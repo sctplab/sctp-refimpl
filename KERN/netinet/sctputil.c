@@ -3423,3 +3423,107 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
 	}
 	return (ret_sz);
 }
+
+/*
+ * checks to see if the given address, sa, is one that is currently
+ * known by the kernel
+ * note: can't distinguish the same address on multiple interfaces and
+ *       doesn't handle multiple addresses with different zone/scope id's
+ * note: ifa_ifwithaddr() compares the entire sockaddr struct
+ */
+struct ifaddr *
+sctp_find_ifa_by_addr(struct sockaddr *sa)
+{
+	struct ifnet *ifn;
+	struct ifaddr *ifa;
+
+	/* go through all our known interfaces */
+	TAILQ_FOREACH(ifn, &ifnet, if_link) {
+		/* go through each interface addresses */
+		TAILQ_FOREACH(ifa, &ifn->if_addrhead, ifa_link) {
+			/* correct family? */
+			if (ifa->ifa_addr->sa_family != sa->sa_family)
+				continue;
+
+#ifdef INET6
+			if (ifa->ifa_addr->sa_family == AF_INET6) {
+				/* IPv6 address */
+				struct sockaddr_in6 *sin1, *sin2, sin6_tmp;
+				sin1 = (struct sockaddr_in6 *)ifa->ifa_addr;
+				if (IN6_IS_SCOPE_LINKLOCAL(&sin1->sin6_addr)) {
+					/* create a copy and clear scope */
+					memcpy(&sin6_tmp, sin1,
+					    sizeof(struct sockaddr_in6));
+					sin1 = &sin6_tmp;
+					in6_clearscope(&sin1->sin6_addr);
+				}
+				sin2 = (struct sockaddr_in6 *)sa;
+				if (memcmp(&sin1->sin6_addr, &sin2->sin6_addr,
+					   sizeof(struct in6_addr)) == 0) {
+					/* found it */
+					return (ifa);
+				}
+			} else
+#endif
+			if (ifa->ifa_addr->sa_family == AF_INET) {
+				/* IPv4 address */
+				struct sockaddr_in *sin1, *sin2;
+				sin1 = (struct sockaddr_in *)ifa->ifa_addr;
+				sin2 = (struct sockaddr_in *)sa;
+				if (sin1->sin_addr.s_addr ==
+				    sin2->sin_addr.s_addr) {
+					/* found it */
+					return (ifa);
+				}
+			}
+			/* else, not AF_INET or AF_INET6, so skip */
+		} /* end foreach ifa */
+	} /* end foreach ifn */
+	/* not found! */
+	return (NULL);
+}
+
+
+#ifdef __APPLE__
+/*
+ * here we hack in a fix for Apple's m_copym for the case where the first mbuf
+ * in the chain is a M_PKTHDR and the length is zero
+ */
+static void
+sctp_pkthdr_fix(struct mbuf *m)
+{
+	struct mbuf *m_nxt;
+
+	if ((m->m_flags & M_PKTHDR) == 0) {
+		/* not a PKTHDR */
+		return;
+	}
+
+	if (m->m_len != 0) {
+		/* not a zero length PKTHDR mbuf */
+		return;
+	}
+
+	/* let's move in a word into the first mbuf... yes, ugly! */
+	m_nxt = m->m_next;
+	if (m_nxt == NULL) {
+		/* umm... not a very useful mbuf chain... */
+		return;
+	}
+	if (m_nxt->m_len > sizeof(long)) {
+		/* move over a long */
+		bcopy(mtod(m_nxt, caddr_t), mtod(m, caddr_t), sizeof(long));
+		/* update mbuf data pointers and lengths */
+		m->m_len += sizeof(long);
+		m_nxt->m_data += sizeof(long);
+		m_nxt->m_len -= sizeof(long);
+	}
+}
+
+inline struct mbuf *
+sctp_m_copym(struct mbuf *m, int off, int len, int wait)
+{
+	sctp_pkthdr_fix(m);
+	return (m_copym(m, off, len, wait));
+}
+#endif /* __APPLE__ */

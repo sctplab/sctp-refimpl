@@ -1816,7 +1816,8 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 
 	the_len = (chk_length-sizeof(struct sctp_data_chunk));
 	if (last_chunk == 0) {
-		dmbuf = m_copym(*m,(offset + sizeof(struct sctp_data_chunk)),
+		dmbuf = sctp_m_copym(*m,
+		    (offset + sizeof(struct sctp_data_chunk)),
 		    the_len, M_DONTWAIT);
 	} else {
 		/* We can steal the last chunk */

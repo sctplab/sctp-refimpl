@@ -44,6 +44,12 @@
 #define sctp_m_freem m_freem
 #endif
 
+#ifdef __APPLE__
+struct mbuf *sctp_m_copym(struct mbuf *m, int off, int len, int wait);
+#else
+#define sctp_m_copym	m_copym
+#endif /* __APPLE__ */
+
 /*
  * Zone(pool) allocation routines: MUST be defined for each OS
  * zone = zone/pool pointer
@@ -96,7 +102,7 @@
 #endif
 #elif defined(__APPLE__)
 #define SCTP_ZONE_GET(zone) \
-	zalloc_noblock(zone);
+	zalloc(zone);
 #elif defined(__NetBSD__) || defined(__OpenBSD__)
 #define SCTP_ZONE_GET(zone) \
 	pool_get(&zone, PR_NOWAIT);
@@ -130,6 +136,8 @@
 /*
  * Function prototypes
  */
+struct ifaddr *sctp_find_ifa_by_addr(struct sockaddr *sa);
+
 u_int32_t sctp_select_initial_TSN(struct sctp_pcb *);
 
 u_int32_t sctp_select_a_tag(struct sctp_inpcb *);

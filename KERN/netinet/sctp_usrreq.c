@@ -129,7 +129,6 @@ int sctp_recvspace = 128 * (1024 +
 				sizeof(struct sockaddr_in);
 #endif
 	);
-
 int sctp_strict_sacks = 0;
 int sctp_ecn = 1;
 int sctp_ecn_nonce = 0;
@@ -574,12 +573,11 @@ SYSCTL_INT(_net_inet_sctp, SCTPCTL_ECN_NONCE, ecn_nonce, CTLFLAG_RW,
 SYSCTL_INT(_net_inet_sctp, SCTPCTL_STRICT_SACK, strict_sacks, CTLFLAG_RW,
 	   &sctp_strict_sacks, 0, "Enable SCTP Strict SACK checking");
 
-SYSCTL_INT(_net_inet_sctp, SCTPCTL_NOCSUM_LO, looback_nocsum, CTLFLAG_RW,
+SYSCTL_INT(_net_inet_sctp, SCTPCTL_NOCSUM_LO, loopback_nocsum, CTLFLAG_RW,
 	   &sctp_no_csum_on_loopback, 0, "Enable NO Csum on packets sent on loopback");
 
 SYSCTL_INT(_net_inet_sctp, SCTPCTL_STRICT_INIT, strict_init, CTLFLAG_RW,
 	   &sctp_strict_init, 0, "Enable strict INIT/INIT-ACK singleton enforcement");
-
 #endif
 
 static int

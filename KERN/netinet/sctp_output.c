@@ -270,12 +270,13 @@ sctp_add_cookie(struct sctp_inpcb *inp, struct mbuf *init, int init_offset,
 	if (mret == NULL) {
 		return (NULL);
 	}
-	copy_init = m_copym(init, init_offset, M_COPYALL, M_DONTWAIT);
+	copy_init = sctp_m_copym(init, init_offset, M_COPYALL, M_DONTWAIT);
 	if (copy_init == NULL) {
 		sctp_m_freem(mret);
 		return (NULL);
 	}
-	copy_initack = m_copym(initack, initack_offset, M_COPYALL, M_DONTWAIT);
+	copy_initack = sctp_m_copym(initack, initack_offset, M_COPYALL,
+	    M_DONTWAIT);
 	if (copy_initack == NULL) {
 		sctp_m_freem(mret);
 		sctp_m_freem(copy_init);
@@ -4309,18 +4310,17 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 {
 	struct mbuf *appendchain;
 #if defined(__FreeBSD__) || defined(__NetBSD__)
-	/* Supposedly the m_copypacket is a optimzation,
-	 * use it if we can.
-	 */
+	/* Supposedly m_copypacket is an optimization, use it if we can */
 	if (clonechain->m_flags & M_PKTHDR) {
-		appendchain = m_copypacket(clonechain,  M_DONTWAIT);
+		appendchain = m_copypacket(clonechain, M_DONTWAIT);
 		sctp_pegs[SCTP_CACHED_SRC]++;
 	} else
 		appendchain = m_copy(clonechain, 0, M_COPYALL);
+#elif defined(__APPLE__)
+	appendchain = sctp_m_copym(clonechain, 0, M_COPYALL, M_DONTWAIT);
 #else
 	appendchain = m_copy(clonechain, 0, M_COPYALL);
 #endif
-
 
 	if (appendchain == NULL) {
 		/* error */
@@ -5501,8 +5501,9 @@ sctp_send_cookie_echo(struct mbuf *m,
 		      struct sctp_tcb *stcb,
 		      struct sctp_nets *net)
 {
-	/* pull out the cookie and put it at
-	 * the front of the control chunk queue.
+	/*
+	 * pull out the cookie and put it at the front of the control
+	 * chunk queue.
 	 */
 	int at;
 	struct mbuf *cookie,*mat;
@@ -5527,7 +5528,7 @@ sctp_send_cookie_echo(struct mbuf *m,
 			if ((pad = (plen % 4))) {
 				plen += 4 - pad;
 			}
-			cookie = m_copym(m, at, plen, M_DONTWAIT);
+			cookie = sctp_m_copym(m, at, plen, M_DONTWAIT);
 			if (cookie == NULL) {
 				/* No memory */
 				return (-2);
@@ -5540,9 +5541,7 @@ sctp_send_cookie_echo(struct mbuf *m,
 		/* Did not find the cookie */
 		return (-3);
 	}
-	/* ok, we got the cookie lets change it
-	 * into a cookie echo chunk.
-	 */
+	/* ok, we got the cookie lets change it into a cookie echo chunk */
 
 	/* first the change from param to cookie */
 	hdr = mtod(cookie, struct sctp_chunkhdr *);
@@ -5580,9 +5579,7 @@ sctp_send_cookie_echo(struct mbuf *m,
 	chk->data = cookie;
 	chk->whoTo = chk->asoc->primary_destination;
 	chk->whoTo->ref_count++;
-	TAILQ_INSERT_HEAD(&chk->asoc->control_send_queue,
-			  chk,
-			  sctp_next);
+	TAILQ_INSERT_HEAD(&chk->asoc->control_send_queue, chk, sctp_next);
 	chk->asoc->ctrl_queue_cnt++;
 	return (0);
 }
@@ -5606,7 +5603,7 @@ sctp_send_heartbeat_ack(struct sctp_tcb *stcb,
 		/* must have a net pointer */
 		return;
 
-	outchain = m_copym(m, offset, chk_length, M_DONTWAIT);
+	outchain = sctp_m_copym(m, offset, chk_length, M_DONTWAIT);
 	if (outchain == NULL) {
 		/* gak out of memory */
 		return;

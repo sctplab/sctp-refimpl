@@ -375,16 +375,12 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 	retval = sctp_send_cookie_echo(m, offset, stcb, net);
 	if (retval < 0) {
 		/*
-		 * No cookie, we probably should
-		 * send a op error.
-		 * But in any case if it is a no cookie in
-		 * the INIT-ACK, we can abandon the peer, its broke.
+		 * No cookie, we probably should send a op error.
+		 * But in any case if there is no cookie in the INIT-ACK,
+		 * we can abandon the peer, its broke.
 		 */
 		if (retval == -3) {
-			/*
-			 * We abort with an error of
-			 * missing mandatory param.
-			 */
+			/* We abort with an error of missing mandatory param */
 			struct mbuf *op_err;
 			op_err =
 			    sctp_generate_invmanparam(SCTP_CAUSE_MISS_PARAM);
@@ -3715,7 +3711,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					phd->param_length =
 					    htons(chk_length + sizeof(*phd));
 					mm->m_len = sizeof(*phd);
-					mm->m_next = m_copym(m, *offset,
+					mm->m_next = sctp_m_copym(m, *offset,
 					    SCTP_SIZE32(chk_length),
 					    M_DONTWAIT);
 					if (mm->m_next) {
@@ -4113,15 +4109,15 @@ sctp_input(m, va_alist)
 		sctp_pegs[SCTP_IN_MCAST]++;
 		goto bad;
 	}
-
 	if (in_broadcast(ip->ip_dst, m->m_pkthdr.rcvif)) {
 		sctp_pegs[SCTP_IN_MCAST]++;
 		goto bad;
 	}
+
 	/* validate SCTP checksum */
-	if((sctp_no_csum_on_loopback == 0) ||
-	   (m->m_pkthdr.rcvif == NULL) ||
-	   (m->m_pkthdr.rcvif->if_type != IFT_LOOP)) {
+	if ((sctp_no_csum_on_loopback == 0) ||
+	    (m->m_pkthdr.rcvif == NULL) ||
+	    (m->m_pkthdr.rcvif->if_type != IFT_LOOP)) {
 		/* we do NOT validate things from the loopback if the
 		 * sysctl is set to 1.
 		 */
@@ -4129,10 +4125,12 @@ sctp_input(m, va_alist)
 		sh->checksum = 0;		/* prepare for calc */
 		calc_check = sctp_calculate_sum(m, &mlen, iphlen);
 		if (calc_check != check) {
-			stcb = sctp_findassociation_addr(m, iphlen, offset - sizeof(*ch),
+			stcb = sctp_findassociation_addr(m, iphlen,
+							 offset - sizeof(*ch),
 							 sh, ch, &inp, &net);
-			if((inp) && (stcb)) {
-				sctp_send_packet_dropped(stcb, net, m, iphlen, 1);
+			if ((inp) && (stcb)) {
+				sctp_send_packet_dropped(stcb, net, m, iphlen,
+							 1);
 				sctp_chunk_output(inp, stcb, 2);
 			}
 			sctp_pegs[SCTP_BAD_CSUM]++;
@@ -4199,9 +4197,8 @@ sctp_input(m, va_alist)
 	}
 #ifdef IPSEC
 	/*
-	 * I very much doubt any of the IPSEC stuff will
-	 * work but I have no idea, so I will leave it
-	 * in place.
+	 * I very much doubt any of the IPSEC stuff will work but I have
+	 * no idea, so I will leave it in place.
 	 */
 
 #ifdef __OpenBSD__
@@ -4212,16 +4209,16 @@ sctp_input(m, va_alist)
 	    mtag = m_tag_find(m, PACKET_TAG_IPSEC_IN_DONE, NULL);
 	    s = splnet();
 	    if (mtag != NULL) {
-		tdbi = (struct tdb_ident *)(mtag + 1);
-	        tdb = gettdb(tdbi->spi, &tdbi->dst, tdbi->proto);
+		    tdbi = (struct tdb_ident *)(mtag + 1);
+		    tdb = gettdb(tdbi->spi, &tdbi->dst, tdbi->proto);
 	    } else
-		tdb = NULL;
+		    tdb = NULL;
 	    ipsp_spd_lookup(m, af, iphlen, &error, IPSP_DIRECTION_IN,
 			    tdb, i_inp);
 	    if (error) {
-		splx(s);
-		sctp_pegs[SCTP_HDR_DROPS]++;
-		goto bad;
+		    splx(s);
+		    sctp_pegs[SCTP_HDR_DROPS]++;
+		    goto bad;
 	    }
 
 	    /* Latch SA */
