@@ -3459,13 +3459,13 @@ int
 sctp_usr_recvd(struct socket *so, int flags)
 {
 	int s;
-	struct sctp_socket_q_list *sq;
+	struct sctp_socket_q_list *sq=NULL;
 	/*
 	 * The user has received some data, we may be able to stuff more
 	 * up the socket. And we need to possibly update the rwnd.
 	 */
 	struct sctp_inpcb *inp;
-	struct sctp_tcb *stcb;
+	struct sctp_tcb *stcb=NULL;
 	
 	inp = (struct sctp_inpcb *)so->so_pcb;
 #ifdef SCTP_DEBUG
@@ -3491,7 +3491,8 @@ sctp_usr_recvd(struct socket *so, int flags)
 	 * Grab the first one on the list. It will re-insert itself if
 	 * it runs out of room
 	 */
-	if ((flags & MSG_EOR) && ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0)) {
+	if ((flags & MSG_EOR) && ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) 
+	    && ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
 		/* Ok the other part of our grubby tracking
 		 * stuff for our horrible layer violation that
 		 * the tsvwg thinks is ok for sctp_peeloff.. gak!
@@ -3499,17 +3500,20 @@ sctp_usr_recvd(struct socket *so, int flags)
 		 * socket buffer (if any).
 		 */
 		inp->sctp_vtag_last = sctp_get_last_vtag_from_sb(so);
-	}
-	sq = TAILQ_FIRST(&inp->sctp_queue_list);
-	if (sq) {
-		stcb = sq->tcb;
+		sq = TAILQ_FIRST(&inp->sctp_queue_list);
+		if (sq) {
+			stcb = sq->tcb;
+		} else {
+			stcb = NULL;
+		}
 	} else {
-		stcb = NULL;
+		stcb = LIST_FIRST(&inp->sctp_asoc_list);
 	}
 	if (stcb) {
 		long incr;
 		if (flags & MSG_EOR) {
-			if((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0)
+			if(((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0)
+			   && ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) 
 				stcb = sctp_remove_from_socket_q(inp);
 			else
 				stcb = LIST_FIRST(&inp->sctp_asoc_list);
@@ -3552,7 +3556,8 @@ sctp_usr_recvd(struct socket *so, int flags)
 			sctp_chunk_output(inp, stcb, 10);
 		}
 	} else {
-		if (( sq ) && (flags & MSG_EOR) && ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0)) {
+		if ((( sq ) && (flags & MSG_EOR) && ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0)) 
+			   && ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
 			stcb = sctp_remove_from_socket_q(inp);
 		}
 	}
@@ -3565,7 +3570,8 @@ sctp_usr_recvd(struct socket *so, int flags)
 			       (u_int)inp);
 #endif
 
-		if((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) {
+		if(((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) 
+			&& ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
 			while (TAILQ_EMPTY(&inp->sctp_queue_list) == 0) {
 				sq_cnt++;
 				(void)sctp_remove_from_socket_q(inp);
