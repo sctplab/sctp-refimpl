@@ -233,8 +233,8 @@ sctp_log_cwnd(struct sctp_nets *net, int augment, uint8_t from)
 	sctp_clog[sctp_cwnd_log_at].from = (u_int8_t)from;
 	sctp_clog[sctp_cwnd_log_at].event_type = (u_int8_t)SCTP_LOG_EVENT_CWND;
 	sctp_clog[sctp_cwnd_log_at].x.cwnd.net = net;
-	sctp_clog[sctp_cwnd_log_at].x.cwnd.cwnd_new_value = (net->cwnd/1024);
-	sctp_clog[sctp_cwnd_log_at].x.cwnd.inflight = (net->flight_size/1024);
+	sctp_clog[sctp_cwnd_log_at].x.cwnd.cwnd_new_value = net->cwnd;
+	sctp_clog[sctp_cwnd_log_at].x.cwnd.inflight = net->flight_size;
 	sctp_clog[sctp_cwnd_log_at].x.cwnd.cwnd_augment = augment;
 	sctp_cwnd_log_at++;
 	if (sctp_cwnd_log_at >= SCTP_STAT_LOG_SIZE) {
@@ -250,9 +250,9 @@ sctp_log_block(uint8_t from, struct socket *so, struct sctp_association *asoc)
 	sctp_clog[sctp_cwnd_log_at].from = (u_int8_t)from;
 	sctp_clog[sctp_cwnd_log_at].event_type = (u_int8_t)SCTP_LOG_EVENT_BLOCK;
 	sctp_clog[sctp_cwnd_log_at].x.blk.maxmb = (u_int16_t)(so->so_snd.sb_mbmax/1024);
-	sctp_clog[sctp_cwnd_log_at].x.blk.onmb = (u_int16_t)(asoc->total_output_mbuf_queue_size/1024);
+	sctp_clog[sctp_cwnd_log_at].x.blk.onmb = asoc->total_output_mbuf_queue_size;
 	sctp_clog[sctp_cwnd_log_at].x.blk.maxsb = (u_int16_t)(so->so_snd.sb_hiwat/1024);
-	sctp_clog[sctp_cwnd_log_at].x.blk.onsb = (u_int16_t)(asoc->total_output_queue_size/1024);
+	sctp_clog[sctp_cwnd_log_at].x.blk.onsb = asoc->total_output_queue_size;
 	sctp_clog[sctp_cwnd_log_at].x.blk.send_sent_qcnt = (u_int16_t)(asoc->send_queue_cnt + asoc->sent_queue_cnt);
 	sctp_clog[sctp_cwnd_log_at].x.blk.stream_qcnt = (u_int16_t)asoc->stream_queue_cnt;
 	sctp_cwnd_log_at++;
