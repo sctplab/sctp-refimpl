@@ -48,4 +48,7 @@ Patch 25)
 4) Fixed shutdown-received state so we get the
    shutdown and not return without stopping the
    timer and sending a S-A.
-
+5) Chunk_output was not being called when a shutdown
+   was queued on the v6 side. This is a bug that
+   was fixed for v4 at the Munester Inter-op, but we
+   missed the V6 side :-<
