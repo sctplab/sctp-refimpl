@@ -1962,6 +1962,8 @@ sctp_notify_assoc_change(u_int32_t event, struct sctp_tcb *stcb,
 	if (m_notify == NULL)
 		/* no space left */
 		return;
+	m_notify->m_len = 0;
+
 	sac = mtod(m_notify, struct sctp_assoc_change *);
 	sac->sac_type = SCTP_ASSOC_CHANGE;
 	sac->sac_flags = 0;
@@ -2035,6 +2037,8 @@ sctp_notify_peer_addr_change(struct sctp_tcb *stcb, uint32_t state,
 	MGETHDR(m_notify, M_DONTWAIT, MT_DATA);
 	if (m_notify == NULL)
 		return;
+	m_notify->m_len = 0;
+
 	MCLGET(m_notify, M_DONTWAIT);
 	if ((m_notify->m_flags & M_EXT) != M_EXT) {
 		sctp_m_freem(m_notify);
@@ -2117,6 +2121,7 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, u_int32_t error,
 	if (m_notify == NULL)
 		/* no space left */
 		return;
+	m_notify->m_len = 0;
 	ssf = mtod(m_notify, struct sctp_send_failed *);
 	ssf->ssf_type = SCTP_SEND_FAILED;
 	if (error == SCTP_NOTIFY_DATAGRAM_UNSENT)
@@ -2204,6 +2209,7 @@ sctp_notify_adaption_layer(struct sctp_tcb *stcb,
 	if (m_notify == NULL)
 		/* no space left */
 		return;
+	m_notify->m_len = 0;
 	sai = mtod(m_notify, struct sctp_adaption_event *);
 	sai->sai_type = SCTP_ADAPTION_INDICATION;
 	sai->sai_flags = 0;
@@ -2269,6 +2275,7 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
 	if (m_notify == NULL)
 		/* no space left */
 		return;
+	m_notify->m_len = 0;
 	pdapi = mtod(m_notify, struct sctp_pdapi_event *);
 	pdapi->pdapi_type = SCTP_PARTIAL_DELIVERY_EVENT;
 	pdapi->pdapi_flags = 0;
@@ -2347,6 +2354,7 @@ sctp_notify_shutdown_event(struct sctp_tcb *stcb)
 	if (m_notify == NULL)
 		/* no space left */
 		return;
+	m_notify->m_len = 0;
 	sse = mtod(m_notify, struct sctp_shutdown_event *);
 	sse->sse_type = SCTP_SHUTDOWN_EVENT;
 	sse->sse_flags = 0;
@@ -2412,6 +2420,7 @@ sctp_notify_stream_reset(struct sctp_tcb *stcb,
 	if (m_notify == NULL)
 		/* no space left */
 		return;
+	m_notify->m_len = 0;
 	len = sizeof(struct sctp_stream_reset_event) + (number_entries * sizeof(uint16_t));
 	if (len > M_TRAILINGSPACE(m_notify)) {
 		MCLGET(m_notify, M_WAIT);
@@ -3003,6 +3012,7 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 	MGET(m, M_DONTWAIT, MT_SONAME);
 	if (m == 0)
 		return (0);
+	m->m_len = 0;
 	if (asa->sa_len > MLEN) {
 		MEXTMALLOC(m, asa->sa_len, M_NOWAIT);
 		if ((m->m_flags & M_EXT) == 0) {
@@ -3060,6 +3070,7 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 		MGET(m, M_DONTWAIT, MT_SONAME);
 		if (m == 0)
 			return (0);
+		m->m_len = 0;
 		/* safety */
 		if (m == m0) {
 			printf("Duplicate mbuf allocated %p in and mget returned %p?\n",
