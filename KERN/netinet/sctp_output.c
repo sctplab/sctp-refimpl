@@ -7554,15 +7554,17 @@ static struct sctp_nets *
 sctp_select_hb_destination(struct sctp_tcb *stcb, struct timeval *now)
 {
 	struct sctp_nets *net, *hnet;
-	int ms_goneby, highest_ms;
+	int ms_goneby, highest_ms, state_overide=0;
 
 	SCTP_GETTIME_TIMEVAL(now);
 	highest_ms = 0;
 	hnet = NULL;
 	TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
-		if ((net->dest_state & SCTP_ADDR_NOHB) ||
-		    (net->dest_state & SCTP_ADDR_OUT_OF_SCOPE)) {
-			/* Skip this guy from consideration */
+		if (
+			((net->dest_state & SCTP_ADDR_NOHB) && ((net->dest_state & SCTP_ADDR_UNCONFIRMED) == 0)) ||
+			(net->dest_state & SCTP_ADDR_OUT_OF_SCOPE)
+			) {
+			/* Skip this guy from consideration if HB is off AND its confirmed*/
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
 				printf("Skipping net:%p state:%d nohb/out-of-scope\n",
@@ -7593,8 +7595,17 @@ sctp_select_hb_destination(struct sctp_tcb *stcb, struct timeval *now)
 			       net, ms_goneby);
 		}
 #endif
+		/* When the address state is unconfirmed but still considered reachable, we
+		 * HB at a higher rate. Once it goes confirmed OR reaches the "unreachable"
+		 * state, thenw we cut it back to HB at a more normal pace.
+		 */
+		if((net->dest_state & (SCTP_ADDR_UNCONFIRMED|SCTP_ADDR_NOT_REACHABLE)) == SCTP_ADDR_UNCONFIRMED) {
+			state_overide = 1;
+		} else {
+			state_overide = 0;
+		}
 
-		if ((ms_goneby >= stcb->asoc.heart_beat_delay) &&
+		if (((ms_goneby >= stcb->asoc.heart_beat_delay) || (state_overide)) &&
 		    (ms_goneby > highest_ms)) {
 			highest_ms = ms_goneby;
 			hnet = net;
@@ -7606,8 +7617,18 @@ sctp_select_hb_destination(struct sctp_tcb *stcb, struct timeval *now)
 #endif
 		}
 	}
-	if (highest_ms && (highest_ms > stcb->asoc.heart_beat_delay)) {
-		/* Found the one with longest delay bounds */
+	if(hnet &&
+	   ((hnet->dest_state & (SCTP_ADDR_UNCONFIRMED|SCTP_ADDR_NOT_REACHABLE)) == SCTP_ADDR_UNCONFIRMED)) {
+		state_overide = 1;
+	} else {
+		state_overide = 0;
+	}
+
+	if (highest_ms && ((highest_ms > stcb->asoc.heart_beat_delay) || state_overide)) {
+		/* Found the one with longest delay bounds 
+		 * OR it is unconfirmed and still not marked
+		 * unreachable.
+		 */
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
 			printf("net:%p is the hb winner -",
@@ -7766,7 +7787,7 @@ sctp_send_hb(struct sctp_tcb *stcb, int user_req, struct sctp_nets *u_net)
 			/* we have lost the association, in a way this
 			 * is quite bad since we really are one less time
 			 * since we really did not send yet. This is the
-			 * down side to the Dr. Xie style as defined in the RFC
+			 * down side to the Q's style as defined in the RFC
 			 * and not my alternate style defined in the RFC.
 			 */
 			if (chk->data != NULL) {
