@@ -32,3 +32,12 @@ Patch 24 change log
 14) Kernel changes for sctp_sendx()
 15) Kernel changes for MSG_SENDALL flag
 16) sctp lib adde of sctp_sendx()
+
+
+Patch 25)
+
+1) Link Local addresses for V6 where the ll address
+   is included implicitly would make a false decision to
+   NOT list addresses. This has been fixed.
+2) Fix switch back after failure
+
