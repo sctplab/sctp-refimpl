@@ -911,12 +911,12 @@ sctp_t1init_timer(struct sctp_inpcb *inp,
 	if (stcb->asoc.initial_init_rto_max < net->RTO) {
 		net->RTO = stcb->asoc.initial_init_rto_max;
 	}
-
+	printf("Timer t1 sees %d nets\n", stcb->asoc.numnets);
 	if (stcb->asoc.numnets > 1) {
 		/* If we have more than one addr use it */
 		struct sctp_nets *alt;
-		alt = TAILQ_NEXT(net, sctp_next);
-		if (alt != NULL) {
+		alt = sctp_find_alternate_net(stcb, stcb->asoc.primary_destination);
+		if ((alt != NULL) && (alt != stcb->asoc.primary_destination)) {
 			sctp_move_all_chunks_to_alt(stcb, stcb->asoc.primary_destination, alt);
 			stcb->asoc.primary_destination = alt;
 		}
