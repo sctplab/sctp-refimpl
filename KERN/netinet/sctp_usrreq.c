@@ -3488,7 +3488,7 @@ sctp_optsset(struct socket *so,
 			/* add the address */
 			struct sctp_inpcb  *lep;
 			((struct sockaddr_in *)addr_touse)->sin_port = inp->sctp_lport;
-			lep = sctp_pcb_findep(addr_touse, 1, 0);
+			lep = sctp_pcb_findep(addr_touse, 1, 0, NULL);
 			if (lep != NULL) {
 				/* We must decrement the refcount
 				 * since we have the ep already and
