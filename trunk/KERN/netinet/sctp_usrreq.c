@@ -565,88 +565,7 @@ SYSCTL_PROC(_net_inet_sctp, OID_AUTO, getcred, CTLTYPE_OPAQUE|CTLFLAG_RW,
 /*
  * sysctl definitions
  */
-#if defined(__FreeBSD__)
-SYSCTL_INT(_net_inet_sctp, SCTPCTL_MAXDGRAM, maxdgram, CTLFLAG_RW,
-	   &sctp_sendspace, 0, "Maximum outgoing SCTP buffer size");
-
-SYSCTL_INT(_net_inet_sctp, SCTPCTL_RECVSPACE, recvspace, CTLFLAG_RW,
-	   &sctp_recvspace, 0, "Maximum incoming SCTP buffer size");
-
-SYSCTL_INT(_net_inet_sctp, SCTPCTL_AUTOASCONF, auto_asconf, CTLFLAG_RW,
-	   &sctp_auto_asconf, 0, "Enable SCTP Auto-ASCONF");
-
-SYSCTL_INT(_net_inet_sctp, SCTPCTL_ECN_ENABLE, ecn_enable, CTLFLAG_RW,
-	   &sctp_ecn, 0, "Enable SCTP ECN");
-
-SYSCTL_INT(_net_inet_sctp, SCTPCTL_ECN_NONCE, ecn_nonce, CTLFLAG_RW,
-	   &sctp_ecn_nonce, 0, "Enable SCTP ECN Nonce");
-
-SYSCTL_INT(_net_inet_sctp, SCTPCTL_STRICT_SACK, strict_sacks, CTLFLAG_RW,
-	   &sctp_strict_sacks, 0, "Enable SCTP Strict SACK checking");
-
-SYSCTL_INT(_net_inet_sctp, SCTPCTL_NOCSUM_LO, loopback_nocsum, CTLFLAG_RW,
-	   &sctp_no_csum_on_loopback, 0, "Enable NO Csum on packets sent on loopback");
-
-SYSCTL_INT(_net_inet_sctp, SCTPCTL_STRICT_INIT, strict_init, CTLFLAG_RW,
-	   &sctp_strict_init, 0, "Enable strict INIT/INIT-ACK singleton enforcement");
-
-SYSCTL_INT(_net_inet_sctp, SCTPCTL_PEER_CHK_OH, peer_chkoh, CTLFLAG_RW,
-	   &sctp_peer_chunk_oh, 0, "Amount to debit peers rwnd per chunk sent");
-
-SYSCTL_INT(_net_inet_sctp, SCTPCTL_MAXBURST, maxburst, CTLFLAG_RW,
-	   &sctp_max_burst_default, 0, "Default max burst for sctp endpoints");
-
-SYSCTL_INT(_net_inet_sctp, SCTPCTL_MAXCHUNKONQ, maxchunks, CTLFLAG_RW,
-	   &sctp_max_chunks_on_queue, 0, "Default max chunks on queue per asoc");
-
-SYSCTL_INT(_net_inet_sctp, SCTPCTL_DELAYED_SACK, delayed_sack_time, CTLFLAG_RW,
-	   &sctp_delayed_sack_time_default, 0, "Default delayed SACK timer in msec");
-
-SYSCTL_INT(_net_inet_sctp, SCTPCTL_HB_INTERVAL, heartbeat_interval, CTLFLAG_RW,
-	   &sctp_heartbeat_interval_default, 0, "Default heartbeat interval in msec");
-
-SYSCTL_INT(_net_inet_sctp, SCTPCTL_PMTU_RAISE, pmtu_raise_time, CTLFLAG_RW,
-	   &sctp_pmtu_raise_time_default, 0, "Default PMTU raise timer in sec");
-
-SYSCTL_INT(_net_inet_sctp, SCTPCTL_SHUTDOWN_GUARD, shutdown_guard_time, CTLFLAG_RW,
-	   &sctp_shutdown_guard_time_default, 0, "Default shutdown guard timer in sec");
-
-SYSCTL_INT(_net_inet_sctp, SCTPCTL_SECRET_LIFETIME, secret_lifetime, CTLFLAG_RW,
-	   &sctp_secret_lifetime_default, 0, "Default secret lifetime in sec");
-
-SYSCTL_INT(_net_inet_sctp, SCTPCTL_RTO_MAX, rto_max, CTLFLAG_RW,
-	   &sctp_rto_max_default, 0, "Default maximum retransmission timeout in msec");
-
-SYSCTL_INT(_net_inet_sctp, SCTPCTL_RTO_MIN, rto_min, CTLFLAG_RW,
-	   &sctp_rto_min_default, 0, "Default minimum retransmission timeout in msec");
-
-SYSCTL_INT(_net_inet_sctp, SCTPCTL_RTO_INITIAL, rto_initial, CTLFLAG_RW,
-	   &sctp_rto_initial_default, 0, "Default initial retransmission timeout in msec");
-
-SYSCTL_INT(_net_inet_sctp, SCTPCTL_INIT_RTO_MAX, init_rto_max, CTLFLAG_RW,
-	   &sctp_init_rto_max_default, 0, "Default maximum retransmission timeout during association setup in msec");
-
-SYSCTL_INT(_net_inet_sctp, SCTPCTL_COOKIE_LIFE, valid_cookie_life, CTLFLAG_RW,
-	   &sctp_valid_cookie_life_default, 0, "Default cookie lifetime in sec");
-
-SYSCTL_INT(_net_inet_sctp, SCTPCTL_INIT_RTX_MAX, init_rtx_max, CTLFLAG_RW,
-	   &sctp_init_rtx_max_default, 0, "Default maximum number of retransmission for INIT chunks");
-
-SYSCTL_INT(_net_inet_sctp, SCTPCTL_ASSOC_RTX_MAX, assoc_rtx_max, CTLFLAG_RW,
-	   &sctp_assoc_rtx_max_default, 0, "Default maximum number of retransmissions per association");
-
-SYSCTL_INT(_net_inet_sctp, SCTPCTL_PATH_RTX_MAX, path_rtx_max, CTLFLAG_RW,
-	   &sctp_path_rtx_max_default, 0, "Default maximum of retransmissions per path");
-
-SYSCTL_INT(_net_inet_sctp, SCTPCTL_NR_OUTGOING_STREAMS, nr_outgoing_streams, CTLFLAG_RW,
-	   &sctp_nr_outgoing_streams_default, 0, "Default number of outgoing streams");
-
-#ifdef SCTP_DEBUG
-SYSCTL_INT(_net_inet_sctp, SCTPCTL_DEBUG, debug, CTLFLAG_RW,
-	   &sctp_debug_on, 0, "Configure debug output");
-#endif
-
-#elif defined (__APPLE__)
+#if defined(__FreeBSD__) || defined (__APPLE__)
 
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, maxdgram, CTLFLAG_RW,
 	   &sctp_sendspace, 0, "Maximum outgoing SCTP buffer size");
@@ -667,67 +586,85 @@ SYSCTL_INT(_net_inet_sctp, OID_AUTO, strict_sacks, CTLFLAG_RW,
 	   &sctp_strict_sacks, 0, "Enable SCTP Strict SACK checking");
 
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, loopback_nocsum, CTLFLAG_RW,
-	   &sctp_no_csum_on_loopback, 0, "Enable NO Csum on packets sent on loopback");
+	   &sctp_no_csum_on_loopback, 0,
+	   "Enable NO Csum on packets sent on loopback");
 
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, strict_init, CTLFLAG_RW,
-	   &sctp_strict_init, 0, "Enable strict INIT/INIT-ACK singleton enforcement");
+	   &sctp_strict_init, 0,
+	   "Enable strict INIT/INIT-ACK singleton enforcement");
 
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, peer_chkoh, CTLFLAG_RW,
-	   &sctp_peer_chunk_oh, 0, "Amount to debit peers rwnd per chunk sent");
+	   &sctp_peer_chunk_oh, 0,
+	   "Amount to debit peers rwnd per chunk sent");
 
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, maxburst, CTLFLAG_RW,
-	   &sctp_max_burst_default, 0, "Default max burst for sctp endpoints");
+	   &sctp_max_burst_default, 0,
+	   "Default max burst for sctp endpoints");
 
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, maxchunks, CTLFLAG_RW,
-	   &sctp_max_chunks_on_queue, 0, "Default max chunks on queue per asoc");
+	   &sctp_max_chunks_on_queue, 0,
+	   "Default max chunks on queue per asoc");
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, delayed_sack_time, CTLFLAG_RW,
-	   &sctp_delayed_sack_time_default, 0, "Default delayed SACK timer in msec");
+	    &sctp_delayed_sack_time_default, 0,
+	    "Default delayed SACK timer in msec");
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, heartbeat_interval, CTLFLAG_RW,
-	   &sctp_heartbeat_interval_default, 0, "Default heartbeat interval in msec");
+	    &sctp_heartbeat_interval_default, 0,
+	    "Default heartbeat interval in msec");
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, pmtu_raise_time, CTLFLAG_RW,
-	   &sctp_pmtu_raise_time_default, 0, "Default PMTU raise timer in sec");
+	    &sctp_pmtu_raise_time_default, 0,
+	    "Default PMTU raise timer in sec");
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, shutdown_guard_time, CTLFLAG_RW,
-	   &sctp_shutdown_guard_time_default, 0, "Default shutdown guard timer in sec");
+	    &sctp_shutdown_guard_time_default, 0,
+	    "Default shutdown guard timer in sec");
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, secret_lifetime, CTLFLAG_RW,
-	   &sctp_secret_lifetime_default, 0, "Default secret lifetime in sec");
+	    &sctp_secret_lifetime_default, 0,
+	    "Default secret lifetime in sec");
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, rto_max, CTLFLAG_RW,
-	   &sctp_rto_max_default, 0, "Default maximum retransmission timeout in msec");
+	    &sctp_rto_max_default, 0,
+	    "Default maximum retransmission timeout in msec");
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, rto_min, CTLFLAG_RW,
-	   &sctp_rto_min_default, 0, "Default minimum retransmission timeout in msec");
+	    &sctp_rto_min_default, 0,
+	    "Default minimum retransmission timeout in msec");
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, rto_initial, CTLFLAG_RW,
-	   &sctp_rto_initial_default, 0, "Default initial retransmission timeout in msec");
+	    &sctp_rto_initial_default, 0,
+	    "Default initial retransmission timeout in msec");
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, init_rto_max, CTLFLAG_RW,
-	   &sctp_init_rto_max_default, 0, "Default maximum retransmission timeout during association setup in msec");
+	    &sctp_init_rto_max_default, 0,
+	    "Default maximum retransmission timeout during association setup in msec");
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, valid_cookie_life, CTLFLAG_RW,
-	   &sctp_valid_cookie_life_default, 0, "Default cookie lifetime in sec");
+	    &sctp_valid_cookie_life_default, 0,
+	    "Default cookie lifetime in sec");
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, init_rtx_max, CTLFLAG_RW,
-	   &sctp_init_rtx_max_default, 0, "Default maximum number of retransmission for INIT chunks");
+	    &sctp_init_rtx_max_default, 0,
+	    "Default maximum number of retransmission for INIT chunks");
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, assoc_rtx_max, CTLFLAG_RW,
-	   &sctp_assoc_rtx_max_default, 0, "Default maximum number of retransmissions per association");
+	    &sctp_assoc_rtx_max_default, 0,
+	    "Default maximum number of retransmissions per association");
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, path_rtx_max, CTLFLAG_RW,
-	   &sctp_path_rtx_max_default, 0, "Default maximum of retransmissions per path");
+	    &sctp_path_rtx_max_default, 0,
+	    "Default maximum of retransmissions per path");
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, nr_outgoing_streams, CTLFLAG_RW,
-	   &sctp_nr_outgoing_streams_default, 0, "Default number of outgoing streams");
+	    &sctp_nr_outgoing_streams_default, 0,
+	    "Default number of outgoing streams");
 
 #ifdef SCTP_DEBUG
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, debug, CTLFLAG_RW,
 	   &sctp_debug_on, 0, "Configure debug output");
-#endif
-
+#endif /* SCTP_DEBUG */
 #endif
 
 static int
