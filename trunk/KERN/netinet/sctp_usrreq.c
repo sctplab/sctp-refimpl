@@ -1490,15 +1490,15 @@ sctp_do_connect_x(struct socket *so,
 		splx(s);
 		return(EFAULT);
 	}
-	
+
 	totaddrp = mtod(m, int *);
 	totaddr = *totaddrp;
 	sa = (struct sockaddr *)(totaddrp + 1);
 	at = incr = 0;
+	/* account and validate addresses */
 	SCTP_INP_WLOCK(inp);
 	SCTP_INP_INCR_REF(inp);
 	SCTP_INP_WUNLOCK(inp);
-	/* account and validate addresses */
 	for (i = 0; i < totaddr; i++) {
 		if (sa->sa_family == AF_INET) {
 			num_v4++;
@@ -1532,16 +1532,15 @@ sctp_do_connect_x(struct socket *so,
 		}
 		sa = (struct sockaddr *)((caddr_t)sa + incr);
 	}
+	sa = (struct sockaddr *)(totaddrp + 1);
 	SCTP_INP_WLOCK(inp);
 	SCTP_INP_DECR_REF(inp);
 	SCTP_INP_WUNLOCK(inp);
-	sa = (struct sockaddr *)(totaddrp + 1);
-	SCTP_INP_RLOCK(inp);
 #ifdef INET6
 	if (((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0) &&
 	    (num_v6 > 0)) {
 		splx(s);
-		SCTP_INP_RUNLOCK(inp);
+		SCTP_INP_WUNLOCK(inp);
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		return (EINVAL);
 	}
@@ -1562,7 +1561,7 @@ sctp_do_connect_x(struct socket *so,
 			 * if IPV6_V6ONLY flag, ignore connections
 			 * destined to a v4 addr or v4-mapped addr
 			 */
-			SCTP_INP_RUNLOCK(inp);
+			SCTP_INP_WUNLOCK(inp);
 			SCTP_ASOC_CREATE_UNLOCK(inp);
 			splx(s);
 			return EINVAL;
@@ -1572,7 +1571,7 @@ sctp_do_connect_x(struct socket *so,
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) ==
 	    SCTP_PCB_FLAGS_UNBOUND) {
 		/* Bind a ephemeral port */
-		SCTP_INP_RUNLOCK(inp);
+		SCTP_INP_WUNLOCK(inp);
 		error = sctp_inpcb_bind(so, NULL, p);
 		if (error) {
 			SCTP_ASOC_CREATE_UNLOCK(inp);
@@ -1580,7 +1579,7 @@ sctp_do_connect_x(struct socket *so,
 			return (error);
 		}
 	} else {
-		SCTP_INP_RUNLOCK(inp);
+		SCTP_INP_WUNLOCK(inp);
 	}
         /* We are GOOD to go */
 	stcb = sctp_aloc_assoc(inp, sa, 1, &error, 0);
@@ -1590,7 +1589,6 @@ sctp_do_connect_x(struct socket *so,
 		splx(s);
 		return (error);
 	}
-	SCTP_ASOC_CREATE_UNLOCK(inp);
 	/* move to second address */
 	if (sa->sa_family == AF_INET)
 		sa = (struct sockaddr *)((caddr_t)sa + sizeof(struct sockaddr_in));
@@ -1603,6 +1601,7 @@ sctp_do_connect_x(struct socket *so,
 			if (sctp_add_remote_addr(stcb, sa, 0, 8)) {
 				/* assoc gone no un-lock */
 				sctp_free_assoc(inp, stcb);
+				SCTP_ASOC_CREATE_UNLOCK(inp);
 				splx(s);
 				return (ENOBUFS);
 			}
@@ -1612,6 +1611,7 @@ sctp_do_connect_x(struct socket *so,
 			if (sctp_add_remote_addr(stcb, sa, 0, 8)) {
 				/* assoc gone no un-lock */
 				sctp_free_assoc(inp, stcb);
+				SCTP_ASOC_CREATE_UNLOCK(inp);
 				splx(s);
 				return (ENOBUFS);
 			}
@@ -1628,13 +1628,12 @@ sctp_do_connect_x(struct socket *so,
 		sctp_send_initiate(inp, stcb);
 	}
 	SCTP_TCB_UNLOCK(stcb);
-	SCTP_INP_WLOCK(inp);
 	if (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) {
 		stcb->sctp_ep->sctp_flags |= SCTP_PCB_FLAGS_CONNECTED;
 		/* Set the connected flag so we can queue data */
 		soisconnecting(so);
 	}
-	SCTP_INP_WUNLOCK(inp);
+	SCTP_ASOC_CREATE_UNLOCK(inp);
 	splx(s);
 	return error;
 }
@@ -3764,11 +3763,11 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		return (ECONNRESET);
 	}
 	SCTP_ASOC_CREATE_LOCK(inp);
-	SCTP_INP_RLOCK(inp);
+	SCTP_INP_WLOCK(inp);
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
 		/* Should I really unlock ? */
-		SCTP_INP_RUNLOCK(inp);
+		SCTP_INP_WUNLOCK(inp);
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		splx(s);
 		return(EFAULT);
@@ -3776,7 +3775,7 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 #ifdef INET6
 	if (((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0) &&
 	    (addr->sa_family == AF_INET6)) {
-		SCTP_INP_RUNLOCK(inp);
+		SCTP_INP_WUNLOCK(inp);
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		splx(s);
 		return (EINVAL);
@@ -3785,21 +3784,21 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) ==
 	    SCTP_PCB_FLAGS_UNBOUND) {
 		/* Bind a ephemeral port */
-		SCTP_INP_RUNLOCK(inp);
+		SCTP_INP_WUNLOCK(inp);
 		error = sctp_inpcb_bind(so, NULL, p);
 		if (error) {
 			SCTP_ASOC_CREATE_UNLOCK(inp);
 			splx(s);
 			return (error);
 		}
-		SCTP_INP_RLOCK(inp);
+		SCTP_INP_WLOCK(inp);
 	}
 	/* Now do we connect? */
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
 		/* We are already connected AND the TCP model */
 		splx(s);
-		SCTP_INP_RUNLOCK(inp);
+		SCTP_INP_WUNLOCK(inp);
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		return (EADDRINUSE);
 	}
@@ -3807,10 +3806,8 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		stcb = LIST_FIRST(&inp->sctp_asoc_list);
 		if (stcb)
 			SCTP_TCB_UNLOCK(stcb);
-		SCTP_INP_RUNLOCK(inp);
+		SCTP_INP_WUNLOCK(inp);
 	} else {
-		SCTP_INP_RUNLOCK(inp);
-		SCTP_INP_WLOCK(inp);
 		SCTP_INP_INCR_REF(inp);
 		SCTP_INP_WUNLOCK(inp);
 		stcb = sctp_findassociation_ep_addr(&inp, addr, NULL, NULL, NULL);
@@ -3827,10 +3824,8 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		splx(s);
 		return (EALREADY);
 	}
-
 	/* We are GOOD to go */
 	stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0);
-	SCTP_ASOC_CREATE_UNLOCK(inp);
 	if (stcb == NULL) {
 		/* Gak! no memory */
 		splx(s);
@@ -3844,7 +3839,7 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	stcb->asoc.state = SCTP_STATE_COOKIE_WAIT;
 	SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_entered);
 	sctp_send_initiate(inp, stcb);
-
+	SCTP_ASOC_CREATE_UNLOCK(inp);
 	SCTP_TCB_UNLOCK(stcb);
 	splx(s);
 	return error;

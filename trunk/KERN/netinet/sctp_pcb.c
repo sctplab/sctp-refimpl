@@ -1887,6 +1887,8 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 	}
 	SCTP_INP_INFO_WLOCK();
 	SCTP_INP_WLOCK(inp);
+	/* increase our count due to the unlock we do */
+	SCTP_INP_INCR_REF(inp);
 	if (lport) {
 		/*
 		 * Did the caller specify a port? if so we must see if a
@@ -1907,12 +1909,14 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 			    suser(p, 0)
 #endif
 			    )) {
+				SCTP_INP_DECR_REF(inp);
 				SCTP_INP_WUNLOCK(inp);
 				SCTP_INP_INFO_WUNLOCK();
 				return (error);
 			}
 		}
 		if (p == NULL) {
+			SCTP_INP_DECR_REF(inp);
 			SCTP_INP_WUNLOCK(inp);
 			SCTP_INP_INFO_WUNLOCK();
 			return (error);
@@ -1939,6 +1943,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 			/* verify that no lport is not used by a singleton */
 			if (sctp_isport_inuse(inp, lport)) {
 				/* Sorry someone already has this one bound */
+				SCTP_INP_DECR_REF(inp);
 				SCTP_INP_WUNLOCK(inp);
 				SCTP_INP_INFO_WUNLOCK();
 				return (EADDRNOTAVAIL);
@@ -2005,6 +2010,16 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 		}
 		/* we don't get out of the loop until we have a port */
 		lport = htons(port_attempt);
+	}
+	SCTP_INP_DECR_REF(inp);
+	if (inp->sctp_flags & (SCTP_PCB_FLAGS_SOCKET_GONE|SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
+		/* this really should not happen. The guy
+		 * did a non-blocking bind and then did a close
+		 * at the same time.
+		 */
+		SCTP_INP_WUNLOCK(inp);
+		SCTP_INP_INFO_WUNLOCK();
+		return (EINVAL);
 	}
 	/* ok we look clear to give out this port, so lets setup the binding */
 	if (bindall) {
@@ -2987,6 +3002,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	stcb->sctp_socket = inp->sctp_socket;
 	if ((err = sctp_init_asoc(inp, asoc, for_a_init, override_tag))) {
 		/* failed */
+		SCTP_TCB_LOCK_DESTROY (stcb);
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
 		sctppcbinfo.ipi_count_asoc--;
 #ifdef SCTP_DEBUG
@@ -2995,13 +3011,27 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		}
 #endif
 		*error = err;
-		SCTP_TCB_LOCK_DESTROY (stcb);
 		return (NULL);
 	}
 	/* and the port */
 	stcb->rport = rport;
 	SCTP_INP_INFO_WLOCK();
 	SCTP_INP_WLOCK(inp);
+	if(inp->sctp_flags & (SCTP_PCB_FLAGS_SOCKET_GONE|SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
+		/* inpcb freed while alloc going on */
+		SCTP_TCB_LOCK_DESTROY (stcb);
+		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
+		SCTP_INP_WUNLOCK(inp);
+		SCTP_INP_INFO_WUNLOCK();
+		sctppcbinfo.ipi_count_asoc--;
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_PCB3) {
+			printf("aloc_assoc: couldn't init asoc, out of mem?!\n");
+		}
+#endif
+		*error = EINVAL;
+		return (NULL);
+	}
 	SCTP_TCB_LOCK(stcb);
 
 	/* now that my_vtag is set, add it to the  hash */
@@ -4198,7 +4228,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 	 * m points to the IP packet and the offset points
 	 * to the beginning of the parameters.
 	 */
-	struct sctp_inpcb *inp;
+	struct sctp_inpcb *inp, *l_inp;
 	struct sctp_nets *net, *net_tmp;
 	struct ip *iph;
 	struct sctp_paramhdr *phdr, parm_buf;
@@ -4265,7 +4295,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 		net->dest_state |= SCTP_ADDR_NOT_IN_ASSOC;
 	}
 	/* does the source address already exist? if so skip it */
-	inp = stcb->sctp_ep;
+	l_inp = inp = stcb->sctp_ep;
 	stcb_tmp = sctp_findassociation_ep_addr(&inp, sa, &net_tmp, local_sa, stcb);
 	if ((stcb_tmp == NULL && inp == stcb->sctp_ep) || inp == NULL) {
 		/* we must add the source address */
@@ -4289,6 +4319,18 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			return (-1);
 		}
 	}
+	/* since a unlock occured we must check the
+	 * TCB's state and the pcb's gone flags.
+	 */
+	if(l_inp->sctp_flags & (SCTP_PCB_FLAGS_SOCKET_GONE|SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
+		/* the user freed the ep */
+		return(-1);
+	}
+	if(stcb->asoc.state == 0) {
+		/* the assoc was freed? */
+		return(-1);
+	}
+
 	/* now we must go through each of the params. */
 	phdr = sctp_get_next_param(m, offset, &parm_buf, sizeof(parm_buf));
 	while (phdr) {
@@ -4322,10 +4364,28 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			    inp == NULL) {
 				/* we must add the source address */
 				/* no scope set since we have a tcb already */
+
+				/* we must validate the state again here */
+				if(l_inp->sctp_flags & (SCTP_PCB_FLAGS_SOCKET_GONE|SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
+					/* the user freed the ep */
+					return(-1);
+				}
+				if(stcb->asoc.state == 0) {
+					/* the assoc was freed? */
+					return(-1);
+				}
 				if (sctp_add_remote_addr(stcb, sa, 0, 4)) {
 					return (-1);
 				}
 			} else if (stcb_tmp == stcb) {
+				if(l_inp->sctp_flags & (SCTP_PCB_FLAGS_SOCKET_GONE|SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
+					/* the user freed the ep */
+					return(-1);
+				}
+				if(stcb->asoc.state == 0) {
+					/* the assoc was freed? */
+					return(-1);
+				}
 				if (net != NULL) {
 					/* clear flag */
 					net->dest_state &=
@@ -4336,7 +4396,17 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 				 * straighten out locks.
 				 */
 				SCTP_TCB_UNLOCK(stcb_tmp);
-				SCTP_INP_RLOCK(stcb->sctp_ep);
+				SCTP_INP_RLOCK(inp);
+				if(l_inp->sctp_flags & (SCTP_PCB_FLAGS_SOCKET_GONE|SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
+					/* the user freed the ep */
+					SCTP_INP_RUNLOCK(l_inp);
+					return(-1);
+				}
+				if(stcb->asoc.state == 0) {
+					/* the assoc was freed? */
+					SCTP_INP_RUNLOCK(l_inp);
+					return(-1);
+				}
 				SCTP_TCB_LOCK(stcb);
 				SCTP_INP_RUNLOCK(stcb->sctp_ep);
 				return (-1);
@@ -4360,11 +4430,29 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			    local_sa, stcb);
 			if (stcb_tmp == NULL && (inp == stcb->sctp_ep ||
 			    inp == NULL)) {
+				/* we must validate the state again here */
+				if(l_inp->sctp_flags & (SCTP_PCB_FLAGS_SOCKET_GONE|SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
+					/* the user freed the ep */
+					return(-1);
+				}
+				if(stcb->asoc.state == 0) {
+					/* the assoc was freed? */
+					return(-1);
+				}
 				/* we must add the address, no scope set */
 				if (sctp_add_remote_addr(stcb, sa, 0, 5)) {
 					return (-1);
 				}
 			} else if (stcb_tmp == stcb) {
+				/* we must validate the state again here */
+				if(l_inp->sctp_flags & (SCTP_PCB_FLAGS_SOCKET_GONE|SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
+					/* the user freed the ep */
+					return(-1);
+				}
+				if(stcb->asoc.state == 0) {
+					/* the assoc was freed? */
+					return(-1);
+				}
 				if (net != NULL) {
 					/* clear flag */
 					net->dest_state &=
@@ -4375,9 +4463,20 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 				 * straighten out locks.
 				 */
 				SCTP_TCB_UNLOCK(stcb_tmp);
-				SCTP_INP_RLOCK(stcb->sctp_ep);
+				SCTP_INP_RLOCK(l_inp);
+				/* we must validate the state again here */
+				if(l_inp->sctp_flags & (SCTP_PCB_FLAGS_SOCKET_GONE|SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
+					/* the user freed the ep */
+					SCTP_INP_RUNLOCK(l_inp);
+					return(-1);
+				}
+				if(stcb->asoc.state == 0) {
+					/* the assoc was freed? */
+					SCTP_INP_RUNLOCK(l_inp);
+					return(-1);
+				}
 				SCTP_TCB_LOCK(stcb);
-				SCTP_INP_RUNLOCK(stcb->sctp_ep);
+				SCTP_INP_RUNLOCK(l_inp);
 				return (-1);
 			}
 		} else if (ptype == SCTP_ECN_CAPABLE) {
