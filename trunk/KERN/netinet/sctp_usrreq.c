@@ -1,4 +1,4 @@
-/*	$KAME: sctp_usrreq.c,v 1.42 2004/08/17 06:28:02 t-momose Exp $	*/
+/*	$KAME: sctp_usrreq.c,v 1.46 2005/01/27 02:59:46 jinmei Exp $	*/
 
 /*
  * Copyright (c) 2001, 2002, 2003, 2004 Cisco Systems, Inc.
@@ -4185,13 +4185,13 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 		inp->sctp_flags &= ~SCTP_PCB_FLAGS_DONT_WAKE;
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_WAKEOUTPUT) {
 			inp->sctp_flags &= ~SCTP_PCB_FLAGS_WAKEOUTPUT;
-#ifdef __NetBSD__
-                        if (sowritable(inp->sctp_socket)) {
-#else
-			if (sowriteable(inp->sctp_socket)) {
-#endif
+#if defined(__NetBSD__)
+			if (sowritable(inp->sctp_socket))
 				sowwakeup(inp->sctp_socket);
-			}
+#else
+			if (sowriteable(inp->sctp_socket))
+				sowwakeup(inp->sctp_socket);
+#endif
 		}
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_WAKEINPUT) {
 			inp->sctp_flags &= ~SCTP_PCB_FLAGS_WAKEINPUT;
@@ -4591,7 +4591,8 @@ sctp_usrreq(so, req, m, nam, control)
 }
 #endif
 
-#if (defined(__NetBSD__) && __NetBSD_Version__ < 200000000) || defined(__OpenBSD__)
+/* #if defined(__NetBSD__) || defined(__OpenBSD__) */
+#if __OpenBSD__
 /*
  * Sysctl for sctp variables.
  */
@@ -4608,6 +4609,7 @@ sctp_sysctl(name, namelen, oldp, oldlenp, newp, newlen)
 	/* All sysctl names at this level are terminal. */
 	if (namelen != 1)
 		return (ENOTDIR);
+sysctl_int();
 
 	switch (name[0]) {
 	case SCTPCTL_MAXDGRAM:
@@ -4696,16 +4698,16 @@ sctp_sysctl(name, namelen, oldp, oldlenp, newp, newlen)
 	/* NOTREACHED */
 }
 #endif
-
-#if (defined(__NetBSD__) && __NetBSD_Version__ >= 200000000)
+#if __NetBSD__
 /*
  * Sysctl for sctp variables.
  */
 SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
 {
-        sysctl_createv(clog, 0, NULL, NULL,
-                       CTLFLAG_PERMANENT,
-                       CTLTYPE_NODE, "net", NULL,
+
+	sysctl_createv(clog, 0, NULL, NULL,
+		       CTLFLAG_PERMANENT,
+	               CTLTYPE_NODE, "net", NULL,
                        NULL, 0, NULL, 0,
                        CTL_NET, CTL_EOL);
         sysctl_createv(clog, 0, NULL, NULL,
@@ -4720,7 +4722,7 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
                        NULL, 0, NULL, 0,
                        CTL_NET, PF_INET, IPPROTO_SCTP, CTL_EOL);
 
-        sysctl_createv(clog, 0, NULL, NULL,
+       sysctl_createv(clog, 0, NULL, NULL,
                        CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
                        CTLTYPE_INT, "maxdgram",
                        SYSCTL_DESCR("Maximum outgoing SCTP buffer size"),
@@ -4752,7 +4754,7 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
                        CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_ECN_ENABLE,
                        CTL_EOL);
 
-      sysctl_createv(clog, 0, NULL, NULL,
+       sysctl_createv(clog, 0, NULL, NULL,
                        CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
                        CTLTYPE_INT, "ecn_nonce",
                        SYSCTL_DESCR("Enable SCTP ECN Nonce"),
@@ -4807,5 +4809,6 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
                        NULL, 0, &sctp_max_chunks_on_queue, 0,
                        CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_MAXCHUNKONQ,
                        CTL_EOL);
+
 }
 #endif
