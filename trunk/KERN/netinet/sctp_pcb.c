@@ -4782,7 +4782,8 @@ sctp_add_to_socket_q(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	}
 	sctppcbinfo.ipi_count_sockq++;
 	sctppcbinfo.ipi_gencnt_sockq++;
-	stcb->asoc.cnt_msg_on_sb++;
+	if (stcb)
+		stcb->asoc.cnt_msg_on_sb++;
 	SCTP_INP_WLOCK(inp);
 	sq->tcb = stcb;
 	TAILQ_INSERT_TAIL(&inp->sctp_queue_list, sq, next_sq);
