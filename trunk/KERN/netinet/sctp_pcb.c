@@ -994,7 +994,6 @@ sctp_findassociation_addr_sa(struct sockaddr *to, struct sockaddr *from,
 		}
 	}
 	inp = sctp_pcb_findep(to, 0, 0);
-	/* inp's ref-count increased */
 	if (inp_p != NULL) {
 		*inp_p = inp;
 	}
@@ -1858,13 +1857,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 		}
 
 		inp_tmp = sctp_pcb_findep(addr, 0, 1);
-		/* inp_tmp's ref-count increased */
 		if (inp_tmp != NULL) {
-			/* reduce ref-count */
-			SCTP_INP_WLOCK(inp_tmp);
-			SCTP_INP_DECR_REF(inp_tmp);
-			SCTP_INP_WUNLOCK(inp_tmp);
-
 			SCTP_INP_INFO_WUNLOCK();
 			SCTP_INP_WUNLOCK(inp);
 			return (EADDRNOTAVAIL);
@@ -2277,7 +2270,10 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 #endif
 #endif /*IPSEC*/
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
-		ACCEPT_LOCK();
+/*		ACCEPT_LOCK(); - Commented out after panic 
+		sotryfree calls sofree() which does a
+                SOCK_UNLOCK() and then a ACCEPT_LOCK()
+ */
 		SOCK_LOCK(so);
 #endif
 		so->so_pcb = 0;
@@ -3211,15 +3207,13 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	 */
 	sctp_iterator_asoc_being_freed(stcb);
 
-	SCTP_TCB_UNLOCK(stcb);
-	SCTP_INP_WLOCK(inp);
-	SCTP_TCB_LOCK(stcb);
 	/* Null all of my entry's on the socket q */
 	TAILQ_FOREACH(sq, &inp->sctp_queue_list, next_sq) {
 		if (sq->tcb == stcb) {
 			sq->tcb = NULL;
 		}
 	}
+	SCTP_INP_WLOCK(inp);
 	if (inp->sctp_tcb_at_block == (void *)stcb) {
 		inp->error_on_block = ECONNRESET;
 	}
