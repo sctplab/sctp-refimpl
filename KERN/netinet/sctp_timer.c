@@ -171,6 +171,9 @@ sctp_threshold_management(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			if (net->dest_state & SCTP_ADDR_REACHABLE) {
 				net->dest_state &= ~SCTP_ADDR_REACHABLE;
 				net->dest_state |= SCTP_ADDR_NOT_REACHABLE;
+				if(net == stcb->asoc.primary_destination) {
+					net->dest_state |= SCTP_ADDR_WAS_PRIMARY;
+				}
 				sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_DOWN,
 						stcb,
 						SCTP_FAILED_THRESHOLD,
