@@ -915,201 +915,537 @@ sctp_ipv4_source_address_selection(struct sctp_inpcb *inp,
 	}
 }
 
+
+
 static struct sockaddr_in6 *
-sctp_choose_correctv6_scope(struct rtentry *rt, int site_scope, int loc_scope, int loopscope,
-    struct sctp_tcb *stcb, struct sctp_inpcb *inp, int is_negative_list,
-    int *are_done)
+sctp_is_v6_ifa_addr_acceptable (struct ifaddr *ifa, int loopscope, int loc_scope, int *sin_loop, int *sin_local)
 {
-	struct ifnet *ifn;
-	struct sockaddr_in6 *sin6;
-	struct ifaddr *ifa;
 	struct in6_ifaddr *ifa6;
-	int ok;
+	struct sockaddr_in6 *sin6;
 
-	sin6 = (struct sockaddr_in6 *)rt->rt_ifa->ifa_addr;
-	ok = 1;
-	ifn = rt->rt_ifp;
-
-	if (sin6->sin6_family == AF_INET6) {
-		if (IN6_IS_ADDR_LINKLOCAL(&sin6->sin6_addr) && !loc_scope) {
-			/* Its linklocal and we don't have link local scope */
-			ok = 0;
-		}
-		if (IN6_IS_ADDR_SITELOCAL(&sin6->sin6_addr) && !site_scope) {
-			/* Its sitelocal and we don't have site local scope */
-			ok = 0;
-		}
-		if (!loopscope && IN6_IS_ADDR_LOOPBACK(&sin6->sin6_addr)) {
-			ok = 0;
-		}
-		ifa6 = (struct in6_ifaddr *)rt->rt_ifa;
-		/* ok to use deprecated addresses? */
-		if (!ip6_use_deprecated) {
-			if (IFA6_IS_DEPRECATED(ifa6)) {
-				/* can't use this type */
-				ok = 0;
-			}
-		}
-		if (ifa6->ia6_flags &
-		    (IN6_IFF_DETACHED | IN6_IFF_NOTREADY | IN6_IFF_ANYCAST)) {
-			/* Can't use these types */
-			ok = 0;
-		}
-		if (sctp_is_addr_restricted(stcb, rt->rt_ifa->ifa_addr)) {
-			/* it is in a list which way ? */
-			if (is_negative_list) {
-				/* negative so we can't use it */
-				ok = 0;
-			} else {
-				/* It is a bound address */
-				*are_done = 1;
-			}
-		} else {
-			/* Not on the restricted list */
-			if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL)
-				*are_done = 1;
-			else if (sctp_is_addr_in_ep(inp, rt->rt_ifa->ifa_addr))
-				*are_done = 1;
-		}
-		if ((ifn->if_type == IFT_LOOP) && (loopscope == 0)) {
-			memset(sin6,0,sizeof(*sin6));
-			*are_done = 0;
-			return (sin6);
-		}
-		if (ok) {
-			return (sin6);
+	if (ifa->ifa_addr->sa_family != AF_INET6) {
+		/* forget non-v6 */
+		return(NULL);
+	}
+	ifa6 = (struct in6_ifaddr *)ifa;
+	/* ok to use deprecated addresses? */
+	if (!ip6_use_deprecated) {
+		if (IFA6_IS_DEPRECATED(ifa6)) {
+			/* can't use this type */
+			return (NULL);
 		}
 	}
-	/* Must find a better scope */
-	if (ifn == NULL) {
-		return (sin6);
+	/* are we ok, with the current state of this address? */
+	if (ifa6->ia6_flags &
+	    (IN6_IFF_DETACHED | IN6_IFF_NOTREADY | IN6_IFF_ANYCAST)) {
+		/* Can't use these types */
+		return (NULL);
 	}
-	TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
-		if (ifa->ifa_addr->sa_family != AF_INET6) {
-			continue;
-		}
-		ifa6 = (struct in6_ifaddr *)ifa;
-		/* ok to use deprecated addresses? */
-		if (!ip6_use_deprecated) {
-			if (IFA6_IS_DEPRECATED(ifa6)) {
-				/* can't use this type */
-				continue;
-			}
-		}
-		if (ifa6->ia6_flags &
-		    (IN6_IFF_DETACHED | IN6_IFF_NOTREADY | IN6_IFF_ANYCAST)) {
-			/* Can't use these types */
-			continue;
-		}
-		sin6 = (struct sockaddr_in6 *)ifa->ifa_addr;
-		/* Is address ok to consider */
-		if (!loopscope && IN6_IS_ADDR_LOOPBACK(&sin6->sin6_addr)) {
-			continue;
-		}
-		if (IN6_IS_ADDR_LINKLOCAL(&sin6->sin6_addr) && !loc_scope) {
-			continue;
-		}
-		if (IN6_IS_ADDR_SITELOCAL(&sin6->sin6_addr) && !site_scope) {
-			continue;
-		}
+	/* Ok the address may be ok */
+	sin6 = (struct sockaddr_in6 *)ifa->ifa_addr;
+	*sin_local = *sin_loop = 0;
+	if ((ifa->ifa_ifp->if_type == IFT_LOOP) ||
+	    (IN6_IS_ADDR_LOOPBACK(&sin6->sin6_addr))) {
+		*sin_loop = 1;
+	}
+	if (!loopscope && *sin_loop) {
+		/* Its a loopback address and we don't have loop scope */
+		return(NULL);
+	}
+	if (IN6_IS_ADDR_UNSPECIFIED(&sin6->sin6_addr)) {
+		/* we skip unspecifed addresses */
+		return(NULL);
+	}
 
-		/* Ok, now are we done? */
-		if (is_negative_list) {
-			/* TCB must be set */
-			if (sctp_is_addr_restricted(stcb, ifa->ifa_addr))
-				continue;
-			if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
-				*are_done = 1;
-			        return (sin6);
-			}
-			if (sctp_is_addr_in_ep(inp, ifa->ifa_addr)) {
-				*are_done = 1;
-				return (sin6);
-			}
-		} else if (stcb) {
-			/* postive list on the stcb only */
-			if (sctp_is_addr_restricted(stcb, ifa->ifa_addr))
-				*are_done = 1;
-			return (sin6);
-		} else {
-			/* Use inp list and its positive */
-			if (sctp_is_addr_in_ep(inp, ifa->ifa_addr)) {
-				*are_done = 1;
-				return (sin6);
-			}
-		}
+	if(IN6_IS_ADDR_LINKLOCAL(&sin6->sin6_addr) ){
+		*sin_local = 1;
 	}
-	/*
-	 * Ok, if we fell out here, we will be hunting for
-	 * an alternative in the src addr selection. We
-	 * send back a default, i.e. one that is the right
-	 * scope.
-	 */
-	TAILQ_FOREACH(ifa,&ifn->if_addrlist, ifa_list) {
-		if (ifa->ifa_addr->sa_family != AF_INET6) {
-			continue;
-		}
-		ifa6 = (struct in6_ifaddr *)ifa;
-		/* ok to use deprecated addresses? */
-		if (!ip6_use_deprecated) {
-			if (IFA6_IS_DEPRECATED(ifa6)) {
-				/* can't use this type */
-				continue;
-			}
-		}
-		if (ifa6->ia6_flags &
-		    (IN6_IFF_DETACHED | IN6_IFF_NOTREADY | IN6_IFF_ANYCAST)) {
-			/* Can't use these types */
-			continue;
-		}
-		sin6 = (struct sockaddr_in6 *)ifa->ifa_addr;
-		/* Is address ok to consider */
-		if (!loopscope && IN6_IS_ADDR_LOOPBACK(&sin6->sin6_addr)) {
-			continue;
-		}
-		if (IN6_IS_ADDR_LINKLOCAL(&sin6->sin6_addr) && !loc_scope) {
-			continue;
-		}
-		if (IN6_IS_ADDR_SITELOCAL(&sin6->sin6_addr) && !site_scope) {
-			continue;
-		}
-		return (sin6);
+	if (!loc_scope && *sin_local) {
+		/* Its a link local address, and we don't have link local scope */
+		return(NULL);
 	}
-	sin6 = (struct sockaddr_in6 *)rt->rt_ifa->ifa_addr;
-
 	return (sin6);
 }
 
-/* stcb may be NULL */
+
+static struct sockaddr_in6 *
+sctp_choose_v6_boundspecific_stcb(struct rtentry *rt, 
+ 			          uint8_t loc_scope, 
+				  uint8_t loopscope, 
+				  struct sctp_inpcb *inp, 
+				  struct sctp_tcb *stcb, 
+				  struct sctp_nets *net, 
+				  int non_asoc_addr_ok)
+{
+	/*
+	 *   Each endpoint has a list of local addresses associated
+	 *   with it. The address list is either a "negative list" i.e.
+	 *   those addresses that are NOT allowed to be used as a source OR
+	 *   a "postive list" i.e. those addresses that CAN be used. 
+	 *
+	 *   Its a negative list if asconf is allowed. What we do
+	 *   in this case is use the ep address list BUT we have
+	 *   to cross check it against the negative list.
+	 *  
+	 *   In the case where NO asconf is allowed, we have just
+	 *   a straight association level list that we must use to
+	 *   find a source address.
+	 */
+	struct sctp_laddr *laddr, *starting_point;
+	struct sockaddr_in6 *sin6;
+	int sin_loop, sin_local;
+	int start_at_beginning=0;
+
+	if (inp->sctp_flags & SCTP_PCB_FLAGS_DO_ASCONF) {
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
+			printf("Have a STCB - asconf allowed, not bound all have a netgative list\n");
+		}
+#endif
+		starting_point = stcb->asoc.last_used_address;
+		/* First try for matching scope */
+	sctp_from_the_top:
+		if (stcb->asoc.last_used_address == NULL) {
+			start_at_beginning=1;
+			stcb->asoc.last_used_address = LIST_FIRST(&inp->sctp_addr_list);
+		}
+		/* search beginning with the last used address */
+		for (laddr = stcb->asoc.last_used_address; laddr;
+		     laddr = LIST_NEXT(laddr, sctp_nxt_addr)) {
+			if (laddr->ifa == NULL) {
+				/* address has been removed */
+				continue;
+			}
+			sin6 = sctp_is_v6_ifa_addr_acceptable (laddr->ifa, loopscope, loc_scope, &sin_loop, &sin_local);
+			if(sin6 == NULL)
+				continue;
+			if (sctp_is_addr_restricted(stcb, (struct sockaddr *)sin6)) {
+				/* on the no-no list */
+				continue;
+			}
+			/* is it of matching scope ? */
+			if ((loopscope == 0) &&
+			    (loc_scope == 0) &&
+			    (sin_loop == 0) &&
+			    (sin_local == 0) ){
+				/* all of global scope we are ok with it */
+				return (sin6);
+			}
+			if(loopscope && sin_loop)
+				/* both on the loopback, thats ok */
+				return (sin6);
+			if(loc_scope && sin_local)
+				/* both local scope */
+				return (sin6);
+
+		}
+		if (start_at_beginning == 0) {
+			stcb->asoc.last_used_address = NULL;
+			goto sctp_from_the_top;
+		}
+		/* now try for any higher scope than the destination */
+		stcb->asoc.last_used_address = starting_point;
+		start_at_beginning = 0;
+	sctp_from_the_top2:
+		if (stcb->asoc.last_used_address == NULL) {
+			start_at_beginning=1;
+			stcb->asoc.last_used_address = LIST_FIRST(&inp->sctp_addr_list);
+		}
+		/* search beginning with the last used address */
+		for (laddr = stcb->asoc.last_used_address; laddr;
+		     laddr = LIST_NEXT(laddr, sctp_nxt_addr)) {
+			if (laddr->ifa == NULL) {
+				/* address has been removed */
+				continue;
+			}
+			sin6 = sctp_is_v6_ifa_addr_acceptable (laddr->ifa, loopscope, loc_scope, &sin_loop, &sin_local);
+			if(sin6 == NULL)
+				continue;
+			if (sctp_is_addr_restricted(stcb, (struct sockaddr *)sin6)) {
+				/* on the no-no list */
+				continue;
+			}
+			return (sin6);
+		}
+		if(start_at_beginning == 0) {
+			stcb->asoc.last_used_address = NULL;
+			goto sctp_from_the_top2;
+		}
+	} else {
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
+			printf("Have a STCB - no asconf allowed, not bound all have a postive list\n");
+		}
+#endif
+		/* First try for matching scope */
+		LIST_FOREACH(laddr, &stcb->asoc.sctp_local_addr_list,
+			     sctp_nxt_addr) {
+			if (laddr->ifa == NULL) {
+				/* address has been removed */
+				continue;
+			}
+			sin6 = sctp_is_v6_ifa_addr_acceptable (laddr->ifa, loopscope, loc_scope, &sin_loop, &sin_local);
+			if(sin6 == NULL)
+				continue;
+			if ((loopscope == 0) &&
+			    (loc_scope == 0) &&
+			    (sin_loop == 0) &&
+			    (sin_local == 0) ){
+				/* all of global scope we are ok with it */
+				return (sin6);
+			}
+			if(loopscope && sin_loop)
+				/* both on the loopback, thats ok */
+				return (sin6);
+			if(loc_scope && sin_local)
+				/* both local scope */
+				return (sin6);
+		}
+		/* ok, now try for a higher scope in the source address */
+		/* First try for matching scope */
+		LIST_FOREACH(laddr, &stcb->asoc.sctp_local_addr_list,
+			     sctp_nxt_addr) {
+			if (laddr->ifa == NULL) {
+				/* address has been removed */
+				continue;
+			}
+			sin6 = sctp_is_v6_ifa_addr_acceptable (laddr->ifa, loopscope, loc_scope, &sin_loop, &sin_local);
+			if(sin6 == NULL)
+				continue;
+			return(sin6);
+		}
+		
+	}
+	return (NULL);
+}
+
+
+static struct sockaddr_in6 *
+sctp_choose_v6_boundspecific_inp(struct rtentry *rt, 
+ 			          uint8_t loc_scope, 
+				  uint8_t loopscope, 
+				 struct sctp_inpcb *inp)
+{
+	/*
+	 * Here we are bound specific and have only
+	 * an inp. We must find an address that is bound
+	 * that we can give out as a src address. We
+	 * prefer two addresses of same scope if we can
+	 * find them that way.
+	 */
+	struct sctp_laddr *laddr;
+	struct sockaddr_in6 *sin6;
+	int sin_loop, sin_local;
+
+	for (laddr = LIST_FIRST(&inp->sctp_addr_list);
+	    laddr && (laddr != inp->next_addr_touse);
+	    laddr = LIST_NEXT(laddr, sctp_nxt_addr)) {
+		if (laddr->ifa == NULL) {
+			/* address has been removed */
+			continue;
+		}
+		sin6 = sctp_is_v6_ifa_addr_acceptable (laddr->ifa, loopscope, loc_scope, &sin_loop, &sin_local);
+		if(sin6 == NULL)
+			continue;
+
+		if ((loopscope == 0) &&
+		    (loc_scope == 0) &&
+		    (sin_loop == 0) &&
+		    (sin_local == 0) ){
+			/* all of global scope we are ok with it */
+			return (sin6);
+		}
+		if(loopscope && sin_loop)
+			/* both on the loopback, thats ok */
+			return (sin6);
+		if(loc_scope && sin_local)
+			/* both local scope */
+			return (sin6);
+
+	}
+	/* if we reach here, we could not find two addresses
+	 * of the same scope to give out. Lets look for any higher level
+	 * scope for a source address.
+	 */
+	for (laddr = LIST_FIRST(&inp->sctp_addr_list);
+	    laddr && (laddr != inp->next_addr_touse);
+	    laddr = LIST_NEXT(laddr, sctp_nxt_addr)) {
+		if (laddr->ifa == NULL) {
+			/* address has been removed */
+			continue;
+		}
+		sin6 = sctp_is_v6_ifa_addr_acceptable (laddr->ifa, loopscope, loc_scope, &sin_loop, &sin_local);
+		if(sin6 == NULL)
+			continue;
+		return (sin6);
+	}
+	/* no address bound can be a source for the destination */
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
+		printf("Src address selection for EP, no acceptable src address found for address\n");
+	}
+#endif
+	return(NULL);
+}
+
+
+static struct sockaddr_in6 *
+sctp_select_v6_nth_addr_from_ifn_boundall (struct ifnet *ifn, struct sctp_tcb *stcb, int non_asoc_addr_ok, uint8_t loopscope, 
+					   uint8_t loc_scope, int cur_addr_num, int match_scope)
+{
+	struct ifaddr *ifa;
+	struct sockaddr_in6 *sin6;
+	int sin_loop, sin_local;
+	int num_eligible_addr = 0;
+
+	TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
+		sin6 = sctp_is_v6_ifa_addr_acceptable (ifa, loopscope, loc_scope, &sin_loop, &sin_local);
+		if (sin6 == NULL)
+			continue;
+		if (stcb) {
+			if ((non_asoc_addr_ok == 0) && sctp_is_addr_restricted(stcb, (struct sockaddr *)sin6)) {
+				/* It is restricted for some reason.. probably
+				 * not yet added.
+				 */
+				continue;
+			}
+		}
+		if (match_scope) {
+			/* Here we are asked to match scope if possible */
+			if(loopscope && sin_loop)
+				/* src and destination are loopback scope */
+				return (sin6);
+			if(loc_scope && sin_local) 
+				/* src and destination are local scope */
+				return (sin6);
+			if ((loopscope == 0) &&
+			    (loc_scope == 0)  &&
+			    (sin_loop == 0) &&
+			    (sin_local == 0)) {
+				/* src and destination are global scope */
+				return (sin6);
+			}
+			continue;
+		}
+		if (num_eligible_addr == cur_addr_num) {
+			/* this is it */
+			return (sin6);
+		}
+	}
+	return(NULL);
+}
+
+
+static int 
+sctp_count_v6_num_eligible_boundall (struct ifnet *ifn, struct sctp_tcb *stcb,
+				     int non_asoc_addr_ok, uint8_t loopscope, uint8_t loc_scope)
+{
+	struct ifaddr *ifa;
+	struct sockaddr_in6 *sin6;
+	int num_eligible_addr = 0;
+	int sin_loop, sin_local;
+
+	TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
+		sin6 = sctp_is_v6_ifa_addr_acceptable (ifa, loopscope, loc_scope, &sin_loop, &sin_local);
+		if (sin6 == NULL)
+			continue;
+		if (stcb) {
+			if ((non_asoc_addr_ok == 0) && sctp_is_addr_restricted(stcb, (struct sockaddr *)sin6)) {
+				/* It is restricted for some reason.. probably
+				 * not yet added.
+				 */
+				continue;
+			}
+		}
+		num_eligible_addr++;
+	}
+	return (num_eligible_addr);
+}
+
+
+static struct sockaddr_in6 *
+sctp_choose_v6_boundall( struct rtentry *rt, 
+			 uint8_t loc_scope, 
+			 uint8_t loopscope, 
+			 struct sctp_inpcb *inp, 
+			 struct sctp_tcb *stcb, 
+			 struct sctp_nets *net, 
+			 int non_asoc_addr_ok)
+{
+	/* Ok, we are bound all SO any address
+	 * is ok to use as long as it is NOT in the negative
+	 * list.
+	 */
+	int num_eligible_addr;
+	int cur_addr_num=0;
+	int started_at_beginning=0;
+	int match_scope_prefered;
+	/* first question is, how many eligible addresses are 
+	 * there for the destination ifn that we are using that
+	 * are within the proper scope?
+	 */
+	struct ifnet *ifn;
+	struct sockaddr_in6 *sin6;
+
+	ifn = rt->rt_ifp;
+	if( net ) {
+		cur_addr_num = net->indx_of_eligible_next_to_use;;
+	}
+	if(cur_addr_num == 0) {
+		match_scope_prefered = 1;
+	} else {
+		match_scope_prefered = 0;
+	}
+	num_eligible_addr = sctp_count_v6_num_eligible_boundall (ifn, stcb, non_asoc_addr_ok, loopscope, loc_scope);
+	if (num_eligible_addr == 0) {
+		/* no eligible addresses, we must use some other
+		 * interface address if we can find one.
+		 */
+ 		goto bound_all_v6_plan_b;
+	}
+	/* Ok we have num_eligible_addr set with how many we can use,
+	 * this may vary from call to call due to addresses being deprecated etc..
+	 */
+	if(cur_addr_num >= num_eligible_addr) {
+		cur_addr_num = 0;
+	}
+	/* select the nth address from the list (where cur_addr_num is the nth) and
+	 * 0 is the first one, 1 is the second one etc...
+	 */
+	sin6 = sctp_select_v6_nth_addr_from_ifn_boundall (ifn, stcb, non_asoc_addr_ok, loopscope, 
+							  loc_scope, cur_addr_num, match_scope_prefered);
+	if (match_scope_prefered && (sin6 == NULL)) {
+		/* retry without the preference for matching scope */
+		sin6 = sctp_select_v6_nth_addr_from_ifn_boundall (ifn, stcb, non_asoc_addr_ok, loopscope, 
+								  loc_scope, cur_addr_num, 0);
+	}
+	if (sin6) {
+		if (net) {
+			/* store so we get the next one */
+			if (cur_addr_num < 255)
+				net->indx_of_eligible_next_to_use = cur_addr_num + 1;
+			else
+				net->indx_of_eligible_next_to_use = 0;
+		}
+		return (sin6);
+	}
+	num_eligible_addr = 0;
+ bound_all_v6_plan_b:
+	/* ok, if we reach here we either fell through
+	 * due to something changing during an interupt (unlikely)
+	 * or we have NO eligible source addresses for the ifn
+	 * of the route (most likely). We must look at all the other
+	 * interfaces EXCEPT rt->rt_ifp and do the same game.
+	 */
+	if (inp->next_ifn_touse == NULL) {
+		started_at_beginning=1;
+		inp->next_ifn_touse = TAILQ_FIRST(&ifnet);
+	} else {
+		inp->next_ifn_touse = TAILQ_NEXT(ifn, if_list);
+		if(inp->next_ifn_touse == NULL) {
+			started_at_beginning=1;
+			inp->next_ifn_touse = TAILQ_FIRST(&ifnet);
+		}
+	}
+	for (ifn = inp->next_ifn_touse; ifn;
+	     ifn = TAILQ_NEXT(ifn, if_list)) {
+		if (loopscope == 0 && ifn->if_type == IFT_LOOP) {
+			/* wrong base scope */
+			continue;
+		}
+		if(ifn == rt->rt_ifp) {
+			/* already looked at this guy */
+			continue;
+		}
+		num_eligible_addr = sctp_count_v6_num_eligible_boundall (ifn, stcb, non_asoc_addr_ok, loopscope, loc_scope);
+		if(num_eligible_addr == 0) {
+			/* none we can use */
+			continue;
+		}
+		/* Ok we have num_eligible_addr set with how many we can use,
+		 * this may vary from call to call due to addresses being deprecated etc..
+		 */
+		inp->next_ifn_touse = ifn;
+		if(cur_addr_num >= num_eligible_addr) {
+			cur_addr_num = 0;
+		}
+		/* select the nth address from the list (where cur_addr_num is the nth) and
+		 * 0 is the first one, 1 is the second one etc...
+		 */
+		sin6 = sctp_select_v6_nth_addr_from_ifn_boundall (ifn, stcb, non_asoc_addr_ok, loopscope, loc_scope, cur_addr_num, 0);
+		if(sin6 == NULL) {
+			/* Hmm, can't find one now, things must have changed */
+			continue;
+		}
+		if (net) {
+			/* store so we get the next one */
+			if (cur_addr_num < 255)
+				net->indx_of_eligible_next_to_use = cur_addr_num + 1;
+			else
+				net->indx_of_eligible_next_to_use = 0;
+		}
+		return(sin6);
+	}
+	if (started_at_beginning == 0) {
+		/* we have not been through all of them yet, force
+		 * us to go through them all.
+		 */
+		inp->next_ifn_touse = NULL;
+		goto bound_all_v6_plan_b;
+	}
+	return (NULL);
+
+}
+
+/* stcb and net may be NULL */
 struct in6_addr
 sctp_ipv6_source_address_selection(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
     struct sockaddr_in6 *to, struct route *rtp, struct sctp_nets *net,
     int non_asoc_addr_ok)
 {
-	/*
-	 * This is quite tricky. We can't use the normal
-	 * in6_selectsrc() function since this really does
-	 * not do what we want.
-	 */
 	struct in6_addr ans;
 	struct rtentry *rt;
-	struct sctp_laddr *laddr;
-	struct sockaddr_in6 *out6, *rt_addr;
+	struct sockaddr_in6 *rt_addr;
 	struct ifnet *ifn;
-	struct ifaddr *ifa;
-	struct in6_ifaddr *ifa6;
-	uint8_t loc_scope, site_scope, loopscope;
-	int list_type, are_done;
+	uint8_t loc_scope, loopscope;
 
-	/*
-	 * Rules:
-	 * - Find the route if needed, cache if I can.
-	 * - Look at interface address in route, Is it in the bound list.
-	 *   If so we have the best source.
-	 * - If not we must rotate amongst the addresses.
-	 */
+	/* 
+	 * This routine is tricky standard v6 src address
+	 * selection cannot take into account what we have
+	 * bound etc, so we can't use it.
+	 *
+	 * Instead here is what we must do:
+	 * 1) Make sure we have a route, if we 
+	 *    don't have a route we can never reach the peer.
+	 * 2) Once we have a route, determine the scope of the
+	 *     route. Link local, loopback or global.
+	 * 3) Next we divide into three types. Either we
+	 *    are bound all.. which means we want to use
+	 *    one of the addresses of the interface we are
+	 *    going out. <or>
+	 * 4a) We have not stcb, which means we are using the
+	 *    specific addresses bound on an inp, in this 
+	 *    case we are similar to the stcb case (4b below)
+	 *    accept the list is always a positive list.<or>
+	 * 4b) We are bound specific with a stcb, which means we have a 
+	 *    list of bound addresses and we must see if the
+	 *    ifn of the route is actually one of the bound addresses.
+	 *    If not, then we must rotate addresses amongst properly
+	 *    scoped bound addresses, if so we use the address 
+	 *    of the interface.
+	 * 5) Always, no matter which path we take through the above
+	 *    we must be sure the source address we use is allowed to
+	 *    be used. I.e.  IN6_IFF_DETACHED, IN6_IFF_NOTREADY, and IN6_IFF_ANYCAST
+	 *    addresses cannot be used.
+	 * 6) Addresses that are deprecated MAY be used 
+	 * 		if (!ip6_use_deprecated) {
+	 *                    if (IFA6_IS_DEPRECATED(ifa6)) {
+	 *	                  skip the address
+  	 *	              }
+	 *	        }
+ 	 */
 
-	/* Find the route */
+	/*** 1> determine route, if not already done */
 	if (rtp->ro_rt == NULL) {
 		/*
 		 * Need a route to cache.
@@ -1129,633 +1465,99 @@ sctp_ipv6_source_address_selection(struct sctp_inpcb *inp, struct sctp_tcb *stcb
 		to->sin6_scope_id = scope_save;
 #endif
 	}
-	loc_scope = site_scope = loopscope = 0;
-	rt = rtp->ro_rt;
-	if (rt == NULL) {
+	if (rtp->ro_rt == NULL) {
 		/*
 		 * no route to host. this packet is going no-where.
 		 * We probably should make sure we arrange to send back
 		 * an error.
 		 */
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
+			printf("No route to host, this packet cannot be sent!\n");
+		}
+#endif
+
 		memset(&ans, 0, sizeof(ans));
 		return (ans);
 	}
 
+	/*** 2a> determine scope for outbound address/route */
+	loc_scope = loopscope = 0;
+	rt = rtp->ro_rt;
 	ifn = rt->rt_ifp;
 	/*
-	 * We base our scope on the outbound packet scope.
-	 * Not the TCB. This way in local scope we will only
-	 * use a local scope src address when we send to the
-	 * one local address on the asoc.
+	 * We base our scope on the outbound packet scope and route,
+	 * NOT the TCB (if there is one). This way in local scope we will only
+	 * use a local scope src address when we send to a local address.
 	 */
-	if (IN6_IS_ADDR_LINKLOCAL(&to->sin6_addr)) {
-		site_scope = 0;
-		loc_scope = 1;
-		loopscope = 0;
-	} else if (IN6_IS_ADDR_SITELOCAL(&to->sin6_addr)) {
-		site_scope = 1;
-		loc_scope = 0;
-		loopscope = 0;
-	} else if (IN6_IS_ADDR_LOOPBACK(&to->sin6_addr)) {
-		site_scope = 1;
+
+	if ((ifn->if_type == IFT_LOOP) ||
+		(IN6_IS_ADDR_LOOPBACK(&to->sin6_addr))){
+		/* If the route goes to the loopback address OR
+		 * the address is a loopback address, we are loopback
+		 * scope.
+		 */
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
+			printf("Loopback scope is set\n");
+		}
+#endif
 		loc_scope = 1;
 		loopscope = 1;
-	}
-	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
-		/* negative list */
-		list_type = 1;
-	} else if (stcb) {
-		if (inp->sctp_flags & SCTP_PCB_FLAGS_DO_ASCONF) {
-			list_type = 1;
-		} else {
-			list_type = 0;
+		if (net != NULL) {
+			/* mark it as local */
+			net->addr_is_local = 1;
 		}
+
+	} else if (IN6_IS_ADDR_LINKLOCAL(&to->sin6_addr)) {
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
+			printf("Link local scope is set\n");
+		}
+#endif
+		loc_scope = 1;
+		loopscope = 0;
 	} else {
-		list_type = 0;
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
+			printf("Global scope is set\n");
+		}
+#endif
 	}
-	are_done = 0;
-	rt_addr = sctp_choose_correctv6_scope(rt, site_scope, loc_scope, loopscope,  stcb,
-	    inp, list_type, &are_done);
-	if (are_done) {
-		/* Short cut, the selector says we have it */
-		return (rt_addr->sin6_addr);
-	}
+
+	/* now, depending on which way we are bound we call the appropriate
+	 * routine to do steps 3-6
+	 */
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
-		/*
-		 * Hunt through the interface and find an address not
-		 * restricted with a scope good enough to pass muster.
-		 */
-		/* Ok bound to all but not sure what to do
-		 * since we are not allowed to use
-		 * an address on the interface.
-		 */
-		if (inp->next_ifn_touse == NULL) {
-			inp->next_ifn_touse = TAILQ_FIRST(&ifnet);
-		}
-		/* Hunt for an address amongst the interfaces not on the
-		 * negative list and rotate amongst them.
-		 */
-		for (ifn = inp->next_ifn_touse; ifn;
-		    ifn = TAILQ_NEXT(ifn, if_list)) {
-			if (loopscope == 0 && ifn->if_type == IFT_LOOP) {
-				/* wrong base scope */
-				continue;
-			}
-			TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
-				if (ifa->ifa_addr->sa_family == AF_INET6) {
-					struct sockaddr_in6 *ifa_a;
-					ifa_a = (struct sockaddr_in6 *)
-					    ifa->ifa_addr;
-					if (IN6_IS_ADDR_UNSPECIFIED(&ifa_a->sin6_addr)) {
-						/* skip unspecifed addresses */
-						continue;
-					}
-					if (!loopscope && IN6_IS_ADDR_LOOPBACK(&ifa_a->sin6_addr)) {
-						continue;
-					}
-					if (IN6_IS_ADDR_LINKLOCAL(&ifa_a->sin6_addr)) {
-						if (loc_scope == 0)
-							/* link local scopes not allowed */
-							continue;
-						if (!sctp_is_same_scope(ifa_a, to))
-							continue;
-					}
-					if (site_scope == 0 &&
-					    IN6_IS_ADDR_SITELOCAL(&ifa_a->sin6_addr)) {
-						/* can't use it wrong scope */
-						continue;
-					}
-					/* make sure it is not restricted */
-					if (sctp_is_addr_restricted(stcb, ifa->ifa_addr))
-						continue;
-					/* is the interface address valid */
-					ifa6 = (struct in6_ifaddr *)ifa;
-					/* ok to use deprecated addresses? */
-					if (!ip6_use_deprecated) {
-						if (IFA6_IS_DEPRECATED(ifa6)) {
-							continue;
-						}
-					}
-					if (ifa6->ia6_flags &
-					    (IN6_IFF_DETACHED |
-					     IN6_IFF_ANYCAST |
-					     IN6_IFF_NOTREADY))
-						continue;
-					/* we can use it !! */
-					/* set to start with next intf */
-					inp->next_ifn_touse =
-					    TAILQ_NEXT(ifn, if_list);
-					return (ifa_a->sin6_addr);
-				}
-			}
-		}
-		/*
-		 * Ok nothing turned up in the next_ifn_touse to the next
-		 * lets check the beginning up to next_ifn_touse.
-		 */
-		for (ifn = TAILQ_FIRST(&ifnet);
-		     ifn && (ifn != inp->next_ifn_touse);
-		     ifn = TAILQ_NEXT(ifn, if_list)) {
-			if (loopscope == 0 && ifn->if_type == IFT_LOOP) {
-				/* wrong base scope */
-				continue;
-			}
-			TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
-				if (ifa->ifa_addr->sa_family == AF_INET6) {
-					struct sockaddr_in6 *ifa_a;
-					ifa_a = (struct sockaddr_in6 *)
-					    ifa->ifa_addr;
-					if (IN6_IS_ADDR_UNSPECIFIED(&ifa_a->sin6_addr)) {
-						/* skip unspecifed addresses */
-						continue;
-					}
-					if (!loopscope && IN6_IS_ADDR_LOOPBACK(&ifa_a->sin6_addr)) {
-						continue;
-					}
-					if (IN6_IS_ADDR_LINKLOCAL(&ifa_a->sin6_addr)) {
-						if (loc_scope == 0)
-							/* link local scopes not allowed */
-							continue;
-						if (!sctp_is_same_scope(ifa_a,
-						    to))
-							continue;
-					}
-					if (site_scope == 0 &&
-					    IN6_IS_ADDR_SITELOCAL(&ifa_a->sin6_addr)) {
-						/* can't use it wrong scope */
-						continue;
-					}
-					/* make sure it is not restricted */
-					if (sctp_is_addr_restricted(stcb,
-					    ifa->ifa_addr))
-						continue;
-					/* is the interface address valid */
-					ifa6 = (struct in6_ifaddr *)ifa;
-					/* ok to use deprecated addresses? */
-					if (!ip6_use_deprecated) {
-						if (IFA6_IS_DEPRECATED(ifa6)) {
-							continue;
-						}
-					}
-					if (ifa6->ia6_flags &
-					    (IN6_IFF_DETACHED |
-					     IN6_IFF_ANYCAST |
-					     IN6_IFF_NOTREADY))
-						continue;
-					/* we can use it !! */
-					/* set to start with next intf */
-					inp->next_ifn_touse =
-					    TAILQ_NEXT(ifn, if_list);
-					return (ifa_a->sin6_addr);
-				}
-			}
-		}
-
-		if (!non_asoc_addr_ok) {
-			memset(&ans, 0, sizeof(ans));
-			return (ans);
-		}
-		/*
-		 * see if we can just get an address of the right scope
-		 * without worrying about restrictions.
-		 */
-		for (ifn = TAILQ_FIRST(&ifnet); ifn;
-		    ifn = TAILQ_NEXT(ifn, if_list)) {
-			if (loopscope == 0 && ifn->if_type == IFT_LOOP) {
-				/* wrong base scope */
-				continue;
-			}
-			TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
-				if (ifa->ifa_addr->sa_family == AF_INET6) {
-					struct sockaddr_in6 *ifa_a;
-					ifa_a = (struct sockaddr_in6 *)
-					    ifa->ifa_addr;
-					if (IN6_IS_ADDR_UNSPECIFIED(&ifa_a->sin6_addr)) {
-						/* skip unspecifed addresses */
-						continue;
-					}
-					if (!loopscope && IN6_IS_ADDR_LOOPBACK(&ifa_a->sin6_addr)) {
-						continue;
-					}
-					if (IN6_IS_ADDR_LINKLOCAL(&ifa_a->sin6_addr)) {
-						if (loc_scope == 0)
-							/* link local scopes not allowed */
-							continue;
-						if (!sctp_is_same_scope(ifa_a, to))
-							continue;
-					}
-					if (site_scope == 0 &&
-					    IN6_IS_ADDR_SITELOCAL(&ifa_a->sin6_addr)) {
-						/* can't use it wrong scope */
-						continue;
-					}
-					/* is the interface address valid */
-					ifa6 = (struct in6_ifaddr *)ifa;
-					/* ok to use deprecated addresses? */
-					if (!ip6_use_deprecated) {
-						if (IFA6_IS_DEPRECATED(ifa6)) {
-							continue;
-						}
-					}
-					if (ifa6->ia6_flags &
-					    (IN6_IFF_DETACHED |
-					     IN6_IFF_ANYCAST |
-					     IN6_IFF_NOTREADY))
-						continue;
-					/* we can use it !! */
-					/* set to start with next intf */
-					inp->next_ifn_touse =
-					    TAILQ_NEXT(ifn, if_list);
-					return (ifa_a->sin6_addr);
-				}
-			}
-		}
-		/*
-		 * Can't find a single address of the right scope, you get
-		 * the address on the route...  This could be due to bad
-		 * scope OR it could be due to our strange ASCONF case where
-		 * we are doing the ADD/DEL after a ifconfig that changed
-		 * an address. Less likely on IPv6 but always possible.
-		 */
-		return (rt_addr->sin6_addr);
-	}
-	/* Now here we have specific BOUND addresses cases */
-	if (stcb) {
-		/*
-		 * Ok, we have a local list on the association level
-		 * If asconf is enabled then my list is a reverse composite
-		 * of the addresses allowed.
-		 */
-		if (inp->sctp_flags & SCTP_PCB_FLAGS_DO_ASCONF) {
-			/*
-			 * first is the destination on the bound list for
-			 * the ep but not restricted?
-			 */
-			if (stcb->asoc.last_used_address == NULL) {
-				stcb->asoc.last_used_address = LIST_FIRST(&inp->sctp_addr_list);
-			}
-			/* search beginning with the last used address */
-			for (laddr = stcb->asoc.last_used_address; laddr;
-			    laddr = LIST_NEXT(laddr, sctp_nxt_addr)) {
-				if (laddr->ifa == NULL) {
 #ifdef SCTP_DEBUG
-					if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
-						printf("Help I have fallen and I can't get up!\n");
-					}
+		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
+			printf("Calling bound-all src addr selection for v6\n");
+		}
 #endif
-					continue;
-				}
-				if (laddr->ifa->ifa_addr == NULL)
-					continue;
-
-				if (laddr->ifa->ifa_addr->sa_family != AF_INET6)
-					/* wrong type */
-					continue;
-				out6 = (struct sockaddr_in6 *)
-				    laddr->ifa->ifa_addr;
-				if (IN6_IS_ADDR_UNSPECIFIED(&out6->sin6_addr)) {
-					/* we skip unspecifed addresses */
-					continue;
-				}
-				if (IN6_IS_ADDR_LINKLOCAL(&out6->sin6_addr)) {
-					if (loc_scope == 0)
-						/* link local scopes not allowed */
-						continue;
-					if (!sctp_is_same_scope(out6, to))
-						continue;
-				}
-				if (site_scope == 0 &&
-				    IN6_IS_ADDR_SITELOCAL(&out6->sin6_addr)) {
-					/* can't use it wrong scope */
-					continue;
-				}
-				if (loopscope == 0 &&
-				    IN6_IS_ADDR_LOOPBACK(&out6->sin6_addr)) {
-					continue;
-				}
-				if (sctp_is_addr_restricted(stcb, laddr->ifa->ifa_addr)) {
-					/* on the no-no list */
-					continue;
-				}
-				/* is the interface address valid */
-				ifa6 = (struct in6_ifaddr *)laddr->ifa;
-				/* ok to use deprecated addresses? */
-				if (!ip6_use_deprecated) {
-					if (IFA6_IS_DEPRECATED(ifa6)) {
-						/* can't use this type */
-						continue;
-					}
-				}
-				if (ifa6->ia6_flags &
-				    (IN6_IFF_DETACHED | IN6_IFF_ANYCAST |
-				     IN6_IFF_NOTREADY))
-					continue;
-				stcb->asoc.last_used_address =
-				    LIST_NEXT(laddr, sctp_nxt_addr);
-				return (out6->sin6_addr);
-			}
-			/*
-			 * didn't find it, so expand search and start from
-			 * the top
-			 */
-			for (laddr = LIST_FIRST(&inp->sctp_addr_list);
-			    laddr && (laddr != stcb->asoc.last_used_address);
-			    laddr = LIST_NEXT(laddr, sctp_nxt_addr)) {
-				out6 = (struct sockaddr_in6 *)laddr->ifa->ifa_addr;
-				if (IN6_IS_ADDR_UNSPECIFIED(&out6->sin6_addr)) {
-					/* we skip unspecifed addresses */
-					continue;
-				}
-				if (IN6_IS_ADDR_LINKLOCAL(&out6->sin6_addr)) {
-					if (loc_scope == 0)
-						/* link local scopes not allowed */
-						continue;
-					if (!sctp_is_same_scope(out6, to))
-						continue;
-				}
-				if ((site_scope == 0) &&
-				    (IN6_IS_ADDR_SITELOCAL(&out6->sin6_addr))) {
-					/* can't use it wrong scope */
-					continue;
-				}
-				if ((loopscope == 0) &&
-				    (IN6_IS_ADDR_LOOPBACK(&out6->sin6_addr))) {
-					continue;
-				}
-				if (sctp_is_addr_restricted(stcb, laddr->ifa->ifa_addr)) {
-					/* on the no-no list */
-					continue;
-				}
-				/* is the interface address valid */
-				ifa6 = (struct in6_ifaddr *)laddr->ifa;
-				/* ok to use deprecated addresses? */
-				if (!ip6_use_deprecated) {
-					if (IFA6_IS_DEPRECATED(ifa6)) {
-						continue;
-					}
-				}
-				if (ifa6->ia6_flags &
-				    (IN6_IFF_DETACHED | IN6_IFF_ANYCAST |
-				     IN6_IFF_NOTREADY))
-					continue;
-				stcb->asoc.last_used_address =
-				    LIST_NEXT(laddr, sctp_nxt_addr);
-				return (out6->sin6_addr);
-			}
-			/*
-			 * didn't find an appropriate source address!
-			 * return a NULL address, and a NULL route
-			 */
-			if (rtp->ro_rt) {
-				RTFREE(rtp->ro_rt);
-				rtp->ro_rt = NULL;
-			}
-
-			if (!non_asoc_addr_ok) {
-				memset(&ans, 0, sizeof(ans));
-				return (ans);
-			} else {
-				/*
-				 * Ok if we reach here we are back in same
-				 * condition in BOUND all.. maybe the special
-				 * case of ASCONF.  So we just need to return
-				 * any asoc address and hope things work.
-				 */
-				LIST_FOREACH(laddr, &inp->sctp_addr_list,
-				    sctp_nxt_addr) {
-					if (laddr->ifa == NULL) {
+		rt_addr = sctp_choose_v6_boundall( rt, loc_scope, loopscope, inp, stcb, net, non_asoc_addr_ok );
+	} else {
 #ifdef SCTP_DEBUG
-						if (sctp_debug_on &
-						    SCTP_DEBUG_OUTPUT1) {
-							printf("Help I have fallen and I can't get up!\n");
-						}
+		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
+			printf("Calling bound-specific src addr selection for v6\n");
+		}
 #endif
-						continue;
-					}
-					if (laddr->ifa->ifa_addr == NULL)
-						continue;
-
-					if (laddr->ifa->ifa_addr->sa_family !=
-					    AF_INET6) {
-						/* wrong type */
-						continue;
-					}
-					out6 = (struct sockaddr_in6 *)
-					    laddr->ifa->ifa_addr;
-					if (IN6_IS_ADDR_UNSPECIFIED(&out6->sin6_addr)) {
-						/* skip unspecifed addresses */
-						continue;
-					}
-					if (IN6_IS_ADDR_LINKLOCAL(&out6->sin6_addr)) {
-						if (loc_scope == 0)
-							/* link local scopes not allowed */
-							continue;
-						if (!sctp_is_same_scope(out6, to))
-							continue;
-					}
-					if (site_scope == 0 &&
-					    IN6_IS_ADDR_SITELOCAL(&out6->sin6_addr)) {
-						/* can't use it wrong scope */
-						continue;
-					}
-					if (loopscope == 0 &&
-					    IN6_IS_ADDR_LOOPBACK(&out6->sin6_addr)) {
-						continue;
-					}
-					/* Ok here it is */
-					stcb->asoc.last_used_address =
-					    LIST_NEXT(laddr, sctp_nxt_addr);
-					return (out6->sin6_addr);
-				}
-				/*
-				 * no address in scope.. egad.. I guess you
-				 * will get the interface and we will abort.
-				 */
-			}
-		} else {
-			/*
-			 * This is the opposite case, where the list is
-			 * the only list of addresses on the assoc.
-			 */
-
-			/* Ok look on the list for one we can give out */
-			LIST_FOREACH(laddr, &stcb->asoc.sctp_local_addr_list,
-			    sctp_nxt_addr) {
-				if (laddr->ifa == NULL) {
+		if (stcb) 
+			rt_addr = sctp_choose_v6_boundspecific_stcb( rt, loc_scope, loopscope, inp, stcb,  net, non_asoc_addr_ok );
+		else
+			/* we can't have a non-asoc address since we have no association */
+			rt_addr = sctp_choose_v6_boundspecific_inp( rt, loc_scope, loopscope, inp);
+	}
+	if (rt_addr == NULL) {
+		/* no suitable address? */
+		struct in6_addr in6;
 #ifdef SCTP_DEBUG
-					if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
-						printf("Help I have fallen and I can't get up!\n");
-					}
+		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
+			printf("V6 packet will reach dead-end no suitable src address\n");
+			sctp_print_address((struct sockaddr *)to);
+		}
 #endif
-					continue;
-				}
-				if (laddr->ifa->ifa_addr == NULL)
-					continue;
-
-				if (laddr->ifa->ifa_addr->sa_family !=
-				    AF_INET6) {
-					/* must be IPv6 */
-					continue;
-				}
-				out6 = (struct sockaddr_in6 *)
-				    laddr->ifa->ifa_addr;
-				if (IN6_IS_ADDR_UNSPECIFIED(&out6->sin6_addr)) {
-					/* we skip unspecifed addresses */
-					continue;
-				}
-				if (IN6_IS_ADDR_LINKLOCAL(&out6->sin6_addr)) {
-					if (loc_scope == 0)
-						/* link local scopes not allowed */
-						continue;
-					if (!sctp_is_same_scope(out6, to))
-						continue;
-				}
-				if (site_scope == 0 &&
-				    IN6_IS_ADDR_SITELOCAL(&out6->sin6_addr)) {
-					/* can't use it wrong scope */
-					continue;
-				}
-				if (loopscope == 0 &&
-				    IN6_IS_ADDR_LOOPBACK(&out6->sin6_addr)) {
-					continue;
-				}
-				/* is the interface address valid */
-				ifa6 = (struct in6_ifaddr *)laddr->ifa;
-				/* ok to use deprecated addresses? */
-				if (!ip6_use_deprecated) {
-					if (IFA6_IS_DEPRECATED(ifa6)) {
-						continue;
-					}
-				}
-				if (ifa6->ia6_flags &
-				    (IN6_IFF_DETACHED | IN6_IFF_ANYCAST |
-				     IN6_IFF_NOTREADY))
-					continue;
-				return (out6->sin6_addr);
-			}
-		}
-		if (!non_asoc_addr_ok) {
-			memset(&ans, 0, sizeof(ans));
-			return (ans);
-		}
-		return (rt_addr->sin6_addr);
-	}
-	/* If we reach here there is NO TCB and the EP has a bound sub-set */
-
-	/* Nope src address rotation on the ep is in order */
-	if (inp->next_addr_touse == NULL) {
-		inp->next_addr_touse = LIST_FIRST(&inp->sctp_addr_list);
-	}
-	for (laddr = inp->next_addr_touse; laddr;
-	    laddr = LIST_NEXT(laddr, sctp_nxt_addr)) {
-		if (laddr->ifa == NULL) {
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
-				printf("Help I have fallen and I can't get up!\n");
-			}
-#endif
-			continue;
-		}
-		if (laddr->ifa->ifa_addr == NULL)
-			continue;
-
-		if (laddr->ifa->ifa_addr->sa_family != AF_INET6) {
-			/* wrong type */
-			continue;
-		}
-		out6 = (struct sockaddr_in6 *)laddr->ifa->ifa_addr;
-		if (IN6_IS_ADDR_UNSPECIFIED(&out6->sin6_addr)) {
-			/* we skip unspecifed addresses */
-			continue;
-		}
-		if (IN6_IS_ADDR_LINKLOCAL(&out6->sin6_addr)) {
-			if (loc_scope == 0)
-				/* link local scopes not allowed */
-				continue;
-			if (!sctp_is_same_scope(out6, to))
-				continue;
-		}
-		if (site_scope == 0 &&
-		    IN6_IS_ADDR_SITELOCAL(&out6->sin6_addr)) {
-			/* can't use it wrong scope */
-			continue;
-		}
-		if (loopscope == 0 &&
-		    IN6_IS_ADDR_LOOPBACK(&out6->sin6_addr)) {
-			continue;
-		}
-		/* is the interface address valid */
-		ifa6 = (struct in6_ifaddr *)laddr->ifa;
-		/* ok to use deprecated addresses? */
-		if (!ip6_use_deprecated) {
-			if (IFA6_IS_DEPRECATED(ifa6)) {
-				continue;
-			}
-		}
-		if (ifa6->ia6_flags &
-		    (IN6_IFF_DETACHED | IN6_IFF_ANYCAST | IN6_IFF_NOTREADY))
-			continue;
-		inp->next_addr_touse = LIST_NEXT(laddr, sctp_nxt_addr);
-		return (out6->sin6_addr);
-	}
-	/* Check the front part of the list */
-	for (laddr = LIST_FIRST(&inp->sctp_addr_list);
-	    laddr && (laddr != inp->next_addr_touse);
-	    laddr = LIST_NEXT(laddr, sctp_nxt_addr)) {
-		if (laddr->ifa == NULL) {
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
-				printf("Help I have fallen and I can't get up!\n");
-			}
-#endif
-			continue;
-		}
-		if (laddr->ifa->ifa_addr == NULL)
-			continue;
-
-		if (laddr->ifa->ifa_addr->sa_family != AF_INET6) {
-			/* wrong type */
-			continue;
-		}
-		out6 = (struct sockaddr_in6 *)laddr->ifa->ifa_addr;
-		if (IN6_IS_ADDR_UNSPECIFIED(&out6->sin6_addr)) {
-			/* we skip unspecifed addresses */
-			continue;
-		}
-		if (IN6_IS_ADDR_LINKLOCAL(&out6->sin6_addr)) {
-			if (loc_scope == 0)
-				/* link local scopes not allowed */
-				continue;
-			if (!sctp_is_same_scope(out6, to))
-				continue;
-		}
-		if (site_scope == 0 &&
-		    IN6_IS_ADDR_SITELOCAL(&out6->sin6_addr)) {
-			/* can't use it wrong scope */
-			continue;
-		}
-		if (loopscope == 0 &&
-		    IN6_IS_ADDR_LOOPBACK(&out6->sin6_addr)) {
-			continue;
-		}
-		/* is the interface address valid */
-		ifa6 = (struct in6_ifaddr *)laddr->ifa;
-		/* ok to use deprecated addresses? */
-		if (!ip6_use_deprecated) {
-			if (IFA6_IS_DEPRECATED(ifa6)) {
-				continue;
-			}
-		}
-		if (ifa6->ia6_flags &
-		    (IN6_IFF_DETACHED | IN6_IFF_ANYCAST | IN6_IFF_NOTREADY))
-			continue;
-		inp->next_addr_touse = LIST_NEXT(laddr, sctp_nxt_addr);
-		return (out6->sin6_addr);
-	}
-	/* Drop back to the 40 */
-	if (!non_asoc_addr_ok) {
-		memset(&ans, 0, sizeof(ans));
-		return (ans);
+		memset(&in6, 0, sizeof(in6));
+		return(in6);
 	}
 	return (rt_addr->sin6_addr);
 }
