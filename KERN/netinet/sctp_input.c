@@ -566,16 +566,14 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 	}
 	asoc = &stcb->asoc;
 	/* goto SHUTDOWN_RECEIVED state to block new requests */
-	if (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_RECEIVED) {
-		if (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_SENT) {
-			asoc->state = SCTP_STATE_SHUTDOWN_RECEIVED;
+	if ((SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_RECEIVED) &&
+	    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_SENT)) {
+		asoc->state = SCTP_STATE_SHUTDOWN_RECEIVED;
 #ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-				printf("Moving to SHUTDOWN-RECEIVED state\n");
-			}
-#endif
+		if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
+			printf("Moving to SHUTDOWN-RECEIVED state\n");
 		}
-
+#endif
 		/* notify upper layer that peer has initiated a shutdown */
 		sctp_ulp_notify(SCTP_NOTIFY_PEER_SHUTDOWN, stcb, 0, NULL);
 #ifdef SCTP_TCP_MODEL_SUPPORT
@@ -605,7 +603,14 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 			}
 		}
 	}
-
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
+		printf("some_on_streamwheel:%d send_q_empty:%d sent_q_empty:%d\n",
+		       some_on_streamwheel,
+		       !TAILQ_EMPTY(&asoc->send_queue),
+		       !TAILQ_EMPTY(&asoc->sent_queue));
+	}
+#endif
  	if (!TAILQ_EMPTY(&asoc->send_queue) ||
 	    !TAILQ_EMPTY(&asoc->sent_queue) ||
 	    some_on_streamwheel) {
