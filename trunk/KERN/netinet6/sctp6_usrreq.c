@@ -190,6 +190,7 @@ sctp6_input(mp, offp, proto)
 	struct sctphdr *sh;
 	struct sctp_inpcb *in6p = NULL;
 	struct sctp_nets *net;
+	int refcount_up = 0;
 	u_int32_t check, calc_check;
 	struct inpcb *in6p_ip;
 	struct sctp_chunkhdr *ch;
@@ -285,6 +286,8 @@ sctp6_input(mp, offp, proto)
 			if ((in6p) && (stcb)) {
 				sctp_send_packet_dropped(stcb, net, m, iphlen, 1);
 				sctp_chunk_output((struct sctp_inpcb *)in6p, stcb, 2);
+			}  else if ((in6p != NULL) && (stcb == NULL)) {
+				refcount_up = 1;
 			}
 			sctp_pegs[SCTP_BAD_CSUM]++;
 			goto bad;
@@ -323,6 +326,8 @@ sctp_skip_csum:
 		}
 		sctp_send_abort(m, iphlen, sh, 0, NULL);
 		goto bad;
+	} else if (stcb == NULL) {
+		refcount_up = 1;
 	}
 	in6p_ip = (struct inpcb *)in6p;
 #ifdef IPSEC
@@ -446,17 +451,26 @@ sctp_skip_csum:
 		m_freem(m);
 	if (opts)
 		m_freem(opts);
-	return IPPROTO_DONE;
 
-bad:
-	if (in6p) {
+	if ((in6p) && refcount_up){
 		/* reduce ref-count */
 		SCTP_INP_WLOCK(in6p);
 		SCTP_INP_DECR_REF(in6p);
 		SCTP_INP_WUNLOCK(in6p);
 	}
+
+	return IPPROTO_DONE;
+
+bad:
 	if (stcb)
 		SCTP_TCB_UNLOCK(stcb);
+
+	if ((in6p) && refcount_up){
+		/* reduce ref-count */
+		SCTP_INP_WLOCK(in6p);
+		SCTP_INP_DECR_REF(in6p);
+		SCTP_INP_WUNLOCK(in6p);
+	}
 	if (m)
 		m_freem(m);
 	if (opts)
