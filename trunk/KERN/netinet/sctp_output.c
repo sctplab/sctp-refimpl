@@ -7962,9 +7962,15 @@ sctp_send_sack(struct sctp_tcb *stcb)
 			 * Traveled all of the bits and NO one,
 			 * must have reneged
 			 */
-			asoc->highest_tsn_inside_map = asoc->cumulative_tsn;
+			if(compare_with_wrap(asoc->cumulative_tsn, asoc->highest_tsn_inside_map, MAX_TSN)) {
+			   asoc->highest_tsn_inside_map = asoc->cumulative_tsn;
+#ifdef SCTP_MAP_LOGGING
+			   sctp_log_map(0, 4, asoc->highest_tsn_inside_map, SCTP_MAP_SLIDE_RESULT);
+#endif
+			}
 		}
 	}
+	
 	/* Now calculate the space needed */
 	space = (sizeof(struct sctp_sack_chunk) +
 		 (num_gap_blocks * sizeof(struct sctp_gap_ack_block)) +
