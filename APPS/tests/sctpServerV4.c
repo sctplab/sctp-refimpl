@@ -4,11 +4,15 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <stdio.h>
+#include <unistd.h>
 #include <sys/times.h>
+#include <string.h>
+#include <stdlib.h>
 
 #include <netinet/sctp_constants.h>
 #include <netinet/sctp.h>
 
+int
 main()
 {
 	int	fd,ret,newfd,count;
@@ -17,7 +21,6 @@ main()
 	int	readNum;
 	char *	buff;
 	int	size = 2100; /***1024***/
-	u_int32_t	optval;
 
 	/***
 	fd=socket(AF_INET6,SOCK_STREAM,IPPROTO_TCP);
