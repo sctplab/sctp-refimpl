@@ -501,7 +501,7 @@ int	sctp_getladdrs	__P((int, sctp_assoc_t, struct sockaddr **));
 void	sctp_freeladdrs	__P((struct sockaddr *));
 int     sctp_opt_info   __P((int, sctp_assoc_t, int, void *, size_t *));
 
-int     sctp_sendmsg    __P((int, const void *, size_t,
+ssize_t sctp_sendmsg    __P((int, const void *, size_t,
 	const struct sockaddr *,
 	socklen_t, u_int32_t, u_int32_t, u_int16_t, u_int32_t, u_int32_t));
 
@@ -512,6 +512,10 @@ ssize_t
 sctp_sendx __P((int sd, const void *msg, size_t len, 
 		struct sockaddr *addrs, int addrcnt,
 		struct sctp_sndrcvinfo *sinfo, int flags));
+ssize_t
+sctp_sendmsgx __P((int sd, const void *, size_t,
+	           struct sockaddr *, int,
+	           u_int32_t, u_int32_t, u_int16_t, u_int32_t, u_int32_t));
 
 sctp_assoc_t 
 sctp_getassocid __P((int sd, struct sockaddr *sa));
