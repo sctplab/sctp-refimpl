@@ -669,7 +669,7 @@ u_int32_t sctp_select_a_tag(struct sctp_inpcb *m)
 
 int
 sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
-	       int for_a_init)
+	       int for_a_init, uint32_t override_tag )
 {
 	/*
 	 * Anything set to zero is taken care of by the allocation
@@ -689,7 +689,11 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	asoc->heart_beat_delay = m->sctp_ep.sctp_timeoutticks[SCTP_TIMER_HEARTBEAT];
 	asoc->cookie_life = m->sctp_ep.def_cookie_life;
 
-	asoc->my_vtag = sctp_select_a_tag(m);
+	if (override_tag) {
+		asoc->my_vtag = override_tag;
+	} else {
+		asoc->my_vtag = sctp_select_a_tag(m);
+	}
 	asoc->asconf_seq_out = asoc->str_reset_seq_out = asoc->init_seq_number = asoc->sending_seq =
 		sctp_select_initial_TSN(&m->sctp_ep);
 	asoc->t3timeout_highest_marked = asoc->asconf_seq_out;

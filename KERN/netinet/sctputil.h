@@ -142,7 +142,7 @@ u_int32_t sctp_select_initial_TSN(struct sctp_pcb *);
 
 u_int32_t sctp_select_a_tag(struct sctp_inpcb *);
 
-int sctp_init_asoc(struct sctp_inpcb *, struct sctp_association *, int);
+int sctp_init_asoc(struct sctp_inpcb *, struct sctp_association *, int, uint32_t);
 
 void sctp_fill_random_store(struct sctp_pcb *);
 

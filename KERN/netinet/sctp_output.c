@@ -370,15 +370,8 @@ sctp_is_addr_restricted(struct sctp_tcb *stcb, struct sockaddr *addr)
 #endif
 			continue;
 		}
-		if (laddr->ifa->ifa_addr == NULL)
-			continue;
-
-		if (laddr->ifa->ifa_addr->sa_family != addr->sa_family) {
-			continue;
-		}
-		if (memcmp(addr->sa_data, laddr->ifa->ifa_addr->sa_data,
-		    addr->sa_len) == 0) {
-			/* Yes it is restricted */
+		if (sctp_cmpaddr(addr, laddr->ifa->ifa_addr) == 1) {
+			/* Yes it is on the list */
 			return (1);
 		}
 	}
@@ -1297,6 +1290,11 @@ sctp_choose_v6_boundall( struct rtentry *rt,
 		match_scope_prefered = 0;
 	}
 	num_eligible_addr = sctp_count_v6_num_eligible_boundall (ifn, stcb, non_asoc_addr_ok, loopscope, loc_scope);
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
+		printf("Found %d eligible source addresses\n", num_eligible_addr);
+	}
+#endif
 	if (num_eligible_addr == 0) {
 		/* no eligible addresses, we must use some other
 		 * interface address if we can find one.
@@ -1312,14 +1310,30 @@ sctp_choose_v6_boundall( struct rtentry *rt,
 	/* select the nth address from the list (where cur_addr_num is the nth) and
 	 * 0 is the first one, 1 is the second one etc...
 	 */
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
+		printf("cur_addr_num:%d match_scope_prefered:%d select it\n",
+		       cur_addr_num, match_scope_prefered);
+	}
+#endif
 	sin6 = sctp_select_v6_nth_addr_from_ifn_boundall (ifn, stcb, non_asoc_addr_ok, loopscope, 
 							  loc_scope, cur_addr_num, match_scope_prefered);
 	if (match_scope_prefered && (sin6 == NULL)) {
 		/* retry without the preference for matching scope */
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
+		printf("retry with no match_scope_prefered\n");
+	}
+#endif
 		sin6 = sctp_select_v6_nth_addr_from_ifn_boundall (ifn, stcb, non_asoc_addr_ok, loopscope, 
 								  loc_scope, cur_addr_num, 0);
 	}
 	if (sin6) {
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
+			printf("Selected address %d ifn:%x for the route\n", cur_addr_num, (u_int)ifn);
+		}
+#endif
 		if (net) {
 			/* store so we get the next one */
 			if (cur_addr_num < 255)
@@ -1337,12 +1351,32 @@ sctp_choose_v6_boundall( struct rtentry *rt,
 	 * of the route (most likely). We must look at all the other
 	 * interfaces EXCEPT rt->rt_ifp and do the same game.
 	 */
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
+		printf("bound-all Plan B\n");
+	}
+#endif
 	if (inp->next_ifn_touse == NULL) {
 		started_at_beginning=1;
 		inp->next_ifn_touse = TAILQ_FIRST(&ifnet);
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
+			printf("Start at first IFN:%x\n", (u_int)inp->next_ifn_touse);
+		}
+#endif
 	} else {
-		inp->next_ifn_touse = TAILQ_NEXT(ifn, if_list);
+		inp->next_ifn_touse = TAILQ_NEXT(inp->next_ifn_touse, if_list);
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
+			printf("Resume at IFN:%x\n", (u_int)inp->next_ifn_touse);
+		}
+#endif
 		if(inp->next_ifn_touse == NULL) {
+#ifdef SCTP_DEBUG
+			if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
+				printf("IFN Resets\n");
+			}
+#endif
 			started_at_beginning=1;
 			inp->next_ifn_touse = TAILQ_FIRST(&ifnet);
 		}
@@ -1353,11 +1387,33 @@ sctp_choose_v6_boundall( struct rtentry *rt,
 			/* wrong base scope */
 			continue;
 		}
+		if (loc_scope && (ifn->if_index != loc_scope) ) {
+			/* by definition the scope (from to->sin6_scopeid)
+			 * must match that of the interface. If not then
+			 * we could pick a wrong scope for the address.
+			 * Ususally we don't hit plan-b since the route
+			 * handles this. However we can hit plan-b when
+			 * we send to local-host so the route is the 
+			 * loopback interface, but the destination is a
+			 * link local.
+			 */
+			continue;
+		}
 		if(ifn == rt->rt_ifp) {
 			/* already looked at this guy */
 			continue;
 		}
+		/* Address rotation will only work when we are not
+		 * rotating sourced interfaces and are using the interface
+		 * of the route. We would need to have a per interface index
+		 * in order to do proper rotation.
+		 */
 		num_eligible_addr = sctp_count_v6_num_eligible_boundall (ifn, stcb, non_asoc_addr_ok, loopscope, loc_scope);
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
+			printf("IFN:%x has %d eligible\n", (u_int)ifn, num_eligible_addr );
+		}
+#endif
 		if(num_eligible_addr == 0) {
 			/* none we can use */
 			continue;
@@ -1366,30 +1422,37 @@ sctp_choose_v6_boundall( struct rtentry *rt,
 		 * this may vary from call to call due to addresses being deprecated etc..
 		 */
 		inp->next_ifn_touse = ifn;
-		if(cur_addr_num >= num_eligible_addr) {
-			cur_addr_num = 0;
-		}
-		/* select the nth address from the list (where cur_addr_num is the nth) and
-		 * 0 is the first one, 1 is the second one etc...
+
+		/* select the first one we can find with perference for matching scope.
 		 */
-		sin6 = sctp_select_v6_nth_addr_from_ifn_boundall (ifn, stcb, non_asoc_addr_ok, loopscope, loc_scope, cur_addr_num, 0);
+		sin6 = sctp_select_v6_nth_addr_from_ifn_boundall (ifn, stcb, non_asoc_addr_ok, loopscope, loc_scope, 0, 1);
 		if(sin6 == NULL) {
-			/* Hmm, can't find one now, things must have changed */
-			continue;
+			/* can't find one with matching scope how about a source with higher
+			 * scope
+			 */
+ 			sin6 = sctp_select_v6_nth_addr_from_ifn_boundall (ifn, stcb, non_asoc_addr_ok, loopscope, loc_scope, 0, 0);
+			if(sin6 == NULL)
+				/* Hmm, can't find one in the interface now */
+				continue;
 		}
-		if (net) {
-			/* store so we get the next one */
-			if (cur_addr_num < 255)
-				net->indx_of_eligible_next_to_use = cur_addr_num + 1;
-			else
-				net->indx_of_eligible_next_to_use = 0;
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
+			printf("Selected the %d'th address of ifn:%x\n",
+			       cur_addr_num,
+			       (u_int)ifn);
 		}
+#endif		
 		return(sin6);
 	}
 	if (started_at_beginning == 0) {
 		/* we have not been through all of them yet, force
 		 * us to go through them all.
 		 */
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
+			printf("Force a recycle\n");
+		}
+#endif		
 		inp->next_ifn_touse = NULL;
 		goto bound_all_v6_plan_b;
 	}
@@ -1476,7 +1539,6 @@ sctp_ipv6_source_address_selection(struct sctp_inpcb *inp, struct sctp_tcb *stcb
 			printf("No route to host, this packet cannot be sent!\n");
 		}
 #endif
-
 		memset(&ans, 0, sizeof(ans));
 		return (ans);
 	}
@@ -1491,8 +1553,7 @@ sctp_ipv6_source_address_selection(struct sctp_inpcb *inp, struct sctp_tcb *stcb
 	 * use a local scope src address when we send to a local address.
 	 */
 
-	if ((ifn->if_type == IFT_LOOP) ||
-		(IN6_IS_ADDR_LOOPBACK(&to->sin6_addr))){
+	if (IN6_IS_ADDR_LOOPBACK(&to->sin6_addr)) {
 		/* If the route goes to the loopback address OR
 		 * the address is a loopback address, we are loopback
 		 * scope.
@@ -1502,7 +1563,7 @@ sctp_ipv6_source_address_selection(struct sctp_inpcb *inp, struct sctp_tcb *stcb
 			printf("Loopback scope is set\n");
 		}
 #endif
-		loc_scope = 1;
+		loc_scope = 0;
 		loopscope = 1;
 		if (net != NULL) {
 			/* mark it as local */
@@ -1512,10 +1573,14 @@ sctp_ipv6_source_address_selection(struct sctp_inpcb *inp, struct sctp_tcb *stcb
 	} else if (IN6_IS_ADDR_LINKLOCAL(&to->sin6_addr)) {
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
-			printf("Link local scope is set\n");
+			printf("Link local scope is set, id:%d\n", to->sin6_scope_id);
 		}
 #endif
-		loc_scope = 1;
+		if(to->sin6_scope_id)
+			loc_scope = to->sin6_scope_id;
+		else {
+			loc_scope = 1;
+		}
 		loopscope = 0;
 	} else {
 #ifdef SCTP_DEBUG
@@ -1528,6 +1593,13 @@ sctp_ipv6_source_address_selection(struct sctp_inpcb *inp, struct sctp_tcb *stcb
 	/* now, depending on which way we are bound we call the appropriate
 	 * routine to do steps 3-6
 	 */
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
+		printf("Destination address:");
+		sctp_print_address((struct sockaddr *)to);		
+	}
+#endif
+	
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
@@ -1553,12 +1625,17 @@ sctp_ipv6_source_address_selection(struct sctp_inpcb *inp, struct sctp_tcb *stcb
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
 			printf("V6 packet will reach dead-end no suitable src address\n");
-			sctp_print_address((struct sockaddr *)to);
 		}
 #endif
 		memset(&in6, 0, sizeof(in6));
 		return(in6);
 	}
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
+		printf("Source address selected is:");
+		sctp_print_address((struct sockaddr *)rt_addr);		
+	}
+#endif
 	return (rt_addr->sin6_addr);
 }
 
@@ -1874,7 +1951,9 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		u_char tosBottom, tosTop;
 		struct sockaddr_in6 *sin6, tmp, *lsa6, lsa6_tmp;
 		struct sockaddr_in6 lsa6_storage;
+		int prev_scope=0;
 		int error;
+		u_short prev_port=0;
 
 		M_PREPEND(m, sizeof(struct ip6_hdr), M_DONTWAIT);
 		if (m == NULL) {
@@ -2020,8 +2099,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 						 (rtp->ro_rt ? (rtp->ro_rt->rt_ifp) : (NULL)) :
 						 (NULL)));
 		o_flgs = 0;
-		ifp = NULL;
-
+		ifp = rtp->ro_rt->rt_ifp;
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
 			/* Copy to be sure something bad is not happening */
@@ -2035,7 +2113,12 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			sctp_print_address((struct sockaddr *)sin6);
 		}
 #endif /* SCTP_DEBUG */
-
+		if (net) {
+			sin6 = (struct sockaddr_in6 *)&net->ra._l_addr;
+			/* preserve the port and scope for link local send */
+			prev_scope = sin6->sin6_scope_id;
+			prev_port = sin6->sin6_port;
+		}
 		ret = ip6_output(m, ((struct in6pcb *)inp)->in6p_outputopts,
 #ifdef NEW_STRUCT_ROUTE
 				 rtp,
@@ -2049,6 +2132,11 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		    , NULL
 #endif
 			);
+		if (net) {
+			/* for link local this must be done */
+			sin6->sin6_scope_id = prev_scope;
+			sin6->sin6_port = prev_port;
+		}
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
 			printf("return from send is %d\n", ret);
@@ -6508,7 +6596,7 @@ sctp_output(inp, m, addr, control, p)
 		    return (ENOENT);
 		}
 
-		stcb = sctp_aloc_assoc(inp, addr, 1, &error);
+		stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0);
 		if (stcb == NULL) {
 			if (control) {
 				sctppcbinfo.mbuf_track--;
@@ -9061,7 +9149,7 @@ sctp_sosend(struct socket *so,
 			goto out;
 		}
 		/* get an asoc/stcb struct */
-		stcb = sctp_aloc_assoc(inp, addr, 1, &error);
+		stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0);
 		if (stcb == NULL) {
 			/* Error is setup for us in the call */
 			splx(s);
