@@ -2634,6 +2634,14 @@ sctp_optsset(struct socket *so,
 			break;
 		}
 
+		if (stcb->asoc.sending_seq != (stcb->asoc.last_acked_seq + 1)) {
+			/* Must have all sending data ack'd before we
+			 * start this procedure
+			 */
+			error = EBUSY;
+			break;
+		}
+
 		if (stcb->asoc.stream_reset_outstanding) {
 			error = EALREADY;
 			break;
