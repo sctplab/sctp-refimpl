@@ -1615,7 +1615,8 @@ sctp_optsget(struct socket *so,
 			break;
 		}
 		gnv = mtod(m, struct sctp_get_nonce_values *);
-		stcb = sctp_findassociation_associd(gnv->gn_assoc_id);
+		stcb = sctp_findassociation_ep_asocid(inp, gnv->gn_assoc_id);
+
 		if (stcb == NULL) {
 			error = ENOTCONN;
 		} else {
@@ -1642,8 +1643,7 @@ sctp_optsget(struct socket *so,
 			struct sctp_tcb *stcb;
 			struct sctp_association *asoc;
 			ss = mtod(m, struct sctp_sockstat *);
-
-			stcb = sctp_findassociation_associd(ss->ss_assoc_id);
+   		        stcb = sctp_findassociation_ep_asocid(inp, ss->ss_assoc_id);
 			if (stcb == NULL) {
 				error = ENOTCONN;
 			} else {

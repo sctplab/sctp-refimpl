@@ -359,7 +359,8 @@ SCTP_VTAG_BOGUS "vtag-bog"
 
 If vtags are unique across the entire system (currently a compile option) then
 this peg will be incremented when a vtag leads to an association that the
-address the data is from does not belong to.
+address the data is from does not belong to. Basically it represents
+v-tag collision.
 
 SCTP_T3_SAFEGRD "t3-safeg"
 
