@@ -155,8 +155,8 @@ void     SetVtagOut(struct alias_link *link, u_int32_t tag);
 
 void SwapToTransitTags(struct alias_link *link);
 int IsTransit_tags_set(struct alias_link *link);
-void GetVtagOut_transit(struct alias_link *link, u_int32_t tag);
-void GetVtagIn_transit(struct alias_link *link, u_int32_t tag);
+u_int32_t GetVtagOut_transit(struct alias_link *link);
+u_int32_t GetVtagIn_transit(struct alias_link *link);
 void SetVtagOut_transit(struct alias_link *link, u_int32_t tag);
 void SetVtagIn_transit(struct alias_link *link, u_int32_t tag);
 

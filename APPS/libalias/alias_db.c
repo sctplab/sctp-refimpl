@@ -2022,16 +2022,16 @@ SetVtagOut_transit(struct alias_link *link, u_int32_t tag)
 	link->data.sctp->vtag_out_t = tag;
 }
 
-void
-GetVtagIn_transit(struct alias_link *link, u_int32_t tag)
+u_int32_t
+GetVtagIn_transit(struct alias_link *link)
 {
 	if(link->link_type != LINK_SCTP)
 		return 0;
 	return link->data.sctp->vtag_in_t;
 }
 
-void
-GetVtagOut_transit(struct alias_link *link, u_int32_t tag)
+u_int32_t
+GetVtagOut_transit(struct alias_link *link)
 {
 	if(link->link_type != LINK_SCTP)
 		return 0;
