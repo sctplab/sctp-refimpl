@@ -323,13 +323,13 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 		SCTP_TCB_LOCK(stcb);
 		/* Does this TCB have a matching address? */
 		TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
-			if (net->ra._l_addr.sa.sa_family != from->sa_family) {
+			if (net->ro._l_addr.sa.sa_family != from->sa_family) {
 				/* not the same family, can't be a match */
 				continue;
 			}
 			if (from->sa_family == AF_INET) {
 				struct sockaddr_in *sin, *rsin;
-				sin = (struct sockaddr_in *)&net->ra._l_addr;
+				sin = (struct sockaddr_in *)&net->ro._l_addr;
 				rsin = (struct sockaddr_in *)from;
 				if (sin->sin_addr.s_addr ==
 				    rsin->sin_addr.s_addr) {
@@ -346,7 +346,7 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 				}
 			} else {
 				struct sockaddr_in6 *sin6, *rsin6;
-				sin6 = (struct sockaddr_in6 *)&net->ra._l_addr;
+				sin6 = (struct sockaddr_in6 *)&net->ro._l_addr;
 				rsin6 = (struct sockaddr_in6 *)from;
 				if (SCTP6_ARE_ADDR_EQUAL(&sin6->sin6_addr,
 				    &rsin6->sin6_addr)) {
@@ -522,7 +522,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 			}
 			/* now look at the list of remote addresses */
 			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
-				if (net->ra._l_addr.sa.sa_family !=
+				if (net->ro._l_addr.sa.sa_family !=
 				    remote->sa_family) {
 					/* not the same family */
 					continue;
@@ -530,7 +530,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 				if (remote->sa_family == AF_INET) {
 					struct sockaddr_in *sin, *rsin;
 					sin = (struct sockaddr_in *)
-					    &net->ra._l_addr;
+					    &net->ro._l_addr;
 					rsin = (struct sockaddr_in *)remote;
 					if (sin->sin_addr.s_addr ==
 					    rsin->sin_addr.s_addr) {
@@ -543,7 +543,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 					}
 				} else if (remote->sa_family == AF_INET6) {
 					struct sockaddr_in6 *sin6, *rsin6;
-					sin6 = (struct sockaddr_in6 *)&net->ra._l_addr;
+					sin6 = (struct sockaddr_in6 *)&net->ro._l_addr;
 					rsin6 = (struct sockaddr_in6 *)remote;
 					if (SCTP6_ARE_ADDR_EQUAL(&sin6->sin6_addr,
 					     &rsin6->sin6_addr)) {
@@ -574,7 +574,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 			/* now look at the list of remote addresses */
 			SCTP_TCB_LOCK(stcb);
 			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
-				if (net->ra._l_addr.sa.sa_family !=
+				if (net->ro._l_addr.sa.sa_family !=
 				    remote->sa_family) {
 					/* not the same family */
 					SCTP_TCB_UNLOCK(stcb);
@@ -583,7 +583,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 				if (remote->sa_family == AF_INET) {
 					struct sockaddr_in *sin, *rsin;
 					sin = (struct sockaddr_in *)
-					    &net->ra._l_addr;
+					    &net->ro._l_addr;
 					rsin = (struct sockaddr_in *)remote;
 					if (sin->sin_addr.s_addr ==
 					    rsin->sin_addr.s_addr) {
@@ -599,7 +599,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 				} else if (remote->sa_family == AF_INET6) {
 					struct sockaddr_in6 *sin6, *rsin6;
 					sin6 = (struct sockaddr_in6 *)
-					    &net->ra._l_addr;
+					    &net->ro._l_addr;
 					rsin6 = (struct sockaddr_in6 *)remote;
 					if (SCTP6_ARE_ADDR_EQUAL(&sin6->sin6_addr,
 					    &rsin6->sin6_addr)) {
@@ -2387,7 +2387,7 @@ sctp_findnet(struct sctp_tcb *stcb, struct sockaddr *addr)
 #endif
 	/* locate the address */
 	TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
-		if (sctp_cmpaddr(addr, (struct sockaddr *)&net->ra._l_addr))
+		if (sctp_cmpaddr(addr, (struct sockaddr *)&net->ro._l_addr))
 			return (net);
 	}
 	return (NULL);
@@ -2583,11 +2583,11 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	sctppcbinfo.ipi_count_raddr++;
 	sctppcbinfo.ipi_gencnt_raddr++;
 	bzero(net, sizeof(*net));
-	memcpy(&net->ra._l_addr, newaddr, newaddr->sa_len);
+	memcpy(&net->ro._l_addr, newaddr, newaddr->sa_len);
 	if (newaddr->sa_family == AF_INET) {
-		((struct sockaddr_in *)&net->ra._l_addr)->sin_port = stcb->rport;
+		((struct sockaddr_in *)&net->ro._l_addr)->sin_port = stcb->rport;
 	} else if (newaddr->sa_family == AF_INET6) {
-		((struct sockaddr_in6 *)&net->ra._l_addr)->sin6_port = stcb->rport;
+		((struct sockaddr_in6 *)&net->ro._l_addr)->sin6_port = stcb->rport;
 	}
 	net->addr_is_local = sctp_is_address_on_local_host(newaddr);
 	net->failure_threshold = stcb->asoc.def_net_failure;
@@ -2622,7 +2622,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	/* KAME hack: embed scopeid */
 	if (newaddr->sa_family == AF_INET6 ) {
 		struct sockaddr_in6 *sin6;
-		sin6 = (struct sockaddr_in6 *)&net->ra._l_addr;
+		sin6 = (struct sockaddr_in6 *)&net->ro._l_addr;
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
 		(void)in6_embedscope(&sin6->sin6_addr, sin6,
 		    &stcb->sctp_ep->ip_inp.inp, NULL);
@@ -2634,23 +2634,23 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 #endif
 	}
 #if defined(__FreeBSD__) || defined(__APPLE__)
-	net->ra.ro_rt = rtalloc1((struct sockaddr *)&net->ra._l_addr, 1, 0UL);
+	rtalloc_ign((struct route *)&net->ro, 0UL);
 #else
-	net->ra.ro_rt = rtalloc1((struct sockaddr *)&net->ra._l_addr, 1);
+	rtalloc((struct route *)&net->ro);
 #endif
 	if (newaddr->sa_family == AF_INET6 ) {
 		struct sockaddr_in6 *sin6;
-		sin6 = (struct sockaddr_in6 *)&net->ra._l_addr;
+		sin6 = (struct sockaddr_in6 *)&net->ro._l_addr;
 		(void)in6_recoverscope(sin6, &sin6->sin6_addr, NULL);
 	}
-	if ((net->ra.ro_rt) && 
-	    (net->ra.ro_rt->rt_ifp)) {
-		net->mtu = net->ra.ro_rt->rt_ifp->if_mtu;
+	if ((net->ro.ro_rt) && 
+	    (net->ro.ro_rt->rt_ifp)) {
+		net->mtu = net->ro.ro_rt->rt_ifp->if_mtu;
 		if (from == 1) {
 			stcb->asoc.smallest_mtu = net->mtu;
 		}
 		/* start things off to match mtu of interface please. */
-		net->ra.ro_rt->rt_rmx.rmx_mtu = net->ra.ro_rt->rt_ifp->if_mtu;
+		net->ro.ro_rt->rt_rmx.rmx_mtu = net->ro.ro_rt->rt_ifp->if_mtu;
 	} else {
 		net->mtu = stcb->asoc.smallest_mtu;
 	}
@@ -2671,19 +2671,19 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 
 	net->src_addr_selected = 0;
 	netfirst = TAILQ_FIRST(&stcb->asoc.nets);
-	if (net->ra.ro_rt == NULL) {
+	if (net->ro.ro_rt == NULL) {
 		/* Since we have no route put it at the back */
 		TAILQ_INSERT_TAIL(&stcb->asoc.nets, net, sctp_next);
 	} else if (netfirst == NULL) {
 		/* We are the first one in the pool. */
 		TAILQ_INSERT_HEAD(&stcb->asoc.nets, net, sctp_next);
-	} else if (netfirst->ra.ro_rt == NULL) {
+	} else if (netfirst->ro.ro_rt == NULL) {
 		/*
 		 * First one has NO route. Place this one ahead of the
 		 * first one.
 		 */
 		TAILQ_INSERT_HEAD(&stcb->asoc.nets, net, sctp_next);
-	} else if (net->ra.ro_rt->rt_ifp != netfirst->ra.ro_rt->rt_ifp) {
+	} else if (net->ro.ro_rt->rt_ifp != netfirst->ro.ro_rt->rt_ifp) {
 		/*
 		 * This one has a different interface than the one at the
 		 * top of the list. Place it ahead.
@@ -2705,12 +2705,12 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 				TAILQ_INSERT_TAIL(&stcb->asoc.nets, net,
 				    sctp_next);
 				break;
-			} else if (netlook->ra.ro_rt == NULL) {
+			} else if (netlook->ro.ro_rt == NULL) {
 				/* next one has NO route */
 				TAILQ_INSERT_BEFORE(netfirst, net, sctp_next);
 				break;
-			} else if (netlook->ra.ro_rt->rt_ifp !=
-				   net->ra.ro_rt->rt_ifp) {
+			} else if (netlook->ro.ro_rt->rt_ifp !=
+				   net->ro.ro_rt->rt_ifp) {
 				TAILQ_INSERT_AFTER(&stcb->asoc.nets, netlook,
 				    net, sctp_next);
 				break;
@@ -2722,8 +2722,8 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	/* got to have a primary set */
 	if (stcb->asoc.primary_destination == 0) {
 		stcb->asoc.primary_destination = net;
-	} else if ((stcb->asoc.primary_destination->ra.ro_rt == NULL) &&
-		   (net->ra.ro_rt)) {
+	} else if ((stcb->asoc.primary_destination->ro.ro_rt == NULL) &&
+		   (net->ro.ro_rt)) {
 		/* No route to current primary adopt new primary */
 		stcb->asoc.primary_destination = net;
 	}
@@ -2992,10 +2992,10 @@ sctp_del_remote_addr(struct sctp_tcb *stcb, struct sockaddr *remaddr)
 	/* locate the address */
 	for (net = TAILQ_FIRST(&asoc->nets); net != NULL; net = net_tmp) {
 		net_tmp = TAILQ_NEXT(net, sctp_next);
-		if (net->ra._l_addr.sa.sa_family != remaddr->sa_family) {
+		if (net->ro._l_addr.sa.sa_family != remaddr->sa_family) {
 			continue;
 		}
-		if (sctp_cmpaddr((struct sockaddr *)&net->ra._l_addr,
+		if (sctp_cmpaddr((struct sockaddr *)&net->ro._l_addr,
 		    remaddr)) {
 			/* we found the guy */
 			asoc->numnets--;
@@ -3627,7 +3627,7 @@ sctp_select_primary_destination(struct sctp_tcb *stcb)
 		if (net->dest_state & SCTP_ADDR_UNCONFIRMED)
 			continue;
 		if (sctp_destination_is_reachable(stcb,
-		    (struct sockaddr *)&net->ra._l_addr)) {
+		    (struct sockaddr *)&net->ro._l_addr)) {
 			/* found a reachable destination */
 			stcb->asoc.primary_destination = net;
 		}
@@ -3690,7 +3690,7 @@ sctp_del_local_addr_ep(struct sctp_inpcb *inp, struct ifaddr *ifa)
 		/* select a new primary destination if needed */
 		LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
 			if (sctp_destination_is_reachable(stcb,
-			    (struct sockaddr *)&stcb->asoc.primary_destination->ra._l_addr) == 0) {
+			    (struct sockaddr *)&stcb->asoc.primary_destination->ro._l_addr) == 0) {
 				sctp_select_primary_destination(stcb);
 			}
 		} /* for each tcb */
