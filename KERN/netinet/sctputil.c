@@ -3265,24 +3265,19 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 		if (n->m_next == 0)	/* keep pointer to last control buf */
 			break;
 	}
-	if (((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) == 0) ||
-	    ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)== 0)) {
-		MGETHDR(m, M_DONTWAIT, MT_SONAME);
-		if (m == 0)
+	MGETHDR(m, M_DONTWAIT, MT_SONAME);
+	if (m == 0)
+		return (0);
+	m->m_len = 0;
+	if (asa->sa_len > MHLEN) {
+		MEXTMALLOC(m, asa->sa_len, M_NOWAIT);
+		if ((m->m_flags & M_EXT) == 0) {
+			m_free(m);
 			return (0);
-		m->m_len = 0;
-		if (asa->sa_len > MHLEN) {
-			MEXTMALLOC(m, asa->sa_len, M_NOWAIT);
-			if ((m->m_flags & M_EXT) == 0) {
-				m_free(m);
-				return (0);
-			}
 		}
-		m->m_len = asa->sa_len;
-		memcpy(mtod(m, caddr_t), (caddr_t)asa, asa->sa_len);
-	} else {
-		m = NULL;
 	}
+	m->m_len = asa->sa_len;
+	memcpy(mtod(m, caddr_t), (caddr_t)asa, asa->sa_len);
 	if (n) {
 		n->m_next = m0;		/* concatenate data to control */
 	}else {
@@ -3326,31 +3321,25 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 		if (n->m_next == 0)	/* get pointer to last control buf */
 			break;
 	}
-	if (((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) == 0) ||
-	    ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)== 0)) {
-		if (asa->sa_len > MHLEN)
-			return (0);
+	if (asa->sa_len > MHLEN)
+		return (0);
  try_again:
-		MGETHDR(m, M_DONTWAIT, MT_SONAME);
-		if (m == 0)
-			return (0);
-		m->m_len = 0;
-		/* safety */
-		if (m == m0) {
-			printf("Duplicate mbuf allocated %p in and mget returned %p?\n",
-			       m0, m);
-			if (cnt) {
-				panic("more than once");
-			}
-			cnt++;
-			goto try_again;
+	MGETHDR(m, M_DONTWAIT, MT_SONAME);
+	if (m == 0)
+		return (0);
+	m->m_len = 0;
+	/* safety */
+	if (m == m0) {
+		printf("Duplicate mbuf allocated %p in and mget returned %p?\n",
+		       m0, m);
+		if (cnt) {
+			panic("more than once");
 		}
-		m->m_len = asa->sa_len;
-		bcopy((caddr_t)asa, mtod(m, caddr_t), asa->sa_len);
+		cnt++;
+		goto try_again;
 	}
-	else {
-		m = NULL;
-	}
+	m->m_len = asa->sa_len;
+	bcopy((caddr_t)asa, mtod(m, caddr_t), asa->sa_len);
 	if (n)
 		n->m_next = m0;		/* concatenate data to control */
 	else
@@ -3369,7 +3358,7 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 		inp->sctp_vtag_first = tag;
 	}
 
-#ifdef __FREEBSD__
+#ifdef __FreeBSD__
 	if (sb->sb_mb == NULL)
 		inp->sctp_vtag_first = tag;
 	SCTP_SBLINKRECORD(sb, m);
@@ -3406,18 +3395,13 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 		if (n->m_next == 0)	/* keep pointer to last control buf */
 			break;
 	}
-	if (((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) == 0) ||
-	    ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)== 0)) {
-		if (asa->sa_len > MHLEN)
-			return (0);
-		MGETHDR(m, M_DONTWAIT, MT_SONAME);
-		if (m == 0)
-			return (0);
-		m->m_len = asa->sa_len;
-		bcopy((caddr_t)asa, mtod(m, caddr_t), asa->sa_len);
-	} else {
-		m = NULL;
-	}
+	if (asa->sa_len > MHLEN)
+		return (0);
+	MGETHDR(m, M_DONTWAIT, MT_SONAME);
+	if (m == 0)
+		return (0);
+	m->m_len = asa->sa_len;
+	bcopy((caddr_t)asa, mtod(m, caddr_t), asa->sa_len);
 	if (n)
 		n->m_next = m0;		/* concatenate data to control */
 	else
