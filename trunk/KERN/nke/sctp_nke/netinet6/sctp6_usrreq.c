@@ -207,7 +207,7 @@ sctp6_input(mp, offp, proto)
 	ip6 = mtod(m, struct ip6_hdr *);
 #ifndef PULLDOWN_TEST
 	/* If PULLDOWN_TEST off, must be in a single mbuf. */
-	IP6_EXTHDR_CHECK(m, off, sizeof(*sh) + sizeof(*ch), IPPROTO_DONE);
+	IP6_EXTHDR_CHECK(m, off, (int)(sizeof(*sh) + sizeof(*ch)), IPPROTO_DONE);
 	sh = (struct sctphdr *)((caddr_t)ip6 + off);
 	ch = (struct sctp_chunkhdr *)((caddr_t)sh + sizeof(*sh));
 #else
@@ -465,7 +465,7 @@ sctp6_notify_mbuf(struct sctp_inpcb *inp,
 		  struct sctp_tcb *stcb,
 		  struct sctp_nets *net)
 {
-	int nxtsz;
+	unsigned int nxtsz;
 
 	if ((inp == NULL) || (stcb == NULL) || (net == NULL) ||
 	    (icmp6 == NULL) || (sh == NULL)) {
@@ -581,7 +581,7 @@ sctp6_ctlinput(cmd, pktdst, d)
 		struct sockaddr_in6 final;
 
 		if (ip6cp->ip6c_m == NULL ||
-		    ip6cp->ip6c_m->m_pkthdr.len < (ip6cp->ip6c_off + sizeof(sh)))
+		    (size_t)ip6cp->ip6c_m->m_pkthdr.len < (ip6cp->ip6c_off + sizeof(sh)))
 			return;
 
 		bzero(&sh, sizeof(sh));
