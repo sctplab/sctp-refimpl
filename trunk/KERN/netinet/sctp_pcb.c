@@ -2145,6 +2145,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 			    (SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_COOKIE_ECHOED)) {
 				/* Just abandon things in the front states */
 				SCTP_INP_WUNLOCK(inp);
+				SCTP_TCB_LOCK(asoc);
 				sctp_free_assoc(inp, asoc);
 				SCTP_INP_WLOCK(inp);
 				continue;
@@ -2172,7 +2173,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 				}
 				SCTP_TCB_LOCK(asoc);
 				sctp_send_abort_tcb(asoc, op_err);
-				SCTP_TCB_UNLOCK(asoc);
 
 				SCTP_INP_WUNLOCK(inp);
 				sctp_free_assoc(inp, asoc);
@@ -2285,6 +2285,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	for ((asoc = LIST_FIRST(&inp->sctp_asoc_list)); asoc != NULL;
 	     asoc = nasoc) {
 		nasoc = LIST_NEXT(asoc, sctp_tcblist);
+		SCTP_TCB_LOCK(asoc);
 		if (SCTP_GET_STATE(&asoc->asoc) != SCTP_STATE_COOKIE_WAIT) {
 			struct mbuf *op_err;
 			MGET(op_err, M_DONTWAIT, MT_DATA);
@@ -2297,9 +2298,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 				    SCTP_CAUSE_USER_INITIATED_ABT);
 				ph->param_length = htons(op_err->m_len);
 			}
-			SCTP_TCB_LOCK(asoc);
 			sctp_send_abort_tcb(asoc, op_err);
-			SCTP_TCB_UNLOCK(asoc);
 		}
 		cnt++;
 		/*
