@@ -72,3 +72,8 @@ Patch 25 all of patch24)
 16) DSACK timer now configurable on an EP
 17) Whew, 5.3.x compatibile aka SMP with locking now
     works.
+
+Patch 26 all of patch 25
+
+1)  A new PR_SCTP policy: limited number of retransmissions.
+
