@@ -38,6 +38,7 @@
 #ifndef __OpenBSD__
 #include <sys/socketvar.h>
 #endif
+#include <netinet/sctp_uio.h>
 
 /* SCTP Kernel structures */
 
@@ -202,6 +203,11 @@ int sctp_bindx(struct socket *, int, struct sockaddr_storage *,
 
 /* can't use sctp_assoc_t here */
 int sctp_peeloff(struct socket *, struct socket *, int, caddr_t, int *);
+
+
+sctp_assoc_t sctp_getassocid(struct sockaddr *);
+
+
 
 int sctp_ingetaddr(struct socket *,
 #if defined(__FreeBSD__) || defined(__APPLE__)

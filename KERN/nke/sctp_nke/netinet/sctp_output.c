@@ -482,12 +482,22 @@ int
 sctp_is_addr_restricted(struct sctp_tcb *stcb, struct sockaddr *addr)
 {
 	struct sctp_laddr *laddr;
-
+#ifdef SCTP_DEBUG
+	int cnt=0;
+#endif
 	if (stcb == NULL) {
 		/* There are no restrictions, no TCB :-) */
 		return (0);
 	}
-
+#ifdef SCTP_DEBUG
+	LIST_FOREACH(laddr, &stcb->asoc.sctp_local_addr_list, sctp_nxt_addr) {
+		cnt++;
+	}
+	if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
+		printf("There are %d addresses on the restricted list\n",cnt);
+	}
+	cnt = 0;
+#endif
 	LIST_FOREACH(laddr, &stcb->asoc.sctp_local_addr_list, sctp_nxt_addr) {
 		if (laddr->ifa == NULL) {
 #ifdef SCTP_DEBUG
@@ -497,6 +507,13 @@ sctp_is_addr_restricted(struct sctp_tcb *stcb, struct sockaddr *addr)
 #endif
 			continue;
 		}
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) { 
+			cnt++;
+			printf("Restricted address[%d]:",cnt);
+			sctp_print_address(laddr->ifa->ifa_addr);
+		}
+#endif
 		if (sctp_cmpaddr(addr, laddr->ifa->ifa_addr) == 1) {
 			/* Yes it is on the list */
 			return (1);
@@ -2571,7 +2588,8 @@ int sctp_is_address_in_scope(struct ifaddr *ifa,
 	if ((loopback_scope == 0) &&
 	    (ifa->ifa_ifp) &&
 	    (ifa->ifa_ifp->if_type == IFT_LOOP)) {
-		/* skip loopback if not in scope */
+		/* skip loopback if not in scope *
+		 */
 		return (0);
 	}
 	if ((ifa->ifa_addr->sa_family == AF_INET) && ipv4_addr_legal) {
@@ -2635,7 +2653,8 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	struct sctp_prsctp_supported_param *prsctp;
 	struct sctp_ecn_nonce_supported_param *ecn_nonce;
 	struct sctp_supported_chunk_types_param *pr_supported;
-	int padval;
+	int cnt_inits_to=0;
+	int padval,ret;
 
 	/* INIT's always go to the primary (and usually ONLY address) */
 	m_last = NULL;
@@ -2653,7 +2672,21 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		/* we confirm any address we send an INIT to */
 		net->dest_state &= ~SCTP_ADDR_UNCONFIRMED;
 	}
-
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
+		printf("Sending INIT to ");
+		sctp_print_address ((struct sockaddr *)&net->ra._l_addr);
+	}
+#endif
+	if(((struct sockaddr *)&(net->ra._l_addr))->sa_family == AF_INET6) {
+		/* special hook, if we are sending to link local
+		 * it will not show up in our private address count.
+		 */
+ 		struct sockaddr_in6 *sin6l;
+		sin6l = &net->ra._l_addr.sin6;
+		if(IN6_IS_ADDR_LINKLOCAL(&sin6l->sin6_addr))
+			cnt_inits_to = 1;
+	}
 	if (callout_pending(&net->rxt_timer.timer)) {
 		/* This case should not happen */
 		return;
@@ -2787,7 +2820,7 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		struct ifaddr *ifa;
 		int cnt;
 
-		cnt = 0;
+		cnt = cnt_inits_to;
  		TAILQ_FOREACH(ifn,&ifnet, if_list) {
 			if ((stcb->asoc.loopback_scope == 0) &&
 			    (ifn->if_type == IFT_LOOP)) {
@@ -2837,7 +2870,7 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	} else {
 		struct sctp_laddr *laddr;
 		int cnt;
-		cnt = 0;
+		cnt = cnt_inits_to;
 		/* First, how many ? */
 		LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
 			if (laddr->ifa == NULL) {
@@ -2913,8 +2946,19 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		}
 		m->m_pkthdr.len += padval;
 	}
-	sctp_lowlevel_chunk_output(inp, stcb, net,
-	    (struct sockaddr *)&net->ra._l_addr, m, 0, 0, NULL, 0);
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
+		printf("Calling lowlevel output stcb:%x net:%x\n",
+		       (u_int)stcb, (u_int)net);
+	}
+#endif
+	ret = sctp_lowlevel_chunk_output(inp, stcb, net,
+		  (struct sockaddr *)&net->ra._l_addr, m, 0, 0, NULL, 0);
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
+		printf("Low level output returns %d\n", ret);
+	}
+#endif
 	sctp_timer_start(SCTP_TIMER_TYPE_INIT, inp, stcb, net);
 	SCTP_GETTIME_TIMEVAL(&net->last_sent_time);
 }
@@ -3293,6 +3337,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	struct sockaddr *to;
 	struct sctp_state_cookie stc;
 	struct sctp_nets *net=NULL;
+	int cnt_inits_to=0;
 	uint16_t his_limit, i_want;
 	int abort_flag, padval, sz_of;
 
@@ -3485,6 +3530,12 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				stc.local_scope = 0;
 				stc.site_scope = 1;
 
+				/* we start counting for the private
+				 * address stuff at 1. since the link
+				 * local we source from won't show
+				 * up in our scoped cou8nt.
+				 */
+				cnt_inits_to=1;
 				/* pull out the scope_id from incoming pkt */
 				(void)in6_recoverscope(sin6, &ip6->ip6_src,
 				    init_pkt->m_pkthdr.rcvif);
@@ -3515,10 +3566,22 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		}
 	} else {
 		/* set the scope per the existing tcb */
+		struct sctp_nets *lnet;
+
 		stc.loopback_scope = asoc->loopback_scope;
 		stc.ipv4_scope = asoc->ipv4_local_scope;
 		stc.site_scope = asoc->site_scope;
 		stc.local_scope = asoc->local_scope;
+		TAILQ_FOREACH(lnet, &asoc->nets, sctp_next) {
+			if(lnet->ra._l_addr.sin6.sin6_family == AF_INET6) {
+				if(IN6_IS_ADDR_LINKLOCAL(&lnet->ra._l_addr.sin6.sin6_addr)) {
+					/* if we have a LL address, start counting
+					 * at 1. 
+					 */
+ 					cnt_inits_to = 1;
+				}
+			}
+		}
 
 		/* use the net pointer */
 		to = (struct sockaddr *)&net->ra._l_addr;
@@ -3686,7 +3749,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
 		struct ifnet *ifn;
 		struct ifaddr *ifa;
-		int cnt = 0;
+		int cnt = cnt_inits_to;
 
 		TAILQ_FOREACH(ifn,&ifnet, if_list) {
 			if ((stc.loopback_scope == 0) &&
@@ -3732,7 +3795,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	} else {
 		struct sctp_laddr *laddr;
 		int cnt;
-		cnt = 0;
+		cnt = cnt_inits_to;
 		/* First, how many ? */
 		LIST_FOREACH(laddr,&inp->sctp_addr_list, sctp_nxt_addr) {
 			if (laddr->ifa == NULL) {
@@ -4634,6 +4697,187 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 	}
 }
 
+static void 
+sctp_sendall_iterator(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr, u_int32_t val)
+{
+	struct sctp_copy_all *ca;
+	struct mbuf *m;
+	int turned_on_nonblock=0, ret;
+
+	ca = (struct sctp_copy_all *)ptr;
+	if (ca->m == NULL) {
+		return;
+	}
+	if (ca->inp != inp) {
+		/* TSNH */
+		return;
+	}
+	m = sctp_copy_mbufchain(ca->m, NULL);
+	if (m == NULL) {
+		/* can't copy so we are done */
+		ca->cnt_failed++;
+		return;
+	}
+	if((stcb->sctp_socket->so_state & SS_NBIO) == 0) {
+		/* we have to do this non-blocking */
+		turned_on_nonblock = 1;
+		stcb->sctp_socket->so_state |= SS_NBIO;
+	}
+	ret = sctp_msg_append(stcb, stcb->asoc.primary_destination, m, &ca->sndrcv);
+	if(turned_on_nonblock) {
+		/* we turned on non-blocking so turn it off */
+		stcb->sctp_socket->so_state &= ~SS_NBIO;
+	}
+	if(ret) {
+		ca->cnt_failed++;
+	} else {
+		ca->cnt_sent++;
+	}
+}
+
+static void
+sctp_sendall_completes(void *ptr, u_int32_t val)
+{
+	struct sctp_copy_all *ca;	
+	ca = (struct sctp_copy_all *)ptr;
+	/* Do a notify here?
+	 * Kacheong suggests that the notify
+	 * be done at the send time.. so you would
+	 * push up a notification if any send failed.
+	 * Don't know if this is feasable since the
+	 * only failures we have is "memory" related and
+	 * if you cannot get an mbuf to send the data
+	 * you surely can't get an mbuf to send up
+	 * to notify the user you can't send the data :->
+	 */
+
+	/* now free everything */
+	m_freem(ca->m);
+	FREE(ca, M_PCB);	
+}
+
+
+#define	MC_ALIGN(m, len) do {						\
+	(m)->m_data += (MCLBYTES - (len)) & ~(sizeof(long) - 1);		\
+} while (0)
+
+
+
+static struct mbuf *
+sctp_copy_out_all(struct uio *uio, int len)
+{
+	struct mbuf *ret, *at;
+	int left, willcpy, cancpy, error;
+
+	MGETHDR(ret, M_WAIT, MT_HEADER);
+	if (ret == NULL) {
+		/* TSNH */	
+		return (NULL);
+	}
+	left = len;
+	ret->m_len = 0;
+	ret->m_pkthdr.len = len;
+	MCLGET(ret, M_WAIT);
+	if (ret == NULL) {
+		return (NULL);
+	}
+	if ((ret->m_flags & M_EXT) == 0) {
+		m_freem (ret);
+		return (NULL);
+	}
+	cancpy = M_TRAILINGSPACE(ret);
+	willcpy = min(cancpy, left);
+	at = ret;
+	while (left > 0) {
+		/* Align data to the end */
+		MC_ALIGN(at, willcpy);
+		error = uiomove(mtod(at, caddr_t), willcpy, uio);
+		if (error) {
+		err_out_now:
+			m_freem(ret);
+			return(NULL);
+		}
+		at->m_len = willcpy;
+		at->m_nextpkt = at->m_next = 0;
+		left -= willcpy;
+		if (left > 0) { 
+			MGET(at->m_next, M_WAIT, MT_DATA);
+			if (at->m_next == NULL) {
+				goto err_out_now;
+			}
+			at = at->m_next;
+			at->m_len = 0;
+			MCLGET(at, M_WAIT);
+			if (at == NULL) {
+				goto err_out_now;
+			}
+			if ((at->m_flags & M_EXT) == 0) {
+				goto err_out_now;
+			}
+			cancpy = M_TRAILINGSPACE(at);
+			willcpy = min(cancpy, left);
+		}
+	}
+	return (ret);
+}
+
+static int
+sctp_sendall (struct sctp_inpcb *inp, struct uio *uio, struct mbuf *m, struct sctp_sndrcvinfo *srcv)
+{
+	int ret;
+	struct sctp_copy_all *ca;
+	MALLOC(ca, struct sctp_copy_all *,
+	       sizeof(struct sctp_copy_all), M_PCB, M_WAIT);
+	if(ca == NULL) {
+		m_freem(m);
+		return (ENOMEM);
+	}
+	memset (ca, 0, sizeof(struct sctp_copy_all));
+
+	ca->inp = inp;
+	ca->sndrcv = *srcv;
+	/* take off the sendall flag, it would
+	 * be bad if we failed to do this  :-0
+	 */
+ 	ca->sndrcv.sinfo_flags &= ~MSG_SENDALL;
+
+	/* get length and mbuf chain */
+	if (uio) {
+		ca->sndlen = uio->uio_resid;
+		ca->m = sctp_copy_out_all(uio, ca->sndlen);
+		if (ca->m == NULL) {
+			FREE(ca, M_PCB);
+			return (ENOMEM);
+		}
+	} else {
+		if ((m->m_flags & M_PKTHDR) == 0) {
+			struct mbuf *mat;
+			mat = m;
+			ca->sndlen = 0;
+			while(m) {
+				ca->sndlen += m->m_len;
+				m = m->m_next;
+			}
+		} else {
+			ca->sndlen = m->m_pkthdr.len;
+		}
+		ca->m = m;
+	}
+
+	ret = sctp_initiate_iterator(sctp_sendall_iterator, SCTP_PCB_ANY_FLAGS, SCTP_ASOC_ANY_STATE,
+				     (void *)ca, 0, sctp_sendall_completes, inp);
+	if(ret) {
+#ifdef SCTP_DEBUG
+		printf("Failed to initate iterator to takeover associations\n");
+#endif
+		FREE(ca, M_PCB);
+		return (EFAULT);
+		
+	}
+	return (0);
+}
+
+
 void
 sctp_toss_old_cookies(struct sctp_association *asoc)
 {
@@ -4798,7 +5042,7 @@ sctp_clean_up_ctl(struct sctp_association *asoc)
 			struct sctp_stream_reset_req *strreq;
 			/* special handling, we must look into the param */
 			strreq = mtod(chk->data, struct sctp_stream_reset_req *);
-			if (strreq->ph.param_type == ntohs(SCTP_STR_RESET_RESPONSE)) {
+			if (strreq->sr_req.ph.param_type == ntohs(SCTP_STR_RESET_RESPONSE)) {
 				goto clean_up_anyway;
 			}
 		}
@@ -6261,7 +6505,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 				 */
 				struct sctp_stream_reset_req *strreq;				
 				strreq = mtod(chk->data, struct sctp_stream_reset_req *);
-				if (strreq->ph.param_type != ntohs(SCTP_STR_RESET_REQUEST)) {
+				if (strreq->sr_req.ph.param_type != ntohs(SCTP_STR_RESET_REQUEST)) {
 					continue;
 				}
 			}
@@ -6882,6 +7126,13 @@ sctp_output(inp, m, addr, control, p)
 		sctppcbinfo.mbuf_track++;
 		if (sctp_find_cmsg(SCTP_SNDRCV, (void *)&srcv, control,
 				   sizeof(srcv))) {
+			if (srcv.sinfo_flags & MSG_SENDALL) {
+				/* its a sendall */
+				sctppcbinfo.mbuf_track--;
+				sctp_m_freem(control);
+				splx(s);
+				return (sctp_sendall(inp, NULL, m, &srcv));
+			}
 			if (srcv.sinfo_assoc_id) {
 #ifdef SCTP_TCP_MODEL_SUPPORT
 				if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
@@ -8324,11 +8575,11 @@ sctp_send_cwr(struct sctp_tcb *stcb, struct sctp_nets *net, uint32_t high_tsn)
 }
 static void
 sctp_reset_the_streams(struct sctp_tcb *stcb, 
-     struct sctp_stream_reset_req *req, int number_entries, uint16_t *list)
+     struct sctp_stream_reset_request *req, int number_entries, uint16_t *list)
 {
 	int i;
 
-	if (req->sr_req.reset_flags & SCTP_RESET_ALL) {
+	if (req->reset_flags & SCTP_RESET_ALL) {
 		for (i=0; i<stcb->asoc.streamoutcnt; i++) {
 			stcb->asoc.strmout[i].next_sequence_sent = 0;
 		}
@@ -8346,7 +8597,7 @@ sctp_reset_the_streams(struct sctp_tcb *stcb,
 
 void
 sctp_send_str_reset_ack(struct sctp_tcb *stcb, 
-     struct sctp_stream_reset_req *req)
+     struct sctp_stream_reset_request *req)
 {
 	struct sctp_association *asoc;
 	struct sctp_stream_reset_resp *strack;
@@ -8357,10 +8608,10 @@ sctp_send_str_reset_ack(struct sctp_tcb *stcb,
 	uint16_t *list=NULL;
 
 	asoc = &stcb->asoc;
-	if (req->sr_req.reset_flags & SCTP_RESET_ALL)	
+	if (req->reset_flags & SCTP_RESET_ALL)	
 		number_entries = 0;
 	else
-		number_entries = (ntohs(req->ch.chunk_length) - sizeof(struct sctp_stream_reset_req)) / sizeof(uint16_t);
+		number_entries = (ntohs(req->ph.param_length) - sizeof(struct sctp_stream_reset_request)) / sizeof(uint16_t);
 
 	chk = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk);
 	if (chk == NULL) {
@@ -8414,8 +8665,8 @@ sctp_send_str_reset_ack(struct sctp_tcb *stcb,
 
 	memset(strack->sr_resp.reset_pad,0,sizeof(strack->sr_resp.reset_pad));
 
-	strack->ph.param_type = ntohs(SCTP_STR_RESET_RESPONSE);
-	strack->ph.param_length = htons((chk->send_size - sizeof(struct sctp_chunkhdr)));
+	strack->sr_resp.ph.param_type = ntohs(SCTP_STR_RESET_RESPONSE);
+	strack->sr_resp.ph.param_length = htons((chk->send_size - sizeof(struct sctp_chunkhdr)));
 
 
 
@@ -8432,18 +8683,17 @@ sctp_send_str_reset_ack(struct sctp_tcb *stcb,
 	}
 
         /* actual response */
-	if (req->sr_req.reset_flags & SCTP_RESET_YOUR) {
+	if (req->reset_flags & SCTP_RESET_YOUR) {
 		strack->sr_resp.reset_flags = SCTP_RESET_PERFORMED; 
 	} else {
 		strack->sr_resp.reset_flags = 0; 
 	}
 
-
 	/* copied from reset request */
-	strack->sr_resp.reset_req_seq_resp = req->sr_req.reset_req_seq;
-	seq = ntohl(req->sr_req.reset_req_seq);
+	strack->sr_resp.reset_req_seq_resp = req->reset_req_seq;
+	seq = ntohl(req->reset_req_seq);
 
-	list = req->sr_req.list_of_streams;
+	list = req->list_of_streams;
 	/* copy the un-converted network byte order streams */
 	for (i=0; i<number_entries; i++) {
 		strack->sr_resp.list_of_streams[i] = list[i];
@@ -8462,11 +8712,11 @@ sctp_send_str_reset_ack(struct sctp_tcb *stcb,
 				list[i] = temp;
 			}
 		}
-		if (req->sr_req.reset_flags & SCTP_RESET_YOUR) {
+		if (req->reset_flags & SCTP_RESET_YOUR) {
 			/* reset my outbound streams */
 			sctp_reset_the_streams(stcb, req , number_entries, list);
 		}
-		if (req->sr_req.reset_flags & SCTP_RECIPRICAL) {
+		if (req->reset_flags & SCTP_RECIPRICAL) {
 			/* reset peer too */
 			sctp_send_str_reset_req(stcb, number_entries, list, two_way, not_peer);
 		}
@@ -8567,8 +8817,8 @@ sctp_send_str_reset_req(struct sctp_tcb *stcb,
 	strreq->ch.chunk_flags = 0;
 	strreq->ch.chunk_length = htons(chk->send_size);
 
-	strreq->ph.param_type = ntohs(SCTP_STR_RESET_REQUEST);
-	strreq->ph.param_length = htons((chk->send_size - sizeof(struct sctp_chunkhdr)));
+	strreq->sr_req.ph.param_type = ntohs(SCTP_STR_RESET_REQUEST);
+	strreq->sr_req.ph.param_length = htons((chk->send_size - sizeof(struct sctp_chunkhdr)));
 
 	if (chk->send_size % 4) {
 		/* need a padding for the end */
@@ -8912,11 +9162,6 @@ sctp_send_operr_to(struct mbuf *m, int iphlen,
 			RTFREE(ro.ro_rt);
 	}
 }
-
-#define	MC_ALIGN(m, len) do {						\
-	(m)->m_data += (MCLBYTES - (len)) & ~(sizeof(long) - 1);		\
-} while (0)
-
 
 static int
 sctp_copy_one(struct mbuf *m, struct uio *uio, int cpsz, int resv_upfront, int *mbcnt)
@@ -9486,6 +9731,13 @@ sctp_sosend(struct socket *so,
 		if (sctp_find_cmsg(SCTP_SNDRCV, (void *)&srcv, control,
 				   sizeof(srcv))) {
 			/* got one */
+			if (srcv.sinfo_flags & MSG_SENDALL) {
+				/* its a sendall */
+				sctppcbinfo.mbuf_track--;
+				sctp_m_freem(control);
+				sbunlock(&so->so_snd);
+				return (sctp_sendall(inp, uio, top, &srcv));
+			}
 			use_rcvinfo = 1;
 		}
 	}

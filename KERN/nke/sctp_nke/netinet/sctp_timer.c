@@ -892,6 +892,15 @@ sctp_t1init_timer(struct sctp_inpcb *inp,
 		  struct sctp_nets *net)
 {
 	/* bump the thresholds */
+	if(stcb->asoc.delayed_connection) {
+		/* special hook for delayed connection. The
+		 * library did NOT complete the rest of its
+		 * sends. 
+		 */
+		stcb->asoc.delayed_connection = 0;
+		sctp_send_initiate(inp, stcb);
+		return (0);
+	}
 	if (sctp_threshold_management(inp, stcb, net,
 				      stcb->asoc.max_init_times)) {
 		/* Association was destroyed */
@@ -902,12 +911,14 @@ sctp_t1init_timer(struct sctp_inpcb *inp,
 	if (stcb->asoc.initial_init_rto_max < net->RTO) {
 		net->RTO = stcb->asoc.initial_init_rto_max;
 	}
-
 	if (stcb->asoc.numnets > 1) {
 		/* If we have more than one addr use it */
-		stcb->asoc.primary_destination = TAILQ_NEXT(net, sctp_next);
-		if (stcb->asoc.primary_destination == NULL) 
-			stcb->asoc.primary_destination = TAILQ_FIRST(&stcb->asoc.nets);
+		struct sctp_nets *alt;
+		alt = sctp_find_alternate_net(stcb, stcb->asoc.primary_destination);
+		if ((alt != NULL) && (alt != stcb->asoc.primary_destination)) {
+			sctp_move_all_chunks_to_alt(stcb, stcb->asoc.primary_destination, alt);
+			stcb->asoc.primary_destination = alt;
+		}
 	}
 	/* Send out a new init */
 	sctp_send_initiate(inp, stcb);
@@ -996,7 +1007,7 @@ int sctp_strreset_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		if (strrst->rec.chunk_id == SCTP_STREAM_RESET) {
 			/* is it what we want */
 			strreq = mtod(strrst->data, struct sctp_stream_reset_req *);
-			if (strreq->ph.param_type == ntohs(SCTP_STR_RESET_REQUEST)) {
+			if (strreq->sr_req.ph.param_type == ntohs(SCTP_STR_RESET_REQUEST)) {
 				break;
 			}
 		}
@@ -1451,6 +1462,9 @@ sctp_iterator_timer(struct sctp_iterator *it)
  select_a_new_ep:
 	while ((it->pcb_flags) && ((it->inp->sctp_flags & it->pcb_flags) != it->pcb_flags)) {
 		/* we do not like this ep */
+		if(it->iterator_flags && SCTP_INTERATOR_DO_SINGLE_INP) {
+			goto done_with_iterator;
+		}			
 		it->inp = LIST_NEXT(it->inp, sctp_list);
 		if(it->inp == NULL) {
 			goto done_with_iterator;
@@ -1496,7 +1510,11 @@ sctp_iterator_timer(struct sctp_iterator *it)
 
 	/* unlock it */
 	it->inp->inp_starting_point_for_iterator = NULL;
-	it->inp = LIST_NEXT(it->inp, sctp_list);
+	if (it->iterator_flags && SCTP_INTERATOR_DO_SINGLE_INP) {
+		it->inp = NULL;
+	} else {
+		it->inp = LIST_NEXT(it->inp, sctp_list);
+	}
 	if(it->inp == NULL) {
 		goto done_with_iterator;
 	}
