@@ -67,3 +67,5 @@ Patch 25)
 14) Link local should also include ipv4 private addresses, since
     if its on the local link it better be also part of the 
     private address space :-D
+15) A performance improvement introduced a bug that caused
+    HB's to stop being sent due to a miscaluclation of time.
