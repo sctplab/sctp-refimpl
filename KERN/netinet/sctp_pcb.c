@@ -965,7 +965,8 @@ sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool, int have_lock)
 		}
 		SCTP_INP_INFO_RUNLOCK();
 	} else {
-		SCTP_INP_INCR_REF(inp);
+		if(inp)
+			SCTP_INP_INCR_REF(inp);
 	}
 	return (inp);
 }
