@@ -4219,8 +4219,8 @@ sctp_input(m, va_alist)
 		mlen = m->m_pkthdr.len;
 	}
 	/* validate mbuf chain length with IP payload length */
-#ifdef __OpenBSD__
-	/* Open BSD gives us the len in network order, fix it */
+#if defined(__NetBSD__) || defined(__OpenBSD__)
+	/* Open/Net BSD gives us the len in network order, fix it */
 	NTOHS(ip->ip_len);
 #endif
 	if (mlen < (ip->ip_len - iphlen)) {
