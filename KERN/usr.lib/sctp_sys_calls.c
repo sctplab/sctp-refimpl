@@ -54,6 +54,9 @@
 #endif
 
 
+#define SCTP_CONTROL_VEC_SIZE_SND   8192
+#define SCTP_CONTROL_VEC_SIZE_RCV  16384
+
 #ifdef SCTP_DEBUG_PRINT_ADDRESS
 static void
 SCTPPrintAnAddress(struct sockaddr *a)
@@ -381,7 +384,7 @@ sctp_sendmsg(int s,
 	ssize_t sz;
 	struct msghdr msg;
 	struct iovec iov[2];
-	char controlVector[256];
+	char controlVector[SCTP_CONTROL_VEC_SIZE_SND];
 	struct sctp_sndrcvinfo *s_info;
 	struct cmsghdr *cmsg;
 	struct sockaddr *who=NULL;
@@ -486,7 +489,7 @@ sctp_send(int sd, const void *data, size_t len,
 	struct msghdr msg;
 	struct iovec iov[2];
 	struct sctp_sndrcvinfo *s_info;
-	char controlVector[256];
+	char controlVector[SCTP_CONTROL_VEC_SIZE_SND];
 	struct cmsghdr *cmsg;
 
 	if (sinfo == NULL) {
@@ -624,7 +627,7 @@ sctp_recvmsg (int s,
 	ssize_t sz;
 	struct msghdr msg;
 	struct iovec iov[2];
-	char controlVector[2048];
+	char controlVector[SCTP_CONTROL_VEC_SIZE_RCV];
 	struct cmsghdr *cmsg;
 	
 	if (msg_flags == NULL) {
