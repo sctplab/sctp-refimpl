@@ -8300,11 +8300,10 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh)
 #endif
 		ip6_output(mout, NULL, &ro, 0, NULL, NULL
 #if defined(__NetBSD__)
-			, NULL
+			   , NULL
 #endif
-			NULL
 #if (defined(__FreeBSD__) && __FreeBSD_version >= 480000)
-		    , NULL
+			   , NULL
 #endif
 		    );
 		/* Free the route if we got one back */
