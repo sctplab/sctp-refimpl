@@ -2509,11 +2509,8 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 			else
 			  stcb->asoc.total_flight = 0;
 
-			stcb->asoc.total_flight_count--;
-			if (stcb->asoc.total_flight_count < 0) {
-				stcb->asoc.total_flight_count = 0;
-			}
-
+			if (stcb->asoc.total_flight_count > 0)
+			  stcb->asoc.total_flight_count--;
 			tp1->snd_count--;
 		}
 		{
