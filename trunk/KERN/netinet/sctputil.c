@@ -3690,7 +3690,7 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
 			tp1->data = NULL;
 			sctp_sowwakeup(stcb->sctp_ep, stcb->sctp_socket);
 		}
-		if (tp1->flags & SCTP_PR_SCTP_BUFFER) {
+		if (PR_SCTP_BUF_ENABLED(tp1->flags)) {
 			stcb->asoc.sent_queue_cnt_removeable--;
 		}
 		if (queue == &stcb->asoc.send_queue) {
