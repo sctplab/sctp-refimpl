@@ -1247,7 +1247,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 				printf("Weird cookie load_address failure on cookie existing - 1\n");
 			}
 #endif
-			;
+			return(NULL);
 		}
 
 		/* respond with a COOKIE-ACK */
@@ -1314,7 +1314,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 				printf("Weird cookie load_address failure on cookie existing - 2\n");
 			}
 #endif
-			;
+			return(NULL);
 		}
 
 		if ((asoc->state & SCTP_STATE_COOKIE_WAIT) ||
@@ -1399,7 +1399,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 				printf("Weird cookie load_address failure on cookie existing - 3\n");
 			}
 #endif
-			;
+			return(NULL);
 		}
 
 		if (asoc->state & SCTP_STATE_SHUTDOWN_PENDING) {

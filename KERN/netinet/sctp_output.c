@@ -3406,7 +3406,18 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		stc.cookie_life = asoc->cookie_life;
 		net = asoc->primary_destination;
 		/* now we must relock */
-		SCTP_INP_RLOCK(stcb->sctp_ep);
+		SCTP_INP_RLOCK(inp);
+		/* we may be in trouble here if the inp got freed 
+		 * most likely this set of tests will protect
+		 * us but there is a chance not. 
+		 */
+		if(inp->sctp_flags & (SCTP_PCB_FLAGS_SOCKET_GONE|SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
+			if (op_err)
+				sctp_m_freem(op_err);
+			sctp_m_freem(m);
+			sctp_send_abort(init_pkt, iphlen, sh, 0, NULL);
+			return;
+		}
 		SCTP_TCB_LOCK(stcb);
 		SCTP_INP_RUNLOCK(stcb->sctp_ep);
 	} else {
