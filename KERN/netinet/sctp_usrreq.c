@@ -1454,10 +1454,11 @@ sctp_do_connect_x(struct socket *so,
 		  struct sctp_inpcb *inp,
 		  struct mbuf *m,
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-		  struct thread *p
+		  struct thread *p,
 #else
-  	          struct proc *p
+  	          struct proc *p,
 #endif
+		  int delay
 	)
 {
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -1605,8 +1606,14 @@ sctp_do_connect_x(struct socket *so,
 	}
 #endif
 	stcb->asoc.state = SCTP_STATE_COOKIE_WAIT;
-	SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_entered);
-	sctp_send_initiate(inp, stcb);
+	if (delay) {
+		/* doing delayed connection */
+		stcb->asoc.delayed_connection = 1;
+		sctp_timer_start(SCTP_TIMER_TYPE_INIT, inp, stcb, stcb->asoc.primary_destination);
+	} else {
+		SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_entered);
+		sctp_send_initiate(inp, stcb);
+	}
 	splx(s);
 	return error;
 }
@@ -2694,9 +2701,49 @@ sctp_optsset(struct socket *so,
 			error = EINVAL;
 			break;
 		}
-		error = sctp_do_connect_x(so, inp, m, p);
+		error = sctp_do_connect_x(so, inp, m, p, 0);
 		break;
 
+	case SCTP_CONNECT_X_DELAYED:
+		if (m->m_len < (sizeof(int) + sizeof(struct sockaddr_in))) {
+			error = EINVAL;
+			break;
+		}
+		error = sctp_do_connect_x(so, inp, m, p, 1);
+		break;
+
+	case SCTP_CONNECT_X_COMPLETE:
+	{
+		struct sockaddr *sa;
+		struct sctp_nets *net;
+		if (m->m_len < sizeof(struct sockaddr_in)) {
+			error = EINVAL;
+			break;
+		}
+		sa = mtod(m, struct sockaddr *);
+		/* find tcb */
+#ifdef SCTP_TCP_MODEL_SUPPORT
+		if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
+			stcb = LIST_FIRST(&inp->sctp_asoc_list);
+			if (stcb)
+				net = sctp_findnet(stcb, sa);
+		} else
+#endif /* SCTP_TCP_MODEL_SUPPORT */
+			stcb = sctp_findassociation_ep_addr(&inp, sa, &net, NULL);
+		if (stcb == NULL) {
+			error = ENOENT;
+			break;
+		}
+		if (stcb->asoc.delayed_connection == 1) {
+			stcb->asoc.delayed_connection = 0;
+			SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_entered);
+			sctp_send_initiate(inp, stcb);
+		} else {
+			/* already expired or did not use delayed connectx */
+			error = EALREADY;
+		}
+	}
+	break;
 	case SCTP_MAXBURST:
 	{
 		u_int8_t *burst;

@@ -892,6 +892,15 @@ sctp_t1init_timer(struct sctp_inpcb *inp,
 		  struct sctp_nets *net)
 {
 	/* bump the thresholds */
+	if(stcb->asoc.delayed_connection) {
+		/* special hook for delayed connection. The
+		 * library did NOT complete the rest of its
+		 * sends. 
+		 */
+		stcb->asoc.delayed_connection = 0;
+		sctp_send_initiate(inp, stcb);
+		return (0);
+	}
 	if (sctp_threshold_management(inp, stcb, net,
 				      stcb->asoc.max_init_times)) {
 		/* Association was destroyed */

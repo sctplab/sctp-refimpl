@@ -623,6 +623,7 @@ struct sctp_association {
         u_int8_t dropped_special_cnt;
 	u_int8_t seen_a_sack_this_pkt;
 	u_int8_t stream_reset_outstanding;
+	u_int8_t delayed_connection;
 	/*
 	 * The mapping array is used to track out of order sequences above
 	 * last_acked_seq. 0 indicates packet missing 1 indicates packet 

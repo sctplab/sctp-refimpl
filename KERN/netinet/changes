@@ -29,3 +29,5 @@ Patch 24 change log
 13) Fix the stream reset functions to use the parameters properly
     per the newly forming draft. Still have a bug here where
     we can loose multiple stream resets (labeled with FIXME)
+14) Kernel changes for sctp_sendx()
+15) 
