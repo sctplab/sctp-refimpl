@@ -289,6 +289,7 @@ sctp6_input(mp, offp, proto)
 			if ((in6p) && (stcb)) {
 				sctp_send_packet_dropped(stcb, net, m, iphlen, 1);
 				sctp_chunk_output((struct sctp_inpcb *)in6p, stcb, 2);
+				SCTP_TCB_UNLOCK (stcb);
 			}
 			sctp_pegs[SCTP_BAD_CSUM]++;
 			goto out_of;
@@ -465,16 +466,20 @@ sctp6_notify_mbuf(struct sctp_inpcb *inp,
 
 	if ((inp == NULL) || (stcb == NULL) || (net == NULL) ||
 	    (icmp6 == NULL) || (sh == NULL)) {
+		if(stcb != NULL) 
+			SCTP_TCB_UNLOCK (stcb);
 		return;
 	}
 
 	/* First do we even look at it? */
 	if (ntohl(sh->v_tag) != (stcb->asoc.peer_vtag)) {
+		SCTP_TCB_UNLOCK(stcb);
 		return;
 	}
 
 	if (icmp6->icmp6_type != ICMP6_PACKET_TOO_BIG) {
 		/* not PACKET TO BIG */
+		SCTP_TCB_UNLOCK(stcb);
 		return;
 	}
 	/*
@@ -533,6 +538,7 @@ sctp6_notify_mbuf(struct sctp_inpcb *inp,
 		}
 	}
 	sctp_timer_start(SCTP_TIMER_TYPE_PATHMTURAISE, inp, stcb, NULL);
+	SCTP_TCB_UNLOCK(stcb);
 }
 
 
@@ -680,6 +686,7 @@ sctp6_getcred(SYSCTL_HANDLER_ARGS)
 	error = SYSCTL_OUT(req, inp->sctp_socket->so_cred,
 			   sizeof(struct ucred));
 
+	SCTP_TCB_UNLOCK (stcb);
  out:
 	splx(s);
 	return (error);
@@ -1272,13 +1279,16 @@ sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		addr = addr;	/* for true v6 address case */
 
 	/* Now do we connect? */
-	if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)
+	if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
 		stcb = LIST_FIRST(&inp->sctp_asoc_list);
-	else
+		if (stcb)
+			SCTP_TCB_UNLOCK (stcb);
+	}else
 		stcb = sctp_findassociation_ep_addr(&inp, addr, NULL, NULL, NULL);
 
 	if (stcb != NULL) {
 		/* Already have or am bring up an association */
+		SCTP_TCB_UNLOCK (stcb);
 		splx(s);
 		return (EALREADY);
 	}
@@ -1297,6 +1307,7 @@ sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	stcb->asoc.state = SCTP_STATE_COOKIE_WAIT;
 	SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_entered);
 	sctp_send_initiate(inp, stcb);
+	SCTP_TCB_UNLOCK (stcb);
 	splx(s);
 	return error;
 }
