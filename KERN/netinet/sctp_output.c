@@ -2759,13 +2759,31 @@ sctp_arethere_unrecognized_parameters(struct mbuf *in_initpkt,
 				}
 			}
 			if (op_err) {
-				ura.cause = htons(SCTP_CAUSE_UNRESOLV_ADDR);
-				ura.length = htons(sizeof(ura) - 2);
-				ura.addr_type = htons(SCTP_HOSTNAME_ADDRESS);
-				ura.reserved = 0;
-				m_copyback(op_err, err_at, sizeof(ura), (caddr_t)&ura);
-				err_at += sizeof(ura);
+				/* If we have space */
+				struct sctp_paramhdr s;
+				if (err_at % 4) {
+					u_int32_t cpthis=0;
+					pad_needed = 4 - (err_at % 4);
+					m_copyback(op_err, err_at, pad_needed, (caddr_t)&cpthis);
+					err_at += pad_needed;
+				}
+				s.param_type = htons(SCTP_CAUSE_UNRESOLV_ADDR);
+				s.param_length = htons(sizeof(s) + plen);
+				m_copyback(op_err, err_at, sizeof(s), (caddr_t)&s);
+				err_at += sizeof(s);
+				phdr = sctp_get_next_param(mat, at, (struct sctp_paramhdr *)tempbuf, plen);
+				if (phdr == NULL) {
+					sctp_m_freem(op_err);
+					/* we are out of memory but we 
+					 * still need to have a look at what to
+					 * do (the system is in trouble though).
+					 */
+					return(NULL);
+				}
+				m_copyback(op_err, err_at, plen, (caddr_t)phdr);
+				err_at += plen;
 			}
+			return(op_err);
 		} else {
 			/* we do not recognize the parameter
 			 * figure out what we do.
@@ -2797,12 +2815,9 @@ sctp_arethere_unrecognized_parameters(struct mbuf *in_initpkt,
 				if (op_err) {
 					/* If we have space */
 					struct sctp_paramhdr s;
-					printf("Adding a unrec param err_at:%d mbuf_len:%d\n",
-					       err_at, op_err->m_len);
 					if (err_at % 4) {
 						u_int32_t cpthis=0;
 						pad_needed = 4 - (err_at % 4);
-						printf("First we must PAD err_at %d bytes\n", pad_needed);
 						m_copyback(op_err, err_at, pad_needed, (caddr_t)&cpthis);
 						err_at += pad_needed;
  					}
@@ -2840,7 +2855,7 @@ sctp_arethere_unrecognized_parameters(struct mbuf *in_initpkt,
 			}
 
 		}
-		phdr = sctp_get_next_param(mat, at,&params, sizeof(params));
+		phdr = sctp_get_next_param(mat, at, &params, sizeof(params));
 	}
 	return (op_err);
 }
@@ -3041,9 +3056,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	    (offset+sizeof(struct sctp_init_chunk)), 
 	    &abort_flag, (struct sctp_chunkhdr *)init_chk);
 	if (abort_flag) {
-		if (op_err) {
-			sctp_send_operr_to(init_pkt, iphlen, op_err, init_chk->init.initiate_tag);
-		}
+		sctp_send_abort(init_pkt, iphlen, sh, init_chk->init.initiate_tag, op_err);
 		return;
 	}
 	MGETHDR(m, M_DONTWAIT, MT_HEADER);
