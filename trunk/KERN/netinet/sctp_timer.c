@@ -532,10 +532,6 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 					continue;
 				}
 			}
-			stcb->asoc.total_flight_book -= chk->book_size;
-			if (stcb->asoc.total_flight_book < 0) {
-				stcb->asoc.total_flight_book = 0;
-			}
 			stcb->asoc.total_flight_count--;
 			if (stcb->asoc.total_flight_count < 0) {
 				stcb->asoc.total_flight_count = 0;
@@ -681,7 +677,6 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 		}
 #endif /* SCTP_DEBUG */
 		stcb->asoc.total_flight = 0;
-		stcb->asoc.total_flight_book = 0;
 		stcb->asoc.total_flight_count = 0;
 		/* Clear all networks flight size */
 		TAILQ_FOREACH(lnets, &stcb->asoc.nets, sctp_next) {
@@ -695,9 +690,8 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 		}
 		TAILQ_FOREACH(chk, &stcb->asoc.sent_queue, sctp_next) {
 			if (chk->sent < SCTP_DATAGRAM_RESEND) {
-				stcb->asoc.total_flight += chk->send_size;
-				chk->whoTo->flight_size += chk->send_size;
-				stcb->asoc.total_flight_book += chk->book_size;
+				stcb->asoc.total_flight += chk->book_size;
+				chk->whoTo->flight_size += chk->book_size;
 				stcb->asoc.total_flight_count++;
 			}
 		}

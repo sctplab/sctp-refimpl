@@ -74,6 +74,12 @@
 #define SCTP_MAX_BURST_APPLIED      33
 #define SCTP_MAX_IFP_APPLIED        34
 #define SCTP_MAX_BURST_ERROR_STOP   35
+#define SCTP_INCREASE_PEER_RWND     36
+#define SCTP_DECREASE_PEER_RWND     37
+#define SCTP_SET_PEER_RWND_VIA_SACK 38
+#define SCTP_LOG_MBCNT_INCREASE     39
+#define SCTP_LOG_MBCNT_DECREASE     40
+#define SCTP_LOG_MBCNT_CHKSET       41
 /*
  * To turn on various logging, you must first define SCTP_STAT_LOGGING.
  * Then to get something to log you define one of the logging defines i.e.
@@ -91,6 +97,8 @@
 #define SCTP_LOG_EVENT_FR    4
 #define SCTP_LOG_EVENT_MAP   5
 #define SCTP_LOG_EVENT_MAXBURST 6
+#define SCTP_LOG_EVENT_RWND  7
+#define SCTP_LOG_EVENT_MBCNT 8
 
 /* if you want to support the TCP model, uncomment the following define */
 #define SCTP_TCP_MODEL_SUPPORT	1
