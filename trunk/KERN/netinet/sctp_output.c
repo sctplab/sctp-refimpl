@@ -8332,7 +8332,6 @@ sctp_reset_the_streams(struct sctp_tcb *stcb,
 		for (i=0; i<stcb->asoc.streamoutcnt; i++) {
 			stcb->asoc.strmout[i].next_sequence_sent = 0;
 		}
-		number_entries = stcb->asoc.streamoutcnt;
 	} else if (number_entries) {
 		for (i=0; i<number_entries; i++) {
 			if (list[i] >= stcb->asoc.streamoutcnt) {
