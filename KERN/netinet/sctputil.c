@@ -991,10 +991,10 @@ sctp_timeout_handler(void *t)
 			stcb->asoc.num_send_timers_up = 0;
 		}
 		if ( sctp_t3rxt_timer(inp, stcb, net)) {
-			/* association is over */
-			/* assume any locks are destroyed
-			 * with assoc, so no unlocks
-			 */
+			if (inp) {
+				SCTP_INP_WUNLOCK(inp);
+			}
+			/* unlock inp but no need on tcb */
 			return;
 		}
 #ifdef SCTP_AUDITING_ENABLED
@@ -1019,10 +1019,10 @@ sctp_timeout_handler(void *t)
 		break;
 	case SCTP_TIMER_TYPE_INIT:
 		if (sctp_t1init_timer(inp, stcb, net)) {
-			/* association is over */
-			/* assume any locks are destroyed
-			 * with assoc, so no unlocks
-			 */
+			if (inp) {
+				SCTP_INP_WUNLOCK(inp);
+			}
+			/* unlock inp but no need on tcb */
 			return;
 		}
 		/* We do output but not here */
@@ -1038,11 +1038,10 @@ sctp_timeout_handler(void *t)
 		break;
 	case SCTP_TIMER_TYPE_SHUTDOWN:
 		if (sctp_shutdown_timer(inp, stcb, net) ) {
-			/* association is over */
-			/* assume any locks are destroyed
-			 * with assoc, so no unlocks
-			 */
-
+			if (inp) {
+				SCTP_INP_WUNLOCK(inp);
+			}
+			/* unlock inp but no need on tcb */
 			return;
 		}
 #ifdef SCTP_AUDITING_ENABLED
@@ -1052,10 +1051,10 @@ sctp_timeout_handler(void *t)
 		break;
 	case SCTP_TIMER_TYPE_HEARTBEAT:
 		if (sctp_heartbeat_timer(inp, stcb, net)) {
-			/* assume any locks are destroyed
-			 * with assoc, so no unlocks
-			 */
-
+			if (inp) {
+				SCTP_INP_WUNLOCK(inp);
+			}
+			/* unlock inp but no need on tcb */
 			return;
 		}
 #ifdef SCTP_AUDITING_ENABLED
@@ -1065,11 +1064,10 @@ sctp_timeout_handler(void *t)
 		break;
 	case SCTP_TIMER_TYPE_COOKIE:
 		if (sctp_cookie_timer(inp, stcb, net)) {
-			/* association is over */
-			/* assume any locks are destroyed
-			 * with assoc, so no unlocks
-			 */
-
+			if (inp) {
+				SCTP_INP_WUNLOCK(inp);
+			}
+			/* unlock inp but no need on tcb */
 			return;
 		}
 #ifdef SCTP_AUDITING_ENABLED
@@ -1105,11 +1103,10 @@ sctp_timeout_handler(void *t)
 		break;
 	case SCTP_TIMER_TYPE_SHUTDOWNACK:
 		if (sctp_shutdownack_timer(inp, stcb, net)) {
-			/* association is over */
-			/* assume any locks are destroyed
-			 * with assoc, so no unlocks
-			 */
-
+			if (inp) {
+				SCTP_INP_WUNLOCK(inp);
+			}
+			/* unlock inp but no need on tcb */
 			return;
 		}
 #ifdef SCTP_AUDITING_ENABLED
@@ -1120,18 +1117,19 @@ sctp_timeout_handler(void *t)
 	case SCTP_TIMER_TYPE_SHUTDOWNGUARD:
 		sctp_abort_an_association(inp, stcb,
 					  SCTP_SHUTDOWN_GUARD_EXPIRES, NULL);
-		/* assume any locks are destroyed
-		 * with assoc, so no unlocks
-		 */
+		if (inp) {
+			SCTP_INP_WUNLOCK(inp);
+		}
+		/* unlock inp but no need on tcb */
 		return;
 		break;
 
 	case SCTP_TIMER_TYPE_STRRESET:
 		if (sctp_strreset_timer(inp, stcb, net)) {
-			/* association is over */
-			/* assume any locks are destroyed
-			 * with assoc, so no unlocks
-			 */
+			if (inp) {
+				SCTP_INP_WUNLOCK(inp);
+			}
+			/* unlock inp but no need on tcb */
 			return;
 		}
 		sctp_chunk_output(inp, stcb, 9);
@@ -1139,10 +1137,10 @@ sctp_timeout_handler(void *t)
 
 	case SCTP_TIMER_TYPE_ASCONF:
 		if (sctp_asconf_timer(inp, stcb, net)) {
-			/* association is over */
-			/* assume any locks are destroyed
-			 * with assoc, so no unlocks
-			 */
+			if (inp) {
+				SCTP_INP_WUNLOCK(inp);
+			}
+			/* unlock inp but no need on tcb */
 			return;
 		}
 #ifdef SCTP_AUDITING_ENABLED
