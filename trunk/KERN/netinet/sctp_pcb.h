@@ -702,5 +702,10 @@ void	sctp_callout_alloc(struct sctp_timer *);
 void	sctp_callout_free(struct callout *);
 #endif
 
+#ifdef __NetBSD__
+extern void in6_sin6_2_sin (struct sockaddr_in *,
+                            struct sockaddr_in6 *sin6);
+#endif
+
 #endif /* _KERNEL */
 #endif /* !__sctp_pcb_h__ */

@@ -847,8 +847,14 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	}
 	/* Now the mapping array */
 	asoc->mapping_array_size = SCTP_INITIAL_MAPPING_ARRAY;
+#ifdef __NetBSD__ 
+	MALLOC(asoc->mapping_array, u_int8_t *, SCTP_INITIAL_MAPPING_ARRAY,
+	       M_PCB, M_NOWAIT);
+#else
 	MALLOC(asoc->mapping_array, u_int8_t *, asoc->mapping_array_size,
 	       M_PCB, M_NOWAIT);
+#endif
+
 	if (asoc->mapping_array == NULL) {
 		FREE(asoc->strmout, M_PCB);
 		return (ENOMEM);
@@ -875,7 +881,12 @@ sctp_expand_mapping_array(struct sctp_association *asoc)
 	uint16_t new_size;
 	
 	new_size = asoc->mapping_array_size + SCTP_MAPPING_ARRAY_INCR;
+#ifdef __NetBSD__
+	MALLOC(new_array, u_int8_t *, asoc->mapping_array_size 
+		+ SCTP_MAPPING_ARRAY_INCR, M_PCB, M_NOWAIT);
+#else
 	MALLOC(new_array, u_int8_t *, new_size, M_PCB, M_NOWAIT);
+#endif
 	if (new_array == NULL) {
 		/* can't get more, forget it */
 		printf("No memory for expansion of SCTP mapping array %d\n",
@@ -960,6 +971,7 @@ sctp_timeout_handler(void *t)
 		printf("Timer type %d goes off\n", tmr->type);
 	}
 #endif /* SCTP_DEBUG */
+#ifndef __NetBSD__
 	if (!callout_active(&tmr->timer)) {
 		splx(s);
 #if defined(__APPLE__)
@@ -968,6 +980,7 @@ sctp_timeout_handler(void *t)
 #endif
 		return;
 	}
+#endif
 #if defined(__APPLE__)
 	/* clear the callout pending status here */
 	callout_stop(&tmr->timer);
@@ -3221,8 +3234,12 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 	}else {
 		control = m0;
 	}
+	if (m)
+		m->m_next = control;
+	else
+		m = control;
 	m->m_pkthdr.csum_data = tag;
-	m->m_next = control;
+
 	for (n = m; n; n = n->m_next)
 		sballoc(sb, n);
 	if ((n = sb->sb_mb) != NULL) {

@@ -1906,7 +1906,7 @@ sctp_ipv6_source_address_selection(struct sctp_inpcb *inp,
 #if defined(__FreeBSD__) || defined(__APPLE__)
 		rtalloc_ign(ro, 0UL);
 #else
-		rtalloc(ro, 1);
+		rtalloc(ro);
 #endif
 #ifndef SCOPEDROUTING
 		to->sin6_scope_id = scope_save;
@@ -2514,6 +2514,9 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 #endif
 				 o_flgs,
 				 ((struct in6pcb *)inp)->in6p_moptions,
+#if (defined(__NetBSD__) && __NetBSD_Version__ >= 200000000)
+				(struct socket *)inp->sctp_socket,
+#endif
 				 &ifp
 #if (defined(__FreeBSD__) && __FreeBSD_version >= 480000)
 		    , NULL
@@ -8228,6 +8231,9 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh)
 		}
 #endif
 		ip6_output(mout, NULL, &ro, 0, NULL, NULL
+#if (defined(__NetBSD__) && __NetBSD_Version__ >= 200000000)
+			, NULL
+#endif
 #if (defined(__FreeBSD__) && __FreeBSD_version >= 480000)
 		    , NULL
 #endif
@@ -9193,6 +9199,9 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
                 }
 #endif
 		ip6_output(mout, NULL, &ro, 0, NULL, NULL
+#if (defined(__NetBSD__) && __NetBSD_Version__ >= 200000000)
+			, NULL
+#endif
 #if (defined(__FreeBSD__) && __FreeBSD_version >= 480000)
 		    , NULL
 #endif
@@ -9328,6 +9337,9 @@ sctp_send_operr_to(struct mbuf *m, int iphlen,
 		}
 #endif /* SCTP_DEBUG */
 		ip6_output(scm, NULL, &ro, 0, NULL, NULL
+#if (defined(__NetBSD__) && __NetBSD_Version__ >= 200000000)
+	    , NULL
+#endif
 #if (defined(__FreeBSD__) && __FreeBSD_version >= 480000)
 	    , NULL
 #endif
