@@ -8299,7 +8299,7 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh)
 		}
 #endif
 		ip6_output(mout, NULL, &ro, 0, NULL, NULL
-#if (defined(__NetBSD__)
+#if defined(__NetBSD__)
 			, NULL
 #endif
 			NULL
