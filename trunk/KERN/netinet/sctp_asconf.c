@@ -1812,8 +1812,10 @@ sctp_addr_mgmt_ep(struct sctp_inpcb *inp, struct ifaddr *ifa, uint16_t type)
 		struct in6_ifaddr *ifa6;
 
 		/* invalid if we're not a v6 endpoint */
-		if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0)
+		if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0) {
+			SCTP_INP_WUNLOCK(inp);
 			return;
+		}
 		/* is the v6 addr really valid ? */
 		ifa6 = (struct in6_ifaddr *)ifa;
 		if (IFA6_IS_DEPRECATED(ifa6) ||
@@ -1836,15 +1838,15 @@ sctp_addr_mgmt_ep(struct sctp_inpcb *inp, struct ifaddr *ifa, uint16_t type)
 #else
 		    (inp6->inp_flags & IN6P_IPV6_V6ONLY)
 #endif
-			)
+			) {
 			SCTP_INP_WUNLOCK(inp);
 			return;
+		}
 	} else {
 		/* invalid address family */
 		SCTP_INP_WUNLOCK(inp);
 		return;
 	}
-
 	/* is this endpoint subset bound ? */
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) == 0) {
 		/* subset bound endpoint */
@@ -1881,16 +1883,14 @@ sctp_addr_mgmt_ep(struct sctp_inpcb *inp, struct ifaddr *ifa, uint16_t type)
 #else
 	s = splnet();
 #endif
-	SCTP_INP_WUNLOCK(inp);
 	/* process for all associations for this endpoint */
-	SCTP_INP_RLOCK(inp);
 	LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
 		SCTP_TCB_LOCK(stcb);
 		sctp_addr_mgmt_assoc(inp, stcb, ifa, type);
 		SCTP_TCB_UNLOCK(stcb);
 	} /* for each stcb */
 	splx(s);
-	SCTP_INP_RUNLOCK(inp);
+	SCTP_INP_WUNLOCK(inp);
 }
 
 /*
@@ -1970,6 +1970,7 @@ sctp_addr_mgmt(struct ifaddr *ifa, uint16_t type) {
 	LIST_FOREACH(inp, &sctppcbinfo.listhead, sctp_list) {
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_AUTO_ASCONF) {
 			sctp_addr_mgmt_ep(inp, ifa, type);
+
 		} else {
 			/* this address is going away anyways... */
 			if (type == SCTP_DEL_IP_ADDRESS)
@@ -1987,6 +1988,7 @@ sctp_addr_mgmt(struct ifaddr *ifa, uint16_t type) {
  * all addresses are passed from any type of interface-- need to filter
  * duplicate addresses may get requested
  */
+
 void
 sctp_add_ip_address(struct ifaddr *ifa)
 {
