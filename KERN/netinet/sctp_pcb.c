@@ -179,6 +179,32 @@ SCTP_INP_WLOCK(struct sctp_inpcb *inp)
 	SCTP_INP_RLOCK(inp);
 }
 
+void
+SCTP_INP_INFO_RLOCK()
+{
+	struct sctp_inpcb *inp;
+	struct sctp_tcb *stcb;
+	LIST_FOREACH(inp, &sctppcbinfo.listhead, sctp_list) {
+		if(mtx_owned(&(inp)->inp_mtx))
+			panic("info-lock and own inp lock?");
+		LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
+			if(mtx_owned(&(stcb)->tcb_mtx)) 
+				panic("Info lock and own a tcb lock?"); 
+		}
+	}
+	if(mtx_owned(&sctppcbinfo.ipi_ep_mtx))
+		panic("INP INFO Recursive Lock-R");
+	mtx_lock(&sctppcbinfo.ipi_ep_mtx);                     
+}
+
+void
+SCTP_INP_INFO_WLOCK()
+{
+	SCTP_INP_INFO_RLOCK();
+}
+
+
+
 #endif
 
 void
@@ -2956,16 +2982,9 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	bzero(stcb, sizeof(*stcb));
 	asoc = &stcb->asoc;
 	SCTP_TCB_LOCK_INIT(stcb);
-
-	SCTP_INP_WLOCK(inp);
-
 	/* setup back pointer's */
 	stcb->sctp_ep = inp;
 	stcb->sctp_socket = inp->sctp_socket;
-
-
-	SCTP_TCB_LOCK(stcb);
-
 	if ((err = sctp_init_asoc(inp, asoc, for_a_init, override_tag))) {
 		/* failed */
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
@@ -2977,13 +2996,14 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 #endif
 		*error = err;
 		SCTP_TCB_LOCK_DESTROY (stcb);
-		SCTP_INP_WUNLOCK(inp);
 		return (NULL);
 	}
-
 	/* and the port */
 	stcb->rport = rport;
 	SCTP_INP_INFO_WLOCK();
+	SCTP_INP_WLOCK(inp);
+	SCTP_TCB_LOCK(stcb);
+
 	/* now that my_vtag is set, add it to the  hash */
 	head = &sctppcbinfo.sctp_asochash[SCTP_PCBHASH_ASOC(stcb->asoc.my_vtag,
 	     sctppcbinfo.hashasocmark)];
@@ -3024,19 +3044,14 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	callout_init(&asoc->shut_guard_timer.timer);
 	callout_init(&asoc->autoclose_timer.timer);
 #endif
-
 	LIST_INSERT_HEAD(&inp->sctp_asoc_list, stcb, sctp_tcblist);
-
-	SCTP_INP_WUNLOCK(inp);
 	/* now file the port under the hash as well */
-
-	SCTP_INP_INFO_WLOCK();
 	if (inp->sctp_tcbhash != NULL) {
 		head = &inp->sctp_tcbhash[SCTP_PCBHASH_ALLADDR(stcb->rport,
 		   inp->sctp_hashmark)];
 		LIST_INSERT_HEAD(head, stcb, sctp_tcbhash);
 	}
-	SCTP_INP_INFO_WUNLOCK();
+	SCTP_INP_WUNLOCK(inp);
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_PCB1) {
 		printf("Association %p now allocated\n", stcb);

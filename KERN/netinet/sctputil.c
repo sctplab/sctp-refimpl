@@ -1497,8 +1497,6 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		 * we do NOT allow you to have it already running.
 		 * if it is we leave the current one up unchanged
 		 */
-		printf("Already running internal type:%d flags:%x\n",tmr->type,
-		       tmr->timer.c_flags);
 		return (EALREADY);
 	}
 	/* At this point we can proceed */
