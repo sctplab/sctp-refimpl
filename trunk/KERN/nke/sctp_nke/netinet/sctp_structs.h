@@ -152,7 +152,7 @@ struct sctp_nets {
 		struct rtentry *ro_rt;
 		union sctp_sockstore _l_addr;	/* remote peer addr */
 		union sctp_sockstore _s_addr;	/* our selected src addr */
-	} ra;
+	} ro;
 	/* mtu discovered so far */
 	u_int32_t mtu;
         u_int32_t ssthresh;		/* not sure about this one for split */

@@ -36,8 +36,8 @@
 
 #ifdef SCTP_MBUF_DEBUG
 #define sctp_m_freem(m) do { \
-    printf("m_freem(%x) m->nxtpkt:%x at %d\n", \
-	   (u_int)m, m->m_next, __LINE__); \
+    printf("m_freem(%p) m->nxtpkt:%p at %s[%d]\n", \
+	   (m), (m)->m_next, __FILE__, __LINE__); \
     m_freem(m); \
 } while (0);
 #else
@@ -216,7 +216,7 @@ struct mbuf *sctp_generate_invmanparam(int);
  * alone on the tsvwg in this thought... everyone else considers it part
  * of the sockets layer (along with all of the peeloff code :<)
  */
-u_int32_t sctp_get_last_vtag_from_sb(struct socket *);
+u_int32_t sctp_get_first_vtag_from_sb(struct socket *);
 
 
 void sctp_grub_through_socket_buffer(struct sctp_inpcb *, struct socket *,
