@@ -1,4 +1,4 @@
-/*	$KAME: sctp_uio.h,v 1.10 2004/08/17 04:06:20 itojun Exp $	*/
+/*	$KAME: sctp_uio.h,v 1.11 2005/03/06 16:04:18 itojun Exp $	*/
 
 #ifndef __sctp_uio_h__
 #define __sctp_uio_h__
@@ -87,8 +87,6 @@ struct sctp_snd_all_completes {
 	u_int32_t sall_num_sent;
 	u_int32_t sall_num_failed;
 };
-
-
 
 /* send/recv flags */
 /* MSG_EOF (0x0100) is reused from sys/socket.h */
@@ -266,17 +264,14 @@ struct sctp_stream_reset_event {
 #define SCTP_STRRESET_ALL_STREAMS  0x0004
 #define SCTP_STRRESET_STREAM_LIST  0x0008
 
-
 #define MAX_ASOC_IDS_RET 255
 
 struct sctp_assoc_ids {
 	u_int16_t asls_assoc_start;	/* array of index's start at 0 */
-	u_int8_t asls_numb_present; 
+	u_int8_t asls_numb_present;
 	u_int8_t asls_more_to_get;
 	sctp_assoc_t asls_assoc_id[MAX_ASOC_IDS_RET];
 };
-
-
 
 /* notification types */
 #define SCTP_ASSOC_CHANGE		0x0001
@@ -401,12 +396,12 @@ struct sctp_blk_args {
 };
 
 /*
- * Max we can reset in one setting, note this is dictated not by the 
+ * Max we can reset in one setting, note this is dictated not by the
  * define but the size of a mbuf cluster so don't change this define
  * and think you can specify more. You must do multiple resets if you
  * want to reset more than SCTP_MAX_EXPLICIT_STR_RESET.
  */
-#define SCTP_MAX_EXPLICT_STR_RESET   1000 
+#define SCTP_MAX_EXPLICT_STR_RESET   1000
 
 #define SCTP_RESET_LOCAL_RECV  0x0001
 #define SCTP_RESET_LOCAL_SEND  0x0002
@@ -460,7 +455,6 @@ struct sctp_mbcnt_log {
 	u_int32_t mbcnt_change;
 };
 
-
 struct sctp_cwnd_log{
 	union {
 		struct sctp_blk_args blk;
@@ -499,7 +493,7 @@ int	sctp_getpaddrs	__P((int, sctp_assoc_t, struct sockaddr **));
 void	sctp_freepaddrs	__P((struct sockaddr *));
 int	sctp_getladdrs	__P((int, sctp_assoc_t, struct sockaddr **));
 void	sctp_freeladdrs	__P((struct sockaddr *));
-int     sctp_opt_info   __P((int, sctp_assoc_t, int, void *, socklen_t *));
+int     sctp_opt_info   __P((int, sctp_assoc_t, int, void *, size_t *));
 
 ssize_t sctp_sendmsg    __P((int, const void *, size_t,
 	const struct sockaddr *,
@@ -509,7 +503,7 @@ ssize_t sctp_send       __P((int sd, const void *msg, size_t len,
 	const struct sctp_sndrcvinfo *sinfo,int flags));
 
 ssize_t
-sctp_sendx __P((int sd, const void *msg, size_t len, 
+sctp_sendx __P((int sd, const void *msg, size_t len,
 		struct sockaddr *addrs, int addrcnt,
 		struct sctp_sndrcvinfo *sinfo, int flags));
 ssize_t
@@ -517,7 +511,7 @@ sctp_sendmsgx __P((int sd, const void *, size_t,
 	           struct sockaddr *, int,
 	           u_int32_t, u_int32_t, u_int16_t, u_int32_t, u_int32_t));
 
-sctp_assoc_t 
+sctp_assoc_t
 sctp_getassocid __P((int sd, struct sockaddr *sa));
 
 ssize_t sctp_recvmsg	__P((int, void *, size_t, struct sockaddr *,

@@ -1,4 +1,4 @@
-/*	$KAME: sctp_input.c,v 1.26 2004/08/17 04:06:17 itojun Exp $	*/
+/*	$KAME: sctp_input.c,v 1.27 2005/03/06 16:04:17 itojun Exp $	*/
 
 /*
  * Copyright (C) 2002, 2003, 2004 Cisco Systems Inc,
@@ -197,7 +197,7 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 	/* save off parameters */
 	asoc->peer_vtag = ntohl(init->initiate_tag);
 	asoc->peers_rwnd = ntohl(init->a_rwnd);
-	
+
 	if (TAILQ_FIRST(&asoc->nets)) {
 		/* update any ssthresh's that may have a default */
 		TAILQ_FOREACH(lnet, &asoc->nets, sctp_next) {
@@ -329,7 +329,7 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 	op_err = NULL;
 
 	op_err = sctp_arethere_unrecognized_parameters(m,
-	    (offset+sizeof(struct sctp_init_chunk)) , 
+	    (offset+sizeof(struct sctp_init_chunk)) ,
 	    &abort_flag, (struct sctp_chunkhdr *)cp);
 	if (abort_flag) {
 		/* Send an abort and notify peer */
@@ -417,7 +417,7 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 	 */
 	sctp_timer_stop(SCTP_TIMER_TYPE_INIT, stcb->sctp_ep, stcb,
 	    asoc->primary_destination);
-	
+
 	/* calculate the RTO */
 	net->RTO = sctp_calculate_rto(stcb, asoc, net, &asoc->time_entered);
 
@@ -582,7 +582,7 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 		if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
  		    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
 
-			/* Set the flag so we cannot send more, we 
+			/* Set the flag so we cannot send more, we
 			 * would call the function but we don't want to
 			 * wake up the ulp necessarily.
 			 */
@@ -596,7 +596,8 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 		SCTP_GETTIME_TIMEVAL(&asoc->time_entered);
 	}
 	if (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_SENT) {
-		/* stop the shutdown timer, since we WILL move
+		/*
+		 * stop the shutdown timer, since we WILL move
 		 * to SHUTDOWN-ACK-SENT.
 		 */
 		sctp_timer_stop(SCTP_TIMER_TYPE_SHUTDOWN, stcb->sctp_ep, stcb, net);
@@ -748,7 +749,7 @@ sctp_process_unrecog_param(struct sctp_tcb *stcb, struct sctp_paramhdr *phdr)
 	case SCTP_SUPPORTED_CHUNK_EXT:
 		break;
 		/* draft-ietf-tsvwg-addip-sctp */
-	case SCTP_ECN_NONCE_SUPPORTED:	
+	case SCTP_ECN_NONCE_SUPPORTED:
 		stcb->asoc.peer_supports_ecn_nonce = 0;
 		stcb->asoc.ecn_nonce_allowed = 0;
 		stcb->asoc.ecn_allowed = 0;
@@ -855,7 +856,7 @@ sctp_handle_error(struct sctp_chunkhdr *ch,
 			 * don't support that type of address, they can NOT
 			 * possibly get that packet type... i.e. with no IPv6
 			 * you can't recieve a IPv6 packet. so we can safely
-			 * ignore this one. If we ever added support for 
+			 * ignore this one. If we ever added support for
 			 * HOSTNAME Addresses, then we would need to do
 			 * something here.
 			 */
@@ -1249,7 +1250,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 				printf("Weird cookie load_address failure on cookie existing - 1\n");
 			}
 #endif
-			return(NULL);
+			return (NULL);
 		}
 
 		/* respond with a COOKIE-ACK */
@@ -1290,7 +1291,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		asoc->pre_open_streams =
 		    ntohs(initack_cp->init.num_outbound_streams);
 		asoc->init_seq_number = ntohl(initack_cp->init.initial_tsn);
-		asoc->sending_seq = asoc->asconf_seq_out = asoc->str_reset_seq_out = 
+		asoc->sending_seq = asoc->asconf_seq_out = asoc->str_reset_seq_out =
 		    asoc->init_seq_number;
 		asoc->t3timeout_highest_marked = asoc->asconf_seq_out;
 		asoc->last_cwr_tsn = asoc->init_seq_number - 1;
@@ -1316,7 +1317,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 				printf("Weird cookie load_address failure on cookie existing - 2\n");
 			}
 #endif
-			return(NULL);
+			return (NULL);
 		}
 
 		if ((asoc->state & SCTP_STATE_COOKIE_WAIT) ||
@@ -1365,7 +1366,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		asoc->pre_open_streams =
 		    ntohs(initack_cp->init.num_outbound_streams);
 		asoc->init_seq_number = ntohl(initack_cp->init.initial_tsn);
-		asoc->sending_seq = asoc->asconf_seq_out = asoc->str_reset_seq_out = 
+		asoc->sending_seq = asoc->asconf_seq_out = asoc->str_reset_seq_out =
 		    asoc->init_seq_number;
 		asoc->t3timeout_highest_marked = asoc->asconf_seq_out;
 		asoc->last_cwr_tsn = asoc->init_seq_number - 1;
@@ -1401,7 +1402,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 				printf("Weird cookie load_address failure on cookie existing - 3\n");
 			}
 #endif
-			return(NULL);
+			return (NULL);
 		}
 
 		if (asoc->state & SCTP_STATE_SHUTDOWN_PENDING) {
@@ -1563,7 +1564,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	asoc->str_reset_seq_in = asoc->init_seq_number;
 
 	asoc->advanced_peer_ack_point = asoc->last_acked_seq;
-	
+
 	/* process the INIT info (peer's info) */
 	retval = sctp_process_init(init_cp, stcb, *netp);
 	if (retval < 0) {
@@ -1634,7 +1635,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	    sizeof(struct sctp_init_ack_chunk), initack_limit,
 	    initack_src, cookie->local_scope, cookie->site_scope,
 	    cookie->ipv4_scope, cookie->loopback_scope);
-	    
+
 
 	/* set up to notify upper layer */
 	*notification = SCTP_NOTIFY_ASSOC_UP;
@@ -1823,11 +1824,11 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	 */
 	ep = &(*inp_p)->sctp_ep;
 	l_inp = *inp_p;
-	if(l_stcb) {
+	if (l_stcb) {
 		SCTP_TCB_UNLOCK(l_stcb);
 	}
 	SCTP_INP_RLOCK(l_inp);
-	if(l_stcb) {
+	if (l_stcb) {
 		SCTP_TCB_LOCK(l_stcb);
 	}
 	/* which cookie is it? */
@@ -2015,12 +2016,12 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	if ((*stcb == NULL) && to) {
 		/* Yep, lets check */
 		*stcb = sctp_findassociation_ep_addr(inp_p, to, netp, localep_sa, NULL);
-		if(*stcb == NULL) {
+		if (*stcb == NULL) {
 			/* We should have only got back the same inp. If we
 			 * got back a different ep we have a problem. The original
-			 * findep got back l_inp and now 
+			 * findep got back l_inp and now
 			 */
-			if(l_inp != *inp_p) {
+			if (l_inp != *inp_p) {
 				printf("Bad problem find_ep got a diff inp then special_locate?\n");
 			}
 		}
@@ -2062,7 +2063,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	}
 
 	/*
-	 * Ok, we built an association so confirm the address 
+	 * Ok, we built an association so confirm the address
 	 * we sent the INIT-ACK to.
 	 */
 	netl = sctp_findnet(*stcb, to);
@@ -2082,9 +2083,9 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			sctp_set_primary_addr((*stcb), (struct sockaddr *)NULL,
 					      netl);
 			sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_CONFIRMED,
-					(*stcb),0,(void *)netl);
+					(*stcb), 0, (void *)netl);
 		}
-	} 
+	}
 #ifdef SCTP_DEBUG
 	else {
 		printf("Could not add source address for some reason\n");
@@ -2277,7 +2278,7 @@ sctp_handle_ecn_echo(struct sctp_ecne_chunk *cp,
 			break;
 		lchk = TAILQ_NEXT(lchk, sctp_next);
 	}
-	if (net == NULL) 
+	if (net == NULL)
 		/* default is we use the primary */
 		net = stcb->asoc.primary_destination;
 
@@ -2297,7 +2298,7 @@ sctp_handle_ecn_echo(struct sctp_ecne_chunk *cp,
 		}
 		net->cwnd = net->ssthresh;
 #ifdef SCTP_CWND_LOGGING
-		sctp_log_cwnd(net,(net->cwnd-old_cwnd), SCTP_CWND_LOG_FROM_SAT);
+		sctp_log_cwnd(net, (net->cwnd-old_cwnd), SCTP_CWND_LOG_FROM_SAT);
 #endif
 		/* we reduce once every RTT. So we will only lower
 		 * cwnd at the next sending seq i.e. the resync_tsn.
@@ -2496,7 +2497,7 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 			    stcb, tp1->whoTo);
 			sctp_timer_start(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
 			    stcb, tp1->whoTo);
-			
+
 			/* fix counts and things */
 			tp1->whoTo->flight_size -= tp1->send_size;
 			if (tp1->whoTo->flight_size < 0) {
@@ -2635,38 +2636,38 @@ sctp_reset_in_stream(struct sctp_tcb *stcb,
     struct sctp_stream_reset_response *resp, int number_entries)
 {
 	int i;
-	uint16_t *list,temp;
+	uint16_t *list, temp;
 
         /* We set things to 0xffff since this is the last delivered
 	 * sequence and we will be sending in 0 after the reset.
 	 */
 
-	if ( resp->reset_flags & SCTP_RESET_PERFORMED) {
+	if (resp->reset_flags & SCTP_RESET_PERFORMED) {
 		if (number_entries) {
 			list = resp->list_of_streams;
-			for ( i=0; i<number_entries; i++) {
+			for (i = 0; i < number_entries; i++) {
 				temp = ntohs(list[i]);
 				list[i] = temp;
-				if (list[i] >= stcb->asoc.streamincnt) {				
-					printf("Invalid stream in-stream reset %d\n",list[i]);
+				if (list[i] >= stcb->asoc.streamincnt) {
+					printf("Invalid stream in-stream reset %d\n", list[i]);
 					continue;
 				}
 				stcb->asoc.strmin[(list[i])].last_sequence_delivered = 0xffff;
 			}
 		} else {
 			list = NULL;
-			for ( i=0; i<stcb->asoc.streamincnt; i++) {
+			for (i = 0; i < stcb->asoc.streamincnt; i++) {
 				stcb->asoc.strmin[i].last_sequence_delivered = 0xffff;
 			}
-		} 
+		}
 		sctp_ulp_notify(SCTP_NOTIFY_STR_RESET_RECV, stcb, number_entries, (void *)list);
 	}
 }
 
 static void
-sctp_clean_up_stream_reset(struct sctp_tcb *stcb) 
+sctp_clean_up_stream_reset(struct sctp_tcb *stcb)
 {
-	struct sctp_tmit_chunk *chk,*nchk;
+	struct sctp_tmit_chunk *chk, *nchk;
 	struct sctp_association *asoc;
 
 	asoc = &stcb->asoc;
@@ -2707,14 +2708,14 @@ sctp_clean_up_stream_reset(struct sctp_tcb *stcb)
 	}
 }
 
-  
+
 void
-sctp_handle_stream_reset_response(struct sctp_tcb *stcb, 
+sctp_handle_stream_reset_response(struct sctp_tcb *stcb,
 	struct sctp_stream_reset_response *resp)
 {
- 	uint32_t seq,tsn;
+ 	uint32_t seq, tsn;
  	int number_entries, param_length;
- 
+
  	param_length = ntohs(resp->ph.param_length);
  	seq = ntohl(resp->reset_req_seq_resp);
 	if (seq == stcb->asoc.str_reset_seq_out) {
@@ -2735,7 +2736,7 @@ sctp_handle_stream_reset_response(struct sctp_tcb *stcb,
  			 * any data = or > resp->reset_at_tsn
  			 */
  			if (stcb->asoc.pending_reply != NULL) {
- 				/* FIX ME FIX ME 
+ 				/* FIX ME FIX ME
  				 * This IS WRONG. We need
  				 * to queue each of these up
  				 * and only release the chunks
@@ -2744,11 +2745,11 @@ sctp_handle_stream_reset_response(struct sctp_tcb *stcb,
  				 */
  				FREE(stcb->asoc.pending_reply, M_PCB);
  			}
- 			MALLOC(stcb->asoc.pending_reply, struct sctp_stream_reset_response *, param_length, 
+ 			MALLOC(stcb->asoc.pending_reply, struct sctp_stream_reset_response *, param_length,
  			       M_PCB, M_NOWAIT);
  			memcpy(stcb->asoc.pending_reply, resp, param_length);
  		}
- 		
+
   	} else {
  		/* duplicate */
 #ifdef SCTP_DEBUG
@@ -2768,9 +2769,9 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_req *sr
  	struct sctp_stream_reset_request *req;
  	struct sctp_stream_reset_response *resp;
  	chk_length = ntohs(sr_req->ch.chunk_length);
- 
+
  	ph = (struct sctp_paramhdr *)&sr_req->sr_req;
- 	while ( (size_t)chk_length >=  sizeof (struct sctp_stream_reset_request)) {
+ 	while ((size_t)chk_length >= sizeof(struct sctp_stream_reset_request)) {
  		param_len = ntohs(ph->param_length);
  		if (ntohs(ph->param_type) == SCTP_STR_RESET_REQUEST) {
  			/* this will send the ACK and do the reset if needed */
@@ -2778,7 +2779,7 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_req *sr
  			sctp_send_str_reset_ack(stcb, req);
  		} else if (ntohs(ph->param_type) == SCTP_STR_RESET_RESPONSE) {
  			/* Now here is a tricky one. We reset our receive side
- 			 * of the streams. But what happens if the peers 
+ 			 * of the streams. But what happens if the peers
  			 * next sending TSN is NOT equal to 1 minus our cumack?
  			 * And if his cumack is not equal to our next one out - 1
  			 * we have another problem if this is receprical.
@@ -2816,7 +2817,7 @@ sctp_handle_packet_dropped(struct sctp_pktdrop_chunk *cp,
 		ch = NULL;
 		if (cp->ch.chunk_flags & SCTP_FROM_MIDDLE_BOX)
 			sctp_pegs[SCTP_PDRP_BWRPT]++;
-	} else { 
+	} else {
 		ch = (struct sctp_chunkhdr *)(cp->data + sizeof(struct sctphdr));
 		chlen -= sizeof(struct sctphdr);
 		/* XXX possible chlen underflow */
@@ -2860,7 +2861,7 @@ sctp_handle_packet_dropped(struct sctp_pktdrop_chunk *cp,
 	}
 	trunc_len = (u_int16_t)ntohs(cp->trunc_len);
 	/* now the chunks themselves */
-	while ( (ch != NULL) && (chlen >= sizeof(struct sctp_chunkhdr)) ) {
+	while ((ch != NULL) && (chlen >= sizeof(struct sctp_chunkhdr))) {
 		desc.chunk_type = ch->chunk_type;
 		/* get amount we need to move */
 		at = ntohs(ch->chunk_length);
@@ -2914,7 +2915,7 @@ sctp_handle_packet_dropped(struct sctp_pktdrop_chunk *cp,
 			if ((cp->ch.chunk_flags & SCTP_FROM_MIDDLE_BOX))
 				sctp_pegs[SCTP_PDRP_MB_CT]++;
 		}
-		
+
 		if (process_chunk_drop(stcb, &desc, net, cp->ch.chunk_flags)) {
 			sctp_pegs[SCTP_PDRP_PDBRK]++;
 			break;
@@ -2939,7 +2940,7 @@ sctp_handle_packet_dropped(struct sctp_pktdrop_chunk *cp,
 		 * Note if a T3 timer has went off, we will prohibit any
 		 * changes to cwnd until we exit the t3 loss recovery.
 		 */
-		u_int32_t bw_avail; 
+		u_int32_t bw_avail;
 		int rtt, incr;
 #ifdef SCTP_CWND_LOGGING
 		int old_cwnd=net->cwnd;
@@ -2961,11 +2962,11 @@ sctp_handle_packet_dropped(struct sctp_pktdrop_chunk *cp,
 		bw_avail = (bottle_bw*rtt)/1000;
 		if (bw_avail > bottle_bw) {
 			/*
-			 * Cap the growth to no more than the bottle neck. 
+			 * Cap the growth to no more than the bottle neck.
 			 * This can happen as RTT slides up due to queues.
 			 * It also means if you have more than a 1 second
 			 * RTT with a empty queue you will be limited to
-			 * the bottle_bw per second no matter if 
+			 * the bottle_bw per second no matter if
 			 * other points have 1/2 the RTT and you could
 			 * get more out...
 			 */
@@ -2996,7 +2997,7 @@ sctp_handle_packet_dropped(struct sctp_pktdrop_chunk *cp,
 
 			/* Have I made an adjustment already */
 			if (net->cwnd > net->flight_size) {
-				/* for this flight I made an adjustment 
+				/* for this flight I made an adjustment
 				 * we need to decrease the portion by a share
 				 * our previous adjustment.
 				 */
@@ -3040,7 +3041,7 @@ sctp_handle_packet_dropped(struct sctp_pktdrop_chunk *cp,
 #ifdef SCTP_CWND_LOGGING
 		if (net->cwnd - old_cwnd != 0) {
 			/* log only changes */
-			sctp_log_cwnd(net,(net->cwnd - old_cwnd),
+			sctp_log_cwnd(net, (net->cwnd - old_cwnd),
 			    SCTP_CWND_LOG_FROM_SAT);
 		}
 #endif
@@ -3168,7 +3169,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				sctp_handle_ootb(m, iphlen, *offset, sh, inp,
 				    NULL);
 				return (NULL);
-			} 
+			}
 		} else {
 			/* for all other chunks, vtag must match */
 
@@ -3187,7 +3188,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			}
 		}
 	}  /* end if !SCTP_COOKIE_ECHO */
-	
+
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INPUT3) {
 		printf("sctp_process_control: vtags ok, processing ctrl chunks\n");
@@ -3299,18 +3300,18 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				if (LIST_FIRST(&inp->sctp_asoc_list) == NULL) {
 					/* finish the job now */
 					sctp_inpcb_free(inp, 1);
-				} 
+				}
 				*offset = length;
 				return (NULL);
 			}
 			if ((num_chunks > 1) ||
-			    ( sctp_strict_init && (length - *offset > SCTP_SIZE32(chk_length)))) {
+			    (sctp_strict_init && (length - *offset > SCTP_SIZE32(chk_length)))) {
 				*offset = length;
 				if (locked_tcb)
 					SCTP_TCB_UNLOCK(locked_tcb);
 				return (NULL);
 			}
-			if ((stcb != NULL) && 
+			if ((stcb != NULL) &&
 			    (SCTP_GET_STATE(&stcb->asoc) ==
 			    SCTP_STATE_SHUTDOWN_ACK_SENT)) {
 				sctp_send_shutdown_ack(stcb,
@@ -3350,7 +3351,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				return (NULL);
 			}
 			if ((num_chunks > 1) ||
-			    ( sctp_strict_init && (length - *offset > SCTP_SIZE32(chk_length)))) {
+			    (sctp_strict_init && (length - *offset > SCTP_SIZE32(chk_length)))) {
 #ifdef SCTP_DEBUG
 				if (sctp_debug_on & SCTP_DEBUG_INPUT3) {
 					printf("Length is %d rounded chk_length:%d .. dropping\n",
@@ -3445,7 +3446,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			}
 #endif /* SCTP_DEBUG */
                        {
-			       int abort_flag=0;
+			       int abort_flag = 0;
 			       sctp_handle_shutdown((struct sctp_shutdown_chunk *)ch,
 				   stcb, *netp, &abort_flag);
 			       if (abort_flag) {
@@ -3495,7 +3496,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				return (NULL);
 			}
 			/*
-			 * First are we accepting? 
+			 * First are we accepting?
 			 * We do this again here since it is possible
 			 * that a previous endpoint WAS listening responded to
 			 * a INIT-ACK and then closed. We opened and bound..
@@ -3503,6 +3504,13 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			 */
 			if (((inp->sctp_flags & SCTP_PCB_FLAGS_ACCEPTING) == 0) ||
 			    (inp->sctp_socket->so_qlimit == 0)) {
+  			        if((stcb) && (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)){
+				  /* special case, is this a retran'd COOKIE-ECHO or
+				   * a restarting assoc that is a peeled off or
+				   * one-to-one style socket.
+				   */
+				  goto process_cookie_anyway;
+			        }
 				sctp_abort_association(inp, stcb, m, iphlen, sh,
 				    NULL);
 				*offset = length;
@@ -3533,6 +3541,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					return (NULL);
 				}
 			}
+		process_cookie_anyway:
 			{
 				struct mbuf *ret_buf;
 				ret_buf = sctp_handle_cookie_echo(m, iphlen,
@@ -3547,7 +3556,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 #endif /* SCTP_DEBUG */
 
 				if (ret_buf == NULL) {
-					if( locked_tcb ) {
+					if (locked_tcb) {
 						SCTP_TCB_UNLOCK(locked_tcb);
 					}
 #ifdef SCTP_DEBUG
@@ -3685,7 +3694,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				printf("SCTP_STREAM_RESET\n");
 			}
 #endif /* SCTP_DEBUG */
-			ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, *offset, 
+			ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, *offset,
 			    chk_length, chunk_buf);
 			if (stcb->asoc.peer_supports_strreset == 0) {
 				/* hmm, peer should have annonced this, but
@@ -3703,13 +3712,13 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			}
 #endif /* SCTP_DEBUG */
 			/* re-get it all please */
-			ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, *offset, 
+			ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, *offset,
 			    chk_length, chunk_buf);
 
 			sctp_handle_packet_dropped((struct sctp_pktdrop_chunk *)ch,
 			    stcb, *netp);
-			    
-						   
+
+
 			break;
 		default:
 			/* it's an unknown chunk! */
@@ -3788,7 +3797,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
  * we must look to see if it is ECN(0) or ECN(1) or CE
  */
 static void
-sctp_process_ecn_marked_a(struct sctp_tcb *stcb, struct sctp_nets *net, 
+sctp_process_ecn_marked_a(struct sctp_tcb *stcb, struct sctp_nets *net,
     u_int8_t ecn_bits)
 {
 	if ((ecn_bits & SCTP_CE_BITS) == SCTP_CE_BITS) {
@@ -3954,7 +3963,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 			 */
 			sctp_handle_ootb(m, iphlen, offset, sh, inp, NULL);
 			SCTP_TCB_UNLOCK(stcb);
-			return(1);
+			return (1);
 		        break;
 		case SCTP_STATE_EMPTY:	/* should not happen */
 		case SCTP_STATE_INUSE:	/* should not happen */
@@ -3982,7 +3991,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		retval = sctp_process_data(mm, iphlen, &offset, length, sh,
 		    inp, stcb, net, &high_tsn);
 		if (retval == 2) {
-			/* The association aborted, NO UNLOCK needed 
+			/* The association aborted, NO UNLOCK needed
 			 * since the association is destroyed.
 			 */
 			return (0);
@@ -3993,7 +4002,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 			/* take care of ecn part 2. */
 			if (stcb->asoc.ecn_allowed && (ecn_bits & (SCTP_ECT0_BIT|SCTP_ECT1_BIT)) ) {
 				sctp_process_ecn_marked_b(stcb, net, high_tsn, ecn_bits);
-				
+
 			}
 		}
 
@@ -4099,7 +4108,7 @@ sctp_input(m, va_alist)
 	struct sctp_nets *net;
 	struct sctp_tcb *stcb = NULL;
 	struct sctp_chunkhdr *ch;
-	int refcount_up=0;
+	int refcount_up = 0;
 	int length, mlen, offset;
 #if defined(__OpenBSD__) && defined(IPSEC)
 	struct inpcb *i_inp;
@@ -4199,7 +4208,7 @@ sctp_input(m, va_alist)
 				       calc_check, check, (u_int)m, mlen, iphlen);
 			}
 #endif
-			
+
 			stcb = sctp_findassociation_addr(m, iphlen,
 							 offset - sizeof(*ch),
 							 sh, ch, &inp, &net);
@@ -4219,13 +4228,13 @@ sctp_input(m, va_alist)
 		mlen = m->m_pkthdr.len;
 	}
 	/* validate mbuf chain length with IP payload length */
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	/* Open/Net BSD gives us the len in network order, fix it */
+#ifdef __OpenBSD__
+	/* Open BSD gives us the len in network order, fix it */
 	NTOHS(ip->ip_len);
 #endif
 	if (mlen < (ip->ip_len - iphlen)) {
 	        sctp_pegs[SCTP_HDR_DROPS]++;
-		goto bad;	
+		goto bad;
 	}
 
 	/*
@@ -4264,7 +4273,7 @@ sctp_input(m, va_alist)
 			 * dig in and get the tag from the INIT and
 			 * put it in the common header.
 			 */
-			init_chk = (struct sctp_init_chunk *)sctp_m_getptr(m, 
+			init_chk = (struct sctp_init_chunk *)sctp_m_getptr(m,
 			    iphlen + sizeof(*sh), sizeof(*init_chk),
 			    (u_int8_t *)&chunk_buf);
 			if (init_chk != NULL)
@@ -4272,7 +4281,7 @@ sctp_input(m, va_alist)
 		}
 		sctp_send_abort(m, iphlen, sh, 0, NULL);
 		goto bad;
-	} else if(stcb == NULL) {
+	} else if (stcb == NULL) {
 		refcount_up = 1;
 	}
 #ifdef IPSEC

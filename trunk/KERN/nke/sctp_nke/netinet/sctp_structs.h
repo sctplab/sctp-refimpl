@@ -1,4 +1,4 @@
-/*	$KAME: sctp_structs.h,v 1.12 2004/08/17 04:06:19 itojun Exp $	*/
+/*	$KAME: sctp_structs.h,v 1.13 2005/03/06 16:04:18 itojun Exp $	*/
 
 #ifndef __sctp_structs_h__
 #define __sctp_structs_h__
@@ -75,11 +75,10 @@ struct sctp_timer {
  */
 TAILQ_HEAD(sctpnetlisthead, sctp_nets);
 
-
-/* 
+/*
  * Users of the iterator need to malloc a iterator with a call to
  * sctp_initiate_iterator(func, pcb_flags, asoc_state, void-ptr-arg, u_int32_t,
-                          u_int32-arg, end_func, inp);
+ *                        u_int32-arg, end_func, inp);
  *
  * Use the following two defines if you don't care what pcb flags are on the
  * EP and/or you don't care what state the association is in.
@@ -90,7 +89,7 @@ TAILQ_HEAD(sctpnetlisthead, sctp_nets);
  * then what you put in pcb_flags nothing will happen. use SCTP_PCB_ANY_FLAGS
  * to assure the inp you specify gets treated.
  */
-#define SCTP_PCB_ANY_FLAGS  0x00000000	
+#define SCTP_PCB_ANY_FLAGS  0x00000000
 #define SCTP_ASOC_ANY_STATE 0x00000000
 
 typedef void (*asoc_func)(struct sctp_inpcb *, struct sctp_tcb *, void *ptr,
@@ -124,7 +123,6 @@ struct sctp_copy_all {
 	int cnt_sent;
 	int cnt_failed;
 };
-
 
 union sctp_sockstore {
 #ifdef AF_INET
@@ -162,7 +160,7 @@ struct sctp_nets {
 	int lastsv;
 	unsigned int RTO;
 
-	/* This is used for SHUTDOWN/SHUTDOWN-ACK/SEND or INIT timers */    
+	/* This is used for SHUTDOWN/SHUTDOWN-ACK/SEND or INIT timers */
 	struct sctp_timer rxt_timer;
 
 	/* last time in seconds I sent to it */
@@ -226,7 +224,7 @@ struct sctp_data_chunkrec {
 	 */
 	u_int32_t fast_retran_tsn;	/* sending_seq at the time of FR */
 	struct timeval timetodrop;	/* time we drop it from queue */
-	u_int8_t doing_fast_retransmit;	
+	u_int8_t doing_fast_retransmit;
 	u_int8_t rcv_flags; /* flags pulled from data chunk on inbound
 			   * for outbound holds sending flags.
 			   */
@@ -374,7 +372,7 @@ struct sctp_association {
 	/* circular looking for output selection */
 	struct sctp_stream_out *last_out_stream;
 
-	/* wait to the point the cum-ack passes 
+	/* wait to the point the cum-ack passes
 	 * pending_reply->sr_resp.reset_at_tsn.
 	 */
 	struct sctp_stream_reset_response *pending_reply;
@@ -484,7 +482,7 @@ struct sctp_association {
 	 * is first put in the individual str queue
 	 */
 	unsigned int stream_queue_cnt;
-	unsigned int send_queue_cnt;  
+	unsigned int send_queue_cnt;
 	unsigned int sent_queue_cnt;
 	unsigned int sent_queue_cnt_removeable;
 	/*
@@ -595,7 +593,7 @@ struct sctp_association {
 	u_int8_t ecn_nonce_allowed;  /* Tells us if ECN nonce is on */
 	u_int8_t nonce_sum_check;    /* On off switch used during re-sync */
 	u_int8_t nonce_wait_for_ecne;/* flag when we expect a ECN */
-	u_int8_t peer_supports_ecn_nonce; 
+	u_int8_t peer_supports_ecn_nonce;
 
 	/*
 	 * This value, plus all other ack'd but above cum-ack is added
@@ -646,7 +644,7 @@ struct sctp_association {
 	u_int8_t saw_sack_with_frags;
 	/*
 	 * The mapping array is used to track out of order sequences above
-	 * last_acked_seq. 0 indicates packet missing 1 indicates packet 
+	 * last_acked_seq. 0 indicates packet missing 1 indicates packet
 	 * rec'd. We slide it up every time we raise last_acked_seq and 0
 	 * trailing locactions out.  If I get a TSN above the array
 	 * mappingArraySz, I discard the datagram and let retransmit happen.
