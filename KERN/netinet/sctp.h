@@ -1,5 +1,4 @@
 /*	$KAME: sctp.h,v 1.17 2004/08/17 04:06:15 itojun Exp $	*/
-/* added comment for commit test */
 
 #ifndef _NETINET_SCTP_H_
 #define _NETINET_SCTP_H_
@@ -35,6 +34,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+#include <sys/types.h>
 
 /*
  * SCTP protocol - RFC2960.
