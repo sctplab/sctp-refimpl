@@ -301,6 +301,7 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 			}
 			if (match == 0) {
 				/* This endpoint does not have this address */
+				SCTP_INP_RUNLOCK(inp);
 				continue;
 			}
 		}
