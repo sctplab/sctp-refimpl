@@ -1,4 +1,4 @@
-.\" $FreeBSD: src/sbin/natd/natd.8,v 1.27.2.16 2003/09/22 18:59:45 ru Exp $
+.\" $FreeBSD: src/sbin/natd/natd.8,v 1.27.2.18 2003/11/01 03:50:03 marcus Exp $
 .Dd February 28, 2003
 .Dt NATD 8
 .Os
@@ -31,7 +31,9 @@
 .Op Fl log_denied
 .Op Fl log_facility Ar facility_name
 .Op Fl punch_fw Ar firewall_range
+.Op Fl skinny_port Ar port
 .Op Fl log_ipfw_denied
+.Op Fl pid_file | P Ar pidfile
 .Ek
 .Sh DESCRIPTION
 The
@@ -482,12 +484,23 @@ rules starting from the rule number
 .Ar basenumber
 will be used for punching firewall holes.
 The range will be cleared for all rules on startup.
+.It Fl skinny_port Ar port
+This option allows you to specify the TCP port used for
+the Skinny Station protocol.
+Skinny is used by Cisco IP phones to communicate with
+Cisco Call Managers to set up voice over IP calls.
+By default, Skinny aliasing is not performed.
+The typical port value for Skinny is 2000.
 .It Fl log_ipfw_denied
 Log when a packet cannot be re-injected because an
 .Xr ipfw 8
 rule blocks it.
 This is the default with
 .Fl verbose .
+.It Fl pid_file | P Ar file
+Specify an alternate file in which to store the process ID.
+The default is
+.Pa /var/run/natd.pid .
 .El
 .Sh RUNNING NATD
 The following steps are necessary before attempting to run

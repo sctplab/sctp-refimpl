@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libalias/alias_db.c,v 1.21.2.17 2003/06/27 09:15:16 ru Exp $");
+__FBSDID("$FreeBSD: src/lib/libalias/alias_db.c,v 1.21.2.18 2003/11/01 03:50:02 marcus Exp $");
 
 /*
     Alias_db.c encapsulates all data structures used for storing
@@ -211,6 +211,26 @@ __FBSDID("$FreeBSD: src/lib/libalias/alias_db.c,v 1.21.2.17 2003/06/27 09:15:16 
 #   define TCP_EXPIRE_CONNECTED   86400
 #endif
 
+/* SCTP link expire times */
+/* after we are established */
+#ifndef SCTP_EXPIRE_CONNECTED
+#define SCTP_EXPIRE_CONNECTED 86400
+#endif
+
+/* pre-establishement */
+#ifndef SCTP_EXPIRE_INITIAL
+#define SCTP_EXPIRE_INITIAL 300
+#endif
+
+/* SCTP's max shutdown is 180 so 
+ * we will add a bit to be safe.
+ */
+#ifndef SCTP_EXPIRE_SHUTDOWNMAX
+#define SCTP_EXPIRE_SHUTDOWNMAX 200
+#endif
+
+
+
 
 /* Dummy port number codes used for FindLinkIn/Out() and AddLink().
    These constants can be anything except zero, which indicates an
@@ -274,6 +294,12 @@ struct tcp_dat
     int fwhole;             /* Which firewall record is used for this hole? */
 };
 
+struct sctp_dat
+{
+    u_int32_t vtag;
+    int fwhole;             /* Which firewall record is used for this hole? */
+};
+
 struct server              /* LSNAT server pool (circular list) */
 {
     struct in_addr addr;
@@ -296,6 +322,7 @@ struct alias_link                /* Main data structure */
     int link_type;               /* Type of link: TCP, UDP, ICMP, proto, frag */
 
 /* values for link_type */
+#define LINK_SCTP		      IPPROTO_SCTP
 #define LINK_ICMP                     IPPROTO_ICMP
 #define LINK_UDP                      IPPROTO_UDP
 #define LINK_TCP                      IPPROTO_TCP
@@ -327,6 +354,7 @@ struct alias_link                /* Main data structure */
         char *frag_ptr;
         struct in_addr frag_addr;
         struct tcp_dat *tcp;
+	struct sctp_dat *sctp;
     } data;
 };
 
@@ -363,6 +391,7 @@ linkTableIn[LINK_TABLE_IN_SIZE];     /*   into input and output lookup  */
 static int icmpLinkCount;            /* Link statistics                 */
 static int udpLinkCount;
 static int tcpLinkCount;
+static int sctpLinkCount;
 static int pptpLinkCount;
 static int protoLinkCount;
 static int fragmentIdLinkCount;
@@ -397,6 +426,9 @@ static int fireWallFD = -1;          /* File descriptor to be able to   */
                                      /* setting the PKT_ALIAS_PUNCH_FW  */
                                      /* flag.                           */
 #endif
+
+unsigned int skinnyPort = 0;         /* TCP port used by the Skinny     */
+                                     /* protocol.                       */
 
 
 
@@ -493,10 +525,11 @@ ShowAliasStats(void)
 
    if (monitorFile)
    {
-      fprintf(monitorFile, "icmp=%d, udp=%d, tcp=%d, pptp=%d, proto=%d, frag_id=%d frag_ptr=%d",
+      fprintf(monitorFile, "icmp=%d, udp=%d, tcp=%d, sctp=%d, pptp=%d, proto=%d, frag_id=%d frag_ptr=%d",
               icmpLinkCount,
               udpLinkCount,
               tcpLinkCount,
+              sctpLinkCount,
               pptpLinkCount,
               protoLinkCount,
               fragmentIdLinkCount,
@@ -505,6 +538,7 @@ ShowAliasStats(void)
       fprintf(monitorFile, " / tot=%d  (sock=%d)\n",
               icmpLinkCount + udpLinkCount
                             + tcpLinkCount
+                            + sctpLinkCount
                             + pptpLinkCount
                             + protoLinkCount
                             + fragmentIdLinkCount
@@ -957,6 +991,9 @@ DeleteLink(struct alias_link *link)
         case LINK_UDP:
             udpLinkCount--;
             break;
+        case LINK_SCTP:
+	    sctpLinkCount--;
+	    free(link->data.sctp);   
         case LINK_TCP:
             tcpLinkCount--;
             free(link->data.tcp);
@@ -1032,9 +1069,13 @@ AddLink(struct in_addr  src_addr,
         case LINK_TCP:
             link->expire_time = TCP_EXPIRE_INITIAL;
             break;
+	case LINK_SCTP:
+            link->expire_time = SCTP_EXPIRE_INITIAL;
+	    break;
         case LINK_PPTP:
             link->flags |= LINK_PERMANENT;	/* no timeout. */
             break;
+
         case LINK_FRAGMENT_ID:
             link->expire_time = FRAGMENT_ID_EXPIRE_TIME;
             break;
@@ -1065,6 +1106,7 @@ AddLink(struct in_addr  src_addr,
         switch(link_type)
         {
             struct tcp_dat  *aux_tcp;
+            struct sctp_dat  *aux_sctp;
 
             case LINK_ICMP:
                 icmpLinkCount++;
@@ -1072,6 +1114,22 @@ AddLink(struct in_addr  src_addr,
             case LINK_UDP:
                 udpLinkCount++;
                 break;
+            case LINK_SCTP:
+                aux_sctp = malloc(sizeof(struct sctp_dat));
+		if (aux_sctp != NULL) {
+			sctpLinkCount++;
+			aux_sctp->fwhole = -1;
+			aux_sctp->vtag = 0;
+			link->data.sctp = aux_sctp;
+		} else {
+#ifdef DEBUG
+                    fprintf(stderr, "PacketAlias/AddLink: ");
+                    fprintf(stderr, " cannot allocate auxiliary SCTP data\n");
+#endif
+		    free(link);
+		    return (NULL);
+		}
+	        break;
             case LINK_TCP:
                 aux_tcp = malloc(sizeof(struct tcp_dat));
                 if (aux_tcp != NULL)
@@ -2580,6 +2638,7 @@ PacketAliasInit(void)
     icmpLinkCount = 0;
     udpLinkCount = 0;
     tcpLinkCount = 0;
+    sctpLinkCount = 0;
     pptpLinkCount = 0;
     protoLinkCount = 0;
     fragmentIdLinkCount = 0;
@@ -2943,4 +3002,9 @@ PacketAliasSetFWBase(unsigned int base, unsigned int num) {
     fireWallBaseNum = base;
     fireWallNumNums = num;
 #endif
+}
+
+void
+PacketAliasSetSkinnyPort(unsigned int port) {
+    skinnyPort = port;
 }
