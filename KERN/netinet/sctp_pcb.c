@@ -2002,7 +2002,7 @@ sctp_iterator_inp_being_freed(struct sctp_inpcb *inp, struct sctp_inpcb *inp_nex
 {
 	struct sctp_iterator *it;
 	/* We enter with the only the ITERATOR_LOCK in place and
-	 * a write lock on the freeing inp.
+	 * A write lock on the inp_info stuff.
 	 */
 
 	/* Go through all iterators, we must do this since
@@ -2013,7 +2013,6 @@ sctp_iterator_inp_being_freed(struct sctp_inpcb *inp, struct sctp_inpcb *inp_nex
 	 * of those guys. The list of iterators should never
 	 * be very big though.
 	 */
-	SCTP_INP_INFO_RLOCK();
  	LIST_FOREACH(it, &sctppcbinfo.iteratorhead,sctp_nxt_itr) {
 		if(it == inp->inp_starting_point_for_iterator)
 			/* skip this guy, he's special */
@@ -2036,7 +2035,6 @@ sctp_iterator_inp_being_freed(struct sctp_inpcb *inp, struct sctp_inpcb *inp_nex
 			}
 		}
 	}
-	SCTP_INP_INFO_RUNLOCK();
 	it = inp->inp_starting_point_for_iterator;
 	if (it) {
 		if (it->iterator_flags & SCTP_ITERATOR_DO_SINGLE_INP) {
@@ -2215,8 +2213,15 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	    ipsec4_delete_pcbpolicy(ip_pcb);
 #endif
 #endif /*IPSEC*/
+#if defined(__FreeBSD__) && __FreeBSD_version > 500000
+	    SOCK_LOCK(so);
+#endif
 	    so->so_pcb = 0;
+#if defined(__FreeBSD__) && __FreeBSD_version > 500000
+	    sotryfree(so);
+#else
 	    sofree(so);
+#endif
 	}
 
 	if (ip_pcb->inp_options) {
@@ -4689,8 +4694,6 @@ sctp_drain()
 	struct sctp_tcb *stcb;
 
 	SCTP_INP_INFO_RLOCK();
-	printf("SCTP DRAIN called %d chunks out there\n",
-	    sctppcbinfo.ipi_count_chunk);
 	LIST_FOREACH(inp, &sctppcbinfo.listhead, sctp_list) {
 		/* For each endpoint */
 		SCTP_INP_RLOCK(inp);
