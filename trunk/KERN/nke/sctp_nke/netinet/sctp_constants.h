@@ -602,7 +602,6 @@
 /*  I can handle a 1meg re-assembly */
 #define SCTP_DEFAULT_MAXMSGREASM 1048576
 
-#define SCTP_DEFAULT_MAXWINDOW	32768	/* default rwnd size */
 #define SCTP_DEFAULT_MAXSEGMENT 65535
 
 #define DEFAULT_CHUNK_BUFFER	2048
