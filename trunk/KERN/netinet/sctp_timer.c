@@ -910,7 +910,7 @@ sctp_t1init_timer(struct sctp_inpcb *inp,
 		return (1);
 	}
 	stcb->asoc.dropped_special_cnt = 0;
-	sctp_backoff_on_timeout(stcb, stcb->asoc.primary_destination, 0, 1);
+	sctp_backoff_on_timeout(stcb, stcb->asoc.primary_destination, 1, 0);
 	if (stcb->asoc.initial_init_rto_max < net->RTO) {
 		net->RTO = stcb->asoc.initial_init_rto_max;
 	}
@@ -978,7 +978,7 @@ int  sctp_cookie_timer(struct sctp_inpcb *inp,
 	 * select an alternate
 	 */
 	stcb->asoc.dropped_special_cnt = 0;
-	sctp_backoff_on_timeout(stcb, cookie->whoTo, 0, 1);
+	sctp_backoff_on_timeout(stcb, cookie->whoTo, 1, 0);
 	alt = sctp_find_alternate_net(stcb, cookie->whoTo);
 	if (alt != cookie->whoTo) {
 		sctp_free_remote_addr(cookie->whoTo);
@@ -1034,7 +1034,7 @@ int sctp_strreset_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	 * cleared theshold management
 	 * now lets backoff the address & select an alternate
 	 */
-	sctp_backoff_on_timeout(stcb, strrst->whoTo, 0, 1);
+	sctp_backoff_on_timeout(stcb, strrst->whoTo, 1, 0);
 	alt = sctp_find_alternate_net(stcb, strrst->whoTo);
 	sctp_free_remote_addr(strrst->whoTo);
 	strrst->whoTo = alt;
@@ -1128,7 +1128,7 @@ int sctp_asconf_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		 * cleared theshold management
 		 * now lets backoff the address & select an alternate
 		 */
-		sctp_backoff_on_timeout(stcb, asconf->whoTo, 0, 1);
+		sctp_backoff_on_timeout(stcb, asconf->whoTo, 1, 0);
 		alt = sctp_find_alternate_net(stcb, asconf->whoTo);
 		sctp_free_remote_addr(asconf->whoTo);
 		asconf->whoTo = alt;
