@@ -36,8 +36,8 @@
 
 #ifdef SCTP_MBUF_DEBUG
 #define sctp_m_freem(m) do { \
-    printf("m_freem(%x) m->nxtpkt:%x at %d\n", \
-	   (u_int)m, m->m_next, __LINE__); \
+    printf("m_freem(%p) m->nxtpkt:%p at %s[%d]\n", \
+	   (m), (m)->m_next, __FILE__, __LINE__); \
     m_freem(m); \
 } while (0);
 #else

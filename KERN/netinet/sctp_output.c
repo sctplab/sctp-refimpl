@@ -4393,8 +4393,8 @@ sctp_msg_append(struct sctp_tcb *stcb,
 		/* Fast path */
 		chk = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk);
 		if (chk == NULL) {
-			sctp_m_freem(m);
-			return (ENOMEM);
+			error = ENOMEM;
+			goto release;
 		}
 		sctp_prepare_chunk(chk, stcb, srcv, strq, net);
 		chk->whoTo->ref_count++;
@@ -4652,7 +4652,7 @@ out:
 			sctp_m_freem(n);
 			n = mnext;
 		}
-	} else
+	} else if (m)
 		sctp_m_freem(m);
 	return (error);
 }
@@ -9956,8 +9956,6 @@ release:
 out_locked:
 	SOCKBUF_UNLOCK(&so->so_snd);
 out:
-	if (mm)
-		sctp_m_freem(mm);
 	return (error);
 }
 
