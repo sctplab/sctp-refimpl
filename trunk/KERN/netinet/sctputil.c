@@ -1266,7 +1266,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			return (EFAULT);
 		}
 		tmr = &stcb->asoc.dack_timer;
-		to_ticks = MSEC_TO_TICKS(stcb->delayed_ack);
+		to_ticks = MSEC_TO_TICKS(stcb->asoc.delayed_ack);
 		break;
 	case SCTP_TIMER_TYPE_SHUTDOWN:
 		/* Here we use the RTO of the destination. */
@@ -3359,7 +3359,7 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 		inp->sctp_vtag_first = tag;
 	}
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) && __FreeBSD_version > 410000
 	if (sb->sb_mb == NULL)
 		inp->sctp_vtag_first = tag;
 	SCTP_SBLINKRECORD(sb, m);
