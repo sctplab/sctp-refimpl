@@ -9529,7 +9529,6 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 #endif
 			sbunlock(&so->so_snd);
 			SCTP_TCB_UNLOCK(stcb);
-			SOCKBUF_UNLOCK(&so->so_snd);
 			error = sbwait(&so->so_snd);
 			SCTP_INP_RLOCK(inp);
 			if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
@@ -9567,8 +9566,9 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 				splx(s);
 				goto out;
 			}
-			/* Ok we need to get the lock again */
-			SOCKBUF_LOCK(&so->so_snd);
+			/* Ok we need to assert we have the lock  */
+			SOCKBUF_LOCK_ASSERT(&so->so_snd);
+			
 			error = sblock(&so->so_snd, M_WAITOK);
 			if (error) {
 				/* Can't aquire the lock */
