@@ -4471,7 +4471,7 @@ sctp_add_to_socket_q(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	}
 	sctppcbinfo.ipi_count_sockq++;
 	sctppcbinfo.ipi_gencnt_sockq++;
-
+	stcb->asoc.cnt_msg_on_sb++;
 	sq->tcb = stcb;
 	TAILQ_INSERT_TAIL(&inp->sctp_queue_list, sq, next_sq);
 	return (1);
@@ -4493,6 +4493,9 @@ sctp_remove_from_socket_q(struct sctp_inpcb *inp)
 	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_sockq, sq);
 	sctppcbinfo.ipi_count_sockq--;
 	sctppcbinfo.ipi_gencnt_sockq++;
+	if( stcb) {
+		stcb->asoc.cnt_msg_on_sb--;
+	}
 	return (stcb);
 }
 

@@ -1623,6 +1623,7 @@ sctp_does_chk_belong_to_reasm(struct sctp_association *asoc,
 	return (0);
 }
 
+extern int sctp_max_chunks_on_queue;
 static int
 sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
     struct mbuf **m, int offset, struct sctp_data_chunk *ch, int chk_length,
@@ -1711,7 +1712,11 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	 */
 
 	/* now do the tests */
-	if (((int)asoc->my_rwnd) <= 0) {
+	if(((asoc->cnt_on_all_streams + 
+	 asoc->cnt_on_delivery_queue +
+	 asoc->cnt_on_reasm_queue +
+	  asoc->cnt_msg_on_sb) > sctp_max_chunks_on_queue) ||
+	   (((int)asoc->my_rwnd) <= 0)) {
 		/*
 		 * When we have NO room in the rwnd we check
 		 * to make sure the reader is doing its job...
@@ -1734,7 +1739,14 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			}
 #endif
 			sctp_set_rwnd(stcb, asoc);
-			sctp_pegs[SCTP_RWND_DROPS]++;
+			if((asoc->cnt_on_all_streams + 
+			    asoc->cnt_on_delivery_queue +
+			    asoc->cnt_on_reasm_queue +
+			    asoc->cnt_msg_on_sb) > sctp_max_chunks_on_queue) {
+				sctp_pegs[SCTP_MSGC_DROP]++;
+			} else {
+				sctp_pegs[SCTP_RWND_DROPS]++;
+			}
 			indx = *break_flag;
 			*break_flag = 1;
 			return (0);

@@ -456,6 +456,8 @@ struct sctp_association {
 	int size_on_delivery_queue;
 	int cnt_on_delivery_queue;
 
+	int cnt_msg_on_sb;
+
 	/* All stream count of chunks for delivery */
 	int size_on_all_streams;
 	int cnt_on_all_streams;
