@@ -538,7 +538,10 @@ solisten(so, backlog)
 
 	s = splnet();
 #ifdef SCTP
-        if (TAILQ_EMPTY(&so->so_comp))
+        /* store the parameters to restore them in case of an error */
+        old_options = so->so_options;
+        old_qlimit  = so->so_qlimit;
+	if (TAILQ_EMPTY(&so->so_comp))
 		so->so_options |= SO_ACCEPTCONN;
 	if (backlog < 0 || backlog > somaxconn)
 		backlog = somaxconn;
