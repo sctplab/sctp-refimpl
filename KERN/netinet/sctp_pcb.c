@@ -684,10 +684,12 @@ sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, caddr_t asoc_id)
 				 * same vtag active (vtag collision).
 				 */
 				sctp_pegs[SCTP_VTAG_BOGUS]++;
+				SCTP_TCB_UNLOCK(stcb);
 				continue;
 			}
 			sctp_pegs[SCTP_VTAG_EXPR]++;
 			SCTP_INP_INFO_RUNLOCK();
+			SCTP_TCB_UNLOCK(stcb);
 			return (stcb);
 		}
 		SCTP_TCB_UNLOCK(stcb);
@@ -4676,8 +4678,6 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 			chk = nchk;
 		}
 	}
-	printf("Harvest %d chunks from drain ep:%p - %d left\n",
-	       cnt, inp, sctppcbinfo.ipi_count_chunk);
 	/*
 	 * Question, should we go through the delivery queue?
 	 * The only reason things are on here is the app not reading OR a
