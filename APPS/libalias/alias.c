@@ -241,19 +241,23 @@ SctpMonitorIn(struct ip *pip, struct alias_link *link)
 
 	/* if the vtag is wrong, we ignore the packet */
 	if(ch->chunk_type != SCTP_INITIATION) {
+		if(sctp->v_tag == 0)
+			return;
 		if ((ch->chunk_type == SCTP_SHUTDOWN_COMPLETE) ||
 		    (ch->chunk_type == SCTP_ABORT) ||
 		    (ch->chunk_type == SCTP_PACKET_DROPPED)) {
 			if(ch->chunk_flags & SCTP_HAD_NO_TCB)
-				vtag = GetVtagIn(link);
-			else
 				vtag = GetVtagOut(link);
+			else
+				vtag = GetVtagIn(link);
 		} else {
 			vtag = GetVtagIn(link);
 		}
-		if(sctp->v_tag != vtag)
+		if(sctp->v_tag != vtag) {
 			/* old vtag -- ignore */
-			return;
+			if (sctp->v_tag != GetVtagIn_transit(link)) {
+				return;
+		}
 	} else {
 		if(sctp->v_tag != 0)
 			/* INIT's must have a 0 in the vtag */
@@ -262,16 +266,42 @@ SctpMonitorIn(struct ip *pip, struct alias_link *link)
 	switch (GetStateIn(link))
 	{
 	case ALIAS_SCTP_STATE_NOT_CONNECTED:
-		if ((ch->chunk_type == SCTP_ABORT_ASSOCIATION) || (ch->chunk_type == SCTP_SHUTDOWN_COMPLETE))
+		if ((ch->chunk_type == SCTP_ABORT_ASSOCIATION) || (ch->chunk_type == SCTP_SHUTDOWN_COMPLETE)) {
 			SetStateIn(link, ALIAS_SCTP_STATE_DISCONNECTED);
-		else if ((ch->chunk_type == SCTP_INITIATION) || (ch->chunk_type == SCTP_COOKIE_ACK))
+		} else if (ch->chunk_type == SCTP_INITIATION) {
+			struct sctp_init_chunk *init;
+			init = (struct sctp_init_chunk *)ch;
+			SetVtagOut(link, init->init.initiate_tag)
+		} else if (ch->chunk_type == SCTP_INITIATION_ACK) {
+			struct sctp_init_chunk *init;
+			init = (struct sctp_init_chunk *)ch;
+			SetVtagOut(link, init->init.initiate_tag)
+		} else if (ch->chunk_type == SCTP_COOKIE_ACK) {
 			SetStateIn(link, ALIAS_SCTP_STATE_CONNECTED);
+			SetStateOut(link, ALIAS_SCTP_STATE_CONNECTED);
+		}
 		break;
         case ALIAS_SCTP_STATE_CONNECTED:
 		if ((ch->chunk_type == SCTP_ABORT_ASSOCIATION) || 
 		    (ch->chunk_type == SCTP_SHUTDOWN) ||
-		    (ch->chunk_type == SCTP_SHUTDOWN_ACK))
+		    (ch->chunk_type == SCTP_SHUTDOWN_ACK)) {
 			SetStateIn(link, ALIAS_SCTP_STATE_DISCONNECTED);
+		} else if (ch->chunk_type == SCTP_INITIATION) {
+			struct sctp_init_chunk *init;
+			init = (struct sctp_init_chunk *)ch;
+			SetVtagOut_transit(link, init->init.initiate_tag);
+			SetVtagTransit_needCE(link);
+		} else if (ch->chunk_type == SCTP_INITIATION_ACK) {
+			struct sctp_init_chunk *init;
+			init = (struct sctp_init_chunk *)ch;
+			SetVtagOut_transit(link, init->init.initiate_tag);
+		} else if (ch->chunk_type == SCTP_COOKIE_ECHO) {
+			SetSawCE(link);
+		} else if ((ch->chunk_type == SCTP_COOKIE_ACK) &&
+			   (IsTransit_tags_set(link))){
+			/* restart case */
+			SwapToTransitTags(link);
+		}
 		break;
 	}
 }
@@ -288,6 +318,8 @@ SctpMonitorOut(struct ip *pip, struct alias_link *link)
 
 	/* if the vtag is wrong, we ignore the packet */
 	if(ch->chunk_type != SCTP_INITIATION) {
+		if(sctp->v_tag == 0)
+			return;
 		if ((ch->chunk_type == SCTP_SHUTDOWN_COMPLETE) ||
 		    (ch->chunk_type == SCTP_ABORT) ||
 		    (ch->chunk_type == SCTP_PACKET_DROPPED)) {
@@ -296,11 +328,15 @@ SctpMonitorOut(struct ip *pip, struct alias_link *link)
 			else
 				vtag = GetVtagOut(link);
 		} else {
-			vtag = GetVtagIn(link);
+			vtag = GetVtagOut(link);
 		}
-		if(sctp->v_tag != vtag)
-			/* old vtag -- ignore */
-			return;
+		
+		if(sctp->v_tag != vtag) {
+			/* old vtag -- ignore? */
+			if (sctp->v_tag != GetVtagOut_transit(link)) {
+				return;
+			}
+		}
 	} else {
 		if(sctp->v_tag != 0)
 			/* INIT's must have a 0 in the vtag */
@@ -309,32 +345,57 @@ SctpMonitorOut(struct ip *pip, struct alias_link *link)
 	switch (GetStateOut(link))
 	{
 	case ALIAS_SCTP_STATE_NOT_CONNECTED:
-		if ((ch->chunk_type == SCTP_ABORT_ASSOCIATION) || (ch->chunk_type == SCTP_SHUTDOWN_COMPLETE))
+		if ((ch->chunk_type == SCTP_ABORT_ASSOCIATION) || (ch->chunk_type == SCTP_SHUTDOWN_COMPLETE)) {
 			SetStateOut(link, ALIAS_SCTP_STATE_DISCONNECTED);
-		else if ((ch->chunk_type == SCTP_INITIATION) || (ch->chunk_type == SCTP_COOKIE_ACK))
+		} else if ((ch->chunk_type == SCTP_COOKIE_ECHO) {
+			
+		} else if (ch->chunk_type == SCTP_INITIATION) {
+			struct sctp_init_chunk *init;
+			init = (struct sctp_init_chunk *)ch;
+			SetVtagIn(link, init->init.initiate_tag)
+		} else if (ch->chunk_type == SCTP_INITIATION_ACK) {
+			struct sctp_init_chunk *init;
+			init = (struct sctp_init_chunk *)ch;
+			SetVtagIn(link, init->init.initiate_tag)
+		} else if (ch->chunk_type == SCTP_COOKIE_ACK) {
 			SetStateOut(link, ALIAS_SCTP_STATE_CONNECTED);
+			SetStateIn(link, ALIAS_SCTP_STATE_CONNECTED);
+		}
 		break;
         case ALIAS_SCTP_STATE_CONNECTED:
 		if ((ch->chunk_type == SCTP_ABORT_ASSOCIATION) || 
-		    (ch->chunk_type == SCTP_SHUTDOWN) ||
-		    (ch->chunk_type == SCTP_SHUTDOWN_ACK))
+		    (ch->chunk_type == SCTP_SHUTDOWN) || 
+		    (ch->chunk_type == SCTP_SHUTDOWN_ACK)) {
 			SetStateOut(link, ALIAS_SCTP_STATE_DISCONNECTED);
+		} else if (ch->chunk_type == SCTP_INITIATION) {
+			struct sctp_init_chunk *init;
+			init = (struct sctp_init_chunk *)ch;
+			SetVtagIn_transit(link, init->init.initiate_tag);
+		} else if (ch->chunk_type == SCTP_INITIATION_ACK) {
+			struct sctp_init_chunk *init;
+			init = (struct sctp_init_chunk *)ch;
+			SetVtagIn_transit(link, init->init.initiate_tag);
+		} else if ((ch->chunk_type == SCTP_COOKIE_ACK) &&
+			   (IsTransit_tags_set(link))){
+			/* restart case */
+			SwapToTransitTags(link);
+		}
 		break;
 	};
 }
 
 
 static void
-adjust_sctp_checksum(char *ptr, int len)
+adjust_sctp_checksum(struct ip *pip)
 {
-    struct ip		*pip;
     struct sctphdr	*sc;
-    pip = (struct ip *) ptr;
     u_int32_t crc;
-
+    int len;
+    len =  ntohs(pip->ip_len);
     sc = (struct sctphdr *) ((char *) pip + (pip->ip_hl << 2));
     sc->checksum = 0;
-    
+    crc = calculate_crc32c((char *)sc, (len-(pip->ip_hl<<2)));
+    sc->checksum = crc;
 }
 
 
@@ -1294,6 +1355,165 @@ TcpAliasOut(struct ip *pip, int maxpacketsize)
 /* SCTP Alias IN/OUT goes here */
 
 
+static int
+SctpAliasIn(struct ip *pip)
+{
+	struct sctphdr *sc;
+	struct alias_link *link;
+
+	sc = (struct sctphdr *) ((char *) pip + (pip->ip_hl << 2));
+
+	link = FindUdpTcpIn(pip->ip_src, pip->ip_dst,
+			    tc->th_sport, tc->th_dport,
+			    IPPROTO_SCTP,
+			    !(packetAliasMode & PKT_ALIAS_PROXY_ONLY));
+	if (link != NULL)
+	{
+		struct in_addr alias_address;
+		struct in_addr original_address;
+		struct in_addr proxy_address;
+		u_short alias_port;
+		u_short proxy_port;
+		int accumulate;
+		u_short *sptr;
+
+		/* get all the alisas's and fix the dest_port */
+		alias_address = GetAliasAddress(link);
+		original_address = GetOriginalAddress(link);
+		proxy_address = GetProxyAddress(link);
+		alias_port = sc->dest_port;
+		sc->dest_port = GetOriginalPort(link);
+		proxy_port = GetProxyPort(link);
+
+		if (proxy_port != 0)
+		{
+			/* Adjust the proxy source port*/
+			sc->src_port = proxy_port;
+		}
+		/* Now fix the crc32c sum */
+		adjust_sctp_checksum(pip);
+
+		/* Restore original IP address */
+		sptr = (u_short *) &pip->ip_dst;
+		accumulate  = *sptr++;
+		accumulate += *sptr;
+		pip->ip_dst = original_address;
+		sptr = (u_short *) &pip->ip_dst;
+		accumulate -= *sptr++;
+		accumulate -= *sptr;
+
+		/* If this is a transparent proxy packet, then modify the source
+		 *  address 
+		 */
+		if (proxy_address.s_addr != 0) {
+			sptr = (u_short *) &pip->ip_src;
+			accumulate += *sptr++;
+			accumulate += *sptr;
+			pip->ip_src = proxy_address;
+			sptr = (u_short *) &pip->ip_src;
+			accumulate -= *sptr++;
+			accumulate -= *sptr;
+		}
+		ADJUST_CHECKSUM(accumulate, pip->ip_sum);
+
+		SctpMonitorIn(pip, link);
+
+		return(PKT_ALIAS_OK);
+	}
+	return(PKT_ALIAS_IGNORED);
+}
+
+
+
+static int
+SctpAliasOut(struct ip *pip, int maxpacketsize)
+{
+	int proxy_type;
+	u_short dest_port;
+	u_short proxy_server_port;
+	struct in_addr dest_address;
+	struct in_addr proxy_server_address;
+	struct sctphdr *sc;
+	struct alias_link *link;
+
+	sc = (struct sctphdr *) ((char *) pip + (pip->ip_hl << 2));
+
+/* FIX FIX, need to fix the alias_proxy stuff yet */
+	proxy_type = ProxyCheck(pip, &proxy_server_address, &proxy_server_port);
+
+	if (proxy_type == 0 && (packetAliasMode & PKT_ALIAS_PROXY_ONLY))
+		return PKT_ALIAS_OK;
+
+      /* If this is a transparent proxy, save original destination,
+       * then alter the destination and adjust checksum of IP portion,
+       * we hold off until the link is found and only do one crc32c
+       * since this is quite expensive. This means that if we
+       * can't create a link there will be a problem.
+       */
+	dest_port = sc->dest_port;
+	dest_address = pip->ip_dst;
+	if (proxy_type != 0)
+	{
+		int accumulate;
+		u_short *sptr;
+
+		sc->dest_port = proxy_server_port;
+		pip->ip_dst = proxy_server_address;
+		sptr = (u_short *) &(pip->ip_dst);
+		accumulate -= *sptr++;
+		accumulate -= *sptr;
+		ADJUST_CHECKSUM(accumulate, pip->ip_sum);
+	}
+
+	link = FindUdpTcpOut(pip->ip_src, pip->ip_dst,
+			     sc->src_port, sc->dest_port,
+			     IPPROTO_SCTP, 1);
+	if (link !=NULL)
+	{
+		u_short alias_port;
+		struct in_addr alias_address;
+		int accumulate;
+		u_short *sptr;
+
+/* Save original destination address, if this is a proxy packet.
+   Also modify packet to include destination encoding.  This may
+   change the size of IP header. */
+		if (proxy_type != 0)
+		{
+			SetProxyPort(link, dest_port);
+			SetProxyAddress(link, dest_address);
+			ProxyModify(link, pip, maxpacketsize, proxy_type);
+			sc = (struct sctphdr *) ((char *) pip + (pip->ip_hl << 2));
+		}
+
+/* Get alias address and port */
+		alias_port = GetAliasPort(link);
+		alias_address = GetAliasAddress(link);
+
+/* Monitor SCTP connection state */
+		SctpMonitorOut(pip, link);
+
+		sc->src_port = alias_port;
+		sptr = (u_short *) &(pip->ip_src);
+
+
+/* Change source address */
+		sptr = (u_short *) &(pip->ip_src);
+		accumulate  = *sptr++;
+		accumulate += *sptr;
+		pip->ip_src = alias_address;
+		sptr = (u_short *) &(pip->ip_src);
+		accumulate -= *sptr++;
+		accumulate -= *sptr;
+		adjust_sctp_checksum(pip);
+		ADJUST_CHECKSUM(accumulate, pip->ip_sum);
+
+		return(PKT_ALIAS_OK);
+	}
+	return(PKT_ALIAS_IGNORED);
+}
+
+
 
 /* Fragment Handling
 
@@ -1628,14 +1848,11 @@ PacketUnaliasOut(char *ptr,           /* valid IP packet */
     struct tcphdr 	*tc;
     struct alias_link 	*link;
     int 		iresult = PKT_ALIAS_IGNORED;
-    int len,hlen;
 
     pip = (struct ip *) ptr;
 
     /* Defense against mangled packets */
-    len = ntohs(pip->ip_len);
-
-    if (len > maxpacketsize
+    if (ntohs(pip->ip_len) > maxpacketsize
      || (pip->ip_hl<<2) > maxpacketsize)
         return(iresult);
 
@@ -1712,7 +1929,7 @@ PacketUnaliasOut(char *ptr,           /* valid IP packet */
                 ud->uh_sport = original_port;
 	    else if (pip->ip_p == IPPROTO_SCTP) {
                 sc->src_port = original_port;
-		adjust_sctp_checksum(ptr, len);
+		adjust_sctp_checksum(pip);
 	    } else
                 tc->th_sport = original_port;
 

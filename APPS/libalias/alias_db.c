@@ -310,6 +310,8 @@ struct sctp_dat
 {
     u_int32_t vtag_in;
     u_int32_t vtag_out;
+    u_int32_t vtag_in_t;
+    u_int32_t vtag_out_t;
     struct sctp_state state;
     int fwhole;             /* Which firewall record is used for this hole? */
 };
@@ -1154,7 +1156,10 @@ AddLink(struct in_addr  src_addr,
 			aux_sctp->state.in = ALIAS_SCTP_STATE_NOT_CONNECTED;
 			aux_sctp->state.out = ALIAS_SCTP_STATE_NOT_CONNECTED;
 			aux_sctp->fwhole = -1;
-			aux_sctp->vtag = 0;
+			aux_sctp->vtag_in = 0;
+			aux_sctp->vtag_in_t = 0;
+			aux_sctp->vtag_out = 0;
+			aux_sctp->vtag_out_t = 0;
 			link->data.sctp = aux_sctp;
 		} else {
 #ifdef DEBUG
@@ -2000,6 +2005,60 @@ GetVtagIn(struct alias_link *link)
 	else
 		return link->data.sctp->vtag_in;
 }
+
+void
+SetVtagIn_transit(struct alias_link *link, u_int32_t tag)
+{
+	if(link->link_type != LINK_SCTP)
+		return;
+	link->data.sctp->vtag_in_t = tag;
+}
+
+void
+SetVtagOut_transit(struct alias_link *link, u_int32_t tag)
+{
+	if(link->link_type != LINK_SCTP)
+		return;
+	link->data.sctp->vtag_out_t = tag;
+}
+
+void
+GetVtagIn_transit(struct alias_link *link, u_int32_t tag)
+{
+	if(link->link_type != LINK_SCTP)
+		return 0;
+	return link->data.sctp->vtag_in_t;
+}
+
+void
+GetVtagOut_transit(struct alias_link *link, u_int32_t tag)
+{
+	if(link->link_type != LINK_SCTP)
+		return 0;
+	return link->data.sctp->vtag_out_t;
+}
+
+int
+IsTransit_tags_set(struct alias_link *link)
+{
+	if(link->link_type != LINK_SCTP)
+		return 0;
+	if(link->data.sctp->vtag_out_t && link->data.sctp->vtag_in_t)
+		return 1;
+	return 0;
+}
+
+void
+SwapToTransitTags(struct alias_link *link)
+{
+	if ( IsTransit_tags_set(link) == 0 )
+		return;
+	link->data.sctp->vtag_out = link->data.sctp->vtag_out_t;
+        link->data.sctp->vtag_in = link->data.sctp->vtag_in_t;
+	link->data.sctp->vtag_out_t = 0;
+	link->data.sctp->vtag_in_t = 0;
+}
+
 
 void
 SetVtagIn(struct alias_link *link, u_int32_t tag)
