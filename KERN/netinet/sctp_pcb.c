@@ -159,6 +159,8 @@ extern int ipport_hifirstauto;
 extern int ipport_hilastauto;
 #endif
 
+#if defined(__FreeBSD__) && __FreeBSD_version > 500000
+
 #ifndef xyzzy 
 void
 SCTP_INP_RLOCK(struct sctp_inpcb *inp) 
@@ -205,6 +207,7 @@ SCTP_INP_INFO_WLOCK()
 
 
 
+#endif
 #endif
 
 void
