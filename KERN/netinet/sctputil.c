@@ -1,4 +1,4 @@
-/*	$KAME: sctputil.c,v 1.32 2004/08/17 06:28:02 t-momose Exp $	*/
+/*	$KAME: sctputil.c,v 1.35 2005/01/26 19:40:16 jinmei Exp $	*/
 
 /*
  * Copyright (c) 2001, 2002, 2003, 2004 Cisco Systems, Inc.
@@ -63,6 +63,12 @@
 #include <sys/proc.h>
 #include <sys/kernel.h>
 #include <sys/sysctl.h>
+
+#ifdef __FreeBSD__
+#include <sys/callout.h>
+#else
+#include <netinet/sctp_callout.h>	/* for callout_active() */
+#endif
 
 #include <net/radix.h>
 #include <net/route.h>
@@ -854,7 +860,6 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	MALLOC(asoc->mapping_array, u_int8_t *, asoc->mapping_array_size,
 	       M_PCB, M_NOWAIT);
 #endif
-
 	if (asoc->mapping_array == NULL) {
 		FREE(asoc->strmout, M_PCB);
 		return (ENOMEM);
