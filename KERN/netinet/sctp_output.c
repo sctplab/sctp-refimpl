@@ -10391,7 +10391,8 @@ out:
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		create_lock_applied = 0;
 	}
-	SCTP_TCB_UNLOCK(stcb);
+	if (stcb)
+		SCTP_TCB_UNLOCK(stcb);
 	if (top)
 		sctp_m_freem(top);
 	if (control)
