@@ -3,4 +3,7 @@ Patch 24 change log
 1) Fix for sctp_sendmsg. If the sa_len was set to 0 all worked as
    it should... however if sa_len is set to a proper value then
    garbage would be set as the address size.
-
+2) debug in timer routine made to print under debug
+   level 1 instead of whenever debug is defined
+3) port 0 check moved before the checksum verification.
+4) Added missing port 0 check for IPv6

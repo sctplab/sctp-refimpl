@@ -260,6 +260,10 @@ sctp6_input(mp, offp, proto)
 		sctp_pegs[SCTP_IN_MCAST]++;
 		goto out_of;
 	}
+	/* destination port of 0 is illegal, based on RFC2960. */
+	if (sh->dest_port == 0) {
+		goto out_of;
+	}
 	if ((sctp_no_csum_on_loopback == 0) ||
 	   (m->m_pkthdr.rcvif == NULL) ||
 	   (m->m_pkthdr.rcvif->if_type != IFT_LOOP)) {
@@ -299,10 +303,6 @@ sctp6_input(mp, offp, proto)
 		mlen = m->m_pkthdr.len;
 	}
 	net = NULL;
-	/* destination port of 0 is illegal, based on RFC2960. */
-	if (sh->dest_port == 0) {
-		goto out_of;
-	}
 	/*
 	 * Locate pcb and tcb for datagram
 	 * sctp_findassociation_addr() wants IP/SCTP/first chunk header...

@@ -4152,6 +4152,12 @@ sctp_input(m, va_alist)
 		goto bad;
 	}
 
+	/* destination port of 0 is illegal, based on RFC2960. */
+	if (sh->dest_port == 0) {
+	        sctp_pegs[SCTP_HDR_DROPS]++;
+		goto bad;
+	}
+
 	/* validate SCTP checksum */
 	if ((sctp_no_csum_on_loopback == 0) ||
 	    (m->m_pkthdr.rcvif == NULL) ||
@@ -4200,12 +4206,6 @@ sctp_input(m, va_alist)
 	if (mlen < (ip->ip_len - iphlen)) {
 	        sctp_pegs[SCTP_HDR_DROPS]++;
 		goto bad;	
-	}
-
-	/* destination port of 0 is illegal, based on RFC2960. */
-	if (sh->dest_port == 0) {
-	        sctp_pegs[SCTP_HDR_DROPS]++;
-		goto bad;
 	}
 
 	/*
