@@ -2287,6 +2287,8 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	       inp->refcount);
 	if (inp->refcount) {
 		sctp_timer_start(SCTP_TIMER_TYPE_INPKILL, inp, NULL, NULL);
+		SCTP_INP_WUNLOCK(inp);
+		SCTP_ASOC_CREATE_UNLOCK(inp);
 		return;
 	}
 #endif
