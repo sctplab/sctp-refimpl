@@ -2823,6 +2823,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 				printf("peer address invalid\n");
 			}
 #endif
+			SCTP_INP_RUNLOCK(inp);
 			*error = EINVAL;
 			return (NULL);
 		}
@@ -2838,6 +2839,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 				printf("peer address invalid\n");
 			}
 #endif
+			SCTP_INP_RUNLOCK(inp);
 			*error = EINVAL;
 			return (NULL);
 		}
@@ -2849,6 +2851,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 			printf("BAD family %d\n", firstaddr->sa_family);
 		}
 #endif
+		SCTP_INP_RUNLOCK(inp);
 		*error = EINVAL;
 		return (NULL);
 	}
