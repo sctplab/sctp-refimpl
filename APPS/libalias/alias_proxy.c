@@ -505,7 +505,7 @@ ProxyModify(struct alias_link *link,
         break;
 
     case PROXY_TYPE_ENCODE_TCPSTREAM:
-        ProxyEncodeTcpStream(link, pip, maxpacketsize);
+	ProxyEncodeTcpStream(link, pip, maxpacketsize);
         break;
     }
 }
@@ -524,7 +524,7 @@ PacketAliasProxyRule(const char *cmd)
  *   server <addr>[:<port>]
  *   [port <port>]
  *   [rule n]
- *   [proto tcp|udp]
+ *   [proto tcp|udp|sctp]
  *   [src <addr>[/n]]
  *   [dst <addr>[/n]]
  *   [type encode_tcp_stream|encode_ip_hdr|no_encode]
@@ -705,6 +705,8 @@ PacketAliasProxyRule(const char *cmd)
                 proto = IPPROTO_TCP;
             else if (strcmp(token, "udp") == 0)
                 proto = IPPROTO_UDP;
+            else if (strcmp(token, "sctp") == 0)
+                proto = IPPROTO_SCTP;
             else
                 return -1;
             state = STATE_READ_KEYWORD;
