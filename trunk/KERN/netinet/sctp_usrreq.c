@@ -2808,28 +2808,28 @@ sctp_optsset(struct socket *so,
 		break;
 	case SCTP_DELAYED_ACK_TIME:
 	  {
-   	        struct sctp_assoc_value *tm
-	        if ((size_t)m->m_len < sizeof(struct sctp_assoc_value)) {
+	    struct sctp_assoc_value *tm;
+	    if ((size_t)m->m_len < sizeof(struct sctp_assoc_value)) {
+	      error = EINVAL;
+	      break;
+	    }
+	    tm = mtod(m, struct sctp_assoc_value *);
+	    if(tm->assoc_id) {
+	      stcb = sctp_findassociation_ep_asocid(inp, tm->assoc_id);
+	      if(stcb == NULL) {
+		error = ENOTCONN;
+	      } else {
+		if(tm->assoc_value)
+		  stcb->asoc.delayed_ack = tm->assoc_value;
+		else
 		  error = EINVAL;
-		  break;
-		}
-		tm = mtod(m, struct sctp_assoc_value *);
-		if(tm->assoc_id) {
-		  stcb = sctp_findassociation_ep_asocid(inp, tm->assoc_id);
-		  if(stcb == NULL) {
-		    error = ENOTCONN;
-		  } else {
-		    if(tm->assoc_value)
-		      stcb->delayed_ack = tm->assoc_value;
-		    else
-		      error = EINVAL;
-		  }
-		}else {
-		  if(tm->assoc_vlaue)
-		    inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV] = MSEC_TO_TICKS(tm->assoc_value);
-		  else
-		    error = EINVAL;
-		}
+	      }
+	    }else {
+	      if(tm->assoc_vlaue)
+		inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV] = MSEC_TO_TICKS(tm->assoc_value);
+	      else
+		error = EINVAL;
+	    }
 	  }
 	  break;
 	case SCTP_RESET_STREAMS:
