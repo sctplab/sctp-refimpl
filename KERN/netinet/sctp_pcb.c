@@ -2015,7 +2015,6 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 		inp->sctp_flags |= SCTP_PCB_FLAGS_DO_ASCONF;
 		/* add this address to the endpoint list */
 		error = sctp_insert_laddr(&inp->sctp_addr_list, ifa);
-		SCTP_INP_WUNLOCK(inp);
 		if (error != 0) {
 			SCTP_INP_INFO_WUNLOCK();
 			SCTP_INP_WUNLOCK(inp);
@@ -2246,7 +2245,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 #ifdef IPSEC
 #ifdef __OpenBSD__
 	/* XXX IPsec cleanup here */
-	    {
 		int s2 = spltdb();
 		if (ip_pcb->inp_tdb_in)
 		    TAILQ_REMOVE(&ip_pcb->inp_tdb_in->tdb_inp_in,
@@ -2267,19 +2265,19 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		if (ip_pcb->inp_ipsec_remoteauth)
 		    ipsp_reffree(ip_pcb->inp_ipsec_remoteauth);
 		splx(s2);
-	    }
 #else
-	    ipsec4_delete_pcbpolicy(ip_pcb);
+		ipsec4_delete_pcbpolicy(ip_pcb);
 #endif
 #endif /*IPSEC*/
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
-	    SOCK_LOCK(so);
+		ACCEPT_LOCK();
+		SOCK_LOCK(so);
 #endif
-	    so->so_pcb = 0;
+		so->so_pcb = 0;
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
-	    sotryfree(so);
+		sotryfree(so);
 #else
-	    sofree(so);
+		sofree(so);
 #endif
 	}
 

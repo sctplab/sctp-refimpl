@@ -942,7 +942,7 @@ sctp_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
 		 * definitions) but this is not advisable.
 	     */
 		int ret;
-		ret = sctp_output(inp, inp->pkt, addr, inp->control, p);
+		ret = sctp_output(inp, inp->pkt, addr, inp->control, p, flags);
 		inp->pkt = NULL;
 		inp->control = NULL;
 		return (ret);

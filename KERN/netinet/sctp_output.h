@@ -84,10 +84,10 @@ void sctp_fix_ecn_echo(struct sctp_association *);
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 int sctp_output(struct sctp_inpcb *, struct mbuf *, struct sockaddr *,
-    struct mbuf *, struct thread *);
+    struct mbuf *, struct thread *, int);
 #else
 int sctp_output(struct sctp_inpcb *, struct mbuf *, struct sockaddr *,
-    struct mbuf *, struct proc *);
+    struct mbuf *, struct proc *, int);
 #endif
 
 int sctp_chunk_output(struct sctp_inpcb *, struct sctp_tcb *, int);
