@@ -55,6 +55,7 @@
 			projectDirPath = "";
 			targets = (
 				32A4FEB80562C75700D090E7,
+				50394AAF0729AF7200F8D390,
 			);
 		};
 		089C166AFE841209C02AAC07 = {
@@ -111,6 +112,7 @@
 		19C28FB6FE9D52B211CA2CBB = {
 			children = (
 				32A4FEC40562C75800D090E7,
+				50394AB00729AF7200F8D390,
 			);
 			isa = PBXGroup;
 			name = Products;
@@ -147,6 +149,7 @@
 //244
 		247142CAFF3F8F9811CA285C = {
 			children = (
+				500D736C0729B00A008D8EA9,
 				5045DC9B06DE71830057890E,
 				502A84EB06F4EFF800D156E7,
 				50D42EED06D8C0DF004DAC5C,
@@ -346,6 +349,20 @@
 //502
 //503
 //504
+		500D736C0729B00A008D8EA9 = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.c;
+			path = sctp_sys_calls.c;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		500D736D0729B00A008D8EA9 = {
+			fileRef = 500D736C0729B00A008D8EA9;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
 		502A84E706F4EFE600D156E7 = {
 			fileEncoding = 30;
 			isa = PBXFileReference;
@@ -369,6 +386,64 @@
 			name = net;
 			refType = 4;
 			sourceTree = "<group>";
+		};
+		50394AAC0729AF7200F8D390 = {
+			buildActionMask = 2147483647;
+			files = (
+			);
+			isa = PBXHeadersBuildPhase;
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		50394AAD0729AF7200F8D390 = {
+			buildActionMask = 2147483647;
+			files = (
+				500D736D0729B00A008D8EA9,
+			);
+			isa = PBXSourcesBuildPhase;
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		50394AAE0729AF7200F8D390 = {
+			buildActionMask = 2147483647;
+			files = (
+			);
+			isa = PBXFrameworksBuildPhase;
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		50394AAF0729AF7200F8D390 = {
+			buildPhases = (
+				50394AAC0729AF7200F8D390,
+				50394AAD0729AF7200F8D390,
+				50394AAE0729AF7200F8D390,
+			);
+			buildRules = (
+			);
+			buildSettings = {
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				INSTALL_PATH = /usr/local/lib;
+				LIBRARY_STYLE = DYNAMIC;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = libsctp;
+				SECTORDER_FLAGS = "";
+				WARNING_CFLAGS = "-Wmost -Wno-four-char-constants -Wno-unknown-pragmas";
+			};
+			dependencies = (
+			);
+			isa = PBXNativeTarget;
+			name = libsctp;
+			productName = libsctp;
+			productReference = 50394AB00729AF7200F8D390;
+			productType = "com.apple.product-type.library.dynamic";
+		};
+		50394AB00729AF7200F8D390 = {
+			explicitFileType = "compiled.mach-o.dylib";
+			includeInIndex = 0;
+			isa = PBXFileReference;
+			path = libsctp.dylib;
+			refType = 3;
+			sourceTree = BUILT_PRODUCTS_DIR;
 		};
 		5045DC9B06DE71830057890E = {
 			children = (
