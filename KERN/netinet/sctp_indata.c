@@ -571,7 +571,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc, in
 		    stcb->sctp_socket->so_rcv.sb_hiwat) {
 			if (cntDel) {
 				sctp_sorwakeup(stcb->sctp_ep,
-				    stcb->sctp_socket);
+					       stcb->sctp_socket);
 			}
 			if( hold_locks == 0 ) 
 				SCTP_INP_WUNLOCK(stcb->sctp_ep);
@@ -581,7 +581,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc, in
 		if (chk == NULL) {
 			if (cntDel) {
 				sctp_sorwakeup(stcb->sctp_ep,
-				    stcb->sctp_socket);
+					       stcb->sctp_socket);
 			}
 			if( hold_locks == 0 ) 
 				SCTP_INP_WUNLOCK(stcb->sctp_ep);
@@ -591,7 +591,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc, in
 			/* Can't deliver more :< */
 			if (cntDel) {
 				sctp_sorwakeup(stcb->sctp_ep,
-				    stcb->sctp_socket);
+					       stcb->sctp_socket);
 			}
 			if( hold_locks == 0 ) 
 				SCTP_INP_WUNLOCK(stcb->sctp_ep);
@@ -607,7 +607,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc, in
 			 */
 			if (cntDel) {
 				sctp_sorwakeup(stcb->sctp_ep,
-				    stcb->sctp_socket);
+					       stcb->sctp_socket);
 			}
 			if( hold_locks == 0 ) 
 				SCTP_INP_WUNLOCK(stcb->sctp_ep);
@@ -654,14 +654,14 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc, in
 				sin6.sin6_len = sizeof(struct sockaddr_in6);
 				sin6.sin6_addr.s6_addr16[2] = 0xffff;
 				bcopy(&sin->sin_addr,
-				    &sin6.sin6_addr.s6_addr16[3],
-				    sizeof(sin6.sin6_addr.s6_addr16[3]));
+				      &sin6.sin6_addr.s6_addr16[3],
+				      sizeof(sin6.sin6_addr.s6_addr16[3]));
 				sin6.sin6_port = sin->sin_port;
 				to = (struct sockaddr *)&sin6;
 			}
 			/* check and strip embedded scope junk */
 			to = (struct sockaddr *)sctp_recover_scope((struct sockaddr_in6 *)to,
-			    &lsa6);
+								   &lsa6);
 			if (((struct sockaddr_in *)to)->sin_port == 0) {
 				printf("Huh b, port is %d not net:%x %d?\n",
 				       ((struct sockaddr_in *)to)->sin_port,
@@ -674,25 +674,25 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc, in
 				if (control) {
 					sctp_m_freem(control);
 					stcb->asoc.my_rwnd_control_len -=
-					    CMSG_LEN(sizeof(struct sctp_sndrcvinfo));
+						CMSG_LEN(sizeof(struct sctp_sndrcvinfo));
 				}
 				sctp_sorwakeup(stcb->sctp_ep,
-				    stcb->sctp_socket);
+					       stcb->sctp_socket);
 				if( hold_locks == 0 ) 
 					SCTP_INP_WUNLOCK(stcb->sctp_ep);
 				return;
 			}
 			if (!sbappendaddr_nocheck(&stcb->sctp_socket->so_rcv,
-			    to, chk->data, control, stcb->asoc.my_vtag,
-			    stcb->sctp_ep)) {
+						  to, chk->data, control, stcb->asoc.my_vtag,
+						  stcb->sctp_ep)) {
 				/* Gak not enough room */
 				if (control) {
 					sctp_m_freem(control);
 					stcb->asoc.my_rwnd_control_len -=
-					    CMSG_LEN(sizeof(struct sctp_sndrcvinfo));
+						CMSG_LEN(sizeof(struct sctp_sndrcvinfo));
 				}
 				sctp_sorwakeup(stcb->sctp_ep,
-				    stcb->sctp_socket);
+					       stcb->sctp_socket);
 				if( hold_locks == 0 ) 
 					SCTP_INP_WUNLOCK(stcb->sctp_ep);
 				return;
@@ -705,8 +705,6 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc, in
 			} else {
 				stcb->asoc.my_rwnd_control_len += sizeof(struct mbuf);
 			}
-			if( hold_locks == 0 ) 
-				SCTP_INP_WUNLOCK(stcb->sctp_ep);
 			cntDel++;
 		} else {
 			if (sctp_sbspace(&stcb->sctp_socket->so_rcv) >=
@@ -716,7 +714,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc, in
 			} else {
 				/* out of space in the sb */
 				sctp_sorwakeup(stcb->sctp_ep,
-				    stcb->sctp_socket);
+					       stcb->sctp_socket);
 				if( hold_locks == 0 ) 
 					SCTP_INP_WUNLOCK(stcb->sctp_ep);
 				return;
@@ -760,9 +758,9 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc, in
 					    chk->rec.data.stream_seq) {
 						at = TAILQ_NEXT(chk, sctp_next);
 						TAILQ_REMOVE(&strm->inqueue,
-						    chk, sctp_next);
+							     chk, sctp_next);
 						asoc->size_on_all_streams -=
-						    chk->send_size;
+							chk->send_size;
 						asoc->cnt_on_all_streams--;
 						strm->last_sequence_delivered++;
 						/*
@@ -779,7 +777,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc, in
 						break;
 					}
 					nxt_todel =
-					    strm->last_sequence_delivered + 1;
+						strm->last_sequence_delivered + 1;
 				}
 			}
 			if (!TAILQ_EMPTY(&asoc->delivery_queue)) {
