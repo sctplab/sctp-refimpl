@@ -1,4 +1,4 @@
-/*	$KAME: sctp_timer.h,v 1.5 2004/08/17 04:06:20 itojun Exp $	*/
+/*	$KAME: sctp_timer.h,v 1.6 2005/03/06 16:04:18 itojun Exp $	*/
 
 #ifndef __sctp_timer_h__
 #define __sctp_timer_h__
@@ -68,7 +68,6 @@ void sctp_autoclose_timer(struct sctp_inpcb *, struct sctp_tcb *,
 void sctp_audit_retranmission_queue(struct sctp_association *);
 
 void sctp_iterator_timer(struct sctp_iterator *it);
-
 
 #endif
 #endif

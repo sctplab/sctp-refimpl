@@ -1,4 +1,4 @@
-/*	$KAME: sctp_peeloff.c,v 1.12 2004/08/17 04:06:19 itojun Exp $	*/
+/*	$KAME: sctp_peeloff.c,v 1.13 2005/03/06 16:04:18 itojun Exp $	*/
 
 /*
  * Copyright (C) 2002, 2003 Cisco Systems Inc,
@@ -136,8 +136,8 @@ sctp_do_peeloff(struct socket *head, struct socket *so, caddr_t assoc_id)
 	 * the stcb in the right place.
 	 */
 	sctp_move_pcb_and_assoc(inp, n_inp, stcb);
-	/* 
-	 * And now the final hack. We move data in the 
+	/*
+	 * And now the final hack. We move data in the
 	 * pending side i.e. head to the new socket
 	 * buffer. Let the GRUBBING begin :-0
 	 */
@@ -191,13 +191,13 @@ sctp_get_peeloff(struct socket *head, caddr_t assoc_id, int *error)
 	newso->so_state |= SS_ISCONNECTED;
 	/* We remove it right away */
 #if defined(__FreeBSD__) || defined(__APPLE__)
-	SOCK_LOCK(head); 
+	SOCK_LOCK(head);
 	TAILQ_REMOVE(&head->so_comp, newso, so_list);
 	head->so_qlen--;
-	SOCK_UNLOCK(head); 
+	SOCK_UNLOCK(head);
 #else
 
-#if defined( __NetBSD__) || defined(__OpenBSD__)
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 	newso = TAILQ_FIRST(&head->so_q);
 #else
 	newso = head->so_q;
@@ -211,8 +211,8 @@ sctp_get_peeloff(struct socket *head, caddr_t assoc_id, int *error)
 	 */
 	SCTP_INP_WUNLOCK(n_inp);
 	sctp_move_pcb_and_assoc(inp, n_inp, stcb);
-	/* 
-	 * And now the final hack. We move data in the 
+	/*
+	 * And now the final hack. We move data in the
 	 * pending side i.e. head to the new socket
 	 * buffer. Let the GRUBBING begin :-0
 	 */

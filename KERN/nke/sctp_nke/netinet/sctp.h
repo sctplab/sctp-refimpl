@@ -1,4 +1,4 @@
-/*	$KAME: sctp.h,v 1.17 2004/08/17 04:06:15 itojun Exp $	*/
+/*	$KAME: sctp.h,v 1.18 2005/03/06 16:04:16 itojun Exp $	*/
 
 #ifndef _NETINET_SCTP_H_
 #define _NETINET_SCTP_H_
@@ -66,7 +66,6 @@ struct sctp_paramhdr {
 	u_int16_t param_length;		/* parameter length */
 };
 
-
 /*
  * user socket options
  */
@@ -132,7 +131,7 @@ struct sctp_paramhdr {
 #define SCTP_GET_STAT_LOG		0x0000001d
 #define SCTP_CONNECT_X			0x0000001e	/* hidden opt for connectx */
 #define SCTP_RESET_STREAMS		0x0000001f
-#define SCTP_CONNECT_X_DELAYED		0x00000020	/* hidden opt for connectx_delayed 
+#define SCTP_CONNECT_X_DELAYED		0x00000020	/* hidden opt for connectx_delayed
 							 * part of sctp_sendx()
 							 */
 #define SCTP_CONNECT_X_COMPLETE         0x00000021
@@ -146,8 +145,8 @@ struct sctp_paramhdr {
 #define SCTP_PEER_PUBLIC_KEY            0x00000100 /* get the peers public key */
 #define SCTP_MY_PUBLIC_KEY              0x00000101 /* get/set my endpoints public key */
 #define SCTP_SET_AUTH_SECRET            0x00000102 /* get/set my shared secret */
-#define SCTP_SET_AUTH_CHUNKS            0x00000103/* specify what chunks you want 
-						    * the system may have additional requirments 
+#define SCTP_SET_AUTH_CHUNKS            0x00000103/* specify what chunks you want
+						    * the system may have additional requirments
 						     * as well. I.e. probably ASCONF/ASCONF-ACK no matter
 						     * if you want it or not.
 						     */
@@ -295,8 +294,6 @@ struct sctp_error_unrecognized_chunk {
 
 /* ECN Nonce: SACK Chunk Specific Flags */
 #define SCTP_SACK_NONCE_SUM     0x01
-
-
 
 #include <netinet/sctp_uio.h>
 
