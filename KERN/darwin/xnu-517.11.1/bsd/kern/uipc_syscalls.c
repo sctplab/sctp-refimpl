@@ -57,7 +57,7 @@
  *	@(#)uipc_syscalls.c	8.4 (Berkeley) 2/21/94
  */
 
-
+#include <sctp.h>		/* kernel option */
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -78,6 +78,10 @@
 #include <bsm/audit_kernel.h>
 
 #include <sys/kdebug.h>
+
+#ifdef SCTP
+#include <netinet/sctp_peeloff.h>
+#endif /* SCTP */
 
 #if KDEBUG
 
@@ -2050,3 +2054,89 @@ done:
 }
 
 #endif
+
+#ifdef SCTP_NOT_YET
+int
+sctp_peeloff(struct proc *p, struct sctp_peeloff_args *uap)
+{
+	struct filedesc *fdp = p->p_fd;
+	struct file *lfp = NULL;
+	struct file *nfp = NULL;
+	int error, s;
+	struct socket *head, *so;
+	caddr_t assoc_id;
+	int fd;
+	short fflag;		/* type must match fp->f_flag */
+
+	assoc_id = uap->name;
+	error = holdsock(fdp, uap->sd, &lfp);
+	if (error) {
+		return (error);
+	}
+	s = splnet();
+	head = (struct socket *)lfp->f_data;
+	error = sctp_can_peel_off(head, assoc_id);
+	if (error) {
+		splx(s);
+		goto done;
+	}
+	/*
+	 * At this point we know we do have a assoc to pull
+	 * we proceed to get the fd setup. This may block
+	 * but that is ok.
+	 */
+
+	fflag = lfp->f_flag;
+	error = falloc(p, &nfp, &fd);
+	if (error) {
+		/*
+		 * Probably ran out of file descriptors. Put the
+		 * unaccepted connection back onto the queue and
+		 * do another wakeup so some other process might
+		 * have a chance at it.
+		 */
+		splx(s);
+		goto done;
+	}
+	fhold(nfp);
+	p->p_retval[0] = fd;
+
+	so = sctp_get_peeloff(head, assoc_id, &error);
+	if (so == NULL) {
+		/* 
+		 * Either someone else peeled it off OR
+		 * we can't get a socket.
+		 */
+		goto noconnection;
+	}
+	so->so_state &= ~SS_COMP;
+	so->so_state &= ~SS_NOFDREF;
+	so->so_head = NULL;
+
+	nfp->f_data = (caddr_t)so;
+	nfp->f_flag = fflag;
+	nfp->f_ops = &socketops;
+	nfp->f_type = DTYPE_SOCKET;
+
+ noconnection:
+	/*
+	 * close the new descriptor, assuming someone hasn't ripped it
+	 * out from under us.
+	 */
+	if (error) {
+		if (fdp->fd_ofiles[fd] == nfp) {
+			fdp->fd_ofiles[fd] = NULL;
+			fdrop(nfp, p);
+		}
+	}
+	splx(s);
+	/*
+	 * Release explicitly held references before returning.
+	 */
+ done:
+	if (nfp != NULL)
+		fdrop(nfp, p);
+	fdrop(lfp, p);
+	return (error);
+}
+#endif /* SCTP */

@@ -20,6 +20,7 @@
  * @APPLE_LICENSE_HEADER_END@
  */
 /* Copyright (c) 1992,1995-1999 Apple Computer, Inc.  All rights resereved. */
+#include <sctp.h>			/* kernel option */
 
 char *syscallnames[] = {
 	"syscall",			/* 0 = syscall */
@@ -307,7 +308,11 @@ char *syscallnames[] = {
 	"sem_getvalue",		/* 274 = sem_getvalue */
 	"sem_init",			/* 275 = sem_init */
 	"sem_destroy",		/* 276 = sem_destroy */
+#ifdef SCTP
+	"sctp_peeloff",			/* 277 = sctp_peeloff */
+#else
 	"#277",				/* 277 = nosys */
+#endif
 	"#278",				/* 278 = nosys */
 	"#279",				/* 279 = nosys */
 	"#280",				/* 280 = nosys */

@@ -266,3 +266,12 @@ pseudo-device	bpfilter	4	init	bpf_init
 
 pseudo-device	random		1	init	random_init
 
+#
+# SCTP support
+#
+options		SCTP			# SCTP requires INET6
+options		SCTP_DEBUG		# debugging support
+options		SCTP_TCP_MODEL_SUPPORT	# TCP model support
+#options		SCTP_USE_ADLER32	# use obsolete Adler32 checksum
+options		SCTP_HIGH_SPEED		# high speed SCTP
+#options		SCTP_ALTERNATE_ROUTE	# multiple path support
