@@ -3985,11 +3985,11 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 		if (net->net_ack2) {
 			/* restore any doubled timers */
 			net->RTO = ((net->lastsa >> 2) + net->lastsv) >> 1;
-			if (net->RTO < stcb->sctp_ep->sctp_ep.sctp_minrto) {
-				net->RTO = stcb->sctp_ep->sctp_ep.sctp_minrto;
+			if (net->RTO < stcb->asoc.minrto) {
+				net->RTO = stcb->asoc.minrto;
 			}
-			if (net->RTO > stcb->sctp_ep->sctp_ep.sctp_maxrto) {
-				net->RTO = stcb->sctp_ep->sctp_ep.sctp_maxrto;
+			if (net->RTO > stcb->asoc.maxrto) {
+				net->RTO = stcb->asoc.maxrto;
 			}
 		}
 		if (net->cwnd > sctp_pegs[SCTP_MAX_CWND]) {

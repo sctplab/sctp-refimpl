@@ -320,7 +320,7 @@ sctp_find_alternate_net(struct sctp_tcb *stcb,
 }
 
 static void
-sctp_backoff_on_timeout(struct sctp_inpcb *inp,
+sctp_backoff_on_timeout(struct sctp_tcb *stcb,
 			struct sctp_nets *net,
 			int win_probe,
 			int num_marked)
@@ -338,8 +338,8 @@ sctp_backoff_on_timeout(struct sctp_inpcb *inp,
 	}
 #endif /* SCTP_DEBUG */
 
-	if (net->RTO > inp->sctp_ep.sctp_maxrto) {
-		net->RTO = inp->sctp_ep.sctp_maxrto;
+	if (net->RTO > stcb->asoc.maxrto) {
+		net->RTO = stcb->asoc.maxrto;
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_TIMER2) {
 			printf("Growth capped by maxrto %d\n",
@@ -780,7 +780,7 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 	stcb->asoc.sat_t3_recovery_tsn = stcb->asoc.sending_seq;
 
 	/* Backoff the timer and cwnd */
-	sctp_backoff_on_timeout(inp, net, win_probe, num_mk);
+	sctp_backoff_on_timeout(stcb, net, win_probe, num_mk);
 	if (win_probe == 0) {
 		/* We don't do normal threshold management on window probes */
 		if (sctp_threshold_management(inp, stcb, net,
@@ -891,7 +891,7 @@ sctp_t1init_timer(struct sctp_inpcb *inp,
 		return;
 	}
 	stcb->asoc.dropped_special_cnt = 0;
-	sctp_backoff_on_timeout(inp, stcb->asoc.primary_destination, 0, 1);
+	sctp_backoff_on_timeout(stcb, stcb->asoc.primary_destination, 0, 1);
 	if (stcb->asoc.initial_init_rto_max < net->RTO) {
 		net->RTO = stcb->asoc.initial_init_rto_max;
 	}
@@ -956,7 +956,7 @@ void sctp_cookie_timer(struct sctp_inpcb *inp,
 	 * select an alternate
 	 */
 	stcb->asoc.dropped_special_cnt = 0;
-	sctp_backoff_on_timeout(inp, cookie->whoTo, 0, 1);
+	sctp_backoff_on_timeout(stcb, cookie->whoTo, 0, 1);
 	alt = sctp_find_alternate_net(stcb, cookie->whoTo);
 	if (alt != cookie->whoTo) {
 		sctp_free_remote_addr(cookie->whoTo);
@@ -1011,7 +1011,7 @@ void sctp_strreset_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	 * cleared theshold management
 	 * now lets backoff the address & select an alternate
 	 */
-	sctp_backoff_on_timeout(inp, strrst->whoTo, 0, 1);
+	sctp_backoff_on_timeout(stcb, strrst->whoTo, 0, 1);
 	alt = sctp_find_alternate_net(stcb, strrst->whoTo);
 	sctp_free_remote_addr(strrst->whoTo);
 	strrst->whoTo = alt;
@@ -1105,7 +1105,7 @@ void sctp_asconf_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		 * cleared theshold management
 		 * now lets backoff the address & select an alternate
 		 */
-		sctp_backoff_on_timeout(inp, asconf->whoTo, 0, 1);
+		sctp_backoff_on_timeout(stcb, asconf->whoTo, 0, 1);
 		alt = sctp_find_alternate_net(stcb, asconf->whoTo);
 		sctp_free_remote_addr(asconf->whoTo);
 		asconf->whoTo = alt;
@@ -1243,7 +1243,7 @@ sctp_heartbeat_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 
 	if (net) {
 		if (net->hb_responded == 0) {
-			sctp_backoff_on_timeout(inp, net, 1, 0);
+			sctp_backoff_on_timeout(stcb, net, 1, 0);
 		}
 		/* Zero PBA, if it needs it */
 		if (net->partial_bytes_acked) {
