@@ -2257,6 +2257,11 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 			break;
 		}
 	}
+	if (compare_with_wrap(asoc->cumulative_tsn,
+			      asoc->highest_tsn_inside_map,
+			      MAX_TSN)) {
+		panic("huh, cumack greater than high-tsn in map");
+	}
 	if (all_ones || 
 	    (asoc->cumulative_tsn == asoc->highest_tsn_inside_map && at >= 8)) {
 		/* The complete array was completed by a single FR */

@@ -1632,15 +1632,13 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	if (tmr == NULL)
 		return (EFAULT);
 
-	if (tmr->type != t_type) {
+	if ((tmr->type != t_type) && tmr->type) {
 		/*
 		 * Ok we have a timer that is under joint use. Cookie timer
 		 * per chance with the SEND timer. We therefore are NOT
 		 * running the timer that the caller wants stopped.  So just
 		 * return.
 		 */
-		printf("stop aborted %d != %d\n",
-		       tmr->type, t_type);
 		return (0);
 	}
 	if (t_type == SCTP_TIMER_TYPE_SEND) {

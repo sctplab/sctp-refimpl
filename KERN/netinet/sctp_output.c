@@ -7918,12 +7918,16 @@ sctp_send_sack(struct sctp_tcb *stcb)
 			maxi = (asoc->highest_tsn_inside_map  + (MAX_TSN - asoc->mapping_array_base_tsn) + 1);
 		}
 		if (maxi > m_size) {
-			/* impossible but who knows :> */
-			printf("GAK maxi:%d  > m_size:%d came out higher than allowed htsn:%u base:%u\n",
+			/* impossible but who knows, someone is playing with us  :> */
+#ifdef SCTP_DEBUG
+			printf("GAK maxi:%d  > m_size:%d came out higher than allowed htsn:%u base:%u cumack:%u\n",
 			       maxi,
 			       m_size,
 			       asoc->highest_tsn_inside_map,
-			       asoc->mapping_array_base_tsn);
+			       asoc->mapping_array_base_tsn,
+			       asoc->cumulative_tsn
+			       );
+#endif
 			num_gap_blocks = 0;
 			goto no_gaps_now;
 		}
