@@ -167,7 +167,7 @@ sctp_threshold_management(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			if (net->dest_state & SCTP_ADDR_REACHABLE) {
 				net->dest_state &= ~SCTP_ADDR_REACHABLE;
 				net->dest_state |= SCTP_ADDR_NOT_REACHABLE;
-				if(net == stcb->asoc.primary_destination) {
+				if (net == stcb->asoc.primary_destination) {
 					net->dest_state |= SCTP_ADDR_WAS_PRIMARY;
 				}
 				sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_DOWN,
@@ -887,7 +887,7 @@ sctp_t1init_timer(struct sctp_inpcb *inp,
 		  struct sctp_nets *net)
 {
 	/* bump the thresholds */
-	if(stcb->asoc.delayed_connection) {
+	if (stcb->asoc.delayed_connection) {
 		/* special hook for delayed connection. The
 		 * library did NOT complete the rest of its
 		 * sends. 
@@ -1459,7 +1459,7 @@ void
 sctp_iterator_timer(struct sctp_iterator *it)
 {
 	int cnt= 0;
-	if(it->inp == NULL) {
+	if (it->inp == NULL) {
 		/* iterator is complete */
 	done_with_iterator:
 		LIST_REMOVE(it, sctp_nxt_itr);
@@ -1467,7 +1467,7 @@ sctp_iterator_timer(struct sctp_iterator *it)
 		 * but I am paranoid.
 		 */
 		callout_stop(&it->tmr.timer);
-		if(it->function_atend != NULL) {
+		if (it->function_atend != NULL) {
 			(*it->function_atend)(it->pointer, it->val);
 		}
 		FREE(it, M_PCB);
@@ -1476,11 +1476,11 @@ sctp_iterator_timer(struct sctp_iterator *it)
  select_a_new_ep:
 	while ((it->pcb_flags) && ((it->inp->sctp_flags & it->pcb_flags) != it->pcb_flags)) {
 		/* we do not like this ep */
-		if(it->iterator_flags & SCTP_INTERATOR_DO_SINGLE_INP) {
+		if (it->iterator_flags & SCTP_ITERATOR_DO_SINGLE_INP) {
 			goto done_with_iterator;
 		}			
 		it->inp = LIST_NEXT(it->inp, sctp_list);
-		if(it->inp == NULL) {
+		if (it->inp == NULL) {
 			goto done_with_iterator;
 		}
 	}
@@ -1496,14 +1496,14 @@ sctp_iterator_timer(struct sctp_iterator *it)
 	/* if we reach here we found a inp acceptable, now through each
 	 * one that has the association in the right state 
 	 */
-	if(it->stcb == NULL) {
+	if (it->stcb == NULL) {
 		it->stcb = LIST_FIRST(&it->inp->sctp_asoc_list);
 	}
 	if (it->stcb->asoc.stcb_starting_point_for_iterator == it) {
 		it->stcb->asoc.stcb_starting_point_for_iterator = NULL;
 	}
 	while (it->stcb) {
-		if(it->asoc_state && ((it->stcb->asoc.state & it->asoc_state) != it->asoc_state)) {
+		if (it->asoc_state && ((it->stcb->asoc.state & it->asoc_state) != it->asoc_state)) {
 			it->stcb = LIST_NEXT(it->stcb, sctp_tcblist);
 			continue;
 		}
@@ -1524,12 +1524,12 @@ sctp_iterator_timer(struct sctp_iterator *it)
 
 	/* unlock it */
 	it->inp->inp_starting_point_for_iterator = NULL;
-	if (it->iterator_flags & SCTP_INTERATOR_DO_SINGLE_INP) {
+	if (it->iterator_flags & SCTP_ITERATOR_DO_SINGLE_INP) {
 		it->inp = NULL;
 	} else {
 		it->inp = LIST_NEXT(it->inp, sctp_list);
 	}
-	if(it->inp == NULL) {
+	if (it->inp == NULL) {
 		goto done_with_iterator;
 	}
 	goto select_a_new_ep;

@@ -1984,7 +1984,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	m = &inp->sctp_ep;
 	ip_pcb = &inp->ip_inp.inp; /* we could just cast the main
 				   * pointer here but I will
-				   * be nice :> ( i.e. ip_pcb = ep;)
+				   * be nice :> (i.e. ip_pcb = ep;)
 				   */
 	/* fix any iterators */
 	sctp_iterator_inp_being_freed(inp);
@@ -4496,15 +4496,17 @@ sctp_remove_from_socket_q(struct sctp_inpcb *inp)
 }
 
 int
-sctp_initiate_iterator(asoc_func af, uint32_t pcb_state, 
-    uint32_t asoc_state, void *argp, uint32_t argi,end_func ef, struct sctp_inpcb *s_inp)
+sctp_initiate_iterator(asoc_func af, uint32_t pcb_state, uint32_t asoc_state,
+		       void *argp, uint32_t argi, end_func ef,
+		       struct sctp_inpcb *s_inp)
 {
 	struct sctp_iterator *it=NULL;	
 	int s;
 	if (af == NULL) {
 		return (-1);
 	}
-	MALLOC(it, struct sctp_iterator *, sizeof(struct sctp_iterator), M_PCB, M_WAITOK);
+	MALLOC(it, struct sctp_iterator *, sizeof(struct sctp_iterator), M_PCB,
+	       M_WAITOK);
 	if (it == NULL) {
 		return(ENOMEM);
 	}
@@ -4515,12 +4517,12 @@ sctp_initiate_iterator(asoc_func af, uint32_t pcb_state,
 	it->val = argi;
 	it->pcb_flags = pcb_state;
 	it->asoc_state = asoc_state;
-	if( s_inp ) { 
+	if (s_inp) { 
 		it->inp = s_inp;
-		it->iterator_flags = SCTP_INTERATOR_DO_SINGLE_INP;
+		it->iterator_flags = SCTP_ITERATOR_DO_SINGLE_INP;
 	} else {
 		it->inp = LIST_FIRST(&sctppcbinfo.listhead);
-		it->iterator_flags = SCTP_INTERATOR_DO_ALL_INP;
+		it->iterator_flags = SCTP_ITERATOR_DO_ALL_INP;
 	}
 	/* Init the timer */
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
@@ -4577,7 +4579,6 @@ callout_reset(struct callout *c, int to_ticks, void (*ftn)(void *), void *arg)
 	c->c_func = ftn;
 #ifdef __APPLE__
 	c->c_time = to_ticks;	/* just store the requested timeout */
-/*	thread_call_enter_delayed(c->c_call, to_ticks); */
 	timeout(ftn, arg, to_ticks);
 #else
 	c->c_time = ticks + to_ticks;
