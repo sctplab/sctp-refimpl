@@ -171,6 +171,7 @@
 /* 101-254: Partly Unassigned */
 #define	IPPROTO_PIM		103		/* Protocol Independent Mcast */
 #define	IPPROTO_PGM		113		/* PGM */
+#define	IPPROTO_SCTP		132		/* SCTP - RFC2960 */
 /* 255: Reserved */
 /* BSD Private, local use, namespace incursion */
 #define	IPPROTO_DIVERT		254		/* divert pseudo-protocol */

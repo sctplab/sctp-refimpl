@@ -54,6 +54,7 @@
  *	@(#)rtsock.c	8.5 (Berkeley) 11/2/94
  */
 
+#include <sctp.h>		/* kernel option */
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -72,6 +73,11 @@
 #include <net/route.h>
 #include <net/raw_cb.h>
 #include <netinet/in.h>
+
+#ifdef SCTP
+extern void sctp_add_ip_address(struct ifaddr *ifa);
+extern void sctp_delete_ip_address(struct ifaddr *ifa);
+#endif /* SCTP */
 
 MALLOC_DEFINE(M_RTABLE, "routetbl", "routing tables");
 
@@ -930,6 +936,19 @@ rt_newaddrmsg(cmd, ifa, error, rt)
 	int pass;
 	struct mbuf *m = 0;
 	struct ifnet *ifp = ifa->ifa_ifp;
+
+#ifdef SCTP
+	/*
+	 * notify the SCTP stack
+	 * this will only get called when an address is added/deleted
+	 * XXX pass the ifaddr struct instead if ifa->ifa_addr...
+	 */
+	if (cmd == RTM_ADD) {
+		sctp_add_ip_address(ifa);
+	} else if (cmd == RTM_DELETE) {
+		sctp_delete_ip_address(ifa);
+	}
+#endif /* SCTP */
 
 	if (route_cb.any_count == 0)
 		return;

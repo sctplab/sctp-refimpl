@@ -20,6 +20,8 @@
  * @APPLE_LICENSE_HEADER_END@
  */
 
+#include <sctp.h>		/* kernel option */
+
 #include <sys/param.h>
 #include <sys/buf.h>
 #include <sys/kernel.h>
@@ -291,6 +293,18 @@ extern struct sysctl_oid sysctl__net_inet_raw;
 extern struct sysctl_oid sysctl__net_inet_tcp;
 extern struct sysctl_oid sysctl__net_inet_udp;
 extern struct sysctl_oid sysctl__net_inet_ip_portrange;
+
+#ifdef SCTP
+extern struct sysctl_oid sysctl__net_inet_sctp;
+extern struct sysctl_oid sysctl__net_inet_sctp_maxdgram;
+extern struct sysctl_oid sysctl__net_inet_sctp_recvspace;
+extern struct sysctl_oid sysctl__net_inet_sctp_auto_asconf;
+extern struct sysctl_oid sysctl__net_inet_sctp_ecn_enable;
+extern struct sysctl_oid sysctl__net_inet_sctp_ecn_nonce;
+extern struct sysctl_oid sysctl__net_inet_sctp_strict_sacks;
+extern struct sysctl_oid sysctl__net_inet_sctp_loopback_nocsum;
+extern struct sysctl_oid sysctl__net_inet_sctp_strict_init;
+#endif
 
 extern struct sysctl_oid sysctl__net_link_ether;
 extern struct sysctl_oid sysctl__net_link_ether_inet;
@@ -595,6 +609,18 @@ struct sysctl_oid *newsysctl_list[] =
     ,&sysctl__net_inet_udp_maxdgram
     ,&sysctl__net_inet_udp_recvspace
     ,&sysctl__net_inet_udp_blackhole
+
+#ifdef SCTP
+    ,&sysctl__net_inet_sctp
+    ,&sysctl__net_inet_sctp_auto_asconf
+    ,&sysctl__net_inet_sctp_maxdgram
+    ,&sysctl__net_inet_sctp_recvspace
+    ,&sysctl__net_inet_sctp_ecn_enable
+    ,&sysctl__net_inet_sctp_ecn_nonce
+    ,&sysctl__net_inet_sctp_strict_sacks
+    ,&sysctl__net_inet_sctp_loopback_nocsum
+    ,&sysctl__net_inet_sctp_strict_init
+#endif
 
 #if NETAT
     ,&sysctl__net_appletalk_debug
