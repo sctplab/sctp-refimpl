@@ -438,10 +438,11 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	sctp_log_fr(cur_rto, now.tv_sec, now.tv_usec, SCTP_FR_T3_MARK_TIME);
 	sctp_log_fr(0, min_wait.tv_sec, min_wait.tv_usec, SCTP_FR_T3_MARK_TIME);
 #endif
-	stcb->asoc.total_flight -= net->flight_size;
-	if (stcb->asoc.total_flight < 0) {
-		audit_tf = 1;
-		stcb->asoc.total_flight = 0;
+	if(stcb->asoc.total_flight >= net->flight_size) 
+	  stcb->asoc.total_flight -= net->flight_size;
+	else {
+	  stcb->asoc.total_flight = 0;
+	  audit_tf = 1;
 	}
         /* Our rwnd will be incorrect here since we are not adding
 	 * back the cnt * mbuf but we will fix that down below.

@@ -2499,18 +2499,21 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 			    stcb, tp1->whoTo);
 
 			/* fix counts and things */
-			tp1->whoTo->flight_size -= tp1->send_size;
-			if (tp1->whoTo->flight_size < 0) {
-				tp1->whoTo->flight_size = 0;
-			}
-			stcb->asoc.total_flight -= tp1->book_size;
-			if (stcb->asoc.total_flight < 0) {
-				stcb->asoc.total_flight = 0;
-			}
+			if(tp1->whoTo->flight_size >= tp1->send_size)
+			  tp1->whoTo->flight_size -= tp1->send_size;
+			else 
+			  tp1->whoTo->flight_size = 0;
+
+			if( stcb->asoc.total_flight >= tp1->book_size)
+			    stcb->asoc.total_flight -= tp1->book_size;
+			else
+			  stcb->asoc.total_flight = 0;
+
 			stcb->asoc.total_flight_count--;
 			if (stcb->asoc.total_flight_count < 0) {
 				stcb->asoc.total_flight_count = 0;
 			}
+
 			tp1->snd_count--;
 		}
 		{
