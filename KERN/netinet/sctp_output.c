@@ -4396,8 +4396,8 @@ sctp_msg_append(struct sctp_tcb *stcb,
 		/* Fast path */
 		chk = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk);
 		if (chk == NULL) {
-			error = ENOMEM;
-			goto release;
+			sctp_m_freem(m);
+			return (ENOMEM);
 		}
 		sctp_prepare_chunk(chk, stcb, srcv, strq, net);
 		chk->whoTo->ref_count++;
@@ -4655,7 +4655,7 @@ out:
 			sctp_m_freem(n);
 			n = mnext;
 		}
-	} else if (m)
+	} else
 		sctp_m_freem(m);
 	return (error);
 }
@@ -7304,7 +7304,15 @@ sctp_output(inp, m, addr, control, p, flags)
 			}
 		} else {
 			if (addr != NULL) {
+				SCTP_INP_WLOCK(inp);
+				SCTP_INP_INCR_REF(inp);
+				SCTP_INP_WUNLOCK(inp);
 				stcb = sctp_findassociation_ep_addr(&t_inp, addr, &net, NULL, NULL);
+				if(stcb == NULL) {
+					SCTP_INP_WLOCK(inp);
+					SCTP_INP_DECR_REF(inp);
+					SCTP_INP_WUNLOCK(inp);
+				}
 			}
 		}
 	}
@@ -9960,6 +9968,8 @@ release:
 out_locked:
 	SOCKBUF_UNLOCK(&so->so_snd);
 out:
+	if (mm)
+		sctp_m_freem(mm);
 	return (error);
 }
 
@@ -10104,7 +10114,15 @@ sctp_sosend(struct socket *so,
 				 * increment it, and if we don't find a
 				 * tcb decrement it.
 				 */
+				SCTP_INP_WLOCK(inp);
+				SCTP_INP_INCR_REF(inp);
+				SCTP_INP_WUNLOCK(inp);
 				stcb = sctp_findassociation_ep_addr(&t_inp, addr, &net, NULL, NULL);
+				if (stcb == NULL) {
+					SCTP_INP_WLOCK(inp);
+					SCTP_INP_DECR_REF(inp);
+					SCTP_INP_WUNLOCK(inp);
+				}
 			}
 		}
 	}
@@ -10375,8 +10393,7 @@ out:
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		create_lock_applied = 0;
 	}
-	if (stcb)
-		SCTP_TCB_UNLOCK(stcb);
+	SCTP_TCB_UNLOCK(stcb);
 	if (top)
 		sctp_m_freem(top);
 	if (control)
