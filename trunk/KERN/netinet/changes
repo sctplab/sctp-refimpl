@@ -24,3 +24,5 @@ Patch 24 change log
 10) Rewrite IPv4 src address selection and fixed bound specific
     IPv6 src address selection.
 11) Missing return when already in SHUTDOWN-RECIEVED.
+12) Improper memset found by Marko Lindholm in the libsctp.a code
+    for sctp_bindx.
