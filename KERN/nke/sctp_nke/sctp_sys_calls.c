@@ -223,7 +223,7 @@ sctp_bindx(int sd, struct sockaddr *addrs, int addrcnt, int flags)
 
 
 int
-sctp_opt_info(int sd, sctp_assoc_t id, int opt, void *arg, size_t *size)
+sctp_opt_info(int sd, sctp_assoc_t id, int opt, void *arg, socklen_t *size)
 {
 	if ((opt == SCTP_RTOINFO) || 
  	    (opt == SCTP_ASSOCINFO) || 
@@ -233,7 +233,7 @@ sctp_opt_info(int sd, sctp_assoc_t id, int opt, void *arg, size_t *size)
 	    (opt == SCTP_STATUS) || 
 	    (opt == SCTP_GET_PEER_ADDR_INFO)) { 
 		*(sctp_assoc_t *)arg = id;
-		return(getsockopt(sd, IPPROTO_SCTP, opt, arg, (socklen_t *)size));
+		return(getsockopt(sd, IPPROTO_SCTP, opt, arg, size));
 	}else{
 		errno = EOPNOTSUPP;
 		return(-1);
