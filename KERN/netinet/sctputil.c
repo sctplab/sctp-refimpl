@@ -711,7 +711,8 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 
 	/* ECN Nonce initialization */
 	asoc->ecn_nonce_allowed = 0;
-	asoc->receiver_nonce_sum = 0;
+	asoc->receiver_nonce_sum = 1;
+	asoc->nonce_sum_expect_base = 1;
 	asoc->nonce_sum_check = 1;
 	asoc->nonce_resync_tsn = 0;
 	asoc->nonce_wait_for_ecne = 0;

@@ -7477,7 +7477,7 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh)
 	comp_cp->sh.v_tag = sh->v_tag;
 	comp_cp->shut_cmp.ch.chunk_flags = SCTP_HAD_NO_TCB;
 	comp_cp->shut_cmp.ch.chunk_type = SCTP_SHUTDOWN_COMPLETE;
-	comp_cp->shut_cmp.ch.chunk_length = htons(sizeof(*comp_cp));
+	comp_cp->shut_cmp.ch.chunk_length = htons(sizeof(struct sctp_shutdown_complete_chunk));
 
 	mout->m_pkthdr.len = mout->m_len;
 	/* add checksum */
