@@ -1440,12 +1440,10 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	struct sctp_tcb *stcb;
 	struct sctp_init_chunk *init_cp, init_buf;
 	struct sctp_init_ack_chunk *initack_cp, initack_buf;
-#ifdef NOT_DEFINED
 	struct sockaddr_storage sa_store;
 	struct sockaddr *initack_src = (struct sockaddr *)&sa_store;
 	struct sockaddr_in *sin;
 	struct sockaddr_in6 *sin6;
-#endif
 	struct sctp_association *asoc;
 	int chk_length;
 	int init_offset, initack_offset, initack_limit;
@@ -1600,19 +1598,18 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	/* calculate the RTT */
 	(*netp)->RTO = sctp_calculate_rto(stcb, asoc, *netp,
 	    &cookie->time_entered);
+
 	/*
-	 * add our local addresses which I sent in the INIT-ACK
 	 * if we're doing ASCONFs, check to see if we have any new
-	 * local addresses that need to get added to the peer
-	 * (eg. addresses changed while cookie echo in flight)
-	 * this needs to be done after we go to the OPEN state to
-	 * do the correct asconf processing.
+	 * local addresses that need to get added to the peer (eg.
+	 * addresses changed while cookie echo in flight).  This needs
+	 * to be done after we go to the OPEN state to do the correct
+	 * asconf processing.
 	 * else, make sure we have the correct addresses in our lists
 	 */
 
 	/* warning, we re-use sin, sin6, sa_store here! */
 	/* pull in local_address (our "from" address) */
-#ifdef NOT_DEFINED
 	if (cookie->laddr_type == SCTP_IPV4_ADDRESS) {
 		/* source addr is IPv4 */
 		sin = (struct sockaddr_in *)initack_src;
@@ -1633,11 +1630,10 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		sctp_free_assoc(inp, stcb);
 		return (NULL);
 	}
-#endif
 
 	sctp_check_address_list(stcb, m, initack_offset +
 	    sizeof(struct sctp_init_ack_chunk), initack_limit,
-	    init_src, cookie->local_scope, cookie->site_scope,
+	    initack_src, cookie->local_scope, cookie->site_scope,
 	    cookie->ipv4_scope, cookie->loopback_scope);
 	    
 
