@@ -2270,7 +2270,10 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 #endif
 #endif /*IPSEC*/
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
-		ACCEPT_LOCK();
+/*		ACCEPT_LOCK(); - Commented out after panic 
+		sotryfree calls sofree() which does a
+                SOCK_UNLOCK() and then a ACCEPT_LOCK()
+ */
 		SOCK_LOCK(so);
 #endif
 		so->so_pcb = 0;
