@@ -290,6 +290,11 @@ sctp6_input(mp, offp, proto)
 				sctp_send_packet_dropped(stcb, net, m, iphlen, 1);
 				sctp_chunk_output((struct sctp_inpcb *)in6p, stcb, 2);
 				SCTP_TCB_UNLOCK (stcb);
+			} else if((in6p != NULL) && (stcb == NULL)) {
+			    /* reduce ref-count */
+			    SCTP_INP_WLOCK(in6p);
+			    SCTP_INP_DECR_REF(in6p);
+			    SCTP_INP_WUNLOCK(in6p);
 			}
 			sctp_pegs[SCTP_BAD_CSUM]++;
 			goto out_of;
@@ -356,6 +361,11 @@ sctp6_input(mp, offp, proto)
 		    tdb, i_inp);
 		if (error) {
 			splx(s);
+			if(stcb == NULL) {
+			    SCTP_INP_WLOCK(in6p);
+			    SCTP_INP_DECR_REF(in6p);
+			    SCTP_INP_WUNLOCK(in6p);
+			}
 			goto out_of;
 		}
 
@@ -368,6 +378,11 @@ sctp6_input(mp, offp, proto)
 					    af, IPSP_DIRECTION_OUT);
 					if (i_inp->inp_ipo == NULL) {
 						splx(s);
+						if(stcb == NULL) {
+							SCTP_INP_WLOCK(in6p);
+							SCTP_INP_DECR_REF(in6p);
+							SCTP_INP_WUNLOCK(in6p);
+						}
 						goto bad;
 					}
 				}
@@ -404,6 +419,11 @@ sctp6_input(mp, offp, proto)
 		/* FIX ME: need to find right stat for __APPLE__ */
 		ipsec6stat.in_polvio++;
 #endif
+		if(stcb == NULL) {
+			SCTP_INP_WLOCK(in6p);
+			SCTP_INP_DECR_REF(in6p);
+			SCTP_INP_WUNLOCK(in6p);
+		}
 		goto out_of;
 	}
 #endif
@@ -637,6 +657,11 @@ sctp6_ctlinput(cmd, pktdst, d)
 #endif
 			}
 		}
+		if(inp) {
+			SCTP_INP_WLOCK(inp);
+			SCTP_INP_DECR_REF(inp);
+			SCTP_INP_WUNLOCK(inp);
+		}
 		splx(s);
 	}
 }
@@ -681,6 +706,11 @@ sctp6_getcred(SYSCTL_HANDLER_ARGS)
                                            &inp, &net, 1);
 	if (stcb == NULL || inp == NULL || inp->sctp_socket == NULL) {
 		error = ENOENT;
+		if(inp) {
+			SCTP_INP_WLOCK(inp);
+			SCTP_INP_DECR_REF(inp);
+			SCTP_INP_WUNLOCK(inp);
+		}
 		goto out;
 	}
 	error = SYSCTL_OUT(req, inp->sctp_socket->so_cred,
@@ -1277,6 +1307,9 @@ sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	} else
 #endif /* INET */
 		addr = addr;	/* for true v6 address case */
+	SCTP_INP_WLOCK(inp);
+	SCTP_INP_INCR_REF(inp);
+	SCTP_INP_WUNLOCK(inp);
 
 	/* Now do we connect? */
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
@@ -1307,6 +1340,10 @@ sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	stcb->asoc.state = SCTP_STATE_COOKIE_WAIT;
 	SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_entered);
 	sctp_send_initiate(inp, stcb);
+	SCTP_INP_WLOCK(inp);
+	SCTP_INP_DECR_REF(inp);
+	SCTP_INP_WUNLOCK(inp);
+
 	SCTP_TCB_UNLOCK (stcb);
 	splx(s);
 	return error;
