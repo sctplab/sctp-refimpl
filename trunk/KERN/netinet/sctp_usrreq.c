@@ -262,6 +262,7 @@ sctp_split_chunks(struct sctp_association *asoc,
 static void
 sctp_pathmtu_adustment(struct sctp_inpcb *inp,
 		       struct sctp_tcb *stcb,
+		       struct sctp_nets *net,
 		       uint16_t nxtsz)
 {
   struct sctp_tmit_chunk *chk, *nchk;
@@ -373,7 +374,7 @@ sctp_notify_mbuf(struct sctp_inpcb *inp,
 	}
 	/* now what about the ep? */
 	if (stcb->asoc.smallest_mtu > nxtsz) {
-	  sctp_pathmtu_adustment(inp, stcb, nxtsz);
+	  sctp_pathmtu_adustment(inp, stcb, net, nxtsz);
 	}
 	if (tmr_stopped) 
 	  sctp_timer_start(SCTP_TIMER_TYPE_PATHMTURAISE, inp, stcb, net);
@@ -2398,7 +2399,7 @@ sctp_optsget(struct socket *so,
 	paddrp->spp_pathmtu = 0;
 
 	/* default settins should be these */
-	paddrp->spp_flags = SP_HB_ENABLE | SPP_SACKDELAY_ENABLE | SPP_PMTUD_ENABLE;
+	paddrp->spp_flags = SPP_HB_ENABLE | SPP_SACKDELAY_ENABLE | SPP_PMTUD_ENABLE;
 	SCTP_INP_RUNLOCK(inp);
       }
       m->m_len = sizeof(struct sctp_paddrparams);
@@ -3273,7 +3274,7 @@ sctp_optsset(struct socket *so,
       if (stcb) {
 	/************************TCB SPECIFIC SET ******************/
 	/* sack delay first */
-	if (paddr->spp_flags & SPP_SACKDELAY_ENABLE) {
+	if (paddrp->spp_flags & SPP_SACKDELAY_ENABLE) {
 	  /* we do NOT support turning it off. only
 	   * setting the delay.
 	   */
@@ -3305,7 +3306,7 @@ sctp_optsset(struct socket *so,
 	    if (paddrp->spp_pathmtu > SCTP_DEFAULT_MINSEGMENT) {
 	      net->mtu = paddrp->spp_pathmtu;
 	      if(net->mtu < stcb->asoc.smallest_mtu)
-		sctp_pathmtu_adustment(inp, stcb, nxtsz);
+		sctp_pathmtu_adustment(inp, stcb, net, net->mtu);
 	    }
 	  }
 	  if ( paddrp->spp_flags & SPP_PMTUD_ENABLE ) {
@@ -3354,7 +3355,7 @@ sctp_optsset(struct socket *so,
 	if (paddrp->spp_hbinterval && (paddrp->spp_flags & SPP_HB_ENABLE) ) {
 	  inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_HEARTBEAT] = paddrp->spp_hbinterval;
 	}
-	if ((paddrp->spp_sackdelay > SCTP_CLOCK_GRANULARITY ) && (paddr->spp_flags & SPP_SACKDELAY_ENABLE)) {
+	if ((paddrp->spp_sackdelay > SCTP_CLOCK_GRANULARITY ) && (paddrp->spp_flags & SPP_SACKDELAY_ENABLE)) {
 	  inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV] = paddrp->spp_sackdelay;
 	}
 	SCTP_INP_WUNLOCK(inp);
