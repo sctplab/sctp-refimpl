@@ -40,4 +40,12 @@ Patch 25)
    is included implicitly would make a false decision to
    NOT list addresses. This has been fixed.
 2) Fix switch back after failure
+3) We run only one RTO timer. In the timing of
+   things we would compare to any dest that had been
+   idle longer than the HB-Delay value.. This is
+   incorrect, we should take the longest value and
+   HB if its greater than the RTO.
+4) Fixed shutdown-received state so we get the
+   shutdown and not return without stopping the
+   timer and sending a S-A.
 
