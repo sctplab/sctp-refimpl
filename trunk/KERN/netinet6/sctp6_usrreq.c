@@ -1650,7 +1650,7 @@ sctp6_usrreq(so, req, m, nam, control, p)
 		struct ifnet *ifn;
 		struct ifaddr *ifa;
 		ifn = (struct ifnet *)control;
-		TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_link) {
+		TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
 			if (ifa->ifa_addr->sa_family == family) {
 				sctp_delete_ip_address(ifa);
 			}
