@@ -1,4 +1,4 @@
-/*	$KAME: sctp_timer.c,v 1.28 2004/08/17 04:06:20 itojun Exp $	*/
+/*	$KAME: sctp_timer.c,v 1.29 2005/03/06 16:04:18 itojun Exp $	*/
 
 /*
  * Copyright (C) 2002, 2003, 2004 Cisco Systems Inc,
@@ -31,7 +31,7 @@
 #if !(defined(__OpenBSD__) || defined(__APPLE__))
 #include "opt_ipsec.h"
 #endif
-#if defined(__FreeBSD__) 
+#if defined(__FreeBSD__)
 #include "opt_compat.h"
 #include "opt_inet6.h"
 #include "opt_inet.h"
@@ -281,7 +281,7 @@ sctp_find_alternate_net(struct sctp_tcb *stcb,
 			alt->src_addr_selected = 0;
 		}
 		if (
-			((alt->dest_state & SCTP_ADDR_REACHABLE) == SCTP_ADDR_REACHABLE) && 
+			((alt->dest_state & SCTP_ADDR_REACHABLE) == SCTP_ADDR_REACHABLE) &&
 			(alt->ro.ro_rt != NULL) &&
 			(!(alt->dest_state & SCTP_ADDR_UNCONFIRMED))
 			) {
@@ -334,7 +334,7 @@ sctp_backoff_on_timeout(struct sctp_tcb *stcb,
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_TIMER2) {
 		printf("Timer doubles from %d ms -to-> %d ms\n",
-		       oldRTO,net->RTO);
+		       oldRTO, net->RTO);
 	}
 #endif /* SCTP_DEBUG */
 
@@ -391,7 +391,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	 * mark chunks that have been outstanding long enough to have
 	 * received feed-back.
 	 */
-	struct sctp_tmit_chunk *chk,*tp2;
+	struct sctp_tmit_chunk *chk, *tp2;
 	struct sctp_nets *lnets;
 	struct timeval now, min_wait, tv;
 	int cur_rto;
@@ -414,7 +414,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 #endif
 	cur_rto *= 1000;
 #ifdef SCTP_FR_LOGGING
-	sctp_log_fr(cur_rto,0,0, SCTP_FR_T3_MARK_TIME);
+	sctp_log_fr(cur_rto, 0, 0, SCTP_FR_T3_MARK_TIME);
 #endif
 	tv.tv_sec = cur_rto / 1000000;
 	tv.tv_usec = cur_rto % 1000000;
@@ -493,9 +493,9 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 			 * If it is less than DATAGRAM_ACKED it MUST
 			 * not be a skipped or marked TSN but instead
 			 * one that is either already set for retransmission OR
-			 * one that needs retransmission. 
+			 * one that needs retransmission.
 			 */
-			
+
 			/* validate its been outstanding long enough */
 #ifdef SCTP_FR_LOGGING
 			sctp_log_fr(chk->rec.data.TSN_seq,
@@ -563,9 +563,9 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 				}
 				tsnlast = chk->rec.data.TSN_seq;
 #ifdef SCTP_FR_LOGGING
-				sctp_log_fr(chk->rec.data.TSN_seq, chk->snd_count, 
+				sctp_log_fr(chk->rec.data.TSN_seq, chk->snd_count,
 					    0, SCTP_FR_T3_MARKED);
-			
+
 #endif
 			}
 			chk->sent = SCTP_DATAGRAM_RESEND;
@@ -615,7 +615,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 			printf("LAST TSN marked was %x\n", tsnlast);
 			printf("Num marked for retransmission was %d peer-rwd:%ld\n",
 			       num_mk, (u_long)stcb->asoc.peers_rwnd);
-			printf("LAST TSN marked was %x\n",tsnlast);
+			printf("LAST TSN marked was %x\n", tsnlast);
 			printf("Num marked for retransmission was %d peer-rwd:%d\n",
 			       num_mk,
 			       (int)stcb->asoc.peers_rwnd
@@ -694,7 +694,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 		}
 	}
 	/* Setup the ecn nonce re-sync point. We
-	 * do this since retranmissions are NOT 
+	 * do this since retranmissions are NOT
 	 * setup for ECN. This means that do to
 	 * Karn's rule, we don't know the total
 	 * of the peers ecn bits.
@@ -772,7 +772,7 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 
 	/* FR Loss recovery just ended with the T3. */
 	stcb->asoc.fast_retran_loss_recovery = 0;
-	
+
 	/* setup the sat loss recovery that prevents
 	 * satellite cwnd advance.
 	 */
@@ -786,7 +786,7 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 		if (sctp_threshold_management(inp, stcb, net,
 					      stcb->asoc.max_send_times)) {
 			/* Association was destroyed */
-			return(1);
+			return (1);
 		} else {
 			if (net != stcb->asoc.primary_destination) {
 				/* send a immediate HB if our RTO is stale */
@@ -798,9 +798,7 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 				} else {
 					ms_goneby = 0;
 				}
-				
-				if ((ms_goneby > (((net->lastsa >> 2) + net->lastsv) >> 1)) 
-				    || (net->RTO == 0)) {
+				if ((ms_goneby > net->RTO) || (net->RTO == 0)) {
 					/* no recent feed back in an RTO or more, request a RTT update */
 					sctp_send_hb(stcb, 1, net);
 				}
@@ -816,7 +814,7 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 		if (sctp_threshold_management(inp, stcb, NULL,
 					      stcb->asoc.max_send_times)) {
 			/* Association was destroyed */
-			return(1);
+			return (1);
 		}
 	}
 	if (net->dest_state & SCTP_ADDR_NOT_REACHABLE) {
@@ -831,8 +829,8 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 			 * a change-primary then this flag must be cleared
 			 * from any net structures.
 			 */
-			if (sctp_set_primary_addr(stcb, 
-						 (struct sockaddr *)NULL, 
+			if (sctp_set_primary_addr(stcb,
+						 (struct sockaddr *)NULL,
 						 alt) == 0) {
 				net->dest_state |= SCTP_ADDR_WAS_PRIMARY;
 				net->src_addr_selected = 0;
@@ -854,7 +852,7 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 		}
 #endif /* SCTP_DEBUG */
 		sctp_timer_start(SCTP_TIMER_TYPE_SEND, inp, stcb, net);
-		return(0);
+		return (0);
 	}
 	if (stcb->asoc.peer_supports_prsctp) {
 		struct sctp_tmit_chunk *lchk;
@@ -879,7 +877,7 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 			}
 		}
 	}
-	return(0);
+	return (0);
 }
 
 int
@@ -891,7 +889,7 @@ sctp_t1init_timer(struct sctp_inpcb *inp,
 	if (stcb->asoc.delayed_connection) {
 		/* special hook for delayed connection. The
 		 * library did NOT complete the rest of its
-		 * sends. 
+		 * sends.
 		 */
 		stcb->asoc.delayed_connection = 0;
 		sctp_send_initiate(inp, stcb);
@@ -995,7 +993,7 @@ int sctp_strreset_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
     struct sctp_nets *net)
 {
 	struct sctp_nets *alt;
-	struct sctp_tmit_chunk *strrst,*chk;
+	struct sctp_tmit_chunk *strrst, *chk;
 	struct sctp_stream_reset_req *strreq;
 	/* find the existing STRRESET */
 	TAILQ_FOREACH(strrst, &stcb->asoc.control_send_queue,
@@ -1067,7 +1065,7 @@ int sctp_asconf_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
     struct sctp_nets *net)
 {
 	struct sctp_nets *alt;
-	struct sctp_tmit_chunk *asconf,*chk;
+	struct sctp_tmit_chunk *asconf, *chk;
 
 	/* is this the first send, or a retransmission? */
 	if (stcb->asoc.asconf_sent == 0) {
@@ -1170,7 +1168,7 @@ sctp_shutdown_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	/* first threshold managment */
 	if (sctp_threshold_management(inp, stcb, net, stcb->asoc.max_send_times)) {
 		/* Assoc is over */
-		return(1);
+		return (1);
 	}
 	/* second select an alternative */
 	alt = sctp_find_alternate_net(stcb, net);
@@ -1204,7 +1202,7 @@ int sctp_shutdownack_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	/* first threshold managment */
 	if (sctp_threshold_management(inp, stcb, net, stcb->asoc.max_send_times)) {
 		/* Assoc is over */
-		return(1);
+		return (1);
 	}
 	/* second select an alternative */
 	alt = sctp_find_alternate_net(stcb, net);
@@ -1225,7 +1223,7 @@ sctp_audit_stream_queues_for_size(struct sctp_inpcb *inp,
 	struct sctp_tmit_chunk *chk;
 	unsigned int chks_in_queue=0;
 
-	if ((stcb == NULL) || (inp == NULL)) 
+	if ((stcb == NULL) || (inp == NULL))
 		return;
 	if (TAILQ_EMPTY(&stcb->asoc.out_wheel)) {
 		printf("Strange, out_wheel empty nothing on sent/send and  tot=%lu?\n",
@@ -1248,7 +1246,7 @@ sctp_audit_stream_queues_for_size(struct sctp_inpcb *inp,
 	}
 	if (chks_in_queue != stcb->asoc.stream_queue_cnt) {
 		printf("Hmm, stream queue cnt at %d I counted %d in stream out wheel\n",
-		       stcb->asoc.stream_queue_cnt,chks_in_queue);
+		       stcb->asoc.stream_queue_cnt, chks_in_queue);
 	}
 	if (chks_in_queue) {
 		/* call the output queue function */
@@ -1293,7 +1291,7 @@ sctp_heartbeat_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	}
 	/* Send a new HB, this will do threshold managment, pick a new dest */
 	if (sctp_send_hb(stcb, 0, NULL) < 0) {
-		return(1);
+		return (1);
 	}
 	if (cnt_of_unconf > 1) {
 		/*
@@ -1356,7 +1354,7 @@ void sctp_pathmtu_timer(struct sctp_inpcb *inp,
 			struct sctp_nets *net)
 {
 	u_int32_t next_mtu;
-	
+
 	/* restart the timer in any case */
 	next_mtu = sctp_getnext_mtu(inp, net->mtu);
 	if (next_mtu <= net->mtu) {
@@ -1364,7 +1362,7 @@ void sctp_pathmtu_timer(struct sctp_inpcb *inp,
 	    return;
 	}
 	if (net->ro.ro_rt != NULL) {
-		/* only if we have a route and interface do we 
+		/* only if we have a route and interface do we
 		 * set anything. Note we always restart
 		 * the timer though just in case it is updated
 		 * (i.e. the ifp) or route/ifp is populated.
@@ -1384,7 +1382,7 @@ void sctp_autoclose_timer(struct sctp_inpcb *inp,
 			  struct sctp_tcb *stcb,
 			  struct sctp_nets *net)
 {
-	struct timeval tn,*tim_touse;
+	struct timeval tn, *tim_touse;
 	struct sctp_association *asoc;
 	int ticks_gone_by;
 
@@ -1467,7 +1465,7 @@ sctp_iterator_timer(struct sctp_iterator *it)
 	 * ep is freed.
 	 */
  	SCTP_ITERATOR_LOCK();
-	if(it->inp == NULL) {
+	if (it->inp == NULL) {
 		/* iterator is complete */
 	done_with_iterator:
 		SCTP_ITERATOR_UNLOCK();
@@ -1488,20 +1486,20 @@ sctp_iterator_timer(struct sctp_iterator *it)
 	SCTP_INP_WLOCK(it->inp);
 	while ((it->pcb_flags) && ((it->inp->sctp_flags & it->pcb_flags) != it->pcb_flags)) {
 		/* we do not like this ep */
-		if(it->iterator_flags & SCTP_ITERATOR_DO_SINGLE_INP) {
+		if (it->iterator_flags & SCTP_ITERATOR_DO_SINGLE_INP) {
 			SCTP_INP_WUNLOCK(it->inp);
 			goto done_with_iterator;
-		}			
+		}
 		SCTP_INP_WUNLOCK(it->inp);
 		it->inp = LIST_NEXT(it->inp, sctp_list);
-		if(it->inp == NULL) {
+		if (it->inp == NULL) {
 			goto done_with_iterator;
 		}
 		SCTP_INP_WLOCK(it->inp);
 	}
 	if ((it->inp->inp_starting_point_for_iterator != NULL) &&
 	    (it->inp->inp_starting_point_for_iterator != it)) {
-		printf("Iterator collision, we must wait for other iterator at %x\n", 
+		printf("Iterator collision, we must wait for other iterator at %x\n",
 		       (u_int)it->inp);
 		SCTP_INP_WUNLOCK(it->inp);
 		goto start_timer_return;
@@ -1511,7 +1509,7 @@ sctp_iterator_timer(struct sctp_iterator *it)
 	SCTP_INP_WUNLOCK(it->inp);
 	SCTP_INP_RLOCK(it->inp);
 	/* if we reach here we found a inp acceptable, now through each
-	 * one that has the association in the right state 
+	 * one that has the association in the right state
 	 */
 	if (it->stcb == NULL) {
 		it->stcb = LIST_FIRST(&it->inp->sctp_asoc_list);
@@ -1521,7 +1519,7 @@ sctp_iterator_timer(struct sctp_iterator *it)
 	}
 	while (it->stcb) {
 		SCTP_TCB_LOCK(it->stcb);
-		if(it->asoc_state && ((it->stcb->asoc.state & it->asoc_state) != it->asoc_state)) {
+		if (it->asoc_state && ((it->stcb->asoc.state & it->asoc_state) != it->asoc_state)) {
 			SCTP_TCB_UNLOCK(it->stcb);
 			it->stcb = LIST_NEXT(it->stcb, sctp_tcblist);
 			continue;
