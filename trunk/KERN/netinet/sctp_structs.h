@@ -481,13 +481,15 @@ struct sctp_association {
 	int dup_tsns[SCTP_MAX_DUP_TSNS];
 	int initial_init_rto_max;	/* initial RTO for INIT's */
 	int initial_rto;		/* initial send RTO */
+	int minrto;			/* per assoc RTO-MIN */
+	int maxrto;			/* per assoc RTO-MAX */
 	/* Being that we have no bag to collect stale cookies, and
 	 * that we really would not want to anyway.. we will count
 	 * them in this counter. We of course feed them to the
 	 * pigeons right away (I have always thought of pigeons
 	 * as flying rats).
 	 */
-	int stale_cookie_count;
+	u_int16_t stale_cookie_count;
 
 	/* For the partial delivery API, if up, invoked
 	 * this is what last TSN I delivered

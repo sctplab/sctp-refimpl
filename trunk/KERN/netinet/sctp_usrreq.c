@@ -2214,8 +2214,8 @@ sctp_optsget(struct socket *so,
 			break;
 		}
 		srto->srto_initial = stcb->asoc.initial_rto;
-		srto->srto_max = inp->sctp_ep.sctp_maxrto;
-		srto->srto_min = inp->sctp_ep.sctp_minrto;
+		srto->srto_max = stcb->asoc.maxrto;
+		srto->srto_min = stcb->asoc.minrto;
 		m->m_len = sizeof(*srto);
 	}
 	break;
@@ -2807,7 +2807,7 @@ sctp_optsset(struct socket *so,
 		}
 		srto = mtod(m, struct sctp_rtoinfo *);
 		if (srto->srto_assoc_id == 0) {
-			/* If we have a null asoc, its for the endpoint */
+			/* If we have a null asoc, its default for the endpoint */
 			if (srto->srto_initial > 10)
 				inp->sctp_ep.initial_rto = srto->srto_initial;
 			if (srto->srto_max > 10)
@@ -2830,9 +2830,9 @@ sctp_optsset(struct socket *so,
 		if (srto->srto_initial > 10)
 			stcb->asoc.initial_rto = srto->srto_initial;
 		if (srto->srto_max > 10)
-			inp->sctp_ep.sctp_maxrto = srto->srto_max;
+			stcb->asoc.maxrto = srto->srto_max;
 		if (srto->srto_min > 10)
-			inp->sctp_ep.sctp_minrto = srto->srto_min;
+			stcb->asoc.minrto = srto->srto_min;
 	}
 	break;
 	case SCTP_ASSOCINFO:

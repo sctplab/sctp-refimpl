@@ -751,6 +751,8 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	asoc->peers_rwnd = m->sctp_socket->so_rcv.sb_hiwat;
 
 	asoc->smallest_mtu = m->sctp_frag_point;
+	asoc->minrto = m->sctp_ep.sctp_minrto;
+	asoc->maxrto = m->sctp_ep.sctp_maxrto;
 
 	LIST_INIT(&asoc->sctp_local_addr_list);
 	TAILQ_INIT(&asoc->nets);
@@ -1789,11 +1791,11 @@ sctp_calculate_rto(struct sctp_tcb *stcb,
 		stcb->asoc.sat_network_lockout = 1;
 	}
 	/* bound it, per C6/C7 in Section 5.3.1 */
-	if (new_rto < stcb->sctp_ep->sctp_ep.sctp_minrto) {
-		new_rto = stcb->sctp_ep->sctp_ep.sctp_minrto;
+	if (new_rto < stcb->asoc.minrto) {
+		new_rto = stcb->asoc.minrto;
 	}
-	if (new_rto > stcb->sctp_ep->sctp_ep.sctp_maxrto) {
-		new_rto = stcb->sctp_ep->sctp_ep.sctp_maxrto;
+	if (new_rto > stcb->asoc.maxrto) {
+		new_rto = stcb->asoc.maxrto;
 	}
 	/* we are now returning the RTT Smoothed */
 	return ((u_int32_t)new_rto);
