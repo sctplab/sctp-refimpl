@@ -123,65 +123,6 @@ extern u_int32_t sctp_debug_on;
  */
 
 /*
- * checks to see if the given address, sa, is one that is currently
- * known by the kernel
- * note: can't distinguish the same address on multiple interfaces and
- *       doesn't handle multiple addresses with different zone/scope id's
- * note: ifa_ifwithaddr() compares the entire sockaddr struct
- */
-static struct ifaddr *
-sctp_find_ifa_by_addr(struct sockaddr *sa)
-{
-	struct ifnet *ifn;
-	struct ifaddr *ifa;
-
-	/* go through all our known interfaces */
-	TAILQ_FOREACH(ifn, &ifnet, if_link) {
-		/* go through each interface addresses */
-		TAILQ_FOREACH(ifa, &ifn->if_addrhead, ifa_link) {
-			/* correct family? */
-			if (ifa->ifa_addr->sa_family != sa->sa_family)
-				continue;
-
-#ifdef INET6
-			if (ifa->ifa_addr->sa_family == AF_INET6) {
-				/* IPv6 address */
-				struct sockaddr_in6 *sin1, *sin2, sin6_tmp;
-				sin1 = (struct sockaddr_in6 *)ifa->ifa_addr;
-				if (IN6_IS_SCOPE_LINKLOCAL(&sin1->sin6_addr)) {
-					/* create a copy and clear scope */
-					memcpy(&sin6_tmp, sin1,
-					    sizeof(struct sockaddr_in6));
-					sin1 = &sin6_tmp;
-					in6_clearscope(&sin1->sin6_addr);
-				}
-				sin2 = (struct sockaddr_in6 *)sa;
-				if (memcmp(&sin1->sin6_addr, &sin2->sin6_addr,
-					   sizeof(struct in6_addr)) == 0) {
-					/* found it */
-					return (ifa);
-				}
-			} else
-#endif
-			if (ifa->ifa_addr->sa_family == AF_INET) {
-				/* IPv4 address */
-				struct sockaddr_in *sin1, *sin2;
-				sin1 = (struct sockaddr_in *)ifa->ifa_addr;
-				sin2 = (struct sockaddr_in *)sa;
-				if (sin1->sin_addr.s_addr ==
-				    sin2->sin_addr.s_addr) {
-					/* found it */
-					return (ifa);
-				}
-			}
-			/* else, not AF_INET or AF_INET6, so skip */
-		} /* end foreach ifa */
-	} /* end foreach ifn */
-	/* not found! */
-	return (NULL);
-}
-
-/*
  * ASCONF parameter processing
  * response_required: set if a reply is required (eg. SUCCESS_REPORT)
  * returns a mbuf to an "error" response parameter or NULL/"success" if ok

@@ -1861,7 +1861,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 		 * need to zero out the port to find the address! yuck!
 		 * can't do this earlier since need port for sctp_pcb_findep()
 		 */
-		ifa = ifa_ifwithaddr((struct sockaddr *)&store_sa);
+		ifa = sctp_find_ifa_by_addr((struct sockaddr *)&store_sa);
 		if (ifa == NULL) {
 			/* Can't find an interface with that address */
 			return (EADDRNOTAVAIL);
