@@ -558,8 +558,10 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 				if (fir == 0) {
 					fir = 1;
 #ifdef SCTP_DEBUG
-					printf("First TSN marked was %x\n",
-					       chk->rec.data.TSN_seq);
+					if (sctp_debug_on & SCTP_DEBUG_TIMER1) {
+						printf("First TSN marked was %x\n",
+						       chk->rec.data.TSN_seq);
+					}
 #endif
 					tsnfirst = chk->rec.data.TSN_seq;
 				}
@@ -612,15 +614,17 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	stcb->asoc.peers_rwnd += (num_mk /* * sizeof(struct mbuf)*/);
 
 #ifdef SCTP_DEBUG
-	if (num_mk) {
-		printf("LAST TSN marked was %x\n", tsnlast);
-		printf("Num marked for retransmission was %d peer-rwd:%ld\n",
-		    num_mk, (u_long)stcb->asoc.peers_rwnd);
-		printf("LAST TSN marked was %x\n",tsnlast);
-		printf("Num marked for retransmission was %d peer-rwd:%d\n",
-		       num_mk,
-		       (int)stcb->asoc.peers_rwnd
-			);
+	if (sctp_debug_on & SCTP_DEBUG_TIMER1) {
+		if (num_mk) {
+			printf("LAST TSN marked was %x\n", tsnlast);
+			printf("Num marked for retransmission was %d peer-rwd:%ld\n",
+			       num_mk, (u_long)stcb->asoc.peers_rwnd);
+			printf("LAST TSN marked was %x\n",tsnlast);
+			printf("Num marked for retransmission was %d peer-rwd:%d\n",
+			       num_mk,
+			       (int)stcb->asoc.peers_rwnd
+				);
+		}
 	}
 #endif
 	*num_marked = num_mk;

@@ -358,7 +358,7 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 	/* load all addresses */
 	if (sctp_load_addresses_from_init(stcb, m, iphlen,
 	    (offset + sizeof(struct sctp_init_chunk)), initack_limit, sh,
-	    NULL)){
+	    NULL)) {
 		/* Huh, we should abort */
 		sctp_abort_notification(stcb, 0);
 		sctp_free_assoc(stcb->sctp_ep, stcb);
@@ -1509,7 +1509,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	int init_offset, initack_offset, initack_limit;
 	int retval;
 	int error = 0;
-
+	u_int32_t old_tag;
 	/*
 	 * find and validate the INIT chunk in the cookie (peer's info)
 	 * the INIT should start after the cookie-echo header struct
@@ -1575,7 +1575,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	 * now that we know the INIT/INIT-ACK are in place,
 	 * create a new TCB and popluate
 	 */
-	stcb = sctp_aloc_assoc(inp, init_src, 0, &error);
+ 	stcb = sctp_aloc_assoc(inp, init_src, 0, &error, ntohl(initack_cp->init.initiate_tag));
 	if (stcb == NULL) {
 		struct mbuf *op_err;
 		/* memory problem? */
@@ -1612,6 +1612,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	}
 
 	/* process the INIT-ACK info (my info) */
+	old_tag = asoc->my_vtag;
 	asoc->my_vtag = ntohl(initack_cp->init.initiate_tag);
 	asoc->my_rwnd = ntohl(initack_cp->init.a_rwnd);
 	asoc->pre_open_streams = ntohs(initack_cp->init.num_outbound_streams);
@@ -1623,6 +1624,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	asoc->str_reset_seq_in = asoc->init_seq_number;
 
 	asoc->advanced_peer_ack_point = asoc->last_acked_seq;
+	
 	/* process the INIT info (peer's info) */
 	retval = sctp_process_init(init_cp, stcb, *netp);
 	if (retval < 0) {
@@ -2495,7 +2497,7 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 		if ((tp1) && (tp1->sent < SCTP_DATAGRAM_ACKED)) {
 			u_int8_t *ddp;
 			if (((tp1->rec.data.state_flags & SCTP_WINDOW_PROBE) == SCTP_WINDOW_PROBE) &&
-			    ((flg & SCTP_FROM_MIDDLE_BOX) == 0)){
+			    ((flg & SCTP_FROM_MIDDLE_BOX) == 0)) {
 				sctp_pegs[SCTP_PDRP_DIWNP]++;
 				return (0);
 			}
@@ -2541,7 +2543,7 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 			/*
 			 * mark the tsn with what sequences can cause a new FR.
 			 */
-			if(TAILQ_EMPTY(&stcb->asoc.send_queue) ) {
+			if (TAILQ_EMPTY(&stcb->asoc.send_queue) ) {
 				tp1->rec.data.fast_retran_tsn = stcb->asoc.sending_seq;
 			} else {
 				tp1->rec.data.fast_retran_tsn = (TAILQ_FIRST(&stcb->asoc.send_queue))->rec.data.TSN_seq;
@@ -2965,7 +2967,7 @@ sctp_handle_packet_dropped(struct sctp_pktdrop_chunk *cp,
 	/* now middle boxes in sat networks get a cwnd bump */
 	if ((cp->ch.chunk_flags & SCTP_FROM_MIDDLE_BOX) &&
 	    (stcb->asoc.sat_t3_loss_recovery == 0) &&
-	    (stcb->asoc.sat_network)){
+	    (stcb->asoc.sat_network)) {
 		/*
 		 * This is debateable but for sat networks it makes sense
 		 * Note if a T3 timer has went off, we will prohibit any
@@ -3033,12 +3035,13 @@ sctp_handle_packet_dropped(struct sctp_pktdrop_chunk *cp,
 				 * our previous adjustment.
 				 */
 				int diff_adj;
-				diff_adj = net->flight_size - net->cwnd;
+				diff_adj = net->cwnd - net->flight_size;
 				if (diff_adj > my_portion)
 					my_portion = 0;
 				else
 					my_portion -= diff_adj;
 			}
+
 			/* back down to the previous cwnd (assume
 			 * we have had a sack before this packet). minus
 			 * what ever portion of the overage is my fault.
@@ -3860,8 +3863,21 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 	sctp_audit_log(0xE0, 1);
 	sctp_auditing(0, inp, stcb, net);
 #endif
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
+		printf("Ok, Common input processing called, m:%x iphlen:%d offset:%d",
+		       (u_int)m, iphlen, offset);
+	}
+#endif /* SCTP_DEBUG */
+
 	if (IS_SCTP_CONTROL(ch)) {
 		/* process the control portion of the SCTP packet */
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
+			printf("Processing control\n");
+		}
+#endif /* SCTP_DEBUG */
+
 		stcb = sctp_process_control(m, iphlen, &offset, length, sh, ch,
 		    inp, stcb, &net, &fwd_tsn_seen);
 	} else {
@@ -3869,6 +3885,12 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		 * no control chunks, so pre-process DATA chunks
 		 * (these checks are taken care of by control processing)
 		 */
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
+			printf("No control present\n");
+		}
+#endif /* SCTP_DEBUG */
+
 		if (stcb == NULL) {
 			/* out of the blue DATA chunk */
 			sctp_handle_ootb(m, iphlen, offset, sh, inp, NULL);
@@ -4083,7 +4105,11 @@ sctp_input(m, va_alist)
 #endif
 	net = NULL;
 	sctp_pegs[SCTP_INPKTS]++;
-
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
+		printf("V4 input gets a packet iphlen:%d pktlen:%d\n", iphlen, m->m_pkthdr.len);
+	}
+#endif
 /*#ifdef INET6*/
 /* Don't think this is needed */
 /*	bzero(&opts6, sizeof(opts6));*/
@@ -4127,6 +4153,12 @@ sctp_input(m, va_alist)
 		goto bad;
 	}
 
+	/* destination port of 0 is illegal, based on RFC2960. */
+	if (sh->dest_port == 0) {
+	        sctp_pegs[SCTP_HDR_DROPS]++;
+		goto bad;
+	}
+
 	/* validate SCTP checksum */
 	if ((sctp_no_csum_on_loopback == 0) ||
 	    (m->m_pkthdr.rcvif == NULL) ||
@@ -4135,9 +4167,22 @@ sctp_input(m, va_alist)
 		 * sysctl is set to 1.
 		 */
 		check = sh->checksum;	/* save incoming checksum */
+		if ((check == 0) && (sctp_no_csum_on_loopback)) {
+			/* special hook for where we got a local address
+			 * somehow routed across a non IFT_LOOP type interface
+			 */
+			if (ip->ip_src.s_addr == ip->ip_dst.s_addr)
+				goto sctp_skip_csum_4;
+		}
 		sh->checksum = 0;		/* prepare for calc */
 		calc_check = sctp_calculate_sum(m, &mlen, iphlen);
 		if (calc_check != check) {
+#ifdef SCTP_DEBUG
+			if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
+				printf("Bad CSUM on SCTP packet calc_check:%x check:%x  m:%x mlen:%d iphlen:%d\n",
+				       calc_check, check, (u_int)m, mlen, iphlen);
+			}
+#endif
 			stcb = sctp_findassociation_addr(m, iphlen,
 							 offset - sizeof(*ch),
 							 sh, ch, &inp, &net);
@@ -4151,6 +4196,7 @@ sctp_input(m, va_alist)
 		}
 		sh->checksum = calc_check;
 	} else {
+	sctp_skip_csum_4:
 		mlen = m->m_pkthdr.len;
 	}
 	/* validate mbuf chain length with IP payload length */
@@ -4163,16 +4209,16 @@ sctp_input(m, va_alist)
 		goto bad;	
 	}
 
-	/* destination port of 0 is illegal, based on RFC2960. */
-	if (sh->dest_port == 0) {
-	        sctp_pegs[SCTP_HDR_DROPS]++;
-		goto bad;
-	}
-
 	/*
 	 * Locate pcb and tcb for datagram
 	 * sctp_findassociation_addr() wants IP/SCTP/first chunk header...
 	 */
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
+		printf("V4 find association\n");
+	}
+#endif
+
 	stcb = sctp_findassociation_addr(m, iphlen, offset - sizeof(*ch),
 	    sh, ch, &inp, &net);
 	if (inp == NULL) {

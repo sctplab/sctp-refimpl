@@ -557,7 +557,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 						}
 						return (stcb);
 					}
-				} else if (remote->sa_family == AF_INET6){
+				} else if (remote->sa_family == AF_INET6) {
 					struct sockaddr_in6 *sin6, *rsin6;
 					sin6 = (struct sockaddr_in6 *)
 					    &net->ra._l_addr;
@@ -592,8 +592,9 @@ sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, caddr_t asoc_id)
 	struct sctp_tcb *stcb;
 	u_int32_t vtag;
 
-	if (asoc_id == 0 || inp == NULL)
+	if (asoc_id == 0 || inp == NULL) {
 		return (NULL);
+	}
 
 	vtag = (u_int32_t)asoc_id;
 	head = &sctppcbinfo.sctp_asochash[SCTP_PCBHASH_ASOC(vtag,
@@ -1925,17 +1926,17 @@ static void
 sctp_iterator_inp_being_freed(struct sctp_inpcb *inp)
 {
 	struct sctp_iterator *it;
-	if(inp->inp_starting_point_for_iterator) {
+	if (inp->inp_starting_point_for_iterator) {
 		/* lets fix the one who has the lock first */
 		it = inp->inp_starting_point_for_iterator;
 		it->inp = LIST_NEXT(it->inp, sctp_list);
-		if(it->stcb->asoc.stcb_starting_point_for_iterator) {
+		if (it->stcb->asoc.stcb_starting_point_for_iterator) {
 			/* fix stcb back pointer to null too */
 			it->stcb->asoc.stcb_starting_point_for_iterator = NULL;
 
 		}
 		it->stcb = NULL;
-		if(it->inp && (it->inp->inp_starting_point_for_iterator == NULL)) {
+		if (it->inp && (it->inp->inp_starting_point_for_iterator == NULL)) {
 			/* Give him back the lock on this one */
 			it->inp->inp_starting_point_for_iterator = it;
 		}
@@ -2316,7 +2317,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	if (newaddr->sa_family == AF_INET) {
 		struct sockaddr_in *sin;
 		sin = (struct sockaddr_in *)newaddr;
-		if ((sin->sin_port == 0) || (sin->sin_addr.s_addr == 0)) {
+		if (sin->sin_addr.s_addr == 0) {
 			/* Invalid address */
 			return (-1);
 		}
@@ -2359,8 +2360,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	} else if (newaddr->sa_family == AF_INET6) {
 		struct sockaddr_in6 *sin6;
 		sin6 = (struct sockaddr_in6 *)newaddr;
-		if ((sin6->sin6_port == 0) ||
-		    (IN6_IS_ADDR_UNSPECIFIED(&sin6->sin6_addr))) {
+		if (IN6_IS_ADDR_UNSPECIFIED(&sin6->sin6_addr)) {
 			/* Invalid address */
 			return (-1);
 		}
@@ -2421,17 +2421,12 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	sctppcbinfo.ipi_gencnt_raddr++;
 	bzero(net, sizeof(*net));
 	memcpy(&net->ra._l_addr, newaddr, newaddr->sa_len);
-#if defined(__FreeBSD__) || defined(__APPLE__)
-	if (newaddr->sa_family == AF_INET6)
-		net->addr_is_local = in6_localaddr(
-		    &(((struct sockaddr_in6 *)newaddr)->sin6_addr));
-	else if (newaddr->sa_family == AF_INET)
-		net->addr_is_local = in_localaddr(
-		    ((struct sockaddr_in *)newaddr)->sin_addr);
-#else
-	net->addr_is_local = 0;
-#endif
-
+	if (newaddr->sa_family == AF_INET) {
+		((struct sockaddr_in *)&net->ra._l_addr)->sin_port = stcb->rport;
+	} else if (newaddr->sa_family == AF_INET6) {
+		((struct sockaddr_in6 *)&net->ra._l_addr)->sin6_port = stcb->rport;
+	}
+	net->addr_is_local = sctp_is_address_on_local_host(newaddr);
 	net->failure_threshold = stcb->asoc.def_net_failure;
 	if (addr_inscope == 0) {
 #ifdef SCTP_DEBUG
@@ -2582,7 +2577,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
  */
 struct sctp_tcb *
 sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
-    int for_a_init, int *error)
+    int for_a_init, int *error,  uint32_t override_tag)
 {
 	struct sctp_tcb *stcb;
 	struct sctp_association *asoc;
@@ -2708,7 +2703,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 
 	bzero(stcb, sizeof(*stcb));
 	asoc = &stcb->asoc;
-	if ((err = sctp_init_asoc(inp, asoc, for_a_init))) {
+	if ((err = sctp_init_asoc(inp, asoc, for_a_init, override_tag))) {
 		/* failed */
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
 		sctppcbinfo.ipi_count_asoc--;
@@ -2937,7 +2932,7 @@ sctp_iterator_asoc_being_freed(struct sctp_tcb *stcb)
 		return;
 	}
 	it->stcb = LIST_NEXT(it->stcb, sctp_tcblist);
-	if(it->stcb == NULL) {
+	if (it->stcb == NULL) {
 		/* done with all asoc's in this assoc */
 		inp = LIST_NEXT(it->inp, sctp_list);
 	}
@@ -4238,7 +4233,7 @@ sctp_is_vtag_good(struct sctp_inpcb *inp, u_int32_t tag, struct timeval *now)
 			 * unique across all endpoints. For
 			 * now within a endpoint is ok.
 			 */
- 			if(inp == stcb->sctp_ep) {
+ 			if (inp == stcb->sctp_ep) {
 				/* bad tag, in use */
 				return(0);
 			}
@@ -4542,11 +4537,11 @@ sctp_initiate_iterator(asoc_func af, uint32_t pcb_state,
 {
 	struct sctp_iterator *it=NULL;	
 	int s;
-	if(af == NULL) {
+	if (af == NULL) {
 		return (-1);
 	}
 	MALLOC(it, struct sctp_iterator *, sizeof(struct sctp_iterator), M_PCB, M_WAITOK);
-	if(it == NULL) {
+	if (it == NULL) {
 		return(ENOMEM);
 	}
 	memset(it, 0, sizeof(*it));

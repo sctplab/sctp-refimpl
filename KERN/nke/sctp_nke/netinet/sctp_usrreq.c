@@ -1566,7 +1566,7 @@ sctp_do_connect_x(struct socket *so,
 		}
 	}
         /* We are GOOD to go */
-	stcb = sctp_aloc_assoc(inp, sa, 1, &error);
+	stcb = sctp_aloc_assoc(inp, sa, 1, &error, 0);
 	if (stcb == NULL) {
 		/* Gak! no memory */
 		splx(s);
@@ -1939,6 +1939,8 @@ sctp_optsget(struct socket *so,
 		}
 #endif /* SCTP_DEBUG */
 		if (m->m_len < sizeof(sctp_assoc_t)) {
+			printf("m->m_len:%d not %d\n",
+			       m->m_len, sizeof(sctp_assoc_t));
 			error = EINVAL;
 			break;
 		}
@@ -1951,9 +1953,12 @@ sctp_optsget(struct socket *so,
 #endif /* SCTP_TCP_MODEL_SUPPORT */
 		if (stcb == NULL) {
 			assoc_id = mtod(m, sctp_assoc_t *);
+			printf("Lookup association id:%x for inp:%x\n",
+			       (u_int)*assoc_id, (u_int)inp);
 			stcb = sctp_findassociation_ep_asocid(inp, *assoc_id);
 		}
 		if (stcb == NULL) {
+			printf("Lookup fails\n");
 			error = EINVAL;
 			break;
 		}
@@ -2915,7 +2920,7 @@ sctp_optsset(struct socket *so,
 						int cnt_of_unconf = 0;
 						struct sctp_nets *lnet;
 						TAILQ_FOREACH(lnet, &stcb->asoc.nets, sctp_next) {
-							if (lnet->dest_state & SCTP_ADDR_UNCONFIRMED){
+							if (lnet->dest_state & SCTP_ADDR_UNCONFIRMED) {
 								cnt_of_unconf++;
 							}
 						}
@@ -2984,7 +2989,7 @@ sctp_optsset(struct socket *so,
 			break;
 		}
 		sasoc = mtod(m, struct sctp_assocparams *);
-		if ((sasoc->sasoc_assoc_id) && (stcb == NULL)){
+		if ((sasoc->sasoc_assoc_id) && (stcb == NULL)) {
 #ifdef SCTP_TCP_MODEL_SUPPORT
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)
 				stcb = LIST_FIRST(&inp->sctp_asoc_list);
@@ -3438,7 +3443,7 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		return (EALREADY);
 	}
 	/* We are GOOD to go */
-	stcb = sctp_aloc_assoc(inp, addr, 1, &error);
+	stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0);
 	if (stcb == NULL) {
 		/* Gak! no memory */
 		splx(s);

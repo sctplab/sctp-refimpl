@@ -669,7 +669,7 @@ u_int32_t sctp_select_a_tag(struct sctp_inpcb *m)
 
 int
 sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
-	       int for_a_init)
+	       int for_a_init, uint32_t override_tag )
 {
 	/*
 	 * Anything set to zero is taken care of by the allocation
@@ -689,7 +689,11 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	asoc->heart_beat_delay = m->sctp_ep.sctp_timeoutticks[SCTP_TIMER_HEARTBEAT];
 	asoc->cookie_life = m->sctp_ep.def_cookie_life;
 
-	asoc->my_vtag = sctp_select_a_tag(m);
+	if (override_tag) {
+		asoc->my_vtag = override_tag;
+	} else {
+		asoc->my_vtag = sctp_select_a_tag(m);
+	}
 	asoc->asconf_seq_out = asoc->str_reset_seq_out = asoc->init_seq_number = asoc->sending_seq =
 		sctp_select_initial_TSN(&m->sctp_ep);
 	asoc->t3timeout_highest_marked = asoc->asconf_seq_out;
@@ -1179,7 +1183,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			struct sctp_nets *lnet;
 
 			TAILQ_FOREACH(lnet, &stcb->asoc.nets, sctp_next) {
-				if (lnet->dest_state & SCTP_ADDR_UNCONFIRMED){
+				if (lnet->dest_state & SCTP_ADDR_UNCONFIRMED) {
 					cnt_of_unconf++;
 				}
 			}
@@ -1200,7 +1204,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			 * RTO is in ms.
 			 */
 			if ((stcb->asoc.heart_beat_delay == 0) &&
-			    (cnt_of_unconf == 0)){
+			    (cnt_of_unconf == 0)) {
 				/* no HB on this inp after confirmations */
 				return (0);
 			}
@@ -1497,7 +1501,7 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		 */
 		return (0);
 	}
-	if(t_type == SCTP_TIMER_TYPE_SEND) {
+	if (t_type == SCTP_TIMER_TYPE_SEND) {
 		stcb->asoc.num_send_timers_up--;
 		if (stcb->asoc.num_send_timers_up < 0) {
 			stcb->asoc.num_send_timers_up = 0;
@@ -1818,7 +1822,7 @@ sctp_calculate_rto(struct sctp_tcb *stcb,
 	}
 	new_rto = ((net->lastsa >> 2) + net->lastsv) >> 1;
 	if ((new_rto > SCTP_SAT_NETWORK_MIN) &&
-	    (stcb->asoc.sat_network_lockout == 0)){
+	    (stcb->asoc.sat_network_lockout == 0)) {
 		stcb->asoc.sat_network = 1;
 	} else 	if ((!first_measure) && stcb->asoc.sat_network) {
 		stcb->asoc.sat_network = 0;
@@ -3098,7 +3102,7 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 	}
 #ifdef SCTP_TCP_MODEL_SUPPORT
 	if (((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) == 0) ||
-	    ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)== 0)){
+	    ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)== 0)) {
 #endif
 		if (asa->sa_len > MLEN)
 			return (0);
