@@ -181,6 +181,7 @@ sctp_get_peeloff(struct socket *head, caddr_t assoc_id, int *error)
 		return (NULL);
 	}
 	n_inp = (struct sctp_inpcb *)newso->so_pcb;
+	SCTP_INP_WLOCK(n_inp);
 	n_inp->sctp_flags = (SCTP_PCB_FLAGS_UDPTYPE |
 	    SCTP_PCB_FLAGS_CONNECTED |
 	    SCTP_PCB_FLAGS_IN_TCPPOOL | /* Turn on Blocking IO */
@@ -191,8 +192,10 @@ sctp_get_peeloff(struct socket *head, caddr_t assoc_id, int *error)
 	newso->so_state |= SS_ISCONNECTED;
 	/* We remove it right away */
 #if defined(__FreeBSD__) || defined(__APPLE__)
+	SOCK_LOCK(head) 
 	TAILQ_REMOVE(&head->so_comp, newso, so_list);
 	head->so_qlen--;
+	SOCK_UNLOCK(head) 
 #else
 
 #if defined( __NetBSD__) || defined(__OpenBSD__)
@@ -207,6 +210,7 @@ sctp_get_peeloff(struct socket *head, caddr_t assoc_id, int *error)
 	 * Now we must move it from one hash table to another and get
 	 * the stcb in the right place.
 	 */
+	SCTP_INP_WUNLOCK(n_inp);
 	sctp_move_pcb_and_assoc(inp, n_inp, stcb);
 	/* 
 	 * And now the final hack. We move data in the 
