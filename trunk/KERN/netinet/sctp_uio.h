@@ -88,11 +88,6 @@ struct sctp_snd_all_completes {
 	u_int32_t sall_num_failed;
 };
 
-/* send/recv flags */
-#ifndef MSG_EOF
-#define MSG_EOF 	0x1000	/* Start shutdown procedures */
-#endif
-
 /* Flags that go into the sinfo->sinfo_flags field */
 #define SCTP_EOF 	  0x0100	/* Start shutdown procedures */
 #define SCTP_ABORT	  0x0200	/* Send an ABORT to peer */
@@ -328,7 +323,17 @@ struct sctp_paddrparams {
 	struct sockaddr_storage spp_address;
 	u_int32_t spp_hbinterval;
 	u_int16_t spp_pathmaxrxt;
+        u_int32_t spp_pathmtu;
+        u_int32_t spp_sackdelay;
+        u_int32_t spp_flags;
 };
+
+#define SPP_HB_ENABLE         0x00000001
+#define SPP_HB_DISABLE        0x00000002
+#define SPP_PMTUD_ENABLE      0x00000004
+#define SPP_PMTUD_DISABLE     0x00000008
+#define SPP_SACKDELAY_ENABLE  0x00000010
+#define SPP_SACKDELAY_DISABLE 0x00000020
 
 struct sctp_paddrinfo {
 	sctp_assoc_t spinfo_assoc_id;
