@@ -480,6 +480,14 @@ int     sctp_sendmsg    __P((int, const void *, size_t,
 ssize_t sctp_send       __P((int sd, const void *msg, size_t len,
 	const struct sctp_sndrcvinfo *sinfo,int flags));
 
+ssize_t
+sctp_sendx __P((int sd, const void *msg, size_t len, 
+		struct sockaddr *addrs, int addrcnt,
+		struct sctp_sndrcvinfo *sinfo, int flags));
+
+sctp_assoc_t 
+sctp_getassocid __P((int sd, struct sockaddr *sa));
+
 ssize_t sctp_recvmsg	__P((int, void *, size_t, struct sockaddr *,
         socklen_t *, struct sctp_sndrcvinfo *, int *));
 
