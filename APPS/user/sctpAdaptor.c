@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.1.1.1 2004-06-23 13:07:29 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.2 2004-07-25 11:03:56 lei Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -182,7 +182,7 @@ handle_notification(int fd,char *notify_buf) {
 			       strscope);
 		} else {
 			int i,cnt=0;
-			len = ((strrst->strreset_length - sizeof(struct sctp_stream_reset_event))/sizeof(uint16_t));
+			len = ((strrst->strreset_length - sizeof(struct sctp_stream_reset_event))/sizeof(u_int16_t));
 			printf("Streams ");
 			for ( i=0; i<len; i++){
 				cnt++;

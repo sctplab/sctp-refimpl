@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.1.1.1 2004-06-23 13:07:29 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.2 2004-07-25 11:03:56 lei Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -1667,7 +1667,7 @@ cmd_streamreset(char *argv[], int argc)
 	strrst->strrst_assoc_id = get_assoc_id();
 	if(setsockopt(adap->fd,IPPROTO_SCTP,
 		      SCTP_RESET_STREAMS,
-		      strrst, (sizeof(*strrst)+(strrst->strrst_num_streams * sizeof(uint16_t)))) != 0){
+		      strrst, (sizeof(*strrst)+(strrst->strrst_num_streams * sizeof(u_int16_t)))) != 0){
 		printf("Stream Reset fails %d\n",errno);
 	}else{
 		printf("Stream reset succesful\n");
