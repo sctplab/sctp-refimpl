@@ -1027,7 +1027,6 @@ sctp_findassoc_by_vtag(struct sockaddr *from, uint32_t vtag,
 				 */
 				continue;
 			}
-
 			net = sctp_findnet(stcb, from);
 			if (net) {
 				/* yep its him. */
@@ -1067,6 +1066,7 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 	struct sockaddr *to = (struct sockaddr *)&to_store;
 	struct sockaddr *from = (struct sockaddr *)&from_store;
 	struct sctp_inpcb *inp;
+
 
 	iph = mtod(m, struct ip *);
 	if (iph->ip_v == IPVERSION) {
@@ -1130,12 +1130,11 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 	if (sh->v_tag) {
 		/* we only go down this path if vtag is non-zero */
 		retval = sctp_findassoc_by_vtag(from, ntohl(sh->v_tag),
-		    inp_p, netp, sh->dest_port, sh->src_port);
+		    inp_p, netp, sh->src_port, sh->dest_port);
 		if (retval) {
 			return (retval);
 		}
 	}
-
 	find_tcp_pool = 0;
 #ifdef SCTP_TCP_MODEL_SUPPORT
 	if ((ch->chunk_type != SCTP_INITIATION) &&
@@ -4050,6 +4049,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			if (lsa) {
 				sctp_set_primary_addr(stcb, sa, NULL);
 			}
+
 		} else if (ptype == SCTP_PRSCTP_SUPPORTED) {
 			/* Peer supports pr-sctp */
 			stcb->asoc.peer_supports_prsctp = 1;
@@ -4100,6 +4100,16 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			/* Peer supports ECN-nonce */
 			stcb->asoc.peer_supports_ecn_nonce = 1;
 			stcb->asoc.ecn_nonce_allowed = 1;
+		} else if ((ptype == SCTP_HEARTBEAT_INFO) || 
+			   (ptype == SCTP_STATE_COOKIE) ||
+			   (ptype == SCTP_UNRECOG_PARAM) ||
+			   (ptype == SCTP_COOKIE_PRESERVE) ||
+			   (ptype == SCTP_SUPPORTED_ADDRTYPE) ||
+			   (ptype == SCTP_ADD_IP_ADDRESS) ||
+			   (ptype == SCTP_DEL_IP_ADDRESS) ||
+			   (ptype == SCTP_ERROR_CAUSE_IND) ||
+			   (ptype == SCTP_SUCCESS_REPORT)) {
+			/* don't care */;
 		} else {
 			if ((ptype & 0x8000) == 0x0000) {
 				/* must stop processing the rest of
