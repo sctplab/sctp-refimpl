@@ -1340,7 +1340,6 @@ sctp6_getaddr(struct socket *so, struct mbuf *nam)
 			struct sctp_tcb *stcb;
 			struct sockaddr_in6 *sin_a6;
 			struct sctp_nets *net;
-			struct route *rtp;
 			int fnd;
 
 			stcb = LIST_FIRST(&inp->sctp_asoc_list);
@@ -1350,7 +1349,7 @@ sctp6_getaddr(struct socket *so, struct mbuf *nam)
 			fnd = 0;
 			sin_a6 = NULL;
 			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
-				sin_a6 = (struct sockaddr_in6 *)&net->ra._l_addr;
+				sin_a6 = (struct sockaddr_in6 *)&net->ro._l_addr;
 				if (sin_a6->sin6_family == AF_INET6) {
 					fnd = 1;
 					break;
@@ -1360,9 +1359,9 @@ sctp6_getaddr(struct socket *so, struct mbuf *nam)
 				/* punt */
 				goto notConn6;
 			}
-			rtp = (struct route *)&net->ra;
-			sin6->sin6_addr = sctp_ipv6_source_address_selection(inp,
-			    stcb, sin_a6, rtp, net, 0);
+			sin6->sin6_addr = sctp_ipv6_source_address_selection(
+			    inp, stcb, (struct route *)&net->ro, net, 0);
+			    
 		} else {
 			/* For the bound all case you get back 0 */
 		notConn6:
@@ -1450,7 +1449,7 @@ sctp6_peeraddr(struct socket *so, struct mbuf *nam)
 	}
 	fnd = 0;
 	TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
-		sin_a6 = (struct sockaddr_in6 *)&net->ra._l_addr;
+		sin_a6 = (struct sockaddr_in6 *)&net->ro._l_addr;
 		if (sin_a6->sin6_family == AF_INET6) {
 			fnd = 1;
 			sin6->sin6_port = stcb->rport;

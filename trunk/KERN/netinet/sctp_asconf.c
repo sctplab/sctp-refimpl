@@ -1584,10 +1584,10 @@ sctp_is_scopeid_in_nets(struct sctp_tcb *stcb, struct sockaddr *sa)
 
 	/* hunt through our destination nets list for this scope_id */
 	TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
-		if (((struct sockaddr *)(&net->ra._l_addr))->sa_family !=
+		if (((struct sockaddr *)(&net->ro._l_addr))->sa_family !=
 		    AF_INET6)
 			continue;
-		net6 = (struct sockaddr_in6 *)&net->ra._l_addr;
+		net6 = (struct sockaddr_in6 *)&net->ro._l_addr;
 		if (IN6_IS_ADDR_LINKLOCAL(&net6->sin6_addr) == 0)
 			continue;
 		if (sctp_is_same_scope(sin6, net6)) {
@@ -2030,10 +2030,10 @@ sctp_delete_ip_address(struct ifaddr *ifa)
 			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 				struct rtentry *rt;
 				/* delete this address if cached */
-				rt = net->ra.ro_rt;
+				rt = net->ro.ro_rt;
 				if (rt != NULL && rt->rt_ifa == ifa) {
 /*					RTFREE(rt);*/
-					net->ra.ro_rt = NULL;
+					net->ro.ro_rt = NULL;
 				}
 			} /* for each net */
 			/* process through the asoc "pending" list */

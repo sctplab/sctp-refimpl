@@ -254,10 +254,10 @@ sctp_find_alternate_net(struct sctp_tcb *stcb,
 			}
 			alt = TAILQ_FIRST(&stcb->asoc.nets);
 		}
-		if (alt->ra.ro_rt == NULL) {
+		if (alt->ro.ro_rt == NULL) {
 #ifndef SCOPEDROUTING
 			struct sockaddr_in6 *sin6;
-			sin6 = (struct sockaddr_in6 *)&alt->ra._l_addr;
+			sin6 = (struct sockaddr_in6 *)&alt->ro._l_addr;
 			if (sin6->sin6_family == AF_INET6) {
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
 				(void)in6_embedscope(&sin6->sin6_addr, sin6,
@@ -268,22 +268,21 @@ sctp_find_alternate_net(struct sctp_tcb *stcb,
 			}
 #endif
 #if defined(__FreeBSD__) || defined(__APPLE__)
-			alt->ra.ro_rt = rtalloc1((struct sockaddr *)&alt->ra._l_addr,
-						 1, 0UL);
+			rtalloc_ign((struct route*)&alt->ro, 0UL);
 #else
-			alt->ra.ro_rt = rtalloc1((struct sockaddr *)&alt->ra._l_addr,
-						 1);
+			rtalloc((struct route*)&alt->ro);
 #endif
 #ifndef SCOPEDROUTING
 			if (sin6->sin6_family == AF_INET6) {
-				(void)in6_recoverscope(sin6, &sin6->sin6_addr, NULL);
+				(void)in6_recoverscope(sin6, &sin6->sin6_addr,
+				    NULL);
 			}
 #endif
 			alt->src_addr_selected = 0;
 		}
 		if (
 			((alt->dest_state & SCTP_ADDR_REACHABLE) == SCTP_ADDR_REACHABLE) && 
-			(alt->ra.ro_rt != NULL) &&
+			(alt->ro.ro_rt != NULL) &&
 			(!(alt->dest_state & SCTP_ADDR_UNCONFIRMED))
 			) {
 			/* Found a reachable address */
@@ -1362,14 +1361,14 @@ void sctp_pathmtu_timer(struct sctp_inpcb *inp,
 	    /* nothing to do */
 	    return;
 	}
-	if (net->ra.ro_rt != NULL) {
+	if (net->ro.ro_rt != NULL) {
 		/* only if we have a route and interface do we 
 		 * set anything. Note we always restart
 		 * the timer though just in case it is updated
 		 * (i.e. the ifp) or route/ifp is populated.
 		 */
-		if (net->ra.ro_rt->rt_ifp != NULL) {
-			if (net->ra.ro_rt->rt_ifp->if_mtu > next_mtu) {
+		if (net->ro.ro_rt->rt_ifp != NULL) {
+			if (net->ro.ro_rt->rt_ifp->if_mtu > next_mtu) {
 				/* ok it will fit out the door */
 				net->mtu = next_mtu;
 			}

@@ -729,8 +729,9 @@ sctp_attach(struct socket *so, int proto, struct proc *p)
 		splx(s);
 		return error;
 	}
-	SCTP_INP_WLOCK(inp);
 	inp = (struct sctp_inpcb *)so->so_pcb;
+	SCTP_INP_WLOCK(inp);
+
 	inp->sctp_flags &= ~SCTP_PCB_FLAGS_BOUND_V6;	/* I'm not v6! */
 	ip_inp = &inp->ip_inp.inp;
 #if defined(__FreeBSD__) || defined(__APPLE__)
@@ -2038,9 +2039,9 @@ sctp_optsget(struct socket *so,
 		SCTP_TCB_LOCK(stcb);
 		TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 			if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_NEEDS_MAPPED_V4) ||
-			    (((struct sockaddr *)&net->ra._l_addr)->sa_family == AF_INET6)) {
+			    (((struct sockaddr *)&net->ro._l_addr)->sa_family == AF_INET6)) {
 				sz += sizeof(struct sockaddr_in6);
-			} else if (((struct sockaddr *)&net->ra._l_addr)->sa_family == AF_INET) {
+			} else if (((struct sockaddr *)&net->ro._l_addr)->sa_family == AF_INET) {
 				sz += sizeof(struct sockaddr_in);
 			} else {
 				/* huh */
@@ -2089,9 +2090,9 @@ sctp_optsget(struct socket *so,
 		SCTP_TCB_LOCK(stcb);
 		TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 			if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_NEEDS_MAPPED_V4) ||
-			    (((struct sockaddr *)&net->ra._l_addr)->sa_family == AF_INET6)) {
+			    (((struct sockaddr *)&net->ro._l_addr)->sa_family == AF_INET6)) {
 				cpsz = sizeof(struct sockaddr_in6);
-			} else if (((struct sockaddr *)&net->ra._l_addr)->sa_family == AF_INET) {
+			} else if (((struct sockaddr *)&net->ro._l_addr)->sa_family == AF_INET) {
 				cpsz = sizeof(struct sockaddr_in);
 			} else {
 				/* huh */
@@ -2107,12 +2108,12 @@ sctp_optsget(struct socket *so,
 				break;
 			}
 			if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_NEEDS_MAPPED_V4) &&
-			   (((struct sockaddr *)&net->ra._l_addr)->sa_family == AF_INET)) {
+			   (((struct sockaddr *)&net->ro._l_addr)->sa_family == AF_INET)) {
 				/* Must map the address */
-				in6_sin_2_v4mapsin6((struct sockaddr_in *)&net->ra._l_addr, 
+				in6_sin_2_v4mapsin6((struct sockaddr_in *)&net->ro._l_addr, 
 						    (struct sockaddr_in6 *)sas);
 			} else {
-				memcpy(sas, &net->ra._l_addr, cpsz);
+				memcpy(sas, &net->ro._l_addr, cpsz);
 			}
 			((struct sockaddr_in *)sas)->sin_port = stcb->rport;
 
@@ -2401,8 +2402,8 @@ sctp_optsget(struct socket *so,
 		sstat->sstat_outstrms = stcb->asoc.streamoutcnt;
 		sstat->sstat_fragmentation_point = sctp_get_frag_point(stcb,&stcb->asoc);
 		memcpy(&sstat->sstat_primary.spinfo_address,
-		       &stcb->asoc.primary_destination->ra._l_addr,
-		       ((struct sockaddr *)(&stcb->asoc.primary_destination->ra._l_addr))->sa_len);
+		       &stcb->asoc.primary_destination->ro._l_addr,
+		       ((struct sockaddr *)(&stcb->asoc.primary_destination->ro._l_addr))->sa_len);
 		net = stcb->asoc.primary_destination;
 		((struct sockaddr_in *)&sstat->sstat_primary.spinfo_address)->sin_port = stcb->rport;
 		/*
@@ -2595,8 +2596,8 @@ sctp_optsget(struct socket *so,
 		/* simply copy out the sockaddr_storage... */
 		SCTP_TCB_LOCK(stcb);
 		memcpy(&ssp->ssp_addr,
-		       &stcb->asoc.primary_destination->ra._l_addr,
-		       ((struct sockaddr *)&stcb->asoc.primary_destination->ra._l_addr)->sa_len);
+		       &stcb->asoc.primary_destination->ro._l_addr,
+		       ((struct sockaddr *)&stcb->asoc.primary_destination->ro._l_addr)->sa_len);
 		SCTP_TCB_UNLOCK(stcb);
 		m->m_len = sizeof(*ssp);
 	}
@@ -3959,7 +3960,7 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 	}
 	SCTP_TCB_LOCK(stcb);
 	SCTP_INP_RUNLOCK(inp);
-	prim = (struct sockaddr *)&stcb->asoc.primary_destination->ra._l_addr;
+	prim = (struct sockaddr *)&stcb->asoc.primary_destination->ro._l_addr;
 	if (prim->sa_family == AF_INET) {
 		struct sockaddr_in *sin;
 #if defined(__FreeBSD__) || defined(__APPLE__)
@@ -4071,7 +4072,6 @@ sctp_ingetaddr(struct socket *so, struct mbuf *nam)
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
 			struct sctp_tcb *stcb;
 			struct sockaddr_in *sin_a;
-			struct route *rtp;
 			struct sctp_nets *net;
 			int fnd;
 
@@ -4082,7 +4082,7 @@ sctp_ingetaddr(struct socket *so, struct mbuf *nam)
 			fnd = 0;
 			sin_a = NULL;
 			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
-				sin_a = (struct sockaddr_in *)&net->ra._l_addr;
+				sin_a = (struct sockaddr_in *)&net->ro._l_addr;
 				if (sin_a->sin_family == AF_INET) {
 					fnd = 1;
 					break;
@@ -4092,14 +4092,9 @@ sctp_ingetaddr(struct socket *so, struct mbuf *nam)
 				/* punt */
 				goto notConn;
 			}
-			rtp = (struct route *)&net->ra;
 			SCTP_TCB_LOCK(stcb);
 			sin->sin_addr = sctp_ipv4_source_address_selection(inp,
-									   stcb,
-									   sin_a,
-									   rtp,
-									   net,
-									   0);
+			    stcb, (struct route *)&net->ro, net, 0);
 			SCTP_TCB_UNLOCK(stcb);
 		} else {
 			/* For the bound all case you get back 0 */
@@ -4198,7 +4193,7 @@ sctp_peeraddr(struct socket *so, struct mbuf *nam)
 	fnd = 0;
 	SCTP_TCB_LOCK(stcb);
 	TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
-		sin_a = (struct sockaddr_in *)&net->ra._l_addr;
+		sin_a = (struct sockaddr_in *)&net->ro._l_addr;
 		if (sin_a->sin_family == AF_INET) {
 			fnd = 1;
 			sin->sin_port = stcb->rport;

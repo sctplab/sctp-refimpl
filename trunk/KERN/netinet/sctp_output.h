@@ -55,13 +55,11 @@ void sctp_send_heartbeat_ack(struct sctp_tcb *, struct mbuf *, int, int,
 int sctp_is_addr_restricted(struct sctp_tcb *, struct sockaddr *);
 
 struct in_addr sctp_ipv4_source_address_selection(struct sctp_inpcb *,
-    struct sctp_tcb *, struct sockaddr_in *, struct route *, struct sctp_nets *,
-    int);
+    struct sctp_tcb *, struct route *, struct sctp_nets *, int);
     
 
 struct in6_addr sctp_ipv6_source_address_selection(struct sctp_inpcb *,
-	struct sctp_tcb *, struct sockaddr_in6 *, struct route *,
-	struct sctp_nets *, int);
+	struct sctp_tcb *, struct route *, struct sctp_nets *, int);
 
 
 int sctp_send_shutdown(struct sctp_tcb *, struct sctp_nets *);

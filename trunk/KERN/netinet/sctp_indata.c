@@ -408,7 +408,7 @@ sctp_deliver_data(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		struct sockaddr_in6 lsa6;
 
 		control = sctp_build_ctl(stcb, chk);
-		to = (struct sockaddr *)&chk->whoTo->ra._l_addr;
+		to = (struct sockaddr *)&chk->whoTo->ro._l_addr;
 		if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_NEEDS_MAPPED_V4) &&
 		    to->sa_family == AF_INET) {
 			struct sockaddr_in *sin;
@@ -608,7 +608,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 			struct sockaddr_in6 lsa6;
 
 			control = sctp_build_ctl(stcb, chk);
-			to = (struct sockaddr *)&chk->whoTo->ra._l_addr;
+			to = (struct sockaddr *)&chk->whoTo->ro._l_addr;
 			if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_NEEDS_MAPPED_V4) &&
 			    to->sa_family == AF_INET) {
 				struct sockaddr_in *sin;
@@ -1902,7 +1902,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			tmp->m_next = dmbuf;
 			dmbuf = tmp;
 		}
-		to = (struct sockaddr *)&net->ra._l_addr;
+		to = (struct sockaddr *)&net->ro._l_addr;
 		if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_NEEDS_MAPPED_V4) &&
 		    to->sa_family == AF_INET) {
 			struct sockaddr_in *sin;
