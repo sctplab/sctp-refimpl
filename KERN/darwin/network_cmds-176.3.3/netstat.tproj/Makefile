@@ -15,7 +15,7 @@ PROJECT_TYPE = Tool
 HFILES = netstat.h
 
 CFILES = data.c if.c inet.c inet6.c ipsec.c main.c mbuf.c mroute.c mroute6.c route.c\
-         tp_astring.c unix.c
+         tp_astring.c unix.c sctp.c
 
 OTHERSRCS = Makefile.preamble Makefile Makefile.postamble netstat.1\
             DERIVED_FILES

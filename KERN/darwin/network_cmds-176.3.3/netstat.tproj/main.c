@@ -65,7 +65,7 @@ char const copyright[] =
 static char sccsid[] = "@(#)main.c	8.4 (Berkeley) 3/1/94";
 #endif
 static const char rcsid[] =
-	"$Id: main.c,v 1.1 2004-08-16 19:07:44 lei Exp $";
+	"$Id: main.c,v 1.2 2004-08-16 19:26:26 lei Exp $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -100,7 +100,7 @@ static const char rcsid[] =
  * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
  * ----------------------------------------------------------------------------
  *
- * $Id: main.c,v 1.1 2004-08-16 19:07:44 lei Exp $
+ * $Id: main.c,v 1.2 2004-08-16 19:26:26 lei Exp $
  *
  */
 
@@ -192,6 +192,10 @@ static struct nlist nl[] = {
 	{ "_nmbufs" },
 #define	N_RTTRASH	42
 	{ "_rttrash" },
+#define N_SCTPEPINFO	43
+	{ "_sctppcbinfo" },
+#define N_SCTPPEGS	44
+	{ "_sctp_pegs" },
 	{ "" },
 };
 
@@ -213,6 +217,10 @@ struct protox {
 	  tcp_stats,	NULL,		"tcp",	IPPROTO_TCP },
 	{ -1,		-1,		1,	protopr,
 	  udp_stats,	NULL,		"udp",	IPPROTO_UDP },
+#ifdef SCTP
+	{ N_SCTPEPINFO,	N_SCTPPEGS,	1,	sctp_protopr,
+	  sctp_stats,	NULL,		"sctp",	0 },
+#endif /* SCTP */
 	{ -1,		-1,		1,	protopr,
 	  NULL,		NULL,		"divert",IPPROTO_DIVERT },
 	{ -1,		-1,		1,	protopr,
