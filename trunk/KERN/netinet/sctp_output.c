@@ -4660,8 +4660,6 @@ sctp_sendall_iterator(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr, 
 		turned_on_nonblock = 1;
 		stcb->sctp_socket->so_state |= SS_NBIO;
 	}
-	printf("Call msg_append with mbuf chain:%x len:%d\n",
-	       (u_int)m, m->m_pkthdr.len);
 	ret = sctp_msg_append(stcb, stcb->asoc.primary_destination, m, &ca->sndrcv);
 	if(turned_on_nonblock) {
 		/* we turned on non-blocking so turn it off */
@@ -4691,7 +4689,6 @@ sctp_sendall_completes(void *ptr, u_int32_t val)
 	 */
 
 	/* now free everything */
-	printf("All done sending\n");
 	m_freem(ca->m);
 	FREE(ca, M_PCB);	
 }
@@ -4716,7 +4713,6 @@ sctp_copy_out_all(struct uio *uio, int len)
 	}
 	left = len;
 	ret->m_len = 0;
-	printf("Putting %d bytes into a cluster\n", len);
 	ret->m_pkthdr.len = len;
 	MCLGET(ret, M_WAIT);
 	if (ret == NULL) {
@@ -4805,7 +4801,6 @@ sctp_sendall (struct sctp_inpcb *inp, struct uio *uio, struct mbuf *m, struct sc
 		ca->m = m;
 	}
 
-	printf("Starting an iterator\n");
 	ret = sctp_initiate_iterator(sctp_sendall_iterator, SCTP_PCB_ANY_FLAGS, SCTP_ASOC_ANY_STATE,
 				     (void *)ca, 0, sctp_sendall_completes, inp);
 	if(ret) {
@@ -9677,6 +9672,7 @@ sctp_sosend(struct socket *so,
 				/* its a sendall */
 				sctppcbinfo.mbuf_track--;
 				sctp_m_freem(control);
+				sbunlock(&so->so_snd);
 				return (sctp_sendall(inp, uio, top, &srcv));
 			}
 			use_rcvinfo = 1;
