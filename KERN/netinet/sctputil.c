@@ -3277,6 +3277,23 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 	SCTP_SBLINKRECORD(sb, m);
 	sb->sb_mbtail = nlast;
 #else /* __APPLE__ */
+	if ((n = sb->sb_mb) != NULL) {
+		if ((n->m_nextpkt != inp->sb_last_mpkt) && (n->m_nextpkt == NULL)) {
+			inp->sb_last_mpkt = NULL;
+		}
+		if (inp->sb_last_mpkt) 
+			inp->sb_last_mpkt->m_nextpkt = m;
+ 		else {
+			while (n->m_nextpkt) {
+				n = n->m_nextpkt;
+			}
+			n->m_nextpkt = m;
+		}
+		inp->sb_last_mpkt = m;
+	} else {
+		inp->sb_last_mpkt = sb->sb_mb = m;
+		inp->sctp_vtag_last = tag;
+	}
 #endif
 	return (1);
 #endif
