@@ -3393,6 +3393,8 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 
 	/* populate any tie tags */
 	if (asoc != NULL) {
+		/* unlock before tag selections */
+		SCTP_TCB_UNLOCK(stcb);
 		if (asoc->my_vtag_nonce == 0)
 			asoc->my_vtag_nonce = sctp_select_a_tag(inp);
 		stc.tie_tag_my_vtag = asoc->my_vtag_nonce;
@@ -3403,6 +3405,10 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 
 		stc.cookie_life = asoc->cookie_life;
 		net = asoc->primary_destination;
+		/* now we must relock */
+		SCTP_INP_RLOCK(stcb->sctp_ep);
+		SCTP_TCB_LOCK(stcb);
+		SCTP_INP_RUNLOCK(stcb->sctp_ep);
 	} else {
 		stc.tie_tag_my_vtag = 0;
 		stc.tie_tag_peer_vtag = 0;

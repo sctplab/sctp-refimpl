@@ -428,6 +428,7 @@ struct sctp_tcb {
 #define SCTP_INP_INFO_LOCK_INIT() \
         mtx_init(&sctppcbinfo.ipi_ep_mtx, "sctp", "inp_info", MTX_DEF)
 
+#ifdef xyzzy 
 #define SCTP_INP_INFO_RLOCK()	do{ 					\
              if(mtx_owned(&sctppcbinfo.ipi_ep_mtx))                     \
 		panic("INP INFO Recursive Lock-R");                     \
@@ -440,6 +441,12 @@ struct sctp_tcb {
              mtx_lock(&sctppcbinfo.ipi_ep_mtx);                         \
 } while (0)
 
+#else
+
+void SCTP_INP_INFO_RLOCK(void);
+void SCTP_INP_INFO_WLOCK(void);
+
+#endif
 
 #define SCTP_INP_INFO_RUNLOCK()		mtx_unlock(&sctppcbinfo.ipi_ep_mtx)
 #define SCTP_INP_INFO_WUNLOCK()		mtx_unlock(&sctppcbinfo.ipi_ep_mtx)
