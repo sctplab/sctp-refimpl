@@ -1232,7 +1232,12 @@ sctp_fill_up_addresses(struct sctp_inpcb *inp,
 					    (IN4_ISPRIVATE_ADDRESS(&sin->sin_addr))) {
 						continue;
 					}
-					if (inp->sctp_flags & SCTP_I_WANT_MAPPED_V4_ADDR) {
+					printf("sctp_flags:%x want_mapped:%x = %s\n",
+					       (u_int)inp->sctp_flags,
+					       (u_int)SCTP_PCB_FLAGS_NEEDS_MAPPED_V4,
+					       ((inp->sctp_flags & SCTP_PCB_FLAGS_NEEDS_MAPPED_V4) ? "TRUE" : "FALSE"));
+					if (inp->sctp_flags & SCTP_PCB_FLAGS_NEEDS_MAPPED_V4) {
+						printf("Mapping V4 address to V6\n");
 						in6_sin_2_v4mapsin6(sin,(struct sockaddr_in6 *)sas);
 						((struct sockaddr_in6 *)sas)->sin6_port = inp->sctp_lport;
 						sas = (struct sockaddr_storage *)((caddr_t)sas + sizeof(struct sockaddr_in6));
@@ -1366,7 +1371,7 @@ sctp_count_max_addresses(struct sctp_inpcb *inp)
 			TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
 				/* Count them if they are the right type */
 				if (ifa->ifa_addr->sa_family == AF_INET) {
-					if (inp->sctp_flags & SCTP_I_WANT_MAPPED_V4_ADDR) 
+					if (inp->sctp_flags & SCTP_PCB_FLAGS_NEEDS_MAPPED_V4) 
 						cnt += sizeof(struct sockaddr_in6);
 					else
 						cnt += sizeof(struct sockaddr_in);
@@ -1379,7 +1384,7 @@ sctp_count_max_addresses(struct sctp_inpcb *inp)
 		struct sctp_laddr *laddr;
 		LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
 			if (laddr->ifa->ifa_addr->sa_family == AF_INET) {
-				if (inp->sctp_flags & SCTP_I_WANT_MAPPED_V4_ADDR) 
+				if (inp->sctp_flags & SCTP_PCB_FLAGS_NEEDS_MAPPED_V4) 
 					cnt += sizeof(struct sockaddr_in6);
 				else
 					cnt += sizeof(struct sockaddr_in);
@@ -1616,7 +1621,7 @@ sctp_optsget(struct socket *so,
 			optval = inp->sctp_flags & SCTP_PCB_FLAGS_NO_FRAGMENT;
 			break;
 		case SCTP_I_WANT_MAPPED_V4_ADDR:
-			optval = inp->sctp_flags & SCTP_I_WANT_MAPPED_V4_ADDR;
+			optval = inp->sctp_flags & SCTP_PCB_FLAGS_NEEDS_MAPPED_V4;
 			break;
 		case SCTP_AUTO_ASCONF:
 			optval = inp->sctp_flags & SCTP_PCB_FLAGS_AUTO_ASCONF;
