@@ -454,12 +454,12 @@ struct sctp_tcb {
  */
 #define SCTP_INP_LOCK_INIT(_inp) \
 	mtx_init(&(_inp)->inp_mtx, "sctp", "inp", MTX_DEF | MTX_DUPOK)
-#define SCTP_INP_CREATE_LOCK_INIT(_inp) \
+#define SCTP_ASOC_CREATE_LOCK_INIT(_inp) \
 	mtx_init(&(_inp)->inp_create_mtx, "sctp", "inp_create", \
 		 MTX_DEF | MTX_DUPOK)
 
 #define SCTP_INP_LOCK_DESTROY(_inp)	mtx_destroy(&(_inp)->inp_mtx)
-#define SCTP_INP_CREATE_LOCK_DESTROY(_inp)	mtx_destroy(&(_inp)->inp_create_mtx)
+#define SCTP_ASOC_CREATE_LOCK_DESTROY(_inp)	mtx_destroy(&(_inp)->inp_create_mtx)
 
 #ifndef INVARIANTS
 #define SCTP_INP_RLOCK(_inp)	do{ 					\
@@ -482,18 +482,18 @@ struct sctp_tcb {
 #endif
 
 #ifndef INVARIANTS
-#define SCTP_INP_CREATE_LOCK(_inp)  do{					\
+#define SCTP_ASOC_CREATE_LOCK(_inp)  do{				\
         if(mtx_owned(&(_inp)->inp_create_mtx))                          \
 		panic("INP Recursive CREATE");                          \
         mtx_lock(&(_inp)->inp_create_mtx);                              \
 } while (0)
 #else
-#define SCTP_INP_CREATE_LOCK(_inp)	mtx_lock(&(_inp)->inp_create_mtx)
+#define SCTP_ASOC_CREATE_LOCK(_inp)	mtx_lock(&(_inp)->inp_create_mtx)
 #endif
 
 #define SCTP_INP_RUNLOCK(_inp)		mtx_unlock(&(_inp)->inp_mtx)
 #define SCTP_INP_WUNLOCK(_inp)		mtx_unlock(&(_inp)->inp_mtx)
-#define SCTP_INP_CREATE_UNLOCK(_inp)	mtx_unlock(&(_inp)->inp_create_mtx)
+#define SCTP_ASOC_CREATE_UNLOCK(_inp)	mtx_unlock(&(_inp)->inp_create_mtx)
 
 /* For the majority of things (once we have found the association) we
  * will lock the actual association mutex. This will protect all
