@@ -571,10 +571,10 @@ struct sctp_tcb {
 #define SOCKBUF_LOCK(_so_buf) 
 #define SOCKBUF_UNLOCK(_so_buf) 
 /* iterator locks */
-#define SCTP_ITERATOR_LOCK_INIT(_it)
-#define SCTP_ITERATOR_LOCK(_it)
-#define SCTP_ITERATOR_UNLOCK(_it)
-#define SCTP_ITERATOR_LOCK_DESTROY(_it)	
+#define SCTP_ITERATOR_LOCK_INIT()
+#define SCTP_ITERATOR_LOCK()
+#define SCTP_ITERATOR_UNLOCK()
+#define SCTP_ITERATOR_LOCK_DESTROY()	
 #endif
 
 #if defined(_KERNEL) || (defined(__APPLE__) && defined(KERNEL))
