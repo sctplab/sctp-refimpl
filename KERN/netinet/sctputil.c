@@ -3352,14 +3352,14 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 	m->m_pkthdr.csum_data = (int)tag;
 
 	SOCKBUF_LOCK(sb);
-	for (n = m; n; n = n->m_next)
+	for (n = m; n->m_next != NULL; n = n->m_next)
 		sballoc(sb, n);
+	sballoc(sb, n);
 	nlast = n;
 	if (sb->sb_mb == NULL) {
 		inp->sctp_vtag_first = tag;
 	}
-
-#if defined(__FreeBSD__) && __FreeBSD_version > 500000
+#if defined(__FreeBSD__) 
 	if (sb->sb_mb == NULL)
 		inp->sctp_vtag_first = tag;
 	SCTP_SBLINKRECORD(sb, m);
