@@ -1460,6 +1460,9 @@ sctp_iterator_timer(struct sctp_iterator *it)
  select_a_new_ep:
 	while ((it->pcb_flags) && ((it->inp->sctp_flags & it->pcb_flags) != it->pcb_flags)) {
 		/* we do not like this ep */
+		if(it->iterator_flags && SCTP_INTERATOR_DO_SINGLE_INP) {
+			goto done_with_iterator;
+		}			
 		it->inp = LIST_NEXT(it->inp, sctp_list);
 		if(it->inp == NULL) {
 			goto done_with_iterator;
@@ -1505,7 +1508,11 @@ sctp_iterator_timer(struct sctp_iterator *it)
 
 	/* unlock it */
 	it->inp->inp_starting_point_for_iterator = NULL;
-	it->inp = LIST_NEXT(it->inp, sctp_list);
+	if (it->iterator_flags && SCTP_INTERATOR_DO_SINGLE_INP) {
+		it->inp = NULL;
+	} else {
+		it->inp = LIST_NEXT(it->inp, sctp_list);
+	}
 	if(it->inp == NULL) {
 		goto done_with_iterator;
 	}

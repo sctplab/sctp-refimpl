@@ -458,9 +458,14 @@ int sctp_add_to_socket_q(struct sctp_inpcb *, struct sctp_tcb *);
 
 struct sctp_tcb *sctp_remove_from_socket_q(struct sctp_inpcb *);
 
+
+/* Null in last arg inpcb indicate run on ALL ep's. Specific
+ * inp in last arg indicates run on ONLY assoc's of the
+ * specified endpoint.
+ */
 int
 sctp_initiate_iterator(asoc_func af, uint32_t, uint32_t, void *, uint32_t,
-		       end_func ef);
+		       end_func ef, struct sctp_inpcb *);
 
 #if defined(__APPLE__)
 void	sctp_callout_alloc(struct sctp_timer *);
