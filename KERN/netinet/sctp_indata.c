@@ -3417,10 +3417,11 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	struct sctp_tmit_chunk *tp1, *tp2;
 	u_long cum_ack, last_tsn, biggest_tsn_acked, biggest_tsn_newly_acked;
 	uint16_t num_seg;
+	int sack_length;
 	uint32_t send_s;
 	int some_on_streamwheel;
 	long j;
-	int strike_enabled, cnt_of_cacc = 0;
+	int strike_enabled = 0, cnt_of_cacc = 0;
 	int accum_moved = 0;
 	int marking_allowed = 1;
 	int will_exit_fast_recovery=0;
@@ -3474,8 +3475,8 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	 */
 
 	j = 0;
-
-	if (ntohs(ch->ch.chunk_length) < sizeof(struct sctp_sack_chunk)) {
+	sack_length = ntohs(ch->ch.chunk_length);
+	if (sack_length < sizeof(struct sctp_sack_chunk)) {
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_INDATA1) {
 			printf("Bad size on sack chunk .. to small\n");
@@ -3698,6 +3699,10 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	/* always set this up to cum-ack */
 	asoc->this_sack_highest_gap = last_tsn;
 
+	if(((num_seg * sizeof (sizeof(struct sctp_gap_ack_block))) + sizeof(struct sctp_sack_chunk)) > sack_length) {
+		goto skip_segments;
+	}
+
 	if (num_seg > 0) {
 		if (asoc->primary_destination->dest_state &
 		    SCTP_ADDR_SWITCH_PRIMARY) {
@@ -3709,6 +3714,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 		/*
 		 * thisSackHighestGap will increase while handling NEW segments
 		 */
+		
 		sctp_handle_segments(stcb, asoc, ch, last_tsn,
 		    &biggest_tsn_acked, &biggest_tsn_newly_acked,
 		    num_seg, &ecn_seg_sums);
@@ -3819,7 +3825,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	/* Check revoke no matter whether this SACK has frag or not */
 	sctp_check_for_revoked(asoc, cum_ack, biggest_tsn_acked);
 
-
+ skip_segments:
 	/******************************/
 	/* update cwnd                */
 	/******************************/

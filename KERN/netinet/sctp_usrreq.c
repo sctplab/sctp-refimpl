@@ -3325,8 +3325,10 @@ sctp_usr_recvd(struct socket *so, int flags)
 
 	if (inp == 0) {
 		/* I made the same as TCP since we are not setup? */
+#ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_USRREQ2)
 			printf("Nope, connection reset\n");
+#endif
 		return (ECONNRESET);
 	}
 #if defined(__NetBSD__) || defined(__OpenBSD__)

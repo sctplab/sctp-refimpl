@@ -326,7 +326,7 @@ struct sctp_inpcb {
 	int  error_on_block;
 	int32_t sctp_frag_point;
 	uint32_t sctp_vtag_last;
-	struct mbuf *pkt, *pkt_last;
+	struct mbuf *pkt, *pkt_last, *sb_last_mpkt;
 	struct mbuf *control;
 #ifndef SCTP_VTAG_TIMEWAIT_PER_STACK
 	struct sctpvtaghead vtag_timewait[SCTP_NUMBER_IN_VTAG_BLOCK];

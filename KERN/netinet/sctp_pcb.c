@@ -3996,13 +3996,15 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 		} else if (ptype == SCTP_ECN_CAPABLE) {
 			stcb->asoc.ecn_allowed = 1;
 		} else if (ptype == SCTP_ULP_ADAPTION) {
-			struct sctp_adaption_layer_indication ai, *aip;
+			if(stcb->asoc.state != SCTP_STATE_OPEN) {
+				struct sctp_adaption_layer_indication ai, *aip;
 
-			phdr = sctp_get_next_param(m, offset,
-			    (struct sctp_paramhdr *)&ai, sizeof(ai));
-			aip = (struct sctp_adaption_layer_indication *)phdr;
-			sctp_ulp_notify(SCTP_NOTIFY_ADAPTION_INDICATION,
-			    stcb, ntohl(aip->indication), NULL);
+				phdr = sctp_get_next_param(m, offset,
+							   (struct sctp_paramhdr *)&ai, sizeof(ai));
+				aip = (struct sctp_adaption_layer_indication *)phdr;
+				sctp_ulp_notify(SCTP_NOTIFY_ADAPTION_INDICATION,
+						stcb, ntohl(aip->indication), NULL);
+			}
 		} else if (ptype == SCTP_SET_PRIM_ADDR) {
 			struct sctp_asconf_addr_param lstore, *fee;
 			struct sctp_asconf_addrv4_param *fii;

@@ -3016,11 +3016,19 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 	for (n = m; n; n = n->m_next)
 		sballoc(sb, n);
 	if ((n = sb->sb_mb) != NULL) {
-		while (n->m_nextpkt)
-			n = n->m_nextpkt;
-		n->m_nextpkt = m;
+		if(inp->sb_last_mpkt) 
+			inp->sb_last_mpkt->m_nextpkt = m;
+		else {
+			struct mbuf *last;
+			last = n;
+			while(last->m_nextpkt != NULL) {
+				last = last->m_nextpkt;
+			}
+			last->m_nextpkt = m;
+		}
+		inp->sb_last_mpkt = m;
 	} else {
-		sb->sb_mb = m;
+		inp->sb_last_mpkt = sb->sb_mb = m;
 		inp->sctp_vtag_last = tag;
 	}
 	return (1);
@@ -3078,11 +3086,19 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 		sballoc(sb, n);
 	n = sb->sb_mb;
 	if (n) {
-		while (n->m_nextpkt)
-			n = n->m_nextpkt;
-		n->m_nextpkt = m;
+		if(inp->sb_last_mpkt) 
+			inp->sb_last_mpkt->m_nextpkt = m;
+		else {
+			struct mbuf *last;
+			last = n;
+			while(last->m_nextpkt != NULL) {
+				last = last->m_nextpkt;
+			}
+			last->m_nextpkt = m;
+		}
+		inp->sb_last_mpkt = m;
 	} else {
-		sb->sb_mb = m;
+		inp->sb_last_mpkt = sb->sb_mb = m;
 		inp->sctp_vtag_last = tag;
 	}
 	return (1);
@@ -3116,11 +3132,19 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 	for (n = m; n; n = n->m_next)
 		sballoc(sb, n);
 	if ((n = sb->sb_mb) != NULL) {
-		while (n->m_nextpkt)
-			n = n->m_nextpkt;
-		n->m_nextpkt = m;
+		if(inp->sb_last_mpkt) 
+			inp->sb_last_mpkt->m_nextpkt = m;
+		else {
+			struct mbuf *last;
+			last = n;
+			while(last->m_nextpkt != NULL) {
+				last = last->m_nextpkt;
+			}
+			last->m_nextpkt = m;
+		}
+		inp->sb_last_mpkt = m;
 	} else {
-		sb->sb_mb = m;
+		inp->sb_last_mpkt = sb->sb_mb = m;
 		inp->sctp_vtag_last = tag;
 	}
 	return (1);
