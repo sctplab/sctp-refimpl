@@ -167,7 +167,7 @@ void sctp_validate_no_locks(void);
 void
 SCTP_INP_RLOCK(struct sctp_inpcb *inp) 
 {
-        struct sctp_tcb *stcb;			       
+        struct sctp_tcb *stcb;
 	LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
 		if(mtx_owned(&(stcb)->tcb_mtx))
 			panic("I own TCB lock?");
@@ -193,12 +193,12 @@ SCTP_INP_INFO_RLOCK()
 			panic("info-lock and own inp lock?");
 		LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
 			if(mtx_owned(&(stcb)->tcb_mtx)) 
-				panic("Info lock and own a tcb lock?"); 
+				panic("Info lock and own a tcb lock?");
 		}
 	}
 	if(mtx_owned(&sctppcbinfo.ipi_ep_mtx))
 		panic("INP INFO Recursive Lock-R");
-	mtx_lock(&sctppcbinfo.ipi_ep_mtx);                     
+	mtx_lock(&sctppcbinfo.ipi_ep_mtx);
 }
 
 void
@@ -585,6 +585,13 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 				SCTP_INP_WLOCK(inp);
 				SCTP_INP_DECR_REF(inp);
 				SCTP_INP_WUNLOCK(inp);
+			}
+			if (locked_tcb != NULL) {
+				SCTP_INP_RLOCK(locked_tcb->sctp_ep);
+				SCTP_TCB_LOCK(locked_tcb);
+				SCTP_INP_RUNLOCK(locked_tcb->sctp_ep);
+				if (stcb != NULL)
+					SCTP_TCB_UNLOCK(stcb);
 			}
 			SCTP_INP_INFO_RUNLOCK();
 			return (stcb);
@@ -1668,8 +1675,8 @@ sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
 	struct sctppcbhead *head;
 	struct sctp_laddr *laddr, *oladdr;
 
-	SCTP_INP_INFO_WLOCK();
 	SCTP_TCB_UNLOCK(stcb);
+	SCTP_INP_INFO_WLOCK();
 	SCTP_INP_WLOCK(old_inp);
 	SCTP_INP_WLOCK(new_inp);
 	SCTP_TCB_LOCK(stcb);
