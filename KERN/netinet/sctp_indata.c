@@ -2816,17 +2816,15 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 								*biggest_newly_acked_tsn =
 								    tp1->rec.data.TSN_seq;
 							}
-							tp1->whoTo->flight_size -= tp1->book_size;
-							if (tp1->whoTo->flight_size < 0) {
-								tp1->whoTo->flight_size = 0;
+							if(tp1->whoTo->flight_size >= tp1->book_size)
+							  tp1->whoTo->flight_size -= tp1->book_size;
+							else 
+							  tp1->whoTo->flight_size = 0;
+							if(asoc->total_flight >= tp1->book_size) {
+							  asoc->total_flight = -= tp1->book_size;
+							} else {
+							  asoc->total_flight = 0;
 							}
-							asoc->total_flight -=
-							    tp1->book_size;
-
-							if (asoc->total_flight < 0) {
-								asoc->total_flight = 0;
-							}
-
 							asoc->total_flight_count--;
 							if (asoc->total_flight_count < 0) {
 								asoc->total_flight_count = 0;
@@ -3206,10 +3204,11 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			/* fix counts and things */
 
 			tp1->whoTo->net_ack++;
-			tp1->whoTo->flight_size -= tp1->book_size;
-			if (tp1->whoTo->flight_size < 0) {
-				tp1->whoTo->flight_size = 0;
-			}
+			if(tp1->whoTo->flight_size >= tp1->book_size)
+			  tp1->whoTo->flight_size -= tp1->book_size;
+			else
+			  tp1->whoTo->flight_size = 0;
+
 #ifdef SCTP_LOG_RWND
 			sctp_log_rwnd(SCTP_INCREASE_PEER_RWND,
 				      asoc->peers_rwnd , tp1->send_size, sctp_peer_chunk_oh);
@@ -3218,10 +3217,11 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			asoc->peers_rwnd += (tp1->send_size + sctp_peer_chunk_oh);
 
 			/* remove from the total flight */
-			asoc->total_flight -= tp1->book_size;
-			if (asoc->total_flight < 0) {
-				asoc->total_flight = 0;
-			}
+			if(asoc->total_flight >= tp1->book_size)
+			  asoc->total_flight -= tp1->book_size;
+			else
+			  asoc->total_flight = 0;
+
 			asoc->total_flight_count--;
 			if (asoc->total_flight_count < 0) {
 				asoc->total_flight_count = 0;
@@ -3745,15 +3745,16 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 						tp1->whoTo->dest_state &=
 							~SCTP_ADDR_UNCONFIRMED;
 					}
-					tp1->whoTo->flight_size -=
-						tp1->book_size;
-					if (tp1->whoTo->flight_size < 0) {
-						tp1->whoTo->flight_size = 0;
+					if(tp1->whoTo->flight_size >= tp1->book_size) {
+					  tp1->whoTo->flight_size -= tp1->book_size;
+					} else {
+					  tp1->whoTo->flight_size = 0;
 					}
-					asoc->total_flight -= tp1->book_size;
-					if (asoc->total_flight < 0) {
+					if(asoc->total_flight >= tp1->book_size)
+					  asoc->total_flight -= tp1->book_size;
+					else
 						asoc->total_flight = 0;
-					}
+
 					asoc->total_flight_count--;
 					if (asoc->total_flight_count < 0) {
 						asoc->total_flight_count = 0;

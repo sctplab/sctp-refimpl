@@ -532,6 +532,8 @@ struct sctp_association {
 
 	/* the cookie life I award for any cookie, in seconds */
 	unsigned int cookie_life;
+        /* time to delay acks for */
+        unsigned int delayed_ack;
 
 	unsigned int numduptsns;
 	int dup_tsns[SCTP_MAX_DUP_TSNS];

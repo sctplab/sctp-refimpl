@@ -330,10 +330,11 @@ struct sctp_paddrparams {
 
 #define SPP_HB_ENABLE         0x00000001
 #define SPP_HB_DISABLE        0x00000002
-#define SPP_PMTUD_ENABLE      0x00000004
-#define SPP_PMTUD_DISABLE     0x00000008
-#define SPP_SACKDELAY_ENABLE  0x00000010
-#define SPP_SACKDELAY_DISABLE 0x00000020
+#define SPP_HB_DEMAND         0x00000004
+#define SPP_PMTUD_ENABLE      0x00000008
+#define SPP_PMTUD_DISABLE     0x00000010
+#define SPP_SACKDELAY_ENABLE  0x00000020
+#define SPP_SACKDELAY_DISABLE 0x00000040
 
 struct sctp_paddrinfo {
 	sctp_assoc_t spinfo_assoc_id;
@@ -394,6 +395,11 @@ struct sctp_status {
         u_int16_t sstat_outstrms;
         u_int32_t sstat_fragmentation_point;
 	struct sctp_paddrinfo sstat_primary;
+};
+
+struct sctp_assoc_value {
+        sctp_assoc_t             assoc_id;
+        u_int32_t                assoc_value;
 };
 
 struct sctp_cwnd_args {

@@ -341,18 +341,15 @@ sctp_notify_mbuf(struct sctp_inpcb *inp,
 
 				/* Clear any time so NO RTT is being done */
 				chk->do_rtt = 0;
-				stcb->asoc.total_flight -= chk->book_size;
-				if (stcb->asoc.total_flight < 0) {
-					stcb->asoc.total_flight = 0;
-				}
+				if(stcb->asoc.total_flight >= chk->book_size)
+				  stcb->asoc.total_flight -= chk->book_size;
+				else 
+				  stcb->asoc.total_flight = 0;
 				stcb->asoc.total_flight_count--;
-				if (stcb->asoc.total_flight_count < 0) {
-					stcb->asoc.total_flight_count = 0;
-				}
-				net->flight_size -= chk->book_size;
-				if (net->flight_size < 0) {
-					net->flight_size = 0;
-				}
+				if( net->flight_size >= chk->book_size) 
+				  net->flight_size -= chk->book_size;
+				else
+				  net->flight_size = 0;
 			}
 		}
 		TAILQ_FOREACH(strm, &stcb->asoc.out_wheel, next_spoke) {
@@ -1762,6 +1759,8 @@ sctp_optsget(struct socket *so,
 			stcb = LIST_NEXT(stcb , sctp_tcblist);
 			orig--;
 			cnt--;
+			if ( stcb == NULL)
+			  goto none_out_now;
 		}
 		if ( stcb == NULL)
 			goto none_out_now;
@@ -1811,14 +1810,23 @@ sctp_optsget(struct socket *so,
 
 	case SCTP_DELAYED_ACK_TIME:
 	{
-		int32_t *tm;
-		if ((size_t)m->m_len < sizeof(int32_t)) {
+                struct sctp_assoc_value *tm
+		if ((size_t)m->m_len < sizeof(struct sctp_assoc_value)) {
 			error = EINVAL;
 			break;
 		}
-		tm = mtod(m, int32_t *);
-
-		*tm = TICKS_TO_MSEC(inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV]);
+		tm = mtod(m, sctp_assoc_value *);
+		if(tm->assoc_id) {
+		  stcb = sctp_findassociation_ep_asocid(inp, tm->assoc_id);
+		  if(stcb == NULL) {
+		    error = ENOTCONN;
+		    tm->assoc_value = 0;
+		  } else {
+		    tm->assoc_value = stcb->delayed_ack;
+		  }
+		}else {
+		  tm->assoc_value = TICKS_TO_MSEC(inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV]);
+		}
 	}
 	break;
 
@@ -2799,23 +2807,31 @@ sctp_optsset(struct socket *so,
 #endif
 		break;
 	case SCTP_DELAYED_ACK_TIME:
-	{
-		int32_t *tm;
-		if ((size_t)m->m_len < sizeof(int32_t)) {
-			error = EINVAL;
-			break;
+	  {
+   	        struct sctp_assoc_value *tm
+	        if ((size_t)m->m_len < sizeof(struct sctp_assoc_value)) {
+		  error = EINVAL;
+		  break;
 		}
-		tm = mtod(m, int32_t *);
-
-		if ((*tm < 10) || (*tm > 500)) {
-			/* can't be smaller than 10ms */
-			/* MUST NOT be larger than 500ms */
-			error = EINVAL;
-			break;
+		tm = mtod(m, sctp_assoc_value *);
+		if(tm->assoc_id) {
+		  stcb = sctp_findassociation_ep_asocid(inp, tm->assoc_id);
+		  if(stcb == NULL) {
+		    error = ENOTCONN;
+		  } else {
+		    if(tm->assoc_value)
+		      stcb->delayed_ack = tm->assoc_value;
+		    else
+		      error = EINVAL;
+		  }
+		}else {
+		  if(tm->assoc_vlaue)
+		    inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV] = MSEC_TO_TICKS(tm->assoc_value);
+		  else
+		    error = EINVAL;
 		}
-		inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV] = MSEC_TO_TICKS(*tm);
-	}
-		break;
+	  }
+	  break;
 	case SCTP_RESET_STREAMS:
 	{
 		struct sctp_stream_reset *strrst;
