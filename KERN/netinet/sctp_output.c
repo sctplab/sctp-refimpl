@@ -2739,7 +2739,6 @@ sctp_arethere_unrecognized_parameters(struct mbuf *in_initpkt,
 			at += SCTP_SIZE32(plen);
 		} else if (ptype == SCTP_HOSTNAME_ADDRESS) {
 			/* We can NOT handle HOST NAME addresses!! */
-			struct sctp_unresolv_addr ura;
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
 		printf("Can't handle hostname addresses.. abort processing\n");
@@ -8411,6 +8410,13 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 			m_tmp = m_tmp->m_next;
 		}
 		mout->m_pkthdr.len = mout->m_len + err_len;
+		if(err_len % 4) {
+			/* need pad at end of chunk */
+			u_int32_t cpthis=0;
+			int padlen;
+			padlen = 4 - (mout->m_pkthdr.len % 4);
+			m_copyback(mout, mout->m_pkthdr.len, padlen, (caddr_t)&cpthis);
+		}
 		abm->msg.ch.chunk_length = htons(sizeof(abm->msg.ch) + err_len);
 	} else {
 		mout->m_pkthdr.len = mout->m_len;
