@@ -257,7 +257,7 @@ SCTP_OQS_AT_CA "tqs @ ca"
 The total output queue size when the recorded 
 SCTP_CWND_DIFF_CA event was found.
 
-#define SCTP_SQQ_AT_CA "sqq @ ca"
+SCTP_SQQ_AT_CA "sqq @ ca"
 The total number number of chunks on the sent queue when
 the recorded SCTP_CWND_DIFF_CA event was found.
 
@@ -275,76 +275,172 @@ SCTP_SQC_AT_SS  "sndqctss"
 The total number of chunks on the send queue when
 the recorded SCTP_CWND_DIFF_SA event was found.
 
-#define SCTP_SQC_AT_CA 	"sndqctca"
+SCTP_SQC_AT_CA 	"sndqctca"
 
 The total number of chunks on the send queue when
 the recorded SCTP_CWND_DIFF_CA event was found.
 
-#define SCTP_MOVED_MAX     56
-	"movemax ", /* 56 */
-#define SCTP_MOVED_NLEF    57
-	"move_equ", /* 57 */
-#define SCTP_NAGLE_NOQ     58
-	"nagle_qo", /* 58 */
-#define SCTP_NAGLE_OFF     59
-	"nagle_of", /* 59 */
-#define SCTP_OUTPUT_FRM_SND 60
-	"out_fr_s", /* 60 */
-#define SCTP_SOS_NOSNT     61   /* some on stream queues when none sent */
-	"sostrnos", /* 61 */
-#define SCTP_NOS_NOSNT     62   /* none on stream queues when none sent */
-	"nostrnos", /* 62 */
-#define SCTP_SOSE_NOSNT    63   /* some on send queue when none sent */
-	"sosnqnos", /* 63 */
-#define SCTP_NOSE_NOSNT    64   /* none on send queue when none sent */
-	"nosnqnos", /* 64 */
-#define SCTP_DATA_OUT_ERR  65
-	"intoperr", /* 65 */
-#define SCTP_DUP_SSN_RCVD  66
-	"dupssnrc", /* 66 */
-#define SCTP_DUP_FR        67
-	"multi-fr", /* 67 */
-#define SCTP_VTAG_EXPR     68
-	"vtag-exp", /* 68 */
-#define SCTP_VTAG_BOGUS    69
-	"vtag-bog", /* 69 */
-#define SCTP_T3_SAFEGRD    70
-	"t3-safeg", /* 70 */
-#define SCTP_PDRP_FMBOX    71
-	"pd--mbox", /* 71 */
-#define SCTP_PDRP_FEHOS    72
-	"pd-ehost", /* 72 */
-#define SCTP_PDRP_MB_DA	   73
-        "pdmb_wda"  /* 73 */
-#define SCTP_PDRP_MB_CT	   74
-	"pdmb_ctl", /* 74 */
-#define SCTP_PDRP_BWRPT	   75
-	"pdmb_bwr", /* 75 */
-#define SCTP_PDRP_CRUPT	   76
-	"pd_corup", /* 76 */
-#define SCTP_PDRP_NEDAT    77
-	"pd_nedat", /* 77 */
-#define SCTP_PDRP_PDBRK    78
-	"pd_errpd", /* 78 */
-#define SCTP_PREPENDS_FAST 79
-	"fst_prep", /* 79 */
-#define SCTP_PDRP_DNFND    80
-	"pd_daNFo", /* 80 */
-#define SCTP_PDRP_DIWNP    81
-	"pd_dIWin", /* 81 */
-#define SCTP_PDRP_DIZRW    82
-	"pd_dIZrw", /* 82 */
-#define SCTP_PDRP_BADD     83
-	"pd_BadDa", /* 83 */
-#define SCTP_PDRP_MARK     84
-	"pd_dMark", /* 84 */
-#define SCTP_ECNE_RCVD     85
-	"ecne_rcv", /* 85 */
-#define SCTP_CWR_PERFO     86
-	"cwr_perf", /* 86 */
-#define SCTP_ECNE_SENT     87
-	"ecne_snt", /* 87 */
-#define SCTP_MSGC_DROP     88 "chun_drp",
+SCTP_MOVED_MAX "movemax "
+
+Number of times that the sctp_fill_outqueue routine was
+called to move data from stream queues to the send queue
+and completed its task (i.e. moved some data).
+
+SCTP_MOVED_NLEF "move_equ"
+
+Number of times we were attempting to move data (in
+sctp_fill_outqueue) and we ended due to the fact that
+there was no data left to move on any stream on the
+output stream wheel.
+
+SCTP_NAGLE_NOQ "nagle_qo"
+
+Number of times that data was queued by the user but
+the Nagle algorithm dictated that we should not attempt
+to send any of the data.
+
+SCTP_NAGLE_OFF "nagle_of"
+
+Number of times that data was queued by the user and
+Nagle was either off, or we had none in flight, or 
+we had a full MTU's worth of data available to send so
+that we would call the output routine if possible.
+
+SCTP_OUTPUT_FRM_SND "out_fr_s"
+
+Number of times a user send routine caused the sctp_chunk_output
+to be called.
+
+SCTP_SOS_NOSNT "sostrnos"
+
+Number of times no output was sent from sctp_chunk_output and there
+were at least one chunk on a stream queue someplace that for some
+reason did not get put into the send queue.
+
+SCTP_NOS_NOSNT "nostrnos"
+
+Number of times no output was sent from sctp_chunk_output and there
+were NONE left on any stream queue.
+
+SCTP_SOSE_NOSNT "sosnqnos"
+
+Number of times no output was sent from sctp_chunk_output and there
+was SOME data left on the send queue.
+
+SCTP_NOSE_NOSNT "nosnqnos"
+
+Number of times no output was sent from sctp_chunk_output and
+there was NO data left on the send queue.
+
+SCTP_DATA_OUT_ERR  "intoperr"
+
+Total number of times that the lowest level of sctp output returned
+an error indicating output was not peformed. This is either due
+to a no-memory problem, an ip_output error or some other error such
+as can't find a route or select a source address for the destination.
+
+SCTP_DUP_SSN_RCVD "dupssnrc"
+
+Number of times a duplicate SSN is found during attempted input
+to the stream reordering queue.
+
+SCTP_DUP_FR "multi-fr"
+
+Number of times a TSN was fast retransmitted more than once using
+the U-Del algorithm with the highest TSNs.
+
+SCTP_VTAG_EXPR "vtag-exp"
+
+Number of times the vtag was used to locate the TCB. This is
+normally the fastest way to lookup a TCB so we want this number
+to be high.
+
+SCTP_VTAG_BOGUS "vtag-bog"
+
+If vtags are unique across the entire system (currently a compile option) then
+this peg will be incremented when a vtag leads to an association that the
+address the data is from does not belong to.
+
+SCTP_T3_SAFEGRD "t3-safeg"
+
+Number of times the safe-guard T3 timer was started. This is invoked when
+there is no timer running and yet there are chunks on the send queue.
+
+SCTP_PDRP_FMBOX "pd--mbox"
+
+Number of packet drop reports received from middle boxes.
+
+SCTP_PDRP_FEHOS "pd-ehost"
+
+Number of packet drop reports received from end hosts.
+
+SCTP_PDRP_MB_DA "pdmb_wda"
+
+Number of chunks reported by packet drops received from middle boxes reporting
+DATA TSN's not sent.
+
+SCTP_PDRP_MB_CT "pdmb_ctl"
+Number of chunks reported by packet drops received from middle boxes reporting
+control chunks not sent.
+
+SCTP_PDRP_BWRPT	"pdmb_bwr"
+Number of packet drop chunks that had NO report of a dropped chunk
+but instead were simply a bandwidth or rwnd report.
+
+SCTP_PDRP_CRUPT	"pd_corup"
+The number of packet drop chunks that at least one chunks
+was skipped due to corruption or truncation.
+
+SCTP_PDRP_NEDAT	"pd_nedat"
+The number of packet drop data chunks reported that did
+not have enough data in the chunk to determine if it
+truely was a dropped chunk.
+
+SCTP_PDRP_PDBRK "pd_errpd"
+The number of times that a packet drop report aborted processing
+of the rest of the packet drop due to an error.
+
+SCTP_PDRP_TSNNF "fst_prep"
+This peg indicates the number of times that a TSN could not
+be found using any method on the send queue.
+
+SCTP_PDRP_DNFND "pd_daNFo"
+The number of times a data chunk could not be found and so an
+extensive search of the sent queue was done ignoring the 
+tsn order in which the send queue is maintained.
+
+SCTP_PDRP_DIWNP	"pd_dIWin"
+The number of times a TSN was reported lost by the peer and that
+TSN was a window probe. This means no fast retransmit
+will be done on the chunk since we want the timer to expire
+and give the peer application time to read from its buffers.
+
+SCTP_PDRP_DIZRW	"pd_dIZrw"
+The number of times a TSN was reported lost by a middle box
+and that TSN was a window probe.
+
+SCTP_PDRP_BADD "pd_BadDa"
+The number of times a data TSN was reported dropped and the 
+sample of data inside the returned packet that is checked
+against the real packet comes up incorrect (i.e. the data
+in the packet drop report does not match the data in queue).
+This causes an abort of the processing of the rest of the
+packet drop chunk.
+
+SCTP_PDRP_MARK "pd_dMark"
+The number of times a data TSN was reported dropped and all
+tests passed so we marked it for immediate fast retransmission.
+
+SCTP_ECNE_RCVD "ecne_rcv"
+The number of ECN echos that we received.
+
+SCTP_CWR_PERFO "cwr_perf"
+The number of times a ECNE caused us to reduce our congestion window.
+
+SCTP_ECNE_SENT "ecne_snt"
+The number of ENCE chunks that have been sent.
+
+SCTP_MSGC_DROP "chun_drp",
 Total number of chunks on queue that were dropped
 without processing due to the peer hitting the
 total chunk limit.
