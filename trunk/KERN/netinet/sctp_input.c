@@ -3035,12 +3035,13 @@ sctp_handle_packet_dropped(struct sctp_pktdrop_chunk *cp,
 				 * our previous adjustment.
 				 */
 				int diff_adj;
-				diff_adj = net->flight_size - net->cwnd;
+				diff_adj = net->cwnd - net->flight_size;
 				if (diff_adj > my_portion)
 					my_portion = 0;
 				else
 					my_portion -= diff_adj;
 			}
+
 			/* back down to the previous cwnd (assume
 			 * we have had a sack before this packet). minus
 			 * what ever portion of the overage is my fault.

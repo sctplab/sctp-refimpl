@@ -7,3 +7,5 @@ Patch 24 change log
    level 1 instead of whenever debug is defined
 3) port 0 check moved before the checksum verification.
 4) Added missing port 0 check for IPv6
+5) Fixed packet-drop processing decrease routine. The
+   fs/cwnd subtraction were done the wrong way.
