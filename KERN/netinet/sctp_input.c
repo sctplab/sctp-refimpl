@@ -3059,6 +3059,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 	 * hopefully work ... until we get into jumbo grams and such..
 	 */
 	u_int8_t chunk_buf[DEFAULT_CHUNK_BUFFER];
+	struct sctp_tcb *locked_tcb = stcb;
 
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
@@ -3090,6 +3091,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			}
 #endif /* SCTP_DEBUG */
 			sctp_pegs[SCTP_BAD_VTAGS]++;
+			if (locked_tcb)
+				SCTP_TCB_UNLOCK(locked_tcb);
 			return (NULL);
 		}
 	} else if (ch->chunk_type != SCTP_COOKIE_ECHO) {
@@ -3111,6 +3114,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			}
 #endif /* SCTP_DEBUG */
 			*offset = length;
+			if (locked_tcb)
+				SCTP_TCB_UNLOCK(locked_tcb);
 			return (NULL);
 		}
 		asoc = &stcb->asoc;
@@ -3125,8 +3130,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			} else {
 				/* drop this packet... */
 				sctp_pegs[SCTP_BAD_VTAGS]++;
-				if (stcb)
-					SCTP_TCB_UNLOCK(stcb);
+				if (locked_tcb)
+					SCTP_TCB_UNLOCK(locked_tcb);
 				return (NULL);
 			}
 		} else if (ch->chunk_type == SCTP_SHUTDOWN_ACK) {
@@ -3138,8 +3143,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				 * but it won't complete until the shutdown is
 				 * completed
 				 */
-				if (stcb)
-					SCTP_TCB_UNLOCK(stcb);
+				if (locked_tcb)
+					SCTP_TCB_UNLOCK(locked_tcb);
 				sctp_handle_ootb(m, iphlen, *offset, sh, inp,
 				    NULL);
 				return (NULL);
@@ -3155,8 +3160,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				}
 #endif /* SCTP_DEBUG */
 				sctp_pegs[SCTP_BAD_VTAGS]++;
-				if (stcb)
-					SCTP_TCB_UNLOCK(stcb);
+				if (locked_tcb)
+					SCTP_TCB_UNLOCK(locked_tcb);
 				*offset = length;
 				return (NULL);
 			}
@@ -3197,6 +3202,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			}
 #endif /* SCTP_DEBUG */
 			*offset = length;
+			if (locked_tcb)
+				SCTP_TCB_UNLOCK(locked_tcb);
 			return (NULL);
 		}
 
@@ -3211,6 +3218,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			    sizeof(struct sctp_init_ack), chunk_buf);
 			if (ch == NULL) {
 				*offset = length;
+				if (locked_tcb)
+					SCTP_TCB_UNLOCK(locked_tcb);
 				return (NULL);
 			}
 		} else {
@@ -3232,6 +3241,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					    htons(sizeof(struct sctp_paramhdr));
 					sctp_queue_op_err(stcb, oper);
 				}
+				if (locked_tcb)
+					SCTP_TCB_UNLOCK(locked_tcb);
 				return (NULL);
 			}
 			ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, *offset,
@@ -3239,6 +3250,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			if (ch == NULL) {
 				printf("sctp_process_control: Can't get the all data....\n");
 				*offset = length;
+				if (locked_tcb)
+					SCTP_TCB_UNLOCK(locked_tcb);
 				return (NULL);
 			}
 
@@ -3261,6 +3274,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 #endif /* SCTP_DEBUG */
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 				/* We are not interested anymore */
+				if (locked_tcb)
+					SCTP_TCB_UNLOCK(locked_tcb);
 				if (LIST_FIRST(&inp->sctp_asoc_list) == NULL) {
 					/* finish the job now */
 					sctp_inpcb_free(inp, 1);
@@ -3271,8 +3286,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			if ((num_chunks > 1) ||
 			    ( sctp_strict_init && (length - *offset > SCTP_SIZE32(chk_length)))) {
 				*offset = length;
-				if (stcb)
-					SCTP_TCB_UNLOCK(stcb);
+				if (locked_tcb)
+					SCTP_TCB_UNLOCK(locked_tcb);
 				return (NULL);
 			}
 			if ((stcb != NULL) && 
@@ -3281,15 +3296,15 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				sctp_send_shutdown_ack(stcb,
 				    stcb->asoc.primary_destination);
 				*offset = length;
-				if (stcb)
-					SCTP_TCB_UNLOCK(stcb);
+				if (locked_tcb)
+					SCTP_TCB_UNLOCK(locked_tcb);
 				return (NULL);
 			}
 			sctp_handle_init(m, iphlen, *offset, sh,
 			    (struct sctp_init_chunk *)ch, inp, stcb, *netp);
 			*offset = length;
-			if (stcb)
-				SCTP_TCB_UNLOCK(stcb);
+			if (locked_tcb)
+				SCTP_TCB_UNLOCK(locked_tcb);
 			return (NULL);
 			break;
 		case SCTP_INITIATION_ACK:
@@ -3301,6 +3316,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 #endif /* SCTP_DEBUG */
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 				/* We are not interested anymore */
+				if (locked_tcb)
+					SCTP_TCB_UNLOCK(locked_tcb);
 				*offset = length;
 				if (stcb) {
 					sctp_free_assoc(inp, stcb);
@@ -3312,7 +3329,6 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				}
 				return (NULL);
 			}
-
 			if ((num_chunks > 1) ||
 			    ( sctp_strict_init && (length - *offset > SCTP_SIZE32(chk_length)))) {
 #ifdef SCTP_DEBUG
@@ -3323,8 +3339,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				}
 #endif
 				*offset = length;
-				if (stcb)
-					SCTP_TCB_UNLOCK(stcb);
+				if (locked_tcb)
+					SCTP_TCB_UNLOCK(locked_tcb);
 				return (NULL);
 			}
 			ret = sctp_handle_init_ack(m, iphlen, *offset, sh,
@@ -3341,8 +3357,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				printf("All done INIT-ACK processing\n");
 			}
 #endif
-			if (stcb)
-				SCTP_TCB_UNLOCK(stcb);
+			if (locked_tcb)
+				SCTP_TCB_UNLOCK(locked_tcb);
 			return (NULL);
 			break;
 		case SCTP_SELECTIVE_ACK:
@@ -3470,8 +3486,6 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				sctp_abort_association(inp, stcb, m, iphlen, sh,
 				    NULL);
 				*offset = length;
-				if (stcb)
-					SCTP_TCB_UNLOCK(stcb);
 				return (NULL);
 			} else if (inp->sctp_flags & SCTP_PCB_FLAGS_ACCEPTING) {
 				/* we are accepting so check limits like TCP */
@@ -3496,17 +3510,11 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					sctp_abort_association(inp, stcb, m,
 					    iphlen, sh, oper);
 					*offset = length;
-					if (stcb)
-						SCTP_TCB_UNLOCK(stcb);
 					return (NULL);
 				}
 			}
 			{
 				struct mbuf *ret_buf;
-				struct sctp_tcb *had_tcb=NULL;
-				if (stcb) {
-					had_tcb = stcb;
-				}
 				ret_buf = sctp_handle_cookie_echo(m, iphlen,
 				    *offset, sh,
 				    (struct sctp_cookie_echo_chunk *)ch, &inp,
@@ -3519,8 +3527,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 #endif /* SCTP_DEBUG */
 
 				if (ret_buf == NULL) {
-					if( had_tcb ) {
-						SCTP_TCB_UNLOCK(had_tcb);
+					if( locked_tcb ) {
+						SCTP_TCB_UNLOCK(locked_tcb);
 					}
 #ifdef SCTP_DEBUG
 					if (sctp_debug_on & SCTP_DEBUG_INPUT3) {
@@ -3595,6 +3603,9 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			if ((num_chunks > 1) ||
 			    (length - *offset > SCTP_SIZE32(chk_length))) {
 				*offset = length;
+				if (locked_tcb)
+					SCTP_TCB_UNLOCK(locked_tcb);
+
 				return (NULL);
 			}
 			sctp_handle_shutdown_complete((struct sctp_shutdown_complete_chunk *)ch,
@@ -3742,6 +3753,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 		ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, *offset,
 		    sizeof(struct sctp_chunkhdr), chunk_buf);
 		if (ch == NULL) {
+			if (locked_tcb)
+				SCTP_TCB_UNLOCK(locked_tcb);
 			*offset = length;
 			return (NULL);
 		}
@@ -3838,7 +3851,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-		printf("Ok, Common input processing called, m:%x iphlen:%d offset:%d",
+		printf("Ok, Common input processing called, m:%x iphlen:%d offset:%d\n",
 		       (u_int)m, iphlen, offset);
 	}
 #endif /* SCTP_DEBUG */
