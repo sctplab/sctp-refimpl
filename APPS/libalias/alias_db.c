@@ -229,6 +229,9 @@ __FBSDID("$FreeBSD: src/lib/libalias/alias_db.c,v 1.21.2.18 2003/11/01 03:50:02 
 #define SCTP_EXPIRE_SHUTDOWNMAX 200
 #endif
 
+#ifndef SCTP_EXPIRE_DEAD
+#define SCTP_EXPIRE_DEAD 10
+#endif
 
 
 
@@ -285,6 +288,15 @@ struct tcp_state           /* Information about TCP connection        */
                            /* been modified                           */
 };
 
+
+struct sctp_state           /* Information about SCTP connection        */
+{
+    int in;                /* State for outside -> inside             */
+    int out;               /* State for inside  -> outside            */
+};
+
+
+
 #define N_LINK_TCP_DATA   3 /* Number of distinct ACK number changes
                                saved for a modified TCP stream */
 struct tcp_dat
@@ -296,7 +308,9 @@ struct tcp_dat
 
 struct sctp_dat
 {
-    u_int32_t vtag;
+    u_int32_t vtag_in;
+    u_int32_t vtag_out;
+    struct sctp_state state;
     int fwhole;             /* Which firewall record is used for this hole? */
 };
 
@@ -737,9 +751,11 @@ GetSocket(u_short port_net, int *sockfd, int link_type)
     struct sockaddr_in sock_addr;
 
     if (link_type == LINK_TCP)
-        sock = socket(AF_INET, SOCK_STREAM, 0);
+        sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     else if (link_type == LINK_UDP)
-        sock = socket(AF_INET, SOCK_DGRAM, 0);
+        sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    else if (link_type == LINK_SCTP)
+        sock = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
     else
     {
 #ifdef DEBUG
@@ -810,6 +826,9 @@ FindNewPortGroup(struct in_addr  dst_addr,
         break;
     case IPPROTO_TCP:
         link_type = LINK_TCP;
+        break;
+    case IPPROTO_SCTP:
+        link_type = LINK_SCTP;
         break;
     default:
         return (0);
@@ -916,6 +935,20 @@ IncrementalCleanup(void)
         idelta = timeStamp - link->timestamp;
         switch (link->link_type)
         {
+            case LINK_SCTP:
+                if (idelta > link->expire_time)
+                {
+                    struct sctp_dat *sctp_aux;
+
+                    sctp_aux = link->data.sctp;
+                    if (sctp_aux->state.in  != ALIAS_SCTP_STATE_CONNECTED
+                     || sctp_aux->state.out != ALIAS_SCTP_STATE_CONNECTED)
+                    {
+                        DeleteLink(link);
+                        icount++;
+                    }
+                }
+                break;
             case LINK_TCP:
                 if (idelta > link->expire_time)
                 {
@@ -1118,6 +1151,8 @@ AddLink(struct in_addr  src_addr,
                 aux_sctp = malloc(sizeof(struct sctp_dat));
 		if (aux_sctp != NULL) {
 			sctpLinkCount++;
+			aux_sctp->state.in = ALIAS_SCTP_STATE_NOT_CONNECTED;
+			aux_sctp->state.out = ALIAS_SCTP_STATE_NOT_CONNECTED;
 			aux_sctp->fwhole = -1;
 			aux_sctp->vtag = 0;
 			link->data.sctp = aux_sctp;
@@ -1656,6 +1691,9 @@ FindUdpTcpIn(struct in_addr dst_addr,
     case IPPROTO_TCP:
         link_type = LINK_TCP;
         break;
+    case IPPROTO_SCTP:
+        link_type = LINK_SCTP;
+        break;
     default:
         return NULL;
         break;
@@ -1697,6 +1735,9 @@ FindUdpTcpOut(struct in_addr  src_addr,
         break;
     case IPPROTO_TCP:
         link_type = LINK_TCP;
+        break;
+    case IPPROTO_SCTP:
+        link_type = LINK_SCTP;
         break;
     default:
         return NULL;
@@ -1913,6 +1954,7 @@ FindAliasAddress(struct in_addr original_addr)
 
     SetFragmentData(), GetFragmentData()
     SetFragmentPtr(), GetFragmentPtr()
+    GetVtagIn(), SetVtagIn(), GetVtagOut(), SetVtagOut()
     SetStateIn(), SetStateOut(), GetStateIn(), GetStateOut()
     GetOriginalAddress(), GetDestAddress(), GetAliasAddress()
     GetOriginalPort(), GetAliasPort()
@@ -1950,64 +1992,146 @@ GetFragmentPtr(struct alias_link *link, char **fptr)
    *fptr = link->data.frag_ptr;
 }
 
+u_int32_t 
+GetVtagIn(struct alias_link *link)
+{
+	if(link->link_type != LINK_SCTP)
+		return 0;
+	else
+		return link->data.sctp->vtag_in;
+}
+
+void
+SetVtagIn(struct alias_link *link, u_int32_t tag)
+{
+	if(link->link_type != LINK_SCTP)
+		return;
+	link->data.sctp->vtag_in = tag;
+}
+
+u_int32_t 
+GetVtagOut(struct alias_link *link)
+{
+	if(link->link_type != LINK_SCTP)
+		return 0;
+	else
+		return link->data.sctp->vtag_out;
+}
+
+void
+SetVtagOut(struct alias_link *link, u_int32_t tag)
+{
+	if(link->link_type != LINK_SCTP)
+		return;
+	link->data.sctp->vtag_out = tag;
+}
+
 
 void
 SetStateIn(struct alias_link *link, int state)
 {
-    /* TCP input state */
-    switch (state) {
-    case ALIAS_TCP_STATE_DISCONNECTED:
-        if (link->data.tcp->state.out != ALIAS_TCP_STATE_CONNECTED)
-            link->expire_time = TCP_EXPIRE_DEAD;
-        else
-            link->expire_time = TCP_EXPIRE_SINGLEDEAD;
-        break;
-    case ALIAS_TCP_STATE_CONNECTED:
-        if (link->data.tcp->state.out == ALIAS_TCP_STATE_CONNECTED)
-            link->expire_time = TCP_EXPIRE_CONNECTED;
-        break;
-    default:
-        abort();
-    }
-    link->data.tcp->state.in = state;
+	if( link->link_type == LINK_TCP) {
+		/* TCP input state */
+		switch (state) {
+		case ALIAS_TCP_STATE_DISCONNECTED:
+			if (link->data.tcp->state.out != ALIAS_TCP_STATE_CONNECTED)
+				link->expire_time = TCP_EXPIRE_DEAD;
+			else
+				link->expire_time = TCP_EXPIRE_SINGLEDEAD;
+			break;
+		case ALIAS_TCP_STATE_CONNECTED:
+			if (link->data.tcp->state.out == ALIAS_TCP_STATE_CONNECTED)
+				link->expire_time = TCP_EXPIRE_CONNECTED;
+			break;
+		default:
+			abort();
+		}
+		link->data.tcp->state.in = state;
+	} else if (link->link_type == LINK_SCTP) {
+		/* TCP input state */
+		switch (state) {
+		case ALIAS_SCTP_STATE_DISCONNECTED:
+			if (link->data.sctp->state.out != ALIAS_SCTP_STATE_CONNECTED)
+				link->expire_time = SCTP_EXPIRE_DEAD;
+			else
+				link->expire_time = SCTP_EXPIRE_SHUTDOWNMAX;
+			break;
+		case ALIAS_SCTP_STATE_CONNECTED:
+			if (link->data.sctp->state.out == ALIAS_SCTP_STATE_CONNECTED)
+				link->expire_time = SCTP_EXPIRE_CONNECTED;
+			break;
+		default:
+			abort();
+		}
+		link->data.sctp->state.in = state;
+	}
 }
 
 
 void
 SetStateOut(struct alias_link *link, int state)
 {
-    /* TCP output state */
-    switch (state) {
-    case ALIAS_TCP_STATE_DISCONNECTED:
-        if (link->data.tcp->state.in != ALIAS_TCP_STATE_CONNECTED)
-            link->expire_time = TCP_EXPIRE_DEAD;
-        else
-            link->expire_time = TCP_EXPIRE_SINGLEDEAD;
-        break;
-    case ALIAS_TCP_STATE_CONNECTED:
-        if (link->data.tcp->state.in == ALIAS_TCP_STATE_CONNECTED)
-            link->expire_time = TCP_EXPIRE_CONNECTED;
-        break;
-    default:
-        abort();
-    }
-    link->data.tcp->state.out = state;
+	if( link->link_type == LINK_TCP) {
+		/* TCP output state */
+		switch (state) {
+		case ALIAS_TCP_STATE_DISCONNECTED:
+			if (link->data.tcp->state.in != ALIAS_TCP_STATE_CONNECTED)
+				link->expire_time = TCP_EXPIRE_DEAD;
+			else
+				link->expire_time = TCP_EXPIRE_SINGLEDEAD;
+			break;
+		case ALIAS_TCP_STATE_CONNECTED:
+			if (link->data.tcp->state.in == ALIAS_TCP_STATE_CONNECTED)
+				link->expire_time = TCP_EXPIRE_CONNECTED;
+			break;
+		default:
+			abort();
+		}
+		link->data.tcp->state.out = state;
+	} else if (link->link_type == LINK_SCTP) {
+		/* TCP output state */
+		switch (state) {
+		case ALIAS_SCTP_STATE_DISCONNECTED:
+			if (link->data.sctp->state.in != ALIAS_SCTP_STATE_CONNECTED)
+				link->expire_time = SCTP_EXPIRE_DEAD;
+			else
+				link->expire_time = SCTP_EXPIRE_SHUTDOWNMAX;
+			break;
+		case ALIAS_SCTP_STATE_CONNECTED:
+			if (link->data.sctp->state.in == ALIAS_SCTP_STATE_CONNECTED)
+				link->expire_time = SCTP_EXPIRE_CONNECTED;
+			break;
+		default:
+			abort();
+		}
+		link->data.tcp->state.out = state;
+	}
 }
 
 
 int
 GetStateIn(struct alias_link *link)
 {
-    /* TCP input state */
-    return link->data.tcp->state.in;
+	if( link->link_type == LINK_TCP) {
+		/* TCP input state */
+		return link->data.tcp->state.in;
+	}else if( link->link_type == LINK_SCTP) {
+		/* SCTP input state */
+		return link->data.sctp->state.in;
+	}
 }
 
 
 int
 GetStateOut(struct alias_link *link)
 {
-    /* TCP output state */
-    return link->data.tcp->state.out;
+	if( link->link_type == LINK_TCP) {
+		/* TCP output state */
+		return link->data.tcp->state.out;
+	} else if( link->link_type == LINK_SCTP) {
+		/* SCTP input state */
+		return link->data.sctp->state.out;
+	}
 }
 
 
@@ -2445,6 +2569,9 @@ PacketAliasRedirectPort(struct in_addr src_addr,   u_short src_port,
     case IPPROTO_TCP:
         link_type = LINK_TCP;
         break;
+    case IPPROTO_SCTP:
+        link_type = LINK_SCTP;
+        break;
     default:
 #ifdef DEBUG
         fprintf(stderr, "PacketAliasRedirectPort(): ");
@@ -2839,12 +2966,22 @@ PunchFWHole(struct alias_link *link) {
     int r;                      /* Result code */
     struct ip_fw rule;          /* On-the-fly built rule */
     int fwhole;                 /* Where to punch hole */
+    int proto_type;
+
+
 
 /* Don't do anything unless we are asked to */
     if ( !(packetAliasMode & PKT_ALIAS_PUNCH_FW) ||
          fireWallFD < 0 ||
-         link->link_type != LINK_TCP)
+         ((link->link_type != LINK_TCP) &&
+	  (link->link_type != LINK_SCTP)))
         return;
+
+
+    if (link->link_type == LINK_TCP)
+	    proto_type = IPPROTO_TCP;
+    else if (link->link_type == LINK_SCTP)
+	    proto_type = IPPROTO_SCTP;
 
     memset(&rule, 0, sizeof rule);
 
@@ -2886,7 +3023,7 @@ PunchFWHole(struct alias_link *link) {
 	int i;
 
 	i = fill_rule(rulebuf, sizeof(rulebuf), fwhole,
-		O_ACCEPT, IPPROTO_TCP,
+		O_ACCEPT, proto_type,
 		GetOriginalAddress(link), ntohs(GetOriginalPort(link)),
 		GetDestAddress(link), ntohs(GetDestPort(link)) );
 	r = setsockopt(fireWallFD, IPPROTO_IP, IP_FW_ADD, rulebuf, i);
@@ -2894,7 +3031,7 @@ PunchFWHole(struct alias_link *link) {
 		err(1, "alias punch inbound(1) setsockopt(IP_FW_ADD)");
 
 	i = fill_rule(rulebuf, sizeof(rulebuf), fwhole,
-		O_ACCEPT, IPPROTO_TCP,
+		O_ACCEPT, proto_type,
 		GetDestAddress(link), ntohs(GetDestPort(link)),
 		GetOriginalAddress(link), ntohs(GetOriginalPort(link)) );
 	r = setsockopt(fireWallFD, IPPROTO_IP, IP_FW_ADD, rulebuf, i);
@@ -2908,7 +3045,7 @@ PunchFWHole(struct alias_link *link) {
     IP_FW_SETNSRCP(&rule, 1);	/* Number of source ports. */
     IP_FW_SETNDSTP(&rule, 1);	/* Number of destination ports. */
     rule.fw_flg = IP_FW_F_ACCEPT | IP_FW_F_IN | IP_FW_F_OUT;
-    rule.fw_prot = IPPROTO_TCP;
+    rule.fw_prot = proto_type;
     rule.fw_smsk.s_addr = INADDR_BROADCAST;
     rule.fw_dmsk.s_addr = INADDR_BROADCAST;
 
@@ -2940,9 +3077,14 @@ PunchFWHole(struct alias_link *link) {
     }
 #endif /* !IPFW2 */
 /* Indicate hole applied */
-    link->data.tcp->fwhole = fwhole;
+    if (link->link_type == LINK_TCP)
+	    link->data.tcp->fwhole = fwhole;
+    else if (link->link_type == LINK_SCTP)
+	    link->data.sctp->fwhole = fwhole;
+
     fw_setfield(fireWallField, fwhole);
 }
+
 
 /* Remove a hole in a firewall associated with a particular alias
    link.  Calling this too often is harmless. */
@@ -2968,6 +3110,26 @@ ClearFWHole(struct alias_link *link) {
 #endif /* !IPFW2 */
         fw_clrfield(fireWallField, fwhole);
         link->data.tcp->fwhole = -1;
+    } else if (link->link_type == LINK_SCTP) {
+        int fwhole =  link->data.sctp->fwhole; /* Where is the firewall hole? */
+        struct ip_fw rule;
+
+	if (fwhole < 0)
+	    return;
+
+        memset(&rule, 0, sizeof rule); /* useless for ipfw2 */
+#if IPFW2
+	while (!setsockopt(fireWallFD, IPPROTO_IP, IP_FW_DEL,
+		    &fwhole, sizeof fwhole))
+	    ;
+#else /* !IPFW2 */
+        rule.fw_number = fwhole;
+        while (!setsockopt(fireWallFD, IPPROTO_IP, IP_FW_DEL,
+		    &rule, sizeof rule))
+            ;
+#endif /* !IPFW2 */
+        fw_clrfield(fireWallField, fwhole);
+        link->data.sctp->fwhole = -1;
     }
 }
 
