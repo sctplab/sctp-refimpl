@@ -8120,7 +8120,7 @@ sctp_select_hb_destination(struct sctp_tcb *stcb, struct timeval *now)
 			state_overide = 0;
 		}
 
-		if (((ms_goneby >= stcb->asoc.heart_beat_delay) || (state_overide)) &&
+		if (((ms_goneby >= net->RTO) || (state_overide)) &&
 		    (ms_goneby > highest_ms)) {
 			highest_ms = ms_goneby;
 			hnet = net;
@@ -8139,7 +8139,7 @@ sctp_select_hb_destination(struct sctp_tcb *stcb, struct timeval *now)
 		state_overide = 0;
 	}
 
-	if (highest_ms && ((highest_ms > stcb->asoc.heart_beat_delay) || state_overide)) {
+	if (highest_ms && ((highest_ms >= hnet->RTO) || state_overide)) {
 		/* Found the one with longest delay bounds 
 		 * OR it is unconfirmed and still not marked
 		 * unreachable.
