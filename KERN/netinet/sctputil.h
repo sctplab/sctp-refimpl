@@ -125,6 +125,7 @@
 	force_comile_error;
 #endif
 
+#define sctp_get_associd(stcb) ((sctp_assoc_t)stcb)
 
 /*
  * Function prototypes

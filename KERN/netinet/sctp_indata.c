@@ -220,7 +220,7 @@ sctp_build_ctl_nchunk(struct sctp_tcb *stcb, uint32_t tsn, uint32_t ppid,
 	}
 	outinfo->sinfo_ppid = ppid;
 	outinfo->sinfo_context = context;
-	outinfo->sinfo_assoc_id = (caddr_t)stcb;
+	outinfo->sinfo_assoc_id = sctp_get_associd(stcb);
 	outinfo->sinfo_tsn = tsn;
 	outinfo->sinfo_cumtsn = stcb->asoc.cumulative_tsn;
 	ret->m_len = cmh->cmsg_len;
@@ -270,7 +270,7 @@ sctp_build_ctl(struct sctp_tcb *stcb, struct sctp_tmit_chunk *chk)
 	}
 	outinfo->sinfo_ppid = chk->rec.data.payloadtype;
 	outinfo->sinfo_context = chk->rec.data.context;
-	outinfo->sinfo_assoc_id = (caddr_t)stcb;
+	outinfo->sinfo_assoc_id = sctp_get_associd(stcb);
 	outinfo->sinfo_tsn = chk->rec.data.TSN_seq;
 	outinfo->sinfo_cumtsn = stcb->asoc.cumulative_tsn;
 	ret->m_len = cmh->cmsg_len;

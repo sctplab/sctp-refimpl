@@ -1959,7 +1959,7 @@ sctp_notify_assoc_change(u_int32_t event, struct sctp_tcb *stcb,
 	/* XXX verify these stream counts */
 	sac->sac_outbound_streams = stcb->asoc.streamoutcnt;
 	sac->sac_inbound_streams = stcb->asoc.streamincnt;
-	sac->sac_assoc_id = (sctp_assoc_t)stcb;
+	sac->sac_assoc_id = sctp_get_associd(stcb);
 
 	m_notify->m_flags |= M_EOR | M_NOTIFICATION;
 	m_notify->m_pkthdr.len = sizeof(struct sctp_assoc_change);
@@ -2040,7 +2040,7 @@ sctp_notify_peer_addr_change(struct sctp_tcb *stcb, uint32_t state,
 	}
 	spc->spc_state = state;
 	spc->spc_error = error;
-	spc->spc_assoc_id = (sctp_assoc_t)stcb;
+	spc->spc_assoc_id = sctp_get_associd(stcb);
 
 	m_notify->m_flags |= M_EOR | M_NOTIFICATION;
 	m_notify->m_pkthdr.len = sizeof(struct sctp_paddr_change);
@@ -2119,8 +2119,8 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, u_int32_t error,
 	ssf->ssf_info.sinfo_flags = chk->rec.data.rcv_flags;
 	ssf->ssf_info.sinfo_ppid = chk->rec.data.payloadtype;
 	ssf->ssf_info.sinfo_context = chk->rec.data.context;
-	ssf->ssf_info.sinfo_assoc_id = (sctp_assoc_t)stcb;
-	ssf->ssf_assoc_id = (sctp_assoc_t)stcb;
+	ssf->ssf_info.sinfo_assoc_id = sctp_get_associd(stcb);
+	ssf->ssf_assoc_id = sctp_get_associd(stcb);
 	m_notify->m_next = chk->data;
 	if (m_notify->m_next == NULL)
 		m_notify->m_flags |= M_EOR | M_NOTIFICATION;
@@ -2197,7 +2197,7 @@ sctp_notify_adaption_layer(struct sctp_tcb *stcb,
 	sai->sai_flags = 0;
 	sai->sai_length = sizeof(struct sctp_adaption_event);
 	sai->sai_adaption_ind = error;
-	sai->sai_assoc_id = (sctp_assoc_t)stcb;
+	sai->sai_assoc_id = sctp_get_associd(stcb);
 
 	m_notify->m_flags |= M_EOR | M_NOTIFICATION;
 	m_notify->m_pkthdr.len = sizeof(struct sctp_adaption_event);
@@ -2262,7 +2262,7 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
 	pdapi->pdapi_flags = 0;
 	pdapi->pdapi_length = sizeof(struct sctp_pdapi_event);
 	pdapi->pdapi_indication = error;
-	pdapi->pdapi_assoc_id = (sctp_assoc_t)stcb;
+	pdapi->pdapi_assoc_id = sctp_get_associd(stcb);
 
 	m_notify->m_flags |= M_EOR | M_NOTIFICATION;
 	m_notify->m_pkthdr.len = sizeof(struct sctp_pdapi_event);
@@ -2339,7 +2339,7 @@ sctp_notify_shutdown_event(struct sctp_tcb *stcb)
 	sse->sse_type = SCTP_SHUTDOWN_EVENT;
 	sse->sse_flags = 0;
 	sse->sse_length = sizeof(struct sctp_shutdown_event);
-	sse->sse_assoc_id = (sctp_assoc_t)stcb;
+	sse->sse_assoc_id = sctp_get_associd(stcb);
 
 	m_notify->m_flags |= M_EOR | M_NOTIFICATION;
 	m_notify->m_pkthdr.len = sizeof(struct sctp_shutdown_event);
@@ -2421,7 +2421,7 @@ sctp_notify_stream_reset(struct sctp_tcb *stcb,
 		strreset->strreset_flags = flag | SCTP_STRRESET_STREAM_LIST;
 	}
 	strreset->strreset_length = len;
-	strreset->strreset_assoc_id = (sctp_assoc_t)stcb;
+	strreset->strreset_assoc_id = sctp_get_associd(stcb);
 	if (number_entries) {
 		int i;
 		for (i=0; i<number_entries; i++) {

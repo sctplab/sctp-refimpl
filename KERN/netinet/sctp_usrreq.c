@@ -2023,7 +2023,7 @@ sctp_optsget(struct socket *so,
 				paddrp->spp_pathmaxrxt = stcb->asoc.def_net_failure;
 			}
 			paddrp->spp_hbinterval = stcb->asoc.heart_beat_delay;
-			paddrp->spp_assoc_id = (sctp_assoc_t)(stcb);
+			paddrp->spp_assoc_id = sctp_get_associd(stcb);
 		} else {
 			/* Use endpoint defaults */
 #ifdef SCTP_DEBUG
@@ -2081,7 +2081,7 @@ sctp_optsget(struct socket *so,
 		paddri->spinfo_cwnd = net->cwnd;
 		paddri->spinfo_srtt = ((net->lastsa >> 2) + net->lastsv) >> 1;
 		paddri->spinfo_rto = net->RTO;
-		paddri->spinfo_assoc_id = (sctp_assoc_t)stcb;
+		paddri->spinfo_assoc_id = sctp_get_associd(stcb);
 	}
 	break;
 	case SCTP_PCB_STATUS:
@@ -2159,7 +2159,7 @@ sctp_optsget(struct socket *so,
 		sstat->sstat_primary.spinfo_srtt = net->lastsa;
 		sstat->sstat_primary.spinfo_rto = net->RTO;
 		sstat->sstat_primary.spinfo_mtu = net->mtu;
-		sstat->sstat_primary.spinfo_assoc_id = (sctp_assoc_t)stcb;
+		sstat->sstat_primary.spinfo_assoc_id = sctp_get_associd(stcb);
 		m->m_len = sizeof(*sstat);
 	}
 	break;
