@@ -52,3 +52,5 @@ Patch 25)
    was queued on the v6 side. This is a bug that
    was fixed for v4 at the Munester Inter-op, but we
    missed the V6 side :-<
+6) You can use NULL as the to argument in sctp_sendmsg
+   for 1to1 style sockets.
