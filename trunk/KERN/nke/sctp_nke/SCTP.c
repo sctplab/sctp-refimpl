@@ -66,6 +66,20 @@ extern struct sysctl_oid sysctl__net_inet_sctp_strict_init;
 extern struct sysctl_oid sysctl__net_inet_sctp_peer_chkoh;
 extern struct sysctl_oid sysctl__net_inet_sctp_maxburst;
 extern struct sysctl_oid sysctl__net_inet_sctp_maxchunks;
+extern struct sysctl_oid sysctl__net_inet_sctp_delayed_sack_time;
+extern struct sysctl_oid sysctl__net_inet_sctp_heartbeat_interval;
+extern struct sysctl_oid sysctl__net_inet_sctp_pmtu_raise_time;
+extern struct sysctl_oid sysctl__net_inet_sctp_shutdown_guard_time;
+extern struct sysctl_oid sysctl__net_inet_sctp_secret_lifetime;
+extern struct sysctl_oid sysctl__net_inet_sctp_rto_max;
+extern struct sysctl_oid sysctl__net_inet_sctp_rto_min;
+extern struct sysctl_oid sysctl__net_inet_sctp_rto_initial;
+extern struct sysctl_oid sysctl__net_inet_sctp_init_rto_max;
+extern struct sysctl_oid sysctl__net_inet_sctp_valid_cookie_life;
+extern struct sysctl_oid sysctl__net_inet_sctp_init_rtx_max;
+extern struct sysctl_oid sysctl__net_inet_sctp_assoc_rtx_max;
+extern struct sysctl_oid sysctl__net_inet_sctp_path_rtx_max;
+extern struct sysctl_oid sysctl__net_inet_sctp_nr_outgoing_streams;
 #ifdef SCTP_DEBUG
 extern struct sysctl_oid sysctl__net_inet_sctp_debug;
 #endif
@@ -232,6 +246,20 @@ kern_return_t SCTP_start (kmod_info_t * ki, void * d) {
 	sysctl_register_oid(&sysctl__net_inet_sctp_peer_chkoh);
 	sysctl_register_oid(&sysctl__net_inet_sctp_maxburst);
 	sysctl_register_oid(&sysctl__net_inet_sctp_maxchunks);
+	sysctl_register_oid(&sysctl__net_inet_sctp_delayed_sack_time);
+	sysctl_register_oid(&sysctl__net_inet_sctp_heartbeat_interval);
+	sysctl_register_oid(&sysctl__net_inet_sctp_pmtu_raise_time);
+	sysctl_register_oid(&sysctl__net_inet_sctp_shutdown_guard_time);
+	sysctl_register_oid(&sysctl__net_inet_sctp_secret_lifetime);
+	sysctl_register_oid(&sysctl__net_inet_sctp_rto_max);
+	sysctl_register_oid(&sysctl__net_inet_sctp_rto_min);
+	sysctl_register_oid(&sysctl__net_inet_sctp_rto_initial);
+	sysctl_register_oid(&sysctl__net_inet_sctp_init_rto_max);
+	sysctl_register_oid(&sysctl__net_inet_sctp_valid_cookie_life);
+	sysctl_register_oid(&sysctl__net_inet_sctp_init_rtx_max);
+	sysctl_register_oid(&sysctl__net_inet_sctp_assoc_rtx_max);
+	sysctl_register_oid(&sysctl__net_inet_sctp_path_rtx_max);
+	sysctl_register_oid(&sysctl__net_inet_sctp_nr_outgoing_streams);
 #ifdef SCTP_DEBUG
 	sysctl_register_oid(&sysctl__net_inet_sctp_debug);
 #endif
@@ -271,6 +299,20 @@ kern_return_t SCTP_stop (kmod_info_t * ki, void * d) {
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_peer_chkoh);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_maxburst);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_maxchunks);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_delayed_sack_time);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_heartbeat_interval);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_pmtu_raise_time);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_shutdown_guard_time);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_secret_lifetime);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_rto_max);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_rto_min);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_rto_initial);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_init_rto_max);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_valid_cookie_life);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_init_rtx_max);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_assoc_rtx_max);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_path_rtx_max);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_nr_outgoing_streams);
 #ifdef SCTP_DEBUG
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_debug);
 #endif
