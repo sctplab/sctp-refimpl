@@ -445,3 +445,33 @@ SCTP_MSGC_DROP "chun_drp",
 Total number of chunks on queue that were dropped
 without processing due to the peer hitting the
 total chunk limit.
+
+SCTP_SEND_QUEUE_POP
+Total number of times from user send module that
+we went to send and found that things were on
+the send queue (i.e. unsent due to other issues
+like ip_output failing). Thus we will not proceed
+and call low level send routines
+
+SCTP_ERROUT_FRM_USR
+Total number of times we called the low level
+output routines and generated an ip_output
+failure.
+
+
+SCTP_SENDTO_FULL_CWND
+Total number of times we queued only due
+to the fact that the selected destination 
+had a full cwnd.
+
+SCTP_QUEONLY_BURSTLMT
+Total number of times we queue only since
+the burst limit was applied. No call
+to lowlevel output.
+
+
+SCTP_IFP_QUEUE_FULL
+Total number of times a destination was
+skipped due to the fact that its IFP
+queue on the outbound interface was
+full.
