@@ -4677,7 +4677,16 @@ sctp_sendall_completes(void *ptr, u_int32_t val)
 {
 	struct sctp_copy_all *ca;	
 	ca = (struct sctp_copy_all *)ptr;
-	/* Do a notify here */
+	/* Do a notify here?
+	 * Kacheong suggests that the notify
+	 * be done at the send time.. so you would
+	 * push up a notification if any send failed.
+	 * Don't know if this is feasable since the
+	 * only failures we have is "memory" related and
+	 * if you cannot get an mbuf to send the data
+	 * you surely can't get an mbuf to send up
+	 * to notify the user you can't send the data :->
+	 */
 
 	/* now free everything */
 	m_freem(ca->m);
