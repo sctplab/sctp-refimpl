@@ -44,6 +44,7 @@
 /*
  * Names for SCTP sysctl objects
  */
+#ifndef __APPLE__
 #define	SCTPCTL_MAXDGRAM	1	/* max datagram size */
 #define	SCTPCTL_RECVSPACE	2	/* default receive buffer space */
 #define SCTPCTL_AUTOASCONF      3       /* auto asconf enable/disable flag */
@@ -61,6 +62,7 @@
 #define SCTPCTL_MAXBURST        10
 #define SCTPCTL_MAXCHUNKONQ     11
 #define SCTPCTL_MAXID		12
+#endif
 
 #define SCTPCTL_NAMES { \
 	{ 0, 0 }, \
