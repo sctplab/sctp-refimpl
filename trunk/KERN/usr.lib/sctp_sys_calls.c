@@ -131,10 +131,11 @@ int
 sctp_connectx(int sd, struct sockaddr *addrs, int addrcnt)
 {
 	char buf[2048];
-	int i,len,ret,cnt,*aa;
+	int i,ret,cnt,*aa;
 	char *cpto;
 	struct sockaddr *at;
-	len = sizeof(int);
+	size_t len = sizeof(int);
+	
 	at = addrs;
 	cnt = 0;
 	cpto = ((caddr_t)buf + sizeof(int));
@@ -146,7 +147,6 @@ sctp_connectx(int sd, struct sockaddr *addrs, int addrcnt)
 			len += at->sa_len;
 		} else if (at->sa_family == AF_INET6){
 			if(IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6 *)at)->sin6_addr)){
-				struct sockaddr_in sin;
 				len += sizeof(struct sockaddr_in);
 				in6_sin6_2_sin((struct sockaddr_in *)cpto,(struct sockaddr_in6 *)at);
 				cpto = ((caddr_t)cpto + sizeof(struct sockaddr_in));
@@ -368,7 +368,7 @@ sctp_sendmsg(int s,
 	     const void *data, 
 	     size_t len,
 	     const struct sockaddr *to,
-	     socklen_t tolen,
+	     socklen_t tolen __attribute__((unused)),
 	     u_int32_t ppid,
 	     u_int32_t flags,
 	     u_int16_t stream_no,
