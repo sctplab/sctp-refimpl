@@ -168,7 +168,6 @@ sctp_get_peeloff(struct socket *head, caddr_t assoc_id, int *error)
 		*error = ENOTCONN;
 		return (NULL);
 	}
-	SCTP_TCB_LOCK(stcb);
 	newso = sonewconn(head, SS_ISCONNECTED);
 	if (newso == NULL) {
 #ifdef SCTP_DEBUG
