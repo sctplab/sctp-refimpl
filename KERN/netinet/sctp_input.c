@@ -2110,7 +2110,11 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 				return (m);
 			}
 			oso = (*inp_p)->sctp_socket;
+			SCTP_TCB_UNLOCK((*stcb));
 			so = sonewconn(oso, SS_ISCONNECTED);
+			SCTP_INP_WLOCK((*stcb)->sctp_ep);
+			SCTP_TCB_LOCK((*stcb));
+			SCTP_INP_WUNLOCK((*stcb)->sctp_ep);
 			if (so == NULL) {
 				struct mbuf *op_err;
 				/* Too many sockets */
