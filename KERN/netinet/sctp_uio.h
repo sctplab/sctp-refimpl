@@ -79,9 +79,20 @@ struct sctp_sndrcvinfo {
 	sctp_assoc_t sinfo_assoc_id;
 };
 
+struct sctp_snd_all_completes {
+	u_int16_t sall_stream;
+	u_int16_t sall_flags;
+	u_int32_t sall_ppid;
+	u_int32_t sall_context;
+	u_int32_t sall_num_sent;
+	u_int32_t sall_num_failed;
+};
+
+
 
 /* send/recv flags */
 /* MSG_EOF (0x0100) is reused from sys/socket.h */
+#define MSG_SENDALL     0x0200
 #define MSG_PR_SCTP_TTL	0x0400	/* Partial Reliable on this msg */
 #define MSG_PR_SCTP_BUF	0x0800	/* Buffer based PR-SCTP */
 #ifndef MSG_EOF

@@ -115,6 +115,16 @@ struct sctp_iterator {
 
 LIST_HEAD(sctpiterators, sctp_iterator);
 
+struct sctp_copy_all {
+	struct sctp_inpcb *inp;	/* ep */
+	struct mbuf *m;
+	struct sctp_sndrcvinfo sndrcv;
+	int sndlen;
+	int cnt_sent;
+	int cnt_failed;
+};
+
+
 union sctp_sockstore {
 #ifdef AF_INET
 	struct sockaddr_in  sin;

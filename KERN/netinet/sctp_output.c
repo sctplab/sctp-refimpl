@@ -4634,6 +4634,177 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 	}
 }
 
+static void 
+sctp_sendall_iterator(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr, u_int32_t val)
+{
+	struct sctp_copy_all *ca;
+	struct mbuf *m;
+	int turned_on_nonblock=0, ret;
+
+	ca = (struct sctp_copy_all *)ptr;
+	if (ca->m == NULL) {
+		return;
+	}
+	if (ca->inp != inp) {
+		/* TSNH */
+		return;
+	}
+	m = sctp_copy_mbufchain(ca->m, NULL);
+	if (m == NULL) {
+		/* can't copy so we are done */
+		ca->cnt_failed++;
+		return;
+	}
+	if((stcb->sctp_socket->so_state & SS_NBIO) == 0) {
+		/* we have to do this non-blocking */
+		turned_on_nonblock = 1;
+		stcb->sctp_socket->so_state |= SS_NBIO;
+	}
+	ret = sctp_msg_append(stcb, stcb->asoc.primary_destination, m, &ca->sndrcv);
+	if(turned_on_nonblock) {
+		/* we turned on non-blocking so turn it off */
+		stcb->sctp_socket->so_state &= ~SS_NBIO;
+	}
+	if(ret) {
+		ca->cnt_failed++;
+	} else {
+		ca->cnt_sent++;
+	}
+}
+
+static void
+sctp_sendall_completes(void *ptr, u_int32_t val)
+{
+	struct sctp_copy_all *ca;	
+	ca = (struct sctp_copy_all *)ptr;
+	/* Do a notify here */
+
+	/* now free everything */
+	m_freem(ca->m);
+	FREE(ca, M_PCB);	
+}
+
+
+#define	MC_ALIGN(m, len) do {						\
+	(m)->m_data += (MCLBYTES - (len)) & ~(sizeof(long) - 1);		\
+} while (0)
+
+
+
+static struct mbuf *
+sctp_copy_out_all(struct uio *uio, int len)
+{
+	struct mbuf *ret, *at;
+	int left, willcpy, cancpy, error;
+
+	MGETHDR(ret, M_WAIT, MT_HEADER);
+	if (ret == NULL) {
+		/* TSNH */	
+		return (NULL);
+	}
+	left = len;
+	ret->m_len = 0;
+	MCLGET(ret, M_WAIT);
+	if (ret == NULL) {
+		return (NULL);
+	}
+	if ((ret->m_flags & M_EXT) == 0) {
+		m_freem (ret);
+		return (NULL);
+	}
+	cancpy = M_TRAILINGSPACE(ret);
+	willcpy = min(cancpy, left);
+	at = ret;
+	while (left > 0) {
+		/* Align data to the end */
+		MC_ALIGN(at, willcpy);
+		error = uiomove(mtod(at, caddr_t), willcpy, uio);
+		if (error) {
+		err_out_now:
+			m_freem(ret);
+			return(NULL);
+		}
+		at->m_len = willcpy;
+		at->m_nextpkt = at->m_next = 0;
+		left -= willcpy;
+		if (left > 0) { 
+			MGET(at->m_next, M_WAIT, MT_DATA);
+			if (at->m_next == NULL) {
+				goto err_out_now;
+			}
+			at = at->m_next;
+			at->m_len = 0;
+			MCLGET(at, M_WAIT);
+			if (at == NULL) {
+				goto err_out_now;
+			}
+			if ((at->m_flags & M_EXT) == 0) {
+				goto err_out_now;
+			}
+			cancpy = M_TRAILINGSPACE(at);
+			willcpy = min(cancpy, left);
+		}
+	}
+	return (ret);
+}
+
+static int
+sctp_sendall (struct sctp_inpcb *inp, struct uio *uio, struct mbuf *m, struct sctp_sndrcvinfo *srcv)
+{
+	int ret;
+	struct sctp_copy_all *ca;
+	MALLOC(ca, struct sctp_copy_all *,
+	       sizeof(struct sctp_copy_all), M_PCB, M_WAIT);
+	if(ca == NULL) {
+		m_freem(m);
+		return (ENOMEM);
+	}
+	memset (ca, 0, sizeof(struct sctp_copy_all));
+
+	ca->inp = inp;
+	ca->sndrcv = *srcv;
+	/* take off the sendall flag, it would
+	 * be bad if we failed to do this  :-0
+	 */
+ 	ca->sndrcv.sinfo_flags &= ~MSG_SENDALL;
+
+	/* get length and mbuf chain */
+	if (uio) {
+		ca->sndlen = uio->uio_resid;
+		ca->m = sctp_copy_out_all(uio, ca->sndlen);
+		if (ca->m == NULL) {
+			FREE(ca, M_PCB);
+			return (ENOMEM);
+		}
+	} else {
+		if ((m->m_flags & M_PKTHDR) == 0) {
+			struct mbuf *mat;
+			mat = m;
+			ca->sndlen = 0;
+			while(m) {
+				ca->sndlen += m->m_len;
+				m = m->m_next;
+			}
+		} else {
+			ca->sndlen = m->m_pkthdr.len;
+		}
+		ca->m = m;
+	}
+
+	ret = sctp_initiate_iterator(sctp_sendall_iterator, SCTP_PCB_ANY_FLAGS, SCTP_ASOC_ANY_STATE,
+				     (void *)ca, 0, sctp_sendall_completes, inp);
+	if(ret) {
+#ifdef SCTP_DEBUG
+		printf("Failed to initate iterator to takeover associations\n");
+#endif
+		FREE(ca, M_PCB);
+		return (EFAULT);
+		
+	}
+	return (0);
+}
+
+
 void
 sctp_toss_old_cookies(struct sctp_association *asoc)
 {
@@ -6882,6 +7053,13 @@ sctp_output(inp, m, addr, control, p)
 		sctppcbinfo.mbuf_track++;
 		if (sctp_find_cmsg(SCTP_SNDRCV, (void *)&srcv, control,
 				   sizeof(srcv))) {
+			if (srcv.sinfo_flags & MSG_SENDALL) {
+				/* its a sendall */
+				sctppcbinfo.mbuf_track--;
+				sctp_m_freem(control);
+				splx(s);
+				return (sctp_sendall(inp, NULL, m, &srcv));
+			}
 			if (srcv.sinfo_assoc_id) {
 #ifdef SCTP_TCP_MODEL_SUPPORT
 				if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
@@ -8912,11 +9090,6 @@ sctp_send_operr_to(struct mbuf *m, int iphlen,
 	}
 }
 
-#define	MC_ALIGN(m, len) do {						\
-	(m)->m_data += (MCLBYTES - (len)) & ~(sizeof(long) - 1);		\
-} while (0)
-
-
 static int
 sctp_copy_one(struct mbuf *m, struct uio *uio, int cpsz, int resv_upfront, int *mbcnt)
 {
@@ -9485,6 +9658,12 @@ sctp_sosend(struct socket *so,
 		if (sctp_find_cmsg(SCTP_SNDRCV, (void *)&srcv, control,
 				   sizeof(srcv))) {
 			/* got one */
+			if (srcv.sinfo_flags & MSG_SENDALL) {
+				/* its a sendall */
+				sctppcbinfo.mbuf_track--;
+				sctp_m_freem(control);
+				return (sctp_sendall(inp, uio, top, &srcv));
+			}
 			use_rcvinfo = 1;
 		}
 	}
