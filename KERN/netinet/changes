@@ -30,4 +30,5 @@ Patch 24 change log
     per the newly forming draft. Still have a bug here where
     we can loose multiple stream resets (labeled with FIXME)
 14) Kernel changes for sctp_sendx()
-15) 
+15) Kernel changes for MSG_SENDALL flag
+16) sctp lib adde of sctp_sendx()
