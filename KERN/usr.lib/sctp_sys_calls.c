@@ -46,6 +46,14 @@
 
 #include <net/if_dl.h>
 
+#ifndef IN6_IS_ADDR_V4MAPPED
+#define IN6_IS_ADDR_V4MAPPED(a)		      \
+	((*(const u_int32_t *)(const void *)(&(a)->s6_addr[0]) == 0) &&	\
+	 (*(const u_int32_t *)(const void *)(&(a)->s6_addr[4]) == 0) &&	\
+	 (*(const u_int32_t *)(const void *)(&(a)->s6_addr[8]) == ntohl(0x0000ffff)))
+#endif
+
+
 #ifdef SCTP_DEBUG_PRINT_ADDRESS
 static void
 SCTPPrintAnAddress(struct sockaddr *a)
@@ -109,47 +117,65 @@ SCTPPrintAnAddress(struct sockaddr *a)
 }
 #endif /* SCTP_DEBUG_PRINT_ADDRESS */
 
+static void
+in6_sin6_2_sin(struct sockaddr_in *sin, struct sockaddr_in6 *sin6)
+{
+	bzero(sin, sizeof(*sin));
+	sin->sin_len = sizeof(struct sockaddr_in);
+	sin->sin_family = AF_INET;
+	sin->sin_port = sin6->sin6_port;
+	sin->sin_addr.s_addr = sin6->sin6_addr.__u6_addr.__u6_addr32[3];
+}
+
 int
 sctp_connectx(int sd, struct sockaddr *addrs, int addrcnt)
 {
+	char buf[2048];
 	int i,len,ret,cnt,*aa;
-	char *buf;
+	char *cpto;
 	struct sockaddr *at;
 	len = sizeof(int);
 	at = addrs;
 	cnt = 0;
+	cpto = ((caddr_t)buf + sizeof(int));
 	/* validate all the addresses and get the size */
 	for (i=0; i < addrcnt; i++) {
-		if ((at->sa_family != AF_INET) &&
-		   (at->sa_family != AF_INET6)) {
+		if (at->sa_family == AF_INET) {
+			memcpy(cpto, at, at->sa_len);
+			cpto = ((caddr_t)cpto + at->sa_len);
+			len += at->sa_len;
+		} else if (at->sa_family == AF_INET6){
+			if(IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6 *)at)->sin6_addr)){
+				struct sockaddr_in sin;
+				len += sizeof(struct sockaddr_in);
+				in6_sin6_2_sin((struct sockaddr_in *)cpto,(struct sockaddr_in6 *)at);
+				cpto = ((caddr_t)cpto + sizeof(struct sockaddr_in));
+				len += sizeof(struct sockaddr_in);
+			} else {
+				memcpy(cpto, at, at->sa_len);
+				cpto = ((caddr_t)cpto + at->sa_len);
+				len += at->sa_len;
+			}
+		} else {
 			errno = EINVAL;
 			return (-1);
 		}
-		len += at->sa_len;
+		if (len > (sizeof(buf)-sizeof(int))) {
+			/* Never enough memory */
+			return(E2BIG);
+		}
 		at = (struct sockaddr *)((caddr_t)at + at->sa_len);
 		cnt++;
-	}
+        }
 	/* do we have any? */
 	if (cnt == 0) {
 		errno = EINVAL;
 		return(-1);
 	}
-	if (len > 2048) {
-		/* Never enough memory */
-		return(E2BIG);
-	}
-
-	buf = malloc(len);
-	if(buf == NULL) {
-		return(ENOMEM);
-	}
 	aa = (int *)buf;
 	*aa = cnt;
-	aa++;
-	memcpy((caddr_t)aa,addrs,(len-sizeof(int)));
 	ret = setsockopt(sd, IPPROTO_SCTP, SCTP_CONNECT_X, (void *)buf,
 			 (unsigned int)len);
-	free(buf);
 	return (ret);
 }
 
