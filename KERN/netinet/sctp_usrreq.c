@@ -3910,7 +3910,6 @@ sctp_usr_recvd(struct socket *so, int flags)
 		 * that you have a tcb_lock only. Thus
 		 * we must release the inp write lock.
 		 */
-		SCTP_INP_WUNLOCK(inp);
 		if (flags & MSG_EOR) {
 			if(((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0)
 			   && ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
@@ -3932,7 +3931,7 @@ sctp_usr_recvd(struct socket *so, int flags)
 		if ((TAILQ_EMPTY(&stcb->asoc.delivery_queue) == 0) ||
 		    (TAILQ_EMPTY(&stcb->asoc.reasmqueue) == 0)) {
 			/* Deliver if there is something to be delivered */
-			sctp_service_queues(stcb, &stcb->asoc);
+			sctp_service_queues(stcb, &stcb->asoc, 1);
 		}
 		sctp_set_rwnd(stcb, &stcb->asoc);
 		/* if we increase by 1 or more MTU's (smallest MTUs of all
@@ -3954,14 +3953,6 @@ sctp_usr_recvd(struct socket *so, int flags)
 			/* Now do the output */
 			sctp_chunk_output(inp, stcb, 10);
 		}
-		/* Now lets get back the INP
-		 * write lock, to do that we need to 
-		 * unlock the tcb, then relock the
-		 * inp and then get our tcb lock back too.
-		 */
-		SCTP_TCB_UNLOCK(stcb);
-		SCTP_INP_WLOCK(inp);
-		SCTP_TCB_LOCK(stcb);
 	} else {
 		if ((( sq ) && (flags & MSG_EOR) && ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0)) 
 		    && ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {

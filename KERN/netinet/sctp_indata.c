@@ -297,6 +297,10 @@ sctp_deliver_data(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		printf("I am now in Deliver data! (%p)\n", chk);
 	}
 #endif
+	/* get a write lock on the inp */
+	SCTP_TCB_UNLOCK(stcb);
+	SCTP_INP_WLOCK(stcb->sctp_ep);
+	SCTP_TCB_LOCK(stcb);
 	free_it = 0;
 	/* We always add it to the queue */
 	if (stcb && (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
@@ -336,6 +340,7 @@ sctp_deliver_data(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			}
 			sctppcbinfo.ipi_gencnt_chunk++;
 		}
+		SCTP_INP_WUNLOCK(stcb->sctp_ep);
 		return (0);
 	}
 	if (chk != NULL) {
@@ -353,6 +358,7 @@ sctp_deliver_data(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			printf("Fragmented delivery in progress?\n");
 		}
 #endif
+		SCTP_INP_WUNLOCK(stcb->sctp_ep);
 		return (0);
 	}
 	/* Now grab the first one  */
@@ -366,11 +372,13 @@ sctp_deliver_data(struct sctp_tcb *stcb, struct sctp_association *asoc,
 #endif
 		asoc->size_on_delivery_queue = 0;
 		asoc->cnt_on_delivery_queue = 0;
+		SCTP_INP_WUNLOCK(stcb->sctp_ep);
 		return (0);
 	}
 
 	if (stcb->sctp_socket->so_rcv.sb_cc >= stcb->sctp_socket->so_rcv.sb_hiwat) {
 		/* Boy, there really is NO room */
+		SCTP_INP_WUNLOCK(stcb->sctp_ep);
 		return (0);
 	}
 #ifdef SCTP_DEBUG
@@ -383,6 +391,7 @@ sctp_deliver_data(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		MGETHDR(m, M_DONTWAIT, MT_DATA);
 		if (m == NULL) {
 			/* no room! */
+			SCTP_INP_WUNLOCK(stcb->sctp_ep);
 			return (0);
 		}
 		m->m_pkthdr.len = chk->send_size;
@@ -442,9 +451,6 @@ sctp_deliver_data(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			}
 			goto skip;
 		}
-		SCTP_TCB_UNLOCK(stcb);
-		SCTP_INP_WLOCK(stcb->sctp_ep);
-		SCTP_TCB_LOCK(stcb);
 		if (!sbappendaddr_nocheck(&stcb->sctp_socket->so_rcv,
 		    to, chk->data, control, stcb->asoc.my_vtag,
 		    stcb->sctp_ep)) {
@@ -465,7 +471,6 @@ sctp_deliver_data(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			}
 			free_it = 1;
 		}
-		SCTP_INP_WUNLOCK(stcb->sctp_ep);
 	} else {
 		/* append to a already started message. */
 		if (sctp_sbspace(&stcb->sctp_socket->so_rcv) >=
@@ -475,6 +480,7 @@ sctp_deliver_data(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		}
 	}
  skip:
+	SCTP_INP_WUNLOCK(stcb->sctp_ep);
 	/* free up the one we inserted */
 	if (free_it) {
 		/* Pull it off the queue */
@@ -509,7 +515,7 @@ sctp_deliver_data(struct sctp_tcb *stcb, struct sctp_association *asoc,
  * 3) hit the SCTP_DATA_LAST_FRAG flag.
  */
 static void
-sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
+sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc, int hold_locks)
 {
 	struct sockaddr *to;
 	struct sockaddr_in6 sin6;
@@ -519,7 +525,14 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 	u_int16_t stream_no;
 	int cntDel;
 	cntDel = stream_no = 0;
-
+	if( hold_locks == 0 ) {
+		/* you always have the TCB lock, we need
+		 * to have the inp write lock as well.
+		 */
+		SCTP_TCB_UNLOCK(stcb);
+		SCTP_INP_WLOCK(stcb->sctp_ep);
+		SCTP_TCB_LOCK(stcb);
+	}
 	if (stcb && (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
 		/* socket above is long gone */
 		asoc->fragmented_delivery_inprogress = 0;
@@ -541,6 +554,8 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 			}
 			sctppcbinfo.ipi_gencnt_chunk++;
 		}
+		if( hold_locks == 0 ) 
+			SCTP_INP_WUNLOCK(stcb->sctp_ep);
 		return;
 	}
 	do {
@@ -550,6 +565,8 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 				sctp_sorwakeup(stcb->sctp_ep,
 				    stcb->sctp_socket);
 			}
+			if( hold_locks == 0 ) 
+				SCTP_INP_WUNLOCK(stcb->sctp_ep);
 			return;
 		}
 		chk = TAILQ_FIRST(&asoc->reasmqueue);
@@ -558,6 +575,8 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 				sctp_sorwakeup(stcb->sctp_ep,
 				    stcb->sctp_socket);
 			}
+			if( hold_locks == 0 ) 
+				SCTP_INP_WUNLOCK(stcb->sctp_ep);
 			return;
 		}
 		if (chk->rec.data.TSN_seq != (asoc->tsn_last_delivered + 1)) {
@@ -566,6 +585,8 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 				sctp_sorwakeup(stcb->sctp_ep,
 				    stcb->sctp_socket);
 			}
+			if( hold_locks == 0 ) 
+				SCTP_INP_WUNLOCK(stcb->sctp_ep);
 			return;
 		}
 		stream_no = chk->rec.data.stream_number;
@@ -580,6 +601,8 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 				sctp_sorwakeup(stcb->sctp_ep,
 				    stcb->sctp_socket);
 			}
+			if( hold_locks == 0 ) 
+				SCTP_INP_WUNLOCK(stcb->sctp_ep);
 			return;
 		}
 
@@ -587,6 +610,8 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 			MGETHDR(m, M_DONTWAIT, MT_DATA);
 			if (m == NULL) {
 				/* no room! */
+				if( hold_locks == 0 ) 
+					SCTP_INP_WUNLOCK(stcb->sctp_ep);
 				return;
 			}
 			m->m_pkthdr.len = chk->send_size;
@@ -645,11 +670,10 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 				}
 				sctp_sorwakeup(stcb->sctp_ep,
 				    stcb->sctp_socket);
+				if( hold_locks == 0 ) 
+					SCTP_INP_WUNLOCK(stcb->sctp_ep);
 				return;
 			}
-			SCTP_TCB_UNLOCK(stcb);
-			SCTP_INP_WLOCK(stcb->sctp_ep);
-			SCTP_TCB_LOCK(stcb);
 			if (!sbappendaddr_nocheck(&stcb->sctp_socket->so_rcv,
 			    to, chk->data, control, stcb->asoc.my_vtag,
 			    stcb->sctp_ep)) {
@@ -661,6 +685,8 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 				}
 				sctp_sorwakeup(stcb->sctp_ep,
 				    stcb->sctp_socket);
+				if( hold_locks == 0 ) 
+					SCTP_INP_WUNLOCK(stcb->sctp_ep);
 				return;
 			}
 			if((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) {
@@ -671,7 +697,8 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 			} else {
 				stcb->asoc.my_rwnd_control_len += sizeof(struct mbuf);
 			}
-			SCTP_INP_WUNLOCK(stcb->sctp_ep);
+			if( hold_locks == 0 ) 
+				SCTP_INP_WUNLOCK(stcb->sctp_ep);
 			cntDel++;
 		} else {
 			if (sctp_sbspace(&stcb->sctp_socket->so_rcv) >=
@@ -682,6 +709,8 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 				/* out of space in the sb */
 				sctp_sorwakeup(stcb->sctp_ep,
 				    stcb->sctp_socket);
+				if( hold_locks == 0 ) 
+					SCTP_INP_WUNLOCK(stcb->sctp_ep);
 				return;
 			}
 		}
@@ -752,6 +781,8 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 					break;
 			}
 			sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
+			if( hold_locks == 0 ) 
+				SCTP_INP_WUNLOCK(stcb->sctp_ep);
 			return;
 		}
 		chk = TAILQ_FIRST(&asoc->reasmqueue);
@@ -759,6 +790,8 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 	if (cntDel) {
 		sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 	}
+	if( hold_locks == 0 ) 
+		SCTP_INP_WUNLOCK(stcb->sctp_ep);
 }
 
 /*
@@ -1566,11 +1599,11 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				    chk->rec.data.stream_number;
 				asoc->ssn_of_pdapi = chk->rec.data.stream_seq;
 				asoc->fragment_flags = chk->rec.data.rcv_flags;
-				sctp_service_reassembly(stcb, asoc);
+				sctp_service_reassembly(stcb, asoc, 0);
 			}
 		}
 	} else {
-		sctp_service_reassembly(stcb, asoc);
+		sctp_service_reassembly(stcb, asoc, 0);
 	}
 }
 
@@ -2381,7 +2414,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 }
 
 void
-sctp_service_queues(struct sctp_tcb *stcb, struct sctp_association *asoc)
+sctp_service_queues(struct sctp_tcb *stcb, struct sctp_association *asoc, int hold_locks)
 {
 	struct sctp_tmit_chunk *chk;
 	int tsize, cntDel;
@@ -2389,7 +2422,7 @@ sctp_service_queues(struct sctp_tcb *stcb, struct sctp_association *asoc)
 
 	cntDel = 0;
 	if (asoc->fragmented_delivery_inprogress) {
-		sctp_service_reassembly(stcb, asoc);
+		sctp_service_reassembly(stcb, asoc, hold_locks);
 	}
 	/* Can we proceed further, i.e. the PD-API is complete */
 	if (asoc->fragmented_delivery_inprogress) {
@@ -2451,7 +2484,7 @@ sctp_service_queues(struct sctp_tcb *stcb, struct sctp_association *asoc)
 			asoc->str_of_pdapi = chk->rec.data.stream_number;
 			asoc->ssn_of_pdapi = chk->rec.data.stream_seq;
 			asoc->fragment_flags = chk->rec.data.rcv_flags;
-			sctp_service_reassembly(stcb, asoc);
+			sctp_service_reassembly(stcb, asoc, hold_locks);
 		}
 	}
 }
@@ -2637,7 +2670,7 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 		SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_last_rcvd);
 	}
 	/* now service all of the reassm queue and delivery queue */
-	sctp_service_queues(stcb, asoc);
+	sctp_service_queues(stcb, asoc, 0);
 	if (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_SENT) {
 		/*
 		 * Assure that we ack right away by making
@@ -3496,7 +3529,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 #endif
 	}
 
-	sctp_service_queues(stcb, asoc);
+	sctp_service_queues(stcb, asoc, 0);
 
 	/*
 	 * Now perform the actual SACK handling:
@@ -4525,7 +4558,7 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 	 * progress it forward
 	 */
 	if (asoc->fragmented_delivery_inprogress) {
-		sctp_service_reassembly(stcb, asoc);
+		sctp_service_reassembly(stcb, asoc, 0);
 	}
 	if (!TAILQ_EMPTY(&asoc->reasmqueue)) {
 		/* For each one on here see if we need to toss it */
