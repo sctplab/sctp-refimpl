@@ -5976,7 +5976,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 						printf("Update HB time anyway\n");
 					}
 #endif
-					if(now_filled == 0) {
+					if(*now_filled == 0) {
 						SCTP_GETTIME_TIMEVAL(&net->last_sent_time);
 						*now_filled = 1;
 						*now = net->last_sent_time;
@@ -6004,7 +6004,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 			}
 			if (bundle_at || hbflag) {
 				/* For data/asconf and hb set time */
-				if(now_filled == 0) {
+				if(*now_filled == 0) {
 					SCTP_GETTIME_TIMEVAL(&net->last_sent_time);
 					*now_filled = 1;
 					*now = net->last_sent_time;
