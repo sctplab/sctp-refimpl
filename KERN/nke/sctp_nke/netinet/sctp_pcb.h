@@ -165,14 +165,14 @@ struct sctp_epinfo {
 	struct uma_zone *ipi_zone_ep;
 	struct uma_zone *ipi_zone_asoc;
 	struct uma_zone *ipi_zone_laddr;
-	struct uma_zone *ipi_zone_raddr;
+	struct uma_zone *ipi_zone_net;
 	struct uma_zone *ipi_zone_chunk;
 	struct uma_zone *ipi_zone_sockq;
 #else
 	struct vm_zone *ipi_zone_ep;
 	struct vm_zone *ipi_zone_asoc;
 	struct vm_zone *ipi_zone_laddr;
-	struct vm_zone *ipi_zone_raddr;
+	struct vm_zone *ipi_zone_net;
 	struct vm_zone *ipi_zone_chunk;
 	struct vm_zone *ipi_zone_sockq;
 #endif
@@ -181,9 +181,14 @@ struct sctp_epinfo {
 	struct pool ipi_zone_ep;
 	struct pool ipi_zone_asoc;
 	struct pool ipi_zone_laddr;
-	struct pool ipi_zone_raddr;
+	struct pool ipi_zone_net;
 	struct pool ipi_zone_chunk;
 	struct pool ipi_zone_sockq;
+#endif
+
+#if defined(__FreeBSD__) && __FreeBSD_version >= 503000
+	struct mtx ipi_ep_mtx;
+	struct mtx ipi_asoc_mtx;
 #endif
 	u_int ipi_count_ep;
 	u_quad_t ipi_gencnt_ep;
@@ -288,6 +293,11 @@ struct sctp_pcb {
 
 #define sctp_lport ip_inp.inp.inp_lport
 
+struct sctp_socket_q_list {
+	struct sctp_tcb *tcb;
+	TAILQ_ENTRY(sctp_socket_q_list) next_sq;
+};
+
 struct sctp_inpcb {
 	/*
 	 * put an inpcb in front of it all, kind of a waste but we need
@@ -338,6 +348,9 @@ struct sctp_inpcb {
 	u_char inp_ip_ttl;
 	u_char inp_ip_tos;
 #endif
+#if defined(__FreeBSD__) && __FreeBSD_version >= 503000
+	struct mtx inp_mtx;
+#endif
 };
 
 struct sctp_tcb {
@@ -349,15 +362,59 @@ struct sctp_tcb {
 	struct sctp_association asoc;
 	uint16_t rport;			/* remote port in network format */
 	uint16_t resv;
+#if defined(__FreeBSD__) && __FreeBSD_version >= 503000
+	struct mtx tcb_mtx;
+#endif
 };
 
+#if defined(__FreeBSD__) && __FreeBSD_version >= 503000
+#define SCTP_INP_INFO_LOCK_INIT() \
+        mtx_init(&sctppcbinfo.ipi_ep_mtx, "sctp", "inp_info", MTX_DEF | MTX_RECURSE)
+#define SCTP_INP_INFO_RLOCK()		mtx_lock(&sctppcbinfo.ipi_ep_mtx)
+#define SCTP_INP_INFO_WLOCK()		mtx_lock(&sctppcbinfo.ipi_ep_mtx)
+#define SCTP_INP_INFO_RUNLOCK()		mtx_unlock(&sctppcbinfo.ipi_ep_mtx)
+#define SCTP_INP_INFO_WUNLOCK()		mtx_unlock(&sctppcbinfo.ipi_ep_mtx)
+#define SCTP_INP_INFO_RLOCK_ASSERT()	do { \
+        mtx_assert(&sctppcbinfo.ipi_ep_mtx, MA_OWNED); \
+        NET_ASSERT_GIANT(); \
+} while (0)
 
-struct sctp_socket_q_list {
-	struct sctp_tcb *tcb;
-	TAILQ_ENTRY(sctp_socket_q_list) next_sq;
-};
+#define SCTP_TCB_INFO_LOCK_INIT() \
+        mtx_init(&sctppcbinfo.ipi_tcb_info, "sctp", "tcb_info", MTX_DEF | MTX_RECURSE)
+#define SCTP_TCB_INFO_RLOCK()		mtx_lock(&sctppcbinfo.ipi_tcb_info)
+#define SCTP_TCB_INFO_WLOCK()		mtx_lock(&sctppcbinfo.ipi_tcb_info)
+#define SCTP_TCB_INFO_RUNLOCK()		mtx_unlock(&sctppcbinfo.ipi_tcb_info)
+#define SCTP_TCB_INFO_WUNLOCK()		mtx_unlock(&sctppcbinfo.ipi_tcb_info)
+#define SCTP_TCB_INFO_RLOCK_ASSERT()	do { \
+        mtx_assert(&sctppcbinfo.ipi_tcb_info, MA_OWNED); \
+        NET_ASSERT_GIANT(); \
+} while (0)
 
+#define SCTP_INP_INFO_WLOCK_ASSERT(ipi)      do {                            \
+        mtx_assert(&(ipi)->ipi_mtx, MA_OWNED);                          \
+        NET_ASSERT_GIANT();                                             \
+} while (0)
 
+#define SCTP_INP_LOCK_INIT(_inp) \
+	mtx_init(&(_inp)->inp_mtx, "sctp", "inp", MTX_DEF | MTX_RECURSE | MTX_DUPOK)
+#define SCTP_INP_LOCK_DESTROY(_inp)	mtx_destroy(&(_inp)->inp_mtx)
+#define SCTP_INP_LOCK(_inp)		mtx_lock(&(_inp)->inp_mtx)
+#define SCTP_INP_UNLOCK(_inp)		mtx_unlock(&(_inp)->inp_mtx)
+#define SCTP_INP_LOCK_ASSERT(_inp)	do { \
+	mtx_assert(&(_inp)->inp_mtx, MA_OWNED); \
+	NET_ASSERT_GIANT(); \
+} while (0)
+
+#define SCTP_TCB_LOCK_INIT(_tcb) \
+	mtx_init(&(_tcb)->inp_mtx, "sctp", "tcb", MTX_DEF | MTX_RECURSE | MTX_DUPOK)
+#define SCTP_TCB_LOCK_DESTROY(_tcb)	mtx_destroy(&(_tcb)->inp_mtx)
+#define SCTP_TCB_LOCK(_tcb)		mtx_lock(&(_tcb)->inp_mtx)
+#define SCTP_TCB_UNLOCK(_tcb)		mtx_unlock(&(_tcb)->inp_mtx)
+#define SCTP_TCB_LOCK_ASSERT(_tcb)	do { \
+	mtx_assert(&(_tcb)->tcb_mtx, MA_OWNED); \
+	NET_ASSERT_GIANT(); \
+} while (0)
+#endif
 
 #if defined(_KERNEL) || (defined(__APPLE__) && defined(KERNEL))
 

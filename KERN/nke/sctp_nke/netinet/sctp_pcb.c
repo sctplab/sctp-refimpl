@@ -105,10 +105,6 @@
 #endif
 #endif /* INET6 */
 
-#ifndef APPLE_NKE
-#include "faith.h"
-#endif
-
 #ifdef IPSEC
 #ifndef __OpenBSD__
 #include <netinet6/ipsec.h>
@@ -1961,8 +1957,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	struct inpcb *ip_pcb;
 	struct socket *so;
 	struct sctp_socket_q_list *sq;
-	struct rtentry *rt;
+ 	struct rtentry *rt;
 	int s, cnt;
+
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
 #else
@@ -1987,7 +1984,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	m = &inp->sctp_ep;
 	ip_pcb = &inp->ip_inp.inp; /* we could just cast the main
 				   * pointer here but I will
-				   * be nice :> ( i.e. ip_pcb = ep;)
+				   * be nice :> (i.e. ip_pcb = ep;)
 				   */
 	/* fix any iterators */
 	sctp_iterator_inp_being_freed(inp);
@@ -2055,7 +2052,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		}
 	}
 	inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_ALLGONE;
-	rt = ip_pcb->inp_route.ro_rt;
+ 	rt = ip_pcb->inp_route.ro_rt;
 	if (so) {
 	/* First take care of socket level things */
 #ifdef IPSEC
@@ -2095,10 +2092,10 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		(void)m_free(ip_pcb->inp_options);
 		ip_pcb->inp_options = 0;
 	}
-	if (rt) {
-		RTFREE(rt);
-		ip_pcb->inp_route.ro_rt = 0;
-	}
+ 	if (rt) {
+ 		RTFREE(rt);
+ 		ip_pcb->inp_route.ro_rt = 0;
+ 	}
 	if (ip_pcb->inp_moptions) {
 		ip_freemoptions(ip_pcb->inp_moptions);
 		ip_pcb->inp_moptions = 0;
@@ -2360,7 +2357,10 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 				 * we must have common site scope. Don't set
 				 * the local scope since we may not share all
 				 * links, only loopback can do this.
+ 				 * Links on the local network would also
+ 				 * be on our private network for v4 too.
 				 */
+ 				stcb->asoc.ipv4_local_scope = 1;
 				stcb->asoc.site_scope = 1;
 			} else if (IN6_IS_ADDR_SITELOCAL(&sin6->sin6_addr)) {
 				/*
@@ -2395,7 +2395,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 		/* not supported family type */
 		return (-1);
 	}
-	net = (struct sctp_nets *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_raddr);
+	net = (struct sctp_nets *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_net);
 	if (net == NULL) {
 		return (-1);
 	}
@@ -2767,7 +2767,7 @@ sctp_free_remote_addr(struct sctp_nets *net)
 		callout_stop(&net->rxt_timer.timer);
 		callout_stop(&net->pmtu_timer.timer);
 		net->dest_state = SCTP_ADDR_NOT_REACHABLE;
-		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_raddr, net);
+		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_net, net);
 		sctppcbinfo.ipi_count_raddr--;
 	}
 }
@@ -2998,7 +2998,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		TAILQ_REMOVE(&asoc->nets, net, sctp_next);
 		/* free it */
 		net->ref_count = 0;
-		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_raddr, net);
+		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_net, net);
 		sctppcbinfo.ipi_count_raddr--;
 	}
 	/*
@@ -3750,7 +3750,7 @@ sctp_pcb_init()
 	    sizeof(struct sctp_laddr),
 	    (sctp_max_number_of_assoc * sctp_scale_up_for_address));
 
-	SCTP_ZONE_INIT(sctppcbinfo.ipi_zone_raddr, "sctp_raddr",
+	SCTP_ZONE_INIT(sctppcbinfo.ipi_zone_net, "sctp_raddr",
 	    sizeof(struct sctp_nets),
 	    (sctp_max_number_of_assoc * sctp_scale_up_for_address));
 
@@ -4496,15 +4496,17 @@ sctp_remove_from_socket_q(struct sctp_inpcb *inp)
 }
 
 int
-sctp_initiate_iterator(asoc_func af, uint32_t pcb_state, 
-    uint32_t asoc_state, void *argp, uint32_t argi,end_func ef, struct sctp_inpcb *s_inp)
+sctp_initiate_iterator(asoc_func af, uint32_t pcb_state, uint32_t asoc_state,
+		       void *argp, uint32_t argi, end_func ef,
+		       struct sctp_inpcb *s_inp)
 {
 	struct sctp_iterator *it=NULL;	
 	int s;
 	if (af == NULL) {
 		return (-1);
 	}
-	MALLOC(it, struct sctp_iterator *, sizeof(struct sctp_iterator), M_PCB, M_WAITOK);
+	MALLOC(it, struct sctp_iterator *, sizeof(struct sctp_iterator), M_PCB,
+	       M_WAITOK);
 	if (it == NULL) {
 		return(ENOMEM);
 	}
@@ -4515,12 +4517,12 @@ sctp_initiate_iterator(asoc_func af, uint32_t pcb_state,
 	it->val = argi;
 	it->pcb_flags = pcb_state;
 	it->asoc_state = asoc_state;
-	if( s_inp ) { 
+	if (s_inp) { 
 		it->inp = s_inp;
-		it->iterator_flags = SCTP_INTERATOR_DO_SINGLE_INP;
+		it->iterator_flags = SCTP_ITERATOR_DO_SINGLE_INP;
 	} else {
 		it->inp = LIST_FIRST(&sctppcbinfo.listhead);
-		it->iterator_flags = SCTP_INTERATOR_DO_ALL_INP;
+		it->iterator_flags = SCTP_ITERATOR_DO_ALL_INP;
 	}
 	/* Init the timer */
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
@@ -4577,7 +4579,6 @@ callout_reset(struct callout *c, int to_ticks, void (*ftn)(void *), void *arg)
 	c->c_func = ftn;
 #ifdef __APPLE__
 	c->c_time = to_ticks;	/* just store the requested timeout */
-/*	thread_call_enter_delayed(c->c_call, to_ticks); */
 	timeout(ftn, arg, to_ticks);
 #else
 	c->c_time = ticks + to_ticks;

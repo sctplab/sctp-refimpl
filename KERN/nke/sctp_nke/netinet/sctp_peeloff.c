@@ -111,6 +111,40 @@ sctp_can_peel_off(struct socket *head, caddr_t assoc_id)
 	return (0);
 }
 
+int
+sctp_do_peeloff(struct socket *head, struct socket *so, caddr_t assoc_id)
+{
+	struct sctp_inpcb *inp, *n_inp;
+	struct sctp_tcb *stcb;
+
+	inp = (struct sctp_inpcb *)head->so_pcb;
+	if (inp == NULL)
+		return (EFAULT);
+	stcb = sctp_findassociation_ep_asocid(inp, assoc_id);
+	if (stcb == NULL)
+		return (ENOTCONN);
+
+	n_inp = (struct sctp_inpcb *)so->so_pcb;
+	n_inp->sctp_flags = (SCTP_PCB_FLAGS_UDPTYPE |
+	    SCTP_PCB_FLAGS_CONNECTED |
+	    SCTP_PCB_FLAGS_IN_TCPPOOL | /* Turn on Blocking IO */
+	    (SCTP_PCB_COPY_FLAGS & inp->sctp_flags));
+	n_inp->sctp_socket = so;
+
+	/*
+	 * Now we must move it from one hash table to another and get
+	 * the stcb in the right place.
+	 */
+	sctp_move_pcb_and_assoc(inp, n_inp, stcb);
+	/* 
+	 * And now the final hack. We move data in the 
+	 * pending side i.e. head to the new socket
+	 * buffer. Let the GRUBBING begin :-0
+	 */
+	sctp_grub_through_socket_buffer(inp, head, so, stcb);
+	return (0);
+}
+
 struct socket *
 sctp_get_peeloff(struct socket *head, caddr_t assoc_id, int *error)
 {
@@ -142,14 +176,13 @@ sctp_get_peeloff(struct socket *head, caddr_t assoc_id, int *error)
 		}
 #endif /* SCTP_DEBUG */
 		*error = ENOMEM;
-		return (newso);
+		return (NULL);
 	}
 	n_inp = (struct sctp_inpcb *)newso->so_pcb;
 	n_inp->sctp_flags = (SCTP_PCB_FLAGS_UDPTYPE |
-			     SCTP_PCB_FLAGS_CONNECTED |
-			     SCTP_PCB_FLAGS_IN_TCPPOOL |
-			     /* Turn on Blocking IO */
-			     (SCTP_PCB_COPY_FLAGS & inp->sctp_flags));
+	    SCTP_PCB_FLAGS_CONNECTED |
+	    SCTP_PCB_FLAGS_IN_TCPPOOL | /* Turn on Blocking IO */
+	    (SCTP_PCB_COPY_FLAGS & inp->sctp_flags));
 	n_inp->sctp_socket = newso;
 	/* Turn off any non-blocking symantic. */
 	newso->so_state &= ~SS_NBIO;
