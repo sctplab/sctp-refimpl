@@ -358,7 +358,7 @@ struct sctp_association {
 	/* wait to the point the cum-ack passes 
 	 * pending_reply->sr_resp.reset_at_tsn.
 	 */
-	struct sctp_stream_reset_resp *pending_reply;
+	struct sctp_stream_reset_response *pending_reply;
 	struct sctpchunk_listhead pending_reply_queue;
 
 	u_int32_t cookie_preserve_req;

@@ -996,7 +996,7 @@ int sctp_strreset_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		if (strrst->rec.chunk_id == SCTP_STREAM_RESET) {
 			/* is it what we want */
 			strreq = mtod(strrst->data, struct sctp_stream_reset_req *);
-			if (strreq->ph.param_type == ntohs(SCTP_STR_RESET_REQUEST)) {
+			if (strreq->sr_req.ph.param_type == ntohs(SCTP_STR_RESET_REQUEST)) {
 				break;
 			}
 		}

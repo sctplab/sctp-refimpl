@@ -4798,7 +4798,7 @@ sctp_clean_up_ctl(struct sctp_association *asoc)
 			struct sctp_stream_reset_req *strreq;
 			/* special handling, we must look into the param */
 			strreq = mtod(chk->data, struct sctp_stream_reset_req *);
-			if (strreq->ph.param_type == ntohs(SCTP_STR_RESET_RESPONSE)) {
+			if (strreq->sr_req.ph.param_type == ntohs(SCTP_STR_RESET_RESPONSE)) {
 				goto clean_up_anyway;
 			}
 		}
@@ -6261,7 +6261,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 				 */
 				struct sctp_stream_reset_req *strreq;				
 				strreq = mtod(chk->data, struct sctp_stream_reset_req *);
-				if (strreq->ph.param_type != ntohs(SCTP_STR_RESET_REQUEST)) {
+				if (strreq->sr_req.ph.param_type != ntohs(SCTP_STR_RESET_REQUEST)) {
 					continue;
 				}
 			}
@@ -8324,14 +8324,15 @@ sctp_send_cwr(struct sctp_tcb *stcb, struct sctp_nets *net, uint32_t high_tsn)
 }
 static void
 sctp_reset_the_streams(struct sctp_tcb *stcb, 
-     struct sctp_stream_reset_req *req, int number_entries, uint16_t *list)
+     struct sctp_stream_reset_request *req, int number_entries, uint16_t *list)
 {
 	int i;
 
-	if (req->sr_req.reset_flags & SCTP_RESET_ALL) {
+	if (req->reset_flags & SCTP_RESET_ALL) {
 		for (i=0; i<stcb->asoc.streamoutcnt; i++) {
 			stcb->asoc.strmout[i].next_sequence_sent = 0;
 		}
+		number_entries = stcb->asoc.streamoutcnt;
 	} else if (number_entries) {
 		for (i=0; i<number_entries; i++) {
 			if (list[i] >= stcb->asoc.streamoutcnt) {
@@ -8346,7 +8347,7 @@ sctp_reset_the_streams(struct sctp_tcb *stcb,
 
 void
 sctp_send_str_reset_ack(struct sctp_tcb *stcb, 
-     struct sctp_stream_reset_req *req)
+     struct sctp_stream_reset_request *req)
 {
 	struct sctp_association *asoc;
 	struct sctp_stream_reset_resp *strack;
@@ -8357,10 +8358,10 @@ sctp_send_str_reset_ack(struct sctp_tcb *stcb,
 	uint16_t *list=NULL;
 
 	asoc = &stcb->asoc;
-	if (req->sr_req.reset_flags & SCTP_RESET_ALL)	
+	if (req->reset_flags & SCTP_RESET_ALL)	
 		number_entries = 0;
 	else
-		number_entries = (ntohs(req->ch.chunk_length) - sizeof(struct sctp_stream_reset_req)) / sizeof(uint16_t);
+		number_entries = (ntohs(req->ph.param_length) - sizeof(struct sctp_stream_reset_request)) / sizeof(uint16_t);
 
 	chk = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk);
 	if (chk == NULL) {
@@ -8414,8 +8415,8 @@ sctp_send_str_reset_ack(struct sctp_tcb *stcb,
 
 	memset(strack->sr_resp.reset_pad,0,sizeof(strack->sr_resp.reset_pad));
 
-	strack->ph.param_type = ntohs(SCTP_STR_RESET_RESPONSE);
-	strack->ph.param_length = htons((chk->send_size - sizeof(struct sctp_chunkhdr)));
+	strack->sr_resp.ph.param_type = ntohs(SCTP_STR_RESET_RESPONSE);
+	strack->sr_resp.ph.param_length = htons((chk->send_size - sizeof(struct sctp_chunkhdr)));
 
 
 
@@ -8432,18 +8433,17 @@ sctp_send_str_reset_ack(struct sctp_tcb *stcb,
 	}
 
         /* actual response */
-	if (req->sr_req.reset_flags & SCTP_RESET_YOUR) {
+	if (req->reset_flags & SCTP_RESET_YOUR) {
 		strack->sr_resp.reset_flags = SCTP_RESET_PERFORMED; 
 	} else {
 		strack->sr_resp.reset_flags = 0; 
 	}
 
-
 	/* copied from reset request */
-	strack->sr_resp.reset_req_seq_resp = req->sr_req.reset_req_seq;
-	seq = ntohl(req->sr_req.reset_req_seq);
+	strack->sr_resp.reset_req_seq_resp = req->reset_req_seq;
+	seq = ntohl(req->reset_req_seq);
 
-	list = req->sr_req.list_of_streams;
+	list = req->list_of_streams;
 	/* copy the un-converted network byte order streams */
 	for (i=0; i<number_entries; i++) {
 		strack->sr_resp.list_of_streams[i] = list[i];
@@ -8462,11 +8462,11 @@ sctp_send_str_reset_ack(struct sctp_tcb *stcb,
 				list[i] = temp;
 			}
 		}
-		if (req->sr_req.reset_flags & SCTP_RESET_YOUR) {
+		if (req->reset_flags & SCTP_RESET_YOUR) {
 			/* reset my outbound streams */
 			sctp_reset_the_streams(stcb, req , number_entries, list);
 		}
-		if (req->sr_req.reset_flags & SCTP_RECIPRICAL) {
+		if (req->reset_flags & SCTP_RECIPRICAL) {
 			/* reset peer too */
 			sctp_send_str_reset_req(stcb, number_entries, list, two_way, not_peer);
 		}
@@ -8567,8 +8567,8 @@ sctp_send_str_reset_req(struct sctp_tcb *stcb,
 	strreq->ch.chunk_flags = 0;
 	strreq->ch.chunk_length = htons(chk->send_size);
 
-	strreq->ph.param_type = ntohs(SCTP_STR_RESET_REQUEST);
-	strreq->ph.param_length = htons((chk->send_size - sizeof(struct sctp_chunkhdr)));
+	strreq->sr_req.ph.param_type = ntohs(SCTP_STR_RESET_REQUEST);
+	strreq->sr_req.ph.param_length = htons((chk->send_size - sizeof(struct sctp_chunkhdr)));
 
 	if (chk->send_size % 4) {
 		/* need a padding for the end */

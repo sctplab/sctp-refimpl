@@ -189,7 +189,7 @@ sctp_bindx(int fd, struct sockaddr *addrs, int addrcnt, int flags)
 			free(gaddrs);
 			return(-1);
 		}
-		memset(gaddrs->addr, 0, argsz);
+		memset(gaddrs, 0, argsz);
 		sa = (struct sockaddr *)((caddr_t)sa + sz);
 	}
 	free(gaddrs);
