@@ -361,32 +361,39 @@ sctp_sendmsg(int s,
 		struct sockaddr_in6 in6;
 	}addr;
 
-	if (to->sa_len == 0) {
-		/* For the lazy app, that did not
-		 * set sa_len, we attempt to set for them.
-		 */
- 		if(to->sa_family == AF_INET){
-			memcpy(&addr, to, sizeof(struct sockaddr_in));
-			addr.in.sin_len = sizeof(struct sockaddr_in);
-		}else if(to->sa_family == AF_INET6){
-			memcpy(&addr, to, sizeof(struct sockaddr_in6));
-			addr.in6.sin6_len = sizeof(struct sockaddr_in6);
+	if (to) {
+		if (to->sa_len == 0) {
+			/* For the lazy app, that did not
+			* set sa_len, we attempt to set for them.
+			*/
+			if(to->sa_family == AF_INET){
+				memcpy(&addr, to, sizeof(struct sockaddr_in));
+				addr.in.sin_len = sizeof(struct sockaddr_in);
+			} else if(to->sa_family == AF_INET6){
+				memcpy(&addr, to, sizeof(struct sockaddr_in6));
+				addr.in6.sin6_len = sizeof(struct sockaddr_in6);
+			}
+		} else {
+			memcpy (&addr, to, to->sa_len);
 		}
-	} else {
-		memcpy (&addr, to, to->sa_len);
+		who = (struct sockaddr *)&addr;
 	}
-	who = (struct sockaddr *)&addr;
 	iov[0].iov_base = (char *)data;
 	iov[0].iov_len = len;
 	iov[1].iov_base = NULL;
 	iov[1].iov_len = 0;
 
-	msg.msg_name = (caddr_t)who;
-	msg.msg_namelen = who->sa_len;
+	if (to) {
+		msg.msg_name = (caddr_t)who;
+		msg.msg_namelen = who->sa_len;
+	} else {
+		msg.msg_name = (caddr_t)NULL;
+		msg.msg_namelen = 0;
+	}
 	msg.msg_iov = iov;
 	msg.msg_iovlen = 1;
 	msg.msg_control = (caddr_t)controlVector;
-  
+
 	cmsg = (struct cmsghdr *)controlVector;
 
 	cmsg->cmsg_level = IPPROTO_SCTP;
