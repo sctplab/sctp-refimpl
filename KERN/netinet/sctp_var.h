@@ -38,6 +38,7 @@
 #ifndef __OpenBSD__
 #include <sys/socketvar.h>
 #endif
+#include <netinet/sctp_uio.h>
 
 /* SCTP Kernel structures */
 
