@@ -2777,7 +2777,7 @@ sctp_handle_stream_reset_response(struct sctp_tcb *stcb,
  		stcb->asoc.str_reset_seq_out++;
  		stcb->asoc.stream_reset_outstanding = 0;
  		tsn = ntohl(resp->reset_at_tsn);
- 		number_entries = (param_length - sizeof(struct sctp_stream_reset_resp))/sizeof(uint16_t);
+ 		number_entries = (param_length - sizeof(struct sctp_stream_reset_response))/sizeof(uint16_t);
  		tsn--;
  		if ((tsn == stcb->asoc.cumulative_tsn) ||
  		    (compare_with_wrap(stcb->asoc.cumulative_tsn, tsn, MAX_TSN))) {
