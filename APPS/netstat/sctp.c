@@ -72,7 +72,7 @@ struct pool {
 #endif
 #include <netinet/sctp_pcb.h>
 
-#ifndef __OpenBSD__
+#if !(defined(__OpenBSD__) || defined(__APPLE__))
 #define nflag	numeric_port
 #endif
 
@@ -81,7 +81,7 @@ static int width;
 void	inet46print	__P((struct sockaddr *, u_int16_t, int));
 
 void
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__APPLE__)
 sctp_protopr(u_long off, char *name, int af)
 #else /* NetBSD and OpenBSD */
 sctp_protopr(off, name)
@@ -89,7 +89,7 @@ sctp_protopr(off, name)
 	char *name;
 #endif
 {
-#if !defined(__FreeBSD__)
+#if !(defined(__FreeBSD__) || defined(__APPLE__))
 	int af;
 #endif
 	struct sctp_epinfo epinfo;
@@ -117,7 +117,7 @@ sctp_protopr(off, name)
 	kread(off, (char *)&epinfo, sizeof(epinfo));
 	inp_prev = inp_next = epinfo.listhead.lh_first;
 
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__APPLE__)
 	if (Aflag && !Wflag)
 		width = 18;
 	else if (Wflag)
@@ -140,25 +140,25 @@ sctp_protopr(off, name)
 	putchar('\n');
 	if (Aflag)
 		printf("%-8.8s ",
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__APPLE__)
 			"Socket");
 #else
 			"PCB");
 #endif
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__APPLE__)
 	printf("%-6.6s %-6.6s %-6.6s%s %-*.*s %-*.*s %s\n",
 #else
 	printf("%-5.5s %-6.6s %-6.6s%s %-*.*s %-*.*s %s\n",
 #endif
 	    "Proto", "Recv-Q", "Send-Q",
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__APPLE__)
 	    " ",
 #else
 	    Aflag ? "" : " ",
 #endif
 	    width, width, "Local Address",
 	    width, width, "Foreign Address",
-#if defined(__FreeBSD__) || defined(__OpenBSD__)
+#if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__APPLE__)
 	    "(state)");
 #else
 	    "State");
@@ -254,7 +254,7 @@ sctp_protopr(off, name)
 				if (first) {
 					if (Aflag)
 						printf("%8lx ", (u_long)inp_prev);
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__APPLE__)
 					printf("%-6.6s %6ld %6ld%s ",
 #else
 					printf("%-5.5s %6ld %6ld%s ",
@@ -262,13 +262,13 @@ sctp_protopr(off, name)
 					    name,
 					    (u_long)sockb.so_rcv.sb_cc,
 					    (u_long)sockb.so_snd.sb_cc,
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__APPLE__)
 					    " ");
 #else
 					    Aflag ? "" : " ");
 #endif
 				} else {
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__APPLE__)
 					if (Aflag)
 						printf("%31s"," ");
 					else 
@@ -380,7 +380,7 @@ sctp_protopr(off, name)
 				if (first) {
 					if (Aflag)
 						printf("%8lx ", (u_long)inp_prev);
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__APPLE__)
 					printf("%-6.6s %6ld %6ld%s ",
 #else
 					printf("%-5.5s %6ld %6ld%s ",
@@ -388,14 +388,14 @@ sctp_protopr(off, name)
 					    name,
 					    (u_long)sockb.so_rcv.sb_cc,
 					    (u_long)sockb.so_snd.sb_cc,
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__APPLE__)
 					    " ");
 #else
 					    Aflag ? "" : " ");
 #endif
 						
 				} else {
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__APPLE__)
 					if (Aflag)
 						printf("%31s"," ");
 					else 
@@ -526,90 +526,99 @@ inet46print(sa, port, numeric)
 }
 
 static char *pegs_name[SCTP_NUMBER_OF_PEGS] = {
-	"PEG_SACKS_SEEN",
-	"PEG_SACKS_SENT",
-	"PEG_TSNS_SENT",
-	"PEG_TSNS_RCVD",
-	"DATAGRAMS_SENT",
-	"DATAGRAMS_RCVD",
-	"RETRANTSN_SENT",
-	"DUPTSN_RECVD",
-	"HB_RECV",
-	"HB_ACK_RECV",
-	"HB_SENT",
-	"WINDOW_PROBES",
-	"DATA_DG_RECV",
-	"TMIT_TIMER",
-	"RECV_TIMER",
-	"HB_TIMER",
-	"FAST_RETRAN",
-	"TIMERS_EXP",
-	"FR_INAWINDOW",
-	"RWND_BLOCKED",
-	"CWND_BLOCKED",
-	"RWND_DROPS",
-	"BAD_STRMNO",
-	"BAD_SSN_WRAP",
-	"DROP_NOMEMORY",
-	"DROP_FRAG",
-	"BAD_VTAGS",
-	"BAD_CSUM",
-	"INPKTS",
-	"IN_MCAST",
-	"HDR_DROPS",
-	"NOPORTS",
-	"CWND_NOFILL",
-	"CALLS_TO_CO",
-	"CO_NODATASNT",
-	"CWND_NOUSE_SS",
-	"MAX_BURST_APL",
-	"EXPRESS_ROUTE",
-	"NO_COPY_IN",
-	"CACHED_SRC",
-	"CWND_NOCUM",
-	"CWND_SS",
-	"CWND_CA",
-	"CWND_SKIP",
-	"CWND_NOUSE_CA",
-	"MAX_CWND",
-	"CWND_DIFF_CA",
-	"CWND_DIFF_SA",
-	"OQS_AT_SS",
-	"SQQ_AT_SS",
-	"OQS_AT_CA",
-	"SQQ_AT_CA",
-	"MOVED_MTU",
-	"MOVED_QMAX",
-	"SQC_AT_SS",
-	"SQC_AT_CA",
-	"MOVED_MAX",
-	"MOVED_NLEF",
-	"NAGLE_NOQ",
-	"NAGLE_OFF",
-	"OUTPUT_FRM_SND",
-	"SOS_NOSNT",
-	"NOS_NOSNT",
-	"SOSE_NOSNT",
-	"NOSE_NOSNT",
-	"DATA_OUT_ERR",
-	"DUP_SSN_RCVD",
-	"DUP_FR",
-	"VTAG_EXPR",
-	"VTAG_BOGUS",
-	"T3_SAFEGRD",
-	"PDRP_FMBOX",
-	"PDRP_FEHOS",
-	"PDRP_MB_DA",
-	"PDRP_MB_CT",
-	"PDRP_BWRPT",
-	"PDRP_CRUPT",
-	"PDRP_NEDAT",
-	"PDRP_PDBRK",
+	"sack_rcv", /* 00 */
+	"sack_snt", /* 01 */
+	"tsns_snt", /* 02 */
+	"tsns_rcv", /* 03 */
+	"pkt_sent", /* 04 */
+	"pkt_rcvd", /* 05 */
+	"tsns_ret", /* 06 */
+	"dup_tsns", /* 07 */
+	"hbs__rcv", /* 08 */
+	"hbackrcv", /* 09 */
+	"htb__snt", /* 10 */
+	"win_prbe", /* 11 */
+	"pktswdat", /* 12 */
+	"t3-timeo", /* 13 */
+	"dsack-to", /* 14 */
+	"hb_timer", /* 15 */
+	"fst_rxts", /* 16 */
+	"timerexp", /* 17 */
+	"fr_inwin", /* 18 */
+	"blk_rwnd", /* 19 */
+	"blk_cwnd", /* 20 */
+	"rwnd_drp", /* 21 */
+	"bad_strm", /* 22 */
+	"bad_ssnw", /* 23 */
+	"drpnomem", /* 24 */
+	"drpfragm", /* 25 */
+	"badvtags", /* 26 */
+	"badcsumv", /* 27 */
+	"packetin", /* 28 */
+	"mcastrcv", /* 29 */
+	"hdrdrops", /* 30 */
+	"no_portn", /* 31 */
+	"cwnd_nf ", /* 32 */
+	"co_snds ", /* 33 */
+	"co_nodat", /* 34 */
+	"cw_nu_ss", /* 35 */
+	"max_brst", /* 36 */
+	"expr_del", /* 37 */
+	"no_cp_in", /* 38 */
+	"cach_src", /* 39 */
+	"cw_nocum", /* 40 */
+	"cw_incss", /* 41 */
+	"cw_incca", /* 42 */
+	"cw_skip ", /* 43 */
+	"cw_nu_ca", /* 44 */
+	"cw_maxcw", /* 45 */
+	"diff_ss ", /* 46 */
+	"diff_ca ", /* 47 */
+	"tqs @ ss", /* 48 */
+	"sqs @ ss", /* 49 */
+	"tqs @ ca", /* 50 */
+	"sqq @ ca", /* 51 */
+	"lmtu_mov", /* 52 */
+	"lcnt_mov", /* 53 */
+	"sndqctss", /* 54 */
+	"sndqctca", /* 55 */
+	"movemax ", /* 56 */
+	"move_equ", /* 57 */
+	"nagle_qo", /* 58 */
+	"nagle_of", /* 59 */
+	"out_fr_s", /* 60 */
+	"sostrnos", /* 61 */
+	"nostrnos", /* 62 */
+	"sosnqnos", /* 63 */
+	"nosnqnos", /* 64 */
+	"intoperr", /* 65 */
+	"dupssnrc", /* 66 */
+	"multi-fr", /* 67 */
+	"vtag-exp", /* 68 */
+	"vtag-bog", /* 69 */
+	"t3-safeg", /* 70 */
+	"pd--mbox", /* 71 */
+	"pd-ehost", /* 72 */
+	"pdmb_wda", /* 73 */
+	"pdmb_ctl", /* 74 */
+	"pdmb_bwr", /* 75 */
+	"pd_corup", /* 76 */
+	"pd_nedat", /* 77 */
+	"pd_errpd", /* 78 */
+	"fst_prep", /* 79 */
+	"pd_daNFo", /* 80 */
+	"pd_dIWin", /* 81 */
+	"pd_dIZrw", /* 82 */
+	"pd_BadDa", /* 83 */
+	"pd_dMark", /* 84 */
+	"ecne_rcv", /* 85 */
+	"cwr_perf", /* 86 */
+	"ecne_snt", /* 87 */
 	NULL,
 };
 		
 void
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__APPLE__)
 sctp_stats(u_long off, char *name, int af)
 #else /* NetBSD and OpenBSD */
 sctp_stats(off, name)
@@ -617,7 +626,7 @@ sctp_stats(off, name)
         char *name;
 #endif
 {
-#if !defined(__FreeBSD__)
+#if !(defined(__FreeBSD__) || defined(__APPLE__))
         int af;
 #endif
 	int i;
