@@ -415,7 +415,7 @@ int sctp_is_address_on_local_host(struct sockaddr *addr);
 void sctp_inpcb_free(struct sctp_inpcb *, int);
 
 struct sctp_tcb *sctp_aloc_assoc(struct sctp_inpcb *, struct sockaddr *,
-	int, int *);
+	int, int *, uint32_t);
 
 void sctp_free_assoc(struct sctp_inpcb *, struct sctp_tcb *);
 

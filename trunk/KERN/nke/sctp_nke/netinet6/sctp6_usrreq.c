@@ -44,6 +44,11 @@
 #if !(defined(__OpenBSD__) || defined(__APPLE__))
 #include "opt_ipsec.h"
 #endif
+#ifdef __APPLE__
+#include <sctp.h>
+#elif !defined(__OpenBSD__)
+#include "opt_sctp.h"
+#endif
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -112,6 +117,10 @@ extern struct protosw inetsw[];
 #ifndef sotoin6pcb
 #define sotoin6pcb      sotoinpcb
 #endif
+#endif
+
+#ifdef SCTP_DEBUG
+extern u_int32_t sctp_debug_on;
 #endif
 
 static	int sctp6_detach __P((struct socket *so));
@@ -241,25 +250,47 @@ sctp6_input(mp, offp, proto)
 
 #endif /* NFAITH defined and > 0 */
 	sctp_pegs[SCTP_INPKTS]++;
-
-	if (IN6_IS_ADDR_MULTICAST(&ip6->ip6_dst)) {
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
+		printf("V6 input gets a packet iphlen:%d pktlen:%d\n", iphlen, m->m_pkthdr.len);
+	}
+#endif
+ 	if (IN6_IS_ADDR_MULTICAST(&ip6->ip6_dst)) {
 		/* No multi-cast support in SCTP */
 		sctp_pegs[SCTP_IN_MCAST]++;
 		goto out_of;
 	}
-	if((sctp_no_csum_on_loopback == 0) ||
+	/* destination port of 0 is illegal, based on RFC2960. */
+	if (sh->dest_port == 0) {
+		goto out_of;
+	}
+	if ((sctp_no_csum_on_loopback == 0) ||
 	   (m->m_pkthdr.rcvif == NULL) ||
 	   (m->m_pkthdr.rcvif->if_type != IFT_LOOP)) {
 		/* we do NOT validate things from the loopback if the
 		 * sysctl is set to 1.
 		 */
 		check = sh->checksum;		/* save incoming checksum */
+		if ((check == 0) && (sctp_no_csum_on_loopback)) {
+			/* special hook for where we got a local address
+			 * somehow routed across a non IFT_LOOP type interface
+			 */
+			if (IN6_ARE_ADDR_EQUAL(&ip6->ip6_src, &ip6->ip6_dst))
+				goto sctp_skip_csum;
+		}
 		sh->checksum = 0;		/* prepare for calc */
 		calc_check = sctp_calculate_sum(m, &mlen, iphlen);
 		if (calc_check != check) {
+#ifdef SCTP_DEBUG
+			if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
+				printf("Bad CSUM on SCTP packet calc_check:%x check:%x  m:%x mlen:%d iphlen:%d\n",
+				       calc_check, check, (u_int)m, 
+				       mlen, iphlen);
+			}
+#endif
 			stcb = sctp_findassociation_addr(m, iphlen, offset - sizeof(*ch),
 							 sh, ch, &in6p, &net);
-			if((in6p) && (stcb)) {
+			if ((in6p) && (stcb)) {
 				sctp_send_packet_dropped(stcb, net, m, iphlen, 1);
 				sctp_chunk_output((struct sctp_inpcb *)in6p, stcb, 2);
 			}
@@ -268,24 +299,26 @@ sctp6_input(mp, offp, proto)
 		}
 		sh->checksum = calc_check;
 	} else {
+	sctp_skip_csum:
 		mlen = m->m_pkthdr.len;
 	}
 	net = NULL;
-	/* destination port of 0 is illegal, based on RFC2960. */
-	if (sh->dest_port == 0) {
-		goto out_of;
-	}
 	/*
 	 * Locate pcb and tcb for datagram
 	 * sctp_findassociation_addr() wants IP/SCTP/first chunk header...
 	 */
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
+		printf("V6 Find the association\n");
+	}
+#endif
 	stcb = sctp_findassociation_addr(m, iphlen, offset - sizeof(*ch),
 	    sh, ch, &in6p, &net);
 	if (in6p == NULL) {
 		struct sctp_init_chunk *init_chk, chunk_buf;
 		
 		sctp_pegs[SCTP_NOPORTS]++;
-		if(ch->chunk_type == SCTP_INITIATION) {
+		if (ch->chunk_type == SCTP_INITIATION) {
 			/* we do a trick here to get the INIT tag,
 			 * dig in and get the tag from the INIT and
 			 * put it in the common header.
@@ -1249,7 +1282,7 @@ sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		return (EALREADY);
 	}
 	/* We are GOOD to go */
-	stcb = sctp_aloc_assoc(inp, addr, 1, &error);
+	stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0);
 	if (stcb == NULL) {
 		/* Gak! no memory */
 		splx(s);
@@ -1474,7 +1507,7 @@ sctp6_in6getaddr(struct socket *so, struct mbuf *nam)
 		addr = *nam;
 #endif
 		/* if I'm V6ONLY, convert it to v4-mapped */
-		if(
+		if (
 #if defined(__OpenBSD__)
 	     (0) /* we always do dual bind */
 #elif defined (__NetBSD__)
@@ -1617,7 +1650,7 @@ sctp6_usrreq(so, req, m, nam, control, p)
 		struct ifnet *ifn;
 		struct ifaddr *ifa;
 		ifn = (struct ifnet *)control;
-		TAILQ_FOREACH(ifa, &ifn->if_addrhead, ifa_link) {
+		TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
 			if (ifa->ifa_addr->sa_family == family) {
 				sctp_delete_ip_address(ifa);
 			}
