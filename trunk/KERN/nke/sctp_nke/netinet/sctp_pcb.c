@@ -163,8 +163,6 @@ extern int ipport_hifirstauto;
 extern int ipport_hilastauto;
 #endif
 
-caddr_t sctp_lowest_tcb = (caddr_t)0xffffffff;
-caddr_t sctp_highest_tcb = 0;
 
 void
 sctp_fill_pcbinfo(struct sctp_pcbinfo *spcb)
@@ -587,43 +585,38 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 struct sctp_tcb *
 sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, caddr_t asoc_id)
 {
-	struct sctp_tcb *retval;
+	/*
+	 * Use my the assoc_id to find a endpoint
+	 */
+	struct sctpasochead *head;
+	struct sctp_tcb *stcb;
+	u_int32_t vtag;
 
 	if (asoc_id == 0 || inp == NULL)
 		return (NULL);
 
-	if (inp->highest_tcb == 0) {
-		/* can't be never allocated a association yet */
+	vtag = (u_int32_t)asoc_id;
+	head = &sctppcbinfo.sctp_asochash[SCTP_PCBHASH_ASOC(vtag,
+	    sctppcbinfo.hashasocmark)];
+	if (head == NULL) {
+		/* invalid vtag */
 		return (NULL);
 	}
-	if (((u_long)asoc_id % 4) != 0) {
-	       /* Must be aligned to 4 byte boundary */
-	       return (NULL);
-	}
-
-	if ((inp->highest_tcb >= asoc_id) && (inp->lowest_tcb <= asoc_id)) {
-		/* it is possible lets have a look */
-		retval = (struct sctp_tcb *)asoc_id;
-		if (retval->sctp_ep == inp && retval->asoc.state) {
-			return (retval);
+	LIST_FOREACH(stcb, head, sctp_asocs) {
+		if (stcb->asoc.my_vtag == vtag) {
+			/* candidate */
+			if (inp != stcb->sctp_ep) {
+				/* some other guy has the
+				 * same vtag active (vtag collision).
+				 */
+				sctp_pegs[SCTP_VTAG_BOGUS]++;
+				continue;
+			}
+			sctp_pegs[SCTP_VTAG_EXPR]++;
+			return (stcb);
 		}
 	}
 	return (NULL);
-}
-
-struct sctp_tcb *
-sctp_findassociation_associd(caddr_t asoc_id)
-{
-	/* This is allows you to look at another sockets info */
-	struct sctp_tcb *retval;
-	if ((asoc_id < sctp_lowest_tcb) && (asoc_id > sctp_highest_tcb)) {
-		return (NULL);
-	}
-	retval = (struct sctp_tcb *)asoc_id;
-	if (retval->asoc.state != 0)
-		return (retval);
-	return (NULL);
-
 }
 
 static struct sctp_inpcb *
@@ -1039,15 +1032,11 @@ sctp_findassoc_by_vtag(struct sockaddr *from, uint32_t vtag,
 				*inp_p = stcb->sctp_ep;
 				return (stcb);
 			} else {
-				/* bogus 
-				sctp_pegs[SCTP_VTAG_BOGUS]++;
-				return (NULL);
-				*/
-				/* we could uncomment the above
-				 * if vtags were unique across
-				 * the system.
-				 */
-				continue;
+ 				/* not him, this sould only
+ 				 * happen in rare cases so
+ 				 * I peg it.
+  				 */
+ 				sctp_pegs[SCTP_VTAG_BOGUS]++;
 			}
 		}
 	}
@@ -1210,16 +1199,23 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 	return (retval);
 }
 
-extern int sctp_rto_max_default;
-extern int sctp_rto_min_default;
-extern int sctp_rto_initial_default;
-extern int sctp_init_rto_max_default;
 extern int sctp_max_burst_default;
-extern int sctp_valid_cookie_life_default;
-extern int sctp_init_rtx_max_default;
-extern int sctp_assoc_rtx_max_default;
-extern int sctp_path_rtx_max_default;
-extern int sctp_nr_outgoing_streams_default;
+
+extern unsigned int sctp_delayed_sack_time_default;
+extern unsigned int sctp_heartbeat_interval_default;
+extern unsigned int sctp_pmtu_raise_time_default;
+extern unsigned int sctp_shutdown_guard_time_default;
+extern unsigned int sctp_secret_lifetime_default;
+
+extern unsigned int sctp_rto_max_default;
+extern unsigned int sctp_rto_min_default;
+extern unsigned int sctp_rto_initial_default;
+extern unsigned int sctp_init_rto_max_default;
+extern unsigned int sctp_valid_cookie_life_default;
+extern unsigned int sctp_init_rtx_max_default;
+extern unsigned int sctp_assoc_rtx_max_default;
+extern unsigned int sctp_path_rtx_max_default;
+extern unsigned int sctp_nr_outgoing_streams_default;
 
 /*
  * allocate a sctp_inpcb and setup a temporary binding to a port/all
@@ -1275,10 +1271,6 @@ sctp_inpcb_alloc(struct socket *so)
 	/* setup inpcb socket too */
 	inp->ip_inp.inp.inp_socket = so;
 	inp->sctp_frag_point = SCTP_DEFAULT_MAXSEGMENT;
-#ifndef SCTP_VTAG_TIMEWAIT_PER_STACK
-	LIST_INIT(inp->vtag_timewait);
-#endif
-
 #ifdef IPSEC
 #if !(defined(__OpenBSD__) || defined(__APPLE__))
 	{
@@ -1307,7 +1299,6 @@ sctp_inpcb_alloc(struct socket *so)
 #endif
 
 	so->so_pcb = (caddr_t)inp;
-	inp->lowest_tcb = (caddr_t)0xffffffff;
 
 	if ((so->so_type == SOCK_DGRAM) ||
 	    (so->so_type == SOCK_SEQPACKET)) {
@@ -1364,13 +1355,13 @@ sctp_inpcb_alloc(struct socket *so)
 	m = &inp->sctp_ep;
 
 	/* setup the base timeout information */
-	m->sctp_timeoutticks[SCTP_TIMER_SEND] = SCTP_SEND_SEC;
-	m->sctp_timeoutticks[SCTP_TIMER_INIT] = SCTP_INIT_SEC;
-	m->sctp_timeoutticks[SCTP_TIMER_RECV] = SCTP_RECV_SEC;
-	m->sctp_timeoutticks[SCTP_TIMER_HEARTBEAT] = SCTP_HB_DEFAULT;
-	m->sctp_timeoutticks[SCTP_TIMER_PMTU] = SCTP_DEF_PMTU_RAISE;
-	m->sctp_timeoutticks[SCTP_TIMER_MAXSHUTDOWN] = SCTP_DEF_MAX_SHUTDOWN;
-	m->sctp_timeoutticks[SCTP_TIMER_SIGNATURE] = SCTP_DEFAULT_SECRET_LIFE;
+	m->sctp_timeoutticks[SCTP_TIMER_SEND] = SEC_TO_TICKS(SCTP_SEND_SEC); /* needed ? */
+	m->sctp_timeoutticks[SCTP_TIMER_INIT] = SEC_TO_TICKS(SCTP_INIT_SEC); /* needed ? */
+	m->sctp_timeoutticks[SCTP_TIMER_RECV] = MSEC_TO_TICKS(sctp_delayed_sack_time_default);
+	m->sctp_timeoutticks[SCTP_TIMER_HEARTBEAT] = sctp_heartbeat_interval_default; /* this is in MSEC */
+	m->sctp_timeoutticks[SCTP_TIMER_PMTU] = SEC_TO_TICKS(sctp_pmtu_raise_time_default);
+	m->sctp_timeoutticks[SCTP_TIMER_MAXSHUTDOWN] = SEC_TO_TICKS(sctp_shutdown_guard_time_default);
+	m->sctp_timeoutticks[SCTP_TIMER_SIGNATURE] = SEC_TO_TICKS(sctp_secret_lifetime_default);
 	/* all max/min max are in ms */
 	m->sctp_maxrto = sctp_rto_max_default;
 	m->sctp_minrto = sctp_rto_min_default;
@@ -1481,8 +1472,6 @@ sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
 	 */
 	stcb->sctp_socket = new_inp->sctp_socket;
 	stcb->sctp_ep = new_inp;
-	new_inp->highest_tcb = (caddr_t)stcb;
-	new_inp->lowest_tcb = (caddr_t)stcb;
 	if (new_inp->sctp_tcbhash != NULL) {
 		FREE(new_inp->sctp_tcbhash, M_PCB);
 		new_inp->sctp_tcbhash = NULL;
@@ -2199,22 +2188,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	 * ifaddr's that are set into this ep. Again macro limitations here,
 	 * since the LIST_FOREACH could be a bad idea.
 	 */
-#ifndef SCTP_VTAG_TIMEWAIT_PER_STACK
-	{
-		int i;
-		struct sctp_tagblock *tb, *ntb;
-		/* Free anything in the vtag_waitblock */
-		for (i = 0; i < SCTP_NUMBER_IN_VTAG_BLOCK; i++) {
-			tb = LIST_FIRST(&inp->vtag_timewait[i]);
-			while (tb) {
-				ntb = LIST_NEXT(tb, sctp_nxt_tagblock);
-				LIST_REMOVE(tb, sctp_nxt_tagblock);
-				FREE(tb, M_PCB);
-				tb = ntb;
-			}
-		}
-	}
-#endif /* !SCTP_VTAG_TIMEWAIT_PER_STACK */
 	for ((laddr = LIST_FIRST(&inp->sctp_addr_list)); laddr != NULL;
 	     laddr = nladdr) {
 		nladdr = LIST_NEXT(laddr, sctp_nxt_addr);
@@ -2776,19 +2749,6 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		*error = ENOBUFS;
 		return (NULL);
 	}
-	if ((caddr_t)stcb < inp->lowest_tcb) {
-		inp->lowest_tcb = (caddr_t)stcb;
-	}
-	if ((caddr_t)stcb > inp->highest_tcb) {
-		inp->highest_tcb = (caddr_t)stcb;
-	}
-	if ((caddr_t)stcb < sctp_lowest_tcb) {
-		sctp_lowest_tcb = (caddr_t)stcb;
-	}
-	if ((caddr_t)stcb > sctp_highest_tcb) {
-		sctp_highest_tcb = (caddr_t)stcb;
-	}
-
 	/* Init all the timers */
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 	callout_init(&asoc->hb_timer.timer, 0);
@@ -2909,11 +2869,7 @@ sctp_add_vtag_to_timewait(struct sctp_inpcb *inp, u_int32_t tag)
 	struct timeval now;
 	int set, i;
 	SCTP_GETTIME_TIMEVAL(&now);
-#ifdef SCTP_VTAG_TIMEWAIT_PER_STACK
 	chain = &sctppcbinfo.vtag_timewait[(tag % SCTP_STACK_VTAG_HASH_SIZE)];
-#else
-	chain = &inp->vtag_timewait[(tag % SCTP_STACK_VTAG_HASH_SIZE)];
-#endif
 	set = 0;
 	if (!LIST_EMPTY(chain)) {
 		/* Block(s) present, lets find space, and expire on the fly */
@@ -3877,12 +3833,10 @@ sctp_pcb_init()
 #else
 	sctppcbinfo.lastlow = anonportmin;
 #endif
-#ifdef SCTP_VTAG_TIMEWAIT_PER_STACK
 	/* Init the TIMEWAIT list */
 	for (i = 0; i < SCTP_STACK_VTAG_HASH_SIZE; i++) {
 		LIST_INIT(&sctppcbinfo.vtag_timewait[i]);
 	}
-#endif
 
 #if defined(_SCTP_NEEDS_CALLOUT_) && !defined(__APPLE__)
 	TAILQ_INIT(&sctppcbinfo.callqueue);
@@ -4269,25 +4223,27 @@ sctp_is_vtag_good(struct sctp_inpcb *inp, u_int32_t tag, struct timeval *now)
 	struct sctp_tcb *stcb;
 
 	int i;
-#ifdef SCTP_VTAG_TIMEWAIT_PER_STACK
 	chain = &sctppcbinfo.vtag_timewait[(tag % SCTP_STACK_VTAG_HASH_SIZE)];
-#else
-	chain = &inp->vtag_timewait[(tag % SCTP_STACK_VTAG_HASH_SIZE)];
-#endif
 	/* First is the vtag in use ? */
 
 	head = &sctppcbinfo.sctp_asochash[SCTP_PCBHASH_ASOC(tag,
 	    sctppcbinfo.hashasocmark)];
 	if (head == NULL) {
-		goto good_so_far;
+		return(0);
 	}
 	LIST_FOREACH(stcb, head, sctp_asocs) {
 		if (stcb->asoc.my_vtag == tag) {
-			/* bad tag, in use */
-			return(0);
+			/* We should remove this if and
+			 * return 0 always if we want vtags
+			 * unique across all endpoints. For
+			 * now within a endpoint is ok.
+			 */
+ 			if(inp == stcb->sctp_ep) {
+				/* bad tag, in use */
+				return(0);
+			}
 		}
 	}
- good_so_far:
 	if (!LIST_EMPTY(chain)) {
 		/*
 		 * Block(s) are present, lets see if we have this tag in

@@ -655,6 +655,10 @@ u_int32_t sctp_select_a_tag(struct sctp_inpcb *m)
 	not_done = 1;
 	while (not_done) {
 		x = sctp_select_initial_TSN(&m->sctp_ep);
+		if (x == 0) {
+			/* we never use 0 */
+			continue;
+		}
 		if (sctp_is_vtag_good(m, x, &now)) {
 			not_done = 0;
 		}
