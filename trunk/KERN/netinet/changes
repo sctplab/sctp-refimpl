@@ -1,0 +1,21 @@
+1) More NKE changes for apple.
+2) More sysctl's added to control variables
+   without requiring user intervention through socket
+   api.
+3) Re-wrote ipv6 source address selection. It now
+   trys to find matching scope first. Also special
+   handling of sending to a link local that is on
+   the local machine.. strange things can happen
+   i.e. the route goes through the loop back interface 
+   and yet the packet arrives (from receivers side) on
+   the actual interface. Also we can't send to a ll
+   that is us with a source of ::1. Special handling
+   for the c-sum was needed and so now we check to
+   see if the src/dest are the same to find out
+   if the csum is disabled
+4) Changes to make the assoc-id be equal to the local
+   vtag. This will make it so that we have less likelyhood
+   of association reuse issue for sloppy api coders... since
+   vtags already go into a vtag hash for time-wait. Note also
+   we no longer have selected ways of building vtag hash.. just
+   a system wide hash.

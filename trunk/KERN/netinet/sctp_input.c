@@ -1509,7 +1509,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	int init_offset, initack_offset, initack_limit;
 	int retval;
 	int error = 0;
-
+	u_int32_t old_tag;
 	/*
 	 * find and validate the INIT chunk in the cookie (peer's info)
 	 * the INIT should start after the cookie-echo header struct
@@ -1575,7 +1575,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	 * now that we know the INIT/INIT-ACK are in place,
 	 * create a new TCB and popluate
 	 */
-	stcb = sctp_aloc_assoc(inp, init_src, 0, &error);
+ 	stcb = sctp_aloc_assoc(inp, init_src, 0, &error, ntohl(initack_cp->init.initiate_tag));
 	if (stcb == NULL) {
 		struct mbuf *op_err;
 		/* memory problem? */
@@ -1612,6 +1612,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	}
 
 	/* process the INIT-ACK info (my info) */
+	old_tag = asoc->my_vtag;
 	asoc->my_vtag = ntohl(initack_cp->init.initiate_tag);
 	asoc->my_rwnd = ntohl(initack_cp->init.a_rwnd);
 	asoc->pre_open_streams = ntohs(initack_cp->init.num_outbound_streams);
@@ -1623,6 +1624,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	asoc->str_reset_seq_in = asoc->init_seq_number;
 
 	asoc->advanced_peer_ack_point = asoc->last_acked_seq;
+	
 	/* process the INIT info (peer's info) */
 	retval = sctp_process_init(init_cp, stcb, *netp);
 	if (retval < 0) {
@@ -3860,8 +3862,21 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 	sctp_audit_log(0xE0, 1);
 	sctp_auditing(0, inp, stcb, net);
 #endif
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
+		printf("Ok, Common input processing called, m:%x iphlen:%d offset:%d",
+		       (u_int)m, iphlen, offset);
+	}
+#endif /* SCTP_DEBUG */
+
 	if (IS_SCTP_CONTROL(ch)) {
 		/* process the control portion of the SCTP packet */
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
+			printf("Processing control\n");
+		}
+#endif /* SCTP_DEBUG */
+
 		stcb = sctp_process_control(m, iphlen, &offset, length, sh, ch,
 		    inp, stcb, &net, &fwd_tsn_seen);
 	} else {
@@ -3869,6 +3884,12 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		 * no control chunks, so pre-process DATA chunks
 		 * (these checks are taken care of by control processing)
 		 */
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
+			printf("No control present\n");
+		}
+#endif /* SCTP_DEBUG */
+
 		if (stcb == NULL) {
 			/* out of the blue DATA chunk */
 			sctp_handle_ootb(m, iphlen, offset, sh, inp, NULL);
@@ -4083,7 +4104,11 @@ sctp_input(m, va_alist)
 #endif
 	net = NULL;
 	sctp_pegs[SCTP_INPKTS]++;
-
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
+		printf("V4 input gets a packet iphlen:%d pktlen:%d\n", iphlen, m->m_pkthdr.len);
+	}
+#endif
 /*#ifdef INET6*/
 /* Don't think this is needed */
 /*	bzero(&opts6, sizeof(opts6));*/
@@ -4135,9 +4160,22 @@ sctp_input(m, va_alist)
 		 * sysctl is set to 1.
 		 */
 		check = sh->checksum;	/* save incoming checksum */
+		if ((check == 0) && (sctp_no_csum_on_loopback)){
+			/* special hook for where we got a local address
+			 * somehow routed across a non IFT_LOOP type interface
+			 */
+			if(ip->ip_src.s_addr == ip->ip_dst.s_addr)
+				goto sctp_skip_csum_4;
+		}
 		sh->checksum = 0;		/* prepare for calc */
 		calc_check = sctp_calculate_sum(m, &mlen, iphlen);
 		if (calc_check != check) {
+#ifdef SCTP_DEBUG
+			if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
+				printf("Bad CSUM on SCTP packet calc_check:%x check:%x  m:%x mlen:%d iphlen:%d\n",
+				       calc_check, check, (u_int)m, mlen, iphlen);
+			}
+#endif
 			stcb = sctp_findassociation_addr(m, iphlen,
 							 offset - sizeof(*ch),
 							 sh, ch, &inp, &net);
@@ -4151,6 +4189,7 @@ sctp_input(m, va_alist)
 		}
 		sh->checksum = calc_check;
 	} else {
+	sctp_skip_csum_4:
 		mlen = m->m_pkthdr.len;
 	}
 	/* validate mbuf chain length with IP payload length */
@@ -4173,6 +4212,12 @@ sctp_input(m, va_alist)
 	 * Locate pcb and tcb for datagram
 	 * sctp_findassociation_addr() wants IP/SCTP/first chunk header...
 	 */
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
+		printf("V4 find association\n");
+	}
+#endif
+
 	stcb = sctp_findassociation_addr(m, iphlen, offset - sizeof(*ch),
 	    sh, ch, &inp, &net);
 	if (inp == NULL) {

@@ -427,11 +427,10 @@ sctp_deliver_data(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		to = (struct sockaddr *)sctp_recover_scope((struct sockaddr_in6 *)to,
 		    &lsa6);
 		if (((struct sockaddr_in *)to)->sin_port == 0) {
-#ifdef SCTP_DEBUG
-			printf("Port was 0 not %d on address (net:%x), correcting\n",
+			printf("Huh a, port is %d not net:%x %d?\n",
+			       ((struct sockaddr_in *)to)->sin_port,
 			       (u_int)chk->whoTo,
-			       (int)((u_int)ntohs(stcb->rport)));
-#endif			
+			       (int)(ntohs(stcb->rport)));
 			((struct sockaddr_in *)to)->sin_port = stcb->rport;
 		}
 		if (sctp_sbspace(&stcb->sctp_socket->so_rcv) < chk->send_size) {
@@ -609,7 +608,6 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 			if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_NEEDS_MAPPED_V4) &&
 			    to->sa_family == AF_INET) {
 				struct sockaddr_in *sin;
-
 				sin = (struct sockaddr_in *)to;
 				bzero(&sin6, sizeof(sin6));
 				sin6.sin6_family = AF_INET6;
@@ -625,14 +623,12 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 			to = (struct sockaddr *)sctp_recover_scope((struct sockaddr_in6 *)to,
 			    &lsa6);
 			if (((struct sockaddr_in *)to)->sin_port == 0) {
-#ifdef SCTP_DEBUG
-				printf("Port was 0 not %d on address (net:%x), correcting\n",
+				printf("Huh b, port is %d not net:%x %d?\n",
+				       ((struct sockaddr_in *)to)->sin_port,
 				       (u_int)chk->whoTo,
-				       (int)((u_int)ntohs(stcb->rport)));
-#endif			
+				       (int)(ntohs(stcb->rport)));
 				((struct sockaddr_in *)to)->sin_port = stcb->rport;
 			}
-
 			if (sctp_sbspace(&stcb->sctp_socket->so_rcv) <
 			    chk->send_size) {
 				if (control) {
@@ -1919,11 +1915,10 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		to = (struct sockaddr *)sctp_recover_scope((struct sockaddr_in6 *)to,
 		    &lsa6);
 		if (((struct sockaddr_in *)to)->sin_port == 0) {
-#ifdef SCTP_DEBUG
-			printf("Port was 0 not %d on address (net:%x), correcting\n",
-			       (u_int)chk->whoTo,
-			       (int)((u_int)ntohs(stcb->rport)));
-#endif			
+			printf("Huh c, port is %d not net:%x %d?\n",
+			       ((struct sockaddr_in *)to)->sin_port,
+			       (u_int)net,
+			       (int)(ntohs(stcb->rport)));
 			((struct sockaddr_in *)to)->sin_port = stcb->rport;
 		}
 
