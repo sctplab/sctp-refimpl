@@ -31,10 +31,9 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-#ifndef SCTP_USE_ADLER32
 
-#define SCTP_CRC32C_POLY 0x1EDC6F41
-#define SCTP_CRC32C(c, d) (c = ((c) >> 8) ^ sctp_crc_c[((c) ^ (d)) & 0xFF])
+#define CRC32C_POLY 0x1EDC6F41
+#define CALC_CRC32C(c, d) (c = ((c) >> 8) ^ sctp_crc_c[((c) ^ (d)) & 0xFF])
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* Copyright 2001, D. Otis.  Use this program, code or tables    */
@@ -131,7 +130,7 @@ update_crc32c(uint32_t crc32,
 	unsigned int i;
 
 	for (i = 0; i < length; i++) {
-		SCTP_CRC32C(crc32, buffer[i]);
+		CALC_CRC32C(crc32, buffer[i]);
 	}
 	return (crc32);
 }
@@ -178,4 +177,3 @@ calculate_crc32c(char *ptr, int len)
 	return (base);
 }
 
-#endif

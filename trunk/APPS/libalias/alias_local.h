@@ -153,6 +153,14 @@ void     SetVtagIn(struct alias_link *link, u_int32_t tag);
 u_int32_t GetVtagOut(struct alias_link *link);
 void     SetVtagOut(struct alias_link *link, u_int32_t tag);
 
+void SwapToTransitTags(struct alias_link *link);
+int IsTransit_tags_set(struct alias_link *link);
+void GetVtagOut_transit(struct alias_link *link, u_int32_t tag);
+void GetVtagIn_transit(struct alias_link *link, u_int32_t tag);
+void SetVtagOut_transit(struct alias_link *link, u_int32_t tag);
+void SetVtagIn_transit(struct alias_link *link, u_int32_t tag);
+
+
 struct in_addr
 	 GetOriginalAddress(struct alias_link *_link);
 struct in_addr
@@ -226,6 +234,10 @@ int	 ProxyCheck(struct ip *_pip, struct in_addr *_proxy_server_addr,
 	    u_short *_proxy_server_port);
 void	 ProxyModify(struct alias_link *_link, struct ip *_pip,
 	    int _maxpacketsize, int _proxy_type);
+
+/* CRC32c checksum */
+uint32_t calculate_crc32c(char *ptr, int len);
+
 
 enum alias_tcp_state {
 	ALIAS_TCP_STATE_NOT_CONNECTED,
