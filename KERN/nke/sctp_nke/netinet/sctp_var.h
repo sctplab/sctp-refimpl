@@ -45,27 +45,41 @@
  * Names for SCTP sysctl objects
  */
 #ifndef __APPLE__
-#define	SCTPCTL_MAXDGRAM	1	/* max datagram size */
-#define	SCTPCTL_RECVSPACE	2	/* default receive buffer space */
-#define SCTPCTL_AUTOASCONF      3       /* auto asconf enable/disable flag */
-#define SCTPCTL_ECN_ENABLE      4	/* Is ecn allowed */
-#define SCTPCTL_ECN_NONCE       5       /* Is ecn nonce allowed */
-#define SCTPCTL_STRICT_SACK     6	/* strictly require sack'd TSN's to be 
+#define	SCTPCTL_MAXDGRAM	    1	/* max datagram size */
+#define	SCTPCTL_RECVSPACE	    2	/* default receive buffer space */
+#define SCTPCTL_AUTOASCONF          3   /* auto asconf enable/disable flag */
+#define SCTPCTL_ECN_ENABLE          4	/* Is ecn allowed */
+#define SCTPCTL_ECN_NONCE           5   /* Is ecn nonce allowed */
+#define SCTPCTL_STRICT_SACK         6	/* strictly require sack'd TSN's to be 
 					 * smaller than sndnxt.
 					 */
-#define SCTPCTL_NOCSUM_LO       7       /* Require that the Loopback NOT have
-					 * the crc32 checksum on packets routed over
+#define SCTPCTL_NOCSUM_LO           7   /* Require that the Loopback NOT have
+				         * the crc32 checksum on packets routed over
 					 * it.
-					 */
-#define SCTPCTL_STRICT_INIT     8
-#define SCTPCTL_PEER_CHK_OH     9
-#define SCTPCTL_MAXBURST        10
-#define SCTPCTL_MAXCHUNKONQ     11
+				         */
+#define SCTPCTL_STRICT_INIT         8
+#define SCTPCTL_PEER_CHK_OH         9
+#define SCTPCTL_MAXBURST            10
+#define SCTPCTL_MAXCHUNKONQ         11
+#define SCTPCTL_DELAYED_SACK        12
+#define SCTPCTL_HB_INTERVAL         13
+#define SCTPCTL_PMTU_RAISE          14
+#define SCTPCTL_SHUTDOWN_GUARD      15
+#define SCTPCTL_SECRET_LIFETIME     16
+#define SCTPCTL_RTO_MAX             17
+#define SCTPCTL_RTO_MIN             18
+#define SCTPCTL_RTO_INITIAL         19
+#define SCTPCTL_INIT_RTO_MAX        20
+#define SCTPCTL_COOKIE_LIFE         21
+#define SCTPCTL_INIT_RTX_MAX        22
+#define SCTPCTL_ASSOC_RTX_MAX       23
+#define SCTPCTL_PATH_RTX_MAX        24
+#define SCTPCTL_NR_OUTGOING_STREAMS 25  
 #ifdef SCTP_DEBUG
-#define SCTPCTL_DEBUG           12
-#define SCTPCTL_MAXID		13
+#define SCTPCTL_DEBUG               26
+#define SCTPCTL_MAXID		    27
 #else
-#define SCTPCTL_MAXID		12
+#define SCTPCTL_MAXID		    26
 #endif
 
 #endif
@@ -84,6 +98,20 @@
 	{ "peer_chkoh", CTLTYPE_INT }, \
 	{ "maxburst", CTLTYPE_INT }, \
 	{ "maxchunks", CTLTYPE_INT }, \
+	{ "delayed_sack_time", CTLTYPE_INT }, \
+	{ "heartbeat_interval", CTLTYPE_INT }, \
+	{ "pmtu_raise_time", CTLTYPE_INT }, \
+	{ "shutdown_guard_time", CTLTYPE_INT }, \
+	{ "secret_lifetime", CTLTYPE_INT }, \
+	{ "rto_max", CTLTYPE_INT }, \
+	{ "rto_min", CTLTYPE_INT }, \
+	{ "rto_initial", CTLTYPE_INT }, \
+	{ "init_rto_max", CTLTYPE_INT }, \
+	{ "valid_cookie_life", CTLTYPE_INT }, \
+	{ "init_rtx_max", CTLTYPE_INT }, \
+	{ "assoc_rtx_max", CTLTYPE_INT }, \
+	{ "path_rtx_max", CTLTYPE_INT }, \
+	{ "nr_outgoing_streams", CTLTYPE_INT }, \
 	{ "debug", CTLTYPE_INT }, \
 }
 #else
@@ -100,6 +128,20 @@
 	{ "peer_chkoh", CTLTYPE_INT }, \
 	{ "maxburst", CTLTYPE_INT }, \
 	{ "maxchunks", CTLTYPE_INT }, \
+	{ "delayed_sack_time", CTLTYPE_INT }, \
+	{ "heartbeat_interval", CTLTYPE_INT }, \
+	{ "pmtu_raise_time", CTLTYPE_INT }, \
+	{ "shutdown_guard_time", CTLTYPE_INT }, \
+	{ "secret_lifetime", CTLTYPE_INT }, \
+	{ "rto_max", CTLTYPE_INT }, \
+	{ "rto_min", CTLTYPE_INT }, \
+	{ "rto_initial", CTLTYPE_INT }, \
+	{ "init_rto_max", CTLTYPE_INT }, \
+	{ "valid_cookie_life", CTLTYPE_INT }, \
+	{ "init_rtx_max", CTLTYPE_INT }, \
+	{ "assoc_rtx_max", CTLTYPE_INT }, \
+	{ "path_rtx_max", CTLTYPE_INT }, \
+	{ "nr_outgoing_streams", CTLTYPE_INT }, \
 }
 #endif
 

@@ -485,27 +485,28 @@
 #define SCTP_ASOC_MAX_CHUNKS_ON_QUEUE 512
 
 #define MSEC_TO_TICKS(x) (((x) * hz) / 1000)
+#define SEC_TO_TICKS(x) ((x) * hz)
 
 /* init timer def = 1 sec */
-#define SCTP_INIT_SEC	(1*hz)
+#define SCTP_INIT_SEC	1
 
 /* send timer def = 1 seconds */
-#define SCTP_SEND_SEC	(1*hz)
+#define SCTP_SEND_SEC	1
 
-/* recv timer def = 200ms (in nsec) */
-#define SCTP_RECV_SEC	(2000/hz)
+/* recv timer def = 200ms  */
+#define SCTP_RECV_MSEC	200
 
 /* 30 seconds + RTO (in ms) */
-#define SCTP_HB_DEFAULT	(30000)
+#define SCTP_HB_DEFAULT_MSEC	30000
 
 /* Max time I will wait for Shutdown to complete */
-#define SCTP_DEF_MAX_SHUTDOWN (180*hz)
+#define SCTP_DEF_MAX_SHUTDOWN_SEC 180
 
 
 /* This is how long a secret lives, NOT how long a cookie lives
  * how many ticks the current secret will live.
  */
-#define SCTP_DEFAULT_SECRET_LIFE (3600 * hz)
+#define SCTP_DEFAULT_SECRET_LIFE_SEC 3600
 
 #define SCTP_RTO_UPPER_BOUND	(60000)	/* 60 sec in ms */
 #define SCTP_RTO_UPPER_BOUND_SEC 60	/* for the init timer */
@@ -515,7 +516,7 @@
 #define SCTP_DEF_MAX_INIT	8
 #define SCTP_DEF_MAX_SEND	10
 
-#define SCTP_DEF_PMTU_RAISE	(600 * hz)  /* 10 min between raise attempts */
+#define SCTP_DEF_PMTU_RAISE_SEC	600  /* 10 min between raise attempts */
 #define SCTP_DEF_PMTU_MIN	600
 
 #define SCTP_MSEC_IN_A_SEC	1000
