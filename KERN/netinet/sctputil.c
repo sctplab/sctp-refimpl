@@ -246,8 +246,6 @@ sctp_log_cwnd(struct sctp_nets *net, int augment, uint8_t from)
 void
 sctp_log_maxburst(struct sctp_nets *net, int error, int burst, uint8_t from)
 {
-	
-
 	sctp_clog[sctp_cwnd_log_at].from = (u_int8_t)from;
 	sctp_clog[sctp_cwnd_log_at].event_type = (u_int8_t)SCTP_LOG_EVENT_MAXBURST;
 	sctp_clog[sctp_cwnd_log_at].x.cwnd.net = net;
@@ -259,10 +257,55 @@ sctp_log_maxburst(struct sctp_nets *net, int error, int burst, uint8_t from)
 		sctp_cwnd_log_at = 0;
 		sctp_cwnd_log_rolled = 1;
 	}
-
 }
 
+void
+sctp_log_rwnd(uint8_t from, u_int32_t peers_rwnd , u_int32_t snd_size, u_int32_t overhead)
+{
+	sctp_clog[sctp_cwnd_log_at].from = (u_int8_t)from;
+	sctp_clog[sctp_cwnd_log_at].event_type = (u_int8_t)SCTP_LOG_EVENT_RWND;
+	sctp_clog[sctp_cwnd_log_at].x.rwnd.rwnd = peers_rwnd;
+	sctp_clog[sctp_cwnd_log_at].x.rwnd.send_size = snd_size;
+	sctp_clog[sctp_cwnd_log_at].x.rwnd.overhead = overhead;
+	sctp_clog[sctp_cwnd_log_at].x.rwnd.new_rwnd = 0;
+	sctp_cwnd_log_at++;
+	if (sctp_cwnd_log_at >= SCTP_STAT_LOG_SIZE) {
+		sctp_cwnd_log_at = 0;
+		sctp_cwnd_log_rolled = 1;
+	}
+}
 
+void
+sctp_log_rwnd_set(uint8_t from, u_int32_t peers_rwnd , u_int32_t flight_size, u_int32_t overhead, u_int32_t a_rwndval)
+{
+	sctp_clog[sctp_cwnd_log_at].from = (u_int8_t)from;
+	sctp_clog[sctp_cwnd_log_at].event_type = (u_int8_t)SCTP_LOG_EVENT_RWND;
+	sctp_clog[sctp_cwnd_log_at].x.rwnd.rwnd = peers_rwnd;
+	sctp_clog[sctp_cwnd_log_at].x.rwnd.send_size = flight_size;
+	sctp_clog[sctp_cwnd_log_at].x.rwnd.overhead = overhead;
+	sctp_clog[sctp_cwnd_log_at].x.rwnd.new_rwnd = a_rwndval;
+	sctp_cwnd_log_at++;
+	if (sctp_cwnd_log_at >= SCTP_STAT_LOG_SIZE) {
+		sctp_cwnd_log_at = 0;
+		sctp_cwnd_log_rolled = 1;
+	}
+}
+
+void
+sctp_log_mbcnt(uint8_t from, u_int32_t total_oq , u_int32_t book, u_int32_t total_mbcnt_q, u_int32_t mbcnt)
+{
+	sctp_clog[sctp_cwnd_log_at].from = (u_int8_t)from;
+	sctp_clog[sctp_cwnd_log_at].event_type = (u_int8_t)SCTP_LOG_EVENT_MBCNT;
+	sctp_clog[sctp_cwnd_log_at].x.mbcnt.total_queue_size = total_oq;
+	sctp_clog[sctp_cwnd_log_at].x.mbcnt.size_change  = book;
+	sctp_clog[sctp_cwnd_log_at].x.mbcnt.total_queue_mb_size = total_mbcnt_q;
+	sctp_clog[sctp_cwnd_log_at].x.mbcnt.mbcnt_change = mbcnt;
+	sctp_cwnd_log_at++;
+	if (sctp_cwnd_log_at >= SCTP_STAT_LOG_SIZE) {
+		sctp_cwnd_log_at = 0;
+		sctp_cwnd_log_rolled = 1;
+	}
+}
 
 void
 sctp_log_block(uint8_t from, struct socket *so, struct sctp_association *asoc)
@@ -413,7 +456,7 @@ void sctp_print_audit_report(void)
 void sctp_auditing(int from, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
     struct sctp_nets *net)
 {
-	int s, resend_cnt, tot_out, rep, tot_book, tot_book_cnt;
+	int s, resend_cnt, tot_out, rep, tot_book_cnt;
 	struct sctp_nets *lnet;
 	struct sctp_tmit_chunk *chk;
 
@@ -456,14 +499,13 @@ void sctp_auditing(int from, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		sctp_audit_indx = 0;
 	}
 	rep = 0;
-	tot_book = tot_book_cnt = 0;
+	tot_book_cnt = 0;
 	resend_cnt = tot_out = 0;
 	TAILQ_FOREACH(chk, &stcb->asoc.sent_queue, sctp_next) {
 		if (chk->sent == SCTP_DATAGRAM_RESEND) {
 			resend_cnt++;
 		} else if (chk->sent < SCTP_DATAGRAM_RESEND) {
-			tot_out += chk->send_size;
-			tot_book += chk->book_size;
+			tot_out += chk->book_size;
 			tot_book_cnt++;
 		}
 	}
@@ -498,18 +540,6 @@ void sctp_auditing(int from, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		    (int)stcb->asoc.total_flight);
 		stcb->asoc.total_flight = tot_out;
 	}
-	if (tot_book != stcb->asoc.total_flight_book) {
-		sctp_audit_data[sctp_audit_indx][0] = 0xAF;
-		sctp_audit_data[sctp_audit_indx][1] = 0xA4;
-		sctp_audit_indx++;
-		if (sctp_audit_indx >= SCTP_AUDIT_SIZE) {
-			sctp_audit_indx = 0;
-		}
-		rep = 1;
-		printf("tot_flt_book:%d asoc_tot:%d\n", tot_book,
-		    (int)stcb->asoc.total_flight_book);
-		stcb->asoc.total_flight_book = tot_book;
-	}
 	if (tot_book_cnt != stcb->asoc.total_flight_count) {
 		sctp_audit_data[sctp_audit_indx][0] = 0xAF;
 		sctp_audit_data[sctp_audit_indx][1] = 0xA5;
@@ -518,8 +548,8 @@ void sctp_auditing(int from, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			sctp_audit_indx = 0;
 		}
 		rep = 1;
-		printf("tot_flt_book:%d asoc_tot:%d\n", tot_book,
-		    (int)stcb->asoc.total_flight_book);
+		printf("tot_flt_book:%d\n", tot_book);
+
 		stcb->asoc.total_flight_count = tot_book_cnt;
 	}
 	tot_out = 0;
@@ -542,7 +572,7 @@ void sctp_auditing(int from, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			TAILQ_FOREACH(chk, &stcb->asoc.sent_queue, sctp_next) {
 				if ((chk->whoTo == lnet) &&
 				    (chk->sent < SCTP_DATAGRAM_RESEND)) {
-					tot_out += chk->send_size;
+					tot_out += chk->book_size;
 				}
 			}
 			if (lnet->flight_size != tot_out) {
@@ -3445,29 +3475,16 @@ void
 sctp_free_bufspace(struct sctp_tcb *stcb, struct sctp_association *asoc,
     struct sctp_tmit_chunk *tp1)
 {
-	struct mbuf *mm;
-	int mbcnt=0;
-	int num_mb=0;
-	int num_mbext=0;
-
 	if (tp1->data == NULL) {
 		return;
 	}
-	/*
-	 * The book_size accounts for all 
-	 * of the actual data size, so instead here
-	 * we need to go through and sum up
-	 * the MBUF/M_EXT useage for subtraction.
-	 */
-	for (mm = tp1->data; mm; mm = mm->m_next) {
-		num_mb++;
-		mbcnt += MSIZE;
-		if (mm->m_flags & M_EXT) {
-			num_mbext++;
-			mbcnt += mm->m_ext.ext_size;
-		}
-	}
-	/* We release the book_size and mbcnt */
+#ifdef SCTP_MBCNT_LOGGING
+	sctp_log_mbcnt(SCTP_LOG_MBCNT_DECREASE,
+		       asoc->total_output_queue_size,
+		       tp1->book_size,
+		       asoc->total_output_mbuf_queue_size,
+		       tp1->mbcnt);
+#endif	
 	if (asoc->total_output_queue_size >= tp1->book_size) {
 		asoc->total_output_queue_size -= tp1->book_size;
 	} else {
@@ -3475,8 +3492,8 @@ sctp_free_bufspace(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	}
 
 	/* Now free the mbuf */
-	if (asoc->total_output_mbuf_queue_size >= mbcnt) {
-		asoc->total_output_mbuf_queue_size -= mbcnt;
+	if (asoc->total_output_mbuf_queue_size >= tp1->mbcnt) {
+		asoc->total_output_mbuf_queue_size -= tp1->mbcnt;
 	} else {
 		asoc->total_output_mbuf_queue_size = 0;
 	}
@@ -3489,8 +3506,8 @@ sctp_free_bufspace(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			stcb->sctp_socket->so_snd.sb_cc = 0;
 
 		}
-		if (stcb->sctp_socket->so_snd.sb_mbcnt >= mbcnt) {
-			stcb->sctp_socket->so_snd.sb_mbcnt -= mbcnt;
+		if (stcb->sctp_socket->so_snd.sb_mbcnt >= tp1->mbcnt) {
+			stcb->sctp_socket->so_snd.sb_mbcnt -= tp1->mbcnt;
 		} else {
 			stcb->sctp_socket->so_snd.sb_mbcnt = 0;
 		}

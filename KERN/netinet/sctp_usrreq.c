@@ -339,19 +339,15 @@ sctp_notify_mbuf(struct sctp_inpcb *inp,
 
 				/* Clear any time so NO RTT is being done */
 				chk->do_rtt = 0;
-				stcb->asoc.total_flight -= chk->send_size;
+				stcb->asoc.total_flight -= chk->book_size;
 				if (stcb->asoc.total_flight < 0) {
 					stcb->asoc.total_flight = 0;
-				}
-				stcb->asoc.total_flight_book -= chk->book_size;
-				if (stcb->asoc.total_flight_book < 0) {
-					stcb->asoc.total_flight_book = 0;
 				}
 				stcb->asoc.total_flight_count--;
 				if (stcb->asoc.total_flight_count < 0) {
 					stcb->asoc.total_flight_count = 0;
 				}
-				net->flight_size -= chk->send_size;
+				net->flight_size -= chk->book_size;
 				if (net->flight_size < 0) {
 					net->flight_size = 0;
 				}

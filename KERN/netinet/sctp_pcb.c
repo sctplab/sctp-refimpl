@@ -2494,15 +2494,16 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	if (stcb->asoc.smallest_mtu > net->mtu) {
 		stcb->asoc.smallest_mtu = net->mtu;
 	}
-	if (net->addr_is_local) {
-		net->cwnd = max((net->mtu * 4), SCTP_INITIAL_CWND);
-	} else {
-		net->cwnd = min((net->mtu * 4), max((2*net->mtu),
-		    SCTP_INITIAL_CWND));
-	}
+	/* We take the max of the burst limit times a MTU or the INITIAL_CWND.
+	 * We then limit this to 4 MTU's of sending.
+	 */
+ 	net->cwnd = min((net->mtu * 4), max((stcb->asoc.max_burst * net->mtu), SCTP_INITIAL_CWND));
+
+	/* we always get at LEAST 2 MTU's */
 	if (net->cwnd < (2 * net->mtu)) {
 		net->cwnd = 2 * net->mtu;
 	}
+
 	net->ssthresh = stcb->asoc.peers_rwnd;
 
 	net->src_addr_selected = 0;

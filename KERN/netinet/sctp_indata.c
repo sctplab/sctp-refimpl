@@ -2727,22 +2727,17 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 								*biggest_newly_acked_tsn =
 								    tp1->rec.data.TSN_seq;
 							}
-							tp1->whoTo->flight_size -= tp1->send_size;
+							tp1->whoTo->flight_size -= tp1->book_size;
 							if (tp1->whoTo->flight_size < 0) {
 								tp1->whoTo->flight_size = 0;
 							}
 							asoc->total_flight -=
-							    tp1->send_size;
+							    tp1->book_size;
 
 							if (asoc->total_flight < 0) {
 								asoc->total_flight = 0;
 							}
-							asoc->total_flight_book -=
-							    tp1->book_size;
-							if (asoc->total_flight_book < 0) {
-								asoc->total_flight_book = 0;
 
-							}
 							asoc->total_flight_count--;
 							if (asoc->total_flight_count < 0) {
 								asoc->total_flight_count = 0;
@@ -3111,21 +3106,21 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			/* fix counts and things */
 
 			tp1->whoTo->net_ack++;
-			tp1->whoTo->flight_size -= tp1->send_size;
+			tp1->whoTo->flight_size -= tp1->book_size;
 			if (tp1->whoTo->flight_size < 0) {
 				tp1->whoTo->flight_size = 0;
 			}
+#ifdef SCTP_LOG_RWND
+			sctp_log_rwnd(SCTP_INCREASE_PEER_RWND, 
+				      asoc->peers_rwnd , tp1->send_size, sctp_peer_chunk_oh);
+#endif
 			/* add back to the rwnd */
 			asoc->peers_rwnd += (tp1->send_size + sctp_peer_chunk_oh);
 
 			/* remove from the total flight */
-			asoc->total_flight -= tp1->send_size;
+			asoc->total_flight -= tp1->book_size;
 			if (asoc->total_flight < 0) {
 				asoc->total_flight = 0;
-			}
-			asoc->total_flight_book -= tp1->book_size;
-			if (asoc->total_flight_book < 0) {
-				asoc->total_flight_book = 0;
 			}
 			asoc->total_flight_count--;
 			if (asoc->total_flight_count < 0) {
@@ -3160,11 +3155,11 @@ sctp_try_advance_peer_ack_point(struct sctp_tcb *stcb,
 {
 	struct sctp_tmit_chunk *tp1, *tp2, *a_adv=NULL;
 	struct timeval now;
+	int now_filled=0;
 
 	if (asoc->peer_supports_prsctp == 0) {
 		return (NULL);
 	}
-	SCTP_GETTIME_TIMEVAL(&now);
 	tp1 = TAILQ_FIRST(&asoc->sent_queue);
 	while (tp1) {
 		if (tp1->sent != SCTP_FORWARD_TSN_SKIP &&
@@ -3178,6 +3173,10 @@ sctp_try_advance_peer_ack_point(struct sctp_tcb *stcb,
 			 * aka retransmitted until the asoc fails.
 			 */
 			break;
+		}
+		if (!now_filled) {
+			SCTP_GETTIME_TIMEVAL(&now);
+			now_filled = 1;
 		}
 		tp2 = TAILQ_NEXT(tp1, sctp_next);
 		/*
@@ -3576,6 +3575,10 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 
 	if (TAILQ_EMPTY(&asoc->sent_queue)) {
 		/* nothing left on sendqueue.. consider done */
+#ifdef SCTP_LOG_RWND
+		sctp_log_rwnd_set(SCTP_SET_PEER_RWND_VIA_SACK,
+				  asoc->peers_rwnd, 0, 0, a_rwnd);
+#endif
 		asoc->peers_rwnd = a_rwnd;
 		if (asoc->sent_queue_retran_cnt) {
 #ifdef SCTP_DEBUG
@@ -3597,7 +3600,6 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 			net->flight_size = 0;
 		}
 		asoc->total_flight = 0;
-		asoc->total_flight_book = 0;
 		asoc->total_flight_count = 0;
 		return;
 	}
@@ -3643,18 +3645,13 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 							~SCTP_ADDR_UNCONFIRMED;
 					}
 					tp1->whoTo->flight_size -=
-						tp1->send_size;
+						tp1->book_size;
 					if (tp1->whoTo->flight_size < 0) {
 						tp1->whoTo->flight_size = 0;
 					}
-					asoc->total_flight -= tp1->send_size;
+					asoc->total_flight -= tp1->book_size;
 					if (asoc->total_flight < 0) {
 						asoc->total_flight = 0;
-					}
-					asoc->total_flight_book -=
-						tp1->book_size;
-					if (asoc->total_flight_book < 0) {
-						asoc->total_flight_book = 0;
 					}
 					asoc->total_flight_count--;
 					if (asoc->total_flight_count < 0) {
@@ -3719,6 +3716,8 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	asoc->this_sack_highest_gap = last_tsn;
 
 	if (((num_seg * sizeof (sizeof(struct sctp_gap_ack_block))) + sizeof(struct sctp_sack_chunk)) > sack_length) {
+		/* skip corrupt segments */
+		strike_enabled = 0;
 		goto skip_segments;
 	}
 
@@ -3763,12 +3762,13 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 		}
 
 	}
+
 	if (cnt_of_cacc < 2) {
 		strike_enabled = 1;
 	} else {
 		strike_enabled = 0;
 	}
-
+ skip_segments:
 	/********************************************/
 	/* drop the acked chunks from the sendqueue */
 	/********************************************/
@@ -3832,6 +3832,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 		tp1 = tp2;
 	} while (tp1 != NULL);
 
+
 	if (asoc->fast_retran_loss_recovery && accum_moved) {
 		if (compare_with_wrap(asoc->last_acked_seq,
 				      asoc->fast_recovery_tsn, MAX_TSN) ||
@@ -3841,10 +3842,19 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 		}
 	}
 
-	/* Check revoke no matter whether this SACK has frag or not */
-	sctp_check_for_revoked(asoc, cum_ack, biggest_tsn_acked);
+	/* Check for revoked fragments if we hand
+	 * fragments in a previous segment. If we
+	 * had no previous fragments we cannot have
+	 * a revoke issue.
+	 */
+	if(asoc->saw_sack_with_frags)
+		sctp_check_for_revoked(asoc, cum_ack, biggest_tsn_acked);
 
- skip_segments:
+	if(num_seg)
+		asoc->saw_sack_with_frags = 1;
+	else
+		asoc->saw_sack_with_frags = 0;
+
 	/******************************/
 	/* update cwnd                */
 	/******************************/
@@ -4025,6 +4035,10 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	    some_on_streamwheel == 0) {
 		/* nothing left on sendqueue.. consider done */
 		/* stop all timers */
+#ifdef SCTP_LOG_RWND
+		sctp_log_rwnd_set(SCTP_SET_PEER_RWND_VIA_SACK,
+				  asoc->peers_rwnd, 0, 0,  a_rwnd);
+#endif
 		asoc->peers_rwnd = a_rwnd;
 		if (asoc->peers_rwnd < stcb->sctp_ep->sctp_ep.sctp_sws_sender) {
 			/* SWS sender side engages */
@@ -4038,7 +4052,6 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 			net->partial_bytes_acked = 0;
 		}
 		asoc->total_flight = 0;
-		asoc->total_flight_book = 0;
 		asoc->total_flight_count = 0;
 		/* clean up */
 		if (asoc->state & SCTP_STATE_SHUTDOWN_PENDING) {
@@ -4237,6 +4250,10 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 		asoc->sat_t3_loss_recovery = 0;
 	}
 	/* Adjust and set the new rwnd value */
+#ifdef SCTP_LOG_RWND
+	sctp_log_rwnd_set(SCTP_SET_PEER_RWND_VIA_SACK,
+			  asoc->peers_rwnd,  asoc->total_flight, (asoc->sent_queue_cnt * sctp_peer_chunk_oh), a_rwnd);
+#endif
 
 	asoc->peers_rwnd = sctp_sbspace_sub(a_rwnd, 
 					    (u_int32_t)(asoc->total_flight + (asoc->sent_queue_cnt * sctp_peer_chunk_oh)));

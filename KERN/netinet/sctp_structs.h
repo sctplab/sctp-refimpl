@@ -247,6 +247,7 @@ struct sctp_tmit_chunk {
 	u_int32_t flags;		/* flags, such as FRAGMENT_OK */
 	int32_t   send_size;
 	int32_t   book_size;
+	int32_t   mbcnt;
 	struct sctp_association *asoc;	/* bp to asoc this belongs to */
 	struct timeval sent_rcv_time;	/* filled in if RTT being calculated */
 	struct mbuf *data;		/* pointer to mbuf chain of data */
@@ -499,7 +500,6 @@ struct sctp_association {
 	/* amount of data (bytes) currently in flight (on all destinations) */
 	int total_flight;
 	/* Total book size in flight */
-	int total_flight_book;
 	int total_flight_count;	/* count of chunks used with book total */
 	/* count of destinaton nets and list of destination nets */
 	int numnets;
@@ -644,6 +644,8 @@ struct sctp_association {
 	u_int8_t seen_a_sack_this_pkt;
 	u_int8_t stream_reset_outstanding;
 	u_int8_t delayed_connection;
+	u_int8_t ifp_had_enobuf;
+	u_int8_t saw_sack_with_frags;
 	/*
 	 * The mapping array is used to track out of order sequences above
 	 * last_acked_seq. 0 indicates packet missing 1 indicates packet 
