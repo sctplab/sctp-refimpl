@@ -1525,6 +1525,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		    sh, op_err);
 		return (NULL);
 	}
+	/* Note we return with TCB locked. */
 	SCTP_TCB_LOCK(stcb);
 
 	/* get the correct sctp_nets */
@@ -1853,7 +1854,6 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			printf("sctp_handle_cookie: couldn't pull the signature\n");
 		}
 #endif
-		SCTP_INP_RUNLOCK(l_inp);
 		return (NULL);
 	}
 	/* compare the received digest with the computed digest */
@@ -3953,7 +3953,9 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		retval = sctp_process_data(mm, iphlen, &offset, length, sh,
 		    inp, stcb, net, &high_tsn);
 		if (retval == 2) {
-			/* The association aborted, no unlock needed */
+			/* The association aborted, NO UNLOCK needed 
+			 * since the association is destroyed.
+			 */
 			return (0);
 		}
 
@@ -3979,8 +3981,10 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 			was_a_gap = 1;
 		}
 		sctp_sack_check(stcb, 1, was_a_gap, &abort_flag);
-		if (abort_flag)
+		if (abort_flag) {
+			/* Again, we aborted so NO UNLOCK needed */
 			return (0);
+		}
 	}
 	/* trigger send of any chunks in queue... */
 #ifdef SCTP_AUDITING_ENABLED
