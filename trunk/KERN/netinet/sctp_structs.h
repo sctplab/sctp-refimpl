@@ -236,7 +236,7 @@ TAILQ_HEAD(sctpchunk_listhead, sctp_tmit_chunk);
 /* The lower byte is used to enumerate PR_SCTP policies */
 #define CHUNK_FLAGS_PR_SCTP_TTL	        SCTP_PR_SCTP_TTL
 #define CHUNK_FLAGS_PR_SCTP_BUF	        SCTP_PR_SCTP_BUF
-#define CHUNK_FLAGS_PR_SCTP_NTX         SCTP_PR_SCTP_NTX
+#define CHUNK_FLAGS_PR_SCTP_RTX         SCTP_PR_SCTP_RTX
 
 /* The upper byte is used a a bit mask */
 #define CHUNK_FLAGS_FRAGMENT_OK	        0x0100

@@ -4069,36 +4069,54 @@ sctp_prepare_chunk(struct sctp_tmit_chunk *template,
 {
 	bzero(template, sizeof(struct sctp_tmit_chunk));
 	template->sent = SCTP_DATAGRAM_UNSENT;
-	if ((stcb->asoc.peer_supports_prsctp) &&
-	    (PR_SCTP_ENABLED(srcv->sinfo_flags)) &&
-	    (srcv->sinfo_timetolive > 0)
-		) {
-		/* If:
-		 *  Peer supports PR-SCTP
-		 *  The flags is set against this send for PR-SCTP
-		 *  And timetolive is a postive value, zero is reserved
-		 *     to mean a reliable send for both buffer/time
-		 *     related one.
+	template->flags = 0;
+	/* PR sctp flags */
+	if (stcb->asoc.peer_supports_prsctp) {
+		/*
+		 * We assume that the user wants PR_SCTP_TTL
+		 * if the user provides a positive lifetime but
+		 * does not specify any PR_SCTP policy.
 		 */
-		/* FIXME MT */
-		if (PR_SCTP_BUF_ENABLED(srcv->sinfo_flags)) {
+		if ((srcv->sinfo_timetolive > 0) && (!PR_SCTP_ENABLED(srcv->sinfo_flags))) {
+			template->flags |= CHUNK_FLAGS_PR_SCTP_TTL;
+		} else {
+			template->flags |= PR_SCTP_POLICY(srcv->sinfo_flags);
+		}
+		switch (PR_SCTP_POLICY(template->flags)) {
+		struct timeval tv;
+		case CHUNK_FLAGS_PR_SCTP_BUF:
 			/*
 			 * Time to live is a priority stored in tv_sec
 			 * when doing the buffer drop thing.
 			 */
-			template->rec.data.timetodrop.tv_sec = srcv->sinfo_timetolive;
-		} else {
-			struct timeval tv;
-
+			template->rec.data.timetodrop.tv_sec  = srcv->sinfo_timetolive;
+			template->rec.data.timetodrop.tv_usec = 0;
+			break;
+		case CHUNK_FLAGS_PR_SCTP_TTL:
 			SCTP_GETTIME_TIMEVAL(&template->rec.data.timetodrop);
 			tv.tv_sec = srcv->sinfo_timetolive / 1000;
 			tv.tv_usec = (srcv->sinfo_timetolive * 1000) % 1000000;
 #ifndef __FreeBSD__
 			timeradd(&template->rec.data.timetodrop, &tv,
-			    &template->rec.data.timetodrop);
+				 &template->rec.data.timetodrop);
 #else
 			timevaladd(&template->rec.data.timetodrop, &tv);
 #endif
+			break;
+		case CHUNK_FLAGS_PR_SCTP_RTX:
+			/*
+			 * Time to live is a the number or retransmissions
+			 * stored in tv_sec.
+			 */
+			template->rec.data.timetodrop.tv_sec  = srcv->sinfo_timetolive;
+			template->rec.data.timetodrop.tv_usec = 0;
+			break;
+		default:
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_USRREQ1) {
+			printf("Unknown PR_SCTP policy %u.\n", PR_SCTP_POLICY(template->flags));
+		}
+#endif	
 		}
 	}
 	if ((srcv->sinfo_flags & SCTP_UNORDERED) == 0) {
@@ -4131,22 +4149,6 @@ sctp_prepare_chunk(struct sctp_tmit_chunk *template,
 		template->rec.data.rcv_flags = 0;
 	}
 	/* no flags yet, FRAGMENT_OK goes here */
-	template->flags = 0;
-	/* PR sctp flags */
-	if (stcb->asoc.peer_supports_prsctp) {
-		if (srcv->sinfo_timetolive > 0) {
-			/*
-			 * We only set the flag if timetolive (or
-			 * priority) was set to a positive number.
-			 * Zero is reserved specifically to be
-			 * EXCLUDED and sent reliable.
-			 */
-			if (!PR_SCTP_ENABLED(srcv->sinfo_flags))
-				template->flags |= CHUNK_FLAGS_PR_SCTP_TTL;
-			else
-				template->flags |= (0xff & srcv->sinfo_flags);
-		}
-	}
 	template->asoc = &stcb->asoc;
 }
 
