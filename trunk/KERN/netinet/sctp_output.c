@@ -7222,6 +7222,8 @@ sctp_output(inp, m, addr, control, p)
 	}
 	/* Can't allow a V6 address on a non-v6 socket */
 	if (addr) {
+		SCTP_INP_CREATE_LOCK(inp);
+		create_lock_applied = 1;
 		if (((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0) &&
 		    (addr->sa_family == AF_INET6)) {
 			splx(s);
@@ -7237,6 +7239,10 @@ sctp_output(inp, m, addr, control, p)
 				sctppcbinfo.mbuf_track--;
 				sctp_m_freem(control);
 				splx(s);
+				if(create_lock_applied) {
+					SCTP_INP_CREATE_UNLOCK(inp);
+					create_lock_applied = 0;
+				}
 				return (sctp_sendall(inp, NULL, m, &srcv));
 			}
 			if (srcv.sinfo_assoc_id) {
@@ -7271,14 +7277,14 @@ sctp_output(inp, m, addr, control, p)
 		}
 	}
 	if (stcb == NULL) {
-		SCTP_INP_CREATE_LOCK(inp);
-		create_lock_applied = 1;
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
 			SCTP_INP_RLOCK(inp);
 			stcb = LIST_FIRST(&inp->sctp_asoc_list);
 			SCTP_INP_RUNLOCK(inp);
 			if (stcb == NULL) {
 				splx(s);
+				if(create_lock_applied)
+					SCTP_INP_CREATE_UNLOCK(inp);
 				return (ENOTCONN);
 			}
 			if (addr == NULL) {
@@ -7289,11 +7295,11 @@ sctp_output(inp, m, addr, control, p)
 					net = stcb->asoc.primary_destination;
 				}
 			}
-		}
-		else
+		} else {
 			if (addr != NULL) {
 				stcb = sctp_findassociation_ep_addr(&t_inp, addr,&net, NULL);
 			}
+		}
 	}
 	if ((stcb == NULL) &&
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE)) {
@@ -7359,6 +7365,8 @@ sctp_output(inp, m, addr, control, p)
 		if(create_lock_applied) {
 			SCTP_INP_CREATE_UNLOCK(inp);
 			create_lock_applied = 0;
+		} else {
+			printf("Huh-1, create lock should have been applied!\n");
 		}
 		queue_only = 1;
 		asoc = &stcb->asoc;
@@ -7457,8 +7465,10 @@ sctp_output(inp, m, addr, control, p)
 			return (error);
 		}
 	}
-        /* we should never hit here with the create lock applied */
 	if(create_lock_applied) {
+		/* we should never hit here with the create lock applied 
+		 *
+		 */
 		SCTP_INP_CREATE_UNLOCK(inp);
 		create_lock_applied = 0;
 	}
@@ -9885,6 +9895,8 @@ sctp_sosend(struct socket *so,
 		goto out;
 	}
 	if (addr) {
+		SCTP_INP_CREATE_LOCK(inp);
+		create_lock_applied = 1;
 		if (((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0) &&
 		    (addr->sa_family == AF_INET6)) {
 			error = EINVAL;
@@ -9915,6 +9927,11 @@ sctp_sosend(struct socket *so,
 				sctppcbinfo.mbuf_track--;
 				sctp_m_freem(control);
 				sbunlock(&so->so_snd);
+
+				if(create_lock_applied) {
+					SCTP_INP_CREATE_UNLOCK(inp);
+					create_lock_applied = 0;
+				}
 				return (sctp_sendall(inp, uio, top, &srcv));
 			}
 			use_rcvinfo = 1;
@@ -9922,8 +9939,6 @@ sctp_sosend(struct socket *so,
 	}
 	if (stcb == NULL) {
 		/* Need to do a lookup */
-		SCTP_INP_CREATE_LOCK(inp);
-		create_lock_applied = 1;
 		if (use_rcvinfo && srcv.sinfo_assoc_id) {
 			stcb = sctp_findassociation_ep_asocid(inp, srcv.sinfo_assoc_id);
 			/*
@@ -9987,6 +10002,8 @@ sctp_sosend(struct socket *so,
 		if(create_lock_applied) {
 			SCTP_INP_CREATE_UNLOCK(inp);
 			create_lock_applied = 0;
+		} else {
+			printf("Huh-3? create lock should have been on??\n");
 		}
 		/* Turn on queue only flag to prevent data from being sent */
  		queue_only = 1;
@@ -10327,9 +10344,9 @@ sctp_sosend(struct socket *so,
 	}
 #endif
  out:
-	SCTP_TCB_UNLOCK(stcb);
 	sbunlock(&so->so_snd);
  out_nsb:
+	SCTP_TCB_UNLOCK(stcb);
 	if (top)
 		sctp_m_freem(top);
 	if (control)
