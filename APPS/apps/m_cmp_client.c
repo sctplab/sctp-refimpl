@@ -440,7 +440,7 @@ measure_one(struct control_info *req,
 #if defined(__APPLE__) || defined(linux)
 	printf("Set send buffer to %d\n", htonl(req->req.snd_buf));
 #else
-	printf("Set send buffer to %ld\n", htonl(req->req.snd_buf));
+	printf("Set send buffer to %ld\n", (long)htonl(req->req.snd_buf));
 #endif
 #ifdef WIN32	 
 	if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, (const char *)&optval,
@@ -460,7 +460,7 @@ measure_one(struct control_info *req,
 #if defined(__APPLE__) || defined(linux)
 	printf("Set recv buffer to %d\n", htonl(req->req.rcv_buf));
 #else
-	printf("Set recv buffer to %ld\n", htonl(req->req.rcv_buf));
+	printf("Set recv buffer to %ld\n", (long)htonl(req->req.rcv_buf));
 #endif
 #ifdef WIN32
 	if (setsockopt(fd, SOL_SOCKET, SO_RCVBUF, (const char *)&optval,

@@ -3,7 +3,7 @@
 This file is part of the SCTP reference Implementation
 
 Version:4.0.5
-$Header: /usr/sctpCVS/APPS/baselib/HashedTbl.h,v 1.1.1.1 2004-06-23 13:07:29 randall Exp $
+$Header: /usr/sctpCVS/APPS/baselib/HashedTbl.h,v 1.2 2005-01-18 17:41:55 randall Exp $
 
 
 The SCTP reference implementation  is free software; 
@@ -44,6 +44,7 @@ There are still LOTS of bugs in this code... I always run on the motto
 #include <signal.h>
 #include <time.h>
 #include <string.h>
+#include <sys/types.h>
 
 #ifdef  _SYSTYPE_SVR4
 double sqrt(double);

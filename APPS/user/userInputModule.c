@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.8 2004-10-29 14:25:43 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.9 2005-01-18 17:41:55 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -1449,7 +1449,7 @@ initUserInterface(distributor *o,struct sctpAdaptorMod *s)
   /* Override the default completion done by the library, because
    * we want to complete commands, not filenames.
    */
-#if defined(__APPLE__)
+#if defined(__APPLE__) || __FreeBSD_version > 500000
   rl_completion_entry_function = (rl_compentry_func_t *) command_generator;
 #else
   rl_completion_entry_function = (Function *) command_generator;
