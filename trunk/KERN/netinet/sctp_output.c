@@ -10052,13 +10052,14 @@ sctp_sosend(struct socket *so,
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
 		SCTP_INP_RLOCK(inp);
 		stcb = LIST_FIRST(&inp->sctp_asoc_list);
-		SCTP_INP_RUNLOCK(inp);
 		if (stcb == NULL) {
+			SCTP_INP_RUNLOCK(inp);
 			error = ENOTCONN;
 			splx(s);
 			goto out;
 		}
 		SCTP_TCB_LOCK(stcb);
+		SCTP_INP_RUNLOCK(inp);
 		net = stcb->asoc.primary_destination;
 	}
 	/* get control */
