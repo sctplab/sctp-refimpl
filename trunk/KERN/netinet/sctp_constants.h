@@ -670,100 +670,100 @@
 #define SCTP_UNSET_TSN_PRESENT(arry, gap) (arry[(gap >> 3)] &= ((~(0x01 << ((gap & 0x07)))) & 0xff))
 
 /* pegs */
-#define SCTP_NUMBER_OF_PEGS 92
+#define SCTP_NUMBER_OF_PEGS	92
 /* peg index's */
-#define SCTP_PEG_SACKS_SEEN 0 /* XX */
-#define SCTP_PEG_SACKS_SENT 1 /* XX */
-#define SCTP_PEG_TSNS_SENT  2 /* XX */
-#define SCTP_PEG_TSNS_RCVD  3 /* XX */
-#define SCTP_DATAGRAMS_SENT 4 /* XX */
-#define SCTP_DATAGRAMS_RCVD 5 /* XX */
-#define SCTP_RETRANTSN_SENT 6 /* XX */
-#define SCTP_DUPTSN_RECVD   7 /* XX */
-#define SCTP_HB_RECV	    8 /* XX */
-#define SCTP_HB_ACK_RECV    9 /* XX */
-#define SCTP_HB_SENT	   10 /* XX */
-#define SCTP_WINDOW_PROBES 11 /* XX */
-#define SCTP_DATA_DG_RECV  12 /* XX */
-#define SCTP_TMIT_TIMER    13 /* XX */
-#define SCTP_RECV_TIMER    14 /* XX */
-#define SCTP_HB_TIMER      15 /* XX */
-#define SCTP_FAST_RETRAN   16 /* XX */
-#define SCTP_TIMERS_EXP    17 /* XX */
-#define SCTP_FR_INAWINDOW  18 /* XX */
-#define SCTP_RWND_BLOCKED  19 /* XX */
-#define SCTP_CWND_BLOCKED  20 /* XX */
-#define SCTP_RWND_DROPS    21 /* XX */
-#define SCTP_BAD_STRMNO    22 /* XX */
-#define SCTP_BAD_SSN_WRAP  23 /* XX */
-#define SCTP_DROP_NOMEMORY 24 /* XX */
-#define SCTP_DROP_FRAG     25 /* XX */
-#define SCTP_BAD_VTAGS     26 /* XX */
-#define SCTP_BAD_CSUM      27 /* XX */
-#define SCTP_INPKTS        28 /* XX */
-#define SCTP_IN_MCAST      29 /* XX */
-#define SCTP_HDR_DROPS     30 /* XX */
-#define SCTP_NOPORTS	   31 /* XX */
-#define SCTP_CWND_NOFILL   32 /* XX */
-#define SCTP_CALLS_TO_CO   33 /* XX */
-#define SCTP_CO_NODATASNT  34 /* XX */
-#define SCTP_CWND_NOUSE_SS 35 /* XX */
-#define SCTP_MAX_BURST_APL 36 /* XX */
-#define SCTP_EXPRESS_ROUTE 37 /* XX */
-#define SCTP_NO_COPY_IN    38 /* XX */
-#define SCTP_CACHED_SRC    39  
-#define SCTP_CWND_NOCUM	   40
-#define SCTP_CWND_SS	   41
-#define SCTP_CWND_CA	   42
-#define SCTP_CWND_SKIP	   43
-#define SCTP_CWND_NOUSE_CA 44
-#define SCTP_MAX_CWND	   45
-#define SCTP_CWND_DIFF_CA  46
-#define SCTP_CWND_DIFF_SA  47
-#define SCTP_OQS_AT_SS 	   48
-#define SCTP_SQQ_AT_SS 	   49
-#define SCTP_OQS_AT_CA 	   50
-#define SCTP_SQQ_AT_CA 	   51
-#define SCTP_MOVED_MTU     52
-#define SCTP_MOVED_QMAX    53
-#define SCTP_SQC_AT_SS     54
-#define SCTP_SQC_AT_CA     55
-#define SCTP_MOVED_MAX     56
-#define SCTP_MOVED_NLEF    57
-#define SCTP_NAGLE_NOQ     58
-#define SCTP_NAGLE_OFF     59
-#define SCTP_OUTPUT_FRM_SND 60
-#define SCTP_SOS_NOSNT     61   /* some on stream queues when none sent */
-#define SCTP_NOS_NOSNT     62   /* none on stream queues when none sent */
-#define SCTP_SOSE_NOSNT    63   /* some on send queue when none sent */
-#define SCTP_NOSE_NOSNT    64   /* none on send queue when none sent */
-#define SCTP_DATA_OUT_ERR  65
-#define SCTP_DUP_SSN_RCVD  66
-#define SCTP_DUP_FR        67
-#define SCTP_VTAG_EXPR     68
-#define SCTP_VTAG_BOGUS    69
-#define SCTP_T3_SAFEGRD    70
-#define SCTP_PDRP_FMBOX    71
-#define SCTP_PDRP_FEHOS    72
-#define SCTP_PDRP_MB_DA	   73
-#define SCTP_PDRP_MB_CT	   74
-#define SCTP_PDRP_BWRPT	   75
-#define SCTP_PDRP_CRUPT	   76
-#define SCTP_PDRP_NEDAT    77
-#define SCTP_PDRP_PDBRK    78
-#define SCTP_PDRP_TSNNF    79
-#define SCTP_PDRP_DNFND    80
-#define SCTP_PDRP_DIWNP    81
-#define SCTP_PDRP_DIZRW    82
-#define SCTP_PDRP_BADD     83
-#define SCTP_PDRP_MARK     84
-#define SCTP_ECNE_RCVD     85
-#define SCTP_CWR_PERFO     86
-#define SCTP_ECNE_SENT     87
-#define SCTP_MSGC_DROP     88
-#define SCTP_RESV1         89
-#define SCTP_RESV2         90
-#define SCTP_RESV3         91
+#define SCTP_PEG_SACKS_SEEN	0
+#define SCTP_PEG_SACKS_SENT	1
+#define SCTP_PEG_TSNS_SENT	2
+#define SCTP_PEG_TSNS_RCVD	3
+#define SCTP_DATAGRAMS_SENT	4
+#define SCTP_DATAGRAMS_RCVD	5
+#define SCTP_RETRANTSN_SENT	6
+#define SCTP_DUPTSN_RECVD	7
+#define SCTP_HB_RECV		8
+#define SCTP_HB_ACK_RECV	9
+#define SCTP_HB_SENT		10
+#define SCTP_WINDOW_PROBES	11
+#define SCTP_DATA_DG_RECV	12
+#define SCTP_TMIT_TIMER		13
+#define SCTP_RECV_TIMER		14
+#define SCTP_HB_TIMER		15
+#define SCTP_FAST_RETRAN	16
+#define SCTP_TIMERS_EXP		17
+#define SCTP_FR_INAWINDOW	18
+#define SCTP_RWND_BLOCKED	19
+#define SCTP_CWND_BLOCKED	20
+#define SCTP_RWND_DROPS		21
+#define SCTP_BAD_STRMNO		22
+#define SCTP_BAD_SSN_WRAP	23
+#define SCTP_DROP_NOMEMORY	24
+#define SCTP_DROP_FRAG		25
+#define SCTP_BAD_VTAGS		26
+#define SCTP_BAD_CSUM		27
+#define SCTP_INPKTS		28
+#define SCTP_IN_MCAST		29
+#define SCTP_HDR_DROPS		30
+#define SCTP_NOPORTS		31
+#define SCTP_CWND_NOFILL	32
+#define SCTP_CALLS_TO_CO	33
+#define SCTP_CO_NODATASNT	34
+#define SCTP_CWND_NOUSE_SS	35
+#define SCTP_MAX_BURST_APL	36
+#define SCTP_EXPRESS_ROUTE	37
+#define SCTP_NO_COPY_IN		38
+#define SCTP_CACHED_SRC		39  
+#define SCTP_CWND_NOCUM		40
+#define SCTP_CWND_SS		41
+#define SCTP_CWND_CA		42
+#define SCTP_CWND_SKIP		43
+#define SCTP_CWND_NOUSE_CA	44
+#define SCTP_MAX_CWND		45
+#define SCTP_CWND_DIFF_CA	46
+#define SCTP_CWND_DIFF_SA	47
+#define SCTP_OQS_AT_SS		48
+#define SCTP_SQQ_AT_SS		49
+#define SCTP_OQS_AT_CA		50
+#define SCTP_SQQ_AT_CA		51
+#define SCTP_MOVED_MTU		52
+#define SCTP_MOVED_QMAX		53
+#define SCTP_SQC_AT_SS		54
+#define SCTP_SQC_AT_CA		55
+#define SCTP_MOVED_MAX		56
+#define SCTP_MOVED_NLEF		57
+#define SCTP_NAGLE_NOQ		58
+#define SCTP_NAGLE_OFF		59
+#define SCTP_OUTPUT_FRM_SND	60
+#define SCTP_SOS_NOSNT		61
+#define SCTP_NOS_NOSNT		62
+#define SCTP_SOSE_NOSNT		63
+#define SCTP_NOSE_NOSNT		64
+#define SCTP_DATA_OUT_ERR	65
+#define SCTP_DUP_SSN_RCVD	66
+#define SCTP_DUP_FR		67
+#define SCTP_VTAG_EXPR		68
+#define SCTP_VTAG_BOGUS		69
+#define SCTP_T3_SAFEGRD		70
+#define SCTP_PDRP_FMBOX		71
+#define SCTP_PDRP_FEHOS		72
+#define SCTP_PDRP_MB_DA		73
+#define SCTP_PDRP_MB_CT		74
+#define SCTP_PDRP_BWRPT		75
+#define SCTP_PDRP_CRUPT		76
+#define SCTP_PDRP_NEDAT		77
+#define SCTP_PDRP_PDBRK		78
+#define SCTP_PDRP_TSNNF		79
+#define SCTP_PDRP_DNFND		80
+#define SCTP_PDRP_DIWNP		81
+#define SCTP_PDRP_DIZRW		82
+#define SCTP_PDRP_BADD		83
+#define SCTP_PDRP_MARK		84
+#define SCTP_ECNE_RCVD		85
+#define SCTP_CWR_PERFO		86
+#define SCTP_ECNE_SENT		87
+#define SCTP_MSGC_DROP		88
+#define SCTP_RESV1		89
+#define SCTP_RESV2		90
+#define SCTP_RESV3		91
 
 /*
  * This value defines the number of vtag block time wait entry's
