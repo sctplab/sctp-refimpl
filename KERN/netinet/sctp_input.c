@@ -4119,6 +4119,11 @@ sctp_input(m, va_alist)
 	sh->checksum = 0;		/* prepare for calc */
 	calc_check = sctp_calculate_sum(m, &mlen, iphlen);
 	if (calc_check != check) {
+		stcb = sctp_findassociation_addr(m, iphlen, offset - sizeof(*ch),
+						 sh, ch, &inp, &net);
+		if((inp) && (stcb)) {
+			sctp_send_packet_dropped(stcb, net, m, iphlen);
+		}
 		sctp_pegs[SCTP_BAD_CSUM]++;
 		goto bad;
 	}

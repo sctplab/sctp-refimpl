@@ -266,7 +266,7 @@
  */
 
 /* draft-ietf-tsvwg-prsctp */
-#define SCTP_SUPPORTED_CHUNK_EXT    0x8002
+#define SCTP_SUPPORTED_CHUNK_EXT    0x8008
 
 /* number of extensions we support */
 #define SCTP_EXT_COUNT 5     	/* num of extensions we support chunk wise */
