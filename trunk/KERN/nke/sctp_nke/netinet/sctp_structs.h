@@ -78,17 +78,26 @@ TAILQ_HEAD(sctpnetlisthead, sctp_nets);
 
 /* 
  * Users of the iterator need to malloc a iterator with a call to
- * sctp_initiate_iterator(func, pcb_flags, asoc_state, void-ptr-arg,  u_int32_t, u_int32-arg, end_func );
+ * sctp_initiate_iterator(func, pcb_flags, asoc_state, void-ptr-arg,  u_int32_t, u_int32-arg, end_func, inp );
  *
  * Use the following two defines if you don't
  * care what pcb flags are on the EP and/or you
  * don't care what state the association is in.
+ *
+ * Note that if you specify an INP as the last argument then ONLY each
+ * association of that single INP will be executed upon. Note that the
+ * pcb flags STILL apply so if the inp you specify has different pcb_flags
+ * then what you put in pcb_flags nothing will happen ... use SCTP_PCB_ANY_FLAGS
+ * to assure the inp you specify gets treated.
  */
 #define SCTP_PCB_ANY_FLAGS  0x00000000	
 #define SCTP_ASOC_ANY_STATE 0x00000000
 
 typedef void(*asoc_func)(struct sctp_inpcb *, struct sctp_tcb *, void *ptr, u_int32_t val);
 typedef void(*end_func)(void *ptr, u_int32_t val);
+
+#define SCTP_INTERATOR_DO_ALL_INP    0x00000001
+#define SCTP_INTERATOR_DO_SINGLE_INP 0x00000002
 
 struct sctp_iterator {
         LIST_ENTRY(sctp_iterator) sctp_nxt_itr;
@@ -101,9 +110,20 @@ struct sctp_iterator {
 	u_int32_t val;		/* type could go here */
 	u_int32_t pcb_flags;
 	u_int32_t asoc_state;
+	u_int32_t iterator_flags;
 };
 
 LIST_HEAD(sctpiterators, sctp_iterator);
+
+struct sctp_copy_all {
+	struct sctp_inpcb *inp;	/* ep */
+	struct mbuf *m;
+	struct sctp_sndrcvinfo sndrcv;
+	int sndlen;
+	int cnt_sent;
+	int cnt_failed;
+};
+
 
 union sctp_sockstore {
 #ifdef AF_INET
@@ -358,7 +378,7 @@ struct sctp_association {
 	/* wait to the point the cum-ack passes 
 	 * pending_reply->sr_resp.reset_at_tsn.
 	 */
-	struct sctp_stream_reset_resp *pending_reply;
+	struct sctp_stream_reset_response *pending_reply;
 	struct sctpchunk_listhead pending_reply_queue;
 
 	u_int32_t cookie_preserve_req;
@@ -623,6 +643,7 @@ struct sctp_association {
         u_int8_t dropped_special_cnt;
 	u_int8_t seen_a_sack_this_pkt;
 	u_int8_t stream_reset_outstanding;
+	u_int8_t delayed_connection;
 	/*
 	 * The mapping array is used to track out of order sequences above
 	 * last_acked_seq. 0 indicates packet missing 1 indicates packet 

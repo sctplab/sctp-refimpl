@@ -1454,10 +1454,11 @@ sctp_do_connect_x(struct socket *so,
 		  struct sctp_inpcb *inp,
 		  struct mbuf *m,
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-		  struct thread *p
+		  struct thread *p,
 #else
-  	          struct proc *p
+  	          struct proc *p,
 #endif
+		  int delay
 	)
 {
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -1605,8 +1606,14 @@ sctp_do_connect_x(struct socket *so,
 	}
 #endif
 	stcb->asoc.state = SCTP_STATE_COOKIE_WAIT;
-	SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_entered);
-	sctp_send_initiate(inp, stcb);
+	if (delay) {
+		/* doing delayed connection */
+		stcb->asoc.delayed_connection = 1;
+		sctp_timer_start(SCTP_TIMER_TYPE_INIT, inp, stcb, stcb->asoc.primary_destination);
+	} else {
+		SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_entered);
+		sctp_send_initiate(inp, stcb);
+	}
 	splx(s);
 	return error;
 }
@@ -1706,6 +1713,50 @@ sctp_optsget(struct socket *so,
 			m->m_len = sizeof(optval);
 		}
 		break;
+	case SCTP_GET_ASOC_ID_LIST:
+	{
+		struct sctp_assoc_ids *ids;
+		int cnt, at;
+		u_int16_t orig;
+
+		if(m->m_len < sizeof(struct sctp_assoc_ids)) {
+			error = EINVAL;
+			break;
+		}
+		ids = mtod(m, struct sctp_assoc_ids *);
+		cnt = 0;
+		stcb = LIST_FIRST(&inp->sctp_asoc_list);
+		if(stcb == NULL) {
+		none_out_now:
+			ids->asls_numb_present = 0;
+			ids->asls_more_to_get = 0;
+			break;
+		}
+		orig = ids->asls_assoc_start;
+		stcb = LIST_FIRST(&inp->sctp_asoc_list);
+		while( orig ) {
+			stcb = LIST_NEXT(stcb , sctp_tcblist);
+			orig--;
+			cnt--;
+		}
+		if( stcb == NULL)
+			goto none_out_now;
+
+		at = 0;
+		ids->asls_numb_present = 0;
+		ids->asls_more_to_get = 1;
+		while(at < MAX_ASOC_IDS_RET) {
+			ids->asls_assoc_id[at] = sctp_get_associd(stcb);
+			at++;
+			ids->asls_numb_present++;
+			stcb = LIST_NEXT(stcb , sctp_tcblist);
+			if(stcb == NULL) {
+				ids->asls_more_to_get = 0;
+				break;
+			}
+		}
+	}
+	break;
 	case SCTP_GET_NONCE_VALUES:
 	{
 		struct sctp_get_nonce_values *gnv;
@@ -2634,6 +2685,28 @@ sctp_optsset(struct socket *so,
 			break;
 		}
 
+/* Having re-thought this code I added as I write the I-D there
+ * is NO need for it. The peer, if we are requesting a stream-reset
+ * will send a request to us but will itself do what we do, take
+ * and copy off the "reset information" we send and queue TSN's
+ * larger than the send-next in our response message. Thus they
+ * will handle it.
+ */
+/*		if (stcb->asoc.sending_seq != (stcb->asoc.last_acked_seq + 1)) {*/
+			/* Must have all sending data ack'd before we
+			 * start this procedure. This is a bit restrictive
+			 * and we SHOULD work on changing this so ONLY the 
+			 * streams being RESET get held up. So, a reset-all
+			 * would require this.. but a reset specific just
+			 * needs to be sure that the ones being reset have
+			 * nothing on the send_queue. For now we will
+			 * skip this more detailed method and do a course
+			 * way.. i.e. nothing pending ... for future FIX ME!
+			 */
+/*			error = EBUSY;*/
+/*			break;*/
+/*		}*/
+
 		if (stcb->asoc.stream_reset_outstanding) {
 			error = EALREADY;
 			break;
@@ -2672,9 +2745,50 @@ sctp_optsset(struct socket *so,
 			error = EINVAL;
 			break;
 		}
-		error = sctp_do_connect_x(so, inp, m, p);
+		error = sctp_do_connect_x(so, inp, m, p, 0);
 		break;
 
+	case SCTP_CONNECT_X_DELAYED:
+		if (m->m_len < (sizeof(int) + sizeof(struct sockaddr_in))) {
+			error = EINVAL;
+			break;
+		}
+		error = sctp_do_connect_x(so, inp, m, p, 1);
+		break;
+
+	case SCTP_CONNECT_X_COMPLETE:
+	{
+		struct sockaddr *sa;
+		struct sctp_nets *net;
+		if (m->m_len < sizeof(struct sockaddr_in)) {
+			error = EINVAL;
+			break;
+		}
+		sa = mtod(m, struct sockaddr *);
+		/* find tcb */
+#ifdef SCTP_TCP_MODEL_SUPPORT
+		if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
+			stcb = LIST_FIRST(&inp->sctp_asoc_list);
+			if (stcb)
+				net = sctp_findnet(stcb, sa);
+		} else
+#endif /* SCTP_TCP_MODEL_SUPPORT */
+			stcb = sctp_findassociation_ep_addr(&inp, sa, &net, NULL);
+		if (stcb == NULL) {
+			error = ENOENT;
+			break;
+		}
+		if (stcb->asoc.delayed_connection == 1) {
+			stcb->asoc.delayed_connection = 0;
+			SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_entered);
+			sctp_timer_stop(SCTP_TIMER_TYPE_INIT, inp, stcb, stcb->asoc.primary_destination);
+			sctp_send_initiate(inp, stcb);
+		} else {
+			/* already expired or did not use delayed connectx */
+			error = EALREADY;
+		}
+	}
+	break;
 	case SCTP_MAXBURST:
 	{
 		u_int8_t *burst;

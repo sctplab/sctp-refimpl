@@ -2102,8 +2102,8 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			 * is only the singletons I must worry about.
 			 */
 			if ((asoc->pending_reply) &&
-			   ((compare_with_wrap(tsn, ntohl(asoc->pending_reply->sr_resp.reset_at_tsn), MAX_TSN)) ||
-			    (tsn == ntohl(asoc->pending_reply->sr_resp.reset_at_tsn)))
+			   ((compare_with_wrap(tsn, ntohl(asoc->pending_reply->reset_at_tsn), MAX_TSN)) ||
+			    (tsn == ntohl(asoc->pending_reply->reset_at_tsn)))
 				) {
 				/* yep its past where we need to reset... go ahead and 
 				 * queue it.
@@ -2277,8 +2277,8 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 
         /* check the special flag for stream resets */
 	if ((asoc->pending_reply) &&
-	   ((compare_with_wrap(asoc->cumulative_tsn, ntohl(asoc->pending_reply->sr_resp.reset_at_tsn), MAX_TSN)) ||
-	    (asoc->cumulative_tsn ==  ntohl(asoc->pending_reply->sr_resp.reset_at_tsn)))
+	   ((compare_with_wrap((asoc->cumulative_tsn+1), ntohl(asoc->pending_reply->reset_at_tsn), MAX_TSN)) ||
+	    ((asoc->cumulative_tsn+1) ==  ntohl(asoc->pending_reply->reset_at_tsn)))
 		) {	   
 		/* we have finished working through the backlogged TSN's now
 		 * time to reset streams.
@@ -2287,7 +2287,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 		 * 3: distribute any chunks in pending_reply_queue.
 		 */
 		struct sctp_tmit_chunk *chk;
-		sctp_handle_stream_reset((struct sctp_stream_reset_req *)asoc->pending_reply, stcb);
+		sctp_handle_stream_reset_response(stcb, asoc->pending_reply);
 		FREE(asoc->pending_reply, M_PCB);
 		asoc->pending_reply = NULL;
 		chk = TAILQ_FIRST(&asoc->pending_reply_queue);

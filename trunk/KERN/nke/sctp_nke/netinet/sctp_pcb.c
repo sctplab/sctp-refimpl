@@ -4533,7 +4533,7 @@ sctp_remove_from_socket_q(struct sctp_inpcb *inp)
 
 int
 sctp_initiate_iterator(asoc_func af, uint32_t pcb_state, 
-    uint32_t asoc_state, void *argp, uint32_t argi,end_func ef)
+    uint32_t asoc_state, void *argp, uint32_t argi,end_func ef, struct sctp_inpcb *s_inp)
 {
 	struct sctp_iterator *it=NULL;	
 	int s;
@@ -4551,7 +4551,13 @@ sctp_initiate_iterator(asoc_func af, uint32_t pcb_state,
 	it->val = argi;
 	it->pcb_flags = pcb_state;
 	it->asoc_state = asoc_state;
-	it->inp = LIST_FIRST(&sctppcbinfo.listhead);
+	if( s_inp ) { 
+		it->inp = s_inp;
+		it->iterator_flags = SCTP_INTERATOR_DO_SINGLE_INP;
+	} else {
+		it->inp = LIST_FIRST(&sctppcbinfo.listhead);
+		it->iterator_flags = SCTP_INTERATOR_DO_ALL_INP;
+	}
 	/* Init the timer */
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 	callout_init(&it->tmr.timer, 0);
