@@ -162,6 +162,8 @@ extern int ipport_hilastauto;
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 
 #ifndef xyzzy 
+void sctp_validate_no_locks(void);
+
 void
 SCTP_INP_RLOCK(struct sctp_inpcb *inp) 
 {
@@ -206,6 +208,23 @@ SCTP_INP_INFO_WLOCK()
 }
 
 
+void sctp_validate_no_locks()
+{
+	struct sctp_inpcb *inp;
+	struct sctp_tcb *stcb;
+
+	if(mtx_owned(&sctppcbinfo.ipi_ep_mtx))
+		panic("INP INFO lock is owned?");
+
+	LIST_FOREACH(inp, &sctppcbinfo.listhead, sctp_list) {
+		if(mtx_owned(&(inp)->inp_mtx))
+			panic("You own an INP lock?");
+		LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
+			if(mtx_owned(&(stcb)->tcb_mtx)) 
+				panic("You own a TCB lock?"); 
+		}
+	}
+}
 
 #endif
 #endif
@@ -3836,10 +3855,13 @@ sctp_del_local_addr_ep(struct sctp_inpcb *inp, struct ifaddr *ifa)
 		sctp_update_ep_vflag(inp);
 		/* select a new primary destination if needed */
 		LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
+			/* presume caller (sctp_asconf.c) already owns INP lock */
+			SCTP_TCB_LOCK(stcb);
 			if (sctp_destination_is_reachable(stcb,
 			    (struct sockaddr *)&stcb->asoc.primary_destination->ro._l_addr) == 0) {
 				sctp_select_primary_destination(stcb);
 			}
+			SCTP_TCB_UNLOCK(stcb);
 		} /* for each tcb */
 	}
 	return (0);
