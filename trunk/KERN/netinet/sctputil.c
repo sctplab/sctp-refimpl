@@ -991,7 +991,7 @@ sctp_timeout_handler(void *t)
 		if (stcb->asoc.num_send_timers_up < 0) {
 			stcb->asoc.num_send_timers_up = 0;
 		}
-		if ( sctp_t3rxt_timer(inp, stcb, net)) {
+		if (sctp_t3rxt_timer(inp, stcb, net)) {
 			/* no need to unlock on tcb its gone */
 			return;
 		}
