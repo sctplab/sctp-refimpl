@@ -105,7 +105,6 @@ kern_return_t SCTP_start (kmod_info_t * ki, void * d) {
 	int s;
 	int funnel_state;
 	int err;
-	int i;
 			
 
 	old_pr4  = ip_protox [IPPROTO_SCTP];
