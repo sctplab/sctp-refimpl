@@ -105,7 +105,9 @@
 #endif
 #endif /* INET6 */
 
+#ifndef APPLE_NKE
 #include "faith.h"
+#endif
 
 #ifdef IPSEC
 #ifndef __OpenBSD__

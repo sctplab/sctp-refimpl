@@ -557,7 +557,7 @@ SYSCTL_PROC(_net_inet_sctp, OID_AUTO, getcred, CTLTYPE_OPAQUE|CTLFLAG_RW,
 /*
  * sysctl definitions
  */
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__)
 SYSCTL_INT(_net_inet_sctp, SCTPCTL_MAXDGRAM, maxdgram, CTLFLAG_RW,
 	   &sctp_sendspace, 0, "Maximum outgoing SCTP buffer size");
 
@@ -590,7 +590,39 @@ SYSCTL_INT(_net_inet_sctp, SCTPCTL_MAXBURST, maxburst, CTLFLAG_RW,
 
 SYSCTL_INT(_net_inet_sctp, SCTPCTL_MAXCHUNKONQ, maxchunks, CTLFLAG_RW,
 	   &sctp_max_chunks_on_queue, 0, "Default max chunks on queue per asoc");
+#elif defined (__APPLE__)
+SYSCTL_INT(_net_inet_sctp, OID_AUTO, maxdgram, CTLFLAG_RW,
+	   &sctp_sendspace, 0, "Maximum outgoing SCTP buffer size");
 
+SYSCTL_INT(_net_inet_sctp, OID_AUTO, recvspace, CTLFLAG_RW,
+	   &sctp_recvspace, 0, "Maximum incoming SCTP buffer size");
+
+SYSCTL_INT(_net_inet_sctp, OID_AUTO, auto_asconf, CTLFLAG_RW,
+	   &sctp_auto_asconf, 0, "Enable SCTP Auto-ASCONF");
+
+SYSCTL_INT(_net_inet_sctp, OID_AUTO, ecn_enable, CTLFLAG_RW,
+	   &sctp_ecn, 0, "Enable SCTP ECN");
+
+SYSCTL_INT(_net_inet_sctp, OID_AUTO, ecn_nonce, CTLFLAG_RW,
+	   &sctp_ecn_nonce, 0, "Enable SCTP ECN Nonce");
+
+SYSCTL_INT(_net_inet_sctp, OID_AUTO, strict_sacks, CTLFLAG_RW,
+	   &sctp_strict_sacks, 0, "Enable SCTP Strict SACK checking");
+
+SYSCTL_INT(_net_inet_sctp, OID_AUTO, loopback_nocsum, CTLFLAG_RW,
+	   &sctp_no_csum_on_loopback, 0, "Enable NO Csum on packets sent on loopback");
+
+SYSCTL_INT(_net_inet_sctp, OID_AUTO, strict_init, CTLFLAG_RW,
+	   &sctp_strict_init, 0, "Enable strict INIT/INIT-ACK singleton enforcement");
+
+SYSCTL_INT(_net_inet_sctp, OID_AUTO, peer_chkoh, CTLFLAG_RW,
+	   &sctp_peer_chunk_oh, 0, "Amount to debit peers rwnd per chunk sent");
+
+SYSCTL_INT(_net_inet_sctp, OID_AUTO, maxburst, CTLFLAG_RW,
+	   &sctp_max_burst_default, 0, "Default max burst for sctp endpoints");
+
+SYSCTL_INT(_net_inet_sctp, OID_AUTO, maxchunks, CTLFLAG_RW,
+	   &sctp_max_chunks_on_queue, 0, "Default max chunks on queue per asoc");
 #endif
 
 static int

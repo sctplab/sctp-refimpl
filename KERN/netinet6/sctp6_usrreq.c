@@ -93,7 +93,10 @@
 #endif
 #endif /*IPSEC*/
 
+#ifndef APPLE_NKE
 #include "faith.h"
+#endif
+
 #if defined(NFAITH) && NFAITH > 0
 #include <net/if_faith.h>
 #endif
