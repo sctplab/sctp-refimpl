@@ -3625,6 +3625,7 @@ sctp_usr_recvd(struct socket *so, int flags)
 	 * Grab the first one on the list. It will re-insert itself if
 	 * it runs out of room
 	 */
+
 #ifdef SCTP_TCP_MODEL_SUPPORT
 	if (flags & MSG_EOR) {
 		/* Ok the other part of our grubby tracking

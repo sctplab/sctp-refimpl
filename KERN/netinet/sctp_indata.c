@@ -202,12 +202,11 @@ sctp_build_ctl_nchunk(struct sctp_tcb *stcb, uint32_t tsn, uint32_t ppid,
 		return (NULL);
 	}
 
-	MGET(ret, M_DONTWAIT, MT_CONTROL);
+	MGETHDR(ret, M_DONTWAIT, MT_CONTROL);
 	if (ret == NULL) {
 		/* No space */
 		return (ret);
 	}
-
 	/* We need a CMSG header followed by the struct  */
 	cmh = mtod(ret, struct cmsghdr *);
 	outinfo = (struct sctp_sndrcvinfo *)CMSG_DATA(cmh);
@@ -227,6 +226,7 @@ sctp_build_ctl_nchunk(struct sctp_tcb *stcb, uint32_t tsn, uint32_t ppid,
 	outinfo->sinfo_tsn = tsn;
 	outinfo->sinfo_cumtsn = stcb->asoc.cumulative_tsn;
 	ret->m_len = cmh->cmsg_len;
+	ret->m_pkthdr.len = ret->m_len;
 	/*
 	 * We track how many control len's have gone upon the sb 
 	 * and do not count these in the rwnd calculation.
