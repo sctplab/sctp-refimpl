@@ -106,18 +106,17 @@ main(int argc, char **argv)
 				       from_str[log.from]);
 			}
 		}else if(log.event_type == SCTP_LOG_EVENT_MAXBURST) {
-			if(log.from == 0) {
-				printf("%d: Network:%x Cwnd:%d flight:%d bursted out:%d - NOT limited\n",
+			if(log.from != 0) {
+				printf("%d: Network:%x Flight:%d bursted out:%d - send error:%d halted output\n",
 				       at,
 				       (u_int)log.x.cwnd.net,
-				       (int)(log.x.cwnd.cwnd_new_value * 1024),
 				       (int)(log.x.cwnd.inflight * 1024),
-				       (int)log.x.cwnd.cwnd_augment);
+				       (int)log.x.cwnd.cwnd_augment,
+				       (int)(log.x.cwnd.cwnd_new_value));
 			} else {
-				printf("%d: Network:%x Cwnd:%d flight:%d burst limted to:%d - limited\n",
+				printf("%d: Network:%x flight:%d burst limted to:%d - limited\n",
 				       at,
 				       (u_int)log.x.cwnd.net,
-				       (int)(log.x.cwnd.cwnd_new_value * 1024),
 				       (int)(log.x.cwnd.inflight * 1024),
 				       (int)log.x.cwnd.cwnd_augment);
 			}
