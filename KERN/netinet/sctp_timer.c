@@ -184,7 +184,14 @@ sctp_threshold_management(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	}
 	if (stcb == NULL)
 		return (0);
-	stcb->asoc.overall_error_count++;
+
+	if (net) {
+		if ((net->dest_state & SCTP_ADDR_UNCONFIRMED) == 0) {
+			stcb->asoc.overall_error_count++;
+		}
+	} else {
+		stcb->asoc.overall_error_count++;
+	}
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_TIMER4) {
 		printf("Overall error count for %p now %d thresh:%u\n",

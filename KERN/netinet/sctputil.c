@@ -1505,6 +1505,20 @@ update_adler32(uint32_t adler, uint8_t *buf, int32_t len)
 
 #endif
 
+
+u_int32_t
+sctp_calculate_len(struct mbuf *m)
+{
+	u_int32_t tlen=0;
+	struct mbuf *at;
+	at = m;
+	while (at) {
+		tlen += at->m_len;
+		at = at->m_next;
+	}
+	return(tlen);
+}
+
 #if defined(SCTP_WITH_NO_CSUM)
 
 uint32_t
@@ -1520,17 +1534,9 @@ sctp_calculate_sum(struct mbuf *m, int32_t *pktlen, uint32_t offset)
 	 * Note: if offset is greater than the total mbuf length,
 	 * checksum=1, pktlen=0 is returned (ie. no real error code)
 	 */
-	int32_t tlen=0;
-	struct mbuf *at;
-
 	if (pktlen == NULL)
 		return (0);
-	at = m;
-	while (at) {
-		tlen += at->m_len;
-		at = at->m_next;
-	}
-	*pktlen = tlen;
+	*pktlen = sctp_calculate_len(m);
 	return (0);
 }
 

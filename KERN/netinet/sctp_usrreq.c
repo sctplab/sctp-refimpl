@@ -118,6 +118,7 @@ extern u_int32_t sctp_debug_on;
  * we use the number of mbufs and clusters to tune our initial send
  * and receive windows and the limit of chunks allocated.
  */
+int sctp_no_csum_on_loopback = 1;
 int sctp_max_chunks_on_queue = SCTP_ASOC_MAX_CHUNKS_ON_QUEUE;
 int sctp_sendspace = (128 * 1024);	
 int sctp_recvspace = 128 * (1024 +
@@ -571,6 +572,10 @@ SYSCTL_INT(_net_inet_sctp, SCTPCTL_ECN_NONCE, ecn_nonce, CTLFLAG_RW,
 
 SYSCTL_INT(_net_inet_sctp, SCTPCTL_STRICT_SACK, strict_sacks, CTLFLAG_RW,
 	   &sctp_strict_sacks, 0, "Enable SCTP Strict SACK checking");
+
+SYSCTL_INT(_net_inet_sctp, SCTPCTL_NOCSUM_LO, looback_nocsum, CTLFLAG_RW,
+	   &sctp_no_csum_on_loopback, 0, "Enable NO Csum on packets sent on loopback");
+
 
 #endif
 
@@ -3973,7 +3978,9 @@ sctp_sysctl(name, namelen, oldp, oldlenp, newp, newlen)
 	case SCTPCTL_STRICT_SACK:
 		return (sysctl_int(oldp, oldlenp, newp, newlen,
 				   &sctp_strict_sacks));
-
+	case SCTPCTL_NOCSUM_LO:
+		return (sysctl_int(oldp, oldlenp, newp, newlen,
+				   &sctp_no_csum_on_loopback));
 	default:
 		return (ENOPROTOOPT);
 	}

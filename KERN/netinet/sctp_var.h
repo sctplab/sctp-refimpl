@@ -52,7 +52,11 @@
 #define SCTPCTL_STRICT_SACK     6	/* strictly require sack'd TSN's to be 
 					 * smaller than sndnxt.
 					 */
-#define SCTPCTL_MAXID		6
+#define SCTPCTL_NOCSUM_LO       7       /* Require that the Loopback NOT have
+					 * the crc32 checksum on packets routed over
+					 * it.
+					 */
+#define SCTPCTL_MAXID		7
 
 #define SCTPCTL_NAMES { \
 	{ 0, 0 }, \
@@ -62,6 +66,7 @@
 	{ "ecn_enable", CTLTYPE_INT }, \
 	{ "ecn_nonce", CTLTYPE_INT }, \
 	{ "strict_sack", CTLTYPE_INT }, \
+	{ "looback_nocsum", CTLTYPE_INT }, \
 }
 
 #if defined(_KERNEL) || (defined(__APPLE__) && defined(KERNEL))

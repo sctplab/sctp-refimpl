@@ -163,6 +163,8 @@ in6_sin6_2_sin_in_sock(struct sockaddr *nam)
 
 #endif /* !(__FreeBSD__ || __APPLE__) */
 
+extern int sctp_no_csum_on_loopback;
+
 int
 #if defined(__APPLE__)
 sctp6_input(mp, offp)
@@ -242,20 +244,28 @@ sctp6_input(mp, offp, proto)
 		sctp_pegs[SCTP_IN_MCAST]++;
 		goto out_of;
 	}
-
-	check = sh->checksum;		/* save incoming checksum */
-	sh->checksum = 0;		/* prepare for calc */
-	calc_check = sctp_calculate_sum(m, &mlen, iphlen);
-	if (calc_check != check) {
-		stcb = sctp_findassociation_addr(m, iphlen, offset - sizeof(*ch),
-						 sh, ch, &in6p, &net);
-		if((in6p) && (stcb)) {
-			sctp_send_packet_dropped(stcb, net, m, iphlen, 1);
+	if((sctp_no_csum_on_loopback == 0) ||
+	   (m->m_pkthdr.rcvif == NULL) ||
+	   (m->m_pkthdr.rcvif->if_type != IFT_LOOP)) {
+		/* we do NOT validate things from the loopback if the
+		 * sysctl is set to 1.
+		 */
+		check = sh->checksum;		/* save incoming checksum */
+		sh->checksum = 0;		/* prepare for calc */
+		calc_check = sctp_calculate_sum(m, &mlen, iphlen);
+		if (calc_check != check) {
+			stcb = sctp_findassociation_addr(m, iphlen, offset - sizeof(*ch),
+							 sh, ch, &in6p, &net);
+			if((in6p) && (stcb)) {
+				sctp_send_packet_dropped(stcb, net, m, iphlen, 1);
+			}
+			sctp_pegs[SCTP_BAD_CSUM]++;
+			goto out_of;
 		}
-		sctp_pegs[SCTP_BAD_CSUM]++;
-		goto out_of;
+		sh->checksum = calc_check;
+	} else {
+		mlen = m->m_pkthdr.len;
 	}
-	sh->checksum = calc_check;
 	net = NULL;
 	/* destination port of 0 is illegal, based on RFC2960. */
 	if (sh->dest_port == 0) {
