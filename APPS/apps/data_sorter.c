@@ -304,11 +304,13 @@ add_entry_to_cache(struct cache_entry **head,
 int
 parse_data_input(char *buf,struct data_entry *ent, int lineno)
 {
+
     char *dot=".";
     char *colon=":";
     char *space=" ";
     char *err,*time,*sec,*usec,*rb,*sz,*protocol;
     int secs,usecs,size;
+    char timef[200];
 
 /* 3.0 2.882067 # rb:0 size:10000:sctp: */
     err = strtok(buf,space);
@@ -353,9 +355,10 @@ parse_data_input(char *buf,struct data_entry *ent, int lineno)
                lineno);
         return(-1);
     }
-    sec = strtok(time,dot);
+    strcpy(timef, time);
+    sec = strtok(timef,dot);
     if(sec == NULL){
-        printf("time is malformed, not x.xxxxxx - line %d skipping\n",
+	    printf("time %s is malformed, not x.xxxxxx - line %d skipping\n", time,
                lineno);
         return(-1);
     }
@@ -366,10 +369,23 @@ parse_data_input(char *buf,struct data_entry *ent, int lineno)
     }
     usec = (char *)((caddr_t)sec + strlen(sec) + 1);
     secs = strtol(sec,NULL,0);
+    /* trim up the leading 0's */
+    {
+	    int blat, blen;
+	    blen = strlen(usec);
+	    blat=0;
+	    while(*usec == '0') {
+		    usec++;
+		    blat++;
+		    if(blat >= blen)
+			    break;
+	    }
+    }
     usecs = strtol(usec,NULL,0);
     if((secs == 0) && (usecs == 0)){
-        printf("bad time measurement, can't be 0.00000 line %d skipping\n",
-               lineno);
+	    printf("bad time '%s' sec:%s usec:%s  measurement, can't be 0.00000 line %d skipping\n",
+		   time, sec, usec,
+		   lineno);
         return(-1);
     }
     size = strtol(sz,NULL,0);
