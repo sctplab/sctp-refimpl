@@ -982,8 +982,10 @@ sctp6_disconnect(struct socket *so)
 			    TAILQ_EMPTY(&asoc->sent_queue) &&
 			    (some_on_streamwheel == 0)) {
 				/* nothing queued to send, so I'm done... */
-				if ((asoc->state & SCTP_STATE_MASK) !=
-				    SCTP_STATE_SHUTDOWN_SENT) {
+				if ((SCTP_GET_STATE(asoc) != 
+				     SCTP_STATE_SHUTDOWN_SENT) &&
+				    (SCTP_GET_STATE(asoc) != 
+				     SCTP_STATE_SHUTDOWN_ACK_SENT)) {
 					/* only send SHUTDOWN the first time */
 #ifdef SCTP_DEBUG
 					if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
