@@ -34,7 +34,7 @@ Patch 24 change log
 16) sctp lib adde of sctp_sendx()
 
 
-Patch 25)
+Patch 25 all of patch24)
 
 1) Link Local addresses for V6 where the ll address
    is included implicitly would make a false decision to

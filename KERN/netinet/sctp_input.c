@@ -3503,14 +3503,21 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			 */
 			if (((inp->sctp_flags & SCTP_PCB_FLAGS_ACCEPTING) == 0) ||
 			    (inp->sctp_socket->so_qlimit == 0)) {
+  			        if((stcb) && (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)){
+				  /* special case, is this a retran'd COOKIE-ECHO or
+				   * a restarting assoc that is a peeled off or
+				   * one-to-one style socket.
+				   */
+				  goto process_cookie_anyway;
+			        }
 				sctp_abort_association(inp, stcb, m, iphlen, sh,
 				    NULL);
 				*offset = length;
 				return (NULL);
 			} else if (inp->sctp_flags & SCTP_PCB_FLAGS_ACCEPTING) {
 				/* we are accepting so check limits like TCP */
-				if (inp->sctp_socket->so_qlen >
-				    inp->sctp_socket->so_qlimit) {
+				if ((inp->sctp_socket->so_qlen >
+				     inp->sctp_socket->so_qlimit) && (stcb == NULL)) {
 					/* no space */
 					struct mbuf *oper;
 					struct sctp_paramhdr *phdr;
@@ -3533,6 +3540,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					return (NULL);
 				}
 			}
+		process_cookie_anyway:
 			{
 				struct mbuf *ret_buf;
 				ret_buf = sctp_handle_cookie_echo(m, iphlen,
