@@ -386,16 +386,16 @@ struct sctp_status {
 
 struct sctp_cwnd_args {
 	struct sctp_nets *net;		/* network to */
-	u_int16_t cwnd_new_value;	/* cwnd in k */
-	u_int16_t inflight;		/* flightsize in k */
+	u_int32_t cwnd_new_value;	/* cwnd in k */
+	u_int32_t inflight;		/* flightsize in k */
 	int cwnd_augment;		/* increment to it */
 };
 
 struct sctp_blk_args {
+	u_int32_t onmb;			/* in 1k bytes */
+	u_int32_t onsb;			/* in 1k bytes */
 	u_int16_t maxmb;		/* in 1k bytes */
-	u_int16_t onmb;			/* in 1k bytes */
 	u_int16_t maxsb;		/* in 1k bytes */
-	u_int16_t onsb;			/* in 1k bytes */
 	u_int16_t send_sent_qcnt;	/* chnk cnt */
 	u_int16_t stream_qcnt;		/* chnk cnt */
 };
