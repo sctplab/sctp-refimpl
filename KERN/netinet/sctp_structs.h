@@ -312,9 +312,7 @@ struct sctp_association {
 	struct sctp_timer strreset_timer;	/* stream reset */
 	struct sctp_timer shut_guard_timer;	/* guard */
 	struct sctp_timer autoclose_timer;	/* automatic close timer */
-#ifdef SCTP_TCP_MODEL_SUPPORT
 	struct sctp_timer delayed_event_timer;	/* timer for delayed events */
-#endif /* SCTP_TCP_MODEL_SUPPORT */
 
 	/* list of local addresses when add/del in progress */
 	struct sctpladdr sctp_local_addr_list;

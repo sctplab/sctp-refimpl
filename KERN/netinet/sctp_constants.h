@@ -100,8 +100,6 @@
 #define SCTP_LOG_EVENT_RWND  7
 #define SCTP_LOG_EVENT_MBCNT 8
 
-/* if you want to support the TCP model, uncomment the following define */
-#define SCTP_TCP_MODEL_SUPPORT	1
 
 /* number of associations by default for zone allocation */
 #define SCTP_MAX_NUM_OF_ASOC	40000
@@ -852,7 +850,6 @@
 #define SCTP_GETTIME_TIMESPEC(x) (nanotime(x))
 #endif /* __FreeBSD__ */
 
-#ifdef SCTP_TCP_MODEL_SUPPORT
 #define sctp_sowwakeup(inp, so) \
 do { \
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_DONT_WAKE) { \
@@ -870,18 +867,6 @@ do { \
 		sorwakeup(so); \
 	} \
 } while (0)
-#else
-
-#define sctp_sowwakeup(inp, so) \
-do { \
-	sowwakeup(so); \
-} while (0)
-
-#define sctp_sorwakeup(inp, so) \
-do { \
-	sorwakeup(so); \
-} while (0)
-#endif /* SCTP_TCP_MODEL_SUPPORT */
 
 #endif /* _KERNEL */
 #endif

@@ -1063,7 +1063,6 @@ sctp_shutdown(struct socket *so)
 		splx(s);
 		return (EOPNOTSUPP);
 	}
-#ifdef SCTP_TCP_MODEL_SUPPORT
 	/*
 	 * Ok if we reach here its the TCP model and it is either a SHUT_WR
 	 * or SHUT_RDWR. This means we put the shutdown flag against it.
@@ -1130,9 +1129,6 @@ sctp_shutdown(struct socket *so)
 	}
 	splx(s);
 	return 0;
-#endif
-	splx(s);
-	return (EOPNOTSUPP);
 }
 
 /*
@@ -1421,15 +1417,12 @@ sctp_do_connect_x(struct socket *so,
 		printf("Connectx called\n");
 	}
 #endif /* SCTP_DEBUG */
-#ifdef SCTP_TCP_MODEL_SUPPORT
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
 		/* We are already connected AND the TCP model */
 		splx(s);
 		return (EADDRINUSE);
 	}
-#endif /* SCTP_TCP_MODEL_SUPPORT */
-#ifdef SCTP_TCP_MODEL_SUPPORT
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)
 		stcb = LIST_FIRST(&inp->sctp_asoc_list);
 	if (stcb) {
@@ -1437,8 +1430,6 @@ sctp_do_connect_x(struct socket *so,
 		return (EALREADY);
 
 	}
-#endif /* SCTP_TCP_MODEL_SUPPORT */
-
 	totaddrp = mtod(m, int *);
 	totaddr = *totaddrp;
 	sa = (struct sockaddr *)(totaddrp + 1);
@@ -1544,13 +1535,11 @@ sctp_do_connect_x(struct socket *so,
 		}
 		sa = (struct sockaddr *)((caddr_t)sa + incr);
 	}
-#ifdef SCTP_TCP_MODEL_SUPPORT
 	if (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) {
 		stcb->sctp_ep->sctp_flags |= SCTP_PCB_FLAGS_CONNECTED;
 		/* Set the connected flag so we can queue data */
 		soisconnecting(so);
 	}
-#endif
 	stcb->asoc.state = SCTP_STATE_COOKIE_WAIT;
 	if (delay) {
 		/* doing delayed connection */
@@ -1768,7 +1757,6 @@ sctp_optsget(struct socket *so,
 		int ovh;
 		segsize = mtod(m, u_int32_t *);
 		m->m_len = sizeof(u_int32_t);
-#ifdef SCTP_TCP_MODEL_SUPPORT
 		if (((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 		     (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) ||
 		    (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
@@ -1780,7 +1768,6 @@ sctp_optsget(struct socket *so,
 				goto skipit;
 		} else {
 		skipit:
-#endif
 
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) {
 				ovh = SCTP_MED_OVERHEAD;
@@ -1788,9 +1775,7 @@ sctp_optsget(struct socket *so,
 				ovh = SCTP_MED_V4_OVERHEAD;
 			}
 			*segsize = inp->sctp_frag_point - ovh;
-#ifdef SCTP_TCP_MODEL_SUPPORT
 		}
-#endif
 	}
 	break;
 
@@ -1943,11 +1928,9 @@ sctp_optsget(struct socket *so,
 		}
 		stcb = NULL;
 		val = mtod(m, u_int32_t *);
-#ifdef SCTP_TCP_MODEL_SUPPORT
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
 			stcb = LIST_FIRST(&inp->sctp_asoc_list);
 		}
-#endif /* SCTP_TCP_MODEL_SUPPORT */
 		if (stcb == NULL) {
 			assoc_id = mtod(m, sctp_assoc_t *);
 			printf("Lookup association id:%x for inp:%x\n",
@@ -1998,14 +1981,11 @@ sctp_optsget(struct socket *so,
 		}
 		left = m->m_len - sizeof(struct sctp_getaddresses);
 		saddr = mtod(m, struct sctp_getaddresses *);
-#ifdef SCTP_TCP_MODEL_SUPPORT
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
 			stcb = LIST_FIRST(&inp->sctp_asoc_list);
-		}
-		else
-#endif /* SCTP_TCP_MODEL_SUPPORT */
+		} else
 			stcb = sctp_findassociation_ep_asocid(inp,
-							     saddr->sget_assoc_id);
+							      saddr->sget_assoc_id);
 		if (stcb == NULL) {
 			error = ENOENT;
 			break;
@@ -2075,11 +2055,9 @@ sctp_optsget(struct socket *so,
 		saddr = mtod(m, struct sctp_getaddresses *);
 
 		if (saddr->sget_assoc_id) {
-#ifdef SCTP_TCP_MODEL_SUPPORT
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)
 				stcb = LIST_FIRST(&inp->sctp_asoc_list);
 			else
-#endif /* SCTP_TCP_MODEL_SUPPORT */
 				stcb = sctp_findassociation_ep_asocid(inp, saddr->sget_assoc_id);
 		} else {
 			stcb = NULL;
@@ -2088,12 +2066,10 @@ sctp_optsget(struct socket *so,
 		 * assure that the TCP model does not need a assoc id 
 		 * once connected.
 		 */
-#ifdef SCTP_TCP_MODEL_SUPPORT
 		if ( (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) &&
 		     (stcb == NULL) ) {
 			stcb = LIST_FIRST(&inp->sctp_asoc_list);			
 		}
-#endif /* SCTP_TCP_MODEL_SUPPORT */				
 		sas = (struct sockaddr_storage *)&saddr->addr[0];
 		limit = m->m_len - sizeof(sctp_assoc_t);
 		actual = sctp_fill_up_addresses(inp, stcb, limit, sas);
@@ -2129,13 +2105,11 @@ sctp_optsget(struct socket *so,
 				printf("In spp_assoc_id find type\n");
 			}
 #endif /* SCTP_DEBUG */
-#ifdef SCTP_TCP_MODEL_SUPPORT
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
 				stcb = LIST_FIRST(&inp->sctp_asoc_list);
 				if (stcb)
 					net = sctp_findnet(stcb, (struct sockaddr *)&paddrp->spp_address);
 			} else
-#endif /* SCTP_TCP_MODEL_SUPPORT */
 				stcb = sctp_findassociation_ep_asocid(inp, paddrp->spp_assoc_id);
 			if (stcb == NULL) {
 				error = ENOENT;
@@ -2151,13 +2125,11 @@ sctp_optsget(struct socket *so,
 				printf("Ok we need to lookup a param\n");
 			}
 #endif /* SCTP_DEBUG */
-#ifdef SCTP_TCP_MODEL_SUPPORT
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
 				stcb = LIST_FIRST(&inp->sctp_asoc_list);
 				if (stcb)
 					net = sctp_findnet(stcb, (struct sockaddr *)&paddrp->spp_address);
 			} else
-#endif /* SCTP_TCP_MODEL_SUPPORT */
 				stcb = sctp_findassociation_ep_addr(&inp,
 				    (struct sockaddr *)&paddrp->spp_address,
 				    &net, NULL);
@@ -2221,14 +2193,12 @@ sctp_optsget(struct socket *so,
 		if ((((struct sockaddr *)&paddri->spinfo_address)->sa_family == AF_INET) ||
 		    (((struct sockaddr *)&paddri->spinfo_address)->sa_family == AF_INET6)) {
 			/* Lookup via address */
-#ifdef SCTP_TCP_MODEL_SUPPORT
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
 				stcb = LIST_FIRST(&inp->sctp_asoc_list);
 				if (stcb)
 					net = sctp_findnet(stcb, 
 							    (struct sockaddr *)&paddri->spinfo_address);
 			} else {
-#endif /* SCTP_TCP_MODEL_SUPPORT */
 				stcb = sctp_findassociation_ep_addr(&inp,
 				    (struct sockaddr *)&paddri->spinfo_address,
 				    &net, NULL);
@@ -2281,11 +2251,9 @@ sctp_optsget(struct socket *so,
 			break;
 		}
 		sstat = mtod(m, struct sctp_status *);
-#ifdef SCTP_TCP_MODEL_SUPPORT
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)
 			stcb = LIST_FIRST(&inp->sctp_asoc_list);
 		else
-#endif /* SCTP_TCP_MODEL_SUPPORT */
 			stcb = sctp_findassociation_ep_asocid(inp, sstat->sstat_assoc_id);
 		if (stcb == NULL) {
 			error = EINVAL;
@@ -2349,11 +2317,9 @@ sctp_optsget(struct socket *so,
 			srto->srto_min = inp->sctp_ep.sctp_minrto;
 			break;
 		}
-#ifdef SCTP_TCP_MODEL_SUPPORT
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)
 			stcb = LIST_FIRST(&inp->sctp_asoc_list);
 		else
-#endif /* SCTP_TCP_MODEL_SUPPORT */
 			stcb = sctp_findassociation_ep_asocid(inp, srto->srto_assoc_id);
 		if (stcb == NULL) {
 			error = EINVAL;
@@ -2379,10 +2345,8 @@ sctp_optsget(struct socket *so,
 		}
 		sasoc = mtod(m, struct sctp_assocparams *);
 		stcb = NULL;
-#ifdef SCTP_TCP_MODEL_SUPPORT
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)
 			stcb = LIST_FIRST(&inp->sctp_asoc_list);
-#endif /* SCTP_MODEL_SUPPORT */
 		if ((sasoc->sasoc_assoc_id) && (stcb == NULL)) {
 			stcb = sctp_findassociation_ep_asocid(inp,
 							     sasoc->sasoc_assoc_id);
@@ -2418,11 +2382,9 @@ sctp_optsget(struct socket *so,
 			break;
 		}
 		s_info = mtod(m, struct sctp_sndrcvinfo *);
-#ifdef SCTP_TCP_MODEL_SUPPORT
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)
 			stcb = LIST_FIRST(&inp->sctp_asoc_list);
 		else
-#endif /* SCTP_TCP_MODEL_SUPPORT */
 			stcb = sctp_findassociation_ep_asocid(inp, s_info->sinfo_assoc_id);
 		if (stcb == NULL) {
 			error = ENOENT;
@@ -2467,20 +2429,16 @@ sctp_optsget(struct socket *so,
 			break;
 		}
 		ssp = mtod(m, struct sctp_setprim *);
-#ifdef SCTP_TCP_MODEL_SUPPORT
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)
 			stcb = LIST_FIRST(&inp->sctp_asoc_list);
 		else
-#endif /* SCTP_TCP_MODEL_SUPPORT */
 			stcb = sctp_findassociation_ep_asocid(inp, ssp->ssp_assoc_id);
 		if (stcb == NULL) {
 			/* one last shot, try it by the address in */
 			struct sctp_nets *net;
-#ifdef SCTP_TCP_MODEL_SUPPORT
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)
 				stcb = LIST_FIRST(&inp->sctp_asoc_list);
 			else
-#endif
 				stcb = sctp_findassociation_ep_addr(&inp,
 				    (struct sockaddr *)&ssp->ssp_addr,
 				    &net, NULL);
@@ -2611,11 +2569,9 @@ sctp_optsset(struct socket *so,
 			break;
 		}
 		strrst = mtod(m, struct sctp_stream_reset *);
-#ifdef SCTP_TCP_MODEL_SUPPORT
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
 			stcb = LIST_FIRST(&inp->sctp_asoc_list);
 		} else
-#endif /* SCTP_TCP_MODEL_SUPPORT */
 			stcb = sctp_findassociation_ep_asocid(inp, strrst->strrst_assoc_id);
 		if (stcb == NULL) {
 			error = ENOENT;
@@ -2712,13 +2668,11 @@ sctp_optsset(struct socket *so,
 		}
 		sa = mtod(m, struct sockaddr *);
 		/* find tcb */
-#ifdef SCTP_TCP_MODEL_SUPPORT
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
 			stcb = LIST_FIRST(&inp->sctp_asoc_list);
 			if (stcb)
 				net = sctp_findnet(stcb, sa);
 		} else
-#endif /* SCTP_TCP_MODEL_SUPPORT */
 			stcb = sctp_findassociation_ep_addr(&inp, sa, &net, NULL);
 		if (stcb == NULL) {
 			error = ENOENT;
@@ -2879,11 +2833,9 @@ sctp_optsset(struct socket *so,
 			break;
 		}
 		s_info = mtod(m, struct sctp_sndrcvinfo *);
-#ifdef SCTP_TCP_MODEL_SUPPORT
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)
 			stcb = LIST_FIRST(&inp->sctp_asoc_list);
 		else
-#endif /* SCTP_TCP_MODEL_SUPPORT */
 			stcb = sctp_findassociation_ep_asocid(inp, s_info->sinfo_assoc_id);
 		if (stcb == NULL) {
 			error = ENOENT;
@@ -2913,13 +2865,11 @@ sctp_optsset(struct socket *so,
 		paddrp = mtod(m, struct sctp_paddrparams *);
 		net = NULL;
 		if (paddrp->spp_assoc_id) {
-#ifdef SCTP_TCP_MODEL_SUPPORT
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
 				stcb = LIST_FIRST(&inp->sctp_asoc_list);
 				if (stcb)
 					net = sctp_findnet(stcb, (struct sockaddr *)&paddrp->spp_address);
 			} else
-#endif /* SCTP_TCP_MODEL_SUPPORT */
 				stcb = sctp_findassociation_ep_asocid(inp, paddrp->spp_assoc_id);
 			if (stcb == NULL) {
 				error = ENOENT;
@@ -2930,7 +2880,6 @@ sctp_optsset(struct socket *so,
 		    ((((struct sockaddr *)&paddrp->spp_address)->sa_family == AF_INET) ||
 		     (((struct sockaddr *)&paddrp->spp_address)->sa_family == AF_INET6))) {
 			/* Lookup via address */
-#ifdef SCTP_TCP_MODEL_SUPPORT
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
 				stcb = LIST_FIRST(&inp->sctp_asoc_list);
 				if (stcb) {
@@ -2938,7 +2887,6 @@ sctp_optsset(struct socket *so,
 							    (struct sockaddr *)&paddrp->spp_address);
 				}
 			} else
-#endif
 				stcb = sctp_findassociation_ep_addr(&inp,
 				    (struct sockaddr *)&paddrp->spp_address,
 				    &net, NULL);
@@ -3021,11 +2969,9 @@ sctp_optsset(struct socket *so,
 				inp->sctp_ep.sctp_minrto = srto->srto_min;
 			break;
 		}
-#ifdef SCTP_TCP_MODEL_SUPPORT
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)
 			stcb = LIST_FIRST(&inp->sctp_asoc_list);
 		else
-#endif /* SCTP_TCP_MODEL_SUPPORT */
 			stcb = sctp_findassociation_ep_asocid(inp, srto->srto_assoc_id);
 		if (stcb == NULL) {
 			error = EINVAL;
@@ -3050,11 +2996,9 @@ sctp_optsset(struct socket *so,
 		}
 		sasoc = mtod(m, struct sctp_assocparams *);
 		if ((sasoc->sasoc_assoc_id) && (stcb == NULL)) {
-#ifdef SCTP_TCP_MODEL_SUPPORT
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)
 				stcb = LIST_FIRST(&inp->sctp_asoc_list);
 			else
-#endif /* SCTP_TCP_MODEL_SUPPORT */
 				stcb = sctp_findassociation_ep_asocid(inp,
 								     sasoc->sasoc_assoc_id);
 			if (stcb == NULL) {
@@ -3117,19 +3061,15 @@ sctp_optsset(struct socket *so,
 		}
 		spa = mtod(m, struct sctp_setprim *);
 
-#ifdef SCTP_TCP_MODEL_SUPPORT
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)
 			stcb = LIST_FIRST(&inp->sctp_asoc_list);
 		else
-#endif /* SCTP_TCP_MODEL_SUPPORT */
 			stcb = sctp_findassociation_ep_asocid(inp, spa->ssp_assoc_id);
 		if (stcb == NULL) {
 			/* One last shot */
-#ifdef SCTP_TCP_MODEL_SUPPORT
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)
 				stcb = LIST_FIRST(&inp->sctp_asoc_list);
 			else
-#endif /* SCTP_TCP_MODEL_SUPPORT */
 				stcb = sctp_findassociation_ep_addr(&inp,
 				    (struct sockaddr *)&spa->ssp_addr,
 				    &net, NULL);
@@ -3171,11 +3111,9 @@ sctp_optsset(struct socket *so,
 		}
 		sspp = mtod(m, struct sctp_setpeerprim *);
 
-#ifdef SCTP_TCP_MODEL_SUPPORT
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)
 			stcb = LIST_FIRST(&inp->sctp_asoc_list);
 		else
-#endif /* SCTP_TCP_MODEL_SUPPORT */
 			stcb = sctp_findassociation_ep_asocid(inp, sspp->sspp_assoc_id);
 		if (stcb == NULL) {
 			error = EINVAL;
@@ -3482,19 +3420,15 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	}
 
 	/* Now do we connect? */
-#ifdef SCTP_TCP_MODEL_SUPPORT
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
 		/* We are already connected AND the TCP model */
 		splx(s);
 		return (EADDRINUSE);
 	}
-#endif /* SCTP_TCP_MODEL_SUPPORT */
-#ifdef SCTP_TCP_MODEL_SUPPORT
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)
 		stcb = LIST_FIRST(&inp->sctp_asoc_list);
 	else
-#endif /* SCTP_TCP_MODEL_SUPPORT */
 		stcb = sctp_findassociation_ep_addr(&inp, addr, NULL, NULL);
 
 	if (stcb != NULL) {
@@ -3509,13 +3443,11 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		splx(s);
 		return (error);
 	}
-#ifdef SCTP_TCP_MODEL_SUPPORT
 	if (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) {
 		stcb->sctp_ep->sctp_flags |= SCTP_PCB_FLAGS_CONNECTED;
 		/* Set the connected flag so we can queue data */
 		soisconnecting(so);
 	}
-#endif
 	stcb->asoc.state = SCTP_STATE_COOKIE_WAIT;
 	SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_entered);
 	sctp_send_initiate(inp, stcb);
@@ -3559,9 +3491,7 @@ sctp_usr_recvd(struct socket *so, int flags)
 	 * Grab the first one on the list. It will re-insert itself if
 	 * it runs out of room
 	 */
-
-#ifdef SCTP_TCP_MODEL_SUPPORT
-	if (flags & MSG_EOR) {
+	if ((flags & MSG_EOR) && ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0)) {
 		/* Ok the other part of our grubby tracking
 		 * stuff for our horrible layer violation that
 		 * the tsvwg thinks is ok for sctp_peeloff.. gak!
@@ -3570,7 +3500,6 @@ sctp_usr_recvd(struct socket *so, int flags)
 		 */
 		inp->sctp_vtag_last = sctp_get_last_vtag_from_sb(so);
 	}
-#endif
 	sq = TAILQ_FIRST(&inp->sctp_queue_list);
 	if (sq) {
 		stcb = sq->tcb;
@@ -3580,7 +3509,10 @@ sctp_usr_recvd(struct socket *so, int flags)
 	if (stcb) {
 		long incr;
 		if (flags & MSG_EOR) {
-			stcb = sctp_remove_from_socket_q(inp);
+			if((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0)
+				stcb = sctp_remove_from_socket_q(inp);
+			else
+				stcb = LIST_FIRST(&inp->sctp_asoc_list);
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_USRREQ2)
 				printf("remove from socket queue for inp:%x tcbret:%x\n",
@@ -3620,7 +3552,7 @@ sctp_usr_recvd(struct socket *so, int flags)
 			sctp_chunk_output(inp, stcb, 10);
 		}
 	} else {
-		if (( sq ) && (flags & MSG_EOR)) {
+		if (( sq ) && (flags & MSG_EOR) && ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0)) {
 			stcb = sctp_remove_from_socket_q(inp);
 		}
 	}
@@ -3632,16 +3564,19 @@ sctp_usr_recvd(struct socket *so, int flags)
 			printf("Something off, inp:%x so->so_rcv->sb_mb is empty and sockq is not.. cleaning\n",
 			       (u_int)inp);
 #endif
-		while (TAILQ_EMPTY(&inp->sctp_queue_list) == 0) {
-			sq_cnt++;
-			(void)sctp_remove_from_socket_q(inp);
+
+		if((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) {
+			while (TAILQ_EMPTY(&inp->sctp_queue_list) == 0) {
+				sq_cnt++;
+				(void)sctp_remove_from_socket_q(inp);
+			}
 		}
+
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_USRREQ2)
 			printf("Cleaned up %d sockq's\n", sq_cnt);
 #endif
 	}
-
 	splx(s);
 	return (0);
 }
@@ -3675,14 +3610,12 @@ sctp_listen(struct socket *so, struct proc *p)
 		/* I made the same as TCP since we are not setup? */
 		return (ECONNRESET);
 	}
-#ifdef SCTP_TCP_MODEL_SUPPORT
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
 		/* We are already connected AND the TCP model */
 		splx(s);
 		return (EADDRINUSE);
 	}
-#endif /* SCTP_TCP_MODEL_SUPPORT */
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) {
 		/* We must do a bind. */
 		if ((error = sctp_inpcb_bind(so, NULL, p))) {
@@ -3725,7 +3658,6 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 {
 	struct sockaddr *addr = mtod(nam, struct sockaddr *);
 #endif
-#ifdef SCTP_TCP_MODEL_SUPPORT
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s = splsoftnet();
 #else
@@ -3815,10 +3747,6 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 	}
 	splx(s);
 	return (0);
-#else
-	/* No TCP model, we don't support accept then */
-	return (EOPNOTSUPP);
-#endif
 }
 
 int

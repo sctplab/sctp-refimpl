@@ -4637,13 +4637,11 @@ sctp_msg_append(struct sctp_tcb *stcb,
 #endif	
 	asoc->total_output_queue_size += dataout;
 	asoc->total_output_mbuf_queue_size += mbcnt;
-#ifdef  SCTP_TCP_MODEL_SUPPORT
 	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
 		stcb->sctp_socket->so_snd.sb_cc += dataout;
 		stcb->sctp_socket->so_snd.sb_mbcnt += mbcnt;
 	}
-#endif
 	
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_OUTPUT2) {
@@ -5093,12 +5091,10 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb,
 		}
 		if (orig != chk->data) {
 			/* A new mbuf was added, account for it */
-#ifdef  SCTP_TCP_MODEL_SUPPORT
 			if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 			    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
 				stcb->sctp_socket->so_snd.sb_mbcnt += MSIZE;
 			}
-#endif
 #ifdef SCTP_MBCNT_LOGGING
 			sctp_log_mbcnt(SCTP_LOG_MBCNT_INCREASE,
 				       asoc->total_output_queue_size,
@@ -7210,7 +7206,6 @@ sctp_output(inp, m, addr, control, p)
 	}
 #endif
 
-#ifdef SCTP_TCP_MODEL_SUPPORT
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_ACCEPTING)) {
 		/* The listner can NOT send */
@@ -7223,7 +7218,6 @@ sctp_output(inp, m, addr, control, p)
 		splx(s);
 		return (EFAULT);
 	}
-#endif
 	/* Can't allow a V6 address on a non-v6 socket */
 	if (addr) {
 		if (((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0) &&
@@ -7244,7 +7238,6 @@ sctp_output(inp, m, addr, control, p)
 				return (sctp_sendall(inp, NULL, m, &srcv));
 			}
 			if (srcv.sinfo_assoc_id) {
-#ifdef SCTP_TCP_MODEL_SUPPORT
 				if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
 					stcb = LIST_FIRST(&inp->sctp_asoc_list);
 					if (stcb == NULL) {
@@ -7254,7 +7247,6 @@ sctp_output(inp, m, addr, control, p)
 					net = stcb->asoc.primary_destination;
 				}
 				else
-#endif
 					stcb = sctp_findassociation_ep_asocid(inp, srcv.sinfo_assoc_id);
 				/*
 				 * Question: Should I error here if the
@@ -7274,7 +7266,6 @@ sctp_output(inp, m, addr, control, p)
 		}
 	}
 	if (stcb == NULL) {
-#ifdef SCTP_TCP_MODEL_SUPPORT
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
 			stcb = LIST_FIRST(&inp->sctp_asoc_list);
 			if (stcb == NULL) {
@@ -7291,7 +7282,6 @@ sctp_output(inp, m, addr, control, p)
 			}
 		}
 		else
-#endif
 			if (addr != NULL)
 				stcb = sctp_findassociation_ep_addr(&t_inp, addr,&net, NULL);
 	}
@@ -9697,14 +9687,11 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 #endif	
 	asoc->total_output_queue_size += dataout;
 	asoc->total_output_mbuf_queue_size += mbcnt;
-#ifdef  SCTP_TCP_MODEL_SUPPORT
 	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
 		stcb->sctp_socket->so_snd.sb_cc += dataout;
 		stcb->sctp_socket->so_snd.sb_mbcnt += mbcnt;
 	}
-#endif
-	
 	if ((srcv->sinfo_flags & MSG_EOF) &&
 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE)
 		) {
@@ -9837,7 +9824,6 @@ sctp_sosend(struct socket *so,
 	s = splnet();
 #endif
 
-#ifdef SCTP_TCP_MODEL_SUPPORT
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_ACCEPTING)) {
 		/* The listner can NOT send */
@@ -9845,7 +9831,6 @@ sctp_sosend(struct socket *so,
 		splx(s);
 		goto out;
 	}
-#endif
 	if (addr) {
 		if (((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0) &&
 		    (addr->sa_family == AF_INET6)) {
@@ -9855,7 +9840,6 @@ sctp_sosend(struct socket *so,
 		}
 	}
 	/* now we must find the assoc */
-#ifdef SCTP_TCP_MODEL_SUPPORT
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
 		stcb = LIST_FIRST(&inp->sctp_asoc_list);
 		if (stcb == NULL) {
@@ -9865,7 +9849,6 @@ sctp_sosend(struct socket *so,
 		}
 		net = stcb->asoc.primary_destination;
 	}
-#endif
 	/* get control */
 	if (control) {
 		/* process cmsg snd/rcv info (maybe a assoc-id) */

@@ -2058,7 +2058,6 @@ sctp_notify_assoc_change(u_int32_t event, struct sctp_tcb *stcb,
 		sctp_deliver_data(stcb, &stcb->asoc, NULL);
 	}
 
-#ifdef SCTP_TCP_MODEL_SUPPORT
 	/*
 	 * For TCP model AND UDP connected sockets we will send
 	 * an error up when an ABORT comes in.
@@ -2078,8 +2077,6 @@ sctp_notify_assoc_change(u_int32_t event, struct sctp_tcb *stcb,
 		 soisconnected(stcb->sctp_socket);
 	}
 #endif
-#endif /* SCTP_TCP_MODEL_SUPPORT */
-
 	if (!(stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_RECVASSOCEVNT)) {
 		/* event not enabled */
 		return;
@@ -2139,7 +2136,11 @@ sctp_notify_assoc_change(u_int32_t event, struct sctp_tcb *stcb,
 		sctp_m_freem(m_notify);
 		return;
 	}
-	if (sctp_add_to_socket_q(stcb->sctp_ep, stcb)) {
+	if((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) {
+		if (sctp_add_to_socket_q(stcb->sctp_ep, stcb)) {
+			stcb->asoc.my_rwnd_control_len += sizeof(struct mbuf);
+		}
+	} else {
 		stcb->asoc.my_rwnd_control_len += sizeof(struct mbuf);
 	}
 	/* Wake up any sleeper */
@@ -2221,7 +2222,11 @@ sctp_notify_peer_addr_change(struct sctp_tcb *stcb, uint32_t state,
 		sctp_m_freem(m_notify);
 		return;
 	}
-	if (sctp_add_to_socket_q(stcb->sctp_ep, stcb)) {
+	if((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) {
+		if (sctp_add_to_socket_q(stcb->sctp_ep, stcb)) {
+			stcb->asoc.my_rwnd_control_len += sizeof(struct mbuf);
+		}
+	} else {
 		stcb->asoc.my_rwnd_control_len += sizeof(struct mbuf);
 	}
 	sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
@@ -2312,7 +2317,11 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, u_int32_t error,
 		sctp_m_freem(m_notify);
 		return;
 	}
-	if (sctp_add_to_socket_q(stcb->sctp_ep, stcb)) {
+	if((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) {
+		if (sctp_add_to_socket_q(stcb->sctp_ep, stcb)) {
+			stcb->asoc.my_rwnd_control_len += sizeof(struct mbuf);
+		}
+	} else {
 		stcb->asoc.my_rwnd_control_len += sizeof(struct mbuf);
 	}
 	sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
@@ -2378,7 +2387,11 @@ sctp_notify_adaption_layer(struct sctp_tcb *stcb,
 		sctp_m_freem(m_notify);
 		return;
 	}
-	if (sctp_add_to_socket_q(stcb->sctp_ep, stcb)) {
+	if((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) {
+		if (sctp_add_to_socket_q(stcb->sctp_ep, stcb)) {
+			stcb->asoc.my_rwnd_control_len += sizeof(struct mbuf);
+		}
+	} else {
 		stcb->asoc.my_rwnd_control_len += sizeof(struct mbuf);
 	}
 	sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
@@ -2445,7 +2458,11 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
 		sctp_m_freem(m_notify);
 		return;
 	}
-	if (sctp_add_to_socket_q(stcb->sctp_ep, stcb)) {
+	if((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) {
+		if (sctp_add_to_socket_q(stcb->sctp_ep, stcb)) {
+			stcb->asoc.my_rwnd_control_len += sizeof(struct mbuf);
+		}
+	} else {
 		stcb->asoc.my_rwnd_control_len += sizeof(struct mbuf);
 	}
 	sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
@@ -2459,7 +2476,6 @@ sctp_notify_shutdown_event(struct sctp_tcb *stcb)
 	struct sockaddr_in6 sin6, lsa6;
 	struct sockaddr *to;
 
-#ifdef SCTP_TCP_MODEL_SUPPORT
 	/*
 	 * For TCP model AND UDP connected sockets we will send
 	 * an error up when an SHUTDOWN completes
@@ -2470,7 +2486,6 @@ sctp_notify_shutdown_event(struct sctp_tcb *stcb)
 		socantrcvmore(stcb->sctp_socket);
 		socantsendmore(stcb->sctp_socket);
 	}
-#endif /* SCTP_TCP_MODEL_SUPPORT */
 
 	if (!(stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_RECVSHUTDOWNEVNT))
 		/* event not enabled */
@@ -2522,7 +2537,11 @@ sctp_notify_shutdown_event(struct sctp_tcb *stcb)
 		sctp_m_freem(m_notify);
 		return;
 	}
-	if (sctp_add_to_socket_q(stcb->sctp_ep, stcb)) {
+	if((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) {
+		if (sctp_add_to_socket_q(stcb->sctp_ep, stcb)) {
+			stcb->asoc.my_rwnd_control_len += sizeof(struct mbuf);
+		}
+	} else {
 		stcb->asoc.my_rwnd_control_len += sizeof(struct mbuf);
 	}
 	sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
@@ -2610,7 +2629,11 @@ sctp_notify_stream_reset(struct sctp_tcb *stcb,
 		sctp_m_freem(m_notify);
 		return;
 	}
-	if (sctp_add_to_socket_q(stcb->sctp_ep, stcb)) {
+	if((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) {
+		if (sctp_add_to_socket_q(stcb->sctp_ep, stcb)) {
+			stcb->asoc.my_rwnd_control_len += sizeof(struct mbuf);
+		}
+	} else {
 		stcb->asoc.my_rwnd_control_len += sizeof(struct mbuf);
 	}
 	sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
@@ -3145,10 +3168,8 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 		if (n->m_next == 0)	/* keep pointer to last control buf */
 			break;
 	}
-#ifdef SCTP_TCP_MODEL_SUPPORT
 	if (((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) == 0) ||
 	    ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)== 0)) {
-#endif
 		MGETHDR(m, M_DONTWAIT, MT_SONAME);
 		if (m == 0)
 			return (0);
@@ -3162,11 +3183,9 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 		}
 		m->m_len = asa->sa_len;
 		memcpy(mtod(m, caddr_t), (caddr_t)asa, asa->sa_len);
-#ifdef SCTP_TCP_MODEL_SUPPORT
 	} else {
 		m = NULL;
 	}
-#endif
 	if (n) {
 		n->m_next = m0;		/* concatenate data to control */
 	}else {
@@ -3206,10 +3225,8 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 		if (n->m_next == 0)	/* get pointer to last control buf */
 			break;
 	}
-#ifdef SCTP_TCP_MODEL_SUPPORT
 	if (((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) == 0) ||
 	    ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)== 0)) {
-#endif
 		if (asa->sa_len > MHLEN)
 			return (0);
  try_again:
@@ -3230,11 +3247,9 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 		m->m_len = asa->sa_len;
 		bcopy((caddr_t)asa, mtod(m, caddr_t), asa->sa_len);
 	}
-#ifdef SCTP_TCP_MODEL_SUPPORT
 	else {
 		m = NULL;
 	}
-#endif
 	if (n)
 		n->m_next = m0;		/* concatenate data to control */
 	else
@@ -3267,10 +3282,8 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 		if (n->m_next == 0)	/* keep pointer to last control buf */
 			break;
 	}
-#ifdef SCTP_TCP_MODEL_SUPPORT
 	if (((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) == 0) ||
 	    ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)== 0)) {
-#endif
 		if (asa->sa_len > MHLEN)
 			return (0);
 		MGETHDR(m, M_DONTWAIT, MT_SONAME);
@@ -3278,11 +3291,9 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 			return (0);
 		m->m_len = asa->sa_len;
 		bcopy((caddr_t)asa, mtod(m, caddr_t), asa->sa_len);
-#ifdef SCTP_TCP_MODEL_SUPPORT
 	} else {
 		m = NULL;
 	}
-#endif
 	if (n)
 		n->m_next = m0;		/* concatenate data to control */
 	else
@@ -3516,7 +3527,6 @@ sctp_free_bufspace(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	} else {
 		asoc->total_output_mbuf_queue_size = 0;
 	}
-#ifdef  SCTP_TCP_MODEL_SUPPORT
 	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
 		if (stcb->sctp_socket->so_snd.sb_cc >= tp1->book_size) {
@@ -3531,8 +3541,6 @@ sctp_free_bufspace(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			stcb->sctp_socket->so_snd.sb_mbcnt = 0;
 		}
 	}
-#endif
-
 }
 
 int
