@@ -1440,9 +1440,7 @@ SctpAliasOut(struct ip *pip, int maxpacketsize)
 
 	sc = (struct sctphdr *) ((char *) pip + (pip->ip_hl << 2));
 
-/* FIX FIX, need to fix the alias_proxy stuff yet */
 	proxy_type = ProxyCheck(pip, &proxy_server_address, &proxy_server_port);
-
 	if (proxy_type == 0 && (packetAliasMode & PKT_ALIAS_PROXY_ONLY))
 		return PKT_ALIAS_OK;
 
@@ -1485,6 +1483,7 @@ SctpAliasOut(struct ip *pip, int maxpacketsize)
 			SetProxyPort(link, dest_port);
 			SetProxyAddress(link, dest_address);
 			ProxyModify(link, pip, maxpacketsize, proxy_type);
+			/* IP options could have been added, reset header  */
 			sc = (struct sctphdr *) ((char *) pip + (pip->ip_hl << 2));
 		}
 

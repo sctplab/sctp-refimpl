@@ -716,6 +716,7 @@ GetNewPort(struct alias_link *link, int alias_port_param)
             if ((packetAliasMode & PKT_ALIAS_USE_SOCKETS)
              && (link->flags & LINK_PARTIALLY_SPECIFIED)
 	     && ((link->link_type == LINK_TCP) ||
+		 (link->link_type == LINK_SCTP) ||
 		 (link->link_type == LINK_UDP)))
             {
                 if (GetSocket(port_net, &link->sockfd, link->link_type))
@@ -1254,7 +1255,8 @@ ReLink(struct alias_link *old_link,
                        link_type);
 #ifndef NO_FW_PUNCH
     if (new_link != NULL &&
-        old_link->link_type == LINK_TCP &&
+        ((old_link->link_type == LINK_TCP) ||
+	 (old_link->link_type == LINK_SCTP)) &&
         old_link->data.tcp->fwhole > 0) {
       PunchFWHole(new_link);
     }
@@ -1866,6 +1868,9 @@ FindRtspOut(struct in_addr  src_addr,
 {
     int link_type;
     struct alias_link *link;
+    /* Do we need to worry about SCTP here? 
+     * I don't think so, so I won't for now.
+     */
 
     switch (proto)
     {
