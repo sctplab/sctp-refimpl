@@ -7312,7 +7312,7 @@ sctp_output(inp, m, addr, control, p)
 			}
 		} else {
 			if (addr != NULL) {
-				stcb = sctp_findassociation_ep_addr(&t_inp, addr,&net, NULL);
+				stcb = sctp_findassociation_ep_addr(&t_inp, addr,&net, NULL, NULL);
 			}
 		}
 	}
@@ -9976,7 +9976,7 @@ sctp_sosend(struct socket *so,
 		}
 		if (stcb == NULL) {
 			if (addr != NULL) {
-				stcb = sctp_findassociation_ep_addr(&t_inp, addr, &net, NULL);
+				stcb = sctp_findassociation_ep_addr(&t_inp, addr, &net, NULL, NULL);
 			}
 		}
 	}

@@ -649,7 +649,12 @@ sctp_fill_random_store(struct sctp_pcb *m)
 	/*
 	 * Here we use the MD5/SHA-1 to hash with our good randomNumbers
 	 * and our counter. The result becomes our good random numbers and
-	 * we then setup to give these out.
+	 * we then setup to give these out. Note that we do no lockig
+	 * to protect this. This is ok, since if competing folks call
+	 * this we will get more gobbled gook in the random store whic
+	 * is what we want. There is a danger that two guys will use
+	 * the same random numbers, but thats ok too since that
+	 * is random as well :->
 	 */
 	m->store_at = 0;
 	sctp_hash_digest((char *)m->random_numbers, sizeof(m->random_numbers),
@@ -967,13 +972,9 @@ sctp_timeout_handler(void *t)
 	/* clear the callout pending status here */
 	callout_stop(&tmr->timer);
 #endif
-	if (inp) {
-		SCTP_INP_WLOCK(inp);
-	}
 	if (stcb) {
 		SCTP_TCB_LOCK(stcb);
 	}
-
 	typ = tmr->type;
 	switch (tmr->type) {
 	case SCTP_TIMER_TYPE_ITERATOR:
@@ -991,10 +992,7 @@ sctp_timeout_handler(void *t)
 			stcb->asoc.num_send_timers_up = 0;
 		}
 		if ( sctp_t3rxt_timer(inp, stcb, net)) {
-			if (inp) {
-				SCTP_INP_WUNLOCK(inp);
-			}
-			/* unlock inp but no need on tcb */
+			/* no need to unlock on tcb its gone */
 			return;
 		}
 #ifdef SCTP_AUDITING_ENABLED
@@ -1019,10 +1017,7 @@ sctp_timeout_handler(void *t)
 		break;
 	case SCTP_TIMER_TYPE_INIT:
 		if (sctp_t1init_timer(inp, stcb, net)) {
-			if (inp) {
-				SCTP_INP_WUNLOCK(inp);
-			}
-			/* unlock inp but no need on tcb */
+			/* no need to unlock on tcb its gone */
 			return;
 		}
 		/* We do output but not here */
@@ -1038,10 +1033,7 @@ sctp_timeout_handler(void *t)
 		break;
 	case SCTP_TIMER_TYPE_SHUTDOWN:
 		if (sctp_shutdown_timer(inp, stcb, net) ) {
-			if (inp) {
-				SCTP_INP_WUNLOCK(inp);
-			}
-			/* unlock inp but no need on tcb */
+			/* no need to unlock on tcb its gone */
 			return;
 		}
 #ifdef SCTP_AUDITING_ENABLED
@@ -1051,10 +1043,7 @@ sctp_timeout_handler(void *t)
 		break;
 	case SCTP_TIMER_TYPE_HEARTBEAT:
 		if (sctp_heartbeat_timer(inp, stcb, net)) {
-			if (inp) {
-				SCTP_INP_WUNLOCK(inp);
-			}
-			/* unlock inp but no need on tcb */
+			/* no need to unlock on tcb its gone */
 			return;
 		}
 #ifdef SCTP_AUDITING_ENABLED
@@ -1064,10 +1053,7 @@ sctp_timeout_handler(void *t)
 		break;
 	case SCTP_TIMER_TYPE_COOKIE:
 		if (sctp_cookie_timer(inp, stcb, net)) {
-			if (inp) {
-				SCTP_INP_WUNLOCK(inp);
-			}
-			/* unlock inp but no need on tcb */
+			/* no need to unlock on tcb its gone */
 			return;
 		}
 #ifdef SCTP_AUDITING_ENABLED
@@ -1080,6 +1066,7 @@ sctp_timeout_handler(void *t)
 		struct timeval tv;
 		int i, secret;
 		SCTP_GETTIME_TIMEVAL(&tv);
+		SCTP_INP_WLOCK(inp);
 		inp->sctp_ep.time_of_secret_change = tv.tv_sec;
 		inp->sctp_ep.last_secret_number =
 		    inp->sctp_ep.current_secret_number;
@@ -1093,6 +1080,7 @@ sctp_timeout_handler(void *t)
 			inp->sctp_ep.secret_key[secret][i] =
 			    sctp_select_initial_TSN(&inp->sctp_ep);
 		}
+		SCTP_INP_WUNLOCK(inp);
 		sctp_timer_start(SCTP_TIMER_TYPE_NEWCOOKIE, inp, stcb, net);
 	}
 	did_output = 0;
@@ -1103,10 +1091,7 @@ sctp_timeout_handler(void *t)
 		break;
 	case SCTP_TIMER_TYPE_SHUTDOWNACK:
 		if (sctp_shutdownack_timer(inp, stcb, net)) {
-			if (inp) {
-				SCTP_INP_WUNLOCK(inp);
-			}
-			/* unlock inp but no need on tcb */
+			/* no need to unlock on tcb its gone */
 			return;
 		}
 #ifdef SCTP_AUDITING_ENABLED
@@ -1117,19 +1102,13 @@ sctp_timeout_handler(void *t)
 	case SCTP_TIMER_TYPE_SHUTDOWNGUARD:
 		sctp_abort_an_association(inp, stcb,
 					  SCTP_SHUTDOWN_GUARD_EXPIRES, NULL);
-		if (inp) {
-			SCTP_INP_WUNLOCK(inp);
-		}
-		/* unlock inp but no need on tcb */
+		/* no need to unlock on tcb its gone */
 		return;
 		break;
 
 	case SCTP_TIMER_TYPE_STRRESET:
 		if (sctp_strreset_timer(inp, stcb, net)) {
-			if (inp) {
-				SCTP_INP_WUNLOCK(inp);
-			}
-			/* unlock inp but no need on tcb */
+			/* no need to unlock on tcb its gone */
 			return;
 		}
 		sctp_chunk_output(inp, stcb, 9);
@@ -1137,10 +1116,7 @@ sctp_timeout_handler(void *t)
 
 	case SCTP_TIMER_TYPE_ASCONF:
 		if (sctp_asconf_timer(inp, stcb, net)) {
-			if (inp) {
-				SCTP_INP_WUNLOCK(inp);
-			}
-			/* unlock inp but no need on tcb */
+			/* no need to unlock on tcb its gone */
 			return;
 		}
 #ifdef SCTP_AUDITING_ENABLED
@@ -1182,9 +1158,6 @@ sctp_timeout_handler(void *t)
 		printf("Timer now complete (type %d)\n", typ);
 	}
 #endif /* SCTP_DEBUG */
-	if (inp) {
-		SCTP_INP_WUNLOCK(inp);
-	}
 	if (stcb) {
 		SCTP_TCB_UNLOCK(stcb);
 	}

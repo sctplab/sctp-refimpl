@@ -2007,7 +2007,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 
 	if ((*stcb == NULL) && to) {
 		/* Yep, lets check */
-		*stcb = sctp_findassociation_ep_addr(inp_p, to, netp, localep_sa);
+		*stcb = sctp_findassociation_ep_addr(inp_p, to, netp, localep_sa, NULL);
 		if (*stcb) {
 			SCTP_TCB_LOCK((*stcb));
 		}

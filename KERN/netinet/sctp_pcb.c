@@ -473,13 +473,13 @@ sctp_findassociation_ep_asconf(struct mbuf *m, int iphlen, int offset,
 
 	stcb = sctp_findassociation_ep_addr(inp_p,
 	    (struct sockaddr *)&remote_store, netp,
-	    (struct sockaddr *)&local_store);
+	    (struct sockaddr *)&local_store, NULL);
 	return (stcb);
 }
 
 struct sctp_tcb *
 sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
-    struct sctp_nets **netp, struct sockaddr *local)
+    struct sctp_nets **netp, struct sockaddr *local, struct sctp_tcb *locked_tcb)
 {
 	struct sctpasochead *head;
 	struct sctp_inpcb *inp;
@@ -516,8 +516,18 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 				SCTP_INP_RUNLOCK(inp);
 				return (NULL);
 			}
+			if(locked_tcb != stcb) {
+				/* if the caller has not locked a
+				 * tcb (the usual case) then we must
+				 * lock it to look at it.
+				 */
+ 				SCTP_TCB_LOCK(stcb);
+			}
 			if (stcb->rport != rport) {
 				/* remote port does not match. */
+				if(locked_tcb != stcb) {
+					SCTP_TCB_UNLOCK(stcb);
+				}
 				SCTP_INP_RUNLOCK(inp);
 				return (NULL);
 			}
@@ -540,6 +550,9 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 							*netp = net;
 						}
 						SCTP_INP_RUNLOCK(inp);
+						if(locked_tcb != stcb) {
+							SCTP_TCB_UNLOCK(stcb);
+						}
 						return (stcb);
 					}
 				} else if (remote->sa_family == AF_INET6) {
@@ -553,9 +566,15 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 							*netp = net;
 						}
 						SCTP_INP_RUNLOCK(inp);
+						if(locked_tcb != stcb) {
+							SCTP_TCB_UNLOCK(stcb);
+						}
 						return (stcb);
 					}
 				}
+			}
+			if(locked_tcb != stcb) {
+				SCTP_TCB_UNLOCK(stcb);
 			}
 		}
 	} else {
@@ -571,12 +590,17 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 				continue;
 			}
 			/* now look at the list of remote addresses */
-			SCTP_TCB_LOCK(stcb);
+			if(locked_tcb != stcb) {
+				/* if the caller has not locked a
+				 * tcb (the usual case) then we must
+				 * lock it to look at it.
+				 */
+ 				SCTP_TCB_LOCK(stcb);
+			}
 			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 				if (net->ro._l_addr.sa.sa_family !=
 				    remote->sa_family) {
 					/* not the same family */
-					SCTP_TCB_UNLOCK(stcb);
 					continue;
 				}
 				if (remote->sa_family == AF_INET) {
@@ -590,7 +614,9 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 						if (netp != NULL) {
 							*netp = net;
 						}
-						SCTP_TCB_UNLOCK(stcb);
+						if(locked_tcb != stcb) {
+							SCTP_TCB_UNLOCK(stcb);
+						}
 						SCTP_INP_RUNLOCK(inp);
 						return (stcb);
 					}
@@ -605,13 +631,17 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 						if (netp != NULL) {
 							*netp = net;
 						}
-						SCTP_TCB_UNLOCK(stcb);
+						if(locked_tcb != stcb) {
+							SCTP_TCB_UNLOCK(stcb);
+						}
 						SCTP_INP_RUNLOCK(inp);
 						return (stcb);
 					}
 				}
 			}
-			SCTP_TCB_UNLOCK(stcb);
+			if(locked_tcb != stcb) {
+				SCTP_TCB_UNLOCK(stcb);
+			}
 		}
 	}
 	SCTP_INP_RUNLOCK(inp);
@@ -961,9 +991,9 @@ sctp_findassociation_addr_sa(struct sockaddr *to, struct sockaddr *from,
 	 * inbound packet side.
 	 */
 	if (inp_p != NULL) {
-		return (sctp_findassociation_ep_addr(inp_p, from, netp, to));
+		return (sctp_findassociation_ep_addr(inp_p, from, netp, to, NULL));
 	} else {
-		return (sctp_findassociation_ep_addr(&inp, from, netp, to));
+		return (sctp_findassociation_ep_addr(&inp, from, netp, to, NULL));
 	}
 }
 
@@ -1023,7 +1053,7 @@ sctp_findassociation_special_addr(struct mbuf *m, int iphlen, int offset,
 			memcpy(&sin4.sin_addr, &p4->addr, sizeof(p4->addr));
 			/* look it up */
 			retval = sctp_findassociation_ep_addr(inp_p,
-			    (struct sockaddr *)&sin4, netp, dest);
+			    (struct sockaddr *)&sin4, netp, dest, NULL);
 			if (retval != NULL) {
 				return (retval);
 			}
@@ -1041,7 +1071,7 @@ sctp_findassociation_special_addr(struct mbuf *m, int iphlen, int offset,
 			memcpy(&sin6.sin6_addr, &p6->addr, sizeof(p6->addr));
 			/* look it up */
 			retval = sctp_findassociation_ep_addr(inp_p,
-			    (struct sockaddr *)&sin6, netp, dest);
+			    (struct sockaddr *)&sin6, netp, dest, NULL);
 			if (retval != NULL) {
 				return (retval);
 			}
@@ -3080,12 +3110,13 @@ sctp_iterator_asoc_being_freed(struct sctp_tcb *stcb)
 	 * lock.
 	 */
 	SCTP_TCB_UNLOCK(stcb);
-	/* now pull the iterator lock */
 	SCTP_ITERATOR_LOCK();
-	/* now re-apply the TCB lock */
 	SCTP_TCB_LOCK(stcb);
 
 	it = stcb->asoc.stcb_starting_point_for_iterator;
+	if (it == NULL) {
+		return;
+	}
 	if (it->inp != stcb->sctp_ep) {
 		/* hm, focused on the wrong one? */
 		return;
@@ -4128,7 +4159,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 	}
 	/* does the source address already exist? if so skip it */
 	inp = stcb->sctp_ep;
-	stcb_tmp = sctp_findassociation_ep_addr(&inp, sa, &net_tmp, local_sa);
+	stcb_tmp = sctp_findassociation_ep_addr(&inp, sa, &net_tmp, local_sa, stcb);
 	if ((stcb_tmp == NULL && inp == stcb->sctp_ep) || inp == NULL) {
 		/* we must add the source address */
 		/* no scope set here since we have a tcb already. */
@@ -4178,7 +4209,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			sa = (struct sockaddr *)&sin;
 			inp = stcb->sctp_ep;
 			stcb_tmp = sctp_findassociation_ep_addr(&inp, sa, &net,
-			    local_sa);
+			    local_sa, stcb);
 
 			if ((stcb_tmp== NULL && inp == stcb->sctp_ep) ||
 			    inp == NULL) {
@@ -4213,7 +4244,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			sa = (struct sockaddr *)&sin6;
 			inp = stcb->sctp_ep;
 			stcb_tmp= sctp_findassociation_ep_addr(&inp, sa, &net,
-			    local_sa);
+			    local_sa, stcb);
 			if (stcb_tmp == NULL && (inp == stcb->sctp_ep ||
 			    inp == NULL)) {
 				/* we must add the address, no scope set */

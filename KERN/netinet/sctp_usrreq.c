@@ -1497,7 +1497,7 @@ sctp_do_connect_x(struct socket *so,
 			totaddr = i;
 			break;
 		}
-		stcb = sctp_findassociation_ep_addr(&inp, sa, NULL, NULL);
+		stcb = sctp_findassociation_ep_addr(&inp, sa, NULL, NULL, NULL);
 		if (stcb != NULL) {
 			/* Already have or am bring up an association */
 			SCTP_ASOC_CREATE_UNLOCK(inp);
@@ -2249,7 +2249,7 @@ sctp_optsget(struct socket *so,
 			} else
 				stcb = sctp_findassociation_ep_addr(&inp,
 				    (struct sockaddr *)&paddrp->spp_address,
-				    &net, NULL);
+				    &net, NULL, NULL);
 			if (stcb == NULL) {
 				error = ENOENT;
 				break;
@@ -2324,7 +2324,7 @@ sctp_optsget(struct socket *so,
 			} else {
 				stcb = sctp_findassociation_ep_addr(&inp,
 				    (struct sockaddr *)&paddri->spinfo_address,
-				    &net, NULL);
+				    &net, NULL, NULL);
 			}
 
 		} else {
@@ -2595,7 +2595,7 @@ sctp_optsget(struct socket *so,
 
 			stcb = sctp_findassociation_ep_addr(&inp,
 							    (struct sockaddr *)&ssp->ssp_addr,
-							    &net, NULL);
+							    &net, NULL, NULL);
 			if (stcb == NULL) {
 				error = EINVAL;
 				break;
@@ -2840,7 +2840,7 @@ sctp_optsset(struct socket *so,
 			if (stcb)
 				net = sctp_findnet(stcb, sa);
 		} else
-			stcb = sctp_findassociation_ep_addr(&inp, sa, &net, NULL);
+			stcb = sctp_findassociation_ep_addr(&inp, sa, &net, NULL, NULL);
 		if (stcb == NULL) {
 			error = ENOENT;
 			break;
@@ -3079,7 +3079,7 @@ sctp_optsset(struct socket *so,
 			} else
 				stcb = sctp_findassociation_ep_addr(&inp,
 				    (struct sockaddr *)&paddrp->spp_address,
-				    &net, NULL);
+				    &net, NULL, NULL);
 		} else {
 			/* Effects the Endpoint */
 			stcb = NULL;
@@ -3279,7 +3279,7 @@ sctp_optsset(struct socket *so,
 			/* One last shot */
 			stcb = sctp_findassociation_ep_addr(&inp,
 							    (struct sockaddr *)&spa->ssp_addr,
-							    &net, NULL);
+							    &net, NULL, NULL);
 			if (stcb == NULL) {
 				error = EINVAL;
 				break;
@@ -3683,7 +3683,7 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		SCTP_INP_RUNLOCK(inp);
 	} else {
 		SCTP_INP_RUNLOCK(inp);
-		stcb = sctp_findassociation_ep_addr(&inp, addr, NULL, NULL);
+		stcb = sctp_findassociation_ep_addr(&inp, addr, NULL, NULL, NULL);
 	}
 	if (stcb != NULL) {
 		/* Already have or am bring up an association */
@@ -3822,9 +3822,7 @@ sctp_usr_recvd(struct socket *so, int flags)
 	} else {
 		if ((( sq ) && (flags & MSG_EOR) && ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0)) 
 		    && ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
-			SCTP_INP_WLOCK(inp);
 			stcb = sctp_remove_from_socket_q(inp);
-			SCTP_INP_WUNLOCK(inp);
 		}
 	}
 	SOCKBUF_LOCK(&so->so_rcv);
