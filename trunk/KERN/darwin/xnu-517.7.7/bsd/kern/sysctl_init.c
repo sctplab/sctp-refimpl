@@ -304,6 +304,9 @@ extern struct sysctl_oid sysctl__net_inet_sctp_ecn_nonce;
 extern struct sysctl_oid sysctl__net_inet_sctp_strict_sacks;
 extern struct sysctl_oid sysctl__net_inet_sctp_loopback_nocsum;
 extern struct sysctl_oid sysctl__net_inet_sctp_strict_init;
+extern struct sysctl_oid sysctl__net_inet_sctp_peer_chkoh;
+extern struct sysctl_oid sysctl__net_inet_sctp_maxburst;
+extern struct sysctl_oid sysctl__net_inet_sctp_maxchunks;
 #endif
 
 extern struct sysctl_oid sysctl__net_link_ether;
@@ -620,6 +623,9 @@ struct sysctl_oid *newsysctl_list[] =
     ,&sysctl__net_inet_sctp_strict_sacks
     ,&sysctl__net_inet_sctp_loopback_nocsum
     ,&sysctl__net_inet_sctp_strict_init
+    ,&sysctl__net_inet_sctp_peer_chkoh
+    ,&sysctl__net_inet_sctp_maxburst
+    ,&sysctl__net_inet_sctp_maxchunks
 #endif
 
 #if NETAT
