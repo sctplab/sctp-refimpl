@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.3 2004-07-26 07:04:19 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.4 2005-01-21 12:26:18 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -665,6 +665,7 @@ create_SCTP_adaptor(distributor *o,u_short port, int model, int rwnd , int swnd 
     }
   }
   if(r->fd < 0){
+    printf("errno:%d\n", errno);
     free(r);
     return(NULL);
   }
