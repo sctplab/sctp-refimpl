@@ -71,6 +71,9 @@
 #define SCTP_FR_MARKED              30
 #define SCTP_CWND_LOG_NOADV_SS      31
 #define SCTP_CWND_LOG_NOADV_CA      32
+#define SCTP_MAX_BURST_APPLIED      33
+#define SCTP_MAX_IFP_APPLIED        34
+#define SCTP_MAX_BURST_ERROR_STOP   35
 /*
  * To turn on various logging, you must first define SCTP_STAT_LOGGING.
  * Then to get something to log you define one of the logging defines i.e.

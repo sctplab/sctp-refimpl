@@ -251,8 +251,8 @@ sctp_log_maxburst(struct sctp_nets *net, int error, int burst, uint8_t from)
 	sctp_clog[sctp_cwnd_log_at].from = (u_int8_t)from;
 	sctp_clog[sctp_cwnd_log_at].event_type = (u_int8_t)SCTP_LOG_EVENT_MAXBURST;
 	sctp_clog[sctp_cwnd_log_at].x.cwnd.net = net;
-	sctp_clog[sctp_cwnd_log_at].x.cwnd.cwnd_new_value = (error & 0xffff);
-	sctp_clog[sctp_cwnd_log_at].x.cwnd.inflight = (net->flight_size/1024);
+	sctp_clog[sctp_cwnd_log_at].x.cwnd.cwnd_new_value = error;
+	sctp_clog[sctp_cwnd_log_at].x.cwnd.inflight = net->flight_size;
 	sctp_clog[sctp_cwnd_log_at].x.cwnd.cwnd_augment = burst;
 	sctp_cwnd_log_at++;
 	if (sctp_cwnd_log_at >= SCTP_STAT_LOG_SIZE) {
@@ -298,9 +298,9 @@ sctp_fill_stat_log(struct mbuf *m)
 	}
 	req = mtod(m, struct sctp_cwnd_log_req *);
 	num = size_limit/sizeof(struct sctp_cwnd_log);
-	if (sctp_cwnd_log_rolled)
+	if (sctp_cwnd_log_rolled) {
 		req->num_in_log = SCTP_STAT_LOG_SIZE;
-	else {
+	} else {
 		req->num_in_log = sctp_cwnd_log_at;
 		/* if the log has not rolled, we don't
 		 * let you have old data.
@@ -309,7 +309,6 @@ sctp_fill_stat_log(struct mbuf *m)
 			req->end_at = sctp_cwnd_log_at;
 		}
 	}
-
 	if ((num < SCTP_STAT_LOG_SIZE) && 
 	    ((sctp_cwnd_log_rolled) || (sctp_cwnd_log_at > num))) {
 		/* we can't return all of it */
@@ -333,6 +332,7 @@ sctp_fill_stat_log(struct mbuf *m)
 				cc = (SCTP_STAT_LOG_SIZE - req->start_at) +
 				    (req->end_at + 1);
 			} else {
+
 				cc = req->end_at - req->start_at;
 			}
 			if (cc < num) {
@@ -342,15 +342,9 @@ sctp_fill_stat_log(struct mbuf *m)
 		}
 	} else {
 		/* We can return all  of it */
-		if (sctp_cwnd_log_rolled) {
-			req->num_ret = SCTP_STAT_LOG_SIZE;
-			req->start_at = sctp_cwnd_log_at;
-			req->end_at = sctp_cwnd_log_at - 1;
-		} else {
-			req->start_at = 0;
-			req->end_at = sctp_cwnd_log_at - 1;
-			req->num_ret = sctp_cwnd_log_at;
-		}
+		req->start_at = 0;
+		req->end_at = sctp_cwnd_log_at - 1;
+		req->num_ret = sctp_cwnd_log_at;
 	}
 	for (i = 0, at = req->start_at; i < req->num_ret; i++) {
 		req->log[i] = sctp_clog[at];
