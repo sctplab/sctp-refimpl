@@ -2821,7 +2821,7 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 							else 
 							  tp1->whoTo->flight_size = 0;
 							if(asoc->total_flight >= tp1->book_size) {
-							  asoc->total_flight = -= tp1->book_size;
+							  asoc->total_flight -= tp1->book_size;
 							} else {
 							  asoc->total_flight = 0;
 							}
