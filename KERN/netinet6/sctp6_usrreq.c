@@ -1074,7 +1074,6 @@ sctp6_send(struct socket *so, int flags, struct mbuf *m, struct mbuf *nam,
 	}
 	in_inp = (struct inpcb *)inp;
 	inp6 = (struct in6pcb *)inp;
-#ifdef SCTP_TCP_MODEL_SUPPORT
 	/* For the TCP model we may get a NULL addr, if we
 	 * are a connected socket thats ok.
 	 */
@@ -1082,7 +1081,6 @@ sctp6_send(struct socket *so, int flags, struct mbuf *m, struct mbuf *nam,
 	    (addr == NULL)) {
 	        goto connected_type;
 	}
-#endif
 	if (addr == NULL) {
 		m_freem(m);
 		if (control) {
@@ -1231,14 +1229,12 @@ sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 			return (error);
 		}
 	}
-#ifdef SCTP_TCP_MODEL_SUPPORT
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
 		/* We are already connected AND the TCP model */
 		splx(s);
 		return (EADDRINUSE);
 	}
-#endif
 
 #ifdef INET
 	sin6 = (struct sockaddr_in6 *)addr;
@@ -1280,11 +1276,9 @@ sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		addr = addr;	/* for true v6 address case */
 
 	/* Now do we connect? */
-#ifdef SCTP_TCP_MODEL_SUPPORT
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)
 		stcb = LIST_FIRST(&inp->sctp_asoc_list);
 	else
-#endif /* SCTP_TCP_MODEL_SUPPORT */
 		stcb = sctp_findassociation_ep_addr(&inp, addr, NULL, NULL);
 
 	if (stcb != NULL) {
@@ -1299,13 +1293,11 @@ sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		splx(s);
 		return (error);
 	}
-#ifdef SCTP_TCP_MODEL_SUPPORT
 	if (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) {
 		stcb->sctp_ep->sctp_flags |= SCTP_PCB_FLAGS_CONNECTED;
 		/* Set the connected flag so we can queue data */
 		soisconnecting(so);
 	}
-#endif
 	stcb->asoc.state = SCTP_STATE_COOKIE_WAIT;
 	SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_entered);
 	sctp_send_initiate(inp, stcb);
