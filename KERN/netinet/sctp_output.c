@@ -3529,7 +3529,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				 */
 				stc.local_scope = 0;
 				stc.site_scope = 1;
-
+				stc.ipv4_scope = 1;
 				/* we start counting for the private
 				 * address stuff at 1. since the link
 				 * local we source from won't show
