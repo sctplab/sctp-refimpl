@@ -308,6 +308,23 @@ extern struct sysctl_oid sysctl__net_inet_sctp_strict_init;
 extern struct sysctl_oid sysctl__net_inet_sctp_peer_chkoh;
 extern struct sysctl_oid sysctl__net_inet_sctp_maxburst;
 extern struct sysctl_oid sysctl__net_inet_sctp_maxchunks;
+extern struct sysctl_oid sysctl__net_inet_sctp_delayed_sack_time;
+extern struct sysctl_oid sysctl__net_inet_sctp_heartbeat_interval;
+extern struct sysctl_oid sysctl__net_inet_sctp_pmtu_raise_time;
+extern struct sysctl_oid sysctl__net_inet_sctp_shutdown_guard_time;
+extern struct sysctl_oid sysctl__net_inet_sctp_secret_lifetime;
+extern struct sysctl_oid sysctl__net_inet_sctp_rto_max;
+extern struct sysctl_oid sysctl__net_inet_sctp_rto_min;
+extern struct sysctl_oid sysctl__net_inet_sctp_rto_initial;
+extern struct sysctl_oid sysctl__net_inet_sctp_init_rto_max;
+extern struct sysctl_oid sysctl__net_inet_sctp_valid_cookie_life;
+extern struct sysctl_oid sysctl__net_inet_sctp_init_rtx_max;
+extern struct sysctl_oid sysctl__net_inet_sctp_assoc_rtx_max;
+extern struct sysctl_oid sysctl__net_inet_sctp_path_rtx_max;
+extern struct sysctl_oid sysctl__net_inet_sctp_nr_outgoing_streams;
+#ifdef SCTP_DEBUG
+extern struct sysctl_oid sysctl__net_inet_sctp_debug;
+#endif /* SCTP_DEBUG */
 #endif
 
 extern struct sysctl_oid sysctl__net_link_ether;
@@ -628,6 +645,23 @@ struct sysctl_oid *newsysctl_list[] =
     ,&sysctl__net_inet_sctp_peer_chkoh
     ,&sysctl__net_inet_sctp_maxburst
     ,&sysctl__net_inet_sctp_maxchunks
+    ,&sysctl__net_inet_sctp_delayed_sack_time
+    ,&sysctl__net_inet_sctp_heartbeat_interval
+    ,&sysctl__net_inet_sctp_pmtu_raise_time
+    ,&sysctl__net_inet_sctp_shutdown_guard_time
+    ,&sysctl__net_inet_sctp_secret_lifetime
+    ,&sysctl__net_inet_sctp_rto_max
+    ,&sysctl__net_inet_sctp_rto_min
+    ,&sysctl__net_inet_sctp_rto_initial
+    ,&sysctl__net_inet_sctp_init_rto_max
+    ,&sysctl__net_inet_sctp_valid_cookie_life
+    ,&sysctl__net_inet_sctp_init_rtx_max
+    ,&sysctl__net_inet_sctp_assoc_rtx_max
+    ,&sysctl__net_inet_sctp_path_rtx_max
+    ,&sysctl__net_inet_sctp_nr_outgoing_streams
+#ifdef SCTP_DEBUG
+    ,&sysctl__net_inet_sctp_debug
+#endif /* SCTP_DEBUG */
 #endif
 
 #if NETAT
