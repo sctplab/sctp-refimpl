@@ -560,6 +560,7 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 			       (int)sizeof(struct sctp_shutdown_chunk));
 		}
 #endif
+		return;
 	} else {
 		sctp_update_acked(stcb, cp, net, abort_flag);
 	}
