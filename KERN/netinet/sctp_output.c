@@ -3996,9 +3996,7 @@ sctp_prune_prsctp(struct sctp_tcb *stcb,
 			 * being sent is equal or greater priority then
 			 * purge the old one and free some space.
 			 */
-			if ((chk->flags & (SCTP_PR_SCTP_ENABLED |
-					   SCTP_PR_SCTP_BUFFER)) ==
-			    (SCTP_PR_SCTP_ENABLED|SCTP_PR_SCTP_BUFFER)) {
+			if (PR_SCTP_BUF_ENABLED(chk->flags))  {
 				/*
 				 * This one is PR-SCTP AND buffer space
 				 * limited type
@@ -4038,9 +4036,7 @@ sctp_prune_prsctp(struct sctp_tcb *stcb,
 		while (chk) {
 			nchk = TAILQ_NEXT(chk, sctp_next);
 			/* Here we must move to the sent queue and mark */
-			if ((chk->flags & (SCTP_PR_SCTP_ENABLED |
-					   SCTP_PR_SCTP_BUFFER)) ==
-			    (SCTP_PR_SCTP_ENABLED|SCTP_PR_SCTP_BUFFER)) {
+			if (PR_SCTP_TTL_ENABLED(chk->flags)) {
 				if (chk->rec.data.timetodrop.tv_sec >= (long)srcv->sinfo_timetolive) {
 					if (chk->data) {
 						/* We release the
@@ -4074,7 +4070,7 @@ sctp_prepare_chunk(struct sctp_tmit_chunk *template,
 	bzero(template, sizeof(struct sctp_tmit_chunk));
 	template->sent = SCTP_DATAGRAM_UNSENT;
 	if ((stcb->asoc.peer_supports_prsctp) &&
-	    (srcv->sinfo_flags & (MSG_PR_SCTP_TTL|MSG_PR_SCTP_BUF)) &&
+	    (PR_SCTP_ENABLED(srcv->sinfo_flags)) &&
 	    (srcv->sinfo_timetolive > 0)
 		) {
 		/* If:
@@ -4084,7 +4080,8 @@ sctp_prepare_chunk(struct sctp_tmit_chunk *template,
 		 *     to mean a reliable send for both buffer/time
 		 *     related one.
 		 */
-		if (srcv->sinfo_flags & MSG_PR_SCTP_BUF) {
+		/* FIXME MT */
+		if (PR_SCTP_BUF_ENABLED(srcv->sinfo_flags)) {
 			/*
 			 * Time to live is a priority stored in tv_sec
 			 * when doing the buffer drop thing.
@@ -4104,7 +4101,7 @@ sctp_prepare_chunk(struct sctp_tmit_chunk *template,
 #endif
 		}
 	}
-	if ((srcv->sinfo_flags & MSG_UNORDERED) == 0) {
+	if ((srcv->sinfo_flags & SCTP_UNORDERED) == 0) {
 		template->rec.data.stream_seq = strq->next_sequence_sent;
 	} else {
 		template->rec.data.stream_seq = 0;
@@ -4117,7 +4114,7 @@ sctp_prepare_chunk(struct sctp_tmit_chunk *template,
 	template->rec.data.doing_fast_retransmit = 0;
 	template->rec.data.ect_nonce = 0;   /* ECN Nonce */
 
-	if (srcv->sinfo_flags & MSG_ADDR_OVER) {
+	if (srcv->sinfo_flags & SCTP_ADDR_OVER) {
 		template->whoTo = net;
 	} else {
 		if (stcb->asoc.primary_destination)
@@ -4128,7 +4125,7 @@ sctp_prepare_chunk(struct sctp_tmit_chunk *template,
 		}
 	}
 	/* the actual chunk flags */
-	if (srcv->sinfo_flags & MSG_UNORDERED) {
+	if (srcv->sinfo_flags & SCTP_UNORDERED) {
 		template->rec.data.rcv_flags = SCTP_DATA_UNORDERED;
 	} else {
 		template->rec.data.rcv_flags = 0;
@@ -4144,12 +4141,10 @@ sctp_prepare_chunk(struct sctp_tmit_chunk *template,
 			 * Zero is reserved specifically to be
 			 * EXCLUDED and sent reliable.
 			 */
-			if (srcv->sinfo_flags & MSG_PR_SCTP_TTL) {
-				template->flags |= SCTP_PR_SCTP_ENABLED;
-			}
-			if (srcv->sinfo_flags & MSG_PR_SCTP_BUF) {
-				template->flags |= SCTP_PR_SCTP_BUFFER;
-			}
+			if (!PR_SCTP_ENABLED(srcv->sinfo_flags))
+				template->flags |= CHUNK_FLAGS_PR_SCTP_TTL;
+			else
+				template->flags |= (0xff & srcv->sinfo_flags);
 		}
 	}
 	template->asoc = &stcb->asoc;
@@ -4228,7 +4223,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 	}
 	so = stcb->sctp_socket;
 	asoc = &stcb->asoc;
-	if (srcv->sinfo_flags & MSG_ABORT) {
+	if (srcv->sinfo_flags & SCTP_ABORT) {
 		if ((SCTP_GET_STATE(asoc) != SCTP_STATE_COOKIE_WAIT) &&
 		    (SCTP_GET_STATE(asoc) != SCTP_STATE_COOKIE_ECHOED)) {
 			/* It has to be up before we abort */
@@ -4311,7 +4306,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 		error = EMSGSIZE;
 		goto release;
 	}
-	if ((srcv->sinfo_flags & MSG_EOF) &&
+	if ((srcv->sinfo_flags & SCTP_EOF) &&
 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE) &&
 	    (dataout == 0)
 		) {
@@ -4440,7 +4435,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 		chk->book_size = chk->send_size;
 		chk->mbcnt = mbcnt;
 		/* ok, we are commited */
-		if ((srcv->sinfo_flags & MSG_UNORDERED) == 0) {
+		if ((srcv->sinfo_flags & SCTP_UNORDERED) == 0) {
 			/* bump the ssn if we are unordered. */
 			strq->next_sequence_sent++;
 		}
@@ -4546,7 +4541,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			chk->book_size = chk->send_size;
 			chk->mbcnt = mbcnt_e;
 			mbcnt += mbcnt_e;
-			if (chk->flags & SCTP_PR_SCTP_BUFFER) {
+			if (PR_SCTP_BUF_ENABLED(chk->flags)) {
 				asoc->sent_queue_cnt_removeable++;
 			}
 			n = n->m_nextpkt;
@@ -4558,7 +4553,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 		 * and breaking the pointers.
 		 */
 		/* ok, we are commited */
-		if ((srcv->sinfo_flags & MSG_UNORDERED) == 0) {
+		if ((srcv->sinfo_flags & SCTP_UNORDERED) == 0) {
 			/* bump the ssn if we are unordered. */
 			strq->next_sequence_sent++;
 		}
@@ -4593,7 +4588,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 	/* has a SHUTDOWN been (also) requested by the user on this asoc? */
 zap_by_it_all:
 
-	if ((srcv->sinfo_flags & MSG_EOF) &&
+	if ((srcv->sinfo_flags & SCTP_EOF) &&
 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE)) {
 
 		int some_on_streamwheel = 0;
@@ -4637,7 +4632,7 @@ zap_by_it_all:
 			 * SHUTDOWN_PENDING
 			 */
 			/*
-			 * XXX sockets draft says that MSG_EOF should be sent
+			 * XXX sockets draft says that SCTP_EOF should be sent
 			 * with no data.  currently, we will allow user data
 			 * to be sent first and move to SHUTDOWN-PENDING
 			 */
@@ -4880,7 +4875,7 @@ sctp_sendall (struct sctp_inpcb *inp, struct uio *uio, struct mbuf *m, struct sc
 	/* take off the sendall flag, it would
 	 * be bad if we failed to do this  :-0
 	 */
- 	ca->sndrcv.sinfo_flags &= ~MSG_SENDALL;
+ 	ca->sndrcv.sinfo_flags &= ~SCTP_SENDALL;
 
 	/* get length and mbuf chain */
 	if (uio) {
@@ -7278,7 +7273,7 @@ sctp_output(inp, m, addr, control, p, flags)
 		sctppcbinfo.mbuf_track++;
 		if (sctp_find_cmsg(SCTP_SNDRCV, (void *)&srcv, control,
 				   sizeof(srcv))) {
-			if (srcv.sinfo_flags & MSG_SENDALL) {
+			if (srcv.sinfo_flags & SCTP_SENDALL) {
 				/* its a sendall */
 				sctppcbinfo.mbuf_track--;
 				sctp_m_freem(control);
@@ -7403,7 +7398,7 @@ sctp_output(inp, m, addr, control, p, flags)
 		return (ENOENT);
 	} else if (stcb == NULL) {
 		/* UDP mode, we must go ahead and start the INIT process */
-		if ((use_rcvinfo) && (srcv.sinfo_flags & MSG_ABORT)) {
+		if ((use_rcvinfo) && (srcv.sinfo_flags & SCTP_ABORT)) {
 			/* Strange user to do this */
 			if (control) {
 				sctppcbinfo.mbuf_track--;
@@ -7522,7 +7517,7 @@ sctp_output(inp, m, addr, control, p, flags)
 				control = NULL;
 			}
 			if ((use_rcvinfo) &&
-			    (srcv.sinfo_flags & MSG_ABORT)) {
+			    (srcv.sinfo_flags & SCTP_ABORT)) {
 				sctp_msg_append(stcb, net, m, &srcv, flags);
 				error = 0;
 			} else {
@@ -7562,7 +7557,7 @@ sctp_output(inp, m, addr, control, p, flags)
 		sctp_m_freem(control);
 		control = NULL;
 	}
-	if (net && ((srcv.sinfo_flags & MSG_ADDR_OVER))) {
+	if (net && ((srcv.sinfo_flags & SCTP_ADDR_OVER))) {
 		/* we take the override or the unconfirmed */
 		;
 	} else {
@@ -9661,7 +9656,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 	}
 
 	/* Are we aborting? */
-	if (srcv->sinfo_flags & MSG_ABORT) {
+	if (srcv->sinfo_flags & SCTP_ABORT) {
 		if ((SCTP_GET_STATE(asoc) != SCTP_STATE_COOKIE_WAIT) &&
 		    (SCTP_GET_STATE(asoc) != SCTP_STATE_COOKIE_ECHOED)) {
 			/* It has to be up before we abort */
@@ -9748,7 +9743,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 		splx(s);
 		goto release;
 	}
-	if ((srcv->sinfo_flags & MSG_EOF) &&
+	if ((srcv->sinfo_flags & SCTP_EOF) &&
 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE) &&
 	    (tot_out == 0)) {
 		splx(s);
@@ -9806,11 +9801,11 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 		chk->send_size = tot_out;
 		chk->book_size = chk->send_size;
 		/* ok, we are commited */
-		if ((srcv->sinfo_flags & MSG_UNORDERED) == 0) {
+		if ((srcv->sinfo_flags & SCTP_UNORDERED) == 0) {
 			/* bump the ssn if we are unordered. */
 			strq->next_sequence_sent++;
 		}
-		if (chk->flags & SCTP_PR_SCTP_BUFFER) {
+		if (PR_SCTP_BUF_ENABLED(chk->flags)) {
 			asoc->sent_queue_cnt_removeable++;
 		}
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -9893,14 +9888,14 @@ clean_up:
 			chk->send_size = tot_demand;
 			chk->data->m_pkthdr.len = tot_demand;
 			chk->book_size = chk->send_size;
-			if (chk->flags & SCTP_PR_SCTP_BUFFER) {
+			if (PR_SCTP_BUF_ENABLED(chk->flags)) {
 				asoc->sent_queue_cnt_removeable++;
 			}
 			TAILQ_INSERT_TAIL(&tmp, chk, sctp_next);
 			tot_out -= tot_demand;
 		}
 		/* Now the tmp list holds all chunks and data */
-		if ((srcv->sinfo_flags & MSG_UNORDERED) == 0) {
+		if ((srcv->sinfo_flags & SCTP_UNORDERED) == 0) {
 			/* bump the ssn if we are unordered. */
 			strq->next_sequence_sent++;
 		}
@@ -9989,7 +9984,7 @@ zap_by_it_now:
 		so->so_snd.sb_cc += dataout;
 		so->so_snd.sb_mbcnt += mbcnt;
 	}
-	if ((srcv->sinfo_flags & MSG_EOF) &&
+	if ((srcv->sinfo_flags & SCTP_EOF) &&
 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE)
 		) {
 		int some_on_streamwheel = 0;
@@ -10032,7 +10027,7 @@ zap_by_it_now:
 			 * SHUTDOWN_PENDING
 			 */
 			/*
-			 * XXX sockets draft says that MSG_EOF should be sent
+			 * XXX sockets draft says that SCTP_EOF should be sent
 			 * with no data.  currently, we will allow user data
 			 * to be sent first and move to SHUTDOWN-PENDING
 			 */
@@ -10165,7 +10160,7 @@ sctp_sosend(struct socket *so,
 		if (sctp_find_cmsg(SCTP_SNDRCV, (void *)&srcv, control,
 				   sizeof(srcv))) {
 			/* got one */
-			if (srcv.sinfo_flags & MSG_SENDALL) {
+			if (srcv.sinfo_flags & SCTP_SENDALL) {
 				/* its a sendall */
 				sctppcbinfo.mbuf_track--;
 				sctp_m_freem(control);
@@ -10223,7 +10218,7 @@ sctp_sosend(struct socket *so,
 	} else if (stcb == NULL) {
 		/* UDP style, we must go ahead and start the INIT process */
 		if ((use_rcvinfo) &&
-		    (srcv.sinfo_flags & MSG_ABORT)) {
+		    (srcv.sinfo_flags & SCTP_ABORT)) {
 			/* User asks to abort a non-existant asoc */
 			error = ENOENT;
 			splx(s);
@@ -10338,7 +10333,7 @@ sctp_sosend(struct socket *so,
 	    (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_ACK_SENT) ||
 	    (asoc->state & SCTP_STATE_SHUTDOWN_PENDING)) {
 		if ((use_rcvinfo) &&
-		    (srcv.sinfo_flags & MSG_ABORT)) {
+		    (srcv.sinfo_flags & SCTP_ABORT)) {
 			;
 		} else {
 			error = ECONNRESET;
@@ -10355,7 +10350,7 @@ sctp_sosend(struct socket *so,
 #endif
 
 	if (stcb) {
-		if (net && ((srcv.sinfo_flags & MSG_ADDR_OVER))) {
+		if (net && ((srcv.sinfo_flags & SCTP_ADDR_OVER))) {
 			/* we take the override or the unconfirmed */
 			;
 		} else {
