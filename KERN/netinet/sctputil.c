@@ -932,15 +932,19 @@ sctp_timeout_handler(void *t)
 	sctp_auditing(3, inp, stcb, net);
 #endif
 	sctp_pegs[SCTP_TIMERS_EXP]++;
-	if (inp) {
-		if (inp->sctp_socket == 0) {
-			splx(s);
+
+	if (inp == NULL)
+		return;
+
+	SCTP_INP_WLOCK(inp);
+	if (inp->sctp_socket == 0) {
+		splx(s);
 #if defined(__APPLE__)
-			/* release BSD kernel funnel/mutex */
-			(void) thread_funnel_set(network_flock, FALSE);
+		/* release BSD kernel funnel/mutex */
+		(void) thread_funnel_set(network_flock, FALSE);
 #endif
-			return;
-		}
+		SCTP_INP_WUNLOCK(inp);
+		return;
 	}
 	if (stcb) {
 		if (stcb->asoc.state == 0) {
@@ -949,23 +953,10 @@ sctp_timeout_handler(void *t)
 			/* release BSD kernel funnel/mutex */
 			(void) thread_funnel_set(network_flock, FALSE);
 #endif
+			SCTP_INP_WUNLOCK(inp);
 			return;
 		}
 	}
-#ifdef SCTP_DEBUG
-	if (inp) {
-		if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
-			if (LIST_FIRST(&inp->sctp_asoc_list) == NULL) {
-				printf("Timer type %d fires on GONE enpoint:%p\n",
-				    tmr->type, inp);
-				if (stcb)
-					printf("stcb:%p\n", stcb);
-
-				printf("Hmm, all asoc's are gone?\n");
-			}
-		}
-	}
-#endif
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_TIMER1) {
 		printf("Timer type %d goes off\n", tmr->type);
@@ -978,6 +969,7 @@ sctp_timeout_handler(void *t)
 		/* release BSD kernel funnel/mutex */
 		(void) thread_funnel_set(network_flock, FALSE);
 #endif
+		SCTP_INP_WUNLOCK(inp);
 		return;
 	}
 #endif
@@ -988,6 +980,9 @@ sctp_timeout_handler(void *t)
 	if (stcb) {
 		SCTP_TCB_LOCK(stcb);
 	}
+	SCTP_INP_INCR_REF(inp);
+	SCTP_INP_WUNLOCK(inp);
+
 	typ = tmr->type;
 	switch (tmr->type) {
 	case SCTP_TIMER_TYPE_ITERATOR:
@@ -997,7 +992,7 @@ sctp_timeout_handler(void *t)
 		sctp_iterator_timer(it);
 	}
 	break;
-		/* call the handler for the appropriate timer type */
+	/* call the handler for the appropriate timer type */
 	case SCTP_TIMER_TYPE_SEND:
 		sctp_pegs[SCTP_TMIT_TIMER]++;
 		stcb->asoc.num_send_timers_up--;
@@ -1006,7 +1001,8 @@ sctp_timeout_handler(void *t)
 		}
 		if (sctp_t3rxt_timer(inp, stcb, net)) {
 			/* no need to unlock on tcb its gone */
-			return;
+			
+			goto out_decr;
 		}
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
@@ -1025,13 +1021,13 @@ sctp_timeout_handler(void *t)
 			sctp_pegs[SCTP_T3_SAFEGRD]++;
 			chk = TAILQ_FIRST(&stcb->asoc.sent_queue);
 			sctp_timer_start(SCTP_TIMER_TYPE_SEND, inp, stcb,
-			    chk->whoTo);
+					 chk->whoTo);
 		}
 		break;
 	case SCTP_TIMER_TYPE_INIT:
 		if (sctp_t1init_timer(inp, stcb, net)) {
 			/* no need to unlock on tcb its gone */
-			return;
+			goto out_decr;
 		}
 		/* We do output but not here */
 		did_output = 0;
@@ -1047,7 +1043,7 @@ sctp_timeout_handler(void *t)
 	case SCTP_TIMER_TYPE_SHUTDOWN:
 		if (sctp_shutdown_timer(inp, stcb, net) ) {
 			/* no need to unlock on tcb its gone */
-			return;
+			goto out_decr;
 		}
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
@@ -1057,7 +1053,7 @@ sctp_timeout_handler(void *t)
 	case SCTP_TIMER_TYPE_HEARTBEAT:
 		if (sctp_heartbeat_timer(inp, stcb, net)) {
 			/* no need to unlock on tcb its gone */
-			return;
+			goto out_decr;
 		}
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
@@ -1067,7 +1063,7 @@ sctp_timeout_handler(void *t)
 	case SCTP_TIMER_TYPE_COOKIE:
 		if (sctp_cookie_timer(inp, stcb, net)) {
 			/* no need to unlock on tcb its gone */
-			return;
+			goto out_decr;
 		}
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
@@ -1082,7 +1078,7 @@ sctp_timeout_handler(void *t)
 		SCTP_INP_WLOCK(inp);
 		inp->sctp_ep.time_of_secret_change = tv.tv_sec;
 		inp->sctp_ep.last_secret_number =
-		    inp->sctp_ep.current_secret_number;
+			inp->sctp_ep.current_secret_number;
 		inp->sctp_ep.current_secret_number++;
 		if (inp->sctp_ep.current_secret_number >=
 		    SCTP_HOW_MANY_SECRETS) {
@@ -1091,7 +1087,7 @@ sctp_timeout_handler(void *t)
 		secret = (int)inp->sctp_ep.current_secret_number;
 		for (i = 0; i < SCTP_NUMBER_OF_SECRETS; i++) {
 			inp->sctp_ep.secret_key[secret][i] =
-			    sctp_select_initial_TSN(&inp->sctp_ep);
+				sctp_select_initial_TSN(&inp->sctp_ep);
 		}
 		SCTP_INP_WUNLOCK(inp);
 		sctp_timer_start(SCTP_TIMER_TYPE_NEWCOOKIE, inp, stcb, net);
@@ -1105,7 +1101,7 @@ sctp_timeout_handler(void *t)
 	case SCTP_TIMER_TYPE_SHUTDOWNACK:
 		if (sctp_shutdownack_timer(inp, stcb, net)) {
 			/* no need to unlock on tcb its gone */
-			return;
+			goto out_decr;
 		}
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
@@ -1116,13 +1112,13 @@ sctp_timeout_handler(void *t)
 		sctp_abort_an_association(inp, stcb,
 					  SCTP_SHUTDOWN_GUARD_EXPIRES, NULL);
 		/* no need to unlock on tcb its gone */
-		return;
+		goto out_decr;
 		break;
 
 	case SCTP_TIMER_TYPE_STRRESET:
 		if (sctp_strreset_timer(inp, stcb, net)) {
 			/* no need to unlock on tcb its gone */
-			return;
+			goto out_decr;
 		}
 		sctp_chunk_output(inp, stcb, 9);
 		break;
@@ -1130,7 +1126,7 @@ sctp_timeout_handler(void *t)
 	case SCTP_TIMER_TYPE_ASCONF:
 		if (sctp_asconf_timer(inp, stcb, net)) {
 			/* no need to unlock on tcb its gone */
-			return;
+			goto out_decr;
 		}
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
@@ -1144,7 +1140,14 @@ sctp_timeout_handler(void *t)
 		did_output = 0;
 		break;
 	case SCTP_TIMER_TYPE_INPKILL:
+		/* special case, take away our
+		 * increment since WE are the killer
+		 */
+		SCTP_INP_WLOCK(inp);
+		SCTP_INP_DECR_REF(inp);	
+		SCTP_INP_WUNLOCK(inp);
 		sctp_inpcb_free(inp, 1);
+		goto out_no_decr;
 		break;
 	default:
 #ifdef SCTP_DEBUG
@@ -1169,14 +1172,22 @@ sctp_timeout_handler(void *t)
 		 */
 		sctp_fix_ecn_echo(&stcb->asoc);
 	}
+	if (stcb) {
+		SCTP_TCB_UNLOCK(stcb);
+	}
+ out_decr:
+	SCTP_INP_WLOCK(inp);
+	SCTP_INP_DECR_REF(inp);	
+	SCTP_INP_WUNLOCK(inp);
+
+ out_no_decr:
+
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_TIMER1) {
 		printf("Timer now complete (type %d)\n", typ);
 	}
 #endif /* SCTP_DEBUG */
-	if (stcb) {
-		SCTP_TCB_UNLOCK(stcb);
-	}
+
 	splx(s);
 #if defined(__APPLE__)
 	/* release BSD kernel funnel/mutex */
