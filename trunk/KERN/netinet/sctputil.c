@@ -2177,10 +2177,14 @@ sctp_notify_assoc_change(u_int32_t event, struct sctp_tcb *stcb,
 	 *	return;
 	 * }
 	*/
+	SCTP_TCB_UNLOCK(stcb);
+	SCTP_INP_WLOCK(stcb->sctp_ep);
+	SCTP_TCB_LOCK(stcb);
 	if (!sbappendaddr_nocheck(&stcb->sctp_socket->so_rcv,
 	    to, m_notify, NULL, stcb->asoc.my_vtag, stcb->sctp_ep)) {
 		/* not enough room */
 		sctp_m_freem(m_notify);
+		SCTP_INP_WUNLOCK(stcb->sctp_ep);
 		return;
 	}
 	if(((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) &&
@@ -2191,6 +2195,7 @@ sctp_notify_assoc_change(u_int32_t event, struct sctp_tcb *stcb,
 	} else {
 		stcb->asoc.my_rwnd_control_len += sizeof(struct mbuf);
 	}
+	SCTP_INP_WUNLOCK(stcb->sctp_ep);
 	/* Wake up any sleeper */
 	sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 	sctp_sowwakeup(stcb->sctp_ep, stcb->sctp_socket);
@@ -2264,10 +2269,14 @@ sctp_notify_peer_addr_change(struct sctp_tcb *stcb, uint32_t state,
 		return;
 	}
 	/* append to socket */
+	SCTP_TCB_UNLOCK(stcb);
+	SCTP_INP_WLOCK(stcb->sctp_ep);
+	SCTP_TCB_LOCK(stcb);
 	if (!sbappendaddr_nocheck(&stcb->sctp_socket->so_rcv, to,
 	    m_notify, NULL, stcb->asoc.my_vtag, stcb->sctp_ep)) {
 		/* not enough room */
 		sctp_m_freem(m_notify);
+		SCTP_INP_WUNLOCK(stcb->sctp_ep);
 		return;
 	}
 	if(((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) &&
@@ -2278,6 +2287,7 @@ sctp_notify_peer_addr_change(struct sctp_tcb *stcb, uint32_t state,
 	} else {
 		stcb->asoc.my_rwnd_control_len += sizeof(struct mbuf);
 	}
+	SCTP_INP_WUNLOCK(stcb->sctp_ep);
 	sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 }
 
@@ -2360,10 +2370,14 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, u_int32_t error,
 	}
 
 	/* append to socket */
+	SCTP_TCB_UNLOCK(stcb);
+	SCTP_INP_WLOCK(stcb->sctp_ep);
+	SCTP_TCB_LOCK(stcb);
 	if (!sbappendaddr_nocheck(&stcb->sctp_socket->so_rcv, to,
 	    m_notify, NULL, stcb->asoc.my_vtag, stcb->sctp_ep)) {
 		/* not enough room */
 		sctp_m_freem(m_notify);
+		SCTP_INP_WUNLOCK(stcb->sctp_ep);
 		return;
 	}
 	if(((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) &&
@@ -2374,6 +2388,7 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, u_int32_t error,
 	} else {
 		stcb->asoc.my_rwnd_control_len += sizeof(struct mbuf);
 	}
+	SCTP_INP_WUNLOCK(stcb->sctp_ep);
 	sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 }
 
@@ -2431,10 +2446,14 @@ sctp_notify_adaption_layer(struct sctp_tcb *stcb,
 		return;
 	}
 	/* append to socket */
+	SCTP_TCB_UNLOCK(stcb);
+	SCTP_INP_WLOCK(stcb->sctp_ep);
+	SCTP_TCB_LOCK(stcb);
 	if (!sbappendaddr_nocheck(&stcb->sctp_socket->so_rcv, to,
 	    m_notify, NULL, stcb->asoc.my_vtag, stcb->sctp_ep)) {
 		/* not enough room */
 		sctp_m_freem(m_notify);
+		SCTP_INP_WUNLOCK(stcb->sctp_ep);
 		return;
 	}
 	if(((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) &&
@@ -2445,6 +2464,7 @@ sctp_notify_adaption_layer(struct sctp_tcb *stcb,
 	} else {
 		stcb->asoc.my_rwnd_control_len += sizeof(struct mbuf);
 	}
+	SCTP_INP_WUNLOCK(stcb->sctp_ep);
 	sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 }
 
@@ -2502,11 +2522,14 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
 		return;
 	}
 	/* append to socket */
-
+	SCTP_TCB_UNLOCK(stcb);
+	SCTP_INP_WLOCK(stcb->sctp_ep);
+	SCTP_TCB_LOCK(stcb);
 	if (!sbappendaddr_nocheck(&stcb->sctp_socket->so_rcv, to,
 	    m_notify, NULL, stcb->asoc.my_vtag, stcb->sctp_ep)) {
 		/* not enough room */
 		sctp_m_freem(m_notify);
+		SCTP_INP_WUNLOCK(stcb->sctp_ep);
 		return;
 	}
 	if(((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) &&
@@ -2517,6 +2540,7 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
 	} else {
 		stcb->asoc.my_rwnd_control_len += sizeof(struct mbuf);
 	}
+	SCTP_INP_WUNLOCK(stcb->sctp_ep);
 	sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 }
 
@@ -2583,10 +2607,14 @@ sctp_notify_shutdown_event(struct sctp_tcb *stcb)
 		return;
 	}
 	/* append to socket */
+	SCTP_TCB_UNLOCK(stcb);
+	SCTP_INP_WLOCK(stcb->sctp_ep);
+	SCTP_TCB_LOCK(stcb);
 	if (!sbappendaddr_nocheck(&stcb->sctp_socket->so_rcv, to,
 	    m_notify, NULL, stcb->asoc.my_vtag, stcb->sctp_ep)) {
 		/* not enough room */
 		sctp_m_freem(m_notify);
+		SCTP_INP_WUNLOCK(stcb->sctp_ep);
 		return;
 	}
 	if(((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) &&
@@ -2597,6 +2625,7 @@ sctp_notify_shutdown_event(struct sctp_tcb *stcb)
 	} else {
 		stcb->asoc.my_rwnd_control_len += sizeof(struct mbuf);
 	}
+	SCTP_INP_WUNLOCK(stcb->sctp_ep);
 	sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 }
 
@@ -2676,10 +2705,14 @@ sctp_notify_stream_reset(struct sctp_tcb *stcb,
 	to = (struct sockaddr *)sctp_recover_scope((struct sockaddr_in6 *)to,
 	    &lsa6);
 	/* append to socket */
+	SCTP_TCB_UNLOCK(stcb);
+	SCTP_INP_WLOCK(stcb->sctp_ep);
+	SCTP_TCB_LOCK(stcb);
 	if (!sbappendaddr_nocheck(&stcb->sctp_socket->so_rcv, to,
 	    m_notify, NULL, stcb->asoc.my_vtag, stcb->sctp_ep)) {
 		/* not enough room */
 		sctp_m_freem(m_notify);
+		SCTP_INP_WUNLOCK(stcb->sctp_ep);
 		return;
 	}
 	if(((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) &&
@@ -2690,6 +2723,7 @@ sctp_notify_stream_reset(struct sctp_tcb *stcb,
 	} else {
 		stcb->asoc.my_rwnd_control_len += sizeof(struct mbuf);
 	}
+	SCTP_INP_WUNLOCK(stcb->sctp_ep);
 	sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 }
 
@@ -3318,15 +3352,17 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 		m = control;
 	m->m_pkthdr.csum_data = (int)tag;
 
+	SOCKBUF_LOCK(sb);
 	for (n = m; n; n = n->m_next)
 		sballoc(sb, n);
 	nlast = n;
-	SOCKBUF_LOCK(sb);
 	if (sb->sb_mb == NULL) {
 		inp->sctp_vtag_last = tag;
 	}
 
 #ifdef __FREEBSD__
+	if(sb->sb_mb == NULL)
+		inp->sctp_vtag_last = tag;
 	SCTP_SBLINKRECORD(sb, m);
 	sb->sb_mbtail = nlast;
 #else
