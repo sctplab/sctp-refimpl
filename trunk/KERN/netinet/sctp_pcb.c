@@ -935,7 +935,7 @@ sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool, int have_lock)
 	if (have_lock == 0)
 		SCTP_INP_INFO_RLOCK();
 	head = &sctppcbinfo.sctp_ephash[SCTP_PCBHASH_ALLADDR(lport,
-	    sctppcbinfo.hashmark)];
+							     sctppcbinfo.hashmark)];
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_PCB1) {
 		printf("Main hash to lookup at head:%p\n", head);
@@ -987,9 +987,11 @@ sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool, int have_lock)
 		}
 		SCTP_INP_INFO_RUNLOCK();
 	} else {
-		SCTP_INP_WLOCK(inp);
-		SCTP_INP_INCR_REF(inp);
-		SCTP_INP_WUNLOCK(inp);
+		if(inp) {
+			SCTP_INP_WLOCK(inp);
+			SCTP_INP_INCR_REF(inp);
+			SCTP_INP_WUNLOCK(inp);
+		}
 	}
 	return (inp);
 }
