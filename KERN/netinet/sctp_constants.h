@@ -298,11 +298,6 @@
 /* mask to get sticky */
 #define SCTP_STICKY_OPTIONS_MASK	0x0c
 
-/* MTU discovery flags */
-#define SCTP_DONT_FRAGMENT	0x0100
-#define SCTP_FRAGMENT_OK	0x0200
-#define SCTP_PR_SCTP_ENABLED	0x0400
-#define SCTP_PR_SCTP_BUFFER	0x0800
 
 /* Chunk flags */
 #define SCTP_WINDOW_PROBE	0x01

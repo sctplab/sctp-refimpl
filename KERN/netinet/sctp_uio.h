@@ -90,15 +90,33 @@ struct sctp_snd_all_completes {
 
 /* send/recv flags */
 /* MSG_EOF (0x0100) is reused from sys/socket.h */
-#define MSG_SENDALL     0x0200
-#define MSG_PR_SCTP_TTL	0x0400	/* Partial Reliable on this msg */
-#define MSG_PR_SCTP_BUF	0x0800	/* Buffer based PR-SCTP */
 #ifndef MSG_EOF
 #define MSG_EOF 	0x1000	/* Start shutdown procedures */
 #endif
 #define MSG_UNORDERED 	0x2000	/* Message is un-ordered */
 #define MSG_ADDR_OVER	0x4000	/* Override the primary-address */
 #define MSG_ABORT	0x8000	/* Send an ABORT to peer */
+
+/*---->  sinfo->sinfo_flags */
+#define MSG_SENDALL     0x0200
+#define MSG_PR_SCTP_TTL	0x0400	/* Partial Reliable on this msg */
+#define MSG_PR_SCTP_BUF	0x0800	/* Buffer based PR-SCTP */
+#define MSG_EOF 	0x1000	/* Start shutdown procedures */
+#define MSG_UNORDERED 	0x2000	/* Message is un-ordered */
+#define MSG_ADDR_OVER	0x4000	/* Override the primary-address */
+#define MSG_ABORT	0x8000	/* Send an ABORT to peer */
+
+/*<-----  sinfo->sinfo_flags */
+#define MSG_UNORDERED 	0x2000	/* Message is un-ordered */
+
+/* <---- msg->msg_flags */
+#define MSG_EOF 	0x1000	/* Start shutdown procedures */
+/*??? MSG_EOR ?? */
+
+/* ----> msg->msg_flags */
+
+/* ??? */
+
 
 /* Stat's */
 struct sctp_pcbinfo {
