@@ -267,6 +267,17 @@ struct sctp_stream_reset_event {
 #define SCTP_STRRESET_STREAM_LIST  0x0008
 
 
+#define MAX_ASOC_IDS_RET 255
+
+struct sctp_assoc_ids {
+	u_int16_t asls_assoc_start;	/* array of index's start at 0 */
+	u_int8_t asls_numb_present; 
+	u_int8_t asls_more_to_get;
+	sctp_assoc_t asls_assoc_id[MAX_ASOC_IDS_RET];
+};
+
+
+
 /* notification types */
 #define SCTP_ASSOC_CHANGE		0x0001
 #define SCTP_PEER_ADDR_CHANGE		0x0002
