@@ -3141,10 +3141,8 @@ sctp_print_address_pkt(struct ip *iph, struct sctphdr *sh)
 	}
 }
 
-#if defined(__FreeBSD__) || defined(__APPLE__)
-
+#if defined(__FreeBSD__) 
 /* cloned from uipc_socket.c */
-
 #define SCTP_SBLINKRECORD(sb, m0) do {					\
 	if ((sb)->sb_lastrecord != NULL)				\
 		(sb)->sb_lastrecord->m_nextpkt = (m0);			\
@@ -3275,8 +3273,11 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 		inp->sctp_vtag_last = tag;
 	}
 
+#if defined(__FreeBSD__)
 	SCTP_SBLINKRECORD(sb, m);
 	sb->sb_mbtail = nlast;
+#else /* __APPLE__ */
+#endif
 	return (1);
 #endif
 #ifdef __OpenBSD__
