@@ -34,6 +34,9 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+
+/* test line to see if Michael gets mail */
+
 #include <sys/types.h>
 #include <sys/socket.h>
 
