@@ -349,6 +349,7 @@ sctp_findassociation_ep_asconf(struct mbuf *m, int iphlen, int offset,
 	struct sockaddr_storage local_store, remote_store;
 	struct ip *iph;
 	struct sctp_paramhdr parm_buf, *phdr;
+	int ptype;
 
 	memset(&local_store, 0, sizeof(local_store));
 	memset(&remote_store, 0, sizeof(remote_store));
@@ -385,14 +386,12 @@ sctp_findassociation_ep_asconf(struct mbuf *m, int iphlen, int offset,
 #endif /* SCTP_DEBUG */
 		return NULL;
 	}
-	phdr->param_type = ntohs(phdr->param_type);
-	phdr->param_length = ntohs(phdr->param_length);
-
+	ptype = (int)((u_int)ntohs(phdr->param_type));
 	/* get the correlation address */
-	if (phdr->param_type == SCTP_IPV6_ADDRESS) {
+	if (ptype == SCTP_IPV6_ADDRESS) {
 		/* ipv6 address param */
 		struct sctp_ipv6addr_param *p6, p6_buf;
-		if (phdr->param_length != sizeof(struct sctp_ipv6addr_param)) {
+		if (ntohs(phdr->param_length) != sizeof(struct sctp_ipv6addr_param)) {
 			return NULL;
 		}
 
@@ -412,10 +411,10 @@ sctp_findassociation_ep_asconf(struct mbuf *m, int iphlen, int offset,
 		sin6->sin6_len = sizeof(*sin6);
 		sin6->sin6_port = sh->src_port;
 		memcpy(&sin6->sin6_addr, &p6->addr, sizeof(struct in6_addr));
-	} else if (phdr->param_type == SCTP_IPV4_ADDRESS) {
+	} else if (ptype == SCTP_IPV4_ADDRESS) {
 		/* ipv4 address param */
 		struct sctp_ipv4addr_param *p4, p4_buf;
-		if (phdr->param_length != sizeof(struct sctp_ipv4addr_param)) {
+		if (ntohs(phdr->param_length) != sizeof(struct sctp_ipv4addr_param)) {
 			return NULL;
 		}
 
