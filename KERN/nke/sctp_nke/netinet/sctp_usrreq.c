@@ -1232,7 +1232,7 @@ sctp_fill_up_addresses(struct sctp_inpcb *inp,
 					    (IN4_ISPRIVATE_ADDRESS(&sin->sin_addr))) {
 						continue;
 					}
-					if (inp->sctp_flags & SCTP_I_WANT_MAPPED_V4_ADDR) {
+					if (inp->sctp_flags & SCTP_PCB_FLAGS_NEEDS_MAPPED_V4) {
 						in6_sin_2_v4mapsin6(sin,(struct sockaddr_in6 *)sas);
 						((struct sockaddr_in6 *)sas)->sin6_port = inp->sctp_lport;
 						sas = (struct sockaddr_storage *)((caddr_t)sas + sizeof(struct sockaddr_in6));
@@ -1366,7 +1366,7 @@ sctp_count_max_addresses(struct sctp_inpcb *inp)
 			TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
 				/* Count them if they are the right type */
 				if (ifa->ifa_addr->sa_family == AF_INET) {
-					if (inp->sctp_flags & SCTP_I_WANT_MAPPED_V4_ADDR) 
+					if (inp->sctp_flags & SCTP_PCB_FLAGS_NEEDS_MAPPED_V4) 
 						cnt += sizeof(struct sockaddr_in6);
 					else
 						cnt += sizeof(struct sockaddr_in);
@@ -1379,7 +1379,7 @@ sctp_count_max_addresses(struct sctp_inpcb *inp)
 		struct sctp_laddr *laddr;
 		LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
 			if (laddr->ifa->ifa_addr->sa_family == AF_INET) {
-				if (inp->sctp_flags & SCTP_I_WANT_MAPPED_V4_ADDR) 
+				if (inp->sctp_flags & SCTP_PCB_FLAGS_NEEDS_MAPPED_V4) 
 					cnt += sizeof(struct sockaddr_in6);
 				else
 					cnt += sizeof(struct sockaddr_in);
@@ -1616,7 +1616,7 @@ sctp_optsget(struct socket *so,
 			optval = inp->sctp_flags & SCTP_PCB_FLAGS_NO_FRAGMENT;
 			break;
 		case SCTP_I_WANT_MAPPED_V4_ADDR:
-			optval = inp->sctp_flags & SCTP_I_WANT_MAPPED_V4_ADDR;
+			optval = inp->sctp_flags & SCTP_PCB_FLAGS_NEEDS_MAPPED_V4;
 			break;
 		case SCTP_AUTO_ASCONF:
 			optval = inp->sctp_flags & SCTP_PCB_FLAGS_AUTO_ASCONF;
@@ -1921,8 +1921,10 @@ sctp_optsget(struct socket *so,
 		}
 #endif /* SCTP_DEBUG */
 		if ((size_t)m->m_len < sizeof(sctp_assoc_t)) {
+#ifdef SCTP_DEBUG
 			printf("m->m_len:%d not %d\n",
 			       m->m_len, sizeof(sctp_assoc_t));
+#endif /* SCTP_DEBUG */
 			error = EINVAL;
 			break;
 		}
@@ -1933,12 +1935,9 @@ sctp_optsget(struct socket *so,
 		}
 		if (stcb == NULL) {
 			assoc_id = mtod(m, sctp_assoc_t *);
-			printf("Lookup association id:%x for inp:%x\n",
-			       (u_int)*assoc_id, (u_int)inp);
 			stcb = sctp_findassociation_ep_asocid(inp, *assoc_id);
 		}
 		if (stcb == NULL) {
-			printf("Lookup fails\n");
 			error = EINVAL;
 			break;
 		}
@@ -3128,7 +3127,8 @@ sctp_optsset(struct socket *so,
 	case SCTP_BINDX_ADD_ADDR:
 	{
 		struct sctp_getaddresses *addrs;
-
+		struct sockaddr *addr_touse;
+		struct sockaddr_in sin;
 		/* see if we're bound all already! */
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
 			error = EINVAL;
@@ -3139,29 +3139,35 @@ sctp_optsset(struct socket *so,
 			break;
 		}
 		addrs = mtod(m, struct sctp_getaddresses *);
+		addr_touse = addrs->addr;
+		if (addrs->addr->sa_family == AF_INET6) {
+			struct sockaddr_in6 *sin6;
+			sin6 = (struct sockaddr_in6 *)addr_touse;
+			if (IN6_IS_ADDR_V4MAPPED(&sin6->sin6_addr)) {
+				in6_sin6_2_sin(&sin, sin6);
+				addr_touse = (struct sockaddr *)&sin;
+			}
+		}
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) {
 				if (p == NULL) {
 					/* Can't get proc for Net/Open BSD */
 					error = EINVAL;
 					break;
 				}
-				error = sctp_inpcb_bind(so,
-							(struct sockaddr *)addrs->addr,
-							p);
+				error = sctp_inpcb_bind(so, addr_touse, p);
 				break;
 		}
 		if (addrs->sget_assoc_id == 0) {
 			/* add the address */
 			struct sctp_inpcb  *lep;
-
-			((struct sockaddr_in *)addrs->addr)->sin_port = inp->sctp_lport;
-			lep = sctp_pcb_findep(addrs->addr, 1);
+			((struct sockaddr_in *)addr_touse)->sin_port = inp->sctp_lport;
+			lep = sctp_pcb_findep(addr_touse, 1);
 			if (lep == inp) {
 				/* already bound to it.. ok */
 				break;
 			} else if (lep == NULL) {
-				((struct sockaddr_in *)addrs->addr)->sin_port = 0;
-				error = sctp_addr_mgmt_ep_sa(inp, (struct sockaddr *)addrs->addr,
+				((struct sockaddr_in *)addr_touse)->sin_port = 0;
+				error = sctp_addr_mgmt_ep_sa(inp, addr_touse,
 							     SCTP_ADD_IP_ADDRESS);
 			} else {
 				error = EADDRNOTAVAIL;
@@ -3177,6 +3183,8 @@ sctp_optsset(struct socket *so,
 	case SCTP_BINDX_REM_ADDR:
 	{
 		struct sctp_getaddresses *addrs;
+		struct sockaddr *addr_touse;
+		struct sockaddr_in sin;
 		/* see if we're bound all already! */
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
 			error = EINVAL;
@@ -3187,9 +3195,18 @@ sctp_optsset(struct socket *so,
 			break;
 		}
 		addrs = mtod(m, struct sctp_getaddresses *);
+		addr_touse = addrs->addr;
+		if (addrs->addr->sa_family == AF_INET6) {
+			struct sockaddr_in6 *sin6;
+			sin6 = (struct sockaddr_in6 *)addr_touse;
+			if (IN6_IS_ADDR_V4MAPPED(&sin6->sin6_addr)) {
+				in6_sin6_2_sin(&sin, sin6);
+				addr_touse = (struct sockaddr *)&sin;
+			}
+		}
 		if (addrs->sget_assoc_id == 0) {
 				/* delete the address */
-			sctp_addr_mgmt_ep_sa(inp, addrs->addr,
+			sctp_addr_mgmt_ep_sa(inp, addr_touse,
 					     SCTP_DEL_IP_ADDRESS);
 		} else {
 			/* FIX: decide whether we allow assoc based bindx */
@@ -3277,6 +3294,8 @@ sctp_ctloutput(struct socket *so, struct sockopt *sopt)
 	}
 	if ( (error == 0) && (m != NULL)) {
 		error = sooptcopyout(sopt, mtod(m, caddr_t), m->m_len);
+		sctp_m_freem(m);
+	} else if (m != NULL) {
 		sctp_m_freem(m);
 	}
  out:
@@ -3557,7 +3576,7 @@ sctp_usr_recvd(struct socket *so, int flags)
 		}
 	} else {
 		if ((( sq ) && (flags & MSG_EOR) && ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0)) 
-			   && ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
+			   && ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
 			stcb = sctp_remove_from_socket_q(inp);
 		}
 	}
@@ -3571,7 +3590,7 @@ sctp_usr_recvd(struct socket *so, int flags)
 #endif
 
 		if(((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) 
-			&& ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
+			&& ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
 			while (TAILQ_EMPTY(&inp->sctp_queue_list) == 0) {
 				sq_cnt++;
 				(void)sctp_remove_from_socket_q(inp);
