@@ -361,11 +361,24 @@ sctp_sendmsg(int s,
 		struct sockaddr_in6 in6;
 	}addr;
 
+/*
+  fprintf(io, "sctp_sendmsg(sd:%d, data:%x, len:%d, to:%x, tolen:%d, ppid:%x, flags:%x str:%d ttl:%d ctx:%x\n",
+  s, 
+  (u_int)data, 
+  (int)len,
+  (u_int)to,
+  (int)tolen,
+  ppid, flags,
+  (int)stream_no,
+  (int)timetolive,
+  (u_int)context);
+  fflush(io);
+*/
 	if (to) {
 		if (to->sa_len == 0) {
 			/* For the lazy app, that did not
-			* set sa_len, we attempt to set for them.
-			*/
+			 * set sa_len, we attempt to set for them.
+			 */
 			if(to->sa_family == AF_INET){
 				memcpy(&addr, to, sizeof(struct sockaddr_in));
 				addr.in.sin_len = sizeof(struct sockaddr_in);
