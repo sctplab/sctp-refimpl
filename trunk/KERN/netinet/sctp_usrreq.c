@@ -114,10 +114,7 @@ extern u_int32_t sctp_debug_on;
 /*
  * sysctl tunable variables
  */
-/*
- * we use the number of mbufs and clusters to tune our initial send
- * and receive windows and the limit of chunks allocated.
- */
+int sctp_auto_asconf = SCTP_DEFAULT_AUTO_ASCONF;
 int sctp_max_burst_default = SCTP_DEF_MAX_BURST;
 int sctp_peer_chunk_oh = sizeof(struct mbuf);
 int sctp_strict_init = 1;
