@@ -20,6 +20,6 @@ Patch 24 change log
    called on an association that was free... very bad. This is
    all fixed and now all t-o functions that do threshold mangagment
    must return 0 for ok and 1 for association destroyed.
-
-
-
+9) Got rid of  an used define in sctp_constants.h
+10) Rewrite IPv4 src address selection and fixed bound specific
+    IPv6 src address selection.

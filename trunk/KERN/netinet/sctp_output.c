@@ -346,6 +346,133 @@ sctp_add_cookie(struct sctp_inpcb *inp, struct mbuf *init, int init_offset,
 	return (mret);
 }
 
+
+static struct sockaddr_in * 
+sctp_is_v4_ifa_addr_prefered (struct ifaddr *ifa, uint8_t loopscope, uint8_t ipv4_scope, uint8_t *sin_loop, uint8_t *sin_local)
+{
+	struct sockaddr_in *sin;
+	/* 
+	 * Here we determine if its a prefered address. A
+	 * prefered address means it is the same scope or
+	 * higher scope then the destination.
+	 *  L = loopback, P = private, G = global
+	 * -----------------------------------------
+	 *  src    |      dest     |    result
+	 *-----------------------------------------
+	 *   L     |       L       |    yes
+	 *-----------------------------------------
+	 *   P     |       L       |    yes
+	 *-----------------------------------------
+	 *   G     |       L       |    yes
+	 *-----------------------------------------
+	 *   L     |       P       |    no
+	 *-----------------------------------------
+	 *   P     |       P       |    yes
+	 *-----------------------------------------
+	 *   G     |       P       |    no
+	 *-----------------------------------------
+	 *   L     |       G       |    no
+	 *-----------------------------------------
+	 *   P     |       G       |    no
+	 *-----------------------------------------
+	 *   G     |       G       |    yes
+	 *-----------------------------------------
+	 */
+
+	if (ifa->ifa_addr->sa_family != AF_INET) {
+		/* forget non-v4 */
+		return(NULL);
+	}
+	/* Ok the address may be ok */
+	sin = (struct sockaddr_in *)ifa->ifa_addr;
+	if(sin->sin_addr.s_addr == 0) {
+		return (NULL);
+	}
+	*sin_local = *sin_loop = 0;
+	if ((ifa->ifa_ifp->if_type == IFT_LOOP) ||
+	    (IN4_ISLOOPBACK_ADDRESS(&sin->sin_addr))) {
+		*sin_loop = 1;
+		*sin_local = 1;
+	}
+	if ((IN4_ISPRIVATE_ADDRESS(&sin->sin_addr))) {
+		*sin_local = 1;
+	}
+	if (!loopscope && *sin_loop) {
+		/* Its a loopback address and we don't have loop scope */
+		return(NULL);
+	}
+	if (!ipv4_scope && *sin_local) {
+		/* Its a private address, and we don't have private address scope */
+		return(NULL);
+	}
+	if (((ipv4_scope == 0) && (loopscope == 0)) && (*sin_local)) {
+		/* its a global src and a private dest */
+		return(NULL);
+	}
+	/* its a prefered address */
+	return (sin);
+}
+
+static struct sockaddr_in * 
+sctp_is_v4_ifa_addr_acceptable (struct ifaddr *ifa, uint8_t loopscope, uint8_t ipv4_scope, uint8_t *sin_loop, uint8_t *sin_local)
+{
+	struct sockaddr_in *sin;
+	/* 
+	 * Here we determine if its a acceptable address. A
+	 * acceptable address means it is the same scope or
+	 * higher scope but we can allow for NAT which means
+	 * its ok to have a global dest and a private src.
+	 *
+	 *  L = loopback, P = private, G = global
+	 * -----------------------------------------
+	 *  src    |      dest     |    result
+	 *-----------------------------------------
+	 *   L     |       L       |    yes
+	 *-----------------------------------------
+	 *   P     |       L       |    yes
+	 *-----------------------------------------
+	 *   G     |       L       |    yes
+	 *-----------------------------------------
+	 *   L     |       P       |    no 
+	 *-----------------------------------------
+	 *   P     |       P       |    yes
+	 *-----------------------------------------
+	 *   G     |       P       |    yes - probably this won't work.
+	 *-----------------------------------------
+	 *   L     |       G       |    no
+	 *-----------------------------------------
+	 *   P     |       G       |    yes
+	 *-----------------------------------------
+	 *   G     |       G       |    yes
+	 *-----------------------------------------
+	 */
+
+	if (ifa->ifa_addr->sa_family != AF_INET) {
+		/* forget non-v4 */
+		return(NULL);
+	}
+	/* Ok the address may be ok */
+	sin = (struct sockaddr_in *)ifa->ifa_addr;
+	if(sin->sin_addr.s_addr == 0) {
+		return (NULL);
+	}
+	*sin_local = *sin_loop = 0;
+	if ((ifa->ifa_ifp->if_type == IFT_LOOP) ||
+	    (IN4_ISLOOPBACK_ADDRESS(&sin->sin_addr))) {
+		*sin_loop = 1;
+		*sin_local = 1;
+	}
+	if ((IN4_ISPRIVATE_ADDRESS(&sin->sin_addr))) {
+		*sin_local = 1;
+	}
+	if (!loopscope && *sin_loop) {
+		/* Its a loopback address and we don't have loop scope */
+		return(NULL);
+	}
+	/* its an acceptable address */
+	return (sin);
+}
+
 /*
  * This treats the address list on the ep as a restricted list
  * (negative list). If a the passed address is listed, then
@@ -379,10 +506,12 @@ sctp_is_addr_restricted(struct sctp_tcb *stcb, struct sockaddr *addr)
 }
 
 static int
-sctp_is_addr_in_ep(struct sctp_inpcb *inp, struct sockaddr *addr)
+sctp_is_addr_in_ep(struct sctp_inpcb *inp, struct ifaddr *ifa)
 {
 	struct sctp_laddr *laddr;
 
+	if(ifa == NULL)
+		return (0);
 	LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
 		if (laddr->ifa == NULL) {
 #ifdef SCTP_DEBUG
@@ -394,18 +523,561 @@ sctp_is_addr_in_ep(struct sctp_inpcb *inp, struct sockaddr *addr)
 		}
 		if (laddr->ifa->ifa_addr == NULL)
 			continue;
-		if (laddr->ifa->ifa_addr->sa_family != addr->sa_family) {
+		if(laddr->ifa == ifa)
+			/* same pointer */
+			return (1);
+		if (laddr->ifa->ifa_addr->sa_family != ifa->ifa_addr->sa_family) {
 			/* skip non compatible address comparison */
 			continue;
 		}
-		if (memcmp(addr->sa_data, laddr->ifa->ifa_addr->sa_data,
-		    addr->sa_len) == 0) {
+		if (sctp_cmpaddr(ifa->ifa_addr, laddr->ifa->ifa_addr) == 1) {
 			/* Yes it is restricted */
 			return (1);
 		}
 	}
 	return (0);
 }
+
+
+
+static struct in_addr
+sctp_choose_v4_boundspecific_inp(struct sctp_inpcb *inp,
+				 struct rtentry *rt, 
+				 uint8_t ipv4_scope, 
+				 uint8_t loopscope)
+{
+	struct in_addr ans;
+	struct sctp_laddr *laddr;
+	struct sockaddr_in *sin;
+	struct ifnet *ifn;
+	struct ifaddr *ifa;
+	uint8_t sin_loop, sin_local;
+
+	/* first question, is the ifn we will emit on
+	 * in our list, if so, we want that one.
+	 */
+	ifn = rt->rt_ifp;
+	if (ifn) {
+		/* is a prefered one on the interface we route out? */
+		TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
+			sin = sctp_is_v4_ifa_addr_prefered (ifa, loopscope, ipv4_scope, &sin_loop, &sin_local);
+			if (sin == NULL)
+				continue;
+			if(sctp_is_addr_in_ep(inp, ifa)) {
+				return (sin->sin_addr);
+			}
+		}
+		/* is an acceptable one on the interface we route out? */
+		TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
+			sin = sctp_is_v4_ifa_addr_acceptable (ifa, loopscope, ipv4_scope, &sin_loop, &sin_local);
+			if (sin == NULL)
+				continue;
+			if(sctp_is_addr_in_ep(inp, ifa)) {
+				return (sin->sin_addr);
+			}
+		}
+	}
+	/* ok, what about a prefered address in the inp */
+	for (laddr = LIST_FIRST(&inp->sctp_addr_list);
+	     laddr && (laddr != inp->next_addr_touse);
+	     laddr = LIST_NEXT(laddr, sctp_nxt_addr)) {
+		if (laddr->ifa == NULL) {
+			/* address has been removed */
+			continue;
+		}
+		sin = sctp_is_v4_ifa_addr_prefered (laddr->ifa, loopscope, ipv4_scope, &sin_loop, &sin_local);
+		if(sin == NULL)
+			continue;
+		return(sin->sin_addr);
+
+	}
+	/* ok, what about an acceptable address in the inp */
+	for (laddr = LIST_FIRST(&inp->sctp_addr_list);
+	     laddr && (laddr != inp->next_addr_touse);
+	     laddr = LIST_NEXT(laddr, sctp_nxt_addr)) {
+		if (laddr->ifa == NULL) {
+			/* address has been removed */
+			continue;
+		}
+		sin = sctp_is_v4_ifa_addr_acceptable (laddr->ifa, loopscope, ipv4_scope, &sin_loop, &sin_local);
+		if(sin == NULL)
+			continue;
+		return(sin->sin_addr);
+
+	}
+
+	/* no address bound can be a source for the destination we are in trouble */
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
+		printf("Src address selection for EP, no acceptable src address found for address\n");
+	}
+#endif
+	memset(&ans, 0, sizeof(ans));
+	return(ans);
+}
+
+
+
+static struct in_addr
+sctp_choose_v4_boundspecific_stcb(struct sctp_inpcb *inp, 
+				  struct sctp_tcb *stcb, 
+				  struct sctp_nets *net, 
+				  struct rtentry *rt, 
+ 			          uint8_t ipv4_scope, 
+				  uint8_t loopscope, 
+				  int non_asoc_addr_ok)
+{
+	/*
+	 * Here we have two cases, bound all asconf
+	 * allowed. bound all asconf not allowed.
+	 *
+	 */
+	struct sctp_laddr *laddr, *starting_point;
+	struct in_addr ans;
+	struct ifnet *ifn;
+	struct ifaddr *ifa;
+	uint8_t sin_loop, sin_local, start_at_beginning=0;
+	struct sockaddr_in *sin;
+
+	/* first question, is the ifn we will emit on
+	 * in our list, if so, we want that one.
+	 */
+	ifn = rt->rt_ifp;
+
+ 	if (inp->sctp_flags & SCTP_PCB_FLAGS_DO_ASCONF) {
+		/* 
+		 * Here we use the list of addresses on the endpoint. Then
+		 * the addresses listed on the "restricted" list is just that,
+		 * address that have not been added and can't be used (unless
+		 * the non_asoc_addr_ok is set).
+		 */
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
+			printf("Have a STCB - asconf allowed, not bound all have a netgative list\n");
+		}
+#endif
+		/* first question, is the ifn we will emit on
+		 * in our list, if so, we want that one.
+		 */
+		if (ifn) {
+			/* first try for an prefered address on the ep */
+			TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
+				if(sctp_is_addr_in_ep(inp, ifa)) {
+					sin = sctp_is_v4_ifa_addr_prefered (ifa, loopscope, ipv4_scope, &sin_loop, &sin_local);
+					if (sin == NULL)
+						continue;
+					if ((non_asoc_addr_ok == 0) && 
+					    (sctp_is_addr_restricted(stcb, (struct sockaddr *)sin))) {
+						/* on the no-no list */
+						continue;
+					}
+					return (sin->sin_addr);
+				}
+			}
+			/* next try for an acceptable address on the ep */
+			TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
+				if(sctp_is_addr_in_ep(inp, ifa)) {
+					sin = sctp_is_v4_ifa_addr_acceptable (ifa, loopscope, ipv4_scope, &sin_loop, &sin_local);
+					if (sin == NULL)
+						continue;
+					if ((non_asoc_addr_ok == 0) && 
+					    (sctp_is_addr_restricted(stcb, (struct sockaddr *)sin))) {
+						/* on the no-no list */
+						continue;
+					}
+					return (sin->sin_addr);
+				}
+			}
+
+		}
+		/* if we can't find one like that then we must
+		 * look at all addresses bound to pick one at
+		 * first prefereable then secondly acceptable.
+		 */
+		starting_point = stcb->asoc.last_used_address;
+	sctpv4_from_the_top:
+		if (stcb->asoc.last_used_address == NULL) {
+			start_at_beginning=1;
+			stcb->asoc.last_used_address = LIST_FIRST(&inp->sctp_addr_list);
+		}
+		/* search beginning with the last used address */
+		for (laddr = stcb->asoc.last_used_address; laddr;
+		     laddr = LIST_NEXT(laddr, sctp_nxt_addr)) {
+			if (laddr->ifa == NULL) {
+				/* address has been removed */
+				continue;
+			}
+			sin = sctp_is_v4_ifa_addr_prefered (laddr->ifa, loopscope, ipv4_scope, &sin_loop, &sin_local);
+			if(sin == NULL)
+				continue;
+			if ((non_asoc_addr_ok == 0) && 
+			    (sctp_is_addr_restricted(stcb, (struct sockaddr *)sin))) {
+				/* on the no-no list */
+				continue;
+			}
+			return (sin->sin_addr);
+
+		}
+		if (start_at_beginning == 0) {
+			stcb->asoc.last_used_address = NULL;
+			goto sctpv4_from_the_top;
+		}
+		/* now try for any higher scope than the destination */
+		stcb->asoc.last_used_address = starting_point;
+		start_at_beginning = 0;
+	sctpv4_from_the_top2:
+		if (stcb->asoc.last_used_address == NULL) {
+			start_at_beginning=1;
+			stcb->asoc.last_used_address = LIST_FIRST(&inp->sctp_addr_list);
+		}
+		/* search beginning with the last used address */
+		for (laddr = stcb->asoc.last_used_address; laddr;
+		     laddr = LIST_NEXT(laddr, sctp_nxt_addr)) {
+			if (laddr->ifa == NULL) {
+				/* address has been removed */
+				continue;
+			}
+			sin = sctp_is_v4_ifa_addr_acceptable (laddr->ifa, loopscope, ipv4_scope, &sin_loop, &sin_local);
+			if(sin == NULL)
+				continue;
+			if ((non_asoc_addr_ok == 0) && 
+			    (sctp_is_addr_restricted(stcb, (struct sockaddr *)sin))) {
+				/* on the no-no list */
+				continue;
+			}
+			return (sin->sin_addr);
+		}
+		if(start_at_beginning == 0) {
+			stcb->asoc.last_used_address = NULL;
+			goto sctpv4_from_the_top2;
+		}
+	} else {
+		/*
+		 * Here we have an address list on the association, thats the
+		 * only valid source addresses that we can use.
+		 */
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
+			printf("Have a STCB - no asconf allowed, not bound all have a postive list\n");
+		}
+#endif
+		/* First look at all addresses for one that is on
+		 * the interface we route out
+		 */
+		LIST_FOREACH(laddr, &stcb->asoc.sctp_local_addr_list,
+			     sctp_nxt_addr) {
+			if (laddr->ifa == NULL) {
+				/* address has been removed */
+				continue;
+			}
+			sin = sctp_is_v4_ifa_addr_prefered (laddr->ifa, loopscope, ipv4_scope, &sin_loop, &sin_local);
+			if(sin == NULL)
+				continue;
+			/* first question, is laddr->ifa an address associated with the emit interface */
+			if (ifn) {
+				TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
+					if (laddr->ifa == ifa) {
+						sin = (struct sockaddr_in *)laddr->ifa->ifa_addr;
+						return (sin->sin_addr);
+					}
+					if(sctp_cmpaddr(ifa->ifa_addr, laddr->ifa->ifa_addr) == 1) {
+						sin = (struct sockaddr_in *)laddr->ifa->ifa_addr;
+						return (sin->sin_addr);
+					}
+				}
+			}
+		}
+		/* what about an acceptable one on the interface? */
+		LIST_FOREACH(laddr, &stcb->asoc.sctp_local_addr_list,
+			     sctp_nxt_addr) {
+			if (laddr->ifa == NULL) {
+				/* address has been removed */
+				continue;
+			}
+			sin = sctp_is_v4_ifa_addr_acceptable (laddr->ifa, loopscope, ipv4_scope, &sin_loop, &sin_local);
+			if(sin == NULL)
+				continue;
+			/* first question, is laddr->ifa an address associated with the emit interface */
+			if (ifn) {
+				TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
+					if (laddr->ifa == ifa) {
+						sin = (struct sockaddr_in *)laddr->ifa->ifa_addr;
+						return (sin->sin_addr);
+					}
+					if(sctp_cmpaddr(ifa->ifa_addr, laddr->ifa->ifa_addr) == 1) {
+						sin = (struct sockaddr_in *)laddr->ifa->ifa_addr;
+						return (sin->sin_addr);
+					}
+				}
+			}
+		}
+		/* ok, next one that is preferable in general */
+		LIST_FOREACH(laddr, &stcb->asoc.sctp_local_addr_list,
+			     sctp_nxt_addr) {
+			if (laddr->ifa == NULL) {
+				/* address has been removed */
+				continue;
+			}
+			sin = sctp_is_v4_ifa_addr_prefered (laddr->ifa, loopscope, ipv4_scope, &sin_loop, &sin_local);
+			if(sin == NULL)
+				continue;
+			return(sin->sin_addr);
+		}
+
+		/* last, what about one that is acceptable */
+		LIST_FOREACH(laddr, &stcb->asoc.sctp_local_addr_list,
+			     sctp_nxt_addr) {
+			if (laddr->ifa == NULL) {
+				/* address has been removed */
+				continue;
+			}
+			sin = sctp_is_v4_ifa_addr_acceptable (laddr->ifa, loopscope, ipv4_scope, &sin_loop, &sin_local);
+			if(sin == NULL)
+				continue;
+			return(sin->sin_addr);
+		}
+	}
+	memset(&ans, 0, sizeof(ans));
+	return(ans);
+}
+
+static struct sockaddr_in *
+sctp_select_v4_nth_prefered_addr_from_ifn_boundall (struct ifnet *ifn, struct sctp_tcb *stcb, int non_asoc_addr_ok, 
+						    uint8_t loopscope, uint8_t ipv4_scope, int cur_addr_num)
+{
+	struct ifaddr *ifa;
+	struct sockaddr_in *sin;
+	uint8_t sin_loop, sin_local;
+	int num_eligible_addr = 0;
+	TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
+		sin = sctp_is_v4_ifa_addr_prefered (ifa, loopscope, ipv4_scope, &sin_loop, &sin_local);
+		if(sin == NULL) 
+			continue;
+		if (stcb) {
+			if ((non_asoc_addr_ok == 0) && sctp_is_addr_restricted(stcb, (struct sockaddr *)sin)) {
+				/* It is restricted for some reason.. probably
+				 * not yet added.
+				 */
+				continue;
+			}
+		}
+		if( cur_addr_num == num_eligible_addr) {
+			return (sin);
+		}
+	}
+	return (NULL);
+} 
+
+
+static int
+sctp_count_v4_num_prefered_boundall (struct ifnet *ifn, struct sctp_tcb *stcb, int non_asoc_addr_ok, 
+				     uint8_t loopscope, uint8_t ipv4_scope, uint8_t *sin_loop, uint8_t *sin_local)
+{
+	struct ifaddr *ifa;
+	struct sockaddr_in *sin;
+	int num_eligible_addr = 0;
+
+	TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
+		sin = sctp_is_v4_ifa_addr_prefered (ifa, loopscope, ipv4_scope, sin_loop, sin_local);
+		if (sin == NULL)
+			continue;
+		if (stcb) {
+			if ((non_asoc_addr_ok == 0) && sctp_is_addr_restricted(stcb, (struct sockaddr *)sin)) {
+				/* It is restricted for some reason.. probably
+				 * not yet added.
+				 */
+				continue;
+			}
+		}
+		num_eligible_addr++;
+	}
+	return (num_eligible_addr);
+
+}
+
+static struct in_addr
+sctp_choose_v4_boundall(struct sctp_inpcb *inp, 
+			struct sctp_tcb *stcb, 
+			struct sctp_nets *net, 
+			struct rtentry *rt, 
+			uint8_t ipv4_scope, 
+			uint8_t loopscope, 
+			int non_asoc_addr_ok)
+{
+	int cur_addr_num=0, num_prefered=0;
+	uint8_t sin_loop, sin_local;
+	struct ifnet *ifn;
+	struct sockaddr_in *sin;
+	struct in_addr ans;
+	struct ifaddr *ifa;
+	/* 
+	 * For v4 we can use (in boundall) any address in the association. If
+	 * non_asoc_addr_ok is set we can use any address (at least in theory).
+	 * So we look for prefered addresses first. If we find one, we use it.
+	 * Otherwise we next try to get an address on the interface, which we
+	 * should be able to do (unless non_asoc_addr_ok is false and we are
+	 * routed out that way). In these cases where we can't use the address
+	 * of the interface we go through all the ifn's looking for an address
+	 * we can use and fill that in. Punting means we send back address
+	 * 0, which will probably cause problems actually since then IP will
+	 * fill in the address of the route ifn, which means we probably already
+	 * rejected it.. i.e. here comes an abort :-<.
+	 */
+	ifn = rt->rt_ifp;
+	if( net ) {
+		cur_addr_num = net->indx_of_eligible_next_to_use;
+	}
+	if( ifn == NULL) {
+ 		goto bound_all_v4_plan_c;		
+	}
+	num_prefered = sctp_count_v4_num_prefered_boundall (ifn, stcb, non_asoc_addr_ok, loopscope, ipv4_scope, &sin_loop, &sin_local);
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
+		printf("Found %d prefered source addresses\n", num_prefered);
+	}
+#endif
+	if (num_prefered == 0) {
+		/* no eligible addresses, we must use some other
+		 * interface address if we can find one.
+		 */
+ 		goto bound_all_v4_plan_b;
+	}
+	/* Ok we have num_eligible_addr set with how many we can use,
+	 * this may vary from call to call due to addresses being deprecated etc..
+	 */
+	if(cur_addr_num >= num_prefered) {
+		cur_addr_num = 0;
+	}
+	/* select the nth address from the list (where cur_addr_num is the nth) and
+	 * 0 is the first one, 1 is the second one etc...
+	 */
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
+		printf("cur_addr_num:%d\n",cur_addr_num);
+	}
+#endif
+	sin = sctp_select_v4_nth_prefered_addr_from_ifn_boundall (ifn, stcb, non_asoc_addr_ok, loopscope, 
+								   ipv4_scope, cur_addr_num);
+
+	/* if sin is NULL something changed??, plan_a now */
+	if (sin) {
+		return (sin->sin_addr);
+	}
+
+	/* 
+	 * plan_b: Look at the interface that we emit on
+	 *         and see if we can find an acceptable address.
+	 */
+ bound_all_v4_plan_b:
+	TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
+		sin = sctp_is_v4_ifa_addr_acceptable (ifa, loopscope, ipv4_scope, &sin_loop, &sin_local);
+		if (sin == NULL)
+			continue;
+		if (stcb) {
+			if ((non_asoc_addr_ok == 0) && sctp_is_addr_restricted(stcb, (struct sockaddr *)sin)) {
+				/* It is restricted for some reason.. probably
+				 * not yet added.
+				 */
+				continue;
+			}
+		}
+		return (sin->sin_addr);
+	}
+	/* 
+	 * plan_c: Look at all interfaces and find a prefered
+	 *         address. If we reache here we are in trouble I think.
+	 */
+ bound_all_v4_plan_c:
+	for (ifn = TAILQ_FIRST(&ifnet);
+	     ifn && (ifn != inp->next_ifn_touse);
+	     ifn=TAILQ_NEXT(ifn, if_list)) {
+		if (loopscope == 0 && ifn->if_type == IFT_LOOP) {
+			/* wrong base scope */
+			continue;
+		}
+		if(ifn == rt->rt_ifp)
+			/* already looked at this guy */
+			continue;
+		num_prefered = sctp_count_v4_num_prefered_boundall (ifn, stcb, non_asoc_addr_ok, 
+								    loopscope, ipv4_scope, &sin_loop, &sin_local);
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
+			printf("Found ifn:%x %d prefered source addresses\n",(u_int)ifn, num_prefered);
+		}
+#endif
+		if (num_prefered == 0) {
+			/* 
+			 * None on this interface.
+			 */
+			continue;
+		}
+		/* Ok we have num_eligible_addr set with how many we can use,
+		 * this may vary from call to call due to addresses being deprecated etc..
+		 */
+		if(cur_addr_num >= num_prefered) {
+			cur_addr_num = 0;
+		}
+		sin = sctp_select_v4_nth_prefered_addr_from_ifn_boundall (ifn, stcb, non_asoc_addr_ok, loopscope, 
+									  ipv4_scope, cur_addr_num);
+		if (sin == NULL) 
+			continue;
+		return (sin->sin_addr);
+
+	}
+
+	/* 
+	 * plan_d: We are in deep trouble. No prefered address on
+	 *         any interface. And the emit interface does not
+	 *         even have an acceptable address. Take anything
+	 *         we can get! If this does not work we are 
+	 *         probably going to emit a packet that will
+	 *         illicit an ABORT, falling through.
+	 */
+
+	for (ifn = TAILQ_FIRST(&ifnet);
+	     ifn && (ifn != inp->next_ifn_touse);
+	     ifn=TAILQ_NEXT(ifn, if_list)) {
+		if (loopscope == 0 && ifn->if_type == IFT_LOOP) {
+			/* wrong base scope */
+			continue;
+		}
+		if(ifn == rt->rt_ifp)
+			/* already looked at this guy */
+			continue;
+
+		TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
+			sin = sctp_is_v4_ifa_addr_acceptable (ifa, loopscope, ipv4_scope, &sin_loop, &sin_local);
+			if (sin == NULL)
+				continue;
+			if (stcb) {
+				if ((non_asoc_addr_ok == 0) && sctp_is_addr_restricted(stcb, (struct sockaddr *)sin)) {
+					/* It is restricted for some reason.. probably
+					 * not yet added.
+					 */
+					continue;
+				}
+			}
+			return (sin->sin_addr);
+		}
+	}
+	/*
+	 * Ok we can find NO address to source from that is
+	 * not on our negative list. It is either the special
+	 * ASCONF case where we are sourceing from a intf that
+	 * has been ifconfig'd to a different address (i.e.
+	 * it holds a ADD/DEL/SET-PRIM and the proper lookup
+	 * address. OR we are hosed, and this baby is going
+	 * to abort the association.
+	 */
+	if (non_asoc_addr_ok) {
+		return (((struct sockaddr_in *)(rt->rt_ifa->ifa_addr))->sin_addr);
+	} else {
+		memset(&ans, 0, sizeof(ans));
+		return (ans);
+	}
+}
+
+
 
 /* tcb may be NULL */
 struct in_addr
@@ -415,22 +1087,59 @@ sctp_ipv4_source_address_selection(struct sctp_inpcb *inp,
 {
 	struct in_addr ans;
 	struct rtentry *rt;
-	struct sctp_laddr *laddr;
-	struct sockaddr_in *out;
 	uint8_t ipv4_scope, loopscope;
-
 	/*
 	 * Rules:
 	 * - Find the route if needed, cache if I can.
 	 * - Look at interface address in route, Is it
 	 *   in the bound list. If so we have the best source.
 	 * - If not we must rotate amongst the addresses.
+	 * 
+	 * Cavets and issues
+	 * 
+	 * Do we need to pay attention to scope. We can have
+	 * a private address or a global address we are sourcing
+	 * or sending to. So if we draw it out
+	 *      source     *      dest   *  result
+	 *  ------------------------------------------
+	 *  a   Private    *     Global  *  NAT?
+	 *  ------------------------------------------
+	 *  b   Private    *     Private *  No problem
+	 *  ------------------------------------------
+	 *  c   Global     *     Private *  Huh, How will this work?
+	 *  ------------------------------------------
+	 *  d   Global     *     Global  *  No Problem
+	 *  ------------------------------------------
+	 *
+	 * And then we add to that what happens if there are multiple
+	 * addresses assigned to an interface. Remember the ifa on a
+	 * ifn is a linked list of addresses. So one interface can
+	 * have more than one IPv4 address. What happens if we
+	 * have both a private and a global address? Do we then
+	 * use context of destination to sort out which one is
+	 * best? And what about NAT's sending P->G may get you
+	 * a NAT translation, or should you select the G thats
+	 * on the interface in preference. 
+	 *
+	 * Decisions:
+	 *
+	 *  - count the number of addresses on the interface.
+	 *  - if its one, no problem except case <c>. For <a>
+	 *    we will assume a NAT out there.
+	 *  - if there are more than one, then we need to worry
+	 *    about scope P or G. We should prefer G -> G and
+	 *    P -> P if possible. Then as a secondary fall back
+	 *    to mixed types G->P being a last ditch one.
+	 *  - The above all works for bound all, but bound
+	 *    specific we need to use the same concept but instead
+	 *    only consider the bound addresses. If the bound set
+	 *    is NOT assigned to the interface then we must use
+	 *    rotation amongst them.
+	 *
+	 * Notes: For v4, we can always punt and let ip_output
+	 * decide by sending back a source of 0.0.0.0
 	 */
 
-	/*
-	 * Find the route, if possible we end up caching it via the way
-	 * the caller sends it to us.
-	 */
 	if (rtp->ro_rt == NULL) {
 		/*
 		 * Need a route to cache.
@@ -441,7 +1150,7 @@ sctp_ipv4_source_address_selection(struct sctp_inpcb *inp,
 #else
 		rtp->ro_rt = rtalloc1(&rtp->ro_dst, 1);
 #endif
-	}
+        }
 	rt = rtp->ro_rt;
 	if (rt == NULL) {
 		/* No route to host .. punt */
@@ -474,438 +1183,39 @@ sctp_ipv4_source_address_selection(struct sctp_inpcb *inp,
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
 		/*
 		 * When bound to all if the address list is set
-		 * it is a negative list.
+		 * it is a negative list. Addresses being added
+		 * by asconf.
 		 */
-		struct ifnet *ifn;
-		struct ifaddr *ifa;
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
-			printf("we are bound all - check restricted\n");
-		}
-#endif
-		if (!sctp_is_addr_restricted(stcb, rt->rt_ifa->ifa_addr)) {
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
-				printf("Not on restricted, out goes intf addr %x\n",
-				       (u_int)((struct sockaddr_in *)(rt->rt_ifa->ifa_addr))->sin_addr.s_addr);
-			}
-#endif
-			return (((struct sockaddr_in *)(rt->rt_ifa->ifa_addr))->sin_addr);
-		}
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
-			printf("Ok, we will see what we come up with in rr\n");
-		}
-#endif
-		/*
-		 * If cant_use got set we head for source address selection
-		 * via round robin. However we don't have a list as
-		 * in our specific binding case. So we just need to
-		 * rotate amongst the interfaces, choosing an address
-		 * from them.
-		 */
-		if (inp->next_ifn_touse == NULL) {
-			inp->next_ifn_touse = TAILQ_FIRST(&ifnet);
-		}
-		/*
-		 * Hunt for an address amongst the interfaces not on the
-		 * negative list and rotate amongst them.
-		 */
-		for (ifn = inp->next_ifn_touse; ifn;
-		    ifn = TAILQ_NEXT(ifn, if_list)) {
-			if (loopscope == 0 && ifn->if_type == IFT_LOOP) {
-				/* wrong base scope */
-				continue;
-			}
-			TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
-				if (ifa->ifa_addr->sa_family == AF_INET) {
-					struct sockaddr_in *ifa_a;
-					ifa_a = (struct sockaddr_in *)
-					    ifa->ifa_addr;
-					if (ipv4_scope == 0 &&
-					    IN4_ISPRIVATE_ADDRESS(&ifa_a->sin_addr)) {
-						/* wrong scope */
-						continue;
-					}
-					/* make sure it's not restricted */
-					if (sctp_is_addr_restricted(stcb,
-					    ifa->ifa_addr))
-						continue;
-					/* we can use it !! */
-					/* set to start with next intf */
-					inp->next_ifn_touse =
-					    TAILQ_NEXT(ifn, if_list);
-					return (ifa_a->sin_addr);
-				}
-			}
-		}
-		/*
-		 * Ok nothing turned up in the next_ifn_touse to the next
-		 * lets check the beginning up to next_ifn_touse.
-		 */
-		for (ifn = TAILQ_FIRST(&ifnet);
-		    ifn && (ifn != inp->next_ifn_touse);
-		    ifn=TAILQ_NEXT(ifn, if_list)) {
-			if (loopscope == 0 && ifn->if_type == IFT_LOOP) {
-				/* wrong base scope */
-				continue;
-			}
-			TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
-				if (ifa->ifa_addr->sa_family == AF_INET) {
-					struct sockaddr_in *ifa_a;
-					ifa_a = (struct sockaddr_in *)
-					    ifa->ifa_addr;
-					if (ipv4_scope == 0 &&
-					    IN4_ISPRIVATE_ADDRESS(&ifa_a->sin_addr)) {
-						/* wrong scope */
-						continue;
-					}
-					/* make sure it is not restricted */
-					if (sctp_is_addr_restricted(stcb, ifa->ifa_addr))
-						continue;
-					/* we can use it !! */
-					/* set to start with next intf */
-					inp->next_ifn_touse =
-					    TAILQ_NEXT(ifn, if_list);
-					return (ifa_a->sin_addr);
-				}
-			}
-		}
-		/*
-		 * Ok we can find NO address to source from that is
-		 * not on our negative list. It is either the special
-		 * ASCONF case where we are sourceing from a intf that
-		 * has been ifconfig'd to a different address (i.e.
-		 * it holds a ADD/DEL/SET-PRIM and the proper lookup
-		 * address. OR we are hosed, and this baby is going
-		 * to abort the association.
-		 */
-		if (non_asoc_addr_ok) {
-			return (((struct sockaddr_in *)(rt->rt_ifa->ifa_addr))->sin_addr);
-		} else {
-			memset(&ans, 0, sizeof(ans));
-			return (ans);
-		}
-	}
-
+		return(sctp_choose_v4_boundall(inp, stcb, net, rt, ipv4_scope, loopscope, non_asoc_addr_ok));
+        }
 	/*
-	 * This is the sub-set bound case. One of two possiblities.
-	 * if flag on pcb says NO asconf then the list in the asoc (if
-	 * present) is the only addresses that can be sources. Otherwise
-	 * the list (if present) is a negative address list, i.e.
-	 * addresses can be any one on the inp structure EXCEPT the one
-	 * listed in the TCB. If no TCB exists then we just get what is
-	 * in the pcb list (i.e. we are sending an INIT-ACK).
+ 	 * Three possiblities here:
+	 * 
+	 * a) stcb is NULL, which means we operate only from
+	 *    the list of addresses (ifa's) bound to the assoc and
+	 *    we care not about the list.
+	 * b) stcb is NOT-NULL, which means we have an assoc structure and
+	 *    auto-asconf is on. This means that the list of addresses is
+         *    a NOT list. We use the list from the inp, but any listed address
+	 *    in our list is NOT yet added. However if the non_asoc_addr_ok is
+	 *    set we CAN use an address NOT available (i.e. being added). Its
+	 *    a negative list.
+	 * c) stcb is NOT-NULL, which means we have an assoc structure and
+	 *    auto-asconf is off. This means that the list of addresses is
+         *    the ONLY addresses I can use.. its positive.
+	 * 
+	 *    Note we collapse b & c into the same function just like in
+	 *    the v6 address selection.
 	 */
 	if (stcb) {
-		if (inp->sctp_flags & SCTP_PCB_FLAGS_DO_ASCONF) {
-			/* The list on the stcb is a negative list */
-			if (!sctp_is_addr_restricted(stcb, rt->rt_ifa->ifa_addr) &&
-			    sctp_is_addr_in_ep(inp, rt->rt_ifa->ifa_addr)) {
-				/*
-				 * We can use it since it is not on the
-				 * negative list and it is on the positive
-				 * list.
-				 */
-				return (((struct sockaddr_in *)(rt->rt_ifa->ifa_addr))->sin_addr);
-			}
-			/*
-			 * Src address selection is in order, here we use the
-			 * EP list and don't use any in the negative list on
-			 * the stcb.
-			 */
-			if (stcb->asoc.last_used_address == NULL) {
-				stcb->asoc.last_used_address = LIST_FIRST(&inp->sctp_addr_list);
-			}
-			/* start with the next address to use */
-			for (laddr = stcb->asoc.last_used_address; laddr;
-			     laddr = LIST_NEXT(laddr, sctp_nxt_addr)) {
-				if (laddr->ifa == NULL) {
-#ifdef SCTP_DEBUG
-					if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
-						printf("Help I have fallen and I can't get up!\n");
-					}
-#endif
-					continue;
-				}
-				if (laddr->ifa->ifa_addr == NULL)
-					continue;
-
-				if (laddr->ifa->ifa_addr->sa_family !=
-				    AF_INET) {
-					/* wrong type */
-					continue;
-				}
-				out =
-				    (struct sockaddr_in *)laddr->ifa->ifa_addr;
-				if (ipv4_scope == 0 &&
-				    IN4_ISPRIVATE_ADDRESS(&out->sin_addr)) {
-					/* wrong scope */
-					continue;
-				}
-				if (loopscope == 0 &&
-				    IN4_ISLOOPBACK_ADDRESS(&out->sin_addr)) {
-					/* wrong scope */
-					continue;
-				}
-				if (sctp_is_addr_restricted(stcb,
-				    laddr->ifa->ifa_addr)) {
-					/* on the no-no list */
-					continue;
-				}
-				stcb->asoc.last_used_address =
-				    LIST_NEXT(laddr, sctp_nxt_addr);
-				return (out->sin_addr);
-			}
-			/* didn't find one, so start from the top */
-			for (laddr = LIST_FIRST(&inp->sctp_addr_list);
-			    laddr && (laddr != stcb->asoc.last_used_address);
-			    laddr = LIST_NEXT(laddr, sctp_nxt_addr)) {
-				if (laddr->ifa == NULL) {
-#ifdef SCTP_DEBUG
-					if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
-						printf("Help I have fallen and I can't get up!\n");
-					}
-#endif
-					continue;
-				}
-				if (laddr->ifa->ifa_addr == NULL)
-					continue;
-				if (laddr->ifa->ifa_addr->sa_family !=
-				    AF_INET) {
-					/* wrong type */
-					continue;
-				}
-				out = (struct sockaddr_in *)laddr->ifa->ifa_addr;
-				if (ipv4_scope == 0 &&
-				    IN4_ISPRIVATE_ADDRESS(&out->sin_addr)) {
-					/* wrong scope */
-					continue;
-				}
-				if (loopscope == 0 &&
-				    IN4_ISLOOPBACK_ADDRESS(&out->sin_addr)) {
-					/* wrong scope */
-					continue;
-				}
-				if (sctp_is_addr_restricted(stcb,
-				    laddr->ifa->ifa_addr)) {
-					/* on the no-no list */
-					continue;
-				}
-				stcb->asoc.last_used_address =
-				    LIST_NEXT(laddr, sctp_nxt_addr);
-				return (out->sin_addr);
-			}
-			/*
-			 * didn't find an appropriate source address!
-			 * return a NULL address, and a NULL route
-			 */
-			if (rtp->ro_rt) {
-				RTFREE(rtp->ro_rt);
-				rtp->ro_rt = NULL;
-			}
-			if (!non_asoc_addr_ok) {
-				memset(&ans, 0, sizeof(ans));
-				return (ans);
-			} else {
-				/*
-				 * Ok if we reach here we are back in same
-				 * condition in BOUND all.. maybe the special
-				 * case of ASCONF.
-				 * So we just need to return any asoc address
-				 * and hope things work.
-				 */
-				LIST_FOREACH(laddr, &inp->sctp_addr_list,
-				    sctp_nxt_addr) {
-					if (laddr->ifa == NULL) {
-#ifdef SCTP_DEBUG
-						if (sctp_debug_on &
-						    SCTP_DEBUG_OUTPUT1) {
-							printf("Help I have fallen and I can't get up!\n");
-						}
-#endif
-						continue;
-					}
-					if (laddr->ifa->ifa_addr == NULL)
-						continue;
-
-					if (laddr->ifa->ifa_addr->sa_family !=
-					    AF_INET)
-						/* wrong type */
-						continue;
-					out = (struct sockaddr_in *)
-					    laddr->ifa->ifa_addr;
-					if (ipv4_scope == 0 &&
-					    IN4_ISPRIVATE_ADDRESS(&out->sin_addr)) {
-						/* wrong scope */
-						continue;
-					}
-					if (loopscope == 0 &&
-					    IN4_ISLOOPBACK_ADDRESS(&out->sin_addr)) {
-						/* wrong scope */
-						continue;
-					}
-					/* Ok here it is */
-					stcb->asoc.last_used_address =
-					    LIST_NEXT(laddr, sctp_nxt_addr);
-					return (out->sin_addr);
-				}
-				/*
-				 * no address in scope.. egad.. I guess you
-				 * will get the interface and we will abort.
-				 */
-			}
-		} else {
-			/* This list on the stcb is a positive list. */
-			if (sctp_is_addr_restricted(stcb,
-			    rt->rt_ifa->ifa_addr)) {
-				/* usable since it IS on the negative list */
-				return (((struct sockaddr_in *)
-				    (rt->rt_ifa->ifa_addr))->sin_addr);
-			}
-			/*
-			 * src address selection is in order, here
-			 * we use the TCB list and rotate amongst them.
-			 */
-			if (stcb->asoc.last_used_address == NULL) {
-				stcb->asoc.last_used_address =
-				    LIST_FIRST(&stcb->asoc.sctp_local_addr_list);
-			}
-			for (laddr = stcb->asoc.last_used_address; laddr;
-			    laddr = LIST_NEXT(laddr, sctp_nxt_addr)) {
-				if (laddr->ifa == NULL) {
-#ifdef SCTP_DEBUG
-					if (sctp_debug_on &
-					    SCTP_DEBUG_OUTPUT1) {
-						printf("Help I have fallen and I can't get up!\n");
-					}
-#endif
-					continue;
-				}
-				if (laddr->ifa->ifa_addr == NULL)
-					continue;
-
-				if (laddr->ifa->ifa_addr->sa_family != AF_INET)
-					continue;
-				out = (struct sockaddr_in *)laddr->ifa->ifa_addr;
-				if (ipv4_scope == 0 &&
-				    IN4_ISPRIVATE_ADDRESS(&out->sin_addr)) {
-					/* wrong scope */
-					continue;
-				}
-				if (loopscope == 0 &&
-				    IN4_ISLOOPBACK_ADDRESS(&out->sin_addr)) {
-					/* wrong scope */
-					continue;
-				}
-				/* Ok here it is */
-				stcb->asoc.last_used_address =
-				    LIST_NEXT(laddr, sctp_nxt_addr);
-				return (out->sin_addr);
-			}
-			/* Ok, nothing to give out in the right scope? Punt! */
-		}
-		/*
-		 * The Punt action here is you get the intf we put the packet
-		 * out anyway, even though you will probably get an ABORT. And
-		 * you may not even recognize it :> sigh..
-		 */
-		if (non_asoc_addr_ok) {
-			return (((struct sockaddr_in *)(rt->rt_ifa->ifa_addr))->sin_addr);
-		} else {
-			memset(&ans, 0, sizeof(ans));
-			return (ans);
-		}
-	}
-	/*
-	 * Only list we have to go on is in the EP, must be
-	 * an INIT going out since no TCB is formed.
-	 */
-	if (sctp_is_addr_in_ep(inp, rt->rt_ifa->ifa_addr)) {
-		/* We are good, the interface address IS bound to this ep */
-		return (((struct sockaddr_in *)
-		    (rt->rt_ifa->ifa_addr))->sin_addr);
-	}
-	/* Ok, not lucky, instead lets do src addr selection */
-	if (inp->next_addr_touse == NULL)
-		inp->next_addr_touse = LIST_FIRST(&inp->sctp_addr_list);
-
-	for (laddr = inp->next_addr_touse; laddr;
-	    laddr = LIST_NEXT(laddr, sctp_nxt_addr)) {
-		if (laddr->ifa == NULL) {
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
-				printf("Help I have fallen and I can't get up!\n");
-			}
-#endif
-			continue;
-		}
-		if (laddr->ifa->ifa_addr == NULL)
-			continue;
-
-		if (laddr->ifa->ifa_addr->sa_family != AF_INET) {
-			/* skip non IPv4 addresses */
-			continue;
-		}
-		out = (struct sockaddr_in *)laddr->ifa->ifa_addr;
-		if (ipv4_scope == 0 &&
-		    IN4_ISPRIVATE_ADDRESS(&out->sin_addr)) {
-			/* wrong scope */
-			continue;
-		}
-		if (loopscope == 0 &&
-		    IN4_ISLOOPBACK_ADDRESS(&out->sin_addr)) {
-			/* wrong scope */
-			continue;
-		}
-		inp->next_addr_touse = LIST_NEXT(laddr, sctp_nxt_addr);
-		return (out->sin_addr);
-	}
-	/* ok check the front end */
-	for (laddr = LIST_FIRST(&inp->sctp_addr_list);
-	     laddr && (laddr != inp->next_addr_touse);
-	     laddr = LIST_NEXT(laddr, sctp_nxt_addr)) {
-		if (laddr->ifa == NULL) {
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
-				printf("Help I have fallen and I can't get up!\n");
-			}
-#endif
-			continue;
-		}
-		if (laddr->ifa->ifa_addr == NULL)
-			continue;
-
-		if (laddr->ifa->ifa_addr->sa_family != AF_INET) {
-			/* skip non IPv4 addresses */
-			continue;
-		}
-		out = (struct sockaddr_in *)laddr->ifa->ifa_addr;
-		if (ipv4_scope == 0 &&
-		    IN4_ISPRIVATE_ADDRESS(&out->sin_addr)) {
-			/* wrong scope */
-			continue;
-		}
-		if (loopscope == 0 &&
-		    IN4_ISLOOPBACK_ADDRESS(&out->sin_addr)) {
-			/* wrong scope */
-			continue;
-		}
-		inp->next_addr_touse = LIST_NEXT(laddr, sctp_nxt_addr);
-		return (out->sin_addr);
-	}
-	/*
-	 * Ok we must be in a bad situation where no address know matches
-	 * our ep. We will fire off using the ifn address and let the ABORTs
-	 * land where they may :>
-	 */
-	if (non_asoc_addr_ok) {
-		return (((struct sockaddr_in *)
-		    (rt->rt_ifa->ifa_addr))->sin_addr);
+		return (sctp_choose_v4_boundspecific_stcb(inp, stcb, net, rt, ipv4_scope, loopscope, 
+							  non_asoc_addr_ok));
 	} else {
-		memset(&ans, 0, sizeof(ans));
-		return (ans);
+		return (sctp_choose_v4_boundspecific_inp(inp, rt, ipv4_scope, loopscope));
 	}
+	/* this should not be reached */
+	memset(&ans, 0, sizeof(ans));
+	return (ans);
 }
 
 
@@ -962,12 +1272,12 @@ sctp_is_v6_ifa_addr_acceptable (struct ifaddr *ifa, int loopscope, int loc_scope
 
 
 static struct sockaddr_in6 *
-sctp_choose_v6_boundspecific_stcb(struct rtentry *rt, 
- 			          uint8_t loc_scope, 
-				  uint8_t loopscope, 
-				  struct sctp_inpcb *inp, 
+sctp_choose_v6_boundspecific_stcb(struct sctp_inpcb *inp, 
 				  struct sctp_tcb *stcb, 
 				  struct sctp_nets *net, 
+				  struct rtentry *rt, 
+ 			          uint8_t loc_scope, 
+				  uint8_t loopscope, 
 				  int non_asoc_addr_ok)
 {
 	/*
@@ -988,13 +1298,34 @@ sctp_choose_v6_boundspecific_stcb(struct rtentry *rt,
 	struct sockaddr_in6 *sin6;
 	int sin_loop, sin_local;
 	int start_at_beginning=0;
+	struct ifnet *ifn;
+	struct ifaddr *ifa;
 
+	ifn = rt->rt_ifp;
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_DO_ASCONF) {
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
 			printf("Have a STCB - asconf allowed, not bound all have a netgative list\n");
 		}
 #endif
+		/* first question, is the ifn we will emit on
+		 * in our list, if so, we want that one.
+		 */
+		if (ifn) {
+			TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
+				if(sctp_is_addr_in_ep(inp, ifa)) {
+					sin6 = sctp_is_v6_ifa_addr_acceptable (ifa, loopscope, loc_scope, &sin_loop, &sin_local);
+					if(sin6 == NULL)
+						continue;
+					if ((non_asoc_addr_ok == 0) && 
+					    (sctp_is_addr_restricted(stcb, (struct sockaddr *)sin6))) {
+						/* on the no-no list */
+						continue;
+					}
+					return (sin6);
+				}
+			}
+		}
 		starting_point = stcb->asoc.last_used_address;
 		/* First try for matching scope */
 	sctp_from_the_top:
@@ -1012,7 +1343,7 @@ sctp_choose_v6_boundspecific_stcb(struct rtentry *rt,
 			sin6 = sctp_is_v6_ifa_addr_acceptable (laddr->ifa, loopscope, loc_scope, &sin_loop, &sin_local);
 			if (sin6 == NULL)
 				continue;
-			if (sctp_is_addr_restricted(stcb, (struct sockaddr *)sin6)) {
+			if ((non_asoc_addr_ok == 0) && (sctp_is_addr_restricted(stcb, (struct sockaddr *)sin6))) {
 				/* on the no-no list */
 				continue;
 			}
@@ -1054,7 +1385,7 @@ sctp_choose_v6_boundspecific_stcb(struct rtentry *rt,
 			sin6 = sctp_is_v6_ifa_addr_acceptable (laddr->ifa, loopscope, loc_scope, &sin_loop, &sin_local);
 			if (sin6 == NULL)
 				continue;
-			if (sctp_is_addr_restricted(stcb, (struct sockaddr *)sin6)) {
+			if ((non_asoc_addr_ok == 0) && (sctp_is_addr_restricted(stcb, (struct sockaddr *)sin6))) {
 				/* on the no-no list */
 				continue;
 			}
@@ -1070,7 +1401,31 @@ sctp_choose_v6_boundspecific_stcb(struct rtentry *rt,
 			printf("Have a STCB - no asconf allowed, not bound all have a postive list\n");
 		}
 #endif
-		/* First try for matching scope */
+		/* First try for interface output match */
+		LIST_FOREACH(laddr, &stcb->asoc.sctp_local_addr_list,
+			     sctp_nxt_addr) {
+			if (laddr->ifa == NULL) {
+				/* address has been removed */
+				continue;
+			}
+			sin6 = sctp_is_v6_ifa_addr_acceptable (laddr->ifa, loopscope, loc_scope, &sin_loop, &sin_local);
+			if(sin6 == NULL)
+				continue;
+			/* first question, is laddr->ifa an address associated with the emit interface */
+			if (ifn) {
+				TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
+					if (laddr->ifa == ifa) {
+						sin6 = (struct sockaddr_in6 *)laddr->ifa->ifa_addr;
+						return (sin6);
+					}
+					if(sctp_cmpaddr(ifa->ifa_addr, laddr->ifa->ifa_addr) == 1) {
+						sin6 = (struct sockaddr_in6 *)laddr->ifa->ifa_addr;
+						return (sin6);
+					}
+				}
+			}
+		}
+		/* Next try for matching scope */
 		LIST_FOREACH(laddr, &stcb->asoc.sctp_local_addr_list,
 			     sctp_nxt_addr) {
 			if (laddr->ifa == NULL) {
@@ -1080,6 +1435,7 @@ sctp_choose_v6_boundspecific_stcb(struct rtentry *rt,
 			sin6 = sctp_is_v6_ifa_addr_acceptable (laddr->ifa, loopscope, loc_scope, &sin_loop, &sin_local);
 			if (sin6 == NULL)
 				continue;
+
 			if ((loopscope == 0) &&
 			    (loc_scope == 0) &&
 			    (sin_loop == 0) &&
@@ -1107,17 +1463,15 @@ sctp_choose_v6_boundspecific_stcb(struct rtentry *rt,
 				continue;
 			return(sin6);
 		}
-		
 	}
 	return (NULL);
 }
 
-
 static struct sockaddr_in6 *
-sctp_choose_v6_boundspecific_inp(struct rtentry *rt, 
- 			          uint8_t loc_scope, 
-				  uint8_t loopscope, 
-				 struct sctp_inpcb *inp)
+sctp_choose_v6_boundspecific_inp(struct sctp_inpcb *inp,
+				 struct rtentry *rt, 
+				 uint8_t loc_scope, 
+				 uint8_t loopscope)
 {
 	/*
 	 * Here we are bound specific and have only
@@ -1128,11 +1482,28 @@ sctp_choose_v6_boundspecific_inp(struct rtentry *rt,
 	 */
 	struct sctp_laddr *laddr;
 	struct sockaddr_in6 *sin6;
+	struct ifnet *ifn;
+	struct ifaddr *ifa;
 	int sin_loop, sin_local;
 
+	/* first question, is the ifn we will emit on
+	 * in our list, if so, we want that one.
+	 */
+
+	ifn = rt->rt_ifp;
+	if (ifn) {
+		TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
+			sin6 = sctp_is_v6_ifa_addr_acceptable (ifa, loopscope, loc_scope, &sin_loop, &sin_local);
+			if (sin6 == NULL)
+				continue;
+			if(sctp_is_addr_in_ep(inp, ifa)) {
+				return (sin6);
+			}
+		}
+	}
 	for (laddr = LIST_FIRST(&inp->sctp_addr_list);
-	    laddr && (laddr != inp->next_addr_touse);
-	    laddr = LIST_NEXT(laddr, sctp_nxt_addr)) {
+	     laddr && (laddr != inp->next_addr_touse);
+	     laddr = LIST_NEXT(laddr, sctp_nxt_addr)) {
 		if (laddr->ifa == NULL) {
 			/* address has been removed */
 			continue;
@@ -1161,8 +1532,8 @@ sctp_choose_v6_boundspecific_inp(struct rtentry *rt,
 	 * scope for a source address.
 	 */
 	for (laddr = LIST_FIRST(&inp->sctp_addr_list);
-	    laddr && (laddr != inp->next_addr_touse);
-	    laddr = LIST_NEXT(laddr, sctp_nxt_addr)) {
+	     laddr && (laddr != inp->next_addr_touse);
+	     laddr = LIST_NEXT(laddr, sctp_nxt_addr)) {
 		if (laddr->ifa == NULL) {
 			/* address has been removed */
 			continue;
@@ -1224,6 +1595,7 @@ sctp_select_v6_nth_addr_from_ifn_boundall (struct ifnet *ifn, struct sctp_tcb *s
 			/* this is it */
 			return (sin6);
 		}
+		num_eligible_addr++;
 	}
 	return(NULL);
 }
@@ -1257,12 +1629,12 @@ sctp_count_v6_num_eligible_boundall (struct ifnet *ifn, struct sctp_tcb *stcb,
 
 
 static struct sockaddr_in6 *
-sctp_choose_v6_boundall( struct rtentry *rt, 
-			 uint8_t loc_scope, 
-			 uint8_t loopscope, 
-			 struct sctp_inpcb *inp, 
+sctp_choose_v6_boundall( struct sctp_inpcb *inp, 
 			 struct sctp_tcb *stcb, 
 			 struct sctp_nets *net, 
+			 struct rtentry *rt, 
+			 uint8_t loc_scope, 
+			 uint8_t loopscope, 
 			 int non_asoc_addr_ok)
 {
 	/* Ok, we are bound all SO any address
@@ -1282,7 +1654,7 @@ sctp_choose_v6_boundall( struct rtentry *rt,
 
 	ifn = rt->rt_ifp;
 	if ( net ) {
-		cur_addr_num = net->indx_of_eligible_next_to_use;;
+		cur_addr_num = net->indx_of_eligible_next_to_use;
 	}
 	if (cur_addr_num == 0) {
 		match_scope_prefered = 1;
@@ -1606,7 +1978,7 @@ sctp_ipv6_source_address_selection(struct sctp_inpcb *inp, struct sctp_tcb *stcb
 			printf("Calling bound-all src addr selection for v6\n");
 		}
 #endif
-		rt_addr = sctp_choose_v6_boundall( rt, loc_scope, loopscope, inp, stcb, net, non_asoc_addr_ok );
+		rt_addr = sctp_choose_v6_boundall(inp, stcb, net, rt, loc_scope, loopscope, non_asoc_addr_ok );
 	} else {
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
@@ -1614,10 +1986,10 @@ sctp_ipv6_source_address_selection(struct sctp_inpcb *inp, struct sctp_tcb *stcb
 		}
 #endif
 		if (stcb) 
-			rt_addr = sctp_choose_v6_boundspecific_stcb( rt, loc_scope, loopscope, inp, stcb,  net, non_asoc_addr_ok );
+			rt_addr = sctp_choose_v6_boundspecific_stcb(inp, stcb, net, rt, loc_scope, loopscope,  non_asoc_addr_ok );
 		else
 			/* we can't have a non-asoc address since we have no association */
-			rt_addr = sctp_choose_v6_boundspecific_inp( rt, loc_scope, loopscope, inp);
+			rt_addr = sctp_choose_v6_boundspecific_inp(inp,  rt, loc_scope, loopscope);
 	}
 	if (rt_addr == NULL) {
 		/* no suitable address? */
@@ -3983,7 +4355,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 		for (mm = chk->data; mm; mm = mm->m_next) {
 			mbcnt += MSIZE;
 			if (mm->m_flags & M_EXT) {
-				mbcnt += chk->data->m_ext.ext_size;;
+				mbcnt += chk->data->m_ext.ext_size;
 			}
 		}
 		/* fix up the send_size if it is not present */
@@ -4074,7 +4446,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			for (mm = chk->data; mm; mm = mm->m_next) {
 				mbcnt += MSIZE;
 				if (mm->m_flags & M_EXT) {
-					mbcnt += chk->data->m_ext.ext_size;;
+					mbcnt += chk->data->m_ext.ext_size;
 				}
 			}
 			/* now fix the chk->send_size */
@@ -8568,7 +8940,7 @@ sctp_copy_one(struct mbuf *m, struct uio *uio, int cpsz, int resv_upfront, int *
 			*mbcnt = 0;
 			return (ENOMEM);
 		}
-		*mbcnt += m->m_ext.ext_size;;
+		*mbcnt += m->m_ext.ext_size;
 	}
 	*mbcnt += MSIZE;
 	cancpy = M_TRAILINGSPACE(m);
@@ -8613,7 +8985,7 @@ sctp_copy_one(struct mbuf *m, struct uio *uio, int cpsz, int resv_upfront, int *
 					*mbcnt = 0;
 					return (ENOMEM);
 				}
-				*mbcnt += m->m_ext.ext_size;;
+				*mbcnt += m->m_ext.ext_size;
 			}
 			cancpy = M_TRAILINGSPACE(m);
 			willcpy = min(cancpy, left);
