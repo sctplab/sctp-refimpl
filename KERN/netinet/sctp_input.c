@@ -358,7 +358,7 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 	/* load all addresses */
 	if (sctp_load_addresses_from_init(stcb, m, iphlen,
 	    (offset + sizeof(struct sctp_init_chunk)), initack_limit, sh,
-	    NULL)){
+	    NULL)) {
 		/* Huh, we should abort */
 		sctp_abort_notification(stcb, 0);
 		sctp_free_assoc(stcb->sctp_ep, stcb);
@@ -2497,7 +2497,7 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 		if ((tp1) && (tp1->sent < SCTP_DATAGRAM_ACKED)) {
 			u_int8_t *ddp;
 			if (((tp1->rec.data.state_flags & SCTP_WINDOW_PROBE) == SCTP_WINDOW_PROBE) &&
-			    ((flg & SCTP_FROM_MIDDLE_BOX) == 0)){
+			    ((flg & SCTP_FROM_MIDDLE_BOX) == 0)) {
 				sctp_pegs[SCTP_PDRP_DIWNP]++;
 				return (0);
 			}
@@ -2543,7 +2543,7 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 			/*
 			 * mark the tsn with what sequences can cause a new FR.
 			 */
-			if(TAILQ_EMPTY(&stcb->asoc.send_queue) ) {
+			if (TAILQ_EMPTY(&stcb->asoc.send_queue) ) {
 				tp1->rec.data.fast_retran_tsn = stcb->asoc.sending_seq;
 			} else {
 				tp1->rec.data.fast_retran_tsn = (TAILQ_FIRST(&stcb->asoc.send_queue))->rec.data.TSN_seq;
@@ -2967,7 +2967,7 @@ sctp_handle_packet_dropped(struct sctp_pktdrop_chunk *cp,
 	/* now middle boxes in sat networks get a cwnd bump */
 	if ((cp->ch.chunk_flags & SCTP_FROM_MIDDLE_BOX) &&
 	    (stcb->asoc.sat_t3_loss_recovery == 0) &&
-	    (stcb->asoc.sat_network)){
+	    (stcb->asoc.sat_network)) {
 		/*
 		 * This is debateable but for sat networks it makes sense
 		 * Note if a T3 timer has went off, we will prohibit any
@@ -4160,11 +4160,11 @@ sctp_input(m, va_alist)
 		 * sysctl is set to 1.
 		 */
 		check = sh->checksum;	/* save incoming checksum */
-		if ((check == 0) && (sctp_no_csum_on_loopback)){
+		if ((check == 0) && (sctp_no_csum_on_loopback)) {
 			/* special hook for where we got a local address
 			 * somehow routed across a non IFT_LOOP type interface
 			 */
-			if(ip->ip_src.s_addr == ip->ip_dst.s_addr)
+			if (ip->ip_src.s_addr == ip->ip_dst.s_addr)
 				goto sctp_skip_csum_4;
 		}
 		sh->checksum = 0;		/* prepare for calc */
