@@ -423,7 +423,14 @@ sctp_deliver_data(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		/* check and strip embedded scope junk */
 		to = (struct sockaddr *)sctp_recover_scope((struct sockaddr_in6 *)to,
 		    &lsa6);
-
+		if(((struct sockaddr_in *)to)->sin_port == 0) {
+#ifdef SCTP_DEBUG
+			printf("Port was 0 not %d on address (net:%x), correcting\n",
+			       (u_int)chk->whoTo,
+			       (int)((u_int)ntohs(stcb->rport)));
+#endif			
+			((struct sockaddr_in *)to)->sin_port = stcb->rport;
+		}
 		if (sctp_sbspace(&stcb->sctp_socket->so_rcv) < chk->send_size) {
 			/* Gak not enough room */
 			if (control) {
@@ -614,6 +621,15 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 			/* check and strip embedded scope junk */
 			to = (struct sockaddr *)sctp_recover_scope((struct sockaddr_in6 *)to,
 			    &lsa6);
+			if(((struct sockaddr_in *)to)->sin_port == 0) {
+#ifdef SCTP_DEBUG
+				printf("Port was 0 not %d on address (net:%x), correcting\n",
+				       (u_int)chk->whoTo,
+				       (int)((u_int)ntohs(stcb->rport)));
+#endif			
+				((struct sockaddr_in *)to)->sin_port = stcb->rport;
+			}
+
 			if (sctp_sbspace(&stcb->sctp_socket->so_rcv) <
 			    chk->send_size) {
 				if (control) {
@@ -1886,6 +1902,15 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		/* check and strip embedded scope junk */
 		to = (struct sockaddr *)sctp_recover_scope((struct sockaddr_in6 *)to,
 		    &lsa6);
+		if(((struct sockaddr_in *)to)->sin_port == 0) {
+#ifdef SCTP_DEBUG
+			printf("Port was 0 not %d on address (net:%x), correcting\n",
+			       (u_int)chk->whoTo,
+			       (int)((u_int)ntohs(stcb->rport)));
+#endif			
+			((struct sockaddr_in *)to)->sin_port = stcb->rport;
+		}
+
 		mmm = dmbuf;
 		/* Mark the EOR */
 		while (mmm->m_next != NULL) {

@@ -690,6 +690,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	/* we are opptimisitic here */
 	asoc->peer_supports_asconf = 1;
 	asoc->peer_supports_asconf_setprim = 1;
+	asoc->peer_supports_pktdrop = 1;
 
 	asoc->sent_queue_retran_cnt = 0;
 	/* This will need to be adjusted */
@@ -1999,8 +2000,8 @@ sctp_notify_assoc_change(u_int32_t event, struct sctp_tcb *stcb,
 	 *	return;
 	 * }
 	*/
-	if (sbappendaddr_nocheck(&stcb->sctp_socket->so_rcv,
-	    to, m_notify, NULL, stcb->asoc.my_vtag, stcb->sctp_ep) == 0) {
+	if (!sbappendaddr_nocheck(&stcb->sctp_socket->so_rcv,
+	    to, m_notify, NULL, stcb->asoc.my_vtag, stcb->sctp_ep)) {
 		/* not enough room */
 		sctp_m_freem(m_notify);
 		return;
@@ -2482,6 +2483,10 @@ sctp_ulp_notify(u_int32_t notification, struct sctp_tcb *stcb,
 {
 	if (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 		/* No notifications up when we are in a no socket state */
+		return;
+	}
+	if(stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
+		/* Can't send up to a closed socket any notifications */
 		return;
 	}
 	switch (notification) {

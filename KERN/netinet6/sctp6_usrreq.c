@@ -258,6 +258,7 @@ sctp6_input(mp, offp, proto)
 							 sh, ch, &in6p, &net);
 			if((in6p) && (stcb)) {
 				sctp_send_packet_dropped(stcb, net, m, iphlen, 1);
+				sctp_chunk_output((struct sctp_inpcb *)in6p, stcb, 2);
 			}
 			sctp_pegs[SCTP_BAD_CSUM]++;
 			goto out_of;

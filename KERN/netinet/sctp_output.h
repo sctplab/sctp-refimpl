@@ -41,7 +41,8 @@ void sctp_send_initiate(struct sctp_inpcb *, struct sctp_tcb *);
 void sctp_send_initiate_ack(struct sctp_inpcb *, struct sctp_tcb *,
     struct mbuf *, int, int, struct sctphdr *, struct sctp_init_chunk *);
 
-struct mbuf *sctp_arethere_unrecognized_parameters(struct mbuf *, int, int *);
+struct mbuf *sctp_arethere_unrecognized_parameters(struct mbuf *, int, int *,
+    struct sctp_chunkhdr *);
 void sctp_queue_op_err(struct sctp_tcb *, struct mbuf *);
 
 int sctp_send_cookie_echo(struct mbuf *, int, struct sctp_tcb *,
@@ -124,8 +125,7 @@ sctp_send_str_reset_req(struct sctp_tcb *stcb,
 void sctp_send_abort(struct mbuf *, int, struct sctphdr *, uint32_t,
     struct mbuf *);
 
-void sctp_send_operr_to(struct mbuf *, int, struct mbuf *, struct sctphdr *,
-    uint32_t);
+void sctp_send_operr_to(struct mbuf *, int, struct mbuf *, uint32_t);
 
 int
 sctp_sosend(struct socket *so,

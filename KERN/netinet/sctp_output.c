@@ -2356,6 +2356,7 @@ int sctp_is_address_in_scope(struct ifaddr *ifa,
 	return (1);
 }
 
+
 void
 sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 {
@@ -2378,8 +2379,14 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 			/* TSNH */
 			return;
 		}
+		/* we confirm any address we send an INIT to */
+		net->dest_state &= ~SCTP_ADDR_UNCONFIRMED;
 		sctp_set_primary_addr(stcb, NULL, net);
+	} else {
+		/* we confirm any address we send an INIT to */
+		net->dest_state &= ~SCTP_ADDR_UNCONFIRMED;
 	}
+
 	if (callout_pending(&net->rxt_timer.timer)) {
 		/* This case should not happen */
 		return;
@@ -2497,14 +2504,14 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 
 	m->m_len += (sizeof(*pr_supported) + SCTP_EXT_COUNT + SCTP_PAD_EXT_COUNT);
 	/* ECN nonce: And now tell the peer we support ECN nonce */
-	ecn_nonce = (struct sctp_ecn_nonce_supported_param *)((caddr_t)pr_supported +
-	   sizeof(*pr_supported) + 
-	   SCTP_EXT_COUNT +
-	   SCTP_PAD_EXT_COUNT);
 
-	ecn_nonce->ph.param_type = htons(SCTP_ECN_NONCE_SUPPORTED);
-	ecn_nonce->ph.param_length = htons(sizeof(*ecn_nonce));
-	m->m_len += sizeof(*ecn_nonce);
+	if( sctp_ecn_nonce ) {
+		ecn_nonce = (struct sctp_ecn_nonce_supported_param *)((caddr_t)pr_supported +
+		    sizeof(*pr_supported) + SCTP_EXT_COUNT + SCTP_PAD_EXT_COUNT);
+		ecn_nonce->ph.param_type = htons(SCTP_ECN_NONCE_SUPPORTED);
+		ecn_nonce->ph.param_length = htons(sizeof(*ecn_nonce));
+		m->m_len += sizeof(*ecn_nonce);
+	}
 
 	m_at = m;
 	/* now the addresses */
@@ -2647,7 +2654,7 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 
 struct mbuf *
 sctp_arethere_unrecognized_parameters(struct mbuf *in_initpkt,
-    int param_offset, int *abort_processing)
+    int param_offset, int *abort_processing, struct sctp_chunkhdr *cp)
 {
 	/* Given a mbuf containing an INIT or INIT-ACK
 	 * with the param_offset being equal to the
@@ -2665,31 +2672,47 @@ sctp_arethere_unrecognized_parameters(struct mbuf *in_initpkt,
 	 * by new features.
 	 */
 	struct sctp_paramhdr *phdr, params;
+
 	struct mbuf *mat,*op_err;
 	char tempbuf[2048];
-	int at;
+	int at, limit, pad_needed;
 	uint16_t ptype, plen;
 	int err_at;
 
 	*abort_processing = 0;
 	mat = in_initpkt;
 	err_at = 0;
-	at = param_offset;
+	limit = ntohs(cp->chunk_length) - sizeof(struct sctp_init_chunk);
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
+		printf("Limit is %d bytes\n",limit);
+	}
+#endif
+	at = param_offset; 
 	op_err = NULL;
 
 	phdr = sctp_get_next_param(mat, at, &params, sizeof(params));
-	while (phdr != NULL) {
+	while ((phdr != NULL) && (limit >= sizeof(struct sctp_paramhdr))) {
 		ptype = ntohs(phdr->param_type);
 		plen = ntohs(phdr->param_length);
+		limit -= SCTP_SIZE32(plen);
 		if (plen < sizeof(struct sctp_paramhdr)) {
 #ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
-				printf("sctp_output.c:Impossible length in parameter - 0\n");
-			}
+	if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
+			printf("sctp_output.c:Impossible length in parameter < %d\n", plen);
+	}
 #endif
 			*abort_processing = 1;			
 			break;
 		}
+		/* All parameters for all chunks that we
+		 * know/understand are listed here. We process
+		 * them other places and make appropriate
+		 * stop actions per the upper bits. However
+		 * this is the generic routine processor's can
+		 * call to get back an operr.. to either incorporate (init-ack)
+		 * or send.
+		 */
 		if ((ptype == SCTP_HEARTBEAT_INFO) ||
 		    (ptype == SCTP_IPV4_ADDRESS) ||
 		    (ptype == SCTP_IPV6_ADDRESS) ||
@@ -2714,6 +2737,11 @@ sctp_arethere_unrecognized_parameters(struct mbuf *in_initpkt,
 		} else if (ptype == SCTP_HOSTNAME_ADDRESS) {
 			/* We can NOT handle HOST NAME addresses!! */
 			struct sctp_unresolv_addr ura;
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
+		printf("Can't handle hostname addresses.. abort processing\n");
+	}
+#endif			
 			*abort_processing = 1;
 			if (op_err == NULL) {
 				/* Ok need to try to get a mbuf */
@@ -2732,8 +2760,6 @@ sctp_arethere_unrecognized_parameters(struct mbuf *in_initpkt,
 				ura.length = htons(sizeof(ura) - 2);
 				ura.addr_type = htons(SCTP_HOSTNAME_ADDRESS);
 				ura.reserved = 0;
-				if (M_TRAILINGSPACE(op_err) > sizeof(ura))
-					op_err->m_len += sizeof(ura);
 				m_copyback(op_err, err_at, sizeof(ura), (caddr_t)&ura);
 				err_at += sizeof(ura);
 			}
@@ -2741,18 +2767,21 @@ sctp_arethere_unrecognized_parameters(struct mbuf *in_initpkt,
 			/* we do not recognize the parameter
 			 * figure out what we do.
 			 */
-			if ((ptype & 0xc000) == 0x8000) {
-				/* skip this chunk and continue processing */
-				at += SCTP_SIZE32(plen);
-			} else if ((ptype & 0xc000) == 0x0000) {
-				/* Not recognized and I don't report */
-				*abort_processing = 1;
-				return (op_err);
-			} else if ((ptype & 0xc000) == 0x4000) {
-				/* Report and stop */
-				*abort_processing = 1;
+#ifdef SCTP_DEBUG
+			if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
+				printf("Got parameter type %x - unknown\n",
+				       (u_int)ptype);
+			}
+#endif
+			if ((ptype & 0x4000) == 0x4000) {
+				/* Report bit is set?? */
+#ifdef SCTP_DEBUG
+				if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {	
+					printf("Report bit is set\n");
+				}
+#endif
 				if (op_err == NULL) {
-					/* Ok need to try to get a mbuf */
+					/* Ok need to try to get an mbuf */
 					MGETHDR(op_err, M_DONTWAIT, MT_DATA);
 					if (op_err) {
 						op_err->m_len = 0;
@@ -2765,10 +2794,17 @@ sctp_arethere_unrecognized_parameters(struct mbuf *in_initpkt,
 				if (op_err) {
 					/* If we have space */
 					struct sctp_paramhdr s;
+					printf("Adding a unrec param err_at:%d mbuf_len:%d\n",
+					       err_at, op_err->m_len);
+					if (err_at % 4) {
+						u_int32_t cpthis=0;
+						pad_needed = 4 - (err_at % 4);
+						printf("First we must PAD err_at %d bytes\n", pad_needed);
+						m_copyback(op_err, err_at, pad_needed, (caddr_t)&cpthis);
+						err_at += pad_needed;
+ 					}
 					s.param_type = htons(SCTP_UNRECOG_PARAM);
 					s.param_length = htons(sizeof(s) + plen);
-					if (M_TRAILINGSPACE(op_err) > sizeof(s))
-						op_err->m_len += sizeof(s);
 					m_copyback(op_err, err_at, sizeof(s), (caddr_t)&s);
 					err_at += sizeof(s);
 					if (plen > sizeof(tempbuf)) {
@@ -2777,76 +2813,31 @@ sctp_arethere_unrecognized_parameters(struct mbuf *in_initpkt,
 					phdr = sctp_get_next_param(mat, at, (struct sctp_paramhdr *)tempbuf, plen);
 					if (phdr == NULL) {
 						sctp_m_freem(op_err);
-						return NULL;
+						/* we are out of memory but we 
+						 * still need to have a look at what to
+						 * do (the system is in trouble though).
+						 */
+						goto more_processing;
 					}
-					if (M_TRAILINGSPACE(op_err) > plen)
-						op_err->m_len += plen;
 					m_copyback(op_err, err_at, plen, (caddr_t)phdr);
 					err_at += plen;
-					if (err_at % 4) {
-						if (sctp_pad_lastmbuf(op_err,(4-(err_at % 4)))) {
-							/* dump error */
-							err_at = 0;
-							sctp_m_freem(op_err);
-							op_err = NULL;
-							err_at = 0;
-						} else 
-							err_at += (4-(err_at % 4));
- 					}
 				}
+			}
+		more_processing:
+			if ((ptype & 0x8000) == 0x0000) {
+#ifdef SCTP_DEBUG
+				if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {	
+					printf("Abort bit is now setting1\n");
+				}
+#endif
 				return (op_err);
-			} else if ((ptype & 0xc000) == 0xc000) {
-				/* Report and continue */
-				if (op_err == NULL) {
-					/* Ok need to try to get a mbuf */
-					MGETHDR(op_err, M_DONTWAIT, MT_DATA);
-					if (op_err) {
-						op_err->m_len = 0;
-						op_err->m_pkthdr.len = 0;
-						op_err->m_data += sizeof(struct ip6_hdr);
-						op_err->m_data += sizeof(struct sctphdr);
-						op_err->m_data += sizeof(struct sctp_chunkhdr);
-					}
-				}
-				if (op_err) {
-					/* If we have space */
-					struct sctp_paramhdr s;
-					s.param_type = htons(SCTP_UNRECOG_PARAM);
-					s.param_length = htons(sizeof(struct sctp_paramhdr) + plen);
-					if (M_TRAILINGSPACE(op_err) > sizeof(struct sctp_paramhdr))
-						op_err->m_len += sizeof(struct sctp_paramhdr);
-					m_copyback(op_err, err_at, sizeof(struct sctp_paramhdr), (caddr_t)&s);
-					err_at += sizeof(struct sctp_paramhdr);
-					if (plen > sizeof(tempbuf)) {
-						plen = sizeof(tempbuf);
-					}
-					phdr = sctp_get_next_param(mat, at, (struct sctp_paramhdr *)tempbuf, plen);
-					if (phdr == NULL) {
-						sctp_m_freem(op_err);
-						return NULL;
-					}
-					if (M_TRAILINGSPACE(op_err) > plen)
-						op_err->m_len += plen;
-					m_copyback(op_err, err_at, plen, (caddr_t)phdr);
-					err_at += plen;
-					if (err_at % 4) {
-						if (sctp_pad_lastmbuf(op_err, (4-(err_at % 4)))) {
-							/* dump error */
-							err_at = 0;
-							sctp_m_freem(op_err);
-							op_err = NULL;
-							err_at = 0;
-						} else 
-							err_at += (4-(err_at % 4));
-					}
-				}
+			} else {
+				/* skip this chunk and continue processing */
 				at += SCTP_SIZE32(plen);
 			}
+
 		}
 		phdr = sctp_get_next_param(mat, at,&params, sizeof(params));
-	}
-	if (op_err) {
-		op_err->m_pkthdr.len = err_at;
 	}
 	return (op_err);
 }
@@ -3044,28 +3035,12 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	}
 	abort_flag = 0;
 	op_err = sctp_arethere_unrecognized_parameters(init_pkt,
-	    offset + sizeof(struct sctp_init_chunk), &abort_flag);
+	    (offset+sizeof(struct sctp_init_chunk)), 
+	    &abort_flag, (struct sctp_chunkhdr *)init_chk);
 	if (abort_flag) {
 		if (op_err) {
-			struct sctphdr *sh_out;
-			struct sctp_chunkhdr *ch_out;
-			/* get the initial msg so we can get out peers vtag */
-			/* prepend a header and size it too*/
-			M_PREPEND(op_err, sizeof(*sh_out) + sizeof(*ch_out),
-			    M_DONTWAIT);
-			if (op_err == NULL)
-				goto done_now;
-			sh_out = mtod(op_err, struct sctphdr *);
-			ch_out = (struct sctp_chunkhdr *)(((caddr_t)sh_out) +
-			    sizeof(*sh_out));
-			ch_out->chunk_type = SCTP_OPERATION_ERROR;
-			ch_out->chunk_flags = 0;
-			ch_out->chunk_length = htons(op_err->m_pkthdr.len);
-			/* send the operr to the peer */
-			sctp_send_operr_to(init_pkt, iphlen, op_err, sh_out,
-			    init_chk->init.initiate_tag);
+			sctp_send_operr_to(init_pkt, iphlen, op_err, init_chk->init.initiate_tag);
 		}
-	done_now:
 		return;
 	}
 	MGETHDR(m, M_DONTWAIT, MT_HEADER);
@@ -3320,7 +3295,9 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	/* Save it off for quick ref */
 	stc.peers_vtag = init_chk->init.initiate_tag;
 	initackm_out->sh.checksum = 0;	/* calculate later */
-
+	/* who are we */
+	strncpy(stc.identification,SCTP_VERSION_STRING,
+	   min(strlen(SCTP_VERSION_STRING), sizeof(stc.identification)));
 	/* now the chunk header */
 	initackm_out->msg.ch.chunk_type = SCTP_INITIATION_ACK;
 	initackm_out->msg.ch.chunk_flags = 0;
@@ -3416,14 +3393,14 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	pr_supported->chunk_types[7] = 0; /* pad */
 
 	m->m_len += (sizeof(*pr_supported) + SCTP_EXT_COUNT + SCTP_PAD_EXT_COUNT);
-	/* ECN nonce: And now tell the peer we support ECN nonce */
-	ecn_nonce = (struct sctp_ecn_nonce_supported_param *)((caddr_t)pr_supported +
-	   sizeof(*pr_supported) + 
-	   SCTP_EXT_COUNT +
-	   SCTP_PAD_EXT_COUNT);
-	ecn_nonce->ph.param_type = htons(SCTP_ECN_NONCE_SUPPORTED);
-	ecn_nonce->ph.param_length = htons(sizeof(*ecn_nonce));
-	m->m_len += sizeof(*ecn_nonce);
+	if( sctp_ecn_nonce ) {
+		/* ECN nonce: And now tell the peer we support ECN nonce */
+		ecn_nonce = (struct sctp_ecn_nonce_supported_param *)((caddr_t)pr_supported +
+		     sizeof(*pr_supported) + SCTP_EXT_COUNT + SCTP_PAD_EXT_COUNT);
+		ecn_nonce->ph.param_type = htons(SCTP_ECN_NONCE_SUPPORTED);
+		ecn_nonce->ph.param_length = htons(sizeof(*ecn_nonce));
+		m->m_len += sizeof(*ecn_nonce);
+	}
 
 	m_at = m;
 	/* now the addresses */
@@ -3520,6 +3497,13 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 
 	/* tack on the operational error if present */
 	if (op_err) {
+		if(op_err->m_pkthdr.len % 4) {
+			/* must add a pad to the param */
+			u_int32_t cpthis=0;
+			int padlen;
+			padlen = 4 - (op_err->m_pkthdr.len % 4);
+			m_copyback(op_err, op_err->m_pkthdr.len, padlen, (caddr_t)&cpthis);
+		}
 		while (m_at->m_next != NULL) {
 			m_at = m_at->m_next;
 		}
@@ -3528,7 +3512,6 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			m_at = m_at->m_next;
 		}
 	}
-
 	/* Get total size of init packet */
 	sz_of = SCTP_SIZE32(ntohs(init_chk->ch.chunk_length));
 	/* pre-calulate the size and update pkt header and chunk header */
@@ -5644,6 +5627,13 @@ sctp_send_heartbeat_ack(struct sctp_tcb *stcb,
 		outchain = tmp;
 	}
 	outchain->m_pkthdr.len = chk_length;
+	if(chk_length % 4) {
+		/* need pad */
+		u_int32_t cpthis=0;
+		int padlen;
+		padlen = 4 - (outchain->m_pkthdr.len % 4);
+		m_copyback(outchain, outchain->m_pkthdr.len, padlen, (caddr_t)&cpthis);
+	}
 	chk = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk);
 	if (chk == NULL) {
 		/* no memory */
@@ -5664,26 +5654,6 @@ sctp_send_heartbeat_ack(struct sctp_tcb *stcb,
 	chk->whoTo->ref_count++;
 	TAILQ_INSERT_TAIL(&chk->asoc->control_send_queue, chk, sctp_next);
 	chk->asoc->ctrl_queue_cnt++;
-
-/*
-	if (outchain->m_len == 0) {
-	outchain->m_len = sizeof(struct sctphdr);
-	} else {
-	M_PREPEND(outchain, sizeof(struct sctphdr), M_DONTWAIT);
-	if (outchain == NULL) {
-	return;
-	}
- 	}
-	shdr = mtod(outchain, struct sctphdr *);
-	shdr->src_port = stcb->sctp_ep->sctp_lport;
-	shdr->dest_port = stcb->rport;
-	shdr->v_tag = htonl(stcb->asoc.peer_vtag);
-	shdr->checksum = 0;
-	sctp_lowlevel_chunk_output(stcb->sctp_ep, stcb, net,
-	(struct sockaddr *)&net->ra._l_addr,
-	outchain, 0, 0, NULL, 0);
-*/
-
 }
 
 int
@@ -8508,11 +8478,13 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 void
 sctp_send_operr_to(struct mbuf *m, int iphlen,
 		   struct mbuf *scm,
-		   struct sctphdr *ohdr,
 		   uint32_t vtag)
 {
 	struct sctphdr *ihdr;
 	int retcode;
+	struct sctphdr *ohdr;
+	struct sctp_chunkhdr *ophdr;
+		
 	struct ip *iph;
 #ifdef SCTP_DEBUG
 	struct sockaddr_in6 lsa6, fsa6;
@@ -8520,11 +8492,33 @@ sctp_send_operr_to(struct mbuf *m, int iphlen,
 	uint32_t val;
 	iph = mtod(m, struct ip *);
 	ihdr = (struct sctphdr *)((caddr_t)iph + iphlen);
+	if(!(scm->m_flags & M_PKTHDR)) {
+		/* must be a pkthdr */
+		printf("Huh, not a packet header in send_operr\n");
+		m_freem(scm);
+		return;
+	}
+	M_PREPEND(scm, (sizeof(struct sctphdr) + sizeof(struct sctp_chunkhdr)), M_DONTWAIT);
+	if(scm == NULL) {
+		/* can't send because we can't add a mbuf */
+		return;
+	}
+	ohdr = mtod(scm, struct sctphdr *);
 	ohdr->src_port = ihdr->dest_port;
 	ohdr->dest_port = ihdr->src_port;
 	ohdr->v_tag = vtag;
 	ohdr->checksum = 0;
-
+	ophdr = (struct sctp_chunkhdr *)(ohdr + 1);
+	ophdr->chunk_type = SCTP_OPERATION_ERROR;
+	ophdr->chunk_flags = 0;
+	ophdr->chunk_length = htons(scm->m_pkthdr.len - sizeof(struct sctphdr));
+	if(scm->m_pkthdr.len % 4) {
+		/* need padding */
+		u_int32_t cpthis=0;
+		int padlen;
+		padlen = 4 - (scm->m_pkthdr.len % 4);
+		m_copyback(scm, scm->m_pkthdr.len, padlen, (caddr_t)&cpthis);
+	}
 	if((sctp_no_csum_on_loopback) &&
 	   (m->m_pkthdr.rcvif) &&
 	   (m->m_pkthdr.rcvif->if_type == IFT_LOOP)) {
@@ -8609,7 +8603,6 @@ sctp_send_operr_to(struct mbuf *m, int iphlen,
 	    , NULL
 #endif
 		);
-
 		sctp_pegs[SCTP_DATAGRAMS_SENT]++;
 		/* Free the route if we got one back */
 		if (ro.ro_rt)

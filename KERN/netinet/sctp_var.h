@@ -56,7 +56,8 @@
 					 * the crc32 checksum on packets routed over
 					 * it.
 					 */
-#define SCTPCTL_MAXID		7
+#define SCTPCTL_STRICT_INIT     8
+#define SCTPCTL_MAXID		8
 
 #define SCTPCTL_NAMES { \
 	{ 0, 0 }, \
@@ -67,6 +68,7 @@
 	{ "ecn_nonce", CTLTYPE_INT }, \
 	{ "strict_sack", CTLTYPE_INT }, \
 	{ "looback_nocsum", CTLTYPE_INT }, \
+	{ "strict_init", CTLTYPE_INT }, \
 }
 
 #if defined(_KERNEL) || (defined(__APPLE__) && defined(KERNEL))

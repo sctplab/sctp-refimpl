@@ -194,10 +194,11 @@ sctp_threshold_management(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	}
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_TIMER4) {
-		printf("Overall error count for %p now %d thresh:%u\n",
+		printf("Overall error count for %p now %d thresh:%u state:%x\n",
 		       &stcb->asoc,
 		       stcb->asoc.overall_error_count,
-		       (u_int)threshold);
+		       (u_int)threshold,
+		       ((net == NULL) ? (u_int)0 : (u_int)net->dest_state));
 	}
 #endif /* SCTP_DEBUG */
 	/* We specifically do not do >= to give the assoc one more
