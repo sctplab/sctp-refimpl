@@ -2551,7 +2551,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 							    rtp->ro_rt->rt_rmx.rmx_mtu);
 				}
 			} else if (ifp) {
-#if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
+#if (defined(SCTP_BASE_FREEBSD) &&  __FreeBSD_version < 500000) || defined(__APPLE__)
 #define ND_IFINFO(ifp) (&nd_ifinfo[ifp->if_index])
 #endif /* SCTP_BASE_FREEBSD */
 				if (ND_IFINFO(ifp)->linkmtu &&
@@ -3529,7 +3529,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				 */
 				stc.local_scope = 0;
 				stc.site_scope = 1;
-				stc.ipv4_scope = 1;
+ 				stc.ipv4_scope = 1;
 				/* we start counting for the private
 				 * address stuff at 1. since the link
 				 * local we source from won't show
@@ -4364,7 +4364,11 @@ sctp_msg_append(struct sctp_tcb *stcb,
 					 * Otherwise we cycle back and recheck
 					 * the space
 					 */
+#if defined(__FreeBSD__) && __FreeBSD_version >= 502115
+					if (so->so_rcv.sb_state & SBS_CANTSENDMORE) {
+#else
 					if (so->so_state & SS_CANTSENDMORE) {
+#endif
 						err = EPIPE;
 						goto out;
 					}
@@ -8092,7 +8096,7 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh)
 		ip6_out->ip6_nxt = IPPROTO_SCTP;
 		ip6_out->ip6_src = ip6->ip6_dst;
 		ip6_out->ip6_dst = ip6->ip6_src;
-		ip6_out->ip6_plen = mout->m_len;
+ 		ip6_out->ip6_plen = mout->m_len;
 		offset_out += sizeof(*ip6_out);
 		comp_cp = (struct sctp_shutdown_complete_msg *)(
 		    (caddr_t)ip6_out + offset_out);
@@ -10109,7 +10113,11 @@ sctp_sosend(struct socket *so,
 				splx(s);
 				goto out_nsb;
 			}
+#if defined(__FreeBSD__) && __FreeBSD_version >= 502115
+			if (so->so_rcv.sb_state & SBS_CANTSENDMORE) {
+#else
 			if (so->so_state & SS_CANTSENDMORE) {
+#endif
 				/* The socket is now set not to sendmore.. its gone */
 				splx(s);
 				error = EPIPE;
