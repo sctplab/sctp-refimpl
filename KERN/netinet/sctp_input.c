@@ -1690,6 +1690,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	struct sctp_state_cookie *cookie;
 	struct sockaddr_in6 sin6;
 	struct sockaddr_in sin;
+	struct sctp_inpcb *l_inp;
 	struct sockaddr *to;
 	struct sctp_pcb *ep;
 	struct mbuf *m_sig;
@@ -1819,7 +1820,8 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	 * compute the signature/digest for the cookie
 	 */
 	ep = &(*inp_p)->sctp_ep;
-	SCTP_INP_RLOCK(ep);
+	l_inp = *inp_p;
+	SCTP_INP_RLOCK(l_inp);
 	/* which cookie is it? */
 	if ((cookie->time_entered.tv_sec < (long)ep->time_of_secret_change) &&
 	    (ep->current_secret_number != ep->last_secret_number)) {
@@ -1842,7 +1844,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		    SCTP_SECRET_SIZE, m, cookie_offset, calc_sig);
 	}
 	/* get the signature */
-	SCTP_INP_RUNLOCK(ep);
+	SCTP_INP_RUNLOCK(l_inp);
 	sig = (u_int8_t *)sctp_m_getptr(m_sig, 0, SCTP_SIGNATURE_SIZE, (u_int8_t *)&tmp_sig);
 	if (sig == NULL) {
 		/* couldn't find signature */
@@ -1851,7 +1853,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			printf("sctp_handle_cookie: couldn't pull the signature\n");
 		}
 #endif
-		SCTP_INP_RUNLOCK(ep);
+		SCTP_INP_RUNLOCK(l_inp);
 		return (NULL);
 	}
 	/* compare the received digest with the computed digest */
