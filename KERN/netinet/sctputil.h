@@ -131,7 +131,7 @@ struct mbuf *sctp_m_copym(struct mbuf *m, int off, int len, int wait);
 	force_comile_error;
 #endif
 
-#define sctp_get_associd(stcb) ((sctp_assoc_t)stcb)
+#define sctp_get_associd(stcb) ((sctp_assoc_t)stcb->asoc.my_vtag)
 
 /*
  * Function prototypes

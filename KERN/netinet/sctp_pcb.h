@@ -210,10 +210,7 @@ struct sctp_epinfo {
 	u_int ipi_count_sockq;
 	u_quad_t ipi_gencnt_sockq;
 
-
-#ifdef SCTP_VTAG_TIMEWAIT_PER_STACK
 	struct sctpvtaghead vtag_timewait[SCTP_STACK_VTAG_HASH_SIZE];
-#endif /* SCTP_VTAG_TIMEWAIT_PER_STACK */
 
 #ifdef _SCTP_NEEDS_CALLOUT_
 	struct calloutlist callqueue;
@@ -317,8 +314,6 @@ struct sctp_inpcb {
 	/* back pointer to our socket */
 	struct socket *sctp_socket;
 	uint32_t sctp_flags;			/* flag set */
-	caddr_t lowest_tcb;			/* lowest/highest used to */
-	caddr_t highest_tcb;			/* validate the asoc_id.  */
 	struct sctp_pcb sctp_ep;		/* SCTP ep data */
 	/* head of the hash of all associations */
 	struct sctpasochead *sctp_tcbhash;
@@ -334,9 +329,6 @@ struct sctp_inpcb {
 	uint32_t sctp_vtag_last;
 	struct mbuf *pkt, *pkt_last, *sb_last_mpkt;
 	struct mbuf *control;
-#ifndef SCTP_VTAG_TIMEWAIT_PER_STACK
-	struct sctpvtaghead vtag_timewait[SCTP_NUMBER_IN_VTAG_BLOCK];
-#endif
 #if !(defined(__FreeBSD__) || defined(__APPLE__))
 #ifndef INP_IPV6
 #define INP_IPV6	0x1
@@ -444,8 +436,6 @@ int sctp_del_remote_addr(struct sctp_tcb *, struct sockaddr *);
 void sctp_pcb_init(void);
 
 void sctp_free_remote_addr(struct sctp_nets *);
-
-struct sctp_tcb *sctp_findassociation_associd(caddr_t);
 
 int sctp_add_local_addr_assoc(struct sctp_tcb *, struct ifaddr *);
 
