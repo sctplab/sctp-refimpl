@@ -24,7 +24,7 @@
 #include <sys/uio.h>
 #include <netdb.h>
 
-#include "../netinet/sctp_constants.h"
+#include "../../KERN/netinet/sctp_constants.h"
 #include <netinet/sctp_uio.h>
 #include <netinet/sctp.h>
 
