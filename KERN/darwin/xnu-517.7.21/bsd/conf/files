@@ -95,6 +95,8 @@ OPTIONS/faith				optional faith
 OPTIONS/gif				optional gif
 OPTIONS/netat				optional netat
 
+OPTIONS/sctp				optional sctp
+
 #
 # Filesystem options
 #
@@ -245,6 +247,18 @@ bsd/netinet/in_gif.c      		optional gif inet
 bsd/netinet/ip_ecn.c          		optional inet inet6
 bsd/netinet/ip_ecn.c          		optional inet ipsec
 bsd/netinet/ip_encap.c         		optional inet 
+bsd/netinet/sctp_asconf.c		optional inet sctp
+bsd/netinet/sctp_crc32.c		optional inet sctp
+bsd/netinet/sctp_hashdriver.c		optional inet sctp
+bsd/netinet/sctp_indata.c		optional inet sctp
+bsd/netinet/sctp_input.c		optional inet sctp
+bsd/netinet/sctp_output.c		optional inet sctp
+bsd/netinet/sctp_pcb.c			optional inet sctp
+bsd/netinet/sctp_peeloff.c		optional inet sctp
+bsd/netinet/sctp_sha1.c			optional inet sctp
+bsd/netinet/sctp_timer.c		optional inet sctp
+bsd/netinet/sctp_usrreq.c		optional inet sctp
+bsd/netinet/sctputil.c			optional inet sctp
 bsd/netinet6/ah_core.c      		optional ipsec
 bsd/netinet6/ah_input.c     		optional ipsec
 bsd/netinet6/ah_output.c   		optional ipsec
@@ -281,6 +295,7 @@ bsd/netinet6/route6.c       		optional inet6
 bsd/netinet6/scope6.c       		optional inet6
 bsd/netinet6/udp6_output.c  		optional inet6
 bsd/netinet6/udp6_usrreq.c  		optional inet6
+bsd/netinet6/sctp6_usrreq.c		optional inet6 sctp
 
 bsd/netkey/key.c          		optional ipsec
 bsd/netkey/key_debug.c    		optional ipsec
