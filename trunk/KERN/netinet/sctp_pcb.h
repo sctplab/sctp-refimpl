@@ -230,19 +230,19 @@ extern uint32_t sctp_pegs[SCTP_NUMBER_OF_PEGS];
  * how to access /dev/random.
  */
 struct sctp_pcb {
-	int time_of_secret_change; /* number of seconds from timeval.tv_sec */
+	unsigned int time_of_secret_change; /* number of seconds from timeval.tv_sec */
 	uint32_t secret_key[SCTP_HOW_MANY_SECRETS][SCTP_NUMBER_OF_SECRETS];
-	int size_of_a_cookie;
+	unsigned int size_of_a_cookie;
 
-	int sctp_timeoutticks[SCTP_NUM_TMRS];
-	int sctp_minrto;
-	int sctp_maxrto;
-	int initial_rto;
+	unsigned int sctp_timeoutticks[SCTP_NUM_TMRS];
+	unsigned int sctp_minrto;
+	unsigned int sctp_maxrto;
+	unsigned int initial_rto;
 
 	int initial_init_rto_max;
 
-	int32_t sctp_sws_sender;
-	int32_t sctp_sws_receiver;
+	uint32_t sctp_sws_sender;
+	uint32_t sctp_sws_receiver;
 
 	/* various thresholds */
 	/* Max times I will init at a guy */
@@ -323,7 +323,7 @@ struct sctp_inpcb {
 	void *sctp_tcb_at_block;
 	struct sctp_iterator *inp_starting_point_for_iterator;
 	int  error_on_block;
-	int32_t sctp_frag_point;
+	uint32_t sctp_frag_point;
 	uint32_t sctp_vtag_last;
 	struct mbuf *pkt, *pkt_last, *sb_last_mpkt;
 	struct mbuf *control;

@@ -580,7 +580,7 @@ sctp_process_asconf_set_primary(struct sctp_asconf_paramhdr *aph,
  * if all parameters are processed ok, send a plain (empty) ASCONF-ACK
  */
 void
-sctp_handle_asconf(struct mbuf *m, int offset, struct sctp_asconf_chunk *cp,
+sctp_handle_asconf(struct mbuf *m, unsigned int offset, struct sctp_asconf_chunk *cp,
     struct sctp_tcb *stcb, struct sctp_nets *net)
 {
 	struct sctp_association *asoc;
@@ -589,7 +589,7 @@ sctp_handle_asconf(struct mbuf *m, int offset, struct sctp_asconf_chunk *cp,
 	struct sctp_asconf_ack_chunk *ack_cp;
 	struct sctp_asconf_paramhdr *aph, *ack_aph;
 	struct sctp_ipv6addr_param *p_addr;
-	int asconf_limit;
+	unsigned int asconf_limit;
 	int error = 0;		/* did an error occur? */
 	/* asconf param buffer */
 	static u_int8_t aparam_buf[DEFAULT_PARAM_BUFFER];
@@ -696,7 +696,7 @@ sctp_handle_asconf(struct mbuf *m, int offset, struct sctp_asconf_chunk *cp,
 
 	/* process through all parameters */
 	while (aph != NULL) {
-		int param_length, param_type;
+		unsigned int param_length, param_type;
 
 		param_type = ntohs(aph->ph.param_type);
 		param_length = ntohs(aph->ph.param_length);
@@ -1404,7 +1404,7 @@ sctp_handle_asconf_ack(struct mbuf *m, int offset,
 	offset += sizeof(struct sctp_asconf_ack_chunk);
 	/* process through all parameters */
 	while (ack_length >= sizeof(struct sctp_asconf_paramhdr)) {
-		int param_length, param_type;
+		unsigned int param_length, param_type;
 
 		/* get pointer to next asconf parameter */
 		aph = (struct sctp_asconf_paramhdr *)sctp_m_getptr(m, offset,
@@ -2435,7 +2435,7 @@ sctp_compose_asconf(struct sctp_tcb *stcb)
  */
 static void
 sctp_process_initack_addresses(struct sctp_tcb *stcb, struct mbuf *m,
-    int offset, int length)
+    unsigned int offset, unsigned int length)
 {
 	struct sctp_paramhdr tmp_param, *ph;
 	uint16_t plen, ptype;
@@ -2591,8 +2591,8 @@ sctp_process_initack_addresses(struct sctp_tcb *stcb, struct mbuf *m,
  * returns 1 if found, 0 if not
  */
 static uint32_t
-sctp_addr_in_initack(struct sctp_tcb *stcb, struct mbuf *m, int offset,
-    int length, struct sockaddr *sa)
+sctp_addr_in_initack(struct sctp_tcb *stcb, struct mbuf *m, unsigned int offset,
+    unsigned int length, struct sockaddr *sa)
 {
 	struct sctp_paramhdr tmp_param, *ph;
 	uint16_t plen, ptype;
