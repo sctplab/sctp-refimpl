@@ -1,4 +1,5 @@
 /*	$KAME: sctp.h,v 1.17 2004/08/17 04:06:15 itojun Exp $	*/
+
 #ifndef _NETINET_SCTP_H_
 #define _NETINET_SCTP_H_
 
