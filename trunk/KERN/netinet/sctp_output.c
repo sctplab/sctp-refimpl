@@ -7232,12 +7232,25 @@ sctp_output(inp, m, addr, control, p, flags)
 		    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
 			/* Should I really unlock ? */
 			SCTP_ASOC_CREATE_UNLOCK(inp);
+			if (control) {
+				sctppcbinfo.mbuf_track--;
+				sctp_m_freem(control);
+				control = NULL;
+			}
+			sctp_m_freem(m);
 			splx(s);
 			return(EFAULT);
 		}
 		create_lock_applied = 1;
 		if (((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0) &&
 		    (addr->sa_family == AF_INET6)) {
+			SCTP_ASOC_CREATE_UNLOCK(inp);
+			if (control) {
+				sctppcbinfo.mbuf_track--;
+				sctp_m_freem(control);
+				control = NULL;
+			}
+			sctp_m_freem(m);
 			splx(s);
 			return (EINVAL);
 		}
@@ -7266,12 +7279,18 @@ sctp_output(inp, m, addr, control, p, flags)
 					SCTP_INP_RUNLOCK(inp);
 
 					if (stcb == NULL) {
+						if(create_lock_applied) {
+							SCTP_ASOC_CREATE_UNLOCK(inp);
+							create_lock_applied = 0;
+						}
+						sctppcbinfo.mbuf_track--;
+						sctp_m_freem(control);
+						sctp_m_freem(m);
 						splx(s);
 						return (ENOTCONN);
 					}
 					net = stcb->asoc.primary_destination;
-				}
-				else {
+				} else {
 					stcb = sctp_findassociation_ep_asocid(inp, srcv.sinfo_assoc_id);
 				}
 				/*
@@ -7305,6 +7324,12 @@ sctp_output(inp, m, addr, control, p, flags)
 					SCTP_ASOC_CREATE_UNLOCK(inp);
 					create_lock_applied = 0;
 				}
+				if (control) {
+					sctppcbinfo.mbuf_track--;
+					sctp_m_freem(control);
+					control = NULL;
+				}
+				sctp_m_freem(m);
 				return (ENOTCONN);
 			}
 			if (addr == NULL) {
@@ -10027,7 +10052,7 @@ sctp_sosend(struct socket *so,
 	int un_sent = 0;
 	int now_filled=0;
 	struct sctp_inpcb *inp;	
- 	struct sctp_tcb *stcb;
+ 	struct sctp_tcb *stcb=NULL;
 	struct sctp_sndrcvinfo srcv;
 	struct timeval now;
 	struct sctp_nets *net;
@@ -10413,12 +10438,13 @@ sctp_sosend(struct socket *so,
 		       stcb->asoc.total_output_queue_size);
 	}
 #endif
-out:
+ out:
 	if (create_lock_applied) {
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		create_lock_applied = 0;
 	}
-	SCTP_TCB_UNLOCK(stcb);
+	if(stcb)
+		SCTP_TCB_UNLOCK(stcb);
 	if (top)
 		sctp_m_freem(top);
 	if (control)
