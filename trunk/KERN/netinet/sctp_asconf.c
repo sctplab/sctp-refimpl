@@ -1880,12 +1880,12 @@ sctp_addr_mgmt_ep(struct sctp_inpcb *inp, struct ifaddr *ifa, uint16_t type)
 #endif
 	/* process for all associations for this endpoint */
 	LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
-		SCTP_TCB_LOCK(stcb)
+		SCTP_TCB_LOCK(stcb);
 		sctp_addr_mgmt_assoc(inp, stcb, ifa, type);
-		SCTP_TCB_UNLOCK(stcb)
+		SCTP_TCB_UNLOCK(stcb);
 	} /* for each stcb */
 	splx(s);
-	SCTP_INP_WUNLOCK(_inp)
+	SCTP_INP_WUNLOCK(inp);
 }
 
 /*
@@ -1915,9 +1915,9 @@ sctp_addr_mgmt_restrict_ep(struct sctp_inpcb *inp, struct ifaddr *ifa)
 	/* process for all associations for this endpoint */
 	LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
 		/* put this address on the "pending/do not use yet" list */
-		SCTP_TCB_LOCK(stcb)
+		SCTP_TCB_LOCK(stcb);
 		sctp_add_local_addr_assoc(stcb, ifa);
-		SCTP_TCB_UNLOCK(stcb)
+		SCTP_TCB_UNLOCK(stcb);
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
 			printf("restrict_ep: added addr to unusable list\n");
@@ -1925,7 +1925,7 @@ sctp_addr_mgmt_restrict_ep(struct sctp_inpcb *inp, struct ifaddr *ifa)
 #endif /* SCTP_DEBUG */
 	} /* for each stcb */
 	splx(s);
-	SCTP_INP_RUNLOCK(_inp)
+	SCTP_INP_RUNLOCK(inp);
 }
 
 /*
@@ -2054,7 +2054,7 @@ sctp_delete_ip_address(struct ifaddr *ifa)
 		} /* while */
 		SCTP_INP_RUNLOCK(inp);
 	} /* for each inp */
-	SCTP_INP_INFO_RUNLOCK()
+	SCTP_INP_INFO_RUNLOCK();
 }
 
 /*

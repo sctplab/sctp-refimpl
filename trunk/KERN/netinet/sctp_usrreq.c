@@ -1443,9 +1443,9 @@ sctp_do_connect_x(struct socket *so,
 		return (EADDRINUSE);
 	}
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
-		SCTP_INP_RLOCK();
+		SCTP_INP_RLOCK(inp);
 		stcb = LIST_FIRST(&inp->sctp_asoc_list);
-		SCTP_INP_RUNLOCK();
+		SCTP_INP_RUNLOCK(inp);
 	}
 	if (stcb) {
 		splx(s);
@@ -1495,6 +1495,7 @@ sctp_do_connect_x(struct socket *so,
 	if (((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0) &&
 	    (num_v6 > 0)) {
 		splx(s);
+		SCTP_INP_CREATE_UNLOCK(inp);
 		return (EINVAL);
 	}
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) &&
@@ -1794,16 +1795,20 @@ sctp_optsget(struct socket *so,
 	{
 		u_int32_t *segsize;
 		sctp_assoc_t *assoc_id;
-		
 		int ovh;
-		if((m->m_len < sizeof(u_int32_t) ||
-		    (m->m_len < sizeof(sctp_assoc_t))) {
+
+		if(m->m_len < sizeof(u_int32_t)) {
 			error = EINVAL;
 			break;
 		}
-		assoc_id = mtod(m, assoc_id *);
+		if(m->m_len < sizeof(sctp_assoc_t)) {
+			error = EINVAL;
+			break;
+		}
+		assoc_id = mtod(m, sctp_assoc_t *);
 		segsize = mtod(m, u_int32_t *);
 		m->m_len = sizeof(u_int32_t);
+
 		if (((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 		     (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) ||
 		    (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
@@ -3733,8 +3738,9 @@ sctp_usr_recvd(struct socket *so, int flags)
 			if(((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0)
 			   && ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
 				stcb = sctp_remove_from_socket_q(inp);
-			} else
+			} else {
 				stcb = LIST_FIRST(&inp->sctp_asoc_list);
+			}
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_USRREQ2)
 				printf("remove from socket queue for inp:%x tcbret:%x\n",
@@ -3793,7 +3799,7 @@ sctp_usr_recvd(struct socket *so, int flags)
 		   && ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
 			int done_yet;
 			SCTP_INP_RLOCK(inp);
-			not_done_yet = TAILQ_EMPTY(&inp->sctp_queue_list);
+			done_yet = TAILQ_EMPTY(&inp->sctp_queue_list);
 			while (!done_yet) {
 				sq_cnt++;
 				SCTP_INP_RUNLOCK(inp);
@@ -3884,7 +3890,7 @@ sctp_listen(struct socket *so, struct proc *p)
 		inp->sctp_socket->so_options &= ~SO_ACCEPTCONN;
 	}
 	SCTP_INP_RUNLOCK(inp);
-	SOCK_UNLOCK(so)
+	SOCK_UNLOCK(so);
 	splx(s);
 	return (error);
 }

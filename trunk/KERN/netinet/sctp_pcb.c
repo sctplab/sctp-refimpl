@@ -693,7 +693,7 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 		return (NULL);
 
 	LIST_FOREACH(inp, head, sctp_hash) {
-		SCTP_INP_LOCK(inp);
+		SCTP_INP_RLOCK(inp);
 		if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) &&
 		    (inp->sctp_lport == lport)) {
 			/* got it */
@@ -710,19 +710,19 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 #endif
 				) {
 				/* IPv4 on a IPv6 socket with ONLY IPv6 set */
-				SCTP_INP_UNLOCK(inp);
+				SCTP_INP_RUNLOCK(inp);
 				continue;
 			}
 			/* A V6 address and the endpoint is NOT bound V6 */
 			if (nam->sa_family == AF_INET6 &&
 			   (inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0) {
-				SCTP_INP_UNLOCK(inp);
+				SCTP_INP_RUNLOCK(inp);
 				continue;
 			}
-			SCTP_INP_UNLOCK(inp);
+			SCTP_INP_RUNLOCK(inp);
 			return (inp);
 		}
-		SCTP_INP_UNLOCK(inp);
+		SCTP_INP_RUNLOCK(inp);
 	}
 
 	if ((nam->sa_family == AF_INET) &&
@@ -744,9 +744,9 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 	}
 #endif
 	LIST_FOREACH(inp, head, sctp_hash) {
-		SCTP_INP_LOCK(inp);
+		SCTP_INP_RLOCK(inp);
 		if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL)) {
-			SCTP_INP_UNLOCK(inp);
+			SCTP_INP_RUNLOCK(inp);
 			continue;
 		}
 		/*
@@ -754,7 +754,7 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 		 * its addresses
 		 */
 		if (inp->sctp_lport != lport) {
-			SCTP_INP_UNLOCK(inp);
+			SCTP_INP_RUNLOCK(inp);
 			continue;
 		}
 #ifdef SCTP_DEBUG
@@ -769,7 +769,7 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 					printf("An ounce of prevention is worth a pound of cure\n");
 				}
 #endif
-				SCTP_INP_UNLOCK(inp);
+				SCTP_INP_RUNLOCK(inp);
 				continue;
 			}
 #ifdef SCTP_DEBUG
@@ -784,7 +784,7 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 					printf("Huh IFA as an ifa_addr=NULL, ");
 				}
 #endif
-				SCTP_INP_UNLOCK(inp);
+				SCTP_INP_RUNLOCK(inp);
 				continue;
 			}
 #ifdef SCTP_DEBUG
@@ -809,7 +809,7 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 							printf("YES, return ep:%p\n", inp);
 						}
 #endif
-						SCTP_INP_UNLOCK(inp);
+						SCTP_INP_RUNLOCK(inp);
 						return (inp);
 					}
 				} else if (nam->sa_family == AF_INET6) {
@@ -823,12 +823,12 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 							printf("YES, return ep:%p\n", inp);
 						}
 #endif
-						SCTP_INP_UNLOCK(inp);
+						SCTP_INP_RUNLOCK(inp);
 						return (inp);
 					}
 				}
 			}
-			SCTP_INP_UNLOCK(inp);
+			SCTP_INP_RUNLOCK(inp);
 		}
 	}
 #ifdef SCTP_DEBUG
@@ -1331,14 +1331,14 @@ sctp_inpcb_alloc(struct socket *so)
 			if (LIST_FIRST(&inp->sctp_asoc_list) == NULL) {
 				/* finish the job now */
 				printf("Found a GONE on list\n");
-				SCTP_INP_INFO_RUNLOCK()
+				SCTP_INP_INFO_RUNLOCK();
 				sctp_inpcb_free(inp, 1);
 				SCTP_INP_INFO_RLOCK();
 			}
 		}
 		inp = n_inp;
 	}		
-	SCTP_INP_INFO_RUNLOCK()
+	SCTP_INP_INFO_RUNLOCK();
 	SCTP_INP_INFO_WLOCK();
 	inp = (struct sctp_inpcb *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_ep);
 	if (inp == NULL) {
@@ -1429,7 +1429,7 @@ sctp_inpcb_alloc(struct socket *so)
 	SCTP_INP_LOCK_INIT(inp);
 	SCTP_INP_CREATE_LOCK_INIT(inp);
 	/* lock the new ep */
-	SCTP_LOCK_WLOCK(inp);
+	SCTP_INP_WLOCK(inp);
 
 	/* add it to the info area */
 	LIST_INSERT_HEAD(&sctppcbinfo.listhead, inp, sctp_list);
@@ -1523,7 +1523,7 @@ sctp_inpcb_alloc(struct socket *so)
 
 	/* How long is a cookie good for ? */
 	m->def_cookie_life = sctp_valid_cookie_life_default;
-	SCTP_LOCK_WUNLOCK(inp);
+	SCTP_INP_WUNLOCK(inp);
 	return (error);
 }
 
@@ -2041,7 +2041,6 @@ static void
 sctp_iterator_inp_being_freed(struct sctp_inpcb *inp, struct sctp_inpcb *inp_next)
 {
 	struct sctp_iterator *it;
-	struct sctp_inpcb *inp_save;
 	/* We enter with the INFO locked and the INP
 	 * out of all lists and locked.
 	 */
@@ -2066,7 +2065,7 @@ sctp_iterator_inp_being_freed(struct sctp_inpcb *inp, struct sctp_inpcb *inp_nex
 			 * its is not running but waiting for inp->inp_starting_point_for_iterator
 			 * to be released by the guy that does have our INP in a lock.
 			 */
-			if(it->iterator_flags & SCTP_INTERATOR_DO_SINGLE_INP) {
+			if(it->iterator_flags & SCTP_ITERATOR_DO_SINGLE_INP) {
 				it->inp = NULL;
 				it->stcb = NULL;
 			} else {
@@ -2078,7 +2077,7 @@ sctp_iterator_inp_being_freed(struct sctp_inpcb *inp, struct sctp_inpcb *inp_nex
 	}
 	it = inp->inp_starting_point_for_iterator;
 	if (it) {
-		if (it->iterator_flags & SCTP_INTERATOR_DO_SINGLE_INP) {
+		if (it->iterator_flags & SCTP_ITERATOR_DO_SINGLE_INP) {
 			it->inp = NULL;
 		} else {
 			it->inp = inp_next;
@@ -2103,12 +2102,15 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	 * d) finally the ep itself.
 	 */
 	struct sctp_pcb *m;
+	struct sctp_inpcb *inp_save;
 	struct sctp_tcb *asoc, *nasoc;
 	struct sctp_laddr *laddr, *nladdr;
 	struct inpcb *ip_pcb;
 	struct socket *so;
 	struct sctp_socket_q_list *sq;
+#if !defined(__FreeBSD__) || __FreeBSD_version < 500000
  	struct rtentry *rt;
+#endif
 	int s, cnt;
 
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -2213,7 +2215,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		}
 	}
 	inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_ALLGONE;
+#if !defined(__FreeBSD__) || __FreeBSD_version < 500000
  	rt = ip_pcb->inp_route.ro_rt;
+#endif
 	if (so) {
 	/* First take care of socket level things */
 #ifdef IPSEC
@@ -2253,10 +2257,12 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		(void)m_free(ip_pcb->inp_options);
 		ip_pcb->inp_options = 0;
 	}
+#if !defined(__FreeBSD__) || __FreeBSD_version < 500000
  	if (rt) {
  		RTFREE(rt);
  		ip_pcb->inp_route.ro_rt = 0;
  	}
+#endif
 	if (ip_pcb->inp_moptions) {
 		ip_freemoptions(ip_pcb->inp_moptions);
 		ip_pcb->inp_moptions = 0;
@@ -2331,7 +2337,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		LIST_REMOVE(inp, sctp_hash);
 	}
 	SCTP_INP_INFO_WUNLOCK();
-	SCTP_INP_WUNLOCK();	
+	SCTP_INP_WUNLOCK(inp);	
 	/* fix any iterators only after out of the list */
 	sctp_iterator_inp_being_freed(inp, inp_save);
 
@@ -3112,10 +3118,12 @@ sctp_iterator_asoc_being_freed(struct sctp_tcb *stcb)
 	if (it->stcb != stcb) {
 		return;
 	}
+	inp = it->inp;
+
 	it->stcb = LIST_NEXT(stcb, sctp_tcblist);
 	if (it->stcb == NULL) {
 		/* done with all asoc's in this assoc */
-		if(it->iterator_flags & SCTP_INTERATOR_DO_SINGLE_INP) {
+		if(it->iterator_flags & SCTP_ITERATOR_DO_SINGLE_INP) {
 			it->inp = NULL;
 		} else {
 			SCTP_INP_WLOCK(inp);
@@ -4804,7 +4812,7 @@ sctp_initiate_iterator(asoc_func af, uint32_t pcb_state, uint32_t asoc_state,
 		SCTP_INP_INFO_RLOCK();
 		it->inp = LIST_FIRST(&sctppcbinfo.listhead);
 		SCTP_INP_INFO_RUNLOCK();
-		it->iterator_flags = SCTP_INTERATOR_DO_ALL_INP;
+		it->iterator_flags = SCTP_ITERATOR_DO_ALL_INP;
 
 	}
 	/* Init the timer */

@@ -7241,9 +7241,9 @@ sctp_output(inp, m, addr, control, p)
 			}
 			if (srcv.sinfo_assoc_id) {
 				if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
-					SCTP_INP_RLOCK();
+					SCTP_INP_RLOCK(inp);
 					stcb = LIST_FIRST(&inp->sctp_asoc_list);
-					SCTP_INP_RUNLOCK();
+					SCTP_INP_RUNLOCK(inp);
 					if (stcb == NULL) {
 						splx(s);
 						return (ENOTCONN);
@@ -7274,9 +7274,9 @@ sctp_output(inp, m, addr, control, p)
 		SCTP_INP_CREATE_LOCK(inp);
 		create_lock_applied = 1;
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
-			SCTP_INP_RLOCK();
+			SCTP_INP_RLOCK(inp);
 			stcb = LIST_FIRST(&inp->sctp_asoc_list);
-			SCTP_INP_RUNLOCK();
+			SCTP_INP_RUNLOCK(inp);
 			if (stcb == NULL) {
 				splx(s);
 				return (ENOTCONN);
@@ -7453,7 +7453,7 @@ sctp_output(inp, m, addr, control, p)
 				error = ECONNRESET;
 			}
 			splx(s);
-			SCTP_TCB_UNLOCK();
+			SCTP_TCB_UNLOCK(stcb);
 			return (error);
 		}
 	}
@@ -7489,7 +7489,7 @@ sctp_output(inp, m, addr, control, p)
 		net = stcb->asoc.primary_destination;
 	}
 	if ((error = sctp_msg_append(stcb, net, m, &srcv))) {
-		SCTP_TCB_UNLOCK();
+		SCTP_TCB_UNLOCK(stcb);
 		splx(s);
 		return (error);
 	}
@@ -7543,7 +7543,7 @@ sctp_output(inp, m, addr, control, p)
 		printf("USR Send complete qo:%d prw:%d\n", queue_only, stcb->asoc.peers_rwnd);
 	}
 #endif
-	SCTP_TCB_UNLOCK();
+	SCTP_TCB_UNLOCK(stcb);
 	splx(s);
 	return (0);
 }
@@ -9844,15 +9844,16 @@ sctp_sosend(struct socket *so,
 	struct sctp_nets *net;
 	struct sctp_association *asoc;
 	struct sctp_inpcb *t_inp;
+	int create_lock_applied = 0;
 #if defined(__APPLE__)
 	struct proc *p = current_proc();
 #elif defined(__NetBSD__)
 	struct proc *p = curproc; /* XXX */
 	struct sockaddr *addr = NULL;
-	int create_lock_applied = 0;
 	if (addr_mbuf)
 		addr = mtod(addr_mbuf, struct sockaddr *);
 #endif
+
 	error = use_rcvinfo = 0;
 	net = NULL;
 	stcb = NULL;
@@ -9893,9 +9894,9 @@ sctp_sosend(struct socket *so,
 	}
 	/* now we must find the assoc */
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
-		SCTP_INP_RLOCK();
+		SCTP_INP_RLOCK(inp);
 		stcb = LIST_FIRST(&inp->sctp_asoc_list);
-		SCTP_INP_RUNLOCK();
+		SCTP_INP_RUNLOCK(inp);
 		if (stcb == NULL) {
 			error = ENOTCONN;
 			splx(s);
@@ -10151,7 +10152,7 @@ sctp_sosend(struct socket *so,
 				       asoc);
 #endif
 			sbunlock(&so->so_snd);
-			SCTP_TCB_RUNLOCK(stcb);
+			SCTP_TCB_UNLOCK(stcb);
 			err = sbwait(&stcb->sctp_socket->so_snd);
 			SCTP_TCB_LOCK(stcb);
 			inp->sctp_tcb_at_block = 0;
@@ -10326,7 +10327,7 @@ sctp_sosend(struct socket *so,
 	}
 #endif
  out:
-	SCTP_TCB_RUNLOCK(stcb);
+	SCTP_TCB_UNLOCK(stcb);
 	sbunlock(&so->so_snd);
  out_nsb:
 	if (top)

@@ -1488,7 +1488,7 @@ sctp_iterator_timer(struct sctp_iterator *it)
 	SCTP_INP_WLOCK(it->inp);
 	while ((it->pcb_flags) && ((it->inp->sctp_flags & it->pcb_flags) != it->pcb_flags)) {
 		/* we do not like this ep */
-		if(it->iterator_flags & SCTP_INTERATOR_DO_SINGLE_INP) {
+		if(it->iterator_flags & SCTP_ITERATOR_DO_SINGLE_INP) {
 			SCTP_INP_WUNLOCK(it->inp);
 			SCTP_INP_INFO_RUNLOCK();
 			goto done_with_iterator;
@@ -1552,7 +1552,7 @@ sctp_iterator_timer(struct sctp_iterator *it)
 	SCTP_INP_WLOCK(it->inp);
 	it->inp->inp_starting_point_for_iterator = NULL;
 	SCTP_INP_WUNLOCK(it->inp);
-	if (it->iterator_flags & SCTP_INTERATOR_DO_SINGLE_INP) {
+	if (it->iterator_flags & SCTP_ITERATOR_DO_SINGLE_INP) {
 		it->inp = NULL;
 	} else {
 		SCTP_INP_INFO_RLOCK();
