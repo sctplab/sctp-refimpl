@@ -607,7 +607,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	sctp_log_fr(tsnfirst, tsnlast, num_mk, SCTP_FR_T3_TIMEOUT);
 #endif
 	/* compensate for the number we marked */
-	stcb->asoc.peers_rwnd += (num_mk * sizeof(struct mbuf));
+	stcb->asoc.peers_rwnd += (num_mk /* * sizeof(struct mbuf)*/);
 
 #ifdef SCTP_DEBUG
 	if (num_mk) {

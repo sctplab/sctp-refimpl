@@ -1206,7 +1206,7 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 	return (retval);
 }
 
-
+extern int sctp_max_burst_default;
 /*
  * allocate a sctp_inpcb and setup a temporary binding to a port/all
  * addresses. This way if we don't get a bind we by default pick a ephemeral
@@ -1370,7 +1370,7 @@ sctp_inpcb_alloc(struct socket *so)
 	m->def_net_failure = SCTP_DEF_MAX_SEND/2;
 	m->sctp_sws_sender = SCTP_SWS_SENDER_DEF;
 	m->sctp_sws_receiver = SCTP_SWS_RECEIVER_DEF;
-	m->max_burst = SCTP_DEF_MAX_BURST;
+	m->max_burst = sctp_max_burst_default;
 	/* number of streams to pre-open on a association */
 	m->pre_open_stream_count = SCTP_OSTREAM_INITIAL;
 

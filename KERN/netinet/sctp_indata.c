@@ -119,21 +119,21 @@ extern int sctp_strict_sacks;
 void
 sctp_set_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 {
-	long calc;
+	u_int32_t calc, calc_w_oh;
 
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INDATA4) {
 		printf("cc:%lu hiwat:%lu lowat:%lu mbcnt:%lu mbmax:%lu\n",
-		    (u_long)stcb->sctp_socket->so_rcv.sb_cc,
-		    (u_long)stcb->sctp_socket->so_rcv.sb_hiwat,
-		    (u_long)stcb->sctp_socket->so_rcv.sb_lowat,
-		    (u_long)stcb->sctp_socket->so_rcv.sb_mbcnt,
-		    (u_long)stcb->sctp_socket->so_rcv.sb_mbmax);
+		       (u_long)stcb->sctp_socket->so_rcv.sb_cc,
+		       (u_long)stcb->sctp_socket->so_rcv.sb_hiwat,
+		       (u_long)stcb->sctp_socket->so_rcv.sb_lowat,
+		       (u_long)stcb->sctp_socket->so_rcv.sb_mbcnt,
+		       (u_long)stcb->sctp_socket->so_rcv.sb_mbmax);
 		printf("Setting rwnd to: sb:%ld - (del:%d + reasm:%d str:%d)\n",
-		    sctp_sbspace(&stcb->sctp_socket->so_rcv),
-		    asoc->size_on_delivery_queue,
-		    asoc->size_on_reasm_queue,
-		    asoc->size_on_all_streams);
+		       sctp_sbspace(&stcb->sctp_socket->so_rcv),
+		       asoc->size_on_delivery_queue,
+		       asoc->size_on_reasm_queue,
+		       asoc->size_on_all_streams);
 	}
 #endif
 	if (stcb->sctp_socket->so_rcv.sb_cc == 0 &&
@@ -142,43 +142,46 @@ sctp_set_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 	    asoc->size_on_all_streams == 0) {
 		/* Full rwnd granted */
 		asoc->my_rwnd = max(stcb->sctp_socket->so_rcv.sb_hiwat,
-		    SCTP_MINIMAL_RWND);
+				    SCTP_MINIMAL_RWND);
 		return;
 	}
-	calc = sctp_sbspace(&stcb->sctp_socket->so_rcv);
-	/*
-	 * add back in what control is on the sb so that we give a smooth
-	 * rwnd. We have already reserved some space above always out of
-	 * the rwnd for control. The peer may send many small messages
-	 * overrunning our reservation, but alas that can't be helped.
+	/* get actual space */
+	calc = (u_int32_t)sctp_sbspace(&stcb->sctp_socket->so_rcv);
+
+	/* take out what has NOT been put on socket queue and
+	 * we yet hold for putting up.
 	 */
+	calc = sctp_sbspace_sub(calc, (u_int32_t)asoc->size_on_delivery_queue);
+	calc = sctp_sbspace_sub(calc, (u_int32_t)asoc->size_on_reasm_queue);
+	calc = sctp_sbspace_sub(calc, (u_int32_t)asoc->size_on_all_streams);
 
-	if (stcb->asoc.my_rwnd_control_len < 0x7fffffff)
-		calc -= stcb->asoc.my_rwnd_control_len;
-	else 
-		stcb->asoc.my_rwnd_control_len = 0;
+	/* what is the overhead of all these rwnd's */
+	calc_w_oh = sctp_sbspace_sub(calc, stcb->asoc.my_rwnd_control_len);
 
-	/* Now what else is in queue needs to be subtracted */
-	calc -= (asoc->size_on_delivery_queue + asoc->size_on_reasm_queue +
-	    asoc->size_on_all_streams);
-	if (calc < 0)
-		calc = 0;
 	asoc->my_rwnd = calc;
-
-	/* SWS threshold */
-	if (asoc->my_rwnd &&
-	    (asoc->my_rwnd < stcb->sctp_ep->sctp_ep.sctp_sws_receiver)) {
-		/* SWS engaged, tell peer none left */
-		asoc->my_rwnd = 1;
-#ifdef SCTP_DBUG
-		if (sctp_debug_on & SCTP_DEBUG_INDATA4) {
-			printf(" - SWS zeros\n");
-		}
+	if(calc_w_oh == 0) {
+		/* If our overhead is greater than the advertised
+		 * rwnd, we clamp the rwnd to 1. This lets us
+		 * still accept inbound segments, but hopefully will
+		 * shut the sender down when he finally gets the message.
+		 */
+ 		asoc->my_rwnd = 1;
 	} else {
-		if (sctp_debug_on & SCTP_DEBUG_INDATA4) {
-			printf("\n");
-		}
+		/* SWS threshold */
+		if (asoc->my_rwnd &&
+		    (asoc->my_rwnd < stcb->sctp_ep->sctp_ep.sctp_sws_receiver)) {
+			/* SWS engaged, tell peer none left */
+			asoc->my_rwnd = 1;
+#ifdef SCTP_DBUG
+			if (sctp_debug_on & SCTP_DEBUG_INDATA4) {
+				printf(" - SWS zeros\n");
+			}
+		} else {
+			if (sctp_debug_on & SCTP_DEBUG_INDATA4) {
+				printf("\n");
+			}
 #endif
+		}
 	}
 }
 
@@ -2863,6 +2866,8 @@ sctp_check_for_revoked(struct sctp_association *asoc, u_long cum_ack,
 
 }
 
+extern int sctp_peer_chunk_oh;
+
 static void
 sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
     u_long biggest_tsn_acked, int strike_enabled,
@@ -3096,8 +3101,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				tp1->whoTo->flight_size = 0;
 			}
 			/* add back to the rwnd */
-			asoc->peers_rwnd +=
-			    (tp1->send_size + sizeof(struct mbuf));
+			asoc->peers_rwnd += (tp1->send_size + sctp_peer_chunk_oh);
 
 			/* remove from the total flight */
 			asoc->total_flight -= tp1->send_size;
@@ -3425,7 +3429,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	int accum_moved = 0;
 	int marking_allowed = 1;
 	int will_exit_fast_recovery=0;
-	int a_rwnd, xxxx;
+	u_int32_t a_rwnd;
 	struct sctp_nets *net = NULL;
 	int nonce_sum_flag, ecn_seg_sums=0;
 	asoc = &stcb->asoc;
@@ -3527,7 +3531,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 		}
 	}
 	/* update the Rwnd of the peer */
-	a_rwnd = ntohl(sack->a_rwnd);
+	a_rwnd = (u_int32_t)ntohl(sack->a_rwnd);
 	if (asoc->sent_queue_retran_cnt) {
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_INDATA1) {
@@ -4202,13 +4206,9 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 		asoc->sat_t3_loss_recovery = 0;
 	}
 	/* Adjust and set the new rwnd value */
-	xxxx = asoc->total_flight +
-		(asoc->sent_queue_cnt * sizeof(struct mbuf));
-	if (a_rwnd > xxxx)
-		asoc->peers_rwnd =  a_rwnd - xxxx;
-	else
-		asoc->peers_rwnd =  0;
 
+	asoc->peers_rwnd = sctp_sbspace_sub(a_rwnd, 
+					    (u_int32_t)(asoc->total_flight + (asoc->sent_queue_cnt * sctp_peer_chunk_oh)));
 	if (asoc->peers_rwnd < stcb->sctp_ep->sctp_ep.sctp_sws_sender) {
 		/* SWS sender side engages */
 		asoc->peers_rwnd = 0;

@@ -57,7 +57,9 @@
 					 * it.
 					 */
 #define SCTPCTL_STRICT_INIT     8
-#define SCTPCTL_MAXID		8
+#define SCTPCTL_PEER_CHK_OH     9
+#define SCTPCTL_MAXBURST        10
+#define SCTPCTL_MAXID		11
 
 #define SCTPCTL_NAMES { \
 	{ 0, 0 }, \
@@ -69,6 +71,8 @@
 	{ "strict_sack", CTLTYPE_INT }, \
 	{ "looback_nocsum", CTLTYPE_INT }, \
 	{ "strict_init", CTLTYPE_INT }, \
+	{ "peer_chkoh", CTLTYPE_INT }, \
+	{ "maxburst", CTLTYPE_INT }, \
 }
 
 #if defined(_KERNEL) || (defined(__APPLE__) && defined(KERNEL))
@@ -85,6 +89,8 @@ int sctp_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,
 #endif
 
 #define	sctp_sbspace(sb) ((long) (((sb)->sb_hiwat > (sb)->sb_cc) ? ((sb)->sb_hiwat - (sb)->sb_cc) : 0))
+
+#define sctp_sbspace_sub(a,b) ((a > b) ? (a - b) : 0)
 
 extern int	sctp_sendspace;
 extern int	sctp_recvspace;
