@@ -63,7 +63,9 @@ main(int argc, char **argv)
 		/* 28 */ "T3-Stopped Marking",
 		/* 29 */ "NOT-USED",
 		/* 30 */ "FR-Marked",
-		/* 31 */ "Unknown"
+		/* 31 */ "No Cwnd advance from SS",
+		/* 32 */ "No Cwnd advance from CA",
+		/* 33 */ "Unknown"
 	};
 #define FROM_STRING_MAX 31
 	FILE *out;
@@ -84,13 +86,25 @@ main(int argc, char **argv)
 
 	while(fread((void *)&log, sizeof(log), 1,out) > 0) {
 		if(log.event_type == SCTP_LOG_EVENT_CWND) {
-			printf("%d: Network:%x New_cwnd:%d flight:%d cwnd_augment:%d adjusted from:%s\n",
-			       at,
-			       (u_int)log.x.cwnd.net,
-			       (int)(log.x.cwnd.cwnd_new_value * 1024),
-			       (int)(log.x.cwnd.inflight * 1024),
-			       (int)log.x.cwnd.cwnd_augment,
-			       from_str[log.from]);
+			if((log.from == SCTP_CWND_LOG_NOADV_CA) ||
+			   (log.from == SCTP_CWND_LOG_NOADV_SS)) {
+				printf("%d: Network:%x Cwnd:%d flight:%d flight+acked:%d %s\n",
+				       at,
+				       (u_int)log.x.cwnd.net,
+				       (int)log.x.cwnd.cwnd_new_value,
+				       (int)log.x.cwnd.inflight,
+				       (int)log.x.cwnd.cwnd_augment,
+				       from_str[log.from]);
+
+			}else {
+				printf("%d: Network:%x New_cwnd:%d flight:%d cwnd_augment:%d adjusted from:%s\n",
+				       at,
+				       (u_int)log.x.cwnd.net,
+				       (int)log.x.cwnd.cwnd_new_value,
+				       (int)log.x.cwnd.inflight,
+				       (int)log.x.cwnd.cwnd_augment,
+				       from_str[log.from]);
+			}
 		}else if(log.event_type == SCTP_LOG_EVENT_MAXBURST) {
 			if(log.from == 0) {
 				printf("%d: Network:%x Cwnd:%d flight:%d bursted out:%d - NOT limited\n",
@@ -111,9 +125,9 @@ main(int argc, char **argv)
 			printf("%d:mb-max:%d mb-used:%d sb-max:%d sb-used:%d send/sent cnt:%d strq_cnt:%d from %s\n",
 			       at,
 			       (log.x.blk.maxmb*1024),
-			       (log.x.blk.onmb*1024),
+			       (int)log.x.blk.onmb,
 			       (log.x.blk.maxsb*1024),
-			       (log.x.blk.onsb*1024),
+			       (int)log.x.blk.onsb,
 			       log.x.blk.send_sent_qcnt,
 			       log.x.blk.stream_qcnt,
 			       from_str[log.from]);
