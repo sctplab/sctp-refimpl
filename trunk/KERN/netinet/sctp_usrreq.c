@@ -584,9 +584,12 @@ SYSCTL_INT(_net_inet_sctp, SCTPCTL_STRICT_INIT, strict_init, CTLFLAG_RW,
 
 SYSCTL_INT(_net_inet_sctp, SCTPCTL_PEER_CHK_OH, peer_chkoh, CTLFLAG_RW,
 	   &sctp_peer_chunk_oh, 0, "Amount to debit peers rwnd per chunk sent");
+
 SYSCTL_INT(_net_inet_sctp, SCTPCTL_MAXBURST, maxburst, CTLFLAG_RW,
 	   &sctp_max_burst_default, 0, "Default max burst for sctp endpoints");
 
+SYSCTL_INT(_net_inet_sctp, SCTPCTL_MAXCHUNKONQ, maxchunks, CTLFLAG_RW,
+	   &sctp_max_chunks_on_queue, 0, "Default max chunks on queue per asoc");
 
 #endif
 
@@ -4037,6 +4040,9 @@ sctp_sysctl(name, namelen, oldp, oldlenp, newp, newlen)
  	case SCTPCTL_MAXBURST:
  		return (sysctl_int(oldp, oldlenp, newp, newlen,
  				   &sctp_max_burst_default));
+ 	case SCTPCTL_MAXCHUNKONQ:
+ 		return (sysctl_int(oldp, oldlenp, newp, newlen,
+ 				   &sctp_max_chunks_on_queue));
 	default:
 		return (ENOPROTOOPT);
 	}

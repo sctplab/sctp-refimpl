@@ -59,7 +59,8 @@
 #define SCTPCTL_STRICT_INIT     8
 #define SCTPCTL_PEER_CHK_OH     9
 #define SCTPCTL_MAXBURST        10
-#define SCTPCTL_MAXID		11
+#define SCTPCTL_MAXCHUNKONQ     11
+#define SCTPCTL_MAXID		12
 
 #define SCTPCTL_NAMES { \
 	{ 0, 0 }, \
@@ -73,6 +74,7 @@
 	{ "strict_init", CTLTYPE_INT }, \
 	{ "peer_chkoh", CTLTYPE_INT }, \
 	{ "maxburst", CTLTYPE_INT }, \
+	{ "maxchunks", CTLTYPE_INT }, \
 }
 
 #if defined(_KERNEL) || (defined(__APPLE__) && defined(KERNEL))
