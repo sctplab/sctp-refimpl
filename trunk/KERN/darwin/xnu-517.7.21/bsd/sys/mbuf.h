@@ -72,6 +72,8 @@
 #ifndef	_SYS_MBUF_H_
 #define	_SYS_MBUF_H_
 
+#include <sctp.h>		/* kernel option */
+
 #include <sys/appleapiopts.h>
 #include <sys/lock.h>
 
@@ -194,10 +196,19 @@ struct mbuf {
 #define	M_FRAG		0x0400	/* packet is a fragment of a larger packet */
 #define	M_FIRSTFRAG	0x0800	/* packet is first fragment */
 #define	M_LASTFRAG	0x1000	/* packet is last fragment */
+#ifdef SCTP
+#define M_NOTIFICATION	0x8000	/* notification event */
+#endif
 
 /* flags copied when copying m_pkthdr */
+#ifdef SCTP
+#define	M_COPYFLAGS	(M_PKTHDR|M_EOR|M_PROTO1|M_PROTO1|M_PROTO2|M_PROTO3 | \
+			    M_PROTO4|M_PROTO5|M_BCAST|M_MCAST|M_FRAG | \
+			    M_NOTIFICATION)
+#else
 #define	M_COPYFLAGS	(M_PKTHDR|M_EOR|M_PROTO1|M_PROTO1|M_PROTO2|M_PROTO3 | \
 			    M_PROTO4|M_PROTO5|M_BCAST|M_MCAST|M_FRAG)
+#endif
 
 /* flags indicating hw checksum support and sw checksum requirements [freebsd4.1]*/
 #define CSUM_IP                 0x0001          /* will csum IP */
