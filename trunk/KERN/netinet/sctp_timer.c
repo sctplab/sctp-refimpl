@@ -1483,19 +1483,16 @@ sctp_iterator_timer(struct sctp_iterator *it)
 		return;
 	}
  select_a_new_ep:
-	SCTP_INP_INFO_RLOCK();
 	SCTP_INP_WLOCK(it->inp);
 	while ((it->pcb_flags) && ((it->inp->sctp_flags & it->pcb_flags) != it->pcb_flags)) {
 		/* we do not like this ep */
 		if(it->iterator_flags & SCTP_ITERATOR_DO_SINGLE_INP) {
 			SCTP_INP_WUNLOCK(it->inp);
-			SCTP_INP_INFO_RUNLOCK();
 			goto done_with_iterator;
 		}			
 		SCTP_INP_WUNLOCK(it->inp);
 		it->inp = LIST_NEXT(it->inp, sctp_list);
 		if(it->inp == NULL) {
-			SCTP_INP_INFO_WUNLOCK();
 			goto done_with_iterator;
 		}
 		SCTP_INP_WLOCK(it->inp);
@@ -1504,14 +1501,12 @@ sctp_iterator_timer(struct sctp_iterator *it)
 	    (it->inp->inp_starting_point_for_iterator != it)) {
 		printf("Iterator collision, we must wait for other iterator at %x\n", 
 		       (u_int)it->inp);
-		SCTP_INP_INFO_RUNLOCK();
 		SCTP_INP_WUNLOCK(it->inp);
 		goto start_timer_return;
 	}
 	/* now we do the actual write to this guy */
 	it->inp->inp_starting_point_for_iterator = it;
 	SCTP_INP_WUNLOCK(it->inp);
-	SCTP_INP_INFO_RUNLOCK();
 	SCTP_INP_RLOCK(it->inp);
 	/* if we reach here we found a inp acceptable, now through each
 	 * one that has the association in the right state 

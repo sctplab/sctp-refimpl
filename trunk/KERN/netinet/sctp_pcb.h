@@ -523,15 +523,18 @@ struct sctp_tcb {
 #define SCTP_TCB_LOCK_INIT(_tcb) \
 	mtx_init(&(_tcb)->tcb_mtx, "sctp", "tcb", MTX_DEF | MTX_DUPOK)
 #define SCTP_TCB_LOCK_DESTROY(_tcb)	mtx_destroy(&(_tcb)->tcb_mtx)
-#ifndef INVARIANTS
+/*#ifndef INVARIANTS*/
 #define SCTP_TCB_LOCK(_tcb)  do{					\
+        if(!mtx_owned(&((_tcb)->sctp_ep)->inp_mtx))                     \
+                panic("TCB Locking without INP locked?");               \
         if(mtx_owned(&(_tcb)->tcb_mtx))                                 \
 		panic("TCB Lock");                                      \
 	mtx_lock(&(_tcb)->tcb_mtx);                                     \
 } while (0)
-#else
-#define SCTP_TCB_LOCK(_tcb)		mtx_lock(&(_tcb)->tcb_mtx)
-#endif
+
+/*#else*/
+/*#define SCTP_TCB_LOCK(_tcb)		mtx_lock(&(_tcb)->tcb_mtx)*/
+/*#endif*/
 
 #define SCTP_TCB_UNLOCK(_tcb)		mtx_unlock(&(_tcb)->tcb_mtx)
 
