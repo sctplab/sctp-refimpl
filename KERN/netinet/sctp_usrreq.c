@@ -2825,7 +2825,7 @@ sctp_optsset(struct socket *so,
 		  error = EINVAL;
 	      }
 	    }else {
-	      if(tm->assoc_vlaue)
+	      if(tm->assoc_value)
 		inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV] = MSEC_TO_TICKS(tm->assoc_value);
 	      else
 		error = EINVAL;
