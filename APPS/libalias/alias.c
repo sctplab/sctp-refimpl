@@ -268,7 +268,10 @@ SctpMonitorIn(struct ip *pip, struct alias_link *link)
 	switch (GetStateIn(link))
 	{
 	case ALIAS_SCTP_STATE_NOT_CONNECTED:
-		if ((ch->chunk_type == SCTP_ABORT_ASSOCIATION) || (ch->chunk_type == SCTP_SHUTDOWN_COMPLETE)) {
+		if (ch->chunk_type == SCTP_ABORT_ASSOCIATION) {
+			SetStateIn(link, ALIAS_SCTP_STATE_DISCONNECTED);
+			SetStateOut(link, ALIAS_SCTP_STATE_DISCONNECTED);
+		} else if (ch->chunk_type == SCTP_SHUTDOWN_COMPLETE) {
 			SetStateIn(link, ALIAS_SCTP_STATE_DISCONNECTED);
 		} else if (ch->chunk_type == SCTP_INITIATION) {
 			struct sctp_init_chunk *init;
@@ -292,13 +295,10 @@ SctpMonitorIn(struct ip *pip, struct alias_link *link)
 			struct sctp_init_chunk *init;
 			init = (struct sctp_init_chunk *)ch;
 			SetVtagOut_transit(link, init->init.initiate_tag);
-			SetVtagTransit_needCE(link);
 		} else if (ch->chunk_type == SCTP_INITIATION_ACK) {
 			struct sctp_init_chunk *init;
 			init = (struct sctp_init_chunk *)ch;
 			SetVtagOut_transit(link, init->init.initiate_tag);
-		} else if (ch->chunk_type == SCTP_COOKIE_ECHO) {
-			SetSawCE(link);
 		} else if ((ch->chunk_type == SCTP_COOKIE_ACK) &&
 			   (IsTransit_tags_set(link))){
 			/* restart case */
