@@ -526,94 +526,98 @@ inet46print(sa, port, numeric)
 }
 
 static char *pegs_name[SCTP_NUMBER_OF_PEGS] = {
-	"sack_rcv", /* 00 */
-	"sack_snt", /* 01 */
-	"tsns_snt", /* 02 */
-	"tsns_rcv", /* 03 */
-	"pkt_sent", /* 04 */
-	"pkt_rcvd", /* 05 */
-	"tsns_ret", /* 06 */
-	"dup_tsns", /* 07 */
-	"hbs__rcv", /* 08 */
-	"hbackrcv", /* 09 */
-	"htb__snt", /* 10 */
-	"win_prbe", /* 11 */
-	"pktswdat", /* 12 */
-	"t3-timeo", /* 13 */
-	"dsack-to", /* 14 */
-	"hb_timer", /* 15 */
-	"fst_rxts", /* 16 */
-	"timerexp", /* 17 */
-	"fr_inwin", /* 18 */
-	"blk_rwnd", /* 19 */
-	"blk_cwnd", /* 20 */
-	"rwnd_drp", /* 21 */
-	"bad_strm", /* 22 */
-	"bad_ssnw", /* 23 */
-	"drpnomem", /* 24 */
-	"drpfragm", /* 25 */
-	"badvtags", /* 26 */
-	"badcsumv", /* 27 */
-	"packetin", /* 28 */
-	"mcastrcv", /* 29 */
-	"hdrdrops", /* 30 */
-	"no_portn", /* 31 */
-	"cwnd_nf ", /* 32 */
-	"co_snds ", /* 33 */
-	"co_nodat", /* 34 */
-	"cw_nu_ss", /* 35 */
-	"max_brst", /* 36 */
-	"expr_del", /* 37 */
-	"no_cp_in", /* 38 */
-	"cach_src", /* 39 */
-	"cw_nocum", /* 40 */
-	"cw_incss", /* 41 */
-	"cw_incca", /* 42 */
-	"cw_skip ", /* 43 */
-	"cw_nu_ca", /* 44 */
-	"cw_maxcw", /* 45 */
-	"diff_ss ", /* 46 */
-	"diff_ca ", /* 47 */
-	"tqs @ ss", /* 48 */
-	"sqs @ ss", /* 49 */
-	"tqs @ ca", /* 50 */
-	"sqq @ ca", /* 51 */
-	"lmtu_mov", /* 52 */
-	"lcnt_mov", /* 53 */
-	"sndqctss", /* 54 */
-	"sndqctca", /* 55 */
-	"movemax ", /* 56 */
-	"move_equ", /* 57 */
-	"nagle_qo", /* 58 */
-	"nagle_of", /* 59 */
-	"out_fr_s", /* 60 */
-	"sostrnos", /* 61 */
-	"nostrnos", /* 62 */
-	"sosnqnos", /* 63 */
-	"nosnqnos", /* 64 */
-	"intoperr", /* 65 */
-	"dupssnrc", /* 66 */
-	"multi-fr", /* 67 */
-	"vtag-exp", /* 68 */
-	"vtag-bog", /* 69 */
-	"t3-safeg", /* 70 */
-	"pd--mbox", /* 71 */
-	"pd-ehost", /* 72 */
-	"pdmb_wda", /* 73 */
-	"pdmb_ctl", /* 74 */
-	"pdmb_bwr", /* 75 */
-	"pd_corup", /* 76 */
-	"pd_nedat", /* 77 */
-	"pd_errpd", /* 78 */
-	"fst_prep", /* 79 */
-	"pd_daNFo", /* 80 */
-	"pd_dIWin", /* 81 */
-	"pd_dIZrw", /* 82 */
-	"pd_BadDa", /* 83 */
-	"pd_dMark", /* 84 */
-	"ecne_rcv", /* 85 */
-	"cwr_perf", /* 86 */
-	"ecne_snt", /* 87 */
+/* SCTP_PEG_SACKS_SEEN	 0 */ "SACKs received",
+/* SCTP_PEG_SACKS_SENT	 1 */ "SACKs sent",
+/* SCTP_PEG_TSNS_SENT	 2 */ "TSNs sent",
+/* SCTP_PEG_TSNS_RCVD	 3 */ "non-duplicate TSNs received",
+/* SCTP_DATAGRAMS_SENT	 4 */ "SCTP packets sent",
+/* SCTP_DATAGRAMS_RCVD	 5 */ "valid SCTP packets received",
+/* SCTP_RETRANTSN_SENT	 6 */ "TSNs retransmitted",
+/* SCTP_DUPTSN_RECVD	 7 */ "duplicate TSNs received",
+/* SCTP_HB_RECV		 8 */ "HEARTBEATs received",
+/* SCTP_HB_ACK_RECV	 9 */ "HEARTBEAT-ACKs received",
+/* SCTP_HB_SENT		10 */ "HEARTBEATs sent",
+/* SCTP_WINDOW_PROBES	11 */ "window probe TSNs sent",
+/* SCTP_DATA_DG_RECV	12 */ "SCTP packets received with DATA",
+/* SCTP_TMIT_TIMER	13 */ "T3 retransmission timeouts",
+/* SCTP_RECV_TIMER	14 */ "delayed SACK timeouts",
+/* SCTP_HB_TIMER	15 */ "heartbeat timeouts",
+/* SCTP_FAST_RETRAN	16 */ "packets fast retransmitted",
+/* SCTP_TIMERS_EXP	17 */ "timers expired/handled",
+/* SCTP_FR_INAWINDOW	18 */ "multiple fast retransmissions in an RTT",
+/* SCTP_RWND_BLOCKED	19 */ "attempts blocked by peer's receive window",
+/* SCTP_CWND_BLOCKED	20 */ "attempts blocked by destination cwnd",
+/* SCTP_RWND_DROPS	21 */ "receive window overruns by peer",
+/* SCTP_BAD_STRMNO	22 */ "DATA received with invalid stream number",
+/* SCTP_BAD_SSN_WRAP	23 */ "DATA received with SSN less than expected",
+/* SCTP_DROP_NOMEMORY	24 */ "DATA dropped due to memory shortage",
+/* SCTP_DROP_FRAG	25 */ "drpfragm",
+/* SCTP_BAD_VTAGS	26 */ "packets received with invalid VTAG",
+/* SCTP_BAD_CSUM	27 */ "packets received with invalid checksum",
+/* SCTP_INPKTS		28 */ "total packets received",
+/* SCTP_IN_MCAST	29 */ "multicast packets received (dropped)",
+/* SCTP_HDR_DROPS	30 */ "packets received with header errors",
+/* SCTP_NOPORTS		31 */ "packets received for non-listening ports",
+/* SCTP_CWND_NOFILL	32 */ "cwnd_nf",
+/* SCTP_CALLS_TO_CO	33 */ "calls to sctp_chunk_output",
+/* SCTP_CO_NODATASNT	34 */ "calls to sctp_chunk_output but no data sent",
+/* SCTP_CWND_NOUSE_SS	35 */ "cw_nu_ss",
+/* SCTP_MAX_BURST_APL	36 */ "max burst limited output",
+/* SCTP_EXPRESS_ROUTE	37 */ "express deliveries",
+/* SCTP_NO_COPY_IN	38 */ "co_cp_in",
+/* SCTP_CACHED_SRC	39 */ "packets sent with optimized copying",
+/* SCTP_CWND_NOCUM	40 */ "cw_nocum",
+/* SCTP_CWND_SS		41 */ "cwnd increases in slow start",
+/* SCTP_CWND_CA		42 */ "cwnd increases in congestion avoidance",
+/* SCTP_CWND_SKIP	43 */ "loss recoveries skipped cwnd adjustment",
+/* SCTP_CWND_NOUSE_CA	44 */ "cw_nu_ca",
+/* SCTP_MAX_CWND	45 */ ": max cwnd on any destination",
+/* SCTP_CWND_DIFF_CA	46 */ "diff_ca ",
+/* SCTP_CWND_DIFF_SA	47 */ "diff_ss ",
+/* SCTP_OQS_AT_SS	48 */ "tqs @ ss",
+/* SCTP_SQQ_AT_SS	49 */ "sqs @ ss",
+/* SCTP_OQS_AT_CA	50 */ "tqs @ ca",
+/* SCTP_SQQ_AT_CA	51 */ "sqs @ ca",
+/* SCTP_MOVED_MTU	52 */ ": largest MTU requested",
+/* SCTP_MOVED_QMAX	53 */ ": largest number of chunks at once",
+/* SCTP_SQC_AT_SS	54 */ "sndqctss",
+/* SCTP_SQC_AT_CA	55 */ "sndqctca",
+/* SCTP_MOVED_MAX	56 */ "calls to sctp_fill_outqueue with data moved",
+/* SCTP_MOVED_NLEF	57 */ "calls to sctp_fill_outqueue with no data left",
+/* SCTP_NAGLE_NOQ	58 */ "Nagle limited output",
+/* SCTP_NAGLE_OFF	59 */ "nagle_of",
+/* SCTP_OUTPUT_FRM_SND	60 */ "user send calls sctp_chunk_output",
+/* SCTP_SOS_NOSNT	61 */ "sostrnos",
+/* SCTP_NOS_NOSNT	62 */ "nostrnos",
+/* SCTP_SOSE_NOSNT	63 */ "sosnqnos",
+/* SCTP_NOSE_NOSNT	64 */ "nosnqnos",
+/* SCTP_DATA_OUT_ERR	65 */ "intoperr",
+/* SCTP_DUP_SSN_RCVD	66 */ "duplicate SSN received",
+/* SCTP_DUP_FR		67 */ "multi-fr",
+/* SCTP_VTAG_EXPR	68 */ "TCB located by VTAG",
+/* SCTP_VTAG_BOGUS	69 */ "VTAG and address mismatches",
+/* SCTP_T3_SAFEGRD	70 */ "T3 safegaurd timers started",
+/* SCTP_PDRP_FMBOX	71 */ "PACKET-DROP reports received from middleboxes",
+/* SCTP_PDRP_FEHOS	72 */ "PACKET-DROP reports received from end hosts",
+/* SCTP_PDRP_MB_DA	73 */ "PACKET-DROPs from middleboxes reporting lost data chunks ",
+/* SCTP_PDRP_MB_CT	74 */ "PACKET-DROPs from middleboxes reporting lost control chunks",
+/* SCTP_PDRP_BWRPT	75 */ "PACKET-DROPs received with only Bandwidth reports",
+/* SCTP_PDRP_CRUPT	76 */ "pd_corup",
+/* SCTP_PDRP_NEDAT	77 */ "PACKET-DROPs received with inconclusive DATA",
+/* SCTP_PDRP_PDBRK	78 */ "PACKET-DROPs received and not processed due to error",
+/* SCTP_PDRP_TSNNF	79 */ "PACKET-DROPs received with a TSN that could not be found",
+/* SCTP_PDRP_DNFND	80 */ "PACKET-DROPs received requiring exhuastive DATA chunk search",
+/* SCTP_PDRP_DIWNP	81 */ "PACKET-DROPs from endhost about a window probe TSN",
+/* SCTP_PDRP_DIZRW	82 */ "PACKET-DROPs from middleboxes about a window probe TSN",
+/* SCTP_PDRP_BADD	83 */ "PACKET-DROPs received with invalid DATA TSN",
+/* SCTP_PDRP_MARK	84 */ "PACKET-DROPs causing a valid fast retransmission",
+/* SCTP_ECNE_RCVD	85 */ "ECN-Echo chunks received",
+/* SCTP_CWR_PERFO	86 */ "congestion window reductions performed",
+/* SCTP_ECNE_SENT	87 */ "ECN-Echo chunks sent",
+/* SCTP_MSGC_DROP	88 */ "chunks on queue dropped due to peer total chunk limit",
+/* SCTP_RESV1		89 */ "reserved 1",
+/* SCTP_RESV2		90 */ "reserved 2",
+/* SCTP_RESV3		91 */ "reserved 3",
 	NULL,
 };
 		
@@ -640,7 +644,7 @@ sctp_stats(off, name)
 	printf("sctp:\n");
 	for (i = 0; i < SCTP_NUMBER_OF_PEGS; i++) {
 		if (pegs_name[i])
-			printf("\t%10u :%s\n", pegs[i], pegs_name[i]);
+			printf("\t%10u %s\n", pegs[i], pegs_name[i]);
 	}
 
 	/* clear stats, if requested */
