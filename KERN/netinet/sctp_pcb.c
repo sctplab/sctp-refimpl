@@ -1961,8 +1961,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	struct inpcb *ip_pcb;
 	struct socket *so;
 	struct sctp_socket_q_list *sq;
-	struct rtentry *rt;
+ 	struct rtentry *rt;
 	int s, cnt;
+
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
 #else
@@ -2055,7 +2056,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		}
 	}
 	inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_ALLGONE;
-	rt = ip_pcb->inp_route.ro_rt;
+ 	rt = ip_pcb->inp_route.ro_rt;
 	if (so) {
 	/* First take care of socket level things */
 #ifdef IPSEC
@@ -2095,10 +2096,10 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		(void)m_free(ip_pcb->inp_options);
 		ip_pcb->inp_options = 0;
 	}
-	if (rt) {
-		RTFREE(rt);
-		ip_pcb->inp_route.ro_rt = 0;
-	}
+ 	if (rt) {
+ 		RTFREE(rt);
+ 		ip_pcb->inp_route.ro_rt = 0;
+ 	}
 	if (ip_pcb->inp_moptions) {
 		ip_freemoptions(ip_pcb->inp_moptions);
 		ip_pcb->inp_moptions = 0;
@@ -2360,10 +2361,10 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 				 * we must have common site scope. Don't set
 				 * the local scope since we may not share all
 				 * links, only loopback can do this.
-				 * Links on the local network would also
-				 * be on our private network for v4 too.
+ 				 * Links on the local network would also
+ 				 * be on our private network for v4 too.
 				 */
-				stcb->asoc.ipv4_local_scope = 1;
+ 				stcb->asoc.ipv4_local_scope = 1;
 				stcb->asoc.site_scope = 1;
 			} else if (IN6_IS_ADDR_SITELOCAL(&sin6->sin6_addr)) {
 				/*
@@ -2398,7 +2399,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 		/* not supported family type */
 		return (-1);
 	}
-	net = (struct sctp_nets *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_raddr);
+	net = (struct sctp_nets *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_net);
 	if (net == NULL) {
 		return (-1);
 	}
@@ -2770,7 +2771,7 @@ sctp_free_remote_addr(struct sctp_nets *net)
 		callout_stop(&net->rxt_timer.timer);
 		callout_stop(&net->pmtu_timer.timer);
 		net->dest_state = SCTP_ADDR_NOT_REACHABLE;
-		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_raddr, net);
+		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_net, net);
 		sctppcbinfo.ipi_count_raddr--;
 	}
 }
@@ -3001,7 +3002,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		TAILQ_REMOVE(&asoc->nets, net, sctp_next);
 		/* free it */
 		net->ref_count = 0;
-		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_raddr, net);
+		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_net, net);
 		sctppcbinfo.ipi_count_raddr--;
 	}
 	/*
@@ -3753,7 +3754,7 @@ sctp_pcb_init()
 	    sizeof(struct sctp_laddr),
 	    (sctp_max_number_of_assoc * sctp_scale_up_for_address));
 
-	SCTP_ZONE_INIT(sctppcbinfo.ipi_zone_raddr, "sctp_raddr",
+	SCTP_ZONE_INIT(sctppcbinfo.ipi_zone_net, "sctp_raddr",
 	    sizeof(struct sctp_nets),
 	    (sctp_max_number_of_assoc * sctp_scale_up_for_address));
 
