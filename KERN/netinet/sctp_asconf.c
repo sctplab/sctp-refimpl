@@ -1820,7 +1820,7 @@ sctp_addr_mgmt_ep(struct sctp_inpcb *inp, struct ifaddr *ifa, uint16_t type)
 		    (ifa6->ia6_flags &
 		     (IN6_IFF_DETACHED | IN6_IFF_ANYCAST | IN6_IFF_NOTREADY))) {
 			/* can't use an invalid address */
-			SCTP_INP_WLOCK(inp);
+			SCTP_INP_WUNLOCK(inp);
 			return;
 		}
 	} else if (ifa->ifa_addr->sa_family == AF_INET) {
@@ -1837,7 +1837,7 @@ sctp_addr_mgmt_ep(struct sctp_inpcb *inp, struct ifaddr *ifa, uint16_t type)
 		    (inp6->inp_flags & IN6P_IPV6_V6ONLY)
 #endif
 			)
-			SCTP_INP_WLOCK(inp);
+			SCTP_INP_WUNLOCK(inp);
 			return;
 	} else {
 		/* invalid address family */
@@ -1859,7 +1859,7 @@ sctp_addr_mgmt_ep(struct sctp_inpcb *inp, struct ifaddr *ifa, uint16_t type)
 				sctp_del_local_addr_ep(inp, ifa);
 			}
 			/* no asconfs to queue for this inp... */
-			SCTP_INP_WLOCK(inp);
+			SCTP_INP_WUNLOCK(inp);
 			return;
 		} else {
 			/*
