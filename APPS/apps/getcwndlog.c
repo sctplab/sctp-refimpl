@@ -63,7 +63,6 @@ main(int argc, char **argv)
 		return(3);
 	}
 	at = tot = 0;
-	siz = sizeof(struct sctp_cwnd_log_req) + (num * sizeof(struct sctp_cwnd_log));
 	logp = req->log;
 	numat = SCTP_STAT_LOG_SIZE;
 	while(tot < numat ) {
@@ -71,6 +70,8 @@ main(int argc, char **argv)
 		req->num_ret = num;
 		req->start_at = at;
 		req->end_at = (at + (num -1));
+
+		siz = sizeof(struct sctp_cwnd_log_req) + (num * sizeof(struct sctp_cwnd_log));
 		if((xxx = getsockopt(sd,IPPROTO_SCTP,
 			      SCTP_GET_STAT_LOG, req, &siz)) != 0) {
 			printf("error %d can't get\n",errno);
@@ -79,7 +80,6 @@ main(int argc, char **argv)
 		if(req->num_in_log < numat) {
 			numat = req->num_in_log;
 		}
-		printf("get socketopt ret %d\n",xxx);
 		at += req->num_ret;
 		tot += req->num_ret;
 		ret = fwrite((void *)logp, sizeof(struct sctp_cwnd_log),

@@ -65,9 +65,17 @@ main(int argc, char **argv)
 		/* 30 */ "FR-Marked",
 		/* 31 */ "No Cwnd advance from SS",
 		/* 32 */ "No Cwnd advance from CA",
-		/* 33 */ "Unknown"
+                /* 33 */ "Max Burst Applied",
+                /* 34 */ "Max IFP Queue Stops Output",
+                /* 35 */ "Max Burst stops at Error",
+                /* 36 */ "SACK increases rwnd",     
+		/* 37 */ "SEND decreases rwnd",
+		/* 38 */ "SACK sets rwnd",
+		/* 39 */ "MBCNT Increase",
+		/* 40 */ "MBCNT Decrease",
+		/* 41 */ "Unknown"
 	};
-#define FROM_STRING_MAX 31
+#define FROM_STRING_MAX 41
 	FILE *out;
 	int at;
 	struct sctp_cwnd_log log;
@@ -105,21 +113,83 @@ main(int argc, char **argv)
 				       (int)log.x.cwnd.cwnd_augment,
 				       from_str[log.from]);
 			}
-		}else if(log.event_type == SCTP_LOG_EVENT_MAXBURST) {
-			if(log.from != 0) {
-				printf("%d: Network:%x Flight:%d bursted out:%d - send error:%d halted output\n",
-				       at,
-				       (u_int)log.x.cwnd.net,
-				       (int)(log.x.cwnd.inflight * 1024),
-				       (int)log.x.cwnd.cwnd_augment,
-				       (int)(log.x.cwnd.cwnd_new_value));
+		}else if(log.event_type == SCTP_LOG_EVENT_MBCNT) {
+			if(log.from == SCTP_LOG_MBCNT_INCREASE) {
+				printf("%s - tqs(%d + %d) = %d mb_tqs(%d + %d) = %d\n",
+				       from_str[log.from],
+				       log.x.mbcnt.total_queue_size,
+				       log.x.mbcnt.size_change,
+				       (log.x.mbcnt.total_queue_size + log.x.mbcnt.size_change),
+				       log.x.mbcnt.total_queue_mb_size,
+				       log.x.mbcnt.mbcnt_change,
+				       (log.x.mbcnt.total_queue_mb_size + log.x.mbcnt.mbcnt_change));
+			} else if (log.from == SCTP_LOG_MBCNT_DECREASE) {
+				printf("%s - tqs(%d - %d) = %d mb_tqs(%d - %d) = %d\n",
+				       from_str[log.from],
+				       log.x.mbcnt.total_queue_size,
+				       log.x.mbcnt.size_change,
+				       (log.x.mbcnt.total_queue_size - log.x.mbcnt.size_change),
+				       log.x.mbcnt.total_queue_mb_size,
+				       log.x.mbcnt.mbcnt_change,
+				       (log.x.mbcnt.total_queue_mb_size - log.x.mbcnt.mbcnt_change));
+
 			} else {
-				printf("%d: Network:%x flight:%d burst limted to:%d - limited\n",
+				printf("Unkowns MBCNT event %d\n", log.from);
+			}
+		}else if(log.event_type == SCTP_LOG_EVENT_RWND) {
+			if(log.from == SCTP_INCREASE_PEER_RWND) {
+				printf("%s - rwnd:%d increase:(%d + overhead:%d) -> %d\n",
+				       from_str[log.from],
+				       log.x.rwnd.rwnd,
+				       log.x.rwnd.send_size,
+				       log.x.rwnd.overhead,
+				       (log.x.rwnd.rwnd + log.x.rwnd.send_size + log.x.rwnd.overhead));
+			} else if (log.from == SCTP_DECREASE_PEER_RWND) {
+				printf("%s - rwnd:%d decrease:(%d + overhead:%d) -> %d\n",
+ 				       from_str[log.from],
+				       log.x.rwnd.rwnd,
+				       log.x.rwnd.send_size,
+				       log.x.rwnd.overhead,
+				       (log.x.rwnd.rwnd - (log.x.rwnd.send_size + log.x.rwnd.overhead)));
+
+			} else if (log.from == SCTP_SET_PEER_RWND_VIA_SACK) {
+				printf("%s - rwnd:%d decrease:(%d + overhead:%d) arwnd:%d ->%d\n",
+ 				       from_str[log.from],
+				       log.x.rwnd.rwnd,
+				       log.x.rwnd.send_size,
+				       log.x.rwnd.overhead,
+				       log.x.rwnd.new_rwnd,
+				       (log.x.rwnd.new_rwnd - (log.x.rwnd.send_size + log.x.rwnd.overhead))
+				       );
+			} else {
+				printf("Unknown RWND event\n");
+			}
+		}else if(log.event_type == SCTP_LOG_EVENT_MAXBURST) {
+			if(log.from == SCTP_MAX_BURST_ERROR_STOP) {
+				printf("%d: Network:%x Flight:%d burst cnt:%d - send error:%d %s\n",
 				       at,
 				       (u_int)log.x.cwnd.net,
-				       (int)(log.x.cwnd.inflight * 1024),
-				       (int)log.x.cwnd.cwnd_augment);
+				       (int)log.x.cwnd.inflight,
+				       (int)log.x.cwnd.cwnd_augment,
+				       (int)log.x.cwnd.cwnd_new_value,
+				       from_str[log.from]);
+			} else if (log.from == SCTP_MAX_BURST_APPLIED) {
+				printf("%d: Network:%x Flight:%d burst cnt:%d %s\n",
+				       at,
+				       (u_int)log.x.cwnd.net,
+				       (int)log.x.cwnd.inflight,
+				       (int)log.x.cwnd.cwnd_augment,
+				       from_str[log.from]);
+			} else if (log.from == SCTP_MAX_IFP_APPLIED) {
+				printf("%d: Network:%x Flight:%d ifp_send_qsize: %d ifp_send_qlimit:%d %s\n",
+				       at,
+				       (u_int)log.x.cwnd.net,
+				       (int)log.x.cwnd.inflight,
+				       (int)log.x.cwnd.cwnd_new_value,
+				       (int)log.x.cwnd.cwnd_augment,
+				       from_str[log.from]);
 			}
+
 		}else if(log.event_type == SCTP_LOG_EVENT_BLOCK) {
 			printf("%d:mb-max:%d mb-used:%d sb-max:%d sb-used:%d send/sent cnt:%d strq_cnt:%d from %s\n",
 			       at,
