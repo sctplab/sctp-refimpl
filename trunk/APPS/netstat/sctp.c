@@ -642,6 +642,18 @@ sctp_stats(off, name)
 		if (pegs_name[i])
 			printf("\t%10u :%s\n", pegs[i], pegs_name[i]);
 	}
-	return;
+
+	/* clear stats, if requested */
+#if !defined(__APPLE__)
+	if (zflag) {
+		int fd;
+		int option = 0;
+
+		fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
+		if (fd < 0)
+			return;
+		setsockopt(fd, IPPROTO_SCTP, SCTP_RESET_PEGS, &option, sizeof(option));
+	}
+#endif
 }
 #endif /* SCTP */
