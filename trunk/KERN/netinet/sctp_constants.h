@@ -390,6 +390,7 @@
 #define SCTP_TIMER_TYPE_AUTOCLOSE	12
 #define SCTP_TIMER_TYPE_EVENTWAKE	13
 #define SCTP_TIMER_TYPE_STRRESET        14
+#define SCTP_TIMER_TYPE_INPKILL         15
 
 /*
  * Number of ticks before the soxwakeup() event that
@@ -477,6 +478,9 @@
 #define SCTP_RTO_UPPER_BOUND_SEC 60	/* for the init timer */
 #define SCTP_RTO_LOWER_BOUND	(1000)	/* 1 sec in ms */
 #define SCTP_RTO_INITIAL	(3000)	/* 3 sec in ms */
+
+
+#define SCTP_INP_KILL_TIMEOUT 100 /* number of ms to retry kill of inpcb*/
 
 #define SCTP_DEF_MAX_INIT	8
 #define SCTP_DEF_MAX_SEND	10
