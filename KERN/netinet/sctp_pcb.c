@@ -994,6 +994,7 @@ sctp_findassociation_addr_sa(struct sockaddr *to, struct sockaddr *from,
 		}
 	}
 	inp = sctp_pcb_findep(to, 0, 0);
+	/* inp's ref-count increased */
 	if (inp_p != NULL) {
 		*inp_p = inp;
 	}
@@ -1857,7 +1858,13 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 		}
 
 		inp_tmp = sctp_pcb_findep(addr, 0, 1);
+		/* inp_tmp's ref-count increased */
 		if (inp_tmp != NULL) {
+			/* reduce ref-count */
+			SCTP_INP_WLOCK(inp_tmp);
+			SCTP_INP_DECR_REF(inp_tmp);
+			SCTP_INP_WUNLOCK(inp_tmp);
+
 			SCTP_INP_INFO_WUNLOCK();
 			SCTP_INP_WUNLOCK(inp);
 			return (EADDRNOTAVAIL);

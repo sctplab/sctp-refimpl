@@ -4175,7 +4175,7 @@ sctp_input(m, va_alist)
 	u_int8_t ecn_bits;
 	struct ip *ip;
 	struct sctphdr *sh;
-	struct sctp_inpcb *inp;
+	struct sctp_inpcb *inp = NULL;
 	struct mbuf *opts = 0;
 /*#ifdef INET6*/
 /* Don't think this is needed */
@@ -4184,7 +4184,7 @@ sctp_input(m, va_alist)
 
 	u_int32_t check, calc_check;
 	struct sctp_nets *net;
-	struct sctp_tcb *stcb;
+	struct sctp_tcb *stcb = NULL;
 	struct sctp_chunkhdr *ch;
 	int length, mlen, offset;
 #if defined(__OpenBSD__) && defined(IPSEC)
@@ -4329,6 +4329,7 @@ sctp_input(m, va_alist)
 
 	stcb = sctp_findassociation_addr(m, iphlen, offset - sizeof(*ch),
 	    sh, ch, &inp, &net);
+	/* inp's ref-count increased && stcb locked */
 	if (inp == NULL) {
 		struct sctp_init_chunk *init_chk, chunk_buf;
 
@@ -4359,8 +4360,7 @@ sctp_input(m, va_alist)
 				sh->v_tag = init_chk->init.initiate_tag;
 		}
 		sctp_send_abort(m, iphlen, sh, 0, NULL);
-		sctp_m_freem(m);
-		return;
+		goto bad;
 	}
 #ifdef IPSEC
 	/*
@@ -4384,12 +4384,6 @@ sctp_input(m, va_alist)
 			    tdb, i_inp);
 	    if (error) {
 		    splx(s);
-		    if((inp != NULL) && (stcb == NULL)) {
-			    /* reduce ref-count */
-			    SCTP_INP_WLOCK(inp);
-			    SCTP_INP_DECR_REF(inp);
-			    SCTP_INP_WUNLOCK(inp);
-		    }
 		    sctp_pegs[SCTP_HDR_DROPS]++;
 		    goto bad;
 	    }
@@ -4404,12 +4398,6 @@ sctp_input(m, va_alist)
 			if (i_inp->inp_ipo == NULL) {
 			    splx(s);
 			    sctp_pegs[SCTP_HDR_DROPS]++;
-			    if((inp != NULL) && (stcb == NULL)) {
-				    /* reduce ref-count */
-				    SCTP_INP_WLOCK(inp);
-				    SCTP_INP_DECR_REF(inp);
-				    SCTP_INP_WUNLOCK(inp);
-			    }
 			    goto bad;
 			}
 		    }
@@ -4442,12 +4430,6 @@ sctp_input(m, va_alist)
 	if (ipsec4_in_reject_so(m, inp->ip_inp.inp.inp_socket)) {
 		ipsecstat.in_polvio++;
 		sctp_pegs[SCTP_HDR_DROPS]++;
-		if((inp != NULL) && (stcb == NULL)) {
-			/* reduce ref-count */
-			SCTP_INP_WLOCK(inp);
-			SCTP_INP_DECR_REF(inp);
-			SCTP_INP_WUNLOCK(inp);
-		}
 		goto bad;
 	}
 #endif
@@ -4485,11 +4467,9 @@ sctp_input(m, va_alist)
 #else
 	s = splnet();
 #endif
-	if (sctp_common_input_processing(&m, iphlen, offset, length, sh, ch,
-	    inp, stcb, net, ecn_bits)) {
-		splx(s);
-		goto bad;
-	}
+	sctp_common_input_processing(&m, iphlen, offset, length, sh, ch,
+	    inp, stcb, net, ecn_bits);
+	/* inp's ref-count reduced && stcb unlocked */
 	splx(s);
 	if (m) {
 		sctp_m_freem(m);
@@ -4497,7 +4477,15 @@ sctp_input(m, va_alist)
 	if (opts)
 		sctp_m_freem(opts);
 	return;
- bad:
+bad:
+	if (inp) {
+		/* reduce ref-count */
+		SCTP_INP_WLOCK(inp);
+		SCTP_INP_DECR_REF(inp);
+		SCTP_INP_WUNLOCK(inp);
+	}
+	if (stcb)
+		SCTP_TCB_UNLOCK(stcb);
 	if (m) {
 		sctp_m_freem(m);
 	}
