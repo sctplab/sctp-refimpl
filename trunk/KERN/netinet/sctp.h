@@ -1,4 +1,4 @@
-/*	$KAME: sctp.h,v 1.16 2004/02/24 21:52:26 itojun Exp $	*/
+/*	$KAME: sctp.h,v 1.17 2004/08/17 04:06:15 itojun Exp $	*/
 /* added comment for commit test */
 
 #ifndef _NETINET_SCTP_H_

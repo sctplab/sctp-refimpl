@@ -1,4 +1,4 @@
-/*	$KAME: sctp_peeloff.h,v 1.4 2003/11/25 06:40:53 ono Exp $	*/
+/*	$KAME: sctp_peeloff.h,v 1.5 2004/08/17 04:06:19 itojun Exp $	*/
 
 #ifndef __sctp_peeloff_h__
 #define __sctp_peeloff_h__

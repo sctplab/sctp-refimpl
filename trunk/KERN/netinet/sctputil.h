@@ -1,4 +1,4 @@
-/*	$KAME: sctputil.h,v 1.13 2004/02/24 21:52:27 itojun Exp $	*/
+/*	$KAME: sctputil.h,v 1.14 2004/08/17 04:06:21 itojun Exp $	*/
 
 #ifndef __sctputil_h__
 #define __sctputil_h__

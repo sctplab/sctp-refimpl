@@ -1,4 +1,4 @@
-/*	$KAME: sctp_callout.h,v 1.6 2004/02/24 21:52:26 itojun Exp $	*/
+/*	$KAME: sctp_callout.h,v 1.7 2004/08/17 04:06:16 itojun Exp $	*/
 
 #ifndef __SCTP_CALLOUT__
 #define __SCTP_CALLOUT__

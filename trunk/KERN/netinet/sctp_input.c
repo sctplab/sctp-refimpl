@@ -1,4 +1,4 @@
-/*	$KAME: sctp_input.c,v 1.24 2004/02/24 21:52:26 itojun Exp $	*/
+/*	$KAME: sctp_input.c,v 1.26 2004/08/17 04:06:17 itojun Exp $	*/
 
 /*
  * Copyright (C) 2002, 2003, 2004 Cisco Systems Inc,
@@ -2122,7 +2122,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	netl = sctp_findnet(*stcb, to);
         /* This code should in theory NOT run but
 	 */
-	if(netl == NULL) {
+	if (netl == NULL) {
 		int ret;
 #ifdef SCTP_DEBUG
 		printf("TSNH! Huh, why do I need to add this address here?\n");

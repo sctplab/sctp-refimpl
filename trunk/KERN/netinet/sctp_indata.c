@@ -1,4 +1,4 @@
-/*	$KAME: sctp_indata.c,v 1.33 2004/02/24 21:52:26 itojun Exp $	*/
+/*	$KAME: sctp_indata.c,v 1.35 2004/08/17 04:06:17 itojun Exp $	*/
 
 /*
  * Copyright (C) 2002, 2003, 2004 Cisco Systems Inc,
@@ -159,7 +159,7 @@ sctp_set_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 	calc_w_oh = sctp_sbspace_sub(calc, stcb->asoc.my_rwnd_control_len);
 
 	asoc->my_rwnd = calc;
-	if(calc_w_oh == 0) {
+	if (calc_w_oh == 0) {
 		/* If our overhead is greater than the advertised
 		 * rwnd, we clamp the rwnd to 1. This lets us
 		 * still accept inbound segments, but hopefully will
@@ -172,7 +172,7 @@ sctp_set_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 		    (asoc->my_rwnd < stcb->sctp_ep->sctp_ep.sctp_sws_receiver)) {
 			/* SWS engaged, tell peer none left */
 			asoc->my_rwnd = 1;
-#ifdef SCTP_DBUG
+#ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_INDATA4) {
 				printf(" - SWS zeros\n");
 			}
@@ -426,7 +426,7 @@ sctp_deliver_data(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		/* check and strip embedded scope junk */
 		to = (struct sockaddr *)sctp_recover_scope((struct sockaddr_in6 *)to,
 		    &lsa6);
-		if(((struct sockaddr_in *)to)->sin_port == 0) {
+		if (((struct sockaddr_in *)to)->sin_port == 0) {
 #ifdef SCTP_DEBUG
 			printf("Port was 0 not %d on address (net:%x), correcting\n",
 			       (u_int)chk->whoTo,
@@ -624,7 +624,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 			/* check and strip embedded scope junk */
 			to = (struct sockaddr *)sctp_recover_scope((struct sockaddr_in6 *)to,
 			    &lsa6);
-			if(((struct sockaddr_in *)to)->sin_port == 0) {
+			if (((struct sockaddr_in *)to)->sin_port == 0) {
 #ifdef SCTP_DEBUG
 				printf("Port was 0 not %d on address (net:%x), correcting\n",
 				       (u_int)chk->whoTo,
@@ -1712,7 +1712,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	 */
 
 	/* now do the tests */
-	if(((asoc->cnt_on_all_streams + 
+	if (((asoc->cnt_on_all_streams + 
 	 asoc->cnt_on_delivery_queue +
 	 asoc->cnt_on_reasm_queue +
 	  asoc->cnt_msg_on_sb) > sctp_max_chunks_on_queue) ||
@@ -1739,7 +1739,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			}
 #endif
 			sctp_set_rwnd(stcb, asoc);
-			if((asoc->cnt_on_all_streams + 
+			if ((asoc->cnt_on_all_streams + 
 			    asoc->cnt_on_delivery_queue +
 			    asoc->cnt_on_reasm_queue +
 			    asoc->cnt_msg_on_sb) > sctp_max_chunks_on_queue) {
@@ -1918,7 +1918,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		/* check and strip embedded scope junk */
 		to = (struct sockaddr *)sctp_recover_scope((struct sockaddr_in6 *)to,
 		    &lsa6);
-		if(((struct sockaddr_in *)to)->sin_port == 0) {
+		if (((struct sockaddr_in *)to)->sin_port == 0) {
 #ifdef SCTP_DEBUG
 			printf("Port was 0 not %d on address (net:%x), correcting\n",
 			       (u_int)chk->whoTo,
@@ -3715,7 +3715,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	/* always set this up to cum-ack */
 	asoc->this_sack_highest_gap = last_tsn;
 
-	if(((num_seg * sizeof (sizeof(struct sctp_gap_ack_block))) + sizeof(struct sctp_sack_chunk)) > sack_length) {
+	if (((num_seg * sizeof (sizeof(struct sctp_gap_ack_block))) + sizeof(struct sctp_sack_chunk)) > sack_length) {
 		goto skip_segments;
 	}
 

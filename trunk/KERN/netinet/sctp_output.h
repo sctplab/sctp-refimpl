@@ -1,4 +1,4 @@
-/*	$KAME: sctp_output.h,v 1.12 2004/02/24 21:52:27 itojun Exp $	*/
+/*	$KAME: sctp_output.h,v 1.13 2004/08/17 04:06:18 itojun Exp $	*/
 
 #ifndef __sctp_output_h__
 #define __sctp_output_h__

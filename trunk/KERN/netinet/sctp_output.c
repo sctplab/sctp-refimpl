@@ -1,4 +1,4 @@
-/*	$KAME: sctp_output.c,v 1.39 2004/02/24 21:52:26 itojun Exp $	*/
+/*	$KAME: sctp_output.c,v 1.44 2004/08/17 06:28:02 t-momose Exp $	*/
 
 /*
  * Copyright (C) 2002, 2003, 2004 Cisco Systems Inc,
@@ -517,12 +517,12 @@ sctp_ipv4_source_address_selection(struct sctp_inpcb *inp,
 		 * negative list and rotate amongst them.
 		 */
 		for (ifn = inp->next_ifn_touse; ifn;
-		    ifn = TAILQ_NEXT(ifn, if_link)) {
+		    ifn = TAILQ_NEXT(ifn, if_list)) {
 			if (loopscope == 0 && ifn->if_type == IFT_LOOP) {
 				/* wrong base scope */
 				continue;
 			}
-			TAILQ_FOREACH(ifa, &ifn->if_addrhead, ifa_link) {
+			TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
 				if (ifa->ifa_addr->sa_family == AF_INET) {
 					struct sockaddr_in *ifa_a;
 					ifa_a = (struct sockaddr_in *)
@@ -539,7 +539,7 @@ sctp_ipv4_source_address_selection(struct sctp_inpcb *inp,
 					/* we can use it !! */
 					/* set to start with next intf */
 					inp->next_ifn_touse =
-					    TAILQ_NEXT(ifn, if_link);
+					    TAILQ_NEXT(ifn, if_list);
 					return (ifa_a->sin_addr);
 				}
 			}
@@ -550,12 +550,12 @@ sctp_ipv4_source_address_selection(struct sctp_inpcb *inp,
 		 */
 		for (ifn = TAILQ_FIRST(&ifnet);
 		    ifn && (ifn != inp->next_ifn_touse);
-		    ifn=TAILQ_NEXT(ifn, if_link)) {
+		    ifn=TAILQ_NEXT(ifn, if_list)) {
 			if (loopscope == 0 && ifn->if_type == IFT_LOOP) {
 				/* wrong base scope */
 				continue;
 			}
-			TAILQ_FOREACH(ifa, &ifn->if_addrhead, ifa_link) {
+			TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
 				if (ifa->ifa_addr->sa_family == AF_INET) {
 					struct sockaddr_in *ifa_a;
 					ifa_a = (struct sockaddr_in *)
@@ -571,7 +571,7 @@ sctp_ipv4_source_address_selection(struct sctp_inpcb *inp,
 					/* we can use it !! */
 					/* set to start with next intf */
 					inp->next_ifn_touse =
-					    TAILQ_NEXT(ifn, if_link);
+					    TAILQ_NEXT(ifn, if_list);
 					return (ifa_a->sin_addr);
 				}
 			}
@@ -982,7 +982,7 @@ sctp_choose_correctv6_scope(struct rtentry *rt, int site_scope, int loc_scope, i
 	if (ifn == NULL) {
 		return (sin6);
 	}
-	TAILQ_FOREACH(ifa, &ifn->if_addrhead, ifa_link) {
+	TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
 		if (ifa->ifa_addr->sa_family != AF_INET6) {
 			continue;
 		}
@@ -1043,7 +1043,7 @@ sctp_choose_correctv6_scope(struct rtentry *rt, int site_scope, int loc_scope, i
 	 * send back a default, i.e. one that is the right
 	 * scope.
 	 */
-	TAILQ_FOREACH(ifa,&ifn->if_addrhead, ifa_link) {
+	TAILQ_FOREACH(ifa,&ifn->if_addrlist, ifa_list) {
 		if (ifa->ifa_addr->sa_family != AF_INET6) {
 			continue;
 		}
@@ -1194,12 +1194,12 @@ sctp_ipv6_source_address_selection(struct sctp_inpcb *inp, struct sctp_tcb *stcb
 		 * negative list and rotate amongst them.
 		 */
 		for (ifn = inp->next_ifn_touse; ifn;
-		    ifn = TAILQ_NEXT(ifn, if_link)) {
+		    ifn = TAILQ_NEXT(ifn, if_list)) {
 			if (loopscope == 0 && ifn->if_type == IFT_LOOP) {
 				/* wrong base scope */
 				continue;
 			}
-			TAILQ_FOREACH(ifa, &ifn->if_addrhead, ifa_link) {
+			TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
 				if (ifa->ifa_addr->sa_family == AF_INET6) {
 					struct sockaddr_in6 *ifa_a;
 					ifa_a = (struct sockaddr_in6 *)
@@ -1242,7 +1242,7 @@ sctp_ipv6_source_address_selection(struct sctp_inpcb *inp, struct sctp_tcb *stcb
 					/* we can use it !! */
 					/* set to start with next intf */
 					inp->next_ifn_touse =
-					    TAILQ_NEXT(ifn, if_link);
+					    TAILQ_NEXT(ifn, if_list);
 					return (ifa_a->sin6_addr);
 				}
 			}
@@ -1253,12 +1253,12 @@ sctp_ipv6_source_address_selection(struct sctp_inpcb *inp, struct sctp_tcb *stcb
 		 */
 		for (ifn = TAILQ_FIRST(&ifnet);
 		     ifn && (ifn != inp->next_ifn_touse);
-		     ifn = TAILQ_NEXT(ifn, if_link)) {
+		     ifn = TAILQ_NEXT(ifn, if_list)) {
 			if (loopscope == 0 && ifn->if_type == IFT_LOOP) {
 				/* wrong base scope */
 				continue;
 			}
-			TAILQ_FOREACH(ifa, &ifn->if_addrhead, ifa_link) {
+			TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
 				if (ifa->ifa_addr->sa_family == AF_INET6) {
 					struct sockaddr_in6 *ifa_a;
 					ifa_a = (struct sockaddr_in6 *)
@@ -1303,7 +1303,7 @@ sctp_ipv6_source_address_selection(struct sctp_inpcb *inp, struct sctp_tcb *stcb
 					/* we can use it !! */
 					/* set to start with next intf */
 					inp->next_ifn_touse =
-					    TAILQ_NEXT(ifn, if_link);
+					    TAILQ_NEXT(ifn, if_list);
 					return (ifa_a->sin6_addr);
 				}
 			}
@@ -1318,12 +1318,12 @@ sctp_ipv6_source_address_selection(struct sctp_inpcb *inp, struct sctp_tcb *stcb
 		 * without worrying about restrictions.
 		 */
 		for (ifn = TAILQ_FIRST(&ifnet); ifn;
-		    ifn = TAILQ_NEXT(ifn, if_link)) {
+		    ifn = TAILQ_NEXT(ifn, if_list)) {
 			if (loopscope == 0 && ifn->if_type == IFT_LOOP) {
 				/* wrong base scope */
 				continue;
 			}
-			TAILQ_FOREACH(ifa, &ifn->if_addrhead, ifa_link) {
+			TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
 				if (ifa->ifa_addr->sa_family == AF_INET6) {
 					struct sockaddr_in6 *ifa_a;
 					ifa_a = (struct sockaddr_in6 *)
@@ -1363,7 +1363,7 @@ sctp_ipv6_source_address_selection(struct sctp_inpcb *inp, struct sctp_tcb *stcb
 					/* we can use it !! */
 					/* set to start with next intf */
 					inp->next_ifn_touse =
-					    TAILQ_NEXT(ifn, if_link);
+					    TAILQ_NEXT(ifn, if_list);
 					return (ifa_a->sin6_addr);
 				}
 			}
@@ -1958,7 +1958,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 													       stcb,
 													       (struct sockaddr_in *)to,
 													       rtp, net, out_of_asoc_ok);
-				if(rtp->ro_rt) net->src_addr_selected = 1;
+				if (rtp->ro_rt) net->src_addr_selected = 1;
 			}
 			ip->ip_src = ((struct sockaddr_in *)&net->ra._s_addr)->sin_addr;
 		} else {
@@ -2139,7 +2139,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 				((struct sockaddr_in6 *)&net->ra._s_addr)->sin6_addr =
 				    sctp_ipv6_source_address_selection(inp, stcb, sin6, rtp, net, out_of_asoc_ok);
 
-				if(rtp->ro_rt) net->src_addr_selected = 1;
+				if (rtp->ro_rt) net->src_addr_selected = 1;
 			}
 			lsa6->sin6_addr = ((struct sockaddr_in6 *)&net->ra._s_addr)->sin6_addr;
 		} else {
@@ -2508,7 +2508,7 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	m->m_len += (sizeof(*pr_supported) + SCTP_EXT_COUNT + SCTP_PAD_EXT_COUNT);
 	/* ECN nonce: And now tell the peer we support ECN nonce */
 
-	if( sctp_ecn_nonce ) {
+	if ( sctp_ecn_nonce ) {
 		ecn_nonce = (struct sctp_ecn_nonce_supported_param *)((caddr_t)pr_supported +
 		    sizeof(*pr_supported) + SCTP_EXT_COUNT + SCTP_PAD_EXT_COUNT);
 		ecn_nonce->ph.param_type = htons(SCTP_ECN_NONCE_SUPPORTED);
@@ -2524,7 +2524,7 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		int cnt;
 
 		cnt = 0;
- 		TAILQ_FOREACH(ifn,&ifnet, if_link) {
+ 		TAILQ_FOREACH(ifn,&ifnet, if_list) {
 			if ((stcb->asoc.loopback_scope == 0) &&
 			    (ifn->if_type == IFT_LOOP)) {
 				/*
@@ -2533,7 +2533,7 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 				 */
 				continue;
 			}
-			TAILQ_FOREACH(ifa, &ifn->if_addrhead, ifa_link) {
+			TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
 				if (sctp_is_address_in_scope(ifa,
 				    stcb->asoc.ipv4_addr_legal,
 				    stcb->asoc.ipv6_addr_legal,
@@ -2547,7 +2547,7 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 			}
 		}
 		if (cnt > 1) {
-			TAILQ_FOREACH(ifn,&ifnet, if_link) {
+			TAILQ_FOREACH(ifn,&ifnet, if_list) {
 				if ((stcb->asoc.loopback_scope == 0) &&
 				    (ifn->if_type == IFT_LOOP)) {
 					/*
@@ -2556,7 +2556,7 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 					 */
 					continue;
 				}
-				TAILQ_FOREACH(ifa, &ifn->if_addrhead, ifa_link) {
+				TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
 					if (sctp_is_address_in_scope(ifa,
 					    stcb->asoc.ipv4_addr_legal,
 					    stcb->asoc.ipv6_addr_legal,
@@ -3408,7 +3408,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	pr_supported->chunk_types[7] = 0; /* pad */
 
 	m->m_len += (sizeof(*pr_supported) + SCTP_EXT_COUNT + SCTP_PAD_EXT_COUNT);
-	if( sctp_ecn_nonce ) {
+	if ( sctp_ecn_nonce ) {
 		/* ECN nonce: And now tell the peer we support ECN nonce */
 		ecn_nonce = (struct sctp_ecn_nonce_supported_param *)((caddr_t)pr_supported +
 		     sizeof(*pr_supported) + SCTP_EXT_COUNT + SCTP_PAD_EXT_COUNT);
@@ -3424,7 +3424,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		struct ifaddr *ifa;
 		int cnt = 0;
 
-		TAILQ_FOREACH(ifn,&ifnet, if_link) {
+		TAILQ_FOREACH(ifn,&ifnet, if_list) {
 			if ((stc.loopback_scope == 0) &&
 			    (ifn->if_type == IFT_LOOP)) {
 				/*
@@ -3433,7 +3433,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				 */
 				continue;
 			}
-			TAILQ_FOREACH(ifa, &ifn->if_addrhead, ifa_link) {
+			TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
 				if (sctp_is_address_in_scope(ifa,
 				    stc.ipv4_addr_legal, stc.ipv6_addr_legal,
 				    stc.loopback_scope, stc.ipv4_scope,
@@ -3444,7 +3444,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			}
 		}
 		if (cnt > 1) {
-			TAILQ_FOREACH(ifn, &ifnet, if_link) {
+			TAILQ_FOREACH(ifn, &ifnet, if_list) {
 				if ((stc.loopback_scope == 0) &&
 				    (ifn->if_type == IFT_LOOP)) {
 					/*
@@ -3453,7 +3453,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 					 */
 					continue;
 				}
-				TAILQ_FOREACH(ifa, &ifn->if_addrhead, ifa_link) {
+				TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
 					if (sctp_is_address_in_scope(ifa,
 					    stc.ipv4_addr_legal,
 					    stc.ipv6_addr_legal,
@@ -3512,7 +3512,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 
 	/* tack on the operational error if present */
 	if (op_err) {
-		if(op_err->m_pkthdr.len % 4) {
+		if (op_err->m_pkthdr.len % 4) {
 			/* must add a pad to the param */
 			u_int32_t cpthis=0;
 			int padlen;
@@ -5635,7 +5635,7 @@ sctp_send_heartbeat_ack(struct sctp_tcb *stcb,
 		outchain = tmp;
 	}
 	outchain->m_pkthdr.len = chk_length;
-	if(chk_length % 4) {
+	if (chk_length % 4) {
 		/* need pad */
 		u_int32_t cpthis=0;
 		int padlen;
@@ -7486,7 +7486,7 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh)
 
 	mout->m_pkthdr.len = mout->m_len;
 	/* add checksum */
-	if((sctp_no_csum_on_loopback) &&
+	if ((sctp_no_csum_on_loopback) &&
 	   (m->m_pkthdr.rcvif) &&
 	   (m->m_pkthdr.rcvif->if_type == IFT_LOOP)) {
 		comp_cp->sh.checksum =  0;
@@ -7950,7 +7950,7 @@ sctp_send_packet_dropped(struct sctp_tcb *stcb, struct sctp_nets *net,
 		drp->ch.chunk_flags = 0;
 		drp->trunc_len = htons(0);
 	}
-	if( bad_crc ) {
+	if ( bad_crc ) {
 		drp->ch.chunk_flags |= SCTP_BADCRC;
 	}
 	chk->send_size += sizeof(struct sctp_pktdrop_chunk);
@@ -8410,7 +8410,7 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 			m_tmp = m_tmp->m_next;
 		}
 		mout->m_pkthdr.len = mout->m_len + err_len;
-		if(err_len % 4) {
+		if (err_len % 4) {
 			/* need pad at end of chunk */
 			u_int32_t cpthis=0;
 			int padlen;
@@ -8424,7 +8424,7 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 	}
 
 	/* add checksum */
-	if((sctp_no_csum_on_loopback) &&
+	if ((sctp_no_csum_on_loopback) &&
 	   (m->m_pkthdr.rcvif) &&
 	   (m->m_pkthdr.rcvif->if_type == IFT_LOOP)) {
 		abm->sh.checksum =  0;
@@ -8504,14 +8504,14 @@ sctp_send_operr_to(struct mbuf *m, int iphlen,
 	uint32_t val;
 	iph = mtod(m, struct ip *);
 	ihdr = (struct sctphdr *)((caddr_t)iph + iphlen);
-	if(!(scm->m_flags & M_PKTHDR)) {
+	if (!(scm->m_flags & M_PKTHDR)) {
 		/* must be a pkthdr */
 		printf("Huh, not a packet header in send_operr\n");
 		m_freem(scm);
 		return;
 	}
 	M_PREPEND(scm, (sizeof(struct sctphdr) + sizeof(struct sctp_chunkhdr)), M_DONTWAIT);
-	if(scm == NULL) {
+	if (scm == NULL) {
 		/* can't send because we can't add a mbuf */
 		return;
 	}
@@ -8524,16 +8524,16 @@ sctp_send_operr_to(struct mbuf *m, int iphlen,
 	ophdr->chunk_type = SCTP_OPERATION_ERROR;
 	ophdr->chunk_flags = 0;
 	ophdr->chunk_length = htons(scm->m_pkthdr.len - sizeof(struct sctphdr));
-	if(scm->m_pkthdr.len % 4) {
+	if (scm->m_pkthdr.len % 4) {
 		/* need padding */
 		u_int32_t cpthis=0;
 		int padlen;
 		padlen = 4 - (scm->m_pkthdr.len % 4);
 		m_copyback(scm, scm->m_pkthdr.len, padlen, (caddr_t)&cpthis);
 	}
-	if((sctp_no_csum_on_loopback) &&
-	   (m->m_pkthdr.rcvif) &&
-	   (m->m_pkthdr.rcvif->if_type == IFT_LOOP)) {
+	if ((sctp_no_csum_on_loopback) &&
+	    (m->m_pkthdr.rcvif) &&
+	    (m->m_pkthdr.rcvif->if_type == IFT_LOOP)) {
 		val = 0;
 	} else {
 		val = sctp_calculate_sum(scm, NULL, 0);
