@@ -2781,6 +2781,7 @@ sctp_optsset(struct socket *so,
 		if (stcb->asoc.delayed_connection == 1) {
 			stcb->asoc.delayed_connection = 0;
 			SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_entered);
+			sctp_timer_stop(SCTP_TIMER_TYPE_INIT, inp, stcb, stcb->asoc.primary_destination);
 			sctp_send_initiate(inp, stcb);
 		} else {
 			/* already expired or did not use delayed connectx */

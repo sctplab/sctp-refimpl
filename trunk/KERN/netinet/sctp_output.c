@@ -2635,7 +2635,7 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	struct sctp_prsctp_supported_param *prsctp;
 	struct sctp_ecn_nonce_supported_param *ecn_nonce;
 	struct sctp_supported_chunk_types_param *pr_supported;
-	int padval;
+	int padval,ret;
 
 	/* INIT's always go to the primary (and usually ONLY address) */
 	m_last = NULL;
@@ -2653,7 +2653,12 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		/* we confirm any address we send an INIT to */
 		net->dest_state &= ~SCTP_ADDR_UNCONFIRMED;
 	}
-
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
+		printf("Sending INIT to ");
+		sctp_print_address ((struct sockaddr *)&net->ra._l_addr);
+	}
+#endif
 	if (callout_pending(&net->rxt_timer.timer)) {
 		/* This case should not happen */
 		return;
@@ -2913,8 +2918,19 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		}
 		m->m_pkthdr.len += padval;
 	}
-	sctp_lowlevel_chunk_output(inp, stcb, net,
-	    (struct sockaddr *)&net->ra._l_addr, m, 0, 0, NULL, 0);
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
+		printf("Calling lowlevel output stcb:%x net:%x\n",
+		       (u_int)stcb, (u_int)net);
+	}
+#endif
+	ret = sctp_lowlevel_chunk_output(inp, stcb, net,
+		  (struct sockaddr *)&net->ra._l_addr, m, 0, 0, NULL, 0);
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
+		printf("Low level output returns %d\n", ret);
+	}
+#endif
 	sctp_timer_start(SCTP_TIMER_TYPE_INIT, inp, stcb, net);
 	SCTP_GETTIME_TIMEVAL(&net->last_sent_time);
 }

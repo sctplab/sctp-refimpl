@@ -914,9 +914,12 @@ sctp_t1init_timer(struct sctp_inpcb *inp,
 
 	if (stcb->asoc.numnets > 1) {
 		/* If we have more than one addr use it */
-		stcb->asoc.primary_destination = TAILQ_NEXT(net, sctp_next);
-		if (stcb->asoc.primary_destination == NULL) 
-			stcb->asoc.primary_destination = TAILQ_FIRST(&stcb->asoc.nets);
+		struct sctp_nets *alt;
+		alt = TAILQ_NEXT(net, sctp_next);
+		if (alt != NULL) {
+			sctp_move_all_chunks_to_alt(stcb, stcb->asoc.primary_destination, alt);
+			stcb->asoc.primary_destination = alt;
+		}
 	}
 	/* Send out a new init */
 	sctp_send_initiate(inp, stcb);
