@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.3 2004-09-16 13:41:26 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.4 2004-10-12 14:01:21 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -4462,10 +4462,12 @@ parse_send_opt(char *p)
     return(MSG_UNORDERED);
   }else if(strcmp(p,"over") == 0){
     return(MSG_ADDR_OVER);
+  }else if(strcmp(p,"sendall") == 0){
+    return (MSG_SENDALL);
   }else if(strcmp(p,"none") == 0){
     return(0);
   }else{
-    printf("Sorry option %s not known, value must be prsctp|bufbnd|unord|over|none\n",p);
+    printf("Sorry option %s not known, value must be prsctp|bufbnd|unord|over|none|sendall\n",p);
   }
   return(0);
 }
