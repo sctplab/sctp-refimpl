@@ -2636,7 +2636,14 @@ sctp_optsset(struct socket *so,
 
 		if (stcb->asoc.sending_seq != (stcb->asoc.last_acked_seq + 1)) {
 			/* Must have all sending data ack'd before we
-			 * start this procedure
+			 * start this procedure. This is a bit restrictive
+			 * and we SHOULD work on changing this so ONLY the 
+			 * streams being RESET get held up. So, a reset-all
+			 * would require this.. but a reset specific just
+			 * needs to be sure that the ones being reset have
+			 * nothing on the send_queue. For now we will
+			 * skip this more detailed method and do a course
+			 * way.. i.e. nothing pending ... for future FIX ME!
 			 */
 			error = EBUSY;
 			break;
