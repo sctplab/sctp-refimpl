@@ -4595,6 +4595,14 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			if ((SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_SENT) &&
 			    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_ACK_SENT)) {
 				/* only send SHUTDOWN the first time through */
+#ifdef SCTP_DEBUG
+				if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
+					printf("%s:%d sends a shutdown\n",
+					       __FILE__,
+					       __LINE__
+						);
+				}
+#endif
 				sctp_send_shutdown(stcb, stcb->asoc.primary_destination);
 				asoc->state = SCTP_STATE_SHUTDOWN_SENT;
 				sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN, stcb->sctp_ep, stcb,
@@ -5431,6 +5439,10 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 			chk_cnt++;
 		}
 		printf("We have %d chunks on the sent_queue\n", chk_cnt);
+		TAILQ_FOREACH(chk,&asoc->control_send_queue, sctp_next) {
+			chk_cnt++;
+		}
+		printf("We have %d chunks on the control_queue\n", chk_cnt);
 	}
 #endif
 	/* If we have data to send, and DSACK is running, stop it
@@ -8120,7 +8132,7 @@ sctp_select_hb_destination(struct sctp_tcb *stcb, struct timeval *now)
 			state_overide = 0;
 		}
 
-		if (((ms_goneby >= stcb->asoc.heart_beat_delay) || (state_overide)) &&
+		if (((ms_goneby >= net->RTO) || (state_overide)) &&
 		    (ms_goneby > highest_ms)) {
 			highest_ms = ms_goneby;
 			hnet = net;
@@ -8139,7 +8151,7 @@ sctp_select_hb_destination(struct sctp_tcb *stcb, struct timeval *now)
 		state_overide = 0;
 	}
 
-	if (highest_ms && ((highest_ms > stcb->asoc.heart_beat_delay) || state_overide)) {
+	if (highest_ms && ((highest_ms >= hnet->RTO) || state_overide)) {
 		/* Found the one with longest delay bounds 
 		 * OR it is unconfirmed and still not marked
 		 * unreachable.
@@ -9600,6 +9612,14 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 			if ((SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_SENT) &&
 			    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_ACK_SENT)) {
 				/* only send SHUTDOWN the first time through */
+#ifdef SCTP_DEBUG
+				if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
+					printf("%s:%d sends a shutdown\n",
+					       __FILE__,
+					       __LINE__
+						);
+				}
+#endif
 				sctp_send_shutdown(stcb, stcb->asoc.primary_destination);
 				asoc->state = SCTP_STATE_SHUTDOWN_SENT;
 				sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN, stcb->sctp_ep, stcb,

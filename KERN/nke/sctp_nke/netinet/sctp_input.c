@@ -566,16 +566,14 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 	}
 	asoc = &stcb->asoc;
 	/* goto SHUTDOWN_RECEIVED state to block new requests */
-	if (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_RECEIVED) {
-		if (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_SENT) {
-			asoc->state = SCTP_STATE_SHUTDOWN_RECEIVED;
+	if ((SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_RECEIVED) &&
+	    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_SENT)) {
+		asoc->state = SCTP_STATE_SHUTDOWN_RECEIVED;
 #ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-				printf("Moving to SHUTDOWN-RECEIVED state\n");
-			}
-#endif
+		if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
+			printf("Moving to SHUTDOWN-RECEIVED state\n");
 		}
-
+#endif
 		/* notify upper layer that peer has initiated a shutdown */
 		sctp_ulp_notify(SCTP_NOTIFY_PEER_SHUTDOWN, stcb, 0, NULL);
 #ifdef SCTP_TCP_MODEL_SUPPORT
@@ -593,6 +591,12 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 		/* reset time */
 		SCTP_GETTIME_TIMEVAL(&asoc->time_entered);
 	}
+	if (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_SENT) {
+		/* stop the shutdown timer, since we WILL move
+		 * to SHUTDOWN-ACK-SENT.
+		 */
+		sctp_timer_stop(SCTP_TIMER_TYPE_SHUTDOWN, stcb->sctp_ep, stcb, net);
+	}
 	/* Now are we there yet? */
 	some_on_streamwheel = 0;
 	if (!TAILQ_EMPTY(&asoc->out_wheel)) {
@@ -605,7 +609,14 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 			}
 		}
 	}
-
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
+		printf("some_on_streamwheel:%d send_q_empty:%d sent_q_empty:%d\n",
+		       some_on_streamwheel,
+		       !TAILQ_EMPTY(&asoc->send_queue),
+		       !TAILQ_EMPTY(&asoc->sent_queue));
+	}
+#endif
  	if (!TAILQ_EMPTY(&asoc->send_queue) ||
 	    !TAILQ_EMPTY(&asoc->sent_queue) ||
 	    some_on_streamwheel) {
@@ -898,49 +909,6 @@ sctp_handle_error(struct sctp_chunkhdr *ch,
 	return (0);
 }
 
-/*
- * Ok we must examine the INIT-ACK to see what I sent in
- * terms of the PR-SCTP streams. This module is only called
- * if the peer supports PR-SCTP.
- */
-static void
-sctp_unpack_prsctp_streams(struct sctp_tcb *stcb,
-    struct sctp_init_ack_chunk *initack_cp, struct mbuf *m, int offset)
-{
-	struct sctp_paramhdr *phdr, phold;
-	int len, augment, at;
-	int my_len;
-
-	phdr = (struct sctp_paramhdr *)((caddr_t)initack_cp +
-	    sizeof(struct sctp_init_chunk));
-	len = ntohs(initack_cp->ch.chunk_length) -
-	    sizeof(struct sctp_init_chunk);
-	at = sizeof(struct sctp_init_chunk);
-
-	while (len) {
-		phdr = sctp_get_next_param(m, (offset+at), &phold,
-		    sizeof(struct sctp_paramhdr));
-		if (phdr == NULL) {
-			break;
-		}
-		if (ntohs(phdr->param_type) == SCTP_PRSCTP_SUPPORTED) {
-			/* Found a pr-sctp parameter, process it */
-			my_len = ntohs(phdr->param_length);
-			if (my_len != sizeof(struct sctp_paramhdr)) {
-				goto next_param;
-			}
-			stcb->asoc.peer_supports_prsctp = 1;
-		}
-	next_param:
-		augment = SCTP_SIZE32(ntohs(phdr->param_length));
-		at += augment;
-		len -= augment;
-		if (len <= 0) {
-			break;
-		}
-	}
-}
-
 static int
 sctp_handle_init_ack(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
     struct sctp_init_ack_chunk *cp, struct sctp_tcb *stcb,
@@ -1046,10 +1014,6 @@ sctp_handle_init_ack(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 		/* reset the RTO calc */
 		stcb->asoc.overall_error_count = 0;
 		SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_entered);
-		if (stcb->asoc.peer_supports_prsctp) {
-			sctp_unpack_prsctp_streams(stcb, cp, m, offset);
-		}
-
 		/*
 		 * collapse the init timer back in case of a exponential backoff
 		 */
@@ -1288,14 +1252,6 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			;
 		}
 
-		/* now do we enable pr-sctp? */
-		if (stcb->asoc.peer_supports_prsctp) {
-			/*
-			 * Yes, we must set all the streams that we told him
-			 * about in the INIT-ACK.
-			 */
-			sctp_unpack_prsctp_streams(stcb, initack_cp, m, offset);
-		}
 		/* respond with a COOKIE-ACK */
 		sctp_send_cookie_ack(stcb);
 		return (stcb);
@@ -1363,13 +1319,6 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			;
 		}
 
-		/* now do we enable pr-sctp? */
-		if (stcb->asoc.peer_supports_prsctp) {
-			/* Yes, we must set all the streams that we told him
-			 * about in the INIT-ACK.
-			 */
-			sctp_unpack_prsctp_streams(stcb, initack_cp, m, offset);
-		}
 		if ((asoc->state & SCTP_STATE_COOKIE_WAIT) ||
 		    (asoc->state & SCTP_STATE_COOKIE_ECHOED)) {
 			*notification = SCTP_NOTIFY_ASSOC_UP;
@@ -1457,14 +1406,6 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			;
 		}
 
-		/* now do we enable pr-sctp? */
-		if (stcb->asoc.peer_supports_prsctp) {
-			/*
-			 * Yes, we must set all the streams that we told him
-			 * about in the INIT-ACK.
-			 */
-			sctp_unpack_prsctp_streams(stcb, initack_cp, m, offset);
-		}
 		if (asoc->state & SCTP_STATE_SHUTDOWN_PENDING) {
 			asoc->state = SCTP_STATE_OPEN |
 			    SCTP_STATE_SHUTDOWN_PENDING;
@@ -1643,14 +1584,6 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	    init_src)) {
 		sctp_free_assoc(inp, stcb);
 		return (NULL);
-	}
-	/* now do we enable pr-sctp? */
-	if (stcb->asoc.peer_supports_prsctp) {
-		/*
-		 * Yes, we must set all the streams that we told him
-		 * about in the INIT-ACK.
-		 */
-		sctp_unpack_prsctp_streams(stcb, initack_cp, m, initack_offset);
 	}
 
 	/* update current state */
@@ -2637,6 +2570,14 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 		sctp_send_hb(stcb, 1, net);
 		break;
 	case SCTP_SHUTDOWN:
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
+			printf("%s:%d sends a shutdown\n",
+			       __FILE__,
+			       __LINE__
+				);
+		}
+#endif
 		sctp_send_shutdown(stcb, net);
 		break;
 	case SCTP_SHUTDOWN_ACK:
