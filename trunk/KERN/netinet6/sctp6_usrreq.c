@@ -247,6 +247,11 @@ sctp6_input(mp, offp, proto)
 	sh->checksum = 0;		/* prepare for calc */
 	calc_check = sctp_calculate_sum(m, &mlen, iphlen);
 	if (calc_check != check) {
+		stcb = sctp_findassociation_addr(m, iphlen, offset - sizeof(*ch),
+						 sh, ch, &in6p, &net);
+		if((in6p) && (stcb)) {
+			sctp_send_packet_dropped(stcb, net, m, iphlen);
+		}
 		sctp_pegs[SCTP_BAD_CSUM]++;
 		goto out_of;
 	}
