@@ -121,6 +121,7 @@ __FBSDID("$FreeBSD: src/lib/libalias/alias.c,v 1.16.2.14 2003/11/01 03:50:02 mar
 #include <netinet/ip_icmp.h>
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
+#include <netinet/sctp.h>
 
 #include <stdio.h>
 
@@ -203,7 +204,138 @@ TcpMonitorOut(struct ip *pip, struct alias_link *link)
 }
 
 
+/* SCTP Handling Routines
 
+    SctpMonitorIn()  -- These routines monitor SCTP connections, and
+    SctpMonitorOut()    delete a link when a connection is closed.
+
+These routines first verify the vtag so we are sure
+we are not getting a spoofed packet. Then after verifying the
+vtag we process INIT's and COOKIE-ACK's will take us to
+the connected state. Note we do not use INIT-ACK since
+there is no state in the guy sending the INIT-ACK and it
+is not until the cookie-ack ack's the COOKIE-ECHO does
+the receiver of the INIT form a connection. For RESET
+type things we look at either ABORT or SHUTDOWN_COMPLETE.
+For regular SHUTDOWN we look at SHUTDOWN and SHUTDOWN_ACK.
+Note we must handle the T-Bit as well.
+
+*/
+
+
+/* Local prototypes */
+static void SctpMonitorIn(struct ip *, struct alias_link *);
+
+static void SctpMonitorOut(struct ip *, struct alias_link *);
+
+
+static void
+SctpMonitorIn(struct ip *pip, struct alias_link *link)
+{
+	struct sctphdr *sctp;
+	struct sctp_chunkhdr *ch;
+	u_int32_t vtag;
+	sctp = (struct sctphdr *) ((char *) pip + (pip->ip_hl << 2));
+
+	ch = (struct sctp_chunkhdr *)((caddr_t)sctp + sizeof(struct sctphdr));
+
+	/* if the vtag is wrong, we ignore the packet */
+	if(ch->chunk_type != SCTP_INITIATION) {
+		if ((ch->chunk_type == SCTP_SHUTDOWN_COMPLETE) ||
+		    (ch->chunk_type == SCTP_ABORT) ||
+		    (ch->chunk_type == SCTP_PACKET_DROPPED)) {
+			if(ch->chunk_flags & SCTP_HAD_NO_TCB)
+				vtag = GetVtagIn(link);
+			else
+				vtag = GetVtagOut(link);
+		} else {
+			vtag = GetVtagIn(link);
+		}
+		if(sctp->v_tag != vtag)
+			/* old vtag -- ignore */
+			return;
+	} else {
+		if(sctp->v_tag != 0)
+			/* INIT's must have a 0 in the vtag */
+			return;
+	}
+	switch (GetStateIn(link))
+	{
+	case ALIAS_SCTP_STATE_NOT_CONNECTED:
+		if ((ch->chunk_type == SCTP_ABORT_ASSOCIATION) || (ch->chunk_type == SCTP_SHUTDOWN_COMPLETE))
+			SetStateIn(link, ALIAS_SCTP_STATE_DISCONNECTED);
+		else if ((ch->chunk_type == SCTP_INITIATION) || (ch->chunk_type == SCTP_COOKIE_ACK))
+			SetStateIn(link, ALIAS_SCTP_STATE_CONNECTED);
+		break;
+        case ALIAS_SCTP_STATE_CONNECTED:
+		if ((ch->chunk_type == SCTP_ABORT_ASSOCIATION) || 
+		    (ch->chunk_type == SCTP_SHUTDOWN) ||
+		    (ch->chunk_type == SCTP_SHUTDOWN_ACK))
+			SetStateIn(link, ALIAS_SCTP_STATE_DISCONNECTED);
+		break;
+	}
+}
+
+static void
+SctpMonitorOut(struct ip *pip, struct alias_link *link)
+{
+	struct sctphdr *sctp;
+	struct sctp_chunkhdr *ch;
+	u_int32_t vtag;
+	sctp = (struct sctphdr *) ((char *) pip + (pip->ip_hl << 2));
+
+	ch = (struct sctp_chunkhdr *)((caddr_t)sctp + sizeof(struct sctphdr));
+
+	/* if the vtag is wrong, we ignore the packet */
+	if(ch->chunk_type != SCTP_INITIATION) {
+		if ((ch->chunk_type == SCTP_SHUTDOWN_COMPLETE) ||
+		    (ch->chunk_type == SCTP_ABORT) ||
+		    (ch->chunk_type == SCTP_PACKET_DROPPED)) {
+			if(ch->chunk_flags & SCTP_HAD_NO_TCB)
+				vtag = GetVtagIn(link);
+			else
+				vtag = GetVtagOut(link);
+		} else {
+			vtag = GetVtagIn(link);
+		}
+		if(sctp->v_tag != vtag)
+			/* old vtag -- ignore */
+			return;
+	} else {
+		if(sctp->v_tag != 0)
+			/* INIT's must have a 0 in the vtag */
+			return;
+	}
+	switch (GetStateOut(link))
+	{
+	case ALIAS_SCTP_STATE_NOT_CONNECTED:
+		if ((ch->chunk_type == SCTP_ABORT_ASSOCIATION) || (ch->chunk_type == SCTP_SHUTDOWN_COMPLETE))
+			SetStateOut(link, ALIAS_SCTP_STATE_DISCONNECTED);
+		else if ((ch->chunk_type == SCTP_INITIATION) || (ch->chunk_type == SCTP_COOKIE_ACK))
+			SetStateOut(link, ALIAS_SCTP_STATE_CONNECTED);
+		break;
+        case ALIAS_SCTP_STATE_CONNECTED:
+		if ((ch->chunk_type == SCTP_ABORT_ASSOCIATION) || 
+		    (ch->chunk_type == SCTP_SHUTDOWN) ||
+		    (ch->chunk_type == SCTP_SHUTDOWN_ACK))
+			SetStateOut(link, ALIAS_SCTP_STATE_DISCONNECTED);
+		break;
+	};
+}
+
+
+static void
+adjust_sctp_checksum(char *ptr, int len)
+{
+    struct ip		*pip;
+    struct sctphdr	*sc;
+    pip = (struct ip *) ptr;
+    u_int32_t crc;
+
+    sc = (struct sctphdr *) ((char *) pip + (pip->ip_hl << 2));
+    sc->checksum = 0;
+    
+}
 
 
 /* Protocol Specific Packet Aliasing Routines
@@ -231,7 +363,7 @@ packet.
 ICMP error messages are handled by looking at the IP fragment
 in the data section of the message.
 
-For TCP and UDP protocols, a port number is chosen for an outgoing
+For TCP, SCTP  and UDP protocols, a port number is chosen for an outgoing
 packet, and then incoming packets are identified by IP address and
 port numbers.  For TCP packets, there is additional logic in the event
 that sequence and ACK numbers have been altered (as in the case for
@@ -263,6 +395,9 @@ static int UdpAliasIn (struct ip *);
 
 static int TcpAliasOut(struct ip *, int);
 static int TcpAliasIn (struct ip *);
+
+static int SctpAliasOut(struct ip *, int);
+static int SctpAliasIn (struct ip *);
 
 
 static int
@@ -1156,6 +1291,9 @@ TcpAliasOut(struct ip *pip, int maxpacketsize)
 
 
 
+/* SCTP Alias IN/OUT goes here */
+
+
 
 /* Fragment Handling
 
@@ -1333,6 +1471,10 @@ PacketAliasIn(char *ptr, int maxpacketsize)
             case IPPROTO_TCP:
                 iresult = TcpAliasIn(pip);
                 break;
+            case IPPROTO_SCTP:
+                iresult = SctpAliasIn(pip);
+                break;
+
             case IPPROTO_GRE:
 		if (packetAliasMode & PKT_ALIAS_PROXY_ONLY ||
 		    AliasHandlePptpGreIn(pip) == 0)
@@ -1450,6 +1592,10 @@ PacketAliasOut(char *ptr,           /* valid IP packet */
             case IPPROTO_TCP:
                 iresult = TcpAliasOut(pip, maxpacketsize);
                 break;
+            case IPPROTO_SCTP:
+                iresult = SctpAliasOut(pip, maxpacketsize);
+                break;
+
 	    case IPPROTO_GRE:
 		if (AliasHandlePptpGreOut(pip) == 0)
 		    iresult = PKT_ALIAS_OK;
@@ -1478,18 +1624,23 @@ PacketUnaliasOut(char *ptr,           /* valid IP packet */
     struct ip		*pip;
     struct icmp 	*ic;
     struct udphdr	*ud;
+    struct sctphdr	*sc;
     struct tcphdr 	*tc;
     struct alias_link 	*link;
     int 		iresult = PKT_ALIAS_IGNORED;
+    int len,hlen;
 
     pip = (struct ip *) ptr;
 
     /* Defense against mangled packets */
-    if (ntohs(pip->ip_len) > maxpacketsize
+    len = ntohs(pip->ip_len);
+
+    if (len > maxpacketsize
      || (pip->ip_hl<<2) > maxpacketsize)
         return(iresult);
 
     ud = (struct udphdr *) ((char *) pip + (pip->ip_hl << 2));
+    sc = (struct sctphdr *) ud;
     tc = (struct tcphdr *) ud;
     ic = (struct icmp *) ud;
 
@@ -1502,6 +1653,10 @@ PacketUnaliasOut(char *ptr,           /* valid IP packet */
         link = FindUdpTcpIn(pip->ip_dst, pip->ip_src,
                             tc->th_dport, tc->th_sport,
                             IPPROTO_TCP, 0);
+    else if (pip->ip_p == IPPROTO_SCTP)
+        link = FindUdpTcpIn(pip->ip_dst, pip->ip_src,
+                            tc->th_dport, tc->th_sport,
+                            IPPROTO_SCTP, 0);
     else if (pip->ip_p == IPPROTO_ICMP)
         link = FindIcmpIn(pip->ip_dst, pip->ip_src, ic->icmp_id, 0);
     else
@@ -1510,7 +1665,7 @@ PacketUnaliasOut(char *ptr,           /* valid IP packet */
     /* Change it from an aliased packet to an unaliased packet */
     if (link != NULL)
     {
-        if (pip->ip_p == IPPROTO_UDP || pip->ip_p == IPPROTO_TCP)
+        if (pip->ip_p == IPPROTO_UDP || pip->ip_p == IPPROTO_TCP || pip->ip_p == IPPROTO_SCTP)
         {
             u_short        *sptr;
             int 	   accumulate;
@@ -1532,11 +1687,18 @@ PacketUnaliasOut(char *ptr,           /* valid IP packet */
                 accumulate += ud->uh_sport;
                 accumulate -= original_port;
                 ADJUST_CHECKSUM(accumulate, ud->uh_sum);
+	    } else if (pip->ip_p == IPPROTO_SCTP) {
+		    /* do nothing here, we 
+		     * adjust the checksum by recalcing
+		     * the crc32c after the port is
+		     * modified.
+		     */
+		    ;
 	    } else {
                 accumulate += tc->th_sport;
                 accumulate -= original_port;
                 ADJUST_CHECKSUM(accumulate, tc->th_sum);
-	    }
+
 
             /* Adjust IP checksum */
             DifferentialChecksum(&pip->ip_sum,
@@ -1548,7 +1710,10 @@ PacketUnaliasOut(char *ptr,           /* valid IP packet */
             pip->ip_src = original_address;
             if (pip->ip_p == IPPROTO_UDP)
                 ud->uh_sport = original_port;
-	    else
+	    else if (pip->ip_p == IPPROTO_SCTP) {
+                sc->src_port = original_port;
+		adjust_sctp_checksum(ptr, len);
+	    } else
                 tc->th_sport = original_port;
 
 	    iresult = PKT_ALIAS_OK;

@@ -148,6 +148,11 @@ void	 SetStateIn(struct alias_link *_link, int _state);
 void	 SetStateOut(struct alias_link *_link, int _state);
 int	 GetStateIn(struct alias_link *_link);
 int	 GetStateOut(struct alias_link *_link);
+u_int32_t GetVtagIn(struct alias_link *link);
+void     SetVtagIn(struct alias_link *link, u_int32_t tag);
+u_int32_t GetVtagOut(struct alias_link *link);
+void     SetVtagOut(struct alias_link *link, u_int32_t tag);
+
 struct in_addr
 	 GetOriginalAddress(struct alias_link *_link);
 struct in_addr
@@ -227,6 +232,13 @@ enum alias_tcp_state {
 	ALIAS_TCP_STATE_CONNECTED,
 	ALIAS_TCP_STATE_DISCONNECTED
 };
+
+enum alias_sctp_state {
+	ALIAS_SCTP_STATE_NOT_CONNECTED,
+	ALIAS_SCTP_STATE_CONNECTED,
+	ALIAS_SCTP_STATE_DISCONNECTED
+};
+
 
 /*lint -restore */
 
