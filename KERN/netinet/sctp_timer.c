@@ -530,10 +530,8 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 					continue;
 				}
 			}
-			stcb->asoc.total_flight_count--;
-			if (stcb->asoc.total_flight_count < 0) {
-				stcb->asoc.total_flight_count = 0;
-			}
+			if (stcb->asoc.total_flight_count > 0)
+			  stcb->asoc.total_flight_count--;
 			if (PR_SCTP_TTL_ENABLED(chk->flags)) {
 				/* Is it expired? */
 				if ((now.tv_sec > chk->rec.data.timetodrop.tv_sec) ||

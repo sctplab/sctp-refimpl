@@ -2825,10 +2825,8 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 							} else {
 							  asoc->total_flight = 0;
 							}
-							asoc->total_flight_count--;
-							if (asoc->total_flight_count < 0) {
-								asoc->total_flight_count = 0;
-							}
+							if(asoc->total_flight_count > 0) 
+							  asoc->total_flight_count--;
 
 							if (tp1->snd_count < 2) {
 								/* True non-retransmited chunk */
@@ -3222,10 +3220,9 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			else
 			  asoc->total_flight = 0;
 
-			asoc->total_flight_count--;
-			if (asoc->total_flight_count < 0) {
-				asoc->total_flight_count = 0;
-			}
+			if (asoc->total_flight_count > 0)
+			  asoc->total_flight_count--;
+
 			if (alt != tp1->whoTo) {
 				/* yes, there is an alternate. */
 				sctp_free_remote_addr(tp1->whoTo);
@@ -3755,10 +3752,9 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 					else
 						asoc->total_flight = 0;
 
-					asoc->total_flight_count--;
-					if (asoc->total_flight_count < 0) {
-						asoc->total_flight_count = 0;
-					}
+					if (asoc->total_flight_count > 0)
+					  asoc->total_flight_count--;
+
 					tp1->whoTo->net_ack += tp1->send_size;
 					if (tp1->snd_count < 2) {
 						/* True non-retransmited chunk */

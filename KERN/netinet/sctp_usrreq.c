@@ -294,7 +294,8 @@ sctp_pathmtu_adustment(struct sctp_inpcb *inp,
 	stcb->asoc.total_flight -= chk->book_size;
       else 
 	stcb->asoc.total_flight = 0;
-      stcb->asoc.total_flight_count--;
+      if( stcb->asoc.total_flight_count > 0) 
+	stcb->asoc.total_flight_count--;
       if( net->flight_size >= chk->book_size) 
 	net->flight_size -= chk->book_size;
       else
