@@ -2362,6 +2362,17 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 
 	if (so) {
 	/* First take care of socket level things */
+	  if((so->so_rcv.sb_mb == NULL) && (so->so_rcv.sb_cc > 0)) {
+	    printf("Strange, so->so_rcv.sb_mb was NULL count was %d?\n",
+		   so->so_rcv.sb_cc);
+	    so->so_rcv.sb_cc = 0;
+	  }
+	  if(so->so_snd.sb_cc > 0) {
+	    /* we never really use the send buf
+	     * so its always safe to zero it.
+	     */
+ 	    so->so_snd.sb_cc = 0;
+	  }
 #ifdef IPSEC
 #ifdef __OpenBSD__
 	/* XXX IPsec cleanup here */
