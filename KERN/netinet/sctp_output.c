@@ -9539,7 +9539,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 				goto out;
 			}
 			SCTP_TCB_LOCK(stcb);
-			SCTP_INP_UNLOCK(inp);
+			SCTP_INP_RUNLOCK(inp);
 
 			inp->sctp_tcb_at_block = 0;
 #ifdef SCTP_BLK_LOGGING
