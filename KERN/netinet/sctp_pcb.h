@@ -458,6 +458,7 @@ struct sctp_tcb {
 #define SCTP_INP_LOCK_DESTROY(_inp)	mtx_destroy(&(_inp)->inp_mtx)
 #define SCTP_ASOC_CREATE_LOCK_DESTROY(_inp)	mtx_destroy(&(_inp)->inp_create_mtx)
 
+#ifdef xyzzy 
 #define SCTP_INP_RLOCK(_inp)	do{ 					\
         struct sctp_tcb *xx_stcb;					\
         xx_stcb = LIST_FIRST(&_inp->sctp_asoc_list);                    \
@@ -479,6 +480,13 @@ struct sctp_tcb {
 		panic("INP Recursive Lock-W");                          \
         mtx_lock(&(_inp)->inp_mtx);                                     \
 } while (0)
+
+#else
+void SCTP_INP_RLOCK(struct sctp_inpcb *);
+void SCTP_INP_WLOCK(struct sctp_inpcb *);
+
+#endif
+
 
 #define SCTP_INP_INCR_REF(_inp)        _inp->refcount++
 
@@ -512,8 +520,10 @@ struct sctp_tcb {
 	mtx_init(&(_tcb)->tcb_mtx, "sctp", "tcb", MTX_DEF | MTX_DUPOK)
 #define SCTP_TCB_LOCK_DESTROY(_tcb)	mtx_destroy(&(_tcb)->tcb_mtx)
 #define SCTP_TCB_LOCK(_tcb)  do{					\
+        if(!mtx_owned(&(_tcb->sctp_ep->inp_mtx)))                       \
+		panic("TCB locking and no INP lock");                   \
         if(mtx_owned(&(_tcb)->tcb_mtx))                                 \
-		panic("TCB Lock");                                      \
+		panic("TCB Lock-recursive");                            \
 	mtx_lock(&(_tcb)->tcb_mtx);                                     \
 } while (0)
 #define SCTP_TCB_UNLOCK(_tcb)		mtx_unlock(&(_tcb)->tcb_mtx)
