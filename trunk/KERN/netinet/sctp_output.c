@@ -251,6 +251,8 @@ sctp_add_addr_to_mbuf(struct mbuf *m, struct ifaddr *ifa)
 	return (mret);
 }
 
+
+
 static struct mbuf *
 sctp_add_cookie(struct sctp_inpcb *inp, struct mbuf *init, int init_offset,
     struct mbuf *initack, int initack_offset, struct sctp_state_cookie *stc_in)
@@ -273,14 +275,12 @@ sctp_add_cookie(struct sctp_inpcb *inp, struct mbuf *init, int init_offset,
 		sctp_m_freem(mret);
 		return (NULL);
 	}
-
 	copy_initack = m_copym(initack, initack_offset, M_COPYALL, M_DONTWAIT);
 	if (copy_initack == NULL) {
 		sctp_m_freem(mret);
 		sctp_m_freem(copy_init);
 		return (NULL);
 	}
-
 	/* easy side we just drop it on the end */
 	ph = mtod(mret, struct sctp_paramhdr *);
 	mret->m_len = sizeof(struct sctp_state_cookie) +
@@ -317,24 +317,17 @@ sctp_add_cookie(struct sctp_inpcb *inp, struct mbuf *init, int init_offset,
 			break;
 		}
 	}
-	/* Now on to the end of the copy_initack */
-	if (M_TRAILINGSPACE(m_at) >= SCTP_SIGNATURE_SIZE) {
-		sig = m_at;
-		sig_offset = sig->m_len;
-	} else {
-		MGET(sig, M_DONTWAIT, MT_DATA);
-		if (sig == NULL) {
-			/* no space */
-			sctp_m_freem(mret);
-			sctp_m_freem(copy_init);
-			sctp_m_freem(copy_initack);
-			return (NULL);
-		}
-		sig->m_len = 0;
-		m_at->m_next = sig;
-		sig_offset = 0;
+	MGET(sig, M_DONTWAIT, MT_DATA);
+	if (sig == NULL) {
+		/* no space */
+		sctp_m_freem(mret);
+		sctp_m_freem(copy_init);
+		sctp_m_freem(copy_initack);
+		return (NULL);
 	}
-
+	sig->m_len = 0;
+	m_at->m_next = sig;
+	sig_offset = 0;
 	signature = (uint8_t *)(mtod(sig, caddr_t) + sig_offset);
 	/* Time to sign the cookie */
 	sctp_hash_digest_m((char *)inp->sctp_ep.secret_key[
@@ -1813,6 +1806,8 @@ sctp_get_ect(struct sctp_tcb *stcb,
 	}
 }
 
+extern int sctp_no_csum_on_loopback;
+
 static int
 sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			   struct sctp_tcb *stcb,    /* may be NULL */
@@ -1857,10 +1852,17 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 	}
 	/* Calculate the csum and fill in the length of the packet */
 	sctphdr = mtod(m, struct sctphdr *);
-	sctphdr->checksum = 0;
 	have_mtu = 0;
-	csum = sctp_calculate_sum(m, &m->m_pkthdr.len, 0);
-	sctphdr->checksum = csum;
+	if ( sctp_no_csum_on_loopback &&
+	     (stcb) &&
+	     (stcb->asoc.loopback_scope)) {
+		sctphdr->checksum = 0;
+		m->m_pkthdr.len = sctp_calculate_len(m);
+	} else {
+		sctphdr->checksum = 0;
+		csum = sctp_calculate_sum(m, &m->m_pkthdr.len, 0);
+		sctphdr->checksum = csum;
+	}
 	if (to->sa_family == AF_INET) {
 		struct ip *ip;
 		M_PREPEND(m, sizeof(struct ip), M_DONTWAIT);
@@ -3020,7 +3022,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	struct sctp_state_cookie stc;
 	struct sctp_nets *net=NULL;
 	uint16_t his_limit, i_want;
-	int abort_flag, padval, sz_of, init_sz;
+	int abort_flag, padval, sz_of;
 
 	if (stcb) {
 		asoc = &stcb->asoc;
@@ -3424,16 +3426,6 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	m->m_len += sizeof(*ecn_nonce);
 
 	m_at = m;
-	/* tack on the operational error if present */
-	if (op_err) {
-		while (m_at->m_next != NULL) {
-			m_at = m_at->m_next;
-		}
-		m_at->m_next = op_err;
-		while (m_at->m_next != NULL) {
-			m_at = m_at->m_next;
-		}
-	}
 	/* now the addresses */
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
 		struct ifnet *ifn;
@@ -3525,9 +3517,20 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			}
 		}
 	}
-	/* Get total size of init packet */
 
-	init_sz = sz_of = ntohs(init_chk->ch.chunk_length);
+	/* tack on the operational error if present */
+	if (op_err) {
+		while (m_at->m_next != NULL) {
+			m_at = m_at->m_next;
+		}
+		m_at->m_next = op_err;
+		while (m_at->m_next != NULL) {
+			m_at = m_at->m_next;
+		}
+	}
+
+	/* Get total size of init packet */
+	sz_of = SCTP_SIZE32(ntohs(init_chk->ch.chunk_length));
 	/* pre-calulate the size and update pkt header and chunk header */
 	m->m_pkthdr.len = 0;
 	for (m_tmp = m; m_tmp; m_tmp = m_tmp->m_next) {
@@ -3570,19 +3573,6 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	}
 	/* Now append the cookie to the end and update the space/size */
 	m_tmp->m_next = m_cookie;
-	/* now a walk back through all of the mbufs to count size */
-	m->m_pkthdr.len = 0;
-	for (m_tmp = m; m_tmp; m_tmp = m_tmp->m_next) {
-		if (m_tmp->m_next == NULL)
-			m_last = m_tmp;
-		m->m_pkthdr.len += m_tmp->m_len;
-	}
-	/*
-	 * set the init ack chunk size
-	 * note, this is also for the init ack in the cookie!
-	 */
-	initackm_out->msg.ch.chunk_length = htons(m->m_pkthdr.len -
-	    sizeof(struct sctphdr));
 
 	/*
 	 * We pass 0 here to NOT set IP_DF if its IPv4, we ignore the
@@ -7521,7 +7511,13 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh)
 
 	mout->m_pkthdr.len = mout->m_len;
 	/* add checksum */
-	comp_cp->sh.checksum = sctp_calculate_sum(mout, NULL, offset_out);
+	if((sctp_no_csum_on_loopback) &&
+	   (m->m_pkthdr.rcvif) &&
+	   (m->m_pkthdr.rcvif->if_type == IFT_LOOP)) {
+		comp_cp->sh.checksum =  0;
+	} else {
+		comp_cp->sh.checksum = sctp_calculate_sum(mout, NULL, offset_out);
+	}
 
 	/* zap the rcvif, it should be null */
 	mout->m_pkthdr.rcvif = 0;
@@ -8446,7 +8442,13 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 	}
 
 	/* add checksum */
-	abm->sh.checksum = sctp_calculate_sum(mout, NULL, iphlen_out);
+	if((sctp_no_csum_on_loopback) &&
+	   (m->m_pkthdr.rcvif) &&
+	   (m->m_pkthdr.rcvif->if_type == IFT_LOOP)) {
+		abm->sh.checksum =  0;
+	} else {
+		abm->sh.checksum = sctp_calculate_sum(mout, NULL, iphlen_out);
+	}
 
 	/* zap the rcvif, it should be null */
 	mout->m_pkthdr.rcvif = 0;
@@ -8522,7 +8524,14 @@ sctp_send_operr_to(struct mbuf *m, int iphlen,
 	ohdr->dest_port = ihdr->src_port;
 	ohdr->v_tag = vtag;
 	ohdr->checksum = 0;
-	val = sctp_calculate_sum(scm, NULL, 0);
+
+	if((sctp_no_csum_on_loopback) &&
+	   (m->m_pkthdr.rcvif) &&
+	   (m->m_pkthdr.rcvif->if_type == IFT_LOOP)) {
+		val = 0;
+	} else {
+		val = sctp_calculate_sum(scm, NULL, 0);
+	}
 	ohdr->checksum = val;
 	if (iph->ip_v == IPVERSION) {
 		/* V4 */

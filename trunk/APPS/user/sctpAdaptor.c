@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.2 2004-07-25 11:03:56 lei Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.3 2004-07-26 07:04:19 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -737,25 +737,22 @@ create_SCTP_adaptor(distributor *o,u_short port, int model, int rwnd , int swnd 
   event.sctp_partial_delivery_event = 1;
   event.sctp_adaption_layer_event = 1;
   event.sctp_stream_reset_events = 1;
+
   if (setsockopt(r->fd, IPPROTO_SCTP, SCTP_EVENTS, &event, sizeof(event)) != 0) {
     printf("Can't do SET_EVENTS socket option! err:%d\n", errno);
   }
   optlen = 4;
-  if(swnd){
+  if(swnd) {
 	  optval = swnd;
-  }else{
-	  optval = 512000;
-  }
-  if(setsockopt(r->fd, SOL_SOCKET, SO_SNDBUF, &optval, optlen) != 0){
-    printf("err:%d could not set sndbuf\n",errno);
+	  if(setsockopt(r->fd, SOL_SOCKET, SO_SNDBUF, &optval, optlen) != 0){
+		  printf("err:%d could not set sndbuf\n",errno);
+	  }
   }
   if (rwnd){
 	  optval = rwnd;
-  }else{
-	  optval = 512000;
-  }
-  if(setsockopt(r->fd, SOL_SOCKET, SO_RCVBUF, &optval, optlen) != 0){
-	  printf("err:%d could not set rcvbuf\n",errno);
+	  if(setsockopt(r->fd, SOL_SOCKET, SO_RCVBUF, &optval, optlen) != 0){
+		  printf("err:%d could not set rcvbuf\n",errno);
+	  }
   }
   optval = 0;
   if(getsockopt(r->fd, SOL_SOCKET, SO_SNDBUF, &optval, &optlen) != 0)

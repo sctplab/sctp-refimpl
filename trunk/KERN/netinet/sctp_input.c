@@ -1186,7 +1186,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 	 * find and validate the INIT-ACK chunk in the cookie (my info)
 	 * the INIT-ACK follows the INIT chunk
 	 */
-	initack_offset = init_offset + chk_length;
+	initack_offset = init_offset + SCTP_SIZE32(chk_length);
 	initack_cp = (struct sctp_init_ack_chunk *)
 	    sctp_m_getptr(m, initack_offset, sizeof(struct sctp_init_ack_chunk),
 	    (u_int8_t *)&initack_buf);
@@ -1550,7 +1550,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		return (NULL);
 	}
 
-	initack_offset = init_offset + chk_length;
+	initack_offset = init_offset + SCTP_SIZE32(chk_length);
 	/*
 	 * find and validate the INIT-ACK chunk in the cookie (my info)
 	 * the INIT-ACK follows the INIT chunk
@@ -1581,7 +1581,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 #endif /* SCTP_DEBUG */
 		return (NULL);
 	}
-	initack_limit = initack_offset + chk_length;
+	initack_limit = initack_offset + SCTP_SIZE32(chk_length);
 
 	/*
 	 * now that we know the INIT/INIT-ACK are in place,
@@ -1936,7 +1936,6 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 #endif
 		return (NULL);
 	}
-
 	/* compare the received digest with the computed digest */
 	if (memcmp(calc_sig, sig, SCTP_SIGNATURE_SIZE) != 0) {
 		/* try the old cookie? */
@@ -2133,6 +2132,16 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	 * we sent the INIT-ACK to.
 	 */
 	netl = sctp_findnet(*stcb, to);
+        /* This code should in theory NOT run but
+	 */
+	if(netl == NULL) {
+		int ret;
+#ifdef SCTP_DEBUG
+		printf("TSNH! Huh, why do I need to add this address here?\n");
+#endif
+		ret = sctp_add_remote_addr(*stcb, to, 0, 100);
+		netl = sctp_findnet(*stcb, to);
+	}
 	if (netl) {
 		if (netl->dest_state &  SCTP_ADDR_UNCONFIRMED) {
 			netl->dest_state &= ~SCTP_ADDR_UNCONFIRMED;
@@ -2141,7 +2150,12 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_CONFIRMED,
 					(*stcb),0,(void *)netl);
 		}
+	} 
+#ifdef SCTP_DEBUG
+	else {
+		printf("Could not add source address for some reason\n");
 	}
+#endif
 
 #ifdef SCTP_TCP_MODEL_SUPPORT
 	if ((*inp_p)->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) {
@@ -4019,6 +4033,8 @@ sctp_saveopt(struct sctp_inpcb *inp, struct mbuf **mp, struct ip *ip,
 }
 #endif
 
+extern int sctp_no_csum_on_loopback;
+
 #if defined(__FreeBSD__) || defined(__APPLE__)
 void
 sctp_input(m, off)
@@ -4115,19 +4131,28 @@ sctp_input(m, va_alist)
 		goto bad;
 	}
 	/* validate SCTP checksum */
-	check = sh->checksum;	/* save incoming checksum */
-	sh->checksum = 0;		/* prepare for calc */
-	calc_check = sctp_calculate_sum(m, &mlen, iphlen);
-	if (calc_check != check) {
-		stcb = sctp_findassociation_addr(m, iphlen, offset - sizeof(*ch),
-						 sh, ch, &inp, &net);
-		if((inp) && (stcb)) {
-			sctp_send_packet_dropped(stcb, net, m, iphlen, 1);
+	if((sctp_no_csum_on_loopback == 0) ||
+	   (m->m_pkthdr.rcvif == NULL) ||
+	   (m->m_pkthdr.rcvif->if_type != IFT_LOOP)) {
+		/* we do NOT validate things from the loopback if the
+		 * sysctl is set to 1.
+		 */
+		check = sh->checksum;	/* save incoming checksum */
+		sh->checksum = 0;		/* prepare for calc */
+		calc_check = sctp_calculate_sum(m, &mlen, iphlen);
+		if (calc_check != check) {
+			stcb = sctp_findassociation_addr(m, iphlen, offset - sizeof(*ch),
+							 sh, ch, &inp, &net);
+			if((inp) && (stcb)) {
+				sctp_send_packet_dropped(stcb, net, m, iphlen, 1);
+			}
+			sctp_pegs[SCTP_BAD_CSUM]++;
+			goto bad;
 		}
-		sctp_pegs[SCTP_BAD_CSUM]++;
-		goto bad;
+		sh->checksum = calc_check;
+	} else {
+		mlen = m->m_pkthdr.len;
 	}
-	sh->checksum = calc_check;
 	/* validate mbuf chain length with IP payload length */
 #ifdef __OpenBSD__
 	/* Open BSD gives us the len in network order, fix it */

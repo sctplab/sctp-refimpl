@@ -154,6 +154,8 @@ int find_next_best_mtu(int);
 u_int32_t sctp_calculate_rto(struct sctp_tcb *, struct sctp_association *,
 	struct sctp_nets *, struct timeval *);
 
+u_int32_t sctp_calculate_len(struct mbuf *);
+
 caddr_t sctp_m_getptr(struct mbuf *, int, int, u_int8_t *);
 
 struct sctp_paramhdr *sctp_get_next_param(struct mbuf *, int,
