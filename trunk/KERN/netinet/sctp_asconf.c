@@ -816,6 +816,15 @@ sctp_handle_asconf(struct mbuf *m, int offset, struct sctp_asconf_chunk *cp,
 			/* FIX */
 			break;
 		default:
+			if((param_type & 0x8000) == 0) {
+				/* Been told to STOP at this param */
+				asconf_limit = offset;
+				/* FIX FIX - We need to call sctp_arethere_unrecognized_parameters()
+				 * to get a operr and send it for any param's with the
+				 * 0x4000 bit set OR do it here ourselves... note we still
+				 * must STOP if the 0x8000 bit is clear.
+				 */
+			}
 			/* unknown/invalid param type */
 			break;
 		} /* switch */
@@ -839,7 +848,7 @@ sctp_handle_asconf(struct mbuf *m, int offset, struct sctp_asconf_chunk *cp,
 
 		offset += SCTP_SIZE32(param_length);
 		/* update remaining ASCONF message length to process */
-		if (offset > asconf_limit) {
+		if (offset >= asconf_limit) {
 			/* no more data in the mbuf chain */
 			break;
 		}
@@ -854,8 +863,7 @@ sctp_handle_asconf(struct mbuf *m, int offset, struct sctp_asconf_chunk *cp,
 				printf("handle_asconf: can't get asconf param hdr!\n");
 			}
 #endif /* SCTP_DEBUG */
-			sctp_m_freem(m_ack);
-			return;
+			/* FIX ME - add error here... */
 		}
 	} /* while */
 

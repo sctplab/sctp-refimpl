@@ -322,23 +322,17 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 	struct mbuf *op_err;
 	int retval, abort_flag;
 	uint32_t initack_limit;
-
 	/* First verify that we have no illegal param's */
 	abort_flag = 0;
 	op_err = NULL;
+
 	op_err = sctp_arethere_unrecognized_parameters(m,
-	    (offset + sizeof(struct sctp_init_chunk)), &abort_flag);
+	    (offset+sizeof(struct sctp_init_chunk)) , 
+	    &abort_flag, (struct sctp_chunkhdr *)cp);
 	if (abort_flag) {
 		/* Send an abort and notify peer */
 		if (op_err != NULL) {
-			/* should this be sending a ERROR not an ABORT? */
-			M_PREPEND(op_err,sizeof(struct sctphdr), M_DONTWAIT);
-			if (op_err != NULL) {
-				struct sctphdr *ohdr;
-				ohdr = mtod(op_err, struct sctphdr *);
-				sctp_send_operr_to(m, iphlen, op_err, ohdr,
-				    cp->init.initiate_tag);
-			}
+			sctp_send_operr_to(m, iphlen, op_err, cp->init.initiate_tag);
 		} else {
 			/*
 			 * Just notify (abort_assoc does this if
@@ -1124,7 +1118,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 	if (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_ACK_SENT) {
 		/* SHUTDOWN came in after sending INIT-ACK */
 		struct mbuf *op_err;
-		struct sctp_cookie_while_shutting_down *scm;
+		struct sctp_paramhdr *ph;
 
 		sctp_send_shutdown_ack(stcb, stcb->asoc.primary_destination);
 #ifdef SCTP_DEBUG
@@ -1139,18 +1133,14 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		}
 		/* pre-reserve some space */
 		op_err->m_data += sizeof(struct ip6_hdr);
+		op_err->m_data += sizeof(struct sctphdr);
+		op_err->m_data += sizeof(struct sctp_chunkhdr);
 		/* Set the len */
-		op_err->m_len = op_err->m_pkthdr.len =
-		    sizeof(struct sctp_cookie_while_shutting_down);
-		scm = mtod(op_err, struct sctp_cookie_while_shutting_down *);
-		scm->ch.chunk_type = SCTP_OPERATION_ERROR;
-		scm->ch.chunk_flags = 0;
-		scm->ch.chunk_length =
-		    htons((op_err->m_len-sizeof(struct sctphdr)));
-		scm->ph.param_type = htons(SCTP_CAUSE_COOKIE_IN_SHUTDOWN);
-		scm->ph.param_length = htons(sizeof(struct sctp_paramhdr));
-		sctp_send_operr_to(m, iphlen, op_err, &scm->sh,
-		    cookie->peers_vtag);
+		op_err->m_len = op_err->m_pkthdr.len = sizeof(struct sctp_paramhdr);
+		ph = mtod(op_err, struct sctp_paramhdr *);
+		ph->param_type = htons(SCTP_CAUSE_COOKIE_IN_SHUTDOWN);
+		ph->param_length = htons(sizeof(struct sctp_paramhdr));
+		sctp_send_operr_to(m, iphlen, op_err, cookie->peers_vtag);
 		return (NULL);
 	}
 	/*
@@ -2039,14 +2029,12 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		}
 		/* pre-reserve some space */
 		op_err->m_data += sizeof(struct ip6_hdr);
+		op_err->m_data += sizeof(struct sctphdr);
+		op_err->m_data += sizeof(struct sctp_chunkhdr);
+
 		/* Set the len */
-		op_err->m_len = op_err->m_pkthdr.len =
-		    sizeof(struct sctp_stale_cookie_msg);
+		op_err->m_len = op_err->m_pkthdr.len = sizeof(struct sctp_stale_cookie_msg);
 		scm = mtod(op_err, struct sctp_stale_cookie_msg *);
-		scm->ch.chunk_type = SCTP_OPERATION_ERROR;
-		scm->ch.chunk_flags = 0;
-		scm->ch.chunk_length =
-		    htons((op_err->m_len-sizeof(struct sctphdr)));
 		scm->ph.param_type = htons(SCTP_CAUSE_STALE_COOKIE);
 		scm->ph.param_length = htons((sizeof(struct sctp_paramhdr) +
 		    (sizeof(u_int32_t))));
@@ -2056,8 +2044,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		if (tim == 0)
 			tim = now.tv_usec - cookie->time_entered.tv_usec;
 		scm->time_usec = htonl(tim);
-		sctp_send_operr_to(m, iphlen, op_err, &scm->sh,
-		    cookie->peers_vtag);
+		sctp_send_operr_to(m, iphlen, op_err, cookie->peers_vtag);
 		return (NULL);
 	}
 	/*
@@ -3082,6 +3069,8 @@ sctp_handle_packet_dropped(struct sctp_pktdrop_chunk *cp,
 	}
 }
 
+extern int sctp_strict_init;
+
 /*
  * handles all control chunks in a packet
  * inputs:
@@ -3315,7 +3304,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				return (NULL);
 			}
 			if ((num_chunks > 1) ||
-			    (length - *offset > SCTP_SIZE32(chk_length))) {
+			    ( sctp_strict_init && (length - *offset > SCTP_SIZE32(chk_length)))) {
 				*offset = length;
 				return (NULL);
 			}
@@ -3354,7 +3343,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			}
 
 			if ((num_chunks > 1) ||
-			    (length - *offset > SCTP_SIZE32(chk_length))) {
+			    ( sctp_strict_init && (length - *offset > SCTP_SIZE32(chk_length)))) {
 #ifdef SCTP_DEBUG
 				if (sctp_debug_on & SCTP_DEBUG_INPUT3) {
 					printf("Length is %d rounded chk_length:%d .. dropping\n",
@@ -3756,7 +3745,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			if ((ch->chunk_type & 0x80) == 0) {
 				/* discard this packet */
 				*offset = length;
-				return (NULL);
+				return (stcb);
 			} /* else skip this bad chunk and continue... */
 			break;
 		} /* switch (ch->chunk_type) */
@@ -3773,7 +3762,6 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			return (NULL);
 		}
 	} /* while */
-
 	return (stcb);
 }
 
@@ -4145,6 +4133,7 @@ sctp_input(m, va_alist)
 							 sh, ch, &inp, &net);
 			if((inp) && (stcb)) {
 				sctp_send_packet_dropped(stcb, net, m, iphlen, 1);
+				sctp_chunk_output(inp, stcb, 2);
 			}
 			sctp_pegs[SCTP_BAD_CSUM]++;
 			goto bad;

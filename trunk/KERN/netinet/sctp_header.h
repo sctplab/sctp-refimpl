@@ -155,6 +155,7 @@ struct sctp_init {
 
 /* state cookie header */
 struct sctp_state_cookie {		/* this is our definition... */
+	u_int8_t  identification[16];	/* id of who we are */
 	u_int32_t cookie_life;		/* life I will award this cookie */
 	u_int32_t tie_tag_my_vtag;	/* my tag in old association */
 	u_int32_t tie_tag_peer_vtag;	/* peers tag in old association */
@@ -318,8 +319,6 @@ struct sctp_shutdown_complete_chunk {
 
 /* Oper error holding a stale cookie */
 struct sctp_stale_cookie_msg {
-	struct sctphdr sh;
-	struct sctp_chunkhdr ch;
 	struct sctp_paramhdr ph;	/* really an error cause */
 	u_int32_t time_usec;
 };

@@ -2980,8 +2980,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		callout_stop(&net->rxt_timer.timer);
 		callout_stop(&net->pmtu_timer.timer);
 	}
-
-
 	prev = NULL;
 	while (!TAILQ_EMPTY(&asoc->nets)) {
 		net = TAILQ_FIRST(&asoc->nets);
@@ -4066,6 +4064,11 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			if (phdr == NULL) {
 				return (-1);
 			}
+			stcb->asoc.peer_supports_asconf = 0;
+			stcb->asoc.peer_supports_asconf_setprim = 0;
+			stcb->asoc.peer_supports_prsctp = 0;
+			stcb->asoc.peer_supports_pktdrop = 0;
+			stcb->asoc.peer_supports_strreset = 0;
 			pr_supported = (struct sctp_supported_chunk_types_param *)phdr;
 			num_ent = plen - sizeof(struct sctp_paramhdr);
 			for (i=0; i<num_ent; i++) {
@@ -4097,6 +4100,15 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			/* Peer supports ECN-nonce */
 			stcb->asoc.peer_supports_ecn_nonce = 1;
 			stcb->asoc.ecn_nonce_allowed = 1;
+		} else {
+			if ((ptype & 0x8000) == 0x0000) {
+				/* must stop processing the rest of
+				 * the param's. Any report bits were
+				 * handled with the call to sctp_arethere_unrecognized_parameters()
+				 * when the INIT or INIT-ACK was first seen.
+				 */
+				break;
+			}
 		}
 		offset += SCTP_SIZE32(plen);
 		if (offset >= limit) {
