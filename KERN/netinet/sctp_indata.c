@@ -1981,6 +1981,10 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			mmm = mmm->m_next;
 		}
 		mmm->m_flags |= M_EOR;
+		if (compare_with_wrap(tsn, asoc->highest_tsn_inside_map, MAX_TSN)) {
+			/* we have a new high score */
+			asoc->highest_tsn_inside_map = tsn;
+		}
 		SCTP_TCB_UNLOCK(stcb);
 		SCTP_INP_WLOCK(stcb->sctp_ep);
 		SCTP_TCB_LOCK(stcb);
@@ -2187,12 +2191,11 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			return (0);
 		}
 	}
- finish_express_del:
-	/* Mark it as received */
 	if (compare_with_wrap(tsn, asoc->highest_tsn_inside_map, MAX_TSN)) {
 		/* we have a new high score */
 		asoc->highest_tsn_inside_map = tsn;
 	}
+ finish_express_del:
 	if (last_chunk) {
 		*m = NULL;
 	}
