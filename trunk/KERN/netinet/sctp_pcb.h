@@ -138,7 +138,6 @@ struct sctp_epinfo {
 	struct sctppcbhead *sctp_ephash;
 	u_long hashmark;
 
-#ifdef SCTP_TCP_MODEL_SUPPORT
 	/*
 	 * The TCP model represents a substantial overhead in that we get
 	 * an additional hash table to keep explicit connections in. The
@@ -154,7 +153,6 @@ struct sctp_epinfo {
 	 */
 	struct sctppcbhead *sctp_tcpephash;
 	u_long hashtcpmark;
-#endif /* SCTP_TCP_MODEL_SUPPORT */
 	uint32_t hashtblsize;
 
 	struct sctppcbhead listhead;
@@ -387,10 +385,8 @@ struct sctp_tcb *sctp_findassociation_addr(struct mbuf *, int, int,
 struct sctp_tcb *sctp_findassociation_addr_sa(struct sockaddr *,
 	struct sockaddr *, struct sctp_inpcb **, struct sctp_nets **, int);
 
-#ifdef SCTP_TCP_MODEL_SUPPORT
 void sctp_move_pcb_and_assoc(struct sctp_inpcb *, struct sctp_inpcb *,
 	struct sctp_tcb *);
-#endif
 
 /*
  * For this call ep_addr, the to is the destination endpoint address

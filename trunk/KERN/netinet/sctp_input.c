@@ -576,7 +576,6 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 #endif
 		/* notify upper layer that peer has initiated a shutdown */
 		sctp_ulp_notify(SCTP_NOTIFY_PEER_SHUTDOWN, stcb, 0, NULL);
-#ifdef SCTP_TCP_MODEL_SUPPORT
 
 		if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
  		    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
@@ -587,7 +586,6 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 			 */
 			stcb->sctp_ep->sctp_socket->so_state |= SS_CANTSENDMORE;
 		}
-#endif
 		/* reset time */
 		SCTP_GETTIME_TIMEVAL(&asoc->time_entered);
 	}
@@ -672,16 +670,14 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
 	sctp_send_shutdown_complete(stcb, net);
 	/* notify upper layer protocol */
 	sctp_ulp_notify(SCTP_NOTIFY_ASSOC_DOWN, stcb, 0, NULL);
-#ifdef SCTP_TCP_MODEL_SUPPORT
-		if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
-		    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
-			stcb->sctp_ep->sctp_flags &= ~SCTP_PCB_FLAGS_CONNECTED;
-			/* Set the connected flag to disconnected */
-			stcb->sctp_ep->sctp_socket->so_snd.sb_cc = 0;
-			stcb->sctp_ep->sctp_socket->so_snd.sb_mbcnt = 0;
-			soisdisconnected(stcb->sctp_ep->sctp_socket);
-		}
-#endif
+	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
+	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
+		stcb->sctp_ep->sctp_flags &= ~SCTP_PCB_FLAGS_CONNECTED;
+		/* Set the connected flag to disconnected */
+		stcb->sctp_ep->sctp_socket->so_snd.sb_cc = 0;
+		stcb->sctp_ep->sctp_socket->so_snd.sb_mbcnt = 0;
+		soisdisconnected(stcb->sctp_ep->sctp_socket);
+	}
 	/* free the TCB but first save off the ep */
 	sctp_free_assoc(stcb->sctp_ep, stcb);
 }
@@ -1197,7 +1193,6 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 				/* if ok, move to OPEN state */
 				asoc->state = SCTP_STATE_OPEN;
 			}
-#ifdef SCTP_TCP_MODEL_SUPPORT
 			if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 			    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) &&
 			    (!(stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_ACCEPTING))) {
@@ -1211,7 +1206,6 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 				    SCTP_PCB_FLAGS_CONNECTED;
 				soisconnected(stcb->sctp_ep->sctp_socket);
 			}
-#endif
 			/* notify upper layer */
 			*notification = SCTP_NOTIFY_ASSOC_UP;
 			sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb,
@@ -1323,7 +1317,6 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		    (asoc->state & SCTP_STATE_COOKIE_ECHOED)) {
 			*notification = SCTP_NOTIFY_ASSOC_UP;
 
-#ifdef SCTP_TCP_MODEL_SUPPORT
 			if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 			     (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) &&
 			    !(stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_ACCEPTING)) {
@@ -1331,7 +1324,6 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 				    SCTP_PCB_FLAGS_CONNECTED;
 				soisconnected(stcb->sctp_ep->sctp_socket);
 			}
-#endif
 		}
 		if (asoc->state & SCTP_STATE_SHUTDOWN_PENDING) {
 			asoc->state = SCTP_STATE_OPEN |
@@ -1639,7 +1631,6 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 
 	/* set up to notify upper layer */
 	*notification = SCTP_NOTIFY_ASSOC_UP;
-#ifdef SCTP_TCP_MODEL_SUPPORT
 	if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 	     (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL))  &&
 	    !(stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_ACCEPTING)) {
@@ -1666,9 +1657,6 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	} else {
 		sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, *netp);
 	}
-#else
-	sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, *netp);
-#endif
 	/* since we did not send a HB make sure we don't double things */
 	(*netp)->hb_responded = 1;
 
@@ -1711,9 +1699,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	struct ip *iph;
 	int notification = 0;
 	struct sctp_nets *netl;
-#ifdef SCTP_TCP_MODEL_SUPPORT
 	int had_a_existing_tcb = 0;
-#endif
 
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INPUT2) {
@@ -2030,9 +2016,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			printf("sctp_handle_cookie: processing EXISTING cookie\n");
 		}
 #endif
-#ifdef SCTP_TCP_MODEL_SUPPORT
 		had_a_existing_tcb = 1;
-#endif
 		*stcb = sctp_process_cookie_existing(m, iphlen, offset, sh,
 		    cookie, cookie_len, *inp_p, *stcb, *netp, to, &notification);
 	}
@@ -2077,7 +2061,6 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	}
 #endif
 
-#ifdef SCTP_TCP_MODEL_SUPPORT
 	if ((*inp_p)->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) {
 		if (!had_a_existing_tcb ||
 		    (((*inp_p)->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
@@ -2136,7 +2119,6 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			return (m);
 		}
 	}
-#endif
 	if ((notification) && ((*inp_p)->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE)) {
 		sctp_ulp_notify(notification, *stcb, 0, NULL);
 	}
@@ -2183,13 +2165,11 @@ sctp_handle_cookie_ack(struct sctp_cookie_ack_chunk *cp,
 		}
 		SCTP_GETTIME_TIMEVAL(&asoc->time_entered);
 		sctp_ulp_notify(SCTP_NOTIFY_ASSOC_UP, stcb, 0, NULL);
-#ifdef SCTP_TCP_MODEL_SUPPORT
 		if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 		    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
 			stcb->sctp_ep->sctp_flags |= SCTP_PCB_FLAGS_CONNECTED;
 			soisconnected(stcb->sctp_ep->sctp_socket);
 		}
-#endif
 		sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep,
 		    stcb, net);
 		/* since we did not send a HB make sure we don't double things */
@@ -2362,7 +2342,6 @@ sctp_handle_shutdown_complete(struct sctp_shutdown_complete_chunk *cp,
 	}
 	/* notify upper layer protocol */
 	sctp_ulp_notify(SCTP_NOTIFY_ASSOC_DOWN, stcb, 0, NULL);
-#ifdef SCTP_TCP_MODEL_SUPPORT
 	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
 		stcb->sctp_ep->sctp_flags &= ~SCTP_PCB_FLAGS_CONNECTED;
@@ -2370,7 +2349,6 @@ sctp_handle_shutdown_complete(struct sctp_shutdown_complete_chunk *cp,
 		stcb->sctp_ep->sctp_socket->so_snd.sb_mbcnt = 0;
 		soisdisconnected(stcb->sctp_ep->sctp_socket);
 	}
-#endif
 	/* are the queues empty? they should be */
 	if (!TAILQ_EMPTY(&asoc->send_queue) ||
 	    !TAILQ_EMPTY(&asoc->sent_queue) ||
@@ -3461,7 +3439,6 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				    NULL);
 				*offset = length;
 				return (NULL);
-#ifdef SCTP_TCP_MODEL_SUPPORT
 			} else if (inp->sctp_flags & SCTP_PCB_FLAGS_ACCEPTING) {
 				/* we are accepting so check limits for TCP */
 				if (inp->sctp_socket->so_qlen >
@@ -3487,7 +3464,6 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					*offset = length;
 					return (NULL);
 				}
-#endif
 			}
 			{
 				struct mbuf *ret_buf;
