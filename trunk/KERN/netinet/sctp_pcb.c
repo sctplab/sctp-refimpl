@@ -2360,7 +2360,10 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 				 * we must have common site scope. Don't set
 				 * the local scope since we may not share all
 				 * links, only loopback can do this.
+				 * Links on the local network would also
+				 * be on our private network for v4 too.
 				 */
+				stcb->asoc.ipv4_local_scope = 1;
 				stcb->asoc.site_scope = 1;
 			} else if (IN6_IS_ADDR_SITELOCAL(&sin6->sin6_addr)) {
 				/*
