@@ -138,7 +138,6 @@ struct sctp_epinfo {
 	struct sctppcbhead *sctp_ephash;
 	u_long hashmark;
 
-#ifdef SCTP_TCP_MODEL_SUPPORT
 	/*
 	 * The TCP model represents a substantial overhead in that we get
 	 * an additional hash table to keep explicit connections in. The
@@ -154,7 +153,6 @@ struct sctp_epinfo {
 	 */
 	struct sctppcbhead *sctp_tcpephash;
 	u_long hashtcpmark;
-#endif /* SCTP_TCP_MODEL_SUPPORT */
 	uint32_t hashtblsize;
 
 	struct sctppcbhead listhead;
@@ -232,19 +230,19 @@ extern uint32_t sctp_pegs[SCTP_NUMBER_OF_PEGS];
  * how to access /dev/random.
  */
 struct sctp_pcb {
-	int time_of_secret_change; /* number of seconds from timeval.tv_sec */
+	unsigned int time_of_secret_change; /* number of seconds from timeval.tv_sec */
 	uint32_t secret_key[SCTP_HOW_MANY_SECRETS][SCTP_NUMBER_OF_SECRETS];
-	int size_of_a_cookie;
+	unsigned int size_of_a_cookie;
 
-	int sctp_timeoutticks[SCTP_NUM_TMRS];
-	int sctp_minrto;
-	int sctp_maxrto;
-	int initial_rto;
+	unsigned int sctp_timeoutticks[SCTP_NUM_TMRS];
+	unsigned int sctp_minrto;
+	unsigned int sctp_maxrto;
+	unsigned int initial_rto;
 
 	int initial_init_rto_max;
 
-	int32_t sctp_sws_sender;
-	int32_t sctp_sws_receiver;
+	uint32_t sctp_sws_sender;
+	uint32_t sctp_sws_receiver;
 
 	/* various thresholds */
 	/* Max times I will init at a guy */
@@ -325,7 +323,7 @@ struct sctp_inpcb {
 	void *sctp_tcb_at_block;
 	struct sctp_iterator *inp_starting_point_for_iterator;
 	int  error_on_block;
-	int32_t sctp_frag_point;
+	uint32_t sctp_frag_point;
 	uint32_t sctp_vtag_last;
 	struct mbuf *pkt, *pkt_last, *sb_last_mpkt;
 	struct mbuf *control;
@@ -387,10 +385,8 @@ struct sctp_tcb *sctp_findassociation_addr(struct mbuf *, int, int,
 struct sctp_tcb *sctp_findassociation_addr_sa(struct sockaddr *,
 	struct sockaddr *, struct sctp_inpcb **, struct sctp_nets **, int);
 
-#ifdef SCTP_TCP_MODEL_SUPPORT
 void sctp_move_pcb_and_assoc(struct sctp_inpcb *, struct sctp_inpcb *,
 	struct sctp_tcb *);
-#endif
 
 /*
  * For this call ep_addr, the to is the destination endpoint address

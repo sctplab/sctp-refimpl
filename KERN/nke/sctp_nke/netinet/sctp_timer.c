@@ -400,7 +400,9 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	struct sctp_nets *lnets;
 	struct timeval now, min_wait, tv;
 	int cur_rto;
-	int win_probes, non_win_probes, orig_rwnd, orig_flight, audit_tf, cnt_mk, num_mk, fir;
+	int win_probes, non_win_probes, orig_rwnd, audit_tf, num_mk, fir;
+	unsigned int cnt_mk;
+	u_int32_t orig_flight;
 	u_int32_t tsnlast, tsnfirst;
 
 	/* none in flight now */
@@ -531,10 +533,6 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 #endif
 					continue;
 				}
-			}
-			stcb->asoc.total_flight_book -= chk->book_size;
-			if (stcb->asoc.total_flight_book < 0) {
-				stcb->asoc.total_flight_book = 0;
 			}
 			stcb->asoc.total_flight_count--;
 			if (stcb->asoc.total_flight_count < 0) {
@@ -681,7 +679,6 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 		}
 #endif /* SCTP_DEBUG */
 		stcb->asoc.total_flight = 0;
-		stcb->asoc.total_flight_book = 0;
 		stcb->asoc.total_flight_count = 0;
 		/* Clear all networks flight size */
 		TAILQ_FOREACH(lnets, &stcb->asoc.nets, sctp_next) {
@@ -695,9 +692,8 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 		}
 		TAILQ_FOREACH(chk, &stcb->asoc.sent_queue, sctp_next) {
 			if (chk->sent < SCTP_DATAGRAM_RESEND) {
-				stcb->asoc.total_flight += chk->send_size;
-				chk->whoTo->flight_size += chk->send_size;
-				stcb->asoc.total_flight_book += chk->book_size;
+				stcb->asoc.total_flight += chk->book_size;
+				chk->whoTo->flight_size += chk->book_size;
 				stcb->asoc.total_flight_count++;
 			}
 		}
@@ -800,7 +796,7 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 			if (net != stcb->asoc.primary_destination) {
 				/* send a immediate HB if our RTO is stale */
 				struct  timeval now;
-				int ms_goneby;
+				unsigned int ms_goneby;
 				SCTP_GETTIME_TIMEVAL(&now);
 				if (net->last_sent_time.tv_sec) {
 					ms_goneby = (now.tv_sec - net->last_sent_time.tv_sec) * 1000;
@@ -1230,7 +1226,7 @@ sctp_audit_stream_queues_for_size(struct sctp_inpcb *inp,
 {
 	struct sctp_stream_out *outs;
 	struct sctp_tmit_chunk *chk;
-	int chks_in_queue=0;
+	unsigned int chks_in_queue=0;
 
 	if ((stcb == NULL) || (inp == NULL)) 
 		return;
@@ -1319,7 +1315,7 @@ sctp_heartbeat_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 }
 
 #define SCTP_NUMBER_OF_MTU_SIZES 18
-static int mtu_sizes[]={
+static u_int32_t mtu_sizes[]={
 	68,
 	296,
 	508,
@@ -1410,7 +1406,7 @@ void sctp_autoclose_timer(struct sctp_inpcb *inp,
 		/* Now has long enough transpired to autoclose? */
 		ticks_gone_by = ((tn.tv_sec - tim_touse->tv_sec) * hz);
 		if ((ticks_gone_by > 0) &&
-		    (ticks_gone_by >= asoc->sctp_autoclose_ticks)) {
+		    (ticks_gone_by >= (int)asoc->sctp_autoclose_ticks)) {
 			/*
 			 * autoclose time has hit, call the output routine,
 			 * which should do nothing just to be SURE we don't

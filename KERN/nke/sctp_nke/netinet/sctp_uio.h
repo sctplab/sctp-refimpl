@@ -446,6 +446,21 @@ struct sctp_fr_map {
 	u_int32_t high;
 };
 
+struct sctp_rwnd_log {
+	u_int32_t rwnd;
+	u_int32_t send_size;
+	u_int32_t overhead;
+	u_int32_t new_rwnd;
+};
+
+struct sctp_mbcnt_log {
+	u_int32_t total_queue_size;
+	u_int32_t size_change;
+	u_int32_t total_queue_mb_size;
+	u_int32_t mbcnt_change;
+};
+
+
 struct sctp_cwnd_log{
 	union {
 		struct sctp_blk_args blk;
@@ -453,6 +468,8 @@ struct sctp_cwnd_log{
 		struct sctp_str_log strlog;
 		struct sctp_fr_log fr;
 		struct sctp_fr_map map;
+		struct sctp_rwnd_log rwnd;
+		struct sctp_mbcnt_log mbcnt;
 	}x;
 	u_int8_t from;
 	u_int8_t event_type;

@@ -136,7 +136,7 @@ update_crc32(u_int32_t crc32,
 	     unsigned char *buffer,
 	     unsigned int length)
 {
-	int i;
+	unsigned int i;
 
 	for (i = 0; i < length; i++) {
 		SCTP_CRC32C(crc32, buffer[i]);

@@ -153,14 +153,14 @@ struct sctp_nets {
 		union sctp_sockstore _s_addr;	/* our selected source address */
 	} ra;
 	/* mtu discovered so far */
-	int mtu;
-        int ssthresh;		/* not sure about this one for split */
+	u_int32_t mtu;
+        u_int32_t ssthresh;		/* not sure about this one for split */
 
 
 	/* smoothed average things for RTT and RTO itself */
 	int lastsa;
 	int lastsv;
-	int RTO;
+	unsigned int RTO;
 
 	/* This is used for SHUTDOWN/SHUTDOWN-ACK/SEND or INIT timers */    
 	struct sctp_timer rxt_timer;
@@ -174,14 +174,14 @@ struct sctp_nets {
 	 * flight size variables and such, sorry Vern, I could not avoid
 	 * this if I wanted performance :>
 	 */
-	int flight_size;
-	int cwnd; /* actual cwnd */
-	int prev_cwnd; /* cwnd before any processing */
-	int partial_bytes_acked; /* in CA tracks when to increment a MTU */
+	u_int32_t flight_size;
+	u_int32_t cwnd; /* actual cwnd */
+	u_int32_t prev_cwnd; /* cwnd before any processing */
+	u_int32_t partial_bytes_acked; /* in CA tracks when to increment a MTU */
 
 	/* tracking variables to avoid the aloc/free in sack processing */
-	int net_ack;
-	int net_ack2;
+	unsigned int net_ack;
+	unsigned int net_ack2;
 	/*
 	 * These only are valid if the primary dest_sstate holds the
 	 * SCTP_ADDR_SWITCH_PRIMARY flag
@@ -245,8 +245,9 @@ struct sctp_tmit_chunk {
 	int32_t   sent;		/* the send status */
 	int32_t   snd_count;			/* number of times I sent */
 	u_int32_t flags;		/* flags, such as FRAGMENT_OK */
-	int32_t   send_size;
-	int32_t   book_size;
+	u_int32_t   send_size;
+	u_int32_t   book_size;
+	u_int32_t   mbcnt;
 	struct sctp_association *asoc;	/* bp to asoc this belongs to */
 	struct timeval sent_rcv_time;	/* filled in if RTT being calculated */
 	struct mbuf *data;		/* pointer to mbuf chain of data */
@@ -311,9 +312,7 @@ struct sctp_association {
 	struct sctp_timer strreset_timer;	/* stream reset */
 	struct sctp_timer shut_guard_timer;	/* guard */
 	struct sctp_timer autoclose_timer;	/* automatic close timer */
-#ifdef SCTP_TCP_MODEL_SUPPORT
 	struct sctp_timer delayed_event_timer;	/* timer for delayed events */
-#endif /* SCTP_TCP_MODEL_SUPPORT */
 
 	/* list of local addresses when add/del in progress */
 	struct sctpladdr sctp_local_addr_list;
@@ -484,59 +483,58 @@ struct sctp_association {
 	 * and then await sending. The stream seq comes when it
 	 * is first put in the individual str queue
 	 */
-	int stream_queue_cnt;
-	int send_queue_cnt;  
-	int sent_queue_cnt;
-	int sent_queue_cnt_removeable;
+	unsigned int stream_queue_cnt;
+	unsigned int send_queue_cnt;  
+	unsigned int sent_queue_cnt;
+	unsigned int sent_queue_cnt_removeable;
 	/*
 	 * Number on sent queue that are marked for retran until this
 	 * value is 0 we only send one packet of retran'ed data.
 	 */
-	int sent_queue_retran_cnt;
+	unsigned int sent_queue_retran_cnt;
 
-	int size_on_reasm_queue;
-	int cnt_on_reasm_queue;
+	unsigned int size_on_reasm_queue;
+	unsigned int cnt_on_reasm_queue;
 	/* amount of data (bytes) currently in flight (on all destinations) */
-	int total_flight;
+	unsigned int total_flight;
 	/* Total book size in flight */
-	int total_flight_book;
-	int total_flight_count;	/* count of chunks used with book total */
+	unsigned int total_flight_count;	/* count of chunks used with book total */
 	/* count of destinaton nets and list of destination nets */
-	int numnets;
+	unsigned int numnets;
 
 	/* Total error count on this association */
-	int overall_error_count;
+	unsigned int overall_error_count;
 
-	int size_on_delivery_queue;
-	int cnt_on_delivery_queue;
+	unsigned int size_on_delivery_queue;
+	unsigned int cnt_on_delivery_queue;
 
-	int cnt_msg_on_sb;
+	unsigned int cnt_msg_on_sb;
 
 	/* All stream count of chunks for delivery */
-	int size_on_all_streams;
-	int cnt_on_all_streams;
+	unsigned int size_on_all_streams;
+	unsigned int cnt_on_all_streams;
 
 	/* Heart Beat delay in ticks */
-	int heart_beat_delay;
+	unsigned int heart_beat_delay;
 
 	/* autoclose */
-	int sctp_autoclose_ticks;
+	unsigned int sctp_autoclose_ticks;
 
 	/* how many preopen streams we have */
-	int pre_open_streams;
+	unsigned int pre_open_streams;
 
 	/* How many streams I support coming into me */
-	int max_inbound_streams;
+	unsigned int max_inbound_streams;
 
 	/* the cookie life I award for any cookie, in seconds */
-	int cookie_life;
+	unsigned int cookie_life;
 
-	int numduptsns;
+	unsigned int numduptsns;
 	int dup_tsns[SCTP_MAX_DUP_TSNS];
-	int initial_init_rto_max;	/* initial RTO for INIT's */
-	int initial_rto;		/* initial send RTO */
-	int minrto;			/* per assoc RTO-MIN */
-	int maxrto;			/* per assoc RTO-MAX */
+	unsigned int initial_init_rto_max;	/* initial RTO for INIT's */
+	unsigned int initial_rto;		/* initial send RTO */
+	unsigned int minrto;			/* per assoc RTO-MIN */
+	unsigned int maxrto;			/* per assoc RTO-MAX */
 	/* Being that we have no bag to collect stale cookies, and
 	 * that we really would not want to anyway.. we will count
 	 * them in this counter. We of course feed them to the
@@ -644,6 +642,8 @@ struct sctp_association {
 	u_int8_t seen_a_sack_this_pkt;
 	u_int8_t stream_reset_outstanding;
 	u_int8_t delayed_connection;
+	u_int8_t ifp_had_enobuf;
+	u_int8_t saw_sack_with_frags;
 	/*
 	 * The mapping array is used to track out of order sequences above
 	 * last_acked_seq. 0 indicates packet missing 1 indicates packet 

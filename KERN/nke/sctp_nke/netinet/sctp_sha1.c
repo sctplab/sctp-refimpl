@@ -164,8 +164,8 @@ SHA1_Final(struct sha1_context *ctx, unsigned char *digest)
 	 * block through by itself.  Also the 64 bit int must be in
 	 * network byte order.
 	 */
-	int i, left_to_fill;
-	unsigned int *ptr;
+	int left_to_fill;
+	unsigned int i, *ptr;
 	if (ctx->how_many_in_block > 55) {
 		/*
 		 * special case, we need to process two blocks here.

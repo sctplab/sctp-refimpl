@@ -192,7 +192,6 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 	 * peer and the FROM field represents my address. For this module it
 	 * is reversed of that.
 	 */
-#ifdef SCTP_TCP_MODEL_SUPPORT
 	/*
 	 * If we support the TCP model, then we must now dig through to
 	 * see if we can find our endpoint in the list of tcp ep's.
@@ -338,7 +337,6 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 			}
 		}
 	}
-#endif /* SCTP_TCP_MODEL_SUPPORT */
 	return (NULL);
 }
 
@@ -466,7 +464,6 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 	} else {
 		return (NULL);
 	}
-#ifdef SCTP_TCP_MODEL_SUPPORT
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) {
 		/*
 		 * Now either this guy is our listner or it's the connector.
@@ -524,9 +521,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 				}
 			}
 		}
-	} else 
-#endif
-	{
+	} else {
 		head = &inp->sctp_tcbhash[SCTP_PCBHASH_ALLADDR(rport,
 		    inp->sctp_hashmark)];
 		if (head == NULL) {
@@ -817,7 +812,6 @@ sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool)
 #endif
  	inp = sctp_endpoint_probe(nam, head, lport);
 
-#ifdef SCTP_TCP_MODEL_SUPPORT
 	/*
 	 * If the TCP model exists it could be that the main listening
 	 * endpoint is gone but there exists a connected socket for this
@@ -826,7 +820,7 @@ sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool)
 	 * has further code to look at all TCP models.
 	 */
 	if (inp == NULL && find_tcp_pool) {
-		int i;
+		unsigned int i;
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_PCB1) {
 			printf("EP was NULL and TCP model is supported\n");
@@ -849,7 +843,6 @@ sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool)
 			}
 		}
 	}
-#endif /* SCTP_TCP_MODEL_SUPPORT */
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_PCB1) {
 		printf("EP to return is %p\n", inp);
@@ -868,7 +861,6 @@ sctp_findassociation_addr_sa(struct sockaddr *to, struct sockaddr *from,
     struct sctp_inpcb **inp_p, struct sctp_nets **netp, int find_tcp_pool)
 {
 	struct sctp_inpcb *inp;
-#ifdef SCTP_TCP_MODEL_SUPPORT
 	struct sctp_tcb *retval;
 
 	if (find_tcp_pool) {
@@ -881,7 +873,6 @@ sctp_findassociation_addr_sa(struct sockaddr *to, struct sockaddr *from,
 			return (retval);
 		}
 	}
-#endif
 	inp = sctp_pcb_findep(to, 0);
 	if (inp_p != NULL) {
 		*inp_p = inp;
@@ -1130,7 +1121,6 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 		}
 	}
 	find_tcp_pool = 0;
-#ifdef SCTP_TCP_MODEL_SUPPORT
 	if ((ch->chunk_type != SCTP_INITIATION) &&
 	    (ch->chunk_type != SCTP_INITIATION_ACK) &&
 	    (ch->chunk_type != SCTP_COOKIE_ACK) &&
@@ -1138,7 +1128,6 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 		/* Other chunk types go to the tcp pool. */
 		find_tcp_pool = 1;
 	}
-#endif
 	if (inp_p) {
 		retval = sctp_findassociation_addr_sa(to, from, inp_p, netp,
 		    find_tcp_pool);
@@ -1162,7 +1151,6 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 #endif
 		if ((ch->chunk_type == SCTP_INITIATION) ||
 		    (ch->chunk_type == SCTP_INITIATION_ACK)) {
-#ifdef SCTP_TCP_MODEL_SUPPORT
 			/*
 			 * special hook, we do NOT return linp or an
 			 * association that is linked to an existing
@@ -1182,7 +1170,6 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 				}
 				return (NULL);
 			}
-#endif /* SCTP_TCP_MODEL_SUPPORT */
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_PCB1) {
 				printf("Now doing SPECIAL find\n");
@@ -1309,7 +1296,6 @@ sctp_inpcb_alloc(struct socket *so)
 		inp->sctp_flags |= (SCTP_PCB_FLAGS_RECVDATAIOEVNT);
 		/* Be sure it is NON-BLOCKING IO for UDP */
 		/*so->so_state |= SS_NBIO;*/
-#ifdef SCTP_TCP_MODEL_SUPPORT
 	} else if (so->so_type == SOCK_STREAM) {
 		/* TCP style socket */
 		inp->sctp_flags = (SCTP_PCB_FLAGS_TCPTYPE |
@@ -1317,7 +1303,6 @@ sctp_inpcb_alloc(struct socket *so)
 		inp->sctp_flags |= (SCTP_PCB_FLAGS_RECVDATAIOEVNT);
 		/* Be sure we have blocking IO bu default */
 		so->so_state &= ~SS_NBIO;
-#endif /* SCTP_TCP_MODEL_SUPPORT */
 	} else {
 		/*
 		 * unsupported socket type (RAW, etc)- in case we missed
@@ -1434,7 +1419,6 @@ sctp_inpcb_alloc(struct socket *so)
 }
 
 
-#ifdef SCTP_TCP_MODEL_SUPPORT
 void
 sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
     struct sctp_tcb *stcb)
@@ -1505,8 +1489,6 @@ sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
 		}
 	}
 }
-#endif
-
 
 static int
 sctp_isport_inuse(struct sctp_inpcb *inp, uint16_t lport)
@@ -2494,15 +2476,16 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	if (stcb->asoc.smallest_mtu > net->mtu) {
 		stcb->asoc.smallest_mtu = net->mtu;
 	}
-	if (net->addr_is_local) {
-		net->cwnd = max((net->mtu * 4), SCTP_INITIAL_CWND);
-	} else {
-		net->cwnd = min((net->mtu * 4), max((2*net->mtu),
-		    SCTP_INITIAL_CWND));
-	}
+	/* We take the max of the burst limit times a MTU or the INITIAL_CWND.
+	 * We then limit this to 4 MTU's of sending.
+	 */
+ 	net->cwnd = min((net->mtu * 4), max((stcb->asoc.max_burst * net->mtu), SCTP_INITIAL_CWND));
+
+	/* we always get at LEAST 2 MTU's */
 	if (net->cwnd < (2 * net->mtu)) {
 		net->cwnd = 2 * net->mtu;
 	}
+
 	net->ssthresh = stcb->asoc.peers_rwnd;
 
 	net->src_addr_selected = 0;
@@ -2596,7 +2579,6 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		return (NULL);
 	}
 
-#ifdef SCTP_TCP_MODEL_SUPPORT
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) {
 		/*
 		 * If its in the TCP pool, its NOT allowed to create an
@@ -2607,7 +2589,6 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		*error = EINVAL;
 		return (NULL);
  	}
-#endif
 
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_PCB3) {
@@ -2877,7 +2858,7 @@ sctp_add_vtag_to_timewait(struct sctp_inpcb *inp, u_int32_t tag)
 					twait_block->vtag_block[0].v_tag = tag;
 					set = 1;
 				} else if ((twait_block->vtag_block[i].v_tag) &&
-				    (twait_block->vtag_block[i].tv_sec_at_expire >
+				    ((long)twait_block->vtag_block[i].tv_sec_at_expire >
 				    now.tv_sec)) {
 					/* Audit expires this guy */
 					twait_block->vtag_block[i].tv_sec_at_expire = 0;
@@ -3001,9 +2982,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	callout_stop(&asoc->asconf_timer.timer);
 	callout_stop(&asoc->shut_guard_timer.timer);
 	callout_stop(&asoc->autoclose_timer.timer);
-#ifdef SCTP_TCP_MODEL_SUPPORT
 	callout_stop(&asoc->delayed_event_timer.timer);
-#endif /* SCTP_TCP_MODEL_SUPPORT */
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 		callout_stop(&net->rxt_timer.timer);
 		callout_stop(&net->pmtu_timer.timer);
@@ -3224,7 +3203,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	/* now clean up the tasoc itself */
 	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
 	sctppcbinfo.ipi_count_asoc--;
-#ifdef SCTP_TCP_MODEL_SUPPORT
 	if ((inp->sctp_socket->so_snd.sb_cc) ||
 	    (inp->sctp_socket->so_snd.sb_mbcnt)) {
 		/* This will happen when a abort is done */
@@ -3250,7 +3228,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 			 */
 		}
 	}
-#endif /* SCTP_TCP_MODEL_SUPPORT */
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 		sctp_inpcb_free(inp, 0);
 	}
@@ -3671,17 +3648,6 @@ static int sctp_scale_up_for_address = SCTP_SCALE_FOR_ADDR;
 
 #endif /* FreeBSD || APPLE */
 
-/* sysctl to enable/disable SCTP_PCB_FLAGS_AUTO_ASCONF for new EP's */
-int sctp_auto_asconf = SCTP_DEFAULT_AUTO_ASCONF;
-#if defined(__FreeBSD__)
-SYSCTL_INT(_net_inet_sctp, SCTPCTL_AUTOASCONF, sctp_auto_asconf,
-	   CTLFLAG_RW, &sctp_auto_asconf, 0,
-	   "auto ASCONF flag enable(1)/disable(0)");
-#elif defined(__APPLE__)
-SYSCTL_INT(_net_inet_sctp, OID_AUTO, sctp_auto_asconf, CTLFLAG_RW,
-	   &sctp_auto_asconf, 0, "auto ASCONF flag enable(1)/disable(0)");
-#endif
-
 #ifndef SCTP_TCBHASHSIZE
 #define SCTP_TCBHASHSIZE 1024
 #endif
@@ -3757,7 +3723,6 @@ sctp_pcb_init()
 #endif
 	    &sctppcbinfo.hashmark);
 
-#ifdef SCTP_TCP_MODEL_SUPPORT
 	sctppcbinfo.sctp_tcpephash = hashinit(hashtblsize,
 #ifdef __NetBSD__
 	    HASH_LIST,
@@ -3767,7 +3732,6 @@ sctp_pcb_init()
 	    M_WAITOK,
 #endif
 	    &sctppcbinfo.hashtcpmark);
-#endif /* SCTP_TCP_MODEL_SUPPORT */
 
 	sctppcbinfo.hashtblsize = hashtblsize;
 
@@ -4249,7 +4213,7 @@ sctp_is_vtag_good(struct sctp_inpcb *inp, u_int32_t tag, struct timeval *now)
 				if (twait_block->vtag_block[i].v_tag == 0) {
 					/* not used */
 					continue;
-				} else if (twait_block->vtag_block[i].tv_sec_at_expire >
+				} else if ((long)twait_block->vtag_block[i].tv_sec_at_expire >
 				    now->tv_sec) {
 					/* Audit expires this guy */
 					twait_block->vtag_block[i].tv_sec_at_expire = 0;
