@@ -529,7 +529,7 @@ sctp_ctlinput(cmd, sa, vip)
 					    inetctlerrmap[cmd]);
 			}
 #endif
-			if(inp != NULL) {
+			if ((stcb == NULL) && (inp != NULL)) {
 				/* reduce ref-count */
 				SCTP_INP_WLOCK(inp);
 				SCTP_INP_DECR_REF(inp);
@@ -572,7 +572,7 @@ sctp_getcred(SYSCTL_HANDLER_ARGS)
 					   sintosa(&addrs[1]),
 					   &inp, &net, 1);
 	if (stcb == NULL || inp == NULL || inp->sctp_socket == NULL) {
-		if(inp != NULL) {
+		if((inp != NULL) && (stcb == NULL)) {
 			/* reduce ref-count */
 			SCTP_INP_WLOCK(inp);
 			SCTP_INP_DECR_REF(inp);
@@ -1532,6 +1532,9 @@ sctp_do_connect_x(struct socket *so,
 		}
 		sa = (struct sockaddr *)((caddr_t)sa + incr);
 	}
+	SCTP_INP_WLOCK(inp);
+	SCTP_INP_DECR_REF(inp);
+	SCTP_INP_WUNLOCK(inp);
 	sa = (struct sockaddr *)(totaddrp + 1);
 	SCTP_INP_RLOCK(inp);
 #ifdef INET6
@@ -1615,14 +1618,6 @@ sctp_do_connect_x(struct socket *so,
 		}
 		sa = (struct sockaddr *)((caddr_t)sa + incr);
 	}
-	SCTP_INP_WLOCK(inp);
-	if (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) {
-		stcb->sctp_ep->sctp_flags |= SCTP_PCB_FLAGS_CONNECTED;
-		/* Set the connected flag so we can queue data */
-		soisconnecting(so);
-	}
-	SCTP_INP_DECR_REF(inp);
-	SCTP_INP_WUNLOCK(inp);
 	stcb->asoc.state = SCTP_STATE_COOKIE_WAIT;
 	if (delay) {
 		/* doing delayed connection */
@@ -1633,6 +1628,13 @@ sctp_do_connect_x(struct socket *so,
 		sctp_send_initiate(inp, stcb);
 	}
 	SCTP_TCB_UNLOCK(stcb);
+	SCTP_INP_WLOCK(inp);
+	if (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) {
+		stcb->sctp_ep->sctp_flags |= SCTP_PCB_FLAGS_CONNECTED;
+		/* Set the connected flag so we can queue data */
+		soisconnecting(so);
+	}
+	SCTP_INP_WUNLOCK(inp);
 	splx(s);
 	return error;
 }
@@ -3761,13 +3763,8 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		/* I made the same as TCP since we are not setup? */
 		return (ECONNRESET);
 	}
-
-	SCTP_INP_WLOCK(inp);
-	SCTP_INP_INCR_REF(inp);
-	SCTP_INP_WUNLOCK(inp);
-
-	SCTP_INP_RLOCK(inp);
 	SCTP_ASOC_CREATE_LOCK(inp);
+	SCTP_INP_RLOCK(inp);
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
 		/* Should I really unlock ? */
@@ -3838,9 +3835,6 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	stcb->asoc.state = SCTP_STATE_COOKIE_WAIT;
 	SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_entered);
 	sctp_send_initiate(inp, stcb);
-	SCTP_INP_WLOCK(inp);
-	SCTP_INP_DECR_REF(inp);
-	SCTP_INP_WUNLOCK(inp);
 
 	SCTP_TCB_UNLOCK(stcb);
 	splx(s);
