@@ -104,12 +104,13 @@ struct sctp_snd_all_completes {
 /* The lower byte is an enumeration of PR-SCTP policies */
 #define SCTP_PR_SCTP_TTL  0x0001	/* Time based PR-SCTP */
 #define SCTP_PR_SCTP_BUF  0x0002	/* Buffer based PR-SCTP */
-#define SCTP_PR_SCTP_NTX  0x0003	/* Number of transmissions based PR-SCTP */
+#define SCTP_PR_SCTP_RTX  0x0003	/* Number of retransmissions based PR-SCTP */
 
-#define PR_SCTP_ENABLED(x)     (((x) & 0xff) != 0)
-#define PR_SCTP_TTL_ENABLED(x) (((x) & 0xff) == SCTP_PR_SCTP_TTL)
-#define PR_SCTP_BUF_ENABLED(x) (((x) & 0xff) == SCTP_PR_SCTP_BUF)
-#define PR_SCTP_NTX_ENABLED(x) (((x) & 0xff) == SCTP_PR_SCTP_NTX)
+#define PR_SCTP_POLICY(x)      ((x) & 0xff)
+#define PR_SCTP_ENABLED(x)     (PR_SCTP_POLICY(x) != 0)
+#define PR_SCTP_TTL_ENABLED(x) (PR_SCTP_POLICY(x) == SCTP_PR_SCTP_TTL)
+#define PR_SCTP_BUF_ENABLED(x) (PR_SCTP_POLICY(x) == SCTP_PR_SCTP_BUF)
+#define PR_SCTP_RTX_ENABLED(x) (PR_SCTP_POLICY(x) == SCTP_PR_SCTP_RTX)
 
 /* Stat's */
 struct sctp_pcbinfo {

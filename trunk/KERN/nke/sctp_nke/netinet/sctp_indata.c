@@ -3010,25 +3010,38 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			/* done */
 			break;
 		}
-		if ((PR_SCTP_TTL_ENABLED(tp1->flags)) && tp1->sent < SCTP_DATAGRAM_ACKED) {
-			/* Is it expired? */
+		if (stcb->asoc.peer_supports_prsctp) {
+			if ((PR_SCTP_TTL_ENABLED(tp1->flags)) && tp1->sent < SCTP_DATAGRAM_ACKED) {
+				/* Is it expired? */
 #ifndef __FreeBSD__
-			if (timercmp(&now, &tp1->rec.data.timetodrop, >))
+				if (timercmp(&now, &tp1->rec.data.timetodrop, >)) {
 #else
-			if (timevalcmp(&now, &tp1->rec.data.timetodrop, >))
+				if (timevalcmp(&now, &tp1->rec.data.timetodrop, >)) {
 #endif
-			{
-				/* Yes so drop it */
-				if (tp1->data != NULL) {
-					sctp_release_pr_sctp_chunk(stcb, tp1,
-					    (SCTP_RESPONSE_TO_USER_REQ|SCTP_NOTIFY_DATAGRAM_SENT),
-					    &asoc->sent_queue);
+					/* Yes so drop it */
+					if (tp1->data != NULL) {
+						sctp_release_pr_sctp_chunk(stcb, tp1,
+						    (SCTP_RESPONSE_TO_USER_REQ|SCTP_NOTIFY_DATAGRAM_SENT),
+						    &asoc->sent_queue);
+					}
+					tp1 = TAILQ_NEXT(tp1, sctp_next);
+					continue;
 				}
-				tp1 = TAILQ_NEXT(tp1, sctp_next);
-				continue;
+			}
+			if ((PR_SCTP_RTX_ENABLED(tp1->flags)) && tp1->sent < SCTP_DATAGRAM_ACKED) {
+				/* Has it been retransmitted tv_sec times? */
+				if (tp1->snd_count > tp1->rec.data.timetodrop.tv_sec) {
+					/* Yes, so drop it */
+					if (tp1->data != NULL) {
+						sctp_release_pr_sctp_chunk(stcb, tp1,
+						    (SCTP_RESPONSE_TO_USER_REQ|SCTP_NOTIFY_DATAGRAM_SENT),
+						    &asoc->sent_queue);
+					}
+					tp1 = TAILQ_NEXT(tp1, sctp_next);
+					continue;
+				}
 			}
 		}
-
 		if (compare_with_wrap(tp1->rec.data.TSN_seq,
 		    asoc->this_sack_highest_gap, MAX_TSN)) {
 			/* we are beyond the tsn in the sack  */
@@ -3254,7 +3267,7 @@ sctp_try_advance_peer_ack_point(struct sctp_tcb *stcb,
 			/* no chance to advance, out of here */
 			break;
 		}
-		if (PR_SCTP_TTL_ENABLED(tp1->flags)) {
+		if (!PR_SCTP_ENABLED(tp1->flags)) {
 			/*
 			 * We can't fwd-tsn past any that are reliable
 			 * aka retransmitted until the asoc fails.
@@ -3274,7 +3287,7 @@ sctp_try_advance_peer_ack_point(struct sctp_tcb *stcb,
 		 * resend?
 		 */
 		if (tp1->sent == SCTP_DATAGRAM_RESEND &&
-		    (PR_SCTP_BUF_ENABLED(tp1->flags)) == 0) {
+		    (PR_SCTP_TTL_ENABLED(tp1->flags))) {
 			/*
 			 * Now is this one marked for resend and its time
 			 * is now up?
@@ -3299,6 +3312,7 @@ sctp_try_advance_peer_ack_point(struct sctp_tcb *stcb,
 				break;
 			}
 		}
+
 		/*
 		 * Ok now if this chunk is marked to drop it
 		 * we can clean up the chunk, advance our peer ack point
