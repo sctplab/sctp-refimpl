@@ -159,6 +159,27 @@ extern int ipport_hifirstauto;
 extern int ipport_hilastauto;
 #endif
 
+#ifndef xyzzy 
+void
+SCTP_INP_RLOCK(struct sctp_inpcb *inp) 
+{
+        struct sctp_tcb *stcb;			       
+	LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
+		if(mtx_owned(&(stcb)->tcb_mtx))
+			panic("I own TCB lock?");
+	}
+        if(mtx_owned(&(inp)->inp_mtx))
+		panic("INP Recursive Lock-R");
+        mtx_lock(&(inp)->inp_mtx);                  
+}
+
+void
+SCTP_INP_WLOCK(struct sctp_inpcb *inp) 
+{
+	SCTP_INP_RLOCK(inp);
+}
+
+#endif
 
 void
 sctp_fill_pcbinfo(struct sctp_pcbinfo *spcb)
