@@ -633,6 +633,10 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 		    (chk->rec.chunk_id == SCTP_ECN_ECHO)) {
 			sctp_free_remote_addr(chk->whoTo);
 			chk->whoTo = alt;
+			if(chk->sent != SCTP_DATAGRAM_RESEND) {
+				chk->sent = SCTP_DATAGRAM_RESEND;
+				stcb->asoc.sent_queue_retran_cnt++;
+			}
 			alt->ref_count++;
 		}
 	}
@@ -1010,6 +1014,10 @@ void sctp_strreset_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		if ((chk->whoTo == net) &&
 		    (chk->rec.chunk_id == SCTP_ECN_ECHO)) {
 			sctp_free_remote_addr(chk->whoTo);
+			if(chk->sent != SCTP_DATAGRAM_RESEND) {
+				chk->sent = SCTP_DATAGRAM_RESEND;
+				stcb->asoc.sent_queue_retran_cnt++;
+			}
 			chk->whoTo = alt;
 			alt->ref_count++;
 		}
@@ -1027,7 +1035,7 @@ void sctp_strreset_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	strrst->sent = SCTP_DATAGRAM_RESEND;
 
 	/* restart the timer */
-	sctp_timer_start(SCTP_TIMER_TYPE_STRRESET, inp, stcb, net);
+	sctp_timer_start(SCTP_TIMER_TYPE_STRRESET, inp, stcb, strrst->whoTo);
 
 }
 
@@ -1101,6 +1109,10 @@ void sctp_asconf_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			    (chk->rec.chunk_id == SCTP_ECN_ECHO)) {
 				sctp_free_remote_addr(chk->whoTo);
 				chk->whoTo = alt;
+				if(chk->sent != SCTP_DATAGRAM_RESEND) {
+					chk->sent = SCTP_DATAGRAM_RESEND;
+					stcb->asoc.sent_queue_retran_cnt++;
+				}
 				alt->ref_count++;
 
 			}
