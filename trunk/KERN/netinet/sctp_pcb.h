@@ -347,10 +347,12 @@ struct sctp_inpcb {
 	u_char inp_vflag;
 	u_char inp_ip_ttl;
 	u_char inp_ip_tos;
+	u_char inp_ip_resv;
 #endif
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
 	struct mtx inp_mtx;
 	struct mtx inp_create_mtx;
+	u_int32_t refcount;
 #endif
 };
 
@@ -481,6 +483,20 @@ struct sctp_tcb {
 #define SCTP_INP_WLOCK(_inp)		mtx_lock(&(_inp)->inp_mtx)
 #endif
 
+#define SCTP_INP_INCR_REF(_inp)        _inp->refcount++
+
+#ifndef INVARIANTS
+#define SCTP_INP_DECR_REF(_inp)         do {                                 \
+                                             if(_inp->refcount > 0)          \
+                                                  _inp->refcount--;          \
+                                             else                            \
+                                                  panic("bad inp refcount"); \
+}while (0)
+
+#else
+#define SCTP_INP_DECR_REF(_inp)        _inp->refcount--
+#endif
+
 #ifndef INVARIANTS
 #define SCTP_ASOC_CREATE_LOCK(_inp)  do{				\
         if(mtx_owned(&(_inp)->inp_create_mtx))                          \
@@ -553,6 +569,8 @@ struct sctp_tcb {
 #define SCTP_INP_RLOCK(_inp) 
 #define SCTP_INP_RUNLOCK(_inp) 
 #define SCTP_INP_WLOCK(_inp) 
+#define SCTP_INP_INCR_REF(_inp)
+#define SCTP_INP_DECR_REF(_inp)
 #define SCTP_INP_WUNLOCK(_inp) 
 #define SCTP_ASOC_CREATE_LOCK_INIT(_inp) 
 #define SCTP_ASOC_CREATE_LOCK_DESTROY(_inp) 

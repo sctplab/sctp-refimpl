@@ -197,7 +197,7 @@ sctp_fill_pcbinfo(struct sctp_pcbinfo *spcb)
  */
 static struct sctp_tcb *
 sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
-    struct sockaddr *to, struct sctp_nets **netp)
+    struct sockaddr *to, struct sctp_nets **netp, struct sctp_tcb *locked_tcb)
 {
 	/*
 	 * Note for this module care must be taken when observing what to is
@@ -315,10 +315,12 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 			SCTP_INP_RUNLOCK(inp);
 			continue;
 		}
-		SCTP_TCB_LOCK(stcb);
+		if( stcb != locked_tcb)
+			SCTP_TCB_LOCK(stcb);
 		if (stcb->rport != rport) {
 			/* remote port does not match. */
-			SCTP_TCB_UNLOCK(stcb);
+			if( stcb != locked_tcb)
+				SCTP_TCB_UNLOCK(stcb);
 			SCTP_INP_RUNLOCK(inp);
 			continue;
 		}
@@ -362,7 +364,8 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 				}
 			}
 		}
-		SCTP_TCB_UNLOCK(stcb);
+		if( stcb != locked_tcb )
+			SCTP_TCB_UNLOCK(stcb);
 		SCTP_INP_RUNLOCK(inp);
 	}
 	SCTP_INP_INFO_RUNLOCK();
@@ -493,7 +496,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 	} else {
 		return (NULL);
 	}
-	SCTP_INP_RLOCK(inp);
+	SCTP_INP_WLOCK(inp);
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) {
 		/*
 		 * Now either this guy is our listner or it's the connector.
@@ -504,14 +507,20 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 		 */
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_ACCEPTING) {
 			/* to is peer addr, from is my addr */
-			SCTP_INP_RUNLOCK(inp);
+			SCTP_INP_WUNLOCK(inp);
 			stcb = sctp_tcb_special_locate(inp_p, remote, local,
-						       netp);
+						       netp, locked_tcb);
+			if((stcb != NULL) && (locked_tcb == NULL)){
+				/* we have a locked tcb, lower refcount */
+				SCTP_INP_WLOCK(inp);
+				SCTP_INP_DECR_REF(inp);
+				SCTP_INP_WUNLOCK(inp);
+			}
 			return (stcb);
 		} else {
 			stcb = LIST_FIRST(&inp->sctp_asoc_list);
 			if (stcb == NULL) {
-				SCTP_INP_RUNLOCK(inp);
+				SCTP_INP_WUNLOCK(inp);
 				return (NULL);
 			}
 			if(locked_tcb != stcb) {
@@ -526,7 +535,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 				if(locked_tcb != stcb) {
 					SCTP_TCB_UNLOCK(stcb);
 				}
-				SCTP_INP_RUNLOCK(inp);
+				SCTP_INP_WUNLOCK(inp);
 				return (NULL);
 			}
 			/* now look at the list of remote addresses */
@@ -547,7 +556,10 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 						if (netp != NULL) {
 							*netp = net;
 						}
-						SCTP_INP_RUNLOCK(inp);
+						if (locked_tcb == NULL) {
+							SCTP_INP_DECR_REF(inp);
+						}
+						SCTP_INP_WUNLOCK(inp);
 						return (stcb);
 					}
 				} else if (remote->sa_family == AF_INET6) {
@@ -560,7 +572,10 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 						if (netp != NULL) {
 							*netp = net;
 						}
-						SCTP_INP_RUNLOCK(inp);
+						if (locked_tcb == NULL) {
+							SCTP_INP_DECR_REF(inp);
+						}
+						SCTP_INP_WUNLOCK(inp);
 						return (stcb);
 					}
 				}
@@ -573,7 +588,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 		head = &inp->sctp_tcbhash[SCTP_PCBHASH_ALLADDR(rport,
 							       inp->sctp_hashmark)];
 		if (head == NULL) {
-			SCTP_INP_RUNLOCK(inp);
+			SCTP_INP_WUNLOCK(inp);
 			return (NULL);
 		}
 		LIST_FOREACH(stcb, head, sctp_tcbhash) {
@@ -606,7 +621,10 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 						if (netp != NULL) {
 							*netp = net;
 						}
-						SCTP_INP_RUNLOCK(inp);
+						if (locked_tcb == NULL) {
+							SCTP_INP_DECR_REF(inp);
+						}
+						SCTP_INP_WUNLOCK(inp);
 						return (stcb);
 					}
 				} else if (remote->sa_family == AF_INET6) {
@@ -620,7 +638,10 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 						if (netp != NULL) {
 							*netp = net;
 						}
-						SCTP_INP_RUNLOCK(inp);
+						if (locked_tcb == NULL) {
+							SCTP_INP_DECR_REF(inp);
+						}
+						SCTP_INP_WUNLOCK(inp);
 						return (stcb);
 					}
 				}
@@ -630,7 +651,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 			}
 		}
 	}
-	SCTP_INP_RUNLOCK(inp);
+	SCTP_INP_WUNLOCK(inp);
 	/* not found */
 	return (NULL);
 }
@@ -936,8 +957,16 @@ sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool, int have_lock)
 		printf("EP to return is %p\n", inp);
 	}
 #endif
-	if (have_lock == 0)
+	if (have_lock == 0) {
+		if (inp) {
+			SCTP_INP_WLOCK(inp);
+			SCTP_INP_INCR_REF(inp);
+			SCTP_INP_WUNLOCK(inp);
+		}
 		SCTP_INP_INFO_RUNLOCK();
+	} else {
+		SCTP_INP_INCR_REF(inp);
+	}
 	return (inp);
 }
 
@@ -955,9 +984,9 @@ sctp_findassociation_addr_sa(struct sockaddr *to, struct sockaddr *from,
 
 	if (find_tcp_pool) {
 		if (inp_p != NULL) {
-			retval = sctp_tcb_special_locate(inp_p, from, to, netp);
+			retval = sctp_tcb_special_locate(inp_p, from, to, netp, NULL);
 		} else {
-			retval = sctp_tcb_special_locate(&inp, from, to, netp);
+			retval = sctp_tcb_special_locate(&inp, from, to, netp, NULL);
 		}
 		if (retval != NULL) {
 			return (retval);
