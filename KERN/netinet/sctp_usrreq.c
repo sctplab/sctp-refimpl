@@ -1822,7 +1822,7 @@ sctp_optsget(struct socket *so,
 	  error = ENOTCONN;
 	  tm->assoc_value = 0;
 	} else {
-	  tm->assoc_value = stcb->delayed_ack;
+	  tm->assoc_value = stcb->asoc.delayed_ack;
 	}
       }else {
 	tm->assoc_value = TICKS_TO_MSEC(inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV]);
