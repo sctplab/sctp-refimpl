@@ -3672,17 +3672,6 @@ static int sctp_scale_up_for_address = SCTP_SCALE_FOR_ADDR;
 
 #endif /* FreeBSD || APPLE */
 
-/* sysctl to enable/disable SCTP_PCB_FLAGS_AUTO_ASCONF for new EP's */
-int sctp_auto_asconf = SCTP_DEFAULT_AUTO_ASCONF;
-#if defined(__FreeBSD__)
-SYSCTL_INT(_net_inet_sctp, SCTPCTL_AUTOASCONF, sctp_auto_asconf,
-	   CTLFLAG_RW, &sctp_auto_asconf, 0,
-	   "auto ASCONF flag enable(1)/disable(0)");
-#elif defined(__APPLE__)
-SYSCTL_INT(_net_inet_sctp, OID_AUTO, sctp_auto_asconf, CTLFLAG_RW,
-	   &sctp_auto_asconf, 0, "auto ASCONF flag enable(1)/disable(0)");
-#endif
-
 #ifndef SCTP_TCBHASHSIZE
 #define SCTP_TCBHASHSIZE 1024
 #endif
