@@ -1200,6 +1200,23 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 }
 
 extern int sctp_max_burst_default;
+
+extern unsigned int sctp_delayed_sack_time_default;
+extern unsigned int sctp_heartbeat_interval_default;
+extern unsigned int sctp_pmtu_raise_time_default;
+extern unsigned int sctp_shutdown_guard_time_default;
+extern unsigned int sctp_secret_lifetime_default;
+
+extern unsigned int sctp_rto_max_default;
+extern unsigned int sctp_rto_min_default;
+extern unsigned int sctp_rto_initial_default;
+extern unsigned int sctp_init_rto_max_default;
+extern unsigned int sctp_valid_cookie_life_default;
+extern unsigned int sctp_init_rtx_max_default;
+extern unsigned int sctp_assoc_rtx_max_default;
+extern unsigned int sctp_path_rtx_max_default;
+extern unsigned int sctp_nr_outgoing_streams_default;
+
 /*
  * allocate a sctp_inpcb and setup a temporary binding to a port/all
  * addresses. This way if we don't get a bind we by default pick a ephemeral
@@ -1338,29 +1355,29 @@ sctp_inpcb_alloc(struct socket *so)
 	m = &inp->sctp_ep;
 
 	/* setup the base timeout information */
-	m->sctp_timeoutticks[SCTP_TIMER_SEND] = SCTP_SEND_SEC;
-	m->sctp_timeoutticks[SCTP_TIMER_INIT] = SCTP_INIT_SEC;
-	m->sctp_timeoutticks[SCTP_TIMER_RECV] = SCTP_RECV_SEC;
-	m->sctp_timeoutticks[SCTP_TIMER_HEARTBEAT] = SCTP_HB_DEFAULT;
-	m->sctp_timeoutticks[SCTP_TIMER_PMTU] = SCTP_DEF_PMTU_RAISE;
-	m->sctp_timeoutticks[SCTP_TIMER_MAXSHUTDOWN] = SCTP_DEF_MAX_SHUTDOWN;
-	m->sctp_timeoutticks[SCTP_TIMER_SIGNATURE] = SCTP_DEFAULT_SECRET_LIFE;
+	m->sctp_timeoutticks[SCTP_TIMER_SEND] = SEC_TO_TICKS(SCTP_SEND_SEC); /* needed ? */
+	m->sctp_timeoutticks[SCTP_TIMER_INIT] = SEC_TO_TICKS(SCTP_INIT_SEC); /* needed ? */
+	m->sctp_timeoutticks[SCTP_TIMER_RECV] = MSEC_TO_TICKS(sctp_delayed_sack_time_default);
+	m->sctp_timeoutticks[SCTP_TIMER_HEARTBEAT] = sctp_heartbeat_interval_default; /* this is in MSEC */
+	m->sctp_timeoutticks[SCTP_TIMER_PMTU] = SEC_TO_TICKS(sctp_pmtu_raise_time_default);
+	m->sctp_timeoutticks[SCTP_TIMER_MAXSHUTDOWN] = SEC_TO_TICKS(sctp_shutdown_guard_time_default);
+	m->sctp_timeoutticks[SCTP_TIMER_SIGNATURE] = SEC_TO_TICKS(sctp_secret_lifetime_default);
 	/* all max/min max are in ms */
-	m->sctp_maxrto = SCTP_RTO_UPPER_BOUND;
-	m->sctp_minrto = SCTP_RTO_LOWER_BOUND;
-	m->initial_rto = SCTP_RTO_INITIAL;
-	m->initial_init_rto_max = SCTP_RTO_UPPER_BOUND;
+	m->sctp_maxrto = sctp_rto_max_default;
+	m->sctp_minrto = sctp_rto_min_default;
+	m->initial_rto = sctp_rto_initial_default;
+	m->initial_init_rto_max = sctp_init_rto_max_default;
 
 	m->max_open_streams_intome = MAX_SCTP_STREAMS;
 
-	m->max_init_times = SCTP_DEF_MAX_INIT;
-	m->max_send_times = SCTP_DEF_MAX_SEND;
-	m->def_net_failure = SCTP_DEF_MAX_SEND/2;
+	m->max_init_times = sctp_init_rtx_max_default;
+	m->max_send_times = sctp_assoc_rtx_max_default;
+	m->def_net_failure = sctp_path_rtx_max_default;
 	m->sctp_sws_sender = SCTP_SWS_SENDER_DEF;
 	m->sctp_sws_receiver = SCTP_SWS_RECEIVER_DEF;
 	m->max_burst = sctp_max_burst_default;
 	/* number of streams to pre-open on a association */
-	m->pre_open_stream_count = SCTP_OSTREAM_INITIAL;
+	m->pre_open_stream_count = sctp_nr_outgoing_streams_default;
 
 	/* Add adaption cookie */
 	m->adaption_layer_indicator = 0x504C5253;
@@ -1411,7 +1428,7 @@ sctp_inpcb_alloc(struct socket *so)
 	sctp_timer_start(SCTP_TIMER_TYPE_NEWCOOKIE, inp, NULL, NULL);
 
 	/* How long is a cookie good for ? */
-	m->def_cookie_life = SCTP_DEFAULT_COOKIE_LIFE;
+	m->def_cookie_life = sctp_valid_cookie_life_default;
 	return (error);
 }
 

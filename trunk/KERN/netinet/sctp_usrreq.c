@@ -135,6 +135,21 @@ int sctp_strict_sacks = 0;
 int sctp_ecn = 1;
 int sctp_ecn_nonce = 0;
 
+unsigned int sctp_delayed_sack_time_default = SCTP_RECV_MSEC;
+unsigned int sctp_heartbeat_interval_default = SCTP_HB_DEFAULT_MSEC;
+unsigned int sctp_pmtu_raise_time_default = SCTP_DEF_PMTU_RAISE_SEC;
+unsigned int sctp_shutdown_guard_time_default = SCTP_DEF_MAX_SHUTDOWN_SEC;
+unsigned int sctp_secret_lifetime_default = SCTP_DEFAULT_SECRET_LIFE_SEC;
+unsigned int sctp_rto_max_default = SCTP_RTO_UPPER_BOUND;
+unsigned int sctp_rto_min_default = SCTP_RTO_LOWER_BOUND;
+unsigned int sctp_rto_initial_default = SCTP_RTO_INITIAL;
+unsigned int sctp_init_rto_max_default = SCTP_RTO_UPPER_BOUND;
+unsigned int sctp_valid_cookie_life_default = SCTP_DEFAULT_COOKIE_LIFE;
+unsigned int sctp_init_rtx_max_default = SCTP_DEF_MAX_INIT;
+unsigned int sctp_assoc_rtx_max_default = SCTP_DEF_MAX_SEND;
+unsigned int sctp_path_rtx_max_default = SCTP_DEF_MAX_SEND/2;
+unsigned int sctp_nr_outgoing_streams_default = SCTP_OSTREAM_INITIAL;
+
 void
 sctp_init(void)
 {
@@ -591,6 +606,48 @@ SYSCTL_INT(_net_inet_sctp, SCTPCTL_MAXBURST, maxburst, CTLFLAG_RW,
 SYSCTL_INT(_net_inet_sctp, SCTPCTL_MAXCHUNKONQ, maxchunks, CTLFLAG_RW,
 	   &sctp_max_chunks_on_queue, 0, "Default max chunks on queue per asoc");
 
+SYSCTL_INT(_net_inet_sctp, SCTPCTL_DELAYED_SACK, delayed_sack_time, CTLFLAG_RW,
+	   &sctp_delayed_sack_time_default, 0, "Default delayed SACK timer in msec");
+
+SYSCTL_INT(_net_inet_sctp, SCTPCTL_HB_INTERVAL, heartbeat_interval, CTLFLAG_RW,
+	   &sctp_heartbeat_interval_default, 0, "Default heartbeat interval in msec");
+
+SYSCTL_INT(_net_inet_sctp, SCTPCTL_PMTU_RAISE, pmtu_raise_time, CTLFLAG_RW,
+	   &sctp_pmtu_raise_time_default, 0, "Default PMTU raise timer in sec");
+
+SYSCTL_INT(_net_inet_sctp, SCTPCTL_SHUTDOWN_GUARD, shutdown_guard_time, CTLFLAG_RW,
+	   &sctp_shutdown_guard_time_default, 0, "Default shutdown guard timer in sec");
+
+SYSCTL_INT(_net_inet_sctp, SCTPCTL_SECRET_LIFETIME, secret_lifetime, CTLFLAG_RW,
+	   &sctp_secret_lifetime_default, 0, "Default secret lifetime in sec");
+
+SYSCTL_INT(_net_inet_sctp, SCTPCTL_RTO_MAX, rto_max, CTLFLAG_RW,
+	   &sctp_rto_max_default, 0, "Default maximum retransmission timeout in msec");
+
+SYSCTL_INT(_net_inet_sctp, SCTPCTL_RTO_MIN, rto_min, CTLFLAG_RW,
+	   &sctp_rto_min_default, 0, "Default minimum retransmission timeout in msec");
+
+SYSCTL_INT(_net_inet_sctp, SCTPCTL_RTO_INITIAL, rto_initial, CTLFLAG_RW,
+	   &sctp_rto_initial_default, 0, "Default initial retransmission timeout in msec");
+
+SYSCTL_INT(_net_inet_sctp, SCTPCTL_INIT_RTO_MAX, init_rto_max, CTLFLAG_RW,
+	   &sctp_init_rto_max_default, 0, "Default maximum retransmission timeout during association setup in msec");
+
+SYSCTL_INT(_net_inet_sctp, SCTPCTL_COOKIE_LIFE, valid_cookie_life, CTLFLAG_RW,
+	   &sctp_valid_cookie_life_default, 0, "Default cookie lifetime in sec");
+
+SYSCTL_INT(_net_inet_sctp, SCTPCTL_INIT_RTX_MAX, init_rtx_max, CTLFLAG_RW,
+	   &sctp_init_rtx_max_default, 0, "Default maximum number of retransmission for INIT chunks");
+
+SYSCTL_INT(_net_inet_sctp, SCTPCTL_ASSOC_RTX_MAX, assoc_rtx_max, CTLFLAG_RW,
+	   &sctp_assoc_rtx_max_default, 0, "Default maximum number of retransmissions per association");
+
+SYSCTL_INT(_net_inet_sctp, SCTPCTL_PATH_RTX_MAX, path_rtx_max, CTLFLAG_RW,
+	   &sctp_path_rtx_max_default, 0, "Default maximum of retransmissions per path");
+
+SYSCTL_INT(_net_inet_sctp, SCTPCTL_NR_OUTGOING_STREAMS, nr_outgoing_streams, CTLFLAG_RW,
+	   &sctp_nr_outgoing_streams_default, 0, "Default number of outgoing streams");
+
 #ifdef SCTP_DEBUG
 SYSCTL_INT(_net_inet_sctp, SCTPCTL_DEBUG, debug, CTLFLAG_RW,
 	   &sctp_debug_on, 0, "Configure debug output");
@@ -630,6 +687,48 @@ SYSCTL_INT(_net_inet_sctp, OID_AUTO, maxburst, CTLFLAG_RW,
 
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, maxchunks, CTLFLAG_RW,
 	   &sctp_max_chunks_on_queue, 0, "Default max chunks on queue per asoc");
+
+SYSCTL_UINT(_net_inet_sctp, OID_AUTO, delayed_sack_time, CTLFLAG_RW,
+	   &sctp_delayed_sack_time_default, 0, "Default delayed SACK timer in msec");
+
+SYSCTL_UINT(_net_inet_sctp, OID_AUTO, heartbeat_interval, CTLFLAG_RW,
+	   &sctp_heartbeat_interval_default, 0, "Default heartbeat interval in msec");
+
+SYSCTL_UINT(_net_inet_sctp, OID_AUTO, pmtu_raise_time, CTLFLAG_RW,
+	   &sctp_pmtu_raise_time_default, 0, "Default PMTU raise timer in sec");
+
+SYSCTL_UINT(_net_inet_sctp, OID_AUTO, shutdown_guard_time, CTLFLAG_RW,
+	   &sctp_shutdown_guard_time_default, 0, "Default shutdown guard timer in sec");
+
+SYSCTL_UINT(_net_inet_sctp, OID_AUTO, secret_lifetime, CTLFLAG_RW,
+	   &sctp_secret_lifetime_default, 0, "Default secret lifetime in sec");
+
+SYSCTL_UINT(_net_inet_sctp, OID_AUTO, rto_max, CTLFLAG_RW,
+	   &sctp_rto_max_default, 0, "Default maximum retransmission timeout in msec");
+
+SYSCTL_UINT(_net_inet_sctp, OID_AUTO, rto_min, CTLFLAG_RW,
+	   &sctp_rto_min_default, 0, "Default minimum retransmission timeout in msec");
+
+SYSCTL_UINT(_net_inet_sctp, OID_AUTO, rto_initial, CTLFLAG_RW,
+	   &sctp_rto_initial_default, 0, "Default initial retransmission timeout in msec");
+
+SYSCTL_UINT(_net_inet_sctp, OID_AUTO, init_rto_max, CTLFLAG_RW,
+	   &sctp_init_rto_max_default, 0, "Default maximum retransmission timeout during association setup in msec");
+
+SYSCTL_UINT(_net_inet_sctp, OID_AUTO, valid_cookie_life, CTLFLAG_RW,
+	   &sctp_valid_cookie_life_default, 0, "Default cookie lifetime in sec");
+
+SYSCTL_UINT(_net_inet_sctp, OID_AUTO, init_rtx_max, CTLFLAG_RW,
+	   &sctp_init_rtx_max_default, 0, "Default maximum number of retransmission for INIT chunks");
+
+SYSCTL_UINT(_net_inet_sctp, OID_AUTO, assoc_rtx_max, CTLFLAG_RW,
+	   &sctp_assoc_rtx_max_default, 0, "Default maximum number of retransmissions per association");
+
+SYSCTL_UINT(_net_inet_sctp, OID_AUTO, path_rtx_max, CTLFLAG_RW,
+	   &sctp_path_rtx_max_default, 0, "Default maximum of retransmissions per path");
+
+SYSCTL_UINT(_net_inet_sctp, OID_AUTO, nr_outgoing_streams, CTLFLAG_RW,
+	   &sctp_nr_outgoing_streams_default, 0, "Default number of outgoing streams");
 
 #ifdef SCTP_DEBUG
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, debug, CTLFLAG_RW,
@@ -4085,6 +4184,48 @@ sctp_sysctl(name, namelen, oldp, oldlenp, newp, newlen)
  	case SCTPCTL_MAXCHUNKONQ:
  		return (sysctl_int(oldp, oldlenp, newp, newlen,
  				   &sctp_max_chunks_on_queue));
+ 	case SCTPCTL_DELAYED_SACK:
+ 		return (sysctl_int(oldp, oldlenp, newp, newlen,
+ 				   &sctp_delayed_sack_time_default));
+ 	case SCTPCTL_HB_INTERVAL:
+ 		return (sysctl_int(oldp, oldlenp, newp, newlen,
+ 				   &sctp_heartbeat_interval_default));
+ 	case SCTPCTL_PMTU_RAISE:
+ 		return (sysctl_int(oldp, oldlenp, newp, newlen,
+ 				   &sctp_pmtu_raise_time_default));
+ 	case SCTPCTL_SHUTDOWN_GUARD:
+ 		return (sysctl_int(oldp, oldlenp, newp, newlen,
+ 				   &sctp_shutdown_guard_time_default));
+ 	case SCTPCTL_SECRET_LIFETIME:
+ 		return (sysctl_int(oldp, oldlenp, newp, newlen,
+ 				   &sctp_secret_lifetime_default));
+ 	case SCTPCTL_RTO_MAX:
+ 		return (sysctl_int(oldp, oldlenp, newp, newlen,
+ 				   &sctp_rto_max_default));
+ 	case SCTPCTL_RTO_MIN:
+ 		return (sysctl_int(oldp, oldlenp, newp, newlen,
+ 				   &sctp_rto_min_default));
+ 	case SCTPCTL_RTO_INITIAL:
+ 		return (sysctl_int(oldp, oldlenp, newp, newlen,
+ 				   &sctp_rto_initial_default));
+ 	case SCTPCTL_INIT_RTO_MAX:
+ 		return (sysctl_int(oldp, oldlenp, newp, newlen,
+ 				   &sctp_init_rto_max_default));
+ 	case SCTPCTL_COOKIE_LIFE:
+ 		return (sysctl_int(oldp, oldlenp, newp, newlen,
+ 				   &sctp_valid_cookie_life_default));
+ 	case SCTPCTL_INIT_RTX_MAX:
+ 		return (sysctl_int(oldp, oldlenp, newp, newlen,
+ 				   &sctp_init_rtx_max_default));
+ 	case SCTPCTL_ASSOC_RTX_MAX:
+ 		return (sysctl_int(oldp, oldlenp, newp, newlen,
+ 				   &sctp_assoc_rtx_max_default));
+ 	case SCTPCTL_PATH_RTX_MAX:
+ 		return (sysctl_int(oldp, oldlenp, newp, newlen,
+ 				   &sctp_path_rtx_max_default));
+ 	case SCTPCTL_NR_OUTGOING_STREAMS:
+ 		return (sysctl_int(oldp, oldlenp, newp, newlen,
+ 				   &sctp_nr_outgoing_streams_default));
 #ifdef SCTP_DEBUG
  	case SCTPCTL_DEBUG:
  		return (sysctl_int(oldp, oldlenp, newp, newlen,
