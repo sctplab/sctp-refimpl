@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.4 2004-10-12 14:01:21 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.5 2004-10-14 10:36:30 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -651,53 +651,37 @@ int
 sctpSEND(int fd,int defStream,char *s_buff,int sndsz,
 	 struct sockaddr *to,int options, int payload,int not_used)
 {
-  int sz;
-  struct msghdr msg;
-  struct iovec iov[2];
-  char controlVector[256];
-  struct sctp_sndrcvinfo *s_info;
-  struct cmsghdr *cmsg;
-
-  iov[0].iov_base = s_buff;
-  iov[0].iov_len = sndsz;
-  iov[1].iov_base = NULL;
-  iov[1].iov_len = 0;
-  msg.msg_name = (caddr_t)to;
-  msg.msg_namelen = to->sa_len;
-  msg.msg_iov = iov;
-  msg.msg_iovlen = 1;
-  msg.msg_control = (caddr_t)controlVector;
-  
-  cmsg = (struct cmsghdr *)controlVector;
-
-  cmsg->cmsg_level = IPPROTO_SCTP;
-  cmsg->cmsg_type = SCTP_SNDRCV;
-#if defined(__FreeBSD__) 
-  cmsg->cmsg_len = _ALIGN(sizeof(struct cmsghdr)) + sizeof(struct sctp_sndrcvinfo);
-#elif defined(__APPLE__)
-  cmsg->cmsg_len = ALIGN(sizeof(struct cmsghdr)) + sizeof(struct sctp_sndrcvinfo);
-#else
-  cmsg->cmsg_len = __CMSG_ALIGN(sizeof(struct cmsghdr)) + sizeof(struct sctp_sndrcvinfo);
-#endif
-  s_info = (struct sctp_sndrcvinfo *)CMSG_DATA(cmsg);
-
-  s_info->sinfo_stream = defStream;
-  s_info->sinfo_ssn = 0;
-  s_info->sinfo_flags = options;
-  s_info->sinfo_ppid = payload;
-  s_info->sinfo_context = 0;
-  s_info->sinfo_assoc_id = 0;
-  s_info->sinfo_timetolive = time_to_live;
-  errno = 0;
-  msg.msg_controllen = cmsg->cmsg_len;
-  sz = sendmsg(fd,&msg,0);
-  if((sz <=0) && (errno != ENOBUFS)){
-    printf("Return from sendmsg is %d errno %d\n",
-	   sz,errno);
-  }
-  return(sz);
+	int sz;
+	errno = 0;
+	sz = sctp_sendmsg(fd, s_buff, sndsz, to, to->sa_len, 
+			  payload, options, defStream,time_to_live, 0);
+	if((sz <=0) && (errno != ENOBUFS)){
+		printf("Return from sendmsg is %d errno %d\n",
+		       sz,errno);
+	}
+	return(sz);
 }
 
+int
+sctpsend_associd (int fd, sctp_assoc_t asoc, char *s_buff, int sz, int options, int payload)
+{
+	int ret;
+	struct sctp_sndrcvinfo s_info;
+	errno = 0;
+	s_info.sinfo_stream = defStream;
+	s_info.sinfo_flags = options;
+	s_info.sinfo_ppid = payload;
+	s_info.sinfo_context = 0;
+	s_info.sinfo_timetolive = time_to_live;
+	s_info.sinfo_assoc_id = asoc;
+
+	ret = sctp_send (fd, s_buff, sz, &s_info,0);
+	if((sz <=0) && (errno != ENOBUFS)){
+		printf("Return from sendmsg is %d errno %d\n",
+		       sz,errno);
+	}
+	return(ret);
+}
 
 int
 sctpTERMINATE(int fd,struct sockaddr *to)
