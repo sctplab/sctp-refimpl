@@ -1233,19 +1233,39 @@ sctp_audit_stream_queues_for_size(struct sctp_inpcb *inp,
 	struct sctp_stream_out *outs;
 	struct sctp_tmit_chunk *chk;
 	unsigned int chks_in_queue=0;
+	/* This function is ONLY called when the send/sent
+	 * queues are empty.
+	 */
+ 	if ((stcb == NULL) || (inp == NULL))
+		return;
 
-	if ((stcb == NULL) || (inp == NULL))
-		return;
-	if (TAILQ_EMPTY(&stcb->asoc.out_wheel)) {
-		printf("Strange, out_wheel empty nothing on sent/send and  tot=%lu?\n",
-		    (u_long)stcb->asoc.total_output_queue_size);
-		stcb->asoc.total_output_queue_size = 0;
-		return;
-	}
 	if (stcb->asoc.sent_queue_retran_cnt) {
 		printf("Hmm, sent_queue_retran_cnt is non-zero %d\n",
 		    stcb->asoc.sent_queue_retran_cnt);
 		stcb->asoc.sent_queue_retran_cnt = 0;
+	}
+
+	if (TAILQ_EMPTY(&stcb->asoc.out_wheel)) {
+	        int i,cnt=0;
+		printf("Strange, out_wheel empty nothing on sent/send and  tot=%lu, audit outwheel?\n",
+		    (u_long)stcb->asoc.total_output_queue_size);
+
+		/* Check to see if a spoke fell off the wheel */
+		for(i=0 ; i<stcb->asoc.streamoutcnt; i++ ) {
+		  if(!TAILQ_EMPTY(&stcb->asoc.strmout[i].outqueue)) {
+		    sctp_insert_on_wheel(&stcb->asoc,&stcb->asoc.strmout[i]);
+		    cnt++;
+		  }
+		}
+		if(cnt) {
+		  /* yep, we lost a spoke or two */
+		  printf("Found an additional %d streams NOT on outwheel, corrected\n", cnt);
+		}else {
+		  /* no spokes lost, */
+		  printf("No streams with data, clearing output_queue_size\n");
+ 		  stcb->asoc.total_output_queue_size = 0;
+		}
+		return;
 	}
 	/* Check to see if some data queued, if so report it */
 	TAILQ_FOREACH(outs, &stcb->asoc.out_wheel, next_spoke) {

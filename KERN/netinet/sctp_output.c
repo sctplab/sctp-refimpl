@@ -3941,7 +3941,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 }
 
 
-static void
+void
 sctp_insert_on_wheel(struct sctp_association *asoc,
 		     struct sctp_stream_out *strq)
 {
