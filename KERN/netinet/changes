@@ -57,3 +57,9 @@ Patch 25)
 7) Performance changes on the sender side of SCTP that
    provide signifigant gains in SACK processing as
    well as on destinations that fill up the ifp queue.
+8) Fixed IPV6 to V4 mapping issue with V6 Mapped addresses
+   in sctp_bindx
+9) Get rid of warnings comparison in signed/unsigned.
+10) Purged TCP_MODEL, so now it is always present.
+11) Fixed a socketoption mbuf leak when a setsockopt() failed.
+12) Fixed problem with mapped v4 addresses.
