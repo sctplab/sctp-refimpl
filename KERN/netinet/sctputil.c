@@ -1275,7 +1275,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		 * Here the timer comes from the inp
 		 * but its value is from the RTO.
 		 */
-		if ((stcb == NULL) && (net == NULL)) {
+		if ((stcb == NULL) || (net == NULL)) {
 			return (EFAULT);
 		}
 		if (net->RTO == 0) {
@@ -1291,7 +1291,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		 * Here the timer comes from the inp
 		 * but its value is from the RTO.
 		 */
-		if ((stcb == NULL) && (net == NULL)) {
+		if ((stcb == NULL) || (net == NULL)) {
 			return (EFAULT);
 		}
 		if (net->RTO == 0) {
