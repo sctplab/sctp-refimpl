@@ -665,9 +665,9 @@ static char* FormatPacket (struct ip* ip)
 		sctphdr = (struct sctphdr*) ((char*) ip + (ip->ip_hl << 2));
 		sprintf (buf, "[SCTP] %s:%d -> %s:%d",
 			      src,
-			      ntohs (tcphdr->src_port),
+			      ntohs (sctphdr->src_port),
 			      dst,
-			      ntohs (tcphdr->dest_port));
+			      ntohs (sctphdr->dest_port));
 		break;
 
 	case IPPROTO_UDP:
