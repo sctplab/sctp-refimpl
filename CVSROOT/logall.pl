@@ -45,7 +45,7 @@ if ((open(OUT, ">>" . $logfile)) != 1) {
   printf PIPE "From: The Repository Clerk <daemon\@$hostname>\n";
   printf PIPE "To: $recipients \n";
   printf PIPE "Subject: Changes to 'SCTP KAME tree' repository\n\n";
-  printf PIPE "CVSROOT=> stewart.chicago.il.us:/home/sourceTree/src/sctp \n\n";
+  printf PIPE "CVSROOT=> stewart.chicago.il.us:/usr/sctpCVS/ \n\n";
   printf PIPE "Our team member " . $fullname . " just made the following changes:\n\n";
 
 # 
