@@ -9705,9 +9705,13 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 					mm = NULL;
 				}
 			}
+			sbunlock(&so->so_snd);
+			SOCKBUF_UNLOCK(&so->so_snd);
 			sctp_abort_an_association(stcb->sctp_ep, stcb,
 						  SCTP_RESPONSE_TO_USER_REQ,
 						  mm);
+			splx(s);
+			goto out_notlocked;
 		}
 		splx(s);
 		goto release;
@@ -10045,6 +10049,7 @@ release:
 	sbunlock(&so->so_snd);
 out_locked:
 	SOCKBUF_UNLOCK(&so->so_snd);
+out_notlocked:
 	if (mm)
 		sctp_m_freem(mm);
 	return (error);
