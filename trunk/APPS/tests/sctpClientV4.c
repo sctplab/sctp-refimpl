@@ -7,26 +7,25 @@
 #include <stdio.h>
 #include <errno.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <string.h>
 /***hchiba***/
 #include <netinet/sctp_constants.h>
 #include <netinet/sctp.h>
 
+int
 main()
 {
 	const char	hostname[64]="10.1.1.11";
 	const char	servname[16]="10001";
 	struct addrinfo	hints,*res,*res0;
-	ssize_t	l;
 	int s,count,ii;
 	char hbuf[NI_MAXHOST],sbuf[NI_MAXSERV];
 	int error;
-	u_int32_t	optval;
 	int	writeNum;
 	int	size = 2100;/*** 128 ***/
 	char *	buff;
 	char *	buf2;
-	int	buf2_readnum;
 
 	printf("hchiba-> FreeBSD version = %d\n",__FreeBSD__);
 

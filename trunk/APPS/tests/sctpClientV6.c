@@ -8,10 +8,13 @@
 #include <errno.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdlib.h>
+
 /***hchiba***/
 #include <netinet/sctp_constants.h>
 #include <netinet/sctp.h>
 
+int
 main()
 {
 	const char	hostname[64]="fe80::20d:60ff:fe39:ba97%dc1";
@@ -20,16 +23,13 @@ main()
 	*********hchiba*****/
 	const char	servname[16]="10001";
 	struct addrinfo	hints,*res,*res0;
-	ssize_t	l;
 	int s,count,ii;
 	char hbuf[NI_MAXHOST],sbuf[NI_MAXSERV];
 	int error;
-	u_int32_t	optval;
 	int	writeNum;
 	int	size = 2100;/*** 128 ***/
 	char *	buff;
 	char *	buf2;
-	int	buf2_readnum;
 
 	printf("hchiba-> FreeBSD version = %d\n",__FreeBSD__);
 
