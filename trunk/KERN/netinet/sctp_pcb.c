@@ -3204,13 +3204,15 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	 */
 	sctp_iterator_asoc_being_freed(stcb);
 
+	SCTP_TCB_UNLOCK(stcb);
+	SCTP_INP_WLOCK(inp);
+	SCTP_TCB_LOCK(stcb);
 	/* Null all of my entry's on the socket q */
 	TAILQ_FOREACH(sq, &inp->sctp_queue_list, next_sq) {
 		if (sq->tcb == stcb) {
 			sq->tcb = NULL;
 		}
 	}
-	SCTP_INP_WLOCK(inp);
 	if (inp->sctp_tcb_at_block == (void *)stcb) {
 		inp->error_on_block = ECONNRESET;
 	}
