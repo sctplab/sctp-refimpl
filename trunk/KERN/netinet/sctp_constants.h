@@ -1,4 +1,4 @@
-/*	$KAME: sctp_constants.h,v 1.16 2004/08/17 04:06:16 itojun Exp $	*/
+/*	$KAME: sctp_constants.h,v 1.17 2005/03/06 16:04:17 itojun Exp $	*/
 
 #ifndef __sctp_constants_h__
 #define __sctp_constants_h__
@@ -189,7 +189,7 @@
 #define SCTP_FORWARD_TSN_SKIP		30010
 
 /* SCTP chunk types */
-/* Moved to sctp.h so f/w and natd 
+/* Moved to sctp.h so f/w and natd
  * boxes can find the chunk types.
  */
 
@@ -215,8 +215,8 @@
 
 /* ECN Nonce: draft-ladha-sctp-ecn-nonce */
 #define SCTP_ECN_NONCE_SUPPORTED    0x8001
-/* 
- * draft-ietf-stewart-strreset-xxx 
+/*
+ * draft-ietf-stewart-strreset-xxx
  *   param=0x8001  len=0xNNNN
  *   Byte | Byte | Byte | Byte
  *   Byte | Byte ...
@@ -228,11 +228,11 @@
  *  80 01 00 09
  *  C0 C1 80 81
  *  82 00 00 00
- *  
- *  Has the parameter. 
+ *
+ *  Has the parameter.
  *   C0 = PR-SCTP    (RFC3758)
  *   C1, 80 = ASCONF (addip draft)
- *   81 = Packet Drop 
+ *   81 = Packet Drop
  *   82 = Stream Reset
  */
 
@@ -426,7 +426,7 @@
 /* How many drop re-attempts we make on  INIT/COOKIE-ECHO */
 #define SCTP_RETRY_DROPPED_THRESH 4
 
-/* And the max we will keep a history of in the tcb 
+/* And the max we will keep a history of in the tcb
  * which MUST be lower than 256.
  */
 
@@ -502,7 +502,7 @@
                                  * a window update sack is sent (should be a
                                  * power of 2).
                                  */
-#define SCTP_SCALE_OF_RWND_TO_UPD       4       /* Incr * this > hiwat, send 
+#define SCTP_SCALE_OF_RWND_TO_UPD       4       /* Incr * this > hiwat, send
                                                  * window update. Should be a
                                                  * power of 2.
                                                  */
@@ -690,7 +690,7 @@
 #define SCTP_MAX_BURST_APL	36
 #define SCTP_EXPRESS_ROUTE	37
 #define SCTP_NO_COPY_IN		38
-#define SCTP_CACHED_SRC		39  
+#define SCTP_CACHED_SRC		39
 #define SCTP_CWND_NOCUM		40
 #define SCTP_CWND_SS		41
 #define SCTP_CWND_CA		42

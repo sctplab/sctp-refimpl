@@ -1,4 +1,4 @@
-/*	$KAME: sctp_var.h,v 1.23 2004/10/27 07:57:49 itojun Exp $	*/
+/*	$KAME: sctp_var.h,v 1.24 2005/03/06 16:04:19 itojun Exp $	*/
 
 /*
  * Copyright (c) 2001, 2002, 2003, 2004 Cisco Systems, Inc.
@@ -51,7 +51,7 @@
 #define SCTPCTL_AUTOASCONF          3   /* auto asconf enable/disable flag */
 #define SCTPCTL_ECN_ENABLE          4	/* Is ecn allowed */
 #define SCTPCTL_ECN_NONCE           5   /* Is ecn nonce allowed */
-#define SCTPCTL_STRICT_SACK         6	/* strictly require sack'd TSN's to be 
+#define SCTPCTL_STRICT_SACK         6	/* strictly require sack'd TSN's to be
 					 * smaller than sndnxt.
 					 */
 #define SCTPCTL_NOCSUM_LO           7   /* Require that the Loopback NOT have
@@ -75,7 +75,7 @@
 #define SCTPCTL_INIT_RTX_MAX        22
 #define SCTPCTL_ASSOC_RTX_MAX       23
 #define SCTPCTL_PATH_RTX_MAX        24
-#define SCTPCTL_NR_OUTGOING_STREAMS 25  
+#define SCTPCTL_NR_OUTGOING_STREAMS 25
 #ifdef SCTP_DEBUG
 #define SCTPCTL_DEBUG               26
 #define SCTPCTL_MAXID		    27

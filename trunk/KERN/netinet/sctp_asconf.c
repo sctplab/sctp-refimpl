@@ -1,4 +1,4 @@
-/*	$KAME: sctp_asconf.c,v 1.23 2004/08/17 06:28:01 t-momose Exp $	*/
+/*	$KAME: sctp_asconf.c,v 1.24 2005/03/06 16:04:16 itojun Exp $	*/
 
 /*
  * Copyright (c) 2001, 2002, 2003, 2004 Cisco Systems, Inc.
@@ -1970,7 +1970,6 @@ sctp_addr_mgmt(struct ifaddr *ifa, uint16_t type) {
 	LIST_FOREACH(inp, &sctppcbinfo.listhead, sctp_list) {
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_AUTO_ASCONF) {
 			sctp_addr_mgmt_ep(inp, ifa, type);
-
 		} else {
 			/* this address is going away anyways... */
 			if (type == SCTP_DEL_IP_ADDRESS)
@@ -2626,7 +2625,7 @@ sctp_addr_in_initack(struct sctp_tcb *stcb, struct mbuf *m, unsigned int offset,
 
 	if (
 #ifdef INET6
-		(sa->sa_family != AF_INET6) && 
+		(sa->sa_family != AF_INET6) &&
 #endif /* INET6 */
 		(sa->sa_family != AF_INET))
 		return (0);

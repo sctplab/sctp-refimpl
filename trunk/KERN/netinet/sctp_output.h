@@ -1,4 +1,4 @@
-/*	$KAME: sctp_output.h,v 1.13 2004/08/17 04:06:18 itojun Exp $	*/
+/*	$KAME: sctp_output.h,v 1.14 2005/03/06 16:04:18 itojun Exp $	*/
 
 #ifndef __sctp_output_h__
 #define __sctp_output_h__
@@ -56,7 +56,7 @@ int sctp_is_addr_restricted(struct sctp_tcb *, struct sockaddr *);
 
 struct in_addr sctp_ipv4_source_address_selection(struct sctp_inpcb *,
     struct sctp_tcb *, struct route *, struct sctp_nets *, int);
-    
+
 
 struct in6_addr sctp_ipv6_source_address_selection(struct sctp_inpcb *,
 	struct sctp_tcb *, struct route *, struct sctp_nets *, int);
@@ -112,12 +112,12 @@ void sctp_send_cwr(struct sctp_tcb *, struct sctp_nets *, uint32_t);
 
 
 void
-sctp_send_str_reset_ack(struct sctp_tcb *stcb, 
+sctp_send_str_reset_ack(struct sctp_tcb *stcb,
     struct sctp_stream_reset_request *req);
 
 
 void
-sctp_send_str_reset_req(struct sctp_tcb *stcb, 
+sctp_send_str_reset_req(struct sctp_tcb *stcb,
     int number_entrys, uint16_t *list, uint8_t two_way, uint8_t not_peer);
 
 
