@@ -760,7 +760,7 @@ sctp_move_all_chunks_to_alt(struct sctp_tcb *stcb,
 
 }
 
-void
+int
 sctp_t3rxt_timer(struct sctp_inpcb *inp,
 		 struct sctp_tcb *stcb,
 		 struct sctp_nets *net)
@@ -792,7 +792,7 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 		if (sctp_threshold_management(inp, stcb, net,
 					      stcb->asoc.max_send_times)) {
 			/* Association was destroyed */
-			return;
+			return(1);
 		} else {
 			if (net != stcb->asoc.primary_destination) {
 				/* send a immediate HB if our RTO is stale */
@@ -820,7 +820,7 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 		if (sctp_threshold_management(inp, stcb, NULL,
 					      stcb->asoc.max_send_times)) {
 			/* Association was destroyed */
-			return;
+			return(1);
 		}
 	}
 	if (net->dest_state & SCTP_ADDR_NOT_REACHABLE) {
@@ -858,7 +858,7 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 		}
 #endif /* SCTP_DEBUG */
 		sctp_timer_start(SCTP_TIMER_TYPE_SEND, inp, stcb, net);
-		return;
+		return(0);
 	}
 	if (stcb->asoc.peer_supports_prsctp) {
 		struct sctp_tmit_chunk *lchk;
@@ -883,9 +883,10 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 			}
 		}
 	}
+	return(0);
 }
 
-void
+int
 sctp_t1init_timer(struct sctp_inpcb *inp,
 		  struct sctp_tcb *stcb,
 		  struct sctp_nets *net)
@@ -894,7 +895,7 @@ sctp_t1init_timer(struct sctp_inpcb *inp,
 	if (sctp_threshold_management(inp, stcb, net,
 				      stcb->asoc.max_init_times)) {
 		/* Association was destroyed */
-		return;
+		return (1);
 	}
 	stcb->asoc.dropped_special_cnt = 0;
 	sctp_backoff_on_timeout(stcb, stcb->asoc.primary_destination, 0, 1);
@@ -910,6 +911,7 @@ sctp_t1init_timer(struct sctp_inpcb *inp,
 	}
 	/* Send out a new init */
 	sctp_send_initiate(inp, stcb);
+	return (0);
 }
 
 /*
@@ -917,7 +919,7 @@ sctp_t1init_timer(struct sctp_inpcb *inp,
  * then increment the resend counter (after all the threshold management
  * stuff of course).
  */
-void sctp_cookie_timer(struct sctp_inpcb *inp,
+int  sctp_cookie_timer(struct sctp_inpcb *inp,
 		       struct sctp_tcb *stcb,
 		       struct sctp_nets *net)
 {
@@ -949,13 +951,13 @@ void sctp_cookie_timer(struct sctp_inpcb *inp,
 			sctp_abort_an_association(inp, stcb, SCTP_INTERNAL_ERROR,
 			    oper);
 		}
-		return;
+		return (1);
 	}
 	/* Ok we found the cookie, threshold management next */
 	if (sctp_threshold_management(inp, stcb, cookie->whoTo,
 	    stcb->asoc.max_init_times)) {
 		/* Assoc is over */
-		return;
+		return (1);
 	}
 	/*
 	 * cleared theshold management now lets backoff the address &
@@ -979,9 +981,10 @@ void sctp_cookie_timer(struct sctp_inpcb *inp,
 	 * don't mark any chunks for retran so that FR will need to kick in
 	 * to move these (or a send timer).
 	 */
+	return (0);
 }
 
-void sctp_strreset_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
+int sctp_strreset_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
     struct sctp_nets *net)
 {
 	struct sctp_nets *alt;
@@ -1004,13 +1007,13 @@ void sctp_strreset_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			printf("Strange, strreset timer fires, but I can't find an str-reset?\n");
 		}
 #endif /* SCTP_DEBUG */
-		return;
+		return (0);
 	}
 	/* do threshold management */
 	if (sctp_threshold_management(inp, stcb, strrst->whoTo,
 				      stcb->asoc.max_send_times)) {
 		/* Assoc is over */
-		return;
+		return (1);
 	}
 
 	/*
@@ -1050,10 +1053,10 @@ void sctp_strreset_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 
 	/* restart the timer */
 	sctp_timer_start(SCTP_TIMER_TYPE_STRRESET, inp, stcb, strrst->whoTo);
-
+	return (0);
 }
 
-void sctp_asconf_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
+int sctp_asconf_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
     struct sctp_nets *net)
 {
 	struct sctp_nets *alt;
@@ -1079,13 +1082,13 @@ void sctp_asconf_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				printf("Strange, asconf timer fires, but I can't find an asconf?\n");
 			}
 #endif /* SCTP_DEBUG */
-			return;
+			return (0);
 		}
 		/* do threshold management */
 		if (sctp_threshold_management(inp, stcb, asconf->whoTo,
 		    stcb->asoc.max_send_times)) {
 			/* Assoc is over */
-			return;
+			return (1);
 		}
 
 		/* PETER? FIX? How will the following code ever run? If
@@ -1105,7 +1108,7 @@ void sctp_asconf_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			}
 #endif /* SCTP_DEBUG */
 			sctp_asconf_cleanup(stcb, net);
-			return;
+			return (0);
 		}
 		/*
 		 * cleared theshold management
@@ -1143,6 +1146,7 @@ void sctp_asconf_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			stcb->asoc.sent_queue_retran_cnt++;
 		asconf->sent = SCTP_DATAGRAM_RESEND;
 	}
+	return (0);
 }
 
 /*
@@ -1151,7 +1155,7 @@ void sctp_asconf_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
  * chunk output routine, AFTER having done threshold
  * management.
  */
-void
+int
 sctp_shutdown_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
     struct sctp_nets *net)
 {
@@ -1159,7 +1163,7 @@ sctp_shutdown_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	/* first threshold managment */
 	if (sctp_threshold_management(inp, stcb, net, stcb->asoc.max_send_times)) {
 		/* Assoc is over */
-		return;
+		return(1);
 	}
 	/* second select an alternative */
 	alt = sctp_find_alternate_net(stcb, net);
@@ -1168,20 +1172,21 @@ sctp_shutdown_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	if (alt) {
 		sctp_send_shutdown(stcb, alt);
 	} else {
-		return;
+		return(0);
 	}
 	/* fourth restart timer */
 	sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN, inp, stcb, alt);
+	return (0);
 }
 
-void sctp_shutdownack_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
+int sctp_shutdownack_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
     struct sctp_nets *net)
 {
 	struct sctp_nets *alt;
 	/* first threshold managment */
 	if (sctp_threshold_management(inp, stcb, net, stcb->asoc.max_send_times)) {
 		/* Assoc is over */
-		return;
+		return(1);
 	}
 	/* second select an alternative */
 	alt = sctp_find_alternate_net(stcb, net);
@@ -1191,6 +1196,7 @@ void sctp_shutdownack_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 
 	/* fourth restart timer */
 	sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNACK, inp, stcb, alt);
+	return (0);
 }
 
 static void
@@ -1241,7 +1247,7 @@ sctp_audit_stream_queues_for_size(struct sctp_inpcb *inp,
 	}
 }
 
-void
+int
 sctp_heartbeat_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
     struct sctp_nets *net)
 {
@@ -1268,7 +1274,9 @@ sctp_heartbeat_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		sctp_audit_stream_queues_for_size(inp, stcb);
 	}
 	/* Send a new HB, this will do threshold managment, pick a new dest */
-	sctp_send_hb(stcb, 0, NULL);
+	if (sctp_send_hb(stcb, 0, NULL) < 0) {
+		return(1);
+	}
 	if (cnt_of_unconf > 1) {
 		/*
 		 * this will send out extra hb's up to maxburst if
@@ -1282,6 +1290,7 @@ sctp_heartbeat_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			cnt_sent++;
 		}
 	}
+	return (0);
 }
 
 #define SCTP_NUMBER_OF_MTU_SIZES 18
