@@ -7254,7 +7254,10 @@ sctp_output(inp, m, addr, control, p, flags)
 				if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
 					SCTP_INP_RLOCK(inp);
 					stcb = LIST_FIRST(&inp->sctp_asoc_list);
+					if (stcb)
+						SCTP_TCB_LOCK(stcb);
 					SCTP_INP_RUNLOCK(inp);
+
 					if (stcb == NULL) {
 						splx(s);
 						return (ENOTCONN);
@@ -7266,6 +7269,7 @@ sctp_output(inp, m, addr, control, p, flags)
 				}
 				/*
 				 * Question: Should I error here if the
+
 				 * assoc_id is no longer valid?
 				 * i.e. I can't find it?
 				 */
@@ -7285,6 +7289,8 @@ sctp_output(inp, m, addr, control, p, flags)
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
 			SCTP_INP_RLOCK(inp);
 			stcb = LIST_FIRST(&inp->sctp_asoc_list);
+			if (stcb) 
+				SCTP_TCB_LOCK(stcb);
 			SCTP_INP_RUNLOCK(inp);
 			if (stcb == NULL) {
 				splx(s);
@@ -9524,7 +9530,17 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 			sbunlock(&so->so_snd);
 			SCTP_TCB_UNLOCK(stcb);
 			error = sbwait(&so->so_snd);
+			SCTP_INP_RLOCK(inp);
+			if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
+			    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
+				/* Should I really unlock ? */
+				SCTP_INP_RUNLOCK(inp);
+				error = EFAULT;
+				goto out;
+			}
 			SCTP_TCB_LOCK(stcb);
+			SCTP_INP_UNLOCK(inp);
+
 			inp->sctp_tcb_at_block = 0;
 #ifdef SCTP_BLK_LOGGING
 			sctp_log_block(SCTP_BLOCK_LOG_OUTOF_BLK,

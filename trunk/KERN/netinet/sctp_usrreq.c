@@ -1867,14 +1867,15 @@ sctp_optsget(struct socket *so,
 			struct sctp_tcb *stcb;
 			SCTP_INP_RLOCK(inp);
 			stcb = LIST_FIRST(&inp->sctp_asoc_list);
-			SCTP_INP_RUNLOCK(inp);
 			if (stcb) {
 				SCTP_TCB_LOCK(stcb);
+				SCTP_INP_RUNLOCK(inp);
 				*segsize = sctp_get_frag_point(stcb, &stcb->asoc);
 				SCTP_TCB_UNLOCK(stcb);
-			}
-			else
+			} else {
+				SCTP_INP_RUNLOCK(inp);
 				goto skipit;
+			}
 		} else {
 			stcb = sctp_findassociation_ep_asocid(inp, *assoc_id);
 			if(stcb) {
@@ -2056,9 +2057,9 @@ sctp_optsget(struct socket *so,
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
 			SCTP_INP_RLOCK(inp);
 			stcb = LIST_FIRST(&inp->sctp_asoc_list);
-			SCTP_INP_RUNLOCK(inp);
 			if(stcb)
 				SCTP_TCB_LOCK(stcb);
+			SCTP_INP_RUNLOCK(inp);
 		}
 		if (stcb == NULL) {
 			assoc_id = mtod(m, sctp_assoc_t *);
@@ -2252,11 +2253,11 @@ sctp_optsget(struct socket *so,
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
 				SCTP_INP_RLOCK(inp);
 				stcb = LIST_FIRST(&inp->sctp_asoc_list);
-				SCTP_INP_RLOCK(inp);
 				if (stcb) {
 					SCTP_TCB_LOCK(stcb);
 					net = sctp_findnet(stcb, (struct sockaddr *)&paddrp->spp_address);
 				}
+				SCTP_INP_RLOCK(inp);
 			} else {
 				stcb = sctp_findassociation_ep_asocid(inp, paddrp->spp_assoc_id);
 			}
@@ -2277,11 +2278,11 @@ sctp_optsget(struct socket *so,
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
 				SCTP_INP_RLOCK(inp);
 				stcb = LIST_FIRST(&inp->sctp_asoc_list);
-				SCTP_INP_RUNLOCK(inp);
 				if (stcb) {
 					SCTP_TCB_LOCK(stcb);
 					net = sctp_findnet(stcb, (struct sockaddr *)&paddrp->spp_address);
 				}
+				SCTP_INP_RUNLOCK(inp);
 			} else {
 				SCTP_INP_WLOCK(inp);
 				SCTP_INP_INCR_REF(inp);
@@ -2362,12 +2363,12 @@ sctp_optsget(struct socket *so,
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
 				SCTP_INP_RLOCK(inp);
 				stcb = LIST_FIRST(&inp->sctp_asoc_list);
-				SCTP_INP_RUNLOCK(inp);
 				if (stcb) {
 					SCTP_TCB_LOCK(stcb);
 					net = sctp_findnet(stcb, 
 							    (struct sockaddr *)&paddri->spinfo_address);
 				}
+				SCTP_INP_RUNLOCK(inp);
 			} else {
 				SCTP_INP_WLOCK(inp);
 				SCTP_INP_INCR_REF(inp);
@@ -2436,7 +2437,6 @@ sctp_optsget(struct socket *so,
 			stcb = LIST_FIRST(&inp->sctp_asoc_list);
 			if (stcb)
 				SCTP_TCB_LOCK(stcb);
-
 			SCTP_INP_RUNLOCK(inp);
 		} else
 			stcb = sctp_findassociation_ep_asocid(inp, sstat->sstat_assoc_id);
@@ -2906,11 +2906,11 @@ sctp_optsset(struct socket *so,
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
 			SCTP_INP_RLOCK(inp);
 			stcb = LIST_FIRST(&inp->sctp_asoc_list);
-			SCTP_INP_RUNLOCK(inp);
 			if (stcb) {
 				SCTP_TCB_LOCK(stcb);
 				net = sctp_findnet(stcb, sa);
 			}
+			SCTP_INP_RUNLOCK(inp);
 		} else {
 			SCTP_INP_WLOCK(inp);
 			SCTP_INP_INCR_REF(inp);
@@ -3136,11 +3136,11 @@ sctp_optsset(struct socket *so,
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
 				SCTP_INP_RLOCK(inp);
 				stcb = LIST_FIRST(&inp->sctp_asoc_list);
-				SCTP_INP_RUNLOCK(inp);
 				if (stcb) {
 					SCTP_TCB_LOCK(stcb);
 					net = sctp_findnet(stcb, (struct sockaddr *)&paddrp->spp_address);
 				}
+				SCTP_INP_RUNLOCK(inp);
 			} else
 				stcb = sctp_findassociation_ep_asocid(inp, paddrp->spp_assoc_id);
 			if (stcb == NULL) {
@@ -3156,12 +3156,12 @@ sctp_optsset(struct socket *so,
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
 				SCTP_INP_RLOCK(inp);
 				stcb = LIST_FIRST(&inp->sctp_asoc_list);
-				SCTP_INP_RUNLOCK(inp);
 				if (stcb) {
 					SCTP_TCB_LOCK(stcb);
 					net = sctp_findnet(stcb, 
 							   (struct sockaddr *)&paddrp->spp_address);
 				}
+				SCTP_INP_RUNLOCK(inp);
 			} else {
 				SCTP_INP_WLOCK(inp);
 				SCTP_INP_INCR_REF(inp);
@@ -3902,18 +3902,15 @@ sctp_usr_recvd(struct socket *so, int flags)
 	} else {
 		stcb = LIST_FIRST(&inp->sctp_asoc_list);
 	}
+	if (stcb)
+		SCTP_TCB_LOCK(stcb);
 	SCTP_INP_RUNLOCK(inp);
 	if (stcb) {
 		long incr;
-		SCTP_TCB_LOCK(stcb);
 		if (flags & MSG_EOR) {
 			if(((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0)
 			   && ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
 				stcb = sctp_remove_from_socket_q(inp);
-			} else {
-				SCTP_INP_RLOCK(inp);		
-				stcb = LIST_FIRST(&inp->sctp_asoc_list);
-				SCTP_INP_RUNLOCK(inp);		
 			}
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_USRREQ2)
@@ -4335,6 +4332,8 @@ sctp_peeraddr(struct socket *so, struct mbuf *nam)
 	}
 	SCTP_INP_RLOCK(inp);
 	stcb = LIST_FIRST(&inp->sctp_asoc_list);
+	if(stcb)
+		SCTP_TCB_LOCK(stcb);
 	SCTP_INP_RUNLOCK(inp);
 	if (stcb == NULL) {
 		splx(s);
@@ -4344,7 +4343,6 @@ sctp_peeraddr(struct socket *so, struct mbuf *nam)
 		return ECONNRESET;
 	}
 	fnd = 0;
-	SCTP_TCB_LOCK(stcb);
 	TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 		sin_a = (struct sockaddr_in *)&net->ro._l_addr;
 		if (sin_a->sin_family == AF_INET) {

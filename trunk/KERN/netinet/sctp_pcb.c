@@ -2161,8 +2161,8 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 			if ((SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_COOKIE_WAIT) ||
 			    (SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_COOKIE_ECHOED)) {
 				/* Just abandon things in the front states */
-				SCTP_INP_WUNLOCK(inp);
 				SCTP_TCB_LOCK(asoc);
+				SCTP_INP_WUNLOCK(inp);
 				sctp_free_assoc(inp, asoc);
 				SCTP_INP_WLOCK(inp);
 				continue;
