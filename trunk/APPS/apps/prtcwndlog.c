@@ -91,6 +91,22 @@ main(int argc, char **argv)
 			       (int)(log.x.cwnd.inflight * 1024),
 			       (int)log.x.cwnd.cwnd_augment,
 			       from_str[log.from]);
+		}else if(log.event_type == SCTP_LOG_EVENT_MAXBURST) {
+			if(log.from == 0) {
+				printf("%d: Network:%x Cwnd:%d flight:%d bursted out:%d - NOT limited\n",
+				       at,
+				       (u_int)log.x.cwnd.net,
+				       (int)(log.x.cwnd.cwnd_new_value * 1024),
+				       (int)(log.x.cwnd.inflight * 1024),
+				       (int)log.x.cwnd.cwnd_augment);
+			} else {
+				printf("%d: Network:%x Cwnd:%d flight:%d burst limted to:%d - limited\n",
+				       at,
+				       (u_int)log.x.cwnd.net,
+				       (int)(log.x.cwnd.cwnd_new_value * 1024),
+				       (int)(log.x.cwnd.inflight * 1024),
+				       (int)log.x.cwnd.cwnd_augment);
+			}
 		}else if(log.event_type == SCTP_LOG_EVENT_BLOCK) {
 			printf("%d:mb-max:%d mb-used:%d sb-max:%d sb-used:%d send/sent cnt:%d strq_cnt:%d from %s\n",
 			       at,
