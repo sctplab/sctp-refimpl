@@ -911,6 +911,10 @@ sctp_timeout_handler(void *t)
 #endif
 		return;
 	}
+#if defined(__APPLE__)
+	/* clear the callout pending status here */
+	callout_stop(&tmr->timer);
+#endif
 	typ = tmr->type;
 	switch (tmr->type) {
 		/* call the handler for the appropriate timer type */
