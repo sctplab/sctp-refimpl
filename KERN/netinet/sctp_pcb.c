@@ -981,7 +981,7 @@ sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool, int have_lock, struct s
 	} else {
 		if(locked_inp == inp)
 			SCTP_INP_INCR_REF(inp);
-		else {
+		else if (inp) {
 			SCTP_INP_WLOCK(inp);
 			SCTP_INP_INCR_REF(inp);
 			SCTP_INP_WUNLOCK(inp);
@@ -4826,6 +4826,7 @@ sctp_add_to_socket_q(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 {
 	struct sctp_socket_q_list *sq;
 
+	/* write lock on INP assumed */
 	if ((inp == NULL) || (stcb == NULL)) {
 		/* I am paranoid */
 		return (0);
@@ -4840,10 +4841,8 @@ sctp_add_to_socket_q(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	sctppcbinfo.ipi_gencnt_sockq++;
 	if (stcb)
 		stcb->asoc.cnt_msg_on_sb++;
-	SCTP_INP_WLOCK(inp);
 	sq->tcb = stcb;
 	TAILQ_INSERT_TAIL(&inp->sctp_queue_list, sq, next_sq);
-	SCTP_INP_WUNLOCK(inp);
 	return (1);
 }
 
@@ -4854,14 +4853,13 @@ sctp_remove_from_socket_q(struct sctp_inpcb *inp)
 	struct sctp_tcb *stcb = NULL;
 	struct sctp_socket_q_list *sq;
 
+	/* W-Lock on INP assumed held */
 	sq = TAILQ_FIRST(&inp->sctp_queue_list);
 	if (sq == NULL)
 		return (NULL);
 
 	stcb = sq->tcb;
-	SCTP_INP_WLOCK(inp);
 	TAILQ_REMOVE(&inp->sctp_queue_list, sq, next_sq);
-	SCTP_INP_WUNLOCK(inp);
 	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_sockq, sq);
 	sctppcbinfo.ipi_count_sockq--;
 	sctppcbinfo.ipi_gencnt_sockq++;

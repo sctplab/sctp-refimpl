@@ -442,7 +442,9 @@ sctp_deliver_data(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			}
 			goto skip;
 		}
-
+		SCTP_TCB_UNLOCK(stcb);
+		SCTP_INP_WLOCK(stcb->sctp_ep);
+		SCTP_TCB_LOCK(stcb);
 		if (!sbappendaddr_nocheck(&stcb->sctp_socket->so_rcv,
 		    to, chk->data, control, stcb->asoc.my_vtag,
 		    stcb->sctp_ep)) {
@@ -463,6 +465,7 @@ sctp_deliver_data(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			}
 			free_it = 1;
 		}
+		SCTP_INP_WUNLOCK(stcb->sctp_ep);
 	} else {
 		/* append to a already started message. */
 		if (sctp_sbspace(&stcb->sctp_socket->so_rcv) >=
@@ -644,6 +647,9 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 				    stcb->sctp_socket);
 				return;
 			}
+			SCTP_TCB_UNLOCK(stcb);
+			SCTP_INP_WLOCK(stcb->sctp_ep);
+			SCTP_TCB_LOCK(stcb);
 			if (!sbappendaddr_nocheck(&stcb->sctp_socket->so_rcv,
 			    to, chk->data, control, stcb->asoc.my_vtag,
 			    stcb->sctp_ep)) {
@@ -665,6 +671,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 			} else {
 				stcb->asoc.my_rwnd_control_len += sizeof(struct mbuf);
 			}
+			SCTP_INP_WUNLOCK(stcb->sctp_ep);
 			cntDel++;
 		} else {
 			if (sctp_sbspace(&stcb->sctp_socket->so_rcv) >=
@@ -1936,6 +1943,9 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			mmm = mmm->m_next;
 		}
 		mmm->m_flags |= M_EOR;
+		SCTP_TCB_UNLOCK(stcb);
+		SCTP_INP_WLOCK(stcb->sctp_ep);
+		SCTP_TCB_LOCK(stcb);
 		if (!sbappendaddr_nocheck(&stcb->sctp_socket->so_rcv, to, dmbuf,
 		    control, stcb->asoc.my_vtag, stcb->sctp_ep)) {
 			if (control) {
@@ -1953,6 +1963,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		} else {
 			stcb->asoc.my_rwnd_control_len += sizeof(struct mbuf);
 		}
+		SCTP_INP_WUNLOCK(stcb->sctp_ep);
 		sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 		if ((ch->ch.chunk_flags & SCTP_DATA_UNORDERED) == 0) {
 
@@ -1964,6 +1975,11 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		sctp_log_strm_del_alt(tsn, strmseq,
 		    SCTP_STR_LOG_FROM_EXPRS_DEL);
 #endif	
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_INDATA1) {
+			printf("Express Delivery succeeds\n");
+		}
+#endif
 		goto finish_express_del;
 	}
 	   

@@ -3883,7 +3883,7 @@ sctp_usr_recvd(struct socket *so, int flags)
 	 * Grab the first one on the list. It will re-insert itself if
 	 * it runs out of room
 	 */
-	SCTP_INP_RLOCK(inp);		
+	SCTP_INP_WLOCK(inp);
 	if ((flags & MSG_EOR) && ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) 
 	    && ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
 		/* Ok the other part of our grubby tracking
@@ -3904,7 +3904,7 @@ sctp_usr_recvd(struct socket *so, int flags)
 	}
 	if (stcb)
 		SCTP_TCB_LOCK(stcb);
-	SCTP_INP_RUNLOCK(inp);
+	SCTP_INP_WUNLOCK(inp);
 	if (stcb) {
 		long incr;
 		if (flags & MSG_EOR) {
@@ -3954,9 +3954,12 @@ sctp_usr_recvd(struct socket *so, int flags)
 	} else {
 		if ((( sq ) && (flags & MSG_EOR) && ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0)) 
 		    && ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
+			SCTP_INP_WLOCK(inp);
 			stcb = sctp_remove_from_socket_q(inp);
+			SCTP_INP_WUNLOCK(inp);
 		}
 	}
+	SCTP_INP_WLOCK(inp);
 	SOCKBUF_LOCK(&so->so_rcv);
 	if (( so->so_rcv.sb_mb == NULL ) &&
 	    (TAILQ_EMPTY(&inp->sctp_queue_list) == 0)) {
@@ -3969,16 +3972,12 @@ sctp_usr_recvd(struct socket *so, int flags)
 		if(((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) 
 		   && ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
 			int done_yet;
-			SCTP_INP_RLOCK(inp);
 			done_yet = TAILQ_EMPTY(&inp->sctp_queue_list);
 			while (!done_yet) {
 				sq_cnt++;
-				SCTP_INP_RUNLOCK(inp);
 				(void)sctp_remove_from_socket_q(inp);
-				SCTP_INP_RLOCK(inp);
 				done_yet = TAILQ_EMPTY(&inp->sctp_queue_list);
 			}
-			SCTP_INP_RUNLOCK(inp);
 		}
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_USRREQ2)
@@ -3986,6 +3985,7 @@ sctp_usr_recvd(struct socket *so, int flags)
 #endif
 	}
 	SOCKBUF_UNLOCK(&so->so_rcv);
+	SCTP_INP_WUNLOCK(inp);
 	splx(s);
 	return (0);
 }
