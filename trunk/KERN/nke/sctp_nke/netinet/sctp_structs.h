@@ -233,7 +233,13 @@ struct sctp_data_chunkrec {
 
 TAILQ_HEAD(sctpchunk_listhead, sctp_tmit_chunk);
 
-#define CHUNK_FLAGS_FRAGMENT_OK	0x0001
+/* The lower byte is used to enumerate PR_SCTP policies */
+#define CHUNK_FLAGS_PR_SCTP_TTL	        SCTP_PR_SCTP_TTL
+#define CHUNK_FLAGS_PR_SCTP_BUF	        SCTP_PR_SCTP_BUF
+#define CHUNK_FLAGS_PR_SCTP_NTX         SCTP_PR_SCTP_NTX
+
+/* The upper byte is used a a bit mask */
+#define CHUNK_FLAGS_FRAGMENT_OK	        0x0100
 
 struct sctp_tmit_chunk {
 	union {
