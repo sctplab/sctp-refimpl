@@ -1066,6 +1066,14 @@ sctp_disconnect(struct socket *so)
 				    (SCTP_GET_STATE(asoc) != 
 				     SCTP_STATE_SHUTDOWN_ACK_SENT)) {
 					/* only send SHUTDOWN 1st time thru */
+#ifdef SCTP_DEBUG
+					if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
+						printf("%s:%d sends a shutdown\n",
+						       __FILE__,
+						       __LINE__
+							);
+					}
+#endif
 					sctp_send_shutdown(stcb,
 							   stcb->asoc.primary_destination);
 					sctp_chunk_output(stcb->sctp_ep, stcb, 1);
@@ -1163,6 +1171,14 @@ sctp_shutdown(struct socket *so)
 			/* there is nothing queued to send, so I'm done... */
 			if (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_SENT) {
 				/* only send SHUTDOWN the first time through */
+#ifdef SCTP_DEBUG
+				if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
+					printf("%s:%d sends a shutdown\n",
+					       __FILE__,
+					       __LINE__
+						);
+				}
+#endif
 				sctp_send_shutdown(stcb,
 						   stcb->asoc.primary_destination);
 				sctp_chunk_output(stcb->sctp_ep, stcb, 1);

@@ -2315,6 +2315,14 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 				sctp_timer_stop(SCTP_TIMER_TYPE_RECV,
 				    stcb->sctp_ep, stcb, NULL);
 			}
+#ifdef SCTP_DEBUG
+			if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
+				printf("%s:%d sends a shutdown\n",
+				       __FILE__,
+				       __LINE__
+				       );
+			}
+#endif
 			sctp_send_shutdown(stcb, stcb->asoc.primary_destination);
 			sctp_send_sack(stcb);
 		} else {
@@ -4027,6 +4035,14 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 		/* clean up */
 		if (asoc->state & SCTP_STATE_SHUTDOWN_PENDING) {
 			asoc->state = SCTP_STATE_SHUTDOWN_SENT;
+#ifdef SCTP_DEBUG
+			if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
+				printf("%s:%d sends a shutdown\n",
+				       __FILE__,
+				       __LINE__
+				       );
+			}
+#endif
 			sctp_send_shutdown(stcb,
 					   stcb->asoc.primary_destination);
 			sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN,

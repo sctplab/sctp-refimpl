@@ -1183,10 +1183,21 @@ sctp_shutdown_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	alt = sctp_find_alternate_net(stcb, net);
 
 	/* third generate a shutdown into the queue for out net */
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
+		printf("%s:%d sends a shutdown\n",
+		       __FILE__,
+		       __LINE__
+			);
+	}
+#endif
 	if (alt) {
 		sctp_send_shutdown(stcb, alt);
 	} else {
-		return(0);
+		/* if alt is NULL, there is no dest
+		 * to send to??
+		 */
+		return (0);
 	}
 	/* fourth restart timer */
 	sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN, inp, stcb, alt);
@@ -1417,6 +1428,14 @@ void sctp_autoclose_timer(struct sctp_inpcb *inp,
 				if (SCTP_GET_STATE(asoc) !=
 				    SCTP_STATE_SHUTDOWN_SENT) {
 					/* only send SHUTDOWN 1st time thru */
+#ifdef SCTP_DEBUG
+					if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
+						printf("%s:%d sends a shutdown\n",
+						       __FILE__,
+						       __LINE__
+							);
+					}
+#endif
 					sctp_send_shutdown(stcb, stcb->asoc.primary_destination);
 					asoc->state = SCTP_STATE_SHUTDOWN_SENT;
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN,

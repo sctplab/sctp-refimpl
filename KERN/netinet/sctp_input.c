@@ -2570,6 +2570,14 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 		sctp_send_hb(stcb, 1, net);
 		break;
 	case SCTP_SHUTDOWN:
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
+			printf("%s:%d sends a shutdown\n",
+			       __FILE__,
+			       __LINE__
+				);
+		}
+#endif
 		sctp_send_shutdown(stcb, net);
 		break;
 	case SCTP_SHUTDOWN_ACK:
