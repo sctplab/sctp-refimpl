@@ -192,10 +192,10 @@ sctp_get_peeloff(struct socket *head, caddr_t assoc_id, int *error)
 	newso->so_state |= SS_ISCONNECTED;
 	/* We remove it right away */
 #if defined(__FreeBSD__) || defined(__APPLE__)
-	SOCK_LOCK(head) 
+	SOCK_LOCK(head); 
 	TAILQ_REMOVE(&head->so_comp, newso, so_list);
 	head->so_qlen--;
-	SOCK_UNLOCK(head) 
+	SOCK_UNLOCK(head); 
 #else
 
 #if defined( __NetBSD__) || defined(__OpenBSD__)

@@ -4029,12 +4029,15 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 int
 #if defined(__FreeBSD__) || defined(__APPLE__)
 sctp_ingetaddr(struct socket *so, struct sockaddr **addr)
-	struct sockaddr_in *sin;
 #else
 sctp_ingetaddr(struct socket *so, struct mbuf *nam)
-	struct sockaddr_in *sin = mtod(nam, struct sockaddr_in *);
 #endif
 {
+#if defined(__FreeBSD__) || defined(__APPLE__)
+	struct sockaddr_in *sin;
+#else
+	struct sockaddr_in *sin = mtod(nam, struct sockaddr_in *);
+#endif
 	int s;
 	struct sctp_inpcb *inp;
 	/*
