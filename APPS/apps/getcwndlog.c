@@ -37,11 +37,18 @@ main(int argc, char **argv)
 	struct sctp_cwnd_log_req *req;
 	struct sctp_cwnd_log *logp;
 	int sd,siz,at,ret;
+	int clear=0;
 	int xxx;
 
 	if(argc < 2){
-		printf("use %s log-file\n",argv[0]);
+		printf("use %s log-file [clear]\n",argv[0]);
 		return (1);
+	}
+	if(argc > 2) {
+		if (strncmp("clear", argv[2], 5) == 0){
+			printf("I will clear log file after retreiveal\n");
+			clear = 1;
+		}
 	}
 	sd = socket(AF_INET, SOCK_DGRAM, IPPROTO_SCTP);
 	if(sd == -1){
@@ -80,6 +87,15 @@ main(int argc, char **argv)
 		printf("Got start:%d end:%d num:%d wrote out ret:%d (tot in %d)\n",
 		       req->start_at, req->end_at, req->num_ret, ret, req->num_in_log);
 	}
+	if(clear) {
+		if(setsockopt(sd,IPPROTO_SCTP,
+			      SCTP_CLR_STAT_LOG, &clear, sizeof(clear)) != 0) {
+			printf("error %d can't clear log file\n",errno);
+		} else {
+			printf ("Log filed cleared\n");
+		}
+	}
+	close(sd);
 	fclose(out);
 	return(0);
 }
