@@ -1671,6 +1671,7 @@ void
 sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
     struct sctp_tcb *stcb)
 {
+	struct sctp_nets *net;
 	uint16_t lport, rport;
 	struct sctppcbhead *head;
 	struct sctp_laddr *laddr, *oladdr;
@@ -1680,6 +1681,13 @@ sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
 	SCTP_INP_WLOCK(old_inp);
 	SCTP_INP_WLOCK(new_inp);
 	SCTP_TCB_LOCK(stcb);
+
+	/* Change the timer's argument of old_inp, to new_inp,
+	 * so stop it at first. */
+	TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
+		sctp_timer_stop(SCTP_TIMER_TYPE_PATHMTURAISE, old_inp,
+		    stcb, net);
+	}
 
 	new_inp->sctp_ep.time_of_secret_change =
 	    old_inp->sctp_ep.time_of_secret_change;
@@ -1711,6 +1719,13 @@ sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
 	 * we only have one connection? Probably not :> so lets
 	 * get rid of it and not suck up any kernel memory in that.
 	 */
+
+	/* Ok. Let's restart timer. */
+	TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
+		sctp_timer_start(SCTP_TIMER_TYPE_PATHMTURAISE, new_inp,
+		    stcb, net);
+	}
+
 	SCTP_INP_INFO_WUNLOCK();
 	stcb->sctp_socket = new_inp->sctp_socket;
 	stcb->sctp_ep = new_inp;
