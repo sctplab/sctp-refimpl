@@ -183,6 +183,7 @@ struct sctp_nets {
 	u_int8_t hb_responded;
 	u_int8_t cacc_saw_newack;	/* CACC algorithm flag */
         u_int8_t src_addr_selected;	/* if we split we move */
+	u_int8_t indx_of_eligible_next_to_use;
 	u_int8_t addr_is_local;		/* its a local address (if known) could move in split */
 #ifdef SCTP_HIGH_SPEED
 	u_int8_t last_hs_used;		/* index into the last HS table entry we used */
