@@ -35,8 +35,6 @@
  * SUCH DAMAGE.
  */
 
-#include <netinet/sctp.h>
-#include <netinet/sctp_constants.h>
 /*
  * We must have V6 so the size of the proto can be calculated. Otherwise
  * we would not allocate enough for Net/Open BSD :-<
@@ -44,6 +42,8 @@
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 #include <net/pfil.h>
 #endif
+#include <net/if.h>
+#include <net/if_var.h>
 #include <netinet/ip6.h>
 #include <netinet6/ip6_var.h>
 #include <netinet6/ip6protosw.h>
@@ -60,6 +60,8 @@
 #endif
 #endif
 
+#include <netinet/sctp.h>
+#include <netinet/sctp_constants.h>
 
 LIST_HEAD(sctppcbhead, sctp_inpcb);
 LIST_HEAD(sctpasochead, sctp_tcb);

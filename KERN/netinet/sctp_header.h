@@ -35,6 +35,7 @@
  * SUCH DAMAGE.
  */
 
+#include <sys/time.h>
 #include <netinet/sctp.h>
 #include <netinet/sctp_constants.h>
 
