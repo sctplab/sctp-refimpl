@@ -4158,8 +4158,10 @@ sctp_is_vtag_good(struct sctp_inpcb *inp, u_int32_t tag, struct timeval *now)
 	 * A secondary function it will do is purge out old tags that can
 	 * be removed.
 	 */
+	struct sctpasochead *head;
 	struct sctpvtaghead *chain;
 	struct sctp_tagblock *twait_block;
+	struct sctp_tcb *stcb;
 
 	int i;
 #ifdef SCTP_VTAG_TIMEWAIT_PER_STACK
@@ -4167,22 +4169,25 @@ sctp_is_vtag_good(struct sctp_inpcb *inp, u_int32_t tag, struct timeval *now)
 #else
 	chain = &inp->vtag_timewait[(tag % SCTP_STACK_VTAG_HASH_SIZE)];
 #endif
+	/* First is the vtag in use ? */
+
+	head = &sctppcbinfo.sctp_asochash[SCTP_PCBHASH_ASOC(tag,
+	    sctppcbinfo.hashasocmark)];
+	if (head == NULL) {
+		goto good_so_far;
+	}
+	LIST_FOREACH(stcb, head, sctp_asocs) {
+		if (stcb->asoc.my_vtag == tag) {
+			/* bad tag, in use */
+			return(0);
+		}
+	}
+ good_so_far:
 	if (!LIST_EMPTY(chain)) {
 		/*
 		 * Block(s) are present, lets see if we have this tag in
 		 * the list
 		 */
-
-		/*** FIX ME? if a tag is in use/ it would still be good?
-		 * This means that even if we setup the compile options to
-		 * have the vtag time-wait across the system it is still possible
-		 * that two assoc's will have the same tag. To fix this we would
-		 * need to add code to this module to assure that a vtag was
-		 * not in use. Presumably by hashing the vtag cache in a new
-		 * way to assure it is not in use and then doing the stuff below
-		 * to verify its not in timed wait...
-		 */
-
 		LIST_FOREACH(twait_block, chain, sctp_nxt_tagblock) {
 			for (i = 0; i < SCTP_NUMBER_IN_VTAG_BLOCK; i++) {
 				if (twait_block->vtag_block[i].v_tag == 0) {

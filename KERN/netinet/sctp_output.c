@@ -4533,7 +4533,8 @@ sctp_clean_up_ctl(struct sctp_association *asoc)
 		    (chk->rec.chunk_id == SCTP_ASCONF_ACK)) {
 			/* Stray chunks must be cleaned up */
 		clean_up_anyway:
-			TAILQ_REMOVE(&asoc->control_send_queue, chk, sctp_next);			if (chk->data) {
+			TAILQ_REMOVE(&asoc->control_send_queue, chk, sctp_next);
+			if (chk->data) {
 				sctp_m_freem(chk->data);
 				chk->data = NULL;
 			}
