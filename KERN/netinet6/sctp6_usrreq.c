@@ -250,7 +250,7 @@ sctp6_input(mp, offp, proto)
 		stcb = sctp_findassociation_addr(m, iphlen, offset - sizeof(*ch),
 						 sh, ch, &in6p, &net);
 		if((in6p) && (stcb)) {
-			sctp_send_packet_dropped(stcb, net, m, iphlen);
+			sctp_send_packet_dropped(stcb, net, m, iphlen, 1);
 		}
 		sctp_pegs[SCTP_BAD_CSUM]++;
 		goto out_of;
