@@ -299,6 +299,8 @@ extern struct sysctl_oid sysctl__net_inet_sctp_auto_asconf;
 extern struct sysctl_oid sysctl__net_inet_sctp_ecn_enable;
 extern struct sysctl_oid sysctl__net_inet_sctp_ecn_nonce;
 extern struct sysctl_oid sysctl__net_inet_sctp_strict_sacks;
+extern struct sysctl_oid sysctl__net_inet_sctp_loopback_nocsum;
+extern struct sysctl_oid sysctl__net_inet_sctp_strict_init;
 #endif
 
 extern struct sysctl_oid sysctl__net_link_ether;
@@ -600,12 +602,15 @@ struct sysctl_oid *newsysctl_list[] =
     ,&sysctl__net_inet_udp_blackhole
 
 #ifdef SCTP
+    ,&sysctl__net_inet_sctp
     ,&sysctl__net_inet_sctp_auto_asconf
     ,&sysctl__net_inet_sctp_maxdgram
     ,&sysctl__net_inet_sctp_recvspace
     ,&sysctl__net_inet_sctp_ecn_enable
     ,&sysctl__net_inet_sctp_ecn_nonce
     ,&sysctl__net_inet_sctp_strict_sacks
+    ,&sysctl__net_inet_sctp_loopback_nocsum
+    ,&sysctl__net_inet_sctp_strict_init
 #endif
 
 #if NETAT
