@@ -75,6 +75,36 @@ struct sctp_timer {
  */
 TAILQ_HEAD(sctpnetlisthead, sctp_nets);
 
+
+/* 
+ * Users of the iterator need to malloc a iterator with a call to
+ * sctp_initiate_iterator(func, pcb_flags, asoc_state, void-ptr-arg,  u_int32_t, u_int32-arg, end_func );
+ *
+ * Use the following two defines if you don't
+ * care what pcb flags are on the EP and/or you
+ * don't care what state the association is in.
+ */
+#define SCTP_PCB_ANY_FLAGS  0x00000000	
+#define SCTP_ASOC_ANY_STATE 0x00000000
+
+typedef void(*asoc_func)(struct sctp_inpcb *, struct sctp_tcb *, void *ptr, u_int32_t val);
+typedef void(*end_func)(void *ptr, u_int32_t val);
+
+struct sctp_iterator {
+        LIST_ENTRY(sctp_iterator) sctp_nxt_itr;
+	struct sctp_timer tmr;
+	struct sctp_inpcb *inp;	/* ep */
+	struct sctp_tcb *stcb;	/* assoc */
+	asoc_func function_toapply;
+	end_func function_atend;
+	void *pointer;		/* IFA could go here */
+	u_int32_t val;		/* type could go here */
+	u_int32_t pcb_flags;
+	u_int32_t asoc_state;
+};
+
+LIST_HEAD(sctpiterators, sctp_iterator);
+
 union sctp_sockstore {
 #ifdef AF_INET
 	struct sockaddr_in  sin;
@@ -293,6 +323,9 @@ struct sctp_association {
 	struct sctpchunk_listhead delivery_queue;
 
 	struct sctpwheel_listhead out_wheel;
+
+	/* If an iterator is looking at me, this is it */
+	struct sctp_iterator *stcb_starting_point_for_iterator;
 
 	/* ASCONF destination address last sent to */
 	struct sctp_nets *asconf_last_sent_to;

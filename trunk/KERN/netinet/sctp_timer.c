@@ -1414,3 +1414,76 @@ void sctp_autoclose_timer(struct sctp_inpcb *inp,
 		}
 	}
 }
+
+void
+sctp_iterator_timer(struct sctp_iterator *it)
+{
+	int cnt= 0;
+	if(it->inp == NULL) {
+		/* iterator is complete */
+	done_with_iterator:
+		LIST_REMOVE(it, sctp_nxt_itr);
+		/* stopping the callout is not needed, in theory,
+		 * but I am paranoid.
+		 */
+		callout_stop(&it->tmr.timer);
+		if(it->function_atend != NULL) {
+			(*it->function_atend)(it->pointer, it->val);
+		}
+		FREE(it, M_PCB);
+		return;
+	}
+ select_a_new_ep:
+	while ((it->pcb_flags) && ((it->inp->sctp_flags & it->pcb_flags) != it->pcb_flags)) {
+		/* we do not like this ep */
+		it->inp = LIST_NEXT(it->inp, sctp_list);
+		if(it->inp == NULL) {
+			goto done_with_iterator;
+		}
+	}
+	if ((it->inp->inp_starting_point_for_iterator != NULL) &&
+	    (it->inp->inp_starting_point_for_iterator != it)) {
+		printf("Iterator collision, we must wait for other iterator at %x\n", 
+		       (u_int)it->inp);
+		goto start_timer_return;
+	}
+	/* now we lock this EP to us */
+	it->inp->inp_starting_point_for_iterator = it;
+
+	/* if we reach here we found a inp acceptable, now through each
+	 * one that has the association in the right state 
+	 */
+	if(it->stcb == NULL) {
+		it->stcb = LIST_FIRST(&it->inp->sctp_asoc_list);
+	}
+	if (it->stcb->asoc.stcb_starting_point_for_iterator == it) {
+		it->stcb->asoc.stcb_starting_point_for_iterator = NULL;
+	}
+	while (it->stcb) {
+		if(it->asoc_state && ((it->stcb->asoc.state & it->asoc_state) != it->asoc_state)) {
+			it->stcb = LIST_NEXT(it->stcb, sctp_tcblist);
+			continue;
+		}
+		cnt++;
+		/* run function on this one */
+		(*it->function_toapply)(it->inp, it->stcb, it->pointer, it->val);
+		sctp_chunk_output(it->inp, it->stcb, 1);
+		/* see if we have limited out */
+		if (cnt > SCTP_MAX_ITERATOR_AT_ONCE) {
+			it->stcb->asoc.stcb_starting_point_for_iterator = it;
+		start_timer_return:
+			sctp_timer_start(SCTP_TIMER_TYPE_ITERATOR, (struct sctp_inpcb *)it, NULL, NULL);
+			return;
+		}
+		it->stcb = LIST_NEXT(it->stcb, sctp_tcblist);
+	}
+	/* if we reach here, we ran out of stcb's in the inp we are looking at */
+
+	/* unlock it */
+	it->inp->inp_starting_point_for_iterator = NULL;
+	it->inp = LIST_NEXT(it->inp, sctp_list);
+	if(it->inp == NULL) {
+		goto done_with_iterator;
+	}
+	goto select_a_new_ep;
+}
