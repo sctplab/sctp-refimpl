@@ -683,7 +683,9 @@ sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, caddr_t asoc_id)
 		return (NULL);
 	}
 	LIST_FOREACH(stcb, head, sctp_asocs) {
+		SCTP_INP_RLOCK(sctp->sctp_ep);
 		SCTP_TCB_LOCK(stcb);
+		SCTP_INP_RUNLOCK(sctp->sctp_ep);
 		if (stcb->asoc.my_vtag == vtag) {
 			/* candidate */
 			if (inp != stcb->sctp_ep) {
@@ -1122,7 +1124,9 @@ sctp_findassoc_by_vtag(struct sockaddr *from, uint32_t vtag,
 		return (NULL);
 	}
 	LIST_FOREACH(stcb, head, sctp_asocs) {
+		SCTP_INP_RLOCK(stcb->sctp_ep);
 		SCTP_TCB_LOCK(stcb);
+		SCTP_INP_RUNLOCK(stcb->sctp_ep);
 		if (stcb->asoc.my_vtag == vtag) {
 			/* candidate */
 			if (stcb->rport != rport) {
@@ -1425,6 +1429,7 @@ sctp_inpcb_alloc(struct socket *so)
 #endif
 	if (error != 0) {
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, inp);
+		SCTP_INP_INFO_WUNLOCK();
 		return error;
 	}
 #endif /* IPSEC */
@@ -1460,6 +1465,7 @@ sctp_inpcb_alloc(struct socket *so)
 		 * it in protosw
 		 */
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, inp);
+		SCTP_INP_INFO_WUNLOCK();
 		return (EOPNOTSUPP);
 	}
 	inp->sctp_tcbhash = hashinit(sctp_pcbtblsize,
@@ -1474,6 +1480,7 @@ sctp_inpcb_alloc(struct socket *so)
 	if (inp->sctp_tcbhash == NULL) {
 		printf("Out of SCTP-INPCB->hashinit - no resources\n");
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, inp);
+		SCTP_INP_INFO_WUNLOCK();
 		return (ENOBUFS);
 	}
         /* LOCK init's */
@@ -2879,6 +2886,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 				printf("BIND FAILS ret:%d\n", err);
 			}
 #endif
+
 			*error = err;
 			return (NULL);
 		}
@@ -2900,6 +2908,14 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	bzero(stcb, sizeof(*stcb));
 	asoc = &stcb->asoc;
 	SCTP_TCB_LOCK_INIT(stcb);
+
+	SCTP_INP_WLOCK(inp);
+
+	/* setup back pointer's */
+	stcb->sctp_ep = inp;
+	stcb->sctp_socket = inp->sctp_socket;
+
+
 	SCTP_TCB_LOCK(stcb);
 
 	if ((err = sctp_init_asoc(inp, asoc, for_a_init, override_tag))) {
@@ -2912,11 +2928,10 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		}
 #endif
 		*error = err;
+		SCTP_TCB_LOCK_DESTROY (stcb);
+		SCTP_INP_WUNLOCK(inp);
 		return (NULL);
 	}
-	/* setup back pointer's */
-	stcb->sctp_ep = inp;
-	stcb->sctp_socket = inp->sctp_socket;
 
 	/* and the port */
 	stcb->rport = rport;
@@ -2935,6 +2950,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 			FREE(asoc->strmout, M_PCB);
 		if (asoc->mapping_array)
 			FREE(asoc->mapping_array, M_PCB);
+		
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
 		sctppcbinfo.ipi_count_asoc--;
 #ifdef SCTP_DEBUG
@@ -2942,6 +2958,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 			printf("aloc_assoc: couldn't add remote addr!\n");
 		}
 #endif
+		SCTP_TCB_LOCK_DESTROY (stcb);
 		*error = ENOBUFS;
 		return (NULL);
 	}
@@ -2959,7 +2976,6 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	callout_init(&asoc->shut_guard_timer.timer);
 	callout_init(&asoc->autoclose_timer.timer);
 #endif
-	SCTP_INP_WLOCK(inp);
 
 	LIST_INSERT_HEAD(&inp->sctp_asoc_list, stcb, sctp_tcblist);
 
@@ -3139,7 +3155,9 @@ sctp_iterator_asoc_being_freed(struct sctp_tcb *stcb)
 	 */
 	SCTP_TCB_UNLOCK(stcb);
 	SCTP_ITERATOR_LOCK();
+	SCTP_INP_RLOCK(stcb->sctp_ep);
 	SCTP_TCB_LOCK(stcb);
+	SCTP_INP_RUNLOCK(stcb->sctp_ep);
 
 	it = stcb->asoc.stcb_starting_point_for_iterator;
 	if (it == NULL) {

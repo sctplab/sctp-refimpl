@@ -4360,9 +4360,9 @@ sctp_msg_append(struct sctp_tcb *stcb,
 				error = inp->error_on_block;
 			if (so->so_error)
 				error = so->so_error;
-			if (error)
-				goto out;
-			SOCKBUF_LOCK(&so->so_snd);
+			if (error) {
+				goto out_locked;
+			}
 			error = sblock(&so->so_snd, M_WAITOK);
 			if (error)
 				goto out_locked;
@@ -4391,13 +4391,14 @@ sctp_msg_append(struct sctp_tcb *stcb,
 	 * smallest mtu of the asoc
 	 */
 	siz = sctp_get_frag_point(stcb, asoc);
-
+	SOCKBUF_UNLOCK(&so->so_snd);
 	if ((dataout) && (dataout <= siz)) {
 		/* Fast path */
 		chk = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk);
 		if (chk == NULL) {
-			sctp_m_freem(m);
-			return (ENOMEM);
+			error = ENOMEM;
+			SOCKBUF_LOCK(&so->so_snd);
+			goto release;
 		}
 		sctp_prepare_chunk(chk, stcb, srcv, strq, net);
 		chk->whoTo->ref_count++;
@@ -4441,7 +4442,8 @@ sctp_msg_append(struct sctp_tcb *stcb,
 		if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_NO_FRAGMENT) &&
 		    (dataout > siz)) {
 			error = EMSGSIZE;
-			goto out;
+			SOCKBUF_LOCK(&so->so_snd);
+			goto release;
 		}
 		/* setup the template */
 		sctp_prepare_chunk(&template, stcb, srcv, strq, net);
@@ -4454,7 +4456,9 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			 */
 			n->m_nextpkt = m_split(n, siz, M_WAIT);
 			if (n->m_nextpkt == NULL) {
-				goto out;
+				error = EFAULT;
+				SOCKBUF_LOCK(&so->so_snd);
+				goto release;
 			}
 			dataout -= siz;
 			n = n->m_nextpkt;
@@ -4492,7 +4496,9 @@ sctp_msg_append(struct sctp_tcb *stcb,
 					sctppcbinfo.ipi_gencnt_chunk++;
 					chk = TAILQ_FIRST(&tmp);
 				}
-				goto out;
+				error = ENOMEM;
+				SOCKBUF_LOCK(&so->so_snd);
+				goto release;
 			}
 			sctppcbinfo.ipi_count_chunk++;
 			asoc->chunks_on_out_queue++;
@@ -4565,6 +4571,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			sctp_insert_on_wheel(asoc, strq);
 		}
 	}
+	SOCKBUF_LOCK(&so->so_snd);
 	/* has a SHUTDOWN been (also) requested by the user on this asoc? */
 zap_by_it_all:
 
@@ -9536,7 +9543,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 				/* Should I really unlock ? */
 				SCTP_INP_RUNLOCK(inp);
 				error = EFAULT;
-				goto out;
+				goto out_locked;
 			}
 			SCTP_TCB_LOCK(stcb);
 			SCTP_INP_RUNLOCK(inp);
@@ -9554,21 +9561,18 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 				 */
  				error = inp->error_on_block;
 				splx(s);
-				goto out;
+				goto out_locked;
 			}
 			if (error) {
 				splx(s);
-				goto out;		
+				goto out_locked;
 			}
 			/* did we encounter a socket error? */
 			if (so->so_error) {
 				error = so->so_error;
 				splx(s);
-				goto out;
+				goto out_locked;
 			}
-			/* Ok we need to assert we have the lock  */
-			SOCKBUF_LOCK_ASSERT(&so->so_snd);
-			
 			error = sblock(&so->so_snd, M_WAITOK);
 			if (error) {
 				/* Can't aquire the lock */
@@ -9707,11 +9711,13 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 	 * we need multiple chunks.
 	 */
 	splx(s);
+	SOCKBUF_UNLOCK(&so->so_snd);	
 	if (tot_out <= frag_size) {
 		/* no need to setup a template */
 		chk = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk);
 		if (chk == NULL) {
 			error = ENOMEM;
+			SOCKBUF_LOCK(&so->so_snd);
 			goto release;
 		}
 		sctppcbinfo.ipi_count_chunk++;
@@ -9780,6 +9786,7 @@ clean_up:
 			if ((int)sctppcbinfo.ipi_count_chunk < 0) {
 				panic("Chunk count is negative");
 			}
+			SOCKBUF_LOCK(&so->so_snd);
 			goto release;
 		}
 	} else {
@@ -9882,6 +9889,7 @@ clean_up:
 		splx(s);
 temp_clean_up:
 		if (error) {
+			SOCKBUF_LOCK(&so->so_snd);
 			chk = TAILQ_FIRST(&tmp);
 			while (chk) {
 				if (chk->data) {
@@ -9914,7 +9922,7 @@ zap_by_it_now:
 #else
 	s = splnet();
 #endif
-
+	SOCKBUF_LOCK(&so->so_snd);
 	asoc->total_output_queue_size += dataout;
 	asoc->total_output_mbuf_queue_size += mbcnt;
 	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
@@ -9985,7 +9993,6 @@ release:
 	sbunlock(&so->so_snd);
 out_locked:
 	SOCKBUF_UNLOCK(&so->so_snd);
-out:
 	if (mm)
 		sctp_m_freem(mm);
 	return (error);
