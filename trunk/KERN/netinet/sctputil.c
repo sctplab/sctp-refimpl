@@ -1847,20 +1847,17 @@ sctp_mtu_size_reset(struct sctp_inpcb *inp,
 	TAILQ_FOREACH(strm, &asoc->out_wheel, next_spoke) {
 		TAILQ_FOREACH(chk, &strm->outqueue, sctp_next) {
 			if (chk->send_size > eff_mtu) {
-				chk->flags &= SCTP_DONT_FRAGMENT;
 				chk->flags |= CHUNK_FLAGS_FRAGMENT_OK;
 			}
 		}
 	}
 	TAILQ_FOREACH(chk, &asoc->send_queue, sctp_next) {
 		if (chk->send_size > eff_mtu) {
-			chk->flags &= SCTP_DONT_FRAGMENT;
 			chk->flags |= CHUNK_FLAGS_FRAGMENT_OK;
 		}
 	}
 	TAILQ_FOREACH(chk, &asoc->sent_queue, sctp_next) {
 		if (chk->send_size > eff_mtu) {
-			chk->flags &= SCTP_DONT_FRAGMENT;
 			chk->flags |= CHUNK_FLAGS_FRAGMENT_OK;
 		}
 	}

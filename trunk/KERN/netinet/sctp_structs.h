@@ -233,7 +233,10 @@ struct sctp_data_chunkrec {
 
 TAILQ_HEAD(sctpchunk_listhead, sctp_tmit_chunk);
 
-#define CHUNK_FLAGS_FRAGMENT_OK	0x0001
+#define CHUNK_FLAGS_FRAGMENT_OK	                0x0001
+#define CHUNK_FLAGS_SCTP_PR_SCTP_ENABLED	0x0400
+#define CHUNK_FLAGS_SCTP_PR_SCTP_BUFFER	        0x0800
+
 
 struct sctp_tmit_chunk {
 	union {
