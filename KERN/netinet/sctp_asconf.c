@@ -1820,6 +1820,7 @@ sctp_addr_mgmt_ep(struct sctp_inpcb *inp, struct ifaddr *ifa, uint16_t type)
 		    (ifa6->ia6_flags &
 		     (IN6_IFF_DETACHED | IN6_IFF_ANYCAST | IN6_IFF_NOTREADY))) {
 			/* can't use an invalid address */
+			SCTP_INP_WLOCK(inp);
 			return;
 		}
 	} else if (ifa->ifa_addr->sa_family == AF_INET) {
@@ -1836,6 +1837,7 @@ sctp_addr_mgmt_ep(struct sctp_inpcb *inp, struct ifaddr *ifa, uint16_t type)
 		    (inp6->inp_flags & IN6P_IPV6_V6ONLY)
 #endif
 			)
+			SCTP_INP_WLOCK(inp);
 			return;
 	} else {
 		/* invalid address family */
@@ -1857,6 +1859,7 @@ sctp_addr_mgmt_ep(struct sctp_inpcb *inp, struct ifaddr *ifa, uint16_t type)
 				sctp_del_local_addr_ep(inp, ifa);
 			}
 			/* no asconfs to queue for this inp... */
+			SCTP_INP_WLOCK(inp);
 			return;
 		} else {
 			/*
@@ -1878,14 +1881,16 @@ sctp_addr_mgmt_ep(struct sctp_inpcb *inp, struct ifaddr *ifa, uint16_t type)
 #else
 	s = splnet();
 #endif
+	SCTP_INP_WUNLOCK(inp);
 	/* process for all associations for this endpoint */
+	SCTP_INP_RLOCK(inp);
 	LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
 		SCTP_TCB_LOCK(stcb);
 		sctp_addr_mgmt_assoc(inp, stcb, ifa, type);
 		SCTP_TCB_UNLOCK(stcb);
 	} /* for each stcb */
 	splx(s);
-	SCTP_INP_WUNLOCK(inp);
+	SCTP_INP_RUNLOCK(inp);
 }
 
 /*
