@@ -911,7 +911,6 @@ sctp_t1init_timer(struct sctp_inpcb *inp,
 	if (stcb->asoc.initial_init_rto_max < net->RTO) {
 		net->RTO = stcb->asoc.initial_init_rto_max;
 	}
-	printf("Timer t1 sees %d nets\n", stcb->asoc.numnets);
 	if (stcb->asoc.numnets > 1) {
 		/* If we have more than one addr use it */
 		struct sctp_nets *alt;
