@@ -482,12 +482,22 @@ int
 sctp_is_addr_restricted(struct sctp_tcb *stcb, struct sockaddr *addr)
 {
 	struct sctp_laddr *laddr;
-
+#ifdef SCTP_DEBUG
+	int cnt=0;
+#endif
 	if (stcb == NULL) {
 		/* There are no restrictions, no TCB :-) */
 		return (0);
 	}
-
+#ifdef SCTP_DEBUG
+	LIST_FOREACH(laddr, &stcb->asoc.sctp_local_addr_list, sctp_nxt_addr) {
+		cnt++;
+	}
+	if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
+		printf("There are %d addresses on the restricted list\n",cnt);
+	}
+	cnt = 0;
+#endif
 	LIST_FOREACH(laddr, &stcb->asoc.sctp_local_addr_list, sctp_nxt_addr) {
 		if (laddr->ifa == NULL) {
 #ifdef SCTP_DEBUG
@@ -497,6 +507,13 @@ sctp_is_addr_restricted(struct sctp_tcb *stcb, struct sockaddr *addr)
 #endif
 			continue;
 		}
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) { 
+			cnt++;
+			printf("Restricted address[%d]:",cnt);
+			sctp_print_address(laddr->ifa->ifa_addr);
+		}
+#endif
 		if (sctp_cmpaddr(addr, laddr->ifa->ifa_addr) == 1) {
 			/* Yes it is on the list */
 			return (1);
@@ -2571,7 +2588,8 @@ int sctp_is_address_in_scope(struct ifaddr *ifa,
 	if ((loopback_scope == 0) &&
 	    (ifa->ifa_ifp) &&
 	    (ifa->ifa_ifp->if_type == IFT_LOOP)) {
-		/* skip loopback if not in scope */
+		/* skip loopback if not in scope *
+		 */
 		return (0);
 	}
 	if ((ifa->ifa_addr->sa_family == AF_INET) && ipv4_addr_legal) {
@@ -2635,6 +2653,7 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	struct sctp_prsctp_supported_param *prsctp;
 	struct sctp_ecn_nonce_supported_param *ecn_nonce;
 	struct sctp_supported_chunk_types_param *pr_supported;
+	int cnt_inits_to=0;
 	int padval,ret;
 
 	/* INIT's always go to the primary (and usually ONLY address) */
@@ -2659,6 +2678,15 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		sctp_print_address ((struct sockaddr *)&net->ra._l_addr);
 	}
 #endif
+	if(((struct sockaddr *)&(net->ra._l_addr))->sa_family == AF_INET6) {
+		/* special hook, if we are sending to link local
+		 * it will not show up in our private address count.
+		 */
+ 		struct sockaddr_in6 *sin6l;
+		sin6l = &net->ra._l_addr.sin6;
+		if(IN6_IS_ADDR_LINKLOCAL(&sin6l->sin6_addr))
+			cnt_inits_to = 1;
+	}
 	if (callout_pending(&net->rxt_timer.timer)) {
 		/* This case should not happen */
 		return;
@@ -2792,7 +2820,7 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		struct ifaddr *ifa;
 		int cnt;
 
-		cnt = 0;
+		cnt = cnt_inits_to;
  		TAILQ_FOREACH(ifn,&ifnet, if_list) {
 			if ((stcb->asoc.loopback_scope == 0) &&
 			    (ifn->if_type == IFT_LOOP)) {
@@ -2842,7 +2870,7 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	} else {
 		struct sctp_laddr *laddr;
 		int cnt;
-		cnt = 0;
+		cnt = cnt_inits_to;
 		/* First, how many ? */
 		LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
 			if (laddr->ifa == NULL) {
@@ -3309,6 +3337,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	struct sockaddr *to;
 	struct sctp_state_cookie stc;
 	struct sctp_nets *net=NULL;
+	int cnt_inits_to=0;
 	uint16_t his_limit, i_want;
 	int abort_flag, padval, sz_of;
 
@@ -3501,6 +3530,12 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				stc.local_scope = 0;
 				stc.site_scope = 1;
 
+				/* we start counting for the private
+				 * address stuff at 1. since the link
+				 * local we source from won't show
+				 * up in our scoped cou8nt.
+				 */
+				cnt_inits_to=1;
 				/* pull out the scope_id from incoming pkt */
 				(void)in6_recoverscope(sin6, &ip6->ip6_src,
 				    init_pkt->m_pkthdr.rcvif);
@@ -3531,10 +3566,22 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		}
 	} else {
 		/* set the scope per the existing tcb */
+		struct sctp_nets *lnet;
+
 		stc.loopback_scope = asoc->loopback_scope;
 		stc.ipv4_scope = asoc->ipv4_local_scope;
 		stc.site_scope = asoc->site_scope;
 		stc.local_scope = asoc->local_scope;
+		TAILQ_FOREACH(lnet, &asoc->nets, sctp_next) {
+			if(lnet->ra._l_addr.sin6.sin6_family == AF_INET6) {
+				if(IN6_IS_ADDR_LINKLOCAL(&lnet->ra._l_addr.sin6.sin6_addr)) {
+					/* if we have a LL address, start counting
+					 * at 1. 
+					 */
+ 					cnt_inits_to = 1;
+				}
+			}
+		}
 
 		/* use the net pointer */
 		to = (struct sockaddr *)&net->ra._l_addr;
@@ -3702,7 +3749,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
 		struct ifnet *ifn;
 		struct ifaddr *ifa;
-		int cnt = 0;
+		int cnt = cnt_inits_to;
 
 		TAILQ_FOREACH(ifn,&ifnet, if_list) {
 			if ((stc.loopback_scope == 0) &&
@@ -3748,7 +3795,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	} else {
 		struct sctp_laddr *laddr;
 		int cnt;
-		cnt = 0;
+		cnt = cnt_inits_to;
 		/* First, how many ? */
 		LIST_FOREACH(laddr,&inp->sctp_addr_list, sctp_nxt_addr) {
 			if (laddr->ifa == NULL) {
