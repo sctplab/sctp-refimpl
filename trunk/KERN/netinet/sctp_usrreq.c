@@ -2920,7 +2920,7 @@ sctp_optsset(struct socket *so,
 						int cnt_of_unconf = 0;
 						struct sctp_nets *lnet;
 						TAILQ_FOREACH(lnet, &stcb->asoc.nets, sctp_next) {
-							if (lnet->dest_state & SCTP_ADDR_UNCONFIRMED){
+							if (lnet->dest_state & SCTP_ADDR_UNCONFIRMED) {
 								cnt_of_unconf++;
 							}
 						}
@@ -2989,7 +2989,7 @@ sctp_optsset(struct socket *so,
 			break;
 		}
 		sasoc = mtod(m, struct sctp_assocparams *);
-		if ((sasoc->sasoc_assoc_id) && (stcb == NULL)){
+		if ((sasoc->sasoc_assoc_id) && (stcb == NULL)) {
 #ifdef SCTP_TCP_MODEL_SUPPORT
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)
 				stcb = LIST_FIRST(&inp->sctp_asoc_list);

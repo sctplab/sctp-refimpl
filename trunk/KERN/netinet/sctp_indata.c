@@ -4157,8 +4157,8 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	 ******************************************************************/
 
 	if (asoc->ecn_nonce_allowed) {
-		if (asoc->nonce_sum_check){ 
-			if (nonce_sum_flag != ((asoc->nonce_sum_expect_base + ecn_seg_sums) & SCTP_SACK_NONCE_SUM)){
+		if (asoc->nonce_sum_check) { 
+			if (nonce_sum_flag != ((asoc->nonce_sum_expect_base + ecn_seg_sums) & SCTP_SACK_NONCE_SUM)) {
 				if (asoc->nonce_wait_for_ecne == 0) {
 					struct sctp_tmit_chunk *lchk;
 					lchk = TAILQ_FIRST(&asoc->send_queue);

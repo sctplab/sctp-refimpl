@@ -557,7 +557,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 						}
 						return (stcb);
 					}
-				} else if (remote->sa_family == AF_INET6){
+				} else if (remote->sa_family == AF_INET6) {
 					struct sockaddr_in6 *sin6, *rsin6;
 					sin6 = (struct sockaddr_in6 *)
 					    &net->ra._l_addr;
@@ -1926,17 +1926,17 @@ static void
 sctp_iterator_inp_being_freed(struct sctp_inpcb *inp)
 {
 	struct sctp_iterator *it;
-	if(inp->inp_starting_point_for_iterator) {
+	if (inp->inp_starting_point_for_iterator) {
 		/* lets fix the one who has the lock first */
 		it = inp->inp_starting_point_for_iterator;
 		it->inp = LIST_NEXT(it->inp, sctp_list);
-		if(it->stcb->asoc.stcb_starting_point_for_iterator) {
+		if (it->stcb->asoc.stcb_starting_point_for_iterator) {
 			/* fix stcb back pointer to null too */
 			it->stcb->asoc.stcb_starting_point_for_iterator = NULL;
 
 		}
 		it->stcb = NULL;
-		if(it->inp && (it->inp->inp_starting_point_for_iterator == NULL)) {
+		if (it->inp && (it->inp->inp_starting_point_for_iterator == NULL)) {
 			/* Give him back the lock on this one */
 			it->inp->inp_starting_point_for_iterator = it;
 		}
@@ -2932,7 +2932,7 @@ sctp_iterator_asoc_being_freed(struct sctp_tcb *stcb)
 		return;
 	}
 	it->stcb = LIST_NEXT(it->stcb, sctp_tcblist);
-	if(it->stcb == NULL) {
+	if (it->stcb == NULL) {
 		/* done with all asoc's in this assoc */
 		inp = LIST_NEXT(it->inp, sctp_list);
 	}
@@ -4233,7 +4233,7 @@ sctp_is_vtag_good(struct sctp_inpcb *inp, u_int32_t tag, struct timeval *now)
 			 * unique across all endpoints. For
 			 * now within a endpoint is ok.
 			 */
- 			if(inp == stcb->sctp_ep) {
+ 			if (inp == stcb->sctp_ep) {
 				/* bad tag, in use */
 				return(0);
 			}
@@ -4537,11 +4537,11 @@ sctp_initiate_iterator(asoc_func af, uint32_t pcb_state,
 {
 	struct sctp_iterator *it=NULL;	
 	int s;
-	if(af == NULL) {
+	if (af == NULL) {
 		return (-1);
 	}
 	MALLOC(it, struct sctp_iterator *, sizeof(struct sctp_iterator), M_PCB, M_WAITOK);
-	if(it == NULL) {
+	if (it == NULL) {
 		return(ENOMEM);
 	}
 	memset(it, 0, sizeof(*it));

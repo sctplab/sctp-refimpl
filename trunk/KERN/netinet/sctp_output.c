@@ -950,7 +950,7 @@ sctp_is_v6_ifa_addr_acceptable (struct ifaddr *ifa, int loopscope, int loc_scope
 		return(NULL);
 	}
 
-	if(IN6_IS_ADDR_LINKLOCAL(&sin6->sin6_addr) ){
+	if (IN6_IS_ADDR_LINKLOCAL(&sin6->sin6_addr) ) {
 		*sin_local = 1;
 	}
 	if (!loc_scope && *sin_local) {
@@ -1010,7 +1010,7 @@ sctp_choose_v6_boundspecific_stcb(struct rtentry *rt,
 				continue;
 			}
 			sin6 = sctp_is_v6_ifa_addr_acceptable (laddr->ifa, loopscope, loc_scope, &sin_loop, &sin_local);
-			if(sin6 == NULL)
+			if (sin6 == NULL)
 				continue;
 			if (sctp_is_addr_restricted(stcb, (struct sockaddr *)sin6)) {
 				/* on the no-no list */
@@ -1020,14 +1020,14 @@ sctp_choose_v6_boundspecific_stcb(struct rtentry *rt,
 			if ((loopscope == 0) &&
 			    (loc_scope == 0) &&
 			    (sin_loop == 0) &&
-			    (sin_local == 0) ){
+			    (sin_local == 0) ) {
 				/* all of global scope we are ok with it */
 				return (sin6);
 			}
-			if(loopscope && sin_loop)
+			if (loopscope && sin_loop)
 				/* both on the loopback, thats ok */
 				return (sin6);
-			if(loc_scope && sin_local)
+			if (loc_scope && sin_local)
 				/* both local scope */
 				return (sin6);
 
@@ -1052,7 +1052,7 @@ sctp_choose_v6_boundspecific_stcb(struct rtentry *rt,
 				continue;
 			}
 			sin6 = sctp_is_v6_ifa_addr_acceptable (laddr->ifa, loopscope, loc_scope, &sin_loop, &sin_local);
-			if(sin6 == NULL)
+			if (sin6 == NULL)
 				continue;
 			if (sctp_is_addr_restricted(stcb, (struct sockaddr *)sin6)) {
 				/* on the no-no list */
@@ -1060,7 +1060,7 @@ sctp_choose_v6_boundspecific_stcb(struct rtentry *rt,
 			}
 			return (sin6);
 		}
-		if(start_at_beginning == 0) {
+		if (start_at_beginning == 0) {
 			stcb->asoc.last_used_address = NULL;
 			goto sctp_from_the_top2;
 		}
@@ -1078,19 +1078,19 @@ sctp_choose_v6_boundspecific_stcb(struct rtentry *rt,
 				continue;
 			}
 			sin6 = sctp_is_v6_ifa_addr_acceptable (laddr->ifa, loopscope, loc_scope, &sin_loop, &sin_local);
-			if(sin6 == NULL)
+			if (sin6 == NULL)
 				continue;
 			if ((loopscope == 0) &&
 			    (loc_scope == 0) &&
 			    (sin_loop == 0) &&
-			    (sin_local == 0) ){
+			    (sin_local == 0) ) {
 				/* all of global scope we are ok with it */
 				return (sin6);
 			}
-			if(loopscope && sin_loop)
+			if (loopscope && sin_loop)
 				/* both on the loopback, thats ok */
 				return (sin6);
-			if(loc_scope && sin_local)
+			if (loc_scope && sin_local)
 				/* both local scope */
 				return (sin6);
 		}
@@ -1103,7 +1103,7 @@ sctp_choose_v6_boundspecific_stcb(struct rtentry *rt,
 				continue;
 			}
 			sin6 = sctp_is_v6_ifa_addr_acceptable (laddr->ifa, loopscope, loc_scope, &sin_loop, &sin_local);
-			if(sin6 == NULL)
+			if (sin6 == NULL)
 				continue;
 			return(sin6);
 		}
@@ -1138,20 +1138,20 @@ sctp_choose_v6_boundspecific_inp(struct rtentry *rt,
 			continue;
 		}
 		sin6 = sctp_is_v6_ifa_addr_acceptable (laddr->ifa, loopscope, loc_scope, &sin_loop, &sin_local);
-		if(sin6 == NULL)
+		if (sin6 == NULL)
 			continue;
 
 		if ((loopscope == 0) &&
 		    (loc_scope == 0) &&
 		    (sin_loop == 0) &&
-		    (sin_local == 0) ){
+		    (sin_local == 0) ) {
 			/* all of global scope we are ok with it */
 			return (sin6);
 		}
-		if(loopscope && sin_loop)
+		if (loopscope && sin_loop)
 			/* both on the loopback, thats ok */
 			return (sin6);
-		if(loc_scope && sin_local)
+		if (loc_scope && sin_local)
 			/* both local scope */
 			return (sin6);
 
@@ -1168,7 +1168,7 @@ sctp_choose_v6_boundspecific_inp(struct rtentry *rt,
 			continue;
 		}
 		sin6 = sctp_is_v6_ifa_addr_acceptable (laddr->ifa, loopscope, loc_scope, &sin_loop, &sin_local);
-		if(sin6 == NULL)
+		if (sin6 == NULL)
 			continue;
 		return (sin6);
 	}
@@ -1205,10 +1205,10 @@ sctp_select_v6_nth_addr_from_ifn_boundall (struct ifnet *ifn, struct sctp_tcb *s
 		}
 		if (match_scope) {
 			/* Here we are asked to match scope if possible */
-			if(loopscope && sin_loop)
+			if (loopscope && sin_loop)
 				/* src and destination are loopback scope */
 				return (sin6);
-			if(loc_scope && sin_local) 
+			if (loc_scope && sin_local) 
 				/* src and destination are local scope */
 				return (sin6);
 			if ((loopscope == 0) &&
@@ -1281,10 +1281,10 @@ sctp_choose_v6_boundall( struct rtentry *rt,
 	struct sockaddr_in6 *sin6;
 
 	ifn = rt->rt_ifp;
-	if( net ) {
+	if ( net ) {
 		cur_addr_num = net->indx_of_eligible_next_to_use;;
 	}
-	if(cur_addr_num == 0) {
+	if (cur_addr_num == 0) {
 		match_scope_prefered = 1;
 	} else {
 		match_scope_prefered = 0;
@@ -1304,7 +1304,7 @@ sctp_choose_v6_boundall( struct rtentry *rt,
 	/* Ok we have num_eligible_addr set with how many we can use,
 	 * this may vary from call to call due to addresses being deprecated etc..
 	 */
-	if(cur_addr_num >= num_eligible_addr) {
+	if (cur_addr_num >= num_eligible_addr) {
 		cur_addr_num = 0;
 	}
 	/* select the nth address from the list (where cur_addr_num is the nth) and
@@ -1371,7 +1371,7 @@ sctp_choose_v6_boundall( struct rtentry *rt,
 			printf("Resume at IFN:%x\n", (u_int)inp->next_ifn_touse);
 		}
 #endif
-		if(inp->next_ifn_touse == NULL) {
+		if (inp->next_ifn_touse == NULL) {
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
 				printf("IFN Resets\n");
@@ -1399,7 +1399,7 @@ sctp_choose_v6_boundall( struct rtentry *rt,
 			 */
 			continue;
 		}
-		if(ifn == rt->rt_ifp) {
+		if (ifn == rt->rt_ifp) {
 			/* already looked at this guy */
 			continue;
 		}
@@ -1414,7 +1414,7 @@ sctp_choose_v6_boundall( struct rtentry *rt,
 			printf("IFN:%x has %d eligible\n", (u_int)ifn, num_eligible_addr );
 		}
 #endif
-		if(num_eligible_addr == 0) {
+		if (num_eligible_addr == 0) {
 			/* none we can use */
 			continue;
 		}
@@ -1426,12 +1426,12 @@ sctp_choose_v6_boundall( struct rtentry *rt,
 		/* select the first one we can find with perference for matching scope.
 		 */
 		sin6 = sctp_select_v6_nth_addr_from_ifn_boundall (ifn, stcb, non_asoc_addr_ok, loopscope, loc_scope, 0, 1);
-		if(sin6 == NULL) {
+		if (sin6 == NULL) {
 			/* can't find one with matching scope how about a source with higher
 			 * scope
 			 */
  			sin6 = sctp_select_v6_nth_addr_from_ifn_boundall (ifn, stcb, non_asoc_addr_ok, loopscope, loc_scope, 0, 0);
-			if(sin6 == NULL)
+			if (sin6 == NULL)
 				/* Hmm, can't find one in the interface now */
 				continue;
 		}
@@ -1576,7 +1576,7 @@ sctp_ipv6_source_address_selection(struct sctp_inpcb *inp, struct sctp_tcb *stcb
 			printf("Link local scope is set, id:%d\n", to->sin6_scope_id);
 		}
 #endif
-		if(to->sin6_scope_id)
+		if (to->sin6_scope_id)
 			loc_scope = to->sin6_scope_id;
 		else {
 			loc_scope = 1;
@@ -7491,7 +7491,7 @@ sctp_select_hb_destination(struct sctp_tcb *stcb, struct timeval *now)
 		 * HB at a higher rate. Once it goes confirmed OR reaches the "unreachable"
 		 * state, thenw we cut it back to HB at a more normal pace.
 		 */
-		if((net->dest_state & (SCTP_ADDR_UNCONFIRMED|SCTP_ADDR_NOT_REACHABLE)) == SCTP_ADDR_UNCONFIRMED) {
+		if ((net->dest_state & (SCTP_ADDR_UNCONFIRMED|SCTP_ADDR_NOT_REACHABLE)) == SCTP_ADDR_UNCONFIRMED) {
 			state_overide = 1;
 		} else {
 			state_overide = 0;
@@ -7509,7 +7509,7 @@ sctp_select_hb_destination(struct sctp_tcb *stcb, struct timeval *now)
 #endif
 		}
 	}
-	if(hnet &&
+	if (hnet &&
 	   ((hnet->dest_state & (SCTP_ADDR_UNCONFIRMED|SCTP_ADDR_NOT_REACHABLE)) == SCTP_ADDR_UNCONFIRMED)) {
 		state_overide = 1;
 	} else {
