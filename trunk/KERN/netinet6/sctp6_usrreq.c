@@ -1,4 +1,4 @@
-/*	$KAME: sctp6_usrreq.c,v 1.33 2004/06/02 05:53:17 itojun Exp $	*/
+/*	$KAME: sctp6_usrreq.c,v 1.35 2004/08/17 06:28:03 t-momose Exp $	*/
 
 /*
  * Copyright (c) 2001, 2002, 2003, 2004 Cisco Systems, Inc.
