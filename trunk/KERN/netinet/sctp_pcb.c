@@ -2127,6 +2127,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 #endif
 	SCTP_ASOC_CREATE_LOCK(inp);
 	SCTP_INP_WLOCK(inp);
+
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
 		/* been here before */
 		splx(s);
@@ -2135,6 +2136,12 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		return;
 	}
+#if defined(__FreeBSD__) && __FreeBSD_version >= 503000
+	printf("Refcount at sctp_inpcb_free(%x, %d) is %d\n",
+	       (u_int)inp,
+	       immediate,
+	       inp->refcount);
+#endif
 	sctp_timer_stop(SCTP_TIMER_TYPE_NEWCOOKIE, inp, NULL, NULL);
 
 	if (inp->control) {
