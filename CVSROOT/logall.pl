@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-$recipients = "sctp-coders@lakerest.net\n";
+$recipients = "sctp-coders\@lakerest.net\n";
 
 $login = (getpwuid($<))[0] || "nobody";
 $fullname = (getpwuid($<))[6] || "nobody";
