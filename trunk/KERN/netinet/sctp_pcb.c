@@ -197,7 +197,7 @@ sctp_fill_pcbinfo(struct sctp_pcbinfo *spcb)
  */
 static struct sctp_tcb *
 sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
-    struct sockaddr *to, struct sctp_nets **netp, struct sctp_tcb *locked_tcb)
+    struct sockaddr *to, struct sctp_nets **netp, struct sctp_tcb *locked_tcb, struct sctp_inpcb *locked_inp)
 {
 	/*
 	 * Note for this module care must be taken when observing what to is
@@ -245,7 +245,8 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 		if (lport != inp->sctp_lport) {
 			continue;
 		}
-		SCTP_INP_RLOCK(inp);
+		if(inp != locked_inp)
+			SCTP_INP_RLOCK(inp);
 		/* check to see if the ep has one of the addresses */
 		if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) == 0) {
 			/* We are NOT bound all, so look further */
@@ -279,7 +280,8 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 						if (sin->sin_addr.s_addr ==
 						    intf_addr->sin_addr.s_addr) {
 							match = 1;
-							SCTP_INP_RUNLOCK(inp);
+							if (inp != locked_inp)
+								SCTP_INP_RUNLOCK(inp);
 							break;
 						}
 					} else {
@@ -293,7 +295,8 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 						if (SCTP6_ARE_ADDR_EQUAL(&sin6->sin6_addr,
 						    &intf_addr6->sin6_addr)) {
 							match = 1;
-							SCTP_INP_RUNLOCK(inp);
+							if (inp != locked_inp)
+								SCTP_INP_RUNLOCK(inp);
 							break;
 						}
 					}
@@ -301,7 +304,8 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 			}
 			if (match == 0) {
 				/* This endpoint does not have this address */
-				SCTP_INP_RUNLOCK(inp);
+				if (inp != locked_inp)
+					SCTP_INP_RUNLOCK(inp);
 				continue;
 			}
 		}
@@ -312,7 +316,8 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 		
 		stcb = LIST_FIRST(&inp->sctp_asoc_list);
 		if (stcb == NULL) {
-			SCTP_INP_RUNLOCK(inp);
+			if (inp != locked_inp)
+				SCTP_INP_RUNLOCK(inp);
 			continue;
 		}
 		if( stcb != locked_tcb)
@@ -321,7 +326,8 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 			/* remote port does not match. */
 			if( stcb != locked_tcb)
 				SCTP_TCB_UNLOCK(stcb);
-			SCTP_INP_RUNLOCK(inp);
+			if (inp != locked_inp)
+				SCTP_INP_RUNLOCK(inp);
 			continue;
 		}
 		/* Does this TCB have a matching address? */
@@ -342,7 +348,8 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 					}
 					/* Update the endpoint pointer */
 					*inp_p = inp;
-					SCTP_INP_RUNLOCK(inp);
+					if (inp != locked_inp)
+						SCTP_INP_RUNLOCK(inp);
 					SCTP_INP_INFO_RUNLOCK();
 					return (stcb);
 				}
@@ -358,7 +365,8 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 					}
 					/* Update the endpoint pointer */
 					*inp_p = inp;
-					SCTP_INP_RUNLOCK(inp);
+					if (inp != locked_inp)
+						SCTP_INP_RUNLOCK(inp);
 					SCTP_INP_INFO_RUNLOCK();
 					return (stcb);
 				}
@@ -366,7 +374,9 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 		}
 		if( stcb != locked_tcb )
 			SCTP_TCB_UNLOCK(stcb);
-		SCTP_INP_RUNLOCK(inp);
+
+		if (inp != locked_inp)
+			SCTP_INP_RUNLOCK(inp);
 	}
 	SCTP_INP_INFO_RUNLOCK();
 	return (NULL);
@@ -507,14 +517,11 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 		 */
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_ACCEPTING) {
 			/* to is peer addr, from is my addr */
-			SCTP_INP_WUNLOCK(inp);
 			stcb = sctp_tcb_special_locate(inp_p, remote, local,
-						       netp, locked_tcb);
+						       netp, locked_tcb, inp);
 			if((stcb != NULL) && (locked_tcb == NULL)){
 				/* we have a locked tcb, lower refcount */
-				SCTP_INP_WLOCK(inp);
 				SCTP_INP_DECR_REF(inp);
-				SCTP_INP_WUNLOCK(inp);
 			}
 			return (stcb);
 		} else {
@@ -1004,9 +1011,9 @@ sctp_findassociation_addr_sa(struct sockaddr *to, struct sockaddr *from,
 
 	if (find_tcp_pool) {
 		if (inp_p != NULL) {
-			retval = sctp_tcb_special_locate(inp_p, from, to, netp, NULL);
+			retval = sctp_tcb_special_locate(inp_p, from, to, netp, NULL, NULL);
 		} else {
-			retval = sctp_tcb_special_locate(&inp, from, to, netp, NULL);
+			retval = sctp_tcb_special_locate(&inp, from, to, netp, NULL, NULL);
 		}
 		if (retval != NULL) {
 			return (retval);
