@@ -67,5 +67,8 @@ void sctp_autoclose_timer(struct sctp_inpcb *, struct sctp_tcb *,
 
 void sctp_audit_retranmission_queue(struct sctp_association *);
 
+void sctp_iterator_timer(struct sctp_iterator *it);
+
+
 #endif
 #endif

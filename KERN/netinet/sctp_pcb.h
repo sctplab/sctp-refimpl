@@ -112,11 +112,10 @@ LIST_HEAD(sctpvtaghead, sctp_tagblock);
 /* flags to copy to new PCB */
 #define SCTP_PCB_COPY_FLAGS		0x0707ff64
 
-#define SCTP_IS_FLAG_SET(var, flag)	((var & flag) == flag))
-
 #define SCTP_PCBHASH_ALLADDR(port, mask) (port & mask)
 #define SCTP_PCBHASH_ASOC(tag, mask) (tag & mask)
 
+	
 struct sctp_laddr {
 	LIST_ENTRY(sctp_laddr) sctp_nxt_addr;	/* next in list */
 	struct ifaddr *ifa;
@@ -128,7 +127,7 @@ struct sctp_timewait {
 };
 
 struct sctp_tagblock {
-	LIST_ENTRY(sctp_tagblock) sctp_nxt_tagblock;
+        LIST_ENTRY(sctp_tagblock) sctp_nxt_tagblock;
 	struct sctp_timewait vtag_block[SCTP_NUMBER_IN_VTAG_BLOCK];
 };
 
@@ -159,6 +158,8 @@ struct sctp_epinfo {
 	uint32_t hashtblsize;
 
 	struct sctppcbhead listhead;
+
+	struct sctpiterators iteratorhead;
 
 	/* ep zone info */
 #if defined(__FreeBSD__) || defined(__APPLE__)
@@ -327,6 +328,7 @@ struct sctp_inpcb {
 	/* queue of TCB's waiting to stuff data up the socket */
 	struct sctpsocketq sctp_queue_list;
 	void *sctp_tcb_at_block;
+	struct sctp_iterator *inp_starting_point_for_iterator;
 	int  error_on_block;
 	int32_t sctp_frag_point;
 	uint32_t sctp_vtag_last;
@@ -465,6 +467,10 @@ int sctp_destination_is_reachable(struct sctp_tcb *, struct sockaddr *);
 int sctp_add_to_socket_q(struct sctp_inpcb *, struct sctp_tcb *);
 
 struct sctp_tcb *sctp_remove_from_socket_q(struct sctp_inpcb *);
+
+int
+sctp_initiate_iterator(asoc_func af, uint32_t, uint32_t, void *, uint32_t,
+		       end_func ef);
 
 #if defined(__APPLE__)
 void	sctp_callout_alloc(struct sctp_timer *);

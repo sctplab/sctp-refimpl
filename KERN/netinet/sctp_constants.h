@@ -141,6 +141,14 @@
 
 /* option:
  * If you comment out the following you will receive the old
+
+/* how many executions every N tick's */
+#define SCTP_MAX_ITERATOR_AT_ONCE 20
+
+/* number of clock ticks between iterator executions */
+#define SCTP_ITERATOR_TICKS 1
+
+
  * behavior of obeying cwnd for the fast retransmit algorithm.
  * With this defined a FR happens right away with-out waiting
  * for the flightsize to drop below the cwnd value (which is
@@ -439,6 +447,7 @@
 /* max number of TSN's dup'd that I will hold */
 #define SCTP_MAX_DUP_TSNS	20
 
+#define SCTP_TIMER_TYPE_ITERATOR        16
 /*
  * Here we define the types used when setting the retry amounts.
  */

@@ -1918,6 +1918,42 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 }
 
 
+static void
+sctp_iterator_inp_being_freed(struct sctp_inpcb *inp)
+{
+	struct sctp_iterator *it;
+	if(inp->inp_starting_point_for_iterator) {
+		/* lets fix the one who has the lock first */
+		it = inp->inp_starting_point_for_iterator;
+		it->inp = LIST_NEXT(it->inp, sctp_list);
+		if(it->stcb->asoc.stcb_starting_point_for_iterator) {
+			/* fix stcb back pointer to null too */
+			it->stcb->asoc.stcb_starting_point_for_iterator = NULL;
+
+		}
+		it->stcb = NULL;
+		if(it->inp && (it->inp->inp_starting_point_for_iterator == NULL)) {
+			/* Give him back the lock on this one */
+			it->inp->inp_starting_point_for_iterator = it;
+		}
+	}
+	/* Go through all iterators, we must do this since
+	 * it is possible that some iterator does NOT have
+	 * the lock, but is waiting for it. And the one that
+	 * had the lock has either moved in the last iteration
+	 * or we just cleared it above. We need to find all
+	 * of those guys. The list of iterators should never
+	 * be very big though.
+	 */
+ 	LIST_FOREACH(it, &sctppcbinfo.iteratorhead,sctp_nxt_itr) {
+		if (it->inp == inp) {
+			/* this one points to the inp being removed */
+			it->inp = LIST_NEXT(it->inp, sctp_list);
+			it->stcb = NULL;
+		}
+	}
+}
+
 /* release sctp_inpcb unbind the port */
 void
 sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
@@ -1967,6 +2003,8 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 				   * pointer here but I will
 				   * be nice :> ( i.e. ip_pcb = ep;)
 				   */
+	/* fix any iterators */
+	sctp_iterator_inp_being_freed(inp);
 
 	if (immediate == 0) {
 		int cnt_in_sd;
@@ -2912,6 +2950,29 @@ sctp_add_vtag_to_timewait(struct sctp_inpcb *inp, u_int32_t tag)
 }
 
 
+static void
+sctp_iterator_asoc_being_freed(struct sctp_tcb *stcb)
+{
+	struct sctp_iterator *it;
+	struct sctp_inpcb *inp;
+
+	it = stcb->asoc.stcb_starting_point_for_iterator;
+	if (it->inp != stcb->sctp_ep) {
+		/* hm, focused on the wrong one? */
+		printf("freeing asoc finds a iterator focused on wrong place1?\n");
+		return;
+	}
+	if (it->stcb != stcb) {
+		printf("freeing asoc finds a iterator focused on wrong place2?\n");
+		return;
+	}
+	it->stcb = LIST_NEXT(it->stcb, sctp_tcblist);
+	if(it->stcb == NULL) {
+		/* done with all asoc's in this assoc */
+		inp = LIST_NEXT(it->inp, sctp_list);
+	}
+}
+
 /*
  * Free the association after un-hashing the remote port.
  */
@@ -2937,6 +2998,9 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		    stcb);
 		splx(s);
 		return;
+	}
+	if (stcb->asoc.stcb_starting_point_for_iterator) {
+		sctp_iterator_asoc_being_freed(stcb);
 	}
 	/* Null all of my entry's on the socket q */
 	TAILQ_FOREACH(sq, &inp->sctp_queue_list, next_sq) {
@@ -3688,6 +3752,9 @@ sctp_pcb_init()
 
 	/* init the empty list of (All) Endpoints */
 	LIST_INIT(&sctppcbinfo.listhead);
+
+	/* init the iterator head */
+	LIST_INIT(&sctppcbinfo.iteratorhead);
 
 	/* init the hash table of endpoints */
 #if defined(__FreeBSD__)
@@ -4497,6 +4564,45 @@ sctp_remove_from_socket_q(struct sctp_inpcb *inp)
 		stcb->asoc.cnt_msg_on_sb--;
 	}
 	return (stcb);
+}
+
+int
+sctp_initiate_iterator(asoc_func af, uint32_t pcb_state, 
+    uint32_t asoc_state, void *argp, uint32_t argi,end_func ef)
+{
+	struct sctp_iterator *it=NULL;	
+	int s;
+	if(af == NULL) {
+		return (-1);
+	}
+	MALLOC(it, struct sctp_iterator *, sizeof(struct sctp_iterator), M_PCB, M_WAITOK);
+	if(it == NULL) {
+		return(ENOMEM);
+	}
+	memset(it, 0, sizeof(*it));
+	it->function_toapply = af;
+	it->function_atend = ef;
+	it->pointer = argp;
+	it->val = argi;
+	it->pcb_flags = pcb_state;
+	it->asoc_state = asoc_state;
+	it->inp = LIST_FIRST(&sctppcbinfo.listhead);
+	/* Init the timer */
+#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+	callout_init(&it->tmr.timer, 0);
+#else
+	callout_init(&it->tmr.timer);
+#endif
+	/* add to the list of all iterators */
+	LIST_INSERT_HEAD(&sctppcbinfo.iteratorhead, it, sctp_nxt_itr);
+#if defined(__NetBSD__) || defined(__OpenBSD__)
+	s = splsoftnet();
+#else
+	s = splnet();
+#endif
+	sctp_iterator_timer(it);
+	splx(s);
+	return(0);
 }
 
 

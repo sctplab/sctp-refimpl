@@ -919,6 +919,13 @@ sctp_timeout_handler(void *t)
 #endif
 	typ = tmr->type;
 	switch (tmr->type) {
+	case SCTP_TIMER_TYPE_ITERATOR:
+	{
+		struct sctp_iterator *it;
+		it = (struct sctp_iterator *)inp;
+		sctp_iterator_timer(it);
+	}
+	break;
 		/* call the handler for the appropriate timer type */
 	case SCTP_TIMER_TYPE_SEND:
 		sctp_pegs[SCTP_TMIT_TIMER]++;
@@ -1087,6 +1094,14 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 
 	tmr = NULL;
 	switch (t_type) {
+	case SCTP_TIMER_TYPE_ITERATOR:
+	{
+		struct sctp_iterator *it;
+		it = (struct sctp_iterator *)inp;
+		tmr = &it->tmr;
+		to_ticks = SCTP_ITERATOR_TICKS;
+	}
+	break;
 	case SCTP_TIMER_TYPE_SEND:
 		/* Here we use the RTO timer */
 	{
@@ -1330,13 +1345,6 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		return (EFAULT);
 		break;
 	};
-	if (callout_pending(&tmr->timer)) {
-		/*
-		 * we do NOT allow you to have it already running.
-		 * if it is we leave the current one up unchanged
-		 */
-		return (EALREADY);
-	}
 	if ((to_ticks <= 0) || (tmr == NULL)) {
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_TIMER1) {
@@ -1345,6 +1353,13 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		}
 #endif /* SCTP_DEBUG */
 		return (EFAULT);
+	}
+	if (callout_pending(&tmr->timer)) {
+		/*
+		 * we do NOT allow you to have it already running.
+		 * if it is we leave the current one up unchanged
+		 */
+		return (EALREADY);
 	}
 	/* At this point we can proceed */
 	if (t_type == SCTP_TIMER_TYPE_SEND) {
@@ -1369,6 +1384,13 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 
 	tmr = NULL;
 	switch (t_type) {
+	case SCTP_TIMER_TYPE_ITERATOR:
+	{
+		struct sctp_iterator *it;
+		it = (struct sctp_iterator *)inp;
+		tmr = &it->tmr;
+	}
+	break;
 	case SCTP_TIMER_TYPE_SEND:
 		if ((stcb == NULL) || (net == NULL)) {
 			return (EFAULT);
@@ -1457,6 +1479,9 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 #endif /* SCTP_DEBUG */
 		break;
 	};
+	if (tmr == NULL)
+		return (EFAULT);
+
 	if (tmr->type != t_type) {
 		/*
 		 * Ok we have a timer that is under joint use. Cookie timer
@@ -1466,9 +1491,12 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		 */
 		return (0);
 	}
-	if (tmr == NULL)
-		return (EFAULT);
-
+	if(t_type == SCTP_TIMER_TYPE_SEND) {
+		stcb->asoc.num_send_timers_up--;
+		if (stcb->asoc.num_send_timers_up < 0) {
+			stcb->asoc.num_send_timers_up = 0;
+		}
+	}
 	callout_stop(&tmr->timer);
 	return (0);
 }
