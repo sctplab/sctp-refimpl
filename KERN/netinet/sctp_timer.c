@@ -548,6 +548,18 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 				}
 				continue;
 			}
+			if (PR_SCTP_RTX_ENABLED(chk->flags)) {
+				/* Has it been retransmitted tv_sec times? */
+				if (chk->snd_count > chk->rec.data.timetodrop.tv_sec) {
+					if (chk->data) {
+						sctp_release_pr_sctp_chunk(stcb,
+						    chk,
+						    (SCTP_RESPONSE_TO_USER_REQ|SCTP_NOTIFY_DATAGRAM_SENT),
+						    &stcb->asoc.sent_queue);
+					}
+				}
+				continue;
+			}
 			if (chk->sent != SCTP_DATAGRAM_RESEND) {
  				stcb->asoc.sent_queue_retran_cnt++;
  				num_mk++;
