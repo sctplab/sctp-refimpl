@@ -61,9 +61,32 @@
 #define SCTPCTL_PEER_CHK_OH     9
 #define SCTPCTL_MAXBURST        10
 #define SCTPCTL_MAXCHUNKONQ     11
+#ifdef SCTP_DEBUG
+#define SCTPCTL_DEBUG           12
+#define SCTPCTL_MAXID		13
+#else
 #define SCTPCTL_MAXID		12
 #endif
 
+#endif
+
+#ifdef SCTP_DEBUG
+#define SCTPCTL_NAMES { \
+	{ 0, 0 }, \
+	{ "maxdgram", CTLTYPE_INT }, \
+	{ "recvspace", CTLTYPE_INT }, \
+	{ "autoasconf", CTLTYPE_INT }, \
+	{ "ecn_enable", CTLTYPE_INT }, \
+	{ "ecn_nonce", CTLTYPE_INT }, \
+	{ "strict_sack", CTLTYPE_INT }, \
+	{ "looback_nocsum", CTLTYPE_INT }, \
+	{ "strict_init", CTLTYPE_INT }, \
+	{ "peer_chkoh", CTLTYPE_INT }, \
+	{ "maxburst", CTLTYPE_INT }, \
+	{ "maxchunks", CTLTYPE_INT }, \
+	{ "debug", CTLTYPE_INT }, \
+}
+#else
 #define SCTPCTL_NAMES { \
 	{ 0, 0 }, \
 	{ "maxdgram", CTLTYPE_INT }, \
@@ -78,6 +101,7 @@
 	{ "maxburst", CTLTYPE_INT }, \
 	{ "maxchunks", CTLTYPE_INT }, \
 }
+#endif
 
 #if defined(_KERNEL) || (defined(__APPLE__) && defined(KERNEL))
 

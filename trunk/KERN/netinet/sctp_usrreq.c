@@ -590,7 +590,14 @@ SYSCTL_INT(_net_inet_sctp, SCTPCTL_MAXBURST, maxburst, CTLFLAG_RW,
 
 SYSCTL_INT(_net_inet_sctp, SCTPCTL_MAXCHUNKONQ, maxchunks, CTLFLAG_RW,
 	   &sctp_max_chunks_on_queue, 0, "Default max chunks on queue per asoc");
+
+#ifdef SCTP_DEBUG
+SYSCTL_INT(_net_inet_sctp, SCTPCTL_DEBUG, debug, CTLFLAG_RW,
+	   &sctp_debug_on, 0, "Configure debug output");
+#endif
+
 #elif defined (__APPLE__)
+
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, maxdgram, CTLFLAG_RW,
 	   &sctp_sendspace, 0, "Maximum outgoing SCTP buffer size");
 
@@ -623,6 +630,12 @@ SYSCTL_INT(_net_inet_sctp, OID_AUTO, maxburst, CTLFLAG_RW,
 
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, maxchunks, CTLFLAG_RW,
 	   &sctp_max_chunks_on_queue, 0, "Default max chunks on queue per asoc");
+
+#ifdef SCTP_DEBUG
+SYSCTL_INT(_net_inet_sctp, OID_AUTO, debug, CTLFLAG_RW,
+	   &sctp_debug_on, 0, "Configure debug output");
+#endif
+
 #endif
 
 static int
@@ -4072,6 +4085,11 @@ sctp_sysctl(name, namelen, oldp, oldlenp, newp, newlen)
  	case SCTPCTL_MAXCHUNKONQ:
  		return (sysctl_int(oldp, oldlenp, newp, newlen,
  				   &sctp_max_chunks_on_queue));
+#ifdef SCTP_DEBUG
+ 	case SCTPCTL_DEBUG:
+ 		return (sysctl_int(oldp, oldlenp, newp, newlen,
+ 				   &sctp_debug_on));
+#endif
 	default:
 		return (ENOPROTOOPT);
 	}
