@@ -1246,9 +1246,9 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		}
 		tmr = &net->rxt_timer;
 		if (net->RTO == 0) {
-			to_ticks = MS_TO_TICKS(stcb->asoc.initial_rto);
+			to_ticks = MSEC_TO_TICKS(stcb->asoc.initial_rto);
 		} else {
-			to_ticks = MS_TO_TICKS(net->RTO);
+			to_ticks = MSEC_TO_TICKS(net->RTO);
 		}
 		break;
 	case SCTP_TIMER_TYPE_RECV:
@@ -1269,9 +1269,9 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		}
 
 		if (net->RTO == 0) {
-			to_ticks = MS_TO_TICKS(stcb->asoc.initial_rto);
+			to_ticks = MSEC_TO_TICKS(stcb->asoc.initial_rto);
 		} else {
-			to_ticks = MS_TO_TICKS(net->RTO);
+			to_ticks = MSEC_TO_TICKS(net->RTO);
 		}
 		tmr = &net->rxt_timer;
 		break;
@@ -1371,9 +1371,9 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			return (EFAULT);
 		}
 		if (net->RTO == 0) {
-			to_ticks = MS_TO_TICKS(stcb->asoc.initial_rto);
+			to_ticks = MSEC_TO_TICKS(stcb->asoc.initial_rto);
 		} else {
-			to_ticks = MS_TO_TICKS(net->RTO)
+			to_ticks = MSEC_TO_TICKS(net->RTO);
 		}
 		tmr = &net->rxt_timer;
 		break;
@@ -1414,9 +1414,9 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			return (EFAULT);
 		}
 		if (net->RTO == 0) {
-			to_ticks = MS_TO_TICKS(stcb->asoc.initial_rto);
+			to_ticks = MSEC_TO_TICKS(stcb->asoc.initial_rto);
 		} else {
-			to_ticks = MS_TO_TICKS(net->RTO);
+			to_ticks = MSEC_TO_TICKS(net->RTO);
 		}
 		tmr = &net->rxt_timer;
 		break;
@@ -1440,9 +1440,9 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			return (EFAULT);
 		}
 		if (net->RTO == 0) {
-			to_ticks = MS_TO_TICKS(stcb->asoc.initial_rto);
+			to_ticks = MSEC_TO_TICKS(stcb->asoc.initial_rto);
 		} else {
-			to_ticks = MS_TO_TICKS(net->RTO);
+			to_ticks = MSEC_TO_TICKS(net->RTO);
 		}
 		tmr = &stcb->asoc.strreset_timer;
 		break;
@@ -1456,9 +1456,9 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			return (EFAULT);
 		}
 		if (net->RTO == 0) {
-			to_ticks = MS_TO_TICKS(stcb->asoc.initial_rto);
+			to_ticks = MSEC_TO_TICKS(stcb->asoc.initial_rto);
 		} else {
-			to_ticks = MS_TO_TICKS(net->RTO);
+			to_ticks = MSEC_TO_TICKS(net->RTO);
 		}
 		tmr = &stcb->asoc.asconf_timer;
 		break;

@@ -1818,7 +1818,7 @@ sctp_optsget(struct socket *so,
 		}
 		tm = mtod(m, int32_t *);
 
-		*ts = TICKS_TO_MS(inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV]);
+		*tm = TICKS_TO_MSEC(inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV]);
 	}
 	break;
 
@@ -2813,7 +2813,7 @@ sctp_optsset(struct socket *so,
 			error = EINVAL;
 			break;
 		}
-		inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV] = MSEC_TO_TICKS(*ts);
+		inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV] = MSEC_TO_TICKS(*tm);
 	}
 		break;
 	case SCTP_RESET_STREAMS:
