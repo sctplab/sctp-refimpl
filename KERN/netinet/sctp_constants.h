@@ -139,16 +139,14 @@
 #define MAX_TSN	0xffffffff
 #define MAX_SEQ	0xffff
 
-/* option:
- * If you comment out the following you will receive the old
-
 /* how many executions every N tick's */
 #define SCTP_MAX_ITERATOR_AT_ONCE 20
 
 /* number of clock ticks between iterator executions */
 #define SCTP_ITERATOR_TICKS 1
 
-
+/* option:
+ * If you comment out the following you will receive the old
  * behavior of obeying cwnd for the fast retransmit algorithm.
  * With this defined a FR happens right away with-out waiting
  * for the flightsize to drop below the cwnd value (which is
