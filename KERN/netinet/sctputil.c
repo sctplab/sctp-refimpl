@@ -966,6 +966,7 @@ sctp_timeout_handler(void *t)
 		sctp_chunk_output(inp, stcb, 5);
 		break;
 	case SCTP_TIMER_TYPE_HEARTBEAT:
+		sctp_pegs[SCTP_HB_TIMER]++;
 		sctp_heartbeat_timer(inp, stcb, net);
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
