@@ -194,7 +194,6 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 	 * peer and the FROM field represents my address. For this module it
 	 * is reversed of that.
 	 */
-
 #ifdef SCTP_TCP_MODEL_SUPPORT
 	/*
 	 * If we support the TCP model, then we must now dig through to
@@ -206,6 +205,10 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 	struct sctp_laddr *laddr;
 	struct sctp_tcb *stcb;
 	struct sctp_nets *net;
+
+	if ((to == NULL) || (from == NULL)) {
+		return(NULL);
+	}
 
 	if (to->sa_family == AF_INET && from->sa_family == AF_INET) {
 		lport = ((struct sockaddr_in *)to)->sin_port;

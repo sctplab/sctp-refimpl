@@ -2765,10 +2765,6 @@ sctp_optsset(struct socket *so,
 				stcb = sctp_findassociation_ep_addr(&inp,
 				    (struct sockaddr *)&paddrp->spp_address,
 				    &net, NULL);
-			if (stcb == NULL) {
-				error = ENOENT;
-				break;
-			}
 		} else {
 			/* Effects the Endpoint */
 			stcb = NULL;
