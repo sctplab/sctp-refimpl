@@ -5490,6 +5490,10 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 			ifp = net->ra.ro_rt->rt_ifp;
 			if ((ifp->if_snd.ifq_len + 2) >= ifp->if_snd.ifq_maxlen) {
 				sctp_pegs[SCTP_IFP_QUEUE_FULL]++;
+#ifdef SCTP_LOG_MAXBURST
+				sctp_log_maxburst( net, ifp->if_snd.ifq_len ,ifp->if_snd.ifq_maxlen, SCTP_MAX_IFP_APPLIED );
+#endif
+
 				continue;
 			}
  		}
@@ -7016,7 +7020,7 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 					net->ssthresh = net->cwnd;
 				net->cwnd = (net->flight_size+(burst_limit*net->mtu));
 #ifdef SCTP_LOG_MAXBURST
-				sctp_log_maxburst( net, 0 ,burst_limit, 0);
+				sctp_log_maxburst( net, 0 ,burst_limit,SCTP_MAX_BURST_APPLIED );
 #endif
 				sctp_pegs[SCTP_MAX_BURST_APL]++;
 			}
@@ -7043,7 +7047,7 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 			}
 #endif
 #ifdef SCTP_LOG_MAXBURST
-			sctp_log_maxburst( asoc->primary_destination, error , burst_cnt, 1);
+			sctp_log_maxburst( asoc->primary_destination, error , burst_cnt, SCTP_MAX_BURST_ERROR_STOP);
 #endif
 			break;
 		}
@@ -7064,7 +7068,7 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 		sctp_pegs[SCTP_MAX_BURST_APL]++;
  		asoc->burst_limit_applied = 1;
 #ifdef SCTP_LOG_MAXBURST
-		sctp_log_maxburst( asoc->primary_destination, 0 , burst_cnt, 0);
+		sctp_log_maxburst( asoc->primary_destination, 0 , burst_cnt, SCTP_MAX_BURST_APPLIED);
 #endif
  	} else {
 		asoc->burst_limit_applied = 0;
@@ -7394,12 +7398,13 @@ sctp_output(inp, m, addr, control, p)
 		sctp_pegs[SCTP_SENDTO_FULL_CWND]++;
 		queue_only = 1;
 /*
-	} else if (asoc->burst_limit_applied) {
-	sctp_pegs[SCTP_QUEONLY_BURSTLMT]++;
-	queue_only = 1;
-	} else if (asoc->send_queue_cnt > 0) {
-	sctp_pegs[SCTP_SEND_QUEUE_POP]++;
-	queue_only = 1;
+  } else if ((net->ra.ro_rt) && (net->ra.ro_rt->rt_ifp)) {
+  struct ifnet *ifp;
+  ifp = net->ra.ro_rt->rt_ifp;
+  if ((ifp->if_snd.ifq_len + 2) >= ifp->if_snd.ifq_maxlen) {
+  sctp_pegs[SCTP_QUEONLY_BURSTLMT]++;
+  queue_only = 1;
+  }
 */
  	} else {
 		un_sent = ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight_book) +
@@ -10090,13 +10095,15 @@ sctp_sosend(struct socket *so,
 	if (net->flight_size > net->cwnd) {
 		sctp_pegs[SCTP_SENDTO_FULL_CWND]++;
 		queue_only = 1;
+
 /*
-  } else if (asoc->burst_limit_applied) {
-  sctp_pegs[SCTP_QUEONLY_BURSTLMT]++;
-  queue_only = 1;
-  } else if (asoc->send_queue_cnt > 0) {
-  sctp_pegs[SCTP_SEND_QUEUE_POP]++;
-  queue_only = 1;
+	} else if ((net->ra.ro_rt) && (net->ra.ro_rt->rt_ifp)) {
+	struct ifnet *ifp;
+	ifp = net->ra.ro_rt->rt_ifp;
+	if ((ifp->if_snd.ifq_len + 2) >= ifp->if_snd.ifq_maxlen) {
+	sctp_pegs[SCTP_QUEONLY_BURSTLMT]++;
+	queue_only = 1;
+	}
 */
 	} else {
 		un_sent = ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight_book) +
