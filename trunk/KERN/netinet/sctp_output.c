@@ -7887,7 +7887,7 @@ sctp_send_ecn_echo(struct sctp_tcb *stcb, struct sctp_nets *net,
 
 void
 sctp_send_packet_dropped(struct sctp_tcb *stcb, struct sctp_nets *net,
-			 struct mbuf *m, int iphlen)
+			 struct mbuf *m, int iphlen, int bad_crc)
 {
 	struct sctp_association *asoc;
 	struct sctp_pktdrop_chunk *drp;
@@ -7978,6 +7978,9 @@ sctp_send_packet_dropped(struct sctp_tcb *stcb, struct sctp_nets *net,
 		/* no truncation needed */
 		drp->ch.chunk_flags = 0;
 		drp->trunc_len = htons(0);
+	}
+	if( bad_crc ) {
+		drp->ch.chunk_flags |= SCTP_BADCRC;
 	}
 	chk->send_size += sizeof(struct sctp_pktdrop_chunk);
 	chk->data->m_pkthdr.len = chk->data->m_len = chk->send_size; 
