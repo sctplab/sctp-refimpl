@@ -23,3 +23,4 @@ Patch 24 change log
 9) Got rid of  an used define in sctp_constants.h
 10) Rewrite IPv4 src address selection and fixed bound specific
     IPv6 src address selection.
+11) Missing return when already in SHUTDOWN-RECIEVED.
