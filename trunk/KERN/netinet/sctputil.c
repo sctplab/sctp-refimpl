@@ -2933,8 +2933,8 @@ sctp_abort_notification(struct sctp_tcb *stcb, int error)
 		return;
 	}
 	/* Tell them we lost the asoc */
-	sctp_ulp_notify(SCTP_NOTIFY_ASSOC_ABORTED, stcb, error, NULL);
 	sctp_report_all_outbound(stcb);
+	sctp_ulp_notify(SCTP_NOTIFY_ASSOC_ABORTED, stcb, error, NULL);
 }
 
 void
