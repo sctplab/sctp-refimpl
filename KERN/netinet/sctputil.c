@@ -1130,6 +1130,9 @@ sctp_timeout_handler(void *t)
 		sctp_chunk_output(inp, stcb, 10);
 		did_output = 0;
 		break;
+	case SCTP_TIMER_TYPE_INPKILL:
+		sctp_inpcb_free(inp, 1);
+		break;
 	default:
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_TIMER1) {
@@ -1355,6 +1358,15 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		tmr = &inp->sctp_ep.signature_change;
 		to_ticks = inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_SIGNATURE];
 		break;
+	case SCTP_TIMER_TYPE_INPKILL:
+		/*
+		 * The inp is setup to die. We re-use the
+		 * signature_chage timer since that has
+		 * stopped and we are in the GONE state.
+		 */
+		tmr = &inp->sctp_ep.signature_change;
+		to_ticks = (SCTP_INP_KILL_TIMEOUT * hz) / 1000;
+		break;
 	case SCTP_TIMER_TYPE_PATHMTURAISE:
 		/*
 		 * Here we use the value found in the EP for PMTU
@@ -1528,6 +1540,14 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		break;
 	case SCTP_TIMER_TYPE_NEWCOOKIE:
 		/* nothing needed but the endpoint here */
+		tmr = &inp->sctp_ep.signature_change;
+		break;
+	case SCTP_TIMER_TYPE_INPKILL:
+		/*
+		 * The inp is setup to die. We re-use the
+		 * signature_chage timer since that has
+		 * stopped and we are in the GONE state.
+		 */
 		tmr = &inp->sctp_ep.signature_change;
 		break;
 	case SCTP_TIMER_TYPE_PATHMTURAISE:

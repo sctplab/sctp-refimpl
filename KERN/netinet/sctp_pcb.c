@@ -2136,12 +2136,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		return;
 	}
-#if defined(__FreeBSD__) && __FreeBSD_version >= 503000
-	printf("Refcount at sctp_inpcb_free(%x, %d) is %d\n",
-	       (u_int)inp,
-	       immediate,
-	       inp->refcount);
-#endif
 	sctp_timer_stop(SCTP_TIMER_TYPE_NEWCOOKIE, inp, NULL, NULL);
 
 	if (inp->control) {
@@ -2232,10 +2226,21 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 			return;
 		}
 	}
+#if defined(__FreeBSD__) && __FreeBSD_version >= 503000
+	printf("Refcount at sctp_inpcb_free(%x, %d) is %d\n",
+	       (u_int)inp,
+	       immediate,
+	       inp->refcount);
+	if (inp->refcount) {
+		sctp_timer_start(SCTP_TIMER_TYPE_INPKILL, inp, NULL, NULL);
+		return;
+	}
+#endif
 	inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_ALLGONE;
 #if !defined(__FreeBSD__) || __FreeBSD_version < 500000
  	rt = ip_pcb->inp_route.ro_rt;
 #endif
+
 	if (so) {
 	/* First take care of socket level things */
 #ifdef IPSEC
