@@ -4251,6 +4251,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 				ph->param_length = htons(m->m_len);
 			}
 			sctp_abort_an_association(stcb->sctp_ep, stcb, SCTP_RESPONSE_TO_USER_REQ, m);
+			m = NULL;
 		} else {
 			/* Only free if we don't send an abort */
 			;
@@ -4679,8 +4680,9 @@ out:
 			sctp_m_freem(n);
 			n = mnext;
 		}
-	} else
+	} else if(m)
 		sctp_m_freem(m);
+
 	return (error);
 }
 
@@ -9710,6 +9712,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 			sctp_abort_an_association(stcb->sctp_ep, stcb,
 						  SCTP_RESPONSE_TO_USER_REQ,
 						  mm);
+			mm = NULL;
 			splx(s);
 			goto out_notlocked;
 		}
