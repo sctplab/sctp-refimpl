@@ -66,95 +66,220 @@ SCTP_DATA_DG_RECV  "pktswdat"
 
 Total number of datagrams received that carried DATA chunks.
 
-#define SCTP_TMIT_TIMER    13
-	"t3-timeo", /* 13 */
-#define SCTP_RECV_TIMER    14
-	"dsack-to", /* 14 */
+SCTP_TMIT_TIMER  "t3-timeo"
 
-#define SCTP_HB_TIMER      15
-	"hb_timer", /* 15 */
+Total number of T3 re-transmit timers that have gone off.
 
-#define SCTP_FAST_RETRAN   16
-	"fst_rxts", /* 16 */
+SCTP_RECV_TIMER    dsack-to"
 
-#define SCTP_TIMERS_EXP    17
-	"timerexp", /* 17 */
-#define SCTP_FR_INAWINDOW  18
-	"fr_inwin", /* 18 */
-#define SCTP_RWND_BLOCKED  19
-	"blk_rwnd", /* 19 */
-#define SCTP_CWND_BLOCKED  20
-	"blk_cwnd", /* 20 */
-#define SCTP_RWND_DROPS    21
-	"rwnd_drp", /* 21 */
-#define SCTP_BAD_STRMNO    22
-	"bad_strm", /* 22 */
-#define SCTP_BAD_SSN_WRAP  23
-	"bad_ssnw", /* 23 */
-#define SCTP_DROP_NOMEMORY 24
-	"drpnomem", /* 24 */
-#define SCTP_DROP_FRAG     25
-	"drpfragm", /* 25 */
-#define SCTP_BAD_VTAGS     26
-	"badvtags", /* 26 */
-#define SCTP_BAD_CSUM      27
-	"badcsumv", /* 27 */
-#define SCTP_INPKTS        28
-	"packetin", /* 28 */
-#define SCTP_IN_MCAST      29
-	"mcastrcv", /* 29 */
-#define SCTP_HDR_DROPS     30
-	"hdrdrops", /* 30 */
-#define SCTP_NOPORTS	   31
-	"no_portn", /* 31 */
-#define SCTP_CWND_NOFILL   32
-	"cwnd_nf ", /* 32 */
-#define SCTP_CALLS_TO_CO   33
-	"co_snds ", /* 33 */
-#define SCTP_CO_NODATASNT  34
-	"co_nodat", /* 34 */
-#define SCTP_CWND_NOUSE_SS 35
-	"cw_nu_ss", /* 35 */
-#define SCTP_MAX_BURST_APL 36
-	"max_brst", /* 36 */
-#define SCTP_EXPRESS_ROUTE 37
-	"expr_del", /* 37 */
-#define SCTP_NO_COPY_IN    38
-	"no_cp_in", /* 38 */
-#define SCTP_CACHED_SRC    39
-	"cach_src", /* 39 */
-#define SCTP_CWND_NOCUM	   40
-	"cw_nocum", /* 40 */
-#define SCTP_CWND_SS	   41
-	"cw_incss", /* 41 */
-#define SCTP_CWND_CA	   42
-	"cw_incca", /* 42 */
-#define SCTP_CWND_SKIP	   43
-	"cw_skip ", /* 43 */
-#define SCTP_CWND_NOUSE_CA 44
-	"cw_nu_ca", /* 44 */
-#define SCTP_MAX_CWND	   45
-	"cw_maxcw", /* 45 */
-#define SCTP_CWND_DIFF_CA  46
-	"diff_ss ", /* 46 */
-#define SCTP_CWND_DIFF_SA  47
-	"diff_ca ", /* 47 */
-#define SCTP_OQS_AT_SS 	   48
-	"tqs @ ss", /* 48 */
-#define SCTP_SQQ_AT_SS 	   49
-	"sqs @ ss", /* 49 */
-#define SCTP_OQS_AT_CA 	   50
-	"tqs @ ca", /* 50 */
-#define SCTP_SQQ_AT_CA 	   51
-	"sqq @ ca", /* 51 */
-#define SCTP_MOVED_MTU     52
-	"lmtu_mov", /* 52 */
-#define SCTP_MOVED_QMAX    53
-	"lcnt_mov", /* 53 */
-#define SCTP_SQC_AT_SS     54
-	"sndqctss", /* 54 */
-#define SCTP_SQC_AT_CA     55
-	"sndqctca", /* 55 */
+Total number of Delayed SACK timers that have gone off.
+
+SCTP_HB_TIMER      "hb_timer"
+
+Total number of times a HB timer has expired.
+
+SCTP_FAST_RETRAN   "fst_rxts"
+
+Total number of packets sent that the retransmission was caused
+by one or more TSN's being fast retransmitted.
+
+SCTP_TIMERS_EXP    "timerexp"
+
+Total number of times the timer expiration code has been activated.
+
+SCTP_FR_INAWINDOW "fr_inwin"
+
+Total number of times we did more than one fast retransmission in
+a single RTT window (thus we did not do a second cwnd reduction).
+
+SCTP_RWND_BLOCKED  "blk_rwnd"
+
+Total number of times that we would have sent more data but
+we were blocked by the peers RWND.
+
+SCTP_CWND_BLOCKED "blk_cwnd"
+
+Total number of times that we would have sent more data but
+we were blocked by the destinatioin CWND.
+
+SCTP_RWND_DROPS   "rwnd_drp"
+
+Total number of times that we dropped inbound data due to
+the peer exceeding our advertised rwnd (the peer over-ran
+our rwnd).
+
+SCTP_BAD_STRMNO "bad_strm"
+
+Total number of times a peer sent us data in a stream
+that did not exist.
+
+SCTP_BAD_SSN_WRAP  "bad_ssnw"
+
+Total number of times a peer sent us a new TSN that had
+a stream sequence number less than or equal to the
+one we last delivered.
+
+SCTP_DROP_NOMEMORY  "drpnomem"
+
+Total number of times we had to drop incoming data due to
+a shortage of memory (either chunk space or mbuf space).
+
+SCTP_DROP_FRAG     25	"drpfragm"
+
+Total number of times we were dealing with reassembled data
+and the peer sent something out of bounds, i.e. the consistency
+checks for the reassembled data failed. An example of this
+would be where we get a TSN marked as un-fragmented but its
+TSN belongs in the middle of a reassembly.
+
+SCTP_BAD_VTAGS     "badvtags"
+
+Total number of packets received where the VTAG was invalid.
+
+SCTP_BAD_CSUM  "badcsumv"
+
+Total number of input packets that had bad checksums and were
+dropped.
+
+SCTP_INPKTS "packetin"
+
+Total number of packets received, including ones dropped for
+checksum or other errors.
+
+SCTP_IN_MCAST    "mcastrcv"
+
+Total number of multicast packets received and dropped.
+
+SCTP_HDR_DROPS 	"hdrdrops"
+
+Total number of header errors, this can be an in-consistent
+mbuf size, packets sent to port 0, or failure of the mbuf
+system to be able to do a pullup to cover the IP and SCTP header.
+
+SCTP_NOPORTS "no_portn"
+
+Number of ootb packets recieved destined for ports that had
+no listeners and no association.
+
+SCTP_CWND_NOFILL "cwnd_nf "
+
+Number of times a destination address was skipped in the
+transfer of stream data into queue to it due to the fact that the
+flightsize of the destination was already at or above the cwnd.
+
+SCTP_CALLS_TO_CO   "co_snds "
+
+Total number of calls made to the sctp_chunk_output routine. This
+is the basic call that most all local output is scheduled through.
+
+SCTP_CO_NODATASNT  "co_nodat"
+
+Number of times sctp_chunk_output was called and no data was sent.
+
+SCTP_CWND_NOUSE_SS "cw_nu_ss"
+
+Number of times a destination's cwnd could have been raised
+except that the full cwnd was not being used.
+
+SCTP_MAX_BURST_APL "max_brst"
+
+Number of times the max_burst parameter stopped output.
+
+SCTP_EXPRESS_ROUTE "expr_del"
+
+The total number of times that express delivery was used. Express
+delivery means that the inbound TSN was a total user message, nothing
+else was waiting to be delivered, no fragmented delivery (pd-api) was
+in progress, the message was either un-ordered OR the next stream
+sequence ready to be delivered in its stream, and there was
+room to put it into the socket buffer. When all of the above our
+true, we deliver right away and thus save a huge amount of overhead
+allocating and tracking the chunk and finally delivering it after
+any re-ordering is sorted out.
+
+SCTP_NO_COPY_IN "no_cp_in"
+
+Number of times the last data chunk in the packet was able to
+be used without a mcopy_m() call, i.e. we stole the mbuf to
+hold the data without doing a copy.
+
+SCTP_CACHED_SRC "cach_src"
+
+Number of times we were able to use the m_copypacket() function to
+optimize copying of the data packet to be sent upon the wire.
+
+SCTP_CWND_NOCUM	  "cw_nocum"
+
+Number of times that we had acknowledged data that did not
+move forward the CWND due to the fact that the cumulative
+ack point did NOT move forward.
+
+SCTP_CWND_SS "cw_incss"
+
+Number of times we increased the CWND in slow start.
+
+SCTP_CWND_CA "cw_incca"
+
+Number of times we increased the CWND in congestion avoidance.
+
+SCTP_CWND_SKIP "cw_skip "
+
+Number of times loss recover had us skip a CWND update.
+
+SCTP_CWND_NOUSE_CA "cw_nu_ca"
+
+Number of times we were not fully using the CWND and we
+were in congestion avoidance so we did NOT grow the cwnd.
+
+SCTP_MAX_CWND "cw_maxcw"
+
+Maximum valud we have ever grown cwnd for any destination to.
+
+SCTP_CWND_DIFF_CA  "diff_ss "
+
+The largest amount of room in the cwnd window ever seen
+when the cwnd was NOT grown in congestion avoidance.
+
+SCTP_CWND_DIFF_SA  "diff_ca "
+
+The largest amount of room in the cwnd window ever seen
+when the cwnd was NOT grown in slow start.
+
+SCTP_OQS_AT_SS 	"tqs @ ss"
+The total output queue size when the recorded 
+SCTP_CWND_DIFF_SA event was found.
+
+SCTP_SQQ_AT_SS 	"sqs @ ss"
+The total number number of chunks on the sent queue when
+the recorded SCTP_CWND_DIFF_SA event was found.
+
+SCTP_OQS_AT_CA "tqs @ ca"
+The total output queue size when the recorded 
+SCTP_CWND_DIFF_CA event was found.
+
+#define SCTP_SQQ_AT_CA "sqq @ ca"
+The total number number of chunks on the sent queue when
+the recorded SCTP_CWND_DIFF_CA event was found.
+
+SCTP_MOVED_MTU  "lmtu_mov"
+
+In attempting to fill up the send queue, what is the
+largest mtu ever requested to the fill routine.
+
+SCTP_MOVED_QMAX "lcnt_mov"
+
+In attempting to fill up the send queue, the largest
+number of chunks ever moved at one call.
+
+SCTP_SQC_AT_SS  "sndqctss"
+The total number of chunks on the send queue when
+the recorded SCTP_CWND_DIFF_SA event was found.
+
+#define SCTP_SQC_AT_CA 	"sndqctca"
+
+The total number of chunks on the send queue when
+the recorded SCTP_CWND_DIFF_CA event was found.
+
 #define SCTP_MOVED_MAX     56
 	"movemax ", /* 56 */
 #define SCTP_MOVED_NLEF    57
