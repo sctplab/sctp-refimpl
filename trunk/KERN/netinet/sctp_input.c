@@ -591,6 +591,12 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 		/* reset time */
 		SCTP_GETTIME_TIMEVAL(&asoc->time_entered);
 	}
+	if (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_SENT) {
+		/* stop the shutdown timer, since we WILL move
+		 * to SHUTDOWN-ACK-SENT.
+		 */
+		sctp_timer_stop(SCTP_TIMER_TYPE_SHUTDOWN, stcb->sctp_ep, stcb, net);
+	}
 	/* Now are we there yet? */
 	some_on_streamwheel = 0;
 	if (!TAILQ_EMPTY(&asoc->out_wheel)) {
@@ -903,49 +909,6 @@ sctp_handle_error(struct sctp_chunkhdr *ch,
 	return (0);
 }
 
-/*
- * Ok we must examine the INIT-ACK to see what I sent in
- * terms of the PR-SCTP streams. This module is only called
- * if the peer supports PR-SCTP.
- */
-static void
-sctp_unpack_prsctp_streams(struct sctp_tcb *stcb,
-    struct sctp_init_ack_chunk *initack_cp, struct mbuf *m, int offset)
-{
-	struct sctp_paramhdr *phdr, phold;
-	int len, augment, at;
-	int my_len;
-
-	phdr = (struct sctp_paramhdr *)((caddr_t)initack_cp +
-	    sizeof(struct sctp_init_chunk));
-	len = ntohs(initack_cp->ch.chunk_length) -
-	    sizeof(struct sctp_init_chunk);
-	at = sizeof(struct sctp_init_chunk);
-
-	while (len) {
-		phdr = sctp_get_next_param(m, (offset+at), &phold,
-		    sizeof(struct sctp_paramhdr));
-		if (phdr == NULL) {
-			break;
-		}
-		if (ntohs(phdr->param_type) == SCTP_PRSCTP_SUPPORTED) {
-			/* Found a pr-sctp parameter, process it */
-			my_len = ntohs(phdr->param_length);
-			if (my_len != sizeof(struct sctp_paramhdr)) {
-				goto next_param;
-			}
-			stcb->asoc.peer_supports_prsctp = 1;
-		}
-	next_param:
-		augment = SCTP_SIZE32(ntohs(phdr->param_length));
-		at += augment;
-		len -= augment;
-		if (len <= 0) {
-			break;
-		}
-	}
-}
-
 static int
 sctp_handle_init_ack(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
     struct sctp_init_ack_chunk *cp, struct sctp_tcb *stcb,
@@ -1051,10 +1014,6 @@ sctp_handle_init_ack(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 		/* reset the RTO calc */
 		stcb->asoc.overall_error_count = 0;
 		SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_entered);
-		if (stcb->asoc.peer_supports_prsctp) {
-			sctp_unpack_prsctp_streams(stcb, cp, m, offset);
-		}
-
 		/*
 		 * collapse the init timer back in case of a exponential backoff
 		 */
