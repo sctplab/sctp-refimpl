@@ -118,6 +118,8 @@ extern u_int32_t sctp_debug_on;
  * we use the number of mbufs and clusters to tune our initial send
  * and receive windows and the limit of chunks allocated.
  */
+int sctp_max_burst_default = SCTP_DEF_MAX_BURST;
+int sctp_peer_chunk_oh = sizeof(struct mbuf);
 int sctp_strict_init = 1;
 int sctp_no_csum_on_loopback = 1;
 int sctp_max_chunks_on_queue = SCTP_ASOC_MAX_CHUNKS_ON_QUEUE;
@@ -148,8 +150,9 @@ sctp_init(void)
 	if (nmbclusters > SCTP_ASOC_MAX_CHUNKS_ON_QUEUE)
 		sctp_max_chunks_on_queue = nmbclusters;
 #else
-	if (nmbclust > SCTP_ASOC_MAX_CHUNKS_ON_QUEUE)
-		sctp_max_chunks_on_queue = nmbclust;
+/*	if (nmbclust > SCTP_ASOC_MAX_CHUNKS_ON_QUEUE)
+	sctp_max_chunks_on_queue = nmbclust; FIX ME */
+	sctp_max_chunks_on_queue = nmbclust * 2;
 #endif
 	/*
 	 * Allow a user to take no more than 1/2 the number of clusters
@@ -578,6 +581,13 @@ SYSCTL_INT(_net_inet_sctp, SCTPCTL_NOCSUM_LO, loopback_nocsum, CTLFLAG_RW,
 
 SYSCTL_INT(_net_inet_sctp, SCTPCTL_STRICT_INIT, strict_init, CTLFLAG_RW,
 	   &sctp_strict_init, 0, "Enable strict INIT/INIT-ACK singleton enforcement");
+
+SYSCTL_INT(_net_inet_sctp, SCTPCTL_PEER_CHK_OH, peer_chkoh, CTLFLAG_RW,
+	   &sctp_peer_chunk_oh, 0, "Amount to debit peers rwnd per chunk sent");
+SYSCTL_INT(_net_inet_sctp, SCTPCTL_MAXBURST, maxburst, CTLFLAG_RW,
+	   &sctp_max_burst_default, 0, "Default max burst for sctp endpoints");
+
+
 #endif
 
 static int
@@ -3367,13 +3377,12 @@ sctp_usr_recvd(struct socket *so, int flags)
 				       (u_int)inp, (u_int)stcb);
 #endif
 
-			stcb->asoc.my_rwnd_control_len -= sizeof(struct mbuf);
+ 			stcb->asoc.my_rwnd_control_len = sctp_sbspace_sub(stcb->asoc.my_rwnd_control_len,
+ 									  sizeof(struct mbuf));
 			if (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_RECVDATAIOEVNT) {
-				stcb->asoc.my_rwnd_control_len -=
-				    CMSG_LEN(sizeof(struct sctp_sndrcvinfo));
+ 				stcb->asoc.my_rwnd_control_len = sctp_sbspace_sub(stcb->asoc.my_rwnd_control_len,
+ 										  CMSG_LEN(sizeof(struct sctp_sndrcvinfo)));
 			}
-			if (stcb->asoc.my_rwnd_control_len > 0x7fffffff)
-				stcb->asoc.my_rwnd_control_len = 0;
 		} 
 		if ((TAILQ_EMPTY(&stcb->asoc.delivery_queue) == 0) ||
 		    (TAILQ_EMPTY(&stcb->asoc.reasmqueue) == 0)) {
@@ -4022,6 +4031,12 @@ sctp_sysctl(name, namelen, oldp, oldlenp, newp, newlen)
 	case SCTPCTL_STRICT_INIT:
 		return (sysctl_int(oldp, oldlenp, newp, newlen,
 				   &sctp_strict_init));
+ 	case SCTPCTL_PEER_CHK_OH:
+ 		return (sysctl_int(oldp, oldlenp, newp, newlen,
+ 				   &sctp_peer_chunk_oh));
+ 	case SCTPCTL_MAXBURST:
+ 		return (sysctl_int(oldp, oldlenp, newp, newlen,
+ 				   &sctp_max_burst_default));
 	default:
 		return (ENOPROTOOPT);
 	}

@@ -655,7 +655,7 @@
 #define IPPROTO_SCTP 132	/* the Official IANA number :-) */
 #endif /* !IPPROTO_SCTP */
 
-#define SCTP_MAX_DATA_BUNDLING		80
+#define SCTP_MAX_DATA_BUNDLING		256
 #define SCTP_MAX_CONTROL_BUNDLING	20
 
 /* modular comparison */

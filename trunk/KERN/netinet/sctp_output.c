@@ -140,6 +140,8 @@
 extern uint32_t sctp_debug_on;
 #endif
 
+extern int sctp_peer_chunk_oh;
+
 static int
 sctp_find_cmsg(int c_type, void *data, struct mbuf *control, int cpsize)
 {
@@ -4475,11 +4477,8 @@ sctp_clean_up_datalist(struct sctp_tcb *stcb,
 		asoc->total_flight += data_list[i]->send_size;
 		asoc->total_flight_book += data_list[i]->book_size;
 		asoc->total_flight_count++;
-		if (asoc->peers_rwnd > (data_list[i]->send_size+sizeof(struct mbuf)))
-			asoc->peers_rwnd -= (data_list[i]->send_size + sizeof(struct mbuf));
-		else
-			asoc->peers_rwnd = 0;
-
+		asoc->peers_rwnd = sctp_sbspace_sub(asoc->peers_rwnd, 
+						    (u_int32_t)(data_list[i]->send_size + sctp_peer_chunk_oh));
 		if (asoc->peers_rwnd < stcb->sctp_ep->sctp_ep.sctp_sws_sender) {
 			/* SWS sender side engages */
 			asoc->peers_rwnd = 0;
@@ -6264,11 +6263,8 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 				asoc->total_flight_book += data_list[i]->book_size;
 				asoc->total_flight_count++;
 			
-				if (asoc->peers_rwnd > (data_list[i]->send_size + sizeof(struct mbuf)))
-					asoc->peers_rwnd -= (data_list[i]->send_size + sizeof(struct mbuf));
-				else
-					asoc->peers_rwnd = 0;
-
+				asoc->peers_rwnd = sctp_sbspace_sub(asoc->peers_rwnd, 
+								    (u_int32_t)(data_list[i]->send_size + sctp_peer_chunk_oh));
 				if (asoc->peers_rwnd < stcb->sctp_ep->sctp_ep.sctp_sws_sender) {
 					/* SWS sender side engages */
 					asoc->peers_rwnd = 0;
