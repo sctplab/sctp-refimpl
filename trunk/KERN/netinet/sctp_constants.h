@@ -189,55 +189,9 @@
 #define SCTP_FORWARD_TSN_SKIP		30010
 
 /* SCTP chunk types */
-#define SCTP_DATA		0x00
-#define SCTP_INITIATION		0x01
-#define SCTP_INITIATION_ACK	0x02
-#define SCTP_SELECTIVE_ACK	0x03
-#define SCTP_HEARTBEAT_REQUEST	0x04
-#define SCTP_HEARTBEAT_ACK	0x05
-#define SCTP_ABORT_ASSOCIATION	0x06
-#define SCTP_SHUTDOWN		0x07
-#define SCTP_SHUTDOWN_ACK	0x08
-#define SCTP_OPERATION_ERROR	0x09
-#define SCTP_COOKIE_ECHO	0x0a
-#define SCTP_COOKIE_ACK		0x0b
-#define SCTP_ECN_ECHO		0x0c
-#define SCTP_ECN_CWR		0x0d
-#define SCTP_SHUTDOWN_COMPLETE	0x0e
-
-/* draft-ietf-tsvwg-addip-sctp */
-#define SCTP_ASCONF		0xc1
-#define	SCTP_ASCONF_ACK		0x80
-
-/* draft-ietf-stewart-prsctp */
-#define SCTP_FORWARD_CUM_TSN	0xc0
-
-/* draft-ietf-stewart-pktdrpsctp */
-#define SCTP_PACKET_DROPPED	0x81
-
-/* draft-ietf-stewart-strreset-xxx */
-#define SCTP_STREAM_RESET       0x82
-
-/* ABORT and SHUTDOWN COMPLETE FLAG */
-#define SCTP_HAD_NO_TCB		0x01
-
-/* Packet dropped flags */
-#define SCTP_FROM_MIDDLE_BOX	SCTP_HAD_NO_TCB
-#define SCTP_BADCRC		0x02
-#define SCTP_PACKET_TRUNCATED	0x04
-
-#define SCTP_SAT_NETWORK_MIN	     400	/* min ms for RTT to set satellite time */
-#define SCTP_SAT_NETWORK_BURST_INCR  2		/* how many times to multiply maxburst in sat */
-/* Data Chuck Specific Flags */
-#define SCTP_DATA_FRAG_MASK	0x03
-#define SCTP_DATA_MIDDLE_FRAG	0x00
-#define SCTP_DATA_LAST_FRAG	0x01
-#define SCTP_DATA_FIRST_FRAG	0x02
-#define SCTP_DATA_NOT_FRAG	0x03
-#define SCTP_DATA_UNORDERED	0x04
-
-/* ECN Nonce: SACK Chunk Specific Flags */
-#define SCTP_SACK_NONCE_SUM     0x01
+/* Moved to sctp.h so f/w and natd 
+ * boxes can find the chunk types.
+ */
 
 /* align to 32-bit sizes */
 #define SCTP_SIZE32(x)	((((x)+3) >> 2) << 2)
