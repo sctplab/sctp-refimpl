@@ -466,8 +466,8 @@ sctp_send(int sd, const void *data, size_t len,
 }
 
 
-int
-sctp_sendx(int sd, void *msg, size_t len, 
+ssize_t
+sctp_sendx(int sd, const void *msg, size_t len, 
 	   struct sockaddr *addrs, int addrcnt,
 	   struct sctp_sndrcvinfo *sinfo,
 	   int flags)
