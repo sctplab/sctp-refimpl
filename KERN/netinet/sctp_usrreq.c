@@ -2634,7 +2634,14 @@ sctp_optsset(struct socket *so,
 			break;
 		}
 
-		if (stcb->asoc.sending_seq != (stcb->asoc.last_acked_seq + 1)) {
+/* Having re-thought this code I added as I write the I-D there
+ * is NO need for it. The peer, if we are requesting a stream-reset
+ * will send a request to us but will itself do what we do, take
+ * and copy off the "reset information" we send and queue TSN's
+ * larger than the send-next in our response message. Thus they
+ * will handle it.
+ */
+/*		if (stcb->asoc.sending_seq != (stcb->asoc.last_acked_seq + 1)) {*/
 			/* Must have all sending data ack'd before we
 			 * start this procedure. This is a bit restrictive
 			 * and we SHOULD work on changing this so ONLY the 
@@ -2645,9 +2652,9 @@ sctp_optsset(struct socket *so,
 			 * skip this more detailed method and do a course
 			 * way.. i.e. nothing pending ... for future FIX ME!
 			 */
-			error = EBUSY;
-			break;
-		}
+/*			error = EBUSY;*/
+/*			break;*/
+/*		}*/
 
 		if (stcb->asoc.stream_reset_outstanding) {
 			error = EALREADY;
