@@ -315,13 +315,13 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 			SCTP_INP_RUNLOCK(inp);
 			continue;
 		}
-
+		SCTP_TCB_LOCK(stcb);
 		if (stcb->rport != rport) {
 			/* remote port does not match. */
+			SCTP_TCB_UNLOCK(stcb);
 			SCTP_INP_RUNLOCK(inp);
 			continue;
 		}
-		SCTP_TCB_LOCK(stcb);
 		/* Does this TCB have a matching address? */
 		TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 			if (net->ro._l_addr.sa.sa_family != from->sa_family) {
@@ -340,7 +340,6 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 					}
 					/* Update the endpoint pointer */
 					*inp_p = inp;
-					SCTP_TCB_UNLOCK(stcb);
 					SCTP_INP_RUNLOCK(inp);
 					SCTP_INP_INFO_RUNLOCK();
 					return (stcb);
@@ -357,7 +356,6 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 					}
 					/* Update the endpoint pointer */
 					*inp_p = inp;
-					SCTP_TCB_UNLOCK(stcb);
 					SCTP_INP_RUNLOCK(inp);
 					SCTP_INP_INFO_RUNLOCK();
 					return (stcb);
@@ -508,7 +506,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 			/* to is peer addr, from is my addr */
 			SCTP_INP_RUNLOCK(inp);
 			stcb = sctp_tcb_special_locate(inp_p, remote, local,
-			    netp);
+						       netp);
 			return (stcb);
 		} else {
 			stcb = LIST_FIRST(&inp->sctp_asoc_list);
@@ -541,7 +539,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 				if (remote->sa_family == AF_INET) {
 					struct sockaddr_in *sin, *rsin;
 					sin = (struct sockaddr_in *)
-					    &net->ro._l_addr;
+						&net->ro._l_addr;
 					rsin = (struct sockaddr_in *)remote;
 					if (sin->sin_addr.s_addr ==
 					    rsin->sin_addr.s_addr) {
@@ -550,9 +548,6 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 							*netp = net;
 						}
 						SCTP_INP_RUNLOCK(inp);
-						if(locked_tcb != stcb) {
-							SCTP_TCB_UNLOCK(stcb);
-						}
 						return (stcb);
 					}
 				} else if (remote->sa_family == AF_INET6) {
@@ -560,15 +555,12 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 					sin6 = (struct sockaddr_in6 *)&net->ro._l_addr;
 					rsin6 = (struct sockaddr_in6 *)remote;
 					if (SCTP6_ARE_ADDR_EQUAL(&sin6->sin6_addr,
-					     &rsin6->sin6_addr)) {
+								 &rsin6->sin6_addr)) {
 						/* found it */
 						if (netp != NULL) {
 							*netp = net;
 						}
 						SCTP_INP_RUNLOCK(inp);
-						if(locked_tcb != stcb) {
-							SCTP_TCB_UNLOCK(stcb);
-						}
 						return (stcb);
 					}
 				}
@@ -579,7 +571,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 		}
 	} else {
 		head = &inp->sctp_tcbhash[SCTP_PCBHASH_ALLADDR(rport,
-		    inp->sctp_hashmark)];
+							       inp->sctp_hashmark)];
 		if (head == NULL) {
 			SCTP_INP_RUNLOCK(inp);
 			return (NULL);
@@ -606,7 +598,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 				if (remote->sa_family == AF_INET) {
 					struct sockaddr_in *sin, *rsin;
 					sin = (struct sockaddr_in *)
-					    &net->ro._l_addr;
+						&net->ro._l_addr;
 					rsin = (struct sockaddr_in *)remote;
 					if (sin->sin_addr.s_addr ==
 					    rsin->sin_addr.s_addr) {
@@ -614,25 +606,19 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 						if (netp != NULL) {
 							*netp = net;
 						}
-						if(locked_tcb != stcb) {
-							SCTP_TCB_UNLOCK(stcb);
-						}
 						SCTP_INP_RUNLOCK(inp);
 						return (stcb);
 					}
 				} else if (remote->sa_family == AF_INET6) {
 					struct sockaddr_in6 *sin6, *rsin6;
 					sin6 = (struct sockaddr_in6 *)
-					    &net->ro._l_addr;
+						&net->ro._l_addr;
 					rsin6 = (struct sockaddr_in6 *)remote;
 					if (SCTP6_ARE_ADDR_EQUAL(&sin6->sin6_addr,
-					    &rsin6->sin6_addr)) {
+								 &rsin6->sin6_addr)) {
 						/* found it */
 						if (netp != NULL) {
 							*netp = net;
-						}
-						if(locked_tcb != stcb) {
-							SCTP_TCB_UNLOCK(stcb);
 						}
 						SCTP_INP_RUNLOCK(inp);
 						return (stcb);
@@ -689,7 +675,6 @@ sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, caddr_t asoc_id)
 			}
 			sctp_pegs[SCTP_VTAG_EXPR]++;
 			SCTP_INP_INFO_RUNLOCK();
-			SCTP_TCB_UNLOCK(stcb);
 			return (stcb);
 		}
 		SCTP_TCB_UNLOCK(stcb);
@@ -1107,9 +1092,9 @@ sctp_findassoc_by_vtag(struct sockaddr *from, uint32_t vtag,
 		return (NULL);
 	}
 	LIST_FOREACH(stcb, head, sctp_asocs) {
+		SCTP_TCB_LOCK(stcb);
 		if (stcb->asoc.my_vtag == vtag) {
 			/* candidate */
-			SCTP_TCB_LOCK(stcb);
 			if (stcb->rport != rport) {
 				/*
 				 * we could remove this if vtags are unique
@@ -1132,7 +1117,6 @@ sctp_findassoc_by_vtag(struct sockaddr *from, uint32_t vtag,
 				*netp = net;
 				sctp_pegs[SCTP_VTAG_EXPR]++;
 				*inp_p = stcb->sctp_ep;
-				SCTP_TCB_UNLOCK(stcb);
 				SCTP_INP_INFO_RUNLOCK();
 				return (stcb);
 			} else {
@@ -1143,6 +1127,7 @@ sctp_findassoc_by_vtag(struct sockaddr *from, uint32_t vtag,
  				sctp_pegs[SCTP_VTAG_BOGUS]++;
 			}
 		}
+		SCTP_TCB_UNLOCK(stcb);
 	}
 	SCTP_INP_INFO_RUNLOCK();
 	return (NULL);
@@ -2950,7 +2935,6 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		printf("Association %p now allocated\n", stcb);
 	}
 #endif
-	SCTP_TCB_UNLOCK(stcb);
 	return (stcb);
 }
 

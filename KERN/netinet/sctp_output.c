@@ -7376,7 +7376,6 @@ sctp_output(inp, m, addr, control, p)
 			splx(s);
 			return (error);
 		}
-		SCTP_TCB_LOCK(stcb);
 		if(create_lock_applied) {
 			SCTP_ASOC_CREATE_UNLOCK(inp);
 			create_lock_applied = 0;
@@ -7447,7 +7446,6 @@ sctp_output(inp, m, addr, control, p)
 		 */
 		net = stcb->asoc.primary_destination;
 	} else {
-		SCTP_TCB_LOCK(stcb);
 		if(create_lock_applied) {
 			SCTP_ASOC_CREATE_UNLOCK(inp);
 			create_lock_applied = 0;
@@ -10005,7 +10003,6 @@ sctp_sosend(struct socket *so,
 			splx(s);
 			goto out;
 		}
-		SCTP_TCB_LOCK(stcb);
 		if(create_lock_applied) {
 			SCTP_ASOC_CREATE_UNLOCK(inp);
 			create_lock_applied = 0;
@@ -10083,7 +10080,6 @@ sctp_sosend(struct socket *so,
 		net = stcb->asoc.primary_destination;
 		asoc = &stcb->asoc;
 	} else {
-		SCTP_TCB_LOCK(stcb);
 		asoc = &stcb->asoc;
 	}
 	if(create_lock_applied) {

@@ -1525,8 +1525,6 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		    sh, op_err);
 		return (NULL);
 	}
-	/* Note we return with TCB locked. */
-	SCTP_TCB_LOCK(stcb);
 
 	/* get the correct sctp_nets */
 	*netp = sctp_findnet(stcb, init_src);
@@ -2008,9 +2006,6 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	if ((*stcb == NULL) && to) {
 		/* Yep, lets check */
 		*stcb = sctp_findassociation_ep_addr(inp_p, to, netp, localep_sa, NULL);
-		if (*stcb) {
-			SCTP_TCB_LOCK((*stcb));
-		}
 	}
 
 	cookie_len -= SCTP_SIGNATURE_SIZE;
@@ -3855,10 +3850,6 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		       (u_int)m, iphlen, offset);
 	}
 #endif /* SCTP_DEBUG */
-	if (stcb != NULL) {
-		SCTP_TCB_LOCK(stcb);
-	}
-
 	if (IS_SCTP_CONTROL(ch)) {
 		/* process the control portion of the SCTP packet */
 #ifdef SCTP_DEBUG
