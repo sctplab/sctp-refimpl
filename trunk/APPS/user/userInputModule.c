@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.5 2004-10-14 10:36:30 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.6 2004-10-14 10:38:33 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -162,6 +162,7 @@ static int cmd_setinitparam(char *argv[], int argc);
 static int cmd_gettimetolive(char *argv[], int argc);
 static int cmd_settimetolive(char *argv[], int argc);
 static int cmd_getlocaladdrs(char *argv[], int argc);
+static int cmd_getassocids(char *argv[], int argc);
 static int cmd_restorefd(char *argv[], int argc);
 static int cmd_listen(char *argv[], int argc);
 static int cmd_setfd(char *argv[], int argc);
@@ -267,6 +268,8 @@ static struct command commands[] = {
      cmd_getstatus},
     {"heartctl", "heartctl on/off/allon/alloff - Turn HB on or off to the destination or all dests",
      cmd_heart},
+    {"getasocids", "getasocids - list all association id's",
+     cmd_getassocids},
     {"gethbdelay", "gethbdelay [ep] - get the hb delay",
      cmd_gethbdelay},
     {"getinitparam", "getinitparam - get the default INIT parameters",
@@ -1569,6 +1572,56 @@ cmd_gettimetolive(char *argv[], int argc)
 	 time_to_live);
   return 0;	
 }
+
+
+int cmd_getassocids(char *argv[], int argc)
+{
+	struct sctp_assoc_ids ids;
+	int sz,i;
+	sz = sizeof(ids);
+	memset ( &ids, 0, sizeof(ids));
+	if(getsockopt(adap->fd, IPPROTO_SCTP,
+		      SCTP_GET_ASOC_ID_LIST,
+			&ids, &sz) != 0){
+		printf("Could not get ids error:%d\n",errno);
+		return(-1);
+	}
+	printf("Got %d ids starting at index:%d (more_to_get:%d)\n",
+	       ids.asls_numb_present,
+	       ids.asls_assoc_start,
+	       ids.asls_more_to_get
+		);
+	for (i=0; i < ids.asls_numb_present; i++ ) {
+		printf("id:%x ",(u_int32_t)ids.asls_assoc_id[i]);
+		if((i+1) % 16 == 0){
+			printf("\n");
+		}
+	}
+	printf("\n");
+	while (ids.asls_more_to_get) {
+		ids.asls_assoc_start += ids.asls_numb_present;
+		if(getsockopt(adap->fd, IPPROTO_SCTP,
+			      SCTP_GET_ASOC_ID_LIST,
+			      &ids, &sz) != 0){
+			printf("Could not get ids error:%d\n",errno);
+			return(-1);
+		}
+		printf("Got %d ids starting at index:%d (more_to_get:%d)\n",
+		       ids.asls_numb_present,
+		       ids.asls_assoc_start,
+		       ids.asls_more_to_get
+			);
+		for (i=0; i < ids.asls_numb_present; i++ ) {
+			printf("id:%x ",(u_int32_t)ids.asls_assoc_id[i]);
+			if((i+1) % 16 == 0){
+				printf("\n");
+			}
+		}
+		printf("\n");
+	}
+	return(0);
+}
+
 
 int
 cmd_sendsent(char *argv[], int argc)
