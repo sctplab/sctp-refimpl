@@ -3372,7 +3372,7 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 		inp->sctp_vtag_first = tag;
 	}
 
-#ifdef __FREEBSD__
+#ifdef __FreeBSD__
 	if(sb->sb_mb == NULL)
 		inp->sctp_vtag_first = tag;
 	SCTP_SBLINKRECORD(sb, m);
