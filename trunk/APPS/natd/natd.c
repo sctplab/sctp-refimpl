@@ -11,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/natd/natd.c,v 1.25.2.7 2003/06/27 10:05:32 ru Exp $");
+__FBSDID("$FreeBSD: src/sbin/natd/natd.c,v 1.25.2.9 2003/11/01 03:50:03 marcus Exp $");
 
 #define SYSLOG_NAMES
 
@@ -26,6 +26,7 @@ __FBSDID("$FreeBSD: src/sbin/natd/natd.c,v 1.25.2.7 2003/06/27 10:05:32 ru Exp $
 #include <machine/in_cksum.h>
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
+#include <netinet/sctp.h>
 #include <netinet/ip_icmp.h>
 #include <net/if.h>
 #include <net/if_dl.h>
@@ -99,6 +100,7 @@ static int 	StrToProto (const char* str);
 static int      StrToAddrAndPortRange (const char* str, struct in_addr* addr, char* proto, port_range *portRange);
 static void	ParseArgs (int argc, char** argv);
 static void	SetupPunchFW(const char *strValue);
+static void	SetupSkinnyPort(const char *strValue);
 
 /*
  * Globals.
@@ -122,6 +124,7 @@ static  int			dropIgnoredIncoming;
 static  int			logDropped;
 static	int			logFacility;
 static	int			logIpfwDenied;
+static	char*			pidName;
 
 int main (int argc, char** argv)
 {
@@ -156,6 +159,7 @@ int main (int argc, char** argv)
  	logDropped		= 0;
  	logFacility		= LOG_DAEMON;
 	logIpfwDenied		= -1;
+	pidName			= PIDFILE;
 
 	ParseArgs (argc, argv);
 /*
@@ -380,7 +384,7 @@ int main (int argc, char** argv)
 	}
 
 	if (background)
-		unlink (PIDFILE);
+		unlink (pidName);
 
 	return 0;
 }
@@ -392,7 +396,7 @@ static void DaemonMode ()
 	daemon (0, 0);
 	background = 1;
 
-	pidFile = fopen (PIDFILE, "w");
+	pidFile = fopen (pidName, "w");
 	if (pidFile) {
 
 		fprintf (pidFile, "%d\n", getpid ());
@@ -495,6 +499,10 @@ static void DoAliasing (int fd, int direction)
 		switch (ip->ip_p) {
 		case IPPROTO_TCP:
 			printf ("[TCP]  ");
+			break;
+
+		case IPPROTO_SCTP:
+			printf ("[SCTP]  ");
 			break;
 
 		case IPPROTO_UDP:
@@ -635,6 +643,7 @@ static char* FormatPacket (struct ip* ip)
 	static char	buf[256];
 	struct tcphdr*	tcphdr;
 	struct udphdr*	udphdr;
+	struct sctphdr* sctphdr;
 	struct icmp*	icmphdr;
 	char		src[20];
 	char		dst[20];
@@ -650,6 +659,15 @@ static char* FormatPacket (struct ip* ip)
 			      ntohs (tcphdr->th_sport),
 			      dst,
 			      ntohs (tcphdr->th_dport));
+		break;
+
+	case IPPROTO_SCTP:
+		sctphdr = (struct sctphdr*) ((char*) ip + (ip->ip_hl << 2));
+		sprintf (buf, "[SCTP] %s:%d -> %s:%d",
+			      src,
+			      ntohs (tcphdr->src_port),
+			      dst,
+			      ntohs (tcphdr->dest_port));
 		break;
 
 	case IPPROTO_UDP:
@@ -836,7 +854,9 @@ enum Option {
  	LogDenied,
  	LogFacility,
 	PunchFW,
-	LogIpfwDenied
+	SkinnyPort,
+	LogIpfwDenied,
+	PidFile
 };
 
 enum Param {
@@ -1056,6 +1076,14 @@ static struct OptionInfo optionTable[] = {
 		"punch_fw",
 		NULL },
 
+	{ SkinnyPort,
+		0,
+		String,
+		"port",
+		"set the TCP port for use with the Skinny Station protocol",
+		"skinny_port",
+		NULL },
+
 	{ LogIpfwDenied,
 		0,
 		YesNo,
@@ -1063,6 +1091,14 @@ static struct OptionInfo optionTable[] = {
 		"log packets converted by natd, but denied by ipfw",
 		"log_ipfw_denied",
 		NULL },
+
+	{ PidFile,
+		0,
+		String,
+		"file_name",
+		"store PID in an alternate file",
+		"pid_file",
+		"P" },
 };
 	
 static void ParseOption (const char* option, const char* parms)
@@ -1247,8 +1283,16 @@ static void ParseOption (const char* option, const char* parms)
 		SetupPunchFW(strValue);
 		break;
 
+	case SkinnyPort:
+		SetupSkinnyPort(strValue);
+		break;
+
 	case LogIpfwDenied:
 		logIpfwDenied = yesNoValue;;
+		break;
+
+	case PidFile:
+		pidName = strdup (strValue);
 		break;
 	}
 }
@@ -1658,6 +1702,9 @@ int StrToProto (const char* str)
 	if (!strcmp (str, "tcp"))
 		return IPPROTO_TCP;
 
+	if (!strcmp (str, "sctp"))
+		return IPPROTO_SCTP;
+
 	if (!strcmp (str, "udp"))
 		return IPPROTO_UDP;
 
@@ -1689,4 +1736,15 @@ SetupPunchFW(const char *strValue)
 
 	PacketAliasSetFWBase(base, num);
 	(void)PacketAliasSetMode(PKT_ALIAS_PUNCH_FW, PKT_ALIAS_PUNCH_FW);
+}
+
+static void
+SetupSkinnyPort(const char *strValue)
+{
+	unsigned int port;
+
+	if (sscanf(strValue, "%u", &port) != 1)
+		errx(1, "skinny_port: port parameter required");
+
+	PacketAliasSetSkinnyPort(port);
 }

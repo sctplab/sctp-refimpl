@@ -23,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/lib/libalias/libalias.3,v 1.23.2.12 2003/06/27 09:15:16 ru Exp $
+.\" $FreeBSD: src/lib/libalias/libalias.3,v 1.23.2.13 2003/11/01 03:50:02 marcus Exp $
 .\"
 .Dd April 13, 2000
 .Dt LIBALIAS 3
@@ -264,6 +264,16 @@ Set firewall range allocated for punching firewall holes (with the
 .Dv PKT_ALIAS_PUNCH_FW
 flag).
 The range will be cleared for all rules on initialization.
+.Ed
+.Pp
+.Ft void
+.Fn PacketAliasSkinnyPort "unsigned int port"
+.Bd -ragged -offset indent
+Set the TCP port used by the Skinny Station protocol.
+Skinny is used by Cisco IP phones to communicate with
+Cisco Call Managers to set up voice over IP calls.
+If this is not set, Skinny aliasing will not be done.
+The typical port used by Skinny is 2000.
 .Ed
 .Sh PACKET HANDLING
 The packet handling functions are used to modify incoming (remote to local)

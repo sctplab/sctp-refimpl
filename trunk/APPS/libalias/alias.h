@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libalias/alias.h,v 1.12.2.8 2003/06/27 09:15:16 ru Exp $
+ * $FreeBSD: src/lib/libalias/alias.h,v 1.12.2.9 2003/11/01 03:50:02 marcus Exp $
  */
 
 /*-
@@ -45,6 +45,7 @@
 void	 PacketAliasInit(void);
 void	 PacketAliasSetAddress(struct in_addr _addr);
 void	 PacketAliasSetFWBase(unsigned int _base, unsigned int _num);
+void	 PacketAliasSetSkinnyPort(unsigned int _port);
 unsigned int
 	 PacketAliasSetMode(unsigned int _flags, unsigned int _mask);
 void	 PacketAliasUninit(void);
