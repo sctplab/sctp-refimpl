@@ -168,6 +168,7 @@ sctp_get_peeloff(struct socket *head, caddr_t assoc_id, int *error)
 		*error = ENOTCONN;
 		return (NULL);
 	}
+	SCTP_TCB_LOCK(stcb);
 	newso = sonewconn(head, SS_ISCONNECTED);
 	if (newso == NULL) {
 #ifdef SCTP_DEBUG
@@ -176,6 +177,7 @@ sctp_get_peeloff(struct socket *head, caddr_t assoc_id, int *error)
 		}
 #endif /* SCTP_DEBUG */
 		*error = ENOMEM;
+		SCTP_TCB_UNLOCK(stcb);
 		return (NULL);
 	}
 	n_inp = (struct sctp_inpcb *)newso->so_pcb;
@@ -212,5 +214,6 @@ sctp_get_peeloff(struct socket *head, caddr_t assoc_id, int *error)
 	 * buffer. Let the GRUBBING begin :-0
 	 */
 	sctp_grub_through_socket_buffer(inp, head, newso, stcb);
+	SCTP_TCB_UNLOCK(stcb);
 	return (newso);
 }
