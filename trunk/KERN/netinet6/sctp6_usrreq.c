@@ -1266,19 +1266,28 @@ sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		return (ECONNRESET);	/* I made the same as TCP since
 					 * we are not setup? */
 	}
+	SCTP_ASOC_CREATE_LOCK(inp);
+	SCTP_INP_RLOCK(inp);
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) ==
 	    SCTP_PCB_FLAGS_UNBOUND) {
 		/* Bind a ephemeral port */
+		SCTP_INP_RUNLOCK(inp);
 		error = sctp6_bind(so, NULL, p);
 		if (error) {
 			splx(s);
+			SCTP_ASOC_CREATE_UNLOCK(inp);
+
 			return (error);
 		}
+		SCTP_INP_RLOCK(inp);
 	}
+
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
 		/* We are already connected AND the TCP model */
 		splx(s);
+		SCTP_INP_RUNLOCK(inp);
+		SCTP_ASOC_CREATE_UNLOCK(inp);
 		return (EADDRINUSE);
 	}
 
@@ -1299,10 +1308,14 @@ sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		 */
 		if (addr->sa_family == AF_INET) {
 			splx(s);
+			SCTP_INP_RUNLOCK(inp);
+			SCTP_ASOC_CREATE_UNLOCK(inp);
 			return EINVAL;
 		}
 		if (IN6_IS_ADDR_V4MAPPED(&sin6->sin6_addr)) {
 			splx(s);
+			SCTP_INP_RUNLOCK(inp);
+			SCTP_ASOC_CREATE_UNLOCK(inp);
 			return EINVAL;
 		}
 	}
@@ -1315,31 +1328,43 @@ sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		} else {
 			/* mapped addresses aren't enabled */
 			splx(s);
+			SCTP_INP_RUNLOCK(inp);
+			SCTP_ASOC_CREATE_UNLOCK(inp);
 			return EINVAL;
 		}
 	} else
 #endif /* INET */
 		addr = addr;	/* for true v6 address case */
-	SCTP_INP_WLOCK(inp);
-	SCTP_INP_INCR_REF(inp);
-	SCTP_INP_WUNLOCK(inp);
 
 	/* Now do we connect? */
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
 		stcb = LIST_FIRST(&inp->sctp_asoc_list);
 		if (stcb)
 			SCTP_TCB_UNLOCK (stcb);
-	}else
+		SCTP_INP_RUNLOCK(inp);
+	}else {
+		SCTP_INP_RUNLOCK(inp);
+		SCTP_INP_WLOCK(inp);
+		SCTP_INP_INCR_REF(inp);
+		SCTP_INP_WUNLOCK(inp);
 		stcb = sctp_findassociation_ep_addr(&inp, addr, NULL, NULL, NULL);
+		if (stcb == NULL) {
+			SCTP_INP_WLOCK(inp);
+			SCTP_INP_DECR_REF(inp);
+			SCTP_INP_WUNLOCK(inp);
+		}
+	}
 
 	if (stcb != NULL) {
 		/* Already have or am bring up an association */
+		SCTP_ASOC_CREATE_UNLOCK(inp);
 		SCTP_TCB_UNLOCK (stcb);
 		splx(s);
 		return (EALREADY);
 	}
 	/* We are GOOD to go */
 	stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0);
+	SCTP_ASOC_CREATE_UNLOCK(inp);
 	if (stcb == NULL) {
 		/* Gak! no memory */
 		splx(s);
@@ -1353,10 +1378,6 @@ sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	stcb->asoc.state = SCTP_STATE_COOKIE_WAIT;
 	SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_entered);
 	sctp_send_initiate(inp, stcb);
-	SCTP_INP_WLOCK(inp);
-	SCTP_INP_DECR_REF(inp);
-	SCTP_INP_WUNLOCK(inp);
-
 	SCTP_TCB_UNLOCK (stcb);
 	splx(s);
 	return error;

@@ -427,25 +427,19 @@ struct sctp_tcb {
 
 #define SCTP_INP_INFO_LOCK_INIT() \
         mtx_init(&sctppcbinfo.ipi_ep_mtx, "sctp", "inp_info", MTX_DEF)
-#ifndef INVARIANTS
+
 #define SCTP_INP_INFO_RLOCK()	do{ 					\
              if(mtx_owned(&sctppcbinfo.ipi_ep_mtx))                     \
 		panic("INP INFO Recursive Lock-R");                     \
              mtx_lock(&sctppcbinfo.ipi_ep_mtx);                         \
 } while (0)
-#else
-#define SCTP_INP_INFO_RLOCK()		mtx_lock(&sctppcbinfo.ipi_ep_mtx)
-#endif
 
-#ifndef INVARIANTS
 #define SCTP_INP_INFO_WLOCK()	do{ 					\
              if(mtx_owned(&sctppcbinfo.ipi_ep_mtx))                     \
 		panic("INP INFO Recursive Lock-W");                     \
              mtx_lock(&sctppcbinfo.ipi_ep_mtx);                         \
 } while (0)
-#else
-#define SCTP_INP_INFO_WLOCK()		mtx_lock(&sctppcbinfo.ipi_ep_mtx)
-#endif
+
 
 #define SCTP_INP_INFO_RUNLOCK()		mtx_unlock(&sctppcbinfo.ipi_ep_mtx)
 #define SCTP_INP_INFO_WUNLOCK()		mtx_unlock(&sctppcbinfo.ipi_ep_mtx)
@@ -456,6 +450,7 @@ struct sctp_tcb {
  */
 #define SCTP_INP_LOCK_INIT(_inp) \
 	mtx_init(&(_inp)->inp_mtx, "sctp", "inp", MTX_DEF | MTX_DUPOK)
+
 #define SCTP_ASOC_CREATE_LOCK_INIT(_inp) \
 	mtx_init(&(_inp)->inp_create_mtx, "sctp", "inp_create", \
 		 MTX_DEF | MTX_DUPOK)
@@ -463,29 +458,30 @@ struct sctp_tcb {
 #define SCTP_INP_LOCK_DESTROY(_inp)	mtx_destroy(&(_inp)->inp_mtx)
 #define SCTP_ASOC_CREATE_LOCK_DESTROY(_inp)	mtx_destroy(&(_inp)->inp_create_mtx)
 
-#ifndef INVARIANTS
 #define SCTP_INP_RLOCK(_inp)	do{ 					\
+        struct sctp_tcb *xx_stcb;					\
+        xx_stcb = LIST_FIRST(&_inp->sctp_asoc_list);                    \
+        if(xx_stcb)                                                     \
+              if(mtx_owned(&(xx_stcb)->tcb_mtx))                        \
+                     panic("I own TCB lock?");                          \
         if(mtx_owned(&(_inp)->inp_mtx))                                 \
 		panic("INP Recursive Lock-R");                          \
         mtx_lock(&(_inp)->inp_mtx);                                     \
 } while (0)
-#else
-#define SCTP_INP_RLOCK(_inp)		mtx_lock(&(_inp)->inp_mtx)
-#endif
 
-#ifndef INVARIANTS
 #define SCTP_INP_WLOCK(_inp)	do{ 					\
+        struct sctp_tcb *xx_stcb;					\
+        xx_stcb = LIST_FIRST(&_inp->sctp_asoc_list);                    \
+        if(xx_stcb)                                                     \
+              if(mtx_owned(&(xx_stcb)->tcb_mtx))                        \
+                     panic("I own TCB lock?");                          \
         if(mtx_owned(&(_inp)->inp_mtx))                                 \
 		panic("INP Recursive Lock-W");                          \
         mtx_lock(&(_inp)->inp_mtx);                                     \
 } while (0)
-#else
-#define SCTP_INP_WLOCK(_inp)		mtx_lock(&(_inp)->inp_mtx)
-#endif
 
 #define SCTP_INP_INCR_REF(_inp)        _inp->refcount++
 
-#ifndef INVARIANTS
 #define SCTP_INP_DECR_REF(_inp)         do {                                 \
                                              if(_inp->refcount > 0)          \
                                                   _inp->refcount--;          \
@@ -493,19 +489,11 @@ struct sctp_tcb {
                                                   panic("bad inp refcount"); \
 }while (0)
 
-#else
-#define SCTP_INP_DECR_REF(_inp)        _inp->refcount--
-#endif
-
-#ifndef INVARIANTS
 #define SCTP_ASOC_CREATE_LOCK(_inp)  do{				\
         if(mtx_owned(&(_inp)->inp_create_mtx))                          \
 		panic("INP Recursive CREATE");                          \
         mtx_lock(&(_inp)->inp_create_mtx);                              \
 } while (0)
-#else
-#define SCTP_ASOC_CREATE_LOCK(_inp)	mtx_lock(&(_inp)->inp_create_mtx)
-#endif
 
 #define SCTP_INP_RUNLOCK(_inp)		mtx_unlock(&(_inp)->inp_mtx)
 #define SCTP_INP_WUNLOCK(_inp)		mtx_unlock(&(_inp)->inp_mtx)
@@ -523,29 +511,20 @@ struct sctp_tcb {
 #define SCTP_TCB_LOCK_INIT(_tcb) \
 	mtx_init(&(_tcb)->tcb_mtx, "sctp", "tcb", MTX_DEF | MTX_DUPOK)
 #define SCTP_TCB_LOCK_DESTROY(_tcb)	mtx_destroy(&(_tcb)->tcb_mtx)
-#ifndef INVARIANTS
 #define SCTP_TCB_LOCK(_tcb)  do{					\
         if(mtx_owned(&(_tcb)->tcb_mtx))                                 \
 		panic("TCB Lock");                                      \
 	mtx_lock(&(_tcb)->tcb_mtx);                                     \
 } while (0)
-#else
-#define SCTP_TCB_LOCK(_tcb)		mtx_lock(&(_tcb)->tcb_mtx)
-#endif
-
 #define SCTP_TCB_UNLOCK(_tcb)		mtx_unlock(&(_tcb)->tcb_mtx)
 
 #define SCTP_ITERATOR_LOCK_INIT() \
         mtx_init(&sctppcbinfo.it_mtx, "sctp", "iterator", MTX_DEF)
-#ifndef INVARIANTS
 #define SCTP_ITERATOR_LOCK()  do{					\
         if(mtx_owned(&sctppcbinfo.it_mtx))                              \
 		panic("Iterator Lock");                                 \
 	mtx_lock(&sctppcbinfo.it_mtx);                                  \
 } while (0)
-#else
-#define SCTP_ITERATOR_LOCK()		mtx_lock(&sctppcbinfo.it_mtx)
-#endif
 
 #define SCTP_ITERATOR_UNLOCK()	        mtx_unlock(&sctppcbinfo.it_mtx)
 #define SCTP_ITERATOR_LOCK_DESTROY()	mtx_destroy(&sctppcbinfo.it_mtx)

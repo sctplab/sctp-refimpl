@@ -3768,16 +3768,16 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
 		/* Should I really unlock ? */
-		SCTP_ASOC_CREATE_UNLOCK(inp);
 		SCTP_INP_RUNLOCK(inp);
+		SCTP_ASOC_CREATE_UNLOCK(inp);
 		splx(s);
 		return(EFAULT);
 	}
 #ifdef INET6
 	if (((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0) &&
 	    (addr->sa_family == AF_INET6)) {
-		SCTP_ASOC_CREATE_UNLOCK(inp);
 		SCTP_INP_RUNLOCK(inp);
+		SCTP_ASOC_CREATE_UNLOCK(inp);
 		splx(s);
 		return (EINVAL);
 	}
@@ -3799,8 +3799,8 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
 		/* We are already connected AND the TCP model */
 		splx(s);
-		SCTP_ASOC_CREATE_UNLOCK(inp);
 		SCTP_INP_RUNLOCK(inp);
+		SCTP_ASOC_CREATE_UNLOCK(inp);
 		return (EADDRINUSE);
 	}
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
@@ -3810,7 +3810,15 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		SCTP_INP_RUNLOCK(inp);
 	} else {
 		SCTP_INP_RUNLOCK(inp);
+		SCTP_INP_WLOCK(inp);
+		SCTP_INP_INCR_REF(inp);
+		SCTP_INP_WUNLOCK(inp);
 		stcb = sctp_findassociation_ep_addr(&inp, addr, NULL, NULL, NULL);
+		if (stcb == NULL) {
+			SCTP_INP_WLOCK(inp);
+			SCTP_INP_DECR_REF(inp);
+			SCTP_INP_WUNLOCK(inp);
+		}
 	}
 	if (stcb != NULL) {
 		/* Already have or am bring up an association */
@@ -3819,6 +3827,7 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		splx(s);
 		return (EALREADY);
 	}
+
 	/* We are GOOD to go */
 	stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0);
 	SCTP_ASOC_CREATE_UNLOCK(inp);
