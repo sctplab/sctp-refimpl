@@ -5320,13 +5320,15 @@ sctp_move_to_an_alt(struct sctp_tcb *stcb,
 	}
 }
 
+static int sctp_from_user_send=0;
+
 static int
 sctp_med_chunk_output(struct sctp_inpcb *inp,
 		      struct sctp_tcb *stcb,
 		      struct sctp_association *asoc,
 		      int *num_out,
 		      int *reason_code,
-		      int control_only, int *cwnd_full)
+		      int control_only, int *cwnd_full, int from_where)
 {
 	/*
 	 * Ok this is the generic chunk service queue.
@@ -5479,6 +5481,18 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 		outchain = NULL;
 		no_fragmentflg = 1;
 		one_chunk = 0;
+		if((net->ra.ro_rt) && (net->ra.ro_rt->rt_ifp)) {
+			/* if we have a route and an ifp 
+			 * check to see if we have room to
+			 * send to this guy
+			 */
+			struct ifnet *ifp;
+			ifp = net->ra.ro_rt->rt_ifp;
+			if ((ifp->if_snd.ifq_len + 2) >= ifp->if_snd.ifq_maxlen) {
+				sctp_pegs[SCTP_IFP_QUEUE_FULL]++;
+				continue;
+			}
+ 		}
 		if (((struct sockaddr *)&net->ra._l_addr)->sa_family == AF_INET) {
 			mtu = net->mtu - (sizeof(struct ip) + sizeof(struct sctphdr));
 		} else {
@@ -5649,6 +5663,9 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 									       outchain,
 									       no_fragmentflg, 0, NULL, asconf))) {
 						sctp_pegs[SCTP_DATA_OUT_ERR]++;
+						if (from_where == 0) {
+							sctp_pegs[SCTP_ERROUT_FRM_USR]++;
+						}
 					error_out_again:
 #ifdef SCTP_DEBUG
 						if (sctp_debug_on & SCTP_DEBUG_OUTPUT2) {
@@ -5908,6 +5925,10 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 							       no_fragmentflg, bundle_at, data_list[0], asconf))) {
 				/* error, we could not output */
 				sctp_pegs[SCTP_DATA_OUT_ERR]++;
+				if (from_where == 0) {
+					sctp_pegs[SCTP_ERROUT_FRM_USR]++;
+				}
+
 			errored_send:
 #ifdef SCTP_DEBUG
 				if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
@@ -6916,7 +6937,7 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 			 * output once. this assures that we WILL send HB's
 			 * if queued too.
 			 */
-			(void)sctp_med_chunk_output(inp, stcb, asoc, &num_out, &reason_code, 1, &cwnd_full);
+			(void)sctp_med_chunk_output(inp, stcb, asoc, &num_out, &reason_code, 1, &cwnd_full, from_where);
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
 				printf("Control send outputs:%d@full\n", num_out);
@@ -6953,7 +6974,7 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 			sctp_auditing(10, inp, stcb, NULL);
 #endif
 			/* Push out any control */
-			(void)sctp_med_chunk_output(inp, stcb, asoc,&num_out,&reason_code, 1, &cwnd_full);
+			(void)sctp_med_chunk_output(inp, stcb, asoc,&num_out,&reason_code, 1, &cwnd_full, from_where);
 			return (ret);
 		}
 		if ((num_out == 0) && (ret == 0)) {
@@ -6994,6 +7015,9 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 				if (net->ssthresh < net->cwnd)
 					net->ssthresh = net->cwnd;
 				net->cwnd = (net->flight_size+(burst_limit*net->mtu));
+#ifdef SCTP_LOG_MAXBURST
+				sctp_log_maxburst( net, 0 ,burst_limit, 0);
+#endif
 				sctp_pegs[SCTP_MAX_BURST_APL]++;
 			}
 			net->fast_retran_ip = 0;
@@ -7011,14 +7035,16 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 		}
 #endif
 		error = sctp_med_chunk_output(inp, stcb, asoc, &num_out,
-					      &reason_code, 0,  &cwnd_full);
+					      &reason_code, 0,  &cwnd_full, from_where);
 		if (error) {
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
 				printf("Error %d was returned from med-c-op\n", error);
 			}
 #endif
-
+#ifdef SCTP_LOG_MAXBURST
+			sctp_log_maxburst( asoc->primary_destination, error , burst_cnt, 1);
+#endif
 			break;
 		}
 #ifdef SCTP_DEBUG
@@ -7037,6 +7063,9 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 	if (burst_cnt >= burst_limit) {
 		sctp_pegs[SCTP_MAX_BURST_APL]++;
  		asoc->burst_limit_applied = 1;
+#ifdef SCTP_LOG_MAXBURST
+		sctp_log_maxburst( asoc->primary_destination, 0 , burst_cnt, 0);
+#endif
  	} else {
 		asoc->burst_limit_applied = 0;
  	}
@@ -7090,7 +7119,7 @@ sctp_output(inp, m, addr, control, p)
 	int queue_only, error = 0;
 	int s;
 	struct sctp_sndrcvinfo srcv;
-	int un_sent;
+	int un_sent = 0;
 	int use_rcvinfo = 0;
 	t_inp = inp;
 	/*  struct route ro;*/
@@ -7361,23 +7390,36 @@ sctp_output(inp, m, addr, control, p)
 		splx(s);
 		return (error);
 	}
-	un_sent = ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight_book) +
-	    ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) * sizeof(struct sctp_data_chunk)) +
-	    SCTP_MED_OVERHEAD);
-
-	if (((inp->sctp_flags & SCTP_PCB_FLAGS_NODELAY) == 0) &&
-	    (stcb->asoc.total_flight > 0) &&
-	    (un_sent < stcb->asoc.smallest_mtu)
-		) {
-	   
-		/* Ok, Nagle is set on and we have
-		 * data outstanding. Don't send anything
-		 * and let the SACK drive out the data.
-		 */
-		sctp_pegs[SCTP_NAGLE_NOQ]++;
+	if(net->flight_size > net->cwnd) {
+		sctp_pegs[SCTP_SENDTO_FULL_CWND]++;
 		queue_only = 1;
-	} else {
-		sctp_pegs[SCTP_NAGLE_OFF]++;
+/*
+	} else if (asoc->burst_limit_applied) {
+	sctp_pegs[SCTP_QUEONLY_BURSTLMT]++;
+	queue_only = 1;
+	} else if (asoc->send_queue_cnt > 0) {
+	sctp_pegs[SCTP_SEND_QUEUE_POP]++;
+	queue_only = 1;
+*/
+ 	} else {
+		un_sent = ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight_book) +
+			   ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) * sizeof(struct sctp_data_chunk)) +
+			   SCTP_MED_OVERHEAD);
+
+		if (((inp->sctp_flags & SCTP_PCB_FLAGS_NODELAY) == 0) &&
+		    (stcb->asoc.total_flight > 0) &&
+		    (un_sent < stcb->asoc.smallest_mtu)
+			) {
+			
+			/* Ok, Nagle is set on and we have
+			 * data outstanding. Don't send anything
+			 * and let the SACK drive out the data.
+			 */
+			sctp_pegs[SCTP_NAGLE_NOQ]++;
+			queue_only = 1;
+		} else {
+			sctp_pegs[SCTP_NAGLE_OFF]++;
+		}
 	}
 	if ((queue_only == 0) && stcb->asoc.peers_rwnd) {
 		/* we can attempt to send too.*/
@@ -9678,7 +9720,7 @@ sctp_sosend(struct socket *so,
 {
  	int sndlen, error, use_rcvinfo;
 	int s, queue_only = 0, queue_only_for_init=0;	
-	int un_sent;
+	int un_sent = 0;
 	struct sctp_inpcb *inp;	
  	struct sctp_tcb *stcb;
 	struct sctp_sndrcvinfo srcv;
@@ -9910,7 +9952,7 @@ sctp_sosend(struct socket *so,
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 		p->td_proc->p_stats->p_ru.ru_msgsnd++;
 #else
-		p->p_stats->p_ru.ru_msgsnd++;
+	p->p_stats->p_ru.ru_msgsnd++;
 #endif
 
 	if (stcb) {
@@ -9947,7 +9989,7 @@ sctp_sosend(struct socket *so,
 		 */
 		while ((stcb->sctp_socket->so_snd.sb_hiwat < (sndlen + asoc->total_output_queue_size)) ||
 		       (asoc->chunks_on_out_queue > sctp_max_chunks_on_queue) ||
-			(asoc->total_output_mbuf_queue_size > stcb->sctp_socket->so_snd.sb_mbmax)) {
+		       (asoc->total_output_mbuf_queue_size > stcb->sctp_socket->so_snd.sb_mbmax)) {
 			int err, ret;
 			if (stcb->sctp_socket->so_state & SS_NBIO) {
 				/* Non-blocking io in place */
@@ -10044,23 +10086,36 @@ sctp_sosend(struct socket *so,
 			goto out;
 		}
 	}
-	un_sent = ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight_book) +
-	    ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) * sizeof(struct sctp_data_chunk)) +
-	    SCTP_MED_OVERHEAD);
-
- 	if (((inp->sctp_flags & SCTP_PCB_FLAGS_NODELAY) == 0) &&
-	    (stcb->asoc.total_flight > 0) &&
-	    (un_sent < stcb->asoc.smallest_mtu)
-		) {
-	   
-		/* Ok, Nagle is set on and we have data outstanding. Don't
-		 * send anything and let SACKs drive out the data unless we
-		 * have a "full" segment to send.
-		 */
-		sctp_pegs[SCTP_NAGLE_NOQ]++;
+	
+	if (net->flight_size > net->cwnd) {
+		sctp_pegs[SCTP_SENDTO_FULL_CWND]++;
 		queue_only = 1;
+/*
+  } else if (asoc->burst_limit_applied) {
+  sctp_pegs[SCTP_QUEONLY_BURSTLMT]++;
+  queue_only = 1;
+  } else if (asoc->send_queue_cnt > 0) {
+  sctp_pegs[SCTP_SEND_QUEUE_POP]++;
+  queue_only = 1;
+*/
 	} else {
-		sctp_pegs[SCTP_NAGLE_OFF]++;
+		un_sent = ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight_book) +
+			   ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) * sizeof(struct sctp_data_chunk)) +
+			   SCTP_MED_OVERHEAD);
+
+		if (((inp->sctp_flags & SCTP_PCB_FLAGS_NODELAY) == 0) &&
+		    (stcb->asoc.total_flight > 0) &&
+		    (un_sent < stcb->asoc.smallest_mtu)) {
+	   
+			/* Ok, Nagle is set on and we have data outstanding. Don't
+			 * send anything and let SACKs drive out the data unless we
+			 * have a "full" segment to send.
+			 */
+			sctp_pegs[SCTP_NAGLE_NOQ]++;
+			queue_only = 1;
+		} else {
+			sctp_pegs[SCTP_NAGLE_OFF]++;
+		}
 	}
 	if (queue_only_for_init) {
 		/* It is possible to have a turn around of the
@@ -10099,7 +10154,9 @@ sctp_sosend(struct socket *so,
 #else
 		s = splnet();
 #endif
+		sctp_from_user_send = 1;
 		sctp_chunk_output(inp, stcb, 0);
+		sctp_from_user_send = 0;
 		splx(s);
 
 	} else if (!TAILQ_EMPTY(&stcb->asoc.control_send_queue)) {
@@ -10111,15 +10168,15 @@ sctp_sosend(struct socket *so,
 		s = splnet();
 #endif
 		sctp_med_chunk_output(inp, stcb, &stcb->asoc, &num_out,
-				      &reason, 1, &cwnd_full);
+				      &reason, 1, &cwnd_full, 1);
 		splx(s);
 	}
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
-	printf("USR Send complete qo:%d prw:%d unsent:%d tf:%d cooq:%d toqs:%d \n",
-	       queue_only, stcb->asoc.peers_rwnd, un_sent,
-	       stcb->asoc.total_flight, stcb->asoc.chunks_on_out_queue,
-	       stcb->asoc.total_output_queue_size);
+		printf("USR Send complete qo:%d prw:%d unsent:%d tf:%d cooq:%d toqs:%d \n",
+		       queue_only, stcb->asoc.peers_rwnd, un_sent,
+		       stcb->asoc.total_flight, stcb->asoc.chunks_on_out_queue,
+		       stcb->asoc.total_output_queue_size);
 	}
 #endif
  out:

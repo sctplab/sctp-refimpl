@@ -3884,8 +3884,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 			if (net->cwnd <= net->ssthresh) {
 				/* We are in slow start */
 				if (net->flight_size + net->net_ack >=
-				    net->cwnd ||
-				    asoc->burst_limit_applied) {
+				    net->cwnd ) {
 #ifdef SCTP_HIGH_SPEED
 					sctp_hs_cwnd_increase(net);
 #else
@@ -3911,6 +3910,10 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 					sctp_pegs[SCTP_CWND_NOUSE_SS]++;
 					dif = net->cwnd - (net->flight_size +
 							   net->net_ack);
+#ifdef SCTP_CWND_LOGGING
+					sctp_log_cwnd(net, net->net_ack,
+						      SCTP_CWND_LOG_NOADV_SS);
+#endif
 					if (dif > sctp_pegs[SCTP_CWND_DIFF_SA]) {
 						sctp_pegs[SCTP_CWND_DIFF_SA] =
 							dif;
@@ -3925,7 +3928,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 			} else {
 				/* We are in congestion avoidance */
 				if (net->flight_size + net->net_ack >=
-				    net->cwnd || asoc->burst_limit_applied) {
+				    net->cwnd) {
 					/*
 					 * add to pba only if we had a cwnd's
 					 * worth (or so) in flight OR the
@@ -3958,6 +3961,10 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 				} else {
 					int dif;
 					sctp_pegs[SCTP_CWND_NOUSE_CA]++;
+#ifdef SCTP_CWND_LOGGING
+					sctp_log_cwnd(net, net->net_ack,
+						      SCTP_CWND_LOG_NOADV_CA);
+#endif
 					dif = net->cwnd - (net->flight_size +
 							   net->net_ack);
 					if (dif > sctp_pegs[SCTP_CWND_DIFF_CA]) {
