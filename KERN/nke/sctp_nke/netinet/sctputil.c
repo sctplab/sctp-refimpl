@@ -943,7 +943,10 @@ sctp_timeout_handler(void *t)
 		if (stcb->asoc.num_send_timers_up < 0) {
 			stcb->asoc.num_send_timers_up = 0;
 		}
-		sctp_t3rxt_timer(inp, stcb, net);
+		if ( sctp_t3rxt_timer(inp, stcb, net)) {
+			/* association is over */
+			return;
+		}
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
 #endif
@@ -965,7 +968,10 @@ sctp_timeout_handler(void *t)
 		}
 		break;
 	case SCTP_TIMER_TYPE_INIT:
-		sctp_t1init_timer(inp, stcb, net);
+		if (sctp_t1init_timer(inp, stcb, net)) {
+			/* association is over */
+			return;
+		}
 		/* We do output but not here */
 		did_output = 0;
 		break;
@@ -978,21 +984,29 @@ sctp_timeout_handler(void *t)
 		sctp_chunk_output(inp, stcb, 4);
 		break;
 	case SCTP_TIMER_TYPE_SHUTDOWN:
-		sctp_shutdown_timer(inp, stcb, net);
+		if (sctp_shutdown_timer(inp, stcb, net) ) {
+			/* association is over */
+			return;
+		}
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
 #endif
 		sctp_chunk_output(inp, stcb, 5);
 		break;
 	case SCTP_TIMER_TYPE_HEARTBEAT:
-		sctp_heartbeat_timer(inp, stcb, net);
+		if (sctp_heartbeat_timer(inp, stcb, net)) {
+			return;
+		}
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
 #endif
 		sctp_chunk_output(inp, stcb, 6);
 		break;
 	case SCTP_TIMER_TYPE_COOKIE:
-		sctp_cookie_timer(inp, stcb, net);
+		if (sctp_cookie_timer(inp, stcb, net)) {
+			/* association is over */
+			return;
+		}
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
 #endif
@@ -1025,7 +1039,10 @@ sctp_timeout_handler(void *t)
 		did_output = 0;
 		break;
 	case SCTP_TIMER_TYPE_SHUTDOWNACK:
-		sctp_shutdownack_timer(inp, stcb, net);
+		if (sctp_shutdownack_timer(inp, stcb, net)) {
+			/* association is over */
+			return;
+		}
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
 #endif
@@ -1034,16 +1051,22 @@ sctp_timeout_handler(void *t)
 	case SCTP_TIMER_TYPE_SHUTDOWNGUARD:
 		sctp_abort_an_association(inp, stcb,
 					  SCTP_SHUTDOWN_GUARD_EXPIRES, NULL);
-		did_output = 0;
+		return;
 		break;
 
 	case SCTP_TIMER_TYPE_STRRESET:
-		sctp_strreset_timer(inp, stcb, net);
+		if (sctp_strreset_timer(inp, stcb, net)) {
+			/* association is over */
+			return;
+		}
 		sctp_chunk_output(inp, stcb, 9);
 		break;
 
 	case SCTP_TIMER_TYPE_ASCONF:
-		sctp_asconf_timer(inp, stcb, net);
+		if (sctp_asconf_timer(inp, stcb, net)) {
+			/* association is over */
+			return;
+		}
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
 #endif

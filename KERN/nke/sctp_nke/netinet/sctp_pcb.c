@@ -2444,7 +2444,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 			net->dest_state = SCTP_ADDR_REACHABLE |
 			    SCTP_ADDR_UNCONFIRMED;
 	}
-	net->RTO = 0;
+	net->RTO = stcb->asoc.initial_rto;
 	stcb->asoc.numnets++;
 	net->ref_count = 1;
 
