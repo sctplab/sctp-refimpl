@@ -1232,12 +1232,7 @@ sctp_fill_up_addresses(struct sctp_inpcb *inp,
 					    (IN4_ISPRIVATE_ADDRESS(&sin->sin_addr))) {
 						continue;
 					}
-					printf("sctp_flags:%x want_mapped:%x = %s\n",
-					       (u_int)inp->sctp_flags,
-					       (u_int)SCTP_PCB_FLAGS_NEEDS_MAPPED_V4,
-					       ((inp->sctp_flags & SCTP_PCB_FLAGS_NEEDS_MAPPED_V4) ? "TRUE" : "FALSE"));
 					if (inp->sctp_flags & SCTP_PCB_FLAGS_NEEDS_MAPPED_V4) {
-						printf("Mapping V4 address to V6\n");
 						in6_sin_2_v4mapsin6(sin,(struct sockaddr_in6 *)sas);
 						((struct sockaddr_in6 *)sas)->sin6_port = inp->sctp_lport;
 						sas = (struct sockaddr_storage *)((caddr_t)sas + sizeof(struct sockaddr_in6));
