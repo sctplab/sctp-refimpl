@@ -3111,6 +3111,20 @@ sctp_print_address_pkt(struct ip *iph, struct sctphdr *sh)
 	}
 }
 
+#if defined(__FreeBSD__) || defined(__APPLE__)
+
+/* cloned from uipc_socket.c */
+
+#define SCTP_SBLINKRECORD(sb, m0) do {					\
+	if ((sb)->sb_lastrecord != NULL)				\
+		(sb)->sb_lastrecord->m_nextpkt = (m0);			\
+	else								\
+		(sb)->sb_mb = (m0);					\
+	(sb)->sb_lastrecord = (m0);					\
+} while (/*CONSTCOND*/0)
+#endif
+
+
 int
 sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 	struct sockbuf *sb;
@@ -3121,37 +3135,44 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 {
 #ifdef __NetBSD__
 	struct mbuf *m, *n;
-	int space = asa->sa_len;
 
 	if (m0 && (m0->m_flags & M_PKTHDR) == 0)
 		panic("sbappendaddr_nocheck");
-	if (m0)
-		space += m0->m_pkthdr.len;
 
-	m0->m_pkthdr.csum_data = tag;
+	m0->m_pkthdr.csum_data = (int)tag;
 
 	for (n = control; n; n = n->m_next) {
-		space += n->m_len;
 		if (n->m_next == 0)	/* keep pointer to last control buf */
 			break;
 	}
-	MGET(m, M_DONTWAIT, MT_SONAME);
-	if (m == 0)
-		return (0);
-	m->m_len = 0;
-	if (asa->sa_len > MLEN) {
-		MEXTMALLOC(m, asa->sa_len, M_NOWAIT);
-		if ((m->m_flags & M_EXT) == 0) {
-			m_free(m);
+#ifdef SCTP_TCP_MODEL_SUPPORT
+	if (((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) == 0) ||
+	    ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)== 0)) {
+#endif
+		MGETHDR(m, M_DONTWAIT, MT_SONAME);
+		if (m == 0)
 			return (0);
+		m->m_len = 0;
+		if (asa->sa_len > MHLEN) {
+			MEXTMALLOC(m, asa->sa_len, M_NOWAIT);
+			if ((m->m_flags & M_EXT) == 0) {
+				m_free(m);
+				return (0);
+			}
 		}
+		m->m_len = asa->sa_len;
+		memcpy(mtod(m, caddr_t), (caddr_t)asa, asa->sa_len);
+#ifdef SCTP_TCP_MODEL_SUPPORT
+	} else {
+		m = NULL;
 	}
-	m->m_len = asa->sa_len;
-	memcpy(mtod(m, caddr_t), (caddr_t)asa, asa->sa_len);
-	if (n)
+#endif
+	if (n) {
 		n->m_next = m0;		/* concatenate data to control */
-	else
+	}else {
 		control = m0;
+	}
+	m->m_pkthdr.csum_data = tag;
 	m->m_next = control;
 	for (n = m; n; n = n->m_next)
 		sballoc(sb, n);
@@ -3175,13 +3196,12 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 	return (1);
 #endif
 #if defined(__FreeBSD__) || defined(__APPLE__)
-	struct mbuf *m, *n;
+	struct mbuf *m, *n, *nlast;
 	int cnt=0;
 
 	if (m0 && (m0->m_flags & M_PKTHDR) == 0)
 		panic("sbappendaddr_nocheck");
 
- 	m0->m_pkthdr.csum_data = (int)tag;
 	for (n = control; n; n = n->m_next) {
 		if (n->m_next == 0)	/* get pointer to last control buf */
 			break;
@@ -3190,10 +3210,10 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 	if (((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) == 0) ||
 	    ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)== 0)) {
 #endif
-		if (asa->sa_len > MLEN)
+		if (asa->sa_len > MHLEN)
 			return (0);
  try_again:
-		MGET(m, M_DONTWAIT, MT_SONAME);
+		MGETHDR(m, M_DONTWAIT, MT_SONAME);
 		if (m == 0)
 			return (0);
 		m->m_len = 0;
@@ -3219,58 +3239,56 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 		n->m_next = m0;		/* concatenate data to control */
 	else
 		control = m0;
-	if (m) {
+	if (m) 
 		m->m_next = control;
-	} else {
+	else 
 		m = control;
-	}
+	m->m_pkthdr.csum_data = (int)tag;
+
 	for (n = m; n; n = n->m_next)
 		sballoc(sb, n);
-	n = sb->sb_mb;
-	if (n) {
-		if ((n->m_nextpkt != inp->sb_last_mpkt) && (n->m_nextpkt == NULL)) {
-			inp->sb_last_mpkt = NULL;
-		}
-		if (inp->sb_last_mpkt) 
-			inp->sb_last_mpkt->m_nextpkt = m;
- 		else {
-			while (n->m_nextpkt) {
-				n = n->m_nextpkt;
-			}
-			n->m_nextpkt = m;
-		}
-		inp->sb_last_mpkt = m;
-	} else {
-		inp->sb_last_mpkt = sb->sb_mb = m;
+	nlast = n;
+
+	if (sb->sb_mb == NULL) {
 		inp->sctp_vtag_last = tag;
 	}
+
+	SCTP_SBLINKRECORD(sb, m);
+	sb->sb_mbtail = nlast;
 	return (1);
 #endif
 #ifdef __OpenBSD__
 	struct mbuf *m, *n;
-	int space = asa->sa_len;
 
 	if (m0 && (m0->m_flags & M_PKTHDR) == 0)
 		panic("sbappendaddr_nocheck");
-	if (m0)
-		space += m0->m_pkthdr.len;
 	m0->m_pkthdr.csum = (int)tag;
 	for (n = control; n; n = n->m_next) {
-		space += n->m_len;
 		if (n->m_next == 0)	/* keep pointer to last control buf */
 			break;
 	}
-	if (asa->sa_len > MLEN)
-		return (0);
-	MGET(m, M_DONTWAIT, MT_SONAME);
-	if (m == 0)
-		return (0);
-	m->m_len = asa->sa_len;
-	bcopy((caddr_t)asa, mtod(m, caddr_t), asa->sa_len);
+#ifdef SCTP_TCP_MODEL_SUPPORT
+	if (((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) == 0) ||
+	    ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)== 0)) {
+#endif
+		if (asa->sa_len > MHLEN)
+			return (0);
+		MGETHDR(m, M_DONTWAIT, MT_SONAME);
+		if (m == 0)
+			return (0);
+		m->m_len = asa->sa_len;
+		bcopy((caddr_t)asa, mtod(m, caddr_t), asa->sa_len);
+#ifdef SCTP_TCP_MODEL_SUPPORT
+	} else {
+		m = NULL;
+	}
+#endif
 	if (n)
 		n->m_next = m0;		/* concatenate data to control */
 	else
 		control = m0;
+
+	m->m_pkthdr.csum = (int)tag;
 	m->m_next = control;
 	for (n = m; n; n = n->m_next)
 		sballoc(sb, n);
@@ -3366,8 +3384,9 @@ sctp_get_last_vtag_from_sb(struct socket *so)
 			while (at) {
 				if (at->m_flags & M_PKTHDR)
 					break;
-				else
+				else {
 					at = at->m_next;
+				}
 			}
 			/* now do we have a m_pkthdr */
 			if (at && (at->m_flags & M_PKTHDR)) {
