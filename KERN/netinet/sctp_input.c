@@ -2489,6 +2489,9 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 				tp1 = TAILQ_NEXT(tp1, sctp_next);
 			}
 		}
+		if (tp1 == NULL) {
+			sctp_pegs[SCTP_PDRP_TSNNF]++;
+		}
 		if ((tp1) && (tp1->sent < SCTP_DATAGRAM_ACKED)) {
 			u_int8_t *ddp;
 			if (((tp1->rec.data.state_flags & SCTP_WINDOW_PROBE) == SCTP_WINDOW_PROBE) &&
@@ -2538,7 +2541,12 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 			/*
 			 * mark the tsn with what sequences can cause a new FR.
 			 */
-			tp1->rec.data.fast_retran_tsn = stcb->asoc.sending_seq;
+			if(TAILQ_EMPTY(&stcb->asoc.send_queue) ) {
+				tp1->rec.data.fast_retran_tsn = stcb->asoc.sending_seq;
+			} else {
+				tp1->rec.data.fast_retran_tsn = (TAILQ_FIRST(&stcb->asoc.send_queue))->rec.data.TSN_seq;
+			}
+
 			/* restart the timer */
 			sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
 			    stcb, tp1->whoTo);

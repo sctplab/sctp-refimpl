@@ -751,7 +751,7 @@
 #define SCTP_PDRP_CRUPT	   76
 #define SCTP_PDRP_NEDAT    77
 #define SCTP_PDRP_PDBRK    78
-#define SCTP_PREPENDS_FAST 79
+#define SCTP_PDRP_TSNNF    79
 #define SCTP_PDRP_DNFND    80
 #define SCTP_PDRP_DIWNP    81
 #define SCTP_PDRP_DIZRW    82
