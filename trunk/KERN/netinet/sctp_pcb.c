@@ -2364,7 +2364,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	/* First take care of socket level things */
 	  if((so->so_rcv.sb_mb == NULL) && (so->so_rcv.sb_cc > 0)) {
 	    printf("Strange, so->so_rcv.sb_mb was NULL count was %d?\n",
-		   so->so_rcv.sb_cc);
+		   (int)so->so_rcv.sb_cc);
 	    so->so_rcv.sb_cc = 0;
 	  }
 	  if(so->so_snd.sb_cc > 0) {
