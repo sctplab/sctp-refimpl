@@ -163,6 +163,11 @@ extern int ipport_hilastauto;
 void
 sctp_fill_pcbinfo(struct sctp_pcbinfo *spcb)
 {
+	/* We really don't need 
+	 * to lock this, but I will
+	 * just because it does not hurt.
+	 */
+	SCTP_INP_INFO_RLOCK();
 	spcb->ep_count = sctppcbinfo.ipi_count_ep;
 	spcb->asoc_count = sctppcbinfo.ipi_count_asoc;
 	spcb->laddr_count = sctppcbinfo.ipi_count_laddr;
@@ -170,7 +175,19 @@ sctp_fill_pcbinfo(struct sctp_pcbinfo *spcb)
 	spcb->chk_count = sctppcbinfo.ipi_count_chunk;
 	spcb->sockq_count = sctppcbinfo.ipi_count_sockq;
 	spcb->mbuf_track = sctppcbinfo.mbuf_track;
+	SCTP_INP_INFO_RUNLOCK();
 }
+
+
+/*
+ * Notes on locks for FreeBSD 5 and up. All association
+ * lookups that have a definte ep, the INP structure is
+ * assumed to be locked for reading. If we need to go
+ * find the INP (ususally when a **inp is passed) then
+ * we must lock the INFO structure first and if needed
+ * lock the INP too. Note that if we lock it we must 
+ *
+ */
 
 
 /*
@@ -212,7 +229,7 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 	} else {
 		return NULL;
 	}
-
+	SCTP_INP_INFO_RLOCK();
 	ephead = &sctppcbinfo.sctp_tcpephash[SCTP_PCBHASH_ALLADDR(
 	    (lport + rport), sctppcbinfo.hashtcpmark)];
 	/*
@@ -228,7 +245,7 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 		if (lport != inp->sctp_lport) {
 			continue;
 		}
-
+		SCTP_INP_RLOCK(inp);
 		/* check to see if the ep has one of the addresses */
 		if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) == 0) {
 			/* We are NOT bound all, so look further */
@@ -262,6 +279,7 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 						if (sin->sin_addr.s_addr ==
 						    intf_addr->sin_addr.s_addr) {
 							match = 1;
+							SCTP_INP_RUNLOCK(inp);
 							break;
 						}
 					} else {
@@ -275,27 +293,34 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 						if (SCTP6_ARE_ADDR_EQUAL(&sin6->sin6_addr,
 						    &intf_addr6->sin6_addr)) {
 							match = 1;
+							SCTP_INP_RUNLOCK(inp);
 							break;
 						}
 					}
 				}
 			}
-			if (match == 0)
+			if (match == 0) {
 				/* This endpoint does not have this address */
 				continue;
+			}
 		}
 		/*
 		 * Ok if we hit here the ep has the address, does it hold the
-		 * 
+		 * tcb?
 		 */
+		
 		stcb = LIST_FIRST(&inp->sctp_asoc_list);
-		if (stcb== NULL)
+		if (stcb== NULL) {
+			SCTP_INP_RUNLOCK(inp);
 			continue;
+		}
 
-		if (stcb->rport != rport)
+		if (stcb->rport != rport) {
 			/* remote port does not match. */
+			SCTP_INP_RUNLOCK(inp);
 			continue;
-
+		}
+		SCTP_TCB_LOCK(stcb);
 		/* Does this TCB have a matching address? */
 		TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 			if (net->ra._l_addr.sa.sa_family != from->sa_family) {
@@ -314,6 +339,9 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 					}
 					/* Update the endpoint pointer */
 					*inp_p = inp;
+					SCTP_TCB_UNLOCK(stcb);
+					SCTP_INP_RUNLOCK(inp);
+					SCTP_INP_INFO_RUNLOCK();
 					return (stcb);
 				}
 			} else {
@@ -328,11 +356,17 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 					}
 					/* Update the endpoint pointer */
 					*inp_p = inp;
+					SCTP_TCB_UNLOCK(stcb);
+					SCTP_INP_RUNLOCK(inp);
+					SCTP_INP_INFO_RUNLOCK();
 					return (stcb);
 				}
 			}
 		}
+		SCTP_TCB_UNLOCK(stcb);
+		SCTP_INP_RUNLOCK(inp);
 	}
+	SCTP_INP_INFO_RUNLOCK();
 	return (NULL);
 }
 
@@ -460,6 +494,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 	} else {
 		return (NULL);
 	}
+	SCTP_INP_RLOCK(inp);
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) {
 		/*
 		 * Now either this guy is our listner or it's the connector.
@@ -470,16 +505,19 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 		 */
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_ACCEPTING) {
 			/* to is peer addr, from is my addr */
+			SCTP_INP_RUNLOCK(inp);
 			stcb = sctp_tcb_special_locate(inp_p, remote, local,
 			    netp);
 			return (stcb);
 		} else {
 			stcb = LIST_FIRST(&inp->sctp_asoc_list);
 			if (stcb == NULL) {
+				SCTP_INP_RUNLOCK(inp);
 				return (NULL);
 			}
 			if (stcb->rport != rport) {
 				/* remote port does not match. */
+				SCTP_INP_RUNLOCK(inp);
 				return (NULL);
 			}
 			/* now look at the list of remote addresses */
@@ -500,6 +538,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 						if (netp != NULL) {
 							*netp = net;
 						}
+						SCTP_INP_RUNLOCK(inp);
 						return (stcb);
 					}
 				} else if (remote->sa_family == AF_INET6) {
@@ -512,15 +551,19 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 						if (netp != NULL) {
 							*netp = net;
 						}
+						SCTP_INP_RUNLOCK(inp);
 						return (stcb);
 					}
 				}
 			}
 		}
 	} else {
+		SCTP_INP_INFO_RLOCK();
 		head = &inp->sctp_tcbhash[SCTP_PCBHASH_ALLADDR(rport,
 		    inp->sctp_hashmark)];
 		if (head == NULL) {
+			SCTP_INP_INFO_RUNLOCK();
+			SCTP_INP_RUNLOCK(inp);
 			return (NULL);
 		}
 		LIST_FOREACH(stcb, head, sctp_tcbhash) {
@@ -529,10 +572,12 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 				continue;
 			}
 			/* now look at the list of remote addresses */
+			SCTP_TCB_LOCK(stcb);
 			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 				if (net->ra._l_addr.sa.sa_family !=
 				    remote->sa_family) {
 					/* not the same family */
+					SCTP_TCB_UNLOCK(stcb);
 					continue;
 				}
 				if (remote->sa_family == AF_INET) {
@@ -546,6 +591,9 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 						if (netp != NULL) {
 							*netp = net;
 						}
+						SCTP_TCB_UNLOCK(stcb);
+						SCTP_INP_INFO_RUNLOCK();
+						SCTP_INP_RUNLOCK(inp);
 						return (stcb);
 					}
 				} else if (remote->sa_family == AF_INET6) {
@@ -559,12 +607,18 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 						if (netp != NULL) {
 							*netp = net;
 						}
+						SCTP_TCB_UNLOCK(stcb);
+						SCTP_INP_INFO_RUNLOCK();
+						SCTP_INP_RUNLOCK(inp);
 						return (stcb);
 					}
 				}
 			}
+			SCTP_TCB_UNLOCK(stcb);
 		}
 	}
+	SCTP_INP_INFO_RUNLOCK();
+	SCTP_INP_RUNLOCK(inp);
 	/* not found */
 	return (NULL);
 }
@@ -586,15 +640,17 @@ sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, caddr_t asoc_id)
 	if (asoc_id == 0 || inp == NULL) {
 		return (NULL);
 	}
-
+	SCTP_INP_INFO_RLOCK();
 	vtag = (u_int32_t)asoc_id;
 	head = &sctppcbinfo.sctp_asochash[SCTP_PCBHASH_ASOC(vtag,
 	    sctppcbinfo.hashasocmark)];
 	if (head == NULL) {
 		/* invalid vtag */
+		SCTP_INP_INFO_RUNLOCK();
 		return (NULL);
 	}
 	LIST_FOREACH(stcb, head, sctp_asocs) {
+		SCTP_TCB_LOCK(stcb);
 		if (stcb->asoc.my_vtag == vtag) {
 			/* candidate */
 			if (inp != stcb->sctp_ep) {
@@ -605,9 +661,12 @@ sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, caddr_t asoc_id)
 				continue;
 			}
 			sctp_pegs[SCTP_VTAG_EXPR]++;
+			SCTP_INP_INFO_RUNLOCK();
 			return (stcb);
 		}
+		SCTP_TCB_UNLOCK(stcb);
 	}
+	SCTP_INP_INFO_RUNLOCK();
 	return (NULL);
 }
 
@@ -630,7 +689,11 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 		/* unsupported family */
 		return (NULL);
 	}
+	if (head == NULL)
+		return (NULL);
+
 	LIST_FOREACH(inp, head, sctp_hash) {
+		SCTP_INP_LOCK(inp);
 		if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) &&
 		    (inp->sctp_lport == lport)) {
 			/* got it */
@@ -647,15 +710,19 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 #endif
 				) {
 				/* IPv4 on a IPv6 socket with ONLY IPv6 set */
+				SCTP_INP_UNLOCK(inp);
 				continue;
 			}
 			/* A V6 address and the endpoint is NOT bound V6 */
 			if (nam->sa_family == AF_INET6 &&
 			   (inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0) {
+				SCTP_INP_UNLOCK(inp);
 				continue;
 			}
+			SCTP_INP_UNLOCK(inp);
 			return (inp);
 		}
+		SCTP_INP_UNLOCK(inp);
 	}
 
 	if ((nam->sa_family == AF_INET) &&
@@ -677,15 +744,19 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 	}
 #endif
 	LIST_FOREACH(inp, head, sctp_hash) {
+		SCTP_INP_LOCK(inp);
 		if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL)) {
+			SCTP_INP_UNLOCK(inp);
 			continue;
 		}
 		/*
 		 * Ok this could be a likely candidate, look at all of
 		 * its addresses
 		 */
-		if (inp->sctp_lport != lport)
+		if (inp->sctp_lport != lport) {
+			SCTP_INP_UNLOCK(inp);
 			continue;
+		}
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_PCB1) {
 			printf("Ok, found maching local port\n");
@@ -698,6 +769,7 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 					printf("An ounce of prevention is worth a pound of cure\n");
 				}
 #endif
+				SCTP_INP_UNLOCK(inp);
 				continue;
 			}
 #ifdef SCTP_DEBUG
@@ -712,6 +784,7 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 					printf("Huh IFA as an ifa_addr=NULL, ");
 				}
 #endif
+				SCTP_INP_UNLOCK(inp);
 				continue;
 			}
 #ifdef SCTP_DEBUG
@@ -736,6 +809,7 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 							printf("YES, return ep:%p\n", inp);
 						}
 #endif
+						SCTP_INP_UNLOCK(inp);
 						return (inp);
 					}
 				} else if (nam->sa_family == AF_INET6) {
@@ -749,10 +823,12 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 							printf("YES, return ep:%p\n", inp);
 						}
 #endif
+						SCTP_INP_UNLOCK(inp);
 						return (inp);
 					}
 				}
 			}
+			SCTP_INP_UNLOCK(inp);
 		}
 	}
 #ifdef SCTP_DEBUG
@@ -799,6 +875,7 @@ sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool)
 	 * type too.
 	 */
 	/* Find the head of the ALLADDR chain */
+	SCTP_INP_INFO_RLOCK();
 	head = &sctppcbinfo.sctp_ephash[SCTP_PCBHASH_ALLADDR(lport,
 	    sctppcbinfo.hashmark)];
 #ifdef SCTP_DEBUG
@@ -844,6 +921,7 @@ sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool)
 		printf("EP to return is %p\n", inp);
 	}
 #endif
+	SCTP_INP_INFO_RUNLOCK();
 	return (inp);
 }
 
@@ -989,20 +1067,24 @@ sctp_findassoc_by_vtag(struct sockaddr *from, uint32_t vtag,
 	struct sctp_nets *net;
 	struct sctp_tcb *stcb;
 
+	SCTP_INP_INFO_RLOCK();
 	head = &sctppcbinfo.sctp_asochash[SCTP_PCBHASH_ASOC(vtag,
 	    sctppcbinfo.hashasocmark)];
 	if (head == NULL) {
 		/* invalid vtag */
+		SCTP_INP_INFO_RUNLOCK();
 		return (NULL);
 	}
 	LIST_FOREACH(stcb, head, sctp_asocs) {
 		if (stcb->asoc.my_vtag == vtag) {
 			/* candidate */
+			SCTP_TCB_LOCK(stcb);
 			if (stcb->rport != rport) {
 				/*
 				 * we could remove this if vtags are unique
 				 * across the system.
 				 */
+				SCTP_TCB_UNLOCK(stcb);
 				continue;
 			}
 			if (stcb->sctp_ep->sctp_lport != lport) {
@@ -1010,6 +1092,7 @@ sctp_findassoc_by_vtag(struct sockaddr *from, uint32_t vtag,
 				 * we could remove this if vtags are unique
 				 * across the system.
 				 */
+				SCTP_TCB_UNLOCK(stcb);
 				continue;
 			}
 			net = sctp_findnet(stcb, from);
@@ -1018,9 +1101,11 @@ sctp_findassoc_by_vtag(struct sockaddr *from, uint32_t vtag,
 				*netp = net;
 				sctp_pegs[SCTP_VTAG_EXPR]++;
 				*inp_p = stcb->sctp_ep;
+				SCTP_TCB_UNLOCK(stcb);
+				SCTP_INP_INFO_RUNLOCK();
 				return (stcb);
 			} else {
- 				/* not him, this sould only
+ 				/* not him, this should only
  				 * happen in rare cases so
  				 * I peg it.
   				 */
@@ -1028,6 +1113,7 @@ sctp_findassoc_by_vtag(struct sockaddr *from, uint32_t vtag,
 			}
 		}
 	}
+	SCTP_INP_INFO_RUNLOCK();
 	return (NULL);
 }
 
@@ -1108,6 +1194,7 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 		sctp_print_address(from);
 	}
 #endif
+
 	if (sh->v_tag) {
 		/* we only go down this path if vtag is non-zero */
 		retval = sctp_findassoc_by_vtag(from, ntohl(sh->v_tag),
@@ -1224,7 +1311,19 @@ sctp_inpcb_alloc(struct socket *so)
 
 	error = 0;
 
-        /* Hack alert */
+        /* Hack alert:
+	 * 
+	 * This code audits the entire INP list to see if
+	 * any ep's that are in the GONE state are now
+	 * all free. This should not happen really since when
+	 * the last association if freed we should end up deleting
+	 * the inpcb. This code including the locks should
+	 * be taken out ... since the last set of fixes I
+	 * have not seen the "Found a GONE on list" has not
+	 * came out. But i am paranoid and we will leave this
+	 * in at the cost of efficency on allocation of PCB's.
+	 */
+	SCTP_INP_INFO_RLOCK();
 	inp = LIST_FIRST(&sctppcbinfo.listhead);
 	while (inp) {
 		n_inp = LIST_NEXT(inp, sctp_list);
@@ -1232,14 +1331,19 @@ sctp_inpcb_alloc(struct socket *so)
 			if (LIST_FIRST(&inp->sctp_asoc_list) == NULL) {
 				/* finish the job now */
 				printf("Found a GONE on list\n");
+				SCTP_INP_INFO_RUNLOCK()
 				sctp_inpcb_free(inp, 1);
+				SCTP_INP_INFO_RLOCK();
 			}
 		}
 		inp = n_inp;
 	}		
+	SCTP_INP_INFO_RUNLOCK()
+	SCTP_INP_INFO_WLOCK();
 	inp = (struct sctp_inpcb *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_ep);
 	if (inp == NULL) {
 		printf("Out of SCTP-INPCB structures - no resources\n");
+		SCTP_INP_INFO_WUNLOCK();
 		return (ENOBUFS);
 	}
 
@@ -1321,8 +1425,16 @@ sctp_inpcb_alloc(struct socket *so)
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, inp);
 		return (ENOBUFS);
 	}
+        /* LOCK init's */
+	SCTP_INP_LOCK_INIT(inp);
+	SCTP_INP_CREATE_LOCK_INIT(inp);
+	/* lock the new ep */
+	SCTP_LOCK_WLOCK(inp);
 
+	/* add it to the info area */
 	LIST_INSERT_HEAD(&sctppcbinfo.listhead, inp, sctp_list);
+	SCTP_INP_INFO_WUNLOCK();
+
 	LIST_INIT(&inp->sctp_addr_list);
 	LIST_INIT(&inp->sctp_asoc_list);
 	TAILQ_INIT(&inp->sctp_queue_list);
@@ -1411,6 +1523,7 @@ sctp_inpcb_alloc(struct socket *so)
 
 	/* How long is a cookie good for ? */
 	m->def_cookie_life = sctp_valid_cookie_life_default;
+	SCTP_LOCK_WUNLOCK(inp);
 	return (error);
 }
 
@@ -1423,6 +1536,8 @@ sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
 	struct sctppcbhead *head;
 	struct sctp_laddr *laddr, *oladdr;
 
+	SCTP_INP_WLOCK(old_inp);
+	SCTP_INP_WLOCK(new_inp);
 	new_inp->sctp_ep.time_of_secret_change =
 	    old_inp->sctp_ep.time_of_secret_change;
 	memcpy(new_inp->sctp_ep.secret_key, old_inp->sctp_ep.secret_key,
@@ -1439,10 +1554,14 @@ sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
 	/* Pull the tcb from the old association */
 	LIST_REMOVE(stcb, sctp_tcbhash);
 	LIST_REMOVE(stcb, sctp_tcblist);
+
 	/* Now insert the new_inp into the TCP connected hash */
+	SCTP_INP_INFO_WLOCK();
 	head = &sctppcbinfo.sctp_tcpephash[SCTP_PCBHASH_ALLADDR((lport + rport),
 	    sctppcbinfo.hashtcpmark)];
+
 	LIST_INSERT_HEAD(head, new_inp, sctp_hash);
+	SCTP_INP_INFO_WUNLOCK();
 
 	/* Now move the tcb into the endpoint list */
 	LIST_INSERT_HEAD(&new_inp->sctp_asoc_list, stcb, sctp_tcblist);
@@ -1484,6 +1603,8 @@ sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
 			new_inp->laddr_count++;
 		}
 	}
+	SCTP_INP_WUNLOCK(new_inp);
+	SCTP_INP_WUNLOCK(old_inp);
 }
 
 static int
@@ -1491,6 +1612,8 @@ sctp_isport_inuse(struct sctp_inpcb *inp, uint16_t lport)
 {
 	struct sctppcbhead *head;
 	struct sctp_inpcb *t_inp;
+
+	SCTP_INP_INFO_RLOCK();
 	head = &sctppcbinfo.sctp_ephash[SCTP_PCBHASH_ALLADDR(lport,
 	    sctppcbinfo.hashmark)];
 	LIST_FOREACH(t_inp, head, sctp_hash) {
@@ -1512,6 +1635,7 @@ sctp_isport_inuse(struct sctp_inpcb *inp, uint16_t lport)
 			) {
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) {
 				/* collision in V6 space */
+				SCTP_INP_INFO_RUNLOCK();
 				return (1);
 			} else {
 				/* inp is BOUND_V4 no conflict */
@@ -1519,6 +1643,7 @@ sctp_isport_inuse(struct sctp_inpcb *inp, uint16_t lport)
 			}
 		} else if (t_inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) {
 			/* t_inp is bound v4 and v6, conflict always */
+			SCTP_INP_INFO_RUNLOCK();
 			return (1);
 		} else {
 			/* t_inp is bound only V4 */
@@ -1538,8 +1663,10 @@ sctp_isport_inuse(struct sctp_inpcb *inp, uint16_t lport)
 			}
 			/* else fall through to conflict */
 		}
+		SCTP_INP_INFO_RUNLOCK();
 		return (1);
 	}
+	SCTP_INP_INFO_RUNLOCK();
 	return (0);
 }
 
@@ -1563,12 +1690,12 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 	struct sctppcbhead *head;
 	struct sctp_inpcb *inp, *inp_tmp;
 	struct inpcb *ip_inp;
-	int wild, bindall;
+	int bindall;
 	uint16_t lport;
 	int error;
 
 	lport = 0;
-	error = wild = 0;
+	error = 0;
 	bindall = 1;
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	ip_inp = (struct inpcb *)so->so_pcb;
@@ -1586,13 +1713,6 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 		/* already did a bind, subsequent binds NOT allowed ! */
 		return (EINVAL);
 	}
-
-	/*
-	 * do we support address re-use? if so I am not sure how. It will
-	 * need to be added ...
-	 */
-	if ((so->so_options & (SO_REUSEADDR|SO_REUSEPORT)) == 0)
-		wild = 1;
 
 	if (addr != NULL) {
 		if (addr->sa_family == AF_INET) {
@@ -1706,6 +1826,8 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 		 */
 		uint16_t first, last, *lastport;
 
+		SCTP_INP_INFO_RLOCK();
+		SCTP_INP_WLOCK(inp);
 #ifndef __OpenBSD__
 		ip_inp->inp_flags |= INP_ANONPORT;
 #endif
@@ -1723,10 +1845,15 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 			    suser(p, 0)
 #endif
 			    )) {
+				SCTP_INP_INFO_RUNLOCK();
+				SCTP_INP_WUNLOCK(inp);
 				return (error);
 			}
-			if (p == NULL)
+			if (p == NULL) {
+				SCTP_INP_INFO_RUNLOCK();
+				SCTP_INP_WUNLOCK(inp);
 				return (error);
+			}
 
 			lastport = &sctppcbinfo.lastlow;
 #if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__APPLE__)
@@ -1762,6 +1889,8 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 			last = anonportmax;
 #endif
 		}
+		SCTP_INP_INFO_RUNLOCK();
+		SCTP_INP_WUNLOCK(inp);
 		if (first > last) {
 			/* we are assigning from large towards small */
 			int max, cnt;
@@ -1803,6 +1932,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 	/* ok we look clear to give out this port, so lets setup the binding */
 	if (bindall) {
 		/* binding to all addresses, so just set in the proper flags */
+		SCTP_INP_WLOCK(inp);
 		inp->sctp_flags |= (SCTP_PCB_FLAGS_BOUNDALL |
 		    SCTP_PCB_FLAGS_DO_ASCONF);
 		/* set the automatic addr changes from kernel flag */
@@ -1811,6 +1941,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 		} else {
 			inp->sctp_flags |= SCTP_PCB_FLAGS_AUTO_ASCONF;
 		}
+		SCTP_INP_WUNLOCK(inp);
 	} else {
 		/*
 		 * bind specific, make sure flags is off and add a new address
@@ -1863,6 +1994,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 			}
 		}
 		/* we're not bound all */
+		SCTP_INP_WLOCK(inp);
 		inp->sctp_flags &= ~SCTP_PCB_FLAGS_BOUNDALL;
 #if 0 /* use sysctl now */
 		/* don't allow automatic addr changes from kernel */
@@ -1878,11 +2010,13 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 		inp->sctp_flags |= SCTP_PCB_FLAGS_DO_ASCONF;
 		/* add this address to the endpoint list */
 		error = sctp_insert_laddr(&inp->sctp_addr_list, ifa);
+		SCTP_INP_WUNLOCK(inp);
 		if (error != 0)
 			return (error);
 		inp->laddr_count++;
 	}
 	/* find the bucket */
+	SCTP_INP_INFO_WLOCK();
 	head = &sctppcbinfo.sctp_ephash[SCTP_PCBHASH_ALLADDR(lport,
 	    sctppcbinfo.hashmark)];
 	/* put it in the bucket */
@@ -1892,33 +2026,26 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 		printf("Main hash to bind at head:%p, bound port:%d\n", head, ntohs(lport));
 	}
 #endif
+	SCTP_INP_INFO_WUNLOCK();
 	/* set in the port */
+	SCTP_INP_WLOCK(inp);
 	inp->sctp_lport = lport;
 	/* turn off just the unbound flag */
 	inp->sctp_flags &= ~SCTP_PCB_FLAGS_UNBOUND;
+	SCTP_INP_WUNLOCK(inp);
 	return (0);
 }
 
 
 static void
-sctp_iterator_inp_being_freed(struct sctp_inpcb *inp)
+sctp_iterator_inp_being_freed(struct sctp_inpcb *inp, struct sctp_inpcb *inp_next)
 {
 	struct sctp_iterator *it;
-	if (inp->inp_starting_point_for_iterator) {
-		/* lets fix the one who has the lock first */
-		it = inp->inp_starting_point_for_iterator;
-		it->inp = LIST_NEXT(it->inp, sctp_list);
-		if (it->stcb->asoc.stcb_starting_point_for_iterator) {
-			/* fix stcb back pointer to null too */
-			it->stcb->asoc.stcb_starting_point_for_iterator = NULL;
+	struct sctp_inpcb *inp_save;
+	/* We enter with the INFO locked and the INP
+	 * out of all lists and locked.
+	 */
 
-		}
-		it->stcb = NULL;
-		if (it->inp && (it->inp->inp_starting_point_for_iterator == NULL)) {
-			/* Give him back the lock on this one */
-			it->inp->inp_starting_point_for_iterator = it;
-		}
-	}
 	/* Go through all iterators, we must do this since
 	 * it is possible that some iterator does NOT have
 	 * the lock, but is waiting for it. And the one that
@@ -1928,11 +2055,35 @@ sctp_iterator_inp_being_freed(struct sctp_inpcb *inp)
 	 * be very big though.
 	 */
  	LIST_FOREACH(it, &sctppcbinfo.iteratorhead,sctp_nxt_itr) {
-		if (it->inp == inp) {
-			/* this one points to the inp being removed */
-			it->inp = LIST_NEXT(it->inp, sctp_list);
-			it->stcb = NULL;
+		if(it == inp->inp_starting_point_for_iterator)
+			/* skip this guy, he's special */
+			continue;
+ 		if (it->inp == inp) {
+			/* This is tricky and we DON'T lock the iterator.
+			 * Reason is he's running but waiting for me since
+			 * inp->inp_starting_point_for_iterator has the lock
+			 * on me (the guy above we skipped). This tells us
+			 * its is not running but waiting for inp->inp_starting_point_for_iterator
+			 * to be released by the guy that does have our INP in a lock.
+			 */
+			if(it->iterator_flags & SCTP_INTERATOR_DO_SINGLE_INP) {
+				it->inp = NULL;
+				it->stcb = NULL;
+			} else {
+				/* set him up to do the next guy not me */
+				it->inp = inp_next;
+				it->stcb = NULL;
+			}
 		}
+	}
+	it = inp->inp_starting_point_for_iterator;
+	if (it) {
+		if (it->iterator_flags & SCTP_INTERATOR_DO_SINGLE_INP) {
+			it->inp = NULL;
+		} else {
+			it->inp = inp_next;
+		}
+		it->stcb = NULL;
 	}
 }
 
@@ -1965,13 +2116,16 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 #else
 	s = splnet();
 #endif
+	SCTP_INP_WLOCK(inp);
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
 		/* been here before */
 		splx(s);
 		printf("Endpoint was all gone (dup free)?\n");
+		SCTP_INP_WUNLOCK(inp);
 		return;
 	}
 	sctp_timer_stop(SCTP_TIMER_TYPE_NEWCOOKIE, inp, NULL, NULL);
+
 	if (inp->control) {
 		sctp_m_freem(inp->control);
 		inp->control = NULL;
@@ -1986,8 +2140,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 				   * pointer here but I will
 				   * be nice :> (i.e. ip_pcb = ep;)
 				   */
-	/* fix any iterators */
-	sctp_iterator_inp_being_freed(inp);
 
 	if (immediate == 0) {
 		int cnt_in_sd;
@@ -1998,7 +2150,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 			if ((SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_COOKIE_WAIT) ||
 			    (SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_COOKIE_ECHOED)) {
 				/* Just abandon things in the front states */
+				SCTP_INP_WUNLOCK(inp);
 				sctp_free_assoc(inp, asoc);
+				SCTP_INP_WLOCK(inp);
 				continue;
 			} else {
 				asoc->asoc.state |= SCTP_STATE_CLOSED_SOCKET;
@@ -2022,14 +2176,20 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 					    SCTP_CAUSE_USER_INITIATED_ABT);
 					ph->param_length = htons(op_err->m_len);
 				}
+				SCTP_TCB_LOCK(asoc);
 				sctp_send_abort_tcb(asoc, op_err);
+				SCTP_TCB_UNLOCK(asoc);
+
+				SCTP_INP_WUNLOCK(inp);
 				sctp_free_assoc(inp, asoc);
+				SCTP_INP_WLOCK(inp);
 				continue;
 			} else if (TAILQ_EMPTY(&asoc->asoc.send_queue) &&
 			    TAILQ_EMPTY(&asoc->asoc.sent_queue)) {
 				if ((SCTP_GET_STATE(&asoc->asoc) != SCTP_STATE_SHUTDOWN_SENT) &&
 				    (SCTP_GET_STATE(&asoc->asoc) != SCTP_STATE_SHUTDOWN_ACK_SENT)) {
 					/* there is nothing queued to send, so I send shutdown */
+					SCTP_TCB_LOCK(asoc);
 					sctp_send_shutdown(asoc, asoc->asoc.primary_destination);
 					asoc->asoc.state = SCTP_STATE_SHUTDOWN_SENT;
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN, asoc->sctp_ep, asoc,
@@ -2037,6 +2197,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD, asoc->sctp_ep, asoc,
 							 asoc->asoc.primary_destination);
 					sctp_chunk_output(inp, asoc, 1);
+					SCTP_TCB_UNLOCK(asoc);
 				}
 			} else {
 				/* mark into shutdown pending */
@@ -2129,7 +2290,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 				    SCTP_CAUSE_USER_INITIATED_ABT);
 				ph->param_length = htons(op_err->m_len);
 			}
+			SCTP_TCB_LOCK(asoc);
 			sctp_send_abort_tcb(asoc, op_err);
+			SCTP_TCB_UNLOCK(asoc);
 		}
 		cnt++;
 		/*
@@ -2139,7 +2302,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		 * no double sctp_inpcb_free().
 		 */
 		inp->sctp_flags &= ~SCTP_PCB_FLAGS_SOCKET_GONE;
+		SCTP_INP_WUNLOCK(inp);
 		sctp_free_assoc(inp, asoc);
+		SCTP_INP_WLOCK(inp);
 	}
 	while ((sq = TAILQ_FIRST(&inp->sctp_queue_list)) != NULL) {
 		TAILQ_REMOVE(&inp->sctp_queue_list, sq, next_sq);
@@ -2149,8 +2314,10 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	}
 	inp->sctp_socket = 0;
 	/* Now first we remove ourselves from the overall list of all EP's */
+	SCTP_ITERATOR_LOCK();
+	SCTP_INP_INFO_WLOCK();
+	inp_save = LIST_NEXT(inp, sctp_list);
 	LIST_REMOVE(inp, sctp_list);
-
 	/*
 	 * Now the question comes as to if this EP was ever bound at all.
 	 * If it was, then we must pull it out of the EP hash list.
@@ -2163,6 +2330,12 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		 */
 		LIST_REMOVE(inp, sctp_hash);
 	}
+	SCTP_INP_INFO_WUNLOCK();
+	SCTP_INP_WUNLOCK();	
+	/* fix any iterators only after out of the list */
+	sctp_iterator_inp_being_freed(inp, inp_save);
+
+	SCTP_ITERATOR_UNLOCK();
 	/*
 	 * if we have an address list the following will free the list of
 	 * ifaddr's that are set into this ep. Again macro limitations here,
@@ -2181,6 +2354,8 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		FREE(inp->sctp_tcbhash, M_PCB);
 		inp->sctp_tcbhash = 0;
 	}
+	SCTP_INP_LOCK_DESTROY(inp);
+	SCTP_INP_CREATE_LOCK_DESTROY(inp);
 
 	/* Now we must put the ep memory back into the zone pool */
 	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, inp);
@@ -2578,14 +2753,15 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		*error = ENOBUFS;
 		return (NULL);
 	}
-
+	SCTP_INP_RLOCK(inp);
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) {
 		/*
 		 * If its in the TCP pool, its NOT allowed to create an
 		 * association. The parent listener needs to call
-		 * sctp_alloc_assoc.. or the one-2-many socket. If a
+		 * sctp_aloc_assoc.. or the one-2-many socket. If a
 		 * peeled off, or connected one does this.. its an error.
 		 */
+		SCTP_INP_RUNLOCK(inp);
 		*error = EINVAL;
 		return (NULL);
  	}
@@ -2640,6 +2816,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		*error = EINVAL;
 		return (NULL);
 	}
+	SCTP_INP_RUNLOCK(inp);
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) {
 		/*
 		 * If you have not performed a bind, then we need to do
@@ -2650,13 +2827,15 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 			printf("Doing implicit BIND\n");
 		}
 #endif
+
 		if ((err = sctp_inpcb_bind(inp->sctp_socket,
 		    (struct sockaddr *)NULL,
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-		    (struct thread *)NULL))) {
+					   (struct thread *)NULL 
 #else
-		    (struct proc *)NULL))) {
+					   (struct proc *)NULL 
 #endif
+			     ))){
 			/* bind error, probably perm */
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_PCB3) {
@@ -2667,7 +2846,6 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 			return (NULL);
 		}
 	}
-
 	stcb = (struct sctp_tcb *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_asoc);
 	if (stcb == NULL) {
 		/* out of memory? */
@@ -2684,6 +2862,8 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 
 	bzero(stcb, sizeof(*stcb));
 	asoc = &stcb->asoc;
+	SCTP_TCB_LOCK_INIT(stcb);
+
 	if ((err = sctp_init_asoc(inp, asoc, for_a_init, override_tag))) {
 		/* failed */
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
@@ -2700,14 +2880,17 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	stcb->sctp_ep = inp;
 	stcb->sctp_socket = inp->sctp_socket;
 
+	SCTP_TCB_LOCK(stcb);
 	/* and the port */
 	stcb->rport = rport;
-
+	SCTP_INP_INFO_WLOCK();
 	/* now that my_vtag is set, add it to the  hash */
 	head = &sctppcbinfo.sctp_asochash[SCTP_PCBHASH_ASOC(stcb->asoc.my_vtag,
 	     sctppcbinfo.hashasocmark)];
 	/* put it in the bucket in the vtag hash of assoc's for the system */
 	LIST_INSERT_HEAD(head, stcb, sctp_asocs);
+	SCTP_INP_INFO_WUNLOCK();
+
 
 	if ((err = sctp_add_remote_addr(stcb, firstaddr, 1, 1))) {
 		/* failure.. memory error? */
@@ -2739,20 +2922,26 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	callout_init(&asoc->shut_guard_timer.timer);
 	callout_init(&asoc->autoclose_timer.timer);
 #endif
+	SCTP_INP_WLOCK(inp);
 
 	LIST_INSERT_HEAD(&inp->sctp_asoc_list, stcb, sctp_tcblist);
 
+	SCTP_INP_WUNLOCK(inp);
 	/* now file the port under the hash as well */
+
+	SCTP_INP_INFO_WLOCK();
 	if (inp->sctp_tcbhash != NULL) {
 		head = &inp->sctp_tcbhash[SCTP_PCBHASH_ALLADDR(stcb->rport,
 		   inp->sctp_hashmark)];
 		LIST_INSERT_HEAD(head, stcb, sctp_tcbhash);
 	}
+	SCTP_INP_INFO_WUNLOCK();
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_PCB1) {
 		printf("Association %p now allocated\n", stcb);
 	}
 #endif
+	SCTP_TCB_UNLOCK(stcb);
 	return (stcb);
 }
 
@@ -2902,21 +3091,43 @@ sctp_iterator_asoc_being_freed(struct sctp_tcb *stcb)
 	struct sctp_iterator *it;
 	struct sctp_inpcb *inp;
 
+
+	/* Unlock the tcb lock we do this so
+	 * we avoid a dead lock scenario where
+	 * the iterator is waiting on the TCB lock
+	 * and the TCB lock is waiting on the iterator
+	 * lock.
+	 */
+	SCTP_TCB_UNLOCK(stcb);
+	/* now pull the iterator lock */
+	SCTP_ITERATOR_LOCK();
+	/* now re-apply the TCB lock */
+	SCTP_TCB_LOCK(stcb);
+
 	it = stcb->asoc.stcb_starting_point_for_iterator;
 	if (it->inp != stcb->sctp_ep) {
 		/* hm, focused on the wrong one? */
-		printf("freeing asoc finds a iterator focused on wrong place1?\n");
 		return;
 	}
 	if (it->stcb != stcb) {
-		printf("freeing asoc finds a iterator focused on wrong place2?\n");
 		return;
 	}
-	it->stcb = LIST_NEXT(it->stcb, sctp_tcblist);
+	it->stcb = LIST_NEXT(stcb, sctp_tcblist);
 	if (it->stcb == NULL) {
 		/* done with all asoc's in this assoc */
-		inp = LIST_NEXT(it->inp, sctp_list);
+		if(it->iterator_flags & SCTP_INTERATOR_DO_SINGLE_INP) {
+			it->inp = NULL;
+		} else {
+			SCTP_INP_WLOCK(inp);
+			inp = LIST_NEXT(it->inp, sctp_list);
+			SCTP_INP_WUNLOCK(inp);
+			it->inp = inp;
+		}
 	}
+	/* note we return leaving the iterator lock applied since
+	 * we cannot let any iterator run until after we
+	 * have removed the stcb from the list.
+	 */
 }
 
 /*
@@ -2945,27 +3156,36 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		splx(s);
 		return;
 	}
-	if (stcb->asoc.stcb_starting_point_for_iterator) {
-		sctp_iterator_asoc_being_freed(stcb);
-	}
+	/* this returns with the iterator lock applied 
+	 * we already have the TCB lock applied.
+	 */
+	sctp_iterator_asoc_being_freed(stcb);
+
 	/* Null all of my entry's on the socket q */
 	TAILQ_FOREACH(sq, &inp->sctp_queue_list, next_sq) {
 		if (sq->tcb == stcb) {
 			sq->tcb = NULL;
 		}
 	}
-
+	SCTP_INP_WLOCK(inp);
 	if (inp->sctp_tcb_at_block == (void *)stcb) {
 		inp->error_on_block = ECONNRESET;
 	}
+
 	if (inp->sctp_tcbhash) {
 		LIST_REMOVE(stcb, sctp_tcbhash);
 	}
-	/* pull it from the vtag hash */
-	LIST_REMOVE(stcb, sctp_asocs);
-
 	/* Now lets remove it from the list of ALL associations in the EP */
 	LIST_REMOVE(stcb, sctp_tcblist);
+	SCTP_INP_WUNLOCK(inp);
+	SCTP_ITERATOR_UNLOCK();
+
+
+	SCTP_INP_INFO_WLOCK();
+	/* pull from vtag hash */
+	LIST_REMOVE(stcb, sctp_asocs);
+	SCTP_INP_INFO_WUNLOCK();
+
 
 	/*
 	 * Now before we can free the assoc, we must  remove all of the
@@ -3200,6 +3420,9 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	}
 	/* Insert new items here :> */
 
+	/* Get rid of LOCK */
+	SCTP_TCB_LOCK_DESTROY(stcb);
+
 	/* now clean up the tasoc itself */
 	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
 	sctppcbinfo.ipi_count_asoc--;
@@ -3248,29 +3471,39 @@ int
 sctp_destination_is_reachable(struct sctp_tcb *stcb, struct sockaddr *destaddr)
 {
 	struct sctp_inpcb *inp;
+	int answer;
 
 	inp = stcb->sctp_ep;
-	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL)
+	SCTP_INP_RLOCK(inp);
+	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
 		/* if bound all, destination is not restricted */
+		/* RRS: Question during lock work: Is this
+		 * correct? If you are bound-all you still
+		 * might need to obey the V4--V6 flags???
+		 * IMO this bound-all stuff needs to be removed!
+		 */
+ 		SCTP_INP_RUNLOCK(inp);
 		return (1);
-
+	}
 	/* NOTE: all "scope" checks are done when local addresses are added */
 	if (destaddr->sa_family == AF_INET6) {
 #if !(defined(__FreeBSD__) || defined(__APPLE__))
-		return (inp->inp_vflag & INP_IPV6);
+		answer = inp->inp_vflag & INP_IPV6;
 #else
-		return (inp->ip_inp.inp.inp_vflag & INP_IPV6);
+		answer = inp->ip_inp.inp.inp_vflag & INP_IPV6;
 #endif
 	} else if (destaddr->sa_family == AF_INET) {
 #if !(defined(__FreeBSD__) || defined(__APPLE__))
-		return (inp->inp_vflag & INP_IPV4);
+		answer = inp->inp_vflag & INP_IPV4;
 #else
-		return (inp->ip_inp.inp.inp_vflag & INP_IPV4);
+		answer = inp->ip_inp.inp.inp_vflag & INP_IPV4;
 #endif
 	} else {
 		/* invalid family, so it's unreachable */
-		return (0);
+		answer = 0;
 	}
+	SCTP_INP_RUNLOCK(inp);
+	return (answer);
 }
 
 /*
@@ -3470,6 +3703,10 @@ sctp_add_local_addr_assoc(struct sctp_tcb *stcb, struct ifaddr *ifa)
 	struct sctp_laddr *laddr;
 	int error;
 
+	/* Assumes TCP is locked.. and possiblye
+	 * the INP. May need to confirm/fix that if
+	 * we need it and is not the case.
+	 */
 	inp = stcb->sctp_ep;
 	if (ifa->ifa_addr->sa_family == AF_INET6) {
 		struct in6_ifaddr *ifa6;
@@ -3556,6 +3793,19 @@ sctp_del_local_addr_assoc(struct sctp_tcb *stcb, struct ifaddr *ifa)
 	struct sctp_inpcb *inp;
 	struct sctp_laddr *laddr;
 
+	/* This is called by asconf work. It is assumed that
+	 * a) The TCB is locked
+	 * and
+	 * b) The INP is locked.
+	 * This is true in as much as I can trace through
+	 * the entry asconf code where I did these locks.
+	 * Again, the ASCONF code is a bit different in
+	 * that it does lock the INP during its work often
+	 * times. This must be since we don't want other
+	 * proc's looking up things while what they are
+	 * looking up is changing :-D
+	 */
+
 	inp = stcb->sctp_ep;
 	/* if subset bound and don't allow ASCONF's, can't delete last */
 	if (((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) == 0) &&
@@ -3591,6 +3841,12 @@ sctp_del_local_addr_assoc_sa(struct sctp_tcb *stcb, struct sockaddr *sa)
 	struct sctp_laddr *laddr;
 	struct sockaddr *l_sa;
 
+        /* 
+         * This function I find does not seem to have a caller.
+	 * As such we NEED TO DELETE this code. If we do
+	 * find a caller, the caller MUST have locked the TCB
+	 * at the least and probably the INP as well.
+         */
 	inp = stcb->sctp_ep;
 	/* if subset bound and don't allow ASCONF's, can't delete last */
 	if (((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) == 0) &&
@@ -3764,6 +4020,9 @@ sctp_pcb_init()
 	    (sctp_max_number_of_assoc * sctp_scale_up_for_address *
 	    sctp_chunkscale));
 
+        /* Master Lock INIT for info structure */
+	SCTP_INP_INFO_LOCK_INIT();
+	SCTP_ITERATOR_LOCK_INIT();
 	/* not sure if we need all the counts */
 	sctppcbinfo.ipi_count_ep = 0;
 	sctppcbinfo.ipi_gencnt_ep = 0;
@@ -4182,12 +4441,14 @@ sctp_is_vtag_good(struct sctp_inpcb *inp, u_int32_t tag, struct timeval *now)
 	struct sctp_tcb *stcb;
 
 	int i;
+	SCTP_INP_INFO_WLOCK();
 	chain = &sctppcbinfo.vtag_timewait[(tag % SCTP_STACK_VTAG_HASH_SIZE)];
 	/* First is the vtag in use ? */
 
 	head = &sctppcbinfo.sctp_asochash[SCTP_PCBHASH_ASOC(tag,
 	    sctppcbinfo.hashasocmark)];
 	if (head == NULL) {
+		SCTP_INP_INFO_WUNLOCK();
 		return(0);
 	}
 	LIST_FOREACH(stcb, head, sctp_asocs) {
@@ -4199,6 +4460,7 @@ sctp_is_vtag_good(struct sctp_inpcb *inp, u_int32_t tag, struct timeval *now)
 			 */
  			if (inp == stcb->sctp_ep) {
 				/* bad tag, in use */
+				SCTP_INP_INFO_WUNLOCK();
 				return(0);
 			}
 		}
@@ -4221,12 +4483,14 @@ sctp_is_vtag_good(struct sctp_inpcb *inp, u_int32_t tag, struct timeval *now)
 				} else if (twait_block->vtag_block[i].v_tag ==
 				    tag) {
 					/* Bad tag, sorry :< */
+					SCTP_INP_INFO_WUNLOCK();
 					return (0);
 				}
 			}
 		}
 	}
 	/* Not found, ok to use the tag */
+	SCTP_INP_INFO_WUNLOCK();
 	return (1);
 }
 
@@ -4241,6 +4505,12 @@ sctp_del_local_addr_ep_sa(struct sctp_inpcb *inp, struct sockaddr *sa)
 	struct sctp_laddr *laddr;
 	struct sockaddr *l_sa;
 	int found = 0;
+	/* Here is another function I cannot find a
+	 * caller for. As such we SHOULD delete it
+	 * if we have no users. If we find a user that
+	 * user MUST have the INP locked.
+	 *
+	 */
 
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
 		/* You are already bound to all. You have it already */
@@ -4439,15 +4709,21 @@ sctp_drain()
 	struct sctp_inpcb *inp;
 	struct sctp_tcb *stcb;
 
+	SCTP_INP_INFO_RLOCK();
 	printf("SCTP DRAIN called %d chunks out there\n",
 	    sctppcbinfo.ipi_count_chunk);
 	LIST_FOREACH(inp, &sctppcbinfo.listhead, sctp_list) {
 		/* For each endpoint */
+		SCTP_INP_RLOCK(inp);
 		LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
 			/* For each association */
+			SCTP_TCB_LOCK(stcb);
 			sctp_drain_mbufs(inp, stcb);
+			SCTP_TCB_UNLOCK(stcb);
 		}
+		SCTP_INP_RUNLOCK(inp);
 	}
+	SCTP_INP_INFO_RUNLOCK();
 }
 
 int
@@ -4468,8 +4744,10 @@ sctp_add_to_socket_q(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	sctppcbinfo.ipi_count_sockq++;
 	sctppcbinfo.ipi_gencnt_sockq++;
 	stcb->asoc.cnt_msg_on_sb++;
+	SCTP_INP_WLOCK(inp);
 	sq->tcb = stcb;
 	TAILQ_INSERT_TAIL(&inp->sctp_queue_list, sq, next_sq);
+	SCTP_INP_WUNLOCK(inp);
 	return (1);
 }
 
@@ -4485,7 +4763,9 @@ sctp_remove_from_socket_q(struct sctp_inpcb *inp)
 		return (NULL);
 
 	stcb = sq->tcb;
+	SCTP_INP_WLOCK(inp);
 	TAILQ_REMOVE(&inp->sctp_queue_list, sq, next_sq);
+	SCTP_INP_WUNLOCK(inp);
 	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_sockq, sq);
 	sctppcbinfo.ipi_count_sockq--;
 	sctppcbinfo.ipi_gencnt_sockq++;
@@ -4521,8 +4801,11 @@ sctp_initiate_iterator(asoc_func af, uint32_t pcb_state, uint32_t asoc_state,
 		it->inp = s_inp;
 		it->iterator_flags = SCTP_ITERATOR_DO_SINGLE_INP;
 	} else {
+		SCTP_INP_INFO_RLOCK();
 		it->inp = LIST_FIRST(&sctppcbinfo.listhead);
-		it->iterator_flags = SCTP_ITERATOR_DO_ALL_INP;
+		SCTP_INP_INFO_RUNLOCK();
+		it->iterator_flags = SCTP_INTERATOR_DO_ALL_INP;
+
 	}
 	/* Init the timer */
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
@@ -4531,7 +4814,9 @@ sctp_initiate_iterator(asoc_func af, uint32_t pcb_state, uint32_t asoc_state,
 	callout_init(&it->tmr.timer);
 #endif
 	/* add to the list of all iterators */
+	SCTP_INP_INFO_WLOCK();
 	LIST_INSERT_HEAD(&sctppcbinfo.iteratorhead, it, sctp_nxt_itr);
+	SCTP_INP_INFO_WUNLOCK();
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
 #else

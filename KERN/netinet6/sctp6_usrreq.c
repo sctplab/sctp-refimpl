@@ -284,8 +284,10 @@ sctp6_input(mp, offp, proto)
 				       mlen, iphlen);
 			}
 #endif
+			SCTP_INP_INFO_RLOCK();
 			stcb = sctp_findassociation_addr(m, iphlen, offset - sizeof(*ch),
 							 sh, ch, &in6p, &net);
+			SCTP_INP_INFO_RUNLOCK();
 			if ((in6p) && (stcb)) {
 				sctp_send_packet_dropped(stcb, net, m, iphlen, 1);
 				sctp_chunk_output((struct sctp_inpcb *)in6p, stcb, 2);
@@ -308,8 +310,10 @@ sctp6_input(mp, offp, proto)
 		printf("V6 Find the association\n");
 	}
 #endif
+	SCTP_INP_INFO_RLOCK();
 	stcb = sctp_findassociation_addr(m, iphlen, offset - sizeof(*ch),
 	    sh, ch, &in6p, &net);
+	SCTP_INP_INFO_RUNLOCK();
 	if (in6p == NULL) {
 		struct sctp_init_chunk *init_chk, chunk_buf;
 		

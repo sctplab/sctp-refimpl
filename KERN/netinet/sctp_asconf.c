@@ -1806,6 +1806,7 @@ sctp_addr_mgmt_ep(struct sctp_inpcb *inp, struct ifaddr *ifa, uint16_t type)
 	struct sctp_tcb *stcb;
 	int s;
 
+	SCTP_INP_WLOCK(inp);
 	/* make sure we're "allowed" to add this type of addr */
 	if (ifa->ifa_addr->sa_family == AF_INET6) {
 		struct in6_ifaddr *ifa6;
@@ -1878,9 +1879,12 @@ sctp_addr_mgmt_ep(struct sctp_inpcb *inp, struct ifaddr *ifa, uint16_t type)
 #endif
 	/* process for all associations for this endpoint */
 	LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
+		SCTP_TCB_LOCK(stcb)
 		sctp_addr_mgmt_assoc(inp, stcb, ifa, type);
+		SCTP_TCB_UNLOCK(stcb)
 	} /* for each stcb */
 	splx(s);
+	SCTP_INP_WUNLOCK(_inp)
 }
 
 /*
@@ -1906,10 +1910,13 @@ sctp_addr_mgmt_restrict_ep(struct sctp_inpcb *inp, struct ifaddr *ifa)
 #else
 	s = splnet();
 #endif
+	SCTP_INP_RLOCK(inp);
 	/* process for all associations for this endpoint */
 	LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
 		/* put this address on the "pending/do not use yet" list */
+		SCTP_TCB_LOCK(stcb)
 		sctp_add_local_addr_assoc(stcb, ifa);
+		SCTP_TCB_UNLOCK(stcb)
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
 			printf("restrict_ep: added addr to unusable list\n");
@@ -1917,6 +1924,7 @@ sctp_addr_mgmt_restrict_ep(struct sctp_inpcb *inp, struct ifaddr *ifa)
 #endif /* SCTP_DEBUG */
 	} /* for each stcb */
 	splx(s);
+	SCTP_INP_RUNLOCK(_inp)
 }
 
 /*
@@ -2002,11 +2010,13 @@ sctp_delete_ip_address(struct ifaddr *ifa)
 	}
 
 	/* go through all our PCB's */
+	SCTP_INP_INFO_RLOCK();
 	LIST_FOREACH(inp, &sctppcbinfo.listhead, sctp_list) {
 		struct sctp_tcb *stcb;
 		struct sctp_laddr *laddr, *laddr_next;
 
 		/* process for all associations for this endpoint */
+		SCTP_INP_RLOCK(inp);
 		LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
 			struct sctp_nets *net;
 
@@ -2041,7 +2051,9 @@ sctp_delete_ip_address(struct ifaddr *ifa)
 			}
 			laddr = laddr_next;
 		} /* while */
+		SCTP_INP_RUNLOCK(inp);
 	} /* for each inp */
+	SCTP_INP_INFO_RUNLOCK()
 }
 
 /*

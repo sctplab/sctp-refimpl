@@ -452,15 +452,10 @@ void sctp_print_audit_report(void)
 void sctp_auditing(int from, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
     struct sctp_nets *net)
 {
-	int s, resend_cnt, tot_out, rep, tot_book_cnt;
+	int resend_cnt, tot_out, rep, tot_book_cnt;
 	struct sctp_nets *lnet;
 	struct sctp_tmit_chunk *chk;
 
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	s = splsoftnet();
-#else
-	s = splnet();
-#endif
 	sctp_audit_data[sctp_audit_indx][0] = 0xAA;
 	sctp_audit_data[sctp_audit_indx][1] = 0x000000ff & from;
 	sctp_audit_indx++;
@@ -474,7 +469,6 @@ void sctp_auditing(int from, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		if (sctp_audit_indx >= SCTP_AUDIT_SIZE) {
 			sctp_audit_indx = 0;
 		}
-		splx(s);
 		return;
 	}
 	if (stcb == NULL) {
@@ -484,7 +478,6 @@ void sctp_auditing(int from, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		if (sctp_audit_indx >= SCTP_AUDIT_SIZE) {
 			sctp_audit_indx = 0;
 		}
-		splx(s);
 		return;
 	}
 	sctp_audit_data[sctp_audit_indx][0] = 0xA1;
@@ -583,7 +576,6 @@ void sctp_auditing(int from, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	if (rep) {
 		sctp_print_audit_report();
 	}
-	splx(s);
 }
 
 void
@@ -975,6 +967,13 @@ sctp_timeout_handler(void *t)
 	/* clear the callout pending status here */
 	callout_stop(&tmr->timer);
 #endif
+	if (inp) {
+		SCTP_INP_WLOCK(inp);
+	}
+	if (stcb) {
+		SCTP_TCB_LOCK(stcb);
+	}
+
 	typ = tmr->type;
 	switch (tmr->type) {
 	case SCTP_TIMER_TYPE_ITERATOR:
@@ -993,6 +992,9 @@ sctp_timeout_handler(void *t)
 		}
 		if ( sctp_t3rxt_timer(inp, stcb, net)) {
 			/* association is over */
+			/* assume any locks are destroyed
+			 * with assoc, so no unlocks
+			 */
 			return;
 		}
 #ifdef SCTP_AUDITING_ENABLED
@@ -1018,6 +1020,9 @@ sctp_timeout_handler(void *t)
 	case SCTP_TIMER_TYPE_INIT:
 		if (sctp_t1init_timer(inp, stcb, net)) {
 			/* association is over */
+			/* assume any locks are destroyed
+			 * with assoc, so no unlocks
+			 */
 			return;
 		}
 		/* We do output but not here */
@@ -1034,6 +1039,10 @@ sctp_timeout_handler(void *t)
 	case SCTP_TIMER_TYPE_SHUTDOWN:
 		if (sctp_shutdown_timer(inp, stcb, net) ) {
 			/* association is over */
+			/* assume any locks are destroyed
+			 * with assoc, so no unlocks
+			 */
+
 			return;
 		}
 #ifdef SCTP_AUDITING_ENABLED
@@ -1043,6 +1052,10 @@ sctp_timeout_handler(void *t)
 		break;
 	case SCTP_TIMER_TYPE_HEARTBEAT:
 		if (sctp_heartbeat_timer(inp, stcb, net)) {
+			/* assume any locks are destroyed
+			 * with assoc, so no unlocks
+			 */
+
 			return;
 		}
 #ifdef SCTP_AUDITING_ENABLED
@@ -1053,6 +1066,10 @@ sctp_timeout_handler(void *t)
 	case SCTP_TIMER_TYPE_COOKIE:
 		if (sctp_cookie_timer(inp, stcb, net)) {
 			/* association is over */
+			/* assume any locks are destroyed
+			 * with assoc, so no unlocks
+			 */
+
 			return;
 		}
 #ifdef SCTP_AUDITING_ENABLED
@@ -1089,6 +1106,10 @@ sctp_timeout_handler(void *t)
 	case SCTP_TIMER_TYPE_SHUTDOWNACK:
 		if (sctp_shutdownack_timer(inp, stcb, net)) {
 			/* association is over */
+			/* assume any locks are destroyed
+			 * with assoc, so no unlocks
+			 */
+
 			return;
 		}
 #ifdef SCTP_AUDITING_ENABLED
@@ -1099,12 +1120,18 @@ sctp_timeout_handler(void *t)
 	case SCTP_TIMER_TYPE_SHUTDOWNGUARD:
 		sctp_abort_an_association(inp, stcb,
 					  SCTP_SHUTDOWN_GUARD_EXPIRES, NULL);
+		/* assume any locks are destroyed
+		 * with assoc, so no unlocks
+		 */
 		return;
 		break;
 
 	case SCTP_TIMER_TYPE_STRRESET:
 		if (sctp_strreset_timer(inp, stcb, net)) {
 			/* association is over */
+			/* assume any locks are destroyed
+			 * with assoc, so no unlocks
+			 */
 			return;
 		}
 		sctp_chunk_output(inp, stcb, 9);
@@ -1113,6 +1140,9 @@ sctp_timeout_handler(void *t)
 	case SCTP_TIMER_TYPE_ASCONF:
 		if (sctp_asconf_timer(inp, stcb, net)) {
 			/* association is over */
+			/* assume any locks are destroyed
+			 * with assoc, so no unlocks
+			 */
 			return;
 		}
 #ifdef SCTP_AUDITING_ENABLED
@@ -1154,6 +1184,12 @@ sctp_timeout_handler(void *t)
 		printf("Timer now complete (type %d)\n", typ);
 	}
 #endif /* SCTP_DEBUG */
+	if (inp) {
+		SCTP_INP_WUNLOCK(inp);
+	}
+	if (stcb) {
+		SCTP_TCB_UNLOCK(stcb);
+	}
 	splx(s);
 #if defined(__APPLE__)
 	/* release BSD kernel funnel/mutex */
@@ -3220,7 +3256,7 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 #if defined(__FreeBSD__) || defined(__APPLE__)
 	struct mbuf *m, *n, *nlast;
 	int cnt=0;
-
+	
 	if (m0 && (m0->m_flags & M_PKTHDR) == 0)
 		panic("sbappendaddr_nocheck");
 
@@ -3266,7 +3302,7 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 	for (n = m; n; n = n->m_next)
 		sballoc(sb, n);
 	nlast = n;
-
+	SOCKBUF_LOCK(sb);
 	if (sb->sb_mb == NULL) {
 		inp->sctp_vtag_last = tag;
 	}
@@ -3293,6 +3329,7 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 		inp->sctp_vtag_last = tag;
 	}
 #endif
+	SOCKBUF_UNLOCK(sb);
 	return (1);
 #endif
 #ifdef __OpenBSD__
@@ -3464,6 +3501,9 @@ sctp_grub_through_socket_buffer(struct sctp_inpcb *inp, struct socket *old,
 		/* Nothing to move */
 		return;
 	}
+	SOCKBUF_LOCK(old_sb);
+	SOCKBUF_LOCK(new_sb);
+
 	if (inp->sctp_vtag_last == asoc->my_vtag) {
 		/* First one must be moved */
 		struct mbuf *mm;
@@ -3522,6 +3562,8 @@ sctp_grub_through_socket_buffer(struct sctp_inpcb *inp, struct socket *old,
 		 */
 		inp->sctp_vtag_last = sctp_get_last_vtag_from_sb(old);
 	}
+	SOCKBUF_UNLOCK(old_sb);
+	SOCKBUF_UNLOCK(new_sb);
 }
 
 void

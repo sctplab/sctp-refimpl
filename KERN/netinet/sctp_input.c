@@ -1525,6 +1525,8 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		    sh, op_err);
 		return (NULL);
 	}
+	SCTP_TCB_LOCK(stcb);
+
 	/* get the correct sctp_nets */
 	*netp = sctp_findnet(stcb, init_src);
 	asoc = &stcb->asoc;
@@ -1817,6 +1819,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	 * compute the signature/digest for the cookie
 	 */
 	ep = &(*inp_p)->sctp_ep;
+	SCTP_INP_RLOCK(ep);
 	/* which cookie is it? */
 	if ((cookie->time_entered.tv_sec < (long)ep->time_of_secret_change) &&
 	    (ep->current_secret_number != ep->last_secret_number)) {
@@ -1839,6 +1842,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		    SCTP_SECRET_SIZE, m, cookie_offset, calc_sig);
 	}
 	/* get the signature */
+	SCTP_INP_RUNLOCK(ep);
 	sig = (u_int8_t *)sctp_m_getptr(m_sig, 0, SCTP_SIGNATURE_SIZE, (u_int8_t *)&tmp_sig);
 	if (sig == NULL) {
 		/* couldn't find signature */
@@ -1847,6 +1851,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			printf("sctp_handle_cookie: couldn't pull the signature\n");
 		}
 #endif
+		SCTP_INP_RUNLOCK(ep);
 		return (NULL);
 	}
 	/* compare the received digest with the computed digest */
@@ -2001,6 +2006,9 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	if ((*stcb == NULL) && to) {
 		/* Yep, lets check */
 		*stcb = sctp_findassociation_ep_addr(inp_p, to, netp, localep_sa);
+		if (*stcb) {
+			SCTP_TCB_LOCK((*stcb));
+		}
 	}
 
 	cookie_len -= SCTP_SIGNATURE_SIZE;
@@ -3115,6 +3123,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			} else {
 				/* drop this packet... */
 				sctp_pegs[SCTP_BAD_VTAGS]++;
+				if (stcb)
+					SCTP_TCB_UNLOCK(stcb);
 				return (NULL);
 			}
 		} else if (ch->chunk_type == SCTP_SHUTDOWN_ACK) {
@@ -3126,6 +3136,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				 * but it won't complete until the shutdown is
 				 * completed
 				 */
+				if (stcb)
+					SCTP_TCB_UNLOCK(stcb);
 				sctp_handle_ootb(m, iphlen, *offset, sh, inp,
 				    NULL);
 				return (NULL);
@@ -3141,6 +3153,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				}
 #endif /* SCTP_DEBUG */
 				sctp_pegs[SCTP_BAD_VTAGS]++;
+				if (stcb)
+					SCTP_TCB_UNLOCK(stcb);
 				*offset = length;
 				return (NULL);
 			}
@@ -3255,6 +3269,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			if ((num_chunks > 1) ||
 			    ( sctp_strict_init && (length - *offset > SCTP_SIZE32(chk_length)))) {
 				*offset = length;
+				if (stcb)
+					SCTP_TCB_UNLOCK(stcb);
 				return (NULL);
 			}
 			if ((stcb != NULL) && 
@@ -3263,11 +3279,15 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				sctp_send_shutdown_ack(stcb,
 				    stcb->asoc.primary_destination);
 				*offset = length;
+				if (stcb)
+					SCTP_TCB_UNLOCK(stcb);
 				return (NULL);
 			}
 			sctp_handle_init(m, iphlen, *offset, sh,
 			    (struct sctp_init_chunk *)ch, inp, stcb, *netp);
 			*offset = length;
+			if (stcb)
+				SCTP_TCB_UNLOCK(stcb);
 			return (NULL);
 			break;
 		case SCTP_INITIATION_ACK:
@@ -3301,6 +3321,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				}
 #endif
 				*offset = length;
+				if (stcb)
+					SCTP_TCB_UNLOCK(stcb);
 				return (NULL);
 			}
 			ret = sctp_handle_init_ack(m, iphlen, *offset, sh,
@@ -3317,6 +3339,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				printf("All done INIT-ACK processing\n");
 			}
 #endif
+			if (stcb)
+				SCTP_TCB_UNLOCK(stcb);
 			return (NULL);
 			break;
 		case SCTP_SELECTIVE_ACK:
@@ -3444,9 +3468,11 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				sctp_abort_association(inp, stcb, m, iphlen, sh,
 				    NULL);
 				*offset = length;
+				if (stcb)
+					SCTP_TCB_UNLOCK(stcb);
 				return (NULL);
 			} else if (inp->sctp_flags & SCTP_PCB_FLAGS_ACCEPTING) {
-				/* we are accepting so check limits for TCP */
+				/* we are accepting so check limits like TCP */
 				if (inp->sctp_socket->so_qlen >
 				    inp->sctp_socket->so_qlimit) {
 					/* no space */
@@ -3468,11 +3494,17 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					sctp_abort_association(inp, stcb, m,
 					    iphlen, sh, oper);
 					*offset = length;
+					if (stcb)
+						SCTP_TCB_UNLOCK(stcb);
 					return (NULL);
 				}
 			}
 			{
 				struct mbuf *ret_buf;
+				struct sctp_tcb *had_tcb=NULL;
+				if (stcb) {
+					had_tcb = stcb;
+				}
 				ret_buf = sctp_handle_cookie_echo(m, iphlen,
 				    *offset, sh,
 				    (struct sctp_cookie_echo_chunk *)ch, &inp,
@@ -3485,6 +3517,9 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 #endif /* SCTP_DEBUG */
 
 				if (ret_buf == NULL) {
+					if( had_tcb ) {
+						SCTP_TCB_UNLOCK(had_tcb);
+					}
 #ifdef SCTP_DEBUG
 					if (sctp_debug_on & SCTP_DEBUG_INPUT3) {
 						printf("GAK, null buffer\n");
@@ -3798,12 +3833,16 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 	sctp_audit_log(0xE0, 1);
 	sctp_auditing(0, inp, stcb, net);
 #endif
+
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
 		printf("Ok, Common input processing called, m:%x iphlen:%d offset:%d",
 		       (u_int)m, iphlen, offset);
 	}
 #endif /* SCTP_DEBUG */
+	if (stcb != NULL) {
+		SCTP_TCB_LOCK(stcb);
+	}
 
 	if (IS_SCTP_CONTROL(ch)) {
 		/* process the control portion of the SCTP packet */
@@ -3834,6 +3873,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		if (stcb->asoc.my_vtag != ntohl(sh->v_tag)) {
 			/* v_tag mismatch! */
 			sctp_pegs[SCTP_BAD_VTAGS]++;
+			SCTP_TCB_UNLOCK(stcb);
 			return (1);
 		}
 	}
@@ -3882,6 +3922,8 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 			 * We consider OOTB any data sent during asoc setup.
 			 */
 			sctp_handle_ootb(m, iphlen, offset, sh, inp, NULL);
+			SCTP_TCB_UNLOCK(stcb);
+			return(1);
 		        break;
 		case SCTP_STATE_EMPTY:	/* should not happen */
 		case SCTP_STATE_INUSE:	/* should not happen */
@@ -3893,6 +3935,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 				printf("Got data in invalid state %d.. dropping\n", stcb->asoc.state);
 			}
 #endif
+			SCTP_TCB_UNLOCK(stcb);
 			return (1);
 			break;
 		case SCTP_STATE_OPEN:
@@ -3908,7 +3951,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		retval = sctp_process_data(mm, iphlen, &offset, length, sh,
 		    inp, stcb, net, &high_tsn);
 		if (retval == 2) {
-			/* The association aborted */
+			/* The association aborted, no unlock needed */
 			return (0);
 		}
 
@@ -3970,6 +4013,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 	sctp_audit_log(0xE0, 3);
 	sctp_auditing(2, inp, stcb, net);
 #endif
+	SCTP_TCB_UNLOCK(stcb);
 	return (0);
 }
 
@@ -4119,6 +4163,7 @@ sctp_input(m, va_alist)
 				       calc_check, check, (u_int)m, mlen, iphlen);
 			}
 #endif
+			
 			stcb = sctp_findassociation_addr(m, iphlen,
 							 offset - sizeof(*ch),
 							 sh, ch, &inp, &net);

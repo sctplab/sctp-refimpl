@@ -7182,6 +7182,7 @@ sctp_output(inp, m, addr, control, p)
  	struct sctp_tcb *stcb;
 	struct sctp_nets *net;
 	struct sctp_association *asoc;
+	int create_lock_applied = 0;
 	int queue_only, error = 0;
 	int s;
 	struct sctp_sndrcvinfo srcv;
@@ -7240,15 +7241,18 @@ sctp_output(inp, m, addr, control, p)
 			}
 			if (srcv.sinfo_assoc_id) {
 				if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
+					SCTP_INP_RLOCK();
 					stcb = LIST_FIRST(&inp->sctp_asoc_list);
+					SCTP_INP_RUNLOCK();
 					if (stcb == NULL) {
 						splx(s);
 						return (ENOTCONN);
 					}
 					net = stcb->asoc.primary_destination;
 				}
-				else
+				else {
 					stcb = sctp_findassociation_ep_asocid(inp, srcv.sinfo_assoc_id);
+				}
 				/*
 				 * Question: Should I error here if the
 				 * assoc_id is no longer valid?
@@ -7267,8 +7271,12 @@ sctp_output(inp, m, addr, control, p)
 		}
 	}
 	if (stcb == NULL) {
+		SCTP_INP_CREATE_LOCK(inp);
+		create_lock_applied = 1;
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
+			SCTP_INP_RLOCK();
 			stcb = LIST_FIRST(&inp->sctp_asoc_list);
+			SCTP_INP_RUNLOCK();
 			if (stcb == NULL) {
 				splx(s);
 				return (ENOTCONN);
@@ -7283,8 +7291,9 @@ sctp_output(inp, m, addr, control, p)
 			}
 		}
 		else
-			if (addr != NULL)
+			if (addr != NULL) {
 				stcb = sctp_findassociation_ep_addr(&t_inp, addr,&net, NULL);
+			}
 	}
 	if ((stcb == NULL) &&
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE)) {
@@ -7292,6 +7301,10 @@ sctp_output(inp, m, addr, control, p)
 			sctppcbinfo.mbuf_track--;
 			sctp_m_freem(control);
 			control = NULL;
+		}
+		if(create_lock_applied) {
+			SCTP_INP_CREATE_UNLOCK(inp);
+			create_lock_applied = 0;
 		}
 		sctp_m_freem(m);
 		splx(s);
@@ -7302,6 +7315,10 @@ sctp_output(inp, m, addr, control, p)
 			sctppcbinfo.mbuf_track--;
 			sctp_m_freem(control);
 			control = NULL;
+		}
+		if(create_lock_applied) {
+			SCTP_INP_CREATE_UNLOCK(inp);
+			create_lock_applied = 0;
 		}
 		sctp_m_freem(m);
 		splx(s);
@@ -7315,11 +7332,14 @@ sctp_output(inp, m, addr, control, p)
 				sctp_m_freem(control);
 				control = NULL;
 			}
+			if(create_lock_applied) {
+				SCTP_INP_CREATE_UNLOCK(inp);
+				create_lock_applied = 0;
+			}
 			sctp_m_freem(m);
 			splx(s);
 			return (ENOENT);
 		}
-
 		stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0);
 		if (stcb == NULL) {
 			if (control) {
@@ -7327,9 +7347,18 @@ sctp_output(inp, m, addr, control, p)
 				sctp_m_freem(control);
 				control = NULL;
 			}
+			if(create_lock_applied) {
+				SCTP_INP_CREATE_UNLOCK(inp);
+				create_lock_applied = 0;
+			}
 			sctp_m_freem(m);
 			splx(s);
 			return (error);
+		}
+		SCTP_TCB_LOCK(stcb);
+		if(create_lock_applied) {
+			SCTP_INP_CREATE_UNLOCK(inp);
+			create_lock_applied = 0;
 		}
 		queue_only = 1;
 		asoc = &stcb->asoc;
@@ -7395,6 +7424,11 @@ sctp_output(inp, m, addr, control, p)
 		 */
 		net = stcb->asoc.primary_destination;
 	} else {
+		SCTP_TCB_LOCK(stcb);
+		if(create_lock_applied) {
+			SCTP_INP_CREATE_UNLOCK(inp);
+			create_lock_applied = 0;
+		}
 		asoc = &stcb->asoc;
 		if ((SCTP_GET_STATE(asoc) == SCTP_STATE_COOKIE_WAIT) ||
 		    (SCTP_GET_STATE(asoc) == SCTP_STATE_COOKIE_ECHOED)) {
@@ -7419,9 +7453,17 @@ sctp_output(inp, m, addr, control, p)
 				error = ECONNRESET;
 			}
 			splx(s);
+			SCTP_TCB_UNLOCK();
 			return (error);
 		}
 	}
+        /* we should never hit here with the create lock applied */
+	if(create_lock_applied) {
+		SCTP_INP_CREATE_UNLOCK(inp);
+		create_lock_applied = 0;
+	}
+
+
 	if (use_rcvinfo == 0) {
 		srcv = stcb->asoc.def_send;
 	}
@@ -7447,6 +7489,7 @@ sctp_output(inp, m, addr, control, p)
 		net = stcb->asoc.primary_destination;
 	}
 	if ((error = sctp_msg_append(stcb, net, m, &srcv))) {
+		SCTP_TCB_UNLOCK();
 		splx(s);
 		return (error);
 	}
@@ -7500,6 +7543,7 @@ sctp_output(inp, m, addr, control, p)
 		printf("USR Send complete qo:%d prw:%d\n", queue_only, stcb->asoc.peers_rwnd);
 	}
 #endif
+	SCTP_TCB_UNLOCK();
 	splx(s);
 	return (0);
 }
@@ -9690,6 +9734,12 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 		       asoc->total_output_mbuf_queue_size,
 		       mbcnt);
 #endif	
+#if defined(__NetBSD__) || defined(__OpenBSD__)
+	s = splsoftnet();
+#else
+	s = splnet();
+#endif
+
 	asoc->total_output_queue_size += dataout;
 	asoc->total_output_mbuf_queue_size += mbcnt;
 	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
@@ -9701,6 +9751,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE)
 		) {
 		int some_on_streamwheel = 0;
+		error = 0;
 		if (!TAILQ_EMPTY(&asoc->out_wheel)) {
 			/* Check to see if some data queued */
 			struct sctp_stream_out *outs;
@@ -9711,11 +9762,6 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 				}
 			}
 		}
-#if defined(__NetBSD__) || defined(__OpenBSD__)
- 		s = splsoftnet();
-#else
-		s = splnet();
-#endif
 		if (TAILQ_EMPTY(&asoc->send_queue) &&
 		    TAILQ_EMPTY(&asoc->sent_queue) &&
 		    (some_on_streamwheel == 0)) {
@@ -9750,9 +9796,8 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 			 */
 			asoc->state |= SCTP_STATE_SHUTDOWN_PENDING;
 		}
-		splx(s);
-		return (0);
 	}
+	splx(s);
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_OUTPUT2) {
 		printf("++total out:%d total_mbuf_out:%d\n",
@@ -9804,6 +9849,7 @@ sctp_sosend(struct socket *so,
 #elif defined(__NetBSD__)
 	struct proc *p = curproc; /* XXX */
 	struct sockaddr *addr = NULL;
+	int create_lock_applied = 0;
 	if (addr_mbuf)
 		addr = mtod(addr_mbuf, struct sockaddr *);
 #endif
@@ -9847,7 +9893,9 @@ sctp_sosend(struct socket *so,
 	}
 	/* now we must find the assoc */
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
+		SCTP_INP_RLOCK();
 		stcb = LIST_FIRST(&inp->sctp_asoc_list);
+		SCTP_INP_RUNLOCK();
 		if (stcb == NULL) {
 			error = ENOTCONN;
 			splx(s);
@@ -9873,6 +9921,8 @@ sctp_sosend(struct socket *so,
 	}
 	if (stcb == NULL) {
 		/* Need to do a lookup */
+		SCTP_INP_CREATE_LOCK(inp);
+		create_lock_applied = 1;
 		if (use_rcvinfo && srcv.sinfo_assoc_id) {
 			stcb = sctp_findassociation_ep_asocid(inp, srcv.sinfo_assoc_id);
 			/*
@@ -9886,16 +9936,25 @@ sctp_sosend(struct socket *so,
 			}
 		}
 		if (stcb == NULL) {
-			if (addr != NULL)
+			if (addr != NULL) {
 				stcb = sctp_findassociation_ep_addr(&t_inp, addr, &net, NULL);
+			}
 		}
 	}
 	if ((stcb == NULL) &&
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE)) {
 		error = ENOTCONN;
+		if(create_lock_applied) {
+			SCTP_INP_CREATE_UNLOCK(inp);
+			create_lock_applied = 0;
+		}
 		splx(s);
 		goto out;
 	} else if ((stcb == NULL) && (addr == NULL)) {
+		if(create_lock_applied) {
+			SCTP_INP_CREATE_UNLOCK(inp);
+			create_lock_applied = 0;
+		}
 		error = ENOENT;
 		splx(s);
 		goto out;
@@ -9904,6 +9963,10 @@ sctp_sosend(struct socket *so,
 		if ((use_rcvinfo) &&
 		    (srcv.sinfo_flags & MSG_ABORT)) {
 			/* User asks to abort a non-existant asoc */
+			if(create_lock_applied) {
+				SCTP_INP_CREATE_UNLOCK(inp);
+				create_lock_applied = 0;
+			}
 			error = ENOENT;
 			splx(s);
 			goto out;
@@ -9912,8 +9975,17 @@ sctp_sosend(struct socket *so,
 		stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0);
 		if (stcb == NULL) {
 			/* Error is setup for us in the call */
+			if(create_lock_applied) {
+				SCTP_INP_CREATE_UNLOCK(inp);
+				create_lock_applied = 0;
+			}
 			splx(s);
 			goto out;
+		}
+		SCTP_TCB_LOCK(stcb);
+		if(create_lock_applied) {
+			SCTP_INP_CREATE_UNLOCK(inp);
+			create_lock_applied = 0;
 		}
 		/* Turn on queue only flag to prevent data from being sent */
  		queue_only = 1;
@@ -9986,7 +10058,12 @@ sctp_sosend(struct socket *so,
 		net = stcb->asoc.primary_destination;
 		asoc = &stcb->asoc;
 	} else {
+		SCTP_TCB_LOCK(stcb);
 		asoc = &stcb->asoc;
+	}
+	if(create_lock_applied) {
+		SCTP_INP_CREATE_UNLOCK(inp);
+		create_lock_applied = 0;
 	}
 	if ((SCTP_GET_STATE(asoc) == SCTP_STATE_COOKIE_WAIT) ||
 	    (SCTP_GET_STATE(asoc) == SCTP_STATE_COOKIE_ECHOED)) {
@@ -10074,7 +10151,9 @@ sctp_sosend(struct socket *so,
 				       asoc);
 #endif
 			sbunlock(&so->so_snd);
+			SCTP_TCB_RUNLOCK(stcb);
 			err = sbwait(&stcb->sctp_socket->so_snd);
+			SCTP_TCB_LOCK(stcb);
 			inp->sctp_tcb_at_block = 0;
 #ifdef SCTP_BLK_LOGGING
 			sctp_log_block(SCTP_BLOCK_LOG_OUTOF_BLK,
@@ -10247,6 +10326,7 @@ sctp_sosend(struct socket *so,
 	}
 #endif
  out:
+	SCTP_TCB_RUNLOCK(stcb);
 	sbunlock(&so->so_snd);
  out_nsb:
 	if (top)
