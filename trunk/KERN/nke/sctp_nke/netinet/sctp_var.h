@@ -149,7 +149,9 @@
 #if defined(_KERNEL) || (defined(__APPLE__) && defined(KERNEL))
 
 #if defined(__FreeBSD__) || defined(__APPLE__)
+#ifdef SYSCTL_DECL
 SYSCTL_DECL(_net_inet_sctp);
+#endif
 extern struct	pr_usrreqs sctp_usrreqs;
 #elif defined(__NetBSD__)
 int sctp_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,

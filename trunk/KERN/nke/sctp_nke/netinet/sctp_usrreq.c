@@ -509,10 +509,13 @@ sctp_ctlinput(cmd, sa, vip)
 				sctp_notify_mbuf(inp, stcb, net, ip, sh);
 			}
 		} else {
+#if defined(__FreeBSD__) && __FreeBSD_version < 500000
+                        /* XXX must be fixed for 5.x and higher, leave for 4.x */
 			if (PRC_IS_REDIRECT(cmd) && inp) {
 				in_rtchange((struct inpcb *)inp,
 					    inetctlerrmap[cmd]);
 			}
+#endif
 		}
 		splx(s);
 	}
@@ -1058,7 +1061,11 @@ sctp_shutdown(struct socket *so)
 	/* For UDP model this is a invalid call */
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE) {
 		/* Restore the flags that the soshutdown took away. */
+#if defined(__FreeBSD__) && __FreeBSD_version >= 502115
+		so->so_rcv.sb_state &= ~SBS_CANTRCVMORE;
+#else
 		so->so_state &= ~SS_CANTRCVMORE;
+#endif
 		/* This proc will wakeup for read and do nothing (I hope) */
 		splx(s);
 		return (EOPNOTSUPP);

@@ -78,26 +78,27 @@ TAILQ_HEAD(sctpnetlisthead, sctp_nets);
 
 /* 
  * Users of the iterator need to malloc a iterator with a call to
- * sctp_initiate_iterator(func, pcb_flags, asoc_state, void-ptr-arg,  u_int32_t, u_int32-arg, end_func, inp );
+ * sctp_initiate_iterator(func, pcb_flags, asoc_state, void-ptr-arg, u_int32_t,
+                          u_int32-arg, end_func, inp);
  *
- * Use the following two defines if you don't
- * care what pcb flags are on the EP and/or you
- * don't care what state the association is in.
+ * Use the following two defines if you don't care what pcb flags are on the
+ * EP and/or you don't care what state the association is in.
  *
  * Note that if you specify an INP as the last argument then ONLY each
  * association of that single INP will be executed upon. Note that the
  * pcb flags STILL apply so if the inp you specify has different pcb_flags
- * then what you put in pcb_flags nothing will happen ... use SCTP_PCB_ANY_FLAGS
+ * then what you put in pcb_flags nothing will happen. use SCTP_PCB_ANY_FLAGS
  * to assure the inp you specify gets treated.
  */
 #define SCTP_PCB_ANY_FLAGS  0x00000000	
 #define SCTP_ASOC_ANY_STATE 0x00000000
 
-typedef void(*asoc_func)(struct sctp_inpcb *, struct sctp_tcb *, void *ptr, u_int32_t val);
-typedef void(*end_func)(void *ptr, u_int32_t val);
+typedef void (*asoc_func)(struct sctp_inpcb *, struct sctp_tcb *, void *ptr,
+			  u_int32_t val);
+typedef void (*end_func)(void *ptr, u_int32_t val);
 
-#define SCTP_INTERATOR_DO_ALL_INP    0x00000001
-#define SCTP_INTERATOR_DO_SINGLE_INP 0x00000002
+#define SCTP_ITERATOR_DO_ALL_INP	0x00000001
+#define SCTP_ITERATOR_DO_SINGLE_INP	0x00000002
 
 struct sctp_iterator {
         LIST_ENTRY(sctp_iterator) sctp_nxt_itr;
@@ -106,8 +107,8 @@ struct sctp_iterator {
 	struct sctp_tcb *stcb;	/* assoc */
 	asoc_func function_toapply;
 	end_func function_atend;
-	void *pointer;		/* IFA could go here */
-	u_int32_t val;		/* type could go here */
+	void *pointer;		/* pointer for apply func to use */
+	u_int32_t val;		/* value for apply func to use */
 	u_int32_t pcb_flags;
 	u_int32_t asoc_state;
 	u_int32_t iterator_flags;
@@ -150,12 +151,11 @@ struct sctp_nets {
 	struct sctp_route {
 		struct rtentry *ro_rt;
 		union sctp_sockstore _l_addr;	/* remote peer addr */
-		union sctp_sockstore _s_addr;	/* our selected source address */
+		union sctp_sockstore _s_addr;	/* our selected src addr */
 	} ra;
 	/* mtu discovered so far */
 	u_int32_t mtu;
         u_int32_t ssthresh;		/* not sure about this one for split */
-
 
 	/* smoothed average things for RTT and RTO itself */
 	int lastsa;
@@ -177,7 +177,7 @@ struct sctp_nets {
 	u_int32_t flight_size;
 	u_int32_t cwnd; /* actual cwnd */
 	u_int32_t prev_cwnd; /* cwnd before any processing */
-	u_int32_t partial_bytes_acked; /* in CA tracks when to increment a MTU */
+	u_int32_t partial_bytes_acked; /* in CA tracks when to incr a MTU */
 
 	/* tracking variables to avoid the aloc/free in sack processing */
 	unsigned int net_ack;

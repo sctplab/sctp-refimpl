@@ -98,10 +98,6 @@
 #endif
 #endif /*IPSEC*/
 
-#ifndef APPLE_NKE
-#include "faith.h"
-#endif
-
 #if defined(NFAITH) && NFAITH > 0
 #include <net/if_faith.h>
 #endif
@@ -422,9 +418,9 @@ sctp6_input(mp, offp, proto)
 #endif
 	    ) {
 #if defined(__FreeBSD__) || defined(__APPLE__)
-#if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
+#if (defined(SCTP_BASE_FREEBSD) && __FreeBSD_version < 501113) || defined(__APPLE__)
 		ip6_savecontrol(in6p_ip, &opts, ip6, m);
-#elif defined(__FreeBSD_cc_version) && __FreeBSD_cc_version >= 440000
+#elif __FreeBSD_version >= 440000 || (defined(SCTP_BASE_FREEBSD) && __FreeBSD_version >= 501113)
 		ip6_savecontrol(in6p_ip, m, &opts);
 #else
 		ip6_savecontrol(in6p_ip, m, &opts, NULL);

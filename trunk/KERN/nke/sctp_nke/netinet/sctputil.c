@@ -102,10 +102,6 @@
 
 #endif /* INET6 */
 
-#ifndef APPLE_NKE
-#include "faith.h"
-#endif
-
 #include <netinet/sctp_pcb.h>
 
 #ifdef IPSEC

@@ -42,6 +42,8 @@
 
 int sctp_can_peel_off(struct socket *, caddr_t);
 
+int sctp_do_peeloff(struct socket *, struct socket *, caddr_t);
+
 struct socket *sctp_get_peeloff(struct socket *, caddr_t, int *);
 
 #ifdef __APPLE__

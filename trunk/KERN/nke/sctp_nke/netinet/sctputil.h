@@ -72,7 +72,7 @@ struct mbuf *sctp_m_copym(struct mbuf *m, int off, int len, int wait);
 #if __FreeBSD_version >= 500000
 #define UMA_ZFLAG_FULL	0x0020
 #define SCTP_ZONE_INIT(zone, name, size, number) { \
-	zone = uma_zcreate(name, size, NULL, NULL, NULL, NULL, UMA_ALIGN_PTR,
+	zone = uma_zcreate(name, size, NULL, NULL, NULL, NULL, UMA_ALIGN_PTR,\
 		UMA_ZFLAG_FULL); \
 	uma_zone_set_max(zone, number); \
 }
