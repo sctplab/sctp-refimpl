@@ -9523,12 +9523,13 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 			}
 			inp->sctp_tcb_at_block = (void *)stcb;
 			inp->error_on_block = 0;
-#ifdef CTP_BLK_LOGGING
+#ifdef SCTP_BLK_LOGGING
 			sctp_log_block(SCTP_BLOCK_LOG_INTO_BLK,
 			    so, asoc);
 #endif
 			sbunlock(&so->so_snd);
 			SCTP_TCB_UNLOCK(stcb);
+			SOCKBUF_UNLOCK(&so->so_snd);
 			error = sbwait(&so->so_snd);
 			SCTP_INP_RLOCK(inp);
 			if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
