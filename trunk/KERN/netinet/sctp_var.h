@@ -184,12 +184,12 @@ int sctp_sysctl(int *, u_int, void *, size_t *, void *, size_t);
 #define callout_active(c) timeout_initialized(c)
 #endif
 
-/* XXX: Temporary until I convert fix OpenBSD and move to newer defs */
-#if defined(__OpenBSD__)
-#define if_addrhead	if_addrlist
-#define if_link		if_list
-#define ifa_link	ifa_list
-#endif /* __OpenBSD__ */
+/* XXX: Hopefully temporary until APPLE changes to newer defs like other BSDs */
+#if defined(__APPLE__)
+#define if_addrlist	if_addrhead
+#define if_list		if_link
+#define ifa_list	ifa_link
+#endif /* __APPLE__ **/
 
 #endif /* _KERNEL */
 
