@@ -311,7 +311,7 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 		 */
 		
 		stcb = LIST_FIRST(&inp->sctp_asoc_list);
-		if (stcb== NULL) {
+		if (stcb == NULL) {
 			SCTP_INP_RUNLOCK(inp);
 			continue;
 		}
@@ -683,9 +683,9 @@ sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, caddr_t asoc_id)
 		return (NULL);
 	}
 	LIST_FOREACH(stcb, head, sctp_asocs) {
-		SCTP_INP_RLOCK(sctp->sctp_ep);
+		SCTP_INP_RLOCK(stcb->sctp_ep);
 		SCTP_TCB_LOCK(stcb);
-		SCTP_INP_RUNLOCK(sctp->sctp_ep);
+		SCTP_INP_RUNLOCK(stcb->sctp_ep);
 		if (stcb->asoc.my_vtag == vtag) {
 			/* candidate */
 			if (inp != stcb->sctp_ep) {
@@ -708,7 +708,7 @@ sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, caddr_t asoc_id)
 
 static struct sctp_inpcb *
 sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
-    uint16_t lport)
+    uint16_t lport, struct sctp_inpcb *locked_inp)
 {
 	struct sctp_inpcb *inp;
 	struct sockaddr_in *sin;
@@ -732,7 +732,9 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 		return (NULL);
 
 	LIST_FOREACH(inp, head, sctp_hash) {
-		SCTP_INP_RLOCK(inp);
+		if( locked_inp != inp) 
+			SCTP_INP_RLOCK(inp);
+
 		if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) &&
 		    (inp->sctp_lport == lport)) {
 			/* got it */
@@ -749,19 +751,23 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 #endif
 				) {
 				/* IPv4 on a IPv6 socket with ONLY IPv6 set */
-				SCTP_INP_RUNLOCK(inp);
+				if( locked_inp != inp) 
+					SCTP_INP_RUNLOCK(inp);
 				continue;
 			}
 			/* A V6 address and the endpoint is NOT bound V6 */
 			if (nam->sa_family == AF_INET6 &&
 			   (inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0) {
-				SCTP_INP_RUNLOCK(inp);
+				if( locked_inp != inp) 
+					SCTP_INP_RUNLOCK(inp);
 				continue;
 			}
-			SCTP_INP_RUNLOCK(inp);
+			if( locked_inp != inp) 
+				SCTP_INP_RUNLOCK(inp);
 			return (inp);
 		}
-		SCTP_INP_RUNLOCK(inp);
+		if( locked_inp != inp) 
+			SCTP_INP_RUNLOCK(inp);
 	}
 
 	if ((nam->sa_family == AF_INET) &&
@@ -783,9 +789,11 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 	}
 #endif
 	LIST_FOREACH(inp, head, sctp_hash) {
-		SCTP_INP_RLOCK(inp);
+		if( locked_inp != inp) 
+			SCTP_INP_RLOCK(inp);
 		if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL)) {
-			SCTP_INP_RUNLOCK(inp);
+			if( locked_inp != inp) 
+				SCTP_INP_RUNLOCK(inp);
 			continue;
 		}
 		/*
@@ -793,7 +801,8 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 		 * its addresses
 		 */
 		if (inp->sctp_lport != lport) {
-			SCTP_INP_RUNLOCK(inp);
+			if( locked_inp != inp) 
+				SCTP_INP_RUNLOCK(inp);
 			continue;
 		}
 #ifdef SCTP_DEBUG
@@ -846,7 +855,8 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 							printf("YES, return ep:%p\n", inp);
 						}
 #endif
-						SCTP_INP_RUNLOCK(inp);
+						if( locked_inp != inp) 
+							SCTP_INP_RUNLOCK(inp);
 						return (inp);
 					}
 				} else if (nam->sa_family == AF_INET6) {
@@ -860,12 +870,14 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 							printf("YES, return ep:%p\n", inp);
 						}
 #endif
-						SCTP_INP_RUNLOCK(inp);
+						if( locked_inp != inp) 
+							SCTP_INP_RUNLOCK(inp);
 						return (inp);
 					}
 				}
 			}
-			SCTP_INP_RUNLOCK(inp);
+			if( locked_inp != inp) 
+				SCTP_INP_RUNLOCK(inp);
 		}
 	}
 #ifdef SCTP_DEBUG
@@ -878,7 +890,7 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 
 
 struct sctp_inpcb *
-sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool, int have_lock)
+sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool, int have_lock, struct sctp_inpcb *locked_inp)
 {
 	/*
 	 * First we check the hash table to see if someone has this port
@@ -921,7 +933,7 @@ sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool, int have_lock)
 		printf("Main hash to lookup at head:%p\n", head);
 	}
 #endif
- 	inp = sctp_endpoint_probe(nam, head, lport);
+ 	inp = sctp_endpoint_probe(nam, head, lport, locked_inp);
 
 	/*
 	 * If the TCP model exists it could be that the main listening
@@ -946,7 +958,7 @@ sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool, int have_lock)
 			 */
 			head = &sctppcbinfo.sctp_tcpephash[i];
 			if (LIST_FIRST(head)) {
-				inp = sctp_endpoint_probe(nam, head, lport);
+				inp = sctp_endpoint_probe(nam, head, lport, locked_inp);
 				if (inp) {
 					/* Found one */
 					break;
@@ -967,8 +979,13 @@ sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool, int have_lock)
 		}
 		SCTP_INP_INFO_RUNLOCK();
 	} else {
-		if(inp)
+		if(locked_inp == inp)
 			SCTP_INP_INCR_REF(inp);
+		else {
+			SCTP_INP_WLOCK(inp);
+			SCTP_INP_INCR_REF(inp);
+			SCTP_INP_WUNLOCK(inp);
+		}
 	}
 	return (inp);
 }
@@ -995,7 +1012,7 @@ sctp_findassociation_addr_sa(struct sockaddr *to, struct sockaddr *from,
 			return (retval);
 		}
 	}
-	inp = sctp_pcb_findep(to, 0, 0);
+	inp = sctp_pcb_findep(to, 0, 0, NULL);
 	if (inp_p != NULL) {
 		*inp_p = inp;
 	}
@@ -1852,29 +1869,42 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 			    suser(p, 0)
 #endif
 			    )) {
-				SCTP_INP_INFO_WUNLOCK();
 				SCTP_INP_WUNLOCK(inp);
+				SCTP_INP_INFO_WUNLOCK();
 				return (error);
 			}
 		}
 		if (p == NULL) {
-			SCTP_INP_INFO_WUNLOCK();
 			SCTP_INP_WUNLOCK(inp);
+			SCTP_INP_INFO_WUNLOCK();
 			return (error);
 		}
 
-		inp_tmp = sctp_pcb_findep(addr, 0, 1);
+		inp_tmp = sctp_pcb_findep(addr, 0, 1, inp);
 		if (inp_tmp != NULL) {
-			SCTP_INP_INFO_WUNLOCK();
+			/* release local lock on inp */
 			SCTP_INP_WUNLOCK(inp);
+			
+			/* lock guy returned and lower count 
+			 * note that we are not bound so inp_tmp
+			 * should NEVER be inp. And it is this
+			 * inp (inp_tmp) that gets the reference 
+			 * bump, so we must lower it.
+			 */
+			SCTP_INP_WLOCK(inp_tmp);
+			SCTP_INP_DECR_REF(inp_tmp);
+			SCTP_INP_WUNLOCK(inp_tmp);
+
+			/* unlock info */
+			SCTP_INP_INFO_WUNLOCK();
 			return (EADDRNOTAVAIL);
 		}
 		if (bindall) {
 			/* verify that no lport is not used by a singleton */
 			if (sctp_isport_inuse(inp, lport)) {
 				/* Sorry someone already has this one bound */
-				SCTP_INP_INFO_WUNLOCK();
 				SCTP_INP_WUNLOCK(inp);
+				SCTP_INP_INFO_WUNLOCK();
 				return (EADDRNOTAVAIL);
 			}
 		}
@@ -1986,8 +2016,8 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 		ifa = sctp_find_ifa_by_addr((struct sockaddr *)&store_sa);
 		if (ifa == NULL) {
 			/* Can't find an interface with that address */
-			SCTP_INP_INFO_WUNLOCK();
 			SCTP_INP_WUNLOCK(inp);
+			SCTP_INP_INFO_WUNLOCK();
 			return (EADDRNOTAVAIL);
 		}
 		if (addr->sa_family == AF_INET6) {
@@ -2001,8 +2031,8 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 			    IN6_IFF_ANYCAST |
 			    IN6_IFF_NOTREADY)) {
 				/* Can't bind a non-existent addr. */
-				SCTP_INP_INFO_WUNLOCK();
 				SCTP_INP_WUNLOCK(inp);
+				SCTP_INP_INFO_WUNLOCK();
 				return (EINVAL);
 			}
 		}
@@ -2023,8 +2053,8 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 		/* add this address to the endpoint list */
 		error = sctp_insert_laddr(&inp->sctp_addr_list, ifa);
 		if (error != 0) {
-			SCTP_INP_INFO_WUNLOCK();
 			SCTP_INP_WUNLOCK(inp);
+			SCTP_INP_INFO_WUNLOCK();
 			return (error);
 		}
 		inp->laddr_count++;
@@ -2044,8 +2074,8 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 
 	/* turn off just the unbound flag */
 	inp->sctp_flags &= ~SCTP_PCB_FLAGS_UNBOUND;
-	SCTP_INP_INFO_WUNLOCK();
 	SCTP_INP_WUNLOCK(inp);
+	SCTP_INP_INFO_WUNLOCK();
 	return (0);
 }
 
@@ -2354,8 +2384,16 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	}
 	inp->sctp_socket = 0;
 	/* Now first we remove ourselves from the overall list of all EP's */
+
+	/* Unlock inp first, need correct order */
+	SCTP_INP_WUNLOCK(inp);
+	/* now iterator lock */
 	SCTP_ITERATOR_LOCK();
+	/* now info lock */
 	SCTP_INP_INFO_WLOCK();
+	/* now reget the inp lock */
+	SCTP_INP_WLOCK(inp);
+
 	inp_save = LIST_NEXT(inp, sctp_list);
 	LIST_REMOVE(inp, sctp_list);
 	/*
