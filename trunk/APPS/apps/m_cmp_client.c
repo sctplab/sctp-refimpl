@@ -916,6 +916,7 @@ main(int argc, char **argv)
 		}else{
 		    log_measurement(IPPROTO_SCTP,&ctl[i],&start,&end);
 		}
+		sleep(2);
 	    } else {
 		sctp_skip++;
 	    }
@@ -928,6 +929,7 @@ main(int argc, char **argv)
 		}else{
 		    log_measurement(IPPROTO_TCP,&ctl[i],&start,&end);
 		}
+		sleep(2);
 	    } else {
 		tcp_skip++;
 	    }
