@@ -1689,6 +1689,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	struct sctp_state_cookie *cookie;
 	struct sockaddr_in6 sin6;
 	struct sockaddr_in sin;
+	struct sctp_tcb *l_stcb=*stcb;
 	struct sctp_inpcb *l_inp;
 	struct sockaddr *to;
 	struct sctp_pcb *ep;
@@ -1820,7 +1821,13 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	 */
 	ep = &(*inp_p)->sctp_ep;
 	l_inp = *inp_p;
+	if(l_stcb) {
+		SCTP_TCB_UNLOCK(l_stcb);
+	}
 	SCTP_INP_RLOCK(l_inp);
+	if(l_stcb) {
+		SCTP_TCB_LOCK(l_stcb);
+	}
 	/* which cookie is it? */
 	if ((cookie->time_entered.tv_sec < (long)ep->time_of_secret_change) &&
 	    (ep->current_secret_number != ep->last_secret_number)) {

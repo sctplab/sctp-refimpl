@@ -506,7 +506,14 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 	} else {
 		return (NULL);
 	}
-	SCTP_INP_WLOCK(inp);
+	if(locked_tcb && (locked_tcb->sctp_ep == inp)) {
+		/* relock in proper order */
+		SCTP_TCB_UNLOCK(locked_tcb);
+		SCTP_INP_WLOCK(inp);
+		SCTP_TCB_LOCK(locked_tcb);
+	} else 
+		SCTP_INP_WLOCK(inp);
+
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) {
 		/*
 		 * Now either this guy is our listner or it's the connector.
@@ -523,6 +530,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 				/* we have a locked tcb, lower refcount */
 				SCTP_INP_DECR_REF(inp);
 			}
+			SCTP_INP_WUNLOCK(inp);
 			return (stcb);
 		} else {
 			stcb = LIST_FIRST(&inp->sctp_asoc_list);
@@ -1619,8 +1627,11 @@ sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
 	struct sctp_laddr *laddr, *oladdr;
 
 	SCTP_INP_INFO_WLOCK();
+	SCTP_TCB_UNLOCK(stcb);
 	SCTP_INP_WLOCK(old_inp);
 	SCTP_INP_WLOCK(new_inp);
+	SCTP_TCB_LOCK(stcb);
+
 	new_inp->sctp_ep.time_of_secret_change =
 	    old_inp->sctp_ep.time_of_secret_change;
 	memcpy(new_inp->sctp_ep.secret_key, old_inp->sctp_ep.secret_key,
@@ -3273,7 +3284,11 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 			sq->tcb = NULL;
 		}
 	}
+	/* setup correct order for locks */
+	SCTP_TCB_UNLOCK(stcb);
 	SCTP_INP_WLOCK(inp);
+	SCTP_TCB_LOCK(stcb);
+
 	if (inp->sctp_tcb_at_block == (void *)stcb) {
 		inp->error_on_block = ECONNRESET;
 	}
@@ -3579,8 +3594,18 @@ sctp_destination_is_reachable(struct sctp_tcb *stcb, struct sockaddr *destaddr)
 	struct sctp_inpcb *inp;
 	int answer;
 
+	/* No locks here, the TCB, in all cases is already
+	 * locked and an assoc is up. There is either a
+	 * INP lock by the caller applied (in asconf case when
+	 * deleting an address) or NOT in the HB case, however
+	 * if HB then the INP increment is up and the INP
+	 * will not be removed (on top of the fact that
+	 * we have a TCB lock). So we only want to
+	 * read the sctp_flags, which is either bound-all
+	 * or not.. no protection needed since once an
+	 * assoc is up you can't be changing your binding.
+	 */
 	inp = stcb->sctp_ep;
-	SCTP_INP_RLOCK(inp);
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
 		/* if bound all, destination is not restricted */
 		/* RRS: Question during lock work: Is this
@@ -3588,7 +3613,6 @@ sctp_destination_is_reachable(struct sctp_tcb *stcb, struct sockaddr *destaddr)
 		 * might need to obey the V4--V6 flags???
 		 * IMO this bound-all stuff needs to be removed!
 		 */
- 		SCTP_INP_RUNLOCK(inp);
 		return (1);
 	}
 	/* NOTE: all "scope" checks are done when local addresses are added */
@@ -3608,7 +3632,6 @@ sctp_destination_is_reachable(struct sctp_tcb *stcb, struct sockaddr *destaddr)
 		/* invalid family, so it's unreachable */
 		answer = 0;
 	}
-	SCTP_INP_RUNLOCK(inp);
 	return (answer);
 }
 
