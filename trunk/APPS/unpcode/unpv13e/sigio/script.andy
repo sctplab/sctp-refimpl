@@ -1,0 +1,10 @@
+#!/bin/sh
+
+./udpcli01 127.0.0.1 < tcap > /dev/null &
+./udpcli01 127.0.0.1 < tcap > /dev/null &
+./udpcli01 127.0.0.1 < tcap > /dev/null &
+./udpcli01 127.0.0.1 < tcap > /dev/null &
+./udpcli01 127.0.0.1 < tcap > /dev/null &
+./udpcli01 127.0.0.1 < tcap > /dev/null &
+
+wait

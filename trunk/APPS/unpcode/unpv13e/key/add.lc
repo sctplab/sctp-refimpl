@@ -1,0 +1,180 @@
+
+int##  1 ##src/key/add.c##
+salen(struct sockaddr *sa)##  2 ##src/key/add.c##
+{##  3 ##src/key/add.c##
+#ifdef HAVE_SOCKADDR_SA_LEN##  4 ##src/key/add.c##
+    return sa->sa_len;##  5 ##src/key/add.c##
+#else##  6 ##src/key/add.c##
+    switch (sa->sa_family) {##  7 ##src/key/add.c##
+    case AF_INET:##  8 ##src/key/add.c##
+        return sizeof(struct sockaddr_in);##  9 ##src/key/add.c##
+#ifdef IPV6## 10 ##src/key/add.c##
+    case AF_INET6:## 11 ##src/key/add.c##
+        return sizeof(struct sockaddr_in6);## 12 ##src/key/add.c##
+#endif## 13 ##src/key/add.c##
+    default:## 14 ##src/key/add.c##
+        return 0;               /* XXX */## 15 ##src/key/add.c##
+    }## 16 ##src/key/add.c##
+#endif## 17 ##src/key/add.c##
+}## 18 ##src/key/add.c##
+
+int## 19 ##src/key/add.c##
+prefix_all(struct sockaddr *sa)## 20 ##src/key/add.c##
+{## 21 ##src/key/add.c##
+    switch (sa->sa_family) {## 22 ##src/key/add.c##
+    case AF_INET:## 23 ##src/key/add.c##
+        return 32;## 24 ##src/key/add.c##
+#ifdef IPV6## 25 ##src/key/add.c##
+    case AF_INET6:## 26 ##src/key/add.c##
+        return 128;## 27 ##src/key/add.c##
+#endif## 28 ##src/key/add.c##
+    default:## 29 ##src/key/add.c##
+        return 0;               /* XXX */## 30 ##src/key/add.c##
+    }## 31 ##src/key/add.c##
+}## 32 ##src/key/add.c##
+
+/* include sadb_add */
+void## 33 ##src/key/add.c##
+sadb_add(struct sockaddr *src, struct sockaddr *dst, int type, int alg,## 34 ##src/key/add.c##
+         int spi, int keybits, unsigned char *keydata)## 35 ##src/key/add.c##
+{## 36 ##src/key/add.c##
+    int     s;## 37 ##src/key/add.c##
+    char    buf[4096], *p;      /* XXX */## 38 ##src/key/add.c##
+    struct sadb_msg *msg;## 39 ##src/key/add.c##
+    struct sadb_sa *saext;## 40 ##src/key/add.c##
+    struct sadb_address *addrext;## 41 ##src/key/add.c##
+    struct sadb_key *keyext;## 42 ##src/key/add.c##
+    int     len;## 43 ##src/key/add.c##
+    int     mypid;## 44 ##src/key/add.c##
+
+    s = Socket(PF_KEY, SOCK_RAW, PF_KEY_V2);## 45 ##src/key/add.c##
+
+    mypid = getpid();## 46 ##src/key/add.c##
+
+    /* Build and write SADB_ADD request */## 47 ##src/key/add.c##
+    bzero(&buf, sizeof(buf));## 48 ##src/key/add.c##
+    p = buf;## 49 ##src/key/add.c##
+    msg = (struct sadb_msg *) p;## 50 ##src/key/add.c##
+    msg->sadb_msg_version = PF_KEY_V2;## 51 ##src/key/add.c##
+    msg->sadb_msg_type = SADB_ADD;## 52 ##src/key/add.c##
+    msg->sadb_msg_satype = type;## 53 ##src/key/add.c##
+    msg->sadb_msg_pid = getpid();## 54 ##src/key/add.c##
+    len = sizeof(*msg);## 55 ##src/key/add.c##
+    p += sizeof(*msg);## 56 ##src/key/add.c##
+
+    saext = (struct sadb_sa *) p;## 57 ##src/key/add.c##
+    saext->sadb_sa_len = sizeof(*saext) / 8;## 58 ##src/key/add.c##
+    saext->sadb_sa_exttype = SADB_EXT_SA;## 59 ##src/key/add.c##
+    saext->sadb_sa_spi = htonl(spi);## 60 ##src/key/add.c##
+    saext->sadb_sa_replay = 0;  /* no replay protection with static keys */## 61 ##src/key/add.c##
+    saext->sadb_sa_state = SADB_SASTATE_MATURE;## 62 ##src/key/add.c##
+    saext->sadb_sa_auth = alg;## 63 ##src/key/add.c##
+    saext->sadb_sa_encrypt = SADB_EALG_NONE;## 64 ##src/key/add.c##
+    saext->sadb_sa_flags = 0;## 65 ##src/key/add.c##
+    len += saext->sadb_sa_len * 8;## 66 ##src/key/add.c##
+    p += saext->sadb_sa_len * 8;## 67 ##src/key/add.c##
+
+    addrext = (struct sadb_address *) p;## 68 ##src/key/add.c##
+    addrext->sadb_address_len = (sizeof(*addrext) + salen(src) + 7) / 8;## 69 ##src/key/add.c##
+    addrext->sadb_address_exttype = SADB_EXT_ADDRESS_SRC;## 70 ##src/key/add.c##
+    addrext->sadb_address_proto = 0;    /* any protocol */## 71 ##src/key/add.c##
+    addrext->sadb_address_prefixlen = prefix_all(src);## 72 ##src/key/add.c##
+    addrext->sadb_address_reserved = 0;## 73 ##src/key/add.c##
+    memcpy(addrext + 1, src, salen(src));## 74 ##src/key/add.c##
+    len += addrext->sadb_address_len * 8;## 75 ##src/key/add.c##
+    p += addrext->sadb_address_len * 8;## 76 ##src/key/add.c##
+
+    addrext = (struct sadb_address *) p;## 77 ##src/key/add.c##
+    addrext->sadb_address_len = (sizeof(*addrext) + salen(dst) + 7) / 8;## 78 ##src/key/add.c##
+    addrext->sadb_address_exttype = SADB_EXT_ADDRESS_DST;## 79 ##src/key/add.c##
+    addrext->sadb_address_proto = 0;    /* any protocol */## 80 ##src/key/add.c##
+    addrext->sadb_address_prefixlen = prefix_all(dst);## 81 ##src/key/add.c##
+    addrext->sadb_address_reserved = 0;## 82 ##src/key/add.c##
+    memcpy(addrext + 1, dst, salen(dst));## 83 ##src/key/add.c##
+    len += addrext->sadb_address_len * 8;## 84 ##src/key/add.c##
+    p += addrext->sadb_address_len * 8;## 85 ##src/key/add.c##
+
+    keyext = (struct sadb_key *) p;## 86 ##src/key/add.c##
+    /* "+7" handles alignment requirements */## 87 ##src/key/add.c##
+    keyext->sadb_key_len = (sizeof(*keyext) + (keybits / 8) + 7) / 8;## 88 ##src/key/add.c##
+    keyext->sadb_key_exttype = SADB_EXT_KEY_AUTH;## 89 ##src/key/add.c##
+    keyext->sadb_key_bits = keybits;## 90 ##src/key/add.c##
+    keyext->sadb_key_reserved = 0;## 91 ##src/key/add.c##
+    memcpy(keyext + 1, keydata, keybits / 8);## 92 ##src/key/add.c##
+    len += keyext->sadb_key_len * 8;## 93 ##src/key/add.c##
+    p += keyext->sadb_key_len * 8;## 94 ##src/key/add.c##
+
+    msg->sadb_msg_len = len / 8;## 95 ##src/key/add.c##
+    printf("Sending add message:\n");## 96 ##src/key/add.c##
+    print_sadb_msg(buf, len);## 97 ##src/key/add.c##
+    Write(s, buf, len);## 98 ##src/key/add.c##
+
+    printf("\nReply returned:\n");## 99 ##src/key/add.c##
+    /* Read and print SADB_ADD reply, discarding any others */##100 ##src/key/add.c##
+    while (1) {##101 ##src/key/add.c##
+        int     msglen;##102 ##src/key/add.c##
+        struct sadb_msg *msgp;##103 ##src/key/add.c##
+
+        msglen = Read(s, &buf, sizeof(buf));##104 ##src/key/add.c##
+        msgp = (struct sadb_msg *) &buf;##105 ##src/key/add.c##
+        if (msgp->sadb_msg_pid == mypid && msgp->sadb_msg_type == SADB_ADD) {##106 ##src/key/add.c##
+            print_sadb_msg(msgp, msglen);##107 ##src/key/add.c##
+            break;##108 ##src/key/add.c##
+        }##109 ##src/key/add.c##
+    }##110 ##src/key/add.c##
+    close(s);##111 ##src/key/add.c##
+}##112 ##src/key/add.c##
+/* end sadb_add */
+
+int##113 ##src/key/add.c##
+main(int argc, char **argv)##114 ##src/key/add.c##
+{##115 ##src/key/add.c##
+    struct addrinfo hints, *src, *dst;##116 ##src/key/add.c##
+    unsigned char *p, *keydata, *kp;##117 ##src/key/add.c##
+    char   *ep;##118 ##src/key/add.c##
+    int     ret, len, i;##119 ##src/key/add.c##
+    int     satype, alg, keybits;##120 ##src/key/add.c##
+
+    bzero(&hints, sizeof(hints));##121 ##src/key/add.c##
+    if ((ret = getaddrinfo(argv[1], NULL, &hints, &src)) != 0) {##122 ##src/key/add.c##
+        err_quit("%s: %s\n", argv[1], gai_strerror(ret));##123 ##src/key/add.c##
+    }##124 ##src/key/add.c##
+    if ((ret = getaddrinfo(argv[2], NULL, &hints, &dst)) != 0) {##125 ##src/key/add.c##
+        err_quit("%s: %s\n", argv[2], gai_strerror(ret));##126 ##src/key/add.c##
+    }##127 ##src/key/add.c##
+    if (src->ai_family != dst->ai_family) {##128 ##src/key/add.c##
+        err_quit("%s and %s not same addr family\n", argv[1], argv[2]);##129 ##src/key/add.c##
+    }##130 ##src/key/add.c##
+    satype = SADB_SATYPE_AH;##131 ##src/key/add.c##
+    if ((alg = getsaalgbyname(satype, argv[3])) < 0) {##132 ##src/key/add.c##
+        err_quit("Unknown SA type / algorithm pair ah/%s\n", argv[3]);##133 ##src/key/add.c##
+    }##134 ##src/key/add.c##
+    keybits = strtoul(argv[4], &ep, 0);##135 ##src/key/add.c##
+    if (ep == argv[4] || *ep != '\0' || (keybits % 8) != 0) {##136 ##src/key/add.c##
+        err_quit("Invalid number of bits %s\n", argv[4]);##137 ##src/key/add.c##
+    }##138 ##src/key/add.c##
+    p = argv[5];##139 ##src/key/add.c##
+    if (p[0] == '0' && (p[1] == 'x' || p[1] == 'X'))##140 ##src/key/add.c##
+        p += 2;##141 ##src/key/add.c##
+    len = strlen(p);##142 ##src/key/add.c##
+    kp = keydata = malloc(keybits / 8);##143 ##src/key/add.c##
+    for (i = 0; i < keybits; i += 8) {##144 ##src/key/add.c##
+        int     c;##145 ##src/key/add.c##
+
+        if (len < 2) {##146 ##src/key/add.c##
+            err_quit("%s: not enough bytes (expected %d)\n", argv[5],##147 ##src/key/add.c##
+                     keybits / 8);##148 ##src/key/add.c##
+        }##149 ##src/key/add.c##
+        if (sscanf(p, "%2x", &c) != 1) {##150 ##src/key/add.c##
+            err_quit("%s contains invalid hex digit\n", argv[5]);##151 ##src/key/add.c##
+        }##152 ##src/key/add.c##
+        *kp++ = c;##153 ##src/key/add.c##
+        p += 2;##154 ##src/key/add.c##
+        len -= 2;##155 ##src/key/add.c##
+    }##156 ##src/key/add.c##
+    if (len > 0) {##157 ##src/key/add.c##
+        err_quit("%s: too many bytes (expected %d)\n", argv[5], keybits / 8);##158 ##src/key/add.c##
+    }##159 ##src/key/add.c##
+    sadb_add(src->ai_addr, dst->ai_addr, satype, alg, 0x9876, keybits,##160 ##src/key/add.c##
+             keydata);##161 ##src/key/add.c##
+}##162 ##src/key/add.c##

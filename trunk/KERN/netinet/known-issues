@@ -1,0 +1,6 @@
+1) While testing OOTB when I send a INIT from BSD and then
+   send OOTB data from the tester.. I get no ABORT().. this
+   may be ok. - Fixed patch 14 I think?
+
+2) Restart seems to leave the mapping array in a strange 
+   state knowing about previous chunks. - Fixed patch 12 I think?

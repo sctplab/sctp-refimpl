@@ -1,0 +1,6 @@
+# Control file needs
+# sizetos:blksize:snd_buf:recv_buf\n
+1450:1450:0:0
+2900:1450:0:0
+4350:1450:0:0
+5800:1450:0:0

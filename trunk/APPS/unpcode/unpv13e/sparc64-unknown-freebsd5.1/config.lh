@@ -1,0 +1,305 @@
+/* config.h.  Generated automatically by configure.  */##  1 ##src/sparc64-unknown-freebsd5.1/config.h##
+/* config.h.in.  Generated automatically from configure.in by autoheader.  */##  2 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* CPU, vendor, and operating system */##  3 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define CPU_VENDOR_OS "sparc64-unknown-freebsd5.1"##  4 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if <netdb.h> defines struct addrinfo */##  5 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_ADDRINFO_STRUCT 1##  6 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the <arpa/inet.h> header file. */##  7 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_ARPA_INET_H 1##  8 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the bzero function. */##  9 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_BZERO 1## 10 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if the /dev/streams/xtiso/tcp device exists */## 11 ##src/sparc64-unknown-freebsd5.1/config.h##
+/* #undef HAVE_DEV_STREAMS_XTISO_TCP */## 12 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if the /dev/tcp device exists */## 13 ##src/sparc64-unknown-freebsd5.1/config.h##
+/* #undef HAVE_DEV_TCP */## 14 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if the /dev/xti/tcp device exists */## 15 ##src/sparc64-unknown-freebsd5.1/config.h##
+/* #undef HAVE_DEV_XTI_TCP */## 16 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the <errno.h> header file. */## 17 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_ERRNO_H 1## 18 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the <fcntl.h> header file. */## 19 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_FCNTL_H 1## 20 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the getaddrinfo function. */## 21 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_GETADDRINFO 1## 22 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* define if getaddrinfo prototype is in <netdb.h> */## 23 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_GETADDRINFO_PROTO 1## 24 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the gethostbyname2 function. */## 25 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_GETHOSTBYNAME2 1## 26 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the gethostbyname_r function. */## 27 ##src/sparc64-unknown-freebsd5.1/config.h##
+/* #undef HAVE_GETHOSTBYNAME_R */## 28 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the gethostname function. */## 29 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_GETHOSTNAME 1## 30 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* define if gethostname prototype is in <unistd.h> */## 31 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_GETHOSTNAME_PROTO 1## 32 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the getnameinfo function. */## 33 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_GETNAMEINFO 1## 34 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* define if getnameinfo prototype is in <netdb.h> */## 35 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_GETNAMEINFO_PROTO 1## 36 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* define if getrusage prototype is in <sys/resource.h> */## 37 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_GETRUSAGE_PROTO 1## 38 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the hstrerror function. */## 39 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_HSTRERROR 1## 40 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* define if hstrerror prototype is in <netdb.h> */## 41 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_HSTRERROR_PROTO 1## 42 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if <net/if.h> defines struct if_nameindex */## 43 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_IF_NAMEINDEX_STRUCT 1## 44 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the if_nametoindex function. */## 45 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_IF_NAMETOINDEX 1## 46 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* define if if_nametoindex prototype is in <net/if.h> */## 47 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_IF_NAMETOINDEX_PROTO 1## 48 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the inet_aton function. */## 49 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_INET_ATON 1## 50 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* define if inet_aton prototype is in <arpa/inet.h> */## 51 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_INET_ATON_PROTO 1## 52 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the inet_pton function. */## 53 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_INET_PTON 1## 54 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* define if inet_pton prototype is in <arpa/inet.h> */## 55 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_INET_PTON_PROTO 1## 56 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the kevent function. */## 57 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_KEVENT 1## 58 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the kqueue function. */## 59 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_KQUEUE 1## 60 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the nsl library (-lnsl). */## 61 ##src/sparc64-unknown-freebsd5.1/config.h##
+/* #undef HAVE_LIBNSL */## 62 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the pthread library (-lpthread). */## 63 ##src/sparc64-unknown-freebsd5.1/config.h##
+/* #undef HAVE_LIBPTHREAD */## 64 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the pthreads library (-lpthreads). */## 65 ##src/sparc64-unknown-freebsd5.1/config.h##
+/* #undef HAVE_LIBPTHREADS */## 66 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the resolv library (-lresolv). */## 67 ##src/sparc64-unknown-freebsd5.1/config.h##
+/* #undef HAVE_LIBRESOLV */## 68 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the xti library (-lxti). */## 69 ##src/sparc64-unknown-freebsd5.1/config.h##
+/* #undef HAVE_LIBXTI */## 70 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the mkstemp function. */## 71 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_MKSTEMP 1## 72 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* define if struct msghdr contains the msg_control element */## 73 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_MSGHDR_MSG_CONTROL 1## 74 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the <netconfig.h> header file. */## 75 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_NETCONFIG_H 1## 76 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the <netdb.h> header file. */## 77 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_NETDB_H 1## 78 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the <netdir.h> header file. */## 79 ##src/sparc64-unknown-freebsd5.1/config.h##
+/* #undef HAVE_NETDIR_H */## 80 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the <netinet/in.h> header file. */## 81 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_NETINET_IN_H 1## 82 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the <net/if_dl.h> header file. */## 83 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_NET_IF_DL_H 1## 84 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the poll function. */## 85 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_POLL 1## 86 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the <poll.h> header file. */## 87 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_POLL_H 1## 88 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the pselect function. */## 89 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_PSELECT 1## 90 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* define if pselect prototype is in <sys/stat.h> */## 91 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_PSELECT_PROTO 1## 92 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the <pthread.h> header file. */## 93 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_PTHREAD_H 1## 94 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the <signal.h> header file. */## 95 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_SIGNAL_H 1## 96 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the snprintf function. */## 97 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_SNPRINTF 1## 98 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* define if snprintf prototype is in <stdio.h> */## 99 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_SNPRINTF_PROTO 1##100 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if <net/if_dl.h> defines struct sockaddr_dl */##101 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_SOCKADDR_DL_STRUCT 1##102 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* define if socket address structures have length fields */##103 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_SOCKADDR_SA_LEN 1##104 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the sockatmark function. */##105 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_SOCKATMARK 1##106 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* define if sockatmark prototype is in <sys/socket.h> */##107 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_SOCKATMARK_PROTO 1##108 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the <stdio.h> header file. */##109 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_STDIO_H 1##110 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the <stdlib.h> header file. */##111 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_STDLIB_H 1##112 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the <strings.h> header file. */##113 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_STRINGS_H 1##114 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the <string.h> header file. */##115 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_STRING_H 1##116 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the <stropts.h> header file. */##117 ##src/sparc64-unknown-freebsd5.1/config.h##
+/* #undef HAVE_STROPTS_H */##118 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if ifr_mtu is member of struct ifreq. */##119 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_STRUCT_IFREQ_IFR_MTU 1##120 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if the system has the type struct sockaddr_storage. */##121 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_STRUCT_SOCKADDR_STORAGE 1##122 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the <sys/event.h> header file. */##123 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_SYS_EVENT_H 1##124 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the <sys/filio.h> header file. */##125 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_SYS_FILIO_H 1##126 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the <sys/ioctl.h> header file. */##127 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_SYS_IOCTL_H 1##128 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the <sys/select.h> header file. */##129 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_SYS_SELECT_H 1##130 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the <sys/socket.h> header file. */##131 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_SYS_SOCKET_H 1##132 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the <sys/sockio.h> header file. */##133 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_SYS_SOCKIO_H 1##134 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the <sys/stat.h> header file. */##135 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_SYS_STAT_H 1##136 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the <sys/sysctl.h> header file. */##137 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_SYS_SYSCTL_H 1##138 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the <sys/time.h> header file. */##139 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_SYS_TIME_H 1##140 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the <sys/types.h> header file. */##141 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_SYS_TYPES_H 1##142 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the <sys/uio.h> header file. */##143 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_SYS_UIO_H 1##144 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the <sys/un.h> header file. */##145 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_SYS_UN_H 1##146 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the <sys/wait.h> header file. */##147 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_SYS_WAIT_H 1##148 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if <time.h> defines struct timespec */##149 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_TIMESPEC_STRUCT 1##150 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the <time.h> header file. */##151 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_TIME_H 1##152 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the <unistd.h> header file. */##153 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_UNISTD_H 1##154 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the vsnprintf function. */##155 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define HAVE_VSNPRINTF 1##156 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the <xti.h> header file. */##157 ##src/sparc64-unknown-freebsd5.1/config.h##
+/* #undef HAVE_XTI_H */##158 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the <xti_inet.h> header file. */##159 ##src/sparc64-unknown-freebsd5.1/config.h##
+/* #undef HAVE_XTI_INET_H */##160 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if the system supports IPv4 */##161 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define IPV4 1##162 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if the system supports IPv6 */##163 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define IPV6 1##164 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if the system supports IPv4 */##165 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define IPv4 1##166 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if the system supports IPv6 */##167 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define IPv6 1##168 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if the system supports IP Multicast */##169 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define MCAST 1##170 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* the size of the sa_family field in a socket address structure */##171 ##src/sparc64-unknown-freebsd5.1/config.h##
+/* #undef SA_FAMILY_T */##172 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you have the ANSI C header files. */##173 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define STDC_HEADERS 1##174 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if you can safely include both <sys/time.h> and <time.h>. */##175 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define TIME_WITH_SYS_TIME 1##176 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if the system supports UNIX domain sockets */##177 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define UNIXDOMAIN 1##178 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* Define if the system supports UNIX domain sockets */##179 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define UNIXdomain 1##180 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* 16 bit signed type */##181 ##src/sparc64-unknown-freebsd5.1/config.h##
+/* #undef int16_t */##182 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* 32 bit signed type */##183 ##src/sparc64-unknown-freebsd5.1/config.h##
+/* #undef int32_t */##184 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* the type of the sa_family struct element */##185 ##src/sparc64-unknown-freebsd5.1/config.h##
+/* #undef sa_family_t */##186 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* unsigned integer type of the result of the sizeof operator */##187 ##src/sparc64-unknown-freebsd5.1/config.h##
+/* #undef size_t */##188 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* a type appropriate for address */##189 ##src/sparc64-unknown-freebsd5.1/config.h##
+/* #undef socklen_t */##190 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* define to __ss_family if sockaddr_storage has that instead of ss_family */##191 ##src/sparc64-unknown-freebsd5.1/config.h##
+/* #undef ss_family */##192 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* a signed type appropriate for a count of bytes or an error indication */##193 ##src/sparc64-unknown-freebsd5.1/config.h##
+/* #undef ssize_t */##194 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* scalar type */##195 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define t_scalar_t int32_t##196 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* unsigned scalar type */##197 ##src/sparc64-unknown-freebsd5.1/config.h##
+#define t_uscalar_t uint32_t##198 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* 16 bit unsigned type */##199 ##src/sparc64-unknown-freebsd5.1/config.h##
+/* #undef uint16_t */##200 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* 32 bit unsigned type */##201 ##src/sparc64-unknown-freebsd5.1/config.h##
+/* #undef uint32_t */##202 ##src/sparc64-unknown-freebsd5.1/config.h##
+
+/* 8-bit unsigned type */##203 ##src/sparc64-unknown-freebsd5.1/config.h##
+/* #undef uint8_t */##204 ##src/sparc64-unknown-freebsd5.1/config.h##

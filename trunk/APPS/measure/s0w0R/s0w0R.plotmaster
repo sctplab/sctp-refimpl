@@ -1,0 +1,104 @@
+set nomultiplot
+set output 's0w0R.10000.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'Error Rate in %'
+set ylabel 'Time of Transfer'
+load 's0w0R.plot_rbscp.10000'
+reset
+set nomultiplot
+set output 's0w0R.20000.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'Error Rate in %'
+set ylabel 'Time of Transfer'
+load 's0w0R.plot_rbscp.20000'
+reset
+set nomultiplot
+set output 's0w0R.30000.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'Error Rate in %'
+set ylabel 'Time of Transfer'
+load 's0w0R.plot_rbscp.30000'
+reset
+set nomultiplot
+set output 's0w0R.40000.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'Error Rate in %'
+set ylabel 'Time of Transfer'
+load 's0w0R.plot_rbscp.40000'
+reset
+set nomultiplot
+set output 's0w0R.50000.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'Error Rate in %'
+set ylabel 'Time of Transfer'
+load 's0w0R.plot_rbscp.50000'
+reset
+set nomultiplot
+set output 's0w0R.100000.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'Error Rate in %'
+set ylabel 'Time of Transfer'
+load 's0w0R.plot_rbscp.100000'
+reset
+set nomultiplot
+set output 's0w0R.150000.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'Error Rate in %'
+set ylabel 'Time of Transfer'
+load 's0w0R.plot_rbscp.150000'
+reset
+set nomultiplot
+set output 's0w0R.200000.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'Error Rate in %'
+set ylabel 'Time of Transfer'
+load 's0w0R.plot_rbscp.200000'
+reset
+set nomultiplot
+set output 's0w0R.300000.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'Error Rate in %'
+set ylabel 'Time of Transfer'
+load 's0w0R.plot_rbscp.300000'
+reset
+set nomultiplot
+set output 's0w0R.400000.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'Error Rate in %'
+set ylabel 'Time of Transfer'
+load 's0w0R.plot_rbscp.400000'
+reset
+set nomultiplot
+set output 's0w0R.500000.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'Error Rate in %'
+set ylabel 'Time of Transfer'
+load 's0w0R.plot_rbscp.500000'
+reset
+set nomultiplot
+set output 's0w0R.1000000.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'Error Rate in %'
+set ylabel 'Time of Transfer'
+load 's0w0R.plot_rbscp.1000000'
+reset
+set nomultiplot
+set output 's0w0R.10000000.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'Error Rate in %'
+set ylabel 'Time of Transfer'
+load 's0w0R.plot_rbscp.10000000'
+reset
