@@ -770,7 +770,7 @@
 #define SCTP_CWR_PERFO		86
 #define SCTP_ECNE_SENT		87
 #define SCTP_MSGC_DROP		88
-#define SCTP_RESV1		89
+#define SCTP_ASCONF_KERN_CHG	89
 #define SCTP_RESV2		90
 #define SCTP_RESV3		91
 
