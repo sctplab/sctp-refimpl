@@ -1058,7 +1058,7 @@ sctp_disconnect(struct socket *so)
 				 * so set SHUTDOWN_PENDING
 				 */
 				/*
-				 * XXX sockets draft says that MSG_EOF should
+				 * XXX sockets draft says that SCTP_EOF should
 				 * be sent with no data.
 				 * currently, we will allow user data to be
 				 * sent first and move to SHUTDOWN-PENDING
@@ -3144,10 +3144,6 @@ sctp_optsset(struct socket *so,
 			error = EINVAL;
 			break;
 		}
-		/* Mask off the flags that are allowed */
-		s_info->sinfo_flags = (s_info->sinfo_flags &
-				       (MSG_UNORDERED | MSG_ADDR_OVER |
-					MSG_PR_SCTP_TTL | MSG_PR_SCTP_BUF));
 		/* Copy it in */
 		stcb->asoc.def_send = *s_info;
 		SCTP_TCB_UNLOCK(stcb);

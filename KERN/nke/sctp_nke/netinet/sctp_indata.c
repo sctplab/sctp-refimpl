@@ -216,7 +216,7 @@ sctp_build_ctl_nchunk(struct sctp_tcb *stcb, uint32_t tsn, uint32_t ppid,
 	outinfo->sinfo_stream = stream_no;
 	outinfo->sinfo_ssn = stream_seq;
 	if (flags & SCTP_DATA_UNORDERED) {
-		outinfo->sinfo_flags = MSG_UNORDERED;
+		outinfo->sinfo_flags = SCTP_UNORDERED;
 	} else {
 		outinfo->sinfo_flags = 0;
 	}
@@ -267,7 +267,7 @@ sctp_build_ctl(struct sctp_tcb *stcb, struct sctp_tmit_chunk *chk)
 	outinfo->sinfo_stream = chk->rec.data.stream_number;
 	outinfo->sinfo_ssn = chk->rec.data.stream_seq;
 	if (chk->rec.data.rcv_flags & SCTP_DATA_UNORDERED) {
-		outinfo->sinfo_flags = MSG_UNORDERED;
+		outinfo->sinfo_flags = SCTP_UNORDERED;
 	} else {
 		outinfo->sinfo_flags = 0;
 	}
@@ -3010,9 +3010,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			/* done */
 			break;
 		}
-		if ((tp1->flags & (SCTP_PR_SCTP_ENABLED|SCTP_PR_SCTP_BUFFER)) ==
-		    SCTP_PR_SCTP_ENABLED &&
-		    tp1->sent < SCTP_DATAGRAM_ACKED) {
+		if ((PR_SCTP_TTL_ENABLED(tp1->flags)) && tp1->sent < SCTP_DATAGRAM_ACKED) {
 			/* Is it expired? */
 #ifndef __FreeBSD__
 			if (timercmp(&now, &tp1->rec.data.timetodrop, >))
@@ -3256,7 +3254,7 @@ sctp_try_advance_peer_ack_point(struct sctp_tcb *stcb,
 			/* no chance to advance, out of here */
 			break;
 		}
-		if ((tp1->flags & SCTP_PR_SCTP_ENABLED) == 0) {
+		if (PR_SCTP_TTL_ENABLED(tp1->flags)) {
 			/*
 			 * We can't fwd-tsn past any that are reliable
 			 * aka retransmitted until the asoc fails.
@@ -3276,7 +3274,7 @@ sctp_try_advance_peer_ack_point(struct sctp_tcb *stcb,
 		 * resend?
 		 */
 		if (tp1->sent == SCTP_DATAGRAM_RESEND &&
-		    (tp1->flags & SCTP_PR_SCTP_BUFFER) == 0) {
+		    (PR_SCTP_BUF_ENABLED(tp1->flags)) == 0) {
 			/*
 			 * Now is this one marked for resend and its time
 			 * is now up?
@@ -3901,7 +3899,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 #endif
 
 			sctp_m_freem(tp1->data);
-			if (tp1->flags & SCTP_PR_SCTP_BUFFER) {
+			if (PR_SCTP_BUF_ENABLED(tp1->flags)) {
 				asoc->sent_queue_cnt_removeable--;
 			}
 

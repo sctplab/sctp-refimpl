@@ -474,7 +474,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 			if (chk->data) {
 				sctp_release_pr_sctp_chunk(stcb, chk, 0xffff,
 				    &stcb->asoc.sent_queue);
-				if (chk->flags & SCTP_PR_SCTP_BUFFER) {
+				if (PR_SCTP_BUF_ENABLED(chk->flags)) {
 					stcb->asoc.sent_queue_cnt_removeable--;
 				}
 			}
@@ -533,7 +533,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 			if (stcb->asoc.total_flight_count < 0) {
 				stcb->asoc.total_flight_count = 0;
 			}
-			if ((chk->flags & (SCTP_PR_SCTP_ENABLED|SCTP_PR_SCTP_BUFFER)) == SCTP_PR_SCTP_ENABLED) {
+			if (PR_SCTP_TTL_ENABLED(chk->flags)) {
 				/* Is it expired? */
 				if ((now.tv_sec > chk->rec.data.timetodrop.tv_sec) ||
 				    ((chk->rec.data.timetodrop.tv_sec == now.tv_sec) &&

@@ -89,16 +89,27 @@ struct sctp_snd_all_completes {
 };
 
 /* send/recv flags */
-/* MSG_EOF (0x0100) is reused from sys/socket.h */
-#define MSG_SENDALL     0x0200
-#define MSG_PR_SCTP_TTL	0x0400	/* Partial Reliable on this msg */
-#define MSG_PR_SCTP_BUF	0x0800	/* Buffer based PR-SCTP */
 #ifndef MSG_EOF
 #define MSG_EOF 	0x1000	/* Start shutdown procedures */
 #endif
-#define MSG_UNORDERED 	0x2000	/* Message is un-ordered */
-#define MSG_ADDR_OVER	0x4000	/* Override the primary-address */
-#define MSG_ABORT	0x8000	/* Send an ABORT to peer */
+
+/* Flags that go into the sinfo->sinfo_flags field */
+#define SCTP_EOF 	  0x0100	/* Start shutdown procedures */
+#define SCTP_ABORT	  0x0200	/* Send an ABORT to peer */
+#define SCTP_UNORDERED 	  0x0400	/* Message is un-ordered */
+#define SCTP_ADDR_OVER	  0x0800	/* Override the primary-address */
+#define SCTP_SENDALL      0x1000        /* Send this on all associations */
+                                        /* for the endpoint */
+
+/* The lower byte is an enumeration of PR-SCTP policies */
+#define SCTP_PR_SCTP_TTL  0x0001	/* Time based PR-SCTP */
+#define SCTP_PR_SCTP_BUF  0x0002	/* Buffer based PR-SCTP */
+#define SCTP_PR_SCTP_NTX  0x0003	/* Number of transmissions based PR-SCTP */
+
+#define PR_SCTP_ENABLED(x)     (((x) & 0xff) != 0)
+#define PR_SCTP_TTL_ENABLED(x) (((x) & 0xff) == SCTP_PR_SCTP_TTL)
+#define PR_SCTP_BUF_ENABLED(x) (((x) & 0xff) == SCTP_PR_SCTP_BUF)
+#define PR_SCTP_NTX_ENABLED(x) (((x) & 0xff) == SCTP_PR_SCTP_NTX)
 
 /* Stat's */
 struct sctp_pcbinfo {
