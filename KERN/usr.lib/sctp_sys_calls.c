@@ -1,4 +1,4 @@
-/*	$KAME: sctp_sys_calls.c,v 1.7 2003/11/25 06:54:38 ono Exp $ */
+/*	$KAME: sctp_sys_calls.c,v 1.9 2004/08/17 06:08:53 itojun Exp $ */
 
 /*
  * Copyright (C) 2002, 2003, 2004 Cisco Systems Inc,
