@@ -581,6 +581,29 @@ sctp_sendx(int sd, const void *msg, size_t len,
 }
 
 ssize_t
+sctp_sendmsgx(int sd, 
+	      const void *msg, 
+	      size_t len,
+	      struct sockaddr *addrs,
+	      int addrcnt,
+	      u_int32_t ppid,
+	      u_int32_t flags,
+	      u_int16_t stream_no,
+	      u_int32_t timetolive,
+	      u_int32_t context)
+{
+	struct sctp_sndrcvinfo sinfo;
+    
+	memset((void *) &sinfo, 0, sizeof(struct sctp_sndrcvinfo));
+	sinfo.sinfo_ppid       = ppid;
+	sinfo.sinfo_flags      = flags;
+	sinfo.sinfo_ssn        = stream_no;
+	sinfo.sinfo_timetolive = timetolive;
+	sinfo.sinfo_context    = context;
+	return sctp_sendx(sd, msg, len, addrs, addrcnt, &sinfo, 0);
+}
+
+ssize_t
 sctp_recvmsg (int s, 
 	      void *dbuf, 
 	      size_t len,
