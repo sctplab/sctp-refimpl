@@ -1839,7 +1839,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 		int not_done=1;
 
 		while (not_done) {
-			port_guess = sctp_select_initial_TSN(inp);
+			port_guess = sctp_select_initial_TSN(&inp->sctp_ep);
 			port_attempt = (port_guess &  0x0000ffff);
 			if(port_attempt == 0) {
 				goto next_half;
@@ -2080,7 +2080,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 #else
 	s = splnet();
 #endif
-	SCTP_ASOC_CREATE_LOCK(inp;)
+	SCTP_ASOC_CREATE_LOCK(inp);
 	SCTP_INP_WLOCK(inp);
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
 		/* been here before */

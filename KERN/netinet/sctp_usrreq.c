@@ -3379,7 +3379,7 @@ sctp_optsset(struct socket *so,
 			/* add the address */
 			struct sctp_inpcb  *lep;
 			((struct sockaddr_in *)addr_touse)->sin_port = inp->sctp_lport;
-			lep = sctp_pcb_findep(addr_touse, 1);
+			lep = sctp_pcb_findep(addr_touse, 1, 0);
 			if (lep == inp) {
 				/* already bound to it.. ok */
 				break;
