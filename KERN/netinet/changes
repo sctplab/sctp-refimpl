@@ -9,3 +9,5 @@ Patch 24 change log
 4) Added missing port 0 check for IPv6
 5) Fixed packet-drop processing decrease routine. The
    fs/cwnd subtraction were done the wrong way.
+6) The initial RTO would not backoff, doubling. This
+   was due to not initializing it to rto.initial.
