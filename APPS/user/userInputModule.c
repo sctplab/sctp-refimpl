@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.7 2004-10-14 11:41:55 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.8 2004-10-29 14:25:43 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -3140,9 +3140,13 @@ cmd_getpegs(char *argv[], int argc)
 	"cwr_perf", /* 86 */
 	"ecne_snt", /* 87 */
 	"chun_drp", /* 88 */
-	"resv_1  ",
-	"resv_2  ",
-	"resv_3  "
+        "nollsndq", /* 89 */
+	"ll_c_err", /* 90 */
+	"nollcwnd", /* 91 */
+	"nollbrst", /* 92 */
+	"no_ifqsp", /* 93 */
+ 	"resv_2  ", /* 94 */
+ 	"resv_3  "  /* 95 */
     };
     printf("there are %d pegs\n",
 	   SCTP_NUMBER_OF_PEGS);
