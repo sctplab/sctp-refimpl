@@ -1,4 +1,4 @@
-/*	$KAME: sctp_usrreq.c,v 1.38 2004/02/24 21:52:27 itojun Exp $	*/
+/*	$KAME: sctp_usrreq.c,v 1.42 2004/08/17 06:28:02 t-momose Exp $	*/
 
 /*
  * Copyright (c) 2001, 2002, 2003, 2004 Cisco Systems, Inc.
@@ -1113,13 +1113,13 @@ sctp_fill_up_addresses(struct sctp_inpcb *inp,
 	}
 
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
-		TAILQ_FOREACH(ifn, &ifnet, if_link) {
+		TAILQ_FOREACH(ifn, &ifnet, if_list) {
 			if ((loopback_scope == 0) &&
 			    (ifn->if_type == IFT_LOOP)) {
 				/* Skip loopback if loopback_scope not set */
 				continue;
 			}
-			TAILQ_FOREACH(ifa, &ifn->if_addrhead, ifa_link) {
+			TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
 				if (stcb) {
 				/*
 				 * For the BOUND-ALL case, the list
@@ -1276,8 +1276,8 @@ sctp_count_max_addresses(struct sctp_inpcb *inp)
 		struct ifnet *ifn;
 		struct ifaddr *ifa;
 
-		TAILQ_FOREACH(ifn, &ifnet, if_link) {
-			TAILQ_FOREACH(ifa, &ifn->if_addrhead, ifa_link) {
+		TAILQ_FOREACH(ifn, &ifnet, if_list) {
+			TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
 				/* Count them if they are the right type */
 				if (ifa->ifa_addr->sa_family == AF_INET) {
 					if (inp->sctp_flags & SCTP_I_WANT_MAPPED_V4_ADDR) 
@@ -1565,7 +1565,7 @@ sctp_optsget(struct socket *so,
 	case SCTP_GET_NONCE_VALUES:
 	{
 		struct sctp_get_nonce_values *gnv;
-		if(m->m_len < sizeof(struct sctp_get_nonce_values)) {
+		if (m->m_len < sizeof(struct sctp_get_nonce_values)) {
 			error = EINVAL;
 			break;
 		}
@@ -1988,7 +1988,7 @@ sctp_optsget(struct socket *so,
 				stcb = LIST_FIRST(&inp->sctp_asoc_list);
 				if (stcb)
 					net = sctp_findnet(stcb, (struct sockaddr *)&paddrp->spp_address);
-			}else
+			} else
 #endif /* SCTP_TCP_MODEL_SUPPORT */
 				stcb = sctp_findassociation_ep_asocid(inp, paddrp->spp_assoc_id);
 			if (stcb == NULL) {
@@ -2010,7 +2010,7 @@ sctp_optsget(struct socket *so,
 				stcb = LIST_FIRST(&inp->sctp_asoc_list);
 				if (stcb)
 					net = sctp_findnet(stcb, (struct sockaddr *)&paddrp->spp_address);
-			}else
+			} else
 #endif /* SCTP_TCP_MODEL_SUPPORT */
 				stcb = sctp_findassociation_ep_addr(&inp,
 				    (struct sockaddr *)&paddrp->spp_address,
@@ -3426,7 +3426,7 @@ sctp_usr_recvd(struct socket *so, int flags)
 			printf("Something off, inp:%x so->so_rcv->sb_mb is empty and sockq is not.. cleaning\n",
 			       (u_int)inp);
 #endif
-		while(TAILQ_EMPTY(&inp->sctp_queue_list) == 0) {
+		while (TAILQ_EMPTY(&inp->sctp_queue_list) == 0) {
 			sq_cnt++;
 			(void)sctp_remove_from_socket_q(inp);
 		}
@@ -3875,7 +3875,7 @@ sctp_usrreq(so, req, m, nam, control)
 		struct ifnet *ifn;
 		struct ifaddr *ifa;
 		ifn = (struct ifnet *)control;
-		TAILQ_FOREACH(ifa, &ifn->if_addrhead, ifa_link) {
+		TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
 			if (ifa->ifa_addr->sa_family == family) {
 				sctp_delete_ip_address(ifa);
 			}

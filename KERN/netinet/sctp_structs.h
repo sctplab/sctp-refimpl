@@ -1,4 +1,4 @@
-/*	$KAME: sctp_structs.h,v 1.11 2004/02/24 21:52:27 itojun Exp $	*/
+/*	$KAME: sctp_structs.h,v 1.12 2004/08/17 04:06:19 itojun Exp $	*/
 
 #ifndef __sctp_structs_h__
 #define __sctp_structs_h__

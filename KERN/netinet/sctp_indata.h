@@ -1,4 +1,4 @@
-/*	$KAME: sctp_indata.h,v 1.7 2004/02/24 21:52:26 itojun Exp $	*/
+/*	$KAME: sctp_indata.h,v 1.8 2004/08/17 04:06:17 itojun Exp $	*/
 
 #ifndef __sctp_indata_h__
 #define __sctp_indata_h__

@@ -1,4 +1,4 @@
-/*	$KAME: sctp_crc32.h,v 1.4 2003/11/25 06:40:52 ono Exp $	*/
+/*	$KAME: sctp_crc32.h,v 1.5 2004/08/17 04:06:16 itojun Exp $	*/
 
 #ifndef __crc32c_h__
 #define __crc32c_h__

@@ -1,4 +1,4 @@
-/*	$KAME: sctp_timer.c,v 1.26 2004/02/24 21:52:27 itojun Exp $	*/
+/*	$KAME: sctp_timer.c,v 1.28 2004/08/17 04:06:20 itojun Exp $	*/
 
 /*
  * Copyright (C) 2002, 2003, 2004 Cisco Systems Inc,
@@ -641,7 +641,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 		    (chk->rec.chunk_id == SCTP_ECN_ECHO)) {
 			sctp_free_remote_addr(chk->whoTo);
 			chk->whoTo = alt;
-			if(chk->sent != SCTP_DATAGRAM_RESEND) {
+			if (chk->sent != SCTP_DATAGRAM_RESEND) {
 				chk->sent = SCTP_DATAGRAM_RESEND;
 				stcb->asoc.sent_queue_retran_cnt++;
 			}
@@ -1022,7 +1022,7 @@ void sctp_strreset_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		if ((chk->whoTo == net) &&
 		    (chk->rec.chunk_id == SCTP_ECN_ECHO)) {
 			sctp_free_remote_addr(chk->whoTo);
-			if(chk->sent != SCTP_DATAGRAM_RESEND) {
+			if (chk->sent != SCTP_DATAGRAM_RESEND) {
 				chk->sent = SCTP_DATAGRAM_RESEND;
 				stcb->asoc.sent_queue_retran_cnt++;
 			}
@@ -1117,7 +1117,7 @@ void sctp_asconf_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			    (chk->rec.chunk_id == SCTP_ECN_ECHO)) {
 				sctp_free_remote_addr(chk->whoTo);
 				chk->whoTo = alt;
-				if(chk->sent != SCTP_DATAGRAM_RESEND) {
+				if (chk->sent != SCTP_DATAGRAM_RESEND) {
 					chk->sent = SCTP_DATAGRAM_RESEND;
 					stcb->asoc.sent_queue_retran_cnt++;
 				}

@@ -1,4 +1,4 @@
-/*	$KAME: sctp_pcb.c,v 1.33 2004/02/24 21:52:27 itojun Exp $	*/
+/*	$KAME: sctp_pcb.c,v 1.37 2004/08/17 06:28:02 t-momose Exp $	*/
 
 /*
  * Copyright (c) 2001, 2002, 2003, 2004 Cisco Systems, Inc.
@@ -1397,7 +1397,7 @@ sctp_inpcb_alloc(struct socket *so)
 		ranm = ranp + SCTP_SIGNATURE_ALOC_SIZE;
 		if ((u_long)ranp % 4) {
 			/* not a even boundary? */
-			ranp = (u_int32_t *)SCTP_SIZE32(ranp);
+			ranp = (u_int32_t *)SCTP_SIZE32((u_long)ranp);
 		}
 		while (ranp < ranm) {
 			*ranp = random();
@@ -2218,8 +2218,8 @@ sctp_is_address_on_local_host(struct sockaddr *addr)
 {
 	struct ifnet *ifn;
 	struct ifaddr *ifa;
-	TAILQ_FOREACH(ifn, &ifnet, if_link) {
-		TAILQ_FOREACH(ifa, &ifn->if_addrhead, ifa_link) {
+	TAILQ_FOREACH(ifn, &ifnet, if_list) {
+		TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
 			if (addr->sa_family == ifa->ifa_addr->sa_family) {
 				/* same family */
 				if (addr->sa_family == AF_INET) {
@@ -3996,7 +3996,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 		} else if (ptype == SCTP_ECN_CAPABLE) {
 			stcb->asoc.ecn_allowed = 1;
 		} else if (ptype == SCTP_ULP_ADAPTION) {
-			if(stcb->asoc.state != SCTP_STATE_OPEN) {
+			if (stcb->asoc.state != SCTP_STATE_OPEN) {
 				struct sctp_adaption_layer_indication ai, *aip;
 
 				phdr = sctp_get_next_param(m, offset,
@@ -4493,7 +4493,7 @@ sctp_remove_from_socket_q(struct sctp_inpcb *inp)
 	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_sockq, sq);
 	sctppcbinfo.ipi_count_sockq--;
 	sctppcbinfo.ipi_gencnt_sockq++;
-	if( stcb) {
+	if (stcb) {
 		stcb->asoc.cnt_msg_on_sb--;
 	}
 	return (stcb);

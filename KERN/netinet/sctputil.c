@@ -1,4 +1,4 @@
-/*	$KAME: sctputil.c,v 1.28 2004/02/24 21:52:27 itojun Exp $	*/
+/*	$KAME: sctputil.c,v 1.32 2004/08/17 06:28:02 t-momose Exp $	*/
 
 /*
  * Copyright (c) 2001, 2002, 2003, 2004 Cisco Systems, Inc.
@@ -966,7 +966,6 @@ sctp_timeout_handler(void *t)
 		sctp_chunk_output(inp, stcb, 5);
 		break;
 	case SCTP_TIMER_TYPE_HEARTBEAT:
-		sctp_pegs[SCTP_HB_TIMER]++;
 		sctp_heartbeat_timer(inp, stcb, net);
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
@@ -2491,7 +2490,7 @@ sctp_ulp_notify(u_int32_t notification, struct sctp_tcb *stcb,
 		/* No notifications up when we are in a no socket state */
 		return;
 	}
-	if(stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
+	if (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
 		/* Can't send up to a closed socket any notifications */
 		return;
 	}
@@ -3021,13 +3020,13 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 	for (n = m; n; n = n->m_next)
 		sballoc(sb, n);
 	if ((n = sb->sb_mb) != NULL) {
-		if((n->m_nextpkt != inp->sb_last_mpkt) && (n->m_nextpkt == NULL)) {
+		if ((n->m_nextpkt != inp->sb_last_mpkt) && (n->m_nextpkt == NULL)) {
 			inp->sb_last_mpkt = NULL;
 		}
-		if(inp->sb_last_mpkt) 
+		if (inp->sb_last_mpkt) 
 			inp->sb_last_mpkt->m_nextpkt = m;
  		else {
-			while(n->m_nextpkt) {
+			while (n->m_nextpkt) {
 				n = n->m_nextpkt;
 			}
 			n->m_nextpkt = m;
@@ -3092,13 +3091,13 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 		sballoc(sb, n);
 	n = sb->sb_mb;
 	if (n) {
-		if((n->m_nextpkt != inp->sb_last_mpkt) && (n->m_nextpkt == NULL)) {
+		if ((n->m_nextpkt != inp->sb_last_mpkt) && (n->m_nextpkt == NULL)) {
 			inp->sb_last_mpkt = NULL;
 		}
-		if(inp->sb_last_mpkt) 
+		if (inp->sb_last_mpkt) 
 			inp->sb_last_mpkt->m_nextpkt = m;
  		else {
-			while(n->m_nextpkt) {
+			while (n->m_nextpkt) {
 				n = n->m_nextpkt;
 			}
 			n->m_nextpkt = m;
@@ -3139,13 +3138,13 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 	for (n = m; n; n = n->m_next)
 		sballoc(sb, n);
 	if ((n = sb->sb_mb) != NULL) {
-		if((n->m_nextpkt != inp->sb_last_mpkt) && (n->m_nextpkt == NULL)) {
+		if ((n->m_nextpkt != inp->sb_last_mpkt) && (n->m_nextpkt == NULL)) {
 			inp->sb_last_mpkt = NULL;
 		}
-		if(inp->sb_last_mpkt) 
+		if (inp->sb_last_mpkt) 
 			inp->sb_last_mpkt->m_nextpkt = m;
  		else {
-			while(n->m_nextpkt) {
+			while (n->m_nextpkt) {
 				n = n->m_nextpkt;
 			}
 			n->m_nextpkt = m;
@@ -3470,9 +3469,9 @@ sctp_find_ifa_by_addr(struct sockaddr *sa)
 	struct ifaddr *ifa;
 
 	/* go through all our known interfaces */
-	TAILQ_FOREACH(ifn, &ifnet, if_link) {
+	TAILQ_FOREACH(ifn, &ifnet, if_list) {
 		/* go through each interface addresses */
-		TAILQ_FOREACH(ifa, &ifn->if_addrhead, ifa_link) {
+		TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
 			/* correct family? */
 			if (ifa->ifa_addr->sa_family != sa->sa_family)
 				continue;

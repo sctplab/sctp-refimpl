@@ -1,4 +1,4 @@
-/*	$KAME: sctp_constants.h,v 1.14 2004/02/24 21:52:26 itojun Exp $	*/
+/*	$KAME: sctp_constants.h,v 1.16 2004/08/17 04:06:16 itojun Exp $	*/
 
 #ifndef __sctp_constants_h__
 #define __sctp_constants_h__

@@ -1,4 +1,4 @@
-/*	$KAME: sctp_sha1.h,v 1.4 2002/10/09 18:01:22 itojun Exp $	*/
+/*	$KAME: sctp_sha1.h,v 1.5 2004/08/17 04:06:19 itojun Exp $	*/
 
 #ifndef __SCTP_SLA1_h__
 #define __SCTP_SLA1_h__

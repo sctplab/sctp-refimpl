@@ -1,4 +1,4 @@
-/*	$KAME: sctp_peeloff.c,v 1.10 2003/11/25 06:40:53 ono Exp $	*/
+/*	$KAME: sctp_peeloff.c,v 1.12 2004/08/17 04:06:19 itojun Exp $	*/
 
 /*
  * Copyright (C) 2002, 2003 Cisco Systems Inc,

@@ -1,4 +1,4 @@
-/*	$KAME: sctp_asconf.h,v 1.6 2003/11/25 06:40:52 ono Exp $	*/
+/*	$KAME: sctp_asconf.h,v 1.7 2004/08/17 04:06:16 itojun Exp $	*/
 
 #ifndef _NETINET_SCTP_ASCONF_H_
 #define _NETINET_SCTP_ASCONF_H_

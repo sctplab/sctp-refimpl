@@ -1,4 +1,4 @@
-/*	$KAME: sctp_uio.h,v 1.9 2003/11/25 06:40:54 ono Exp $	*/
+/*	$KAME: sctp_uio.h,v 1.10 2004/08/17 04:06:20 itojun Exp $	*/
 
 #ifndef __sctp_uio_h__
 #define __sctp_uio_h__

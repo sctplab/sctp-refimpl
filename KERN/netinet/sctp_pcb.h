@@ -1,4 +1,4 @@
-/*	$KAME: sctp_pcb.h,v 1.15 2004/02/24 21:52:27 itojun Exp $	*/
+/*	$KAME: sctp_pcb.h,v 1.19 2004/08/17 06:28:02 t-momose Exp $	*/
 
 #ifndef __sctp_pcb_h__
 #define __sctp_pcb_h__
@@ -43,7 +43,9 @@
 #include <net/pfil.h>
 #endif
 #include <net/if.h>
+#ifdef __FreeBSD__
 #include <net/if_var.h>
+#endif
 #include <netinet/ip6.h>
 #include <netinet6/ip6_var.h>
 #include <netinet6/ip6protosw.h>

@@ -1,4 +1,4 @@
-/*	$KAME: sctp_header.h,v 1.12 2004/02/24 21:52:26 itojun Exp $	*/
+/*	$KAME: sctp_header.h,v 1.13 2004/08/17 04:06:16 itojun Exp $	*/
 
 #ifndef __sctp_header_h__
 #define __sctp_header_h__

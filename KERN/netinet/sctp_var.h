@@ -1,4 +1,4 @@
-/*	$KAME: sctp_var.h,v 1.19 2004/02/24 21:52:27 itojun Exp $	*/
+/*	$KAME: sctp_var.h,v 1.21 2004/08/17 04:06:21 itojun Exp $	*/
 
 /*
  * Copyright (c) 2001, 2002, 2003, 2004 Cisco Systems, Inc.
