@@ -474,19 +474,23 @@ sctp_sendx(int sd, const void *msg, size_t len,
 {
 	int i,ret,cnt,*aa, saved_errno;
 	char *buf;
+	int add_len;
 	struct sockaddr *at;
 	len = sizeof(int);
 	at = addrs;
 	cnt = 0;
 	/* validate all the addresses and get the size */
 	for (i=0; i < addrcnt; i++) {
-		if ((at->sa_family != AF_INET) &&
-		   (at->sa_family != AF_INET6)) {
+		if (at->sa_family == AF_INET) {
+			add_len = sizeof(struct sockaddr_in);
+		} else if (at->sa_family == AF_INET6) {
+			add_len = sizeof(struct sockaddr_in6);
+		} else {
 			errno = EINVAL;
 			return (-1);
 		}
-		len += at->sa_len;
-		at = (struct sockaddr *)((caddr_t)at + at->sa_len);
+		len += add_len;
+		at = (struct sockaddr *)((caddr_t)at + add_len);
 		cnt++;
 	}
 	/* do we have any? */
