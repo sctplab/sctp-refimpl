@@ -3890,7 +3890,7 @@ sctp_usr_recvd(struct socket *so, int flags)
 		 * We must update the next vtag pending on the
 		 * socket buffer (if any).
 		 */
-		inp->sctp_vtag_last = sctp_get_last_vtag_from_sb(so);
+		inp->sctp_vtag_first = sctp_get_first_vtag_from_sb(so);
 		sq = TAILQ_FIRST(&inp->sctp_queue_list);
 		if (sq) {
 			stcb = sq->tcb;

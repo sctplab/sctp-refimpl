@@ -3309,7 +3309,7 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 		inp->sb_last_mpkt = m;
 	} else {
 		inp->sb_last_mpkt = sb->sb_mb = m;
-		inp->sctp_vtag_last = tag;
+		inp->sctp_vtag_first = tag;
 	}
 	return (1);
 #endif
@@ -3364,12 +3364,12 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 		sballoc(sb, n);
 	nlast = n;
 	if (sb->sb_mb == NULL) {
-		inp->sctp_vtag_last = tag;
+		inp->sctp_vtag_first = tag;
 	}
 
 #ifdef __FREEBSD__
 	if(sb->sb_mb == NULL)
-		inp->sctp_vtag_last = tag;
+		inp->sctp_vtag_first = tag;
 	SCTP_SBLINKRECORD(sb, m);
 	sb->sb_mbtail = nlast;
 #else
@@ -3388,7 +3388,7 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 		inp->sb_last_mpkt = m;
 	} else {
 		inp->sb_last_mpkt = sb->sb_mb = m;
-		inp->sctp_vtag_last = tag;
+		inp->sctp_vtag_first = tag;
 	}
 #endif
 	SOCKBUF_UNLOCK(sb);
@@ -3440,7 +3440,7 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 		inp->sb_last_mpkt = m;
 	} else {
 		inp->sb_last_mpkt = sb->sb_mb = m;
-		inp->sctp_vtag_last = tag;
+		inp->sctp_vtag_first = tag;
 	}
 	return (1);
 #endif
@@ -3502,7 +3502,7 @@ sctp_should_be_moved(struct mbuf *this, struct sctp_association *asoc)
 }
 
 u_int32_t
-sctp_get_last_vtag_from_sb(struct socket *so)
+sctp_get_first_vtag_from_sb(struct socket *so)
 {
 	struct mbuf *this,*at;
 	u_int32_t retval;
@@ -3566,7 +3566,7 @@ sctp_grub_through_socket_buffer(struct sctp_inpcb *inp, struct socket *old,
 	SOCKBUF_LOCK(old_sb);
 	SOCKBUF_LOCK(new_sb);
 
-	if (inp->sctp_vtag_last == asoc->my_vtag) {
+	if (inp->sctp_vtag_first == asoc->my_vtag) {
 		/* First one must be moved */
 		struct mbuf *mm;
 		for (mm = old_sb->sb_mb; mm; mm = mm->m_next) {
@@ -3618,11 +3618,11 @@ sctp_grub_through_socket_buffer(struct sctp_inpcb *inp, struct socket *old,
 	} 
 	if (moved_top) {
 		/*
-		 * Ok so now we must re-postion vtag_last to
+		 * Ok so now we must re-postion vtag_first to
 		 * match the new first one since we moved the
 		 * mbuf at the top.
 		 */
-		inp->sctp_vtag_last = sctp_get_last_vtag_from_sb(old);
+		inp->sctp_vtag_first = sctp_get_first_vtag_from_sb(old);
 	}
 	SOCKBUF_UNLOCK(old_sb);
 	SOCKBUF_UNLOCK(new_sb);

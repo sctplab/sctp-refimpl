@@ -1690,6 +1690,9 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 
 	chk = NULL;
 	tsn = ntohl(ch->dp.tsn);
+#ifdef SCTP_MAP_LOGGING
+	sctp_log_map(0, tsn, asoc->cumulative_tsn, SCTP_MAP_PREPARE_SLIDE);
+#endif
 	if (compare_with_wrap(asoc->cumulative_tsn, tsn, MAX_TSN) ||
 	    asoc->cumulative_tsn == tsn) {
 		/* It is a duplicate */
@@ -1984,6 +1987,9 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		if (compare_with_wrap(tsn, asoc->highest_tsn_inside_map, MAX_TSN)) {
 			/* we have a new high score */
 			asoc->highest_tsn_inside_map = tsn;
+#ifdef SCTP_MAP_LOGGING
+			sctp_log_map(0, 1, asoc->highest_tsn_inside_map, SCTP_MAP_SLIDE_RESULT);
+#endif
 		}
 		SCTP_TCB_UNLOCK(stcb);
 		SCTP_INP_WLOCK(stcb->sctp_ep);
@@ -2194,6 +2200,9 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	if (compare_with_wrap(tsn, asoc->highest_tsn_inside_map, MAX_TSN)) {
 		/* we have a new high score */
 		asoc->highest_tsn_inside_map = tsn;
+#ifdef SCTP_MAP_LOGGING
+		sctp_log_map(0, 2, asoc->highest_tsn_inside_map, SCTP_MAP_SLIDE_RESULT);
+#endif
 	}
  finish_express_del:
 	if (last_chunk) {
@@ -2204,6 +2213,10 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 #ifdef SCTP_STR_LOGGING
 	sctp_log_strm_del_alt(tsn, strmseq, SCTP_STR_LOG_FROM_MARK_TSN);
 #endif	
+#ifdef SCTP_MAP_LOGGING
+	sctp_log_map(asoc->mapping_array_base_tsn, asoc->cumulative_tsn,
+		     asoc->highest_tsn_inside_map, SCTP_MAP_PREPARE_SLIDE);
+#endif
 	SCTP_SET_TSN_PRESENT(asoc->mapping_array, gap);
 	return (1);
 }
@@ -4508,14 +4521,19 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 	if (compare_with_wrap(new_cum_tsn, asoc->highest_tsn_inside_map,
 	    MAX_TSN)) {
 		asoc->highest_tsn_inside_map = new_cum_tsn;
+#ifdef SCTP_MAP_LOGGING
+			sctp_log_map(0, 0, asoc->highest_tsn_inside_map, SCTP_MAP_SLIDE_RESULT);
+#endif
 	}
 	/*
 	 * now we know the new TSN is more advanced, let's find the
 	 * actual gap
 	 */
-	if (new_cum_tsn >= asoc->mapping_array_base_tsn)
+	if ((compare_with_wrap(new_cum_tsn, asoc->mapping_array_base_tsn,
+			       MAX_TSN)) ||
+	     (new_cum_tsn == asoc->mapping_array_base_tsn)) {
 		gap = new_cum_tsn - asoc->mapping_array_base_tsn;
-	else {
+	} else {
 		/* try to prevent underflow here */
 		gap = new_cum_tsn + (MAX_TSN - asoc->mapping_array_base_tsn) + 1;
 	}
@@ -4560,6 +4578,9 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 		asoc->highest_tsn_inside_map =  new_cum_tsn - 1;
 		asoc->mapping_array_base_tsn = new_cum_tsn;
 		asoc->cumulative_tsn = asoc->highest_tsn_inside_map;
+#ifdef SCTP_MAP_LOGGING
+		sctp_log_map(0, 3, asoc->highest_tsn_inside_map, SCTP_MAP_SLIDE_RESULT);
+#endif
 		asoc->last_echo_tsn = asoc->highest_tsn_inside_map;
 	}
 	/*************************************************************/
