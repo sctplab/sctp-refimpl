@@ -1,4 +1,4 @@
-/*	$KAME: sctp6_usrreq.c,v 1.35 2004/08/17 06:28:03 t-momose Exp $	*/
+/*	$KAME: sctp6_usrreq.c,v 1.36 2005/03/06 16:04:19 itojun Exp $	*/
 
 /*
  * Copyright (c) 2001, 2002, 2003, 2004 Cisco Systems, Inc.
@@ -82,7 +82,7 @@
 #include <netinet/sctp_asconf.h>
 #include <netinet6/ip6_var.h>
 #include <netinet/ip6.h>
-#if !defined(__OpenBSD__) 
+#if !defined(__OpenBSD__)
 #include <netinet6/in6_pcb.h>
 #endif
 #include <netinet/icmp6.h>
@@ -276,7 +276,7 @@ sctp6_input(mp, offp, proto)
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
 				printf("Bad CSUM on SCTP packet calc_check:%x check:%x  m:%x mlen:%d iphlen:%d\n",
-				       calc_check, check, (u_int)m, 
+				       calc_check, check, (u_int)m,
 				       mlen, iphlen);
 			}
 #endif
@@ -312,15 +312,15 @@ sctp_skip_csum:
 	/* in6p's ref-count increased */
 	if (in6p == NULL) {
 		struct sctp_init_chunk *init_chk, chunk_buf;
-		
+
 		sctp_pegs[SCTP_NOPORTS]++;
 		if (ch->chunk_type == SCTP_INITIATION) {
 			/* we do a trick here to get the INIT tag,
 			 * dig in and get the tag from the INIT and
 			 * put it in the common header.
 			 */
-			init_chk = (struct sctp_init_chunk *)sctp_m_getptr(m, 
-			    iphlen + sizeof(*sh), sizeof(*init_chk), 
+			init_chk = (struct sctp_init_chunk *)sctp_m_getptr(m,
+			    iphlen + sizeof(*sh), sizeof(*init_chk),
 			    (u_int8_t *)&chunk_buf);
 			sh->v_tag = init_chk->init.initiate_tag;
 		}
@@ -391,7 +391,7 @@ sctp_skip_csum:
 				}
 			} else { /* Just reset */
 				TAILQ_REMOVE(&i_inp->inp_tdb_in->tdb_inp_in,
-				    i_inp,binp_tdb_in_next);
+				    i_inp, binp_tdb_in_next);
 				i_inp->inp_tdb_in = NULL;
 			}
 		}
@@ -719,7 +719,7 @@ sctp6_getcred(SYSCTL_HANDLER_ARGS)
                                            &inp, &net, 1);
 	if (stcb == NULL || inp == NULL || inp->sctp_socket == NULL) {
 		error = ENOENT;
-		if(inp) {
+		if (inp) {
 			SCTP_INP_WLOCK(inp);
 			SCTP_INP_DECR_REF(inp);
 			SCTP_INP_WUNLOCK(inp);
@@ -757,7 +757,7 @@ sctp6_abort(struct socket *so)
 #else
 	s = splnet();
 #endif
-	sctp_inpcb_free(inp,1);
+	sctp_inpcb_free(inp, 1);
 	splx(s);
 	return 0;
 }
@@ -1028,9 +1028,9 @@ sctp6_disconnect(struct socket *so)
 			    TAILQ_EMPTY(&asoc->sent_queue) &&
 			    (some_on_streamwheel == 0)) {
 				/* nothing queued to send, so I'm done... */
-				if ((SCTP_GET_STATE(asoc) != 
+				if ((SCTP_GET_STATE(asoc) !=
 				     SCTP_STATE_SHUTDOWN_SENT) &&
-				    (SCTP_GET_STATE(asoc) != 
+				    (SCTP_GET_STATE(asoc) !=
 				     SCTP_STATE_SHUTDOWN_ACK_SENT)) {
 					/* only send SHUTDOWN the first time */
 #ifdef SCTP_DEBUG
@@ -1171,7 +1171,7 @@ sctp6_send(struct socket *so, int flags, struct mbuf *m, struct mbuf *nam,
 			/* mapped addresses aren't enabled */
 			return EINVAL;
 		}
-	} 
+	}
 #endif /* INET */
  connected_type:
 	/* now what about control */
@@ -1184,7 +1184,7 @@ sctp6_send(struct socket *so, int flags, struct mbuf *m, struct mbuf *nam,
 		inp->control = control;
 	}
 	/* add it in possibly */
-	if ((inp->pkt) && 
+	if ((inp->pkt) &&
 	    (inp->pkt->m_flags & M_PKTHDR)) {
 		struct mbuf *x;
 		int c_len;
@@ -1443,7 +1443,7 @@ sctp6_getaddr(struct socket *so, struct mbuf *nam)
 			}
 			sin6->sin6_addr = sctp_ipv6_source_address_selection(
 			    inp, stcb, (struct route *)&net->ro, net, 0);
-			    
+
 		} else {
 			/* For the bound all case you get back 0 */
 		notConn6:
