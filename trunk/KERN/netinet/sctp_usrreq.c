@@ -1713,6 +1713,50 @@ sctp_optsget(struct socket *so,
 			m->m_len = sizeof(optval);
 		}
 		break;
+	case SCTP_GET_ASOC_ID_LIST:
+	{
+		struct sctp_assoc_ids *ids;
+		int cnt, at;
+		u_int16_t orig;
+
+		if(m->m_len < sizeof(struct sctp_assoc_ids)) {
+			error = EINVAL;
+			break;
+		}
+		ids = mtod(m, struct sctp_assoc_ids *);
+		cnt = 0;
+		stcb = LIST_FIRST(&inp->sctp_asoc_list);
+		if(stcb == NULL) {
+		none_out_now:
+			ids->asls_numb_present = 0;
+			ids->asls_more_to_get = 0;
+			break;
+		}
+		orig = ids->asls_assoc_start;
+		stcb = LIST_FIRST(&inp->sctp_asoc_list);
+		while( orig ) {
+			stcb = LIST_NEXT(stcb , sctp_tcblist);
+			orig--;
+			cnt--;
+		}
+		if( stcb == NULL)
+			goto none_out_now;
+
+		at = 0;
+		ids->asls_numb_present = 0;
+		ids->asls_more_to_get = 1;
+		while(at < MAX_ASOC_IDS_RET) {
+			ids->asls_assoc_id[at] = sctp_get_associd(stcb);
+			at++;
+			ids->asls_numb_present++;
+			stcb = LIST_NEXT(stcb , sctp_tcblist);
+			if(stcb == NULL) {
+				ids->asls_more_to_get = 0;
+				break;
+			}
+		}
+	}
+	break;
 	case SCTP_GET_NONCE_VALUES:
 	{
 		struct sctp_get_nonce_values *gnv;
