@@ -7692,7 +7692,7 @@ sctp_send_hb(struct sctp_tcb *stcb, int user_req, struct sctp_nets *u_net)
 				panic("Chunk count is negative");
 			}
 			sctppcbinfo.ipi_gencnt_chunk++;
-			return (0);
+			return (-1);
 		}
 	}
 	net->hb_responded = 0;

@@ -11,3 +11,15 @@ Patch 24 change log
    fs/cwnd subtraction were done the wrong way.
 6) The initial RTO would not backoff, doubling. This
    was due to not initializing it to rto.initial.
+7) The parameter length of the stream reset request
+   was incorrect.
+8) All timers that sub-functions that ran threshold_management() had
+   a possibility that the association was destroyed. However no way
+   was it possible to communicate that fact to the calling timeout
+   handler. Thus it was possible that a chunk_output would be
+   called on an association that was free... very bad. This is
+   all fixed and now all t-o functions that do threshold mangagment
+   must return 0 for ok and 1 for association destroyed.
+
+
+
