@@ -465,7 +465,6 @@ struct sctp_tcb {
 #define SCTP_INP_RLOCK(_inp)	do{ 					\
         if(mtx_owned(&(_inp)->inp_mtx))                                 \
 		panic("INP Recursive Lock-R");                          \
-#endif									\
         mtx_lock(&(_inp)->inp_mtx);                                     \
 } while (0)
 #else
@@ -512,7 +511,6 @@ struct sctp_tcb {
 #define SCTP_TCB_LOCK(_tcb)  do{					\
         if(mtx_owned(&(_tcb)->tcb_mtx))                                 \
 		panic("TCB Lock");                                      \
-#endif									\
 	mtx_lock(&(_tcb)->tcb_mtx);                                     \
 } while (0)
 #else
