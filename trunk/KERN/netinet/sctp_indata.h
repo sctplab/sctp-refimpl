@@ -35,7 +35,7 @@
 
 #if defined(_KERNEL) || (defined(__APPLE__) && defined(KERNEL))
 int sctp_deliver_data(struct sctp_tcb *, struct sctp_association *,
-    struct sctp_tmit_chunk *);
+    struct sctp_tmit_chunk *, int);
 
 void sctp_set_rwnd(struct sctp_tcb *, struct sctp_association *);
 
