@@ -225,6 +225,9 @@ sctp_bindx(int sd, struct sockaddr *addrs, int addrcnt, int flags)
 int
 sctp_opt_info(int sd, sctp_assoc_t id, int opt, void *arg, socklen_t *size)
 {
+	if (arg == NULL) {
+		return(EINVAL);
+	}
 	if ((opt == SCTP_RTOINFO) || 
  	    (opt == SCTP_ASSOCINFO) || 
 	    (opt == SCTP_PRIMARY_ADDR) || 
@@ -486,6 +489,9 @@ sctp_send(int sd, const void *data, size_t len,
 	char controlVector[256];
 	struct cmsghdr *cmsg;
 
+	if (sinfo == NULL) {
+	    return(EINVAL);
+	}
 	iov[0].iov_base = (char *)data;
 	iov[0].iov_len = len;
 	iov[1].iov_base = NULL;
@@ -620,12 +626,19 @@ sctp_recvmsg (int s,
 	struct iovec iov[2];
 	char controlVector[2048];
 	struct cmsghdr *cmsg;
+	
+	if (msg_flags == NULL) {
+		return EINVAL;
+	}
 	iov[0].iov_base = dbuf;
 	iov[0].iov_len = len;
 	iov[1].iov_base = NULL;
 	iov[1].iov_len = 0;
 	msg.msg_name = (caddr_t)from;
-	msg.msg_namelen = *fromlen;
+	if (fromlen == NULL)
+	    msg.msg_namelen = 0;
+	else
+	    msg.msg_namelen = *fromlen;
 	msg.msg_iov = iov;
 	msg.msg_iovlen = 1;
 	msg.msg_control = (caddr_t)controlVector;
@@ -636,7 +649,6 @@ sctp_recvmsg (int s,
 	s_info = NULL;
 	len = sz;
 	*msg_flags = msg.msg_flags;
-	*fromlen = msg.msg_namelen;
 	if ((msg.msg_controllen) && sinfo) {
 		/* parse through and see if we find
 		 * the sctp_sndrcvinfo (if the user wants it).
