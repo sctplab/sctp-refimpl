@@ -1862,11 +1862,11 @@ sctp_optsget(struct socket *so,
 		sctp_assoc_t *assoc_id;
 		int ovh;
 
-		if(m->m_len < sizeof(u_int32_t)) {
+		if((size_t)m->m_len < sizeof(u_int32_t)) {
 			error = EINVAL;
 			break;
 		}
-		if(m->m_len < sizeof(sctp_assoc_t)) {
+		if((size_t)m->m_len < sizeof(sctp_assoc_t)) {
 			error = EINVAL;
 			break;
 		}
@@ -3390,7 +3390,7 @@ sctp_optsset(struct socket *so,
 	{
 		struct sctp_setprim *spa;
 		struct sctp_nets *net, *lnet;
-		if (m->m_len < sizeof(struct sctp_setprim)) {
+		if ((size_t)m->m_len < sizeof(struct sctp_setprim)) {
 			error = EINVAL;
 			break;
 		}
