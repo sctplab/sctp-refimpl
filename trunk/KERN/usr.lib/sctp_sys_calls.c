@@ -44,6 +44,71 @@
 #include <netinet/sctp_uio.h>
 #include <netinet/sctp.h>
 
+#include <net/if_dl.h>
+
+
+static void
+SCTPPrintAnAddress(struct sockaddr *a)
+{
+  char stringToPrint[256];
+  u_short prt;
+  char *srcaddr,*txt;
+  if (a == NULL) {
+	  printf("NULL\n");
+	  return;
+  }
+  if(a->sa_family == AF_INET){
+    srcaddr = (char *)&((struct sockaddr_in *)a)->sin_addr;
+    txt = "IPv4 Address: ";
+    prt = ntohs(((struct sockaddr_in *)a)->sin_port);
+  }else if(a->sa_family == AF_INET6){
+    srcaddr = (char *)&((struct sockaddr_in6 *)a)->sin6_addr;
+    prt = ntohs(((struct sockaddr_in6 *)a)->sin6_port);
+    txt = "IPv6 Address: ";
+  }else if(a->sa_family == AF_LINK){
+    int i;
+    char tbuf[200];
+    u_char adbuf[200];
+    struct sockaddr_dl *dl;
+
+    dl = (struct sockaddr_dl *)a;
+    strncpy(tbuf,dl->sdl_data,dl->sdl_nlen);
+    tbuf[dl->sdl_nlen] = 0;
+    printf("Intf:%s (len:%d)Interface index:%d type:%x(%d) ll-len:%d ",
+	   tbuf,
+	   dl->sdl_nlen,
+	   dl->sdl_index,
+	   dl->sdl_type,
+	   dl->sdl_type,
+	   dl->sdl_alen
+	   );
+    memcpy(adbuf,LLADDR(dl),dl->sdl_alen);
+    for(i=0;i<dl->sdl_alen;i++){
+      printf("%2.2x",adbuf[i]);
+      if(i<(dl->sdl_alen-1))
+	printf(":");
+    }
+    printf("\n");
+    /*	u_short	sdl_route[16];*/	/* source routing information */
+    return;
+  }else{
+    return;
+  }
+  if(inet_ntop(a->sa_family,srcaddr,stringToPrint,sizeof(stringToPrint))){
+	  if(a->sa_family == AF_INET6){
+		  printf("%s%s:%d scope:%d\n",
+		      txt,stringToPrint,prt,
+		      ((struct sockaddr_in6 *)a)->sin6_scope_id);
+	  }else{
+		  printf("%s%s:%d\n",txt,stringToPrint,prt);
+	  }
+
+  }else{
+    printf("%s unprintable?\n",txt);
+  }
+}
+
+
 int
 sctp_connectx(int fd, struct sockaddr *addrs, int addrcnt)
 {
@@ -289,39 +354,36 @@ sctp_sendmsg(int s,
 	struct msghdr msg;
 	struct iovec iov[2];
 	char controlVector[256];
-	char whoset=0;
 	struct sctp_sndrcvinfo *s_info;
 	struct cmsghdr *cmsg;
 	struct sockaddr *who=NULL;
-	struct sockaddr_in in;
-	struct sockaddr_in6 in6;
+	union {
+		struct sockaddr_in in;
+		struct sockaddr_in6 in6;
+	}addr;
 
 	if (to->sa_len == 0) {
 		/* For the lazy app, that did not
 		 * set sa_len, we attempt to set for them.
 		 */
  		if(to->sa_family == AF_INET){
-			memcpy(&in,to,sizeof(in));
-			in.sin_len = sizeof(in);
-			who = (struct sockaddr *)&in;
-			whoset = 1;
+			memcpy(&addr, to, sizeof(struct sockaddr_in));
+			addr.in.sin_len = sizeof(struct sockaddr_in);
 		}else if(to->sa_family == AF_INET6){
-			memcpy(&in6,to,sizeof(in6));
-			in6.sin6_len = sizeof(in6);
-			who = (struct sockaddr *)&in6;
-			whoset = 1;
+			memcpy(&addr, to, sizeof(struct sockaddr_in6));
+			addr.in6.sin6_len = sizeof(struct sockaddr_in6);
 		}
+	} else {
+		memcpy (&addr, to, to->sa_len);
 	}
+	who = (struct sockaddr *)&addr;
 	iov[0].iov_base = (char *)data;
 	iov[0].iov_len = len;
 	iov[1].iov_base = NULL;
 	iov[1].iov_len = 0;
 
-	if(whoset)
-		msg.msg_name = (caddr_t)who;
-	else
-		msg.msg_name = (caddr_t)to;
-	msg.msg_namelen = in.sin_len;
+	msg.msg_name = (caddr_t)who;
+	msg.msg_namelen = who->sa_len;
 	msg.msg_iov = iov;
 	msg.msg_iovlen = 1;
 	msg.msg_control = (caddr_t)controlVector;
