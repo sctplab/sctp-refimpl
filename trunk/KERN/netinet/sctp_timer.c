@@ -438,10 +438,11 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	sctp_log_fr(cur_rto, now.tv_sec, now.tv_usec, SCTP_FR_T3_MARK_TIME);
 	sctp_log_fr(0, min_wait.tv_sec, min_wait.tv_usec, SCTP_FR_T3_MARK_TIME);
 #endif
-	if(stcb->asoc.total_flight >= net->flight_size) 
+	if(stcb->asoc.total_flight >= net->flight_size) {
 	  stcb->asoc.total_flight -= net->flight_size;
-	else {
+	} else {
 	  stcb->asoc.total_flight = 0;
+	  stcb->asoc.total_flight_count = 0;
 	  audit_tf = 1;
 	}
         /* Our rwnd will be incorrect here since we are not adding
@@ -530,8 +531,6 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 					continue;
 				}
 			}
-			if (stcb->asoc.total_flight_count > 0)
-			  stcb->asoc.total_flight_count--;
 			if (PR_SCTP_TTL_ENABLED(chk->flags)) {
 				/* Is it expired? */
 				if ((now.tv_sec > chk->rec.data.timetodrop.tv_sec) ||
@@ -579,6 +578,8 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 
 #endif
 			}
+			if (stcb->asoc.total_flight_count > 0)
+			  stcb->asoc.total_flight_count--;
 			chk->sent = SCTP_DATAGRAM_RESEND;
 			/* reset the TSN for striking and other FR stuff */
 			chk->rec.data.doing_fast_retransmit = 0;

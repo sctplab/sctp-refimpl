@@ -2504,13 +2504,14 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 			else 
 			  tp1->whoTo->flight_size = 0;
 
-			if( stcb->asoc.total_flight >= tp1->book_size)
+			if( stcb->asoc.total_flight >= tp1->book_size) {
+			  if (stcb->asoc.total_flight_count > 0)
+			    stcb->asoc.total_flight_count--;
 			    stcb->asoc.total_flight -= tp1->book_size;
-			else
+			} else {
 			  stcb->asoc.total_flight = 0;
-
-			if (stcb->asoc.total_flight_count > 0)
-			  stcb->asoc.total_flight_count--;
+			  stcb->asoc.total_flight_count = 0;
+			}
 			tp1->snd_count--;
 		}
 		{
