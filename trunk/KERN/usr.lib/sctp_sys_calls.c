@@ -110,7 +110,7 @@ SCTPPrintAnAddress(struct sockaddr *a)
 #endif /* SCTP_DEBUG_PRINT_ADDRESS */
 
 int
-sctp_connectx(int fd, struct sockaddr *addrs, int addrcnt)
+sctp_connectx(int sd, struct sockaddr *addrs, int addrcnt)
 {
 	int i,len,ret,cnt,*aa;
 	char *buf;
@@ -147,15 +147,14 @@ sctp_connectx(int fd, struct sockaddr *addrs, int addrcnt)
 	*aa = cnt;
 	aa++;
 	memcpy((caddr_t)aa,addrs,(len-sizeof(int)));
-	ret = setsockopt(fd, IPPROTO_SCTP, SCTP_CONNECT_X, (void *)buf,
+	ret = setsockopt(sd, IPPROTO_SCTP, SCTP_CONNECT_X, (void *)buf,
 			 (unsigned int)len);
 	free(buf);
 	return (ret);
 }
 
-
 int
-sctp_bindx(int fd, struct sockaddr *addrs, int addrcnt, int flags)
+sctp_bindx(int sd, struct sockaddr *addrs, int addrcnt, int flags)
 {
 	struct sctp_getaddresses *gaddrs;
 	struct sockaddr *sa;
@@ -184,7 +183,7 @@ sctp_bindx(int fd, struct sockaddr *addrs, int addrcnt, int flags)
 			return(-1);
 		}
 		memcpy(gaddrs->addr, sa, sz);
-		if (setsockopt(fd, IPPROTO_SCTP, flags, 
+		if (setsockopt(sd, IPPROTO_SCTP, flags, 
 			       gaddrs, (unsigned int)argsz) != 0) {
 			free(gaddrs);
 			return(-1);
@@ -198,7 +197,7 @@ sctp_bindx(int fd, struct sockaddr *addrs, int addrcnt, int flags)
 
 
 int
-sctp_opt_info(int fd, sctp_assoc_t id, int opt, void *arg, size_t *size)
+sctp_opt_info(int sd, sctp_assoc_t id, int opt, void *arg, size_t *size)
 {
 	if ((opt == SCTP_RTOINFO) || 
  	    (opt == SCTP_ASSOCINFO) || 
@@ -208,7 +207,7 @@ sctp_opt_info(int fd, sctp_assoc_t id, int opt, void *arg, size_t *size)
 	    (opt == SCTP_STATUS) || 
 	    (opt == SCTP_GET_PEER_ADDR_INFO)) { 
 		*(sctp_assoc_t *)arg = id;
-		return(getsockopt(fd, IPPROTO_SCTP, opt, arg, (int *)size));
+		return(getsockopt(sd, IPPROTO_SCTP, opt, arg, (int *)size));
 	}else{
 		errno = EOPNOTSUPP;
 		return(-1);
@@ -216,7 +215,7 @@ sctp_opt_info(int fd, sctp_assoc_t id, int opt, void *arg, size_t *size)
 }
 
 int
-sctp_getpaddrs(int fd, sctp_assoc_t id, struct sockaddr **raddrs)
+sctp_getpaddrs(int sd, sctp_assoc_t id, struct sockaddr **raddrs)
 {
 	struct sctp_getaddresses *addrs;
 	struct sockaddr *sa;
@@ -232,7 +231,7 @@ sctp_getpaddrs(int fd, sctp_assoc_t id, struct sockaddr **raddrs)
 	}
 	asoc = id;
 	siz = sizeof(sctp_assoc_t);  
-	if (getsockopt(fd, IPPROTO_SCTP, SCTP_GET_REMOTE_ADDR_SIZE,
+	if (getsockopt(sd, IPPROTO_SCTP, SCTP_GET_REMOTE_ADDR_SIZE,
 	    &asoc, &siz) != 0) {
 		return(-1);
 	}
@@ -246,7 +245,7 @@ sctp_getpaddrs(int fd, sctp_assoc_t id, struct sockaddr **raddrs)
 	memset(addrs, 0, (size_t)siz);
 	addrs->sget_assoc_id = id;
 	/* Now lets get the array of addresses */
-	if (getsockopt(fd, IPPROTO_SCTP, SCTP_GET_PEER_ADDRESSES,
+	if (getsockopt(sd, IPPROTO_SCTP, SCTP_GET_PEER_ADDRESSES,
 	    addrs, &siz) != 0) {
 		free(addrs);
 		return(-1);
@@ -275,7 +274,7 @@ void sctp_freepaddrs(struct sockaddr *addrs)
 }
 
 int
-sctp_getladdrs (int fd, sctp_assoc_t id, struct sockaddr **raddrs)
+sctp_getladdrs (int sd, sctp_assoc_t id, struct sockaddr **raddrs)
 {
 	struct sctp_getaddresses *addrs;
 	struct sockaddr *re;
@@ -291,7 +290,7 @@ sctp_getladdrs (int fd, sctp_assoc_t id, struct sockaddr **raddrs)
 	}
 	size_of_addresses = 0;
 	siz = sizeof(int);  
-	if (getsockopt(fd, IPPROTO_SCTP, SCTP_GET_LOCAL_ADDR_SIZE,
+	if (getsockopt(sd, IPPROTO_SCTP, SCTP_GET_LOCAL_ADDR_SIZE,
 	    &size_of_addresses, &siz) != 0) {
 		return(-1);
 	}
@@ -309,7 +308,7 @@ sctp_getladdrs (int fd, sctp_assoc_t id, struct sockaddr **raddrs)
 	memset(addrs, 0, (size_t)siz);
 	addrs->sget_assoc_id = id;
 	/* Now lets get the array of addresses */
-	if (getsockopt(fd, IPPROTO_SCTP, SCTP_GET_LOCAL_ADDRESSES, addrs,
+	if (getsockopt(sd, IPPROTO_SCTP, SCTP_GET_LOCAL_ADDRESSES, addrs,
 	    &siz) != 0) {
 		free(addrs);
 		return(-1);
@@ -408,6 +407,27 @@ sctp_sendmsg(int s,
 	return(sz);
 }
 
+sctp_assoc_t
+sctp_getassocid(int sd, struct sockaddr *sa)
+{
+  struct sctp_paddrparams sp;
+  int siz;
+
+  /* First get the assoc id */
+  siz = sizeof(struct sctp_paddrparams);
+  memset(&sp,0,sizeof(sp));
+  memcpy((caddr_t)&sp.spp_address,sa,sa->sa_len);
+  errno = 0;
+  if(getsockopt(sd,IPPROTO_SCTP,
+		SCTP_PEER_ADDR_PARAMS, &sp, &siz) != 0) {	
+	  return((sctp_assoc_t)0);
+  }
+  /* We depend on the fact that 0 can never be returned */
+  return(sp.spp_assoc_id);
+}
+
+
+
 ssize_t
 sctp_send(int sd, const void *data, size_t len,
 	  const struct sctp_sndrcvinfo *sinfo,
@@ -445,6 +465,70 @@ sctp_send(int sd, const void *data, size_t len,
 	return(sz);
 }
 
+
+int
+sctp_sendx(int sd, void *msg, size_t len, 
+	   struct sockaddr *addrs, int addrcnt,
+	   struct sctp_sndrcvinfo *sinfo,
+	   int flags)
+{
+	int i,ret,cnt,*aa, saved_errno;
+	char *buf;
+	struct sockaddr *at;
+	len = sizeof(int);
+	at = addrs;
+	cnt = 0;
+	/* validate all the addresses and get the size */
+	for (i=0; i < addrcnt; i++) {
+		if ((at->sa_family != AF_INET) &&
+		   (at->sa_family != AF_INET6)) {
+			errno = EINVAL;
+			return (-1);
+		}
+		len += at->sa_len;
+		at = (struct sockaddr *)((caddr_t)at + at->sa_len);
+		cnt++;
+	}
+	/* do we have any? */
+	if (cnt == 0) {
+		errno = EINVAL;
+		return(-1);
+	}
+	if (len > 2048) {
+		/* Never enough memory */
+		return(E2BIG);
+	}
+	buf = malloc(len);
+	if(buf == NULL) {
+		return(ENOMEM);
+	}
+	aa = (int *)buf;
+	*aa = cnt;
+	aa++;
+	memcpy((caddr_t)aa,addrs,(len-sizeof(int)));
+	ret = setsockopt(sd, IPPROTO_SCTP, SCTP_CONNECT_X_DELAYED, (void *)buf,
+			 (unsigned int)len);
+
+	free(buf);
+	if(ret != 0) {
+		return(ret);
+	}
+	sinfo->sinfo_assoc_id = sctp_getassocid(sd, addrs);
+	if (sinfo->sinfo_assoc_id == 0) {
+		printf("Huh, can't get associd? TSNH!\n");
+		(void)setsockopt(sd, IPPROTO_SCTP, SCTP_CONNECT_X_COMPLETE, (void *)addrs,
+				 (unsigned int)addrs->sa_len);
+		errno = ENOENT;
+		return (-1);
+	}
+	ret = sctp_send(sd, msg, len, sinfo, flags);
+	saved_errno = errno;
+	(void)setsockopt(sd, IPPROTO_SCTP, SCTP_CONNECT_X_COMPLETE, (void *)addrs,
+			 (unsigned int)addrs->sa_len);
+
+	errno = saved_errno;
+	return (ret);
+}
 
 ssize_t
 sctp_recvmsg (int s, 
