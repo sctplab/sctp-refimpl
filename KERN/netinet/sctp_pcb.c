@@ -820,7 +820,7 @@ sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool)
 	 * has further code to look at all TCP models.
 	 */
 	if (inp == NULL && find_tcp_pool) {
-		int i;
+		unsigned int i;
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_PCB1) {
 			printf("EP was NULL and TCP model is supported\n");
@@ -2858,7 +2858,7 @@ sctp_add_vtag_to_timewait(struct sctp_inpcb *inp, u_int32_t tag)
 					twait_block->vtag_block[0].v_tag = tag;
 					set = 1;
 				} else if ((twait_block->vtag_block[i].v_tag) &&
-				    (twait_block->vtag_block[i].tv_sec_at_expire >
+				    ((long)twait_block->vtag_block[i].tv_sec_at_expire >
 				    now.tv_sec)) {
 					/* Audit expires this guy */
 					twait_block->vtag_block[i].tv_sec_at_expire = 0;
@@ -4213,7 +4213,7 @@ sctp_is_vtag_good(struct sctp_inpcb *inp, u_int32_t tag, struct timeval *now)
 				if (twait_block->vtag_block[i].v_tag == 0) {
 					/* not used */
 					continue;
-				} else if (twait_block->vtag_block[i].tv_sec_at_expire >
+				} else if ((long)twait_block->vtag_block[i].tv_sec_at_expire >
 				    now->tv_sec) {
 					/* Audit expires this guy */
 					twait_block->vtag_block[i].tv_sec_at_expire = 0;

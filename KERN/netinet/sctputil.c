@@ -1729,7 +1729,7 @@ sctp_calculate_sum(struct mbuf *m, int32_t *pktlen, uint32_t offset)
 	struct mbuf *at;
 	at = m;
 	/* find the correct mbuf and offset into mbuf */
-	while ((at != NULL) && (offset > at->m_len)) {
+	while ((at != NULL) && (offset > (uint32_t)at->m_len)) {
 		offset -= at->m_len;	/* update remaining offset left */
 		at = at->m_next;
 	}
@@ -1776,7 +1776,7 @@ sctp_mtu_size_reset(struct sctp_inpcb *inp,
 	 */
 	struct sctp_tmit_chunk *chk;
 	struct sctp_stream_out *strm;
-	int eff_mtu,ovh;
+	unsigned int eff_mtu,ovh;
 	asoc->smallest_mtu = mtu;
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) {
 		ovh = SCTP_MIN_OVERHEAD;
@@ -1825,7 +1825,7 @@ sctp_calculate_rto(struct sctp_tcb *stcb,
 	 */
 	int calc_time = 0;
 	int o_calctime;
-	int new_rto = 0;
+	unsigned int new_rto = 0;
 	int first_measure = 0;
 	struct timeval now;
 
@@ -2904,7 +2904,7 @@ sctp_handle_ootb(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
     struct sctp_inpcb *inp, struct mbuf *op_err)
 {
 	struct sctp_chunkhdr *ch, chunk_buf;
-	int chk_length;
+	unsigned int chk_length;
 
 	/* Generate a TO address for future reference */
 	if (inp && (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
@@ -2956,7 +2956,7 @@ sctp_is_there_an_abort_here(struct mbuf *m, int iphlen, int *vtagfill)
 	struct sctp_chunkhdr *ch;
 	struct sctp_init_chunk *init_chk, chunk_buf;
 	int offset;
-	int chk_length;
+	unsigned int chk_length;
 
 	offset = iphlen + sizeof(struct sctphdr);
 	ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, offset, sizeof(*ch),
@@ -3141,8 +3141,10 @@ sctp_print_address_pkt(struct ip *iph, struct sctphdr *sh)
 	}
 }
 
-#if defined(__FreeBSD__) 
+#if defined(__FreeBSD__) || defined(__APPLE__)
+
 /* cloned from uipc_socket.c */
+
 #define SCTP_SBLINKRECORD(sb, m0) do {					\
 	if ((sb)->sb_lastrecord != NULL)				\
 		(sb)->sb_lastrecord->m_nextpkt = (m0);			\
@@ -3273,10 +3275,10 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 		inp->sctp_vtag_last = tag;
 	}
 
-#if defined(__FreeBSD__)
+#ifdef __FREEBSD__
 	SCTP_SBLINKRECORD(sb, m);
 	sb->sb_mbtail = nlast;
-#else /* __APPLE__ */
+#else
 	if ((n = sb->sb_mb) != NULL) {
 		if ((n->m_nextpkt != inp->sb_last_mpkt) && (n->m_nextpkt == NULL)) {
 			inp->sb_last_mpkt = NULL;
@@ -3717,7 +3719,7 @@ sctp_pkthdr_fix(struct mbuf *m)
 		/* umm... not a very useful mbuf chain... */
 		return;
 	}
-	if (m_nxt->m_len > sizeof(long)) {
+	if ((size_t)m_nxt->m_len > sizeof(long)) {
 		/* move over a long */
 		bcopy(mtod(m_nxt, caddr_t), mtod(m, caddr_t), sizeof(long));
 		/* update mbuf data pointers and lengths */

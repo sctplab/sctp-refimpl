@@ -190,7 +190,7 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 	struct sctp_init *init;
 	struct sctp_association *asoc;
 	struct sctp_nets *lnet;
-	int i;
+	unsigned int i;
 
 	init = &cp->init;
 	asoc = &stcb->asoc;
@@ -205,7 +205,7 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 		}
 	}
 	if (asoc->pre_open_streams > ntohs(init->num_inbound_streams)) {
-		int newcnt;
+		unsigned int newcnt;
 		struct sctp_stream_out *outs;
 		struct sctp_tmit_chunk *chk;
 
@@ -792,7 +792,7 @@ sctp_handle_error(struct sctp_chunkhdr *ch,
 	phdr = (struct sctp_paramhdr *)((caddr_t)ch +
 	    sizeof(struct sctp_chunkhdr));
 	chklen = ntohs(ch->chunk_length) - sizeof(struct sctp_chunkhdr);
-	while (chklen >= sizeof(struct sctp_paramhdr)) {
+	while ((size_t)chklen >= sizeof(struct sctp_paramhdr)) {
 		/* Process an Error Cause */
 		error_type = ntohs(phdr->param_type);
 		error_len = ntohs(phdr->param_length);
@@ -1690,8 +1690,8 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	uint8_t calc_sig[SCTP_SIGNATURE_SIZE], tmp_sig[SCTP_SIGNATURE_SIZE];
 	uint8_t *sig;
 	uint8_t cookie_ok = 0;
-	int size_of_pkt, sig_offset, cookie_offset;
-	int cookie_len;
+	unsigned int size_of_pkt, sig_offset, cookie_offset;
+	unsigned int cookie_len;
 	struct timeval now;
 	struct timeval time_expires;
 	struct sockaddr_storage dest_store;
@@ -1814,7 +1814,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	 */
 	ep = &(*inp_p)->sctp_ep;
 	/* which cookie is it? */
-	if ((cookie->time_entered.tv_sec < ep->time_of_secret_change) &&
+	if ((cookie->time_entered.tv_sec < (long)ep->time_of_secret_change) &&
 	    (ep->current_secret_number != ep->last_secret_number)) {
 		/* it's the old cookie */
 #ifdef SCTP_DEBUG
@@ -1848,7 +1848,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	/* compare the received digest with the computed digest */
 	if (memcmp(calc_sig, sig, SCTP_SIGNATURE_SIZE) != 0) {
 		/* try the old cookie? */
-		if ((cookie->time_entered.tv_sec == ep->time_of_secret_change) &&
+		if ((cookie->time_entered.tv_sec == (long)ep->time_of_secret_change) &&
 		    (ep->current_secret_number != ep->last_secret_number)) {
 			/* compute digest with old */
 #ifdef SCTP_DEBUG
@@ -2417,7 +2417,7 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 			ddp = (u_int8_t *)(mtod(tp1->data, caddr_t) +
 			    sizeof(struct sctp_data_chunk));
 			{
-				int iii;
+				unsigned int iii;
 				for (iii = 0; iii < sizeof(desc->data_bytes);
 				    iii++) {
 					if (ddp[iii] != desc->data_bytes[iii]) {
@@ -2480,7 +2480,7 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 		}
 		{
 			/* audit code */
-			int audit;
+			unsigned int audit;
 			audit = 0;
 			TAILQ_FOREACH(tp1, &stcb->asoc.sent_queue, sctp_next) {
 				if (tp1->sent == SCTP_DATAGRAM_RESEND)
@@ -2736,7 +2736,7 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_req *sr
  	chk_length = ntohs(sr_req->ch.chunk_length);
  
  	ph = (struct sctp_paramhdr *)&sr_req->sr_req;
- 	while ( chk_length >=  sizeof (struct sctp_stream_reset_request)) {
+ 	while ( (size_t)chk_length >=  sizeof (struct sctp_stream_reset_request)) {
  		param_len = ntohs(ph->param_length);
  		if (ntohs(ph->param_type) == SCTP_STR_RESET_REQUEST) {
  			/* this will send the ACK and do the reset if needed */
@@ -2770,7 +2770,8 @@ sctp_handle_packet_dropped(struct sctp_pktdrop_chunk *cp,
 {
 	u_int32_t bottle_bw, on_queue;
 	u_int16_t trunc_len;
-	int chlen, at;
+	unsigned int chlen;
+	unsigned int at;
 	struct sctp_chunk_desc desc;
 	struct sctp_chunkhdr *ch;
 
@@ -2863,7 +2864,7 @@ sctp_handle_packet_dropped(struct sctp_pktdrop_chunk *cp,
 				/* yep */
 				struct sctp_data_chunk *dcp;
 				u_int8_t  *ddp;
-				int iii;
+				unsigned int iii;
 				dcp = (struct sctp_data_chunk *)ch;
 				ddp = (u_int8_t *)(dcp + 1);
 				for (iii = 0; iii < sizeof(desc.data_bytes); iii++) {
@@ -3035,7 +3036,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 	struct sctp_association *asoc;
 	u_int32_t vtag_in;
 	int num_chunks = 0;	/* number of control chunks processed */
-	int chk_length, ret;
+	int chk_length;
+	int ret;
 
 	/*
 	 * How big should this be, and should it be alloc'd?
@@ -3166,7 +3168,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			printf("sctp_process_control: processing a chunk type=%u, len=%u\n", ch->chunk_type, chk_length);
 		}
 #endif /* SCTP_DEBUG */
-		if (chk_length < sizeof(*ch) ||
+		if ((size_t)chk_length < sizeof(*ch) ||
 		    (*offset + chk_length) > length) {
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_INPUT3) {
@@ -3193,7 +3195,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			}
 		} else {
 			/* get a complete chunk... */
-			if (chk_length > sizeof(chunk_buf)) {
+			if ((size_t)chk_length > sizeof(chunk_buf)) {
 				struct mbuf *oper;
 				struct sctp_paramhdr *phdr;
 				oper = NULL;
@@ -3998,7 +4000,8 @@ sctp_input(m, va_alist)
 #endif
 #endif
 {
-	int iphlen, s;
+	int iphlen;
+	int s;
 	u_int8_t ecn_bits;
 	struct ip *ip;
 	struct sctphdr *sh;
@@ -4047,7 +4050,7 @@ sctp_input(m, va_alist)
 	/*
 	 * Strip IP options, we don't allow any in or out.
 	 */
-	if (iphlen > sizeof(struct ip)) {
+	if ((size_t)iphlen > sizeof(struct ip)) {
 		ip_stripoptions(m, (struct mbuf *)0);
 		iphlen = sizeof(struct ip);
 	}
