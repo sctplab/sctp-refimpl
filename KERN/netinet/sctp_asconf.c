@@ -1839,6 +1839,7 @@ sctp_addr_mgmt_ep(struct sctp_inpcb *inp, struct ifaddr *ifa, uint16_t type)
 			return;
 	} else {
 		/* invalid address family */
+		SCTP_INP_WUNLOCK(inp);
 		return;
 	}
 
