@@ -1,0 +1,225 @@
+
+All pegs are logged SINCE system start OR since
+the last peg clear.
+
+SCTP_PEG_SACKS_SEEN 	"sack_rcv"
+
+Total number of SACK's that have been received by the
+system since startup.
+
+
+SCTP_PEG_SACKS_SENT "sack_snt",
+
+Total number of SACK's the system has sent since system
+startup.
+
+SCTP_PEG_TSNS_SENT  "tsns_snt"
+
+Total number of TSN's that have been sent onto the 
+wire by this endpoint.
+
+SCTP_PEG_TSNS_RCVD 	"tsns_rcv"
+
+Total number of valid TSN's received by this endpoint. This
+does NOT include duplicate TSN's which are counted in a
+seperate peg.
+
+SCTP_DATAGRAMS_SENT 	"pkt_sent"
+
+
+Total number of IP packets placed on the wire by the SCTP
+code.
+
+SCTP_DATAGRAMS_RCVD "pkt_rcvd"
+
+Total number of valid SCTP datagrams received. A valid
+datagram is one that DOES NOT have a CRC error and  has a valid
+port listening for the data.
+
+SCTP_RETRANTSN_SENT "tsns_ret"
+
+Total number of TSN's that were retransmitted by this endpoint.
+
+SCTP_DUPTSN_RECVD   "dup_tsns"
+
+Total number of duplicate TSN's received (not included in the
+total number of TSN's received.
+
+SCTP_HB_RECV "hbs__rcv"
+
+Total number of Heartbeats received
+
+SCTP_HB_ACK_RECV "hbackrcv"
+
+Total number of Heartbeat-ack's received
+
+SCTP_HB_SENT "htb__snt"
+
+Total number of Heartbeats enqueued to the control output queue.
+
+SCTP_WINDOW_PROBES "win_prbe"
+
+Total number of TSN's sent has window probes (this includes
+duplicate retransmissions while awaiting the rwnd to raise).
+
+SCTP_DATA_DG_RECV  "pktswdat"
+
+Total number of datagrams received that carried DATA chunks.
+
+#define SCTP_TMIT_TIMER    13
+	"t3-timeo", /* 13 */
+#define SCTP_RECV_TIMER    14
+	"dsack-to", /* 14 */
+
+#define SCTP_HB_TIMER      15
+	"hb_timer", /* 15 */
+
+#define SCTP_FAST_RETRAN   16
+	"fst_rxts", /* 16 */
+
+#define SCTP_TIMERS_EXP    17
+	"timerexp", /* 17 */
+#define SCTP_FR_INAWINDOW  18
+	"fr_inwin", /* 18 */
+#define SCTP_RWND_BLOCKED  19
+	"blk_rwnd", /* 19 */
+#define SCTP_CWND_BLOCKED  20
+	"blk_cwnd", /* 20 */
+#define SCTP_RWND_DROPS    21
+	"rwnd_drp", /* 21 */
+#define SCTP_BAD_STRMNO    22
+	"bad_strm", /* 22 */
+#define SCTP_BAD_SSN_WRAP  23
+	"bad_ssnw", /* 23 */
+#define SCTP_DROP_NOMEMORY 24
+	"drpnomem", /* 24 */
+#define SCTP_DROP_FRAG     25
+	"drpfragm", /* 25 */
+#define SCTP_BAD_VTAGS     26
+	"badvtags", /* 26 */
+#define SCTP_BAD_CSUM      27
+	"badcsumv", /* 27 */
+#define SCTP_INPKTS        28
+	"packetin", /* 28 */
+#define SCTP_IN_MCAST      29
+	"mcastrcv", /* 29 */
+#define SCTP_HDR_DROPS     30
+	"hdrdrops", /* 30 */
+#define SCTP_NOPORTS	   31
+	"no_portn", /* 31 */
+#define SCTP_CWND_NOFILL   32
+	"cwnd_nf ", /* 32 */
+#define SCTP_CALLS_TO_CO   33
+	"co_snds ", /* 33 */
+#define SCTP_CO_NODATASNT  34
+	"co_nodat", /* 34 */
+#define SCTP_CWND_NOUSE_SS 35
+	"cw_nu_ss", /* 35 */
+#define SCTP_MAX_BURST_APL 36
+	"max_brst", /* 36 */
+#define SCTP_EXPRESS_ROUTE 37
+	"expr_del", /* 37 */
+#define SCTP_NO_COPY_IN    38
+	"no_cp_in", /* 38 */
+#define SCTP_CACHED_SRC    39
+	"cach_src", /* 39 */
+#define SCTP_CWND_NOCUM	   40
+	"cw_nocum", /* 40 */
+#define SCTP_CWND_SS	   41
+	"cw_incss", /* 41 */
+#define SCTP_CWND_CA	   42
+	"cw_incca", /* 42 */
+#define SCTP_CWND_SKIP	   43
+	"cw_skip ", /* 43 */
+#define SCTP_CWND_NOUSE_CA 44
+	"cw_nu_ca", /* 44 */
+#define SCTP_MAX_CWND	   45
+	"cw_maxcw", /* 45 */
+#define SCTP_CWND_DIFF_CA  46
+	"diff_ss ", /* 46 */
+#define SCTP_CWND_DIFF_SA  47
+	"diff_ca ", /* 47 */
+#define SCTP_OQS_AT_SS 	   48
+	"tqs @ ss", /* 48 */
+#define SCTP_SQQ_AT_SS 	   49
+	"sqs @ ss", /* 49 */
+#define SCTP_OQS_AT_CA 	   50
+	"tqs @ ca", /* 50 */
+#define SCTP_SQQ_AT_CA 	   51
+	"sqq @ ca", /* 51 */
+#define SCTP_MOVED_MTU     52
+	"lmtu_mov", /* 52 */
+#define SCTP_MOVED_QMAX    53
+	"lcnt_mov", /* 53 */
+#define SCTP_SQC_AT_SS     54
+	"sndqctss", /* 54 */
+#define SCTP_SQC_AT_CA     55
+	"sndqctca", /* 55 */
+#define SCTP_MOVED_MAX     56
+	"movemax ", /* 56 */
+#define SCTP_MOVED_NLEF    57
+	"move_equ", /* 57 */
+#define SCTP_NAGLE_NOQ     58
+	"nagle_qo", /* 58 */
+#define SCTP_NAGLE_OFF     59
+	"nagle_of", /* 59 */
+#define SCTP_OUTPUT_FRM_SND 60
+	"out_fr_s", /* 60 */
+#define SCTP_SOS_NOSNT     61   /* some on stream queues when none sent */
+	"sostrnos", /* 61 */
+#define SCTP_NOS_NOSNT     62   /* none on stream queues when none sent */
+	"nostrnos", /* 62 */
+#define SCTP_SOSE_NOSNT    63   /* some on send queue when none sent */
+	"sosnqnos", /* 63 */
+#define SCTP_NOSE_NOSNT    64   /* none on send queue when none sent */
+	"nosnqnos", /* 64 */
+#define SCTP_DATA_OUT_ERR  65
+	"intoperr", /* 65 */
+#define SCTP_DUP_SSN_RCVD  66
+	"dupssnrc", /* 66 */
+#define SCTP_DUP_FR        67
+	"multi-fr", /* 67 */
+#define SCTP_VTAG_EXPR     68
+	"vtag-exp", /* 68 */
+#define SCTP_VTAG_BOGUS    69
+	"vtag-bog", /* 69 */
+#define SCTP_T3_SAFEGRD    70
+	"t3-safeg", /* 70 */
+#define SCTP_PDRP_FMBOX    71
+	"pd--mbox", /* 71 */
+#define SCTP_PDRP_FEHOS    72
+	"pd-ehost", /* 72 */
+#define SCTP_PDRP_MB_DA	   73
+        "pdmb_wda"  /* 73 */
+#define SCTP_PDRP_MB_CT	   74
+	"pdmb_ctl", /* 74 */
+#define SCTP_PDRP_BWRPT	   75
+	"pdmb_bwr", /* 75 */
+#define SCTP_PDRP_CRUPT	   76
+	"pd_corup", /* 76 */
+#define SCTP_PDRP_NEDAT    77
+	"pd_nedat", /* 77 */
+#define SCTP_PDRP_PDBRK    78
+	"pd_errpd", /* 78 */
+#define SCTP_PREPENDS_FAST 79
+	"fst_prep", /* 79 */
+#define SCTP_PDRP_DNFND    80
+	"pd_daNFo", /* 80 */
+#define SCTP_PDRP_DIWNP    81
+	"pd_dIWin", /* 81 */
+#define SCTP_PDRP_DIZRW    82
+	"pd_dIZrw", /* 82 */
+#define SCTP_PDRP_BADD     83
+	"pd_BadDa", /* 83 */
+#define SCTP_PDRP_MARK     84
+	"pd_dMark", /* 84 */
+#define SCTP_ECNE_RCVD     85
+	"ecne_rcv", /* 85 */
+#define SCTP_CWR_PERFO     86
+	"cwr_perf", /* 86 */
+#define SCTP_ECNE_SENT     87
+	"ecne_snt", /* 87 */
+#define SCTP_MSGC_DROP     88 "chun_drp",
+Total number of chunks on queue that were dropped
+without processing due to the peer hitting the
+total chunk limit.
