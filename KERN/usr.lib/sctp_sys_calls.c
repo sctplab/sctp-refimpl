@@ -69,6 +69,11 @@ sctp_connectx(int fd, struct sockaddr *addrs, int addrcnt)
 		errno = EINVAL;
 		return(-1);
 	}
+	if (len > 2048) {
+		/* Never enough memory */
+		return(E2BIG);
+	}
+
 	buf = malloc(len);
 	if(buf == NULL) {
 		return(ENOMEM);
@@ -79,6 +84,7 @@ sctp_connectx(int fd, struct sockaddr *addrs, int addrcnt)
 	memcpy((caddr_t)aa,addrs,(len-sizeof(int)));
 	ret = setsockopt(fd, IPPROTO_SCTP, SCTP_CONNECT_X, (void *)buf,
 			 (unsigned int)len);
+	free(buf);
 	return (ret);
 }
 
