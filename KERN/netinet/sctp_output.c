@@ -7228,7 +7228,14 @@ sctp_output(inp, m, addr, control, p)
 	}
 	/* Can't allow a V6 address on a non-v6 socket */
 	if (addr) {
-		SCTP_INP_CREATE_LOCK(inp);
+		SCTP_ASOC_CREATE_LOCK(inp);
+		if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
+		    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
+			/* Should I really unlock ? */
+			SCTP_ASOC_CREATE_UNLOCK(inp);
+			splx(s);
+			return(EFAULT);
+		}
 		create_lock_applied = 1;
 		if (((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0) &&
 		    (addr->sa_family == AF_INET6)) {
@@ -7246,7 +7253,7 @@ sctp_output(inp, m, addr, control, p)
 				sctp_m_freem(control);
 				splx(s);
 				if(create_lock_applied) {
-					SCTP_INP_CREATE_UNLOCK(inp);
+					SCTP_ASOC_CREATE_UNLOCK(inp);
 					create_lock_applied = 0;
 				}
 				return (sctp_sendall(inp, NULL, m, &srcv));
@@ -7289,8 +7296,10 @@ sctp_output(inp, m, addr, control, p)
 			SCTP_INP_RUNLOCK(inp);
 			if (stcb == NULL) {
 				splx(s);
-				if(create_lock_applied)
-					SCTP_INP_CREATE_UNLOCK(inp);
+				if(create_lock_applied) {
+					SCTP_ASOC_CREATE_UNLOCK(inp);
+					create_lock_applied = 0;
+				}
 				return (ENOTCONN);
 			}
 			if (addr == NULL) {
@@ -7315,7 +7324,7 @@ sctp_output(inp, m, addr, control, p)
 			control = NULL;
 		}
 		if(create_lock_applied) {
-			SCTP_INP_CREATE_UNLOCK(inp);
+			SCTP_ASOC_CREATE_UNLOCK(inp);
 			create_lock_applied = 0;
 		}
 		sctp_m_freem(m);
@@ -7329,7 +7338,7 @@ sctp_output(inp, m, addr, control, p)
 			control = NULL;
 		}
 		if(create_lock_applied) {
-			SCTP_INP_CREATE_UNLOCK(inp);
+			SCTP_ASOC_CREATE_UNLOCK(inp);
 			create_lock_applied = 0;
 		}
 		sctp_m_freem(m);
@@ -7345,7 +7354,7 @@ sctp_output(inp, m, addr, control, p)
 				control = NULL;
 			}
 			if(create_lock_applied) {
-				SCTP_INP_CREATE_UNLOCK(inp);
+				SCTP_ASOC_CREATE_UNLOCK(inp);
 				create_lock_applied = 0;
 			}
 			sctp_m_freem(m);
@@ -7360,7 +7369,7 @@ sctp_output(inp, m, addr, control, p)
 				control = NULL;
 			}
 			if(create_lock_applied) {
-				SCTP_INP_CREATE_UNLOCK(inp);
+				SCTP_ASOC_CREATE_UNLOCK(inp);
 				create_lock_applied = 0;
 			}
 			sctp_m_freem(m);
@@ -7369,7 +7378,7 @@ sctp_output(inp, m, addr, control, p)
 		}
 		SCTP_TCB_LOCK(stcb);
 		if(create_lock_applied) {
-			SCTP_INP_CREATE_UNLOCK(inp);
+			SCTP_ASOC_CREATE_UNLOCK(inp);
 			create_lock_applied = 0;
 		} else {
 			printf("Huh-1, create lock should have been applied!\n");
@@ -7440,7 +7449,7 @@ sctp_output(inp, m, addr, control, p)
 	} else {
 		SCTP_TCB_LOCK(stcb);
 		if(create_lock_applied) {
-			SCTP_INP_CREATE_UNLOCK(inp);
+			SCTP_ASOC_CREATE_UNLOCK(inp);
 			create_lock_applied = 0;
 		}
 		asoc = &stcb->asoc;
@@ -7475,7 +7484,7 @@ sctp_output(inp, m, addr, control, p)
 		/* we should never hit here with the create lock applied 
 		 *
 		 */
-		SCTP_INP_CREATE_UNLOCK(inp);
+		SCTP_ASOC_CREATE_UNLOCK(inp);
 		create_lock_applied = 0;
 	}
 
@@ -9901,7 +9910,15 @@ sctp_sosend(struct socket *so,
 		goto out;
 	}
 	if (addr) {
-		SCTP_INP_CREATE_LOCK(inp);
+		SCTP_ASOC_CREATE_LOCK(inp);
+		if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
+		    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
+			/* Should I really unlock ? */
+			error = EFAULT;
+			splx(s);
+			goto out;
+
+		}
 		create_lock_applied = 1;
 		if (((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0) &&
 		    (addr->sa_family == AF_INET6)) {
@@ -9935,7 +9952,7 @@ sctp_sosend(struct socket *so,
 				sbunlock(&so->so_snd);
 
 				if(create_lock_applied) {
-					SCTP_INP_CREATE_UNLOCK(inp);
+					SCTP_ASOC_CREATE_UNLOCK(inp);
 					create_lock_applied = 0;
 				}
 				return (sctp_sendall(inp, uio, top, &srcv));
@@ -9966,17 +9983,9 @@ sctp_sosend(struct socket *so,
 	if ((stcb == NULL) &&
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE)) {
 		error = ENOTCONN;
-		if(create_lock_applied) {
-			SCTP_INP_CREATE_UNLOCK(inp);
-			create_lock_applied = 0;
-		}
 		splx(s);
 		goto out;
 	} else if ((stcb == NULL) && (addr == NULL)) {
-		if(create_lock_applied) {
-			SCTP_INP_CREATE_UNLOCK(inp);
-			create_lock_applied = 0;
-		}
 		error = ENOENT;
 		splx(s);
 		goto out;
@@ -9985,10 +9994,6 @@ sctp_sosend(struct socket *so,
 		if ((use_rcvinfo) &&
 		    (srcv.sinfo_flags & MSG_ABORT)) {
 			/* User asks to abort a non-existant asoc */
-			if(create_lock_applied) {
-				SCTP_INP_CREATE_UNLOCK(inp);
-				create_lock_applied = 0;
-			}
 			error = ENOENT;
 			splx(s);
 			goto out;
@@ -9997,16 +10002,12 @@ sctp_sosend(struct socket *so,
 		stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0);
 		if (stcb == NULL) {
 			/* Error is setup for us in the call */
-			if(create_lock_applied) {
-				SCTP_INP_CREATE_UNLOCK(inp);
-				create_lock_applied = 0;
-			}
 			splx(s);
 			goto out;
 		}
 		SCTP_TCB_LOCK(stcb);
 		if(create_lock_applied) {
-			SCTP_INP_CREATE_UNLOCK(inp);
+			SCTP_ASOC_CREATE_UNLOCK(inp);
 			create_lock_applied = 0;
 		} else {
 			printf("Huh-3? create lock should have been on??\n");
@@ -10086,7 +10087,7 @@ sctp_sosend(struct socket *so,
 		asoc = &stcb->asoc;
 	}
 	if(create_lock_applied) {
-		SCTP_INP_CREATE_UNLOCK(inp);
+		SCTP_ASOC_CREATE_UNLOCK(inp);
 		create_lock_applied = 0;
 	}
 	if ((SCTP_GET_STATE(asoc) == SCTP_STATE_COOKIE_WAIT) ||
@@ -10351,6 +10352,10 @@ sctp_sosend(struct socket *so,
 #endif
  out:
 	sbunlock(&so->so_snd);
+	if(create_lock_applied) {
+		SCTP_ASOC_CREATE_UNLOCK(inp);
+		create_lock_applied = 0;
+	}
  out_nsb:
 	SCTP_TCB_UNLOCK(stcb);
 	if (top)

@@ -1464,7 +1464,15 @@ sctp_do_connect_x(struct socket *so,
 		return (EALREADY);
 
 	}
-	SCTP_INP_CREATE_LOCK(inp);
+	SCTP_ASOC_CREATE_LOCK(inp);
+	if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
+	    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
+		/* Should I really unlock ? */
+		SCTP_ASOC_CREATE_UNLOCK(inp);
+		splx(s);
+		return(EFAULT);
+	}
+	
 	totaddrp = mtod(m, int *);
 	totaddr = *totaddrp;
 	sa = (struct sockaddr *)(totaddrp + 1);
@@ -1479,7 +1487,7 @@ sctp_do_connect_x(struct socket *so,
 			sin6 = (struct sockaddr_in6 *)sa;
 			if (IN6_IS_ADDR_V4MAPPED(&sin6->sin6_addr)) {
 				/* Must be non-mapped for connectx */
-				SCTP_INP_CREATE_UNLOCK(inp);
+				SCTP_ASOC_CREATE_UNLOCK(inp);
 				splx(s);
 				return EINVAL;
 			}
@@ -1492,7 +1500,7 @@ sctp_do_connect_x(struct socket *so,
 		stcb = sctp_findassociation_ep_addr(&inp, sa, NULL, NULL);
 		if (stcb != NULL) {
 			/* Already have or am bring up an association */
-			SCTP_INP_CREATE_UNLOCK(inp);
+			SCTP_ASOC_CREATE_UNLOCK(inp);
 			splx(s);
 			return (EALREADY);
 		}
@@ -1509,7 +1517,7 @@ sctp_do_connect_x(struct socket *so,
 	    (num_v6 > 0)) {
 		splx(s);
 		SCTP_INP_RUNLOCK(inp);
-		SCTP_INP_CREATE_UNLOCK(inp);
+		SCTP_ASOC_CREATE_UNLOCK(inp);
 		return (EINVAL);
 	}
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) &&
@@ -1530,7 +1538,7 @@ sctp_do_connect_x(struct socket *so,
 			 * destined to a v4 addr or v4-mapped addr
 			 */
 			SCTP_INP_RUNLOCK(inp);
-			SCTP_INP_CREATE_UNLOCK(inp);
+			SCTP_ASOC_CREATE_UNLOCK(inp);
 			splx(s);
 			return EINVAL;
 		}
@@ -1542,7 +1550,7 @@ sctp_do_connect_x(struct socket *so,
 		SCTP_INP_RUNLOCK(inp);
 		error = sctp_inpcb_bind(so, NULL, p);
 		if (error) {
-			SCTP_INP_CREATE_UNLOCK(inp);
+			SCTP_ASOC_CREATE_UNLOCK(inp);
 			splx(s);
 			return (error);
 		}
@@ -1553,12 +1561,12 @@ sctp_do_connect_x(struct socket *so,
 	stcb = sctp_aloc_assoc(inp, sa, 1, &error, 0);
 	if (stcb == NULL) {
 		/* Gak! no memory */
-		SCTP_INP_CREATE_UNLOCK(inp);
+		SCTP_ASOC_CREATE_UNLOCK(inp);
 		splx(s);
 		return (error);
 	}
 	SCTP_TCB_LOCK(stcb);
-	SCTP_INP_CREATE_UNLOCK(inp);
+	SCTP_ASOC_CREATE_UNLOCK(inp);
 	/* move to second address */
 	if (sa->sa_family == AF_INET)
 		sa = (struct sockaddr *)((caddr_t)sa + sizeof(struct sockaddr_in));
@@ -3634,11 +3642,18 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		/* I made the same as TCP since we are not setup? */
 		return (ECONNRESET);
 	}
-	SCTP_INP_CREATE_LOCK(inp);
+	SCTP_ASOC_CREATE_LOCK(inp);
+	if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
+	    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
+		/* Should I really unlock ? */
+		SCTP_ASOC_CREATE_UNLOCK(inp);
+		splx(s);
+		return(EFAULT);
+	}
 #ifdef INET6
 	if (((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0) &&
 	    (addr->sa_family == AF_INET6)) {
-		SCTP_INP_CREATE_UNLOCK(inp);
+		SCTP_ASOC_CREATE_UNLOCK(inp);
 		splx(s);
 		return (EINVAL);
 	}
@@ -3648,7 +3663,7 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		/* Bind a ephemeral port */
 		error = sctp_inpcb_bind(so, NULL, p);
 		if (error) {
-			SCTP_INP_CREATE_UNLOCK(inp);
+			SCTP_ASOC_CREATE_UNLOCK(inp);
 			splx(s);
 			return (error);
 		}
@@ -3659,7 +3674,7 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
 		/* We are already connected AND the TCP model */
 		splx(s);
-		SCTP_INP_CREATE_UNLOCK(inp);
+		SCTP_ASOC_CREATE_UNLOCK(inp);
 		SCTP_INP_RUNLOCK(inp);
 		return (EADDRINUSE);
 	}
@@ -3672,7 +3687,7 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	}
 	if (stcb != NULL) {
 		/* Already have or am bring up an association */
-		SCTP_INP_CREATE_UNLOCK(inp);
+		SCTP_ASOC_CREATE_UNLOCK(inp);
 		splx(s);
 		return (EALREADY);
 	}
@@ -3680,12 +3695,12 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0);
 	if (stcb == NULL) {
 		/* Gak! no memory */
-		SCTP_INP_CREATE_UNLOCK(inp);
+		SCTP_ASOC_CREATE_UNLOCK(inp);
 		splx(s);
 		return (error);
 	}
 	SCTP_TCB_LOCK(stcb);
-	SCTP_INP_CREATE_UNLOCK(inp);
+	SCTP_ASOC_CREATE_UNLOCK(inp);
 	if (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) {
 		stcb->sctp_ep->sctp_flags |= SCTP_PCB_FLAGS_CONNECTED;
 		/* Set the connected flag so we can queue data */
