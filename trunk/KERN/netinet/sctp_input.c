@@ -1252,14 +1252,6 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			;
 		}
 
-		/* now do we enable pr-sctp? */
-		if (stcb->asoc.peer_supports_prsctp) {
-			/*
-			 * Yes, we must set all the streams that we told him
-			 * about in the INIT-ACK.
-			 */
-			sctp_unpack_prsctp_streams(stcb, initack_cp, m, offset);
-		}
 		/* respond with a COOKIE-ACK */
 		sctp_send_cookie_ack(stcb);
 		return (stcb);
@@ -1327,13 +1319,6 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			;
 		}
 
-		/* now do we enable pr-sctp? */
-		if (stcb->asoc.peer_supports_prsctp) {
-			/* Yes, we must set all the streams that we told him
-			 * about in the INIT-ACK.
-			 */
-			sctp_unpack_prsctp_streams(stcb, initack_cp, m, offset);
-		}
 		if ((asoc->state & SCTP_STATE_COOKIE_WAIT) ||
 		    (asoc->state & SCTP_STATE_COOKIE_ECHOED)) {
 			*notification = SCTP_NOTIFY_ASSOC_UP;
@@ -1421,14 +1406,6 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			;
 		}
 
-		/* now do we enable pr-sctp? */
-		if (stcb->asoc.peer_supports_prsctp) {
-			/*
-			 * Yes, we must set all the streams that we told him
-			 * about in the INIT-ACK.
-			 */
-			sctp_unpack_prsctp_streams(stcb, initack_cp, m, offset);
-		}
 		if (asoc->state & SCTP_STATE_SHUTDOWN_PENDING) {
 			asoc->state = SCTP_STATE_OPEN |
 			    SCTP_STATE_SHUTDOWN_PENDING;
@@ -1607,14 +1584,6 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	    init_src)) {
 		sctp_free_assoc(inp, stcb);
 		return (NULL);
-	}
-	/* now do we enable pr-sctp? */
-	if (stcb->asoc.peer_supports_prsctp) {
-		/*
-		 * Yes, we must set all the streams that we told him
-		 * about in the INIT-ACK.
-		 */
-		sctp_unpack_prsctp_streams(stcb, initack_cp, m, initack_offset);
 	}
 
 	/* update current state */
