@@ -3904,9 +3904,13 @@ sctp_usr_recvd(struct socket *so, int flags)
 	}
 	if (stcb)
 		SCTP_TCB_LOCK(stcb);
-	SCTP_INP_WUNLOCK(inp);
 	if (stcb) {
 		long incr;
+		/* all code in normal stcb path assumes
+		 * that you have a tcb_lock only. Thus
+		 * we must release the inp write lock.
+		 */
+		SCTP_INP_WUNLOCK(inp);
 		if (flags & MSG_EOR) {
 			if(((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0)
 			   && ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
@@ -3950,16 +3954,20 @@ sctp_usr_recvd(struct socket *so, int flags)
 			/* Now do the output */
 			sctp_chunk_output(inp, stcb, 10);
 		}
+		/* Now lets get back the INP
+		 * write lock, to do that we need to 
+		 * unlock the tcb, then relock the
+		 * inp and then get our tcb lock back too.
+		 */
 		SCTP_TCB_UNLOCK(stcb);
+		SCTP_INP_WLOCK(inp);
+		SCTP_TCB_LOCK(stcb);
 	} else {
 		if ((( sq ) && (flags & MSG_EOR) && ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0)) 
 		    && ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
-			SCTP_INP_WLOCK(inp);
 			stcb = sctp_remove_from_socket_q(inp);
-			SCTP_INP_WUNLOCK(inp);
 		}
 	}
-	SCTP_INP_WLOCK(inp);
 	SOCKBUF_LOCK(&so->so_rcv);
 	if (( so->so_rcv.sb_mb == NULL ) &&
 	    (TAILQ_EMPTY(&inp->sctp_queue_list) == 0)) {
@@ -3985,6 +3993,8 @@ sctp_usr_recvd(struct socket *so, int flags)
 #endif
 	}
 	SOCKBUF_UNLOCK(&so->so_rcv);
+	if(stcb)
+		SCTP_TCB_UNLOCK(stcb);
 	SCTP_INP_WUNLOCK(inp);
 	splx(s);
 	return (0);
