@@ -10266,7 +10266,7 @@ sctp_sosend(struct socket *so,
 		}
 	}
 
-	if (top) {
+	if (top == NULL) {
 		/* Must copy it all in from user land. The
 		 * socket buf is locked but we don't suspend
 		 * protocol processing until we are ready to
