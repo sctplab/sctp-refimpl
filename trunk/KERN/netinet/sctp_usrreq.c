@@ -128,7 +128,7 @@ int sctp_recvspace = 128 * (1024 +
 #ifdef INET6
 				sizeof(struct sockaddr_in6)
 #else
-				sizeof(struct sockaddr_in);
+				sizeof(struct sockaddr_in)
 #endif
 	);
 int sctp_strict_sacks = 0;
