@@ -138,8 +138,9 @@ struct sctp_paramhdr {
 #define SCTP_CONNECT_X_COMPLETE         0x00000021
 #define SCTP_GET_ASOC_ID_LIST           0x00000022
 
-/* Other debug items */
+/* Other BSD items */
 #define SCTP_GET_NONCE_VALUES           0x00000023
+#define SCTP_DELAYED_ACK_TIME           0x00000024
 
 /* Things for the AUTH draft possibly */
 #define SCTP_PEER_PUBLIC_KEY            0x00000100 /* get the peers public key */

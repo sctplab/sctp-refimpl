@@ -69,3 +69,6 @@ Patch 25)
     private address space :-D
 15) A performance improvement introduced a bug that caused
     HB's to stop being sent due to a miscaluclation of time.
+16) DSACK timer now configurable on an EP
+17) Whew, 5.3.x compatibile aka SMP with locking now
+    works.
