@@ -2096,7 +2096,7 @@ sctp_optsget(struct socket *so,
 		}
 		
 		m->m_len = sizeof(struct sctp_paddrinfo);
-		paddri->spinfo_state = net->dest_state & SCTP_REACHABLE_MASK;
+		paddri->spinfo_state = net->dest_state & (SCTP_REACHABLE_MASK|SCTP_ADDR_NOHB);
 		paddri->spinfo_cwnd = net->cwnd;
 		paddri->spinfo_srtt = ((net->lastsa >> 2) + net->lastsv) >> 1;
 		paddri->spinfo_rto = net->RTO;
@@ -2169,6 +2169,7 @@ sctp_optsget(struct socket *so,
 		       &stcb->asoc.primary_destination->ra._l_addr,
 		       ((struct sockaddr *)(&stcb->asoc.primary_destination->ra._l_addr))->sa_len);
 		net = stcb->asoc.primary_destination;
+		((struct sockaddr_in *)&sstat->sstat_primary.spinfo_address)->sin_port = stcb->rport;
 		/*
 		 * Again the user can get info from sctp_constants.h
 		 * for what the state of the network is.
