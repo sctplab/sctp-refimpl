@@ -8039,6 +8039,14 @@ sctp_send_str_reset_ack(struct sctp_tcb *stcb,
 	strack->ch.chunk_type = SCTP_STREAM_RESET;
 	strack->ch.chunk_flags = 0;
 	strack->ch.chunk_length = htons(chk->send_size);
+
+	memset(strack->sr_resp.reset_pad,0,sizeof(strack->sr_resp.reset_pad));
+
+	strack->ph.param_type = ntohs(SCTP_STR_RESET_RESPONSE);
+	strack->ph.param_length = htons((chk->send_size - sizeof(struct sctp_chunkhdr)));
+
+
+
 	if (chk->send_size % 4) {
 		/* need a padding for the end */
 		int pad;
@@ -8058,9 +8066,6 @@ sctp_send_str_reset_ack(struct sctp_tcb *stcb,
 		strack->sr_resp.reset_flags = 0; 
 	}
 
-	strack->ph.param_type = ntohs(SCTP_STR_RESET_RESPONSE);
-	strack->ph.param_length = htons((chk->send_size - sizeof(struct sctp_chunkhdr)));
-	memset(strack->sr_resp.reset_pad,0,sizeof(strack->sr_resp.reset_pad));
 
 	/* copied from reset request */
 	strack->sr_resp.reset_req_seq_resp = req->sr_req.reset_req_seq;
@@ -8190,6 +8195,9 @@ sctp_send_str_reset_req(struct sctp_tcb *stcb,
 	strreq->ch.chunk_flags = 0;
 	strreq->ch.chunk_length = htons(chk->send_size);
 
+	strreq->ph.param_type = ntohs(SCTP_STR_RESET_REQUEST);
+	strreq->ph.param_length = htons((chk->send_size - sizeof(struct sctp_chunkhdr)));
+
 	if (chk->send_size % 4) {
 		/* need a padding for the end */
 		int pad, i;
@@ -8201,8 +8209,6 @@ sctp_send_str_reset_req(struct sctp_tcb *stcb,
 		}
 		chk->send_size += pad;
 	}
-	strreq->ph.param_type = ntohs(SCTP_STR_RESET_REQUEST);
-	strreq->ph.param_length = htons(sizeof(struct sctp_stream_reset_request) + (number_entrys * sizeof(uint16_t)));
 
 	strreq->sr_req.reset_flags = 0;
 	if (number_entrys == 0) {
