@@ -1963,6 +1963,9 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 			SCTP_INP_DECR_REF(inp_tmp);
 			SCTP_INP_WUNLOCK(inp_tmp);
 
+			SCTP_INP_WLOCK(inp);
+			SCTP_INP_DECR_REF(inp);
+			SCTP_INP_WUNLOCK(inp);
 			/* unlock info */
 			SCTP_INP_INFO_WUNLOCK();
 			return (EADDRNOTAVAIL);
