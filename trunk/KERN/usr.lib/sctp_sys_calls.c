@@ -46,7 +46,7 @@
 
 #include <net/if_dl.h>
 
-
+#ifdef SCTP_DEBUG_PRINT_ADDRESS
 static void
 SCTPPrintAnAddress(struct sockaddr *a)
 {
@@ -107,7 +107,7 @@ SCTPPrintAnAddress(struct sockaddr *a)
     printf("%s unprintable?\n",txt);
   }
 }
-
+#endif /* SCTP_DEBUG_PRINT_ADDRESS */
 
 int
 sctp_connectx(int fd, struct sockaddr *addrs, int addrcnt)
