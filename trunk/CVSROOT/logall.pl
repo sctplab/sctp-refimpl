@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-$recipients = "rrs\@cisco.com,peterlei\@cisco.com,rodrigc\@crodrigues.org,xtang\@qnx.com,ma-kun\@kozuka.jp \n";
+$recipients = "rrs\@cisco.com,peterlei\@cisco.com,xtang\@qnx.com,ma-kun\@kozuka.jp,tuexen@fh-muenster.de\n";
 
 $login = (getpwuid($<))[0] || "nobody";
 $fullname = (getpwuid($<))[6] || "nobody";
