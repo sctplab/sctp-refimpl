@@ -451,6 +451,7 @@
 #define SCTP_ASOC_MAX_CHUNKS_ON_QUEUE 512
 
 #define MSEC_TO_TICKS(x) (((x) * hz) / 1000)
+#define TICKS_TO_MSEC(x) (((x) * 1000) / hz)
 #define SEC_TO_TICKS(x) ((x) * hz)
 
 /* init timer def = 1 sec */

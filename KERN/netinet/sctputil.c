@@ -1233,7 +1233,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		} else {
 			rto_val = net->RTO;
 		}
-		to_ticks = (rto_val * hz)/1000;
+		to_ticks = MSEC_TO_TICKS(rto_val);
 	}
 	break;
 	case SCTP_TIMER_TYPE_INIT:
@@ -1246,9 +1246,9 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		}
 		tmr = &net->rxt_timer;
 		if (net->RTO == 0) {
-			to_ticks = (stcb->asoc.initial_rto * hz)/1000;
+			to_ticks = MS_TO_TICKS(stcb->asoc.initial_rto);
 		} else {
-			to_ticks = (net->RTO * hz)/1000;
+			to_ticks = MS_TO_TICKS(net->RTO);
 		}
 		break;
 	case SCTP_TIMER_TYPE_RECV:
@@ -1269,9 +1269,9 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		}
 
 		if (net->RTO == 0) {
-			to_ticks = (stcb->asoc.initial_rto * hz)/1000;
+			to_ticks = MS_TO_TICKS(stcb->asoc.initial_rto);
 		} else {
-			to_ticks = (net->RTO * hz)/1000;
+			to_ticks = MS_TO_TICKS(net->RTO);
 		}
 		tmr = &net->rxt_timer;
 		break;
@@ -1371,9 +1371,9 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			return (EFAULT);
 		}
 		if (net->RTO == 0) {
-			to_ticks = (stcb->asoc.initial_rto * hz)/1000;
+			to_ticks = MS_TO_TICKS(stcb->asoc.initial_rto);
 		} else {
-			to_ticks = (net->RTO * hz)/1000;
+			to_ticks = MS_TO_TICKS(net->RTO)
 		}
 		tmr = &net->rxt_timer;
 		break;
@@ -1414,9 +1414,9 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			return (EFAULT);
 		}
 		if (net->RTO == 0) {
-			to_ticks = (stcb->asoc.initial_rto * hz)/1000;
+			to_ticks = MS_TO_TICKS(stcb->asoc.initial_rto);
 		} else {
-			to_ticks = (net->RTO * hz)/1000;
+			to_ticks = MS_TO_TICKS(net->RTO);
 		}
 		tmr = &net->rxt_timer;
 		break;
@@ -1440,9 +1440,9 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			return (EFAULT);
 		}
 		if (net->RTO == 0) {
-			to_ticks = (stcb->asoc.initial_rto * hz)/1000;
+			to_ticks = MS_TO_TICKS(stcb->asoc.initial_rto);
 		} else {
-			to_ticks = (net->RTO * hz)/1000;
+			to_ticks = MS_TO_TICKS(net->RTO);
 		}
 		tmr = &stcb->asoc.strreset_timer;
 		break;
@@ -1456,9 +1456,9 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			return (EFAULT);
 		}
 		if (net->RTO == 0) {
-			to_ticks = (stcb->asoc.initial_rto * hz)/1000;
+			to_ticks = MS_TO_TICKS(stcb->asoc.initial_rto);
 		} else {
-			to_ticks = (net->RTO * hz)/1000;
+			to_ticks = MS_TO_TICKS(net->RTO);
 		}
 		tmr = &stcb->asoc.asconf_timer;
 		break;

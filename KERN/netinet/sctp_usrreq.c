@@ -1809,6 +1809,18 @@ sctp_optsget(struct socket *so,
 		error = EOPNOTSUPP;
 		break;
 
+	case SCTP_DELAYED_ACK_TIME:
+	{
+		int32_t *tm;
+		if ((size_t)m->m_len < sizeof(int32_t)) {
+			error = EINVAL;
+			break;
+		}
+		tm = mtod(m, int32_t *);
+
+		*ts = TICKS_TO_MS(inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV]);
+	}
+	break;
 
 	case SCTP_GET_SNDBUF_USE:
 		if ((size_t)m->m_len < sizeof(struct sctp_sockstat)) {
@@ -2785,6 +2797,24 @@ sctp_optsset(struct socket *so,
 #else
 		error = EOPNOTSUPP;
 #endif
+		break;
+	case SCTP_DELAYED_ACK_TIME:
+	{
+		int32_t *tm;
+		if ((size_t)m->m_len < sizeof(int32_t)) {
+			error = EINVAL;
+			break;
+		}
+		tm = mtod(m, int32_t *);
+
+		if ((*tm < 10) || (*tm > 500)) {
+			/* can't be smaller than 10ms */
+			/* MUST NOT be larger than 500ms */
+			error = EINVAL;
+			break;
+		}
+		inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV] = MSEC_TO_TICKS(*ts);
+	}
 		break;
 	case SCTP_RESET_STREAMS:
 	{
