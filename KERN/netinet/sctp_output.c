@@ -4313,7 +4313,11 @@ sctp_msg_append(struct sctp_tcb *stcb,
 		    so->so_snd.sb_mbmax)) {
 			struct sctp_inpcb *inp;
 			/* Now did we free up enough room? */
-			if ((so->so_state & SS_NBIO) || (flags & MSG_NBIO)) {
+			if ((so->so_state & SS_NBIO)
+#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+			    || (flags & MSG_NBIO)
+#endif
+				) {
 				/* Non-blocking io in place */
 				error = EWOULDBLOCK;
 				goto release;
@@ -9490,7 +9494,11 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 		    (asoc->total_output_mbuf_queue_size >
 		    so->so_snd.sb_mbmax)
 		) {
-			if ((so->so_state & SS_NBIO) || (flags & MSG_NBIO)) {
+			if ((so->so_state & SS_NBIO)
+#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+			    || (flags & MSG_NBIO)
+#endif
+				) {
 				/* Non-blocking io in place */
 				error = EWOULDBLOCK;
 				goto release;
