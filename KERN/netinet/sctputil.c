@@ -927,14 +927,16 @@ sctp_timeout_handler(void *t)
 	net = (struct sctp_nets *)tmr->net;
 	did_output = 1;
 
+
 #ifdef SCTP_AUDITING_ENABLED
 	sctp_audit_log(0xF0, (u_int8_t)tmr->type);
 	sctp_auditing(3, inp, stcb, net);
 #endif
 	sctp_pegs[SCTP_TIMERS_EXP]++;
 
-	if (inp == NULL)
+	if (inp == NULL) { 
 		return;
+	}
 
 	SCTP_INP_WLOCK(inp);
 	if (inp->sctp_socket == 0) {
@@ -1146,6 +1148,7 @@ sctp_timeout_handler(void *t)
 		SCTP_INP_WLOCK(inp);
 		SCTP_INP_DECR_REF(inp);	
 		SCTP_INP_WUNLOCK(inp);
+		sctp_timer_stop(SCTP_TIMER_TYPE_INPKILL, inp, NULL, NULL);
 		sctp_inpcb_free(inp, 1);
 		goto out_no_decr;
 		break;
@@ -1494,6 +1497,8 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		 * we do NOT allow you to have it already running.
 		 * if it is we leave the current one up unchanged
 		 */
+		printf("Already running internal type:%d flags:%x\n",tmr->type,
+		       tmr->timer.c_flags);
 		return (EALREADY);
 	}
 	/* At this point we can proceed */
@@ -1565,6 +1570,10 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	case SCTP_TIMER_TYPE_NEWCOOKIE:
 		/* nothing needed but the endpoint here */
 		tmr = &inp->sctp_ep.signature_change;
+		/* We re-use the newcookie timer for
+		 * the INP kill timer. We must assure
+		 * that we do not kill it by accident.
+		 */
 		break;
 	case SCTP_TIMER_TYPE_INPKILL:
 		/*
@@ -1632,6 +1641,8 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		 * running the timer that the caller wants stopped.  So just
 		 * return.
 		 */
+		printf("stop aborted %d != %d\n",
+		       tmr->type, t_type);
 		return (0);
 	}
 	if (t_type == SCTP_TIMER_TYPE_SEND) {

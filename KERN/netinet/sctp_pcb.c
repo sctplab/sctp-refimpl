@@ -1534,6 +1534,7 @@ sctp_inpcb_alloc(struct socket *so)
 #else
 	callout_init(&inp->sctp_ep.signature_change.timer);
 #endif
+	inp->sctp_ep.signature_change.type = SCTP_TIMER_TYPE_NEWCOOKIE;
 
 	/* now init the actual endpoint default data */
 	m = &inp->sctp_ep;
@@ -1569,21 +1570,20 @@ sctp_inpcb_alloc(struct socket *so)
 	/* seed random number generator */
 	m->random_counter = 1;
 	m->store_at = SCTP_SIGNATURE_SIZE;
-#if defined(__FreeBSD__) && __FreeBSD_version < 500000
+#if defined(__FreeBSD__) && (__FreeBSD_version < 500000)
 	read_random_unlimited(m->random_numbers, sizeof(m->random_numbers));
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) || (__FreeBSD_version > 500000)
 	read_random(m->random_numbers, sizeof(m->random_numbers));
 #elif defined(__OpenBSD__)
 	get_random_bytes(m->random_numbers, sizeof(m->random_numbers));
-#elif defined(__NetBSD__) || (defined(__FreeBSD__) && __FreeBSD_version >= 500000)
-#if !defined(__FreeBSD__) && NRND > 0
+#elif defined(__NetBSD__) && NRND > 0
 	rnd_extract_data(m->random_numbers, sizeof(m->random_numbers),
 			 RND_EXTRACT_ANY);
 #else
 	{
 		u_int32_t *ranm, *ranp;
 		ranp = (u_int32_t *)&m->random_numbers;
-		ranm = ranp + SCTP_SIGNATURE_ALOC_SIZE;
+		ranm = ranp + (SCTP_SIGNATURE_ALOC_SIZE/sizeof(u_int32_t));
 		if ((u_long)ranp % 4) {
 			/* not a even boundary? */
 			ranp = (u_int32_t *)SCTP_SIZE32((u_long)ranp);
@@ -1593,7 +1593,6 @@ sctp_inpcb_alloc(struct socket *so)
 			ranp++;
 		}
 	}
-#endif
 #endif
 	sctp_fill_random_store(m);
 
@@ -2281,10 +2280,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		}
 	}
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
-	printf("Refcount at sctp_inpcb_free(%x, %d) is %d\n",
-	       (u_int)inp,
-	       immediate,
-	       inp->refcount);
 	if (inp->refcount) {
 		sctp_timer_start(SCTP_TIMER_TYPE_INPKILL, inp, NULL, NULL);
 		SCTP_INP_WUNLOCK(inp);
@@ -2296,6 +2291,8 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 #if !defined(__FreeBSD__) || __FreeBSD_version < 500000
  	rt = ip_pcb->inp_route.ro_rt;
 #endif
+
+	callout_stop(&inp->sctp_ep.signature_change.timer);
 
 	if (so) {
 	/* First take care of socket level things */
