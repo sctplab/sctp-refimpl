@@ -7312,7 +7312,15 @@ sctp_output(inp, m, addr, control, p)
 			}
 		} else {
 			if (addr != NULL) {
-				stcb = sctp_findassociation_ep_addr(&t_inp, addr,&net, NULL, NULL);
+				SCTP_INP_WLOCK(inp);
+				SCTP_INP_INCR_REF(inp);
+				SCTP_INP_WUNLOCK(inp);
+				stcb = sctp_findassociation_ep_addr(&t_inp, addr, &net, NULL, NULL);
+				if(stcb == NULL) {
+					SCTP_INP_WLOCK(inp);
+					SCTP_INP_DECR_REF(inp);
+					SCTP_INP_WUNLOCK(inp);
+				}
 			}
 		}
 	}
@@ -9974,7 +9982,19 @@ sctp_sosend(struct socket *so,
 		}
 		if (stcb == NULL) {
 			if (addr != NULL) {
+				/* Since we did not use findep we must
+				 * increment it, and if we don't find a
+				 * tcb decrement it.
+				 */
+				SCTP_INP_WLOCK(inp);
+				SCTP_INP_INCR_REF(inp);
+				SCTP_INP_WUNLOCK(inp);
 				stcb = sctp_findassociation_ep_addr(&t_inp, addr, &net, NULL, NULL);
+				if(stcb == NULL) {
+					SCTP_INP_WLOCK(inp);
+					SCTP_INP_DECR_REF(inp);
+					SCTP_INP_WUNLOCK(inp);
+				}
 			}
 		}
 	}
