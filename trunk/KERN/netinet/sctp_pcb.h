@@ -612,7 +612,7 @@ void sctp_move_pcb_and_assoc(struct sctp_inpcb *, struct sctp_inpcb *,
  * this is why it is passed.
  */
 struct sctp_tcb *sctp_findassociation_ep_addr(struct sctp_inpcb **,
-	struct sockaddr *, struct sctp_nets **, struct sockaddr *);
+	struct sockaddr *, struct sctp_nets **, struct sockaddr *, struct sctp_tcb *);
 
 struct sctp_tcb *sctp_findassociation_ep_asocid(struct sctp_inpcb *, caddr_t);
 
