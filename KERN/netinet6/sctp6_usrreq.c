@@ -1275,7 +1275,7 @@ sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)
 		stcb = LIST_FIRST(&inp->sctp_asoc_list);
 	else
-		stcb = sctp_findassociation_ep_addr(&inp, addr, NULL, NULL);
+		stcb = sctp_findassociation_ep_addr(&inp, addr, NULL, NULL, NULL);
 
 	if (stcb != NULL) {
 		/* Already have or am bring up an association */
