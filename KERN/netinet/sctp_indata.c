@@ -285,7 +285,7 @@ sctp_build_ctl(struct sctp_tcb *stcb, struct sctp_tmit_chunk *chk)
 
 int
 sctp_deliver_data(struct sctp_tcb *stcb, struct sctp_association *asoc,
-    struct sctp_tmit_chunk *chk)
+    struct sctp_tmit_chunk *chk, int hold_locks)
 {
 	struct mbuf *control, *m;
 	int free_it;
@@ -297,10 +297,12 @@ sctp_deliver_data(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		printf("I am now in Deliver data! (%p)\n", chk);
 	}
 #endif
-	/* get a write lock on the inp */
-	SCTP_TCB_UNLOCK(stcb);
-	SCTP_INP_WLOCK(stcb->sctp_ep);
-	SCTP_TCB_LOCK(stcb);
+	/* get a write lock on the inp if not already */
+	if (hold_locks == 0) {
+		SCTP_TCB_UNLOCK(stcb);
+		SCTP_INP_WLOCK(stcb->sctp_ep);
+		SCTP_TCB_LOCK(stcb);
+	}
 	free_it = 0;
 	/* We always add it to the queue */
 	if (stcb && (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
@@ -340,7 +342,8 @@ sctp_deliver_data(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			}
 			sctppcbinfo.ipi_gencnt_chunk++;
 		}
-		SCTP_INP_WUNLOCK(stcb->sctp_ep);
+		if (hold_locks == 0) 
+			SCTP_INP_WUNLOCK(stcb->sctp_ep);
 		return (0);
 	}
 	if (chk != NULL) {
@@ -358,7 +361,8 @@ sctp_deliver_data(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			printf("Fragmented delivery in progress?\n");
 		}
 #endif
-		SCTP_INP_WUNLOCK(stcb->sctp_ep);
+		if (hold_locks == 0) 
+			SCTP_INP_WUNLOCK(stcb->sctp_ep);
 		return (0);
 	}
 	/* Now grab the first one  */
@@ -372,13 +376,15 @@ sctp_deliver_data(struct sctp_tcb *stcb, struct sctp_association *asoc,
 #endif
 		asoc->size_on_delivery_queue = 0;
 		asoc->cnt_on_delivery_queue = 0;
-		SCTP_INP_WUNLOCK(stcb->sctp_ep);
+		if (hold_locks == 0)
+			SCTP_INP_WUNLOCK(stcb->sctp_ep);
 		return (0);
 	}
 
 	if (stcb->sctp_socket->so_rcv.sb_cc >= stcb->sctp_socket->so_rcv.sb_hiwat) {
 		/* Boy, there really is NO room */
-		SCTP_INP_WUNLOCK(stcb->sctp_ep);
+		if (hold_locks == 0) 
+			SCTP_INP_WUNLOCK(stcb->sctp_ep);
 		return (0);
 	}
 #ifdef SCTP_DEBUG
@@ -391,7 +397,8 @@ sctp_deliver_data(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		MGETHDR(m, M_DONTWAIT, MT_DATA);
 		if (m == NULL) {
 			/* no room! */
-			SCTP_INP_WUNLOCK(stcb->sctp_ep);
+			if (hold_locks == 0) 
+				SCTP_INP_WUNLOCK(stcb->sctp_ep);
 			return (0);
 		}
 		m->m_pkthdr.len = chk->send_size;
@@ -480,7 +487,8 @@ sctp_deliver_data(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		}
 	}
  skip:
-	SCTP_INP_WUNLOCK(stcb->sctp_ep);
+	if (hold_locks == 0) 
+		SCTP_INP_WUNLOCK(stcb->sctp_ep);
 	/* free up the one we inserted */
 	if (free_it) {
 		/* Pull it off the queue */
@@ -765,8 +773,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc, in
 						 * finite number that can be
 						 * delivered from the strq.
 						 */
-						sctp_deliver_data(stcb, asoc,
-						    chk);
+						sctp_deliver_data(stcb, asoc, chk, 1);
 						chk = at;
 					} else {
 						break;
@@ -777,7 +784,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc, in
 			}
 			if (!TAILQ_EMPTY(&asoc->delivery_queue)) {
 				/* Here if deliver_data fails, we must break */
-				if (sctp_deliver_data(stcb, asoc, NULL) == 0)
+				if (sctp_deliver_data(stcb, asoc, NULL, 1) == 0)
 					break;
 			}
 			sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
@@ -880,7 +887,7 @@ sctp_queue_data_to_stream(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		asoc->size_on_all_streams -= chk->send_size;
 		asoc->cnt_on_all_streams--;
 		strm->last_sequence_delivered++;
-		sctp_deliver_data(stcb, asoc, chk);
+		sctp_deliver_data(stcb, asoc, chk, 0);
 		chk = TAILQ_FIRST(&strm->inqueue);
 		while (chk != NULL) {
 			/* all delivered */
@@ -901,7 +908,7 @@ sctp_queue_data_to_stream(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				sctp_log_strm_del(chk, NULL,
 				    SCTP_STR_LOG_FROM_IMMED_DEL);
 #endif	
-				sctp_deliver_data(stcb, asoc, chk);
+				sctp_deliver_data(stcb, asoc, chk, 0);
 				chk = at;
 				continue;
 			}
@@ -2146,7 +2153,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		}
 		if (chk->rec.data.rcv_flags & SCTP_DATA_UNORDERED) {
 			/* queue directly into socket buffer */
-			sctp_deliver_data(stcb, asoc, chk);
+			sctp_deliver_data(stcb, asoc, chk, 0);
 			sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 		} else {
 			/* Special check for when streams are resetting.
@@ -2441,7 +2448,7 @@ sctp_service_queues(struct sctp_tcb *stcb, struct sctp_association *asoc, int ho
 			break;
 		}
 		/* If deliver_data says no we must stop */
-		if (sctp_deliver_data(stcb, asoc,(struct sctp_tmit_chunk *)NULL) == 0)
+		if (sctp_deliver_data(stcb, asoc,(struct sctp_tmit_chunk *)NULL, hold_locks) == 0)
 			break;
 		cntDel++;
 		chk = TAILQ_FIRST(&asoc->delivery_queue);
@@ -4398,7 +4405,7 @@ sctp_kick_prsctp_reorder_queue(struct sctp_tcb *stcb,
 			asoc->size_on_all_streams -= chk->send_size;
 			asoc->cnt_on_all_streams--;
 			/* deliver it to at least the delivery-q */
-			sctp_deliver_data(stcb, &stcb->asoc, chk);
+			sctp_deliver_data(stcb, &stcb->asoc, chk, 0);
 		} else {
 			/* no more delivery now. */
 			break;
@@ -4422,7 +4429,7 @@ sctp_kick_prsctp_reorder_queue(struct sctp_tcb *stcb,
 			/* deliver it to at least the delivery-q */
 			strmin->last_sequence_delivered =
 			    chk->rec.data.stream_seq;
-			sctp_deliver_data(stcb, &stcb->asoc, chk);
+			sctp_deliver_data(stcb, &stcb->asoc, chk, 0);
 			tt = strmin->last_sequence_delivered + 1;
 		} else {
 			break;
