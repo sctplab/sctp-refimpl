@@ -1815,7 +1815,7 @@ sctp_optsget(struct socket *so,
 	error = EINVAL;
 	break;
       }
-      tm = mtod(m, sctp_assoc_value *);
+      tm = mtod(m, struct sctp_assoc_value *);
       if(tm->assoc_id) {
 	stcb = sctp_findassociation_ep_asocid(inp, tm->assoc_id);
 	if(stcb == NULL) {
@@ -2813,7 +2813,7 @@ sctp_optsset(struct socket *so,
 		  error = EINVAL;
 		  break;
 		}
-		tm = mtod(m, sctp_assoc_value *);
+		tm = mtod(m, struct sctp_assoc_value *);
 		if(tm->assoc_id) {
 		  stcb = sctp_findassociation_ep_asocid(inp, tm->assoc_id);
 		  if(stcb == NULL) {
