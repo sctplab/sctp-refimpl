@@ -3557,7 +3557,7 @@ sctp_usr_recvd(struct socket *so, int flags)
 		}
 	} else {
 		if ((( sq ) && (flags & MSG_EOR) && ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0)) 
-			   && ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
+			   && ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
 			stcb = sctp_remove_from_socket_q(inp);
 		}
 	}
@@ -3571,7 +3571,7 @@ sctp_usr_recvd(struct socket *so, int flags)
 #endif
 
 		if(((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) 
-			&& ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
+			&& ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
 			while (TAILQ_EMPTY(&inp->sctp_queue_list) == 0) {
 				sq_cnt++;
 				(void)sctp_remove_from_socket_q(inp);
