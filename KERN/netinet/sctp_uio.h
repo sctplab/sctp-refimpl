@@ -35,6 +35,7 @@
  * SUCH DAMAGE.
  */
 #include <sys/types.h>
+#include <sys/socket.h>
 
 typedef caddr_t sctp_assoc_t;
 
@@ -362,13 +363,11 @@ struct sctp_blk_args {
 	u_int16_t stream_qcnt;		/* chnk cnt */
 };
 
-/* Max we can reset in one setting,
- * note this is dictated not by the 
- * define but the size of a mbuf cluster
- * so don't change this define and think
- * you can specify more. You must do multiple
- * resets if you want to reset more than
- * SCTP_MAX_EXPLICIT_STR_RESET.
+/*
+ * Max we can reset in one setting, note this is dictated not by the 
+ * define but the size of a mbuf cluster so don't change this define
+ * and think you can specify more. You must do multiple resets if you
+ * want to reset more than SCTP_MAX_EXPLICIT_STR_RESET.
  */
 #define SCTP_MAX_EXPLICT_STR_RESET   1000 
 
