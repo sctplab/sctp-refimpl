@@ -9714,6 +9714,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 		mbcnt_e = 0;
 		mm->m_pkthdr.len = tot_out;
 		chk->data = mm;
+		mm = NULL;
 
 		/* the actual chunk flags */
 		chk->rec.data.rcv_flags |= SCTP_DATA_NOT_FRAG;
