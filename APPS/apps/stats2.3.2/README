@@ -1,0 +1,76 @@
+
+/*
+ * Copyright (c) 2001 BBNT Solutions LLC
+ *
+ * Permission to use, copy, modify, and distribute this software
+ * and its documentation for any purpose is hereby granted without
+ * fee, provided that the above copyright notice and this permission
+ * appear in all copies and in supporting documentation, and that the
+ * name of BBN Technologies not be used in advertising or publicity
+ * pertaining to distribution of the software without specific,
+ * written prior permission.  BBN makes no representations about the
+ * suitability of this software for any purposes.  It is provided "AS
+ * IS" without express or implied warranties.
+ */
+
+
+Stats
+Mark Allman (mallman@ir.bbn.com)
+March, 2001
+
+
+The aim of this program is to do small amounts of data manipulation
+and provide basic statistics for datasets.  For in-depth statistical
+analysis you should probably look at another utility.  I have
+written this program over the last five years, adding functionality
+as needed.
+
+If you add something useful to the program, please drop me a note
+and I'll add it to the code base.  If you find a bug, I'd appreciate
+hearing about that, as well.
+
+Stats requires the "readline" library (which, I assume is fairly
+standard these days).  Other than that just type "make".  This will
+produce a "stats" binary that you can then drop in your favorite
+place for such things (~/bin, /usr/local/bin, etc.).
+
+I routinely use stats under Solaris, NetBSD and Linux (a variety of
+versions of all the aforementioned OSes).  It also seems to compile
+OK under FreeBSD -- but, I don't use it under FreeBSD regularly.
+
+The tool expects input to be one data point per line.  When using
+the command line the "-" denotes that the input should come from
+standard input.  
+
+Internally the data is kept in a big array of doubles.  This makes
+lots of things easy (such as finding percentiles).  However, the
+downside is that the array is of static size (100,000 elements, by
+default).  Ideally, the tool would be able to allocate more memory
+on the fly.  However, the program is not ideal.  If you need to
+crunch more than 100,000 elements use the "-M X" command line option
+to allocate enough memory for X elements.  This bug will be fixed in
+a later version of the program.
+
+Stats has three basic modes of operation.  Each will be explained in
+turn.  
+
+    (1) Interactive
+        
+	Type "help" at the stats command line for a list of
+        commands. 
+
+    (2)	Batch mode (or command line mode)
+        
+	Type "stats -h" in the shell for command-line usage
+        instructions. 
+
+    (3) Script mode
+
+	You can write a script containing any of the commands you
+        would give in interactive mode.  Invoking "stats -f
+        scriptname" will then execute the stats script.
+
+One of the bugs is that there is very little documentation.
+However, after figuring out a few things I am sure you'll agree that
+it is a fairly straightforward and flexible utility to use.  I hope
+it serves you well.

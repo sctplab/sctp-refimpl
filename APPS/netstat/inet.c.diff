@@ -1,0 +1,117 @@
+*** inet.c.org	Wed Feb 13 18:11:58 2002
+--- inet.c	Wed Feb 13 18:10:57 2002
+***************
+*** 104,109 ****
+--- 104,111 ----
+  	static int first = 1;
+  	char *buf;
+  	const char *mibvar;
++ 	struct sctp_tcb *scb = NULL;
++ 	struct sctp_inpcb *sp = NULL;
+  	struct tcpcb *tp = NULL;
+  	struct inpcb *inp;
+  	struct xinpgen *xig, *oxig;
+***************
+*** 168,174 ****
+  	for (xig = (struct xinpgen *)((char *)xig + xig->xig_len);
+  	     xig->xig_len > sizeof(struct xinpgen);
+  	     xig = (struct xinpgen *)((char *)xig + xig->xig_len)) {
+! 		if (istcp) {
+  			tp = &((struct xtcpcb *)xig)->xt_tp;
+  			inp = &((struct xtcpcb *)xig)->xt_inp;
+  			so = &((struct xtcpcb *)xig)->xt_socket;
+--- 170,181 ----
+  	for (xig = (struct xinpgen *)((char *)xig + xig->xig_len);
+  	     xig->xig_len > sizeof(struct xinpgen);
+  	     xig = (struct xinpgen *)((char *)xig + xig->xig_len)) {
+! 		if (issctp) {
+! 			scb = &((struct xsctp_inpcb *)xig)->xs_sctp_tcb;
+! 			sp = &((struct xsctp_inpcb *)xig)->xs_sctp_inpcb;
+! 			inp = &((struct xsctp_inpcb *)xig)->xs_inp;
+! 			so = &((struct xsctp_inpcb *)xig)->xs_socket;
+! 		} else if (istcp) {
+  			tp = &((struct xtcpcb *)xig)->xt_tp;
+  			inp = &((struct xtcpcb *)xig)->xt_inp;
+  			so = &((struct xtcpcb *)xig)->xt_socket;
+***************
+*** 338,343 ****
+--- 345,360 ----
+  #endif /* defined(TF_NEEDSYN) && defined(TF_NEEDFIN) */
+                        }
+  		}
++         else if (issctp && !Lflag) {
++ 			int s,s_state = scb->asoc.state;
++ 
++         	if (s_state < 0)
++            		printf("%d", s_state);
++             else {
++ 				for(s=0; s_state>1; s_state>>=1,s++);
++                 printf("%s", sctpstates[s]);
++ 			}
++         }
+  		putchar('\n');
+  	}
+  	if (xig != oxig && xig->xig_gen != oxig->xig_gen) {
+***************
+*** 353,358 ****
+--- 370,429 ----
+  		}
+  	}
+  	free(buf);
++ }
++ 
++ /*
++  * Dump SCTP statistics structure.
++  */
++ void
++ sctp_stats(u_long off __unused, char *name, int af __unused)
++ {
++ 	struct sctpstat sctpstat;
++ 	size_t len = sizeof sctpstat;
++ 	
++ 	if (sysctlbyname("net.inet.sctp.stats", &sctpstat, &len, 0, 0) < 0) {
++ 		warn("sysctl: net.inet.sctp.stats");
++ 		return;
++ 	}
++ 
++ #ifdef INET6
++ 	if (sctp_done != 0)
++ 		return;
++ 	else
++ 		sctp_done = 1;
++ #endif
++ 
++ 	printf ("%s:\n", name);
++ 
++ #define	p(f, m) if (sctpstat.f || sflag <= 1) \
++     printf(m, sctpstat.f, plural(sctpstat.f))
++ #define	p1a(f, m) if (sctpstat.f || sflag <= 1) \
++     printf(m, sctpstat.f)
++ #define	p2(f1, f2, m) if (sctpstat.f1 || sctpstat.f2 || sflag <= 1) \
++     printf(m, sctpstat.f1, plural(sctpstat.f1), sctpstat.f2, plural(sctpstat.f2))
++ #define	p2a(f1, f2, m) if (sctpstat.f1 || sctpstat.f2 || sflag <= 1) \
++     printf(m, sctpstat.f1, plural(sctpstat.f1), sctpstat.f2)
++ #define	p3(f, m) if (sctpstat.f || sflag <= 1) \
++     printf(m, sctpstat.f, plurales(sctpstat.f))
++ 
++ 	p(sctps_opackets, "\t%lu packet%s sent\n");
++ 	p(sctps_fastout, "\t\t%lu packet%s sent on fast path\n");
++ 	p1a(sctps_hdrops, "\t\t%lu discarded for pakcet shorter than header\n");
++ 	p(sctps_sendbadaddr, "\t\t%lu packet%s sent with invalid address\n");
++ 	p(sctps_sendbadport, "\t\t%lu packet%s sent with invalid port\n");
++ 	p(sctps_ipackets, "\t%lu packet%s received\n");
++ 	p1a(sctps_hdrops, "\t\t%lu discarded for pakcet shorter than header\n");
++ 	p1a(sctps_noport, "\t\t%lu discarded for having no socket on port\n");
++ 	p1a(sctps_badsum, "\t\t%lu discarded for bad checksum\n");
++ 	p(sctps_bcastmcast, "\t\t%lu broad/multi-cast packet%s dropped\n");
++ 	p(sctps_badvtag, "\t\t%lu discarded for invalid verification tag\n");
++ 	p(sctps_badpktfmt, "\t\t%lu discarded for bad packet format\n");
++ 
++ #undef p
++ #undef p1a
++ #undef p2
++ #undef p2a
++ #undef p3
+  }
+  
+  /*
