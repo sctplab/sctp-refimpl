@@ -91,7 +91,7 @@
 #define SCTP_TCP_MODEL_SUPPORT	1
 
 /* number of associations by default for zone allocation */
-#define SCTP_MAX_NUM_OF_ASOC	20000
+#define SCTP_MAX_NUM_OF_ASOC	40000
 /* how many addresses per assoc remote and local */
 #define SCTP_SCALE_FOR_ADDR	2
 
