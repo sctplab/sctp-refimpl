@@ -3309,8 +3309,11 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		stcb->sctp_ep->sctp_flags |= SCTP_PCB_FLAGS_CONNECTED;
 		/* Set the connected flag so we can queue data */
 		soisconnecting(so);
-	}
+	} else
 #endif
+		/* One to many model we turn this off */
+		so->so_options &= ~SO_ACCEPTCONN;
+
 	stcb->asoc.state = SCTP_STATE_COOKIE_WAIT;
 	SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_entered);
 	sctp_send_initiate(inp, stcb);
