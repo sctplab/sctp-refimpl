@@ -1920,6 +1920,11 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			    (u_int32_t)offset, cookie_offset, sig_offset);
 		}
 #endif
+		if (*stcb == NULL) {
+			SCTP_INP_WLOCK(l_inp);
+			SCTP_INP_DECR_REF(l_inp);
+			SCTP_INP_WUNLOCK(l_inp);
+		}
 		return (NULL);
 	}
 #ifdef SCTP_DEBUG
@@ -1973,6 +1978,11 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			tim = now.tv_usec - cookie->time_entered.tv_usec;
 		scm->time_usec = htonl(tim);
 		sctp_send_operr_to(m, iphlen, op_err, cookie->peers_vtag);
+		if (*stcb == NULL) {
+			SCTP_INP_WLOCK(l_inp);
+			SCTP_INP_DECR_REF(l_inp);
+			SCTP_INP_WUNLOCK(l_inp);
+		}
 		return (NULL);
 	}
 	/*
@@ -2006,6 +2016,34 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	if ((*stcb == NULL) && to) {
 		/* Yep, lets check */
 		*stcb = sctp_findassociation_ep_addr(inp_p, to, netp, localep_sa, NULL);
+		if(*stcb == NULL) {
+			/* One of two things has occured. The *inp_p is still the
+			 * same as l_inp, which in that case we still have a increment
+			 * on the correct inp ref-count. OR l_inp is different then
+			 * l_inp. In this case the l_inp has a refcount and the
+			 * correct one does not. We must fix this.
+			 */
+			if(l_inp != *inp_p) {
+				/* this should be rare, if it happens
+				 * at all and its not my paranoia.
+				 */
+				SCTP_INP_WLOCK((*inp_p));
+				SCTP_INP_WLOCK(l_inp);
+				SCTP_INP_DECR_REF(l_inp);
+				SCTP_INP_INCR_REF((*inp_p));
+				/* now check the gone flag */
+				if((*inp_p)->sctp_flags & 
+				   (SCTP_PCB_FLAGS_SOCKET_ALLGONE|SCTP_PCB_FLAGS_SOCKET_GONE)) {
+					SCTP_INP_DECR_REF((*inp_p));
+					SCTP_INP_WUNLOCK((*inp_p));
+					SCTP_INP_WUNLOCK(l_inp);
+					return (NULL);
+				}
+				SCTP_INP_WUNLOCK((*inp_p));
+				SCTP_INP_WUNLOCK(l_inp);
+			}
+
+		}
 	}
 
 	cookie_len -= SCTP_SIGNATURE_SIZE;
@@ -2018,6 +2056,12 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 #endif
 		*stcb = sctp_process_cookie_new(m, iphlen, offset, sh, cookie,
 		    cookie_len, *inp_p, netp, to, &notification);
+		/* now always decrement, since this is the normal
+		 * case.. we had no tcb when we entered.
+		 */
+ 		SCTP_INP_WLOCK(l_inp);
+		SCTP_INP_DECR_REF(l_inp);
+		SCTP_INP_WUNLOCK(l_inp);
 	} else {
 		/* this is abnormal... cookie-echo on existing TCB */
 #ifdef SCTP_DEBUG
@@ -3088,6 +3132,11 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			sctp_pegs[SCTP_BAD_VTAGS]++;
 			if (locked_tcb)
 				SCTP_TCB_UNLOCK(locked_tcb);
+			else {
+				SCTP_INP_WLOCK(inp);
+				SCTP_INP_DECR_REF(inp);
+				SCTP_INP_WUNLOCK(inp);
+			}
 			return (NULL);
 		}
 	} else if (ch->chunk_type != SCTP_COOKIE_ECHO) {
@@ -3111,6 +3160,11 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			*offset = length;
 			if (locked_tcb)
 				SCTP_TCB_UNLOCK(locked_tcb);
+			else {
+				SCTP_INP_WLOCK(inp);
+				SCTP_INP_DECR_REF(inp);
+				SCTP_INP_WUNLOCK(inp);
+			}
 			return (NULL);
 		}
 		asoc = &stcb->asoc;
@@ -3215,6 +3269,12 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				*offset = length;
 				if (locked_tcb)
 					SCTP_TCB_UNLOCK(locked_tcb);
+				else {
+					/* TSNH - or rarely */
+					SCTP_INP_WLOCK(inp);
+					SCTP_INP_DECR_REF(inp);
+					SCTP_INP_WUNLOCK(inp);
+				}
 				return (NULL);
 			}
 		} else {
@@ -3238,6 +3298,12 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				}
 				if (locked_tcb)
 					SCTP_TCB_UNLOCK(locked_tcb);
+				else {
+					/* TMH rarely */
+					SCTP_INP_WLOCK(inp);
+					SCTP_INP_DECR_REF(inp);
+					SCTP_INP_WUNLOCK(inp);
+				}
 				return (NULL);
 			}
 			ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, *offset,
@@ -3247,6 +3313,12 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				*offset = length;
 				if (locked_tcb)
 					SCTP_TCB_UNLOCK(locked_tcb);
+				else {
+					/* TMH rarely */
+					SCTP_INP_WLOCK(inp);
+					SCTP_INP_DECR_REF(inp);
+					SCTP_INP_WUNLOCK(inp);
+				}
 				return (NULL);
 			}
 
@@ -3271,6 +3343,12 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				/* We are not interested anymore */
 				if (locked_tcb)
 					SCTP_TCB_UNLOCK(locked_tcb);
+				else {
+					/* TMH rarely */
+					SCTP_INP_WLOCK(inp);
+					SCTP_INP_DECR_REF(inp);
+					SCTP_INP_WUNLOCK(inp);
+				}
 				if (LIST_FIRST(&inp->sctp_asoc_list) == NULL) {
 					/* finish the job now */
 					sctp_inpcb_free(inp, 1);
@@ -3283,6 +3361,12 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				*offset = length;
 				if (locked_tcb)
 					SCTP_TCB_UNLOCK(locked_tcb);
+				else {
+					/* TMH rarely */
+					SCTP_INP_WLOCK(inp);
+					SCTP_INP_DECR_REF(inp);
+					SCTP_INP_WUNLOCK(inp);
+				}
 				return (NULL);
 			}
 			if ((stcb != NULL) && 
@@ -3293,6 +3377,12 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				*offset = length;
 				if (locked_tcb)
 					SCTP_TCB_UNLOCK(locked_tcb);
+				else {
+					/* TMH rarely */
+					SCTP_INP_WLOCK(inp);
+					SCTP_INP_DECR_REF(inp);
+					SCTP_INP_WUNLOCK(inp);
+				}
 				return (NULL);
 			}
 			sctp_handle_init(m, iphlen, *offset, sh,
@@ -3300,6 +3390,13 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			*offset = length;
 			if (locked_tcb)
 				SCTP_TCB_UNLOCK(locked_tcb);
+			else {
+					/* TMH rarely */
+					SCTP_INP_WLOCK(inp);
+					SCTP_INP_DECR_REF(inp);
+					SCTP_INP_WUNLOCK(inp);
+				}
+
 			return (NULL);
 			break;
 		case SCTP_INITIATION_ACK:
@@ -3459,6 +3556,11 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 				/* We are not interested anymore */
 				*offset = length;
+				if (locked_tcb == NULL) {
+					SCTP_INP_WLOCK(inp);
+					SCTP_INP_DECR_REF(inp);
+					SCTP_INP_WUNLOCK(inp);
+				}
 				if (stcb) {
 					sctp_free_assoc(inp, stcb);
 				} else {
@@ -3480,6 +3582,11 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			    (inp->sctp_socket->so_qlimit == 0)) {
 				sctp_abort_association(inp, stcb, m, iphlen, sh,
 				    NULL);
+				if (locked_tcb == NULL) {
+					SCTP_INP_WLOCK(inp);
+					SCTP_INP_DECR_REF(inp);
+					SCTP_INP_WUNLOCK(inp);
+				}
 				*offset = length;
 				return (NULL);
 			} else if (inp->sctp_flags & SCTP_PCB_FLAGS_ACCEPTING) {
@@ -3501,6 +3608,11 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 						    htons(SCTP_CAUSE_OUT_OF_RESC);
 						phdr->param_length =
 						    htons(sizeof(struct sctp_paramhdr));
+					}
+					if (locked_tcb == NULL) {
+						SCTP_INP_WLOCK(inp);
+						SCTP_INP_DECR_REF(inp);
+						SCTP_INP_WUNLOCK(inp);
 					}
 					sctp_abort_association(inp, stcb, m,
 					    iphlen, sh, oper);
@@ -4181,6 +4293,11 @@ sctp_input(m, va_alist)
 				sctp_send_packet_dropped(stcb, net, m, iphlen,
 							 1);
 				sctp_chunk_output(inp, stcb, 2);
+			} else if ((inp != NULL) && (stcb == NULL)) {
+			    /* reduce ref-count */
+			    SCTP_INP_WLOCK(inp);
+			    SCTP_INP_DECR_REF(inp);
+			    SCTP_INP_WUNLOCK(inp);
 			}
 			sctp_pegs[SCTP_BAD_CSUM]++;
 			goto bad;
@@ -4267,6 +4384,12 @@ sctp_input(m, va_alist)
 			    tdb, i_inp);
 	    if (error) {
 		    splx(s);
+		    if((inp != NULL) && (stcb == NULL)) {
+			    /* reduce ref-count */
+			    SCTP_INP_WLOCK(inp);
+			    SCTP_INP_DECR_REF(inp);
+			    SCTP_INP_WUNLOCK(inp);
+		    }
 		    sctp_pegs[SCTP_HDR_DROPS]++;
 		    goto bad;
 	    }
@@ -4281,6 +4404,12 @@ sctp_input(m, va_alist)
 			if (i_inp->inp_ipo == NULL) {
 			    splx(s);
 			    sctp_pegs[SCTP_HDR_DROPS]++;
+			    if((inp != NULL) && (stcb == NULL)) {
+				    /* reduce ref-count */
+				    SCTP_INP_WLOCK(inp);
+				    SCTP_INP_DECR_REF(inp);
+				    SCTP_INP_WUNLOCK(inp);
+			    }
 			    goto bad;
 			}
 		    }
@@ -4313,6 +4442,12 @@ sctp_input(m, va_alist)
 	if (ipsec4_in_reject_so(m, inp->ip_inp.inp.inp_socket)) {
 		ipsecstat.in_polvio++;
 		sctp_pegs[SCTP_HDR_DROPS]++;
+		if((inp != NULL) && (stcb == NULL)) {
+			/* reduce ref-count */
+			SCTP_INP_WLOCK(inp);
+			SCTP_INP_DECR_REF(inp);
+			SCTP_INP_WUNLOCK(inp);
+		}
 		goto bad;
 	}
 #endif
