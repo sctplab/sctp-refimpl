@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.6 2004-10-14 10:38:33 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.7 2004-10-14 11:41:55 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -119,7 +119,9 @@ static int cmd_quit(char *argv[], int argc);
 static int cmd_rftp(char *argv[], int argc);
 static int cmd_printrftpstat(char *argv[], int argc);
 static int cmd_rwnd(char *argv[], int argc);
+static int cmd_sctpsendx(char *argv[], int argc);
 static int cmd_send(char *argv[], int argc);
+static int cmd_sendasoc(char *argv[], int argc);
 static int cmd_getmaxburst(char *argv[], int argc);
 static int cmd_setmaxburst(char *argv[], int argc);
 static int cmd_sendloop(char *argv[], int argc);
@@ -347,6 +349,10 @@ static struct command commands[] = {
      cmd_restorefd},
     {"send", "send string [n] - send string to a peer if a peer is set [and retrans n times]",
      cmd_send},
+    {"sendasoc", "sendasoc asocid string [n] - send string to a peer if a peer is set [and retrans n times]",
+     cmd_sendasoc},
+    {"sendx", "sendx string port addr [addr addr] - send string to a peer with the listed addresses",
+     cmd_sctpsendx},
     {"sendloop", "sendloop [num] - send test script loopback request of num size",
      cmd_sendloop},
     {"sendloopend", "sendloopend [num] - send test script loopback request of num size and terminate",
@@ -4131,6 +4137,94 @@ cmd_send(char *argv[], int argc)
 		   sendOptions, payload, 0);
     printf("Returned %d from the send\n",ret);
     return 0;
+}
+
+/* send asocid string [n] - send string to a peer if a peer is set
+ */
+static int
+cmd_sendasoc(char *argv[], int argc)
+{
+    int fd = adap->fd;
+    int ret;
+    u_int32_t aaa;
+    sctp_assoc_t asoc;
+    if (argc < 2) {
+	printf("send: expected at least 2 argument\n");
+	return -1;
+    }
+    aaa = strtoul(argv[0], NULL, 0);
+    if(aaa == 0) {
+	    printf("Sorry asocid 0 never valid\n");
+	    return -1;
+    }
+    asoc = (sctp_assoc_t)aaa;
+    ret = sctpsend_associd(fd, asoc, argv[1], strlen(argv[1]), sendOptions, payload);
+    printf("sctpsend_associd returned %d from the send\n",ret);
+    return 0;
+}
+
+static int 
+cmd_sctpsendx(char *argv[], int argc)
+{
+	struct sctp_sndrcvinfo s_info;
+	int fd = adap->fd;
+	int port1;
+	uint16_t port;
+	int i, ret, addr_cnt=0;
+	char addr_buf[2048];
+	char *at;
+	struct sockaddr_in *sin;
+	struct sockaddr_in6 *sin6;
+	struct sockaddr *sa;
+
+	at = addr_buf;
+	if(argc < 3) {
+		printf("Error need at least 3 args, buffer port and addr('s)\n");
+		return -1;
+	}
+	port1 = strtol(argv[1], NULL, 0);
+	port = htons((uint16_t)port1);
+	for (i=2; i<argc; i++) {
+		/* try v4 */
+		sin = (struct sockaddr_in *)at;
+		ret = inet_pton(AF_INET, argv[i], &sin->sin_addr);
+		if(ret == 1) {
+			/* found it */
+			addr_cnt++;
+			sin->sin_family = AF_INET;
+			sin->sin_len = sizeof(struct sockaddr_in);
+			sin->sin_port = port;
+			at += sizeof(struct sockaddr_in);
+			continue;
+		}
+		/* try v6 */
+		sin6 = (struct sockaddr_in6 *)at;
+		ret = inet_pton(AF_INET6, argv[i], &sin6->sin6_addr);
+		if (ret == 1) {
+			/* found it */
+			addr_cnt++;
+			sin6->sin6_family = AF_INET6;
+			sin6->sin6_len = sizeof(struct sockaddr_in6);
+			sin6->sin6_port = port;
+			at += sizeof(struct sockaddr_in6);
+			continue;
+		}
+		printf("I can't find a V4 or V6 address in %s - skipping\n", argv[i]);
+	}
+	if (addr_cnt == 0) {
+		printf ("no valid addresses found, sorry can't send anything\n");
+		return -1;
+	}
+	sa = (struct sockaddr *)(addr_buf);
+    	s_info.sinfo_stream = defStream;
+	s_info.sinfo_flags = sendOptions;
+	s_info.sinfo_ppid = payload;
+	s_info.sinfo_context = 0;
+	s_info.sinfo_timetolive = time_to_live;
+	s_info.sinfo_assoc_id = 0;
+	ret = sctp_sendx(fd, argv[0], strlen(argv[0]), sa, addr_cnt, &s_info,0);
+	printf("sctp_sendx returned %d from the send\n",ret);
+	return 0;
 }
 
 /* sendloop [num] - send test script loopback request of num size
