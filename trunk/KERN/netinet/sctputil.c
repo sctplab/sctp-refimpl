@@ -244,6 +244,27 @@ sctp_log_cwnd(struct sctp_nets *net, int augment, uint8_t from)
 }
 
 void
+sctp_log_maxburst(struct sctp_nets *net, int error, int burst, uint8_t from)
+{
+	
+
+	sctp_clog[sctp_cwnd_log_at].from = (u_int8_t)from;
+	sctp_clog[sctp_cwnd_log_at].event_type = (u_int8_t)SCTP_LOG_EVENT_MAXBURST;
+	sctp_clog[sctp_cwnd_log_at].x.cwnd.net = net;
+	sctp_clog[sctp_cwnd_log_at].x.cwnd.cwnd_new_value = (error & 0xffff);
+	sctp_clog[sctp_cwnd_log_at].x.cwnd.inflight = (net->flight_size/1024);
+	sctp_clog[sctp_cwnd_log_at].x.cwnd.cwnd_augment = burst;
+	sctp_cwnd_log_at++;
+	if (sctp_cwnd_log_at >= SCTP_STAT_LOG_SIZE) {
+		sctp_cwnd_log_at = 0;
+		sctp_cwnd_log_rolled = 1;
+	}
+
+}
+
+
+
+void
 sctp_log_block(uint8_t from, struct socket *so, struct sctp_association *asoc)
 {
 
@@ -279,8 +300,15 @@ sctp_fill_stat_log(struct mbuf *m)
 	num = size_limit/sizeof(struct sctp_cwnd_log);
 	if (sctp_cwnd_log_rolled)
 		req->num_in_log = SCTP_STAT_LOG_SIZE;
-	else
+	else {
 		req->num_in_log = sctp_cwnd_log_at;
+		/* if the log has not rolled, we don't
+		 * let you have old data.
+		 */
+ 		if(req->end_at > sctp_cwnd_log_at) {
+			req->end_at = sctp_cwnd_log_at;
+		}
+	}
 
 	if ((num < SCTP_STAT_LOG_SIZE) && 
 	    ((sctp_cwnd_log_rolled) || (sctp_cwnd_log_at > num))) {

@@ -1929,7 +1929,6 @@ sctp_addr_mgmt(struct ifaddr *ifa, uint16_t type) {
 	struct sctp_inpcb *inp;
 
 	/* make sure we care about this interface... */
-	sctp_pegs[SCTP_ASCONF_KERN_CHG]++;
 	if (!sctp_is_desired_interface_type(ifa)) {
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {

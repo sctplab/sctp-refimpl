@@ -87,6 +87,7 @@
 #define SCTP_LOG_EVENT_STRM  3
 #define SCTP_LOG_EVENT_FR    4
 #define SCTP_LOG_EVENT_MAP   5
+#define SCTP_LOG_EVENT_MAXBURST 6
 
 /* if you want to support the TCP model, uncomment the following define */
 #define SCTP_TCP_MODEL_SUPPORT	1
@@ -680,7 +681,7 @@
 #define SCTP_UNSET_TSN_PRESENT(arry, gap) (arry[(gap >> 3)] &= ((~(0x01 << ((gap & 0x07)))) & 0xff))
 
 /* pegs */
-#define SCTP_NUMBER_OF_PEGS	92
+#define SCTP_NUMBER_OF_PEGS	96
 /* peg index's */
 #define SCTP_PEG_SACKS_SEEN	0
 #define SCTP_PEG_SACKS_SENT	1
@@ -771,10 +772,13 @@
 #define SCTP_CWR_PERFO		86
 #define SCTP_ECNE_SENT		87
 #define SCTP_MSGC_DROP		88
-#define SCTP_ASCONF_KERN_CHG	89
-#define SCTP_RESV2		90
-#define SCTP_RESV3		91
-
+#define SCTP_SEND_QUEUE_POP	89
+#define SCTP_ERROUT_FRM_USR	90
+#define SCTP_SENDTO_FULL_CWND	91
+#define SCTP_QUEONLY_BURSTLMT   92
+#define SCTP_IFP_QUEUE_FULL     93
+#define SCTP_RESV2              94
+#define SCTP_RESV3              95
 
 /*
  * This value defines the number of vtag block time wait entry's
