@@ -586,7 +586,7 @@ void sctp_fill_pcbinfo(struct sctp_pcbinfo *);
 
 struct sctp_nets *sctp_findnet(struct sctp_tcb *, struct sockaddr *);
 
-struct sctp_inpcb *sctp_pcb_findep(struct sockaddr *, int);
+struct sctp_inpcb *sctp_pcb_findep(struct sockaddr *, int, int);
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 int sctp_inpcb_bind(struct socket *, struct sockaddr *, struct thread *);
