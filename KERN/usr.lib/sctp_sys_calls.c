@@ -625,6 +625,7 @@ sctp_recvmsg (int s,
 {
 	struct sctp_sndrcvinfo *s_info;
 	ssize_t sz;
+	int sinfo_found=0;
 	struct msghdr msg;
 	struct iovec iov[2];
 	char controlVector[SCTP_CONTROL_VEC_SIZE_RCV];
@@ -652,6 +653,29 @@ sctp_recvmsg (int s,
 	s_info = NULL;
 	len = sz;
 	*msg_flags = msg.msg_flags;
+	if(msg.msg_flags & MSG_CTRUNC) {
+	  FILE *io;
+	  printf("Error, MSG_CTRUNC detected writting to /tmp/for_randy");
+	  io = fopen("/tmp/for_randy", "a+");
+	  if(io == NULL) {
+	    printf("Gak, can't write control file failed to open errno:%d\n", errno);
+	    goto out_of_here;
+	  }
+	  if(fwrite(msg, sizeof(struct msg), 1, io) != sizeof(struct msg)) {
+	    printf("Error can't write msg err:%d\n",errno);
+	    goto out_of_here_close;
+	  }
+	  if(fwrite(controlVector, msg.msg_controllen, 1, io) != msg.msg_controllen) {
+	    printf("Error can't write control data err:%d\n",errno);
+	    goto out_of_here_close;
+	  }
+	  if(fwrite(dbuf, sz, 1, io) != sz) {
+	    printf("Error can't write data err:%d\n",errno);
+	  }
+	out_of_here_close:
+	  flclose(io);
+	out_of_here:
+	}
 	if ((msg.msg_controllen) && sinfo) {
 		/* parse through and see if we find
 		 * the sctp_sndrcvinfo (if the user wants it).
@@ -664,11 +688,15 @@ sctp_recvmsg (int s,
 					s_info = (struct sctp_sndrcvinfo *)CMSG_DATA(cmsg);
 					/* Copy it to the user */
 					*sinfo = *s_info;
+					sinfo_found = 1;
 					break;
 				}
 			}
 			cmsg = CMSG_NXTHDR(&msg,cmsg);
 		}
+	}
+	if (sinfo_found == 0) {
+	  memset(sinfo, 0, sizeof(*sinfo));
 	}
 	return(sz);
 }
