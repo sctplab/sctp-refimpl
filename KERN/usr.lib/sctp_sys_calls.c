@@ -675,6 +675,7 @@ sctp_recvmsg (int s,
 	out_of_here_close:
 	  fclose(io);
 	out_of_here:
+	  ; /* nop */
 	}
 	if ((msg.msg_controllen) && sinfo) {
 		/* parse through and see if we find
