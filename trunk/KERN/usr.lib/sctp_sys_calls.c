@@ -661,7 +661,7 @@ sctp_recvmsg (int s,
 	    printf("Gak, can't write control file failed to open errno:%d\n", errno);
 	    goto out_of_here;
 	  }
-	  if(fwrite(msg, sizeof(struct msg), 1, io) != sizeof(struct msg)) {
+	  if(fwrite((void *)&msg, sizeof(msg), 1, io) != sizeof(msg)) {
 	    printf("Error can't write msg err:%d\n",errno);
 	    goto out_of_here_close;
 	  }
@@ -673,7 +673,7 @@ sctp_recvmsg (int s,
 	    printf("Error can't write data err:%d\n",errno);
 	  }
 	out_of_here_close:
-	  flclose(io);
+	  fclose(io);
 	out_of_here:
 	}
 	if ((msg.msg_controllen) && sinfo) {
