@@ -968,7 +968,7 @@ int  sctp_cookie_timer(struct sctp_inpcb *inp,
 			sctp_abort_an_association(inp, stcb, SCTP_INTERNAL_ERROR,
 			    oper);
 		}
-		return (1);
+		return (0);
 	}
 	/* Ok we found the cookie, threshold management next */
 	if (sctp_threshold_management(inp, stcb, cookie->whoTo,
