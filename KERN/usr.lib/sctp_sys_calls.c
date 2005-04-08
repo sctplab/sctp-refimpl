@@ -655,10 +655,13 @@ sctp_recvmsg (int s,
 	*msg_flags = msg.msg_flags;
 	if(msg.msg_flags & MSG_CTRUNC) {
 	  FILE *io;
+	  char buffname[100];
+	dump_it:
+	  sprintf(buffname, "/tmp/for_randy.%d", getpid());
 	  printf("Error, MSG_CTRUNC detected writting to /tmp/for_randy");
-	  io = fopen("/tmp/for_randy", "a+");
+	  io = fopen(buffname, "a+");
 	  if(io == NULL) {
-	    printf("Gak, can't write control file failed to open errno:%d\n", errno);
+	    printf("Gak, can't write control file failed %s to open errno:%d\n", buffname, errno);
 	    goto out_of_here;
 	  }
 	  if(fwrite((void *)&msg, sizeof(msg), 1, io) != sizeof(msg)) {
@@ -675,7 +678,7 @@ sctp_recvmsg (int s,
 	out_of_here_close:
 	  fclose(io);
 	out_of_here:
-	  ; /* nop */
+	  memset(sinfo, 0, sizeof(*sinfo));
 	}
 	if ((msg.msg_controllen) && sinfo) {
 		/* parse through and see if we find
@@ -683,6 +686,11 @@ sctp_recvmsg (int s,
 		 */
 		cmsg = (struct cmsghdr *)controlVector;
 		while (cmsg) {
+			if((cmsg->cmsg_len == 0) || (cmsg->cmsg_len > msg.msg_controllen)) {
+				printf("Invalid CMSG struct\n");
+				memset(sinfo, 0, sizeof(*sinfo));
+				goto dump_it;
+			}
 			if (cmsg->cmsg_level == IPPROTO_SCTP) {
 				if (cmsg->cmsg_type == SCTP_SNDRCV) {
 					/* Got it */
