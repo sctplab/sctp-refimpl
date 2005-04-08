@@ -48,12 +48,14 @@
 static void
 hexDump(void *vdb, int sz)
 {
-  int i,j;
-  char str[20], *db;
-  db = (char *)vdb;
+  int i,j, prn;
+  unsigned char str[20];
+  char *db;
+  db = (unsigned char *)vdb;
 
   for(i=0, j=0; i<sz; i++) {
-    printf("%2.2x ", db[i]);
+    prn = (db[i] & 0x000000ff);
+    printf("%2.2x ", prn);
     if((db[i] >= '!') &&
        (db[i] <= 'z')) {
       str[j++] = db[i];
