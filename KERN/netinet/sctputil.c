@@ -3322,13 +3322,16 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 		if (n->m_next == 0)	/* get pointer to last control buf */
 			break;
 	}
+#if MSIZE <= 256
 	if (asa->sa_len > MHLEN)
 		return (0);
+#endif
+
  try_again:
-	MGETHDR(m, M_DONTWAIT, MT_SONAME);
+
+	MGET(m, M_DONTWAIT, MT_SONAME);
 	if (m == 0)
 		return (0);
-	m->m_len = 0;
 	/* safety */
 	if (m == m0) {
 		printf("Duplicate mbuf allocated %p in and mget returned %p?\n",
@@ -3345,13 +3348,13 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 		n->m_next = m0;		/* concatenate data to control */
 	else
 		control = m0;
+
 	if (m)
 		m->m_next = control;
 	else
 		m = control;
 	m->m_pkthdr.csum_data = (int)tag;
 
-	SOCKBUF_LOCK(sb);
 	for (n = m; n->m_next != NULL; n = n->m_next)
 		sballoc(sb, n);
 	sballoc(sb, n);
