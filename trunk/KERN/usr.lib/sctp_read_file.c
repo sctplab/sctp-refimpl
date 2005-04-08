@@ -45,6 +45,35 @@
 
 #include <net/if_dl.h>
 
+static void
+hexDump(void *vdb, int sz)
+{
+  int i,j;
+  char str[20], *db;
+  db = (char *)vdb;
+
+  for(i=0, j=0; i<sz; i++) {
+    printf("%2.2x ", db[i]);
+    if((db[i] >= '!') &&
+       (db[i] <= 'z')) {
+      str[j++] = db[i];
+    }else {
+      str[j++] = '.';
+    }
+    if(((i+1) % 16) == 0) {
+      str[16] = 0;
+      printf(" %s\n", str);
+      j = 0;
+    }
+  }
+  if(sz % 16) {
+    str[j] = 0;
+    printf(" %s\n", str);
+    j = 0;
+  }
+}
+
+
 int
 main (int argc, char **argv)
 {
@@ -83,14 +112,17 @@ main (int argc, char **argv)
   printf("msg_flags:%x\n", msg.msg_flags);
   sz = sb.st_size - (sizeof(msg) + msg.msg_controllen);
   printf("Data left over is %d\n", sz);
-
   if(fread(controlVector, msg.msg_controllen, 1, io) != 1) {
     printf("Error can't read control data err:%d\n",errno);
     goto out_of_here_close;
   }
+  printf("---------Control-----------------\n");
+  hexDump(controlVector, msg.msg_controllen);
   if(fread(dbuf, sz, 1, io) != 1) {
     printf("Error can't read data err:%d\n",errno);
   }
+  printf("---------Data-----------------\n");
+  hexDump(dbuf, sz);
   out_of_here_close:
     fclose(io);
   out_of_here:
