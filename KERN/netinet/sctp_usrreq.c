@@ -4483,6 +4483,9 @@ sctp_peeraddr(struct socket *so, struct mbuf *nam)
 		return ENOENT;
 	}
 	splx(s);
+#if defined(__FreeBSD__) || defined(__APPLE__)
+	(*addr) = (struct sockaddr *)sin;
+#endif
 	return (0);
 }
 
