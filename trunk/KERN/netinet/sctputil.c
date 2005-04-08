@@ -3342,6 +3342,7 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 		cnt++;
 		goto try_again;
 	}
+	SOCKBUF_LOCK(sb);
 	m->m_len = asa->sa_len;
 	bcopy((caddr_t)asa, mtod(m, caddr_t), asa->sa_len);
 	if (n)
