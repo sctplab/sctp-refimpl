@@ -636,7 +636,7 @@ sctp_recvmsg (int s,
 	if (msg_flags == NULL) {
 		return EINVAL;
 	}
-	memset(&msg, 0, sizeof(msg));
+	msg.msg_flags = 0;
 	iov[0].iov_base = dbuf;
 	iov[0].iov_len = len;
 	iov[1].iov_base = NULL;
@@ -654,41 +654,9 @@ sctp_recvmsg (int s,
 	sz = recvmsg(s,&msg,0);
 	if(sz <= 0)
 	  return(sz);
-	if((msg.msg_flags < 0) || (msg.msg_flags > 0xc3ff)) {
-	  printf("Abort time msg.msg_flags are %x?\n", msg.msg_flags);
-	  abort();
-	}
 	s_info = NULL;
 	len = sz;
 	*msg_flags = msg.msg_flags;
-	if(msg.msg_flags & MSG_CTRUNC) {
-	  FILE *io;
-	  char buffname[100];
-	dump_it:
-	  printf("Received flags %x in message\n", msg.msg_flags);
-	  sprintf(buffname, "/tmp/for_randy.%d.%d", getpid(), generation);
-	  io = fopen(buffname, "a+");
-	  if(io == NULL) {
-	    printf("Gak, can't write control file failed %s to open errno:%d\n", buffname, errno);
-	    goto out_of_here;
-	  }
-	  if(fwrite((void *)&msg, sizeof(msg), 1, io) != sizeof(msg)) {
-	    printf("A:Error can't write msg err:%d\n",errno);
-	    goto out_of_here_close;
-	  }
-	  if(fwrite(controlVector, msg.msg_controllen, 1, io) != msg.msg_controllen) {
-	    printf("B:Error can't write control data err:%d\n",errno);
-	    goto out_of_here_close;
-	  }
-	  if(fwrite(dbuf, sz, 1, io) != sz) {
-	    printf("C:Error can't write data err:%d\n",errno);
-	  }
-	out_of_here_close:
-	  fclose(io);
-	out_of_here:
-	  memset(sinfo, 0, sizeof(*sinfo));
-	  goto done_now;
-	}
 	if ((msg.msg_controllen) && sinfo) {
 		/* parse through and see if we find
 		 * the sctp_sndrcvinfo (if the user wants it).
@@ -696,9 +664,8 @@ sctp_recvmsg (int s,
 		cmsg = (struct cmsghdr *)controlVector;
 		while (cmsg) {
 			if((cmsg->cmsg_len == 0) || (cmsg->cmsg_len > msg.msg_controllen)) {
-				printf("Invalid CMSG struct gak\n");
 				memset(sinfo, 0, sizeof(*sinfo));
-				goto dump_it;
+				return(sz);
 			}
 			if (cmsg->cmsg_level == IPPROTO_SCTP) {
 				if (cmsg->cmsg_type == SCTP_SNDRCV) {
@@ -716,7 +683,6 @@ sctp_recvmsg (int s,
 	if (sinfo_found == 0) {
 	  memset(sinfo, 0, sizeof(*sinfo));
 	}
- done_now:
 	return(sz);
 }
 
