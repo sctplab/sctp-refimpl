@@ -652,6 +652,8 @@ sctp_recvmsg (int s,
 	msg.msg_controllen = sizeof(controlVector);
 	errno = 0;
 	sz = recvmsg(s,&msg,0);
+	if(sz <= 0)
+	  return(sz);
 	if((msg.msg_flags < 0) || (msg.msg_flags > 0xc3ff)) {
 	  printf("Abort time msg.msg_flags are %x?\n", msg.msg_flags);
 	  abort();
