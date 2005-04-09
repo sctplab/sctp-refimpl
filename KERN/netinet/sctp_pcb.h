@@ -40,6 +40,7 @@
  * we would not allocate enough for Net/Open BSD :-<
  */
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
+#include "opt_global.h"
 #include <net/pfil.h>
 #endif
 #include <net/if.h>
