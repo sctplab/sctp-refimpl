@@ -4360,7 +4360,18 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			inp->sctp_tcb_at_block = (void *)stcb;
 			inp->error_on_block = 0;
 			sbunlock(&so->so_snd);
+			SCTP_TCB_UNLOCK(stcb);
 			error = sbwait(&so->so_snd);
+			SCTP_INP_RLOCK(inp);
+			if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
+			    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
+				/* Should I really unlock ? */
+				SCTP_INP_RUNLOCK(inp);
+				error = EFAULT;
+				goto out_locked;
+			}
+			SCTP_TCB_LOCK(stcb);
+			SCTP_INP_RUNLOCK(inp);
 			/*
 			 * XXX: This is ugly but I have
 			 * recreated most of what goes on to
