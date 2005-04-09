@@ -108,7 +108,9 @@ main (int argc, char **argv)
     goto out_of_here_close;
   }
   printf("Read the msg vector\n");
-  printf("msg_name %x len:%d\n", (u_int)msg.msg_name, msg.msg_namelen);
+  printf("msg_name %x len:%d flags:%x\n", 
+	 (u_int)msg.msg_name, msg.msg_namelen,
+	 msg.msg_flags);
   printf("msg_iovlen:%d\n", msg.msg_iovlen);
   printf("msg_controllen:%d\n", msg.msg_controllen);
   printf("msg_flags:%x\n", msg.msg_flags);
