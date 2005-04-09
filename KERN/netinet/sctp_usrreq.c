@@ -445,14 +445,16 @@ sctp_notify(struct sctp_inpcb *inp,
 		}
 	} else {
 		/* Send all others to the app */
+	        if (stcb)
+			SCTP_TCB_UNLOCK(stcb);
+
+
 		if (inp->sctp_socket) {
 			SOCK_LOCK(inp->sctp_socket);
 			inp->sctp_socket->so_error = errno;
 			sctp_sowwakeup(inp, inp->sctp_socket);
 			SOCK_UNLOCK(inp->sctp_socket);
 		}
-	        if (stcb)
-			SCTP_TCB_UNLOCK(stcb);
 	}
 }
 
