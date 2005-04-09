@@ -613,6 +613,7 @@ sctp_sendmsgx(int sd,
 	sinfo.sinfo_context    = context;
 	return sctp_sendx(sd, msg, len, addrs, addrcnt, &sinfo, 0);
 }
+static int generation=0;
 
 ssize_t
 sctp_recvmsg (int s, 
@@ -630,10 +631,12 @@ sctp_recvmsg (int s,
 	struct iovec iov[2];
 	char controlVector[SCTP_CONTROL_VEC_SIZE_RCV];
 	struct cmsghdr *cmsg;
-	
+
+	generation++;
 	if (msg_flags == NULL) {
 		return EINVAL;
 	}
+	memset(&msg, 0, sizeof(msg));
 	iov[0].iov_base = dbuf;
 	iov[0].iov_len = len;
 	iov[1].iov_base = NULL;
@@ -649,7 +652,10 @@ sctp_recvmsg (int s,
 	msg.msg_controllen = sizeof(controlVector);
 	errno = 0;
 	sz = recvmsg(s,&msg,0);
-
+	if((msg.msg_flags < 0) || (msg.msg_flags > 0xc3ff)) {
+	  printf("Abort time msg.msg_flags are %x?\n", msg.msg_flags);
+	  abort();
+	}
 	s_info = NULL;
 	len = sz;
 	*msg_flags = msg.msg_flags;
@@ -657,28 +663,29 @@ sctp_recvmsg (int s,
 	  FILE *io;
 	  char buffname[100];
 	dump_it:
-	  sprintf(buffname, "/tmp/for_randy.%d", getpid());
-	  printf("Error, MSG_CTRUNC detected writting to /tmp/for_randy");
+	  printf("Received flags %x in message\n", msg.msg_flags);
+	  sprintf(buffname, "/tmp/for_randy.%d.%d", getpid(), generation);
 	  io = fopen(buffname, "a+");
 	  if(io == NULL) {
 	    printf("Gak, can't write control file failed %s to open errno:%d\n", buffname, errno);
 	    goto out_of_here;
 	  }
 	  if(fwrite((void *)&msg, sizeof(msg), 1, io) != sizeof(msg)) {
-	    printf("Error can't write msg err:%d\n",errno);
+	    printf("A:Error can't write msg err:%d\n",errno);
 	    goto out_of_here_close;
 	  }
 	  if(fwrite(controlVector, msg.msg_controllen, 1, io) != msg.msg_controllen) {
-	    printf("Error can't write control data err:%d\n",errno);
+	    printf("B:Error can't write control data err:%d\n",errno);
 	    goto out_of_here_close;
 	  }
 	  if(fwrite(dbuf, sz, 1, io) != sz) {
-	    printf("Error can't write data err:%d\n",errno);
+	    printf("C:Error can't write data err:%d\n",errno);
 	  }
 	out_of_here_close:
 	  fclose(io);
 	out_of_here:
 	  memset(sinfo, 0, sizeof(*sinfo));
+	  goto done_now;
 	}
 	if ((msg.msg_controllen) && sinfo) {
 		/* parse through and see if we find
@@ -687,7 +694,7 @@ sctp_recvmsg (int s,
 		cmsg = (struct cmsghdr *)controlVector;
 		while (cmsg) {
 			if((cmsg->cmsg_len == 0) || (cmsg->cmsg_len > msg.msg_controllen)) {
-				printf("Invalid CMSG struct\n");
+				printf("Invalid CMSG struct gak\n");
 				memset(sinfo, 0, sizeof(*sinfo));
 				goto dump_it;
 			}
@@ -707,6 +714,7 @@ sctp_recvmsg (int s,
 	if (sinfo_found == 0) {
 	  memset(sinfo, 0, sizeof(*sinfo));
 	}
+ done_now:
 	return(sz);
 }
 
