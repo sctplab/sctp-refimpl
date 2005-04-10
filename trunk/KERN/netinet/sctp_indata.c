@@ -708,18 +708,8 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc, in
 			}
 			cntDel++;
 		} else {
-			if (sctp_sbspace(&stcb->sctp_socket->so_rcv) >=
-			    (long)chk->send_size) {
-				sbappend(&stcb->sctp_socket->so_rcv, chk->data);
-				cntDel++;
-			} else {
-				/* out of space in the sb */
-				sctp_sorwakeup(stcb->sctp_ep,
-					       stcb->sctp_socket);
-				if (hold_locks == 0)
-					SCTP_INP_WUNLOCK(stcb->sctp_ep);
-				return;
-			}
+		        sbappend(&stcb->sctp_socket->so_rcv, chk->data);
+			cntDel++;
 		}
 		/* pull it we did it */
 		TAILQ_REMOVE(&asoc->reasmqueue, chk, sctp_next);
