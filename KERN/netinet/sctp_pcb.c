@@ -161,7 +161,7 @@ extern int ipport_hilastauto;
 
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 
-#ifdef INVARIANTS
+#ifdef SCTP_INVARIANTS
 void sctp_validate_no_locks(void);
 
 void
