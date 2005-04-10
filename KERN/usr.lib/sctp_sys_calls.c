@@ -614,6 +614,18 @@ sctp_sendmsgx(int sd,
 	return sctp_sendx(sd, msg, len, addrs, addrcnt, &sinfo, 0);
 }
 static int generation=0;
+static struct sctp_sndrcvinfo pd_api = {
+	(u_int16_t)0,
+	(u_int16_t)0,
+	(u_int16_t)0,
+	(u_int32_t)0,
+	(u_int32_t)0,
+	(u_int32_t)0,
+	(u_int32_t)0,
+	(u_int32_t)0,
+	(sctp_assoc_t)0
+};
+static unsigned char saved_in_pdapi=0;
 
 ssize_t
 sctp_recvmsg (int s, 
@@ -654,6 +666,7 @@ sctp_recvmsg (int s,
 	sz = recvmsg(s,&msg,0);
 	if(sz <= 0)
 	  return(sz);
+
 	s_info = NULL;
 	len = sz;
 	*msg_flags = msg.msg_flags;
@@ -679,6 +692,12 @@ sctp_recvmsg (int s,
 					/* Copy it to the user */
 					*sinfo = *s_info;
 					sinfo_found = 1;
+					if (msg.msg_flags & MSG_EOR) {
+					  saved_in_pdapi = 0;
+					} else {
+					  saved_in_pdapi = 1; 
+					  pd_api = *s_info;
+					}
 					break;
 				}
 			}
@@ -687,6 +706,8 @@ sctp_recvmsg (int s,
 	}
 	if (sinfo_found == 0) {
 	  memset(sinfo, 0, sizeof(*sinfo));
+	} else if (saved_in_pdapi) {
+	  memcpy(&sinfo, &pd_api, sizeof(sinfo));
 	}
 	return(sz);
 }
