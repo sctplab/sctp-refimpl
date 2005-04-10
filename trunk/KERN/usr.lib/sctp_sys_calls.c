@@ -636,82 +636,85 @@ sctp_recvmsg (int s,
 	      struct sctp_sndrcvinfo *sinfo,
 	      int *msg_flags)
 {
-	struct sctp_sndrcvinfo *s_info;
-	ssize_t sz;
-	int sinfo_found=0;
-	struct msghdr msg;
-	struct iovec iov[2];
-	char controlVector[SCTP_CONTROL_VEC_SIZE_RCV];
-	struct cmsghdr *cmsg;
+  struct sctp_sndrcvinfo *s_info;
+  ssize_t sz;
+  int sinfo_found=0;
+  struct msghdr msg;
+  struct iovec iov[2];
+  char controlVector[SCTP_CONTROL_VEC_SIZE_RCV];
+  struct cmsghdr *cmsg;
 
-	generation++;
-	if (msg_flags == NULL) {
-		return EINVAL;
-	}
-	msg.msg_flags = 0;
-	iov[0].iov_base = dbuf;
-	iov[0].iov_len = len;
-	iov[1].iov_base = NULL;
-	iov[1].iov_len = 0;
-	msg.msg_name = (caddr_t)from;
-	if (fromlen == NULL)
-	    msg.msg_namelen = 0;
-	else
-	    msg.msg_namelen = *fromlen;
-	msg.msg_iov = iov;
-	msg.msg_iovlen = 1;
-	msg.msg_control = (caddr_t)controlVector;
-	msg.msg_controllen = sizeof(controlVector);
-	errno = 0;
-	sz = recvmsg(s,&msg,0);
-	if(sz <= 0)
-	  return(sz);
+  generation++;
+  if (msg_flags == NULL) {
+    return EINVAL;
+  }
+  msg.msg_flags = 0;
+  iov[0].iov_base = dbuf;
+  iov[0].iov_len = len;
+  iov[1].iov_base = NULL;
+  iov[1].iov_len = 0;
+  msg.msg_name = (caddr_t)from;
+  if (fromlen == NULL)
+    msg.msg_namelen = 0;
+  else
+    msg.msg_namelen = *fromlen;
+  msg.msg_iov = iov;
+  msg.msg_iovlen = 1;
+  msg.msg_control = (caddr_t)controlVector;
+  msg.msg_controllen = sizeof(controlVector);
+  errno = 0;
+  sz = recvmsg(s,&msg,0);
+  if(sz <= 0)
+    return(sz);
 
-	s_info = NULL;
-	len = sz;
-	*msg_flags = msg.msg_flags;
-	if(msg.msg_flags & MSG_CTRUNC) {
-	  printf("PANIC... MSG_CTRUNC detected got read:%d gave them buf:%d datasz:%d\n",
-		 msg.msg_controllen, SCTP_CONTROL_VEC_SIZE_RCV, sz);
-	  abort();
-	}
-	if ((msg.msg_controllen) && sinfo) {
-		/* parse through and see if we find
-		 * the sctp_sndrcvinfo (if the user wants it).
-		 */
-		cmsg = (struct cmsghdr *)controlVector;
-		while (cmsg) {
-			if((cmsg->cmsg_len == 0) || (cmsg->cmsg_len > msg.msg_controllen)) {
-				memset(sinfo, 0, sizeof(*sinfo));
-				return(sz);
-			}
-			if (cmsg->cmsg_level == IPPROTO_SCTP) {
-				if (cmsg->cmsg_type == SCTP_SNDRCV) {
-					/* Got it */
-					s_info = (struct sctp_sndrcvinfo *)CMSG_DATA(cmsg);
-					/* Copy it to the user */
-					*sinfo = *s_info;
-					sinfo_found = 1;
-					if (msg.msg_flags & MSG_EOR) {
-					  if(sinfo->sinfo_assoc_id == s_info->sinfo_assoc_id)
-					    /* done with pd-api */
-					    saved_in_pdapi = 0;
-					} else {
-					  saved_in_pdapi = 1; 
-					  pd_api = *s_info;
-					}
-					break;
-				}
-			}
-			cmsg = CMSG_NXTHDR(&msg,cmsg);
-		}
-	}
-	if ((sinfo_found == 0) && (saved_in_pdapi == 0)) {
-	  memset(sinfo, 0, sizeof(*sinfo));
-	} else if (saved_in_pdapi) {
-	  memcpy(&sinfo, &pd_api, sizeof(sinfo));
-	}
+  s_info = NULL;
+  len = sz;
+  *msg_flags = msg.msg_flags;
+  if(msg.msg_flags & MSG_CTRUNC) {
+    printf("PANIC... MSG_CTRUNC detected got read:%d gave them buf:%d datasz:%d\n",
+	   msg.msg_controllen, SCTP_CONTROL_VEC_SIZE_RCV, sz);
+    abort();
+  }
+  if ((msg.msg_controllen) && sinfo) {
+    /* parse through and see if we find
+     * the sctp_sndrcvinfo (if the user wants it).
+     */
+    cmsg = (struct cmsghdr *)controlVector;
+    while (cmsg) {
+      if((cmsg->cmsg_len == 0) || (cmsg->cmsg_len > msg.msg_controllen)) {
+	memset(sinfo, 0, sizeof(*sinfo));
 	return(sz);
+      }
+      if (cmsg->cmsg_level == IPPROTO_SCTP) {
+	if (cmsg->cmsg_type == SCTP_SNDRCV) {
+	  /* Got it */
+	  s_info = (struct sctp_sndrcvinfo *)CMSG_DATA(cmsg);
+	  /* Copy it to the user */
+	  *sinfo = *s_info;
+	  sinfo_found = 1;
+	  if (msg.msg_flags & MSG_EOR) {
+	    if(saved_in_pdapi) {
+	      if(sinfo->sinfo_assoc_id == s_info->sinfo_assoc_id) {
+		/* done with pd-api */
+		saved_in_pdapi = 0;
+	      }
+	    }
+	  } else {
+	    memcpy(&pd_api, s_info, sizeof(pd_api));
+	    saved_in_pdapi = 1; 
+	  }
+	  break;
+	}
+      }
+      cmsg = CMSG_NXTHDR(&msg,cmsg);
+    }
+  }
+  if ((sinfo_found == 0) && (saved_in_pdapi == 0)) {
+    memset(sinfo, 0, sizeof(*sinfo));
+  } else if (saved_in_pdapi) {
+    memcpy(sinfo, &pd_api, sizeof(sinfo));
+  }
+  return(sz);
 }
 
 #ifdef SYS_sctp_peeloff
