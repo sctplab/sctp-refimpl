@@ -4117,6 +4117,7 @@ sctp_prepare_chunk(struct sctp_tmit_chunk *template,
 			printf("Unknown PR_SCTP policy %u.\n", PR_SCTP_POLICY(template->flags));
 		}
 #endif	
+		break;
 		}
 	}
 	if ((srcv->sinfo_flags & SCTP_UNORDERED) == 0) {
