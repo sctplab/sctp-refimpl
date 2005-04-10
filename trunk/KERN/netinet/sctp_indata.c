@@ -1591,7 +1591,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			if (TAILQ_EMPTY(&asoc->delivery_queue) &&
 			    (sctp_is_all_msg_on_reasm(asoc, &tsize) ||
 			     (asoc->size_on_reasm_queue >=
-			      (stcb->sctp_socket->so_rcv.sb_hiwat >> 2) &&
+			      (stcb->sctp_socket->so_rcv.sb_hiwat - 6000) &&
 			      tsize))) {
 				/*
 				 * Yes, we setup to
@@ -2505,7 +2505,7 @@ sctp_service_queues(struct sctp_tcb *stcb, struct sctp_association *asoc, int ho
 		if (TAILQ_EMPTY(&asoc->delivery_queue) &&
 		    (sctp_is_all_msg_on_reasm(asoc, &tsize) ||
 		     (asoc->size_on_reasm_queue >=
-		      (stcb->sctp_socket->so_rcv.sb_hiwat >> 2) && tsize))) {
+		      (stcb->sctp_socket->so_rcv.sb_hiwat - 6000) && tsize))) {
 			asoc->fragmented_delivery_inprogress = 1;
 			asoc->tsn_last_delivered = chk->rec.data.TSN_seq-1;
 			asoc->str_of_pdapi = chk->rec.data.stream_number;
