@@ -693,7 +693,9 @@ sctp_recvmsg (int s,
 					*sinfo = *s_info;
 					sinfo_found = 1;
 					if (msg.msg_flags & MSG_EOR) {
-					  saved_in_pdapi = 0;
+					  if(sinfo->sinfo_assoc_id == s_info->sinfo_assoc_id)
+					    /* done with pd-api */
+					    saved_in_pdapi = 0;
 					} else {
 					  saved_in_pdapi = 1; 
 					  pd_api = *s_info;
@@ -704,7 +706,7 @@ sctp_recvmsg (int s,
 			cmsg = CMSG_NXTHDR(&msg,cmsg);
 		}
 	}
-	if (sinfo_found == 0) {
+	if ((sinfo_found == 0) && (saved_in_pdapi == 0)) {
 	  memset(sinfo, 0, sizeof(*sinfo));
 	} else if (saved_in_pdapi) {
 	  memcpy(&sinfo, &pd_api, sizeof(sinfo));
