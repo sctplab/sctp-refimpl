@@ -657,6 +657,11 @@ sctp_recvmsg (int s,
 	s_info = NULL;
 	len = sz;
 	*msg_flags = msg.msg_flags;
+	if(msg.msg_flags & MSG_CTRUNC) {
+	  printf("PANIC... MSG_CTRUNC detected got read:%d gave them buf:%d datasz:%d\n",
+		 msg.msg_controllen, SCTP_CONTROL_VEC_SIZE_RCV, sz);
+	  abort();
+	}
 	if ((msg.msg_controllen) && sinfo) {
 		/* parse through and see if we find
 		 * the sctp_sndrcvinfo (if the user wants it).
