@@ -4010,7 +4010,8 @@ restart:
 	} else if ((m != NULL) && (m->m_len == 0) && (m->m_next) &&
 		   (stcb)) {
 		/* restore hacked value */
-		so->so_rcv.sb_cc = m->m_pkthdr.len;
+		so->so_rcv.sb_cc += m->m_pkthdr.len;
+		m->m_pkthdr.len = 0;
 	}
 	/*
 	 * If we have less data than requested, block awaiting more
