@@ -3288,6 +3288,7 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp, stcb)
 #endif
 #if defined(__FreeBSD__) || defined(__APPLE__)
 	struct mbuf *m, *n, *nlast;
+	int msg_eor_seen = 0;
 	int cnt=0;
 
 	if (m0 && (m0->m_flags & M_PKTHDR) == 0)
@@ -3331,8 +3332,12 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp, stcb)
 		m = control;
 	m->m_pkthdr.csum_data = (int)tag;
 
-	for (n = m; n->m_next != NULL; n = n->m_next)
+	for (n = m; n->m_next != NULL; n = n->m_next) {
 		sballoc(sb, n);
+		if(n->m_flags & M_EOR) {
+			msg_eor_seen = 1;
+		}
+	}
 	sballoc(sb, n);
 	nlast = n;
 	if (sb->sb_mb == NULL) {
@@ -3343,7 +3348,10 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp, stcb)
 		inp->sctp_vtag_first = tag;
 	SCTP_SBLINKRECORD(sb, m);
 	sb->sb_mbtail = nlast;
-	stcb->last_record_insert = nlast;
+	if(msg_eor_seen == 0) {
+		/* only move if we don't have a whole msg */
+		stcb->last_record_insert = nlast;
+	}
 #else
 	if ((n = sb->sb_mb) != NULL) {
 		if ((n->m_nextpkt != inp->sb_last_mpkt) && (n->m_nextpkt == NULL)) {
@@ -4516,8 +4524,10 @@ sctp_sbappend( struct sockbuf *sb,
   if(stcb->last_record_insert->m_flags & M_FREELIST) {
     panic("stcb->last_record_insert is FREE?");
   }
-  if((sb->sb_mb) && (sb->sb_mb->m_len == 0)) {
-	  if(sb->sb_mb->m_pkthdr.len != stcb->hidden_from_sb) {
+
+  if(sb->sb_mb == stcb->last_record_insert) {
+	  ixf((sb->sb_mb->m_len == 0) &&
+ 	     (sb->sb_mb->m_pkthdr.len != stcb->hidden_from_sb)) {
 		  panic("At append, mismatch");
 	  }
   }
