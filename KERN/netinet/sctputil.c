@@ -3985,6 +3985,11 @@ restart:
 	if((m != NULL) && (m->m_len == 0) && (m->m_next == NULL) &&
 	   (stcb) && (stcb->asoc.fragmented_delivery_inprogress)) {
 	  printf("Fragmented delivery in progress, doing wait/block?\n");
+	  if(sb->so_rcv.sb_cc) {
+		  /* HACK .. if this is not bad enough */
+		  m->m_pkthdr.len = sb->so_rcv.sb_cc;
+		  sb->so_rcv.sb_cc = 0;
+	  }
 	  if(flags & MSG_DONTWAIT) {
 	    error = EWOULDBLOCK;
 	    goto release;
@@ -3997,6 +4002,10 @@ restart:
 	    goto out;
 	  printf("Fragmented delivery in progress, out to temporial restart!\n");
 	  goto temporal_restart;
+	} else if ((m != NULL) && (m->m_len == 0) && (m->m_next) &&
+		   (stcb)) {
+		/* restore hack */
+		sb->so_rcv.sb_cc = m->m_pkthdr.len;
 	}
 	/*
 	 * If we have less data than requested, block awaiting more
