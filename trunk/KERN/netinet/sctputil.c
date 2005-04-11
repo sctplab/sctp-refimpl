@@ -4086,7 +4086,9 @@ restart:
 		  }
 		  if (stcb) {
 			  SCTP_TCB_LOCK(stcb);
-			  SOCKBUF_LOCK(&so->so_rcv);
+		  }
+		  SOCKBUF_LOCK(&so->so_rcv);
+		  if (stcb) {
 			  SCTP_TCB_UNLOCK(stcb);
 		  }
 		  SCTP_INP_RUNLOCK(inp);
