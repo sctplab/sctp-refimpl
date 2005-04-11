@@ -3984,6 +3984,7 @@ restart:
 	m = so->so_rcv.sb_mb;
 	if((m != NULL) && (m->m_len == 0) && (m->m_next == NULL) &&
 	   (stcb) && (stcb->asoc.fragmented_delivery_inprogress)) {
+	  printf("Fragmented delivery in progress, doing wait/block?\n");
 	  if(flags & MSG_DONTWAIT) {
 	    error = EWOULDBLOCK;
 	    goto release;
@@ -3994,6 +3995,7 @@ restart:
 	  error = sbwait(&so->so_rcv);
 	  if (error)
 	    goto out;
+	  printf("Fragmented delivery in progress, out to temporial restart!\n");
 	  goto temporal_restart;
 	}
 	/*
@@ -4067,6 +4069,7 @@ restart:
 	temporal_restart:
 		if (stcb) {
 		  /* we must change the lock order here */
+		  printf("Doing magic lock/unlock seq\n");
 		  SOCKBUF_UNLOCK(&so->so_rcv);
 		  SCTP_INP_RLOCK(inp);
 		  SCTP_TCB_LOCK(stcb);
@@ -4289,10 +4292,8 @@ dontblock:
 		if (len == m->m_len - moff) {
 			if (m->m_flags & M_EOR)
 				flags |= MSG_EOR;
-#ifdef SCTP
 			if (m->m_flags & M_NOTIFICATION)
 				flags |= MSG_NOTIFICATION;
-#endif /* SCTP */
 			if (flags & MSG_PEEK) {
 				m = m->m_next;
 				moff = 0;
@@ -4314,6 +4315,7 @@ dontblock:
 					       (stcb) &&
 					       (stcb->asoc.fragmented_delivery_inprogress)){
 					    /* special case, we must wait at this point */
+					    printf("special case we zap mbuf to 0\n");
 					    m->m_len = 0;
 					    special_mark = 1;
 					  } else {
@@ -4340,6 +4342,7 @@ dontblock:
 			else {
 				if (mp != NULL) {
 					SOCKBUF_UNLOCK(&so->so_rcv);
+					printf("Gak mp was NOT null.. we have problems\n");
 					*mp = m_copym(m, 0, len, M_TRYWAIT);
 					if(stcb) {
 					  SCTP_INP_RLOCK(inp);
@@ -4372,8 +4375,10 @@ dontblock:
 		}
 		if (flags & MSG_EOR)
 			break;
-		if (special_mark)
+		if (special_mark) {
+ 		        printf("Special mark break m is %x\n", (u_int)m);
 	 	        break;
+		}
 		/*
 		 * If the MSG_WAITALL flag is set (for non-atomic socket),
 		 * we must not quit until "uio->uio_resid == 0" or an error
@@ -4477,7 +4482,6 @@ sctp_sbappend( struct sockbuf *sb,
   SOCKBUF_LOCK(sb);
   register struct mbuf *n;
 
-  SOCKBUF_LOCK_ASSERT(sb);
   if (m == 0)
     return;
   if (stcb == NULL)
