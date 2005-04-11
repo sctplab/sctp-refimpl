@@ -3982,7 +3982,7 @@ restart:
 		goto out;
 
 	m = so->so_rcv.sb_mb;
-	if((m->m_len == 0) && (m->m_next == NULL) &&
+	if((m != NULL) && (m->m_len == 0) && (m->m_next == NULL) &&
 	   (stcb) && (stcb->asoc.fragmented_delivery_inprogress)) {
 	  if(flags & MSG_DONTWAIT) {
 	    error = EWOULDBLOCK;
@@ -3994,7 +3994,7 @@ restart:
 	  error = sbwait(&so->so_rcv);
 	  if (error)
 	    goto out;
-	  goto restart;
+	  goto temporal_restart;
 	}
 	/*
 	 * If we have less data than requested, block awaiting more
@@ -4053,6 +4053,27 @@ restart:
 		error = sbwait(&so->so_rcv);
 		if (error)
 			goto out;
+		if (m == NULL) {
+		  /* we could not have had a stcb,
+		   * can we get one now?
+		   */
+		  sq = TAILQ_FIRST(&inp->sctp_queue_list);
+		  if(sq != NULL) {
+		    stcb = sq->tcb;
+		  } else {
+		    stcb = NULL;
+		  }
+		}
+	temporal_restart:
+		if (stcb) {
+		  /* we must change the lock order here */
+		  SOCKBUF_UNLOCK(&so->so_rcv);
+		  SCTP_INP_RLOCK(inp);
+		  SCTP_TCB_LOCK(stcb);
+		  SOCKBUF_LOCK(&so->so_rcv);
+		  SCTP_TCB_UNLOCK(stcb);
+		  SCTP_INP_RUNLOCK(inp);
+		}
 		goto restart;
 	}
 dontblock:
