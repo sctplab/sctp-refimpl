@@ -3944,13 +3944,16 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 	/* pickup the assoc we are reading from */
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	SCTP_INP_RLOCK(inp);
-	sq = TAILQ_FIRST(&inp->sctp_queue_list);
-	if(sq != NULL) {
-	  stcb = sq->tcb;
+	if(inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) {
+		stcb = LIST_FIRST(&inp->sctp_asoc_list);
 	} else {
-	  stcb = NULL;
+		sq = TAILQ_FIRST(&inp->sctp_queue_list);
+		if(sq != NULL) {
+			stcb = sq->tcb;
+		} else {
+			stcb = NULL;
+		}
 	}
-
 	mp = mp0;
 	if (psa != NULL)
 		*psa = NULL;
@@ -3968,14 +3971,14 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		(*pr->pr_usrreqs->pru_rcvd)(so, 0);
 
 	if(stcb) {
-	  SCTP_TCB_LOCK(stcb);
+		SCTP_TCB_LOCK(stcb);
 	}
 	SOCKBUF_LOCK(&so->so_rcv);
 	if(stcb) {
-	  SCTP_TCB_UNLOCK(stcb);
+		SCTP_TCB_UNLOCK(stcb);
 	}
 	SCTP_INP_RUNLOCK(inp);
-restart:
+ restart:
 	SOCKBUF_LOCK_ASSERT(&so->so_rcv);
 	error = sblock(&so->so_rcv, SBLOCKWAIT(flags));
 	if (error)
@@ -3984,30 +3987,30 @@ restart:
 	m = so->so_rcv.sb_mb;
 	if((m != NULL) && (m->m_len == 0) && (m->m_next == NULL) &&
 	   (stcb) && (stcb->asoc.fragmented_delivery_inprogress)) {
-	  printf("Fragmented delivery in progress, doing wait/block?\n");
-	  if(so->so_rcv.sb_cc) {
-		  /* HACK .. if this is not bad enough this
-		   * is icing on the cake of hacks. We hide
-		   * the len in sb_cc from the socket buf. That
-		   * way sleep won't re-wake until our data
-		   * comes.
-		   */
-		  m->m_pkthdr.len += so->so_rcv.sb_cc;
-		  printf("We now have %d bytes hidden from sb_cc\n", (int)m->m_pkthdr.len);
-		  so->so_rcv.sb_cc = 0;
-	  }
-	  if(flags & MSG_DONTWAIT) {
-	    error = EWOULDBLOCK;
-	    goto release;
-	  }
-	  SBLASTRECORDCHK(&so->so_rcv);
-	  SBLASTMBUFCHK(&so->so_rcv);
-	  sbunlock(&so->so_rcv);
-	  error = sbwait(&so->so_rcv);
-	  if (error)
-	    goto out;
-	  printf("Fragmented delivery in progress, out to temporial restart!\n");
-	  goto temporal_restart;
+		printf("Fragmented delivery in progress, doing wait/block?\n");
+		if(so->so_rcv.sb_cc) {
+			/* HACK .. if this is not bad enough this
+			 * is icing on the cake of hacks. We hide
+			 * the len in sb_cc from the socket buf. That
+			 * way sleep won't re-wake until our data
+			 * comes.
+			 */
+			m->m_pkthdr.len += so->so_rcv.sb_cc;
+			printf("We now have %d bytes hidden from sb_cc\n", (int)m->m_pkthdr.len);
+			so->so_rcv.sb_cc = 0;
+		}
+		if(flags & MSG_DONTWAIT) {
+			error = EWOULDBLOCK;
+			goto release;
+		}
+		SBLASTRECORDCHK(&so->so_rcv);
+		SBLASTMBUFCHK(&so->so_rcv);
+		sbunlock(&so->so_rcv);
+		error = sbwait(&so->so_rcv);
+		if (error)
+			goto out;
+		printf("Fragmented delivery in progress, out to temporial restart!\n");
+		goto temporal_restart;
 	} else if ((m != NULL) && (m->m_len == 0) && (m->m_next) &&
 		   (stcb)) {
 		/* restore hacked value */
@@ -4027,13 +4030,13 @@ restart:
 	 * a short count if a timeout or signal occurs after we start.
 	 */
 	if (m == NULL || (((flags & MSG_DONTWAIT) == 0 &&
-	    so->so_rcv.sb_cc < uio->uio_resid) &&
-	    (so->so_rcv.sb_cc < so->so_rcv.sb_lowat ||
-	    ((flags & MSG_WAITALL) && uio->uio_resid <= so->so_rcv.sb_hiwat)) &&
-	    m->m_nextpkt == NULL && (pr->pr_flags & PR_ATOMIC) == 0)) {
+			   so->so_rcv.sb_cc < uio->uio_resid) &&
+			  (so->so_rcv.sb_cc < so->so_rcv.sb_lowat ||
+			   ((flags & MSG_WAITALL) && uio->uio_resid <= so->so_rcv.sb_hiwat)) &&
+			  m->m_nextpkt == NULL && (pr->pr_flags & PR_ATOMIC) == 0)) {
 		KASSERT(m != NULL || !so->so_rcv.sb_cc,
-		    ("receive: m == %p so->so_rcv.sb_cc == %u",
-		    m, so->so_rcv.sb_cc));
+			("receive: m == %p so->so_rcv.sb_cc == %u",
+			 m, so->so_rcv.sb_cc));
 		if (so->so_error) {
 			if (m != NULL)
 				goto dontblock;
@@ -4073,40 +4076,44 @@ restart:
 		if (error)
 			goto out;
 		if ((m == NULL) || (stcb == NULL)){
-		  /* we could not have had a stcb,
-		   * or we don't have one.
-		   */
-		  SOCKBUF_UNLOCK(&so->so_rcv);
-		  SCTP_INP_RLOCK(inp);
-		  sq = TAILQ_FIRST(&inp->sctp_queue_list);
-		  if(sq != NULL) {
-		    stcb = sq->tcb;
-		  } else {
-		    stcb = NULL;
-		  }
-		  if (stcb) {
-			  SCTP_TCB_LOCK(stcb);
-		  }
-		  SOCKBUF_LOCK(&so->so_rcv);
-		  if (stcb) {
-			  SCTP_TCB_UNLOCK(stcb);
-		  }
-		  SCTP_INP_RUNLOCK(inp);
-		  goto restart;
+			/* we could not have had a stcb,
+			 * or we don't have one.
+			 */
+			SOCKBUF_UNLOCK(&so->so_rcv);
+			SCTP_INP_RLOCK(inp);
+			if(inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) {
+				stcb = LIST_FIRST(&inp->sctp_asoc_list);
+			} else {
+				sq = TAILQ_FIRST(&inp->sctp_queue_list);
+				if(sq != NULL) {
+					stcb = sq->tcb;
+				} else {
+					stcb = NULL;
+				}
+			}
+			if (stcb) {
+				SCTP_TCB_LOCK(stcb);
+			}
+			SOCKBUF_LOCK(&so->so_rcv);
+			if (stcb) {
+				SCTP_TCB_UNLOCK(stcb);
+			}
+			SCTP_INP_RUNLOCK(inp);
+			goto restart;
 		}
 	temporal_restart:
 		if (stcb) {
-		  /* we must change the lock order here */
-		  SOCKBUF_UNLOCK(&so->so_rcv);
-		  SCTP_INP_RLOCK(inp);
-		  SCTP_TCB_LOCK(stcb);
-		  SOCKBUF_LOCK(&so->so_rcv);
-		  SCTP_TCB_UNLOCK(stcb);
-		  SCTP_INP_RUNLOCK(inp);
+			/* we must change the lock order here */
+			SOCKBUF_UNLOCK(&so->so_rcv);
+			SCTP_INP_RLOCK(inp);
+			SCTP_TCB_LOCK(stcb);
+			SOCKBUF_LOCK(&so->so_rcv);
+			SCTP_TCB_UNLOCK(stcb);
+			SCTP_INP_RUNLOCK(inp);
 		}
 		goto restart;
 	}
-dontblock:
+ dontblock:
 	/*
 	 * From this point onward, we maintain 'nextrecord' as a cache of the
 	 * pointer to the next record in the socket buffer.  We must keep the
@@ -4136,13 +4143,13 @@ dontblock:
 #ifdef SCTP
 	    || (pr->pr_flags & PR_ADDR_OPT && m->m_type == MT_SONAME)
 #endif
-	    ) {
+		) {
 		KASSERT(m->m_type == MT_SONAME,
-		    ("m->m_type == %d", m->m_type));
+			("m->m_type == %d", m->m_type));
 		orig_resid = 0;
 		if (psa != NULL)
 			*psa = sodupsockaddr(mtod(m, struct sockaddr *),
-			    M_NOWAIT);
+					     M_NOWAIT);
 		if (flags & MSG_PEEK) {
 			m = m->m_next;
 		} else {
@@ -4187,15 +4194,15 @@ dontblock:
 			if (pr->pr_domain->dom_externalize != NULL) {
 				SOCKBUF_UNLOCK(&so->so_rcv);
 				error = (*pr->pr_domain->dom_externalize)
-				    (cm, controlp);
+					(cm, controlp);
 				if(stcb) {
-				  SCTP_INP_RLOCK(inp);
-				  SCTP_TCB_LOCK(stcb);
+					SCTP_INP_RLOCK(inp);
+					SCTP_TCB_LOCK(stcb);
 				}
 				SOCKBUF_LOCK(&so->so_rcv);
 				if(stcb) {
-				  SCTP_TCB_UNLOCK(stcb);
-				  SCTP_INP_RUNLOCK(inp);
+					SCTP_TCB_UNLOCK(stcb);
+					SCTP_INP_RUNLOCK(inp);
 				}
 			} else if (controlp != NULL)
 				*controlp = cm;
@@ -4214,12 +4221,12 @@ dontblock:
 	if (m != NULL) {
 		if ((flags & MSG_PEEK) == 0) {
 			KASSERT(m->m_nextpkt == nextrecord,
-			    ("soreceive: post-control, nextrecord !sync"));
+				("soreceive: post-control, nextrecord !sync"));
 			if (nextrecord == NULL) {
 				KASSERT(so->so_rcv.sb_mb == m,
-				    ("soreceive: post-control, sb_mb!=m"));
+					("soreceive: post-control, sb_mb!=m"));
 				KASSERT(so->so_rcv.sb_lastrecord == m,
-				    ("soreceive: post-control, lastrecord!=m"));
+					("soreceive: post-control, lastrecord!=m"));
 			}
 		}
 		type = m->m_type;
@@ -4228,10 +4235,10 @@ dontblock:
 	} else {
 		if ((flags & MSG_PEEK) == 0) {
 			KASSERT(so->so_rcv.sb_mb == nextrecord,
-			    ("soreceive: sb_mb != nextrecord"));
+				("soreceive: sb_mb != nextrecord"));
 			if (so->so_rcv.sb_mb == NULL) {
 				KASSERT(so->so_rcv.sb_lastrecord == NULL,
-				    ("soreceive: sb_lastercord != NULL"));
+					("soreceive: sb_lastercord != NULL"));
 			}
 		}
 	}
@@ -4261,8 +4268,8 @@ dontblock:
 		} else if (type == MT_OOBDATA)
 			break;
 		else
-		    KASSERT(m->m_type == MT_DATA || m->m_type == MT_HEADER,
-			("m->m_type == %d", m->m_type));
+			KASSERT(m->m_type == MT_DATA || m->m_type == MT_HEADER,
+				("m->m_type == %d", m->m_type));
 		so->so_rcv.sb_state &= ~SBS_RCVATMARK;
 		len = uio->uio_resid;
 		if (so->so_oobmark && len > so->so_oobmark - offset)
@@ -4288,13 +4295,13 @@ dontblock:
 				int disposable;
 
 				if ((m->m_flags & M_EXT)
-				 && (m->m_ext.ext_type == EXT_DISPOSABLE))
+				    && (m->m_ext.ext_type == EXT_DISPOSABLE))
 					disposable = 1;
 				else
 					disposable = 0;
 
 				pg = PHYS_TO_VM_PAGE(vtophys(mtod(m, caddr_t) +
-					moff));
+							     moff));
 
 				if (uio->uio_offset == -1)
 					uio->uio_offset =IDX_TO_OFF(pg->pindex);
@@ -4304,15 +4311,15 @@ dontblock:
 						  disposable);
 			} else
 #endif /* ZERO_COPY_SOCKETS */
-			error = uiomove(mtod(m, char *) + moff, (int)len, uio);
+				error = uiomove(mtod(m, char *) + moff, (int)len, uio);
 			if(stcb) {
-			  SCTP_INP_RLOCK(inp);
-			  SCTP_TCB_LOCK(stcb);
+				SCTP_INP_RLOCK(inp);
+				SCTP_TCB_LOCK(stcb);
 			}
 			SOCKBUF_LOCK(&so->so_rcv);
 			if(stcb) {
-			  SCTP_TCB_UNLOCK(stcb);
-			  SCTP_INP_RUNLOCK(inp);
+				SCTP_TCB_UNLOCK(stcb);
+				SCTP_INP_RUNLOCK(inp);
 			}
 			if (error)
 				goto release;
@@ -4337,24 +4344,24 @@ dontblock:
 					*mp = NULL;
 				} else {
 				        if (flags & MSG_EOR) {
-					  so->so_rcv.sb_mb = m_free(m);
-					  m = so->so_rcv.sb_mb;
+						so->so_rcv.sb_mb = m_free(m);
+						m = so->so_rcv.sb_mb;
 					} else {
-					  /* not eor. what should we do here */
-					  if ( (m->m_next == NULL) &&
-					       (stcb) &&
-					       (stcb->asoc.fragmented_delivery_inprogress)){
-					    /* special case, we must wait at this point */
-					    printf("special case we zap mbuf to 0\n");
-					    m->m_len = 0;
-					    /* zero for hackery */
-					    m->m_pkthdr.len = 0;
-					    special_mark = 1;
-					  } else {
-					    /* normal thing is ok */
-					    so->so_rcv.sb_mb = m_free(m);
-					    m = so->so_rcv.sb_mb;
-					  }
+						/* not eor. what should we do here */
+						if ( (m->m_next == NULL) &&
+						     (stcb) &&
+						     (stcb->asoc.fragmented_delivery_inprogress)){
+							/* special case, we must wait at this point */
+							printf("special case we zap mbuf to 0\n");
+							m->m_len = 0;
+							/* zero for hackery */
+							m->m_pkthdr.len = 0;
+							special_mark = 1;
+						} else {
+							/* normal thing is ok */
+							so->so_rcv.sb_mb = m_free(m);
+							m = so->so_rcv.sb_mb;
+						}
 					}
 				}
 				if (m != NULL) {
@@ -4377,13 +4384,13 @@ dontblock:
 					printf("Gak mp was NOT null.. we have problems\n");
 					*mp = m_copym(m, 0, len, M_TRYWAIT);
 					if(stcb) {
-					  SCTP_INP_RLOCK(inp);
-					  SCTP_TCB_LOCK(stcb);
+						SCTP_INP_RLOCK(inp);
+						SCTP_TCB_LOCK(stcb);
 					}
 					SOCKBUF_LOCK(&so->so_rcv);
 					if(stcb) {
-					  SCTP_TCB_UNLOCK(stcb);
-					  SCTP_INP_RUNLOCK(inp);
+						SCTP_TCB_UNLOCK(stcb);
+						SCTP_INP_RUNLOCK(inp);
 					}
 				}
 				m->m_data += len;
@@ -4419,7 +4426,7 @@ dontblock:
 		 * Keep sockbuf locked against other readers.
 		 */
 		while (flags & MSG_WAITALL && m == NULL && uio->uio_resid > 0 &&
-		    !sosendallatonce(so) && nextrecord == NULL) {
+		       !sosendallatonce(so) && nextrecord == NULL) {
 			SOCKBUF_LOCK_ASSERT(&so->so_rcv);
 			if (so->so_error || so->so_rcv.sb_state & SBS_CANTRCVMORE)
 				break;
@@ -4431,13 +4438,13 @@ dontblock:
 				SOCKBUF_UNLOCK(&so->so_rcv);
 				(*pr->pr_usrreqs->pru_rcvd)(so, flags);
 				if(stcb) {
-				  SCTP_INP_RLOCK(inp);
-				  SCTP_TCB_LOCK(stcb);
+					SCTP_INP_RLOCK(inp);
+					SCTP_TCB_LOCK(stcb);
 				}
 				SOCKBUF_LOCK(&so->so_rcv);
 				if(stcb) {
-				  SCTP_TCB_UNLOCK(stcb);
-				  SCTP_INP_RUNLOCK(inp);
+					SCTP_TCB_UNLOCK(stcb);
+					SCTP_INP_RUNLOCK(inp);
 				}
 			}
 			SBLASTRECORDCHK(&so->so_rcv);
@@ -4477,13 +4484,13 @@ dontblock:
 			SOCKBUF_UNLOCK(&so->so_rcv);
 			(*pr->pr_usrreqs->pru_rcvd)(so, flags);
 			if(stcb) {
-			  SCTP_INP_RLOCK(inp);
-			  SCTP_TCB_LOCK(stcb);
+				SCTP_INP_RLOCK(inp);
+				SCTP_TCB_LOCK(stcb);
 			}
 			SOCKBUF_LOCK(&so->so_rcv);
 			if(stcb) {
-			  SCTP_TCB_UNLOCK(stcb);
-			  SCTP_INP_RUNLOCK(inp);
+				SCTP_TCB_UNLOCK(stcb);
+				SCTP_INP_RUNLOCK(inp);
 			}
 		}
 	}
@@ -4496,10 +4503,10 @@ dontblock:
 
 	if (flagsp != NULL)
 		*flagsp |= flags;
-release:
+ release:
 	SOCKBUF_LOCK_ASSERT(&so->so_rcv);
 	sbunlock(&so->so_rcv);
-out:
+ out:
 	SOCKBUF_LOCK_ASSERT(&so->so_rcv);
 	SOCKBUF_UNLOCK(&so->so_rcv);
 	return (error);
