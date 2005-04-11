@@ -4084,7 +4084,6 @@ restart:
 	temporal_restart:
 		if (stcb) {
 		  /* we must change the lock order here */
-		  printf("Doing magic lock/unlock seq\n");
 		  SOCKBUF_UNLOCK(&so->so_rcv);
 		  SCTP_INP_RLOCK(inp);
 		  SCTP_TCB_LOCK(stcb);
