@@ -362,10 +362,8 @@ struct sctp_tcb {
 	LIST_ENTRY(sctp_tcb) sctp_tcbhash;	/* next link in hash table */
 	LIST_ENTRY(sctp_tcb) sctp_tcblist;	/* list of all of the TCB's */
 	LIST_ENTRY(sctp_tcb) sctp_asocs;
-#if defined(__FreeBSD__) && __FreeBSD_version >= 503000
         /* last place we began inserting a record */
         struct mbuf *last_record_insert;
-#endif
 	struct sctp_association asoc;
 	uint16_t rport;			/* remote port in network format */
 	uint16_t resv;

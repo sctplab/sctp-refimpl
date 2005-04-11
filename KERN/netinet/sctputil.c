@@ -3993,6 +3993,7 @@ restart:
 		   * comes.
 		   */
 		  m->m_pkthdr.len += so->so_rcv.sb_cc;
+		  printf("We now have %d bytes hidden from sb_cc\n", (int)m->m_pkthdr.len);
 		  so->so_rcv.sb_cc = 0;
 	  }
 	  if(flags & MSG_DONTWAIT) {
@@ -4010,6 +4011,7 @@ restart:
 	} else if ((m != NULL) && (m->m_len == 0) && (m->m_next) &&
 		   (stcb)) {
 		/* restore hacked value */
+		printf("We now restore %d bytes that were hidden from sb_cc\n", (int)m->m_pkthdr.len);
 		so->so_rcv.sb_cc += m->m_pkthdr.len;
 		m->m_pkthdr.len = 0;
 	}
