@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.4 2005-01-21 12:26:18 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.5 2005-04-11 18:23:11 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -382,7 +382,6 @@ sctpReadInput(int fd, distributor *o,sctpAdaptorMod *r)
     return(0);
   }
   big_o = o;
-
   if (msg.msg_flags & MSG_NOTIFICATION) {
     handle_notification(fd,readBuffer);
     return(0);
