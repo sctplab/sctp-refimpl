@@ -3986,8 +3986,13 @@ restart:
 	   (stcb) && (stcb->asoc.fragmented_delivery_inprogress)) {
 	  printf("Fragmented delivery in progress, doing wait/block?\n");
 	  if(so->so_rcv.sb_cc) {
-		  /* HACK .. if this is not bad enough */
-		  m->m_pkthdr.len = so->so_rcv.sb_cc;
+		  /* HACK .. if this is not bad enough this
+		   * is icing on the cake of hacks. We hide
+		   * the len in sb_cc from the socket buf. That
+		   * way sleep won't re-wake until our data
+		   * comes.
+		   */
+		  m->m_pkthdr.len += so->so_rcv.sb_cc;
 		  so->so_rcv.sb_cc = 0;
 	  }
 	  if(flags & MSG_DONTWAIT) {
@@ -4004,7 +4009,7 @@ restart:
 	  goto temporal_restart;
 	} else if ((m != NULL) && (m->m_len == 0) && (m->m_next) &&
 		   (stcb)) {
-		/* restore hack */
+		/* restore hacked value */
 		so->so_rcv.sb_cc = m->m_pkthdr.len;
 	}
 	/*
@@ -4326,6 +4331,8 @@ dontblock:
 					    /* special case, we must wait at this point */
 					    printf("special case we zap mbuf to 0\n");
 					    m->m_len = 0;
+					    /* zero for hackery */
+					    m->m_pkthdr.len = 0;
 					    special_mark = 1;
 					  } else {
 					    /* normal thing is ok */
