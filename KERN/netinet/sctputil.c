@@ -4310,14 +4310,15 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 				moff = 0;
 			} else {
 				nextrecord = m->m_nextpkt;
-				sbfree(&so->so_rcv, m);
 				if (mp != NULL) {
+				        sbfree(&so->so_rcv, m);
 					*mp = m;
 					mp = &m->m_next;
 					so->so_rcv.sb_mb = m = m->m_next;
 					*mp = NULL;
 				} else {
 				        if (flags & MSG_EOR) {
+					        sbfree(&so->so_rcv, m);
 						so->so_rcv.sb_mb = m_free(m);
 						m = so->so_rcv.sb_mb;
 					} else {
@@ -4327,12 +4328,14 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 						     (stcb->asoc.fragmented_delivery_inprogress)){
 							/* special case, we must wait at this point */
 							sctp_pegs[SCTP_PDAPI_HAD_TOWAIT_RCV]++;
+							so->so_rcv.sb_cc -= m->m_len;
 							m->m_len = 0;
 							/* zero for hackery */
 							m->m_pkthdr.len = 0;
 							special_mark = 1;
 						} else {
 							/* normal thing is ok */
+ 					                sbfree(&so->so_rcv, m);
 							so->so_rcv.sb_mb = m_free(m);
 							m = so->so_rcv.sb_mb;
 						}
