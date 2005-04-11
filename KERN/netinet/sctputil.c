@@ -3982,6 +3982,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 	} else if ((m != NULL) && (m->m_len == 0) && (m->m_next) &&
 		   (stcb)) {
 		/* restore hacked value */
+		sctp_pegs[SCTP_PDAPI_HAD_TORCVR_RCV]++;
 		printf("We now restore %d bytes that were hidden from sb_cc\n", (int)m->m_pkthdr.len);
 		so->so_rcv.sb_cc += m->m_pkthdr.len;
 		m->m_pkthdr.len = 0;
@@ -4098,7 +4099,12 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 	 * readers from pulling off the front of the socket buffer.
 	 */
 	if(stcb == NULL){
-		printf ("Doing a read with no tcb found?\n");
+		sctp_pegs[SCTP_NO_TCB_IN_RCV]++;
+	} else {
+		sctp_pegs[SCTP_HAD_TCB_IN_RCV]++;
+		if(stcb->asoc.fragmented_delivery_inprogress) {
+			sctp_pegs[SCTP_PDAPI_UP_IN_RCV]++;
+		}
 	}
 	SOCKBUF_LOCK_ASSERT(&so->so_rcv);
 	if (uio->uio_td)
@@ -4320,7 +4326,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 						     (stcb) &&
 						     (stcb->asoc.fragmented_delivery_inprogress)){
 							/* special case, we must wait at this point */
-							printf("special case we zap mbuf to 0\n");
+							sctp_pegs[SCTP_PDAPI_HAD_TOWAIT_RCV]++;
 							m->m_len = 0;
 							/* zero for hackery */
 							m->m_pkthdr.len = 0;
