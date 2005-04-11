@@ -3943,6 +3943,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 
 	/* pickup the assoc we are reading from */
 	inp = (struct sctp_inpcb *)so->so_pcb;
+	SCTP_INP_RLOCK(inp);
 	sq = TAILQ_FIRST(&inp->sctp_queue_list);
 	if(sq != NULL) {
 	  stcb = sq->tcb;
@@ -3967,14 +3968,13 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		(*pr->pr_usrreqs->pru_rcvd)(so, 0);
 
 	if(stcb) {
-	  SCTP_INP_RLOCK(inp);
 	  SCTP_TCB_LOCK(stcb);
 	}
 	SOCKBUF_LOCK(&so->so_rcv);
 	if(stcb) {
 	  SCTP_TCB_UNLOCK(stcb);
-	  SCTP_INP_RUNLOCK(inp);
 	}
+	SCTP_INP_RUNLOCK(inp);
 restart:
 	SOCKBUF_LOCK_ASSERT(&so->so_rcv);
 	error = sblock(&so->so_rcv, SBLOCKWAIT(flags));
@@ -4072,16 +4072,25 @@ restart:
 		error = sbwait(&so->so_rcv);
 		if (error)
 			goto out;
-		if (m == NULL) {
+		if ((m == NULL) || (stcb == NULL)){
 		  /* we could not have had a stcb,
-		   * can we get one now?
+		   * or we don't have one.
 		   */
+		  SOCKBUF_UNLOCK(&so->so_rcv);
+		  SCTP_INP_RLOCK(inp);
 		  sq = TAILQ_FIRST(&inp->sctp_queue_list);
 		  if(sq != NULL) {
 		    stcb = sq->tcb;
 		  } else {
 		    stcb = NULL;
 		  }
+		  if (stcb) {
+			  SCTP_TCB_LOCK(stcb);
+			  SOCKBUF_LOCK(&so->so_rcv);
+			  SCTP_TCB_UNLOCK(stcb);
+		  }
+		  SCTP_INP_RUNLOCK(inp);
+		  goto restart;
 		}
 	temporal_restart:
 		if (stcb) {
@@ -4111,6 +4120,9 @@ dontblock:
 	 * By holding the high-level sblock(), we prevent simultaneous
 	 * readers from pulling off the front of the socket buffer.
 	 */
+	if(stcb == NULL){
+		printf ("Doing a read with no tcb found?\n");
+	}
 	SOCKBUF_LOCK_ASSERT(&so->so_rcv);
 	if (uio->uio_td)
 		uio->uio_td->td_proc->p_stats->p_ru.ru_msgrcv++;
