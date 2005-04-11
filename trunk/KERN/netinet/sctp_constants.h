@@ -745,7 +745,7 @@
 #define SCTP_PDAPI_UP_IN_RCV    96
 #define SCTP_PDAPI_HAD_TOWAIT_RCV 97
 #define SCTP_PDAPI_HAD_TORCVR_RCV 98
-#define SCTP_RESV_1             99
+#define SCTP_PDAPI_SB_HAD_NL_TCB  99
 
 /*
  * This value defines the number of vtag block time wait entry's
