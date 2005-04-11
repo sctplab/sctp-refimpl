@@ -478,11 +478,8 @@ sctp_deliver_data(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		}
 	} else {
 		/* append to a already started message. */
-		if (sctp_sbspace(&stcb->sctp_socket->so_rcv) >=
-		    (long)chk->send_size) {
-			SCTP_SBAPPEND(&stcb->sctp_socket->so_rcv, chk->data, stcb);
-			free_it = 1;
-		}
+	  SCTP_SBAPPEND(&stcb->sctp_socket->so_rcv, chk->data, stcb);
+	  free_it = 1;
 	}
  skip:
 	if (hold_locks == 0)
