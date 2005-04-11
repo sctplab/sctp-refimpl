@@ -54,15 +54,33 @@
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/fcntl.h>
+#include <sys/limits.h>
+#include <sys/lock.h>
+#include <sys/mac.h>
 #include <sys/malloc.h>
+#include <sys/mutex.h>
 #include <sys/mbuf.h>
 #include <sys/domain.h>
+#include <sys/file.h>			/* for struct knote */
+#include <sys/kernel.h>
+#include <sys/event.h>
+#include <sys/poll.h>
+
 #include <sys/protosw.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>
 #include <sys/proc.h>
 #include <sys/kernel.h>
+#include <sys/resourcevar.h>
+#include <sys/signalvar.h>
 #include <sys/sysctl.h>
+#include <sys/uio.h>
+#include <sys/jail.h>
+
+#include <vm/uma.h>
+
+
 
 #ifdef __FreeBSD__
 #include <sys/callout.h>
@@ -2191,7 +2209,7 @@ sctp_notify_assoc_change(u_int32_t event, struct sctp_tcb *stcb,
 	SCTP_INP_WLOCK(stcb->sctp_ep);
 	SCTP_TCB_LOCK(stcb);
 	if (!sbappendaddr_nocheck(&stcb->sctp_socket->so_rcv,
-	    to, m_notify, NULL, stcb->asoc.my_vtag, stcb->sctp_ep)) {
+	    to, m_notify, NULL, stcb->asoc.my_vtag, stcb->sctp_ep, stcb)) {
 		/* not enough room */
 		sctp_m_freem(m_notify);
 		SCTP_INP_WUNLOCK(stcb->sctp_ep);
@@ -2283,7 +2301,7 @@ sctp_notify_peer_addr_change(struct sctp_tcb *stcb, uint32_t state,
 	SCTP_INP_WLOCK(stcb->sctp_ep);
 	SCTP_TCB_LOCK(stcb);
 	if (!sbappendaddr_nocheck(&stcb->sctp_socket->so_rcv, to,
-	    m_notify, NULL, stcb->asoc.my_vtag, stcb->sctp_ep)) {
+	    m_notify, NULL, stcb->asoc.my_vtag, stcb->sctp_ep, stcb)) {
 		/* not enough room */
 		sctp_m_freem(m_notify);
 		SCTP_INP_WUNLOCK(stcb->sctp_ep);
@@ -2384,7 +2402,7 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, u_int32_t error,
 	SCTP_INP_WLOCK(stcb->sctp_ep);
 	SCTP_TCB_LOCK(stcb);
 	if (!sbappendaddr_nocheck(&stcb->sctp_socket->so_rcv, to,
-	    m_notify, NULL, stcb->asoc.my_vtag, stcb->sctp_ep)) {
+	    m_notify, NULL, stcb->asoc.my_vtag, stcb->sctp_ep, stcb)) {
 		/* not enough room */
 		sctp_m_freem(m_notify);
 		SCTP_INP_WUNLOCK(stcb->sctp_ep);
@@ -2460,7 +2478,7 @@ sctp_notify_adaption_layer(struct sctp_tcb *stcb,
 	SCTP_INP_WLOCK(stcb->sctp_ep);
 	SCTP_TCB_LOCK(stcb);
 	if (!sbappendaddr_nocheck(&stcb->sctp_socket->so_rcv, to,
-	    m_notify, NULL, stcb->asoc.my_vtag, stcb->sctp_ep)) {
+	    m_notify, NULL, stcb->asoc.my_vtag, stcb->sctp_ep, stcb)) {
 		/* not enough room */
 		sctp_m_freem(m_notify);
 		SCTP_INP_WUNLOCK(stcb->sctp_ep);
@@ -2536,7 +2554,7 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
 	SCTP_INP_WLOCK(stcb->sctp_ep);
 	SCTP_TCB_LOCK(stcb);
 	if (!sbappendaddr_nocheck(&stcb->sctp_socket->so_rcv, to,
-	    m_notify, NULL, stcb->asoc.my_vtag, stcb->sctp_ep)) {
+	    m_notify, NULL, stcb->asoc.my_vtag, stcb->sctp_ep, stcb)) {
 		/* not enough room */
 		sctp_m_freem(m_notify);
 		SCTP_INP_WUNLOCK(stcb->sctp_ep);
@@ -2621,7 +2639,7 @@ sctp_notify_shutdown_event(struct sctp_tcb *stcb)
 	SCTP_INP_WLOCK(stcb->sctp_ep);
 	SCTP_TCB_LOCK(stcb);
 	if (!sbappendaddr_nocheck(&stcb->sctp_socket->so_rcv, to,
-	    m_notify, NULL, stcb->asoc.my_vtag, stcb->sctp_ep)) {
+	    m_notify, NULL, stcb->asoc.my_vtag, stcb->sctp_ep, stcb)) {
 		/* not enough room */
 		sctp_m_freem(m_notify);
 		SCTP_INP_WUNLOCK(stcb->sctp_ep);
@@ -2719,7 +2737,7 @@ sctp_notify_stream_reset(struct sctp_tcb *stcb,
 	SCTP_INP_WLOCK(stcb->sctp_ep);
 	SCTP_TCB_LOCK(stcb);
 	if (!sbappendaddr_nocheck(&stcb->sctp_socket->so_rcv, to,
-	    m_notify, NULL, stcb->asoc.my_vtag, stcb->sctp_ep)) {
+	    m_notify, NULL, stcb->asoc.my_vtag, stcb->sctp_ep, stcb)) {
 		/* not enough room */
 		sctp_m_freem(m_notify);
 		SCTP_INP_WUNLOCK(stcb->sctp_ep);
@@ -3247,12 +3265,13 @@ sctp_print_address_pkt(struct ip *iph, struct sctphdr *sh)
 
 
 int
-sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
+sbappendaddr_nocheck(sb, asa, m0, control, tag, inp, stcb)
 	struct sockbuf *sb;
 	struct sockaddr *asa;
 	struct mbuf *m0, *control;
 	u_int32_t tag;
 	struct sctp_inpcb *inp;
+	struct sctp_tcb *stcb;
 {
 #ifdef __NetBSD__
 	struct mbuf *m, *n;
@@ -3290,8 +3309,12 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 		m = control;
 	m->m_pkthdr.csum_data = tag;
 
-	for (n = m; n; n = n->m_next)
+	for (n = m; n; n = n->m_next) {
 		sballoc(sb, n);
+		if(n->m_next == NULL) {
+		  stcb->last_record_insert = nlast;
+		}
+	}
 	if ((n = sb->sb_mb) != NULL) {
 		if ((n->m_nextpkt != inp->sb_last_mpkt) && (n->m_nextpkt == NULL)) {
 			inp->sb_last_mpkt = NULL;
@@ -3368,6 +3391,7 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 		inp->sctp_vtag_first = tag;
 	SCTP_SBLINKRECORD(sb, m);
 	sb->sb_mbtail = nlast;
+	stcb->last_record_insert = nlast;
 #else
 	if ((n = sb->sb_mb) != NULL) {
 		if ((n->m_nextpkt != inp->sb_last_mpkt) && (n->m_nextpkt == NULL)) {
@@ -3414,8 +3438,12 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp)
 
 	m->m_pkthdr.csum = (int)tag;
 	m->m_next = control;
-	for (n = m; n; n = n->m_next)
+	for (n = m; n; n = n->m_next) {
 		sballoc(sb, n);
+		if(n->m_next == NULL) {
+		  stcb->last_record_insert = nlast;
+		}
+	}
 	if ((n = sb->sb_mb) != NULL) {
 		if ((n->m_nextpkt != inp->sb_last_mpkt) && (n->m_nextpkt == NULL)) {
 			inp->sb_last_mpkt = NULL;
@@ -3827,3 +3855,637 @@ sctp_m_copym(struct mbuf *m, int off, int len, int wait)
 	return (m_copym(m, off, len, wait));
 }
 #endif /* __APPLE__ */
+
+
+#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+
+
+
+/*
+ * Following replacement or removal of the first mbuf on the first mbuf chain
+ * of a socket buffer, push necessary state changes back into the socket
+ * buffer so that other consumers see the values consistently.  'nextrecord'
+ * is the callers locally stored value of the original value of
+ * sb->sb_mb->m_nextpkt which must be restored when the lead mbuf changes.
+ * NOTE: 'nextrecord' may be NULL.
+ */
+static __inline void
+sockbuf_pushsync(struct sockbuf *sb, struct mbuf *nextrecord)
+{
+
+	SOCKBUF_LOCK_ASSERT(sb);
+	/*
+	 * First, update for the new value of nextrecord.  If necessary, make
+	 * it the first record.
+	 */
+	if (sb->sb_mb != NULL)
+		sb->sb_mb->m_nextpkt = nextrecord;
+	else
+		sb->sb_mb = nextrecord;
+
+        /*
+         * Now update any dependent socket buffer fields to reflect the new
+         * state.  This is an expanded inline of SB_EMPTY_FIXUP(), with the
+	 * addition of a second clause that takes care of the case where
+	 * sb_mb has been updated, but remains the last record.
+         */
+        if (sb->sb_mb == NULL) {
+                sb->sb_mbtail = NULL;
+                sb->sb_lastrecord = NULL;
+        } else if (sb->sb_mb->m_nextpkt == NULL)
+                sb->sb_lastrecord = sb->sb_mb;
+}
+
+
+#define	SBLOCKWAIT(f)	(((f) & MSG_DONTWAIT) ? M_NOWAIT : M_WAITOK)
+/*
+ * Implement receive operations on a socket.
+ * We depend on the way that records are added to the sockbuf
+ * by sbappend*.  In particular, each record (mbufs linked through m_next)
+ * must begin with an address if the protocol so specifies,
+ * followed by an optional mbuf or mbufs containing ancillary data,
+ * and then zero or more mbufs of data.
+ * In order to avoid blocking network interrupts for the entire time here,
+ * we splx() while doing the actual copy to user space.
+ * Although the sockbuf is locked, new data may still be appended,
+ * and thus we must maintain consistency of the sockbuf during that time.
+ *
+ * The caller may receive the data as a single mbuf chain by supplying
+ * an mbuf **mp0 for use in returning the chain.  The uio is then used
+ * only for the count in uio_resid.
+ */
+
+/* This is a HORRIBLE hack.. to get the U-Vancover folks through
+ * until I can re-write this customized for SCTP.. which I
+ * always intended ;-0
+ */
+
+int
+sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
+	struct socket *so;
+	struct sockaddr **psa;
+	struct uio *uio;
+	struct mbuf **mp0;
+	struct mbuf **controlp;
+	int *flagsp;
+{
+	struct mbuf *m, **mp;
+	int flags, len, error, offset;
+	struct protosw *pr = so->so_proto;
+	struct mbuf *nextrecord;
+	int moff, type = 0;
+	int orig_resid = uio->uio_resid;
+	int special_mark=0;
+	struct sctp_inpcb *inp;
+	struct sctp_tcb *stcb;
+	struct sctp_socket_q_list *sq;
+
+
+	/* pickup the assoc we are reading from */
+	inp = (struct sctp_inpcb *)so->so_pcb;
+	sq = TAILQ_FIRST(&inp->sctp_queue_list);
+	if(sq != NULL) {
+	  stcb = sq->tcb;
+	} else {
+	  stcb = NULL;
+	}
+
+	mp = mp0;
+	if (psa != NULL)
+		*psa = NULL;
+	if (controlp != NULL)
+		*controlp = NULL;
+	if (flagsp != NULL)
+		flags = *flagsp &~ MSG_EOR;
+	else
+		flags = 0;
+	if (flags & MSG_OOB)
+	        return (EOPNOTSUPP);
+	if (mp != NULL)
+		*mp = NULL;
+	if (so->so_state & SS_ISCONFIRMING && uio->uio_resid)
+		(*pr->pr_usrreqs->pru_rcvd)(so, 0);
+
+	if(stcb) {
+	  SCTP_INP_RLOCK(inp);
+	  SCTP_TCB_LOCK(stcb);
+	}
+	SOCKBUF_LOCK(&so->so_rcv);
+	if(stcb) {
+	  SCTP_TCB_UNLOCK(stcb);
+	  SCTP_INP_RUNLOCK(inp);
+	}
+restart:
+	SOCKBUF_LOCK_ASSERT(&so->so_rcv);
+	error = sblock(&so->so_rcv, SBLOCKWAIT(flags));
+	if (error)
+		goto out;
+
+	m = so->so_rcv.sb_mb;
+	if((m->m_len == 0) && (m->m_next == NULL) &&
+	   (stcb) && (stcb->asoc.fragmented_delivery_inprogress)) {
+	  if(flags & MSG_DONTWAIT) {
+	    error = EWOULDBLOCK;
+	    goto release;
+	  }
+	  SBLASTRECORDCHK(&so->so_rcv);
+	  SBLASTMBUFCHK(&so->so_rcv);
+	  sbunlock(&so->so_rcv);
+	  error = sbwait(&so->so_rcv);
+	  if (error)
+	    goto out;
+	  goto restart;
+	}
+	/*
+	 * If we have less data than requested, block awaiting more
+	 * (subject to any timeout) if:
+	 *   1. the current count is less than the low water mark, or
+	 *   2. MSG_WAITALL is set, and it is possible to do the entire
+	 *	receive operation at once if we block (resid <= hiwat).
+	 *   3. MSG_DONTWAIT is not set
+	 * If MSG_WAITALL is set but resid is larger than the receive buffer,
+	 * we have to do the receive in sections, and thus risk returning
+	 * a short count if a timeout or signal occurs after we start.
+	 */
+	if (m == NULL || (((flags & MSG_DONTWAIT) == 0 &&
+	    so->so_rcv.sb_cc < uio->uio_resid) &&
+	    (so->so_rcv.sb_cc < so->so_rcv.sb_lowat ||
+	    ((flags & MSG_WAITALL) && uio->uio_resid <= so->so_rcv.sb_hiwat)) &&
+	    m->m_nextpkt == NULL && (pr->pr_flags & PR_ATOMIC) == 0)) {
+		KASSERT(m != NULL || !so->so_rcv.sb_cc,
+		    ("receive: m == %p so->so_rcv.sb_cc == %u",
+		    m, so->so_rcv.sb_cc));
+		if (so->so_error) {
+			if (m != NULL)
+				goto dontblock;
+			error = so->so_error;
+			if ((flags & MSG_PEEK) == 0)
+				so->so_error = 0;
+			goto release;
+		}
+		SOCKBUF_LOCK_ASSERT(&so->so_rcv);
+		if (so->so_rcv.sb_state & SBS_CANTRCVMORE) {
+			if (m)
+				goto dontblock;
+			else
+				goto release;
+		}
+		for (; m != NULL; m = m->m_next)
+			if (m->m_type == MT_OOBDATA  || (m->m_flags & M_EOR)) {
+				m = so->so_rcv.sb_mb;
+				goto dontblock;
+			}
+		if ((so->so_state & (SS_ISCONNECTED|SS_ISCONNECTING)) == 0 &&
+		    (so->so_proto->pr_flags & PR_CONNREQUIRED)) {
+			error = ENOTCONN;
+			goto release;
+		}
+		if (uio->uio_resid == 0)
+			goto release;
+		if ((so->so_state & SS_NBIO) ||
+		    (flags & (MSG_DONTWAIT|MSG_NBIO))) {
+			error = EWOULDBLOCK;
+			goto release;
+		}
+		SBLASTRECORDCHK(&so->so_rcv);
+		SBLASTMBUFCHK(&so->so_rcv);
+		sbunlock(&so->so_rcv);
+		error = sbwait(&so->so_rcv);
+		if (error)
+			goto out;
+		goto restart;
+	}
+dontblock:
+	/*
+	 * From this point onward, we maintain 'nextrecord' as a cache of the
+	 * pointer to the next record in the socket buffer.  We must keep the
+	 * various socket buffer pointers and local stack versions of the
+	 * pointers in sync, pushing out modifications before dropping the
+	 * socket buffer mutex, and re-reading them when picking it up.
+	 *
+	 * Otherwise, we will race with the network stack appending new data
+	 * or records onto the socket buffer by using inconsistent/stale
+	 * versions of the field, possibly resulting in socket buffer
+	 * corruption.
+	 *
+	 * By holding the high-level sblock(), we prevent simultaneous
+	 * readers from pulling off the front of the socket buffer.
+	 */
+	SOCKBUF_LOCK_ASSERT(&so->so_rcv);
+	if (uio->uio_td)
+		uio->uio_td->td_proc->p_stats->p_ru.ru_msgrcv++;
+	KASSERT(m == so->so_rcv.sb_mb, ("soreceive: m != so->so_rcv.sb_mb"));
+	SBLASTRECORDCHK(&so->so_rcv);
+	SBLASTMBUFCHK(&so->so_rcv);
+	nextrecord = m->m_nextpkt;
+	if (pr->pr_flags & PR_ADDR
+#ifdef SCTP
+	    || (pr->pr_flags & PR_ADDR_OPT && m->m_type == MT_SONAME)
+#endif
+	    ) {
+		KASSERT(m->m_type == MT_SONAME,
+		    ("m->m_type == %d", m->m_type));
+		orig_resid = 0;
+		if (psa != NULL)
+			*psa = sodupsockaddr(mtod(m, struct sockaddr *),
+			    M_NOWAIT);
+		if (flags & MSG_PEEK) {
+			m = m->m_next;
+		} else {
+			sbfree(&so->so_rcv, m);
+			so->so_rcv.sb_mb = m_free(m);
+			m = so->so_rcv.sb_mb;
+			sockbuf_pushsync(&so->so_rcv, nextrecord);
+		}
+	}
+
+	/*
+	 * Process one or more MT_CONTROL mbufs present before any data mbufs
+	 * in the first mbuf chain on the socket buffer.  If MSG_PEEK, we
+	 * just copy the data; if !MSG_PEEK, we call into the protocol to
+	 * perform externalization (or freeing if controlp == NULL).
+	 */
+	if (m != NULL && m->m_type == MT_CONTROL) {
+		struct mbuf *cm = NULL, *cmn;
+		struct mbuf **cme = &cm;
+
+		do {
+			if (flags & MSG_PEEK) {
+				if (controlp != NULL) {
+					*controlp = m_copy(m, 0, m->m_len);
+					controlp = &(*controlp)->m_next;
+				}
+				m = m->m_next;
+			} else {
+				sbfree(&so->so_rcv, m);
+				so->so_rcv.sb_mb = m->m_next;
+				m->m_next = NULL;
+				*cme = m;
+				cme = &(*cme)->m_next;
+				m = so->so_rcv.sb_mb;
+			}
+		} while (m != NULL && m->m_type == MT_CONTROL);
+		if ((flags & MSG_PEEK) == 0)
+			sockbuf_pushsync(&so->so_rcv, nextrecord);
+		while (cm != NULL) {
+			cmn = cm->m_next;
+			cm->m_next = NULL;
+			if (pr->pr_domain->dom_externalize != NULL) {
+				SOCKBUF_UNLOCK(&so->so_rcv);
+				error = (*pr->pr_domain->dom_externalize)
+				    (cm, controlp);
+				if(stcb) {
+				  SCTP_INP_RLOCK(inp);
+				  SCTP_TCB_LOCK(stcb);
+				}
+				SOCKBUF_LOCK(&so->so_rcv);
+				if(stcb) {
+				  SCTP_TCB_UNLOCK(stcb);
+				  SCTP_INP_RUNLOCK(inp);
+				}
+			} else if (controlp != NULL)
+				*controlp = cm;
+			else
+				m_freem(cm);
+			if (controlp != NULL) {
+				orig_resid = 0;
+				while (*controlp != NULL)
+					controlp = &(*controlp)->m_next;
+			}
+			cm = cmn;
+		}
+		nextrecord = so->so_rcv.sb_mb->m_nextpkt;
+		orig_resid = 0;
+	}
+	if (m != NULL) {
+		if ((flags & MSG_PEEK) == 0) {
+			KASSERT(m->m_nextpkt == nextrecord,
+			    ("soreceive: post-control, nextrecord !sync"));
+			if (nextrecord == NULL) {
+				KASSERT(so->so_rcv.sb_mb == m,
+				    ("soreceive: post-control, sb_mb!=m"));
+				KASSERT(so->so_rcv.sb_lastrecord == m,
+				    ("soreceive: post-control, lastrecord!=m"));
+			}
+		}
+		type = m->m_type;
+		if (type == MT_OOBDATA)
+			flags |= MSG_OOB;
+	} else {
+		if ((flags & MSG_PEEK) == 0) {
+			KASSERT(so->so_rcv.sb_mb == nextrecord,
+			    ("soreceive: sb_mb != nextrecord"));
+			if (so->so_rcv.sb_mb == NULL) {
+				KASSERT(so->so_rcv.sb_lastrecord == NULL,
+				    ("soreceive: sb_lastercord != NULL"));
+			}
+		}
+	}
+	SOCKBUF_LOCK_ASSERT(&so->so_rcv);
+	SBLASTRECORDCHK(&so->so_rcv);
+	SBLASTMBUFCHK(&so->so_rcv);
+
+	/*
+	 * Now continue to read any data mbufs off of the head of the socket
+	 * buffer until the read request is satisfied.  Note that 'type' is
+	 * used to store the type of any mbuf reads that have happened so far
+	 * such that soreceive() can stop reading if the type changes, which
+	 * causes soreceive() to return only one of regular data and inline
+	 * out-of-band data in a single socket receive operation.
+	 */
+	moff = 0;
+	offset = 0;
+	while (m != NULL && uio->uio_resid > 0 && error == 0) {
+		/*
+		 * If the type of mbuf has changed since the last mbuf
+		 * examined ('type'), end the receive operation.
+	 	 */
+		SOCKBUF_LOCK_ASSERT(&so->so_rcv);
+		if (m->m_type == MT_OOBDATA) {
+			if (type != MT_OOBDATA)
+				break;
+		} else if (type == MT_OOBDATA)
+			break;
+		else
+		    KASSERT(m->m_type == MT_DATA || m->m_type == MT_HEADER,
+			("m->m_type == %d", m->m_type));
+		so->so_rcv.sb_state &= ~SBS_RCVATMARK;
+		len = uio->uio_resid;
+		if (so->so_oobmark && len > so->so_oobmark - offset)
+			len = so->so_oobmark - offset;
+		if (len > m->m_len - moff)
+			len = m->m_len - moff;
+		/*
+		 * If mp is set, just pass back the mbufs.
+		 * Otherwise copy them out via the uio, then free.
+		 * Sockbuf must be consistent here (points to current mbuf,
+		 * it points to next record) when we drop priority;
+		 * we must note any additions to the sockbuf when we
+		 * block interrupts again.
+		 */
+		if (mp == NULL) {
+			SOCKBUF_LOCK_ASSERT(&so->so_rcv);
+			SBLASTRECORDCHK(&so->so_rcv);
+			SBLASTMBUFCHK(&so->so_rcv);
+			SOCKBUF_UNLOCK(&so->so_rcv);
+#ifdef ZERO_COPY_SOCKETS
+			if (so_zero_copy_receive) {
+				vm_page_t pg;
+				int disposable;
+
+				if ((m->m_flags & M_EXT)
+				 && (m->m_ext.ext_type == EXT_DISPOSABLE))
+					disposable = 1;
+				else
+					disposable = 0;
+
+				pg = PHYS_TO_VM_PAGE(vtophys(mtod(m, caddr_t) +
+					moff));
+
+				if (uio->uio_offset == -1)
+					uio->uio_offset =IDX_TO_OFF(pg->pindex);
+
+				error = uiomoveco(mtod(m, char *) + moff,
+						  (int)len, uio,pg->object,
+						  disposable);
+			} else
+#endif /* ZERO_COPY_SOCKETS */
+			error = uiomove(mtod(m, char *) + moff, (int)len, uio);
+			if(stcb) {
+			  SCTP_INP_RLOCK(inp);
+			  SCTP_TCB_LOCK(stcb);
+			}
+			SOCKBUF_LOCK(&so->so_rcv);
+			if(stcb) {
+			  SCTP_TCB_UNLOCK(stcb);
+			  SCTP_INP_RUNLOCK(inp);
+			}
+			if (error)
+				goto release;
+		} else
+			uio->uio_resid -= len;
+		SOCKBUF_LOCK_ASSERT(&so->so_rcv);
+		if (len == m->m_len - moff) {
+			if (m->m_flags & M_EOR)
+				flags |= MSG_EOR;
+#ifdef SCTP
+			if (m->m_flags & M_NOTIFICATION)
+				flags |= MSG_NOTIFICATION;
+#endif /* SCTP */
+			if (flags & MSG_PEEK) {
+				m = m->m_next;
+				moff = 0;
+			} else {
+				nextrecord = m->m_nextpkt;
+				sbfree(&so->so_rcv, m);
+				if (mp != NULL) {
+					*mp = m;
+					mp = &m->m_next;
+					so->so_rcv.sb_mb = m = m->m_next;
+					*mp = NULL;
+				} else {
+				        if (flags & MSG_EOR) {
+					  so->so_rcv.sb_mb = m_free(m);
+					  m = so->so_rcv.sb_mb;
+					} else {
+					  /* not eor. what should we do here */
+					  if ( (m->m_next == NULL) &&
+					       (stcb) &&
+					       (stcb->asoc.fragmented_delivery_inprogress)){
+					    /* special case, we must wait at this point */
+					    m->m_len = 0;
+					    special_mark = 1;
+					  } else {
+					    /* normal thing is ok */
+					    so->so_rcv.sb_mb = m_free(m);
+					    m = so->so_rcv.sb_mb;
+					  }
+					}
+				}
+				if (m != NULL) {
+					m->m_nextpkt = nextrecord;
+					if (nextrecord == NULL)
+						so->so_rcv.sb_lastrecord = m;
+				} else {
+					so->so_rcv.sb_mb = nextrecord;
+					SB_EMPTY_FIXUP(&so->so_rcv);
+				}
+				SBLASTRECORDCHK(&so->so_rcv);
+				SBLASTMBUFCHK(&so->so_rcv);
+			}
+		} else {
+			if (flags & MSG_PEEK)
+				moff += len;
+			else {
+				if (mp != NULL) {
+					SOCKBUF_UNLOCK(&so->so_rcv);
+					*mp = m_copym(m, 0, len, M_TRYWAIT);
+					if(stcb) {
+					  SCTP_INP_RLOCK(inp);
+					  SCTP_TCB_LOCK(stcb);
+					}
+					SOCKBUF_LOCK(&so->so_rcv);
+					if(stcb) {
+					  SCTP_TCB_UNLOCK(stcb);
+					  SCTP_INP_RUNLOCK(inp);
+					}
+				}
+				m->m_data += len;
+				m->m_len -= len;
+				so->so_rcv.sb_cc -= len;
+			}
+		}
+		SOCKBUF_LOCK_ASSERT(&so->so_rcv);
+		if (so->so_oobmark) {
+			if ((flags & MSG_PEEK) == 0) {
+				so->so_oobmark -= len;
+				if (so->so_oobmark == 0) {
+					so->so_rcv.sb_state |= SBS_RCVATMARK;
+					break;
+				}
+			} else {
+				offset += len;
+				if (offset == so->so_oobmark)
+					break;
+			}
+		}
+		if (flags & MSG_EOR)
+			break;
+		if (special_mark)
+	 	        break;
+		/*
+		 * If the MSG_WAITALL flag is set (for non-atomic socket),
+		 * we must not quit until "uio->uio_resid == 0" or an error
+		 * termination.  If a signal/timeout occurs, return
+		 * with a short count but without error.
+		 * Keep sockbuf locked against other readers.
+		 */
+		while (flags & MSG_WAITALL && m == NULL && uio->uio_resid > 0 &&
+		    !sosendallatonce(so) && nextrecord == NULL) {
+			SOCKBUF_LOCK_ASSERT(&so->so_rcv);
+			if (so->so_error || so->so_rcv.sb_state & SBS_CANTRCVMORE)
+				break;
+			/*
+			 * Notify the protocol that some data has been
+			 * drained before blocking.
+			 */
+			if (pr->pr_flags & PR_WANTRCVD && so->so_pcb != NULL) {
+				SOCKBUF_UNLOCK(&so->so_rcv);
+				(*pr->pr_usrreqs->pru_rcvd)(so, flags);
+				if(stcb) {
+				  SCTP_INP_RLOCK(inp);
+				  SCTP_TCB_LOCK(stcb);
+				}
+				SOCKBUF_LOCK(&so->so_rcv);
+				if(stcb) {
+				  SCTP_TCB_UNLOCK(stcb);
+				  SCTP_INP_RUNLOCK(inp);
+				}
+			}
+			SBLASTRECORDCHK(&so->so_rcv);
+			SBLASTMBUFCHK(&so->so_rcv);
+			error = sbwait(&so->so_rcv);
+			if (error)
+				goto release;
+			m = so->so_rcv.sb_mb;
+			if (m != NULL)
+				nextrecord = m->m_nextpkt;
+		}
+	}
+
+	SOCKBUF_LOCK_ASSERT(&so->so_rcv);
+	if (m != NULL && pr->pr_flags & PR_ATOMIC) {
+		flags |= MSG_TRUNC;
+		if ((flags & MSG_PEEK) == 0)
+			(void) sbdroprecord_locked(&so->so_rcv);
+	}
+	if ((flags & MSG_PEEK) == 0) {
+		if (m == NULL) {
+			/*
+			 * First part is an inline SB_EMPTY_FIXUP().  Second
+			 * part makes sure sb_lastrecord is up-to-date if
+			 * there is still data in the socket buffer.
+			 */
+			so->so_rcv.sb_mb = nextrecord;
+			if (so->so_rcv.sb_mb == NULL) {
+				so->so_rcv.sb_mbtail = NULL;
+				so->so_rcv.sb_lastrecord = NULL;
+			} else if (nextrecord->m_nextpkt == NULL)
+				so->so_rcv.sb_lastrecord = nextrecord;
+		}
+		SBLASTRECORDCHK(&so->so_rcv);
+		SBLASTMBUFCHK(&so->so_rcv);
+		if (pr->pr_flags & PR_WANTRCVD && so->so_pcb) {
+			SOCKBUF_UNLOCK(&so->so_rcv);
+			(*pr->pr_usrreqs->pru_rcvd)(so, flags);
+			if(stcb) {
+			  SCTP_INP_RLOCK(inp);
+			  SCTP_TCB_LOCK(stcb);
+			}
+			SOCKBUF_LOCK(&so->so_rcv);
+			if(stcb) {
+			  SCTP_TCB_UNLOCK(stcb);
+			  SCTP_INP_RUNLOCK(inp);
+			}
+		}
+	}
+	SOCKBUF_LOCK_ASSERT(&so->so_rcv);
+	if (orig_resid == uio->uio_resid && orig_resid &&
+	    (flags & MSG_EOR) == 0 && (so->so_rcv.sb_state & SBS_CANTRCVMORE) == 0) {
+		sbunlock(&so->so_rcv);
+		goto restart;
+	}
+
+	if (flagsp != NULL)
+		*flagsp |= flags;
+release:
+	SOCKBUF_LOCK_ASSERT(&so->so_rcv);
+	sbunlock(&so->so_rcv);
+out:
+	SOCKBUF_LOCK_ASSERT(&so->so_rcv);
+	SOCKBUF_UNLOCK(&so->so_rcv);
+	return (error);
+}
+
+
+void
+sctp_sbappend( struct sockbuf *sb,
+	       struct mbuf *m,
+	       struct sctp_tcb *stcb)
+{
+  SOCKBUF_LOCK(sb);
+  register struct mbuf *n;
+
+  SOCKBUF_LOCK_ASSERT(sb);
+  if (m == 0)
+    return;
+  if (stcb == NULL)
+    return;
+
+  if(stcb->last_record_insert == NULL) {
+    panic("stcb->last_record_insert is NULL?");
+  }
+
+  if(stcb->last_record_insert->m_flags & M_FREELIST) {
+    panic("stcb->last_record_insert is FREE?");
+  }
+  n = stcb->last_record_insert;
+  n->m_next = m;
+  while(m) {
+    sballoc(sb, m);
+    if(m->m_flags & M_EOR) {
+      /* done with this record */
+      stcb->last_record_insert = NULL;
+      if(m->m_next) {
+	panic("m_next set with M_EOR on m");
+      }
+    } else if (m->m_next == NULL) {
+      /* move last pointer */
+      stcb->last_record_insert = m;
+    }
+    m = m->m_next;
+  }
+  SOCKBUF_UNLOCK(sb);
+}
+
+#endif

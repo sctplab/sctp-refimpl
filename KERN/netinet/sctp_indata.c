@@ -116,6 +116,12 @@ extern u_int32_t sctp_debug_on;
 
 extern int sctp_strict_sacks;
 
+#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+#define SCTP_SBAPPEND(a, b, c) sctp_sbappend(a,b,c)
+#else
+#define SCTP_SBAPPEND(a, b, c) sbappend(a, b)
+#endif
+
 void
 sctp_set_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 {
@@ -460,7 +466,7 @@ sctp_deliver_data(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		}
 		if (!sbappendaddr_nocheck(&stcb->sctp_socket->so_rcv,
 		    to, chk->data, control, stcb->asoc.my_vtag,
-		    stcb->sctp_ep)) {
+		    stcb->sctp_ep, stcb)) {
 			/* Gak not enough room */
 			if (control) {
 				sctp_m_freem(control);
@@ -482,7 +488,7 @@ sctp_deliver_data(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		/* append to a already started message. */
 		if (sctp_sbspace(&stcb->sctp_socket->so_rcv) >=
 		    (long)chk->send_size) {
-			sbappend(&stcb->sctp_socket->so_rcv, chk->data);
+			SCTP_SBAPPEND(&stcb->sctp_socket->so_rcv, chk->data, stcb);
 			free_it = 1;
 		}
 	}
@@ -685,7 +691,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc, in
 			}
 			if (!sbappendaddr_nocheck(&stcb->sctp_socket->so_rcv,
 						  to, chk->data, control, stcb->asoc.my_vtag,
-						  stcb->sctp_ep)) {
+						  stcb->sctp_ep, stcb)) {
 				/* Gak not enough room */
 				if (control) {
 					sctp_m_freem(control);
@@ -708,7 +714,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc, in
 			}
 			cntDel++;
 		} else {
-		        sbappend(&stcb->sctp_socket->so_rcv, chk->data);
+		        SCTP_SBAPPEND(&stcb->sctp_socket->so_rcv, chk->data, stcb);
 			cntDel++;
 		}
 		/* pull it we did it */
@@ -1986,7 +1992,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		SCTP_INP_WLOCK(stcb->sctp_ep);
 		SCTP_TCB_LOCK(stcb);
 		if (!sbappendaddr_nocheck(&stcb->sctp_socket->so_rcv, to, dmbuf,
-		    control, stcb->asoc.my_vtag, stcb->sctp_ep)) {
+		    control, stcb->asoc.my_vtag, stcb->sctp_ep, stcb)) {
 			if (control) {
 				sctp_m_freem(control);
 				stcb->asoc.my_rwnd_control_len -=

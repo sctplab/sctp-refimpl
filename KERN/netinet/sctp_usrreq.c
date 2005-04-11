@@ -4078,6 +4078,7 @@ sctp_usr_recvd(struct socket *so, int flags)
 	} else {
 		if ((( sq ) && (flags & MSG_EOR) && ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0))
 		    && ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
+		        /* assoc removed aka it closed */
 			stcb = sctp_remove_from_socket_q(inp);
 		}
 	}
@@ -4421,6 +4422,7 @@ sctp_peeraddr(struct socket *so, struct mbuf *nam)
 	struct sctp_tcb *stcb;
 	struct sctp_nets *net;
 
+
 	/* Do the malloc first in case it blocks. */
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if ((inp == NULL) ||
@@ -4511,7 +4513,11 @@ struct pr_usrreqs sctp_usrreqs = {
 	sctp_shutdown,
 	sctp_ingetaddr,
 	sctp_sosend,
+#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+	sctp_soreceive,	/* horrible hack for u-vancover until re-write */
+#else
 	soreceive,
+#endif
 	sopoll
 };
 
