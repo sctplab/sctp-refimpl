@@ -4526,7 +4526,7 @@ sctp_sbappend( struct sockbuf *sb,
   }
 
   if(sb->sb_mb == stcb->last_record_insert) {
-	  ixf((sb->sb_mb->m_len == 0) &&
+	  if((sb->sb_mb->m_len == 0) &&
  	     (sb->sb_mb->m_pkthdr.len != stcb->hidden_from_sb)) {
 		  panic("At append, mismatch");
 	  }
