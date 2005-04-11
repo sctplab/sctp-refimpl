@@ -203,7 +203,8 @@ void sctp_print_address(struct sockaddr *);
 void sctp_print_address_pkt(struct ip *, struct sctphdr *);
 
 int sbappendaddr_nocheck __P((struct sockbuf *, struct sockaddr *,
-	struct mbuf *, struct mbuf *, u_int32_t, struct sctp_inpcb *));
+	struct mbuf *, struct mbuf *, u_int32_t, struct sctp_inpcb *,
+	struct sctp_tcb *));
 
 
 int sctp_release_pr_sctp_chunk(struct sctp_tcb *, struct sctp_tmit_chunk *,
@@ -224,6 +225,21 @@ void sctp_grub_through_socket_buffer(struct sctp_inpcb *, struct socket *,
 
 void sctp_free_bufspace(struct sctp_tcb *, struct sctp_association *,
 	struct sctp_tmit_chunk *);
+
+#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+int
+sctp_soreceive(	struct socket *so, struct sockaddr **psa,
+		struct uio *uio,
+		struct mbuf **mp0,
+		struct mbuf **controlp,
+		int *flagsp);
+
+void
+sctp_sbappend( struct sockbuf *sb,
+	       struct mbuf *m,
+	       struct sctp_tcb *stcb);
+
+#endif
 
 #ifdef SCTP_STAT_LOGGING
 void sctp_log_strm_del_alt(u_int32_t, u_int16_t, int);
