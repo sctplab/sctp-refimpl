@@ -474,14 +474,6 @@ sctp_deliver_data(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				    CMSG_LEN(sizeof(struct sctp_sndrcvinfo));
 			}
 		} else {
-			if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) {
-				if (sctp_add_to_socket_q(stcb->sctp_ep, stcb)) {
-					stcb->asoc.my_rwnd_control_len +=
-						sizeof(struct mbuf);
-				}
-			} else {
-				stcb->asoc.my_rwnd_control_len += sizeof(struct mbuf);
-			}
 			free_it = 1;
 		}
 	} else {
@@ -703,14 +695,6 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc, in
 				if (hold_locks == 0)
 					SCTP_INP_WUNLOCK(stcb->sctp_ep);
 				return;
-			}
-			if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) {
-				if (sctp_add_to_socket_q(stcb->sctp_ep, stcb)) {
-					stcb->asoc.my_rwnd_control_len +=
-						sizeof(struct mbuf);
-				}
-			} else {
-				stcb->asoc.my_rwnd_control_len += sizeof(struct mbuf);
 			}
 			cntDel++;
 		} else {
@@ -2000,13 +1984,6 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			}
 			sctp_m_freem(dmbuf);
 			goto failed_express_del;
-		}
-		if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) {
-			if (sctp_add_to_socket_q(stcb->sctp_ep, stcb)) {
-				stcb->asoc.my_rwnd_control_len += sizeof(struct mbuf);
-			}
-		} else {
-			stcb->asoc.my_rwnd_control_len += sizeof(struct mbuf);
 		}
 		SCTP_INP_WUNLOCK(stcb->sctp_ep);
 		sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
