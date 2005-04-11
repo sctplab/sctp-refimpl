@@ -3918,6 +3918,9 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		sq = TAILQ_FIRST(&inp->sctp_queue_list);
 		if(sq != NULL) {
 			stcb = sq->tcb;
+			if(stcb == NULL) {
+			  sctp_pegs[SCTP_PDAPI_SB_HAD_NL_TCB]++;
+			}
 		} else {
 			stcb = NULL;
 		}
@@ -4056,6 +4059,9 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 				sq = TAILQ_FIRST(&inp->sctp_queue_list);
 				if(sq != NULL) {
 					stcb = sq->tcb;
+					if(stcb == NULL) {
+					  sctp_pegs[SCTP_PDAPI_SB_HAD_NL_TCB]++;
+					}
 				} else {
 					stcb = NULL;
 				}
