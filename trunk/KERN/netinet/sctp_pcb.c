@@ -2377,10 +2377,15 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 
 	if (so) {
 	/* First take care of socket level things */
-	  if((so->so_rcv.sb_mb == NULL) && (so->so_rcv.sb_cc > 0)) {
+	  if((so->so_rcv.sb_mb == NULL) && (so->so_rcv.sb_cc)) {
 	    printf("Strange, so->so_rcv.sb_mb was NULL count was %d?\n",
 		   (int)so->so_rcv.sb_cc);
 	    so->so_rcv.sb_cc = 0;
+	  }
+	  if((so->so_rcv.sb_mb == NULL) && (so->so_rcv.sb_mbcnt)) {
+	    printf("Strange, so->so_rcv.sb_mb was NULL mb count was %d?\n",
+		   (int)so->so_rcv.sb_mbcnt);
+	    so->so_rcv.sb_mbcnt = 0;
 	  }
 	  if(so->so_snd.sb_cc > 0) {
 	    /* we never really use the send buf
