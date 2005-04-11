@@ -3918,9 +3918,6 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		sq = TAILQ_FIRST(&inp->sctp_queue_list);
 		if(sq != NULL) {
 			stcb = sq->tcb;
-			if(stcb == NULL) {
-			  sctp_pegs[SCTP_PDAPI_SB_HAD_NL_TCB]++;
-			}
 		} else {
 			stcb = NULL;
 		}
@@ -3967,6 +3964,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 			 * comes.
 			 */
 			m->m_pkthdr.len += so->so_rcv.sb_cc;
+			stcb->hidden_from_sb += so->so_rcv.sb_cc;
 			printf("We now have %d bytes hidden from sb_cc\n", (int)m->m_pkthdr.len);
 			so->so_rcv.sb_cc = 0;
 		}
@@ -3988,7 +3986,12 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		sctp_pegs[SCTP_PDAPI_HAD_TORCVR_RCV]++;
 		printf("We now restore %d bytes that were hidden from sb_cc\n", (int)m->m_pkthdr.len);
 		so->so_rcv.sb_cc += m->m_pkthdr.len;
+		if(m->m_pkthdr.len != stcb->hidden_from_sb) {
+			panic("At restoral, mismatch");
+		}
 		m->m_pkthdr.len = 0;
+	} else if ((m != NULL) && (m->m_len == 0) && (stcb == NULL)) {
+		sctp_pegs[SCTP_PDAPI_NOSTCB_ATC]++;
 	}
 	/*
 	 * If we have less data than requested, block awaiting more
@@ -4059,9 +4062,6 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 				sq = TAILQ_FIRST(&inp->sctp_queue_list);
 				if(sq != NULL) {
 					stcb = sq->tcb;
-					if(stcb == NULL) {
-					  sctp_pegs[SCTP_PDAPI_SB_HAD_NL_TCB]++;
-					}
 				} else {
 					stcb = NULL;
 				}
@@ -4336,7 +4336,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 							sctp_pegs[SCTP_PDAPI_HAD_TOWAIT_RCV]++;
 							so->so_rcv.sb_cc -= m->m_len;
 							m->m_len = 0;
-							/* zero for hackery */
+							stcb->hidden_from_sb = 0;
 							m->m_pkthdr.len = 0;
 							special_mark = 1;
 						} else {
@@ -4516,6 +4516,12 @@ sctp_sbappend( struct sockbuf *sb,
   if(stcb->last_record_insert->m_flags & M_FREELIST) {
     panic("stcb->last_record_insert is FREE?");
   }
+  if((sb->sb_mb) && (sb->sb_mb->m_len == 0)) {
+	  if(sb->sb_mb->m_pkthdr.len != stcb->hidden_from_sb) {
+		  panic("At append, mismatch");
+	  }
+  }
+
   n = stcb->last_record_insert;
   n->m_next = m;
   while(m) {
