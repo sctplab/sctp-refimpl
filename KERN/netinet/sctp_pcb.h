@@ -365,6 +365,7 @@ struct sctp_tcb {
         /* last place we began inserting a record */
         struct mbuf *last_record_insert;
 	struct sctp_association asoc;
+	uint32_t hidden_from_sb;
 	uint16_t rport;			/* remote port in network format */
 	uint16_t resv;
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
