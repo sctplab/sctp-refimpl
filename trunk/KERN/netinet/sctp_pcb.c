@@ -3396,6 +3396,18 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	SCTP_TCB_UNLOCK(stcb);
 	sctp_iterator_asoc_being_freed(inp, stcb);
 
+	/* check the hidden socket buffer thing */
+	if(asoc->fragmented_delivery_inprogress) {
+	  /* yep we were in the middle of fragmented delivery */
+	  if (inp->sctp_socket->so_rcv.sb_mb->m_len == 0) {
+	    /* opps. the head of the buffer is in process */
+	    sq = TAILQ_FIRST(&inp->sctp_queue_list);
+	    if(sq && (sq->tcb == stcb)) {
+	      /* yep I hid it, must fix the sb_cc */
+	      inp->sctp_socket->so_rcv.sb_cc = inp->sctp_socket->so_rcv.sb_mb->m_pkthdr.len;
+	    }
+	  }
+	}
 	/* Null all of my entry's on the socket q */
 	TAILQ_FOREACH(sq, &inp->sctp_queue_list, next_sq) {
 		if (sq->tcb == stcb) {
