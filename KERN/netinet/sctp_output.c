@@ -9977,6 +9977,7 @@ temp_clean_up:
 			goto release;
 		}
 	}
+	SOCKBUF_LOCK(&so->so_snd);
 zap_by_it_now:
 #ifdef SCTP_MBCNT_LOGGING
 	sctp_log_mbcnt(SCTP_LOG_MBCNT_INCREASE,
@@ -9990,7 +9991,6 @@ zap_by_it_now:
 #else
 	s = splnet();
 #endif
-	SOCKBUF_LOCK(&so->so_snd);
 	asoc->total_output_queue_size += dataout;
 	asoc->total_output_mbuf_queue_size += mbcnt;
 	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
