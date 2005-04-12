@@ -55,11 +55,8 @@
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/fcntl.h>
-#include <sys/limits.h>
 #include <sys/lock.h>
-#include <sys/mac.h>
 #include <sys/malloc.h>
-#include <sys/mutex.h>
 #include <sys/mbuf.h>
 #include <sys/domain.h>
 #include <sys/file.h>			/* for struct knote */
@@ -78,10 +75,6 @@
 #include <sys/uio.h>
 #include <sys/jail.h>
 
-#include <vm/uma.h>
-
-
-
 #ifdef __FreeBSD__
 #include <sys/callout.h>
 #else
@@ -99,6 +92,9 @@
 
 #if (defined(__FreeBSD__) && __FreeBSD_version >= 500000)
 #include <sys/limits.h>
+#include <sys/mac.h>
+#include <sys/mutex.h>
+#include <vm/uma.h>
 #else
 #include <machine/limits.h>
 #endif
