@@ -2393,6 +2393,12 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	     */
  	    so->so_snd.sb_cc = 0;
 	  }
+	  if(so->so_rcv.sb_mb && (so->so_rcv.sb_mb->m_len == 0)) {
+	    printf("Shutdown recovery in progress adding %d to cc:%d\n",
+		   so->so_rcv.sb_mb->m_pkthdr.len,
+		   so->so_rcv.sb_cc);
+	    so->so_rcv.sb_cc += so->so_rcv.sb_mb->m_pkthdr.len;
+	  }
 #ifdef IPSEC
 #ifdef __OpenBSD__
 	/* XXX IPsec cleanup here */
