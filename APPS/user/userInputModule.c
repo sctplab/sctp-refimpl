@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.10 2005-04-11 18:23:11 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.11 2005-04-12 21:21:48 lei Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -696,7 +696,7 @@ int
 sctpTERMINATE(int fd,struct sockaddr *to)
 {
   char buf[16];
-  return(sctpSEND(fd,0,buf,0,to,MSG_EOF,0,0));
+  return(sctpSEND(fd,0,buf,0,to,SCTP_EOF,0,0));
 }
 
 
@@ -2388,7 +2388,7 @@ cmd_abort(char *argv[], int argc)
 {
   char buf[4];
   memset(buf,0,sizeof(buf));
-  return(sctpSEND(adap->fd,0,buf,0,SCTP_getAddr(),MSG_ABORT,0,0));
+  return(sctpSEND(adap->fd,0,buf,0,SCTP_getAddr(),SCTP_ABORT,0,0));
 }
 /* assoc - associate with the set destination
  */
@@ -4595,15 +4595,15 @@ parse_send_opt(char *p)
 {
   printf("Parsing option '%s'\n",p);
   if(strcmp(p,"prsctp") == 0){
-    return(MSG_PR_SCTP_TTL);
+    return(SCTP_PR_SCTP_TTL);
   }else if(strcmp(p,"bufbnd") == 0){
-    return(MSG_PR_SCTP_BUF);
+    return(SCTP_PR_SCTP_BUF);
   }else if(strcmp(p,"unord") == 0){
-    return(MSG_UNORDERED);
+    return(SCTP_UNORDERED);
   }else if(strcmp(p,"over") == 0){
-    return(MSG_ADDR_OVER);
+    return(SCTP_ADDR_OVER);
   }else if(strcmp(p,"sendall") == 0){
-    return (MSG_SENDALL);
+    return (SCTP_SENDALL);
   }else if(strcmp(p,"none") == 0){
     return(0);
   }else{
