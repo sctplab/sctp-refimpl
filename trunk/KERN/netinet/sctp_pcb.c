@@ -1336,6 +1336,13 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 		}
 	}
 	find_tcp_pool = 0;
+	/* FIX FIX?, I think we only need to look in the
+	 * TCP pool if its an INIT or COOKIE-ECHO, We 
+	 * really don't need to find it that way if its
+	 * a INIT-ACK or COOKIE_ACK since these in bot
+	 * one-2-one and one-2-N would be in the main
+	 * pool anyway.
+	 */
 	if ((ch->chunk_type != SCTP_INITIATION) &&
 	    (ch->chunk_type != SCTP_INITIATION_ACK) &&
 	    (ch->chunk_type != SCTP_COOKIE_ACK) &&
