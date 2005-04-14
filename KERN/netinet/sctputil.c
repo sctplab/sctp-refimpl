@@ -3371,6 +3371,8 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp, stcb)
 		if (sctp_add_to_socket_q(inp, stcb)) {
 			stcb->asoc.my_rwnd_control_len +=
 				sizeof(struct mbuf);
+		} else {
+		  printf("Add to socket queue failed!\n");
 		}
 	} else {
 		stcb->asoc.my_rwnd_control_len += sizeof(struct mbuf);

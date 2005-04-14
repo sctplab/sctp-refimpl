@@ -3973,6 +3973,7 @@ int
 sctp_usr_recvd(struct socket *so, int flags)
 {
 	int s;
+	long incr;
 	struct sctp_socket_q_list *sq=NULL;
 	/*
 	 * The user has received some data, we may be able to stuff more
@@ -4006,7 +4007,7 @@ sctp_usr_recvd(struct socket *so, int flags)
 	 * it runs out of room
 	 */
 	SCTP_INP_WLOCK(inp);
-	if ((flags & MSG_EOR) && ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0)
+	if (((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0)
 	    && ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
 		/* Ok the other part of our grubby tracking
 		 * stuff for our horrible layer violation that
@@ -4019,19 +4020,45 @@ sctp_usr_recvd(struct socket *so, int flags)
 		if (sq) {
 			stcb = sq->tcb;
 		} else {
-			stcb = NULL;
+		  printf("Audit of sb, no sq struct found!\n");
+		  /* RRS hack alert */
+		  LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
+		    SCTP_TCB_LOCK(stcb);
+		    if ((TAILQ_EMPTY(&stcb->asoc.delivery_queue) == 0) ||
+			(TAILQ_EMPTY(&stcb->asoc.reasmqueue) == 0)) {
+		      /* Deliver if there is something to be delivered */
+		      sctp_service_queues(stcb, &stcb->asoc, 1);
+		    }
+		    sctp_set_rwnd(stcb, &stcb->asoc);
+		    incr = stcb->asoc.my_rwnd - stcb->asoc.my_last_reported_rwnd;
+		    if (incr < 0) {
+		      incr = 0;
+		    }
+		    if (((uint32_t)incr >= (stcb->asoc.smallest_mtu * SCTP_SEG_TO_RWND_UPD)) ||
+			((((uint32_t)incr)*SCTP_SCALE_OF_RWND_TO_UPD) >= so->so_rcv.sb_hiwat)) {
+		      if (callout_pending(&stcb->asoc.dack_timer.timer)) {
+			/* If the timer is up, stop it */
+			sctp_timer_stop(SCTP_TIMER_TYPE_RECV,
+					stcb->sctp_ep, stcb, NULL);
+		      }
+		      /* Send the sack, with the new rwnd */
+		      sctp_send_sack(stcb);
+		      /* Now do the output */
+		      sctp_chunk_output(inp, stcb, 10);
+		    }
+		    SCTP_TCB_UNLOCK(stcb);
+		  }
+		  stcb = NULL;
 		}
 	} else {
 		stcb = LIST_FIRST(&inp->sctp_asoc_list);
 	}
-	if (stcb)
-		SCTP_TCB_LOCK(stcb);
 	if (stcb) {
-		long incr;
 		/* all code in normal stcb path assumes
 		 * that you have a tcb_lock only. Thus
 		 * we must release the inp write lock.
 		 */
+		SCTP_TCB_LOCK(stcb);
 		if (flags & MSG_EOR) {
 			if (((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0)
 			   && ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
@@ -4100,6 +4127,8 @@ sctp_usr_recvd(struct socket *so, int flags)
 				(void)sctp_remove_from_socket_q(inp);
 				done_yet = TAILQ_EMPTY(&inp->sctp_queue_list);
 			}
+			printf("Hmm. mb empty and queue_list empty remove sq's:%d\n",
+			       sq_cnt);
 		}
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_USRREQ2)
