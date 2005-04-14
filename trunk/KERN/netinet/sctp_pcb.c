@@ -5060,12 +5060,16 @@ sctp_add_to_socket_q(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	/* write lock on INP assumed */
 	if ((inp == NULL) || (stcb == NULL)) {
 		/* I am paranoid */
+		printf("Huh, inp:%x stcb:%x on add_to_sq\n",
+		       (u_int)inp, (u_int)stcb);
 		return (0);
 	}
 	sq = (struct sctp_socket_q_list *)SCTP_ZONE_GET(
 	    sctppcbinfo.ipi_zone_sockq);
 	if (sq == NULL) {
 		/* out of sq structs */
+		printf("add_to_sq, no zone space inp:%x stcb:%x\n",
+		       (u_int)inp, (u_int)stcb);
 		return (0);
 	}
 	sctppcbinfo.ipi_count_sockq++;
