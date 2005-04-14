@@ -3399,12 +3399,17 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	/* check the hidden socket buffer thing */
 	if(asoc->fragmented_delivery_inprogress) {
 	  /* yep we were in the middle of fragmented delivery */
-	  if (inp->sctp_socket->so_rcv.sb_mb->m_len == 0) {
-	    /* opps. the head of the buffer is in process */
-	    sq = TAILQ_FIRST(&inp->sctp_queue_list);
-	    if(sq && (sq->tcb == stcb)) {
-	      /* yep I hid it, must fix the sb_cc */
-	      inp->sctp_socket->so_rcv.sb_cc = inp->sctp_socket->so_rcv.sb_mb->m_pkthdr.len;
+	  if(inp->sctp_socket->so_rcv.sb_mb) {
+	    struct mbuf *m;
+	    m = inp->sctp_socket->so_rcv.sb_mb;
+	    if (m->m_len == 0) {
+	      /* opps. the head of the buffer is in process */
+	      sq = TAILQ_FIRST(&inp->sctp_queue_list);
+	      if(sq && (sq->tcb == stcb)) {
+		/* yep I hid it, must fix the sb_cc */
+		printf("Doing double duty restoral\n");
+		inp->sctp_socket->so_rcv.sb_cc = m->m_pkthdr.len;
+	      }
 	    }
 	  }
 	}
