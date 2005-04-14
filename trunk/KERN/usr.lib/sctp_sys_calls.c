@@ -670,11 +670,6 @@ sctp_recvmsg (int s,
   s_info = NULL;
   len = sz;
   *msg_flags = msg.msg_flags;
-  if(msg.msg_flags & MSG_CTRUNC) {
-    printf("PANIC... MSG_CTRUNC detected got read:%d gave them buf:%d datasz:%d\n",
-	   msg.msg_controllen, SCTP_CONTROL_VEC_SIZE_RCV, sz);
-    abort();
-  }
   if ((msg.msg_controllen) && sinfo) {
     /* parse through and see if we find
      * the sctp_sndrcvinfo (if the user wants it).
@@ -692,14 +687,10 @@ sctp_recvmsg (int s,
 	  /* Copy it to the user */
 	  *sinfo = *s_info;
 	  sinfo_found = 1;
-	  if (msg.msg_flags & MSG_EOR) {
-	    if(saved_in_pdapi) {
-	      if(sinfo->sinfo_assoc_id == s_info->sinfo_assoc_id) {
-		/* done with pd-api */
-		saved_in_pdapi = 0;
-	      }
-	    }
-	  } else {
+	  if((msg.msg_flags & MSG_EOR) == 0) {
+	    /* partial delivey is starting 
+	     * save the info off.
+	     */
 	    memcpy(&pd_api, s_info, sizeof(pd_api));
 	    saved_in_pdapi = 1; 
 	  }
@@ -713,6 +704,10 @@ sctp_recvmsg (int s,
     memset(sinfo, 0, sizeof(*sinfo));
   } else if (saved_in_pdapi) {
     memcpy(sinfo, &pd_api, sizeof(sinfo));
+  }
+  if(msg.msg_flags == MSG_EOR) {
+    /* pd-api is done if it was up */
+    saved_in_pdapi = 0;
   }
   return(sz);
 }
