@@ -25,11 +25,83 @@ struct requests {
   sctp_assoc_t assoc_id;
   struct sockaddr_in who;
   struct sctp_requests *next;
+  struct sctp_requests *prev;
   struct data_block *first;
 };
 
 
 struct requests *base=NULL;
+
+
+void
+audit_all_msg(struct requests *who)
+{
+
+}
+
+void
+pdapi_addasoc( struct sockaddr_in *from, struct sctp_assoc_change *asoc)
+{
+  struct requests *who;
+  who = malloc(sizeof(struct requests));
+  if(who == NULL) {
+    perror("out of memory");
+    abort();
+  }
+  who->assoc_id = asoc->sac_assoc_id;
+  who->who = *from;
+  who->prev = who->next = NULL;
+  who->first = NULL;
+  if(base == NULL) {
+    base = who;
+  } else {
+    who->next = base;
+    who->base->prev = who;
+    base = who;
+  }
+}
+
+int
+pdapi_clean_all(struct requests *who)
+{
+  struct data_block *blk,*nxt;	
+  int cnt=0;
+  blk = who->first;
+  while(blk) {
+    nxt = blk->next;
+    blk->next = NULL;
+    free(blk);
+    blk = next;
+    cnt++;
+  }
+  return (cnt);
+}
+
+void
+pdapi_delasoc( struct sctp_assoc_change *asoc)
+{
+  struct requests *who;
+  for(who=base; who; who=who->next) {
+    if(who->assoc_id == asoc->sac_assoc_id) {
+      if(who->next) {
+	who->next->prev = who->prev;
+      }
+      if(who->prev) {
+	who->prev->next = who->next;
+      } else {
+	base = who->next;
+      }
+      who->next = NULL;
+      who->prev = NULL;
+      audit_all_msg(who);
+      if(who->first) {
+	printf("Association fails incompletely free:%d msgs\n",
+	       pdapi_clean_all(who));	
+      }
+    }
+  }
+}
+
 
 void
 pdapi_notification(unsigned char *buffer, 
@@ -47,15 +119,16 @@ pdapi_notification(unsigned char *buffer,
   case SCTP_ASSOC_CHANGE:
     asoc = (struct sctp_assoc_change  *)sn_header;
     if (asoc->sac_state == SCTP_COMM_UP) {
+      pdapi_addasoc( from, asoc );
     } else if (asoc->sac_state == SCTP_COMM_LOST) {
+      pdapi_delasoc( from, asoc );
     }
     break;
   case SCTP_PARTIAL_DELIVERY_EVENT:
     pdapi = (struct sctp_pdapi_event *)sn_header;
+    pdapi_abortrecption(pdapi);
     break;
   case SCTP_SHUTDOWN_EVENT:
-    shut = (struct sctp_shutdown_event *)sn_header;
-    
     break;
   case SCTP_REMOTE_ERROR:
   case SCTP_SEND_FAILED:
