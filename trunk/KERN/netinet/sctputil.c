@@ -4338,10 +4338,17 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 						     (stcb->asoc.fragmented_delivery_inprogress)){
 							/* special case, we must wait at this point */
 							sctp_pegs[SCTP_PDAPI_HAD_TOWAIT_RCV]++;
-							so->so_rcv.sb_cc -= m->m_len;
+							if(so->so_rcv.sb_cc >= m->m_len) {
+							  so->so_rcv.sb_cc -= m->m_len;
+							} else {
+							  printf("Huh, subtraction greater sb_cc:%d sub:%d?\n",
+								 (int)so->so_rcv.sb_cc,
+								 (int)m->m_len);
+							  so->so_rcv.sb_cc = 0;
+							}
 							m->m_len = 0;
-							stcb->hidden_from_sb = 0;
-							m->m_pkthdr.len = 0;
+							stcb->hidden_from_sb = so->so_rcv.sb_cc;
+							m->m_pkthdr.len = so->so_rcv.sb_cc;
 							special_mark = 1;
 						} else {
 							/* normal thing is ok */
@@ -4401,10 +4408,6 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		}
 		if (flags & MSG_EOR)
 			break;
-		if (special_mark) {
- 		        printf("Special mark break m is %x\n", (u_int)m);
-	 	        break;
-		}
 		/*
 		 * If the MSG_WAITALL flag is set (for non-atomic socket),
 		 * we must not quit until "uio->uio_resid == 0" or an error
@@ -4436,15 +4439,36 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 			}
 			SBLASTRECORDCHK(&so->so_rcv);
 			SBLASTMBUFCHK(&so->so_rcv);
+		local_restart:
 			error = sbwait(&so->so_rcv);
 			if (error)
 				goto release;
 			m = so->so_rcv.sb_mb;
 			if (m != NULL)
 				nextrecord = m->m_nextpkt;
+
+			if((m != NULL) && (m->m_len == 0) && (m->m_next == NULL) &&
+			   (stcb) && (stcb->asoc.fragmented_delivery_inprogress)) {
+			  printf("Fragmented delivery in progress, doing wait/block in MSG_WAITALL?\n");
+			  if(so->so_rcv.sb_cc) {
+			    /* HACK .. if this is not bad enough this
+			     * is icing on the cake of hacks. We hide
+			     * the len in sb_cc from the socket buf. That
+			     * way sleep won't re-wake until our data
+			     * comes.
+			     */
+			    m->m_pkthdr.len += so->so_rcv.sb_cc;
+			    stcb->hidden_from_sb += so->so_rcv.sb_cc;
+			    printf("We now have %d bytes hidden from sb_cc\n", (int)m->m_pkthdr.len);
+			    so->so_rcv.sb_cc = 0;
+			  }
+			  SBLASTRECORDCHK(&so->so_rcv);
+			  SBLASTMBUFCHK(&so->so_rcv);
+			  printf("Fragmented delivery in progress, out to temporial restart!\n");
+			  goto local_restart;
+			}
 		}
 	}
-
 	SOCKBUF_LOCK_ASSERT(&so->so_rcv);
 	if (m != NULL && pr->pr_flags & PR_ATOMIC) {
 		flags |= MSG_TRUNC;
