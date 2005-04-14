@@ -3988,13 +3988,18 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		   (stcb)) {
 		/* restore hacked value */
 		sctp_pegs[SCTP_PDAPI_HAD_TORCVR_RCV]++;
-		printf("We now restore %d bytes that were hidden from sb_cc\n", (int)m->m_pkthdr.len);
+		if ((m->m_nextpkt == NULL) && m->m_pkthdr.len) {
+			panic("Huh, restoring to a null record?");
+		}
+		printf("We now restore %d bytes that were hidden nextrecord:%x", 
+		       (int)m->m_pkthdr.len,
+		       (u_int)m->m_nextpkt);
 		so->so_rcv.sb_cc += m->m_pkthdr.len;
 		if(m->m_pkthdr.len != stcb->hidden_from_sb) {
 			panic("At restoral, mismatch");
 		}
 		m->m_pkthdr.len = 0;
-	} else if ((m != NULL) && (m->m_len == 0) && (stcb == NULL)) {
+	} else if ((m != NULL) && (stcb == NULL)) {
 		sctp_pegs[SCTP_PDAPI_NOSTCB_ATC]++;
 	}
 	/*
@@ -4349,6 +4354,9 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 							m->m_len = 0;
 							stcb->hidden_from_sb = so->so_rcv.sb_cc;
 							m->m_pkthdr.len = so->so_rcv.sb_cc;
+							so->so_rcv.sb_cc = 0;
+							printf("Hide %d bytes nextrecord:%x\n",
+							       m->m_pkthder.len, (u_int)nextrecord);
 							special_mark = 1;
 						} else {
 							/* normal thing is ok */
