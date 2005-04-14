@@ -3959,7 +3959,6 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 	m = so->so_rcv.sb_mb;
 	if((m != NULL) && (m->m_len == 0) && (m->m_next == NULL) &&
 	   (stcb) && (stcb->asoc.fragmented_delivery_inprogress)) {
-		printf("Fragmented delivery in progress, doing wait/block?\n");
 		if(so->so_rcv.sb_cc) {
 			/* HACK .. if this is not bad enough this
 			 * is icing on the cake of hacks. We hide
@@ -3969,7 +3968,9 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 			 */
 			m->m_pkthdr.len += so->so_rcv.sb_cc;
 			stcb->hidden_from_sb += so->so_rcv.sb_cc;
-			printf("We now have %d bytes hidden from sb_cc\n", (int)m->m_pkthdr.len);
+			printf("We now have %d bytes hidden from sb_cc nextrecord:%x\n", 
+			       (int)m->m_pkthdr.len,
+			       (u_int)m->m_nextpkt);
 			so->so_rcv.sb_cc = 0;
 		}
 		if(flags & MSG_DONTWAIT) {
@@ -3982,7 +3983,6 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		error = sbwait(&so->so_rcv);
 		if (error)
 			goto out;
-		printf("Fragmented delivery in progress, out to temporial restart!\n");
 		goto temporal_restart;
 	} else if ((m != NULL) && (m->m_len == 0) && (m->m_next) &&
 		   (stcb)) {
@@ -3991,7 +3991,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		if ((m->m_nextpkt == NULL) && m->m_pkthdr.len) {
 			panic("Huh, restoring to a null record?");
 		}
-		printf("We now restore %d bytes that were hidden nextrecord:%x", 
+		printf("We now restore %d bytes that were hidden nextrecord:%x\n", 
 		       (int)m->m_pkthdr.len,
 		       (u_int)m->m_nextpkt);
 		so->so_rcv.sb_cc += m->m_pkthdr.len;
