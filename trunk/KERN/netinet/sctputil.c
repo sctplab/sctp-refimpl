@@ -4356,7 +4356,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 							m->m_pkthdr.len = so->so_rcv.sb_cc;
 							so->so_rcv.sb_cc = 0;
 							printf("Hide %d bytes nextrecord:%x\n",
-							       m->m_pkthder.len, (u_int)nextrecord);
+							       m->m_pkthdr.len, (u_int)nextrecord);
 							special_mark = 1;
 						} else {
 							/* normal thing is ok */
