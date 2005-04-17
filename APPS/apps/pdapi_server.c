@@ -14,29 +14,230 @@
 #define PDAPI_DATA_BLOCK_SIZE 16000
 
 int verbose = 0;
-struct data_block {
-  struct data_block *next;
-  struct sctp_sndrcvinfo info;
-  unsigned char data[PDAPI_DATA_BLOCK_SIZE];
-};
-
-
-struct requests {
-  sctp_assoc_t assoc_id;
-  struct sockaddr_in who;
-  struct sctp_requests *next;
-  struct sctp_requests *prev;
-  struct data_block *first;
-};
-
 
 struct requests *base=NULL;
 
+struct asoc_read_log {
+  sctp_assoc_t assoc_id;
+  int sz;
+  int flags;
+};
+#define READ_LOG_SIZE 50000
+struct asoc_read_log rdlog[READ_LOG_SIZE];
+static int rdlog_at=0;
+static int rdlog_wrap=0;
+
+void
+clean_up_broken_msg(struct requests *who)
+{
+  struct data_block *blk,*nxt;	
+  struct pdapi_request *msg;
+  ushort ssn;
+  int killed=0;
+  printf("Failed to process a message, cleaning\n");
+ try_again:
+  if(who->first == NULL) {
+    printf("msg queue now empty\n");
+    return;
+  }
+  msg = (struct pdapi_request *)who->first->data;
+  if(msg->request == PDAPI_REQUEST_MESSAGE) {
+    /* this is correct */
+    printf("First msg is correct\n");
+    ssn = who->first->info.sinfo_ssn;
+  } else if (msg->request == PDAPI_END_MESSAGE) {
+    printf("First msg is a End?? -- unexpected, freeing\n");
+    blk = who->first;
+    who->first = blk->next;
+    blk->next = NULL;
+    if(blk == who->tail) {
+      tail = NULL;
+    }
+    free(blk);
+    killed++;
+    goto try_again;
+  } else if (msg->request == PDAPI_DATA_MESSAGE) {
+    printf("First msg is a Data?? -- unexpected freeing\n");
+    blk = who->first;
+    who->first = blk->next;
+    blk->next = NULL;
+    if(blk == who->tail) {
+      tail = NULL;
+    }
+    free(blk);
+    killed++;
+    goto try_again;
+  } else {
+    printf("First msg is a partial message of data -- unexpected freeing\n");
+    blk = who->first;
+    who->first = blk->next;
+    blk->next = NULL;
+    if(blk == who->tail) {
+      tail = NULL;
+    }
+    free(blk);
+    killed++;
+    goto try_again;
+  }
+  printf("Ok, we killed %d msgs\n", killed);
+  if(killed) {
+    return;
+  }
+  printf("This requires further analysis req-ssn:%d\n",ssn);
+  abort();
+}
+
+int
+audit_a_msg (struct requests *who)
+{
+  struct data_block *blk,*nxt, *end_blk;	
+  struct pdapi_request *msg, *end, *datafirst=NULL;
+  int cnt_data=0, cnt_end=0, tot_size, calc_size=0;
+  uint32_t base_crc = 0xffffffff, passed_sum;
+
+  msg = (struct pdapi_request *)who->first->data;
+  ushort ssn_req, ssn_data, ssn_end;
+  if(msg->request != PDAPI_REQUEST_MESSAGE) {
+    /* not a request at the head? */
+    return(0);
+  } else {
+    tot_size = msg->msg.size;
+  }
+  ssn_req = who->first->info.sinfo_ssn;
+  ssn_data = ssn_req + 1;
+  ssn_end = ssn_data + 1;
+  /* now do we have all the ssn's */
+  blk = who->first->next;
+  while(blk) {
+    if(blk->info.sinfo_ssn == ssn_data) {
+      cnt_data++;
+    } else if (blk->info.sinfo_ssn == ssn_end) {
+      cnt_end++;
+      end = (struct pdapi_request *)blk->data;
+      passed_sum = end->msg.checksum;
+      end_blk = blk;
+      break;
+    }
+    blk = blk->next;
+  }
+  if(cnt_data && cnt_end) {
+    /* we have at least ONE complete message */
+    printf("We have %d data blocks and %d ends\n", 
+	   cnt_data, cnt_end);
+
+    /* get rid of request */
+    blk = who->first;
+    who->first = blk->next;
+    if(blk == who->tail) {
+      /* should not happen */
+      who->tail = NULL;
+    }
+    free(blk);
+    blk = who->first;
+    if(blk->info.sinfo_ssn != ssn_data) {
+      printf("Out of order\n");
+      return(0);
+    }
+    msg = (struct pdapi_request *)blk->data;
+    if(msg->request != PDAPI_DATA_MESSAGE) {
+      printf("Data garbled -- not request data type\n");
+      return (0);
+    }
+    /* csum the first msg */
+    calc_size = blk->sz - 1;
+    base_crc = update_crc32(base_crc, msg->msg.data, calc_size);
+    who->first = blk->next;
+    if(blk == who->tail) {
+      /* should not happen */
+      who->tail = NULL;
+    }
+    free(blk);
+    blk = who->first;
+    while(blk && (blk != end_blk)) {
+      base_crc = update_crc32(base_crc, blk->data, blk->sz);
+      calc_size += blk->sz;
+      who->first = blk->next;
+      if(blk == who->tail) {
+	/* should not happen */
+	who->tail = NULL;
+      }
+      free(blk);
+      blk = who->first;
+    }
+    if(who->first == end_blk) {
+      printf("Ate all data and saw %d bytes\n", calc_size);
+      base_crc = sctp_csum_finalize(base_crc);
+      who->first = end_blk->next;
+      if(who->tail == end_blk) {
+	/* may happen */
+	who->tail = NULL;
+      }
+      free(end_blk);
+    } else {
+      printf("corrupt chain\n");
+      return(0);
+    }
+    if(calc_size != tot_size) {
+      printf("Message size was supposed to be %d but saw %d\n",
+	     tot_size, calc_size);
+    }
+    if(passed_sum != base_crc) {
+      printf("Checksum mis-match should be %x but is %x\n",
+	     (u_int)passed_sum, (u_int)base_crc);
+    }
+    return(1);
+  }
+  printf("Not a complete msg yet\n");
+  return (1);
+}
 
 void
 audit_all_msg(struct requests *who)
 {
+  struct data_block *blk,*nxt;	
+  int cnt=0,ret;
+  ushort ssn;
+  int notset=1, notdone=1;
 
+  blk = who->first;
+  while(blk) {
+    nxt = blk->next;
+    if(notset) {
+      notset = 0;
+      ssn = blk->info.sinfo_ssn;
+      cnt++;
+    } else {
+      if(blk->info.sinfo_ssn == ssn) {
+	goto nxt_msg;
+      } else {
+	cnt++;
+	if(blk->info.sinfo_ssn < ssn) {
+	  printf("Found ssn:%d before finding ssn:%d??\n",
+		 ssn, blk->info.sinfo_ssn);
+	}
+	ssn = blk->info.sinfo_ssn;
+      }
+    }
+  nxt_msg:
+    blk = nxt;      
+  }
+  printf("assoc:%x has %d messages %s",
+	 who->assoc_id,
+	 cnt,
+	 (((cnt % 3) == 0) ? "which is normal" :
+	  "Which is incorrect"));
+  while(not_done) {
+    if(who->first == NULL) {
+      /* all gone */
+      not_done = 0;
+      continue;
+    }
+    ret = audit_a_msg (who);
+    if(ret == 0) {
+      /* we did NOT consume a message */
+      clean_up_broken_msg(who);
+    }
+  }
 }
 
 void
@@ -94,11 +295,55 @@ pdapi_delasoc( struct sctp_assoc_change *asoc)
       who->next = NULL;
       who->prev = NULL;
       audit_all_msg(who);
+      pdapi_clean_all(who);
+      free(who);
       if(who->first) {
 	printf("Association fails incompletely free:%d msgs\n",
 	       pdapi_clean_all(who));	
       }
     }
+  }
+}
+
+void
+pdapi_process_data(unsigned char *buffer, 
+		   ssize_t len, 
+		   struct sctp_sndrcvinfo *sinfo, 
+		   struct sockaddr_in *from, 
+		   int flags)
+{
+  /* find the assoc */
+  /* add the data to the list */
+  /* if MSG_EOR then call the audit function */
+  struct data_block *blk;
+  struct requests *who;
+  if(sinfo->sinfo_assoc_id == 0) {
+    printf("Zero'ed assoc id\n");
+    abort();
+  }
+  who = base;
+  while(who) {
+    if(who->assoc_id == sinfo->sinfo_assoc_id){
+      break;
+    }
+    who = who->next;
+  }
+  if(who == NULL) {
+    printf("Huh, can't find asoc %x\n", (u_int)sinfo->sinfo_assoc_id);
+    abort();
+  }
+  blk = malloc(sizeof(struct data_block));
+  blk->next = NULL;
+  blk->info = *sinfo;
+  blk->sz = len;
+  if(who->tail) {
+    who->tail->next = blk;
+  } else {
+    who->first = blk;
+    who->tail = blk;
+  }
+  if(flags & MSG_EOR) {
+    (void)audit_a_msg (who);
   }
 }
 
@@ -158,7 +403,6 @@ pdapi_process_msg(unsigned char *buffer,
   } else {
     pdapi_process_data(buffer, len, sinfo, from, flags);
   }
-
 }
 
 
@@ -240,9 +484,18 @@ main(int argc, char **argv)
   }
   while(1) {
     fromlen = sizeof(from);
+    memset(&sndrcv, 0, sizeof(sndrcv));
     len = sctp_recvmsg(fd, buffer, (size_t)PDAPI_DATA_BLOCK_SIZE, 
 		       (struct sockaddr *)&from, &fromlen,
 		       &sndrcv, &flags);
+    rdlog[rdlog_at].sz = len;
+    rdlog[rdlog_at].flags = flags;
+    rdlog[rdlog_at].assoc_id = sinfo->sinfo_assoc_id;
+    rdlog_at++;
+    if(rdlog_at >= READ_LOG_SIZE) {
+      rdlog_at = 0;
+      rdlog_wrap++;
+    }
     if(len) {
       pdapi_process_msg(buffer, len, sndrcv, from, flags);
     }
