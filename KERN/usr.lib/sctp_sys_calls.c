@@ -626,6 +626,20 @@ static struct sctp_sndrcvinfo pd_api = {
 	(sctp_assoc_t)0
 };
 static unsigned char saved_in_pdapi=0;
+static int arry_at=0;
+
+struct sctp_track {
+  int sz;
+  int msg_flags;
+  sctp_assoc_t asoc;
+  unsigned char saved_in_pdapi;
+  unsigned char found_sinfo;
+  unsigned char copyed_from_saved;
+  unsigned char cleared_saved;
+};
+
+static struct sctp_track arry[20000];
+static int array_wrapped= 0;
 
 ssize_t
 sctp_recvmsg (int s, 
@@ -646,7 +660,8 @@ sctp_recvmsg (int s,
 
   generation++;
   if (msg_flags == NULL) {
-    return EINVAL;
+    errno = EINVAL;
+    return (-1);
   }
   msg.msg_flags = 0;
   iov[0].iov_base = dbuf;
@@ -670,6 +685,14 @@ sctp_recvmsg (int s,
   s_info = NULL;
   len = sz;
   *msg_flags = msg.msg_flags;
+
+  arry[arry_at].sz = sz;
+  arry[arry_at].msg_flags = msg.msg_flags;
+  arry[arry_at].saved_in_pdapi = 0;
+  arry[arry_at].found_sinfo = 0;
+  arry[arry_at].copyed_from_saved = 0;
+  arry[arry_at].cleared_saved = 0;
+
   if ((msg.msg_controllen) && sinfo) {
     /* parse through and see if we find
      * the sctp_sndrcvinfo (if the user wants it).
@@ -677,13 +700,13 @@ sctp_recvmsg (int s,
     cmsg = (struct cmsghdr *)controlVector;
     while (cmsg) {
       if((cmsg->cmsg_len == 0) || (cmsg->cmsg_len > msg.msg_controllen)) {
-	memset(sinfo, 0, sizeof(*sinfo));
-	return(sz);
+	break;
       }
       if (cmsg->cmsg_level == IPPROTO_SCTP) {
 	if (cmsg->cmsg_type == SCTP_SNDRCV) {
 	  /* Got it */
 	  s_info = (struct sctp_sndrcvinfo *)CMSG_DATA(cmsg);
+	  arry[arry_at].found_sinfo = 1;
 	  /* Copy it to the user */
 	  *sinfo = *s_info;
 	  sinfo_found = 1;
@@ -691,6 +714,7 @@ sctp_recvmsg (int s,
 	    /* partial delivey is starting 
 	     * save the info off.
 	     */
+	    arry[arry_at].saved_in_pdapi = 1;
 	    memcpy(&pd_api, s_info, sizeof(pd_api));
 	    saved_in_pdapi = 1; 
 	  }
@@ -700,14 +724,28 @@ sctp_recvmsg (int s,
       cmsg = CMSG_NXTHDR(&msg,cmsg);
     }
   }
-  if ((sinfo_found == 0) && (saved_in_pdapi == 0)) {
-    memset(sinfo, 0, sizeof(*sinfo));
-  } else if (saved_in_pdapi) {
-    memcpy(sinfo, &pd_api, sizeof(sinfo));
+  if(sinfo_found == 0) {
+    if (saved_in_pdapi) {
+      memcpy(sinfo, &pd_api, sizeof(sinfo));
+      arry[arry_at].copyed_from_saved = 1;
+    } else {
+      memset(sinfo, 0, sizeof(sinfo));
+    }
   }
   if(msg.msg_flags == MSG_EOR) {
     /* pd-api is done if it was up */
+    arry[arry_at].cleared_saved = 1;
     saved_in_pdapi = 0;
+  }
+  arry[arry_at].asoc = sinfo->sinfo_assoc_id;
+  arry_at++;
+  if( arry_at > 20000 ) {
+    arry_at = 0;
+    array_wrapped++;
+  }
+  if(sinfo->sinfo_assoc_id == 0) {
+    printf("Aborting due to assoc id 0\n");
+    abort();
   }
   return(sz);
 }
