@@ -613,67 +613,6 @@ sctp_sendmsgx(int sd,
 	sinfo.sinfo_context    = context;
 	return sctp_sendx(sd, msg, len, addrs, addrcnt, &sinfo, 0);
 }
-static int generation=0;
-
-#define SCTP_NUMBER_OF_SAVES  7
-
-static struct sctp_sndrcvinfo pd_api[SCTP_NUMBER_OF_SAVES] = {
-  {(u_int16_t)0,(u_int16_t)0,(u_int16_t)0,(u_int32_t)0,
-   (u_int32_t)0,(u_int32_t)0,(u_int32_t)0,(u_int32_t)0,
-   (sctp_assoc_t)0
-  },
-  {(u_int16_t)0,(u_int16_t)0,(u_int16_t)0,(u_int32_t)0,
-   (u_int32_t)0,(u_int32_t)0,(u_int32_t)0,(u_int32_t)0,
-   (sctp_assoc_t)0
-  },
-  {(u_int16_t)0,(u_int16_t)0,(u_int16_t)0,(u_int32_t)0,
-   (u_int32_t)0,(u_int32_t)0,(u_int32_t)0,(u_int32_t)0,
-   (sctp_assoc_t)0
-  },
-  {(u_int16_t)0,(u_int16_t)0,(u_int16_t)0,(u_int32_t)0,
-   (u_int32_t)0,(u_int32_t)0,(u_int32_t)0,(u_int32_t)0,
-   (sctp_assoc_t)0
-  },
-  {(u_int16_t)0,(u_int16_t)0,(u_int16_t)0,(u_int32_t)0,
-   (u_int32_t)0,(u_int32_t)0,(u_int32_t)0,(u_int32_t)0,
-   (sctp_assoc_t)0
-  },
-  {(u_int16_t)0,(u_int16_t)0,(u_int16_t)0,(u_int32_t)0,
-   (u_int32_t)0,(u_int32_t)0,(u_int32_t)0,(u_int32_t)0,
-   (sctp_assoc_t)0
-  },
-  {(u_int16_t)0,(u_int16_t)0,(u_int16_t)0,(u_int32_t)0,
-   (u_int32_t)0,(u_int32_t)0,(u_int32_t)0,(u_int32_t)0,
-   (sctp_assoc_t)0
-  }
-};
-
-static unsigned char saved_in_pdapi[SCTP_NUMBER_OF_SAVES] = {
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0
-};
-
-
-static int arry_at=0;
-
-struct sctp_track {
-  int sd;
-  int sz;
-  int msg_flags;
-  sctp_assoc_t asoc;
-  unsigned char saved_in_pdapi;
-  unsigned char found_sinfo;
-  unsigned char copyed_from_saved;
-  unsigned char cleared_saved;
-};
-
-static struct sctp_track arry[20000];
-static int array_wrapped= 0;
 
 ssize_t
 sctp_recvmsg (int s, 
@@ -691,10 +630,7 @@ sctp_recvmsg (int s,
   struct iovec iov[2];
   char controlVector[SCTP_CONTROL_VEC_SIZE_RCV];
   struct cmsghdr *cmsg;
-  int l_arry_at;
-  int pdapi_idx;
 
-  generation++;
   if (msg_flags == NULL) {
     errno = EINVAL;
     return (-1);
@@ -714,14 +650,6 @@ sctp_recvmsg (int s,
   msg.msg_control = (caddr_t)controlVector;
   msg.msg_controllen = sizeof(controlVector);
   errno = 0;
-
-  l_arry_at = arry_at;
-  arry_at++;
-  if( arry_at > 20000 ) {
-    arry_at = 0;
-    array_wrapped++;
-  }
-  pdapi_idx = (s % SCTP_NUMBER_OF_SAVES);
   sz = recvmsg(s,&msg,0);
   if(sz <= 0)
     return(sz);
@@ -729,14 +657,8 @@ sctp_recvmsg (int s,
   s_info = NULL;
   len = sz;
   *msg_flags = msg.msg_flags;
-
-  arry[l_arry_at].sd = s;
-  arry[l_arry_at].sz = sz;
-  arry[l_arry_at].msg_flags = msg.msg_flags;
-  arry[l_arry_at].saved_in_pdapi = 0;
-  arry[l_arry_at].found_sinfo = 0;
-  arry[l_arry_at].copyed_from_saved = 0;
-  arry[l_arry_at].cleared_saved = 0;
+  if(sinfo) 
+    sinfo->sinfo_assoc_id = 0;
 
   if ((msg.msg_controllen) && sinfo) {
     /* parse through and see if we find
@@ -751,77 +673,17 @@ sctp_recvmsg (int s,
 	if (cmsg->cmsg_type == SCTP_SNDRCV) {
 	  /* Got it */
 	  s_info = (struct sctp_sndrcvinfo *)CMSG_DATA(cmsg);
-	  arry[l_arry_at].found_sinfo = 1;
 	  /* Copy it to the user */
-	  *sinfo = *s_info;
+	  if(sinfo)
+	    *sinfo = *s_info;
 	  sinfo_found = 1;
-	  if((msg.msg_flags & MSG_EOR) == 0) {
-	    /* partial delivey is starting 
-	     * save the info off.
-	     */
-	    if(saved_in_pdapi[pdapi_idx] &&
-	       (saved_in_pdapi[pdapi_idx] != (s + 1))) {
-	      /* find a different home */
-	      int i,fnd=0;
-	      for(i=0; i< SCTP_NUMBER_OF_SAVES; i++) {
-		if(saved_in_pdapi[i] &&
-		   (saved_in_pdapi[i] != (s + 1))) {
-		  continue;
-		}
-		fnd = 1;
-		pdapi_idx = i;
-		break;
-	      }
-	      if(!fnd) {
-		printf("Corruption, to many simultaneous pd-api's\n");
-		abort();
-	      }
-	    }
-	    arry[l_arry_at].saved_in_pdapi = pdapi_idx;
-	    memcpy(&pd_api[pdapi_idx], s_info, sizeof(pd_api));
-	    saved_in_pdapi[pdapi_idx] = s + 1; 
-	  }
 	  break;
 	}
       }
       cmsg = CMSG_NXTHDR(&msg,cmsg);
     }
   }
-  if(sinfo_found == 0) {
-    if(saved_in_pdapi[pdapi_idx] == (s + 1)) {
-      memcpy(sinfo, &pd_api, sizeof(sinfo));
-      arry[l_arry_at].copyed_from_saved = (pdapi_idx+1);
-    } else {
-      int i;
-      for(i=0; i<SCTP_NUMBER_OF_SAVES; i++) {
-	if(saved_in_pdapi[i] == (s + 1)) {
-	  memcpy(sinfo, &pd_api[i], sizeof(sinfo));
-	  arry[l_arry_at].copyed_from_saved = (pdapi_idx+1);
-	  sinfo_found = 1;
-	}
-	if(sinfo_found == 0) {
-	  memset(sinfo, 0, sizeof(sinfo));
-	}
-      }
-    }
-  }
-  if(msg.msg_flags == MSG_EOR) {
-    /* pd-api is done if it was up */
-    if(saved_in_pdapi[pdapi_idx] == (s + 1)) {
-      saved_in_pdapi[pdapi_idx] = 0;
-      arry[l_arry_at].cleared_saved = pdapi_idx+1;
-    } else {
-      int i;
-      for(i=0; i<SCTP_NUMBER_OF_SAVES; i++) {
-	if(saved_in_pdapi[i] == (s + 1)) {
-	  saved_in_pdapi[i] = 0;
-	  arry[l_arry_at].cleared_saved = i+1;
-	}
-      }
-    }
-  }
-  arry[l_arry_at].asoc = sinfo->sinfo_assoc_id;
-  if(sinfo->sinfo_assoc_id == 0) {
+  if(sinfo && (sinfo->sinfo_assoc_id == 0)) {
     printf("Aborting due to assoc id 0\n");
     abort();
   }
