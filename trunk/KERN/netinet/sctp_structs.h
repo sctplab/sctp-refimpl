@@ -463,7 +463,8 @@ struct sctp_association {
 	u_int32_t sat_t3_recovery_tsn;
 
 	u_int32_t tsn_last_delivered;
-
+        u_int32_t pdapi_ppid;
+        u_int32_t context;
 	/*
 	 * window state information and smallest MTU that I use to bound
 	 * segmentation

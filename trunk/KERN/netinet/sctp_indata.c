@@ -195,7 +195,7 @@ sctp_set_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
  * Take a chk structure and build it into an mbuf. Hmm should we change things
  * so that instead we store the data side in a chunk?
  */
-static struct mbuf *
+struct mbuf *
 sctp_build_ctl_nchunk(struct sctp_tcb *stcb, uint32_t tsn, uint32_t ppid,
     uint32_t context, uint16_t stream_no, uint16_t stream_seq, uint8_t flags)
 {
@@ -1581,6 +1581,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				asoc->str_of_pdapi =
 				    chk->rec.data.stream_number;
 				asoc->ssn_of_pdapi = chk->rec.data.stream_seq;
+				asoc->pdapi_ppid = chk->rec.data.payloadtype;
 				asoc->fragment_flags = chk->rec.data.rcv_flags;
 				sctp_service_reassembly(stcb, asoc, 0);
 			}
@@ -1905,7 +1906,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 
 		/* It would be nice to avoid this copy if we could :< */
 		control = sctp_build_ctl_nchunk(stcb, tsn,
-		    ch->dp.protocol_id, 0, strmno, strmseq,
+		    ch->dp.protocol_id, stcb->asoc.context, strmno, strmseq,
 		    ch->ch.chunk_flags);
 		/* XXX need to append PKTHDR to the socket buffer first */
 
@@ -2020,7 +2021,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	chk->rec.data.stream_seq = strmseq;
 	chk->rec.data.stream_number = strmno;
 	chk->rec.data.payloadtype = ch->dp.protocol_id;
-	chk->rec.data.context = 0;
+	chk->rec.data.context = stcb->asoc.context;
 	chk->rec.data.doing_fast_retransmit = 0;
 	chk->rec.data.rcv_flags = ch->ch.chunk_flags;
 	chk->asoc = asoc;
@@ -2480,6 +2481,7 @@ sctp_service_queues(struct sctp_tcb *stcb, struct sctp_association *asoc, int ho
 			asoc->tsn_last_delivered = chk->rec.data.TSN_seq-1;
 			asoc->str_of_pdapi = chk->rec.data.stream_number;
 			asoc->ssn_of_pdapi = chk->rec.data.stream_seq;
+			asoc->pdapi_ppid = chk->rec.data.payloadtype;
 			asoc->fragment_flags = chk->rec.data.rcv_flags;
 			sctp_service_reassembly(stcb, asoc, hold_locks);
 		}
