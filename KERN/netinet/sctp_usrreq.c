@@ -1798,6 +1798,24 @@ sctp_optsget(struct socket *so,
       SCTP_INP_RUNLOCK(inp);
     }
     break;
+  case SCTP_CONTEXT:
+    {
+
+      struct sctp_assoc_value *av;
+      if ((size_t)m->m_len < sizeof(struct sctp_assoc_value)) {
+	error = EINVAL;
+	break;
+      }
+      av = mtod(m, struct sctp_assoc_value *);
+      stcb = sctp_findassociation_ep_asocid(inp, av->assoc_id);
+      if (stcb == NULL) {
+	error = ENOTCONN;
+      } else {
+	av->assoc_value = stcb->asoc.context;
+	SCTP_TCB_UNLOCK(stcb);
+      }
+    }
+    break;
   case SCTP_GET_NONCE_VALUES:
     {
       struct sctp_get_nonce_values *gnv;
@@ -2849,6 +2867,24 @@ sctp_optsset(struct socket *so,
 #else
     error = EOPNOTSUPP;
 #endif
+    break;
+  case SCTP_CONTEXT:
+    {
+
+      struct sctp_assoc_value *av;
+      if ((size_t)m->m_len < sizeof(struct sctp_assoc_value)) {
+	error = EINVAL;
+	break;
+      }
+      av = mtod(m, struct sctp_assoc_value *);
+      stcb = sctp_findassociation_ep_asocid(inp, av->assoc_id);
+      if (stcb == NULL) {
+	error = ENOTCONN;
+      } else {
+	stcb->asoc.context = av->assoc_value;
+	SCTP_TCB_UNLOCK(stcb);
+      }
+    }
     break;
   case SCTP_DELAYED_ACK_TIME:
     {

@@ -4544,8 +4544,22 @@ sctp_sbappend( struct sockbuf *sb,
 		  panic("At append, mismatch");
 	  }
   }
-
   n = stcb->last_record_insert;
+  if ((sb->sb_mb == n) && sb->sb_mb->m_len == 0) {
+    /* need a new control for this guy */
+    struct mbuf *x;
+    x = sctp_build_ctl_nchunk(stcb, 
+			      stcb->asoc.tsn_last_delivered, 
+			      stcb->asoc.pdapi_ppid,
+			      stcb->asoc.context, 
+			      stcb->asoc.str_of_pdapi, 
+			      stcb->asoc.ssn_of_pdapi, 
+			      stcb->asoc.fragment_flags);
+    if(x) {
+      x->m_next = m;
+      m = x;
+    }
+  }
   n->m_next = m;
   while(m) {
     sballoc(sb, m);

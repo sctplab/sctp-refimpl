@@ -140,6 +140,7 @@ struct sctp_paramhdr {
 /* Other BSD items */
 #define SCTP_GET_NONCE_VALUES           0x00000023
 #define SCTP_DELAYED_ACK_TIME           0x00000024
+#define SCTP_CONTEXT                    0x00000025 /* set/get assoc level context */
 
 /* Things for the AUTH draft possibly */
 #define SCTP_PEER_PUBLIC_KEY            0x00000100 /* get the peers public key */
