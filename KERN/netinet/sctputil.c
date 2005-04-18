@@ -4001,6 +4001,14 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 			panic("At restoral, mismatch");
 		}
 		m->m_pkthdr.len = 0;
+		/* move off the nextrecord pointer */
+		m->m_next->m_nextpkt = m->m_nextpkt;
+		if(so->so_rcv.sb_lastrecord == m) {
+		  /* last record pointed to our 0 len mbuf, fix this too */
+		  so->so_rcv.sb_lastrecord = m->m_nextpkt;
+		}
+		so->so_rcv.sb_mb = m_free(m);
+		m = so->so_rcv.sb_mb;
 	} else if ((m != NULL) && (stcb == NULL)) {
 		sctp_pegs[SCTP_PDAPI_NOSTCB_ATC]++;
 	}
