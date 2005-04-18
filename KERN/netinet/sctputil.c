@@ -4555,9 +4555,10 @@ sctp_sbappend( struct sockbuf *sb,
 			      stcb->asoc.str_of_pdapi, 
 			      stcb->asoc.ssn_of_pdapi, 
 			      stcb->asoc.fragment_flags);
+    printf("Building control %x to insert\n", (u_int)x);
     if(x) {
-      x->m_next = m;
-      m = x;
+      x->m_next = n;
+      n = x;
     }
   }
   n->m_next = m;
