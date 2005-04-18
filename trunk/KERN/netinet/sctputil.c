@@ -4563,10 +4563,10 @@ sctp_sbappend( struct sockbuf *sb,
 			      stcb->asoc.str_of_pdapi, 
 			      stcb->asoc.ssn_of_pdapi, 
 			      stcb->asoc.fragment_flags);
-    printf("Building control %x to insert\n", (u_int)x);
+    printf("Building control %x to insert len:%d\n", (u_int)x, x->m_len);
     if(x) {
-      x->m_next = n;
-      n = x;
+      x->m_next = m;
+      m = x;
     }
   }
   n->m_next = m;
