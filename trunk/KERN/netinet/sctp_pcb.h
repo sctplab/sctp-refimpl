@@ -595,6 +595,7 @@ void SCTP_INP_WLOCK(struct sctp_inpcb *);
 #define SOCK_UNLOCK(_so)
 #define SOCKBUF_LOCK(_so_buf)
 #define SOCKBUF_UNLOCK(_so_buf)
+#define SOCKBUF_LOCK_ASSERT(_so_buf)
 /* iterator locks */
 #define SCTP_ITERATOR_LOCK_INIT()
 #define SCTP_ITERATOR_LOCK()
