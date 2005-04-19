@@ -226,7 +226,7 @@ void sctp_grub_through_socket_buffer(struct sctp_inpcb *, struct socket *,
 void sctp_free_bufspace(struct sctp_tcb *, struct sctp_association *,
 	struct sctp_tmit_chunk *);
 
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+#if defined(__FreeBSD__)
 int
 sctp_soreceive(	struct socket *so, struct sockaddr **psa,
 		struct uio *uio,
