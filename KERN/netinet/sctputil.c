@@ -4163,7 +4163,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 			("m->m_type == %d", m->m_type));
 		orig_resid = 0;
 		if (psa != NULL)
-#ifdef xxxx
+#if defined(__FreeBSD__) && __FreeBSD_version > 500000
 			*psa = sodupsockaddr(mtod(m, struct sockaddr *),
 					     M_NOWAIT);
 #else
