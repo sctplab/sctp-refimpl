@@ -4040,7 +4040,13 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 			goto release;
 		}
 		SOCKBUF_LOCK_ASSERT(&so->so_rcv);
-		if (so->so_rcv.sb_state & SBS_CANTRCVMORE) {
+#if defined(__FreeBSD__) && __FreeBSD_version > 500000
+		if (so->so_rcv.sb_state & SBS_CANTRCVMORE) 
+#else
+		if (so->so_state & SS_CANTRCVMORE) 
+#endif
+		{
+
 			if (m)
 				goto dontblock;
 			else
@@ -4059,7 +4065,12 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		if (uio->uio_resid == 0)
 			goto release;
 		if ((so->so_state & SS_NBIO) ||
-		    (flags & (MSG_DONTWAIT|MSG_NBIO))) {
+
+		    (flags & (MSG_DONTWAIT
+#if defined(__FreeBSD__) && __FreeBSD_version > 500000
+			      |MSG_NBIO
+#endif
+			    ))) {
 			error = EWOULDBLOCK;
 			goto release;
 		}
@@ -4132,8 +4143,13 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		}
 	}
 	SOCKBUF_LOCK_ASSERT(&so->so_rcv);
+#if defined(__FreeBSD__) && __FreeBSD_version > 500000
 	if (uio->uio_td)
 		uio->uio_td->td_proc->p_stats->p_ru.ru_msgrcv++;
+#else
+	if (uio->uio_procp)
+		uio->uio_procp->p_stats->p_ru.ru_msgrcv++;
+#endif
 	KASSERT(m == so->so_rcv.sb_mb, ("soreceive: m != so->so_rcv.sb_mb"));
 	SBLASTRECORDCHK(&so->so_rcv);
 	SBLASTMBUFCHK(&so->so_rcv);
@@ -4147,8 +4163,13 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 			("m->m_type == %d", m->m_type));
 		orig_resid = 0;
 		if (psa != NULL)
+#ifdef xxxx
 			*psa = sodupsockaddr(mtod(m, struct sockaddr *),
 					     M_NOWAIT);
+#else
+			*psa = dup_sockaddr(mtod(m, struct sockaddr *),
+					    mp0 == 0);
+#endif
 		if (flags & MSG_PEEK) {
 			m = m->m_next;
 		} else {
@@ -4192,8 +4213,12 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 			cm->m_next = NULL;
 			if (pr->pr_domain->dom_externalize != NULL) {
 				SOCKBUF_UNLOCK(&so->so_rcv);
+#if defined(__FreeBSD__) && __FreeBSD_version > 500000
 				error = (*pr->pr_domain->dom_externalize)
 					(cm, controlp);
+#else
+				error = (*pr->pr_domain->dom_externalize)(cm);
+#endif
 				if(stcb) {
 					SCTP_INP_RLOCK(inp);
 					SCTP_TCB_LOCK(stcb);
@@ -4269,7 +4294,11 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		else
 			KASSERT(m->m_type == MT_DATA || m->m_type == MT_HEADER,
 				("m->m_type == %d", m->m_type));
+#if defined(__FreeBSD__) && __FreeBSD_version > 500000
 		so->so_rcv.sb_state &= ~SBS_RCVATMARK;
+#else
+		so->so_state &= ~SS_RCVATMARK;
+#endif
 		len = uio->uio_resid;
 		if (so->so_oobmark && len > so->so_oobmark - offset)
 			len = so->so_oobmark - offset;
@@ -4387,7 +4416,13 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 				if (mp != NULL) {
 					SOCKBUF_UNLOCK(&so->so_rcv);
 					printf("Gak mp was NOT null.. we have problems\n");
-					*mp = m_copym(m, 0, len, M_TRYWAIT);
+					*mp = m_copym(m, 0, len, 
+#if defined(__FreeBSD__) && __FreeBSD_version > 500000
+						      M_TRYWAIT
+#else
+						      M_WAIT
+#endif
+						);
 					if(stcb) {
 						SCTP_INP_RLOCK(inp);
 						SCTP_TCB_LOCK(stcb);
@@ -4408,7 +4443,11 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 			if ((flags & MSG_PEEK) == 0) {
 				so->so_oobmark -= len;
 				if (so->so_oobmark == 0) {
+#if defined(__FreeBSD__) && __FreeBSD_version > 500000
 					so->so_rcv.sb_state |= SBS_RCVATMARK;
+#else
+					so->so_state |= SS_RCVATMARK;
+#endif
 					break;
 				}
 			} else {
@@ -4434,8 +4473,13 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		while (flags & MSG_WAITALL && m == NULL && uio->uio_resid > 0 &&
 		       !sosendallatonce(so) && nextrecord == NULL) {
 			SOCKBUF_LOCK_ASSERT(&so->so_rcv);
+#if defined(__FreeBSD__) && __FreeBSD_version > 500000
 			if (so->so_error || so->so_rcv.sb_state & SBS_CANTRCVMORE)
 				break;
+#else
+			 if (so->so_error || so->so_state & SS_CANTRCVMORE) 
+				break;
+#endif
 			/*
 			 * Notify the protocol that some data has been
 			 * drained before blocking.
@@ -4467,7 +4511,11 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 	if (m != NULL && pr->pr_flags & PR_ATOMIC) {
 		flags |= MSG_TRUNC;
 		if ((flags & MSG_PEEK) == 0)
+#if defined(__FreeBSD__) && __FreeBSD_version > 500000
 			(void) sbdroprecord_locked(&so->so_rcv);
+#else
+			(void) sbdroprecord(&so->so_rcv);
+#endif
 	}
 	if ((flags & MSG_PEEK) == 0) {
 		if (m == NULL) {
@@ -4501,7 +4549,13 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 	}
 	SOCKBUF_LOCK_ASSERT(&so->so_rcv);
 	if (orig_resid == uio->uio_resid && orig_resid &&
-	    (flags & MSG_EOR) == 0 && (so->so_rcv.sb_state & SBS_CANTRCVMORE) == 0) {
+	    (flags & MSG_EOR) == 0 && 
+#if defined(__FreeBSD__) && __FreeBSD_version > 500000
+	    (so->so_rcv.sb_state & SBS_CANTRCVMORE) == 0)
+#else
+	    (so->so_state & SS_CANTRCVMORE)  == 0)
+#endif
+	{
 		sbunlock(&so->so_rcv);
 		goto restart;
 	}
@@ -4523,8 +4577,8 @@ sctp_sbappend( struct sockbuf *sb,
 	       struct mbuf *m,
 	       struct sctp_tcb *stcb)
 {
-  SOCKBUF_LOCK(sb);
   register struct mbuf *n;
+  SOCKBUF_LOCK(sb);
 
   if (m == 0)
     return;
@@ -4535,9 +4589,15 @@ sctp_sbappend( struct sockbuf *sb,
     panic("stcb->last_record_insert is NULL?");
   }
 
+#if defined(__FreeBSD__) && __FreeBSD_version > 500000
   if(stcb->last_record_insert->m_flags & M_FREELIST) {
     panic("stcb->last_record_insert is FREE?");
   }
+#else
+  if(stcb->last_record_insert->m_type == MT_FREE) {
+    panic("stcb->last_record_insert is FREE?");
+  }
+#endif
 
   if(sb->sb_mb == stcb->last_record_insert) {
 	  if((sb->sb_mb->m_len == 0) &&
