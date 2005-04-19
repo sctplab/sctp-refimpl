@@ -126,7 +126,13 @@ void
 sctp_set_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 {
 	u_int32_t calc, calc_w_oh;
-
+	/*
+	 * This is really set wrong with respect to
+	 * a 1-2-m socket. Since the sb_cc is the count
+	 * that everyone as put up. When we re-write
+	 * sctp_soreceive then we will fix this so that
+	 * ONLY this associations data is taken into account.
+	 */
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INDATA4) {
 		printf("cc:%lu hiwat:%lu lowat:%lu mbcnt:%lu mbmax:%lu\n",
@@ -386,13 +392,21 @@ sctp_deliver_data(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			SCTP_INP_WUNLOCK(stcb->sctp_ep);
 		return (0);
 	}
-
+#ifdef SHOULD_WE_BE_DOING_THIS
+	/* the gate must be at the rwnd, not at the socket buffer.
+	 * if we reach here we have already let the dog in the
+	 * door. We must put it up to let the data go up thus
+	 * be read. Back pressure should be asserted by
+	 * the setting of the rwnd.
+	 */
 	if (stcb->sctp_socket->so_rcv.sb_cc >= stcb->sctp_socket->so_rcv.sb_hiwat) {
 		/* Boy, there really is NO room */
 		if (hold_locks == 0)
 			SCTP_INP_WUNLOCK(stcb->sctp_ep);
 		return (0);
 	}
+#endif
+
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INDATA1) {
 		printf("Now to the delivery with chk(%p)!\n", chk);
@@ -455,6 +469,8 @@ sctp_deliver_data(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			       (int)(ntohs(stcb->rport)));
 			((struct sockaddr_in *)to)->sin_port = stcb->rport;
 		}
+#ifdef SHOULD_WE_BE_DOING_THIS
+		/* SEE THE COMMENT above */
 		if (sctp_sbspace(&stcb->sctp_socket->so_rcv) < (long)chk->send_size) {
 			/* Gak not enough room */
 			if (control) {
@@ -464,6 +480,7 @@ sctp_deliver_data(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			}
 			goto skip;
 		}
+#endif
 		if (!sbappendaddr_nocheck(&stcb->sctp_socket->so_rcv,
 		    to, chk->data, control, stcb->asoc.my_vtag,
 		    stcb->sctp_ep, stcb)) {
@@ -481,7 +498,9 @@ sctp_deliver_data(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	  SCTP_SBAPPEND(&stcb->sctp_socket->so_rcv, chk->data, stcb);
 	  free_it = 1;
 	}
+#ifdef SHOULD_WE_BE_DOING_THIS	
  skip:
+#endif
 	if (hold_locks == 0)
 		SCTP_INP_WUNLOCK(stcb->sctp_ep);
 	/* free up the one we inserted */
@@ -563,6 +582,12 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc, in
 		return;
 	}
 	do {
+#ifdef SHOULD_WE_BE_DOING_THIS
+	  /*
+	   * We don't need to be doing this. The dog
+	   * is already in the door. We need to shove
+	   * stuff up ASAP for it to be read.
+	   */
 		if (stcb->sctp_socket->so_rcv.sb_cc >=
 		    stcb->sctp_socket->so_rcv.sb_hiwat) {
 			if (cntDel) {
@@ -573,6 +598,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc, in
 				SCTP_INP_WUNLOCK(stcb->sctp_ep);
 			return;
 		}
+#endif
 		chk = TAILQ_FIRST(&asoc->reasmqueue);
 		if (chk == NULL) {
 			if (cntDel) {
@@ -665,6 +691,12 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc, in
 				       (int)(ntohs(stcb->rport)));
 				((struct sockaddr_in *)to)->sin_port = stcb->rport;
 			}
+#ifdef SHOULD_WE_BE_DOING_THIS
+			/*
+			 * We don't need to be doing this. The dog
+			 * is already in the door. We need to shove
+			 * stuff up ASAP for it to be read.
+			 */
 			if (sctp_sbspace(&stcb->sctp_socket->so_rcv) <
 			    (long)chk->send_size) {
 				if (control) {
@@ -678,6 +710,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc, in
 					SCTP_INP_WUNLOCK(stcb->sctp_ep);
 				return;
 			}
+#endif
 			if (!sbappendaddr_nocheck(&stcb->sctp_socket->so_rcv,
 						  to, chk->data, control, stcb->asoc.my_vtag,
 						  stcb->sctp_ep, stcb)) {
