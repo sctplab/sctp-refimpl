@@ -4353,14 +4353,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 						     (stcb->asoc.fragmented_delivery_inprogress)){
 							/* special case, we must wait at this point */
 							sctp_pegs[SCTP_PDAPI_HAD_TOWAIT_RCV]++;
-							if(so->so_rcv.sb_cc >= m->m_len) {
-							  so->so_rcv.sb_cc -= m->m_len;
-							} else {
-							  printf("Huh, subtraction greater sb_cc:%d sub:%d?\n",
-								 (int)so->so_rcv.sb_cc,
-								 (int)m->m_len);
-							  so->so_rcv.sb_cc = 0;
-							}
+ 					                sbfree(&so->so_rcv, m);
 							m->m_len = 0;
 							stcb->hidden_from_sb = so->so_rcv.sb_cc;
 							m->m_pkthdr.len = so->so_rcv.sb_cc;
@@ -4563,7 +4556,6 @@ sctp_sbappend( struct sockbuf *sb,
 			      stcb->asoc.str_of_pdapi, 
 			      stcb->asoc.ssn_of_pdapi, 
 			      stcb->asoc.fragment_flags);
-    printf("Building control %x to insert len:%d\n", (u_int)x, x->m_len);
     if(x) {
       x->m_next = m;
       m = x;
