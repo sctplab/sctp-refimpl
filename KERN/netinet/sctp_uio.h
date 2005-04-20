@@ -478,6 +478,14 @@ struct sctp_mbcnt_log {
 	u_int32_t mbcnt_change;
 };
 
+struct sctp_sack_log {
+        u_int32_t cumack;
+        u_int32_t oldcumack;
+        u_int32_t tsn;
+        u_int16_t numGaps;
+        u_int16_t numDups;
+};
+
 struct sctp_cwnd_log{
 	union {
 		struct sctp_blk_args blk;
@@ -487,6 +495,7 @@ struct sctp_cwnd_log{
 		struct sctp_fr_map map;
 		struct sctp_rwnd_log rwnd;
 		struct sctp_mbcnt_log mbcnt;
+  	        struct sctp_sack_log sack;
 	}x;
 	u_int8_t from;
 	u_int8_t event_type;

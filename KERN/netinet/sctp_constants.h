@@ -80,6 +80,9 @@
 #define SCTP_LOG_MBCNT_INCREASE     39
 #define SCTP_LOG_MBCNT_DECREASE     40
 #define SCTP_LOG_MBCNT_CHKSET       41
+#define SCTP_LOG_NEW_SACK           42
+#define SCTP_LOG_TSN_ACKED          43
+#define SCTP_LOG_TSN_REVOKED        44
 /*
  * To turn on various logging, you must first define SCTP_STAT_LOGGING.
  * Then to get something to log you define one of the logging defines i.e.
@@ -99,7 +102,7 @@
 #define SCTP_LOG_EVENT_MAXBURST 6
 #define SCTP_LOG_EVENT_RWND  7
 #define SCTP_LOG_EVENT_MBCNT 8
-
+#define SCTP_LOG_EVENT_SACK  9
 
 /* number of associations by default for zone allocation */
 #define SCTP_MAX_NUM_OF_ASOC	40000
