@@ -3804,6 +3804,15 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 							tp1->do_rtt = 0;
 						}
 					}
+#ifdef SCTP_SACK_LOGGING
+					sctp_log_sack(asoc->last_acked_seq, 
+						      cum_ack, 
+						      tp1->rec.data.TSN_seq, 
+						      0, 
+						      0, 
+						      SCTP_LOG_TSN_ACKED);
+#endif
+
 				}
 				if (tp1->sent == SCTP_DATAGRAM_RESEND) {
 #ifdef SCTP_DEBUG
@@ -3828,15 +3837,6 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 
 				}
 				tp1->sent = SCTP_DATAGRAM_ACKED;
-#ifdef SCTP_SACK_LOGGING
-				sctp_log_sack(asoc->last_acked_seq, 
-					      cum_ack, 
-					      tp1->rec.data.TSN_seq, 
-					      0, 
-					      0, 
-					      SCTP_LOG_TSN_ACKED);
-#endif
-
 			}
 		} else {
 			break;
