@@ -2953,11 +2953,6 @@ sctp_check_for_revoked(struct sctp_association *asoc, u_long cum_ack,
 				tp1->sent = SCTP_DATAGRAM_ACKED;
 			}
 		}
-		if (compare_with_wrap(tp1->rec.data.TSN_seq, biggest_tsn_acked,
-		    MAX_TSN)) {
-			/* above the sack */
-			break;
-		}
 		if (tp1->sent == SCTP_DATAGRAM_UNSENT)
 			break;
 		tp1 = TAILQ_NEXT(tp1, sctp_next);
