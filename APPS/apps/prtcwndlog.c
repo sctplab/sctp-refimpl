@@ -73,9 +73,13 @@ main(int argc, char **argv)
 		/* 38 */ "SACK sets rwnd",
 		/* 39 */ "MBCNT Increase",
 		/* 40 */ "MBCNT Decrease",
-		/* 41 */ "Unknown"
+		/* 41 */ "MBCNT chkset",
+		/* 42 */ "New SACK",
+		/* 43 */ "Tsn Acked",
+		/* 44 */ "TSN Revoked",
+		/* 45 */ "Unknown"
 	};
-#define FROM_STRING_MAX 41
+#define FROM_STRING_MAX 45
 	FILE *out;
 	int at;
 	struct sctp_cwnd_log log;
@@ -113,6 +117,25 @@ main(int argc, char **argv)
 				       (int)log.x.cwnd.cwnd_augment,
 				       from_str[log.from]);
 			}
+		}else if(log.event_type == SCTP_LOG_EVENT_SACK) {
+		  if(log.from == SCTP_LOG_NEW_SACK) {
+		    printf("%s - cum-ack:%x old-cumack:%x dups:%d gaps:%d\n", 
+			   from_str[log.from],
+			   log.x.sack.cumack,
+			   log.x.sack.oldcumack,
+			   (int)log.x.sack.numDups,
+			   (int)log.x.sack.numGaps
+			   );
+		  } else {
+		    printf("%s - cum-ack:%x TSN:%x dups:%d gaps:%d\n", 
+			   from_str[log.from],
+			   log.x.sack.cumack,
+			   log.x.sack.tsn,
+			   (int)log.x.sack.numDups,
+			   (int)log.x.sack.numGaps
+			   );
+
+		  }
 		}else if(log.event_type == SCTP_LOG_EVENT_MBCNT) {
 			if(log.from == SCTP_LOG_MBCNT_INCREASE) {
 				printf("%s - tqs(%d + %d) = %d mb_tqs(%d + %d) = %d\n",
