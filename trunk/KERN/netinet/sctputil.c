@@ -181,9 +181,25 @@ sctp_log_strm_del_alt(u_int32_t tsn, u_int16_t sseq, int from)
 }
 
 void
+sctp_log_sack(u_int32_t old_cumack, u_int32_t cumack, u_int32_t tsn, u_int16_t gaps, u_int16_t dups, int from)
+{
+	sctp_clog[sctp_cwnd_log_at].from = (u_int8_t)from;
+	sctp_clog[sctp_cwnd_log_at].event_type = (u_int8_t)SCTP_LOG_EVENT_SACK;
+	sctp_clog[sctp_cwnd_log_at].x.sack.cumack = cumack;
+	sctp_clog[sctp_cwnd_log_at].x.sack.oldcumack = old_cumack;
+	sctp_clog[sctp_cwnd_log_at].x.sack.tsn = tsn;
+	sctp_clog[sctp_cwnd_log_at].x.sack.numGaps = gaps;
+	sctp_clog[sctp_cwnd_log_at].x.sack.numDups = dups;
+	sctp_cwnd_log_at++;
+	if (sctp_cwnd_log_at >= SCTP_STAT_LOG_SIZE) {
+		sctp_cwnd_log_at = 0;
+		sctp_cwnd_log_rolled = 1;
+	}
+}
+
+void
 sctp_log_map(uint32_t map, uint32_t cum, uint32_t high, int from)
 {
-
 	sctp_clog[sctp_cwnd_log_at].from = (u_int8_t)from;
 	sctp_clog[sctp_cwnd_log_at].event_type = (u_int8_t)SCTP_LOG_EVENT_MAP;
 	sctp_clog[sctp_cwnd_log_at].x.map.base = map;
@@ -2196,7 +2212,7 @@ sctp_notify_assoc_change(u_int32_t event, struct sctp_tcb *stcb,
 						   &lsa6);
 	/*
 	 * We need to always notify comm changes.
-	 * if (sctp_sbspace(&stcb->sctp_socket->so_rcv) < m_notify->m_len) {
+	 * if (sctp_sbspace(&stcb->asoc, &stcb->sctp_socket->so_rcv) < m_notify->m_len) {
 	 * 	sctp_m_freem(m_notify);
 	 *	return;
 	 * }
@@ -2280,7 +2296,7 @@ sctp_notify_peer_addr_change(struct sctp_tcb *stcb, uint32_t state,
 	to = (struct sockaddr *)sctp_recover_scope((struct sockaddr_in6 *)to,
 	    &lsa6);
 
-	if (sctp_sbspace(&stcb->sctp_socket->so_rcv) < m_notify->m_len) {
+	if (sctp_sbspace(&stcb->asoc, &stcb->sctp_socket->so_rcv) < m_notify->m_len) {
 		sctp_m_freem(m_notify);
 		return;
 	}
@@ -2372,7 +2388,7 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, u_int32_t error,
 	to = (struct sockaddr *)sctp_recover_scope((struct sockaddr_in6 *)to,
 						   &lsa6);
 
-	if (sctp_sbspace(&stcb->sctp_socket->so_rcv) < m_notify->m_len) {
+	if (sctp_sbspace(&stcb->asoc, &stcb->sctp_socket->so_rcv) < m_notify->m_len) {
 		sctp_m_freem(m_notify);
 		return;
 	}
@@ -2441,7 +2457,7 @@ sctp_notify_adaption_layer(struct sctp_tcb *stcb,
 	/* check and strip embedded scope junk */
 	to = (struct sockaddr *)sctp_recover_scope((struct sockaddr_in6 *)to,
 						   &lsa6);
-	if (sctp_sbspace(&stcb->sctp_socket->so_rcv) < m_notify->m_len) {
+	if (sctp_sbspace(&stcb->asoc, &stcb->sctp_socket->so_rcv) < m_notify->m_len) {
 		sctp_m_freem(m_notify);
 		return;
 	}
@@ -2509,7 +2525,7 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
 	/* check and strip embedded scope junk */
 	to = (struct sockaddr *)sctp_recover_scope((struct sockaddr_in6 *)to,
 						   &lsa6);
-	if (sctp_sbspace(&stcb->sctp_socket->so_rcv) < m_notify->m_len) {
+	if (sctp_sbspace(&stcb->asoc, &stcb->sctp_socket->so_rcv) < m_notify->m_len) {
 		sctp_m_freem(m_notify);
 		return;
 	}
@@ -2586,7 +2602,7 @@ sctp_notify_shutdown_event(struct sctp_tcb *stcb)
 	/* check and strip embedded scope junk */
 	to = (struct sockaddr *)sctp_recover_scope((struct sockaddr_in6 *)to,
 	    &lsa6);
-	if (sctp_sbspace(&stcb->sctp_socket->so_rcv) < m_notify->m_len) {
+	if (sctp_sbspace(&stcb->asoc, &stcb->sctp_socket->so_rcv) < m_notify->m_len) {
 		sctp_m_freem(m_notify);
 		return;
 	}
@@ -2657,7 +2673,7 @@ sctp_notify_stream_reset(struct sctp_tcb *stcb,
 	m_notify->m_pkthdr.rcvif = 0;
 	m_notify->m_len = len;
 	m_notify->m_next = NULL;
-	if (sctp_sbspace(&stcb->sctp_socket->so_rcv) < m_notify->m_len) {
+	if (sctp_sbspace(&stcb->asoc, &stcb->sctp_socket->so_rcv) < m_notify->m_len) {
 		/* no space */
 		sctp_m_freem(m_notify);
 		return;
@@ -3250,7 +3266,7 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp, stcb)
 	m->m_pkthdr.csum_data = tag;
 
 	for (n = m; n; n = n->m_next) {
-		sballoc(sb, n);
+		sctp_sballoc(stcb, sb, n);
 		if(n->m_next == NULL) {
 		  stcb->last_record_insert = nlast;
 		}
@@ -3329,12 +3345,12 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp, stcb)
 	m->m_pkthdr.csum_data = (int)tag;
 
 	for (n = m; n->m_next != NULL; n = n->m_next) {
-		sballoc(sb, n);
+		sctp_sballoc(stcb, sb, n);
 		if(n->m_flags & M_EOR) {
 			msg_eor_seen = 1;
 		}
 	}
-	sballoc(sb, n);
+	sctp_sballoc(stcb, sb, n);
 	nlast = n;
 	if (sb->sb_mb == NULL) {
 		inp->sctp_vtag_first = tag;
@@ -3405,7 +3421,7 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp, stcb)
 	m->m_pkthdr.csum = (int)tag;
 	m->m_next = control;
 	for (n = m; n; n = n->m_next) {
-		sballoc(sb, n);
+		sctp_sballoc(stcb, sb, n);
 		if(n->m_next == NULL) {
 		  stcb->last_record_insert = nlast;
 		}
@@ -3568,8 +3584,8 @@ sctp_grub_through_socket_buffer(struct sctp_inpcb *inp, struct socket *old,
 			 * the space allocation of the
 			 * two sockets.
 			 */
-			sbfree(old_sb, mm);
-			sballoc(new_sb, mm);
+			sctp_sbfree(stcb, old_sb, mm);
+			sctp_sballoc(stcb, new_sb, mm);
 		}
 		new_sb->sb_mb = old_sb->sb_mb;
 		old_sb->sb_mb = new_sb->sb_mb->m_nextpkt;
@@ -3599,8 +3615,8 @@ sctp_grub_through_socket_buffer(struct sctp_inpcb *inp, struct socket *old,
 				 * the space allocation of the
 				 * two sockets.
 				 */
-				sbfree(old_sb, mm);
-				sballoc(new_sb, mm);
+				sctp_sbfree(stcb, old_sb, mm);
+				sctp_sballoc(stcb, new_sb, mm);
 			}
 			put = &this->m_nextpkt;
 
@@ -4173,7 +4189,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		if (flags & MSG_PEEK) {
 			m = m->m_next;
 		} else {
-			sbfree(&so->so_rcv, m);
+			sctp_sbfree(stcb, &so->so_rcv, m);
 			so->so_rcv.sb_mb = m_free(m);
 			m = so->so_rcv.sb_mb;
 			sockbuf_pushsync(&so->so_rcv, nextrecord);
@@ -4198,7 +4214,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 				}
 				m = m->m_next;
 			} else {
-				sbfree(&so->so_rcv, m);
+				sctp_sbfree(stcb, &so->so_rcv, m);
 				so->so_rcv.sb_mb = m->m_next;
 				m->m_next = NULL;
 				*cme = m;
@@ -4365,14 +4381,14 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 			} else {
 				nextrecord = m->m_nextpkt;
 				if (mp != NULL) {
-				        sbfree(&so->so_rcv, m);
+				        sctp_sbfree(stcb, &so->so_rcv, m);
 					*mp = m;
 					mp = &m->m_next;
 					so->so_rcv.sb_mb = m = m->m_next;
 					*mp = NULL;
 				} else {
 				        if (flags & MSG_EOR) {
-					        sbfree(&so->so_rcv, m);
+					        sctp_sbfree(stcb, &so->so_rcv, m);
 						so->so_rcv.sb_mb = m_free(m);
 						m = so->so_rcv.sb_mb;
 					} else {
@@ -4382,7 +4398,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 						     (stcb->asoc.fragmented_delivery_inprogress)){
 							/* special case, we must wait at this point */
 							sctp_pegs[SCTP_PDAPI_HAD_TOWAIT_RCV]++;
- 					                sbfree(&so->so_rcv, m);
+ 					                sctp_sbfree(stcb, &so->so_rcv, m);
 							m->m_len = 0;
 							stcb->hidden_from_sb = so->so_rcv.sb_cc;
 							m->m_pkthdr.len = so->so_rcv.sb_cc;
@@ -4392,7 +4408,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 							special_mark = 1;
 						} else {
 							/* normal thing is ok */
- 					                sbfree(&so->so_rcv, m);
+ 					                sctp_sbfree(stcb, &so->so_rcv, m);
 							so->so_rcv.sb_mb = m_free(m);
 							m = so->so_rcv.sb_mb;
 						}
@@ -4623,7 +4639,7 @@ sctp_sbappend( struct sockbuf *sb,
   }
   n->m_next = m;
   while(m) {
-    sballoc(sb, m);
+    sctp_sballoc(stcb, sb, m);
     if(m->m_flags & M_EOR) {
       /* done with this record */
       stcb->last_record_insert = NULL;

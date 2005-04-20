@@ -253,6 +253,7 @@ void sctp_log_mbcnt(uint8_t, u_int32_t, u_int32_t, u_int32_t, u_int32_t);
 void sctp_log_rwnd_set(uint8_t, u_int32_t, u_int32_t, u_int32_t, u_int32_t);
 int sctp_fill_stat_log(struct mbuf *);
 void sctp_log_fr(uint32_t, uint32_t, uint32_t, int);
+void sctp_log_sack(u_int32_t, u_int32_t, u_int32_t, u_int16_t, u_int16_t, int);
 void sctp_log_map(uint32_t, uint32_t, uint32_t, int);
 
 void sctp_clr_stat_log(void);

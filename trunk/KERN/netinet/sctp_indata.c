@@ -142,7 +142,7 @@ sctp_set_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 		       (u_long)stcb->sctp_socket->so_rcv.sb_mbcnt,
 		       (u_long)stcb->sctp_socket->so_rcv.sb_mbmax);
 		printf("Setting rwnd to: sb:%ld - (del:%d + reasm:%d str:%d)\n",
-		       sctp_sbspace(&stcb->sctp_socket->so_rcv),
+		       sctp_sbspace(&stcb->asoc, &stcb->sctp_socket->so_rcv),
 		       asoc->size_on_delivery_queue,
 		       asoc->size_on_reasm_queue,
 		       asoc->size_on_all_streams);
@@ -158,7 +158,7 @@ sctp_set_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 		return;
 	}
 	/* get actual space */
-	calc = (u_int32_t)sctp_sbspace(&stcb->sctp_socket->so_rcv);
+	calc = (u_int32_t)sctp_sbspace(&stcb->asoc, &stcb->sctp_socket->so_rcv);
 
 	/* take out what has NOT been put on socket queue and
 	 * we yet hold for putting up.
@@ -471,7 +471,7 @@ sctp_deliver_data(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		}
 #ifdef SHOULD_WE_BE_DOING_THIS
 		/* SEE THE COMMENT above */
-		if (sctp_sbspace(&stcb->sctp_socket->so_rcv) < (long)chk->send_size) {
+		if (sctp_sbspace(&stcb->asoc, &stcb->sctp_socket->so_rcv) < (long)chk->send_size) {
 			/* Gak not enough room */
 			if (control) {
 				sctp_m_freem(control);
@@ -697,7 +697,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc, in
 			 * is already in the door. We need to shove
 			 * stuff up ASAP for it to be read.
 			 */
-			if (sctp_sbspace(&stcb->sctp_socket->so_rcv) <
+			if (sctp_sbspace(&stcb->asoc, &stcb->sctp_socket->so_rcv) <
 			    (long)chk->send_size) {
 				if (control) {
 					sctp_m_freem(control);
@@ -1798,7 +1798,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			if (sctp_debug_on & SCTP_DEBUG_INDATA1) {
 				printf("My rwnd overrun1:tsn:%lx rwnd %lu sbspace:%ld delq:%d!\n",
 				    (u_long)tsn, (u_long)asoc->my_rwnd,
-				    sctp_sbspace(&stcb->sctp_socket->so_rcv),
+				    sctp_sbspace(&stcb->asoc, &stcb->sctp_socket->so_rcv),
 				    stcb->asoc.cnt_on_delivery_queue);
 			}
 #endif
@@ -2932,9 +2932,25 @@ sctp_check_for_revoked(struct sctp_association *asoc, u_long cum_ack,
 				 */
 				tp1->sent = SCTP_DATAGRAM_SENT;
 				tot_revoked++;
+#ifdef SCTP_SACK_LOGGING
+				sctp_log_sack(asoc->last_acked_seq, 
+					      cum_ack, 
+					      tp1->rec.data.TSN_seq, 
+					      0, 
+					      0, 
+					      SCTP_LOG_TSN_REVOKED);
+#endif
 			} else if (tp1->sent == SCTP_DATAGRAM_MARKED) {
 				/* it has been re-acked in this SACK */
 				tp1->sent = SCTP_DATAGRAM_ACKED;
+#ifdef SCTP_SACK_LOGGING
+				sctp_log_sack(asoc->last_acked_seq, 
+					      cum_ack, 
+					      tp1->rec.data.TSN_seq, 
+					      0, 
+					      0, 
+					      SCTP_LOG_TSN_ACKED);
+#endif
 			}
 		}
 		if (compare_with_wrap(tp1->rec.data.TSN_seq, biggest_tsn_acked,
@@ -3540,7 +3556,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	struct sctp_sack *sack;
 	struct sctp_tmit_chunk *tp1, *tp2;
 	u_long cum_ack, last_tsn, biggest_tsn_acked, biggest_tsn_newly_acked;
-	uint16_t num_seg;
+	uint16_t num_seg, num_dup;
 	unsigned int sack_length;
 	uint32_t send_s;
 	int some_on_streamwheel;
@@ -3613,7 +3629,15 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	sack = &ch->sack;
 	cum_ack = last_tsn = ntohl(sack->cum_tsn_ack);
 	num_seg = ntohs(sack->num_gap_ack_blks);
-
+	num_dup = ntohs(sack->num_dup_tsns);
+#ifdef SCTP_SACK_LOGGING
+	sctp_log_sack(asoc->last_acked_seq, 
+		      cum_ack, 
+		      0, 
+		      num_seg, 
+		      num_dup, 
+		      SCTP_LOG_NEW_SACK);
+#endif
 	/* reality check */
 	if (TAILQ_EMPTY(&asoc->send_queue)) {
 		send_s = asoc->sending_seq;
@@ -3804,6 +3828,15 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 
 				}
 				tp1->sent = SCTP_DATAGRAM_ACKED;
+#ifdef SCTP_SACK_LOGGING
+				sctp_log_sack(asoc->last_acked_seq, 
+					      cum_ack, 
+					      tp1->rec.data.TSN_seq, 
+					      num_seg, 
+					      num_dup, 
+					      SCTP_LOG_TSN_ACKED);
+#endif
+
 			}
 		} else {
 			break;
@@ -4560,7 +4593,7 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 
 	if (gap > m_size  || gap < 0) {
 		asoc->highest_tsn_inside_map = back_out_htsn;
-		if ((long)gap > sctp_sbspace(&stcb->sctp_socket->so_rcv)) {
+		if ((long)gap > sctp_sbspace(&stcb->asoc, &stcb->sctp_socket->so_rcv)) {
 			/*
 			 * out of range (of single byte chunks in the rwnd I
 			 * give out)
