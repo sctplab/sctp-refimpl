@@ -2822,11 +2822,11 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 								    tp1->rec.data.TSN_seq;
 							}
 #ifdef SCTP_SACK_LOGGING
-							sctp_log_sack(asoc->last_acked_seq, 
-								      *biggest_newly_acked_tsn, 
+							sctp_log_sack(*biggest_newly_acked_tsn, 
+								      last_tsn,
 								      tp1->rec.data.TSN_seq, 
-								      0, 
-								      0, 
+								      frag_start, 
+								      frag_end, 
 								      SCTP_LOG_TSN_ACKED);
 #endif
 							if(tp1->whoTo->flight_size >= tp1->book_size)
@@ -3832,8 +3832,8 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 				sctp_log_sack(asoc->last_acked_seq, 
 					      cum_ack, 
 					      tp1->rec.data.TSN_seq, 
-					      num_seg, 
-					      num_dup, 
+					      0, 
+					      0, 
 					      SCTP_LOG_TSN_ACKED);
 #endif
 
