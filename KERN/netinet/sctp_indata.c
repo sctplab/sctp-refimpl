@@ -2825,7 +2825,7 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 							sctp_log_sack(*biggest_newly_acked_tsn, 
 								      last_tsn,
 								      tp1->rec.data.TSN_seq, 
-								      frag_start, 
+								      frag_strt, 
 								      frag_end, 
 								      SCTP_LOG_TSN_ACKED);
 #endif
