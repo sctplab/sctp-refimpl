@@ -2821,6 +2821,14 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 								*biggest_newly_acked_tsn =
 								    tp1->rec.data.TSN_seq;
 							}
+#ifdef SCTP_SACK_LOGGING
+							sctp_log_sack(asoc->last_acked_seq, 
+								      *biggest_newly_acked_tsn, 
+								      tp1->rec.data.TSN_seq, 
+								      0, 
+								      0, 
+								      SCTP_LOG_TSN_ACKED);
+#endif
 							if(tp1->whoTo->flight_size >= tp1->book_size)
 							  tp1->whoTo->flight_size -= tp1->book_size;
 							else 
@@ -2943,14 +2951,6 @@ sctp_check_for_revoked(struct sctp_association *asoc, u_long cum_ack,
 			} else if (tp1->sent == SCTP_DATAGRAM_MARKED) {
 				/* it has been re-acked in this SACK */
 				tp1->sent = SCTP_DATAGRAM_ACKED;
-#ifdef SCTP_SACK_LOGGING
-				sctp_log_sack(asoc->last_acked_seq, 
-					      cum_ack, 
-					      tp1->rec.data.TSN_seq, 
-					      0, 
-					      0, 
-					      SCTP_LOG_TSN_ACKED);
-#endif
 			}
 		}
 		if (compare_with_wrap(tp1->rec.data.TSN_seq, biggest_tsn_acked,
