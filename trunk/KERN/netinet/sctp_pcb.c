@@ -940,8 +940,8 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 					}
 				}
 			}
-			SCTP_INP_RUNLOCK(inp);
 		}
+		SCTP_INP_RUNLOCK(inp);
 	}
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_PCB1) {
