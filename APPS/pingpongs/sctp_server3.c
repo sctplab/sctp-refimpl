@@ -21,11 +21,11 @@ int num_snds=0;
 int num_rcvs=0;
 int data_failures=0;
 int num_rcv_failed=0;
-int num_snd_failed=0;
 
 static int
 init_fd(struct sockaddr_in *sin, int fd)
 {
+  struct sctp_event_subscribe event;
   int on=1;
   if(setsockopt(fd,IPPROTO_SCTP,
 		SCTP_NODELAY,
@@ -33,6 +33,13 @@ init_fd(struct sockaddr_in *sin, int fd)
     printf("Can't set TCP nodelay %d\n", errno);
     return(-1);
   }
+  /* setup recv sndrcvinfo stuff */
+  memset(&event, 0, sizeof(event));
+  event.sctp_data_io_event = 1;
+  if (setsockopt(fd, IPPROTO_SCTP, SCTP_EVENTS, &event, sizeof(event)) != 0) {
+    printf("Can't do SET_EVENTS socket option! err:%d\n", errno);
+  }
+
   if(bind(fd,(struct sockaddr *)sin, sin->sin_len) < 0){
     printf("Can't bind port %d error:%d\n",ntohs(sin->sin_port), errno);
     return(-1);
@@ -49,22 +56,26 @@ handle_fd(int fd)
   int msg_size;
   int sen,rec;
   int *size_p;
+  struct sockaddr_in from;
+  int flags;
+  struct sctp_sndrcvinfo sinfo;
+  socklen_t len;
   size_p = (int *)respbuf;
-  printf("Doing rcv\n");
-
-  while(rec = recv(fd, respbuf, MY_MAX_SIZE, 0) >= sizeof(int)) {
+  len = sizeof(from);
+  flags = 0;
+  while((rec = sctp_recvmsg(fd, respbuf, MY_MAX_SIZE,
+			    (struct sockaddr *)&from,
+			    &len, &sinfo, &flags)) > sizeof(int)) {
     num_rcvs++;
-    fflush(stdout);
     msg_size = ntohl(*size_p);
     if(msg_size > MY_MAX_SIZE) {
       printf("Gak, wants more than my max %d\n", msg_size);
       num_rcv_failed++;
       return;
     }
-    sen = send(fd, respbuf, msg_size, 0);
+    sen = sctp_send(fd, respbuf, msg_size, &sinfo, 0);
     if(sen < msg_size) {
       printf("Error sent %d not %d?\n", sen, msg_size);
-      num_snd_failed++;
       return;
     }
     num_snds++;
@@ -135,12 +146,8 @@ main(int argc, char **argv)
   }
   len = sizeof(from);
   while((newfd = accept(fd, (struct sockaddr *)&from, &len)) != -1 ){
-    printf("Got a connection from %x port %d\n",
-	   (u_int)ntohl(from.sin_addr.s_addr),
-	   (u_int)ntohs(from.sin_port));
     handle_fd(newfd);
     close(newfd);
-    printf("closing newfd %d\n", newfd);
   }
   return (0);
 }
