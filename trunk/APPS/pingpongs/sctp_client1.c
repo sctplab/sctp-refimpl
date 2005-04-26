@@ -13,6 +13,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netinet/sctp.h>
+#include <sys/filio.h>
 
 #define MY_MAX_SIZE 230000
 
@@ -44,12 +45,16 @@ init_buffer(int sz)
 static int
 init_fd(int fd)
 {
-  int on=1;
+  int on=0;
   if(setsockopt(fd,IPPROTO_SCTP,
 		SCTP_NODELAY,
 		&on, sizeof(on)) != 0) {
     printf("Can't set TCP nodelay %d\n", errno);
     return(-1);
+  }
+  if(ioctl(fd, FIONBIO, &on) != 0) {
+    printf("IOCTL FIONBIO fails error:%d!\n",errno);
+    return (-1);
   }
   return (0);
 }
@@ -62,12 +67,19 @@ do_a_pass( int fd, int msg_size)
   int sen,rec;
 
   num_snds++;
-  if(send(fd, mybuf, msg_size, 0) < msg_size) {
+  errno = 0;
+  if((sen = send(fd, mybuf, msg_size, 0)) < msg_size) {
+    printf("snd failed errno:%d size:%d\n",
+	   errno,  sen);
     snd_failed++;
     return;
   }
-  if(recv(fd, respbuf, msg_size, 0) < msg_size) {
+  errno = 0;
+  if((rec = recv(fd, respbuf, msg_size, 0)) < msg_size) {
     rcv_failed++;
+    printf("rcv failed errno:%d size:%d\n",
+	   errno,  rec);
+    return;
   }
   num_rcvs++;
   if(memcmp(mybuf, respbuf, msg_size) != 0) {
@@ -154,14 +166,14 @@ main(int argc, char **argv)
   sec = end.tv_sec - start.tv_sec;
   if(sec) {
     if(end.tv_usec > start.tv_usec) {
-      usec = end.tv_usec - end.tv_usec;
+      usec = end.tv_usec - start.tv_usec;
     } else {
       usec = 1000000 - start.tv_usec;
       usec += end.tv_usec;
       sec--;
     }
   } else {
-    usec = end.tv_usec - end.tv_usec;
+    usec = end.tv_usec - start.tv_usec;
   }
   printf("%d snds and %d recvs had %d failures in %d.%6.6d\n",
 	 num_snds,

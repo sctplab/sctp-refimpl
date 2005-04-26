@@ -35,8 +35,8 @@ init_buffer(int sz)
       at = 'A';
     }
   }
+  printf("Place %d in buffer\n", sz);
   *sizep = htonl(sz);
-
 }
 
 static int
@@ -161,14 +161,14 @@ main(int argc, char **argv)
   sec = end.tv_sec - start.tv_sec;
   if(sec) {
     if(end.tv_usec > start.tv_usec) {
-      usec = end.tv_usec - end.tv_usec;
+      usec = end.tv_usec - start.tv_usec;
     } else {
       usec = 1000000 - start.tv_usec;
       usec += end.tv_usec;
       sec--;
     }
   } else {
-    usec = end.tv_usec - end.tv_usec;
+    usec = end.tv_usec - start.tv_usec;
   }
   printf("%d snds and %d recvs had %d failures in %d.%6.6d\n",
 	 num_snds,
