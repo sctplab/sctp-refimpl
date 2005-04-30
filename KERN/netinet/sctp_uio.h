@@ -486,6 +486,19 @@ struct sctp_sack_log {
         u_int16_t numDups;
 };
 
+struct sctp_lock_log {
+  u_int32_t sock;
+  u_int32_t inp;
+  u_int8_t tcb_lock;
+  u_int8_t inp_lock;
+  u_int8_t info_lock;
+  u_int8_t sock_lock;
+  u_int8_t sockrcvbuf_lock;
+  u_int8_t socksndbuf_lock;
+  u_int8_t create_lock;
+  u_int8_t resv;
+};
+
 struct sctp_cwnd_log{
 	union {
 		struct sctp_blk_args blk;
@@ -496,6 +509,7 @@ struct sctp_cwnd_log{
 		struct sctp_rwnd_log rwnd;
 		struct sctp_mbcnt_log mbcnt;
   	        struct sctp_sack_log sack;
+	        struct sctp_lock_log lock;
 	}x;
 	u_int8_t from;
 	u_int8_t event_type;

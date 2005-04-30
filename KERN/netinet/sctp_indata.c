@@ -559,10 +559,13 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc, in
 	if (stcb && (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
 		/* socket above is long gone */
 		asoc->fragmented_delivery_inprogress = 0;
+
 		TAILQ_FOREACH(chk, &asoc->reasmqueue, sctp_next) {
 			asoc->size_on_delivery_queue -= chk->send_size;
 			asoc->cnt_on_delivery_queue--;
+
 			/*
+
 			 * Lose the data pointer, since its in the socket buffer
 			 */
 			if (chk->data)
@@ -825,7 +828,6 @@ sctp_queue_data_to_stream(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	int queue_needed;
 	u_int16_t nxt_todel;
 	struct mbuf *oper;
-
 /*** FIX FIX FIX ???
  * Need to add code to deal with 16 bit seq wrap
  * without a TSN wrap for ordered delivery (maybe).
@@ -2537,6 +2539,7 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 	sctp_set_rwnd(stcb, &stcb->asoc);
 
 	m = *mm;
+	STCB_TCB_LOCK_ASSERT(stcb);
 	asoc = &stcb->asoc;
 	if (compare_with_wrap(stcb->asoc.highest_tsn_inside_map,
 	    stcb->asoc.cumulative_tsn, MAX_TSN)) {
@@ -3563,6 +3566,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	u_int32_t a_rwnd;
 	struct sctp_nets *net = NULL;
 	int nonce_sum_flag, ecn_seg_sums=0;
+
 	asoc = &stcb->asoc;
 
 	/*
@@ -3574,6 +3578,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	 * cannot get awoken when the socket is read from :<
 	 */
 	asoc->overall_error_count = 0;
+	STCB_TCB_LOCK_ASSERT(stcb);
 
 	if (asoc->sent_queue_retran_cnt) {
 #ifdef SCTP_DEBUG
@@ -4403,6 +4408,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	 */
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 		struct sctp_tmit_chunk *chk;
+
 		TAILQ_FOREACH(chk, &asoc->sent_queue, sctp_next) {
 			if (chk->whoTo == net &&
 			    (chk->sent < SCTP_DATAGRAM_ACKED ||

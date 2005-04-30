@@ -119,7 +119,6 @@ void
 sctp_audit_retranmission_queue(struct sctp_association *asoc)
 {
 	struct sctp_tmit_chunk *chk;
-
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_TIMER4) {
 		printf("Audit invoked on send queue cnt:%d onqueue:%d\n",
@@ -734,7 +733,6 @@ sctp_move_all_chunks_to_alt(struct sctp_tcb *stcb,
 	struct sctp_association *asoc;
 	struct sctp_stream_out *outs;
 	struct sctp_tmit_chunk *chk;
-
 	if (net == alt)
 		/* nothing to do */
 		return;
@@ -1078,7 +1076,6 @@ int sctp_asconf_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 {
 	struct sctp_nets *alt;
 	struct sctp_tmit_chunk *asconf, *chk;
-
 	/* is this the first send, or a retransmission? */
 	if (stcb->asoc.asconf_sent == 0) {
 		/* compose a new ASCONF chunk and send it */
@@ -1272,7 +1269,7 @@ sctp_audit_stream_queues_for_size(struct sctp_inpcb *inp,
 	TAILQ_FOREACH(outs, &stcb->asoc.out_wheel, next_spoke) {
 		if (!TAILQ_EMPTY(&outs->outqueue)) {
 			TAILQ_FOREACH(chk, &outs->outqueue, sctp_next) {
-				chks_in_queue++;
+			      chks_in_queue++;
 			}
 		}
 	}
@@ -1300,7 +1297,6 @@ sctp_heartbeat_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
     struct sctp_nets *net)
 {
 	int cnt_of_unconf=0;
-
 	if (net) {
 		if (net->hb_responded == 0) {
 			sctp_backoff_on_timeout(stcb, net, 1, 0);

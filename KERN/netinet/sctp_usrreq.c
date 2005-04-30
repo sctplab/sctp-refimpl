@@ -451,6 +451,11 @@ sctp_notify(struct sctp_inpcb *inp,
 
 		if (inp->sctp_socket) {
 			SOCK_LOCK(inp->sctp_socket);
+			SCTP_INP_RLOCK(inp);
+#ifdef SCTP_LOCK_LOGGING
+		        sctp_log_lock(inp, stcb, SCTP_LOG_LOCK_SOCK);
+#endif
+			SCTP_INP_RUNLOCK(inp);
 			inp->sctp_socket->so_error = errno;
 			sctp_sowwakeup(inp, inp->sctp_socket);
 			SOCK_UNLOCK(inp->sctp_socket);
@@ -4043,8 +4048,8 @@ sctp_usr_recvd(struct socket *so, int flags)
 	 * it runs out of room
 	 */
 	SCTP_INP_WLOCK(inp);
-	if (((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0)
-	    && ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
+	if (((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) &&
+	    ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
 		/* Ok the other part of our grubby tracking
 		 * stuff for our horrible layer violation that
 		 * the tsvwg thinks is ok for sctp_peeloff.. gak!
@@ -4096,7 +4101,7 @@ sctp_usr_recvd(struct socket *so, int flags)
 		 */
 		SCTP_TCB_LOCK(stcb);
 		if (flags & MSG_EOR) {
-			if (((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0)
+			if (((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) 
 			   && ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
 				stcb = sctp_remove_from_socket_q(inp);
 			}
@@ -4145,6 +4150,9 @@ sctp_usr_recvd(struct socket *so, int flags)
 			stcb = sctp_remove_from_socket_q(inp);
 		}
 	}
+#ifdef SCTP_LOCK_LOGGING
+	sctp_log_lock(inp, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
+#endif
 	SOCKBUF_LOCK(&so->so_rcv);
 	if (( so->so_rcv.sb_mb == NULL ) &&
 	    (TAILQ_EMPTY(&inp->sctp_queue_list) == 0)) {
@@ -4208,12 +4216,17 @@ sctp_listen(struct socket *so, struct proc *p)
 		/* I made the same as TCP since we are not setup? */
 		return (ECONNRESET);
 	}
+#ifdef SCTP_LOCK_LOGGING
+	sctp_log_lock(inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_SOCK);
+#endif
+	SOCK_LOCK(so);
 	SCTP_INP_RLOCK(inp);
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
 		/* We are already connected AND the TCP model */
 		splx(s);
 		SCTP_INP_RUNLOCK(inp);
+		SOCK_UNLOCK(so);
 		return (EADDRINUSE);
 	}
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) {
@@ -4221,13 +4234,13 @@ sctp_listen(struct socket *so, struct proc *p)
 		SCTP_INP_RUNLOCK(inp);
 		if ((error = sctp_inpcb_bind(so, NULL, p))) {
 			/* bind error, probably perm */
+		        SOCK_UNLOCK(so);
 			splx(s);
 			return (error);
 		}
 	} else {
 		SCTP_INP_RUNLOCK(inp);
 	}
-	SOCK_LOCK(so);
 	SCTP_INP_WLOCK(inp);
 	if (inp->sctp_socket->so_qlimit) {
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE) {
