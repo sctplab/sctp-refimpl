@@ -2301,7 +2301,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	SCTP_INP_WLOCK(inp);
 	so  = inp->sctp_socket;
 	SCTP_INP_WUNLOCK(inp);
-	if(so) {
+	if(so && so->so_count) {
 	  SOCK_LOCK(so);
 	}
 	SCTP_ASOC_CREATE_LOCK(inp);
@@ -2420,7 +2420,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 
 	callout_stop(&inp->sctp_ep.signature_change.timer);
 
-	if (so) {
+	if (so && so->so_count) {
 	/* First take care of socket level things */
 	  if((so->so_rcv.sb_mb == NULL) && (so->so_rcv.sb_cc)) {
 	    printf("Strange, so->so_rcv.sb_mb was NULL count was %d?\n",
