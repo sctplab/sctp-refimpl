@@ -83,6 +83,12 @@
 #define SCTP_LOG_NEW_SACK           42
 #define SCTP_LOG_TSN_ACKED          43
 #define SCTP_LOG_TSN_REVOKED        44
+#define SCTP_LOG_LOCK_TCB           45
+#define SCTP_LOG_LOCK_INP           46
+#define SCTP_LOG_LOCK_SOCK          47
+#define SCTP_LOG_LOCK_SOCKBUF_R     48
+#define SCTP_LOG_LOCK_SOCKBUF_S     49
+#define SCTP_LOG_LOCK_CREATE        50
 /*
  * To turn on various logging, you must first define SCTP_STAT_LOGGING.
  * Then to get something to log you define one of the logging defines i.e.
@@ -103,6 +109,9 @@
 #define SCTP_LOG_EVENT_RWND  7
 #define SCTP_LOG_EVENT_MBCNT 8
 #define SCTP_LOG_EVENT_SACK  9
+#define SCTP_LOG_LOCK_EVENT 10
+
+#define SCTP_LOCK_UNKNOWN 2
 
 /* number of associations by default for zone allocation */
 #define SCTP_MAX_NUM_OF_ASOC	40000

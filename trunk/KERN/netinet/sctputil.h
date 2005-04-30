@@ -246,6 +246,7 @@ void sctp_log_strm_del_alt(u_int32_t, u_int16_t, int);
 
 void sctp_log_strm_del(struct sctp_tmit_chunk *, struct sctp_tmit_chunk *, int);
 void sctp_log_cwnd(struct sctp_nets *, int, uint8_t);
+void sctp_log_lock(struct sctp_inpcb *inp, struct sctp_tcb *stcb, uint8_t from);
 void sctp_log_maxburst(struct sctp_nets *, int, int, uint8_t);
 void sctp_log_block(uint8_t, struct socket *, struct sctp_association *);
 void sctp_log_rwnd(uint8_t, u_int32_t, u_int32_t, u_int32_t );
