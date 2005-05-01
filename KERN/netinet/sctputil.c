@@ -3983,6 +3983,10 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) || 
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
 		stcb = LIST_FIRST(&inp->sctp_asoc_list);
+		if(stcb == NULL) {
+		  SCTP_INP_RUNLOCK(inp);
+		  return (ENOTCONN);
+		}
 		if(stcb->last_record_insert == NULL) {
 		  at_eor = 1;
 		}
@@ -4137,7 +4141,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 
 		if ((so->so_state & (SS_ISCONNECTED|SS_ISCONNECTING)) == 0 &&
 		    (so->so_proto->pr_flags & PR_CONNREQUIRED)) {
-			error = ENOTCONN;
+ 		        error = ENOTCONN;
 			goto release;
 		}
 		if (uio->uio_resid == 0)
@@ -4167,6 +4171,11 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 			if ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) || 
 			    (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
 				stcb = LIST_FIRST(&inp->sctp_asoc_list);
+				if(stcb == NULL) {
+				  SCTP_INP_RUNLOCK(inp);
+				  error = ENOTCONN;
+				  goto out;
+				}
 				if(stcb->last_record_insert == NULL) {
 				  at_eor = 1;
 				}
