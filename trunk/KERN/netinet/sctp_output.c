@@ -6454,7 +6454,8 @@ sctp_send_shutdown(struct sctp_tcb *stcb, struct sctp_nets *net)
 	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
 		stcb->sctp_ep->sctp_socket->so_snd.sb_cc = 0;
-		soisdisconnecting(stcb->sctp_ep->sctp_socket);
+		if(stcb->sctp_ep->sctp_socket->so_count)
+		  soisdisconnecting(stcb->sctp_ep->sctp_socket);
 	}
 	return (0);
 }
@@ -8214,8 +8215,10 @@ sctp_send_shutdown_complete(struct sctp_tcb *stcb,
 		stcb->sctp_ep->sctp_socket->so_snd.sb_cc = 0;
 		if(stcb->sctp_ep->sctp_socket->so_count)
 		  soisdisconnected(stcb->sctp_ep->sctp_socket);
+		/*
 		else
-		  printf("Warning, saw so_count == 0\n");
+		  printf("SCTP(c):disconnect of unref socket\n");
+		*/
 	}
 	return (0);
 }

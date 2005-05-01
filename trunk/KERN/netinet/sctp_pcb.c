@@ -3723,8 +3723,10 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 				inp->sctp_flags &= ~SCTP_PCB_FLAGS_CONNECTED;
 				if(stcb->sctp_ep->sctp_socket->so_count)
 				  soisdisconnected(stcb->sctp_ep->sctp_socket);
+				/*
 				else
-				  printf("Warning2, saw so_count == 0\n");
+				  printf("SCTP(d):disconnect of unref socket\n");
+				*/
 			}
 			/*
 			 * For those that are in the TCP pool we just leave
