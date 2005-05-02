@@ -51,7 +51,7 @@ handle_fd(int fd)
   int *size_p;
   at = 0;
   size_p = (int *)respbuf;
-  while((rec = recv(fd, &respbuf[at], sizeof(int) , 0)) == sizeof(int)) {
+  while(((rec = recv(fd, &respbuf[at], sizeof(int) , 0)) >= sizeof(int))) {
     num_rcvs++;
     msg_size = ntohl(*size_p);
     if(msg_size > MY_MAX_SIZE) {
