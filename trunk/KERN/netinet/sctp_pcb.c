@@ -2313,6 +2313,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		printf("Endpoint was all gone (dup free)?\n");
 		SCTP_INP_WUNLOCK(inp);
 		SCTP_ASOC_CREATE_UNLOCK(inp);
+		if(so && so->so_count) {
+		  SOCK_UNLOCK(so);
+		}
 		return;
 	}
 	sctp_timer_stop(SCTP_TIMER_TYPE_NEWCOOKIE, inp, NULL, NULL);
@@ -2402,6 +2405,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 			splx(s);
 			SCTP_INP_WUNLOCK(inp);
 			SCTP_ASOC_CREATE_UNLOCK(inp);
+			if(so && so->so_count) {
+			  SOCK_UNLOCK(so);
+			}
 			return;
 		}
 	}
@@ -2410,6 +2416,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		sctp_timer_start(SCTP_TIMER_TYPE_INPKILL, inp, NULL, NULL);
 		SCTP_INP_WUNLOCK(inp);
 		SCTP_ASOC_CREATE_UNLOCK(inp);
+		if(so && so->so_count) {
+		  SOCK_UNLOCK(so);
+		}
 		return;
 	}
 #endif
