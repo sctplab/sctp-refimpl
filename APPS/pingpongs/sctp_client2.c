@@ -62,7 +62,7 @@ init_fd(int fd)
 }
 
 static void
-do_a_pass( int fd, int msg_size)
+do_a_pass( int fd, int msg_size, int *stop)
 {
   int not_done = 1;
   int at=0;
@@ -76,6 +76,7 @@ do_a_pass( int fd, int msg_size)
   if((sen = sctp_send(fd, mybuf, msg_size, &sinfo,  0)) < msg_size) {
     printf("snd failed errno:%d size:%d\n",
 	   errno,  sen);
+    *stop = 1;
     snd_failed++;
     return;
   }
@@ -84,6 +85,7 @@ do_a_pass( int fd, int msg_size)
 			    (struct sockaddr *)&from,
 			    &len, &sinfo, &flags)) < msg_size) {
     rcv_failed++;
+    *stop = 1;
     printf("rcv failed errno:%d size:%d\n",
 	   errno,  rec);
     return;
@@ -103,7 +105,7 @@ main(int argc, char **argv)
   char *addr=NULL;
   int msg_size = 0;
   int fd=-1, i;
-  int sec, usec;
+  int sec, usec, stop=0;
   int number_iterations=0;
   struct sockaddr_in sin;
 
@@ -166,7 +168,9 @@ main(int argc, char **argv)
     return (-1);
   }
   for (i=0; i<number_iterations; i++) {
-    do_a_pass(fd, msg_size);
+    do_a_pass(fd, msg_size, &stop);
+    if(stop)
+      break;
   }
   gettimeofday(&end, NULL);
   

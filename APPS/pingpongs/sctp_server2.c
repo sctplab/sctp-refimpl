@@ -50,9 +50,8 @@ handle_fd(int fd)
   int sen,rec;
   int *size_p;
   size_p = (int *)respbuf;
-  printf("Doing rcv\n");
-
-  while(rec = recv(fd, respbuf, MY_MAX_SIZE, 0) >= sizeof(int)) {
+  rec = recv(fd, respbuf, MY_MAX_SIZE, 0);
+  while(rec >= sizeof(int)) {
     num_rcvs++;
     fflush(stdout);
     msg_size = ntohl(*size_p);
@@ -68,6 +67,7 @@ handle_fd(int fd)
       return;
     }
     num_snds++;
+    rec = recv(fd, respbuf, MY_MAX_SIZE, 0);
   }
   printf("sen:%d recv:%d\n", num_snds, num_rcvs);
   num_snds = 0;
