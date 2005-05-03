@@ -141,6 +141,7 @@ struct sctp_assoc_change {
 	u_int16_t sac_outbound_streams;
 	u_int16_t sac_inbound_streams;
 	sctp_assoc_t sac_assoc_id;
+	sctp_assoc_t sac_old_assoc_id;
 };
 /* sac_state values */
 

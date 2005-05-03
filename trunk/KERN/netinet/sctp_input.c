@@ -1069,7 +1069,7 @@ static struct sctp_tcb *
 sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
     struct sctphdr *sh, struct sctp_state_cookie *cookie, int cookie_len,
     struct sctp_inpcb *inp, struct sctp_tcb *stcb, struct sctp_nets *net,
-    struct sockaddr *init_src, int *notification)
+    struct sockaddr *init_src, int *notification, sctp_assoc_t *sac_assoc_id)
 {
 	struct sctp_association *asoc;
 	struct sctp_init_chunk *init_cp, init_buf;
@@ -1355,7 +1355,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		sctp_timer_stop(SCTP_TIMER_TYPE_INIT, inp, stcb, net);
 		sctp_timer_stop(SCTP_TIMER_TYPE_COOKIE, inp, stcb, net);
 		sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net);
-
+		*sac_assoc_id = sctp_get_associd(stcb);;
 		/* notify upper layer */
 		*notification = SCTP_NOTIFY_ASSOC_RESTART;
 
@@ -1697,6 +1697,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	struct sctp_tcb *l_stcb=*stcb;
 	struct sctp_inpcb *l_inp;
 	struct sockaddr *to;
+	sctp_assoc_t sac_restart_id;
 	struct sctp_pcb *ep;
 	struct mbuf *m_sig;
 	uint8_t calc_sig[SCTP_SIGNATURE_SIZE], tmp_sig[SCTP_SIGNATURE_SIZE];
@@ -2051,7 +2052,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 #endif
 		had_a_existing_tcb = 1;
 		*stcb = sctp_process_cookie_existing(m, iphlen, offset, sh,
-		    cookie, cookie_len, *inp_p, *stcb, *netp, to, &notification);
+		    cookie, cookie_len, *inp_p, *stcb, *netp, to, &notification, &sac_restart_id);
 	}
 
 	if (*stcb == NULL) {
@@ -2109,7 +2110,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 				 * For a restart we will keep the same socket,
 				 * no need to do anything. I THINK!!
 				 */
-				sctp_ulp_notify(notification, *stcb, 0, NULL);
+				sctp_ulp_notify(notification, *stcb, 0, (void *)&sac_restart_id);
 				return (m);
 			}
 			oso = (*inp_p)->sctp_socket;
