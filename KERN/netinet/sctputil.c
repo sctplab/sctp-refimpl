@@ -2163,7 +2163,7 @@ sctp_pad_lastmbuf(struct mbuf *m, int padval)
 
 static void
 sctp_notify_assoc_change(u_int32_t event, struct sctp_tcb *stcb,
-    u_int32_t error)
+    u_int32_t error, void *data)
 {
 	struct mbuf *m_notify;
 	struct sctp_assoc_change *sac;
@@ -2217,7 +2217,11 @@ sctp_notify_assoc_change(u_int32_t event, struct sctp_tcb *stcb,
 	sac->sac_outbound_streams = stcb->asoc.streamoutcnt;
 	sac->sac_inbound_streams = stcb->asoc.streamincnt;
 	sac->sac_assoc_id = sctp_get_associd(stcb);
-
+	if ((data != NULL) && (event == SCTP_RESTART)) {
+	  sac->sac_old_assoc_id = *(sctp_assoc_t *)data;
+	} else {
+	  sac->sac_old_assoc_id = sctp_get_associd(stcb);
+	}
 	m_notify->m_flags |= M_EOR | M_NOTIFICATION;
 	m_notify->m_pkthdr.len = sizeof(struct sctp_assoc_change);
 	m_notify->m_pkthdr.rcvif = 0;
@@ -2759,10 +2763,10 @@ sctp_ulp_notify(u_int32_t notification, struct sctp_tcb *stcb,
 	}
 	switch (notification) {
 	case SCTP_NOTIFY_ASSOC_UP:
-		sctp_notify_assoc_change(SCTP_COMM_UP, stcb, error);
+		sctp_notify_assoc_change(SCTP_COMM_UP, stcb, error, NULL);
 		break;
 	case SCTP_NOTIFY_ASSOC_DOWN:
-		sctp_notify_assoc_change(SCTP_SHUTDOWN_COMP, stcb, error);
+		sctp_notify_assoc_change(SCTP_SHUTDOWN_COMP, stcb, error, NULL);
 		break;
 	case SCTP_NOTIFY_INTERFACE_DOWN:
 	{
@@ -2802,14 +2806,14 @@ sctp_ulp_notify(u_int32_t notification, struct sctp_tcb *stcb,
 	case SCTP_NOTIFY_STRDATA_ERR:
 		break;
 	case SCTP_NOTIFY_ASSOC_ABORTED:
-		sctp_notify_assoc_change(SCTP_COMM_LOST, stcb, error);
+		sctp_notify_assoc_change(SCTP_COMM_LOST, stcb, error, NULL);
 		break;
 	case SCTP_NOTIFY_PEER_OPENED_STREAM:
 		break;
 	case SCTP_NOTIFY_STREAM_OPENED_OK:
 		break;
 	case SCTP_NOTIFY_ASSOC_RESTART:
-		sctp_notify_assoc_change(SCTP_RESTART, stcb, error);
+		sctp_notify_assoc_change(SCTP_RESTART, stcb, error, data);
 		break;
 	case SCTP_NOTIFY_HB_RESP:
 		break;
