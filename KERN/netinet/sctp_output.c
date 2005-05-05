@@ -4135,8 +4135,16 @@ sctp_prepare_chunk(struct sctp_tmit_chunk *template,
 	template->rec.data.ect_nonce = 0;   /* ECN Nonce */
 
 	if (srcv->sinfo_flags & SCTP_ADDR_OVER) {
+	  /* we may want to add a flag here to set
+	   * on the chunk struct (template) that the
+	   * address was over-ridden by the user.
+	   */
 		template->whoTo = net;
 	} else {
+	  /* Here we would want to clear that
+	   * flag for CMT.
+	   */
+
 		if (stcb->asoc.primary_destination)
 			template->whoTo = stcb->asoc.primary_destination;
 		else {
@@ -5322,6 +5330,24 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
 			continue;
 		}
 		if (chk->whoTo != net) {
+		  /* This place here is where CMT would
+		   * only need to verify that the address was
+		   * not over-ridden by the user. If not the
+		   * MISSING ELSE case to this IF, the
+		   * whoTo would need to be reset to this "net" that
+		   * was passed to this function.. it was passed since
+		   * it DID have room in the cwnd to send to.
+		   *
+		   * to change the whoTo we normally do:
+		   *
+		   * sctp_free_remote_addr(chk->whoTo);
+		   * chk->whoTo = net;
+		   * net->ref_count++;
+		   *
+		   * Unless of course whoTo does == net.
+		   *
+		   */
+
 			/* Skip this stream, first one on stream
 			 * does not head to our current destination.
 			 */
@@ -5452,7 +5478,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 #endif
 		return (0);
 	}
-	if (asoc->peers_rwnd <= 0) {
+	if (asoc->peers_rwnd == 0) {
 		/* No room in peers rwnd */
 		*cwnd_full = 1;
 		*reason_code = 1;
@@ -5469,31 +5495,33 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 		       (int)asoc->total_flight, (int)asoc->peers_rwnd);
 	}
 #endif
-	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
+	if(no_data_chunks == 0) {
+	  TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 #ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
-			printf("net:%p fs:%d  cwnd:%d\n",
-			       net, net->flight_size, net->cwnd);
-		}
+	    if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
+	      printf("net:%p fs:%d  cwnd:%d\n",
+		     net, net->flight_size, net->cwnd);
+	    }
 #endif
-		if (net->flight_size >= net->cwnd) {
-			/* skip this network, no room */
-			cwnd_full_ind++;
+	    if (net->flight_size >= net->cwnd) {
+	      /* skip this network, no room */
+	      cwnd_full_ind++;
 #ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
-				printf("Ok skip fillup->fs:%d > cwnd:%d\n",
-				       net->flight_size,
-				       net->cwnd);
-			}
+	      if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
+		printf("Ok skip fillup->fs:%d > cwnd:%d\n",
+		       net->flight_size,
+		       net->cwnd);
+	      }
 #endif
-			sctp_pegs[SCTP_CWND_NOFILL]++;
-			continue;
-		}
-		/*
-		 * spin through the stream queues moving one message and
-		 * assign TSN's as appropriate.
-		 */
-		sctp_fill_outqueue(stcb, net);
+	      sctp_pegs[SCTP_CWND_NOFILL]++;
+	      continue;
+	    }
+	    /*
+	     * spin through the stream queues moving one message and
+	     * assign TSN's as appropriate.
+	     */
+	    sctp_fill_outqueue(stcb, net);
+	  }
 	}
 	*cwnd_full = cwnd_full_ind;
 	/* now service each destination and send out what we can for it */
@@ -5561,7 +5589,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 				sctp_pegs[SCTP_IFP_QUEUE_FULL]++;
 #ifdef SCTP_LOG_MAXBURST
 				sctp_log_maxburst(net, ifp->if_snd.ifq_len, ifp->if_snd.ifq_maxlen, SCTP_MAX_IFP_APPLIED);
-  #endif
+#endif
 				continue;
 			}
 		}
