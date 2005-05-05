@@ -10490,6 +10490,11 @@ sctp_sosend(struct socket *so,
 	}
 
 	if (net->flight_size > net->cwnd) {
+	  /* You will need to add && cmt is disabled for
+	   * this if. Since if CMT is on, you always want
+	   * to attempt to send with the output routine
+	   * that will look at all nets.
+	   */
 		sctp_pegs[SCTP_SENDTO_FULL_CWND]++;
 		queue_only = 1;
 
