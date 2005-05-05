@@ -146,7 +146,7 @@ unsigned int sctp_init_rtx_max_default = SCTP_DEF_MAX_INIT;
 unsigned int sctp_assoc_rtx_max_default = SCTP_DEF_MAX_SEND;
 unsigned int sctp_path_rtx_max_default = SCTP_DEF_MAX_SEND/2;
 unsigned int sctp_nr_outgoing_streams_default = SCTP_OSTREAM_INITIAL;
-
+unsigned int sctp_cmt_on_off = 0;
 void
 sctp_init(void)
 {
@@ -657,6 +657,10 @@ SYSCTL_INT(_net_inet_sctp, OID_AUTO, maxchunks, CTLFLAG_RW,
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, delayed_sack_time, CTLFLAG_RW,
 	    &sctp_delayed_sack_time_default, 0,
 	    "Default delayed SACK timer in msec");
+
+SYSCTL_UINT(_net_inet_sctp, OID_AUTO, cmt_on_off, CTLFLAG_RW,
+	    &sctp_cmt_on_off, 0,
+	    "CMT on-off flag");
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, heartbeat_interval, CTLFLAG_RW,
 	    &sctp_heartbeat_interval_default, 0,
@@ -4829,6 +4833,9 @@ sysctl_int();
  	case SCTPCTL_DELAYED_SACK:
  		return (sysctl_int(oldp, oldlenp, newp, newlen,
  				   &sctp_delayed_sack_time_default));
+ 	case SCTPCTL_CMT_ONOFF:
+ 		return (sysctl_int(oldp, oldlenp, newp, newlen,
+ 				   &sctp_cmt_on_off));
  	case SCTPCTL_HB_INTERVAL:
  		return (sysctl_int(oldp, oldlenp, newp, newlen,
  				   &sctp_heartbeat_interval_default));

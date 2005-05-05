@@ -76,11 +76,12 @@
 #define SCTPCTL_ASSOC_RTX_MAX       23
 #define SCTPCTL_PATH_RTX_MAX        24
 #define SCTPCTL_NR_OUTGOING_STREAMS 25
+#define SCTPCTL_CMT_ONOFF           26
 #ifdef SCTP_DEBUG
-#define SCTPCTL_DEBUG               26
-#define SCTPCTL_MAXID		    27
+#define SCTPCTL_DEBUG               27
+#define SCTPCTL_MAXID		    28
 #else
-#define SCTPCTL_MAXID		    26
+#define SCTPCTL_MAXID		    27
 #endif
 
 #endif
@@ -113,6 +114,7 @@
 	{ "assoc_rtx_max", CTLTYPE_INT }, \
 	{ "path_rtx_max", CTLTYPE_INT }, \
 	{ "nr_outgoing_streams", CTLTYPE_INT }, \
+	{ "cmt_on_off", CTLTYPE_INT }, \
 	{ "debug", CTLTYPE_INT }, \
 }
 #else
@@ -143,6 +145,7 @@
 	{ "assoc_rtx_max", CTLTYPE_INT }, \
 	{ "path_rtx_max", CTLTYPE_INT }, \
 	{ "nr_outgoing_streams", CTLTYPE_INT }, \
+	{ "cmt_on_off", CTLTYPE_INT }, \
 }
 #endif
 

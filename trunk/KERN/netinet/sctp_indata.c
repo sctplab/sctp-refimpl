@@ -122,6 +122,9 @@ extern int sctp_strict_sacks;
 #define SCTP_SBAPPEND(a, b, c) sbappend(a, b)
 #endif
 
+extern unsigned int sctp_cmt_on_off;
+
+
 void
 sctp_set_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 {
