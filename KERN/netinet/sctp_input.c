@@ -681,7 +681,8 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
 		/* Set the connected flag to disconnected */
 		stcb->sctp_ep->sctp_socket->so_snd.sb_cc = 0;
 		stcb->sctp_ep->sctp_socket->so_snd.sb_mbcnt = 0;
-		if(stcb->sctp_ep->sctp_socket->so_count)
+		if(((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) == 0) &&
+		   ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0))
 		  soisdisconnected(stcb->sctp_ep->sctp_socket);
 		/*		else
 		  printf("SCTP(b):disconnect of unref socket\n");
@@ -2385,7 +2386,8 @@ sctp_handle_shutdown_complete(struct sctp_shutdown_complete_chunk *cp,
 		stcb->sctp_ep->sctp_flags &= ~SCTP_PCB_FLAGS_CONNECTED;
 		stcb->sctp_ep->sctp_socket->so_snd.sb_cc = 0;
 		stcb->sctp_ep->sctp_socket->so_snd.sb_mbcnt = 0;
-		if(stcb->sctp_ep->sctp_socket->so_count)
+		if(((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) == 0) &&
+		   ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0))
 		  soisdisconnected(stcb->sctp_ep->sctp_socket);
 		/*
 		else

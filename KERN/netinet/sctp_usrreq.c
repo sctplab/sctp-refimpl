@@ -4595,11 +4595,7 @@ struct pr_usrreqs sctp_usrreqs = {
 	sctp_shutdown,
 	sctp_ingetaddr,
 	sctp_sosend,
-#if defined(__FreeBSD__)
 	sctp_soreceive,	
-#else
-	soreceive,
-#endif
 	sopoll
 };
 

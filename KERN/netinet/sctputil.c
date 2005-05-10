@@ -3981,6 +3981,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 
 
 	/* pickup the assoc we are reading from */
+	sctp_pegs[SCTP_ENTER_SCTPSORCV]++;
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	SCTP_INP_RLOCK(inp);
 	at_eor = 0;

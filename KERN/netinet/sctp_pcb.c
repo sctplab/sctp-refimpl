@@ -2287,6 +2287,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	struct sctp_laddr *laddr, *nladdr;
 	struct inpcb *ip_pcb;
 	struct socket *so;
+	uint8_t locked_so=0;
 	struct sctp_socket_q_list *sq;
 #if !defined(__FreeBSD__) || __FreeBSD_version < 500000
  	struct rtentry *rt;
@@ -2301,7 +2302,10 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	SCTP_INP_WLOCK(inp);
 	so  = inp->sctp_socket;
 	SCTP_INP_WUNLOCK(inp);
-	if(so && so->so_count) {
+	if(so &&
+	   ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) == 0) &&
+	   ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0)){
+	  locked_so = 1;
 	  SOCK_LOCK(so);
 	}
 	SCTP_ASOC_CREATE_LOCK(inp);
@@ -2313,9 +2317,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		printf("Endpoint was all gone (dup free)?\n");
 		SCTP_INP_WUNLOCK(inp);
 		SCTP_ASOC_CREATE_UNLOCK(inp);
-		if(so && so->so_count) {
-		  SOCK_UNLOCK(so);
-		}
 		return;
 	}
 	sctp_timer_stop(SCTP_TIMER_TYPE_NEWCOOKIE, inp, NULL, NULL);
@@ -2405,7 +2406,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 			splx(s);
 			SCTP_INP_WUNLOCK(inp);
 			SCTP_ASOC_CREATE_UNLOCK(inp);
-			if(so && so->so_count) {
+			if(locked_so) {
 			  SOCK_UNLOCK(so);
 			}
 			return;
@@ -2416,7 +2417,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		sctp_timer_start(SCTP_TIMER_TYPE_INPKILL, inp, NULL, NULL);
 		SCTP_INP_WUNLOCK(inp);
 		SCTP_ASOC_CREATE_UNLOCK(inp);
-		if(so && so->so_count) {
+		if(locked_so) {
 		  SOCK_UNLOCK(so);
 		}
 		return;
@@ -2429,7 +2430,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 
 	callout_stop(&inp->sctp_ep.signature_change.timer);
 
-	if (so && so->so_count) {
+	if (locked_so) {
 	/* First take care of socket level things */
 	  if((so->so_rcv.sb_mb == NULL) && (so->so_rcv.sb_cc)) {
 	    printf("Strange, so->so_rcv.sb_mb was NULL count was %d?\n",
@@ -3730,7 +3731,8 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 				 * connect.
 				 */
 				inp->sctp_flags &= ~SCTP_PCB_FLAGS_CONNECTED;
-				if(stcb->sctp_ep->sctp_socket->so_count)
+				if(((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) == 0) &&
+				   ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0))
 				  soisdisconnected(stcb->sctp_ep->sctp_socket);
 				/*
 				else

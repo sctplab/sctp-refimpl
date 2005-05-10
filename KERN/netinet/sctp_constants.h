@@ -656,7 +656,7 @@
 #define SCTP_UNSET_TSN_PRESENT(arry, gap) (arry[(gap >> 3)] &= ((~(0x01 << ((gap & 0x07)))) & 0xff))
 
 /* pegs */
-#define SCTP_NUMBER_OF_PEGS	100
+#define SCTP_NUMBER_OF_PEGS	104
 /* peg index's */
 #define SCTP_PEG_SACKS_SEEN	0
 #define SCTP_PEG_SACKS_SENT	1
@@ -758,6 +758,10 @@
 #define SCTP_PDAPI_HAD_TOWAIT_RCV 97
 #define SCTP_PDAPI_HAD_TORCVR_RCV 98
 #define SCTP_PDAPI_NOSTCB_ATC     99
+#define SCTP_ENTER_SCTPSORCV     100
+#define SCTP_RESV1               101
+#define SCTP_RESV2               102
+#define SCTP_RESV3               103
 
 /*
  * This value defines the number of vtag block time wait entry's
