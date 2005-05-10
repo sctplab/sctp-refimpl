@@ -192,8 +192,7 @@
 #define SCTP_DATAGRAM_SENT		1
 #define SCTP_DATAGRAM_RESEND1		2 /* not used (in code, but may hit this value) */
 #define SCTP_DATAGRAM_RESEND2		3 /* not used (in code, but may hit this value) */
-#define SCTP_DATAGRAM_RESEND3		4 /* not used (in code, but may hit this value) */
-#define SCTP_DATAGRAM_RESEND		5
+#define SCTP_DATAGRAM_RESEND		4
 #define SCTP_DATAGRAM_ACKED		10010
 #define SCTP_DATAGRAM_INBOUND		10011
 #define SCTP_READY_TO_TRANSMIT		10012
