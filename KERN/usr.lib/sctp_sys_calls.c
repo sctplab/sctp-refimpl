@@ -683,10 +683,6 @@ sctp_recvmsg (int s,
       cmsg = CMSG_NXTHDR(&msg,cmsg);
     }
   }
-  if(sinfo && (sinfo->sinfo_assoc_id == 0)) {
-    printf("Aborting due to assoc id 0\n");
-    abort();
-  }
   return(sz);
 }
 
