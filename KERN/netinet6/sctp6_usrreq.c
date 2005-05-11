@@ -1683,7 +1683,7 @@ struct pr_usrreqs sctp6_usrreqs = {
 	sctp6_connect, pru_connect2_notsupp, in6_control,
 	sctp6_detach, sctp6_disconnect, sctp_listen, sctp6_getpeeraddr,
 	sctp_usr_recvd, pru_rcvoob_notsupp, sctp6_send, pru_sense_null,
-	sctp_shutdown, sctp6_in6getaddr, sctp_sosend, soreceive, sopoll
+	sctp_shutdown, sctp6_in6getaddr, sctp_sosend, sctp_soreceive, sopoll
 };
 
 #else
