@@ -151,7 +151,8 @@ sctp_set_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 		       asoc->size_on_all_streams);
 	}
 #endif
-	if (stcb->sctp_socket->so_rcv.sb_cc == 0 &&
+
+	if (stcb->asoc.sb_cc == 0 &&
 	    asoc->size_on_delivery_queue == 0 &&
 	    asoc->size_on_reasm_queue == 0 &&
 	    asoc->size_on_all_streams == 0) {
@@ -341,7 +342,7 @@ sctp_deliver_data(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		}
 		TAILQ_FOREACH(chk, &asoc->delivery_queue, sctp_next) {
 			asoc->size_on_delivery_queue -= chk->send_size;
-			asoc->cnt_on_delivery_queue--;
+			sctp_ucount_decr(asoc->cnt_on_delivery_queue);
 			/*
 			 * Lose the data pointer, since its in the socket buffer
 			 */
@@ -364,7 +365,7 @@ sctp_deliver_data(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	if (chk != NULL) {
 		TAILQ_INSERT_TAIL(&asoc->delivery_queue, chk, sctp_next);
 		asoc->size_on_delivery_queue += chk->send_size;
-		asoc->cnt_on_delivery_queue++;
+		sctp_ucount_incr(asoc->cnt_on_delivery_queue);
 	}
 	if (asoc->fragmented_delivery_inprogress) {
 		/*
@@ -517,7 +518,7 @@ sctp_deliver_data(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 		TAILQ_REMOVE(&asoc->delivery_queue, chk, sctp_next);
 		asoc->size_on_delivery_queue -= chk->send_size;
-		asoc->cnt_on_delivery_queue--;
+		sctp_ucount_decr(asoc->cnt_on_delivery_queue);
 		/* Lose the data pointer, since its in the socket buffer */
 		chk->data = NULL;
 		/* Now free the address and data */
@@ -564,9 +565,8 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc, in
 		asoc->fragmented_delivery_inprogress = 0;
 
 		TAILQ_FOREACH(chk, &asoc->reasmqueue, sctp_next) {
-			asoc->size_on_delivery_queue -= chk->send_size;
-			asoc->cnt_on_delivery_queue--;
-
+			asoc->size_on_reasm_queue -= chk->send_size;
+			sctp_ucount_decr(asoc->cnt_on_reasm_queue);
 			/*
 
 			 * Lose the data pointer, since its in the socket buffer
@@ -747,7 +747,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc, in
 		}
 		asoc->tsn_last_delivered = chk->rec.data.TSN_seq;
 		asoc->size_on_reasm_queue -= chk->send_size;
-		asoc->cnt_on_reasm_queue--;
+		sctp_ucount_decr(asoc->cnt_on_reasm_queue);
 		/* free up the chk */
 		sctp_free_remote_addr(chk->whoTo);
 		chk->data = NULL;
@@ -778,7 +778,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc, in
 							     chk, sctp_next);
 						asoc->size_on_all_streams -=
 							chk->send_size;
-						asoc->cnt_on_all_streams--;
+						sctp_ucount_decr(asoc->cnt_on_all_streams);
 						strm->last_sequence_delivered++;
 						/*
 						 * We ignore the return of
@@ -838,7 +838,7 @@ sctp_queue_data_to_stream(struct sctp_tcb *stcb, struct sctp_association *asoc,
  */
 	queue_needed = 1;
 	asoc->size_on_all_streams += chk->send_size;
-	asoc->cnt_on_all_streams++;
+	sctp_ucount_incr(asoc->cnt_on_all_streams);
 	strm = &asoc->strmin[chk->rec.data.stream_number];
 	nxt_todel = strm->last_sequence_delivered + 1;
 #ifdef SCTP_STR_LOGGING
@@ -899,7 +899,7 @@ sctp_queue_data_to_stream(struct sctp_tcb *stcb, struct sctp_association *asoc,
 #endif
 		queue_needed = 0;
 		asoc->size_on_all_streams -= chk->send_size;
-		asoc->cnt_on_all_streams--;
+		sctp_ucount_decr(asoc->cnt_on_all_streams);
 		strm->last_sequence_delivered++;
 		sctp_deliver_data(stcb, asoc, chk, 0);
 		chk = TAILQ_FIRST(&strm->inqueue);
@@ -910,7 +910,7 @@ sctp_queue_data_to_stream(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				at = TAILQ_NEXT(chk, sctp_next);
 				TAILQ_REMOVE(&strm->inqueue, chk, sctp_next);
 				asoc->size_on_all_streams -= chk->send_size;
-				asoc->cnt_on_all_streams--;
+				sctp_ucount_decr(asoc->cnt_on_all_streams);
 				strm->last_sequence_delivered++;
 				/*
 				 * We ignore the return of deliver_data here
@@ -979,7 +979,7 @@ sctp_queue_data_to_stream(struct sctp_tcb *stcb, struct sctp_association *asoc,
 						sctp_m_freem(chk->data);
 					chk->data = NULL;
 					asoc->size_on_all_streams -= chk->send_size;
-					asoc->cnt_on_all_streams--;
+					sctp_ucount_decr(asoc->cnt_on_all_streams);
 					sctp_pegs[SCTP_DUP_SSN_RCVD]++;
 					sctp_free_remote_addr(chk->whoTo);
 					SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
@@ -1083,7 +1083,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		 * only one fragment is here
 		 */
 		asoc->size_on_reasm_queue = chk->send_size;
-		asoc->cnt_on_reasm_queue++;
+		sctp_ucount_incr(asoc->cnt_on_reasm_queue);
 		if (chk->rec.data.TSN_seq == cum_ackp1) {
 			if (asoc->fragmented_delivery_inprogress == 0  &&
 			    (chk->rec.data.rcv_flags & SCTP_DATA_FIRST_FRAG) !=
@@ -1226,7 +1226,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			 */
 			/* A check */
 			asoc->size_on_reasm_queue += chk->send_size;
-			asoc->cnt_on_reasm_queue++;
+			sctp_ucount_incr(asoc->cnt_on_reasm_queue);
 			next = at;
 			TAILQ_INSERT_BEFORE(at, chk, sctp_next);
 			break;
@@ -1260,7 +1260,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				 */
 				/* check it first */
 				asoc->size_on_reasm_queue += chk->send_size;
-				asoc->cnt_on_reasm_queue++;
+				sctp_ucount_incr(asoc->cnt_on_reasm_queue);
 				TAILQ_INSERT_AFTER(&asoc->reasmqueue, at, chk, sctp_next);
 				break;
 			}
@@ -4479,7 +4479,7 @@ sctp_kick_prsctp_reorder_queue(struct sctp_tcb *stcb,
 			TAILQ_REMOVE(&strmin->inqueue, chk, sctp_next);
 			/* subtract pending on streams */
 			asoc->size_on_all_streams -= chk->send_size;
-			asoc->cnt_on_all_streams--;
+			sctp_ucount_decr(asoc->cnt_on_all_streams);
 			/* deliver it to at least the delivery-q */
 			sctp_deliver_data(stcb, &stcb->asoc, chk, 0);
 		} else {
@@ -4501,7 +4501,7 @@ sctp_kick_prsctp_reorder_queue(struct sctp_tcb *stcb,
 			TAILQ_REMOVE(&strmin->inqueue, chk, sctp_next);
 			/* subtract pending on streams */
 			asoc->size_on_all_streams -= chk->send_size;
-			asoc->cnt_on_all_streams--;
+			sctp_ucount_decr(asoc->cnt_on_all_streams);
 			/* deliver it to at least the delivery-q */
 			strmin->last_sequence_delivered =
 			    chk->rec.data.stream_seq;
@@ -4681,7 +4681,7 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 					    chk->rec.data.rcv_flags;
 				}
 				asoc->size_on_reasm_queue -= chk->send_size;
-				asoc->cnt_on_reasm_queue--;
+				sctp_ucount_decr(asoc->cnt_on_reasm_queue);
 				cnt_gone++;
 
 				/* Clear up any stream problem */
