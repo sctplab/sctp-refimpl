@@ -4993,7 +4993,7 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 				    tsn + 1;
 			}
 			asoc->size_on_reasm_queue -= chk->send_size;
-			asoc->cnt_on_reasm_queue--;
+			sctp_ucount_decr(asoc->cnt_on_reasm_queue);
 			SCTP_UNSET_TSN_PRESENT(asoc->mapping_array, gap);
 			TAILQ_REMOVE(&asoc->reasmqueue, chk, sctp_next);
 			if (chk->data) {
@@ -5028,7 +5028,7 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 					    tsn + 1;
 				}
 				asoc->size_on_all_streams -= chk->send_size;
-				asoc->cnt_on_all_streams--;
+				sctp_ucount_decr(asoc->cnt_on_all_streams);
 
 				SCTP_UNSET_TSN_PRESENT(asoc->mapping_array,
 				    gap);
@@ -5131,7 +5131,7 @@ sctp_add_to_socket_q(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	sctppcbinfo.ipi_count_sockq++;
 	sctppcbinfo.ipi_gencnt_sockq++;
 	if (stcb)
-		stcb->asoc.cnt_msg_on_sb++;
+		sctp_ucount_incr(stcb->asoc.cnt_msg_on_sb);
 	sq->tcb = stcb;
 	TAILQ_INSERT_TAIL(&inp->sctp_queue_list, sq, next_sq);
 	return (1);
@@ -5155,7 +5155,7 @@ sctp_remove_from_socket_q(struct sctp_inpcb *inp)
 	sctppcbinfo.ipi_count_sockq--;
 	sctppcbinfo.ipi_gencnt_sockq++;
 	if (stcb) {
-		stcb->asoc.cnt_msg_on_sb--;
+		sctp_ucount_decr(stcb->asoc.cnt_msg_on_sb);
 	}
 	return (stcb);
 }

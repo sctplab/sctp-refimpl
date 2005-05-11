@@ -215,6 +215,28 @@ int sctp_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,
 
 #endif
 
+#define sctp_ucount_incr(val) { \
+             val++; \
+} 
+#ifdef INVARIANTS_SCTP
+#define sctp_ucount_decr(val) { \
+             if(val > 0) { \
+                val--; \
+             } else {  \
+                panic("decr would be negative"); \
+             } \
+}
+#else
+#define sctp_ucount_decr(val) { \
+             if(val > 0) { \
+                val--; \
+             } else {  \
+                val = 0; \
+             } \
+}
+#endif
+ 
+ 
 
 extern int	sctp_sendspace;
 extern int	sctp_recvspace;
