@@ -4609,10 +4609,11 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		}
 	}
 	SOCKBUF_LOCK_ASSERT(&so->so_rcv);
-	if ((orig_resid == uio->uio_resid && orig_resid &&
+	if ((orig_resid == uio->uio_resid) && 
+	    (orig_resid) &&
 	    ((flags & MSG_EOR) == 0) && 
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
-	    (so->so_rcv.sb_state & SBS_CANTRCVMORE) == 0)
+	    ((so->so_rcv.sb_state & SBS_CANTRCVMORE) == 0)
 #else
 	    ((so->so_state & SS_CANTRCVMORE)  == 0)
 #endif
