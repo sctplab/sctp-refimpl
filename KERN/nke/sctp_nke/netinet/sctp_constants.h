@@ -80,6 +80,15 @@
 #define SCTP_LOG_MBCNT_INCREASE     39
 #define SCTP_LOG_MBCNT_DECREASE     40
 #define SCTP_LOG_MBCNT_CHKSET       41
+#define SCTP_LOG_NEW_SACK           42
+#define SCTP_LOG_TSN_ACKED          43
+#define SCTP_LOG_TSN_REVOKED        44
+#define SCTP_LOG_LOCK_TCB           45
+#define SCTP_LOG_LOCK_INP           46
+#define SCTP_LOG_LOCK_SOCK          47
+#define SCTP_LOG_LOCK_SOCKBUF_R     48
+#define SCTP_LOG_LOCK_SOCKBUF_S     49
+#define SCTP_LOG_LOCK_CREATE        50
 /*
  * To turn on various logging, you must first define SCTP_STAT_LOGGING.
  * Then to get something to log you define one of the logging defines i.e.
@@ -99,7 +108,10 @@
 #define SCTP_LOG_EVENT_MAXBURST 6
 #define SCTP_LOG_EVENT_RWND  7
 #define SCTP_LOG_EVENT_MBCNT 8
+#define SCTP_LOG_EVENT_SACK  9
+#define SCTP_LOG_LOCK_EVENT 10
 
+#define SCTP_LOCK_UNKNOWN 2
 
 /* number of associations by default for zone allocation */
 #define SCTP_MAX_NUM_OF_ASOC	40000
@@ -180,8 +192,7 @@
 #define SCTP_DATAGRAM_SENT		1
 #define SCTP_DATAGRAM_RESEND1		2 /* not used (in code, but may hit this value) */
 #define SCTP_DATAGRAM_RESEND2		3 /* not used (in code, but may hit this value) */
-#define SCTP_DATAGRAM_RESEND3		4 /* not used (in code, but may hit this value) */
-#define SCTP_DATAGRAM_RESEND		5
+#define SCTP_DATAGRAM_RESEND		4
 #define SCTP_DATAGRAM_ACKED		10010
 #define SCTP_DATAGRAM_INBOUND		10011
 #define SCTP_READY_TO_TRANSMIT		10012
@@ -644,7 +655,7 @@
 #define SCTP_UNSET_TSN_PRESENT(arry, gap) (arry[(gap >> 3)] &= ((~(0x01 << ((gap & 0x07)))) & 0xff))
 
 /* pegs */
-#define SCTP_NUMBER_OF_PEGS	96
+#define SCTP_NUMBER_OF_PEGS	104
 /* peg index's */
 #define SCTP_PEG_SACKS_SEEN	0
 #define SCTP_PEG_SACKS_SENT	1
@@ -740,8 +751,16 @@
 #define SCTP_SENDTO_FULL_CWND	91
 #define SCTP_QUEONLY_BURSTLMT   92
 #define SCTP_IFP_QUEUE_FULL     93
-#define SCTP_RESV2              94
-#define SCTP_RESV3              95
+#define SCTP_NO_TCB_IN_RCV      94
+#define SCTP_HAD_TCB_IN_RCV     95
+#define SCTP_PDAPI_UP_IN_RCV    96
+#define SCTP_PDAPI_HAD_TOWAIT_RCV 97
+#define SCTP_PDAPI_HAD_TORCVR_RCV 98
+#define SCTP_PDAPI_NOSTCB_ATC     99
+#define SCTP_ENTER_SCTPSORCV     100
+#define SCTP_RESV1               101
+#define SCTP_RESV2               102
+#define SCTP_RESV3               103
 
 /*
  * This value defines the number of vtag block time wait entry's

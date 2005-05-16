@@ -90,6 +90,10 @@ int sctp_output(struct sctp_inpcb *, struct mbuf *, struct sockaddr *,
     struct mbuf *, struct proc *, int);
 #endif
 
+void
+sctp_insert_on_wheel(struct sctp_association *asoc,
+		     struct sctp_stream_out *strq);
+
 int sctp_chunk_output(struct sctp_inpcb *, struct sctp_tcb *, int);
 void sctp_send_abort_tcb(struct sctp_tcb *, struct mbuf *);
 
