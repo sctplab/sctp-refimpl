@@ -3901,7 +3901,7 @@ sctp_m_copym(struct mbuf *m, int off, int len, int wait)
 #endif /* __APPLE__ */
 
 
-#if defined(__FreeBSD__) 
+#if defined(__FreeBSD__)
 
 
 
