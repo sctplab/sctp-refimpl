@@ -62,7 +62,9 @@
 #include <sys/file.h>			/* for struct knote */
 #include <sys/kernel.h>
 #include <sys/event.h>
+#ifndef __APPLE__
 #include <sys/poll.h>
+#endif
 
 #include <sys/protosw.h>
 #include <sys/socket.h>
@@ -70,10 +72,14 @@
 #include <sys/proc.h>
 #include <sys/kernel.h>
 #include <sys/resourcevar.h>
+#ifndef __APPLE__
 #include <sys/signalvar.h>
+#endif
 #include <sys/sysctl.h>
 #include <sys/uio.h>
+#ifndef __APPLE__
 #include <sys/jail.h>
+#endif
 
 #ifdef __FreeBSD__
 #include <sys/callout.h>
