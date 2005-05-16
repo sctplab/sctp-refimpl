@@ -1679,11 +1679,30 @@ sctp6_getpeeraddr(struct socket *so, struct mbuf *nam)
 
 #if defined(__FreeBSD__) || defined(__APPLE__)
 struct pr_usrreqs sctp6_usrreqs = {
-	sctp6_abort, sctp_accept, sctp6_attach, sctp6_bind,
-	sctp6_connect, pru_connect2_notsupp, in6_control,
-	sctp6_detach, sctp6_disconnect, sctp_listen, sctp6_getpeeraddr,
-	sctp_usr_recvd, pru_rcvoob_notsupp, sctp6_send, pru_sense_null,
-	sctp_shutdown, sctp6_in6getaddr, sctp_sosend, sctp_soreceive, sopoll
+	sctp6_abort,
+	sctp_accept,
+	sctp6_attach,
+	sctp6_bind,
+	sctp6_connect,
+	pru_connect2_notsupp,
+	in6_control,
+	sctp6_detach,
+	sctp6_disconnect,
+	sctp_listen,
+	sctp6_getpeeraddr,
+	sctp_usr_recvd,
+	pru_rcvoob_notsupp,
+	sctp6_send,
+	pru_sense_null,	
+	sctp_shutdown,
+	sctp6_in6getaddr,
+	sctp_sosend,
+#if defined(__APPLE__)
+	soreceive,
+#else
+	sctp_soreceive,
+#endif
+	sopoll
 };
 
 #else
