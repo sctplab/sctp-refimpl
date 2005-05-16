@@ -197,7 +197,6 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 	/* save off parameters */
 	asoc->peer_vtag = ntohl(init->initiate_tag);
 	asoc->peers_rwnd = ntohl(init->a_rwnd);
-
 	if (TAILQ_FIRST(&asoc->nets)) {
 		/* update any ssthresh's that may have a default */
 		TAILQ_FOREACH(lnet, &asoc->nets, sctp_next) {
@@ -539,7 +538,6 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 {
 	struct sctp_association *asoc;
 	int some_on_streamwheel;
-
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INPUT2) {
 		printf("sctp_handle_shutdown: handling SHUTDOWN\n");
@@ -683,7 +681,12 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
 		/* Set the connected flag to disconnected */
 		stcb->sctp_ep->sctp_socket->so_snd.sb_cc = 0;
 		stcb->sctp_ep->sctp_socket->so_snd.sb_mbcnt = 0;
-		soisdisconnected(stcb->sctp_ep->sctp_socket);
+		if(((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) == 0) &&
+		   ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0))
+		  soisdisconnected(stcb->sctp_ep->sctp_socket);
+		/*		else
+		  printf("SCTP(b):disconnect of unref socket\n");
+		*/
 	}
 	/* free the TCB but first save off the ep */
 	sctp_free_assoc(stcb->sctp_ep, stcb);
@@ -1067,7 +1070,7 @@ static struct sctp_tcb *
 sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
     struct sctphdr *sh, struct sctp_state_cookie *cookie, int cookie_len,
     struct sctp_inpcb *inp, struct sctp_tcb *stcb, struct sctp_nets *net,
-    struct sockaddr *init_src, int *notification)
+    struct sockaddr *init_src, int *notification, sctp_assoc_t *sac_assoc_id)
 {
 	struct sctp_association *asoc;
 	struct sctp_init_chunk *init_cp, init_buf;
@@ -1353,7 +1356,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		sctp_timer_stop(SCTP_TIMER_TYPE_INIT, inp, stcb, net);
 		sctp_timer_stop(SCTP_TIMER_TYPE_COOKIE, inp, stcb, net);
 		sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net);
-
+		*sac_assoc_id = sctp_get_associd(stcb);;
 		/* notify upper layer */
 		*notification = SCTP_NOTIFY_ASSOC_RESTART;
 
@@ -1695,6 +1698,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	struct sctp_tcb *l_stcb=*stcb;
 	struct sctp_inpcb *l_inp;
 	struct sockaddr *to;
+	sctp_assoc_t sac_restart_id;
 	struct sctp_pcb *ep;
 	struct mbuf *m_sig;
 	uint8_t calc_sig[SCTP_SIGNATURE_SIZE], tmp_sig[SCTP_SIGNATURE_SIZE];
@@ -2049,7 +2053,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 #endif
 		had_a_existing_tcb = 1;
 		*stcb = sctp_process_cookie_existing(m, iphlen, offset, sh,
-		    cookie, cookie_len, *inp_p, *stcb, *netp, to, &notification);
+		    cookie, cookie_len, *inp_p, *stcb, *netp, to, &notification, &sac_restart_id);
 	}
 
 	if (*stcb == NULL) {
@@ -2107,7 +2111,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 				 * For a restart we will keep the same socket,
 				 * no need to do anything. I THINK!!
 				 */
-				sctp_ulp_notify(notification, *stcb, 0, NULL);
+				sctp_ulp_notify(notification, *stcb, 0, (void *)&sac_restart_id);
 				return (m);
 			}
 			oso = (*inp_p)->sctp_socket;
@@ -2382,7 +2386,13 @@ sctp_handle_shutdown_complete(struct sctp_shutdown_complete_chunk *cp,
 		stcb->sctp_ep->sctp_flags &= ~SCTP_PCB_FLAGS_CONNECTED;
 		stcb->sctp_ep->sctp_socket->so_snd.sb_cc = 0;
 		stcb->sctp_ep->sctp_socket->so_snd.sb_mbcnt = 0;
-		soisdisconnected(stcb->sctp_ep->sctp_socket);
+		if(((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) == 0) &&
+		   ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0))
+		  soisdisconnected(stcb->sctp_ep->sctp_socket);
+		/*
+		else
+		  printf("SCTP(a):disconnect of unref socket\n");
+		*/
 	}
 	/* are the queues empty? they should be */
 	if (!TAILQ_EMPTY(&asoc->send_queue) ||
@@ -2499,17 +2509,18 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 			    stcb, tp1->whoTo);
 
 			/* fix counts and things */
-			tp1->whoTo->flight_size -= tp1->send_size;
-			if (tp1->whoTo->flight_size < 0) {
-				tp1->whoTo->flight_size = 0;
-			}
-			stcb->asoc.total_flight -= tp1->book_size;
-			if (stcb->asoc.total_flight < 0) {
-				stcb->asoc.total_flight = 0;
-			}
-			stcb->asoc.total_flight_count--;
-			if (stcb->asoc.total_flight_count < 0) {
-				stcb->asoc.total_flight_count = 0;
+			if(tp1->whoTo->flight_size >= tp1->send_size)
+			  tp1->whoTo->flight_size -= tp1->send_size;
+			else 
+			  tp1->whoTo->flight_size = 0;
+
+			if( stcb->asoc.total_flight >= tp1->book_size) {
+			  if (stcb->asoc.total_flight_count > 0)
+			    stcb->asoc.total_flight_count--;
+			    stcb->asoc.total_flight -= tp1->book_size;
+			} else {
+			  stcb->asoc.total_flight = 0;
+			  stcb->asoc.total_flight_count = 0;
 			}
 			tp1->snd_count--;
 		}

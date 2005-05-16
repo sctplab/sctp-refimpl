@@ -463,7 +463,8 @@ struct sctp_association {
 	u_int32_t sat_t3_recovery_tsn;
 
 	u_int32_t tsn_last_delivered;
-
+        u_int32_t pdapi_ppid;
+        u_int32_t context;
 	/*
 	 * window state information and smallest MTU that I use to bound
 	 * segmentation
@@ -476,6 +477,7 @@ struct sctp_association {
 	u_int32_t total_output_queue_size;
 	u_int32_t total_output_mbuf_queue_size;
 
+        u_int32_t sb_cc; /* shadow of sb_cc in one-2-one */
 	/* 32 bit nonce stuff */
 	u_int32_t nonce_resync_tsn;
 	u_int32_t nonce_wait_tsn;
@@ -532,6 +534,8 @@ struct sctp_association {
 
 	/* the cookie life I award for any cookie, in seconds */
 	unsigned int cookie_life;
+        /* time to delay acks for */
+        unsigned int delayed_ack;
 
 	unsigned int numduptsns;
 	int dup_tsns[SCTP_MAX_DUP_TSNS];

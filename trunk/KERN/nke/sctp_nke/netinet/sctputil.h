@@ -203,7 +203,8 @@ void sctp_print_address(struct sockaddr *);
 void sctp_print_address_pkt(struct ip *, struct sctphdr *);
 
 int sbappendaddr_nocheck __P((struct sockbuf *, struct sockaddr *,
-	struct mbuf *, struct mbuf *, u_int32_t, struct sctp_inpcb *));
+	struct mbuf *, struct mbuf *, u_int32_t, struct sctp_inpcb *,
+	struct sctp_tcb *));
 
 
 int sctp_release_pr_sctp_chunk(struct sctp_tcb *, struct sctp_tmit_chunk *,
@@ -225,11 +226,27 @@ void sctp_grub_through_socket_buffer(struct sctp_inpcb *, struct socket *,
 void sctp_free_bufspace(struct sctp_tcb *, struct sctp_association *,
 	struct sctp_tmit_chunk *);
 
+#if defined(__FreeBSD__)
+int
+sctp_soreceive(	struct socket *so, struct sockaddr **psa,
+		struct uio *uio,
+		struct mbuf **mp0,
+		struct mbuf **controlp,
+		int *flagsp);
+
+void
+sctp_sbappend( struct sockbuf *sb,
+	       struct mbuf *m,
+	       struct sctp_tcb *stcb);
+
+#endif
+
 #ifdef SCTP_STAT_LOGGING
 void sctp_log_strm_del_alt(u_int32_t, u_int16_t, int);
 
 void sctp_log_strm_del(struct sctp_tmit_chunk *, struct sctp_tmit_chunk *, int);
 void sctp_log_cwnd(struct sctp_nets *, int, uint8_t);
+void sctp_log_lock(struct sctp_inpcb *inp, struct sctp_tcb *stcb, uint8_t from);
 void sctp_log_maxburst(struct sctp_nets *, int, int, uint8_t);
 void sctp_log_block(uint8_t, struct socket *, struct sctp_association *);
 void sctp_log_rwnd(uint8_t, u_int32_t, u_int32_t, u_int32_t );
@@ -237,6 +254,7 @@ void sctp_log_mbcnt(uint8_t, u_int32_t, u_int32_t, u_int32_t, u_int32_t);
 void sctp_log_rwnd_set(uint8_t, u_int32_t, u_int32_t, u_int32_t, u_int32_t);
 int sctp_fill_stat_log(struct mbuf *);
 void sctp_log_fr(uint32_t, uint32_t, uint32_t, int);
+void sctp_log_sack(u_int32_t, u_int32_t, u_int32_t, u_int16_t, u_int16_t, int);
 void sctp_log_map(uint32_t, uint32_t, uint32_t, int);
 
 void sctp_clr_stat_log(void);

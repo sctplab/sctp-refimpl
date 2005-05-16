@@ -88,11 +88,6 @@ struct sctp_snd_all_completes {
 	u_int32_t sall_num_failed;
 };
 
-/* send/recv flags */
-#ifndef MSG_EOF
-#define MSG_EOF 	0x1000	/* Start shutdown procedures */
-#endif
-
 /* Flags that go into the sinfo->sinfo_flags field */
 #define SCTP_EOF 	  0x0100	/* Start shutdown procedures */
 #define SCTP_ABORT	  0x0200	/* Send an ABORT to peer */
@@ -146,6 +141,7 @@ struct sctp_assoc_change {
 	u_int16_t sac_outbound_streams;
 	u_int16_t sac_inbound_streams;
 	sctp_assoc_t sac_assoc_id;
+	sctp_assoc_t sac_old_assoc_id;
 };
 /* sac_state values */
 
@@ -328,7 +324,18 @@ struct sctp_paddrparams {
 	struct sockaddr_storage spp_address;
 	u_int32_t spp_hbinterval;
 	u_int16_t spp_pathmaxrxt;
+        u_int32_t spp_pathmtu;
+        u_int32_t spp_sackdelay;
+        u_int32_t spp_flags;
 };
+
+#define SPP_HB_ENABLE         0x00000001
+#define SPP_HB_DISABLE        0x00000002
+#define SPP_HB_DEMAND         0x00000004
+#define SPP_PMTUD_ENABLE      0x00000008
+#define SPP_PMTUD_DISABLE     0x00000010
+#define SPP_SACKDELAY_ENABLE  0x00000020
+#define SPP_SACKDELAY_DISABLE 0x00000040
 
 struct sctp_paddrinfo {
 	sctp_assoc_t spinfo_assoc_id;
@@ -389,6 +396,11 @@ struct sctp_status {
         u_int16_t sstat_outstrms;
         u_int32_t sstat_fragmentation_point;
 	struct sctp_paddrinfo sstat_primary;
+};
+
+struct sctp_assoc_value {
+        sctp_assoc_t             assoc_id;
+        u_int32_t                assoc_value;
 };
 
 struct sctp_cwnd_args {
@@ -467,6 +479,27 @@ struct sctp_mbcnt_log {
 	u_int32_t mbcnt_change;
 };
 
+struct sctp_sack_log {
+        u_int32_t cumack;
+        u_int32_t oldcumack;
+        u_int32_t tsn;
+        u_int16_t numGaps;
+        u_int16_t numDups;
+};
+
+struct sctp_lock_log {
+  u_int32_t sock;
+  u_int32_t inp;
+  u_int8_t tcb_lock;
+  u_int8_t inp_lock;
+  u_int8_t info_lock;
+  u_int8_t sock_lock;
+  u_int8_t sockrcvbuf_lock;
+  u_int8_t socksndbuf_lock;
+  u_int8_t create_lock;
+  u_int8_t resv;
+};
+
 struct sctp_cwnd_log{
 	union {
 		struct sctp_blk_args blk;
@@ -476,6 +509,8 @@ struct sctp_cwnd_log{
 		struct sctp_fr_map map;
 		struct sctp_rwnd_log rwnd;
 		struct sctp_mbcnt_log mbcnt;
+  	        struct sctp_sack_log sack;
+	        struct sctp_lock_log lock;
 	}x;
 	u_int8_t from;
 	u_int8_t event_type;

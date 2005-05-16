@@ -119,7 +119,6 @@ void
 sctp_audit_retranmission_queue(struct sctp_association *asoc)
 {
 	struct sctp_tmit_chunk *chk;
-
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_TIMER4) {
 		printf("Audit invoked on send queue cnt:%d onqueue:%d\n",
@@ -438,10 +437,12 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	sctp_log_fr(cur_rto, now.tv_sec, now.tv_usec, SCTP_FR_T3_MARK_TIME);
 	sctp_log_fr(0, min_wait.tv_sec, min_wait.tv_usec, SCTP_FR_T3_MARK_TIME);
 #endif
-	stcb->asoc.total_flight -= net->flight_size;
-	if (stcb->asoc.total_flight < 0) {
-		audit_tf = 1;
-		stcb->asoc.total_flight = 0;
+	if(stcb->asoc.total_flight >= net->flight_size) {
+	  stcb->asoc.total_flight -= net->flight_size;
+	} else {
+	  stcb->asoc.total_flight = 0;
+	  stcb->asoc.total_flight_count = 0;
+	  audit_tf = 1;
 	}
         /* Our rwnd will be incorrect here since we are not adding
 	 * back the cnt * mbuf but we will fix that down below.
@@ -529,10 +530,6 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 					continue;
 				}
 			}
-			stcb->asoc.total_flight_count--;
-			if (stcb->asoc.total_flight_count < 0) {
-				stcb->asoc.total_flight_count = 0;
-			}
 			if (PR_SCTP_TTL_ENABLED(chk->flags)) {
 				/* Is it expired? */
 				if ((now.tv_sec > chk->rec.data.timetodrop.tv_sec) ||
@@ -580,6 +577,8 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 
 #endif
 			}
+			if (stcb->asoc.total_flight_count > 0)
+			  stcb->asoc.total_flight_count--;
 			chk->sent = SCTP_DATAGRAM_RESEND;
 			/* reset the TSN for striking and other FR stuff */
 			chk->rec.data.doing_fast_retransmit = 0;
@@ -734,7 +733,6 @@ sctp_move_all_chunks_to_alt(struct sctp_tcb *stcb,
 	struct sctp_association *asoc;
 	struct sctp_stream_out *outs;
 	struct sctp_tmit_chunk *chk;
-
 	if (net == alt)
 		/* nothing to do */
 		return;
@@ -968,7 +966,7 @@ int  sctp_cookie_timer(struct sctp_inpcb *inp,
 			sctp_abort_an_association(inp, stcb, SCTP_INTERNAL_ERROR,
 			    oper);
 		}
-		return (1);
+		return (0);
 	}
 	/* Ok we found the cookie, threshold management next */
 	if (sctp_threshold_management(inp, stcb, cookie->whoTo,
@@ -1078,7 +1076,6 @@ int sctp_asconf_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 {
 	struct sctp_nets *alt;
 	struct sctp_tmit_chunk *asconf, *chk;
-
 	/* is this the first send, or a retransmission? */
 	if (stcb->asoc.asconf_sent == 0) {
 		/* compose a new ASCONF chunk and send it */
@@ -1234,25 +1231,45 @@ sctp_audit_stream_queues_for_size(struct sctp_inpcb *inp,
 	struct sctp_stream_out *outs;
 	struct sctp_tmit_chunk *chk;
 	unsigned int chks_in_queue=0;
+	/* This function is ONLY called when the send/sent
+	 * queues are empty.
+	 */
+ 	if ((stcb == NULL) || (inp == NULL))
+		return;
 
-	if ((stcb == NULL) || (inp == NULL))
-		return;
-	if (TAILQ_EMPTY(&stcb->asoc.out_wheel)) {
-		printf("Strange, out_wheel empty nothing on sent/send and  tot=%lu?\n",
-		    (u_long)stcb->asoc.total_output_queue_size);
-		stcb->asoc.total_output_queue_size = 0;
-		return;
-	}
 	if (stcb->asoc.sent_queue_retran_cnt) {
 		printf("Hmm, sent_queue_retran_cnt is non-zero %d\n",
 		    stcb->asoc.sent_queue_retran_cnt);
 		stcb->asoc.sent_queue_retran_cnt = 0;
 	}
+
+	if (TAILQ_EMPTY(&stcb->asoc.out_wheel)) {
+	        int i,cnt=0;
+		printf("Strange, out_wheel empty nothing on sent/send and  tot=%lu, audit outwheel?\n",
+		    (u_long)stcb->asoc.total_output_queue_size);
+
+		/* Check to see if a spoke fell off the wheel */
+		for(i=0 ; i<stcb->asoc.streamoutcnt; i++ ) {
+		  if(!TAILQ_EMPTY(&stcb->asoc.strmout[i].outqueue)) {
+		    sctp_insert_on_wheel(&stcb->asoc,&stcb->asoc.strmout[i]);
+		    cnt++;
+		  }
+		}
+		if(cnt) {
+		  /* yep, we lost a spoke or two */
+		  printf("Found an additional %d streams NOT on outwheel, corrected\n", cnt);
+		}else {
+		  /* no spokes lost, */
+		  printf("No streams with data, clearing output_queue_size\n");
+ 		  stcb->asoc.total_output_queue_size = 0;
+		}
+		return;
+	}
 	/* Check to see if some data queued, if so report it */
 	TAILQ_FOREACH(outs, &stcb->asoc.out_wheel, next_spoke) {
 		if (!TAILQ_EMPTY(&outs->outqueue)) {
 			TAILQ_FOREACH(chk, &outs->outqueue, sctp_next) {
-				chks_in_queue++;
+			      chks_in_queue++;
 			}
 		}
 	}
@@ -1280,7 +1297,6 @@ sctp_heartbeat_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
     struct sctp_nets *net)
 {
 	int cnt_of_unconf=0;
-
 	if (net) {
 		if (net->hb_responded == 0) {
 			sctp_backoff_on_timeout(stcb, net, 1, 0);

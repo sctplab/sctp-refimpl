@@ -76,11 +76,12 @@
 #define SCTPCTL_ASSOC_RTX_MAX       23
 #define SCTPCTL_PATH_RTX_MAX        24
 #define SCTPCTL_NR_OUTGOING_STREAMS 25
+#define SCTPCTL_CMT_ONOFF           26
 #ifdef SCTP_DEBUG
-#define SCTPCTL_DEBUG               26
-#define SCTPCTL_MAXID		    27
+#define SCTPCTL_DEBUG               27
+#define SCTPCTL_MAXID		    28
 #else
-#define SCTPCTL_MAXID		    26
+#define SCTPCTL_MAXID		    27
 #endif
 
 #endif
@@ -113,6 +114,7 @@
 	{ "assoc_rtx_max", CTLTYPE_INT }, \
 	{ "path_rtx_max", CTLTYPE_INT }, \
 	{ "nr_outgoing_streams", CTLTYPE_INT }, \
+	{ "cmt_on_off", CTLTYPE_INT }, \
 	{ "debug", CTLTYPE_INT }, \
 }
 #else
@@ -143,6 +145,7 @@
 	{ "assoc_rtx_max", CTLTYPE_INT }, \
 	{ "path_rtx_max", CTLTYPE_INT }, \
 	{ "nr_outgoing_streams", CTLTYPE_INT }, \
+	{ "cmt_on_off", CTLTYPE_INT }, \
 }
 #endif
 
@@ -161,9 +164,79 @@ int sctp_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,
 		      struct mbuf *));
 #endif
 
-#define	sctp_sbspace(sb) ((long) (((sb)->sb_hiwat > (sb)->sb_cc) ? ((sb)->sb_hiwat - (sb)->sb_cc) : 0))
+#define	sctp_sbspace(asoc, sb) ((long) (((sb)->sb_hiwat > (asoc)->sb_cc) ? ((sb)->sb_hiwat - (asoc)->sb_cc) : 0))
 
 #define sctp_sbspace_sub(a,b) ((a > b) ? (a - b) : 0)
+
+#if defined(__FreeBSD__) && __FreeBSD_version > 500000
+#define sctp_sbfree(stcb, sb, m) { \
+	(sb)->sb_cc -= (m)->m_len; \
+        if(stcb) \
+          (stcb)->asoc.sb_cc -= (m)->m_len; \
+	if ((m)->m_type != MT_DATA && (m)->m_type != MT_HEADER && \
+	    (m)->m_type != MT_OOBDATA) \
+		(sb)->sb_ctl -= (m)->m_len; \
+	(sb)->sb_mbcnt -= MSIZE; \
+	if ((m)->m_flags & M_EXT) \
+		(sb)->sb_mbcnt -= (m)->m_ext.ext_size; \
+}
+
+#define sctp_sballoc(stcb, sb, m)  { \
+	(sb)->sb_cc += (m)->m_len; \
+        if(stcb) \
+  	  (stcb)->asoc.sb_cc += (m)->m_len; \
+	if ((m)->m_type != MT_DATA && (m)->m_type != MT_HEADER && \
+	    (m)->m_type != MT_OOBDATA) \
+		(sb)->sb_ctl += (m)->m_len; \
+	(sb)->sb_mbcnt += MSIZE; \
+	if ((m)->m_flags & M_EXT) \
+		(sb)->sb_mbcnt += (m)->m_ext.ext_size; \
+}
+
+#else
+
+#define sctp_sbfree(stcb, sb, m) { \
+	(sb)->sb_cc -= (m)->m_len; \
+        if(stcb) \
+          (stcb)->asoc.sb_cc -= (m)->m_len; \
+	(sb)->sb_mbcnt -= MSIZE; \
+	if ((m)->m_flags & M_EXT) \
+		(sb)->sb_mbcnt -= (m)->m_ext.ext_size; \
+}
+
+#define sctp_sballoc(stcb, sb, m)  { \
+	(sb)->sb_cc += (m)->m_len; \
+        if(stcb) \
+  	  (stcb)->asoc.sb_cc += (m)->m_len; \
+	(sb)->sb_mbcnt += MSIZE; \
+	if ((m)->m_flags & M_EXT) \
+		(sb)->sb_mbcnt += (m)->m_ext.ext_size; \
+}
+
+#endif
+
+#define sctp_ucount_incr(val) { \
+             val++; \
+} 
+#ifdef INVARIANTS_SCTP
+#define sctp_ucount_decr(val) { \
+             if(val > 0) { \
+                val--; \
+             } else {  \
+                panic("decr would be negative"); \
+             } \
+}
+#else
+#define sctp_ucount_decr(val) { \
+             if(val > 0) { \
+                val--; \
+             } else {  \
+                val = 0; \
+             } \
+}
+#endif
+ 
+ 
 
 extern int	sctp_sendspace;
 extern int	sctp_recvspace;

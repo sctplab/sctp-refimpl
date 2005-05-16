@@ -37,6 +37,10 @@
 int sctp_deliver_data(struct sctp_tcb *, struct sctp_association *,
     struct sctp_tmit_chunk *, int);
 
+struct mbuf *
+sctp_build_ctl_nchunk(struct sctp_tcb *stcb, uint32_t tsn, uint32_t ppid,
+		      uint32_t context, uint16_t stream_no, uint16_t stream_seq, uint8_t flags);
+
 void sctp_set_rwnd(struct sctp_tcb *, struct sctp_association *);
 
 void sctp_handle_sack(struct sctp_sack_chunk *, struct sctp_tcb *,
