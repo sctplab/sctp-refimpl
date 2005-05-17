@@ -51,25 +51,11 @@ handle_fd(int fd)
     len = sizeof(struct sockaddr_in);
     rec = recvfrom(fd, respbuf, MY_MAX_SIZE, 0,
 		   (struct sockaddr *)&from, &len);
-    printf("did rec:%d errno:%d\n", rec, errno);
-    printf("bytes 89ab %2.2u %2.2u %2.2u %2.2u\n",
-	   respbuf[8], 
-	   respbuf[9], 
-	   respbuf[10], 
-	   respbuf[11]);
-    if(len > 0) {
-      printf("from.from_addr:%x port:%d\n",
-	     ntohl(from.sin_addr.s_addr),
-	     ntohs(from.sin_port));
-    } else {
-      printf("sin len was 0?\n");
-    }
     num_rcvs++;
     if(rec < sizeof(int)) {
       continue;
     }
     msg_size = ntohl(*size_p);
-    printf("Doing send of 4 bytes\n");
     sen = sendto(fd, respbuf, sizeof(int), 0, 
 		 (struct sockaddr *)&from, len);
     if(sen < sizeof(int)) {
@@ -79,7 +65,6 @@ handle_fd(int fd)
     num_snds++;
     len = sizeof(struct sockaddr_in);
   }
-  printf("out of handle-fd\n");
 }
 
 int

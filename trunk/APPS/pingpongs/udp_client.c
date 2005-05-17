@@ -25,7 +25,6 @@ struct timeval rcvtimes[MY_TRAIN_SIZE];
 int snd_failed=0;
 int num_rcvs=0;
 int rcv_failed=0;
-struct sctp_sndrcvinfo sinfo;
 
 struct snddata {
   int seq;
@@ -36,24 +35,24 @@ struct snddata {
 static void
 init_buffer(char *buf, int seq, int sz)
 {
-  int *sizep, i;
+  int i;
   char at='A';
+  struct snddata *snd;
+
   if(sz < (sizeof(int) *2)) {
     printf("Bad init size\n");
     exit(-1);
   }
-  memset(&sinfo, 0 , sizeof(sinfo));
-  sizep = (int *)buf;
-  *sizep = seq;
-  *sizep = sz;
-  sizep++;
-  for(i=(sizeof(int)*2); i<sz; i++) {
+  for(i=0; i<sz; i++) {
     buf[i] = at;
     at++;
     if(at > 'z'){
       at = 'A';
     }
   }
+  snd = (struct snddata *)buf;
+  snd->seq = seq;
+  snd->size_of = sz;
 }
 
 static int
