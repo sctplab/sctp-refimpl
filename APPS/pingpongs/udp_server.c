@@ -17,6 +17,7 @@
 #define MY_MAX_SIZE 8000
 
 unsigned char respbuf[MY_MAX_SIZE];
+int verbose = 0;
 int num_snds=0;
 int num_rcvs=0;
 int data_failures=0;
@@ -51,6 +52,11 @@ handle_fd(int fd)
     len = sizeof(struct sockaddr_in);
     rec = recvfrom(fd, respbuf, MY_MAX_SIZE, 0,
 		   (struct sockaddr *)&from, &len);
+    if(verbose) {
+      printf("Received %d bytes from %x:%d\n",
+	     rec, ntohl(from.sin_addr.s_addr),
+	     ntohs(from.sin_port));
+    }
     num_rcvs++;
     if(rec < sizeof(int)) {
       continue;
@@ -82,8 +88,11 @@ main(int argc, char **argv)
   struct sockaddr_in sin;
   struct sockaddr_in from;
 
-  while((i= getopt(argc,argv,"h:p:?")) != EOF) {
+  while((i= getopt(argc,argv,"h:p:v?")) != EOF) {
     switch (i) {
+    case 'v':
+      verbose = 1;
+      break;
     case 'h':
       addr = optarg;
       break;

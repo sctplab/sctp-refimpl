@@ -25,6 +25,7 @@ struct timeval rcvtimes[MY_TRAIN_SIZE];
 int snd_failed=0;
 int num_rcvs=0;
 int rcv_failed=0;
+int verbose=0;
 
 struct snddata {
   int seq;
@@ -97,6 +98,11 @@ do_recv_pass( int fd, struct sockaddr_in *sin)
     recv = recvfrom(fd, respbuf[i], MY_MAX_SIZE, 0,
 		    (struct sockaddr *)&from, &len);
     gettimeofday(&rcvtimes[i], NULL);
+    if(verbose) {
+      printf("Received %d bytes from %x:%d\n",
+	     recv, ntohl(from.sin_addr.s_addr),
+	     ntohs(from.sin_port));
+    }
     num_rcvs++;
     if(recv < sizeof(int)){
       i--;
@@ -131,8 +137,11 @@ main(int argc, char **argv)
   int sec, usec, stop=0;
   struct sockaddr_in sin;
 
-  while((i= getopt(argc,argv,"h:p:?s:S:")) != EOF) {
+  while((i= getopt(argc,argv,"h:p:?s:S:v")) != EOF) {
     switch (i) {
+    case 'v':
+      verbose = 1;
+      break;
     case 'h':
       addr = optarg;
       break;
