@@ -1,7 +1,7 @@
 /*	$KAME: sctp_pcb.c,v 1.38 2005/03/06 16:04:18 itojun Exp $	*/
 
 /*
- * Copyright (c) 2001, 2002, 2003, 2004 Cisco Systems, Inc.
+ * Copyright (c) 2001-2005 Cisco Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -263,8 +263,7 @@ void sctp_validate_no_locks()
 void
 sctp_fill_pcbinfo(struct sctp_pcbinfo *spcb)
 {
-	/* We really don't need
-	 * to lock this, but I will
+	/* We really don't need to lock this, but I will
 	 * just because it does not hurt.
 	 */
 	SCTP_INP_INFO_RLOCK();
@@ -602,7 +601,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 	SCTP_INP_INFO_RLOCK();
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) {
 		/*
-		 * Now either this guy is our listner or it's the connector.
+		 * Now either this guy is our listener or it's the connector.
 		 * If it is the one that issued the connect, then it's only
 		 * chance is to be the first TCB in the list. If it is the
 		 * acceptor, then do the special_lookup to hash and find the
@@ -4327,6 +4326,17 @@ sctp_pcb_init()
 	    sctp_chunkscale));
 
         /* Master Lock INIT for info structure */
+#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+	/* allocate the lock group attribute for SCTP PCB mutexes */
+	sctppcbinfo.mtx_grp_attr = lck_grp_attr_alloc_init();
+	lck_grp_attr_setdefault(sctppcbinfo.mtx_grp_attr);
+	/* allocate the lock group for SCTP PCB mutexes */
+	sctppcbinfo.mtx_grp = lck_grp_alloc_init("sctppcb",
+						 sctppcbinfo.mtx_grp_attr);
+	/* allocate the lock attribute for SCTP PCB mutexes */
+	sctppcbinfo.mtx_attr = lck_attr_alloc_init();
+	lck_attr_setdefault(sctppcbinfo.mtx_attr);
+#endif /* __APPLE__ */
 	SCTP_INP_INFO_LOCK_INIT();
 	SCTP_ITERATOR_LOCK_INIT();
 	/* not sure if we need all the counts */
