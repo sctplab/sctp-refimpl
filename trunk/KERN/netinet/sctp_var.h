@@ -1,7 +1,7 @@
 /*	$KAME: sctp_var.h,v 1.24 2005/03/06 16:04:19 itojun Exp $	*/
 
 /*
- * Copyright (c) 2001, 2002, 2003, 2004 Cisco Systems, Inc.
+ * Copyright (c) 2001-2005 Cisco Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -236,8 +236,6 @@ int sctp_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,
 }
 #endif
  
- 
-
 extern int	sctp_sendspace;
 extern int	sctp_recvspace;
 extern int      sctp_ecn;
@@ -341,6 +339,17 @@ do { \
 #define if_list		if_link
 #define ifa_list	ifa_link
 #endif /* __APPLE__ **/
+
+/* additional protosw entries for Mac OS X 10.4 */
+#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+int sctp_lock (struct socket *so, int refcount, int lr);
+int sctp_unlock (struct socket *so, int refcount, int lr);
+#ifdef _KERN_LOCKS_H_
+lck_mtx_t *sctp_getlock(struct socket *so, int locktype);
+#else
+void * sctp_getlock(struct socket *so, int locktype);
+#endif /* _KERN_LOCKS_H_ */
+#endif /* __APPLE__ */
 
 #endif /* _KERNEL */
 

@@ -1,7 +1,7 @@
 /*	$KAME: sctp_usrreq.c,v 1.48 2005/03/07 23:26:08 itojun Exp $	*/
 
 /*
- * Copyright (c) 2001, 2002, 2003, 2004 Cisco Systems, Inc.
+ * Copyright (c) 2001-2005 Cisco Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -5000,3 +5000,87 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
 
 }
 #endif
+
+/*
+ * additional protosw entries for Mac OS X 10.4
+ * lr is temporarily being used for socket lock/unlock LR debug
+ */
+#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+
+int sctp_lock (struct socket *so, int refcount, int lr) {
+	int lr_saved;
+
+#ifdef __ppc__
+	if (lr == 0) {
+		__asm__ volatile("mflr %0" : "=r" (lr_saved));
+	} else
+		lr_saved = lr;
+#endif
+
+	if (so->so_pcb) {
+		lck_mtx_assert(((struct inpcb *)so->so_pcb)->inpcb_mtx,
+			       LCK_MTX_ASSERT_NOTOWNED);
+		lck_mtx_lock(((struct inpcb *)so->so_pcb)->inpcb_mtx);
+	} else {
+		panic("sctp_lock: so=%x NO PCB! lr =%x\n", so, lr_saved);
+		lck_mtx_assert(so->so_proto->pr_domain->dom_mtx,
+			       LCK_MTX_ASSERT_NOTOWNED);
+		lck_mtx_lock(so->so_proto->pr_domain->dom_mtx);
+	}
+
+	if (so->so_usecount < 0)
+		panic("sctp_lock: so=%x so_pcb=%x lr=%x ref=%x\n",
+		      so, so->so_pcb, lr_saved, so->so_usecount);
+
+	if (refcount)
+		so->so_usecount++;
+	so->reserved3 = (void *)lr_saved;
+	return (0);
+}
+
+int sctp_unlock (struct socket *so, int refcount, int lr) {
+	int lr_saved;
+
+#ifdef __ppc__
+	if (lr == 0) {
+		__asm__ volatile("mflr %0" : "=r" (lr_saved));
+	} else
+		lr_saved = lr;
+#endif
+
+	if (refcount)
+		so->so_usecount--;
+
+	if (so->so_usecount < 0)
+		panic("sctp_unlock: so=%x usecount=%x\n",
+		      so, so->so_usecount);
+
+	if (so->so_pcb == NULL) {
+		panic("sctp_unlock: so=%x NO PCB! lr =%x\n", so, lr_saved);
+		lck_mtx_assert(((so->so_proto->pr_domain->dom_mtx,
+				 LCK_MTX_ASSERT_OWNED);
+		lck_mtx_unlock(so->so_proto->pr_domain->dom_mtx);
+	} else {
+		lck_mtx_assert(((struct inpcb *)so->so_pcb)->inpcb_mtx,
+			       LCK_MTX_ASSERT_OWNED);
+		lck_mtx_unlock(((struct inpcb *)so->so_pcb)->inpcb_mtx);
+	}
+	so->reserved4 = (void *)lr_saved;
+	return (0);
+}
+
+lck_mtx_t *sctp_getlock(struct socket *so, int locktype) {
+	struct inpcb *inp = sotoinpcb(so);
+
+	if (so->so_pcb) {
+		if (so->so_usecount < 0)
+			panic("sctp_getlock: so=%x usecount=%x\n", so,
+			      so->so_usecount);
+		return (inp->inpcb_mtx);
+	} else {
+		panic("sctp_getlock: so=%x NULL so_pcb\n", so);
+		return (so->so_proto->pr_domain->dom_mtx);
+	}
+}
+
+#endif /* __APPLE__ */
