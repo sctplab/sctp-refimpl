@@ -1,7 +1,7 @@
 /*	$KAME: sctputil.c,v 1.37 2005/03/07 23:26:09 itojun Exp $	*/
 
 /*
- * Copyright (c) 2001, 2002, 2003, 2004 Cisco Systems, Inc.
+ * Copyright (c) 2001-2005 Cisco Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -984,7 +984,7 @@ sctp_timeout_handler(void *t)
 	struct sctp_nets *net;
 	struct sctp_timer *tmr;
 	int s, did_output, typ;
-#if defined(__APPLE__)
+#if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
 	boolean_t funnel_state;
 
 	/* get BSD kernel funnel/mutex */
@@ -1016,7 +1016,7 @@ sctp_timeout_handler(void *t)
 	SCTP_INP_WLOCK(inp);
 	if (inp->sctp_socket == 0) {
 		splx(s);
-#if defined(__APPLE__)
+#if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
 		/* release BSD kernel funnel/mutex */
 		(void) thread_funnel_set(network_flock, FALSE);
 #endif
@@ -1026,7 +1026,7 @@ sctp_timeout_handler(void *t)
 	if (stcb) {
 		if (stcb->asoc.state == 0) {
 			splx(s);
-#if defined(__APPLE__)
+#if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
 			/* release BSD kernel funnel/mutex */
 			(void) thread_funnel_set(network_flock, FALSE);
 #endif
@@ -1042,7 +1042,7 @@ sctp_timeout_handler(void *t)
 #ifndef __NetBSD__
 	if (!callout_active(&tmr->timer)) {
 		splx(s);
-#if defined(__APPLE__)
+#if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
 		/* release BSD kernel funnel/mutex */
 		(void) thread_funnel_set(network_flock, FALSE);
 #endif
@@ -1267,7 +1267,7 @@ sctp_timeout_handler(void *t)
 #endif /* SCTP_DEBUG */
 
 	splx(s);
-#if defined(__APPLE__)
+#if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
 	/* release BSD kernel funnel/mutex */
 	(void) thread_funnel_set(network_flock, FALSE);
 #endif
