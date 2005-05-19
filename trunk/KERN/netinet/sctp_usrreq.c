@@ -147,6 +147,7 @@ unsigned int sctp_assoc_rtx_max_default = SCTP_DEF_MAX_SEND;
 unsigned int sctp_path_rtx_max_default = SCTP_DEF_MAX_SEND/2;
 unsigned int sctp_nr_outgoing_streams_default = SCTP_OSTREAM_INITIAL;
 unsigned int sctp_cmt_on_off = 0;
+
 void
 sctp_init(void)
 {
@@ -5018,9 +5019,13 @@ int sctp_lock (struct socket *so, int refcount, int lr) {
 #endif
 
 	if (so->so_pcb) {
+#if 0
 		lck_mtx_assert(((struct inpcb *)so->so_pcb)->inpcb_mtx,
 			       LCK_MTX_ASSERT_NOTOWNED);
 		lck_mtx_lock(((struct inpcb *)so->so_pcb)->inpcb_mtx);
+#else
+		SCTP_INP_WLOCK((struct sctp_inpcb *)so->so_pcb);
+#endif
 	} else {
 		panic("sctp_lock: so=%x NO PCB! lr =%x\n", so, lr_saved);
 		lck_mtx_assert(so->so_proto->pr_domain->dom_mtx,
@@ -5057,26 +5062,38 @@ int sctp_unlock (struct socket *so, int refcount, int lr) {
 
 	if (so->so_pcb == NULL) {
 		panic("sctp_unlock: so=%x NO PCB! lr =%x\n", so, lr_saved);
-		lck_mtx_assert(((so->so_proto->pr_domain->dom_mtx,
-				 LCK_MTX_ASSERT_OWNED);
+		lck_mtx_assert(so->so_proto->pr_domain->dom_mtx,
+			       LCK_MTX_ASSERT_OWNED);
 		lck_mtx_unlock(so->so_proto->pr_domain->dom_mtx);
 	} else {
+#if 0
 		lck_mtx_assert(((struct inpcb *)so->so_pcb)->inpcb_mtx,
 			       LCK_MTX_ASSERT_OWNED);
 		lck_mtx_unlock(((struct inpcb *)so->so_pcb)->inpcb_mtx);
+#else
+		SCTP_INP_WUNLOCK((struct sctp_inpcb *)so->so_pcb);
+#endif
 	}
 	so->reserved4 = (void *)lr_saved;
 	return (0);
 }
 
 lck_mtx_t *sctp_getlock(struct socket *so, int locktype) {
+#if 0
 	struct inpcb *inp = sotoinpcb(so);
+#else
+	struct sctp_inpcb *inp = (struct sctp_inpcb *)so->so_pcb;
+#endif
 
 	if (so->so_pcb) {
 		if (so->so_usecount < 0)
 			panic("sctp_getlock: so=%x usecount=%x\n", so,
 			      so->so_usecount);
+#if 0
 		return (inp->inpcb_mtx);
+#else
+		return (inp->inp_mtx);
+#endif
 	} else {
 		panic("sctp_getlock: so=%x NULL so_pcb\n", so);
 		return (so->so_proto->pr_domain->dom_mtx);

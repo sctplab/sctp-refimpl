@@ -1482,16 +1482,14 @@ sctp_inpcb_alloc(struct socket *so)
 
         /* Hack alert:
 	 *
-	 * This code audits the entire INP list to see if
-	 * any ep's that are in the GONE state are now
-	 * all free. This should not happen really since when
-	 * the last association if freed we should end up deleting
-	 * the inpcb. This code including the locks should
-	 * be taken out ... since the last set of fixes I
-	 * have not seen the "Found a GONE on list" has not
-	 * came out. But i am paranoid and we will leave this
-	 * in at the cost of efficency on allocation of PCB's.
-	 * Probably we should move this to the invariant
+	 * This code audits the entire INP list to see if any ep's that
+	 * are in the GONE state are now all free. This should not happen
+	 * really since when the last association if freed we should end
+	 * up deleting the inpcb. This code including the locks should be
+	 * taken out ... since the last set of fixes I have not seen the
+	 * "Found a GONE on list" has not came out. But I am paranoid and
+	 * we will leave this in at the cost of efficency on allocation
+	 * of PCB's.  Probably we should move this to the invariant
 	 * compile options
 	 */
 #ifdef INVARIANTS_SCTP
@@ -1533,6 +1531,7 @@ sctp_inpcb_alloc(struct socket *so)
 	/* setup inpcb socket too */
 	inp->ip_inp.inp.inp_socket = so;
 	inp->sctp_frag_point = SCTP_DEFAULT_MAXSEGMENT;
+
 #ifdef IPSEC
 #if !(defined(__OpenBSD__) || defined(__APPLE__))
 	{
@@ -1576,7 +1575,7 @@ sctp_inpcb_alloc(struct socket *so)
 		inp->sctp_flags = (SCTP_PCB_FLAGS_TCPTYPE |
 		    SCTP_PCB_FLAGS_UNBOUND);
 		inp->sctp_flags |= (SCTP_PCB_FLAGS_RECVDATAIOEVNT);
-		/* Be sure we have blocking IO bu default */
+		/* Be sure we have blocking IO by default */
 		so->so_state &= ~SS_NBIO;
 	} else {
 		/*
