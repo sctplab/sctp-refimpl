@@ -169,6 +169,23 @@ void sctp_clr_stat_log(void)
 }
 
 void
+rto_logging(struct sctp_nets *net, int from)
+{
+	sctp_clog[sctp_cwnd_log_at].from = (u_int8_t)from;
+	sctp_clog[sctp_cwnd_log_at].event_type = (u_int8_t)SCTP_LOG_EVENT_RTT;
+	sctp_clog[sctp_cwnd_log_at].x.rto.net = (u_int32_t)net;
+	sctp_clog[sctp_cwnd_log_at].x.rto.rtt = net->prev_rtt;
+	sctp_clog[sctp_cwnd_log_at].x.rto.rttvar = net->rtt_variance;
+	sctp_clog[sctp_cwnd_log_at].x.rto.direction = net->rto_variance_dir;
+	sctp_cwnd_log_at++;
+	if (sctp_cwnd_log_at >= SCTP_STAT_LOG_SIZE) {
+		sctp_cwnd_log_at = 0;
+		sctp_cwnd_log_rolled = 1;
+	}
+
+}
+
+void
 sctp_log_strm_del_alt(u_int32_t tsn, u_int16_t sseq, int from)
 {
 
@@ -2017,6 +2034,19 @@ sctp_calculate_rto(struct sctp_tcb *stcb,
 	/* this is Van Jacobson's integer version */
 	if (net->RTO) {
 		calc_time -= (net->lastsa >> 3);
+		if(net->prev_rtt > o_calctime) {
+		  net->rtt_variance = net->prev_rtt - o_calctime;
+		  /* decreasing */
+		  net->rto_variance_dir = 0;
+		} else {
+		  /* increasing */
+		  net->rtt_variance = o_calctime - net->prev_rtt;
+		  net->rto_variance_dir = 1;
+		}
+#ifdef SCTP_RTTVAR_LOGGING
+		rto_logging(net, SCTP_LOG_RTTVAR);
+#endif
+		net->prev_rtt = o_calctime;
 		net->lastsa += calc_time;
 		if (calc_time < 0) {
 			calc_time = -calc_time;
@@ -2031,6 +2061,12 @@ sctp_calculate_rto(struct sctp_tcb *stcb,
 		net->lastsa = calc_time;
 		net->lastsv = calc_time >> 1;
 		first_measure = 1;
+		net->rto_variance_dir = 1;
+		net->prev_rtt = o_calctime;
+		net->rtt_variance = 0;
+#ifdef SCTP_RTTVAR_LOGGING
+		rto_logging(net, SCTP_LOG_INITIAL_RTT);
+#endif
 	}
 	new_rto = ((net->lastsa >> 2) + net->lastsv) >> 1;
 	if ((new_rto > SCTP_SAT_NETWORK_MIN) &&

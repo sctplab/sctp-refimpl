@@ -77,11 +77,12 @@
 #define SCTPCTL_PATH_RTX_MAX        24
 #define SCTPCTL_NR_OUTGOING_STREAMS 25
 #define SCTPCTL_CMT_ONOFF           26
+#define SCTPCTL_CWND_MAXBURST       27
 #ifdef SCTP_DEBUG
-#define SCTPCTL_DEBUG               27
-#define SCTPCTL_MAXID		    28
+#define SCTPCTL_DEBUG               28
+#define SCTPCTL_MAXID		    29
 #else
-#define SCTPCTL_MAXID		    27
+#define SCTPCTL_MAXID		    28
 #endif
 
 #endif
@@ -115,6 +116,7 @@
 	{ "path_rtx_max", CTLTYPE_INT }, \
 	{ "nr_outgoing_streams", CTLTYPE_INT }, \
 	{ "cmt_on_off", CTLTYPE_INT }, \
+	{ "cwnd_maxburst", CTLTYPE_INT }, \
 	{ "debug", CTLTYPE_INT }, \
 }
 #else
@@ -146,6 +148,7 @@
 	{ "path_rtx_max", CTLTYPE_INT }, \
 	{ "nr_outgoing_streams", CTLTYPE_INT }, \
 	{ "cmt_on_off", CTLTYPE_INT }, \
+	{ "cwnd_maxburst", CTLTYPE_INT }, \
 }
 #endif
 
@@ -240,7 +243,7 @@ extern int	sctp_sendspace;
 extern int	sctp_recvspace;
 extern int      sctp_ecn;
 extern int      sctp_ecn_nonce;
-
+extern int      sctp_use_cwnd_based_maxburst;
 struct sctp_nets;
 struct sctp_inpcb;
 struct sctp_tcb;

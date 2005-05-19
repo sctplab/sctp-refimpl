@@ -89,6 +89,8 @@
 #define SCTP_LOG_LOCK_SOCKBUF_R     48
 #define SCTP_LOG_LOCK_SOCKBUF_S     49
 #define SCTP_LOG_LOCK_CREATE        50
+#define SCTP_LOG_INITIAL_RTT        51
+#define SCTP_LOG_RTTVAR             52
 /*
  * To turn on various logging, you must first define SCTP_STAT_LOGGING.
  * Then to get something to log you define one of the logging defines i.e.
@@ -110,6 +112,7 @@
 #define SCTP_LOG_EVENT_MBCNT 8
 #define SCTP_LOG_EVENT_SACK  9
 #define SCTP_LOG_LOCK_EVENT 10
+#define SCTP_LOG_EVENT_RTT  11
 
 #define SCTP_LOCK_UNKNOWN 2
 
@@ -758,7 +761,7 @@
 #define SCTP_PDAPI_HAD_TORCVR_RCV 98
 #define SCTP_PDAPI_NOSTCB_ATC     99
 #define SCTP_ENTER_SCTPSORCV     100
-#define SCTP_RESV1               101
+#define SCTP_REACHED_FR_MARK     101
 #define SCTP_RESV2               102
 #define SCTP_RESV3               103
 

@@ -3173,6 +3173,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			sctp_log_fr(tp1->rec.data.TSN_seq, tp1->snd_count,
 			    0, SCTP_FR_MARKED);
 #endif
+			sctp_pegs[SCTP_REACHED_FR_MARK]++;
 			if (strike_flag) {
 				/* This is a subsequent FR */
 				sctp_pegs[SCTP_DUP_FR]++;
@@ -4065,8 +4066,10 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 					dif = net->cwnd - (net->flight_size +
 							   net->net_ack);
 #ifdef SCTP_CWND_LOGGING
-/*					sctp_log_cwnd(net, net->net_ack,
-					SCTP_CWND_LOG_NOADV_SS);*/
+					/*
+					  sctp_log_cwnd(net, net->net_ack,
+						      SCTP_CWND_LOG_NOADV_SS);
+					*/
 #endif
 					if (dif > sctp_pegs[SCTP_CWND_DIFF_SA]) {
 						sctp_pegs[SCTP_CWND_DIFF_SA] =
