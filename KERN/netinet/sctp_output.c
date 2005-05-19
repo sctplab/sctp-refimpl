@@ -6101,13 +6101,13 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 				*num_out += (ctl_cnt + bundle_at);
 			}
 			if (bundle_at) {
-				if (!net->rto_pending) {
-					/* setup for a RTO measurement */
-					net->rto_pending = 1;
-					data_list[0]->do_rtt = 1;
-				} else {
-					data_list[0]->do_rtt = 0;
-				}
+			        /*				if (!net->rto_pending) {*/
+ 			        /* setup for a RTO measurement */
+			        /*net->rto_pending = 1;*/
+				data_list[0]->do_rtt = 1;
+				/*				} else {*/
+				/*					data_list[0]->do_rtt = 0;*/
+				/*				}*/
 				sctp_pegs[SCTP_PEG_TSNS_SENT] += bundle_at;
 				sctp_clean_up_datalist(stcb, asoc, data_list, bundle_at, net);
 			}
@@ -7169,18 +7169,23 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 			}
 #endif
 
-#ifdef SCTP_USE_ALLMAN_BURST
-			if ((net->flight_size+(burst_limit*net->mtu)) < net->cwnd) {
-				if (net->ssthresh < net->cwnd)
-					net->ssthresh = net->cwnd;
-				net->cwnd = (net->flight_size+(burst_limit*net->mtu));
+			if(sctp_use_cwnd_based_maxburst) {
+			  if ((net->flight_size+(burst_limit*net->mtu)) < net->cwnd) {
+			    if (net->ssthresh < net->cwnd)
+			      net->ssthresh = net->cwnd;
+			    net->cwnd = (net->flight_size+(burst_limit*net->mtu));
 #ifdef SCTP_LOG_MAXBURST
-				sctp_log_maxburst(net, 0, burst_limit, SCTP_MAX_BURST_APPLIED);
+			    sctp_log_maxburst(net, 0, burst_limit, SCTP_MAX_BURST_APPLIED);
 #endif
-				sctp_pegs[SCTP_MAX_BURST_APL]++;
+			    sctp_pegs[SCTP_MAX_BURST_APL]++;
+			  }
+			  net->fast_retran_ip = 0;
+			} else {
+			  if (net->flight_size == 0) {
+			    /* Should be decaying the cwnd here */
+			    ;
+			  }
 			}
-			net->fast_retran_ip = 0;
-#endif
 		}
 
 	}
@@ -7214,22 +7219,20 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 #endif
 		tot_out += num_out;
 		burst_cnt++;
-	} while (num_out
-#ifndef SCTP_USE_ALLMAN_BURST
-		 &&  (burst_cnt < burst_limit)
-#endif
-		);
-#ifndef SCTP_USE_ALLMAN_BURST
-	if (burst_cnt >= burst_limit) {
-		sctp_pegs[SCTP_MAX_BURST_APL]++;
- 		asoc->burst_limit_applied = 1;
+	} while (num_out && (sctp_use_cwnd_based_maxburst  || 
+			     (burst_cnt < burst_limit)));
+
+	if(sctp_use_cwnd_based_maxburst == 0) {      
+	  if (burst_cnt >= burst_limit) {
+	    sctp_pegs[SCTP_MAX_BURST_APL]++;
+	    asoc->burst_limit_applied = 1;
 #ifdef SCTP_LOG_MAXBURST
-		sctp_log_maxburst(asoc->primary_destination, 0 , burst_cnt, SCTP_MAX_BURST_APPLIED);
+	    sctp_log_maxburst(asoc->primary_destination, 0 , burst_cnt, SCTP_MAX_BURST_APPLIED);
 #endif
- 	} else {
-		asoc->burst_limit_applied = 0;
- 	}
-#endif
+	  } else {
+	    asoc->burst_limit_applied = 0;
+	  }
+	}
 
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
@@ -8518,28 +8521,6 @@ sctp_send_hb(struct sctp_tcb *stcb, int user_req, struct sctp_nets *u_net)
 					 net);
 			return (0);
 		}
-#ifndef SCTP_USE_ALLMAN_BURST
-		else {
-			/* found one idle.. decay cwnd on this one
-			 * by 1/2 if none outstanding.
-			 */
-
-			if (net->flight_size == 0) {
-				net->cwnd /= 2;
-				if (net->addr_is_local) {
-					if (net->cwnd < (net->mtu *4)) {
-						net->cwnd = net->mtu * 4;
-					}
-				} else {
-					if (net->cwnd < (net->mtu * 2)) {
-						net->cwnd = net->mtu * 2;
-					}
-				}
-
-			}
-
-		}
-#endif
 	} else {
 		net = u_net;
 		if (net == NULL) {

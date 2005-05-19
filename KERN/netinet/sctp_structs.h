@@ -176,7 +176,8 @@ struct sctp_nets {
 	u_int32_t cwnd; /* actual cwnd */
 	u_int32_t prev_cwnd; /* cwnd before any processing */
 	u_int32_t partial_bytes_acked; /* in CA tracks when to incr a MTU */
-
+        u_int32_t rtt_variance;
+        u_int32_t prev_rtt;
 	/* tracking variables to avoid the aloc/free in sack processing */
 	unsigned int net_ack;
 	unsigned int net_ack2;
@@ -194,8 +195,9 @@ struct sctp_nets {
 	u_int16_t failure_threshold;
 	/* error stats on destination */
 	u_int16_t error_count;
-
 	/* Flags that probably can be combined into dest_state */
+
+        u_int8_t rto_variance_dir;      /* increase = 1, decreasing = 0 */
 	u_int8_t rto_pending;		/* is segment marked for RTO update  ** if we split?*/
 	u_int8_t fast_retran_ip;	/* fast retransmit in progress */
 	u_int8_t hb_responded;

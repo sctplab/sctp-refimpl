@@ -131,7 +131,7 @@ int sctp_recvspace = 128 * (1024 +
 int sctp_strict_sacks = 0;
 int sctp_ecn = 1;
 int sctp_ecn_nonce = 0;
-
+int sctp_use_cwnd_based_maxburst = 1;
 unsigned int sctp_delayed_sack_time_default = SCTP_RECV_MSEC;
 unsigned int sctp_heartbeat_interval_default = SCTP_HB_DEFAULT_MSEC;
 unsigned int sctp_pmtu_raise_time_default = SCTP_DEF_PMTU_RAISE_SEC;
@@ -686,6 +686,10 @@ SYSCTL_UINT(_net_inet_sctp, OID_AUTO, rto_max, CTLFLAG_RW,
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, rto_min, CTLFLAG_RW,
 	    &sctp_rto_min_default, 0,
 	    "Default minimum retransmission timeout in msec");
+
+SYSCTL_UINT(_net_inet_sctp, OID_AUTO, cwnd_maxburst, CTLFLAG_RW,
+	    &sctp_use_cwnd_based_maxburst, 0,
+	    "Use a CWND adjusting maxburst");
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, rto_initial, CTLFLAG_RW,
 	    &sctp_rto_initial_default, 0,
@@ -4795,7 +4799,7 @@ sctp_sysctl(name, namelen, oldp, oldlenp, newp, newlen)
 	/* All sysctl names at this level are terminal. */
 	if (namelen != 1)
 		return (ENOTDIR);
-sysctl_int();
+	/* ?? whats this ?? sysctl_int(); */
 
 	switch (name[0]) {
 	case SCTPCTL_MAXDGRAM:
@@ -4855,6 +4859,9 @@ sysctl_int();
  	case SCTPCTL_RTO_MIN:
  		return (sysctl_int(oldp, oldlenp, newp, newlen,
  				   &sctp_rto_min_default));
+	case SCTPCTL_CWND_MAXBURST:
+  	        return (sysctl_int(oldp, oldlenp, newp, newlen,
+ 				   &sctp_use_cwnd_based_maxburst));
  	case SCTPCTL_RTO_INITIAL:
  		return (sysctl_int(oldp, oldlenp, newp, newlen,
  				   &sctp_rto_initial_default));
@@ -4998,6 +5005,155 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
                        NULL, 0, &sctp_max_chunks_on_queue, 0,
                        CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_MAXCHUNKONQ,
                        CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "delayed_sack_time",
+                       SYSCTL_DESCR("Default delayed SACK timer in msec"),
+                       NULL, 0, &sctp_delayed_sack_time_default, 0,
+                       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_DELAYED_SACK,
+                       CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "cmt_on_off",
+                       SYSCTL_DESCR("CMT on-off flag"),
+                       NULL, 0, &sctp_cmt_on_off, 0,
+                       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_CMT_ONOFF,
+                       CTL_EOL);
+
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "heartbeat_interval",
+                       SYSCTL_DESCR("Default heartbeat interval in msec"),
+                       NULL, 0, &sctp_heartbeat_interval_default, 0,
+                       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_HB_INTERVAL,
+                       CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "pmtu_raise_time",
+                       SYSCTL_DESCR("Default PMTU raise timer in sec"),
+                       NULL, 0, &sctp_pmtu_raise_time_default, 0,
+		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_PMTU_RAISE,
+                       CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "shutdown_guard_time",
+                       SYSCTL_DESCR("Default shutdown guard timer in sec"),
+                       NULL, 0, &sctp_shutdown_guard_time_default, 0,
+		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_SHUTDOWN_GUARD,
+                       CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "secret_lifetime",
+                       SYSCTL_DESCR("Default secret liftime in sec"),
+                       NULL, 0, &sctp_secret_lifetime_default, 0,
+		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_SECRET_LIFETIME,
+                       CTL_EOL);
+       
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "rto_max",
+                       SYSCTL_DESCR("Default maximum retransmission timeout in msec"),
+                       NULL, 0, &sctp_rto_max_default, 0,
+		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_RTO_MAX,
+                       CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "rto_min",
+                       SYSCTL_DESCR("Default minimum retransmission timeout in msec"),
+                       NULL, 0, &sctp_rto_min_default, 0,
+		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_RTO_MIN,
+                       CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "cwnd_maxburst",
+                       SYSCTL_DESCR("Use a CWND adjusting maxburst"),
+                       NULL, 0, &sctp_use_cwnd_based_maxburst, 0,
+		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_CWND_MAXBURST,
+                       CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "rto_initial",
+                       SYSCTL_DESCR("Default initial retransmission timeout in msec"),
+                       NULL, 0, &sctp_rto_initial_default, 0,
+		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_RTO_INITIAL,
+                       CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "init_rto_max",
+                       SYSCTL_DESCR("Default maximum retransmission timeout during association setup in msec"),
+                       NULL, 0, &sctp_init_rto_max_default, 0,
+		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_INIT_RTO_MAX,
+                       CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "",
+                       SYSCTL_DESCR(),
+                       NULL, 0, &, 0,
+		       CTL_NET, PF_INET, IPPROTO_SCTP, 
+                       CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "valid_cookie_life",
+                       SYSCTL_DESCR("Default cookie lifetime in sec"),
+                       NULL, 0, &sctp_valid_cookie_life_default, 0,
+		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_COOKIE_LIFE,
+                       CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "init_rtx_max",
+                       SYSCTL_DESCR("Default maximum number of retransmission for INIT chunks"),
+                       NULL, 0, &sctp_init_rtx_max_default, 0,
+		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_INIT_RTX_MAX,
+                       CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "assoc_rtx_max",
+                       SYSCTL_DESCR("Default maximum number of retransmissions per association"),
+                       NULL, 0, &sctp_assoc_rtx_max_default, 0,
+		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_ASSOC_RTX_MAX,
+                       CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "path_rtx_max",
+                       SYSCTL_DESCR("Default maximum of retransmissions per path"),
+                       NULL, 0, &sctp_path_rtx_max_default, 0,
+		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_PATH_RTX_MAX,
+                       CTL_EOL);
+
+       
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "nr_outgoing_streams",
+                       SYSCTL_DESCR("Default number of outgoing streams"),
+                       NULL, 0, &sctp_nr_outgoing_streams_default, 0,
+		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_NR_OUTGOING_STREAMS,
+                       CTL_EOL);
+
+#ifdef SCTP_DEBUG
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "debug",
+                       SYSCTL_DESCR("Configure debug output"),
+                       NULL, 0, &sctp_debug_on, 0,
+		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_DEBUG,
+                       CTL_EOL);
+#endif
 
 }
 #endif
