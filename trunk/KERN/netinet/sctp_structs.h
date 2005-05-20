@@ -181,11 +181,13 @@ struct sctp_nets {
 	/* tracking variables to avoid the aloc/free in sack processing */
 	unsigned int net_ack;
 	unsigned int net_ack2;
-	/*
-	 * These only are valid if the primary dest_sstate holds the
-	 * SCTP_ADDR_SWITCH_PRIMARY flag
+
+        /* 
+	 * CMT variables
 	 */
-	u_int32_t next_tsn_at_change;
+        u_int32_t this_sack_highest_newack; /* tracks highest TSN newly acked for a given dest
+					       in the current SACK. Used in SFR and HTNA algos */
+  
 	u_int32_t heartbeat_random1;
 	u_int32_t heartbeat_random2;
 
@@ -201,7 +203,7 @@ struct sctp_nets {
 	u_int8_t rto_pending;		/* is segment marked for RTO update  ** if we split?*/
 	u_int8_t fast_retran_ip;	/* fast retransmit in progress */
 	u_int8_t hb_responded;
-	u_int8_t cacc_saw_newack;	/* CACC algorithm flag */
+	u_int8_t saw_newack;	        /* CMT's SFR algorithm flag */
         u_int8_t src_addr_selected;	/* if we split we move */
 	u_int8_t indx_of_eligible_next_to_use;
 	u_int8_t addr_is_local;		/* its a local address (if known) could move in split */

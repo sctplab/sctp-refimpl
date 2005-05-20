@@ -3580,7 +3580,6 @@ sctp_optsset(struct socket *so,
 	  (!(net->dest_state & SCTP_ADDR_UNCONFIRMED))) {
 	/* Ok we need to set it */
 	lnet = stcb->asoc.primary_destination;
-	lnet->next_tsn_at_change = net->next_tsn_at_change = stcb->asoc.sending_seq;
 	if (sctp_set_primary_addr(stcb,
 				  (struct sockaddr *)NULL,
 				  net) == 0) {
