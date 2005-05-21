@@ -311,6 +311,7 @@ extern struct sysctl_oid sysctl__net_inet_sctp_maxburst;
 extern struct sysctl_oid sysctl__net_inet_sctp_maxchunks;
 extern struct sysctl_oid sysctl__net_inet_sctp_delayed_sack_time;
 extern struct sysctl_oid sysctl__net_inet_sctp_heartbeat_interval;
+extern struct sysctl_oid sysctl__net_inet_sctp_cmt_on_off;
 extern struct sysctl_oid sysctl__net_inet_sctp_pmtu_raise_time;
 extern struct sysctl_oid sysctl__net_inet_sctp_shutdown_guard_time;
 extern struct sysctl_oid sysctl__net_inet_sctp_secret_lifetime;
