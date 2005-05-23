@@ -77,9 +77,17 @@ main(int argc, char **argv)
 		/* 42 */ "New SACK",
 		/* 43 */ "Tsn Acked",
 		/* 44 */ "TSN Revoked",
-		/* 45 */ "Unknown"
+		/* 45 */ "Lock TCB",
+		/* 46 */ "Lock INP",
+		/* 47 */ "Lock Socket",
+		/* 48 */ "Lock Socket-rcvbuf",
+		/* 49 */ "Lock Socket-sndbuf",
+		/* 50 */ "Lock Create", 
+                /* 51 */ "Initial RTT",
+		/* 52 */ "RTT Variance",
+		/* 53 */ "Unknown"
 	};
-#define FROM_STRING_MAX 45
+#define FROM_STRING_MAX 53
 	FILE *out;
 	int at;
 	struct sctp_cwnd_log log;
@@ -117,6 +125,29 @@ main(int argc, char **argv)
 				       (int)log.x.cwnd.cwnd_augment,
 				       from_str[log.from]);
 			}
+		}else if(log.event_type == SCTP_LOG_EVENT_RTT) {
+		  printf("%d: Net:%x  Rtt:%d Rttvar:%d Direction=%s from:%s\n",
+			 at, 
+			 log.x.rto.net,
+			 log.x.rto.rtt,
+			 log.x.rto.rttvar,
+			 ((log.x.rto.direction == 0) ? "-" : "+"),
+			 from_str[log.from]
+			 );
+
+		}else if(log.event_type == SCTP_LOG_LOCK_EVENT) {
+		  printf("%s sock:%x inp:%x inp:%d tcb:%d info:%d sock:%d sockrb:%d socksb:%d cre:%d\n",
+			 from_str[log.from],
+			 log.x.lock.sock,
+			 log.x.lock.inp,
+			 log.x.lock.inp_lock,
+			 log.x.lock.tcb_lock,
+			 log.x.lock.info_lock,
+			 log.x.lock.sock_lock,
+			 log.x.lock.sockrcvbuf_lock,
+			 log.x.lock.socksndbuf_lock,
+			 log.x.lock.create_lock
+			 );
 		}else if(log.event_type == SCTP_LOG_EVENT_SACK) {
 		  if(log.from == SCTP_LOG_NEW_SACK) {
 		    printf("%s - cum-ack:%x old-cumack:%x dups:%d gaps:%d\n", 
@@ -127,9 +158,10 @@ main(int argc, char **argv)
 			   (int)log.x.sack.numGaps
 			   );
 		  } else {
-		    printf("%s - cum-ack:%x TSN:%x dups:%d gaps:%d\n", 
+		    printf("%s - cum-ack:%x biggestTSNAcked:%x TSN:%x dups:%d gaps:%d\n", 
 			   from_str[log.from],
 			   log.x.sack.cumack,
+			   log.x.sack.oldcumack,
 			   log.x.sack.tsn,
 			   (int)log.x.sack.numDups,
 			   (int)log.x.sack.numGaps
