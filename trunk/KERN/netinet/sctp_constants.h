@@ -400,6 +400,8 @@
 #define SCTP_TIMER_TYPE_EVENTWAKE	13
 #define SCTP_TIMER_TYPE_STRRESET        14
 #define SCTP_TIMER_TYPE_INPKILL         15
+#define SCTP_TIMER_TYPE_ITERATOR        16
+#define SCTP_TIMER_TYPE_EARLYFR         17
 
 /*
  * Number of ticks before the soxwakeup() event that
@@ -420,7 +422,6 @@
 /* max number of TSN's dup'd that I will hold */
 #define SCTP_MAX_DUP_TSNS	20
 
-#define SCTP_TIMER_TYPE_ITERATOR        16
 /*
  * Here we define the types used when setting the retry amounts.
  */

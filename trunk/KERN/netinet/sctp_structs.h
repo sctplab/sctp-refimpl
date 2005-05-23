@@ -162,6 +162,7 @@ struct sctp_nets {
 
 	/* This is used for SHUTDOWN/SHUTDOWN-ACK/SEND or INIT timers */
 	struct sctp_timer rxt_timer;
+        struct sctp_timer fr_timer; /* for early fr */
 
 	/* last time in seconds I sent to it */
 	struct timeval last_sent_time;
