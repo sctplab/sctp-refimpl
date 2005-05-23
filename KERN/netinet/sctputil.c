@@ -464,7 +464,7 @@ sctp_fill_stat_log(struct mbuf *m)
 				    (req->end_at + 1);
 			} else {
 
-				cc = req->end_at - req->start_at;
+				cc = (req->end_at - req->start_at) + 1;
 			}
 			if (cc < num) {
 				num = cc;
@@ -484,7 +484,7 @@ sctp_fill_stat_log(struct mbuf *m)
 		if (at >= SCTP_STAT_LOG_SIZE)
 			at = 0;
 	}
-	m->m_len = (cnt_out * sizeof(struct sctp_cwnd_log_req)) + sizeof(struct sctp_cwnd_log_req);
+	m->m_len = (cnt_out * sizeof(struct sctp_cwnd_log)) + sizeof(struct sctp_cwnd_log_req);
 	return (0);
 }
 
