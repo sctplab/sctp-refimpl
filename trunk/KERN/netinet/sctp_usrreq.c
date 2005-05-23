@@ -4239,6 +4239,13 @@ sctp_listen(struct socket *so, struct proc *p)
 	sctp_log_lock(inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_SOCK);
 #endif
 	SOCK_LOCK(so);
+#if defined(__FreeBSD__) && __FreeBSD_version > 500000
+	error = solisten_proto_check(so);
+	if(error) {
+		SOCK_UNLOCK(so);
+		return (error);
+	}
+#endif
 	SCTP_INP_RLOCK(inp);
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
@@ -4283,6 +4290,9 @@ sctp_listen(struct socket *so, struct proc *p)
 		inp->sctp_socket->so_options &= ~SO_ACCEPTCONN;
 	}
 	SCTP_INP_WUNLOCK(inp);
+#if defined(__FreeBSD__) && __FreeBSD_version > 500000
+	solisten_proto(so);
+#endif
 	SOCK_UNLOCK(so);
 	splx(s);
 	return (error);
