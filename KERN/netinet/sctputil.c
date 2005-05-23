@@ -1216,7 +1216,10 @@ sctp_timeout_handler(void *t)
 		}
 		sctp_chunk_output(inp, stcb, 9);
 		break;
+	case SCTP_TIMER_TYPE_EARLYFR:
+	        /* Need to do FR of things for net */
 
+	        break;
 	case SCTP_TIMER_TYPE_ASCONF:
 		if (sctp_asconf_timer(inp, stcb, net)) {
 			/* no need to unlock on tcb its gone */
@@ -1538,6 +1541,22 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		tmr = &stcb->asoc.strreset_timer;
 		break;
 
+	case SCTP_TIMER_TYPE_EARLYFR:
+		if ((stcb == NULL) || (net == NULL)) {
+			return (EFAULT);
+		}
+		if(net->flight_size > net->cwnd) {
+		  /* no need to start */
+		  return (0);
+		}
+		if(net->lastsa == 0) {
+		  /* Hmm no rtt estimate yet? */
+		  to_ticks = MSEC_TO_TICKS((stcb->asoc.initial_rto >> 2));
+		} else {
+		  to_ticks = MSEC_TO_TICKS((net->lastsa +  (net->lastsa >> 1)));
+		}
+		tmr = &net->fr_timer;
+	        break;
 	case SCTP_TIMER_TYPE_ASCONF:
 		/*
 		 * Here the timer comes from the inp
@@ -1613,13 +1632,19 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 
 	tmr = NULL;
 	switch (t_type) {
+	case SCTP_TIMER_TYPE_EARLYFR:
+		if ((stcb == NULL) || (net == NULL)) {
+			return (EFAULT);
+		}
+		tmr = &net->fr_timer;
+		break;
 	case SCTP_TIMER_TYPE_ITERATOR:
 	{
 		struct sctp_iterator *it;
 		it = (struct sctp_iterator *)inp;
 		tmr = &it->tmr;
 	}
-	break;
+ 	        break;
 	case SCTP_TIMER_TYPE_SEND:
 		if ((stcb == NULL) || (net == NULL)) {
 			return (EFAULT);

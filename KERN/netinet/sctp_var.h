@@ -78,11 +78,13 @@
 #define SCTPCTL_NR_OUTGOING_STREAMS 25
 #define SCTPCTL_CMT_ONOFF           26
 #define SCTPCTL_CWND_MAXBURST       27
+#define SCTPCTL_EARLY_FR            28
+#define SCTPCTL_RTTVAR_CC           29
 #ifdef SCTP_DEBUG
-#define SCTPCTL_DEBUG               28
-#define SCTPCTL_MAXID		    29
+#define SCTPCTL_DEBUG               30
+#define SCTPCTL_MAXID		    31
 #else
-#define SCTPCTL_MAXID		    28
+#define SCTPCTL_MAXID		    30
 #endif
 
 #endif
@@ -117,6 +119,8 @@
 	{ "nr_outgoing_streams", CTLTYPE_INT }, \
 	{ "cmt_on_off", CTLTYPE_INT }, \
 	{ "cwnd_maxburst", CTLTYPE_INT }, \
+        { "early_fast_retran", CTLTYPE_INT }, \
+        { "use_rttvar_congctrl", CTLTYPE_INT }, \
 	{ "debug", CTLTYPE_INT }, \
 }
 #else
@@ -149,6 +153,8 @@
 	{ "nr_outgoing_streams", CTLTYPE_INT }, \
 	{ "cmt_on_off", CTLTYPE_INT }, \
 	{ "cwnd_maxburst", CTLTYPE_INT }, \
+        { "early_fast_retran", CTLTYPE_INT }, \
+        { "use_rttvar_congctrl", CTLTYPE_INT }, \
 }
 #endif
 
