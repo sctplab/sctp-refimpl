@@ -4291,7 +4291,10 @@ sctp_listen(struct socket *so, struct proc *p)
 	}
 	SCTP_INP_WUNLOCK(inp);
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
-	solisten_proto(so);
+	if (inp->sctp_socket->so_qlimit &&
+	    ((inp->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE) == 0)) {
+	  solisten_proto(so);
+	}
 #endif
 	SOCK_UNLOCK(so);
 	splx(s);
