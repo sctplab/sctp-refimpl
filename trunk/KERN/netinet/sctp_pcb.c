@@ -1559,6 +1559,7 @@ sctp_inpcb_alloc(struct socket *so)
 	inp->inp_ip_ttl = ip_defttl;
 	inp->inp_ip_tos = 0;
 #endif
+	SCTP_INP_INFO_WUNLOCK();
 
 	so->so_pcb = (caddr_t)inp;
 
@@ -1598,9 +1599,9 @@ sctp_inpcb_alloc(struct socket *so)
 	if (inp->sctp_tcbhash == NULL) {
 		printf("Out of SCTP-INPCB->hashinit - no resources\n");
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, inp);
-		SCTP_INP_INFO_WUNLOCK();
 		return (ENOBUFS);
 	}
+	SCTP_INP_INFO_WLOCK();
         /* LOCK init's */
 	SCTP_INP_LOCK_INIT(inp);
 	SCTP_ASOC_CREATE_LOCK_INIT(inp);

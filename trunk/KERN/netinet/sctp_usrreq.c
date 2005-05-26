@@ -4316,8 +4316,8 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 	int s = splnet();
 #endif
 	struct sctp_tcb *stcb;
-	struct sockaddr *prim;
 	struct sctp_inpcb *inp;
+	union sctp_sockstore store;
 
 	inp = (struct sctp_inpcb *)so->so_pcb;
 
@@ -4339,8 +4339,9 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 	}
 	SCTP_TCB_LOCK(stcb);
 	SCTP_INP_RUNLOCK(inp);
-	prim = (struct sockaddr *)&stcb->asoc.primary_destination->ro._l_addr;
-	if (prim->sa_family == AF_INET) {
+	store = stcb->asoc.primary_destination->ro._l_addr;
+	SCTP_TCB_UNLOCK(stcb);
+	if (store.sa.sa_family == AF_INET) {
 		struct sockaddr_in *sin;
 #if defined(__FreeBSD__) || defined(__APPLE__)
 		MALLOC(sin, struct sockaddr_in *, sizeof *sin, M_SONAME,
@@ -4351,8 +4352,8 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 #endif
 		sin->sin_family = AF_INET;
 		sin->sin_len = sizeof(*sin);
-		sin->sin_port = ((struct sockaddr_in *)prim)->sin_port;
-		sin->sin_addr = ((struct sockaddr_in *)prim)->sin_addr;
+		sin->sin_port = ((struct sockaddr_in *)&store)->sin_port;
+		sin->sin_addr = ((struct sockaddr_in *)&store)->sin_addr;
 #if defined(__FreeBSD__) || defined(__APPLE__)
 		*addr = (struct sockaddr *)sin;
 #else
@@ -4365,13 +4366,13 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 		       M_WAITOK | M_ZERO);
 #else
 		sin6 = (struct sockaddr_in6 *)addr;
-#endif
 		bzero((caddr_t)sin6, sizeof (*sin6));
+#endif
 		sin6->sin6_family = AF_INET6;
 		sin6->sin6_len = sizeof(*sin6);
-		sin6->sin6_port = ((struct sockaddr_in6 *)prim)->sin6_port;
+		sin6->sin6_port = ((struct sockaddr_in6 *)&store)->sin6_port;
 
-		sin6->sin6_addr = ((struct sockaddr_in6 *)prim)->sin6_addr;
+		sin6->sin6_addr = ((struct sockaddr_in6 *)&store)->sin6_addr;
 		if (IN6_IS_SCOPE_LINKLOCAL(&sin6->sin6_addr))
 			/*      sin6->sin6_scope_id = ntohs(sin6->sin6_addr.s6_addr16[1]);*/
 			in6_recoverscope(sin6, &sin6->sin6_addr, NULL);  /* skip ifp check */
@@ -4384,8 +4385,6 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 #endif
 	}
 	/* Wake any delayed sleep action */
-	SCTP_TCB_UNLOCK(stcb);
-	SCTP_INP_WLOCK(inp);
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_DONT_WAKE) {
 		inp->sctp_flags &= ~SCTP_PCB_FLAGS_DONT_WAKE;
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_WAKEOUTPUT) {
@@ -4405,7 +4404,6 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 		}
 
 	}
-	SCTP_INP_WUNLOCK(inp);
 	splx(s);
 	return (0);
 }
