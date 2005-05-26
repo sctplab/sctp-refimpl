@@ -9933,8 +9933,8 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 		s = splnet();
 #endif
 		SCTP_INP_RLOCK(inp);
-		if(bu.error) {
-		  error = bu.error;
+		if(be.error) {
+		  error = be.error;
 		  SCTP_INP_RUNLOCK(inp);
 		  goto clean_up;
 		}
@@ -10050,8 +10050,8 @@ clean_up:
  		s = splnet();
 #endif
 		SCTP_INP_RLOCK(inp);
-		if(bu.error) {
-		  error = bu.error;
+		if(be.error) {
+		  error = be.error;
 		  SCTP_INP_RUNLOCK(inp);
 		  goto temp_clean_up;
 		}
