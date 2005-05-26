@@ -4376,6 +4376,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			SCTP_TCB_UNLOCK(stcb);
 			error = sbwait(&so->so_snd);
 			SCTP_INP_RLOCK(inp);
+			SCTP_TCB_LOCK(stcb);
 			if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
 			    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
 				/* Should I really unlock ? */
@@ -4383,7 +4384,6 @@ sctp_msg_append(struct sctp_tcb *stcb,
 				error = EFAULT;
 				goto out_locked;
 			}
-			SCTP_TCB_LOCK(stcb);
 			SCTP_INP_RUNLOCK(inp);
 			/*
 			 * XXX: This is ugly but I have
@@ -4508,6 +4508,10 @@ sctp_msg_append(struct sctp_tcb *stcb,
 				sctp_log_lock(stcb->sctp_ep, stcb, SCTP_LOG_LOCK_SOCKBUF_S);
 #endif
 				SOCKBUF_LOCK(&so->so_snd);
+				/* relock to stay sane */
+				SCTP_INP_RLOCK(stcb->sctp_ep);
+				SCTP_TCB_LOCK(stcb);
+				SCTP_INP_RUNLOCK(stcb->sctp_ep);
 				goto release;
 			}
 			dataout -= siz;
@@ -9689,25 +9693,37 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 				 */
  				error = inp->error_on_block;
 				splx(s);
+			recover_out_locked:
+				SCTP_INP_RLOCK(inp);
+				SCTP_TCB_LOCK(stcb);
+				if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
+				    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
+					/* Should I really unlock ? */
+					SCTP_INP_RUNLOCK(inp);
+					error = EFAULT;
+					goto out_locked;
+				}
+				SCTP_INP_RUNLOCK(inp);
 				goto out_locked;
 			}
 			if (error) {
 				splx(s);
-				goto out_locked;
+				goto recover_out_locked;
 			}
 			/* did we encounter a socket error? */
 			if (so->so_error) {
 				error = so->so_error;
 				splx(s);
-				goto out_locked;
+				goto recover_out_locked;
 			}
 			error = sblock(&so->so_snd, M_WAITOK);
 			if (error) {
 				/* Can't aquire the lock */
 				splx(s);
-				goto out_locked;
+				goto recover_out_locked;
 			}
 			SCTP_INP_RLOCK(inp);
+			SCTP_TCB_LOCK(stcb);
 			if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
 			    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
 				/* Should I really unlock ? */
@@ -9715,7 +9731,6 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 				error = EFAULT;
 				goto out_locked;
 			}
-			SCTP_TCB_LOCK(stcb);
 			SCTP_INP_RUNLOCK(inp);
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 502115
@@ -9881,11 +9896,15 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 		MGETHDR(mm, M_WAIT, MT_DATA);
 		if (mm == NULL) {
 			error = ENOMEM;
+		recover_clean_up:
+			SCTP_INP_RLOCK(inp);
+			SCTP_TCB_LOCK(stcb);
+			SCTP_INP_RUNLOCK(inp);
 			goto clean_up;
 		}
 		error = sctp_copy_one(mm, uio, tot_out, resv_in_first, &mbcnt_e);
 		if (error)
-			goto clean_up;
+			goto recover_clean_up;
 		sctp_prepare_chunk(chk, stcb, srcv, strq, net);
 		chk->mbcnt = mbcnt_e;
 		mbcnt += mbcnt_e;
@@ -9985,12 +10004,16 @@ clean_up:
 			MGETHDR(chk->data, M_WAIT, MT_DATA);
 			if (chk->data == NULL) {
 				error = ENOMEM;
+			recover_temp_clean_up:
+				SCTP_INP_RLOCK(inp);
+				SCTP_TCB_LOCK(stcb);
+				SCTP_INP_RUNLOCK(inp);
 				goto temp_clean_up;
 			}
 			tot_demand = min(tot_out, frag_size);
 			error = sctp_copy_one(chk->data, uio, tot_demand , resv_in_first, &mbcnt_e);
 			if (error)
-				goto temp_clean_up;
+				goto recover_temp_clean_up;
 			/* now fix the chk->send_size */
 			chk->mbcnt = mbcnt_e;
 			mbcnt += mbcnt_e;
