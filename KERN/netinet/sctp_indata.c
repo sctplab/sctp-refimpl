@@ -171,9 +171,13 @@ sctp_set_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 	calc = sctp_sbspace_sub(calc, (u_int32_t)asoc->size_on_reasm_queue);
 	calc = sctp_sbspace_sub(calc, (u_int32_t)asoc->size_on_all_streams);
 
+	if (calc == 0) {
+		/* out of space */
+		asoc->my_rwnd = 0;
+		return;
+	}
 	/* what is the overhead of all these rwnd's */
 	calc_w_oh = sctp_sbspace_sub(calc, stcb->asoc.my_rwnd_control_len);
-
 	asoc->my_rwnd = calc;
 	if (calc_w_oh == 0) {
 		/* If our overhead is greater than the advertised
