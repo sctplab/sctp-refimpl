@@ -4198,6 +4198,7 @@ sctp_get_frag_point(struct sctp_tcb *stcb,
 }
 extern unsigned int sctp_max_chunks_on_queue;
 
+
 #define   SBLOCKWAIT(f)   (((f)&MSG_DONTWAIT) ? M_NOWAIT : M_WAITOK)
 
 static int
@@ -4215,6 +4216,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 	struct sctp_tmit_chunk template;
 	struct mbuf *n, *mnext;
 	struct mbuf *mm;
+	struct sctp_block_entry be;
 	unsigned int dataout, siz;
 	int mbcnt = 0;
 	int mbcnt_e = 0;
@@ -4369,22 +4371,11 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			 * drop to spl0() so that others can
 			 * get in.
 			 */
-
-			inp->sctp_tcb_at_block = (void *)stcb;
-			inp->error_on_block = 0;
 			sbunlock(&so->so_snd);
+			be.error = 0;
+			stcb->block_entry = &be;
 			SCTP_TCB_UNLOCK(stcb);
 			error = sbwait(&so->so_snd);
-			SCTP_INP_RLOCK(inp);
-			if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
-			    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
-				/* Should I really unlock ? */
-				SCTP_INP_RUNLOCK(inp);
-				error = EFAULT;
-				goto out_locked;
-			}
-			SCTP_TCB_LOCK(stcb);
-			SCTP_INP_RUNLOCK(inp);
 			/*
 			 * XXX: This is ugly but I have
 			 * recreated most of what goes on to
@@ -4394,28 +4385,46 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			 * further dooms the UDP model NOT to
 			 * allow this.
 			 */
-			inp->sctp_tcb_at_block = 0;
-			if (inp->error_on_block)
-				error = inp->error_on_block;
-			if (so->so_error)
-				error = so->so_error;
+			if ((error) || (so->so_error) || (be.error)){
+			  if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
+			      (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
+			    error = EFAULT;
+			  }
+			  if(!error) {
+			    if(so->so_error)
+			      error = so->so_error;
+			    if(be.error)
+			      error = be.error;
+			  }
+			  goto out_locked;
+			}
+			SCTP_INP_RLOCK(inp);
+			SCTP_TCB_LOCK(stcb);
+			if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
+			    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
+				/* Should I really unlock ? */
+				SCTP_INP_RUNLOCK(inp);
+				error = EFAULT;
+				goto out_locked;
+			}
+			stcb->block_entry = NULL;
+			SCTP_INP_RUNLOCK(inp);
+			error = sblock(&so->so_snd, M_WAITOK);
 			if (error) {
 				goto out_locked;
 			}
-			error = sblock(&so->so_snd, M_WAITOK);
-			if (error)
-				goto out_locked;
 			/* Otherwise we cycle back and recheck
 			 * the space
 			 */
 #if defined(__FreeBSD__) && __FreeBSD_version >= 502115
-			if (so->so_rcv.sb_state & SBS_CANTSENDMORE) {
+			if (so->so_rcv.sb_state & SBS_CANTSENDMORE) 
 #else
-			if (so->so_state & SS_CANTSENDMORE) {
+			if (so->so_state & SS_CANTSENDMORE) 
 #endif
+			  {
 				error = EPIPE;
 				goto release;
-			}
+			  }
 			if (so->so_error) {
 				error = so->so_error;
 				goto release;
@@ -4494,6 +4503,8 @@ sctp_msg_append(struct sctp_tcb *stcb,
 		sctp_prepare_chunk(&template, stcb, srcv, strq, net);
 
 		n = m;
+		/* unlock in case of m_wait in split */
+		SCTP_TCB_UNLOCK(stcb);
 		while (dataout > siz) {
 			/*
 			 * We can wait since this is called from the user
@@ -4506,11 +4517,19 @@ sctp_msg_append(struct sctp_tcb *stcb,
 				sctp_log_lock(stcb->sctp_ep, stcb, SCTP_LOG_LOCK_SOCKBUF_S);
 #endif
 				SOCKBUF_LOCK(&so->so_snd);
+				/* relock to stay sane */
+				SCTP_INP_RLOCK(stcb->sctp_ep);
+				SCTP_TCB_LOCK(stcb);
+				SCTP_INP_RUNLOCK(stcb->sctp_ep);
 				goto release;
 			}
 			dataout -= siz;
 			n = n->m_nextpkt;
 		}
+		/* relock to stay sane */
+		SCTP_INP_RLOCK(stcb->sctp_ep);
+		SCTP_TCB_LOCK(stcb);
+		SCTP_INP_RUNLOCK(stcb->sctp_ep);
 		/*
 		 * ok, now we have a chain on m where m->m_nextpkt points to
 		 * the next chunk and m/m->m_next chain is the piece to send.
@@ -6101,13 +6120,13 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 				*num_out += (ctl_cnt + bundle_at);
 			}
 			if (bundle_at) {
-				if (!net->rto_pending) {
-					/* setup for a RTO measurement */
-					net->rto_pending = 1;
-					data_list[0]->do_rtt = 1;
-				} else {
-					data_list[0]->do_rtt = 0;
-				}
+			        /*				if (!net->rto_pending) {*/
+ 			        /* setup for a RTO measurement */
+			        /*net->rto_pending = 1;*/
+				data_list[0]->do_rtt = 1;
+				/*				} else {*/
+				/*					data_list[0]->do_rtt = 0;*/
+				/*				}*/
 				sctp_pegs[SCTP_PEG_TSNS_SENT] += bundle_at;
 				sctp_clean_up_datalist(stcb, asoc, data_list, bundle_at, net);
 			}
@@ -7169,18 +7188,23 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 			}
 #endif
 
-#ifdef SCTP_USE_ALLMAN_BURST
-			if ((net->flight_size+(burst_limit*net->mtu)) < net->cwnd) {
-				if (net->ssthresh < net->cwnd)
-					net->ssthresh = net->cwnd;
-				net->cwnd = (net->flight_size+(burst_limit*net->mtu));
+			if(sctp_use_cwnd_based_maxburst) {
+			  if ((net->flight_size+(burst_limit*net->mtu)) < net->cwnd) {
+			    if (net->ssthresh < net->cwnd)
+			      net->ssthresh = net->cwnd;
+			    net->cwnd = (net->flight_size+(burst_limit*net->mtu));
 #ifdef SCTP_LOG_MAXBURST
-				sctp_log_maxburst(net, 0, burst_limit, SCTP_MAX_BURST_APPLIED);
+			    sctp_log_maxburst(net, 0, burst_limit, SCTP_MAX_BURST_APPLIED);
 #endif
-				sctp_pegs[SCTP_MAX_BURST_APL]++;
+			    sctp_pegs[SCTP_MAX_BURST_APL]++;
+			  }
+			  net->fast_retran_ip = 0;
+			} else {
+			  if (net->flight_size == 0) {
+			    /* Should be decaying the cwnd here */
+			    ;
+			  }
 			}
-			net->fast_retran_ip = 0;
-#endif
 		}
 
 	}
@@ -7214,22 +7238,20 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 #endif
 		tot_out += num_out;
 		burst_cnt++;
-	} while (num_out
-#ifndef SCTP_USE_ALLMAN_BURST
-		 &&  (burst_cnt < burst_limit)
-#endif
-		);
-#ifndef SCTP_USE_ALLMAN_BURST
-	if (burst_cnt >= burst_limit) {
-		sctp_pegs[SCTP_MAX_BURST_APL]++;
- 		asoc->burst_limit_applied = 1;
+	} while (num_out && (sctp_use_cwnd_based_maxburst  || 
+			     (burst_cnt < burst_limit)));
+
+	if(sctp_use_cwnd_based_maxburst == 0) {      
+	  if (burst_cnt >= burst_limit) {
+	    sctp_pegs[SCTP_MAX_BURST_APL]++;
+	    asoc->burst_limit_applied = 1;
 #ifdef SCTP_LOG_MAXBURST
-		sctp_log_maxburst(asoc->primary_destination, 0 , burst_cnt, SCTP_MAX_BURST_APPLIED);
+	    sctp_log_maxburst(asoc->primary_destination, 0 , burst_cnt, SCTP_MAX_BURST_APPLIED);
 #endif
- 	} else {
-		asoc->burst_limit_applied = 0;
- 	}
-#endif
+	  } else {
+	    asoc->burst_limit_applied = 0;
+	  }
+	}
 
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
@@ -7541,10 +7563,18 @@ sctp_output(inp, m, addr, control, p, flags)
 				FREE(asoc->strmout, M_PCB);
 				asoc->strmout = NULL;
 				asoc->streamoutcnt = asoc->pre_open_streams;
-				MALLOC(asoc->strmout, struct sctp_stream_out *,
-				       asoc->streamoutcnt *
-				       sizeof(struct sctp_stream_out), M_PCB,
-				       M_WAIT);
+				{
+				  struct sctp_stream_out *tmp_str;
+				  SCTP_TCB_UNLOCK(stcb);
+				  MALLOC(tmp_str, struct sctp_stream_out *,
+					 asoc->streamoutcnt *
+					 sizeof(struct sctp_stream_out), M_PCB,
+					 M_WAIT);
+				  SCTP_INP_RLOCK(inp);
+				  SCTP_TCB_LOCK(stcb);
+				  SCTP_INP_RUNLOCK(inp);
+				  asoc->strmout = tmp_str;
+				}
 				for (i = 0; i < asoc->streamoutcnt; i++) {
 					/*
 					 * inbound side must be set to 0xffff,
@@ -7695,7 +7725,17 @@ sctp_output(inp, m, addr, control, p, flags)
 		printf("USR Send complete qo:%d prw:%d\n", queue_only, stcb->asoc.peers_rwnd);
 	}
 #endif
-	SCTP_TCB_UNLOCK(stcb);
+	/* This is ugly but its the only way I can think of doing
+	 * it. When copying in data, we may be doing a sbwait() or
+	 * an mbuf M_WAIT. So we had to release the TCB lock in
+	 * order for that to work. But if we always re-lock we
+	 * have another problem.. its possible to go to lock
+	 * it at the error return and get into a hung state
+	 * waiting on a lock that's been freed ... at least
+	 * thats what the forced panic showed... so I can't relock
+	 * if the sbwait() or mutex returns an error :-0
+	 */
+ 	SCTP_TCB_UNLOCK_IFOWNED(stcb);
 	splx(s);
 	return (0);
 }
@@ -8518,28 +8558,6 @@ sctp_send_hb(struct sctp_tcb *stcb, int user_req, struct sctp_nets *u_net)
 					 net);
 			return (0);
 		}
-#ifndef SCTP_USE_ALLMAN_BURST
-		else {
-			/* found one idle.. decay cwnd on this one
-			 * by 1/2 if none outstanding.
-			 */
-
-			if (net->flight_size == 0) {
-				net->cwnd /= 2;
-				if (net->addr_is_local) {
-					if (net->cwnd < (net->mtu *4)) {
-						net->cwnd = net->mtu * 4;
-					}
-				} else {
-					if (net->cwnd < (net->mtu * 2)) {
-						net->cwnd = net->mtu * 2;
-					}
-				}
-
-			}
-
-		}
-#endif
 	} else {
 		net = u_net;
 		if (net == NULL) {
@@ -9607,6 +9625,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 	int tot_out, dataout;
 	struct sctp_tmit_chunk *chk;
 	struct mbuf *mm;
+	struct sctp_block_entry be;
 	struct sctp_stream_out *strq;
 	uint32_t my_vtag;
 	int resv_in_first;
@@ -9616,7 +9635,6 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 #else
 	s = splnet();
 #endif
-	STCB_TCB_LOCK_ASSERT(stcb);
 	so = stcb->sctp_socket;
 	chk = NULL;
 	mm = NULL;
@@ -9673,16 +9691,32 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 				error = EWOULDBLOCK;
 				goto release;
 			}
-			inp->sctp_tcb_at_block = (void *)stcb;
-			inp->error_on_block = 0;
 #ifdef SCTP_BLK_LOGGING
 			sctp_log_block(SCTP_BLOCK_LOG_INTO_BLK,
 			    so, asoc);
 #endif
 			sbunlock(&so->so_snd);
+			be.error = 0;
+			stcb->block_entry = &be;
 			SCTP_TCB_UNLOCK(stcb);
 			error = sbwait(&so->so_snd);
+			if (error || so->so_error || be.error) {
+				splx(s);
+				if(error == 0) {
+				  if(so->so_error)
+				    error = so->so_error;
+				  if(be.error) {
+				    error = be.error;
+				  }
+				}
+				goto out_locked;
+			}
+#ifdef SCTP_BLK_LOGGING
+			sctp_log_block(SCTP_BLOCK_LOG_OUTOF_BLK,
+			    so, asoc);
+#endif
 			SCTP_INP_RLOCK(inp);
+			SCTP_TCB_LOCK(stcb);
 			if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
 			    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
 				/* Should I really unlock ? */
@@ -9690,34 +9724,8 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 				error = EFAULT;
 				goto out_locked;
 			}
-			SCTP_TCB_LOCK(stcb);
+			stcb->block_entry = NULL;
 			SCTP_INP_RUNLOCK(inp);
-
-			inp->sctp_tcb_at_block = 0;
-#ifdef SCTP_BLK_LOGGING
-			sctp_log_block(SCTP_BLOCK_LOG_OUTOF_BLK,
-			    so, asoc);
-#endif
-			if (inp->error_on_block) {
-				/*
-				 * if our asoc was killed, the free code
-				 * (in sctp_pcb.c) will save a error in
-				 * here for us
-				 */
- 				error = inp->error_on_block;
-				splx(s);
-				goto out_locked;
-			}
-			if (error) {
-				splx(s);
-				goto out_locked;
-			}
-			/* did we encounter a socket error? */
-			if (so->so_error) {
-				error = so->so_error;
-				splx(s);
-				goto out_locked;
-			}
 			error = sblock(&so->so_snd, M_WAITOK);
 			if (error) {
 				/* Can't aquire the lock */
@@ -9725,10 +9733,11 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 				goto out_locked;
 			}
 #if defined(__FreeBSD__) && __FreeBSD_version >= 502115
-			if (so->so_rcv.sb_state & SBS_CANTSENDMORE) {
+			if (so->so_rcv.sb_state & SBS_CANTSENDMORE)
 #else
-			if (so->so_state & SS_CANTSENDMORE) {
+			if (so->so_state & SS_CANTSENDMORE)
 #endif
+			  {
 				/* The socket is now set not to sendmore.. its gone */
 				error = EPIPE;
 				splx(s);
@@ -9762,6 +9771,9 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 			 * it is done that way in the sosend code so I guess
 			 * it is ok :-0
 			 */
+
+		        /* unlock all due to m_wait */
+		        SCTP_TCB_UNLOCK(stcb);
  			MGETHDR(mm, M_WAIT, MT_DATA);
 			if (mm) {
 				struct sctp_paramhdr *ph;
@@ -9805,6 +9817,10 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 						  mm);
 			mm = NULL;
 			splx(s);
+			/* now relock the stcb so everything is sane */
+			SCTP_INP_RLOCK(inp);
+			SCTP_TCB_LOCK(stcb);
+			SCTP_INP_RUNLOCK(inp);
 			goto out_notlocked;
 		}
 		splx(s);
@@ -9862,6 +9878,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 	 */
 	splx(s);
 	SOCKBUF_UNLOCK(&so->so_snd);
+	SCTP_TCB_UNLOCK(stcb);
 	if (tot_out <= frag_size) {
 		/* no need to setup a template */
 		chk = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk);
@@ -9879,11 +9896,15 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 		MGETHDR(mm, M_WAIT, MT_DATA);
 		if (mm == NULL) {
 			error = ENOMEM;
+		recover_clean_up:
+			SCTP_INP_RLOCK(inp);
+			SCTP_TCB_LOCK(stcb);
+			SCTP_INP_RUNLOCK(inp);
 			goto clean_up;
 		}
 		error = sctp_copy_one(mm, uio, tot_out, resv_in_first, &mbcnt_e);
 		if (error)
-			goto clean_up;
+			goto recover_clean_up;
 		sctp_prepare_chunk(chk, stcb, srcv, strq, net);
 		chk->mbcnt = mbcnt_e;
 		mbcnt += mbcnt_e;
@@ -9900,6 +9921,14 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 		chk->send_size = tot_out;
 		chk->book_size = chk->send_size;
 		/* ok, we are commited */
+#if defined(__NetBSD__) || defined(__OpenBSD__)
+		s = splsoftnet();
+#else
+		s = splnet();
+#endif
+		SCTP_INP_RLOCK(inp);
+		SCTP_TCB_LOCK(stcb);
+		SCTP_INP_RUNLOCK(inp);
 		if ((srcv->sinfo_flags & SCTP_UNORDERED) == 0) {
 			/* bump the ssn if we are unordered. */
 			strq->next_sequence_sent++;
@@ -9907,11 +9936,6 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 		if (PR_SCTP_BUF_ENABLED(chk->flags)) {
 			asoc->sent_queue_cnt_removeable++;
 		}
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-		s = splsoftnet();
-#else
-		s = splnet();
-#endif
 		if ((asoc->state == 0) ||
 		    (my_vtag != asoc->my_vtag) ||
 		    (so != inp->sctp_socket) ||
@@ -9950,8 +9974,10 @@ clean_up:
 		/* we need to setup a template */
 		struct sctp_tmit_chunk template;
 		struct sctpchunk_listhead tmp;
+		int remove_cnt=0;
 
 		/* setup the template */
+
 		sctp_prepare_chunk(&template, stcb, srcv, strq, net);
 
 		/* Prepare the temp list */
@@ -9978,12 +10004,16 @@ clean_up:
 			MGETHDR(chk->data, M_WAIT, MT_DATA);
 			if (chk->data == NULL) {
 				error = ENOMEM;
+			recover_temp_clean_up:
+				SCTP_INP_RLOCK(inp);
+				SCTP_TCB_LOCK(stcb);
+				SCTP_INP_RUNLOCK(inp);
 				goto temp_clean_up;
 			}
 			tot_demand = min(tot_out, frag_size);
 			error = sctp_copy_one(chk->data, uio, tot_demand , resv_in_first, &mbcnt_e);
 			if (error)
-				goto temp_clean_up;
+				goto recover_temp_clean_up;
 			/* now fix the chk->send_size */
 			chk->mbcnt = mbcnt_e;
 			mbcnt += mbcnt_e;
@@ -9991,16 +10021,9 @@ clean_up:
 			chk->send_size = tot_demand;
 			chk->data->m_pkthdr.len = tot_demand;
 			chk->book_size = chk->send_size;
-			if (PR_SCTP_BUF_ENABLED(chk->flags)) {
-				asoc->sent_queue_cnt_removeable++;
-			}
+			remove_cnt++;
 			TAILQ_INSERT_TAIL(&tmp, chk, sctp_next);
 			tot_out -= tot_demand;
-		}
-		/* Now the tmp list holds all chunks and data */
-		if ((srcv->sinfo_flags & SCTP_UNORDERED) == 0) {
-			/* bump the ssn if we are unordered. */
-			strq->next_sequence_sent++;
 		}
 		/* Mark the first/last flags. This will
 		 * result int a 3 for a single item on the list
@@ -10017,6 +10040,19 @@ clean_up:
 #else
  		s = splnet();
 #endif
+		SCTP_INP_RLOCK(inp);
+		SCTP_TCB_LOCK(stcb);
+		SCTP_INP_RUNLOCK(inp);
+
+		/* add in the stored removeable count possibly */
+		if (PR_SCTP_BUF_ENABLED(chk->flags)) {
+		  asoc->sent_queue_cnt_removeable += remove_cnt;
+		}
+		/* Now the tmp list holds all chunks and data */
+		if ((srcv->sinfo_flags & SCTP_UNORDERED) == 0) {
+			/* bump the ssn if we are unordered. */
+			strq->next_sequence_sent++;
+		}
 		if ((asoc->state == 0) ||
 		    (my_vtag != asoc->my_vtag) ||
 		    (so != inp->sctp_socket) ||
@@ -10251,21 +10287,6 @@ sctp_sosend(struct socket *so,
 			goto out;
 		}
 	}
-	/* now we must find the assoc */
-	if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
-		SCTP_INP_RLOCK(inp);
-		stcb = LIST_FIRST(&inp->sctp_asoc_list);
-		if (stcb == NULL) {
-			SCTP_INP_RUNLOCK(inp);
-			error = ENOTCONN;
-			splx(s);
-			goto out;
-		}
-		SCTP_TCB_LOCK(stcb);
-		SCTP_INP_RUNLOCK(inp);
-		net = stcb->asoc.primary_destination;
-	}
-	/* get control */
 	if (control) {
 		/* process cmsg snd/rcv info (maybe a assoc-id) */
 		if (sctp_find_cmsg(SCTP_SNDRCV, (void *)&srcv, control,
@@ -10285,6 +10306,21 @@ sctp_sosend(struct socket *so,
 			use_rcvinfo = 1;
 		}
 	}
+	/* now we must find the assoc */
+	if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
+		SCTP_INP_RLOCK(inp);
+		stcb = LIST_FIRST(&inp->sctp_asoc_list);
+		if (stcb == NULL) {
+			SCTP_INP_RUNLOCK(inp);
+			error = ENOTCONN;
+			splx(s);
+			goto out;
+		}
+		SCTP_TCB_LOCK(stcb);
+		SCTP_INP_RUNLOCK(inp);
+		net = stcb->asoc.primary_destination;
+	}
+	/* get control */
 	if (stcb == NULL) {
 		/* Need to do a lookup */
 		if (use_rcvinfo && srcv.sinfo_assoc_id) {
@@ -10380,11 +10416,19 @@ sctp_sosend(struct socket *so,
 					asoc->streamoutcnt = asoc->pre_open_streams;
 
 					/* What happesn if this fails? .. we panic ...*/
-					MALLOC(asoc->strmout,
-					       struct sctp_stream_out *,
-					       asoc->streamoutcnt *
-					       sizeof(struct sctp_stream_out),
-					       M_PCB, M_WAIT);
+					{
+					  struct sctp_stream_out *tmp_str;
+					  SCTP_TCB_UNLOCK(stcb);
+					  MALLOC(tmp_str,
+						 struct sctp_stream_out *,
+						 asoc->streamoutcnt *
+						 sizeof(struct sctp_stream_out),
+						 M_PCB, M_WAIT);
+					  SCTP_INP_RLOCK(inp);
+					  SCTP_TCB_LOCK(stcb);
+					  SCTP_INP_RUNLOCK(inp);
+					  asoc->strmout = tmp_str;
+					}
 					for (i = 0; i < asoc->streamoutcnt; i++) {
 						/*
 						 * inbound side must be set to 0xffff,
@@ -10589,8 +10633,19 @@ sctp_sosend(struct socket *so,
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		create_lock_applied = 0;
 	}
-	if (stcb)
-		SCTP_TCB_UNLOCK(stcb);
+	if (stcb) {
+	  /* This is ugly but its the only way I can think of doing
+	   * it. When copying in data, we may be doing a sbwait() or
+	   * an mbuf M_WAIT. So we had to release the TCB lock in
+	   * order for that to work. But if we always re-lock we
+	   * have another problem.. its possible to go to lock
+	   * it at the error return and get into a hung state
+	   * waiting on a lock that's been freed ... at least
+	   * thats what the forced panic showed... so I can't relock
+	   * if the sbwait() or mutex returns an error :-0
+	   */
+	  SCTP_TCB_UNLOCK_IFOWNED(stcb);
+	}
 	if (top)
 		sctp_m_freem(top);
 	if (control)

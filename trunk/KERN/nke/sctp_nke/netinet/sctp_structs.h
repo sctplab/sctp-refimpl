@@ -162,6 +162,7 @@ struct sctp_nets {
 
 	/* This is used for SHUTDOWN/SHUTDOWN-ACK/SEND or INIT timers */
 	struct sctp_timer rxt_timer;
+        struct sctp_timer fr_timer; /* for early fr */
 
 	/* last time in seconds I sent to it */
 	struct timeval last_sent_time;
@@ -176,15 +177,18 @@ struct sctp_nets {
 	u_int32_t cwnd; /* actual cwnd */
 	u_int32_t prev_cwnd; /* cwnd before any processing */
 	u_int32_t partial_bytes_acked; /* in CA tracks when to incr a MTU */
-
+        u_int32_t rtt_variance;
+        u_int32_t prev_rtt;
 	/* tracking variables to avoid the aloc/free in sack processing */
 	unsigned int net_ack;
 	unsigned int net_ack2;
-	/*
-	 * These only are valid if the primary dest_sstate holds the
-	 * SCTP_ADDR_SWITCH_PRIMARY flag
+
+        /* 
+	 * CMT variables
 	 */
-	u_int32_t next_tsn_at_change;
+        u_int32_t this_sack_highest_newack; /* tracks highest TSN newly acked for a given dest
+					       in the current SACK. Used in SFR and HTNA algos */
+  
 	u_int32_t heartbeat_random1;
 	u_int32_t heartbeat_random2;
 
@@ -194,12 +198,13 @@ struct sctp_nets {
 	u_int16_t failure_threshold;
 	/* error stats on destination */
 	u_int16_t error_count;
-
 	/* Flags that probably can be combined into dest_state */
+
+        u_int8_t rto_variance_dir;      /* increase = 1, decreasing = 0 */
 	u_int8_t rto_pending;		/* is segment marked for RTO update  ** if we split?*/
 	u_int8_t fast_retran_ip;	/* fast retransmit in progress */
 	u_int8_t hb_responded;
-	u_int8_t cacc_saw_newack;	/* CACC algorithm flag */
+	u_int8_t saw_newack;	        /* CMT's SFR algorithm flag */
         u_int8_t src_addr_selected;	/* if we split we move */
 	u_int8_t indx_of_eligible_next_to_use;
 	u_int8_t addr_is_local;		/* its a local address (if known) could move in split */

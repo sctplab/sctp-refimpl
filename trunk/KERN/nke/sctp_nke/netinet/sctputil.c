@@ -1,7 +1,7 @@
 /*	$KAME: sctputil.c,v 1.37 2005/03/07 23:26:09 itojun Exp $	*/
 
 /*
- * Copyright (c) 2001, 2002, 2003, 2004 Cisco Systems, Inc.
+ * Copyright (c) 2001-2005 Cisco Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -166,6 +166,23 @@ void sctp_clr_stat_log(void)
 {
 	sctp_cwnd_log_at=0;
 	sctp_cwnd_log_rolled=0;
+}
+
+void
+rto_logging(struct sctp_nets *net, int from)
+{
+	sctp_clog[sctp_cwnd_log_at].from = (u_int8_t)from;
+	sctp_clog[sctp_cwnd_log_at].event_type = (u_int8_t)SCTP_LOG_EVENT_RTT;
+	sctp_clog[sctp_cwnd_log_at].x.rto.net = (u_int32_t)net;
+	sctp_clog[sctp_cwnd_log_at].x.rto.rtt = net->prev_rtt;
+	sctp_clog[sctp_cwnd_log_at].x.rto.rttvar = net->rtt_variance;
+	sctp_clog[sctp_cwnd_log_at].x.rto.direction = net->rto_variance_dir;
+	sctp_cwnd_log_at++;
+	if (sctp_cwnd_log_at >= SCTP_STAT_LOG_SIZE) {
+		sctp_cwnd_log_at = 0;
+		sctp_cwnd_log_rolled = 1;
+	}
+
 }
 
 void
@@ -447,7 +464,7 @@ sctp_fill_stat_log(struct mbuf *m)
 				    (req->end_at + 1);
 			} else {
 
-				cc = req->end_at - req->start_at;
+				cc = (req->end_at - req->start_at) + 1;
 			}
 			if (cc < num) {
 				num = cc;
@@ -467,7 +484,7 @@ sctp_fill_stat_log(struct mbuf *m)
 		if (at >= SCTP_STAT_LOG_SIZE)
 			at = 0;
 	}
-	m->m_len = (cnt_out * sizeof(struct sctp_cwnd_log_req)) + sizeof(struct sctp_cwnd_log_req);
+	m->m_len = (cnt_out * sizeof(struct sctp_cwnd_log)) + sizeof(struct sctp_cwnd_log_req);
 	return (0);
 }
 
@@ -984,7 +1001,7 @@ sctp_timeout_handler(void *t)
 	struct sctp_nets *net;
 	struct sctp_timer *tmr;
 	int s, did_output, typ;
-#if defined(__APPLE__)
+#if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
 	boolean_t funnel_state;
 
 	/* get BSD kernel funnel/mutex */
@@ -1016,7 +1033,7 @@ sctp_timeout_handler(void *t)
 	SCTP_INP_WLOCK(inp);
 	if (inp->sctp_socket == 0) {
 		splx(s);
-#if defined(__APPLE__)
+#if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
 		/* release BSD kernel funnel/mutex */
 		(void) thread_funnel_set(network_flock, FALSE);
 #endif
@@ -1026,7 +1043,7 @@ sctp_timeout_handler(void *t)
 	if (stcb) {
 		if (stcb->asoc.state == 0) {
 			splx(s);
-#if defined(__APPLE__)
+#if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
 			/* release BSD kernel funnel/mutex */
 			(void) thread_funnel_set(network_flock, FALSE);
 #endif
@@ -1042,7 +1059,7 @@ sctp_timeout_handler(void *t)
 #ifndef __NetBSD__
 	if (!callout_active(&tmr->timer)) {
 		splx(s);
-#if defined(__APPLE__)
+#if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
 		/* release BSD kernel funnel/mutex */
 		(void) thread_funnel_set(network_flock, FALSE);
 #endif
@@ -1199,7 +1216,10 @@ sctp_timeout_handler(void *t)
 		}
 		sctp_chunk_output(inp, stcb, 9);
 		break;
+	case SCTP_TIMER_TYPE_EARLYFR:
+	        /* Need to do FR of things for net */
 
+	        break;
 	case SCTP_TIMER_TYPE_ASCONF:
 		if (sctp_asconf_timer(inp, stcb, net)) {
 			/* no need to unlock on tcb its gone */
@@ -1267,7 +1287,7 @@ sctp_timeout_handler(void *t)
 #endif /* SCTP_DEBUG */
 
 	splx(s);
-#if defined(__APPLE__)
+#if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
 	/* release BSD kernel funnel/mutex */
 	(void) thread_funnel_set(network_flock, FALSE);
 #endif
@@ -1521,6 +1541,22 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		tmr = &stcb->asoc.strreset_timer;
 		break;
 
+	case SCTP_TIMER_TYPE_EARLYFR:
+		if ((stcb == NULL) || (net == NULL)) {
+			return (EFAULT);
+		}
+		if(net->flight_size > net->cwnd) {
+		  /* no need to start */
+		  return (0);
+		}
+		if(net->lastsa == 0) {
+		  /* Hmm no rtt estimate yet? */
+		  to_ticks = MSEC_TO_TICKS((stcb->asoc.initial_rto >> 2));
+		} else {
+		  to_ticks = MSEC_TO_TICKS((net->lastsa +  (net->lastsa >> 1)));
+		}
+		tmr = &net->fr_timer;
+	        break;
 	case SCTP_TIMER_TYPE_ASCONF:
 		/*
 		 * Here the timer comes from the inp
@@ -1596,13 +1632,19 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 
 	tmr = NULL;
 	switch (t_type) {
+	case SCTP_TIMER_TYPE_EARLYFR:
+		if ((stcb == NULL) || (net == NULL)) {
+			return (EFAULT);
+		}
+		tmr = &net->fr_timer;
+		break;
 	case SCTP_TIMER_TYPE_ITERATOR:
 	{
 		struct sctp_iterator *it;
 		it = (struct sctp_iterator *)inp;
 		tmr = &it->tmr;
 	}
-	break;
+ 	        break;
 	case SCTP_TIMER_TYPE_SEND:
 		if ((stcb == NULL) || (net == NULL)) {
 			return (EFAULT);
@@ -2017,6 +2059,19 @@ sctp_calculate_rto(struct sctp_tcb *stcb,
 	/* this is Van Jacobson's integer version */
 	if (net->RTO) {
 		calc_time -= (net->lastsa >> 3);
+		if(net->prev_rtt > o_calctime) {
+		  net->rtt_variance = net->prev_rtt - o_calctime;
+		  /* decreasing */
+		  net->rto_variance_dir = 0;
+		} else {
+		  /* increasing */
+		  net->rtt_variance = o_calctime - net->prev_rtt;
+		  net->rto_variance_dir = 1;
+		}
+#ifdef SCTP_RTTVAR_LOGGING
+		rto_logging(net, SCTP_LOG_RTTVAR);
+#endif
+		net->prev_rtt = o_calctime;
 		net->lastsa += calc_time;
 		if (calc_time < 0) {
 			calc_time = -calc_time;
@@ -2031,6 +2086,12 @@ sctp_calculate_rto(struct sctp_tcb *stcb,
 		net->lastsa = calc_time;
 		net->lastsv = calc_time >> 1;
 		first_measure = 1;
+		net->rto_variance_dir = 1;
+		net->prev_rtt = o_calctime;
+		net->rtt_variance = 0;
+#ifdef SCTP_RTTVAR_LOGGING
+		rto_logging(net, SCTP_LOG_INITIAL_RTT);
+#endif
 	}
 	new_rto = ((net->lastsa >> 2) + net->lastsv) >> 1;
 	if ((new_rto > SCTP_SAT_NETWORK_MIN) &&
@@ -2685,7 +2746,7 @@ sctp_notify_stream_reset(struct sctp_tcb *stcb,
 	m_notify->m_len = 0;
 	len = sizeof(struct sctp_stream_reset_event) + (number_entries * sizeof(uint16_t));
 	if (len > M_TRAILINGSPACE(m_notify)) {
-		MCLGET(m_notify, M_WAIT);
+		MCLGET(m_notify, M_DONTWAIT);
 	}
 	if (m_notify == NULL)
 		/* no clusters */
