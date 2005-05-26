@@ -1923,9 +1923,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	    TAILQ_EMPTY(&asoc->delivery_queue) &&
 	    ((ch->ch.chunk_flags & SCTP_DATA_UNORDERED) ||
 	     ((asoc->strmin[strmno].last_sequence_delivered + 1) == strmseq &&
-	      TAILQ_EMPTY(&asoc->strmin[strmno].inqueue))) &&
-	    ((long)(stcb->sctp_socket->so_rcv.sb_hiwat -
-	            stcb->sctp_socket->so_rcv.sb_cc) >= (long)the_len)) {
+	      TAILQ_EMPTY(&asoc->strmin[strmno].inqueue)))) {
 		/* Candidate for express delivery */
 		/*
 		 * Its not fragmented,
@@ -2471,9 +2469,11 @@ sctp_service_queues(struct sctp_tcb *stcb, struct sctp_association *asoc, int ho
 	 * have some on the sb hold queue.
 	 */
 	do {
-		if (stcb->sctp_socket->so_rcv.sb_cc >= stcb->sctp_socket->so_rcv.sb_hiwat) {
-			if (cntDel == 0)
+		if (stcb->sctp_socket->so_rcv.sb_cc >= sctb->sctp_socket->so_rcv.sb_hiwat) {
+			if (cntDel == 0) {
+				/* We do this to make sure we wakeup the full socket */
 				sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
+			}
 			break;
 		}
 		/* If deliver_data says no we must stop */
