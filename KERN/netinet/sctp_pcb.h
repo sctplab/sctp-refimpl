@@ -550,7 +550,7 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #define SCTP_TCB_UNLOCK(_tcb)		mtx_unlock(&(_tcb)->tcb_mtx)
 
 #define SCTP_TCB_UNLOCK_IFOWNED(_tcb)	      do { \
-                                                if (mtx_owned(&(_tcb)->tcb_mtx) == 0) \
+                                                if (mtx_owned(&(_tcb)->tcb_mtx)) \
                                                      mtx_unlock(&(_tcb)->tcb_mtx); \
                                               } while (0)
 
