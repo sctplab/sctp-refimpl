@@ -500,6 +500,13 @@ struct sctp_lock_log {
   u_int8_t resv;
 };
 
+struct sctp_rto_log {
+  u_int32_t net;
+  u_int32_t rtt;
+  u_int32_t rttvar;
+  u_int8_t  direction;
+};
+
 struct sctp_cwnd_log{
 	union {
 		struct sctp_blk_args blk;
@@ -511,6 +518,7 @@ struct sctp_cwnd_log{
 		struct sctp_mbcnt_log mbcnt;
   	        struct sctp_sack_log sack;
 	        struct sctp_lock_log lock;
+	        struct sctp_rto_log rto;
 	}x;
 	u_int8_t from;
 	u_int8_t event_type;

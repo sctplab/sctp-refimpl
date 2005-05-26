@@ -1,7 +1,7 @@
 /*	$KAME: sctp_usrreq.c,v 1.48 2005/03/07 23:26:08 itojun Exp $	*/
 
 /*
- * Copyright (c) 2001, 2002, 2003, 2004 Cisco Systems, Inc.
+ * Copyright (c) 2001-2005 Cisco Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -131,7 +131,7 @@ int sctp_recvspace = 128 * (1024 +
 int sctp_strict_sacks = 0;
 int sctp_ecn = 1;
 int sctp_ecn_nonce = 0;
-
+int sctp_use_cwnd_based_maxburst = 1;
 unsigned int sctp_delayed_sack_time_default = SCTP_RECV_MSEC;
 unsigned int sctp_heartbeat_interval_default = SCTP_HB_DEFAULT_MSEC;
 unsigned int sctp_pmtu_raise_time_default = SCTP_DEF_PMTU_RAISE_SEC;
@@ -147,6 +147,10 @@ unsigned int sctp_assoc_rtx_max_default = SCTP_DEF_MAX_SEND;
 unsigned int sctp_path_rtx_max_default = SCTP_DEF_MAX_SEND/2;
 unsigned int sctp_nr_outgoing_streams_default = SCTP_OSTREAM_INITIAL;
 unsigned int sctp_cmt_on_off = 0;
+unsigned int sctp_early_fr = 1;
+unsigned int sctp_use_rttvar_cc = 0;
+
+
 void
 sctp_init(void)
 {
@@ -662,6 +666,14 @@ SYSCTL_UINT(_net_inet_sctp, OID_AUTO, cmt_on_off, CTLFLAG_RW,
 	    &sctp_cmt_on_off, 0,
 	    "CMT on-off flag");
 
+SYSCTL_UINT(_net_inet_sctp, OID_AUTO, early_fast_retran, CTLFLAG_RW,
+	    &sctp_early_fr, 0,
+	    "Early Fast Retransmit with Timer");
+
+SYSCTL_UINT(_net_inet_sctp, OID_AUTO, use_rttvar_congctrl, CTLFLAG_RW,
+	    &sctp_use_rttvar_cc, 0,
+	    "Use congestion control via rtt variation");
+
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, heartbeat_interval, CTLFLAG_RW,
 	    &sctp_heartbeat_interval_default, 0,
 	    "Default heartbeat interval in msec");
@@ -685,6 +697,10 @@ SYSCTL_UINT(_net_inet_sctp, OID_AUTO, rto_max, CTLFLAG_RW,
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, rto_min, CTLFLAG_RW,
 	    &sctp_rto_min_default, 0,
 	    "Default minimum retransmission timeout in msec");
+
+SYSCTL_UINT(_net_inet_sctp, OID_AUTO, cwnd_maxburst, CTLFLAG_RW,
+	    &sctp_use_cwnd_based_maxburst, 0,
+	    "Use a CWND adjusting maxburst");
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, rto_initial, CTLFLAG_RW,
 	    &sctp_rto_initial_default, 0,
@@ -3575,7 +3591,6 @@ sctp_optsset(struct socket *so,
 	  (!(net->dest_state & SCTP_ADDR_UNCONFIRMED))) {
 	/* Ok we need to set it */
 	lnet = stcb->asoc.primary_destination;
-	lnet->next_tsn_at_change = net->next_tsn_at_change = stcb->asoc.sending_seq;
 	if (sctp_set_primary_addr(stcb,
 				  (struct sockaddr *)NULL,
 				  net) == 0) {
@@ -4224,6 +4239,13 @@ sctp_listen(struct socket *so, struct proc *p)
 	sctp_log_lock(inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_SOCK);
 #endif
 	SOCK_LOCK(so);
+#if defined(__FreeBSD__) && __FreeBSD_version > 500000
+	error = solisten_proto_check(so);
+	if(error) {
+		SOCK_UNLOCK(so);
+		return (error);
+	}
+#endif
 	SCTP_INP_RLOCK(inp);
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
@@ -4268,6 +4290,12 @@ sctp_listen(struct socket *so, struct proc *p)
 		inp->sctp_socket->so_options &= ~SO_ACCEPTCONN;
 	}
 	SCTP_INP_WUNLOCK(inp);
+#if defined(__FreeBSD__) && __FreeBSD_version > 500000
+	if (inp->sctp_socket->so_qlimit &&
+	    ((inp->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE) == 0)) {
+	  solisten_proto(so);
+	}
+#endif
 	SOCK_UNLOCK(so);
 	splx(s);
 	return (error);
@@ -4288,8 +4316,8 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 	int s = splnet();
 #endif
 	struct sctp_tcb *stcb;
-	struct sockaddr *prim;
 	struct sctp_inpcb *inp;
+	union sctp_sockstore store;
 
 	inp = (struct sctp_inpcb *)so->so_pcb;
 
@@ -4311,8 +4339,9 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 	}
 	SCTP_TCB_LOCK(stcb);
 	SCTP_INP_RUNLOCK(inp);
-	prim = (struct sockaddr *)&stcb->asoc.primary_destination->ro._l_addr;
-	if (prim->sa_family == AF_INET) {
+	store = stcb->asoc.primary_destination->ro._l_addr;
+	SCTP_TCB_UNLOCK(stcb);
+	if (store.sa.sa_family == AF_INET) {
 		struct sockaddr_in *sin;
 #if defined(__FreeBSD__) || defined(__APPLE__)
 		MALLOC(sin, struct sockaddr_in *, sizeof *sin, M_SONAME,
@@ -4323,8 +4352,8 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 #endif
 		sin->sin_family = AF_INET;
 		sin->sin_len = sizeof(*sin);
-		sin->sin_port = ((struct sockaddr_in *)prim)->sin_port;
-		sin->sin_addr = ((struct sockaddr_in *)prim)->sin_addr;
+		sin->sin_port = ((struct sockaddr_in *)&store)->sin_port;
+		sin->sin_addr = ((struct sockaddr_in *)&store)->sin_addr;
 #if defined(__FreeBSD__) || defined(__APPLE__)
 		*addr = (struct sockaddr *)sin;
 #else
@@ -4337,13 +4366,13 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 		       M_WAITOK | M_ZERO);
 #else
 		sin6 = (struct sockaddr_in6 *)addr;
-#endif
 		bzero((caddr_t)sin6, sizeof (*sin6));
+#endif
 		sin6->sin6_family = AF_INET6;
 		sin6->sin6_len = sizeof(*sin6);
-		sin6->sin6_port = ((struct sockaddr_in6 *)prim)->sin6_port;
+		sin6->sin6_port = ((struct sockaddr_in6 *)&store)->sin6_port;
 
-		sin6->sin6_addr = ((struct sockaddr_in6 *)prim)->sin6_addr;
+		sin6->sin6_addr = ((struct sockaddr_in6 *)&store)->sin6_addr;
 		if (IN6_IS_SCOPE_LINKLOCAL(&sin6->sin6_addr))
 			/*      sin6->sin6_scope_id = ntohs(sin6->sin6_addr.s6_addr16[1]);*/
 			in6_recoverscope(sin6, &sin6->sin6_addr, NULL);  /* skip ifp check */
@@ -4356,8 +4385,6 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 #endif
 	}
 	/* Wake any delayed sleep action */
-	SCTP_TCB_UNLOCK(stcb);
-	SCTP_INP_WLOCK(inp);
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_DONT_WAKE) {
 		inp->sctp_flags &= ~SCTP_PCB_FLAGS_DONT_WAKE;
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_WAKEOUTPUT) {
@@ -4377,7 +4404,6 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 		}
 
 	}
-	SCTP_INP_WUNLOCK(inp);
 	splx(s);
 	return (0);
 }
@@ -4794,7 +4820,7 @@ sctp_sysctl(name, namelen, oldp, oldlenp, newp, newlen)
 	/* All sysctl names at this level are terminal. */
 	if (namelen != 1)
 		return (ENOTDIR);
-sysctl_int();
+	/* ?? whats this ?? sysctl_int(); */
 
 	switch (name[0]) {
 	case SCTPCTL_MAXDGRAM:
@@ -4836,6 +4862,12 @@ sysctl_int();
  	case SCTPCTL_CMT_ONOFF:
  		return (sysctl_int(oldp, oldlenp, newp, newlen,
  				   &sctp_cmt_on_off));
+ 	case SCTPCTL_EARLY_FR:
+ 		return (sysctl_int(oldp, oldlenp, newp, newlen,
+ 				   &sctp_early_fr));
+ 	case SCTPCTL_RTTVAR_CC:
+ 		return (sysctl_int(oldp, oldlenp, newp, newlen,
+ 				   &sctp_use_rttvar_cc));
  	case SCTPCTL_HB_INTERVAL:
  		return (sysctl_int(oldp, oldlenp, newp, newlen,
  				   &sctp_heartbeat_interval_default));
@@ -4854,6 +4886,9 @@ sysctl_int();
  	case SCTPCTL_RTO_MIN:
  		return (sysctl_int(oldp, oldlenp, newp, newlen,
  				   &sctp_rto_min_default));
+	case SCTPCTL_CWND_MAXBURST:
+  	        return (sysctl_int(oldp, oldlenp, newp, newlen,
+ 				   &sctp_use_cwnd_based_maxburst));
  	case SCTPCTL_RTO_INITIAL:
  		return (sysctl_int(oldp, oldlenp, newp, newlen,
  				   &sctp_rto_initial_default));
@@ -4998,5 +5033,269 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
                        CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_MAXCHUNKONQ,
                        CTL_EOL);
 
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "delayed_sack_time",
+                       SYSCTL_DESCR("Default delayed SACK timer in msec"),
+                       NULL, 0, &sctp_delayed_sack_time_default, 0,
+                       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_DELAYED_SACK,
+                       CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "cmt_on_off",
+                       SYSCTL_DESCR("CMT on-off flag"),
+                       NULL, 0, &sctp_cmt_on_off, 0,
+                       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_CMT_ONOFF,
+                       CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "early_fast_retran",
+                       SYSCTL_DESCR("Early Fast Retransmit with Timer"),
+                       NULL, 0, &sctp_early_fr, 0,
+                       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_EARLY_FR,
+                       CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "use_rttvar_congctrl",
+                       SYSCTL_DESCR("Use Congestion Control via rtt variation"),
+                       NULL, 0, &sctp_use_rttvar_cc, 0,
+                       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_RTTVAR_CC,
+                       CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "heartbeat_interval",
+                       SYSCTL_DESCR("Default heartbeat interval in msec"),
+                       NULL, 0, &sctp_heartbeat_interval_default, 0,
+                       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_HB_INTERVAL,
+                       CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "pmtu_raise_time",
+                       SYSCTL_DESCR("Default PMTU raise timer in sec"),
+                       NULL, 0, &sctp_pmtu_raise_time_default, 0,
+		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_PMTU_RAISE,
+                       CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "shutdown_guard_time",
+                       SYSCTL_DESCR("Default shutdown guard timer in sec"),
+                       NULL, 0, &sctp_shutdown_guard_time_default, 0,
+		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_SHUTDOWN_GUARD,
+                       CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "secret_lifetime",
+                       SYSCTL_DESCR("Default secret liftime in sec"),
+                       NULL, 0, &sctp_secret_lifetime_default, 0,
+		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_SECRET_LIFETIME,
+                       CTL_EOL);
+       
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "rto_max",
+                       SYSCTL_DESCR("Default maximum retransmission timeout in msec"),
+                       NULL, 0, &sctp_rto_max_default, 0,
+		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_RTO_MAX,
+                       CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "rto_min",
+                       SYSCTL_DESCR("Default minimum retransmission timeout in msec"),
+                       NULL, 0, &sctp_rto_min_default, 0,
+		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_RTO_MIN,
+                       CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "cwnd_maxburst",
+                       SYSCTL_DESCR("Use a CWND adjusting maxburst"),
+                       NULL, 0, &sctp_use_cwnd_based_maxburst, 0,
+		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_CWND_MAXBURST,
+                       CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "rto_initial",
+                       SYSCTL_DESCR("Default initial retransmission timeout in msec"),
+                       NULL, 0, &sctp_rto_initial_default, 0,
+		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_RTO_INITIAL,
+                       CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "init_rto_max",
+                       SYSCTL_DESCR("Default maximum retransmission timeout during association setup in msec"),
+                       NULL, 0, &sctp_init_rto_max_default, 0,
+		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_INIT_RTO_MAX,
+                       CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "",
+                       SYSCTL_DESCR(),
+                       NULL, 0, &, 0,
+		       CTL_NET, PF_INET, IPPROTO_SCTP, 
+                       CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "valid_cookie_life",
+                       SYSCTL_DESCR("Default cookie lifetime in sec"),
+                       NULL, 0, &sctp_valid_cookie_life_default, 0,
+		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_COOKIE_LIFE,
+                       CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "init_rtx_max",
+                       SYSCTL_DESCR("Default maximum number of retransmission for INIT chunks"),
+                       NULL, 0, &sctp_init_rtx_max_default, 0,
+		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_INIT_RTX_MAX,
+                       CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "assoc_rtx_max",
+                       SYSCTL_DESCR("Default maximum number of retransmissions per association"),
+                       NULL, 0, &sctp_assoc_rtx_max_default, 0,
+		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_ASSOC_RTX_MAX,
+                       CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "path_rtx_max",
+                       SYSCTL_DESCR("Default maximum of retransmissions per path"),
+                       NULL, 0, &sctp_path_rtx_max_default, 0,
+		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_PATH_RTX_MAX,
+                       CTL_EOL);
+
+       
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "nr_outgoing_streams",
+                       SYSCTL_DESCR("Default number of outgoing streams"),
+                       NULL, 0, &sctp_nr_outgoing_streams_default, 0,
+		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_NR_OUTGOING_STREAMS,
+                       CTL_EOL);
+
+#ifdef SCTP_DEBUG
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "debug",
+                       SYSCTL_DESCR("Configure debug output"),
+                       NULL, 0, &sctp_debug_on, 0,
+		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_DEBUG,
+                       CTL_EOL);
+#endif
+
 }
 #endif
+
+/*
+ * additional protosw entries for Mac OS X 10.4
+ * lr is temporarily being used for socket lock/unlock LR debug
+ */
+#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+
+int sctp_lock (struct socket *so, int refcount, int lr) {
+	int lr_saved;
+
+#ifdef __ppc__
+	if (lr == 0) {
+		__asm__ volatile("mflr %0" : "=r" (lr_saved));
+	} else
+		lr_saved = lr;
+#endif
+
+	if (so->so_pcb) {
+#if 0
+		lck_mtx_assert(((struct inpcb *)so->so_pcb)->inpcb_mtx,
+			       LCK_MTX_ASSERT_NOTOWNED);
+		lck_mtx_lock(((struct inpcb *)so->so_pcb)->inpcb_mtx);
+#else
+		SCTP_INP_WLOCK((struct sctp_inpcb *)so->so_pcb);
+#endif
+	} else {
+		panic("sctp_lock: so=%x NO PCB! lr =%x\n", so, lr_saved);
+		lck_mtx_assert(so->so_proto->pr_domain->dom_mtx,
+			       LCK_MTX_ASSERT_NOTOWNED);
+		lck_mtx_lock(so->so_proto->pr_domain->dom_mtx);
+	}
+
+	if (so->so_usecount < 0)
+		panic("sctp_lock: so=%x so_pcb=%x lr=%x ref=%x\n",
+		      so, so->so_pcb, lr_saved, so->so_usecount);
+
+	if (refcount)
+		so->so_usecount++;
+	so->reserved3 = (void *)lr_saved;
+	return (0);
+}
+
+int sctp_unlock (struct socket *so, int refcount, int lr) {
+	int lr_saved;
+
+#ifdef __ppc__
+	if (lr == 0) {
+		__asm__ volatile("mflr %0" : "=r" (lr_saved));
+	} else
+		lr_saved = lr;
+#endif
+
+	if (refcount)
+		so->so_usecount--;
+
+	if (so->so_usecount < 0)
+		panic("sctp_unlock: so=%x usecount=%x\n",
+		      so, so->so_usecount);
+
+	if (so->so_pcb == NULL) {
+		panic("sctp_unlock: so=%x NO PCB! lr =%x\n", so, lr_saved);
+		lck_mtx_assert(so->so_proto->pr_domain->dom_mtx,
+			       LCK_MTX_ASSERT_OWNED);
+		lck_mtx_unlock(so->so_proto->pr_domain->dom_mtx);
+	} else {
+#if 0
+		lck_mtx_assert(((struct inpcb *)so->so_pcb)->inpcb_mtx,
+			       LCK_MTX_ASSERT_OWNED);
+		lck_mtx_unlock(((struct inpcb *)so->so_pcb)->inpcb_mtx);
+#else
+		SCTP_INP_WUNLOCK((struct sctp_inpcb *)so->so_pcb);
+#endif
+	}
+	so->reserved4 = (void *)lr_saved;
+	return (0);
+}
+
+lck_mtx_t *sctp_getlock(struct socket *so, int locktype) {
+#if 0
+	struct inpcb *inp = sotoinpcb(so);
+#else
+	struct sctp_inpcb *inp = (struct sctp_inpcb *)so->so_pcb;
+#endif
+
+	if (so->so_pcb) {
+		if (so->so_usecount < 0)
+			panic("sctp_getlock: so=%x usecount=%x\n", so,
+			      so->so_usecount);
+#if 0
+		return (inp->inpcb_mtx);
+#else
+		return (inp->inp_mtx);
+#endif
+	} else {
+		panic("sctp_getlock: so=%x NULL so_pcb\n", so);
+		return (so->so_proto->pr_domain->dom_mtx);
+	}
+}
+
+#endif /* __APPLE__ */

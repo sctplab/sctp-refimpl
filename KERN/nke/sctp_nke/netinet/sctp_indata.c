@@ -171,9 +171,13 @@ sctp_set_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 	calc = sctp_sbspace_sub(calc, (u_int32_t)asoc->size_on_reasm_queue);
 	calc = sctp_sbspace_sub(calc, (u_int32_t)asoc->size_on_all_streams);
 
+	if (calc == 0) {
+		/* out of space */
+		asoc->my_rwnd = 0;
+		return;
+	}
 	/* what is the overhead of all these rwnd's */
 	calc_w_oh = sctp_sbspace_sub(calc, stcb->asoc.my_rwnd_control_len);
-
 	asoc->my_rwnd = calc;
 	if (calc_w_oh == 0) {
 		/* If our overhead is greater than the advertised
@@ -1923,9 +1927,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	    TAILQ_EMPTY(&asoc->delivery_queue) &&
 	    ((ch->ch.chunk_flags & SCTP_DATA_UNORDERED) ||
 	     ((asoc->strmin[strmno].last_sequence_delivered + 1) == strmseq &&
-	      TAILQ_EMPTY(&asoc->strmin[strmno].inqueue))) &&
-	    ((long)(stcb->sctp_socket->so_rcv.sb_hiwat -
-	            stcb->sctp_socket->so_rcv.sb_cc) >= (long)the_len)) {
+	      TAILQ_EMPTY(&asoc->strmin[strmno].inqueue)))) {
 		/* Candidate for express delivery */
 		/*
 		 * Its not fragmented,
@@ -2472,8 +2474,10 @@ sctp_service_queues(struct sctp_tcb *stcb, struct sctp_association *asoc, int ho
 	 */
 	do {
 		if (stcb->sctp_socket->so_rcv.sb_cc >= stcb->sctp_socket->so_rcv.sb_hiwat) {
-			if (cntDel == 0)
+			if (cntDel == 0) {
+				/* We do this to make sure we wakeup the full socket */
 				sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
+			}
 			break;
 		}
 		/* If deliver_data says no we must stop */
@@ -2745,6 +2749,8 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	uint16_t frag_strt, frag_end, primary_flag_set;
 	u_long last_frag_high;
 
+	/* @@@ JRI : 
+	 * TODO: This flag is not used anywhere .. remove? */
 	if (asoc->primary_destination->dest_state & SCTP_ADDR_SWITCH_PRIMARY) {
 		primary_flag_set = 1;
 	} else {
@@ -2827,6 +2833,20 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 								*biggest_newly_acked_tsn =
 								    tp1->rec.data.TSN_seq;
 							}
+							
+							/* CMT: SFR algo (and HTNA) - 
+							 * set saw_newack to 1 for dest being newly acked.
+							 * update this_sack_highest_newack if appropriate. 
+							 * (iyengar@cis.udel.edu, 2005/05/12)
+							 */
+							tp1->whoTo->saw_newack = 1;
+
+							if (compare_with_wrap(tp1->rec.data.TSN_seq,
+							    tp1->whoTo->this_sack_highest_newack,
+							    MAX_TSN)) {
+								tp1->whoTo->this_sack_highest_newack =
+								    tp1->rec.data.TSN_seq;
+							}
 #ifdef SCTP_SACK_LOGGING
 							sctp_log_sack(*biggest_newly_acked_tsn, 
 								      last_tsn,
@@ -2865,6 +2885,7 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 								}
 							}
 						}
+
 						if (tp1->sent <= SCTP_DATAGRAM_RESEND &&
 						    tp1->sent != SCTP_DATAGRAM_UNSENT &&
 						    compare_with_wrap(tp1->rec.data.TSN_seq,
@@ -2872,10 +2893,8 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 						    MAX_TSN)) {
 							asoc->this_sack_highest_gap =
 							    tp1->rec.data.TSN_seq;
-							if (primary_flag_set) {
-								tp1->whoTo->cacc_saw_newack = 1;
-							}
 						}
+						
 						if (tp1->sent == SCTP_DATAGRAM_RESEND) {
 #ifdef SCTP_DEBUG
 							if (sctp_debug_on &
@@ -2988,16 +3007,13 @@ extern int sctp_peer_chunk_oh;
 
 static void
 sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
-    u_long biggest_tsn_acked, int strike_enabled,
-    u_long biggest_tsn_newly_acked, int accum_moved)
+    u_long biggest_tsn_acked, u_long biggest_tsn_newly_acked, int accum_moved)
 {
 	struct sctp_tmit_chunk *tp1;
 	int strike_flag=0;
 	struct timeval now;
 	int tot_retrans=0;
 	u_int32_t sending_seq;
-	int primary_switch_active = 0;
-	int double_switch_active = 0;
 
 	/* select the sending_seq, this is
 	 * either the next thing ready to
@@ -3011,12 +3027,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		sending_seq = tp1->rec.data.TSN_seq;
 	}
 
-	if (asoc->primary_destination->dest_state & SCTP_ADDR_SWITCH_PRIMARY) {
-		primary_switch_active = 1;
-	}
-	if (asoc->primary_destination->dest_state & SCTP_ADDR_DOUBLE_SWITCH) {
-		double_switch_active = 1;
-	}
+
 	if (stcb->asoc.peer_supports_prsctp ) {
 		SCTP_GETTIME_TIMEVAL(&now);
 	}
@@ -3072,35 +3083,32 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			tp1 = TAILQ_NEXT(tp1, sctp_next);
 			continue;
 		}
-		if (primary_switch_active && (strike_enabled == 0)) {
-			if (tp1->whoTo != asoc->primary_destination) {
-				/*
-				 * We can only strike things on the primary if
-				 * the strike_enabled flag is clear
-				 */
-				tp1 = TAILQ_NEXT(tp1, sctp_next);
-				continue;
-			}
-		} else if (primary_switch_active) {
-			if (tp1->whoTo->cacc_saw_newack == 0) {
-				/*
-				 * Only one was received but it was NOT
-				 * this one.
-				 */
-				tp1 = TAILQ_NEXT(tp1, sctp_next);
-				continue;
-			}
-		}
-		if (double_switch_active &&
-		    (compare_with_wrap(asoc->primary_destination->next_tsn_at_change,
-		    tp1->rec.data.TSN_seq, MAX_TSN))) {
-			/*
-			 * With a double switch we do NOT mark unless we
-			 * are beyond the switch point.
+
+		/* CMT : SFR algo (covers HTNA as well)
+		 * (iyengar@cis.udel.edu, 2005/05/12)
+		 */
+		if (tp1->whoTo->saw_newack == 0) {
+			/* No new acks were receieved for data sent to this dest.
+			 * Therefore, according to the SFR algo for CMT, no data sent
+			 * to this dest can be marked for FR using this SACK.
+			 * (iyengar@cis.udel.edu, 2005/05/12)
 			 */
 			tp1 = TAILQ_NEXT(tp1, sctp_next);
 			continue;
 		}
+		else if (compare_with_wrap(tp1->rec.data.TSN_seq, 
+			tp1->whoTo->this_sack_highest_newack, MAX_TSN)) {
+			/* New acks were receieved for data sent to this dest.
+			 * But no new acks were seen for data sent after tp1.
+			 * Therefore, according to the SFR algo for CMT,
+			 * tp1 cannot be marked for FR using this SACK.
+			 * This step covers the HTNA algo as well.
+			 * (iyengar@cis.udel.edu, 2005/05/12)
+			 */
+			tp1 = TAILQ_NEXT(tp1, sctp_next);
+			continue;
+		}
+		
 		/*
 		 * Here we check to see if we were have already done a FR
 		 * and if so we see if the biggest TSN we saw in the sack is
@@ -3152,6 +3160,9 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					strike_flag=1;
 				}
 			}
+		/* @@@ JRI: 
+		 * TODO: remove code for HTNA algo. CMT's SFR algo covers HTNA.
+		 */
  		} else if (compare_with_wrap(tp1->rec.data.TSN_seq,
  		    biggest_tsn_newly_acked, MAX_TSN)) {
 			/*
@@ -3173,6 +3184,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			sctp_log_fr(tp1->rec.data.TSN_seq, tp1->snd_count,
 			    0, SCTP_FR_MARKED);
 #endif
+			sctp_pegs[SCTP_REACHED_FR_MARK]++;
 			if (strike_flag) {
 				/* This is a subsequent FR */
 				sctp_pegs[SCTP_DUP_FR]++;
@@ -3562,7 +3574,6 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	uint32_t send_s;
 	int some_on_streamwheel;
 	long j;
-	int strike_enabled = 0, cnt_of_cacc = 0;
 	int accum_moved = 0;
 	int marking_allowed = 1;
 	int will_exit_fast_recovery=0;
@@ -3689,6 +3700,13 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	}
 	if (compare_with_wrap(asoc->t3timeout_highest_marked, cum_ack, MAX_TSN)) {
 		/* we are not allowed to mark for FR */
+	        /* @@@ JRI : Bad impact on CMT. On a timeout, not TSN will be allowes
+		 * to be marked for FR until the timeout rtx's TSNs are cumacked.
+		 * This does not make sense when timeout occurs on one path, and 
+		 * FR's should be allowed to happen on other paths which have
+		 * not suffered the timeout.
+		 * TODO: Temp fix - disable this variable if CMT is used (?)
+		 */
 		marking_allowed = 0;
 	}
 	/**********************/
@@ -3807,6 +3825,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 							tp1->do_rtt = 0;
 						}
 					}
+
 #ifdef SCTP_SACK_LOGGING
 					sctp_log_sack(asoc->last_acked_seq, 
 						      cum_ack, 
@@ -3860,21 +3879,27 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	asoc->this_sack_highest_gap = last_tsn;
 
 	if (((num_seg * (sizeof(struct sctp_gap_ack_block))) + sizeof(struct sctp_sack_chunk)) > sack_length) {
+
 		/* skip corrupt segments */
-		strike_enabled = 0;
 		goto skip_segments;
 	}
 
 	if (num_seg > 0) {
-		if (asoc->primary_destination->dest_state &
-		    SCTP_ADDR_SWITCH_PRIMARY) {
-			/* clear the nets CACC flags */
-			TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
-				net->cacc_saw_newack = 0;
-			}
+
+		/* CMT: SFR algo (and HTNA) - 
+		 * this_sack_highest_newack has to be greater than the cumack. 
+		 * Also reset saw_newack to 0 for all dests.
+		 * (iyengar@cis.udel.edu, 2005/05/11)
+		 */
+		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
+		  net->saw_newack = 0;
+		  net->this_sack_highest_newack = last_tsn ;
 		}
+		
 		/*
 		 * thisSackHighestGap will increase while handling NEW segments
+		 * this_sack_highest_newack will increase while handling NEWLY ACKED chunks.
+		 * saw_newack will also change.
 		 */
 
 		sctp_handle_segments(stcb, asoc, ch, last_tsn,
@@ -3894,41 +3919,14 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 				goto hopeless_peer;
 			}
 		}
-
-		if (asoc->primary_destination->dest_state &
-		    SCTP_ADDR_SWITCH_PRIMARY) {
-			/* clear the nets CACC flags */
-			TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
-				if (net->cacc_saw_newack) {
-					cnt_of_cacc++;
-				}
-			}
-		}
-
 	}
 
-	if (cnt_of_cacc < 2) {
-		strike_enabled = 1;
-	} else {
-		strike_enabled = 0;
-	}
  skip_segments:
 	/********************************************/
 	/* drop the acked chunks from the sendqueue */
 	/********************************************/
 	asoc->last_acked_seq = cum_ack;
-	if (asoc->primary_destination->dest_state & SCTP_ADDR_SWITCH_PRIMARY) {
-		if ((cum_ack == asoc->primary_destination->next_tsn_at_change) ||
-		    (compare_with_wrap(cum_ack,
-				       asoc->primary_destination->next_tsn_at_change, MAX_TSN))) {
-			struct sctp_nets *lnet;
-			/* Turn off the switch flag for ALL addresses */
-			TAILQ_FOREACH(lnet, &asoc->nets, sctp_next) {
-				asoc->primary_destination->dest_state &=
-					~(SCTP_ADDR_SWITCH_PRIMARY|SCTP_ADDR_DOUBLE_SWITCH);
-			}
-		}
-	}
+
 	/* Drag along the t3 timeout point so we don't have a problem at wrap */
 	if (marking_allowed) {
 		asoc->t3timeout_highest_marked = cum_ack;
@@ -3991,13 +3989,14 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	 * had no previous fragments we cannot have
 	 * a revoke issue.
 	 */
-	if (asoc->saw_sack_with_frags)
-		sctp_check_for_revoked(asoc, cum_ack, biggest_tsn_acked);
 
 	if (num_seg)
 		asoc->saw_sack_with_frags = 1;
 	else
 		asoc->saw_sack_with_frags = 0;
+
+	if (asoc->saw_sack_with_frags)
+		sctp_check_for_revoked(asoc, cum_ack, biggest_tsn_acked);
 
 	/******************************/
 	/* update cwnd                */
@@ -4065,8 +4064,10 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 					dif = net->cwnd - (net->flight_size +
 							   net->net_ack);
 #ifdef SCTP_CWND_LOGGING
-/*					sctp_log_cwnd(net, net->net_ack,
-					SCTP_CWND_LOG_NOADV_SS);*/
+					/*
+					  sctp_log_cwnd(net, net->net_ack,
+						      SCTP_CWND_LOG_NOADV_SS);
+					*/
 #endif
 					if (dif > sctp_pegs[SCTP_CWND_DIFF_SA]) {
 						sctp_pegs[SCTP_CWND_DIFF_SA] =
@@ -4234,7 +4235,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	}
 	if ((num_seg > 0) && marking_allowed) {
 		sctp_strike_gap_ack_chunks(stcb, asoc, biggest_tsn_acked,
-					   strike_enabled, biggest_tsn_newly_acked, accum_moved);
+					   biggest_tsn_newly_acked, accum_moved);
 	}
 
 	/*********************************************/

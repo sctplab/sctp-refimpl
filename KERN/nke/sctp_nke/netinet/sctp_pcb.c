@@ -1,7 +1,7 @@
 /*	$KAME: sctp_pcb.c,v 1.38 2005/03/06 16:04:18 itojun Exp $	*/
 
 /*
- * Copyright (c) 2001, 2002, 2003, 2004 Cisco Systems, Inc.
+ * Copyright (c) 2001-2005 Cisco Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -263,8 +263,7 @@ void sctp_validate_no_locks()
 void
 sctp_fill_pcbinfo(struct sctp_pcbinfo *spcb)
 {
-	/* We really don't need
-	 * to lock this, but I will
+	/* We really don't need to lock this, but I will
 	 * just because it does not hurt.
 	 */
 	SCTP_INP_INFO_RLOCK();
@@ -602,7 +601,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 	SCTP_INP_INFO_RLOCK();
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) {
 		/*
-		 * Now either this guy is our listner or it's the connector.
+		 * Now either this guy is our listener or it's the connector.
 		 * If it is the one that issued the connect, then it's only
 		 * chance is to be the first TCB in the list. If it is the
 		 * acceptor, then do the special_lookup to hash and find the
@@ -1483,16 +1482,14 @@ sctp_inpcb_alloc(struct socket *so)
 
         /* Hack alert:
 	 *
-	 * This code audits the entire INP list to see if
-	 * any ep's that are in the GONE state are now
-	 * all free. This should not happen really since when
-	 * the last association if freed we should end up deleting
-	 * the inpcb. This code including the locks should
-	 * be taken out ... since the last set of fixes I
-	 * have not seen the "Found a GONE on list" has not
-	 * came out. But i am paranoid and we will leave this
-	 * in at the cost of efficency on allocation of PCB's.
-	 * Probably we should move this to the invariant
+	 * This code audits the entire INP list to see if any ep's that
+	 * are in the GONE state are now all free. This should not happen
+	 * really since when the last association if freed we should end
+	 * up deleting the inpcb. This code including the locks should be
+	 * taken out ... since the last set of fixes I have not seen the
+	 * "Found a GONE on list" has not came out. But I am paranoid and
+	 * we will leave this in at the cost of efficency on allocation
+	 * of PCB's.  Probably we should move this to the invariant
 	 * compile options
 	 */
 #ifdef INVARIANTS_SCTP
@@ -1534,6 +1531,7 @@ sctp_inpcb_alloc(struct socket *so)
 	/* setup inpcb socket too */
 	inp->ip_inp.inp.inp_socket = so;
 	inp->sctp_frag_point = SCTP_DEFAULT_MAXSEGMENT;
+
 #ifdef IPSEC
 #if !(defined(__OpenBSD__) || defined(__APPLE__))
 	{
@@ -1561,6 +1559,7 @@ sctp_inpcb_alloc(struct socket *so)
 	inp->inp_ip_ttl = ip_defttl;
 	inp->inp_ip_tos = 0;
 #endif
+	SCTP_INP_INFO_WUNLOCK();
 
 	so->so_pcb = (caddr_t)inp;
 
@@ -1577,7 +1576,7 @@ sctp_inpcb_alloc(struct socket *so)
 		inp->sctp_flags = (SCTP_PCB_FLAGS_TCPTYPE |
 		    SCTP_PCB_FLAGS_UNBOUND);
 		inp->sctp_flags |= (SCTP_PCB_FLAGS_RECVDATAIOEVNT);
-		/* Be sure we have blocking IO bu default */
+		/* Be sure we have blocking IO by default */
 		so->so_state &= ~SS_NBIO;
 	} else {
 		/*
@@ -1600,9 +1599,9 @@ sctp_inpcb_alloc(struct socket *so)
 	if (inp->sctp_tcbhash == NULL) {
 		printf("Out of SCTP-INPCB->hashinit - no resources\n");
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, inp);
-		SCTP_INP_INFO_WUNLOCK();
 		return (ENOBUFS);
 	}
+	SCTP_INP_INFO_WLOCK();
         /* LOCK init's */
 	SCTP_INP_LOCK_INIT(inp);
 	SCTP_ASOC_CREATE_LOCK_INIT(inp);
@@ -3472,10 +3471,9 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		}
 	}
 
-	if (inp->sctp_tcb_at_block == (void *)stcb) {
-		inp->error_on_block = ECONNRESET;
+	if(stcb->block_entry) {
+	  stcb->block_entry->error = ECONNRESET;
 	}
-
 	if (inp->sctp_tcbhash) {
 		LIST_REMOVE(stcb, sctp_tcbhash);
 	}
@@ -3751,6 +3749,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	}
 	splx(s);
 }
+
 
 
 /*
@@ -4327,6 +4326,17 @@ sctp_pcb_init()
 	    sctp_chunkscale));
 
         /* Master Lock INIT for info structure */
+#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+	/* allocate the lock group attribute for SCTP PCB mutexes */
+	sctppcbinfo.mtx_grp_attr = lck_grp_attr_alloc_init();
+	lck_grp_attr_setdefault(sctppcbinfo.mtx_grp_attr);
+	/* allocate the lock group for SCTP PCB mutexes */
+	sctppcbinfo.mtx_grp = lck_grp_alloc_init("sctppcb",
+						 sctppcbinfo.mtx_grp_attr);
+	/* allocate the lock attribute for SCTP PCB mutexes */
+	sctppcbinfo.mtx_attr = lck_attr_alloc_init();
+	lck_attr_setdefault(sctppcbinfo.mtx_attr);
+#endif /* __APPLE__ */
 	SCTP_INP_INFO_LOCK_INIT();
 	SCTP_ITERATOR_LOCK_INIT();
 	/* not sure if we need all the counts */

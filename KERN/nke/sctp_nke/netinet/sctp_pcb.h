@@ -4,7 +4,7 @@
 #define __sctp_pcb_h__
 
 /*
- * Copyright (c) 2001, 2002, 2003, 2004 Cisco Systems, Inc.
+ * Copyright (c) 2001-2005 Cisco Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -71,7 +71,6 @@ LIST_HEAD(sctpasochead, sctp_tcb);
 TAILQ_HEAD(sctpsocketq, sctp_socket_q_list);
 LIST_HEAD(sctpladdr, sctp_laddr);
 LIST_HEAD(sctpvtaghead, sctp_tagblock);
-
 #include <netinet/sctp_structs.h>
 #include <netinet/sctp_uio.h>
 
@@ -121,6 +120,10 @@ struct sctp_laddr {
 	struct ifaddr *ifa;
 };
 
+struct sctp_block_entry {
+        int error;
+};
+
 struct sctp_timewait {
 	uint32_t tv_sec_at_expire;	/* the seconds from boot to expire */
 	uint32_t v_tag;		/* the vtag that can not be reused */
@@ -130,6 +133,7 @@ struct sctp_tagblock {
         LIST_ENTRY(sctp_tagblock) sctp_nxt_tagblock;
 	struct sctp_timewait vtag_block[SCTP_NUMBER_IN_VTAG_BLOCK];
 };
+
 
 struct sctp_epinfo {
 	struct sctpasochead *sctp_asochash;
@@ -189,6 +193,20 @@ struct sctp_epinfo {
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
 	struct mtx ipi_ep_mtx;
 	struct mtx it_mtx;
+#elif defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+#ifdef _KERN_LOCKS_H_
+	lck_grp_attr_t *mtx_grp_attr;
+	lck_grp_t *mtx_grp;
+	lck_attr_t *mtx_attr;
+	lck_mtx_t *ipi_ep_mtx;
+	lck_mtx_t *it_mtx;
+#else
+	void *mtx_grp_attr;
+	void *mtx_grp;
+	void *mtx_attr;
+	void *ipi_ep_mtx;
+	void *it_mtx;
+#endif /* _KERN_LOCKS_H_ */
 #endif
 	u_int ipi_count_ep;
 	u_quad_t ipi_gencnt_ep;
@@ -310,8 +328,7 @@ struct sctp_inpcb {
 	} ip_inp;
 	LIST_ENTRY(sctp_inpcb) sctp_list;	/* lists all endpoints */
 	/* hash of all endpoints for model */
-	LIST_ENTRY(sctp_inpcb) sctp_hash;
-
+        LIST_ENTRY(sctp_inpcb) sctp_hash;
 	/* count of local addresses bound, 0 if bound all */
 	int laddr_count;
 	/* list of addrs in use by the EP */
@@ -330,9 +347,7 @@ struct sctp_inpcb {
 	struct sctpasochead sctp_asoc_list;
 	/* queue of TCB's waiting to stuff data up the socket */
 	struct sctpsocketq sctp_queue_list;
-	void *sctp_tcb_at_block;
 	struct sctp_iterator *inp_starting_point_for_iterator;
-	int  error_on_block;
 	uint32_t sctp_frag_point;
 	uint32_t sctp_vtag_first;
 	struct mbuf *pkt, *pkt_last, *sb_last_mpkt;
@@ -353,6 +368,16 @@ struct sctp_inpcb {
 	struct mtx inp_mtx;
 	struct mtx inp_create_mtx;
 	u_int32_t refcount;
+#elif defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+#ifdef _KERN_LOCKS_H_
+	lck_mtx_t *inp_mtx;
+	lck_mtx_t *inp_create_mtx;
+	u_int32_t refcount;
+#else
+	void *inp_mtx;
+	void *inp_create_mtx;
+	u_int32_t refcount;
+#endif /* _KERN_LOCKS_H_ */
 #endif
 };
 
@@ -362,6 +387,7 @@ struct sctp_tcb {
 	LIST_ENTRY(sctp_tcb) sctp_tcbhash;	/* next link in hash table */
 	LIST_ENTRY(sctp_tcb) sctp_tcblist;	/* list of all of the TCB's */
 	LIST_ENTRY(sctp_tcb) sctp_asocs;
+        struct sctp_block_entry *block_entry;
         /* last place we began inserting a record */
         struct mbuf *last_record_insert;
 	struct sctp_association asoc;
@@ -370,74 +396,72 @@ struct sctp_tcb {
 	uint16_t resv;
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
 	struct mtx tcb_mtx;
+#elif defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+#ifdef _KERN_LOCKS_H_
+	lck_mtx_t *tcb_mtx;
+#else
+	void *tcb_mtx;
+#endif /* _KERN_LOCKS_H_ */
 #endif
 };
+
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
 
 /* General locking concepts:
- * The goal of our locking is to of course provide
- * consistency and yet minimize overhead. We will
- * attempt to use non-recursive locks which are supposed
- * to be quite inexpensive. Now in order to do this the goal
- * is that most functions are not aware of locking. Once we
- * have a TCB we lock it and unlock when we are through. This
- * means that the TCB lock is kind-of a "global" lock when
- * working on an association. Caution must be used when
- * asserting a TCB_LOCK since if we recurse we deadlock.
+ * The goal of our locking is to of course provide consistency and yet
+ * minimize overhead. We will attempt to use non-recursive locks which
+ * are supposed to be quite inexpensive. Now in order to do this the goal
+ * is that most functions are not aware of locking. Once we have a TCB
+ * we lock it and unlock when we are through. This means that the TCB
+ * lock is kind-of a "global" lock when working on an association.
+ * Caution must be used when asserting a TCB_LOCK since if we recurse
+ * we deadlock.
  *
- * Most other locks (INP and INFO) attempt to localize
- * the locking i.e. we try to contain the lock and
- * unlock within the function that needs to lock it. This
- * sometimes mean we do extra locks and unlocks and loose
- * a bit of efficency, but if the performance statements about
- * non-recursive locks are true this should not be a problem.
- * One issue that arises with this only lock when needed
- * is that if an implicit association setup is done we
- * have a problem. If at the time I lookup an association
- * I have NULL in the tcb return, by the time I call to
- * create the association some other processor could
- * have created it. This is what the CREATE lock on
- * the endpoint. Places where we will be implicitly
- * creating the association OR just creating an association
- * (the connect call) will assert the CREATE_INP lock. This
- * will assure us that during all the lookup of INP and INFO
- * if another creator is also locking/looking up we can
- * gate the two to synchronize. So the CREATE_INP lock is
- * also another one we must use extreme caution in locking
- * to make sure we don't hit a re-entrancy issue.
+ * Most other locks (INP and INFO) attempt to localize the locking i.e.
+ * we try to contain the lock and unlock within the function that needs
+ * to lock it. This sometimes mean we do extra locks and unlocks and
+ * lose a bit of efficency, but if the performance statements about
+ * non-recursive locks are true this should not be a problem.  One issue
+ * that arises with this only lock when needed is that if an implicit
+ * association setup is done we have a problem. If at the time I lookup
+ * an association I have NULL in the tcb return, by the time I call to
+ * create the association some other processor could have created it.
+ * This is what the CREATE lock on the endpoint. Places where we will
+ * be implicitly creating the association OR just creating an association
+ * (the connect call) will assert the CREATE_INP lock. This will assure
+ * us that during all the lookup of INP and INFO if another creator is
+ * also locking/looking up we can gate the two to synchronize. So the
+ * CREATE_INP lock is also another one we must use extreme caution in
+ * locking to make sure we don't hit a re-entrancy issue.
  *
- * For non FreeBSD 5.x and above we provide a bunch
- * of EMPTY lock macro's so we can blatantly put locks
- * everywhere and they reduce to nothing on NetBSD/OpenBSD
- * and FreeBSD 4.x
+ * For non FreeBSD 5.x we provide a bunch of EMPTY lock macros so we
+ * can blatantly put locks everywhere and they reduce to nothing on
+ * NetBSD/OpenBSD and FreeBSD 4.x
  *
- */
-
-
-/* When working with the global SCTP lists we lock and unlock
- * the INP_INFO lock. So when we go to lookup an association
- * we will want to do a SCTP_INP_INFO_RLOCK() and then when
- * we want to add a new association to the sctppcbinfo list's
- * we will do a SCTP_INP_INFO_WLOCK().
+ * Appropriate macros are also provided for Apple Mac OS 10.4.x systems.
+ * 10.3.x systems (SCTP_APPLE_PANTHER defined) builds use the emtpy
+ * macros.
  */
 
 /*
- * FIX ME, all locks right now have a
- * recursive check/panic to validate that I
- * don't have any lock recursion going on.
+ * When working with the global SCTP lists we lock and unlock the INP_INFO
+ * lock. So when we go to lookup an association we will want to do a
+ * SCTP_INP_INFO_RLOCK() and then when we want to add a new association
+ * to the sctppcbinfo list's we will do a SCTP_INP_INFO_WLOCK().
  */
 
+/*
+ * FIX ME: all locks right now have a recursive check/panic to validate
+ * that I don't have any lock recursion going on.
+ */
 #define SCTP_INP_INFO_LOCK_INIT() \
         mtx_init(&sctppcbinfo.ipi_ep_mtx, "sctp", "inp_info", MTX_DEF)
 
 #ifdef INVARIANTS_SCTP
-
 void SCTP_INP_INFO_RLOCK(void);
 void SCTP_INP_INFO_WLOCK(void);
-
 #else
-
 #define SCTP_INP_INFO_RLOCK()	do { 					\
              mtx_lock(&sctppcbinfo.ipi_ep_mtx);                         \
 } while (0)
@@ -450,27 +474,25 @@ void SCTP_INP_INFO_WLOCK(void);
 #define SCTP_INP_INFO_RUNLOCK()		mtx_unlock(&sctppcbinfo.ipi_ep_mtx)
 #define SCTP_INP_INFO_WUNLOCK()		mtx_unlock(&sctppcbinfo.ipi_ep_mtx)
 
-/* The INP locks we will use for locking an SCTP endpoint, so for
+/*
+ * The INP locks we will use for locking an SCTP endpoint, so for
  * example if we want to change something at the endpoint level for
  * example random_store or cookie secrets we lock the INP level.
  */
 #define SCTP_INP_LOCK_INIT(_inp) \
 	mtx_init(&(_inp)->inp_mtx, "sctp", "inp", MTX_DEF | MTX_DUPOK)
-
 #define SCTP_ASOC_CREATE_LOCK_INIT(_inp) \
 	mtx_init(&(_inp)->inp_create_mtx, "sctp", "inp_create", \
 		 MTX_DEF | MTX_DUPOK)
-
-#define SCTP_INP_LOCK_DESTROY(_inp)	mtx_destroy(&(_inp)->inp_mtx)
-#define SCTP_ASOC_CREATE_LOCK_DESTROY(_inp)	mtx_destroy(&(_inp)->inp_create_mtx)
+#define SCTP_INP_LOCK_DESTROY(_inp) \
+	mtx_destroy(&(_inp)->inp_mtx)
+#define SCTP_ASOC_CREATE_LOCK_DESTROY(_inp) \
+	mtx_destroy(&(_inp)->inp_create_mtx)
 
 #ifdef INVARIANTS_SCTP
-
 void SCTP_INP_RLOCK(struct sctp_inpcb *);
 void SCTP_INP_WLOCK(struct sctp_inpcb *);
-
 #else
-
 #define SCTP_INP_RLOCK(_inp)	do { 					\
         mtx_lock(&(_inp)->inp_mtx);                                     \
 } while (0)
@@ -478,41 +500,37 @@ void SCTP_INP_WLOCK(struct sctp_inpcb *);
 #define SCTP_INP_WLOCK(_inp)	do { 					\
         mtx_lock(&(_inp)->inp_mtx);                                     \
 } while (0)
-
 #endif
 
-
 #define SCTP_INP_INCR_REF(_inp)        _inp->refcount++
-
-#define SCTP_INP_DECR_REF(_inp)         do {                                 \
-                                             if (_inp->refcount > 0)          \
-                                                  _inp->refcount--;          \
-                                             else                            \
-                                                  panic("bad inp refcount"); \
-}while (0)
+#define SCTP_INP_DECR_REF(_inp) \
+	do {								\
+		if (_inp->refcount > 0)					\
+			_inp->refcount--;				\
+		else							\
+			panic("bad inp refcount");			\
+	} while (0)
 
 #ifdef INVARIANTS_SCTP
-
 void SCTP_ASOC_CREATE_LOCK(struct sctp_inpcb *inp);
-
 #else
-#define SCTP_ASOC_CREATE_LOCK(_inp)  do {				\
-        mtx_lock(&(_inp)->inp_create_mtx);                              \
-} while (0)
-
+#define SCTP_ASOC_CREATE_LOCK(_inp) \
+	do {								\
+		mtx_lock(&(_inp)->inp_create_mtx);			\
+	} while (0)
 #endif
 
 #define SCTP_INP_RUNLOCK(_inp)		mtx_unlock(&(_inp)->inp_mtx)
 #define SCTP_INP_WUNLOCK(_inp)		mtx_unlock(&(_inp)->inp_mtx)
 #define SCTP_ASOC_CREATE_UNLOCK(_inp)	mtx_unlock(&(_inp)->inp_create_mtx)
 
-/* For the majority of things (once we have found the association) we
- * will lock the actual association mutex. This will protect all
- * the assoiciation level queues and streams and such. We will
- * need to lock the socket layer when we stuff data up into
- * the receiving sb_mb. I.e. we will need to do an extra
- * SOCKBUF_LOCK(&so->so_rcv) even though the association is
- * locked.
+/*
+ * For the majority of things (once we have found the association) we
+ * will lock the actual association mutex. This will protect all the
+ * assoiciation level queues and streams and such. We will need to lock
+ * the socket layer when we stuff data up into the receiving sb_mb. I.e.
+ * we will need to do an extra SOCKBUF_LOCK(&so->so_rcv) even though the
+ * association is locked.
  */
 
 #define SCTP_TCB_LOCK_INIT(_tcb) \
@@ -523,16 +541,18 @@ void SCTP_ASOC_CREATE_LOCK(struct sctp_inpcb *inp);
 struct sctp_tcb;
 
 void SCTP_TCB_LOCK(struct sctp_tcb *stcb); 
-
 #else
-
 #define SCTP_TCB_LOCK(_tcb)  do {					\
 	mtx_lock(&(_tcb)->tcb_mtx);                                     \
 } while (0)
-
 #endif
 
 #define SCTP_TCB_UNLOCK(_tcb)		mtx_unlock(&(_tcb)->tcb_mtx)
+
+#define SCTP_TCB_UNLOCK_IFOWNED(_tcb)	      do { \
+                                                if (mtx_owned(&(_tcb)->tcb_mtx)) \
+                                                     mtx_unlock(&(_tcb)->tcb_mtx); \
+                                              } while (0)
 
 #ifdef INVARIANTS_SCTP
 #define STCB_TCB_LOCK_ASSERT(_tcb) do { \
@@ -540,39 +560,122 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
                                 panic("Don't own TCB lock"); \
                             } while (0)
 #else
-
 #define STCB_TCB_LOCK_ASSERT(_tcb)
-
 #endif
-
 
 #define SCTP_ITERATOR_LOCK_INIT() \
         mtx_init(&sctppcbinfo.it_mtx, "sctp", "iterator", MTX_DEF)
 
 #ifdef INVARIANTS_SCTP
-#define SCTP_ITERATOR_LOCK()  do {					\
-        if (mtx_owned(&sctppcbinfo.it_mtx))                              \
-		panic("Iterator Lock");                                 \
-	mtx_lock(&sctppcbinfo.it_mtx);                                  \
-} while (0)
+#define SCTP_ITERATOR_LOCK() \
+	do {								\
+		if (mtx_owned(&sctppcbinfo.it_mtx))			\
+			panic("Iterator Lock");				\
+		mtx_lock(&sctppcbinfo.it_mtx);				\
+	} while (0)
 #else
-#define SCTP_ITERATOR_LOCK()  do {					\
-	mtx_lock(&sctppcbinfo.it_mtx);                                  \
-} while (0)
+#define SCTP_ITERATOR_LOCK() \
+	do {								\
+		mtx_lock(&sctppcbinfo.it_mtx);				\
+	} while (0)
 
 #endif
 
 #define SCTP_ITERATOR_UNLOCK()	        mtx_unlock(&sctppcbinfo.it_mtx)
 #define SCTP_ITERATOR_LOCK_DESTROY()	mtx_destroy(&sctppcbinfo.it_mtx)
+
+/*
+ * Apple MacOS X 10.4 "Tiger"
+ */
+#elif defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+
+/* for now, all locks use this group and attributes */
+#define SCTP_MTX_GRP sctppcbinfo.mtx_grp
+#define SCTP_MTX_ATTR sctppcbinfo.mtx_attr
+
+/* Lock for INFO stuff */
+#define SCTP_INP_INFO_LOCK_INIT() \
+	sctppcbinfo.ipi_ep_mtx = lck_rw_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
+#define SCTP_INP_INFO_RLOCK() \
+	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx)
+#define SCTP_INP_INFO_RUNLOCK() \
+	lck_rw_done(sctppcbinfo.ipi_ep_mtx)
+#define SCTP_INP_INFO_WLOCK() \
+	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx)
+#define SCTP_INP_INFO_WUNLOCK() \
+	lck_rw_done(sctppcbinfo.ipi_ep_mtx)
+
+/* Lock for INP */
+#define SCTP_INP_LOCK_INIT(_inp) \
+	(_inp)->inp_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
+#define SCTP_INP_LOCK_DESTROY(_inp) \
+	lck_mtx_free((_inp)->inp_mtx, SCTP_MTX_GRP)
+#define SCTP_INP_RLOCK(_inp) \
+	lck_mtx_lock((_inp)->inp_mtx)
+#define SCTP_INP_RUNLOCK(_inp) \
+	lck_mtx_unlock((_inp)->inp_mtx)
+#define SCTP_INP_WLOCK(_inp) \
+	lck_mtx_lock((_inp)->inp_mtx)
+#define SCTP_INP_WUNLOCK(_inp) \
+	lck_mtx_unlock((_inp)->inp_mtx)
+#define SCTP_INP_INCR_REF(_inp) \
+	(_inp)->refcount++
+#define SCTP_INP_DECR_REF(_inp) { \
+		if ((_inp)->refcount > 0) \
+			(_inp)->refcount--; \
+		else \
+			panic("bad inp refcount"); \
+	}
+
+#define SCTP_ASOC_CREATE_LOCK_INIT(_inp) \
+	(_inp)->inp_create_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
+#define SCTP_ASOC_CREATE_LOCK_DESTROY(_inp) \
+	lck_mtx_free((_inp)->inp_create_mtx, SCTP_MTX_GRP)
+#define SCTP_ASOC_CREATE_LOCK(_inp) \
+	lck_mtx_lock((_inp)->inp_create_mtx)
+#define SCTP_ASOC_CREATE_UNLOCK(_inp) \
+	lck_mtx_unlock((_inp)->inp_create_mtx)
+
+/* Lock for TCB */
+#define SCTP_TCB_LOCK_INIT(_tcb) \
+	(_tcb)->tcb_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
+#define SCTP_TCB_LOCK_DESTROY(_tcb) \
+	lck_mtx_free((_tcb)->tcb_mtx)
+#define SCTP_TCB_LOCK(_tcb) \
+	lck_mtx_lock((_tcb)->tcb_mtx)
+#define SCTP_TCB_UNLOCK(_tcb) \
+	lck_mtx_unlock((_tcb)->tcb_mtx)
+#define STCB_TCB_LOCK_ASSERT(_tcb) \
+	lck_mtx_assert((_tcb)->tcb_mtx, LCK_MTX_ASSERT_OWNED)
+
+/* iterator locks */
+#define SCTP_ITERATOR_LOCK_INIT() \
+	sctppcbinfo.it_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
+#define SCTP_ITERATOR_LOCK() \
+	lck_mtx_lock(sctppcbinfo.it_mtx)
+#define SCTP_ITERATOR_UNLOCK() \
+	lck_mtx_unlock(sctppcbinfo.it_mtx)
+#define SCTP_ITERATOR_LOCK_DESTROY() \
+	lck_mtx_free(sctppcbinfo.it_mtx, SCTP_MTX_GRP)
+
+/* socket locks */
+/* FIX ME: takes second parameter = refcount */
+#define SOCK_LOCK(_so) socket_lock(_so)
+#define SOCK_UNLOCK(_so) socket_unlock(_so)
+/* FIX ME: need second parameter */
+#define SOCKBUF_LOCK(_so_buf) sblock(_so_buf, 0)
+#define SOCKBUF_UNLOCK(_so_buf) sbunlock(_so_buf, 0)
+#define SOCKBUF_LOCK_ASSERT(_so_buf)
+
 #else
 
-/* Empty Lock declarations for all other
- * platforms pre-process away to nothing.
+/*
+ * Empty Lock declarations for all other platforms.
+ * Pre-process away to nothing.
  */
 
 /* Lock for INFO stuff */
 #define SCTP_INP_INFO_LOCK_INIT()
-#define SCTP_INP_INFO_RLOCK()
 #define SCTP_INP_INFO_RLOCK()
 #define SCTP_INP_INFO_WLOCK()
 
@@ -596,6 +699,7 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #define SCTP_TCB_LOCK_DESTROY(_tcb)
 #define SCTP_TCB_LOCK(_tcb)
 #define SCTP_TCB_UNLOCK(_tcb)
+#define SCTP_TCB_UNLOCK_IFOWNED(_tcb)
 #define STCB_TCB_LOCK_ASSERT(_tcb)
 /* socket locks that are not here in other than 5.3 > FreeBSD*/
 #define SOCK_LOCK(_so)
@@ -609,6 +713,7 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #define SCTP_ITERATOR_UNLOCK()
 #define SCTP_ITERATOR_LOCK_DESTROY()
 #endif
+
 
 #if defined(_KERNEL) || (defined(__APPLE__) && defined(KERNEL))
 
@@ -693,7 +798,8 @@ int sctp_del_local_addr_assoc_sa(struct sctp_tcb *, struct sockaddr *);
 int sctp_load_addresses_from_init(struct sctp_tcb *, struct mbuf *, int, int,
     int, struct sctphdr *, struct sockaddr *);
 
-int sctp_set_primary_addr(struct sctp_tcb *, struct sockaddr *, struct sctp_nets *);
+int sctp_set_primary_addr(struct sctp_tcb *, struct sockaddr *,
+			  struct sctp_nets *);
 
 int sctp_is_vtag_good(struct sctp_inpcb *, uint32_t, struct timeval *);
 
@@ -706,13 +812,12 @@ int sctp_add_to_socket_q(struct sctp_inpcb *, struct sctp_tcb *);
 struct sctp_tcb *sctp_remove_from_socket_q(struct sctp_inpcb *);
 
 
-/* Null in last arg inpcb indicate run on ALL ep's. Specific
- * inp in last arg indicates run on ONLY assoc's of the
- * specified endpoint.
+/*
+ * Null in last arg inpcb indicate run on ALL ep's. Specific inp in last
+ * arg indicates run on ONLY assoc's of the specified endpoint.
  */
-int
-sctp_initiate_iterator(asoc_func af, uint32_t, uint32_t, void *, uint32_t,
-		       end_func ef, struct sctp_inpcb *);
+int sctp_initiate_iterator(asoc_func af, uint32_t, uint32_t, void *, uint32_t,
+			   end_func ef, struct sctp_inpcb *);
 
 #if defined(__APPLE__)
 void	sctp_callout_alloc(struct sctp_timer *);
@@ -720,8 +825,7 @@ void	sctp_callout_free(struct callout *);
 #endif
 
 #ifdef __NetBSD__
-extern void in6_sin6_2_sin (struct sockaddr_in *,
-                            struct sockaddr_in6 *sin6);
+extern void in6_sin6_2_sin (struct sockaddr_in *, struct sockaddr_in6 *sin6);
 #endif
 
 #endif /* _KERNEL */
