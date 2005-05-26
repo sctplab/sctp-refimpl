@@ -4399,6 +4399,11 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			  goto out_locked;
 			}
 			SCTP_INP_RLOCK(inp);
+			if(be.error) {
+			  error = be.error;
+			  SCTP_INP_RUNLOCK(inp);
+			  goto out_locked;
+			}
 			SCTP_TCB_LOCK(stcb);
 			if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
 			    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
@@ -4504,6 +4509,8 @@ sctp_msg_append(struct sctp_tcb *stcb,
 
 		n = m;
 		/* unlock in case of m_wait in split */
+		be.error = 0;
+		stcb->block_entry = &be;
 		SCTP_TCB_UNLOCK(stcb);
 		while (dataout > siz) {
 			/*
@@ -4517,10 +4524,6 @@ sctp_msg_append(struct sctp_tcb *stcb,
 				sctp_log_lock(stcb->sctp_ep, stcb, SCTP_LOG_LOCK_SOCKBUF_S);
 #endif
 				SOCKBUF_LOCK(&so->so_snd);
-				/* relock to stay sane */
-				SCTP_INP_RLOCK(stcb->sctp_ep);
-				SCTP_TCB_LOCK(stcb);
-				SCTP_INP_RUNLOCK(stcb->sctp_ep);
 				goto release;
 			}
 			dataout -= siz;
@@ -4528,8 +4531,14 @@ sctp_msg_append(struct sctp_tcb *stcb,
 		}
 		/* relock to stay sane */
 		SCTP_INP_RLOCK(stcb->sctp_ep);
+		if(be.error) {
+		  error = be.error;
+		  SCTP_INP_RUNLOCK(stcb->sctp_ep);
+		  goto release;
+		}
 		SCTP_TCB_LOCK(stcb);
 		SCTP_INP_RUNLOCK(stcb->sctp_ep);
+		stcb->block_entry = NULL;
 		/*
 		 * ok, now we have a chain on m where m->m_nextpkt points to
 		 * the next chunk and m/m->m_next chain is the piece to send.
@@ -9773,6 +9782,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 			 */
 
 		        /* unlock all due to m_wait */
+			stcb->block_entry = NULL;
 		        SCTP_TCB_UNLOCK(stcb);
  			MGETHDR(mm, M_WAIT, MT_DATA);
 			if (mm) {
@@ -9818,9 +9828,6 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 			mm = NULL;
 			splx(s);
 			/* now relock the stcb so everything is sane */
-			SCTP_INP_RLOCK(inp);
-			SCTP_TCB_LOCK(stcb);
-			SCTP_INP_RUNLOCK(inp);
 			goto out_notlocked;
 		}
 		splx(s);
@@ -9926,6 +9933,11 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 		s = splnet();
 #endif
 		SCTP_INP_RLOCK(inp);
+		if(bu.error) {
+		  error = bu.error;
+		  SCTP_INP_RUNLOCK(inp);
+		  goto clean_up;
+		}
 		SCTP_TCB_LOCK(stcb);
 		SCTP_INP_RUNLOCK(inp);
 		stcb->block_entry = NULL;
@@ -10038,6 +10050,11 @@ clean_up:
  		s = splnet();
 #endif
 		SCTP_INP_RLOCK(inp);
+		if(bu.error) {
+		  error = bu.error;
+		  SCTP_INP_RUNLOCK(inp);
+		  goto temp_clean_up;
+		}
 		SCTP_TCB_LOCK(stcb);
 		SCTP_INP_RUNLOCK(inp);
 		stcb->block_entry = NULL;
