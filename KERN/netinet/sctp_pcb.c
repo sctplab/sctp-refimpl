@@ -3473,6 +3473,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 
 	if(stcb->block_entry) {
 	  stcb->block_entry->error = ECONNRESET;
+	  stcb->block_entry = NULL;
 	}
 	if (inp->sctp_tcbhash) {
 		LIST_REMOVE(stcb, sctp_tcbhash);

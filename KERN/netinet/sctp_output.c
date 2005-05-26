@@ -9878,6 +9878,8 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 	 */
 	splx(s);
 	SOCKBUF_UNLOCK(&so->so_snd);
+	stcb->block_entry = &be;
+	be.error = 0;
 	SCTP_TCB_UNLOCK(stcb);
 	if (tot_out <= frag_size) {
 		/* no need to setup a template */
@@ -9896,15 +9898,12 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 		MGETHDR(mm, M_WAIT, MT_DATA);
 		if (mm == NULL) {
 			error = ENOMEM;
-		recover_clean_up:
-			SCTP_INP_RLOCK(inp);
-			SCTP_TCB_LOCK(stcb);
-			SCTP_INP_RUNLOCK(inp);
 			goto clean_up;
 		}
 		error = sctp_copy_one(mm, uio, tot_out, resv_in_first, &mbcnt_e);
-		if (error)
-			goto recover_clean_up;
+		if (error || be.error) {
+			goto clean_up;
+		}
 		sctp_prepare_chunk(chk, stcb, srcv, strq, net);
 		chk->mbcnt = mbcnt_e;
 		mbcnt += mbcnt_e;
@@ -9929,6 +9928,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 		SCTP_INP_RLOCK(inp);
 		SCTP_TCB_LOCK(stcb);
 		SCTP_INP_RUNLOCK(inp);
+		stcb->block_entry = NULL;
 		if ((srcv->sinfo_flags & SCTP_UNORDERED) == 0) {
 			/* bump the ssn if we are unordered. */
 			strq->next_sequence_sent++;
@@ -10004,16 +10004,13 @@ clean_up:
 			MGETHDR(chk->data, M_WAIT, MT_DATA);
 			if (chk->data == NULL) {
 				error = ENOMEM;
-			recover_temp_clean_up:
-				SCTP_INP_RLOCK(inp);
-				SCTP_TCB_LOCK(stcb);
-				SCTP_INP_RUNLOCK(inp);
 				goto temp_clean_up;
 			}
 			tot_demand = min(tot_out, frag_size);
 			error = sctp_copy_one(chk->data, uio, tot_demand , resv_in_first, &mbcnt_e);
-			if (error)
-				goto recover_temp_clean_up;
+			if (error || be.error) {
+				goto temp_clean_up;
+			}
 			/* now fix the chk->send_size */
 			chk->mbcnt = mbcnt_e;
 			mbcnt += mbcnt_e;
@@ -10043,7 +10040,7 @@ clean_up:
 		SCTP_INP_RLOCK(inp);
 		SCTP_TCB_LOCK(stcb);
 		SCTP_INP_RUNLOCK(inp);
-
+		stcb->block_entry = NULL;
 		/* add in the stored removeable count possibly */
 		if (PR_SCTP_BUF_ENABLED(chk->flags)) {
 		  asoc->sent_queue_cnt_removeable += remove_cnt;
