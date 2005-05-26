@@ -4494,6 +4494,8 @@ sctp_msg_append(struct sctp_tcb *stcb,
 		sctp_prepare_chunk(&template, stcb, srcv, strq, net);
 
 		n = m;
+		/* unlock in case of m_wait in split */
+		SCTP_TCB_UNLOCK(stcb);
 		while (dataout > siz) {
 			/*
 			 * We can wait since this is called from the user
@@ -4511,6 +4513,10 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			dataout -= siz;
 			n = n->m_nextpkt;
 		}
+		/* relock to stay sane */
+		SCTP_INP_RLOCK(stcb->sctp_ep);
+		SCTP_TCB_LOCK(stcb);
+		SCTP_INP_RUNLOCK(stcb->sctp_ep);
 		/*
 		 * ok, now we have a chain on m where m->m_nextpkt points to
 		 * the next chunk and m/m->m_next chain is the piece to send.
@@ -7544,10 +7550,18 @@ sctp_output(inp, m, addr, control, p, flags)
 				FREE(asoc->strmout, M_PCB);
 				asoc->strmout = NULL;
 				asoc->streamoutcnt = asoc->pre_open_streams;
-				MALLOC(asoc->strmout, struct sctp_stream_out *,
-				       asoc->streamoutcnt *
-				       sizeof(struct sctp_stream_out), M_PCB,
-				       M_WAIT);
+				{
+				  struct sctp_stream_out *tmp_str;
+				  SCTP_TCB_UNLOCK(stcb);
+				  MALLOC(tmp_str, struct sctp_stream_out *,
+					 asoc->streamoutcnt *
+					 sizeof(struct sctp_stream_out), M_PCB,
+					 M_WAIT);
+				  SCTP_INP_RLOCK(inp);
+				  SCTP_TCB_LOCK(stcb);
+				  SCTP_INP_RUNLOCK(inp);
+				  asoc->strmout = tmp_str;
+				}
 				for (i = 0; i < asoc->streamoutcnt; i++) {
 					/*
 					 * inbound side must be set to 0xffff,
@@ -9597,7 +9611,6 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 #else
 	s = splnet();
 #endif
-	STCB_TCB_LOCK_ASSERT(stcb);
 	so = stcb->sctp_socket;
 	chk = NULL;
 	mm = NULL;
@@ -9663,17 +9676,6 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 			sbunlock(&so->so_snd);
 			SCTP_TCB_UNLOCK(stcb);
 			error = sbwait(&so->so_snd);
-			SCTP_INP_RLOCK(inp);
-			if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
-			    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
-				/* Should I really unlock ? */
-				SCTP_INP_RUNLOCK(inp);
-				error = EFAULT;
-				goto out_locked;
-			}
-			SCTP_TCB_LOCK(stcb);
-			SCTP_INP_RUNLOCK(inp);
-
 			inp->sctp_tcb_at_block = 0;
 #ifdef SCTP_BLK_LOGGING
 			sctp_log_block(SCTP_BLOCK_LOG_OUTOF_BLK,
@@ -9705,6 +9707,17 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 				splx(s);
 				goto out_locked;
 			}
+			SCTP_INP_RLOCK(inp);
+			if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
+			    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
+				/* Should I really unlock ? */
+				SCTP_INP_RUNLOCK(inp);
+				error = EFAULT;
+				goto out_locked;
+			}
+			SCTP_TCB_LOCK(stcb);
+			SCTP_INP_RUNLOCK(inp);
+
 #if defined(__FreeBSD__) && __FreeBSD_version >= 502115
 			if (so->so_rcv.sb_state & SBS_CANTSENDMORE) {
 #else
@@ -9743,6 +9756,9 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 			 * it is done that way in the sosend code so I guess
 			 * it is ok :-0
 			 */
+
+		        /* unlock all due to m_wait */
+		        SCTP_TCB_UNLOCK(stcb);
  			MGETHDR(mm, M_WAIT, MT_DATA);
 			if (mm) {
 				struct sctp_paramhdr *ph;
@@ -9786,6 +9802,10 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 						  mm);
 			mm = NULL;
 			splx(s);
+			/* now relock the stcb so everything is sane */
+			SCTP_INP_RLOCK(inp);
+			SCTP_TCB_LOCK(stcb);
+			SCTP_INP_RUNLOCK(inp);
 			goto out_notlocked;
 		}
 		splx(s);
@@ -9843,6 +9863,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 	 */
 	splx(s);
 	SOCKBUF_UNLOCK(&so->so_snd);
+	SCTP_TCB_UNLOCK(stcb);
 	if (tot_out <= frag_size) {
 		/* no need to setup a template */
 		chk = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk);
@@ -9881,6 +9902,14 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 		chk->send_size = tot_out;
 		chk->book_size = chk->send_size;
 		/* ok, we are commited */
+#if defined(__NetBSD__) || defined(__OpenBSD__)
+		s = splsoftnet();
+#else
+		s = splnet();
+#endif
+		SCTP_INP_RLOCK(inp);
+		SCTP_TCB_LOCK(stcb);
+		SCTP_INP_RUNLOCK(inp);
 		if ((srcv->sinfo_flags & SCTP_UNORDERED) == 0) {
 			/* bump the ssn if we are unordered. */
 			strq->next_sequence_sent++;
@@ -9888,11 +9917,6 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 		if (PR_SCTP_BUF_ENABLED(chk->flags)) {
 			asoc->sent_queue_cnt_removeable++;
 		}
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-		s = splsoftnet();
-#else
-		s = splnet();
-#endif
 		if ((asoc->state == 0) ||
 		    (my_vtag != asoc->my_vtag) ||
 		    (so != inp->sctp_socket) ||
@@ -9931,8 +9955,10 @@ clean_up:
 		/* we need to setup a template */
 		struct sctp_tmit_chunk template;
 		struct sctpchunk_listhead tmp;
+		int remove_cnt=0;
 
 		/* setup the template */
+
 		sctp_prepare_chunk(&template, stcb, srcv, strq, net);
 
 		/* Prepare the temp list */
@@ -9972,16 +9998,9 @@ clean_up:
 			chk->send_size = tot_demand;
 			chk->data->m_pkthdr.len = tot_demand;
 			chk->book_size = chk->send_size;
-			if (PR_SCTP_BUF_ENABLED(chk->flags)) {
-				asoc->sent_queue_cnt_removeable++;
-			}
+			remove_cnt++;
 			TAILQ_INSERT_TAIL(&tmp, chk, sctp_next);
 			tot_out -= tot_demand;
-		}
-		/* Now the tmp list holds all chunks and data */
-		if ((srcv->sinfo_flags & SCTP_UNORDERED) == 0) {
-			/* bump the ssn if we are unordered. */
-			strq->next_sequence_sent++;
 		}
 		/* Mark the first/last flags. This will
 		 * result int a 3 for a single item on the list
@@ -9998,6 +10017,19 @@ clean_up:
 #else
  		s = splnet();
 #endif
+		SCTP_INP_RLOCK(inp);
+		SCTP_TCB_LOCK(stcb);
+		SCTP_INP_RUNLOCK(inp);
+
+		/* add in the stored removeable count possibly */
+		if (PR_SCTP_BUF_ENABLED(chk->flags)) {
+		  asoc->sent_queue_cnt_removeable += remove_cnt;
+		}
+		/* Now the tmp list holds all chunks and data */
+		if ((srcv->sinfo_flags & SCTP_UNORDERED) == 0) {
+			/* bump the ssn if we are unordered. */
+			strq->next_sequence_sent++;
+		}
 		if ((asoc->state == 0) ||
 		    (my_vtag != asoc->my_vtag) ||
 		    (so != inp->sctp_socket) ||
@@ -10232,21 +10264,6 @@ sctp_sosend(struct socket *so,
 			goto out;
 		}
 	}
-	/* now we must find the assoc */
-	if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
-		SCTP_INP_RLOCK(inp);
-		stcb = LIST_FIRST(&inp->sctp_asoc_list);
-		if (stcb == NULL) {
-			SCTP_INP_RUNLOCK(inp);
-			error = ENOTCONN;
-			splx(s);
-			goto out;
-		}
-		SCTP_TCB_LOCK(stcb);
-		SCTP_INP_RUNLOCK(inp);
-		net = stcb->asoc.primary_destination;
-	}
-	/* get control */
 	if (control) {
 		/* process cmsg snd/rcv info (maybe a assoc-id) */
 		if (sctp_find_cmsg(SCTP_SNDRCV, (void *)&srcv, control,
@@ -10266,6 +10283,21 @@ sctp_sosend(struct socket *so,
 			use_rcvinfo = 1;
 		}
 	}
+	/* now we must find the assoc */
+	if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
+		SCTP_INP_RLOCK(inp);
+		stcb = LIST_FIRST(&inp->sctp_asoc_list);
+		if (stcb == NULL) {
+			SCTP_INP_RUNLOCK(inp);
+			error = ENOTCONN;
+			splx(s);
+			goto out;
+		}
+		SCTP_TCB_LOCK(stcb);
+		SCTP_INP_RUNLOCK(inp);
+		net = stcb->asoc.primary_destination;
+	}
+	/* get control */
 	if (stcb == NULL) {
 		/* Need to do a lookup */
 		if (use_rcvinfo && srcv.sinfo_assoc_id) {
@@ -10361,11 +10393,19 @@ sctp_sosend(struct socket *so,
 					asoc->streamoutcnt = asoc->pre_open_streams;
 
 					/* What happesn if this fails? .. we panic ...*/
-					MALLOC(asoc->strmout,
-					       struct sctp_stream_out *,
-					       asoc->streamoutcnt *
-					       sizeof(struct sctp_stream_out),
-					       M_PCB, M_WAIT);
+					{
+					  struct sctp_stream_out *tmp_str;
+					  SCTP_TCB_UNLOCK(stcb);
+					  MALLOC(tmp_str,
+						 struct sctp_stream_out *,
+						 asoc->streamoutcnt *
+						 sizeof(struct sctp_stream_out),
+						 M_PCB, M_WAIT);
+					  SCTP_INP_RLOCK(inp);
+					  SCTP_TCB_LOCK(stcb);
+					  SCTP_INP_RUNLOCK(inp);
+					  asoc->strmout = tmp_str;
+					}
 					for (i = 0; i < asoc->streamoutcnt; i++) {
 						/*
 						 * inbound side must be set to 0xffff,

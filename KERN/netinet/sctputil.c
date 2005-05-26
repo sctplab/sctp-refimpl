@@ -2746,7 +2746,7 @@ sctp_notify_stream_reset(struct sctp_tcb *stcb,
 	m_notify->m_len = 0;
 	len = sizeof(struct sctp_stream_reset_event) + (number_entries * sizeof(uint16_t));
 	if (len > M_TRAILINGSPACE(m_notify)) {
-		MCLGET(m_notify, M_WAIT);
+		MCLGET(m_notify, M_DONTWAIT);
 	}
 	if (m_notify == NULL)
 		/* no clusters */
