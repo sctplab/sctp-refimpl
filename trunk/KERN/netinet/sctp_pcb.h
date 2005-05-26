@@ -71,7 +71,6 @@ LIST_HEAD(sctpasochead, sctp_tcb);
 TAILQ_HEAD(sctpsocketq, sctp_socket_q_list);
 LIST_HEAD(sctpladdr, sctp_laddr);
 LIST_HEAD(sctpvtaghead, sctp_tagblock);
-
 #include <netinet/sctp_structs.h>
 #include <netinet/sctp_uio.h>
 
@@ -121,6 +120,10 @@ struct sctp_laddr {
 	struct ifaddr *ifa;
 };
 
+struct sctp_block_entry {
+        int error;
+};
+
 struct sctp_timewait {
 	uint32_t tv_sec_at_expire;	/* the seconds from boot to expire */
 	uint32_t v_tag;		/* the vtag that can not be reused */
@@ -130,6 +133,7 @@ struct sctp_tagblock {
         LIST_ENTRY(sctp_tagblock) sctp_nxt_tagblock;
 	struct sctp_timewait vtag_block[SCTP_NUMBER_IN_VTAG_BLOCK];
 };
+
 
 struct sctp_epinfo {
 	struct sctpasochead *sctp_asochash;
@@ -324,8 +328,7 @@ struct sctp_inpcb {
 	} ip_inp;
 	LIST_ENTRY(sctp_inpcb) sctp_list;	/* lists all endpoints */
 	/* hash of all endpoints for model */
-	LIST_ENTRY(sctp_inpcb) sctp_hash;
-
+        LIST_ENTRY(sctp_inpcb) sctp_hash;
 	/* count of local addresses bound, 0 if bound all */
 	int laddr_count;
 	/* list of addrs in use by the EP */
@@ -344,9 +347,7 @@ struct sctp_inpcb {
 	struct sctpasochead sctp_asoc_list;
 	/* queue of TCB's waiting to stuff data up the socket */
 	struct sctpsocketq sctp_queue_list;
-	void *sctp_tcb_at_block;
 	struct sctp_iterator *inp_starting_point_for_iterator;
-	int  error_on_block;
 	uint32_t sctp_frag_point;
 	uint32_t sctp_vtag_first;
 	struct mbuf *pkt, *pkt_last, *sb_last_mpkt;
@@ -386,6 +387,7 @@ struct sctp_tcb {
 	LIST_ENTRY(sctp_tcb) sctp_tcbhash;	/* next link in hash table */
 	LIST_ENTRY(sctp_tcb) sctp_tcblist;	/* list of all of the TCB's */
 	LIST_ENTRY(sctp_tcb) sctp_asocs;
+        struct sctp_block_entry *block_entry;
         /* last place we began inserting a record */
         struct mbuf *last_record_insert;
 	struct sctp_association asoc;
@@ -402,6 +404,7 @@ struct sctp_tcb {
 #endif /* _KERN_LOCKS_H_ */
 #endif
 };
+
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
 
@@ -545,6 +548,11 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #endif
 
 #define SCTP_TCB_UNLOCK(_tcb)		mtx_unlock(&(_tcb)->tcb_mtx)
+
+#define SCTP_TCB_UNLOCK_IFOWNED(_tcb)	      do { \
+                                                if (mtx_owned(&(_tcb)->tcb_mtx) == 0) \
+                                                     mtx_unlock(&(_tcb)->tcb_mtx); \
+                                              } while (0)
 
 #ifdef INVARIANTS_SCTP
 #define STCB_TCB_LOCK_ASSERT(_tcb) do { \
@@ -691,6 +699,7 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #define SCTP_TCB_LOCK_DESTROY(_tcb)
 #define SCTP_TCB_LOCK(_tcb)
 #define SCTP_TCB_UNLOCK(_tcb)
+#define SCTP_TCB_UNLOCK_IFOWNED(_tcb)
 #define STCB_TCB_LOCK_ASSERT(_tcb)
 /* socket locks that are not here in other than 5.3 > FreeBSD*/
 #define SOCK_LOCK(_so)

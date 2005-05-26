@@ -3471,10 +3471,9 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		}
 	}
 
-	if (inp->sctp_tcb_at_block == (void *)stcb) {
-		inp->error_on_block = ECONNRESET;
+	if(stcb->block_entry) {
+	  stcb->block_entry->error = ECONNRESET;
 	}
-
 	if (inp->sctp_tcbhash) {
 		LIST_REMOVE(stcb, sctp_tcbhash);
 	}
@@ -3750,6 +3749,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	}
 	splx(s);
 }
+
 
 
 /*

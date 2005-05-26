@@ -4198,6 +4198,7 @@ sctp_get_frag_point(struct sctp_tcb *stcb,
 }
 extern unsigned int sctp_max_chunks_on_queue;
 
+
 #define   SBLOCKWAIT(f)   (((f)&MSG_DONTWAIT) ? M_NOWAIT : M_WAITOK)
 
 static int
@@ -4215,6 +4216,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 	struct sctp_tmit_chunk template;
 	struct mbuf *n, *mnext;
 	struct mbuf *mm;
+	struct sctp_block_entry be;
 	unsigned int dataout, siz;
 	int mbcnt = 0;
 	int mbcnt_e = 0;
@@ -4369,22 +4371,11 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			 * drop to spl0() so that others can
 			 * get in.
 			 */
-
-			inp->sctp_tcb_at_block = (void *)stcb;
-			inp->error_on_block = 0;
 			sbunlock(&so->so_snd);
+			be.error = 0;
+			stcb->block_entry = &be;
 			SCTP_TCB_UNLOCK(stcb);
 			error = sbwait(&so->so_snd);
-			SCTP_INP_RLOCK(inp);
-			SCTP_TCB_LOCK(stcb);
-			if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
-			    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
-				/* Should I really unlock ? */
-				SCTP_INP_RUNLOCK(inp);
-				error = EFAULT;
-				goto out_locked;
-			}
-			SCTP_INP_RUNLOCK(inp);
 			/*
 			 * XXX: This is ugly but I have
 			 * recreated most of what goes on to
@@ -4394,28 +4385,46 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			 * further dooms the UDP model NOT to
 			 * allow this.
 			 */
-			inp->sctp_tcb_at_block = 0;
-			if (inp->error_on_block)
-				error = inp->error_on_block;
-			if (so->so_error)
-				error = so->so_error;
+			if ((error) || (so->so_error) || (be.error)){
+			  if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
+			      (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
+			    error = EFAULT;
+			  }
+			  if(!error) {
+			    if(so->so_error)
+			      error = so->so_error;
+			    if(be.error)
+			      error = be.error;
+			  }
+			  goto out_locked;
+			}
+			SCTP_INP_RLOCK(inp);
+			SCTP_TCB_LOCK(stcb);
+			if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
+			    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
+				/* Should I really unlock ? */
+				SCTP_INP_RUNLOCK(inp);
+				error = EFAULT;
+				goto out_locked;
+			}
+			stcb->block_entry = NULL;
+			SCTP_INP_RUNLOCK(inp);
+			error = sblock(&so->so_snd, M_WAITOK);
 			if (error) {
 				goto out_locked;
 			}
-			error = sblock(&so->so_snd, M_WAITOK);
-			if (error)
-				goto out_locked;
 			/* Otherwise we cycle back and recheck
 			 * the space
 			 */
 #if defined(__FreeBSD__) && __FreeBSD_version >= 502115
-			if (so->so_rcv.sb_state & SBS_CANTSENDMORE) {
+			if (so->so_rcv.sb_state & SBS_CANTSENDMORE) 
 #else
-			if (so->so_state & SS_CANTSENDMORE) {
+			if (so->so_state & SS_CANTSENDMORE) 
 #endif
+			  {
 				error = EPIPE;
 				goto release;
-			}
+			  }
 			if (so->so_error) {
 				error = so->so_error;
 				goto release;
@@ -7716,7 +7725,17 @@ sctp_output(inp, m, addr, control, p, flags)
 		printf("USR Send complete qo:%d prw:%d\n", queue_only, stcb->asoc.peers_rwnd);
 	}
 #endif
-	SCTP_TCB_UNLOCK(stcb);
+	/* This is ugly but its the only way I can think of doing
+	 * it. When copying in data, we may be doing a sbwait() or
+	 * an mbuf M_WAIT. So we had to release the TCB lock in
+	 * order for that to work. But if we always re-lock we
+	 * have another problem.. its possible to go to lock
+	 * it at the error return and get into a hung state
+	 * waiting on a lock that's been freed ... at least
+	 * thats what the forced panic showed... so I can't relock
+	 * if the sbwait() or mutex returns an error :-0
+	 */
+ 	SCTP_TCB_UNLOCK_IFOWNED(stcb);
 	splx(s);
 	return (0);
 }
@@ -9606,6 +9625,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 	int tot_out, dataout;
 	struct sctp_tmit_chunk *chk;
 	struct mbuf *mm;
+	struct sctp_block_entry be;
 	struct sctp_stream_out *strq;
 	uint32_t my_vtag;
 	int resv_in_first;
@@ -9671,57 +9691,30 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 				error = EWOULDBLOCK;
 				goto release;
 			}
-			inp->sctp_tcb_at_block = (void *)stcb;
-			inp->error_on_block = 0;
 #ifdef SCTP_BLK_LOGGING
 			sctp_log_block(SCTP_BLOCK_LOG_INTO_BLK,
 			    so, asoc);
 #endif
 			sbunlock(&so->so_snd);
+			be.error = 0;
+			stcb->block_entry = &be;
 			SCTP_TCB_UNLOCK(stcb);
 			error = sbwait(&so->so_snd);
-			inp->sctp_tcb_at_block = 0;
+			if (error || so->so_error || be.error) {
+				splx(s);
+				if(error == 0) {
+				  if(so->so_error)
+				    error = so->so_error;
+				  if(be.error) {
+				    error = be.error;
+				  }
+				}
+				goto out_locked;
+			}
 #ifdef SCTP_BLK_LOGGING
 			sctp_log_block(SCTP_BLOCK_LOG_OUTOF_BLK,
 			    so, asoc);
 #endif
-			if (inp->error_on_block) {
-				/*
-				 * if our asoc was killed, the free code
-				 * (in sctp_pcb.c) will save a error in
-				 * here for us
-				 */
- 				error = inp->error_on_block;
-				splx(s);
-			recover_out_locked:
-				SCTP_INP_RLOCK(inp);
-				SCTP_TCB_LOCK(stcb);
-				if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
-				    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
-					/* Should I really unlock ? */
-					SCTP_INP_RUNLOCK(inp);
-					error = EFAULT;
-					goto out_locked;
-				}
-				SCTP_INP_RUNLOCK(inp);
-				goto out_locked;
-			}
-			if (error) {
-				splx(s);
-				goto recover_out_locked;
-			}
-			/* did we encounter a socket error? */
-			if (so->so_error) {
-				error = so->so_error;
-				splx(s);
-				goto recover_out_locked;
-			}
-			error = sblock(&so->so_snd, M_WAITOK);
-			if (error) {
-				/* Can't aquire the lock */
-				splx(s);
-				goto recover_out_locked;
-			}
 			SCTP_INP_RLOCK(inp);
 			SCTP_TCB_LOCK(stcb);
 			if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
@@ -9731,13 +9724,20 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 				error = EFAULT;
 				goto out_locked;
 			}
+			stcb->block_entry = NULL;
 			SCTP_INP_RUNLOCK(inp);
-
+			error = sblock(&so->so_snd, M_WAITOK);
+			if (error) {
+				/* Can't aquire the lock */
+				splx(s);
+				goto out_locked;
+			}
 #if defined(__FreeBSD__) && __FreeBSD_version >= 502115
-			if (so->so_rcv.sb_state & SBS_CANTSENDMORE) {
+			if (so->so_rcv.sb_state & SBS_CANTSENDMORE)
 #else
-			if (so->so_state & SS_CANTSENDMORE) {
+			if (so->so_state & SS_CANTSENDMORE)
 #endif
+			  {
 				/* The socket is now set not to sendmore.. its gone */
 				error = EPIPE;
 				splx(s);
@@ -10633,8 +10633,19 @@ sctp_sosend(struct socket *so,
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		create_lock_applied = 0;
 	}
-	if (stcb)
-		SCTP_TCB_UNLOCK(stcb);
+	if (stcb) {
+	  /* This is ugly but its the only way I can think of doing
+	   * it. When copying in data, we may be doing a sbwait() or
+	   * an mbuf M_WAIT. So we had to release the TCB lock in
+	   * order for that to work. But if we always re-lock we
+	   * have another problem.. its possible to go to lock
+	   * it at the error return and get into a hung state
+	   * waiting on a lock that's been freed ... at least
+	   * thats what the forced panic showed... so I can't relock
+	   * if the sbwait() or mutex returns an error :-0
+	   */
+	  SCTP_TCB_UNLOCK_IFOWNED(stcb);
+	}
 	if (top)
 		sctp_m_freem(top);
 	if (control)
