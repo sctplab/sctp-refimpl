@@ -2469,7 +2469,7 @@ sctp_service_queues(struct sctp_tcb *stcb, struct sctp_association *asoc, int ho
 	 * have some on the sb hold queue.
 	 */
 	do {
-		if (stcb->sctp_socket->so_rcv.sb_cc >= sctb->sctp_socket->so_rcv.sb_hiwat) {
+		if (stcb->sctp_socket->so_rcv.sb_cc >= stcb->sctp_socket->so_rcv.sb_hiwat) {
 			if (cntDel == 0) {
 				/* We do this to make sure we wakeup the full socket */
 				sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
