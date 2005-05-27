@@ -2492,11 +2492,14 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, u_int32_t error,
 	to = (struct sockaddr *)sctp_recover_scope((struct sockaddr_in6 *)to,
 						   &lsa6);
 
-	if (sctp_sbspace(&stcb->asoc, &stcb->sctp_socket->so_rcv) < m_notify->m_len) {
+	/* For this case, we check the actual socket buffer, since the
+	 * assoc is going away we don't want to overfill the socket
+	 * buffer for a non-reader
+	 */
+	if (sctp_sbspace_failedmsgs(&stcb->sctp_socket->so_rcv) < m_notify->m_len) {
 		sctp_m_freem(m_notify);
 		return;
 	}
-
 	/* append to socket */
 	SCTP_TCB_UNLOCK(stcb);
 	SCTP_INP_WLOCK(stcb->sctp_ep);
