@@ -128,6 +128,8 @@ int sctp_recvspace = 128 * (1024 +
 				sizeof(struct sockaddr_in)
 #endif
 	);
+
+int sctp_says_check_for_deadlock = 0;
 int sctp_strict_sacks = 0;
 int sctp_ecn = 1;
 int sctp_ecn_nonce = 0;
@@ -673,6 +675,10 @@ SYSCTL_UINT(_net_inet_sctp, OID_AUTO, early_fast_retran, CTLFLAG_RW,
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, use_rttvar_congctrl, CTLFLAG_RW,
 	    &sctp_use_rttvar_cc, 0,
 	    "Use congestion control via rtt variation");
+
+SYSCTL_UINT(_net_inet_sctp, OID_AUTO, deadlock_detect, CTLFLAG_RW,
+	    &sctp_says_check_for_deadlock, 0,
+	    "SMP Deadlock detection on/off");
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, heartbeat_interval, CTLFLAG_RW,
 	    &sctp_heartbeat_interval_default, 0,
@@ -4874,6 +4880,11 @@ sctp_sysctl(name, namelen, oldp, oldlenp, newp, newlen)
  	case SCTPCTL_PMTU_RAISE:
  		return (sysctl_int(oldp, oldlenp, newp, newlen,
  				   &sctp_pmtu_raise_time_default));
+
+	case SCTPCTL_DEADLOCK_DET:
+ 		return (sysctl_int(oldp, oldlenp, newp, newlen,
+ 				   &sctp_says_check_for_deadlock));
+
  	case SCTPCTL_SHUTDOWN_GUARD:
  		return (sysctl_int(oldp, oldlenp, newp, newlen,
  				   &sctp_shutdown_guard_time_default));
@@ -5079,6 +5090,14 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
                        SYSCTL_DESCR("Default PMTU raise timer in sec"),
                        NULL, 0, &sctp_pmtu_raise_time_default, 0,
 		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_PMTU_RAISE,
+                       CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "deadlock_detect",
+                       SYSCTL_DESCR("SMP Deadlock detection on/off"),
+                       NULL, 0, &sctp_says_check_for_deadlock, 0,
+		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_DEADLOCK_DET,
                        CTL_EOL);
 
        sysctl_createv(clog, 0, NULL, NULL,
