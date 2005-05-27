@@ -2305,6 +2305,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	   ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) == 0) &&
 	   ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0)){
 	  locked_so = 1;
+#ifdef SCTP_LOCK_LOGGING
+	  sctp_log_lock(inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_SOCK);
+#endif
 	  SOCK_LOCK(so);
 	}
 	SCTP_ASOC_CREATE_LOCK(inp);
@@ -2482,9 +2485,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 #endif /*IPSEC*/
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 		ACCEPT_LOCK();
-#ifdef SCTP_LOCK_LOGGING
-		sctp_log_lock(inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_SOCK);
-#endif
 #endif
 		so->so_pcb = 0;
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
