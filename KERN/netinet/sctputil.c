@@ -328,16 +328,6 @@ sctp_log_lock(struct sctp_inpcb *inp, struct sctp_tcb *stcb, uint8_t from)
     sctp_clog[sctp_cwnd_log_at].x.lock.sockrcvbuf_lock = SCTP_LOCK_UNKNOWN;
     sctp_clog[sctp_cwnd_log_at].x.lock.socksndbuf_lock = SCTP_LOCK_UNKNOWN;
   }
-  if((sctp_clog[sctp_cwnd_log_at].x.lock.sock_lock == 1) &&
-     (from == SCTP_LOG_LOCK_SOCK)) {
-	  panic("socket buffer lock on and locking it??");
-  } else if ((from == SCTP_LOG_LOCK_SOCKBUF_R) &&
-	     (sctp_clog[sctp_cwnd_log_at].x.lock.sockrcvbuf_lock == 1)) {
-	  panic("socket rcv buffer lock on and locking it??");
-  } else if ((from == SCTP_LOG_LOCK_SOCKBUF_S) &&
-	     (sctp_clog[sctp_cwnd_log_at].x.lock.socksndbuf_lock == 1)) {
-	  panic("socket snd buffer lock on and locking it??");
-  }
   sctp_cwnd_log_at++;
   if (sctp_cwnd_log_at >= SCTP_STAT_LOG_SIZE) {
     sctp_cwnd_log_at = 0;
