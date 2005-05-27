@@ -4404,7 +4404,9 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			  SCTP_INP_RUNLOCK(inp);
 			  goto out_locked;
 			}
+			SOCKBUF_UNLOCK(&so->so_snd);
 			SCTP_TCB_LOCK(stcb);
+			SOCKBUF_LOCK(&so->so_snd);
 			if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
 			    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
 				/* Should I really unlock ? */
@@ -9725,7 +9727,9 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 			    so, asoc);
 #endif
 			SCTP_INP_RLOCK(inp);
+			SOCKBUF_UNLOCK(&so->so_snd);
 			SCTP_TCB_LOCK(stcb);
+			SOCKBUF_LOCK(&so->so_snd);
 			if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
 			    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
 				/* Should I really unlock ? */
@@ -9954,6 +9958,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 		    (inp->sctp_socket == 0)) {
 			/* connection was aborted */
 			splx(s);
+			SCTP_TCB_UNLOCK(stcb);
 			error = ECONNRESET;
 			goto clean_up;
 		}
