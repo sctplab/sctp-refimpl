@@ -4116,7 +4116,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 	if (mp != NULL)
 		*mp = NULL;
 #ifdef SCTP_LOCK_LOGGING
-	sctp_log_lock(stcb->sctp_ep, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
+	sctp_log_lock(inp, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
 #endif
 	SOCKBUF_LOCK(&so->so_rcv);
  restart:
@@ -4483,7 +4483,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 #endif /* ZERO_COPY_SOCKETS */
 				error = uiomove(mtod(m, char *) + moff, (int)len, uio);
 #ifdef SCTP_LOCK_LOGGING
-			sctp_log_lock(stcb->sctp_ep, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
+			sctp_log_lock(inp, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
 #endif
 			SOCKBUF_LOCK(&so->so_rcv);
 			if (error)
@@ -4561,7 +4561,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 #endif
 						);
 #ifdef SCTP_LOCK_LOGGING
-					sctp_log_lock(stcb->sctp_ep, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
+					sctp_log_lock(inp, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
 #endif
 					SOCKBUF_LOCK(&so->so_rcv);
 				}
@@ -4621,7 +4621,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 				SOCKBUF_UNLOCK(&so->so_rcv);
 				(*pr->pr_usrreqs->pru_rcvd)(so, flags);
 #ifdef SCTP_LOCK_LOGGING
-				sctp_log_lock(stcb->sctp_ep, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
+				sctp_log_lock(inp, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
 #endif
 
 				SOCKBUF_LOCK(&so->so_rcv);
@@ -4656,7 +4656,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		SOCKBUF_UNLOCK(&so->so_rcv);
 		(*pr->pr_usrreqs->pru_rcvd)(so, flags);
 #ifdef SCTP_LOCK_LOGGING
-		sctp_log_lock(stcb->sctp_ep, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
+		sctp_log_lock(inp, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
 #endif
 		SOCKBUF_LOCK(&so->so_rcv);
 	}
