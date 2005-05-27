@@ -10090,7 +10090,7 @@ clean_up:
 			chk = TAILQ_FIRST(&tmp);
 		}
 		asoc->chunks_on_out_queue += cnt_on_queue;
-		chk->whoTo->ref_count += ref_count_add;
+		net->ref_count += ref_count_add;
 		/* now check if this stream is on the wheel */
 		if ((strq->next_spoke.tqe_next == NULL) &&
 		    (strq->next_spoke.tqe_prev == NULL)) {
