@@ -454,11 +454,11 @@ sctp_notify(struct sctp_inpcb *inp,
 
 
 		if (inp->sctp_socket) {
-			SOCK_LOCK(inp->sctp_socket);
-			SCTP_INP_RLOCK(inp);
 #ifdef SCTP_LOCK_LOGGING
 		        sctp_log_lock(inp, stcb, SCTP_LOG_LOCK_SOCK);
 #endif
+			SOCK_LOCK(inp->sctp_socket);
+			SCTP_INP_RLOCK(inp);
 			SCTP_INP_RUNLOCK(inp);
 			inp->sctp_socket->so_error = errno;
 			sctp_sowwakeup(inp, inp->sctp_socket);
