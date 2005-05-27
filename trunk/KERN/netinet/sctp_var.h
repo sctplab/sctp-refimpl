@@ -80,11 +80,12 @@
 #define SCTPCTL_CWND_MAXBURST       27
 #define SCTPCTL_EARLY_FR            28
 #define SCTPCTL_RTTVAR_CC           29
+#define SCTPCTL_DEADLOCK_DET        30
 #ifdef SCTP_DEBUG
-#define SCTPCTL_DEBUG               30
-#define SCTPCTL_MAXID		    31
+#define SCTPCTL_DEBUG               31
+#define SCTPCTL_MAXID		    32
 #else
-#define SCTPCTL_MAXID		    30
+#define SCTPCTL_MAXID		    31
 #endif
 
 #endif
@@ -121,6 +122,7 @@
 	{ "cwnd_maxburst", CTLTYPE_INT }, \
         { "early_fast_retran", CTLTYPE_INT }, \
         { "use_rttvar_congctrl", CTLTYPE_INT }, \
+        { "deadlock_detect", CTLTYPE_INT }, \
 	{ "debug", CTLTYPE_INT }, \
 }
 #else
@@ -155,6 +157,7 @@
 	{ "cwnd_maxburst", CTLTYPE_INT }, \
         { "early_fast_retran", CTLTYPE_INT }, \
         { "use_rttvar_congctrl", CTLTYPE_INT }, \
+        { "deadlock_detect", CTLTYPE_INT }, \
 }
 #endif
 
