@@ -4264,7 +4264,9 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 			/* we could not have had a stcb,
 			 * or we don't have one.
 			 */
+			SOCKBUF_UNLOCK(&so->so_rcv);
 			SCTP_INP_RLOCK(inp);
+			SOCKBUF_LOCK(&so->so_rcv);
 			at_eor = 0;
 			if ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) || 
 			    (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
