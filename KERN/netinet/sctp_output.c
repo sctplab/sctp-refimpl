@@ -4459,13 +4459,11 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			goto release;
 		}
 		sctp_prepare_chunk(chk, stcb, srcv, strq, net);
-		chk->whoTo->ref_count++;
 		chk->rec.data.rcv_flags |= SCTP_DATA_NOT_FRAG;
 
 		/* no flags yet, FRAGMENT_OK goes here */
 		sctppcbinfo.ipi_count_chunk++;
 		sctppcbinfo.ipi_gencnt_chunk++;
-		asoc->chunks_on_out_queue++;
 		chk->data = m;
 		m = NULL;
 		/* Total in the MSIZE */
@@ -4479,6 +4477,8 @@ sctp_msg_append(struct sctp_tcb *stcb,
 		chk->send_size = dataout;
 		chk->book_size = chk->send_size;
 		chk->mbcnt = mbcnt;
+		chk->whoTo->ref_count++;
+		asoc->chunks_on_out_queue++;
 		/* ok, we are commited */
 		if ((srcv->sinfo_flags & SCTP_UNORDERED) == 0) {
 			/* bump the ssn if we are unordered. */
@@ -9905,7 +9905,6 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 		}
 		sctppcbinfo.ipi_count_chunk++;
 		sctppcbinfo.ipi_gencnt_chunk++;
-		asoc->chunks_on_out_queue++;
 		MGETHDR(mm, M_WAIT, MT_DATA);
 		if (mm == NULL) {
 			error = ENOMEM;
@@ -9925,7 +9924,6 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 
 		/* the actual chunk flags */
 		chk->rec.data.rcv_flags |= SCTP_DATA_NOT_FRAG;
-		chk->whoTo->ref_count++;
 
 		/* fix up the send_size if it is not present */
 		chk->send_size = tot_out;
@@ -9944,6 +9942,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 		}
 		SCTP_TCB_LOCK(stcb);
 		SCTP_INP_RUNLOCK(inp);
+		asoc->chunks_on_out_queue++;
 		stcb->block_entry = NULL;
 		if ((srcv->sinfo_flags & SCTP_UNORDERED) == 0) {
 			/* bump the ssn if we are unordered. */
@@ -9962,6 +9961,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 			error = ECONNRESET;
 			goto clean_up;
 		}
+		chk->whoTo->ref_count++;
 		asoc->stream_queue_cnt++;
 		TAILQ_INSERT_TAIL(&strq->outqueue, chk, sctp_next);
 		/* now check if this stream is on the wheel */
@@ -9992,7 +9992,8 @@ clean_up:
 		struct sctp_tmit_chunk template;
 		struct sctpchunk_listhead tmp;
 		int remove_cnt=0;
-
+		int cnt_on_queue=0;
+		int ref_count_add=0;
 		/* setup the template */
 
 		sctp_prepare_chunk(&template, stcb, srcv, strq, net);
@@ -10013,11 +10014,10 @@ clean_up:
 				error = ENOMEM;
 			}
 			sctppcbinfo.ipi_count_chunk++;
-			asoc->chunks_on_out_queue++;
-
+			cnt_on_queue++;
 			sctppcbinfo.ipi_gencnt_chunk++;
 			*chk = template;
-			chk->whoTo->ref_count++;
+			ref_count_add++;
 			MGETHDR(chk->data, M_WAIT, MT_DATA);
 			if (chk->data == NULL) {
 				error = ENOMEM;
@@ -10089,6 +10089,8 @@ clean_up:
 			TAILQ_INSERT_TAIL(&strq->outqueue, chk, sctp_next);
 			chk = TAILQ_FIRST(&tmp);
 		}
+		asoc->chunks_on_out_queue += cnt_on_queue;
+		chk->whoTo->ref_count += ref_count_add;
 		/* now check if this stream is on the wheel */
 		if ((strq->next_spoke.tqe_next == NULL) &&
 		    (strq->next_spoke.tqe_prev == NULL)) {
