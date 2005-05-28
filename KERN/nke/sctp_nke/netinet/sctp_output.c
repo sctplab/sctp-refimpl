@@ -4399,7 +4399,14 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			  goto out_locked;
 			}
 			SCTP_INP_RLOCK(inp);
+			if(be.error) {
+			  error = be.error;
+			  SCTP_INP_RUNLOCK(inp);
+			  goto out_locked;
+			}
+			SOCKBUF_UNLOCK(&so->so_snd);
 			SCTP_TCB_LOCK(stcb);
+			SOCKBUF_LOCK(&so->so_snd);
 			if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
 			    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
 				/* Should I really unlock ? */
@@ -4452,13 +4459,11 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			goto release;
 		}
 		sctp_prepare_chunk(chk, stcb, srcv, strq, net);
-		chk->whoTo->ref_count++;
 		chk->rec.data.rcv_flags |= SCTP_DATA_NOT_FRAG;
 
 		/* no flags yet, FRAGMENT_OK goes here */
 		sctppcbinfo.ipi_count_chunk++;
 		sctppcbinfo.ipi_gencnt_chunk++;
-		asoc->chunks_on_out_queue++;
 		chk->data = m;
 		m = NULL;
 		/* Total in the MSIZE */
@@ -4472,6 +4477,8 @@ sctp_msg_append(struct sctp_tcb *stcb,
 		chk->send_size = dataout;
 		chk->book_size = chk->send_size;
 		chk->mbcnt = mbcnt;
+		chk->whoTo->ref_count++;
+		asoc->chunks_on_out_queue++;
 		/* ok, we are commited */
 		if ((srcv->sinfo_flags & SCTP_UNORDERED) == 0) {
 			/* bump the ssn if we are unordered. */
@@ -4504,6 +4511,8 @@ sctp_msg_append(struct sctp_tcb *stcb,
 
 		n = m;
 		/* unlock in case of m_wait in split */
+		be.error = 0;
+		stcb->block_entry = &be;
 		SCTP_TCB_UNLOCK(stcb);
 		while (dataout > siz) {
 			/*
@@ -4517,10 +4526,6 @@ sctp_msg_append(struct sctp_tcb *stcb,
 				sctp_log_lock(stcb->sctp_ep, stcb, SCTP_LOG_LOCK_SOCKBUF_S);
 #endif
 				SOCKBUF_LOCK(&so->so_snd);
-				/* relock to stay sane */
-				SCTP_INP_RLOCK(stcb->sctp_ep);
-				SCTP_TCB_LOCK(stcb);
-				SCTP_INP_RUNLOCK(stcb->sctp_ep);
 				goto release;
 			}
 			dataout -= siz;
@@ -4528,8 +4533,14 @@ sctp_msg_append(struct sctp_tcb *stcb,
 		}
 		/* relock to stay sane */
 		SCTP_INP_RLOCK(stcb->sctp_ep);
+		if(be.error) {
+		  error = be.error;
+		  SCTP_INP_RUNLOCK(stcb->sctp_ep);
+		  goto release;
+		}
 		SCTP_TCB_LOCK(stcb);
 		SCTP_INP_RUNLOCK(stcb->sctp_ep);
+		stcb->block_entry = NULL;
 		/*
 		 * ok, now we have a chain on m where m->m_nextpkt points to
 		 * the next chunk and m/m->m_next chain is the piece to send.
@@ -9716,7 +9727,9 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 			    so, asoc);
 #endif
 			SCTP_INP_RLOCK(inp);
+			SOCKBUF_UNLOCK(&so->so_snd);
 			SCTP_TCB_LOCK(stcb);
+			SOCKBUF_LOCK(&so->so_snd);
 			if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
 			    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
 				/* Should I really unlock ? */
@@ -9773,6 +9786,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 			 */
 
 		        /* unlock all due to m_wait */
+			stcb->block_entry = NULL;
 		        SCTP_TCB_UNLOCK(stcb);
  			MGETHDR(mm, M_WAIT, MT_DATA);
 			if (mm) {
@@ -9818,9 +9832,6 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 			mm = NULL;
 			splx(s);
 			/* now relock the stcb so everything is sane */
-			SCTP_INP_RLOCK(inp);
-			SCTP_TCB_LOCK(stcb);
-			SCTP_INP_RUNLOCK(inp);
 			goto out_notlocked;
 		}
 		splx(s);
@@ -9878,6 +9889,8 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 	 */
 	splx(s);
 	SOCKBUF_UNLOCK(&so->so_snd);
+	stcb->block_entry = &be;
+	be.error = 0;
 	SCTP_TCB_UNLOCK(stcb);
 	if (tot_out <= frag_size) {
 		/* no need to setup a template */
@@ -9892,19 +9905,15 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 		}
 		sctppcbinfo.ipi_count_chunk++;
 		sctppcbinfo.ipi_gencnt_chunk++;
-		asoc->chunks_on_out_queue++;
 		MGETHDR(mm, M_WAIT, MT_DATA);
 		if (mm == NULL) {
 			error = ENOMEM;
-		recover_clean_up:
-			SCTP_INP_RLOCK(inp);
-			SCTP_TCB_LOCK(stcb);
-			SCTP_INP_RUNLOCK(inp);
 			goto clean_up;
 		}
 		error = sctp_copy_one(mm, uio, tot_out, resv_in_first, &mbcnt_e);
-		if (error)
-			goto recover_clean_up;
+		if (error || be.error) {
+			goto clean_up;
+		}
 		sctp_prepare_chunk(chk, stcb, srcv, strq, net);
 		chk->mbcnt = mbcnt_e;
 		mbcnt += mbcnt_e;
@@ -9915,7 +9924,6 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 
 		/* the actual chunk flags */
 		chk->rec.data.rcv_flags |= SCTP_DATA_NOT_FRAG;
-		chk->whoTo->ref_count++;
 
 		/* fix up the send_size if it is not present */
 		chk->send_size = tot_out;
@@ -9927,8 +9935,15 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 		s = splnet();
 #endif
 		SCTP_INP_RLOCK(inp);
+		if(be.error) {
+		  error = be.error;
+		  SCTP_INP_RUNLOCK(inp);
+		  goto clean_up;
+		}
 		SCTP_TCB_LOCK(stcb);
 		SCTP_INP_RUNLOCK(inp);
+		asoc->chunks_on_out_queue++;
+		stcb->block_entry = NULL;
 		if ((srcv->sinfo_flags & SCTP_UNORDERED) == 0) {
 			/* bump the ssn if we are unordered. */
 			strq->next_sequence_sent++;
@@ -9942,9 +9957,11 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 		    (inp->sctp_socket == 0)) {
 			/* connection was aborted */
 			splx(s);
+			SCTP_TCB_UNLOCK(stcb);
 			error = ECONNRESET;
 			goto clean_up;
 		}
+		chk->whoTo->ref_count++;
 		asoc->stream_queue_cnt++;
 		TAILQ_INSERT_TAIL(&strq->outqueue, chk, sctp_next);
 		/* now check if this stream is on the wheel */
@@ -9975,7 +9992,8 @@ clean_up:
 		struct sctp_tmit_chunk template;
 		struct sctpchunk_listhead tmp;
 		int remove_cnt=0;
-
+		int cnt_on_queue=0;
+		int ref_count_add=0;
 		/* setup the template */
 
 		sctp_prepare_chunk(&template, stcb, srcv, strq, net);
@@ -9996,24 +10014,20 @@ clean_up:
 				error = ENOMEM;
 			}
 			sctppcbinfo.ipi_count_chunk++;
-			asoc->chunks_on_out_queue++;
-
+			cnt_on_queue++;
 			sctppcbinfo.ipi_gencnt_chunk++;
 			*chk = template;
-			chk->whoTo->ref_count++;
+			ref_count_add++;
 			MGETHDR(chk->data, M_WAIT, MT_DATA);
 			if (chk->data == NULL) {
 				error = ENOMEM;
-			recover_temp_clean_up:
-				SCTP_INP_RLOCK(inp);
-				SCTP_TCB_LOCK(stcb);
-				SCTP_INP_RUNLOCK(inp);
 				goto temp_clean_up;
 			}
 			tot_demand = min(tot_out, frag_size);
 			error = sctp_copy_one(chk->data, uio, tot_demand , resv_in_first, &mbcnt_e);
-			if (error)
-				goto recover_temp_clean_up;
+			if (error || be.error) {
+				goto temp_clean_up;
+			}
 			/* now fix the chk->send_size */
 			chk->mbcnt = mbcnt_e;
 			mbcnt += mbcnt_e;
@@ -10041,9 +10055,14 @@ clean_up:
  		s = splnet();
 #endif
 		SCTP_INP_RLOCK(inp);
+		if(be.error) {
+		  error = be.error;
+		  SCTP_INP_RUNLOCK(inp);
+		  goto temp_clean_up;
+		}
 		SCTP_TCB_LOCK(stcb);
 		SCTP_INP_RUNLOCK(inp);
-
+		stcb->block_entry = NULL;
 		/* add in the stored removeable count possibly */
 		if (PR_SCTP_BUF_ENABLED(chk->flags)) {
 		  asoc->sent_queue_cnt_removeable += remove_cnt;
@@ -10070,6 +10089,8 @@ clean_up:
 			TAILQ_INSERT_TAIL(&strq->outqueue, chk, sctp_next);
 			chk = TAILQ_FIRST(&tmp);
 		}
+		asoc->chunks_on_out_queue += cnt_on_queue;
+		net->ref_count += ref_count_add;
 		/* now check if this stream is on the wheel */
 		if ((strq->next_spoke.tqe_next == NULL) &&
 		    (strq->next_spoke.tqe_prev == NULL)) {
