@@ -311,9 +311,14 @@ sctp_log_lock(struct sctp_inpcb *inp, struct sctp_tcb *stcb, uint8_t from)
   } else {
     sctp_clog[sctp_cwnd_log_at].x.lock.tcb_lock = SCTP_LOCK_UNKNOWN;
   }
-  sctp_clog[sctp_cwnd_log_at].x.lock.inp_lock = mtx_owned(&inp->inp_mtx);
+  if(inp) {
+	  sctp_clog[sctp_cwnd_log_at].x.lock.inp_lock = mtx_owned(&inp->inp_mtx);
+	  sctp_clog[sctp_cwnd_log_at].x.lock.create_lock = mtx_owned(&inp->inp_create_mtx);
+  } else {
+	  sctp_clog[sctp_cwnd_log_at].x.lock.inp_lock = SCTP_LOCK_UNKNOWN;
+	  sctp_clog[sctp_cwnd_log_at].x.lock.create_lock = SCTP_LOCK_UNKNOWN;
+  }
   sctp_clog[sctp_cwnd_log_at].x.lock.info_lock = mtx_owned(&sctppcbinfo.ipi_ep_mtx);
-  sctp_clog[sctp_cwnd_log_at].x.lock.create_lock = mtx_owned(&inp->inp_create_mtx);
   if(inp->sctp_socket) {
     sctp_clog[sctp_cwnd_log_at].x.lock.sock_lock = mtx_owned(&(inp->sctp_socket->so_rcv.sb_mtx));
     sctp_clog[sctp_cwnd_log_at].x.lock.sockrcvbuf_lock = mtx_owned(&(inp->sctp_socket->so_rcv.sb_mtx));
@@ -2492,11 +2497,14 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, u_int32_t error,
 	to = (struct sockaddr *)sctp_recover_scope((struct sockaddr_in6 *)to,
 						   &lsa6);
 
-	if (sctp_sbspace(&stcb->asoc, &stcb->sctp_socket->so_rcv) < m_notify->m_len) {
+	/* For this case, we check the actual socket buffer, since the
+	 * assoc is going away we don't want to overfill the socket
+	 * buffer for a non-reader
+	 */
+	if (sctp_sbspace_failedmsgs(&stcb->sctp_socket->so_rcv) < m_notify->m_len) {
 		sctp_m_freem(m_notify);
 		return;
 	}
-
 	/* append to socket */
 	SCTP_TCB_UNLOCK(stcb);
 	SCTP_INP_WLOCK(stcb->sctp_ep);
@@ -3686,7 +3694,6 @@ sctp_grub_through_socket_buffer(struct sctp_inpcb *inp, struct socket *old,
 #ifdef SCTP_LOCK_LOGGING
 	sctp_log_lock(inp, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
 #endif
-
 	SOCKBUF_LOCK(old_sb);
 	SOCKBUF_LOCK(new_sb);
 
@@ -4049,6 +4056,23 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 
 	/* pickup the assoc we are reading from */
 	sctp_pegs[SCTP_ENTER_SCTPSORCV]++;
+	if (flagsp != NULL)
+		flags = *flagsp &~ MSG_EOR;
+	else
+		flags = 0;
+	if (flags & MSG_OOB)
+	        return (EOPNOTSUPP);
+
+	if ((so->so_rcv.sb_mb == NULL) &&
+	    ((so->so_state & SS_NBIO) ||
+	     (flags & (MSG_DONTWAIT
+#if defined(__FreeBSD__) && __FreeBSD_version > 500000
+		       |MSG_NBIO
+#endif
+		     )))) {
+		return (EWOULDBLOCK);
+		
+	}
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	SCTP_INP_RLOCK(inp);
 	at_eor = 0;
@@ -4084,18 +4108,10 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		*psa = NULL;
 	if (controlp != NULL)
 		*controlp = NULL;
-	if (flagsp != NULL)
-		flags = *flagsp &~ MSG_EOR;
-	else
-		flags = 0;
-	if (flags & MSG_OOB)
-	        return (EOPNOTSUPP);
 	if (mp != NULL)
 		*mp = NULL;
 #ifdef SCTP_LOCK_LOGGING
-	if(stcb) {
-		sctp_log_lock(stcb->sctp_ep, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
-	}
+	sctp_log_lock(inp, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
 #endif
 	SOCKBUF_LOCK(&so->so_rcv);
  restart:
@@ -4238,7 +4254,9 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 			/* we could not have had a stcb,
 			 * or we don't have one.
 			 */
+			SOCKBUF_UNLOCK(&so->so_rcv);
 			SCTP_INP_RLOCK(inp);
+			SOCKBUF_LOCK(&so->so_rcv);
 			at_eor = 0;
 			if ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) || 
 			    (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
@@ -4268,11 +4286,6 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 				}
 			}
 			SCTP_INP_RUNLOCK(inp);
-#ifdef SCTP_LOCK_LOGGING
-			if (stcb) {
-				sctp_log_lock(stcb->sctp_ep, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
-			}
-#endif
 			goto restart;
 		}
 		goto restart;
@@ -4466,18 +4479,10 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 			} else
 #endif /* ZERO_COPY_SOCKETS */
 				error = uiomove(mtod(m, char *) + moff, (int)len, uio);
-			if(stcb) {
-				SCTP_INP_RLOCK(inp);
-				SCTP_TCB_LOCK(stcb);
 #ifdef SCTP_LOCK_LOGGING
-				sctp_log_lock(stcb->sctp_ep, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
+			sctp_log_lock(inp, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
 #endif
-			}
 			SOCKBUF_LOCK(&so->so_rcv);
-			if(stcb) {
-				SCTP_TCB_UNLOCK(stcb);
-				SCTP_INP_RUNLOCK(inp);
-			}
 			if (error)
 				goto release;
 		} else
@@ -4552,18 +4557,10 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 						      M_WAIT
 #endif
 						);
-					if(stcb) {
-						SCTP_INP_RLOCK(inp);
-						SCTP_TCB_LOCK(stcb);
 #ifdef SCTP_LOCK_LOGGING
-						sctp_log_lock(stcb->sctp_ep, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
+					sctp_log_lock(inp, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
 #endif
-					}
 					SOCKBUF_LOCK(&so->so_rcv);
-					if(stcb) {
-						SCTP_TCB_UNLOCK(stcb);
-						SCTP_INP_RUNLOCK(inp);
-					}
 				}
 				m->m_data += len;
 				m->m_len -= len;
@@ -4620,18 +4617,11 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 			if (pr->pr_flags & PR_WANTRCVD && so->so_pcb != NULL) {
 				SOCKBUF_UNLOCK(&so->so_rcv);
 				(*pr->pr_usrreqs->pru_rcvd)(so, flags);
-				if(stcb) {
-					SCTP_INP_RLOCK(inp);
-					SCTP_TCB_LOCK(stcb);
 #ifdef SCTP_LOCK_LOGGING
-					sctp_log_lock(stcb->sctp_ep, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
+				sctp_log_lock(inp, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
 #endif
-				}
+
 				SOCKBUF_LOCK(&so->so_rcv);
-				if(stcb) {
-					SCTP_TCB_UNLOCK(stcb);
-					SCTP_INP_RUNLOCK(inp);
-				}
 			}
 			SBLASTRECORDCHK(&so->so_rcv);
 			SBLASTMBUFCHK(&so->so_rcv);
@@ -4662,18 +4652,10 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		SBLASTMBUFCHK(&so->so_rcv);
 		SOCKBUF_UNLOCK(&so->so_rcv);
 		(*pr->pr_usrreqs->pru_rcvd)(so, flags);
-		if(stcb) {
-		  SCTP_INP_RLOCK(inp);
-		  SCTP_TCB_LOCK(stcb);
 #ifdef SCTP_LOCK_LOGGING
-		  sctp_log_lock(stcb->sctp_ep, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
+		sctp_log_lock(inp, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
 #endif
-		}
 		SOCKBUF_LOCK(&so->so_rcv);
-		if(stcb) {
-		  SCTP_TCB_UNLOCK(stcb);
-		  SCTP_INP_RUNLOCK(inp);
-		}
 	}
 	SOCKBUF_LOCK_ASSERT(&so->so_rcv);
 	if ((orig_resid == uio->uio_resid) && 

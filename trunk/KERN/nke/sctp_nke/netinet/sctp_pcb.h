@@ -462,13 +462,16 @@ struct sctp_tcb {
 void SCTP_INP_INFO_RLOCK(void);
 void SCTP_INP_INFO_WLOCK(void);
 #else
+
 #define SCTP_INP_INFO_RLOCK()	do { 					\
              mtx_lock(&sctppcbinfo.ipi_ep_mtx);                         \
 } while (0)
 
+
 #define SCTP_INP_INFO_WLOCK()	do { 					\
              mtx_lock(&sctppcbinfo.ipi_ep_mtx);                         \
 } while (0)
+
 #endif
 
 #define SCTP_INP_INFO_RUNLOCK()		mtx_unlock(&sctppcbinfo.ipi_ep_mtx)
@@ -493,6 +496,19 @@ void SCTP_INP_INFO_WLOCK(void);
 void SCTP_INP_RLOCK(struct sctp_inpcb *);
 void SCTP_INP_WLOCK(struct sctp_inpcb *);
 #else
+#ifdef SCTP_LOCK_LOGGING
+#define SCTP_INP_RLOCK(_inp)	do { 					\
+	sctp_log_lock(_inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_INP);\
+        mtx_lock(&(_inp)->inp_mtx);                                     \
+} while (0)
+
+#define SCTP_INP_WLOCK(_inp)	do { 					\
+	sctp_log_lock(_inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_INP);\
+        mtx_lock(&(_inp)->inp_mtx);                                     \
+} while (0)
+
+#else
+
 #define SCTP_INP_RLOCK(_inp)	do { 					\
         mtx_lock(&(_inp)->inp_mtx);                                     \
 } while (0)
@@ -500,6 +516,8 @@ void SCTP_INP_WLOCK(struct sctp_inpcb *);
 #define SCTP_INP_WLOCK(_inp)	do { 					\
         mtx_lock(&(_inp)->inp_mtx);                                     \
 } while (0)
+
+#endif
 #endif
 
 #define SCTP_INP_INCR_REF(_inp)        _inp->refcount++
@@ -513,11 +531,21 @@ void SCTP_INP_WLOCK(struct sctp_inpcb *);
 
 #ifdef INVARIANTS_SCTP
 void SCTP_ASOC_CREATE_LOCK(struct sctp_inpcb *inp);
+
 #else
+#ifdef SCTP_LOCK_LOGGING
+#define SCTP_ASOC_CREATE_LOCK(_inp) \
+	do {								\
+                sctp_log_lock(_inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_CREATE); \
+		mtx_lock(&(_inp)->inp_create_mtx);			\
+	} while (0)
+#else
+
 #define SCTP_ASOC_CREATE_LOCK(_inp) \
 	do {								\
 		mtx_lock(&(_inp)->inp_create_mtx);			\
 	} while (0)
+#endif
 #endif
 
 #define SCTP_INP_RUNLOCK(_inp)		mtx_unlock(&(_inp)->inp_mtx)
@@ -542,9 +570,18 @@ struct sctp_tcb;
 
 void SCTP_TCB_LOCK(struct sctp_tcb *stcb); 
 #else
+#ifdef SCTP_LOCK_LOGGING
+#define SCTP_TCB_LOCK(_tcb)  do {					\
+        sctp_log_lock(_tcb->sctp_ep, _tcb, SCTP_LOG_LOCK_TCB);          \
+	mtx_lock(&(_tcb)->tcb_mtx);                                     \
+} while (0)
+
+#else
 #define SCTP_TCB_LOCK(_tcb)  do {					\
 	mtx_lock(&(_tcb)->tcb_mtx);                                     \
 } while (0)
+
+#endif
 #endif
 
 #define SCTP_TCB_UNLOCK(_tcb)		mtx_unlock(&(_tcb)->tcb_mtx)
