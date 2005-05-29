@@ -64,7 +64,9 @@
 #else
 #include <machine/limits.h>
 #endif
+#ifndef __APPLE__
 #include <machine/cpu.h>
+#endif
 
 #include <net/if.h>
 #include <net/route.h>
@@ -109,7 +111,9 @@
 #endif
 #endif /*IPSEC*/
 
+#ifndef __APPLE__
 #include <net/net_osdep.h>
+#endif
 
 #ifdef SCTP_DEBUG
 extern u_int32_t sctp_debug_on;
