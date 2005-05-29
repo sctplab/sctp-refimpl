@@ -96,7 +96,9 @@
 #endif
 #endif /* IPSEC */
 
+#ifndef __APPLE__
 #include <net/net_osdep.h>
+#endif
 
 #if defined(HAVE_NRL_INPCB) || defined(__FreeBSD__)
 #ifndef in6pcb

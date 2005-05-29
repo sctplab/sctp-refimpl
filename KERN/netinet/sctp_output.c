@@ -69,7 +69,9 @@
 #else
 #include <machine/limits.h>
 #endif
+#ifndef __APPLE__
 #include <machine/cpu.h>
+#endif
 
 #include <net/if.h>
 #include <net/if_types.h>
@@ -103,7 +105,9 @@
 
 #endif /* INET6 */
 
+#ifndef __APPLE__
 #include <net/net_osdep.h>
+#endif
 
 #if defined(HAVE_NRL_INPCB) || defined(__FreeBSD__)
 #ifndef in6pcb
