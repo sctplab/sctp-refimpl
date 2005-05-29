@@ -1242,6 +1242,11 @@ sctp_is_v6_ifa_addr_acceptable (struct ifaddr *ifa, int loopscope, int loc_scope
 {
 	struct in6_ifaddr *ifa6;
 	struct sockaddr_in6 *sin6;
+#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+	struct timeval timenow;
+	
+	getmicrotime(&timenow);
+#endif
 
 	if (ifa->ifa_addr->sa_family != AF_INET6) {
 		/* forget non-v6 */

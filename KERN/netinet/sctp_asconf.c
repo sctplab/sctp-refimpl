@@ -1610,6 +1610,11 @@ sctp_addr_mgmt_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 #ifdef SCTP_DEBUG
 	char buf[128];	/* for address in string format */
 #endif /* SCTP_DEBUG */
+#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+	struct timeval timenow;
+	
+	getmicrotime(&timenow);
+#endif
 
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) == 0 &&
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_DO_ASCONF) == 0) {
@@ -1805,6 +1810,11 @@ sctp_addr_mgmt_ep(struct sctp_inpcb *inp, struct ifaddr *ifa, uint16_t type)
 {
 	struct sctp_tcb *stcb;
 	int s;
+#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+	struct timeval timenow;
+	
+	getmicrotime(&timenow);
+#endif
 
 	SCTP_INP_WLOCK(inp);
 	/* make sure we're "allowed" to add this type of addr */
@@ -2155,6 +2165,11 @@ sctp_find_valid_localaddr(struct sctp_tcb *stcb)
 {
 	struct ifnet *ifn;
 	struct ifaddr *ifa;
+#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+	struct timeval timenow;
+	
+	getmicrotime(&timenow);
+#endif
 
 	TAILQ_FOREACH(ifn, &ifnet, if_list) {
 		if (stcb->asoc.loopback_scope == 0 && ifn->if_type == IFT_LOOP) {
@@ -2883,6 +2898,11 @@ uint32_t
 sctp_addr_mgmt_ep_sa(struct sctp_inpcb *inp, struct sockaddr *sa, uint16_t type)
 {
 	struct ifaddr *ifa;
+#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+	struct timeval timenow;
+	
+	getmicrotime(&timenow);
+#endif
 
 	if (sa->sa_len == 0)
 		return (EINVAL);
