@@ -82,7 +82,9 @@
 #else
 #include <machine/limits.h>
 #endif
+#ifndef __APPLE__
 #include <machine/cpu.h>
+#endif
 
 #include <net/if.h>
 #include <net/if_types.h>

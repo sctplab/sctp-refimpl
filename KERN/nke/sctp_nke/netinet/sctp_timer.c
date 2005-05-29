@@ -109,7 +109,9 @@
 #include <netinet/sctp.h>
 #include <netinet/sctp_uio.h>
 
+#ifndef __APPLE__
 #include <net/net_osdep.h>
+#endif
 
 #ifdef SCTP_DEBUG
 extern u_int32_t sctp_debug_on;
