@@ -760,8 +760,208 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #define SCTP_ITERATOR_LOCK_DESTROY()
 #endif
 
+/***************BEGIN FREEBSD 5 count stuff**********************/
+#if defined(__FreeBSD__) && __FreeBSD_version >= 503000
+#define SCTP_INCRS_DEFINED 1
+
+#define SCTP_INCR_EP_COUNT() \
+                do { \
+                       mtx_lock(&sctppcbinfo.ipi_count_mtx); \
+		       sctppcbinfo.ipi_count_ep++; \
+		       sctppcbinfo.ipi_gencnt_ep++; \
+                       mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+                     
+#define SCTP_DECR_EP_COUNT() \
+                do { \
+                       mtx_lock(&sctppcbinfo.ipi_count_mtx); \
+		       sctppcbinfo.ipi_count_ep--; \
+		       sctppcbinfo.ipi_gencnt_ep++; \
+                       mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+
+#define SCTP_INCR_ASOC_COUNT() \
+                do { \
+                       mtx_lock(&sctppcbinfo.ipi_count_mtx); \
+	               sctppcbinfo.ipi_count_asoc++; \
+	               sctppcbinfo.ipi_gencnt_asoc++; \
+                       mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+
+#define SCTP_DECR_ASOC_COUNT() \
+                do { \
+                       mtx_lock(&sctppcbinfo.ipi_count_mtx); \
+	               sctppcbinfo.ipi_count_asoc--; \
+	               sctppcbinfo.ipi_gencnt_asoc++; \
+                       mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+
+#define SCTP_INCR_LADDR_COUNT() \
+                do { \
+                       mtx_lock(&sctppcbinfo.ipi_count_mtx); \
+	               sctppcbinfo.ipi_count_laddr++; \
+		       sctppcbinfo.ipi_gencnt_laddr++; \
+                       mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+
+#define SCTP_DECR_LADDR_COUNT() \
+                do { \
+                       mtx_lock(&sctppcbinfo.ipi_count_mtx); \
+	               sctppcbinfo.ipi_count_laddr--; \
+		       sctppcbinfo.ipi_gencnt_laddr++; \
+                       mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+
+#define SCTP_INCR_RADDR_COUNT() \
+                do { \
+                       mtx_lock(&sctppcbinfo.ipi_count_mtx); \
+ 	               sctppcbinfo.ipi_count_raddr++; \
+		       sctppcbinfo.ipi_gencnt_raddr++; \
+                       mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+
+#define SCTP_DECR_RADDR_COUNT() \
+                do { \
+                       mtx_lock(&sctppcbinfo.ipi_count_mtx); \
+ 	               sctppcbinfo.ipi_count_raddr--; \
+		       sctppcbinfo.ipi_gencnt_raddr++; \
+                       mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+
+#define SCTP_INCR_CHK_COUNT() \
+                do { \
+                       mtx_lock(&sctppcbinfo.ipi_count_mtx); \
+  	               sctppcbinfo.ipi_count_chunk++; \
+                       sctppcbinfo.ipi_gencnt_chunk++; \
+                       mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+
+#define SCTP_DECR_CHK_COUNT() \
+                do { \
+                       mtx_lock(&sctppcbinfo.ipi_count_mtx); \
+  	               sctppcbinfo.ipi_count_chunk--; \
+                       sctppcbinfo.ipi_gencnt_chunk++; \
+                       mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+
+#define SCTP_INCR_SOCKQ_COUNT() \
+                do { \
+                       mtx_lock(&sctppcbinfo.ipi_count_mtx); \
+		       sctppcbinfo.ipi_count_sockq++; \
+                       mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+
+#define SCTP_DECR_SOCKQ_COUNT() \
+                do { \
+                       mtx_lock(&sctppcbinfo.ipi_count_mtx); \
+		       sctppcbinfo.ipi_count_sockq--; \
+                       mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+#endif
+/***************END FREEBSD 5 count stuff**********************/
+
+/***************BEGIN APPLE PANTHER count stuff**********************/
+#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+#define SCTP_INCRS_DEFINED 1
+#define SCTP_INCR_EP_COUNT() \
+                do { \
+                       lck_rw_lock_exclusive(&sctppcbinfo.ipi_count_mtx); \
+		       sctppcbinfo.ipi_count_ep++; \
+		       sctppcbinfo.ipi_gencnt_ep++; \
+                       lck_rw_done(&sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+                     
+#define SCTP_DECR_EP_COUNT() \
+                do { \
+                       lck_rw_lock_exclusive(&sctppcbinfo.ipi_count_mtx); \
+		       sctppcbinfo.ipi_count_ep--; \
+		       sctppcbinfo.ipi_gencnt_ep++; \
+                       lck_rw_done(&sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+
+#define SCTP_INCR_ASOC_COUNT() \
+                do { \
+                       lck_rw_lock_exclusive(&sctppcbinfo.ipi_count_mtx); \
+	               sctppcbinfo.ipi_count_asoc++; \
+	               sctppcbinfo.ipi_gencnt_asoc++; \
+                       lck_rw_done(&sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+
+#define SCTP_DECR_ASOC_COUNT() \
+                do { \
+                       lck_rw_lock_exclusive(&sctppcbinfo.ipi_count_mtx); \
+	               sctppcbinfo.ipi_count_asoc--; \
+	               sctppcbinfo.ipi_gencnt_asoc++; \
+                       lck_rw_done(&sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+
+#define SCTP_INCR_LADDR_COUNT() \
+                do { \
+                       lck_rw_lock_exclusive(&sctppcbinfo.ipi_count_mtx); \
+	               sctppcbinfo.ipi_count_laddr++; \
+		       sctppcbinfo.ipi_gencnt_laddr++; \
+                       lck_rw_done(&sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+
+#define SCTP_DECR_LADDR_COUNT() \
+                do { \
+                       lck_rw_lock_exclusive(&sctppcbinfo.ipi_count_mtx); \
+	               sctppcbinfo.ipi_count_laddr--; \
+		       sctppcbinfo.ipi_gencnt_laddr++; \
+                       lck_rw_done(&sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+
+#define SCTP_INCR_RADDR_COUNT() \
+                do { \
+                       lck_rw_lock_exclusive(&sctppcbinfo.ipi_count_mtx); \
+ 	               sctppcbinfo.ipi_count_raddr++; \
+		       sctppcbinfo.ipi_gencnt_raddr++; \
+                       lck_rw_done(&sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+
+#define SCTP_DECR_RADDR_COUNT() \
+                do { \
+                       lck_rw_lock_exclusive(&sctppcbinfo.ipi_count_mtx); \
+ 	               sctppcbinfo.ipi_count_raddr--; \
+		       sctppcbinfo.ipi_gencnt_raddr++; \
+                       (&sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+
+#define SCTP_INCR_CHK_COUNT() \
+                do { \
+                       lck_rw_lock_exclusive(&sctppcbinfo.ipi_count_mtx); \
+  	               sctppcbinfo.ipi_count_chunk++; \
+                       sctppcbinfo.ipi_gencnt_chunk++; \
+                       lck_rw_done(&sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+
+#define SCTP_DECR_CHK_COUNT() \
+                do { \
+                       lck_rw_lock_exclusive(&sctppcbinfo.ipi_count_mtx); \
+  	               sctppcbinfo.ipi_count_chunk--; \
+                       sctppcbinfo.ipi_gencnt_chunk++; \
+                       lck_rw_done(&sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+
+#define SCTP_INCR_SOCKQ_COUNT() \
+                do { \
+                       lck_rw_lock_exclusive(&sctppcbinfo.ipi_count_mtx); \
+		       sctppcbinfo.ipi_count_sockq++; \
+                       lck_rw_done(&sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+
+#define SCTP_DECR_SOCKQ_COUNT() \
+                do { \
+                       lck_rw_lock_exclusive(&sctppcbinfo.ipi_count_mtx); \
+		       sctppcbinfo.ipi_count_sockq--; \
+                       lck_rw_done(&sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+#endif
+/***************BEGIN APPLE PANTHER count stuff**********************/
 
 
+/***************BEGIN all othher count stuff**********************/
+#ifndef SCTP_INCRS_DEFINED
 #define SCTP_INCR_EP_COUNT() \
                 do { \
 		       sctppcbinfo.ipi_count_ep++; \
@@ -832,6 +1032,7 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 		       sctppcbinfo.ipi_count_sockq--; \
 	        } while (0)
 
+#endif
 
 #if defined(_KERNEL) || (defined(__APPLE__) && defined(KERNEL))
 
