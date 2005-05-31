@@ -963,6 +963,8 @@ int  sctp_cookie_timer(struct sctp_inpcb *inp,
 			}
 			sctp_abort_an_association(inp, stcb, SCTP_INTERNAL_ERROR,
 			    oper);
+		} else {
+			panic("Cookie timer expires in wrong state?");
 		}
 		return (0);
 	}
