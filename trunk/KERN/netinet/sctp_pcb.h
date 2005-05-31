@@ -839,6 +839,8 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #define SCTP_DECR_CHK_COUNT() \
                 do { \
                        mtx_lock(&sctppcbinfo.ipi_count_mtx); \
+                       if(sctppcbinfo.ipi_count_chunk == 0) \
+                            panic("chunk count reaches 0"); \
   	               sctppcbinfo.ipi_count_chunk--; \
                        sctppcbinfo.ipi_gencnt_chunk++; \
                        mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
