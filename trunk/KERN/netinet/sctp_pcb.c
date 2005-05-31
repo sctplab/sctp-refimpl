@@ -798,11 +798,11 @@ sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, caddr_t asoc_id)
 				/* some other guy has the
 				 * same vtag active (vtag collision).
 				 */
-				sctp_pegs[SCTP_BY_ASSOCID]++;
+				sctp_pegs[SCTP_ASID_BOGUS]++;
 				SCTP_TCB_UNLOCK(stcb);
 				continue;
 			}
-			sctp_pegs[SCTP_VTAG_EXPR]++;
+			sctp_pegs[SCTP_BY_ASSOCID]++;
 			SCTP_INP_INFO_RUNLOCK();
 			return (stcb);
 		}
