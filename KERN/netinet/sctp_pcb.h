@@ -762,72 +762,72 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 
 
 
-SCTP_INCR_EP_COUNT() \
+#define SCTP_INCR_EP_COUNT() \
                 do { \
 		       sctppcbinfo.ipi_count_ep++; \
 		       sctppcbinfo.ipi_gencnt_ep++; \
 	        } while (0)
                      
-SCTP_DECR_EP_COUNT() \
+#define SCTP_DECR_EP_COUNT() \
                 do { \
 		       sctppcbinfo.ipi_count_ep--; \
 		       sctppcbinfo.ipi_gencnt_ep++; \
 	        } while (0)
 
-SCTP_INCR_ASOC_COUNT() \
+#define SCTP_INCR_ASOC_COUNT() \
                 do { \
 	               sctppcbinfo.ipi_count_asoc++; \
 	               sctppcbinfo.ipi_gencnt_asoc++; \
 	        } while (0)
 
-SCTP_DECR_ASOC_COUNT() \
+#define SCTP_DECR_ASOC_COUNT() \
                 do { \
 	               sctppcbinfo.ipi_count_asoc--; \
 	               sctppcbinfo.ipi_gencnt_asoc++; \
 	        } while (0)
 
-SCTP_INCR_LADDR_COUNT() \
+#define SCTP_INCR_LADDR_COUNT() \
                 do { \
 	               sctppcbinfo.ipi_count_laddr++; \
 		       sctppcbinfo.ipi_gencnt_laddr++; \
 	        } while (0)
 
-SCTP_DECR_LADDR_COUNT() \
+#define SCTP_DECR_LADDR_COUNT() \
                 do { \
 	               sctppcbinfo.ipi_count_laddr--; \
 		       sctppcbinfo.ipi_gencnt_laddr++; \
 	        } while (0)
 
-SCTP_INCR_RADDR_COUNT() \
+#define SCTP_INCR_RADDR_COUNT() \
                 do { \
  	               sctppcbinfo.ipi_count_raddr++; \
 		       sctppcbinfo.ipi_gencnt_raddr++; \
 	        } while (0)
 
-SCTP_DECR_RADDR_COUNT() \
+#define SCTP_DECR_RADDR_COUNT() \
                 do { \
  	               sctppcbinfo.ipi_count_raddr--; \
 		       sctppcbinfo.ipi_gencnt_raddr++; \
 	        } while (0)
 
-SCTP_INCR_CHK_COUNT() \
+#define SCTP_INCR_CHK_COUNT() \
                 do { \
   	               sctppcbinfo.ipi_count_chunk++; \
                        sctppcbinfo.ipi_gencnt_chunk++; \
 	        } while (0)
 
-SCTP_DECR_CHK_COUNT() \
+#define SCTP_DECR_CHK_COUNT() \
                 do { \
   	               sctppcbinfo.ipi_count_chunk--; \
                        sctppcbinfo.ipi_gencnt_chunk++; \
 	        } while (0)
 
-SCTP_INCR_CHK_COUNT() \
+#define SCTP_INCR_SOCKQ_COUNT() \
                 do { \
 		       sctppcbinfo.ipi_count_sockq++; \
 	        } while (0)
 
-SCTP_DECR_CHK_COUNT() \
+#define SCTP_DECR_SOCKQ_COUNT() \
                 do { \
 		       sctppcbinfo.ipi_count_sockq--; \
 	        } while (0)
