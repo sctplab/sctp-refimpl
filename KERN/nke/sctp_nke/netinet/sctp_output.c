@@ -4471,8 +4471,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 		chk->rec.data.rcv_flags |= SCTP_DATA_NOT_FRAG;
 
 		/* no flags yet, FRAGMENT_OK goes here */
-		sctppcbinfo.ipi_count_chunk++;
-		sctppcbinfo.ipi_gencnt_chunk++;
+		SCTP_INCR_CHK_COUNT();
 		chk->data = m;
 		m = NULL;
 		/* Total in the MSIZE */
@@ -4575,12 +4574,8 @@ sctp_msg_append(struct sctp_tcb *stcb,
 				while (chk) {
 					TAILQ_REMOVE(&tmp, chk, sctp_next);
 					SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-					sctppcbinfo.ipi_count_chunk--;
+					SCTP_DECR_CHK_COUNT();
 					asoc->chunks_on_out_queue--;
-					if ((int)sctppcbinfo.ipi_count_chunk < 0) {
-						panic("Chunk count is negative");
-					}
-					sctppcbinfo.ipi_gencnt_chunk++;
 					chk = TAILQ_FIRST(&tmp);
 				}
 				error = ENOMEM;
@@ -4590,10 +4585,9 @@ sctp_msg_append(struct sctp_tcb *stcb,
 				SOCKBUF_LOCK(&so->so_snd);
 				goto release;
 			}
-			sctppcbinfo.ipi_count_chunk++;
+			SCTP_INCR_CHK_COUNT();
 			asoc->chunks_on_out_queue++;
 
-			sctppcbinfo.ipi_gencnt_chunk++;
 			*chk = template;
 			chk->whoTo->ref_count++;
 			chk->data = n;
@@ -5011,11 +5005,7 @@ sctp_toss_old_cookies(struct sctp_association *asoc)
 			if (chk->whoTo)
 				sctp_free_remote_addr(chk->whoTo);
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-			sctppcbinfo.ipi_count_chunk--;
-			if ((int)sctppcbinfo.ipi_count_chunk < 0) {
-				panic("Chunk count is negative");
-			}
-			sctppcbinfo.ipi_gencnt_chunk++;
+			SCTP_DECR_CHK_COUNT();
 		}
 		chk = nchk;
 	}
@@ -5043,11 +5033,7 @@ sctp_toss_old_asconf(struct sctp_tcb *stcb)
 			if (chk->whoTo)
 				sctp_free_remote_addr(chk->whoTo);
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-			sctppcbinfo.ipi_count_chunk--;
-			if ((int)sctppcbinfo.ipi_count_chunk < 0) {
-				panic("Chunk count is negative");
-			}
-			sctppcbinfo.ipi_gencnt_chunk++;
+			SCTP_DECR_CHK_COUNT();
 		}
 	}
 }
@@ -5144,11 +5130,7 @@ sctp_clean_up_ctl(struct sctp_association *asoc)
 			asoc->ctrl_queue_cnt--;
 			sctp_free_remote_addr(chk->whoTo);
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-			sctppcbinfo.ipi_count_chunk--;
-			if ((int)sctppcbinfo.ipi_count_chunk < 0) {
-				panic("Chunk count is negative");
-			}
-			sctppcbinfo.ipi_gencnt_chunk++;
+			SCTP_DECR_CHK_COUNT();
 		} else if (chk->rec.chunk_id == SCTP_STREAM_RESET) {
 			struct sctp_stream_reset_req *strreq;
 			/* special handling, we must look into the param */
@@ -5261,11 +5243,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb,
 				chk->whoTo = NULL;
 			}
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-			sctppcbinfo.ipi_count_chunk--;
-			if ((int)sctppcbinfo.ipi_count_chunk < 0) {
-				panic("Chunk count is negative");
-			}
-			sctppcbinfo.ipi_gencnt_chunk++;
+			SCTP_DECR_CHK_COUNT();
 			chk = nchk;
 		}
 		return (0);
@@ -6185,16 +6163,11 @@ sctp_queue_op_err(struct sctp_tcb *stcb, struct mbuf *op_err)
 		sctp_m_freem(op_err);
 		return;
 	}
-	sctppcbinfo.ipi_count_chunk++;
-	sctppcbinfo.ipi_gencnt_chunk++;
+	SCTP_INCR_CHK_COUNT();
 	M_PREPEND(op_err, sizeof(struct sctp_chunkhdr), M_DONTWAIT);
 	if (op_err == NULL) {
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-		sctppcbinfo.ipi_count_chunk--;
-		if ((int)sctppcbinfo.ipi_count_chunk < 0) {
-			panic("Chunk count is negative");
-		}
-		sctppcbinfo.ipi_gencnt_chunk++;
+		SCTP_DECR_CHK_COUNT();
 		return;
 	}
 	chk->send_size = 0;
@@ -6295,8 +6268,7 @@ sctp_send_cookie_echo(struct mbuf *m,
 		sctp_m_freem(cookie);
 		return (-5);
 	}
-	sctppcbinfo.ipi_count_chunk++;
-	sctppcbinfo.ipi_gencnt_chunk++;
+	SCTP_INCR_CHK_COUNT();
 	chk->send_size = cookie->m_pkthdr.len;
 	chk->rec.chunk_id = SCTP_COOKIE_ECHO;
 	chk->sent = SCTP_DATAGRAM_UNSENT;
@@ -6364,9 +6336,7 @@ sctp_send_heartbeat_ack(struct sctp_tcb *stcb,
 		sctp_m_freem(outchain);
 		return ;
 	}
-	sctppcbinfo.ipi_count_chunk++;
-	sctppcbinfo.ipi_gencnt_chunk++;
-
+	SCTP_INCR_CHK_COUNT();
 	chk->send_size = chk_length;
 	chk->rec.chunk_id = SCTP_HEARTBEAT_ACK;
 	chk->sent = SCTP_DATAGRAM_UNSENT;
@@ -6401,8 +6371,7 @@ sctp_send_cookie_ack(struct sctp_tcb *stcb) {
 		sctp_m_freem(cookie_ack);
 		return (-1);
 	}
-	sctppcbinfo.ipi_count_chunk++;
-	sctppcbinfo.ipi_gencnt_chunk++;
+	SCTP_INCR_CHK_COUNT();
 
 	chk->send_size = sizeof(struct sctp_chunkhdr);
 	chk->rec.chunk_id = SCTP_COOKIE_ACK;
@@ -6450,8 +6419,7 @@ sctp_send_shutdown_ack(struct sctp_tcb *stcb, struct sctp_nets *net)
 		sctp_m_freem(m_shutdown_ack);
 		return (-1);
 	}
-	sctppcbinfo.ipi_count_chunk++;
-	sctppcbinfo.ipi_gencnt_chunk++;
+	SCTP_INCR_CHK_COUNT();
 
 	chk->send_size = sizeof(struct sctp_chunkhdr);
 	chk->rec.chunk_id = SCTP_SHUTDOWN_ACK;
@@ -6495,8 +6463,7 @@ sctp_send_shutdown(struct sctp_tcb *stcb, struct sctp_nets *net)
 		sctp_m_freem(m_shutdown);
 		return (-1);
 	}
-	sctppcbinfo.ipi_count_chunk++;
-	sctppcbinfo.ipi_gencnt_chunk++;
+	SCTP_INCR_CHK_COUNT();
 
 	chk->send_size = sizeof(struct sctp_shutdown_chunk);
 	chk->rec.chunk_id = SCTP_SHUTDOWN;
@@ -6553,8 +6520,7 @@ sctp_send_asconf(struct sctp_tcb *stcb, struct sctp_nets *net)
 		sctp_m_freem(m_asconf);
 		return (-1);
 	}
-	sctppcbinfo.ipi_count_chunk++;
-	sctppcbinfo.ipi_gencnt_chunk++;
+	SCTP_INCR_CHK_COUNT();
 
 	chk->data = m_asconf;
 	chk->send_size = m_asconf->m_pkthdr.len;
@@ -6611,8 +6577,7 @@ sctp_send_asconf_ack(struct sctp_tcb *stcb, uint32_t retrans)
 			sctp_m_freem(m_ack);
 		return (-1);
 	}
-	sctppcbinfo.ipi_count_chunk++;
-	sctppcbinfo.ipi_gencnt_chunk++;
+	SCTP_INCR_CHK_COUNT();
 
 	/* figure out where it goes to */
 	if (retrans) {
@@ -7787,19 +7752,14 @@ send_forward_tsn(struct sctp_tcb *stcb,
 	if (chk == NULL) {
 		return;
 	}
-	sctppcbinfo.ipi_count_chunk++;
-	sctppcbinfo.ipi_gencnt_chunk++;
+	SCTP_INCR_CHK_COUNT();
 	chk->rec.chunk_id = SCTP_FORWARD_CUM_TSN;
 	chk->asoc = asoc;
 	MGETHDR(chk->data, M_DONTWAIT, MT_DATA);
 	if (chk->data == NULL) {
 		chk->whoTo->ref_count--;
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-		sctppcbinfo.ipi_count_chunk--;
-		if ((int)sctppcbinfo.ipi_count_chunk < 0) {
-			panic("Chunk count is negative");
-		}
-		sctppcbinfo.ipi_gencnt_chunk++;
+		SCTP_DECR_CHK_COUNT();
 		return;
 	}
 	chk->data->m_data += SCTP_MIN_OVERHEAD;
@@ -7968,8 +7928,7 @@ sctp_send_sack(struct sctp_tcb *stcb)
 					 stcb->sctp_ep, stcb, NULL);
 			return;
 		}
-		sctppcbinfo.ipi_count_chunk++;
-		sctppcbinfo.ipi_gencnt_chunk++;
+		SCTP_INCR_CHK_COUNT();
 		a_chk->rec.chunk_id = SCTP_SELECTIVE_ACK;
 	}
 	a_chk->asoc = asoc;
@@ -8026,11 +7985,7 @@ sctp_send_sack(struct sctp_tcb *stcb)
 		}
 		a_chk->whoTo->ref_count--;
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, a_chk);
-		sctppcbinfo.ipi_count_chunk--;
-		if ((int)sctppcbinfo.ipi_count_chunk < 0) {
-			panic("Chunk count is negative");
-		}
-		sctppcbinfo.ipi_gencnt_chunk++;
+		SCTP_DECR_CHK_COUNT();
 		sctp_timer_stop(SCTP_TIMER_TYPE_RECV,
 				stcb->sctp_ep, stcb, NULL);
 		sctp_timer_start(SCTP_TIMER_TYPE_RECV,
@@ -8146,11 +8101,7 @@ sctp_send_sack(struct sctp_tcb *stcb)
 			a_chk->data = NULL;
 			a_chk->whoTo->ref_count--;
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, a_chk);
-			sctppcbinfo.ipi_count_chunk--;
-			if ((int)sctppcbinfo.ipi_count_chunk < 0) {
-				panic("Chunk count is negative");
-			}
-			sctppcbinfo.ipi_gencnt_chunk++;
+			SCTP_DECR_CHK_COUNT();
 			sctp_timer_stop(SCTP_TIMER_TYPE_RECV,
 					stcb->sctp_ep, stcb, NULL);
 			sctp_timer_start(SCTP_TIMER_TYPE_RECV,
@@ -8601,19 +8552,14 @@ sctp_send_hb(struct sctp_tcb *stcb, int user_req, struct sctp_nets *u_net)
 #endif
 		return (0);
 	}
-	sctppcbinfo.ipi_gencnt_chunk++;
-	sctppcbinfo.ipi_count_chunk++;
+	SCTP_INCR_CHK_COUNT();
 	chk->rec.chunk_id = SCTP_HEARTBEAT_REQUEST;
 	chk->asoc = &stcb->asoc;
 	chk->send_size = sizeof(struct sctp_heartbeat_chunk);
 	MGETHDR(chk->data, M_DONTWAIT, MT_DATA);
 	if (chk->data == NULL) {
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-		sctppcbinfo.ipi_count_chunk--;
-		if ((int)sctppcbinfo.ipi_count_chunk < 0) {
-			panic("Chunk count is negative");
-		}
-		sctppcbinfo.ipi_gencnt_chunk++;
+		SCTP_DECR_CHK_COUNT();
 		return (0);
 	}
 	chk->data->m_data += SCTP_MIN_OVERHEAD;
@@ -8679,11 +8625,7 @@ sctp_send_hb(struct sctp_tcb *stcb, int user_req, struct sctp_nets *u_net)
 				chk->data = NULL;
 			}
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-			sctppcbinfo.ipi_count_chunk--;
-			if ((int)sctppcbinfo.ipi_count_chunk < 0) {
-				panic("Chunk count is negative");
-			}
-			sctppcbinfo.ipi_gencnt_chunk++;
+			SCTP_DECR_CHK_COUNT();
 			return (-1);
 		}
 	}
@@ -8732,19 +8674,14 @@ sctp_send_ecn_echo(struct sctp_tcb *stcb, struct sctp_nets *net,
 		return;
 	}
 	sctp_pegs[SCTP_ECNE_SENT]++;
-	sctppcbinfo.ipi_count_chunk++;
-	sctppcbinfo.ipi_gencnt_chunk++;
+	SCTP_INCR_CHK_COUNT();
 	chk->rec.chunk_id = SCTP_ECN_ECHO;
 	chk->asoc = &stcb->asoc;
 	chk->send_size = sizeof(struct sctp_ecne_chunk);
 	MGETHDR(chk->data, M_DONTWAIT, MT_DATA);
 	if (chk->data == NULL) {
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-		sctppcbinfo.ipi_count_chunk--;
-		if ((int)sctppcbinfo.ipi_count_chunk < 0) {
-			panic("Chunk count is negative");
-		}
-		sctppcbinfo.ipi_gencnt_chunk++;
+		SCTP_DECR_CHK_COUNT();
 		return;
 	}
 	chk->data->m_data += SCTP_MIN_OVERHEAD;
@@ -8787,9 +8724,7 @@ sctp_send_packet_dropped(struct sctp_tcb *stcb, struct sctp_nets *net,
 	if (chk == NULL) {
 		return;
 	}
-	sctppcbinfo.ipi_count_chunk++;
-	sctppcbinfo.ipi_gencnt_chunk++;
-
+	SCTP_INCR_CHK_COUNT();
 	iph = mtod(m, struct ip *);
 	if (iph == NULL) {
 		return;
@@ -8816,11 +8751,7 @@ sctp_send_packet_dropped(struct sctp_tcb *stcb, struct sctp_nets *net,
 	if (chk->data == NULL) {
 	jump_out:
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-		sctppcbinfo.ipi_count_chunk--;
-		if ((int)sctppcbinfo.ipi_count_chunk < 0) {
-			panic("Chunk count is negative");
-		}
-		sctppcbinfo.ipi_gencnt_chunk++;
+		SCTP_DECR_CHK_COUNT();
 		return;
 	}
 	if ((chk->send_size+sizeof(struct sctp_pktdrop_chunk)+SCTP_MIN_OVERHEAD) > MHLEN) {
@@ -8917,19 +8848,14 @@ sctp_send_cwr(struct sctp_tcb *stcb, struct sctp_nets *net, uint32_t high_tsn)
 	if (chk == NULL) {
 		return;
 	}
-	sctppcbinfo.ipi_count_chunk++;
-	sctppcbinfo.ipi_gencnt_chunk++;
+	SCTP_INCR_CHK_COUNT();
 	chk->rec.chunk_id = SCTP_ECN_CWR;
 	chk->asoc = &stcb->asoc;
 	chk->send_size = sizeof(struct sctp_cwr_chunk);
 	MGETHDR(chk->data, M_DONTWAIT, MT_DATA);
 	if (chk->data == NULL) {
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-		sctppcbinfo.ipi_count_chunk--;
-		if ((int)sctppcbinfo.ipi_count_chunk < 0) {
-			panic("Chunk count is negative");
-		}
-		sctppcbinfo.ipi_gencnt_chunk++;
+		SCTP_DECR_CHK_COUNT();
 		return;
 	}
 	chk->data->m_data += SCTP_MIN_OVERHEAD;
@@ -8990,8 +8916,7 @@ sctp_send_str_reset_ack(struct sctp_tcb *stcb,
 	if (chk == NULL) {
 		return;
 	}
-	sctppcbinfo.ipi_count_chunk++;
-	sctppcbinfo.ipi_gencnt_chunk++;
+	SCTP_INCR_CHK_COUNT();
 	chk->rec.chunk_id = SCTP_STREAM_RESET;
 	chk->asoc = &stcb->asoc;
 	chk->send_size = sizeof(struct sctp_stream_reset_resp) + (number_entries * sizeof(uint16_t));
@@ -8999,11 +8924,7 @@ sctp_send_str_reset_ack(struct sctp_tcb *stcb,
 	if (chk->data == NULL) {
 	strresp_jump_out:
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-		sctppcbinfo.ipi_count_chunk--;
-		if ((int)sctppcbinfo.ipi_count_chunk < 0) {
-			panic("Chunk count is negative");
-		}
-		sctppcbinfo.ipi_gencnt_chunk++;
+		SCTP_DECR_CHK_COUNT();
 		return;
 	}
 	chk->data->m_data += SCTP_MIN_OVERHEAD;
@@ -9145,8 +9066,7 @@ sctp_send_str_reset_req(struct sctp_tcb *stcb,
 	if (chk == NULL) {
 		return;
 	}
-	sctppcbinfo.ipi_count_chunk++;
-	sctppcbinfo.ipi_gencnt_chunk++;
+	SCTP_INCR_CHK_COUNT();
 	chk->rec.chunk_id = SCTP_STREAM_RESET;
 	chk->asoc = &stcb->asoc;
 	chk->send_size = sizeof(struct sctp_stream_reset_req) + (number_entrys * sizeof(uint16_t));
@@ -9154,11 +9074,7 @@ sctp_send_str_reset_req(struct sctp_tcb *stcb,
 	if (chk->data == NULL) {
 	strreq_jump_out:
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-		sctppcbinfo.ipi_count_chunk--;
-		if ((int)sctppcbinfo.ipi_count_chunk < 0) {
-			panic("Chunk count is negative");
-		}
-		sctppcbinfo.ipi_gencnt_chunk++;
+		SCTP_DECR_CHK_COUNT();
 		return;
 	}
 	chk->data->m_data += SCTP_MIN_OVERHEAD;
@@ -9912,8 +9828,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 			SOCKBUF_LOCK(&so->so_snd);
 			goto release;
 		}
-		sctppcbinfo.ipi_count_chunk++;
-		sctppcbinfo.ipi_gencnt_chunk++;
+		SCTP_INCR_CHK_COUNT();
 		MGETHDR(mm, M_WAIT, MT_DATA);
 		if (mm == NULL) {
 			error = ENOMEM;
@@ -9985,10 +9900,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 clean_up:
 		if (error) {
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-			sctppcbinfo.ipi_count_chunk--;
-			if ((int)sctppcbinfo.ipi_count_chunk < 0) {
-				panic("Chunk count is negative");
-			}
+			SCTP_DECR_CHK_COUNT();
 #ifdef SCTP_LOCK_LOGGING
 			sctp_log_lock(stcb->sctp_ep, stcb, SCTP_LOG_LOCK_SOCKBUF_S);
 #endif
@@ -10022,9 +9934,8 @@ clean_up:
 				 */
 				error = ENOMEM;
 			}
-			sctppcbinfo.ipi_count_chunk++;
+			SCTP_INCR_CHK_COUNT();
 			cnt_on_queue++;
-			sctppcbinfo.ipi_gencnt_chunk++;
 			*chk = template;
 			ref_count_add++;
 			MGETHDR(chk->data, M_WAIT, MT_DATA);
@@ -10125,12 +10036,8 @@ temp_clean_up:
 				}
 				TAILQ_REMOVE(&tmp, chk, sctp_next);
 				SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-				sctppcbinfo.ipi_count_chunk--;
+				SCTP_DECR_CHK_COUNT();
 				asoc->chunks_on_out_queue--;
-				if ((int)sctppcbinfo.ipi_count_chunk < 0) {
-					panic("Chunk count is negative");
-				}
-				sctppcbinfo.ipi_gencnt_chunk++;
 				chk = TAILQ_FIRST(&tmp);
 			}
 			goto release;
@@ -10363,6 +10270,22 @@ sctp_sosend(struct socket *so,
 			    (addr != NULL)) {
 				/* Must locate the net structure */
 				net = sctp_findnet(stcb, addr);
+			}
+		}
+		if((stcb) && ((so->so_state & SS_NBIO)
+#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+			    || (flags & MSG_NBIO)
+#endif
+				)){
+			if((so->so_snd.sb_hiwat <
+			    (sndlen + stcb->asoc.total_output_queue_size)) ||
+			   (stcb->asoc.chunks_on_out_queue >
+			    sctp_max_chunks_on_queue) ||
+			   (stcb->asoc.total_output_mbuf_queue_size >
+			    so->so_snd.sb_mbmax)) {
+				error = EWOULDBLOCK;
+				splx(s);
+				goto out;
 			}
 		}
 		if (stcb == NULL) {

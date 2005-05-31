@@ -193,6 +193,7 @@ struct sctp_epinfo {
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
 	struct mtx ipi_ep_mtx;
 	struct mtx it_mtx;
+        struct mtx ipi_count_mtx;
 #elif defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
 #ifdef _KERN_LOCKS_H_
 	lck_grp_attr_t *mtx_grp_attr;
@@ -200,12 +201,14 @@ struct sctp_epinfo {
 	lck_attr_t *mtx_attr;
 	lck_mtx_t *ipi_ep_mtx;
 	lck_mtx_t *it_mtx;
+        lck_mtx_t ipi_count_mtx;
 #else
 	void *mtx_grp_attr;
 	void *mtx_grp;
 	void *mtx_attr;
 	void *ipi_ep_mtx;
 	void *it_mtx;
+        void *ipi_count_mtx;
 #endif /* _KERN_LOCKS_H_ */
 #endif
 	u_int ipi_count_ep;
@@ -455,8 +458,11 @@ struct sctp_tcb {
  * FIX ME: all locks right now have a recursive check/panic to validate
  * that I don't have any lock recursion going on.
  */
+#define SCTP_IPI_COUNT_INIT() \
+        mtx_init(&sctppcbinfo.ipi_count_mtx, "sctp-count", "inp_info", MTX_DEF)
+
 #define SCTP_INP_INFO_LOCK_INIT() \
-        mtx_init(&sctppcbinfo.ipi_ep_mtx, "sctp", "inp_info", MTX_DEF)
+        mtx_init(&sctppcbinfo.ipi_ep_mtx, "sctp-info", "inp_info", MTX_DEF)
 
 #ifdef INVARIANTS_SCTP
 void SCTP_INP_INFO_RLOCK(void);
@@ -483,9 +489,9 @@ void SCTP_INP_INFO_WLOCK(void);
  * example random_store or cookie secrets we lock the INP level.
  */
 #define SCTP_INP_LOCK_INIT(_inp) \
-	mtx_init(&(_inp)->inp_mtx, "sctp", "inp", MTX_DEF | MTX_DUPOK)
+	mtx_init(&(_inp)->inp_mtx, "sctp-inp", "inp", MTX_DEF | MTX_DUPOK)
 #define SCTP_ASOC_CREATE_LOCK_INIT(_inp) \
-	mtx_init(&(_inp)->inp_create_mtx, "sctp", "inp_create", \
+	mtx_init(&(_inp)->inp_create_mtx, "sctp-create", "inp_create", \
 		 MTX_DEF | MTX_DUPOK)
 #define SCTP_INP_LOCK_DESTROY(_inp) \
 	mtx_destroy(&(_inp)->inp_mtx)
@@ -562,7 +568,7 @@ void SCTP_ASOC_CREATE_LOCK(struct sctp_inpcb *inp);
  */
 
 #define SCTP_TCB_LOCK_INIT(_tcb) \
-	mtx_init(&(_tcb)->tcb_mtx, "sctp", "tcb", MTX_DEF | MTX_DUPOK)
+	mtx_init(&(_tcb)->tcb_mtx, "sctp-tcb", "tcb", MTX_DEF | MTX_DUPOK)
 #define SCTP_TCB_LOCK_DESTROY(_tcb)	mtx_destroy(&(_tcb)->tcb_mtx)
 
 #ifdef INVARIANTS_SCTP
@@ -601,7 +607,7 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #endif
 
 #define SCTP_ITERATOR_LOCK_INIT() \
-        mtx_init(&sctppcbinfo.it_mtx, "sctp", "iterator", MTX_DEF)
+        mtx_init(&sctppcbinfo.it_mtx, "sctp-it", "iterator", MTX_DEF)
 
 #ifdef INVARIANTS_SCTP
 #define SCTP_ITERATOR_LOCK() \
@@ -633,6 +639,8 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 /* Lock for INFO stuff */
 #define SCTP_INP_INFO_LOCK_INIT() \
 	sctppcbinfo.ipi_ep_mtx = lck_rw_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
+#define SCTP_IPI_COUNT_INIT()
+	sctppcbinfo.ipi_count_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
 #define SCTP_INP_INFO_RLOCK() \
 	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx)
 #define SCTP_INP_INFO_RUNLOCK() \
@@ -715,6 +723,7 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #define SCTP_INP_INFO_LOCK_INIT()
 #define SCTP_INP_INFO_RLOCK()
 #define SCTP_INP_INFO_WLOCK()
+#define SCTP_IPI_COUNT_INIT()
 
 #define SCTP_INP_INFO_RUNLOCK()
 #define SCTP_INP_INFO_WUNLOCK()
@@ -751,6 +760,281 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #define SCTP_ITERATOR_LOCK_DESTROY()
 #endif
 
+/***************BEGIN FREEBSD 5 count stuff**********************/
+#if defined(__FreeBSD__) && __FreeBSD_version >= 503000
+#define SCTP_INCRS_DEFINED 1
+
+#define SCTP_INCR_EP_COUNT() \
+                do { \
+                       mtx_lock(&sctppcbinfo.ipi_count_mtx); \
+		       sctppcbinfo.ipi_count_ep++; \
+		       sctppcbinfo.ipi_gencnt_ep++; \
+                       mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+                     
+#define SCTP_DECR_EP_COUNT() \
+                do { \
+                       mtx_lock(&sctppcbinfo.ipi_count_mtx); \
+		       sctppcbinfo.ipi_count_ep--; \
+		       sctppcbinfo.ipi_gencnt_ep++; \
+                       mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+
+#define SCTP_INCR_ASOC_COUNT() \
+                do { \
+                       mtx_lock(&sctppcbinfo.ipi_count_mtx); \
+	               sctppcbinfo.ipi_count_asoc++; \
+	               sctppcbinfo.ipi_gencnt_asoc++; \
+                       mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+
+#define SCTP_DECR_ASOC_COUNT() \
+                do { \
+                       mtx_lock(&sctppcbinfo.ipi_count_mtx); \
+	               sctppcbinfo.ipi_count_asoc--; \
+	               sctppcbinfo.ipi_gencnt_asoc++; \
+                       mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+
+#define SCTP_INCR_LADDR_COUNT() \
+                do { \
+                       mtx_lock(&sctppcbinfo.ipi_count_mtx); \
+	               sctppcbinfo.ipi_count_laddr++; \
+		       sctppcbinfo.ipi_gencnt_laddr++; \
+                       mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+
+#define SCTP_DECR_LADDR_COUNT() \
+                do { \
+                       mtx_lock(&sctppcbinfo.ipi_count_mtx); \
+	               sctppcbinfo.ipi_count_laddr--; \
+		       sctppcbinfo.ipi_gencnt_laddr++; \
+                       mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+
+#define SCTP_INCR_RADDR_COUNT() \
+                do { \
+                       mtx_lock(&sctppcbinfo.ipi_count_mtx); \
+ 	               sctppcbinfo.ipi_count_raddr++; \
+		       sctppcbinfo.ipi_gencnt_raddr++; \
+                       mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+
+#define SCTP_DECR_RADDR_COUNT() \
+                do { \
+                       mtx_lock(&sctppcbinfo.ipi_count_mtx); \
+ 	               sctppcbinfo.ipi_count_raddr--; \
+		       sctppcbinfo.ipi_gencnt_raddr++; \
+                       mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+
+#define SCTP_INCR_CHK_COUNT() \
+                do { \
+                       mtx_lock(&sctppcbinfo.ipi_count_mtx); \
+  	               sctppcbinfo.ipi_count_chunk++; \
+                       sctppcbinfo.ipi_gencnt_chunk++; \
+                       mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+
+#define SCTP_DECR_CHK_COUNT() \
+                do { \
+                       mtx_lock(&sctppcbinfo.ipi_count_mtx); \
+                       if(sctppcbinfo.ipi_count_chunk == 0) \
+                            panic("chunk count reaches 0"); \
+  	               sctppcbinfo.ipi_count_chunk--; \
+                       sctppcbinfo.ipi_gencnt_chunk++; \
+                       mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+
+#define SCTP_INCR_SOCKQ_COUNT() \
+                do { \
+                       mtx_lock(&sctppcbinfo.ipi_count_mtx); \
+		       sctppcbinfo.ipi_count_sockq++; \
+                       mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+
+#define SCTP_DECR_SOCKQ_COUNT() \
+                do { \
+                       mtx_lock(&sctppcbinfo.ipi_count_mtx); \
+		       sctppcbinfo.ipi_count_sockq--; \
+                       mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+#endif
+/***************END FREEBSD 5 count stuff**********************/
+
+/***************BEGIN APPLE PANTHER count stuff**********************/
+#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+#define SCTP_INCRS_DEFINED 1
+#define SCTP_INCR_EP_COUNT() \
+                do { \
+                       lck_mtx_lock(sctppcbinfo.ipi_count_mtx); \
+		       sctppcbinfo.ipi_count_ep++; \
+		       sctppcbinfo.ipi_gencnt_ep++; \
+                       lck_mtx_unlock(sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+                     
+#define SCTP_DECR_EP_COUNT() \
+                do { \
+                       lck_mtx_lock(sctppcbinfo.ipi_count_mtx); \
+		       sctppcbinfo.ipi_count_ep--; \
+		       sctppcbinfo.ipi_gencnt_ep++; \
+                       lck_mtx_unlock(sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+
+#define SCTP_INCR_ASOC_COUNT() \
+                do { \
+                       lck_mtx_lock(sctppcbinfo.ipi_count_mtx); \
+	               sctppcbinfo.ipi_count_asoc++; \
+	               sctppcbinfo.ipi_gencnt_asoc++; \
+                       lck_mtx_unlock(sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+
+#define SCTP_DECR_ASOC_COUNT() \
+                do { \
+                       lck_mtx_lock(sctppcbinfo.ipi_count_mtx); \
+	               sctppcbinfo.ipi_count_asoc--; \
+	               sctppcbinfo.ipi_gencnt_asoc++; \
+                       lck_mtx_unlock(sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+
+#define SCTP_INCR_LADDR_COUNT() \
+                do { \
+                       lck_mtx_lock(sctppcbinfo.ipi_count_mtx); \
+	               sctppcbinfo.ipi_count_laddr++; \
+		       sctppcbinfo.ipi_gencnt_laddr++; \
+                       lck_mtx_unlock(sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+
+#define SCTP_DECR_LADDR_COUNT() \
+                do { \
+                       lck_mtx_lock(sctppcbinfo.ipi_count_mtx); \
+	               sctppcbinfo.ipi_count_laddr--; \
+		       sctppcbinfo.ipi_gencnt_laddr++; \
+                       lck_mtx_unlock(sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+
+#define SCTP_INCR_RADDR_COUNT() \
+                do { \
+                       lck_mtx_lock(sctppcbinfo.ipi_count_mtx); \
+ 	               sctppcbinfo.ipi_count_raddr++; \
+		       sctppcbinfo.ipi_gencnt_raddr++; \
+                       lck_mtx_unlock(sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+
+#define SCTP_DECR_RADDR_COUNT() \
+                do { \
+                       lck_mtx_lock(sctppcbinfo.ipi_count_mtx); \
+ 	               sctppcbinfo.ipi_count_raddr--; \
+		       sctppcbinfo.ipi_gencnt_raddr++; \
+                       (sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+
+#define SCTP_INCR_CHK_COUNT() \
+                do { \
+                       lck_mtx_lock(sctppcbinfo.ipi_count_mtx); \
+  	               sctppcbinfo.ipi_count_chunk++; \
+                       sctppcbinfo.ipi_gencnt_chunk++; \
+                       lck_mtx_unlock(sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+
+#define SCTP_DECR_CHK_COUNT() \
+                do { \
+                       lck_mtx_lock(sctppcbinfo.ipi_count_mtx); \
+  	               sctppcbinfo.ipi_count_chunk--; \
+                       sctppcbinfo.ipi_gencnt_chunk++; \
+                       lck_mtx_unlock(sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+
+#define SCTP_INCR_SOCKQ_COUNT() \
+                do { \
+                       lck_mtx_lock(sctppcbinfo.ipi_count_mtx); \
+		       sctppcbinfo.ipi_count_sockq++; \
+                       lck_mtx_unlock(sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+
+#define SCTP_DECR_SOCKQ_COUNT() \
+                do { \
+                       lck_mtx_lock(sctppcbinfo.ipi_count_mtx); \
+		       sctppcbinfo.ipi_count_sockq--; \
+                       lck_mtx_unlock(sctppcbinfo.ipi_count_mtx); \
+	        } while (0)
+#endif
+/***************BEGIN APPLE PANTHER count stuff**********************/
+
+
+/***************BEGIN all othher count stuff**********************/
+#ifndef SCTP_INCRS_DEFINED
+#define SCTP_INCR_EP_COUNT() \
+                do { \
+		       sctppcbinfo.ipi_count_ep++; \
+		       sctppcbinfo.ipi_gencnt_ep++; \
+	        } while (0)
+                     
+#define SCTP_DECR_EP_COUNT() \
+                do { \
+		       sctppcbinfo.ipi_count_ep--; \
+		       sctppcbinfo.ipi_gencnt_ep++; \
+	        } while (0)
+
+#define SCTP_INCR_ASOC_COUNT() \
+                do { \
+	               sctppcbinfo.ipi_count_asoc++; \
+	               sctppcbinfo.ipi_gencnt_asoc++; \
+	        } while (0)
+
+#define SCTP_DECR_ASOC_COUNT() \
+                do { \
+	               sctppcbinfo.ipi_count_asoc--; \
+	               sctppcbinfo.ipi_gencnt_asoc++; \
+	        } while (0)
+
+#define SCTP_INCR_LADDR_COUNT() \
+                do { \
+	               sctppcbinfo.ipi_count_laddr++; \
+		       sctppcbinfo.ipi_gencnt_laddr++; \
+	        } while (0)
+
+#define SCTP_DECR_LADDR_COUNT() \
+                do { \
+	               sctppcbinfo.ipi_count_laddr--; \
+		       sctppcbinfo.ipi_gencnt_laddr++; \
+	        } while (0)
+
+#define SCTP_INCR_RADDR_COUNT() \
+                do { \
+ 	               sctppcbinfo.ipi_count_raddr++; \
+		       sctppcbinfo.ipi_gencnt_raddr++; \
+	        } while (0)
+
+#define SCTP_DECR_RADDR_COUNT() \
+                do { \
+ 	               sctppcbinfo.ipi_count_raddr--; \
+		       sctppcbinfo.ipi_gencnt_raddr++; \
+	        } while (0)
+
+#define SCTP_INCR_CHK_COUNT() \
+                do { \
+  	               sctppcbinfo.ipi_count_chunk++; \
+                       sctppcbinfo.ipi_gencnt_chunk++; \
+	        } while (0)
+
+#define SCTP_DECR_CHK_COUNT() \
+                do { \
+  	               sctppcbinfo.ipi_count_chunk--; \
+                       sctppcbinfo.ipi_gencnt_chunk++; \
+	        } while (0)
+
+#define SCTP_INCR_SOCKQ_COUNT() \
+                do { \
+		       sctppcbinfo.ipi_count_sockq++; \
+	        } while (0)
+
+#define SCTP_DECR_SOCKQ_COUNT() \
+                do { \
+		       sctppcbinfo.ipi_count_sockq--; \
+	        } while (0)
+
+#endif
 
 #if defined(_KERNEL) || (defined(__APPLE__) && defined(KERNEL))
 
