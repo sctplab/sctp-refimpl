@@ -1553,9 +1553,9 @@ sctp_inpcb_alloc(struct socket *so)
 		return error;
 	}
 #endif /* IPSEC */
-	sctppcbinfo.ipi_count_ep++;
+	SCTP_INCR_EP_COUNT();
 #if defined(__FreeBSD__) || defined(__APPLE__)
-	inp->ip_inp.inp.inp_gencnt = ++sctppcbinfo.ipi_gencnt_ep;
+	inp->ip_inp.inp.inp_gencnt = sctppcbinfo.ipi_gencnt_ep;
 	inp->ip_inp.inp.inp_ip_ttl = ip_defttl;
 #else
 	inp->inp_ip_ttl = ip_defttl;
@@ -1790,8 +1790,7 @@ sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
 #endif /* SCTP_DEBUG */
 				continue;
 			}
-			sctppcbinfo.ipi_count_laddr++;
-			sctppcbinfo.ipi_gencnt_laddr++;
+			SCTP_INCR_LADDR_COUNT();
 			bzero(laddr, sizeof(*laddr));
 			laddr->ifa = oladdr->ifa;
 			LIST_INSERT_HEAD(&new_inp->sctp_addr_list, laddr,
@@ -2558,8 +2557,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	while ((sq = TAILQ_FIRST(&inp->sctp_queue_list)) != NULL) {
 		TAILQ_REMOVE(&inp->sctp_queue_list, sq, next_sq);
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_sockq, sq);
-		sctppcbinfo.ipi_count_sockq--;
-		sctppcbinfo.ipi_gencnt_sockq++;
+		SCTP_DECR_SOCKQ_COUNT();
 	}
 	inp->sctp_socket = 0;
 	/* Now first we remove ourselves from the overall list of all EP's */
@@ -2600,8 +2598,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		nladdr = LIST_NEXT(laddr, sctp_nxt_addr);
 		LIST_REMOVE(laddr, sctp_nxt_addr);
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_laddr, laddr);
-		sctppcbinfo.ipi_gencnt_laddr++;
-		sctppcbinfo.ipi_count_laddr--;
+		SCTP_DECR_LADDR_COUNT();
 	}
 	/* Now lets see about freeing the EP hash table. */
 	if (inp->sctp_tcbhash != NULL) {
@@ -2615,7 +2612,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 
 	/* Now we must put the ep memory back into the zone pool */
 	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, inp);
-	sctppcbinfo.ipi_count_ep--;
+	SCTP_DECR_EP_COUNT();
 
 	SCTP_INP_INFO_WUNLOCK();
 	splx(s);
@@ -2832,8 +2829,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	if (net == NULL) {
 		return (-1);
 	}
-	sctppcbinfo.ipi_count_raddr++;
-	sctppcbinfo.ipi_gencnt_raddr++;
+	SCTP_INCR_RADDR_COUNT();
 	bzero(net, sizeof(*net));
 	memcpy(&net->ro._l_addr, newaddr, newaddr->sa_len);
 	if (newaddr->sa_family == AF_INET) {
@@ -3119,8 +3115,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		*error = ENOMEM;
 		return (NULL);
 	}
-	sctppcbinfo.ipi_count_asoc++;
-	sctppcbinfo.ipi_gencnt_asoc++;
+	SCTP_INCR_ASOC_COUNT();
 
 	bzero(stcb, sizeof(*stcb));
 	asoc = &stcb->asoc;
@@ -3132,7 +3127,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		/* failed */
 		SCTP_TCB_LOCK_DESTROY (stcb);
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
-		sctppcbinfo.ipi_count_asoc--;
+		SCTP_DECR_ASOC_COUNT();
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_PCB3) {
 			printf("aloc_assoc: couldn't init asoc, out of mem?!\n");
@@ -3151,7 +3146,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
 		SCTP_INP_WUNLOCK(inp);
 		SCTP_INP_INFO_WUNLOCK();
-		sctppcbinfo.ipi_count_asoc--;
+		SCTP_DECR_ASOC_COUNT();
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_PCB3) {
 			printf("aloc_assoc: couldn't init asoc, out of mem?!\n");
@@ -3178,7 +3173,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 			FREE(asoc->mapping_array, M_PCB);
 
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
-		sctppcbinfo.ipi_count_asoc--;
+		SCTP_DECR_ASOC_COUNT();
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_PCB3) {
 			printf("aloc_assoc: couldn't add remote addr!\n");
@@ -3230,7 +3225,7 @@ sctp_free_remote_addr(struct sctp_nets *net)
 		callout_stop(&net->pmtu_timer.timer);
 		net->dest_state = SCTP_ADDR_NOT_REACHABLE;
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_net, net);
-		sctppcbinfo.ipi_count_raddr--;
+		SCTP_DECR_RADDR_COUNT();
 	}
 }
 
@@ -3509,7 +3504,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		/* free it */
 		net->ref_count = 0;
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_net, net);
-		sctppcbinfo.ipi_count_raddr--;
+		SCTP_DECR_RADDR_COUNT();
 	}
 	/*
 	 * The chunk lists and such SHOULD be empty but we check them
@@ -3532,11 +3527,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 			chk->asoc = NULL;
 			/* Free the chunk */
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-			sctppcbinfo.ipi_count_chunk--;
-			sctppcbinfo.ipi_gencnt_chunk++;
-			if ((int)sctppcbinfo.ipi_count_chunk < 0) {
-				panic("Chunk count is negative");
-			}
+			SCTP_DECR_CHK_COUNT();
 			chk = TAILQ_FIRST(&outs->outqueue);
 		}
 		outs = TAILQ_FIRST(&asoc->out_wheel);
@@ -3557,11 +3548,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		chk->asoc = NULL;
 		/* Free the chunk */
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-		sctppcbinfo.ipi_count_chunk--;
-		sctppcbinfo.ipi_gencnt_chunk++;
-		if ((int)sctppcbinfo.ipi_count_chunk < 0) {
-			panic("Chunk count is negative");
-		}
+		SCTP_DECR_CHK_COUNT();
 		chk = TAILQ_FIRST(&asoc->pending_reply_queue);
 	}
 	/* pending send queue SHOULD be empty */
@@ -3574,11 +3561,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 				chk->data = NULL;
 			}
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-			sctppcbinfo.ipi_count_chunk--;
-			if ((int)sctppcbinfo.ipi_count_chunk < 0) {
-				panic("Chunk count is negative");
-			}
-			sctppcbinfo.ipi_gencnt_chunk++;
+			SCTP_DECR_CHK_COUNT();
 			chk = TAILQ_FIRST(&asoc->send_queue);
 		}
 	}
@@ -3592,11 +3575,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 				chk->data = NULL;
 			}
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-			sctppcbinfo.ipi_count_chunk--;
-			if ((int)sctppcbinfo.ipi_count_chunk < 0) {
-				panic("Chunk count is negative");
-			}
-			sctppcbinfo.ipi_gencnt_chunk++;
+			SCTP_DECR_CHK_COUNT();
 			chk = TAILQ_FIRST(&asoc->sent_queue);
 		}
 	}
@@ -3610,11 +3589,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 				chk->data = NULL;
 			}
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-			sctppcbinfo.ipi_count_chunk--;
-			if ((int)sctppcbinfo.ipi_count_chunk < 0) {
-				panic("Chunk count is negative");
-			}
-			sctppcbinfo.ipi_gencnt_chunk++;
+			SCTP_DECR_CHK_COUNT();
 			chk = TAILQ_FIRST(&asoc->control_send_queue);
 		}
 	}
@@ -3627,11 +3602,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 				chk->data = NULL;
 			}
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-			sctppcbinfo.ipi_count_chunk--;
-			if ((int)sctppcbinfo.ipi_count_chunk < 0) {
-				panic("Chunk count is negative");
-			}
-			sctppcbinfo.ipi_gencnt_chunk++;
+			SCTP_DECR_CHK_COUNT();
 			chk = TAILQ_FIRST(&asoc->reasmqueue);
 		}
 	}
@@ -3644,11 +3615,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 				chk->data = NULL;
 			}
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-			sctppcbinfo.ipi_count_chunk--;
-			if ((int)sctppcbinfo.ipi_count_chunk < 0) {
-				panic("Chunk count is negative");
-			}
-			sctppcbinfo.ipi_gencnt_chunk++;
+			SCTP_DECR_CHK_COUNT();
 			chk = TAILQ_FIRST(&asoc->delivery_queue);
 		}
 	}
@@ -3678,11 +3645,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 					}
 					SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk,
 					    chk);
-					sctppcbinfo.ipi_count_chunk--;
-					if ((int)sctppcbinfo.ipi_count_chunk < 0) {
-						panic("Chunk count is negative");
-					}
-					sctppcbinfo.ipi_gencnt_chunk++;
+					SCTP_DECR_CHK_COUNT();
 					chk = TAILQ_FIRST(&asoc->strmin[i].inqueue);
 				}
 			}
@@ -3696,7 +3659,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		laddr = LIST_FIRST(&asoc->sctp_local_addr_list);
 		LIST_REMOVE(laddr, sctp_nxt_addr);
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_laddr, laddr);
-		sctppcbinfo.ipi_count_laddr--;
+		SCTP_DECR_LADDR_COUNT();
 	}
 	/* pending asconf (address) parameters */
 	while (!TAILQ_EMPTY(&asoc->asconf_queue)) {
@@ -3715,7 +3678,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 
 	/* now clean up the tasoc itself */
 	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
-	sctppcbinfo.ipi_count_asoc--;
+	SCTP_DECR_ASOC_COUNT();
 	if ((inp->sctp_socket->so_snd.sb_cc) ||
 	    (inp->sctp_socket->so_snd.sb_mbcnt)) {
 		/* This will happen when a abort is done */
@@ -4060,8 +4023,7 @@ sctp_insert_laddr(struct sctpladdr *list, struct ifaddr *ifa) {
 		splx(s);
 		return (EINVAL);
 	}
-	sctppcbinfo.ipi_count_laddr++;
-	sctppcbinfo.ipi_gencnt_laddr++;
+	SCTP_INCR_LADDR_COUNT();
 	bzero(laddr, sizeof(*laddr));
 	laddr->ifa = ifa;
 	/* insert it */
@@ -4086,9 +4048,7 @@ sctp_remove_laddr(struct sctp_laddr *laddr)
 	/* remove from the list */
 	LIST_REMOVE(laddr, sctp_nxt_addr);
 	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_laddr, laddr);
-	sctppcbinfo.ipi_count_laddr--;
-	sctppcbinfo.ipi_gencnt_laddr++;
-
+	SCTP_DECR_LADDR_COUNT();
 	splx(s);
 }
 
@@ -4342,6 +4302,7 @@ sctp_pcb_init()
 #endif /* __APPLE__ */
 	SCTP_INP_INFO_LOCK_INIT();
 	SCTP_ITERATOR_LOCK_INIT();
+	SCTP_IPI_COUNT_INIT();
 	/* not sure if we need all the counts */
 	sctppcbinfo.ipi_count_ep = 0;
 	sctppcbinfo.ipi_gencnt_ep = 0;
@@ -5014,11 +4975,7 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 				chk->data = NULL;
 			}
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-			sctppcbinfo.ipi_count_chunk--;
-			if ((int)sctppcbinfo.ipi_count_chunk < 0) {
-				panic("Chunk count is negative");
-			}
-			sctppcbinfo.ipi_gencnt_chunk++;
+			SCTP_DECR_CHR_COUNT();
 		}
 		chk = nchk;
 	}
@@ -5052,11 +5009,7 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 					chk->data = NULL;
 				}
 				SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-				sctppcbinfo.ipi_count_chunk--;
-				if ((int)sctppcbinfo.ipi_count_chunk < 0) {
-					panic("Chunk count is negative");
-				}
-				sctppcbinfo.ipi_gencnt_chunk++;
+				SCTP_DECR_CHR_COUNT();
 			}
 			chk = nchk;
 		}
@@ -5141,8 +5094,7 @@ sctp_add_to_socket_q(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		       (u_int)inp, (u_int)stcb);
 		return (0);
 	}
-	sctppcbinfo.ipi_count_sockq++;
-	sctppcbinfo.ipi_gencnt_sockq++;
+	SCTP_INCR_SOCKQ_COUNT();
 	if (stcb)
 		sctp_ucount_incr(stcb->asoc.cnt_msg_on_sb);
 	sq->tcb = stcb;
@@ -5165,8 +5117,7 @@ sctp_remove_from_socket_q(struct sctp_inpcb *inp)
 	stcb = sq->tcb;
 	TAILQ_REMOVE(&inp->sctp_queue_list, sq, next_sq);
 	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_sockq, sq);
-	sctppcbinfo.ipi_count_sockq--;
-	sctppcbinfo.ipi_gencnt_sockq++;
+	SCTP_DECR_SOCKQ_COUNT();
 	if (stcb) {
 		sctp_ucount_decr(stcb->asoc.cnt_msg_on_sb);
 	}
