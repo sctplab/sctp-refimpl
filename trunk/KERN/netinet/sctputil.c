@@ -2960,11 +2960,7 @@ sctp_report_all_outbound(struct sctp_tcb *stcb)
 			chk->asoc = NULL;
 			/* Free the chunk */
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-			sctppcbinfo.ipi_count_chunk--;
-			if ((int)sctppcbinfo.ipi_count_chunk < 0) {
-				panic("Chunk count is negative");
-			}
-			sctppcbinfo.ipi_gencnt_chunk++;
+			SCTP_DECR_CHK_COUNT();
 			chk = TAILQ_FIRST(&outs->outqueue);
 		}
 	}
@@ -2982,11 +2978,7 @@ sctp_report_all_outbound(struct sctp_tcb *stcb)
 				sctp_free_remote_addr(chk->whoTo);
 			chk->whoTo = NULL;
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-			sctppcbinfo.ipi_count_chunk--;
-			if ((int)sctppcbinfo.ipi_count_chunk < 0) {
-				panic("Chunk count is negative");
-			}
-			sctppcbinfo.ipi_gencnt_chunk++;
+			SCTP_DECR_CHK_COUNT();
 			chk = TAILQ_FIRST(&asoc->send_queue);
 		}
 	}
@@ -3005,11 +2997,7 @@ sctp_report_all_outbound(struct sctp_tcb *stcb)
 				sctp_free_remote_addr(chk->whoTo);
 			chk->whoTo = NULL;
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-			sctppcbinfo.ipi_count_chunk--;
-			if ((int)sctppcbinfo.ipi_count_chunk < 0) {
-				panic("Chunk count is negative");
-			}
-			sctppcbinfo.ipi_gencnt_chunk++;
+			SCTP_DECR_CHK_COUNT();
 			chk = TAILQ_FIRST(&asoc->sent_queue);
 		}
 	}
