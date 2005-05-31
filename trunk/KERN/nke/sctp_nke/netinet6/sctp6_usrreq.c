@@ -102,7 +102,9 @@
 #include <net/if_faith.h>
 #endif
 
+#ifndef __APPLE__
 #include <net/net_osdep.h>
+#endif
 
 extern struct protosw inetsw[];
 
