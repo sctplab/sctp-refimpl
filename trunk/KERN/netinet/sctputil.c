@@ -1311,6 +1311,9 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	to_ticks = 0;
 
 	tmr = NULL;
+	if(stcb) {
+		STCB_TCB_LOCK_ASSERT(stcb);
+	}
 	switch (t_type) {
 	case SCTP_TIMER_TYPE_ITERATOR:
 	{
@@ -1636,6 +1639,9 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		return (EFAULT);
 
 	tmr = NULL;
+	if(stcb) {
+		STCB_TCB_LOCK_ASSERT(stcb);
+	}
 	switch (t_type) {
 	case SCTP_TIMER_TYPE_EARLYFR:
 		if ((stcb == NULL) || (net == NULL)) {
