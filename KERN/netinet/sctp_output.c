@@ -10272,6 +10272,22 @@ sctp_sosend(struct socket *so,
 				net = sctp_findnet(stcb, addr);
 			}
 		}
+		if((stcb) && ((so->so_state & SS_NBIO)
+#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+			    || (flags & MSG_NBIO)
+#endif
+				)){
+			if((so->so_snd.sb_hiwat <
+			    (sndlen + stcb->asoc.total_output_queue_size)) ||
+			   (stcb->asoc.chunks_on_out_queue >
+			    sctp_max_chunks_on_queue) ||
+			   (stcb->asoc.total_output_mbuf_queue_size >
+			    so->so_snd.sb_mbmax)) {
+				error = EWOULDBLOCK;
+				splx(s);
+				goto out;
+			}
+		}
 		if (stcb == NULL) {
 			if (addr != NULL) {
 				/* Since we did not use findep we must
