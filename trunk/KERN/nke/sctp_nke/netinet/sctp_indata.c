@@ -342,11 +342,7 @@ sctp_deliver_data(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			chk->data = NULL;
 			sctp_free_remote_addr(chk->whoTo);
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-			sctppcbinfo.ipi_count_chunk--;
-			if ((int)sctppcbinfo.ipi_count_chunk < 0) {
-				panic("Chunk count is negative");
-			}
-			sctppcbinfo.ipi_gencnt_chunk++;
+			SCTP_DECR_CHK_COUNT();
 		}
 		TAILQ_FOREACH(chk, &asoc->delivery_queue, sctp_next) {
 			asoc->size_on_delivery_queue -= chk->send_size;
@@ -360,11 +356,7 @@ sctp_deliver_data(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			/* Now free the address and data */
 			sctp_free_remote_addr(chk->whoTo);
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-			sctppcbinfo.ipi_count_chunk--;
-			if ((int)sctppcbinfo.ipi_count_chunk < 0) {
-				panic("Chunk count is negative");
-			}
-			sctppcbinfo.ipi_gencnt_chunk++;
+			SCTP_DECR_CHK_COUNT();
 		}
 		if (hold_locks == 0)
 			SCTP_INP_WUNLOCK(stcb->sctp_ep);
@@ -532,11 +524,7 @@ sctp_deliver_data(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		/* Now free the address and data */
 		sctp_free_remote_addr(chk->whoTo);
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-		sctppcbinfo.ipi_count_chunk--;
-		if ((int)sctppcbinfo.ipi_count_chunk < 0) {
-			panic("Chunk count is negative");
-		}
-		sctppcbinfo.ipi_gencnt_chunk++;
+		SCTP_DECR_CHK_COUNT();
 	}
 	return (free_it);
 }
@@ -585,11 +573,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc, in
 			/* Now free the address and data */
 			sctp_free_remote_addr(chk->whoTo);
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-			sctppcbinfo.ipi_count_chunk--;
-			if ((int)sctppcbinfo.ipi_count_chunk < 0) {
-				panic("Chunk count is negative");
-			}
-			sctppcbinfo.ipi_gencnt_chunk++;
+			SCTP_DECR_CHK_COUNT();
 		}
 		if (hold_locks == 0)
 			SCTP_INP_WUNLOCK(stcb->sctp_ep);
@@ -760,11 +744,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc, in
 		sctp_free_remote_addr(chk->whoTo);
 		chk->data = NULL;
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-		sctppcbinfo.ipi_count_chunk--;
-		if ((int)sctppcbinfo.ipi_count_chunk < 0) {
-			panic("Chunk count is negative");
-		}
-		sctppcbinfo.ipi_gencnt_chunk++;
+		SCTP_DECR_CHK_COUNT();
 		if (asoc->fragmented_delivery_inprogress == 0) {
 			/*
 			 * Now lets see if we can deliver the next one on the
@@ -991,12 +971,7 @@ sctp_queue_data_to_stream(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					sctp_pegs[SCTP_DUP_SSN_RCVD]++;
 					sctp_free_remote_addr(chk->whoTo);
 					SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-					sctppcbinfo.ipi_count_chunk--;
-					if ((int)sctppcbinfo.ipi_count_chunk <
-					    0) {
-						panic("Chunk count is negative");
-					}
-					sctppcbinfo.ipi_gencnt_chunk++;
+					SCTP_DECR_CHK_COUNT();
 					return;
 				} else {
 					if (TAILQ_NEXT(at, sctp_next) == NULL) {
@@ -1252,11 +1227,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			chk->data = NULL;
 			sctp_free_remote_addr(chk->whoTo);
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-			sctppcbinfo.ipi_count_chunk--;
-			if ((int)sctppcbinfo.ipi_count_chunk < 0) {
-				panic("Chunk count is negative");
-			}
-			sctppcbinfo.ipi_gencnt_chunk++;
+			SCTP_DECR_CHK_COUNT();
 			return;
 		} else {
 			last_flags = at->rec.data.rcv_flags;
@@ -2059,8 +2030,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		}
 		return (0);
 	}
-	sctppcbinfo.ipi_count_chunk++;
-	sctppcbinfo.ipi_gencnt_chunk++;
+	SCTP_INCR_CHK_COUNT();
 	chk->rec.data.TSN_seq = tsn;
 	chk->rec.data.stream_seq = strmseq;
 	chk->rec.data.stream_number = strmno;
@@ -3966,14 +3936,10 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 		tp1->data = NULL;
 		asoc->sent_queue_cnt--;
 		sctp_free_remote_addr(tp1->whoTo);
-		sctppcbinfo.ipi_count_chunk--;
-		asoc->chunks_on_out_queue--;
 
-		if ((int)sctppcbinfo.ipi_count_chunk < 0) {
-			panic("Chunk count is going negative");
-		}
+		asoc->chunks_on_out_queue--;
+		SCTP_DECR_CHK_COUNT();
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, tp1);
-		sctppcbinfo.ipi_gencnt_chunk++;
 		sctp_sowwakeup(stcb->sctp_ep, stcb->sctp_socket);
 		tp1 = tp2;
 	} while (tp1 != NULL);
@@ -4720,11 +4686,7 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 				}
 				sctp_free_remote_addr(chk->whoTo);
 				SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-				sctppcbinfo.ipi_count_chunk--;
-				if ((int)sctppcbinfo.ipi_count_chunk < 0) {
-					panic("Chunk count is negative");
-				}
-				sctppcbinfo.ipi_gencnt_chunk++;
+				SCTP_DECR_CHK_COUNT();
 			} else {
 				/*
 				 * Ok we have gone beyond the end of the
