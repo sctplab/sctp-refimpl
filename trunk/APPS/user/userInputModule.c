@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.13 2005-05-31 16:24:42 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.14 2005-05-31 16:46:25 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -3154,7 +3154,7 @@ cmd_getpegs(char *argv[], int argc)
  	"entersor", /* 100 */
  	"rch_frmk", /* 101 */
  	"fndbyaid", /* 102 */
- 	"resv3   "  /* 103 */
+ 	"bad_asid"  /* 103 */
     };
     printf("there are %d pegs\n",
 	   SCTP_NUMBER_OF_PEGS);
