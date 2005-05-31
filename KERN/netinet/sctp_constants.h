@@ -764,7 +764,7 @@
 #define SCTP_ENTER_SCTPSORCV     100
 #define SCTP_REACHED_FR_MARK     101
 #define SCTP_BY_ASSOCID          102
-#define SCTP_RESV3               103
+#define SCTP_ASID_BOGUS          103
 
 /*
  * This value defines the number of vtag block time wait entry's
