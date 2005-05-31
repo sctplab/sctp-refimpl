@@ -226,8 +226,7 @@ sctp_split_chunks(struct sctp_association *asoc,
 		chk->flags |= CHUNK_FLAGS_FRAGMENT_OK;
 		return;
 	}
-	sctppcbinfo.ipi_count_chunk++;
-	sctppcbinfo.ipi_gencnt_chunk++;
+	SCTP_INCR_CHK_COUNT();
 	/* Copy it all */
 	*new_chk = *chk;
 	/*  split the data */
@@ -236,11 +235,7 @@ sctp_split_chunks(struct sctp_association *asoc,
 		/* Can't split */
 		chk->flags |= CHUNK_FLAGS_FRAGMENT_OK;
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, new_chk);
-		sctppcbinfo.ipi_count_chunk--;
-		if ((int)sctppcbinfo.ipi_count_chunk < 0) {
-			panic("Chunk count is negative");
-		}
-		sctppcbinfo.ipi_gencnt_chunk++;
+		SCTP_DECR_CHK_COUNT();
 		return;
 
 	}

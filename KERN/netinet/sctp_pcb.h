@@ -193,6 +193,7 @@ struct sctp_epinfo {
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
 	struct mtx ipi_ep_mtx;
 	struct mtx it_mtx;
+        struct mtx ipi_count_mtx;
 #elif defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
 #ifdef _KERN_LOCKS_H_
 	lck_grp_attr_t *mtx_grp_attr;
@@ -200,12 +201,14 @@ struct sctp_epinfo {
 	lck_attr_t *mtx_attr;
 	lck_mtx_t *ipi_ep_mtx;
 	lck_mtx_t *it_mtx;
+        lck_mtx_t ipi_count_mtx;
 #else
 	void *mtx_grp_attr;
 	void *mtx_grp;
 	void *mtx_attr;
 	void *ipi_ep_mtx;
 	void *it_mtx;
+        void *ipi_count_mtx;
 #endif /* _KERN_LOCKS_H_ */
 #endif
 	u_int ipi_count_ep;
@@ -750,6 +753,78 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #define SCTP_ITERATOR_UNLOCK()
 #define SCTP_ITERATOR_LOCK_DESTROY()
 #endif
+
+
+
+SCTP_INCR_EP_COUNT() \
+                do { \
+		       sctppcbinfo.ipi_count_ep++; \
+		       sctppcbinfo.ipi_gencnt_ep++; \
+	        } while (0)
+                     
+SCTP_DECR_EP_COUNT() \
+                do { \
+		       sctppcbinfo.ipi_count_ep--; \
+		       sctppcbinfo.ipi_gencnt_ep++; \
+	        } while (0)
+
+SCTP_INCR_ASOC_COUNT() \
+                do { \
+	               sctppcbinfo.ipi_count_asoc++; \
+	               sctppcbinfo.ipi_gencnt_asoc++; \
+	        } while (0)
+
+SCTP_DECR_ASOC_COUNT() \
+                do { \
+	               sctppcbinfo.ipi_count_asoc--; \
+	               sctppcbinfo.ipi_gencnt_asoc++; \
+	        } while (0)
+
+SCTP_INCR_LADDR_COUNT() \
+                do { \
+	               sctppcbinfo.ipi_count_laddr++; \
+		       sctppcbinfo.ipi_gencnt_laddr++; \
+	        } while (0)
+
+SCTP_DECR_LADDR_COUNT() \
+                do { \
+	               sctppcbinfo.ipi_count_laddr--; \
+		       sctppcbinfo.ipi_gencnt_laddr++; \
+	        } while (0)
+
+SCTP_INCR_RADDR_COUNT() \
+                do { \
+ 	               sctppcbinfo.ipi_count_raddr++; \
+		       sctppcbinfo.ipi_gencnt_raddr++; \
+	        } while (0)
+
+SCTP_DECR_RADDR_COUNT() \
+                do { \
+ 	               sctppcbinfo.ipi_count_raddr--; \
+		       sctppcbinfo.ipi_gencnt_raddr++; \
+	        } while (0)
+
+SCTP_INCR_CHK_COUNT() \
+                do { \
+  	               sctppcbinfo.ipi_count_chunk++; \
+                       sctppcbinfo.ipi_gencnt_chunk++; \
+	        } while (0)
+
+SCTP_DECR_CHK_COUNT() \
+                do { \
+  	               sctppcbinfo.ipi_count_chunk--; \
+                       sctppcbinfo.ipi_gencnt_chunk++; \
+	        } while (0)
+
+SCTP_INCR_CHK_COUNT() \
+                do { \
+		       sctppcbinfo.ipi_count_sockq++; \
+	        } while (0)
+
+SCTP_DECR_CHK_COUNT() \
+                do { \
+		       sctppcbinfo.ipi_count_sockq--; \
+	        } while (0)
 
 
 #if defined(_KERNEL) || (defined(__APPLE__) && defined(KERNEL))

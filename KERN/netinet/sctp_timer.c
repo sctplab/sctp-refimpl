@@ -483,12 +483,8 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 			}
 			stcb->asoc.sent_queue_cnt--;
 			sctp_free_remote_addr(chk->whoTo);
-			sctppcbinfo.ipi_count_chunk--;
-			if ((int)sctppcbinfo.ipi_count_chunk < 0) {
-				panic("Chunk count is going negative");
-			}
+			SCTP_DECR_CHK_COUNT();
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-			sctppcbinfo.ipi_gencnt_chunk++;
 			continue;
 		}
 		if ((chk->whoTo == net) && (chk->sent < SCTP_DATAGRAM_ACKED)) {
