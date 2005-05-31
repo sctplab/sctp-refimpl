@@ -4975,7 +4975,7 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 				chk->data = NULL;
 			}
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-			SCTP_DECR_CHR_COUNT();
+			SCTP_DECR_CHK_COUNT();
 		}
 		chk = nchk;
 	}
@@ -5009,7 +5009,7 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 					chk->data = NULL;
 				}
 				SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-				SCTP_DECR_CHR_COUNT();
+				SCTP_DECR_CHK_COUNT();
 			}
 			chk = nchk;
 		}
