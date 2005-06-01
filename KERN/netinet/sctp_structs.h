@@ -468,6 +468,7 @@ struct sctp_association {
 	u_int32_t sat_t3_recovery_tsn;
 
 	u_int32_t tsn_last_delivered;
+	u_int32_t tsn_of_pdapi_last_delivered;
         u_int32_t pdapi_ppid;
         u_int32_t context;
 	/*
@@ -582,6 +583,9 @@ struct sctp_association {
 	u_int16_t asconf_sent;   /* possibly removable REM */
 	u_int16_t mapping_array_size;
 
+	u_int16_t last_strm_seq_delivered;
+	u_int16_t last_strm_no_delivered;
+
 	u_int16_t chunks_on_out_queue; /* total chunks floating around */
 	int16_t num_send_timers_up;
 	/*
@@ -600,6 +604,7 @@ struct sctp_association {
 	u_int8_t hb_random_values[4];
 	u_int8_t fragmented_delivery_inprogress;
 	u_int8_t fragment_flags;
+	u_int8_t last_flags_delivered;
 	u_int8_t hb_ect_randombit;
         u_int8_t hb_random_idx;
 

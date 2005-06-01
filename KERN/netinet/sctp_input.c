@@ -678,6 +678,7 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
 	if ((SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_SENT) &&
 	    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_ACK_SENT)) {
 		/* unexpected SHUTDOWN-ACK... so ignore... */
+		SCTP_TCB_UNLOCK_IFOWNED(stcb);
 		return;
 	}
 	/* are the queues empty? */
@@ -2389,6 +2390,7 @@ sctp_handle_shutdown_complete(struct sctp_shutdown_complete_chunk *cp,
 	/* process according to association state */
 	if (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_ACK_SENT) {
 		/* unexpected SHUTDOWN-COMPLETE... so ignore... */
+		SCTP_TCB_UNLOCK_IFOWNED(stcb);
 		return;
 	}
 	/* notify upper layer protocol */
@@ -4424,7 +4426,9 @@ sctp_input(m, va_alist)
 		SCTP_INP_DECR_REF(inp);
 		SCTP_INP_WUNLOCK(inp);
 	}
-
+#ifdef INVARIANTS_SCTP
+	sctp_verify_no_locks();
+#endif
 	return;
 bad:
 	if (stcb)
@@ -4442,5 +4446,9 @@ bad:
 	}
 	if (opts)
 		sctp_m_freem(opts);
+	
+#ifdef INVARIANTS_SCTP
+	sctp_verify_no_locks();
+#endif
 	return;
 }
