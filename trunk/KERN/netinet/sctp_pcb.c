@@ -164,19 +164,18 @@ extern int ipport_hilastauto;
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 
 #ifdef INVARIANTS_SCTP
-void sctp_validate_no_locks(void);
 
 void SCTP_ASOC_CREATE_LOCK(struct sctp_inpcb *inp)
 {
 #ifdef SCTP_LOCK_LOGGING
-  sctp_log_lock(inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_CREATE);
+	sctp_log_lock(inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_CREATE);
 #endif
-  if (mtx_owned(&inp->inp_mtx)) {
-    panic("Want Create lock, own INP");
-  }
-  if (mtx_owned(&inp->inp_create_mtx)) 
-    panic("INP Recursive CREATE");
-  mtx_lock(&inp->inp_create_mtx); 
+	if (mtx_owned(&inp->inp_mtx)) {
+		panic("Want Create lock, own INP");
+	}
+	if (mtx_owned(&inp->inp_create_mtx)) 
+		panic("INP Recursive CREATE");
+	mtx_lock(&inp->inp_create_mtx); 
 }
 
 
@@ -187,6 +186,7 @@ SCTP_INP_RLOCK(struct sctp_inpcb *inp)
 #ifdef SCTP_LOCK_LOGGING
 	sctp_log_lock(inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_INP);
 #endif
+
 	LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
 		if (mtx_owned(&(stcb)->tcb_mtx))
 			panic("I own TCB lock?");
@@ -206,32 +206,32 @@ void
 SCTP_TCB_LOCK(struct sctp_tcb *stcb) 
 {
 #ifdef SCTP_LOCK_LOGGING
-  sctp_log_lock(stcb->sctp_ep, stcb, SCTP_LOG_LOCK_TCB);
+	sctp_log_lock(stcb->sctp_ep, stcb, SCTP_LOG_LOCK_TCB);
 #endif
-  if (!mtx_owned(&(stcb->sctp_ep->inp_mtx)))
-    panic("TCB locking and no INP lock");
-  if (mtx_owned(&(stcb)->tcb_mtx)) 
-    panic("TCB Lock-recursive");
-  mtx_lock(&(stcb)->tcb_mtx);
+	if (!mtx_owned(&(stcb->sctp_ep->inp_mtx)))
+		panic("TCB locking and no INP lock");
+	if (mtx_owned(&(stcb)->tcb_mtx)) 
+		panic("TCB Lock-recursive");
+	mtx_lock(&(stcb)->tcb_mtx);
 }
 
 
 void
 SCTP_INP_INFO_RLOCK()
 {
-  struct sctp_inpcb *inp;
-  struct sctp_tcb *stcb;
-  LIST_FOREACH(inp, &sctppcbinfo.listhead, sctp_list) {
-    if (mtx_owned(&(inp)->inp_mtx))
-      panic("info-lock and own inp lock?");
-    LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
-      if (mtx_owned(&(stcb)->tcb_mtx))
-	panic("Info lock and own a tcb lock?");
-    }
-  }
-  if (mtx_owned(&sctppcbinfo.ipi_ep_mtx))
-    panic("INP INFO Recursive Lock-R");
-  mtx_lock(&sctppcbinfo.ipi_ep_mtx);
+	struct sctp_inpcb *inp;
+	struct sctp_tcb *stcb;
+	LIST_FOREACH(inp, &sctppcbinfo.listhead, sctp_list) {
+		if (mtx_owned(&(inp)->inp_mtx))
+			panic("info-lock and own inp lock?");
+		LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
+			if (mtx_owned(&(stcb)->tcb_mtx))
+				panic("Info lock and own a tcb lock?");
+		}
+	}
+	if (mtx_owned(&sctppcbinfo.ipi_ep_mtx))
+		panic("INP INFO Recursive Lock-R");
+	mtx_lock(&sctppcbinfo.ipi_ep_mtx);
 }
 
 void
@@ -241,7 +241,7 @@ SCTP_INP_INFO_WLOCK()
 }
 
 
-void sctp_validate_no_locks()
+void sctp_verify_no_locks(void)
 {
 	struct sctp_inpcb *inp;
 	struct sctp_tcb *stcb;

@@ -467,6 +467,7 @@ struct sctp_tcb {
 #ifdef INVARIANTS_SCTP
 void SCTP_INP_INFO_RLOCK(void);
 void SCTP_INP_INFO_WLOCK(void);
+void sctp_verify_no_locks(void);
 #else
 
 #define SCTP_INP_INFO_RLOCK()	do { 					\
