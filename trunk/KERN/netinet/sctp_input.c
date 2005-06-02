@@ -2498,7 +2498,7 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 			}
 			sctp_pegs[SCTP_PDRP_MARK]++;
 			if(tp1->sent != SCTP_DATAGRAM_RESEND)
-			   sctp_ucount_incr(asoc->sent_queue_retran_cnt);
+			   sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
 			tp1->sent = SCTP_DATAGRAM_RESEND;
 			/*
 			 * mark it as if we were doing a FR, since we
