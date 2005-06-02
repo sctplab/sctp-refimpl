@@ -674,7 +674,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc, in
 			/* turn the flag back on since we just  delivered
 			 * yet another one.
 			 */
-			asoc->fragmented_delivery_inprogress = 0;
+			asoc->fragmented_delivery_inprogress = 1;
 		}
 		asoc->tsn_of_pdapi_last_delivered = chk->rec.data.TSN_seq;
 		asoc->last_flags_delivered        = chk->rec.data.rcv_flags;
