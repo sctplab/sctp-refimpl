@@ -132,13 +132,13 @@ sctp_audit_retranmission_queue(struct sctp_association *asoc)
 	asoc->sent_queue_cnt = 0;
 	TAILQ_FOREACH(chk, &asoc->sent_queue, sctp_next) {
 		if (chk->sent == SCTP_DATAGRAM_RESEND) {
-			asoc->sent_queue_retran_cnt++;
+			sctp_ucount_incr(asoc->sent_queue_retran_cnt);
 		}
 		asoc->sent_queue_cnt++;
 	}
 	TAILQ_FOREACH(chk, &asoc->control_send_queue, sctp_next) {
 		if (chk->sent == SCTP_DATAGRAM_RESEND) {
-			asoc->sent_queue_retran_cnt++;
+			sctp_ucount_incr(asoc->sent_queue_retran_cnt);
 		}
 	}
 #ifdef SCTP_DEBUG
@@ -556,7 +556,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 				continue;
 			}
 			if (chk->sent != SCTP_DATAGRAM_RESEND) {
- 				stcb->asoc.sent_queue_retran_cnt++;
+				sctp_ucount_incr(asoc->sent_queue_retran_cnt);
  				num_mk++;
 				if (fir == 0) {
 					fir = 1;
@@ -638,7 +638,8 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	*num_marked = num_mk;
 	if ((stcb->asoc.sent_queue_retran_cnt == 0) && (could_be_sent)) {
 		/* fix it so we retransmit the highest acked anyway */
-		stcb->asoc.sent_queue_retran_cnt++;
+		sctp_ucount_incr(asoc->sent_queue_retran_cnt);
+		cnt_mk++;
 		could_be_sent->sent = SCTP_DATAGRAM_RESEND;
 	}
 	if (stcb->asoc.sent_queue_retran_cnt != cnt_mk) {
@@ -662,7 +663,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 			chk->whoTo = alt;
 			if (chk->sent != SCTP_DATAGRAM_RESEND) {
 				chk->sent = SCTP_DATAGRAM_RESEND;
-				stcb->asoc.sent_queue_retran_cnt++;
+				sctp_ucount_incr(asoc->sent_queue_retran_cnt);
 			}
 			alt->ref_count++;
 		}
@@ -996,7 +997,7 @@ int  sctp_cookie_timer(struct sctp_inpcb *inp,
 	}
 	/* Now mark the retran info */
 	if (cookie->sent != SCTP_DATAGRAM_RESEND) {
-		stcb->asoc.sent_queue_retran_cnt++;
+		sctp_ucount_incr(asoc->sent_queue_retran_cnt);
 	}
 	cookie->sent = SCTP_DATAGRAM_RESEND;
 	/*
@@ -1056,7 +1057,7 @@ int sctp_strreset_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			sctp_free_remote_addr(chk->whoTo);
 			if (chk->sent != SCTP_DATAGRAM_RESEND) {
 				chk->sent = SCTP_DATAGRAM_RESEND;
-				stcb->asoc.sent_queue_retran_cnt++;
+				sctp_ucount_incr(asoc->sent_queue_retran_cnt);
 			}
 			chk->whoTo = alt;
 			alt->ref_count++;
@@ -1071,7 +1072,7 @@ int sctp_strreset_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	}
 	/* mark the retran info */
 	if (strrst->sent != SCTP_DATAGRAM_RESEND)
-		stcb->asoc.sent_queue_retran_cnt++;
+		sctp_ucount_incr(asoc->sent_queue_retran_cnt);
 	strrst->sent = SCTP_DATAGRAM_RESEND;
 
 	/* restart the timer */
@@ -1150,7 +1151,7 @@ int sctp_asconf_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				chk->whoTo = alt;
 				if (chk->sent != SCTP_DATAGRAM_RESEND) {
 					chk->sent = SCTP_DATAGRAM_RESEND;
-					stcb->asoc.sent_queue_retran_cnt++;
+					sctp_ucount_incr(asoc->sent_queue_retran_cnt);
 				}
 				alt->ref_count++;
 
@@ -1165,7 +1166,7 @@ int sctp_asconf_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		}
 		/* mark the retran info */
 		if (asconf->sent != SCTP_DATAGRAM_RESEND)
-			stcb->asoc.sent_queue_retran_cnt++;
+			sctp_ucount_incr(asoc->sent_queue_retran_cnt);
 		asconf->sent = SCTP_DATAGRAM_RESEND;
 	}
 	return (0);

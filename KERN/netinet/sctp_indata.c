@@ -2820,22 +2820,12 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 								printf("Hmm. one that is in RESEND that is now ACKED\n");
 							}
 #endif
-							asoc->sent_queue_retran_cnt--;
+							sctp_ucount_decr(asoc->sent_queue_retran_cnt);
 #ifdef SCTP_AUDITING_ENABLED
 							sctp_audit_log(0xB2,
 							    (asoc->sent_queue_retran_cnt & 0x000000ff));
 #endif
 
-							if (asoc->sent_queue_retran_cnt < 0) {
-								printf("huh3 retran went negative?\n");
-#ifdef SCTP_AUDITING_ENABLED
-								sctp_auditing(30,
-								    inp, tcb,
-								    NULL);
-#else
-								asoc->sent_queue_retran_cnt = 0;
-#endif
-							}
 						}
 						(*ecn_seg_sums) += tp1->rec.data.ect_nonce;
 						(*ecn_seg_sums) &= SCTP_SACK_NONCE_SUM;
@@ -3107,7 +3097,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				/* This is a subsequent FR */
 				sctp_pegs[SCTP_DUP_FR]++;
 			}
-			asoc->sent_queue_retran_cnt++;
+			sctp_ucount_incr(asoc->sent_queue_retran_cnt);
 #ifdef SCTP_FR_TO_ALTERNATE
 			/* Can we find an alternate? */
 			alt = sctp_find_alternate_net(stcb, tp1->whoTo);
@@ -3760,21 +3750,11 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 						printf("Hmm. one that is in RESEND that is now ACKED\n");
 					}
 #endif
-					asoc->sent_queue_retran_cnt--;
+					sctp_ucount_decr(asoc->sent_queue_retran_cnt);
 #ifdef SCTP_AUDITING_ENABLED
 					sctp_audit_log(0xB3,
 						       (asoc->sent_queue_retran_cnt & 0x000000ff));
 #endif
-					if (asoc->sent_queue_retran_cnt < 0) {
-						printf("huh4 retran went negative?\n");
-#ifdef SCTP_AUDITING_ENABLED
-						sctp_auditing(31, inp, tcb,
-							      NULL);
-#else
-						asoc->sent_queue_retran_cnt = 0;
-#endif
-					}
-
 				}
 				tp1->sent = SCTP_DATAGRAM_ACKED;
 			}
@@ -3923,7 +3903,6 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 			TAILQ_FOREACH(tp1, &asoc->sent_queue, sctp_next) {
 				if(tp1->sent < SCTP_DATAGRAM_ACKED)
 					break;
-				asoc->sent_queue_retran_cnt++;
 				tp1->sent = SCTP_DATAGRAM_SENT;
 			}
 		}
