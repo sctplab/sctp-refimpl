@@ -587,6 +587,7 @@ struct sctp_association {
 	u_int16_t last_strm_no_delivered;
 
 	u_int16_t chunks_on_out_queue; /* total chunks floating around */
+	u_int16_t last_revoke_count;
 	int16_t num_send_timers_up;
 	/*
 	 * This flag indicates that we need to send the first SACK. If

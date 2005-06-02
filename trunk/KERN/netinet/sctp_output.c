@@ -4683,6 +4683,7 @@ zap_by_it_all:
 		    (some_on_streamwheel == 0)) {
 			/* there is nothing queued to send, so I'm done... */
 			if ((SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_SENT) &&
+			    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_RECEIVED) &&
 			    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_ACK_SENT)) {
 				/* only send SHUTDOWN the first time through */
 #ifdef SCTP_DEBUG
@@ -4710,7 +4711,11 @@ zap_by_it_all:
 			 * with no data.  currently, we will allow user data
 			 * to be sent first and move to SHUTDOWN-PENDING
 			 */
-			asoc->state |= SCTP_STATE_SHUTDOWN_PENDING;
+			if ((SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_SENT) &&
+			    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_RECEIVED) &&
+			    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_ACK_SENT)) {
+				asoc->state |= SCTP_STATE_SHUTDOWN_PENDING;
+			}
 		}
 	}
 #ifdef SCTP_MBCNT_LOGGING
@@ -10088,6 +10093,7 @@ zap_by_it_now:
 		    (some_on_streamwheel == 0)) {
 			/* there is nothing queued to send, so I'm done... */
 			if ((SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_SENT) &&
+			    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_RECEIVED) &&
 			    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_ACK_SENT)) {
 				/* only send SHUTDOWN the first time through */
 #ifdef SCTP_DEBUG
@@ -10115,7 +10121,11 @@ zap_by_it_now:
 			 * with no data.  currently, we will allow user data
 			 * to be sent first and move to SHUTDOWN-PENDING
 			 */
-			asoc->state |= SCTP_STATE_SHUTDOWN_PENDING;
+			if ((SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_SENT) &&
+			    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_RECEIVED) &&
+			    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_ACK_SENT)) {
+				asoc->state |= SCTP_STATE_SHUTDOWN_PENDING;
+			}
 		}
 	}
 	splx(s);

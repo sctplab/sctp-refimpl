@@ -392,7 +392,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	 * mark chunks that have been outstanding long enough to have
 	 * received feed-back.
 	 */
-	struct sctp_tmit_chunk *chk, *tp2;
+	struct sctp_tmit_chunk *chk, *tp2, *could_be_sent=NULL;
 	struct sctp_nets *lnets;
 	struct timeval now, min_wait, tv;
 	int cur_rto;
@@ -606,6 +606,9 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 				chk->rec.data.state_flags &= ~SCTP_WINDOW_PROBE;
 				win_probes++;
 			}
+		} else if (chk->sent == SCTP_DATAGRAM_ACKED) {
+			/* remember highest acked one */
+			could_be_sent = chk;
 		}
 		if (chk->sent == SCTP_DATAGRAM_RESEND) {
 			cnt_mk++;
@@ -633,6 +636,11 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	}
 #endif
 	*num_marked = num_mk;
+	if ((stcb->asoc.sent_queue_retran_cnt == 0) && (could_be_sent)) {
+		/* fix it so we retransmit the highest acked anyway */
+		stcb->asoc.sent_queue_retran_cnt++;
+		could_be_sent->sent = SCTP_DATAGRAM_RESEND;
+	}
 	if (stcb->asoc.sent_queue_retran_cnt != cnt_mk) {
 		printf("Local Audit says there are %d for retran asoc cnt:%d\n",
 		       cnt_mk, stcb->asoc.sent_queue_retran_cnt);

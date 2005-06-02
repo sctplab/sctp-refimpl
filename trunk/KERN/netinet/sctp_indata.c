@@ -3901,12 +3901,26 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 
 	if (num_seg)
 		asoc->saw_sack_with_frags = 1;
-	else
+	else {
 		asoc->saw_sack_with_frags = 0;
+
+	}
 
 	if (asoc->saw_sack_with_frags)
 		sctp_check_for_revoked(asoc, cum_ack, biggest_tsn_acked);
-
+	else {
+		/* verify that he did not revoke everything. */
+		tp1 = TAILQ_FIRST(&asoc->sent_queue);		
+		if(tp1->sent == SCTP_DATAGRAM_ACKED) {
+			/* he revoked all dg's marked acked */
+			TAILQ_FOREACH(tp1, &asoc->sent_queue, sctp_next) {
+				if(tp1->sent < SCTP_DATAGRAM_ACKED)
+					break;
+				asoc->sent_queue_retran_cnt++;
+				tp1->sent = SCTP_DATAGRAM_SENT;
+			}
+		}
+	}
 	/******************************/
 	/* update cwnd                */
 	/******************************/
