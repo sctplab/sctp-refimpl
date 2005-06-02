@@ -287,7 +287,7 @@ sctp_pathmtu_adustment(struct sctp_inpcb *inp,
        */
       chk->flags |= CHUNK_FLAGS_FRAGMENT_OK;
       if (chk->sent != SCTP_DATAGRAM_RESEND) {
-	stcb->asoc.sent_queue_retran_cnt++;
+	sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
       }
       chk->sent = SCTP_DATAGRAM_RESEND;
       chk->rec.data.doing_fast_retransmit = 0;

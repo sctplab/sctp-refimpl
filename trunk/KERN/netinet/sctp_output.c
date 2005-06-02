@@ -6749,10 +6749,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 		/*    SCTP_GETTIME_TIMEVAL(&chk->whoTo->last_sent_time);*/
 		*cnt_out += 1;
 		chk->sent = SCTP_DATAGRAM_SENT;
-		asoc->sent_queue_retran_cnt--;
-		if (asoc->sent_queue_retran_cnt < 0) {
-		    asoc->sent_queue_retran_cnt = 0;
-		}
+		sctp_ucount_decr(asoc->sent_queue_retran_cnt);
 		if (fwd_tsn == 0) {
 			return (0);
 		} else {
@@ -6963,7 +6960,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 				sctp_pegs[SCTP_RETRANTSN_SENT]++;
 				data_list[i]->sent = SCTP_DATAGRAM_SENT;
 				data_list[i]->snd_count++;
-				asoc->sent_queue_retran_cnt--;
+				sctp_ucount_decr(asoc->sent_queue_retran_cnt);
 				/* record the time */
 				data_list[i]->sent_rcv_time = asoc->time_last_sent;
 				if (asoc->sent_queue_retran_cnt < 0) {

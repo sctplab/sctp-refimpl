@@ -2485,9 +2485,6 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 					}
 				}
 			}
-			if (tp1->sent != SCTP_DATAGRAM_RESEND) {
-				stcb->asoc.sent_queue_retran_cnt++;
-			}
 			/* We zero out the nonce so resync not needed */
 			tp1->rec.data.ect_nonce = 0;
 
@@ -2500,6 +2497,8 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 				tp1->do_rtt = 0;
 			}
 			sctp_pegs[SCTP_PDRP_MARK]++;
+			if(tp1->sent != SCTP_DATAGRAM_RESEND)
+			   sctp_ucount_incr(asoc->sent_queue_retran_cnt);
 			tp1->sent = SCTP_DATAGRAM_RESEND;
 			/*
 			 * mark it as if we were doing a FR, since we
@@ -2572,7 +2571,7 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 		}
 		if (asconf) {
 			if (asconf->sent != SCTP_DATAGRAM_RESEND)
-				stcb->asoc.sent_queue_retran_cnt++;
+				sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
 			asconf->sent = SCTP_DATAGRAM_RESEND;
 			asconf->snd_count--;
 		}
@@ -2625,7 +2624,7 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 		}
 		if (cookie) {
 			if (cookie->sent != SCTP_DATAGRAM_RESEND)
-				stcb->asoc.sent_queue_retran_cnt++;
+				sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
 			cookie->sent = SCTP_DATAGRAM_RESEND;
 			sctp_stop_all_cookie_timers(stcb);
 		}
