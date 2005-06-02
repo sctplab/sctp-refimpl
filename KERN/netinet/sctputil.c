@@ -4126,9 +4126,13 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 			 */
 			m->m_pkthdr.len += so->so_rcv.sb_cc;
 			stcb->hidden_from_sb += so->so_rcv.sb_cc;
-			printf("We now have %d bytes hidden from sb_cc nextrecord:%x\n", 
-			       (int)m->m_pkthdr.len,
-			       (u_int)m->m_nextpkt);
+#ifdef SCTP_DEBUG
+			if (sctp_debug_on & SCTP_DEBUG_UTIL1) {
+			  printf("We now have %d bytes hidden from sb_cc nextrecord:%x\n", 
+				 (int)m->m_pkthdr.len,
+				 (u_int)m->m_nextpkt);
+			}
+#endif
 			so->so_rcv.sb_cc = 0;
 		}
 		if(flags & MSG_DONTWAIT) {
@@ -4149,9 +4153,13 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		if ((m->m_nextpkt == NULL) && m->m_pkthdr.len) {
 			panic("Huh, restoring to a null record?");
 		}
-		printf("We now restore %d bytes that were hidden nextrecord:%x\n", 
-		       (int)m->m_pkthdr.len,
-		       (u_int)m->m_nextpkt);
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_UTIL1) {
+		  printf("We now restore %d bytes that were hidden nextrecord:%x\n", 
+			 (int)m->m_pkthdr.len,
+			 (u_int)m->m_nextpkt);
+		}
+#endif
 		so->so_rcv.sb_cc += m->m_pkthdr.len;
 		if(m->m_pkthdr.len != stcb->hidden_from_sb) {
 			panic("At restoral, mismatch");
@@ -4515,8 +4523,12 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 							stcb->hidden_from_sb = so->so_rcv.sb_cc;
 							m->m_pkthdr.len = so->so_rcv.sb_cc;
 							so->so_rcv.sb_cc = 0;
-							printf("Hide %d bytes nextrecord:%x\n",
-							       m->m_pkthdr.len, (u_int)nextrecord);
+#ifdef SCTP_DEBUG
+							if (sctp_debug_on & SCTP_DEBUG_UTIL1) {
+							  printf("Hide %d bytes nextrecord:%x\n",
+								 m->m_pkthdr.len, (u_int)nextrecord);
+							}
+#endif
 							special_mark = 1;
 						} else {
 							/* normal thing is ok */
@@ -4543,7 +4555,6 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 			else {
 				if (mp != NULL) {
 					SOCKBUF_UNLOCK(&so->so_rcv);
-					printf("Gak mp was NOT null.. we have problems\n");
 					*mp = m_copym(m, 0, len, 
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 						      M_TRYWAIT
