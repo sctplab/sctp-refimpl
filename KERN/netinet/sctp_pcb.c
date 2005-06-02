@@ -5036,7 +5036,10 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		}
 	}
 #endif /* SCTP_DEBUG */
-
+	asoc->last_revoke_count = cnt;
+	if(cnt) {
+		sctp_send_sack(stcb);
+	}
 	/*
 	 * Another issue, in un-setting the TSN's in the mapping array we
 	 * DID NOT adjust the higest_tsn marker.  This will cause one of
