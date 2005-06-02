@@ -1607,6 +1607,7 @@ sctp_inpcb_alloc(struct socket *so)
         /* LOCK init's */
 	SCTP_INP_LOCK_INIT(inp);
 	SCTP_ASOC_CREATE_LOCK_INIT(inp);
+	SCTP_INP_SOCKQ_LOCK_INIT(inp);
 	/* lock the new ep */
 	SCTP_INP_WLOCK(inp);
 
@@ -2607,6 +2608,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	}
 	SCTP_INP_WUNLOCK(inp);
 	SCTP_ASOC_CREATE_UNLOCK(inp);
+	SCTP_INP_SOCKQ_LOCK_INIT(inp);
 	SCTP_INP_LOCK_DESTROY(inp);
 	SCTP_ASOC_CREATE_LOCK_DESTROY(inp);
 
@@ -5101,7 +5103,9 @@ sctp_add_to_socket_q(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	if (stcb)
 		sctp_ucount_incr(stcb->asoc.cnt_msg_on_sb);
 	sq->tcb = stcb;
+	SCTP_INP_SOCKQ_LOCK(inp);
 	TAILQ_INSERT_TAIL(&inp->sctp_queue_list, sq, next_sq);
+	SCTP_INP_SOCKQ_UNLOCK(inp);
 	return (1);
 }
 
@@ -5113,12 +5117,16 @@ sctp_remove_from_socket_q(struct sctp_inpcb *inp)
 	struct sctp_socket_q_list *sq;
 
 	/* W-Lock on INP assumed held */
+	SCTP_INP_SOCKQ_LOCK(inp);
 	sq = TAILQ_FIRST(&inp->sctp_queue_list);
-	if (sq == NULL)
+	if (sq == NULL) {
+	        SCTP_INP_SOCKQ_UNLOCK(inp);
 		return (NULL);
+	}
 
 	stcb = sq->tcb;
 	TAILQ_REMOVE(&inp->sctp_queue_list, sq, next_sq);
+	SCTP_INP_SOCKQ_UNLOCK(inp);
 	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_sockq, sq);
 	SCTP_DECR_SOCKQ_COUNT();
 	if (stcb) {
