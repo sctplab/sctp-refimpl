@@ -3911,7 +3911,9 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	else {
 		/* verify that he did not revoke everything. */
 		tp1 = TAILQ_FIRST(&asoc->sent_queue);		
-		if(tp1->sent == SCTP_DATAGRAM_ACKED) {
+
+		if((tp1 != NULL) && 
+		   (tp1->sent == SCTP_DATAGRAM_ACKED)) {
 			/* he revoked all dg's marked acked */
 			TAILQ_FOREACH(tp1, &asoc->sent_queue, sctp_next) {
 				if(tp1->sent < SCTP_DATAGRAM_ACKED)
