@@ -670,6 +670,11 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc, in
 			if ((chk->rec.data.rcv_flags & SCTP_DATA_UNORDERED) == 0) {
 				asoc->strmin[stream_no].last_sequence_delivered++;
 			}
+		} else if (chk->rec.data.rcv_flags & SCTP_DATA_FIRST_FRAG) {
+			/* turn the flag back on since we just  delivered
+			 * yet another one.
+			 */
+			asoc->fragmented_delivery_inprogress = 0;
 		}
 		asoc->tsn_of_pdapi_last_delivered = chk->rec.data.TSN_seq;
 		asoc->last_flags_delivered        = chk->rec.data.rcv_flags;
