@@ -201,7 +201,7 @@ struct sctp_epinfo {
 	lck_attr_t *mtx_attr;
 	lck_mtx_t *ipi_ep_mtx;
 	lck_mtx_t *it_mtx;
-        lck_mtx_t ipi_count_mtx;
+        lck_mtx_t *ipi_count_mtx;
 #else
 	void *mtx_grp_attr;
 	void *mtx_grp;
@@ -655,7 +655,7 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 /* Lock for INFO stuff */
 #define SCTP_INP_INFO_LOCK_INIT() \
 	sctppcbinfo.ipi_ep_mtx = lck_rw_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
-#define SCTP_IPI_COUNT_INIT()
+#define SCTP_IPI_COUNT_INIT() \
 	sctppcbinfo.ipi_count_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
 #define SCTP_INP_INFO_RLOCK() \
 	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx)
