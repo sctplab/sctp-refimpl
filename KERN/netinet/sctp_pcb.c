@@ -57,6 +57,9 @@
 #include <sys/socket.h>
 #include <sys/socketvar.h>
 #include <sys/proc.h>
+#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+#include <sys/proc_internal.h>
+#endif
 #include <sys/kernel.h>
 #include <sys/sysctl.h>
 #if defined(__FreeBSD__) || defined(__APPLE__)

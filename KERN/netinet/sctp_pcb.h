@@ -199,7 +199,7 @@ struct sctp_epinfo {
 	lck_grp_attr_t *mtx_grp_attr;
 	lck_grp_t *mtx_grp;
 	lck_attr_t *mtx_attr;
-	lck_mtx_t *ipi_ep_mtx;
+	lck_rw_t *ipi_ep_mtx;
 	lck_mtx_t *it_mtx;
         lck_mtx_t *ipi_count_mtx;
 #else
@@ -715,8 +715,9 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 /* Lock for TCB */
 #define SCTP_TCB_LOCK_INIT(_tcb) \
 	(_tcb)->tcb_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
+/* FIXME takes second parameter */
 #define SCTP_TCB_LOCK_DESTROY(_tcb) \
-	lck_mtx_free((_tcb)->tcb_mtx)
+	lck_mtx_free((_tcb)->tcb_mtx, 0)
 #define SCTP_TCB_LOCK(_tcb) \
 	lck_mtx_lock((_tcb)->tcb_mtx)
 #define SCTP_TCB_UNLOCK(_tcb) \
@@ -736,8 +737,8 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 
 /* socket locks */
 /* FIX ME: takes second parameter = refcount */
-#define SOCK_LOCK(_so) socket_lock(_so)
-#define SOCK_UNLOCK(_so) socket_unlock(_so)
+#define SOCK_LOCK(_so) socket_lock(_so, 0)
+#define SOCK_UNLOCK(_so) socket_unlock(_so, 0)
 /* FIX ME: need second parameter */
 #define SOCKBUF_LOCK(_so_buf) sblock(_so_buf, 0)
 #define SOCKBUF_UNLOCK(_so_buf) sbunlock(_so_buf, 0)

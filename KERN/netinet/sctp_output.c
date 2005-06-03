@@ -4387,7 +4387,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			 * drop to spl0() so that others can
 			 * get in.
 			 */
-			SOCKBUF_UNLOCK(&so->so_snd);
+			sbunlock(&so->so_snd);
 			be.error = 0;
 			stcb->block_entry = &be;
 			SCTP_TCB_UNLOCK(stcb);
@@ -4749,7 +4749,7 @@ zap_by_it_all:
 #endif
 
 release:
-	SOCKBUF_UNLOCK(&so->so_snd);
+	sbunlock(&so->so_snd);
 out_locked:
 	SOCKBUF_UNLOCK(&so->so_snd);
 out:
@@ -9649,7 +9649,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 			sctp_log_block(SCTP_BLOCK_LOG_INTO_BLK,
 			    so, asoc);
 #endif
-			SOCKBUF_UNLOCK(&so->so_snd);
+			sbunlock(&so->so_snd);
 			be.error = 0;
 			stcb->block_entry = &be;
 			SCTP_TCB_UNLOCK(stcb);
@@ -9767,6 +9767,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 					mm = NULL;
 				}
 			}
+			sbunlock(&so->so_snd);
 			SOCKBUF_UNLOCK(&so->so_snd);
 			sctp_abort_an_association(stcb->sctp_ep, stcb,
 						  SCTP_RESPONSE_TO_USER_REQ,
@@ -10150,7 +10151,7 @@ zap_by_it_now:
 #endif
 
 release:
-	SOCKBUF_UNLOCK(&so->so_snd);
+	sbunlock(&so->so_snd);
 out_locked:
 	SOCKBUF_UNLOCK(&so->so_snd);
 out_notlocked:

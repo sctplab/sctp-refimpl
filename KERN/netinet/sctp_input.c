@@ -2135,7 +2135,11 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			}
 			oso = (*inp_p)->sctp_socket;
 			SCTP_TCB_UNLOCK((*stcb));
-			so = sonewconn(oso, SS_ISCONNECTED);
+			so = sonewconn(oso, SS_ISCONNECTED
+#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+			               , NULL
+#endif
+                                      );
 			SCTP_INP_WLOCK((*stcb)->sctp_ep);
 			SCTP_TCB_LOCK((*stcb));
 			SCTP_INP_WUNLOCK((*stcb)->sctp_ep);
