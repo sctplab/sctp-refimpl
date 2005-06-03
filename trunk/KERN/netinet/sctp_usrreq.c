@@ -2871,7 +2871,7 @@ sctp_optsset(struct socket *so,
        * Note this does not effect old associations, only
        * new ones.
        */
-      inp->sctp_ep.auto_close_time = (*mopt * hz);
+      inp->sctp_ep.auto_close_time = SEC_TO_TICKS(*mopt);
       break;
     }
     SCTP_INP_WLOCK(inp);

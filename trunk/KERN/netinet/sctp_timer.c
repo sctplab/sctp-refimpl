@@ -1436,7 +1436,7 @@ void sctp_autoclose_timer(struct sctp_inpcb *inp,
 			tim_touse = &asoc->time_last_sent;
 		}
 		/* Now has long enough transpired to autoclose? */
-		ticks_gone_by = ((tn.tv_sec - tim_touse->tv_sec) * hz);
+		ticks_gone_by = SEC_TO_TICKS(tn.tv_sec - tim_touse->tv_sec);
 		if ((ticks_gone_by > 0) &&
 		    (ticks_gone_by >= (int)asoc->sctp_autoclose_ticks)) {
 			/*
