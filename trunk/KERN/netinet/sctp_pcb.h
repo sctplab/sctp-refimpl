@@ -722,6 +722,10 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 	lck_mtx_lock((_tcb)->tcb_mtx)
 #define SCTP_TCB_UNLOCK(_tcb) \
 	lck_mtx_unlock((_tcb)->tcb_mtx)
+/* FIXME: check ownership */
+#define SCTP_TCB_UNLOCK_IFOWNED(_tcb)	      do { \
+                                                     lck_mtx_unlock((_tcb)->tcb_mtx); \
+                                              } while (0)
 #define STCB_TCB_LOCK_ASSERT(_tcb) \
 	lck_mtx_assert((_tcb)->tcb_mtx, LCK_MTX_ASSERT_OWNED)
 
