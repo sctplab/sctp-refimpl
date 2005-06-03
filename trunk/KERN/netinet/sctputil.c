@@ -4141,7 +4141,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		}
 		SBLASTRECORDCHK(&so->so_rcv);
 		SBLASTMBUFCHK(&so->so_rcv);
-		sbunlock(&so->so_rcv);
+		SOCKBUF_UNLOCK(&so->so_rcv);
 		error = sbwait(&so->so_rcv);
 		if (error)
 			goto out;
@@ -4248,7 +4248,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		}
 		SBLASTRECORDCHK(&so->so_rcv);
 		SBLASTMBUFCHK(&so->so_rcv);
-		sbunlock(&so->so_rcv);
+		SOCKBUF_UNLOCK(&so->so_rcv);
 		error = sbwait(&so->so_rcv);
 		if (error)
 			goto out;
@@ -4672,14 +4672,14 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 	    ((so->so_state & SS_CANTRCVMORE)  == 0)
 #endif
 	    ){
-		sbunlock(&so->so_rcv);
+		SOCKBUF_UNLOCK(&so->so_rcv);
 		goto restart;
 	}
 	if (flagsp != NULL)
 		*flagsp |= flags;
  release:
 	SOCKBUF_LOCK_ASSERT(&so->so_rcv);
-	sbunlock(&so->so_rcv);
+	SOCKBUF_UNLOCK(&so->so_rcv);
  out:
 	SOCKBUF_LOCK_ASSERT(&so->so_rcv);
 	SOCKBUF_UNLOCK(&so->so_rcv);
