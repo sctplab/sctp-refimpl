@@ -75,7 +75,9 @@
 #include <netinet/ip_var.h>
 #include <netinet6/ip6_var.h>
 #include <netinet6/in6_var.h>
-
+#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+#include <sys/domain.h>
+#endif
 #include <netinet/ip_icmp.h>
 #include <netinet/icmp_var.h>
 #include <netinet/sctp_pcb.h>

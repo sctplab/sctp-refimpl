@@ -1453,8 +1453,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			 * Now we must convert the to_ticks that are now in
 			 * ms to ticks.
 			 */
-			to_ticks *= hz;
-			to_ticks /= 1000;
+			to_ticks = MSEC_TO_TICKS(to_ticks);
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_TIMER1) {
 				printf("Timer to expire in %d ticks\n", to_ticks);
@@ -1494,7 +1493,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		 * stopped and we are in the GONE state.
 		 */
 		tmr = &inp->sctp_ep.signature_change;
-		to_ticks = (SCTP_INP_KILL_TIMEOUT * hz) / 1000;
+		to_ticks = MSEC_TO_TICKS(SCTP_INP_KILL_TIMEOUT);
 		break;
 	case SCTP_TIMER_TYPE_PATHMTURAISE:
 		/*
@@ -4141,7 +4140,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		}
 		SBLASTRECORDCHK(&so->so_rcv);
 		SBLASTMBUFCHK(&so->so_rcv);
-		SOCKBUF_UNLOCK(&so->so_rcv);
+		sbunlock(&so->so_rcv);
 		error = sbwait(&so->so_rcv);
 		if (error)
 			goto out;
@@ -4248,7 +4247,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		}
 		SBLASTRECORDCHK(&so->so_rcv);
 		SBLASTMBUFCHK(&so->so_rcv);
-		SOCKBUF_UNLOCK(&so->so_rcv);
+		sbunlock(&so->so_rcv);
 		error = sbwait(&so->so_rcv);
 		if (error)
 			goto out;
@@ -4672,14 +4671,14 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 	    ((so->so_state & SS_CANTRCVMORE)  == 0)
 #endif
 	    ){
-		SOCKBUF_UNLOCK(&so->so_rcv);
+		sbunlock(&so->so_rcv);
 		goto restart;
 	}
 	if (flagsp != NULL)
 		*flagsp |= flags;
  release:
 	SOCKBUF_LOCK_ASSERT(&so->so_rcv);
-	SOCKBUF_UNLOCK(&so->so_rcv);
+	sbunlock(&so->so_rcv);
  out:
 	SOCKBUF_LOCK_ASSERT(&so->so_rcv);
 	SOCKBUF_UNLOCK(&so->so_rcv);

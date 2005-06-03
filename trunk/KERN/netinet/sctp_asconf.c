@@ -1007,7 +1007,7 @@ sctp_asconf_queue_add(struct sctp_tcb *stcb, struct ifaddr *ifa, uint16_t type)
 		memcpy(&aa->ap.addrp.addr, &sin->sin_addr,
 		    sizeof(struct in_addr));
 #ifdef SCTP_DEBUG
-		strlcpy(buf, inet_ntoa(sin->sin_addr), sizeof(buf));
+		strlcpy(buf, (const char *)inet_ntoa(sin->sin_addr), sizeof(buf));
 #endif /* SCTP_DEBUG */
 	} else {
 		/* invalid family! */
@@ -1745,7 +1745,7 @@ sctp_addr_mgmt_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 
 		sin = (struct sockaddr_in *)ifa->ifa_addr;
 #ifdef SCTP_DEBUG
-		strlcpy(buf, inet_ntoa(sin->sin_addr), sizeof(buf));
+		strlcpy(buf, (const char *)inet_ntoa(sin->sin_addr), sizeof(buf));
 #endif /* SCTP_DEBUG */
 		if (sin->sin_addr.s_addr == 0) {
 			/* we skip unspecifed addresses */
