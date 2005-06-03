@@ -3263,7 +3263,11 @@ sctp_print_address(struct sockaddr *sa)
 	} else if (sa->sa_family == AF_INET) {
 		struct sockaddr_in *sin;
 		sin = (struct sockaddr_in *)sa;
-		printf("IPv4 address: %s:%d\n", inet_ntoa(sin->sin_addr),
+		printf("IPv4 address: %u.%u.%u.%u:%d\n",
+		    (sin->sin_addr.s_addr & 0xff000000) >> 24,
+		    (sin->sin_addr.s_addr & 0x00ff0000) >> 16,
+		    (sin->sin_addr.s_addr & 0x0000ff00) >> 8,
+		    (sin->sin_addr.s_addr & 0x000000ff),
 		    ntohs(sin->sin_port));
 	} else {
 		printf("?\n");
