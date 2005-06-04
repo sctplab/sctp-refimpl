@@ -60,6 +60,10 @@
 #include <sys/sysctl.h>
 #include <sys/resourcevar.h>
 #include <sys/uio.h>
+#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+#include <sys/proc_internal.h>
+#include <sys/uio_internal.h>
+#endif
 #ifdef INET6
 #include <sys/domain.h>
 #endif
@@ -2530,6 +2534,9 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 #if (defined(__FreeBSD__) && __FreeBSD_version >= 480000)
 		    , NULL
 #endif
+#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+		    , 0
+#endif
 			);
 		if (net) {
 			/* for link local this must be done */
@@ -4380,7 +4387,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			 * drop to spl0() so that others can
 			 * get in.
 			 */
-			sbunlock(&so->so_snd);
+			SOCKBUF_UNLOCK(&so->so_snd);
 			be.error = 0;
 			stcb->block_entry = &be;
 			SCTP_TCB_UNLOCK(stcb);
@@ -4683,6 +4690,7 @@ zap_by_it_all:
 		    (some_on_streamwheel == 0)) {
 			/* there is nothing queued to send, so I'm done... */
 			if ((SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_SENT) &&
+			    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_RECEIVED) &&
 			    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_ACK_SENT)) {
 				/* only send SHUTDOWN the first time through */
 #ifdef SCTP_DEBUG
@@ -4710,7 +4718,11 @@ zap_by_it_all:
 			 * with no data.  currently, we will allow user data
 			 * to be sent first and move to SHUTDOWN-PENDING
 			 */
-			asoc->state |= SCTP_STATE_SHUTDOWN_PENDING;
+			if ((SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_SENT) &&
+			    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_RECEIVED) &&
+			    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_ACK_SENT)) {
+				asoc->state |= SCTP_STATE_SHUTDOWN_PENDING;
+			}
 		}
 	}
 #ifdef SCTP_MBCNT_LOGGING
@@ -4737,7 +4749,7 @@ zap_by_it_all:
 #endif
 
 release:
-	sbunlock(&so->so_snd);
+	SOCKBUF_UNLOCK(&so->so_snd);
 out_locked:
 	SOCKBUF_UNLOCK(&so->so_snd);
 out:
@@ -6744,10 +6756,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 		/*    SCTP_GETTIME_TIMEVAL(&chk->whoTo->last_sent_time);*/
 		*cnt_out += 1;
 		chk->sent = SCTP_DATAGRAM_SENT;
-		asoc->sent_queue_retran_cnt--;
-		if (asoc->sent_queue_retran_cnt < 0) {
-		    asoc->sent_queue_retran_cnt = 0;
-		}
+		sctp_ucount_decr(asoc->sent_queue_retran_cnt);
 		if (fwd_tsn == 0) {
 			return (0);
 		} else {
@@ -6958,7 +6967,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 				sctp_pegs[SCTP_RETRANTSN_SENT]++;
 				data_list[i]->sent = SCTP_DATAGRAM_SENT;
 				data_list[i]->snd_count++;
-				asoc->sent_queue_retran_cnt--;
+				sctp_ucount_decr(asoc->sent_queue_retran_cnt);
 				/* record the time */
 				data_list[i]->sent_rcv_time = asoc->time_last_sent;
 				if (asoc->sent_queue_retran_cnt < 0) {
@@ -8396,6 +8405,9 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh)
 #if (defined(__FreeBSD__) && __FreeBSD_version >= 480000)
 			   , NULL
 #endif
+#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+			   , 0
+#endif
 		    );
 		/* Free the route if we got one back */
 		if (ro.ro_rt)
@@ -9312,6 +9324,9 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 #if (defined(__FreeBSD__) && __FreeBSD_version >= 480000)
 		    , NULL
 #endif
+#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+		    , 0
+#endif
 		    );
 		/* Free the route if we got one back */
 		if (ro.ro_rt)
@@ -9449,6 +9464,9 @@ sctp_send_operr_to(struct mbuf *m, int iphlen,
 #endif
 #if (defined(__FreeBSD__) && __FreeBSD_version >= 480000)
 	    , NULL
+#endif
+#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+		    , 0
 #endif
 		);
 		sctp_pegs[SCTP_DATAGRAMS_SENT]++;
@@ -9631,7 +9649,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 			sctp_log_block(SCTP_BLOCK_LOG_INTO_BLK,
 			    so, asoc);
 #endif
-			sbunlock(&so->so_snd);
+			SOCKBUF_UNLOCK(&so->so_snd);
 			be.error = 0;
 			stcb->block_entry = &be;
 			SCTP_TCB_UNLOCK(stcb);
@@ -9749,7 +9767,6 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 					mm = NULL;
 				}
 			}
-			sbunlock(&so->so_snd);
 			SOCKBUF_UNLOCK(&so->so_snd);
 			sctp_abort_an_association(stcb->sctp_ep, stcb,
 						  SCTP_RESPONSE_TO_USER_REQ,
@@ -10088,6 +10105,7 @@ zap_by_it_now:
 		    (some_on_streamwheel == 0)) {
 			/* there is nothing queued to send, so I'm done... */
 			if ((SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_SENT) &&
+			    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_RECEIVED) &&
 			    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_ACK_SENT)) {
 				/* only send SHUTDOWN the first time through */
 #ifdef SCTP_DEBUG
@@ -10115,7 +10133,11 @@ zap_by_it_now:
 			 * with no data.  currently, we will allow user data
 			 * to be sent first and move to SHUTDOWN-PENDING
 			 */
-			asoc->state |= SCTP_STATE_SHUTDOWN_PENDING;
+			if ((SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_SENT) &&
+			    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_RECEIVED) &&
+			    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_ACK_SENT)) {
+				asoc->state |= SCTP_STATE_SHUTDOWN_PENDING;
+			}
 		}
 	}
 	splx(s);
@@ -10128,7 +10150,7 @@ zap_by_it_now:
 #endif
 
 release:
-	sbunlock(&so->so_snd);
+	SOCKBUF_UNLOCK(&so->so_snd);
 out_locked:
 	SOCKBUF_UNLOCK(&so->so_snd);
 out_notlocked:
@@ -10454,7 +10476,7 @@ sctp_sosend(struct socket *so,
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 		p->td_proc->p_stats->p_ru.ru_msgsnd++;
 #else
-	p->p_stats->p_ru.ru_msgsnd++;
+		p->p_stats->p_ru.ru_msgsnd++;
 #endif
 
 	if (stcb) {

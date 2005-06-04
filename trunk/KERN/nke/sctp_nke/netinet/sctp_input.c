@@ -119,6 +119,23 @@
 extern u_int32_t sctp_debug_on;
 #endif
 
+static void
+sctp_stop_all_cookie_timers(struct sctp_tcb *stcb)
+{
+	struct sctp_nets *net;
+
+	STCB_TCB_LOCK_ASSERT(stcb);
+	TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
+		if ((callout_pending(&net->rxt_timer.timer)) &&
+		    (net->rxt_timer.type == SCTP_TIMER_TYPE_COOKIE)) {
+			sctp_timer_stop(SCTP_TIMER_TYPE_COOKIE, 
+					stcb->sctp_ep, 
+					stcb, 
+					net);		
+		}
+	}
+}
+
 /* INIT handler */
 static void
 sctp_handle_init(struct mbuf *m, int iphlen, int offset,
@@ -661,6 +678,7 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
 	if ((SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_SENT) &&
 	    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_ACK_SENT)) {
 		/* unexpected SHUTDOWN-ACK... so ignore... */
+		SCTP_TCB_UNLOCK_IFOWNED(stcb);
 		return;
 	}
 	/* are the queues empty? */
@@ -846,8 +864,8 @@ sctp_handle_error(struct sctp_chunkhdr *ch,
 				/* blast back to INIT state */
 				asoc->state &= ~SCTP_STATE_COOKIE_ECHOED;
 				asoc->state |= SCTP_STATE_COOKIE_WAIT;
-				sctp_timer_stop(SCTP_TIMER_TYPE_COOKIE,
-				    stcb->sctp_ep, stcb, net);
+
+				sctp_stop_all_cookie_timers(stcb);
 				sctp_send_initiate(stcb->sctp_ep, stcb);
 			}
 			break;
@@ -1193,8 +1211,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb,
 			    net);
 			sctp_timer_stop(SCTP_TIMER_TYPE_INIT, inp, stcb, net);
-			sctp_timer_stop(SCTP_TIMER_TYPE_COOKIE, inp, stcb,
-			    net);
+			sctp_stop_all_cookie_timers(stcb);
 			/* update current state */
 			if (asoc->state & SCTP_STATE_SHUTDOWN_PENDING) {
 				asoc->state = SCTP_STATE_OPEN |
@@ -1279,7 +1296,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		 */
 		sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net);
 		sctp_timer_stop(SCTP_TIMER_TYPE_INIT, inp, stcb, net);
-		sctp_timer_stop(SCTP_TIMER_TYPE_COOKIE, inp, stcb, net);
+		sctp_stop_all_cookie_timers(stcb);
 		sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net);
 		/*
 		 * since we did not send a HB make sure we don't double things
@@ -1341,6 +1358,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		} else {
 			asoc->state = SCTP_STATE_OPEN;
 		}
+		sctp_stop_all_cookie_timers(stcb);
 		sctp_send_cookie_ack(stcb);
 		return (stcb);
 	}
@@ -1354,7 +1372,6 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		 * case A in Section 5.2.4 Table 2: XXMM (peer restarted)
 		 */
 		sctp_timer_stop(SCTP_TIMER_TYPE_INIT, inp, stcb, net);
-		sctp_timer_stop(SCTP_TIMER_TYPE_COOKIE, inp, stcb, net);
 		sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net);
 		*sac_assoc_id = sctp_get_associd(stcb);;
 		/* notify upper layer */
@@ -1416,6 +1433,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			asoc->state = SCTP_STATE_OPEN;
 		}
 		/* respond with a COOKIE-ACK */
+		sctp_stop_all_cookie_timers(stcb);
 		sctp_send_cookie_ack(stcb);
 
 		return (stcb);
@@ -1598,6 +1616,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	} else {
 		asoc->state = SCTP_STATE_OPEN;
 	}
+	sctp_stop_all_cookie_timers(stcb);
 	/* calculate the RTT */
 	(*netp)->RTO = sctp_calculate_rto(stcb, asoc, *netp,
 	    &cookie->time_entered);
@@ -2116,7 +2135,11 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			}
 			oso = (*inp_p)->sctp_socket;
 			SCTP_TCB_UNLOCK((*stcb));
-			so = sonewconn(oso, SS_ISCONNECTED);
+			so = sonewconn(oso, SS_ISCONNECTED
+#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+			               , NULL
+#endif
+                                      );
 			SCTP_INP_WLOCK((*stcb)->sctp_ep);
 			SCTP_TCB_LOCK((*stcb));
 			SCTP_INP_WUNLOCK((*stcb)->sctp_ep);
@@ -2181,8 +2204,7 @@ sctp_handle_cookie_ack(struct sctp_cookie_ack_chunk *cp,
 
 	asoc = &stcb->asoc;
 
-	sctp_timer_stop(SCTP_TIMER_TYPE_COOKIE, stcb->sctp_ep, stcb, net);
-
+	sctp_stop_all_cookie_timers(stcb);
 	/* process according to association state */
 	if (SCTP_GET_STATE(asoc) == SCTP_STATE_COOKIE_ECHOED) {
 		/* state change only needed when I am in right state */
@@ -2196,7 +2218,6 @@ sctp_handle_cookie_ack(struct sctp_cookie_ack_chunk *cp,
 		} else {
 			asoc->state = SCTP_STATE_OPEN;
 		}
-
 		/* update RTO */
 		if (asoc->overall_error_count == 0) {
 			net->RTO = sctp_calculate_rto(stcb, asoc, net,
@@ -2373,6 +2394,7 @@ sctp_handle_shutdown_complete(struct sctp_shutdown_complete_chunk *cp,
 	/* process according to association state */
 	if (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_ACK_SENT) {
 		/* unexpected SHUTDOWN-COMPLETE... so ignore... */
+		SCTP_TCB_UNLOCK_IFOWNED(stcb);
 		return;
 	}
 	/* notify upper layer protocol */
@@ -2467,9 +2489,6 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 					}
 				}
 			}
-			if (tp1->sent != SCTP_DATAGRAM_RESEND) {
-				stcb->asoc.sent_queue_retran_cnt++;
-			}
 			/* We zero out the nonce so resync not needed */
 			tp1->rec.data.ect_nonce = 0;
 
@@ -2482,6 +2501,8 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 				tp1->do_rtt = 0;
 			}
 			sctp_pegs[SCTP_PDRP_MARK]++;
+			if(tp1->sent != SCTP_DATAGRAM_RESEND)
+			   sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
 			tp1->sent = SCTP_DATAGRAM_RESEND;
 			/*
 			 * mark it as if we were doing a FR, since we
@@ -2554,7 +2575,7 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 		}
 		if (asconf) {
 			if (asconf->sent != SCTP_DATAGRAM_RESEND)
-				stcb->asoc.sent_queue_retran_cnt++;
+				sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
 			asconf->sent = SCTP_DATAGRAM_RESEND;
 			asconf->snd_count--;
 		}
@@ -2607,9 +2628,9 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 		}
 		if (cookie) {
 			if (cookie->sent != SCTP_DATAGRAM_RESEND)
-				stcb->asoc.sent_queue_retran_cnt++;
+				sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
 			cookie->sent = SCTP_DATAGRAM_RESEND;
-			sctp_timer_stop(SCTP_TIMER_TYPE_COOKIE, stcb->sctp_ep, stcb, net);
+			sctp_stop_all_cookie_timers(stcb);
 		}
 	}
 	break;
@@ -4408,7 +4429,9 @@ sctp_input(m, va_alist)
 		SCTP_INP_DECR_REF(inp);
 		SCTP_INP_WUNLOCK(inp);
 	}
-
+#ifdef INVARIANTS_SCTP
+	sctp_verify_no_locks();
+#endif
 	return;
 bad:
 	if (stcb)
@@ -4426,5 +4449,9 @@ bad:
 	}
 	if (opts)
 		sctp_m_freem(opts);
+	
+#ifdef INVARIANTS_SCTP
+	sctp_verify_no_locks();
+#endif
 	return;
 }

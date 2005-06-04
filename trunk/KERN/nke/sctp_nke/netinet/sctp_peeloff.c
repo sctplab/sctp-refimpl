@@ -168,7 +168,11 @@ sctp_get_peeloff(struct socket *head, caddr_t assoc_id, int *error)
 		*error = ENOTCONN;
 		return (NULL);
 	}
-	newso = sonewconn(head, SS_ISCONNECTED);
+	newso = sonewconn(head, SS_ISCONNECTED
+#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+			               , NULL
+#endif
+	                 );
 	if (newso == NULL) {
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_PEEL1) {

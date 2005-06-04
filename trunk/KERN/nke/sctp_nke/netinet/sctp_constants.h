@@ -3,6 +3,7 @@
 #ifndef __sctp_constants_h__
 #define __sctp_constants_h__
 
+#include <sys/kernel.h>
 /*
  * Copyright (c) 2001, 2002, 2003, 2004 Cisco Systems, Inc.
  * All rights reserved.

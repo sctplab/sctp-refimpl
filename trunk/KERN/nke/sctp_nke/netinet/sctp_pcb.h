@@ -199,9 +199,9 @@ struct sctp_epinfo {
 	lck_grp_attr_t *mtx_grp_attr;
 	lck_grp_t *mtx_grp;
 	lck_attr_t *mtx_attr;
-	lck_mtx_t *ipi_ep_mtx;
+	lck_rw_t *ipi_ep_mtx;
 	lck_mtx_t *it_mtx;
-        lck_mtx_t ipi_count_mtx;
+        lck_mtx_t *ipi_count_mtx;
 #else
 	void *mtx_grp_attr;
 	void *mtx_grp;
@@ -370,15 +370,18 @@ struct sctp_inpcb {
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
 	struct mtx inp_mtx;
 	struct mtx inp_create_mtx;
+	struct mtx inp_sockq_mtx;
 	u_int32_t refcount;
 #elif defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
 #ifdef _KERN_LOCKS_H_
 	lck_mtx_t *inp_mtx;
 	lck_mtx_t *inp_create_mtx;
+	lck_mtx_t *inp_sockq_mtx;
 	u_int32_t refcount;
 #else
 	void *inp_mtx;
 	void *inp_create_mtx;
+	void *inp_sockq_mtx;
 	u_int32_t refcount;
 #endif /* _KERN_LOCKS_H_ */
 #endif
@@ -467,6 +470,7 @@ struct sctp_tcb {
 #ifdef INVARIANTS_SCTP
 void SCTP_INP_INFO_RLOCK(void);
 void SCTP_INP_INFO_WLOCK(void);
+void sctp_verify_no_locks(void);
 #else
 
 #define SCTP_INP_INFO_RLOCK()	do { 					\
@@ -493,10 +497,19 @@ void SCTP_INP_INFO_WLOCK(void);
 #define SCTP_ASOC_CREATE_LOCK_INIT(_inp) \
 	mtx_init(&(_inp)->inp_create_mtx, "sctp-create", "inp_create", \
 		 MTX_DEF | MTX_DUPOK)
+
+#define SCTP_INP_SOCKQ_LOCK_INIT(_inp) \
+	mtx_init(&(_inp)->inp_sockq_mtx, "sctp-inp_sockq", "inp_sockq", \
+		 MTX_DEF | MTX_DUPOK)
+
 #define SCTP_INP_LOCK_DESTROY(_inp) \
 	mtx_destroy(&(_inp)->inp_mtx)
+
 #define SCTP_ASOC_CREATE_LOCK_DESTROY(_inp) \
 	mtx_destroy(&(_inp)->inp_create_mtx)
+
+#define SCTP_INP_SOCKQ_LOCK_DESTROY(_inp) \
+	mtx_destroy(&(_inp)->inp_sockq_mtx)
 
 #ifdef INVARIANTS_SCTP
 void SCTP_INP_RLOCK(struct sctp_inpcb *);
@@ -553,6 +566,9 @@ void SCTP_ASOC_CREATE_LOCK(struct sctp_inpcb *inp);
 	} while (0)
 #endif
 #endif
+
+#define SCTP_INP_SOCKQ_LOCK(_inp)	mtx_lock(&(_inp)->inp_sockq_mtx)
+#define SCTP_INP_SOCKQ_UNLOCK(_inp)	mtx_unlock(&(_inp)->inp_sockq_mtx)
 
 #define SCTP_INP_RUNLOCK(_inp)		mtx_unlock(&(_inp)->inp_mtx)
 #define SCTP_INP_WUNLOCK(_inp)		mtx_unlock(&(_inp)->inp_mtx)
@@ -639,7 +655,7 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 /* Lock for INFO stuff */
 #define SCTP_INP_INFO_LOCK_INIT() \
 	sctppcbinfo.ipi_ep_mtx = lck_rw_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
-#define SCTP_IPI_COUNT_INIT()
+#define SCTP_IPI_COUNT_INIT() \
 	sctppcbinfo.ipi_count_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
 #define SCTP_INP_INFO_RLOCK() \
 	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx)
@@ -653,8 +669,23 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 /* Lock for INP */
 #define SCTP_INP_LOCK_INIT(_inp) \
 	(_inp)->inp_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
+
+#define SCTP_INP_SOCKQ_LOCK_INIT(_inp) \
+	(_inp)->inp_sockq_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
+
 #define SCTP_INP_LOCK_DESTROY(_inp) \
 	lck_mtx_free((_inp)->inp_mtx, SCTP_MTX_GRP)
+
+#define SCTP_INP_SOCKQ_LOCK_DESTROY(_inp) \
+	lck_mtx_free((_inp)->inp_sockq_mtx, SCTP_MTX_GRP)
+
+#define SCTP_INP_SOCKQ_LOCK(_inp) \
+	lck_mtx_lock((_inp)->inp_sockq_mtx)
+
+#define SCTP_INP_SOCKQ_UNLOCK(_inp) \
+	lck_mtx_unlock((_inp)->inp_sockq_mtx)
+
+
 #define SCTP_INP_RLOCK(_inp) \
 	lck_mtx_lock((_inp)->inp_mtx)
 #define SCTP_INP_RUNLOCK(_inp) \
@@ -684,12 +715,17 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 /* Lock for TCB */
 #define SCTP_TCB_LOCK_INIT(_tcb) \
 	(_tcb)->tcb_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
+/* FIXME takes second parameter */
 #define SCTP_TCB_LOCK_DESTROY(_tcb) \
-	lck_mtx_free((_tcb)->tcb_mtx)
+	lck_mtx_free((_tcb)->tcb_mtx, 0)
 #define SCTP_TCB_LOCK(_tcb) \
 	lck_mtx_lock((_tcb)->tcb_mtx)
 #define SCTP_TCB_UNLOCK(_tcb) \
 	lck_mtx_unlock((_tcb)->tcb_mtx)
+/* FIXME: check ownership */
+#define SCTP_TCB_UNLOCK_IFOWNED(_tcb)	      do { \
+                                                     lck_mtx_unlock((_tcb)->tcb_mtx); \
+                                              } while (0)
 #define STCB_TCB_LOCK_ASSERT(_tcb) \
 	lck_mtx_assert((_tcb)->tcb_mtx, LCK_MTX_ASSERT_OWNED)
 
@@ -705,8 +741,8 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 
 /* socket locks */
 /* FIX ME: takes second parameter = refcount */
-#define SOCK_LOCK(_so) socket_lock(_so)
-#define SOCK_UNLOCK(_so) socket_unlock(_so)
+#define SOCK_LOCK(_so) socket_lock(_so, 0)
+#define SOCK_UNLOCK(_so) socket_unlock(_so, 0)
 /* FIX ME: need second parameter */
 #define SOCKBUF_LOCK(_so_buf) sblock(_so_buf, 0)
 #define SOCKBUF_UNLOCK(_so_buf) sbunlock(_so_buf, 0)
@@ -733,6 +769,10 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #define SCTP_INP_RLOCK(_inp)
 #define SCTP_INP_RUNLOCK(_inp)
 #define SCTP_INP_WLOCK(_inp)
+#define SCTP_INP_SOCKQ_LOCK_INIT(_inp)
+#define SCTP_INP_SOCKQ_LOCK_DESTROY(_inp)
+#define SCTP_INP_SOCKQ_LOCK(_inp)
+#define SCTP_INP_SOCKQ_UNLOCK(_inp)
 #define SCTP_INP_INCR_REF(_inp)
 #define SCTP_INP_DECR_REF(_inp)
 #define SCTP_INP_WUNLOCK(_inp)

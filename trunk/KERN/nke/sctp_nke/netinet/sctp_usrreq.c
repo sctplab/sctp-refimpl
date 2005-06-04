@@ -75,7 +75,9 @@
 #include <netinet/ip_var.h>
 #include <netinet6/ip6_var.h>
 #include <netinet6/in6_var.h>
-
+#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+#include <sys/domain.h>
+#endif
 #include <netinet/ip_icmp.h>
 #include <netinet/icmp_var.h>
 #include <netinet/sctp_pcb.h>
@@ -287,7 +289,7 @@ sctp_pathmtu_adustment(struct sctp_inpcb *inp,
        */
       chk->flags |= CHUNK_FLAGS_FRAGMENT_OK;
       if (chk->sent != SCTP_DATAGRAM_RESEND) {
-	stcb->asoc.sent_queue_retran_cnt++;
+	sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
       }
       chk->sent = SCTP_DATAGRAM_RESEND;
       chk->rec.data.doing_fast_retransmit = 0;
@@ -2871,7 +2873,7 @@ sctp_optsset(struct socket *so,
        * Note this does not effect old associations, only
        * new ones.
        */
-      inp->sctp_ep.auto_close_time = (*mopt * hz);
+      inp->sctp_ep.auto_close_time = SEC_TO_TICKS(*mopt);
       break;
     }
     SCTP_INP_WLOCK(inp);
