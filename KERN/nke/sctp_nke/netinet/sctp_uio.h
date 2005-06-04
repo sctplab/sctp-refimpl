@@ -548,7 +548,7 @@ int	sctp_getpaddrs	__P((int, sctp_assoc_t, struct sockaddr **));
 void	sctp_freepaddrs	__P((struct sockaddr *));
 int	sctp_getladdrs	__P((int, sctp_assoc_t, struct sockaddr **));
 void	sctp_freeladdrs	__P((struct sockaddr *));
-int     sctp_opt_info   __P((int, sctp_assoc_t, int, void *, size_t *));
+int     sctp_opt_info   __P((int, sctp_assoc_t, int, void *, socklen_t *));
 
 ssize_t sctp_sendmsg    __P((int, const void *, size_t,
 	const struct sockaddr *,

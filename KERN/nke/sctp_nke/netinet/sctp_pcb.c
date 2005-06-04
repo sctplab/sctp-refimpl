@@ -57,6 +57,9 @@
 #include <sys/socket.h>
 #include <sys/socketvar.h>
 #include <sys/proc.h>
+#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+#include <sys/proc_internal.h>
+#endif
 #include <sys/kernel.h>
 #include <sys/sysctl.h>
 #if defined(__FreeBSD__) || defined(__APPLE__)
@@ -164,19 +167,18 @@ extern int ipport_hilastauto;
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 
 #ifdef INVARIANTS_SCTP
-void sctp_validate_no_locks(void);
 
 void SCTP_ASOC_CREATE_LOCK(struct sctp_inpcb *inp)
 {
 #ifdef SCTP_LOCK_LOGGING
-  sctp_log_lock(inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_CREATE);
+	sctp_log_lock(inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_CREATE);
 #endif
-  if (mtx_owned(&inp->inp_mtx)) {
-    panic("Want Create lock, own INP");
-  }
-  if (mtx_owned(&inp->inp_create_mtx)) 
-    panic("INP Recursive CREATE");
-  mtx_lock(&inp->inp_create_mtx); 
+	if (mtx_owned(&inp->inp_mtx)) {
+		panic("Want Create lock, own INP");
+	}
+	if (mtx_owned(&inp->inp_create_mtx)) 
+		panic("INP Recursive CREATE");
+	mtx_lock(&inp->inp_create_mtx); 
 }
 
 
@@ -187,6 +189,7 @@ SCTP_INP_RLOCK(struct sctp_inpcb *inp)
 #ifdef SCTP_LOCK_LOGGING
 	sctp_log_lock(inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_INP);
 #endif
+
 	LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
 		if (mtx_owned(&(stcb)->tcb_mtx))
 			panic("I own TCB lock?");
@@ -206,32 +209,32 @@ void
 SCTP_TCB_LOCK(struct sctp_tcb *stcb) 
 {
 #ifdef SCTP_LOCK_LOGGING
-  sctp_log_lock(stcb->sctp_ep, stcb, SCTP_LOG_LOCK_TCB);
+	sctp_log_lock(stcb->sctp_ep, stcb, SCTP_LOG_LOCK_TCB);
 #endif
-  if (!mtx_owned(&(stcb->sctp_ep->inp_mtx)))
-    panic("TCB locking and no INP lock");
-  if (mtx_owned(&(stcb)->tcb_mtx)) 
-    panic("TCB Lock-recursive");
-  mtx_lock(&(stcb)->tcb_mtx);
+	if (!mtx_owned(&(stcb->sctp_ep->inp_mtx)))
+		panic("TCB locking and no INP lock");
+	if (mtx_owned(&(stcb)->tcb_mtx)) 
+		panic("TCB Lock-recursive");
+	mtx_lock(&(stcb)->tcb_mtx);
 }
 
 
 void
 SCTP_INP_INFO_RLOCK()
 {
-  struct sctp_inpcb *inp;
-  struct sctp_tcb *stcb;
-  LIST_FOREACH(inp, &sctppcbinfo.listhead, sctp_list) {
-    if (mtx_owned(&(inp)->inp_mtx))
-      panic("info-lock and own inp lock?");
-    LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
-      if (mtx_owned(&(stcb)->tcb_mtx))
-	panic("Info lock and own a tcb lock?");
-    }
-  }
-  if (mtx_owned(&sctppcbinfo.ipi_ep_mtx))
-    panic("INP INFO Recursive Lock-R");
-  mtx_lock(&sctppcbinfo.ipi_ep_mtx);
+	struct sctp_inpcb *inp;
+	struct sctp_tcb *stcb;
+	LIST_FOREACH(inp, &sctppcbinfo.listhead, sctp_list) {
+		if (mtx_owned(&(inp)->inp_mtx))
+			panic("info-lock and own inp lock?");
+		LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
+			if (mtx_owned(&(stcb)->tcb_mtx))
+				panic("Info lock and own a tcb lock?");
+		}
+	}
+	if (mtx_owned(&sctppcbinfo.ipi_ep_mtx))
+		panic("INP INFO Recursive Lock-R");
+	mtx_lock(&sctppcbinfo.ipi_ep_mtx);
 }
 
 void
@@ -241,7 +244,7 @@ SCTP_INP_INFO_WLOCK()
 }
 
 
-void sctp_validate_no_locks()
+void sctp_verify_no_locks(void)
 {
 	struct sctp_inpcb *inp;
 	struct sctp_tcb *stcb;
@@ -1607,6 +1610,7 @@ sctp_inpcb_alloc(struct socket *so)
         /* LOCK init's */
 	SCTP_INP_LOCK_INIT(inp);
 	SCTP_ASOC_CREATE_LOCK_INIT(inp);
+	SCTP_INP_SOCKQ_LOCK_INIT(inp);
 	/* lock the new ep */
 	SCTP_INP_WLOCK(inp);
 
@@ -2607,6 +2611,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	}
 	SCTP_INP_WUNLOCK(inp);
 	SCTP_ASOC_CREATE_UNLOCK(inp);
+	SCTP_INP_SOCKQ_LOCK_DESTROY(inp);
 	SCTP_INP_LOCK_DESTROY(inp);
 	SCTP_ASOC_CREATE_LOCK_DESTROY(inp);
 
@@ -5036,7 +5041,10 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		}
 	}
 #endif /* SCTP_DEBUG */
-
+	asoc->last_revoke_count = cnt;
+	if(cnt) {
+		sctp_send_sack(stcb);
+	}
 	/*
 	 * Another issue, in un-setting the TSN's in the mapping array we
 	 * DID NOT adjust the higest_tsn marker.  This will cause one of
@@ -5098,7 +5106,9 @@ sctp_add_to_socket_q(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	if (stcb)
 		sctp_ucount_incr(stcb->asoc.cnt_msg_on_sb);
 	sq->tcb = stcb;
+	SCTP_INP_SOCKQ_LOCK(inp);
 	TAILQ_INSERT_TAIL(&inp->sctp_queue_list, sq, next_sq);
+	SCTP_INP_SOCKQ_UNLOCK(inp);
 	return (1);
 }
 
@@ -5110,12 +5120,16 @@ sctp_remove_from_socket_q(struct sctp_inpcb *inp)
 	struct sctp_socket_q_list *sq;
 
 	/* W-Lock on INP assumed held */
+	SCTP_INP_SOCKQ_LOCK(inp);
 	sq = TAILQ_FIRST(&inp->sctp_queue_list);
-	if (sq == NULL)
+	if (sq == NULL) {
+	        SCTP_INP_SOCKQ_UNLOCK(inp);
 		return (NULL);
+	}
 
 	stcb = sq->tcb;
 	TAILQ_REMOVE(&inp->sctp_queue_list, sq, next_sq);
+	SCTP_INP_SOCKQ_UNLOCK(inp);
 	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_sockq, sq);
 	SCTP_DECR_SOCKQ_COUNT();
 	if (stcb) {

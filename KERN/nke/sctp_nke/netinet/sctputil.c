@@ -1453,8 +1453,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			 * Now we must convert the to_ticks that are now in
 			 * ms to ticks.
 			 */
-			to_ticks *= hz;
-			to_ticks /= 1000;
+			to_ticks = MSEC_TO_TICKS(to_ticks);
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_TIMER1) {
 				printf("Timer to expire in %d ticks\n", to_ticks);
@@ -1494,7 +1493,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		 * stopped and we are in the GONE state.
 		 */
 		tmr = &inp->sctp_ep.signature_change;
-		to_ticks = (SCTP_INP_KILL_TIMEOUT * hz) / 1000;
+		to_ticks = MSEC_TO_TICKS(SCTP_INP_KILL_TIMEOUT);
 		break;
 	case SCTP_TIMER_TYPE_PATHMTURAISE:
 		/*
@@ -3263,9 +3262,11 @@ sctp_print_address(struct sockaddr *sa)
 		    sin6->sin6_scope_id);
 	} else if (sa->sa_family == AF_INET) {
 		struct sockaddr_in *sin;
+		unsigned char *p;
 		sin = (struct sockaddr_in *)sa;
-		printf("IPv4 address: %s:%d\n", inet_ntoa(sin->sin_addr),
-		    ntohs(sin->sin_port));
+		p = (unsigned char *)&sin->sin_addr;
+		printf("IPv4 address: %u.%u.%u.%u:%d\n",
+		       p[0], p[1], p[2], p[3], ntohs(sin->sin_port));
 	} else {
 		printf("?\n");
 	}
@@ -4126,9 +4127,13 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 			 */
 			m->m_pkthdr.len += so->so_rcv.sb_cc;
 			stcb->hidden_from_sb += so->so_rcv.sb_cc;
-			printf("We now have %d bytes hidden from sb_cc nextrecord:%x\n", 
-			       (int)m->m_pkthdr.len,
-			       (u_int)m->m_nextpkt);
+#ifdef SCTP_DEBUG
+			if (sctp_debug_on & SCTP_DEBUG_UTIL1) {
+			  printf("We now have %d bytes hidden from sb_cc nextrecord:%x\n", 
+				 (int)m->m_pkthdr.len,
+				 (u_int)m->m_nextpkt);
+			}
+#endif
 			so->so_rcv.sb_cc = 0;
 		}
 		if(flags & MSG_DONTWAIT) {
@@ -4149,9 +4154,13 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		if ((m->m_nextpkt == NULL) && m->m_pkthdr.len) {
 			panic("Huh, restoring to a null record?");
 		}
-		printf("We now restore %d bytes that were hidden nextrecord:%x\n", 
-		       (int)m->m_pkthdr.len,
-		       (u_int)m->m_nextpkt);
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_UTIL1) {
+		  printf("We now restore %d bytes that were hidden nextrecord:%x\n", 
+			 (int)m->m_pkthdr.len,
+			 (u_int)m->m_nextpkt);
+		}
+#endif
 		so->so_rcv.sb_cc += m->m_pkthdr.len;
 		if(m->m_pkthdr.len != stcb->hidden_from_sb) {
 			panic("At restoral, mismatch");
@@ -4515,8 +4524,12 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 							stcb->hidden_from_sb = so->so_rcv.sb_cc;
 							m->m_pkthdr.len = so->so_rcv.sb_cc;
 							so->so_rcv.sb_cc = 0;
-							printf("Hide %d bytes nextrecord:%x\n",
-							       m->m_pkthdr.len, (u_int)nextrecord);
+#ifdef SCTP_DEBUG
+							if (sctp_debug_on & SCTP_DEBUG_UTIL1) {
+							  printf("Hide %d bytes nextrecord:%x\n",
+								 m->m_pkthdr.len, (u_int)nextrecord);
+							}
+#endif
 							special_mark = 1;
 						} else {
 							/* normal thing is ok */
@@ -4543,7 +4556,6 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 			else {
 				if (mp != NULL) {
 					SOCKBUF_UNLOCK(&so->so_rcv);
-					printf("Gak mp was NOT null.. we have problems\n");
 					*mp = m_copym(m, 0, len, 
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 						      M_TRYWAIT
