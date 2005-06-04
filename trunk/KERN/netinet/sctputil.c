@@ -3262,13 +3262,11 @@ sctp_print_address(struct sockaddr *sa)
 		    sin6->sin6_scope_id);
 	} else if (sa->sa_family == AF_INET) {
 		struct sockaddr_in *sin;
+		unsigned char *p;
 		sin = (struct sockaddr_in *)sa;
+		p = (unsigned char *)&sin->sin_addr;
 		printf("IPv4 address: %u.%u.%u.%u:%d\n",
-		    (sin->sin_addr.s_addr & 0xff000000) >> 24,
-		    (sin->sin_addr.s_addr & 0x00ff0000) >> 16,
-		    (sin->sin_addr.s_addr & 0x0000ff00) >> 8,
-		    (sin->sin_addr.s_addr & 0x000000ff),
-		    ntohs(sin->sin_port));
+		       p[0], p[1], p[2], p[3], ntohs(sin->sin_port));
 	} else {
 		printf("?\n");
 	}
