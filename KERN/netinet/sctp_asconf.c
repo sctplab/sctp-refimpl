@@ -911,9 +911,7 @@ static uint32_t
 sctp_asconf_queue_add(struct sctp_tcb *stcb, struct ifaddr *ifa, uint16_t type)
 {
 	struct sctp_asconf_addr *aa, *aa_next;
-#ifdef SCTP_DEBUG
-	char buf[128];	/* for address in string format */
-#endif /* SCTP_DEBUG */
+	struct sockaddr *sa;
 
 	/* see if peer supports ASCONF */
 	if (stcb->asoc.peer_supports_asconf == 0) {
@@ -985,6 +983,7 @@ sctp_asconf_queue_add(struct sctp_tcb *stcb, struct ifaddr *ifa, uint16_t type)
 		struct sockaddr_in6 *sin6;
 
 		sin6 = (struct sockaddr_in6 *)ifa->ifa_addr;
+		sa   = (struct sockaddr *) sin6;
 		aa->ap.addrp.ph.param_type = SCTP_IPV6_ADDRESS;
 		aa->ap.addrp.ph.param_length = (sizeof(struct sctp_ipv6addr_param));
 		aa->ap.aph.ph.param_length =
@@ -992,13 +991,10 @@ sctp_asconf_queue_add(struct sctp_tcb *stcb, struct ifaddr *ifa, uint16_t type)
 		    sizeof(struct sctp_ipv6addr_param);
 		memcpy(&aa->ap.addrp.addr, &sin6->sin6_addr,
 		    sizeof(struct in6_addr));
-#ifdef SCTP_DEBUG
-		strlcpy(buf, ip6_sprintf(&sin6->sin6_addr), sizeof(buf));
-#endif /* SCTP_DEBUG */
-
 	} else if (ifa->ifa_addr->sa_family == AF_INET) {
 		/* IPv4 address */
 		struct sockaddr_in *sin = (struct sockaddr_in *)ifa->ifa_addr;
+		sa   = (struct sockaddr *) sin;
 		aa->ap.addrp.ph.param_type = SCTP_IPV4_ADDRESS;
 		aa->ap.addrp.ph.param_length = (sizeof(struct sctp_ipv4addr_param));
 		aa->ap.aph.ph.param_length =
@@ -1006,9 +1002,6 @@ sctp_asconf_queue_add(struct sctp_tcb *stcb, struct ifaddr *ifa, uint16_t type)
 		    sizeof(struct sctp_ipv4addr_param);
 		memcpy(&aa->ap.addrp.addr, &sin->sin_addr,
 		    sizeof(struct in_addr));
-#ifdef SCTP_DEBUG
-		strlcpy(buf, (const char *)inet_ntoa(sin->sin_addr), sizeof(buf));
-#endif /* SCTP_DEBUG */
 	} else {
 		/* invalid family! */
 		return (-1);
@@ -1024,7 +1017,8 @@ sctp_asconf_queue_add(struct sctp_tcb *stcb, struct ifaddr *ifa, uint16_t type)
 		TAILQ_INSERT_HEAD(&stcb->asoc.asconf_queue, aa, next);
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
-			printf("asconf_queue_add: appended asconf ADD_IP_ADDRESS: %s\n", buf);
+			printf("asconf_queue_add: appended asconf ADD_IP_ADDRESS: ");
+			sctp_print_address(sa);
 		}
 #endif /* SCTP_DEBUG */
 	} else {
@@ -1033,9 +1027,11 @@ sctp_asconf_queue_add(struct sctp_tcb *stcb, struct ifaddr *ifa, uint16_t type)
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
 			if (type == SCTP_DEL_IP_ADDRESS) {
-				printf("asconf_queue_add: inserted asconf DEL_IP_ADDRESS: %s\n", buf);
+				printf("asconf_queue_add: inserted asconf DEL_IP_ADDRESS: ");
+				sctp_print_address(sa);
 			} else {
-				printf("asconf_queue_add: inserted asconf SET_PRIM_ADDR: %s\n", buf);
+				printf("asconf_queue_add: inserted asconf SET_PRIM_ADDR: ");
+				sctp_print_address(sa);
 			}
 		}
 #endif /* SCTP_DEBUG */
