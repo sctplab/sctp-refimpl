@@ -4253,47 +4253,46 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		error = sbwait(&so->so_rcv);
 		if (error)
 			goto out;
-		if ((m == NULL) || (stcb == NULL)){
-			/* we could not have had a stcb,
-			 * or we don't have one.
-			 */
-			SOCKBUF_UNLOCK(&so->so_rcv);
-			SCTP_INP_RLOCK(inp);
-			SOCKBUF_LOCK(&so->so_rcv);
-			at_eor = 0;
-			if ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) || 
-			    (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
-				stcb = LIST_FIRST(&inp->sctp_asoc_list);
-				if(stcb == NULL) {
-				  SCTP_INP_RUNLOCK(inp);
-				  error = ENOTCONN;
-				  goto out;
-				}
-				if(stcb->last_record_insert == NULL) {
-				  at_eor = 1;
-				}
-			} else {
-				sq = TAILQ_FIRST(&inp->sctp_queue_list);
-				if(sq != NULL) {
-					stcb = sq->tcb;
-					if(stcb) {
-					  if(stcb->last_record_insert == NULL) {
-					     at_eor = 1;
-					  }
-					} else {
-					  at_eor = 1;
-					}
-				} else {
-					stcb = NULL;
-					at_eor = 0;
-				}
-			}
-			SCTP_INP_RUNLOCK(inp);
-			goto restart;
-		}
 		goto restart;
 	}
  dontblock:
+	/* If we never had a sb/stcb, lets see if we have
+	 * one now that we have a mb to read in.. we should :-D
+	 */
+	if (stcb == NULL){
+		SOCKBUF_UNLOCK(&so->so_rcv);
+		SCTP_INP_RLOCK(inp);
+		SOCKBUF_LOCK(&so->so_rcv);
+		at_eor = 0;
+		if ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) || 
+		    (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
+			stcb = LIST_FIRST(&inp->sctp_asoc_list);
+			if(stcb == NULL) {
+				SCTP_INP_RUNLOCK(inp);
+				error = ENOTCONN;
+				goto out;
+			}
+			if(stcb->last_record_insert == NULL) {
+				at_eor = 1;
+			}
+		} else {
+			sq = TAILQ_FIRST(&inp->sctp_queue_list);
+			if(sq != NULL) {
+				stcb = sq->tcb;
+				if(stcb) {
+					if(stcb->last_record_insert == NULL) {
+						at_eor = 1;
+					}
+				} else {
+					at_eor = 1;
+				}
+			} else {
+				stcb = NULL;
+				at_eor = 0;
+			}
+		}
+		SCTP_INP_RUNLOCK(inp);
+	}
 	/*
 	 * From this point onward, we maintain 'nextrecord' as a cache of the
 	 * pointer to the next record in the socket buffer.  We must keep the
