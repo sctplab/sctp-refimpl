@@ -1368,14 +1368,17 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 	    cookie->tie_tag_my_vtag == asoc->my_vtag_nonce &&
 	    cookie->tie_tag_peer_vtag == asoc->peer_vtag_nonce &&
 	    cookie->tie_tag_peer_vtag != 0) {
+		struct sctpasochead *head;
+
 		/*
 		 * case A in Section 5.2.4 Table 2: XXMM (peer restarted)
 		 */
 		sctp_timer_stop(SCTP_TIMER_TYPE_INIT, inp, stcb, net);
 		sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net);
-		*sac_assoc_id = sctp_get_associd(stcb);;
+		*sac_assoc_id = sctp_get_associd(stcb);
 		/* notify upper layer */
 		*notification = SCTP_NOTIFY_ASSOC_RESTART;
+
 
 		/* send up all the data */
 		sctp_report_all_outbound(stcb);
@@ -1383,6 +1386,23 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		/* process the INIT-ACK info (my info) */
 		asoc->my_vtag = ntohl(initack_cp->init.initiate_tag);
 		asoc->my_rwnd = ntohl(initack_cp->init.a_rwnd);
+
+		/* pull from vtag hash */
+		LIST_REMOVE(stcb, sctp_asocs);
+		/* re-insert to new vtag position */
+		head = &sctppcbinfo.sctp_asochash[SCTP_PCBHASH_ASOC(stcb->asoc.my_vtag,
+								    sctppcbinfo.hashasocmark)];
+		/* put it in the bucket in the vtag hash of assoc's for the system */
+		LIST_INSERT_HEAD(head, stcb, sctp_asocs);
+
+		/* Is this the first restart? */
+		if(stcb->asoc.in_restart_hash == 0) {
+			/* Ok add it to assoc_id vtag hash */
+			head = &sctppcbinfo.sctp_asochash[SCTP_PCBHASH_ASOC(stcb->asoc.assoc_id,
+									    sctppcbinfo.hashrestartmark)];
+			LIST_INSERT_HEAD(head, stcb,sctp_tcbrestarhash);
+			stcb->asoc.in_restart_hash = 1;
+		}
 		asoc->pre_open_streams =
 		    ntohs(initack_cp->init.num_outbound_streams);
 		asoc->init_seq_number = ntohl(initack_cp->init.initial_tsn);
@@ -1438,6 +1458,9 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 
 		return (stcb);
 	}
+	/* if we are not a restart we need the assoc_id field pop'd */
+	asoc->assoc_id = ntohl(initack_cp->init.initiate_tag);
+
 	/* all other cases... */
 	return (NULL);
 }
@@ -1575,7 +1598,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	/* process the INIT-ACK info (my info) */
 	old_tag = asoc->my_vtag;
 	asoc->my_vtag = ntohl(initack_cp->init.initiate_tag);
-	asoc->my_rwnd = ntohl(initack_cp->init.a_rwnd);
+	asoc->assoc_id = asoc->my_rwnd = ntohl(initack_cp->init.a_rwnd);
 	asoc->pre_open_streams = ntohs(initack_cp->init.num_outbound_streams);
 	asoc->init_seq_number = ntohl(initack_cp->init.initial_tsn);
 	asoc->sending_seq = asoc->asconf_seq_out = asoc->str_reset_seq_out = asoc->init_seq_number;

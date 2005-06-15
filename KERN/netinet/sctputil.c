@@ -836,6 +836,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	} else {
 		asoc->my_vtag = sctp_select_a_tag(m);
 	}
+	asoc->assoc_id = asoc->my_vtag;
 	asoc->asconf_seq_out = asoc->str_reset_seq_out = asoc->init_seq_number = asoc->sending_seq =
 		sctp_select_initial_TSN(&m->sctp_ep);
 	asoc->t3timeout_highest_marked = asoc->asconf_seq_out;
@@ -2294,11 +2295,6 @@ sctp_notify_assoc_change(u_int32_t event, struct sctp_tcb *stcb,
 	sac->sac_outbound_streams = stcb->asoc.streamoutcnt;
 	sac->sac_inbound_streams = stcb->asoc.streamincnt;
 	sac->sac_assoc_id = sctp_get_associd(stcb);
-	if ((data != NULL) && (event == SCTP_RESTART)) {
-	  sac->sac_old_assoc_id = *(sctp_assoc_t *)data;
-	} else {
-	  sac->sac_old_assoc_id = sctp_get_associd(stcb);
-	}
 	m_notify->m_flags |= M_EOR | M_NOTIFICATION;
 	m_notify->m_pkthdr.len = sizeof(struct sctp_assoc_change);
 	m_notify->m_pkthdr.rcvif = 0;

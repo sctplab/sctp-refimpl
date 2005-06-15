@@ -142,6 +142,8 @@ struct sctp_epinfo {
 	struct sctppcbhead *sctp_ephash;
 	u_long hashmark;
 
+	struct sctpasochead *sctp_restarthash;
+	u_long hashrestartmark;
 	/*
 	 * The TCP model represents a substantial overhead in that we get
 	 * an additional hash table to keep explicit connections in. The
@@ -388,11 +390,12 @@ struct sctp_inpcb {
 };
 
 struct sctp_tcb {
-	struct socket *sctp_socket;		/* back pointer to socket */
-	struct sctp_inpcb *sctp_ep;		/* back pointer to ep */
-	LIST_ENTRY(sctp_tcb) sctp_tcbhash;	/* next link in hash table */
-	LIST_ENTRY(sctp_tcb) sctp_tcblist;	/* list of all of the TCB's */
-	LIST_ENTRY(sctp_tcb) sctp_asocs;
+	struct socket *sctp_socket;		 /* back pointer to socket */
+	struct sctp_inpcb *sctp_ep;		 /* back pointer to ep */
+	LIST_ENTRY(sctp_tcb) sctp_tcbhash;	 /* next link in hash table */
+	LIST_ENTRY(sctp_tcb) sctp_tcblist;	 /* list of all of the TCB's */
+	LIST_ENTRY(sctp_tcb) sctp_tcbrestarhash; /* next link in restart hash table */
+	LIST_ENTRY(sctp_tcb) sctp_asocs;         /* vtag hash list */
         struct sctp_block_entry *block_entry;
         /* last place we began inserting a record */
         struct mbuf *last_record_insert;
