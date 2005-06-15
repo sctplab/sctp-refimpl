@@ -458,10 +458,10 @@ sctp_notify(struct sctp_inpcb *inp,
 #ifdef SCTP_LOCK_LOGGING
 		        sctp_log_lock(inp, stcb, SCTP_LOG_LOCK_SOCK);
 #endif
-			SOCK_LOCK(inp->sctp_socket);
 			SCTP_INP_RLOCK(inp);
-			SCTP_INP_RUNLOCK(inp);
 			inp->sctp_socket->so_error = errno;
+			SCTP_INP_RUNLOCK(inp);
+			SOCK_LOCK(inp->sctp_socket);
 			sctp_sowwakeup(inp, inp->sctp_socket);
 			SOCK_UNLOCK(inp->sctp_socket);
 		}
@@ -1029,8 +1029,8 @@ sctp_disconnect(struct socket *so)
 				SCTP_INP_RUNLOCK(inp);
 				return (EINVAL);
 			}
-			asoc = &stcb->asoc;
 			SCTP_TCB_LOCK(stcb);
+			asoc = &stcb->asoc;
 			if (((so->so_options & SO_LINGER) &&
 			     (so->so_linger == 0)) ||
 			    (so->so_rcv.sb_cc > 0)) {
@@ -2718,6 +2718,7 @@ sctp_optsget(struct socket *so,
       SCTP_TCB_UNLOCK(stcb);
       m->m_len = sizeof(*s_info);
     }
+    break;
   case SCTP_INITMSG:
     {
       struct sctp_initmsg *sinit;
