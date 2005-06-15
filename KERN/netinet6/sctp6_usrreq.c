@@ -560,12 +560,6 @@ sctp6_notify_mbuf(struct sctp_inpcb *inp,
 	}
 	sctp_timer_start(SCTP_TIMER_TYPE_PATHMTURAISE, inp, stcb, NULL);
 out:
-	if (inp) {
-		/* reduce inp's ref-count */
-		SCTP_INP_WLOCK(inp);
-		SCTP_INP_DECR_REF(inp);
-		SCTP_INP_WUNLOCK(inp);
-	}
 	if (stcb)
 		SCTP_TCB_UNLOCK(stcb);
 }
@@ -998,10 +992,12 @@ sctp6_disconnect(struct socket *so)
 		splx(s);
 		return (ENOTCONN);
 	}
+	SCTP_INP_RLOCK(inp);
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) {
 		if (LIST_EMPTY(&inp->sctp_asoc_list)) {
 			/* No connection */
 			splx(s);
+			SCTP_INP_RUNLOCK(inp);
 			return (ENOTCONN);
 		} else {
 			int some_on_streamwheel = 0;
@@ -1011,9 +1007,36 @@ sctp6_disconnect(struct socket *so)
 			stcb = LIST_FIRST(&inp->sctp_asoc_list);
 			if (stcb == NULL) {
 				splx(s);
+				SCTP_INP_RUNLOCK(inp);
 				return (EINVAL);
 			}
+			SCTP_TCB_LOCK(stcb);
 			asoc = &stcb->asoc;
+			if (((so->so_options & SO_LINGER) &&
+			     (so->so_linger == 0)) ||
+			    (so->so_rcv.sb_cc > 0)) {
+				if (SCTP_GET_STATE(asoc) !=
+				    SCTP_STATE_COOKIE_WAIT) {
+					/* Left with Data unread */
+					struct mbuf *err;
+					err = NULL;
+					MGET(err, M_DONTWAIT, MT_DATA);
+					if (err) {
+						/* Fill in the user initiated abort */
+						struct sctp_paramhdr *ph;
+						ph = mtod(err, struct sctp_paramhdr *);
+						err->m_len = sizeof(struct sctp_paramhdr);
+						ph->param_type = htons(SCTP_CAUSE_USER_INITIATED_ABT);
+						ph->param_length = htons(err->m_len);
+					}
+					sctp_send_abort_tcb(stcb, err);
+				}
+				SCTP_INP_RUNLOCK(inp);
+				sctp_free_assoc(inp, stcb);
+				/* No unlock tcb assoc is gone */
+				splx(s);
+				return (0);
+			}
 			if (!TAILQ_EMPTY(&asoc->out_wheel)) {
 				/* Check to see if some data queued */
 				struct sctp_stream_out *outs;
@@ -1066,11 +1089,14 @@ sctp6_disconnect(struct socket *so)
 				 */
 				asoc->state |= SCTP_STATE_SHUTDOWN_PENDING;
 			}
+			SCTP_TCB_UNLOCK(stcb);
+			SCTP_INP_RUNLOCK(inp);
 			splx(s);
 			return (0);
 		}
 	} else {
 		/* UDP model does not support this */
+		SCTP_INP_RUNLOCK(inp);
 		splx(s);
 		return EOPNOTSUPP;
 	}
@@ -1416,7 +1442,7 @@ sctp6_getaddr(struct socket *so, struct mbuf *nam)
 #endif
 		return ECONNRESET;
 	}
-
+	SCTP_INP_RLOCK(inp);
 	sin6->sin6_port = inp->sctp_lport;
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
 		/* For the bound all case you get back 0 */
@@ -1449,7 +1475,7 @@ sctp6_getaddr(struct socket *so, struct mbuf *nam)
 		} else {
 			/* For the bound all case you get back 0 */
 		notConn6:
-			memset(&sin6->sin6_addr, 0, sizeof(sin6->sin6_addr));
+            		memset(&sin6->sin6_addr, 0, sizeof(sin6->sin6_addr));
 		}
 	} else {
 		/* Take the first IPv6 address in the list */
@@ -1468,9 +1494,11 @@ sctp6_getaddr(struct socket *so, struct mbuf *nam)
 #if defined(__FreeBSD__) || defined(__APPLE__)
 			FREE(sin6, M_SONAME);
 #endif
+			SCTP_INP_RUNLOCK(inp);
 			return ENOENT;
 		}
 	}
+	SCTP_INP_RUNLOCK(inp);
 	/* Scoping things for v6 */
 	if (IN6_IS_SCOPE_LINKLOCAL(&sin6->sin6_addr))
 		/* skip ifp check below */
@@ -1524,7 +1552,11 @@ sctp6_peeraddr(struct socket *so, struct mbuf *nam)
 #endif
 		return ECONNRESET;
 	}
+	SCTP_INP_RLOCK(inp);
 	stcb = LIST_FIRST(&inp->sctp_asoc_list);
+	if (stcb)
+		SCTP_TCB_LOCK(stcb);
+	SCTP_INP_RUNLOCK(inp);
 	if (stcb == NULL) {
 #if defined(__FreeBSD__) || defined(__APPLE__)
 		FREE(sin6, M_SONAME);
@@ -1541,6 +1573,7 @@ sctp6_peeraddr(struct socket *so, struct mbuf *nam)
 			break;
 		}
 	}
+	SCTP_TCB_UNLOCK(stcb);
 	if (!fnd) {
 		/* No IPv4 address */
 #if defined(__FreeBSD__) || defined(__APPLE__)
