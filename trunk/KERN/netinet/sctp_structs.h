@@ -414,6 +414,7 @@ struct sctp_association {
 	u_int32_t my_vtag_nonce;
 	u_int32_t peer_vtag_nonce;
 
+        u_int32_t assoc_id;
 
 	/* This is the SCTP fragmentation threshold */
 	u_int32_t smallest_mtu;
@@ -663,6 +664,7 @@ struct sctp_association {
 	u_int8_t delayed_connection;
 	u_int8_t ifp_had_enobuf;
 	u_int8_t saw_sack_with_frags;
+	u_int8_t in_restart_hash;
 	/*
 	 * The mapping array is used to track out of order sequences above
 	 * last_acked_seq. 0 indicates packet missing 1 indicates packet

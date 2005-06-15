@@ -778,16 +778,16 @@ sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, caddr_t asoc_id)
 	 */
 	struct sctpasochead *head;
 	struct sctp_tcb *stcb;
-	u_int32_t vtag;
+	u_int32_t id;
 	if (asoc_id == 0 || inp == NULL) {
 		return (NULL);
 	}
 	SCTP_INP_INFO_RLOCK();
-	vtag = (u_int32_t)asoc_id;
-	head = &sctppcbinfo.sctp_asochash[SCTP_PCBHASH_ASOC(vtag,
+	id = (u_int32_t)asoc_id;
+	head = &sctppcbinfo.sctp_asochash[SCTP_PCBHASH_ASOC(id,
 	    sctppcbinfo.hashasocmark)];
 	if (head == NULL) {
-		/* invalid vtag */
+		/* invalid id TSNH */
 		SCTP_INP_INFO_RUNLOCK();
 		return (NULL);
 	}
@@ -795,11 +795,38 @@ sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, caddr_t asoc_id)
 		SCTP_INP_RLOCK(stcb->sctp_ep);
 		SCTP_TCB_LOCK(stcb);
 		SCTP_INP_RUNLOCK(stcb->sctp_ep);
-		if (stcb->asoc.my_vtag == vtag) {
+		if (stcb->asoc.assoc_id == id) {
 			/* candidate */
 			if (inp != stcb->sctp_ep) {
 				/* some other guy has the
-				 * same vtag active (vtag collision).
+				 * same id active (id collision ??).
+				 */
+				sctp_pegs[SCTP_ASID_BOGUS]++;
+				SCTP_TCB_UNLOCK(stcb);
+				continue;
+			}
+			sctp_pegs[SCTP_BY_ASSOCID]++;
+			SCTP_INP_INFO_RUNLOCK();
+			return (stcb);
+		}
+		SCTP_TCB_UNLOCK(stcb);
+	}
+	/* Ok if we missed here, lets try the restart hash */
+	head = &sctppcbinfo.sctp_asochash[SCTP_PCBHASH_ASOC(id,sctppcbinfo.hashrestartmark)];
+	if(head == NULL) {
+		/* invalid id TSNH */
+		SCTP_INP_INFO_RUNLOCK();
+		return (NULL);
+	}
+	LIST_FOREACH(stcb, head, sctp_tcbrestarhash) {
+		SCTP_INP_RLOCK(stcb->sctp_ep);
+		SCTP_TCB_LOCK(stcb);
+		SCTP_INP_RUNLOCK(stcb->sctp_ep);
+		if (stcb->asoc.assoc_id == id) {
+			/* candidate */
+			if (inp != stcb->sctp_ep) {
+				/* some other guy has the
+				 * same id active (id collision ??).
 				 */
 				sctp_pegs[SCTP_ASID_BOGUS]++;
 				SCTP_TCB_UNLOCK(stcb);
@@ -3312,13 +3339,12 @@ sctp_add_vtag_to_timewait(struct sctp_inpcb *inp, u_int32_t tag)
 	if (!LIST_EMPTY(chain)) {
 		/* Block(s) present, lets find space, and expire on the fly */
 		LIST_FOREACH(twait_block, chain, sctp_nxt_tagblock) {
-
 			for (i = 0; i < SCTP_NUMBER_IN_VTAG_BLOCK; i++) {
 				if ((twait_block->vtag_block[i].v_tag == 0) &&
 				    !set) {
-					twait_block->vtag_block[0].tv_sec_at_expire =
+					twait_block->vtag_block[i].tv_sec_at_expire =
 					    now.tv_sec + SCTP_TIME_WAIT;
-					twait_block->vtag_block[0].v_tag = tag;
+					twait_block->vtag_block[i].v_tag = tag;
 					set = 1;
 				} else if ((twait_block->vtag_block[i].v_tag) &&
 				    ((long)twait_block->vtag_block[i].tv_sec_at_expire >
@@ -3479,6 +3505,9 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	}
 	if (inp->sctp_tcbhash) {
 		LIST_REMOVE(stcb, sctp_tcbhash);
+	}
+	if(stcb->asoc.in_restart_hash) {
+		LIST_REMOVE(stcb, sctp_tcbrestarhash);
 	}
 	/* Now lets remove it from the list of ALL associations in the EP */
 	LIST_REMOVE(stcb, sctp_tcblist);
@@ -4264,6 +4293,19 @@ sctp_pcb_init()
 
 	sctppcbinfo.hashtblsize = hashtblsize;
 
+	/* init the small hash table we use to track restarted
+	 * asoc's
+	 */
+ 	sctppcbinfo.sctp_restarthash = hashinit(SCTP_STACK_VTAG_HASH_SIZE,
+#ifdef __NetBSD__
+	    HASH_LIST,
+#endif
+	    M_PCB,
+#if defined(__NetBSD__) || defined(__OpenBSD__)
+	    M_WAITOK,
+#endif
+	    &sctppcbinfo.hashrestartmark);
+
 	/* init the zones */
 	/*
 	 * FIX ME: Should check for NULL returns, but if it does fail we
@@ -4830,6 +4872,20 @@ sctp_is_vtag_good(struct sctp_inpcb *inp, u_int32_t tag, struct timeval *now)
 			}
 		}
 	}
+	/* Now lets check the restart hash */
+	head = &sctppcbinfo.sctp_asochash[SCTP_PCBHASH_ASOC(stcb->asoc.assoc_id,
+							    sctppcbinfo.hashrestartmark)];
+	LIST_FOREACH(stcb, head, sctp_tcbrestarhash) {
+		if (stcb->asoc.assoc_id == tag) {
+			/* candidate */
+			if (inp == stcb->sctp_ep) {
+				/* bad tag, in use */
+				SCTP_INP_INFO_WUNLOCK();
+				return (0);
+			}
+		}
+	}
+	/* Now what about timed wait ? */
 	if (!LIST_EMPTY(chain)) {
 		/*
 		 * Block(s) are present, lets see if we have this tag in

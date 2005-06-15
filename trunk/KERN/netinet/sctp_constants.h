@@ -775,14 +775,7 @@
  * for each timewait block that gets initialized. Increasing it to
  * 31 would yeild 256 bytes per block.
  */
-/* Undef the following turns on per EP behavior */
-#define SCTP_VTAG_TIMEWAIT_PER_STACK 1
-#ifdef SCTP_VTAG_TIMEWAIT_PER_STACK
 #define SCTP_NUMBER_IN_VTAG_BLOCK 15
-#else
-/* The hash list is smaller if we are on a ep basis */
-#define SCTP_NUMBER_IN_VTAG_BLOCK 3
-#endif
 /*
  * If we use the STACK option, we have an array of this size head
  * pointers. This array is mod'd the with the size to find which
