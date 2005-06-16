@@ -4853,8 +4853,8 @@ sctp_sbappend( struct sockbuf *sb,
 	while(n) {
 		if(n->m_len == 0) {
 			if(prev == NULL) {
-				m0 = m_free(n);
-				n = m0;
+				m = m_free(n);
+				n = m;
 			} else {
 				prev->m_next = m_free(n);
 				n = prev->m_next;
