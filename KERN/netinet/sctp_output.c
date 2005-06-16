@@ -6987,10 +6987,12 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 				if (asoc->sent_queue_retran_cnt < 0) {
 				    asoc->sent_queue_retran_cnt = 0;
 				}
+				net->flight_size += data_list[i]->book_size;
+				asoc->total_flight += data_list[i]->book_size;
 				if(data_list[i]->book_size_scale) {
 					/* need to double the book size on this one */
 					data_list[i]->book_size_scale = 0;
-					data_list[i]->book_size += data_list[i]->send_size;
+					data_list[i]->book_size *= 2;
 				} else {
 					sctp_ucount_incr(asoc->total_flight_count);
 #ifdef SCTP_LOG_RWND
@@ -7001,8 +7003,6 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 									    (u_int32_t)(data_list[i]->send_size + 
 											sctp_peer_chunk_oh));
 				}
-				net->flight_size += data_list[i]->book_size;
-				asoc->total_flight += data_list[i]->book_size;
 				if (asoc->peers_rwnd < stcb->sctp_ep->sctp_ep.sctp_sws_sender) {
 					/* SWS sender side engages */
 					asoc->peers_rwnd = 0;
