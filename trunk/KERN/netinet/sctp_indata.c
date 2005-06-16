@@ -2773,6 +2773,7 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 								      frag_end, 
 								      SCTP_LOG_TSN_ACKED);
 #endif
+
 							if(tp1->whoTo->flight_size >= tp1->book_size)
 							  tp1->whoTo->flight_size -= tp1->book_size;
 							else 
@@ -3657,6 +3658,9 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 			sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
 					stcb, net);
+			if(callout_pending(&net->fr_timer.timer)) {
+				sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net);
+			}
 			net->partial_bytes_acked = 0;
 			net->flight_size = 0;
 		}
@@ -3843,9 +3847,11 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 		}
 		tp2 = TAILQ_NEXT(tp1, sctp_next);
 		TAILQ_REMOVE(&asoc->sent_queue, tp1, sctp_next);
+		/* Friendlier printf in lieu of panic now that I think its fixed */
 		if((TAILQ_FIRST(&asoc->sent_queue) == NULL) &&
-		   (asoc->total_flight != 0)) {
-			panic("Total flight incorrect");
+		   (asoc->total_flight > 0)) {
+			printf("Warning flight size incorrect should be 0 is %d\n",
+			       asoc->total_flight);
 		}
 		if (tp1->data) {
 			sctp_free_bufspace(stcb, asoc, tp1);
@@ -4105,10 +4111,24 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 			}
 		}
 	}
+	if (TAILQ_EMPTY(&asoc->sent_queue)) {
+		/* nothing left in-flight */
+		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
+			/* stop all timers */
+			if(callout_pending(&net->fr_timer.timer)) {
+				sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net);
+			}
+			sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
+					stcb, net);
+			net->flight_size = 0;
+			net->partial_bytes_acked = 0;
+		}
+		asoc->total_flight = 0;
+		asoc->total_flight_count = 0;
+	}
 	if (TAILQ_EMPTY(&asoc->send_queue) && TAILQ_EMPTY(&asoc->sent_queue) &&
 	    some_on_streamwheel == 0) {
 		/* nothing left on sendqueue.. consider done */
-		/* stop all timers */
 #ifdef SCTP_LOG_RWND
 		sctp_log_rwnd_set(SCTP_SET_PEER_RWND_VIA_SACK,
 				  asoc->peers_rwnd, 0, 0,  a_rwnd);
@@ -4118,15 +4138,6 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 			/* SWS sender side engages */
 			asoc->peers_rwnd = 0;
 		}
-		/* stop any timers */
-		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
-			sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
-					stcb, net);
-			net->flight_size = 0;
-			net->partial_bytes_acked = 0;
-		}
-		asoc->total_flight = 0;
-		asoc->total_flight_count = 0;
 		/* clean up */
 		if (asoc->state & SCTP_STATE_SHUTDOWN_PENDING) {
 			asoc->state = SCTP_STATE_SHUTDOWN_SENT;
