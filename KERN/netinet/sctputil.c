@@ -3442,6 +3442,9 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp, stcb)
 #endif
 #if defined(__FreeBSD__) || defined(__APPLE__)
 	struct mbuf *m, *n, *nlast;
+#ifdef CRUSHER
+	struct mbuf *prev;
+#endif
 	int msg_eor_seen = 0;
 	int cnt=0;
 
@@ -3477,19 +3480,37 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp, stcb)
 	sctp_log_lock(stcb->sctp_ep, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
 #endif
 	SOCKBUF_LOCK(sb);
+	/* crush out 0 length mbufs from m0 chain */
+#ifdef CRUSSHER
+	prev = NULL;
+	n = m0;
+	while(n) {
+		if(n->m_len == 0) {
+			if(prev == NULL) {
+				m0 = m_free(n);
+				n = m0;
+			} else {
+				prev->m_next = m_free(n);
+				n = prev->m_next;
+			}
+			continue;
+		}
+		/* next mbuf */
+		prev = n;
+		n = n->m_next;
+	}
+#endif
 	m->m_len = asa->sa_len;
 	bcopy((caddr_t)asa, mtod(m, caddr_t), asa->sa_len);
 	if (n)
 		n->m_next = m0;		/* concatenate data to control */
 	else
 		control = m0;
-
 	if (m)
 		m->m_next = control;
 	else
 		m = control;
 	m->m_pkthdr.csum_data = (int)tag;
-	
 	for (n = m; n->m_next != NULL; n = n->m_next) {
 #ifdef SCTP_SB_LOGGING
 		sctp_sblog(sb, stcb, SCTP_LOG_SBALLOC, n->m_len);
@@ -4405,6 +4426,10 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 				   stcb, SCTP_LOG_SBFREE, m->m_len);
 #endif
 			sctp_sbfree(stcb, &so->so_rcv, m);
+#ifdef SCTP_SB_LOGGING
+			sctp_sblog(&so->so_rcv, 
+				   stcb, SCTP_LOG_SBRESULT, 0);
+#endif
 			if(stcb->asoc.sb_cc > so->so_rcv.sb_cc) {
 				panic("sb_cc mis-match");
 			}
@@ -4437,6 +4462,10 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 					   SCTP_LOG_SBFREE, m->m_len);
 #endif
 				sctp_sbfree(stcb, &so->so_rcv, m);
+#ifdef SCTP_SB_LOGGING
+				sctp_sblog(&so->so_rcv, stcb, 
+					   SCTP_LOG_SBRESULT, 0);
+#endif
 				if(stcb->asoc.sb_cc > so->so_rcv.sb_cc) {
 					panic("sb_cc mis-match");
 				}
@@ -4577,6 +4606,10 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 						   SCTP_LOG_SBFREE, m->m_len);
 #endif
 				        sctp_sbfree(stcb, &so->so_rcv, m);
+#ifdef SCTP_SB_LOGGING
+					sctp_sblog(&so->so_rcv, stcb, 
+						   SCTP_LOG_SBRESULT, 0);
+#endif
 					if(stcb->asoc.sb_cc > so->so_rcv.sb_cc) {
 						panic("sb_cc mis-match");
 					}
@@ -4591,6 +4624,10 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 							   SCTP_LOG_SBFREE, m->m_len);
 #endif
 					        sctp_sbfree(stcb, &so->so_rcv, m);
+#ifdef SCTP_SB_LOGGING
+						sctp_sblog(&so->so_rcv, stcb, 
+							   SCTP_LOG_SBRESULT, 0);
+#endif
 						if(stcb->asoc.sb_cc > so->so_rcv.sb_cc) {
 							panic("sb_cc mis-match");
 						}
@@ -4607,6 +4644,10 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 							sctp_sblog(&so->so_rcv, stcb, SCTP_LOG_SBFREE, m->m_len);
 #endif
  					                sctp_sbfree(stcb, &so->so_rcv, m);
+#ifdef SCTP_SB_LOGGING
+							sctp_sblog(&so->so_rcv, stcb,
+								   SCTP_LOG_SBRESULT, 0);
+#endif
 							if(stcb->asoc.sb_cc > so->so_rcv.sb_cc) {
 								panic("sb_cc mis-match");
 							}
@@ -4627,6 +4668,10 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 							sctp_sblog(&so->so_rcv, stcb, SCTP_LOG_SBFREE, m->m_len);
 #endif
  					                sctp_sbfree(stcb, &so->so_rcv, m);
+#ifdef SCTP_SB_LOGGING
+							sctp_sblog(&so->so_rcv, stcb, 
+								   SCTP_LOG_SBRESULT, 0);
+#endif
 							if(stcb->asoc.sb_cc > so->so_rcv.sb_cc) {
 								panic("sb_cc mis-match");
 							}
@@ -4790,6 +4835,9 @@ sctp_sbappend( struct sockbuf *sb,
 	       struct sctp_tcb *stcb)
 {
 	register struct mbuf *n;
+#ifdef CRUSHER
+	struct mbuf *prev;
+#endif
 #ifdef SCTP_LOCK_LOGGING
 	sctp_log_lock(stcb->sctp_ep, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
 #endif
@@ -4814,7 +4862,26 @@ sctp_sbappend( struct sockbuf *sb,
 		panic("stcb->last_record_insert is FREE?");
 	}
 #endif
-
+	/* crush out 0 length mbufs from m0 chain */
+#ifdef CRUSHER
+	prev = NULL;
+	n = m;
+	while(n) {
+		if(n->m_len == 0) {
+			if(prev == NULL) {
+				m0 = m_free(n);
+				n = m0;
+			} else {
+				prev->m_next = m_free(n);
+				n = prev->m_next;
+			}
+			continue;
+		}
+		/* next mbuf */
+		prev = n;
+		n = n->m_next;
+	}
+#endif
 	if(sb->sb_mb == stcb->last_record_insert) {
 		if((sb->sb_mb->m_len == 0) &&
 		   (sb->sb_mb->m_pkthdr.len != stcb->hidden_from_sb)) {
