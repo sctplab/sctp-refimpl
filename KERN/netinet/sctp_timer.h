@@ -33,6 +33,10 @@
  */
 
 #if defined(_KERNEL) || (defined(__APPLE__) && defined(KERNEL))
+
+void sctp_early_fr_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
+	struct sctp_nets *net);
+
 struct sctp_nets *sctp_find_alternate_net(struct sctp_tcb *,
 	struct sctp_nets *);
 
