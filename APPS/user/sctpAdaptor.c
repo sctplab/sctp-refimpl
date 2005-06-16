@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.7 2005-06-16 13:43:11 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.8 2005-06-16 18:09:08 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -344,7 +344,6 @@ sctpReadInput(int fd, distributor *o,sctpAdaptorMod *r)
   msg.msg_control = (caddr_t)controlVector;
   msg.msg_controllen = sizeof(controlVector);
   errno = 0;
-  o_info.sinfo_assoc_id = 0;
   sz = sctp_recvmsg (fd, 
 		     readBuffer, 
 		     (size_t)ll,
