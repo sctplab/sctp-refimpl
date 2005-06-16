@@ -445,11 +445,18 @@ struct sctp_get_nonce_values {
 };
 
 /* Debugging logs */
-struct sctp_str_log{
+struct sctp_str_log {
 	u_int32_t n_tsn;
 	u_int32_t e_tsn;
 	u_int16_t n_sseq;
 	u_int16_t e_sseq;
+};
+
+struct sctp_sb_log {
+	u_int32_t stcb;
+	u_int32_t so_sbcc;
+	u_int32_t stcb_sbcc;
+	u_int32_t incr;
 };
 
 struct sctp_fr_log {
@@ -518,6 +525,7 @@ struct sctp_cwnd_log{
   	        struct sctp_sack_log sack;
 	        struct sctp_lock_log lock;
 	        struct sctp_rto_log rto;
+		struct sctp_sb_log sb;
 	}x;
 	u_int8_t from;
 	u_int8_t event_type;
