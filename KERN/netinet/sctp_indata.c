@@ -3843,6 +3843,10 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 		}
 		tp2 = TAILQ_NEXT(tp1, sctp_next);
 		TAILQ_REMOVE(&asoc->sent_queue, tp1, sctp_next);
+		if((TAILQ_FIRST(&asoc->sent_queue) == NULL) &&
+		   (asoc->total_flight != 0)) {
+			panic("Total flight incorrect");
+		}
 		if (tp1->data) {
 			sctp_free_bufspace(stcb, asoc, tp1);
 #ifdef SCTP_DEBUG
