@@ -4711,7 +4711,17 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 				}
 				m->m_data += len;
 				m->m_len -= len;
+#ifdef SCTP_SB_LOGGING
+				sctp_sblog(&so->so_rcv, stcb, SCTP_LOG_SBFREE, len);
+#endif
 				so->so_rcv.sb_cc -= len;
+				if(stcb) {
+					stcb->asoc.sb_cc -= len;
+				}
+#ifdef SCTP_SB_LOGGING
+				sctp_sblog(&so->so_rcv, stcb, 
+					   SCTP_LOG_SBRESULT, 0);
+#endif
 			}
 		}
 		SOCKBUF_LOCK_ASSERT(&so->so_rcv);
