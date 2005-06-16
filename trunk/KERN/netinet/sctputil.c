@@ -3442,9 +3442,7 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp, stcb)
 #endif
 #if defined(__FreeBSD__) || defined(__APPLE__)
 	struct mbuf *m, *n, *nlast;
-#ifdef CRUSHER
 	struct mbuf *prev;
-#endif
 	int msg_eor_seen = 0;
 	int cnt=0;
 
@@ -3481,7 +3479,6 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp, stcb)
 #endif
 	SOCKBUF_LOCK(sb);
 	/* crush out 0 length mbufs from m0 chain */
-#ifdef CRUSSHER
 	prev = NULL;
 	n = m0;
 	while(n) {
@@ -3499,7 +3496,6 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp, stcb)
 		prev = n;
 		n = n->m_next;
 	}
-#endif
 	m->m_len = asa->sa_len;
 	bcopy((caddr_t)asa, mtod(m, caddr_t), asa->sa_len);
 	if (n)
@@ -4387,7 +4383,6 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 	 */
         if(stcb == NULL){
 		sctp_pegs[SCTP_NO_TCB_IN_RCV]++;
-		panic("No tcb?");
 	} else {
 		sctp_pegs[SCTP_HAD_TCB_IN_RCV]++;
 		if(stcb->asoc.fragmented_delivery_inprogress) {
@@ -4430,9 +4425,6 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 			sctp_sblog(&so->so_rcv, 
 				   stcb, SCTP_LOG_SBRESULT, 0);
 #endif
-			if(stcb->asoc.sb_cc > so->so_rcv.sb_cc) {
-				panic("sb_cc mis-match");
-			}
 			so->so_rcv.sb_mb = m_free(m);
 			m = so->so_rcv.sb_mb;
 			sockbuf_pushsync(&so->so_rcv, nextrecord);
@@ -4466,9 +4458,6 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 				sctp_sblog(&so->so_rcv, stcb, 
 					   SCTP_LOG_SBRESULT, 0);
 #endif
-				if(stcb->asoc.sb_cc > so->so_rcv.sb_cc) {
-					panic("sb_cc mis-match");
-				}
 				so->so_rcv.sb_mb = m->m_next;
 				m->m_next = NULL;
 				*cme = m;
@@ -4610,9 +4599,6 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 					sctp_sblog(&so->so_rcv, stcb, 
 						   SCTP_LOG_SBRESULT, 0);
 #endif
-					if(stcb->asoc.sb_cc > so->so_rcv.sb_cc) {
-						panic("sb_cc mis-match");
-					}
 					*mp = m;
 					mp = &m->m_next;
 					so->so_rcv.sb_mb = m = m->m_next;
@@ -4628,9 +4614,6 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 						sctp_sblog(&so->so_rcv, stcb, 
 							   SCTP_LOG_SBRESULT, 0);
 #endif
-						if(stcb->asoc.sb_cc > so->so_rcv.sb_cc) {
-							panic("sb_cc mis-match");
-						}
 						so->so_rcv.sb_mb = m_free(m);
 						m = so->so_rcv.sb_mb;
 					} else {
@@ -4648,9 +4631,6 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 							sctp_sblog(&so->so_rcv, stcb,
 								   SCTP_LOG_SBRESULT, 0);
 #endif
-							if(stcb->asoc.sb_cc > so->so_rcv.sb_cc) {
-								panic("sb_cc mis-match");
-							}
 							m->m_len = 0;
 							stcb->hidden_from_sb = so->so_rcv.sb_cc;
 							m->m_pkthdr.len = so->so_rcv.sb_cc;
@@ -4672,9 +4652,6 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 							sctp_sblog(&so->so_rcv, stcb, 
 								   SCTP_LOG_SBRESULT, 0);
 #endif
-							if(stcb->asoc.sb_cc > so->so_rcv.sb_cc) {
-								panic("sb_cc mis-match");
-							}
 							so->so_rcv.sb_mb = m_free(m);
 							m = so->so_rcv.sb_mb;
 						}
@@ -4845,9 +4822,7 @@ sctp_sbappend( struct sockbuf *sb,
 	       struct sctp_tcb *stcb)
 {
 	register struct mbuf *n;
-#ifdef CRUSHER
 	struct mbuf *prev;
-#endif
 #ifdef SCTP_LOCK_LOGGING
 	sctp_log_lock(stcb->sctp_ep, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
 #endif
@@ -4873,7 +4848,6 @@ sctp_sbappend( struct sockbuf *sb,
 	}
 #endif
 	/* crush out 0 length mbufs from m0 chain */
-#ifdef CRUSHER
 	prev = NULL;
 	n = m;
 	while(n) {
@@ -4891,7 +4865,6 @@ sctp_sbappend( struct sockbuf *sb,
 		prev = n;
 		n = n->m_next;
 	}
-#endif
 	if(sb->sb_mb == stcb->last_record_insert) {
 		if((sb->sb_mb->m_len == 0) &&
 		   (sb->sb_mb->m_pkthdr.len != stcb->hidden_from_sb)) {
