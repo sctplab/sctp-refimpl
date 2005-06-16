@@ -85,9 +85,11 @@ main(int argc, char **argv)
 		/* 50 */ "Lock Create", 
                 /* 51 */ "Initial RTT",
 		/* 52 */ "RTT Variance",
-		/* 53 */ "Unknown"
+		/* 53 */ "SB Alloc",
+                /* 54 */ "SB Free",
+		/* 55 */ "Unknown"
 	};
-#define FROM_STRING_MAX 53
+#define FROM_STRING_MAX 55
 	FILE *out;
 	int at;
 	struct sctp_cwnd_log log;
@@ -125,6 +127,14 @@ main(int argc, char **argv)
 				       (int)log.x.cwnd.cwnd_augment,
 				       from_str[log.from]);
 			}
+		}else if(log.event_type == SCTP_LOG_EVENT_SB) {
+			printf("%d stcb:%x sb_cc:%x stcb_sbcc:%x %s:%d\n",
+			       at,
+			       log.x.sb.stcb,
+			       log.x.sb.so_sbcc,
+			       log.x.sb.stcb_sbcc,
+			       ((log.from == SCTP_LOG_SBALLOC) ? "increment" : "decrement"),
+			       log.x.sb.incr);
 		}else if(log.event_type == SCTP_LOG_EVENT_RTT) {
 		  if(log.x.rto.rttvar) {
 		    printf("%d: Net:%x  Old-Rtt:%d Change:%d Direction=%s from:%s\n",
