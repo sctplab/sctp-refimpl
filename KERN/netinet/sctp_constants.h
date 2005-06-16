@@ -467,8 +467,8 @@
 #define TICKS_TO_MSEC(x) (((x) * 1000) / hz)
 #define SEC_TO_TICKS(x) ((x) * hz)
 
-/* basically clock granulatity */
-#define SCTP_MIN_MSEC_TIMER 10
+/* basically clock granulatity doubled */
+#define SCTP_MIN_MSEC_TIMER 20
 
 /* init timer def = 1 sec */
 #define SCTP_INIT_SEC	1

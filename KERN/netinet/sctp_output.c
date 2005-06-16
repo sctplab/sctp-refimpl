@@ -5442,6 +5442,7 @@ sctp_move_to_an_alt(struct sctp_tcb *stcb,
 }
 
 static int sctp_from_user_send=0;
+extern int sctp_early_fr;
 
 static int
 sctp_med_chunk_output(struct sctp_inpcb *inp,
@@ -5525,32 +5526,32 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	}
 #endif
 	if(no_data_chunks == 0) {
-	  TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
+		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 #ifdef SCTP_DEBUG
-	    if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
-	      printf("net:%p fs:%d  cwnd:%d\n",
-		     net, net->flight_size, net->cwnd);
-	    }
+			if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
+				printf("net:%p fs:%d  cwnd:%d\n",
+				       net, net->flight_size, net->cwnd);
+			}
 #endif
-	    if (net->flight_size >= net->cwnd) {
-	      /* skip this network, no room */
-	      cwnd_full_ind++;
+			if (net->flight_size >= net->cwnd) {
+				/* skip this network, no room */
+				cwnd_full_ind++;
 #ifdef SCTP_DEBUG
-	      if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
-		printf("Ok skip fillup->fs:%d > cwnd:%d\n",
-		       net->flight_size,
-		       net->cwnd);
-	      }
+				if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
+					printf("Ok skip fillup->fs:%d > cwnd:%d\n",
+					       net->flight_size,
+					       net->cwnd);
+				}
 #endif
-	      sctp_pegs[SCTP_CWND_NOFILL]++;
-	      continue;
-	    }
-	    /*
-	     * spin through the stream queues moving one message and
-	     * assign TSN's as appropriate.
-	     */
-	    sctp_fill_outqueue(stcb, net);
-	  }
+				sctp_pegs[SCTP_CWND_NOFILL]++;
+				continue;
+			}
+			/*
+			 * spin through the stream queues moving one message and
+			 * assign TSN's as appropriate.
+			 */
+			sctp_fill_outqueue(stcb, net);
+		}
 	}
 	*cwnd_full = cwnd_full_ind;
 	/* now service each destination and send out what we can for it */
@@ -6139,14 +6140,18 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 				/*				}*/
 				sctp_pegs[SCTP_PEG_TSNS_SENT] += bundle_at;
 				sctp_clean_up_datalist(stcb, asoc, data_list, bundle_at, net);
-				if(net->flight_size > net->cwnd) {
-					/* stop it if its running */
-					if(callout_pending(&net->fr_timer.timer))
-						sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, inp, stcb, net);
-				} else {
-					/* start it if its not already running */
-					if(!callout_pending(&net->fr_timer.timer))
-						sctp_timer_start(SCTP_TIMER_TYPE_EARLYFR,inp, stcb, net);
+				if(sctp_early_fr) {
+					if(net->flight_size > net->cwnd) {
+						/* stop it if its running */
+						if(callout_pending(&net->fr_timer.timer)) {
+							sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, inp, stcb, net);
+						}
+					} else {
+						/* start it if its not already running */
+						if(!callout_pending(&net->fr_timer.timer)) {
+							sctp_timer_start(SCTP_TIMER_TYPE_EARLYFR,inp, stcb, net);
+						}
+					}
 				}
 			}
 			if (one_chunk) {

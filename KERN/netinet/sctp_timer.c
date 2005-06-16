@@ -124,26 +124,26 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 {
 	struct sctp_tmit_chunk *chk, *tp2;
 	struct timeval now, min_wait, tv;
-	int cur_rto,cnt=0;
-
-	/* first can we send more */
-	if(net->flight_size > net->cwnd)
-		/* nope, false t-o */
-		return;
+	int cur_rtt,cnt=0;
 
 	/* an early FR is occuring. */
 	SCTP_GETTIME_TIMEVAL(&now);
 	/* get cur rto in micro-seconds */
-	cur_rto = (((net->lastsa >> 2) + net->lastsv) >> 1);
+	if(net->lastsa == 0) {
+		/* Hmm no rtt estimate yet? */
+		cur_rtt = stcb->asoc.initial_rto >> 2;
+	} else {
+		cur_rtt = net->lastsa +  (net->lastsa >> 1);
+	}
 #ifdef SCTP_FR_LOGGING
-	sctp_log_fr(cur_rto, 0, 0, SCTP_FR_T3_MARK_TIME);
+	sctp_log_fr(cur_rtt, 0, 0, SCTP_FR_T3_MARK_TIME);
 #endif
-	cur_rto *= 1000;
+	cur_rtt *= 1000;
 #ifdef SCTP_FR_LOGGING
-	sctp_log_fr(cur_rto, 0, 0, SCTP_FR_T3_MARK_TIME);
+	sctp_log_fr(cur_rtt, 0, 0, SCTP_FR_T3_MARK_TIME);
 #endif
-	tv.tv_sec = cur_rto / 1000000;
-	tv.tv_usec = cur_rto % 1000000;
+	tv.tv_sec = cur_rtt / 1000000;
+	tv.tv_usec = cur_rtt % 1000000;
 #ifndef __FreeBSD__
 	timersub(&now, &tv, &min_wait);
 #else
@@ -183,6 +183,13 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 					continue;
 				}
 			}
+			/*
+			printf("min_wait is %d-sec %d-msec\n",
+			(int)min_wait.tv_sec, (int)min_wait.tv_usec);
+			printf("Marking one sent at %d-sec %d-usec \n",
+			(int)chk->sent_rcv_time.tv_sec, 
+			(int)chk->sent_rcv_time.tv_usec);
+			*/
 			sctp_pegs[SCTP_EARLYFR_MRK_RETR]++;
 			chk->sent = SCTP_DATAGRAM_RESEND;
 			sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
@@ -483,7 +490,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	struct sctp_tmit_chunk *chk, *tp2, *could_be_sent=NULL;
 	struct sctp_nets *lnets;
 	struct timeval now, min_wait, tv;
-	int cur_rto;
+	int cur_rtt;
 	int win_probes, non_win_probes, orig_rwnd, audit_tf, num_mk, fir;
 	unsigned int cnt_mk;
 	u_int32_t orig_flight;
@@ -497,16 +504,16 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	 */
 	SCTP_GETTIME_TIMEVAL(&now);
 	/* get cur rto in micro-seconds */
-	cur_rto = (((net->lastsa >> 2) + net->lastsv) >> 1);
+	cur_rtt = (((net->lastsa >> 2) + net->lastsv) >> 1);
 #ifdef SCTP_FR_LOGGING
-	sctp_log_fr(cur_rto, 0, 0, SCTP_FR_T3_MARK_TIME);
+	sctp_log_fr(cur_rtt, 0, 0, SCTP_FR_T3_MARK_TIME);
 #endif
-	cur_rto *= 1000;
+	cur_rtt *= 1000;
 #ifdef SCTP_FR_LOGGING
-	sctp_log_fr(cur_rto, 0, 0, SCTP_FR_T3_MARK_TIME);
+	sctp_log_fr(cur_rtt, 0, 0, SCTP_FR_T3_MARK_TIME);
 #endif
-	tv.tv_sec = cur_rto / 1000000;
-	tv.tv_usec = cur_rto % 1000000;
+	tv.tv_sec = cur_rtt / 1000000;
+	tv.tv_usec = cur_rtt % 1000000;
 #ifndef __FreeBSD__
 	timersub(&now, &tv, &min_wait);
 #else
@@ -524,7 +531,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 		min_wait.tv_sec = min_wait.tv_usec = 0;
 	}
 #ifdef SCTP_FR_LOGGING
-	sctp_log_fr(cur_rto, now.tv_sec, now.tv_usec, SCTP_FR_T3_MARK_TIME);
+	sctp_log_fr(cur_rtt, now.tv_sec, now.tv_usec, SCTP_FR_T3_MARK_TIME);
 	sctp_log_fr(0, min_wait.tv_sec, min_wait.tv_usec, SCTP_FR_T3_MARK_TIME);
 #endif
 	if(stcb->asoc.total_flight >= net->flight_size) {

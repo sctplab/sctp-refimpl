@@ -3469,6 +3469,8 @@ sctp_hs_cwnd_decrease(struct sctp_nets *net)
 }
 #endif
 
+extern int sctp_early_fr;
+
 void
 sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
     struct sctp_nets *net_from, int *abort_now)
@@ -3911,9 +3913,11 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	/* update cwnd                */
 	/******************************/
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
-		if(net->flight_size == 0) {
-			/* stop any early FR timer */
-			sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net);
+		if(sctp_early_fr) {
+			/* stop any early FR timer, since we got feedback */
+			if(callout_pending(&net->fr_timer.timer)) {
+				sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net);
+			}
 		}
 		/* if nothing was acked on this destination skip it */
 		if (net->net_ack == 0)
@@ -4054,13 +4058,21 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 			sctp_pegs[SCTP_CWND_NOCUM]++;
 		}
 	skip_cwnd_update:
+		if(sctp_early_fr) {
+			/* after all is said and done, do we
+			 * need a early_fr running?
+			 */
+			if(net->flight_size && (net->flight_size < net->cwnd)) {
+				/* yep */
+				sctp_timer_start(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net);
+			}
+		}
 		/*
 		 * NOW, according to Karn's rule do we need to restore the
 		 * RTO timer back? Check our net_ack2. If not set then we
 		 * have a ambiguity.. i.e. all data ack'd was sent to more
 		 * than one place.
 		 */
-
 		if (net->net_ack2) {
 			/* restore any doubled timers */
 			net->RTO = ((net->lastsa >> 2) + net->lastsv) >> 1;
