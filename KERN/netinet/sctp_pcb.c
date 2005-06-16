@@ -4854,8 +4854,7 @@ sctp_is_vtag_good(struct sctp_inpcb *inp, u_int32_t tag, struct timeval *now)
 	head = &sctppcbinfo.sctp_asochash[SCTP_PCBHASH_ASOC(tag,
 	    sctppcbinfo.hashasocmark)];
 	if (head == NULL) {
-		SCTP_INP_INFO_WUNLOCK();
-		return (0);
+		goto check_restart;
 	}
 	LIST_FOREACH(stcb, head, sctp_asocs) {
 
@@ -4872,9 +4871,13 @@ sctp_is_vtag_good(struct sctp_inpcb *inp, u_int32_t tag, struct timeval *now)
 			}
 		}
 	}
+ check_restart:
 	/* Now lets check the restart hash */
-	head = &sctppcbinfo.sctp_asochash[SCTP_PCBHASH_ASOC(stcb->asoc.assoc_id,
-							    sctppcbinfo.hashrestartmark)];
+	head = &sctppcbinfo.sctp_restarthash[SCTP_PCBHASH_ASOC(tag,
+							       sctppcbinfo.hashrestartmark)];
+	if(head == NULL) {
+		goto check_time_wait;
+	}
 	LIST_FOREACH(stcb, head, sctp_tcbrestarhash) {
 		if (stcb->asoc.assoc_id == tag) {
 			/* candidate */
@@ -4885,6 +4888,7 @@ sctp_is_vtag_good(struct sctp_inpcb *inp, u_int32_t tag, struct timeval *now)
 			}
 		}
 	}
+ check_time_wait:
 	/* Now what about timed wait ? */
 	if (!LIST_EMPTY(chain)) {
 		/*
