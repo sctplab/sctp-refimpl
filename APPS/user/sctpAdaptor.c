@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.5 2005-04-11 18:23:11 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.6 2005-06-16 13:28:33 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -346,6 +346,7 @@ sctpReadInput(int fd, distributor *o,sctpAdaptorMod *r)
   msg.msg_control = (caddr_t)controlVector;
   msg.msg_controllen = sizeof(controlVector);
   errno = 0;
+  o_info.sinfo_assoc_id = 0;
   sz = sctp_recvmsg (fd, 
 		     readBuffer, 
 		     (size_t)ll,
@@ -355,7 +356,7 @@ sctpReadInput(int fd, distributor *o,sctpAdaptorMod *r)
 		     &msg.msg_flags);
 
   s_info = &o_info;
-/*  sz = recvmsg(fd,&msg,0);*/
+
   if(sz <= 0){
     if((errno == 0) && (fd != mainFd)){
       printf("Connected fd:%d  gets 0/0 remove from dist\n",fd);
@@ -391,37 +392,12 @@ sctpReadInput(int fd, distributor *o,sctpAdaptorMod *r)
   msgout.protocolId = 0;
   lastStream = msgout.streamNo = 0;
   lastStreamSeq = msgout.streamSeq = 0;
-/*
-  if(msg.msg_controllen){
-*/
-    /* parse through and see if we find
-     * the sctp_sndrcvinfo
-     */
-/*
-    cmsg = (struct cmsghdr *)controlVector;
-    while(cmsg){
-       if(cmsg->cmsg_level == IPPROTO_SCTP){
-	if(cmsg->cmsg_type == SCTP_SNDRCV){
-*/
-	  /* Got it */
-/*	  s_info = (struct sctp_sndrcvinfo *)CMSG_DATA(cmsg);
-	  o_info = *s_info;
-	  infoset = 1;*/
-	  /*	  printf("Message on stream:%d SSN:%d\n",
-		  s_info->sinfo_stream,
-		  s_info->sinfo_ssn);
-	  */
-/*	  break;*/
-/*	}*/
-/*      }*/
-/*      cmsg = CMSG_NXTHDR(&msg,cmsg);*/
-/*    }*/
-/*} */
+
   if((dataout == NULL) && (msg.msg_flags & MSG_EOR)){
-    if(s_info){
-      msgout.protocolId = s_info->sinfo_ppid;
-      lastStream = msgout.streamNo = s_info->sinfo_stream;
-      lastStreamSeq = msgout.streamSeq = s_info->sinfo_ssn;
+    if(o_info.sinfo_assoc_id){
+      msgout.protocolId = o_info.sinfo_ppid;
+      lastStream = msgout.streamNo = o_info.sinfo_stream;
+      lastStreamSeq = msgout.streamSeq = o_info.sinfo_ssn;
     }else{
       printf("Gak! no info set\n");
     }
