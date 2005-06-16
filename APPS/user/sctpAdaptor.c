@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.6 2005-06-16 13:28:33 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.7 2005-06-16 13:43:11 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -68,7 +68,6 @@ static int lastStream=0;
 static int lastStreamSeq=0;
 static char *dataout=NULL;
 static int dtsize=0;
-static int infoset=0;
 static distributor *big_o=NULL;
 static int bindSpecific = 0;
 static int v6only = 0;
@@ -241,12 +240,12 @@ handle_notification(int fd,char *notify_buf) {
 	    if(pdapi->pdapi_indication == SCTP_PARTIAL_DELIVERY_ABORTED){
 	      printf("Sending up a truncated message\n");
 		/* Ok we can deliver this guy now */
-		if(infoset){
+		if(o_info.sinfo_assoc_id){
 		  msgout.protocolId = o_info.sinfo_ppid;
 		  lastStream = msgout.streamNo = o_info.sinfo_stream;
 		  lastStreamSeq = msgout.streamSeq = o_info.sinfo_ssn;
 		}else{
-		  printf("Gak! no info set?\n");
+		  printf("Gak! no info set (in pdapi)?\n");
 		}
 	      msgout.takeOk = 1;
 	      msgout.totSize = dtsize;
@@ -268,7 +267,6 @@ handle_notification(int fd,char *notify_buf) {
 	      }
 	      dataout = NULL;
 	      dtsize = 0;
-	      infoset = 0;
 	    }
 	  }
 	  break;
@@ -399,7 +397,7 @@ sctpReadInput(int fd, distributor *o,sctpAdaptorMod *r)
       lastStream = msgout.streamNo = o_info.sinfo_stream;
       lastStreamSeq = msgout.streamSeq = o_info.sinfo_ssn;
     }else{
-      printf("Gak! no info set\n");
+      printf("Gak! no info set with full msg\n");
     }
     msgout.takeOk = 0;
     msgout.totSize = sz;
@@ -440,12 +438,12 @@ sctpReadInput(int fd, distributor *o,sctpAdaptorMod *r)
   deliverIt:
     if(msg.msg_flags & MSG_EOR){
       /* Ok we can deliver this guy now */
-      if(infoset){
+      if(o_info.sinfo_assoc_id){
 	msgout.protocolId = o_info.sinfo_ppid;
 	lastStream = msgout.streamNo = o_info.sinfo_stream;
 	lastStreamSeq = msgout.streamSeq = o_info.sinfo_ssn;
       }else{
-	printf("Gak! no info set?\n");
+	printf("Gak! no info set with msg delivery?\n");
       }
       msgout.takeOk = 1;
       msgout.totSize = dtsize;
@@ -461,7 +459,6 @@ sctpReadInput(int fd, distributor *o,sctpAdaptorMod *r)
       dist_sendmessage(o,&msgout);
       dataout = NULL;
       dtsize = 0;
-      infoset = 0;
     }
   }
   return(0);
