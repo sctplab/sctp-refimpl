@@ -1398,8 +1398,8 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		/* Is this the first restart? */
 		if(stcb->asoc.in_restart_hash == 0) {
 			/* Ok add it to assoc_id vtag hash */
-			head = &sctppcbinfo.sctp_asochash[SCTP_PCBHASH_ASOC(stcb->asoc.assoc_id,
-									    sctppcbinfo.hashrestartmark)];
+			head = &sctppcbinfo.sctp_restarthash[SCTP_PCBHASH_ASOC(stcb->asoc.assoc_id,
+									       sctppcbinfo.hashrestartmark)];
 			LIST_INSERT_HEAD(head, stcb,sctp_tcbrestarhash);
 			stcb->asoc.in_restart_hash = 1;
 		}
