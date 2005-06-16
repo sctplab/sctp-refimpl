@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.14 2005-05-31 16:46:25 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.15 2005-06-16 10:53:37 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -817,7 +817,7 @@ checkBulkTranfer(void *v,void *xxx)
   cnt = 0;
   ret = 0;
   fd = (int)v;
-
+  printf("[Re-]enter checkBulkTransfer bulkCount:%d\n", bulkCount);
   while(bulkCount > 0){
     if(bulkPingMode == 0){
       fillPingBuffer(fd,(bulkBufSize-4));
@@ -826,6 +826,10 @@ checkBulkTranfer(void *v,void *xxx)
       ret = sendBulkTransfer(fd,bulkBufSize);
     }
     if(ret < 0){
+      printf("blocked fd ret < 0 errno:%d start timer", errno);
+      if(errno == ECONNRESET) {
+	printf("Connection reset, should really give up\n");
+      }
       dist_TimerStart(dist,checkBulkTranfer,0,
 		      20000,v,xxx);
       return;
@@ -3154,7 +3158,11 @@ cmd_getpegs(char *argv[], int argc)
  	"entersor", /* 100 */
  	"rch_frmk", /* 101 */
  	"fndbyaid", /* 102 */
- 	"bad_asid"  /* 103 */
+ 	"bad_asid", /* 103 */
+	"efr_strt", /* 104 */
+	"efr_stop", /* 105 */
+	"efr_expr", /* 106 */
+	"efr_mark", /* 107 */
     };
     printf("there are %d pegs\n",
 	   SCTP_NUMBER_OF_PEGS);
