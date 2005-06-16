@@ -169,7 +169,6 @@ void sctp_clr_stat_log(void)
 	sctp_cwnd_log_rolled=0;
 }
 
-static 
 void sctp_sblog(struct sockbuf *sb, 
 		struct sctp_tcb *stcb, int from, int incr)
 {
