@@ -244,6 +244,9 @@ sctp_sbappend( struct sockbuf *sb,
 #ifdef SCTP_STAT_LOGGING
 void sctp_log_strm_del_alt(u_int32_t, u_int16_t, int);
 
+void sctp_sblog(struct sockbuf *sb, 
+		struct sctp_tcb *stcb, int from, int incr);
+
 void sctp_log_strm_del(struct sctp_tmit_chunk *, struct sctp_tmit_chunk *, int);
 void sctp_log_cwnd(struct sctp_nets *, int, uint8_t);
 void rto_logging(struct sctp_nets *net, int from);
