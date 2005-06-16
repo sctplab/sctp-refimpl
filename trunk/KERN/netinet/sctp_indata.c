@@ -3911,6 +3911,10 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	/* update cwnd                */
 	/******************************/
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
+		if(net->flight_size == 0) {
+			/* stop any early FR timer */
+			sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net);
+		}
 		/* if nothing was acked on this destination skip it */
 		if (net->net_ack == 0)
 			continue;

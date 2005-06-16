@@ -3,7 +3,9 @@
 #ifndef __sctp_constants_h__
 #define __sctp_constants_h__
 
+#if defined(_KERNEL)
 #include <sys/kernel.h>
+#endif
 /*
  * Copyright (c) 2001, 2002, 2003, 2004 Cisco Systems, Inc.
  * All rights reserved.
@@ -465,6 +467,9 @@
 #define TICKS_TO_MSEC(x) (((x) * 1000) / hz)
 #define SEC_TO_TICKS(x) ((x) * hz)
 
+/* basically clock granulatity */
+#define SCTP_MIN_MSEC_TIMER 10
+
 /* init timer def = 1 sec */
 #define SCTP_INIT_SEC	1
 
@@ -660,7 +665,7 @@
 #define SCTP_UNSET_TSN_PRESENT(arry, gap) (arry[(gap >> 3)] &= ((~(0x01 << ((gap & 0x07)))) & 0xff))
 
 /* pegs */
-#define SCTP_NUMBER_OF_PEGS	104
+#define SCTP_NUMBER_OF_PEGS	108
 /* peg index's */
 #define SCTP_PEG_SACKS_SEEN	0
 #define SCTP_PEG_SACKS_SENT	1
@@ -766,7 +771,10 @@
 #define SCTP_REACHED_FR_MARK     101
 #define SCTP_BY_ASSOCID          102
 #define SCTP_ASID_BOGUS          103
-
+#define SCTP_EARLYFR_STRT_TMR    104
+#define SCTP_EARLYFR_STOP_TMR    105
+#define SCTP_EARLYFR_EXPI_TMR    106
+#define SCTP_EARLYFR_MRK_RETR    107
 /*
  * This value defines the number of vtag block time wait entry's
  * per list element.  Each entry will take 2 4 byte ints (and of

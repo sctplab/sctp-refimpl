@@ -999,6 +999,7 @@ sctp_expand_mapping_array(struct sctp_association *asoc)
 	return (0);
 }
 
+
 static void
 sctp_timeout_handler(void *t)
 {
@@ -1224,7 +1225,8 @@ sctp_timeout_handler(void *t)
 		break;
 	case SCTP_TIMER_TYPE_EARLYFR:
 	        /* Need to do FR of things for net */
-
+		sctp_pegs[SCTP_EARLYFR_EXPI_TMR]++;
+		sctp_early_fr_timer(inp, stcb, net);
 	        break;
 	case SCTP_TIMER_TYPE_ASCONF:
 		if (sctp_asconf_timer(inp, stcb, net)) {
@@ -1550,6 +1552,8 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		break;
 
 	case SCTP_TIMER_TYPE_EARLYFR:
+	{
+		int msec;
 		if ((stcb == NULL) || (net == NULL)) {
 			return (EFAULT);
 		}
@@ -1557,13 +1561,20 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		  /* no need to start */
 		  return (0);
 		}
+		sctp_pegs[SCTP_EARLYFR_STRT_TMR]++;
 		if(net->lastsa == 0) {
 		  /* Hmm no rtt estimate yet? */
-		  to_ticks = MSEC_TO_TICKS((stcb->asoc.initial_rto >> 2));
+			msec = stcb->asoc.initial_rto >> 2;
 		} else {
-		  to_ticks = MSEC_TO_TICKS((net->lastsa +  (net->lastsa >> 1)));
+			msec = net->lastsa +  (net->lastsa >> 1);
+			
 		}
+		if(msec < SCTP_MIN_MSEC_TIMER) {
+			msec = SCTP_MIN_MSEC_TIMER;
+		}
+		to_ticks = MSEC_TO_TICKS(msec);
 		tmr = &net->fr_timer;
+	}
 	        break;
 	case SCTP_TIMER_TYPE_ASCONF:
 		/*
@@ -1648,6 +1659,7 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			return (EFAULT);
 		}
 		tmr = &net->fr_timer;
+		sctp_pegs[SCTP_EARLYFR_STOP_TMR]++;
 		break;
 	case SCTP_TIMER_TYPE_ITERATOR:
 	{

@@ -263,6 +263,7 @@ struct sctp_tmit_chunk {
 	struct sctp_nets *whoTo;
 	TAILQ_ENTRY(sctp_tmit_chunk) sctp_next;	/* next link */
 	uint8_t do_rtt;
+	uint8_t book_size_scale;
 };
 
 

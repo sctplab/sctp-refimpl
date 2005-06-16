@@ -6139,6 +6139,15 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 				/*				}*/
 				sctp_pegs[SCTP_PEG_TSNS_SENT] += bundle_at;
 				sctp_clean_up_datalist(stcb, asoc, data_list, bundle_at, net);
+				if(net->flight_size > net->cwnd) {
+					/* stop it if its running */
+					if(callout_pending(&net->fr_timer.timer))
+						sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, inp, stcb, net);
+				} else {
+					/* start it if its not already running */
+					if(!callout_pending(&net->fr_timer.timer))
+						sctp_timer_start(SCTP_TIMER_TYPE_EARLYFR,inp, stcb, net);
+				}
 			}
 			if (one_chunk) {
 				break;
@@ -6973,16 +6982,22 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 				if (asoc->sent_queue_retran_cnt < 0) {
 				    asoc->sent_queue_retran_cnt = 0;
 				}
+				if(data_list[i]->book_size_scale) {
+					/* need to double the book size on this one */
+					data_list[i]->book_size_scale = 0;
+					data_list[i]->book_size += data_list[i]->send_size;
+				} else {
+					sctp_ucount_incr(asoc->total_flight_count);
+#ifdef SCTP_LOG_RWND
+					sctp_log_rwnd(SCTP_DECREASE_PEER_RWND,
+						      asoc->peers_rwnd , data_list[i]->send_size, sctp_peer_chunk_oh);
+#endif
+					asoc->peers_rwnd = sctp_sbspace_sub(asoc->peers_rwnd,
+									    (u_int32_t)(data_list[i]->send_size + 
+											sctp_peer_chunk_oh));
+				}
 				net->flight_size += data_list[i]->book_size;
 				asoc->total_flight += data_list[i]->book_size;
-				asoc->total_flight_count++;
-
-#ifdef SCTP_LOG_RWND
-				sctp_log_rwnd(SCTP_DECREASE_PEER_RWND,
-					      asoc->peers_rwnd , data_list[i]->send_size, sctp_peer_chunk_oh);
-#endif
-				asoc->peers_rwnd = sctp_sbspace_sub(asoc->peers_rwnd,
-								    (u_int32_t)(data_list[i]->send_size + sctp_peer_chunk_oh));
 				if (asoc->peers_rwnd < stcb->sctp_ep->sctp_ep.sctp_sws_sender) {
 					/* SWS sender side engages */
 					asoc->peers_rwnd = 0;

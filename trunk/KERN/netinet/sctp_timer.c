@@ -118,6 +118,94 @@ extern u_int32_t sctp_debug_on;
 #endif /* SCTP_DEBUG */
 
 void
+sctp_early_fr_timer(struct sctp_inpcb *inp,
+		    struct sctp_tcb *stcb,
+		    struct sctp_nets *net) 
+{
+	struct sctp_tmit_chunk *chk, *tp2;
+	struct timeval now, min_wait, tv;
+	int cur_rto,cnt=0;
+
+	/* first can we send more */
+	if(net->flight_size > net->cwnd)
+		/* nope, false t-o */
+		return;
+
+	/* an early FR is occuring. */
+	SCTP_GETTIME_TIMEVAL(&now);
+	/* get cur rto in micro-seconds */
+	cur_rto = (((net->lastsa >> 2) + net->lastsv) >> 1);
+#ifdef SCTP_FR_LOGGING
+	sctp_log_fr(cur_rto, 0, 0, SCTP_FR_T3_MARK_TIME);
+#endif
+	cur_rto *= 1000;
+#ifdef SCTP_FR_LOGGING
+	sctp_log_fr(cur_rto, 0, 0, SCTP_FR_T3_MARK_TIME);
+#endif
+	tv.tv_sec = cur_rto / 1000000;
+	tv.tv_usec = cur_rto % 1000000;
+#ifndef __FreeBSD__
+	timersub(&now, &tv, &min_wait);
+#else
+	min_wait = now;
+	timevalsub(&min_wait, &tv);
+#endif
+	if (min_wait.tv_sec < 0 || min_wait.tv_usec < 0) {
+		/*
+		 * if we hit here, we don't
+		 * have enough seconds on the clock to account
+		 * for the RTO. We just let the lower seconds
+		 * be the bounds and don't worry about it. This
+		 * may mean we will mark a lot more than we should.
+		 */
+		min_wait.tv_sec = min_wait.tv_usec = 0;
+	}
+	chk = TAILQ_FIRST(&stcb->asoc.sent_queue);
+	for (;chk != NULL; chk = tp2) {
+		tp2 = TAILQ_NEXT(chk, sctp_next);
+		if(chk->whoTo != net) {
+			continue;
+		}
+		if ((chk->sent > SCTP_DATAGRAM_UNSENT) &&
+		    (chk->sent < SCTP_DATAGRAM_RESEND)) {
+			/* pending, may need retran */
+			if (chk->sent_rcv_time.tv_sec > min_wait.tv_sec) {
+				/* we have reached a chunk that was sent some
+				 * seconds past our min.. forget it we will
+				 * find no more to send.
+				 */
+				continue;
+			} else if (chk->sent_rcv_time.tv_sec == min_wait.tv_sec) {
+				/* we must look at the micro seconds to know.
+				 */
+				if (chk->sent_rcv_time.tv_usec >= min_wait.tv_usec) {
+					/* ok it was sent after our boundary time. */
+					continue;
+				}
+			}
+			sctp_pegs[SCTP_EARLYFR_MRK_RETR]++;
+			chk->sent = SCTP_DATAGRAM_RESEND;
+			sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
+			/* double book size since we are doing an early FR */
+			chk->book_size_scale++;
+			cnt++;
+		}
+	}
+	if(cnt) {
+		sctp_chunk_output(inp, stcb, 9);
+		/* make a small adjustment to cwnd and
+		 * force to CA.
+		 */
+		if(net->cwnd > net->mtu)
+			/* drop down one MTU after sending */
+			net->cwnd -= net->mtu;
+		if(net->cwnd < net->ssthresh) 
+			/* still in SS move to CA */
+			net->ssthresh = net->cwnd - 1;
+	}
+}
+
+void
 sctp_audit_retranmission_queue(struct sctp_association *asoc)
 {
 	struct sctp_tmit_chunk *chk;
