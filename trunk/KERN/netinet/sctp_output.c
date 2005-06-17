@@ -4093,11 +4093,15 @@ sctp_prepare_chunk(struct sctp_tmit_chunk *template,
 		 * We assume that the user wants PR_SCTP_TTL
 		 * if the user provides a positive lifetime but
 		 * does not specify any PR_SCTP policy.
+		 * This is a BAD assumption and causes problems
+		 * at least with the U-Vancovers MPI folks. I will
+		 * change this to be no policy means NO PR-SCTP.
 		 */
 		if ((srcv->sinfo_timetolive > 0) && (!PR_SCTP_ENABLED(srcv->sinfo_flags))) {
 			template->flags |= CHUNK_FLAGS_PR_SCTP_TTL;
 		} else {
 			template->flags |= PR_SCTP_POLICY(srcv->sinfo_flags);
+			goto sctp_no_policy;
 		}
 		switch (PR_SCTP_POLICY(template->flags)) {
 		struct timeval tv;
@@ -4137,6 +4141,7 @@ sctp_prepare_chunk(struct sctp_tmit_chunk *template,
 		break;
 		}
 	}
+sctp_no_policy:
 	if ((srcv->sinfo_flags & SCTP_UNORDERED) == 0) {
 		template->rec.data.stream_seq = strq->next_sequence_sent;
 	} else {
@@ -4160,7 +4165,6 @@ sctp_prepare_chunk(struct sctp_tmit_chunk *template,
 	  /* Here we would want to clear that
 	   * flag for CMT.
 	   */
-
 		if (stcb->asoc.primary_destination)
 			template->whoTo = stcb->asoc.primary_destination;
 		else {
