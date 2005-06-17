@@ -881,7 +881,9 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 	/* Find an alternate and mark those for retransmission */
 	alt = sctp_find_alternate_net(stcb, net);
 	win_probe = sctp_mark_all_for_resend(stcb, net, alt, &num_mk);
-
+	if(win_probe) {
+		sctp_pegs[SCTP_T3_AT_WINPROBE]++;
+	}
 	/* FR Loss recovery just ended with the T3. */
 	stcb->asoc.fast_retran_loss_recovery = 0;
 
