@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.15 2005-06-16 10:53:37 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.16 2005-06-17 11:31:33 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -169,6 +169,7 @@ static int cmd_restorefd(char *argv[], int argc);
 static int cmd_listen(char *argv[], int argc);
 static int cmd_setfd(char *argv[], int argc);
 static int cmd_getevents(char *argv[], int argc);
+static int cmd_getpaddrs(char *argv[], int argc);
 static int cmd_getstatus(char *argv[], int argc);
 static int cmd_closefd(char *argv[], int argc);
 static int cmd_silent(char *argv[], int argc);
@@ -266,6 +267,8 @@ static struct command commands[] = {
      cmd_getdefcookielife},
     {"getevents", "getevents - display the event registration status",
      cmd_getevents},
+    {"getpaddrs", "getpaddrs [asocid] - display the peers addresses",
+     cmd_getpaddrs},
     {"getstatus", "getstatus - display the associaiton status",
      cmd_getstatus},
     {"heartctl", "heartctl on/off/allon/alloff - Turn HB on or off to the destination or all dests",
@@ -2608,6 +2611,28 @@ cmd_bulkstat(char *argv[], int argc)
   return 0;
 }
 
+static int 
+cmd_getpaddrs(char *argv[], int argc)
+{
+	sctp_assoc_t asocid;
+	int cnt;
+	struct sockaddr *addrs=NULL;
+	if(argc == 0) {
+		asocid = get_assoc_id();
+	} else {
+		asocid = (sctp_assoc_t)strtoul(argv[0], NULL, 0);
+	}
+	printf("Getting addresses for assoc id %x\n", (u_int)asocid);
+	cnt = sctp_getpaddrs(adap->fd, asocid, &addrs);
+	if(addrs == NULL) {
+		printf("Returned errno %d\n", errno);
+	} else {
+		printf("Got %d addresses back\n", cnt);
+	}
+	sctp_freepaddrs(addrs);
+	return 0;
+}
+
 
 /* chgcookielife val - change the current assoc cookieLife
  */
@@ -4064,6 +4089,8 @@ cmd_getstatus(char *argv[], int argc)
   printf("primary-mtu  :%d \n",stat.sstat_primary.spinfo_mtu);
   return(0);
 }
+
+
 
 static int
 cmd_getevents(char *argv[], int argc)
