@@ -1597,8 +1597,8 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 
 	/* process the INIT-ACK info (my info) */
 	old_tag = asoc->my_vtag;
-	asoc->my_vtag = ntohl(initack_cp->init.initiate_tag);
-	asoc->assoc_id = asoc->my_rwnd = ntohl(initack_cp->init.a_rwnd);
+	asoc->assoc_id = asoc->my_vtag = ntohl(initack_cp->init.initiate_tag);
+	asoc->my_rwnd = ntohl(initack_cp->init.a_rwnd);
 	asoc->pre_open_streams = ntohs(initack_cp->init.num_outbound_streams);
 	asoc->init_seq_number = ntohl(initack_cp->init.initial_tsn);
 	asoc->sending_seq = asoc->asconf_seq_out = asoc->str_reset_seq_out = asoc->init_seq_number;
