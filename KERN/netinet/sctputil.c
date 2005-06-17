@@ -3440,7 +3440,7 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp, stcb)
 	return (1);
 #endif
 #if defined(__FreeBSD__) || defined(__APPLE__)
-	struct mbuf *m, *n, *nlast;
+	struct mbuf *m, *n, *nlast, *cleanup;
 	struct mbuf *prev;
 	int msg_eor_seen = 0;
 	int cnt=0;
@@ -3453,13 +3453,9 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp, stcb)
 	    break;
 	}
 	cnt = 0;
-#if MSIZE <= 256
 	if (asa->sa_len > MHLEN)
 		return (0);
-#endif
-
  try_again:
-
 	MGET(m, M_DONTWAIT, MT_SONAME);
 	if (m == 0)
 		return (0);
@@ -3479,21 +3475,21 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp, stcb)
 	SOCKBUF_LOCK(sb);
 	/* crush out 0 length mbufs from m0 chain */
 	prev = NULL;
-	n = m0;
-	while(n) {
-		if(n->m_len == 0) {
+	cleanup = m0;
+	while(cleanup) {
+		if(cleanup->m_len == 0) {
 			if(prev == NULL) {
-				m0 = m_free(n);
-				n = m0;
+				m0 = m_free(cleanup);
+				cleanup = m0;
 			} else {
-				prev->m_next = m_free(n);
-				n = prev->m_next;
+				prev->m_next = m_free(cleanup);
+				cleanup = prev->m_next;
 			}
 			continue;
 		}
 		/* next mbuf */
-		prev = n;
-		n = n->m_next;
+		prev = cleanup;
+		cleanup = cleanup->m_next;
 	}
 	m->m_len = asa->sa_len;
 	bcopy((caddr_t)asa, mtod(m, caddr_t), asa->sa_len);
