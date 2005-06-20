@@ -5084,20 +5084,6 @@ sctp_clean_up_datalist(struct sctp_tcb *stcb,
 		/* This does not lower until the cum-ack passes it */
 		asoc->sent_queue_cnt++;
 		asoc->send_queue_cnt--;
-		if ((asoc->peers_rwnd <= 0) &&
-		    (asoc->total_flight == 0) &&
-		    (bundle_at == 1)) {
-			/* Mark the chunk as being a window probe */
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
-				printf("WINDOW PROBE SET\n");
-			}
-#endif
-			sctp_pegs[SCTP_WINDOW_PROBES]++;
-			data_list[i]->rec.data.state_flags |= SCTP_WINDOW_PROBE;
-		} else {
-			data_list[i]->rec.data.state_flags &= ~SCTP_WINDOW_PROBE;
-		}
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_audit_log(0xC2, 3);
 #endif
@@ -5520,6 +5506,8 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 			/* we are allowed one chunk in flight */
 			no_data_chunks = 1;
 			sctp_pegs[SCTP_RWND_BLOCKED]++;
+		} else {
+			sctp_pegs[SCTP_WINDOW_PROBES]++;
 		}
 	}
 #ifdef SCTP_DEBUG
@@ -6841,6 +6829,9 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 #endif
 			sctp_pegs[SCTP_RWND_BLOCKED]++;
 			return (1);
+		} else if ((asoc->peers_rwnd == 0) &&
+			   (asoc->total_flight == 0)) {
+			sctp_pegs[SCTP_RETRAN_WIN_PROBE]++;
 		}
 	one_chunk_around:
 		if (asoc->peers_rwnd < mtu) {
@@ -6880,10 +6871,6 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 			}
 			mtu -= chk->send_size;
 			data_list[bundle_at++] = chk;
-			if (one_chunk && (asoc->total_flight <= 0)) {
-				sctp_pegs[SCTP_WINDOW_PROBES]++;
-				chk->rec.data.state_flags |= SCTP_WINDOW_PROBE;
-			}
 		}
 		if (one_chunk == 0) {
 			/* now are there anymore forward from chk to pick up?*/
