@@ -135,13 +135,7 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 	} else {
 		cur_rtt = net->lastsa +  (net->lastsa >> 1);
 	}
-#ifdef SCTP_FR_LOGGING
-	sctp_log_fr(cur_rtt, 0, 0, SCTP_FR_T3_MARK_TIME);
-#endif
 	cur_rtt *= 1000;
-#ifdef SCTP_FR_LOGGING
-	sctp_log_fr(cur_rtt, 0, 0, SCTP_FR_T3_MARK_TIME);
-#endif
 	tv.tv_sec = cur_rtt / 1000000;
 	tv.tv_usec = cur_rtt % 1000000;
 #ifndef __FreeBSD__
@@ -505,9 +499,6 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	SCTP_GETTIME_TIMEVAL(&now);
 	/* get cur rto in micro-seconds */
 	cur_rtt = (((net->lastsa >> 2) + net->lastsv) >> 1);
-#ifdef SCTP_FR_LOGGING
-	sctp_log_fr(cur_rtt, 0, 0, SCTP_FR_T3_MARK_TIME);
-#endif
 	cur_rtt *= 1000;
 #ifdef SCTP_FR_LOGGING
 	sctp_log_fr(cur_rtt, 0, 0, SCTP_FR_T3_MARK_TIME);
