@@ -97,6 +97,8 @@
 #define SCTP_LOG_SBALLOC            53
 #define SCTP_LOG_SBFREE             54
 #define SCTP_LOG_SBRESULT           55
+#define SCTP_FR_DUPED               56
+#define SCTP_FR_MARKED_EARLY        57
 /*
  * To turn on various logging, you must first define SCTP_STAT_LOGGING.
  * Then to get something to log you define one of the logging defines i.e.

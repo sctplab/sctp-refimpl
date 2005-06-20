@@ -3567,6 +3567,24 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 		      num_dup, 
 		      SCTP_LOG_NEW_SACK);
 #endif
+#ifdef SCTP_FR_LOGGING
+	if(num_dup) {
+		int off_to_dup,iii;
+		u_int32_t *dupdata;
+		off_to_dup = (num_seg * sizeof(struct sctp_gap_ack_block)) + sizeof(struct sctp_sack_chunk);
+		if((off_to_dup + (num_dup * sizeof(u_int32_t))) <= sack_length) {
+			dupdata = (u_int32_t *)((caddr_t)ch + off_to_dup);
+			for(iii = 0 ; iii<num_dup; iii++) {
+				sctp_log_fr(*dupdata, 0, 0, SCTP_FR_DUPED);
+				dupdata++;
+				
+			}
+		} else {
+			printf("Size invalid offset to dups:%d number dups:%d sack_len:%d num gaps:%d\n",
+			       off_to_dup, num_dup, sack_length, num_seg);
+		}
+	}
+#endif
 	/* reality check */
 	if (TAILQ_EMPTY(&asoc->send_queue)) {
 		send_s = asoc->sending_seq;
@@ -3907,6 +3925,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 
 	}
 
+
 	if (asoc->saw_sack_with_frags)
 		sctp_check_for_revoked(asoc, cum_ack, biggest_tsn_acked);
 	else {
@@ -4123,8 +4142,10 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 		/* nothing left in-flight */
 		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 			/* stop all timers */
-			if(callout_pending(&net->fr_timer.timer)) {
-				sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net);
+			if(sctp_early_fr) {
+				if(callout_pending(&net->fr_timer.timer)) {
+					sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net);
+				}
 			}
 			sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
 					stcb, net);
