@@ -3680,8 +3680,10 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 			sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
 					stcb, net);
-			if(callout_pending(&net->fr_timer.timer)) {
-				sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net);
+			if(sctp_early_fr) {
+				if(callout_pending(&net->fr_timer.timer)) {
+					sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net);
+				}
 			}
 			net->partial_bytes_acked = 0;
 			net->flight_size = 0;
@@ -4095,9 +4097,10 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 			/* after all is said and done, do we
 			 * need a early_fr running?
 			 */
-			if((net->flight_size && 
-			    (net->flight_size < net->cwnd)) &&
-			   (net->flight_size < (sctp_get_frag_point(stcb, &stcb->asoc) * 4))){
+			if((net->flight_size) && 
+			   (net->flight_size < net->cwnd) &&
+			   (net->flight_size < (sctp_get_frag_point(stcb, &stcb->asoc) * 4))
+				){
 				/* yep */
 				if(!callout_pending(&net->fr_timer.timer)) {
 					sctp_timer_start(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net);
