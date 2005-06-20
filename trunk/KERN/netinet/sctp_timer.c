@@ -508,7 +508,10 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	cur_rtt = (((net->lastsa >> 2) + net->lastsv) >> 1);
 	cur_rtt *= 1000;
 #ifdef SCTP_FR_LOGGING
-	sctp_log_fr(cur_rtt, 0, 0, SCTP_FR_T3_MARK_TIME);
+	sctp_log_fr(cur_rtt, 
+		    callout_pending(&net->fr_timer.timer), 
+		    callout_active(&net->fr_timer.timer), 
+		    SCTP_FR_T3_MARK_TIME);
 #endif
 	tv.tv_sec = cur_rtt / 1000000;
 	tv.tv_usec = cur_rtt % 1000000;

@@ -1099,11 +1099,18 @@ sctp_timeout_handler(void *t)
 	/* clear the callout pending status here */
 	callout_stop(&tmr->timer);
 #endif
+
+	
 	if (stcb) {
 		SCTP_TCB_LOCK(stcb);
 	}
+
+	/* mark as being serviced now */
+	callout_deactivate(&tmr->timer);
+
 	SCTP_INP_INCR_REF(inp);
 	SCTP_INP_WUNLOCK(inp);
+
 
 	typ = tmr->type;
 	switch (tmr->type) {
