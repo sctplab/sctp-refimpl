@@ -135,6 +135,9 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 	} else {
 		cur_rtt = net->lastsa +  (net->lastsa >> 1);
 	}
+	if(cur_rtt < SCTP_MIN_MSEC_TIMER) {
+		cur_rtt = SCTP_MIN_MSEC_TIMER;
+	}
 	cur_rtt *= 1000;
 	tv.tv_sec = cur_rtt / 1000000;
 	tv.tv_usec = cur_rtt % 1000000;
@@ -184,6 +187,10 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 			(int)chk->sent_rcv_time.tv_sec, 
 			(int)chk->sent_rcv_time.tv_usec);
 			*/
+#ifdef SCTP_FR_LOGGING
+			sctp_log_fr(chk->rec.data.TSN_seq, chk->snd_count,
+			    4, SCTP_FR_MARKED);
+#endif
 			sctp_pegs[SCTP_EARLYFR_MRK_RETR]++;
 			chk->sent = SCTP_DATAGRAM_RESEND;
 			sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
