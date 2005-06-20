@@ -131,8 +131,9 @@ main(int argc, char **argv)
 				       from_str[log.from]);
 			}
 		}else if(log.event_type == SCTP_LOG_EVENT_SB) {
-			printf("%d stcb:%x sb_cc:%x stcb_sbcc:%x %s:%d\n",
+			printf("%d: %s stcb:%x sb_cc:%x stcb_sbcc:%x %s:%d\n",
 			       at,
+			       from_str[log.from],
 			       log.x.sb.stcb,
 			       log.x.sb.so_sbcc,
 			       log.x.sb.stcb_sbcc,
