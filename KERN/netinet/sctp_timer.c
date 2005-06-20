@@ -478,8 +478,7 @@ static int
 sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 			 struct sctp_nets *net,
 			 struct sctp_nets *alt,
-			 int *num_marked,
-			 int win_probe)
+			 int *num_marked)
 {
 
 	/*
@@ -492,7 +491,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	struct sctp_nets *lnets;
 	struct timeval now, min_wait, tv;
 	int cur_rtt;
-	int orig_rwnd, audit_tf, num_mk, fir;
+	int win_probes, non_win_probes, orig_rwnd, audit_tf, num_mk, fir;
 	unsigned int cnt_mk;
 	u_int32_t orig_flight;
 	u_int32_t tsnlast, tsnfirst;
@@ -551,6 +550,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	net->flight_size = 0;
 	net->rto_pending = 0;
 	net->fast_retran_ip= 0;
+	win_probes = non_win_probes = 0;
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_TIMER2) {
 		printf("Marking ALL un-acked for retransmission at t3-timeout\n");
@@ -694,6 +694,13 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 				chk->whoTo = alt;
 				alt->ref_count++;
 			}
+			if ((chk->rec.data.state_flags & SCTP_WINDOW_PROBE) !=
+			    SCTP_WINDOW_PROBE) {
+				non_win_probes++;
+			} else {
+				chk->rec.data.state_flags &= ~SCTP_WINDOW_PROBE;
+				win_probes++;
+			}
 		} else if (chk->sent == SCTP_DATAGRAM_ACKED) {
 			/* remember highest acked one */
 			could_be_sent = chk;
@@ -706,6 +713,8 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 #ifdef SCTP_FR_LOGGING
 	sctp_log_fr(tsnfirst, tsnlast, num_mk, SCTP_FR_T3_TIMEOUT);
 #endif
+	/* compensate for the number we marked */
+	stcb->asoc.peers_rwnd += (num_mk /* * sizeof(struct mbuf)*/);
 
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_TIMER1) {
@@ -754,6 +763,22 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 			alt->ref_count++;
 		}
 	}
+	if ((orig_rwnd == 0) && (stcb->asoc.total_flight == 0) &&
+	    (orig_flight <= net->mtu)) {
+		/*
+		 * If the LAST packet sent was not acked and our rwnd is 0
+		 * then we are in a win-probe state.
+		 */
+		win_probes = 1;
+		non_win_probes = 0;
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_TIMER1) {
+			printf("WIN_PROBE set via o_rwnd=0 tf=0 and all:%d fit in mtu:%d\n",
+			       orig_flight, net->mtu);
+		}
+#endif
+	}
+
 	if (audit_tf) {
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_TIMER4) {
@@ -795,6 +820,10 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	}
 	stcb->asoc.nonce_wait_for_ecne = 0;
 	stcb->asoc.nonce_sum_check = 0;
+	/* We return 1 if we only have a window probe outstanding */
+	if (win_probes && (non_win_probes == 0)) {
+		return (1);
+	}
 	return (0);
 }
 
@@ -851,14 +880,10 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 #endif
 	/* Find an alternate and mark those for retransmission */
 	alt = sctp_find_alternate_net(stcb, net);
-	if((stcb->asoc.peers_rwnd == 0) && (stcb->asoc.total_flight <= net->mtu)) {
-		win_probe = 1;
+	win_probe = sctp_mark_all_for_resend(stcb, net, alt, &num_mk);
+	if(win_probe) {
 		sctp_pegs[SCTP_T3_AT_WINPROBE]++;
-	} else {
-		win_probe = 0;
 	}
-	sctp_mark_all_for_resend(stcb, net, alt, &num_mk, win_probe);
-
 	/* FR Loss recovery just ended with the T3. */
 	stcb->asoc.fast_retran_loss_recovery = 0;
 
