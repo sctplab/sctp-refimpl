@@ -189,7 +189,7 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 			*/
 #ifdef SCTP_FR_LOGGING
 			sctp_log_fr(chk->rec.data.TSN_seq, chk->snd_count,
-			    4, SCTP_FR_MARKED);
+			    4, SCTP_FR_MARKED_EARLY);
 #endif
 			sctp_pegs[SCTP_EARLYFR_MRK_RETR]++;
 			chk->sent = SCTP_DATAGRAM_RESEND;
