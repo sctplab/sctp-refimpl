@@ -87,9 +87,12 @@ main(int argc, char **argv)
 		/* 52 */ "RTT Variance",
 		/* 53 */ "SB Alloc",
                 /* 54 */ "SB Free",
-		/* 55 */ "Unknown"
+		/* 55 */ "SB result", 
+		/* 56 */ "Duplicate TSN sent",
+		/* 57 */ "Early FR",
+		/* 58 */ "Unknown"
 	};
-#define FROM_STRING_MAX 55
+#define FROM_STRING_MAX 58
 	FILE *out;
 	int at;
 	struct sctp_cwnd_log log;
@@ -300,7 +303,14 @@ main(int argc, char **argv)
 				       log.x.fr.largest_tsn,
 				       log.x.fr.largest_new_tsn,
 				       (int)log.x.fr.tsn);
+
+			} else if (log.from == SCTP_FR_DUPED) {
+				printf("%s: TSN:%u \n",
+				       from_str[log.from],
+				       log.x.fr.largest_tsn);
+
 			} else if ((log.from == SCTP_FR_T3_MARKED) ||
+				   (log.from == SCTP_FR_MARKED_EARLY) ||
 				   (log.from == SCTP_FR_MARKED)) {
 				printf("%s: TSN:%u send-count:%d\n",
 				       from_str[log.from],
