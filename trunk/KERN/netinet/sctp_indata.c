@@ -4080,7 +4080,9 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 			    (net->flight_size < net->cwnd)) &&
 			   (net->flight_size < (sctp_get_frag_point(stcb, &stcb->asoc) * 4))){
 				/* yep */
-				sctp_timer_start(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net);
+				if(!callout_pending(&net->fr_timer.timer)) {
+					sctp_timer_start(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net);
+				}
 			}
 		}
 		/*

@@ -6145,16 +6145,18 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 				sctp_pegs[SCTP_PEG_TSNS_SENT] += bundle_at;
 				sctp_clean_up_datalist(stcb, asoc, data_list, bundle_at, net);
 				if(sctp_early_fr) {
-					if((net->flight_size > net->cwnd) &&
-					   (net->flight_size < (sctp_get_frag_point(stcb, &stcb->asoc) * 4))){
+					if((net->flight_size > net->cwnd) ||
+					   (net->flight_size > (sctp_get_frag_point(stcb, &stcb->asoc) * 4))){
 						/* stop it if its running */
 						if(callout_pending(&net->fr_timer.timer)) {
 							sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, inp, stcb, net);
 						}
 					} else {
 						/* start it if its not already running */
-						if(!callout_pending(&net->fr_timer.timer)) {
-							sctp_timer_start(SCTP_TIMER_TYPE_EARLYFR,inp, stcb, net);
+						if(net->flight_size < (sctp_get_frag_point(stcb, &stcb->asoc) * 4)) {
+						   if(!callout_pending(&net->fr_timer.timer)) {
+							   sctp_timer_start(SCTP_TIMER_TYPE_EARLYFR,inp, stcb, net);
+						   }
 						}
 					}
 				}
