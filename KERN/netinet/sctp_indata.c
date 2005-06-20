@@ -2843,9 +2843,11 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		frag++; /* next one */
 	}
 #ifdef SCTP_FR_LOGGING
+/*
 	if (num_frs)
 		sctp_log_fr(*biggest_tsn_acked, *biggest_newly_acked_tsn,
 		    last_tsn, SCTP_FR_LOG_BIGGEST_TSNS);
+*/
 #endif
 }
 
@@ -3060,10 +3062,12 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					 * a FR.
 					 */
 #ifdef SCTP_FR_LOGGING
+/*
 					sctp_log_fr(biggest_tsn_newly_acked,
-					    tp1->rec.data.TSN_seq,
+	 				    tp1->rec.data.TSN_seq,
 					    tp1->rec.data.fast_retran_tsn,
 					    SCTP_FR_LOG_STRIKE_CHUNK);
+*/
 #endif
 					tp1->sent++;
 					strike_flag=1;
