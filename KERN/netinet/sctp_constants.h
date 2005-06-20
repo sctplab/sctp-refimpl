@@ -780,7 +780,7 @@
 #define SCTP_EARLYFR_EXPI_TMR    106
 #define SCTP_EARLYFR_MRK_RETR    107
 #define SCTP_T3_AT_WINPROBE      108
-#define SCTP_RESV1               109
+#define SCTP_RETRAN_WIN_PROBE    109
 #define SCTP_RESV2               110
 #define SCTP_RESV3               111
 /*
