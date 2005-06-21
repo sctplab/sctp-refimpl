@@ -117,6 +117,8 @@
 extern u_int32_t sctp_debug_on;
 #endif /* SCTP_DEBUG */
 
+extern unsigned int sctp_early_fr_msec;
+
 void
 sctp_early_fr_timer(struct sctp_inpcb *inp,
 		    struct sctp_tcb *stcb,
@@ -133,10 +135,10 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 		/* Hmm no rtt estimate yet? */
 		cur_rtt = stcb->asoc.initial_rto >> 2;
 	} else {
-		cur_rtt = net->lastsa +  (net->lastsa >> 1);
+		cur_rtt = net->lastsa + (net->lastsa >> 1);
 	}
-	if(cur_rtt < SCTP_MIN_MSEC_TIMER) {
-		cur_rtt = SCTP_MIN_MSEC_TIMER;
+	if(cur_rtt < sctp_early_fr_msec) {
+		cur_rtt = sctp_early_fr_msec;
 	}
 	cur_rtt *= 1000;
 	tv.tv_sec = cur_rtt / 1000000;

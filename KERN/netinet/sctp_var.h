@@ -81,11 +81,12 @@
 #define SCTPCTL_EARLY_FR            28
 #define SCTPCTL_RTTVAR_CC           29
 #define SCTPCTL_DEADLOCK_DET        30
+#define SCTPCTL_EARLY_FR_MSEC       31
 #ifdef SCTP_DEBUG
-#define SCTPCTL_DEBUG               31
-#define SCTPCTL_MAXID		    32
+#define SCTPCTL_DEBUG               32
+#define SCTPCTL_MAXID		    33
 #else
-#define SCTPCTL_MAXID		    31
+#define SCTPCTL_MAXID		    32
 #endif
 
 #endif
