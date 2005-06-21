@@ -1598,8 +1598,12 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			msec = net->lastsa +  (net->lastsa >> 1);
 			
 		}
-		if(msec < sctp_early_fr_msec) {
-			msec = sctp_early_fr_msec;
+		if (msec < sctp_early_fr_msec) {
+			if (msec < SCTP_MINFR_MSEC_FLOOR) {
+				msec = SCTP_MINFR_MSEC_FLOOR;
+			} else {
+				msec = sctp_early_fr_msec;
+			}
 		}
 		to_ticks = MSEC_TO_TICKS(msec);
 		tmr = &net->fr_timer;
