@@ -127,7 +127,6 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 	struct sctp_tmit_chunk *chk, *tp2;
 	struct timeval now, min_wait, tv;
 	int cur_rtt,cnt=0;
-	int tot_out=0;
 	
 	/* an early FR is occuring. */
 	SCTP_GETTIME_TIMEVAL(&now);
@@ -160,9 +159,9 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 		 */
 		min_wait.tv_sec = min_wait.tv_usec = 0;
 	}
-	chk = TAILQ_LAST(&stcb->asoc.sent_queue);
+	chk = TAILQ_LAST(&stcb->asoc.sent_queue, sctpchunk_listhead);
 	for (;chk != NULL; chk = tp2) {
-		tp2 = TAILQ_PREV(chk, sctp_next);
+		tp2 = TAILQ_PREV(chk, sctpchunk_listhead, sctp_next);
 		if(chk->whoTo != net) {
 			continue;
 		}
@@ -215,7 +214,7 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 		/* Restart it? */
 		if((net->flight_size) && 
 		   (net->flight_size < net->cwnd) &&
-		   (net->flight_size < (sctp_get_frag_point(stcb, &stcb->asoc) * 4))
+		   (net->flight_size < (sctp_get_frag_point(stcb, &stcb->asoc) * 4)))
 		   sctp_timer_start(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net);
 
 	}
