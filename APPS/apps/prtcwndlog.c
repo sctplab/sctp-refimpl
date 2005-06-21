@@ -319,11 +319,10 @@ main(int argc, char **argv)
 			} else if ((log.from == SCTP_FR_T3_MARKED) ||
 				   (log.from == SCTP_FR_MARKED_EARLY) ||
 				   (log.from == SCTP_FR_MARKED)) {
-				printf("%s: TSN:%u send-count:%d (%d)\n",
+				printf("%s: TSN:%u send-count:%d\n",
 				       from_str[log.from],
 				       log.x.fr.largest_tsn,
-				       (int)log.x.fr.largest_new_tsn,
-				       (int)log.x.fr.tsn);
+				       (int)log.x.fr.largest_new_tsn);
 			} else if ((log.from == SCTP_FR_T3_STOPPED)  ||
 				   (log.from == SCTP_FR_T3_MARK_TIME)) {
 				printf("%s: TSN:%u Seconds:%u Usecond:%d\n",
