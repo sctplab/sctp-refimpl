@@ -474,11 +474,17 @@
 #define TICKS_TO_MSEC(x) (((x) * 1000) / hz)
 #define SEC_TO_TICKS(x) ((x) * hz)
 
-/* basically the minimum amount
+/* Basically the minimum amount
  * of time before I do a early
- * FR.
+ * FR. Making this value to low will
+ * cause duplicate retransmissions.
  */
-#define SCTP_MINFR_MSEC_TIMER 30
+#define SCTP_MINFR_MSEC_TIMER 250
+/* The floor that I will allow this
+ * value to fall to when starting
+ * a timer.
+ */
+#define SCTP_MINFR_MSEC_FLOOR 20
 
 /* init timer def = 1 sec */
 #define SCTP_INIT_SEC	1
