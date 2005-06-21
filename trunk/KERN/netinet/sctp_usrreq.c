@@ -154,6 +154,7 @@ unsigned int sctp_path_rtx_max_default = SCTP_DEF_MAX_SEND/2;
 unsigned int sctp_nr_outgoing_streams_default = SCTP_OSTREAM_INITIAL;
 unsigned int sctp_cmt_on_off = 0;
 unsigned int sctp_early_fr = 1;
+unsigned int sctp_early_fr_msec = SCTP_MINFR_MSEC_TIMER;
 unsigned int sctp_use_rttvar_cc = 0;
 
 
@@ -670,6 +671,10 @@ SYSCTL_UINT(_net_inet_sctp, OID_AUTO, cmt_on_off, CTLFLAG_RW,
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, early_fast_retran, CTLFLAG_RW,
 	    &sctp_early_fr, 0,
 	    "Early Fast Retransmit with Timer");
+
+SYSCTL_UINT(_net_inet_sctp, OID_AUTO, early_fast_retran_msec, CTLFLAG_RW,
+	    &sctp_early_fr_msec, 0,
+	    "Early Fast Retransmit minimum timer value");
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, use_rttvar_congctrl, CTLFLAG_RW,
 	    &sctp_use_rttvar_cc, 0,
@@ -4877,6 +4882,9 @@ sctp_sysctl(name, namelen, oldp, oldlenp, newp, newlen)
  	case SCTPCTL_EARLY_FR:
  		return (sysctl_int(oldp, oldlenp, newp, newlen,
  				   &sctp_early_fr));
+ 	case SCTPCTL_EARLY_FR_MSEC:
+ 		return (sysctl_int(oldp, oldlenp, newp, newlen,
+ 				   &sctp_early_fr_msec));
  	case SCTPCTL_RTTVAR_CC:
  		return (sysctl_int(oldp, oldlenp, newp, newlen,
  				   &sctp_use_rttvar_cc));
@@ -5072,6 +5080,14 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
                        SYSCTL_DESCR("Early Fast Retransmit with Timer"),
                        NULL, 0, &sctp_early_fr, 0,
                        CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_EARLY_FR,
+                       CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "early_fast_retran_msec",
+                       SYSCTL_DESCR("Early Fast Retransmit minimum Timer value"),
+                       NULL, 0, &sctp_early_fr_msec, 0,
+                       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_EARLY_FR_MSEC,
                        CTL_EOL);
 
        sysctl_createv(clog, 0, NULL, NULL,

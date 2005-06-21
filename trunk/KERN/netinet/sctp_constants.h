@@ -473,8 +473,11 @@
 #define TICKS_TO_MSEC(x) (((x) * 1000) / hz)
 #define SEC_TO_TICKS(x) ((x) * hz)
 
-/* basically clock granulatity doubled */
-#define SCTP_MIN_MSEC_TIMER 20
+/* basically the minimum amount
+ * of time before I do a early
+ * FR.
+ */
+#define SCTP_MINFR_MSEC_TIMER 30
 
 /* init timer def = 1 sec */
 #define SCTP_INIT_SEC	1

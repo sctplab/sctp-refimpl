@@ -1020,6 +1020,7 @@ sctp_expand_mapping_array(struct sctp_association *asoc)
 	return (0);
 }
 
+extern unsigned int sctp_early_fr_msec;
 
 static void
 sctp_timeout_handler(void *t)
@@ -1597,8 +1598,8 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			msec = net->lastsa +  (net->lastsa >> 1);
 			
 		}
-		if(msec < SCTP_MIN_MSEC_TIMER) {
-			msec = SCTP_MIN_MSEC_TIMER;
+		if(msec < sctp_early_fr_msec) {
+			msec = sctp_early_fr_msec;
 		}
 		to_ticks = MSEC_TO_TICKS(msec);
 		tmr = &net->fr_timer;
