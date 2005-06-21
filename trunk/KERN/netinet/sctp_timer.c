@@ -127,7 +127,8 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 	struct sctp_tmit_chunk *chk, *tp2;
 	struct timeval now, min_wait, tv;
 	int cur_rtt,cnt=0;
-
+	int tot_out=0;
+	
 	/* an early FR is occuring. */
 	SCTP_GETTIME_TIMEVAL(&now);
 	/* get cur rto in micro-seconds */
@@ -159,9 +160,9 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 		 */
 		min_wait.tv_sec = min_wait.tv_usec = 0;
 	}
-	chk = TAILQ_FIRST(&stcb->asoc.sent_queue);
+	chk = TAILQ_LAST(&stcb->asoc.sent_queue);
 	for (;chk != NULL; chk = tp2) {
-		tp2 = TAILQ_NEXT(chk, sctp_next);
+		tp2 = TAILQ_PREV(chk, sctp_next);
 		if(chk->whoTo != net) {
 			continue;
 		}
@@ -182,13 +183,11 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 					continue;
 				}
 			}
-			/*
 			printf("min_wait is %d-sec %d-msec\n",
-			(int)min_wait.tv_sec, (int)min_wait.tv_usec);
+			       (int)min_wait.tv_sec, (int)min_wait.tv_usec);
 			printf("Marking one sent at %d-sec %d-usec \n",
-			(int)chk->sent_rcv_time.tv_sec, 
-			(int)chk->sent_rcv_time.tv_usec);
-			*/
+			       (int)chk->sent_rcv_time.tv_sec, 
+			       (int)chk->sent_rcv_time.tv_usec);
 #ifdef SCTP_FR_LOGGING
 			sctp_log_fr(chk->rec.data.TSN_seq, chk->snd_count,
 			    4, SCTP_FR_MARKED_EARLY);
@@ -199,6 +198,7 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 			/* double book size since we are doing an early FR */
 			chk->book_size_scale++;
 			cnt++;
+			break;
 		}
 	}
 	if(cnt) {
@@ -212,6 +212,12 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 		if(net->cwnd < net->ssthresh) 
 			/* still in SS move to CA */
 			net->ssthresh = net->cwnd - 1;
+		/* Restart it? */
+		if((net->flight_size) && 
+		   (net->flight_size < net->cwnd) &&
+		   (net->flight_size < (sctp_get_frag_point(stcb, &stcb->asoc) * 4))
+		   sctp_timer_start(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net);
+
 	}
 }
 
