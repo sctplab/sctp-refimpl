@@ -182,11 +182,6 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 					continue;
 				}
 			}
-			printf("min_wait is %d-sec %d-msec\n",
-			       (int)min_wait.tv_sec, (int)min_wait.tv_usec);
-			printf("Marking one sent at %d-sec %d-usec \n",
-			       (int)chk->sent_rcv_time.tv_sec, 
-			       (int)chk->sent_rcv_time.tv_usec);
 #ifdef SCTP_FR_LOGGING
 			sctp_log_fr(chk->rec.data.TSN_seq, chk->snd_count,
 			    4, SCTP_FR_MARKED_EARLY);
