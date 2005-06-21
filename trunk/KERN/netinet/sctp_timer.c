@@ -481,6 +481,7 @@ static int
 sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 			 struct sctp_nets *net,
 			 struct sctp_nets *alt,
+			 int window_probe,
 			 int *num_marked)
 {
 
@@ -600,7 +601,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 				    chk->sent_rcv_time.tv_usec,
 				    SCTP_FR_T3_MARK_TIME);
 #endif
-			if (chk->sent_rcv_time.tv_sec > min_wait.tv_sec) {
+			if ((chk->sent_rcv_time.tv_sec > min_wait.tv_sec) && (window_probe == 0)) {
 				/* we have reached a chunk that was sent some
 				 * seconds past our min.. forget it we will
 				 * find no more to send.
@@ -612,7 +613,8 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 					    SCTP_FR_T3_STOPPED);
 #endif
 				continue;
-			} else if (chk->sent_rcv_time.tv_sec == min_wait.tv_sec) {
+			} else if ((chk->sent_rcv_time.tv_sec == min_wait.tv_sec) &&
+				   (window_probe == 0)){
 				/* we must look at the micro seconds to know.
 				 */
 				if (chk->sent_rcv_time.tv_usec >= min_wait.tv_usec) {
@@ -705,7 +707,6 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 			cnt_mk++;
 		}
 	}
-
 #ifdef SCTP_FR_LOGGING
 	sctp_log_fr(tsnfirst, tsnlast, num_mk, SCTP_FR_T3_TIMEOUT);
 #endif
@@ -864,7 +865,7 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 		win_probe = 0;
 	}
 	alt = sctp_find_alternate_net(stcb, net);
-	sctp_mark_all_for_resend(stcb, net, alt, &num_mk);
+	sctp_mark_all_for_resend(stcb, net, alt, win_probe, &num_mk);
 	/* FR Loss recovery just ended with the T3. */
 	stcb->asoc.fast_retran_loss_recovery = 0;
 
