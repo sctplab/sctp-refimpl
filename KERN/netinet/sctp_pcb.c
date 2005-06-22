@@ -4999,7 +4999,7 @@ sctp_del_local_addr_ep_sa(struct sctp_inpcb *inp, struct sockaddr *sa)
 	}
 }
 
-static uint32_t reneged_asoc_ids[256];
+static sctp_assoc_t reneged_asoc_ids[256];
 static uint8_t reneged_at = 0;
 
 static void
@@ -5110,9 +5110,6 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		sctp_pegs[SCTP_IRENEGED_ON_ASOC]++;
 		reneged_asoc_ids[reneged_at] = sctp_get_associd(stcb);	
 		reneged_at++;
-		if(reneged_at >= 256) {
-			reneged_at = 0;
-		}
 	}
 	/*
 	 * Another issue, in un-setting the TSN's in the mapping array we
