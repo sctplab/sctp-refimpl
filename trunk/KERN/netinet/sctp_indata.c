@@ -3682,7 +3682,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 					stcb, net);
 			if(sctp_early_fr) {
 				if(callout_pending(&net->fr_timer.timer)) {
-#ifdef defined(SCTP_EARLYFR_LOGGING)
+#if defined(SCTP_EARLYFR_LOGGING)
 					sctp_log_fr(net->flight_size, net->cwnd, 1, 
 						    SCTP_FR_CWND_REPORT_STOP);
 #endif
@@ -3965,7 +3965,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 				/* yes, so in this case stop it if its running, and
 				 * then restart it.
 				 */
-#ifdef defined(SCTP_EARLYFR_LOGGING)
+#if defined(SCTP_EARLYFR_LOGGING)
 				sctp_log_fr(net->flight_size, net->cwnd, 1, 
 					    SCTP_FR_CWND_REPORT_START);
 #endif
@@ -3976,7 +3976,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 			} else {
 				/* No, stop it if its running */
 				if(callout_pending(&net->fr_timer.timer)) {
-#ifdef defined(SCTP_EARLYFR_LOGGING)
+#if defined(SCTP_EARLYFR_LOGGING)
 					sctp_log_fr(net->flight_size, net->cwnd, 2, 
 						    SCTP_FR_CWND_REPORT_STOP);
 #endif
@@ -4163,7 +4163,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 			/* stop all timers */
 			if(sctp_early_fr) {
 				if(callout_pending(&net->fr_timer.timer)) {
-#ifdef defined(SCTP_EARLYFR_LOGGING)
+#if defined(SCTP_EARLYFR_LOGGING)
 					sctp_log_fr(net->flight_size, net->cwnd, 3, 
 						    SCTP_FR_CWND_REPORT_STOP);
 #endif
