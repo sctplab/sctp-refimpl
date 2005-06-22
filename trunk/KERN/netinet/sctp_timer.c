@@ -212,8 +212,9 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 	   (net->flight_size < net->cwnd) &&
 	   (net->flight_size < (sctp_get_frag_point(stcb, &stcb->asoc) * 4)))
 */
-	if (net->flight_size < (sctp_get_frag_point(stcb, &stcb->asoc) * 4))
+	if ( net->flight_size < net->cwnd ) {
 		sctp_timer_start(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net);
+	}
 
 }
 
