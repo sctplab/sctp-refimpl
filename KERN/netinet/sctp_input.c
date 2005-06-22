@@ -2474,7 +2474,9 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 			tp1 = TAILQ_NEXT(tp1, sctp_next);
 		}
 		if (tp1 == NULL) {
-			/* Do it the other way */
+			/* Do it the other way , aka without paying attention
+			 * to queue seq order.
+			 */
 			sctp_pegs[SCTP_PDRP_DNFND]++;
 			tp1 = TAILQ_FIRST(&stcb->asoc.sent_queue);
 			while (tp1) {
@@ -2490,7 +2492,7 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 		}
 		if ((tp1) && (tp1->sent < SCTP_DATAGRAM_ACKED)) {
 			u_int8_t *ddp;
-			if (((tp1->rec.data.state_flags & SCTP_WINDOW_PROBE) == SCTP_WINDOW_PROBE) &&
+			if ((stcb->asoc.peers_rwnd == 0) &&
 			    ((flg & SCTP_FROM_MIDDLE_BOX) == 0)) {
 				sctp_pegs[SCTP_PDRP_DIWNP]++;
 				return (0);
