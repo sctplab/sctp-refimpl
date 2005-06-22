@@ -5016,7 +5016,11 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	/* We look for anything larger than the cum-ack + 1 */
 
 	asoc = &stcb->asoc;
-	cumulative_tsn_p1 = asoc->cumulative_tsn + 1;
+	cumulative_tsn_p1 = 1;
+	if(asoc->cumulative_tsn == asoc->highest_tsn_inside_map) {
+		/* none we can reneg on. */
+		return;
+	}
 	while(SCTP_IS_TSN_PRESENT(asoc->mapping_array, cumulative_tsn_p1)) {
 		/* We move forward to first GAP. This way we
 		 * don't revoke TSN's that are already here and in
@@ -5025,7 +5029,12 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		 * likely :-D
 		 */
 		cumulative_tsn_p1++;
+		if((cumulative_tsn_p1 + asoc->cumulative_tsn) == asoc->highest_tsn_inside_map) {
+			/* none its all ones to the top */
+			return;
+		}
 	}
+	cumulative_tsn_p1 += asoc->cumulative_tsn;
 	cnt = 0;
 	/* First look in the re-assembly queue */
 	chk = TAILQ_FIRST(&asoc->reasmqueue);
