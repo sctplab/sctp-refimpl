@@ -3935,7 +3935,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 
 	if (asoc->saw_sack_with_frags && num_seg)
 		sctp_check_for_revoked(asoc, cum_ack, biggest_tsn_acked);
-	else if((num_seg == 0) && (asoc->saw_sack_with_frags)){
+	else if(asoc->saw_sack_with_frags){
 		/* verify that he did not revoke everything. */
 		int cnt_revoked=0;
 		tp1 = TAILQ_FIRST(&asoc->sent_queue);		

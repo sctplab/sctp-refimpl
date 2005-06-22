@@ -795,7 +795,7 @@
 #define SCTP_EARLYFR_MRK_RETR    107
 #define SCTP_T3_AT_WINPROBE      108
 #define SCTP_RENEGED_ALL         109
-#define SCTP_RESV2               110
+#define SCTP_IRENEGED_ON_ASOC    110
 #define SCTP_RESV3               111
 /*
  * This value defines the number of vtag block time wait entry's
