@@ -185,15 +185,33 @@ int sctp_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,
 
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 #define sctp_sbfree(stcb, sb, m) { \
-	(sb)->sb_cc -= (m)->m_len; \
-        if(stcb) \
-          (stcb)->asoc.sb_cc -= (m)->m_len; \
+        if((sb)->sb_cc >= (m)->m_len) { \
+  	   (sb)->sb_cc -= (m)->m_len; \
+        } else { \
+           (sb)->sb_cc = 0; \
+        } \
+        if(stcb) {\
+          if((stcb)->asoc.sb_cc >= (m)->m_len) {\
+             (stcb)->asoc.sb_cc -= (m)->m_len; \
+          } else  {\
+             (stcb)->asoc.sb_cc -= 0; \
+          } \
+        } \
 	if ((m)->m_type != MT_DATA && (m)->m_type != MT_HEADER && \
 	    (m)->m_type != MT_OOBDATA) \
 		(sb)->sb_ctl -= (m)->m_len; \
-	(sb)->sb_mbcnt -= MSIZE; \
-	if ((m)->m_flags & M_EXT) \
-		(sb)->sb_mbcnt -= (m)->m_ext.ext_size; \
+        if((sb)->sb_mbcnt >= MSIZE) { \
+           (sb)->sb_mbcnt -= MSIZE; \
+	    if ((m)->m_flags & M_EXT) { \
+		if((sb)->sb_mbcnt >= (m)->m_ext.ext_size) { \
+		   (sb)->sb_mbcnt -= (m)->m_ext.ext_size; \
+                } else  { \
+		   (sb)->sb_mbcnt = 0; \
+                } \
+            } \
+        } else  { \
+            (sb)->sb_mbcnt = 0; \
+        } \
 }
 
 #define sctp_sballoc(stcb, sb, m)  { \
