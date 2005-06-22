@@ -3954,6 +3954,12 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 			}
 		}
 	}
+	tp1 = TAILQ_FIRST(&asoc->sent_queue);
+	if(tp1) {
+		if(tp1->sent == SCTP_DATAGRAM_ACKED) {
+			panic("Inconstent non detected reneg?");
+		}
+	}
 	if (num_seg)
 		asoc->saw_sack_with_frags = 1;
 	else {
