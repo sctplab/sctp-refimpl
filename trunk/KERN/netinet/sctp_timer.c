@@ -191,8 +191,11 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 			sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
 			/* double book size since we are doing an early FR */
 			chk->book_size_scale++;
-			cnt++;
-			break;
+			cnt += chk->send_size;
+			if((cnt + net->flight_size) > net->cwnd) {
+				/* Mark all we could possibly resend */
+				break;
+			}
 		}
 	}
 	if(cnt) {
@@ -513,7 +516,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	cur_rtt *= 1000;
 #if defined(SCTP_FR_LOGGING) || defined(SCTP_EARLYFR_LOGGING)
 	sctp_log_fr(cur_rtt, 
-		    callout_pending(&net->fr_timer.timer), 
+		    stcb->asoc.peers_rwnd, 
 		    window_probe, 
 		    SCTP_FR_T3_MARK_TIME);
 	sctp_log_fr(net->flight_size, net->cwnd, stcb->asoc.total_flight, SCTP_FR_CWND_REPORT);
