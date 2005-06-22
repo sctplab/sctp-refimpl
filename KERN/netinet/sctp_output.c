@@ -6150,12 +6150,12 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 					   (net->flight_size < net->cwnd) &&
 					   (net->flight_size < (sctp_get_frag_point(stcb, &stcb->asoc) * 4))
 */
-					if (net->flight_size < (sctp_get_frag_point(stcb, &stcb->asoc) * 4)
-						){
-						/* start it if its not already running */
-						if(!callout_pending(&net->fr_timer.timer)) {
-							sctp_timer_start(SCTP_TIMER_TYPE_EARLYFR,inp, stcb, net);
+					if (net->flight_size < net->cwnd) {
+						/* start or restart it */
+						if(callout_pending(&net->fr_timer.timer)) {
+							sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, inp, stcb, net);
 						}
+						sctp_timer_start(SCTP_TIMER_TYPE_EARLYFR,inp, stcb, net);
 					} else {
 						/* stop it if its running */
 						if(callout_pending(&net->fr_timer.timer)) {
