@@ -5017,6 +5017,15 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 
 	asoc = &stcb->asoc;
 	cumulative_tsn_p1 = asoc->cumulative_tsn + 1;
+	while(SCTP_IS_TSN_PRESENT(asoc->mapping_array, cumulative_tsn_p1)) {
+		/* We move forward to first GAP. This way we
+		 * don't revoke TSN's that are already here and in
+		 * sequence, we just are delaying telling the peer
+		 * since we have the delayed sack algorithm on.. most 
+		 * likely :-D
+		 */
+		cumulative_tsn_p1++;
+	}
 	cnt = 0;
 	/* First look in the re-assembly queue */
 	chk = TAILQ_FIRST(&asoc->reasmqueue);

@@ -3935,8 +3935,27 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 
 	if (asoc->saw_sack_with_frags && num_seg)
 		sctp_check_for_revoked(asoc, cum_ack, biggest_tsn_acked);
-	else if(asoc->saw_sack_with_frags){
-		/* verify that he did not revoke everything. */
+	else if (num_seg == 0) { 
+		/* This is a strange case that can
+		 * occur. Our table above catches most
+		 * occurances, but what happens when:
+		 * 1) I send a segment.
+		 * 2) The peer gets it but delays
+		 *    its sack (waiting for a subsequent
+		 *    segment).
+		 * 3) Right then the internal mechanism
+		 *    ask to give up clusters.
+		 * 4) Then it revokes and sends an
+		 *    updated sack. But it never got
+		 *    off to us a sack with frags.
+		 * Thus instead of just dealing with the
+		 * case where num_seg = 0 and previously
+		 * the saw_sack_with_frags was set, I also
+		 * need to just plain revoke anything that
+		 * is marked ACKED that is above the
+		 * cum-ack point.
+		 */
+
 		int cnt_revoked=0;
 		tp1 = TAILQ_FIRST(&asoc->sent_queue);		
 		if((tp1 != NULL) && 
@@ -3952,12 +3971,6 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 				sctp_pegs[SCTP_RENEGED_ALL]++;
 				reneged_all = 1;
 			}
-		}
-	}
-	tp1 = TAILQ_FIRST(&asoc->sent_queue);
-	if(tp1) {
-		if(tp1->sent == SCTP_DATAGRAM_ACKED) {
-			panic("Inconstent non detected reneg?");
 		}
 	}
 	if (num_seg)
