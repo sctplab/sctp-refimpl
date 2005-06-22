@@ -3495,6 +3495,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	u_int32_t a_rwnd;
 	struct sctp_nets *net = NULL;
 	int nonce_sum_flag, ecn_seg_sums=0;
+	u_int8_t reneged_all = 0;
 
 	asoc = &stcb->asoc;
 
@@ -3918,26 +3919,26 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 		}
 	}
 
-	/* Check for revoked fragments if we hand
-	 * fragments in a previous segment. If we
-	 * had no previous fragments we cannot have
-	 * a revoke issue.
+	/* Check for revoked fragments:
+	 *                    
+	 *  if Previous sack - Had no frags 
+         *      then we can't have any revoked
+	 *  if Previous sack - Had frag's
+         *      then
+         *          - If we now have frags aka num_seg > 0
+         *            call sctp_check_for_revoked() to tell if
+	 *            peer revoked some of them.
+         *      else
+	 *          - The peer revoked all ACKED fragments, since
+	 *            we had some before and now we have NONE.
 	 */
 
-	if (num_seg)
-		asoc->saw_sack_with_frags = 1;
-	else {
-		asoc->saw_sack_with_frags = 0;
-
-	}
-
-
-	if (asoc->saw_sack_with_frags)
+	if (asoc->saw_sack_with_frags && num_seg)
 		sctp_check_for_revoked(asoc, cum_ack, biggest_tsn_acked);
-	else {
+	else if((num_seg == 0) && (asoc->saw_sack_with_frags)){
 		/* verify that he did not revoke everything. */
+		int cnt_revoked=0;
 		tp1 = TAILQ_FIRST(&asoc->sent_queue);		
-
 		if((tp1 != NULL) && 
 		   (tp1->sent == SCTP_DATAGRAM_ACKED)) {
 			/* he revoked all dg's marked acked */
@@ -3945,8 +3946,18 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 				if(tp1->sent < SCTP_DATAGRAM_ACKED)
 					break;
 				tp1->sent = SCTP_DATAGRAM_SENT;
+				cnt_revoked++;
+			}
+			if (cnt_revoked) {
+				sctp_pegs[SCTP_RENEGED_ALL]++;
+				reneged_all = 1;
 			}
 		}
+	}
+	if (num_seg)
+		asoc->saw_sack_with_frags = 1;
+	else {
+		asoc->saw_sack_with_frags = 0;
 	}
 	/******************************/
 	/* update cwnd and Early FR   */
@@ -3956,9 +3967,14 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 			/* So, first of all do we need to have
 			 * a Early FR timer running?
 			 */
-			if ((net->flight_size) && (net->flight_size < net->cwnd)) {
+			if (((net->flight_size) && (net->flight_size < net->cwnd)) ||
+			    (reneged_all)){
 				/* yes, so in this case stop it if its running, and
-				 * then restart it.
+				 * then restart it. Reneging all is a special case
+				 * where we want to run the Early FR timer and
+				 * then force the last few unacked to be sent, causing
+				 * us to illicit a sack with gaps to force out
+				 * the others.
 				 */
 #if defined(SCTP_EARLYFR_LOGGING)
 				sctp_log_fr(net->flight_size, net->cwnd, 1, 
