@@ -208,11 +208,7 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 			net->ssthresh = net->cwnd - 1;
 	}
 	/* Restart it? */
-/*	if((net->flight_size) && 
-	   (net->flight_size < net->cwnd) &&
-	   (net->flight_size < (sctp_get_frag_point(stcb, &stcb->asoc) * 4)))
-*/
-	if ( net->flight_size < net->cwnd ) {
+	if ((net->flight_size) && (net->flight_size < net->cwnd)) {
 #if defined(SCTP_EARLYFR_LOGGING)
 		sctp_log_fr(net->flight_size, net->cwnd, 3, SCTP_FR_CWND_REPORT_START);
 #endif
@@ -518,7 +514,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 #if defined(SCTP_FR_LOGGING) || defined(SCTP_EARLYFR_LOGGING)
 	sctp_log_fr(cur_rtt, 
 		    callout_pending(&net->fr_timer.timer), 
-		    callout_active(&net->fr_timer.timer), 
+		    window_probe, 
 		    SCTP_FR_T3_MARK_TIME);
 	sctp_log_fr(net->flight_size, net->cwnd, stcb->asoc.total_flight, SCTP_FR_CWND_REPORT);
 #endif
@@ -864,7 +860,7 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 	/* Find an alternate and mark those for retransmission */
 	if((stcb->asoc.peers_rwnd == 0) &&
 	   (stcb->asoc.total_flight < net->mtu)) {
-		sctp_pegs[SCTP_T3_AT_WINPROBE]++;		
+		sctp_pegs[SCTP_T3_AT_WINPROBE]++;
 		win_probe = 1;
 	} else {
 		win_probe = 0;
