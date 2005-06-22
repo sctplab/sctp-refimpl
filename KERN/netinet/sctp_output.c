@@ -6145,12 +6145,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 				sctp_pegs[SCTP_PEG_TSNS_SENT] += bundle_at;
 				sctp_clean_up_datalist(stcb, asoc, data_list, bundle_at, net);
 				if(sctp_early_fr) {
-/*
-					if((net->flight_size) && 
-					   (net->flight_size < net->cwnd) &&
-					   (net->flight_size < (sctp_get_frag_point(stcb, &stcb->asoc) * 4))
-*/
-					if (net->flight_size < net->cwnd) {
+					if ((net->flight_size) && (net->flight_size < net->cwnd)) {
 						/* start or restart it */
 #if defined(SCTP_EARLYFR_LOGGING)
 						sctp_log_fr(net->flight_size, net->cwnd, 2, 
