@@ -182,7 +182,7 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 					continue;
 				}
 			}
-#ifdef SCTP_FR_LOGGING
+#ifdef SCTP_EARLYFR_LOGGING
 			sctp_log_fr(chk->rec.data.TSN_seq, chk->snd_count,
 			    4, SCTP_FR_MARKED_EARLY);
 #endif
@@ -213,9 +213,11 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 	   (net->flight_size < (sctp_get_frag_point(stcb, &stcb->asoc) * 4)))
 */
 	if ( net->flight_size < net->cwnd ) {
+#ifdef defined(SCTP_EARLYFR_LOGGING)
+		sctp_log_fr(net->flight_size, net->cwnd, 3, SCTP_FR_CWND_REPORT_START);
+#endif
 		sctp_timer_start(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net);
 	}
-
 }
 
 void
@@ -513,7 +515,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	/* get cur rto in micro-seconds */
 	cur_rtt = (((net->lastsa >> 2) + net->lastsv) >> 1);
 	cur_rtt *= 1000;
-#ifdef SCTP_FR_LOGGING
+#ifdef defined(SCTP_FR_LOGGING) || defined(SCTP_EARLYFR_LOGGING)
 	sctp_log_fr(cur_rtt, 
 		    callout_pending(&net->fr_timer.timer), 
 		    callout_active(&net->fr_timer.timer), 
@@ -538,7 +540,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 		 */
 		min_wait.tv_sec = min_wait.tv_usec = 0;
 	}
-#ifdef SCTP_FR_LOGGING
+#ifdef defined(SCTP_FR_LOGGING) || defined(SCTP_EARLYFR_LOGGING)
 	sctp_log_fr(cur_rtt, now.tv_sec, now.tv_usec, SCTP_FR_T3_MARK_TIME);
 	sctp_log_fr(0, min_wait.tv_sec, min_wait.tv_usec, SCTP_FR_T3_MARK_TIME);
 #endif
@@ -598,7 +600,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 			 */
 
 			/* validate its been outstanding long enough */
-#ifdef SCTP_FR_LOGGING
+#ifdef defined(SCTP_FR_LOGGING) || defined(SCTP_EARLYFR_LOGGING)
 			sctp_log_fr(chk->rec.data.TSN_seq,
 				    chk->sent_rcv_time.tv_sec,
 				    chk->sent_rcv_time.tv_usec,
@@ -609,7 +611,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 				 * seconds past our min.. forget it we will
 				 * find no more to send.
 				 */
-#ifdef SCTP_FR_LOGGING
+#ifdef defined(SCTP_FR_LOGGING) || defined(SCTP_EARLYFR_LOGGING)
 				sctp_log_fr(0,
 					    chk->sent_rcv_time.tv_sec,
 					    chk->sent_rcv_time.tv_usec,
@@ -622,7 +624,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 				 */
 				if (chk->sent_rcv_time.tv_usec >= min_wait.tv_usec) {
 					/* ok it was sent after our boundary time. */
-#ifdef SCTP_FR_LOGGING
+#ifdef defined(SCTP_FR_LOGGING) || defined(SCTP_EARLYFR_LOGGING)
 					sctp_log_fr(0,
 						    chk->sent_rcv_time.tv_sec,
 						    chk->sent_rcv_time.tv_usec,
@@ -672,7 +674,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 					tsnfirst = chk->rec.data.TSN_seq;
 				}
 				tsnlast = chk->rec.data.TSN_seq;
-#ifdef SCTP_FR_LOGGING
+#ifdef defined(SCTP_FR_LOGGING) || defined(SCTP_EARLYFR_LOGGING)
 				sctp_log_fr(chk->rec.data.TSN_seq, chk->snd_count,
 					    0, SCTP_FR_T3_MARKED);
 
@@ -710,7 +712,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 			cnt_mk++;
 		}
 	}
-#ifdef SCTP_FR_LOGGING
+#ifdef defined(SCTP_FR_LOGGING) || defined(SCTP_EARLYFR_LOGGING)
 	sctp_log_fr(tsnfirst, tsnlast, num_mk, SCTP_FR_T3_TIMEOUT);
 #endif
 	/* compensate for the number we marked */
