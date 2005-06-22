@@ -4698,9 +4698,9 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 #ifdef SCTP_SB_LOGGING
 				sctp_sblog(&so->so_rcv, stcb, SCTP_LOG_SBFREE, len);
 #endif
-				so->so_rcv.sb_cc -= len;
+				so->so_rcv.sb_cc = sctp_sbspace_sub(so->so_rcv.sb_cc, len);
 				if(stcb) {
-					stcb->asoc.sb_cc -= len;
+					stcb->asoc.sb_cc = sctp_sbspace_sub(stcb->asoc.sb_cc, len);
 				}
 #ifdef SCTP_SB_LOGGING
 				sctp_sblog(&so->so_rcv, stcb, 
@@ -4830,17 +4830,15 @@ sctp_sbappend( struct sockbuf *sb,
 {
 	register struct mbuf *n;
 	struct mbuf *prev;
-#ifdef SCTP_LOCK_LOGGING
-	sctp_log_lock(stcb->sctp_ep, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
-#endif
-
-	SOCKBUF_LOCK(sb);
-
 	if (m == 0)
 		return;
 	if (stcb == NULL)
 		return;
 
+#ifdef SCTP_LOCK_LOGGING
+	sctp_log_lock(stcb->sctp_ep, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
+#endif
+	SOCKBUF_LOCK(sb);
 	if(stcb->last_record_insert == NULL) {
 		panic("stcb->last_record_insert is NULL?");
 	}
