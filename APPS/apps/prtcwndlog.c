@@ -90,10 +90,12 @@ main(int argc, char **argv)
 		/* 55 */ "SB result", 
 		/* 56 */ "Duplicate TSN sent",
 		/* 57 */ "Early FR",
-		/* 57 */ "Early FR cwnd report",
-		/* 59 */ "Unknown"
+		/* 58 */ "Early FR cwnd report",
+		/* 59 */ "Early FR cwnd Start",
+                /* 60 */ "Early FR cwnd Stop",
+		/* 61 */ "Unknown"
 	};
-#define FROM_STRING_MAX 59
+#define FROM_STRING_MAX 61 
 	FILE *out;
 	int at;
 	struct sctp_cwnd_log log;
@@ -310,7 +312,9 @@ main(int argc, char **argv)
 				printf("%s: TSN:%u \n",
 				       from_str[log.from],
 				       ntohl(log.x.fr.largest_tsn));
-			} else if (log.from == SCTP_FR_CWND_REPORT) {
+			} else if ((log.from == SCTP_FR_CWND_REPORT) ||
+                                   (log.from == SCTP_FR_CWND_REPORT_START) ||
+                                   (log.from == SCTP_FR_CWND_REPORT_STOP)) {
 				printf("%s: net flight:%d net cwnd:%d tot flight:%d\n",
 				       from_str[log.from],
 				       log.x.fr.largest_tsn,
