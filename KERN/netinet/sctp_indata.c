@@ -3962,7 +3962,8 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 			 * a Early FR timer running?
 			 */
 			if (((net->flight_size) && (net->flight_size < net->cwnd)) ||
-			    (reneged_all)){
+			    (reneged_all)
+				){
 				/* yes, so in this case stop it if its running, and
 				 * then restart it. Reneging all is a special case
 				 * where we want to run the Early FR timer and
