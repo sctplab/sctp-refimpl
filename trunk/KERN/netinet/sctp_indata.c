@@ -3739,14 +3739,14 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 							~SCTP_ADDR_UNCONFIRMED;
 					}
 					if(tp1->whoTo->flight_size >= tp1->book_size) {
-					  tp1->whoTo->flight_size -= tp1->book_size;
+						tp1->whoTo->flight_size -= tp1->book_size;
 					} else {
-					  tp1->whoTo->flight_size = 0;
+						tp1->whoTo->flight_size = 0;
 					}
 					if(asoc->total_flight >= tp1->book_size) {
-					  asoc->total_flight -= tp1->book_size;
-					  if (asoc->total_flight_count > 0)
-					    asoc->total_flight_count--;
+						asoc->total_flight -= tp1->book_size;
+						if (asoc->total_flight_count > 0)
+							asoc->total_flight_count--;
 					} else {
 						asoc->total_flight = 0;
 						asoc->total_flight_count = 0;
@@ -3825,8 +3825,8 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 		 * (iyengar@cis.udel.edu, 2005/05/11)
 		 */
 		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
-		  net->saw_newack = 0;
-		  net->this_sack_highest_newack = last_tsn ;
+			net->saw_newack = 0;
+			net->this_sack_highest_newack = last_tsn ;
 		}
 		
 		/*
@@ -3836,8 +3836,8 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 		 */
 
 		sctp_handle_segments(stcb, asoc, ch, last_tsn,
-		    &biggest_tsn_acked, &biggest_tsn_newly_acked,
-		    num_seg, &ecn_seg_sums);
+				     &biggest_tsn_acked, &biggest_tsn_newly_acked,
+				     num_seg, &ecn_seg_sums);
 
 		if (sctp_strict_sacks) {
 			/* validate the biggest_tsn_acked in the gap acks
@@ -3933,51 +3933,30 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	 *            we had some before and now we have NONE.
 	 */
 
-	if (asoc->saw_sack_with_frags && num_seg)
+	if (num_seg)
 		sctp_check_for_revoked(asoc, cum_ack, biggest_tsn_acked);
-	else if (num_seg == 0) { 
-		/* This is a strange case that can
-		 * occur. Our table above catches most
-		 * occurances, but what happens when:
-		 * 1) I send a segment.
-		 * 2) The peer gets it but delays
-		 *    its sack (waiting for a subsequent
-		 *    segment).
-		 * 3) Right then the internal mechanism
-		 *    ask to give up clusters.
-		 * 4) Then it revokes and sends an
-		 *    updated sack. But it never got
-		 *    off to us a sack with frags.
-		 * Thus instead of just dealing with the
-		 * case where num_seg = 0 and previously
-		 * the saw_sack_with_frags was set, I also
-		 * need to just plain revoke anything that
-		 * is marked ACKED that is above the
-		 * cum-ack point.
-		 */
-
+	else if (asoc->saw_sack_with_frags) { 
 		int cnt_revoked=0;
 		tp1 = TAILQ_FIRST(&asoc->sent_queue);		
-		if((tp1 != NULL) && 
-		   (tp1->sent == SCTP_DATAGRAM_ACKED)) {
-			/* he revoked all dg's marked acked */
+		if(tp1 != NULL) {
+			/* Peer revoked all dg's marked or acked */
 			TAILQ_FOREACH(tp1, &asoc->sent_queue, sctp_next) {
-				if(tp1->sent < SCTP_DATAGRAM_ACKED)
-					break;
-				tp1->sent = SCTP_DATAGRAM_SENT;
-				cnt_revoked++;
+				if((tp1->sent > SCTP_DATAGRAM_RESEND) &&
+				   (tp1->sent < SCTP_FORWARD_TSN_SKIP)) {
+					tp1->sent = SCTP_DATAGRAM_SENT;
+					cnt_revoked++;
+				}
 			}
 			if (cnt_revoked) {
 				sctp_pegs[SCTP_RENEGED_ALL]++;
 				reneged_all = 1;
 			}
 		}
+		asoc->saw_sack_with_frags = 0;
 	}
 	if (num_seg)
 		asoc->saw_sack_with_frags = 1;
-	else {
-		asoc->saw_sack_with_frags = 0;
-	}
+
 	/******************************/
 	/* update cwnd and Early FR   */
 	/******************************/

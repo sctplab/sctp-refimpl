@@ -5013,14 +5013,27 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	struct sctp_tmit_chunk *chk, *nchk;
 	u_int32_t cumulative_tsn_p1, tsn;
 	int cnt, strmat, gap;
+	unsigned int maxi;
 	/* We look for anything larger than the cum-ack + 1 */
 
 	asoc = &stcb->asoc;
-	cumulative_tsn_p1 = 1;
 	if(asoc->cumulative_tsn == asoc->highest_tsn_inside_map) {
 		/* none we can reneg on. */
 		return;
 	}
+	if (asoc->highest_tsn_inside_map >= asoc->mapping_array_base_tsn) {
+		maxi = (asoc->highest_tsn_inside_map - asoc->mapping_array_base_tsn);
+	} else {
+		maxi = (asoc->highest_tsn_inside_map  + (MAX_TSN - asoc->mapping_array_base_tsn) + 1);
+	}
+	if (asoc->cumulative_tsn >= asoc->mapping_array_base_tsn) {
+		cumulative_tsn_p1 = (asoc->cumulative_tsn - asoc->mapping_array_base_tsn);
+	} else {
+			/* Set it so we start at 0 */
+		cumulative_tsn_p1 = -1;
+	}
+	/* Ok move start up one to look at the NEXT past the cum-ack */
+	cumulative_tsn_p1++;
 	while(SCTP_IS_TSN_PRESENT(asoc->mapping_array, cumulative_tsn_p1)) {
 		/* We move forward to first GAP. This way we
 		 * don't revoke TSN's that are already here and in
@@ -5029,11 +5042,16 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		 * likely :-D
 		 */
 		cumulative_tsn_p1++;
-		if((cumulative_tsn_p1 + asoc->cumulative_tsn) == asoc->highest_tsn_inside_map) {
+		if(cumulative_tsn_p1 > maxi)
 			/* none its all ones to the top */
 			return;
-		}
 	}
+	/* slide back behind the one here thats after the cum-ack */
+	cumulative_tsn_p1--;
+	if(cumulative_tsn_p1 == 0)
+		/* it is the cum-ack forget it */
+		return;
+
 	cumulative_tsn_p1 += asoc->cumulative_tsn;
 	cnt = 0;
 	/* First look in the re-assembly queue */
@@ -5052,7 +5070,7 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 				gap = (MAX_TSN - asoc->mapping_array_base_tsn) +
 				    tsn + 1;
 			}
-			asoc->size_on_reasm_queue -= chk->send_size;
+			asoc->size_on_reasm_queue = sctp_sbspace_sub(asoc->size_on_reasm_queue,chk->send_size);
 			sctp_ucount_decr(asoc->cnt_on_reasm_queue);
 			SCTP_UNSET_TSN_PRESENT(asoc->mapping_array, gap);
 			TAILQ_REMOVE(&asoc->reasmqueue, chk, sctp_next);
@@ -5060,6 +5078,7 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 				sctp_m_freem(chk->data);
 				chk->data = NULL;
 			}
+			sctp_free_remote_addr(chk->whoTo);
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
 			SCTP_DECR_CHK_COUNT();
 		}
@@ -5083,7 +5102,7 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 					    asoc->mapping_array_base_tsn) +
 					    tsn + 1;
 				}
-				asoc->size_on_all_streams -= chk->send_size;
+				asoc->size_on_all_streams = sctp_sbspace_sub(asoc->size_on_all_streams,chk->send_size);
 				sctp_ucount_decr(asoc->cnt_on_all_streams);
 
 				SCTP_UNSET_TSN_PRESENT(asoc->mapping_array,
@@ -5094,6 +5113,7 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 					sctp_m_freem(chk->data);
 					chk->data = NULL;
 				}
+				sctp_free_remote_addr(chk->whoTo);
 				SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
 				SCTP_DECR_CHK_COUNT();
 			}
