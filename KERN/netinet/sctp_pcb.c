@@ -5143,7 +5143,6 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		}
 		if(gap == 0) {
 			/* Nothing left in map */
-			printf("Zap map cum:%x\n", (int)asoc->cumulative_tsn);
 			memset(asoc->mapping_array, 0, asoc->mapping_array_size);
 			asoc->mapping_array_base_tsn = asoc->cumulative_tsn + 1;
 			asoc->highest_tsn_inside_map  = asoc->cumulative_tsn;
