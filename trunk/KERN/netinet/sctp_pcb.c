@@ -5143,6 +5143,37 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	}
 #endif /* SCTP_DEBUG */
 	if(cnt) {
+		/* Now do we need to find a new 
+		 *  asoc->highest_tsn_inside_map?
+		 */
+		if (asoc->highest_tsn_inside_map >= asoc->mapping_array_base_tsn) {
+			gap  = asoc->highest_tsn_inside_map - asoc->mapping_array_base_tsn;
+		} else {
+			gap = (MAX_TSN - asoc->mapping_array_base_tsn) +
+				asoc->highest_tsn_inside_map + 1;
+		}
+		if(gap >= (uint32_t)(asoc->mapping_array_size << 3)) {
+			/* Something bad happened or
+			 * cum-ack and high were behind the base, but
+			 * if so earlier checks should have found NO
+			 * data... wierd.
+			 */
+			gap = 0;
+		}
+		while(gap > 0) {
+			if(SCTP_IS_TSN_PRESENT(asoc->mapping_array, gap)) {
+				/* found the new highest */
+				asoc->highest_tsn_inside_map = asoc->mapping_array_base_tsn + gap;
+				break;
+			}
+			gap--;
+		}
+		if(gap == 0) {
+			/* Nothing left in map */
+			memset(asoc->mapping_array, 0, asoc->mapping_array_size);
+			asoc->mapping_array_base_tsn = asoc->cumulative_tsn + 1;
+			asoc->highest_tsn_inside_map  = asoc->cumulative_tsn;
+		}
 		asoc->last_revoke_count = cnt;
 		sctp_send_sack(stcb);
 		sctp_pegs[SCTP_IRENEGED_ON_ASOC]++;
