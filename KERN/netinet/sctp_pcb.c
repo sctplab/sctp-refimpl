@@ -5013,7 +5013,6 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	struct sctp_tmit_chunk *chk, *nchk;
 	u_int32_t cumulative_tsn_p1, tsn;
 	int cnt, strmat, gap;
-	unsigned int maxi;
 	/* We look for anything larger than the cum-ack + 1 */
 
 	asoc = &stcb->asoc;
@@ -5021,38 +5020,7 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		/* none we can reneg on. */
 		return;
 	}
-	if (asoc->highest_tsn_inside_map >= asoc->mapping_array_base_tsn) {
-		maxi = (asoc->highest_tsn_inside_map - asoc->mapping_array_base_tsn);
-	} else {
-		maxi = (asoc->highest_tsn_inside_map  + (MAX_TSN - asoc->mapping_array_base_tsn) + 1);
-	}
-	if (asoc->cumulative_tsn >= asoc->mapping_array_base_tsn) {
-		cumulative_tsn_p1 = (asoc->cumulative_tsn - asoc->mapping_array_base_tsn);
-	} else {
-			/* Set it so we start at 0 */
-		cumulative_tsn_p1 = -1;
-	}
-	/* Ok move start up one to look at the NEXT past the cum-ack */
-	cumulative_tsn_p1++;
-	while(SCTP_IS_TSN_PRESENT(asoc->mapping_array, cumulative_tsn_p1)) {
-		/* We move forward to first GAP. This way we
-		 * don't revoke TSN's that are already here and in
-		 * sequence, we just are delaying telling the peer
-		 * since we have the delayed sack algorithm on.. most 
-		 * likely :-D
-		 */
-		cumulative_tsn_p1++;
-		if(cumulative_tsn_p1 > maxi)
-			/* none its all ones to the top */
-			return;
-	}
-	/* slide back behind the one here thats after the cum-ack */
-	cumulative_tsn_p1--;
-	if(cumulative_tsn_p1 == 0)
-		/* it is the cum-ack forget it */
-		return;
-
-	cumulative_tsn_p1 += asoc->cumulative_tsn;
+	cumulative_tsn_p1 = asoc->cumulative_tsn + 1;
 	cnt = 0;
 	/* First look in the re-assembly queue */
 	chk = TAILQ_FIRST(&asoc->reasmqueue);
@@ -5156,9 +5124,14 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 			/* Something bad happened or
 			 * cum-ack and high were behind the base, but
 			 * if so earlier checks should have found NO
-			 * data... wierd.
+			 * data... wierd... we will start at
+			 * end of mapping array.
 			 */
-			gap = 0;
+			printf("Gap was larger than array?? %d set to max:%d maparraymax:%x\n",
+			       (int)gap, 
+			       (int)(asoc->mapping_array_size << 3), 
+			       (int)asoc->highest_tsn_inside_map);
+			gap = asoc->mapping_array_size << 3;
 		}
 		while(gap > 0) {
 			if(SCTP_IS_TSN_PRESENT(asoc->mapping_array, gap)) {
@@ -5170,6 +5143,7 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		}
 		if(gap == 0) {
 			/* Nothing left in map */
+			printf("Zap map cum:%x\n", (int)asoc->cumulative_tsn);
 			memset(asoc->mapping_array, 0, asoc->mapping_array_size);
 			asoc->mapping_array_base_tsn = asoc->cumulative_tsn + 1;
 			asoc->highest_tsn_inside_map  = asoc->cumulative_tsn;
