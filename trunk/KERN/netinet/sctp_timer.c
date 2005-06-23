@@ -126,7 +126,7 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 {
 	struct sctp_tmit_chunk *chk, *tp2;
 	struct timeval now, min_wait, tv;
-	int cur_rtt,cnt=0;
+	int cur_rtt, cnt=0, cnt_resend=0;
 	
 	/* an early FR is occuring. */
 	SCTP_GETTIME_TIMEVAL(&now);
@@ -165,7 +165,9 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 		if(chk->whoTo != net) {
 			continue;
 		}
-		if ((chk->sent > SCTP_DATAGRAM_UNSENT) &&
+		if(chk->sent == SCTP_DATAGRAM_RESEND)
+			cnt_resend++;
+		else if ((chk->sent > SCTP_DATAGRAM_UNSENT) &&
 		    (chk->sent < SCTP_DATAGRAM_RESEND)) {
 			/* pending, may need retran */
 			if (chk->sent_rcv_time.tv_sec > min_wait.tv_sec) {
@@ -209,6 +211,8 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 		if(net->cwnd < net->ssthresh) 
 			/* still in SS move to CA */
 			net->ssthresh = net->cwnd - 1;
+	} else if (cnt_resend) {
+		sctp_chunk_output(inp, stcb, 9);
 	}
 	/* Restart it? */
 	if (net->flight_size < net->cwnd) {
