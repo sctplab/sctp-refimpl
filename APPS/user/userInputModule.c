@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.17 2005-06-17 15:19:17 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.18 2005-06-23 15:36:34 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -3189,8 +3189,8 @@ cmd_getpegs(char *argv[], int argc)
 	"efr_expr", /* 106 */
 	"efr_mark", /* 107 */
 	"t3winprb", /* 108 */
-	"resv1   ", /* 109 */
-	"resv2   ", /* 110 */
+	"rengalls", /* 109 */
+	"irengeds", /* 110 */
 	"resv3   ", /* 111 */
 
     };
