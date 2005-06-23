@@ -212,9 +212,6 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 	}
 	/* Restart it? */
 	if ((net->flight_size) && (net->flight_size < net->cwnd)) {
-#if defined(SCTP_EARLYFR_LOGGING)
-		sctp_log_fr(net->flight_size, net->cwnd, 3, SCTP_FR_CWND_REPORT_START);
-#endif
 		sctp_timer_start(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net);
 	}
 }
