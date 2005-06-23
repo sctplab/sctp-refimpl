@@ -3961,7 +3961,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 			/* So, first of all do we need to have
 			 * a Early FR timer running?
 			 */
-			if (((net->flight_size) && (net->flight_size < net->cwnd)) ||
+			if (((net->ref_count > 1) && (net->flight_size < net->cwnd)) ||
 			    (reneged_all)
 				){
 				/* yes, so in this case stop it if its running, and
