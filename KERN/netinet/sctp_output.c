@@ -8848,11 +8848,20 @@ sctp_send_packet_dropped(struct sctp_tcb *stcb, struct sctp_nets *net,
 		spc = 0;
 	}
 	drp->bottle_bw = htonl(spc);
-	drp->current_onq = htonl(asoc->size_on_delivery_queue +
-				 asoc->size_on_reasm_queue +
-				 asoc->size_on_all_streams +
-				 asoc->my_rwnd_control_len +
-		                 stcb->sctp_socket->so_rcv.sb_cc);
+	if(asoc->my_rwnd) {
+		drp->current_onq = htonl(asoc->size_on_delivery_queue +
+					 asoc->size_on_reasm_queue +
+					 asoc->size_on_all_streams +
+					 asoc->my_rwnd_control_len +
+					 stcb->sctp_socket->so_rcv.sb_cc);
+	} else {
+		/* If my rwnd is 0, possibly from
+		 * mbuf depletion as well as space used,
+		 * tell the peer there is NO space aka 
+		 * onq == bw
+		 */
+		drp->current_onq = htonl(spc);
+	}
 	drp->reserved = 0;
 	datap = drp->data;
         m_copydata(m, iphlen, len, datap);

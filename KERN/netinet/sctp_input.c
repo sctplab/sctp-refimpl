@@ -2872,42 +2872,6 @@ sctp_handle_packet_dropped(struct sctp_pktdrop_chunk *cp,
 		/* XXX possible chlen underflow */
 		memset(&desc, 0, sizeof(desc));
 	}
-
-	/* first update a rwnd possibly */
-	if ((cp->ch.chunk_flags & SCTP_FROM_MIDDLE_BOX) == 0) {
-		/* From a peer, we get a rwnd report */
-		u_int32_t a_rwnd;
-
-		sctp_pegs[SCTP_PDRP_FEHOS]++;
-
-		bottle_bw = ntohl(cp->bottle_bw);
-		on_queue =  ntohl(cp->current_onq);
-		if (bottle_bw && on_queue) {
-			/* a rwnd report is in here */
-			if (bottle_bw > on_queue)
-				a_rwnd = bottle_bw - on_queue;
-			else
-				a_rwnd = 0;
-
-			if (a_rwnd <= 0)
-				stcb->asoc.peers_rwnd =  0;
-			else {
-				if (a_rwnd > stcb->asoc.total_flight) {
-					stcb->asoc.peers_rwnd =
-					    a_rwnd - stcb->asoc.total_flight;
-				} else {
-					stcb->asoc.peers_rwnd =  0;
-				}
-				if (stcb->asoc.peers_rwnd <
-				    stcb->sctp_ep->sctp_ep.sctp_sws_sender) {
-					/* SWS sender side engages */
-					stcb->asoc.peers_rwnd = 0;
-				}
-			}
-		}
-	} else {
-		sctp_pegs[SCTP_PDRP_FMBOX]++;
-	}
 	trunc_len = (u_int16_t)ntohs(cp->trunc_len);
 	/* now the chunks themselves */
 	while ((ch != NULL) && (chlen >= sizeof(struct sctp_chunkhdr))) {
@@ -2978,6 +2942,41 @@ sctp_handle_packet_dropped(struct sctp_pktdrop_chunk *cp,
 			break;
 		}
 		ch = (struct sctp_chunkhdr *)((caddr_t)ch + SCTP_SIZE32(at));
+	}
+	/* Now update any rwnd --- possibly */
+	if ((cp->ch.chunk_flags & SCTP_FROM_MIDDLE_BOX) == 0) {
+		/* From a peer, we get a rwnd report */
+		u_int32_t a_rwnd;
+
+		sctp_pegs[SCTP_PDRP_FEHOS]++;
+
+		bottle_bw = ntohl(cp->bottle_bw);
+		on_queue =  ntohl(cp->current_onq);
+		if (bottle_bw && on_queue) {
+			/* a rwnd report is in here */
+			if (bottle_bw > on_queue)
+				a_rwnd = bottle_bw - on_queue;
+			else
+				a_rwnd = 0;
+
+			if (a_rwnd == 0)
+				stcb->asoc.peers_rwnd =  0;
+			else {
+				if (a_rwnd > stcb->asoc.total_flight) {
+					stcb->asoc.peers_rwnd =
+					    a_rwnd - stcb->asoc.total_flight;
+				} else {
+					stcb->asoc.peers_rwnd =  0;
+				}
+				if (stcb->asoc.peers_rwnd <
+				    stcb->sctp_ep->sctp_ep.sctp_sws_sender) {
+					/* SWS sender side engages */
+					stcb->asoc.peers_rwnd = 0;
+				}
+			}
+		}
+	} else {
+		sctp_pegs[SCTP_PDRP_FMBOX]++;
 	}
 
 	/* now middle boxes in sat networks get a cwnd bump */
