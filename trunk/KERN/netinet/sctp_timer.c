@@ -516,6 +516,10 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 		    stcb->asoc.peers_rwnd, 
 		    window_probe, 
 		    SCTP_FR_T3_MARK_TIME);
+	sctp_log_fr(net->flight_size, 
+		    callout_pending(&net->fr_timer.timer), 
+		    callout_active(&net->fr_timer.timer), 
+		    SCTP_FR_CWND_REPORT);
 	sctp_log_fr(net->flight_size, net->cwnd, stcb->asoc.total_flight, SCTP_FR_CWND_REPORT);
 #endif
 	tv.tv_sec = cur_rtt / 1000000;

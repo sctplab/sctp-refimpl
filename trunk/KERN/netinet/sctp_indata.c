@@ -3568,7 +3568,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 		      num_dup, 
 		      SCTP_LOG_NEW_SACK);
 #endif
-#ifdef SCTP_FR_LOGGING
+#if defined(SCTP_FR_LOGGING) || defined(SCTP_EARLYFR_LOGGING)
 	if(num_dup) {
 		int off_to_dup,iii;
 		u_int32_t *dupdata;
