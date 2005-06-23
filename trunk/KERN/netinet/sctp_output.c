@@ -6147,10 +6147,6 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 				if(sctp_early_fr) {
 					if ((net->flight_size) && (net->flight_size < net->cwnd)) {
 						/* start or restart it */
-#if defined(SCTP_EARLYFR_LOGGING)
-						sctp_log_fr(net->flight_size, net->cwnd, 2, 
-							    SCTP_FR_CWND_REPORT_START);
-#endif
 						if(callout_pending(&net->fr_timer.timer)) {
 							sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, inp, stcb, net);
 						}
@@ -6158,10 +6154,6 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 					} else {
 						/* stop it if its running */
 						if(callout_pending(&net->fr_timer.timer)) {
-#if defined(SCTP_EARLYFR_LOGGING)
-							sctp_log_fr(net->flight_size, net->cwnd, 4, 
-								    SCTP_FR_CWND_REPORT_STOP);
-#endif
 							sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, inp, stcb, net);
 						}
 					}
