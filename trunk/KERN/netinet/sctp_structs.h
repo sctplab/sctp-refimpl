@@ -184,11 +184,13 @@ struct sctp_nets {
 	unsigned int net_ack2;
 
         /* 
-	 * CMT variables
+	 * CMT variables (iyengar@cis.udel.edu)
 	 */
         u_int32_t this_sack_highest_newack; /* tracks highest TSN newly acked for a given dest
 					       in the current SACK. Used in SFR and HTNA algos */
-  
+        u_int32_t pseudo_cumack; /* CMT CUC algorithm. Maintains next expected pseudo-cumack 
+				    for this destination */
+
 	u_int32_t heartbeat_random1;
 	u_int32_t heartbeat_random2;
 
@@ -208,6 +210,17 @@ struct sctp_nets {
         u_int8_t src_addr_selected;	/* if we split we move */
 	u_int8_t indx_of_eligible_next_to_use;
 	u_int8_t addr_is_local;		/* its a local address (if known) could move in split */
+
+        /* 
+	 * CMT variables (iyengar@cis.udel.edu)
+	 */
+        u_int8_t find_pseudo_cumack; /* CMT CUC algorithm. Flag used to find a new pseudocumack. 
+					This flag is set after a new pseudo-cumack has been received 
+					and indicates that the sender should find the next pseudo-cumack 
+					expected for this destination */
+        u_int8_t new_pseudo_cumack; /* CMT CUC algorithm. Flag used to indicate 
+				       if a new pseudo-cumack has been received */
+
 #ifdef SCTP_HIGH_SPEED
 	u_int8_t last_hs_used;		/* index into the last HS table entry we used */
 #endif
@@ -264,6 +277,10 @@ struct sctp_tmit_chunk {
 	TAILQ_ENTRY(sctp_tmit_chunk) sctp_next;	/* next link */
 	uint8_t do_rtt;
 	uint8_t book_size_scale;
+        u_int8_t addr_over; /* flag which is set if the dest address for this chunk
+			     * is overridden by user. Used for CMT
+			     * (iyengar@cis.udel.edu, 2005/06/21)
+			     */
 };
 
 

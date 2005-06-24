@@ -76,7 +76,7 @@
 #define SCTPCTL_ASSOC_RTX_MAX       23
 #define SCTPCTL_PATH_RTX_MAX        24
 #define SCTPCTL_NR_OUTGOING_STREAMS 25
-#define SCTPCTL_CMT_ONOFF           26
+#define SCTPCTL_CMT_ON_OFF          26
 #define SCTPCTL_CWND_MAXBURST       27
 #define SCTPCTL_EARLY_FR            28
 #define SCTPCTL_RTTVAR_CC           29
@@ -274,6 +274,7 @@ extern int	sctp_recvspace;
 extern int      sctp_ecn;
 extern int      sctp_ecn_nonce;
 extern int      sctp_use_cwnd_based_maxburst;
+extern unsigned int sctp_cmt_on_off;
 struct sctp_nets;
 struct sctp_inpcb;
 struct sctp_tcb;

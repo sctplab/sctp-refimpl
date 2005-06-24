@@ -666,7 +666,7 @@ SYSCTL_UINT(_net_inet_sctp, OID_AUTO, delayed_sack_time, CTLFLAG_RW,
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, cmt_on_off, CTLFLAG_RW,
 	    &sctp_cmt_on_off, 0,
-	    "CMT on-off flag");
+	    "CMT ON/OFF flag");
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, early_fast_retran, CTLFLAG_RW,
 	    &sctp_early_fr, 0,
@@ -1688,6 +1688,7 @@ sctp_do_connect_x(struct socket *so,
 }
 
 
+
 static int
 sctp_optsget(struct socket *so,
 	     int opt,
@@ -1784,6 +1785,12 @@ sctp_optsget(struct socket *so,
 			m->m_len = sizeof(optval);
 		}
 		break;
+	case SCTP_CMT_ON_OFF:
+	{
+		*mtod(m, unsigned int *) = sctp_cmt_on_off;
+		m->m_len = sizeof(unsigned int);
+	}
+	break;
 	case SCTP_GET_ASOC_ID_LIST:
 	{
 		struct sctp_assoc_ids *ids;
@@ -2812,6 +2819,7 @@ sctp_optsget(struct socket *so,
 	return (error);
 }
 
+
 static int
 sctp_optsset(struct socket *so,
 	     int opt,
@@ -2895,6 +2903,13 @@ sctp_optsset(struct socket *so,
       inp->sctp_flags &= ~set_opt;
     }
     SCTP_INP_WUNLOCK(inp);
+    break;
+  case SCTP_CMT_ON_OFF:
+    {
+      sctp_cmt_on_off = *mtod(m, unsigned int *);
+      if (sctp_cmt_on_off != 0) 
+	sctp_cmt_on_off = 1;
+    }
     break;
   case SCTP_MY_PUBLIC_KEY:    /* set my public key */
   case SCTP_SET_AUTH_CHUNKS:  /* set the authenticated chunks required */
@@ -4876,7 +4891,7 @@ sctp_sysctl(name, namelen, oldp, oldlenp, newp, newlen)
  	case SCTPCTL_DELAYED_SACK:
  		return (sysctl_int(oldp, oldlenp, newp, newlen,
  				   &sctp_delayed_sack_time_default));
- 	case SCTPCTL_CMT_ONOFF:
+ 	case SCTPCTL_CMT_ON_OFF:
  		return (sysctl_int(oldp, oldlenp, newp, newlen,
  				   &sctp_cmt_on_off));
  	case SCTPCTL_EARLY_FR:
@@ -5071,7 +5086,7 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
                        CTLTYPE_INT, "cmt_on_off",
                        SYSCTL_DESCR("CMT on-off flag"),
                        NULL, 0, &sctp_cmt_on_off, 0,
-                       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_CMT_ONOFF,
+                       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_CMT_ON_OFF,
                        CTL_EOL);
 
        sysctl_createv(clog, 0, NULL, NULL,
