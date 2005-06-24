@@ -4156,15 +4156,20 @@ sctp_no_policy:
 	template->rec.data.ect_nonce = 0;   /* ECN Nonce */
 
 	if (srcv->sinfo_flags & SCTP_ADDR_OVER) {
-	  /* we may want to add a flag here to set
-	   * on the chunk struct (template) that the
-	   * address was over-ridden by the user.
-	   */
+	       /* CMT: The flag addr_over is set for the chunk
+		* to indicate that the address was overridden by the user.
+		* Used later by CMT. (iyengar@cis.udel.edu, 2005/06/21)
+		*/
 		template->whoTo = net;
+		template->addr_over = 1;
+
 	} else {
-	  /* Here we would want to clear that
-	   * flag for CMT.
-	   */
+	       /* CMT: The flag addr_over is set to zero for the chunk
+		* to indicate that the address was NOT overridden by the user.
+		* Used later by CMT. (iyengar@cis.udel.edu, 2005/06/21)
+		*/
+		template->addr_over = 0;
+
 		if (stcb->asoc.primary_destination)
 			template->whoTo = stcb->asoc.primary_destination;
 		else {
@@ -5363,29 +5368,24 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
 			continue;
 		}
 		if (chk->whoTo != net) {
-		  /* This place here is where CMT would
-		   * only need to verify that the address was
-		   * not over-ridden by the user. If not the
-		   * MISSING ELSE case to this IF, the
-		   * whoTo would need to be reset to this "net" that
-		   * was passed to this function.. it was passed since
-		   * it DID have room in the cwnd to send to.
-		   *
-		   * to change the whoTo we normally do:
-		   *
-		   * sctp_free_remote_addr(chk->whoTo);
-		   * chk->whoTo = net;
-		   * net->ref_count++;
-		   *
-		   * Unless of course whoTo does == net.
-		   *
-		   */
+		        if ((sctp_cmt_on_off == 1) && (chk->addr_over == 0)) {
+			  /* CMT: If CMT is ON, and the user has NOT overridden
+			   * the destination address for this chunk, then reset the 
+			   * destination address to the current one and continue with
+			   * sending this chunk to the current destination.
+			   * (iyengar@cis.udel.edu, 2005/06/21)
+			   */			  
+			  sctp_free_remote_addr(chk->whoTo);
+			  chk->whoTo = net;
+			  net->ref_count++;
 
-			/* Skip this stream, first one on stream
-			 * does not head to our current destination.
-			 */
-			strq = strqn;
-			continue;
+			} else {
+			  /* Skip this stream, first one on stream
+			   * does not head to our current destination.
+			   */
+			  strq = strqn;
+			  continue;
+			}
 		}
 		mtu_fromwheel += sctp_move_to_outqueue(stcb, strq);
 		cnt_mvd++;
@@ -5551,6 +5551,9 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 				continue;
 			}
 			/*
+			 * @@@ JRI : this loops through all nets
+			 * and calls sctp_fill_outqueue for all nets.
+			 * 
 			 * spin through the stream queues moving one message and
 			 * assign TSN's as appropriate.
 			 */
@@ -10545,11 +10548,12 @@ sctp_sosend(struct socket *so,
 		top = 0;
 	}
 
-	if (net->flight_size > net->cwnd) {
-	  /* You will need to add && cmt is disabled for
-	   * this if. Since if CMT is on, you always want
-	   * to attempt to send with the output routine
-	   * that will look at all nets.
+	if ((net->flight_size > net->cwnd) && (sctp_cmt_on_off == 0)) {
+	  /* CMT: Added check for CMT above. net above is the primary dest. If CMT is ON, sender should 
+	   * always attempt to send with the output routine sctp_fill_outqueue() that loops
+	   * through all destination addresses. Therefore, if CMT is ON, queue_only
+	   * is NOT set to 1 here, so that sctp_chunk_output() can be called below.
+	   * (iyengar@cis.udel.edu, 2005/06/21)
 	   */
 		sctp_pegs[SCTP_SENDTO_FULL_CWND]++;
 		queue_only = 1;
@@ -10562,6 +10566,9 @@ sctp_sosend(struct socket *so,
 			   ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) * sizeof(struct sctp_data_chunk)) +
 			   SCTP_MED_OVERHEAD);
 
+		/* @@@ JRI: This check for Nagle assumes only one small packet can 
+		 * be outstanding. Does this need to be changed for CMT?
+		 */
 		if (((inp->sctp_flags & SCTP_PCB_FLAGS_NODELAY) == 0) &&
 		    (stcb->asoc.total_flight > 0) &&
 		    (un_sent < (int)stcb->asoc.smallest_mtu)) {

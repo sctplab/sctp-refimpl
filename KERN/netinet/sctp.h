@@ -151,6 +151,9 @@ struct sctp_paramhdr {
 						     * as well. I.e. probably ASCONF/ASCONF-ACK no matter
 						     * if you want it or not.
 						     */
+/* CMT ON/OFF socket option */
+#define SCTP_CMT_ON_OFF                 0x00000200
+
 /* Debug things that need to be purged */
 #define SCTP_SET_INITIAL_DBG_SEQ	0x00001f00
 #define SCTP_RESET_PEGS                 0x00002000

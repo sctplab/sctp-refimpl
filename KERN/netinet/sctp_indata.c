@@ -126,8 +126,6 @@ extern int sctp_strict_sacks;
 #define SCTP_SBAPPEND(a, b, c) sbappend(a, b)
 #endif
 
-extern unsigned int sctp_cmt_on_off;
-
 
 void
 sctp_set_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
@@ -3704,6 +3702,11 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 		net->prev_cwnd = net->cwnd;
 		net->net_ack = 0;
 		net->net_ack2 = 0;
+
+		/* CMT: Reset these CUC algo variables before SACK processing
+		 * (iyengar@cis.udel.edu, 2005/06/24)
+		 */
+		net->new_pseudo_cumack = FALSE;
 	}
 	/* process the new consecutive TSN first */
 	tp1 = TAILQ_FIRST(&asoc->sent_queue);
