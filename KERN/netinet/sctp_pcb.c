@@ -2949,6 +2949,11 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 
 	net->ssthresh = stcb->asoc.peers_rwnd;
 
+	/* CMT: CUC algo - set find_pseudo_cumack to TRUE (1) at beginning of assoc
+	 * (2005/06/27, iyengar@cis.udel.edu)
+	 */
+	net->find_pseudo_cumack = 1;
+
 	net->src_addr_selected = 0;
 	netfirst = TAILQ_FIRST(&stcb->asoc.nets);
 	if (net->ro.ro_rt == NULL) {
