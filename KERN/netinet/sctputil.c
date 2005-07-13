@@ -1595,8 +1595,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		  /* Hmm no rtt estimate yet? */
 			msec = stcb->asoc.initial_rto >> 2;
 		} else {
-			msec = net->lastsa +  (net->lastsa >> 1);
-			
+			msec = ((net->lastsa >> 2) + net->lastsv) >> 1;
 		}
 		if (msec < sctp_early_fr_msec) {
 			msec = sctp_early_fr_msec;

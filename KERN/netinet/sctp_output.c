@@ -6153,10 +6153,12 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 						if(callout_pending(&net->fr_timer.timer)) {
 							sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, inp, stcb, net);
 						}
+						sctp_pegs[SCTP_EARLYFR_STR_OUT]++;
 						sctp_timer_start(SCTP_TIMER_TYPE_EARLYFR,inp, stcb, net);
 					} else {
 						/* stop it if its running */
 						if(callout_pending(&net->fr_timer.timer)) {
+							sctp_pegs[SCTP_EARLYFR_STP_OUT]++;
 							sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, inp, stcb, net);
 						}
 					}
