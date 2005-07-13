@@ -683,7 +683,7 @@
 #define SCTP_UNSET_TSN_PRESENT(arry, gap) (arry[(gap >> 3)] &= ((~(0x01 << ((gap & 0x07)))) & 0xff))
 
 /* pegs */
-#define SCTP_NUMBER_OF_PEGS	112
+#define SCTP_NUMBER_OF_PEGS	120
 /* peg index's */
 #define SCTP_PEG_SACKS_SEEN	0
 #define SCTP_PEG_SACKS_SENT	1
@@ -796,7 +796,16 @@
 #define SCTP_T3_AT_WINPROBE      108
 #define SCTP_RENEGED_ALL         109
 #define SCTP_IRENEGED_ON_ASOC    110
-#define SCTP_RESV3               111
+#define SCTP_EARLYFR_STP_OUT     111
+#define SCTP_EARLYFR_STP_ID_SCK1 112
+#define SCTP_EARLYFR_STP_ID_SCK2 113
+#define SCTP_EARLYFR_STP_ID_SCK3 114
+#define SCTP_EARLYFR_STP_ID_SCK4 115
+#define SCTP_EARLYFR_STR_ID      116
+#define SCTP_EARLYFR_STR_OUT     117
+#define SCTP_EARLYFR_STR_TMR     118
+#define SCTP_RESV1               119
+
 /*
  * This value defines the number of vtag block time wait entry's
  * per list element.  Each entry will take 2 4 byte ints (and of

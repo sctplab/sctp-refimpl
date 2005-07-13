@@ -3704,6 +3704,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 					stcb, net);
 			if(sctp_early_fr) {
 				if(callout_pending(&net->fr_timer.timer)) {
+					sctp_pegs[SCTP_EARLYFR_STP_ID_SCK1]++;
 					sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net);
 				}
 			}
@@ -4009,12 +4010,16 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 				 * the others.
 				 */
 				if(callout_pending(&net->fr_timer.timer)) {
+					sctp_pegs[SCTP_EARLYFR_STP_ID_SCK2]++;
 					sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net);
 				}
+				sctp_pegs[SCTP_EARLYFR_STR_ID]++;
+
 				sctp_timer_start(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net);
 			} else {
 				/* No, stop it if its running */
 				if(callout_pending(&net->fr_timer.timer)) {
+					sctp_pegs[SCTP_EARLYFR_STP_ID_SCK3]++;
 					sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net);
 				}
 			}
@@ -4207,6 +4212,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 			/* stop all timers */
 			if(sctp_early_fr) {
 				if(callout_pending(&net->fr_timer.timer)) {
+					sctp_pegs[SCTP_EARLYFR_STP_ID_SCK4]++;
 					sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net);
 				}
 			}

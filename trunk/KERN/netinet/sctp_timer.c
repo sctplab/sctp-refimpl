@@ -135,7 +135,8 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 		/* Hmm no rtt estimate yet? */
 		cur_rtt = stcb->asoc.initial_rto >> 2;
 	} else {
-		cur_rtt = net->lastsa + (net->lastsa >> 1);
+
+		cur_rtt = ((net->lastsa >> 2) + net->lastsv) >> 1;
 	}
 	if(cur_rtt < sctp_early_fr_msec) {
 		cur_rtt = sctp_early_fr_msec;
@@ -216,6 +217,7 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 	}
 	/* Restart it? */
 	if (net->flight_size < net->cwnd) {
+		sctp_pegs[SCTP_EARLYFR_STR_TMR]++;
 		sctp_timer_start(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net);
 	}
 }
