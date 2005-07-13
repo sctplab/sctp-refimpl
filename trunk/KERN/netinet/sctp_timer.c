@@ -1,7 +1,7 @@
 /*	$KAME: sctp_timer.c,v 1.29 2005/03/06 16:04:18 itojun Exp $	*/
 
 /*
- * Copyright (C) 2002, 2003, 2004 Cisco Systems Inc,
+ * Copyright (C) 2002-2005 Cisco Systems Inc,
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -82,6 +82,7 @@
 #ifdef INET6
 #include <netinet/ip6.h>
 #include <netinet6/ip6_var.h>
+#include <netinet6/scope6_var.h>
 #endif /* INET6 */
 
 #include <netinet/sctp_pcb.h>
@@ -369,7 +370,11 @@ sctp_find_alternate_net(struct sctp_tcb *stcb,
 				(void)in6_embedscope(&sin6->sin6_addr, sin6,
 						     NULL, NULL);
 #else
+#ifdef SCTP_KAME
+				(void)sa6_embedscope(sin6, ip6_use_defzone);
+#else
 				(void)in6_embedscope(&sin6->sin6_addr, sin6);
+#endif /* SCTP_KAME */
 #endif
 			}
 #endif
@@ -380,8 +385,12 @@ sctp_find_alternate_net(struct sctp_tcb *stcb,
 #endif
 #ifndef SCOPEDROUTING
 			if (sin6->sin6_family == AF_INET6) {
+#ifdef SCTP_KAME
+				(void)sa6_recoverscope(sin6);
+#else
 				(void)in6_recoverscope(sin6, &sin6->sin6_addr,
 				    NULL);
+#endif /* SCTP_KAME */
 			}
 #endif
 			alt->src_addr_selected = 0;

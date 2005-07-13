@@ -1358,6 +1358,13 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 		from6->sin6_port = sh->src_port;
 		to6->sin6_port = sh->dest_port;
 		/* Get the scopes in properly to the sin6 addr's */
+#ifdef SCTP_KAME
+		/* we probably don't need these operations */
+		(void)sa6_recoverscope(to6);
+		sa6_embedscope(to6, ip6_use_defzone);
+		(void)sa6_recoverscope(from6);
+		sa6_embedscope(from6, ip6_use_defzone);
+#else
 		(void)in6_recoverscope(to6, &to6->sin6_addr, NULL);
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
 		(void)in6_embedscope(&to6->sin6_addr, to6, NULL, NULL);
@@ -1371,6 +1378,7 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 #else
 		(void)in6_embedscope(&from6->sin6_addr, from6);
 #endif
+#endif /* SCTP_KAME */
 	} else {
 		/* Currently not supported. */
 		return (NULL);
@@ -1976,6 +1984,10 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 			if (!IN6_IS_ADDR_UNSPECIFIED(&sin6->sin6_addr)) {
 				bindall = 0;
 				/* KAME hack: embed scopeid */
+#ifdef SCTP_KAME
+				if (sa6_embedscope(sin6, ip6_use_defzone) != 0)
+					return (EINVAL);
+#else
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
 				if (in6_embedscope(&sin6->sin6_addr, sin6,
 				    ip_inp, NULL) != 0)
@@ -1989,6 +2001,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 					return (EINVAL);
 				}
 #endif
+#endif /* SCTP_KAME */
 			}
 #ifndef SCOPEDROUTING
 			/* this must be cleared for ifa_ifwithaddr() */
@@ -2907,7 +2920,11 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 		(void)in6_embedscope(&sin6->sin6_addr, sin6,
 		    &stcb->sctp_ep->ip_inp.inp, NULL);
 #else
+#ifdef SCTP_KAME
+		(void)sa6_embedscope(sin6, ip6_use_defzone);
+#else
 		(void)in6_embedscope(&sin6->sin6_addr, sin6);
+#endif /* SCTP_KAME */
 #endif
 #ifndef SCOPEDROUTING
 		sin6->sin6_scope_id = 0;
@@ -2921,7 +2938,11 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	if (newaddr->sa_family == AF_INET6) {
 		struct sockaddr_in6 *sin6;
 		sin6 = (struct sockaddr_in6 *)&net->ro._l_addr;
+#ifdef SCTP_KAME
+		(void)sa6_recoverscope(sin6);
+#else
 		(void)in6_recoverscope(sin6, &sin6->sin6_addr, NULL);
+#endif /* SCTP_KAME */
 	}
 	if ((net->ro.ro_rt) &&
 	    (net->ro.ro_rt->rt_ifp)) {
