@@ -1,7 +1,7 @@
 /*	$KAME: sctp_output.c,v 1.46 2005/03/06 16:04:17 itojun Exp $	*/
 
 /*
- * Copyright (C) 2002, 2003, 2004 Cisco Systems Inc,
+ * Copyright (C) 2002-2005 Cisco Systems Inc,
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -2380,7 +2380,11 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
 		if (in6_embedscope(&sin6->sin6_addr, sin6, NULL, NULL) != 0)
 #else
+#ifdef SCTP_KAME
+		if (sa6_embedscope(sin6, ip6_use_defzone) != 0)
+#else
 		if (in6_embedscope(&sin6->sin6_addr, sin6) != 0)
+#endif /* SCTP_KAME */
 #endif
 			return (EINVAL);
 		if (net == NULL) {
@@ -2478,8 +2482,12 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		bzero(&lsa6_storage, sizeof(lsa6_storage));
 		lsa6_storage.sin6_family = AF_INET6;
 		lsa6_storage.sin6_len = sizeof(lsa6_storage);
+#ifdef SCTP_KAME
+		if ((error = sa6_recoverscope(&lsa6_storage)) != 0) {
+#else
 		if ((error = in6_recoverscope(&lsa6_storage, &lsa6->sin6_addr,
 					      NULL)) != 0) {
+#endif /* SCTP_KAME */
 			sctp_m_freem(m);
 			return (error);
 		}
@@ -3572,17 +3580,26 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				/* we start counting for the private
 				 * address stuff at 1. since the link
 				 * local we source from won't show
-				 * up in our scoped cou8nt.
+				 * up in our scoped count.
 				 */
 				cnt_inits_to=1;
 				/* pull out the scope_id from incoming pkt */
+#ifdef SCTP_KAME
+				/* FIX ME: does this have scope from rcvif? */
+				(void)sa6_recoverscope(sin6);
+#else
 				(void)in6_recoverscope(sin6, &ip6->ip6_src,
 				    init_pkt->m_pkthdr.rcvif);
+#endif /* SCTP_KAME */
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
 				in6_embedscope(&sin6->sin6_addr, sin6, NULL,
 				    NULL);
 #else
+#ifdef SCTP_KAME
+				sa6_embedscope(sin6, ip6_use_defzone);
+#else
 				in6_embedscope(&sin6->sin6_addr, sin6);
+#endif /* SCTP_KAME */
 #endif
 				stc.scope_id = sin6->sin6_scope_id;
 			} else if (IN6_IS_ADDR_SITELOCAL(&sin6->sin6_addr)) {

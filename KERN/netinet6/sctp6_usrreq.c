@@ -1,7 +1,7 @@
 /*	$KAME: sctp6_usrreq.c,v 1.36 2005/03/06 16:04:19 itojun Exp $	*/
 
 /*
- * Copyright (c) 2001, 2002, 2003, 2004 Cisco Systems, Inc.
+ * Copyright (c) 2001-2005 Cisco Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -81,6 +81,7 @@
 #include <netinet/sctp_input.h>
 #include <netinet/sctp_asconf.h>
 #include <netinet6/ip6_var.h>
+#include <netinet6/scope6_var.h>
 #include <netinet/ip6.h>
 #if !defined(__OpenBSD__)
 #include <netinet6/in6_pcb.h>
@@ -1422,6 +1423,10 @@ sctp6_getaddr(struct socket *so, struct mbuf *nam)
 	struct sockaddr_in6 *sin6 = mtod(nam, struct sockaddr_in6 *);
 #endif
 	struct sctp_inpcb *inp;
+#ifdef SCTP_KAME
+	int error;
+#endif /* SCTP_KAME */
+
 	/*
 	 * Do the malloc first in case it blocks.
 	 */
@@ -1500,11 +1505,16 @@ sctp6_getaddr(struct socket *so, struct mbuf *nam)
 	}
 	SCTP_INP_RUNLOCK(inp);
 	/* Scoping things for v6 */
+#ifdef SCTP_KAME
+	if ((error = sa6_recoverscope(sin6)) != 0)
+		return (error);
+#else
 	if (IN6_IS_SCOPE_LINKLOCAL(&sin6->sin6_addr))
 		/* skip ifp check below */
 		in6_recoverscope(sin6, &sin6->sin6_addr, NULL);
 	else
 		sin6->sin6_scope_id = 0;	/*XXX*/
+#endif /* SCTP_KAME */
 #if defined(__FreeBSD__) || defined(__APPLE__)
 	(*addr) = (struct sockaddr *)sin6;
 #endif
@@ -1526,6 +1536,10 @@ sctp6_peeraddr(struct socket *so, struct mbuf *nam)
 	struct sctp_inpcb *inp;
 	struct sctp_tcb *stcb;
 	struct sctp_nets *net;
+#ifdef SCTP_KAME
+	int error;
+#endif /* SCTP_KAME */
+
 	/*
 	 * Do the malloc first in case it blocks.
 	 */
@@ -1581,7 +1595,12 @@ sctp6_peeraddr(struct socket *so, struct mbuf *nam)
 #endif
 		return ENOENT;
 	}
+#ifdef SCTP_KAME
+	if ((error = sa6_recoverscope(sin6)) != 0)
+		return (error);
+#else
 	in6_recoverscope(sin6, &sin6->sin6_addr, NULL);
+#endif /* SCTP_KAME */
 #if defined(__FreeBSD__) || defined(__APPLE__)
 	*addr = (struct sockaddr *)sin6;
 #endif

@@ -75,6 +75,7 @@
 #include <netinet/ip_var.h>
 #include <netinet6/ip6_var.h>
 #include <netinet6/in6_var.h>
+#include <netinet6/scope6_var.h>
 #if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
 #include <sys/domain.h>
 #endif
@@ -1346,7 +1347,10 @@ sctp_fill_up_addresses(struct sctp_inpcb *inp,
 					}
 				} else if ((ifa->ifa_addr->sa_family == AF_INET6) &&
 					   (ipv6_addr_legal)) {
-					struct sockaddr_in6 *sin6, lsa6;
+					struct sockaddr_in6 *sin6;
+#ifndef SCTP_KAME
+					struct sockaddr_in6 lsa6;
+#endif
 					sin6 = (struct sockaddr_in6 *)ifa->ifa_addr;
 					if (IN6_IS_ADDR_UNSPECIFIED(&sin6->sin6_addr)) {
 						/* we skip unspecifed addresses */
@@ -1356,6 +1360,11 @@ sctp_fill_up_addresses(struct sctp_inpcb *inp,
 						if (local_scope == 0)
 							continue;
 						if (sin6->sin6_scope_id == 0) {
+#ifdef SCTP_KAME
+							if (sa6_recoverscope(sin6) != 0)
+								/* bad link local address */
+								continue;
+#else
 							lsa6 = *sin6;
 							if (in6_recoverscope(&lsa6,
 									     &lsa6.sin6_addr,
@@ -1363,6 +1372,7 @@ sctp_fill_up_addresses(struct sctp_inpcb *inp,
 								/* bad link local address */
 								continue;
 							sin6 = &lsa6;
+#endif /* SCTP_KAME */
 						}
 					}
 					if ((site_scope == 0) &&
@@ -4350,6 +4360,9 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 	struct sctp_tcb *stcb;
 	struct sctp_inpcb *inp;
 	union sctp_sockstore store;
+#ifdef SCTP_KAME
+	int error;
+#endif /* SCTP_KAME */
 
 	inp = (struct sctp_inpcb *)so->so_pcb;
 
@@ -4405,11 +4418,16 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 		sin6->sin6_port = ((struct sockaddr_in6 *)&store)->sin6_port;
 
 		sin6->sin6_addr = ((struct sockaddr_in6 *)&store)->sin6_addr;
+#ifdef SCTP_KAME
+		if ((error = sa6_recoverscope(sin6)) != 0)
+			return (error);
+#else
 		if (IN6_IS_SCOPE_LINKLOCAL(&sin6->sin6_addr))
 			/*      sin6->sin6_scope_id = ntohs(sin6->sin6_addr.s6_addr16[1]);*/
 			in6_recoverscope(sin6, &sin6->sin6_addr, NULL);  /* skip ifp check */
 		else
 			sin6->sin6_scope_id = 0;	/*XXX*/
+#endif /* SCTP_KAME */
 #if defined(__FreeBSD__) || defined (__APPLE__)
 		*addr= (struct sockaddr *)sin6;
 #else

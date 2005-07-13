@@ -126,6 +126,9 @@
 #include <netinet/in_pcb.h>
 #endif
 
+#ifdef SCTP_KAME
+#include <netinet6/scope6_var.h>
+#endif /* SCTP_KAME */
 #endif /* INET6 */
 
 #include <netinet/sctp_pcb.h>
@@ -3213,12 +3216,20 @@ sctp_is_same_scope(struct sockaddr_in6 *addr1, struct sockaddr_in6 *addr2)
 	b = *addr2;
 
 	if (a.sin6_scope_id == 0)
+#ifdef SCTP_KAME
+		if (sa6_recoverscope(&a)) {
+#else
 		if (in6_recoverscope(&a, &a.sin6_addr, NULL)) {
+#endif /* SCTP_KAME */
 			/* can't get scope, so can't match */
 			return (0);
 		}
 	if (b.sin6_scope_id == 0)
+#ifdef SCTP_KAME
+		if (sa6_recoverscope(&b)) {
+#else
 		if (in6_recoverscope(&b, &b.sin6_addr, NULL)) {
+#endif /* SCTP_KAME */
 			/* can't get scope, so can't match */
 			return (0);
 		}
@@ -3240,8 +3251,12 @@ sctp_recover_scope(struct sockaddr_in6 *addr, struct sockaddr_in6 *store)
 		if (IN6_IS_SCOPE_LINKLOCAL(&addr->sin6_addr)) {
 			if (addr->sin6_scope_id == 0) {
 				*store = *addr;
+#ifdef SCTP_KAME
+				if (!sa6_recoverscope(store)) {
+#else
 				if (!in6_recoverscope(store, &store->sin6_addr,
 				    NULL)) {
+#endif /* SCTP_KAME */
 					/* use the recovered scope */
 					addr = store;
 				}
