@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.18 2005-06-23 15:36:34 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.19 2005-07-14 14:49:26 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -3191,7 +3191,15 @@ cmd_getpegs(char *argv[], int argc)
 	"t3winprb", /* 108 */
 	"rengalls", /* 109 */
 	"irengeds", /* 110 */
-	"resv3   ", /* 111 */
+        "efr_stot", /* 111 */
+	"efr_sts1", /* 112 */
+	"efr_sts2", /* 113 */
+	"efr_sts3", /* 114 */
+	"efr_sts4", /* 115 */
+	"efr_stai", /* 116 */
+	"efr_stao", /* 117 */
+	"efr_stat", /* 118 */
+	"resv1   ", /* 119 */
 
     };
     printf("there are %d pegs\n",
