@@ -2554,6 +2554,19 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		ip_freemoptions(ip_pcb->inp_moptions);
 		ip_pcb->inp_moptions = 0;
 	}
+
+#ifdef INET6
+#if !(defined(__FreeBSD__) || defined(__APPLE__))
+        if (inp->inp_vflag & INP_IPV6) {
+#else
+        if (ip_pcb->inp_vflag & INP_IPV6) {
+#endif
+                struct in6pcb *in6p;
+                
+                in6p = (struct in6pcb *)inp;
+                ip6_freepcbopts(in6p->in6p_outputopts);
+        }
+#endif /* INET6 */
 #if !(defined(__FreeBSD__) || defined(__APPLE__))
 	inp->inp_vflag = 0;
 #else
