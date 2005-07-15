@@ -5085,6 +5085,8 @@ sctp_clean_up_datalist(struct sctp_tcb *stcb,
 		       struct sctp_nets *net)
 {
 	int i;
+	struct sctp_tmit_chunk *tp1;
+
 	for (i = 0; i < bundle_at; i++) {
 		/* off of the send queue */
 		if (i) {
@@ -5100,9 +5102,29 @@ sctp_clean_up_datalist(struct sctp_tcb *stcb,
 			     data_list[i],
 			     sctp_next);
 		/* on to the sent queue */
-		TAILQ_INSERT_TAIL(&asoc->sent_queue,
-				  data_list[i],
-				  sctp_next);
+		tp1 = TAILQ_LAST(&asoc->send_queue, sctpchunk_listhead);
+		if((tp1) && (compare_with_wrap(tp1->rec.data.TSN_seq, 
+					       data_list[i]->rec.data.TSN_seq, MAX_TSN))) {
+			struct sctp_tmit_chunk *tpp;
+			/* need to move back */
+		back_up_more:
+			tpp = TAILQ_PREV(tp1, sctpchunk_listhead, sctp_next);
+			if(tpp == NULL) {
+				TAILQ_INSERT_BEFORE(tp1, data_list[i], sctp_next);
+				goto all_done;
+			}
+			tp1 = tpp;
+			if (compare_with_wrap(tp1->rec.data.TSN_seq, 
+					       data_list[i]->rec.data.TSN_seq, MAX_TSN)) {
+				goto back_up_more;
+			}
+			TAILQ_INSERT_AFTER(&asoc->sent_queue, data_list[i], tp1,  sctp_next);
+		} else {
+			TAILQ_INSERT_TAIL(&asoc->sent_queue,
+					  data_list[i],
+					  sctp_next);
+		}
+	all_done:
 		/* This does not lower until the cum-ack passes it */
 		asoc->sent_queue_cnt++;
 		asoc->send_queue_cnt--;
