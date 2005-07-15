@@ -224,10 +224,6 @@ struct sctp_nets {
         u_int8_t new_pseudo_cumack; /* CMT CUC algorithm. Flag used to indicate 
 				       if a new pseudo-cumack or rtx-pseudo-cumack has been received */
 
-        u_int8_t find_pseudo_cumack; /* CMT CUC algorithm. Flag used to find a new rtx pseudocumack. 
-					This flag is set after a new rtx-pseudo-cumack has been received 
-					and indicates that the sender should find the next rtx-pseudo-cumack 
-					expected for this destination */
 
 #ifdef SCTP_HIGH_SPEED
 	u_int8_t last_hs_used;		/* index into the last HS table entry we used */
