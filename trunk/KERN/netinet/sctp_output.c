@@ -7746,11 +7746,11 @@ sctp_output(inp, m, addr, control, p, flags)
 	 	queue_only = 1;
  	} else {
 		un_sent = ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight) +
-			   ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) * sizeof(struct sctp_data_chunk)) +
-			   SCTP_MED_OVERHEAD);
+			   ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) * sizeof(struct sctp_data_chunk)));
+
 
 		if (((inp->sctp_flags & SCTP_PCB_FLAGS_NODELAY) == 0) &&
-		    (stcb->asoc.total_flight > 0) &&
+		    ((stcb->asoc.total_flight > 0) && (stcb->asoc.total_flight < (int)stcb->asoc.smallest_mtu)) &&
 		    (un_sent < (int)stcb->asoc.smallest_mtu)
 			) {
 
@@ -10604,14 +10604,13 @@ sctp_sosend(struct socket *so,
 		queue_only = 1;
  	} else {
 		un_sent = ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight) +
-			   ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) * sizeof(struct sctp_data_chunk)) +
-			   SCTP_MED_OVERHEAD);
+			   ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) * sizeof(struct sctp_data_chunk)));
 
 		/* @@@ JRI: This check for Nagle assumes only one small packet can 
 		 * be outstanding. Does this need to be changed for CMT?
 		 */
 		if (((inp->sctp_flags & SCTP_PCB_FLAGS_NODELAY) == 0) &&
-		    (stcb->asoc.total_flight > 0) &&
+		    ((stcb->asoc.total_flight > 0) && (stcb->asoc.total_flight < (int)stcb->asoc.smallest_mtu)) &&
 		    (un_sent < (int)stcb->asoc.smallest_mtu)) {
 
 			/* Ok, Nagle is set on and we have data outstanding. Don't
