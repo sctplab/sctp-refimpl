@@ -592,6 +592,8 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 		    (stcb->asoc.last_acked_seq == chk->rec.data.TSN_seq)) {
 			/* Strange case our list got out of order? */
 			printf("Our list is out of order?\n");
+			panic("Out of order list");
+			/*
 			TAILQ_REMOVE(&stcb->asoc.sent_queue, chk, sctp_next);
 			if (chk->data) {
 				sctp_release_pr_sctp_chunk(stcb, chk, 0xffff,
@@ -605,6 +607,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 			SCTP_DECR_CHK_COUNT();
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
 			continue;
+			*/
 		}
 		if ((chk->whoTo == net) && (chk->sent < SCTP_DATAGRAM_ACKED)) {
 			/* found one to mark:
