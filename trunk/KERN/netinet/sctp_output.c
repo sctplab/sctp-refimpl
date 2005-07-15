@@ -5102,7 +5102,7 @@ sctp_clean_up_datalist(struct sctp_tcb *stcb,
 			     data_list[i],
 			     sctp_next);
 		/* on to the sent queue */
-		tp1 = TAILQ_LAST(&asoc->send_queue, sctpchunk_listhead);
+		tp1 = TAILQ_LAST(&asoc->sent_queue, sctpchunk_listhead);
 		if((tp1) && (compare_with_wrap(tp1->rec.data.TSN_seq, 
 					       data_list[i]->rec.data.TSN_seq, MAX_TSN))) {
 			struct sctp_tmit_chunk *tpp;
