@@ -4053,7 +4053,8 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 		 */
 
 		if (asoc->fast_retran_loss_recovery &&
-		    will_exit_fast_recovery == 0) {
+		    will_exit_fast_recovery == 0 &&
+		    sctp_cmt_on_off == 0) {
 			/* If we are in loss recovery we skip any cwnd update */
 			sctp_pegs[SCTP_CWND_SKIP]++;
 			goto skip_cwnd_update;
