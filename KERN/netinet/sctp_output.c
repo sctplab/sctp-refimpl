@@ -5133,7 +5133,7 @@ sctp_clean_up_datalist(struct sctp_tcb *stcb,
 				goto back_up_more;
 			}
 			printf("Inserting after tp1\n");
-			TAILQ_INSERT_AFTER(&asoc->sent_queue, data_list[i], tp1,  sctp_next);
+			TAILQ_INSERT_AFTER(&asoc->sent_queue, tp1, data_list[i], sctp_next);
 		} else {
 			printf("Inserting at tail\n");
 			TAILQ_INSERT_TAIL(&asoc->sent_queue,
