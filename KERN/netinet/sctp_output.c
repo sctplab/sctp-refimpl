@@ -5104,10 +5104,14 @@ sctp_clean_up_datalist(struct sctp_tcb *stcb,
 			     sctp_next);
 		/* on to the sent queue */
 		tp1 = TAILQ_LAST(&asoc->sent_queue, sctpchunk_listhead);
-		printf("Last on Sent Q is TSN:%x new one is TSN:%x idx:%d\n",
-		       tp1->rec.data.TSN_seq,
-		       data_list[i]->rec.data.TSN_seq,
-		       i);
+		if(tp1) {
+			printf("Last on Sent Q is TSN:%x new one is TSN:%x idx:%d\n",
+			       tp1->rec.data.TSN_seq,
+			       data_list[i]->rec.data.TSN_seq,
+			       i);
+		} else {
+			printf("First one on the list\n");
+		}
 	
 		if((tp1) && (compare_with_wrap(tp1->rec.data.TSN_seq, 
 					       data_list[i]->rec.data.TSN_seq, MAX_TSN))) {
