@@ -5079,15 +5079,14 @@ sctp_toss_old_asconf(struct sctp_tcb *stcb)
 
 static void
 sctp_clean_up_datalist(struct sctp_tcb *stcb,
-		       struct sctp_association *asoc,
+	
+	       struct sctp_association *asoc,
 		       struct sctp_tmit_chunk **data_list,
 		       int bundle_at,
 		       struct sctp_nets *net)
 {
 	int i;
 	struct sctp_tmit_chunk *tp1;
-	printf("Going to clean_up data with %d chunks\n",
-	       bundle_at);
 	for (i = 0; i < bundle_at; i++) {
 		/* off of the send queue */
 		if (i) {
@@ -5104,38 +5103,23 @@ sctp_clean_up_datalist(struct sctp_tcb *stcb,
 			     sctp_next);
 		/* on to the sent queue */
 		tp1 = TAILQ_LAST(&asoc->sent_queue, sctpchunk_listhead);
-		if(tp1) {
-			printf("Last on Sent Q is TSN:%x new one is TSN:%x idx:%d\n",
-			       tp1->rec.data.TSN_seq,
-			       data_list[i]->rec.data.TSN_seq,
-			       i);
-		} else {
-			printf("First one on the list\n");
-		}
-	
 		if((tp1) && (compare_with_wrap(tp1->rec.data.TSN_seq, 
 					       data_list[i]->rec.data.TSN_seq, MAX_TSN))) {
 			struct sctp_tmit_chunk *tpp;
 			/* need to move back */
 		back_up_more:
-			printf("Need to move backward in list I am to big\n");
 			tpp = TAILQ_PREV(tp1, sctpchunk_listhead, sctp_next);
 			if(tpp == NULL) {
-				printf("Hit beginning of list, insert before tp1\n");
 				TAILQ_INSERT_BEFORE(tp1, data_list[i], sctp_next);
 				goto all_done;
 			}
 			tp1 = tpp;
-			printf("Change TP1 to TSN:%x and compare\n",
-			       tp1->rec.data.TSN_seq);
 			if (compare_with_wrap(tp1->rec.data.TSN_seq, 
 					       data_list[i]->rec.data.TSN_seq, MAX_TSN)) {
 				goto back_up_more;
 			}
-			printf("Inserting after tp1\n");
 			TAILQ_INSERT_AFTER(&asoc->sent_queue, tp1, data_list[i], sctp_next);
 		} else {
-			printf("Inserting at tail\n");
 			TAILQ_INSERT_TAIL(&asoc->sent_queue,
 					  data_list[i],
 					  sctp_next);
