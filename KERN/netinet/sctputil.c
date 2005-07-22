@@ -330,6 +330,7 @@ sctp_log_lock(struct sctp_inpcb *inp, struct sctp_tcb *stcb, uint8_t from)
   sctp_clog[sctp_cwnd_log_at].event_type = (u_int8_t)SCTP_LOG_LOCK_EVENT;
   sctp_clog[sctp_cwnd_log_at].x.lock.sock = (u_int32_t)inp->sctp_socket;
   sctp_clog[sctp_cwnd_log_at].x.lock.inp = (u_int32_t)inp;
+#if (defined(__FreeBSD__) && __FreeBSD_version >= 503000) || (defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER))
   if(stcb) {
     sctp_clog[sctp_cwnd_log_at].x.lock.tcb_lock = mtx_owned(&stcb->tcb_mtx);
   } else {
@@ -352,6 +353,7 @@ sctp_log_lock(struct sctp_inpcb *inp, struct sctp_tcb *stcb, uint8_t from)
     sctp_clog[sctp_cwnd_log_at].x.lock.sockrcvbuf_lock = SCTP_LOCK_UNKNOWN;
     sctp_clog[sctp_cwnd_log_at].x.lock.socksndbuf_lock = SCTP_LOCK_UNKNOWN;
   }
+#endif
   sctp_cwnd_log_at++;
   if (sctp_cwnd_log_at >= SCTP_STAT_LOG_SIZE) {
     sctp_cwnd_log_at = 0;
@@ -447,7 +449,8 @@ int
 sctp_fill_stat_log(struct mbuf *m)
 {
 	struct sctp_cwnd_log_req *req;
-	int size_limit, num, i, at, cnt_out=0;
+	size_t size_limit;
+	int num, i, at, cnt_out=0;
 
 	if (m == NULL)
 		return (EINVAL);
@@ -1585,7 +1588,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 
 	case SCTP_TIMER_TYPE_EARLYFR:
 	{
-		int msec;
+		unsigned int msec;
 		if ((stcb == NULL) || (net == NULL)) {
 			return (EFAULT);
 		}
@@ -2116,7 +2119,7 @@ sctp_calculate_rto(struct sctp_tcb *stcb,
 	/* this is Van Jacobson's integer version */
 	if (net->RTO) {
 		calc_time -= (net->lastsa >> 3);
-		if(net->prev_rtt > o_calctime) {
+		if((int)net->prev_rtt > o_calctime) {
 		  net->rtt_variance = net->prev_rtt - o_calctime;
 		  /* decreasing */
 		  net->rto_variance_dir = 0;
@@ -4925,5 +4928,4 @@ sctp_sbappend( struct sockbuf *sb,
 	}
 	SOCKBUF_UNLOCK(sb);
 }
-
 #endif

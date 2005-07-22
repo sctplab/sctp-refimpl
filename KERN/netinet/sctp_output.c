@@ -4413,7 +4413,11 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			 * drop to spl0() so that others can
 			 * get in.
 			 */
+#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+			sbunlock(&so->so_snd, 0); /* MT: FIXME */
+#else
 			sbunlock(&so->so_snd);
+#endif
 			be.error = 0;
 			stcb->block_entry = &be;
 			SCTP_TCB_UNLOCK(stcb);
@@ -4775,7 +4779,11 @@ zap_by_it_all:
 #endif
 
 release:
+#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+	sbunlock(&so->so_snd, 0); /* MT: FIXME */
+#else
 	sbunlock(&so->so_snd);
+#endif
 out_locked:
 	SOCKBUF_UNLOCK(&so->so_snd);
 out:
@@ -7750,7 +7758,7 @@ sctp_output(inp, m, addr, control, p, flags)
 
 
 		if (((inp->sctp_flags & SCTP_PCB_FLAGS_NODELAY) == 0) &&
-		    ((stcb->asoc.total_flight > 0) && (stcb->asoc.total_flight < (int)stcb->asoc.smallest_mtu)) &&
+		    ((stcb->asoc.total_flight > 0) && (stcb->asoc.total_flight < stcb->asoc.smallest_mtu)) &&
 		    (un_sent < (int)stcb->asoc.smallest_mtu)
 			) {
 
@@ -9727,7 +9735,11 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 			sctp_log_block(SCTP_BLOCK_LOG_INTO_BLK,
 			    so, asoc);
 #endif
+#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+			sbunlock(&so->so_snd, 0); /* MT: FIXME */
+#else
 			sbunlock(&so->so_snd);
+#endif
 			be.error = 0;
 			stcb->block_entry = &be;
 			SCTP_TCB_UNLOCK(stcb);
@@ -9845,7 +9857,11 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 					mm = NULL;
 				}
 			}
+#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+			sbunlock(&so->so_snd, 0); /* MT: FIXME */
+#else
 			sbunlock(&so->so_snd);
+#endif
 			SOCKBUF_UNLOCK(&so->so_snd);
 			sctp_abort_an_association(stcb->sctp_ep, stcb,
 						  SCTP_RESPONSE_TO_USER_REQ,
@@ -10229,7 +10245,11 @@ zap_by_it_now:
 #endif
 
 release:
+#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+	sbunlock(&so->so_snd, 0); /* MT: FIXME */
+#else
 	sbunlock(&so->so_snd);
+#endif
 out_locked:
 	SOCKBUF_UNLOCK(&so->so_snd);
 out_notlocked:
@@ -10610,7 +10630,7 @@ sctp_sosend(struct socket *so,
 		 * be outstanding. Does this need to be changed for CMT?
 		 */
 		if (((inp->sctp_flags & SCTP_PCB_FLAGS_NODELAY) == 0) &&
-		    ((stcb->asoc.total_flight > 0) && (stcb->asoc.total_flight < (int)stcb->asoc.smallest_mtu)) &&
+		    ((stcb->asoc.total_flight > 0) && (stcb->asoc.total_flight < stcb->asoc.smallest_mtu)) &&
 		    (un_sent < (int)stcb->asoc.smallest_mtu)) {
 
 			/* Ok, Nagle is set on and we have data outstanding. Don't
