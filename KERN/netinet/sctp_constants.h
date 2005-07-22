@@ -235,12 +235,18 @@
 #define SCTP_HOSTNAME_ADDRESS	    0x000b
 #define SCTP_SUPPORTED_ADDRTYPE	    0x000c
 #define SCTP_ECN_CAPABLE	    0x8000
+
 /* draft-ietf-stewart-strreset-xxx */
 #define SCTP_STR_RESET_REQUEST      0x000d
 #define SCTP_STR_RESET_RESPONSE     0x000e
+/* draft-ietf-tsvwg-sctp-auth */
+#define SCTP_AUTH_RANDOM            0x8002
+#define SCTP_AUTH_CHUNK_LIST        0x8003
+#define SCTP_AUTH_HMAC_ALGO         0x8004
 
 /* ECN Nonce: draft-ladha-sctp-ecn-nonce */
 #define SCTP_ECN_NONCE_SUPPORTED    0x8001
+
 /*
  * draft-ietf-stewart-strreset-xxx
  *   param=0x8001  len=0xNNNN

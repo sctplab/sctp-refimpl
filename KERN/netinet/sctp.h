@@ -278,6 +278,10 @@ struct sctp_error_unrecognized_chunk {
 /* draft-ietf-stewart-strreset-xxx */
 #define SCTP_STREAM_RESET       0x82
 
+/* draft-ietf-tsvwg-sctp-auth */
+#define SCTP_AUTHENTICATION     0x83
+
+
 /* ABORT and SHUTDOWN COMPLETE FLAG */
 #define SCTP_HAD_NO_TCB		0x01
 

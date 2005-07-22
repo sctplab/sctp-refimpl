@@ -409,9 +409,12 @@ struct sctp_association {
 	 * pending_reply->sr_resp.reset_at_tsn.
 	 */
 	struct sctp_stream_reset_response *pending_reply;
+	
+	uint8_t *chks_that_require_auth;
+
 	struct sctpchunk_listhead pending_reply_queue;
 
-	u_int32_t cookie_preserve_req;
+	uint32_t cookie_preserve_req;
 	/* ASCONF next seq I am sending out, inits at init-tsn */
 	uint32_t asconf_seq_out;
 	/* ASCONF last received ASCONF from peer, starts at peer's TSN-1 */
@@ -687,6 +690,7 @@ struct sctp_association {
 	u_int8_t ifp_had_enobuf;
 	u_int8_t saw_sack_with_frags;
 	u_int8_t in_restart_hash;
+	u_int8_t packet_authenticated;
 	/*
 	 * The mapping array is used to track out of order sequences above
 	 * last_acked_seq. 0 indicates packet missing 1 indicates packet
