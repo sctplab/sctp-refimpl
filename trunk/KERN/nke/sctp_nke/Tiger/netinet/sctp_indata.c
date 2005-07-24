@@ -140,8 +140,9 @@ sctp_set_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 	 */
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INDATA4) {
-		printf("cc:%lu hiwat:%lu lowat:%lu mbcnt:%lu mbmax:%lu\n",
+		printf("sb_cc:%lu assoc_cc: %lu hiwat:%lu lowat:%lu mbcnt:%lu mbmax:%lu\n",
 		       (u_long)stcb->sctp_socket->so_rcv.sb_cc,
+		       (u_long)asoc->sb_cc,
 		       (u_long)stcb->sctp_socket->so_rcv.sb_hiwat,
 		       (u_long)stcb->sctp_socket->so_rcv.sb_lowat,
 		       (u_long)stcb->sctp_socket->so_rcv.sb_mbcnt,

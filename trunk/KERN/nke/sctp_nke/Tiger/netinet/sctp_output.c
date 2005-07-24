@@ -4414,7 +4414,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			 * get in.
 			 */
 #if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
-			sbunlock(&so->so_snd, 0); /* MT */
+			sbunlock(&so->so_snd, 0); /* MT: FIXME */
 #else
 			sbunlock(&so->so_snd);
 #endif
@@ -4780,7 +4780,7 @@ zap_by_it_all:
 
 release:
 #if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
-	sbunlock(&so->so_snd, 0); /* MT */
+	sbunlock(&so->so_snd, 0); /* MT: FIXME */
 #else
 	sbunlock(&so->so_snd);
 #endif
@@ -5087,7 +5087,8 @@ sctp_toss_old_asconf(struct sctp_tcb *stcb)
 
 static void
 sctp_clean_up_datalist(struct sctp_tcb *stcb,
-		       struct sctp_association *asoc,
+	
+	       struct sctp_association *asoc,
 		       struct sctp_tmit_chunk **data_list,
 		       int bundle_at,
 		       struct sctp_nets *net)
@@ -7757,7 +7758,7 @@ sctp_output(inp, m, addr, control, p, flags)
 
 
 		if (((inp->sctp_flags & SCTP_PCB_FLAGS_NODELAY) == 0) &&
-		    ((stcb->asoc.total_flight > 0) && (stcb->asoc.total_flight < (int)stcb->asoc.smallest_mtu)) &&
+		    ((stcb->asoc.total_flight > 0) && (stcb->asoc.total_flight < stcb->asoc.smallest_mtu)) &&
 		    (un_sent < (int)stcb->asoc.smallest_mtu)
 			) {
 
@@ -9735,7 +9736,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 			    so, asoc);
 #endif
 #if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
-			sbunlock(&so->so_snd, 0); /* MT */
+			sbunlock(&so->so_snd, 0); /* MT: FIXME */
 #else
 			sbunlock(&so->so_snd);
 #endif
@@ -9857,7 +9858,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 				}
 			}
 #if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
-			sbunlock(&so->so_snd, 0); /* MT */
+			sbunlock(&so->so_snd, 0); /* MT: FIXME */
 #else
 			sbunlock(&so->so_snd);
 #endif
@@ -10245,7 +10246,7 @@ zap_by_it_now:
 
 release:
 #if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
-	sbunlock(&so->so_snd, 0); /* MT */
+	sbunlock(&so->so_snd, 0); /* MT: FIXME */
 #else
 	sbunlock(&so->so_snd);
 #endif
@@ -10629,7 +10630,7 @@ sctp_sosend(struct socket *so,
 		 * be outstanding. Does this need to be changed for CMT?
 		 */
 		if (((inp->sctp_flags & SCTP_PCB_FLAGS_NODELAY) == 0) &&
-		    ((stcb->asoc.total_flight > 0) && (stcb->asoc.total_flight < (int)stcb->asoc.smallest_mtu)) &&
+		    ((stcb->asoc.total_flight > 0) && (stcb->asoc.total_flight < stcb->asoc.smallest_mtu)) &&
 		    (un_sent < (int)stcb->asoc.smallest_mtu)) {
 
 			/* Ok, Nagle is set on and we have data outstanding. Don't

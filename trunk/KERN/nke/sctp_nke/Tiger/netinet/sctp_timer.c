@@ -127,7 +127,7 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 {
 	struct sctp_tmit_chunk *chk, *tp2;
 	struct timeval now, min_wait, tv;
-	int cur_rtt, cnt=0, cnt_resend=0;
+	unsigned int cur_rtt, cnt=0, cnt_resend=0;
 	
 	/* an early FR is occuring. */
 	SCTP_GETTIME_TIMEVAL(&now);

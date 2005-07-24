@@ -649,7 +649,7 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 /*
  * Apple MacOS X 10.4 "Tiger"
  */
-#elif defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER) && defined(MICHAEL)
+#elif defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
 
 /* for now, all locks use this group and attributes */
 #define SCTP_MTX_GRP sctppcbinfo.mtx_grp
@@ -718,14 +718,15 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 /* Lock for TCB */
 #define SCTP_TCB_LOCK_INIT(_tcb) \
 	(_tcb)->tcb_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
+/* FIXME takes second parameter */
 #define SCTP_TCB_LOCK_DESTROY(_tcb) \
-	lck_mtx_free((_tcb)->tcb_mtx, SCTP_MTX_GRP)
+	lck_mtx_free((_tcb)->tcb_mtx, 0)
 #define SCTP_TCB_LOCK(_tcb) \
 	lck_mtx_lock((_tcb)->tcb_mtx)
 #define SCTP_TCB_UNLOCK(_tcb) \
 	lck_mtx_unlock((_tcb)->tcb_mtx)
+/* FIXME: check ownership */
 #define SCTP_TCB_UNLOCK_IFOWNED(_tcb)	      do { \
-                                                /* if (mtx_owned(&(_tcb)->tcb_mtx))*/ \
                                                      lck_mtx_unlock((_tcb)->tcb_mtx); \
                                               } while (0)
 #define STCB_TCB_LOCK_ASSERT(_tcb) \
@@ -905,7 +906,7 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 /***************END FREEBSD 5 count stuff**********************/
 
 /***************BEGIN APPLE PANTHER count stuff**********************/
-#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER) && defined(MICHAEL)
+#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
 #define SCTP_INCRS_DEFINED 1
 #define SCTP_INCR_EP_COUNT() \
                 do { \
