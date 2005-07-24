@@ -1603,9 +1603,6 @@ sctp_addr_mgmt_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
     struct ifaddr *ifa, uint16_t type)
 {
 	int status;
-#ifdef SCTP_DEBUG
-	char buf[128];	/* for address in string format */
-#endif /* SCTP_DEBUG */
 #if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
 	struct timeval timenow;
 	
@@ -1682,9 +1679,6 @@ sctp_addr_mgmt_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		struct sockaddr_in6 *sin6;
 
 		sin6 = (struct sockaddr_in6 *)ifa->ifa_addr;
-#ifdef SCTP_DEBUG
-		strlcpy(buf, ip6_sprintf(&sin6->sin6_addr), sizeof(buf));
-#endif /* SCTP_DEBUG */
 		if (IN6_IS_ADDR_UNSPECIFIED(&sin6->sin6_addr)) {
 			/* we skip unspecifed addresses */
 #ifdef SCTP_DEBUG
@@ -1698,7 +1692,8 @@ sctp_addr_mgmt_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			if (stcb->asoc.local_scope == 0) {
 #ifdef SCTP_DEBUG
 				if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
-					printf("addr_mgmt_assoc: skipping link local IPv6 addr: %s\n", buf);
+					printf("addr_mgmt_assoc: skipping link local IPv6 addr:");
+					sctp_print_address((struct sockaddr *)sin6);
 				}
 #endif /* SCTP_DEBUG */
 				return;
@@ -1707,7 +1702,8 @@ sctp_addr_mgmt_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			if (sctp_is_scopeid_in_nets(stcb, ifa->ifa_addr) == 0) {
 #ifdef SCTP_DEBUG
 				if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
-					printf("addr_mgmt_assoc: skipping link local IPv6 addr: %s, wrong scope_id\n", buf);
+					printf("addr_mgmt_assoc: skipping link local IPv6 addr due to wrong scope_id:");
+					sctp_print_address((struct sockaddr *)sin6);					
 				}
 #endif /* SCTP_DEBUG */
 				return;
@@ -1717,7 +1713,8 @@ sctp_addr_mgmt_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		    IN6_IS_ADDR_SITELOCAL(&sin6->sin6_addr)) {
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
-				printf("addr_mgmt_assoc: skipping site local IPv6 addr: %s\n", buf);
+				printf("addr_mgmt_assoc: skipping site local IPv6 addr:");
+				sctp_print_address((struct sockaddr *)sin6);
 			}
 #endif /* SCTP_DEBUG */
 			return;
@@ -1740,11 +1737,6 @@ sctp_addr_mgmt_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			return;
 
 		sin = (struct sockaddr_in *)ifa->ifa_addr;
-#ifdef SCTP_DEBUG
-/* FIXME MT
-		strlcpy(buf, (const char *)inet_ntoa(sin->sin_addr), sizeof(buf));
-*/
-#endif /* SCTP_DEBUG */
 		if (sin->sin_addr.s_addr == 0) {
 			/* we skip unspecifed addresses */
 #ifdef SCTP_DEBUG
@@ -1758,7 +1750,8 @@ sctp_addr_mgmt_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		    IN4_ISPRIVATE_ADDRESS(&sin->sin_addr)) {
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
-				printf("addr_mgmt_assoc: skipping private IPv4 addr: %s\n", buf);
+				printf("addr_mgmt_assoc: skipping private IPv4 addr:");
+				sctp_print_address((struct sockaddr *)sin);
 			}
 #endif /* SCTP_DEBUG */
 			return;

@@ -5159,7 +5159,7 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 			gap = (MAX_TSN - asoc->mapping_array_base_tsn) +
 				asoc->highest_tsn_inside_map + 1;
 		}
-		if(gap >= (uint32_t)(asoc->mapping_array_size << 3)) {
+		if(gap >= (asoc->mapping_array_size << 3)) {
 			/* Something bad happened or
 			 * cum-ack and high were behind the base, but
 			 * if so earlier checks should have found NO
