@@ -2765,16 +2765,22 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 								    tp1->rec.data.TSN_seq;
 							}
 
-							/* CMT: CUC algorithm. If pseudo-cumack for corresp
-							 * dest is being acked, then we have a new pseudo-cumack.
-							 * Set new_pseudo_cumack to TRUE so that the cwnd for this
+							/* CMT: CUCv2 algorithm. If (rtx-)pseudo-cumack for corresp
+							 * dest is being acked, then we have a new (rtx-)pseudo-cumack.
+							 * Set new_(rtx_)pseudo_cumack to TRUE so that the cwnd for this
 							 * dest can be updated. Also trigger search for the next
-							 * expected pseudo-cumack.
-							 * (2005/06/27, iyengar@cis.udel.edu)
+							 * expected (rtx-)pseudo-cumack. Separate pseudo_cumack trackers for
+							 * first transmissions and retransmissions.
+							 * (2005/07/25, iyengar@cis.udel.edu)
 							 */
 							if (tp1->rec.data.TSN_seq == tp1->whoTo->pseudo_cumack) {
 							  tp1->whoTo->new_pseudo_cumack = 1;
 							  tp1->whoTo->find_pseudo_cumack = 1;
+							}
+							  
+							if (tp1->rec.data.TSN_seq == tp1->whoTo->rtx_pseudo_cumack) {
+							  tp1->whoTo->new_pseudo_cumack = 1;
+							  tp1->whoTo->find_rtx_pseudo_cumack = 1;
 							}
 							
 #ifdef SCTP_SACK_LOGGING
@@ -2850,14 +2856,21 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				    MAX_TSN))
 					break;
 
-				/* CMT: CUC algorithm. For each TSN being processed from the sent queue,
-				 * track the next expected pseudo-cumack, if required.
-				 * (2005/06/27, iyengar@cis.udel.edu)
+				/* CMT: CUCv2 algorithm. For each TSN being processed from the sent queue,
+				 * track the next expected pseudo-cumack, or rtx_pseudo_cumack, if required.
+				 * Separate cumack trackers for first transmissions, and retransmissions.
+				 * (2005/07/25, iyengar@cis.udel.edu)
 				 */
-				if ((tp1->whoTo->find_pseudo_cumack == 1) && (tp1->sent < SCTP_DATAGRAM_ACKED)) {
+				if ((tp1->whoTo->find_pseudo_cumack == 1) && (tp1->sent < SCTP_DATAGRAM_RESEND)) {
 				  tp1->whoTo->pseudo_cumack = tp1->rec.data.TSN_seq;
 				  tp1->whoTo->find_pseudo_cumack = 0;
 				}
+				
+				if ((tp1->whoTo->find_rtx_pseudo_cumack == 1) && (tp1->sent == SCTP_DATAGRAM_RESEND)) {
+				  tp1->whoTo->rtx_pseudo_cumack = tp1->rec.data.TSN_seq;
+				  tp1->whoTo->find_rtx_pseudo_cumack = 0;
+				}
+
 
 				tp1 = TAILQ_NEXT(tp1, sctp_next);
 			}/* end while (tp1) */
@@ -3793,14 +3806,15 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 						}
 					}
 					
-					/* CMT: CUC algorithm. For each TSN being cumacked for the first time,
-					 * set the following variables for the corresp destination. 
-					 * new_pseudo_cumack will trigger a cwnd update.
-					 * find_pseudo_cumack will trigger search for the next expected pseudo-cumack.
-					 * (2005/06/27, iyengar@cis.udel.edu)
+					/* CMT: CUCv2 algorithm. From the cumack'd TSNs, for each TSN being acked 
+					 * for the first time, set the following variables for the corresp destination. 
+					 * new_pseudo_cumack will trigger a cwnd update. find_(rtx_)pseudo_cumack will 
+					 * trigger search for the next expected (rtx-)pseudo-cumack.
+					 * (2005/07/25, iyengar@cis.udel.edu)
 					 */
 					tp1->whoTo->new_pseudo_cumack = 1;
 					tp1->whoTo->find_pseudo_cumack = 1;
+					tp1->whoTo->find_rtx_pseudo_cumack = 1;
 
 
 #ifdef SCTP_SACK_LOGGING
