@@ -4671,11 +4671,7 @@ struct pr_usrreqs sctp_usrreqs = {
 	sctp_shutdown,
 	sctp_ingetaddr,
 	sctp_sosend,
-#if defined(__APPLE__)
-	soreceive,
-#else
 	sctp_soreceive,	
-#endif
 	sopoll
 };
 
