@@ -221,6 +221,10 @@ struct sctp_nets {
 					This flag is set after a new pseudo-cumack has been received 
 					and indicates that the sender should find the next pseudo-cumack 
 					expected for this destination */
+        u_int8_t find_rtx_pseudo_cumack; /* CMT CUCv2 algorithm. Flag used to find a new rtx-pseudocumack. 
+					    This flag is set after a new rtx-pseudo-cumack has been received 
+					    and indicates that the sender should find the next rtx-pseudo-cumack 
+					    expected for this destination */
         u_int8_t new_pseudo_cumack; /* CMT CUC algorithm. Flag used to indicate 
 				       if a new pseudo-cumack or rtx-pseudo-cumack has been received */
 

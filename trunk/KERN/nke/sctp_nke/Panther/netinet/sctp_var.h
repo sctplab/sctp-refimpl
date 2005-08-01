@@ -176,8 +176,11 @@ int sctp_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,
 int sctp_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,
 		      struct mbuf *));
 #endif
-
+#if defined(HAVE_SCTP_SORECIEVE)
 #define	sctp_sbspace(asoc, sb) ((long) (((sb)->sb_hiwat > (asoc)->sb_cc) ? ((sb)->sb_hiwat - (asoc)->sb_cc) : 0))
+#else
+#define	sctp_sbspace(asoc, sb) ((long) (((sb)->sb_hiwat > (sb)->sb_cc) ? ((sb)->sb_hiwat - (sb)->sb_cc) : 0))
+#endif
 
 #define	sctp_sbspace_failedmsgs(sb) ((long) (((sb)->sb_hiwat > (sb)->sb_cc) ? ((sb)->sb_hiwat - (sb)->sb_cc) : 0))
 
@@ -227,7 +230,7 @@ int sctp_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,
 }
 
 #else
-
+#if defined(HAVE_SCTP_SORECIEVE)
 #define sctp_sbfree(stcb, sb, m) { \
 	(sb)->sb_cc -= (m)->m_len; \
         if(stcb) \
@@ -239,11 +242,30 @@ int sctp_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,
 
 #define sctp_sballoc(stcb, sb, m)  { \
 	(sb)->sb_cc += (m)->m_len; \
-	/* FIXME MT */ \
+        if(stcb) \
+  	  (stcb)->asoc.sb_cc += (m)->m_len; \
 	(sb)->sb_mbcnt += MSIZE; \
 	if ((m)->m_flags & M_EXT) \
 		(sb)->sb_mbcnt += (m)->m_ext.ext_size; \
 }
+
+#else
+
+#define sctp_sbfree(stcb, sb, m) { \
+	(sb)->sb_cc -= (m)->m_len; \
+	(sb)->sb_mbcnt -= MSIZE; \
+	if ((m)->m_flags & M_EXT) \
+		(sb)->sb_mbcnt -= (m)->m_ext.ext_size; \
+}
+
+#define sctp_sballoc(stcb, sb, m)  { \
+	(sb)->sb_cc += (m)->m_len; \
+	(sb)->sb_mbcnt += MSIZE; \
+	if ((m)->m_flags & M_EXT) \
+		(sb)->sb_mbcnt += (m)->m_ext.ext_size; \
+}
+
+#endif
 #endif
 
 #define sctp_ucount_incr(val) { \
