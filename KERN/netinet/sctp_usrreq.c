@@ -4309,33 +4309,9 @@ sctp_listen(struct socket *so, struct proc *p)
 	} else {
 		SCTP_INP_RUNLOCK(inp);
 	}
-	SCTP_INP_WLOCK(inp);
-	if (inp->sctp_socket->so_qlimit) {
-		if (inp->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE) {
-			/*
-			 * For the UDP model we must TURN OFF the ACCEPT
-			 * flags since we do NOT allow the accept() call.
-			 * The TCP model (when present) will do accept which
-			 * then prohibits connect().
-			 */
-			inp->sctp_socket->so_options &= ~SO_ACCEPTCONN;
-		}
-		inp->sctp_flags |= SCTP_PCB_FLAGS_ACCEPTING;
-	} else {
-		if (inp->sctp_flags & SCTP_PCB_FLAGS_ACCEPTING) {
-			/*
-			 * Turning off the listen flags if the backlog is
-			 * set to 0 (i.e. qlimit is 0).
-			 */
-			inp->sctp_flags &= ~SCTP_PCB_FLAGS_ACCEPTING;
-		}
-		inp->sctp_socket->so_options &= ~SO_ACCEPTCONN;
-	}
-	SCTP_INP_WUNLOCK(inp);
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
-	if (inp->sctp_socket->so_qlimit &&
-	    ((inp->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE) == 0)) {
-	  solisten_proto(so);
+	if ((inp->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE) == 0) {
+		solisten_proto(so);
 	}
 #endif
 	SOCK_UNLOCK(so);
@@ -4371,6 +4347,9 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 		return (ECONNRESET);
 	}
 	SCTP_INP_RLOCK(inp);
+	if(inp->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE) {
+		return(ENOTSUP);
+	}
 	if (so->so_state & SS_ISDISCONNECTED) {
 		splx(s);
 		SCTP_INP_RUNLOCK(inp);
