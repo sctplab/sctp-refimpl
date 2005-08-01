@@ -4929,3 +4929,515 @@ sctp_sbappend( struct sockbuf *sb,
 	SOCKBUF_UNLOCK(sb);
 }
 #endif
+#ifdef __APPLE__
+
+#define   SBLOCKWAIT(f)   (((f)&MSG_DONTWAIT) ? M_NOWAIT : M_WAITOK)
+
+int
+sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
+	register struct socket *so;
+	struct sockaddr **psa;
+	struct uio *uio;
+	struct mbuf **mp0;
+	struct mbuf **controlp;
+	int *flagsp;
+{
+        register struct mbuf *m, **mp, *ml;
+	register int flags, len, error, s, offset;
+	struct protosw *pr = so->so_proto;
+	struct mbuf *nextrecord;
+	int moff, type = 0;
+	int orig_resid = uio->uio_resid;
+	struct kextcb *kp;
+	volatile struct mbuf *free_list;
+	volatile int delayed_copy_len;
+	int can_delay;
+	int need_event;
+	struct proc *p = current_proc();
+	int sorecvmincopy = 16384;
+
+	kp = sotokextcb(so);
+	while (kp) {
+		if (kp->e_soif && kp->e_soif->sf_soreceive) {
+			error = (*kp->e_soif->sf_soreceive)(so, psa, &uio,
+							    mp0, controlp,
+							    flagsp, kp);
+			if (error) {
+				return((error == EJUSTRETURN) ? 0 : error);
+			}
+		}
+		kp = kp->e_next;
+	}
+
+	mp = mp0;
+	if (psa)
+		*psa = 0;
+	if (controlp)
+		*controlp = 0;
+	if (flagsp)
+		flags = *flagsp &~ MSG_EOR;
+	else
+		flags = 0;
+        /*
+         * When SO_WANTOOBFLAG is set we try to get out-of-band data 
+         * regardless of the flags argument. Here is the case were 
+         * out-of-band data is not inline.
+         */
+	if ((flags & MSG_OOB) || 
+            ((so->so_options & SO_WANTOOBFLAG) != 0 && 
+             (so->so_options & SO_OOBINLINE) == 0 &&
+             (so->so_oobmark || (so->so_state & SS_RCVATMARK)))) {
+		m = m_get(M_WAIT, MT_DATA);
+		if (m == NULL) {
+			return (ENOBUFS);
+		}
+		error = (*pr->pr_usrreqs->pru_rcvoob)(so, m, flags & MSG_PEEK);
+		if (error)
+			goto bad;
+		do {
+			error = uiomove(mtod(m, caddr_t),
+			    (int) min(uio->uio_resid, m->m_len), uio);
+			m = m_free(m);
+		} while (uio->uio_resid && error == 0 && m);
+bad:
+		if (m)
+			m_freem(m);
+#ifdef __APPLE__
+		if ((so->so_options & SO_WANTOOBFLAG) != 0) {
+			if (error == EWOULDBLOCK || error == EINVAL) {
+				/* 
+				 * Let's try to get normal data:
+				 *  EWOULDBLOCK: out-of-band data not receive yet;
+				 *  EINVAL: out-of-band data already read.
+				 */
+				error = 0;
+				goto nooob;
+			} else if (error == 0 && flagsp)
+				*flagsp |= MSG_OOB;
+		}
+#endif
+		return (error);
+	}
+nooob:
+	if (mp)
+		*mp = (struct mbuf *)0;
+	if (so->so_state & SS_ISCONFIRMING && uio->uio_resid)
+		(*pr->pr_usrreqs->pru_rcvd)(so, 0);
+
+
+	free_list = (struct mbuf *)0;
+	delayed_copy_len = 0;
+restart:
+	error = sblock(&so->so_rcv, SBLOCKWAIT(flags));
+	if (error) {
+		return (error);
+	}
+	s = splnet();
+
+	m = so->so_rcv.sb_mb;
+	/*
+	 * If we have less data than requested, block awaiting more
+	 * (subject to any timeout) if:
+	 *   1. the current count is less than the low water mark, or
+	 *   2. MSG_WAITALL is set, and it is possible to do the entire
+	 *	receive operation at once if we block (resid <= hiwat).
+	 *   3. MSG_DONTWAIT is not set
+	 * If MSG_WAITALL is set but resid is larger than the receive buffer,
+	 * we have to do the receive in sections, and thus risk returning
+	 * a short count if a timeout or signal occurs after we start.
+	 */
+	if (m == 0 || (((flags & MSG_DONTWAIT) == 0 &&
+	    so->so_rcv.sb_cc < uio->uio_resid) &&
+           (so->so_rcv.sb_cc < so->so_rcv.sb_lowat ||
+	    ((flags & MSG_WAITALL) && uio->uio_resid <= so->so_rcv.sb_hiwat)) &&
+	    m->m_nextpkt == 0 && (pr->pr_flags & PR_ATOMIC) == 0)) {
+
+		KASSERT(m != 0 || !so->so_rcv.sb_cc, ("receive 1"));
+		if (so->so_error) {
+			if (m)
+				goto dontblock;
+			error = so->so_error;
+			if ((flags & MSG_PEEK) == 0)
+				so->so_error = 0;
+			goto release;
+		}
+		if (so->so_state & SS_CANTRCVMORE) {
+			if (m)
+				goto dontblock;
+			else
+				goto release;
+		}
+		for (; m; m = m->m_next)
+			if (m->m_type == MT_OOBDATA  || (m->m_flags & M_EOR)) {
+				m = so->so_rcv.sb_mb;
+				goto dontblock;
+			}
+		if ((so->so_state & (SS_ISCONNECTED|SS_ISCONNECTING)) == 0 &&
+		    (so->so_proto->pr_flags & PR_CONNREQUIRED)) {
+			error = ENOTCONN;
+			goto release;
+		}
+		if (uio->uio_resid == 0)
+			goto release;
+		if ((so->so_state & SS_NBIO) || (flags & MSG_DONTWAIT)) {
+			error = EWOULDBLOCK;
+			goto release;
+		}
+		sbunlock(&so->so_rcv);
+
+		error = sbwait(&so->so_rcv);
+		splx(s);
+		if (error) {
+		    return (error);
+		}
+		goto restart;
+	}
+dontblock:
+#ifndef __APPLE__
+	if (uio->uio_procp)
+		uio->uio_procp->p_stats->p_ru.ru_msgrcv++;
+#else	/* __APPLE__ */
+	/*
+	 * 2207985
+	 * This should be uio->uio-procp; however, some callers of this
+	 * function use auto variables with stack garbage, and fail to
+	 * fill out the uio structure properly.
+	 */
+	if (p)
+		p->p_stats->p_ru.ru_msgrcv++;
+#endif	/* __APPLE__ */
+	nextrecord = m->m_nextpkt;
+	if ((pr->pr_flags & PR_ADDR) && m->m_type == MT_SONAME) {
+		KASSERT(m->m_type == MT_SONAME, ("receive 1a"));
+		orig_resid = 0;
+		if (psa) {
+			*psa = dup_sockaddr(mtod(m, struct sockaddr *),
+					    mp0 == 0);
+			if ((*psa == 0) && (flags & MSG_NEEDSA)) {
+				error = EWOULDBLOCK;
+				goto release;
+			}
+		}
+		if (flags & MSG_PEEK) {
+			m = m->m_next;
+		} else {
+			sbfree(&so->so_rcv, m);
+			MFREE(m, so->so_rcv.sb_mb);
+			m = so->so_rcv.sb_mb;
+		}
+	}
+#ifdef SCTP
+	if (pr->pr_flags & PR_ADDR_OPT) {
+		/*
+		 * For SCTP, we may be getting a whole message or a
+		 * partial delivery.
+		 */
+		if (m->m_type == MT_SONAME) {
+			orig_resid = 0;
+			if (psa)
+				*psa = dup_sockaddr(mtod(m, struct sockaddr *),
+						    mp == 0);
+			if (flags & MSG_PEEK) {
+				m = m->m_next;
+			} else {
+				sbfree(&so->so_rcv, m);
+				MFREE(m, so->so_rcv.sb_mb);
+				m = so->so_rcv.sb_mb;
+			}
+		}
+	}
+#endif /* SCTP */
+	while (m && m->m_type == MT_CONTROL && error == 0) {
+		if (flags & MSG_PEEK) {
+			if (controlp)
+				*controlp = m_copy(m, 0, m->m_len);
+			m = m->m_next;
+		} else {
+			sbfree(&so->so_rcv, m);
+			if (controlp) {
+				if (pr->pr_domain->dom_externalize &&
+				    mtod(m, struct cmsghdr *)->cmsg_type ==
+				    SCM_RIGHTS)
+				   error = (*pr->pr_domain->dom_externalize)(m);
+				*controlp = m;
+				so->so_rcv.sb_mb = m->m_next;
+				m->m_next = 0;
+				m = so->so_rcv.sb_mb;
+			} else {
+				MFREE(m, so->so_rcv.sb_mb);
+				m = so->so_rcv.sb_mb;
+			}
+		}
+		if (controlp) {
+			orig_resid = 0;
+			controlp = &(*controlp)->m_next;
+		}
+	}
+	if (m) {
+		if ((flags & MSG_PEEK) == 0)
+			m->m_nextpkt = nextrecord;
+		type = m->m_type;
+		if (type == MT_OOBDATA)
+			flags |= MSG_OOB;
+	}
+	moff = 0;
+	offset = 0;
+
+	/* FIXME MT sorecvmincopy instead of 16384*/
+	if (!(flags & MSG_PEEK) && uio->uio_resid > sorecvmincopy)
+	        can_delay = 1;
+	else
+	        can_delay = 0;
+
+	need_event = 0;
+
+
+	while (m && (uio->uio_resid - delayed_copy_len) > 0 && error == 0) {
+		if (m->m_type == MT_OOBDATA) {
+			if (type != MT_OOBDATA)
+				break;
+		} else if (type == MT_OOBDATA)
+			break;
+#ifndef __APPLE__
+/*
+ * This assertion needs rework.  The trouble is Appletalk is uses many
+ * mbuf types (NOT listed in mbuf.h!) which will trigger this panic.
+ * For now just remove the assertion...  CSM 9/98
+ */
+		else
+		    KASSERT(m->m_type == MT_DATA || m->m_type == MT_HEADER,
+			("receive 3"));
+#else
+		/*
+		 * Make sure to allways set MSG_OOB event when getting 
+		 * out of band data inline.
+		 */
+		if ((so->so_options & SO_WANTOOBFLAG) != 0 &&
+			(so->so_options & SO_OOBINLINE) != 0 && 
+			(so->so_state & SS_RCVATMARK) != 0) {
+			flags |= MSG_OOB;
+		}
+#endif
+		so->so_state &= ~SS_RCVATMARK;
+		len = uio->uio_resid - delayed_copy_len;
+		if (so->so_oobmark && len > so->so_oobmark - offset)
+			len = so->so_oobmark - offset;
+		if (len > m->m_len - moff)
+			len = m->m_len - moff;
+		/*
+		 * If mp is set, just pass back the mbufs.
+		 * Otherwise copy them out via the uio, then free.
+		 * Sockbuf must be consistent here (points to current mbuf,
+		 * it points to next record) when we drop priority;
+		 * we must note any additions to the sockbuf when we
+		 * block interrupts again.
+		 */
+		if (mp == 0) {
+			if (can_delay && len == m->m_len) {
+			        /*
+				 * only delay the copy if we're consuming the
+				 * mbuf and we're NOT in MSG_PEEK mode
+				 * and we have enough data to make it worthwile
+				 * to drop and retake the funnel... can_delay
+				 * reflects the state of the 2 latter constraints
+				 * moff should always be zero in these cases
+				 */
+			        delayed_copy_len += len;
+			} else {
+			        splx(s);
+
+  			        if (delayed_copy_len) {
+				        error = sodelayed_copy(uio, &free_list, &delayed_copy_len);
+
+					if (error) {
+					        s = splnet();
+						goto release;
+					}
+					if (m != so->so_rcv.sb_mb) {
+					        /*
+						 * can only get here if MSG_PEEK is not set
+						 * therefore, m should point at the head of the rcv queue...
+						 * if it doesn't, it means something drastically changed
+						 * while we were out from behind the funnel in sodelayed_copy...
+						 * perhaps a RST on the stream... in any event, the stream has
+						 * been interrupted... it's probably best just to return 
+						 * whatever data we've moved and let the caller sort it out...
+						 */
+					        break;
+					}
+				}
+				error = uiomove(mtod(m, caddr_t) + moff, (int)len, uio);
+
+				s = splnet();
+				if (error)
+				        goto release;
+			}
+		} else
+			uio->uio_resid -= len;
+
+		if (len == m->m_len - moff) {
+			if (m->m_flags & M_EOR)
+				flags |= MSG_EOR;
+#ifdef SCTP
+			if (m->m_flags & M_NOTIFICATION)
+				flags |= MSG_NOTIFICATION;
+#endif /* SCTP */
+			if (flags & MSG_PEEK) {
+				m = m->m_next;
+				moff = 0;
+			} else {
+				nextrecord = m->m_nextpkt;
+				sbfree(&so->so_rcv, m);
+
+				if (mp) {
+					*mp = m;
+					mp = &m->m_next;
+					so->so_rcv.sb_mb = m = m->m_next;
+					*mp = (struct mbuf *)0;
+				} else {
+				        m->m_nextpkt = 0;
+					if (free_list == NULL)
+					    free_list = m;
+				        else
+                                            ml->m_next = m;
+                                        ml = m;
+					so->so_rcv.sb_mb = m = m->m_next;
+                                        ml->m_next = 0;
+				}
+				if (m)
+					m->m_nextpkt = nextrecord;
+			}
+		} else {
+			if (flags & MSG_PEEK)
+				moff += len;
+			else {
+				if (mp)
+					*mp = m_copym(m, 0, len, M_WAIT);
+				m->m_data += len;
+				m->m_len -= len;
+				so->so_rcv.sb_cc -= len;
+			}
+		}
+		if (so->so_oobmark) {
+			if ((flags & MSG_PEEK) == 0) {
+				so->so_oobmark -= len;
+				if (so->so_oobmark == 0) {
+				    so->so_state |= SS_RCVATMARK;
+				    /*
+				     * delay posting the actual event until after
+				     * any delayed copy processing has finished
+				     */
+				    need_event = 1;
+				    break;
+				}
+			} else {
+				offset += len;
+				if (offset == so->so_oobmark)
+					break;
+			}
+		}
+		if (flags & MSG_EOR)
+			break;
+		/*
+		 * If the MSG_WAITALL or MSG_WAITSTREAM flag is set (for non-atomic socket),
+		 * we must not quit until "uio->uio_resid == 0" or an error
+		 * termination.  If a signal/timeout occurs, return
+		 * with a short count but without error.
+		 * Keep sockbuf locked against other readers.
+		 */
+		while (flags & (MSG_WAITALL|MSG_WAITSTREAM) && m == 0 && (uio->uio_resid - delayed_copy_len) > 0 &&
+		    !sosendallatonce(so) && !nextrecord) {
+			if (so->so_error || so->so_state & SS_CANTRCVMORE)
+			        goto release;
+
+		        if (pr->pr_flags & PR_WANTRCVD && so->so_pcb)
+			        (*pr->pr_usrreqs->pru_rcvd)(so, flags);
+			if (sbwait(&so->so_rcv)) {
+			        error = 0;
+				goto release;
+			}
+			/*
+			 * have to wait until after we get back from the sbwait to do the copy because
+			 * we will drop the funnel if we have enough data that has been delayed... by dropping
+			 * the funnel we open up a window allowing the netisr thread to process the incoming packets
+			 * and to change the state of this socket... we're issuing the sbwait because
+			 * the socket is empty and we're expecting the netisr thread to wake us up when more
+			 * packets arrive... if we allow that processing to happen and then sbwait, we
+			 * could stall forever with packets sitting in the socket if no further packets
+			 * arrive from the remote side.
+			 *
+			 * we want to copy before we've collected all the data to satisfy this request to 
+			 * allow the copy to overlap the incoming packet processing on an MP system
+			 */
+			if (delayed_copy_len > sorecvmincopy && (delayed_copy_len > (so->so_rcv.sb_hiwat / 2))) {
+
+			        error = sodelayed_copy(uio, &free_list, &delayed_copy_len);
+
+				if (error)
+				        goto release;
+			}
+			m = so->so_rcv.sb_mb;
+			if (m) {
+				nextrecord = m->m_nextpkt;
+			}
+		}
+	}
+
+	if (m && pr->pr_flags & PR_ATOMIC) {
+#ifdef __APPLE__
+		if (so->so_options & SO_DONTTRUNC)
+			flags |= MSG_RCVMORE;
+		else {
+#endif
+			flags |= MSG_TRUNC;
+			if ((flags & MSG_PEEK) == 0)
+				(void) sbdroprecord(&so->so_rcv);
+#ifdef __APPLE__
+		}
+#endif
+	}
+	if ((flags & MSG_PEEK) == 0) {
+		if (m == 0)
+			so->so_rcv.sb_mb = nextrecord;
+		if (pr->pr_flags & PR_WANTRCVD && so->so_pcb)
+			(*pr->pr_usrreqs->pru_rcvd)(so, flags);
+	}
+#ifdef __APPLE__
+	if ((so->so_options & SO_WANTMORE) && so->so_rcv.sb_cc > 0)
+		flags |= MSG_HAVEMORE;
+
+	if (delayed_copy_len) {
+		error = sodelayed_copy(uio, &free_list, &delayed_copy_len);
+
+		if (error)
+		        goto release;
+	}
+	if (free_list) {
+	        m_freem_list((struct mbuf *)free_list);
+		free_list = (struct mbuf *)0;
+	}
+	if (need_event)
+	        postevent(so, 0, EV_OOB);
+#endif
+	if (orig_resid == uio->uio_resid && orig_resid &&
+	    (flags & MSG_EOR) == 0 && (so->so_state & SS_CANTRCVMORE) == 0) {
+		sbunlock(&so->so_rcv);
+		splx(s);
+		goto restart;
+	}
+
+	if (flagsp)
+		*flagsp |= flags;
+release:
+	if (delayed_copy_len) {
+	        error = sodelayed_copy(uio, &free_list, &delayed_copy_len);
+	}
+	if (free_list) {
+	        m_freem_list((struct mbuf *)free_list);
+	}
+	sbunlock(&so->so_rcv);
+	splx(s);
+
+	return (error);
+}
+#endif

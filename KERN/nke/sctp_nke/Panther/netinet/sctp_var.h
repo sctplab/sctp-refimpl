@@ -237,23 +237,13 @@ int sctp_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,
 		(sb)->sb_mbcnt -= (m)->m_ext.ext_size; \
 }
 
-#ifdef __APPLE__
 #define sctp_sballoc(stcb, sb, m)  { \
 	(sb)->sb_cc += (m)->m_len; \
+	/* FIXME MT */ \
 	(sb)->sb_mbcnt += MSIZE; \
 	if ((m)->m_flags & M_EXT) \
 		(sb)->sb_mbcnt += (m)->m_ext.ext_size; \
 }
-#else
-#define sctp_sballoc(stcb, sb, m)  { \
-	(sb)->sb_cc += (m)->m_len; \
-        if(stcb) \
-  	  (stcb)->asoc.sb_cc += (m)->m_len; \
-	(sb)->sb_mbcnt += MSIZE; \
-	if ((m)->m_flags & M_EXT) \
-		(sb)->sb_mbcnt += (m)->m_ext.ext_size; \
-}
-#endif
 #endif
 
 #define sctp_ucount_incr(val) { \
