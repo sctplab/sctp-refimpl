@@ -152,8 +152,7 @@ sctp_handle_init(struct mbuf *m, int iphlen, int offset,
 	op_err = NULL;
 	init = &cp->init;
 	/* First are we accepting? */
-	if (((inp->sctp_flags & SCTP_PCB_FLAGS_ACCEPTING) == 0) ||
-	    (inp->sctp_socket->so_qlimit == 0)) {
+	if (inp->sctp_socket->so_qlimit == 0) {
 		sctp_abort_association(inp, stcb, m, iphlen, sh, op_err);
 		return;
 	}
@@ -1222,7 +1221,8 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			}
 			if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 			    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) &&
-			    (!(stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_ACCEPTING))) {
+			    (inp->sctp_socket->so_qlimit == 0)
+				) {
 				/*
 				 * Here is where collision would go if we did a
 				 * connect() and instead got a
@@ -1346,7 +1346,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 
 			if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 			     (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) &&
-			    !(stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_ACCEPTING)) {
+			    (inp->sctp_socket->so_qlimit == 0)){
 				stcb->sctp_ep->sctp_flags |=
 				    SCTP_PCB_FLAGS_CONNECTED;
 				soisconnected(stcb->sctp_ep->sctp_socket);
@@ -1686,7 +1686,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	*notification = SCTP_NOTIFY_ASSOC_UP;
 	if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 	     (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL))  &&
-	    !(stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_ACCEPTING)) {
+	    (inp->sctp_socket->so_qlimit == 0)) {
 		/*
 		 * This is an endpoint that called connect()
 		 * how it got a cookie that is NEW is a bit of
@@ -1700,7 +1700,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		soisconnected(stcb->sctp_ep->sctp_socket);
 		sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, *netp);
 	} else if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
-		   (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_ACCEPTING)) {
+		   (inp->sctp_socket->so_qlimit)) {
 		/*
 		 * We don't want to do anything with this
 		 * one. Since it is the listening guy. The timer will
@@ -3550,8 +3550,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			 * a INIT-ACK and then closed. We opened and bound..
 			 * and are now no longer listening.
 			 */
-			if (((inp->sctp_flags & SCTP_PCB_FLAGS_ACCEPTING) == 0) ||
-			    (inp->sctp_socket->so_qlimit == 0)) {
+			if (inp->sctp_socket->so_qlimit == 0){
   			        if((stcb) && (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)){
 				  /* special case, is this a retran'd COOKIE-ECHO or
 				   * a restarting assoc that is a peeled off or
@@ -3563,7 +3562,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				    NULL);
 				*offset = length;
 				return (NULL);
-			} else if (inp->sctp_flags & SCTP_PCB_FLAGS_ACCEPTING) {
+			} else if (inp->sctp_socket->so_qlimit){
 				/* we are accepting so check limits like TCP */
 				if (inp->sctp_socket->so_qlen >
 				    inp->sctp_socket->so_qlimit) {

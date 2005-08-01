@@ -612,7 +612,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 		 * acceptor, then do the special_lookup to hash and find the
 		 * real inp.
 		 */
-		if (inp->sctp_flags & SCTP_PCB_FLAGS_ACCEPTING) {
+		if (inp->sctp_socket->so_qlimit) {
 			/* to is peer addr, from is my addr */
 			stcb = sctp_tcb_special_locate(inp_p, remote, local,
 						       netp);
