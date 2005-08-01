@@ -1751,7 +1751,7 @@ struct pr_usrreqs sctp6_usrreqs = {
 	sctp_shutdown,
 	sctp6_in6getaddr,
 	sctp_sosend,
-#if defined(__APPLE__)
+#ifndef HAVE_SCTP_SORECIEVE
 	soreceive,
 #else
 	sctp_soreceive,
