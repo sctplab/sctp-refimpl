@@ -63,6 +63,11 @@
 #endif
 #endif
 
+#if defined(__FreeBSD__) || defined(__NetBSD__)
+#define HAVE_SCTP_SORECIEVE 1
+#endif
+
+
 #include <netinet/sctp.h>
 #include <netinet/sctp_constants.h>
 

@@ -2987,6 +2987,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	 * (2005/06/27, iyengar@cis.udel.edu)
 	 */
 	net->find_pseudo_cumack = 1;
+	net->find_rtx_pseudo_cumack = 1;
 
 	net->src_addr_selected = 0;
 	netfirst = TAILQ_FIRST(&stcb->asoc.nets);
