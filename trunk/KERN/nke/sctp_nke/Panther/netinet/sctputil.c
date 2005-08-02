@@ -4931,7 +4931,7 @@ sctp_sbappend( struct sockbuf *sb,
 #endif
 #ifdef __APPLE__
 
-#define   SBLOCKWAIT(f)   (((f)&MSG_DONTWAIT) ? M_NOWAIT : M_WAITOK)
+#define	SBLOCKWAIT(f)	(((f) & MSG_DONTWAIT) ? M_DONTWAIT : M_WAIT)
 
 int
 sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
@@ -5126,7 +5126,6 @@ dontblock:
 			m = so->so_rcv.sb_mb;
 		}
 	}
-#ifdef SCTP
 	if (pr->pr_flags & PR_ADDR_OPT) {
 		/*
 		 * For SCTP, we may be getting a whole message or a
@@ -5146,7 +5145,6 @@ dontblock:
 			}
 		}
 	}
-#endif /* SCTP */
 	while (m && m->m_type == MT_CONTROL && error == 0) {
 		if (flags & MSG_PEEK) {
 			if (controlp)
@@ -5183,7 +5181,6 @@ dontblock:
 	moff = 0;
 	offset = 0;
 
-	/* FIXME MT sorecvmincopy instead of 16384*/
 	if (!(flags & MSG_PEEK) && uio->uio_resid > sorecvmincopy)
 	        can_delay = 1;
 	else
@@ -5278,10 +5275,8 @@ dontblock:
 		if (len == m->m_len - moff) {
 			if (m->m_flags & M_EOR)
 				flags |= MSG_EOR;
-#ifdef SCTP
 			if (m->m_flags & M_NOTIFICATION)
 				flags |= MSG_NOTIFICATION;
-#endif /* SCTP */
 			if (flags & MSG_PEEK) {
 				m = m->m_next;
 				moff = 0;
