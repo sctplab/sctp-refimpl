@@ -226,14 +226,15 @@ void sctp_grub_through_socket_buffer(struct sctp_inpcb *, struct socket *,
 void sctp_free_bufspace(struct sctp_tcb *, struct sctp_association *,
 	struct sctp_tmit_chunk *);
 
-#if defined(__FreeBSD__)
+#ifdef HAVE_SCTP_SORECEIVE
 int
 sctp_soreceive(	struct socket *so, struct sockaddr **psa,
 		struct uio *uio,
 		struct mbuf **mp0,
 		struct mbuf **controlp,
 		int *flagsp);
-
+#endif
+#if defined(__FreeBSD__) 
 void
 sctp_sbappend( struct sockbuf *sb,
 	       struct mbuf *m,
