@@ -64,7 +64,7 @@
 #endif
 
 #if defined(__FreeBSD__) || defined(__NetBSD__)
-#define HAVE_SCTP_SORECIEVE 1
+#define HAVE_SCTP_SORECEIVE 1
 #endif
 
 

@@ -4650,7 +4650,7 @@ struct pr_usrreqs sctp_usrreqs = {
 	sctp_shutdown,
 	sctp_ingetaddr,
 	sctp_sosend,
-#ifndef HAVE_SCTP_SORECIEVE
+#ifndef HAVE_SCTP_SORECEIVE
 	soreceive,
 #else
 	sctp_soreceive,	
