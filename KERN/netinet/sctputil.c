@@ -3484,7 +3484,7 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp, stcb)
 	if (asa->sa_len > MHLEN)
 		return (0);
  try_again:
-	MGET(m, M_DONTWAIT, MT_SONAME);
+	MGETHDR(m, M_DONTWAIT, MT_SONAME);
 	if (m == 0)
 		return (0);
 	/* safety */
@@ -3694,6 +3694,10 @@ sctp_should_be_moved(struct mbuf *this, struct sctp_association *asoc)
 #if defined(__OpenBSD__)
 			if ((u_int32_t)m->m_pkthdr.csum == asoc->my_vtag)
 #else
+			printf("Ok, found M_PKTHDR check csum:%x against asoc:%x\n",
+			       (u_int)m->m_pkthdr.csum_data,
+			       (u_int)asoc->my_vtag);
+
 			if ((u_int32_t)m->m_pkthdr.csum_data == asoc->my_vtag)
 #endif
 			{
@@ -3756,7 +3760,7 @@ void
 sctp_grub_through_socket_buffer(struct sctp_inpcb *inp, struct socket *old,
     struct socket *new, struct sctp_tcb *stcb)
 {
-	struct mbuf **put, **take, *next, *this;
+	struct mbuf **put, **take, *next, *this, *lastrec, *endlastrec;
 	struct sockbuf *old_sb, *new_sb;
 	struct sctp_association *asoc;
 	int moved_top = 0;
@@ -3773,7 +3777,6 @@ sctp_grub_through_socket_buffer(struct sctp_inpcb *inp, struct socket *old,
 #endif
 	SOCKBUF_LOCK(old_sb);
 	SOCKBUF_LOCK(new_sb);
-
 	if (inp->sctp_vtag_first == asoc->my_vtag) {
 		/* First one must be moved */
 		struct mbuf *mm;
@@ -3791,6 +3794,11 @@ sctp_grub_through_socket_buffer(struct sctp_inpcb *inp, struct socket *old,
 			sctp_sblog(new_sb, stcb, SCTP_LOG_SBALLOC, mm->m_len);
 #endif
 			sctp_sballoc(stcb, new_sb, mm);
+		}
+		if(old_sb->sb_mb == inp->pkt_last) {
+			stcb->sctp_ep->pkt_last = inp->pkt_last;
+			stcb->sctp_ep->pkt = inp->pkt;
+			inp->pkt = inp->pkt_last = NULL;
 		}
 		new_sb->sb_mb = old_sb->sb_mb;
 		old_sb->sb_mb = new_sb->sb_mb->m_nextpkt;
@@ -3811,8 +3819,15 @@ sctp_grub_through_socket_buffer(struct sctp_inpcb *inp, struct socket *old,
 		if (sctp_should_be_moved(this, asoc)) {
 			/* yes this needs to be moved */
 			struct mbuf *mm;
+			if(this == inp->pkt_last) {
+				stcb->sctp_ep->pkt_last = inp->pkt_last;
+				stcb->sctp_ep->pkt = inp->pkt;
+				inp->pkt = inp->pkt_last = NULL;
+			}
 			*take = this->m_nextpkt;
+			
 			this->m_nextpkt = NULL;
+
 			*put = this;
 			for (mm = this; mm; mm = mm->m_next) {
 				/*
@@ -3832,7 +3847,6 @@ sctp_grub_through_socket_buffer(struct sctp_inpcb *inp, struct socket *old,
 				sctp_sballoc(stcb, new_sb, mm);
 			}
 			put = &this->m_nextpkt;
-
 		} else {
 			/* no advance our take point. */
 			take = &this->m_nextpkt;
@@ -3846,6 +3860,51 @@ sctp_grub_through_socket_buffer(struct sctp_inpcb *inp, struct socket *old,
 		 */
 		inp->sctp_vtag_first = sctp_get_first_vtag_from_sb(old);
 	}
+	/* get old sb's last record now */
+	lastrec = old_sb->sb_mb;
+	while(lastrec) {
+		if(lastrec->m_nextpkt == NULL) {
+			break;
+		}
+		lastrec = lastrec->m_nextpkt;
+	}
+	/* find end of that chain */
+	endlastrec = lastrec;
+	while(endlastrec) {
+		if(endlastrec->m_next == NULL)
+			break;
+		else
+			endlastrec = endlastrec->m_next;
+	}
+#ifdef HAVE_SCTP_SO_LASTRECORD
+	old_sb->sb_lastrecord = lastrec;
+	old_sb->sb_mbtail = endlastrec;
+#else
+	inp->sb_last_mpkt = lastrec;
+#endif
+
+	/* get new sb's last record setup */
+	lastrec = new_sb->sb_mb;
+	while(lastrec) {
+		if(lastrec->m_nextpkt == NULL) {
+			break;
+		}
+		lastrec = lastrec->m_nextpkt;
+	}
+	/* find end of that chain */
+	endlastrec = lastrec;
+	while(endlastrec) {
+		if(endlastrec->m_next == NULL)
+			break;
+		else
+			endlastrec = endlastrec->m_next;
+	}
+#ifdef HAVE_SCTP_SO_LASTRECORD
+	new_sb->sb_lastrecord = lastrec;
+	new_sb->sb_mbtail = endlastrec;
+#else
+	stcb->sctp_ep->sb_last_mpkt = lastrec;
+#endif
 	SOCKBUF_UNLOCK(old_sb);
 	SOCKBUF_UNLOCK(new_sb);
 }
