@@ -2194,6 +2194,9 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			 */
 			sctp_move_pcb_and_assoc(*inp_p, inp, *stcb);
 
+			/* move any events */
+			sctp_grub_through_socket_buffer((*inp_p), oso, so, (*stcb));
+
 			/* Switch over to the new guy */
 			*inp_p = inp;
 
