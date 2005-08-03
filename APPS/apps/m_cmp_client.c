@@ -379,11 +379,27 @@ handle_notification(char *notify_buf)
     default:
         printf("Unknown notification event type=%xh\n", 
                snp->sn_header.sn_type);
+	retval = 6;
     } /* end switch(snp->sn_header.sn_type) */
     return(retval);
 }
 #endif /* !WIN32 */
 
+void
+cmp_client_dump_notify(char *buffer, int sz)
+{
+	int i;
+	uint8_t *k;
+	k = (uint8_t *)buffer;
+	for(i=0; i<sz; i++) {
+		printf("%2.2x ",
+		       k[i]);
+		if(((i+1) % 16)  == 0) {
+			printf("\n");
+		}
+	}
+	printf("\n");
+}
 
 int
 measure_one(struct control_info *req, 
@@ -477,7 +493,7 @@ measure_one(struct control_info *req,
 
 #ifndef WIN32
     iov[0].iov_base = buffer;
-    iov[0].iov_len = sizeof(buffer);
+    iov[0].iov_len = /*sizeof(buffer)*/ 1;
     iov[1].iov_base = NULL;
     iov[1].iov_len = 0;
     msg.msg_name = (caddr_t)&from;
@@ -532,10 +548,14 @@ measure_one(struct control_info *req,
 		    printf("exit type notification\n rcvd:%d needed %d",cnt, sz);
 		    goto exit_now;
 		} else {
-		    printf("shutdown:%d need:%d > rcvd:%d?\n", notification,
-			   sz, cnt);
-		    printf("Force to end\n");
-		    cnt = sz;
+			if(notification == 6) {
+			        cmp_client_dump_notify(buffer, ret);
+			} else {
+				printf("shutdown:%d need:%d > rcvd:%d?\n", notification,
+				       sz, cnt);
+				printf("Force to end\n");
+				cnt = sz;
+			}
 		}
 	    }
 	    continue;
