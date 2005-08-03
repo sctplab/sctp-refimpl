@@ -4343,7 +4343,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		}
 #else
 		if((stcb) && 
-		   (so->so_rcv.sb_lastrecord == stcb->sctp_ep->sb_last_mpkt) {
+		   (stcb->sctp_ep->sb_last_mpkt == m) {
 			stcb->sctp_ep->sb_last_mpkt = m->m_nextpkt;
 		}
 #endif
@@ -4777,7 +4777,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 						so->so_rcv.sb_lastrecord = m;
 #else
 					if((stcb) && 
-					   (nextrecord == sNULL)) {
+					   (nextrecord == NULL)) {
 						stcb->sctp_ep->sb_last_mpkt = m;
 					}
 #endif
