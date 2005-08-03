@@ -1,4 +1,4 @@
-TOPDIR= ..
+TOPDIR= ../../APPS
 
 include $(TOPDIR)/GNUmakeconfig
 
@@ -19,6 +19,7 @@ APPLICATION_LIBS+= $(LIBREFIMP)
 
 ifeq ($(GUESS_HOST),Darwin)
 LOCAL_LIBS+= -lc -lm
+LOCAL_CFLAGS+= -DHAVE_SCTP_PEELOFF_SOCKOPT
 else
 ifeq ($(GUESS_HOST),FreeBSD) 
 LOCAL_LIBS+=  -lc -lm 
