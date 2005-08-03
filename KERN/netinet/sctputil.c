@@ -3486,7 +3486,7 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp, stcb)
 	if (asa->sa_len > MHLEN)
 		return (0);
  try_again:
-	MGET(m, M_DONTWAIT, MT_SONAME);
+	MGETHDR(m, M_DONTWAIT, MT_SONAME);
 	if (m == 0)
 		return (0);
 	/* safety */
