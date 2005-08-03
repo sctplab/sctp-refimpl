@@ -31,7 +31,9 @@ main()
 	char *	buff;
 	char *	buf2;
 
+#ifdef __FreeBSD__
 	printf("hchiba-> FreeBSD version = %d\n",__FreeBSD__);
+#endif /* __FreeBSD__ */
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_socktype = SOCK_STREAM;

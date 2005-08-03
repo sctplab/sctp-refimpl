@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
+#include <stdint.h>
 #ifdef WIN32
 #include <winsock2.h>
 #include <time.h>
