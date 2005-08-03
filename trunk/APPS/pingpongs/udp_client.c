@@ -127,7 +127,7 @@ do_recv_pass( int fd, struct sockaddr_in *sin)
 int
 main(int argc, char **argv)
 {
-  struct timeval start, end;
+  struct timeval start, o_start, end;
   int port=0;
   char *addr=NULL;
   int msg_size_s = 0;
@@ -210,6 +210,7 @@ main(int argc, char **argv)
   }
   do_recv_pass(fd, &sin);
   printf("Time train was sent %d.%6.6d\n",start.tv_sec, start.tv_usec);
+  o_start = start;
   for(i=0; i<MY_TRAIN_SIZE; i++) {
     rec = (struct snddata *)respbuf[i];    
     if(rec->seq < MY_TRAIN_SIZE) {
@@ -218,12 +219,46 @@ main(int argc, char **argv)
       printf("Gak, rec->seq:%d unreal -- skip \n",rec->seq);
       continue;
     }
-    printf("Packet size %d time recv %d.%6.6d seq:%d\n",
+    printf("Packet size %d Time:%d.%6.6d seq:%d ",
 	   snd->size_of,
 	   rcvtimes[i].tv_sec,
 	   rcvtimes[i].tv_usec,
 	   rec->seq
 	   );
+    if(start.tv_sec == rcvtimes[i].tv_sec) {
+      end.tv_sec = 0;
+      end.tv_usec = rcvtimes[i].tv_usec - start.tv_usec;
+    } else if (rcvtimes[i].tv_sec > start.tv_sec) {
+      end.tv_sec = rcvtimes[i].tv_sec - start.tv_sec;
+      if(start.tv_usec > rcvtimes[i].tv_usec) {
+	end.tv_sec--;
+	end.tv_usec = rcvtimes[i].tv_usec + (1000000 - start.tv_usec);
+      } else {
+	end.tv_usec = rcvtimes[i].tv_usec  - start.tv_usec;
+      }
+    } else {
+      printf("Impossible time\n");
+      continue;
+    }
+    printf("IAT:%d.%6.6d ",end.tv_sec, end.tv_usec);
+    if(o_start.tv_sec == rcvtimes[i].tv_sec) {
+      end.tv_sec = 0;
+      end.tv_usec = rcvtimes[i].tv_usec - o_start.tv_usec;
+    } else if (rcvtimes[i].tv_sec > o_start.tv_sec) {
+      end.tv_sec = rcvtimes[i].tv_sec - o_start.tv_sec;
+      if(o_start.tv_usec > rcvtimes[i].tv_usec) {
+	end.tv_sec--;
+	end.tv_usec = rcvtimes[i].tv_usec + (1000000 - o_start.tv_usec);
+      } else {
+	end.tv_usec = rcvtimes[i].tv_usec  - o_start.tv_usec;
+      }
+    } else {
+      printf("Impossible time\n");
+      continue;
+    }
+
+    printf("RTT:%d.%6.6d\n",end.tv_sec, end.tv_usec);
+    start = rcvtimes[i];
   }
   return (0);
 }
