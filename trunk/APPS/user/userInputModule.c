@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.19 2005-07-14 14:49:26 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.20 2005-08-03 11:29:24 lei Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -43,6 +43,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <stdint.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <net/if_dl.h>
@@ -58,7 +59,6 @@
 #include <errno.h>
 #include <poll.h>
 #include <sys/uio.h>
-
 
 /* These should not be included except for our test
  * module to generate TLV's to dump in the REL-REQ
