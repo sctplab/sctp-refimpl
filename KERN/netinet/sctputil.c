@@ -4343,7 +4343,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		}
 #else
 		if((stcb) && 
-		   (stcb->sctp_ep->sb_last_mpkt == m) {
+		   (stcb->sctp_ep->sb_last_mpkt == m)) {
 			stcb->sctp_ep->sb_last_mpkt = m->m_nextpkt;
 		}
 #endif
