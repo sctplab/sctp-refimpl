@@ -581,6 +581,7 @@
 					PRIVATE,
 					BSD_BUILD,
 					SCTP_DEBUG,
+					HAVE_SCTP_SORECEIVE,
 				);
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = NO;
 				GCC_WARN_ALLOW_INCOMPLETE_PROTOCOL = NO;
@@ -721,6 +722,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = ppc;
+				GCC_PREPROCESSOR_DEFINITIONS = HAVE_SCTP_SORECEIVE;
 				MACOSX_DEPLOYMENT_TARGET = 10.4;
 			};
 			name = Development;

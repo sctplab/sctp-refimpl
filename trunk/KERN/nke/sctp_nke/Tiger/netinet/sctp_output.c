@@ -7397,7 +7397,7 @@ sctp_output(inp, m, addr, control, p, flags)
 #endif
 
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
-	    (inp->sctp_flags & SCTP_PCB_FLAGS_ACCEPTING)) {
+	    (inp->sctp_socket->so_qlimit)) {
 		/* The listner can NOT send */
 		if (control) {
 			sctppcbinfo.mbuf_track--;
@@ -10321,7 +10321,7 @@ sctp_sosend(struct socket *so,
 #endif
 
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
-	    (inp->sctp_flags & SCTP_PCB_FLAGS_ACCEPTING)) {
+	    (inp->sctp_socket->so_qlimit)) {
 		/* The listner can NOT send */
 		error = EFAULT;
 		splx(s);
