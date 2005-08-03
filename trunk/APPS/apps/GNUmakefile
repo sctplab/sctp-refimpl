@@ -12,9 +12,7 @@ LOCAL_CFLAGS=
 LDFLAGS=
 
 ifeq ($(GUESS_HOST),Darwin)
-#LOCAL_LIBS+= -L/usr/lib ../../KERN/usr.lib/libsctp.a -lm -lreadline
-LOCAL_LIBS+= -L/usr/lib -L/sw/lib /sw/lib/libreadline.a -lm -lsctp -lcurses
-LOCAL_CFLAGS+= -I$(TOPDIR)/../KERN
+LOCAL_LIBS+= -L/usr/lib -L/sw/lib -L../../KERN/usr.lib -lsctp -lreadline -lm
 else
 ifeq ($(GUESS_HOST),LynxOS)
 LOCAL_LIBS+= -L/usr/local/v6/lib -mthreads -lnetinet -lnsl -lm -lsctp

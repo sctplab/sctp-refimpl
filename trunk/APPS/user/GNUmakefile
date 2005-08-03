@@ -18,7 +18,7 @@ LDFLAGS=
 APPLICATION_LIBS+= $(OBJDIR)/$(LIBREFIMP) 
 
 ifeq ($(GUESS_HOST),Darwin)
-#LOCAL_CFLAGS+= -I/sw/include
+LOCAL_CFLAGS+= -I/sw/include
 LOCAL_LIBS+= -lc -lm 
 else
 ifeq ($(GUESS_HOST),FreeBSD) 
