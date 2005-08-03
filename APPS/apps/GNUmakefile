@@ -11,6 +11,11 @@ include $(TOPDIR)/GNUmakerules
 LOCAL_CFLAGS=
 LDFLAGS=
 
+ifeq ($(GUESS_HOST),Darwin)
+#LOCAL_LIBS+= -L/usr/lib ../../KERN/usr.lib/libsctp.a -lm -lreadline
+LOCAL_LIBS+= -L/usr/lib -L/sw/lib /sw/lib/libreadline.a -lm -lsctp -lcurses
+LOCAL_CFLAGS+= -I$(TOPDIR)/../KERN
+else
 ifeq ($(GUESS_HOST),LynxOS)
 LOCAL_LIBS+= -L/usr/local/v6/lib -mthreads -lnetinet -lnsl -lm -lsctp
 else
@@ -34,6 +39,7 @@ ifeq ($(GUESS_HOST),SunOS)
 LOCAL_LIBS+= -L/usr/local/v6/lib -lsocket -lnsl -lm -lposix4 -lpthread -ltermcap -lreadline -lhistory -lsctp
 else
 LOCAL_LIBS+= -L/usr/local/v6/lib -lsocket -lnsl -lm -lposix4 -lpthread -lsctp
+endif
 endif
 endif
 endif
