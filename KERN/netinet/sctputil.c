@@ -4192,6 +4192,20 @@ sockbuf_pushsync(struct sockbuf *sb, struct mbuf *nextrecord, struct sctp_tcb *s
  * until I can re-write this customized for SCTP.. which I
  * always intended ;-0
  */
+#ifdef HAVE_SCTP_SO_LASTRECORD
+#define SCTP_SB_EMPTY_FIXUP(sb, stcb) do {				\
+	if ((sb)->sb_mb == NULL) {					\
+		(sb)->sb_mbtail = NULL;					\
+		(sb)->sb_lastrecord = NULL;				\
+	}								\
+} while (/*CONSTCOND*/0)
+#else 
+#define SCTP_SB_EMPTY_FIXUP(sb, stcb) do {				\
+	if ((stcb) && ((sb)->sb_mb == NULL)) {				\
+		(stcb)->sctp_ep->sb_last_mpkt = NULL;                   \
+	}								\
+} while (/*CONSTCOND*/0)
+#endif
 
 int
 sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
@@ -4783,7 +4797,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 #endif
 				} else {
 					so->so_rcv.sb_mb = nextrecord;
-					SB_EMPTY_FIXUP(&so->so_rcv);
+					SCTP_SB_EMPTY_FIXUP(&so->so_rcv, stcb);
 				}
 #ifdef HAVE_SCTP_SO_LASTRECORD
 				SBLASTRECORDCHK(&so->so_rcv);
