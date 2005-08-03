@@ -4132,7 +4132,7 @@ sctp_m_copym(struct mbuf *m, int off, int len, int wait)
  * NOTE: 'nextrecord' may be NULL.
  */
 static __inline void
-sockbuf_pushsync(struct sockbuf *sb, struct mbuf *nextrecord)
+sockbuf_pushsync(struct sockbuf *sb, struct mbuf *nextrecord, struct sctp_tcb *stcb)
 {
 
 	SOCKBUF_LOCK_ASSERT(sb);
@@ -4151,11 +4151,22 @@ sockbuf_pushsync(struct sockbuf *sb, struct mbuf *nextrecord)
 	 * addition of a second clause that takes care of the case where
 	 * sb_mb has been updated, but remains the last record.
          */
+#ifdef HAVE_SCTP_SO_LASTRECORD
         if (sb->sb_mb == NULL) {
                 sb->sb_mbtail = NULL;
                 sb->sb_lastrecord = NULL;
         } else if (sb->sb_mb->m_nextpkt == NULL)
                 sb->sb_lastrecord = sb->sb_mb;
+#else
+	if(stcb) {
+		if (sb->sb_mb == NULL) {		
+			stcb->sctp_ep->sb_last_mpkt = NULL;
+		} else {
+			stcb->sctp_ep->sb_last_mpkt = sb->sb_mb;
+		}
+	}
+#endif
+
 }
 
 
@@ -4295,8 +4306,10 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 			error = EWOULDBLOCK;
 			goto release;
 		}
+#ifdef HAVE_SCTP_SO_LASTRECORD
 		SBLASTRECORDCHK(&so->so_rcv);
 		SBLASTMBUFCHK(&so->so_rcv);
+#endif
 		sbunlock(&so->so_rcv);
 		error = sbwait(&so->so_rcv);
 		if (error)
@@ -4323,10 +4336,17 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		m->m_pkthdr.len = 0;
 		/* move off the nextrecord pointer */
 		m->m_next->m_nextpkt = m->m_nextpkt;
+#ifdef HAVE_SCTP_SO_LASTRECORD
 		if(so->so_rcv.sb_lastrecord == m) {
 			/* last record pointed to our 0 len mbuf, fix this too */
 			so->so_rcv.sb_lastrecord = m->m_nextpkt;
 		}
+#else
+		if((stcb) && 
+		   (so->so_rcv.sb_lastrecord == stcb->sctp_ep->sb_last_mpkt) {
+			stcb->sctp_ep->sb_last_mpkt = m->m_nextpkt;
+		}
+#endif
 		so->so_rcv.sb_mb = m_free(m);
 		m = so->so_rcv.sb_mb;
 	} else if ((m != NULL) && (stcb == NULL)) {
@@ -4402,8 +4422,10 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 			error = EWOULDBLOCK;
 			goto release;
 		}
+#ifdef HAVE_SCTP_SO_LASTRECORD
 		SBLASTRECORDCHK(&so->so_rcv);
 		SBLASTMBUFCHK(&so->so_rcv);
+#endif
 		sbunlock(&so->so_rcv);
 		error = sbwait(&so->so_rcv);
 		if (error)
@@ -4480,8 +4502,10 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		uio->uio_procp->p_stats->p_ru.ru_msgrcv++;
 #endif
 	KASSERT(m == so->so_rcv.sb_mb, ("soreceive: m != so->so_rcv.sb_mb"));
+#ifdef HAVE_SCTP_SO_LASTRECORD
 	SBLASTRECORDCHK(&so->so_rcv);
 	SBLASTMBUFCHK(&so->so_rcv);
+#endif
 	nextrecord = m->m_nextpkt;
 	if (m->m_type == MT_SONAME) {
 		KASSERT(m->m_type == MT_SONAME,
@@ -4509,7 +4533,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 #endif
 			so->so_rcv.sb_mb = m_free(m);
 			m = so->so_rcv.sb_mb;
-			sockbuf_pushsync(&so->so_rcv, nextrecord);
+			sockbuf_pushsync(&so->so_rcv, nextrecord, stcb);
 		}
 	}
 
@@ -4548,7 +4572,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 			}
 		} while (m != NULL && m->m_type == MT_CONTROL);
 		if ((flags & MSG_PEEK) == 0)
-			sockbuf_pushsync(&so->so_rcv, nextrecord);
+			sockbuf_pushsync(&so->so_rcv, nextrecord, stcb);
 		while (cm != NULL) {
 			cmn = cm->m_next;
 			cm->m_next = NULL;
@@ -4573,8 +4597,10 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 			if (nextrecord == NULL) {
 				KASSERT(so->so_rcv.sb_mb == m,
 					("soreceive: post-control, sb_mb!=m"));
+#ifdef HAVE_SCTP_SO_LASTRECORD
 				KASSERT(so->so_rcv.sb_lastrecord == m,
 					("soreceive: post-control, lastrecord!=m"));
+#endif
 			}
 		}
 		type = m->m_type;
@@ -4583,15 +4609,18 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 			KASSERT(so->so_rcv.sb_mb == nextrecord,
 				("soreceive: sb_mb != nextrecord"));
 			if (so->so_rcv.sb_mb == NULL) {
+#ifdef HAVE_SCTP_SO_LASTRECORD
 				KASSERT(so->so_rcv.sb_lastrecord == NULL,
 					("soreceive: sb_lastercord != NULL"));
+#endif
 			}
 		}
 	}
 	SOCKBUF_LOCK_ASSERT(&so->so_rcv);
+#ifdef HAVE_SCTP_SO_LASTRECORD
 	SBLASTRECORDCHK(&so->so_rcv);
 	SBLASTMBUFCHK(&so->so_rcv);
-
+#endif
 	/*
 	 * Now continue to read any data mbufs off of the head of the socket
 	 * buffer until the read request is satisfied.  Note that 'type' is
@@ -4626,8 +4655,10 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		 */
 		if (mp == NULL) {
 			SOCKBUF_LOCK_ASSERT(&so->so_rcv);
+#ifdef HAVE_SCTP_SO_LASTRECORD
 			SBLASTRECORDCHK(&so->so_rcv);
 			SBLASTMBUFCHK(&so->so_rcv);
+#endif
 			SOCKBUF_UNLOCK(&so->so_rcv);
 #ifdef ZERO_COPY_SOCKETS
 			if (so_zero_copy_receive) {
@@ -4741,14 +4772,23 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 				}
 				if (m != NULL) {
 					m->m_nextpkt = nextrecord;
+#ifdef HAVE_SCTP_SO_LASTRECORD
 					if (nextrecord == NULL)
 						so->so_rcv.sb_lastrecord = m;
+#else
+					if((stcb) && 
+					   (nextrecord == sNULL)) {
+						stcb->sctp_ep->sb_last_mpkt = m;
+					}
+#endif
 				} else {
 					so->so_rcv.sb_mb = nextrecord;
 					SB_EMPTY_FIXUP(&so->so_rcv);
 				}
+#ifdef HAVE_SCTP_SO_LASTRECORD
 				SBLASTRECORDCHK(&so->so_rcv);
 				SBLASTMBUFCHK(&so->so_rcv);
+#endif
 			}
 		} else {
 			if (flags & MSG_PEEK)
@@ -4839,8 +4879,10 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 
 				SOCKBUF_LOCK(&so->so_rcv);
 			}
+#ifdef HAVE_SCTP_SO_LASTRECORD
 			SBLASTRECORDCHK(&so->so_rcv);
 			SBLASTMBUFCHK(&so->so_rcv);
+#endif
 			error = sbwait(&so->so_rcv);
 			if (error)
 				goto release;
@@ -4859,15 +4901,26 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 			 */
 			so->so_rcv.sb_mb = nextrecord;
 			if (so->so_rcv.sb_mb == NULL) {
-				
+#ifdef HAVE_SCTP_SO_LASTRECORD				
 				so->so_rcv.sb_mbtail = NULL;
 				so->so_rcv.sb_lastrecord = NULL;
+#else
+				if(stcb)
+					stcb->sctp_ep->sb_last_mpkt = NULL;
+#endif
 			} else if (nextrecord->m_nextpkt == NULL)
+#ifdef HAVE_SCTP_SO_LASTRECORD				
 				so->so_rcv.sb_lastrecord = nextrecord;
+#else
+				if(stcb)
+					stcb->sctp_ep->sb_last_mpkt = nextrecord;
+#endif
 		}
+#ifdef HAVE_SCTP_SO_LASTRECORD				
 		SBLASTRECORDCHK(&so->so_rcv);
 		SBLASTMBUFCHK(&so->so_rcv);
 		SOCKBUF_UNLOCK(&so->so_rcv);
+#endif
 		(*pr->pr_usrreqs->pru_rcvd)(so, flags);
 #ifdef SCTP_LOCK_LOGGING
 		sctp_log_lock(inp, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
