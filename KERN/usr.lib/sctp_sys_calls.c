@@ -1,7 +1,7 @@
 /*	$KAME: sctp_sys_calls.c,v 1.9 2004/08/17 06:08:53 itojun Exp $ */
 
 /*
- * Copyright (C) 2002, 2003, 2004 Cisco Systems Inc,
+ * Copyright (C) 2002, 2003, 2004, 2005 Cisco Systems Inc,
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -52,7 +52,6 @@
 	 (*(const u_int32_t *)(const void *)(&(a)->s6_addr[4]) == 0) &&	\
 	 (*(const u_int32_t *)(const void *)(&(a)->s6_addr[8]) == ntohl(0x0000ffff)))
 #endif
-
 
 #define SCTP_CONTROL_VEC_SIZE_SND   8192
 #define SCTP_CONTROL_VEC_SIZE_RCV  16384
@@ -479,7 +478,6 @@ sctp_getassocid(int sd, struct sockaddr *sa)
 }
 
 
-
 ssize_t
 sctp_send(int sd, const void *data, size_t len,
 	  const struct sctp_sndrcvinfo *sinfo,
@@ -693,5 +691,19 @@ sctp_peeloff(sd, assoc_id)
       sctp_assoc_t assoc_id;
 {
 	return (syscall(SYS_sctp_peeloff, sd, assoc_id));
+}
+#elif defined(HAVE_SCTP_PEELOFF_SOCKOPT)
+int
+sctp_peeloff(int sd, sctp_assoc_t assoc_id)
+{
+	/* put in real code here */
+	return (-1);
+}
+#else
+int
+sctp_peeloff(int sd, sctp_assoc_t assoc_id)
+{
+	/* NOT supported, return invalid sd */
+	return (-1);
 }
 #endif
