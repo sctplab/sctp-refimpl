@@ -16,7 +16,7 @@ TARGET=Darwin
 HOST=powerpc
 COMPILERDIR=/usr
 
-COMPILEFLAGS=  -DWITH_IP_HDRINCL -DUSES_BSD_4_4_SOCKET -DHAS_DEVICE_RANDOM -Wunused -Wimplicit -Werror
+COMPILEFLAGS=  -DWITH_IP_HDRINCL -DUSES_BSD_4_4_SOCKET -DHAS_DEVICE_RANDOM -Wunused -Wimplicit -Werror -L/sw/lib
 
 LIBDIR=Darwin
 OBJDIR=Darwin
@@ -253,7 +253,7 @@ OPT_CFLAGS+= -Wall -g
 WARNING_CLFLAGS=
 
 CFLAGS= -D$(MACHINE) \
-	-L$(TOPDIR)/usr.lib \
+	-L../../KERN/usr.lib \
 	$(COMPILEFLAGS) \
 	-I.. \
         $(OS_VER) \
