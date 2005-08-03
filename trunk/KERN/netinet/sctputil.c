@@ -4119,7 +4119,7 @@ sctp_m_copym(struct mbuf *m, int off, int len, int wait)
 #endif /* __APPLE__ */
 
 
-#if defined(__FreeBSD__)
+#if defined(HAVE_SCTP_SORECEIVE)
 
 
 
@@ -5042,7 +5042,7 @@ sctp_sbappend( struct sockbuf *sb,
 	SOCKBUF_UNLOCK(sb);
 }
 #endif
-#ifdef __APPLE__
+#ifdef __APPLE1__
 
 #define	SBLOCKWAIT(f)	(((f) & MSG_DONTWAIT) ? M_DONTWAIT : M_WAIT)
 
