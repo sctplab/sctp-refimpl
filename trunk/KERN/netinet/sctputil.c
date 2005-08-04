@@ -3552,13 +3552,13 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp, stcb)
 	if (sb->sb_mb == NULL) {
 		inp->sctp_vtag_first = tag;
 	}
-#if defined(HAVE_SCTP_SO_LASTRECORD) 
-	SCTP_SBLINKRECORD(sb, m);
-	sb->sb_mbtail = nlast;
 	if(msg_eor_seen == 0) {
 		/* only move if we don't have a whole msg */
 		stcb->last_record_insert = nlast;
 	}
+#if defined(HAVE_SCTP_SO_LASTRECORD) 
+	SCTP_SBLINKRECORD(sb, m);
+	sb->sb_mbtail = nlast;
 #else
 	if ((n = sb->sb_mb) != NULL) {
 		while (n->m_nextpkt) {
@@ -4929,8 +4929,8 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 #ifdef HAVE_SCTP_SO_LASTRECORD				
 		SBLASTRECORDCHK(&so->so_rcv);
 		SBLASTMBUFCHK(&so->so_rcv);
-		SOCKBUF_UNLOCK(&so->so_rcv);
 #endif
+		SOCKBUF_UNLOCK(&so->so_rcv);
 		(*pr->pr_usrreqs->pru_rcvd)(so, flags);
 #ifdef SCTP_LOCK_LOGGING
 		sctp_log_lock(inp, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
