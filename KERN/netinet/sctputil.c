@@ -3371,7 +3371,7 @@ sctp_print_address_pkt(struct ip *iph, struct sctphdr *sh)
 	}
 }
 
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(HAVE_SCTP_SO_LASTRECORD)
 
 /* cloned from uipc_socket.c */
 
@@ -4254,11 +4254,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) || 
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
 		stcb = LIST_FIRST(&inp->sctp_asoc_list);
-		if(stcb == NULL) {
-			SCTP_INP_RUNLOCK(inp);
-			return (ENOTCONN);
-		}
-		if(stcb->last_record_insert == NULL) {
+		if(stcb && (stcb->last_record_insert == NULL)) {
 			at_eor = 1;
 		}
 	} else {
@@ -4458,12 +4454,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		if ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) || 
 		    (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
 			stcb = LIST_FIRST(&inp->sctp_asoc_list);
-			if(stcb == NULL) {
-				SCTP_INP_RUNLOCK(inp);
-				error = ENOTCONN;
-				goto out;
-			}
-			if(stcb->last_record_insert == NULL) {
+			if(stcb && (stcb->last_record_insert == NULL)) {
 				at_eor = 1;
 			}
 		} else {
