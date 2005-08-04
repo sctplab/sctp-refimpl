@@ -3548,7 +3548,7 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp, stcb)
 	if (sb->sb_mb == NULL) {
 		inp->sctp_vtag_first = tag;
 	}
-#if defined(__FreeBSD__) 
+#if defined(HAVE_SCTP_SO_LASTRECORD) 
 	SCTP_SBLINKRECORD(sb, m);
 	sb->sb_mbtail = nlast;
 	if(msg_eor_seen == 0) {
