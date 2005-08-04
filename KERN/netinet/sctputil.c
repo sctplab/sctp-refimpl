@@ -3466,7 +3466,7 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp, stcb)
 		stcb->asoc.my_rwnd_control_len += sizeof(struct mbuf);
 	}
 	return (1);
-#endif
+#endif /* NetBSD */
 #if defined(__FreeBSD__) || defined(__APPLE__)
 	struct mbuf *m, *n, *nlast, *cleanup;
 	struct mbuf *prev;
@@ -3557,17 +3557,10 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp, stcb)
 	}
 #else
 	if ((n = sb->sb_mb) != NULL) {
-		if ((n->m_nextpkt != inp->sb_last_mpkt) && (n->m_nextpkt == NULL)) {
-			inp->sb_last_mpkt = NULL;
+		while (n->m_nextpkt) {
+			n = n->m_nextpkt;
 		}
-		if (inp->sb_last_mpkt)
-			inp->sb_last_mpkt->m_nextpkt = m;
- 		else {
-			while (n->m_nextpkt) {
-				n = n->m_nextpkt;
-			}
-			n->m_nextpkt = m;
-		}
+		n->m_nextpkt = m;
 		inp->sb_last_mpkt = m;
 	} else {
 		inp->sb_last_mpkt = sb->sb_mb = m;
