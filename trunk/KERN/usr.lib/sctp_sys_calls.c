@@ -520,7 +520,7 @@ sctp_send(int sd, const void *data, size_t len,
 
 
 ssize_t
-sctp_sendx(int sd, const void *msg, size_t len, 
+sctp_sendx(int sd, const void *msg, size_t msg_len, 
 	   struct sockaddr *addrs, int addrcnt,
 	   struct sctp_sndrcvinfo *sinfo,
 	   int flags)
@@ -528,7 +528,7 @@ sctp_sendx(int sd, const void *msg, size_t len,
 	ssize_t ret;
 	int i, cnt, *aa, saved_errno;
 	char *buf;
-	int add_len;
+	int add_len, len;
 	struct sockaddr *at;
 	
 	len = sizeof(int);
@@ -580,7 +580,7 @@ sctp_sendx(int sd, const void *msg, size_t len,
 		errno = ENOENT;
 		return (-1);
 	}
-	ret = sctp_send(sd, msg, len, sinfo, flags);
+	ret = sctp_send(sd, msg, msg_len, sinfo, flags);
 	saved_errno = errno;
 	(void)setsockopt(sd, IPPROTO_SCTP, SCTP_CONNECT_X_COMPLETE, (void *)addrs,
 			 (socklen_t)addrs->sa_len);
@@ -697,6 +697,7 @@ int
 sctp_peeloff(int sd, sctp_assoc_t assoc_id)
 {
 	/* put in real code here */
+	errno = ENOTSUP;
 	return (-1);
 }
 #else
@@ -704,6 +705,7 @@ int
 sctp_peeloff(int sd, sctp_assoc_t assoc_id)
 {
 	/* NOT supported, return invalid sd */
+	errno = ENOTSUP;
 	return (-1);
 }
 #endif
