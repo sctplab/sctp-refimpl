@@ -36,10 +36,6 @@
  * Distribution Status -
  *      Public Domain.  Distribution Unlimited.
  */
-#ifndef lint
-static char RCSid[] = "ttcp.c $Revision: 1.1 $";
-#endif
-
 /* #define BSD43 */
 /* #define BSD42 */
 /* #define BSD41a */
@@ -163,6 +159,7 @@ sigpipe()
 {
 }
 
+int
 main(argc,argv)
 int argc;
 char **argv;
@@ -407,8 +404,8 @@ char **argv;
 	prep_timer();
 	errno = 0;
 	if (sinkmode) {
-		mes("sinkmode");
 		register int cnt;
+		mes("sinkmode");
 		if (trans)  {
 			mes("trans");
 			pattern( buf, buflen );
@@ -437,8 +434,8 @@ char **argv;
 			}
 		}
 	} else {
-		mes("not sinkmode");		
 		register int cnt;
+		mes("not sinkmode");		
 		//trans = 1; /* FIXME MT */
 		if (trans)  {
 			while((cnt=read(0,buf,buflen)) > 0 &&
@@ -473,7 +470,7 @@ char **argv;
 	fprintf(stdout,
 		"ttcp%s: %d I/O calls, msec/call = %.2f, calls/sec = %.2f\n",
 		trans?"-t":"-r",
-		numCalls,
+		(int)numCalls,
 		1024.0 * realt/((double)numCalls),
 		((double)numCalls)/realt);
 	fprintf(stdout,"ttcp%s: %s\n", trans?"-t":"-r", stats);
@@ -481,7 +478,7 @@ char **argv;
 	    fprintf(stdout,
 		"ttcp%s: buffer address %#x\n",
 		trans?"-t":"-r",
-		buf);
+		(uint)buf);
 	}
 	exit(0);
 
@@ -507,6 +504,7 @@ char *s;
 	fprintf(stderr,"ttcp%s: %s\n", trans?"-t":"-r", s);
 }
 
+int
 pattern( cp, cnt )
 register char *cp;
 register int cnt;
@@ -517,6 +515,7 @@ register int cnt;
 		while( !isprint((c&0x7F)) )  c++;
 		*cp++ = (c++&0x7F);
 	}
+	return (0);
 }
 
 char *
@@ -662,13 +661,13 @@ prusage(r0, r1, e, b, outp)
 
 		case 'U':
 			tvsub(&tdiff, &r1->ru_utime, &r0->ru_utime);
-			sprintf(outp,"%d.%01d", tdiff.tv_sec, tdiff.tv_usec/100000);
+			sprintf(outp,"%d.%01d", (int)tdiff.tv_sec, (int)tdiff.tv_usec/100000);
 			END(outp);
 			break;
 
 		case 'S':
 			tvsub(&tdiff, &r1->ru_stime, &r0->ru_stime);
-			sprintf(outp,"%d.%01d", tdiff.tv_sec, tdiff.tv_usec/100000);
+			sprintf(outp,"%d.%01d", (int)tdiff.tv_sec, (int)tdiff.tv_usec/100000);
 			END(outp);
 			break;
 
@@ -690,50 +689,50 @@ prusage(r0, r1, e, b, outp)
 			break;
 
 		case 'X':
-			sprintf(outp,"%d", t == 0 ? 0 : (r1->ru_ixrss-r0->ru_ixrss)/t);
+			sprintf(outp,"%d", (int)(t == 0 ? 0 : (r1->ru_ixrss-r0->ru_ixrss)/t));
 			END(outp);
 			break;
 
 		case 'D':
-			sprintf(outp,"%d", t == 0 ? 0 :
-			    (r1->ru_idrss+r1->ru_isrss-(r0->ru_idrss+r0->ru_isrss))/t);
+			sprintf(outp,"%d", (int)(t == 0 ? 0 :
+			    (r1->ru_idrss+r1->ru_isrss-(r0->ru_idrss+r0->ru_isrss))/t));
 			END(outp);
 			break;
 
 		case 'K':
-			sprintf(outp,"%d", t == 0 ? 0 :
+			sprintf(outp,"%d", (int)(t == 0 ? 0 :
 			    ((r1->ru_ixrss+r1->ru_isrss+r1->ru_idrss) -
-			    (r0->ru_ixrss+r0->ru_idrss+r0->ru_isrss))/t);
+			    (r0->ru_ixrss+r0->ru_idrss+r0->ru_isrss))/t));
 			END(outp);
 			break;
 
 		case 'M':
-			sprintf(outp,"%d", r1->ru_maxrss/2);
+			sprintf(outp,"%d", (int)(r1->ru_maxrss/2));
 			END(outp);
 			break;
 
 		case 'F':
-			sprintf(outp,"%d", r1->ru_majflt-r0->ru_majflt);
+			sprintf(outp,"%d", (int)(r1->ru_majflt-r0->ru_majflt));
 			END(outp);
 			break;
 
 		case 'R':
-			sprintf(outp,"%d", r1->ru_minflt-r0->ru_minflt);
+			sprintf(outp,"%d", (int)(r1->ru_minflt-r0->ru_minflt));
 			END(outp);
 			break;
 
 		case 'I':
-			sprintf(outp,"%d", r1->ru_inblock-r0->ru_inblock);
+			sprintf(outp,"%d", (int)(r1->ru_inblock-r0->ru_inblock));
 			END(outp);
 			break;
 
 		case 'O':
-			sprintf(outp,"%d", r1->ru_oublock-r0->ru_oublock);
+			sprintf(outp,"%d", (int)(r1->ru_oublock-r0->ru_oublock));
 			END(outp);
 			break;
 		case 'C':
-			sprintf(outp,"%d+%d", r1->ru_nvcsw-r0->ru_nvcsw,
-				r1->ru_nivcsw-r0->ru_nivcsw );
+			sprintf(outp,"%d+%d", (int)(r1->ru_nvcsw-r0->ru_nvcsw),
+				(int)(r1->ru_nivcsw-r0->ru_nivcsw) );
 			END(outp);
 			break;
 #endif /* !SYSV */
@@ -791,16 +790,15 @@ register char *cp;
 /*
  *			N R E A D
  */
+int
 Nread( fd, buf, count )
 int fd;
 void *buf;
 int count;
 {
 	struct sockaddr_in from;
-	struct sctp_sndrcvinfo sinfo;
 	int len = sizeof(from);
-	int msg_flags;
-	register int cnt, i;
+	register int cnt;
 #ifdef DEBUG
 	mes("Nread");
 #endif
@@ -836,6 +834,7 @@ int count;
 /*
  *			N W R I T E
  */
+int
 Nwrite( fd, buf, count )
 int fd;
 void *buf;
