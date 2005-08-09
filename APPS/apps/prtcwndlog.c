@@ -311,7 +311,7 @@ main(int argc, char **argv)
 			} else if (log.from == SCTP_FR_DUPED) {
 				printf("%s: TSN:%u \n",
 				       from_str[log.from],
-				       ntohl(log.x.fr.largest_tsn));
+				       (uint)ntohl(log.x.fr.largest_tsn));
 			} else if ((log.from == SCTP_FR_CWND_REPORT) ||
                                    (log.from == SCTP_FR_CWND_REPORT_START) ||
                                    (log.from == SCTP_FR_CWND_REPORT_STOP)) {
