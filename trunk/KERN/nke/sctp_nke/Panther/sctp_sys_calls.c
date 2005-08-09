@@ -1,7 +1,7 @@
 /*	$KAME: sctp_sys_calls.c,v 1.9 2004/08/17 06:08:53 itojun Exp $ */
 
 /*
- * Copyright (C) 2002, 2003, 2004 Cisco Systems Inc,
+ * Copyright (C) 2002, 2003, 2004, 2005 Cisco Systems Inc,
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -52,7 +52,6 @@
 	 (*(const u_int32_t *)(const void *)(&(a)->s6_addr[4]) == 0) &&	\
 	 (*(const u_int32_t *)(const void *)(&(a)->s6_addr[8]) == ntohl(0x0000ffff)))
 #endif
-
 
 #define SCTP_CONTROL_VEC_SIZE_SND   8192
 #define SCTP_CONTROL_VEC_SIZE_RCV  16384
@@ -479,7 +478,6 @@ sctp_getassocid(int sd, struct sockaddr *sa)
 }
 
 
-
 ssize_t
 sctp_send(int sd, const void *data, size_t len,
 	  const struct sctp_sndrcvinfo *sinfo,
@@ -522,7 +520,7 @@ sctp_send(int sd, const void *data, size_t len,
 
 
 ssize_t
-sctp_sendx(int sd, const void *msg, size_t len, 
+sctp_sendx(int sd, const void *msg, size_t msg_len, 
 	   struct sockaddr *addrs, int addrcnt,
 	   struct sctp_sndrcvinfo *sinfo,
 	   int flags)
@@ -530,7 +528,7 @@ sctp_sendx(int sd, const void *msg, size_t len,
 	ssize_t ret;
 	int i, cnt, *aa, saved_errno;
 	char *buf;
-	int add_len;
+	int add_len, len;
 	struct sockaddr *at;
 	
 	len = sizeof(int);
@@ -582,7 +580,7 @@ sctp_sendx(int sd, const void *msg, size_t len,
 		errno = ENOENT;
 		return (-1);
 	}
-	ret = sctp_send(sd, msg, len, sinfo, flags);
+	ret = sctp_send(sd, msg, msg_len, sinfo, flags);
 	saved_errno = errno;
 	(void)setsockopt(sd, IPPROTO_SCTP, SCTP_CONNECT_X_COMPLETE, (void *)addrs,
 			 (socklen_t)addrs->sa_len);
@@ -693,5 +691,21 @@ sctp_peeloff(sd, assoc_id)
       sctp_assoc_t assoc_id;
 {
 	return (syscall(SYS_sctp_peeloff, sd, assoc_id));
+}
+#elif defined(HAVE_SCTP_PEELOFF_SOCKOPT)
+int
+sctp_peeloff(int sd, sctp_assoc_t assoc_id)
+{
+	/* put in real code here */
+	errno = ENOTSUP;
+	return (-1);
+}
+#else
+int
+sctp_peeloff(int sd, sctp_assoc_t assoc_id)
+{
+	/* NOT supported, return invalid sd */
+	errno = ENOTSUP;
+	return (-1);
 }
 #endif

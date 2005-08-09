@@ -141,6 +141,10 @@
 #undef IPSEC
 #endif
 #endif /* IPSEC */
+#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+#include <sys/uio_internal.h>
+#include <sys/proc_internal.h>
+#endif
 
 #include <netinet/sctputil.h>
 #include <netinet/sctp_var.h>
@@ -3548,13 +3552,13 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp, stcb)
 	if (sb->sb_mb == NULL) {
 		inp->sctp_vtag_first = tag;
 	}
-#if defined(HAVE_SCTP_SO_LASTRECORD) 
-	SCTP_SBLINKRECORD(sb, m);
-	sb->sb_mbtail = nlast;
 	if(msg_eor_seen == 0) {
 		/* only move if we don't have a whole msg */
 		stcb->last_record_insert = nlast;
 	}
+#if defined(HAVE_SCTP_SO_LASTRECORD) 
+	SCTP_SBLINKRECORD(sb, m);
+	sb->sb_mbtail = nlast;
 #else
 	if ((n = sb->sb_mb) != NULL) {
 		while (n->m_nextpkt) {
@@ -4313,7 +4317,11 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		SBLASTRECORDCHK(&so->so_rcv);
 		SBLASTMBUFCHK(&so->so_rcv);
 #endif
+#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+		sbunlock(&so->so_rcv, 1);
+#else
 		sbunlock(&so->so_rcv);
+#endif
 		error = sbwait(&so->so_rcv);
 		if (error)
 			goto out;
@@ -4429,7 +4437,11 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		SBLASTRECORDCHK(&so->so_rcv);
 		SBLASTMBUFCHK(&so->so_rcv);
 #endif
+#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+		sbunlock(&so->so_rcv, 1);
+#else
 		sbunlock(&so->so_rcv);
+#endif
 		error = sbwait(&so->so_rcv);
 		if (error)
 			goto out;
@@ -4917,8 +4929,8 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 #ifdef HAVE_SCTP_SO_LASTRECORD				
 		SBLASTRECORDCHK(&so->so_rcv);
 		SBLASTMBUFCHK(&so->so_rcv);
-		SOCKBUF_UNLOCK(&so->so_rcv);
 #endif
+		SOCKBUF_UNLOCK(&so->so_rcv);
 		(*pr->pr_usrreqs->pru_rcvd)(so, flags);
 #ifdef SCTP_LOCK_LOGGING
 		sctp_log_lock(inp, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
@@ -4935,15 +4947,23 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 	    ((so->so_state & SS_CANTRCVMORE)  == 0)
 #endif
 		){
+#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+		sbunlock(&so->so_rcv, 1);
+#else
 		sbunlock(&so->so_rcv);
+#endif
 		goto restart;
 	}
 	if (flagsp != NULL)
 		*flagsp |= flags;
  release:
 	SOCKBUF_LOCK_ASSERT(&so->so_rcv);
+#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+	sbunlock(&so->so_rcv, 1);
+#else
 	sbunlock(&so->so_rcv);
- out:
+#endif
+out:
 	SOCKBUF_LOCK_ASSERT(&so->so_rcv);
 	SOCKBUF_UNLOCK(&so->so_rcv);
 	return (error);
