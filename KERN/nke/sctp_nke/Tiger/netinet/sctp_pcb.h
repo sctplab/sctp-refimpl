@@ -65,7 +65,9 @@
 #endif
 
 #if defined(__FreeBSD__) || defined(__NetBSD__)
+#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 #define HAVE_SCTP_SO_LASTRECORD 1
+#endif
 #define HAVE_SCTP_SORECEIVE 1
 #endif
 

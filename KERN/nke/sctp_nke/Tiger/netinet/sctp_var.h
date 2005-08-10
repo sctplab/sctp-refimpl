@@ -191,12 +191,14 @@ int sctp_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,
         if((sb)->sb_cc >= (m)->m_len) { \
   	   (sb)->sb_cc -= (m)->m_len; \
         } else { \
+           panic("sb_cc would go negative"); \
            (sb)->sb_cc = 0; \
         } \
         if(stcb) {\
           if((stcb)->asoc.sb_cc >= (m)->m_len) {\
              (stcb)->asoc.sb_cc -= (m)->m_len; \
           } else  {\
+              panic("assoc sb_cc would go negative"); \
              (stcb)->asoc.sb_cc = 0; \
           } \
         } \
@@ -209,10 +211,12 @@ int sctp_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,
 		if((sb)->sb_mbcnt >= (m)->m_ext.ext_size) { \
 		   (sb)->sb_mbcnt -= (m)->m_ext.ext_size; \
                 } else  { \
+                   panic("assoc sb_mbcnt would go negative"); \
 		   (sb)->sb_mbcnt = 0; \
                 } \
             } \
         } else  { \
+            panic("sb_mbcnt would go negative"); \
             (sb)->sb_mbcnt = 0; \
         } \
 }
