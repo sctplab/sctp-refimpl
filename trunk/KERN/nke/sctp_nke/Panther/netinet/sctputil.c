@@ -185,8 +185,8 @@ void sctp_sblog(struct sockbuf *sb,
 	sctp_clog[sctp_cwnd_log_at].x.sb.so_sbcc = sb->sb_cc;
 	if(stcb)
 		sctp_clog[sctp_cwnd_log_at].x.sb.stcb_sbcc = stcb->asoc.sb_cc;
-	else
-		printf("sctp_sblog: No stcb in log?");
+	else 
+		sctp_clog[sctp_cwnd_log_at].x.sb.stcb_sbcc = 0;
 	sctp_clog[sctp_cwnd_log_at].x.sb.incr = incr;
 	sctp_cwnd_log_at++;
 	if (sctp_cwnd_log_at >= SCTP_STAT_LOG_SIZE) {
