@@ -8820,7 +8820,7 @@ sctp_send_packet_dropped(struct sctp_tcb *stcb, struct sctp_nets *net,
 	}
 	if (iph->ip_v == IPVERSION) {
 		/* IPv4 */
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__APPLE__)
 		len = chk->send_size = iph->ip_len;
 #else
 		len = chk->send_size = (iph->ip_len - iphlen);
