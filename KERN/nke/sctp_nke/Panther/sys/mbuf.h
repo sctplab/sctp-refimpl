@@ -194,7 +194,11 @@ struct mbuf {
 #define	M_FRAG		0x0400	/* packet is a fragment of a larger packet */
 #define	M_FIRSTFRAG	0x0800	/* packet is first fragment */
 #define	M_LASTFRAG	0x1000	/* packet is last fragment */
+#ifdef __APPLE__
+#define M_NOTIFICATION	M_PROTO1 /* notification event */
+#else
 #define M_NOTIFICATION	0x8000	/* notification event */
+#endif
 
 /* flags copied when copying m_pkthdr */
 #define	M_COPYFLAGS	(M_PKTHDR|M_EOR|M_PROTO1|M_PROTO1|M_PROTO2|M_PROTO3 | \
