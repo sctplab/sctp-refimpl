@@ -233,8 +233,6 @@ sctp_soreceive(	struct socket *so, struct sockaddr **psa,
 		struct mbuf **mp0,
 		struct mbuf **controlp,
 		int *flagsp);
-#endif
-#if defined(__FreeBSD__) 
 void
 sctp_sbappend( struct sockbuf *sb,
 	       struct mbuf *m,
