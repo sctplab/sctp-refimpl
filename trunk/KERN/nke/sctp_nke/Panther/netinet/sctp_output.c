@@ -2188,7 +2188,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		if (stcb) {
 			if ((stcb->asoc.ecn_allowed) && ecn_ok) {
 				/* Enable ECN */
-#if defined(__FreeBSD__) || defined (__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__)
 				ip->ip_tos = (u_char)((inp->ip_inp.inp.inp_ip_tos & 0x000000fc) |
 						      sctp_get_ect(stcb, chk));
 #elif defined(__NetBSD__)
@@ -6645,9 +6645,12 @@ sctp_send_asconf_ack(struct sctp_tcb *stcb, uint32_t retrans)
 		sctp_pegs[SCTP_CACHED_SRC]++;
 	} else
 		m_ack = m_copy(stcb->asoc.last_asconf_ack_sent, 0, M_COPYALL);
+#elif defined(__APPLE__)
+		m_ack = sctp_m_copym(stcb->asoc.last_asconf_ack_sent, 0, M_COPYALL, M_DONTWAIT);
 #else
 		m_ack = m_copy(stcb->asoc.last_asconf_ack_sent, 0, M_COPYALL);
 #endif
+
 	if (m_ack == NULL) {
 		/* couldn't copy it */
 

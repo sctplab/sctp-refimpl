@@ -120,7 +120,7 @@ extern u_int32_t sctp_debug_on;
 
 extern int sctp_strict_sacks;
 
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+#if defined(HAVE_SCTP_SORECEIVE)
 #define SCTP_SBAPPEND(a, b, c) sctp_sbappend(a,b,c)
 #else
 #define SCTP_SBAPPEND(a, b, c) sbappend(a, b)
