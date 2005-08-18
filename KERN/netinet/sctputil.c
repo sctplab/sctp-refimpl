@@ -4213,7 +4213,8 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 	int *flagsp;
 {
 	struct mbuf *m, **mp;
-	int flags, len, error, offset;
+	int flags, len, error;
+	u_long offset;
 	struct protosw *pr = so->so_proto;
 	struct mbuf *nextrecord;
 	int moff, type = 0;
@@ -4376,8 +4377,8 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 	 */
 	if (m == NULL || 
 	    (
-		    ((flags & MSG_DONTWAIT) == 0 && so->so_rcv.sb_cc < uio->uio_resid) &&
-		    (so->so_rcv.sb_cc < so->so_rcv.sb_lowat || ((flags & MSG_WAITALL) && uio->uio_resid <= so->so_rcv.sb_hiwat)) &&
+		    ((flags & MSG_DONTWAIT) == 0 && so->so_rcv.sb_cc < (u_int)uio->uio_resid) &&
+		    (so->so_rcv.sb_cc < (u_long)so->so_rcv.sb_lowat || ((flags & MSG_WAITALL) && (u_int)uio->uio_resid <= so->so_rcv.sb_hiwat)) &&
 		    (m->m_nextpkt == NULL)
 		    )) {
 		KASSERT(m != NULL || !so->so_rcv.sb_cc,
@@ -4650,7 +4651,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		so->so_state &= ~SS_RCVATMARK;
 #endif
 		len = uio->uio_resid;
-		if (so->so_oobmark && len > so->so_oobmark - offset)
+		if (so->so_oobmark && (u_long)len > so->so_oobmark - offset)
 			len = so->so_oobmark - offset;
 		if (len > m->m_len - moff)
 			len = m->m_len - moff;
