@@ -103,6 +103,10 @@
 #include <net/net_osdep.h>
 #endif
 
+#if defined(HAVE_SCTP_PEELOFF_SOCKOPT)
+#include <netinet/sctp_peeloff.h>
+#endif /* HAVE_SCTP_PEELOFF_SOCKOPT */
+
 #if defined(HAVE_NRL_INPCB) || defined(__FreeBSD__)
 #ifndef in6pcb
 #define in6pcb		inpcb
@@ -2821,6 +2825,29 @@ sctp_optsget(struct socket *so,
 		m->m_len = sizeof(*ssp);
 	}
 	break;
+
+#if defined(HAVE_SCTP_PEELOFF_SOCKOPT)
+	case SCTP_PEELOFF:
+	{
+		struct sctp_peeloff_opt *peeloff;
+
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_USRREQ1) {
+			printf("peeloff\n");
+		}
+#endif /* SCTP_DEBUG */
+		if ((size_t)m->m_len < sizeof(*peeloff)) {
+			error = EINVAL;
+			break;
+		}
+		peeloff = mtod(m, struct sctp_peeloff_opt *);
+		/* do the peeloff */
+		error = sctp_peeloff_option(p, peeloff);
+		m->m_len = sizeof(*peeloff);
+	}
+	break;
+#endif /* HAVE_SCTP_PEELOFF_SOCKOPT */
+
 	default:
 		error = ENOPROTOOPT;
 		m->m_len = 0;

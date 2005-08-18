@@ -4341,7 +4341,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		}
 #endif
 		so->so_rcv.sb_cc += m->m_pkthdr.len;
-		if(m->m_pkthdr.len != stcb->hidden_from_sb) {
+		if ((uint32_t)m->m_pkthdr.len != stcb->hidden_from_sb) {
 			panic("At restoral, mismatch");
 		}
 		m->m_pkthdr.len = 0;
@@ -4823,9 +4823,9 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 #ifdef SCTP_SB_LOGGING
 				sctp_sblog(&so->so_rcv, stcb, SCTP_LOG_SBFREE, len);
 #endif
-				so->so_rcv.sb_cc = sctp_sbspace_sub(so->so_rcv.sb_cc, len);
+				so->so_rcv.sb_cc = sctp_sbspace_sub(so->so_rcv.sb_cc, (uint32_t)len);
 				if(stcb) {
-					stcb->asoc.sb_cc = sctp_sbspace_sub(stcb->asoc.sb_cc, len);
+				    stcb->asoc.sb_cc = sctp_sbspace_sub(stcb->asoc.sb_cc, (uint32_t)len);
 				}
 #ifdef SCTP_SB_LOGGING
 				sctp_sblog(&so->so_rcv, stcb, 
@@ -5019,7 +5019,8 @@ sctp_sbappend( struct sockbuf *sb,
 	}
 	if(sb->sb_mb == stcb->last_record_insert) {
 		if((sb->sb_mb->m_len == 0) &&
-		   (sb->sb_mb->m_pkthdr.len != stcb->hidden_from_sb)) {
+		   ((uint32_t)sb->sb_mb->m_pkthdr.len !=
+		    stcb->hidden_from_sb)) {
 			panic("At append, mismatch");
 		}
 	}
