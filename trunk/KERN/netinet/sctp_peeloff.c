@@ -1,7 +1,7 @@
 /*	$KAME: sctp_peeloff.c,v 1.13 2005/03/06 16:04:18 itojun Exp $	*/
 
 /*
- * Copyright (C) 2002, 2003 Cisco Systems Inc,
+ * Copyright (C) 2002-2005 Cisco Systems Inc,
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -89,6 +89,15 @@
 #endif
 #endif /*IPSEC*/
 
+#if defined(HAVE_SCTP_PEELOFF_SOCKOPT)
+#include <sys/file.h>
+#include <sys/filedesc.h>
+#ifdef __APPLE__
+/* #include <bsm/audit_kernel.h>*/
+extern struct fileops socketops;
+#endif /* __APPLE__ */
+#endif /* HAVE_SCTP_PEELOFF_SOCKOPT */
+
 #ifdef SCTP_DEBUG
 extern u_int32_t sctp_debug_on;
 #endif /* SCTP_DEBUG */
@@ -137,9 +146,8 @@ sctp_do_peeloff(struct socket *head, struct socket *so, caddr_t assoc_id)
 	 */
 	sctp_move_pcb_and_assoc(inp, n_inp, stcb);
 	/*
-	 * And now the final hack. We move data in the
-	 * pending side i.e. head to the new socket
-	 * buffer. Let the GRUBBING begin :-0
+	 * And now the final hack. We move data in the pending side
+	 * i.e. head to the new socket buffer. Let the GRUBBING begin :-0
 	 */
 	sctp_grub_through_socket_buffer(inp, head, so, stcb);
 	return (0);
@@ -192,7 +200,7 @@ sctp_get_peeloff(struct socket *head, caddr_t assoc_id, int *error)
 	    SCTP_PCB_FLAGS_IN_TCPPOOL | /* Turn on Blocking IO */
 	    (SCTP_PCB_COPY_FLAGS & inp->sctp_flags));
 	n_inp->sctp_socket = newso;
-	/* Turn off any non-blocking symantic. */
+	/* Turn off any non-blocking semantic. */
 	newso->so_state &= ~SS_NBIO;
 	newso->so_state |= SS_ISCONNECTED;
 	/* We remove it right away */
@@ -221,11 +229,81 @@ sctp_get_peeloff(struct socket *head, caddr_t assoc_id, int *error)
 	SCTP_INP_WUNLOCK(inp);
 	sctp_move_pcb_and_assoc(inp, n_inp, stcb);
 	/*
-	 * And now the final hack. We move data in the
-	 * pending side i.e. head to the new socket
-	 * buffer. Let the GRUBBING begin :-0
+	 * And now the final hack. We move data in the pending side
+	 * i.e. head to the new socket buffer. Let the GRUBBING begin :-0
 	 */
 	sctp_grub_through_socket_buffer(inp, head, newso, stcb);
 	SCTP_TCB_UNLOCK(stcb);
 	return (newso);
 }
+
+#if defined(HAVE_SCTP_PEELOFF_SOCKOPT)
+#ifdef __APPLE__
+int
+sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
+{
+	struct file *fp;
+	int error, s;
+	struct socket *head, *so;
+	int fd;
+	short fflag;		/* type must match fp->f_flag */
+
+/*	AUDIT_ARG(fd, uap->s);*/
+	error = getsock(p->p_fd, uap->s, &fp);
+	if (error)
+		return (error);
+	s = splnet();
+	head = (struct socket *)fp->f_data;
+	if (head == NULL) {
+		splx(s);
+		return (EBADF);
+	}
+
+	error = sctp_can_peel_off(head, uap->assoc_id);
+	if (error) {
+	    splx(s);
+	    return (error);
+	}
+
+	fflag = fp->f_flag;
+	thread_funnel_switch(NETWORK_FUNNEL, KERNEL_FUNNEL);
+	error = falloc(p, &fp, &fd);
+	thread_funnel_switch(KERNEL_FUNNEL, NETWORK_FUNNEL);
+	if (error) {
+		/*
+		 * Probably ran out of file descriptors. Put the
+		 * unaccepted connection back onto the queue and
+		 * do another wakeup so some other process might
+		 * have a chance at it.
+		 */
+		/* SCTP will NOT put the connection back onto queue */
+		splx(s);
+		return (error);
+	} else {
+		*fdflags(p, fd) &= ~UF_RESERVED;
+		/* return the new descriptor to caller */
+		uap->new_sd = fd;
+	}
+
+	so = sctp_get_peeloff(head, uap->assoc_id, &error);
+	if (so == NULL) {
+	    /* Either someone else peeled it off or can't get a socket */
+	    splx(s);
+	    return (error);
+	}
+
+	so->so_state &= ~SS_COMP;
+	so->so_state &= ~SS_NOFDREF;
+	so->so_head = NULL;
+	fp->f_type = DTYPE_SOCKET;
+	fp->f_flag = fflag;
+	fp->f_ops = &socketops;
+	fp->f_data = (caddr_t)so;
+
+	splx(s);
+	return (error);
+}
+#endif /* __APPLE__ */
+
+#endif /* HAVE_SCTP_PEELOFF_SOCKOPT */
+

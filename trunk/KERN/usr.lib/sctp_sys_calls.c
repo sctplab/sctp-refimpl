@@ -1,7 +1,7 @@
 /*	$KAME: sctp_sys_calls.c,v 1.9 2004/08/17 06:08:53 itojun Exp $ */
 
 /*
- * Copyright (C) 2002, 2003, 2004, 2005 Cisco Systems Inc,
+ * Copyright (C) 2002-2005 Cisco Systems Inc,
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -686,19 +686,33 @@ sctp_recvmsg (int s,
 
 #ifdef SYS_sctp_peeloff
 int
-sctp_peeloff(sd, assoc_id)
-      int sd;
-      sctp_assoc_t assoc_id;
+sctp_peeloff(int sd, sctp_assoc_t assoc_id)
 {
 	return (syscall(SYS_sctp_peeloff, sd, assoc_id));
 }
 #elif defined(HAVE_SCTP_PEELOFF_SOCKOPT)
+#include <netinet/sctp_peeloff.h>
+
 int
 sctp_peeloff(int sd, sctp_assoc_t assoc_id)
 {
-	/* put in real code here */
-	errno = ENOTSUP;
-	return (-1);
+	struct sctp_peeloff_opt peeloff;
+	int error;
+	int optlen;
+
+	/* set in the socket option params */
+	memset(&peeloff, 0, sizeof(peeloff));
+	peeloff.s = sd;
+	peeloff.assoc_id = assoc_id;
+	optlen = sizeof(peeloff);
+	error = getsockopt(sd, IPPROTO_SCTP, SCTP_PEELOFF, (void *)&peeloff,
+			   &optlen);
+	if (error) {
+	    errno = error;
+	    return (-1);
+	} else {
+	    return (peeloff.new_sd);
+	}
 }
 #else
 int
