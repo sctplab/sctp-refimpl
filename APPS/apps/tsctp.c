@@ -54,6 +54,9 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <sys/time.h>		/* struct timeval */
+#ifdef __FreeBSD__
+#include <string.h>
+#endif
 #include <strings.h>
 #include <stdlib.h>
 #include <sys/uio.h>
