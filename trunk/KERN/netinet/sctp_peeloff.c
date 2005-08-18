@@ -1,4 +1,4 @@
-/*	$KAME: sctp_peeloff.c,v 1.13 2005/03/06 16:04:18 itojun Exp $	*/
+GG/*	$KAME: sctp_peeloff.c,v 1.13 2005/03/06 16:04:18 itojun Exp $	*/
 
 /*
  * Copyright (C) 2002-2005 Cisco Systems Inc,
@@ -92,10 +92,15 @@
 #if defined(HAVE_SCTP_PEELOFF_SOCKOPT)
 #include <sys/file.h>
 #include <sys/filedesc.h>
+
 #ifdef __APPLE__
 /* #include <bsm/audit_kernel.h>*/
 extern struct fileops socketops;
+#ifndef SCTP_APPLE_PANTHER
+#include <kern/lock.h>
+#endif /* !SCTP_APPLE_PANTHER */
 #endif /* __APPLE__ */
+
 #endif /* HAVE_SCTP_PEELOFF_SOCKOPT */
 
 #ifdef SCTP_DEBUG
@@ -239,6 +244,7 @@ sctp_get_peeloff(struct socket *head, caddr_t assoc_id, int *error)
 
 #if defined(HAVE_SCTP_PEELOFF_SOCKOPT)
 #ifdef __APPLE__
+#ifdef SCTP_APPLE_PANTHER
 int
 sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 {
@@ -261,8 +267,8 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 
 	error = sctp_can_peel_off(head, uap->assoc_id);
 	if (error) {
-	    splx(s);
-	    return (error);
+		splx(s);
+		return (error);
 	}
 
 	fflag = fp->f_flag;
@@ -287,9 +293,9 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 
 	so = sctp_get_peeloff(head, uap->assoc_id, &error);
 	if (so == NULL) {
-	    /* Either someone else peeled it off or can't get a socket */
-	    splx(s);
-	    return (error);
+		/* Either someone else peeled it off or can't get a socket */
+		splx(s);
+		return (error);
 	}
 
 	so->so_state &= ~SS_COMP;
@@ -303,6 +309,93 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 	splx(s);
 	return (error);
 }
+#else
+/* TIGER */
+int
+sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
+{
+	struct file *fp;
+	int error;
+	struct socket *head, *so = NULL;
+	lck_mtx_t *mutex_held;
+	int fd = uap->s;
+	int newfd;
+	short fflag;		/* type must match fp->f_flag */
+	int dosocklock = 0;
+
+/*	AUDIT_ARG(fd, uap->s);*/
+	error = fp_getsock(p, fd, &fp, &head);
+	if (error) {
+		if (error == EOPNOTSUPP)
+			error = ENOTSOCK;
+		return (error);
+	}
+
+	head = (struct socket *)fp->f_data;
+	if (head == NULL) {
+		error = EBADF;
+		goto out;
+	}
+
+	socket_lock(head, 1);
+
+	if (head->so_proto->pr_getlock != NULL) {
+		mutex_held = (*head->so_proto->pr_getlock)(head, 0);
+		dosocklock = 1;
+	} else {
+		mutex_held = head->so_proto->pr_domain->dom_mtx;
+		dosocklock = 0;
+	}
+
+	error = sctp_can_peel_off(head, uap->assoc_id);
+	if (error) {
+		splx(s);
+		return (error);
+	}
+
+	lck_mtx_assert(mutex_held, LCK_MTX_ASSERT_OWNED);
+	socket_unlock(head, 0); /* unlock head to avoid deadlock with select, keep a ref on head */
+	fflag = fp->f_flag;
+	proc_fdlock(p);
+	error = falloc_locked(p, &fp, &newfd, 1);
+	if (error) {
+		/*
+		 * Probably ran out of file descriptors. Put the
+		 * unaccepted connection back onto the queue and
+		 * do another wakeup so some other process might
+		 * have a chance at it.
+		 */
+		/* SCTP will NOT put the connection back onto queue */
+		proc_fdunlock(p);
+		goto out;
+	}
+
+	*fdflags(p, fd) &= ~UF_RESERVED;
+	uap->new_sd = fd; /* return the new descriptor to the caller */
+	fp->f_type = DTYPE_SOCKET;
+	fp->f_flag = fflag;
+	fp->f_ops = &socketops;
+	fp->f_data = (caddr_t)so;
+	fp_drop(p, newfd, fp, 1);
+	proc_fdunlock(p);
+	socket_lock(head, 0);
+	if (dosocklock)
+		socket_lock(so, 1);
+	so->so_state &= ~SS_COMP;
+	so->so_state &= ~SS_NOFDREF;
+	so->so_head = NULL;
+
+	so = sctp_get_peeloff(head, uap->assoc_id, &error);
+
+	socket_unlock(head, 1);
+	if (dosocklock)
+		socket_unlock(so, 1);
+
+out:
+	file_drop(fd);
+	return (error);
+}
+#endif /* SCTP_APPLE_PANTHER */
 #endif /* __APPLE__ */
 
 #endif /* HAVE_SCTP_PEELOFF_SOCKOPT */
