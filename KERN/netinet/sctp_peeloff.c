@@ -1,4 +1,4 @@
-GG/*	$KAME: sctp_peeloff.c,v 1.13 2005/03/06 16:04:18 itojun Exp $	*/
+/*	$KAME: sctp_peeloff.c,v 1.13 2005/03/06 16:04:18 itojun Exp $	*/
 
 /*
  * Copyright (C) 2002-2005 Cisco Systems Inc,
@@ -121,7 +121,7 @@ sctp_can_peel_off(struct socket *head, caddr_t assoc_id)
 	if (stcb == NULL) {
 		return (ENOTCONN);
 	}
-	SCTP_TCB_UNLOCK(stcb);	
+	SCTP_TCB_UNLOCK(stcb);
 	/* We are clear to peel this one off */
 	return (0);
 }
