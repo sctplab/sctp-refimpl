@@ -3691,22 +3691,12 @@ sctp_should_be_moved(struct mbuf *this, struct sctp_association *asoc)
 #if defined(__OpenBSD__)
 			if ((u_int32_t)m->m_pkthdr.csum == asoc->my_vtag)
 #else
-			printf("Ok, found M_PKTHDR check csum:%x against asoc:%x\n",
-			       (u_int)m->m_pkthdr.csum_data,
-			       (u_int)asoc->my_vtag);
-
 			if ((u_int32_t)m->m_pkthdr.csum_data == asoc->my_vtag)
 #endif
 			{
 				/* Yep */
-				printf("Yep its part of the asoc %d bytes\n",
-				       m->m_pkthdr.len);
 				return (1);
-			} else {
-				printf("Nope its not part of the asoc %d bytes\n",
-				       m->m_pkthdr.len);
-
-			}
+			} 
 
 		}
 		m = m->m_next;
@@ -3748,6 +3738,8 @@ sctp_grub_through_socket_buffer(struct sctp_inpcb *inp, struct socket *old,
 	struct sockbuf *old_sb, *new_sb;
 	struct sctp_association *asoc;
 	int moved_top = 0;
+	u_int before;
+	struct sctp_socket_q_list *sq, *nsq;
 
 	asoc = &stcb->asoc;
 	old_sb = &old->so_rcv;
@@ -3761,6 +3753,26 @@ sctp_grub_through_socket_buffer(struct sctp_inpcb *inp, struct socket *old,
 #endif
 	SOCKBUF_LOCK(old_sb);
 	SOCKBUF_LOCK(new_sb);
+	before = stcb->asoc.sb_cc;
+
+	SCTP_INP_SOCKQ_LOCK(inp);
+	sq = TAILQ_FIRST(&inp->sctp_queue_list);
+	while(sq) {
+		nsq = TAILQ_NEXT(sq, next_sq);
+		if (sq->tcb == stcb) {
+			TAILQ_REMOVE(&inp->sctp_queue_list, sq, next_sq);
+			sq->tcb = NULL;
+			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_sockq, sq);
+			SCTP_DECR_SOCKQ_COUNT();
+			if (stcb) {
+				sctp_ucount_decr(stcb->asoc.cnt_msg_on_sb);
+			}
+		}
+		sq = nsq;
+	}
+	SCTP_INP_SOCKQ_UNLOCK(inp);
+
+
 	if (inp->sctp_vtag_first == asoc->my_vtag) {
 		/* First one must be moved */
 		struct mbuf *mm;
