@@ -156,6 +156,8 @@ sctp_do_peeloff(struct socket *head, struct socket *so, caddr_t assoc_id)
 	 * i.e. head to the new socket buffer. Let the GRUBBING begin :-0
 	 */
 	sctp_grub_through_socket_buffer(inp, head, so, stcb);
+
+	SCTP_TCB_UNLOCK(stcb);
 	return (0);
 }
 
