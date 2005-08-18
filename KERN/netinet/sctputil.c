@@ -3699,8 +3699,15 @@ sctp_should_be_moved(struct mbuf *this, struct sctp_association *asoc)
 #endif
 			{
 				/* Yep */
+				printf("Yep its part of the asoc %d bytes\n",
+				       m->m_pkthdr.len);
 				return (1);
+			} else {
+				printf("Nope its not part of the asoc %d bytes\n",
+				       m->m_pkthdr.len);
+
 			}
+
 		}
 		m = m->m_next;
 	}
@@ -3710,49 +3717,29 @@ sctp_should_be_moved(struct mbuf *this, struct sctp_association *asoc)
 u_int32_t
 sctp_get_first_vtag_from_sb(struct socket *so)
 {
-	struct mbuf *this, *at;
-	u_int32_t retval;
+	struct sctp_socket_q_list *sq=NULL;
+	struct sctp_inpcb *inp;
+	struct sctp_tcb *stcb=NULL;
 
-	retval = 0;
-	if (so->so_rcv.sb_mb) {
-		/* grubbing time */
-		this = so->so_rcv.sb_mb;
-		while (this) {
-			at = this;
-			/* get to the m_pkthdr */
-			while (at) {
-				if (at->m_flags & M_PKTHDR)
-					break;
-				else {
-					at = at->m_next;
-				}
-			}
-			/* now do we have a m_pkthdr */
-			if (at && (at->m_flags & M_PKTHDR)) {
-				/* check it */
-#if defined(__OpenBSD__)
-				if ((u_int32_t)at->m_pkthdr.csum != 0)
-#else
-				if ((u_int32_t)at->m_pkthdr.csum_data != 0)
-#endif
-				{
-					/* its the one */
-#if defined(__OpenBSD__)
-					retval = (u_int32_t)at->m_pkthdr.csum;
-#else
-					retval =
-					    (u_int32_t)at->m_pkthdr.csum_data;
-#endif
-					break;
-				}
-			}
-			this = this->m_nextpkt;
+	inp = (struct sctp_inpcb *)so->so_pcb;
+	if(inp == NULL)
+		return (0);
+
+	if (((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) &&
+	    ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
+ 		sq = TAILQ_FIRST(&inp->sctp_queue_list);
+		if (sq) {
+			stcb = sq->tcb;
+		} else {
+			return (0);
 		}
-
 	}
-	return (retval);
-
+	if(stcb) {
+		return(stcb->asoc.my_vtag);
+	}
+	return (0);
 }
+
 void
 sctp_grub_through_socket_buffer(struct sctp_inpcb *inp, struct socket *old,
     struct socket *new, struct sctp_tcb *stcb)
