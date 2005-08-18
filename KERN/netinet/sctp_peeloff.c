@@ -121,6 +121,7 @@ sctp_can_peel_off(struct socket *head, caddr_t assoc_id)
 	if (stcb == NULL) {
 		return (ENOTCONN);
 	}
+	SCTP_TCB_UNLOCK(stcb);	
 	/* We are clear to peel this one off */
 	return (0);
 }
