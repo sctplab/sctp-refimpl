@@ -4138,14 +4138,7 @@ sctp_usr_recvd(struct socket *so, int flags)
 	SCTP_INP_WLOCK(inp);
 	if (((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) &&
 	    ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
-		/* Ok the other part of our grubby tracking
-		 * stuff for our horrible layer violation that
-		 * the tsvwg thinks is ok for sctp_peeloff.. gak!
-		 * We must update the next vtag pending on the
-		 * socket buffer (if any).
-		 */
-		inp->sctp_vtag_first = sctp_get_first_vtag_from_sb(so);
-		sq = TAILQ_FIRST(&inp->sctp_queue_list);
+ 		sq = TAILQ_FIRST(&inp->sctp_queue_list);
 		if (sq) {
 			stcb = sq->tcb;
 		} else {
@@ -4189,9 +4182,19 @@ sctp_usr_recvd(struct socket *so, int flags)
 		 */
 		SCTP_TCB_LOCK(stcb);
 		if (flags & MSG_EOR) {
+			/* Ok the other part of our grubby tracking
+			 * socket buffer (if any). We could maybe 
+			 * use the sq queue to find the next stcb
+			 * but in theory it should be on the 
+			 * csum field. We may want to change this so
+			 * that we use the sq since only 1-2-m model
+			 * needs this and then we could get rid of
+			 * the csum field useage.
+			 */
 			if (((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) 
 			   && ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
 				stcb = sctp_remove_from_socket_q(inp);
+				inp->sctp_vtag_first = sctp_get_first_vtag_from_sb(so);
 			}
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_USRREQ2)
@@ -4205,6 +4208,9 @@ sctp_usr_recvd(struct socket *so, int flags)
  				stcb->asoc.my_rwnd_control_len = sctp_sbspace_sub(stcb->asoc.my_rwnd_control_len,
  										  CMSG_LEN(sizeof(struct sctp_sndrcvinfo)));
 			}
+		} else {
+			/* we keep our tag up there since we are not done */
+			inp->sctp_vtag_first = stcb->asoc.my_vtag;
 		}
 		if ((TAILQ_EMPTY(&stcb->asoc.delivery_queue) == 0) ||
 		    (TAILQ_EMPTY(&stcb->asoc.reasmqueue) == 0)) {
