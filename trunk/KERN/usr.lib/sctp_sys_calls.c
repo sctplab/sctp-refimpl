@@ -528,7 +528,7 @@ sctp_sendx(int sd, const void *msg, size_t msg_len,
 	ssize_t ret;
 	int i, cnt, *aa, saved_errno;
 	char *buf;
-	int add_len, len;
+	int add_len, len, no_end_cx=0;
 	struct sockaddr *at;
 	
 	len = sizeof(int);
@@ -570,8 +570,13 @@ sctp_sendx(int sd, const void *msg, size_t msg_len,
 
 	free(buf);
 	if(ret != 0) {
+		if(errno == EALREADY) {
+			no_end_cx = 1;;
+			goto continue_send;
+		}
 		return(ret);
 	}
+ continue_send:
 	sinfo->sinfo_assoc_id = sctp_getassocid(sd, addrs);
 	if (sinfo->sinfo_assoc_id == 0) {
 		printf("Huh, can't get associd? TSNH!\n");
@@ -582,8 +587,9 @@ sctp_sendx(int sd, const void *msg, size_t msg_len,
 	}
 	ret = sctp_send(sd, msg, msg_len, sinfo, flags);
 	saved_errno = errno;
-	(void)setsockopt(sd, IPPROTO_SCTP, SCTP_CONNECT_X_COMPLETE, (void *)addrs,
-			 (socklen_t)addrs->sa_len);
+	if(no_end_cx == 0) 
+		(void)setsockopt(sd, IPPROTO_SCTP, SCTP_CONNECT_X_COMPLETE, (void *)addrs,
+				 (socklen_t)addrs->sa_len);
 
 	errno = saved_errno;
 	return (ret);
