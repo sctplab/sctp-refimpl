@@ -465,6 +465,7 @@ process(int fd,int magic)
 	while(i < 4099){
 		printf("pass %d\n",i);
 		while(num_asoc < 2){
+			printf("Have %d asoc's waiting for 2\n", num_asoc);
 			ret = poll_fd(fd);
 			if(ret >0 ){
 				num_asoc += ret;
@@ -509,7 +510,6 @@ process(int fd,int magic)
 			printf("Huh only read %d\n",sz);
 		}
 		if(magic >= i){
-			printf("magic engaged\n");
 			my_sctpReadInput(fd,i);
 		}else{
 			my_sctpReadInput(fd,4100);
@@ -534,12 +534,13 @@ process(int fd,int magic)
 		}else{
 			printf("Huh only read %d\n",sz);
 		}
+		printf("Check buffers\n");
 		if(check_buffers()){
 			exit(0);
 		}
 		close(fd1);
-		i++;
-		num_asoc--;
+		num_asoc = 0;
+		return;
 	}
 }
 
@@ -586,7 +587,7 @@ main(int argc, char **argv)
 	/* enable all event notifications */
 	event.sctp_data_io_event = 1;
 	event.sctp_association_event = 1;
-	event.sctp_address_event = 1;
+	event.sctp_address_event = 0;
 	event.sctp_send_failure_event = 1;
 	event.sctp_peer_error_event = 1;
 	event.sctp_shutdown_event = 1;
