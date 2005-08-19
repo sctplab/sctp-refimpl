@@ -154,6 +154,9 @@ struct sctp_paramhdr {
 /* CMT ON/OFF socket option */
 #define SCTP_CMT_ON_OFF                 0x00000200
 
+/* Hidden socket option based sctp_peeloff */
+#define SCTP_PEELOFF                    0x00000210
+
 /* Debug things that need to be purged */
 #define SCTP_SET_INITIAL_DBG_SEQ	0x00001f00
 #define SCTP_RESET_PEGS                 0x00002000
