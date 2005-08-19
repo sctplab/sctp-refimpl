@@ -175,12 +175,11 @@ sctp_init(void)
 	sctp_pcb_init();
 
 #ifndef __OpenBSD__
-	if (nmbclusters > SCTP_ASOC_MAX_CHUNKS_ON_QUEUE)
-		sctp_max_chunks_on_queue = nmbclusters;
+	if ((nmbclusters/8) > SCTP_ASOC_MAX_CHUNKS_ON_QUEUE)
+		sctp_max_chunks_on_queue = (nmbclusters/8);
 #else
-/*	if (nmbclust > SCTP_ASOC_MAX_CHUNKS_ON_QUEUE)
-	sctp_max_chunks_on_queue = nmbclust; FIX ME */
-	sctp_max_chunks_on_queue = nmbclust * 2;
+	if((nmbclust/8) > SCTP_ASOC_MAX_CHUNKS_ON_QUEUE)
+		sctp_max_chunks_on_queue = nmbclust / 8;
 #endif
 	/*
 	 * Allow a user to take no more than 1/2 the number of clusters

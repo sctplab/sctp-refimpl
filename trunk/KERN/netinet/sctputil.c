@@ -3440,7 +3440,7 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp, stcb)
 #endif
 		sctp_sballoc(stcb, sb, n);
 		if(n->m_next == NULL) {
-		  stcb->last_record_insert = nlast;
+			stcb->last_record_insert = nlast;
 		}
 	}
 	if ((n = sb->sb_mb) != NULL) {
@@ -3481,8 +3481,8 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp, stcb)
 		panic("sbappendaddr_nocheck");
 
 	for (n = control; n; n = n->m_next) {
-	  if (n->m_next == 0)	/* get pointer to last control buf */
-	    break;
+		if (n->m_next == 0)	/* get pointer to last control buf */
+			break;
 	}
 	cnt = 0;
 	if (asa->sa_len > MHLEN)
@@ -3577,7 +3577,7 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp, stcb)
 			stcb->asoc.my_rwnd_control_len +=
 				sizeof(struct mbuf);
 		} else {
-		  printf("Add to socket queue failed!\n");
+			printf("Add to socket queue failed!\n");
 		}
 	} else {
 		stcb->asoc.my_rwnd_control_len += sizeof(struct mbuf);
@@ -3615,7 +3615,7 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp, stcb)
 #endif
 		sctp_sballoc(stcb, sb, n);
 		if(n->m_next == NULL) {
-		  stcb->last_record_insert = nlast;
+			stcb->last_record_insert = nlast;
 		}
 	}
 	if ((n = sb->sb_mb) != NULL) {
@@ -3637,11 +3637,13 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp, stcb)
 	}
 
 
+	if (((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) &&
+	    ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
 		if (sctp_add_to_socket_q(inp, stcb)) {
 			stcb->asoc.my_rwnd_control_len +=
 				sizeof(struct mbuf);
 		}
-	} else {
+        } else {
 		stcb->asoc.my_rwnd_control_len += sizeof(struct mbuf);
 	}
 	return (1);
