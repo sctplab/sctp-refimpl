@@ -3440,7 +3440,7 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp, stcb)
 #endif
 		sctp_sballoc(stcb, sb, n);
 		if(n->m_next == NULL) {
-		  stcb->last_record_insert = nlast;
+			stcb->last_record_insert = nlast;
 		}
 	}
 	if ((n = sb->sb_mb) != NULL) {
@@ -3481,8 +3481,8 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp, stcb)
 		panic("sbappendaddr_nocheck");
 
 	for (n = control; n; n = n->m_next) {
-	  if (n->m_next == 0)	/* get pointer to last control buf */
-	    break;
+		if (n->m_next == 0)	/* get pointer to last control buf */
+			break;
 	}
 	cnt = 0;
 	if (asa->sa_len > MHLEN)
@@ -3577,7 +3577,7 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp, stcb)
 			stcb->asoc.my_rwnd_control_len +=
 				sizeof(struct mbuf);
 		} else {
-		  printf("Add to socket queue failed!\n");
+			printf("Add to socket queue failed!\n");
 		}
 	} else {
 		stcb->asoc.my_rwnd_control_len += sizeof(struct mbuf);
@@ -3615,7 +3615,7 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp, stcb)
 #endif
 		sctp_sballoc(stcb, sb, n);
 		if(n->m_next == NULL) {
-		  stcb->last_record_insert = nlast;
+			stcb->last_record_insert = nlast;
 		}
 	}
 	if ((n = sb->sb_mb) != NULL) {
@@ -3637,11 +3637,13 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp, stcb)
 	}
 
 
+	if (((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) &&
+	    ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
 		if (sctp_add_to_socket_q(inp, stcb)) {
 			stcb->asoc.my_rwnd_control_len +=
 				sizeof(struct mbuf);
 		}
-	} else {
+        } else {
 		stcb->asoc.my_rwnd_control_len += sizeof(struct mbuf);
 	}
 	return (1);
@@ -3691,16 +3693,13 @@ sctp_should_be_moved(struct mbuf *this, struct sctp_association *asoc)
 #if defined(__OpenBSD__)
 			if ((u_int32_t)m->m_pkthdr.csum == asoc->my_vtag)
 #else
-			printf("Ok, found M_PKTHDR check csum:%x against asoc:%x\n",
-			       (u_int)m->m_pkthdr.csum_data,
-			       (u_int)asoc->my_vtag);
-
 			if ((u_int32_t)m->m_pkthdr.csum_data == asoc->my_vtag)
 #endif
 			{
 				/* Yep */
 				return (1);
-			}
+			} 
+
 		}
 		m = m->m_next;
 	}
@@ -3710,49 +3709,29 @@ sctp_should_be_moved(struct mbuf *this, struct sctp_association *asoc)
 u_int32_t
 sctp_get_first_vtag_from_sb(struct socket *so)
 {
-	struct mbuf *this, *at;
-	u_int32_t retval;
+	struct sctp_socket_q_list *sq=NULL;
+	struct sctp_inpcb *inp;
+	struct sctp_tcb *stcb=NULL;
 
-	retval = 0;
-	if (so->so_rcv.sb_mb) {
-		/* grubbing time */
-		this = so->so_rcv.sb_mb;
-		while (this) {
-			at = this;
-			/* get to the m_pkthdr */
-			while (at) {
-				if (at->m_flags & M_PKTHDR)
-					break;
-				else {
-					at = at->m_next;
-				}
-			}
-			/* now do we have a m_pkthdr */
-			if (at && (at->m_flags & M_PKTHDR)) {
-				/* check it */
-#if defined(__OpenBSD__)
-				if ((u_int32_t)at->m_pkthdr.csum != 0)
-#else
-				if ((u_int32_t)at->m_pkthdr.csum_data != 0)
-#endif
-				{
-					/* its the one */
-#if defined(__OpenBSD__)
-					retval = (u_int32_t)at->m_pkthdr.csum;
-#else
-					retval =
-					    (u_int32_t)at->m_pkthdr.csum_data;
-#endif
-					break;
-				}
-			}
-			this = this->m_nextpkt;
+	inp = (struct sctp_inpcb *)so->so_pcb;
+	if(inp == NULL)
+		return (0);
+
+	if (((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) &&
+	    ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
+ 		sq = TAILQ_FIRST(&inp->sctp_queue_list);
+		if (sq) {
+			stcb = sq->tcb;
+		} else {
+			return (0);
 		}
-
 	}
-	return (retval);
-
+	if(stcb) {
+		return(stcb->asoc.my_vtag);
+	}
+	return (0);
 }
+
 void
 sctp_grub_through_socket_buffer(struct sctp_inpcb *inp, struct socket *old,
     struct socket *new, struct sctp_tcb *stcb)
@@ -3761,6 +3740,8 @@ sctp_grub_through_socket_buffer(struct sctp_inpcb *inp, struct socket *old,
 	struct sockbuf *old_sb, *new_sb;
 	struct sctp_association *asoc;
 	int moved_top = 0;
+	u_int before;
+	struct sctp_socket_q_list *sq, *nsq;
 
 	asoc = &stcb->asoc;
 	old_sb = &old->so_rcv;
@@ -3774,6 +3755,26 @@ sctp_grub_through_socket_buffer(struct sctp_inpcb *inp, struct socket *old,
 #endif
 	SOCKBUF_LOCK(old_sb);
 	SOCKBUF_LOCK(new_sb);
+	before = stcb->asoc.sb_cc;
+
+	SCTP_INP_SOCKQ_LOCK(inp);
+	sq = TAILQ_FIRST(&inp->sctp_queue_list);
+	while(sq) {
+		nsq = TAILQ_NEXT(sq, next_sq);
+		if (sq->tcb == stcb) {
+			TAILQ_REMOVE(&inp->sctp_queue_list, sq, next_sq);
+			sq->tcb = NULL;
+			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_sockq, sq);
+			SCTP_DECR_SOCKQ_COUNT();
+			if (stcb) {
+				sctp_ucount_decr(stcb->asoc.cnt_msg_on_sb);
+			}
+		}
+		sq = nsq;
+	}
+	SCTP_INP_SOCKQ_UNLOCK(inp);
+
+
 	if (inp->sctp_vtag_first == asoc->my_vtag) {
 		/* First one must be moved */
 		struct mbuf *mm;
@@ -4214,7 +4215,8 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 	int *flagsp;
 {
 	struct mbuf *m, **mp;
-	int flags, len, error, offset;
+	int flags, len, error;
+	u_long offset;
 	struct protosw *pr = so->so_proto;
 	struct mbuf *nextrecord;
 	int moff, type = 0;
@@ -4341,7 +4343,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		}
 #endif
 		so->so_rcv.sb_cc += m->m_pkthdr.len;
-		if(m->m_pkthdr.len != stcb->hidden_from_sb) {
+		if ((uint32_t)m->m_pkthdr.len != stcb->hidden_from_sb) {
 			panic("At restoral, mismatch");
 		}
 		m->m_pkthdr.len = 0;
@@ -4377,8 +4379,8 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 	 */
 	if (m == NULL || 
 	    (
-		    ((flags & MSG_DONTWAIT) == 0 && so->so_rcv.sb_cc < uio->uio_resid) &&
-		    (so->so_rcv.sb_cc < so->so_rcv.sb_lowat || ((flags & MSG_WAITALL) && uio->uio_resid <= so->so_rcv.sb_hiwat)) &&
+		    ((flags & MSG_DONTWAIT) == 0 && so->so_rcv.sb_cc < (u_int)uio->uio_resid) &&
+		    (so->so_rcv.sb_cc < (u_long)so->so_rcv.sb_lowat || ((flags & MSG_WAITALL) && (u_int)uio->uio_resid <= so->so_rcv.sb_hiwat)) &&
 		    (m->m_nextpkt == NULL)
 		    )) {
 		KASSERT(m != NULL || !so->so_rcv.sb_cc,
@@ -4651,7 +4653,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		so->so_state &= ~SS_RCVATMARK;
 #endif
 		len = uio->uio_resid;
-		if (so->so_oobmark && len > so->so_oobmark - offset)
+		if (so->so_oobmark && (u_long)len > so->so_oobmark - offset)
 			len = so->so_oobmark - offset;
 		if (len > m->m_len - moff)
 			len = m->m_len - moff;
@@ -4823,9 +4825,9 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 #ifdef SCTP_SB_LOGGING
 				sctp_sblog(&so->so_rcv, stcb, SCTP_LOG_SBFREE, len);
 #endif
-				so->so_rcv.sb_cc = sctp_sbspace_sub(so->so_rcv.sb_cc, len);
+				so->so_rcv.sb_cc = sctp_sbspace_sub(so->so_rcv.sb_cc, (uint32_t)len);
 				if(stcb) {
-					stcb->asoc.sb_cc = sctp_sbspace_sub(stcb->asoc.sb_cc, len);
+				    stcb->asoc.sb_cc = sctp_sbspace_sub(stcb->asoc.sb_cc, (uint32_t)len);
 				}
 #ifdef SCTP_SB_LOGGING
 				sctp_sblog(&so->so_rcv, stcb, 
@@ -5019,7 +5021,8 @@ sctp_sbappend( struct sockbuf *sb,
 	}
 	if(sb->sb_mb == stcb->last_record_insert) {
 		if((sb->sb_mb->m_len == 0) &&
-		   (sb->sb_mb->m_pkthdr.len != stcb->hidden_from_sb)) {
+		   ((uint32_t)sb->sb_mb->m_pkthdr.len !=
+		    stcb->hidden_from_sb)) {
 			panic("At append, mismatch");
 		}
 	}
