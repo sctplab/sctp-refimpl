@@ -6757,10 +6757,6 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 		asoc->sent_queue_cnt_removeable = 0;
 	}
 	TAILQ_FOREACH(chk, &asoc->control_send_queue, sctp_next) {
-		if (chk->sent != SCTP_DATAGRAM_RESEND) {
-			/* we only worry about things marked for resend */
-			continue;
-		}
 		if ((chk->rec.chunk_id == SCTP_COOKIE_ECHO) ||
 		    (chk->rec.chunk_id == SCTP_ASCONF) ||
 		    (chk->rec.chunk_id == SCTP_STREAM_RESET) ||

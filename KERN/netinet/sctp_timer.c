@@ -492,6 +492,7 @@ sctp_backoff_on_timeout(struct sctp_tcb *stcb,
 	}
 }
 
+extern int sctp_peer_chunk_oh;
 
 static int
 sctp_mark_all_for_resend(struct sctp_tcb *stcb,
@@ -559,20 +560,11 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	sctp_log_fr(cur_rtt, now.tv_sec, now.tv_usec, SCTP_FR_T3_MARK_TIME);
 	sctp_log_fr(0, min_wait.tv_sec, min_wait.tv_usec, SCTP_FR_T3_MARK_TIME);
 #endif
-	if(stcb->asoc.total_flight >= net->flight_size) {
-	  stcb->asoc.total_flight -= net->flight_size;
-	} else {
-	  stcb->asoc.total_flight = 0;
-	  stcb->asoc.total_flight_count = 0;
-	  audit_tf = 1;
-	}
         /* Our rwnd will be incorrect here since we are not adding
 	 * back the cnt * mbuf but we will fix that down below.
 	 */
 	orig_rwnd = stcb->asoc.peers_rwnd;
 	orig_flight = net->flight_size;
-	stcb->asoc.peers_rwnd += net->flight_size;
-	net->flight_size = 0;
 	net->rto_pending = 0;
 	net->fast_retran_ip= 0;
 #ifdef SCTP_DEBUG
@@ -701,6 +693,11 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 			if (stcb->asoc.total_flight_count > 0)
 			  stcb->asoc.total_flight_count--;
 			chk->sent = SCTP_DATAGRAM_RESEND;
+
+			net->flight_size -= chk->book_size;
+			stcb->asoc.peers_rwnd += chk->send_size;
+			stcb->asoc.peers_rwnd += sctp_peer_chunk_oh;
+
 			/* reset the TSN for striking and other FR stuff */
 			chk->rec.data.doing_fast_retransmit = 0;
 #ifdef SCTP_DEBUG
@@ -733,8 +730,14 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 #if defined(SCTP_FR_LOGGING) || defined(SCTP_EARLYFR_LOGGING)
 	sctp_log_fr(tsnfirst, tsnlast, num_mk, SCTP_FR_T3_TIMEOUT);
 #endif
-	/* compensate for the number we marked */
-	stcb->asoc.peers_rwnd += (num_mk /* * sizeof(struct mbuf)*/);
+	
+	if(stcb->asoc.total_flight >= (orig_flight - net->flight_size)){
+		stcb->asoc.total_flight -= (orig_flight - net->flight_size);
+	} else {
+		stcb->asoc.total_flight = 0;
+		stcb->asoc.total_flight_count = 0;
+		audit_tf = 1;
+	}
 
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_TIMER1) {
