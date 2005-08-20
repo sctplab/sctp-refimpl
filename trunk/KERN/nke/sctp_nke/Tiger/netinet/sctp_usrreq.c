@@ -2334,7 +2334,8 @@ sctp_optsget(struct socket *so,
 		sas = (struct sockaddr_storage *)&saddr->addr[0];
 		limit = m->m_len - sizeof(sctp_assoc_t);
 		actual = sctp_fill_up_addresses(inp, stcb, limit, sas);
-		SCTP_TCB_UNLOCK(stcb);
+		if (stcb)
+			SCTP_TCB_UNLOCK(stcb);
 		m->m_len = sizeof(struct sockaddr_storage) + actual;
 	}
 	break;
