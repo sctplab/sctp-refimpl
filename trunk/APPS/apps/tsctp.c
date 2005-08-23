@@ -104,6 +104,7 @@ int trans;			/* 0=receive, !0=transmit mode */
 int sinkmode = 0;		/* 0=normal I/O, !0=sink/source mode */
 int verbose = 0;		/* 0=print basic info, 1=print cpu rate, proc
 				 * resource usage. */
+int use_abort = 0;
 int nodelay = 0;		/* set TCP_NODELAY socket option */
 int b_flag = 0;			/* use mread() */
 int sockbufsize = 0;		/* socket buffer size to use */
@@ -121,6 +122,7 @@ char Usage[] = "\
 Usage: ttcp -t [-options] host [ < in ]\n\
        ttcp -r [-options > out]\n\
 Common options:\n\
+        -a      use abort instead of shutdown procedure\n\
 	-l ##	length of bufs read from or written to network (default 8192)\n\
 	-u	use UDP instead of TCP\n\
 	-s      use SCTP instead of TCP\n\
@@ -169,12 +171,16 @@ char **argv;
 {
 	unsigned long addr_tmp;
 	int c;
+	struct linger linger;
 
 	if (argc < 2) goto usage;
 
-	while ((c = getopt(argc, argv, "drstuvBDTb:f:l:n:p:qA:O:")) != -1) {
+	while ((c = getopt(argc, argv, "adrstuvBDTb:f:l:n:p:qA:O:")) != -1) {
 		switch (c) {
 
+		case 'a':
+			use_abort = 1;
+			break;
 		case 'B':
 			b_flag = 1;
 			break;
@@ -404,6 +410,13 @@ char **argv;
 		}
 	    }
 	}
+	if (use_abort) {
+		linger.l_onoff = 1;
+		linger.l_linger = 0;
+		if (setsockopt(fd, SOL_SOCKET, SO_LINGER, &linger, sizeof(struct linger)) < 0)
+			err("setsockopt");
+	}
+
 	prep_timer();
 	errno = 0;
 	if (sinkmode) {
