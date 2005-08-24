@@ -1,4 +1,4 @@
-/*	$KAME: sctp_pcb.h,v 1.20 2005/03/06 16:04:18 itojun Exp $	*/
+/*	$KAME: sctp_pcb.h,v 1.21 2005/07/16 01:18:47 suz Exp $	*/
 
 #ifndef __sctp_pcb_h__
 #define __sctp_pcb_h__
@@ -40,7 +40,7 @@
  * we would not allocate enough for Net/Open BSD :-<
  */
 
-#if defined(__FreeBSD__) && __FreeBSD_version > 500000
+#if defined(__FreeBSD__) && __FreeBSD_version > 500000 && defined(_KERNEL)
 #include "opt_global.h"
 #include <net/pfil.h>
 #endif
