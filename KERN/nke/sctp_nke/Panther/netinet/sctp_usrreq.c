@@ -4316,7 +4316,7 @@ sctp_listen(struct socket *so, struct proc *p)
 	SOCK_LOCK(so);
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 	error = solisten_proto_check(so);
-	if(error) {
+	if (error) {
 		SOCK_UNLOCK(so);
 		return (error);
 	}
@@ -4347,6 +4347,10 @@ sctp_listen(struct socket *so, struct proc *p)
 		solisten_proto(so);
 	}
 #endif
+	if (inp->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE) {
+		/* remove the ACCEPTCONN flag for one-to-many sockets */
+		so->so_options &= ~SO_ACCEPTCONN;
+	}
 	SOCK_UNLOCK(so);
 	splx(s);
 	return (error);
