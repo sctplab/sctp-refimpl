@@ -3759,29 +3759,41 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		inp->sctp_socket->so_snd.sb_cc = 0;
 		inp->sctp_socket->so_snd.sb_mbcnt = 0;
 	}
-	if (inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) {
-		if ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) {
-			if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
-				/*
-				 * For the base fd, that is NOT in TCP pool we
-				 * turn off the connected flag. This allows
-				 * non-listening endpoints to connect/shutdown/
-				 * connect.
+	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
+	    (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)){
+		/*
+		 * For TCP type we need special handling
+		 * when we are connected. We also include
+		 * the peel'ed off ones to.
+		 */
+		if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
+			if ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) {
+				/* Not in the pool, i.e. the ones that
+				 * are active server. We want to allow this
+				 * guy to initiate a new connection. In order
+				 * to do that we need to free off the connected
+				 * flags on the socket. I see no easy way to
+				 * do that since if I call soisdisconnected() it
+				 * will set the cant send/cant recv flags on the socket
+				 * buffers. And once that happens you are stuck. So
+				 * we do our own turn off here for the active side
+				 * so that it can start a new assoc if it desires.
 				 */
 				inp->sctp_flags &= ~SCTP_PCB_FLAGS_CONNECTED;
-				if(((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) == 0) &&
-				   ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0))
-				  soisdisconnected(stcb->sctp_ep->sctp_socket);
-				/*
-				else
-				  printf("SCTP(d):disconnect of unref socket\n");
-				*/
+				SOCK_LOCK(stcb->sctp_ep->sctp_socket);
+				stcb->sctp_ep->sctp_socket->so_state &= ~(SS_ISCONNECTING|SS_ISDISCONNECTING|SS_ISCONFIRMING|SS_ISCONNECTED);
+				SOCK_UNLOCK(stcb->sctp_ep->sctp_socket);
+			} else {
+				/* For TCP Pool types including
+				 * peeled off ones, we just disconnect
+				 * leaving the CONNECTED flag on SCTP so
+				 * we won't allow a connect() to be attempted.
+				 * The socket should also protect against this
+				 * too since the can't send more flags are
+				 * also set.
+				 */
+				soisdisconnected(stcb->sctp_ep->sctp_socket);
 			}
-			/*
-			 * For those that are in the TCP pool we just leave
-			 * so it cannot be used. When they close the fd we
-			 * will free it all.
-			 */
 		}
 	}
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
