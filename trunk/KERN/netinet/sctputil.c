@@ -4808,7 +4808,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 			else {
 				if (mp != NULL) {
 					SOCKBUF_UNLOCK(&so->so_rcv);
-					*mp = m_copym(m, 0, len, 
+					*mp = sctp_m_copym(m, 0, len, 
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 						      M_TRYWAIT
 #else
@@ -5441,7 +5441,7 @@ dontblock:
 				moff += len;
 			else {
 				if (mp)
-					*mp = m_copym(m, 0, len, M_WAIT);
+					*mp = sctp_m_copym(m, 0, len, M_WAIT);
 				m->m_data += len;
 				m->m_len -= len;
 				so->so_rcv.sb_cc -= len;
