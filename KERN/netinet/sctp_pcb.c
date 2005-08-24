@@ -4562,21 +4562,17 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 	while (phdr) {
 		ptype = ntohs(phdr->param_type);
 		plen = ntohs(phdr->param_length);
-		printf("ptype => %0x, plen => %d\n", (u_int)ptype, (int)plen);
+/*		printf("ptype => %0x, plen => %d\n", (u_int)ptype, (int)plen);*/
 		if (offset + plen > limit) {
-			printf("Limit reached (%d + %d) > %d\n",
-			       offset, plen, limit);
 			break;
 		}
 		if (plen == 0) {
-			printf("plen is 0?\n");
 			break;
 		}
 		if (ptype == SCTP_IPV4_ADDRESS) {
 			if(stcb->asoc.ipv4_addr_legal) {
 				struct sctp_ipv4addr_param *p4, p4_buf;
 				/* ok get the v4 address and check/add */
-				printf("its a V4 address\n");
 				phdr = sctp_get_next_param(m, offset,
 							   (struct sctp_paramhdr *)&p4_buf, sizeof(p4_buf));
 				if (plen != sizeof(struct sctp_ipv4addr_param) ||
@@ -4604,7 +4600,6 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 						/* the assoc was freed? */
 						return (-1);
 					}
-					printf("Add it\n");
 					if (sctp_add_remote_addr(stcb, sa, 0, 4)) {
 						return (-1);
 					}
@@ -4617,10 +4612,8 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 						/* the assoc was freed? */
 						return (-1);
 					}
-					printf("Clear the not_in_assoc flag?\n");
 					if (net != NULL) {
 						/* clear flag */
-						printf("yes\n");
 						net->dest_state &=
 							~SCTP_ADDR_NOT_IN_ASSOC;
 					}
@@ -4649,7 +4642,6 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			if (stcb->asoc.ipv6_addr_legal) {
 				/* ok get the v6 address and check/add */
 				struct sctp_ipv6addr_param *p6, p6_buf;
-				printf("Its a V6 address\n");
 				phdr = sctp_get_next_param(m, offset,
 							   (struct sctp_paramhdr *)&p6_buf, sizeof(p6_buf));
 				if (plen != sizeof(struct sctp_ipv6addr_param) ||
@@ -4675,7 +4667,6 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 						return (-1);
 					}
 					/* we must add the address, no scope set */
-					printf("Add it\n");
 					if (sctp_add_remote_addr(stcb, sa, 0, 5)) {
 						return (-1);
 					}
@@ -4689,10 +4680,8 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 						/* the assoc was freed? */
 						return (-1);
 					}
-					printf("Clear the its not_in_assoc flag?\n");
 					if (net != NULL) {
 						/* clear flag */
-						printf("yes\n");
 						net->dest_state &=
 							~SCTP_ADDR_NOT_IN_ASSOC;
 					}
