@@ -395,8 +395,7 @@ struct sctp_pktdrop_chunk {
 };
 
 #define SCTP_RESET_YOUR  0x01   /* reset your streams and send response */
-#define SCTP_RESET_ALL   0x02   /* reset all of your streams */
-#define SCTP_RECIPRICAL  0x04   /* reset my streams too */
+#define SCTP_RECIPRICAL  0x02   /* reset my streams too */
 
 struct sctp_stream_reset_request {
 	struct sctp_paramhdr ph;
