@@ -8975,7 +8975,7 @@ sctp_reset_the_streams(struct sctp_tcb *stcb,
 {
 	int i;
 
-	if (req->reset_flags & SCTP_RESET_ALL) {
+	if (number_entries == 0) {
 		for (i=0; i<stcb->asoc.streamoutcnt; i++) {
 			stcb->asoc.strmout[i].next_sequence_sent = 0;
 		}
@@ -9000,14 +9000,20 @@ sctp_send_str_reset_ack(struct sctp_tcb *stcb,
 	struct sctp_tmit_chunk *chk;
 	uint32_t seq;
 	int number_entries, i;
-	uint8_t two_way=0, not_peer=0;
+	uint8_t two_way=0, not_peer=0, len;
 	uint16_t *list=NULL;
 
 	asoc = &stcb->asoc;
-	if (req->reset_flags & SCTP_RESET_ALL)
+	len = ntohs(req->ph.param_length);
+	if (len < sizeof(struct sctp_stream_reset_request)){
+		printf("Invalid str-reset size received %d < %d\n",
+		       len, sizeof(struct sctp_stream_reset_request));
+		return;
+	}
+	if (len == sizeof(struct sctp_stream_reset_request))
 		number_entries = 0;
 	else
-		number_entries = (ntohs(req->ph.param_length) - sizeof(struct sctp_stream_reset_request)) / sizeof(uint16_t);
+		number_entries = (len  - sizeof(struct sctp_stream_reset_request)) / sizeof(uint16_t);
 
 	chk = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk);
 	if (chk == NULL) {
@@ -9219,9 +9225,6 @@ sctp_send_str_reset_req(struct sctp_tcb *stcb,
 	}
 
 	strreq->sr_req.reset_flags = 0;
-	if (number_entrys == 0) {
-		strreq->sr_req.reset_flags |= SCTP_RESET_ALL;
-	}
 	if (two_way == 0) {
 		strreq->sr_req.reset_flags |= SCTP_RESET_YOUR;
 	} else {
