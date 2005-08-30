@@ -82,7 +82,7 @@ void	inet46print	__P((struct sockaddr *, u_int16_t, int));
 
 void
 #if defined(__FreeBSD__) || defined(__APPLE__)
-sctp_protopr(u_long off, char *name, int af)
+sctp_protopr(u_long off, const char *name, int af)
 #else /* NetBSD and OpenBSD */
 sctp_protopr(off, name)
 	u_long off;
@@ -114,9 +114,11 @@ sctp_protopr(off, name)
 
 	if (off == 0)
 		return;
-	kread(off, (char *)&epinfo, sizeof(epinfo));
+	if(kread(off, (char *)&epinfo, sizeof(epinfo)) == -1) {
+		printf("sctp_proto:Can't read epinfo:%x\n", (u_int)off);
+		return;
+	}
 	inp_prev = inp_next = epinfo.listhead.lh_first;
-
 #if defined(__FreeBSD__) || defined(__APPLE__)
 	if (Aflag && !Wflag)
 		width = 18;
@@ -172,10 +174,21 @@ sctp_protopr(off, name)
 	sin_any.sin_family = AF_INET;
 
 	while (inp_next != NULL) {
-		kread((u_long)inp_next, (char *)&inp, sizeof(inp));
+		if(kread((u_long)inp_next, (char *)&inp, sizeof(inp)) == -1) {
+			printf("Error reading address %x terminated\n",
+			       (u_int)inp_next);
+			inp_next = NULL;
+			continue;
+		}
 		inp_prev = inp_next;
 		inp_next = inp.sctp_list.le_next;
-		kread((u_long)inp.sctp_socket, (char *)&sockb, sizeof(sockb));
+		
+		if(kread((u_long)inp.sctp_socket, (char *)&sockb, sizeof(sockb)) == -1) {
+			printf("Error reading sctp_socket for inp %x terminated (addr:%x)\n",
+			       (u_int)inp_prev, (u_int)inp.sctp_socket);
+			inp_next = NULL;
+			continue;
+		}
 
 		ipv4_addr_legal = ipv6_addr_legal = 0;
 		if (inp.sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) {
@@ -224,24 +237,32 @@ sctp_protopr(off, name)
 						ifap = ifap->ifa_next;
 				} else if (laddr_next != NULL) {
 					do {
-						kread((u_long)laddr_next,
+						if(kread((u_long)laddr_next,
 						    (char *)&laddr,
-						    sizeof(laddr));
+							 sizeof(laddr)) == -1){
+							break;
+						}
 						laddr_next = laddr.sctp_nxt_addr.le_next;
 						if (laddr.ifa == NULL)
 							break;
-						kread((u_long)laddr.ifa,
+						if(kread((u_long)laddr.ifa,
 						    (char *)&ifa,
-						    sizeof(ifa));
+							 sizeof(ifa)) == -1) {
+							break;
+						}
 						if (ifa.ifa_addr == NULL)
 							break;
-						kread((u_long)ifa.ifa_addr,
+						if(kread((u_long)ifa.ifa_addr,
 						    (char *)&ss,
-						    sizeof(struct sockaddr));
+							 sizeof(struct sockaddr)) == -1) {
+							break;
+						}
 						ss_len = ss.ss_len;
-						kread((u_long)ifa.ifa_addr,
+						if(kread((u_long)ifa.ifa_addr,
 						    (char *)&ss,
-						    ss_len);
+							 ss_len) == -1) {
+							break;
+						}
 						if  (ss.ss_family == AF_INET) {
 							sin = (struct sockaddr_in *)&ss;
 						} else if (ss.ss_family == AF_INET6) {
@@ -300,7 +321,12 @@ sctp_protopr(off, name)
 
 		tcb_next = inp.sctp_asoc_list.lh_first;
 		while (tcb_next != NULL) {
-			kread((u_long)tcb_next, (char *)&tcb, sizeof(tcb));
+			if(kread((u_long)tcb_next, (char *)&tcb, sizeof(tcb)) == -1) {
+				printf("Can't read tcp_next:%x\n", 
+				       (u_int)tcb_next);
+				tcb_next = NULL;
+				continue;
+			}
 			tcb_prev = tcb_next;
 			tcb_next = tcb.sctp_tcblist.le_next;
 			nets_next = tcb.asoc.nets.tqh_first;
@@ -336,24 +362,32 @@ sctp_protopr(off, name)
 						ifap = ifap->ifa_next;
 				} else if (laddr_next != NULL) {
 					do {
-						kread((u_long)laddr_next,
+						if(kread((u_long)laddr_next,
 						    (char *)&laddr,
-						    sizeof(laddr));
+							 sizeof(laddr)) == -1) {
+							break;
+						}
 						laddr_next = laddr.sctp_nxt_addr.le_next;
 						if (laddr.ifa == NULL)
 							break;
-						kread((u_long)laddr.ifa,
+						if(kread((u_long)laddr.ifa,
 						    (char *)&ifa,
-						    sizeof(ifa));
+							 sizeof(ifa)) == -1) {
+							break;
+						}
 						if (ifa.ifa_addr == NULL)
 							break;
-						kread((u_long)ifa.ifa_addr,
+						if(kread((u_long)ifa.ifa_addr,
 						    (char *)&ss,
-						    sizeof(struct sockaddr));
+						    sizeof(struct sockaddr)) == -1) {
+							break;
+						}
 						ss_len = ss.ss_len;
-						kread((u_long)ifa.ifa_addr,
+						if(kread((u_long)ifa.ifa_addr,
 						    (char *)&ss,
-						    ss_len);
+						    ss_len) == -1) {
+							break;
+						}
 						if  (ss.ss_family == AF_INET) {
 							sin = (struct sockaddr_in *)&ss;
 						} else if (ss.ss_family == AF_INET6) {
@@ -363,8 +397,10 @@ sctp_protopr(off, name)
 				}
 
 				if (nets_next != NULL) {
-					kread((u_long)nets_next, (char *)&nets,
-					    sizeof(nets));
+					if(kread((u_long)nets_next, (char *)&nets,
+					    sizeof(nets)) == -1) {
+						break;
+					}
 					nets_next = nets.sctp_next.tqe_next;
 					sa = (struct sockaddr *)&nets.ro._l_addr;
 					if (sa->sa_family == AF_INET) {
@@ -623,7 +659,7 @@ static char *pegs_name[SCTP_NUMBER_OF_PEGS] = {
 		
 void
 #if defined(__FreeBSD__) || defined(__APPLE__)
-sctp_stats(u_long off, char *name, int af)
+sctp_stats(u_long off, const char *name, int af)
 #else /* NetBSD and OpenBSD */
 sctp_stats(off, name)
         u_long off;
@@ -639,7 +675,10 @@ sctp_stats(off, name)
 	if (off == 0)
 		return;
 
-	kread(off, (char *)pegs, sizeof(pegs));
+	if(kread(off, (char *)pegs, sizeof(pegs)) == -1) {
+		printf("Error reading SCTP pegs\n");
+		return;
+	}
 	
 	printf("sctp:\n");
 	for (i = 0; i < SCTP_NUMBER_OF_PEGS; i++) {

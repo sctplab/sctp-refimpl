@@ -187,8 +187,10 @@ struct protox {
 	  bdg_stats,	NULL,		"bdg",	1 /* bridging... */ },
 	{ -1,		-1,		1,	protopr,
 	  pim_stats,	NULL,		"pim",	IPPROTO_PIM },
+/*
 	{ -1,		N_CARPSTAT,	1,	0,
-	  carp_stats,	NULL,		"carp",		0},
+	  carp_stats,	NULL,		"carp",	0},
+*/
 	{ -1,		-1,		0,	NULL,
 	  NULL,		NULL,		NULL,	0 }
 };
@@ -203,6 +205,10 @@ struct protox ip6protox[] = {
 	{ -1,		-1,		1,	protopr,
 	  dccp_stats,	NULL,		"dccp",	IPPROTO_DCCP },
 #endif /* DCCP */
+#ifdef SCTP
+	{ N_SCTPEPINFO, N_SCTPPEGS,	1,	sctp_protopr,
+	  sctp_stats,	NULL,		"sctp",	0},
+#endif /* SCTP */
 	{ -1,		N_IP6STAT,	1,	protopr,
 	  ip6_stats,	ip6_ifstats,	"ip6",	IPPROTO_RAW },
 	{ -1,		N_ICMP6STAT,	1,	protopr,
