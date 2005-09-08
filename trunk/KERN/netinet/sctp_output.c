@@ -9823,7 +9823,6 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 
 		        /* unlock all due to m_wait */
 			stcb->block_entry = NULL;
-		        SCTP_TCB_UNLOCK(stcb);
  			MGETHDR(mm, M_WAIT, MT_DATA);
 			if (mm) {
 				struct sctp_paramhdr *ph;
