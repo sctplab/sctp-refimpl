@@ -252,7 +252,7 @@
 /* draft-ietf-tsvwg-addip-sctp-xx */
 #define SCTP_SUPPORTED_CHUNK_EXT    0x8008
 /*
- * draft-ietf-tsvwg-addip-sctp-xx */
+ * draft-ietf-tsvwg-addip-sctp-xx 
  *   param=0x8001  len=0xNNNN
  *   Byte | Byte | Byte | Byte
  *   Byte | Byte ...
