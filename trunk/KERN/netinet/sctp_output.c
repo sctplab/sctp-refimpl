@@ -9098,19 +9098,19 @@ sctp_send_str_reset_ack(struct sctp_tcb *stcb,
 	if (asoc->str_reset_seq_in == seq) {
 		/* is it the next expected? */
 		asoc->str_reset_seq_in++;
-		strack->sr_resp.reset_at_tsn = htonl(asoc->sending_seq);
-		asoc->str_reset_sending_seq = asoc->sending_seq;
-		if (number_entries) {
-			int i;
-			uint16_t temp;
-			/* convert them to host byte order */
-			for (i=0 ; i<number_entries; i++) {
-				temp = ntohs(list[i]);
-				list[i] = temp;
-			}
-		}
+		strack->sr_resp.reset_at_tsn = htonl(asoc->sending_seq-1);
+		asoc->str_reset_sending_seq = asoc->sending_seq-1;
 		if (req->reset_flags & SCTP_RESET_YOUR) {
 			/* reset my outbound streams */
+			if (number_entries) {
+				int i;
+				uint16_t temp;
+				/* convert them to host byte order */
+				for (i=0 ; i<number_entries; i++) {
+					temp = ntohs(list[i]);
+					list[i] = temp;
+				}
+			}
 			sctp_reset_the_streams(stcb, req , number_entries, list);
 		}
 		if (req->reset_flags & SCTP_RECIPRICAL) {
@@ -9122,6 +9122,7 @@ sctp_send_str_reset_ack(struct sctp_tcb *stcb,
 		/* no its a retran so I must just ack and do nothing */
 		strack->sr_resp.reset_at_tsn = htonl(asoc->str_reset_sending_seq);
 	}
+	/* This should be changed to highest tsn */
 	strack->sr_resp.cumulative_tsn = htonl(asoc->cumulative_tsn);
 	TAILQ_INSERT_TAIL(&asoc->control_send_queue,
 			  chk,
