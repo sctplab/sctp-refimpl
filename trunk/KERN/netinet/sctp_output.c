@@ -8983,6 +8983,8 @@ sctp_reset_the_streams(struct sctp_tcb *stcb,
 		for (i=0; i<number_entries; i++) {
 			if (list[i] >= stcb->asoc.streamoutcnt) {
 				/* no such stream */
+				printf("%d is an invalid stream for outbound seq number reset\n",
+				       list[i]);
 				continue;
 			}
 			stcb->asoc.strmout[(list[i])].next_sequence_sent = 0;
@@ -9091,9 +9093,16 @@ sctp_send_str_reset_ack(struct sctp_tcb *stcb,
 	seq = ntohl(req->reset_req_seq);
 
 	list = req->list_of_streams;
-	/* copy the un-converted network byte order streams */
-	for (i=0; i<number_entries; i++) {
-		strack->sr_resp.list_of_streams[i] = list[i];
+	if (number_entries) {
+		int i;
+		uint16_t temp;
+		/* copy the un-converted network byte order streams */
+		/* and then convert them to host byte order */
+		for (i=0; i<number_entries; i++) {
+			strack->sr_resp.list_of_streams[i] = list[i];
+			temp = ntohs(list[i]);
+			list[i] = temp;
+		}
 	}
 	if (asoc->str_reset_seq_in == seq) {
 		/* is it the next expected? */
@@ -9102,15 +9111,6 @@ sctp_send_str_reset_ack(struct sctp_tcb *stcb,
 		asoc->str_reset_sending_seq = asoc->sending_seq-1;
 		if (req->reset_flags & SCTP_RESET_YOUR) {
 			/* reset my outbound streams */
-			if (number_entries) {
-				int i;
-				uint16_t temp;
-				/* convert them to host byte order */
-				for (i=0 ; i<number_entries; i++) {
-					temp = ntohs(list[i]);
-					list[i] = temp;
-				}
-			}
 			sctp_reset_the_streams(stcb, req , number_entries, list);
 		}
 		if (req->reset_flags & SCTP_RECIPRICAL) {
