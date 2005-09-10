@@ -30,7 +30,6 @@
 
 /*
  * TODO: - daemon for address reconfiguration.
- *       - understand the changes necessary in uipc_socket.c
  *       - provide an installer.
  */
 
@@ -40,6 +39,7 @@
 #include <sys/sysctl.h>
 #include <netinet/in.h>
 #include <sys/protosw.h>
+#include <sys/mbuf.h>
 
 #include <net/route.h>
 #include <netinet/in_pcb.h>
@@ -105,7 +105,6 @@ kern_return_t SCTP_start (kmod_info_t * ki, void * d) {
 	int s;
 	int funnel_state;
 	int err;
-			
 
 	old_pr4  = ip_protox [IPPROTO_SCTP];
 	old_pr6  = ip6_protox[IPPROTO_SCTP];
@@ -327,7 +326,7 @@ kern_return_t SCTP_stop (kmod_info_t * ki, void * d) {
 
 	splx(s);
 	thread_funnel_set(network_flock, funnel_state);
-		
+
 	if (err) {
 		printf("SCTP NKE: Not all protocol handlers could be removed.\n");
 		return KERN_FAILURE;

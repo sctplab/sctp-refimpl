@@ -252,6 +252,7 @@ struct sctp_error_unrecognized_chunk {
  * these here since that way natd and f/w's
  * in user land can find them.
  */
+/************0x00 series ***********/
 #define SCTP_DATA		0x00
 #define SCTP_INITIATION		0x01
 #define SCTP_INITIATION_ACK	0x02
@@ -267,22 +268,21 @@ struct sctp_error_unrecognized_chunk {
 #define SCTP_ECN_ECHO		0x0c
 #define SCTP_ECN_CWR		0x0d
 #define SCTP_SHUTDOWN_COMPLETE	0x0e
-
+/************0x40 series ***********/
+/************0x80 series ***********/
 /* draft-ietf-tsvwg-addip-sctp */
-#define SCTP_ASCONF		0xc1
 #define	SCTP_ASCONF_ACK		0x80
-
-/* draft-ietf-stewart-prsctp */
-#define SCTP_FORWARD_CUM_TSN	0xc0
-
 /* draft-ietf-stewart-pktdrpsctp */
 #define SCTP_PACKET_DROPPED	0x81
-
 /* draft-ietf-stewart-strreset-xxx */
 #define SCTP_STREAM_RESET       0x82
-
 /* draft-ietf-tsvwg-sctp-auth */
 #define SCTP_AUTHENTICATION     0x83
+/************0xc0 series ***********/
+/* RFC3758 */
+#define SCTP_FORWARD_CUM_TSN	0xc0
+/* draft-ietf-tsvwg-addip-sctp */
+#define SCTP_ASCONF		0xc1
 
 
 /* ABORT and SHUTDOWN COMPLETE FLAG */

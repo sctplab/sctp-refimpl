@@ -225,7 +225,9 @@
 #define IS_SCTP_CONTROL(a) ((a)->chunk_type != SCTP_DATA)
 #define IS_SCTP_DATA(a) ((a)->chunk_type == SCTP_DATA)
 
+
 /* SCTP parameter types */
+/*************0x0000 series*************/
 #define SCTP_HEARTBEAT_INFO	    0x0001
 #define SCTP_IPV4_ADDRESS	    0x0005
 #define SCTP_IPV6_ADDRESS	    0x0006
@@ -234,21 +236,23 @@
 #define SCTP_COOKIE_PRESERVE	    0x0009
 #define SCTP_HOSTNAME_ADDRESS	    0x000b
 #define SCTP_SUPPORTED_ADDRTYPE	    0x000c
-#define SCTP_ECN_CAPABLE	    0x8000
 
 /* draft-ietf-stewart-strreset-xxx */
 #define SCTP_STR_RESET_REQUEST      0x000d
 #define SCTP_STR_RESET_RESPONSE     0x000e
-/* draft-ietf-tsvwg-sctp-auth */
+/*************0x4000 series*************/
+/*************0x8000 series*************/
+#define SCTP_ECN_CAPABLE	    0x8000
+/* ECN Nonce: draft-ladha-sctp-ecn-nonce */
+#define SCTP_ECN_NONCE_SUPPORTED    0x8001
+/* draft-ietf-tsvwg-auth-xxx */
 #define SCTP_AUTH_RANDOM            0x8002
 #define SCTP_AUTH_CHUNK_LIST        0x8003
 #define SCTP_AUTH_HMAC_ALGO         0x8004
-
-/* ECN Nonce: draft-ladha-sctp-ecn-nonce */
-#define SCTP_ECN_NONCE_SUPPORTED    0x8001
-
+/* draft-ietf-tsvwg-addip-sctp-xx */
+#define SCTP_SUPPORTED_CHUNK_EXT    0x8008
 /*
- * draft-ietf-stewart-strreset-xxx
+ * draft-ietf-tsvwg-addip-sctp-xx 
  *   param=0x8001  len=0xNNNN
  *   Byte | Byte | Byte | Byte
  *   Byte | Byte ...
@@ -268,13 +272,10 @@
  *   82 = Stream Reset
  */
 
-/* draft-ietf-tsvwg-prsctp */
-#define SCTP_SUPPORTED_CHUNK_EXT    0x8008
-
 /* number of extensions we support */
 #define SCTP_EXT_COUNT 5     	/* num of extensions we support chunk wise */
 #define SCTP_PAD_EXT_COUNT 3    /* num of pad bytes needed to get to 32 bit boundary */
-
+/*************0x0000 series*************/
 
 #define SCTP_PRSCTP_SUPPORTED	    0xc000
 /* draft-ietf-tsvwg-addip-sctp */

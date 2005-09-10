@@ -8975,7 +8975,7 @@ sctp_reset_the_streams(struct sctp_tcb *stcb,
 {
 	int i;
 
-	if (req->reset_flags & SCTP_RESET_ALL) {
+	if (number_entries == 0) {
 		for (i=0; i<stcb->asoc.streamoutcnt; i++) {
 			stcb->asoc.strmout[i].next_sequence_sent = 0;
 		}
@@ -8983,6 +8983,8 @@ sctp_reset_the_streams(struct sctp_tcb *stcb,
 		for (i=0; i<number_entries; i++) {
 			if (list[i] >= stcb->asoc.streamoutcnt) {
 				/* no such stream */
+				printf("%d is an invalid stream for outbound seq number reset\n",
+				       list[i]);
 				continue;
 			}
 			stcb->asoc.strmout[(list[i])].next_sequence_sent = 0;
@@ -9000,14 +9002,20 @@ sctp_send_str_reset_ack(struct sctp_tcb *stcb,
 	struct sctp_tmit_chunk *chk;
 	uint32_t seq;
 	int number_entries, i;
-	uint8_t two_way=0, not_peer=0;
+	uint8_t two_way=0, not_peer=0, len;
 	uint16_t *list=NULL;
 
 	asoc = &stcb->asoc;
-	if (req->reset_flags & SCTP_RESET_ALL)
+	len = ntohs(req->ph.param_length);
+	if (len < sizeof(struct sctp_stream_reset_request)){
+		printf("Invalid str-reset size received %d < %d\n",
+		       len, sizeof(struct sctp_stream_reset_request));
+		return;
+	}
+	if (len == sizeof(struct sctp_stream_reset_request))
 		number_entries = 0;
 	else
-		number_entries = (ntohs(req->ph.param_length) - sizeof(struct sctp_stream_reset_request)) / sizeof(uint16_t);
+		number_entries = (len  - sizeof(struct sctp_stream_reset_request)) / sizeof(uint16_t);
 
 	chk = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk);
 	if (chk == NULL) {
@@ -9085,24 +9093,22 @@ sctp_send_str_reset_ack(struct sctp_tcb *stcb,
 	seq = ntohl(req->reset_req_seq);
 
 	list = req->list_of_streams;
-	/* copy the un-converted network byte order streams */
-	for (i=0; i<number_entries; i++) {
-		strack->sr_resp.list_of_streams[i] = list[i];
+	if (number_entries) {
+		int i;
+		uint16_t temp;
+		/* copy the un-converted network byte order streams */
+		/* and then convert them to host byte order */
+		for (i=0; i<number_entries; i++) {
+			strack->sr_resp.list_of_streams[i] = list[i];
+			temp = ntohs(list[i]);
+			list[i] = temp;
+		}
 	}
 	if (asoc->str_reset_seq_in == seq) {
 		/* is it the next expected? */
 		asoc->str_reset_seq_in++;
-		strack->sr_resp.reset_at_tsn = htonl(asoc->sending_seq);
-		asoc->str_reset_sending_seq = asoc->sending_seq;
-		if (number_entries) {
-			int i;
-			uint16_t temp;
-			/* convert them to host byte order */
-			for (i=0 ; i<number_entries; i++) {
-				temp = ntohs(list[i]);
-				list[i] = temp;
-			}
-		}
+		strack->sr_resp.reset_at_tsn = htonl(asoc->sending_seq-1);
+		asoc->str_reset_sending_seq = asoc->sending_seq-1;
 		if (req->reset_flags & SCTP_RESET_YOUR) {
 			/* reset my outbound streams */
 			sctp_reset_the_streams(stcb, req , number_entries, list);
@@ -9116,6 +9122,7 @@ sctp_send_str_reset_ack(struct sctp_tcb *stcb,
 		/* no its a retran so I must just ack and do nothing */
 		strack->sr_resp.reset_at_tsn = htonl(asoc->str_reset_sending_seq);
 	}
+	/* This should be changed to highest tsn */
 	strack->sr_resp.cumulative_tsn = htonl(asoc->cumulative_tsn);
 	TAILQ_INSERT_TAIL(&asoc->control_send_queue,
 			  chk,
@@ -9219,9 +9226,6 @@ sctp_send_str_reset_req(struct sctp_tcb *stcb,
 	}
 
 	strreq->sr_req.reset_flags = 0;
-	if (number_entrys == 0) {
-		strreq->sr_req.reset_flags |= SCTP_RESET_ALL;
-	}
 	if (two_way == 0) {
 		strreq->sr_req.reset_flags |= SCTP_RESET_YOUR;
 	} else {
@@ -9819,7 +9823,6 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 
 		        /* unlock all due to m_wait */
 			stcb->block_entry = NULL;
-		        SCTP_TCB_UNLOCK(stcb);
  			MGETHDR(mm, M_WAIT, MT_DATA);
 			if (mm) {
 				struct sctp_paramhdr *ph;
