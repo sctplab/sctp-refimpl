@@ -3068,11 +3068,11 @@ sctp_optsset(struct socket *so,
 	break;
       }
       if (strrst->strrst_flags == SCTP_RESET_LOCAL_RECV) {
-	two_way = 0;
-	not_peer = 0;
-      } else if (strrst->strrst_flags == SCTP_RESET_LOCAL_SEND) {
 	two_way = 1;
 	not_peer = 1;
+      } else if (strrst->strrst_flags == SCTP_RESET_LOCAL_SEND) {
+	two_way = 0;
+	not_peer = 0;
       } else if (strrst->strrst_flags == SCTP_RESET_BOTH) {
 	two_way = 1;
 	not_peer = 0;

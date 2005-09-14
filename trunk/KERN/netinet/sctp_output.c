@@ -9111,7 +9111,7 @@ sctp_send_str_reset_req(struct sctp_tcb *stcb,
 	 *         0     |    0      | = | SCTP_RESET_MINE (just the peer inbound/my out)
 	 *         1     |    0      | = | SCTP_RESET_MINE | SCTP_RECIPRICAL (both sides)
 	 *         0     |    1      | = | Not a Valid Request (not anyone)
-	 *         1     |    1      | = | SCTP_RESET_RECIPRICAL (Just local host)
+	 *         1     |    1      | = | SCTP_RESET_RECIPRICAL (Just local host receive side)
 	 */
 	struct sctp_association *asoc;
 	struct sctp_stream_reset_req *strreq;
