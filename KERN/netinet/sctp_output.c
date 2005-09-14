@@ -5543,7 +5543,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 #endif
 	STCB_TCB_LOCK_ASSERT(stcb);
 	hbflag = 0;
-	if (control_only)
+	if ((control_only) || (asoc->stream_reset_outstanding)) 
 		no_data_chunks = 1;
 	else
 		no_data_chunks = 0;
@@ -7713,6 +7713,13 @@ sctp_output(inp, m, addr, control, p, flags)
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		create_lock_applied = 0;
 	}
+	if(asoc->stream_reset_outstanding) {
+		/* Can't queue any data while
+		 * stream reset is underway.
+		 */
+		SCTP_TCB_UNLOCK(stcb);
+		return(EAGAIN);
+	}
 
 
 	if (use_rcvinfo == 0) {
@@ -8969,40 +8976,17 @@ sctp_send_cwr(struct sctp_tcb *stcb, struct sctp_nets *net, uint32_t high_tsn)
 	TAILQ_INSERT_TAIL(&stcb->asoc.control_send_queue, chk, sctp_next);
 	asoc->ctrl_queue_cnt++;
 }
-static void
-sctp_reset_the_streams(struct sctp_tcb *stcb,
-     struct sctp_stream_reset_request *req, int number_entries, uint16_t *list)
-{
-	int i;
-
-	if (number_entries == 0) {
-		for (i=0; i<stcb->asoc.streamoutcnt; i++) {
-			stcb->asoc.strmout[i].next_sequence_sent = 0;
-		}
-	} else if (number_entries) {
-		for (i=0; i<number_entries; i++) {
-			if (list[i] >= stcb->asoc.streamoutcnt) {
-				/* no such stream */
-				printf("%d is an invalid stream for outbound seq number reset\n",
-				       list[i]);
-				continue;
-			}
-			stcb->asoc.strmout[(list[i])].next_sequence_sent = 0;
-		}
-	}
-	sctp_ulp_notify(SCTP_NOTIFY_STR_RESET_SEND, stcb, number_entries, (void *)list);
-}
 
 void
 sctp_send_str_reset_ack(struct sctp_tcb *stcb,
-     struct sctp_stream_reset_request *req)
+     struct sctp_stream_reset_request *req, uint8_t action)
 {
 	struct sctp_association *asoc;
 	struct sctp_stream_reset_resp *strack;
 	struct sctp_tmit_chunk *chk;
 	uint32_t seq;
 	int number_entries, i;
-	uint8_t two_way=0, not_peer=0, len;
+	uint16_t len;
 	uint16_t *list=NULL;
 
 	asoc = &stcb->asoc;
@@ -9082,52 +9066,33 @@ sctp_send_str_reset_ack(struct sctp_tcb *stcb,
 	}
 
         /* actual response */
-	if (req->reset_flags & SCTP_RESET_YOUR) {
+	if (req->reset_flags & SCTP_RESET_MINE) {
 		strack->sr_resp.reset_flags = SCTP_RESET_PERFORMED;
 	} else {
-		strack->sr_resp.reset_flags = 0;
+		strack->sr_resp.reset_flags = SCTP_RESET_NOACTION;
 	}
 
 	/* copied from reset request */
 	strack->sr_resp.reset_req_seq_resp = req->reset_req_seq;
 	seq = ntohl(req->reset_req_seq);
-
 	list = req->list_of_streams;
 	if (number_entries) {
 		int i;
-		uint16_t temp;
-		/* copy the un-converted network byte order streams */
-		/* and then convert them to host byte order */
+		/* copy the streams,if any.
+		 * note they are in network order.
+		 */
 		for (i=0; i<number_entries; i++) {
+			/* these were un-networked when they arrived */
 			strack->sr_resp.list_of_streams[i] = list[i];
-			temp = ntohs(list[i]);
-			list[i] = temp;
 		}
 	}
-	if (asoc->str_reset_seq_in == seq) {
-		/* is it the next expected? */
-		asoc->str_reset_seq_in++;
-		strack->sr_resp.reset_at_tsn = htonl(asoc->sending_seq-1);
-		asoc->str_reset_sending_seq = asoc->sending_seq-1;
-		if (req->reset_flags & SCTP_RESET_YOUR) {
-			/* reset my outbound streams */
-			sctp_reset_the_streams(stcb, req , number_entries, list);
-		}
-		if (req->reset_flags & SCTP_RECIPRICAL) {
-			/* reset peer too */
-			sctp_send_str_reset_req(stcb, number_entries, list, two_way, not_peer);
-		}
-
-	} else {
-		/* no its a retran so I must just ack and do nothing */
-		strack->sr_resp.reset_at_tsn = htonl(asoc->str_reset_sending_seq);
-	}
-	/* This should be changed to highest tsn */
-	strack->sr_resp.cumulative_tsn = htonl(asoc->cumulative_tsn);
+	strack->sr_resp.recv_reset_at_tsn = htonl(asoc->str_reset_sending_seq);
+	strack->sr_resp.high_tsn = htonl(asoc->highest_tsn_inside_map);
 	TAILQ_INSERT_TAIL(&asoc->control_send_queue,
 			  chk,
 			  sctp_next);
 	asoc->ctrl_queue_cnt++;
+	return;
 }
 
 
@@ -9143,8 +9108,8 @@ sctp_send_str_reset_req(struct sctp_tcb *stcb,
 	 *
 	 *       two_way | not_peer  | = | Flags
 	 *       ------------------------------
-	 *         0     |    0      | = | SCTP_RESET_YOUR (just the peer)
-	 *         1     |    0      | = | SCTP_RESET_YOUR | SCTP_RECIPRICAL (both sides)
+	 *         0     |    0      | = | SCTP_RESET_MINE (just the peer inbound/my out)
+	 *         1     |    0      | = | SCTP_RESET_MINE | SCTP_RECIPRICAL (both sides)
 	 *         0     |    1      | = | Not a Valid Request (not anyone)
 	 *         1     |    1      | = | SCTP_RESET_RECIPRICAL (Just local host)
 	 */
@@ -9227,16 +9192,17 @@ sctp_send_str_reset_req(struct sctp_tcb *stcb,
 
 	strreq->sr_req.reset_flags = 0;
 	if (two_way == 0) {
-		strreq->sr_req.reset_flags |= SCTP_RESET_YOUR;
+		strreq->sr_req.reset_flags |= SCTP_RESET_MINE;
 	} else {
 		if (not_peer == 0) {
-			strreq->sr_req.reset_flags |= SCTP_RECIPRICAL | SCTP_RESET_YOUR;
+			strreq->sr_req.reset_flags |= SCTP_RECIPRICAL | SCTP_RESET_MINE;
 		} else {
 			strreq->sr_req.reset_flags |= SCTP_RECIPRICAL;
 		}
 	}
 	memset(strreq->sr_req.reset_pad, 0, sizeof(strreq->sr_req.reset_pad));
 	strreq->sr_req.reset_req_seq = htonl(asoc->str_reset_seq_out);
+	strreq->sr_req.send_reset_at_tsn = htonl(asoc->sending_seq-1);
 	if (number_entrys) {
 		/* populate the specific entry's */
 		int i;
@@ -10544,6 +10510,13 @@ sctp_sosend(struct socket *so,
 	if (create_lock_applied) {
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		create_lock_applied = 0;
+	}
+	if(asoc->stream_reset_outstanding) {
+		/* Can't queue any data while
+		 * stream reset is underway.
+		 */
+		error = EAGAIN;
+		goto out;
 	}
 	if ((SCTP_GET_STATE(asoc) == SCTP_STATE_COOKIE_WAIT) ||
 	    (SCTP_GET_STATE(asoc) == SCTP_STATE_COOKIE_ECHOED)) {

@@ -75,6 +75,15 @@ struct sctp_timer {
  */
 TAILQ_HEAD(sctpnetlisthead, sctp_nets);
 
+struct sctp_stream_reset_list {
+	TAILQ_ENTRY(sctp_stream_reset_list) next_resp;	
+	uint32_t tsn;
+	int number_entries;
+        struct sctp_stream_reset_request req;
+};
+
+TAILQ_HEAD(sctp_resethead, sctp_stream_reset_list);
+
 /*
  * Users of the iterator need to malloc a iterator with a call to
  * sctp_initiate_iterator(func, pcb_flags, asoc_state, void-ptr-arg, u_int32_t,
@@ -410,13 +419,14 @@ struct sctp_association {
 	struct sctp_stream_out *last_out_stream;
 
 	/* wait to the point the cum-ack passes
-	 * pending_reply->sr_resp.reset_at_tsn.
+	 * req->send_reset_at_tsn for any
+	 * req on the list.
 	 */
-	struct sctp_stream_reset_response *pending_reply;
-	
-	uint8_t *chks_that_require_auth;
-
+	struct sctp_resethead resetHead;	
+	/* queue of chunks waiting to be sent into the local stack */
 	struct sctpchunk_listhead pending_reply_queue;
+
+	uint8_t *chks_that_require_auth;
 
 	uint32_t cookie_preserve_req;
 	/* ASCONF next seq I am sending out, inits at init-tsn */
@@ -695,6 +705,7 @@ struct sctp_association {
 	u_int8_t saw_sack_with_frags;
 	u_int8_t in_restart_hash;
 	u_int8_t packet_authenticated;
+	u_int8_t last_reset_action;
 	/*
 	 * The mapping array is used to track out of order sequences above
 	 * last_acked_seq. 0 indicates packet missing 1 indicates packet

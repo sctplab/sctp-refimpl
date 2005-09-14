@@ -117,7 +117,7 @@ void sctp_send_cwr(struct sctp_tcb *, struct sctp_nets *, uint32_t);
 
 void
 sctp_send_str_reset_ack(struct sctp_tcb *stcb,
-    struct sctp_stream_reset_request *req);
+    struct sctp_stream_reset_request *req, uint8_t);
 
 
 void

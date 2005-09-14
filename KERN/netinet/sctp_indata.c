@@ -1843,6 +1843,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	if ((ch->ch.chunk_flags & SCTP_DATA_NOT_FRAG) == SCTP_DATA_NOT_FRAG &&
 	    asoc->fragmented_delivery_inprogress == 0 &&
 	    TAILQ_EMPTY(&asoc->delivery_queue) &&
+	    TAILQ_EMPTY(&asoc->resetHead) &&
 	    ((ch->ch.chunk_flags & SCTP_DATA_UNORDERED) ||
 	     ((asoc->strmin[strmno].last_sequence_delivered + 1) == strmseq &&
 	      TAILQ_EMPTY(&asoc->strmin[strmno].inqueue)))) {
@@ -2106,9 +2107,10 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			 * they are all sorted and proceessed by TSN order. It
 			 * is only the singletons I must worry about.
 			 */
-			if ((asoc->pending_reply) &&
-			   ((compare_with_wrap(tsn, ntohl(asoc->pending_reply->reset_at_tsn), MAX_TSN)) ||
-			    (tsn == ntohl(asoc->pending_reply->reset_at_tsn)))
+			struct sctp_stream_reset_list *liste;
+			if (((liste = TAILQ_FIRST(&asoc->resetHead)) != NULL) &&
+			   ((compare_with_wrap(tsn, liste->tsn, MAX_TSN)) ||
+			    (tsn == ntohl(liste->tsn)))
 				) {
 				/* yep its past where we need to reset... go ahead and
 				 * queue it.
@@ -2165,6 +2167,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 	uint32_t old_cumack, old_base, old_highest;
 	unsigned char aux_array[64];
 #endif
+	struct sctp_stream_reset_list *liste;
 
 	asoc = &stcb->asoc;
 	at = 0;
@@ -2292,9 +2295,9 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 	}
 
         /* check the special flag for stream resets */
-	if ((asoc->pending_reply) &&
-	   ((compare_with_wrap((asoc->cumulative_tsn+1), ntohl(asoc->pending_reply->reset_at_tsn), MAX_TSN)) ||
-	    ((asoc->cumulative_tsn+1) ==  ntohl(asoc->pending_reply->reset_at_tsn)))
+	if (((liste = TAILQ_FIRST(&asoc->resetHead)) != NULL) &&
+	   ((compare_with_wrap(asoc->cumulative_tsn, liste->tsn, MAX_TSN)) ||
+	    (asoc->cumulative_tsn ==  liste->tsn))
 		) {
 		/* we have finished working through the backlogged TSN's now
 		 * time to reset streams.
@@ -2303,17 +2306,34 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 		 * 3: distribute any chunks in pending_reply_queue.
 		 */
 		struct sctp_tmit_chunk *chk;
-		sctp_handle_stream_reset_response(stcb, asoc->pending_reply);
-		FREE(asoc->pending_reply, M_PCB);
-		asoc->pending_reply = NULL;
+		sctp_reset_in_stream(stcb,  liste->number_entries, liste->req.list_of_streams);
+		TAILQ_REMOVE(&asoc->resetHead, liste, next_resp);
+		FREE(liste, M_PCB);
+		liste = TAILQ_FIRST(&asoc->resetHead);
 		chk = TAILQ_FIRST(&asoc->pending_reply_queue);
-		while (chk) {
-			TAILQ_REMOVE(&asoc->pending_reply_queue, chk, sctp_next);
-			sctp_queue_data_to_stream(stcb, asoc, chk, abort_flag);
-			if (*abort_flag) {
-				return;
+		if(chk && (liste == NULL)) {
+			/* All can be removed */
+			while (chk) {
+				TAILQ_REMOVE(&asoc->pending_reply_queue, chk, sctp_next);
+				sctp_queue_data_to_stream(stcb, asoc, chk, abort_flag);
+				if (*abort_flag) {
+					return;
+				}
+				chk = TAILQ_FIRST(&asoc->pending_reply_queue);
 			}
-			chk = TAILQ_FIRST(&asoc->pending_reply_queue);
+		} else if (chk) {
+			/* more than one in queue */
+			while(!compare_with_wrap(chk->rec.data.TSN_seq, liste->tsn, MAX_TSN)) {
+				/* if chk->TSN is <= liste->tsn we can process it
+				 * which is the NOT of chk->TSN > liste->tsn 
+				 */
+				TAILQ_REMOVE(&asoc->pending_reply_queue, chk, sctp_next);
+				sctp_queue_data_to_stream(stcb, asoc, chk, abort_flag);
+				if (*abort_flag) {
+					return;
+				}
+				chk = TAILQ_FIRST(&asoc->pending_reply_queue);
+			}
 		}
 	}
 	/*

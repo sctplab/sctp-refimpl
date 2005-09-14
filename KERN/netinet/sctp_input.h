@@ -40,5 +40,9 @@ int sctp_common_input_processing(struct mbuf **, int, int, int,
 void
 sctp_handle_stream_reset_response(struct sctp_tcb *, struct sctp_stream_reset_response *resp);
 
+void
+sctp_reset_in_stream(struct sctp_tcb *stcb, int number_entries, uint16_t *list);
+
+
 #endif
 #endif
