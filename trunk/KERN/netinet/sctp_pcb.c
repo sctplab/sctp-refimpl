@@ -3477,6 +3477,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	struct sctp_laddr *laddr;
 	struct sctp_tmit_chunk *chk;
 	struct sctp_asconf_addr *aparam;
+	struct sctp_stream_reset_list *liste;
 	struct sctp_socket_q_list *sq;
 	int s;
 
@@ -3607,10 +3608,11 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		outs = TAILQ_FIRST(&asoc->out_wheel);
 	}
 
-	if (asoc->pending_reply) {
-		FREE(asoc->pending_reply, M_PCB);
-		asoc->pending_reply = NULL;
+	while ((liste = TAILQ_FIRST(&asoc->resetHead)) != NULL) {
+		TAILQ_REMOVE(&asoc->resetHead, liste, next_resp);
+		FREE(liste, M_PCB);
 	}
+
 	chk = TAILQ_FIRST(&asoc->pending_reply_queue);
 	while (chk) {
 		TAILQ_REMOVE(&asoc->pending_reply_queue, chk, sctp_next);

@@ -2687,45 +2687,68 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 	return (0);
 }
 
-static void
-sctp_reset_in_stream(struct sctp_tcb *stcb,
-    struct sctp_stream_reset_response *resp, int number_entries)
+void
+sctp_reset_in_stream(struct sctp_tcb *stcb, int number_entries, uint16_t *list)
 {
 	int i;
-	uint16_t *list, temp;
+	uint16_t temp;
 
         /* We set things to 0xffff since this is the last delivered
 	 * sequence and we will be sending in 0 after the reset.
 	 */
 
-	if (resp->reset_flags & SCTP_RESET_PERFORMED) {
-		if (number_entries) {
-			list = resp->list_of_streams;
-			for (i = 0; i < number_entries; i++) {
-				temp = ntohs(list[i]);
-				list[i] = temp;
-				if (list[i] >= stcb->asoc.streamincnt) {
-					printf("Invalid stream in-stream reset %d\n", list[i]);
-					continue;
-				}
-				stcb->asoc.strmin[(list[i])].last_sequence_delivered = 0xffff;
+	if (number_entries) {
+		for (i = 0; i < number_entries; i++) {
+			temp = ntohs(list[i]);
+			if (temp >= stcb->asoc.streamincnt) {
+				printf("Invalid stream in-stream reset %d\n", temp);
+				continue;
 			}
-		} else {
-			list = NULL;
-			for (i = 0; i < stcb->asoc.streamincnt; i++) {
-				stcb->asoc.strmin[i].last_sequence_delivered = 0xffff;
-			}
+			stcb->asoc.strmin[temp].last_sequence_delivered = 0xffff;
 		}
-		sctp_ulp_notify(SCTP_NOTIFY_STR_RESET_RECV, stcb, number_entries, (void *)list);
+	} else {
+		list = NULL;
+		for (i = 0; i < stcb->asoc.streamincnt; i++) {
+			stcb->asoc.strmin[i].last_sequence_delivered = 0xffff;
+		}
 	}
+	sctp_ulp_notify(SCTP_NOTIFY_STR_RESET_RECV, stcb, number_entries, (void *)list);
 }
 
 static void
+sctp_reset_out_streams(struct sctp_tcb *stcb, int number_entries, u_int16_t *list)
+{
+	int i;
+
+	if (number_entries == 0) {
+		for (i=0; i<stcb->asoc.streamoutcnt; i++) {
+			stcb->asoc.strmout[i].next_sequence_sent = 0;
+		}
+	} else if (number_entries) {
+		for (i=0; i<number_entries; i++) {
+			uint16_t temp;
+			temp = ntohs(list[i]);
+			if (temp >= stcb->asoc.streamoutcnt) {
+				/* no such stream */
+				printf("%d is an invalid stream for outbound seq number reset\n",
+				       temp);
+				continue;
+			}
+			stcb->asoc.strmout[temp].next_sequence_sent = 0;
+		}
+	}
+	sctp_ulp_notify(SCTP_NOTIFY_STR_RESET_SEND, stcb, number_entries, (void *)list);
+}
+
+
+
+
+static int
 sctp_clean_up_stream_reset(struct sctp_tcb *stcb)
 {
 	struct sctp_tmit_chunk *chk, *nchk;
 	struct sctp_association *asoc;
-
+	int flags = 0;
 	asoc = &stcb->asoc;
 
 	for (chk = TAILQ_FIRST(&asoc->control_send_queue);
@@ -2742,6 +2765,7 @@ sctp_clean_up_stream_reset(struct sctp_tcb *stcb)
 				       (u_int)ntohs(strreq->sr_req.ph.param_type));
 				continue;
 			}
+			flags = strreq->sr_req.reset_flags;
 			sctp_timer_stop(SCTP_TIMER_TYPE_STRRESET, stcb->sctp_ep, stcb, chk->whoTo);
 			TAILQ_REMOVE(&asoc->control_send_queue,
 				     chk,
@@ -2758,6 +2782,7 @@ sctp_clean_up_stream_reset(struct sctp_tcb *stcb)
 			break;
 		}
 	}
+	return (flags);
 }
 
 
@@ -2767,46 +2792,109 @@ sctp_handle_stream_reset_response(struct sctp_tcb *stcb,
 {
  	uint32_t seq, tsn;
  	int number_entries, param_length;
+	int flags_from;
 
  	param_length = ntohs(resp->ph.param_length);
  	seq = ntohl(resp->reset_req_seq_resp);
 	if (seq == stcb->asoc.str_reset_seq_out) {
- 		sctp_clean_up_stream_reset(stcb);
- 		stcb->asoc.str_reset_seq_out++;
- 		stcb->asoc.stream_reset_outstanding = 0;
- 		tsn = ntohl(resp->reset_at_tsn);
- 		number_entries = (param_length - sizeof(struct sctp_stream_reset_response))/sizeof(uint16_t);
- 		tsn--;
- 		if ((tsn == stcb->asoc.cumulative_tsn) ||
- 		    (compare_with_wrap(stcb->asoc.cumulative_tsn, tsn, MAX_TSN))) {
- 			/* no problem we are good to go */
- 			sctp_reset_in_stream(stcb, resp, number_entries);
- 		} else {
- 			/* So, we have a stream reset but there
- 			 * is pending data. We need to copy
- 			 * out the stream_reset and then queue
- 			 * any data = or > resp->reset_at_tsn
- 			 */
- 			if (stcb->asoc.pending_reply != NULL) {
- 				/* FIX ME FIX ME
- 				 * This IS WRONG. We need
- 				 * to queue each of these up
- 				 * and only release the chunks
- 				 * for each reset that the cum-ack
- 				 * goes by. This is a short cut.
- 				 */
- 				FREE(stcb->asoc.pending_reply, M_PCB);
- 			}
- 			MALLOC(stcb->asoc.pending_reply, struct sctp_stream_reset_response *, param_length,
- 			       M_PCB, M_NOWAIT);
- 			memcpy(stcb->asoc.pending_reply, resp, param_length);
- 		}
-
+		/* get rid of the request and get the request flags */
+ 		flags_from = sctp_clean_up_stream_reset(stcb);
+		/* increment to next seq */
+		stcb->asoc.str_reset_seq_out++;
+		stcb->asoc.stream_reset_outstanding = 0;
+		if ((flags_from & SCTP_RESET_MINE) && (resp->reset_flags & SCTP_RESET_PERFORMED)) {
+			tsn = ntohl(resp->recv_reset_at_tsn);
+			number_entries = (param_length - sizeof(struct sctp_stream_reset_response))/sizeof(uint16_t);
+			sctp_reset_out_streams(stcb, number_entries, resp->list_of_streams);
+		}
   	} else {
  		/* duplicate */
 #ifdef SCTP_DEBUG
  		printf("Duplicate old stream reset resp next:%x this one:%x\n",
  		       stcb->asoc.str_reset_seq_out, seq);
+#endif
+	}
+}
+
+static void
+sctp_handle_str_reset_request(struct sctp_tcb *stcb,
+   struct sctp_stream_reset_request *req)
+{
+	uint32_t seq, tsn;
+	int number_entries,len;
+	struct sctp_association *asoc = &stcb->asoc;
+	seq = ntohl(req->reset_req_seq);
+
+	/* now if its not a duplicate we process it */
+	if (asoc->str_reset_seq_in == seq){
+		asoc->str_reset_sending_seq = asoc->sending_seq-1;
+
+		len = ntohs(req->ph.param_length);
+		number_entries = ((len - sizeof(struct sctp_stream_reset_request))/sizeof(uint16_t)); 
+		if (req->reset_flags & SCTP_RESET_MINE) {
+			/* the sender is resetting, handle the
+			 * list issue.. we must
+			 * a) verify if we can do the reset, if so no problem
+			 * b) If we can't do the reset we must copy the request.
+			 * c) queue it, and setup the data in processor to
+			 *    trigger it off when needed and dequeue all the
+			 *    queued data.
+			 */
+			tsn = ntohl(req->send_reset_at_tsn);
+			if((tsn == asoc->cumulative_tsn) ||
+			   (compare_with_wrap(asoc->cumulative_tsn, tsn, MAX_TSN))){
+				/* we can do it now */
+				sctp_reset_in_stream(stcb, number_entries, req->list_of_streams);
+			} else {
+				/* we must queue it up and thus 
+				 * wait for the TSN's to arrive that
+				 * are at or before tsn 
+				 */
+				struct sctp_stream_reset_list *liste;
+				int siz;
+				siz = sizeof(struct sctp_stream_reset_list) + (number_entries * sizeof(uint16_t));
+				MALLOC(liste, struct sctp_stream_reset_list *, siz, M_PCB, M_NOWAIT);
+				if(liste == NULL) {
+					/* gak out of memory */
+					sctp_send_str_reset_ack(stcb, req, SCTP_RESET_DENIED);
+					asoc->last_reset_action = SCTP_RESET_DENIED;
+					return;
+				}
+				liste->tsn = tsn;
+				liste->number_entries = number_entries;
+				memcpy(&liste->req, req,
+				       (sizeof(struct sctp_stream_reset_request) + (number_entries * sizeof(uint16_t))));
+				TAILQ_INSERT_TAIL(&asoc->resetHead, liste, next_resp);
+			}
+			sctp_send_str_reset_ack(stcb, req, SCTP_RESET_PERFORMED);
+			asoc->last_reset_action = SCTP_RESET_PERFORMED;
+		} else {
+			sctp_send_str_reset_ack(stcb, req, SCTP_RESET_NOACTION);
+			asoc->last_reset_action = SCTP_RESET_NOACTION;
+		}
+		/* Do we need to reset our outbound too? */
+		if (req->reset_flags & SCTP_RECIPRICAL) {
+			/* convert to host byte order for call that user app makes */
+			for(len=0;len<number_entries;len++){
+				uint16_t temp;
+				temp = ntohs(req->list_of_streams[len]);
+				req->list_of_streams[len] = temp;
+			}
+			/* reset peer too */
+			sctp_send_str_reset_req(stcb, number_entries, req->list_of_streams, 0, 0);
+		}
+		asoc->str_reset_seq_in++;
+	} else if ((asoc->str_reset_seq_in - 1) == seq){
+		/* one seq back, just echo back last action 
+		 * since my response was lost.
+		 */
+		sctp_send_str_reset_ack(stcb, req, asoc->last_reset_action);
+	} else {
+#ifdef SCTP_DEBUG
+/*		if (sctp_debug_on & SCTP_DEBUG_INPUT1) {*/
+			printf("SCTP:Peer sends a old str-reset seq %x, I expect %x\n",
+			       (u_int)seq, (u_int)asoc->str_reset_seq_in);
+/*		}*/
 #endif
 	}
 }
@@ -2828,7 +2916,7 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_req *sr
  		if (ntohs(ph->param_type) == SCTP_STR_RESET_REQUEST) {
  			/* this will send the ACK and do the reset if needed */
  			req = (struct sctp_stream_reset_request *)ph;
- 			sctp_send_str_reset_ack(stcb, req);
+ 			sctp_handle_str_reset_request(stcb, req);
  		} else if (ntohs(ph->param_type) == SCTP_STR_RESET_RESPONSE) {
  			/* Now here is a tricky one. We reset our receive side
  			 * of the streams. But what happens if the peers

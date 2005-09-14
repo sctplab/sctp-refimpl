@@ -2831,7 +2831,7 @@ sctp_notify_stream_reset(struct sctp_tcb *stcb,
 	if (number_entries) {
 		int i;
 		for (i=0; i<number_entries; i++) {
-			strreset->strreset_list[i] = list[i];
+			strreset->strreset_list[i] = ntohs(list[i]);
 		}
 	}
 	m_notify->m_flags |= M_EOR | M_NOTIFICATION;

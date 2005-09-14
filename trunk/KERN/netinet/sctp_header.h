@@ -394,27 +394,30 @@ struct sctp_pktdrop_chunk {
 	u_int8_t data[0];
 };
 
-#define SCTP_RESET_YOUR  0x01   /* reset your streams and send response */
-#define SCTP_RECIPRICAL  0x02   /* reset my streams too */
+#define SCTP_RESET_MINE  0x01   /* reset my outbound streams */
+#define SCTP_RECIPRICAL  0x02   /* reset my streams inbound streams too */
 
 struct sctp_stream_reset_request {
 	struct sctp_paramhdr ph;
 	u_int8_t reset_flags;		   /* actual request */
 	u_int8_t reset_pad[3];
 	u_int32_t reset_req_seq;           /* monotonically increasing seq no */
+	u_int32_t send_reset_at_tsn;       /* last TSN I assigned outbound */
 	u_int16_t list_of_streams[0];      /* if not all list of streams */
 };
 
+
 #define SCTP_RESET_PERFORMED        0x01   /* Peers sending str was reset */
 #define SCTP_RESET_DENIED           0x02   /* Asked for but refused       */
+#define SCTP_RESET_NOACTION         0x04   /* No need for me to take action */
 
 struct sctp_stream_reset_response {
 	struct sctp_paramhdr ph;
 	u_int8_t reset_flags;		   /* actual request */
 	u_int8_t reset_pad[3];
 	u_int32_t reset_req_seq_resp;   /* copied from reset_req reset_req_seq */
-	u_int32_t reset_at_tsn;		/* resetters next TSN to be assigned send wise */
-	u_int32_t cumulative_tsn;	/* resetters cum-ack point receive wise */
+	u_int32_t recv_reset_at_tsn;	/* last TSN assigned by me outbound (by the receiver of req)  */
+	u_int32_t high_tsn;             /* me, the receivers cum-ack point */
 	u_int16_t list_of_streams[0];   /* if not all list of streams */
 };
 
