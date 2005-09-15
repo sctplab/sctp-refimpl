@@ -2115,7 +2115,34 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				/* yep its past where we need to reset... go ahead and
 				 * queue it.
 				 */
-				TAILQ_INSERT_TAIL(&asoc->pending_reply_queue , chk, sctp_next);
+				if(TAILQ_EMPTY(&asoc->pending_reply_queue)) {
+				/* first one on */
+					TAILQ_INSERT_TAIL(&asoc->pending_reply_queue , chk, sctp_next);
+				} else {
+					struct sctp_tmit_chunk *chkOn;
+					unsigned char inserted = 0;
+					chkOn = TAILQ_FIRST(&asoc->pending_reply_queue);
+					while(chkOn) {
+						if(compare_with_wrap(chk->rec.data.TSN_seq, 
+								     chkOn->rec.data.TSN_seq, MAX_TSN)) {
+							chkOn = TAILQ_NEXT(chkOn, sctp_next);
+						} else {
+							/* found it */
+							TAILQ_INSERT_BEFORE(chkOn, chk, sctp_next);
+							inserted = 1;
+							break;
+						}
+					}
+					if(inserted == 0) {
+						/* must be put at end, use
+						 * prevP (all setup from loop)
+						 * to setup nextP.
+						 */
+						TAILQ_INSERT_TAIL(&asoc->pending_reply_queue , chk, sctp_next);
+					}
+					
+				}
+				
 			}  else {
 				sctp_queue_data_to_stream(stcb, asoc, chk, abort_flag);
 			}
