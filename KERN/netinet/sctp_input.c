@@ -2873,7 +2873,8 @@ sctp_handle_str_reset_request(struct sctp_tcb *stcb,
 			asoc->last_reset_action = SCTP_RESET_NOACTION;
 		}
 		/* Do we need to reset our outbound too? */
-		if (req->reset_flags & SCTP_RECIPRICAL) {
+		if ((req->reset_flags & SCTP_RECIPRICAL) &&
+		    (stcb->asoc.stream_reset_outstanding == 0)){
 			/* convert to host byte order for call that user app makes */
 			for(len=0;len<number_entries;len++){
 				uint16_t temp;

@@ -8984,7 +8984,6 @@ sctp_send_str_reset_ack(struct sctp_tcb *stcb,
 	struct sctp_association *asoc;
 	struct sctp_stream_reset_resp *strack;
 	struct sctp_tmit_chunk *chk;
-	uint32_t seq;
 	int number_entries, i;
 	uint16_t len;
 	uint16_t *list=NULL;
@@ -9050,9 +9049,6 @@ sctp_send_str_reset_ack(struct sctp_tcb *stcb,
 
 	strack->sr_resp.ph.param_type = ntohs(SCTP_STR_RESET_RESPONSE);
 	strack->sr_resp.ph.param_length = htons((chk->send_size - sizeof(struct sctp_chunkhdr)));
-
-
-
 	if (chk->send_size % 4) {
 		/* need a padding for the end */
 		int pad;
@@ -9066,15 +9062,10 @@ sctp_send_str_reset_ack(struct sctp_tcb *stcb,
 	}
 
         /* actual response */
-	if (req->reset_flags & SCTP_RESET_MINE) {
-		strack->sr_resp.reset_flags = SCTP_RESET_PERFORMED;
-	} else {
-		strack->sr_resp.reset_flags = SCTP_RESET_NOACTION;
-	}
+	strack->sr_resp.reset_flags = action;
 
 	/* copied from reset request */
 	strack->sr_resp.reset_req_seq_resp = req->reset_req_seq;
-	seq = ntohl(req->reset_req_seq);
 	list = req->list_of_streams;
 	if (number_entries) {
 		int i;
