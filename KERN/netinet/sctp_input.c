@@ -2741,7 +2741,19 @@ sctp_reset_out_streams(struct sctp_tcb *stcb, int number_entries, u_int16_t *lis
 }
 
 
-
+static struct struct sctp_tmit_chunk *chk
+sctp_find_stream_reset(struct sctp_tcb *stcb)
+{
+	struct sctp_tmit_chunk *chk, *nchk;
+	for (chk = TAILQ_FIRST(&asoc->control_send_queue);
+	    chk; chk = nchk) {
+		nchk = TAILQ_NEXT(chk, sctp_next);
+		if (chk->rec.chunk_id == SCTP_STREAM_RESET) {
+			return(chk);
+		}
+	}
+	return(NULL);
+}
 
 static int
 sctp_clean_up_stream_reset(struct sctp_tcb *stcb)
@@ -2797,16 +2809,26 @@ sctp_handle_stream_reset_response(struct sctp_tcb *stcb,
  	param_length = ntohs(resp->ph.param_length);
  	seq = ntohl(resp->reset_req_seq_resp);
 	if (seq == stcb->asoc.str_reset_seq_out) {
+		if ((flags_from & SCTP_RESET_MINE) && (resp->reset_flags & SCTP_RESET_PERFORMED)) {
+			struct sctp_stream_reset_req *req;
+			struct sctp_tmit_chunk *chk;
+			chk = (sctp_tmit_chunk *)sctp_find_stream_reset(stcb);
+			if(chk) {
+				int lparm_len;
+				req = mtod(struct sctp_stream_reset_req, chk->data);
+				lparm_len = ntohs(req->sr_req.ph.param_length);
+				tsn = ntohl(resp->recv_reset_at_tsn);
+				number_entries = (lparm_len - sizeof(struct sctp_stream_reset_request))/sizeof(uint16_t);
+				sctp_reset_out_streams(stcb, number_entries, req->sr_req.list_of_streams);
+			} else {
+				printf("Error, I could not find a str-reset that I sent?\n");
+			}
+		}
 		/* get rid of the request and get the request flags */
  		flags_from = sctp_clean_up_stream_reset(stcb);
 		/* increment to next seq */
 		stcb->asoc.str_reset_seq_out++;
 		stcb->asoc.stream_reset_outstanding = 0;
-		if ((flags_from & SCTP_RESET_MINE) && (resp->reset_flags & SCTP_RESET_PERFORMED)) {
-			tsn = ntohl(resp->recv_reset_at_tsn);
-			number_entries = (param_length - sizeof(struct sctp_stream_reset_response))/sizeof(uint16_t);
-			sctp_reset_out_streams(stcb, number_entries, resp->list_of_streams);
-		}
   	} else {
  		/* duplicate */
 #ifdef SCTP_DEBUG
