@@ -395,41 +395,66 @@ struct sctp_pktdrop_chunk {
 	u_int16_t reserved;
 	u_int8_t data[0];
 };
+/**********STREAM RESET STUFF ******************/
 
-#define SCTP_RESET_MINE   0x01   /* reset my outbound streams */
-#define SCTP_RECIPRICAL   0x02   /* reset my streams inbound streams too */
-#define SCTP_REQUEST_SACK 0x04   /* would like a sack back please too */
-
-struct sctp_stream_reset_request {
+struct sctp_stream_reset_out_request {
 	struct sctp_paramhdr ph;
-	u_int8_t reset_flags;		   /* actual request */
-	u_int8_t reset_pad[3];
-	u_int32_t reset_req_seq;           /* monotonically increasing seq no */
+	u_int32_t request_seq;           /* monotonically increasing seq no */
+	u_int32_t response_seq;		   /* if a reponse, the resp seq no */
 	u_int32_t send_reset_at_tsn;       /* last TSN I assigned outbound */
 	u_int16_t list_of_streams[0];      /* if not all list of streams */
 };
 
-#define SCTP_RESET_PERFORMED        0x01   /* Peers sending str was reset */
-#define SCTP_RESET_DENIED           0x02   /* Asked for but refused       */
-#define SCTP_RESET_NOACTION         0x04   /* No need for me to take action */
+struct sctp_stream_reset_in_request {
+	struct sctp_paramhdr ph;
+	u_int32_t request_seq;
+	u_int16_t list_of_streams[0];	/* if not all list of streams */
+};
+
+
+struct sctp_stream_reset_tsn_request {
+	struct sctp_paramhdr ph;
+	u_int32_t request_seq;
+};
 
 struct sctp_stream_reset_response {
 	struct sctp_paramhdr ph;
-	u_int8_t reset_flags;		/* actual request */
-	u_int8_t reset_pad[3];
-	u_int32_t reset_req_seq_resp;	/* copied from reset_req reset_req_seq */
-	u_int32_t recv_reset_at_tsn;	/* last TSN assigned by me outbound (by the receiver of req)  */
-	u_int32_t high_tsn;		/* me, the receivers cum-ack point */
-	u_int16_t list_of_streams[0];	/* if not all list of streams */
+	u_int32_t response_seq;		   /* if a reponse, the resp seq no */
+	u_int32_t result;
 };
+
+
+struct sctp_stream_reset_response_tsn {
+	struct sctp_paramhdr ph;
+	u_int32_t response_seq;		   /* if a reponse, the resp seq no */
+	u_int32_t result;
+	u_int32_t sender_next_tsn;
+	u_int32_t next_rcv_tsn;
+};
+
+#define SCTP_STREAM_RESET_NOTHING   0x00000001 /* Nothing for me to do */
+#define SCTP_STREAM_RESET_PERFORMED 0x00000002 /* Did it */
+#define SCTP_STREAM_RESET_DENIED    0x00000003 /* refused to do it */
+#define SCTP_STREAM_RESET_ERROR_STR 0x00000004 /* bad Stream no */
 
 /*
  * convience structures, note that if you are making a request for specific
  * streams then the request will need to be an overlay structure.
  */
-struct sctp_stream_reset_req {
+
+struct sctp_stream_reset_out_req {
 	struct sctp_chunkhdr ch;
-	struct sctp_stream_reset_request sr_req;
+	struct sctp_stream_reset_out_request sr_req;
+};
+
+struct sctp_stream_reset_in_req {
+	struct sctp_chunkhdr ch;
+	struct sctp_stream_reset_in_request sr_req;
+};
+
+struct sctp_stream_reset_tsn_req {
+	struct sctp_chunkhdr ch;
+	struct sctp_stream_reset_tsn_request sr_req;
 };
 
 struct sctp_stream_reset_resp {
@@ -437,6 +462,13 @@ struct sctp_stream_reset_resp {
 	struct sctp_stream_reset_response sr_resp;
 };
 
+/* respone only valid with a TSN request */
+struct sctp_stream_reset_resp_tsn {
+	struct sctp_chunkhdr ch;
+	struct sctp_stream_reset_response_tsn sr_resp;
+};
+
+/****************************************************/
 
 /*
  * Authenticated chunks support 

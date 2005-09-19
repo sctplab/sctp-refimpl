@@ -238,8 +238,11 @@
 #define SCTP_SUPPORTED_ADDRTYPE	    0x000c
 
 /* draft-ietf-stewart-strreset-xxx */
-#define SCTP_STR_RESET_REQUEST      0x000d
-#define SCTP_STR_RESET_RESPONSE     0x000e
+#define SCTP_STR_RESET_OUT_REQUEST      0x000d
+#define SCTP_STR_RESET_IN_REQUEST       0x000e
+#define SCTP_STR_RESET_TSN_REQUEST      0x000f
+#define SCTP_STR_RESET_RESPONSE         0x0010
+
 /*************0x4000 series*************/
 /*************0x8000 series*************/
 #define SCTP_ECN_CAPABLE	    0x8000
