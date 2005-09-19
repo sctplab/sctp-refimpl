@@ -7,7 +7,7 @@
 #include <sys/kernel.h>
 #endif
 /*
- * Copyright (c) 2001, 2002, 2003, 2004 Cisco Systems, Inc.
+ * Copyright (c) 2001, 2002, 2003, 2004, 2005 Cisco Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -297,27 +297,6 @@
 #define SCTP_RECEIVED_SACK		0x0040
 #define SCTP_PEER_FAULTY		0x0080
 
-/* Error causes used in SCTP op-err's and aborts */
-#define SCTP_CAUSE_INV_STRM		0x001
-#define SCTP_CAUSE_MISS_PARAM		0x002
-#define SCTP_CAUSE_STALE_COOKIE		0x003
-#define SCTP_CAUSE_OUT_OF_RESC		0x004
-#define SCTP_CAUSE_UNRESOLV_ADDR	0x005
-#define SCTP_CAUSE_UNRECOG_CHUNK	0x006
-#define SCTP_CAUSE_INVALID_PARAM	0x007
-/* This one is also the same as SCTP_UNRECOG_PARAM above */
-#define SCTP_CAUSE_UNRECOG_PARAM	0x008
-#define SCTP_CAUSE_NOUSER_DATA		0x009
-#define SCTP_CAUSE_COOKIE_IN_SHUTDOWN	0x00a
-#define SCTP_CAUSE_RESTART_W_NEWADDR	0x00b
-#define SCTP_CAUSE_USER_INITIATED_ABT	0x00c
-#define SCTP_CAUSE_PROTOCOL_VIOLATION	0x00d
-
-/* Error's from add ip */
-#define SCTP_CAUSE_DELETEING_LAST_ADDR	0x100
-#define SCTP_CAUSE_OPERATION_REFUSED	0x101
-#define SCTP_CAUSE_DELETING_SRC_ADDR	0x102
-#define SCTP_CAUSE_ILLEGAL_ASCONF	0x103
 
 /* bits for TOS field */
 #define SCTP_ECT0_BIT		0x02

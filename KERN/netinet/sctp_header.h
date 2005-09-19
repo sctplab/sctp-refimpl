@@ -4,7 +4,7 @@
 #define __sctp_header_h__
 
 /*
- * Copyright (c) 2001, 2002, 2003, 2004 Cisco Systems, Inc.
+ * Copyright (c) 2001, 2002, 2003, 2004, 2005 Cisco Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -108,7 +108,7 @@ struct sctp_asconf_addr_param {		/* an ASCONF address parameter */
 	struct sctp_ipv6addr_param  addrp;	/* max storage size */
 };
 
-struct sctp_asconf_addrv4_param {		/* an ASCONF address (v4) parameter */
+struct sctp_asconf_addrv4_param {	/* an ASCONF address (v4) parameter */
 	struct sctp_asconf_paramhdr aph;	/* asconf "parameter" */
 	struct sctp_ipv4addr_param  addrp;	/* max storage size */
 };
@@ -340,7 +340,9 @@ struct sctp_shutdown_complete_msg {
 	struct sctp_shutdown_complete_chunk shut_cmp;
 };
 
-/* draft-ietf-tsvwg-addip-sctp */
+/*
+ * draft-ietf-tsvwg-addip-sctp
+ */
 /* Address/Stream Configuration Change (ASCONF) */
 struct sctp_asconf_chunk {
 	struct sctp_chunkhdr ch;
@@ -406,27 +408,24 @@ struct sctp_stream_reset_request {
 	u_int16_t list_of_streams[0];      /* if not all list of streams */
 };
 
-
 #define SCTP_RESET_PERFORMED        0x01   /* Peers sending str was reset */
 #define SCTP_RESET_DENIED           0x02   /* Asked for but refused       */
 #define SCTP_RESET_NOACTION         0x04   /* No need for me to take action */
 
 struct sctp_stream_reset_response {
 	struct sctp_paramhdr ph;
-	u_int8_t reset_flags;		   /* actual request */
+	u_int8_t reset_flags;		/* actual request */
 	u_int8_t reset_pad[3];
-	u_int32_t reset_req_seq_resp;   /* copied from reset_req reset_req_seq */
+	u_int32_t reset_req_seq_resp;	/* copied from reset_req reset_req_seq */
 	u_int32_t recv_reset_at_tsn;	/* last TSN assigned by me outbound (by the receiver of req)  */
-	u_int32_t high_tsn;             /* me, the receivers cum-ack point */
-	u_int16_t list_of_streams[0];   /* if not all list of streams */
+	u_int32_t high_tsn;		/* me, the receivers cum-ack point */
+	u_int16_t list_of_streams[0];	/* if not all list of streams */
 };
 
-/* convience structures, note that if you
- * are making a request for specific streams
- * then the request will need to be an overlay
- * structure.
+/*
+ * convience structures, note that if you are making a request for specific
+ * streams then the request will need to be an overlay structure.
  */
-
 struct sctp_stream_reset_req {
 	struct sctp_chunkhdr ch;
 	struct sctp_stream_reset_request sr_req;
@@ -438,41 +437,35 @@ struct sctp_stream_reset_resp {
 };
 
 
-/* Auth chunk/parameter things */
-
+/*
+ * Authenticated chunks support 
+ * draft-ietf-tsvwg-sctp-auth
+ */
 struct sctp_auth_random {
-	struct sctp_paramhdr ph; /* 0x8002 */
+	struct sctp_paramhdr ph;	/* type = 0x8002 */
 	u_int8_t random_data[0];
 };
 
 struct sctp_auth_chunk_list {
-	struct sctp_paramhdr ph; /* 0x8003 */
-	u_int8_t chunk_ids[0];
+	struct sctp_paramhdr ph;	/* type = 0x8003 */
+	u_int8_t chunk_types[0];
 };
 
 struct sctp_auth_hmac_algo {
-	struct sctp_paramhdr ph; /* 0x8004 */
-	u_int8_t hmac_ids[0];
+	struct sctp_paramhdr ph;	/* type = 0x8004 */
+	u_int16_t hmac_ids[0];
 };
-
+/* AUTH hmac_id */
+#define SCTP_AUTH_HMAC_ID_RSVD	0x00000000
+#define SCTP_AUTH_HMAC_ID_SHA1	0x00000001
+#define SCTP_AUTH_HMAC_ID_MD5	0x00000002    
 
 struct sctp_auth_chunk {
-	struct sctp_chunkhdr ch;   /* 0x83 */
-	u_int32_t hmac_id;
+	struct sctp_chunkhdr ch;	/* type = 0x84 */
+	u_int16_t shared_key_id;
+	u_int16_t hmac_id;
 	u_int8_t  hmac[0];
 };
-
-
-#define SCTP_HMAC_ID_RESV1   0x00000000
-#define SCTP_HMAC_ID_SHA_1   0x00000001
-#define SCTP_HMAC_ID_MD_5    0x00000002    
-
-struct sctp_auth_supported_hmac {
-	struct sctp_paramhdr ph;
-	u_int32_t hmac_id[0];
-};
-
-
 
 
 /*
