@@ -396,8 +396,9 @@ struct sctp_pktdrop_chunk {
 	u_int8_t data[0];
 };
 
-#define SCTP_RESET_MINE  0x01   /* reset my outbound streams */
-#define SCTP_RECIPRICAL  0x02   /* reset my streams inbound streams too */
+#define SCTP_RESET_MINE   0x01   /* reset my outbound streams */
+#define SCTP_RECIPRICAL   0x02   /* reset my streams inbound streams too */
+#define SCTP_REQUEST_SACK 0x04   /* would like a sack back please too */
 
 struct sctp_stream_reset_request {
 	struct sctp_paramhdr ph;

@@ -2908,6 +2908,9 @@ sctp_handle_str_reset_request(struct sctp_tcb *stcb,
 			/* reset peer too */
 			sctp_send_str_reset_req(stcb, number_entries, req->list_of_streams, 0, 0);
 		}
+		if((req->reset_flags & SCTP_REQUEST_SACK) {
+			sctp_send_sack(stcb);
+		}
 		asoc->str_reset_seq_in++;
 	} else if ((asoc->str_reset_seq_in - 1) == seq){
 		/* one seq back, just echo back last action 
