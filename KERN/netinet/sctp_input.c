@@ -1,7 +1,7 @@
 /*	$KAME: sctp_input.c,v 1.27 2005/03/06 16:04:17 itojun Exp $	*/
 
 /*
- * Copyright (C) 2002, 2003, 2004 Cisco Systems Inc,
+ * Copyright (C) 2002, 2003, 2004, 2005 Cisco Systems Inc,
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -400,7 +400,7 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 			/* We abort with an error of missing mandatory param */
 			struct mbuf *op_err;
 			op_err =
-			    sctp_generate_invmanparam(SCTP_CAUSE_MISS_PARAM);
+			    sctp_generate_invmanparam(SCTP_CAUSE_MISSING_PARAM);
 			if (op_err) {
 				/*
 				 * Expand beyond to include the mandatory
@@ -834,10 +834,10 @@ sctp_handle_error(struct sctp_chunkhdr *ch,
 			return (0);
 		}
 		switch (error_type) {
-		case SCTP_CAUSE_INV_STRM:
-		case SCTP_CAUSE_MISS_PARAM:
+		case SCTP_CAUSE_INVALID_STREAM:
+		case SCTP_CAUSE_MISSING_PARAM:
 		case SCTP_CAUSE_INVALID_PARAM:
-		case SCTP_CAUSE_NOUSER_DATA:
+		case SCTP_CAUSE_NO_USER_DATA:
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
 				printf("Software error we got a %d back? We have a bug :/ (or do they?)\n",
@@ -868,7 +868,7 @@ sctp_handle_error(struct sctp_chunkhdr *ch,
 				sctp_send_initiate(stcb->sctp_ep, stcb);
 			}
 			break;
-		case SCTP_CAUSE_UNRESOLV_ADDR:
+		case SCTP_CAUSE_UNRESOLVABLE_ADDR:
 			/*
 			 * Nothing we can do here, we don't do hostname
 			 * addresses so if the peer does not like my IPv6 (or
@@ -895,8 +895,8 @@ sctp_handle_error(struct sctp_chunkhdr *ch,
 			 * we don't have their tag.
 			 */
 			break;
-		case SCTP_CAUSE_DELETEING_LAST_ADDR:
-		case SCTP_CAUSE_OPERATION_REFUSED:
+		case SCTP_CAUSE_DELETING_LAST_ADDR:
+		case SCTP_CAUSE_RESOURCE_SHORTAGE:
 		case SCTP_CAUSE_DELETING_SRC_ADDR:
 			/* We should NOT get these here, but in a ASCONF-ACK. */
 #ifdef SCTP_DEBUG
@@ -2741,10 +2741,12 @@ sctp_reset_out_streams(struct sctp_tcb *stcb, int number_entries, u_int16_t *lis
 }
 
 
-static struct struct sctp_tmit_chunk *chk
+static struct sctp_tmit_chunk *
 sctp_find_stream_reset(struct sctp_tcb *stcb)
 {
 	struct sctp_tmit_chunk *chk, *nchk;
+	struct sctp_association *asoc;
+	asoc = &stcb->asoc;
 	for (chk = TAILQ_FIRST(&asoc->control_send_queue);
 	    chk; chk = nchk) {
 		nchk = TAILQ_NEXT(chk, sctp_next);
@@ -2812,10 +2814,10 @@ sctp_handle_stream_reset_response(struct sctp_tcb *stcb,
 		if ((flags_from & SCTP_RESET_MINE) && (resp->reset_flags & SCTP_RESET_PERFORMED)) {
 			struct sctp_stream_reset_req *req;
 			struct sctp_tmit_chunk *chk;
-			chk = (sctp_tmit_chunk *)sctp_find_stream_reset(stcb);
+			chk = sctp_find_stream_reset(stcb);
 			if(chk) {
 				int lparm_len;
-				req = mtod(struct sctp_stream_reset_req, chk->data);
+				req = mtod(chk->data, struct sctp_stream_reset_req *);
 				lparm_len = ntohs(req->sr_req.ph.param_length);
 				tsn = ntohl(resp->recv_reset_at_tsn);
 				number_entries = (lparm_len - sizeof(struct sctp_stream_reset_request))/sizeof(uint16_t);
