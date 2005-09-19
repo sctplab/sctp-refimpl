@@ -4,7 +4,7 @@
 #define __sctp_uio_h__
 
 /*
- * Copyright (c) 2001, 2002, 2003, 2004 Cisco Systems, Inc.
+ * Copyright (c) 2001, 2002, 2003, 2004, 2005 Cisco Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -193,8 +193,6 @@ struct sctp_paddr_change {
 #undef SCTP_NOHEARTBEAT
 #endif
 #define SCTP_NOHEARTBEAT        0x0040 /* SCTP_ADDR_NOHB */
-
-
 
 
 /* remote error events */

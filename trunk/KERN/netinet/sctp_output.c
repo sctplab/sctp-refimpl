@@ -3099,7 +3099,7 @@ sctp_arethere_unrecognized_parameters(struct mbuf *in_initpkt,
 					m_copyback(op_err, err_at, pad_needed, (caddr_t)&cpthis);
 					err_at += pad_needed;
 				}
-				s.param_type = htons(SCTP_CAUSE_UNRESOLV_ADDR);
+				s.param_type = htons(SCTP_CAUSE_UNRESOLVABLE_ADDR);
 				s.param_length = htons(sizeof(s) + plen);
 				m_copyback(op_err, err_at, sizeof(s), (caddr_t)&s);
 				err_at += sizeof(s);

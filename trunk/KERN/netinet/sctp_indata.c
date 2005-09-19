@@ -1760,7 +1760,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		 	 */
 			mb->m_pkthdr.len = mb->m_len =
 			    (sizeof(struct sctp_paramhdr) * 2);
-			phdr->param_type = htons(SCTP_CAUSE_INV_STRM);
+			phdr->param_type = htons(SCTP_CAUSE_INVALID_STREAM);
 			phdr->param_length =
 			    htons(sizeof(struct sctp_paramhdr) * 2);
 			phdr++;
