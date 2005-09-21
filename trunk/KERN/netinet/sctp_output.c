@@ -8978,235 +8978,230 @@ sctp_send_cwr(struct sctp_tcb *stcb, struct sctp_nets *net, uint32_t high_tsn)
 }
 
 void
-sctp_send_str_reset_ack(struct sctp_tcb *stcb,
-     struct sctp_stream_reset_request *req, uint8_t action)
+sctp_add_stream_reset_out(struct sctp_tmit_chunk *chk,
+			 int number_entries, uint16_t *list,
+			 u_int32_t seq, u_int32_t resp_seq, u_int32_t last_sent)
 {
-	struct sctp_association *asoc;
-	struct sctp_stream_reset_resp *strack;
-	struct sctp_tmit_chunk *chk;
-	int number_entries, i;
-	uint16_t len;
-	uint16_t *list=NULL;
+	int len, old_len, i;
+	struct sctp_stream_reset_out_request *req_out;
+	struct sctp_chunkhdr *ch;
+	ch = mtod(struct sctp_chunkhdr *, chk->data);
 
-	asoc = &stcb->asoc;
-	len = ntohs(req->ph.param_length);
-	if (len < sizeof(struct sctp_stream_reset_request)){
-		printf("Invalid str-reset size received %d < %d\n",
-		       len, sizeof(struct sctp_stream_reset_request));
-		return;
-	}
-	if (len == sizeof(struct sctp_stream_reset_request))
-		number_entries = 0;
-	else
-		number_entries = (len  - sizeof(struct sctp_stream_reset_request)) / sizeof(uint16_t);
+	
+	old_len = len = SCTP_SIZE32(ntohs(ch->chunk_length));
 
-	chk = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk);
-	if (chk == NULL) {
-		return;
-	}
-	SCTP_INCR_CHK_COUNT();
-	chk->rec.chunk_id = SCTP_STREAM_RESET;
-	chk->asoc = &stcb->asoc;
-	chk->send_size = sizeof(struct sctp_stream_reset_resp) + (number_entries * sizeof(uint16_t));
-	MGETHDR(chk->data, M_DONTWAIT, MT_DATA);
-	if (chk->data == NULL) {
-	strresp_jump_out:
-		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-		SCTP_DECR_CHK_COUNT();
-		return;
-	}
-	chk->data->m_data += SCTP_MIN_OVERHEAD;
-	chk->data->m_pkthdr.len = chk->data->m_len = SCTP_SIZE32(chk->send_size);
-	if (M_TRAILINGSPACE(chk->data) < (int)SCTP_SIZE32(chk->send_size)) {
-		MCLGET(chk->data, M_DONTWAIT);
-		if ((chk->data->m_flags & M_EXT) == 0) {
-			/* Give up */
-			sctp_m_freem(chk->data);
-			chk->data = NULL;
-			goto strresp_jump_out;
+	/* get to new offset for the param. */
+	req_in = (struct sctp_stream_reset_out_request *)((caddr_t)ch + len);
+	/* now how long will this param be? */
+	len = (sizeof(struct sctp_stream_reset_out_request) + (sizeof(u_int16_t) * number_entries));
+	req_out->ph.param_type = htons(SCTP_STR_RESET_OUT_REQUEST);
+	req_out->ph.param_length = htons(len);
+	req_out->request_seq = ntohl(seq);
+	req_out->response_seq = ntohl(resp_seq);
+	req_out->send_reset_at_tsn = ntohl(last_sent);
+	if(number_entries) {
+		for(i=0; i<number_entries; i++) {
+			req_in->list_of_streams[i] = htons(list[i]);
 		}
-		chk->data->m_data += SCTP_MIN_OVERHEAD;
 	}
-	if (M_TRAILINGSPACE(chk->data) < (int)SCTP_SIZE32(chk->send_size)) {
-		/* can't do it, no room */
-		/* Give up */
-		sctp_m_freem(chk->data);
-		chk->data = NULL;
-		goto strresp_jump_out;
-
-	}
-	chk->sent = SCTP_DATAGRAM_UNSENT;
-	chk->snd_count = 0;
-	chk->whoTo = asoc->primary_destination;
-	chk->whoTo->ref_count++;
-	strack = mtod(chk->data, struct sctp_stream_reset_resp *);
-
-	strack->ch.chunk_type = SCTP_STREAM_RESET;
-	strack->ch.chunk_flags = 0;
-	strack->ch.chunk_length = htons(chk->send_size);
-
-	memset(strack->sr_resp.reset_pad, 0, sizeof(strack->sr_resp.reset_pad));
-
-	strack->sr_resp.ph.param_type = ntohs(SCTP_STR_RESET_RESPONSE);
-	strack->sr_resp.ph.param_length = htons((chk->send_size - sizeof(struct sctp_chunkhdr)));
-	if (chk->send_size % 4) {
-		/* need a padding for the end */
-		int pad;
-		uint8_t *end;
-		end = (uint8_t *)((caddr_t)strack + chk->send_size);
-		pad = chk->send_size % 4;
-		for (i = 0; i < pad; i++) {
-			end[i] = 0;
-		}
-		chk->send_size += pad;
-	}
-
-        /* actual response */
-	strack->sr_resp.reset_flags = action;
-
-	/* copied from reset request */
-	strack->sr_resp.reset_req_seq_resp = req->reset_req_seq;
-	list = req->list_of_streams;
-	if (number_entries) {
-		int i;
-		/* copy the streams,if any.
-		 * note they are in network order.
+	if(SCTP_SIZE32(len) > len) {
+		/* Need to worry about the pad we 
+		 * may end up adding to the end. This
+		 * is easy since the struct is either
+		 * aligned to 4 bytes or 2 bytes off.
 		 */
-		for (i=0; i<number_entries; i++) {
-			/* these were un-networked when they arrived */
-			strack->sr_resp.list_of_streams[i] = list[i];
-		}
+		req_in->list_of_streams[number_entries] = 0;
 	}
-	strack->sr_resp.recv_reset_at_tsn = htonl(asoc->str_reset_sending_seq);
-	strack->sr_resp.high_tsn = htonl(asoc->highest_tsn_inside_map);
-	TAILQ_INSERT_TAIL(&asoc->control_send_queue,
-			  chk,
-			  sctp_next);
-	asoc->ctrl_queue_cnt++;
+	/* now fix the chunk length */
+	ch->chunk_length = htons(len + old_len);
+	chk->send_size = len + old_len;
+	chk->data->m_pkthdr.len = chk->data->m_len = SCTP_SIZE32(chk->send_size);
 	return;
 }
 
 
 void
-sctp_send_str_reset_req(struct sctp_tcb *stcb,
-     int number_entrys, uint16_t *list, uint8_t two_way, uint8_t not_peer)
+sctp_add_stream_reset_in(struct sctp_tmit_chunk *chk,
+			 int number_entries, uint16_t *list,
+			 u_int32_t seq)
 {
-	/* Send a stream reset request. The number_entrys may be 0 and list NULL
-	 * if the request is to reset all streams. If two_way is true then we
-	 * not only request a RESET of the received streams but we also
-	 * request the peer to send a reset req to us too.
-	 * Flag combinations in table:
-	 *
-	 *       two_way | not_peer  | = | Flags
-	 *       ------------------------------
-	 *         0     |    0      | = | SCTP_RESET_MINE (just the peer inbound/my out)
-	 *         1     |    0      | = | SCTP_RESET_MINE | SCTP_RECIPRICAL (both sides)
-	 *         0     |    1      | = | Not a Valid Request (not anyone)
-	 *         1     |    1      | = | SCTP_RESET_RECIPRICAL (Just local host receive side)
-	 */
-	struct sctp_association *asoc;
-	struct sctp_stream_reset_req *strreq;
-	struct sctp_tmit_chunk *chk;
+	int len, old_len, i;
+	struct sctp_stream_reset_in_request *req_in;
+	struct sctp_chunkhdr *ch;
+	ch = mtod(struct sctp_chunkhdr *, chk->data);
 
+	
+	old_len = len = SCTP_SIZE32(ntohs(ch->chunk_length));
+
+	/* get to new offset for the param. */
+	req_in = (struct sctp_stream_reset_in_request *)((caddr_t)ch + len);
+	/* now how long will this param be? */
+	len = (sizeof(struct sctp_stream_reset_in_request) + (sizeof(u_int16_t) * number_entries));
+	req_in->ph.param_type = htons(SCTP_STR_RESET_IN_REQUEST);
+	req_in->ph.param_length = htons(len);
+	req_in->request_seq = ntohl(seq);
+	if(number_entries) {
+		for(i=0; i<number_entries; i++) {
+			req_in->list_of_streams[i] = htons(list[i]);
+		}
+	}
+	if(SCTP_SIZE32(len) > len) {
+		/* Need to worry about the pad we 
+		 * may end up adding to the end. This
+		 * is easy since the struct is either
+		 * aligned to 4 bytes or 2 bytes off.
+		 */
+		req_in->list_of_streams[number_entries] = 0;
+	}
+	/* now fix the chunk length */
+	ch->chunk_length = htons(len + old_len);
+	chk->send_size = len + old_len;
+	chk->data->m_pkthdr.len = chk->data->m_len = SCTP_SIZE32(chk->send_size);
+	return;
+}
+
+
+void
+sctp_add_stream_reset_tsn(struct sctp_tmit_chunk *chk,
+			  u_int32_t seq)
+{
+	int len, old_len, i;
+	struct sctp_stream_reset_tsn_request *req_tsn;
+	struct sctp_chunkhdr *ch;
+	ch = mtod(struct sctp_chunkhdr *, chk->data);
+
+	
+	old_len = len = SCTP_SIZE32(ntohs(ch->chunk_length));
+
+	/* get to new offset for the param. */
+	req_tsn = (struct sctp_stream_reset_tsn_request *)((caddr_t)ch + len);
+	/* now how long will this param be? */
+	len = sizeof(struct sctp_stream_reset_tsn_request)
+	req_tsn->ph.param_type = htons(SCTP_STR_RESET_TSN_REQUEST);
+	req_tsn->ph.param_length = htons(len);
+	req_tsn->request_seq = ntohl(seq);
+
+	/* now fix the chunk length */
+	ch->chunk_length = htons(len + old_len);
+	chk->send_size = len + old_len;
+	chk->data->m_pkthdr.len = chk->data->m_len = SCTP_SIZE32(chk->send_size);
+	return;
+}
+
+void
+sctp_add_stream_reset_result(struct sctp_tmit_chunk *chk,
+ 			     u_int32_t resp_seq, u_int32_t result)
+{
+	int len, old_len, i;
+	struct sctp_stream_reset_response *resp;
+	struct sctp_chunkhdr *ch;
+	ch = mtod(struct sctp_chunkhdr *, chk->data);
+
+	
+	old_len = len = SCTP_SIZE32(ntohs(ch->chunk_length));
+
+	/* get to new offset for the param. */
+	resp = (struct sctp_stream_reset_response *)((caddr_t)ch + len);
+	/* now how long will this param be? */
+	len = sizeof(struct sctp_stream_reset_tsn_request)
+	resp->ph.param_type = htons(SCTP_STR_RESET_RESPONSE);
+	resp->ph.param_length = htons(len);
+	resp->response_seq = ntohl(resp_seq);
+
+	/* now fix the chunk length */
+	ch->chunk_length = htons(len + old_len);
+	chk->send_size = len + old_len;
+	chk->data->m_pkthdr.len = chk->data->m_len = SCTP_SIZE32(chk->send_size);
+	return;
+}
+
+
+int
+sctp_send_str_reset_req(struct sctp_tcb *stcb,
+			int number_entrys, uint16_t *list, 
+			uint8_t send_out_req, uint32_t resp_seq,
+                        uint8_t send_in_req, 
+			uint8_t send_tsn_req)
+{
+
+	struct sctp_association *asoc;
+	struct sctp_tmit_chunk *chk;
+	struct sctp_chunkhdr *ch;
+	u_int32_t seq;
 
 	asoc = &stcb->asoc;
 	if (asoc->stream_reset_outstanding) {
 		/* Already one pending, must get ACK back
 		 * to clear the flag.
 		 */
-		return;
+		return(EBUSY);
 	}
-
-	if ((two_way == 0) && (not_peer == 1)) {
-		/* not a valid request */
-		return;
+	if ((send_out_req == 0) && (send_in_req == 0) && (send_tsn_req == 0)) {
+		/* nothing to do */
+		return(EINVAL);
+	}
+	if(send_tsn_req && (send_out_req || send_in_req)) {
+		/* error, can't do that */
+		return(EINVAL);
 	}
 
 	chk = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk);
 	if (chk == NULL) {
-		return;
+		return (ENOMEM);
 	}
 	SCTP_INCR_CHK_COUNT();
 	chk->rec.chunk_id = SCTP_STREAM_RESET;
 	chk->asoc = &stcb->asoc;
-	chk->send_size = sizeof(struct sctp_stream_reset_req) + (number_entrys * sizeof(uint16_t));
+	chk->send_size = sizeof(struct sctp_chunkhdr);
 	MGETHDR(chk->data, M_DONTWAIT, MT_DATA);
 	if (chk->data == NULL) {
 	strreq_jump_out:
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
 		SCTP_DECR_CHK_COUNT();
-		return;
+		return (ENOMEM);
 	}
-	chk->data->m_data += SCTP_MIN_OVERHEAD;
 	chk->data->m_pkthdr.len = chk->data->m_len = SCTP_SIZE32(chk->send_size);
-	if (M_TRAILINGSPACE(chk->data) < (int)SCTP_SIZE32(chk->send_size)) {
-		MCLGET(chk->data, M_DONTWAIT);
-		if ((chk->data->m_flags & M_EXT) == 0) {
-			/* Give up */
-			sctp_m_freem(chk->data);
-			chk->data = NULL;
-			goto strreq_jump_out;
-		}
-		chk->data->m_data += SCTP_MIN_OVERHEAD;
-	}
-	if (M_TRAILINGSPACE(chk->data) < (int)SCTP_SIZE32(chk->send_size)) {
-		/* can't do it, no room */
+	/* Get a cluster, always */
+	MCLGET(chk->data, M_DONTWAIT);
+	if ((chk->data->m_flags & M_EXT) == 0) {
 		/* Give up */
 		sctp_m_freem(chk->data);
 		chk->data = NULL;
 		goto strreq_jump_out;
 	}
+	chk->data->m_data += SCTP_MIN_OVERHEAD;
+
+	/* setup chunk parameters */
 	chk->sent = SCTP_DATAGRAM_UNSENT;
 	chk->snd_count = 0;
 	chk->whoTo = asoc->primary_destination;
 	chk->whoTo->ref_count++;
 
-	strreq = mtod(chk->data, struct sctp_stream_reset_req *);
-	strreq->ch.chunk_type = SCTP_STREAM_RESET;
-	strreq->ch.chunk_flags = 0;
-	strreq->ch.chunk_length = htons(chk->send_size);
-
-	strreq->sr_req.ph.param_type = ntohs(SCTP_STR_RESET_REQUEST);
-	strreq->sr_req.ph.param_length = htons((chk->send_size - sizeof(struct sctp_chunkhdr)));
-
-	if (chk->send_size % 4) {
-		/* need a padding for the end */
-		int pad, i;
-		uint8_t *end;
-		end = (uint8_t *)((caddr_t)strreq + chk->send_size);
-		pad = chk->send_size % 4;
-		for (i=0; i<pad; i++) {
-			end[i] = 0;
-		}
-		chk->send_size += pad;
+	ch->chunk_type = SCTP_STREAM_RESET;
+	ch->chunk_flags = 0;
+	ch->chunk_length = htons(chk->send_size);
+	seq = stcb->asoc.str_reset_sending_seq;
+	if(send_out_req) {
+		sctp_add_stream_reset_out(chk, number_entries, list,
+					  seq, resp_seq, (stcb->asoc.sending_seq-1));
+		seq++;
+		asoc->stream_reset_outstanding++;
 	}
-
-	strreq->sr_req.reset_flags = 0;
-	if (two_way == 0) {
-		strreq->sr_req.reset_flags |= SCTP_RESET_MINE;
-	} else {
-		if (not_peer == 0) {
-			strreq->sr_req.reset_flags |= SCTP_RECIPRICAL | SCTP_RESET_MINE;
-		} else {
-			strreq->sr_req.reset_flags |= SCTP_RECIPRICAL;
-		}
+	if(send_in_req) {
+		sctp_add_stream_reset_in(chk, number_entries, list, seq);
+		asoc->stream_reset_outstanding++;
 	}
-	memset(strreq->sr_req.reset_pad, 0, sizeof(strreq->sr_req.reset_pad));
-	strreq->sr_req.reset_req_seq = htonl(asoc->str_reset_seq_out);
-	strreq->sr_req.send_reset_at_tsn = htonl(asoc->sending_seq-1);
-	if (number_entrys) {
-		/* populate the specific entry's */
-		int i;
-		for (i=0; i < number_entrys; i++) {
-			strreq->sr_req.list_of_streams[i] = htons(list[i]);
-		}
+	if(send_tsn_req) {
+		sctp_add_stream_reset_tsn(chk, seq);
+		asoc->stream_reset_outstanding++;
 	}
+	/* insert the chunk for sending */
 	TAILQ_INSERT_TAIL(&asoc->control_send_queue,
 			  chk,
 			  sctp_next);
 	asoc->ctrl_queue_cnt++;
 	sctp_timer_start(SCTP_TIMER_TYPE_STRRESET, stcb->sctp_ep, stcb, chk->whoTo);
-	asoc->stream_reset_outstanding = 1;
+	return (0);
 }
 
 void

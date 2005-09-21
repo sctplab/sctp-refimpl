@@ -79,7 +79,7 @@ struct sctp_stream_reset_list {
 	TAILQ_ENTRY(sctp_stream_reset_list) next_resp;	
 	uint32_t tsn;
 	int number_entries;
-        struct sctp_stream_reset_request req;
+        struct sctp_stream_reset_out_request req;
 };
 
 TAILQ_HEAD(sctp_resethead, sctp_stream_reset_list);
@@ -328,7 +328,7 @@ struct sctp_asconf_addr {
 	TAILQ_ENTRY(sctp_asconf_addr) next;
 	struct sctp_asconf_addr_param ap;
 	struct ifaddr *ifa;	/* save the ifa for add/del ip */
-	uint8_t	sent;		/* has this been sent yet? */
+	u_int8_t     sent;		/* has this been sent yet? */
 };
 
 
@@ -426,19 +426,19 @@ struct sctp_association {
 	/* queue of chunks waiting to be sent into the local stack */
 	struct sctpchunk_listhead pending_reply_queue;
 
-	uint8_t *chks_that_require_auth;
+	u_int8_t *chks_that_require_auth;
 
-	uint32_t cookie_preserve_req;
+	u_int32_t cookie_preserve_req;
 	/* ASCONF next seq I am sending out, inits at init-tsn */
-	uint32_t asconf_seq_out;
+	u_int32_t asconf_seq_out;
 	/* ASCONF last received ASCONF from peer, starts at peer's TSN-1 */
-	uint32_t asconf_seq_in;
+	u_int32_t asconf_seq_in;
 
 	/* next seq I am sending in str reset messages */
-	uint32_t str_reset_seq_out;
+	u_int32_t str_reset_seq_out;
 
 	/* next seq I am expecting in str reset messages */
-	uint32_t str_reset_seq_in;
+	u_int32_t str_reset_seq_in;
 	u_int32_t str_reset_sending_seq;
 
 	/* various verification tag information */
@@ -511,6 +511,7 @@ struct sctp_association {
 	u_int32_t tsn_of_pdapi_last_delivered;
         u_int32_t pdapi_ppid;
         u_int32_t context;
+	u_int32_t last_reset_action[SCTP_MAX_RESET_PARAMS];
 	/*
 	 * window state information and smallest MTU that I use to bound
 	 * segmentation
@@ -705,7 +706,6 @@ struct sctp_association {
 	u_int8_t saw_sack_with_frags;
 	u_int8_t in_restart_hash;
 	u_int8_t packet_authenticated;
-	u_int8_t last_reset_action;
 	/*
 	 * The mapping array is used to track out of order sequences above
 	 * last_acked_seq. 0 indicates packet missing 1 indicates packet

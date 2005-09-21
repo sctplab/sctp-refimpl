@@ -432,10 +432,11 @@ struct sctp_stream_reset_response_tsn {
 	u_int32_t next_rcv_tsn;
 };
 
-#define SCTP_STREAM_RESET_NOTHING   0x00000001 /* Nothing for me to do */
-#define SCTP_STREAM_RESET_PERFORMED 0x00000002 /* Did it */
-#define SCTP_STREAM_RESET_DENIED    0x00000003 /* refused to do it */
-#define SCTP_STREAM_RESET_ERROR_STR 0x00000004 /* bad Stream no */
+#define SCTP_STREAM_RESET_NOTHING   0x00000000 /* Nothing for me to do */
+#define SCTP_STREAM_RESET_PERFORMED 0x00000001 /* Did it */
+#define SCTP_STREAM_RESET_DENIED    0x00000002 /* refused to do it */
+#define SCTP_STREAM_RESET_ERROR_STR 0x00000003 /* bad Stream no */
+#define SCTP_STREAM_RESET_TRY_LATER 0x00000004 /* collision, try again */
 
 /*
  * convience structures, note that if you are making a request for specific
