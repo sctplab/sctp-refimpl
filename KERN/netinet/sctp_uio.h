@@ -445,9 +445,10 @@ struct sctp_blk_args {
  */
 #define SCTP_MAX_EXPLICT_STR_RESET   1000
 
-#define SCTP_RESET_LOCAL_RECV	0x0001
-#define SCTP_RESET_LOCAL_SEND	0x0002
-#define SCTP_RESET_BOTH		0x0003
+#define SCTP_RESET_LOCAL_RECV  0x0001
+#define SCTP_RESET_LOCAL_SEND  0x0002
+#define SCTP_RESET_BOTH        0x0003
+#define SCTP_RESET_TSN         0x0004
 
 struct sctp_stream_reset {
 	sctp_assoc_t strrst_assoc_id;

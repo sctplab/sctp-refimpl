@@ -3009,7 +3009,7 @@ sctp_optsset(struct socket *so,
   case SCTP_RESET_STREAMS:
     {
       struct sctp_stream_reset *strrst;
-      uint8_t two_way, not_peer;
+      uint8_t send_in=0, send_tsn=0, send_out=0;
 
       if ((size_t)m->m_len < sizeof(struct sctp_stream_reset)) {
 	error = EINVAL;
@@ -3040,49 +3040,30 @@ sctp_optsset(struct socket *so,
 	break;
       }
 
-      /* Having re-thought this code I added as I write the I-D there
-       * is NO need for it. The peer, if we are requesting a stream-reset
-       * will send a request to us but will itself do what we do, take
-       * and copy off the "reset information" we send and queue TSN's
-       * larger than the send-next in our response message. Thus they
-       * will handle it.
-       */
-      /*		if (stcb->asoc.sending_seq != (stcb->asoc.last_acked_seq + 1)) {*/
-      /* Must have all sending data ack'd before we
-       * start this procedure. This is a bit restrictive
-       * and we SHOULD work on changing this so ONLY the
-       * streams being RESET get held up. So, a reset-all
-       * would require this.. but a reset specific just
-       * needs to be sure that the ones being reset have
-       * nothing on the send_queue. For now we will
-       * skip this more detailed method and do a course
-       * way.. i.e. nothing pending ... for future FIX ME!
-       */
-      /*			error = EBUSY;*/
-      /*			break;*/
-      /*		}*/
-
       if (stcb->asoc.stream_reset_outstanding) {
 	error = EALREADY;
 	SCTP_TCB_UNLOCK(stcb);
 	break;
       }
       if (strrst->strrst_flags == SCTP_RESET_LOCAL_RECV) {
-	two_way = 1;
-	not_peer = 1;
+	      send_in = 1;
       } else if (strrst->strrst_flags == SCTP_RESET_LOCAL_SEND) {
-	two_way = 0;
-	not_peer = 0;
+	      send_out = 1;
       } else if (strrst->strrst_flags == SCTP_RESET_BOTH) {
-	two_way = 1;
-	not_peer = 0;
+	      send_in = 1;
+	      send_out = 1;
+      } else if (strrst->strrst_flags == SCTP_RESET_TSN) {
+	      send_tsn = 1;
       } else {
 	error = EINVAL;
 	SCTP_TCB_UNLOCK(stcb);
 	break;
       }
-      sctp_send_str_reset_req(stcb, strrst->strrst_num_streams,
-			      strrst->strrst_list, two_way, not_peer);
+      error = sctp_send_str_reset_req(stcb, strrst->strrst_num_streams,
+				      strrst->strrst_list, 
+				      send_out, (stcb->asoc.str_reset_seq_in-3),
+				      send_in, send_tsn);
+
 #if defined(__NetBSD__) || defined(__OpenBSD__)
       s = splsoftnet();
 #else
