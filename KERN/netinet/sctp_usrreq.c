@@ -158,6 +158,7 @@ unsigned int sctp_assoc_rtx_max_default = SCTP_DEF_MAX_SEND;
 unsigned int sctp_path_rtx_max_default = SCTP_DEF_MAX_SEND/2;
 unsigned int sctp_nr_outgoing_streams_default = SCTP_OSTREAM_INITIAL;
 unsigned int sctp_cmt_on_off = 0;
+unsigned int sctp_cmt_sockopt_on_off = 0;
 unsigned int sctp_early_fr = 1;
 unsigned int sctp_early_fr_msec = SCTP_MINFR_MSEC_TIMER;
 unsigned int sctp_use_rttvar_cc = 0;
@@ -1800,7 +1801,7 @@ sctp_optsget(struct socket *so,
 		break;
 	case SCTP_CMT_ON_OFF:
 	{
-		*mtod(m, unsigned int *) = sctp_cmt_on_off;
+		*mtod(m, unsigned int *) = sctp_cmt_sockopt_on_off;
 		m->m_len = sizeof(unsigned int);
 	}
 	break;
@@ -2943,9 +2944,9 @@ sctp_optsset(struct socket *so,
     break;
   case SCTP_CMT_ON_OFF:
     {
-      sctp_cmt_on_off = *mtod(m, unsigned int *);
-      if (sctp_cmt_on_off != 0) 
-	sctp_cmt_on_off = 1;
+      sctp_cmt_sockopt_on_off = *mtod(m, unsigned int *);
+      if (sctp_cmt_sockopt_on_off != 0) 
+	sctp_cmt_sockopt_on_off = 1;
     }
     break;
   case SCTP_MY_PUBLIC_KEY:    /* set my public key */

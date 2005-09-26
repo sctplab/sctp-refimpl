@@ -518,6 +518,44 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	u_int32_t orig_flight;
 	u_int32_t tsnlast, tsnfirst;
 
+	
+	/* CMT: Using RTX_SSTHRESH policy for CMT.
+	 * If CMT is being used, then pick dest with largest 
+	 * ssthresh for any retransmission.
+	 * (iyengar@cis.udel.edu, 2005/08/12)
+	 */
+	if ((sctp_cmt_on_off) &&
+	    ((alt->dest_state & SCTP_ADDR_REACHABLE) == SCTP_ADDR_REACHABLE) &&
+	    (alt->ro.ro_rt != NULL) &&
+	    (!(alt->dest_state & SCTP_ADDR_UNCONFIRMED))) {
+	    
+	  struct sctp_nets *largest_ssthresh_net = alt;
+	  struct sctp_nets *specified_net = alt;
+	  
+	  do {
+	    alt = sctp_find_alternate_net(stcb, alt);
+	    if (largest_ssthresh_net->ssthresh < alt->ssthresh)
+	      largest_ssthresh_net = alt;
+	    
+	    /* When ssthresh's are equal, use random selection */
+	    else if (largest_ssthresh_net->ssthresh == alt->ssthresh) {
+	      /*
+	      if (stcb->store_at + 1 > SCTP_SIGNATURE_SIZE) {
+		sctp_fill_random_store(stcb);
+	      }
+	      if(((u_int8_t)(stcb->random_store[(int)stcb->store_at])) & 1) {
+		largest_ssthresh_net = alt;
+	      }
+	      stcb->store_at += 1;
+	      */
+	    }
+	    /* This loop should never become an infinite one..
+	     * @@@ Have to check for other blackholes.
+	     */
+	  } while(alt != specified_net);
+
+	  alt = largest_ssthresh_net;
+
 	/* none in flight now */
 	audit_tf = 0;
 	fir=0;

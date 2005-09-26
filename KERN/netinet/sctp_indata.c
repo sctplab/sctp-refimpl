@@ -127,6 +127,9 @@ extern int sctp_strict_sacks;
 #endif
 
 
+/* @@@ JRI : temp fix for logging stuff*/
+int templog = 1;
+
 void
 sctp_set_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 {
@@ -2399,14 +2402,33 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 			    (is_a_gap) ||			/* is still a gap */
 			    (callout_pending(&stcb->asoc.dack_timer.timer)) /* timer was up . second packet */
 				) {
-				/*
-			 	 * Ok we must build a SACK since the timer
-				 * is pending, we got our first packet OR
-				 * there are gaps or duplicates.
-				 */
-				stcb->asoc.first_ack_sent = 1;
-				sctp_send_sack(stcb);
-				/* The sending will stop the timer */
+
+			       if ((cmt_on_off) && (0) && 
+				   (stcb->asoc.first_ack_sent == 1) &&
+				   (stcb->asoc.numduptsns == 0) &&
+				   (!callout_pending(&stcb->asoc.dack_timer.timer))) {
+
+				 /* CMT DAC algorithm: With CMT, delay acks even in the face of reordering.
+				  * Therefore, if acks that do not have to be sent because
+				  * of the above reasons, will be delayed. That is, acks that would
+				  * have been sent due to gap reports will be delayed.
+				  * Start the delayed ack timer.
+				  */
+				 sctp_timer_start(SCTP_TIMER_TYPE_RECV,
+						  stcb->sctp_ep, stcb, NULL);
+			       } else {
+				  /*
+				   * Ok we must build a SACK since the timer
+				   * is pending, we got our first packet OR
+				   * there are gaps or duplicates.
+				   */
+				 stcb->asoc.first_ack_sent = 1;
+
+				 /* @@@ CMT DAC algorithm: If CMT, then also pack in number of packets
+				  * seen since last ack sent.
+				  */
+				 sctp_send_sack(stcb);
+				 /* The sending will stop the timer */
 			} else {
 				sctp_timer_start(SCTP_TIMER_TYPE_RECV,
 				    stcb->sctp_ep, stcb, NULL);
@@ -2776,6 +2798,28 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					num_frs++;
 #endif
 
+				/* CMT: CUCv2 algorithm. For each TSN being processed from the sent queue,
+				 * track the next expected pseudo-cumack, or rtx_pseudo_cumack, if required.
+				 * Separate cumack trackers for first transmissions, and retransmissions.
+				 * (2005/07/25, iyengar@cis.udel.edu)
+				 */
+				if ((tp1->whoTo->find_pseudo_cumack == 1) && (tp1->sent < SCTP_DATAGRAM_RESEND)) {
+				  tp1->whoTo->pseudo_cumack = tp1->rec.data.TSN_seq;
+				  tp1->whoTo->find_pseudo_cumack = 0;
+
+				  if(templog) 
+				    printf("CMT: new pcum found for dest %p: %u, seq: %u\n", tp1->whoTo, (u_int)tp1->whoTo->pseudo_cumack, (u_int)tp1->rec.data.TSN_seq);
+				}
+				
+				if ((tp1->whoTo->find_rtx_pseudo_cumack == 1) && (tp1->sent == SCTP_DATAGRAM_RESEND)) {
+				  tp1->whoTo->rtx_pseudo_cumack = tp1->rec.data.TSN_seq;
+				  tp1->whoTo->find_rtx_pseudo_cumack = 0;
+
+				  if(templog) 
+				    printf("CMT: new rtx-pcum found for dest %p: %u, seq: %u\n", tp1->whoTo, (u_int)tp1->whoTo->rtx_pseudo_cumack, (u_int)tp1->rec.data.TSN_seq);
+				}
+
+
 				if (tp1->rec.data.TSN_seq == j) {
 					if (tp1->sent != SCTP_DATAGRAM_UNSENT) {
 						/* must be held until cum-ack passes */
@@ -2823,11 +2867,17 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 							if (tp1->rec.data.TSN_seq == tp1->whoTo->pseudo_cumack) {
 							  tp1->whoTo->new_pseudo_cumack = 1;
 							  tp1->whoTo->find_pseudo_cumack = 1;
+
+							  if(templog) 
+							    printf("CMT: pcumack recd for dest %p: %u\n", tp1->whoTo, (u_int)tp1->whoTo->pseudo_cumack);
 							}
 							  
 							if (tp1->rec.data.TSN_seq == tp1->whoTo->rtx_pseudo_cumack) {
 							  tp1->whoTo->new_pseudo_cumack = 1;
 							  tp1->whoTo->find_rtx_pseudo_cumack = 1;
+
+							  if(templog) 
+							    printf("CMT: rtx-pcumack recd for dest %p: %u\n", tp1->whoTo, (u_int)tp1->whoTo->rtx_pseudo_cumack);
 							}
 							
 #ifdef SCTP_SACK_LOGGING
@@ -2902,22 +2952,6 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				if (compare_with_wrap(tp1->rec.data.TSN_seq, j,
 				    MAX_TSN))
 					break;
-
-				/* CMT: CUCv2 algorithm. For each TSN being processed from the sent queue,
-				 * track the next expected pseudo-cumack, or rtx_pseudo_cumack, if required.
-				 * Separate cumack trackers for first transmissions, and retransmissions.
-				 * (2005/07/25, iyengar@cis.udel.edu)
-				 */
-				if ((tp1->whoTo->find_pseudo_cumack == 1) && (tp1->sent < SCTP_DATAGRAM_RESEND)) {
-				  tp1->whoTo->pseudo_cumack = tp1->rec.data.TSN_seq;
-				  tp1->whoTo->find_pseudo_cumack = 0;
-				}
-				
-				if ((tp1->whoTo->find_rtx_pseudo_cumack == 1) && (tp1->sent == SCTP_DATAGRAM_RESEND)) {
-				  tp1->whoTo->rtx_pseudo_cumack = tp1->rec.data.TSN_seq;
-				  tp1->whoTo->find_rtx_pseudo_cumack = 0;
-				}
-
 
 				tp1 = TAILQ_NEXT(tp1, sctp_next);
 			}/* end while (tp1) */
@@ -3185,17 +3219,58 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				sctp_pegs[SCTP_DUP_FR]++;
 			}
 			sctp_ucount_incr(asoc->sent_queue_retran_cnt);
-#ifdef SCTP_FR_TO_ALTERNATE
-			/* Can we find an alternate? */
-			alt = sctp_find_alternate_net(stcb, tp1->whoTo);
-#else
-			/*
-			 * default behavior is to NOT retransmit FR's
-			 * to an alternate. Armando Caro's paper details
-			 * why.
+
+			/* CMT: Using RTX_SSTHRESH policy for CMT.
+			 * If CMT is being used, then pick dest with largest 
+			 * ssthresh for any retransmission.
+			 * (iyengar@cis.udel.edu, 2005/08/12)
 			 */
-			alt = tp1->whoTo;
+			if(sctp_cmt_on_off) {
+			  
+			  struct sctp_nets *largest_ssthresh_net = tp1->whoTo;
+			  alt = tp1->whoTo;
+
+			  do {
+			    alt = sctp_find_alternate_net(stcb, alt);
+			    if (largest_ssthresh_net->ssthresh < alt->ssthresh)
+			      largest_ssthresh_net = alt;
+
+			    /* Use random selection when ssthresh's are equal */
+			    else if (largest_ssthresh_net->ssthresh == alt->ssthresh) {
+			      /*
+			      if (stcb->store_at + 1 > SCTP_SIGNATURE_SIZE) {
+				sctp_fill_random_store(stcb);
+			      }
+			      if(((u_int8_t)(stcb->random_store[(int)stcb->store_at])) & 1) {
+				largest_ssthresh_net = alt;
+			      }
+			      stcb->store_at += 1;
+			      */
+			    }
+
+			    /* assume that tp1->whoTo is not marked dead. If not, infinite loop will occur!
+			     * Since this is an FR, tp1->whoTo has to be alive. 
+			     * @@@ Have to check for other blackholes.
+			     */
+			  } while(alt != tp1->whoTo);
+
+			  alt = largest_ssthresh_net;
+
+			} else /*CMT is OFF*/ {
+
+#ifdef SCTP_FR_TO_ALTERNATE
+			      /* Can we find an alternate? */
+			      alt = sctp_find_alternate_net(stcb, tp1->whoTo);
+#else
+			      /*
+			       * default behavior is to NOT retransmit FR's
+			       * to an alternate. Armando Caro's paper details
+			       * why.
+			       */
+			      alt = tp1->whoTo;
 #endif
+			} 
+
 			tp1->rec.data.doing_fast_retransmit = 1;
 			tot_retrans++;
 			/* mark the sending seq for possible subsequent FR's */
@@ -3863,6 +3938,9 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 					tp1->whoTo->find_pseudo_cumack = 1;
 					tp1->whoTo->find_rtx_pseudo_cumack = 1;
 
+					if(templog) 
+					  printf("CMT: new cumack recd for dest %p: %u\n", tp1->whoTo, (u_int)tp1->rec.data.TSN_seq);
+
 
 #ifdef SCTP_SACK_LOGGING
 					sctp_log_sack(asoc->last_acked_seq, 
@@ -4127,6 +4205,10 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 		 */
 		if (accum_moved || (sctp_cmt_on_off && net->new_pseudo_cumack))
 		  {
+		    if(templog) {
+		      printf("CMT: In cwnd update for dest %p ...\n", net);
+		      printf("CMT: old cwnd = %d;\n", net->cwnd);
+		    }
 			/* If the cumulative ack moved we can proceed */
 			if (net->cwnd <= net->ssthresh) {
 				/* We are in slow start */
@@ -4174,6 +4256,8 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 							asoc->send_queue_cnt;
 					}
 				}
+				if(templog)
+				  printf("new cwnd = %d (SS)\n", net->cwnd);
 			} else {
 				/* We are in congestion avoidance */
 				if (net->flight_size + net->net_ack >=
@@ -4230,6 +4314,8 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 					}
 
 				}
+				if(templog)
+				  printf("new cwnd = %d (CA)\n", net->cwnd);
 			}
 		} else {
 			sctp_pegs[SCTP_CWND_NOCUM]++;

@@ -317,6 +317,7 @@ extern int      sctp_ecn;
 extern int      sctp_ecn_nonce;
 extern int      sctp_use_cwnd_based_maxburst;
 extern unsigned int sctp_cmt_on_off;
+extern unsigned int sctp_cmt_sockopt_on_off;
 struct sctp_nets;
 struct sctp_inpcb;
 struct sctp_tcb;
