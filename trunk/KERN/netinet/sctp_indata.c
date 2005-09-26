@@ -2403,7 +2403,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 			    (callout_pending(&stcb->asoc.dack_timer.timer)) /* timer was up . second packet */
 				) {
 
-			       if ((cmt_on_off) && (0) && 
+			       if ((sctp_cmt_on_off) && (0) && 
 				   (stcb->asoc.first_ack_sent == 1) &&
 				   (stcb->asoc.numduptsns == 0) &&
 				   (!callout_pending(&stcb->asoc.dack_timer.timer))) {
@@ -2429,6 +2429,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 				  */
 				 sctp_send_sack(stcb);
 				 /* The sending will stop the timer */
+			       }
 			} else {
 				sctp_timer_start(SCTP_TIMER_TYPE_RECV,
 				    stcb->sctp_ep, stcb, NULL);
