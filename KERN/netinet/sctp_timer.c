@@ -555,7 +555,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	  } while(alt != specified_net);
 
 	  alt = largest_ssthresh_net;
-
+	}
 	/* none in flight now */
 	audit_tf = 0;
 	fir=0;
