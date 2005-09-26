@@ -423,14 +423,15 @@ struct sctp_stream_reset_response {
 	u_int32_t result;
 };
 
-
 struct sctp_stream_reset_response_tsn {
 	struct sctp_paramhdr ph;
 	u_int32_t response_seq;		   /* if a reponse, the resp seq no */
 	u_int32_t result;
-	u_int32_t sender_next_tsn;
-	u_int32_t next_rcv_tsn;
+	u_int32_t senders_next_tsn;
+	u_int32_t receivers_next_tsn;
 };
+
+
 
 #define SCTP_STREAM_RESET_NOTHING   0x00000000 /* Nothing for me to do */
 #define SCTP_STREAM_RESET_PERFORMED 0x00000001 /* Did it */
