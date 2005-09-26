@@ -397,6 +397,10 @@ struct sctp_association {
 	/* ASCONF save the last ASCONF-ACK so we can resend it if necessary */
 	struct mbuf *last_asconf_ack_sent;
 
+	/* pointer to last stream reset queued to control queue by us 
+	 * with requests.
+	 */
+	struct sctp_tmit_chunk *str_reset;
 	/*
 	 * if Source Address Selection happening, this will rotate through
 	 * the link list.

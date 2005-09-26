@@ -2744,26 +2744,18 @@ sctp_reset_out_streams(struct sctp_tcb *stcb, int number_entries, u_int16_t *lis
 struct sctp_stream_reset_out_request *
 sctp_find_stream_reset(struct sctp_tcb *stcb, u_int32_t seq, struct sctp_tmit_chunk **bchk)
 {
-	struct sctp_tmit_chunk *chk, *nchk;
 	struct sctp_association *asoc;
 	struct sctp_stream_reset_out_req *req;
 	struct sctp_stream_reset_out_request *r;
-	int found=0;
+	struct sctp_tmit_chunk *chk;
 	int len,clen;
 
 	asoc = &stcb->asoc;
-	nchk = NULL;
 	chk = TAILQ_FIRST(&asoc->control_send_queue);
- carry_on:
-	for (;chk; chk = nchk) {
-		nchk = TAILQ_NEXT(chk, sctp_next);
-		if (chk->rec.chunk_id == SCTP_STREAM_RESET) {
-			found = 1;
-			break;
-		}
-	}
-	if(!found) 
+	if(stcb->asoc.str_reset == NULL) {
 		return(NULL);
+	}
+	chk = stcb->asoc.str_reset;
 	if(bchk) {
 		/* he wants a copy of the chk pointer */
 		*bchk = chk;
@@ -2783,22 +2775,21 @@ sctp_find_stream_reset(struct sctp_tcb *stcb, u_int32_t seq, struct sctp_tmit_ch
 			return(r);
 		}
 	}
-	if(nchk != NULL) {
-		found=0;
-		chk = nchk;
-		goto carry_on;
-	}
 	/* that seq is not here */
 	return (NULL);
 }
 
 static void
-sctp_clean_up_stream_reset(struct sctp_tcb *stcb, struct sctp_tmit_chunk *chk)
+sctp_clean_up_stream_reset(struct sctp_tcb *stcb)
 {
 	struct sctp_association *asoc;
 	asoc = &stcb->asoc;
-
+	struct sctp_tmit_chunk *chk = stcb->asoc.str_reset;;
 	sctp_timer_stop(SCTP_TIMER_TYPE_STRRESET, stcb->sctp_ep, stcb, chk->whoTo);
+	if(stcb->asoc.str_reset == NULL) {
+		return;
+	}
+	
 	TAILQ_REMOVE(&asoc->control_send_queue,
 		     chk,
 		     sctp_next);
@@ -2884,7 +2875,7 @@ sctp_handle_stream_reset_response(struct sctp_tcb *stcb,
 			}
 			/* get rid of the request and get the request flags */
 			if(asoc->stream_reset_outstanding == 0) {
-				sctp_clean_up_stream_reset(stcb, chk);
+				sctp_clean_up_stream_reset(stcb);
 			}
 		} else {
 			printf("Error, I could not find a str-reset seq that I sent?\n");
