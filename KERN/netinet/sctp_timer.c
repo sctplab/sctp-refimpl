@@ -106,6 +106,7 @@
 #include <netinet/sctp_header.h>
 #include <netinet/sctp_indata.h>
 #include <netinet/sctp_asconf.h>
+#include <netinet/sctp_input.h>
 
 #include <netinet/sctp.h>
 #include <netinet/sctp_uio.h>
@@ -1118,18 +1119,15 @@ int sctp_strreset_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 {
 	struct sctp_nets *alt;
 	struct sctp_tmit_chunk *strrst, *chk;
-	struct sctp_stream_reset_req *strreq;
-	/* find the existing STRRESET */
-	TAILQ_FOREACH(strrst, &stcb->asoc.control_send_queue,
-		      sctp_next) {
-		if (strrst->rec.chunk_id == SCTP_STREAM_RESET) {
-			/* is it what we want */
-			strreq = mtod(strrst->data, struct sctp_stream_reset_req *);
-			if (strreq->sr_req.ph.param_type == ntohs(SCTP_STR_RESET_REQUEST)) {
-				break;
-			}
-		}
+       
+	if(stcb->asoc.stream_reset_outstanding == 0) {
+/*#ifdef SCTP_DEBUG*/
+		printf("SCTP: Stray stream reset timer?\n");
+/*#endif*/
+		return(0);
 	}
+	/* find the existing STRRESET, we use the seq number we sent out on */
+	sctp_find_stream_reset(stcb, stcb->asoc.str_reset_seq_out, &strrst);
 	if (strrst == NULL) {
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_TIMER1) {

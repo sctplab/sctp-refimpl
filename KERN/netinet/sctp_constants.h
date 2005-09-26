@@ -245,6 +245,8 @@
 
 #define SCTP_MAX_RESET_PARAMS 2
 
+#define SCTP_STREAM_RESET_TSN_DELTA    0x1000
+
 /*************0x4000 series*************/
 /*************0x8000 series*************/
 #define SCTP_ECN_CAPABLE	    0x8000

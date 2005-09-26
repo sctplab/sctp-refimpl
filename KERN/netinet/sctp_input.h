@@ -37,8 +37,9 @@ int sctp_common_input_processing(struct mbuf **, int, int, int,
     struct sctphdr *, struct sctp_chunkhdr *, struct sctp_inpcb *,
     struct sctp_tcb *, struct sctp_nets *, u_int8_t);
 
-void
-sctp_handle_stream_reset_response(struct sctp_tcb *, struct sctp_stream_reset_response *resp);
+
+struct sctp_stream_reset_out_request *
+sctp_find_stream_reset(struct sctp_tcb *stcb, u_int32_t seq, struct sctp_tmit_chunk **bchk);
 
 void
 sctp_reset_in_stream(struct sctp_tcb *stcb, int number_entries, uint16_t *list);
