@@ -5200,16 +5200,10 @@ sctp_clean_up_ctl(struct sctp_association *asoc)
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
 			SCTP_DECR_CHK_COUNT();
 		} else if (chk->rec.chunk_id == SCTP_STREAM_RESET) {
-			struct sctp_stream_reset_out_req *strreq;
 			/* special handling, we must look into the param */
-			strreq = mtod(chk->data, struct sctp_stream_reset_out_req *);
-			if (ntohl(strreq->sr_req.request_seq) != asoc->str_reset_seq_out) {
-				/* this will mean we will NOT clean up the list
-				 * if the peer uses the same exact seq number as
-				 * us at the same exact time :-0 FIX ME - FIX 
-				 */
+			if(chk != asoc->str_reset)
 				goto clean_up_anyway;
-			}
+
 		}
 	}
 }
@@ -6766,14 +6760,8 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 		    (chk->rec.chunk_id == SCTP_STREAM_RESET) ||
 		    (chk->rec.chunk_id == SCTP_FORWARD_CUM_TSN)) {
 			if (chk->rec.chunk_id == SCTP_STREAM_RESET) {
-				/* For stream reset we only retran the request
-				 * not the response. FIX ME FIX ME.. if they
-				 * have the exact serial number as us, we then
-				 * have a serious issue...
-				 */
-				struct sctp_stream_reset_out_req *strreq;
-				strreq = mtod(chk->data, struct sctp_stream_reset_out_req *);
-				if (ntohl(strreq->sr_req.request_seq) != asoc->str_reset_seq_out) {
+				if(chk != asoc->str_reset) {
+					/* not eligible for retran if its not ours */
 					continue;
 				}
 			}
@@ -9021,6 +9009,7 @@ sctp_add_stream_reset_out(struct sctp_tmit_chunk *chk,
 	/* now fix the chunk length */
 	ch->chunk_length = htons(len + old_len);
 	chk->send_size = len + old_len;
+	chk->book_size = chk->send_size;
 	chk->data->m_pkthdr.len = chk->data->m_len = SCTP_SIZE32(chk->send_size);
 	return;
 }
@@ -9062,6 +9051,7 @@ sctp_add_stream_reset_in(struct sctp_tmit_chunk *chk,
 	/* now fix the chunk length */
 	ch->chunk_length = htons(len + old_len);
 	chk->send_size = len + old_len;
+	chk->book_size = chk->send_size;
 	chk->data->m_pkthdr.len = chk->data->m_len = SCTP_SIZE32(chk->send_size);
 	return;
 }
@@ -9090,6 +9080,7 @@ sctp_add_stream_reset_tsn(struct sctp_tmit_chunk *chk,
 	/* now fix the chunk length */
 	ch->chunk_length = htons(len + old_len);
 	chk->send_size = len + old_len;
+	chk->book_size = chk->send_size;
 	chk->data->m_pkthdr.len = chk->data->m_len = SCTP_SIZE32(chk->send_size);
 	return;
 }
@@ -9118,6 +9109,7 @@ sctp_add_stream_reset_result(struct sctp_tmit_chunk *chk,
 	/* now fix the chunk length */
 	ch->chunk_length = htons(len + old_len);
 	chk->send_size = len + old_len;
+	chk->book_size = chk->send_size;
 	chk->data->m_pkthdr.len = chk->data->m_len = SCTP_SIZE32(chk->send_size);
 	return;
 
@@ -9151,6 +9143,7 @@ sctp_add_stream_reset_result_tsn(struct sctp_tmit_chunk *chk,
 	/* now fix the chunk length */
 	ch->chunk_length = htons(len + old_len);
 	chk->send_size = len + old_len;
+	chk->book_size = chk->send_size;
 	chk->data->m_pkthdr.len = chk->data->m_len = SCTP_SIZE32(chk->send_size);
 	return;
 }
@@ -9192,7 +9185,8 @@ sctp_send_str_reset_req(struct sctp_tcb *stcb,
 	SCTP_INCR_CHK_COUNT();
 	chk->rec.chunk_id = SCTP_STREAM_RESET;
 	chk->asoc = &stcb->asoc;
-	chk->send_size = sizeof(struct sctp_chunkhdr);
+	chk->book_size = chk->send_size = sizeof(struct sctp_chunkhdr);
+
 	MGETHDR(chk->data, M_DONTWAIT, MT_DATA);
 	if (chk->data == NULL) {
 	strreq_jump_out:
@@ -9236,6 +9230,7 @@ sctp_send_str_reset_req(struct sctp_tcb *stcb,
 		sctp_add_stream_reset_tsn(chk, seq);
 		asoc->stream_reset_outstanding++;
 	}
+	asoc->str_reset = chk;
 	/* insert the chunk for sending */
 	TAILQ_INSERT_TAIL(&asoc->control_send_queue,
 			  chk,

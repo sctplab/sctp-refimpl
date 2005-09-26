@@ -1156,7 +1156,7 @@ int sctp_strreset_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
     struct sctp_nets *net)
 {
 	struct sctp_nets *alt;
-	struct sctp_tmit_chunk *strrst, *chk;
+	struct sctp_tmit_chunk *strrst=NULL, *chk=NULL;
        
 	if(stcb->asoc.stream_reset_outstanding == 0) {
 /*#ifdef SCTP_DEBUG*/
