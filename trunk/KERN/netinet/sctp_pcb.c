@@ -2980,9 +2980,10 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	if (net->cwnd < (2 * net->mtu)) {
 		net->cwnd = 2 * net->mtu;
 	}
-	printf("Initial ssthresh for net:%x is %d\n",
-	       (u_int)net, stcb->asoc.peers_rwnd);
 	net->ssthresh = stcb->asoc.peers_rwnd;
+#ifdef SCTP_CWND_LOGGING
+	sctp_log_cwnd(net, 0, SCTP_CWND_INITIALIZATION);
+#endif
 
 	/* CMT: CUC algo - set find_pseudo_cumack to TRUE (1) at beginning of assoc
 	 * (2005/06/27, iyengar@cis.udel.edu)

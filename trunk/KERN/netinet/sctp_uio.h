@@ -425,8 +425,11 @@ struct sctp_cwnd_args {
 	struct sctp_nets *net;		/* network to */
 	u_int32_t cwnd_new_value;	/* cwnd in k */
 	u_int32_t inflight;		/* flightsize in k */
-	u_int32_t ssthresh;
+	u_int32_t pseudo_cumack;
 	int cwnd_augment;		/* increment to it */
+	u_int8_t meets_pseudo_cumack;
+	u_int8_t need_new_pseudo_cumack;
+	u_int16_t resv;
 };
 
 struct sctp_blk_args {
@@ -535,6 +538,9 @@ struct sctp_rto_log {
 };
 
 struct sctp_cwnd_log{
+	u_int8_t from;
+	u_int8_t event_type;
+	u_int8_t resv[2];
 	union {
 		struct sctp_blk_args blk;
 		struct sctp_cwnd_args cwnd;
@@ -548,9 +554,6 @@ struct sctp_cwnd_log{
 		struct sctp_rto_log rto;
 		struct sctp_sb_log sb;
 	} x;
-	u_int8_t from;
-	u_int8_t event_type;
-
 };
 
 struct sctp_cwnd_log_req{

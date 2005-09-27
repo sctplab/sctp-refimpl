@@ -318,8 +318,10 @@ sctp_log_cwnd(struct sctp_nets *net, int augment, uint8_t from)
 	sctp_clog[sctp_cwnd_log_at].x.cwnd.net = net;
 	sctp_clog[sctp_cwnd_log_at].x.cwnd.cwnd_new_value = net->cwnd;
 	sctp_clog[sctp_cwnd_log_at].x.cwnd.inflight = net->flight_size;
-	sctp_clog[sctp_cwnd_log_at].x.cwnd.ssthresh = net->ssthresh;
+	sctp_clog[sctp_cwnd_log_at].x.cwnd.pseudo_cumack = net->pseudo_cumack;
 	sctp_clog[sctp_cwnd_log_at].x.cwnd.cwnd_augment = augment;
+	sctp_clog[sctp_cwnd_log_at].x.cwnd.meets_pseudo_cumack = net->new_pseudo_cumack;
+	sctp_clog[sctp_cwnd_log_at].x.cwnd.need_new_pseudo_cumack = net->find_pseudo_cumack;
 	sctp_cwnd_log_at++;
 	if (sctp_cwnd_log_at >= SCTP_STAT_LOG_SIZE) {
 		sctp_cwnd_log_at = 0;
