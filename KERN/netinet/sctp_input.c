@@ -221,6 +221,10 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 		/* update any ssthresh's that may have a default */
 		TAILQ_FOREACH(lnet, &asoc->nets, sctp_next) {
 			lnet->ssthresh = asoc->peers_rwnd;
+#ifdef SCTP_CWND_LOGGING
+			sctp_log_cwnd(lnet, 0, SCTP_CWND_LOG_FROM_FR);
+#endif
+
 		}
 	}
 	if (asoc->pre_open_streams > ntohs(init->num_inbound_streams)) {

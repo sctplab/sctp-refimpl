@@ -204,16 +204,23 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 		}
 	}
 	if(cnt) {
+#ifdef SCTP_CWND_LOGGING
+		int old_cwnd;
+#endif
 		sctp_chunk_output(inp, stcb, 9);
 		/* make a small adjustment to cwnd and
 		 * force to CA.
 		 */
+		old_cwnd = net->cwnd;
 		if(net->cwnd > net->mtu)
 			/* drop down one MTU after sending */
 			net->cwnd -= net->mtu;
 		if(net->cwnd < net->ssthresh) 
 			/* still in SS move to CA */
 			net->ssthresh = net->cwnd - 1;
+#ifdef SCTP_CWND_LOGGING
+		sctp_log_cwnd(net,(old_cwnd-net->cwnd) , SCTP_CWND_LOG_FROM_FR);
+#endif
 	} else if (cnt_resend) {
 		sctp_chunk_output(inp, stcb, 9);
 	}

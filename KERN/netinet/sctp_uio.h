@@ -425,6 +425,7 @@ struct sctp_cwnd_args {
 	struct sctp_nets *net;		/* network to */
 	u_int32_t cwnd_new_value;	/* cwnd in k */
 	u_int32_t inflight;		/* flightsize in k */
+	u_int32_t ssthresh;
 	int cwnd_augment;		/* increment to it */
 };
 
