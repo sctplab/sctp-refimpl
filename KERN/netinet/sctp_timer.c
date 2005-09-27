@@ -211,7 +211,9 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 		/* make a small adjustment to cwnd and
 		 * force to CA.
 		 */
+#ifdef SCTP_CWND_LOGGING
 		old_cwnd = net->cwnd;
+#endif
 		if(net->cwnd > net->mtu)
 			/* drop down one MTU after sending */
 			net->cwnd -= net->mtu;
