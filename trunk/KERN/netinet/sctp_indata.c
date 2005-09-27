@@ -3605,9 +3605,6 @@ sctp_hs_cwnd_decrease(struct sctp_nets *net)
 			net->ssthresh = 2 * net->mtu;
 		}
 		net->cwnd = net->ssthresh;
-#ifdef SCTP_CWND_LOGGING
-		sctp_log_cwnd(net, (net->cwnd-old_cwnd), SCTP_CWND_LOG_FROM_FR);
-#endif
 	} else {
 		/* drop by the proper amount */
 		net->ssthresh = net->cwnd - (int)((net->cwnd / 100) *
@@ -3629,6 +3626,10 @@ sctp_hs_cwnd_decrease(struct sctp_nets *net)
 			net->last_hs_used = indx;
 		}
 	}
+#ifdef SCTP_CWND_LOGGING
+	sctp_log_cwnd(net, (net->cwnd-old_cwnd), SCTP_CWND_LOG_FROM_FR);
+#endif
+
 }
 #endif
 

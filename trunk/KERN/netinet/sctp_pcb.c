@@ -2980,7 +2980,8 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	if (net->cwnd < (2 * net->mtu)) {
 		net->cwnd = 2 * net->mtu;
 	}
-
+	printf("Initial ssthresh for net:%x is %d\n",
+	       (u_int)net, stcb->asoc.peers_rwnd);
 	net->ssthresh = stcb->asoc.peers_rwnd;
 
 	/* CMT: CUC algo - set find_pseudo_cumack to TRUE (1) at beginning of assoc
