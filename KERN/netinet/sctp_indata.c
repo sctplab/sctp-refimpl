@@ -128,7 +128,7 @@ extern int sctp_strict_sacks;
 
 
 /* @@@ JRI : temp fix for logging stuff*/
-int templog = 1;
+int templog = 0;
 
 void
 sctp_set_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
