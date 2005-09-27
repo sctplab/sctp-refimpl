@@ -5358,10 +5358,10 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
 	/* Attempt to move at least 1 MTU's worth
 	 * onto the wheel for each destination address
 	 */
-	goal_mtu = net->cwnd - net->flight_size;
-	if ((unsigned int)goal_mtu < net->mtu) {
-		goal_mtu = net->mtu;
-	}
+/*	goal_mtu = net->cwnd - net->flight_size;
+	if ((unsigned int)goal_mtu < net->mtu) {*/
+	goal_mtu = net->mtu;
+/*	}*/
 	if (sctp_pegs[SCTP_MOVED_MTU] < (unsigned int)goal_mtu) {
 		sctp_pegs[SCTP_MOVED_MTU] = goal_mtu;
 	}
@@ -5525,6 +5525,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
         unsigned int mtu, r_mtu, omtu;
 	*num_out = 0;
 	cwnd_full_ind = 0;
+	int tsns_sent=0;
 	ctl_cnt = no_out_cnt = asconf = cookie = 0;
 	/*
 	 * First lets prime the pump. For each destination, if there
@@ -5649,6 +5650,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	}
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 		/* how much can we send? */
+		tsns_sent = 0;
 		if (net->ref_count < 2) {
 			/* Ref-count of 1 so we cannot have data or control
 			 * queued to this address. Skip it.
@@ -6186,6 +6188,8 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 			        /*				if (!net->rto_pending) {*/
  			        /* setup for a RTO measurement */
 			        /*net->rto_pending = 1;*/
+				tsns_sent = data_list[0]->rec.data.TSN_seq;
+
 				data_list[0]->do_rtt = 1;
 				/*				} else {*/
 				/*					data_list[0]->do_rtt = 0;*/
@@ -6213,6 +6217,9 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 				break;
 			}
 		}
+#ifdef SCTP_CWND_LOGGING
+		sctp_log_cwnd(net, tsns_sent, SCTP_CWND_LOG_FROM_SEND);
+#endif
 	}
 	/* At the end there should be no NON timed
 	 * chunks hanging on this queue.

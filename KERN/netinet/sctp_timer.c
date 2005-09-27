@@ -926,7 +926,19 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 
 
 #ifdef SCTP_FR_LOGGING
-	sctp_log_fr(0, 0, 0, SCTP_FR_T3_TIMEOUT);
+	sctp_log_fr(sctp_pegs[SCTP_PEG_TSNS_SENT], 0, 0, SCTP_FR_T3_TIMEOUT);
+#ifdef SCTP_CWND_LOGGING
+	{
+		struct sctp_nets *lnet;
+		TAILQ_FOREACH(lnet, &stcb->asoc.nets, sctp_next) {
+			if(net == lnet) {
+				sctp_log_cwnd(lnet, 1, SCTP_CWND_LOG_FROM_T3);
+			} else {
+				sctp_log_cwnd(lnet, 0, SCTP_CWND_LOG_FROM_T3);
+			}
+		}
+	}
+#endif
 #endif
 	/* Find an alternate and mark those for retransmission */
 	if((stcb->asoc.peers_rwnd == 0) &&
@@ -1045,6 +1057,9 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 			}
 		}
 	}
+#ifdef SCTP_CWND_LOGGING
+	sctp_log_cwnd(net, net->cwnd, SCTP_CWND_LOG_FROM_RTX);
+#endif
 	return (0);
 }
 

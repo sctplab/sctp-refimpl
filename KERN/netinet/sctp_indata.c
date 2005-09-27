@@ -2804,7 +2804,8 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				 * Separate cumack trackers for first transmissions, and retransmissions.
 				 * (2005/07/25, iyengar@cis.udel.edu)
 				 */
-				if ((tp1->whoTo->find_pseudo_cumack == 1) && (tp1->sent < SCTP_DATAGRAM_RESEND)) {
+				if ((tp1->whoTo->find_pseudo_cumack == 1) && (tp1->sent < SCTP_DATAGRAM_RESEND) &&
+					(tp1->snd_count == 1)) {
 				  tp1->whoTo->pseudo_cumack = tp1->rec.data.TSN_seq;
 				  tp1->whoTo->find_pseudo_cumack = 0;
 
@@ -2812,7 +2813,8 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				    printf("CMT: new pcum found for dest %p: %u, seq: %u\n", tp1->whoTo, (u_int)tp1->whoTo->pseudo_cumack, (u_int)tp1->rec.data.TSN_seq);
 				}
 				
-				if ((tp1->whoTo->find_rtx_pseudo_cumack == 1) && (tp1->sent == SCTP_DATAGRAM_RESEND)) {
+				if ((tp1->whoTo->find_rtx_pseudo_cumack == 1) && (tp1->sent < SCTP_DATAGRAM_RESEND) &&
+				    (tp1->snd_count > 1)) {
 				  tp1->whoTo->rtx_pseudo_cumack = tp1->rec.data.TSN_seq;
 				  tp1->whoTo->find_rtx_pseudo_cumack = 0;
 
@@ -2842,7 +2844,6 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 								*biggest_newly_acked_tsn =
 								    tp1->rec.data.TSN_seq;
 							}
-							
 							/* CMT: SFR algo (and HTNA) - 
 							 * set saw_newack to 1 for dest being newly acked.
 							 * update this_sack_highest_newack if appropriate. 
@@ -2872,7 +2873,9 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 							  if(templog) 
 							    printf("CMT: pcumack recd for dest %p: %u\n", tp1->whoTo, (u_int)tp1->whoTo->pseudo_cumack);
 							}
-							  
+#ifdef SCTP_CWND_LOGGING
+							sctp_log_cwnd(tp1->whoTo, tp1->rec.data.TSN_seq, SCTP_CWND_LOG_FROM_SACK);
+#endif
 							if (tp1->rec.data.TSN_seq == tp1->whoTo->rtx_pseudo_cumack) {
 							  tp1->whoTo->new_pseudo_cumack = 1;
 							  tp1->whoTo->find_rtx_pseudo_cumack = 1;
@@ -2902,6 +2905,8 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 							  asoc->total_flight = 0;
 							  asoc->total_flight_count = 0;
 							}
+
+							tp1->whoTo->net_ack += tp1->send_size;
 
 							if (tp1->snd_count < 2) {
 								/* True non-retransmited chunk */
@@ -2946,6 +2951,7 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 						}
 						(*ecn_seg_sums) += tp1->rec.data.ect_nonce;
 						(*ecn_seg_sums) &= SCTP_SACK_NONCE_SUM;
+
 						tp1->sent = SCTP_DATAGRAM_MARKED;
 					}
 					break;
@@ -2961,7 +2967,7 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	}
 #ifdef SCTP_FR_LOGGING
 /*
-	if (num_frs)
+  if (num_frs)
 		sctp_log_fr(*biggest_tsn_acked, *biggest_newly_acked_tsn,
 		    last_tsn, SCTP_FR_LOG_BIGGEST_TSNS);
 */
@@ -3148,6 +3154,12 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		 	 * Strike the TSN if in fast-recovery and
 			 * cum-ack moved.
 			 */
+#ifdef SCTP_FR_LOGGING
+			sctp_log_fr(biggest_tsn_newly_acked,
+				    tp1->rec.data.TSN_seq,
+				    tp1->sent,
+				    SCTP_FR_LOG_STRIKE_CHUNK);
+#endif
 			tp1->sent++;
 		} else if (tp1->rec.data.doing_fast_retransmit) {
 			/*
@@ -3179,12 +3191,10 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					 * a FR.
 					 */
 #ifdef SCTP_FR_LOGGING
-/*
 					sctp_log_fr(biggest_tsn_newly_acked,
-	 				    tp1->rec.data.TSN_seq,
-					    tp1->rec.data.fast_retran_tsn,
-					    SCTP_FR_LOG_STRIKE_CHUNK);
-*/
+						    tp1->rec.data.TSN_seq,
+						    tp1->sent,
+						    SCTP_FR_LOG_STRIKE_CHUNK);
 #endif
 					tp1->sent++;
 					strike_flag=1;
@@ -3204,6 +3214,12 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			;
 	 	} else {
 		 	/* Strike the TSN */
+#ifdef SCTP_FR_LOGGING
+			sctp_log_fr(biggest_tsn_newly_acked,
+				    tp1->rec.data.TSN_seq,
+				    tp1->sent,
+				    SCTP_FR_LOG_STRIKE_CHUNK);
+#endif
 			tp1->sent++;
 		}
 		if (tp1->sent == SCTP_DATAGRAM_RESEND) {
@@ -3952,7 +3968,9 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 						      0, 
 						      SCTP_LOG_TSN_ACKED);
 #endif
-
+#ifdef SCTP_CWND_LOGGING
+					sctp_log_cwnd(tp1->whoTo, tp1->rec.data.TSN_seq, SCTP_CWND_LOG_FROM_SACK);
+#endif
 				}
 				if (tp1->sent == SCTP_DATAGRAM_RESEND) {
 #ifdef SCTP_DEBUG
@@ -3976,10 +3994,19 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	/*******************************************/
 	/* cancel ALL T3-send timer if accum moved */
 	/*******************************************/
-	if (accum_moved) {
+	if(sctp_cmt_on_off) {
 		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
-			sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
-					stcb, net);
+			if(net->new_pseudo_cumack)
+				sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
+						stcb, net);
+
+			}
+	} else {
+		if (accum_moved) {
+			TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
+				sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
+						stcb, net);
+			}
 		}
 	}
 	biggest_tsn_newly_acked = biggest_tsn_acked = last_tsn;
@@ -4242,10 +4269,8 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 					dif = net->cwnd - (net->flight_size +
 							   net->net_ack);
 #ifdef SCTP_CWND_LOGGING
-					/*
 					  sctp_log_cwnd(net, net->net_ack,
-						      SCTP_CWND_LOG_NOADV_SS);
-					*/
+							SCTP_CWND_LOG_NOADV_SS);
 #endif
 					if (dif > sctp_pegs[SCTP_CWND_DIFF_SA]) {
 						sctp_pegs[SCTP_CWND_DIFF_SA] =
@@ -4297,9 +4322,8 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 					unsigned int dif;
 					sctp_pegs[SCTP_CWND_NOUSE_CA]++;
 #ifdef SCTP_CWND_LOGGING
-/*					sctp_log_cwnd(net, net->net_ack,
-					SCTP_CWND_LOG_NOADV_CA);
-*/
+					sctp_log_cwnd(net, net->net_ack,
+						      SCTP_CWND_LOG_NOADV_CA);
 #endif
 					dif = net->cwnd - (net->flight_size +
 							   net->net_ack);
@@ -4320,6 +4344,10 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 				  printf("new cwnd = %d (CA)\n", net->cwnd);
 			}
 		} else {
+#ifdef SCTP_CWND_LOGGING
+			sctp_log_cwnd(net, net->mtu,
+				      SCTP_CWND_LOG_NO_CUMACK);
+#endif
 			sctp_pegs[SCTP_CWND_NOCUM]++;
 		}
 	skip_cwnd_update:
