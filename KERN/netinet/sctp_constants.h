@@ -107,7 +107,9 @@
 #define SCTP_CWND_LOG_FROM_T3       63
 #define SCTP_CWND_LOG_FROM_SACK     64
 #define SCTP_CWND_LOG_NO_CUMACK     65
-
+#define SCTP_CWND_LOG_FROM_RESEND   66
+#define SCTP_FR_LOG_CHECK_STRIKE    67
+#define SCTP_SEND_NOW_COMPLETES     68
 /*
  * To turn on various logging, you must first define SCTP_STAT_LOGGING.
  * Then to get something to log you define one of the logging defines i.e.

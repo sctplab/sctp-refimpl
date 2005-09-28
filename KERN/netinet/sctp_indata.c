@@ -1979,6 +1979,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	}
 	SCTP_INCR_CHK_COUNT();
 	chk->rec.data.TSN_seq = tsn;
+	chk->no_fr_allowed = 0;
 	chk->rec.data.stream_seq = strmseq;
 	chk->rec.data.stream_number = strmno;
 	chk->rec.data.payloadtype = ch->dp.protocol_id;
@@ -3068,6 +3069,18 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	tp1 = TAILQ_FIRST(&asoc->sent_queue);
 	while (tp1) {
 		strike_flag=0;
+		if(tp1->no_fr_allowed) {
+			/* this one had a timeout or something */
+			tp1 = TAILQ_NEXT(tp1, sctp_next);
+			continue;
+		}
+#ifdef SCTP_FR_LOGGING
+		if(tp1->sent < SCTP_DATAGRAM_RESEND)
+			sctp_log_fr(biggest_tsn_newly_acked,
+				    tp1->rec.data.TSN_seq,
+				    tp1->sent,
+				    SCTP_FR_LOG_CHECK_STRIKE);
+#endif
 		if (compare_with_wrap(tp1->rec.data.TSN_seq, biggest_tsn_acked,
 		    MAX_TSN) ||
 		    tp1->sent == SCTP_DATAGRAM_UNSENT) {
@@ -3243,8 +3256,9 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			 * (iyengar@cis.udel.edu, 2005/08/12)
 			 */
 			if(sctp_cmt_on_off) {
-			  
 			  struct sctp_nets *largest_ssthresh_net = tp1->whoTo;
+
+			  tp1->no_fr_allowed = 1; 
 			  alt = tp1->whoTo;
 
 			  do {
@@ -3298,7 +3312,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				 * we subtract one from this to get the one we
 				 * last sent.
 				 */
- 				tp1->rec.data.fast_retran_tsn = sending_seq - 1;
+ 				tp1->rec.data.fast_retran_tsn = sending_seq;
 			} else {
 				/*
 			 	 * If there are chunks on the send queue
@@ -3311,7 +3325,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				struct sctp_tmit_chunk *ttt;
 				ttt = TAILQ_FIRST(&asoc->send_queue);
 				tp1->rec.data.fast_retran_tsn =
-				    ttt->rec.data.TSN_seq - 1;
+				    ttt->rec.data.TSN_seq;
 			}
 			if (tp1->do_rtt) {
 				/*
@@ -3665,7 +3679,6 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	int some_on_streamwheel;
 	long j;
 	int accum_moved = 0;
-	int marking_allowed = 1;
 	int will_exit_fast_recovery=0;
 	u_int32_t a_rwnd;
 	struct sctp_nets *net = NULL;
@@ -3807,17 +3820,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 		}
 #endif
 	}
-	if (compare_with_wrap(asoc->t3timeout_highest_marked, cum_ack, MAX_TSN)) {
-		/* we are not allowed to mark for FR */
-	        /* @@@ JRI : Bad impact on CMT. On a timeout, not TSN will be allowes
-		 * to be marked for FR until the timeout rtx's TSNs are cumacked.
-		 * This does not make sense when timeout occurs on one path, and 
-		 * FR's should be allowed to happen on other paths which have
-		 * not suffered the timeout.
-		 * TODO: Temp fix - disable this variable if CMT is used (?)
-		 */
-		marking_allowed = 0;
-	}
+
 	/**********************/
 	/* 1) check the range */
 	/**********************/
@@ -3991,24 +3994,6 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 		}
 		tp1 = TAILQ_NEXT(tp1, sctp_next);
 	}
-	/*******************************************/
-	/* cancel ALL T3-send timer if accum moved */
-	/*******************************************/
-	if(sctp_cmt_on_off) {
-		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
-			if(net->new_pseudo_cumack)
-				sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
-						stcb, net);
-
-			}
-	} else {
-		if (accum_moved) {
-			TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
-				sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
-						stcb, net);
-			}
-		}
-	}
 	biggest_tsn_newly_acked = biggest_tsn_acked = last_tsn;
 	/* always set this up to cum-ack */
 	asoc->this_sack_highest_gap = last_tsn;
@@ -4057,15 +4042,29 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	}
 
  skip_segments:
+	/*******************************************/
+	/* cancel ALL T3-send timer if accum moved */
+	/*******************************************/
+	if(sctp_cmt_on_off) {
+		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
+			if(net->new_pseudo_cumack)
+				sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
+						stcb, net);
+
+			}
+	} else {
+		if (accum_moved) {
+			TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
+				sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
+						stcb, net);
+			}
+		}
+	}
 	/********************************************/
 	/* drop the acked chunks from the sendqueue */
 	/********************************************/
 	asoc->last_acked_seq = cum_ack;
 
-	/* Drag along the t3 timeout point so we don't have a problem at wrap */
-	if (marking_allowed) {
-		asoc->t3timeout_highest_marked = cum_ack;
-	}
 	tp1 = TAILQ_FIRST(&asoc->sent_queue);
 	do {
 		if (compare_with_wrap(tp1->rec.data.TSN_seq, cum_ack,
@@ -4450,7 +4449,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 		net->net_ack = 0;
 	}
-	if ((num_seg > 0) && marking_allowed) {
+	if (num_seg > 0) {
 		sctp_strike_gap_ack_chunks(stcb, asoc, biggest_tsn_acked,
 					   biggest_tsn_newly_acked, accum_moved);
 	}

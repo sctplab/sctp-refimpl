@@ -4505,6 +4505,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			goto release;
 		}
 		sctp_prepare_chunk(chk, stcb, srcv, strq, net);
+		chk->no_fr_allowed = 0;
 		chk->rec.data.rcv_flags |= SCTP_DATA_NOT_FRAG;
 
 		/* no flags yet, FRAGMENT_OK goes here */
@@ -4519,6 +4520,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			}
 		}
 		/* fix up the send_size if it is not present */
+		chk->no_fr_allowed = 0;
 		chk->send_size = dataout;
 		chk->book_size = chk->send_size;
 		chk->mbcnt = mbcnt;
@@ -4626,6 +4628,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			asoc->chunks_on_out_queue++;
 
 			*chk = template;
+			chk->no_fr_allowed = 0;
 			chk->whoTo->ref_count++;
 			chk->data = n;
 			/* Total in the MSIZE */
@@ -5106,6 +5109,7 @@ sctp_clean_up_datalist(struct sctp_tcb *stcb,
 		}
 		/* record time */
 		data_list[i]->sent_rcv_time = net->last_sent_time;
+		data_list[i]->rec.data.fast_retran_tsn = data_list[i]->rec.data.TSN_seq;
 		TAILQ_REMOVE(&asoc->send_queue,
 			     data_list[i],
 			     sctp_next);
@@ -5358,10 +5362,18 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
 	/* Attempt to move at least 1 MTU's worth
 	 * onto the wheel for each destination address
 	 */
-/*	goal_mtu = net->cwnd - net->flight_size;
-	if ((unsigned int)goal_mtu < net->mtu) {*/
-	goal_mtu = net->mtu;
-/*	}*/
+	goal_mtu = net->cwnd - net->flight_size;
+	if (sctp_cmt_on_off == 0) {
+		if ((unsigned int)goal_mtu < net->mtu) {
+			goal_mtu = net->mtu;
+		}
+	} else {
+		if(goal_mtu <= 0) {
+			return;
+		} else if (goal_mtu < net->mtu) {
+			goal_mtu = net->mtu;
+		}
+	}
 	if (sctp_pegs[SCTP_MOVED_MTU] < (unsigned int)goal_mtu) {
 		sctp_pegs[SCTP_MOVED_MTU] = goal_mtu;
 	}
@@ -5412,25 +5424,27 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
 			strq = strqn;
 			continue;
 		}
-		if (chk->whoTo != net) {
-		        if ((sctp_cmt_on_off == 1) && (chk->addr_over == 0)) {
+		if ((sctp_cmt_on_off == 0) && (chk->whoTo != net)) {
+/*		        if ((sctp_cmt_on_off == 1) && (chk->addr_over == 0)) {*/
 			  /* CMT: If CMT is ON, and the user has NOT overridden
 			   * the destination address for this chunk, then reset the 
 			   * destination address to the current one and continue with
 			   * sending this chunk to the current destination.
 			   * (iyengar@cis.udel.edu, 2005/06/21)
 			   */			  
+/*
 			  sctp_free_remote_addr(chk->whoTo);
 			  chk->whoTo = net;
 			  net->ref_count++;
 
 			} else {
+*/
 			  /* Skip this stream, first one on stream
 			   * does not head to our current destination.
 			   */
-			  strq = strqn;
-			  continue;
-			}
+			strq = strqn;
+			continue;
+/*			}*/
 		}
 		mtu_fromwheel += sctp_move_to_outqueue(stcb, strq);
 		cnt_mvd++;
@@ -5441,8 +5455,8 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
 	sctp_pegs[SCTP_MOVED_MAX]++;
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
-		printf("Ok we moved %d chunks to send queue\n",
-		       moved);
+		printf("Ok we moved %d chunks to send queue for net:%x\n",
+		       moved, (u_int)net);
 	}
 #endif
 	if (sctp_pegs[SCTP_MOVED_QMAX] < cnt_mvd) {
@@ -5583,9 +5597,12 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 				       net, net->flight_size, net->cwnd);
 			}
 #endif
-			if (net->flight_size >= net->cwnd) {
+			if ((net->flight_size >= net->cwnd)  &&
+			    (sctp_cmt_on_off == 0)){
 				/* skip this network, no room */
 				cwnd_full_ind++;
+/*				printf("skip net:%x flightsize:%d > cwnd:%d CMT OFF\n",
+				(u_int)net, (int)net->flight_size, (int)net->cwnd); */
 #ifdef SCTP_DEBUG
 				if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
 					printf("Ok skip fillup->fs:%d > cwnd:%d\n",
@@ -5598,6 +5615,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 			}
 			/*
 			 * @@@ JRI : this loops through all nets
+			
 			 * and calls sctp_fill_outqueue for all nets.
 			 * 
 			 * spin through the stream queues moving one message and
@@ -5650,8 +5668,9 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	}
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 		/* how much can we send? */
+/*		printf("Examine for sending net:%x\n", (u_int)net);*/
 		tsns_sent = 0;
-		if (net->ref_count < 2) {
+		if ((sctp_cmt_on_off == 0) && (net->ref_count < 2)) {
 			/* Ref-count of 1 so we cannot have data or control
 			 * queued to this address. Skip it.
 			 */
@@ -5957,20 +5976,27 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 					}
 #endif
 					sctp_pegs[SCTP_CWND_BLOCKED]++;
+
 					*reason_code = 2;
 					break;
 				}
 				nchk = TAILQ_NEXT(chk, sctp_next);
 				if (chk->whoTo != net) {
-					/* No, not sent to this net */
+				        if ((sctp_cmt_on_off == 1) && (chk->addr_over == 0)) {
+						sctp_free_remote_addr(chk->whoTo);
+						chk->whoTo = net;
+						net->ref_count++;
+					} else {
+						/* No, not sent to this net */
 #ifdef SCTP_DEBUG
-					if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
-						printf("chk->whoTo:%p not %p\n",
-						       chk->whoTo, net);
+						if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
+							printf("chk->whoTo:%p not %p\n",
+							       chk->whoTo, net);
 
-					}
+						}
 #endif
-					continue;
+						continue;
+					}
 				}
 #ifdef SCTP_DEBUG
 				if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
@@ -5985,10 +6011,10 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 					 * fix it here by letting IP fragment it for now and
 					 * printing a warning. This really should not happen ...
 					 */
-/*#ifdef SCTP_DEBUG*/
+#ifdef SCTP_DEBUG
 					printf("Warning chunk of %d bytes > mtu:%d and yet PMTU disc missed\n",
 					       chk->send_size, mtu);
-/*#endif*/
+#endif
 					chk->flags |= CHUNK_FLAGS_FRAGMENT_OK;
 				}
 
@@ -6736,6 +6762,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 	struct sctphdr *shdr;
 	int asconf;
 	struct sctp_nets *net;
+	u_int32_t tsns_sent=0;
 	int no_fragmentflg, bundle_at, cnt_thru;
 	unsigned int mtu;
 	int error, i, one_chunk, fwd_tsn, ctl_cnt, tmr_started;
@@ -7034,6 +7061,9 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 #ifdef SCTP_AUDITING_ENABLED
 			sctp_audit_log(0xC4, bundle_at);
 #endif
+			if(bundle_at) {
+				tsns_sent = data_list[0]->rec.data.TSN_seq;
+			}
 			for (i = 0; i < bundle_at; i++) {
 				sctp_pegs[SCTP_RETRANTSN_SENT]++;
 				data_list[i]->sent = SCTP_DATAGRAM_SENT;
@@ -7083,6 +7113,9 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 					}
 				}
 			}
+#ifdef SCTP_CWND_LOGGING
+			sctp_log_cwnd(net, tsns_sent, SCTP_CWND_LOG_FROM_RESEND);
+#endif
 #ifdef SCTP_AUDITING_ENABLED
 			sctp_auditing(21, inp, stcb, NULL);
 #endif
@@ -7323,7 +7356,9 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 	    asoc->burst_limit_applied = 0;
 	  }
 	}
-
+#ifdef SCTP_CWND_LOGGING
+	sctp_log_cwnd(NULL, tot_out, SCTP_SEND_NOW_COMPLETES);
+#endif
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
 		printf("Ok, we have put out %d chunks\n", tot_out);
@@ -9937,6 +9972,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 			SOCKBUF_LOCK(&so->so_snd);
 			goto release;
 		}
+		chk->no_fr_allowed = 0;
 		SCTP_INCR_CHK_COUNT();
 		MGETHDR(mm, M_WAIT, MT_DATA);
 		if (mm == NULL) {
@@ -10061,6 +10097,7 @@ clean_up:
 			chk->mbcnt = mbcnt_e;
 			mbcnt += mbcnt_e;
 			mbcnt_e = 0;
+			chk->no_fr_allowed = 0;
 			chk->send_size = tot_demand;
 			chk->data->m_pkthdr.len = tot_demand;
 			chk->book_size = chk->send_size;

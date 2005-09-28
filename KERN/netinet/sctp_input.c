@@ -1317,7 +1317,6 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		asoc->init_seq_number = ntohl(initack_cp->init.initial_tsn);
 		asoc->sending_seq = asoc->asconf_seq_out = asoc->str_reset_seq_out =
 		    asoc->init_seq_number;
-		asoc->t3timeout_highest_marked = asoc->asconf_seq_out;
 		asoc->last_cwr_tsn = asoc->init_seq_number - 1;
 		asoc->asconf_seq_in = asoc->last_acked_seq = asoc->init_seq_number - 1;
 		asoc->str_reset_seq_in = asoc->init_seq_number;
@@ -1410,11 +1409,11 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		asoc->pre_open_streams =
 		    ntohs(initack_cp->init.num_outbound_streams);
 		asoc->init_seq_number = ntohl(initack_cp->init.initial_tsn);
-		asoc->sending_seq = asoc->asconf_seq_out = asoc->str_reset_seq_out =
-		    asoc->init_seq_number;
-		asoc->t3timeout_highest_marked = asoc->asconf_seq_out;
+		asoc->sending_seq = asoc->asconf_seq_out = asoc->str_reset_seq_out =  asoc->init_seq_number;
+
 		asoc->last_cwr_tsn = asoc->init_seq_number - 1;
 		asoc->asconf_seq_in = asoc->last_acked_seq = asoc->init_seq_number - 1;
+
 		asoc->str_reset_seq_in = asoc->init_seq_number;
 
 		asoc->advanced_peer_ack_point = asoc->last_acked_seq;
@@ -1606,7 +1605,6 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	asoc->pre_open_streams = ntohs(initack_cp->init.num_outbound_streams);
 	asoc->init_seq_number = ntohl(initack_cp->init.initial_tsn);
 	asoc->sending_seq = asoc->asconf_seq_out = asoc->str_reset_seq_out = asoc->init_seq_number;
-	asoc->t3timeout_highest_marked = asoc->asconf_seq_out;
 	asoc->last_cwr_tsn = asoc->init_seq_number - 1;
 	asoc->asconf_seq_in = asoc->last_acked_seq = asoc->init_seq_number - 1;
 	asoc->str_reset_seq_in = asoc->init_seq_number;
@@ -3085,6 +3083,7 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_out_req
 	SCTP_INCR_CHK_COUNT();
 	chk->rec.chunk_id = SCTP_STREAM_RESET;
 	chk->asoc = &stcb->asoc;
+	chk->no_fr_allowed = 0;
 	chk->send_size = sizeof(struct sctp_chunkhdr);
 	MGETHDR(chk->data, M_DONTWAIT, MT_DATA);
 	if (chk->data == NULL) {
