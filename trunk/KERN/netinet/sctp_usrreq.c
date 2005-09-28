@@ -248,6 +248,7 @@ sctp_split_chunks(struct sctp_association *asoc,
 
 	}
 	/* Data is now split adjust sizes */
+	chk->no_fr_allowed = 0;
 	chk->send_size >>= 1;
 	new_chk->send_size >>= 1;
 

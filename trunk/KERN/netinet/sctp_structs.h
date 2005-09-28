@@ -298,6 +298,7 @@ struct sctp_tmit_chunk {
 			     * is overridden by user. Used for CMT
 			     * (iyengar@cis.udel.edu, 2005/06/21)
 			     */
+	u_int8_t no_fr_allowed; 
 };
 
 
@@ -480,11 +481,6 @@ struct sctp_association {
 	/* Original seq number I used ??questionable to keep?? */
 	u_int32_t init_seq_number;
 
-	/*
-	 * We use this value to know if FR's are allowed, i.e. did the
-	 * cum-ack pass this point or equal it so FR's are now allowed.
-	 */
-	u_int32_t t3timeout_highest_marked;
 
 	/* The Advanced Peer Ack Point, as required by the PR-SCTP */
 	/* (A1 in Section 4.2) */

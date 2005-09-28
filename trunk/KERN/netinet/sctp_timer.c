@@ -755,18 +755,23 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 #endif /* SCTP_DEBUG */
 			/* Clear any time so NO RTT is being done */
 			chk->do_rtt = 0;
-			/* Bump up the count */
-			if (compare_with_wrap(chk->rec.data.TSN_seq,
-					      stcb->asoc.t3timeout_highest_marked,
-					      MAX_TSN)) {
-				/* TSN_seq > than t3timeout so update */
-				stcb->asoc.t3timeout_highest_marked = chk->rec.data.TSN_seq;
-			}
 			if (alt != net) {
 				sctp_free_remote_addr(chk->whoTo);
+				chk->no_fr_allowed = 1; 
 				chk->whoTo = alt;
 				alt->ref_count++;
+			} else {
+				chk->no_fr_allowed = 0;
+				if (TAILQ_EMPTY(&stcb->asoc.send_queue) ) {
+					chk->rec.data.fast_retran_tsn = stcb->asoc.sending_seq;
+				} else {
+					chk->rec.data.fast_retran_tsn = (TAILQ_FIRST(&stcb->asoc.send_queue))->rec.data.TSN_seq;
+				}
 			}
+			if(sctp_cmt_on_off == 1) {
+				chk->no_fr_allowed = 1; 
+			}
+
 		} else if (chk->sent == SCTP_DATAGRAM_ACKED) {
 			/* remember highest acked one */
 			could_be_sent = chk;
