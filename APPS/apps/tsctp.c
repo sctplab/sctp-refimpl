@@ -58,6 +58,7 @@
 #include <string.h>
 #endif
 #include <strings.h>
+#include <string.h>
 #include <stdlib.h>
 #include <sys/uio.h>
 #include <unistd.h>
