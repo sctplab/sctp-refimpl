@@ -3002,8 +3002,7 @@ sctp_check_for_revoked(struct sctp_association *asoc, u_long cum_ack,
 				tp1->sent = SCTP_DATAGRAM_SENT;
 				tp1->rec.data.chunk_was_revoked = 1;
 				tot_revoked++;
-#ifdef SCTP_CWND_LOGGING
-/*#ifdef SCTP_SACK_LOGGING*/
+#ifdef SCTP_SACK_LOGGING
 				sctp_log_sack(asoc->last_acked_seq, 
 					      cum_ack, 
 					      tp1->rec.data.TSN_seq, 
@@ -4078,6 +4077,14 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 			}
 
 		}
+#ifdef SCTP_SACK_LOGGING
+		sctp_log_sack(asoc->last_acked_seq, 
+			      cum_ack, 
+			      tp1->rec.data.TSN_seq, 
+			      0, 
+			      0, 
+			      SCTP_LOG_FREE_SENT);
+#endif
 		tp1->data = NULL;
 		asoc->sent_queue_cnt--;
 		sctp_free_remote_addr(tp1->whoTo);

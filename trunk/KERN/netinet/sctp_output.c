@@ -5360,15 +5360,16 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
 
 	STCB_TCB_LOCK_ASSERT(stcb);
 	asoc = &stcb->asoc;
-	/* Attempt to move at least 1 MTU's worth
-	 * onto the wheel for each destination address
-	 */
-	/*
-	goal_mtu = net->cwnd - net->flight_size;
-	if ((unsigned int)goal_mtu < net->mtu) {
-	*/
-		goal_mtu = net->mtu;
-/*	}*/
+#ifdef AF_INET6
+	if (net->ro._l_addr.sin6.sin6_family == AF_INET6) {
+		goal_mtu = net->mtu - SCTP_MIN_OVERHEAD;
+	} else {
+		/* ?? not sure what else to do */
+		goal_mtu = net->mtu - SCTP_MIN_V4_OVERHEAD;		
+	}
+#else
+	goal_mtu = net->mtu - SCTP_MIN_OVERHEAD;
+#endif
 	if (sctp_pegs[SCTP_MOVED_MTU] < (unsigned int)goal_mtu) {
 		sctp_pegs[SCTP_MOVED_MTU] = goal_mtu;
 	}
@@ -5457,9 +5458,12 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
 		moved_how_much = sctp_move_to_outqueue(stcb, strq);
 		mtu_fromwheel += moved_how_much;
 
-		if(moved_how_much)
+		if(moved_how_much) {
 			stcb->asoc.last_net_data_came_from = chk->whoTo;
-
+#ifdef SCTP_CWND_LOGGING
+			sctp_log_cwnd(net, moved_how_much, SCTP_CWND_LOG_FILL_OUTQ_FILLS);
+#endif
+		}
 		cnt_mvd++;
 		moved++;
 		asoc->last_out_stream = strq;
@@ -5551,7 +5555,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	int bundle_at, ctl_cnt, no_data_chunks, cwnd_full_ind;
         unsigned int mtu, r_mtu, omtu;
 	*num_out = 0;
-	struct sctp_nets *start_at, *old_startat=NULL;
+	struct sctp_nets *start_at, *old_startat=NULL, *send_start_at;
 	cwnd_full_ind = 0;
 	int tsns_sent=0;
 	ctl_cnt = no_out_cnt = asconf = cookie = 0;
@@ -5610,10 +5614,14 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 			 */
 			if(asoc->last_net_data_came_from) {
 				net = TAILQ_NEXT(asoc->last_net_data_came_from, sctp_next);
+				if(net == NULL) {
+					net = TAILQ_FIRST(&asoc->nets);
+				}
 			}else {
 				/* back to start */
 				net = TAILQ_FIRST(&asoc->nets);
 			}
+
 		} else {
 			net = asoc->primary_destination;
 			if(net == NULL) {
@@ -5660,6 +5668,9 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 			 * spin through the stream queues moving one message and
 			 * assign TSN's as appropriate.
 			 */
+#ifdef SCTP_CWND_LOGGING
+			sctp_log_cwnd(net, 0, SCTP_CWND_LOG_FILL_OUTQ_CALLED);
+#endif
 			sctp_fill_outqueue(stcb, net);
 		}
 		if(start_at != TAILQ_FIRST(&asoc->nets)) {
@@ -5711,11 +5722,22 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	    (TAILQ_FIRST(&asoc->send_queue) == NULL)) {
 		return (0);
 	}
+	chk = TAILQ_FIRST(&asoc->send_queue);
+	if(chk) {
+		send_start_at = chk->whoTo;
+	} else {
+		send_start_at = TAILQ_FIRST(&asoc->nets);
+	}
 
-
-	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
+	old_startat = NULL;
+ again_one_more_time:
+	for(net=send_start_at; net != NULL; net=TAILQ_NEXT(net, sctp_next)) {	
 		/* how much can we send? */
 /*		printf("Examine for sending net:%x\n", (u_int)net);*/
+		if(old_startat && (old_startat == net)) {
+			/* through list ocmpletely. */
+			break;
+		}
 		tsns_sent = 0;
 		if (net->ref_count < 2) {
 			/* Ref-count of 1 so we cannot have data or control
@@ -6288,6 +6310,11 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 		if(tsns_sent) 
 			sctp_log_cwnd(net, tsns_sent, SCTP_CWND_LOG_FROM_SEND);
 #endif
+	}
+	if(old_startat == NULL) {
+		old_startat = send_start_at;
+		net = TAILQ_FIRST(&asoc->nets);
+		goto again_one_more_time;
 	}
 	/* At the end there should be no NON timed
 	 * chunks hanging on this queue.
@@ -7375,9 +7402,6 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 		error = sctp_med_chunk_output(inp, stcb, asoc, &num_out,
 					      &reason_code, 0,  &cwnd_full, from_where,
 					      &now, &now_filled);
-#ifdef SCTP_CWND_LOGGING
-		sctp_log_cwnd(NULL, num_out, SCTP_SEND_NOW_COMPLETES);
-#endif
 		if (error) {
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
