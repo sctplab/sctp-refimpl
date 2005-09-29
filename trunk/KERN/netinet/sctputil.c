@@ -309,27 +309,17 @@ sctp_log_strm_del(struct sctp_tmit_chunk *chk, struct sctp_tmit_chunk *poschk,
 	}
 }
 
-static int sctp_log_time_event=0;
-u_int32_t prev_time;
 void
 sctp_log_cwnd(struct sctp_nets *net, int augment, uint8_t from)
 {
-
-	struct timeval now;
-	u_int32_t timeval, usec;
 	if ((from == SCTP_CWND_LOG_FROM_BRST) ||
 	    (from == SCTP_CWND_LOG_FROM_SACK)) {
+		struct timeval now;
+		u_int32_t timeval;
 		SCTP_GETTIME_TIMEVAL(&now);
-		timeval = (now.tv_sec % 0x000f);
-		timeval <<= 28;
-		usec = (now.tv_usec & 0xfffff);
-		timeval |= (usec << 8);
-		if(prev_time != timeval) {
-			sctp_log_time_event = 0;
-		}
-		prev_time = timeval;
-		timeval |= (sctp_log_time_event & 0x000000ff);
-		sctp_log_time_event++;
+		timeval = (now.tv_sec % 0x00000fff);
+		timeval <<= 20;
+		timeval |= now.tv_usec & 0xfffff;
 		sctp_clog[sctp_cwnd_log_at].time_event = timeval;
 	}
 	sctp_clog[sctp_cwnd_log_at].from = (u_int8_t)from;

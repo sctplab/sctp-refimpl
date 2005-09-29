@@ -7375,6 +7375,9 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 		error = sctp_med_chunk_output(inp, stcb, asoc, &num_out,
 					      &reason_code, 0,  &cwnd_full, from_where,
 					      &now, &now_filled);
+#ifdef SCTP_CWND_LOGGING
+		sctp_log_cwnd(NULL, num_out, SCTP_SEND_NOW_COMPLETES);
+#endif
 		if (error) {
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
