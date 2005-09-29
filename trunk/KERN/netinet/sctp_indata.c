@@ -3654,6 +3654,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	struct sctp_tmit_chunk *tp1, *tp2;
 	u_long cum_ack, last_tsn, biggest_tsn_acked, biggest_tsn_newly_acked;
 	uint16_t num_seg, num_dup;
+	u_int8_t wake_him=0;
 	unsigned int sack_length;
 	uint32_t send_s;
 	int some_on_streamwheel;
@@ -4084,10 +4085,12 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 		asoc->chunks_on_out_queue--;
 		SCTP_DECR_CHK_COUNT();
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, tp1);
-		sctp_sowwakeup(stcb->sctp_ep, stcb->sctp_socket);
+		wake_him = 1;
 		tp1 = tp2;
 	} while (tp1 != NULL);
 
+	if(wake_him)
+	  sctp_sowwakeup(stcb->sctp_ep, stcb->sctp_socket);
 
 	if (asoc->fast_retran_loss_recovery && accum_moved) {
 		if (compare_with_wrap(asoc->last_acked_seq,
