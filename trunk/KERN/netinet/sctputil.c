@@ -309,18 +309,30 @@ sctp_log_strm_del(struct sctp_tmit_chunk *chk, struct sctp_tmit_chunk *poschk,
 	}
 }
 
+static int sctp_log_time_event=0;
+static u_int16_t prev_time=0;
 void
 sctp_log_cwnd(struct sctp_nets *net, int augment, uint8_t from)
 {
 
 	struct timeval now;
-	u_int16_t timeval;
-	SCTP_GETTIME_TIMEVAL(&now);
-	timeval = (now.tv_sec % 0xffff);
-	timeval <<= 7;
-	timeval |= ((now.tv_usec / 10000) & 0x003f);
+	u_int16_t timeval, usec;
+	if ((from == SCTP_CWND_LOG_FROM_BRST) ||
+	    (from == SCTP_CWND_LOG_FROM_SACK)) {
+		SCTP_GETTIME_TIMEVAL(&now);
+		timeval = (now.tv_sec % 0x000f);
+		timeval <<= 12;
+		usec = ((now.tv_usec / 10000) & 0x003f);
+		timeval |= (usec << 6);
+		if(prev_time != timeval) {
+			sctp_log_time_event = 0;
+		}
+		prev_time = timeval;
+		timeval |= (sctp_log_time_event & 0x0000003f);
+		sctp_log_time_event++;
+		sctp_clog[sctp_cwnd_log_at].time_event = timeval;
+	}
 	sctp_clog[sctp_cwnd_log_at].from = (u_int8_t)from;
-	sctp_clog[sctp_cwnd_log_at].time_event = timeval;
 	sctp_clog[sctp_cwnd_log_at].event_type = (u_int8_t)SCTP_LOG_EVENT_CWND;
 	sctp_clog[sctp_cwnd_log_at].x.cwnd.net = net;
 	if(net) {

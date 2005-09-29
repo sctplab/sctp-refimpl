@@ -5551,6 +5551,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	int bundle_at, ctl_cnt, no_data_chunks, cwnd_full_ind;
         unsigned int mtu, r_mtu, omtu;
 	*num_out = 0;
+	struct sctp_nets *start_at, *old_startat=NULL;
 	cwnd_full_ind = 0;
 	int tsns_sent=0;
 	ctl_cnt = no_out_cnt = asconf = cookie = 0;
@@ -5603,7 +5604,6 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	}
 #endif
 	if(no_data_chunks == 0) {
-		struct sctp_nets *start_at;
 		if(sctp_cmt_on_off) {
 			/* for CMT we start at the next one
 			 * past the one we last added data to.
@@ -5624,6 +5624,9 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 		start_at = net;
 	one_more_time:
 		for(; net != NULL; net=TAILQ_NEXT(net, sctp_next)) {
+			if(old_startat && (old_startat == net)) {
+				break;
+			}
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
 				printf("net:%p fs:%d  cwnd:%d\n",
@@ -5661,6 +5664,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 		}
 		if(start_at != TAILQ_FIRST(&asoc->nets)) {
 			/* got to pick up the beginning stuff.*/
+			old_startat = start_at;
 			start_at = net = TAILQ_FIRST(&asoc->nets);
 			goto one_more_time;
 		}
@@ -5707,6 +5711,8 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	    (TAILQ_FIRST(&asoc->send_queue) == NULL)) {
 		return (0);
 	}
+
+
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 		/* how much can we send? */
 /*		printf("Examine for sending net:%x\n", (u_int)net);*/
@@ -6279,7 +6285,8 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 			}
 		}
 #ifdef SCTP_CWND_LOGGING
-		sctp_log_cwnd(net, tsns_sent, SCTP_CWND_LOG_FROM_SEND);
+		if(tsns_sent) 
+			sctp_log_cwnd(net, tsns_sent, SCTP_CWND_LOG_FROM_SEND);
 #endif
 	}
 	/* At the end there should be no NON timed
@@ -7315,7 +7322,8 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 			 * to and if we have one we move all queued data on
 			 * the out wheel to this alternate address.
 			 */
-			sctp_move_to_an_alt(stcb, asoc, net);
+			if(net->ref_count > 1)
+				sctp_move_to_an_alt(stcb, asoc, net);
 		} else {
 			/*
 			  if ((asoc->sat_network) || (net->addr_is_local)) {
@@ -7329,13 +7337,6 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 #endif
 
 			if(sctp_use_cwnd_based_maxburst) {
-				/*
-				printf("Check:net->flight_size:%d + (%d * %d) < %d\n",
-				       net->flight_size,
-				       burst_limit,
-				       net->mtu,
-				       net->cwnd);
-				*/
 				if ((net->flight_size+(burst_limit*net->mtu)) < net->cwnd) {
 					int old_cwnd;
 					if (net->ssthresh < net->cwnd)
