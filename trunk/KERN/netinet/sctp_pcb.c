@@ -3343,7 +3343,7 @@ sctp_del_remote_addr(struct sctp_tcb *stcb, struct sockaddr *remaddr)
 				lnet = TAILQ_FIRST(&asoc->nets);
 				/* Try to find a confirmed primary */
 				asoc->primary_destination =
-				    sctp_find_alternate_net(stcb, lnet);
+				    sctp_find_alternate_net(stcb, lnet, 0);
 			}
 			if (net == asoc->last_data_chunk_from) {
 				/* Reset primary */

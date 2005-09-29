@@ -264,6 +264,7 @@ struct sctp_data_chunkrec {
 			   * for outbound holds sending flags.
 			   */
 	u_int8_t state_flags;
+	u_int8_t chunk_was_revoked;
 };
 
 TAILQ_HEAD(sctpchunk_listhead, sctp_tmit_chunk);
@@ -398,6 +399,7 @@ struct sctp_association {
 	/* ASCONF save the last ASCONF-ACK so we can resend it if necessary */
 	struct mbuf *last_asconf_ack_sent;
 
+
 	/* pointer to last stream reset queued to control queue by us 
 	 * with requests.
 	 */
@@ -414,6 +416,9 @@ struct sctp_association {
 	u_int8_t *mapping_array;
 	/* primary destination to use */
 	struct sctp_nets *primary_destination;
+	/* For CMT */
+	struct sctp_nets *last_net_data_came_from;
+
 
 	/* last place I got a data chunk from */
 	struct sctp_nets *last_data_chunk_from;

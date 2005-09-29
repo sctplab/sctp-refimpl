@@ -2850,7 +2850,8 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 							 * update this_sack_highest_newack if appropriate. 
 							 * (iyengar@cis.udel.edu, 2005/05/12)
 							 */
-							tp1->whoTo->saw_newack = 1;
+							if(tp1->rec.data.chunk_was_revoked == 0)
+								tp1->whoTo->saw_newack = 1;
 
 							if (compare_with_wrap(tp1->rec.data.TSN_seq,
 							    tp1->whoTo->this_sack_highest_newack,
@@ -2999,8 +3000,10 @@ sctp_check_for_revoked(struct sctp_association *asoc, u_long cum_ack,
 				 * it occurs will add to flight size
 				 */
 				tp1->sent = SCTP_DATAGRAM_SENT;
+				tp1->rec.data.chunk_was_revoked = 1;
 				tot_revoked++;
-#ifdef SCTP_SACK_LOGGING
+#ifdef SCTP_CWND_LOGGING
+/*#ifdef SCTP_SACK_LOGGING*/
 				sctp_log_sack(asoc->last_acked_seq, 
 					      cum_ack, 
 					      tp1->rec.data.TSN_seq, 
@@ -3239,6 +3242,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			/* Increment the count to resend */
 			struct sctp_nets *alt;
 
+/*			printf("OK, we are now ready to FR this guy\n");*/
 #ifdef SCTP_FR_LOGGING
 			sctp_log_fr(tp1->rec.data.TSN_seq, tp1->snd_count,
 			    0, SCTP_FR_MARKED);
@@ -3256,42 +3260,15 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			 * (iyengar@cis.udel.edu, 2005/08/12)
 			 */
 			if(sctp_cmt_on_off) {
-			  struct sctp_nets *largest_ssthresh_net = tp1->whoTo;
+				tp1->no_fr_allowed = 1; 
+				alt = tp1->whoTo;
+				alt = sctp_find_alternate_net(stcb, alt, 1);
 
-			  tp1->no_fr_allowed = 1; 
-			  alt = tp1->whoTo;
-
-			  do {
-			    alt = sctp_find_alternate_net(stcb, alt);
-			    if (largest_ssthresh_net->ssthresh < alt->ssthresh)
-			      largest_ssthresh_net = alt;
-
-			    /* Use random selection when ssthresh's are equal */
-			    else if (largest_ssthresh_net->ssthresh == alt->ssthresh) {
-			      /*
-			      if (stcb->store_at + 1 > SCTP_SIGNATURE_SIZE) {
-				sctp_fill_random_store(stcb);
-			      }
-			      if(((u_int8_t)(stcb->random_store[(int)stcb->store_at])) & 1) {
-				largest_ssthresh_net = alt;
-			      }
-			      stcb->store_at += 1;
-			      */
-			    }
-
-			    /* assume that tp1->whoTo is not marked dead. If not, infinite loop will occur!
-			     * Since this is an FR, tp1->whoTo has to be alive. 
-			     * @@@ Have to check for other blackholes.
-			     */
-			  } while(alt != tp1->whoTo);
-
-			  alt = largest_ssthresh_net;
-
-			} else /*CMT is OFF*/ {
+			} else { /*CMT is OFF*/
 
 #ifdef SCTP_FR_TO_ALTERNATE
 			      /* Can we find an alternate? */
-			      alt = sctp_find_alternate_net(stcb, tp1->whoTo);
+				alt = sctp_find_alternate_net(stcb, tp1->whoTo);
 #else
 			      /*
 			       * default behavior is to NOT retransmit FR's
@@ -3305,6 +3282,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			tp1->rec.data.doing_fast_retransmit = 1;
 			tot_retrans++;
 			/* mark the sending seq for possible subsequent FR's */
+/*			printf("Marking TSN for FR new value %x\n", (u_int)tpi->rec.data.TSN_seq);*/
 			if (TAILQ_EMPTY(&asoc->send_queue)) {
 				/*
 				 * If the queue of send is empty then its the
@@ -3327,6 +3305,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				tp1->rec.data.fast_retran_tsn =
 				    ttt->rec.data.TSN_seq;
 			}
+/*			printf("value is %x\n", tp1->rec.data.fast_retran_tsn);*/
 			if (tp1->do_rtt) {
 				/*
 				 * this guy had a RTO calculation pending on it,
@@ -3367,6 +3346,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				tp1->whoTo = alt;
 				alt->ref_count++;
 			}
+/*			printf("Moving to next tp1\n");*/
 		}
 		tp1 = TAILQ_NEXT(tp1, sctp_next);
 	} /* while (tp1) */
@@ -3686,7 +3666,6 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	u_int8_t reneged_all = 0;
 
 	asoc = &stcb->asoc;
-
 	/*
 	 * Handle the incoming sack on data I have been sending.
 	 */
@@ -4021,7 +4000,6 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 		 * this_sack_highest_newack will increase while handling NEWLY ACKED chunks.
 		 * saw_newack will also change.
 		 */
-
 		sctp_handle_segments(stcb, asoc, ch, last_tsn,
 				     &biggest_tsn_acked, &biggest_tsn_newly_acked,
 				     num_seg, &ecn_seg_sums);
@@ -4449,6 +4427,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 		net->net_ack = 0;
 	}
+
 	if (num_seg > 0) {
 		sctp_strike_gap_ack_chunks(stcb, asoc, biggest_tsn_acked,
 					   biggest_tsn_newly_acked, accum_moved);

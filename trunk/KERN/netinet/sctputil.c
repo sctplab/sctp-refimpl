@@ -313,7 +313,14 @@ void
 sctp_log_cwnd(struct sctp_nets *net, int augment, uint8_t from)
 {
 
+	struct timeval now;
+	u_int16_t timeval;
+	SCTP_GETTIME_TIMEVAL(&now);
+	timeval = (now.tv_sec % 0xffff);
+	timeval <<= 7;
+	timeval |= ((now.tv_usec / 10000) & 0x003f);
 	sctp_clog[sctp_cwnd_log_at].from = (u_int8_t)from;
+	sctp_clog[sctp_cwnd_log_at].time_event = timeval;
 	sctp_clog[sctp_cwnd_log_at].event_type = (u_int8_t)SCTP_LOG_EVENT_CWND;
 	sctp_clog[sctp_cwnd_log_at].x.cwnd.net = net;
 	if(net) {
@@ -881,6 +888,10 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	asoc->peer_supports_pktdrop = 1;
 
 	asoc->sent_queue_retran_cnt = 0;
+
+	/* for CMT */
+	asoc->last_net_data_came_from = NULL;
+
 	/* This will need to be adjusted */
 	asoc->last_cwr_tsn = asoc->init_seq_number - 1;
 	asoc->last_acked_seq = asoc->init_seq_number - 1;
