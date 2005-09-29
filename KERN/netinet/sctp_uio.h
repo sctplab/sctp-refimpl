@@ -538,9 +538,9 @@ struct sctp_rto_log {
 };
 
 struct sctp_cwnd_log{
+	u_int16_t time_event;
 	u_int8_t from;
 	u_int8_t event_type;
-	u_int8_t resv[2];
 	union {
 		struct sctp_blk_args blk;
 		struct sctp_cwnd_args cwnd;
