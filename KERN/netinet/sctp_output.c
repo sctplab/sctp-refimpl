@@ -8338,7 +8338,11 @@ sctp_send_sack(struct sctp_tcb *stcb)
 	a_chk->data->m_data += SCTP_MIN_OVERHEAD;
 	sack = mtod(a_chk->data, struct sctp_sack_chunk *);
 	sack->ch.chunk_type = SCTP_SELECTIVE_ACK;
-	sack->ch.chunk_flags = asoc->receiver_nonce_sum & SCTP_SACK_NONCE_SUM;
+
+	/* IF you want to set a bit for CMT or in 0x80 because
+	 * 0x01 is used by nonce for ecn.
+	 */
+	sack->ch.chunk_flags = (asoc->receiver_nonce_sum & SCTP_SACK_NONCE_SUM);
 	sack->sack.cum_tsn_ack = htonl(asoc->cumulative_tsn);
 	sack->sack.a_rwnd = htonl(asoc->my_rwnd);
 	asoc->my_last_reported_rwnd = asoc->my_rwnd;
