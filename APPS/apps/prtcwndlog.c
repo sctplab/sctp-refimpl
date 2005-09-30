@@ -101,9 +101,12 @@ main(int argc, char **argv)
 		/* 66 */ "Log from a re-transmission",
 		/* 67 */ "Check TSN to strike",
 		/* 68 */ "chunk output completes",
-		/* 69 */ "Unknown"
+		/* 69 */ "fill_out_queue_called",
+		/* 70 */ "fill_out_queue_fills",
+		/* 71 */ "log_free_sent",
+		/* 72 */ "unknown"
 	};
-#define FROM_STRING_MAX 69
+#define FROM_STRING_MAX 72
 	FILE *out;
 	int at;
 	struct sctp_cwnd_log log;
@@ -124,8 +127,8 @@ main(int argc, char **argv)
 		if(log.event_type == SCTP_LOG_EVENT_CWND) {
 			if((log.from == SCTP_CWND_LOG_NOADV_CA) ||
 			   (log.from == SCTP_CWND_LOG_NOADV_SS)) {
-				printf("%d: Network:%x Cwnd:%d flight:%d flight+acked:%d (atpc:%d npc:%d) %s (psuedo_cumack=%x)\n",
-				       at,
+				printf("%u: Net:%x Cwnd:%d flt:%d flt+acked:%d (atpc:%d npc:%d) %s (pc=%x, sendcnt:%d,strcnt:%d)\n",
+				       (u_int)log.time_event,
 				       (u_int)log.x.cwnd.net,
 				       (int)log.x.cwnd.cwnd_new_value,
 				       (int)log.x.cwnd.inflight,
@@ -133,32 +136,60 @@ main(int argc, char **argv)
 				       log.x.cwnd.meets_pseudo_cumack,
 				       log.x.cwnd.need_new_pseudo_cumack,
 				       from_str[log.from],
-				       (u_int)log.x.cwnd.pseudo_cumack);
+				       (u_int)log.x.cwnd.pseudo_cumack,
+				       (int)log.x.cwnd.cnt_in_send,
+				       (int)log.x.cwnd.cnt_in_str
+					);
 
 			} else if (log.from == SCTP_CWND_LOG_FROM_T3){
-				printf("%d Network:%x at T3 cwnd:%d flight:%d psuedo_cumack:%x (net==lnet ?:%d)\n",
-				       at,
+				printf("%u Network:%x at T3 cwnd:%d flight:%d pc:%x (net==lnet ?:%d,sendcnt:%d,strcnt:%d)\n",
+				       (u_int)log.time_event,
 				       (u_int)log.x.cwnd.net,
 				       log.x.cwnd.cwnd_new_value,
 				       log.x.cwnd.inflight,
 				       (int)log.x.cwnd.pseudo_cumack,
-				       (int)log.x.cwnd.cwnd_augment);
+				       (int)log.x.cwnd.cwnd_augment,
+				       (int)log.x.cwnd.cnt_in_send,
+				       (int)log.x.cwnd.cnt_in_str);
+
+			} else if (log.from == SCTP_CWND_LOG_FILL_OUTQ_FILLS) {
+				printf("%u fill_outqueue adds %d bytes onto net:%x cwnd:%d flight:%d (sendcnt:%d,strcnt:%d)\n",
+				       (u_int)log.time_event,
+				       (int)log.x.cwnd.cwnd_augment,
+				       (u_int)log.x.cwnd.net,
+				       log.x.cwnd.cwnd_new_value,
+				       (int)log.x.cwnd.inflight,
+				       (int)log.x.cwnd.cnt_in_send,
+				       (int)log.x.cwnd.cnt_in_str);
+
+
+			} else if (log.from == SCTP_CWND_LOG_FILL_OUTQ_CALLED) {
+				printf("%u fill_outqueue called on net:%x cwnd:%d flight:%d (sendcnt:%d,strcnt:%d)\n",
+				       (u_int)log.time_event,
+				       (u_int)log.x.cwnd.net,
+				       log.x.cwnd.cwnd_new_value,
+				       (int)log.x.cwnd.inflight,
+				       (int)log.x.cwnd.cnt_in_send,
+				       (int)log.x.cwnd.cnt_in_str);
 
 			} else if (log.from == SCTP_SEND_NOW_COMPLETES) {
-				printf("%d Send completes sending %d\n",
-				       at,
-				       (int)log.x.cwnd.cwnd_augment);
+				printf("%u Send completes sending %d (sendcnt:%d,strcnt:%d)\n",
+				       (u_int)log.time_event,
+				       (int)log.x.cwnd.cwnd_augment,
+				       (int)log.x.cwnd.cnt_in_send,
+				       (int)log.x.cwnd.cnt_in_str);
 			} else if (log.from == SCTP_CWND_LOG_FROM_BRST){
-				printf("%u Network:%x at cwnd_event (BURST) cwnd:%d flight:%d decrease by %d \n",
+				printf("%u Network:%x at cwnd_event (BURST) cwnd:%d flight:%d decrease by %d (sendcnt:%d,strcnt:%d)\n",
 				       (u_int)log.time_event,
 				       (u_int)log.x.cwnd.net,
 				       log.x.cwnd.cwnd_new_value,
 				       log.x.cwnd.inflight,
-				       (u_int)log.x.cwnd.cwnd_augment
-				       );
+				       (u_int)log.x.cwnd.cwnd_augment,
+				       (int)log.x.cwnd.cnt_in_send,
+				       (int)log.x.cwnd.cnt_in_str);
 
 			} else if (log.from == SCTP_CWND_LOG_FROM_SACK){
-				printf("%u Network:%x at cwnd_event (SACK) cwnd:%d flight:%d pq:%x atpc:%d needpc:%d (tsn:%x) \n",
+				printf("%u Net:%x at cwnd_event (SACK) cwnd:%d flight:%d pq:%x atpc:%d needpc:%d (tsn:%x,sendcnt:%d,strcnt:%d) \n",
 				       (u_int)log.time_event,
 				       (u_int)log.x.cwnd.net,
 				       log.x.cwnd.cwnd_new_value,
@@ -166,35 +197,43 @@ main(int argc, char **argv)
 				       (u_int)log.x.cwnd.pseudo_cumack,
 				       log.x.cwnd.meets_pseudo_cumack,
 				       log.x.cwnd.need_new_pseudo_cumack,
-				       (u_int)log.x.cwnd.cwnd_augment
-				       );
+				       (u_int)log.x.cwnd.cwnd_augment,
+				       (int)log.x.cwnd.cnt_in_send,
+				       (int)log.x.cwnd.cnt_in_str);
 
 			} else if (log.from == SCTP_CWND_INITIALIZATION){
-				printf("%d Network:%x initializes cwnd:%d flight:%d pq:%x\n",
-				       at,
+				printf("%u Network:%x initializes cwnd:%d flight:%d pq:%x (sendcnt:%d,strcnt:%d)\n",
+				       (u_int)log.time_event,
 				       (u_int)log.x.cwnd.net,
 				       log.x.cwnd.cwnd_new_value,
 				       log.x.cwnd.inflight,
-				       (u_int)log.x.cwnd.pseudo_cumack);
+				       (u_int)log.x.cwnd.pseudo_cumack,
+				       (int)log.x.cwnd.cnt_in_send,
+				       (int)log.x.cwnd.cnt_in_str);
 			} else if ((log.from == SCTP_CWND_LOG_FROM_SEND) ||
 				   (log.from == SCTP_CWND_LOG_FROM_RESEND)){
-				printf("%d Network:%x cwnd:%d flight:%d pq:%x %s tsn:%x\n",
-				       at,
+				printf("%u Network:%x cwnd:%d flight:%d pq:%x %s tsn:%x (sendcnt:%d,strcnt:%d)\n",
+				       (u_int)log.time_event,
 				       (u_int)log.x.cwnd.net,
 				       log.x.cwnd.cwnd_new_value,
 				       log.x.cwnd.inflight,
 				       (u_int)log.x.cwnd.pseudo_cumack,
 				       from_str[log.from],
-				       (u_int)log.x.cwnd.cwnd_augment);
+				       (u_int)log.x.cwnd.cwnd_augment,
+				       (int)log.x.cwnd.cnt_in_send,
+				       (int)log.x.cwnd.cnt_in_str);
 			}else {
-				printf("%d: Network:%x New_cwnd:%d flight:%d cwnd_augment:%d adjusted from:%s (pq=%x)\n",
-				       at,
+				printf("%u Network:%x at cwnd_event (CWND) cwnd:%d flight:%d pq:%x atpc:%d needpc:%d (tsn:%x,sendcnt:%d,strcnt:%d) \n",
+				       (u_int)log.time_event,
 				       (u_int)log.x.cwnd.net,
-				       (int)log.x.cwnd.cwnd_new_value,
-				       (int)log.x.cwnd.inflight,
-				       (int)log.x.cwnd.cwnd_augment,
-				       from_str[log.from],
-				       (u_int)log.x.cwnd.pseudo_cumack);
+				       log.x.cwnd.cwnd_new_value,
+				       log.x.cwnd.inflight,
+				       (u_int)log.x.cwnd.pseudo_cumack,
+				       log.x.cwnd.meets_pseudo_cumack,
+				       log.x.cwnd.need_new_pseudo_cumack,
+				       (u_int)log.x.cwnd.cwnd_augment,
+				       (int)log.x.cwnd.cnt_in_send,
+				       (int)log.x.cwnd.cnt_in_str);
 			}
 		}else if(log.event_type == SCTP_LOG_EVENT_SB) {
 			printf("%d: %s stcb:%x sb_cc:%x stcb_sbcc:%x %s:%d\n",
@@ -206,49 +245,55 @@ main(int argc, char **argv)
 			       ((log.from == SCTP_LOG_SBALLOC) ? "increment" : "decrement"),
 			       log.x.sb.incr);
 		}else if(log.event_type == SCTP_LOG_EVENT_RTT) {
-		  if(log.x.rto.rttvar) {
-		    printf("%d: Net:%x  Old-Rtt:%d Change:%d Direction=%s from:%s\n",
-			   at, 
-			   log.x.rto.net,
-				   log.x.rto.rtt,
-			   log.x.rto.rttvar,
-			   ((log.x.rto.direction == 0) ? "-" : "+"),
-			   from_str[log.from]
-			   );
-		  }
+			if(log.x.rto.rttvar) {
+				printf("%d: Net:%x  Old-Rtt:%d Change:%d Direction=%s from:%s\n",
+				       at, 
+				       log.x.rto.net,
+				       log.x.rto.rtt,
+				       log.x.rto.rttvar,
+				       ((log.x.rto.direction == 0) ? "-" : "+"),
+				       from_str[log.from]
+					);
+			}
 		}else if(log.event_type == SCTP_LOG_LOCK_EVENT) {
-		  printf("%s sock:%x inp:%x inp:%d tcb:%d info:%d sock:%d sockrb:%d socksb:%d cre:%d\n",
-			 from_str[log.from],
-			 log.x.lock.sock,
-			 log.x.lock.inp,
-			 log.x.lock.inp_lock,
-			 log.x.lock.tcb_lock,
-			 log.x.lock.info_lock,
-			 log.x.lock.sock_lock,
-			 log.x.lock.sockrcvbuf_lock,
-			 log.x.lock.socksndbuf_lock,
-			 log.x.lock.create_lock
-			 );
+			printf("%s sock:%x inp:%x inp:%d tcb:%d info:%d sock:%d sockrb:%d socksb:%d cre:%d\n",
+			       from_str[log.from],
+			       log.x.lock.sock,
+			       log.x.lock.inp,
+			       log.x.lock.inp_lock,
+			       log.x.lock.tcb_lock,
+			       log.x.lock.info_lock,
+			       log.x.lock.sock_lock,
+			       log.x.lock.sockrcvbuf_lock,
+			       log.x.lock.socksndbuf_lock,
+			       log.x.lock.create_lock
+				);
 		}else if(log.event_type == SCTP_LOG_EVENT_SACK) {
-		  if(log.from == SCTP_LOG_NEW_SACK) {
-		    printf("%s - cum-ack:%x old-cumack:%x dups:%d gaps:%d\n", 
-			   from_str[log.from],
-			   log.x.sack.cumack,
-			   log.x.sack.oldcumack,
-			   (int)log.x.sack.numDups,
-			   (int)log.x.sack.numGaps
-			   );
-		  } else {
-		    printf("%s - cum-ack:%x biggestTSNAcked:%x TSN:%x dups:%d gaps:%d\n", 
-			   from_str[log.from],
-			   log.x.sack.cumack,
-			   log.x.sack.oldcumack,
-			   log.x.sack.tsn,
-			   (int)log.x.sack.numDups,
-			   (int)log.x.sack.numGaps
-			   );
+			if(log.from == SCTP_LOG_NEW_SACK) {
+				printf("%s - cum-ack:%x old-cumack:%x dups:%d gaps:%d\n", 
+				       from_str[log.from],
+				       log.x.sack.cumack,
+				       log.x.sack.oldcumack,
+				       (int)log.x.sack.numDups,
+				       (int)log.x.sack.numGaps
+					);
+			} else if(log.from == SCTP_LOG_FREE_SENT) {
+				printf("%s - cum-ack:%x freeing TSN:%x\n",
+				       from_str[log.from],
+				       log.x.sack.cumack,
+				       log.x.sack.tsn
+					);
+			} else {
+				printf("%s - cum-ack:%x biggestTSNAcked:%x TSN:%x dups:%d gaps:%d\n", 
+				       from_str[log.from],
+				       log.x.sack.cumack,
+				       log.x.sack.oldcumack,
+				       log.x.sack.tsn,
+				       (int)log.x.sack.numDups,
+				       (int)log.x.sack.numGaps
+					);
 
-		  }
+			}
 		}else if(log.event_type == SCTP_LOG_EVENT_MBCNT) {
 			if(log.from == SCTP_LOG_MBCNT_INCREASE) {
 				printf("%s - tqs(%d + %d) = %d mb_tqs(%d + %d) = %d\n",
@@ -296,34 +341,43 @@ main(int argc, char **argv)
 				       log.x.rwnd.overhead,
 				       log.x.rwnd.new_rwnd,
 				       (log.x.rwnd.new_rwnd - (log.x.rwnd.send_size + log.x.rwnd.overhead))
-				       );
+					);
 			} else {
 				printf("Unknown RWND event\n");
 			}
 		}else if(log.event_type == SCTP_LOG_EVENT_MAXBURST) {
 			if(log.from == SCTP_MAX_BURST_ERROR_STOP) {
-				printf("%d: Network:%x Flight:%d burst cnt:%d - send error:%d %s\n",
-				       at,
+				printf("%u: Network:%x Flight:%d burst cnt:%d - send error:%d %s (sendcnt:%d strcnt:%d)\n",
+				       (u_int)log.time_event,
 				       (u_int)log.x.cwnd.net,
 				       (int)log.x.cwnd.inflight,
 				       (int)log.x.cwnd.cwnd_augment,
 				       (int)log.x.cwnd.cwnd_new_value,
-				       from_str[log.from]);
+				       from_str[log.from],
+				       (int)log.x.cwnd.cnt_in_send,
+				       (int)log.x.cwnd.cnt_in_str
+					);
 			} else if (log.from == SCTP_MAX_BURST_APPLIED) {
-				printf("%d: Network:%x Flight:%d burst cnt:%d %s\n",
-				       at,
+				printf("%u: Network:%x Flight:%d burst cnt:%d %s (sendcnt:%d strcnt:%d)\n",
+				       (u_int)log.time_event,
 				       (u_int)log.x.cwnd.net,
 				       (int)log.x.cwnd.inflight,
 				       (int)log.x.cwnd.cwnd_augment,
-				       from_str[log.from]);
+				       from_str[log.from],
+				       (int)log.x.cwnd.cnt_in_send,
+				       (int)log.x.cwnd.cnt_in_str
+					);
 			} else if (log.from == SCTP_MAX_IFP_APPLIED) {
-				printf("%d: Network:%x Flight:%d ifp_send_qsize: %d ifp_send_qlimit:%d %s\n",
-				       at,
+				printf("%u: Network:%x Flight:%d ifp_send_qsize: %d ifp_send_qlimit:%d %s (sendcnt:%d strcnt:%d)\n",
+				       (u_int)log.time_event,
 				       (u_int)log.x.cwnd.net,
 				       (int)log.x.cwnd.inflight,
 				       (int)log.x.cwnd.cwnd_new_value,
 				       (int)log.x.cwnd.cwnd_augment,
-				       from_str[log.from]);
+				       from_str[log.from],
+				       (int)log.x.cwnd.cnt_in_send,
+				       (int)log.x.cwnd.cnt_in_str
+					);
 			}
 
 		}else if(log.event_type == SCTP_LOG_EVENT_BLOCK) {
@@ -337,25 +391,25 @@ main(int argc, char **argv)
 			       log.x.blk.stream_qcnt,
 			       from_str[log.from]);
 		}else if(log.event_type == SCTP_LOG_EVENT_STRM) {
-			   if((log.from == SCTP_STR_LOG_FROM_INSERT_MD) ||
-			      (log.from == SCTP_STR_LOG_FROM_INSERT_TL)) {
-				   /* have both the new entry and 
-				    * the previous entry to print.
-				    */
-				   printf("%s: tsn=%x sseq=%u %s tsn=%x sseq=%u\n",
-					  from_str[log.from],
-					  (u_int)log.x.strlog.n_tsn,
-					  log.x.strlog.n_sseq,
-					  ((log.from == SCTP_STR_LOG_FROM_INSERT_MD) ? "Before" : "After"),
-					  (u_int)log.x.strlog.e_tsn,
-					  log.x.strlog.e_sseq
-					   );
-			   }else {
-				   printf("%s: tsn=%x sseq=%x\n",
-					  from_str[log.from],
-					  (u_int)log.x.strlog.n_tsn,
-					  (u_int)log.x.strlog.n_sseq);
-			   }
+			if((log.from == SCTP_STR_LOG_FROM_INSERT_MD) ||
+			   (log.from == SCTP_STR_LOG_FROM_INSERT_TL)) {
+				/* have both the new entry and 
+				 * the previous entry to print.
+				 */
+				printf("%s: tsn=%x sseq=%u %s tsn=%x sseq=%u\n",
+				       from_str[log.from],
+				       (u_int)log.x.strlog.n_tsn,
+				       log.x.strlog.n_sseq,
+				       ((log.from == SCTP_STR_LOG_FROM_INSERT_MD) ? "Before" : "After"),
+				       (u_int)log.x.strlog.e_tsn,
+				       log.x.strlog.e_sseq
+					);
+			}else {
+				printf("%s: tsn=%x sseq=%x\n",
+				       from_str[log.from],
+				       (u_int)log.x.strlog.n_tsn,
+				       (u_int)log.x.strlog.n_sseq);
+			}
 
 		} else if(log.event_type == SCTP_LOG_EVENT_FR) {
 			if(log.from == SCTP_FR_LOG_BIGGEST_TSNS) {
