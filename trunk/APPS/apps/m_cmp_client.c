@@ -494,7 +494,7 @@ measure_one(struct control_info *req,
 
 #ifndef WIN32
     iov[0].iov_base = buffer;
-    iov[0].iov_len = /*sizeof(buffer)*/ 1;
+    iov[0].iov_len = sizeof(buffer);
     iov[1].iov_base = NULL;
     iov[1].iov_len = 0;
     msg.msg_name = (caddr_t)&from;
