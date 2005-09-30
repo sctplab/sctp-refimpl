@@ -429,7 +429,8 @@ struct sctp_cwnd_args {
 	int cwnd_augment;		/* increment to it */
 	u_int8_t meets_pseudo_cumack;
 	u_int8_t need_new_pseudo_cumack;
-	u_int16_t resv;
+	u_int8_t cnt_in_send;
+	u_int8_t cnt_in_str;
 };
 
 struct sctp_blk_args {
