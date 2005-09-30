@@ -2876,7 +2876,7 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 							    printf("CMT: pcumack recd for dest %p: %u\n", tp1->whoTo, (u_int)tp1->whoTo->pseudo_cumack);
 							}
 #ifdef SCTP_CWND_LOGGING
-							sctp_log_cwnd(tp1->whoTo, tp1->rec.data.TSN_seq, SCTP_CWND_LOG_FROM_SACK);
+							sctp_log_cwnd(stcb, tp1->whoTo, tp1->rec.data.TSN_seq, SCTP_CWND_LOG_FROM_SACK);
 #endif
 							if (tp1->rec.data.TSN_seq == tp1->whoTo->rtx_pseudo_cumack) {
 							  tp1->whoTo->new_pseudo_cumack = 1;
@@ -3572,13 +3572,13 @@ sctp_hs_cwnd_increase(struct sctp_nets *net)
 		/* normal mode */
 		if (net->net_ack > net->mtu) {
 			net->cwnd += net->mtu;
-#ifdef SCTP_CWND_LOGGING
-			sctp_log_cwnd(net, net->mtu, SCTP_CWND_LOG_FROM_SS);
+#ifdef SCTP_CWND_MONITOR
+			sctp_log_cwnd(stcb, net, net->mtu, SCTP_CWND_LOG_FROM_SS);
 #endif
 		} else {
 			net->cwnd += net->net_ack;
-#ifdef SCTP_CWND_LOGGING
-			sctp_log_cwnd(net, net->net_ack, SCTP_CWND_LOG_FROM_SS);
+#ifdef SCTP_CWND_MONITOR
+			sctp_log_cwnd(stcb, net, net->net_ack, SCTP_CWND_LOG_FROM_SS);
 #endif
 		}
 	} else {
@@ -3591,8 +3591,8 @@ sctp_hs_cwnd_increase(struct sctp_nets *net)
 		net->last_hs_used = indx;
 		incr = ((sctp_cwnd_adjust[indx].increase) << 10);
 		net->cwnd += incr;
-#ifdef SCTP_CWND_LOGGING
-		sctp_log_cwnd(net, incr, SCTP_CWND_LOG_FROM_SS);
+#ifdef SCTP_CWND_MONITOR
+		sctp_log_cwnd(stcb, net, incr, SCTP_CWND_LOG_FROM_SS);
 #endif
 	}
 }
@@ -3601,7 +3601,7 @@ static void
 sctp_hs_cwnd_decrease(struct sctp_nets *net)
 {
  	int cur_val, i, indx;
-#ifdef SCTP_CWND_LOGGING
+#ifdef SCTP_CWND_MONITOR
 	int old_cwnd = net->cwnd;
 #endif
 
@@ -3635,8 +3635,8 @@ sctp_hs_cwnd_decrease(struct sctp_nets *net)
 			net->last_hs_used = indx;
 		}
 	}
-#ifdef SCTP_CWND_LOGGING
-	sctp_log_cwnd(net, (net->cwnd-old_cwnd), SCTP_CWND_LOG_FROM_FR);
+#ifdef SCTP_CWND_MONITOR
+	sctp_log_cwnd(stcb, net, (net->cwnd-old_cwnd), SCTP_CWND_LOG_FROM_FR);
 #endif
 
 }
@@ -3951,7 +3951,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 						      SCTP_LOG_TSN_ACKED);
 #endif
 #ifdef SCTP_CWND_LOGGING
-					sctp_log_cwnd(tp1->whoTo, tp1->rec.data.TSN_seq, SCTP_CWND_LOG_FROM_SACK);
+					sctp_log_cwnd(stcb, tp1->whoTo, tp1->rec.data.TSN_seq, SCTP_CWND_LOG_FROM_SACK);
 #endif
 				}
 				if (tp1->sent == SCTP_DATAGRAM_RESEND) {
@@ -4235,15 +4235,15 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 #else
 					if (net->net_ack > net->mtu) {
 						net->cwnd += net->mtu;
-#ifdef SCTP_CWND_LOGGING
-						sctp_log_cwnd(net, net->mtu,
+#ifdef SCTP_CWND_MONITOR
+						sctp_log_cwnd(stcb, net, net->mtu,
 							      SCTP_CWND_LOG_FROM_SS);
 #endif
 
 					} else {
 						net->cwnd += net->net_ack;
-#ifdef SCTP_CWND_LOGGING
-						sctp_log_cwnd(net, net->net_ack,
+#ifdef SCTP_CWND_MONITOR
+						sctp_log_cwnd(stcb, net, net->net_ack,
 							      SCTP_CWND_LOG_FROM_SS);
 #endif
 
@@ -4256,7 +4256,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 					dif = net->cwnd - (net->flight_size +
 							   net->net_ack);
 #ifdef SCTP_CWND_LOGGING
-					  sctp_log_cwnd(net, net->net_ack,
+					  sctp_log_cwnd(stcb, net, net->net_ack,
 							SCTP_CWND_LOG_NOADV_SS);
 #endif
 					if (dif > sctp_pegs[SCTP_CWND_DIFF_SA]) {
@@ -4299,8 +4299,8 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 								0;
 						}
 						net->cwnd += net->mtu;
-#ifdef SCTP_CWND_LOGGING
-						sctp_log_cwnd(net, net->mtu,
+#ifdef SCTP_CWND_MONITOR
+						sctp_log_cwnd(stcb, net, net->mtu,
 							      SCTP_CWND_LOG_FROM_CA);
 #endif
 						sctp_pegs[SCTP_CWND_CA]++;
@@ -4309,7 +4309,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 					unsigned int dif;
 					sctp_pegs[SCTP_CWND_NOUSE_CA]++;
 #ifdef SCTP_CWND_LOGGING
-					sctp_log_cwnd(net, net->net_ack,
+					sctp_log_cwnd(stcb, net, net->net_ack,
 						      SCTP_CWND_LOG_NOADV_CA);
 #endif
 					dif = net->cwnd - (net->flight_size +
@@ -4332,7 +4332,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 			}
 		} else {
 #ifdef SCTP_CWND_LOGGING
-			sctp_log_cwnd(net, net->mtu,
+			sctp_log_cwnd(stcb, net, net->mtu,
 				      SCTP_CWND_LOG_NO_CUMACK);
 #endif
 			sctp_pegs[SCTP_CWND_NOCUM]++;
@@ -4490,7 +4490,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 #ifdef  SCTP_HIGH_SPEED
 				sctp_hs_cwnd_decrease(net);
 #else
-#ifdef SCTP_CWND_LOGGING
+#ifdef SCTP_CWND_MONITOR
 				int old_cwnd = net->cwnd;
 #endif
 				net->ssthresh = net->cwnd / 2;
@@ -4498,8 +4498,8 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 					net->ssthresh = 2 * net->mtu;
 				}
 				net->cwnd = net->ssthresh;
-#ifdef SCTP_CWND_LOGGING
-				sctp_log_cwnd(net, (net->cwnd-old_cwnd),
+#ifdef SCTP_CWND_MONITOR
+				sctp_log_cwnd(stcb, net, (net->cwnd-old_cwnd),
 					      SCTP_CWND_LOG_FROM_FR);
 #endif
 #endif

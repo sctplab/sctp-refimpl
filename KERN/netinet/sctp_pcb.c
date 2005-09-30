@@ -2981,8 +2981,8 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 		net->cwnd = 2 * net->mtu;
 	}
 	net->ssthresh = stcb->asoc.peers_rwnd;
-#ifdef SCTP_CWND_LOGGING
-	sctp_log_cwnd(net, 0, SCTP_CWND_INITIALIZATION);
+#if defined(SCTP_CWND_MONITOR) || defined(SCTP_CWND_LOGGING)
+	sctp_log_cwnd(stcb, net, 0, SCTP_CWND_INITIALIZATION);
 #endif
 
 	/* CMT: CUC algo - set find_pseudo_cumack to TRUE (1) at beginning of assoc

@@ -221,8 +221,8 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 		/* update any ssthresh's that may have a default */
 		TAILQ_FOREACH(lnet, &asoc->nets, sctp_next) {
 			lnet->ssthresh = asoc->peers_rwnd;
-#ifdef SCTP_CWND_LOGGING
-			sctp_log_cwnd(lnet, 0, SCTP_CWND_INITIALIZATION);
+#if defined(SCTP_CWND_MONITOR) || defined(SCTP_CWND_LOGGING)
+			sctp_log_cwnd(stcb, lnet, 0, SCTP_CWND_INITIALIZATION);
 #endif
 
 		}
@@ -2336,10 +2336,8 @@ sctp_handle_ecn_echo(struct sctp_ecne_chunk *cp,
 		net = stcb->asoc.primary_destination;
 
 	if (compare_with_wrap(tsn, stcb->asoc.last_cwr_tsn, MAX_TSN)) {
-#ifdef SCTP_CWND_LOGGING
+#ifdef SCTP_CWND_MONITOR
 		int old_cwnd;
-#endif
-#ifdef SCTP_CWND_LOGGING
 		old_cwnd = net->cwnd;
 #endif
 		sctp_pegs[SCTP_CWR_PERFO]++;
@@ -2350,8 +2348,8 @@ sctp_handle_ecn_echo(struct sctp_ecne_chunk *cp,
 			net->RTO <<= 2;
 		}
 		net->cwnd = net->ssthresh;
-#ifdef SCTP_CWND_LOGGING
-		sctp_log_cwnd(net, (net->cwnd-old_cwnd), SCTP_CWND_LOG_FROM_SAT);
+#ifdef SCTP_CWND_MONITOR
+		sctp_log_cwnd(stcb, net, (net->cwnd-old_cwnd), SCTP_CWND_LOG_FROM_SAT);
 #endif
 		/* we reduce once every RTT. So we will only lower
 		 * cwnd at the next sending seq i.e. the resync_tsn.
@@ -3333,7 +3331,7 @@ sctp_handle_packet_dropped(struct sctp_pktdrop_chunk *cp,
 		 */
 		u_int32_t bw_avail;
 		int rtt, incr;
-#ifdef SCTP_CWND_LOGGING
+#ifdef SCTP_CWND_MONITOR
 		int old_cwnd=net->cwnd;
 #endif
 		/* need real RTT for this calc */
@@ -3429,10 +3427,10 @@ sctp_handle_packet_dropped(struct sctp_pktdrop_chunk *cp,
 			/* We always have 1 MTU */
 			net->cwnd = net->mtu;
 		}
-#ifdef SCTP_CWND_LOGGING
+#ifdef SCTP_CWND_MONITOR
 		if (net->cwnd - old_cwnd != 0) {
 			/* log only changes */
-			sctp_log_cwnd(net, (net->cwnd - old_cwnd),
+			sctp_log_cwnd(stcb, net, (net->cwnd - old_cwnd),
 			    SCTP_CWND_LOG_FROM_SAT);
 		}
 #endif

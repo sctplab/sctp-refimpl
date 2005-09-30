@@ -5461,7 +5461,7 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
 		if(moved_how_much) {
 			stcb->asoc.last_net_data_came_from = chk->whoTo;
 #ifdef SCTP_CWND_LOGGING
-			sctp_log_cwnd(net, moved_how_much, SCTP_CWND_LOG_FILL_OUTQ_FILLS);
+			sctp_log_cwnd(stcb, net, moved_how_much, SCTP_CWND_LOG_FILL_OUTQ_FILLS);
 #endif
 		}
 		cnt_mvd++;
@@ -5612,6 +5612,9 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 			/* for CMT we start at the next one
 			 * past the one we last added data to.
 			 */
+			if(TAILQ_FIRST(&asoc->send_queue) != NULL) {
+				goto skip_the_fill_from_streams;
+			}
 			if(asoc->last_net_data_came_from) {
 				net = TAILQ_NEXT(asoc->last_net_data_came_from, sctp_next);
 				if(net == NULL) {
@@ -5669,7 +5672,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 			 * assign TSN's as appropriate.
 			 */
 #ifdef SCTP_CWND_LOGGING
-			sctp_log_cwnd(net, 0, SCTP_CWND_LOG_FILL_OUTQ_CALLED);
+			sctp_log_cwnd(stcb, net, 0, SCTP_CWND_LOG_FILL_OUTQ_CALLED);
 #endif
 			sctp_fill_outqueue(stcb, net);
 		}
@@ -5680,6 +5683,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 			goto one_more_time;
 		}
 	}
+ skip_the_fill_from_streams:
 	*cwnd_full = cwnd_full_ind;
 	/* now service each destination and send out what we can for it */
 #ifdef SCTP_DEBUG
@@ -5760,7 +5764,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 			if ((ifp->if_snd.ifq_len + 2) >= ifp->if_snd.ifq_maxlen) {
 				sctp_pegs[SCTP_IFP_QUEUE_FULL]++;
 #ifdef SCTP_LOG_MAXBURST
-				sctp_log_maxburst(net, ifp->if_snd.ifq_len, ifp->if_snd.ifq_maxlen, SCTP_MAX_IFP_APPLIED);
+				sctp_log_maxburst(stcb, net, ifp->if_snd.ifq_len, ifp->if_snd.ifq_maxlen, SCTP_MAX_IFP_APPLIED);
 #endif
 				continue;
 			}
@@ -6250,6 +6254,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 #ifdef SCTP_DEBUG
 					if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
 						printf("Calling the movement routine\n");
+
 					}
 #endif
 					sctp_move_to_an_alt(stcb, asoc, net);
@@ -6307,18 +6312,20 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 			}
 		}
 #ifdef SCTP_CWND_LOGGING
-		if(tsns_sent) 
-			sctp_log_cwnd(net, tsns_sent, SCTP_CWND_LOG_FROM_SEND);
+		sctp_log_cwnd(stcb, net, tsns_sent, SCTP_CWND_LOG_FROM_SEND);
 #endif
 	}
 	if(old_startat == NULL) {
 		old_startat = send_start_at;
-		net = TAILQ_FIRST(&asoc->nets);
+		send_start_at = TAILQ_FIRST(&asoc->nets);
 		goto again_one_more_time;
 	}
 	/* At the end there should be no NON timed
 	 * chunks hanging on this queue.
 	 */
+#ifdef SCTP_CWND_LOGGING
+	sctp_log_cwnd(stcb, net, *num_out, SCTP_CWND_LOG_FROM_SEND);
+#endif
 	if ((*num_out == 0) && (*reason_code == 0)) {
 		*reason_code = 3;
 	}
@@ -7184,7 +7191,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 				}
 			}
 #ifdef SCTP_CWND_LOGGING
-			sctp_log_cwnd(net, tsns_sent, SCTP_CWND_LOG_FROM_RESEND);
+			sctp_log_cwnd(stcb, net, tsns_sent, SCTP_CWND_LOG_FROM_RESEND);
 #endif
 #ifdef SCTP_AUDITING_ENABLED
 			sctp_auditing(21, inp, stcb, NULL);
@@ -7371,12 +7378,12 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 					old_cwnd = net->cwnd;
 					net->cwnd = (net->flight_size+(burst_limit*net->mtu));
 
-#ifdef SCTP_CWND_LOGGING
-					sctp_log_cwnd(net,(net->cwnd - old_cwnd) , SCTP_CWND_LOG_FROM_BRST);
+#ifdef SCTP_CWND_MONITOR
+					sctp_log_cwnd(stcb, net,(net->cwnd - old_cwnd) , SCTP_CWND_LOG_FROM_BRST);
 #endif
 
 #ifdef SCTP_LOG_MAXBURST
-					sctp_log_maxburst(net, 0, burst_limit, SCTP_MAX_BURST_APPLIED);
+					sctp_log_maxburst(stcb, net, 0, burst_limit, SCTP_MAX_BURST_APPLIED);
 #endif
 					sctp_pegs[SCTP_MAX_BURST_APL]++;
 				}
@@ -7409,8 +7416,13 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 			}
 #endif
 #ifdef SCTP_LOG_MAXBURST
-			sctp_log_maxburst(asoc->primary_destination, error , burst_cnt, SCTP_MAX_BURST_ERROR_STOP);
+			sctp_log_maxburst(stcb, asoc->primary_destination, error , burst_cnt, SCTP_MAX_BURST_ERROR_STOP);
 #endif
+#ifdef SCTP_CWND_LOGGING
+			sctp_log_cwnd(stcb, NULL, error, SCTP_SEND_NOW_COMPLETES);
+			sctp_log_cwnd(stcb, NULL, 0xdeadbeef, SCTP_SEND_NOW_COMPLETES);
+#endif
+
 			break;
 		}
 #ifdef SCTP_DEBUG
@@ -7420,6 +7432,12 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 #endif
 		tot_out += num_out;
 		burst_cnt++;
+#ifdef SCTP_CWND_LOGGING
+		sctp_log_cwnd(stcb, NULL, num_out, SCTP_SEND_NOW_COMPLETES);
+		if(num_out == 0) {
+			sctp_log_cwnd(stcb, NULL, reason_code, SCTP_SEND_NOW_COMPLETES);
+		}
+#endif
 	} while (num_out && (sctp_use_cwnd_based_maxburst  || 
 			     (burst_cnt < burst_limit)));
 
@@ -7428,14 +7446,14 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 			sctp_pegs[SCTP_MAX_BURST_APL]++;
 			asoc->burst_limit_applied = 1;
 #ifdef SCTP_LOG_MAXBURST
-			sctp_log_maxburst(asoc->primary_destination, 0 , burst_cnt, SCTP_MAX_BURST_APPLIED);
+			sctp_log_maxburst(stcb, asoc->primary_destination, 0 , burst_cnt, SCTP_MAX_BURST_APPLIED);
 #endif
 		} else {
 			asoc->burst_limit_applied = 0;
 		}
 	}
 #ifdef SCTP_CWND_LOGGING
-	sctp_log_cwnd(NULL, tot_out, SCTP_SEND_NOW_COMPLETES);
+	sctp_log_cwnd(stcb, NULL, tot_out, SCTP_SEND_NOW_COMPLETES);
 #endif
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {

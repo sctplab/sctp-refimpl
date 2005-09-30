@@ -204,24 +204,23 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 		}
 	}
 	if(cnt) {
-#ifdef SCTP_CWND_LOGGING
+#ifdef SCTP_CWND_MONITOR
 		int old_cwnd;
+		old_cwnd = net->cwnd;
 #endif
 		sctp_chunk_output(inp, stcb, 9);
 		/* make a small adjustment to cwnd and
 		 * force to CA.
 		 */
-#ifdef SCTP_CWND_LOGGING
-		old_cwnd = net->cwnd;
-#endif
+
 		if(net->cwnd > net->mtu)
 			/* drop down one MTU after sending */
 			net->cwnd -= net->mtu;
 		if(net->cwnd < net->ssthresh) 
 			/* still in SS move to CA */
 			net->ssthresh = net->cwnd - 1;
-#ifdef SCTP_CWND_LOGGING
-		sctp_log_cwnd(net,(old_cwnd-net->cwnd) , SCTP_CWND_LOG_FROM_FR);
+#ifdef SCTP_CWND_MONITOR
+		sctp_log_cwnd(stcb, net,(old_cwnd-net->cwnd) , SCTP_CWND_LOG_FROM_FR);
 #endif
 	} else if (cnt_resend) {
 		sctp_chunk_output(inp, stcb, 9);
@@ -497,7 +496,7 @@ sctp_backoff_on_timeout(struct sctp_tcb *stcb,
 
 	if ((win_probe == 0) && num_marked) {
 		/* We don't apply penalty to window probe scenarios */
-#ifdef SCTP_CWND_LOGGING
+#ifdef SCTP_CWND_MONITOR
 		int old_cwnd=net->cwnd;
 #endif
 		net->ssthresh = net->cwnd >> 1;
@@ -508,8 +507,8 @@ sctp_backoff_on_timeout(struct sctp_tcb *stcb,
 		/* floor of 1 mtu */
 		if (net->cwnd < net->mtu)
 			net->cwnd = net->mtu;
-#ifdef SCTP_CWND_LOGGING
-		sctp_log_cwnd(net, net->cwnd-old_cwnd, SCTP_CWND_LOG_FROM_RTX);
+#ifdef SCTP_CWND_MONITOR
+		sctp_log_cwnd(stcb, net, net->cwnd-old_cwnd, SCTP_CWND_LOG_FROM_RTX);
 #endif
 
 		net->partial_bytes_acked = 0;
@@ -934,9 +933,9 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 		struct sctp_nets *lnet;
 		TAILQ_FOREACH(lnet, &stcb->asoc.nets, sctp_next) {
 			if(net == lnet) {
-				sctp_log_cwnd(lnet, 1, SCTP_CWND_LOG_FROM_T3);
+				sctp_log_cwnd(stcb, lnet, 1, SCTP_CWND_LOG_FROM_T3);
 			} else {
-				sctp_log_cwnd(lnet, 0, SCTP_CWND_LOG_FROM_T3);
+				sctp_log_cwnd(stcb, lnet, 0, SCTP_CWND_LOG_FROM_T3);
 			}
 		}
 	}
@@ -1059,8 +1058,8 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 			}
 		}
 	}
-#ifdef SCTP_CWND_LOGGING
-	sctp_log_cwnd(net, net->cwnd, SCTP_CWND_LOG_FROM_RTX);
+#ifdef SCTP_CWND_MONITOR
+	sctp_log_cwnd(stcb, net, net->cwnd, SCTP_CWND_LOG_FROM_RTX);
 #endif
 	return (0);
 }

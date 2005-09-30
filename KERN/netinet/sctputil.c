@@ -310,21 +310,27 @@ sctp_log_strm_del(struct sctp_tmit_chunk *chk, struct sctp_tmit_chunk *poschk,
 }
 
 void
-sctp_log_cwnd(struct sctp_nets *net, int augment, uint8_t from)
+sctp_log_cwnd(struct sctp_tcb *stcb, struct sctp_nets *net, int augment, uint8_t from)
 {
-	if ((from == SCTP_CWND_LOG_FROM_BRST) ||
-	    (from == SCTP_CWND_LOG_FROM_SACK)) {
-		struct timeval now;
-		u_int32_t timeval;
-		SCTP_GETTIME_TIMEVAL(&now);
-		timeval = (now.tv_sec % 0x00000fff);
-		timeval <<= 20;
-		timeval |= now.tv_usec & 0xfffff;
-		sctp_clog[sctp_cwnd_log_at].time_event = timeval;
-	}
+	struct timeval now;
+	u_int32_t timeval;
+	SCTP_GETTIME_TIMEVAL(&now);
+	timeval = (now.tv_sec % 0x00000fff);
+	timeval <<= 20;
+	timeval |= now.tv_usec & 0xfffff;
+	sctp_clog[sctp_cwnd_log_at].time_event = timeval;
 	sctp_clog[sctp_cwnd_log_at].from = (u_int8_t)from;
 	sctp_clog[sctp_cwnd_log_at].event_type = (u_int8_t)SCTP_LOG_EVENT_CWND;
 	sctp_clog[sctp_cwnd_log_at].x.cwnd.net = net;
+	if(stcb->asoc.send_queue_cnt > 255)
+		sctp_clog[sctp_cwnd_log_at].x.cwnd.cnt_in_send = 255;
+	else
+		sctp_clog[sctp_cwnd_log_at].x.cwnd.cnt_in_send = stcb->asoc.send_queue_cnt;
+	if(stcb->asoc.stream_queue_cnt > 255)
+		sctp_clog[sctp_cwnd_log_at].x.cwnd.cnt_in_str = 255;
+	else
+		sctp_clog[sctp_cwnd_log_at].x.cwnd.cnt_in_str = stcb->asoc.stream_queue_cnt;
+
 	if(net) {
 		sctp_clog[sctp_cwnd_log_at].x.cwnd.cwnd_new_value = net->cwnd;
 		sctp_clog[sctp_cwnd_log_at].x.cwnd.inflight = net->flight_size;
@@ -381,14 +387,30 @@ sctp_log_lock(struct sctp_inpcb *inp, struct sctp_tcb *stcb, uint8_t from)
 }
 
 void
-sctp_log_maxburst(struct sctp_nets *net, int error, int burst, uint8_t from)
+sctp_log_maxburst(struct sctp_tcb *stcb, struct sctp_nets *net, int error, int burst, uint8_t from)
 {
+	struct timeval now;
+	u_int32_t timeval;
+	SCTP_GETTIME_TIMEVAL(&now);
+	timeval = (now.tv_sec % 0x00000fff);
+	timeval <<= 20;
+	timeval |= now.tv_usec & 0xfffff;
+	sctp_clog[sctp_cwnd_log_at].time_event = timeval;
 	sctp_clog[sctp_cwnd_log_at].from = (u_int8_t)from;
 	sctp_clog[sctp_cwnd_log_at].event_type = (u_int8_t)SCTP_LOG_EVENT_MAXBURST;
 	sctp_clog[sctp_cwnd_log_at].x.cwnd.net = net;
 	sctp_clog[sctp_cwnd_log_at].x.cwnd.cwnd_new_value = error;
 	sctp_clog[sctp_cwnd_log_at].x.cwnd.inflight = net->flight_size;
 	sctp_clog[sctp_cwnd_log_at].x.cwnd.cwnd_augment = burst;
+	if(stcb->asoc.send_queue_cnt > 255)
+		sctp_clog[sctp_cwnd_log_at].x.cwnd.cnt_in_send = 255;
+	else
+		sctp_clog[sctp_cwnd_log_at].x.cwnd.cnt_in_send = stcb->asoc.send_queue_cnt;
+	if(stcb->asoc.stream_queue_cnt > 255)
+		sctp_clog[sctp_cwnd_log_at].x.cwnd.cnt_in_str = 255;
+	else
+		sctp_clog[sctp_cwnd_log_at].x.cwnd.cnt_in_str = stcb->asoc.stream_queue_cnt;
+
 	sctp_cwnd_log_at++;
 	if (sctp_cwnd_log_at >= SCTP_STAT_LOG_SIZE) {
 		sctp_cwnd_log_at = 0;
