@@ -2836,6 +2836,7 @@ sctp_handle_stream_reset_response(struct sctp_tcb *stcb,
 		srparam = sctp_find_stream_reset(stcb, seq, &chk);
 		if(srparam) {
 			stcb->asoc.str_reset_seq_out++;
+			printf("asoc.str_reset_seq_out now %x\n", stcb->asoc.str_reset_seq_out);
 			type = ntohs(srparam->ph.param_type);
 			lparm_len = ntohs(srparam->ph.param_length);
 			number_entries = (lparm_len - sizeof(struct sctp_stream_reset_out_request))/sizeof(uint16_t);
@@ -2945,6 +2946,7 @@ sctp_handle_str_reset_request_in(struct sctp_tcb *stcb,
 			asoc->last_reset_action[0] = SCTP_STREAM_RESET_TRY_LATER;
 			sctp_add_stream_reset_result(chk, seq, asoc->last_reset_action[0]);
 		}
+		asoc->str_reset_seq_in++;
 	} else if (asoc->str_reset_seq_in-1 == seq) {
 		sctp_add_stream_reset_result(chk, seq, asoc->last_reset_action[0]);
 	} else if (asoc->str_reset_seq_in-2 == seq) {
@@ -3000,6 +3002,7 @@ sctp_handle_str_reset_request_tsn(struct sctp_tcb *stcb,
 		sctp_reset_in_stream(stcb, 0, (u_int16_t *)NULL);
 		stcb->asoc.last_reset_action[1] = stcb->asoc.last_reset_action[0];
 		stcb->asoc.last_reset_action[0] = SCTP_STREAM_RESET_PERFORMED;
+		asoc->str_reset_seq_in++;
 	} else if (asoc->str_reset_seq_in-1 == seq) {
 		sctp_add_stream_reset_result(chk, seq, asoc->last_reset_action[0]);
 	} else if (asoc->str_reset_seq_in-2 == seq) {
@@ -3021,8 +3024,7 @@ sctp_handle_str_reset_request_out(struct sctp_tcb *stcb,
 				  struct sctp_stream_reset_out_request *req)
 {
 	uint32_t seq, tsn;
-	int number_entries,len, i;
-	u_int16_t temp;
+	int number_entries,len;
 	struct sctp_association *asoc = &stcb->asoc;
 	seq = ntohl(req->request_seq);
 
@@ -3030,10 +3032,6 @@ sctp_handle_str_reset_request_out(struct sctp_tcb *stcb,
 	if (asoc->str_reset_seq_in == seq){
 		len = ntohs(req->ph.param_length);
 		number_entries = ((len - sizeof(struct sctp_stream_reset_out_request))/sizeof(uint16_t));
-		for(i=0;i<number_entries;i++) {
-			temp = ntohs(req->list_of_streams[i]);
-			req->list_of_streams[i] = temp;
-		}
 		/* the sender is resetting, handle the
 		 * list issue.. we must
 		 * a) verify if we can do the reset, if so no problem
