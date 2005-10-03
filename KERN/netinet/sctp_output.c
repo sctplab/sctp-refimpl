@@ -5206,8 +5206,12 @@ sctp_clean_up_ctl(struct sctp_association *asoc)
 			SCTP_DECR_CHK_COUNT();
 		} else if (chk->rec.chunk_id == SCTP_STREAM_RESET) {
 			/* special handling, we must look into the param */
-			if(chk != asoc->str_reset)
+			if(chk != asoc->str_reset) {
+				printf("my chunk is %x str-reset to save is %x,  clean it up\n",
+				       (u_int)chk,
+				       (u_int)asoc->str_reset);
 				goto clean_up_anyway;
+			}
 
 		}
 	}
@@ -9336,7 +9340,6 @@ sctp_send_str_reset_req(struct sctp_tcb *stcb,
 		SCTP_DECR_CHK_COUNT();
 		return (ENOMEM);
 	}
-	chk->data->m_pkthdr.len = chk->data->m_len = SCTP_SIZE32(chk->send_size);
 	/* Get a cluster, always */
 	MCLGET(chk->data, M_DONTWAIT);
 	if ((chk->data->m_flags & M_EXT) == 0) {
@@ -9357,10 +9360,13 @@ sctp_send_str_reset_req(struct sctp_tcb *stcb,
 	ch->chunk_type = SCTP_STREAM_RESET;
 	ch->chunk_flags = 0;
 	ch->chunk_length = htons(chk->send_size);
-	seq = stcb->asoc.str_reset_sending_seq;
+	chk->data->m_pkthdr.len = chk->data->m_len = SCTP_SIZE32(chk->send_size);
+
+	seq = stcb->asoc.str_reset_seq_out;
 	if(send_out_req) {
 		sctp_add_stream_reset_out(chk, number_entries, list,
 					  seq, resp_seq, (stcb->asoc.sending_seq-1));
+		asoc->stream_reset_out_is_outstanding = 1;
 		seq++;
 		asoc->stream_reset_outstanding++;
 	}
@@ -9373,6 +9379,7 @@ sctp_send_str_reset_req(struct sctp_tcb *stcb,
 		asoc->stream_reset_outstanding++;
 	}
 	asoc->str_reset = chk;
+
 	/* insert the chunk for sending */
 	TAILQ_INSERT_TAIL(&asoc->control_send_queue,
 			  chk,

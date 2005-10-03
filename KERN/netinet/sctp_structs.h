@@ -449,7 +449,7 @@ struct sctp_association {
 
 	/* next seq I am expecting in str reset messages */
 	u_int32_t str_reset_seq_in;
-	u_int32_t str_reset_sending_seq;
+
 
 	/* various verification tag information */
 	u_int32_t my_vtag;	/*
@@ -706,6 +706,7 @@ struct sctp_association {
         u_int8_t dropped_special_cnt;
 	u_int8_t seen_a_sack_this_pkt;
 	u_int8_t stream_reset_outstanding;
+	u_int8_t stream_reset_out_is_outstanding;
 	u_int8_t delayed_connection;
 	u_int8_t ifp_had_enobuf;
 	u_int8_t saw_sack_with_frags;

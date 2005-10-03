@@ -2751,11 +2751,20 @@ sctp_find_stream_reset(struct sctp_tcb *stcb, u_int32_t seq, struct sctp_tmit_ch
 	int len,clen;
 
 	asoc = &stcb->asoc;
-	chk = TAILQ_FIRST(&asoc->control_send_queue);
+	if(TAILQ_EMPTY(&stcb->asoc.control_send_queue)) {
+		printf("Huh, find-strm-reset and nothing on control queue\n");
+		return(NULL);
+	}
+
 	if(stcb->asoc.str_reset == NULL) {
+		printf("Huh, find-strm-reset and asoc.str_reset not set\n");
 		return(NULL);
 	}
 	chk = stcb->asoc.str_reset;
+	if(chk->data == NULL) {
+		printf("Huh, stream reset's data is free?\n");
+		return(NULL);
+	}
 	if(bchk) {
 		/* he wants a copy of the chk pointer */
 		*bchk = chk;
@@ -2784,12 +2793,13 @@ sctp_clean_up_stream_reset(struct sctp_tcb *stcb)
 {
 	struct sctp_association *asoc;
 	asoc = &stcb->asoc;
-	struct sctp_tmit_chunk *chk = stcb->asoc.str_reset;;
-	sctp_timer_stop(SCTP_TIMER_TYPE_STRRESET, stcb->sctp_ep, stcb, chk->whoTo);
+	struct sctp_tmit_chunk *chk = stcb->asoc.str_reset;
+
 	if(stcb->asoc.str_reset == NULL) {
+		printf("Huh, I don't have one outstanding?\n");
 		return;
 	}
-	
+	sctp_timer_stop(SCTP_TIMER_TYPE_STRRESET, stcb->sctp_ep, stcb, chk->whoTo);
 	TAILQ_REMOVE(&asoc->control_send_queue,
 		     chk,
 		     sctp_next);
@@ -2801,6 +2811,7 @@ sctp_clean_up_stream_reset(struct sctp_tcb *stcb)
 	sctp_free_remote_addr(chk->whoTo);
 	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
 	SCTP_DECR_CHK_COUNT();
+	stcb->asoc.str_reset = NULL;
 }
 
 
@@ -2815,6 +2826,7 @@ sctp_handle_stream_reset_response(struct sctp_tcb *stcb,
 	struct sctp_association *asoc = &stcb->asoc;
 	struct sctp_tmit_chunk *chk;
 	struct sctp_stream_reset_out_request *srparam;
+	int number_entries;
 
 	if(asoc->stream_reset_outstanding == 0) {
 		/* duplicate */
@@ -2825,24 +2837,25 @@ sctp_handle_stream_reset_response(struct sctp_tcb *stcb,
 		if(srparam) {
 			stcb->asoc.str_reset_seq_out++;
 			type = ntohs(srparam->ph.param_type);
+			lparm_len = ntohs(srparam->ph.param_length);
+			number_entries = (lparm_len - sizeof(struct sctp_stream_reset_out_request))/sizeof(uint16_t);
 			if(type == SCTP_STR_RESET_OUT_REQUEST) {
+				asoc->stream_reset_out_is_outstanding = 0;
 				if(asoc->stream_reset_outstanding)
 					asoc->stream_reset_outstanding--;
 				if(action == SCTP_STREAM_RESET_PERFORMED) {
 					/* do it */
-					int number_entries;
-					lparm_len = ntohs(srparam->ph.param_length);
-					number_entries = (lparm_len - sizeof(struct sctp_stream_reset_out_request))/sizeof(uint16_t);
 					sctp_reset_out_streams(stcb, number_entries, srparam->list_of_streams);
 				} else {
-					/* ?? Notification here ?? 
-					 * ?? FIX ME ??
-					 */
+					sctp_ulp_notify(SCTP_NOTIFY_STR_RESET_FAILED_OUT, stcb, number_entries, srparam->list_of_streams);
 				}
 			} else if (type == SCTP_STR_RESET_IN_REQUEST) {
 				/* Answered my request */
 				if(asoc->stream_reset_outstanding)
 					asoc->stream_reset_outstanding--;
+				if(action != SCTP_STREAM_RESET_PERFORMED) {
+					sctp_ulp_notify(SCTP_NOTIFY_STR_RESET_FAILED_IN, stcb, number_entries, srparam->list_of_streams);
+				}
 			} else if (type == SCTP_STR_RESET_TSN_REQUEST) {
 				/**
 				 * a) Adopt the new in tsn.
@@ -2856,22 +2869,24 @@ sctp_handle_stream_reset_response(struct sctp_tcb *stcb,
 					/* huh ? */
 					return(0);
 				}
-				resp = (struct sctp_stream_reset_response_tsn *)respin;
-				asoc->stream_reset_outstanding--;
-				fwdtsn.ch.chunk_length = htons(sizeof(struct sctp_forward_tsn_chunk));
-				fwdtsn.ch.chunk_type = htons(SCTP_FORWARD_CUM_TSN);
-				fwdtsn.new_cumulative_tsn = htonl(ntohl(resp->senders_next_tsn)-1);
-				sctp_handle_forward_tsn(stcb, &fwdtsn, &abort_flag);
-				if(abort_flag) {
-					return(1);
+				if(action == SCTP_STREAM_RESET_PERFORMED) { 
+					resp = (struct sctp_stream_reset_response_tsn *)respin;
+					asoc->stream_reset_outstanding--;
+					fwdtsn.ch.chunk_length = htons(sizeof(struct sctp_forward_tsn_chunk));
+					fwdtsn.ch.chunk_type = htons(SCTP_FORWARD_CUM_TSN);
+					fwdtsn.new_cumulative_tsn = htonl(ntohl(resp->senders_next_tsn)-1);
+					sctp_handle_forward_tsn(stcb, &fwdtsn, &abort_flag);
+					if(abort_flag) {
+						return(1);
+					}
+					stcb->asoc.highest_tsn_inside_map = (ntohl(resp->senders_next_tsn) - 1);
+					stcb->asoc.cumulative_tsn = stcb->asoc.highest_tsn_inside_map;
+					stcb->asoc.mapping_array_base_tsn = ntohl(resp->senders_next_tsn);
+					memset(stcb->asoc.mapping_array, 0, stcb->asoc.mapping_array_size);
+					stcb->asoc.sending_seq = ntohl(resp->receivers_next_tsn);
+					sctp_reset_out_streams(stcb, 0, (u_int16_t *)NULL);
+					sctp_reset_in_stream(stcb, 0, (u_int16_t *)NULL);
 				}
-				stcb->asoc.highest_tsn_inside_map = (ntohl(resp->senders_next_tsn) - 1);
-				stcb->asoc.cumulative_tsn = stcb->asoc.highest_tsn_inside_map;
-				stcb->asoc.mapping_array_base_tsn = ntohl(resp->senders_next_tsn);
-				memset(stcb->asoc.mapping_array, 0, stcb->asoc.mapping_array_size);
-				stcb->asoc.sending_seq = ntohl(resp->receivers_next_tsn);
-				sctp_reset_out_streams(stcb, 0, (u_int16_t *)NULL);
-				sctp_reset_in_stream(stcb, 0, (u_int16_t *)NULL);
 			}
 			/* get rid of the request and get the request flags */
 			if(asoc->stream_reset_outstanding == 0) {
@@ -2883,8 +2898,10 @@ sctp_handle_stream_reset_response(struct sctp_tcb *stcb,
   	} else {
  		/* duplicate */
 #ifdef SCTP_DEBUG
- 		printf("Duplicate old stream reset resp next:%x this one:%x\n",
- 		       stcb->asoc.str_reset_seq_out, seq);
+		if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
+			printf("Duplicate old stream reset resp next:%x this one:%x\n",
+			       stcb->asoc.str_reset_seq_out, seq);
+		}
 #endif
 	}
 	return(0);
@@ -2905,37 +2922,39 @@ sctp_handle_str_reset_request_in(struct sctp_tcb *stcb,
 	struct sctp_association *asoc = &stcb->asoc;
 	seq = ntohl(req->request_seq);
 	if(asoc->str_reset_seq_in == seq) {
-		asoc->str_reset_sending_seq = asoc->sending_seq-1;
-		len = ntohs(req->ph.param_length);
-		number_entries = ((len - sizeof(struct sctp_stream_reset_in_request))/sizeof(uint16_t));
-		for(i=0;i<number_entries;i++) {
-			temp = ntohs(req->list_of_streams[i]);
-			req->list_of_streams[i] = temp;
+		if(stcb->asoc.stream_reset_out_is_outstanding == 0){
+			len = ntohs(req->ph.param_length);
+			number_entries = ((len - sizeof(struct sctp_stream_reset_in_request))/sizeof(uint16_t));
+			for(i=0;i<number_entries;i++) {
+				temp = ntohs(req->list_of_streams[i]);
+				req->list_of_streams[i] = temp;
+			}
+			/* move the reset action back one */
+			asoc->last_reset_action[1] = asoc->last_reset_action[0];
+			asoc->last_reset_action[0] = SCTP_STREAM_RESET_PERFORMED;
+			sctp_add_stream_reset_out(chk, number_entries, req->list_of_streams,
+						  asoc->str_reset_seq_out, 
+						  seq, (asoc->sending_seq-1));
+			asoc->stream_reset_out_is_outstanding = 1;
+			asoc->str_reset = chk;
+			sctp_timer_start(SCTP_TIMER_TYPE_STRRESET, stcb->sctp_ep, stcb, chk->whoTo);
+			stcb->asoc.stream_reset_outstanding++;
+		} else {
+			/* Can't do it, since we have sent one out */
+			asoc->last_reset_action[1] = asoc->last_reset_action[0];
+			asoc->last_reset_action[0] = SCTP_STREAM_RESET_TRY_LATER;
+			sctp_add_stream_reset_result(chk, seq, asoc->last_reset_action[0]);
 		}
-		/* move the reset action back one */
-		asoc->last_reset_action[1] = asoc->last_reset_action[0];
-		asoc->last_reset_action[0] = SCTP_STREAM_RESET_PERFORMED;
-		sctp_add_stream_reset_out(chk, number_entries, req->list_of_streams,
-					  asoc->str_reset_seq_out, 
-					  seq, asoc->str_reset_sending_seq);
 	} else if (asoc->str_reset_seq_in-1 == seq) {
-		if(asoc->stream_reset_outstanding == 0) {
-			printf("SCTP:Peer sends a str-reset-in request, and its old by 1 seq:%x\n",
-			       seq);
-			printf("SCTP:Yet, I have nothing outstanding? (ignoring)\n");
-		}
+		sctp_add_stream_reset_result(chk, seq, asoc->last_reset_action[0]);
 	} else if (asoc->str_reset_seq_in-2 == seq) {
-		if(asoc->stream_reset_outstanding == 0) {
-			printf("SCTP:Peer sends a str-reset-in request, and its old by 2 seq:%x\n",
-			       seq);
-			printf("SCTP:Yet, I have nothing outstanding? (ignoring)\n");
-		}
+		sctp_add_stream_reset_result(chk, seq, asoc->last_reset_action[1]);
 	} else {
 #ifdef SCTP_DEBUG
-/*		if (sctp_debug_on & SCTP_DEBUG_INPUT1) {*/
+		if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
 			printf("SCTP:Peer sends a old str-reset seq %x, I expect %x\n",
 			       (u_int)seq, (u_int)asoc->str_reset_seq_in);
-/*		}*/
+		}
 #endif
 	}
 }
@@ -2954,30 +2973,47 @@ sctp_handle_str_reset_request_tsn(struct sctp_tcb *stcb,
 	 * C) set in the response my next sending seq.
 	 */
 	struct sctp_forward_tsn_chunk fwdtsn;
+	struct sctp_association *asoc = &stcb->asoc;
 	int abort_flag=0;
+	u_int32_t seq;
 
-	fwdtsn.ch.chunk_length = htons(sizeof(struct sctp_forward_tsn_chunk));
-	fwdtsn.ch.chunk_type = htons(SCTP_FORWARD_CUM_TSN);
-	fwdtsn.new_cumulative_tsn = htonl(stcb->asoc.highest_tsn_inside_map + SCTP_STREAM_RESET_TSN_DELTA);
-	sctp_handle_forward_tsn(stcb, &fwdtsn, &abort_flag);
-	if(abort_flag) {
-		return(1);
+	seq = ntohl(req->request_seq);
+	if(asoc->str_reset_seq_in == seq) {
+		fwdtsn.ch.chunk_length = htons(sizeof(struct sctp_forward_tsn_chunk));
+		fwdtsn.ch.chunk_type = htons(SCTP_FORWARD_CUM_TSN);
+		fwdtsn.new_cumulative_tsn = htonl(stcb->asoc.highest_tsn_inside_map + SCTP_STREAM_RESET_TSN_DELTA);
+		sctp_handle_forward_tsn(stcb, &fwdtsn, &abort_flag);
+		if(abort_flag) {
+			return(1);
+		}
+		stcb->asoc.highest_tsn_inside_map += SCTP_STREAM_RESET_TSN_DELTA;
+		stcb->asoc.cumulative_tsn = stcb->asoc.highest_tsn_inside_map;
+		stcb->asoc.mapping_array_base_tsn = stcb->asoc.highest_tsn_inside_map + 1;
+		memset(stcb->asoc.mapping_array, 0, stcb->asoc.mapping_array_size);
+		stcb->asoc.sending_seq++;
+		sctp_add_stream_reset_result_tsn(chk,  
+						 ntohl(req->request_seq), 
+						 SCTP_STREAM_RESET_PERFORMED,
+						 stcb->asoc.sending_seq, 
+						 stcb->asoc.mapping_array_base_tsn);
+		sctp_reset_out_streams(stcb, 0, (u_int16_t *)NULL);
+		sctp_reset_in_stream(stcb, 0, (u_int16_t *)NULL);
+		stcb->asoc.last_reset_action[1] = stcb->asoc.last_reset_action[0];
+		stcb->asoc.last_reset_action[0] = SCTP_STREAM_RESET_PERFORMED;
+	} else if (asoc->str_reset_seq_in-1 == seq) {
+		sctp_add_stream_reset_result(chk, seq, asoc->last_reset_action[0]);
+	} else if (asoc->str_reset_seq_in-2 == seq) {
+		sctp_add_stream_reset_result(chk, seq, asoc->last_reset_action[1]);
+	} else {
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
+			printf("SCTP:Peer sends a old str-reset seq %x, I expect %x\n",
+			       (u_int)seq, (u_int)asoc->str_reset_seq_in);
+		}
+#endif
 	}
-	stcb->asoc.highest_tsn_inside_map += SCTP_STREAM_RESET_TSN_DELTA;
-	stcb->asoc.cumulative_tsn = stcb->asoc.highest_tsn_inside_map;
-	stcb->asoc.mapping_array_base_tsn = stcb->asoc.highest_tsn_inside_map + 1;
-	memset(stcb->asoc.mapping_array, 0, stcb->asoc.mapping_array_size);
-	stcb->asoc.sending_seq++;
-	sctp_add_stream_reset_result_tsn(chk,  
-					 ntohl(req->request_seq), 
-					 SCTP_STREAM_RESET_PERFORMED,
-					 stcb->asoc.sending_seq, 
-					 stcb->asoc.mapping_array_base_tsn);
-	sctp_reset_out_streams(stcb, 0, (u_int16_t *)NULL);
-	sctp_reset_in_stream(stcb, 0, (u_int16_t *)NULL);
 	return(0);
 }
-
 
 static void
 sctp_handle_str_reset_request_out(struct sctp_tcb *stcb,
@@ -3067,6 +3103,7 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_out_req
 	u_int32_t seq;
 	int num_req=0;
 	struct sctp_tmit_chunk *chk;
+	struct sctp_chunkhdr *ch;
  	struct sctp_paramhdr *ph;
  	/* now it may be a reset or a reset-response */
  	chk_length = ntohs(sr_req->ch.chunk_length);
@@ -3082,7 +3119,7 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_out_req
 	chk->rec.chunk_id = SCTP_STREAM_RESET;
 	chk->asoc = &stcb->asoc;
 	chk->no_fr_allowed = 0;
-	chk->send_size = sizeof(struct sctp_chunkhdr);
+	chk->book_size = chk->send_size = sizeof(struct sctp_chunkhdr);
 	MGETHDR(chk->data, M_DONTWAIT, MT_DATA);
 	if (chk->data == NULL) {
 	strres_jump_out:
@@ -3090,7 +3127,6 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_out_req
 		SCTP_DECR_CHK_COUNT();
 		return(ret_code);
 	}
-	chk->data->m_pkthdr.len = chk->data->m_len = SCTP_SIZE32(chk->send_size);
 	/* Get a cluster, always */
 	MCLGET(chk->data, M_DONTWAIT);
 	if ((chk->data->m_flags & M_EXT) == 0) {
@@ -3107,6 +3143,12 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_out_req
 	chk->snd_count = 0;
 	chk->whoTo = stcb->asoc.primary_destination;
 	chk->whoTo->ref_count++;
+
+	ch = mtod(chk->data, struct sctp_chunkhdr *);
+	ch->chunk_type = SCTP_STREAM_RESET;
+	ch->chunk_flags = 0;
+	ch->chunk_length = htons(chk->send_size);
+	chk->data->m_pkthdr.len = chk->data->m_len = SCTP_SIZE32(chk->send_size);
 
 
  	ph = (struct sctp_paramhdr *)&sr_req->sr_req;
@@ -3130,6 +3172,7 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_out_req
 				seq = ntohl(req_out->response_seq);
 				if(seq == stcb->asoc.str_reset_seq_out) {
 					/* implicit ack */	
+					printf("Handle implict str-reset-response seq:%x\n", seq);
 					sctp_handle_stream_reset_response(stcb, seq, SCTP_STREAM_RESET_PERFORMED, NULL);
 				}
 			}
@@ -3156,6 +3199,8 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_out_req
  			resp = (struct sctp_stream_reset_response *)ph;
 			seq = ntohl(resp->response_seq);
 			result = ntohl(resp->result);
+			printf("Got a responze to my seq:%x resp:%d\n",
+			       (u_int)seq, (int)result);
  			if(sctp_handle_stream_reset_response(stcb, seq, result, resp)) {
 				ret_code = 1;
 				goto strres_nochunk;
@@ -3177,8 +3222,6 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_out_req
 			  chk,
 			  sctp_next);
 	stcb->asoc.ctrl_queue_cnt++;
-	sctp_timer_start(SCTP_TIMER_TYPE_STRRESET, stcb->sctp_ep, stcb, chk->whoTo);
-	stcb->asoc.stream_reset_outstanding = 1;
 	return(ret_code);
 }
 
