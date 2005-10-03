@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.20 2005-08-03 11:29:24 lei Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.21 2005-10-03 18:38:59 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -454,7 +454,7 @@ static struct command commands[] = {
     {"startmultping", "startmultping - start the defined ping pong contexts ",
      cmd_startmultping},
 
-    {"streamreset", "streamreset [send|recv|both] [all || num num num] - reset streams ",
+    {"streamreset", "streamreset [send|recv|both|tsn] [all || num num num] - reset streams ",
      cmd_streamreset},
     
     {"send_qdump", "send_qdump - Dump all send/t Q's ",
@@ -1675,6 +1675,7 @@ cmd_streamreset(char *argv[], int argc)
 {
 	char buffer[2048];
 	struct sctp_stream_reset *strrst;
+	int flag=0;
 	memset(buffer,0,sizeof(buffer));
         strrst = (struct sctp_stream_reset *)buffer;
 	if(argc < 2) {
@@ -1695,6 +1696,10 @@ cmd_streamreset(char *argv[], int argc)
 	} else if ((strcmp(argv[0], "send") == 0) ||
 		   (strcmp(argv[0], "SEND") == 0)) {
 		strrst->strrst_flags = SCTP_RESET_LOCAL_SEND;
+	} else if ((strcmp(argv[0], "tsn") == 0) ||
+		   (strcmp(argv[0], "TSN") == 0)) {
+		flag = 1;
+		strrst->strrst_flags = SCTP_RESET_TSN;
 	} else if ((strcmp(argv[0], "both") == 0) ||
 		   (strcmp(argv[0], "BOTH") == 0)) {
 		strrst->strrst_flags = SCTP_RESET_BOTH;
@@ -1703,7 +1708,8 @@ cmd_streamreset(char *argv[], int argc)
 		goto jump_out;
 	}
 	
-	if((strcmp(argv[1], "all") == 0) ||
+	if(flag || 
+	   (strcmp(argv[1], "all") == 0) ||
 	   (strcmp(argv[1], "ALL") == 0)) {
 		strrst->strrst_num_streams = 0;
 	} else {
