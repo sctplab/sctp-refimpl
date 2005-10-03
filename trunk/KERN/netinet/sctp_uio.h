@@ -289,6 +289,7 @@ struct sctp_stream_reset_event {
 #define SCTP_STRRESET_OUTBOUND_STR 0x0002
 #define SCTP_STRRESET_ALL_STREAMS  0x0004
 #define SCTP_STRRESET_STREAM_LIST  0x0008
+#define SCTP_STRRESET_FAILED       0x0010
 
 /* notification types */
 #define SCTP_ASSOC_CHANGE		0x0001
