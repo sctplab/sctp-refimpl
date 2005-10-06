@@ -8,8 +8,8 @@ struct sctp_gap_ack_block {
 };
 
 struct sack_track {
-	u_int8_t right_edge;
-	u_int8_t left_edge;
+	u_int8_t right_edge;	/* mergable on the right edge */
+	u_int8_t left_edge;     /* mergable on the left edge */
         u_int8_t num_entries;
         u_int8_t spare;
 	struct sctp_gap_ack_block gaps[SCTP_MAX_GAPS_INARRAY];
