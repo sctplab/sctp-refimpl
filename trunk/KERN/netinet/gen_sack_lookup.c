@@ -54,11 +54,12 @@ main (int argc, char **argv)
 			copyof >>= 1;
 		}
 		sack_array.num_entries = at;
-		printf("{%d, %d, %d, %d,\n",
+		printf("{%d, %d, %d, %d,     /* 0x%2.2x */\n",
 		       sack_array.right_edge,
 		       sack_array.left_edge,
 		       sack_array.num_entries,
-		       sack_array.spare);
+		       sack_array.spare,
+		       (u_int)i);
 		printf(" { { %d, %d},\n", 
 		       sack_array.gaps[0].start,
 		       sack_array.gaps[0].end);
