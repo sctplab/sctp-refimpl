@@ -2,6 +2,10 @@
 #define __SCTP_SACK_H__
 
 #define SCTP_MAX_GAPS_INARRAY 4
+struct sctp_gap_ack_block {
+	u_int16_t start;		/* Gap Ack block start */
+	u_int16_t end;			/* Gap Ack block end */
+};
 
 struct sack_track {
 	u_int8_t right_edge;
