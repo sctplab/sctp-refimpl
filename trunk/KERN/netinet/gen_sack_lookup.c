@@ -1,6 +1,21 @@
 #include <sys/types.h>
 #include <stdio.h>
-#include "sctp_sack.h"
+
+
+#define SCTP_MAX_GAPS_INARRAY 4
+
+struct sctp_gap_ack_block {
+	u_int16_t start;		/* Gap Ack block start */
+	u_int16_t end;			/* Gap Ack block end */
+};
+
+struct sack_track {
+	u_int8_t right_edge;
+	u_int8_t left_edge;
+        u_int8_t num_entries;
+        u_int8_t spare;
+	struct sctp_gap_ack_block gaps[SCTP_MAX_GAPS_INARRAY];
+};
 
 
 int
@@ -52,6 +67,11 @@ main (int argc, char **argv)
 				} 
 			}
 			copyof >>= 1;
+		}
+		if (seeing_one) {
+			/* If at the end I was seeing one's record it */
+			sack_array.gaps[at].end = 7;
+			at++;
 		}
 		sack_array.num_entries = at;
 		printf("{%d, %d, %d, %d,     /* 0x%2.2x */\n",
