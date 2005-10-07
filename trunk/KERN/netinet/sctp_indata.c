@@ -3267,7 +3267,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 
 #ifdef SCTP_FR_TO_ALTERNATE
 			      /* Can we find an alternate? */
-				alt = sctp_find_alternate_net(stcb, tp1->whoTo);
+				alt = sctp_find_alternate_net(stcb, tp1->whoTo, 0);
 #else
 			      /*
 			       * default behavior is to NOT retransmit FR's
