@@ -256,12 +256,25 @@ sctp_split_chunks(struct sctp_association *asoc,
 	new_chk->book_size >>= 1;
 
 	/* now adjust the marks */
-	chk->rec.data.rcv_flags |= SCTP_DATA_FIRST_FRAG;
-	chk->rec.data.rcv_flags &= ~SCTP_DATA_LAST_FRAG;
+	if(chk->rec.data.rcv_flags & SCTP_DATA_NOT_FRAG) {
+		chk->rec.data.rcv_flags |= SCTP_DATA_FIRST_FRAG;
+		chk->rec.data.rcv_flags &= ~SCTP_DATA_LAST_FRAG;
 
-	new_chk->rec.data.rcv_flags &= ~SCTP_DATA_FIRST_FRAG;
-	new_chk->rec.data.rcv_flags |= SCTP_DATA_LAST_FRAG;
-
+		new_chk->rec.data.rcv_flags &= ~SCTP_DATA_FIRST_FRAG;
+		new_chk->rec.data.rcv_flags |= SCTP_DATA_LAST_FRAG;
+	} else {
+		/* Its already frag'd */
+		if(chk->rec.data.rcv_flags & SCTP_DATA_FIRST_FRAG) {
+			/* just turn off the first on the new piece */
+			new_chk->rec.data.rcv_flags &= ~SCTP_DATA_FIRST_FRAG;
+		}else if (chk->rec.data.rcv_flags & SCTP_DATA_LAST_FRAG) {
+			/* 
+			 * just turn off the last frag on the old chunk
+			 * the new one gets to keep it.
+			 */
+			chk->rec.data.rcv_flags &= ~SCTP_DATA_LAST_FRAG;
+		}
+	}
 	/* Increase ref count if dest is set */
 	if (chk->whoTo) {
 		new_chk->whoTo->ref_count++;
@@ -320,7 +333,10 @@ sctp_pathmtu_adustment(struct sctp_inpcb *inp,
     while (chk) {
       nchk = TAILQ_NEXT(chk, sctp_next);
       if ((chk->send_size+SCTP_MED_OVERHEAD) > nxtsz) {
-	sctp_split_chunks(&stcb->asoc, strm, chk);
+	      if(0)
+		      sctp_split_chunks(&stcb->asoc, strm, chk);
+	      else
+		      chk->flags |= CHUNK_FLAGS_FRAGMENT_OK;
       }
       chk = nchk;
     }

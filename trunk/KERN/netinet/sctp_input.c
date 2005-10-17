@@ -3912,17 +3912,10 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				printf("SCTP_COOKIE-ECHO stcb is %p\n", stcb);
 			}
 #endif /* SCTP_DEBUG */
-			if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
+			if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) &&
+			    (stcb == NULL)){
 				/* We are not interested anymore */
 				*offset = length;
-				if (stcb) {
-					sctp_free_assoc(inp, stcb);
-				} else {
-					if (LIST_FIRST(&inp->sctp_asoc_list) == NULL) {
-						/* finish the job now */
-						sctp_inpcb_free(inp, 1);
-					}
-				}
 				return (NULL);
 			}
 			/*
