@@ -755,7 +755,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 			if (stcb->asoc.total_flight_count > 0)
 			  stcb->asoc.total_flight_count--;
 			chk->sent = SCTP_DATAGRAM_RESEND;
-
+			sctp_pegs[SCTP_T3_MARKED_TSNS]++;
 			net->flight_size -= chk->book_size;
 			stcb->asoc.peers_rwnd += chk->send_size;
 			stcb->asoc.peers_rwnd += sctp_peer_chunk_oh;

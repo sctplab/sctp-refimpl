@@ -811,7 +811,7 @@
 #define SCTP_EARLYFR_STR_ID      116
 #define SCTP_EARLYFR_STR_OUT     117
 #define SCTP_EARLYFR_STR_TMR     118
-#define SCTP_RESV1               119
+#define SCTP_T3_MARKED_TSNS      119
 
 /*
  * This value defines the number of vtag block time wait entry's
