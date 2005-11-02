@@ -7,7 +7,7 @@
 #include <sys/kernel.h>
 #endif
 /*
- * Copyright (c) 2001, 2002, 2003, 2004 Cisco Systems, Inc.
+ * Copyright (c) 2001, 2002, 2003, 2004, 2005 Cisco Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -40,7 +40,7 @@
 #define SCTP_VERSION_STRING "KAME-BSD 1.1"
 /*#define SCTP_AUDITING_ENABLED 1 used for debug/auditing */
 #define SCTP_AUDIT_SIZE 256
-#define SCTP_STAT_LOG_SIZE 80000
+#define SCTP_STAT_LOG_SIZE 40000
 
 /* Places that CWND log can happen from */
 #define SCTP_CWND_LOG_FROM_FR	1
@@ -102,6 +102,18 @@
 #define SCTP_FR_CWND_REPORT         58
 #define SCTP_FR_CWND_REPORT_START   59
 #define SCTP_FR_CWND_REPORT_STOP    60
+#define SCTP_CWND_LOG_FROM_SEND     61
+#define SCTP_CWND_INITIALIZATION    62
+#define SCTP_CWND_LOG_FROM_T3       63
+#define SCTP_CWND_LOG_FROM_SACK     64
+#define SCTP_CWND_LOG_NO_CUMACK     65
+#define SCTP_CWND_LOG_FROM_RESEND   66
+#define SCTP_FR_LOG_CHECK_STRIKE    67
+#define SCTP_SEND_NOW_COMPLETES     68
+#define SCTP_CWND_LOG_FILL_OUTQ_CALLED 69
+#define SCTP_CWND_LOG_FILL_OUTQ_FILLS  70
+#define SCTP_LOG_FREE_SENT             71
+
 /*
  * To turn on various logging, you must first define SCTP_STAT_LOGGING.
  * Then to get something to log you define one of the logging defines i.e.
@@ -225,7 +237,9 @@
 #define IS_SCTP_CONTROL(a) ((a)->chunk_type != SCTP_DATA)
 #define IS_SCTP_DATA(a) ((a)->chunk_type == SCTP_DATA)
 
+
 /* SCTP parameter types */
+/*************0x0000 series*************/
 #define SCTP_HEARTBEAT_INFO	    0x0001
 #define SCTP_IPV4_ADDRESS	    0x0005
 #define SCTP_IPV6_ADDRESS	    0x0006
@@ -234,21 +248,30 @@
 #define SCTP_COOKIE_PRESERVE	    0x0009
 #define SCTP_HOSTNAME_ADDRESS	    0x000b
 #define SCTP_SUPPORTED_ADDRTYPE	    0x000c
-#define SCTP_ECN_CAPABLE	    0x8000
 
 /* draft-ietf-stewart-strreset-xxx */
-#define SCTP_STR_RESET_REQUEST      0x000d
-#define SCTP_STR_RESET_RESPONSE     0x000e
-/* draft-ietf-tsvwg-sctp-auth */
+#define SCTP_STR_RESET_OUT_REQUEST      0x000d
+#define SCTP_STR_RESET_IN_REQUEST       0x000e
+#define SCTP_STR_RESET_TSN_REQUEST      0x000f
+#define SCTP_STR_RESET_RESPONSE         0x0010
+
+#define SCTP_MAX_RESET_PARAMS 2
+
+#define SCTP_STREAM_RESET_TSN_DELTA    0x1000
+
+/*************0x4000 series*************/
+/*************0x8000 series*************/
+#define SCTP_ECN_CAPABLE	    0x8000
+/* ECN Nonce: draft-ladha-sctp-ecn-nonce */
+#define SCTP_ECN_NONCE_SUPPORTED    0x8001
+/* draft-ietf-tsvwg-auth-xxx */
 #define SCTP_AUTH_RANDOM            0x8002
 #define SCTP_AUTH_CHUNK_LIST        0x8003
 #define SCTP_AUTH_HMAC_ALGO         0x8004
-
-/* ECN Nonce: draft-ladha-sctp-ecn-nonce */
-#define SCTP_ECN_NONCE_SUPPORTED    0x8001
-
+/* draft-ietf-tsvwg-addip-sctp-xx */
+#define SCTP_SUPPORTED_CHUNK_EXT    0x8008
 /*
- * draft-ietf-stewart-strreset-xxx
+ * draft-ietf-tsvwg-addip-sctp-xx 
  *   param=0x8001  len=0xNNNN
  *   Byte | Byte | Byte | Byte
  *   Byte | Byte ...
@@ -268,13 +291,10 @@
  *   82 = Stream Reset
  */
 
-/* draft-ietf-tsvwg-prsctp */
-#define SCTP_SUPPORTED_CHUNK_EXT    0x8008
-
 /* number of extensions we support */
 #define SCTP_EXT_COUNT 5     	/* num of extensions we support chunk wise */
 #define SCTP_PAD_EXT_COUNT 3    /* num of pad bytes needed to get to 32 bit boundary */
-
+/*************0x0000 series*************/
 
 #define SCTP_PRSCTP_SUPPORTED	    0xc000
 /* draft-ietf-tsvwg-addip-sctp */
@@ -296,27 +316,6 @@
 #define SCTP_RECEIVED_SACK		0x0040
 #define SCTP_PEER_FAULTY		0x0080
 
-/* Error causes used in SCTP op-err's and aborts */
-#define SCTP_CAUSE_INV_STRM		0x001
-#define SCTP_CAUSE_MISS_PARAM		0x002
-#define SCTP_CAUSE_STALE_COOKIE		0x003
-#define SCTP_CAUSE_OUT_OF_RESC		0x004
-#define SCTP_CAUSE_UNRESOLV_ADDR	0x005
-#define SCTP_CAUSE_UNRECOG_CHUNK	0x006
-#define SCTP_CAUSE_INVALID_PARAM	0x007
-/* This one is also the same as SCTP_UNRECOG_PARAM above */
-#define SCTP_CAUSE_UNRECOG_PARAM	0x008
-#define SCTP_CAUSE_NOUSER_DATA		0x009
-#define SCTP_CAUSE_COOKIE_IN_SHUTDOWN	0x00a
-#define SCTP_CAUSE_RESTART_W_NEWADDR	0x00b
-#define SCTP_CAUSE_USER_INITIATED_ABT	0x00c
-#define SCTP_CAUSE_PROTOCOL_VIOLATION	0x00d
-
-/* Error's from add ip */
-#define SCTP_CAUSE_DELETEING_LAST_ADDR	0x100
-#define SCTP_CAUSE_OPERATION_REFUSED	0x101
-#define SCTP_CAUSE_DELETING_SRC_ADDR	0x102
-#define SCTP_CAUSE_ILLEGAL_ASCONF	0x103
 
 /* bits for TOS field */
 #define SCTP_ECT0_BIT		0x02
@@ -656,7 +655,9 @@
 #define SCTP_NOTIFY_INTERFACE_CONFIRMED 20
 #define SCTP_NOTIFY_STR_RESET_RECV      21
 #define SCTP_NOTIFY_STR_RESET_SEND      22
-#define SCTP_NOTIFY_MAX			22
+#define SCTP_NOTIFY_STR_RESET_FAILED_OUT 23
+#define SCTP_NOTIFY_STR_RESET_FAILED_IN 24
+#define SCTP_NOTIFY_MAX			24
 
 
 
@@ -810,7 +811,7 @@
 #define SCTP_EARLYFR_STR_ID      116
 #define SCTP_EARLYFR_STR_OUT     117
 #define SCTP_EARLYFR_STR_TMR     118
-#define SCTP_RESV1               119
+#define SCTP_T3_MARKED_TSNS      119
 
 /*
  * This value defines the number of vtag block time wait entry's

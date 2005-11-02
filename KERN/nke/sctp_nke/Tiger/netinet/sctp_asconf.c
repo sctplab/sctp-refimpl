@@ -1,7 +1,7 @@
 /*	$KAME: sctp_asconf.c,v 1.24 2005/03/06 16:04:16 itojun Exp $	*/
 
 /*
- * Copyright (c) 2001, 2002, 2003, 2004 Cisco Systems, Inc.
+ * Copyright (c) 2001-2005 Cisco Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -76,6 +76,7 @@
 #endif
 #include <netinet/icmp6.h>
 #include <netinet6/nd6.h>
+#include <netinet6/scope6_var.h> 
 #endif /* INET6 */
 
 #include <netinet/in_pcb.h>
@@ -271,7 +272,7 @@ sctp_process_asconf_add_ip(struct sctp_asconf_paramhdr *aph,
 		/* IPv6 not enabled! */
 		/* FIX ME: currently sends back an invalid param error */
 		m_reply = sctp_asconf_error_response(aph->correlation_id,
-		    SCTP_ERROR_INVALID_PARAM, (uint8_t *)aph, aparam_length);
+		    SCTP_CAUSE_INVALID_PARAM, (uint8_t *)aph, aparam_length);
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
 			printf("process_asconf_add_ip: v6 disabled- skipping ");
@@ -283,7 +284,7 @@ sctp_process_asconf_add_ip(struct sctp_asconf_paramhdr *aph,
 		break;
 	default:
 		m_reply = sctp_asconf_error_response(aph->correlation_id,
-		    SCTP_ERROR_UNRESOLVABLE_ADDR, (uint8_t *)aph,
+		    SCTP_CAUSE_UNRESOLVABLE_ADDR, (uint8_t *)aph,
 		    aparam_length);
 		return m_reply;
 	} /* end switch */
@@ -296,7 +297,7 @@ sctp_process_asconf_add_ip(struct sctp_asconf_paramhdr *aph,
 		}
 #endif /* SCTP_DEBUG */
 		m_reply = sctp_asconf_error_response(aph->correlation_id,
-		    SCTP_ERROR_RESOURCE_SHORTAGE, (uint8_t *)aph,
+		    SCTP_CAUSE_RESOURCE_SHORTAGE, (uint8_t *)aph,
 		    aparam_length);
 	} else {
 		/* notify upper layer */
@@ -416,7 +417,7 @@ sctp_process_asconf_delete_ip(struct mbuf *m, struct sctp_asconf_paramhdr *aph,
 		break;
 	default:
 		m_reply = sctp_asconf_error_response(aph->correlation_id,
-		    SCTP_ERROR_UNRESOLVABLE_ADDR, (uint8_t *)aph,
+		    SCTP_CAUSE_UNRESOLVABLE_ADDR, (uint8_t *)aph,
 		    aparam_length);
 		return m_reply;
 	} /* end switch */
@@ -434,7 +435,7 @@ sctp_process_asconf_delete_ip(struct mbuf *m, struct sctp_asconf_paramhdr *aph,
 		}
 #endif /* SCTP_DEBUG */
 		m_reply = sctp_asconf_error_response(aph->correlation_id,
-		    SCTP_ERROR_DELETE_SOURCE_ADDR, (uint8_t *)aph,
+		    SCTP_CAUSE_DELETING_SRC_ADDR, (uint8_t *)aph,
 		    aparam_length);
 		return m_reply;
 	}
@@ -454,7 +455,7 @@ sctp_process_asconf_delete_ip(struct mbuf *m, struct sctp_asconf_paramhdr *aph,
 		}
 #endif /* SCTP_DEBUG */
 		m_reply = sctp_asconf_error_response(aph->correlation_id,
-		    SCTP_ERROR_DELETE_LAST_ADDR, (uint8_t *)aph,
+		    SCTP_CAUSE_DELETING_LAST_ADDR, (uint8_t *)aph,
 		    aparam_length);
 	} else {
 		/* notify upper layer */
@@ -541,7 +542,7 @@ sctp_process_asconf_set_primary(struct sctp_asconf_paramhdr *aph,
 		break;
 	default:
 		m_reply = sctp_asconf_error_response(aph->correlation_id,
-		    SCTP_ERROR_UNRESOLVABLE_ADDR, (uint8_t *)aph,
+		    SCTP_CAUSE_UNRESOLVABLE_ADDR, (uint8_t *)aph,
 		    aparam_length);
 		return m_reply;
 	} /* end switch */
@@ -568,7 +569,7 @@ sctp_process_asconf_set_primary(struct sctp_asconf_paramhdr *aph,
 #endif /* SCTP_DEBUG */
 		/* must have been an invalid address, so report */
 		m_reply = sctp_asconf_error_response(aph->correlation_id,
-		    SCTP_ERROR_UNRESOLVABLE_ADDR, (uint8_t *)aph,
+		    SCTP_CAUSE_UNRESOLVABLE_ADDR, (uint8_t *)aph,
 		    aparam_length);
 	}
 
@@ -1248,7 +1249,7 @@ sctp_asconf_process_error(struct sctp_tcb *stcb,
 	param_type = ntohs(aph->ph.param_type);
 	/* FIX: this should go back up the REMOTE_ERROR ULP notify */
 	switch (error_code) {
-	case SCTP_ERROR_RESOURCE_SHORTAGE:
+	case SCTP_CAUSE_RESOURCE_SHORTAGE:
 		/* we allow ourselves to "try again" for this error */
 		break;
 	default:
@@ -1373,7 +1374,7 @@ sctp_handle_asconf_ack(struct mbuf *m, int offset,
 	 */
 	if (serial_num == (asoc->asconf_seq_out + 1)) {
 		sctp_abort_an_association(stcb->sctp_ep, stcb,
-		    SCTP_ERROR_ILLEGAL_ASCONF_ACK, NULL);
+		    SCTP_CAUSE_ILLEGAL_ASCONF_ACK, NULL);
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
 			printf("handle_asconf_ack: got unexpected next serial number! Aborting asoc!\n");

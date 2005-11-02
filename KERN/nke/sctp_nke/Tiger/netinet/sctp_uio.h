@@ -4,7 +4,7 @@
 #define __sctp_uio_h__
 
 /*
- * Copyright (c) 2001, 2002, 2003, 2004 Cisco Systems, Inc.
+ * Copyright (c) 2001, 2002, 2003, 2004, 2005 Cisco Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -93,8 +93,8 @@ struct sctp_snd_all_completes {
 #define SCTP_ABORT	  0x0200	/* Send an ABORT to peer */
 #define SCTP_UNORDERED 	  0x0400	/* Message is un-ordered */
 #define SCTP_ADDR_OVER	  0x0800	/* Override the primary-address */
-#define SCTP_SENDALL      0x1000        /* Send this on all associations */
-                                        /* for the endpoint */
+#define SCTP_SENDALL      0x1000	/* Send this on all associations */
+					/* for the endpoint */
 
 /* The lower byte is an enumeration of PR-SCTP policies */
 #define SCTP_PR_SCTP_TTL  0x0001	/* Time based PR-SCTP */
@@ -129,9 +129,9 @@ struct sctp_sockstat {
  * notification event structures
  */
 
-
-/* association change events */
-
+/*
+ * association change event
+ */
 struct sctp_assoc_change {
 	u_int16_t sac_type;
 	u_int16_t sac_flags;
@@ -143,7 +143,6 @@ struct sctp_assoc_change {
 	sctp_assoc_t sac_assoc_id;
 };
 /* sac_state values */
-
 #define SCTP_COMM_UP		0x0001
 #define SCTP_COMM_LOST		0x0002
 #define SCTP_RESTART		0x0003
@@ -151,7 +150,9 @@ struct sctp_assoc_change {
 #define SCTP_CANT_STR_ASSOC	0x0005
 
 
-/* Address events */
+/*
+ * Address event
+ */
 struct sctp_paddr_change {
 	u_int16_t spc_type;
 	u_int16_t spc_flags;
@@ -192,9 +193,7 @@ struct sctp_paddr_change {
 #ifdef SCTP_NOHEARTBEAT
 #undef SCTP_NOHEARTBEAT
 #endif
-#define SCTP_NOHEARTBEAT        0x0040 /* SCTP_ADDR_NOHB */
-
-
+#define SCTP_NOHEARTBEAT	0x0040 /* SCTP_ADDR_NOHB */
 
 
 /* remote error events */
@@ -243,7 +242,9 @@ struct sctp_setadaption {
 	u_int32_t	ssb_adaption_ind;
 };
 
-/* pdapi indications */
+/*
+ * Partial Delivery API event
+ */
 struct sctp_pdapi_event {
 	u_int16_t	pdapi_type;
 	u_int16_t	pdapi_flags;
@@ -251,12 +252,30 @@ struct sctp_pdapi_event {
 	u_int32_t	pdapi_indication;
 	sctp_assoc_t	pdapi_assoc_id;
 };
-
-
+/* indication values */
 #define SCTP_PARTIAL_DELIVERY_ABORTED	0x0001
 
-/* stream reset stuff */
 
+/*
+ * authentication key event
+ */
+struct sctp_authkey_event {
+	u_int16_t	auth_type;
+	u_int16_t	auth_flags;
+	u_int32_t	auth_length;
+	u_int32_t	auth_keynumber;
+	u_int32_t	auth_altkeynumber;
+	u_int32_t	auth_indication;
+	sctp_assoc_t	auth_assoc_id;
+};
+/* indication values */
+#define SCTP_AUTH_NEWKEY	0x0001
+#define SCTP_KEY_CONFLICT	0x0002 
+
+
+/*
+ * stream reset event
+ */
 struct sctp_stream_reset_event {
 	u_int16_t	strreset_type;
 	u_int16_t	strreset_flags;
@@ -270,15 +289,7 @@ struct sctp_stream_reset_event {
 #define SCTP_STRRESET_OUTBOUND_STR 0x0002
 #define SCTP_STRRESET_ALL_STREAMS  0x0004
 #define SCTP_STRRESET_STREAM_LIST  0x0008
-
-#define MAX_ASOC_IDS_RET 255
-
-struct sctp_assoc_ids {
-	u_int16_t asls_assoc_start;	/* array of index's start at 0 */
-	u_int8_t asls_numb_present;
-	u_int8_t asls_more_to_get;
-	sctp_assoc_t asls_assoc_id[MAX_ASOC_IDS_RET];
-};
+#define SCTP_STRRESET_FAILED       0x0010
 
 /* notification types */
 #define SCTP_ASSOC_CHANGE		0x0001
@@ -288,8 +299,8 @@ struct sctp_assoc_ids {
 #define SCTP_SHUTDOWN_EVENT		0x0005
 #define SCTP_ADAPTION_INDICATION	0x0006
 #define SCTP_PARTIAL_DELIVERY_EVENT	0x0007
-#define SCTP_STREAM_RESET_EVENT         0x0008
-
+#define SCTP_AUTHENTICATION_EVENT	0x0008
+#define SCTP_STREAM_RESET_EVENT		0x0009
 
 
 struct sctp_tlv {
@@ -309,6 +320,7 @@ union sctp_notification {
 	struct sctp_shutdown_event sn_shutdown_event;
 	struct sctp_adaption_event sn_adaption_event;
 	struct sctp_pdapi_event sn_pdapi_event;
+	struct sctp_authkey_event sn_auth_event;
 	struct sctp_stream_reset_event sn_strreset_event;
 };
 
@@ -323,18 +335,18 @@ struct sctp_paddrparams {
 	struct sockaddr_storage spp_address;
 	u_int32_t spp_hbinterval;
 	u_int16_t spp_pathmaxrxt;
-        u_int32_t spp_pathmtu;
-        u_int32_t spp_sackdelay;
-        u_int32_t spp_flags;
+	u_int32_t spp_pathmtu;
+	u_int32_t spp_sackdelay;
+	u_int32_t spp_flags;
 };
 
-#define SPP_HB_ENABLE         0x00000001
-#define SPP_HB_DISABLE        0x00000002
-#define SPP_HB_DEMAND         0x00000004
-#define SPP_PMTUD_ENABLE      0x00000008
-#define SPP_PMTUD_DISABLE     0x00000010
-#define SPP_SACKDELAY_ENABLE  0x00000020
-#define SPP_SACKDELAY_DISABLE 0x00000040
+#define SPP_HB_ENABLE		0x00000001
+#define SPP_HB_DISABLE		0x00000002
+#define SPP_HB_DEMAND		0x00000004
+#define SPP_PMTUD_ENABLE	0x00000008
+#define SPP_PMTUD_DISABLE	0x00000010
+#define SPP_SACKDELAY_ENABLE	0x00000020
+#define SPP_SACKDELAY_DISABLE	0x00000040
 
 struct sctp_paddrinfo {
 	sctp_assoc_t spinfo_assoc_id;
@@ -356,10 +368,10 @@ struct sctp_rtoinfo {
 struct sctp_assocparams {
 	sctp_assoc_t sasoc_assoc_id;
 	u_int16_t sasoc_asocmaxrxt;
-        u_int16_t sasoc_number_peer_destinations;
-        u_int32_t sasoc_peer_rwnd;
-        u_int32_t sasoc_local_rwnd;
-        u_int32_t sasoc_cookie_life;
+	u_int16_t sasoc_number_peer_destinations;
+	u_int32_t sasoc_peer_rwnd;
+	u_int32_t sasoc_local_rwnd;
+	u_int32_t sasoc_cookie_life;
 };
 
 struct sctp_setprim {
@@ -391,22 +403,35 @@ struct sctp_status {
 	u_int32_t sstat_rwnd;
 	u_int16_t sstat_unackdata;
 	u_int16_t sstat_penddata;
-        u_int16_t sstat_instrms;
-        u_int16_t sstat_outstrms;
-        u_int32_t sstat_fragmentation_point;
+	u_int16_t sstat_instrms;
+	u_int16_t sstat_outstrms;
+	u_int32_t sstat_fragmentation_point;
 	struct sctp_paddrinfo sstat_primary;
 };
 
 struct sctp_assoc_value {
-        sctp_assoc_t             assoc_id;
-        u_int32_t                assoc_value;
+	sctp_assoc_t assoc_id;
+	u_int32_t assoc_value;
+};
+
+#define MAX_ASOC_IDS_RET 255
+struct sctp_assoc_ids {
+	u_int16_t asls_assoc_start;	/* array of index's start at 0 */
+	u_int8_t asls_numb_present;
+	u_int8_t asls_more_to_get;
+	sctp_assoc_t asls_assoc_id[MAX_ASOC_IDS_RET];
 };
 
 struct sctp_cwnd_args {
 	struct sctp_nets *net;		/* network to */
 	u_int32_t cwnd_new_value;	/* cwnd in k */
 	u_int32_t inflight;		/* flightsize in k */
+	u_int32_t pseudo_cumack;
 	int cwnd_augment;		/* increment to it */
+	u_int8_t meets_pseudo_cumack;
+	u_int8_t need_new_pseudo_cumack;
+	u_int8_t cnt_in_send;
+	u_int8_t cnt_in_str;
 };
 
 struct sctp_blk_args {
@@ -429,6 +454,7 @@ struct sctp_blk_args {
 #define SCTP_RESET_LOCAL_RECV  0x0001
 #define SCTP_RESET_LOCAL_SEND  0x0002
 #define SCTP_RESET_BOTH        0x0003
+#define SCTP_RESET_TSN         0x0004
 
 struct sctp_stream_reset {
 	sctp_assoc_t strrst_assoc_id;
@@ -486,34 +512,38 @@ struct sctp_mbcnt_log {
 };
 
 struct sctp_sack_log {
-        u_int32_t cumack;
-        u_int32_t oldcumack;
-        u_int32_t tsn;
-        u_int16_t numGaps;
-        u_int16_t numDups;
+	u_int32_t cumack;
+	u_int32_t oldcumack;
+	u_int32_t tsn;
+	u_int16_t numGaps;
+	u_int16_t numDups;
 };
 
 struct sctp_lock_log {
-  u_int32_t sock;
-  u_int32_t inp;
-  u_int8_t tcb_lock;
-  u_int8_t inp_lock;
-  u_int8_t info_lock;
-  u_int8_t sock_lock;
-  u_int8_t sockrcvbuf_lock;
-  u_int8_t socksndbuf_lock;
-  u_int8_t create_lock;
-  u_int8_t resv;
+	u_int32_t sock;
+	u_int32_t inp;
+	u_int8_t tcb_lock;
+	u_int8_t inp_lock;
+	u_int8_t info_lock;
+	u_int8_t sock_lock;
+	u_int8_t sockrcvbuf_lock;
+	u_int8_t socksndbuf_lock;
+	u_int8_t create_lock;
+	u_int8_t resv;
 };
 
 struct sctp_rto_log {
-  u_int32_t net;
-  u_int32_t rtt;
-  u_int32_t rttvar;
-  u_int8_t  direction;
+	u_int32_t net;
+	u_int32_t rtt;
+	u_int32_t rttvar;
+	u_int8_t  direction;
 };
 
 struct sctp_cwnd_log{
+	u_int32_t time_event;
+	u_int8_t from;
+	u_int8_t event_type;
+	u_int8_t resv[2];
 	union {
 		struct sctp_blk_args blk;
 		struct sctp_cwnd_args cwnd;
@@ -522,21 +552,18 @@ struct sctp_cwnd_log{
 		struct sctp_fr_map map;
 		struct sctp_rwnd_log rwnd;
 		struct sctp_mbcnt_log mbcnt;
-  	        struct sctp_sack_log sack;
-	        struct sctp_lock_log lock;
-	        struct sctp_rto_log rto;
+  		struct sctp_sack_log sack;
+		struct sctp_lock_log lock;
+		struct sctp_rto_log rto;
 		struct sctp_sb_log sb;
-	}x;
-	u_int8_t from;
-	u_int8_t event_type;
-
+	} x;
 };
 
 struct sctp_cwnd_log_req{
-	int num_in_log;     /* Number in log */
-	int num_ret;        /* Number returned */
-	int start_at;       /* start at this one */
-	int end_at;         /* end at this one */
+	int num_in_log;	/* Number in log */
+	int num_ret;	/* Number returned */
+	int start_at;	/* start at this one */
+	int end_at;	/* end at this one */
 	struct sctp_cwnd_log log[0];
 };
 
@@ -570,14 +597,14 @@ sctp_sendx __P((int sd, const void *msg, size_t len,
 		struct sctp_sndrcvinfo *sinfo, int flags));
 ssize_t
 sctp_sendmsgx __P((int sd, const void *, size_t,
-	           struct sockaddr *, int,
-	           u_int32_t, u_int32_t, u_int16_t, u_int32_t, u_int32_t));
+		   struct sockaddr *, int,
+		   u_int32_t, u_int32_t, u_int16_t, u_int32_t, u_int32_t));
 
 sctp_assoc_t
 sctp_getassocid __P((int sd, struct sockaddr *sa));
 
-ssize_t sctp_recvmsg	__P((int, void *, size_t, struct sockaddr *,
-        socklen_t *, struct sctp_sndrcvinfo *, int *));
+ssize_t sctp_recvmsg __P((int, void *, size_t, struct sockaddr *,
+			  socklen_t *, struct sctp_sndrcvinfo *, int *));
 
 __END_DECLS
 
