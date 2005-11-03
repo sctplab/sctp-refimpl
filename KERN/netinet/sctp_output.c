@@ -146,6 +146,1814 @@
 extern uint32_t sctp_debug_on;
 #endif
 
+
+#define SCTP_MAX_GAPS_INARRAY 4
+struct sack_track {
+	u_int8_t right_edge;	/* mergable on the right edge */
+	u_int8_t left_edge;     /* mergable on the left edge */
+        u_int8_t num_entries;
+        u_int8_t spare;
+	struct sctp_gap_ack_block gaps[SCTP_MAX_GAPS_INARRAY];
+};
+
+struct sack_track sack_array[256] = {
+{0, 0, 0, 0,     /* 0x00 */
+ { { 0, 0},
+   { 0, 0},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 1, 0,     /* 0x01 */
+ { { 0, 0},
+   { 0, 0},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 0, 1, 0,     /* 0x02 */
+ { { 1, 1},
+   { 0, 0},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 1, 0,     /* 0x03 */
+ { { 0, 1},
+   { 0, 0},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 0, 1, 0,     /* 0x04 */
+ { { 2, 2},
+   { 0, 0},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 2, 0,     /* 0x05 */
+ { { 0, 0},
+   { 2, 2},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 0, 1, 0,     /* 0x06 */
+ { { 1, 2},
+   { 0, 0},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 1, 0,     /* 0x07 */
+ { { 0, 2},
+   { 0, 0},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 0, 1, 0,     /* 0x08 */
+ { { 3, 3},
+   { 0, 0},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 2, 0,     /* 0x09 */
+ { { 0, 0},
+   { 3, 3},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 0, 2, 0,     /* 0x0a */
+ { { 1, 1},
+   { 3, 3},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 2, 0,     /* 0x0b */
+ { { 0, 1},
+   { 3, 3},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 0, 1, 0,     /* 0x0c */
+ { { 2, 3},
+   { 0, 0},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 2, 0,     /* 0x0d */
+ { { 0, 0},
+   { 2, 3},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 0, 1, 0,     /* 0x0e */
+ { { 1, 3},
+   { 0, 0},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 1, 0,     /* 0x0f */
+ { { 0, 3},
+   { 0, 0},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 0, 1, 0,     /* 0x10 */
+ { { 4, 4},
+   { 0, 0},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 2, 0,     /* 0x11 */
+ { { 0, 0},
+   { 4, 4},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 0, 2, 0,     /* 0x12 */
+ { { 1, 1},
+   { 4, 4},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 2, 0,     /* 0x13 */
+ { { 0, 1},
+   { 4, 4},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 0, 2, 0,     /* 0x14 */
+ { { 2, 2},
+   { 4, 4},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 3, 0,     /* 0x15 */
+ { { 0, 0},
+   { 2, 2},
+   { 4, 4},
+   { 0, 0}
+ }
+},
+{0, 0, 2, 0,     /* 0x16 */
+ { { 1, 2},
+   { 4, 4},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 2, 0,     /* 0x17 */
+ { { 0, 2},
+   { 4, 4},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 0, 1, 0,     /* 0x18 */
+ { { 3, 4},
+   { 0, 0},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 2, 0,     /* 0x19 */
+ { { 0, 0},
+   { 3, 4},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 0, 2, 0,     /* 0x1a */
+ { { 1, 1},
+   { 3, 4},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 2, 0,     /* 0x1b */
+ { { 0, 1},
+   { 3, 4},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 0, 1, 0,     /* 0x1c */
+ { { 2, 4},
+   { 0, 0},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 2, 0,     /* 0x1d */
+ { { 0, 0},
+   { 2, 4},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 0, 1, 0,     /* 0x1e */
+ { { 1, 4},
+   { 0, 0},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 1, 0,     /* 0x1f */
+ { { 0, 4},
+   { 0, 0},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 0, 1, 0,     /* 0x20 */
+ { { 5, 5},
+   { 0, 0},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 2, 0,     /* 0x21 */
+ { { 0, 0},
+   { 5, 5},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 0, 2, 0,     /* 0x22 */
+ { { 1, 1},
+   { 5, 5},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 2, 0,     /* 0x23 */
+ { { 0, 1},
+   { 5, 5},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 0, 2, 0,     /* 0x24 */
+ { { 2, 2},
+   { 5, 5},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 3, 0,     /* 0x25 */
+ { { 0, 0},
+   { 2, 2},
+   { 5, 5},
+   { 0, 0}
+ }
+},
+{0, 0, 2, 0,     /* 0x26 */
+ { { 1, 2},
+   { 5, 5},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 2, 0,     /* 0x27 */
+ { { 0, 2},
+   { 5, 5},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 0, 2, 0,     /* 0x28 */
+ { { 3, 3},
+   { 5, 5},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 3, 0,     /* 0x29 */
+ { { 0, 0},
+   { 3, 3},
+   { 5, 5},
+   { 0, 0}
+ }
+},
+{0, 0, 3, 0,     /* 0x2a */
+ { { 1, 1},
+   { 3, 3},
+   { 5, 5},
+   { 0, 0}
+ }
+},
+{1, 0, 3, 0,     /* 0x2b */
+ { { 0, 1},
+   { 3, 3},
+   { 5, 5},
+   { 0, 0}
+ }
+},
+{0, 0, 2, 0,     /* 0x2c */
+ { { 2, 3},
+   { 5, 5},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 3, 0,     /* 0x2d */
+ { { 0, 0},
+   { 2, 3},
+   { 5, 5},
+   { 0, 0}
+ }
+},
+{0, 0, 2, 0,     /* 0x2e */
+ { { 1, 3},
+   { 5, 5},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 2, 0,     /* 0x2f */
+ { { 0, 3},
+   { 5, 5},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 0, 1, 0,     /* 0x30 */
+ { { 4, 5},
+   { 0, 0},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 2, 0,     /* 0x31 */
+ { { 0, 0},
+   { 4, 5},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 0, 2, 0,     /* 0x32 */
+ { { 1, 1},
+   { 4, 5},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 2, 0,     /* 0x33 */
+ { { 0, 1},
+   { 4, 5},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 0, 2, 0,     /* 0x34 */
+ { { 2, 2},
+   { 4, 5},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 3, 0,     /* 0x35 */
+ { { 0, 0},
+   { 2, 2},
+   { 4, 5},
+   { 0, 0}
+ }
+},
+{0, 0, 2, 0,     /* 0x36 */
+ { { 1, 2},
+   { 4, 5},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 2, 0,     /* 0x37 */
+ { { 0, 2},
+   { 4, 5},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 0, 1, 0,     /* 0x38 */
+ { { 3, 5},
+   { 0, 0},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 2, 0,     /* 0x39 */
+ { { 0, 0},
+   { 3, 5},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 0, 2, 0,     /* 0x3a */
+ { { 1, 1},
+   { 3, 5},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 2, 0,     /* 0x3b */
+ { { 0, 1},
+   { 3, 5},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 0, 1, 0,     /* 0x3c */
+ { { 2, 5},
+   { 0, 0},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 2, 0,     /* 0x3d */
+ { { 0, 0},
+   { 2, 5},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 0, 1, 0,     /* 0x3e */
+ { { 1, 5},
+   { 0, 0},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 1, 0,     /* 0x3f */
+ { { 0, 5},
+   { 0, 0},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 0, 1, 0,     /* 0x40 */
+ { { 6, 6},
+   { 0, 0},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 2, 0,     /* 0x41 */
+ { { 0, 0},
+   { 6, 6},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 0, 2, 0,     /* 0x42 */
+ { { 1, 1},
+   { 6, 6},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 2, 0,     /* 0x43 */
+ { { 0, 1},
+   { 6, 6},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 0, 2, 0,     /* 0x44 */
+ { { 2, 2},
+   { 6, 6},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 3, 0,     /* 0x45 */
+ { { 0, 0},
+   { 2, 2},
+   { 6, 6},
+   { 0, 0}
+ }
+},
+{0, 0, 2, 0,     /* 0x46 */
+ { { 1, 2},
+   { 6, 6},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 2, 0,     /* 0x47 */
+ { { 0, 2},
+   { 6, 6},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 0, 2, 0,     /* 0x48 */
+ { { 3, 3},
+   { 6, 6},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 3, 0,     /* 0x49 */
+ { { 0, 0},
+   { 3, 3},
+   { 6, 6},
+   { 0, 0}
+ }
+},
+{0, 0, 3, 0,     /* 0x4a */
+ { { 1, 1},
+   { 3, 3},
+   { 6, 6},
+   { 0, 0}
+ }
+},
+{1, 0, 3, 0,     /* 0x4b */
+ { { 0, 1},
+   { 3, 3},
+   { 6, 6},
+   { 0, 0}
+ }
+},
+{0, 0, 2, 0,     /* 0x4c */
+ { { 2, 3},
+   { 6, 6},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 3, 0,     /* 0x4d */
+ { { 0, 0},
+   { 2, 3},
+   { 6, 6},
+   { 0, 0}
+ }
+},
+{0, 0, 2, 0,     /* 0x4e */
+ { { 1, 3},
+   { 6, 6},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 2, 0,     /* 0x4f */
+ { { 0, 3},
+   { 6, 6},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 0, 2, 0,     /* 0x50 */
+ { { 4, 4},
+   { 6, 6},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 3, 0,     /* 0x51 */
+ { { 0, 0},
+   { 4, 4},
+   { 6, 6},
+   { 0, 0}
+ }
+},
+{0, 0, 3, 0,     /* 0x52 */
+ { { 1, 1},
+   { 4, 4},
+   { 6, 6},
+   { 0, 0}
+ }
+},
+{1, 0, 3, 0,     /* 0x53 */
+ { { 0, 1},
+   { 4, 4},
+   { 6, 6},
+   { 0, 0}
+ }
+},
+{0, 0, 3, 0,     /* 0x54 */
+ { { 2, 2},
+   { 4, 4},
+   { 6, 6},
+   { 0, 0}
+ }
+},
+{1, 0, 4, 0,     /* 0x55 */
+ { { 0, 0},
+   { 2, 2},
+   { 4, 4},
+   { 6, 6}
+ }
+},
+{0, 0, 3, 0,     /* 0x56 */
+ { { 1, 2},
+   { 4, 4},
+   { 6, 6},
+   { 0, 0}
+ }
+},
+{1, 0, 3, 0,     /* 0x57 */
+ { { 0, 2},
+   { 4, 4},
+   { 6, 6},
+   { 0, 0}
+ }
+},
+{0, 0, 2, 0,     /* 0x58 */
+ { { 3, 4},
+   { 6, 6},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 3, 0,     /* 0x59 */
+ { { 0, 0},
+   { 3, 4},
+   { 6, 6},
+   { 0, 0}
+ }
+},
+{0, 0, 3, 0,     /* 0x5a */
+ { { 1, 1},
+   { 3, 4},
+   { 6, 6},
+   { 0, 0}
+ }
+},
+{1, 0, 3, 0,     /* 0x5b */
+ { { 0, 1},
+   { 3, 4},
+   { 6, 6},
+   { 0, 0}
+ }
+},
+{0, 0, 2, 0,     /* 0x5c */
+ { { 2, 4},
+   { 6, 6},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 3, 0,     /* 0x5d */
+ { { 0, 0},
+   { 2, 4},
+   { 6, 6},
+   { 0, 0}
+ }
+},
+{0, 0, 2, 0,     /* 0x5e */
+ { { 1, 4},
+   { 6, 6},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 2, 0,     /* 0x5f */
+ { { 0, 4},
+   { 6, 6},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 0, 1, 0,     /* 0x60 */
+ { { 5, 6},
+   { 0, 0},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 2, 0,     /* 0x61 */
+ { { 0, 0},
+   { 5, 6},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 0, 2, 0,     /* 0x62 */
+ { { 1, 1},
+   { 5, 6},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 2, 0,     /* 0x63 */
+ { { 0, 1},
+   { 5, 6},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 0, 2, 0,     /* 0x64 */
+ { { 2, 2},
+   { 5, 6},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 3, 0,     /* 0x65 */
+ { { 0, 0},
+   { 2, 2},
+   { 5, 6},
+   { 0, 0}
+ }
+},
+{0, 0, 2, 0,     /* 0x66 */
+ { { 1, 2},
+   { 5, 6},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 2, 0,     /* 0x67 */
+ { { 0, 2},
+   { 5, 6},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 0, 2, 0,     /* 0x68 */
+ { { 3, 3},
+   { 5, 6},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 3, 0,     /* 0x69 */
+ { { 0, 0},
+   { 3, 3},
+   { 5, 6},
+   { 0, 0}
+ }
+},
+{0, 0, 3, 0,     /* 0x6a */
+ { { 1, 1},
+   { 3, 3},
+   { 5, 6},
+   { 0, 0}
+ }
+},
+{1, 0, 3, 0,     /* 0x6b */
+ { { 0, 1},
+   { 3, 3},
+   { 5, 6},
+   { 0, 0}
+ }
+},
+{0, 0, 2, 0,     /* 0x6c */
+ { { 2, 3},
+   { 5, 6},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 3, 0,     /* 0x6d */
+ { { 0, 0},
+   { 2, 3},
+   { 5, 6},
+   { 0, 0}
+ }
+},
+{0, 0, 2, 0,     /* 0x6e */
+ { { 1, 3},
+   { 5, 6},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 2, 0,     /* 0x6f */
+ { { 0, 3},
+   { 5, 6},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 0, 1, 0,     /* 0x70 */
+ { { 4, 6},
+   { 0, 0},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 2, 0,     /* 0x71 */
+ { { 0, 0},
+   { 4, 6},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 0, 2, 0,     /* 0x72 */
+ { { 1, 1},
+   { 4, 6},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 2, 0,     /* 0x73 */
+ { { 0, 1},
+   { 4, 6},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 0, 2, 0,     /* 0x74 */
+ { { 2, 2},
+   { 4, 6},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 3, 0,     /* 0x75 */
+ { { 0, 0},
+   { 2, 2},
+   { 4, 6},
+   { 0, 0}
+ }
+},
+{0, 0, 2, 0,     /* 0x76 */
+ { { 1, 2},
+   { 4, 6},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 2, 0,     /* 0x77 */
+ { { 0, 2},
+   { 4, 6},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 0, 1, 0,     /* 0x78 */
+ { { 3, 6},
+   { 0, 0},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 2, 0,     /* 0x79 */
+ { { 0, 0},
+   { 3, 6},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 0, 2, 0,     /* 0x7a */
+ { { 1, 1},
+   { 3, 6},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 2, 0,     /* 0x7b */
+ { { 0, 1},
+   { 3, 6},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 0, 1, 0,     /* 0x7c */
+ { { 2, 6},
+   { 0, 0},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 2, 0,     /* 0x7d */
+ { { 0, 0},
+   { 2, 6},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 0, 1, 0,     /* 0x7e */
+ { { 1, 6},
+   { 0, 0},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 0, 1, 0,     /* 0x7f */
+ { { 0, 6},
+   { 0, 0},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 1, 1, 0,     /* 0x80 */
+ { { 7, 7},
+   { 0, 0},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 1, 2, 0,     /* 0x81 */
+ { { 0, 0},
+   { 7, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 1, 2, 0,     /* 0x82 */
+ { { 1, 1},
+   { 7, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 1, 2, 0,     /* 0x83 */
+ { { 0, 1},
+   { 7, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 1, 2, 0,     /* 0x84 */
+ { { 2, 2},
+   { 7, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 1, 3, 0,     /* 0x85 */
+ { { 0, 0},
+   { 2, 2},
+   { 7, 7},
+   { 0, 0}
+ }
+},
+{0, 1, 2, 0,     /* 0x86 */
+ { { 1, 2},
+   { 7, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 1, 2, 0,     /* 0x87 */
+ { { 0, 2},
+   { 7, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 1, 2, 0,     /* 0x88 */
+ { { 3, 3},
+   { 7, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 1, 3, 0,     /* 0x89 */
+ { { 0, 0},
+   { 3, 3},
+   { 7, 7},
+   { 0, 0}
+ }
+},
+{0, 1, 3, 0,     /* 0x8a */
+ { { 1, 1},
+   { 3, 3},
+   { 7, 7},
+   { 0, 0}
+ }
+},
+{1, 1, 3, 0,     /* 0x8b */
+ { { 0, 1},
+   { 3, 3},
+   { 7, 7},
+   { 0, 0}
+ }
+},
+{0, 1, 2, 0,     /* 0x8c */
+ { { 2, 3},
+   { 7, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 1, 3, 0,     /* 0x8d */
+ { { 0, 0},
+   { 2, 3},
+   { 7, 7},
+   { 0, 0}
+ }
+},
+{0, 1, 2, 0,     /* 0x8e */
+ { { 1, 3},
+   { 7, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 1, 2, 0,     /* 0x8f */
+ { { 0, 3},
+   { 7, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 1, 2, 0,     /* 0x90 */
+ { { 4, 4},
+   { 7, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 1, 3, 0,     /* 0x91 */
+ { { 0, 0},
+   { 4, 4},
+   { 7, 7},
+   { 0, 0}
+ }
+},
+{0, 1, 3, 0,     /* 0x92 */
+ { { 1, 1},
+   { 4, 4},
+   { 7, 7},
+   { 0, 0}
+ }
+},
+{1, 1, 3, 0,     /* 0x93 */
+ { { 0, 1},
+   { 4, 4},
+   { 7, 7},
+   { 0, 0}
+ }
+},
+{0, 1, 3, 0,     /* 0x94 */
+ { { 2, 2},
+   { 4, 4},
+   { 7, 7},
+   { 0, 0}
+ }
+},
+{1, 1, 4, 0,     /* 0x95 */
+ { { 0, 0},
+   { 2, 2},
+   { 4, 4},
+   { 7, 7}
+ }
+},
+{0, 1, 3, 0,     /* 0x96 */
+ { { 1, 2},
+   { 4, 4},
+   { 7, 7},
+   { 0, 0}
+ }
+},
+{1, 1, 3, 0,     /* 0x97 */
+ { { 0, 2},
+   { 4, 4},
+   { 7, 7},
+   { 0, 0}
+ }
+},
+{0, 1, 2, 0,     /* 0x98 */
+ { { 3, 4},
+   { 7, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 1, 3, 0,     /* 0x99 */
+ { { 0, 0},
+   { 3, 4},
+   { 7, 7},
+   { 0, 0}
+ }
+},
+{0, 1, 3, 0,     /* 0x9a */
+ { { 1, 1},
+   { 3, 4},
+   { 7, 7},
+   { 0, 0}
+ }
+},
+{1, 1, 3, 0,     /* 0x9b */
+ { { 0, 1},
+   { 3, 4},
+   { 7, 7},
+   { 0, 0}
+ }
+},
+{0, 1, 2, 0,     /* 0x9c */
+ { { 2, 4},
+   { 7, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 1, 3, 0,     /* 0x9d */
+ { { 0, 0},
+   { 2, 4},
+   { 7, 7},
+   { 0, 0}
+ }
+},
+{0, 1, 2, 0,     /* 0x9e */
+ { { 1, 4},
+   { 7, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 1, 2, 0,     /* 0x9f */
+ { { 0, 4},
+   { 7, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 1, 2, 0,     /* 0xa0 */
+ { { 5, 5},
+   { 7, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 1, 3, 0,     /* 0xa1 */
+ { { 0, 0},
+   { 5, 5},
+   { 7, 7},
+   { 0, 0}
+ }
+},
+{0, 1, 3, 0,     /* 0xa2 */
+ { { 1, 1},
+   { 5, 5},
+   { 7, 7},
+   { 0, 0}
+ }
+},
+{1, 1, 3, 0,     /* 0xa3 */
+ { { 0, 1},
+   { 5, 5},
+   { 7, 7},
+   { 0, 0}
+ }
+},
+{0, 1, 3, 0,     /* 0xa4 */
+ { { 2, 2},
+   { 5, 5},
+   { 7, 7},
+   { 0, 0}
+ }
+},
+{1, 1, 4, 0,     /* 0xa5 */
+ { { 0, 0},
+   { 2, 2},
+   { 5, 5},
+   { 7, 7}
+ }
+},
+{0, 1, 3, 0,     /* 0xa6 */
+ { { 1, 2},
+   { 5, 5},
+   { 7, 7},
+   { 0, 0}
+ }
+},
+{1, 1, 3, 0,     /* 0xa7 */
+ { { 0, 2},
+   { 5, 5},
+   { 7, 7},
+   { 0, 0}
+ }
+},
+{0, 1, 3, 0,     /* 0xa8 */
+ { { 3, 3},
+   { 5, 5},
+   { 7, 7},
+   { 0, 0}
+ }
+},
+{1, 1, 4, 0,     /* 0xa9 */
+ { { 0, 0},
+   { 3, 3},
+   { 5, 5},
+   { 7, 7}
+ }
+},
+{0, 1, 4, 0,     /* 0xaa */
+ { { 1, 1},
+   { 3, 3},
+   { 5, 5},
+   { 7, 7}
+ }
+},
+{1, 1, 4, 0,     /* 0xab */
+ { { 0, 1},
+   { 3, 3},
+   { 5, 5},
+   { 7, 7}
+ }
+},
+{0, 1, 3, 0,     /* 0xac */
+ { { 2, 3},
+   { 5, 5},
+   { 7, 7},
+   { 0, 0}
+ }
+},
+{1, 1, 4, 0,     /* 0xad */
+ { { 0, 0},
+   { 2, 3},
+   { 5, 5},
+   { 7, 7}
+ }
+},
+{0, 1, 3, 0,     /* 0xae */
+ { { 1, 3},
+   { 5, 5},
+   { 7, 7},
+   { 0, 0}
+ }
+},
+{1, 1, 3, 0,     /* 0xaf */
+ { { 0, 3},
+   { 5, 5},
+   { 7, 7},
+   { 0, 0}
+ }
+},
+{0, 1, 2, 0,     /* 0xb0 */
+ { { 4, 5},
+   { 7, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 1, 3, 0,     /* 0xb1 */
+ { { 0, 0},
+   { 4, 5},
+   { 7, 7},
+   { 0, 0}
+ }
+},
+{0, 1, 3, 0,     /* 0xb2 */
+ { { 1, 1},
+   { 4, 5},
+   { 7, 7},
+   { 0, 0}
+ }
+},
+{1, 1, 3, 0,     /* 0xb3 */
+ { { 0, 1},
+   { 4, 5},
+   { 7, 7},
+   { 0, 0}
+ }
+},
+{0, 1, 3, 0,     /* 0xb4 */
+ { { 2, 2},
+   { 4, 5},
+   { 7, 7},
+   { 0, 0}
+ }
+},
+{1, 1, 4, 0,     /* 0xb5 */
+ { { 0, 0},
+   { 2, 2},
+   { 4, 5},
+   { 7, 7}
+ }
+},
+{0, 1, 3, 0,     /* 0xb6 */
+ { { 1, 2},
+   { 4, 5},
+   { 7, 7},
+   { 0, 0}
+ }
+},
+{1, 1, 3, 0,     /* 0xb7 */
+ { { 0, 2},
+   { 4, 5},
+   { 7, 7},
+   { 0, 0}
+ }
+},
+{0, 1, 2, 0,     /* 0xb8 */
+ { { 3, 5},
+   { 7, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 1, 3, 0,     /* 0xb9 */
+ { { 0, 0},
+   { 3, 5},
+   { 7, 7},
+   { 0, 0}
+ }
+},
+{0, 1, 3, 0,     /* 0xba */
+ { { 1, 1},
+   { 3, 5},
+   { 7, 7},
+   { 0, 0}
+ }
+},
+{1, 1, 3, 0,     /* 0xbb */
+ { { 0, 1},
+   { 3, 5},
+   { 7, 7},
+   { 0, 0}
+ }
+},
+{0, 1, 2, 0,     /* 0xbc */
+ { { 2, 5},
+   { 7, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 1, 3, 0,     /* 0xbd */
+ { { 0, 0},
+   { 2, 5},
+   { 7, 7},
+   { 0, 0}
+ }
+},
+{0, 1, 2, 0,     /* 0xbe */
+ { { 1, 5},
+   { 7, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 1, 2, 0,     /* 0xbf */
+ { { 0, 5},
+   { 7, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 1, 1, 0,     /* 0xc0 */
+ { { 6, 7},
+   { 0, 0},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 1, 2, 0,     /* 0xc1 */
+ { { 0, 0},
+   { 6, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 1, 2, 0,     /* 0xc2 */
+ { { 1, 1},
+   { 6, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 1, 2, 0,     /* 0xc3 */
+ { { 0, 1},
+   { 6, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 1, 2, 0,     /* 0xc4 */
+ { { 2, 2},
+   { 6, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 1, 3, 0,     /* 0xc5 */
+ { { 0, 0},
+   { 2, 2},
+   { 6, 7},
+   { 0, 0}
+ }
+},
+{0, 1, 2, 0,     /* 0xc6 */
+ { { 1, 2},
+   { 6, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 1, 2, 0,     /* 0xc7 */
+ { { 0, 2},
+   { 6, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 1, 2, 0,     /* 0xc8 */
+ { { 3, 3},
+   { 6, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 1, 3, 0,     /* 0xc9 */
+ { { 0, 0},
+   { 3, 3},
+   { 6, 7},
+   { 0, 0}
+ }
+},
+{0, 1, 3, 0,     /* 0xca */
+ { { 1, 1},
+   { 3, 3},
+   { 6, 7},
+   { 0, 0}
+ }
+},
+{1, 1, 3, 0,     /* 0xcb */
+ { { 0, 1},
+   { 3, 3},
+   { 6, 7},
+   { 0, 0}
+ }
+},
+{0, 1, 2, 0,     /* 0xcc */
+ { { 2, 3},
+   { 6, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 1, 3, 0,     /* 0xcd */
+ { { 0, 0},
+   { 2, 3},
+   { 6, 7},
+   { 0, 0}
+ }
+},
+{0, 1, 2, 0,     /* 0xce */
+ { { 1, 3},
+   { 6, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 1, 2, 0,     /* 0xcf */
+ { { 0, 3},
+   { 6, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 1, 2, 0,     /* 0xd0 */
+ { { 4, 4},
+   { 6, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 1, 3, 0,     /* 0xd1 */
+ { { 0, 0},
+   { 4, 4},
+   { 6, 7},
+   { 0, 0}
+ }
+},
+{0, 1, 3, 0,     /* 0xd2 */
+ { { 1, 1},
+   { 4, 4},
+   { 6, 7},
+   { 0, 0}
+ }
+},
+{1, 1, 3, 0,     /* 0xd3 */
+ { { 0, 1},
+   { 4, 4},
+   { 6, 7},
+   { 0, 0}
+ }
+},
+{0, 1, 3, 0,     /* 0xd4 */
+ { { 2, 2},
+   { 4, 4},
+   { 6, 7},
+   { 0, 0}
+ }
+},
+{1, 1, 4, 0,     /* 0xd5 */
+ { { 0, 0},
+   { 2, 2},
+   { 4, 4},
+   { 6, 7}
+ }
+},
+{0, 1, 3, 0,     /* 0xd6 */
+ { { 1, 2},
+   { 4, 4},
+   { 6, 7},
+   { 0, 0}
+ }
+},
+{1, 1, 3, 0,     /* 0xd7 */
+ { { 0, 2},
+   { 4, 4},
+   { 6, 7},
+   { 0, 0}
+ }
+},
+{0, 1, 2, 0,     /* 0xd8 */
+ { { 3, 4},
+   { 6, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 1, 3, 0,     /* 0xd9 */
+ { { 0, 0},
+   { 3, 4},
+   { 6, 7},
+   { 0, 0}
+ }
+},
+{0, 1, 3, 0,     /* 0xda */
+ { { 1, 1},
+   { 3, 4},
+   { 6, 7},
+   { 0, 0}
+ }
+},
+{1, 1, 3, 0,     /* 0xdb */
+ { { 0, 1},
+   { 3, 4},
+   { 6, 7},
+   { 0, 0}
+ }
+},
+{0, 1, 2, 0,     /* 0xdc */
+ { { 2, 4},
+   { 6, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 1, 3, 0,     /* 0xdd */
+ { { 0, 0},
+   { 2, 4},
+   { 6, 7},
+   { 0, 0}
+ }
+},
+{0, 1, 2, 0,     /* 0xde */
+ { { 1, 4},
+   { 6, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 1, 2, 0,     /* 0xdf */
+ { { 0, 4},
+   { 6, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 1, 1, 0,     /* 0xe0 */
+ { { 5, 7},
+   { 0, 0},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 1, 2, 0,     /* 0xe1 */
+ { { 0, 0},
+   { 5, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 1, 2, 0,     /* 0xe2 */
+ { { 1, 1},
+   { 5, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 1, 2, 0,     /* 0xe3 */
+ { { 0, 1},
+   { 5, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 1, 2, 0,     /* 0xe4 */
+ { { 2, 2},
+   { 5, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 1, 3, 0,     /* 0xe5 */
+ { { 0, 0},
+   { 2, 2},
+   { 5, 7},
+   { 0, 0}
+ }
+},
+{0, 1, 2, 0,     /* 0xe6 */
+ { { 1, 2},
+   { 5, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 1, 2, 0,     /* 0xe7 */
+ { { 0, 2},
+   { 5, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 1, 2, 0,     /* 0xe8 */
+ { { 3, 3},
+   { 5, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 1, 3, 0,     /* 0xe9 */
+ { { 0, 0},
+   { 3, 3},
+   { 5, 7},
+   { 0, 0}
+ }
+},
+{0, 1, 3, 0,     /* 0xea */
+ { { 1, 1},
+   { 3, 3},
+   { 5, 7},
+   { 0, 0}
+ }
+},
+{1, 1, 3, 0,     /* 0xeb */
+ { { 0, 1},
+   { 3, 3},
+   { 5, 7},
+   { 0, 0}
+ }
+},
+{0, 1, 2, 0,     /* 0xec */
+ { { 2, 3},
+   { 5, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 1, 3, 0,     /* 0xed */
+ { { 0, 0},
+   { 2, 3},
+   { 5, 7},
+   { 0, 0}
+ }
+},
+{0, 1, 2, 0,     /* 0xee */
+ { { 1, 3},
+   { 5, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 1, 2, 0,     /* 0xef */
+ { { 0, 3},
+   { 5, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 1, 1, 0,     /* 0xf0 */
+ { { 4, 7},
+   { 0, 0},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 1, 2, 0,     /* 0xf1 */
+ { { 0, 0},
+   { 4, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 1, 2, 0,     /* 0xf2 */
+ { { 1, 1},
+   { 4, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 1, 2, 0,     /* 0xf3 */
+ { { 0, 1},
+   { 4, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 1, 2, 0,     /* 0xf4 */
+ { { 2, 2},
+   { 4, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 1, 3, 0,     /* 0xf5 */
+ { { 0, 0},
+   { 2, 2},
+   { 4, 7},
+   { 0, 0}
+ }
+},
+{0, 1, 2, 0,     /* 0xf6 */
+ { { 1, 2},
+   { 4, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 1, 2, 0,     /* 0xf7 */
+ { { 0, 2},
+   { 4, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 1, 1, 0,     /* 0xf8 */
+ { { 3, 7},
+   { 0, 0},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 1, 2, 0,     /* 0xf9 */
+ { { 0, 0},
+   { 3, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 1, 2, 0,     /* 0xfa */
+ { { 1, 1},
+   { 3, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 1, 2, 0,     /* 0xfb */
+ { { 0, 1},
+   { 3, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 1, 1, 0,     /* 0xfc */
+ { { 2, 7},
+   { 0, 0},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 1, 2, 0,     /* 0xfd */
+ { { 0, 0},
+   { 2, 7},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{0, 1, 1, 0,     /* 0xfe */
+ { { 1, 7},
+   { 0, 0},
+   { 0, 0},
+   { 0, 0}
+ }
+},
+{1, 1, 1, 0,     /* 0xff */
+ { { 0, 7},
+   { 0, 0},
+   { 0, 0},
+   { 0, 0}
+ }
+}
+};
+
+
+
+
 extern int sctp_peer_chunk_oh;
 
 static int
@@ -8117,13 +9925,16 @@ sctp_send_sack(struct sctp_tcb *stcb)
 	struct sctp_tmit_chunk *chk, *a_chk;
 	struct sctp_sack_chunk *sack;
 	struct sctp_gap_ack_block *gap_descriptor;
+	struct sack_track *selector;
+	int mergeable=0;
+	int offset;
+	caddr_t limit;
 	uint32_t *dup;
-	int start;
-	unsigned int i, maxi, seeing_ones, m_size;
-	unsigned int num_gap_blocks, space;
+	int limit_reached=0;
+	unsigned int i, jstart, siz, j;
+	unsigned int num_gap_blocks=0, space;
+	int num_dups=0;
 
-	start = maxi = 0;
-	seeing_ones = 1;
 	a_chk = NULL;
 	asoc = &stcb->asoc;
 	STCB_TCB_LOCK_ASSERT(stcb);
@@ -8163,7 +9974,6 @@ sctp_send_sack(struct sctp_tcb *stcb)
 	a_chk->snd_count = 0;
 	a_chk->send_size = 0;	/* fill in later */
 	a_chk->sent = SCTP_DATAGRAM_UNSENT;
-	m_size = (asoc->mapping_array_size << 3);
 
 	if ((asoc->numduptsns) ||
 	    (asoc->last_data_chunk_from->dest_state & SCTP_ADDR_NOT_REACHABLE)
@@ -8173,7 +9983,7 @@ sctp_send_sack(struct sctp_tcb *stcb)
 		 * than asoc->last_data_chunk_from
 		 */
 		if ((!(asoc->last_data_chunk_from->dest_state &
-		      SCTP_ADDR_NOT_REACHABLE)) &&
+		       SCTP_ADDR_NOT_REACHABLE)) &&
 		    (asoc->used_alt_onsack > 2)) {
 			/* We used an alt last time, don't this time */
 			a_chk->whoTo = NULL;
@@ -8220,129 +10030,35 @@ sctp_send_sack(struct sctp_tcb *stcb)
 				 stcb->sctp_ep, stcb, NULL);
 		return;
 	}
-	/* First count the number of gap ack blocks we need */
-	if (asoc->highest_tsn_inside_map == asoc->cumulative_tsn) {
-		/* We know if there are none above the cum-ack we
-		 * have everything with NO gaps
+	MCLGET(a_chk->data, M_DONTWAIT);
+	if ((a_chk->data->m_flags & M_EXT) != M_EXT) {
+		/* can't get a cluster
+		 * give up and try later.
 		 */
-		num_gap_blocks = 0;
-	} else {
-		/* Ok we must count how many gaps we
-		 * have.
-		 */
-		num_gap_blocks = 0;
-		if (asoc->highest_tsn_inside_map >= asoc->mapping_array_base_tsn) {
-			maxi = (asoc->highest_tsn_inside_map - asoc->mapping_array_base_tsn);
-		} else {
-			maxi = (asoc->highest_tsn_inside_map  + (MAX_TSN - asoc->mapping_array_base_tsn) + 1);
-		}
-		if (maxi > m_size) {
-			/* impossible but who knows, someone is playing with us  :> */
-#ifdef SCTP_DEBUG
-			printf("GAK maxi:%d  > m_size:%d came out higher than allowed htsn:%u base:%u cumack:%u\n",
-			       maxi,
-			       m_size,
-			       asoc->highest_tsn_inside_map,
-			       asoc->mapping_array_base_tsn,
-			       asoc->cumulative_tsn
-			       );
-#endif
-			num_gap_blocks = 0;
-			goto no_gaps_now;
-		}
-		if (asoc->cumulative_tsn >= asoc->mapping_array_base_tsn) {
-			start = (asoc->cumulative_tsn - asoc->mapping_array_base_tsn);
-		} else {
-			/* Set it so we start at 0 */
-			start = -1;
-		}
-		/* Ok move start up one to look at the NEXT past the cum-ack */
-		start++;
-		for (i = start; i <= maxi; i++) {
-			if (seeing_ones) {
-				/* while seeing ones I must
-				 * transition back to 0 before
-				 * finding the next gap and
-				 * counting the segment.
-				 */
-				if (SCTP_IS_TSN_PRESENT(asoc->mapping_array, i) == 0) {
-					seeing_ones = 0;
-				}
-			} else {
-				if (SCTP_IS_TSN_PRESENT(asoc->mapping_array, i)) {
-					seeing_ones = 1;
-					num_gap_blocks++;
-				}
-			}
-		}
-	no_gaps_now:
-		if (num_gap_blocks == 0) {
-			/*
-			 * Traveled all of the bits and NO one,
-			 * must have reneged
-			 */
-			if (compare_with_wrap(asoc->cumulative_tsn, asoc->highest_tsn_inside_map, MAX_TSN)) {
-			   asoc->highest_tsn_inside_map = asoc->cumulative_tsn;
-#ifdef SCTP_MAP_LOGGING
-			   sctp_log_map(0, 4, asoc->highest_tsn_inside_map, SCTP_MAP_SLIDE_RESULT);
-#endif
-			}
-		}
-	}
-
-	/* Now calculate the space needed */
-	space = (sizeof(struct sctp_sack_chunk) +
-		 (num_gap_blocks * sizeof(struct sctp_gap_ack_block)) +
-		 (asoc->numduptsns * sizeof(int32_t))
-		);
-	if (space > (asoc->smallest_mtu-SCTP_MAX_OVERHEAD)) {
-		/* Reduce the size of the sack to fit */
-		int calc, fit;
-		calc = (asoc->smallest_mtu - SCTP_MAX_OVERHEAD);
-		calc -= sizeof(struct sctp_gap_ack_block);
-		fit = calc/sizeof(struct sctp_gap_ack_block);
-		if (fit > (int)num_gap_blocks) {
-			/* discard some dups */
-			asoc->numduptsns = (fit - num_gap_blocks);
-		} else {
-			/* discard all dups and some gaps */
-			num_gap_blocks = fit;
-			asoc->numduptsns = 0;
-		}
-		/* recalc space */
-		space = (sizeof(struct sctp_sack_chunk) +
-			 (num_gap_blocks * sizeof(struct sctp_gap_ack_block)) +
-			 (asoc->numduptsns * sizeof(int32_t))
-			);
-
-	}
-
-	if ((space+SCTP_MIN_OVERHEAD) > MHLEN) {
-		/* We need a cluster */
-		MCLGET(a_chk->data, M_DONTWAIT);
-		if ((a_chk->data->m_flags & M_EXT) != M_EXT) {
-			/* can't get a cluster
-			 * give up and try later.
-			 */
-			if (a_chk->data)
-				sctp_m_freem(a_chk->data);
-			a_chk->data = NULL;
-			a_chk->whoTo->ref_count--;
-			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, a_chk);
-			SCTP_DECR_CHK_COUNT();
-			sctp_timer_stop(SCTP_TIMER_TYPE_RECV,
-					stcb->sctp_ep, stcb, NULL);
-			sctp_timer_start(SCTP_TIMER_TYPE_RECV,
-					 stcb->sctp_ep, stcb, NULL);
-			return;
-		}
+		if (a_chk->data)
+			sctp_m_freem(a_chk->data);
+		a_chk->data = NULL;
+		a_chk->whoTo->ref_count--;
+		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, a_chk);
+		SCTP_DECR_CHK_COUNT();
+		sctp_timer_stop(SCTP_TIMER_TYPE_RECV,
+				stcb->sctp_ep, stcb, NULL);
+		sctp_timer_start(SCTP_TIMER_TYPE_RECV,
+				 stcb->sctp_ep, stcb, NULL);
+		return;
 	}
 
 	/* ok, lets go through and fill it in */
 	a_chk->data->m_data += SCTP_MIN_OVERHEAD;
+	space = M_TRAILINGSPACE(a_chk->data);
+	if(space > (a_chk->whoTo->mtu-SCTP_MIN_OVERHEAD)) {
+		space = (a_chk->whoTo->mtu - SCTP_MIN_OVERHEAD);
+	}
+	limit = mtod(a_chk->data, caddr_t);
+	limit += space;
+
 	sack = mtod(a_chk->data, struct sctp_sack_chunk *);
 	sack->ch.chunk_type = SCTP_SELECTIVE_ACK;
-
 	/* IF you want to set a bit for CMT or in 0x80 because
 	 * 0x01 is used by nonce for ecn.
 	 */
@@ -8350,59 +10066,92 @@ sctp_send_sack(struct sctp_tcb *stcb)
 	sack->sack.cum_tsn_ack = htonl(asoc->cumulative_tsn);
 	sack->sack.a_rwnd = htonl(asoc->my_rwnd);
 	asoc->my_last_reported_rwnd = asoc->my_rwnd;
-	sack->sack.num_gap_ack_blks = htons(num_gap_blocks);
-	sack->sack.num_dup_tsns = htons(asoc->numduptsns);
-
-	a_chk->send_size = (sizeof(struct sctp_sack_chunk) +
-			    (num_gap_blocks * sizeof(struct sctp_gap_ack_block)) +
-			    (asoc->numduptsns * sizeof(int32_t)));
-	a_chk->data->m_pkthdr.len = a_chk->data->m_len = a_chk->send_size;
-	sack->ch.chunk_length = htons(a_chk->send_size);
-
 	gap_descriptor = (struct sctp_gap_ack_block *)((caddr_t)sack + sizeof(struct sctp_sack_chunk));
-	seeing_ones = 0;
-	for (i = start; i <= maxi; i++) {
-		if (num_gap_blocks == 0) {
-			break;
-		}
-		if (seeing_ones) {
-			/* while seeing Ones I must
-			 * transition back to 0 before
-			 * finding the next gap
-			 */
-			if (SCTP_IS_TSN_PRESENT(asoc->mapping_array, i) == 0) {
-				gap_descriptor->end = htons(((uint16_t)(i-start)));
-				gap_descriptor++;
-				seeing_ones = 0;
-				num_gap_blocks--;
-			}
-		} else {
-			if (SCTP_IS_TSN_PRESENT(asoc->mapping_array, i)) {
-				gap_descriptor->start = htons(((uint16_t)(i+1-start)));
-				/* advance struct to next pointer */
-				seeing_ones = 1;
-			}
-		}
-	}
-	if (num_gap_blocks) {
-		/* special case where the array is all 1's
-		 * to the end of the array.
+
+
+	siz = (((asoc->highest_tsn_inside_map - asoc->mapping_array_base_tsn) + 1) + 7)/ 8;
+	if(asoc->cumulative_tsn < asoc->mapping_array_base_tsn) {
+		offset = 1;
+		/* 
+		 * cum-ack behind the mapping array, so we
+		 * start and use all entries.
 		 */
-		gap_descriptor->end = htons(((uint16_t)((i-start))));
-		gap_descriptor++;
+ 		jstart = 0;
+	} else {
+		offset = asoc->mapping_array_base_tsn - asoc->cumulative_tsn; 
+		/* 
+		 * we skip the first one when the cum-ack is at or
+		 * above the mapping array base.
+		 */
+		jstart = 1;
 	}
+	if(compare_with_wrap(asoc->highest_tsn_inside_map, asoc->cumulative_tsn, MAX_TSN)) {
+		/* we have a gap .. maybe */
+		for(i=0; i <siz; i++) {
+			selector = &sack_array[asoc->mapping_array[i]];
+			if(mergeable && selector->right_edge) {
+				/* Backup, left and right edges were ok 
+				 * to merge.
+				 */
+				num_gap_blocks--;
+				gap_descriptor--;
+			}
+			if(selector->num_entries == 0)
+				mergeable = 0;
+			else {
+				for(j=jstart; j<selector->num_entries; j++) {
+					if(mergeable && selector->right_edge) {
+						/* do a merge by NOT setting the left side */
+						mergeable = 0;
+					} else {
+						/* no merge, set the left side */
+						mergeable = 0;
+						gap_descriptor->start = htons((selector->gaps[j].start + offset));
+					}
+					gap_descriptor->end = htons((selector->gaps[j].end + offset));
+					num_gap_blocks++;
+					gap_descriptor++;
+					if(((caddr_t)gap_descriptor + sizeof(struct sctp_gap_ack_block)) > limit) {
+						/* no more room */
+						limit_reached = 1;
+						break;
+					}
+
+				}
+				if(selector->left_edge) {
+					mergeable = 1;
+				}
+			}
+			jstart = 0;
+			offset += 8;
+		}
+	}
+
 	/* now we must add any dups we are going to report. */
-	if (asoc->numduptsns) {
+	if ((limit_reached == 0) && (asoc->numduptsns)) {
 		dup = (uint32_t *)gap_descriptor;
 		for (i = 0; i < asoc->numduptsns; i++) {
 			*dup = htonl(asoc->dup_tsns[i]);
 			dup++;
+			num_dups++;
+			if(((caddr_t)dup + sizeof(uint32_t)) > limit) {
+				/* no more room */
+				break;
+			}
 		}
 		asoc->numduptsns = 0;
 	}
+
 	/* now that the chunk is prepared queue it to the control
 	 * chunk queue.
 	 */
+	a_chk->send_size = (sizeof(struct sctp_sack_chunk) +
+			    (num_gap_blocks * sizeof(struct sctp_gap_ack_block)) +
+			    (num_dups * sizeof(int32_t)));
+	a_chk->data->m_pkthdr.len = a_chk->data->m_len = a_chk->send_size;
+	sack->sack.num_gap_ack_blks = htons(num_gap_blocks);
+	sack->sack.num_dup_tsns = htons(num_dups);
+	sack->ch.chunk_length = htons(a_chk->send_size);
 	TAILQ_INSERT_TAIL(&asoc->control_send_queue, a_chk, sctp_next);
 	asoc->ctrl_queue_cnt++;
 	sctp_pegs[SCTP_PEG_SACKS_SENT]++;
