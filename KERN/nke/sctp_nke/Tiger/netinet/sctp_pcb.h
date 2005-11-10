@@ -658,7 +658,7 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 /*
  * Apple MacOS X 10.4 "Tiger"
  */
-#elif defined(__APPLE__) && defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#elif defined(__APPLE__) && defined(SCTP_APPLE_FINE_GRAINED_LOCKING1)
 
 /* for now, all locks use this group and attributes */
 #define SCTP_MTX_GRP sctppcbinfo.mtx_grp
@@ -915,7 +915,7 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 /***************END FREEBSD 5 count stuff**********************/
 
 /***************BEGIN APPLE PANTHER count stuff**********************/
-#if defined(__APPLE__) && defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__) && defined(SCTP_APPLE_FINE_GRAINED_LOCKING1)
 #define SCTP_INCRS_DEFINED 1
 #define SCTP_INCR_EP_COUNT() \
                 do { \
