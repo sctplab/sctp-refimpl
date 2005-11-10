@@ -6163,11 +6163,12 @@ sctp_msg_append(struct sctp_tcb *stcb,
 #ifdef SCTP_LOCK_LOGGING
 	sctp_log_lock(stcb->sctp_ep, stcb, SCTP_LOG_LOCK_SOCKBUF_S);
 #endif
-	SOCKBUF_LOCK(&so->so_snd);
+	SOCKBUF_LOCK(&so->so_snd);	
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	error = sblock(&so->so_snd, SBLOCKWAIT(flags));
 	if (error)
 		goto out_locked;
-
+#endif
 	if (dataout > so->so_snd.sb_hiwat) {
 		/* It will NEVER fit */
 		error = EMSGSIZE;
@@ -6221,8 +6222,8 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			 * drop to spl0() so that others can
 			 * get in.
 			 */
-#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
-			sbunlock(&so->so_snd, 0); /* MT: FIXME */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			sbunlock(&so->so_snd, 1);
 #else
 			sbunlock(&so->so_snd);
 #endif
@@ -6270,13 +6271,15 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			}
 			stcb->block_entry = NULL;
 			SCTP_INP_RUNLOCK(inp);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			error = sblock(&so->so_snd, SBLOCKWAIT(flags));
+#else
 			error = sblock(&so->so_snd, M_WAITOK);
+#endif
 			if (error) {
 				goto out_locked;
 			}
-			/* Otherwise we cycle back and recheck
-			 * the space
-			 */
+			/* Otherwise we cycle back and recheck the space */
 #if defined(__FreeBSD__) && __FreeBSD_version >= 502115
 			if (so->so_rcv.sb_state & SBS_CANTSENDMORE) 
 #else
@@ -6590,8 +6593,8 @@ zap_by_it_all:
 #endif
 
 release:
-#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
-	sbunlock(&so->so_snd, 0); /* MT: FIXME */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sbunlock(&so->so_snd, 1);
 #else
 	sbunlock(&so->so_snd);
 #endif
@@ -11575,10 +11578,11 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 #endif
 
 	SOCKBUF_LOCK(&so->so_snd);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	error = sblock(&so->so_snd, SBLOCKWAIT(flags));
 	if (error)
 		goto out_locked;
-
+#endif
 	/* will it ever fit ? */
 	if (sndlen > so->so_snd.sb_hiwat) {
 		/* It will NEVER fit */
@@ -11624,8 +11628,8 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 			sctp_log_block(SCTP_BLOCK_LOG_INTO_BLK,
 			    so, asoc);
 #endif
-#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
-			sbunlock(&so->so_snd, 0); /* MT: FIXME */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			sbunlock(&so->so_snd, 1);
 #else
 			sbunlock(&so->so_snd);
 #endif
@@ -11661,7 +11665,11 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 			}
 			stcb->block_entry = NULL;
 			SCTP_INP_RUNLOCK(inp);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			error = sblock(&so->so_snd, SBLOCKWAIT(flags));
+#else
 			error = sblock(&so->so_snd, M_WAITOK);
+#endif
 			if (error) {
 				/* Can't aquire the lock */
 				splx(s);
@@ -11672,7 +11680,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 #else
 			if (so->so_state & SS_CANTSENDMORE)
 #endif
-			  {
+			{
 				/* The socket is now set not to sendmore.. its gone */
 				error = EPIPE;
 				splx(s);
@@ -11745,8 +11753,8 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 					mm = NULL;
 				}
 			}
-#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
-			sbunlock(&so->so_snd, 0); /* MT: FIXME */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			sbunlock(&so->so_snd, 1);
 #else
 			sbunlock(&so->so_snd);
 #endif
@@ -11905,7 +11913,6 @@ clean_up:
 #ifdef SCTP_LOCK_LOGGING
 			sctp_log_lock(stcb->sctp_ep, stcb, SCTP_LOG_LOCK_SOCKBUF_S);
 #endif
-
 			SOCKBUF_LOCK(&so->so_snd);
 			goto release;
 		}
@@ -12135,8 +12142,8 @@ zap_by_it_now:
 #endif
 
 release:
-#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
-	sbunlock(&so->so_snd, 0); /* MT: FIXME */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sbunlock(&so->so_snd, 1);
 #else
 	sbunlock(&so->so_snd);
 #endif
@@ -12235,6 +12242,10 @@ sctp_sosend(struct socket *so,
 			goto out;
 		}
 	}
+
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	socket_lock(so, 1);
+#endif
 	if (control) {
 		/* process cmsg snd/rcv info (maybe a assoc-id) */
 		if (sctp_find_cmsg(SCTP_SNDRCV, (void *)&srcv, control,
@@ -12603,6 +12614,9 @@ sctp_sosend(struct socket *so,
 	}
 #endif
  out:
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sbunlock(&so->so_snd, 0);
+#endif
 	if (create_lock_applied) {
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		create_lock_applied = 0;
