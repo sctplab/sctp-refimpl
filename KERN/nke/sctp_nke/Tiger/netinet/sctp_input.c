@@ -4787,6 +4787,9 @@ sctp_input(m, va_alist)
 #endif
 #endif /* IPSEC */
 
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	socket_lock(inp->sctp_socket, 1);
+#endif
 	/*
 	 * Construct sockaddr format source address.
 	 * Stuff source address and datagram in user buffer.
@@ -4837,6 +4840,9 @@ sctp_input(m, va_alist)
 	}
 #ifdef INVARIANTS_SCTP
 	sctp_verify_no_locks();
+#endif
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	socket_unlock(inp->sctp_socket, 1);
 #endif
 	return;
 bad:

@@ -878,10 +878,13 @@ do { \
 
 #define sctp_sorwakeup(inp, so) \
 do { \
+printf("sctp_sorwakeup: "); \
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_DONT_WAKE) { \
 		inp->sctp_flags |= SCTP_PCB_FLAGS_WAKEINPUT; \
+printf("set wakeinput flag\n"); \
 	} else { \
 		sorwakeup(so); \
+printf("sorwakeup done\n"); \
 	} \
 } while (0)
 
