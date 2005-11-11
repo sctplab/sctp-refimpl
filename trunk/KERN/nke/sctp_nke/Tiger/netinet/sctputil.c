@@ -2957,7 +2957,7 @@ sctp_ulp_notify(u_int32_t notification, struct sctp_tcb *stcb,
 {
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INPUT2) {
-		printf("sctp_ulp_notify: handling ABORT\n");
+		printf("sctp_ulp_notify: handling notification %d (0x%x)\n", notification, notification);
 	}
 #endif
 	
@@ -3572,17 +3572,26 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp, stcb)
 	if (m0 && (m0->m_flags & M_PKTHDR) == 0)
 		panic("sbappendaddr_nocheck");
 
+printf("into sbappendaddr_nocheck\n");
+
 	for (n = control; n; n = n->m_next) {
 		if (n->m_next == 0)	/* get pointer to last control buf */
 			break;
 	}
 	cnt = 0;
 	if (asa->sa_len > MHLEN)
+{
+printf("asa > MHLEN\n");
+
 		return (0);
+}
  try_again:
 	MGETHDR(m, M_DONTWAIT, MT_SONAME);
 	if (m == 0)
+{
+printf("m==0\n");
 		return (0);
+}
 	/* safety */
 	if (m == m0) {
 		printf("Duplicate mbuf allocated %p in and mget returned %p?\n",
@@ -3597,6 +3606,11 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp, stcb)
 	sctp_log_lock(stcb->sctp_ep, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
 #endif
 	SOCKBUF_LOCK(sb);
+#if defined (SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sblock(sb, M_WAIT);
+printf("sblock done...\n");
+#endif
+
 	/* crush out 0 length mbufs from m0 chain */
 	prev = NULL;
 	cleanup = m0;
@@ -3658,9 +3672,11 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp, stcb)
 		}
 		n->m_nextpkt = m;
 		inp->sb_last_mpkt = m;
+printf("append1 done on tag %x\n", tag);
 	} else {
 		inp->sb_last_mpkt = sb->sb_mb = m;
 		inp->sctp_vtag_first = tag;
+printf("append done on tag %x\n", tag);
 	}
 #endif
 	if (((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) &&
@@ -3675,6 +3691,10 @@ sbappendaddr_nocheck(sb, asa, m0, control, tag, inp, stcb)
 		stcb->asoc.my_rwnd_control_len += sizeof(struct mbuf);
 	}
 	SOCKBUF_UNLOCK(sb);
+#if defined (SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sbunlock(sb, 1);
+printf("sbunlock done... cc:%d\n", sb->sb_cc);
+#endif
 	return (1);
 #endif
 #ifdef __OpenBSD__
@@ -3845,8 +3865,13 @@ sctp_grub_through_socket_buffer(struct sctp_inpcb *inp, struct socket *old,
 #ifdef SCTP_LOCK_LOGGING
 	sctp_log_lock(inp, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
 #endif
+#if defined (SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sblock(old_sb, M_WAIT);
+	sblock(new_sb, M_WAIT);
+#else
 	SOCKBUF_LOCK(old_sb);
 	SOCKBUF_LOCK(new_sb);
+#endif
 	before = stcb->asoc.sb_cc;
 
 	SCTP_INP_SOCKQ_LOCK(inp);
@@ -3995,8 +4020,13 @@ sctp_grub_through_socket_buffer(struct sctp_inpcb *inp, struct socket *old,
 #else
 	stcb->sctp_ep->sb_last_mpkt = lastrec;
 #endif
+#if defined (SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sbunlock(old_sb, 1);
+	sbunlock(new_sb, 1);
+#else
 	SOCKBUF_UNLOCK(old_sb);
 	SOCKBUF_UNLOCK(new_sb);
+#endif
 }
 
 void
@@ -4210,9 +4240,6 @@ sctp_m_copym(struct mbuf *m, int off, int len, int wait)
 
 
 #if defined(HAVE_SCTP_SORECEIVE)
-
-
-
 /*
  * Following replacement or removal of the first mbuf on the first mbuf chain
  * of a socket buffer, push necessary state changes back into the socket
@@ -4339,7 +4366,9 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		return (EWOULDBLOCK);
 		
 	}
-	socket_lock(so, 1); /* FIXME MT */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	socket_lock(so, 1);
+#endif
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	SCTP_INP_RLOCK(inp);
 	at_eor = 0;
@@ -4378,12 +4407,12 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 #endif
 	SOCKBUF_LOCK(&so->so_rcv);
  restart:
-	SOCKBUF_LOCK_ASSERT(&so->so_rcv);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	error = sblock(&so->so_rcv, SBLOCKWAIT(flags));
 	if (error)
 		goto out;
 #endif
+	SOCKBUF_LOCK_ASSERT(&so->so_rcv);
 	m = so->so_rcv.sb_mb;
 	if((m != NULL) && (m->m_len == 0) && (m->m_next == NULL) &&
 	   (stcb) && (stcb->asoc.fragmented_delivery_inprogress)) {
@@ -4766,6 +4795,9 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 			SBLASTMBUFCHK(&so->so_rcv);
 #endif
 			SOCKBUF_UNLOCK(&so->so_rcv);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			sbunlock(&so->so_rcv, 1);
+#endif
 #ifdef ZERO_COPY_SOCKETS
 			if (so_zero_copy_receive) {
 				vm_page_t pg;
@@ -4793,6 +4825,9 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 			sctp_log_lock(inp, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
 #endif
 			SOCKBUF_LOCK(&so->so_rcv);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			sblock(&so->so_rcv, SBLOCKWAIT(flags));
+#endif
 			if (error)
 				goto release;
 		} else
@@ -4902,6 +4937,9 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 			else {
 				if (mp != NULL) {
 					SOCKBUF_UNLOCK(&so->so_rcv);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+					sbunlock(&so->so_rcv, 1);
+#endif
 					*mp = sctp_m_copym(m, 0, len, 
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 						      M_TRYWAIT
@@ -4913,6 +4951,9 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 					sctp_log_lock(inp, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
 #endif
 					SOCKBUF_LOCK(&so->so_rcv);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+					sblock(&so->so_rcv, SBLOCKWAIT(flags));
+#endif
 				}
 				m->m_data += len;
 				m->m_len -= len;
@@ -4978,12 +5019,18 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 			 */
 			if (pr->pr_flags & PR_WANTRCVD && so->so_pcb != NULL) {
 				SOCKBUF_UNLOCK(&so->so_rcv);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+				sbunlock(&so->so_rcv, 1);
+#endif
 				(*pr->pr_usrreqs->pru_rcvd)(so, flags);
 #ifdef SCTP_LOCK_LOGGING
 				sctp_log_lock(inp, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
 #endif
 
 				SOCKBUF_LOCK(&so->so_rcv);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+				sblock(&so->so_rcv, SBLOCKWAIT(flags));
+#endif
 			}
 #ifdef HAVE_SCTP_SO_LASTRECORD
 			SBLASTRECORDCHK(&so->so_rcv);
@@ -5029,11 +5076,17 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		SBLASTMBUFCHK(&so->so_rcv);
 #endif
 		SOCKBUF_UNLOCK(&so->so_rcv);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		sbunlock(&so->so_rcv, 1);
+#endif
 		(*pr->pr_usrreqs->pru_rcvd)(so, flags);
 #ifdef SCTP_LOCK_LOGGING
 		sctp_log_lock(inp, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
 #endif
 		SOCKBUF_LOCK(&so->so_rcv);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		sblock(&so->so_rcv, SBLOCKWAIT(flags));
+#endif
 	}
 	SOCKBUF_LOCK_ASSERT(&so->so_rcv);
 	if ((orig_resid == uio->uio_resid) && 
@@ -5059,7 +5112,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 #if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	sbunlock(&so->so_rcv);
 #endif
-out:
+ out:
 #if defined(SCTP_APPLE_FINE_GRAIN_LOCKING)
 	socket_unlock(so, 1);
 #endif
@@ -5085,6 +5138,9 @@ sctp_sbappend( struct sockbuf *sb,
 	sctp_log_lock(stcb->sctp_ep, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
 #endif
 	SOCKBUF_LOCK(sb);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sblock(sb, M_WAIT);
+#endif
 	if(stcb->last_record_insert == NULL) {
 		panic("stcb->last_record_insert is NULL?");
 	}
@@ -5158,6 +5214,9 @@ sctp_sbappend( struct sockbuf *sb,
 		m = m->m_next;
 	}
 	SOCKBUF_UNLOCK(sb);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sbunlock(sb, 1);
+#endif
 }
 #endif
 #ifdef __APPLE1__

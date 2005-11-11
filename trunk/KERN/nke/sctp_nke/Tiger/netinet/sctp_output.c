@@ -6304,6 +6304,9 @@ sctp_msg_append(struct sctp_tcb *stcb,
 	 */
 	siz = sctp_get_frag_point(stcb, asoc);
 	SOCKBUF_UNLOCK(&so->so_snd);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sbunlock(&so->so_snd, 1);
+#endif
 	if ((dataout) && (dataout <= siz)) {
 		/* Fast path */
 		chk = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk);
@@ -6313,6 +6316,9 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			sctp_log_lock(stcb->sctp_ep, stcb, SCTP_LOG_LOCK_SOCKBUF_S);
 #endif
 			SOCKBUF_LOCK(&so->so_snd);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			sblock(&so->so_snd, SBLOCKWAIT(flags));
+#endif
 			goto release;
 		}
 		sctp_prepare_chunk(chk, stcb, srcv, strq, net);
@@ -11822,6 +11828,9 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 	 */
 	splx(s);
 	SOCKBUF_UNLOCK(&so->so_snd);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sbunlock(&so->so_snd, 1);
+#endif
 	stcb->block_entry = &be;
 	be.error = 0;
 	SCTP_TCB_UNLOCK(stcb);
@@ -11834,6 +11843,9 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 			sctp_log_lock(stcb->sctp_ep, stcb, SCTP_LOG_LOCK_SOCKBUF_S);
 #endif
 			SOCKBUF_LOCK(&so->so_snd);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			sbunlock(&so->so_snd, SBLOCKWAIT(flags));
+#endif
 			goto release;
 		}
 		chk->no_fr_allowed = 0;

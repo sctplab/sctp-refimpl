@@ -4097,6 +4097,8 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	return error;
 }
 
+#define	SBLOCKWAIT(f)	(((f) & MSG_DONTWAIT) ? M_DONTWAIT : M_WAIT)
+
 int
 sctp_usr_recvd(struct socket *so, int flags)
 {
@@ -4247,6 +4249,9 @@ sctp_usr_recvd(struct socket *so, int flags)
 	sctp_log_lock(inp, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
 #endif
 	SOCKBUF_LOCK(&so->so_rcv);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sblock(&so->so_rcv, SBLOCKWAIT(flags));
+#endif
 	if (( so->so_rcv.sb_mb == NULL ) &&
 	    (TAILQ_EMPTY(&inp->sctp_queue_list) == 0)) {
 		int sq_cnt=0;
@@ -4273,6 +4278,9 @@ sctp_usr_recvd(struct socket *so, int flags)
 #endif
 	}
 	SOCKBUF_UNLOCK(&so->so_rcv);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sbunlock(&so->so_rcv, 1);
+#endif
 	if (stcb)
 		SCTP_TCB_UNLOCK(stcb);
 	SCTP_INP_WUNLOCK(inp);
