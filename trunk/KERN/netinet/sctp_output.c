@@ -10125,8 +10125,11 @@ sctp_send_sack(struct sctp_tcb *stcb)
 			jstart = 0;
 			offset += 8;
 		}
+		if(num_gap_blocks == 0) {
+			/* reneged all chunks */
+			asoc->highest_tsn_inside_map = asoc->cumulative_tsn;
+		}
 	}
-
 	/* now we must add any dups we are going to report. */
 	if ((limit_reached == 0) && (asoc->numduptsns)) {
 		dup = (uint32_t *)gap_descriptor;
