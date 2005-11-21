@@ -2748,7 +2748,7 @@ sctp_find_stream_reset(struct sctp_tcb *stcb, u_int32_t seq, struct sctp_tmit_ch
 	struct sctp_stream_reset_out_req *req;
 	struct sctp_stream_reset_out_request *r;
 	struct sctp_tmit_chunk *chk;
-	int len,clen;
+	int len, clen;
 
 	asoc = &stcb->asoc;
 	if(TAILQ_EMPTY(&stcb->asoc.control_send_queue)) {
@@ -2777,7 +2777,7 @@ sctp_find_stream_reset(struct sctp_tcb *stcb, u_int32_t seq, struct sctp_tmit_ch
 		return (r);
 	}
 	len = SCTP_SIZE32(ntohs(r->ph.param_length));
-	if(clen > (len + sizeof(struct sctp_chunkhdr))) {
+	if (clen > (len + (int)sizeof(struct sctp_chunkhdr))) {
 		/* move to the next one, there can only be a max of two */
 		r = (struct sctp_stream_reset_out_request *)((caddr_t)r + len);
 		if(ntohl(r->request_seq) == seq) {
@@ -3152,9 +3152,9 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_out_req
  	ph = (struct sctp_paramhdr *)&sr_req->sr_req;
  	while ((size_t)chk_length >= sizeof(struct sctp_stream_reset_tsn_request)) {
  		param_len = ntohs(ph->param_length);
-		if(param_len < sizeof(struct sctp_stream_reset_tsn_request)) {
+		if (param_len < (int)sizeof(struct sctp_stream_reset_tsn_request)) {
 			/* bad param */
-			return(ret_code);
+			return (ret_code);
 		}
 		ptype = ntohs(ph->param_type);
 		num_param++;
