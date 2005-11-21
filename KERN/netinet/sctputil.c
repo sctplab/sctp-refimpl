@@ -1097,7 +1097,6 @@ sctp_timeout_handler(void *t)
 	net = (struct sctp_nets *)tmr->net;
 	did_output = 1;
 
-
 #ifdef SCTP_AUDITING_ENABLED
 	sctp_audit_log(0xF0, (u_int8_t)tmr->type);
 	sctp_auditing(3, inp, stcb, net);
@@ -1105,6 +1104,11 @@ sctp_timeout_handler(void *t)
 	sctp_pegs[SCTP_TIMERS_EXP]++;
 
 	if (inp == NULL) {
+		splx(s);
+#if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
+		/* release BSD kernel funnel/mutex */
+		(void) thread_funnel_set(network_flock, FALSE);
+#endif
 		return;
 	}
 
@@ -1149,7 +1153,6 @@ sctp_timeout_handler(void *t)
 	/* clear the callout pending status here */
 	callout_stop(&tmr->timer);
 #endif
-
 	
 	if (stcb) {
 		SCTP_TCB_LOCK(stcb);
@@ -1160,7 +1163,6 @@ sctp_timeout_handler(void *t)
 
 	SCTP_INP_INCR_REF(inp);
 	SCTP_INP_WUNLOCK(inp);
-
 
 	typ = tmr->type;
 	switch (tmr->type) {
