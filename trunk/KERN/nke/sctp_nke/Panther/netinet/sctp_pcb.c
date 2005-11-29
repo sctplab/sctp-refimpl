@@ -2980,8 +2980,10 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	if (net->cwnd < (2 * net->mtu)) {
 		net->cwnd = 2 * net->mtu;
 	}
-
 	net->ssthresh = stcb->asoc.peers_rwnd;
+#if defined(SCTP_CWND_MONITOR) || defined(SCTP_CWND_LOGGING)
+	sctp_log_cwnd(stcb, net, 0, SCTP_CWND_INITIALIZATION);
+#endif
 
 	/* CMT: CUC algo - set find_pseudo_cumack to TRUE (1) at beginning of assoc
 	 * (2005/06/27, iyengar@cis.udel.edu)
@@ -3341,7 +3343,7 @@ sctp_del_remote_addr(struct sctp_tcb *stcb, struct sockaddr *remaddr)
 				lnet = TAILQ_FIRST(&asoc->nets);
 				/* Try to find a confirmed primary */
 				asoc->primary_destination =
-				    sctp_find_alternate_net(stcb, lnet);
+				    sctp_find_alternate_net(stcb, lnet, 0);
 			}
 			if (net == asoc->last_data_chunk_from) {
 				/* Reset primary */
@@ -3477,6 +3479,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	struct sctp_laddr *laddr;
 	struct sctp_tmit_chunk *chk;
 	struct sctp_asconf_addr *aparam;
+	struct sctp_stream_reset_list *liste;
 	struct sctp_socket_q_list *sq;
 	int s;
 
@@ -3607,10 +3610,11 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		outs = TAILQ_FIRST(&asoc->out_wheel);
 	}
 
-	if (asoc->pending_reply) {
-		FREE(asoc->pending_reply, M_PCB);
-		asoc->pending_reply = NULL;
+	while ((liste = TAILQ_FIRST(&asoc->resetHead)) != NULL) {
+		TAILQ_REMOVE(&asoc->resetHead, liste, next_resp);
+		FREE(liste, M_PCB);
 	}
+
 	chk = TAILQ_FIRST(&asoc->pending_reply_queue);
 	while (chk) {
 		TAILQ_REMOVE(&asoc->pending_reply_queue, chk, sctp_next);

@@ -4,7 +4,7 @@
 #define _NETINET_SCTP_H_
 
 /*
- * Copyright (c) 2001, 2002, 2003, 2004 Cisco Systems, Inc.
+ * Copyright (c) 2001, 2002, 2003, 2004, 2005 Cisco Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -179,24 +179,30 @@ struct sctp_paramhdr {
 /*
  * SCTP operational error codes (user visible)
  */
-#define SCTP_ERROR_NO_ERROR		0x0000
-#define SCTP_ERROR_INVALID_STREAM	0x0001
-#define SCTP_ERROR_MISSING_PARAM	0x0002
-#define SCTP_ERROR_STALE_COOKIE		0x0003
-#define SCTP_ERROR_OUT_OF_RESOURCES	0x0004
-#define SCTP_ERROR_UNRESOLVABLE_ADDR	0x0005
-#define SCTP_ERROR_UNRECOG_CHUNK	0x0006
-#define SCTP_ERROR_INVALID_PARAM	0x0007
-#define SCTP_ERROR_UNRECOG_PARAM	0x0008
-#define SCTP_ERROR_NO_USER_DATA		0x0009
-#define SCTP_ERROR_COOKIE_IN_SHUTDOWN	0x000a
-/* draft-ietf-tsvwg-sctpimpguide */
-#define SCTP_ERROR_RESTART_NEWADDRS	0x000b
-/* draft-ietf-tsvwg-addip-sctp */
-#define SCTP_ERROR_DELETE_LAST_ADDR	0x0100
-#define SCTP_ERROR_RESOURCE_SHORTAGE	0x0101
-#define SCTP_ERROR_DELETE_SOURCE_ADDR	0x0102
-#define SCTP_ERROR_ILLEGAL_ASCONF_ACK	0x0103
+#define SCTP_CAUSE_NO_ERROR		0x0000
+#define SCTP_CAUSE_INVALID_STREAM	0x0001
+#define SCTP_CAUSE_MISSING_PARAM	0x0002
+#define SCTP_CAUSE_STALE_COOKIE		0x0003
+#define SCTP_CAUSE_OUT_OF_RESC		0x0004
+#define SCTP_CAUSE_UNRESOLVABLE_ADDR	0x0005
+#define SCTP_CAUSE_UNRECOG_CHUNK	0x0006
+#define SCTP_CAUSE_INVALID_PARAM	0x0007
+#define SCTP_CAUSE_UNRECOG_PARAM	0x0008
+#define SCTP_CAUSE_NO_USER_DATA		0x0009
+#define SCTP_CAUSE_COOKIE_IN_SHUTDOWN	0x000a
+#define SCTP_CAUSE_RESTART_W_NEWADDR	0x000b
+#define SCTP_CAUSE_USER_INITIATED_ABT	0x000c
+#define SCTP_CAUSE_PROTOCOL_VIOLATION	0x000d
+
+/* Error causes from draft-ietf-tsvwg-addip-sctp */
+#define SCTP_CAUSE_DELETING_LAST_ADDR	0x0100
+#define SCTP_CAUSE_RESOURCE_SHORTAGE	0x0101
+#define SCTP_CAUSE_DELETING_SRC_ADDR	0x0102
+#define SCTP_CAUSE_ILLEGAL_ASCONF_ACK	0x0103
+#define SCTP_CAUSE_NO_AUTH		0x0104
+
+/* Error causes from draft-ietf-tsvwg-sctp-auth */
+#define SCTP_CAUSE_UNSUPPORTED_HMACID	0x0105
 
 /*
  * error cause parameters (user visisble)

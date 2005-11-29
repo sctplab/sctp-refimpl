@@ -4,7 +4,7 @@
 #define __sctp_header_h__
 
 /*
- * Copyright (c) 2001, 2002, 2003, 2004 Cisco Systems, Inc.
+ * Copyright (c) 2001, 2002, 2003, 2004, 2005 Cisco Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -108,7 +108,7 @@ struct sctp_asconf_addr_param {		/* an ASCONF address parameter */
 	struct sctp_ipv6addr_param  addrp;	/* max storage size */
 };
 
-struct sctp_asconf_addrv4_param {		/* an ASCONF address (v4) parameter */
+struct sctp_asconf_addrv4_param {	/* an ASCONF address (v4) parameter */
 	struct sctp_asconf_paramhdr aph;	/* asconf "parameter" */
 	struct sctp_ipv4addr_param  addrp;	/* max storage size */
 };
@@ -340,7 +340,9 @@ struct sctp_shutdown_complete_msg {
 	struct sctp_shutdown_complete_chunk shut_cmp;
 };
 
-/* draft-ietf-tsvwg-addip-sctp */
+/*
+ * draft-ietf-tsvwg-addip-sctp
+ */
 /* Address/Stream Configuration Change (ASCONF) */
 struct sctp_asconf_chunk {
 	struct sctp_chunkhdr ch;
@@ -393,41 +395,68 @@ struct sctp_pktdrop_chunk {
 	u_int16_t reserved;
 	u_int8_t data[0];
 };
+/**********STREAM RESET STUFF ******************/
 
-#define SCTP_RESET_YOUR  0x01   /* reset your streams and send response */
-#define SCTP_RESET_ALL   0x02   /* reset all of your streams */
-#define SCTP_RECIPRICAL  0x04   /* reset my streams too */
-
-struct sctp_stream_reset_request {
+struct sctp_stream_reset_out_request {
 	struct sctp_paramhdr ph;
-	u_int8_t reset_flags;		   /* actual request */
-	u_int8_t reset_pad[3];
-	u_int32_t reset_req_seq;           /* monotonically increasing seq no */
+	u_int32_t request_seq;           /* monotonically increasing seq no */
+	u_int32_t response_seq;		   /* if a reponse, the resp seq no */
+	u_int32_t send_reset_at_tsn;       /* last TSN I assigned outbound */
 	u_int16_t list_of_streams[0];      /* if not all list of streams */
 };
 
-#define SCTP_RESET_PERFORMED        0x01   /* Peers sending str was reset */
-#define SCTP_RESET_DENIED           0x02   /* Asked for but refused       */
+struct sctp_stream_reset_in_request {
+	struct sctp_paramhdr ph;
+	u_int32_t request_seq;
+	u_int16_t list_of_streams[0];	/* if not all list of streams */
+};
+
+
+struct sctp_stream_reset_tsn_request {
+	struct sctp_paramhdr ph;
+	u_int32_t request_seq;
+};
 
 struct sctp_stream_reset_response {
 	struct sctp_paramhdr ph;
-	u_int8_t reset_flags;		   /* actual request */
-	u_int8_t reset_pad[3];
-	u_int32_t reset_req_seq_resp;   /* copied from reset_req reset_req_seq */
-	u_int32_t reset_at_tsn;		/* resetters next TSN to be assigned send wise */
-	u_int32_t cumulative_tsn;	/* resetters cum-ack point receive wise */
-	u_int16_t list_of_streams[0];   /* if not all list of streams */
+	u_int32_t response_seq;		   /* if a reponse, the resp seq no */
+	u_int32_t result;
 };
 
-/* convience structures, note that if you
- * are making a request for specific streams
- * then the request will need to be an overlay
- * structure.
+struct sctp_stream_reset_response_tsn {
+	struct sctp_paramhdr ph;
+	u_int32_t response_seq;		   /* if a reponse, the resp seq no */
+	u_int32_t result;
+	u_int32_t senders_next_tsn;
+	u_int32_t receivers_next_tsn;
+};
+
+
+
+#define SCTP_STREAM_RESET_NOTHING   0x00000000 /* Nothing for me to do */
+#define SCTP_STREAM_RESET_PERFORMED 0x00000001 /* Did it */
+#define SCTP_STREAM_RESET_DENIED    0x00000002 /* refused to do it */
+#define SCTP_STREAM_RESET_ERROR_STR 0x00000003 /* bad Stream no */
+#define SCTP_STREAM_RESET_TRY_LATER 0x00000004 /* collision, try again */
+
+/*
+ * convience structures, note that if you are making a request for specific
+ * streams then the request will need to be an overlay structure.
  */
 
-struct sctp_stream_reset_req {
+struct sctp_stream_reset_out_req {
 	struct sctp_chunkhdr ch;
-	struct sctp_stream_reset_request sr_req;
+	struct sctp_stream_reset_out_request sr_req;
+};
+
+struct sctp_stream_reset_in_req {
+	struct sctp_chunkhdr ch;
+	struct sctp_stream_reset_in_request sr_req;
+};
+
+struct sctp_stream_reset_tsn_req {
+	struct sctp_chunkhdr ch;
+	struct sctp_stream_reset_tsn_request sr_req;
 };
 
 struct sctp_stream_reset_resp {
@@ -435,42 +464,43 @@ struct sctp_stream_reset_resp {
 	struct sctp_stream_reset_response sr_resp;
 };
 
+/* respone only valid with a TSN request */
+struct sctp_stream_reset_resp_tsn {
+	struct sctp_chunkhdr ch;
+	struct sctp_stream_reset_response_tsn sr_resp;
+};
 
-/* Auth chunk/parameter things */
+/****************************************************/
 
+/*
+ * Authenticated chunks support 
+ * draft-ietf-tsvwg-sctp-auth
+ */
 struct sctp_auth_random {
-	struct sctp_paramhdr ph; /* 0x8002 */
+	struct sctp_paramhdr ph;	/* type = 0x8002 */
 	u_int8_t random_data[0];
 };
 
 struct sctp_auth_chunk_list {
-	struct sctp_paramhdr ph; /* 0x8003 */
-	u_int8_t chunk_ids[0];
+	struct sctp_paramhdr ph;	/* type = 0x8003 */
+	u_int8_t chunk_types[0];
 };
 
 struct sctp_auth_hmac_algo {
-	struct sctp_paramhdr ph; /* 0x8004 */
-	u_int8_t hmac_ids[0];
+	struct sctp_paramhdr ph;	/* type = 0x8004 */
+	u_int16_t hmac_ids[0];
 };
-
+/* AUTH hmac_id */
+#define SCTP_AUTH_HMAC_ID_RSVD	0x00000000
+#define SCTP_AUTH_HMAC_ID_SHA1	0x00000001
+#define SCTP_AUTH_HMAC_ID_MD5	0x00000002    
 
 struct sctp_auth_chunk {
-	struct sctp_chunkhdr ch;   /* 0x83 */
-	u_int32_t hmac_id;
+	struct sctp_chunkhdr ch;	/* type = 0x84 */
+	u_int16_t shared_key_id;
+	u_int16_t hmac_id;
 	u_int8_t  hmac[0];
 };
-
-
-#define SCTP_HMAC_ID_RESV1   0x00000000
-#define SCTP_HMAC_ID_SHA_1   0x00000001
-#define SCTP_HMAC_ID_MD_5    0x00000002    
-
-struct sctp_auth_supported_hmac {
-	struct sctp_paramhdr ph;
-	u_int32_t hmac_id[0];
-};
-
-
 
 
 /*

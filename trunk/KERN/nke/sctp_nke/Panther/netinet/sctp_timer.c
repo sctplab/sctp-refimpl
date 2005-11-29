@@ -106,6 +106,7 @@
 #include <netinet/sctp_header.h>
 #include <netinet/sctp_indata.h>
 #include <netinet/sctp_asconf.h>
+#include <netinet/sctp_input.h>
 
 #include <netinet/sctp.h>
 #include <netinet/sctp_uio.h>
@@ -203,16 +204,24 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 		}
 	}
 	if(cnt) {
+#ifdef SCTP_CWND_MONITOR
+		int old_cwnd;
+		old_cwnd = net->cwnd;
+#endif
 		sctp_chunk_output(inp, stcb, 9);
 		/* make a small adjustment to cwnd and
 		 * force to CA.
 		 */
+
 		if(net->cwnd > net->mtu)
 			/* drop down one MTU after sending */
 			net->cwnd -= net->mtu;
 		if(net->cwnd < net->ssthresh) 
 			/* still in SS move to CA */
 			net->ssthresh = net->cwnd - 1;
+#ifdef SCTP_CWND_MONITOR
+		sctp_log_cwnd(stcb, net,(old_cwnd-net->cwnd) , SCTP_CWND_LOG_FROM_FR);
+#endif
 	} else if (cnt_resend) {
 		sctp_chunk_output(inp, stcb, 9);
 	}
@@ -336,15 +345,55 @@ sctp_threshold_management(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 
 struct sctp_nets *
 sctp_find_alternate_net(struct sctp_tcb *stcb,
-			struct sctp_nets *net)
+			struct sctp_nets *net,
+			int highest_ssthresh)
 {
 	/* Find and return an alternate network if possible */
-	struct sctp_nets *alt, *mnet;
+	struct sctp_nets *alt, *mnet, *hthresh=NULL;
 	int once;
+	u_int32_t val=0;
 
 	if (stcb->asoc.numnets == 1) {
 		/* No others but net */
 		return (TAILQ_FIRST(&stcb->asoc.nets));
+	}
+
+	if(highest_ssthresh) {
+		TAILQ_FOREACH(mnet, &stcb->asoc.nets, sctp_next ) {
+			if (((mnet->dest_state & SCTP_ADDR_REACHABLE) != SCTP_ADDR_REACHABLE) ||
+			    (mnet->dest_state & SCTP_ADDR_UNCONFIRMED)
+				) {
+				/* will skip ones that are not-reachable or unconfirmed */
+				continue;
+			}
+			if(val > mnet->ssthresh) {
+				hthresh = mnet;
+				val = mnet->ssthresh;
+			} else if (val == mnet->ssthresh) {
+			    uint32_t rndval;
+			    uint8_t this_random;
+
+			    if (stcb->asoc.hb_random_idx > 3) {
+			      rndval = sctp_select_initial_TSN(&stcb->sctp_ep->sctp_ep);
+			      memcpy(stcb->asoc.hb_random_values, &rndval,
+				     sizeof(stcb->asoc.hb_random_values));
+			      this_random = stcb->asoc.hb_random_values[0];
+			      stcb->asoc.hb_random_idx = 0;
+			      stcb->asoc.hb_ect_randombit = 0;
+			    } else {
+			      this_random = stcb->asoc.hb_random_values[stcb->asoc.hb_random_idx];
+			      stcb->asoc.hb_random_idx++;
+			      stcb->asoc.hb_ect_randombit = 0;
+			    }
+			    if(this_random % 2) {
+				hthresh = mnet;
+				val = mnet->ssthresh;
+			    }
+			}
+		}
+		if(hthresh) {
+			return(hthresh);
+		}
 	}
 	mnet = net;
 	once = 0;
@@ -352,6 +401,7 @@ sctp_find_alternate_net(struct sctp_tcb *stcb,
 	if (mnet == NULL) {
 		mnet = TAILQ_FIRST(&stcb->asoc.nets);
 	}
+
 	do {
 		alt = TAILQ_NEXT(mnet, sctp_next);
 		if (alt == NULL) {
@@ -466,7 +516,7 @@ sctp_backoff_on_timeout(struct sctp_tcb *stcb,
 
 	if ((win_probe == 0) && num_marked) {
 		/* We don't apply penalty to window probe scenarios */
-#ifdef SCTP_CWND_LOGGING
+#ifdef SCTP_CWND_MONITOR
 		int old_cwnd=net->cwnd;
 #endif
 		net->ssthresh = net->cwnd >> 1;
@@ -477,8 +527,8 @@ sctp_backoff_on_timeout(struct sctp_tcb *stcb,
 		/* floor of 1 mtu */
 		if (net->cwnd < net->mtu)
 			net->cwnd = net->mtu;
-#ifdef SCTP_CWND_LOGGING
-		sctp_log_cwnd(net, net->cwnd-old_cwnd, SCTP_CWND_LOG_FROM_RTX);
+#ifdef SCTP_CWND_MONITOR
+		sctp_log_cwnd(stcb, net, net->cwnd-old_cwnd, SCTP_CWND_LOG_FROM_RTX);
 #endif
 
 		net->partial_bytes_acked = 0;
@@ -517,6 +567,18 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	u_int32_t orig_flight;
 	u_int32_t tsnlast, tsnfirst;
 
+	
+	/* CMT: Using RTX_SSTHRESH policy for CMT.
+	 * If CMT is being used, then pick dest with largest 
+	 * ssthresh for any retransmission.
+	 * (iyengar@cis.udel.edu, 2005/08/12)
+	 */
+	if ((sctp_cmt_on_off) &&
+	    ((alt->dest_state & SCTP_ADDR_REACHABLE) == SCTP_ADDR_REACHABLE) &&
+	    (alt->ro.ro_rt != NULL) &&
+	    (!(alt->dest_state & SCTP_ADDR_UNCONFIRMED))) {
+		alt = sctp_find_alternate_net(stcb, alt, 1);
+	}
 	/* none in flight now */
 	audit_tf = 0;
 	fir=0;
@@ -693,7 +755,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 			if (stcb->asoc.total_flight_count > 0)
 			  stcb->asoc.total_flight_count--;
 			chk->sent = SCTP_DATAGRAM_RESEND;
-
+			sctp_pegs[SCTP_T3_MARKED_TSNS]++;
 			net->flight_size -= chk->book_size;
 			stcb->asoc.peers_rwnd += chk->send_size;
 			stcb->asoc.peers_rwnd += sctp_peer_chunk_oh;
@@ -707,18 +769,23 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 #endif /* SCTP_DEBUG */
 			/* Clear any time so NO RTT is being done */
 			chk->do_rtt = 0;
-			/* Bump up the count */
-			if (compare_with_wrap(chk->rec.data.TSN_seq,
-					      stcb->asoc.t3timeout_highest_marked,
-					      MAX_TSN)) {
-				/* TSN_seq > than t3timeout so update */
-				stcb->asoc.t3timeout_highest_marked = chk->rec.data.TSN_seq;
-			}
 			if (alt != net) {
 				sctp_free_remote_addr(chk->whoTo);
+				chk->no_fr_allowed = 1; 
 				chk->whoTo = alt;
 				alt->ref_count++;
+			} else {
+				chk->no_fr_allowed = 0;
+				if (TAILQ_EMPTY(&stcb->asoc.send_queue) ) {
+					chk->rec.data.fast_retran_tsn = stcb->asoc.sending_seq;
+				} else {
+					chk->rec.data.fast_retran_tsn = (TAILQ_FIRST(&stcb->asoc.send_queue))->rec.data.TSN_seq;
+				}
 			}
+			if(sctp_cmt_on_off == 1) {
+				chk->no_fr_allowed = 1; 
+			}
+
 		} else if (chk->sent == SCTP_DATAGRAM_ACKED) {
 			/* remember highest acked one */
 			could_be_sent = chk;
@@ -880,7 +947,19 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 
 
 #ifdef SCTP_FR_LOGGING
-	sctp_log_fr(0, 0, 0, SCTP_FR_T3_TIMEOUT);
+	sctp_log_fr(sctp_pegs[SCTP_PEG_TSNS_SENT], 0, 0, SCTP_FR_T3_TIMEOUT);
+#ifdef SCTP_CWND_LOGGING
+	{
+		struct sctp_nets *lnet;
+		TAILQ_FOREACH(lnet, &stcb->asoc.nets, sctp_next) {
+			if(net == lnet) {
+				sctp_log_cwnd(stcb, lnet, 1, SCTP_CWND_LOG_FROM_T3);
+			} else {
+				sctp_log_cwnd(stcb, lnet, 0, SCTP_CWND_LOG_FROM_T3);
+			}
+		}
+	}
+#endif
 #endif
 	/* Find an alternate and mark those for retransmission */
 	if((stcb->asoc.peers_rwnd == 0) &&
@@ -890,7 +969,7 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 	} else {
 		win_probe = 0;
 	}
-	alt = sctp_find_alternate_net(stcb, net);
+	alt = sctp_find_alternate_net(stcb, net, 0);
 	sctp_mark_all_for_resend(stcb, net, alt, win_probe, &num_mk);
 	/* FR Loss recovery just ended with the T3. */
 	stcb->asoc.fast_retran_loss_recovery = 0;
@@ -999,6 +1078,9 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 			}
 		}
 	}
+#ifdef SCTP_CWND_MONITOR
+	sctp_log_cwnd(stcb, net, net->cwnd, SCTP_CWND_LOG_FROM_RTX);
+#endif
 	return (0);
 }
 
@@ -1030,7 +1112,7 @@ sctp_t1init_timer(struct sctp_inpcb *inp,
 	if (stcb->asoc.numnets > 1) {
 		/* If we have more than one addr use it */
 		struct sctp_nets *alt;
-		alt = sctp_find_alternate_net(stcb, stcb->asoc.primary_destination);
+		alt = sctp_find_alternate_net(stcb, stcb->asoc.primary_destination, 0);
 		if ((alt != NULL) && (alt != stcb->asoc.primary_destination)) {
 			sctp_move_all_chunks_to_alt(stcb, stcb->asoc.primary_destination, alt);
 			stcb->asoc.primary_destination = alt;
@@ -1094,7 +1176,7 @@ int  sctp_cookie_timer(struct sctp_inpcb *inp,
 	 */
 	stcb->asoc.dropped_special_cnt = 0;
 	sctp_backoff_on_timeout(stcb, cookie->whoTo, 1, 0);
-	alt = sctp_find_alternate_net(stcb, cookie->whoTo);
+	alt = sctp_find_alternate_net(stcb, cookie->whoTo, 0);
 	if (alt != cookie->whoTo) {
 		sctp_free_remote_addr(cookie->whoTo);
 		cookie->whoTo = alt;
@@ -1117,19 +1199,17 @@ int sctp_strreset_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
     struct sctp_nets *net)
 {
 	struct sctp_nets *alt;
-	struct sctp_tmit_chunk *strrst, *chk;
-	struct sctp_stream_reset_req *strreq;
-	/* find the existing STRRESET */
-	TAILQ_FOREACH(strrst, &stcb->asoc.control_send_queue,
-		      sctp_next) {
-		if (strrst->rec.chunk_id == SCTP_STREAM_RESET) {
-			/* is it what we want */
-			strreq = mtod(strrst->data, struct sctp_stream_reset_req *);
-			if (strreq->sr_req.ph.param_type == ntohs(SCTP_STR_RESET_REQUEST)) {
-				break;
-			}
-		}
+	struct sctp_tmit_chunk *strrst=NULL, *chk=NULL;
+       
+	if(stcb->asoc.stream_reset_outstanding == 0) {
+/*#ifdef SCTP_DEBUG*/
+		printf("SCTP: Stray stream reset timer?\n");
+/*#endif*/
+		return(0);
 	}
+	/* find the existing STRRESET, we use the seq number we sent out on */
+	printf("Timer looks for seq:%x\n", stcb->asoc.str_reset_seq_out);
+	sctp_find_stream_reset(stcb, stcb->asoc.str_reset_seq_out, &strrst);
 	if (strrst == NULL) {
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_TIMER1) {
@@ -1150,7 +1230,7 @@ int sctp_strreset_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	 * now lets backoff the address & select an alternate
 	 */
 	sctp_backoff_on_timeout(stcb, strrst->whoTo, 1, 0);
-	alt = sctp_find_alternate_net(stcb, strrst->whoTo);
+	alt = sctp_find_alternate_net(stcb, strrst->whoTo, 0);
 	sctp_free_remote_addr(strrst->whoTo);
 	strrst->whoTo = alt;
 	alt->ref_count++;
@@ -1243,7 +1323,7 @@ int sctp_asconf_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		 * now lets backoff the address & select an alternate
 		 */
 		sctp_backoff_on_timeout(stcb, asconf->whoTo, 1, 0);
-		alt = sctp_find_alternate_net(stcb, asconf->whoTo);
+		alt = sctp_find_alternate_net(stcb, asconf->whoTo, 0);
 		sctp_free_remote_addr(asconf->whoTo);
 		asconf->whoTo = alt;
 		alt->ref_count++;
@@ -1294,7 +1374,7 @@ sctp_shutdown_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		return (1);
 	}
 	/* second select an alternative */
-	alt = sctp_find_alternate_net(stcb, net);
+	alt = sctp_find_alternate_net(stcb, net, 0);
 
 	/* third generate a shutdown into the queue for out net */
 #ifdef SCTP_DEBUG
@@ -1328,7 +1408,7 @@ int sctp_shutdownack_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		return (1);
 	}
 	/* second select an alternative */
-	alt = sctp_find_alternate_net(stcb, net);
+	alt = sctp_find_alternate_net(stcb, net, 0);
 
 	/* third generate a shutdown into the queue for out net */
 	sctp_send_shutdown_ack(stcb, alt);

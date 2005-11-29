@@ -75,6 +75,15 @@ struct sctp_timer {
  */
 TAILQ_HEAD(sctpnetlisthead, sctp_nets);
 
+struct sctp_stream_reset_list {
+	TAILQ_ENTRY(sctp_stream_reset_list) next_resp;	
+	uint32_t tsn;
+	int number_entries;
+        struct sctp_stream_reset_out_request req;
+};
+
+TAILQ_HEAD(sctp_resethead, sctp_stream_reset_list);
+
 /*
  * Users of the iterator need to malloc a iterator with a call to
  * sctp_initiate_iterator(func, pcb_flags, asoc_state, void-ptr-arg, u_int32_t,
@@ -255,6 +264,7 @@ struct sctp_data_chunkrec {
 			   * for outbound holds sending flags.
 			   */
 	u_int8_t state_flags;
+	u_int8_t chunk_was_revoked;
 };
 
 TAILQ_HEAD(sctpchunk_listhead, sctp_tmit_chunk);
@@ -289,6 +299,7 @@ struct sctp_tmit_chunk {
 			     * is overridden by user. Used for CMT
 			     * (iyengar@cis.udel.edu, 2005/06/21)
 			     */
+	u_int8_t no_fr_allowed; 
 };
 
 
@@ -319,7 +330,7 @@ struct sctp_asconf_addr {
 	TAILQ_ENTRY(sctp_asconf_addr) next;
 	struct sctp_asconf_addr_param ap;
 	struct ifaddr *ifa;	/* save the ifa for add/del ip */
-	uint8_t	sent;		/* has this been sent yet? */
+	u_int8_t     sent;		/* has this been sent yet? */
 };
 
 
@@ -388,6 +399,11 @@ struct sctp_association {
 	/* ASCONF save the last ASCONF-ACK so we can resend it if necessary */
 	struct mbuf *last_asconf_ack_sent;
 
+
+	/* pointer to last stream reset queued to control queue by us 
+	 * with requests.
+	 */
+	struct sctp_tmit_chunk *str_reset;
 	/*
 	 * if Source Address Selection happening, this will rotate through
 	 * the link list.
@@ -400,6 +416,9 @@ struct sctp_association {
 	u_int8_t *mapping_array;
 	/* primary destination to use */
 	struct sctp_nets *primary_destination;
+	/* For CMT */
+	struct sctp_nets *last_net_data_came_from;
+
 
 	/* last place I got a data chunk from */
 	struct sctp_nets *last_data_chunk_from;
@@ -410,26 +429,27 @@ struct sctp_association {
 	struct sctp_stream_out *last_out_stream;
 
 	/* wait to the point the cum-ack passes
-	 * pending_reply->sr_resp.reset_at_tsn.
+	 * req->send_reset_at_tsn for any
+	 * req on the list.
 	 */
-	struct sctp_stream_reset_response *pending_reply;
-	
-	uint8_t *chks_that_require_auth;
-
+	struct sctp_resethead resetHead;	
+	/* queue of chunks waiting to be sent into the local stack */
 	struct sctpchunk_listhead pending_reply_queue;
 
-	uint32_t cookie_preserve_req;
+	u_int8_t *chks_that_require_auth;
+
+	u_int32_t cookie_preserve_req;
 	/* ASCONF next seq I am sending out, inits at init-tsn */
-	uint32_t asconf_seq_out;
+	u_int32_t asconf_seq_out;
 	/* ASCONF last received ASCONF from peer, starts at peer's TSN-1 */
-	uint32_t asconf_seq_in;
+	u_int32_t asconf_seq_in;
 
 	/* next seq I am sending in str reset messages */
-	uint32_t str_reset_seq_out;
+	u_int32_t str_reset_seq_out;
 
 	/* next seq I am expecting in str reset messages */
-	uint32_t str_reset_seq_in;
-	u_int32_t str_reset_sending_seq;
+	u_int32_t str_reset_seq_in;
+
 
 	/* various verification tag information */
 	u_int32_t my_vtag;	/*
@@ -466,11 +486,6 @@ struct sctp_association {
 	/* Original seq number I used ??questionable to keep?? */
 	u_int32_t init_seq_number;
 
-	/*
-	 * We use this value to know if FR's are allowed, i.e. did the
-	 * cum-ack pass this point or equal it so FR's are now allowed.
-	 */
-	u_int32_t t3timeout_highest_marked;
 
 	/* The Advanced Peer Ack Point, as required by the PR-SCTP */
 	/* (A1 in Section 4.2) */
@@ -501,6 +516,7 @@ struct sctp_association {
 	u_int32_t tsn_of_pdapi_last_delivered;
         u_int32_t pdapi_ppid;
         u_int32_t context;
+	u_int32_t last_reset_action[SCTP_MAX_RESET_PARAMS];
 	/*
 	 * window state information and smallest MTU that I use to bound
 	 * segmentation
@@ -690,6 +706,7 @@ struct sctp_association {
         u_int8_t dropped_special_cnt;
 	u_int8_t seen_a_sack_this_pkt;
 	u_int8_t stream_reset_outstanding;
+	u_int8_t stream_reset_out_is_outstanding;
 	u_int8_t delayed_connection;
 	u_int8_t ifp_had_enobuf;
 	u_int8_t saw_sack_with_frags;
