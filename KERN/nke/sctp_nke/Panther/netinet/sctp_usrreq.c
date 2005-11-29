@@ -158,6 +158,7 @@ unsigned int sctp_assoc_rtx_max_default = SCTP_DEF_MAX_SEND;
 unsigned int sctp_path_rtx_max_default = SCTP_DEF_MAX_SEND/2;
 unsigned int sctp_nr_outgoing_streams_default = SCTP_OSTREAM_INITIAL;
 unsigned int sctp_cmt_on_off = 0;
+unsigned int sctp_cmt_sockopt_on_off = 0;
 unsigned int sctp_early_fr = 1;
 unsigned int sctp_early_fr_msec = SCTP_MINFR_MSEC_TIMER;
 unsigned int sctp_use_rttvar_cc = 0;
@@ -247,6 +248,7 @@ sctp_split_chunks(struct sctp_association *asoc,
 
 	}
 	/* Data is now split adjust sizes */
+	chk->no_fr_allowed = 0;
 	chk->send_size >>= 1;
 	new_chk->send_size >>= 1;
 
@@ -254,12 +256,25 @@ sctp_split_chunks(struct sctp_association *asoc,
 	new_chk->book_size >>= 1;
 
 	/* now adjust the marks */
-	chk->rec.data.rcv_flags |= SCTP_DATA_FIRST_FRAG;
-	chk->rec.data.rcv_flags &= ~SCTP_DATA_LAST_FRAG;
+	if(chk->rec.data.rcv_flags & SCTP_DATA_NOT_FRAG) {
+		chk->rec.data.rcv_flags |= SCTP_DATA_FIRST_FRAG;
+		chk->rec.data.rcv_flags &= ~SCTP_DATA_LAST_FRAG;
 
-	new_chk->rec.data.rcv_flags &= ~SCTP_DATA_FIRST_FRAG;
-	new_chk->rec.data.rcv_flags |= SCTP_DATA_LAST_FRAG;
-
+		new_chk->rec.data.rcv_flags &= ~SCTP_DATA_FIRST_FRAG;
+		new_chk->rec.data.rcv_flags |= SCTP_DATA_LAST_FRAG;
+	} else {
+		/* Its already frag'd */
+		if(chk->rec.data.rcv_flags & SCTP_DATA_FIRST_FRAG) {
+			/* just turn off the first on the new piece */
+			new_chk->rec.data.rcv_flags &= ~SCTP_DATA_FIRST_FRAG;
+		}else if (chk->rec.data.rcv_flags & SCTP_DATA_LAST_FRAG) {
+			/* 
+			 * just turn off the last frag on the old chunk
+			 * the new one gets to keep it.
+			 */
+			chk->rec.data.rcv_flags &= ~SCTP_DATA_LAST_FRAG;
+		}
+	}
 	/* Increase ref count if dest is set */
 	if (chk->whoTo) {
 		new_chk->whoTo->ref_count++;
@@ -318,7 +333,10 @@ sctp_pathmtu_adustment(struct sctp_inpcb *inp,
     while (chk) {
       nchk = TAILQ_NEXT(chk, sctp_next);
       if ((chk->send_size+SCTP_MED_OVERHEAD) > nxtsz) {
-	sctp_split_chunks(&stcb->asoc, strm, chk);
+	      if(0)
+		      sctp_split_chunks(&stcb->asoc, strm, chk);
+	      else
+		      chk->flags |= CHUNK_FLAGS_FRAGMENT_OK;
       }
       chk = nchk;
     }
@@ -1800,7 +1818,7 @@ sctp_optsget(struct socket *so,
 		break;
 	case SCTP_CMT_ON_OFF:
 	{
-		*mtod(m, unsigned int *) = sctp_cmt_on_off;
+		*mtod(m, unsigned int *) = sctp_cmt_sockopt_on_off;
 		m->m_len = sizeof(unsigned int);
 	}
 	break;
@@ -2943,9 +2961,9 @@ sctp_optsset(struct socket *so,
     break;
   case SCTP_CMT_ON_OFF:
     {
-      sctp_cmt_on_off = *mtod(m, unsigned int *);
-      if (sctp_cmt_on_off != 0) 
-	sctp_cmt_on_off = 1;
+      sctp_cmt_sockopt_on_off = *mtod(m, unsigned int *);
+      if (sctp_cmt_sockopt_on_off != 0) 
+	sctp_cmt_sockopt_on_off = 1;
     }
     break;
   case SCTP_MY_PUBLIC_KEY:    /* set my public key */
@@ -3009,7 +3027,7 @@ sctp_optsset(struct socket *so,
   case SCTP_RESET_STREAMS:
     {
       struct sctp_stream_reset *strrst;
-      uint8_t two_way, not_peer;
+      uint8_t send_in=0, send_tsn=0, send_out=0;
 
       if ((size_t)m->m_len < sizeof(struct sctp_stream_reset)) {
 	error = EINVAL;
@@ -3040,49 +3058,30 @@ sctp_optsset(struct socket *so,
 	break;
       }
 
-      /* Having re-thought this code I added as I write the I-D there
-       * is NO need for it. The peer, if we are requesting a stream-reset
-       * will send a request to us but will itself do what we do, take
-       * and copy off the "reset information" we send and queue TSN's
-       * larger than the send-next in our response message. Thus they
-       * will handle it.
-       */
-      /*		if (stcb->asoc.sending_seq != (stcb->asoc.last_acked_seq + 1)) {*/
-      /* Must have all sending data ack'd before we
-       * start this procedure. This is a bit restrictive
-       * and we SHOULD work on changing this so ONLY the
-       * streams being RESET get held up. So, a reset-all
-       * would require this.. but a reset specific just
-       * needs to be sure that the ones being reset have
-       * nothing on the send_queue. For now we will
-       * skip this more detailed method and do a course
-       * way.. i.e. nothing pending ... for future FIX ME!
-       */
-      /*			error = EBUSY;*/
-      /*			break;*/
-      /*		}*/
-
       if (stcb->asoc.stream_reset_outstanding) {
 	error = EALREADY;
 	SCTP_TCB_UNLOCK(stcb);
 	break;
       }
       if (strrst->strrst_flags == SCTP_RESET_LOCAL_RECV) {
-	two_way = 0;
-	not_peer = 0;
+	      send_in = 1;
       } else if (strrst->strrst_flags == SCTP_RESET_LOCAL_SEND) {
-	two_way = 1;
-	not_peer = 1;
+	      send_out = 1;
       } else if (strrst->strrst_flags == SCTP_RESET_BOTH) {
-	two_way = 1;
-	not_peer = 0;
+	      send_in = 1;
+	      send_out = 1;
+      } else if (strrst->strrst_flags == SCTP_RESET_TSN) {
+	      send_tsn = 1;
       } else {
 	error = EINVAL;
 	SCTP_TCB_UNLOCK(stcb);
 	break;
       }
-      sctp_send_str_reset_req(stcb, strrst->strrst_num_streams,
-			      strrst->strrst_list, two_way, not_peer);
+      error = sctp_send_str_reset_req(stcb, strrst->strrst_num_streams,
+				      strrst->strrst_list, 
+				      send_out, (stcb->asoc.str_reset_seq_in-3),
+				      send_in, send_tsn);
+
 #if defined(__NetBSD__) || defined(__OpenBSD__)
       s = splsoftnet();
 #else

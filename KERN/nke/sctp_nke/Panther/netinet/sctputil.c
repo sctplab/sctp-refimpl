@@ -310,14 +310,34 @@ sctp_log_strm_del(struct sctp_tmit_chunk *chk, struct sctp_tmit_chunk *poschk,
 }
 
 void
-sctp_log_cwnd(struct sctp_nets *net, int augment, uint8_t from)
+sctp_log_cwnd(struct sctp_tcb *stcb, struct sctp_nets *net, int augment, uint8_t from)
 {
-
+	struct timeval now;
+	u_int32_t timeval;
+	SCTP_GETTIME_TIMEVAL(&now);
+	timeval = (now.tv_sec % 0x00000fff);
+	timeval <<= 20;
+	timeval |= now.tv_usec & 0xfffff;
+	sctp_clog[sctp_cwnd_log_at].time_event = timeval;
 	sctp_clog[sctp_cwnd_log_at].from = (u_int8_t)from;
 	sctp_clog[sctp_cwnd_log_at].event_type = (u_int8_t)SCTP_LOG_EVENT_CWND;
 	sctp_clog[sctp_cwnd_log_at].x.cwnd.net = net;
-	sctp_clog[sctp_cwnd_log_at].x.cwnd.cwnd_new_value = net->cwnd;
-	sctp_clog[sctp_cwnd_log_at].x.cwnd.inflight = net->flight_size;
+	if(stcb->asoc.send_queue_cnt > 255)
+		sctp_clog[sctp_cwnd_log_at].x.cwnd.cnt_in_send = 255;
+	else
+		sctp_clog[sctp_cwnd_log_at].x.cwnd.cnt_in_send = stcb->asoc.send_queue_cnt;
+	if(stcb->asoc.stream_queue_cnt > 255)
+		sctp_clog[sctp_cwnd_log_at].x.cwnd.cnt_in_str = 255;
+	else
+		sctp_clog[sctp_cwnd_log_at].x.cwnd.cnt_in_str = stcb->asoc.stream_queue_cnt;
+
+	if(net) {
+		sctp_clog[sctp_cwnd_log_at].x.cwnd.cwnd_new_value = net->cwnd;
+		sctp_clog[sctp_cwnd_log_at].x.cwnd.inflight = net->flight_size;
+		sctp_clog[sctp_cwnd_log_at].x.cwnd.pseudo_cumack = net->pseudo_cumack;
+		sctp_clog[sctp_cwnd_log_at].x.cwnd.meets_pseudo_cumack = net->new_pseudo_cumack;
+		sctp_clog[sctp_cwnd_log_at].x.cwnd.need_new_pseudo_cumack = net->find_pseudo_cumack;
+	}
 	sctp_clog[sctp_cwnd_log_at].x.cwnd.cwnd_augment = augment;
 	sctp_cwnd_log_at++;
 	if (sctp_cwnd_log_at >= SCTP_STAT_LOG_SIZE) {
@@ -367,14 +387,30 @@ sctp_log_lock(struct sctp_inpcb *inp, struct sctp_tcb *stcb, uint8_t from)
 }
 
 void
-sctp_log_maxburst(struct sctp_nets *net, int error, int burst, uint8_t from)
+sctp_log_maxburst(struct sctp_tcb *stcb, struct sctp_nets *net, int error, int burst, uint8_t from)
 {
+	struct timeval now;
+	u_int32_t timeval;
+	SCTP_GETTIME_TIMEVAL(&now);
+	timeval = (now.tv_sec % 0x00000fff);
+	timeval <<= 20;
+	timeval |= now.tv_usec & 0xfffff;
+	sctp_clog[sctp_cwnd_log_at].time_event = timeval;
 	sctp_clog[sctp_cwnd_log_at].from = (u_int8_t)from;
 	sctp_clog[sctp_cwnd_log_at].event_type = (u_int8_t)SCTP_LOG_EVENT_MAXBURST;
 	sctp_clog[sctp_cwnd_log_at].x.cwnd.net = net;
 	sctp_clog[sctp_cwnd_log_at].x.cwnd.cwnd_new_value = error;
 	sctp_clog[sctp_cwnd_log_at].x.cwnd.inflight = net->flight_size;
 	sctp_clog[sctp_cwnd_log_at].x.cwnd.cwnd_augment = burst;
+	if(stcb->asoc.send_queue_cnt > 255)
+		sctp_clog[sctp_cwnd_log_at].x.cwnd.cnt_in_send = 255;
+	else
+		sctp_clog[sctp_cwnd_log_at].x.cwnd.cnt_in_send = stcb->asoc.send_queue_cnt;
+	if(stcb->asoc.stream_queue_cnt > 255)
+		sctp_clog[sctp_cwnd_log_at].x.cwnd.cnt_in_str = 255;
+	else
+		sctp_clog[sctp_cwnd_log_at].x.cwnd.cnt_in_str = stcb->asoc.stream_queue_cnt;
+
 	sctp_cwnd_log_at++;
 	if (sctp_cwnd_log_at >= SCTP_STAT_LOG_SIZE) {
 		sctp_cwnd_log_at = 0;
@@ -870,13 +906,16 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	asoc->assoc_id = asoc->my_vtag;
 	asoc->asconf_seq_out = asoc->str_reset_seq_out = asoc->init_seq_number = asoc->sending_seq =
 		sctp_select_initial_TSN(&m->sctp_ep);
-	asoc->t3timeout_highest_marked = asoc->asconf_seq_out;
 	/* we are opptimisitic here */
 	asoc->peer_supports_asconf = 1;
 	asoc->peer_supports_asconf_setprim = 1;
 	asoc->peer_supports_pktdrop = 1;
 
 	asoc->sent_queue_retran_cnt = 0;
+
+	/* for CMT */
+	asoc->last_net_data_came_from = NULL;
+
 	/* This will need to be adjusted */
 	asoc->last_cwr_tsn = asoc->init_seq_number - 1;
 	asoc->last_acked_seq = asoc->init_seq_number - 1;
@@ -1058,7 +1097,6 @@ sctp_timeout_handler(void *t)
 	net = (struct sctp_nets *)tmr->net;
 	did_output = 1;
 
-
 #ifdef SCTP_AUDITING_ENABLED
 	sctp_audit_log(0xF0, (u_int8_t)tmr->type);
 	sctp_auditing(3, inp, stcb, net);
@@ -1066,6 +1104,11 @@ sctp_timeout_handler(void *t)
 	sctp_pegs[SCTP_TIMERS_EXP]++;
 
 	if (inp == NULL) {
+		splx(s);
+#if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
+		/* release BSD kernel funnel/mutex */
+		(void) thread_funnel_set(network_flock, FALSE);
+#endif
 		return;
 	}
 
@@ -1110,7 +1153,6 @@ sctp_timeout_handler(void *t)
 	/* clear the callout pending status here */
 	callout_stop(&tmr->timer);
 #endif
-
 	
 	if (stcb) {
 		SCTP_TCB_LOCK(stcb);
@@ -1121,7 +1163,6 @@ sctp_timeout_handler(void *t)
 
 	SCTP_INP_INCR_REF(inp);
 	SCTP_INP_WUNLOCK(inp);
-
 
 	typ = tmr->type;
 	switch (tmr->type) {
@@ -2831,7 +2872,7 @@ sctp_notify_stream_reset(struct sctp_tcb *stcb,
 	if (number_entries) {
 		int i;
 		for (i=0; i<number_entries; i++) {
-			strreset->strreset_list[i] = list[i];
+			strreset->strreset_list[i] = ntohs(list[i]);
 		}
 	}
 	m_notify->m_flags |= M_EOR | M_NOTIFICATION;
@@ -2952,6 +2993,14 @@ sctp_ulp_notify(u_int32_t notification, struct sctp_tcb *stcb,
 	case SCTP_NOTIFY_STR_RESET_RECV:
 		sctp_notify_stream_reset(stcb, error, ((uint16_t *)data), SCTP_STRRESET_INBOUND_STR);
 		break;
+	case SCTP_NOTIFY_STR_RESET_FAILED_OUT:
+		sctp_notify_stream_reset(stcb, error, ((uint16_t *)data), (SCTP_STRRESET_OUTBOUND_STR|SCTP_STRRESET_INBOUND_STR));
+		break;
+
+	case SCTP_NOTIFY_STR_RESET_FAILED_IN:
+		sctp_notify_stream_reset(stcb, error, ((uint16_t *)data), (SCTP_STRRESET_INBOUND_STR|SCTP_STRRESET_INBOUND_STR));
+		break;
+
 	case SCTP_NOTIFY_ASCONF_ADD_IP:
 		sctp_notify_peer_addr_change(stcb, SCTP_ADDR_ADDED, data,
 		    error);
