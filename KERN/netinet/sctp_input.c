@@ -2982,8 +2982,9 @@ sctp_handle_str_reset_request_tsn(struct sctp_tcb *stcb,
 	seq = ntohl(req->request_seq);
 	if(asoc->str_reset_seq_in == seq) {
 		fwdtsn.ch.chunk_length = htons(sizeof(struct sctp_forward_tsn_chunk));
-		fwdtsn.ch.chunk_type = htons(SCTP_FORWARD_CUM_TSN);
-		fwdtsn.new_cumulative_tsn = htonl(stcb->asoc.highest_tsn_inside_map + SCTP_STREAM_RESET_TSN_DELTA);
+		fwdtsn.ch.chunk_type = SCTP_FORWARD_CUM_TSN;
+		fwdtsn.ch.chunk_flags = 0;
+		fwdtsn.new_cumulative_tsn = htonl(stcb->asoc.highest_tsn_inside_map + 1);
 		sctp_handle_forward_tsn(stcb, &fwdtsn, &abort_flag);
 		if(abort_flag) {
 			return(1);
@@ -2993,6 +2994,12 @@ sctp_handle_str_reset_request_tsn(struct sctp_tcb *stcb,
 		stcb->asoc.mapping_array_base_tsn = stcb->asoc.highest_tsn_inside_map + 1;
 		memset(stcb->asoc.mapping_array, 0, stcb->asoc.mapping_array_size);
 		stcb->asoc.sending_seq++;
+		/* save off historical data for retrans */
+		stcb->asoc.last_sending_seq[1] = stcb->asoc.last_sending_seq[0];
+		stcb->asoc.last_sending_seq[0] = stcb->asoc.sending_seq;
+		stcb->asoc.last_base_tsnsent[1] = stcb->asoc.last_base_tsnsent[0];
+		stcb->asoc.last_base_tsnsent[0] = stcb->asoc.mapping_array_base_tsn;
+
 		sctp_add_stream_reset_result_tsn(chk,  
 						 ntohl(req->request_seq), 
 						 SCTP_STREAM_RESET_PERFORMED,
@@ -3002,11 +3009,19 @@ sctp_handle_str_reset_request_tsn(struct sctp_tcb *stcb,
 		sctp_reset_in_stream(stcb, 0, (u_int16_t *)NULL);
 		stcb->asoc.last_reset_action[1] = stcb->asoc.last_reset_action[0];
 		stcb->asoc.last_reset_action[0] = SCTP_STREAM_RESET_PERFORMED;
+
 		asoc->str_reset_seq_in++;
 	} else if (asoc->str_reset_seq_in-1 == seq) {
-		sctp_add_stream_reset_result(chk, seq, asoc->last_reset_action[0]);
+		sctp_add_stream_reset_result_tsn(chk, seq, asoc->last_reset_action[0], 
+						 stcb->asoc.last_sending_seq[0],
+						 stcb->asoc.last_base_tsnsent[0]
+						 );
 	} else if (asoc->str_reset_seq_in-2 == seq) {
-		sctp_add_stream_reset_result(chk, seq, asoc->last_reset_action[1]);
+		sctp_add_stream_reset_result_tsn(chk, seq, asoc->last_reset_action[1],
+						 stcb->asoc.last_sending_seq[1],
+						 stcb->asoc.last_base_tsnsent[1]
+
+			);
 	} else {
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
