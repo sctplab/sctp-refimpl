@@ -7015,9 +7015,6 @@ sctp_clean_up_ctl(struct sctp_association *asoc)
 		} else if (chk->rec.chunk_id == SCTP_STREAM_RESET) {
 			/* special handling, we must look into the param */
 			if(chk != asoc->str_reset) {
-				printf("my chunk is %x str-reset to save is %x,  clean it up\n",
-				       (u_int)chk,
-				       (u_int)asoc->str_reset);
 				goto clean_up_anyway;
 			}
 

@@ -517,6 +517,8 @@ struct sctp_association {
         u_int32_t pdapi_ppid;
         u_int32_t context;
 	u_int32_t last_reset_action[SCTP_MAX_RESET_PARAMS];
+	u_int32_t last_sending_seq[SCTP_MAX_RESET_PARAMS];
+	u_int32_t last_base_tsnsent[SCTP_MAX_RESET_PARAMS];
 	/*
 	 * window state information and smallest MTU that I use to bound
 	 * segmentation
