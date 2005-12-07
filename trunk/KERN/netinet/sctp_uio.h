@@ -184,7 +184,6 @@ struct sctp_paddr_change {
 #endif
 #define SCTP_INACTIVE		0x0002	/* SCTP_ADDR_NOT_REACHABLE */
 
-
 #ifdef SCTP_UNCONFIRMED
 #undef SCTP_UNCONFIRMED
 #endif
@@ -284,33 +283,21 @@ struct sctp_stream_reset_event {
 	u_int16_t       strreset_list[0];
 };
 
-/* flags in strreset_flags filed */
+/* flags in strreset_flags field */
 #define SCTP_STRRESET_INBOUND_STR  0x0001
 #define SCTP_STRRESET_OUTBOUND_STR 0x0002
 #define SCTP_STRRESET_ALL_STREAMS  0x0004
 #define SCTP_STRRESET_STREAM_LIST  0x0008
 #define SCTP_STRRESET_FAILED       0x0010
 
-/* notification types */
-#define SCTP_ASSOC_CHANGE		0x0001
-#define SCTP_PEER_ADDR_CHANGE		0x0002
-#define SCTP_REMOTE_ERROR		0x0003
-#define SCTP_SEND_FAILED		0x0004
-#define SCTP_SHUTDOWN_EVENT		0x0005
-#define SCTP_ADAPTION_INDICATION	0x0006
-#define SCTP_PARTIAL_DELIVERY_EVENT	0x0007
-#define SCTP_AUTHENTICATION_EVENT	0x0008
-#define SCTP_STREAM_RESET_EVENT		0x0009
 
-
+/* SCTP notification event */
 struct sctp_tlv {
 	u_int16_t sn_type;
 	u_int16_t sn_flags;
 	u_int32_t sn_length;
 };
 
-
-/* notification event */
 union sctp_notification {
 	struct sctp_tlv sn_header;
 	struct sctp_assoc_change sn_assoc_change;
@@ -323,6 +310,17 @@ union sctp_notification {
 	struct sctp_authkey_event sn_auth_event;
 	struct sctp_stream_reset_event sn_strreset_event;
 };
+/* notification types */
+#define SCTP_ASSOC_CHANGE		0x0001
+#define SCTP_PEER_ADDR_CHANGE		0x0002
+#define SCTP_REMOTE_ERROR		0x0003
+#define SCTP_SEND_FAILED		0x0004
+#define SCTP_SHUTDOWN_EVENT		0x0005
+#define SCTP_ADAPTION_INDICATION	0x0006
+#define SCTP_PARTIAL_DELIVERY_EVENT	0x0007
+#define SCTP_AUTHENTICATION_EVENT	0x0008
+#define SCTP_STREAM_RESET_EVENT		0x0009
+
 
 /*
  * socket option structs
