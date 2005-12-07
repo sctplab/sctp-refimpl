@@ -384,7 +384,6 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 						if (sin->sin_addr.s_addr ==
 						    intf_addr->sin_addr.s_addr) {
 							match = 1;
-							SCTP_INP_RUNLOCK(inp);
 							break;
 						}
 					} else {
@@ -398,7 +397,6 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 						if (SCTP6_ARE_ADDR_EQUAL(&sin6->sin6_addr,
 									 &intf_addr6->sin6_addr)) {
 							match = 1;
-							SCTP_INP_RUNLOCK(inp);
 							break;
 						}
 					}
