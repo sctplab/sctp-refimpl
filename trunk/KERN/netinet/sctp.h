@@ -67,100 +67,113 @@ struct sctp_paramhdr {
 };
 
 /*
- * user socket options
+ * user socket options: socket API defined
  */
-/* read-write options */
-#define SCTP_NODELAY			0x00000001
-#define SCTP_MAXSEG			0x00000002
-#define SCTP_ASSOCINFO			0x00000003
-
-#define SCTP_INITMSG			0x00000004
+/*
+ * read-write options
+ */
+#define SCTP_RTOINFO			0x00000001
+#define SCTP_ASSOCINFO			0x00000002
+#define SCTP_INITMSG			0x00000003
+#define SCTP_NODELAY			0x00000004
 #define SCTP_AUTOCLOSE			0x00000005
 #define SCTP_SET_PEER_PRIMARY_ADDR	0x00000006
 #define SCTP_PRIMARY_ADDR		0x00000007
-
-/* read-only options */
-#define SCTP_STATUS			0x00000008
-#define SCTP_PCB_STATUS			0x00000009
-
+#define SCTP_ADAPTION_LAYER		0x00000008
+#define SCTP_DISABLE_FRAGMENTS		0x00000009
+#define SCTP_PEER_ADDR_PARAMS 		0x0000000a
+#define SCTP_DEFAULT_SEND_PARAM		0x0000000b
 /* ancillary data/notification interest options */
-#define SCTP_EVENTS			0x0000000a
-/* sctp_opt_info params */
-#define SCTP_PEER_ADDR_PARAMS 		0x0000000b
-#define SCTP_GET_PEER_ADDR_INFO		0x0000000c
-/* Hidden socket option that gets the addresses */
-#define SCTP_GET_PEER_ADDRESSES		0x0000000d
-#define SCTP_GET_LOCAL_ADDRESSES	0x0000000e
+#define SCTP_EVENTS			0x0000000c
+/* Without this applied we will give V4 and V6 addresses on a V6 socket */
+#define SCTP_I_WANT_MAPPED_V4_ADDR	0x0000000d
+#define SCTP_MAXSEG 			0x0000000e
+#define SCTP_DELAYED_ACK_TIME           0x0000000f
+/* authentication support */
+#define SCTP_AUTH_CHUNK 		0x00000010
+#define SCTP_AUTH_KEY 			0x00000011
+#define SCTP_HMAC_IDENT 		0x00000012
+#define SCTP_AUTH_SETKEY_ACTIVE 	0x00000013
+
+/*
+ * read-only options
+ */
+#define SCTP_STATUS			0x00000100
+#define SCTP_GET_PEER_ADDR_INFO		0x00000101
+/* authentication support */
+#define SCTP_PEER_AUTH_CHUNKS 		0x00000102
+#define SCTP_LOCAL_AUTH_CHUNKS 		0x00000103
+
+
+/*
+ * user socket options: BSD implementation specific
+ */
 /*
  * Blocking I/O is enabled on any TCP type socket by default.
  * For the UDP model if this is turned on then the socket buffer is
- * shared for send resources amongst all associations. The default
- * for the UDP model is that is SS_NBIO is set. Which means all associations
- * have a seperate send limit BUT they will NOT ever BLOCK instead
- * you will get an error back EAGAIN if you try to send to much. If
- * you want the blocking symantics you set this option at the cost
- * of sharing one socket send buffer size amongst all associations.
- * Peeled off sockets turn this option off and block... but since both TCP and
- * peeled off sockets have only one assoc per socket this is fine.
- * It probably does NOT make sense to set this  on SS_NBIO on a TCP model OR
- * peeled off UDP model, but we do allow you to do so. You just use
- * the normal syscall to toggle SS_NBIO the way you want.
+ * shared for send resources amongst all associations.  The default
+ * for the UDP model is that is SS_NBIO is set.  Which means all
+ * associations have a seperate send limit BUT they will NOT ever
+ * BLOCK instead you will get an error back EAGAIN if you try to
+ * send to much. If you want the blocking symantics you set this
+ * option at the cost of sharing one socket send buffer size amongst
+ * all associations. Peeled off sockets turn this option off and block.
+ * But since both TCP and peeled off sockets have only one assoc per
+ * socket this is fine. It probably does NOT make sense to set this
+ * on SS_NBIO on a TCP model OR peeled off UDP model, but we do allow
+ * you to do so. You just use the normal syscall to toggle SS_NBIO
+ * the way you want.
+ *
+ * Blocking I/O is controled by the SS_NBIO flag on the socket state
+ * so_state field.
  */
-/* Blocking I/O is controled by the SS_NBIO flag on the
- * socket state so_state field.
- */
-#define SCTP_GET_SNDBUF_USE		0x0000000f
-/* latter added read/write */
-#define SCTP_ADAPTION_LAYER		0x00000010
-#define SCTP_DISABLE_FRAGMENTS		0x00000011
-/* sctp_bindx() flags as socket options */
-#define SCTP_BINDX_ADD_ADDR		0x00000012
-#define SCTP_BINDX_REM_ADDR		0x00000013
-/* return the total count in bytes needed to hold all local addresses bound */
-#define SCTP_GET_LOCAL_ADDR_SIZE	0x00000014
-/* Without this applied we will give V4 and V6 addresses on a V6 socket */
-#define SCTP_I_WANT_MAPPED_V4_ADDR	0x00000015
-/* Return the total count in bytes needed to hold the remote address */
-#define SCTP_GET_REMOTE_ADDR_SIZE	0x00000016
-#define SCTP_GET_PEGS			0x00000017
-#define SCTP_DEFAULT_SEND_PARAM		0x00000018
-#define SCTP_SET_DEBUG_LEVEL		0x00000019
-#define SCTP_RTOINFO			0x0000001a
-#define SCTP_AUTO_ASCONF		0x0000001b
-#define SCTP_MAXBURST			0x0000001c
-#define SCTP_GET_STAT_LOG		0x0000001d
-#define SCTP_CONNECT_X			0x0000001e	/* hidden opt for connectx */
-#define SCTP_RESET_STREAMS		0x0000001f
-#define SCTP_CONNECT_X_DELAYED		0x00000020	/* hidden opt for connectx_delayed
-							 * part of sctp_sendx()
-							 */
-#define SCTP_CONNECT_X_COMPLETE         0x00000021
-#define SCTP_GET_ASOC_ID_LIST           0x00000022
 
-/* Other BSD items */
-#define SCTP_GET_NONCE_VALUES           0x00000023
-#define SCTP_DELAYED_ACK_TIME           0x00000024
-#define SCTP_CONTEXT                    0x00000025 /* set/get assoc level context */
+/* these should probably go into sockets API */
+#define SCTP_AUTO_ASCONF		0x00001001
+#define SCTP_MAXBURST			0x00001002
+/* assoc level context */
+#define SCTP_CONTEXT                    0x00001003
+#define SCTP_RESET_STREAMS		0x00001004
 
-/* Things for the AUTH draft possibly */
-#define SCTP_PEER_PUBLIC_KEY            0x00000100 /* get the peers public key */
-#define SCTP_MY_PUBLIC_KEY              0x00000101 /* get/set my endpoints public key */
-#define SCTP_SET_AUTH_SECRET            0x00000102 /* get/set my shared secret */
-#define SCTP_SET_AUTH_CHUNKS            0x00000103/* specify what chunks you want
-						    * the system may have additional requirments
-						     * as well. I.e. probably ASCONF/ASCONF-ACK no matter
-						     * if you want it or not.
-						     */
+#define SCTP_SET_DEBUG_LEVEL		0x00001005
+#define SCTP_RESET_PEGS                 0x00001006
+#define SCTP_CLR_STAT_LOG               0x00001007
 /* CMT ON/OFF socket option */
-#define SCTP_CMT_ON_OFF                 0x00000200
+#define SCTP_CMT_ON_OFF                 0x00001200
 
-/* Hidden socket option based sctp_peeloff */
-#define SCTP_PEELOFF                    0x00000210
+/* read only */
+#define SCTP_GET_SNDBUF_USE		0x00001101
+#define SCTP_GET_PEGS			0x00001102
+#define SCTP_GET_STAT_LOG		0x00001103
+#define SCTP_GET_ASOC_ID_LIST           0x00001104
+#define SCTP_PCB_STATUS			0x00001105
+#define SCTP_GET_NONCE_VALUES           0x00001106
+
+
+/*
+ * hidden implementation specific options
+ * these are NOT user visible (should move out of sctp.h)
+ */
+/* sctp_bindx() flags as hidden socket options */
+#define SCTP_BINDX_ADD_ADDR		0x00008001
+#define SCTP_BINDX_REM_ADDR		0x00008002
+/* Hidden socket option that gets the addresses */
+#define SCTP_GET_PEER_ADDRESSES		0x00008003
+#define SCTP_GET_LOCAL_ADDRESSES	0x00008004
+/* return the total count in bytes needed to hold all local addresses bound */
+#define SCTP_GET_LOCAL_ADDR_SIZE	0x00008005
+/* Return the total count in bytes needed to hold the remote address */
+#define SCTP_GET_REMOTE_ADDR_SIZE	0x00008006
+/* hidden option for connectx */
+#define SCTP_CONNECT_X			0x00008007
+/* hidden option for connectx_delayed, part of sendx */
+#define SCTP_CONNECT_X_DELAYED		0x00008008
+#define SCTP_CONNECT_X_COMPLETE         0x00008009
+/* hidden socket option based sctp_peeloff */
+#define SCTP_PEELOFF                    0x0000800a
 
 /* Debug things that need to be purged */
-#define SCTP_SET_INITIAL_DBG_SEQ	0x00001f00
-#define SCTP_RESET_PEGS                 0x00002000
-#define SCTP_CLR_STAT_LOG               0x00002100
+#define SCTP_SET_INITIAL_DBG_SEQ	0x00009f00
 
 /*
  * user state values
@@ -249,14 +262,15 @@ struct sctp_error_unrecognized_chunk {
 #define HAVE_SCTP_PRSCTP		1
 #define HAVE_SCTP_ADDIP			1
 #define HAVE_SCTP_CANSET_PRIMARY	1
-#define HAVE_SCTP_SAT_NETWORK_CAPABILITY1
+#define HAVE_SCTP_SAT_CAPABILITY	1
 #define HAVE_SCTP_MULTIBUF              1
 #define HAVE_SCTP_NOCONNECT             0
 #define HAVE_SCTP_ECN_NONCE             1  /* ECN Nonce option */
+#define HAVE_SCTP_AUTH			1
 
-/* Main SCTP chunk types, we place
- * these here since that way natd and f/w's
- * in user land can find them.
+/*
+ * Main SCTP chunk types
+ * we place these here so natd and f/w's in user land can find them.
  */
 /************0x00 series ***********/
 #define SCTP_DATA		0x00
@@ -299,8 +313,9 @@ struct sctp_error_unrecognized_chunk {
 #define SCTP_BADCRC		0x02
 #define SCTP_PACKET_TRUNCATED	0x04
 
-#define SCTP_SAT_NETWORK_MIN	     400	/* min ms for RTT to set satellite time */
-#define SCTP_SAT_NETWORK_BURST_INCR  2		/* how many times to multiply maxburst in sat */
+#define SCTP_SAT_NETWORK_MIN	400	/* min ms for RTT to set satellite time */
+#define SCTP_SAT_NETWORK_BURST_INCR  2	/* how many times to multiply maxburst in sat */
+
 /* Data Chuck Specific Flags */
 #define SCTP_DATA_FRAG_MASK	0x03
 #define SCTP_DATA_MIDDLE_FRAG	0x00
