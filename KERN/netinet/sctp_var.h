@@ -82,11 +82,13 @@
 #define SCTPCTL_RTTVAR_CC           29
 #define SCTPCTL_DEADLOCK_DET        30
 #define SCTPCTL_EARLY_FR_MSEC       31
+#define SCTPCTL_AUTH_DISABLE        32
+#define SCTPCTL_AUTH_HMAC_ID        33
 #ifdef SCTP_DEBUG
-#define SCTPCTL_DEBUG               32
-#define SCTPCTL_MAXID		    33
+#define SCTPCTL_DEBUG               34
+#define SCTPCTL_MAXID		    35
 #else
-#define SCTPCTL_MAXID		    32
+#define SCTPCTL_MAXID		    35
 #endif
 
 #endif
@@ -94,7 +96,7 @@
 #ifdef SCTP_DEBUG
 #define SCTPCTL_NAMES { \
 	{ 0, 0 }, \
-	{ "maxdgram", CTLTYPE_INT }, \
+	{ "sendspace", CTLTYPE_INT }, \
 	{ "recvspace", CTLTYPE_INT }, \
 	{ "autoasconf", CTLTYPE_INT }, \
 	{ "ecn_enable", CTLTYPE_INT }, \
@@ -124,12 +126,15 @@
         { "early_fast_retran", CTLTYPE_INT }, \
         { "use_rttvar_congctrl", CTLTYPE_INT }, \
         { "deadlock_detect", CTLTYPE_INT }, \
+        { "early_fast_retran_msec", CTLTYPE_INT }, \
+	{ "auth_disable", CTLTYPE_INT }, \
+	{ "auth_hmac_id", CTLTYPE_INT }, \
 	{ "debug", CTLTYPE_INT }, \
 }
 #else
 #define SCTPCTL_NAMES { \
 	{ 0, 0 }, \
-	{ "maxdgram", CTLTYPE_INT }, \
+	{ "sendspace", CTLTYPE_INT }, \
 	{ "recvspace", CTLTYPE_INT }, \
 	{ "autoasconf", CTLTYPE_INT }, \
 	{ "ecn_enable", CTLTYPE_INT }, \
@@ -159,6 +164,9 @@
         { "early_fast_retran", CTLTYPE_INT }, \
         { "use_rttvar_congctrl", CTLTYPE_INT }, \
         { "deadlock_detect", CTLTYPE_INT }, \
+        { "early_fast_retran_msec", CTLTYPE_INT }, \
+	{ "auth_disable", CTLTYPE_INT }, \
+	{ "auth_hmac_id", CTLTYPE_INT }, \
 }
 #endif
 
@@ -313,7 +321,7 @@ int sctp_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,
  
 extern int	sctp_sendspace;
 extern int	sctp_recvspace;
-extern int      sctp_ecn;
+extern int      sctp_ecn_enable;
 extern int      sctp_ecn_nonce;
 extern int      sctp_use_cwnd_based_maxburst;
 extern unsigned int sctp_cmt_on_off;

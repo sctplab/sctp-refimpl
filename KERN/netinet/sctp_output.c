@@ -3849,7 +3849,7 @@ sctp_get_ect(struct sctp_tcb *stcb,
 	uint8_t this_random;
 
 	/* Huh? */
-	if (sctp_ecn == 0)
+	if (sctp_ecn_enable == 0)
 		return (0);
 
 	if (sctp_ecn_nonce == 0)
@@ -4605,7 +4605,7 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	}
 
 	/* ECN parameter */
-	if (sctp_ecn == 1) {
+	if (sctp_ecn_enable == 1) {
 		ecn->ph.param_type = htons(SCTP_ECN_CAPABLE);
 		ecn->ph.param_length = htons(sizeof(*ecn));
 		m->m_len += sizeof(*ecn);
@@ -5566,7 +5566,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	}
 
 	/* ECN parameter */
-	if (sctp_ecn == 1) {
+	if (sctp_ecn_enable == 1) {
 		ecn->ph.param_type = htons(SCTP_ECN_CAPABLE);
 		ecn->ph.param_length = htons(sizeof(*ecn));
 		m->m_len += sizeof(*ecn);

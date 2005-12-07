@@ -113,16 +113,17 @@ struct sctp_asconf_addrv4_param {	/* an ASCONF address (v4) parameter */
 	struct sctp_ipv4addr_param  addrp;	/* max storage size */
 };
 
+struct sctp_supported_chunk_types_param {
+	struct sctp_paramhdr ph;	/* type = 0x8008  len = x */
+	u_int8_t chunk_types[0];
+};
+
 
 /* ECN Nonce: draft-ladha-sctp-ecn-nonce */
 struct sctp_ecn_nonce_supported_param {
 	struct sctp_paramhdr ph;	/* type = 0x8001  len = 4 */
 };
 
-struct sctp_supported_chunk_types_param {
-	struct sctp_paramhdr ph;	/* type = 0x8002  len = x */
-	u_int8_t chunk_types[0];
-};
 
 /*
  * Structures for DATA chunks
@@ -491,9 +492,14 @@ struct sctp_auth_hmac_algo {
 	u_int16_t hmac_ids[0];
 };
 /* AUTH hmac_id */
-#define SCTP_AUTH_HMAC_ID_RSVD	0x00000000
-#define SCTP_AUTH_HMAC_ID_SHA1	0x00000001
-#define SCTP_AUTH_HMAC_ID_MD5	0x00000002    
+#define SCTP_AUTH_HMAC_ID_RSVD		0x0000
+#define SCTP_AUTH_HMAC_ID_SHA1		0x0001	/* SHA-1 160 */
+#define SCTP_AUTH_HMAC_ID_MD5		0x0002
+/* temp/private hash algorithms */
+#define SCTP_AUTH_HMAC_ID_MMH		0x8000
+#define SCTP_AUTH_HMAC_ID_SHA256	0x8001
+#define SCTP_AUTH_HMAC_ID_SHA384	0x8002
+#define SCTP_AUTH_HMAC_ID_SHA512	0x8003
 
 struct sctp_auth_chunk {
 	struct sctp_chunkhdr ch;	/* type = 0x84 */
