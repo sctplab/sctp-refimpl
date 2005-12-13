@@ -36,10 +36,11 @@ DWORD tmpUptime;	/* in milliseconds */
 #endif
 
 struct txfr_request {
-    int sizetosend;
-    int blksize;
-    int snd_buf;
-    int rcv_buf;
+	int sizetosend;
+	int blksize;
+	int snd_buf;
+	int rcv_buf;
+	u_int8_t tos_value;
 };
 
 struct control_info {
@@ -49,6 +50,8 @@ struct control_info {
 
 char *error_rate;
 int blocks_is_error = 0;
+
+static u_int8_t tos_value=0;
 
 #ifdef linux
 #ifndef MSG_NOTIFICATION
@@ -471,6 +474,19 @@ measure_one(struct control_info *req,
 		printf("snd buf set\n");
 	}
     }
+    if(req->req.tos_value) {
+	    if (protocol_touse == IPPROTO_TCP){
+		    optval = req->req.tos_value;
+	    } else {
+		    optval = req->req.tos_value + 4;
+	    }
+	    optlen = 4;
+	    if (setsockopt(fd, IPPROTO_IP, IP_TOS, (const char *)&optval, optlen) != 0) {
+		    printf("Can't set tos value to %x :-( err:%d\n", req->req.tos_value, errno);
+	    } else {
+		    printf("Set tos to %x\n", req->req.tos_value);
+	    }
+    }
     if (req->req.rcv_buf) {
 	optlen = 4;
 	optval = ntohl(req->req.rcv_buf);
@@ -746,6 +762,7 @@ load_control_file(char *control,int *num_ctl)
 	if(tok == NULL){
 	    continue;
 	}
+	ctl[cnt].req.tos_value = tos_value;
 	ctl[cnt].req.sizetosend = htonl(strtol(tok,NULL,0));
 	tok = strtok(NULL,colon);
 	if(tok == NULL){
@@ -809,12 +826,12 @@ main(int argc, char **argv)
 #endif /* WIN32 */
 
     error_rate = NULL;
-    while((i= getopt(argc,argv,"bp:h:f:M:ste:?l:P:T")) != EOF){
+    while((i= getopt(argc,argv,"bp:h:f:M:ste:?B:P:TAQ:")) != EOF){
 	switch(i){
 	case 'P':
 	    lport = (u_int16_t)strtol(optarg,NULL,0);
 	    break;
-	case 'l':
+	case 'B':
 	    laddr = optarg;
 	    break;
 	case 's':
@@ -824,6 +841,12 @@ main(int argc, char **argv)
 	    sctp_only = 1;
 #endif /* WIN32 */
 	    break;
+	case 'Q':
+		tos_value = (u_int8_t)strtol(optarg,NULL,0);
+		tos_value &= 0xfc;
+		printf("Tos_value set to %x\n",
+		       (u_int)tos_value);
+		break;
 	case 't':
 	    tcp_only = 1;
 	    break;

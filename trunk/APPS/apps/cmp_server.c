@@ -16,6 +16,8 @@ typedef unsigned short u_int16_t;
 #include <errno.h>
 #include <sys/signal.h>
 #include <netinet/tcp.h>
+#include <arpa/inet.h>
+
 #endif /* WIN32 */
 #ifdef __NetBSD__
 #include <sys/inttypes.h>
@@ -105,6 +107,7 @@ struct txfr_request{
 	int blksize;
 	int snd_window;
 	int rcv_window;
+	u_int8_t tos_value;
 };
 
 int
@@ -116,6 +119,7 @@ main(int argc, char **argv)
 	u_int16_t port=0;
 	int optval,optlen;
 	int snd_buf=200;
+	char *addr_to_bind=NULL;
 	int maxburst=0;
 #ifdef WIN32
 	unsigned short versionReq = MAKEWORD(2,2);
@@ -129,11 +133,17 @@ main(int argc, char **argv)
 	int cnt_written=0;
 	int maxseg=0;
 	int print_before_write=0;
-	
+	FILE *outlog;
+	char name[64];
+	char cmd[256];	
+
 	optlen = sizeof(optval);
 	sb = 0;
-	while((i= getopt(argc,argv,"tsp:b:Pz:S:m:")) != EOF){
+	while((i= getopt(argc,argv,"tsp:b:Pz:S:m:B:")) != EOF){
 		switch(i){
+		case 'B':
+			addr_to_bind = optarg;
+			break;
 		case 'm':
 			maxburst = strtol(optarg,NULL,0);
 			break;
@@ -183,6 +193,7 @@ main(int argc, char **argv)
 		printf("can't open socket:%d\n",errno);
 		return(-1);
 	}
+	sprintf(name,"./out_log_oferr_tcp.txt");
 #ifndef WIN32
 	if((protocol_touse == IPPROTO_SCTP) && maxburst){
 		int sz;
@@ -194,8 +205,12 @@ main(int argc, char **argv)
 			      &maxburst, sz) != 0) {
 			perror("Failed maxburst set");
 		}
+		sprintf(name,"./out_log_oferr_sctp.txt");
+
 	}
 #endif /* WIN32 */
+
+
 	memset(&bindto,0,sizeof(bindto));
 	len = sizeof(bindto);
 #if !defined(WIN32) && !defined(linux)
@@ -203,6 +218,9 @@ main(int argc, char **argv)
 #endif /* !WIN32 */
 	bindto.sin_family = AF_INET;
 	bindto.sin_port = htons(port);
+	if(addr_to_bind) {
+		inet_pton(AF_INET, addr_to_bind, (void *) &bindto.sin_addr);
+	}
 	if(bind(fd,(struct sockaddr *)&bindto, len) < 0){
 		printf("can't bind a socket:%d\n",errno);
 		close(fd);
@@ -277,12 +295,40 @@ main(int argc, char **argv)
 				printf("err:%d could not set sndbuf to clients %d\n",errno,optval);
 			}
 	}
+	if(req->tos_value) {
+		if (protocol_touse == IPPROTO_TCP){
+			optval = req->tos_value;
+		} else {
+			optval = req->tos_value + 0x4;
+		}
+		optlen = 4;
+		if (setsockopt(newfd, IPPROTO_IP, IP_TOS, (const char *)&optval, optlen) != 0) {
+			printf("Can't set tos value to %x :-( err:%d\n", req->tos_value, errno);
+		} else {
+			printf("Set tos to %x\n", req->tos_value);
+		}
+	}
 	numblk = sizetosend/blksize;
 	if((sizetosend % blksize) > 0){
 		numblk++;
 	}
+	outlog = fopen(name,"w+");
+
 	printf("Client would like %d bytes in %d byte blocks %d total sends sndbuf:%d\n",
 	       sizetosend,blksize,numblk,optval);
+
+	fprintf(outlog,"Client would like %d bytes in %d byte blocks %d total sends sndbuf:%d\n",
+		sizetosend,blksize,numblk,optval);
+	fclose(outlog);
+	if(protocol_touse == IPPROTO_TCP){
+		sprintf(cmd, "/usr/bin/netstat -s -p tcp >> %s", name);
+	} else {
+		sprintf(cmd, "/usr/bin/dump_pegs >> %s", name);
+	}
+	system(cmd);
+	sprintf(cmd, "/bin/echo *************** >> %s", name);
+	system(cmd);
+
 	if(blksize > sizeof(buffer))
 		blksize = sizeof(buffer);
 	memset(buffer,0,blksize);
