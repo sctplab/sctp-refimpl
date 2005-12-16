@@ -4356,14 +4356,18 @@ sctp_listen(struct socket *so, struct proc *p)
 		SCTP_INP_RUNLOCK(inp);
 	}
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
-	if ((inp->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE) == 0) {
 #if __FreeBSD_version > 600000
-		solisten_proto(so, backlog);
+	/* It appears for 6.0 and on, we must
+	 * always call this.
+	 */
+	solisten_proto(so, backlog);
 #else
+	if ((inp->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE) == 0) {
 		solisten_proto(so);
-#endif
 	}
 #endif
+#endif
+
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE) {
 		/* remove the ACCEPTCONN flag for one-to-many sockets */
 		so->so_options &= ~SO_ACCEPTCONN;
