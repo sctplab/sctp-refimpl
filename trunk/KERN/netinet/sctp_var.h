@@ -384,7 +384,11 @@ int sctp_peeraddr(struct socket *,
 );
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+#if __FreeBSD_version >= 600000
+int sctp_listen(struct socket *, int,  struct thread *);
+#else
 int sctp_listen(struct socket *, struct thread *);
+#endif
 #else
 int sctp_listen(struct socket *, struct proc *);
 #endif

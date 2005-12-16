@@ -39,9 +39,6 @@
 #include "opt_compat.h"
 #include "opt_inet6.h"
 #include "opt_inet.h"
-#ifndef SCTP_BASE_FREEBSD
-#include "opt_mpath.h"
-#endif /* SCTP_BASE_FREEBSD */
 #endif /* FreeBSD */
 #if defined(__NetBSD__)
 #include "opt_inet.h"

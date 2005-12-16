@@ -100,7 +100,7 @@ void	sctp_protopr (u_long, char *, int);
 void	sctp_stats (u_long, char *, int);
 #endif
 
-void	bdg_stats (u_long, char *, int);
+extern void	bdg_stats (u_long, char *, int);
 
 void	mbpr (u_long, u_long, u_long, u_long);
 

@@ -96,6 +96,10 @@
 #include <netinet/sctp_indata.h>
 #include <netinet/sctp_asconf.h>
 
+#if __FreeBSD_version >= 600000
+#include <netinet/ip_options.h>
+#endif
+
 #ifdef __APPLE__
 #include <stdarg.h>
 #elif !defined(__FreeBSD__)
