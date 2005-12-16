@@ -116,9 +116,6 @@
 #endif
 #endif
 
-/* should this sockopt operate on the sysctl tunable? this does nothing(!) */
-unsigned int sctp_cmt_sockopt_on_off = 0;
-
 /*
  * sysctl tunable variables
  */
@@ -4295,7 +4292,11 @@ sctp_usr_recvd(struct socket *so, int flags)
 
 int
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+#if __FreeBSD_version >= 600000
+sctp_listen(struct socket *so, int backlog,  struct thread *p)
+#else
 sctp_listen(struct socket *so, struct thread *p)
+#endif
 #else
 sctp_listen(struct socket *so, struct proc *p)
 #endif
@@ -4356,13 +4357,23 @@ sctp_listen(struct socket *so, struct proc *p)
 	}
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE) == 0) {
+#if __FreeBSD_version > 600000
+		solisten_proto(so, backlog);
+#else
 		solisten_proto(so);
+#endif
 	}
 #endif
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE) {
 		/* remove the ACCEPTCONN flag for one-to-many sockets */
 		so->so_options &= ~SO_ACCEPTCONN;
 	}
+#if __FreeBSD_version > 600000
+	if (backlog == 0) {
+		/* turning off listen */
+		so->so_options &= ~SO_ACCEPTCONN;		
+	}
+#endif
 	SOCK_UNLOCK(so);
 	splx(s);
 	return (error);
@@ -4681,6 +4692,25 @@ sctp_peeraddr(struct socket *so, struct mbuf *nam)
 
 #if defined(__FreeBSD__) || defined(__APPLE__)
 struct pr_usrreqs sctp_usrreqs = {
+#if __FreeBSD_version > 600000
+	.pru_abort =		sctp_abort,
+	.pru_accept =		sctp_accept,
+	.pru_attach =		sctp_attach,
+	.pru_bind =		sctp_bind,
+	.pru_connect =		sctp_connect,
+	.pru_control =		in_control,
+	.pru_detach =		sctp_detach,
+	.pru_disconnect =	sctp_disconnect,
+	.pru_listen =		sctp_listen,
+	.pru_peeraddr =		sctp_peeraddr,
+	.pru_rcvd =		sctp_usr_recvd,
+	.pru_send =		sctp_send,
+	.pru_shutdown =		sctp_shutdown,
+	.pru_sockaddr =		sctp_ingetaddr,	
+        .pru_sopoll =	        sopoll,
+	.pru_sosend =           sctp_sosend,
+	.pru_soreceive =        sctp_soreceive
+#else
 	sctp_abort,
 	sctp_accept,
 	sctp_attach,
@@ -4705,6 +4735,8 @@ struct pr_usrreqs sctp_usrreqs = {
 	sctp_soreceive,	
 #endif
 	sopoll
+
+#endif
 };
 
 #else
