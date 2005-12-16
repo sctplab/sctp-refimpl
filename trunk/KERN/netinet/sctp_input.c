@@ -157,6 +157,11 @@ sctp_handle_init(struct mbuf *m, int iphlen, int offset,
 	init = &cp->init;
 	/* First are we accepting? */
 	if (inp->sctp_socket->so_qlimit == 0) {
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_INPUT2) {
+			printf("sctp_handle_init: Abort, so_qlimit:%d\n", inp->sctp_socket->so_qlimit);
+		}
+#endif
 		sctp_abort_association(inp, stcb, m, iphlen, sh, op_err);
 		return;
 	}
