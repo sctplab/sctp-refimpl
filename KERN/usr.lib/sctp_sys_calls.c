@@ -380,11 +380,7 @@ sctp_sendmsg(int s,
 	     u_int32_t timetolive,
 	     u_int32_t context)
 {
-	ssize_t sz;
-	struct msghdr msg;
-	struct iovec iov[2];
-	char controlVector[SCTP_CONTROL_VEC_SIZE_SND];
-	struct sctp_sndrcvinfo *s_info;
+	struct sctp_sndrcvinfo s_info;
 	struct cmsghdr *cmsg;
 	struct sockaddr *who=NULL;
 	union {
@@ -483,6 +479,9 @@ sctp_send(int sd, const void *data, size_t len,
 	  const struct sctp_sndrcvinfo *sinfo,
 	  int flags)
 {
+#ifdef SYS_sctp_send
+	return (syscall(SYS_sctp_send, sd, data, len, sinfo, flags));
+#else
 	ssize_t sz;
 	struct msghdr msg;
 	struct iovec iov[2];
@@ -516,6 +515,7 @@ sctp_send(int sd, const void *data, size_t len,
 	msg.msg_controllen = cmsg->cmsg_len;
 	sz = sendmsg(sd, &msg, flags);
 	return(sz);
+#endif
 }
 
 
