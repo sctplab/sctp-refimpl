@@ -566,10 +566,37 @@ struct sctp_cwnd_log_req{
 };
 
 
+/*
+ * Kernel defined for sctp_send
+ */
+#if defined(_KERNEL)
+int
+sctp_lower_sosend(struct socket *so,
+		  struct sockaddr *addr,
+		  struct uio *uio,
+		  struct mbuf *top,
+		  struct mbuf *control,
+		  int flags,
+		  int use_rcvinfo,
+		  struct sctp_sndrcvinfo *srcv,		  
+#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+		  struct thread *p
+#else
+		  struct proc *p
+#endif
+	);
+int
+sctp_sorecvmsg(struct socket *so, 
+	       struct sockaddr **fromsa,
+	       struct uio *uio,
+	       int *msg_flag,
+	       struct sctp_sndrcvinfo *sinfo);
+#endif
 
 /*
  * API system calls
  */
+
 #if !(defined(_KERNEL) || (defined(__APPLE__) && defined(KERNEL)))
 
 __BEGIN_DECLS
