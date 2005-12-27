@@ -5615,4 +5615,54 @@ release:
 
 	return (error);
 }
+
 #endif
+
+int
+sctp_sorecvmsg(struct socket *so, 
+	       struct sockaddr **fromsa,
+	       struct uio *uio,
+	       int *msg_flag,
+	       struct sctp_sndrcvinfo *sinfo)
+{
+	/* This is a gross, quick hack. Really
+	 * we need to re-write sctp_sorecv() to 
+	 * prepare the args and call into here. This
+	 * will optimize the recieve path... but instead,
+	 * as a temporary quick thing, we will build the
+	 * mbuf with the control junk to get the sndrcvinfo
+	 * and call sctp_sorecv(). Note that when we do
+	 * optimize the receive path a complete re-write
+	 * of the where we put data on this tract will
+	 * be done.. maybe even not using the sb_mb and
+	 * pull right from the association. This will
+	 * have interesting consequences on select/poll that
+	 * must be accounted for.
+	 */
+	int error = 0;
+	struct mbuf *controlp=NULL;
+	
+	error = sctp_soreceive(so, fromsa, uio, (struct mbuf **)NULL, &controlp, msg_flag);
+	if(!error) {
+		/* ok, lets get the sinfo and 
+		 * copy it to the structure. Then
+		 */
+		struct sctp_sndrcvinfo *outinfo;
+		struct cmsghdr *cmh;
+		struct mbuf *m;	
+		m = controlp;
+		while(m) {
+			cmh = mtod(m, struct cmsghdr *);
+			if((cmh->cmsg_level == IPPROTO_SCTP) &&
+			   (cmh->cmsg_type == SCTP_SNDRCV)) {
+				outinfo = (struct sctp_sndrcvinfo *)CMSG_DATA(cmh);
+				*sinfo = *outinfo;
+				break;
+			}
+			m = m->m_next;
+		}
+	}
+	if(controlp)
+		m_freem(controlp);
+	return(error);
+}

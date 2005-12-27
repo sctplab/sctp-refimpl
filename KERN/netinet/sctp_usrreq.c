@@ -918,20 +918,20 @@ sctp_detach(struct socket *so)
 
 int
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-sctp_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
+sctp_sendm(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
 	  struct mbuf *control, struct thread *p);
 #else
-sctp_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
+sctp_sendm(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
 	  struct mbuf *control, struct proc *p);
 #endif
 
 int
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-sctp_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
+sctp_sendm(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
 	  struct mbuf *control, struct thread *p)
 {
 #else
-sctp_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
+sctp_sendm(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
 	  struct mbuf *control, struct proc *p)
 {
 #endif
@@ -4708,7 +4708,7 @@ struct pr_usrreqs sctp_usrreqs = {
 	.pru_listen =		sctp_listen,
 	.pru_peeraddr =		sctp_peeraddr,
 	.pru_rcvd =		sctp_usr_recvd,
-	.pru_send =		sctp_send,
+	.pru_send =		sctp_sendm,
 	.pru_shutdown =		sctp_shutdown,
 	.pru_sockaddr =		sctp_ingetaddr,	
         .pru_sopoll =	        sopoll,
@@ -4728,7 +4728,7 @@ struct pr_usrreqs sctp_usrreqs = {
 	sctp_peeraddr,
 	sctp_usr_recvd,
 	pru_rcvoob_notsupp,
-	sctp_send,
+	sctp_sendm,
 	pru_sense_null,
 	sctp_shutdown,
 	sctp_ingetaddr,
@@ -4883,7 +4883,7 @@ sctp_usrreq(so, req, m, nam, control)
 		    else
 			addr = mtod(nam, struct sockaddr *);
 
-		    error = sctp_send(so, 0, m, addr, control, p);
+		    error = sctp_sendm(so, 0, m, addr, control, p);
 		}
 		break;
 	case PRU_ABORT:

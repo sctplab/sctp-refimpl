@@ -12159,26 +12159,95 @@ sctp_sosend(struct socket *so,
 	    struct uio *uio,
 	    struct mbuf *top,
 	    struct mbuf *control,
-#if defined(__NetBSD__) || defined(__APPLE__)
 	    int flags
-#else
-	    int flags,
+#ifdef __FreeBSD__
+	    ,
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 	    struct thread *p
 #else
 	    struct proc *p
 #endif
 #endif
-)
+	)
+{
+#if defined(__APPLE__)
+	struct proc *p = current_proc();
+#elif defined(__NetBSD__)
+	struct proc *p = curproc; /* XXX */
+	struct sockaddr *addr = NULL;
+	if (addr_mbuf)
+		addr = mtod(addr_mbuf, struct sockaddr *);
+#endif
+	struct sctp_inpcb *inp;
+	int s, error, use_rcvinfo=0;
+	unsigned int sndlen;
+	struct sctp_sndrcvinfo srcv;
+
+	inp = (struct sctp_inpcb *)so->so_pcb;
+	if (uio)
+		sndlen = uio->uio_resid;
+	else
+		sndlen = top->m_pkthdr.len;
+
+
+#if defined(__NetBSD__) || defined(__OpenBSD__)
+	s = splsoftnet();
+#else
+	s = splnet();
+#endif
+
+	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
+	    (inp->sctp_socket->so_qlimit)) {
+		/* The listner can NOT send */
+		error = EFAULT;
+		splx(s);
+		if (top)
+			sctp_m_freem(top);
+		if (control)
+			sctp_m_freem(control);
+		return (error);
+	}
+
+	if (control) {
+		/* process cmsg snd/rcv info (maybe a assoc-id) */
+		if (sctp_find_cmsg(SCTP_SNDRCV, (void *)&srcv, control,
+				   sizeof(srcv))) {
+			/* got one */
+			if (srcv.sinfo_flags & SCTP_SENDALL) {
+				/* its a sendall */
+				sctppcbinfo.mbuf_track--;
+				sctp_m_freem(control);
+				return (sctp_sendall(inp, uio, top, &srcv));
+			}
+			use_rcvinfo = 1;
+		}
+	}
+	return(sctp_lower_sosend(so, addr, uio, top, control, flags, use_rcvinfo, &srcv, p));
+}
+
+int
+sctp_lower_sosend(struct socket *so,
+		  struct sockaddr *addr,
+		  struct uio *uio,
+		  struct mbuf *top,
+		  struct mbuf *control,
+		  int flags,
+		  int use_rcvinfo,
+		  struct sctp_sndrcvinfo *srcv,		  
+#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+		  struct thread *p
+#else
+		  struct proc *p
+#endif
+	)
 {
  	unsigned int sndlen;
-	int error, use_rcvinfo;
+	int error;
 	int s, queue_only = 0, queue_only_for_init=0;
 	int un_sent = 0;
 	int now_filled=0;
 	struct sctp_inpcb *inp;
  	struct sctp_tcb *stcb=NULL;
-	struct sctp_sndrcvinfo srcv;
 	struct timeval now;
 	struct sctp_nets *net;
 	struct sctp_association *asoc;
@@ -12193,7 +12262,7 @@ sctp_sosend(struct socket *so,
 		addr = mtod(addr_mbuf, struct sockaddr *);
 #endif
 
-	error = use_rcvinfo = 0;
+	error = 0;
 	net = NULL;
 	stcb = NULL;
 	asoc = NULL;
@@ -12235,25 +12304,6 @@ sctp_sosend(struct socket *so,
 			goto out;
 		}
 	}
-	if (control) {
-		/* process cmsg snd/rcv info (maybe a assoc-id) */
-		if (sctp_find_cmsg(SCTP_SNDRCV, (void *)&srcv, control,
-				   sizeof(srcv))) {
-			/* got one */
-			if (srcv.sinfo_flags & SCTP_SENDALL) {
-				/* its a sendall */
-				sctppcbinfo.mbuf_track--;
-				sctp_m_freem(control);
-
-				if (create_lock_applied) {
-					SCTP_ASOC_CREATE_UNLOCK(inp);
-					create_lock_applied = 0;
-				}
-				return (sctp_sendall(inp, uio, top, &srcv));
-			}
-			use_rcvinfo = 1;
-		}
-	}
 	/* now we must find the assoc */
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
 		SCTP_INP_RLOCK(inp);
@@ -12271,8 +12321,8 @@ sctp_sosend(struct socket *so,
 	/* get control */
 	if (stcb == NULL) {
 		/* Need to do a lookup */
-		if (use_rcvinfo && srcv.sinfo_assoc_id) {
-			stcb = sctp_findassociation_ep_asocid(inp, srcv.sinfo_assoc_id);
+		if (use_rcvinfo && srcv->sinfo_assoc_id) {
+			stcb = sctp_findassociation_ep_asocid(inp, srcv->sinfo_assoc_id);
 			/*
 			 * Question: Should I error here if the assoc_id is
 			 * no longer valid? i.e. I can't find it?
@@ -12329,7 +12379,7 @@ sctp_sosend(struct socket *so,
 	} else if (stcb == NULL) {
 		/* UDP style, we must go ahead and start the INIT process */
 		if ((use_rcvinfo) &&
-		    (srcv.sinfo_flags & SCTP_ABORT)) {
+		    (srcv->sinfo_flags & SCTP_ABORT)) {
 			/* User asks to abort a non-existant asoc */
 			error = ENOENT;
 			splx(s);
@@ -12446,7 +12496,7 @@ sctp_sosend(struct socket *so,
 	}
 	if (use_rcvinfo == 0) {
 		/* Grab the default stuff from the asoc */
-		srcv = stcb->asoc.def_send;
+		srcv = &stcb->asoc.def_send;
 	}
 	/* we are now done with all control */
 	if (control) {
@@ -12459,7 +12509,7 @@ sctp_sosend(struct socket *so,
 	    (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_ACK_SENT) ||
 	    (asoc->state & SCTP_STATE_SHUTDOWN_PENDING)) {
 		if ((use_rcvinfo) &&
-		    (srcv.sinfo_flags & SCTP_ABORT)) {
+		    (srcv->sinfo_flags & SCTP_ABORT)) {
 			;
 		} else {
 			error = ECONNRESET;
@@ -12476,7 +12526,7 @@ sctp_sosend(struct socket *so,
 #endif
 
 	if (stcb) {
-		if (net && ((srcv.sinfo_flags & SCTP_ADDR_OVER))) {
+		if (net && ((srcv->sinfo_flags & SCTP_ADDR_OVER))) {
 			/* we take the override or the unconfirmed */
 			;
 		} else {
@@ -12491,14 +12541,14 @@ sctp_sosend(struct socket *so,
 		 * send/queue it.
 		 */
  		splx(s);
-		error = sctp_copy_it_in(inp, stcb, asoc, net, &srcv, uio, flags);
+		error = sctp_copy_it_in(inp, stcb, asoc, net, srcv, uio, flags);
 		if (error)
 			goto out;
 	} else {
 		/* Here we must either pull in the user data to chunk
 		 * buffers, or use top to do a msg_append.
 		 */
- 		error = sctp_msg_append(stcb, net, top, &srcv, flags);
+ 		error = sctp_msg_append(stcb, net, top, srcv, flags);
  		splx(s);
 		if (error)
 			goto out;
