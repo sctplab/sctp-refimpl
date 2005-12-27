@@ -126,7 +126,7 @@ struct protosw {
 #define	PR_RIGHTS	0x10		/* passes capabilities */
 #define PR_IMPLOPCL	0x20		/* implied open/close */
 #define	PR_LASTHDR	0x40		/* enforce ipsec policy; last header */
-#define PR_ADDR_OPT     0x80            /* Address optional w/msg /*
+#define PR_ADDR_OPT     0x80            /* Address optional w/msg */
 
 /*
  * The arguments to usrreq are:

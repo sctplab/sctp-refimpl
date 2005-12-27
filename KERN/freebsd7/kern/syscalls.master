@@ -817,6 +817,14 @@
 				    const struct sigevent *sigev); }
 462	AUE_NULL	MNOSTD	{ int mq_unlink(const char *path); }
 463	AUE_NULL	MSTD	{ int sctp_peeloff(int sd,caddr_t name); }
+464     AUE_NULL        MSTD    { int sctp_send(int sd, caddr_t buf, size_t len, \
+				    struct sctp_sndrcvinfo *sinfo, int flags); }
+465     AUE_NULL        MSTD    { int sctp_sendmsg(int sd, caddr_t buf, size_t len, \
+				    caddr_t to, __socklen_t tolen, u_int32_t ppid, u_int32_t flags, \
+ 				    u_int16_t strm, u_int32_t timetolive, u_int32_t context); }
+466     AUE_NULL        MSTD    { int sctp_recvmsg(int sd, caddr_t buf, size_t len, \
+				    struct sockaddr * from, __socklen_t *fromlenaddr, \
+				    struct sctp_sndrcvinfo *sinfo, int *msg_flags); }
 
 
 ; Please copy any additions and changes to the following compatability tables:
