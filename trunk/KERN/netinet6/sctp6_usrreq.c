@@ -1105,10 +1105,10 @@ sctp6_disconnect(struct socket *so)
 
 int
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-sctp_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
+sctp_sendm(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
 	  struct mbuf *control, struct thread *p);
 #else
-sctp_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
+sctp_sendm(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
 	  struct mbuf *control, struct proc *p);
 #endif
 
@@ -1194,7 +1194,7 @@ sctp6_send(struct socket *so, int flags, struct mbuf *m, struct mbuf *nam,
 			struct sockaddr_in sin;
 			/* convert v4-mapped into v4 addr and send */
 			in6_sin6_2_sin(&sin, sin6);
-			return sctp_send(so, flags,  m, (struct sockaddr *)&sin,
+			return sctp_sendm(so, flags,  m, (struct sockaddr *)&sin,
 					   control, p);
 		} else {
 			/* mapped addresses aren't enabled */
