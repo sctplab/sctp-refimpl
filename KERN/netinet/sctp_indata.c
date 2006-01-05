@@ -3643,7 +3643,7 @@ sctp_hs_cwnd_decrease(struct sctp_nets *net)
 #endif
 
 extern int sctp_early_fr;
-
+extern int sctp_L2_abc_variable;
 void
 sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
     struct sctp_nets *net_from, int *abort_now)
@@ -4233,7 +4233,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 #ifdef SCTP_HIGH_SPEED
 					sctp_hs_cwnd_increase(net);
 #else
-					if (net->net_ack > net->mtu) {
+					if (net->net_ack > (net->mtu * sctp_L2_abc_variable)) {
 						net->cwnd += net->mtu;
 #ifdef SCTP_CWND_MONITOR
 						sctp_log_cwnd(stcb, net, net->mtu,
