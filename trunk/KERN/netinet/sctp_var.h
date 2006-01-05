@@ -84,9 +84,10 @@
 #define SCTPCTL_EARLY_FR_MSEC       31
 #define SCTPCTL_AUTH_DISABLE        32
 #define SCTPCTL_AUTH_HMAC_ID        33
+#define SCTPCTL_ABC_L_VAR           34
 #ifdef SCTP_DEBUG
-#define SCTPCTL_DEBUG               34
-#define SCTPCTL_MAXID		    35
+#define SCTPCTL_DEBUG               35
+#define SCTPCTL_MAXID		    36
 #else
 #define SCTPCTL_MAXID		    35
 #endif
