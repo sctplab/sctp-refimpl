@@ -2806,7 +2806,7 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				 * (2005/07/25, iyengar@cis.udel.edu)
 				 */
 				if ((tp1->whoTo->find_pseudo_cumack == 1) && (tp1->sent < SCTP_DATAGRAM_RESEND) &&
-					(tp1->snd_count == 1) && (tp1->rec.data.chunk_was_revoked == 0)) {
+					(tp1->snd_count == 1)) {
 				  tp1->whoTo->pseudo_cumack = tp1->rec.data.TSN_seq;
 				  tp1->whoTo->find_pseudo_cumack = 0;
 
@@ -2815,7 +2815,7 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				}
 				
 				if ((tp1->whoTo->find_rtx_pseudo_cumack == 1) && (tp1->sent < SCTP_DATAGRAM_RESEND) &&
-				    (tp1->snd_count > 1) && (tp1->rec.data.chunk_was_revoked == 0)) {
+				    (tp1->snd_count > 1)) {
 				  tp1->whoTo->rtx_pseudo_cumack = tp1->rec.data.TSN_seq;
 				  tp1->whoTo->find_rtx_pseudo_cumack = 0;
 
@@ -2907,24 +2907,33 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 							  asoc->total_flight = 0;
 							  asoc->total_flight_count = 0;
 							}
-
+							
 							tp1->whoTo->net_ack += tp1->send_size;
 
+							/* JRI: If chunk was revoked, it should not cause more cwnd updates.. for CMT at least */
+							if (tp1->rec.data.chunk_was_revoked > 0) {
+							      tp1->whoTo->net_ack -= tp1->send_size;
+							}
+							
 							if (tp1->snd_count < 2) {
-								/* True non-retransmited chunk */
-								tp1->whoTo->net_ack2 +=
-								    tp1->send_size;
+							      /* True non-retransmited chunk */
+							      tp1->whoTo->net_ack2 += tp1->send_size;
 
-								/* update RTO too? */
-								if (tp1->do_rtt) {
-									tp1->whoTo->RTO =
-									    sctp_calculate_rto(stcb,
-									    asoc,
-									    tp1->whoTo,
-									    &tp1->sent_rcv_time);
-									tp1->whoTo->rto_pending = 0;
-									tp1->do_rtt = 0;
-								}
+							      /* JRI: If chunk was revoked, it should not cause more cwnd updates.. for CMT at least */
+							      if (tp1->rec.data.chunk_was_revoked > 0) {
+								    tp1->whoTo->net_ack2 -= tp1->send_size;
+							      }
+							  
+							      /* update RTO too? */
+							      if (tp1->do_rtt) {
+							            tp1->whoTo->RTO =
+								      sctp_calculate_rto(stcb,
+											 asoc,
+											 tp1->whoTo,
+											 &tp1->sent_rcv_time);
+								    tp1->whoTo->rto_pending = 0;
+								    tp1->do_rtt = 0;
+							      }
 							}
 						}
 
@@ -3261,7 +3270,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			if(sctp_cmt_on_off) {
 				tp1->no_fr_allowed = 1; 
 				alt = tp1->whoTo;
-				// alt = sctp_find_alternate_net(stcb, alt, 1);
+				alt = sctp_find_alternate_net(stcb, alt, 1);
 
 			} else { /*CMT is OFF*/
 
@@ -3910,13 +3919,24 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 						asoc->total_flight = 0;
 						asoc->total_flight_count = 0;
 					}
-
-
+					
 					tp1->whoTo->net_ack += tp1->send_size;
+
+					/* JRI: If chunk was revoked, it should not cause more cwnd updates.. for CMT at least */
+					if (tp1->rec.data.chunk_was_revoked > 0) {
+					      tp1->whoTo->net_ack -= tp1->send_size;
+					}
+
 					if (tp1->snd_count < 2) {
 						/* True non-retransmited chunk */
 						tp1->whoTo->net_ack2 +=
 							tp1->send_size;
+						
+						/* JRI: If chunk was revoked, it should not cause more cwnd updates.. for CMT at least */
+						if (tp1->rec.data.chunk_was_revoked > 0) {
+						      tp1->whoTo->net_ack2 -= tp1->send_size;
+						}
+
 						/* update RTO too? */
 						if (tp1->do_rtt) {
 							tp1->whoTo->RTO =
@@ -4213,7 +4233,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 		 */
 
 		if (asoc->fast_retran_loss_recovery &&
-		    will_exit_fast_recovery == 0) {
+		    will_exit_fast_recovery == 0 && sctp_cmt_on_off == 0) {
 			/* If we are in loss recovery we skip any cwnd update */
 			sctp_pegs[SCTP_CWND_SKIP]++;
 			goto skip_cwnd_update;
