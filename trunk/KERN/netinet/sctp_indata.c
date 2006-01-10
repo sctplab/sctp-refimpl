@@ -4237,7 +4237,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 					sctp_hs_cwnd_increase(net);
 #else
 					if (net->net_ack > (net->mtu * sctp_L2_abc_variable)) {
-						net->cwnd += net->mtu;
+						net->cwnd += (net->mtu * sctp_L2_abc_variable);
 #ifdef SCTP_CWND_MONITOR
 						sctp_log_cwnd(stcb, net, net->mtu,
 							      SCTP_CWND_LOG_FROM_SS);
@@ -4308,6 +4308,12 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 #endif
 						sctp_pegs[SCTP_CWND_CA]++;
 					}
+#ifdef SCTP_CWND_LOGGING
+					else {
+						sctp_log_cwnd(stcb, net, net->net_ack,
+							      SCTP_CWND_LOG_NOADV_CA);
+					}
+#endif
 				} else {
 					unsigned int dif;
 					sctp_pegs[SCTP_CWND_NOUSE_CA]++;
