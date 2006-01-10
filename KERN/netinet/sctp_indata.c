@@ -2806,7 +2806,7 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				 * (2005/07/25, iyengar@cis.udel.edu)
 				 */
 				if ((tp1->whoTo->find_pseudo_cumack == 1) && (tp1->sent < SCTP_DATAGRAM_RESEND) &&
-					(tp1->snd_count == 1)) {
+					(tp1->snd_count == 1) && (tp1->rec.data.chunk_was_revoked == 0)) {
 				  tp1->whoTo->pseudo_cumack = tp1->rec.data.TSN_seq;
 				  tp1->whoTo->find_pseudo_cumack = 0;
 
@@ -2815,7 +2815,7 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				}
 				
 				if ((tp1->whoTo->find_rtx_pseudo_cumack == 1) && (tp1->sent < SCTP_DATAGRAM_RESEND) &&
-				    (tp1->snd_count > 1)) {
+				    (tp1->snd_count > 1) && (tp1->rec.data.chunk_was_revoked == 0)) {
 				  tp1->whoTo->rtx_pseudo_cumack = tp1->rec.data.TSN_seq;
 				  tp1->whoTo->find_rtx_pseudo_cumack = 0;
 
@@ -2868,7 +2868,7 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 							 * first transmissions and retransmissions.
 							 * (2005/07/25, iyengar@cis.udel.edu)
 							 */
-							if (tp1->rec.data.TSN_seq == tp1->whoTo->pseudo_cumack) {
+							if ((tp1->rec.data.TSN_seq == tp1->whoTo->pseudo_cumack) && (tp1->rec.data.chunk_was_revoked == 0))  {
 							  tp1->whoTo->new_pseudo_cumack = 1;
 							  tp1->whoTo->find_pseudo_cumack = 1;
 
@@ -2878,7 +2878,7 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 #ifdef SCTP_CWND_LOGGING
 							sctp_log_cwnd(stcb, tp1->whoTo, tp1->rec.data.TSN_seq, SCTP_CWND_LOG_FROM_SACK);
 #endif
-							if (tp1->rec.data.TSN_seq == tp1->whoTo->rtx_pseudo_cumack) {
+							if ((tp1->rec.data.TSN_seq == tp1->whoTo->rtx_pseudo_cumack) && (tp1->rec.data.chunk_was_revoked == 0)) {
 							  tp1->whoTo->new_pseudo_cumack = 1;
 							  tp1->whoTo->find_rtx_pseudo_cumack = 1;
 
@@ -3261,7 +3261,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			if(sctp_cmt_on_off) {
 				tp1->no_fr_allowed = 1; 
 				alt = tp1->whoTo;
-				alt = sctp_find_alternate_net(stcb, alt, 1);
+				// alt = sctp_find_alternate_net(stcb, alt, 1);
 
 			} else { /*CMT is OFF*/
 
@@ -4181,8 +4181,12 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 			}
 		}
 		/* if nothing was acked on this destination skip it */
-		if (net->net_ack == 0)
+		if (net->net_ack == 0) {
+#ifdef SCTP_CWND_LOGGING
+		        sctp_log_cwnd(stcb, net, 0, SCTP_CWND_LOG_FROM_SACK);
+#endif
 			continue;
+		}
 
 		if (net->net_ack2 > 0) {
 			/*
@@ -4209,8 +4213,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 		 */
 
 		if (asoc->fast_retran_loss_recovery &&
-		    will_exit_fast_recovery == 0 &&
-		    sctp_cmt_on_off == 0) {
+		    will_exit_fast_recovery == 0) {
 			/* If we are in loss recovery we skip any cwnd update */
 			sctp_pegs[SCTP_CWND_SKIP]++;
 			goto skip_cwnd_update;
