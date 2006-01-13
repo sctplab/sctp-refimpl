@@ -3690,7 +3690,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 		if (ch->chunk_type == SCTP_INITIATION_ACK) {
 			/* get an init-ack chunk */
 			ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, *offset,
-			    sizeof(struct sctp_init_ack), chunk_buf);
+			    sizeof(struct sctp_init_ack_chunk), chunk_buf);
 			if (ch == NULL) {
 				*offset = length;
 				if (locked_tcb)
