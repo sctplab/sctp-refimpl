@@ -2553,7 +2553,7 @@ sctp_process_initack_addresses(struct sctp_tcb *stcb, struct mbuf *m,
 		} else {
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_ASCONF2) {
-				printf("process_initack_addrs: skipping param type=%xh\n", ptype);
+				printf("process_initack_addrs: skipping param type=%xh, len=%d\n", ptype, plen);
 			}
 #endif /* SCTP_DEBUG */
 			goto next_addr;
@@ -2602,6 +2602,14 @@ sctp_process_initack_addresses(struct sctp_tcb *stcb, struct mbuf *m,
 		}
 
 	next_addr:
+		/* Sanity check:  Make sure the length isn't 0, otherwise
+		 * we'll be stuck in this loop for a long time...
+		 */
+		if (SCTP_SIZE32(plen) == 0) {
+			printf("process_initack_addrs: bad len (%d) type=%xh\n",
+				plen, ptype);
+			return;
+		}
 		/* get next parameter */
 		offset += SCTP_SIZE32(plen);
 		if ((offset + sizeof(struct sctp_paramhdr)) > length)

@@ -1564,7 +1564,13 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 #endif /* SCTP_DEBUG */
 		return (NULL);
 	}
-	initack_limit = initack_offset + SCTP_SIZE32(chk_length);
+	/*
+	 * NOTE: We can't use the INIT_ACK's chk_length to determine
+	 * the "initack_limit" value.  This is because the chk_length field
+	 * includes the length of the cookie, but the cookie is omitted
+	 * when the INIT and INIT_ACK are tacked onto the cookie...
+	 */
+	initack_limit = offset + cookie_len;
 
 	/*
 	 * now that we know the INIT/INIT-ACK are in place,
@@ -1687,8 +1693,9 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		return (NULL);
 	}
 
-	sctp_check_address_list(stcb, m, initack_offset +
-	    sizeof(struct sctp_init_ack_chunk), initack_limit,
+	sctp_check_address_list(stcb, m,
+	    initack_offset + sizeof(struct sctp_init_ack_chunk),
+	    initack_limit - (initack_offset + sizeof(struct sctp_init_ack_chunk)),
 	    initack_src, cookie->local_scope, cookie->site_scope,
 	    cookie->ipv4_scope, cookie->loopback_scope);
 
