@@ -12253,10 +12253,7 @@ sctp_lower_sosend(struct socket *so,
 	struct sctp_association *asoc;
 	struct sctp_inpcb *t_inp;
 	int create_lock_applied = 0;
-#if defined(__APPLE__)
-	struct proc *p = current_proc();
-#elif defined(__NetBSD__)
-	struct proc *p = curproc; /* XXX */
+#if defined(__NetBSD__)
 	struct sockaddr *addr = NULL;
 	if (addr_mbuf)
 		addr = mtod(addr_mbuf, struct sockaddr *);
