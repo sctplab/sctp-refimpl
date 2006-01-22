@@ -892,7 +892,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	/* init all variables to a known value.*/
 	asoc->state = SCTP_STATE_INUSE;
 	asoc->max_burst = m->sctp_ep.max_burst;
-	asoc->heart_beat_delay = m->sctp_ep.sctp_timeoutticks[SCTP_TIMER_HEARTBEAT];
+	asoc->heart_beat_delay = TICKS_TO_MSEC(m->sctp_ep.sctp_timeoutticks[SCTP_TIMER_HEARTBEAT]);
 	asoc->cookie_life = m->sctp_ep.def_cookie_life;
 
 	if (override_tag) {

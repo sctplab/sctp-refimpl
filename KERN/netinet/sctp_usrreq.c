@@ -2504,8 +2504,8 @@ sctp_optsget(struct socket *so,
 			}
 #endif /* SCTP_DEBUG */
 			paddrp->spp_pathmaxrxt = inp->sctp_ep.def_net_failure;
-			paddrp->spp_hbinterval = inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_HEARTBEAT];
-			paddrp->spp_sackdelay = inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV];
+			paddrp->spp_hbinterval = TICKS_TO_MSEC(inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_HEARTBEAT]);
+			paddrp->spp_sackdelay = TICKS_TO_MSEC(inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV]);
 			paddrp->spp_assoc_id = (sctp_assoc_t)0;
 
 			/* can't return this */
@@ -3429,7 +3429,7 @@ sctp_optsset(struct socket *so,
 	}
 	/* do we change the timer for HB, we run only one? */
 	if((paddrp->spp_hbinterval) && ( paddrp->spp_flags & SPP_HB_ENABLE )) {
-	  paddrp->spp_hbinterval = stcb->asoc.heart_beat_delay;
+	  stcb->asoc.heart_beat_delay = paddrp->spp_hbinterval;
 	}
 
 	/* network sets ? */
@@ -3499,10 +3499,10 @@ sctp_optsset(struct socket *so,
 	  inp->sctp_ep.def_net_failure = paddrp->spp_pathmaxrxt;
 	}
 	if (paddrp->spp_hbinterval && (paddrp->spp_flags & SPP_HB_ENABLE) ) {
-	  inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_HEARTBEAT] = paddrp->spp_hbinterval;
+	  inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_HEARTBEAT] = MSEC_TO_TICKS(paddrp->spp_hbinterval);
 	}
 	if ((paddrp->spp_sackdelay > SCTP_CLOCK_GRANULARITY ) && (paddrp->spp_flags & SPP_SACKDELAY_ENABLE)) {
-	  inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV] = paddrp->spp_sackdelay;
+	  inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV] = MSEC_TO_TICKS(paddrp->spp_sackdelay);
 	}
 	SCTP_INP_WUNLOCK(inp);
       }
