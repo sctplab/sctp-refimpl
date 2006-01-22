@@ -380,7 +380,11 @@ sctp_sendmsg(int s,
 	     u_int32_t timetolive,
 	     u_int32_t context)
 {
-	struct sctp_sndrcvinfo s_info;
+	ssize_t sz;
+	struct msghdr msg;
+	struct iovec iov[2];
+	char controlVector[SCTP_CONTROL_VEC_SIZE_SND];
+	struct sctp_sndrcvinfo *s_info;
 	struct cmsghdr *cmsg;
 	struct sockaddr *who=NULL;
 	union {
