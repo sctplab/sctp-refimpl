@@ -202,6 +202,11 @@ struct sctp_nets {
         u_int32_t rtx_pseudo_cumack; /* CMT CUC algorithm. Maintains next expected pseudo-cumack 
 				    for this destination */
 
+        /* CMT fast recovery variables */
+       	u_int32_t fast_recovery_tsn;
+        u_int8_t fast_retran_loss_recovery;
+        u_int8_t will_exit_fast_recovery;
+        
 
 	u_int32_t heartbeat_random1;
 	u_int32_t heartbeat_random2;
@@ -714,6 +719,9 @@ struct sctp_association {
 	u_int8_t saw_sack_with_frags;
 	u_int8_t in_restart_hash;
 	u_int8_t packet_authenticated;
+
+        /* CMT variables */
+        u_int8_t cmt_dac_pkts_rcvd;
 	/*
 	 * The mapping array is used to track out of order sequences above
 	 * last_acked_seq. 0 indicates packet missing 1 indicates packet

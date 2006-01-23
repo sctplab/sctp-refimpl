@@ -140,6 +140,7 @@ struct sctp_paramhdr {
 #define SCTP_CLR_STAT_LOG               0x00001007
 /* CMT ON/OFF socket option */
 #define SCTP_CMT_ON_OFF                 0x00001200
+#define SCTP_CMT_USE_DAC                0x00001201
 
 /* read only */
 #define SCTP_GET_SNDBUF_USE		0x00001101
@@ -326,6 +327,9 @@ struct sctp_error_unrecognized_chunk {
 
 /* ECN Nonce: SACK Chunk Specific Flags */
 #define SCTP_SACK_NONCE_SUM     0x01
+
+/* CMT DAC algorithm SACK flag */
+#define SCTP_SACK_CMT_DAC       0x80
 
 #include <netinet/sctp_uio.h>
 

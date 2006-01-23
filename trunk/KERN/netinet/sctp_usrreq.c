@@ -153,6 +153,8 @@ unsigned int sctp_path_rtx_max_default = SCTP_DEF_MAX_SEND/2;
 unsigned int sctp_nr_outgoing_streams_default = SCTP_OSTREAM_INITIAL;
 unsigned int sctp_cmt_on_off = 0;
 unsigned int sctp_cmt_sockopt_on_off = 0;
+unsigned int sctp_cmt_use_dac = 0;
+unsigned int sctp_cmt_sockopt_use_dac = 0;
 int sctp_L2_abc_variable = 1;
 unsigned int sctp_early_fr = 0;
 unsigned int sctp_early_fr_msec = SCTP_MINFR_MSEC_TIMER;
@@ -746,6 +748,10 @@ SYSCTL_UINT(_net_inet_sctp, OID_AUTO, nr_outgoing_streams, CTLFLAG_RW,
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, cmt_on_off, CTLFLAG_RW,
 	    &sctp_cmt_on_off, 0,
 	    "CMT ON/OFF flag");
+
+SYSCTL_UINT(_net_inet_sctp, OID_AUTO, cmt_use_dac, CTLFLAG_RW,
+	    &sctp_cmt_use_dac, 0,
+	    "CMT DAC ON/OFF flag");
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, sctp_abc_l_var , CTLFLAG_RW,
 	    &sctp_L2_abc_variable, 0,
@@ -1832,6 +1838,12 @@ sctp_optsget(struct socket *so,
 	case SCTP_CMT_ON_OFF:
 	{
 		*mtod(m, unsigned int *) = sctp_cmt_sockopt_on_off;
+		m->m_len = sizeof(unsigned int);
+	}
+	break;
+	case SCTP_CMT_USE_DAC:
+	{
+		*mtod(m, unsigned int *) = sctp_cmt_sockopt_use_dac;
 		m->m_len = sizeof(unsigned int);
 	}
 	break;
@@ -2978,6 +2990,13 @@ sctp_optsset(struct socket *so,
       sctp_cmt_sockopt_on_off = *mtod(m, unsigned int *);
       if (sctp_cmt_sockopt_on_off != 0) 
 	sctp_cmt_sockopt_on_off = 1;
+    }
+    break;
+  case SCTP_CMT_USE_DAC:
+    {
+      sctp_cmt_sockopt_use_dac = *mtod(m, unsigned int *);
+      if (sctp_cmt_sockopt_use_dac != 0) 
+	sctp_cmt_sockopt_use_dac = 1;
     }
     break;
 #if 0
@@ -5023,6 +5042,9 @@ sctp_sysctl(name, namelen, oldp, oldlenp, newp, newlen)
  	case SCTPCTL_CMT_ON_OFF:
  		return (sysctl_int(oldp, oldlenp, newp, newlen,
  				   &sctp_cmt_on_off));
+ 	case SCTPCTL_CMT_USE_DAC:
+ 		return (sysctl_int(oldp, oldlenp, newp, newlen,
+ 				   &sctp_cmt_use_dac));
 	case SCTPCTL_ABC_L_VAR:
  		return (sysctl_int(oldp, oldlenp, newp, newlen,
  				   &sctp_L2_abc_variable));
@@ -5312,6 +5334,14 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
                        SYSCTL_DESCR("CMT on-off flag"),
                        NULL, 0, &sctp_cmt_on_off, 0,
                        CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_CMT_ON_OFF,
+                       CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "cmt_use_dac",
+                       SYSCTL_DESCR("CMT DAC on-off flag"),
+                       NULL, 0, &sctp_cmt_use_dac, 0,
+                       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_CMT_USE_DAC,
                        CTL_EOL);
 
        sysctl_createv(clog, 0, NULL, NULL,

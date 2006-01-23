@@ -5983,7 +5983,7 @@ sctp_no_policy:
 	if (srcv->sinfo_flags & SCTP_ADDR_OVER) {
 	       /* CMT: The flag addr_over is set for the chunk
 		* to indicate that the address was overridden by the user.
-		* Used later by CMT. (iyengar@cis.udel.edu, 2005/06/21)
+		* Used later by CMT.
 		*/
 		template->whoTo = net;
 		template->addr_over = 1;
@@ -5991,7 +5991,7 @@ sctp_no_policy:
 	} else {
 	       /* CMT: The flag addr_over is set to zero for the chunk
 		* to indicate that the address was NOT overridden by the user.
-		* Used later by CMT. (iyengar@cis.udel.edu, 2005/06/21)
+		* Used later by CMT.
 		*/
 		template->addr_over = 0;
 
@@ -7235,7 +7235,6 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
 				 * the destination address for this chunk, then reset the 
 				 * destination address to the current one and continue with
 				 * sending this chunk to the current destination.
-				 * (iyengar@cis.udel.edu, 2005/06/21)
 				 */			  
 				/*
 				  if(net->dest_state & SCTP_ADDR_UNCONFIRMED) {*/
@@ -7460,8 +7459,6 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 			if (net->flight_size >= net->cwnd) {
 				/* skip this network, no room */
 				cwnd_full_ind++;
-/*				printf("skip net:%x flightsize:%d > cwnd:%d CMT OFF\n",
-				(u_int)net, (int)net->flight_size, (int)net->cwnd); */
 #ifdef SCTP_DEBUG
 				if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
 					printf("Ok skip fillup->fs:%d > cwnd:%d\n",
@@ -10056,10 +10053,15 @@ sctp_send_sack(struct sctp_tcb *stcb)
 
 	sack = mtod(a_chk->data, struct sctp_sack_chunk *);
 	sack->ch.chunk_type = SCTP_SELECTIVE_ACK;
-	/* IF you want to set a bit for CMT or in 0x80 because
-	 * 0x01 is used by nonce for ecn.
-	 */
+	/* 0x01 is used by nonce for ecn */
 	sack->ch.chunk_flags = (asoc->receiver_nonce_sum & SCTP_SACK_NONCE_SUM);
+	if (sctp_cmt_on_off && sctp_cmt_use_dac) {
+	      /* CMT DAC algorithm: If 2 (i.e., 0x10) packets have been received, 
+	       * then set high bit to 1, else 0. Reset pkts_rcvd.
+	       */
+	      sack->ch.chunk_flags |= (asoc->cmt_dac_pkts_rcvd << 6);
+	      asoc->cmt_dac_pkts_rcvd = 0;
+	}
 	sack->sack.cum_tsn_ack = htonl(asoc->cumulative_tsn);
 	sack->sack.a_rwnd = htonl(asoc->my_rwnd);
 	asoc->my_last_reported_rwnd = asoc->my_rwnd;
@@ -12554,12 +12556,11 @@ sctp_lower_sosend(struct socket *so,
 	}
 
 	if ((net->flight_size > net->cwnd) && (sctp_cmt_on_off == 0)) {
-	  /* CMT: Added check for CMT above. net above is the primary dest. If CMT is ON, sender should 
-	   * always attempt to send with the output routine sctp_fill_outqueue() that loops
-	   * through all destination addresses. Therefore, if CMT is ON, queue_only
-	   * is NOT set to 1 here, so that sctp_chunk_output() can be called below.
-	   * (iyengar@cis.udel.edu, 2005/06/21)
-	   */
+	      /* CMT: Added check for CMT above. net above is the primary dest. If CMT is ON, sender should 
+	       * always attempt to send with the output routine sctp_fill_outqueue() that loops
+	       * through all destination addresses. Therefore, if CMT is ON, queue_only
+	       * is NOT set to 1 here, so that sctp_chunk_output() can be called below.
+	       */
 		sctp_pegs[SCTP_SENDTO_FULL_CWND]++;
 		queue_only = 1;
 
