@@ -573,11 +573,14 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	 * ssthresh for any retransmission.
 	 * (iyengar@cis.udel.edu, 2005/08/12)
 	 */
-	if ((sctp_cmt_on_off) &&
-	    ((alt->dest_state & SCTP_ADDR_REACHABLE) == SCTP_ADDR_REACHABLE) &&
-	    (alt->ro.ro_rt != NULL) &&
-	    (!(alt->dest_state & SCTP_ADDR_UNCONFIRMED))) {
-		alt = sctp_find_alternate_net(stcb, alt, 1);
+	if (sctp_cmt_on_off) {
+		alt = sctp_find_alternate_net(stcb, net, 1);
+		/* CUCv2: If a different dest is picked for the retransmission,
+		 * then new (rtx-)pseudo_cumack needs to be tracked for orig dest.
+		 * Let CUCv2 track new (rtx-) pseudo-cumack always.
+		 */
+		net->find_pseudo_cumack = 1;
+		net->find_rtx_pseudo_cumack = 1;
 	}
 	/* none in flight now */
 	audit_tf = 0;
@@ -973,6 +976,9 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 	sctp_mark_all_for_resend(stcb, net, alt, win_probe, &num_mk);
 	/* FR Loss recovery just ended with the T3. */
 	stcb->asoc.fast_retran_loss_recovery = 0;
+
+	/* CMT FR loss recovery ended with the T3 */
+	net->fast_retran_loss_recovery = 0;
 
 	/* setup the sat loss recovery that prevents
 	 * satellite cwnd advance.

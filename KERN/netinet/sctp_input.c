@@ -230,6 +230,7 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 		/* update any ssthresh's that may have a default */
 		TAILQ_FOREACH(lnet, &asoc->nets, sctp_next) {
 			lnet->ssthresh = asoc->peers_rwnd;
+
 #if defined(SCTP_CWND_MONITOR) || defined(SCTP_CWND_LOGGING)
 			sctp_log_cwnd(stcb, lnet, 0, SCTP_CWND_INITIALIZATION);
 #endif

@@ -92,6 +92,7 @@
 #define SCTPCTL_MAXID		    35
 #endif
 
+#define SCTPCTL_CMT_USE_DAC         37
 #endif
 
 #ifdef SCTP_DEBUG
@@ -123,6 +124,7 @@
 	{ "path_rtx_max", CTLTYPE_INT }, \
 	{ "nr_outgoing_streams", CTLTYPE_INT }, \
 	{ "cmt_on_off", CTLTYPE_INT }, \
+	{ "cmt_use_dac", CTLTYPE_INT }, \
 	{ "cwnd_maxburst", CTLTYPE_INT }, \
         { "early_fast_retran", CTLTYPE_INT }, \
         { "use_rttvar_congctrl", CTLTYPE_INT }, \
@@ -161,6 +163,7 @@
 	{ "path_rtx_max", CTLTYPE_INT }, \
 	{ "nr_outgoing_streams", CTLTYPE_INT }, \
 	{ "cmt_on_off", CTLTYPE_INT }, \
+	{ "cmt_use_dac", CTLTYPE_INT }, \
 	{ "cwnd_maxburst", CTLTYPE_INT }, \
         { "early_fast_retran", CTLTYPE_INT }, \
         { "use_rttvar_congctrl", CTLTYPE_INT }, \
@@ -326,6 +329,7 @@ extern int      sctp_ecn_enable;
 extern int      sctp_ecn_nonce;
 extern int      sctp_use_cwnd_based_maxburst;
 extern unsigned int sctp_cmt_on_off;
+extern unsigned int sctp_cmt_use_dac;
 extern unsigned int sctp_cmt_sockopt_on_off;
 struct sctp_nets;
 struct sctp_inpcb;
