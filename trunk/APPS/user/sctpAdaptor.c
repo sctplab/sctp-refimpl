@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.8 2005-06-16 18:09:08 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.9 2006-01-25 18:46:40 lei Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -29,12 +29,16 @@
  * SUCH DAMAGE.
  */
 
+#if defined(__FreeBSD__) || defined(__APPLE__)
+#define __BSD_SCTP_STACK__
+#define HAVE_SA_LEN
+#endif
 
 #include <ctype.h>
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <stdint.h>
 #include <sys/types.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
@@ -57,10 +61,10 @@
 
 #include <sctpAdaptor.h>
 #include <netinet/sctp.h>
-#include <netinet/sctp_uio.h>
 
 static int continualINIT=0;
 static unsigned char to_ip[256];
+static socklen_t to_ip_len;
 static struct sockaddr_storage bind_ss;
 
 sctpAdaptorMod *object_in = NULL;
@@ -122,8 +126,8 @@ handle_notification(int fd,char *notify_buf) {
 			str = "UNKNOWN";
 		} /* end switch(sac->sac_state) */
 		printf("SCTP_ASSOC_CHANGE: %s, sac_error=%xh assoc=%xh\n", str,
-		       (u_int32_t)sac->sac_error,
-		       (u_int32_t)sac->sac_assoc_id);
+		       (uint32_t)sac->sac_error,
+		       (uint32_t)sac->sac_assoc_id);
 		break;
 	case SCTP_PEER_ADDR_CHANGE:
 		spc = &snp->sn_paddr_change;
@@ -143,9 +147,11 @@ handle_notification(int fd,char *notify_buf) {
 		case SCTP_ADDR_MADE_PRIM:
 			str = "ADDRESS MADE PRIMARY";
 			break;
+#if defined(__BSD_SCTP_STACK__)
 		case SCTP_ADDR_CONFIRMED:
 			str = "ADDRESS CONFIRMED";
 			break;
+#endif
 		default:
 			str = "UNKNOWN";
 		} /* end switch */
@@ -157,20 +163,22 @@ handle_notification(int fd,char *notify_buf) {
 			inet_ntop(AF_INET, (char*)&sin->sin_addr, buf, sizeof(buf));
 		}
 		printf("SCTP_PEER_ADDR_CHANGE: %s, addr=%s, assoc=%xh\n", str,
-		       buf, (u_int32_t)spc->spc_assoc_id);
+		       buf, (uint32_t)spc->spc_assoc_id);
 		break;
 	case SCTP_REMOTE_ERROR:
 		sre = &snp->sn_remote_error;
 		printf("SCTP_REMOTE_ERROR: assoc=%xh\n",
-		       (u_int32_t)sre->sre_assoc_id);
+		       (uint32_t)sre->sre_assoc_id);
 		break;
+
+#if defined(__BSD_SCTP_STACK__)
 	case SCTP_STREAM_RESET_EVENT:
 	{
 		int len;
 		char *strscope="unknown";
 		strrst = (struct sctp_stream_reset_event *)&snp->sn_strreset_event;
 		printf("SCTP_STREAM_RESET_EVENT: assoc=%xh\n",
-		       (u_int32_t)strrst->strreset_assoc_id);
+		       (uint32_t)strrst->strreset_assoc_id);
 		if (strrst->strreset_flags & SCTP_STRRESET_INBOUND_STR) {
 			strscope = "inbound";
 		} else if (strrst->strreset_flags & SCTP_STRRESET_OUTBOUND_STR) {
@@ -181,7 +189,7 @@ handle_notification(int fd,char *notify_buf) {
 			       strscope);
 		} else {
 			int i,cnt=0;
-			len = ((strrst->strreset_length - sizeof(struct sctp_stream_reset_event))/sizeof(u_int16_t));
+			len = ((strrst->strreset_length - sizeof(struct sctp_stream_reset_event))/sizeof(uint16_t));
 			printf("Streams ");
 			for ( i=0; i<len; i++){
 				cnt++;
@@ -202,6 +210,7 @@ handle_notification(int fd,char *notify_buf) {
 		
 	}
 	break;
+#endif
 	case SCTP_SEND_FAILED:
 	{
 		char *msg;
@@ -216,7 +225,7 @@ handle_notification(int fd,char *notify_buf) {
 			msg = msgbuf;
 		}
 		printf("SCTP_SEND_FAILED: assoc=%xh flag indicate:%s\n",
-		       (u_int32_t)ssf->ssf_assoc_id,msg);
+		       (uint32_t)ssf->ssf_assoc_id,msg);
 
 	}
 
@@ -226,7 +235,7 @@ handle_notification(int fd,char *notify_buf) {
 	    struct sctp_adaption_event *ae;
 	    ae = &snp->sn_adaption_event;
 	    printf("\nSCTP_adaption_indication ind:0x%x\n",
-		   (u_int)ae->sai_adaption_ind);
+		   (uint32_t)ae->sai_adaption_ind);
 	  }
 	  break;
 	case SCTP_PARTIAL_DELIVERY_EVENT:
@@ -274,7 +283,7 @@ handle_notification(int fd,char *notify_buf) {
 	case SCTP_SHUTDOWN_EVENT:
                 sse = &snp->sn_shutdown_event;
 		printf("SCTP_SHUTDOWN_EVENT: assoc=%xh\n",
-		       (u_int32_t)sse->sse_assoc_id);
+		       (uint32_t)sse->sse_assoc_id);
 		break;
 	default:
 		printf("Unknown notification event type=%xh\n", 
@@ -288,7 +297,7 @@ handle_notification(int fd,char *notify_buf) {
 	  if(continualINIT < 0)
 	    continualINIT = 0;
 	  sa = (struct sockaddr *)to_ip;
-	  ret = connect(fd,sa,sa->sa_len);	  
+	  ret = connect(fd, sa, to_ip_len);	  
 	  printf("Continual INIT spawns a connect %d left ret:%d err:%d\n",
 		 continualINIT,ret,errno);
 	}
@@ -300,9 +309,7 @@ int sctp_verbose = 0;
 int
 sctpReadInput(int fd, distributor *o,sctpAdaptorMod *r)
 {
-  /* receive some number of datagrams and
-   * act on them.
-   */
+  /* receive some number of datagrams and act on them. */
   struct sctp_sndrcvinfo *s_info;
   int sz,i,disped,ll,ll2;
   messageEnvolope msgout;
@@ -348,17 +355,24 @@ sctpReadInput(int fd, distributor *o,sctpAdaptorMod *r)
 		     readBuffer, 
 		     (size_t)ll,
 		     (struct sockaddr *)&from,
-		     &ll2,
+		     (socklen_t *)&ll2,
 		     &o_info,
 		     &msg.msg_flags);
-
   s_info = &o_info;
 
   if(sz <= 0){
-    if((errno == 0) && (fd != mainFd)){
-      printf("Connected fd:%d  gets 0/0 remove from dist\n",fd);
-      dist_deleteFd(o,fd);
-      return(0);
+    if (sz == 0) {
+      if (fd != mainFd) {
+        printf("Connected fd:%d  gets 0/0 remove from dist\n",fd);
+        dist_deleteFd(o,fd);
+        return(0);
+      } else {
+	/* our mainFd went EOF on us... probably a 1-to-1 socket */
+        printf("Main fd:%d got EOF... please quit and restart now...\n",fd);
+	close(fd);
+        dist_deleteFd(o,fd);
+	return(0);
+      }
     }
     if((errno != ENOBUFS) && (errno != EAGAIN))
       printf("Read returns %d errno:%d control len is %d msgflg:%x\n",
@@ -500,31 +514,38 @@ SCTP_setIPaddrinfo(struct addrinfo *res)
         return 1;
     }
     memcpy(to_ip, res->ai_addr, res->ai_addrlen);
+    to_ip_len = res->ai_addrlen;
     return 0;
 }
 
 void
-SCTP_setIPaddr(u_int addr)
+SCTP_setIPaddr(uint32_t addr)
 {
   struct sockaddr_in *to;
   to = (struct sockaddr_in *)to_ip;
   to->sin_family = AF_INET;
+#ifdef HAVE_SA_LEN
   to->sin_len = sizeof(struct sockaddr_in);
+#endif
+  to_ip_len = sizeof(struct sockaddr_in);
   to->sin_addr.s_addr = addr;
 }
 
 void
-SCTP_setIPaddr6(u_char *addr)
+SCTP_setIPaddr6(uint8_t *addr)
 {
   struct sockaddr_in6 *to;
   to = (struct sockaddr_in6 *)to_ip;
   to->sin6_family = AF_INET6;
+#ifdef HAVE_SA_LEN
   to->sin6_len = sizeof(struct sockaddr_in6);
+#endif
+  to_ip_len = sizeof(struct sockaddr_in6);
   memcpy((char *)&to->sin6_addr,addr,sizeof(struct in6_addr));
 }
 
 void
-SCTP_setIPv6scope(u_int scope)
+SCTP_setIPv6scope(uint32_t scope)
 {
   struct sockaddr_in6 *to;
   to = (struct sockaddr_in6 *)to_ip;
@@ -533,23 +554,27 @@ SCTP_setIPv6scope(u_int scope)
 }
 
 void
-SCTP_setBindAddr(u_int addr)
+SCTP_setBindAddr(uint32_t addr)
 {
   struct sockaddr_in *sin;
   sin = (struct sockaddr_in *)&bind_ss;
   sin->sin_family = AF_INET;
+#ifdef HAVE_SA_LEN
   sin->sin_len = sizeof(struct sockaddr_in);
+#endif
   sin->sin_addr.s_addr = addr;
   bindSpecific = 1;
 }
 
 void
-SCTP_setBind6Addr(u_char *addr)
+SCTP_setBind6Addr(uint8_t *addr)
 {
   struct sockaddr_in6 *sin6;
   sin6 = (struct sockaddr_in6 *)&bind_ss;
   sin6->sin6_family = AF_INET6;
+#ifdef HAVE_SA_LEN
   sin6->sin6_len = sizeof(struct sockaddr_in6);
+#endif
   memcpy((char *)&sin6->sin6_addr, addr, sizeof(struct in6_addr));
   bindSpecific = 1;
 }
@@ -558,7 +583,7 @@ SCTP_setBind6Addr(u_char *addr)
  * prt must be in network byte order
  */
 void
-SCTP_setport(u_short prt)
+SCTP_setport(uint16_t prt)
 {
   struct sockaddr_in *to;
   to = (struct sockaddr_in *)to_ip;
@@ -576,12 +601,14 @@ SCTP_setV6only(void) {
 }
 
 struct sockaddr *
-SCTP_getAddr()
+SCTP_getAddr(socklen_t *len)
 {
-  return((struct sockaddr *)to_ip);
+    if (len != NULL)
+	*len = to_ip_len;
+    return ((struct sockaddr *)to_ip);
 }
 
-u_short SCTP_getport()
+uint16_t SCTP_getport()
 {
   return(((struct sockaddr_in *)to_ip)->sin_port);
 }
@@ -599,13 +626,14 @@ SCTPnotify(int event, char *data, int size)
 
 
 sctpAdaptorMod *
-create_SCTP_adaptor(distributor *o,u_short port, int model, int rwnd , int swnd )
+create_SCTP_adaptor(distributor *o,uint16_t port, int model, int rwnd , int swnd )
 {
   sctpAdaptorMod *r;
   int length;
   struct sockaddr_in6 inAddr6,myAddr6;
   struct sctp_event_subscribe event;
-  int optval,optlen;
+  int optval;
+  socklen_t optlen;
   int bindsa_len;
 
   memset(&inAddr6,0,sizeof(inAddr6));
@@ -614,8 +642,10 @@ create_SCTP_adaptor(distributor *o,u_short port, int model, int rwnd , int swnd 
   myAddr6.sin6_port = 0;
   inAddr6.sin6_family = AF_INET6;
   myAddr6.sin6_family = AF_INET6;
+#ifdef HAVE_SA_LEN
   inAddr6.sin6_len = sizeof(struct sockaddr_in6);
   myAddr6.sin6_len = sizeof(struct sockaddr_in6);
+#endif
 
   memset(to_ip,0,sizeof(to_ip));
   r = calloc(1,sizeof(sctpAdaptorMod));
@@ -624,9 +654,9 @@ create_SCTP_adaptor(distributor *o,u_short port, int model, int rwnd , int swnd 
   r->o = o;
   if(model & SCTP_UDP_TYPE){
     if (v4only) {
-      mainFd = r->fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_SCTP);
+      mainFd = r->fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
     } else {
-      mainFd = r->fd = socket(AF_INET6, SOCK_DGRAM, IPPROTO_SCTP);
+      mainFd = r->fd = socket(AF_INET6, SOCK_SEQPACKET, IPPROTO_SCTP);
     }
   }else{
     if (v4only) {
@@ -650,7 +680,8 @@ create_SCTP_adaptor(distributor *o,u_short port, int model, int rwnd , int swnd 
   if (v6only) {
     /* set this to v6 only... */
     optval = 1;
-    if (setsockopt(r->fd, IPPROTO_IPV6, IPV6_V6ONLY, (char *)&optval, sizeof(optval)) == -1) {
+    if (setsockopt(r->fd, IPPROTO_IPV6, IPV6_V6ONLY, (char *)&optval,
+	sizeof(optval)) == -1) {
       close(r->fd);
       free(r);
       return(NULL);
@@ -677,7 +708,9 @@ create_SCTP_adaptor(distributor *o,u_short port, int model, int rwnd , int swnd 
       struct sockaddr_in *sin = (struct sockaddr_in *)&inAddr6;
       memset(sin, 0, sizeof(*sin));
       sin->sin_family = AF_INET;
+#ifdef HAVE_SA_LEN
       sin->sin_len = sizeof(struct sockaddr_in);
+#endif
       sin->sin_port = htons(port);
       bindsa_len = sizeof(struct sockaddr_in);
     } else {
@@ -708,7 +741,9 @@ create_SCTP_adaptor(distributor *o,u_short port, int model, int rwnd , int swnd 
   event.sctp_shutdown_event = 1;
   event.sctp_partial_delivery_event = 1;
   event.sctp_adaption_layer_event = 1;
+#if defined(__BSD_SCTP_STACK__)
   event.sctp_stream_reset_events = 1;
+#endif
 
   if (setsockopt(r->fd, IPPROTO_SCTP, SCTP_EVENTS, &event, sizeof(event)) != 0) {
     printf("Can't do SET_EVENTS socket option! err:%d\n", errno);
@@ -747,7 +782,7 @@ create_SCTP_adaptor(distributor *o,u_short port, int model, int rwnd , int swnd 
     }
   }
   if(model & SCTP_UDP_TYPE){
-    printf("Calling listen for UDP\n");
+    printf("Calling listen for one-to-many model\n");
     listen(r->fd,1);
   }
   dist_addFd(o,r->fd,sctpFdInput,POLLIN,(void *)r);

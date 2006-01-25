@@ -3,7 +3,7 @@
 This file is part of the SCTP reference Implementation
 
 Version:4.0.5
-$Header: /usr/sctpCVS/APPS/baselib/distributor.h,v 1.1.1.1 2004-06-23 13:07:29 randall Exp $
+$Header: /usr/sctpCVS/APPS/baselib/distributor.h,v 1.2 2006-01-25 18:46:39 lei Exp $
 
 
 The SCTP reference implementation  is free software; 
@@ -124,7 +124,9 @@ typedef struct messageEnvolope{
    * the message in.
    */
   void *from;
+  u_int from_len;
   void *to;
+  u_int to_len;
   int type;
   /* this is the base transport that 
    * brought the PDU in. In the

@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.21 2005-10-03 18:38:59 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.22 2006-01-25 18:46:40 lei Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -33,6 +33,19 @@
  * Support for command completion and history added by
  * Marco Molteni <mmolteni@cisco.com>.
  */
+#if defined(__FreeBSD__) || defined(__APPLE__)
+#define __BSD_SCTP_STACK__
+#else
+/* Solaris: old API */
+#define SCTP_EOF	MSG_EOF
+#define SCTP_ABORT	MSG_ABORT
+#define SCTP_UNORDERED	MSG_UNORDERED
+/* unsupported send flags */
+#define SCTP_PR_SCTP_TTL	0
+#define SCTP_PR_SCTP_BUF	0
+#define SCTP_ADDR_OVER		0
+#define SCTP_SENDALL		0
+#endif
 
 #include <userInputModule.h>
 
@@ -67,7 +80,9 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #include <netinet/sctp.h>
+#if defined(__BSD_SCTP_STACK__)
 #include <netinet/sctp_uio.h>
+#endif
 static int execute_line(const char *line);
 static char *command_generator(char *text, int state);
 
@@ -189,6 +204,7 @@ static int cmd_getmsdelay(char *argv[], int argc);
 static int cmd_setmsdelay(char *argv[], int argc);
 
 static int cmd_setdebug(char *argv[], int argc);
+
 #ifndef SCTP_NO_TCP_MODEL
 static int cmd_peeloff(char *argv[], int argc);
 #endif /* !SCTP_NO_TCP_MODEL */
@@ -241,10 +257,11 @@ static struct command commands[] = {
 
     {"continual", "continual num - set continuous init to num times", 
      cmd_continual},
-    {"cwndlog", "cwndlog - get cwnd log", 
+    {"cwndlog", "cwndlog - get cwnd log",
      cmd_cwndlog},
     {"clrcwndlog", "clrcwndlog - clear cwnd log", 
      cmd_clrcwndlog},
+
     {"defretryi", "defretryi num - set a new association failure threshold for initing", 
      cmd_defretryi},
     {"defretrys", "defretrys num - set a new association failure threshold for sending", 
@@ -294,7 +311,6 @@ static struct command commands[] = {
      cmd_getmsdelay},
     {"getnodelay", "getnodelay - get the setting of the nagle algorithm off or on",
      cmd_getnodelay},
-
     {"getpegs", "getpegs - retrieve the peg counts",
      cmd_getpegs},
     {"clrpegs", "clrpegs - clear the peg counts",
@@ -309,10 +325,8 @@ static struct command commands[] = {
      cmd_getrtt},
     {"getrtomin", "getrtomin - Return the RTO MIN/MAX for the endpoint",
      cmd_getrtomin},
-
     {"getsnd", "getsnd <asocid> - get the socketbuffer info for a asoc",
      cmd_getsnd},
-
     {"gettimetolive", "gettimetolive - get the number of microseconds messages live",
      cmd_gettimetolive},
 
@@ -496,10 +510,10 @@ struct sctpdataToProduce{
   struct timeval sent;
   struct timeval recvd;
   struct timeval stored;
-  u_int seq;
+  uint32_t seq;
 };
 
-static u_int curSeq=0;
+static uint32_t curSeq=0;
 static int period = 20000;
 FILE *hulkfile=NULL;
 
@@ -534,7 +548,7 @@ typedef struct {
 #define SCTP_TEST_RFTP	    4
 #define SCTP_TEST_RFTPRESP  5
 
-
+#if defined(__BSD_SCTP_STACK__)
 char *namelist[]={
   "SCTP_PEG_SACKS_SEEN",
   "SCTP_PEG_SACKS_SENT",
@@ -569,23 +583,23 @@ char *namelist[]={
   "SCTP_RECV_STREAM_OTHER",
   "UNKNOWN"
 };
-
-
+#endif
 
 static sctp_assoc_t
 get_assoc_id()
 {
   struct sctp_paddrparams sp;
-  int siz;
+  socklen_t siz;
   struct sockaddr *sa;
+  socklen_t sa_len;
 
   /* First get the assoc id */
   siz = sizeof(struct sctp_paddrparams);
-  sa = SCTP_getAddr();
+  sa = SCTP_getAddr(&sa_len);
   memset(&sp,0,sizeof(sp));
-  memcpy((caddr_t)&sp.spp_address,sa,sa->sa_len);
+  memcpy((caddr_t)&sp.spp_address, sa, sa_len);
   errno = 0;
-  if(getsockopt(adap->fd,IPPROTO_SCTP,
+  if(getsockopt(adap->fd, IPPROTO_SCTP,
 		SCTP_PEER_ADDR_PARAMS, &sp, &siz) != 0) {
     printf("Failed to get assoc id with HB info err:%d\n",errno);
     return(0);
@@ -593,8 +607,6 @@ get_assoc_id()
   /* We depend on the fact that 0 can never be returned */
   return(sp.spp_assoc_id);
 }
-
-
 
 void
 SCTPPrintAnAddress(struct sockaddr *a)
@@ -658,24 +670,34 @@ SCTPPrintAnAddress(struct sockaddr *a)
 }
 
 
-
 int
-sctpSEND(int fd,int defStream,char *s_buff,int sndsz,
-	 struct sockaddr *to,int options, int payload,int not_used)
+sctpSEND(int fd, int defStream, char *s_buff, int sndsz, struct sockaddr *to,
+	 int options, int payload, int not_used)
 {
 	int sz;
 	errno = 0;
-	sz = sctp_sendmsg(fd, s_buff, sndsz, to, to->sa_len, 
-			  payload, options, defStream,time_to_live, 0);
+	socklen_t to_len = 0;
+
+#if HAVE_SA_LEN
+	to_len = to->sa_len;
+#else
+	if (to->sa_family == AF_INET)
+		to_len = sizeof(struct sockaddr_in);
+	else if (to->sa_family == AF_INET6)
+		to_len = sizeof(struct sockaddr_in6);
+#endif
+	sz = sctp_sendmsg(fd, s_buff, sndsz, to, to_len, payload, options,
+			  defStream, time_to_live, 0);
 	if((sz <=0) && (errno != ENOBUFS)){
-		printf("Return from sendmsg is %d errno %d\n",
+		printf("Return from sctp_sendmsg is %d errno %d\n",
 		       sz,errno);
 	}
 	return(sz);
 }
 
 int
-sctpsend_associd (int fd, sctp_assoc_t asoc, char *s_buff, int sz, int options, int payload)
+sctpsend_associd (int fd, sctp_assoc_t asoc, char *s_buff, int sz, int options,
+		  int payload)
 {
 	int ret;
 	struct sctp_sndrcvinfo s_info;
@@ -689,14 +711,14 @@ sctpsend_associd (int fd, sctp_assoc_t asoc, char *s_buff, int sz, int options, 
 
 	ret = sctp_send (fd, s_buff, sz, &s_info,0);
 	if((sz <=0) && (errno != ENOBUFS)){
-		printf("Return from sendmsg is %d errno %d\n",
+		printf("Return from sctp_send is %d errno %d\n",
 		       sz,errno);
 	}
 	return(ret);
 }
 
 int
-sctpTERMINATE(int fd,struct sockaddr *to)
+sctpTERMINATE(int fd, struct sockaddr *to)
 {
   char buf[16];
   return(sctpSEND(fd,0,buf,0,to,SCTP_EOF,0,0));
@@ -778,12 +800,12 @@ u_long translateIPAddress(char *host)
 void
 fillPingBuffer(int fd,int len)
 {
-  u_int *pbp;
+  uint32_t *pbp;
   int i,rlen;
   rlen = (len/4) + 1;
-  pbp = (u_int *)&pingBuffer[4];
+  pbp = (uint32_t *)&pingBuffer[4];
   for(i=0;i<rlen;i++){
-    *pbp = (u_int)mrand48();
+    *pbp = (uint32_t)mrand48();
     pbp++;
   }
 }
@@ -806,8 +828,8 @@ sendBulkTransfer(int fd,int sz)
   tt->type = SCTP_TEST_SIMPLE;
   tt->dgramLen = sndsz - sizeof(testDgram_t);
   tt->dgramID = dgramCount++;
-  
-  ret = sctpSEND(fd,defStream,buffer,sndsz,SCTP_getAddr(),sendOptions,payload,0);
+
+  ret = sctpSEND(fd,defStream,buffer,sndsz,SCTP_getAddr(NULL),sendOptions,payload,0);
   return(ret);
 }
 
@@ -817,6 +839,7 @@ checkBulkTranfer(void *v,void *xxx)
 {	
   int fd;
   int ret,cnt;
+
   cnt = 0;
   ret = 0;
   fd = (int)v;
@@ -824,7 +847,7 @@ checkBulkTranfer(void *v,void *xxx)
   while(bulkCount > 0){
     if(bulkPingMode == 0){
       fillPingBuffer(fd,(bulkBufSize-4));
-      ret = sctpSEND(fd,bulkStream,pingBuffer,bulkBufSize,SCTP_getAddr(),sendOptions,0,0);
+      ret = sctpSEND(fd,bulkStream,pingBuffer,bulkBufSize,SCTP_getAddr(NULL),sendOptions,0,0);
     }else{
       ret = sendBulkTransfer(fd,bulkBufSize);
     }
@@ -843,7 +866,7 @@ checkBulkTranfer(void *v,void *xxx)
   /* ask for the time again */
   if(bulkPingMode == 0){
     strcpy(pingBuffer,"time");
-    ret = sctpSEND(fd,bulkStream,pingBuffer,5,SCTP_getAddr(),sendOptions,0,0);
+    ret = sctpSEND(fd,bulkStream,pingBuffer,5,SCTP_getAddr(NULL),sendOptions,0,0);
     if(ret < 0){
       printf("Could not get time in, will wait ret:%d\n",ret);
       dist_TimerStart(dist,checkBulkTranfer,0,
@@ -952,7 +975,7 @@ SCTPdataTimerTicks(void *o,void *b)
   dp.seq = curSeq;
   curSeq++;
   ret = sctpSEND(fd,defStream,(char *)&dp,sizeof(dp),
-		 SCTP_getAddr(),sendOptions,payload,0);      
+		 SCTP_getAddr(NULL), sendOptions,payload,0);      
   if(ret < 0){
     printf("Send failed? errno:%d\n",errno);
     return;
@@ -965,7 +988,7 @@ SCTPdataTimerTicks(void *o,void *b)
 
 
 void
-printArry(unsigned char *data,int sz)
+printArry(uint8_t *data, int sz)
 {
   /* if debug is on hex dump a array */
   int i,j,linesOut;
@@ -1000,7 +1023,7 @@ printArry(unsigned char *data,int sz)
     int dist,sp;
 
     j=(linesOut*16);
-    dist = ((16 - (i - j)) * 3) + 2;
+    dist = ((16 - (i - j)) * 3);
     *ptr1 = 0;
     *ptr2 = 0;
     for(sp=0;sp<dist;sp++){
@@ -1023,6 +1046,7 @@ sendRftpTransfer(void *v, void *xxx)
   testDgram_t *data;
   int limit;
   int fd;
+  struct sockaddr *sa;
 
   fd = (int)v;
   limit = 0;
@@ -1051,7 +1075,7 @@ sendRftpTransfer(void *v, void *xxx)
       sndsz = readsz + sizeof(testDgram_t);
       ttt = time_to_live;
       time_to_live = rftp_rt;
-      ret1 = sctpSEND(fd,rftp_strm1,cbuf,sndsz,SCTP_getAddr(),sendOptions,payload,0);
+      ret1 = sctpSEND(fd,rftp_strm1,cbuf,sndsz,SCTP_getAddr(NULL),sendOptions,payload,0);
       time_to_live = ttt;
       if(ret1 < 0) {
 	str1Flow++;
@@ -1080,7 +1104,7 @@ sendRftpTransfer(void *v, void *xxx)
       sndsz = readsz + sizeof(testDgram_t);
       ttt = time_to_live;
       time_to_live = rftp_rt;
-      ret2 = sctpSEND(fd,rftp_strm2,cbuf,sndsz,SCTP_getAddr(),sendOptions,payload,0);
+      ret2 = sctpSEND(fd,rftp_strm2,cbuf,sndsz,sa,sendOptions,payload,0);
       time_to_live = ttt;
       if(ret2 < 0) {
 	str2Flow++;
@@ -1167,13 +1191,12 @@ sendLoopRequest(int fd,int sz)
   tt->type = SCTP_TEST_LOOPREQ;
   tt->dgramLen = sndsz - sizeof(testDgram_t);
   tt->dgramID = dgramCount++;
-  ret = sctpSEND(fd,defStream,buffer,sndsz,SCTP_getAddr(),sendOptions,payload,0);      
+  ret = sctpSEND(fd,defStream,buffer,sndsz,SCTP_getAddr(NULL),sendOptions,payload,0);      
   return(ret);
 }
 
-
 void
-handlePong(int fd,struct sockaddr *from,int mode)
+handlePong(int fd, struct sockaddr *from, int mode)
 {
   pingPongCount--;
   if(pingPongCount <= 0){
@@ -1201,13 +1224,14 @@ doPingPong(int fd)
   time_t x;
   int i;
   struct tm *timeptr;
+
   if(bulkPingMode == 0){
     /* use ascii bulk ping mode.*/
     strncpy(pingBuffer,"ping",4);
     for(i=4;i<pingBufSize;i++){
       pingBuffer[i] = 'A' + (i%26);
     }
-    sctpSEND(fd,pingStream,pingBuffer,pingBufSize,SCTP_getAddr(),sendOptions,payload,0);      
+    sctpSEND(fd,pingStream,pingBuffer,pingBufSize,SCTP_getAddr(NULL),sendOptions,payload,0);      
   }else{
      /* use binary bulk ping mode */
     sendLoopRequest(fd,pingBufSize);
@@ -1235,7 +1259,7 @@ handleHulk(int fd,
 
 static int str1read=0;
 static int str2read=0;
-static u_int simplecnt=0;
+static uint32_t simplecnt=0;
 static int modpacket=0;
 static int phase_at = 0;
 static char phase_list[] = {
@@ -1251,17 +1275,14 @@ static char phase_list[] = {
 
 	
 void
-sctpInput(void *arg,messageEnvolope *msg)
+sctpInput(void *arg, messageEnvolope *msg)
 {
-  /* receive some number of datagrams and
-   * act on them.
-   */
+  /* receive some number of datagrams and act on them. */
 
   int disped,i;
   int fd;
   testDgram_t *testptr;
   disped = i = 0;
-
 
   SCTP_setcurrent((sctpAdaptorMod *)arg);
   if(msg->type == PROTOCOL_Sctp){
@@ -1298,8 +1319,7 @@ sctpInput(void *arg,messageEnvolope *msg)
 	    }
     }
     sctpSEND(fd,msg->streamNo,msg->data,msg->siz,(struct sockaddr *)msg->from,
-	     sendOptions,
-	     msg->protocolId,0);
+	     sendOptions, msg->protocolId, 0);
     msg->data = NULL;
   }else if(testptr->type == SCTP_TEST_LOOPRESP){
     handlePong(fd,(struct sockaddr *)msg->from,1);
@@ -1347,7 +1367,7 @@ sctpInput(void *arg,messageEnvolope *msg)
       handlePong(fd,(struct sockaddr *)msg->from,0);
     }
   }else if(strncmp(msg->data,"hulk",4) == 0){
-    handleHulk(fd,(struct sockaddr *)msg->from,
+    handleHulk(fd, (struct sockaddr *)msg->from,
 	       (struct sctpdataToProduce *)msg->data);
     msg->data = NULL;
   }else if(strncmp(msg->data,"sulk",4) == 0){
@@ -1389,7 +1409,7 @@ sctpInput(void *arg,messageEnvolope *msg)
 	       msg->streamNo,
 	       msg->streamSeq,
 	       msg->siz);
-	printArry((char *)msg->data,msg->siz);
+	printArry((uint8_t *)msg->data,msg->siz);
 	msg->data = NULL;
 	disped = 1;
       }
@@ -1456,11 +1476,7 @@ initUserInterface(distributor *o,struct sctpAdaptorMod *s)
   /* Override the default completion done by the library, because
    * we want to complete commands, not filenames.
    */
-#if defined(__APPLE__) || __FreeBSD_version > 500000
   rl_completion_entry_function = (rl_compentry_func_t *) command_generator;
-#else
-  rl_completion_entry_function = (Function *) command_generator;
-#endif
   /*  Call handleStdin2 when a complete line of input has been entered. */
   rl_callback_handler_install(">>>", handleStdin2);
 
@@ -1586,13 +1602,15 @@ cmd_gettimetolive(char *argv[], int argc)
   return 0;	
 }
 
-
 int cmd_getassocids(char *argv[], int argc)
 {
+#if defined(__BSD_SCTP_STACK__)
 	struct sctp_assoc_ids ids;
-	int sz,i;
+	int i;
+	socklen_t sz;
+
 	sz = sizeof(ids);
-	memset ( &ids, 0, sizeof(ids));
+	memset(&ids, 0, sizeof(ids));
 	if(getsockopt(adap->fd, IPPROTO_SCTP,
 		      SCTP_GET_ASOC_ID_LIST,
 			&ids, &sz) != 0){
@@ -1605,7 +1623,7 @@ int cmd_getassocids(char *argv[], int argc)
 	       ids.asls_more_to_get
 		);
 	for (i=0; i < ids.asls_numb_present; i++ ) {
-		printf("id:%x ",(u_int32_t)ids.asls_assoc_id[i]);
+		printf("id:%x ",(uint32_t)ids.asls_assoc_id[i]);
 		if((i+1) % 16 == 0){
 			printf("\n");
 		}
@@ -1625,7 +1643,7 @@ int cmd_getassocids(char *argv[], int argc)
 		       ids.asls_more_to_get
 			);
 		for (i=0; i < ids.asls_numb_present; i++ ) {
-			printf("id:%x ",(u_int32_t)ids.asls_assoc_id[i]);
+			printf("id:%x ",(uint32_t)ids.asls_assoc_id[i]);
 			if((i+1) % 16 == 0){
 				printf("\n");
 			}
@@ -1633,8 +1651,11 @@ int cmd_getassocids(char *argv[], int argc)
 		printf("\n");
 	}
 	return(0);
+#else
+	printf("Not supported on this OS\n");
+	return (0);
+#endif
 }
-
 
 int
 cmd_sendsent(char *argv[], int argc)
@@ -1669,10 +1690,10 @@ cmd_getloopsleep(char *argv[], int argc)
 	return(0);
 }
 
-
 int
 cmd_streamreset(char *argv[], int argc)
 {
+#if defined(__BSD_SCTP_STACK__)
 	char buffer[2048];
 	struct sctp_stream_reset *strrst;
 	int flag=0;
@@ -1723,21 +1744,26 @@ cmd_streamreset(char *argv[], int argc)
 	strrst->strrst_assoc_id = get_assoc_id();
 	if(setsockopt(adap->fd,IPPROTO_SCTP,
 		      SCTP_RESET_STREAMS,
-		      strrst, (sizeof(*strrst)+(strrst->strrst_num_streams * sizeof(u_int16_t)))) != 0){
+		      strrst, (sizeof(*strrst)+(strrst->strrst_num_streams * sizeof(uint16_t)))) != 0){
 		printf("Stream Reset fails %d\n",errno);
 	}else{
 		printf("Stream reset succesful\n");
 	}
 	return(0);
+#else
+	printf("Not supported on this OS\n");
+	return (0);
+#endif
 }
 
 int
 cmd_setdebug(char *argv[], int argc)
 {
-  u_int32_t num,newlevel;
-  int sz;
+#if defined(__BSD_SCTP_STACK__)
+  uint32_t num,newlevel;
+  socklen_t sz;
 
-  sz = sizeof(u_int32_t);
+  sz = sizeof(uint32_t);
   if(getsockopt(adap->fd,IPPROTO_SCTP,
 		SCTP_SET_DEBUG_LEVEL,
 		&num, &sz) != 0){
@@ -1916,6 +1942,10 @@ cmd_setdebug(char *argv[], int argc)
     }
   }
   return(0);
+#else
+	printf("Not supported on this OS\n");
+	return (0);
+#endif
 }
 
 int
@@ -1999,12 +2029,11 @@ int
 cmd_getrtomin(char *argv[], int argc)
 {
   struct sctp_rtoinfo optval;
-  int siz;
+  socklen_t siz;
 
   siz = sizeof(optval);
   memset(&optval,0,sizeof(optval));
-  if(getsockopt(adap->fd,IPPROTO_SCTP,
-		SCTP_RTOINFO, &optval, &siz) != 0) {
+  if(getsockopt(adap->fd,IPPROTO_SCTP, SCTP_RTOINFO, &optval, &siz) != 0) {
     printf("Can't get RTOINFO on socket err:%d!\n",errno);
   }else{
     printf("RTO initial is %d ms\n",optval.srto_initial);
@@ -2042,15 +2071,14 @@ cmd_setrtomin(char *argv[], int argc)
 
 int cmd_getinitparam(char *argv[], int argc)
 {
-  int siz;
+  socklen_t siz;
   struct sctp_initmsg optval;
 
   siz = sizeof(optval);
 
   memset(&optval,0,sizeof(optval));
-  if(getsockopt(adap->fd,IPPROTO_SCTP,
-		SCTP_INITMSG, &optval, &siz) != 0) {
-    printf("Can't get SCTP_INITMSG on socket err:%d!\n",errno);
+  if(getsockopt(adap->fd, IPPROTO_SCTP, SCTP_INITMSG, &optval, &siz) != 0) {
+    printf("Can't get SCTP_INITMSG on socket err:%u!\n", errno);
   }else{
     printf("OS we request is %d\n",optval.sinit_num_ostreams);
     printf("MIS we limit is %d \n",optval.sinit_max_instreams);
@@ -2063,7 +2091,9 @@ int cmd_getinitparam(char *argv[], int argc)
 static int 
 cmd_getautoclose(char *argv[], int argc)
 {
-  u_int32_t adaption,sz;
+  uint32_t adaption;
+  socklen_t sz;
+
   sz = sizeof(adaption);
   if(getsockopt(adap->fd,IPPROTO_SCTP,
 		SCTP_AUTOCLOSE,
@@ -2104,7 +2134,9 @@ static int cmd_setmsdelay(char *argv[], int argc)
 
 static int cmd_getnodelay(char *argv[], int argc)
 {
-  u_int32_t seg,sz;
+  uint32_t seg;
+  socklen_t sz;
+
   sz = sizeof(seg);
   if(getsockopt(adap->fd,IPPROTO_SCTP,
 		SCTP_NODELAY,
@@ -2121,7 +2153,7 @@ static int cmd_getnodelay(char *argv[], int argc)
 
 static int cmd_setnodelay(char *argv[], int argc)
 {
-  u_int32_t seg,sz;
+  uint32_t seg,sz;
 
   if(argc < 1) {
 	  printf("Use setnodelay val\n");
@@ -2147,7 +2179,9 @@ static int cmd_setnodelay(char *argv[], int argc)
 
 static int cmd_getmaxseg(char *argv[], int argc)
 {
-  u_int32_t seg,sz;
+  uint32_t seg;
+  socklen_t sz;
+
   sz = sizeof(seg);
   if(getsockopt(adap->fd,IPPROTO_SCTP,
 		SCTP_MAXSEG,
@@ -2162,7 +2196,7 @@ static int cmd_getmaxseg(char *argv[], int argc)
 
 static int cmd_setmaxseg(char *argv[], int argc)
 {
-  u_int32_t seg,sz;
+  uint32_t seg,sz;
 
   if(argc < 1) {
 	  printf("Use setmaxseg val\n");
@@ -2188,7 +2222,10 @@ static int cmd_setmaxseg(char *argv[], int argc)
 static int 
 cmd_getmaxburst(char *argv[], int argc)
 {
-  u_int32_t burst,sz;
+#if defined(__BSD_SCTP_STACK__)
+  uint32_t burst;
+  socklen_t sz;
+
   sz = sizeof(burst);
   if(getsockopt(adap->fd,IPPROTO_SCTP,
 		SCTP_MAXBURST,
@@ -2199,13 +2236,17 @@ cmd_getmaxburst(char *argv[], int argc)
 		 burst);
   }
   return(0);
-	
+#else
+	printf("Not supported on this OS\n");
+	return (0);
+#endif
 }
 
 static int 
 cmd_setmaxburst(char *argv[], int argc)
 {
-  u_int32_t burst,sz;
+#if defined(__BSD_SCTP_STACK__)
+  uint32_t burst,sz;
 
   if(argc < 1) {
 	  printf("Use setmaxburst val\n");
@@ -2224,12 +2265,16 @@ cmd_setmaxburst(char *argv[], int argc)
 		 burst);
   }
   return(0);
+#else
+	printf("Not supported on this OS\n");
+	return (0);
+#endif
 }
 
 static int 
 cmd_setautoclose(char *argv[], int argc)
 {
-  u_int32_t adaption;
+  uint32_t adaption;
   if (argc < 1) {
     printf("setautoclose: expects an argument (0 turns it off)\n");
     return -1;
@@ -2247,7 +2292,9 @@ cmd_setautoclose(char *argv[], int argc)
 static int 
 cmd_getfragmentation(char *argv[], int argc)
 {
-  u_int32_t adaption,sz;
+  uint32_t adaption;
+  socklen_t sz;
+
   sz = sizeof(adaption);
   if(getsockopt(adap->fd,IPPROTO_SCTP,
 		SCTP_DISABLE_FRAGMENTS,
@@ -2267,7 +2314,7 @@ cmd_getfragmentation(char *argv[], int argc)
 static int 
 cmd_setfragmentation(char *argv[], int argc)
 {
-  u_int32_t adaption;
+  uint32_t adaption;
   if (argc < 1) {
     printf("setfragment: expects an argument (0 turns it off)\n");
     return -1;
@@ -2308,7 +2355,7 @@ cmd_setblocking(char *argv[], int argc)
 static int 
 cmd_setadaption(char *argv[], int argc)
 {
-  u_int32_t adaption;
+  uint32_t adaption;
   if (argc < 1) {
     printf("setadaption: expects an argument (0 turns it off)\n");
     return -1;
@@ -2325,7 +2372,9 @@ cmd_setadaption(char *argv[], int argc)
 static int 
 cmd_getadaption(char *argv[], int argc)
 {
-  u_int32_t adaption,sz;
+  uint32_t adaption;
+  socklen_t sz;
+
   sz = sizeof(adaption);
   if(getsockopt(adap->fd,IPPROTO_SCTP,
 		SCTP_ADAPTION_LAYER,
@@ -2340,7 +2389,8 @@ cmd_getadaption(char *argv[], int argc)
 
 int cmd_setinittsn(char *argv[], int argc)
 {
-  u_int32_t init_tsn;
+#if defined(__BSD_SCTP_STACK__)
+  uint32_t init_tsn;
   if (argc < 1) {
     printf("setinittsn: expects a TSN number as a argument (0 turns it off)\n");
     return -1;
@@ -2351,12 +2401,18 @@ int cmd_setinittsn(char *argv[], int argc)
     printf("Can't set initial tsn on socket err:%d!\n",errno);
   }
   return(0);
+#else
+	printf("Not supported on this OS\n");
+	return (0);
+#endif
 }
 
 int cmd_getinittsn(char *argv[], int argc)
 {
-  u_int32_t init_tsn;
-  int sz;
+#if defined(__BSD_SCTP_STACK__)
+  uint32_t init_tsn;
+  socklen_t sz;
+
   init_tsn = 0;
   sz = sizeof(init_tsn);
   if(getsockopt(adap->fd,IPPROTO_SCTP,
@@ -2370,6 +2426,10 @@ int cmd_getinittsn(char *argv[], int argc)
     }
   }
   return(0);
+#else
+	printf("Not supported on this OS\n");
+	return (0);
+#endif
 }
 
 
@@ -2400,8 +2460,9 @@ static int
 cmd_abort(char *argv[], int argc)
 {
   char buf[4];
+
   memset(buf,0,sizeof(buf));
-  return(sctpSEND(adap->fd,0,buf,0,SCTP_getAddr(),SCTP_ABORT,0,0));
+  return(sctpSEND(adap->fd,0,buf,0,SCTP_getAddr(NULL),SCTP_ABORT,0,0));
 }
 /* assoc - associate with the set destination
  */
@@ -2411,6 +2472,7 @@ cmd_assoc(char *argv[], int argc)
   int fd = adap->fd;
   int ret;
   struct sockaddr *sa;
+  socklen_t sa_len;
 
   if (!(destinationSet && portSet)) {
     printf("Please set the destination/port before\n");
@@ -2420,8 +2482,8 @@ cmd_assoc(char *argv[], int argc)
     printf("sorry m is NULL?\n");
     return -1;
   }
-  sa = SCTP_getAddr();
-  ret = connect(fd,sa,sa->sa_len);
+  sa = SCTP_getAddr(&sa_len);
+  ret = connect(fd, sa, sa_len);
   printf("Connect returns %d errno:%d\n",ret,errno);
   return 0;
 }
@@ -2429,6 +2491,7 @@ cmd_assoc(char *argv[], int argc)
 int
 cmd_xconnect(char *argv[], int argc)
 {
+#if defined(__BSD_SCTP_STACK__)
 	int len,i,addrcnt=0,ret,llen;
 	char *ccc;
 	struct sockaddr *at;
@@ -2455,13 +2518,19 @@ cmd_xconnect(char *argv[], int argc)
 		servaddr6 = (struct sockaddr_in6 *)at;
 		if(inet_pton(AF_INET6,argv[i], &servaddr6->sin6_addr)) {
 			servaddr6->sin6_family = AF_INET6;
-			llen = servaddr6->sin6_len = sizeof(struct sockaddr_in6);
+			llen = sizeof(struct sockaddr_in6);
+#ifdef HAVE_SA_LEN
+			servaddr6->sin6_len = sizeof(struct sockaddr_in6);
+#endif
 			servaddr6->sin6_port = SCTP_getport();
 		} else {
 			servaddr = (struct sockaddr_in *)at;
 			if (inet_pton(AF_INET, argv[i], &servaddr->sin_addr) ){
 				servaddr->sin_family = AF_INET;
-				llen = servaddr->sin_len = sizeof(struct sockaddr_in);
+				llen = sizeof(struct sockaddr_in);
+#ifdef HAVE_SA_LEN
+				servaddr->sin_len = sizeof(struct sockaddr_in);
+#endif
 				servaddr->sin_port = SCTP_getport();
 			} else {
 				printf("Skipping address %s, unknown type\n",
@@ -2485,6 +2554,10 @@ cmd_xconnect(char *argv[], int argc)
 		printf("Connectx returns %d errno:%d\n",ret,errno);
 	free(ccc);
 	return 0;
+#else
+	printf("Not supported on this OS\n");
+	return (0);
+#endif
 }
 
 static int
@@ -2492,10 +2565,16 @@ cmd_bindx(char *argv[], int argc)
 {
   int bindType = 0;
   int bindOption = 0;
+#if defined(__BSD_SCTP_STACK__)
   char bindx_ss[sizeof(struct sctp_getaddresses) + sizeof(struct sockaddr_storage)];
   struct sctp_getaddresses *optval;
+#else
+  char bindx_ss[sizeof(struct sockaddr_storage)];
+#endif
   struct sockaddr_in6 *sin6;
   struct sockaddr_in *sin;
+  socklen_t sa_len;
+
   if (argc < 2) {
     printf("bindx: invalid number of arguments\n");
     return -1;
@@ -2514,29 +2593,44 @@ cmd_bindx(char *argv[], int argc)
     printf("bindx: invalid 'type'=%u\n", bindType);
      return -1;
   }
+#if defined(__BSD_SCTP_STACK__)
   /* get the address and figure out what kind it is */
   optval = (struct sctp_getaddresses *)bindx_ss;
   optval->sget_assoc_id = 0;	/* for the entire endpoint */
   /* try IPv6 first... */
   sin6 = (struct sockaddr_in6 *)&optval->addr;
   sin = (struct sockaddr_in *)&optval->addr;
+#else
+  sin6 = (struct sockaddr_in6 *)bindx_ss;
+  sin = (struct sockaddr_in *)bindx_ss;
+#endif
   if (inet_pton(AF_INET6, argv[1], &sin6->sin6_addr)) {
     /* ipv6 address specified */
     sin6->sin6_family = AF_INET6;
+#ifdef HAVE_SA_LEN
     sin6->sin6_len = sizeof(struct sockaddr_in6);
+#endif
+    sa_len = sizeof(struct sockaddr_in6);
     sin6->sin6_scope_id = scope_id;
   } else if (inet_pton(AF_INET, argv[1], &sin->sin_addr)) {
     /* ipv4 address specified */
     sin->sin_family = AF_INET;
+#ifdef HAVE_SA_LEN
     sin->sin_len = sizeof(struct sockaddr_in);
+#endif
+    sa_len = sizeof(struct sockaddr_in);
   } else {
     printf("bindx: invalid address\n");
     return -1;
   }
   /* do the bindx... */
+#if 0
   /* FIX: put in library/syscall later... */
   if (setsockopt(adap->fd, IPPROTO_SCTP, bindOption, 
 		bindx_ss, sizeof(bindx_ss)) != 0) {
+#else
+  if (sctp_bindx(adap->fd, (struct sockaddr *)bindx_ss, 1, bindOption) == -1) {
+#endif
     printf("Failed bindx() on socket err:%u!\n", errno);
   } else {
     printf("bindx() completed\n");
@@ -2579,7 +2673,7 @@ cmd_bulk(char *argv[], int argc)
     /* ask for the time */
     if(bulkPingMode == 0){
       strcpy(pingBuffer,"time");
-      ret = sctpSEND(fd,bulkStream,pingBuffer,5,SCTP_getAddr(),sendOptions,payload,0);
+      ret = sctpSEND(fd,bulkStream,pingBuffer,5,SCTP_getAddr(NULL),sendOptions,payload,0);
       strncpy(pingBuffer,"bulk",4);
     }
     bulkInProgress = 1;
@@ -2593,8 +2687,7 @@ cmd_bulk(char *argv[], int argc)
 }
 
 
-/* bulkseen - display count of bulk packets seen (time resets)
- */
+/* bulkseen - display count of bulk packets seen (time resets) */
 static int
 cmd_bulkstat(char *argv[], int argc)
 {
@@ -2628,8 +2721,8 @@ cmd_getpaddrs(char *argv[], int argc)
 	} else {
 		asocid = (sctp_assoc_t)strtoul(argv[0], NULL, 0);
 	}
-	printf("Getting addresses for assoc id %x\n", (u_int)asocid);
-	cnt = sctp_getpaddrs(adap->fd, asocid, &addrs);
+	printf("Getting addresses for assoc id %x\n", (uint32_t)asocid);
+	cnt = sctp_getpaddrs(adap->fd, asocid, (void *)&addrs);
 	if(addrs == NULL) {
 		printf("Returned errno %d\n", errno);
 	} else {
@@ -2640,8 +2733,7 @@ cmd_getpaddrs(char *argv[], int argc)
 }
 
 
-/* chgcookielife val - change the current assoc cookieLife
- */
+/* chgcookielife val - change the current assoc cookieLife */
 static int
 cmd_chgcookielife(char *argv[], int argc)
 {
@@ -2676,8 +2768,7 @@ cmd_chgcookielife(char *argv[], int argc)
 }
 
 
-/* continual num - set continuous init to num times
- */
+/* continual num - set continuous init to num times */
 static int
 cmd_continual(char *argv[], int argc)
 {
@@ -2696,6 +2787,7 @@ cmd_continual(char *argv[], int argc)
 
 static int cmd_clrcwndlog(char *argv[], int argc)
 {
+#if defined(__BSD_SCTP_STACK__)
 	int buf,siz;
 	buf = 0;
 	siz = sizeof(buf);
@@ -2707,11 +2799,15 @@ static int cmd_clrcwndlog(char *argv[], int argc)
 	}
 	printf("cwnd log cleared\n");
 	return 0;
+#else
+	printf("Not supported on this OS\n");
+	return (0);
+#endif
 }
-
 
 static int cmd_cwndlog(char *argv[], int argc)
 {
+#if defined(__BSD_SCTP_STACK__)
 	char *cwnd_names[] ={
 		"Unknown-L",
 		"Fast-rxt ",
@@ -2733,8 +2829,9 @@ static int cmd_cwndlog(char *argv[], int argc)
 		"Unknown-H"
 	};
 	struct sctp_cwnd_log_req *req;
-	u_int8_t buf[2048];
-	int siz,i;
+	uint8_t buf[2048];
+	int i;
+	socklen_t siz;
 	int idx;
 	memset(buf,0,sizeof(buf));
 	req = (struct sctp_cwnd_log_req *)buf;
@@ -2758,7 +2855,7 @@ static int cmd_cwndlog(char *argv[], int argc)
 		if(req->log[i].event_type == SCTP_LOG_EVENT_CWND) {
 			printf("%d: net:%x chg:%d cwnd:%d flight:%d  by:%s\n",
 			       i,
-			       (u_int)req->log[i].x.cwnd.net,
+			       (uint32_t)req->log[i].x.cwnd.net,
 			       (req->log[i].x.cwnd.cwnd_augment*1024),
 			       (req->log[i].x.cwnd.inflight*1024),
 			       (int)req->log[i].x.cwnd.cwnd_new_value,
@@ -2797,9 +2894,13 @@ static int cmd_cwndlog(char *argv[], int argc)
 
 	}
 	return 0;
+#else
+	printf("Not supported on this OS\n");
+	return (0);
+#endif
 }
-/* defretryi num - set a new association failure threshold for initing
- */
+
+/* defretryi num - set a new association failure threshold for initing */
 static int
 cmd_defretryi(char *argv[], int argc)
 {
@@ -2929,12 +3030,13 @@ static int
 cmd_doheartbeat(char *argv[], int argc)
 {
   struct sockaddr *sa;
+  socklen_t sa_len;
   struct sctp_paddrparams sp;
   int ret;
   int siz;
-  sa = SCTP_getAddr();
+  sa = SCTP_getAddr(&sa_len);
   memset(&sp,0,sizeof(sp));
-  memcpy((caddr_t)&sp.spp_address,sa,sa->sa_len);
+  memcpy((caddr_t)&sp.spp_address, sa, sa_len);
   sp.spp_hbinterval = 0xffffffff;
   /* Disable this so we don't change it */
 
@@ -2960,7 +3062,7 @@ cmd_getcwndpost(char *argv[], int argc)
 static int
 cmd_getcurcookielife(char *argv[], int argc)
 {
-  int siz;
+  socklen_t siz;
   struct sctp_assocparams sasoc;
   siz = sizeof(sasoc);
   memset(&sasoc,0,sizeof(sasoc));
@@ -2971,8 +3073,7 @@ cmd_getcurcookielife(char *argv[], int argc)
     return(-1);
   }
 
-  if(getsockopt(adap->fd,IPPROTO_SCTP,
-		SCTP_ASSOCINFO, &sasoc, &siz) != 0) {
+  if(getsockopt(adap->fd, IPPROTO_SCTP, SCTP_ASSOCINFO, &sasoc, &siz) != 0) {
     printf("Failed to set option %d\n",errno);
     return -1;
   }
@@ -2987,13 +3088,13 @@ cmd_getcurcookielife(char *argv[], int argc)
 static int
 cmd_getdefcookielife(char *argv[], int argc)
 {
-  int siz;
+  socklen_t siz;
   struct sctp_assocparams sasoc;
+
   siz = sizeof(sasoc);
   memset(&sasoc,0,sizeof(sasoc));
   /* Set in the value */
-  if(getsockopt(adap->fd,IPPROTO_SCTP,
-		SCTP_ASSOCINFO, &sasoc, &siz) != 0) {
+  if(getsockopt(adap->fd, IPPROTO_SCTP, SCTP_ASSOCINFO, &sasoc, &siz) != 0) {
     printf("Failed to set option %d\n",errno);
     return -1;
   }
@@ -3010,8 +3111,10 @@ cmd_gethbdelay(char *argv[], int argc)
 {
   struct sctp_paddrparams sp;
   struct sockaddr *sa;
-  int siz;
+  socklen_t sa_len = 0;
+  socklen_t siz;
   int useaddr;
+
   useaddr = 1;
   if(argc == 1){
     if(strcmp("ep",argv[0]) == 0){
@@ -3019,12 +3122,12 @@ cmd_gethbdelay(char *argv[], int argc)
     }
   }
   siz = sizeof(sp);
-  if(useaddr)
-	  sa = SCTP_getAddr();
+  if(useaddr) 
+	  sa = SCTP_getAddr(&sa_len);
   memset(&sp,0,sizeof(sp));
   if(useaddr)
-    memcpy((caddr_t)&sp.spp_address,sa,sa->sa_len);
-  if(getsockopt(adap->fd,IPPROTO_SCTP,
+    memcpy((caddr_t)&sp.spp_address, sa, sa_len);
+  if(getsockopt(adap->fd, IPPROTO_SCTP,
 		SCTP_PEER_ADDR_PARAMS, &sp, &siz) != 0) {
     printf("Failed to get HB info err:%d\n",errno);
     return 0;
@@ -3032,7 +3135,7 @@ cmd_gethbdelay(char *argv[], int argc)
   if(sp.spp_assoc_id) {
 	  printf("Current failure threshold is %d\n",sp.spp_pathmaxrxt);
 	  printf("Current HB interval is %d\n",sp.spp_hbinterval);
-	  printf("Assoc id is %x\n",(u_int)sp.spp_assoc_id);
+	  printf("Assoc id is %x\n",(uint32_t)sp.spp_assoc_id);
   } else {
 	  printf("EP default failure threshold is %d\n",sp.spp_pathmaxrxt);
 	  printf("EP default HB interval is %d\n",sp.spp_hbinterval);
@@ -3040,14 +3143,14 @@ cmd_gethbdelay(char *argv[], int argc)
   return 0;
 }
 
-
-/* getpegs - retrieve the peg counts
- */
+/* getpegs - retrieve the peg counts */
 
 static int cmd_getpcbinfo(char *argv[], int argc)
 {
+#if defined(__BSD_SCTP_STACK__)
   struct sctp_pcbinfo optval;
-  int siz;
+  socklen_t siz;
+
   siz = sizeof(optval);
   if(getsockopt(adap->fd,IPPROTO_SCTP,
 		SCTP_PCB_STATUS, &optval, &siz) != 0) {
@@ -3062,11 +3165,16 @@ static int cmd_getpcbinfo(char *argv[], int argc)
     printf("Mbuf track:%d\n",optval.mbuf_track);
   }
   return 0;
+#else
+	printf("Not supported on this OS\n");
+	return (0);
+#endif
 }
 
 static int
 cmd_clrpegs(char *argv[], int argc)
 {
+#if defined(__BSD_SCTP_STACK__)
 	int sctp_pegs,siz;
 	sctp_pegs = 0;
 	siz = sizeof(sctp_pegs);
@@ -3078,13 +3186,19 @@ cmd_clrpegs(char *argv[], int argc)
 		printf("pegs cleared\n");
 	}
 	return 0;
+#else
+	printf("Not supported on this OS\n");
+	return (0);
+#endif
 }
 
 static int
 cmd_getpegs(char *argv[], int argc)
 {
-    u_int32_t sctp_pegs[SCTP_NUMBER_OF_PEGS];
-    int siz,i;
+#if defined(__BSD_SCTP_STACK__)
+    uint32_t sctp_pegs[SCTP_NUMBER_OF_PEGS];
+    int i;
+    socklen_t siz;
     static char *pegnames[SCTP_NUMBER_OF_PEGS] = {
 	"sack_rcv", /* 00 */
 	"sack_snt", /* 01 */
@@ -3205,8 +3319,15 @@ cmd_getpegs(char *argv[], int argc)
 	"efr_stai", /* 116 */
 	"efr_stao", /* 117 */
 	"efr_stat", /* 118 */
-	"resv1   ", /* 119 */
-
+	"t3mktsns", /* 119 */
+	"authsent", /* 120 */
+	"authrcvd", /* 121 */
+	"authmiss", /* 122 */
+	"authhmid", /* 123 */
+	"authinvl", /* 124 */
+	"authnoky", /* 125 */
+	"authnutx", /* 126 */
+	"authnurx", /* 127 */
     };
     printf("there are %d pegs\n",
 	   SCTP_NUMBER_OF_PEGS);
@@ -3239,8 +3360,11 @@ cmd_getpegs(char *argv[], int argc)
 	printf("\n");
     }
     return(0);
+#else
+	printf("Not supported on this OS\n");
+	return (0);
+#endif
 }
-
 
 /* getprimary - tells which net number is primary
  */
@@ -3248,12 +3372,14 @@ static int
 cmd_getprimary(char *argv[], int argc)
 {
   struct sockaddr *sa;
+  socklen_t sa_len;
   struct sctp_setprim prim;
-  int siz;
+  socklen_t siz;
+
   memset(&prim,0,sizeof(prim));
-  sa = SCTP_getAddr();
+  sa = SCTP_getAddr(&sa_len);
   siz = sizeof(prim);
-  memcpy(&prim.ssp_addr,(caddr_t)sa,sa->sa_len);
+  memcpy(&prim.ssp_addr, (caddr_t)sa, sa_len);
   if(getsockopt(adap->fd,IPPROTO_SCTP,
 		SCTP_PRIMARY_ADDR,&prim,&siz) != 0) {
     printf("Can't get primary address error:%d\n",errno);
@@ -3279,11 +3405,12 @@ cmd_getrtt(char *argv[], int argc)
 {
   struct sctp_paddrinfo so;
   struct sockaddr *sa;
-  int siz;
+  socklen_t sa_len;
+  socklen_t siz;
 
-  sa = SCTP_getAddr();
+  sa = SCTP_getAddr(&sa_len);
   memset(&so,0,sizeof(so));
-  memcpy((caddr_t)&so.spinfo_address,sa,sa->sa_len);
+  memcpy((caddr_t)&so.spinfo_address, sa, sa_len);
   siz = sizeof(so);
   if(getsockopt(adap->fd,IPPROTO_SCTP,
 		SCTP_GET_PEER_ADDR_INFO, &so, &siz) != 0) {
@@ -3300,8 +3427,9 @@ cmd_getrtt(char *argv[], int argc)
 static int
 cmd_getsnd(char *argv[], int argc)
 {
+#if defined(__BSD_SCTP_STACK__)
 	struct sctp_sockstat so;
-	int siz;
+	socklen_t siz;
 
 	if(argc != 1){
 		printf("Sorry - getsnd requires associd argument\n");
@@ -3315,13 +3443,16 @@ cmd_getsnd(char *argv[], int argc)
 		printf("Failed to get dest info err:%d\n",errno);
 		return 0;
 	}
-	printf("For association %x\n",(u_int)so.ss_assoc_id);
+	printf("For association %x\n",(uint32_t)so.ss_assoc_id);
 	printf("Total sndbuf %d\n",(int)so.ss_total_sndbuf);
 	printf("Total sndbuf mbuf %d\n",(int)so.ss_total_mbuf_sndbuf);
  	printf("Total in recvbuf %d\n",(int)so.ss_total_recv_buf);
 	return 0;
+#else
+	printf("Not supported on this OS\n");
+	return (0);
+#endif
 }
-
 
 /* heart on/off - Turn HB on or off to the destination
  */
@@ -3329,15 +3460,16 @@ static int
 print_peer_addr_info(struct sctp_paddrinfo *so)
 {
   struct sctp_paddrparams sp;
-
   struct sockaddr *sa;
-  int siz;
+  socklen_t sa_len;
+  socklen_t siz;
+
   siz = sizeof(sp);
-  sa = SCTP_getAddr();
+  sa = SCTP_getAddr(&sa_len);
   memset(&sp,0,sizeof(sp));
   memset(so,0,sizeof(so));
-  memcpy((caddr_t)&sp.spp_address,sa,sa->sa_len);
-  memcpy((caddr_t)&so->spinfo_address,sa,sa->sa_len);
+  memcpy((caddr_t)&sp.spp_address, sa, sa_len);
+  memcpy((caddr_t)&so->spinfo_address, sa, sa_len);
   if(getsockopt(adap->fd,IPPROTO_SCTP,
 		SCTP_PEER_ADDR_PARAMS, &sp, &siz) != 0) {
     printf("Failed to get HB info err:%d\n",errno);
@@ -3355,19 +3487,20 @@ print_peer_addr_info(struct sctp_paddrinfo *so)
   printf("Destination RTO is %d\n",so->spinfo_rto);
   printf("Destination srtt is %d\n",so->spinfo_srtt);
   printf("Destination cwnd is %d\n",so->spinfo_cwnd);
-  printf("Assoc id is %x\n",(u_int)sp.spp_assoc_id);
+  printf("Assoc id is %x\n",(uint32_t)sp.spp_assoc_id);
   /* Disable this so we don't change it */
   return(0);
 }
 
-
 static int
 cmd_heart(char *argv[], int argc)
 {
+#if defined(__BSD_SCTP_STACK__)
 	struct sctp_paddrparams sp;
 	struct sctp_paddrinfo so;
 	struct sockaddr *sa;
-	int siz;
+	socklen_t sa_len;
+	socklen_t siz;
 	char *bool;
 
 	siz = sizeof(sp);
@@ -3376,7 +3509,7 @@ cmd_heart(char *argv[], int argc)
 		return -1;
 	}
 	bool = argv[0];
-	sa = SCTP_getAddr();
+	sa = SCTP_getAddr(&sa_len);
 	memset(&sp,0,sizeof(sp));
 	memset(&so,0,sizeof(so));
 
@@ -3384,7 +3517,7 @@ cmd_heart(char *argv[], int argc)
 		print_peer_addr_info(&so);
 		if(so.spinfo_state & SCTP_ADDR_NOHB){
 			siz = sizeof(sp);
-			memcpy((caddr_t)&sp.spp_address,sa,sa->sa_len);
+			memcpy((caddr_t)&sp.spp_address, sa, sa_len);
 			if(sp.spp_hbinterval == 0){
 				/* Set to a postive value */
 				sp.spp_hbinterval = 30000;
@@ -3436,7 +3569,7 @@ cmd_heart(char *argv[], int argc)
 		}
 		printf("Current fail thresh is %d\n",sp.spp_pathmaxrxt);
 		printf("Current HB interval is %d\n",sp.spp_hbinterval);
-		printf("Assoc id is %x\n",(u_int)sp.spp_assoc_id);
+		printf("Assoc id is %x\n",(uint32_t)sp.spp_assoc_id);
 	}else if(strcmp(bool, "allon") == 0) {
 		memset((caddr_t)&sp.spp_address,0,sizeof(sp.spp_address));
 		if(getsockopt(adap->fd,IPPROTO_SCTP,
@@ -3464,14 +3597,17 @@ cmd_heart(char *argv[], int argc)
 		}
 		printf("Current fail thresh is %d\n",sp.spp_pathmaxrxt);
 		printf("Current HB interval is %d\n",sp.spp_hbinterval);
-		printf("Assoc id is %x\n",(u_int)sp.spp_assoc_id);
+		printf("Assoc id is %x\n",(uint32_t)sp.spp_assoc_id);
 	}else{
 		printf("heart: expected on or off allon or alloff\n");
 		return -1;
 	}
 	return 0;
+#else
+	printf("Not supported on this OS\n");
+	return (0);
+#endif
 }
-
 
 /* heartdelay time - Add number of seconds + RTO to hb interval
  */
@@ -3480,7 +3616,9 @@ cmd_heartdelay(char *argv[], int argc)
 {
   struct sctp_paddrparams sp;
   struct sockaddr *sa;
-  int siz,val;
+  socklen_t sa_len;
+  socklen_t siz;
+  int val;
   int setaddr;
 
   setaddr = 1;
@@ -3500,10 +3638,10 @@ cmd_heartdelay(char *argv[], int argc)
   }
   val = strtol(argv[0],NULL,0);
   printf("val of hb set to %d\n",val);
-  sa = SCTP_getAddr();
+  sa = SCTP_getAddr(&sa_len);
   memset(&sp,0,sizeof(sp));
   if(setaddr)
-    memcpy((caddr_t)&sp.spp_address,sa,sa->sa_len);
+    memcpy((caddr_t)&sp.spp_address, sa, sa_len);
 
   if(getsockopt(adap->fd,IPPROTO_SCTP,
 		SCTP_PEER_ADDR_PARAMS, &sp, &siz) != 0) {
@@ -3562,8 +3700,7 @@ cmd_bulkstop(char *argv[], int argc)
     return 0;
 }
 
-/* hulkstart filename - start the hulk hogan process
- */
+/* hulkstart filename - start the hulk hogan process */
 static int
 cmd_hulkstart(char *argv[], int argc)
 {
@@ -3591,8 +3728,7 @@ cmd_hulkstart(char *argv[], int argc)
 }
 
 
-/* hulkstop - stop the hulk hogan process
- */
+/* hulkstop - stop the hulk hogan process */
 static int
 cmd_hulkstop(char *argv[], int argc)
 {
@@ -3608,8 +3744,7 @@ cmd_hulkstop(char *argv[], int argc)
 }
 
 
-/* initmultping - init contexts for a fast test
- */
+/* initmultping - init contexts for a fast test */
 static int
 cmd_initmultping(char *argv[], int argc)
 {
@@ -3699,14 +3834,17 @@ cmd_multping(char *argv[], int argc)
     return 0;
 }
 
+#if defined(__BSD_SCTP_STACK__)
 struct sctp_getaddresses *
 get_assoc_addresses(sctp_assoc_t id, int *numnets)
 {
   struct sctp_getaddresses *addrs;
   struct sockaddr *sa;
+  socklen_t sa_len = 0;
+  socklen_t siz;
   sctp_assoc_t asoc;
   caddr_t lim;
-  int siz,cnt;
+  int cnt;
 
   asoc = id;
   siz = sizeof(sctp_assoc_t);  
@@ -3719,7 +3857,7 @@ get_assoc_addresses(sctp_assoc_t id, int *numnets)
     printf("Sorry size returned is %d\n",siz);
     return(NULL);
   }
-  siz = (u_int32_t)asoc;
+  siz = (uint32_t)asoc;
   siz += sizeof(struct sctp_getaddresses);
   printf("Sizes for addresses are %d\n",siz);
   addrs = calloc(1,siz);
@@ -3740,20 +3878,30 @@ get_assoc_addresses(sctp_assoc_t id, int *numnets)
   sa = (struct sockaddr *)&addrs->addr[0];
   lim = (caddr_t)addrs + siz;
   while((caddr_t)sa < lim){
-    if(sa->sa_len == 0)
+#ifdef HAVE_SA_LEN
+	sa_len = sa->sa_len;
+#else
+	if (sa->sa_family == AF_INET)
+		sa_len = sizeof(struct sockaddr_in);
+	else if (sa->sa_family == AF_INET6)
+		sa_len = sizeof(struct sockaddr_in6);
+#endif
+    if (sa_len == 0)
       break;
     cnt++;
-    sa = (struct sockaddr *)((caddr_t)sa + sa->sa_len);
+    sa = (struct sockaddr *)((caddr_t)sa + sa_len);
   }
-  printf("returning %d addresses addr:%x\n",cnt, (u_int)addrs);
+  printf("returning %d addresses addr:%x\n",cnt, (uint32_t)addrs);
   if(numnets)
     *numnets = cnt;
   return(addrs);
 }
+#endif
 
 static char *
-sctp_network_state(u_int state)
+sctp_network_state(uint32_t state)
 {
+#if defined(__BSD_SCTP_STACK__)
     static char str_buf[256];
     int len;
     str_buf[0] = 0;
@@ -3791,25 +3939,31 @@ sctp_network_state(u_int state)
     if(str_buf[(len-1)] == '|')
         str_buf[(len-1)] = 0;
     return(str_buf);
+#else
+    return ("");
+#endif
 }
 
 
-/* netstats - return all network stats
- */
+/* netstats - return all network stats */
 static int
 cmd_netstats(char *argv[], int argc)
 {
-    int siz,numnets,i;
+#if defined(__BSD_SCTP_STACK__)
+    int numnets,i;
     sctp_assoc_t assoc_id;
     struct sctp_getaddresses *addrs;
     struct sockaddr *sa;
+    socklen_t sa_len = 0;
+    socklen_t siz;
+
     assoc_id = get_assoc_id();
     if(assoc_id == 0){
         printf("Can't find association\n");
         return(-1);
     }
 
-    printf("Setting on assoc id %x\n",(u_int)assoc_id);
+    printf("Setting on assoc id %x\n",(uint32_t)assoc_id);
     /* Now we get the association parameters so we know howm
      * many networks there are.
      */
@@ -3822,9 +3976,15 @@ cmd_netstats(char *argv[], int argc)
     sa = (struct sockaddr *)&addrs->addr[0];
     for(i=0;i<numnets;i++){
         struct sctp_paddrinfo addrwewant;
-        memcpy(&addrwewant.spinfo_address,
-               sa,
-               sa->sa_len);
+#ifdef HAVE_SA_LEN
+	sa_len = sa->sa_len;
+#else
+	if (sa->sa_family == AF_INET)
+		sa_len = sizeof(struct sockaddr_in);
+	else if (sa->sa_family == AF_INET6)
+		sa_len = sizeof(struct sockaddr_in6);
+#endif
+        memcpy(&addrwewant.spinfo_address, sa, sa_len);
         addrwewant.spinfo_assoc_id = assoc_id;
         siz = sizeof(addrwewant);
         printf("Address[%d]:\n",i);
@@ -3835,15 +3995,19 @@ cmd_netstats(char *argv[], int argc)
                       &addrwewant,&siz) != 0){
             printf("Failed to gather information, err:%d\n",errno);
         }else{
-            printf("State:%s,",sctp_network_state((u_int)addrwewant.spinfo_state));
+            printf("State:%s,",sctp_network_state((uint32_t)addrwewant.spinfo_state));
             printf("cwnd:%d,",addrwewant.spinfo_cwnd);
             printf("srtt:%d,",addrwewant.spinfo_srtt);
             printf("rto:%d\n",addrwewant.spinfo_rto);
         }
-        sa = (struct sockaddr *)((caddr_t)sa + sa->sa_len);
+        sa = (struct sockaddr *)((caddr_t)sa + sa_len);
     }
     free(addrs);
     return 0;
+#else
+	printf("Not supported on this OS\n");
+	return (0);
+#endif
 }
 
 
@@ -4037,7 +4201,7 @@ cmd_peeloff(char *argv[], int argc)
     return(-1);
   }
   printf("Peel off fd:%d assoc_id:%xh\n",
-	 adap->fd,(u_int)assoc_id);
+	 adap->fd,(uint32_t)assoc_id);
   /*newfd = sctp_peeloff(adap->fd,&assoc_id); */
   if(newfd < 0){
     printf("Peel-off failed errno:%d\n",errno);
@@ -4052,12 +4216,14 @@ static int cmd_getlocaladdrs(char *argv[], int argc)
 {
   struct sockaddr *raddr;
   struct sockaddr *sa;
+  socklen_t sa_len;
   int cnt,i;
   sctp_assoc_t id;
+
   id = get_assoc_id();
   raddr = NULL;
-  printf("Got asoc id %x\n",(u_int)id);
-  cnt = sctp_getladdrs(adap->fd,id,&raddr);
+  printf("Got asoc id %x\n",(uint32_t)id);
+  cnt = sctp_getladdrs(adap->fd, id, (void *)&raddr);
   printf("Cnt returned is %d\n",cnt);
   if(raddr != NULL){
     if(id)
@@ -4066,10 +4232,18 @@ static int cmd_getlocaladdrs(char *argv[], int argc)
       printf("Got %d addresses on my endpoint\n",cnt);
     sa = raddr;
     for(i=0;i<cnt;i++){
+#ifdef HAVE_SA_LEN
+     sa_len = sa->sa_len;
+#else
+     if (sa->sa_family == AF_INET)
+	sa_len = sizeof(struct sockaddr_in);
+     else if (sa->sa_family == AF_INET)
+	sa_len = sizeof(struct sockaddr_in6);
+#endif
       printf("Address[%d] ",i);
       SCTPPrintAnAddress(sa);
-      sa = (struct sockaddr *)((caddr_t)sa + sa->sa_len);
-      if(sa->sa_len == 0)
+      sa = (struct sockaddr *)((caddr_t)sa + sa_len);
+      if (sa_len == 0)
 	break;
     }
     sctp_freeladdrs(raddr);
@@ -4080,7 +4254,8 @@ static int
 cmd_getstatus(char *argv[], int argc)
 {
   struct sctp_status stat;
-  int sz;
+  socklen_t sz;
+
   memset(&stat,0,sizeof(stat));
   stat.sstat_assoc_id = get_assoc_id();
   sz = sizeof(struct sctp_status);
@@ -4092,10 +4267,10 @@ cmd_getstatus(char *argv[], int argc)
     printf("Can't do GET_STATUS socket option! err:%d\n", errno);
     return(-1);
   }
-  printf("Association Id:%x\n",(u_int)stat.sstat_assoc_id);
-  printf("      State   :%x\n",(u_int)stat.sstat_state);
-  printf("    unacked   :%x\n",(u_int)stat.sstat_unackdata);
-  printf("    pending   :%x\n",(u_int)stat.sstat_penddata);
+  printf("Association Id:%x\n",(uint32_t)stat.sstat_assoc_id);
+  printf("      State   :%x\n",(uint32_t)stat.sstat_state);
+  printf("    unacked   :%x\n",(uint32_t)stat.sstat_unackdata);
+  printf("    pending   :%x\n",(uint32_t)stat.sstat_penddata);
   printf("    in-strm   :%d\n",(int)stat.sstat_instrms);
   printf("   out-strm   :%d\n",(int)stat.sstat_outstrms);
   printf("   frag-point :%d\n",(int)stat.sstat_fragmentation_point);
@@ -4115,7 +4290,8 @@ static int
 cmd_getevents(char *argv[], int argc)
 {
   struct sctp_event_subscribe event;
-  int sz;
+  socklen_t sz;
+
   sz = sizeof(event);
   memset(&event,0,sizeof(event));
   if (getsockopt(adap->fd, IPPROTO_SCTP, SCTP_EVENTS, &event, &sz) != 0) {
@@ -4155,7 +4331,7 @@ cmd_rwnd(char *argv[], int argc)
 {
   struct sctp_assocparams sasoc;
   sctp_assoc_t assoc_id;
-  int sz;
+  socklen_t sz;
 
   assoc_id = get_assoc_id();
   if(assoc_id == 0){
@@ -4163,7 +4339,7 @@ cmd_rwnd(char *argv[], int argc)
     return(-1);
   }
 
-  printf("Setting on assoc id %x\n",(u_int)assoc_id);
+  printf("Setting on assoc id %x\n",(uint32_t)assoc_id);
   sasoc.sasoc_assoc_id = assoc_id;
   sz = sizeof(sasoc);  
   if(getsockopt(adap->fd,IPPROTO_SCTP,
@@ -4199,7 +4375,7 @@ cmd_send(char *argv[], int argc)
 	       "before sending\n");
 	return -1;
     }
-    ret = sctpSEND(fd, defStream, argv[0], strlen(argv[0]), SCTP_getAddr(),
+    ret = sctpSEND(fd, defStream, argv[0], strlen(argv[0]), SCTP_getAddr(NULL),
 		   sendOptions, payload, 0);
     printf("Returned %d from the send\n",ret);
     return 0;
@@ -4212,7 +4388,7 @@ cmd_sendasoc(char *argv[], int argc)
 {
     int fd = adap->fd;
     int ret;
-    u_int32_t aaa;
+    uint32_t aaa;
     sctp_assoc_t asoc;
     if (argc < 2) {
 	printf("send: expected at least 2 argument\n");
@@ -4232,6 +4408,7 @@ cmd_sendasoc(char *argv[], int argc)
 static int 
 cmd_sctpsendx(char *argv[], int argc)
 {
+#if defined(__BSD_SCTP_STACK__)
 	struct sctp_sndrcvinfo s_info;
 	int fd = adap->fd;
 	int port1;
@@ -4289,12 +4466,15 @@ cmd_sctpsendx(char *argv[], int argc)
 	s_info.sinfo_timetolive = time_to_live;
 	s_info.sinfo_assoc_id = 0;
 	ret = sctp_sendx(fd, argv[0], strlen(argv[0]), sa, addr_cnt, &s_info,0);
-	printf("sctp_sendx returned %d from the send\n",ret);
+	printf("Return from sctp_sendx is %d\n",ret);
 	return 0;
+#else
+	printf("Not supported on this OS\n");
+	return (0);
+#endif
 }
 
-/* sendloop [num] - send test script loopback request of num size
- */
+/* sendloop [num] - send test script loopback request of num size */
 static int
 cmd_sendloop(char *argv[], int argc)
 {
@@ -4326,7 +4506,7 @@ cmd_sendloopend(char *argv[], int argc)
       x = 64;
     }
     printf("Send loop request returns:%d\n",sendLoopRequest(fd,x));
-    sctpTERMINATE(fd,SCTP_getAddr());
+    sctpTERMINATE(fd, SCTP_getAddr(NULL));
     printf("Sent loop and terminate queued\n");
     return 0;
 }
@@ -4343,7 +4523,8 @@ cmd_sendreltlv(char *argv[], int argc)
     char *xxx;
     struct sctpParamDesc *TLVout;
     struct SCTP_association *asoc;
-     struct sockaddr *add;
+    struct sockaddr *add;
+    socklen_t add_len;
 
     if (argc != 1) {
 	printf("sendreltlv: expected 1 argument\n");
@@ -4355,7 +4536,7 @@ cmd_sendreltlv(char *argv[], int argc)
      * a test by dumpping inqueue anything we want for a REL-REQ.
      */
   /*
-    add = SCTP_getAddr();
+    add = SCTP_getAddr(NULL);
 
     asoc = SCTPfindAssociation(fd, (struct sockaddr *)add, &sz);
     if(asoc == NULL){
@@ -4455,8 +4636,6 @@ cmd_setbulkmode(char *argv[], int argc)
 	return -1;
     }
     return 0;
-
-
 }
 
 
@@ -4514,8 +4693,9 @@ cmd_seterr(char *argv[], int argc)
   struct sctp_assocparams sasoc;
   struct sctp_paddrparams sp;
   struct sockaddr *sa;
-  int siz,num;
-
+  socklen_t sa_len;
+  socklen_t siz;
+  int num;
 
   if (argc < 1) {
     printf("defretrys: expected 1 argument\n");
@@ -4529,20 +4709,18 @@ cmd_seterr(char *argv[], int argc)
   memset(&sasoc,0,sizeof(sasoc));
   /* Set in the value */
   sasoc.sasoc_asocmaxrxt = num;
-  /* Get the association id so I can set
-   * this only on the assoc.
-   */
+  /* Get the association id so I can set this only on the assoc. */
 
   siz = sizeof(sp);
-  sa = SCTP_getAddr();
+  sa = SCTP_getAddr(&sa_len);
   memset(&sp,0,sizeof(sp));
-  memcpy((caddr_t)&sp.spp_address,sa,sa->sa_len);
+  memcpy((caddr_t)&sp.spp_address, sa, sa_len);
   if(getsockopt(adap->fd,IPPROTO_SCTP,
 		SCTP_PEER_ADDR_PARAMS, &sp, &siz) != 0) {
     printf("Failed to get assoc id with HB info err:%d\n",errno);
     return 0;
   }
-  printf("Setting on assoc id %x\n",(u_int)sp.spp_assoc_id);
+  printf("Setting on assoc id %x\n",(uint32_t)sp.spp_assoc_id);
   sasoc.sasoc_assoc_id = sp.spp_assoc_id;
   if(setsockopt(adap->fd,IPPROTO_SCTP,
 		SCTP_ASSOCINFO, &sasoc, sizeof(sasoc)) != 0) {
@@ -4570,7 +4748,7 @@ cmd_sethost(char *argv[], int argc)
     }
     destinationSet++;
     printf("To Set ");
-    SCTPPrintAnAddress(SCTP_getAddr());
+    SCTPPrintAnAddress(SCTP_getAddr(NULL));
     return 0;
 }
 
@@ -4590,16 +4768,16 @@ cmd_sethost6(char *argv[], int argc)
     }
     destinationSet++;
     printf("To Set ");
-    SCTPPrintAnAddress(SCTP_getAddr());
+    SCTPPrintAnAddress(SCTP_getAddr(NULL));
     return 0;
 }
 
 
-/* setneterr net val - set the association network error thresh
- */
+/* setneterr net val - set the association network error thresh */
 static int
 cmd_setneterr(char *argv[], int argc)
 {
+#if defined(__BSD_SCTP_STACK__)
   struct sctp_getaddresses *addrs;
   struct sctp_paddrparams paddr;
   sctp_assoc_t assoc_id;
@@ -4644,22 +4822,37 @@ cmd_setneterr(char *argv[], int argc)
   }
   free(addrs);
   return 0;
+#else
+	printf("Not supported on this OS\n");
+	return (0);
+#endif
 }
-
 
 static int
 parse_send_opt(char *p)
 {
   printf("Parsing option '%s'\n",p);
   if(strcmp(p,"prsctp") == 0){
+#if !defined(__BSD_SCTP_STACK__)
+  printf("%s option: Not supported on this OS\n", p);
+#endif
     return(SCTP_PR_SCTP_TTL);
   }else if(strcmp(p,"bufbnd") == 0){
+#if !defined(__BSD_SCTP_STACK__)
+  printf("%s option: Not supported on this OS\n", p);
+#endif
     return(SCTP_PR_SCTP_BUF);
   }else if(strcmp(p,"unord") == 0){
     return(SCTP_UNORDERED);
   }else if(strcmp(p,"over") == 0){
+#if !defined(__BSD_SCTP_STACK__)
+  printf("%s option: Not supported on this OS\n", p);
+#endif
     return(SCTP_ADDR_OVER);
   }else if(strcmp(p,"sendall") == 0){
+#if !defined(__BSD_SCTP_STACK__)
+  printf("%s option: Not supported on this OS\n", p);
+#endif
     return (SCTP_SENDALL);
   }else if(strcmp(p,"none") == 0){
     return(0);
@@ -4721,14 +4914,14 @@ cmd_setport(char *argv[], int argc)
   pt = (unsigned short)strtol(argv[0],NULL,0);
   SCTP_setport(htons(pt)); 
   printf("Address set to ");
-  SCTPPrintAnAddress(SCTP_getAddr());
+  SCTPPrintAnAddress(SCTP_getAddr(NULL));
   portSet++;
   return 0;
 }
 
-
 static int cmd_setautoasconf(char *argv[], int argc)
 {
+#if defined(__BSD_SCTP_STACK__)
 	int num;
 	if(argc < 1){
 		printf("setautoasconf needs numric value 0/1\n");
@@ -4742,11 +4935,18 @@ static int cmd_setautoasconf(char *argv[], int argc)
 	}
 	printf("auto asconf is now %s\n", ((num) ? "on" : "off"));
 	return 0;
+#else
+	printf("Not supported on this OS\n");
+	return (0);
+#endif
 }
 
 static int cmd_getautoasconf(char *argv[], int argc)
 {
-	int num, optlen;
+#if defined(__BSD_SCTP_STACK__)
+	int num;
+	socklen_t optlen;
+
 	optlen = sizeof(num);
 	if(getsockopt(adap->fd,IPPROTO_SCTP,
 		      SCTP_AUTO_ASCONF,&num,&optlen) != 0) {
@@ -4755,16 +4955,21 @@ static int cmd_getautoasconf(char *argv[], int argc)
 	}
 	printf("auto asconf is now %s\n", ((num) ? "on" : "off"));
 	return 0;
+#else
+	printf("Not supported on this OS\n");
+	return (0);
+#endif
 }
-
 
 /* setprimary - set current ip address to the primary address
  */
 static int
 cmd_setprimary(char *argv[], int argc)
 {
+#if defined(__BSD_SCTP_STACK__)
   struct sctp_getaddresses *addrs;
   struct sockaddr *sa;
+  socklen_t sa_len = 0;
   struct sctp_setprim prim;
   int numnets,num,i;
   sctp_assoc_t assoc_id;
@@ -4789,13 +4994,19 @@ cmd_setprimary(char *argv[], int argc)
   }
   sa = (struct sockaddr *)&addrs->addr[0];
   for(i=0;i<numnets;i++){
+#ifdef HAVE_SA_LEN
+  sa_len = sa->sa_len;
+#else
+  if (sa->sa_family == AF_INET)
+	sa_len = sizeof(struct sockaddr_in);
+  else if (sa->sa_family == AF_INET6)
+	sa_len = sizeof(struct sockaddr_in6);
+#endif
 	  if(i == num){
-		  memcpy(&prim.ssp_addr,
-			 sa,
-			 sa->sa_len);
+		  memcpy(&prim.ssp_addr, sa, sa_len);
 		  break;
 	  }
-	  sa = (struct sockaddr *)((caddr_t)sa + sa->sa_len);
+	  sa = (struct sockaddr *)((caddr_t)sa + sa_len);
   }
   prim.ssp_assoc_id = assoc_id;
   free(addrs);
@@ -4808,16 +5019,20 @@ cmd_setprimary(char *argv[], int argc)
   printf("Primary address is ");
   SCTPPrintAnAddress((struct sockaddr *)&prim.ssp_addr);
   return 0;
+#else
+	printf("Not supported on this OS\n");
+	return (0);
+#endif
 }
 
 
-/* setremprimary address - set remote's primary address
- */
+/* setremprimary address - set remote's primary address */
 static int
 cmd_setremprimary(char *argv[], int argc)
 {
   char *address;
   struct addrinfo hints, *res;
+  socklen_t sa_len = 0;
   struct sctp_setpeerprim sspp;
   int ret;
 
@@ -4842,7 +5057,15 @@ cmd_setremprimary(char *argv[], int argc)
     return(-1);
   }
 
-  memcpy(&sspp.sspp_addr,res->ai_addr,res->ai_addr->sa_len);
+#ifdef HAVE_SA_LEN
+  sa_len = res->ai_addr->sa_len;
+#else
+  if (res->ai_addr->sa_family == AF_INET)
+	sa_len = sizeof(struct sockaddr_in);
+  else if (res->ai_addr->sa_family == AF_INET6)
+	sa_len = sizeof(struct sockaddr_in6);
+#endif
+  memcpy(&sspp.sspp_addr,res->ai_addr,sa_len);
   if(setsockopt(adap->fd,IPPROTO_SCTP,
 		SCTP_SET_PEER_PRIMARY_ADDR,&sspp,sizeof(sspp)) != 0) {
     printf("Can't set peer primary address error:%d\n",errno);
@@ -4861,17 +5084,17 @@ cmd_setremprimary(char *argv[], int argc)
 static int
 cmd_setscope(char *argv[], int argc)
 {
-    u_int scop;
+    uint32_t scop;
 
     if (argc != 1) {
 	printf("setscope: expected 1 argument\n");
 	return -1;
     }
-    scop = (u_int)strtol(argv[0],NULL,0);
+    scop = (uint32_t)strtol(argv[0],NULL,0);
     /* XXX add input validation */
     SCTP_setIPv6scope(scop);
     printf("Set scope id of %d address\n",scop);
-    SCTPPrintAnAddress(SCTP_getAddr());
+    SCTPPrintAnAddress(SCTP_getAddr(NULL));
     return 0;
 }
 
@@ -4909,7 +5132,7 @@ cmd_startmultping(char *argv[], int argc)
 	    if((pingPongTable[i].stream != -1) &&
 	       (pingPongTable[i].started == 0)){
 		sctpSEND(fd,pingPongTable[i].stream,pingBuffer,pingBufSize,
-			 SCTP_getAddr(),sendOptions,payload,0);      
+			 SCTP_getAddr(NULL),sendOptions,payload,0);      
 		pingPongTable[i].started = 1;
 		x = time(NULL);
 		timeptr = localtime(&x);
@@ -4963,7 +5186,7 @@ cmd_term(char *argv[], int argc)
 	shutdown(fd,SHUT_RDWR);
       }
     }else{
-      sctpTERMINATE(fd,SCTP_getAddr());
+      sctpTERMINATE(fd,SCTP_getAddr(NULL));
     }
     return 0;
 }
@@ -4974,10 +5197,7 @@ cmd_term(char *argv[], int argc)
 static int
 cmd_whereto(char *argv[], int argc)
 {
-    struct sockaddr *to;
-
     printf("Currently sending to:");
-    to = SCTP_getAddr();
-    SCTPPrintAnAddress(to);
+    SCTPPrintAnAddress(SCTP_getAddr(NULL));
     return 0;
 }

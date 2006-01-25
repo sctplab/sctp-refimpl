@@ -16,7 +16,7 @@ TARGET=Darwin
 HOST=powerpc
 COMPILERDIR=/usr
 
-COMPILEFLAGS=  -DWITH_IP_HDRINCL -DUSES_BSD_4_4_SOCKET -DHAS_DEVICE_RANDOM -Wunused -Wimplicit -Werror -L/sw/lib
+COMPILEFLAGS=  -DWITH_IP_HDRINCL -DHAVE_SA_LEN -DHAS_DEVICE_RANDOM -Wunused -Wimplicit -Werror -L/sw/lib
 
 LIBDIR=Darwin
 OBJDIR=Darwin
@@ -75,7 +75,7 @@ MACHINE=LYNX
 OPT_CFLAGS= -mthreads
 
 CC=$(COMPILER) 
-COMPILEFLAGS= -DCYGNUS -D_NO_SIOCGIFMTU_ -DUSES_BSD_4_4_SOCKET -DWITH_IP_HDRINCL
+COMPILEFLAGS= -DCYGNUS -D_NO_SIOCGIFMTU_ -DHAVE_SA_LEN -DWITH_IP_HDRINCL
 # _USE_SELECT_ *not* included in COMPILERFLAGS
 
 endif
@@ -115,7 +115,7 @@ MACHINE=FREEBSD
 
 CC=$(COMPILER) 
 
-COMPILEFLAGS=  -DWITH_IP_HDRINCL -DUSES_BSD_4_4_SOCKET -DHAS_DEVICE_RANDOM -Wunused -Wimplicit -Werror
+COMPILEFLAGS=  -DWITH_IP_HDRINCL -DHAVE_SA_LEN -DHAS_DEVICE_RANDOM -Wunused -Wimplicit -Werror
 
 endif
 # ^^^ ifeq ($(GUESS_HOST),FreeBSD)
@@ -134,7 +134,7 @@ MACHINE=OpenBSD
 
 CC=$(COMPILER) 
 
-COMPILEFLAGS=  -I/usr/local/include -L/usr/local/lib -I/usr/pkg/include -L/usr/pkg/lib -I/usr/include -DWITH_IP_HDRINCL -DUSES_BSD_4_4_SOCKET -DHAS_DEVICE_RANDOM
+COMPILEFLAGS=  -I/usr/local/include -L/usr/local/lib -I/usr/pkg/include -L/usr/pkg/lib -I/usr/include -DWITH_IP_HDRINCL -DHAVE_SA_LEN -DHAS_DEVICE_RANDOM
 
 endif
 # ^^^ ifeq ($(GUESS_HOST),OpenBSD)
@@ -153,7 +153,7 @@ MACHINE=NETBSD
 
 CC=$(COMPILER) 
 
-COMPILEFLAGS=  -I/usr/local/include -L/usr/local/lib -I/usr/pkg/include -L/usr/pkg/lib -I/usr/include -DWITH_IP_HDRINCL -DUSES_BSD_4_4_SOCKET -DHAS_DEVICE_RANDOM
+COMPILEFLAGS=  -I/usr/local/include -L/usr/local/lib -I/usr/pkg/include -L/usr/pkg/lib -I/usr/include -DWITH_IP_HDRINCL -DHAVE_SA_LEN -DHAS_DEVICE_RANDOM
 
 endif
  # ^^^ ifeq ($(GUESS_HOST),NetBSD)
@@ -197,7 +197,7 @@ TARGET=AIX
 HOST=aix
 COMPILERDIR=/usr/local
 
-COMPILEFLAGS= -DWITH_IP_HDRINCL -DUSES_BSD_4_4_SOCKET -DDEBUG_ON
+COMPILEFLAGS= -DWITH_IP_HDRINCL -DHAVE_SA_LEN -DDEBUG_ON
 
 LIBDIR=aix
 OBJDIR=aix
