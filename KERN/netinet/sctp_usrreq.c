@@ -1,7 +1,7 @@
 /*	$KAME: sctp_usrreq.c,v 1.48 2005/03/07 23:26:08 itojun Exp $	*/
 
 /*
- * Copyright (c) 2001-2005 Cisco Systems, Inc.
+ * Copyright (c) 2001-2006 Cisco Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -149,7 +149,7 @@ unsigned int sctp_init_rto_max_default = SCTP_RTO_UPPER_BOUND;
 unsigned int sctp_valid_cookie_life_default = SCTP_DEFAULT_COOKIE_LIFE;
 unsigned int sctp_init_rtx_max_default = SCTP_DEF_MAX_INIT;
 unsigned int sctp_assoc_rtx_max_default = SCTP_DEF_MAX_SEND;
-unsigned int sctp_path_rtx_max_default = SCTP_DEF_MAX_SEND/2;
+unsigned int sctp_path_rtx_max_default = SCTP_DEF_MAX_PATH_RTX;
 unsigned int sctp_nr_outgoing_streams_default = SCTP_OSTREAM_INITIAL;
 unsigned int sctp_cmt_on_off = 0;
 unsigned int sctp_cmt_sockopt_on_off = 0;
@@ -753,7 +753,7 @@ SYSCTL_UINT(_net_inet_sctp, OID_AUTO, cmt_use_dac, CTLFLAG_RW,
 	    &sctp_cmt_use_dac, 0,
 	    "CMT DAC ON/OFF flag");
 
-SYSCTL_UINT(_net_inet_sctp, OID_AUTO, sctp_abc_l_var , CTLFLAG_RW,
+SYSCTL_INT(_net_inet_sctp, OID_AUTO, abc_l_var , CTLFLAG_RW,
 	    &sctp_L2_abc_variable, 0,
 	    "SCTP ABC max increase per SACK (L)");
 
@@ -5321,7 +5321,7 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
 
        sysctl_createv(clog, 0, NULL, NULL,
                        CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
-                       CTLTYPE_INT, "sctp_abc_l_var",
+                       CTLTYPE_INT, "abc_l_var",
 		       SYSCTL_DESCR("SCTP ABC max increase per SACK (L)"),
                        NULL, 0, &sctp_L2_abc_variable, 0,
 		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_ABC_L_VAR,

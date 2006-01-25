@@ -1,7 +1,7 @@
 /*	$KAME: sctp_timer.c,v 1.29 2005/03/06 16:04:18 itojun Exp $	*/
 
 /*
- * Copyright (C) 2002-2005 Cisco Systems Inc,
+ * Copyright (C) 2002-2006 Cisco Systems Inc,
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -278,7 +278,7 @@ sctp_threshold_management(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			    net->failure_threshold);
 		}
 #endif /* SCTP_DEBUG */
-		if (net->error_count >= net->failure_threshold) {
+		if (net->error_count > net->failure_threshold) {
 			/* We had a threshold failure */
 			if (net->dest_state & SCTP_ADDR_REACHABLE) {
 				net->dest_state &= ~SCTP_ADDR_REACHABLE;
