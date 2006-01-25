@@ -7,7 +7,7 @@
 #include <sys/kernel.h>
 #endif
 /*
- * Copyright (c) 2001, 2002, 2003, 2004, 2005 Cisco Systems, Inc.
+ * Copyright (c) 2001-2006 Cisco Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -510,6 +510,7 @@
 
 #define SCTP_DEF_MAX_INIT	8
 #define SCTP_DEF_MAX_SEND	10
+#define SCTP_DEF_MAX_PATH_RTX	4
 
 #define SCTP_DEF_PMTU_RAISE_SEC	600  /* 10 min between raise attempts */
 #define SCTP_DEF_PMTU_MIN	600
