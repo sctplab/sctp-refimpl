@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/baselib/udpDist.c,v 1.1.1.1 2004-06-23 13:07:29 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/baselib/udpDist.c,v 1.2 2006-01-25 18:46:39 lei Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -60,14 +60,15 @@ udpFDawaken(void *o,int fd,int event)
     env.streamSeq = 0;
     env.siz = env.totSize = ret;
   
-  
     env.from = (void *)&s;
+    env.from_len = (u_int)len;
     env.type = PROTOCOL_Udp;
     /* No others yet, we are the originator */
     env.origFrom = NULL;
     env.origType =  PROTOCOL_Unknown;
     /* Don't have the to info */
     env.to = NULL;
+    env.to_len = 0;
     env.distrib = (void *)obj->dist;
     env.sender = (void *)obj;	
     /* ok, we have a message of ret bytes, distribute it */
@@ -108,7 +109,7 @@ createudpDist(distributor *dist,u_short port,u_short family)
     /* we take any port and address */
     sin.sin_port = port;
     sin.sin_family = AF_INET;
-#ifdef USES_BSD_4_4_SOCKET
+#ifdef HAVE_SA_LEN
     sin.sin_len = sizeof(struct sockaddr_in);
 #endif
     bind(obj->udpfd,(struct sockaddr *)&sin,sizeof(struct sockaddr_in));
@@ -118,7 +119,7 @@ createudpDist(distributor *dist,u_short port,u_short family)
     /* we take any port and address */
     sin6.sin6_port = port;
     sin6.sin6_family = AF_INET6;
-#ifdef USES_BSD_4_4_SOCKET
+#ifdef HAVE_SA_LEN
     sin6.sin6_len = sizeof(struct sockaddr_in6);
 #endif
     bind(obj->udpfd,(struct sockaddr *)&sin6,sizeof(struct sockaddr_in6));
@@ -135,7 +136,7 @@ createudpDist(distributor *dist,u_short port,u_short family)
     int x;
     x = sizeof(struct sockaddr_storage);
     memset((char *)&s,0,sizeof(s));
-#ifdef USES_BSD_4_4_SOCKET
+#ifdef HAVE_SA_LEN
     s.ss_len = x;
 #endif
     if(getsockname(obj->udpfd,(struct sockaddr *)&s,&x) < 0){

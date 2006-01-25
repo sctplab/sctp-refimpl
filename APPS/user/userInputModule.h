@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.h,v 1.1.1.1 2004-06-23 13:07:29 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.h,v 1.2 2006-01-25 18:46:40 lei Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -55,7 +55,9 @@
 
 #include "sctpAdaptor.h"
 #include <distributor.h>
+#if defined(__FreeBSD__) || defined(__APPLE__)
 #include <netinet/sctp_constants.h>
+#endif
 
 #ifdef	__cplusplus
 extern "C" {

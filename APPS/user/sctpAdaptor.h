@@ -1,6 +1,6 @@
 #ifndef __sctpAdaptor_h__
 #define __sctpAdaptor_h__
-/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.h,v 1.1.1.1 2004-06-23 13:07:29 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.h,v 1.2 2006-01-25 18:46:40 lei Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -31,7 +31,9 @@
  * SUCH DAMAGE.
  */
 
+#if defined(__FreeBSD__) || defined(__APPLE__)
 #include <netinet/sctp_uio.h>
+#endif
 #include <distributor.h>
 
 /* This constant (SCTP_MAX_READBUFFER) define
@@ -100,7 +102,7 @@ u_short SCTP_getport();
 
 void SCTP_setcurrent(sctpAdaptorMod *r);
 
-struct sockaddr *SCTP_getAddr();
+struct sockaddr *SCTP_getAddr(socklen_t *len);
 
 int SCTP_getBind(void);
 
