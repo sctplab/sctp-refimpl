@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.9 2006-01-25 18:46:40 lei Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.10 2006-01-26 06:24:00 lei Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -44,8 +44,10 @@
 #include <sys/stat.h>
 #include <sys/socket.h>
 #include <net/if.h>
+#ifndef LINUX
 #include <net/if_types.h>
 #include <net/if_dl.h>
+#endif
 #include <netinet/in.h>
 
 #include <stdarg.h>
@@ -90,7 +92,9 @@ handle_notification(int fd,char *notify_buf) {
 	struct sctp_remote_error *sre;
 	struct sctp_send_failed *ssf;
 	struct sctp_shutdown_event *sse;
+#if defined(__BSD_SCTP_STACK__)
 	struct sctp_stream_reset_event *strrst;
+#endif
 	int asocDown;
 	char *str;
 	char buf[256];
@@ -311,7 +315,8 @@ sctpReadInput(int fd, distributor *o,sctpAdaptorMod *r)
 {
   /* receive some number of datagrams and act on them. */
   struct sctp_sndrcvinfo *s_info;
-  int sz,i,disped,ll,ll2;
+  socklen_t from_len;
+  int sz,i,disped,ll;
   messageEnvolope msgout;
   struct msghdr msg;
   struct iovec iov[2];
@@ -326,8 +331,8 @@ sctpReadInput(int fd, distributor *o,sctpAdaptorMod *r)
      (r->model & SCTP_TCP_IS_LISTENING)){
     /* are we using TCP model here, maybe */
     int newfd;
-    sz = sizeof(from);
-    newfd = accept(fd,(struct sockaddr *)from,&sz);
+    from_len = sizeof(from);
+    newfd = accept(fd, (struct sockaddr *)from, &from_len);
     if(newfd != -1){
       printf("New fd accepted fd=%d from:",newfd);
       SCTPPrintAnAddress((struct sockaddr *)from);
@@ -345,7 +350,7 @@ sctpReadInput(int fd, distributor *o,sctpAdaptorMod *r)
   iov[1].iov_base = NULL;
   iov[1].iov_len = 0;
   msg.msg_name = (caddr_t)from;
-  ll2 = msg.msg_namelen = sizeof(from);
+  msg.msg_namelen = from_len;
   msg.msg_iov = iov;
   msg.msg_iovlen = 1;
   msg.msg_control = (caddr_t)controlVector;
@@ -355,7 +360,7 @@ sctpReadInput(int fd, distributor *o,sctpAdaptorMod *r)
 		     readBuffer, 
 		     (size_t)ll,
 		     (struct sockaddr *)&from,
-		     (socklen_t *)&ll2,
+		     &from_len,
 		     &o_info,
 		     &msg.msg_flags);
   s_info = &o_info;
@@ -629,7 +634,7 @@ sctpAdaptorMod *
 create_SCTP_adaptor(distributor *o,uint16_t port, int model, int rwnd , int swnd )
 {
   sctpAdaptorMod *r;
-  int length;
+  socklen_t length;
   struct sockaddr_in6 inAddr6,myAddr6;
   struct sctp_event_subscribe event;
   int optval;
@@ -726,7 +731,7 @@ create_SCTP_adaptor(distributor *o,uint16_t port, int model, int rwnd , int swnd
     return(NULL);
   }
   length = sizeof(myAddr6);
-  if(getsockname(r->fd,(struct sockaddr *)&myAddr6,&length) < 0){
+  if(getsockname(r->fd, (struct sockaddr *)&myAddr6, &length) < 0){
     printf("get sockname failed err:%d\n",errno);
     close(r->fd);
     free(r);

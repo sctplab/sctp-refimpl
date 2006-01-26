@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.22 2006-01-25 18:46:40 lei Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.23 2006-01-26 06:24:00 lei Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -59,8 +59,10 @@
 #include <stdint.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#if defined (__FreeBSD__) || defined(__APPLE__)
 #include <net/if_dl.h>
 #include <sys/filio.h>
+#endif
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <stdarg.h>
@@ -80,9 +82,11 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #include <netinet/sctp.h>
+
 #if defined(__BSD_SCTP_STACK__)
 #include <netinet/sctp_uio.h>
 #endif
+
 static int execute_line(const char *line);
 static char *command_generator(char *text, int state);
 
@@ -626,7 +630,9 @@ SCTPPrintAnAddress(struct sockaddr *a)
     srcaddr = (char *)&((struct sockaddr_in6 *)a)->sin6_addr;
     prt = ntohs(((struct sockaddr_in6 *)a)->sin6_port);
     txt = "IPv6 Address: ";
-  }else if(a->sa_family == AF_LINK){
+  }
+#ifndef LINUX
+  else if(a->sa_family == AF_LINK){
     int i;
     char tbuf[200];
     u_char adbuf[200];
@@ -652,7 +658,9 @@ SCTPPrintAnAddress(struct sockaddr *a)
     printf("\n");
     /*	u_short	sdl_route[16];*/	/* source routing information */
     return;
-  }else{
+  }
+#endif
+  else{
     return;
   }
   if(inet_ntop(a->sa_family,srcaddr,stringToPrint,sizeof(stringToPrint))){
@@ -3366,14 +3374,17 @@ cmd_getpegs(char *argv[], int argc)
 #endif
 }
 
-/* getprimary - tells which net number is primary
- */
+/* getprimary - tells which net number is primary */
 static int
 cmd_getprimary(char *argv[], int argc)
 {
   struct sockaddr *sa;
   socklen_t sa_len;
+#ifdef LINUX
+  struct sctp_prim prim;
+#else
   struct sctp_setprim prim;
+#endif
   socklen_t siz;
 
   memset(&prim,0,sizeof(prim));
@@ -3454,8 +3465,7 @@ cmd_getsnd(char *argv[], int argc)
 #endif
 }
 
-/* heart on/off - Turn HB on or off to the destination
- */
+#if defined(__BSD_SCTP_STACK__)
 static int
 print_peer_addr_info(struct sctp_paddrinfo *so)
 {
@@ -3491,7 +3501,9 @@ print_peer_addr_info(struct sctp_paddrinfo *so)
   /* Disable this so we don't change it */
   return(0);
 }
+#endif
 
+/* heart on/off - Turn HB on or off to the destination */
 static int
 cmd_heart(char *argv[], int argc)
 {
@@ -3609,8 +3621,7 @@ cmd_heart(char *argv[], int argc)
 #endif
 }
 
-/* heartdelay time - Add number of seconds + RTO to hb interval
- */
+/* heartdelay time - Add number of seconds + RTO to hb interval */
 static int
 cmd_heartdelay(char *argv[], int argc)
 {
@@ -3898,10 +3909,10 @@ get_assoc_addresses(sctp_assoc_t id, int *numnets)
 }
 #endif
 
+#if defined(__BSD_SCTP_STACK__)
 static char *
 sctp_network_state(uint32_t state)
 {
-#if defined(__BSD_SCTP_STACK__)
     static char str_buf[256];
     int len;
     str_buf[0] = 0;
@@ -3939,10 +3950,8 @@ sctp_network_state(uint32_t state)
     if(str_buf[(len-1)] == '|')
         str_buf[(len-1)] = 0;
     return(str_buf);
-#else
-    return ("");
-#endif
 }
+#endif
 
 
 /* netstats - return all network stats */

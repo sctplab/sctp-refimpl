@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/baselib/udpDist.c,v 1.2 2006-01-25 18:46:39 lei Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/baselib/udpDist.c,v 1.3 2006-01-26 06:24:01 lei Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -34,10 +34,11 @@
 int
 udpFDawaken(void *o,int fd,int event)
 {
-  int ret,len;
+  int ret;
   char readbuf[UDPDIST_MAXMESSAGE],*dat;
   messageEnvolope env;
   struct sockaddr_storage s;  
+  socklen_t sa_len;
   struct udpDist *obj;
   obj = (struct udpDist *)o;
   if(fd != obj->udpfd){
@@ -47,9 +48,9 @@ udpFDawaken(void *o,int fd,int event)
     return(0);
   }
   if(event == POLLIN){
-    len = sizeof(s);
+    sa_len = sizeof(s);
     ret = recvfrom(obj->udpfd,readbuf,sizeof(readbuf),0,
-		   (struct sockaddr *)&s,&len);
+		   (struct sockaddr *)&s,&sa_len);
     if(ret <= 0){
       return(0);
     }
@@ -61,7 +62,7 @@ udpFDawaken(void *o,int fd,int event)
     env.siz = env.totSize = ret;
   
     env.from = (void *)&s;
-    env.from_len = (u_int)len;
+    env.from_len = (u_int)sa_len;
     env.type = PROTOCOL_Udp;
     /* No others yet, we are the originator */
     env.origFrom = NULL;
@@ -133,13 +134,14 @@ createudpDist(distributor *dist,u_short port,u_short family)
   if(port){
     struct sockaddr_storage s;
     struct sockaddr_in *sin;
-    int x;
-    x = sizeof(struct sockaddr_storage);
+    socklen_t sa_len;
+
+    sa_len = sizeof(struct sockaddr_storage);
     memset((char *)&s,0,sizeof(s));
 #ifdef HAVE_SA_LEN
-    s.ss_len = x;
+    s.ss_len = sa_len;
 #endif
-    if(getsockname(obj->udpfd,(struct sockaddr *)&s,&x) < 0){
+    if(getsockname(obj->udpfd,(struct sockaddr *)&s,&sa_len) < 0){
       /* Can't get name? */
       printf("Error can't get socket name after bind %d\n",errno);
       close(obj->udpfd);
