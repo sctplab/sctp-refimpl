@@ -115,9 +115,10 @@ main(int argc, char **argv)
 {
 	struct txfr_request *req;
 	char buffer[200000];
-	int i,fd,len,newfd,ret,sizetosend,blksize,numblk,sb;
+	int i,fd,newfd,ret,sizetosend,blksize,numblk,sb;
 	u_int16_t port=0;
 	int optval,optlen;
+	socklen_t sa_len;
 	int snd_buf=200;
 	char *addr_to_bind=NULL;
 	int maxburst=0;
@@ -210,23 +211,23 @@ main(int argc, char **argv)
 	}
 #endif /* WIN32 */
 
-
 	memset(&bindto,0,sizeof(bindto));
-	len = sizeof(bindto);
-#if !defined(WIN32) && !defined(linux)
+	sa_len = sizeof(bindto);
+#if defined (HAVE_SA_LEN)
 	bindto.sin_len = sizeof(bindto);
-#endif /* !WIN32 */
+#endif /* HAVE_SA_LEN */
 	bindto.sin_family = AF_INET;
 	bindto.sin_port = htons(port);
 	if(addr_to_bind) {
 		inet_pton(AF_INET, addr_to_bind, (void *) &bindto.sin_addr);
 	}
-	if(bind(fd,(struct sockaddr *)&bindto, len) < 0){
+	if(bind(fd,(struct sockaddr *)&bindto, sa_len) < 0){
 		printf("can't bind a socket:%d\n",errno);
 		close(fd);
 		return(-1);
 	}
-	if(getsockname(fd,(struct sockaddr *)&got,&len) < 0){
+	sa_len = sizeof(got);
+	if(getsockname(fd,(struct sockaddr *)&got,&sa_len) < 0){
 		printf("get sockname failed err:%d\n",errno);
 		close(fd);
 		return(-1);
@@ -243,7 +244,8 @@ main(int argc, char **argv)
 	printf("Listen returns %d errno:%d\n",
 	       newfd,errno);
  again:
-	newfd = accept(fd,(struct sockaddr *)&from,&len);
+	sa_len = sizeof(from);
+	newfd = accept(fd,(struct sockaddr *)&from,&sa_len);
 	if(newfd == -1){
 		printf("Accept fails for fd:%d err:%d\n",fd,errno);
 		return(-1);
@@ -286,14 +288,9 @@ main(int argc, char **argv)
 	blksize =  (int)ntohl(req->blksize);
 	if(req->snd_window) {
 		optval = (int)ntohl(req->snd_window);
-#ifdef WIN32
-		if(setsockopt(newfd, SOL_SOCKET, SO_SNDBUF, (const char *)&optval, optlen) != 0)
-#else
-			if(setsockopt(newfd, SOL_SOCKET, SO_SNDBUF, &optval, optlen) != 0)
-#endif /* WIN32 */
-			{	
-				printf("err:%d could not set sndbuf to clients %d\n",errno,optval);
-			}
+		if(setsockopt(newfd, SOL_SOCKET, SO_SNDBUF, (const char *)&optval, optlen) != 0) {
+			printf("err:%d could not set sndbuf to clients %d\n",errno,optval);
+		}
 	}
 	if(req->tos_value) {
 		if (protocol_touse == IPPROTO_TCP){

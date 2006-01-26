@@ -462,13 +462,8 @@ measure_one(struct control_info *req,
 #else
 	printf("Set send buffer to %ld\n", (long)htonl(req->req.snd_buf));
 #endif
-#ifdef WIN32	 
 	if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, (const char *)&optval,
-		       optlen) != 0)
-#else
-	if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &optval, optlen) != 0)
-#endif /* WIN32 */
-	{
+		       optlen) != 0) {
 	    printf("err:%d could not set sndbuf to %d\n", errno, optval);
 	} else {
 		printf("snd buf set\n");
@@ -495,13 +490,8 @@ measure_one(struct control_info *req,
 #else
 	printf("Set recv buffer to %ld\n", (long)htonl(req->req.rcv_buf));
 #endif
-#ifdef WIN32
 	if (setsockopt(fd, SOL_SOCKET, SO_RCVBUF, (const char *)&optval,
-		       optlen) != 0)
-#else
-        if (setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &optval, optlen) != 0)
-#endif /* WIN32 */
-	{
+		       optlen) != 0) {
 	    printf("err:%d could not set rcvbuf to %d\n", errno, optval);
 	} else {
 		printf("rcv buf set\n");
@@ -908,9 +898,9 @@ main(int argc, char **argv)
     memset(&local_addr,0,sizeof(local_addr));
     if(laddr){ 
 	inet_pton(AF_INET, laddr, (void *) &local_addr.sin_addr);
-#if !defined(WIN32) && !defined(linux)
+#if defined(HAVE_SA_LEN)
 	local_addr.sin_len = sizeof(to);
-#endif /* !WIN32 */
+#endif /* HAVE_SA_LEN */
 	local_addr.sin_family = AF_INET;
 	local_addr.sin_port = htons(lport);
 	l2addr = &local_addr;
@@ -918,9 +908,9 @@ main(int argc, char **argv)
 	l2addr = NULL;
     }
     if(inet_pton(AF_INET, addr, (void *) &to.sin_addr)){
-#if !defined(WIN32) && !defined(linux)
+#if defined(HAVE_SA_LEN)
 	to.sin_len = sizeof(to);
-#endif /* !WIN32 */
+#endif /* HAVE_SA_LEN */
 	to.sin_family = AF_INET;
 	to.sin_port = htons(port);
     }else{
