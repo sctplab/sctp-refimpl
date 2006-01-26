@@ -18,7 +18,7 @@ ifeq ($(GUESS_HOST),LynxOS)
 LOCAL_LIBS+= -L/usr/local/v6/lib -mthreads -lnetinet -lnsl -lm -lsctp
 else
 ifeq ($(GUESS_HOST),Linux)
-LOCAL_LIBS+= -L/usr/local/v6/lib -lnsl -lm -ltermcap -lreadline -lsctp
+LOCAL_LIBS+= -lnsl -lm -ltermcap -lreadline -lsctp
 else
 ifeq ($(GUESS_HOST),FreeBSD)
 LOCAL_LIBS+= -L/usr/local/v6/lib -lm -lreadline -lsctp
