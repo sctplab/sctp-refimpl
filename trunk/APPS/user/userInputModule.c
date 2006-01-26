@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.23 2006-01-26 06:24:00 lei Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.24 2006-01-26 06:42:09 lei Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -631,7 +631,7 @@ SCTPPrintAnAddress(struct sockaddr *a)
     prt = ntohs(((struct sockaddr_in6 *)a)->sin6_port);
     txt = "IPv6 Address: ";
   }
-#ifndef LINUX
+#ifndef linux
   else if(a->sa_family == AF_LINK){
     int i;
     char tbuf[200];
@@ -3380,7 +3380,7 @@ cmd_getprimary(char *argv[], int argc)
 {
   struct sockaddr *sa;
   socklen_t sa_len;
-#ifdef LINUX
+#ifdef linux
   struct sctp_prim prim;
 #else
   struct sctp_setprim prim;

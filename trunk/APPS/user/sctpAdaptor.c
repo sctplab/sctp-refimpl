@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.10 2006-01-26 06:24:00 lei Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.11 2006-01-26 06:42:09 lei Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -44,7 +44,7 @@
 #include <sys/stat.h>
 #include <sys/socket.h>
 #include <net/if.h>
-#ifndef LINUX
+#ifndef linux 
 #include <net/if_types.h>
 #include <net/if_dl.h>
 #endif
