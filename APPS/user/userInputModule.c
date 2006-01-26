@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.25 2006-01-26 21:41:34 lei Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.26 2006-01-26 22:06:25 lei Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -598,24 +598,24 @@ char *namelist[]={
 static sctp_assoc_t
 get_assoc_id()
 {
-  struct sctp_paddrparams sp;
+  struct sctp_paddrinfo sp;
   socklen_t siz;
   struct sockaddr *sa;
   socklen_t sa_len;
 
   /* First get the assoc id */
-  siz = sizeof(struct sctp_paddrparams);
+  siz = sizeof(sp);
   sa = SCTP_getAddr(&sa_len);
   memset(&sp,0,sizeof(sp));
-  memcpy((caddr_t)&sp.spp_address, sa, sa_len);
+  memcpy((caddr_t)&sp.spinfo_address, sa, sa_len);
   errno = 0;
-  if(getsockopt(adap->fd, IPPROTO_SCTP,
-		SCTP_PEER_ADDR_PARAMS, &sp, &siz) != 0) {
-    printf("Failed to get assoc id with HB info err:%d\n",errno);
-    return(0);
+  if(getsockopt(adap->fd, IPPROTO_SCTP, SCTP_GET_PEER_ADDR_INFO,
+		&sp, &siz) != 0) {
+    printf("Failed to get assoc_id with GET_PEER_ADDR_INFO, errno:%d\n",errno);
+    return (0);
   }
-  /* We depend on the fact that 0 can never be returned */
-  return(sp.spp_assoc_id);
+  /* BSD: We depend on the fact that 0 can never be returned */
+  return (sp.spinfo_assoc_id);
 }
 
 void
