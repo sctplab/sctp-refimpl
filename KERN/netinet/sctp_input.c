@@ -2176,12 +2176,21 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 				return (m);
 			}
 			oso = (*inp_p)->sctp_socket;
+#if (defined(__FreeBSD__) && __FreeBSD_version >= 500000)
+			/* We do this to keep the sockets side
+			 * happy durin the sonewcon ONLY.
+			 */
+			NET_LOCK_GIANT();
+#endif
 			SCTP_TCB_UNLOCK((*stcb));
 			so = sonewconn(oso, SS_ISCONNECTED
 #if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
 			               , NULL
 #endif
                                       );
+#if (defined(__FreeBSD__) && __FreeBSD_version >= 500000)
+			NET_UNLOCK_GIANT();
+#endif
 			SCTP_INP_WLOCK((*stcb)->sctp_ep);
 			SCTP_TCB_LOCK((*stcb));
 			SCTP_INP_WUNLOCK((*stcb)->sctp_ep);

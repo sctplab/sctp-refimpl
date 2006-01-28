@@ -1656,7 +1656,7 @@ sctp_inpcb_alloc(struct socket *so)
 	TAILQ_INIT(&inp->sctp_queue_list);
 	/* Init the timer structure for signature change */
 #if defined (__FreeBSD__) && __FreeBSD_version >= 500000
-	callout_init(&inp->sctp_ep.signature_change.timer, 0);
+	callout_init(&inp->sctp_ep.signature_change.timer, 1);
 #else
 	callout_init(&inp->sctp_ep.signature_change.timer);
 #endif
@@ -2917,7 +2917,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 
 	/* Init the timer structure */
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-	callout_init(&net->rxt_timer.timer, 0);
+	callout_init(&net->rxt_timer.timer, 1);
 #else
 	callout_init(&net->rxt_timer.timer);
 #endif
@@ -3258,11 +3258,11 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	}
 	/* Init all the timers */
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-	callout_init(&asoc->hb_timer.timer, 0);
-	callout_init(&asoc->dack_timer.timer, 0);
-	callout_init(&asoc->asconf_timer.timer, 0);
-	callout_init(&asoc->shut_guard_timer.timer, 0);
-	callout_init(&asoc->autoclose_timer.timer, 0);
+	callout_init(&asoc->hb_timer.timer, 1);
+	callout_init(&asoc->dack_timer.timer, 1);
+	callout_init(&asoc->asconf_timer.timer, 1);
+	callout_init(&asoc->shut_guard_timer.timer, 1);
+	callout_init(&asoc->autoclose_timer.timer, 1);
 #else
 	callout_init(&asoc->hb_timer.timer);
 	callout_init(&asoc->dack_timer.timer);
@@ -5337,7 +5337,7 @@ sctp_initiate_iterator(asoc_func af, uint32_t pcb_state, uint32_t asoc_state,
 	}
 	/* Init the timer */
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-	callout_init(&it->tmr.timer, 0);
+	callout_init(&it->tmr.timer, 1);
 #else
 	callout_init(&it->tmr.timer);
 #endif
