@@ -252,11 +252,14 @@ sctp_split_chunks(struct sctp_association *asoc,
 	}
 	/* Data is now split adjust sizes */
 	chk->no_fr_allowed = 0;
+
 	chk->send_size >>= 1;
-	new_chk->send_size >>= 1;
+	new_chk->send_size -= chk->send_size;
+
 
 	chk->book_size >>= 1;
-	new_chk->book_size >>= 1;
+	new_chk->book_size -= chk->book_size;
+
 
 	/* now adjust the marks */
 	if(chk->rec.data.rcv_flags & SCTP_DATA_NOT_FRAG) {

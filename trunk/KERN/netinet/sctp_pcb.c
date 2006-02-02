@@ -2918,8 +2918,12 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	/* Init the timer structure */
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 	callout_init(&net->rxt_timer.timer, 1);
+	callout_init(&net->fr_timer.timer, 1);
+	callout_init(&net->pmtu_timer.timer, 1);
 #else
 	callout_init(&net->rxt_timer.timer);
+	callout_init(&net->fr_timer.timer);
+	callout_init(&net->pmtu_timer.timer);
 #endif
 
 	/* Now generate a route for this guy */
@@ -3261,14 +3265,18 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	callout_init(&asoc->hb_timer.timer, 1);
 	callout_init(&asoc->dack_timer.timer, 1);
 	callout_init(&asoc->asconf_timer.timer, 1);
+	callout_init(&asoc->strreset_timer.timer, 1);
 	callout_init(&asoc->shut_guard_timer.timer, 1);
 	callout_init(&asoc->autoclose_timer.timer, 1);
+	callout_init(&asoc->delayed_event_timer.timer, 1);
 #else
 	callout_init(&asoc->hb_timer.timer);
 	callout_init(&asoc->dack_timer.timer);
+	callout_init(&asoc->strreset_timer.timer);
 	callout_init(&asoc->asconf_timer.timer);
 	callout_init(&asoc->shut_guard_timer.timer);
 	callout_init(&asoc->autoclose_timer.timer);
+	callout_init(&asoc->delayed_event_timer.timer);
 #endif
 	LIST_INSERT_HEAD(&inp->sctp_asoc_list, stcb, sctp_tcblist);
 	/* now file the port under the hash as well */
@@ -3296,6 +3304,7 @@ sctp_free_remote_addr(struct sctp_nets *net)
 		/* stop timer if running */
 		callout_stop(&net->rxt_timer.timer);
 		callout_stop(&net->pmtu_timer.timer);
+		callout_stop(&net->fr_timer.timer);
 		net->dest_state = SCTP_ADDR_NOT_REACHABLE;
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_net, net);
 		SCTP_DECR_RADDR_COUNT();
@@ -3499,11 +3508,13 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	/* now clean up any other timers */
 	callout_stop(&asoc->hb_timer.timer);
 	callout_stop(&asoc->dack_timer.timer);
+	callout_stop(&asoc->strreset_timer.timer);
 	callout_stop(&asoc->asconf_timer.timer);
 	callout_stop(&asoc->shut_guard_timer.timer);
 	callout_stop(&asoc->autoclose_timer.timer);
 	callout_stop(&asoc->delayed_event_timer.timer);
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
+		callout_stop(&net->fr_timer.timer);
 		callout_stop(&net->rxt_timer.timer);
 		callout_stop(&net->pmtu_timer.timer);
 	}
@@ -5388,7 +5399,7 @@ callout_reset(struct callout *c, int to_ticks, void (*ftn)(void *), void *arg)
 		to_ticks = 1;
 
 	c->c_arg = arg;
-	c->c_flags = (CALLOUT_ACTIVE | CALLOUT_PENDING);
+	c->c_flags |= (CALLOUT_ACTIVE | CALLOUT_PENDING);
 	c->c_func = ftn;
 #ifdef __APPLE__
 	c->c_time = to_ticks;	/* just store the requested timeout */
