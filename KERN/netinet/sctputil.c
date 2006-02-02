@@ -1370,7 +1370,6 @@ sctp_timeout_handler(void *t)
 		printf("Timer now complete (type %d)\n", typ);
 	}
 #endif /* SCTP_DEBUG */
-
 	splx(s);
 #if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
 	/* release BSD kernel funnel/mutex */
