@@ -2900,7 +2900,7 @@ sctp_handle_stream_reset_response(struct sctp_tcb *stcb,
 					resp = (struct sctp_stream_reset_response_tsn *)respin;
 					asoc->stream_reset_outstanding--;
 					fwdtsn.ch.chunk_length = htons(sizeof(struct sctp_forward_tsn_chunk));
-					fwdtsn.ch.chunk_type = htons(SCTP_FORWARD_CUM_TSN);
+					fwdtsn.ch.chunk_type = SCTP_FORWARD_CUM_TSN;
 					fwdtsn.new_cumulative_tsn = htonl(ntohl(resp->senders_next_tsn)-1);
 					sctp_handle_forward_tsn(stcb, &fwdtsn, &abort_flag);
 					if(abort_flag) {

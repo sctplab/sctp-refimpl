@@ -3767,6 +3767,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	/* now clean up the tasoc itself */
 	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
 	SCTP_DECR_ASOC_COUNT();
+
 	if ((inp->sctp_socket->so_snd.sb_cc) ||
 	    (inp->sctp_socket->so_snd.sb_mbcnt)) {
 		/* This will happen when a abort is done */
@@ -3794,9 +3795,9 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 				 * so that it can start a new assoc if it desires.
 				 */
 				inp->sctp_flags &= ~SCTP_PCB_FLAGS_CONNECTED;
-				SOCK_LOCK(stcb->sctp_ep->sctp_socket);
-				stcb->sctp_ep->sctp_socket->so_state &= ~(SS_ISCONNECTING|SS_ISDISCONNECTING|SS_ISCONFIRMING|SS_ISCONNECTED);
-				SOCK_UNLOCK(stcb->sctp_ep->sctp_socket);
+				SOCK_LOCK(inp->sctp_socket);
+				inp->sctp_socket->so_state &= ~(SS_ISCONNECTING|SS_ISDISCONNECTING|SS_ISCONFIRMING|SS_ISCONNECTED);
+				SOCK_UNLOCK(inp->sctp_socket);
 			} else {
 				/* For TCP Pool types including
 				 * peeled off ones, we just disconnect
@@ -3806,7 +3807,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 				 * too since the can't send more flags are
 				 * also set.
 				 */
-				soisdisconnected(stcb->sctp_ep->sctp_socket);
+				soisdisconnected(inp->sctp_socket);
 			}
 		}
 	}
