@@ -11578,8 +11578,10 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 
 	SOCKBUF_LOCK(&so->so_snd);
 	error = sblock(&so->so_snd, SBLOCKWAIT(flags));
-	if (error)
+	if (error) {
+		splx(s);
 		goto out_locked;
+	}
 
 	/* will it ever fit ? */
 	if (sndlen > so->so_snd.sb_hiwat) {
@@ -11620,6 +11622,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 				) {
 				/* Non-blocking io in place */
 				error = EWOULDBLOCK;
+				splx(s);
 				goto release;
 			}
 #ifdef SCTP_BLK_LOGGING
@@ -11659,6 +11662,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 				/* Should I really unlock ? */
 				SCTP_INP_RUNLOCK(inp);
 				error = EFAULT;
+				splx(s);
 				goto out_locked;
 			}
 			stcb->block_entry = NULL;
@@ -12219,12 +12223,16 @@ sctp_sosend(struct socket *so,
 				/* its a sendall */
 				sctppcbinfo.mbuf_track--;
 				sctp_m_freem(control);
-				return (sctp_sendall(inp, uio, top, &srcv));
+				error = sctp_sendall(inp, uio, top, &srcv);
+				splx(s);
+				return (error);
 			}
 			use_rcvinfo = 1;
 		}
 	}
-	return(sctp_lower_sosend(so, addr, uio, top, control, flags, use_rcvinfo, &srcv, p));
+	error = sctp_lower_sosend(so, addr, uio, top, control, flags, use_rcvinfo, &srcv, p);
+	splx(s);
+	return (error);
 }
 
 int
