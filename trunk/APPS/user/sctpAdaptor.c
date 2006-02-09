@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.11 2006-01-26 06:42:09 lei Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.12 2006-02-09 20:54:59 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -31,7 +31,9 @@
 
 #if defined(__FreeBSD__) || defined(__APPLE__)
 #define __BSD_SCTP_STACK__
+#ifndef HAVE_SA_LEN
 #define HAVE_SA_LEN
+#endif
 #endif
 
 #include <ctype.h>

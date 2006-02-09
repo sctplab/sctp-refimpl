@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.27 2006-02-09 03:36:17 lei Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.28 2006-02-09 20:54:59 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -1713,7 +1713,7 @@ cmd_streamreset(char *argv[], int argc)
         strrst = (struct sctp_stream_reset *)buffer;
 	if(argc < 2) {
 	jump_out:
-		printf("Missing argument(s), 'both|send|recv' 'all|num num num'\n");
+		printf("Missing argument(s), 'both|send|recv|tsn' 'all|num num num'\n");
 		printf("------arg 1-----------\n");
 		printf("both - gets both the send and recv streams reset\n");
 		printf("recv - gets your receiving stream reset\n");
