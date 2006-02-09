@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.29 2006-02-09 21:43:33 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.30 2006-02-09 21:54:11 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -1330,8 +1330,6 @@ sctpInput(void *arg, messageEnvolope *msg)
 				nanosleep(&to,&top);
 			}
 		}
-		printf("Sending to from address:");
-		SCTPPrintAnAddress((struct sockaddr *)msg->from);
 		sctpSEND(fd,msg->streamNo,msg->data,msg->siz,(struct sockaddr *)msg->from,
 			 sendOptions, msg->protocolId, 0);
 		msg->data = NULL;
