@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.13 2006-02-09 21:43:32 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.14 2006-02-09 21:51:39 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -404,10 +404,6 @@ sctpReadInput(int fd, distributor *o,sctpAdaptorMod *r)
   if (msg.msg_flags & MSG_NOTIFICATION) {
     handle_notification(fd,readBuffer);
     return(0);
-  } else {
-	  printf("Just got a msg:%d from:",sz);
-	  SCTPPrintAnAddress((struct sockaddr *)&from);
-
   }
 
   msgout.takeOk = 0;
