@@ -2862,7 +2862,6 @@ sctp_handle_stream_reset_response(struct sctp_tcb *stcb,
 		srparam = sctp_find_stream_reset(stcb, seq, &chk);
 		if(srparam) {
 			stcb->asoc.str_reset_seq_out++;
-			printf("asoc.str_reset_seq_out now %x\n", stcb->asoc.str_reset_seq_out);
 			type = ntohs(srparam->ph.param_type);
 			lparm_len = ntohs(srparam->ph.param_length);
 			number_entries = (lparm_len - sizeof(struct sctp_stream_reset_out_request))/sizeof(uint16_t);
@@ -3238,8 +3237,6 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_out_req
  			resp = (struct sctp_stream_reset_response *)ph;
 			seq = ntohl(resp->response_seq);
 			result = ntohl(resp->result);
-			printf("Got a responze to my seq:%x resp:%d\n",
-			       (u_int)seq, (int)result);
  			if(sctp_handle_stream_reset_response(stcb, seq, result, resp)) {
 				ret_code = 1;
 				goto strres_nochunk;
