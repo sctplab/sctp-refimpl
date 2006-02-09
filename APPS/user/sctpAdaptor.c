@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.12 2006-02-09 20:54:59 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.13 2006-02-09 21:43:32 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -328,12 +328,12 @@ sctpReadInput(int fd, distributor *o,sctpAdaptorMod *r)
 
   disped = i = 0;
 
+  from_len = sizeof(from);
   if((fd == mainFd) && 
      (r->model & SCTP_TCP_TYPE) &&
      (r->model & SCTP_TCP_IS_LISTENING)){
     /* are we using TCP model here, maybe */
     int newfd;
-    from_len = sizeof(from);
     newfd = accept(fd, (struct sockaddr *)from, &from_len);
     if(newfd != -1){
       printf("New fd accepted fd=%d from:",newfd);
@@ -404,6 +404,10 @@ sctpReadInput(int fd, distributor *o,sctpAdaptorMod *r)
   if (msg.msg_flags & MSG_NOTIFICATION) {
     handle_notification(fd,readBuffer);
     return(0);
+  } else {
+	  printf("Just got a msg:%d from:",sz);
+	  SCTPPrintAnAddress((struct sockaddr *)&from);
+
   }
 
   msgout.takeOk = 0;
