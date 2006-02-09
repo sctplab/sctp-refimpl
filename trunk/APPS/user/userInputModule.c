@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.26 2006-01-26 22:06:25 lei Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.27 2006-02-09 03:36:17 lei Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -59,10 +59,8 @@
 #include <stdint.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#if defined (__FreeBSD__) || defined(__APPLE__)
 #include <net/if_dl.h>
 #include <sys/filio.h>
-#endif
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <stdarg.h>
@@ -2771,7 +2769,11 @@ cmd_getpaddrs(char *argv[], int argc)
 		asocid = (sctp_assoc_t)strtoul(argv[0], NULL, 0);
 	}
 	printf("Getting addresses for assoc id %x\n", (uint32_t)asocid);
+#ifdef SOLARIS
 	cnt = sctp_getpaddrs(adap->fd, asocid, (void *)&addrs);
+#else
+	cnt = sctp_getpaddrs(adap->fd, asocid, &addrs);
+#endif /* SOLARIS */
 	if(addrs == NULL) {
 		printf("Returned errno %d\n", errno);
 	} else {
@@ -3962,7 +3964,11 @@ cmd_netstats(char *argv[], int argc)
     /* Now we get the association parameters so we know how
      * many networks there are.
      */
+#ifdef SOLARIS
+    numnets = sctp_getpaddrs(adap->fd, assoc_id, (void *)&addrs);
+#else
     numnets = sctp_getpaddrs(adap->fd, assoc_id, &addrs);
+#endif /* SOLARIS */
     if (numnets < 0) {	
         printf("Can't get the peer addresses\n");
         return -1;
@@ -4789,7 +4795,11 @@ cmd_setneterr(char *argv[], int argc)
     return(-1);
   }
 
+#ifdef SOLARIS
+  numnets = sctp_getpaddrs(adap->fd, assoc_id, (void *)&addrs);
+#else
   numnets = sctp_getpaddrs(adap->fd, assoc_id, &addrs);
+#endif /* SOLARIS */
   if (numnets < 0) {
         printf("Can't get the peer addresses\n");
         return -1;
@@ -4989,7 +4999,11 @@ cmd_setprimary(char *argv[], int argc)
     return(-1);
   }
 
+#ifdef SOLARIS
+  numnets = sctp_getpaddrs(adap->fd, assoc_id, (void *)&addrs);
+#else
   numnets = sctp_getpaddrs(adap->fd, assoc_id, &addrs);
+#endif /* SOLARIS */
   if (numnets < 0) {
     printf("Can't get the peer addresses\n");
     return -1;
