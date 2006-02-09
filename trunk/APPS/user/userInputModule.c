@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.28 2006-02-09 20:54:59 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.29 2006-02-09 21:43:33 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -1289,150 +1289,154 @@ static char phase_list[] = {
 void
 sctpInput(void *arg, messageEnvolope *msg)
 {
-  /* receive some number of datagrams and act on them. */
+	/* receive some number of datagrams and act on them. */
 
-  int disped,i;
-  int fd;
-  testDgram_t *testptr;
-  disped = i = 0;
+	int disped,i;
+	int fd;
+	testDgram_t *testptr;
+	disped = i = 0;
 
-  SCTP_setcurrent((sctpAdaptorMod *)arg);
-  if(msg->type == PROTOCOL_Sctp){
-    fd  = (int)msg->sender;
-  }else{
-    /* we don't deal with non-sctp data */
-    return;
-  }
-  testptr = (testDgram_t *)msg->data;
-  if(testptr->type == SCTP_TEST_LOOPREQ){
-    /* another ping/pong type */
-    /*    printf("TEST_LOOPREQ send %d bytes str:%d seq:%d\n",
-	  msg->siz,msg->streamNo,msg->streamSeq);*/
-    testptr->type = SCTP_TEST_LOOPRESP;
-    if(loop_sleep) {
-	    sleep(loop_sleep);
-	    printf(">>>%c\r",phase_list[phase_at]);
-	    fflush(stdout);
-	    phase_at++;
-	    if(phase_at > 7) {
-		    phase_at = 0;
-	    }
-    }
-    if(msdelaymode) {
-	    struct timespec to,top;
-	    modpacket++;
-	    if((modpacket % msdelaymode) == 0) {
-		    /* pause 10 ms every third msdelaymode packets */
-		    modpacket = 0;
-		    to.tv_sec = 0;
-		    to.tv_nsec = 10000000;
-		    top = to;
-		    nanosleep(&to,&top);
-	    }
-    }
-    sctpSEND(fd,msg->streamNo,msg->data,msg->siz,(struct sockaddr *)msg->from,
-	     sendOptions, msg->protocolId, 0);
-    msg->data = NULL;
-  }else if(testptr->type == SCTP_TEST_LOOPRESP){
-    handlePong(fd,(struct sockaddr *)msg->from,1);
-    msg->data = NULL;
-  }else if(testptr->type == SCTP_TEST_SIMPLE){
-    simplecnt++;
-    if((simplecnt % 1000) == 0){
-      printf("Have received %d simple dg's\n",simplecnt);
-    }
-    msg->data = NULL;
-  }else if(testptr->type == SCTP_TEST_RFTP){
-    /* send the data back */
-    testptr->type = SCTP_TEST_RFTPRESP;
-    if(msg->streamNo == 1){
-      str1read++;
-    }else{
-      str2read++;
-    }
-    sctpSEND(fd,msg->streamNo,msg->data,msg->siz,(struct sockaddr *)msg->from,
-	     sendOptions, msg->protocolId,0);
-    msg->data = NULL;
-  }else if(testptr->type == SCTP_TEST_RFTPRESP){
-    handleRftpTransfer(fd, msg);
-    msg->data = NULL;
-  }else if(strncmp(msg->data,"ping",4) == 0){
-    /* it is a ping-pong message, send it back after changing
-     * the first 4 bytes to pong 
-     */
-    strncpy(msg->data,"pong",4);
-    sctpSEND(fd,msg->streamNo,msg->data,msg->siz,(struct sockaddr *)msg->from,
-	     sendOptions,
-	     msg->protocolId,0);
-    msg->data = NULL;
-  }else if(strcmp(msg->data,"time") == 0){
-    struct tm *timeptr;
-    time_started = time(0);
-    timeptr = localtime(&time_started);
-    printf("%s",asctime(timeptr));
-    msg->data = NULL;
-    bulkSeen = 0;
-  }else if(strncmp(msg->data,"pong",4) == 0){
-    if(pingPongsDefined > 0){
-      handleMultiplePongs(fd,(struct sockaddr *)msg->from,msg->streamNo);
-    }else{
-      handlePong(fd,(struct sockaddr *)msg->from,0);
-    }
-  }else if(strncmp(msg->data,"hulk",4) == 0){
-    handleHulk(fd, (struct sockaddr *)msg->from,
-	       (struct sctpdataToProduce *)msg->data);
-    msg->data = NULL;
-  }else if(strncmp(msg->data,"sulk",4) == 0){
-    if(hulkfile != NULL){
-      struct sctpdataToProduce *dp;
-      dp = (struct sctpdataToProduce *)msg->data;
-      dp->stored = dist->lastKnownTime;
-      fwrite(msg->data,sizeof(struct sctpdataToProduce),1,hulkfile);
-    }
-    msg->data = NULL;
-  }else if(strncmp(msg->data,"bulk",4) == 0){
-    bulkSeen++;
-  }else{
-    if(silent_mode == 0){
-      /* display a text message */
-      if(isascii(((char *)msg->data)[0])){
-	printf("From:");
-	SCTPPrintAnAddress(msg->from);
-	if(msg->to) {
-		printf("To:");
-		SCTPPrintAnAddress(msg->to);
+	SCTP_setcurrent((sctpAdaptorMod *)arg);
+	if(msg->type == PROTOCOL_Sctp){
+		fd  = (int)msg->sender;
+	}else{
+		/* we don't deal with non-sctp data */
+		return;
 	}
-	((char *)msg->data)[msg->siz] = 0;
-	printf("strm:%d seq:%d %d:'%s'\n",
-	       msg->streamNo,
-	       msg->streamSeq,
-	       msg->siz,
-	       (char *)msg->data);
-	disped = 1;
-	msg->data = NULL;
-      }else{
-	printf("From:");
-	SCTPPrintAnAddress(msg->from);
-	if(msg->to) {
-		printf("To:");
-		SCTPPrintAnAddress(msg->to);
+	testptr = (testDgram_t *)msg->data;
+	if(testptr->type == SCTP_TEST_LOOPREQ){
+		/* another ping/pong type */
+		/*    printf("TEST_LOOPREQ send %d bytes str:%d seq:%d\n",
+		      msg->siz,msg->streamNo,msg->streamSeq);*/
+		testptr->type = SCTP_TEST_LOOPRESP;
+		if(loop_sleep) {
+			sleep(loop_sleep);
+			printf(">>>%c\r",phase_list[phase_at]);
+			fflush(stdout);
+			phase_at++;
+			if(phase_at > 7) {
+				phase_at = 0;
+			}
+		}
+		if(msdelaymode) {
+			struct timespec to,top;
+			modpacket++;
+			if((modpacket % msdelaymode) == 0) {
+				/* pause 10 ms every third msdelaymode packets */
+				modpacket = 0;
+				to.tv_sec = 0;
+				to.tv_nsec = 10000000;
+				top = to;
+				nanosleep(&to,&top);
+			}
+		}
+		printf("Sending to from address:");
+		SCTPPrintAnAddress((struct sockaddr *)msg->from);
+		sctpSEND(fd,msg->streamNo,msg->data,msg->siz,(struct sockaddr *)msg->from,
+			 sendOptions, msg->protocolId, 0);
+		msg->data = NULL;
+	}else if(testptr->type == SCTP_TEST_LOOPRESP){
+		printf("Got a loop response\n");
+		handlePong(fd,(struct sockaddr *)msg->from,1);
+		msg->data = NULL;
+	}else if(testptr->type == SCTP_TEST_SIMPLE){
+		printf("Got a simple\n");
+		simplecnt++;
+		if((simplecnt % 1000) == 0){
+			printf("Have received %d simple dg's\n",simplecnt);
+		}
+		msg->data = NULL;
+	}else if(testptr->type == SCTP_TEST_RFTP){
+		/* send the data back */
+		testptr->type = SCTP_TEST_RFTPRESP;
+		if(msg->streamNo == 1){
+			str1read++;
+		}else{
+			str2read++;
+		}
+		sctpSEND(fd,msg->streamNo,msg->data,msg->siz,(struct sockaddr *)msg->from,
+			 sendOptions, msg->protocolId,0);
+		msg->data = NULL;
+	}else if(testptr->type == SCTP_TEST_RFTPRESP){
+		handleRftpTransfer(fd, msg);
+		msg->data = NULL;
+	}else if(strncmp(msg->data,"ping",4) == 0){
+		/* it is a ping-pong message, send it back after changing
+		 * the first 4 bytes to pong 
+		 */
+		strncpy(msg->data,"pong",4);
+		sctpSEND(fd,msg->streamNo,msg->data,msg->siz,(struct sockaddr *)msg->from,
+			 sendOptions,
+			 msg->protocolId,0);
+		msg->data = NULL;
+	}else if(strcmp(msg->data,"time") == 0){
+		struct tm *timeptr;
+		time_started = time(0);
+		timeptr = localtime(&time_started);
+		printf("%s",asctime(timeptr));
+		msg->data = NULL;
+		bulkSeen = 0;
+	}else if(strncmp(msg->data,"pong",4) == 0){
+		if(pingPongsDefined > 0){
+			handleMultiplePongs(fd,(struct sockaddr *)msg->from,msg->streamNo);
+		}else{
+			handlePong(fd,(struct sockaddr *)msg->from,0);
+		}
+	}else if(strncmp(msg->data,"hulk",4) == 0){
+		handleHulk(fd, (struct sockaddr *)msg->from,
+			   (struct sctpdataToProduce *)msg->data);
+		msg->data = NULL;
+	}else if(strncmp(msg->data,"sulk",4) == 0){
+		if(hulkfile != NULL){
+			struct sctpdataToProduce *dp;
+			dp = (struct sctpdataToProduce *)msg->data;
+			dp->stored = dist->lastKnownTime;
+			fwrite(msg->data,sizeof(struct sctpdataToProduce),1,hulkfile);
+		}
+		msg->data = NULL;
+	}else if(strncmp(msg->data,"bulk",4) == 0){
+		bulkSeen++;
+	}else{
+		if(silent_mode == 0){
+			/* display a text message */
+			if(isascii(((char *)msg->data)[0])){
+				printf("From:");
+				SCTPPrintAnAddress(msg->from);
+				if(msg->to) {
+					printf("To:");
+					SCTPPrintAnAddress(msg->to);
+				}
+				((char *)msg->data)[msg->siz] = 0;
+				printf("strm:%d seq:%d %d:'%s'\n",
+				       msg->streamNo,
+				       msg->streamSeq,
+				       msg->siz,
+				       (char *)msg->data);
+				disped = 1;
+				msg->data = NULL;
+			}else{
+				printf("From:");
+				SCTPPrintAnAddress(msg->from);
+				if(msg->to) {
+					printf("To:");
+					SCTPPrintAnAddress(msg->to);
+				}
+				printf("strm:%d seq:%d %d:\n",
+				       msg->streamNo,
+				       msg->streamSeq,
+				       msg->siz);
+				printArry((uint8_t *)msg->data,msg->siz);
+				msg->data = NULL;
+				disped = 1;
+			}
+		}else{
+			silent_count++;
+		}
 	}
-	printf("strm:%d seq:%d %d:\n",
-	       msg->streamNo,
-	       msg->streamSeq,
-	       msg->siz);
-	printArry((uint8_t *)msg->data,msg->siz);
-	msg->data = NULL;
-	disped = 1;
-      }
-    }else{
-      silent_count++;
-    }
-  }
-  if(disped){
-    printf(">");
-    fflush(stdout);
-  }
+	if(disped){
+		printf(">");
+		fflush(stdout);
+	}
 }
 
 
