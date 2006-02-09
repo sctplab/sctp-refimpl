@@ -2910,8 +2910,11 @@ sctp_handle_stream_reset_response(struct sctp_tcb *stcb,
 					stcb->asoc.mapping_array_base_tsn = ntohl(resp->senders_next_tsn);
 					memset(stcb->asoc.mapping_array, 0, stcb->asoc.mapping_array_size);
 					stcb->asoc.sending_seq = ntohl(resp->receivers_next_tsn);
+					stcb->asoc.last_acked_seq = stcb->asoc.cumulative_tsn;
+
 					sctp_reset_out_streams(stcb, 0, (u_int16_t *)NULL);
 					sctp_reset_in_stream(stcb, 0, (u_int16_t *)NULL);
+
 				}
 			}
 			/* get rid of the request and get the request flags */
