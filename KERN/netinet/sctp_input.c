@@ -3197,7 +3197,7 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_out_req
  		param_len = ntohs(ph->param_length);
 		if (param_len < (int)sizeof(struct sctp_stream_reset_tsn_request)) {
 			/* bad param */
-			return (ret_code);
+			break;
 		}
 		ptype = ntohs(ph->param_type);
 		num_param++;
