@@ -10887,9 +10887,9 @@ sctp_add_stream_reset_out(struct sctp_tmit_chunk *chk,
 	len = (sizeof(struct sctp_stream_reset_out_request) + (sizeof(u_int16_t) * number_entries));
 	req_out->ph.param_type = htons(SCTP_STR_RESET_OUT_REQUEST);
 	req_out->ph.param_length = htons(len);
-	req_out->request_seq = ntohl(seq);
-	req_out->response_seq = ntohl(resp_seq);
-	req_out->send_reset_at_tsn = ntohl(last_sent);
+	req_out->request_seq = htonl(seq);
+	req_out->response_seq = htonl(resp_seq);
+	req_out->send_reset_at_tsn = htonl(last_sent);
 	if(number_entries) {
 		for(i=0; i<number_entries; i++) {
 			req_out->list_of_streams[i] = htons(list[i]);
@@ -10931,7 +10931,7 @@ sctp_add_stream_reset_in(struct sctp_tmit_chunk *chk,
 	len = (sizeof(struct sctp_stream_reset_in_request) + (sizeof(u_int16_t) * number_entries));
 	req_in->ph.param_type = htons(SCTP_STR_RESET_IN_REQUEST);
 	req_in->ph.param_length = htons(len);
-	req_in->request_seq = ntohl(seq);
+	req_in->request_seq = htonl(seq);
 	if(number_entries) {
 		for(i=0; i<number_entries; i++) {
 			req_in->list_of_streams[i] = htons(list[i]);
@@ -10972,7 +10972,7 @@ sctp_add_stream_reset_tsn(struct sctp_tmit_chunk *chk,
 	len = sizeof(struct sctp_stream_reset_tsn_request);
 	req_tsn->ph.param_type = htons(SCTP_STR_RESET_TSN_REQUEST);
 	req_tsn->ph.param_length = htons(len);
-	req_tsn->request_seq = ntohl(seq);
+	req_tsn->request_seq = htonl(seq);
 
 	/* now fix the chunk length */
 	ch->chunk_length = htons(len + old_len);
@@ -11000,7 +11000,7 @@ sctp_add_stream_reset_result(struct sctp_tmit_chunk *chk,
 	len = sizeof(struct sctp_stream_reset_response);
 	resp->ph.param_type = htons(SCTP_STR_RESET_RESPONSE);
 	resp->ph.param_length = htons(len);
-	resp->response_seq = ntohl(resp_seq);
+	resp->response_seq = htonl(resp_seq);
 	resp->result = ntohl(result);
 
 	/* now fix the chunk length */
@@ -11032,10 +11032,10 @@ sctp_add_stream_reset_result_tsn(struct sctp_tmit_chunk *chk,
 	len = sizeof(struct sctp_stream_reset_response_tsn);
 	resp->ph.param_type = htons(SCTP_STR_RESET_RESPONSE);
 	resp->ph.param_length = htons(len);
-	resp->response_seq = ntohl(resp_seq);
-	resp->result = ntohl(result);
-	resp->senders_next_tsn = ntohl(send_una);
-	resp->receivers_next_tsn = ntohl(recv_next);
+	resp->response_seq = htonl(resp_seq);
+	resp->result = htonl(result);
+	resp->senders_next_tsn = htonl(send_una);
+	resp->receivers_next_tsn = htonl(recv_next);
 
 	/* now fix the chunk length */
 	ch->chunk_length = htons(len + old_len);

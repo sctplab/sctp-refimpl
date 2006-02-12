@@ -439,6 +439,7 @@ struct sctp_stream_reset_response_tsn {
 #define SCTP_STREAM_RESET_DENIED    0x00000002 /* refused to do it */
 #define SCTP_STREAM_RESET_ERROR_STR 0x00000003 /* bad Stream no */
 #define SCTP_STREAM_RESET_TRY_LATER 0x00000004 /* collision, try again */
+#define SCTP_STREAM_RESET_BAD_SEQNO 0x00000005 /* bad str-reset seq no */
 
 /*
  * convience structures, note that if you are making a request for specific
