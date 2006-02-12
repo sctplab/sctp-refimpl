@@ -2986,6 +2986,7 @@ sctp_handle_str_reset_request_in(struct sctp_tcb *stcb,
 			       (u_int)seq, (u_int)asoc->str_reset_seq_in);
 		}
 #endif
+		sctp_add_stream_reset_result(chk, seq, SCTP_STREAM_RESET_BAD_SEQNO);
 	}
 }
 
@@ -3057,6 +3058,7 @@ sctp_handle_str_reset_request_tsn(struct sctp_tcb *stcb,
 			       (u_int)seq, (u_int)asoc->str_reset_seq_in);
 		}
 #endif
+		sctp_add_stream_reset_result(chk, seq, SCTP_STREAM_RESET_BAD_SEQNO);
 	}
 	return(0);
 }
@@ -3134,6 +3136,7 @@ sctp_handle_str_reset_request_out(struct sctp_tcb *stcb,
 			       (u_int)seq, (u_int)asoc->str_reset_seq_in);
 /*		}*/
 #endif
+		sctp_add_stream_reset_result(chk, seq, SCTP_STREAM_RESET_BAD_SEQNO);
 	}
 }
 
