@@ -2344,9 +2344,8 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	SCTP_INP_WLOCK(inp);
 	so  = inp->sctp_socket;
 	SCTP_INP_WUNLOCK(inp);
-	if(so &&
-	   ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) == 0) &&
-	   ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0)){
+
+	if(so && ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) == 0)) {
 	  locked_so = 1;
 #ifdef SCTP_LOCK_LOGGING
 	  sctp_log_lock(inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_SOCK);
