@@ -596,8 +596,12 @@ sctp_sorecvmsg(struct socket *so,
 /*
  * API system calls
  */
+#if (defined(__APPLE__) && defined(KERNEL))
+#ifndef _KERNEL
+#define _KERNEL
+#endif
 
-#if !(defined(_KERNEL) || (defined(__APPLE__) && defined(KERNEL)))
+#if !(defined(_KERNEL))
 
 __BEGIN_DECLS
 int	sctp_peeloff	__P((int, sctp_assoc_t));

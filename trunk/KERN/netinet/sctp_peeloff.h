@@ -48,7 +48,12 @@ struct sctp_peeloff_opt {
 #endif /* HAVE_SCTP_PEELOFF_SOCKOPT */
 
 
-#if defined(_KERNEL) || (defined(__APPLE__) && defined(KERNEL))
+#if (defined(__APPLE__) && defined(KERNEL))
+#ifndef _KERNEL
+#define _KERNEL
+#endif
+
+#if defined(_KERNEL)
 
 int sctp_can_peel_off(struct socket *, caddr_t);
 int sctp_do_peeloff(struct socket *, struct socket *, caddr_t);

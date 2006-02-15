@@ -32,7 +32,12 @@
  * SUCH DAMAGE.
  */
 
-#if defined(_KERNEL) || defined(KERNEL)
+#if (defined(__APPLE__) && defined(KERNEL))
+#ifndef _KERNEL
+#define _KERNEL
+#endif
+
+#if defined(_KERNEL)
 int sctp_common_input_processing(struct mbuf **, int, int, int,
     struct sctphdr *, struct sctp_chunkhdr *, struct sctp_inpcb *,
     struct sctp_tcb *, struct sctp_nets *, u_int8_t);

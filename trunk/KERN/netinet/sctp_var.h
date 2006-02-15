@@ -174,7 +174,14 @@
 }
 #endif
 
-#if defined(_KERNEL) || (defined(__APPLE__) && defined(KERNEL))
+
+
+#if (defined(__APPLE__) && defined(KERNEL))
+#ifndef _KERNEL
+#define _KERNEL
+#endif
+
+#if defined(_KERNEL)
 
 #if defined(__FreeBSD__) || defined(__APPLE__)
 #ifdef SYSCTL_DECL
