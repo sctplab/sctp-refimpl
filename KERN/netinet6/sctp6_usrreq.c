@@ -109,7 +109,7 @@
 
 extern struct protosw inetsw[];
 
-#if defined(HAVE_NRL_INPCB) || defined(__FreeBSD__)
+#if defined(HAVE_NRL_INPCB) 
 #ifndef in6pcb
 #define in6pcb		inpcb
 #endif
@@ -117,6 +117,16 @@ extern struct protosw inetsw[];
 #define sotoin6pcb      sotoinpcb
 #endif
 #endif
+
+#if defined(__FreeBSD__)
+#ifndef in6pcb
+#define in6pcb		inpcb
+#endif
+#ifndef sotoin6pcb
+#define sotoin6pcb      sotoinpcb
+#endif
+#endif
+
 
 #ifdef SCTP_DEBUG
 extern u_int32_t sctp_debug_on;
@@ -403,8 +413,10 @@ sctp_skip_csum:
 #else
 	if (ipsec6_in_reject_so(m, in6p->sctp_socket)) {
 /* XXX */
+#ifdef __APPLE__
+	/* FIX ME: need to find right stat for __APPLE__ */
+#endif
 #ifndef __APPLE__
-		/* FIX ME: need to find right stat for __APPLE__ */
 		ipsec6stat.in_polvio++;
 #endif
 		goto bad;
