@@ -40,10 +40,13 @@
  * we would not allocate enough for Net/Open BSD :-<
  */
 
-#if defined(__FreeBSD__) && __FreeBSD_version > 500000 && defined(_KERNEL)
+#if defined(__FreeBSD__) && __FreeBSD_version > 500000 
+#if defined(_KERNEL)
 #include "opt_global.h"
 #include <net/pfil.h>
 #endif
+#endif
+
 #include <net/if.h>
 #ifdef __FreeBSD__
 #include <net/if_var.h>
@@ -457,10 +460,14 @@ struct sctp_tcb {
  * can blatantly put locks everywhere and they reduce to nothing on
  * NetBSD/OpenBSD and FreeBSD 4.x
  *
+ */
+#ifdef __APPLE__
+/*
  * Appropriate macros are also provided for Apple Mac OS 10.4.x systems.
  * 10.3.x systems (SCTP_APPLE_PANTHER defined) builds use the emtpy
  * macros.
  */
+#endif
 
 /*
  * When working with the global SCTP lists we lock and unlock the INP_INFO
@@ -655,10 +662,11 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #define SCTP_ITERATOR_UNLOCK()	        mtx_unlock(&sctppcbinfo.it_mtx)
 #define SCTP_ITERATOR_LOCK_DESTROY()	mtx_destroy(&sctppcbinfo.it_mtx)
 
+
+#elif defined(__APPLE__) && defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 /*
  * Apple MacOS X 10.4 "Tiger"
  */
-#elif defined(__APPLE__) && defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 
 /* for now, all locks use this group and attributes */
 #define SCTP_MTX_GRP sctppcbinfo.mtx_grp
@@ -812,7 +820,6 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #define SCTP_ITERATOR_LOCK_DESTROY()
 #endif
 
-/***************BEGIN FREEBSD 5 count stuff**********************/
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
 #define SCTP_INCRS_DEFINED 1
 
@@ -912,10 +919,10 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
                        mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
 	        } while (0)
 #endif
-/***************END FREEBSD 5 count stuff**********************/
 
-/***************BEGIN APPLE PANTHER count stuff**********************/
+
 #if defined(__APPLE__) && defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+/***************BEGIN APPLE PANTHER count stuff**********************/
 #define SCTP_INCRS_DEFINED 1
 #define SCTP_INCR_EP_COUNT() \
                 do { \
@@ -1010,12 +1017,13 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 		       sctppcbinfo.ipi_count_sockq--; \
                        lck_mtx_unlock(sctppcbinfo.ipi_count_mtx); \
 	        } while (0)
-#endif
 /***************BEGIN APPLE PANTHER count stuff**********************/
+#endif
 
 
-/***************BEGIN all othher count stuff**********************/
+
 #ifndef SCTP_INCRS_DEFINED
+/***************BEGIN all othher count stuff**********************/
 #define SCTP_INCR_EP_COUNT() \
                 do { \
 		       sctppcbinfo.ipi_count_ep++; \

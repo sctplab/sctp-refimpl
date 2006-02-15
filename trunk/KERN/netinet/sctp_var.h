@@ -408,12 +408,13 @@ int sctp_accept(struct socket *, struct mbuf *);
 int sctp_sysctl(int *, u_int, void *, size_t *, void *, size_t);
 #endif
 
+#ifdef __OpenBSD__
 /*
  * compatibility defines for OpenBSD, Apple
  */
 
 /* map callout into timeout for OpenBSD */
-#ifdef __OpenBSD__
+
 #ifndef callout_init
 #define callout_init(args)
 #define callout_reset(c, ticks, func, arg) \
@@ -427,8 +428,10 @@ do { \
 #endif
 #endif
 
-/* XXX: Hopefully temporary until APPLE changes to newer defs like other BSDs */
+
 #if defined(__APPLE__)
+
+/* XXX: Hopefully temporary until APPLE changes to newer defs like other BSDs */
 #define if_addrlist	if_addrhead
 #define if_list		if_link
 #define ifa_list	ifa_link

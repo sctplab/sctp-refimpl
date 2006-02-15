@@ -113,11 +113,18 @@
 #include <net/net_osdep.h>
 #endif
 
-#if defined(HAVE_NRL_INPCB) || defined(__FreeBSD__)
+#if defined(HAVE_NRL_INPCB) 
 #ifndef in6pcb
 #define in6pcb		inpcb
 #endif
 #endif
+
+#if defined(__FreeBSD__)
+#ifndef in6pcb
+#define in6pcb		inpcb
+#endif
+#endif
+
 
 #include <netinet/sctp_pcb.h>
 
@@ -3976,8 +3983,12 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		} else
 			ip->ip_off = 0;
 
-/* FreeBSD and Apple have RANDOM_IP_ID switch */
-#if defined(RANDOM_IP_ID) || defined(__NetBSD__) || defined(__OpenBSD__)
+
+#if defined(__FreeBSD__)
+		/* FreeBSD has a function for ip_id's */
+		ip->ip_id = ip_newid();
+#elif defined(RANDOM_IP_ID) || defined(__NetBSD__) || defined(__OpenBSD__)
+		/* Apple has RANDOM_IP_ID switch */
 		ip->ip_id = htons(ip_randomid());
 #else
 		ip->ip_id = htons(ip_id++);

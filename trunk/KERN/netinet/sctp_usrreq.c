@@ -107,7 +107,7 @@
 #include <netinet/sctp_peeloff.h>
 #endif /* HAVE_SCTP_PEELOFF_SOCKOPT */
 
-#if defined(HAVE_NRL_INPCB) || defined(__FreeBSD__)
+#if defined(HAVE_NRL_INPCB)
 #ifndef in6pcb
 #define in6pcb		inpcb
 #endif
@@ -115,6 +115,17 @@
 #define sotoin6pcb      sotoinpcb
 #endif
 #endif
+
+#if defined(__FreeBSD__)
+#ifndef in6pcb
+#define in6pcb		inpcb
+#endif
+#ifndef sotoin6pcb
+#define sotoin6pcb      sotoinpcb
+#endif
+#endif
+
+
 
 /*
  * sysctl tunable variables
@@ -1032,8 +1043,9 @@ sctp_sendm(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
 		 * by OpenBSD-- NetBSD, FreeBSD, and MacOS have methods for
 		 * re-defining sosend to use the sctp_sosend. One can
 		 * optionally switch back to this code (by changing back the
-		 * definitions) but this is not advisable.
-	     */
+		 * definitions) but this is not advisable. This code is
+                 * used by FreeBSD when sending a file with sendfile() though.
+		 */
 		int ret;
 		ret = sctp_output(inp, inp->pkt, addr, inp->control, p, flags);
 		inp->pkt = NULL;
@@ -4943,7 +4955,6 @@ sctp_usrreq(so, req, m, nam, control)
 }
 #endif
 
-/* #if defined(__NetBSD__) || defined(__OpenBSD__) */
 #if __OpenBSD__
 /*
  * Sysctl for sctp variables.
