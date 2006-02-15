@@ -4585,12 +4585,14 @@ sctp_input(m, va_alist)
 	struct sctp_chunkhdr *ch;
 	int refcount_up = 0;
 	int length, mlen, offset;
-#if defined(__OpenBSD__) && defined(IPSEC)
+#if defined(__OpenBSD__) 
+#if defined(IPSEC)
 	struct inpcb *i_inp;
 	struct m_tag *mtag;
 	struct tdb_ident *tdbi;
 	struct tdb *tdb;
 	int error;
+#endif
 #endif
 
 #if !(defined(__FreeBSD__) || defined(__APPLE__))
