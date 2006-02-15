@@ -600,6 +600,7 @@ sctp_sorecvmsg(struct socket *so,
 #ifndef _KERNEL
 #define _KERNEL
 #endif
+#endif
 
 #if !(defined(_KERNEL))
 

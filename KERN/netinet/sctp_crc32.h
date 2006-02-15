@@ -42,6 +42,7 @@
 #ifndef _KERNEL
 #define _KERNEL
 #endif
+#endif
 
 #if defined(_KERNEL)
 u_int32_t update_crc32(u_int32_t, unsigned char *, unsigned int);
