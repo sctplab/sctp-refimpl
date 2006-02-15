@@ -1,0 +1,5 @@
+#!/bin/sh
+for j in `cat export_freebsd_list`
+do
+	./freebsd_prepare $j
+done
