@@ -1100,6 +1100,7 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #ifndef _KERNEL
 #define _KERNEL
 #endif
+#endif
 
 #if defined(_KERNEL)
 

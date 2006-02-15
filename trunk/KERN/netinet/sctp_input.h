@@ -36,6 +36,7 @@
 #ifndef _KERNEL
 #define _KERNEL
 #endif
+#endif
 
 #if defined(_KERNEL)
 int sctp_common_input_processing(struct mbuf **, int, int, int,
