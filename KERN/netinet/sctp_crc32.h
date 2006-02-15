@@ -38,7 +38,12 @@
 #include <sys/types.h>
 
 #ifndef SCTP_USE_ADLER32
-#if defined(_KERNEL) || (defined(__APPLE__) && defined(KERNEL))
+#if (defined(__APPLE__) && defined(KERNEL))
+#ifndef _KERNEL
+#define _KERNEL
+#endif
+
+#if defined(_KERNEL)
 u_int32_t update_crc32(u_int32_t, unsigned char *, unsigned int);
 
 u_int32_t sctp_csum_finalize(u_int32_t);

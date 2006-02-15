@@ -1096,7 +1096,12 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 
 #endif
 
-#if defined(_KERNEL) || (defined(__APPLE__) && defined(KERNEL))
+#if (defined(__APPLE__) && defined(KERNEL))
+#ifndef _KERNEL
+#define _KERNEL
+#endif
+
+#if defined(_KERNEL)
 
 extern struct sctp_epinfo sctppcbinfo;
 extern int sctp_auto_asconf;

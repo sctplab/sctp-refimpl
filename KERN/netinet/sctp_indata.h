@@ -33,7 +33,13 @@
  */
 
 
-#if defined(_KERNEL) || (defined(__APPLE__) && defined(KERNEL))
+#if (defined(__APPLE__) && defined(KERNEL))
+#ifndef _KERNEL
+#define _KERNEL
+#endif
+
+
+#if defined(_KERNEL)
 int sctp_deliver_data(struct sctp_tcb *, struct sctp_association *,
     struct sctp_tmit_chunk *, int);
 
