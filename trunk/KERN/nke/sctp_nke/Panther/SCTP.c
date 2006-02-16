@@ -55,7 +55,7 @@ SYSCTL_DECL(_net_inet6);
 SYSCTL_NODE(_net_inet, IPPROTO_SCTP,    sctp,   CTLFLAG_RW, 0,  "SCTP");
 SYSCTL_NODE(_net_inet6, IPPROTO_SCTP,   sctp6,  CTLFLAG_RW, 0,  "SCTP6");
 
-extern struct sysctl_oid sysctl__net_inet_sctp_maxdgram;
+extern struct sysctl_oid sysctl__net_inet_sctp_sendspace;
 extern struct sysctl_oid sysctl__net_inet_sctp_recvspace;
 extern struct sysctl_oid sysctl__net_inet_sctp_auto_asconf;
 extern struct sysctl_oid sysctl__net_inet_sctp_ecn_enable;
@@ -233,7 +233,7 @@ kern_return_t SCTP_start (kmod_info_t * ki, void * d) {
 	ip6_protox[IPPROTO_SCTP] = &sctp6_dgram;
 	
 	sysctl_register_oid(&sysctl__net_inet_sctp);
-	sysctl_register_oid(&sysctl__net_inet_sctp_maxdgram);
+	sysctl_register_oid(&sysctl__net_inet_sctp_sendspace);
 	sysctl_register_oid(&sysctl__net_inet_sctp_recvspace);
 	sysctl_register_oid(&sysctl__net_inet_sctp_auto_asconf);
 	sysctl_register_oid(&sysctl__net_inet_sctp_ecn_enable);
@@ -286,7 +286,7 @@ kern_return_t SCTP_stop (kmod_info_t * ki, void * d) {
 	}
 	
 	sysctl_unregister_oid(&sysctl__net_inet_sctp);
-	sysctl_unregister_oid(&sysctl__net_inet_sctp_maxdgram);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_sendspace);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_recvspace);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_auto_asconf);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_ecn_enable);
