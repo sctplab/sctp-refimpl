@@ -7,7 +7,7 @@
 #include <sys/kernel.h>
 #endif
 /*
- * Copyright (c) 2001, 2002, 2003, 2004, 2005 Cisco Systems, Inc.
+ * Copyright (c) 2001-2006 Cisco Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -226,10 +226,7 @@
 #define SCTP_DATAGRAM_MARKED		20010
 #define SCTP_FORWARD_TSN_SKIP		30010
 
-/* SCTP chunk types */
-/* Moved to sctp.h so f/w and natd
- * boxes can find the chunk types.
- */
+/* SCTP chunk types are moved sctp.h for application (NAT, FW) use */
 
 /* align to 32-bit sizes */
 #define SCTP_SIZE32(x)	((((x)+3) >> 2) << 2)
@@ -240,45 +237,42 @@
 
 /* SCTP parameter types */
 /*************0x0000 series*************/
-#define SCTP_HEARTBEAT_INFO	    0x0001
-#define SCTP_IPV4_ADDRESS	    0x0005
-#define SCTP_IPV6_ADDRESS	    0x0006
-#define SCTP_STATE_COOKIE	    0x0007
-#define SCTP_UNRECOG_PARAM	    0x0008
-#define SCTP_COOKIE_PRESERVE	    0x0009
-#define SCTP_HOSTNAME_ADDRESS	    0x000b
-#define SCTP_SUPPORTED_ADDRTYPE	    0x000c
+#define SCTP_HEARTBEAT_INFO		0x0001
+#define SCTP_IPV4_ADDRESS		0x0005
+#define SCTP_IPV6_ADDRESS		0x0006
+#define SCTP_STATE_COOKIE		0x0007
+#define SCTP_UNRECOG_PARAM		0x0008
+#define SCTP_COOKIE_PRESERVE		0x0009
+#define SCTP_HOSTNAME_ADDRESS		0x000b
+#define SCTP_SUPPORTED_ADDRTYPE		0x000c
 
 /* draft-ietf-stewart-strreset-xxx */
-#define SCTP_STR_RESET_OUT_REQUEST      0x000d
-#define SCTP_STR_RESET_IN_REQUEST       0x000e
-#define SCTP_STR_RESET_TSN_REQUEST      0x000f
-#define SCTP_STR_RESET_RESPONSE         0x0010
+#define SCTP_STR_RESET_OUT_REQUEST	0x000d
+#define SCTP_STR_RESET_IN_REQUEST	0x000e
+#define SCTP_STR_RESET_TSN_REQUEST	0x000f
+#define SCTP_STR_RESET_RESPONSE		0x0010
 
 #define SCTP_MAX_RESET_PARAMS 2
-
 #define SCTP_STREAM_RESET_TSN_DELTA    0x1000
 
 /*************0x4000 series*************/
+
 /*************0x8000 series*************/
-#define SCTP_ECN_CAPABLE	    0x8000
+#define SCTP_ECN_CAPABLE		0x8000
 /* ECN Nonce: draft-ladha-sctp-ecn-nonce */
-#define SCTP_ECN_NONCE_SUPPORTED    0x8001
+#define SCTP_ECN_NONCE_SUPPORTED	0x8001
 /* draft-ietf-tsvwg-auth-xxx */
-#define SCTP_AUTH_RANDOM            0x8002
-#define SCTP_AUTH_CHUNK_LIST        0x8003
-#define SCTP_AUTH_HMAC_ALGO         0x8004
-/* draft-ietf-tsvwg-addip-sctp-xx */
-#define SCTP_SUPPORTED_CHUNK_EXT    0x8008
+#define SCTP_AUTH_RANDOM		0x8002
+#define SCTP_AUTH_CHUNK_LIST		0x8003
+#define SCTP_AUTH_HMAC_ALGO		0x8004
 /*
  * draft-ietf-tsvwg-addip-sctp-xx 
- *   param=0x8001  len=0xNNNN
+ *   param=0x8008  len=0xNNNN
  *   Byte | Byte | Byte | Byte
  *   Byte | Byte ...
  *
- *  Where each Byte is a chunk type
- *  extension supported so for example
- *  to support all chunks one would have (in hex):
+ *  Where each byte is a chunk type extension supported.
+ *  For example, to support all chunks one would have (in hex):
  *
  *  80 01 00 09
  *  C0 C1 80 81
@@ -290,20 +284,19 @@
  *   81 = Packet Drop
  *   82 = Stream Reset
  */
+#define SCTP_SUPPORTED_CHUNK_EXT    0x8008
+#define SCTP_EXT_COUNT		5   /* num of extensions we support chunk wise */
+#define SCTP_PAD_EXT_COUNT	3   /* num of pad bytes needed to get to 32 bit boundary */
 
-/* number of extensions we support */
-#define SCTP_EXT_COUNT 5     	/* num of extensions we support chunk wise */
-#define SCTP_PAD_EXT_COUNT 3    /* num of pad bytes needed to get to 32 bit boundary */
-/*************0x0000 series*************/
-
-#define SCTP_PRSCTP_SUPPORTED	    0xc000
+/*************0xC000 series*************/
+#define SCTP_PRSCTP_SUPPORTED		0xc000
 /* draft-ietf-tsvwg-addip-sctp */
-#define SCTP_ADD_IP_ADDRESS	    0xc001
-#define SCTP_DEL_IP_ADDRESS	    0xc002
-#define SCTP_ERROR_CAUSE_IND	    0xc003
-#define SCTP_SET_PRIM_ADDR	    0xc004
-#define SCTP_SUCCESS_REPORT	    0xc005
-#define SCTP_ULP_ADAPTION	    0xc006
+#define SCTP_ADD_IP_ADDRESS		0xc001
+#define SCTP_DEL_IP_ADDRESS		0xc002
+#define SCTP_ERROR_CAUSE_IND		0xc003
+#define SCTP_SET_PRIM_ADDR		0xc004
+#define SCTP_SUCCESS_REPORT		0xc005
+#define SCTP_ULP_ADAPTION		0xc006
 
 /* Notification error codes */
 #define SCTP_NOTIFY_DATAGRAM_UNSENT	0x0001
@@ -315,7 +308,6 @@
 #define SCTP_SHUTDOWN_GUARD_EXPIRES	0x0020
 #define SCTP_RECEIVED_SACK		0x0040
 #define SCTP_PEER_FAULTY		0x0080
-
 
 /* bits for TOS field */
 #define SCTP_ECT0_BIT		0x02
@@ -447,7 +439,6 @@
 #define SCTP_MAXATTEMPT_SEND	3
 
 /* Maximum TSN's we will summarize in a drop report */
-
 #define SCTP_MAX_DROP_REPORT 16
 
 /* How many drop re-attempts we make on  INIT/COOKIE-ECHO */
@@ -456,7 +447,6 @@
 /* And the max we will keep a history of in the tcb
  * which MUST be lower than 256.
  */
-
 #define SCTP_MAX_DROP_SAVE_REPORT 16
 
 /*
@@ -481,16 +471,12 @@
 #define TICKS_TO_MSEC(x) (((x) * 1000) / hz)
 #define SEC_TO_TICKS(x) ((x) * hz)
 
-/* Basically the minimum amount
- * of time before I do a early
- * FR. Making this value to low will
- * cause duplicate retransmissions.
+/*
+ * Basically the minimum amount of time before I do a early FR.
+ * Making this value to low will cause duplicate retransmissions.
  */
 #define SCTP_MINFR_MSEC_TIMER 250
-/* The floor that I will allow this
- * value to fall to when starting
- * a timer.
- */
+/* The floor this value is allowed to fall to when starting a timer. */
 #define SCTP_MINFR_MSEC_FLOOR 20
 
 /* init timer def = 1 sec */
@@ -524,6 +510,7 @@
 
 #define SCTP_DEF_MAX_INIT	8
 #define SCTP_DEF_MAX_SEND	10
+#define SCTP_DEF_MAX_PATH_RTX	4
 
 #define SCTP_DEF_PMTU_RAISE_SEC	600  /* 10 min between raise attempts */
 #define SCTP_DEF_PMTU_MIN	600
@@ -537,18 +524,16 @@
 /* How many streams I request initally by default */
 #define SCTP_OSTREAM_INITIAL 10
 
-#define SCTP_SEG_TO_RWND_UPD 32 /* How many smallest_mtu's need to increase before
-                                 * a window update sack is sent (should be a
-                                 * power of 2).
-                                 */
-#define SCTP_SCALE_OF_RWND_TO_UPD       4       /* Incr * this > hiwat, send
-                                                 * window update. Should be a
-                                                 * power of 2.
-                                                 */
+/*
+ * How many smallest_mtu's need to increase before a window update sack
+ * is sent (should be a power of 2).
+ */
+#define SCTP_SEG_TO_RWND_UPD 32
+/* Send window update (incr * this > hiwat). Should be a power of 2 */
+#define SCTP_SCALE_OF_RWND_TO_UPD       4
 #define SCTP_MINIMAL_RWND		(4096) /* minimal rwnd */
 
 #define SCTP_ADDRMAX		20
-
 
 /* SCTP DEBUG Switch parameters */
 #define SCTP_DEBUG_TIMER1	0x00000001
@@ -561,6 +546,8 @@
 #define SCTP_DEBUG_OUTPUT4	0x00000080
 #define SCTP_DEBUG_UTIL1	0x00000100
 #define SCTP_DEBUG_UTIL2	0x00000200
+#define SCTP_DEBUG_AUTH1	0x00000400
+#define SCTP_DEBUG_AUTH2	0x00000800
 #define SCTP_DEBUG_INPUT1	0x00001000
 #define SCTP_DEBUG_INPUT2	0x00002000
 #define SCTP_DEBUG_INPUT3	0x00004000
@@ -568,6 +555,7 @@
 #define SCTP_DEBUG_ASCONF1	0x00010000
 #define SCTP_DEBUG_ASCONF2	0x00020000
 #define SCTP_DEBUG_OUTPUT5	0x00040000
+#define SCTP_DEBUG_XXX		0x00080000
 #define SCTP_DEBUG_PCB1		0x00100000
 #define SCTP_DEBUG_PCB2		0x00200000
 #define SCTP_DEBUG_PCB3		0x00400000
@@ -579,6 +567,7 @@
 #define SCTP_DEBUG_USRREQ1	0x10000000
 #define SCTP_DEBUG_USRREQ2	0x20000000
 #define SCTP_DEBUG_PEEL1	0x40000000
+#define SCTP_DEBUG_XXXXX	0x80000000
 #define SCTP_DEBUG_ALL		0x7ff3f3ff
 #define SCTP_DEBUG_NOISY	0x00040000
 
@@ -591,7 +580,6 @@
  */
 /* What receiver needs to see in sockbuf or we tell peer its 1 */
 #define SCTP_SWS_RECEIVER_DEF	3000
-
 
 #define SCTP_INITIAL_CWND 4380
 
@@ -660,9 +648,6 @@
 #define SCTP_NOTIFY_MAX			24
 
 
-
-
-
 /* clock variance is 10ms */
 #define SCTP_CLOCK_GRANULARITY	10
 
@@ -690,7 +675,7 @@
 #define SCTP_UNSET_TSN_PRESENT(arry, gap) (arry[(gap >> 3)] &= ((~(0x01 << ((gap & 0x07)))) & 0xff))
 
 /* pegs */
-#define SCTP_NUMBER_OF_PEGS	120
+#define SCTP_NUMBER_OF_PEGS	128
 /* peg index's */
 #define SCTP_PEG_SACKS_SEEN	0
 #define SCTP_PEG_SACKS_SENT	1
@@ -813,6 +798,15 @@
 #define SCTP_EARLYFR_STR_TMR     118
 #define SCTP_T3_MARKED_TSNS      119
 
+#define SCTP_AUTH_SENT           120
+#define SCTP_AUTH_RCVD           121
+#define SCTP_AUTH_MISSING        122
+#define SCTP_AUTH_HMAC_ID_INVAL  123
+#define SCTP_AUTH_INVALID        124
+#define SCTP_AUTH_NO_SECRET_KEY  125
+#define SCTP_AUTH_SENT_NULL_KEY  126
+#define SCTP_AUTH_RCVD_NULL_KEY  127
+
 /*
  * This value defines the number of vtag block time wait entry's
  * per list element.  Each entry will take 2 4 byte ints (and of
@@ -857,7 +851,14 @@
      (((u_char *)&(a)->s_addr)[3] == 1))
 
 
-#if defined(_KERNEL) || (defined(__APPLE__) && defined(KERNEL))
+
+#if (defined(__APPLE__) && defined(KERNEL))
+#ifndef _KERNEL
+#define _KERNEL
+#endif
+#endif
+
+#if defined(_KERNEL)
 
 #if defined(__FreeBSD__) || defined(__APPLE__)
 #define SCTP_GETTIME_TIMEVAL(x)	(microuptime(x))

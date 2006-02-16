@@ -32,7 +32,13 @@
  * SUCH DAMAGE.
  */
 
-#if defined(_KERNEL) || (defined(__APPLE__) && defined(KERNEL))
+#if (defined(__APPLE__) && defined(KERNEL))
+#ifndef _KERNEL
+#define _KERNEL
+#endif
+#endif
+
+#if defined(_KERNEL)
 
 #ifdef SCTP_MBUF_DEBUG
 #define sctp_m_freem(m) do { \

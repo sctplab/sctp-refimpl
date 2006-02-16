@@ -96,6 +96,10 @@
 #include <netinet/sctp_indata.h>
 #include <netinet/sctp_asconf.h>
 
+#if __FreeBSD_version >= 600000
+#include <netinet/ip_options.h>
+#endif
+
 #ifdef __APPLE__
 #include <stdarg.h>
 #elif !defined(__FreeBSD__)
@@ -153,6 +157,11 @@ sctp_handle_init(struct mbuf *m, int iphlen, int offset,
 	init = &cp->init;
 	/* First are we accepting? */
 	if (inp->sctp_socket->so_qlimit == 0) {
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_INPUT2) {
+			printf("sctp_handle_init: Abort, so_qlimit:%d\n", inp->sctp_socket->so_qlimit);
+		}
+#endif
 		sctp_abort_association(inp, stcb, m, iphlen, sh, op_err);
 		return;
 	}
@@ -221,6 +230,7 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 		/* update any ssthresh's that may have a default */
 		TAILQ_FOREACH(lnet, &asoc->nets, sctp_next) {
 			lnet->ssthresh = asoc->peers_rwnd;
+
 #if defined(SCTP_CWND_MONITOR) || defined(SCTP_CWND_LOGGING)
 			sctp_log_cwnd(stcb, lnet, 0, SCTP_CWND_INITIALIZATION);
 #endif
@@ -1555,7 +1565,13 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 #endif /* SCTP_DEBUG */
 		return (NULL);
 	}
-	initack_limit = initack_offset + SCTP_SIZE32(chk_length);
+	/*
+	 * NOTE: We can't use the INIT_ACK's chk_length to determine
+	 * the "initack_limit" value.  This is because the chk_length field
+	 * includes the length of the cookie, but the cookie is omitted
+	 * when the INIT and INIT_ACK are tacked onto the cookie...
+	 */
+	initack_limit = offset + cookie_len;
 
 	/*
 	 * now that we know the INIT/INIT-ACK are in place,
@@ -1678,8 +1694,9 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		return (NULL);
 	}
 
-	sctp_check_address_list(stcb, m, initack_offset +
-	    sizeof(struct sctp_init_ack_chunk), initack_limit,
+	sctp_check_address_list(stcb, m,
+	    initack_offset + sizeof(struct sctp_init_ack_chunk),
+	    initack_limit - (initack_offset + sizeof(struct sctp_init_ack_chunk)),
 	    initack_src, cookie->local_scope, cookie->site_scope,
 	    cookie->ipv4_scope, cookie->loopback_scope);
 
@@ -2159,12 +2176,21 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 				return (m);
 			}
 			oso = (*inp_p)->sctp_socket;
+#if (defined(__FreeBSD__) && __FreeBSD_version >= 500000)
+			/* We do this to keep the sockets side
+			 * happy durin the sonewcon ONLY.
+			 */
+			NET_LOCK_GIANT();
+#endif
 			SCTP_TCB_UNLOCK((*stcb));
 			so = sonewconn(oso, SS_ISCONNECTED
 #if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
 			               , NULL
 #endif
                                       );
+#if (defined(__FreeBSD__) && __FreeBSD_version >= 500000)
+			NET_UNLOCK_GIANT();
+#endif
 			SCTP_INP_WLOCK((*stcb)->sctp_ep);
 			SCTP_TCB_LOCK((*stcb));
 			SCTP_INP_WUNLOCK((*stcb)->sctp_ep);
@@ -2836,7 +2862,6 @@ sctp_handle_stream_reset_response(struct sctp_tcb *stcb,
 		srparam = sctp_find_stream_reset(stcb, seq, &chk);
 		if(srparam) {
 			stcb->asoc.str_reset_seq_out++;
-			printf("asoc.str_reset_seq_out now %x\n", stcb->asoc.str_reset_seq_out);
 			type = ntohs(srparam->ph.param_type);
 			lparm_len = ntohs(srparam->ph.param_length);
 			number_entries = (lparm_len - sizeof(struct sctp_stream_reset_out_request))/sizeof(uint16_t);
@@ -2874,7 +2899,7 @@ sctp_handle_stream_reset_response(struct sctp_tcb *stcb,
 					resp = (struct sctp_stream_reset_response_tsn *)respin;
 					asoc->stream_reset_outstanding--;
 					fwdtsn.ch.chunk_length = htons(sizeof(struct sctp_forward_tsn_chunk));
-					fwdtsn.ch.chunk_type = htons(SCTP_FORWARD_CUM_TSN);
+					fwdtsn.ch.chunk_type = SCTP_FORWARD_CUM_TSN;
 					fwdtsn.new_cumulative_tsn = htonl(ntohl(resp->senders_next_tsn)-1);
 					sctp_handle_forward_tsn(stcb, &fwdtsn, &abort_flag);
 					if(abort_flag) {
@@ -2885,8 +2910,11 @@ sctp_handle_stream_reset_response(struct sctp_tcb *stcb,
 					stcb->asoc.mapping_array_base_tsn = ntohl(resp->senders_next_tsn);
 					memset(stcb->asoc.mapping_array, 0, stcb->asoc.mapping_array_size);
 					stcb->asoc.sending_seq = ntohl(resp->receivers_next_tsn);
+					stcb->asoc.last_acked_seq = stcb->asoc.cumulative_tsn;
+
 					sctp_reset_out_streams(stcb, 0, (u_int16_t *)NULL);
 					sctp_reset_in_stream(stcb, 0, (u_int16_t *)NULL);
+
 				}
 			}
 			/* get rid of the request and get the request flags */
@@ -2958,6 +2986,7 @@ sctp_handle_str_reset_request_in(struct sctp_tcb *stcb,
 			       (u_int)seq, (u_int)asoc->str_reset_seq_in);
 		}
 #endif
+		sctp_add_stream_reset_result(chk, seq, SCTP_STREAM_RESET_BAD_SEQNO);
 	}
 }
 
@@ -2982,8 +3011,9 @@ sctp_handle_str_reset_request_tsn(struct sctp_tcb *stcb,
 	seq = ntohl(req->request_seq);
 	if(asoc->str_reset_seq_in == seq) {
 		fwdtsn.ch.chunk_length = htons(sizeof(struct sctp_forward_tsn_chunk));
-		fwdtsn.ch.chunk_type = htons(SCTP_FORWARD_CUM_TSN);
-		fwdtsn.new_cumulative_tsn = htonl(stcb->asoc.highest_tsn_inside_map + SCTP_STREAM_RESET_TSN_DELTA);
+		fwdtsn.ch.chunk_type = SCTP_FORWARD_CUM_TSN;
+		fwdtsn.ch.chunk_flags = 0;
+		fwdtsn.new_cumulative_tsn = htonl(stcb->asoc.highest_tsn_inside_map + 1);
 		sctp_handle_forward_tsn(stcb, &fwdtsn, &abort_flag);
 		if(abort_flag) {
 			return(1);
@@ -2993,6 +3023,12 @@ sctp_handle_str_reset_request_tsn(struct sctp_tcb *stcb,
 		stcb->asoc.mapping_array_base_tsn = stcb->asoc.highest_tsn_inside_map + 1;
 		memset(stcb->asoc.mapping_array, 0, stcb->asoc.mapping_array_size);
 		stcb->asoc.sending_seq++;
+		/* save off historical data for retrans */
+		stcb->asoc.last_sending_seq[1] = stcb->asoc.last_sending_seq[0];
+		stcb->asoc.last_sending_seq[0] = stcb->asoc.sending_seq;
+		stcb->asoc.last_base_tsnsent[1] = stcb->asoc.last_base_tsnsent[0];
+		stcb->asoc.last_base_tsnsent[0] = stcb->asoc.mapping_array_base_tsn;
+
 		sctp_add_stream_reset_result_tsn(chk,  
 						 ntohl(req->request_seq), 
 						 SCTP_STREAM_RESET_PERFORMED,
@@ -3002,11 +3038,19 @@ sctp_handle_str_reset_request_tsn(struct sctp_tcb *stcb,
 		sctp_reset_in_stream(stcb, 0, (u_int16_t *)NULL);
 		stcb->asoc.last_reset_action[1] = stcb->asoc.last_reset_action[0];
 		stcb->asoc.last_reset_action[0] = SCTP_STREAM_RESET_PERFORMED;
+
 		asoc->str_reset_seq_in++;
 	} else if (asoc->str_reset_seq_in-1 == seq) {
-		sctp_add_stream_reset_result(chk, seq, asoc->last_reset_action[0]);
+		sctp_add_stream_reset_result_tsn(chk, seq, asoc->last_reset_action[0], 
+						 stcb->asoc.last_sending_seq[0],
+						 stcb->asoc.last_base_tsnsent[0]
+						 );
 	} else if (asoc->str_reset_seq_in-2 == seq) {
-		sctp_add_stream_reset_result(chk, seq, asoc->last_reset_action[1]);
+		sctp_add_stream_reset_result_tsn(chk, seq, asoc->last_reset_action[1],
+						 stcb->asoc.last_sending_seq[1],
+						 stcb->asoc.last_base_tsnsent[1]
+
+			);
 	} else {
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
@@ -3014,6 +3058,7 @@ sctp_handle_str_reset_request_tsn(struct sctp_tcb *stcb,
 			       (u_int)seq, (u_int)asoc->str_reset_seq_in);
 		}
 #endif
+		sctp_add_stream_reset_result(chk, seq, SCTP_STREAM_RESET_BAD_SEQNO);
 	}
 	return(0);
 }
@@ -3091,6 +3136,7 @@ sctp_handle_str_reset_request_out(struct sctp_tcb *stcb,
 			       (u_int)seq, (u_int)asoc->str_reset_seq_in);
 /*		}*/
 #endif
+		sctp_add_stream_reset_result(chk, seq, SCTP_STREAM_RESET_BAD_SEQNO);
 	}
 }
 
@@ -3154,7 +3200,7 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_out_req
  		param_len = ntohs(ph->param_length);
 		if (param_len < (int)sizeof(struct sctp_stream_reset_tsn_request)) {
 			/* bad param */
-			return (ret_code);
+			break;
 		}
 		ptype = ntohs(ph->param_type);
 		num_param++;
@@ -3197,8 +3243,6 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_out_req
  			resp = (struct sctp_stream_reset_response *)ph;
 			seq = ntohl(resp->response_seq);
 			result = ntohl(resp->result);
-			printf("Got a responze to my seq:%x resp:%d\n",
-			       (u_int)seq, (int)result);
  			if(sctp_handle_stream_reset_response(stcb, seq, result, resp)) {
 				ret_code = 1;
 				goto strres_nochunk;
@@ -3666,7 +3710,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 		if (ch->chunk_type == SCTP_INITIATION_ACK) {
 			/* get an init-ack chunk */
 			ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, *offset,
-			    sizeof(struct sctp_init_ack), chunk_buf);
+			    sizeof(struct sctp_init_ack_chunk), chunk_buf);
 			if (ch == NULL) {
 				*offset = length;
 				if (locked_tcb)
@@ -4541,12 +4585,14 @@ sctp_input(m, va_alist)
 	struct sctp_chunkhdr *ch;
 	int refcount_up = 0;
 	int length, mlen, offset;
-#if defined(__OpenBSD__) && defined(IPSEC)
+#if defined(__OpenBSD__) 
+#if defined(IPSEC)
 	struct inpcb *i_inp;
 	struct m_tag *mtag;
 	struct tdb_ident *tdbi;
 	struct tdb *tdb;
 	int error;
+#endif
 #endif
 
 #if !(defined(__FreeBSD__) || defined(__APPLE__))
