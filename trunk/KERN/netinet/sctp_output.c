@@ -7661,10 +7661,11 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 					return (ENOMEM);
 				}
 				/* update our MTU size */
-				mtu -= chk->data->m_pkthdr.len;
-				if (mtu < 0) {
+				if(mtu > chk->data->m_pkthdr.len)
+					mtu -= chk->data->m_pkthdr.len;
+				else
 					mtu = 0;
-				}
+
 				/* Do clear IP_DF ? */
 				if (chk->flags & CHUNK_FLAGS_FRAGMENT_OK) {
 					no_fragmentflg = 0;
@@ -7834,9 +7835,15 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 		/*********************/
 		/* now lets add any data within the MTU constraints */
 		if (((struct sockaddr *)&net->ro._l_addr)->sa_family == AF_INET) {
-			omtu = net->mtu - (sizeof(struct ip) + sizeof(struct sctphdr));
+			if(net->mtu > (sizeof(struct ip) + sizeof(struct sctphdr)))
+				omtu = net->mtu - (sizeof(struct ip) + sizeof(struct sctphdr));
+			else
+				omtu = 0;
 		} else {
-			omtu = net->mtu - (sizeof(struct ip6_hdr) + sizeof(struct sctphdr));
+			if(net->mtu > (sizeof(struct ip6_hdr) + sizeof(struct sctphdr)))
+				omtu = net->mtu - (sizeof(struct ip6_hdr) + sizeof(struct sctphdr));
+			else
+				omtu = 0;
 		}
 
 #ifdef SCTP_DEBUG
@@ -7927,19 +7934,23 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 					if (chk->flags & CHUNK_FLAGS_FRAGMENT_OK) {
 						no_fragmentflg = 0;
 					}
-					mtu -= chk->send_size;
-					r_mtu -= chk->send_size;
+					/* unsigned subtraction of mtu */
+					if(mtu > chk->send_size)
+						mtu -= chk->send_size;
+					else
+						mtu = 0;
+					/* unsigned subtraction of r_mtu */
+					if(r_mtu > chk->send_size)
+						r_mtu -= chk->send_size;
+					else
+						r_mtu = 0;
+
 					data_list[bundle_at++] = chk;
 					if (bundle_at >= SCTP_MAX_DATA_BUNDLING) {
 						mtu = 0;
 						break;
 					}
-					if (mtu <= 0) {
-						mtu = 0;
-						break;
-					}
-					if ((r_mtu <= 0) || one_chunk) {
-						r_mtu = 0;
+					if ((mtu == 0) || (r_mtu == 0) || (one_chunk)) {
 						break;
 					}
 				} else {
@@ -8850,7 +8861,10 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 			if (chk->flags & CHUNK_FLAGS_FRAGMENT_OK) {
 				no_fragmentflg = 0;
 			}
-			mtu -= chk->send_size;
+			if(mtu > chk->send_size)
+				mtu -= chk->send_size;
+			else
+				mtu = 0;
 			data_list[bundle_at++] = chk;
 			if (one_chunk && (asoc->total_flight <= 0)) {
 				sctp_pegs[SCTP_WINDOW_PROBES]++;
