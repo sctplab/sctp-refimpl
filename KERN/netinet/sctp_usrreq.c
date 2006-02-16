@@ -259,7 +259,6 @@ sctp_split_chunks(struct sctp_association *asoc,
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, new_chk);
 		SCTP_DECR_CHK_COUNT();
 		return;
-
 	}
 	/* Data is now split adjust sizes */
 	chk->no_fr_allowed = 0;
@@ -267,15 +266,14 @@ sctp_split_chunks(struct sctp_association *asoc,
 	chk->send_size >>= 1;
 	new_chk->send_size -= chk->send_size;
 
-
 	chk->book_size >>= 1;
 	new_chk->book_size -= chk->book_size;
 
 
 	/* now adjust the marks */
 	if(chk->rec.data.rcv_flags & SCTP_DATA_NOT_FRAG) {
-		chk->rec.data.rcv_flags |= SCTP_DATA_FIRST_FRAG;
 		chk->rec.data.rcv_flags &= ~SCTP_DATA_LAST_FRAG;
+		chk->rec.data.rcv_flags |= SCTP_DATA_FIRST_FRAG;
 
 		new_chk->rec.data.rcv_flags &= ~SCTP_DATA_FIRST_FRAG;
 		new_chk->rec.data.rcv_flags |= SCTP_DATA_LAST_FRAG;
@@ -290,6 +288,7 @@ sctp_split_chunks(struct sctp_association *asoc,
 			 * the new one gets to keep it.
 			 */
 			chk->rec.data.rcv_flags &= ~SCTP_DATA_LAST_FRAG;
+			new_chk->rec.data.rcv_flags |= SCTP_DATA_FIRST_FRAG;
 		}
 	}
 	/* Increase ref count if dest is set */
@@ -307,57 +306,54 @@ sctp_pathmtu_adustment(struct sctp_inpcb *inp,
 		       struct sctp_nets *net,
 		       uint16_t nxtsz)
 {
-  struct sctp_tmit_chunk *chk, *nchk;
-  struct sctp_stream_out *strm;
-  /* Adjust that too */
-  stcb->asoc.smallest_mtu = nxtsz;
-  /* now off to subtract IP_DF flag if needed */
+	struct sctp_tmit_chunk *chk, *nchk;
+	struct sctp_stream_out *strm;
+	/* Adjust that too */
+	stcb->asoc.smallest_mtu = nxtsz;
+	/* now off to subtract IP_DF flag if needed */
 
-  TAILQ_FOREACH(chk, &stcb->asoc.send_queue, sctp_next) {
-    if ((chk->send_size+IP_HDR_SIZE) > nxtsz) {
-      chk->flags |= CHUNK_FLAGS_FRAGMENT_OK;
-    }
-  }
-  TAILQ_FOREACH(chk, &stcb->asoc.sent_queue, sctp_next) {
-    if ((chk->send_size+IP_HDR_SIZE) > nxtsz) {
-      /*
-       * For this guy we also mark for immediate
-       * resend since we sent to big of chunk
-       */
-      chk->flags |= CHUNK_FLAGS_FRAGMENT_OK;
-      if (chk->sent != SCTP_DATAGRAM_RESEND) {
-	sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
-      }
-      chk->sent = SCTP_DATAGRAM_RESEND;
-      chk->rec.data.doing_fast_retransmit = 0;
+	TAILQ_FOREACH(chk, &stcb->asoc.send_queue, sctp_next) {
+		if ((chk->send_size+IP_HDR_SIZE) > nxtsz) {
+			chk->flags |= CHUNK_FLAGS_FRAGMENT_OK;
+		}
+	}
+	TAILQ_FOREACH(chk, &stcb->asoc.sent_queue, sctp_next) {
+		if ((chk->send_size+IP_HDR_SIZE) > nxtsz) {
+			/*
+			 * For this guy we also mark for immediate
+			 * resend since we sent to big of chunk
+			 */
+			chk->flags |= CHUNK_FLAGS_FRAGMENT_OK;
+			if (chk->sent != SCTP_DATAGRAM_RESEND) {
+				sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
+			}
+			chk->sent = SCTP_DATAGRAM_RESEND;
+			chk->rec.data.doing_fast_retransmit = 0;
 
-      /* Clear any time so NO RTT is being done */
-      chk->do_rtt = 0;
-      if(stcb->asoc.total_flight >= chk->book_size)
-	stcb->asoc.total_flight -= chk->book_size;
-      else 
-	stcb->asoc.total_flight = 0;
-      if( stcb->asoc.total_flight_count > 0) 
-	stcb->asoc.total_flight_count--;
-      if( net->flight_size >= chk->book_size) 
-	net->flight_size -= chk->book_size;
-      else
-	net->flight_size = 0;
-    }
-  }
-  TAILQ_FOREACH(strm, &stcb->asoc.out_wheel, next_spoke) {
-    chk = TAILQ_FIRST(&strm->outqueue);
-    while (chk) {
-      nchk = TAILQ_NEXT(chk, sctp_next);
-      if ((chk->send_size+SCTP_MED_OVERHEAD) > nxtsz) {
-	      if(0)
-		      sctp_split_chunks(&stcb->asoc, strm, chk);
-	      else
-		      chk->flags |= CHUNK_FLAGS_FRAGMENT_OK;
-      }
-      chk = nchk;
-    }
-  }
+			/* Clear any time so NO RTT is being done */
+			chk->do_rtt = 0;
+			if(stcb->asoc.total_flight >= chk->book_size)
+				stcb->asoc.total_flight -= chk->book_size;
+			else 
+				stcb->asoc.total_flight = 0;
+			if( stcb->asoc.total_flight_count > 0) 
+				stcb->asoc.total_flight_count--;
+			if( net->flight_size >= chk->book_size) 
+				net->flight_size -= chk->book_size;
+			else
+				net->flight_size = 0;
+		}
+	}
+	TAILQ_FOREACH(strm, &stcb->asoc.out_wheel, next_spoke) {
+		chk = TAILQ_FIRST(&strm->outqueue);
+		while (chk) {
+			nchk = TAILQ_NEXT(chk, sctp_next);
+			if ((chk->send_size+SCTP_MED_OVERHEAD) > nxtsz) {
+				sctp_split_chunks(&stcb->asoc, strm, chk);
+			}
+			chk = nchk;
+		}
+	}
 }
 
 static void
@@ -397,6 +393,7 @@ sctp_notify_mbuf(struct sctp_inpcb *inp,
 		return;
 	}
 	totsz = ip->ip_len;
+	
 	nxtsz = ntohs(icmph->icmp_seq);
 	if (nxtsz == 0) {
 		/*
@@ -419,7 +416,7 @@ sctp_notify_mbuf(struct sctp_inpcb *inp,
 	}
 	/* now what about the ep? */
 	if (stcb->asoc.smallest_mtu > nxtsz) {
-	  sctp_pathmtu_adustment(inp, stcb, net, nxtsz);
+		sctp_pathmtu_adustment(inp, stcb, net, nxtsz);
 	}
 	if (tmr_stopped) 
 	  sctp_timer_start(SCTP_TIMER_TYPE_PATHMTURAISE, inp, stcb, net);
