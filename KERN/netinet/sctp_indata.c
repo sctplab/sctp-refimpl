@@ -2889,8 +2889,10 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 								      SCTP_LOG_TSN_ACKED);
 #endif
 							
-							if ((sctp_cmt_on_off == 0) || (tp1->rec.data.chunk_was_revoked == 0)) {
-							
+							if (tp1->rec.data.chunk_was_revoked == 0) {
+								/* Revoked chunks don't count, since
+								 * we previously pulled them from the fs.
+								 */
 							        if(tp1->whoTo->flight_size >= tp1->book_size)
 								        tp1->whoTo->flight_size -= tp1->book_size;
 								else 
@@ -3963,45 +3965,50 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 						tp1->whoTo->dest_state &=
 							~SCTP_ADDR_UNCONFIRMED;
 					}
-					if ((sctp_cmt_on_off == 0) || (sctp_cmt_on_off && (tp1->rec.data.chunk_was_revoked == 0))) {
+					if(tp1->rec.data.chunk_was_revoked == 1) {
+						/* If its been revoked, and now
+						 * ack'd we do NOT take away fs etc.
+						 * since when it is retransmitted
+						 * we clear this flag.
+						 */
+ 						goto skip_fs_update;
+					}
 
-					        if(tp1->whoTo->flight_size >= tp1->book_size) {
-						        tp1->whoTo->flight_size -= tp1->book_size;
-						} else {
-						        tp1->whoTo->flight_size = 0;
-						}
-						if(asoc->total_flight >= tp1->book_size) {
-						        asoc->total_flight -= tp1->book_size;
-							if (asoc->total_flight_count > 0)
-							        asoc->total_flight_count--;
-						} else {
-						        asoc->total_flight = 0;
-							asoc->total_flight_count = 0;
-						}
+					if(tp1->whoTo->flight_size >= tp1->book_size) {
+						tp1->whoTo->flight_size -= tp1->book_size;
+					} else {
+						tp1->whoTo->flight_size = 0;
+					}
+					if(asoc->total_flight >= tp1->book_size) {
+						asoc->total_flight -= tp1->book_size;
+						if (asoc->total_flight_count > 0)
+							asoc->total_flight_count--;
+					} else {
+						asoc->total_flight = 0;
+						asoc->total_flight_count = 0;
+					}
+					tp1->whoTo->net_ack += tp1->send_size;
 					
-						tp1->whoTo->net_ack += tp1->send_size;
-					
-						/* CMT SFR and DAC algos */
-						this_sack_lowest_newack = tp1->rec.data.TSN_seq;
-						tp1->whoTo->saw_newack = 1;
+					/* CMT SFR and DAC algos */
+					this_sack_lowest_newack = tp1->rec.data.TSN_seq;
+					tp1->whoTo->saw_newack = 1;
 
-						if (tp1->snd_count < 2) {
-						        /* True non-retransmited chunk */
-						        tp1->whoTo->net_ack2 +=
-							  tp1->send_size;
+					if (tp1->snd_count < 2) {
+						/* True non-retransmited chunk */
+						tp1->whoTo->net_ack2 +=
+							tp1->send_size;
 							
-							/* update RTO too? */
-							if (tp1->do_rtt) {
-							        tp1->whoTo->RTO =
-								  sctp_calculate_rto(stcb,
-										     asoc, tp1->whoTo,
-										     &tp1->sent_rcv_time);
-								tp1->whoTo->rto_pending = 0;
-								tp1->do_rtt = 0;
-							}
+						/* update RTO too? */
+						if (tp1->do_rtt) {
+							tp1->whoTo->RTO =
+								sctp_calculate_rto(stcb,
+										   asoc, tp1->whoTo,
+										   &tp1->sent_rcv_time);
+							tp1->whoTo->rto_pending = 0;
+							tp1->do_rtt = 0;
 						}
 					}
-						
+				skip_fs_update:
 					/* CMT: CUCv2 algorithm. From the cumack'd TSNs, for each TSN being acked 
 					 * for the first time, set the following variables for the corresp destination. 
 					 * new_pseudo_cumack will trigger a cwnd update. find_(rtx_)pseudo_cumack will 

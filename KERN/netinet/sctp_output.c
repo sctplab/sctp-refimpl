@@ -8974,8 +8974,12 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 			for (i = 0; i < bundle_at; i++) {
 				sctp_pegs[SCTP_RETRANTSN_SENT]++;
 				data_list[i]->sent = SCTP_DATAGRAM_SENT;
-				data_list[i]->snd_count++;
+				/* When we have a revoked data, and we retransmit
+				 * it, then we clear the revoked flag since
+				 * this flag dictates if we subtracted from the fs
+				 */
 				data_list[i]->rec.data.chunk_was_revoked = 0;
+				data_list[i]->snd_count++;
 				sctp_ucount_decr(asoc->sent_queue_retran_cnt);
 				/* record the time */
 				data_list[i]->sent_rcv_time = asoc->time_last_sent;
