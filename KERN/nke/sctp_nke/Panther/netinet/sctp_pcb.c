@@ -384,7 +384,6 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 						if (sin->sin_addr.s_addr ==
 						    intf_addr->sin_addr.s_addr) {
 							match = 1;
-							SCTP_INP_RUNLOCK(inp);
 							break;
 						}
 					} else {
@@ -398,7 +397,6 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 						if (SCTP6_ARE_ADDR_EQUAL(&sin6->sin6_addr,
 									 &intf_addr6->sin6_addr)) {
 							match = 1;
-							SCTP_INP_RUNLOCK(inp);
 							break;
 						}
 					}
@@ -1658,7 +1656,7 @@ sctp_inpcb_alloc(struct socket *so)
 	TAILQ_INIT(&inp->sctp_queue_list);
 	/* Init the timer structure for signature change */
 #if defined (__FreeBSD__) && __FreeBSD_version >= 500000
-	callout_init(&inp->sctp_ep.signature_change.timer, 0);
+	callout_init(&inp->sctp_ep.signature_change.timer, 1);
 #else
 	callout_init(&inp->sctp_ep.signature_change.timer);
 #endif
@@ -1671,7 +1669,7 @@ sctp_inpcb_alloc(struct socket *so)
 	m->sctp_timeoutticks[SCTP_TIMER_SEND] = SEC_TO_TICKS(SCTP_SEND_SEC); /* needed ? */
 	m->sctp_timeoutticks[SCTP_TIMER_INIT] = SEC_TO_TICKS(SCTP_INIT_SEC); /* needed ? */
 	m->sctp_timeoutticks[SCTP_TIMER_RECV] = MSEC_TO_TICKS(sctp_delayed_sack_time_default);
-	m->sctp_timeoutticks[SCTP_TIMER_HEARTBEAT] = sctp_heartbeat_interval_default; /* this is in MSEC */
+	m->sctp_timeoutticks[SCTP_TIMER_HEARTBEAT] = MSEC_TO_TICKS(sctp_heartbeat_interval_default);
 	m->sctp_timeoutticks[SCTP_TIMER_PMTU] = SEC_TO_TICKS(sctp_pmtu_raise_time_default);
 	m->sctp_timeoutticks[SCTP_TIMER_MAXSHUTDOWN] = SEC_TO_TICKS(sctp_shutdown_guard_time_default);
 	m->sctp_timeoutticks[SCTP_TIMER_SIGNATURE] = SEC_TO_TICKS(sctp_secret_lifetime_default);
@@ -2346,9 +2344,8 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	SCTP_INP_WLOCK(inp);
 	so  = inp->sctp_socket;
 	SCTP_INP_WUNLOCK(inp);
-	if(so &&
-	   ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) == 0) &&
-	   ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0)){
+
+	if(so && ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) == 0)) {
 	  locked_so = 1;
 #ifdef SCTP_LOCK_LOGGING
 	  sctp_log_lock(inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_SOCK);
@@ -2919,9 +2916,13 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 
 	/* Init the timer structure */
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-	callout_init(&net->rxt_timer.timer, 0);
+	callout_init(&net->rxt_timer.timer, 1);
+	callout_init(&net->fr_timer.timer, 1);
+	callout_init(&net->pmtu_timer.timer, 1);
 #else
 	callout_init(&net->rxt_timer.timer);
+	callout_init(&net->fr_timer.timer);
+	callout_init(&net->pmtu_timer.timer);
 #endif
 
 	/* Now generate a route for this guy */
@@ -2981,6 +2982,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 		net->cwnd = 2 * net->mtu;
 	}
 	net->ssthresh = stcb->asoc.peers_rwnd;
+
 #if defined(SCTP_CWND_MONITOR) || defined(SCTP_CWND_LOGGING)
 	sctp_log_cwnd(stcb, net, 0, SCTP_CWND_INITIALIZATION);
 #endif
@@ -3259,17 +3261,21 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	}
 	/* Init all the timers */
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-	callout_init(&asoc->hb_timer.timer, 0);
-	callout_init(&asoc->dack_timer.timer, 0);
-	callout_init(&asoc->asconf_timer.timer, 0);
-	callout_init(&asoc->shut_guard_timer.timer, 0);
-	callout_init(&asoc->autoclose_timer.timer, 0);
+	callout_init(&asoc->hb_timer.timer, 1);
+	callout_init(&asoc->dack_timer.timer, 1);
+	callout_init(&asoc->asconf_timer.timer, 1);
+	callout_init(&asoc->strreset_timer.timer, 1);
+	callout_init(&asoc->shut_guard_timer.timer, 1);
+	callout_init(&asoc->autoclose_timer.timer, 1);
+	callout_init(&asoc->delayed_event_timer.timer, 1);
 #else
 	callout_init(&asoc->hb_timer.timer);
 	callout_init(&asoc->dack_timer.timer);
+	callout_init(&asoc->strreset_timer.timer);
 	callout_init(&asoc->asconf_timer.timer);
 	callout_init(&asoc->shut_guard_timer.timer);
 	callout_init(&asoc->autoclose_timer.timer);
+	callout_init(&asoc->delayed_event_timer.timer);
 #endif
 	LIST_INSERT_HEAD(&inp->sctp_asoc_list, stcb, sctp_tcblist);
 	/* now file the port under the hash as well */
@@ -3297,6 +3303,7 @@ sctp_free_remote_addr(struct sctp_nets *net)
 		/* stop timer if running */
 		callout_stop(&net->rxt_timer.timer);
 		callout_stop(&net->pmtu_timer.timer);
+		callout_stop(&net->fr_timer.timer);
 		net->dest_state = SCTP_ADDR_NOT_REACHABLE;
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_net, net);
 		SCTP_DECR_RADDR_COUNT();
@@ -3500,11 +3507,13 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	/* now clean up any other timers */
 	callout_stop(&asoc->hb_timer.timer);
 	callout_stop(&asoc->dack_timer.timer);
+	callout_stop(&asoc->strreset_timer.timer);
 	callout_stop(&asoc->asconf_timer.timer);
 	callout_stop(&asoc->shut_guard_timer.timer);
 	callout_stop(&asoc->autoclose_timer.timer);
 	callout_stop(&asoc->delayed_event_timer.timer);
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
+		callout_stop(&net->fr_timer.timer);
 		callout_stop(&net->rxt_timer.timer);
 		callout_stop(&net->pmtu_timer.timer);
 	}
@@ -3757,6 +3766,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	/* now clean up the tasoc itself */
 	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
 	SCTP_DECR_ASOC_COUNT();
+
 	if ((inp->sctp_socket->so_snd.sb_cc) ||
 	    (inp->sctp_socket->so_snd.sb_mbcnt)) {
 		/* This will happen when a abort is done */
@@ -3784,9 +3794,9 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 				 * so that it can start a new assoc if it desires.
 				 */
 				inp->sctp_flags &= ~SCTP_PCB_FLAGS_CONNECTED;
-				SOCK_LOCK(stcb->sctp_ep->sctp_socket);
-				stcb->sctp_ep->sctp_socket->so_state &= ~(SS_ISCONNECTING|SS_ISDISCONNECTING|SS_ISCONFIRMING|SS_ISCONNECTED);
-				SOCK_UNLOCK(stcb->sctp_ep->sctp_socket);
+				SOCK_LOCK(inp->sctp_socket);
+				inp->sctp_socket->so_state &= ~(SS_ISCONNECTING|SS_ISDISCONNECTING|SS_ISCONFIRMING|SS_ISCONNECTED);
+				SOCK_UNLOCK(inp->sctp_socket);
 			} else {
 				/* For TCP Pool types including
 				 * peeled off ones, we just disconnect
@@ -3796,7 +3806,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 				 * too since the can't send more flags are
 				 * also set.
 				 */
-				soisdisconnected(stcb->sctp_ep->sctp_socket);
+				soisdisconnected(inp->sctp_socket);
 			}
 		}
 	}
@@ -5338,7 +5348,7 @@ sctp_initiate_iterator(asoc_func af, uint32_t pcb_state, uint32_t asoc_state,
 	}
 	/* Init the timer */
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-	callout_init(&it->tmr.timer, 0);
+	callout_init(&it->tmr.timer, 1);
 #else
 	callout_init(&it->tmr.timer);
 #endif
@@ -5389,7 +5399,7 @@ callout_reset(struct callout *c, int to_ticks, void (*ftn)(void *), void *arg)
 		to_ticks = 1;
 
 	c->c_arg = arg;
-	c->c_flags = (CALLOUT_ACTIVE | CALLOUT_PENDING);
+	c->c_flags |= (CALLOUT_ACTIVE | CALLOUT_PENDING);
 	c->c_func = ftn;
 #ifdef __APPLE__
 	c->c_time = to_ticks;	/* just store the requested timeout */

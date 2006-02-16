@@ -1,7 +1,7 @@
 /*	$KAME: sctp_usrreq.c,v 1.48 2005/03/07 23:26:08 itojun Exp $	*/
 
 /*
- * Copyright (c) 2001-2005 Cisco Systems, Inc.
+ * Copyright (c) 2001-2006 Cisco Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -107,7 +107,7 @@
 #include <netinet/sctp_peeloff.h>
 #endif /* HAVE_SCTP_PEELOFF_SOCKOPT */
 
-#if defined(HAVE_NRL_INPCB) || defined(__FreeBSD__)
+#if defined(HAVE_NRL_INPCB)
 #ifndef in6pcb
 #define in6pcb		inpcb
 #endif
@@ -116,19 +116,20 @@
 #endif
 #endif
 
-#ifdef SCTP_DEBUG
-extern u_int32_t sctp_debug_on;
-#endif /* SCTP_DEBUG */
+#if defined(__FreeBSD__)
+#ifndef in6pcb
+#define in6pcb		inpcb
+#endif
+#ifndef sotoin6pcb
+#define sotoin6pcb      sotoinpcb
+#endif
+#endif
+
+
 
 /*
  * sysctl tunable variables
  */
-int sctp_auto_asconf = SCTP_DEFAULT_AUTO_ASCONF;
-int sctp_max_burst_default = SCTP_DEF_MAX_BURST;
-int sctp_peer_chunk_oh = sizeof(struct mbuf);
-int sctp_strict_init = 1;
-int sctp_no_csum_on_loopback = 1;
-unsigned int sctp_max_chunks_on_queue = SCTP_ASOC_MAX_CHUNKS_ON_QUEUE;
 int sctp_sendspace = (128 * 1024);
 int sctp_recvspace = 128 * (1024 +
 #ifdef INET6
@@ -137,12 +138,16 @@ int sctp_recvspace = 128 * (1024 +
 				sizeof(struct sockaddr_in)
 #endif
 	);
-
-int sctp_says_check_for_deadlock = 0;
-int sctp_strict_sacks = 0;
-int sctp_ecn = 1;
+int sctp_auto_asconf = SCTP_DEFAULT_AUTO_ASCONF;
+int sctp_ecn_enable = 1;
 int sctp_ecn_nonce = 0;
+int sctp_strict_sacks = 0;
+int sctp_no_csum_on_loopback = 1;
+int sctp_strict_init = 1;
+int sctp_peer_chunk_oh = sizeof(struct mbuf);
+int sctp_max_burst_default = SCTP_DEF_MAX_BURST;
 int sctp_use_cwnd_based_maxburst = 1;
+unsigned int sctp_max_chunks_on_queue = SCTP_ASOC_MAX_CHUNKS_ON_QUEUE;
 unsigned int sctp_delayed_sack_time_default = SCTP_RECV_MSEC;
 unsigned int sctp_heartbeat_interval_default = SCTP_HB_DEFAULT_MSEC;
 unsigned int sctp_pmtu_raise_time_default = SCTP_DEF_PMTU_RAISE_SEC;
@@ -155,13 +160,22 @@ unsigned int sctp_init_rto_max_default = SCTP_RTO_UPPER_BOUND;
 unsigned int sctp_valid_cookie_life_default = SCTP_DEFAULT_COOKIE_LIFE;
 unsigned int sctp_init_rtx_max_default = SCTP_DEF_MAX_INIT;
 unsigned int sctp_assoc_rtx_max_default = SCTP_DEF_MAX_SEND;
-unsigned int sctp_path_rtx_max_default = SCTP_DEF_MAX_SEND/2;
+unsigned int sctp_path_rtx_max_default = SCTP_DEF_MAX_PATH_RTX;
 unsigned int sctp_nr_outgoing_streams_default = SCTP_OSTREAM_INITIAL;
 unsigned int sctp_cmt_on_off = 0;
 unsigned int sctp_cmt_sockopt_on_off = 0;
-unsigned int sctp_early_fr = 1;
+unsigned int sctp_cmt_use_dac = 0;
+unsigned int sctp_cmt_sockopt_use_dac = 0;
+int sctp_L2_abc_variable = 1;
+unsigned int sctp_early_fr = 0;
 unsigned int sctp_early_fr_msec = SCTP_MINFR_MSEC_TIMER;
 unsigned int sctp_use_rttvar_cc = 0;
+int sctp_says_check_for_deadlock = 0;
+unsigned int sctp_auth_disable = 0;
+unsigned int sctp_auth_hmac_id_default = SCTP_AUTH_HMAC_ID_SHA1;
+#ifdef SCTP_DEBUG
+extern u_int32_t sctp_debug_on;
+#endif /* SCTP_DEBUG */
 
 
 void
@@ -249,11 +263,14 @@ sctp_split_chunks(struct sctp_association *asoc,
 	}
 	/* Data is now split adjust sizes */
 	chk->no_fr_allowed = 0;
+
 	chk->send_size >>= 1;
-	new_chk->send_size >>= 1;
+	new_chk->send_size -= chk->send_size;
+
 
 	chk->book_size >>= 1;
-	new_chk->book_size >>= 1;
+	new_chk->book_size -= chk->book_size;
+
 
 	/* now adjust the marks */
 	if(chk->rec.data.rcv_flags & SCTP_DATA_NOT_FRAG) {
@@ -644,7 +661,7 @@ SYSCTL_PROC(_net_inet_sctp, OID_AUTO, getcred, CTLTYPE_OPAQUE|CTLFLAG_RW,
  */
 #if defined(__FreeBSD__) || defined (__APPLE__)
 
-SYSCTL_INT(_net_inet_sctp, OID_AUTO, maxdgram, CTLFLAG_RW,
+SYSCTL_INT(_net_inet_sctp, OID_AUTO, sendspace, CTLFLAG_RW,
 	   &sctp_sendspace, 0, "Maximum outgoing SCTP buffer size");
 
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, recvspace, CTLFLAG_RW,
@@ -654,7 +671,7 @@ SYSCTL_INT(_net_inet_sctp, OID_AUTO, auto_asconf, CTLFLAG_RW,
 	   &sctp_auto_asconf, 0, "Enable SCTP Auto-ASCONF");
 
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, ecn_enable, CTLFLAG_RW,
-	   &sctp_ecn, 0, "Enable SCTP ECN");
+	   &sctp_ecn_enable, 0, "Enable SCTP ECN");
 
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, ecn_nonce, CTLFLAG_RW,
 	   &sctp_ecn_nonce, 0, "Enable SCTP ECN Nonce");
@@ -678,6 +695,10 @@ SYSCTL_INT(_net_inet_sctp, OID_AUTO, maxburst, CTLFLAG_RW,
 	   &sctp_max_burst_default, 0,
 	   "Default max burst for sctp endpoints");
 
+SYSCTL_UINT(_net_inet_sctp, OID_AUTO, cwnd_maxburst, CTLFLAG_RW,
+	    &sctp_use_cwnd_based_maxburst, 0,
+	    "Use a CWND adjusting maxburst");
+
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, maxchunks, CTLFLAG_RW,
 	   &sctp_max_chunks_on_queue, 0,
 	   "Default max chunks on queue per asoc");
@@ -685,26 +706,6 @@ SYSCTL_INT(_net_inet_sctp, OID_AUTO, maxchunks, CTLFLAG_RW,
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, delayed_sack_time, CTLFLAG_RW,
 	    &sctp_delayed_sack_time_default, 0,
 	    "Default delayed SACK timer in msec");
-
-SYSCTL_UINT(_net_inet_sctp, OID_AUTO, cmt_on_off, CTLFLAG_RW,
-	    &sctp_cmt_on_off, 0,
-	    "CMT ON/OFF flag");
-
-SYSCTL_UINT(_net_inet_sctp, OID_AUTO, early_fast_retran, CTLFLAG_RW,
-	    &sctp_early_fr, 0,
-	    "Early Fast Retransmit with Timer");
-
-SYSCTL_UINT(_net_inet_sctp, OID_AUTO, early_fast_retran_msec, CTLFLAG_RW,
-	    &sctp_early_fr_msec, 0,
-	    "Early Fast Retransmit minimum timer value");
-
-SYSCTL_UINT(_net_inet_sctp, OID_AUTO, use_rttvar_congctrl, CTLFLAG_RW,
-	    &sctp_use_rttvar_cc, 0,
-	    "Use congestion control via rtt variation");
-
-SYSCTL_UINT(_net_inet_sctp, OID_AUTO, deadlock_detect, CTLFLAG_RW,
-	    &sctp_says_check_for_deadlock, 0,
-	    "SMP Deadlock detection on/off");
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, heartbeat_interval, CTLFLAG_RW,
 	    &sctp_heartbeat_interval_default, 0,
@@ -729,10 +730,6 @@ SYSCTL_UINT(_net_inet_sctp, OID_AUTO, rto_max, CTLFLAG_RW,
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, rto_min, CTLFLAG_RW,
 	    &sctp_rto_min_default, 0,
 	    "Default minimum retransmission timeout in msec");
-
-SYSCTL_UINT(_net_inet_sctp, OID_AUTO, cwnd_maxburst, CTLFLAG_RW,
-	    &sctp_use_cwnd_based_maxburst, 0,
-	    "Use a CWND adjusting maxburst");
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, rto_initial, CTLFLAG_RW,
 	    &sctp_rto_initial_default, 0,
@@ -761,6 +758,42 @@ SYSCTL_UINT(_net_inet_sctp, OID_AUTO, path_rtx_max, CTLFLAG_RW,
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, nr_outgoing_streams, CTLFLAG_RW,
 	    &sctp_nr_outgoing_streams_default, 0,
 	    "Default number of outgoing streams");
+
+SYSCTL_UINT(_net_inet_sctp, OID_AUTO, cmt_on_off, CTLFLAG_RW,
+	    &sctp_cmt_on_off, 0,
+	    "CMT ON/OFF flag");
+
+SYSCTL_UINT(_net_inet_sctp, OID_AUTO, cmt_use_dac, CTLFLAG_RW,
+	    &sctp_cmt_use_dac, 0,
+	    "CMT DAC ON/OFF flag");
+
+SYSCTL_INT(_net_inet_sctp, OID_AUTO, abc_l_var , CTLFLAG_RW,
+	    &sctp_L2_abc_variable, 0,
+	    "SCTP ABC max increase per SACK (L)");
+
+SYSCTL_UINT(_net_inet_sctp, OID_AUTO, early_fast_retran, CTLFLAG_RW,
+	    &sctp_early_fr, 0,
+	    "Early Fast Retransmit with Timer");
+
+SYSCTL_UINT(_net_inet_sctp, OID_AUTO, early_fast_retran_msec, CTLFLAG_RW,
+	    &sctp_early_fr_msec, 0,
+	    "Early Fast Retransmit minimum timer value");
+
+SYSCTL_UINT(_net_inet_sctp, OID_AUTO, use_rttvar_congctrl, CTLFLAG_RW,
+	    &sctp_use_rttvar_cc, 0,
+	    "Use congestion control via rtt variation");
+
+SYSCTL_UINT(_net_inet_sctp, OID_AUTO, deadlock_detect, CTLFLAG_RW,
+	    &sctp_says_check_for_deadlock, 0,
+	    "SMP Deadlock detection on/off");
+
+SYSCTL_UINT(_net_inet_sctp, OID_AUTO, auth_disable, CTLFLAG_RW,
+	    &sctp_auth_disable, 0,
+	    "Disable SCTP AUTH chunk requirement/function");
+
+SYSCTL_UINT(_net_inet_sctp, OID_AUTO, auth_hmac_id, CTLFLAG_RW,
+	    &sctp_auth_hmac_id_default, 0,
+	    "Default HMAC Id for SCTP AUTHenthication");
 
 #ifdef SCTP_DEBUG
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, debug, CTLFLAG_RW,
@@ -910,20 +943,20 @@ sctp_detach(struct socket *so)
 
 int
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-sctp_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
+sctp_sendm(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
 	  struct mbuf *control, struct thread *p);
 #else
-sctp_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
+sctp_sendm(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
 	  struct mbuf *control, struct proc *p);
 #endif
 
 int
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-sctp_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
+sctp_sendm(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
 	  struct mbuf *control, struct thread *p)
 {
 #else
-sctp_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
+sctp_sendm(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
 	  struct mbuf *control, struct proc *p)
 {
 #endif
@@ -1010,8 +1043,9 @@ sctp_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
 		 * by OpenBSD-- NetBSD, FreeBSD, and MacOS have methods for
 		 * re-defining sosend to use the sctp_sosend. One can
 		 * optionally switch back to this code (by changing back the
-		 * definitions) but this is not advisable.
-	     */
+		 * definitions) but this is not advisable. This code is
+                 * used by FreeBSD when sending a file with sendfile() though.
+		 */
 		int ret;
 		ret = sctp_output(inp, inp->pkt, addr, inp->control, p, flags);
 		inp->pkt = NULL;
@@ -1822,6 +1856,12 @@ sctp_optsget(struct socket *so,
 		m->m_len = sizeof(unsigned int);
 	}
 	break;
+	case SCTP_CMT_USE_DAC:
+	{
+		*mtod(m, unsigned int *) = sctp_cmt_sockopt_use_dac;
+		m->m_len = sizeof(unsigned int);
+	}
+	break;
 	case SCTP_GET_ASOC_ID_LIST:
 	{
 		struct sctp_assoc_ids *ids;
@@ -1908,6 +1948,7 @@ sctp_optsget(struct socket *so,
 
 	}
 	break;
+#if 0
 	case SCTP_PEER_PUBLIC_KEY:
 	case SCTP_MY_PUBLIC_KEY:
 	case SCTP_SET_AUTH_CHUNKS:
@@ -1915,7 +1956,7 @@ sctp_optsget(struct socket *so,
 		/* not supported yet and until we refine the draft */
 		error = EOPNOTSUPP;
 		break;
-
+#endif
 	case SCTP_DELAYED_ACK_TIME:
 	{
 		struct sctp_assoc_value *tm;
@@ -2490,8 +2531,8 @@ sctp_optsget(struct socket *so,
 			}
 #endif /* SCTP_DEBUG */
 			paddrp->spp_pathmaxrxt = inp->sctp_ep.def_net_failure;
-			paddrp->spp_hbinterval = inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_HEARTBEAT];
-			paddrp->spp_sackdelay = inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV];
+			paddrp->spp_hbinterval = TICKS_TO_MSEC(inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_HEARTBEAT]);
+			paddrp->spp_sackdelay = TICKS_TO_MSEC(inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV]);
 			paddrp->spp_assoc_id = (sctp_assoc_t)0;
 
 			/* can't return this */
@@ -2966,13 +3007,21 @@ sctp_optsset(struct socket *so,
 	sctp_cmt_sockopt_on_off = 1;
     }
     break;
+  case SCTP_CMT_USE_DAC:
+    {
+      sctp_cmt_sockopt_use_dac = *mtod(m, unsigned int *);
+      if (sctp_cmt_sockopt_use_dac != 0) 
+	sctp_cmt_sockopt_use_dac = 1;
+    }
+    break;
+#if 0
   case SCTP_MY_PUBLIC_KEY:    /* set my public key */
   case SCTP_SET_AUTH_CHUNKS:  /* set the authenticated chunks required */
   case SCTP_SET_AUTH_SECRET:  /* set the actual secret for the endpoint */
     /* not supported yet and until we refine the draft */
     error = EOPNOTSUPP;
     break;
-
+#endif
   case SCTP_CLR_STAT_LOG:
 #ifdef SCTP_STAT_LOGGING
     sctp_clr_stat_log();
@@ -3414,7 +3463,7 @@ sctp_optsset(struct socket *so,
 	}
 	/* do we change the timer for HB, we run only one? */
 	if((paddrp->spp_hbinterval) && ( paddrp->spp_flags & SPP_HB_ENABLE )) {
-	  paddrp->spp_hbinterval = stcb->asoc.heart_beat_delay;
+	  stcb->asoc.heart_beat_delay = paddrp->spp_hbinterval;
 	}
 
 	/* network sets ? */
@@ -3484,10 +3533,10 @@ sctp_optsset(struct socket *so,
 	  inp->sctp_ep.def_net_failure = paddrp->spp_pathmaxrxt;
 	}
 	if (paddrp->spp_hbinterval && (paddrp->spp_flags & SPP_HB_ENABLE) ) {
-	  inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_HEARTBEAT] = paddrp->spp_hbinterval;
+	  inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_HEARTBEAT] = MSEC_TO_TICKS(paddrp->spp_hbinterval);
 	}
 	if ((paddrp->spp_sackdelay > SCTP_CLOCK_GRANULARITY ) && (paddrp->spp_flags & SPP_SACKDELAY_ENABLE)) {
-	  inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV] = paddrp->spp_sackdelay;
+	  inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV] = MSEC_TO_TICKS(paddrp->spp_sackdelay);
 	}
 	SCTP_INP_WUNLOCK(inp);
       }
@@ -4282,7 +4331,11 @@ sctp_usr_recvd(struct socket *so, int flags)
 
 int
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+#if __FreeBSD_version >= 600000
+sctp_listen(struct socket *so, int backlog,  struct thread *p)
+#else
 sctp_listen(struct socket *so, struct thread *p)
+#endif
 #else
 sctp_listen(struct socket *so, struct proc *p)
 #endif
@@ -4342,14 +4395,28 @@ sctp_listen(struct socket *so, struct proc *p)
 		SCTP_INP_RUNLOCK(inp);
 	}
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
+#if __FreeBSD_version > 600000
+	/* It appears for 6.0 and on, we must
+	 * always call this.
+	 */
+	solisten_proto(so, backlog);
+#else
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE) == 0) {
 		solisten_proto(so);
 	}
 #endif
+#endif
+
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE) {
 		/* remove the ACCEPTCONN flag for one-to-many sockets */
 		so->so_options &= ~SO_ACCEPTCONN;
 	}
+#if __FreeBSD_version > 600000
+	if (backlog == 0) {
+		/* turning off listen */
+		so->so_options &= ~SO_ACCEPTCONN;		
+	}
+#endif
 	SOCK_UNLOCK(so);
 	splx(s);
 	return (error);
@@ -4668,6 +4735,25 @@ sctp_peeraddr(struct socket *so, struct mbuf *nam)
 
 #if defined(__FreeBSD__) || defined(__APPLE__)
 struct pr_usrreqs sctp_usrreqs = {
+#if __FreeBSD_version > 600000
+	.pru_abort =		sctp_abort,
+	.pru_accept =		sctp_accept,
+	.pru_attach =		sctp_attach,
+	.pru_bind =		sctp_bind,
+	.pru_connect =		sctp_connect,
+	.pru_control =		in_control,
+	.pru_detach =		sctp_detach,
+	.pru_disconnect =	sctp_disconnect,
+	.pru_listen =		sctp_listen,
+	.pru_peeraddr =		sctp_peeraddr,
+	.pru_rcvd =		sctp_usr_recvd,
+	.pru_send =		sctp_sendm,
+	.pru_shutdown =		sctp_shutdown,
+	.pru_sockaddr =		sctp_ingetaddr,	
+        .pru_sopoll =	        sopoll,
+	.pru_sosend =           sctp_sosend,
+	.pru_soreceive =        sctp_soreceive
+#else
 	sctp_abort,
 	sctp_accept,
 	sctp_attach,
@@ -4681,7 +4767,7 @@ struct pr_usrreqs sctp_usrreqs = {
 	sctp_peeraddr,
 	sctp_usr_recvd,
 	pru_rcvoob_notsupp,
-	sctp_send,
+	sctp_sendm,
 	pru_sense_null,
 	sctp_shutdown,
 	sctp_ingetaddr,
@@ -4692,6 +4778,8 @@ struct pr_usrreqs sctp_usrreqs = {
 	sctp_soreceive,	
 #endif
 	sopoll
+
+#endif
 };
 
 #else
@@ -4826,7 +4914,7 @@ sctp_usrreq(so, req, m, nam, control)
 		if (sctp_debug_on & SCTP_DEBUG_USRREQ1) {
 			printf("Send called on V4 side\n");
 		}
-#endif
+#endif /* SCTP_DEBUG */
 		{
 		    struct sockaddr *addr;
 		    if (nam == NULL)
@@ -4834,7 +4922,7 @@ sctp_usrreq(so, req, m, nam, control)
 		    else
 			addr = mtod(nam, struct sockaddr *);
 
-		    error = sctp_send(so, 0, m, addr, control, p);
+		    error = sctp_sendm(so, 0, m, addr, control, p);
 		}
 		break;
 	case PRU_ABORT:
@@ -4867,7 +4955,6 @@ sctp_usrreq(so, req, m, nam, control)
 }
 #endif
 
-/* #if defined(__NetBSD__) || defined(__OpenBSD__) */
 #if __OpenBSD__
 /*
  * Sysctl for sctp variables.
@@ -4899,7 +4986,7 @@ sctp_sysctl(name, namelen, oldp, oldlenp, newp, newlen)
 		    &sctp_auto_asconf));
 	case SCTPCTL_ECN_ENABLE:
 		return (sysctl_int(oldp, oldlenp, newp, newlen,
-				   &sctp_ecn));
+				   &sctp_ecn_enable));
 	case SCTPCTL_ECN_NONCE:
 		return (sysctl_int(oldp, oldlenp, newp, newlen,
 				   &sctp_ecn_nonce));
@@ -4918,35 +5005,21 @@ sctp_sysctl(name, namelen, oldp, oldlenp, newp, newlen)
  	case SCTPCTL_MAXBURST:
  		return (sysctl_int(oldp, oldlenp, newp, newlen,
  				   &sctp_max_burst_default));
+	case SCTPCTL_CWND_MAXBURST:
+  	        return (sysctl_int(oldp, oldlenp, newp, newlen,
+ 				   &sctp_use_cwnd_based_maxburst));
  	case SCTPCTL_MAXCHUNKONQ:
  		return (sysctl_int(oldp, oldlenp, newp, newlen,
  				   &sctp_max_chunks_on_queue));
  	case SCTPCTL_DELAYED_SACK:
  		return (sysctl_int(oldp, oldlenp, newp, newlen,
  				   &sctp_delayed_sack_time_default));
- 	case SCTPCTL_CMT_ON_OFF:
- 		return (sysctl_int(oldp, oldlenp, newp, newlen,
- 				   &sctp_cmt_on_off));
- 	case SCTPCTL_EARLY_FR:
- 		return (sysctl_int(oldp, oldlenp, newp, newlen,
- 				   &sctp_early_fr));
- 	case SCTPCTL_EARLY_FR_MSEC:
- 		return (sysctl_int(oldp, oldlenp, newp, newlen,
- 				   &sctp_early_fr_msec));
- 	case SCTPCTL_RTTVAR_CC:
- 		return (sysctl_int(oldp, oldlenp, newp, newlen,
- 				   &sctp_use_rttvar_cc));
  	case SCTPCTL_HB_INTERVAL:
  		return (sysctl_int(oldp, oldlenp, newp, newlen,
  				   &sctp_heartbeat_interval_default));
  	case SCTPCTL_PMTU_RAISE:
  		return (sysctl_int(oldp, oldlenp, newp, newlen,
  				   &sctp_pmtu_raise_time_default));
-
-	case SCTPCTL_DEADLOCK_DET:
- 		return (sysctl_int(oldp, oldlenp, newp, newlen,
- 				   &sctp_says_check_for_deadlock));
-
  	case SCTPCTL_SHUTDOWN_GUARD:
  		return (sysctl_int(oldp, oldlenp, newp, newlen,
  				   &sctp_shutdown_guard_time_default));
@@ -4959,9 +5032,6 @@ sctp_sysctl(name, namelen, oldp, oldlenp, newp, newlen)
  	case SCTPCTL_RTO_MIN:
  		return (sysctl_int(oldp, oldlenp, newp, newlen,
  				   &sctp_rto_min_default));
-	case SCTPCTL_CWND_MAXBURST:
-  	        return (sysctl_int(oldp, oldlenp, newp, newlen,
- 				   &sctp_use_cwnd_based_maxburst));
  	case SCTPCTL_RTO_INITIAL:
  		return (sysctl_int(oldp, oldlenp, newp, newlen,
  				   &sctp_rto_initial_default));
@@ -4983,6 +5053,33 @@ sctp_sysctl(name, namelen, oldp, oldlenp, newp, newlen)
  	case SCTPCTL_NR_OUTGOING_STREAMS:
  		return (sysctl_int(oldp, oldlenp, newp, newlen,
  				   &sctp_nr_outgoing_streams_default));
+ 	case SCTPCTL_CMT_ON_OFF:
+ 		return (sysctl_int(oldp, oldlenp, newp, newlen,
+ 				   &sctp_cmt_on_off));
+ 	case SCTPCTL_CMT_USE_DAC:
+ 		return (sysctl_int(oldp, oldlenp, newp, newlen,
+ 				   &sctp_cmt_use_dac));
+	case SCTPCTL_ABC_L_VAR:
+ 		return (sysctl_int(oldp, oldlenp, newp, newlen,
+ 				   &sctp_L2_abc_variable));
+ 	case SCTPCTL_EARLY_FR:
+ 		return (sysctl_int(oldp, oldlenp, newp, newlen,
+ 				   &sctp_early_fr));
+ 	case SCTPCTL_EARLY_FR_MSEC:
+ 		return (sysctl_int(oldp, oldlenp, newp, newlen,
+ 				   &sctp_early_fr_msec));
+ 	case SCTPCTL_RTTVAR_CC:
+ 		return (sysctl_int(oldp, oldlenp, newp, newlen,
+ 				   &sctp_use_rttvar_cc));
+	case SCTPCTL_DEADLOCK_DET:
+ 		return (sysctl_int(oldp, oldlenp, newp, newlen,
+ 				   &sctp_says_check_for_deadlock));
+	case SCTPCTL_AUTH_DISABLE:
+ 		return (sysctl_int(oldp, oldlenp, newp, newlen,
+ 				   &sctp_auth_disable));
+	case SCTPCTL_AUTH_HMAC_ID:
+ 		return (sysctl_int(oldp, oldlenp, newp, newlen,
+ 				   &sctp_auth_hmac_id_default));
 #ifdef SCTP_DEBUG
  	case SCTPCTL_DEBUG:
  		return (sysctl_int(oldp, oldlenp, newp, newlen,
@@ -5046,7 +5143,7 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
                        CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
                        CTLTYPE_INT, "ecn_enable",
                        SYSCTL_DESCR("Enable SCTP ECN"),
-                       NULL, 0, &sctp_ecn, 0,
+                       NULL, 0, &sctp_ecn_enable, 0,
                        CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_ECN_ENABLE,
                        CTL_EOL);
 
@@ -5100,6 +5197,14 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
 
        sysctl_createv(clog, 0, NULL, NULL,
                        CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "cwnd_maxburst",
+                       SYSCTL_DESCR("Use a CWND adjusting maxburst"),
+                       NULL, 0, &sctp_use_cwnd_based_maxburst, 0,
+		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_CWND_MAXBURST,
+                       CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
                        CTLTYPE_INT, "maxchunks",
                        SYSCTL_DESCR("Default max chunks on queue per asoc"),
                        NULL, 0, &sctp_max_chunks_on_queue, 0,
@@ -5116,38 +5221,6 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
 
        sysctl_createv(clog, 0, NULL, NULL,
                        CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
-                       CTLTYPE_INT, "cmt_on_off",
-                       SYSCTL_DESCR("CMT on-off flag"),
-                       NULL, 0, &sctp_cmt_on_off, 0,
-                       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_CMT_ON_OFF,
-                       CTL_EOL);
-
-       sysctl_createv(clog, 0, NULL, NULL,
-                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
-                       CTLTYPE_INT, "early_fast_retran",
-                       SYSCTL_DESCR("Early Fast Retransmit with Timer"),
-                       NULL, 0, &sctp_early_fr, 0,
-                       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_EARLY_FR,
-                       CTL_EOL);
-
-       sysctl_createv(clog, 0, NULL, NULL,
-                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
-                       CTLTYPE_INT, "early_fast_retran_msec",
-                       SYSCTL_DESCR("Early Fast Retransmit minimum Timer value"),
-                       NULL, 0, &sctp_early_fr_msec, 0,
-                       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_EARLY_FR_MSEC,
-                       CTL_EOL);
-
-       sysctl_createv(clog, 0, NULL, NULL,
-                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
-                       CTLTYPE_INT, "use_rttvar_congctrl",
-                       SYSCTL_DESCR("Use Congestion Control via rtt variation"),
-                       NULL, 0, &sctp_use_rttvar_cc, 0,
-                       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_RTTVAR_CC,
-                       CTL_EOL);
-
-       sysctl_createv(clog, 0, NULL, NULL,
-                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
                        CTLTYPE_INT, "heartbeat_interval",
                        SYSCTL_DESCR("Default heartbeat interval in msec"),
                        NULL, 0, &sctp_heartbeat_interval_default, 0,
@@ -5160,14 +5233,6 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
                        SYSCTL_DESCR("Default PMTU raise timer in sec"),
                        NULL, 0, &sctp_pmtu_raise_time_default, 0,
 		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_PMTU_RAISE,
-                       CTL_EOL);
-
-       sysctl_createv(clog, 0, NULL, NULL,
-                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
-                       CTLTYPE_INT, "deadlock_detect",
-                       SYSCTL_DESCR("SMP Deadlock detection on/off"),
-                       NULL, 0, &sctp_says_check_for_deadlock, 0,
-		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_DEADLOCK_DET,
                        CTL_EOL);
 
        sysctl_createv(clog, 0, NULL, NULL,
@@ -5200,14 +5265,6 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
                        SYSCTL_DESCR("Default minimum retransmission timeout in msec"),
                        NULL, 0, &sctp_rto_min_default, 0,
 		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_RTO_MIN,
-                       CTL_EOL);
-
-       sysctl_createv(clog, 0, NULL, NULL,
-                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
-                       CTLTYPE_INT, "cwnd_maxburst",
-                       SYSCTL_DESCR("Use a CWND adjusting maxburst"),
-                       NULL, 0, &sctp_use_cwnd_based_maxburst, 0,
-		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_CWND_MAXBURST,
                        CTL_EOL);
 
        sysctl_createv(clog, 0, NULL, NULL,
@@ -5266,14 +5323,87 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
 		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_PATH_RTX_MAX,
                        CTL_EOL);
 
-       
-
        sysctl_createv(clog, 0, NULL, NULL,
                        CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
                        CTLTYPE_INT, "nr_outgoing_streams",
-                       SYSCTL_DESCR("Default number of outgoing streams"),
+		       SYSCTL_DESCR("Default outgoing streams"),
                        NULL, 0, &sctp_nr_outgoing_streams_default, 0,
 		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_NR_OUTGOING_STREAMS,
+                       CTL_EOL);
+
+ 				   
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "abc_l_var",
+		       SYSCTL_DESCR("SCTP ABC max increase per SACK (L)"),
+                       NULL, 0, &sctp_L2_abc_variable, 0,
+		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_ABC_L_VAR,
+                       CTL_EOL);
+
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "cmt_on_off",
+                       SYSCTL_DESCR("CMT on-off flag"),
+                       NULL, 0, &sctp_cmt_on_off, 0,
+                       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_CMT_ON_OFF,
+                       CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "cmt_use_dac",
+                       SYSCTL_DESCR("CMT DAC on-off flag"),
+                       NULL, 0, &sctp_cmt_use_dac, 0,
+                       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_CMT_USE_DAC,
+                       CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "early_fast_retran",
+                       SYSCTL_DESCR("Early Fast Retransmit with Timer"),
+                       NULL, 0, &sctp_early_fr, 0,
+                       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_EARLY_FR,
+                       CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "early_fast_retran_msec",
+                       SYSCTL_DESCR("Early Fast Retransmit minimum Timer value"),
+                       NULL, 0, &sctp_early_fr_msec, 0,
+                       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_EARLY_FR_MSEC,
+                       CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "use_rttvar_congctrl",
+                       SYSCTL_DESCR("Use Congestion Control via rtt variation"),
+                       NULL, 0, &sctp_use_rttvar_cc, 0,
+                       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_RTTVAR_CC,
+                       CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "deadlock_detect",
+                       SYSCTL_DESCR("SMP Deadlock detection on/off"),
+                       NULL, 0, &sctp_says_check_for_deadlock, 0,
+		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_DEADLOCK_DET,
+                       CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "auth_disable",
+                       SYSCTL_DESCR("Disable SCTP AUTH requirement/function"),
+                       NULL, 0, &sctp_auth_disable, 0,
+		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_AUTH_DISABLE,
+                       CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "auth_hmac_id",
+                       SYSCTL_DESCR("Default HMAC Id for SCTP AUTHentication"),
+                       NULL, 0, &sctp_auth_hmac_id_default, 0,
+		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_AUTH_HMAC_ID,
                        CTL_EOL);
 
 #ifdef SCTP_DEBUG
@@ -5284,10 +5414,10 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
                        NULL, 0, &sctp_debug_on, 0,
 		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_DEBUG,
                        CTL_EOL);
-#endif
+#endif /* SCTP_DEBUG */
 
 }
-#endif
+#endif /* __NetBSD__ */
 
 /*
  * additional protosw entries for Mac OS X 10.4

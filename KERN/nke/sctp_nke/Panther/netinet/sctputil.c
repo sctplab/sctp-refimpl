@@ -39,9 +39,6 @@
 #include "opt_compat.h"
 #include "opt_inet6.h"
 #include "opt_inet.h"
-#ifndef SCTP_BASE_FREEBSD
-#include "opt_mpath.h"
-#endif /* SCTP_BASE_FREEBSD */
 #endif /* FreeBSD */
 #if defined(__NetBSD__)
 #include "opt_inet.h"
@@ -895,7 +892,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	/* init all variables to a known value.*/
 	asoc->state = SCTP_STATE_INUSE;
 	asoc->max_burst = m->sctp_ep.max_burst;
-	asoc->heart_beat_delay = m->sctp_ep.sctp_timeoutticks[SCTP_TIMER_HEARTBEAT];
+	asoc->heart_beat_delay = TICKS_TO_MSEC(m->sctp_ep.sctp_timeoutticks[SCTP_TIMER_HEARTBEAT]);
 	asoc->cookie_life = m->sctp_ep.def_cookie_life;
 
 	if (override_tag) {
@@ -1034,6 +1031,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	TAILQ_INIT(&asoc->send_queue);
 	TAILQ_INIT(&asoc->sent_queue);
 	TAILQ_INIT(&asoc->reasmqueue);
+	TAILQ_INIT(&asoc->resetHead);
 	TAILQ_INIT(&asoc->delivery_queue);
 	asoc->max_inbound_streams = m->sctp_ep.max_open_streams_intome;
 
@@ -1373,7 +1371,6 @@ sctp_timeout_handler(void *t)
 		printf("Timer now complete (type %d)\n", typ);
 	}
 #endif /* SCTP_DEBUG */
-
 	splx(s);
 #if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
 	/* release BSD kernel funnel/mutex */
@@ -5618,4 +5615,54 @@ release:
 
 	return (error);
 }
+
 #endif
+
+int
+sctp_sorecvmsg(struct socket *so, 
+	       struct sockaddr **fromsa,
+	       struct uio *uio,
+	       int *msg_flag,
+	       struct sctp_sndrcvinfo *sinfo)
+{
+	/* This is a gross, quick hack. Really
+	 * we need to re-write sctp_sorecv() to 
+	 * prepare the args and call into here. This
+	 * will optimize the recieve path... but instead,
+	 * as a temporary quick thing, we will build the
+	 * mbuf with the control junk to get the sndrcvinfo
+	 * and call sctp_sorecv(). Note that when we do
+	 * optimize the receive path a complete re-write
+	 * of the where we put data on this tract will
+	 * be done.. maybe even not using the sb_mb and
+	 * pull right from the association. This will
+	 * have interesting consequences on select/poll that
+	 * must be accounted for.
+	 */
+	int error = 0;
+	struct mbuf *controlp=NULL;
+	
+	error = sctp_soreceive(so, fromsa, uio, (struct mbuf **)NULL, &controlp, msg_flag);
+	if(!error) {
+		/* ok, lets get the sinfo and 
+		 * copy it to the structure. Then
+		 */
+		struct sctp_sndrcvinfo *outinfo;
+		struct cmsghdr *cmh;
+		struct mbuf *m;	
+		m = controlp;
+		while(m) {
+			cmh = mtod(m, struct cmsghdr *);
+			if((cmh->cmsg_level == IPPROTO_SCTP) &&
+			   (cmh->cmsg_type == SCTP_SNDRCV)) {
+				outinfo = (struct sctp_sndrcvinfo *)CMSG_DATA(cmh);
+				*sinfo = *outinfo;
+				break;
+			}
+			m = m->m_next;
+		}
+	}
+	if(controlp)
+		m_freem(controlp);
+	return(error);
+}

@@ -82,19 +82,23 @@
 #define SCTPCTL_RTTVAR_CC           29
 #define SCTPCTL_DEADLOCK_DET        30
 #define SCTPCTL_EARLY_FR_MSEC       31
+#define SCTPCTL_AUTH_DISABLE        32
+#define SCTPCTL_AUTH_HMAC_ID        33
+#define SCTPCTL_ABC_L_VAR           34
 #ifdef SCTP_DEBUG
-#define SCTPCTL_DEBUG               32
-#define SCTPCTL_MAXID		    33
+#define SCTPCTL_DEBUG               35
+#define SCTPCTL_MAXID		    36
 #else
-#define SCTPCTL_MAXID		    32
+#define SCTPCTL_MAXID		    35
 #endif
 
+#define SCTPCTL_CMT_USE_DAC         37
 #endif
 
 #ifdef SCTP_DEBUG
 #define SCTPCTL_NAMES { \
 	{ 0, 0 }, \
-	{ "maxdgram", CTLTYPE_INT }, \
+	{ "sendspace", CTLTYPE_INT }, \
 	{ "recvspace", CTLTYPE_INT }, \
 	{ "autoasconf", CTLTYPE_INT }, \
 	{ "ecn_enable", CTLTYPE_INT }, \
@@ -120,16 +124,20 @@
 	{ "path_rtx_max", CTLTYPE_INT }, \
 	{ "nr_outgoing_streams", CTLTYPE_INT }, \
 	{ "cmt_on_off", CTLTYPE_INT }, \
+	{ "cmt_use_dac", CTLTYPE_INT }, \
 	{ "cwnd_maxburst", CTLTYPE_INT }, \
         { "early_fast_retran", CTLTYPE_INT }, \
         { "use_rttvar_congctrl", CTLTYPE_INT }, \
         { "deadlock_detect", CTLTYPE_INT }, \
+        { "early_fast_retran_msec", CTLTYPE_INT }, \
+	{ "auth_disable", CTLTYPE_INT }, \
+	{ "auth_hmac_id", CTLTYPE_INT }, \
 	{ "debug", CTLTYPE_INT }, \
 }
 #else
 #define SCTPCTL_NAMES { \
 	{ 0, 0 }, \
-	{ "maxdgram", CTLTYPE_INT }, \
+	{ "sendspace", CTLTYPE_INT }, \
 	{ "recvspace", CTLTYPE_INT }, \
 	{ "autoasconf", CTLTYPE_INT }, \
 	{ "ecn_enable", CTLTYPE_INT }, \
@@ -155,14 +163,26 @@
 	{ "path_rtx_max", CTLTYPE_INT }, \
 	{ "nr_outgoing_streams", CTLTYPE_INT }, \
 	{ "cmt_on_off", CTLTYPE_INT }, \
+	{ "cmt_use_dac", CTLTYPE_INT }, \
 	{ "cwnd_maxburst", CTLTYPE_INT }, \
         { "early_fast_retran", CTLTYPE_INT }, \
         { "use_rttvar_congctrl", CTLTYPE_INT }, \
         { "deadlock_detect", CTLTYPE_INT }, \
+        { "early_fast_retran_msec", CTLTYPE_INT }, \
+	{ "auth_disable", CTLTYPE_INT }, \
+	{ "auth_hmac_id", CTLTYPE_INT }, \
 }
 #endif
 
-#if defined(_KERNEL) || (defined(__APPLE__) && defined(KERNEL))
+
+
+#if (defined(__APPLE__) && defined(KERNEL))
+#ifndef _KERNEL
+#define _KERNEL
+#endif
+#endif
+
+#if defined(_KERNEL)
 
 #if defined(__FreeBSD__) || defined(__APPLE__)
 #ifdef SYSCTL_DECL
@@ -313,10 +333,11 @@ int sctp_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,
  
 extern int	sctp_sendspace;
 extern int	sctp_recvspace;
-extern int      sctp_ecn;
+extern int      sctp_ecn_enable;
 extern int      sctp_ecn_nonce;
 extern int      sctp_use_cwnd_based_maxburst;
 extern unsigned int sctp_cmt_on_off;
+extern unsigned int sctp_cmt_use_dac;
 extern unsigned int sctp_cmt_sockopt_on_off;
 struct sctp_nets;
 struct sctp_inpcb;
@@ -376,7 +397,11 @@ int sctp_peeraddr(struct socket *,
 );
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+#if __FreeBSD_version >= 600000
+int sctp_listen(struct socket *, int,  struct thread *);
+#else
 int sctp_listen(struct socket *, struct thread *);
+#endif
 #else
 int sctp_listen(struct socket *, struct proc *);
 #endif
@@ -391,12 +416,13 @@ int sctp_accept(struct socket *, struct mbuf *);
 int sctp_sysctl(int *, u_int, void *, size_t *, void *, size_t);
 #endif
 
+#ifdef __OpenBSD__
 /*
  * compatibility defines for OpenBSD, Apple
  */
 
 /* map callout into timeout for OpenBSD */
-#ifdef __OpenBSD__
+
 #ifndef callout_init
 #define callout_init(args)
 #define callout_reset(c, ticks, func, arg) \
@@ -410,8 +436,10 @@ do { \
 #endif
 #endif
 
-/* XXX: Hopefully temporary until APPLE changes to newer defs like other BSDs */
+
 #if defined(__APPLE__)
+
+/* XXX: Hopefully temporary until APPLE changes to newer defs like other BSDs */
 #define if_addrlist	if_addrhead
 #define if_list		if_link
 #define ifa_list	ifa_link

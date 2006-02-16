@@ -75,7 +75,14 @@ struct sha1_context {
 #define H3INIT 0x10325476
 #define H4INIT 0xc3d2e1f0
 
-#if defined(_KERNEL) || (defined(__APPLE__) && defined(KERNEL))
+
+#if (defined(__APPLE__) && defined(KERNEL))
+#ifndef _KERNEL
+#define _KERNEL
+#endif
+#endif
+
+#if defined(_KERNEL)
 
 void SHA1_Init(struct sha1_context *);
 void SHA1_Process(struct sha1_context *, unsigned char *, int);

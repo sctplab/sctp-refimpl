@@ -184,7 +184,6 @@ struct sctp_paddr_change {
 #endif
 #define SCTP_INACTIVE		0x0002	/* SCTP_ADDR_NOT_REACHABLE */
 
-
 #ifdef SCTP_UNCONFIRMED
 #undef SCTP_UNCONFIRMED
 #endif
@@ -284,33 +283,21 @@ struct sctp_stream_reset_event {
 	u_int16_t       strreset_list[0];
 };
 
-/* flags in strreset_flags filed */
+/* flags in strreset_flags field */
 #define SCTP_STRRESET_INBOUND_STR  0x0001
 #define SCTP_STRRESET_OUTBOUND_STR 0x0002
 #define SCTP_STRRESET_ALL_STREAMS  0x0004
 #define SCTP_STRRESET_STREAM_LIST  0x0008
 #define SCTP_STRRESET_FAILED       0x0010
 
-/* notification types */
-#define SCTP_ASSOC_CHANGE		0x0001
-#define SCTP_PEER_ADDR_CHANGE		0x0002
-#define SCTP_REMOTE_ERROR		0x0003
-#define SCTP_SEND_FAILED		0x0004
-#define SCTP_SHUTDOWN_EVENT		0x0005
-#define SCTP_ADAPTION_INDICATION	0x0006
-#define SCTP_PARTIAL_DELIVERY_EVENT	0x0007
-#define SCTP_AUTHENTICATION_EVENT	0x0008
-#define SCTP_STREAM_RESET_EVENT		0x0009
 
-
+/* SCTP notification event */
 struct sctp_tlv {
 	u_int16_t sn_type;
 	u_int16_t sn_flags;
 	u_int32_t sn_length;
 };
 
-
-/* notification event */
 union sctp_notification {
 	struct sctp_tlv sn_header;
 	struct sctp_assoc_change sn_assoc_change;
@@ -323,6 +310,17 @@ union sctp_notification {
 	struct sctp_authkey_event sn_auth_event;
 	struct sctp_stream_reset_event sn_strreset_event;
 };
+/* notification types */
+#define SCTP_ASSOC_CHANGE		0x0001
+#define SCTP_PEER_ADDR_CHANGE		0x0002
+#define SCTP_REMOTE_ERROR		0x0003
+#define SCTP_SEND_FAILED		0x0004
+#define SCTP_SHUTDOWN_EVENT		0x0005
+#define SCTP_ADAPTION_INDICATION	0x0006
+#define SCTP_PARTIAL_DELIVERY_EVENT	0x0007
+#define SCTP_AUTHENTICATION_EVENT	0x0008
+#define SCTP_STREAM_RESET_EVENT		0x0009
+
 
 /*
  * socket option structs
@@ -568,11 +566,43 @@ struct sctp_cwnd_log_req{
 };
 
 
+/*
+ * Kernel defined for sctp_send
+ */
+#if defined(_KERNEL)
+int
+sctp_lower_sosend(struct socket *so,
+		  struct sockaddr *addr,
+		  struct uio *uio,
+		  struct mbuf *top,
+		  struct mbuf *control,
+		  int flags,
+		  int use_rcvinfo,
+		  struct sctp_sndrcvinfo *srcv,		  
+#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+		  struct thread *p
+#else
+		  struct proc *p
+#endif
+	);
+int
+sctp_sorecvmsg(struct socket *so, 
+	       struct sockaddr **fromsa,
+	       struct uio *uio,
+	       int *msg_flag,
+	       struct sctp_sndrcvinfo *sinfo);
+#endif
 
 /*
  * API system calls
  */
-#if !(defined(_KERNEL) || (defined(__APPLE__) && defined(KERNEL)))
+#if (defined(__APPLE__) && defined(KERNEL))
+#ifndef _KERNEL
+#define _KERNEL
+#endif
+#endif
+
+#if !(defined(_KERNEL))
 
 __BEGIN_DECLS
 int	sctp_peeloff	__P((int, sctp_assoc_t));
