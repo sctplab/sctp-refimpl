@@ -373,18 +373,26 @@ sctp_sendmsg(int s,
 	     const void *data, 
 	     size_t len,
 	     const struct sockaddr *to,
+#ifdef SYS_sctp_sendmsg
+	     socklen_t tolen,
+#else
 	     socklen_t tolen __attribute__((unused)),
+#endif
 	     u_int32_t ppid,
 	     u_int32_t flags,
 	     u_int16_t stream_no,
 	     u_int32_t timetolive,
 	     u_int32_t context)
 {
+#ifdef SYS_sctp_sendmsg
+	return (syscall(SYS_sctp_sendmsg, s, data, len, to, tolen,
+			ppid, flags, stream_no, timetolive, context));
+#else
 	ssize_t sz;
 	struct msghdr msg;
-	struct iovec iov[2];
-	char controlVector[SCTP_CONTROL_VEC_SIZE_SND];
 	struct sctp_sndrcvinfo *s_info;
+	struct iovec iov[2];
+	char controlVector[SCTP_CONTROL_VEC_SIZE_RCV];
 	struct cmsghdr *cmsg;
 	struct sockaddr *who=NULL;
 	union {
@@ -456,6 +464,7 @@ sctp_sendmsg(int s,
 	msg.msg_controllen = cmsg->cmsg_len;
 	sz = sendmsg(s, &msg, 0);
 	return(sz);
+#endif
 }
 
 sctp_assoc_t
@@ -483,6 +492,9 @@ sctp_send(int sd, const void *data, size_t len,
 	  const struct sctp_sndrcvinfo *sinfo,
 	  int flags)
 {
+#ifdef SYS_sctp_send
+	return (syscall(SYS_sctp_send, sd, data, len, sinfo, flags));
+#else
 	ssize_t sz;
 	struct msghdr msg;
 	struct iovec iov[2];
@@ -516,6 +528,7 @@ sctp_send(int sd, const void *data, size_t len,
 	msg.msg_controllen = cmsg->cmsg_len;
 	sz = sendmsg(sd, &msg, flags);
 	return(sz);
+#endif
 }
 
 
@@ -627,67 +640,71 @@ sctp_recvmsg (int s,
 	      struct sctp_sndrcvinfo *sinfo,
 	      int *msg_flags)
 {
-  struct sctp_sndrcvinfo *s_info;
-  ssize_t sz;
-  int sinfo_found=0;
-  struct msghdr msg;
-  struct iovec iov[2];
-  char controlVector[SCTP_CONTROL_VEC_SIZE_RCV];
-  struct cmsghdr *cmsg;
+#ifdef SYS_sctp_recvmsg
+	return (syscall(SYS_sctp_recvmsg, s, dbuf, len, from, fromlen, sinfo, msg_flags));
+#else
+	struct sctp_sndrcvinfo *s_info;
+	ssize_t sz;
+	int sinfo_found=0;
+	struct msghdr msg;
+	struct iovec iov[2];
+	char controlVector[SCTP_CONTROL_VEC_SIZE_RCV];
+	struct cmsghdr *cmsg;
 
-  if (msg_flags == NULL) {
-    errno = EINVAL;
-    return (-1);
-  }
-  msg.msg_flags = 0;
-  iov[0].iov_base = dbuf;
-  iov[0].iov_len = len;
-  iov[1].iov_base = NULL;
-  iov[1].iov_len = 0;
-  msg.msg_name = (caddr_t)from;
-  if (fromlen == NULL)
-    msg.msg_namelen = 0;
-  else
-    msg.msg_namelen = *fromlen;
-  msg.msg_iov = iov;
-  msg.msg_iovlen = 1;
-  msg.msg_control = (caddr_t)controlVector;
-  msg.msg_controllen = sizeof(controlVector);
-  errno = 0;
-  sz = recvmsg(s,&msg,0);
-  if(sz <= 0)
-    return(sz);
-
-  s_info = NULL;
-  len = sz;
-  *msg_flags = msg.msg_flags;
-  if(sinfo) 
-    sinfo->sinfo_assoc_id = 0;
-
-  if ((msg.msg_controllen) && sinfo) {
-    /* parse through and see if we find
-     * the sctp_sndrcvinfo (if the user wants it).
-     */
-    cmsg = (struct cmsghdr *)controlVector;
-    while (cmsg) {
-      if((cmsg->cmsg_len == 0) || (cmsg->cmsg_len > msg.msg_controllen)) {
-	break;
-      }
-      if (cmsg->cmsg_level == IPPROTO_SCTP) {
-	if (cmsg->cmsg_type == SCTP_SNDRCV) {
-	  /* Got it */
-	  s_info = (struct sctp_sndrcvinfo *)CMSG_DATA(cmsg);
-	  /* Copy it to the user */
-	  if(sinfo)
-	    *sinfo = *s_info;
-	  sinfo_found = 1;
-	  break;
+	if (msg_flags == NULL) {
+		errno = EINVAL;
+		return (-1);
 	}
-      }
-      cmsg = CMSG_NXTHDR(&msg,cmsg);
-    }
-  }
-  return(sz);
+	msg.msg_flags = 0;
+	iov[0].iov_base = dbuf;
+	iov[0].iov_len = len;
+	iov[1].iov_base = NULL;
+	iov[1].iov_len = 0;
+	msg.msg_name = (caddr_t)from;
+	if (fromlen == NULL)
+		msg.msg_namelen = 0;
+	else
+		msg.msg_namelen = *fromlen;
+	msg.msg_iov = iov;
+	msg.msg_iovlen = 1;
+	msg.msg_control = (caddr_t)controlVector;
+	msg.msg_controllen = sizeof(controlVector);
+	errno = 0;
+	sz = recvmsg(s,&msg,0);
+	if(sz <= 0)
+		return(sz);
+
+	s_info = NULL;
+	len = sz;
+	*msg_flags = msg.msg_flags;
+	if(sinfo) 
+		sinfo->sinfo_assoc_id = 0;
+
+	if ((msg.msg_controllen) && sinfo) {
+		/* parse through and see if we find
+		 * the sctp_sndrcvinfo (if the user wants it).
+		 */
+		cmsg = (struct cmsghdr *)controlVector;
+		while (cmsg) {
+			if((cmsg->cmsg_len == 0) || (cmsg->cmsg_len > msg.msg_controllen)) {
+				break;
+			}
+			if (cmsg->cmsg_level == IPPROTO_SCTP) {
+				if (cmsg->cmsg_type == SCTP_SNDRCV) {
+					/* Got it */
+					s_info = (struct sctp_sndrcvinfo *)CMSG_DATA(cmsg);
+					/* Copy it to the user */
+					if(sinfo)
+						*sinfo = *s_info;
+					sinfo_found = 1;
+					break;
+				}
+			}
+			cmsg = CMSG_NXTHDR(&msg,cmsg);
+		}
+	}
+	return(sz);
+#endif
 }
 
 #ifdef SYS_sctp_peeloff
