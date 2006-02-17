@@ -1847,8 +1847,32 @@ sctp_optsget(struct socket *so,
 			m->m_len = sizeof(optval);
 		}
 		break;
+	case SCTP_PARTIAL_DELIVERY_POINT:
+	{
+		if((size_t)m->m_len < sizeof(unsigned int)) {
+			error = EINVAL;
+			break;
+		}
+		*mtod(m, unsigned int *) = inp->partial_delivery_point;
+		m->m_len = sizeof(unsigned int);
+	}
+		break;
+	case SCTP_FRAGMENT_INTERLEAVE:
+	{
+		if((size_t)m->m_len < sizeof(unsigned int)) {
+			error = EINVAL;
+			break;
+		}
+		*mtod(m, unsigned int *) = 0;
+		m->m_len = sizeof(unsigned int);
+	}
+		break;
 	case SCTP_CMT_ON_OFF:
 	{
+		if((size_t)m->m_len < sizeof(unsigned int)) {
+			error = EINVAL;
+			break;
+		}
 		*mtod(m, unsigned int *) = sctp_cmt_sockopt_on_off;
 		m->m_len = sizeof(unsigned int);
 	}
@@ -3056,8 +3080,25 @@ sctp_optsset(struct socket *so,
 		}
 		SCTP_INP_WUNLOCK(inp);
 		break;
+	case SCTP_PARTIAL_DELIVERY_POINT:
+	{
+		if((size_t)m->m_len < sizeof(unsigned int)) {
+			error = EINVAL;
+			break;
+		}
+		inp->partial_delivery_point = *mtod(m, unsigned int *); 
+		m->m_len = sizeof(unsigned int);
+	}
+	case SCTP_FRAGMENT_INTERLEAVE:
+		/* not yet until we re-write sctp_recvmsg() */
+		error = EOPNOTSUPP;
+		break;
 	case SCTP_CMT_ON_OFF:
 	{
+		if ((size_t)m->m_len < sizeof(unsigned int)) {
+			error = EINVAL;
+			break;
+		}
 		sctp_cmt_sockopt_on_off = *mtod(m, unsigned int *);
 		if (sctp_cmt_sockopt_on_off != 0) 
 			sctp_cmt_sockopt_on_off = 1;
@@ -3065,6 +3106,10 @@ sctp_optsset(struct socket *so,
 	break;
 	case SCTP_CMT_USE_DAC:
 	{
+		if ((size_t)m->m_len < sizeof(unsigned int)) {
+			error = EINVAL;
+			break;
+		}
 		sctp_cmt_sockopt_use_dac = *mtod(m, unsigned int *);
 		if (sctp_cmt_sockopt_use_dac != 0) 
 			sctp_cmt_sockopt_use_dac = 1;

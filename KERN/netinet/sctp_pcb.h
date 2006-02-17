@@ -367,6 +367,7 @@ struct sctp_inpcb {
 	struct sctp_iterator *inp_starting_point_for_iterator;
 	uint32_t sctp_frag_point;
 	uint32_t sctp_vtag_first;
+	uint32_t partial_delivery_point;
 	struct mbuf *pkt, *pkt_last, *sb_last_mpkt;
 	struct mbuf *control;
 #if !(defined(__FreeBSD__) || defined(__APPLE__))

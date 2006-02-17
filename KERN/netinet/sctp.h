@@ -96,7 +96,8 @@ struct sctp_paramhdr {
 #define SCTP_AUTH_KEY 			0x00000011
 #define SCTP_HMAC_IDENT 		0x00000012
 #define SCTP_AUTH_SETKEY_ACTIVE 	0x00000013
-
+#define SCTP_FRAGMENT_INTERLEAVE        0x00000014
+#define SCTP_PARTIAL_DELIVERY_POINT     0x00000015
 /*
  * read-only options
  */
