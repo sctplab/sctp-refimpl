@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.30 2006-02-09 21:54:11 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.31 2006-02-17 14:05:36 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -4317,7 +4317,7 @@ cmd_getevents(char *argv[], int argc)
 	 (event.sctp_partial_delivery_event ? "Will" : "Will NOT"));
 
   printf("Adaption layer events %s be received\n",
-	 (event.sctp_adaption_layer_event ? "Will" : "Will NOT"));
+	 (event.sctp_adaptation_layer_event ? "Will" : "Will NOT"));
   return(0);
 }
 

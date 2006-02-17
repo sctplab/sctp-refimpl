@@ -1859,6 +1859,29 @@ sctp_optsget(struct socket *so,
 		m->m_len = sizeof(unsigned int);
 	}
 	break;
+	case SCTP_GET_ADDR_LEN:
+	{
+		struct sctp_assoc_value *av;
+		if ((size_t)m->m_len < sizeof(struct sctp_assoc_value)) {
+			error = EINVAL;
+			break;
+		}
+		av = mtod(m, struct sctp_assoc_value *);
+		error = EINVAL;
+#ifdef AF_INET
+		if(av->assoc_value == AF_INET) {
+			av->assoc_value = sizeof(struct sockaddr_in);
+			error = 0;
+		}
+#endif
+#ifdef AF_INET6
+		if(av->assoc_value == AF_INET6) {
+			av->assoc_value = sizeof(struct sockaddr_in6);
+			error = 0;
+		}
+#endif
+	}
+		break;
 	case SCTP_GET_ASOC_ID_LIST:
 	{
 		struct sctp_assoc_ids *ids;
@@ -2145,8 +2168,8 @@ sctp_optsget(struct socket *so,
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_PDAPIEVNT)
 			events->sctp_partial_delivery_event = 1;
 
-		if (inp->sctp_flags & SCTP_PCB_FLAGS_ADAPTIONEVNT)
-			events->sctp_adaption_layer_event = 1;
+		if (inp->sctp_flags & SCTP_PCB_FLAGS_ADAPTATIONEVNT)
+			events->sctp_adaptation_layer_event = 1;
 
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_STREAM_RESETEVNT)
 			events->sctp_stream_reset_events = 1;
@@ -2156,18 +2179,18 @@ sctp_optsget(struct socket *so,
 	}
 	break;
 
-	case SCTP_ADAPTION_LAYER:
+	case SCTP_ADAPTATION_LAYER:
 		if ((size_t)m->m_len < sizeof(int)) {
 			error = EINVAL;
 			break;
 		}
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_USRREQ1) {
-			printf("getadaption ind\n");
+			printf("getadaptation ind\n");
 		}
 #endif /* SCTP_DEBUG */
 		SCTP_INP_RLOCK(inp);
-		*mtod(m, int *) = inp->sctp_ep.adaption_layer_indicator;
+		*mtod(m, int *) = inp->sctp_ep.adaptation_layer_indicator;
 		SCTP_INP_RUNLOCK(inp);
 		m->m_len = sizeof(int);
 		break;
@@ -2536,7 +2559,7 @@ sctp_optsget(struct socket *so,
 			paddrp->spp_pathmaxrxt = 0;
 			paddrp->spp_pathmtu = 0;
 
-			/* default settins should be these */
+			/* default settings should be these */
 			paddrp->spp_flags = SPP_HB_ENABLE | SPP_SACKDELAY_ENABLE | SPP_PMTUD_ENABLE;
 			SCTP_INP_RUNLOCK(inp);
 		}
@@ -3309,10 +3332,10 @@ sctp_optsset(struct socket *so,
 	inp->sctp_flags &= ~SCTP_PCB_FLAGS_PDAPIEVNT;
       }
 
-      if (events->sctp_adaption_layer_event) {
-	inp->sctp_flags |= SCTP_PCB_FLAGS_ADAPTIONEVNT;
+      if (events->sctp_adaptation_layer_event) {
+	inp->sctp_flags |= SCTP_PCB_FLAGS_ADAPTATIONEVNT;
       } else {
-	inp->sctp_flags &= ~SCTP_PCB_FLAGS_ADAPTIONEVNT;
+	inp->sctp_flags &= ~SCTP_PCB_FLAGS_ADAPTATIONEVNT;
       }
 
       if (events->sctp_stream_reset_events) {
@@ -3324,16 +3347,16 @@ sctp_optsset(struct socket *so,
     }
     break;
 
-  case SCTP_ADAPTION_LAYER:
+  case SCTP_ADAPTATION_LAYER:
     {
-      struct sctp_setadaption *adap_bits;
-      if ((size_t)m->m_len < sizeof(struct sctp_setadaption)) {
+      struct sctp_setadaptation *adap_bits;
+      if ((size_t)m->m_len < sizeof(struct sctp_setadaptation)) {
 	error = EINVAL;
 	break;
       }
       SCTP_INP_WLOCK(inp);
-      adap_bits = mtod(m, struct sctp_setadaption *);
-      inp->sctp_ep.adaption_layer_indicator = adap_bits->ssb_adaption_ind;
+      adap_bits = mtod(m, struct sctp_setadaptation *);
+      inp->sctp_ep.adaptation_layer_indicator = adap_bits->ssb_adaptation_ind;
       SCTP_INP_WUNLOCK(inp);
     }
     break;
@@ -3452,16 +3475,17 @@ sctp_optsset(struct socket *so,
 	/************************TCB SPECIFIC SET ******************/
 	/* sack delay first */
 	if (paddrp->spp_flags & SPP_SACKDELAY_ENABLE) {
-	  /* we do NOT support turning it off. only
+	  /* we do NOT support turning it off (yet). only
 	   * setting the delay.
 	   */
 	  if( paddrp->spp_sackdelay >= SCTP_CLOCK_GRANULARITY )
 	    stcb->asoc.delayed_ack = paddrp->spp_sackdelay;
 	}
 	/* do we change the timer for HB, we run only one? */
-	if((paddrp->spp_hbinterval) && ( paddrp->spp_flags & SPP_HB_ENABLE )) {
-	  stcb->asoc.heart_beat_delay = paddrp->spp_hbinterval;
-	}
+	if(paddrp->spp_hbinterval)
+		stcb->asoc.heart_beat_delay = paddrp->spp_hbinterval;
+	else if (paddrp->spp_flags & SPP_HB_TIME_IS_ZERO)
+		stcb->asoc.heart_beat_delay = 0;
 
 	/* network sets ? */
 	if (net) {

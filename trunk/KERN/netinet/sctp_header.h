@@ -325,7 +325,7 @@ struct sctp_stale_cookie_msg {
 	u_int32_t time_usec;
 };
 
-struct sctp_adaption_layer_indication {
+struct sctp_adaptation_layer_indication {
 	struct sctp_paramhdr ph;
 	u_int32_t indication;
 };

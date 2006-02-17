@@ -49,7 +49,7 @@ struct sctp_event_subscribe {
 	u_int8_t sctp_peer_error_event;
 	u_int8_t sctp_shutdown_event;
 	u_int8_t sctp_partial_delivery_event;
-	u_int8_t sctp_adaption_layer_event;
+	u_int8_t sctp_adaptation_layer_event;
 	u_int8_t sctp_stream_reset_events;
 };
 
@@ -228,7 +228,19 @@ struct sctp_shutdown_event {
 	sctp_assoc_t	sse_assoc_id;
 };
 
-/* Adaption layer indication stuff */
+/* Adaptation layer indication stuff */
+struct sctp_adaptation_event {
+	u_int16_t	sai_type;
+	u_int16_t	sai_flags;
+	u_int32_t	sai_length;
+	u_int32_t	sai_adaptation_ind;
+	sctp_assoc_t	sai_assoc_id;
+};
+
+struct sctp_setadaptation {
+	u_int32_t	ssb_adaptation_ind;
+};
+/* compatable old spelling */
 struct sctp_adaption_event {
 	u_int16_t	sai_type;
 	u_int16_t	sai_flags;
@@ -240,6 +252,7 @@ struct sctp_adaption_event {
 struct sctp_setadaption {
 	u_int32_t	ssb_adaption_ind;
 };
+
 
 /*
  * Partial Delivery API event
@@ -305,6 +318,8 @@ union sctp_notification {
 	struct sctp_remote_error sn_remote_error;
 	struct sctp_send_failed	sn_send_failed;
 	struct sctp_shutdown_event sn_shutdown_event;
+	struct sctp_adaptation_event sn_adaptation_event;
+	/* compatability same as above */
 	struct sctp_adaption_event sn_adaption_event;
 	struct sctp_pdapi_event sn_pdapi_event;
 	struct sctp_authkey_event sn_auth_event;
@@ -316,6 +331,8 @@ union sctp_notification {
 #define SCTP_REMOTE_ERROR		0x0003
 #define SCTP_SEND_FAILED		0x0004
 #define SCTP_SHUTDOWN_EVENT		0x0005
+#define SCTP_ADAPTATION_INDICATION	0x0006
+/* same as above */
 #define SCTP_ADAPTION_INDICATION	0x0006
 #define SCTP_PARTIAL_DELIVERY_EVENT	0x0007
 #define SCTP_AUTHENTICATION_EVENT	0x0008
@@ -345,6 +362,7 @@ struct sctp_paddrparams {
 #define SPP_PMTUD_DISABLE	0x00000010
 #define SPP_SACKDELAY_ENABLE	0x00000020
 #define SPP_SACKDELAY_DISABLE	0x00000040
+#define SPP_HB_TIME_IS_ZERO     0x00000080
 
 struct sctp_paddrinfo {
 	sctp_assoc_t spinfo_assoc_id;
@@ -608,6 +626,7 @@ __BEGIN_DECLS
 int	sctp_peeloff	__P((int, sctp_assoc_t));
 int	sctp_bindx	__P((int, struct sockaddr *, int, int));
 int     sctp_connectx   __P((int, struct sockaddr *, int));
+int     sctp_getaddrlen __P((sa_family_t));
 int	sctp_getpaddrs	__P((int, sctp_assoc_t, struct sockaddr **));
 void	sctp_freepaddrs	__P((struct sockaddr *));
 int	sctp_getladdrs	__P((int, sctp_assoc_t, struct sockaddr **));

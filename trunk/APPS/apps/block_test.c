@@ -99,10 +99,10 @@ handle_notification(int fd,char *notify_buf) {
 		break;
 	case SCTP_ADAPTION_INDICATION:
 	  {
-	    struct sctp_adaption_event *ae;
-	    ae = &snp->sn_adaption_event;
+	    struct sctp_adaptation_event *ae;
+	    ae = &snp->sn_adaptation_event;
 	    printf("\nSCTP_adaption_indication bits:0x%x\n",
-		   (u_int)ae->sai_adaption_ind);
+		   (u_int)ae->sai_adaptation_ind);
 	  }
 	  break;
 	case SCTP_PARTIAL_DELIVERY_EVENT:
