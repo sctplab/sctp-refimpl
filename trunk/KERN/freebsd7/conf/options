@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/conf/options,v 1.475.2.10 2005/03/21 16:05:34 glebius Exp $
+# $FreeBSD: src/sys/conf/options,v 1.528 2006/02/01 21:00:16 rwatson Exp $
 #
 #        On the handling of kernel options
 #
@@ -60,20 +60,24 @@ SYSCTL_DEBUG	opt_sysctl.h
 ADAPTIVE_GIANT	opt_adaptive_mutexes.h
 NO_ADAPTIVE_MUTEXES	opt_adaptive_mutexes.h
 ALQ
+AUDIT		opt_global.h
 CODA_COMPAT_5	opt_coda.h
 COMPAT_43	opt_compat.h
+COMPAT_43TTY	opt_compat.h
 COMPAT_FREEBSD4	opt_compat.h
+COMPAT_FREEBSD5	opt_compat.h
 COMPILING_LINT	opt_global.h
 CONSPEED	opt_comconsole.h
 CY_PCI_FASTINTR
-DIRECTIO	opt_directio.h
+DIRECTIO
 FULL_PREEMPTION	opt_sched.h
-PREEMPTION	opt_sched.h
+IPI_PREEMPTION	opt_sched.h
 GEOM_AES	opt_geom.h
 GEOM_APPLE	opt_geom.h
 GEOM_BDE	opt_geom.h
 GEOM_BSD	opt_geom.h
 GEOM_CONCAT	opt_geom.h
+GEOM_ELI	opt_geom.h
 GEOM_FOX	opt_geom.h
 GEOM_GATE	opt_geom.h
 GEOM_GPT	opt_geom.h
@@ -88,7 +92,7 @@ GEOM_STRIPE	opt_geom.h
 GEOM_SUNLABEL	opt_geom.h
 GEOM_UZIP	opt_geom.h
 GEOM_VOL	opt_geom.h
-HW_WDOG
+GEOM_ZERO	opt_geom.h
 KSTACK_MAX_PAGES
 KSTACK_PAGES
 KTRACE
@@ -114,19 +118,19 @@ MD_ROOT_SIZE	opt_md.h
 MPROF_BUFFERS	opt_mprof.h
 MPROF_HASH_SIZE	opt_mprof.h
 MUTEX_WAKE_ALL
-MUTEX_DEADLOCK_DETECT opt_adaptive_mutexes.h
-
 NSWBUF_MIN	opt_swap.h
 PANIC_REBOOT_WAIT_TIME	opt_panic.h
 PPS_SYNC	opt_ntp.h
+PREEMPTION	opt_sched.h
 PUC_FASTINTR	opt_puc.h
 QUOTA
 SCHED_4BSD	opt_sched.h
 SCHED_ULE	opt_sched.h
 SHOW_BUSYBUFS
 SLEEPQUEUE_PROFILING
+SLHCI_DEBUG	opt_slhci.h
 SPX_HACK
-SUIDDIR		opt_suiddir.h
+SUIDDIR
 MSGMNB		opt_sysvipc.h
 MSGMNI		opt_sysvipc.h
 MSGSEG		opt_sysvipc.h
@@ -156,6 +160,7 @@ WLCACHE		opt_wavelan.h
 WLDEBUG		opt_wavelan.h
 
 # POSIX kernel options
+P1003_1B_MQUEUE			opt_posix.h
 P1003_1B_SEMAPHORES		opt_posix.h
 _KPOSIX_PRIORITY_SCHEDULING	opt_posix.h
 
@@ -179,10 +184,14 @@ NWFS		opt_dontuse.h
 PORTALFS	opt_dontuse.h
 PROCFS		opt_dontuse.h
 PSEUDOFS	opt_dontuse.h
+REISERFS	opt_dontuse.h
 SMBFS		opt_dontuse.h
 UDF		opt_dontuse.h
 UMAPFS		opt_dontuse.h
 UNIONFS		opt_dontuse.h
+
+# Pseudofs debugging
+PSEUDOFS_TRACE	opt_pseudofs.h
 
 # Broken - ffs_snapshot() dependency from ufs_lookup() :-(
 FFS		opt_ffs_broken_fixme.h
@@ -205,6 +214,11 @@ UDF_ICONV	opt_dontuse.h
 # and make the system safer from crashes at the same time.
 # otherwise a STUB module will be compiled in.
 SOFTUPDATES	opt_ffs.h
+
+# On small, embedded systems, it can be useful to turn off support for
+# snapshots.  It saves about 30-40k for a feature that would be lightly
+# used, if it is used at all.
+NO_FFS_SNAPSHOT	opt_ffs.h
 
 # Enabling this option turns on support for Access Control Lists in UFS,
 # which can be used to support high security configurations.  Depends on
@@ -303,12 +317,6 @@ ISP_FW_CRASH_DUMP	opt_isp.h
 # Options used in the 'ata' ATA/ATAPI driver
 ATA_STATIC_ID		opt_ata.h
 ATA_NOPCI		opt_ata.h
-DEV_ATADISK		opt_ata.h
-DEV_ATAPICD		opt_ata.h
-DEV_ATAPIST		opt_ata.h
-DEV_ATAPIFD		opt_ata.h
-DEV_ATAPICAM		opt_ata.h
-DEV_ATARAID		opt_ata.h
 
 # Net stuff.
 ACCEPT_FILTER_DATA
@@ -327,7 +335,7 @@ BOOTP_COMPAT		opt_bootp.h
 BOOTP_NFSROOT		opt_bootp.h
 BOOTP_NFSV3		opt_bootp.h
 BOOTP_WIRED_TO		opt_bootp.h
-BRIDGE			opt_bdg.h
+DEVICE_POLLING
 DEV_PF			opt_pf.h
 DEV_PFLOG		opt_pf.h
 DEV_PFSYNC		opt_pf.h
@@ -348,6 +356,7 @@ IPDIVERT
 DUMMYNET		opt_ipdn.h
 IPFILTER		opt_ipfilter.h
 IPFILTER_LOG		opt_ipfilter.h
+IPFILTER_LOOKUP		opt_ipfilter.h
 IPFILTER_DEFAULT_BLOCK	opt_ipfilter.h
 IPFIREWALL		opt_ipfw.h
 IPFIREWALL_VERBOSE	opt_ipfw.h
@@ -364,7 +373,8 @@ IPX
 IPXIP			opt_ipx.h
 LIBMBPOOL
 LIBMCHAIN
-MBUF_STRESS_TEST	opt_mbuf_stress_test.h
+LIBALIAS
+MBUF_STRESS_TEST
 NCP
 NETATALK		opt_atalk.h
 NET_WITH_GIANT		opt_net.h
@@ -376,6 +386,8 @@ TCPDEBUG
 TCP_SIGNATURE		opt_inet.h
 TCP_SACK_DEBUG		opt_tcp_sack.h 
 TCP_DROP_SYNFIN		opt_tcp_input.h
+DEV_VLAN		opt_vlan.h
+VLAN_ARRAY		opt_vlan.h
 XBONEHACK
 
 #
@@ -402,11 +414,13 @@ SCTP_EARLYFR_LOGGING    opt_sctp.h
 INVARIANTS_SCTP         opt_sctp.h
 #
 
+
 # Netgraph(4). Use option NETGRAPH to enable the base netgraph code.
 # Each netgraph node type can be either be compiled into the kernel
 # or loaded dynamically. To get the former, include the corresponding
 # option below. Each type has its own man page, e.g. ng_async(4).
 NETGRAPH
+NETGRAPH_DEBUG		opt_netgraph.h
 NETGRAPH_ASYNC		opt_netgraph.h
 NETGRAPH_ATMLLC		opt_netgraph.h
 NETGRAPH_ATM_ATMPIF	opt_netgraph.h
@@ -432,12 +446,14 @@ NETGRAPH_GIF_DEMUX	opt_netgraph.h
 NETGRAPH_HOLE		opt_netgraph.h
 NETGRAPH_IFACE		opt_netgraph.h
 NETGRAPH_IP_INPUT	opt_netgraph.h
+NETGRAPH_IPFW		opt_netgraph.h
 NETGRAPH_KSOCKET	opt_netgraph.h
 NETGRAPH_L2TP		opt_netgraph.h
 NETGRAPH_LMI		opt_netgraph.h
 # MPPC compression requires proprietary files (not included)
 NETGRAPH_MPPC_COMPRESSION	opt_netgraph.h
 NETGRAPH_MPPC_ENCRYPTION	opt_netgraph.h
+NETGRAPH_NAT		opt_netgraph.h
 NETGRAPH_NETFLOW	opt_netgraph.h
 NETGRAPH_ONE2MANY	opt_netgraph.h
 NETGRAPH_PPP		opt_netgraph.h
@@ -447,6 +463,7 @@ NETGRAPH_RFC1490	opt_netgraph.h
 NETGRAPH_SOCKET		opt_netgraph.h
 NETGRAPH_SPLIT		opt_netgraph.h
 NETGRAPH_SPPP		opt_netgraph.h
+NETGRAPH_TCPMSS		opt_netgraph.h
 NETGRAPH_TEE		opt_netgraph.h
 NETGRAPH_TTY		opt_netgraph.h
 NETGRAPH_UI		opt_netgraph.h
@@ -494,10 +511,8 @@ VP0_DEBUG		opt_vpo.h
 LPT_DEBUG		opt_lpt.h
 PLIP_DEBUG		opt_plip.h
 LOCKF_DEBUG		opt_debug_lockf.h
-NPX_DEBUG		opt_debug_npx.h
 NETATALKDEBUG		opt_atalk.h
 SI_DEBUG		opt_debug_si.h
-SX_DEBUG		opt_debug_sx.h
 
 # Fb options
 FB_DEBUG		opt_fb.h
@@ -519,7 +534,6 @@ DEBUG_VFS_LOCKS		opt_global.h
 DIAGNOSTIC		opt_global.h
 INVARIANT_SUPPORT	opt_global.h
 INVARIANTS		opt_global.h
-LOOKUP_SHARED		opt_global.h
 MCLSHIFT		opt_global.h
 MUTEX_DEBUG		opt_global.h
 MUTEX_NOINLINE		opt_global.h
@@ -527,6 +541,7 @@ MUTEX_PROFILING		opt_global.h
 MSIZE			opt_global.h
 REGRESSION		opt_global.h
 RESTARTABLE_PANICS	opt_global.h
+RWLOCK_NOINLINE		opt_global.h
 VFS_BIO_DEBUG		opt_global.h
 
 # These are VM related options
@@ -537,11 +552,12 @@ NO_SWAPPING		opt_vm.h
 MALLOC_MAKE_FAILURES	opt_vm.h
 MALLOC_PROFILE		opt_vm.h
 PQ_NOOPT		opt_vmpage.h
-PQ_NORMALCACHE		opt_vmpage.h
-PQ_MEDIUMCACHE		opt_vmpage.h
-PQ_LARGECACHE		opt_vmpage.h
-PQ_HUGECACHE		opt_vmpage.h
-PQ_CACHESIZE		opt_vmpage.h
+
+# The MemGuard replacement allocator used for tamper-after-free detection
+DEBUG_MEMGUARD		opt_vm.h
+
+# The RedZone malloc(9) protection
+DEBUG_REDZONE		opt_vm.h
 
 # Standard SMP options
 SMP			opt_global.h
@@ -599,13 +615,10 @@ UPLCOM_INTR_INTERVAL	opt_uplcom.h
 UVSCOM_DEFAULT_OPKTSIZE	opt_uvscom.h
 UVSCOM_INTR_INTERVAL	opt_uvscom.h
 
-# Vinum options
-VINUMDEBUG		opt_vinum.h
-
 # Embedded system options
-INIT_PATH		opt_init_path.h
+INIT_PATH
 
-ROOTDEVNAME		opt_rootdevname.h
+ROOTDEVNAME
 
 FDC_DEBUG		opt_fdc.h
 PCFCLOCK_VERBOSE	opt_pcfclock.h
@@ -643,13 +656,15 @@ DEV_SPLASH		opt_splash.h
 EISA_SLOTS		opt_eisa.h
 
 # ed driver
-ED_NO_MIIBUS		opt_ed.h
+ED_HPP			opt_ed.h
+ED_3C503		opt_ed.h
+ED_SIC			opt_ed.h
+
+# bge driver
+BGE_FAKE_AUTONEG	opt_bge.h
 
 # wi driver
 WI_SYMBOL_FIRMWARE	opt_wi.h
-
-# XXX bogusly global.
-DEVICE_POLLING		opt_global.h
 
 SOCKBUF_DEBUG		opt_global.h
 
@@ -703,6 +718,9 @@ KBDIO_DEBUG		opt_kbd.h
 AH_SUPPORT_AR5210	opt_ah.h
 AH_SUPPORT_AR5211	opt_ah.h
 AH_SUPPORT_AR5212	opt_ah.h
+AH_SUPPORT_5111		opt_ah.h
+AH_SUPPORT_5112		opt_ah.h
+AH_SUPPORT_2413		opt_ah.h
 AH_DEBUG		opt_ah.h
 AH_DEBUG_ALQ		opt_ah.h
 AH_ASSERT		opt_ah.h
@@ -712,3 +730,20 @@ DCONS_BUF_SIZE		opt_dcons.h
 DCONS_POLL_HZ		opt_dcons.h
 DCONS_FORCE_CONSOLE	opt_dcons.h
 DCONS_FORCE_GDB		opt_dcons.h
+
+# Static unit counts
+NI4BTRC			opt_i4b.h
+NI4BRBCH		opt_i4b.h
+NI4BTEL			opt_i4b.h
+NI4BIPR			opt_i4b.h
+NI4BING			opt_i4b.h
+NI4BISPPP		opt_i4b.h
+
+# VFS options
+LOOKUP_SHARED		opt_vfs.h
+
+# HWPMC options
+HWPMC_HOOKS
+
+# XFS
+XFS

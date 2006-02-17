@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/conf/files,v 1.1079 2005/12/21 15:49:50 ru Exp $
+# $FreeBSD: src/sys/conf/files,v 1.1096 2006/02/07 18:41:56 imp Exp $
 #
 # The long compile-with and dependency lines are required because of
 # limitations in config: backslash-newline doesn't work in strings, and
@@ -55,7 +55,7 @@ emu10k1-alsa%diked.h		optional snd_emu10k1 pci			   \
 	compile-with	"CC=${CC} AWK=${AWK} sh $S/tools/emu10k1-mkalsa.sh $S/gnu/dev/sound/pci/emu10k1-alsa.h emu10k1-alsa%diked.h" \
 	no-obj no-implicit-rule before-depend				   \
 	clean		"emu10k1-alsa%diked.h"
-miidevs.h			optional miibus				   \
+miidevs.h			optional miibus | mii			   \
 	dependency	"$S/tools/miidevs2h.awk $S/dev/mii/miidevs"	   \
 	compile-with	"${AWK} -f $S/tools/miidevs2h.awk $S/dev/mii/miidevs" \
 	no-obj no-implicit-rule before-depend				   \
@@ -439,6 +439,7 @@ dev/amd/amd.c			optional amd
 dev/amr/amr.c			optional amr
 dev/amr/amr_cam.c		optional amr
 dev/amr/amr_disk.c		optional amr
+dev/amr/amr_linux.c		optional amr compat_linux
 dev/amr/amr_pci.c		optional amr pci
 dev/an/if_an.c			optional an
 dev/an/if_an_isa.c		optional an isa
@@ -489,6 +490,7 @@ dev/buslogic/bt_mca.c		optional bt mca
 dev/buslogic/bt_pci.c		optional bt pci
 dev/cardbus/cardbus.c		optional cardbus
 dev/cardbus/cardbus_cis.c	optional cardbus
+dev/cardbus/cardbus_device.c	optional cardbus
 dev/ciss/ciss.c			optional ciss
 dev/cm/smc90cx6.c		optional cm
 dev/cnw/if_cnw.c		optional cnw pccard
@@ -665,6 +667,7 @@ dev/ips/ips_pci.c		optional ips pci
 dev/ipw/if_ipw.c		optional ipw
 dev/isp/isp.c			optional isp
 dev/isp/isp_freebsd.c		optional isp
+dev/isp/isp_library.c		optional isp
 dev/isp/isp_pci.c		optional isp pci
 dev/isp/isp_sbus.c		optional isp sbus
 dev/isp/isp_target.c		optional isp
@@ -677,6 +680,10 @@ dev/joy/joy.c			optional joy
 dev/joy/joy_isa.c		optional joy isa
 dev/joy/joy_pccard.c		optional joy pccard
 dev/kbdmux/kbdmux.c		optional kbdmux
+dev/le/am7990.c			optional le
+dev/le/am79900.c		optional le
+dev/le/if_le_pci.c		optional le pci
+dev/le/lance.c			optional le
 dev/led/led.c			standard
 dev/lge/if_lge.c		optional lge
 dev/lmc/if_lmc.c		optional lmc
@@ -688,31 +695,35 @@ dev/mcd/mcd.c			optional mcd isa nowerror
 dev/mcd/mcd_isa.c		optional mcd isa nowerror
 dev/md/md.c			optional md
 dev/mem/memdev.c		optional mem
-dev/mii/acphy.c			optional miibus
-dev/mii/amphy.c			optional miibus
-dev/mii/bmtphy.c		optional miibus
-dev/mii/brgphy.c		optional miibus
-dev/mii/ciphy.c			optional miibus
-dev/mii/e1000phy.c		optional miibus
-dev/mii/exphy.c			optional miibus
-dev/mii/inphy.c			optional miibus
-dev/mii/lxtphy.c		optional miibus
-dev/mii/mii.c			optional miibus
-dev/mii/mii_physubr.c		optional miibus
-dev/mii/miibus_if.m		optional miibus
-dev/mii/mlphy.c			optional miibus
-dev/mii/nsgphy.c		optional miibus
-dev/mii/nsphy.c			optional miibus
-dev/mii/pnaphy.c		optional miibus
-dev/mii/qsphy.c			optional miibus
-dev/mii/rgephy.c		optional miibus
-dev/mii/rlphy.c			optional miibus
-dev/mii/ruephy.c		optional miibus
-dev/mii/tdkphy.c		optional miibus
-dev/mii/tlphy.c			optional miibus
-dev/mii/ukphy.c			optional miibus
-dev/mii/ukphy_subr.c		optional miibus
-dev/mii/xmphy.c			optional miibus
+dev/mii/acphy.c			optional miibus | acphy
+dev/mii/amphy.c			optional miibus | amphy
+dev/mii/bmtphy.c		optional miibus | bmtphy
+dev/mii/brgphy.c		optional miibus | brgphy
+dev/mii/ciphy.c			optional miibus | ciphy
+dev/mii/e1000phy.c		optional miibus | e1000phy
+# XXX only xl cards?
+dev/mii/exphy.c			optional miibus | exphy
+# XXX only fxp cards?
+dev/mii/inphy.c			optional miibus | inphy
+dev/mii/lxtphy.c		optional miibus | lxtphy
+dev/mii/mii.c			optional miibus | mii
+dev/mii/mii_physubr.c		optional miibus | mii
+dev/mii/miibus_if.m		optional miibus | mii
+dev/mii/mlphy.c			optional miibus | mlphy
+dev/mii/nsgphy.c		optional miibus | nsgphy
+dev/mii/nsphy.c			optional miibus | nsphy
+dev/mii/pnaphy.c		optional miibus | pnaphy
+dev/mii/qsphy.c			optional miibus | qsphy
+dev/mii/rgephy.c		optional miibus | rgephy
+# XXX rl and re only?
+dev/mii/rlphy.c			optional miibus | rlphy
+# XXX rue only?
+dev/mii/ruephy.c		optional miibus | ruephy
+dev/mii/tdkphy.c		optional miibus | tdkphy
+dev/mii/tlphy.c			optional miibus | tlphy
+dev/mii/ukphy.c			optional miibus | mii
+dev/mii/ukphy_subr.c		optional miibus | mii
+dev/mii/xmphy.c			optional miibus | xmphy
 dev/mk48txx/mk48txx.c		optional mk48txx
 dev/mlx/mlx.c			optional mlx
 dev/mlx/mlx_disk.c		optional mlx
@@ -859,7 +870,6 @@ dev/sound/pci/t4dwave.c		optional snd_t4dwave pci
 dev/sound/pci/via8233.c		optional snd_via8233 pci
 dev/sound/pci/via82c686.c	optional snd_via82c686 pci
 dev/sound/pci/vibes.c		optional snd_vibes pci
-#dev/sound/pci/vortex1.c	optional snd_vortex1 pci
 dev/sound/pcm/ac97.c		optional sound
 dev/sound/pcm/ac97_if.m		optional sound
 dev/sound/pcm/ac97_patch.c	optional sound
@@ -962,6 +972,7 @@ dev/usb/ubser.c			optional ubser
 dev/usb/ucom.c			optional ucom
 dev/usb/ucycom.c		optional ucycom ucom
 dev/usb/udbp.c			optional udbp
+dev/usb/ufoma.c			optional ufoma ucom
 dev/usb/ufm.c			optional ufm
 dev/usb/uftdi.c			optional uftdi ucom
 dev/usb/ugen.c			optional ugen
@@ -1266,6 +1277,7 @@ kern/kern_poll.c		optional device_polling
 kern/kern_proc.c		standard
 kern/kern_prot.c		standard
 kern/kern_resource.c		standard
+kern/kern_rwlock.c		standard
 kern/kern_sema.c		standard
 kern/kern_shutdown.c		standard
 kern/kern_sig.c			standard
@@ -1295,9 +1307,11 @@ kern/subr_clock.c		optional genclock
 kern/subr_devstat.c		standard
 kern/subr_disk.c		standard
 kern/subr_eventhandler.c	standard
+kern/subr_firmware.c		optional firmware
 kern/subr_hints.c		standard
 kern/subr_kdb.c			standard
 kern/subr_kobj.c		standard
+kern/subr_lock.c		standard
 kern/subr_log.c			standard
 kern/subr_mbpool.c		optional libmbpool
 kern/subr_mchain.c		optional libmchain
@@ -1329,10 +1343,11 @@ kern/sysv_msg.c			optional sysvmsg
 kern/sysv_sem.c			optional sysvsem
 kern/sysv_shm.c			optional sysvshm
 kern/tty.c			standard
-kern/tty_compat.c		standard
+kern/tty_compat.c		optional compat_43tty
 kern/tty_conf.c			standard
 kern/tty_cons.c			standard
 kern/tty_pty.c			optional pty
+kern/tty_pts.c			optional pty
 kern/tty_subr.c			standard
 kern/tty_tty.c			standard
 kern/uipc_accf.c		optional inet
@@ -1644,6 +1659,8 @@ netinet/ip_fw2.c		optional ipfirewall
 netinet/ip_fw_pfil.c		optional ipfirewall
 netinet/ip_icmp.c		optional inet
 netinet/ip_input.c		optional inet
+netinet/ip_ipsec.c		optional ipsec
+netinet/ip_ipsec.c		optional fast_ipsec
 netinet/ip_mroute.c		optional mrouting
 netinet/ip_options.c		optional inet
 netinet/ip_output.c		optional inet
@@ -1829,6 +1846,14 @@ posix4/ksched.c			optional _kposix_priority_scheduling
 posix4/p1003_1b.c		standard
 posix4/posix4_mib.c		standard
 rpc/rpcclnt.c			optional nfsclient
+security/audit/audit.c		optional audit
+security/audit/audit_arg.c	optional audit
+security/audit/audit_bsm.c	optional audit
+security/audit/audit_bsm_klib.c	optional audit
+security/audit/audit_bsm_token.c	optional audit
+security/audit/audit_pipe.c	optional audit
+security/audit/audit_syscalls.c	standard
+security/audit/audit_trigger.c	optional audit
 security/mac/mac_inet.c		optional mac inet
 security/mac/mac_label.c	optional mac
 security/mac/mac_net.c		optional mac
@@ -1874,6 +1899,7 @@ ufs/ufs/ufs_vnops.c		optional ffs
 vm/default_pager.c		standard
 vm/device_pager.c		standard
 vm/phys_pager.c			standard
+vm/redzone.c			optional DEBUG_REDZONE
 vm/swap_pager.c			standard
 vm/uma_core.c			standard
 vm/uma_dbg.c			standard

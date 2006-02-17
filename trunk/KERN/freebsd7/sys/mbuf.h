@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)mbuf.h	8.5 (Berkeley) 2/19/95
- * $FreeBSD: src/sys/sys/mbuf.h,v 1.184 2005/12/10 15:21:04 andre Exp $
+ * $FreeBSD: src/sys/sys/mbuf.h,v 1.188 2006/02/17 14:14:15 andre Exp $
  */
 
 #ifndef _SYS_MBUF_H_
@@ -186,7 +186,7 @@ struct mbuf {
  */
 #define	EXT_CLUSTER	1	/* mbuf cluster */
 #define	EXT_SFBUF	2	/* sendfile(2)'s sf_bufs */
-#define	EXT_JUMBO4	3	/* jumbo cluster 4096 bytes */
+#define	EXT_JUMBOP	3	/* jumbo cluster 4096 bytes */
 #define	EXT_JUMBO9	4	/* jumbo cluster 9216 bytes */
 #define	EXT_JUMBO16	5	/* jumbo cluster 16184 bytes */
 #define	EXT_PACKET	6	/* mbuf+cluster from packet zone */
@@ -307,7 +307,7 @@ struct mbstat {
 #define	MBUF_MEM_NAME		"mbuf"
 #define	MBUF_CLUSTER_MEM_NAME	"mbuf_cluster"
 #define	MBUF_PACKET_MEM_NAME	"mbuf_packet"
-#define	MBUF_JUMBO4_MEM_NAME	"mbuf_jumbo_4k"
+#define	MBUF_JUMBOP_MEM_NAME	"mbuf_jumbo_pagesize"
 #define	MBUF_JUMBO9_MEM_NAME	"mbuf_jumbo_9k"
 #define	MBUF_JUMBO16_MEM_NAME	"mbuf_jumbo_16k"
 #define	MBUF_TAG_MEM_NAME	"mbuf_tag"
@@ -334,10 +334,11 @@ struct mbstat {
 extern uma_zone_t	zone_mbuf;
 extern uma_zone_t	zone_clust;
 extern uma_zone_t	zone_pack;
-extern uma_zone_t	zone_jumbo4;
+extern uma_zone_t	zone_jumbop;
 extern uma_zone_t	zone_jumbo9;
 extern uma_zone_t	zone_jumbo16;
 extern uma_zone_t	zone_ext_refcnt;
+extern uma_zone_t	zone_mtag_vlan;
 
 static __inline struct mbuf	*m_get(int how, short type);
 static __inline struct mbuf	*m_gethdr(int how, short type);
@@ -401,7 +402,7 @@ m_getcl(int how, short type, int flags)
 
 /*
  * m_getjcl() returns an mbuf with a cluster of the specified size attached.
- * For size it takes MCLBYTES, MJUM4BYTES, MJUM9BYTES, MJUM16BYTES.
+ * For size it takes MCLBYTES, MJUMPAGESIZE, MJUM9BYTES, MJUM16BYTES.
  */
 static __inline	/* XXX: This is rather large, should be real function maybe. */
 struct mbuf *
@@ -422,9 +423,9 @@ m_getjcl(int how, short type, int flags, int size)
 	case MCLBYTES:
 		zone = zone_clust;
 		break;
-#if MJUM4BYTES != MCLBYTES
-	case MJUM4BYTES:
-		zone = zone_jumbo4;
+#if MJUMPAGESIZE != MCLBYTES
+	case MJUMPAGESIZE:
+		zone = zone_jumbop;
 		break;
 #endif
 	case MJUM9BYTES:
@@ -437,9 +438,11 @@ m_getjcl(int how, short type, int flags, int size)
 		panic("%s: m_getjcl: invalid cluster type", __func__);
 	}
 	n = uma_zalloc_arg(zone, m, how);
-	if (n == NULL)
+	if (n == NULL) {
 		uma_zfree(zone_mbuf, m);
-	return n;
+		return NULL;
+	}
+	return m;
 }
 
 static __inline
@@ -471,7 +474,7 @@ m_clget(struct mbuf *m, int how)
  * is the pointer to the cluster of the requested size.  If an mbuf was
  * specified, it gets the cluster attached to it and the return value
  * can be safely ignored.
- * For size it takes MCLBYTES, MJUM4BYTES, MJUM9BYTES, MJUM16BYTES.
+ * For size it takes MCLBYTES, MJUMPAGESIZE, MJUM9BYTES, MJUM16BYTES.
  */
 static __inline
 void *
@@ -488,9 +491,9 @@ m_cljget(struct mbuf *m, int how, int size)
 	case MCLBYTES:
 		zone = zone_clust;
 		break;
-#if MJUM4BYTES != MCLBYTES
-	case MJUM4BYTES:
-		zone = zone_jumbo4;
+#if MJUMPAGESIZE != MCLBYTES
+	case MJUMPAGESIZE:
+		zone = zone_jumbop;
 		break;
 #endif
 	case MJUM9BYTES:
@@ -758,6 +761,10 @@ struct	mbuf	*m_uiotombuf(struct uio *, int, int, int);
 #define	PACKET_TAG_PF_TRANSLATE_LOCALHOST	26 /* PF translate localhost */
 #define	PACKET_TAG_IPOPTIONS			27 /* Saved IP options */
 #define	PACKET_TAG_CARP                         28 /* CARP info */
+
+/* Specific cookies and tags. */
+#define	MTAG_VLAN				1035328035
+#define	MTAG_VLAN_TAG				0 /* tag of VLAN interface */
 
 /* Packet tag routines. */
 struct	m_tag	*m_tag_alloc(u_int32_t, int, int, int);

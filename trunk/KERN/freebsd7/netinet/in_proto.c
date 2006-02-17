@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)in_proto.c	8.2 (Berkeley) 2/9/95
- * $FreeBSD: src/sys/netinet/in_proto.c,v 1.80 2005/11/09 13:29:15 ru Exp $
+ * $FreeBSD: src/sys/netinet/in_proto.c,v 1.81 2005/12/21 21:29:45 thompsa Exp $
  */
 
 #include "opt_ipx.h"
@@ -186,7 +186,6 @@ struct protosw inetsw[] = {
         .pr_usrreqs = 	&sctp_usrreqs
 },
 #endif /* SCTP */
-
 {
 	.pr_type =		SOCK_RAW,
 	.pr_domain =		&inetdomain,
@@ -297,6 +296,16 @@ struct protosw inetsw[] = {
 	.pr_type =		SOCK_RAW,
 	.pr_domain =		&inetdomain,
 	.pr_protocol =		IPPROTO_MOBILE,
+	.pr_flags =		PR_ATOMIC|PR_ADDR|PR_LASTHDR,
+	.pr_input =		encap4_input,
+	.pr_ctloutput =		rip_ctloutput,
+	.pr_init =		encap_init,
+	.pr_usrreqs =		&rip_usrreqs
+},
+{
+	.pr_type =		SOCK_RAW,
+	.pr_domain =		&inetdomain,
+	.pr_protocol =		IPPROTO_ETHERIP,
 	.pr_flags =		PR_ATOMIC|PR_ADDR|PR_LASTHDR,
 	.pr_input =		encap4_input,
 	.pr_ctloutput =		rip_ctloutput,
