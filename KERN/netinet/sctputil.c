@@ -2613,15 +2613,15 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, u_int32_t error,
 }
 
 static void
-sctp_notify_adaption_layer(struct sctp_tcb *stcb,
+sctp_notify_adaptation_layer(struct sctp_tcb *stcb,
 			   u_int32_t error)
 {
 	struct mbuf *m_notify;
-	struct sctp_adaption_event *sai;
+	struct sctp_adaptation_event *sai;
 	struct sockaddr_in6 sin6, lsa6;
 	struct sockaddr *to;
 
-	if (!(stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_ADAPTIONEVNT))
+	if (!(stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_ADAPTATIONEVNT))
 		/* event not enabled */
 		return;
 
@@ -2630,17 +2630,17 @@ sctp_notify_adaption_layer(struct sctp_tcb *stcb,
 		/* no space left */
 		return;
 	m_notify->m_len = 0;
-	sai = mtod(m_notify, struct sctp_adaption_event *);
-	sai->sai_type = SCTP_ADAPTION_INDICATION;
+	sai = mtod(m_notify, struct sctp_adaptation_event *);
+	sai->sai_type = SCTP_ADAPTATION_INDICATION;
 	sai->sai_flags = 0;
-	sai->sai_length = sizeof(struct sctp_adaption_event);
-	sai->sai_adaption_ind = error;
+	sai->sai_length = sizeof(struct sctp_adaptation_event);
+	sai->sai_adaptation_ind = error;
 	sai->sai_assoc_id = sctp_get_associd(stcb);
 
 	m_notify->m_flags |= M_EOR | M_NOTIFICATION;
-	m_notify->m_pkthdr.len = sizeof(struct sctp_adaption_event);
+	m_notify->m_pkthdr.len = sizeof(struct sctp_adaptation_event);
 	m_notify->m_pkthdr.rcvif = 0;
-	m_notify->m_len = sizeof(struct sctp_adaption_event);
+	m_notify->m_len = sizeof(struct sctp_adaptation_event);
 	m_notify->m_next = NULL;
 
 	to = (struct sockaddr *)(struct sockaddr *)&stcb->asoc.primary_destination->ro._l_addr;
@@ -2963,9 +2963,9 @@ sctp_ulp_notify(u_int32_t notification, struct sctp_tcb *stcb,
 		sctp_notify_send_failed(stcb, error,
 		    (struct sctp_tmit_chunk *)data);
 		break;
-	case SCTP_NOTIFY_ADAPTION_INDICATION:
-		/* Here the error is the adaption indication */
-		sctp_notify_adaption_layer(stcb, error);
+	case SCTP_NOTIFY_ADAPTATION_INDICATION:
+		/* Here the error is the adaptation indication */
+		sctp_notify_adaptation_layer(stcb, error);
 		break;
 	case SCTP_NOTIFY_PARTIAL_DELVIERY_INDICATION:
 		sctp_notify_partial_delivery_indication(stcb, error);

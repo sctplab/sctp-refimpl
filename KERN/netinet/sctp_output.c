@@ -4585,14 +4585,14 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	sup_addr->addr_type[1] = htons(SCTP_IPV6_ADDRESS);
 	m->m_len += sizeof(*sup_addr) + sizeof(uint16_t);
 
-/*	if (inp->sctp_flags & SCTP_PCB_FLAGS_ADAPTIONEVNT) {*/
-	if (inp->sctp_ep.adaption_layer_indicator) {
-		struct sctp_adaption_layer_indication *ali;
-		ali = (struct sctp_adaption_layer_indication *)(
+/*	if (inp->sctp_flags & SCTP_PCB_FLAGS_ADAPTATIONEVNT) {*/
+	if (inp->sctp_ep.adaptation_layer_indicator) {
+		struct sctp_adaptation_layer_indication *ali;
+		ali = (struct sctp_adaptation_layer_indication *)(
 		    (caddr_t)sup_addr + sizeof(*sup_addr) + sizeof(uint16_t));
-		ali->ph.param_type = htons(SCTP_ULP_ADAPTION);
+		ali->ph.param_type = htons(SCTP_ULP_ADAPTATION);
 		ali->ph.param_length = htons(sizeof(*ali));
-		ali->indication = ntohl(inp->sctp_ep.adaption_layer_indicator);
+		ali->indication = ntohl(inp->sctp_ep.adaptation_layer_indicator);
 		m->m_len += sizeof(*ali);
 		ecn = (struct sctp_ecn_supported_param *)((caddr_t)ali +
 		    sizeof(*ali));
@@ -4879,11 +4879,11 @@ sctp_arethere_unrecognized_parameters(struct mbuf *in_initpkt,
 		    (ptype == SCTP_ADD_IP_ADDRESS) ||
 		    (ptype == SCTP_DEL_IP_ADDRESS) ||
 		    (ptype == SCTP_ECN_CAPABLE) ||
-		    (ptype == SCTP_ULP_ADAPTION) ||
+		    (ptype == SCTP_ULP_ADAPTATION) ||
 		    (ptype == SCTP_ERROR_CAUSE_IND) ||
 		    (ptype == SCTP_SET_PRIM_ADDR) ||
 		    (ptype == SCTP_SUCCESS_REPORT) ||
-		    (ptype == SCTP_ULP_ADAPTION) ||
+		    (ptype == SCTP_ULP_ADAPTATION) ||
 		    (ptype == SCTP_SUPPORTED_CHUNK_EXT) ||
 		    (ptype == SCTP_ECN_NONCE_SUPPORTED)
 			) {
@@ -5560,14 +5560,14 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	    htons(inp->sctp_ep.max_open_streams_intome);
 	/* setup the ECN pointer */
 
-/*	if (inp->sctp_flags & SCTP_PCB_FLAGS_ADAPTIONEVNT) {*/
-	if (inp->sctp_ep.adaption_layer_indicator) {
-		struct sctp_adaption_layer_indication *ali;
-		ali = (struct sctp_adaption_layer_indication *)(
+/*	if (inp->sctp_flags & SCTP_PCB_FLAGS_ADAPTATIONEVNT) {*/
+	if (inp->sctp_ep.adaptation_layer_indicator) {
+		struct sctp_adaptation_layer_indication *ali;
+		ali = (struct sctp_adaptation_layer_indication *)(
 		    (caddr_t)initackm_out + sizeof(*initackm_out));
-		ali->ph.param_type = htons(SCTP_ULP_ADAPTION);
+		ali->ph.param_type = htons(SCTP_ULP_ADAPTATION);
 		ali->ph.param_length = htons(sizeof(*ali));
-		ali->indication = ntohl(inp->sctp_ep.adaption_layer_indicator);
+		ali->indication = ntohl(inp->sctp_ep.adaptation_layer_indicator);
 		m->m_len += sizeof(*ali);
 		ecn = (struct sctp_ecn_supported_param *)((caddr_t)ali +
 		    sizeof(*ali));

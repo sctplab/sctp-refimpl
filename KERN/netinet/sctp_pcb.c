@@ -1690,8 +1690,8 @@ sctp_inpcb_alloc(struct socket *so)
 	/* number of streams to pre-open on a association */
 	m->pre_open_stream_count = sctp_nr_outgoing_streams_default;
 
-	/* Add adaption cookie */
-	m->adaption_layer_indicator = 0x504C5253;
+	/* Add adaptation cookie */
+	m->adaptation_layer_indicator = 0x504C5253;
 
 	/* seed random number generator */
 	m->random_counter = 1;
@@ -4723,14 +4723,14 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			}
 		} else if (ptype == SCTP_ECN_CAPABLE) {
 			stcb->asoc.ecn_allowed = 1;
-		} else if (ptype == SCTP_ULP_ADAPTION) {
+		} else if (ptype == SCTP_ULP_ADAPTATION) {
 			if (stcb->asoc.state != SCTP_STATE_OPEN) {
-				struct sctp_adaption_layer_indication ai, *aip;
+				struct sctp_adaptation_layer_indication ai, *aip;
 
 				phdr = sctp_get_next_param(m, offset,
 							   (struct sctp_paramhdr *)&ai, sizeof(ai));
-				aip = (struct sctp_adaption_layer_indication *)phdr;
-				sctp_ulp_notify(SCTP_NOTIFY_ADAPTION_INDICATION,
+				aip = (struct sctp_adaptation_layer_indication *)phdr;
+				sctp_ulp_notify(SCTP_NOTIFY_ADAPTATION_INDICATION,
 						stcb, ntohl(aip->indication), NULL);
 			}
 		} else if (ptype == SCTP_SET_PRIM_ADDR) {

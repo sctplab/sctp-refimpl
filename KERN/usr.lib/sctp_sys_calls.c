@@ -130,6 +130,30 @@ in6_sin6_2_sin(struct sockaddr_in *sin, struct sockaddr_in6 *sin6)
 }
 
 int
+sctp_getaddrlen(sa_family_t family)
+{
+	int error,siz,sd;
+	struct sctp_assoc_value av;
+	av.assoc_value = family;
+	siz = sizeof(av);
+#if defined(AF_INET)
+	sd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
+#elif defined(AF_INET6)
+	sd = socket(AF_INET6, SOCK_SEQPACKET, IPPROTO_SCTP);
+#endif
+	if(sd == -1) {
+		return(errno);
+	}
+	error = getsockopt(sd, IPPROTO_SCTP, SCTP_GET_ADDR_LEN , &av, &siz);
+	close(sd);
+	if(error == 0) {
+		return((int)av.assoc_value);
+	} else {
+		return(error);
+	}
+}
+
+int
 sctp_connectx(int sd, struct sockaddr *addrs, int addrcnt)
 {
 	char buf[2048];

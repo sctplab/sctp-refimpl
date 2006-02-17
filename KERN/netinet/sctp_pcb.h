@@ -105,7 +105,7 @@ LIST_HEAD(sctpvtaghead, sctp_tagblock);
 #define SCTP_PCB_FLAGS_RECVPEERERR	0x00002000
 #define SCTP_PCB_FLAGS_RECVSENDFAILEVNT	0x00004000
 #define SCTP_PCB_FLAGS_RECVSHUTDOWNEVNT	0x00008000
-#define SCTP_PCB_FLAGS_ADAPTIONEVNT	0x00010000
+#define SCTP_PCB_FLAGS_ADAPTATIONEVNT	0x00010000
 #define SCTP_PCB_FLAGS_PDAPIEVNT	0x00020000
 #define SCTP_PCB_FLAGS_STREAM_RESETEVNT 0x00040000
 #define SCTP_PCB_FLAGS_NO_FRAGMENT	0x00080000
@@ -311,7 +311,7 @@ struct sctp_pcb {
 	/* defaults to 0 */
 	int auto_close_time;
 	uint32_t initial_sequence_debug;
-	uint32_t adaption_layer_indicator;
+	uint32_t adaptation_layer_indicator;
 	char store_at;
 	uint8_t max_burst;
 	char current_secret_number;
