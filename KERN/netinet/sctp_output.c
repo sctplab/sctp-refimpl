@@ -3961,6 +3961,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 	if (to->sa_family == AF_INET) {
 		struct ip *ip;
 		struct route iproute;
+		u_int8_t tos_value;
 		M_PREPEND(m, sizeof(struct ip), M_DONTWAIT);
 		if (m == NULL) {
 			/* failed to prepend data, give up */
@@ -3969,6 +3970,17 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		ip = mtod(m, struct ip *);
 		ip->ip_v = IPVERSION;
 		ip->ip_hl = (sizeof(struct ip) >> 2);
+		if(net) {
+			tos_value = net->tos_flowlabel & 0x000000ff;
+		} else {
+#if defined(__FreeBSD__) || defined(__APPLE__)
+			tos_value = inp->ip_inp.inp.inp_ip_tos;
+#elif defined(__NetBSD__)
+			tos_value = inp->ip_inp.inp.inp_ip.ip_tos;
+#else
+			tos_value = inp->inp_ip_tos;
+#endif
+		}
 		if (nofragment_flag) {
 #if defined(WITH_CONVERT_IP_OFF) || defined(__FreeBSD__)
 #ifdef __OpenBSD__
@@ -4007,33 +4019,14 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		if (stcb) {
 			if ((stcb->asoc.ecn_allowed) && ecn_ok) {
 				/* Enable ECN */
-#if defined(__FreeBSD__) || defined(__APPLE__)
-				ip->ip_tos = (u_char)((inp->ip_inp.inp.inp_ip_tos & 0x000000fc) |
-						      sctp_get_ect(stcb, chk));
-#elif defined(__NetBSD__)
-				ip->ip_tos = (u_char)((inp->ip_inp.inp.inp_ip.ip_tos & 0x000000fc) |
-						      sctp_get_ect(stcb, chk));
-#else
-				ip->ip_tos = (u_char)((inp->inp_ip_tos & 0x000000fc) |
-						      sctp_get_ect(stcb, chk));
-#endif
+				ip->ip_tos = ((u_char)(tos_value & 0xfc) | sctp_get_ect(stcb, chk));
 			} else {
 				/* No ECN */
-#if defined(__FreeBSD__) || defined(__APPLE__)
-				ip->ip_tos = inp->ip_inp.inp.inp_ip_tos;
-#elif defined(__NetBSD__)
-				ip->ip_tos = inp->ip_inp.inp.inp_ip.ip_tos;
-#else
-				ip->ip_tos = inp->inp_ip_tos;
-#endif
+				ip->ip_tos = (u_char)(tos_value & 0xfc);
 			}
 		} else {
 			/* no association at all */
-#if defined(__FreeBSD__) || defined(__APPLE__)
-			ip->ip_tos = inp->ip_inp.inp.inp_ip_tos;
-#else
-			ip->ip_tos = inp->inp_ip_tos;
-#endif
+			ip->ip_tos = (tos_value & 0xfc);
 		}
 		ip->ip_p = IPPROTO_SCTP;
 		ip->ip_sum = 0;
@@ -4158,6 +4151,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 	}
 #ifdef INET6
 	else if (to->sa_family == AF_INET6) {
+		u_int32_t flowlabel;
 		struct ip6_hdr *ip6h;
 #ifdef NEW_STRUCT_ROUTE
 		struct route ip6route;
@@ -4173,7 +4167,11 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		int prev_scope=0;
 		int error;
 		u_short prev_port=0;
-
+		if(net != NULL) {
+			flowlabel = net->tos_flowlabel;
+		} else {
+			flowlabel = ((struct in6pcb *)inp)->in6p_flowinfo;
+		}
 		M_PREPEND(m, sizeof(struct ip6_hdr), M_DONTWAIT);
 		if (m == NULL) {
 			/* failed to prepend data, give up */
@@ -4185,11 +4183,9 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		 * We assume here that inp_flow is in host byte order within
 		 * the TCB!
 		 */
-		flowBottom = ((struct in6pcb *)inp)->in6p_flowinfo & 0x0000ffff;
-		flowTop = ((((struct in6pcb *)inp)->in6p_flowinfo & 0x000f0000) >> 16);
-
-		tosTop = (((((struct in6pcb *)inp)->in6p_flowinfo & 0xf0) >> 4) | IPV6_VERSION);
-
+		flowBottom = flowlabel & 0x0000ffff;
+		flowTop = ((flowlabel & 0x000f0000) >> 16);
+		tosTop = (((flowlabel & 0xf0) >> 4) | IPV6_VERSION);
 		/* protect *sin6 from overwrite */
 		sin6 = (struct sockaddr_in6 *)to;
 		tmp = *sin6;

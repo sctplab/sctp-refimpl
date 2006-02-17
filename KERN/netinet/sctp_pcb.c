@@ -2913,7 +2913,15 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	net->RTO = stcb->asoc.initial_rto;
 	stcb->asoc.numnets++;
 	net->ref_count = 1;
-
+	net->tos_flowlabel = 0;
+#ifdef AF_INET
+	if(newaddr->sa_family == AF_INET)
+		net->tos_flowlabel = stcb->asoc.default_tos;
+#endif
+#ifdef AF_INET6
+	if(newaddr->sa_family == AF_INET6)
+		net->tos_flowlabel = stcb->asoc.default_flowlabel;
+#endif
 	/* Init the timer structure */
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 	callout_init(&net->rxt_timer.timer, 1);

@@ -895,6 +895,23 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	asoc->heart_beat_delay = TICKS_TO_MSEC(m->sctp_ep.sctp_timeoutticks[SCTP_TIMER_HEARTBEAT]);
 	asoc->cookie_life = m->sctp_ep.def_cookie_life;
 
+#ifdef AF_INET
+#if defined(__FreeBSD__) || defined(__APPLE__)
+	asoc->default_tos = m->ip_inp.inp.inp_ip_tos;
+#elif defined(__NetBSD__)
+	asoc->default_tos = m->ip_inp.inp.inp_ip.ip_tos;
+#else
+	asoc->default_tos  = m->inp_ip_tos;
+#endif
+#else
+	asoc->default_tos = 0;
+#endif
+
+#ifdef AF_INET6
+	asoc->default_flowlabel = ((struct in6pcb *)m)->in6p_flowinfo;
+#else
+	asoc->default_flowlabel = 0;
+#endif
 	if (override_tag) {
 		asoc->my_vtag = override_tag;
 	} else {

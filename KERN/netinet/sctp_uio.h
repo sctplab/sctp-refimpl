@@ -342,8 +342,6 @@ union sctp_notification {
 /*
  * socket option structs
  */
-#define SCTP_ISSUE_HB 0xffffffff	/* get a on-demand hb */
-#define SCTP_NO_HB    0x0		/* turn off hb's */
 
 struct sctp_paddrparams {
 	sctp_assoc_t spp_assoc_id;
@@ -353,6 +351,9 @@ struct sctp_paddrparams {
 	u_int32_t spp_pathmtu;
 	u_int32_t spp_sackdelay;
 	u_int32_t spp_flags;
+	u_int32_t spp_ipv6_flowlabel;
+	u_int8_t  spp_ipv4_tos;
+
 };
 
 #define SPP_HB_ENABLE		0x00000001
@@ -363,6 +364,8 @@ struct sctp_paddrparams {
 #define SPP_SACKDELAY_ENABLE	0x00000020
 #define SPP_SACKDELAY_DISABLE	0x00000040
 #define SPP_HB_TIME_IS_ZERO     0x00000080
+#define SPP_IPV6_FLOWLABEL      0x00000100
+#define SPP_IPV4_TOS            0x00000200
 
 struct sctp_paddrinfo {
 	sctp_assoc_t spinfo_assoc_id;
