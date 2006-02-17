@@ -210,6 +210,7 @@ struct sctp_nets {
 
 	u_int32_t heartbeat_random1;
 	u_int32_t heartbeat_random2;
+	u_int32_t tos_flowlabel;
 
 	/* if this guy is ok or not ... status */
 	u_int16_t dest_state;
@@ -540,7 +541,8 @@ struct sctp_association {
 	/* 32 bit nonce stuff */
 	u_int32_t nonce_resync_tsn;
 	u_int32_t nonce_wait_tsn;
-
+	u_int32_t default_flowlabel;
+	
 	int ctrl_queue_cnt; /* could be removed  REM */
 	/*
 	 * All outbound datagrams queue into this list from the
@@ -661,6 +663,7 @@ struct sctp_association {
 	u_int8_t last_flags_delivered;
 	u_int8_t hb_ect_randombit;
         u_int8_t hb_random_idx;
+	u_int8_t default_tos;
 
 	/* ECN Nonce stuff */
 	u_int8_t receiver_nonce_sum; /* nonce I sum and put in my sack */
