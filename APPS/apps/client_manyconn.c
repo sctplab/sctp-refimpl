@@ -63,7 +63,8 @@ main (int argc, char **argv)
 	remote_addr.sin_family      = AF_INET;
 	bzero(&evnts, sizeof(evnts));
 	memset((caddr_t)&sp,0,sizeof(sp));
-	sp.spp_hbinterval = SCTP_NO_HB;
+	sp.spp_hbinterval = 0;
+	sp.spp_flags = SPP_HB_DISABLE;
 	for(i=0;i<num;i++){
 		if ((fd[i] = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0) {
 			perror("socket call");
