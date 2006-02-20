@@ -90,6 +90,7 @@
 #include <netinet/sctputil.h>
 #include <netinet/sctp_indata.h>
 #include <netinet/sctp_asconf.h>
+#include <netinet/sctp_timer.h>
 #ifdef IPSEC
 #ifndef __OpenBSD__
 #include <netinet6/ipsec.h>
@@ -2577,6 +2578,10 @@ sctp_optsget(struct socket *so,
 				paddrp->spp_ipv6_flowlabel = stcb->asoc.default_flowlabel;
 				paddrp->spp_flags |= SPP_IPV6_FLOWLABEL;
 #endif
+				/* default settings should be these */
+				if(sctp_is_hb_timer_running(stcb) ) {
+					paddrp->spp_flags |= SPP_HB_ENABLE;
+				}
 			}
 			paddrp->spp_hbinterval = stcb->asoc.heart_beat_delay;
 			paddrp->spp_sackdelay = stcb->asoc.delayed_ack;
@@ -2618,9 +2623,9 @@ sctp_optsget(struct socket *so,
 			/* can't return this */
 			paddrp->spp_pathmaxrxt = 0;
 			paddrp->spp_pathmtu = 0;
-
-			/* default settings should be these */
+			/* default behavior, no stcb */
 			paddrp->spp_flags = SPP_HB_ENABLE | SPP_SACKDELAY_ENABLE | SPP_PMTUD_ENABLE;
+			
 			SCTP_INP_RUNLOCK(inp);
 		}
 		m->m_len = sizeof(struct sctp_paddrparams);
@@ -3632,8 +3637,11 @@ sctp_optsset(struct socket *so,
 						}
 						/* stop the timer ONLY if we have no unconfirmed addresses
 						 */
-						if (cnt_of_unconf == 0)
+						if (cnt_of_unconf == 0) {
 							sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net);
+						} else {
+							error = EADDRINUSE;
+						}
 					}
 					if ( paddrp->spp_flags & SPP_HB_ENABLE ) {
 						/* start up the timer. */
