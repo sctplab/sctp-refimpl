@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.32 2006-02-20 13:57:50 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.33 2006-02-20 15:46:29 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -88,6 +88,7 @@
 static int execute_line(const char *line);
 static char *command_generator(char *text, int state);
 
+int block_mode = 1;
 int loop_sleep = 0;
 
 /* Line editing.
@@ -111,6 +112,7 @@ static int cmd_defretrys(char *argv[], int argc);
 static int cmd_defrwnd(char *argv[], int argc);
 static int cmd_delip(char *argv[], int argc);
 static int cmd_doheartbeat(char *argv[], int argc);
+static int cmd_getblocking(char *argv[], int argc);
 static int cmd_getcurcookielife(char *argv[], int argc);
 static int cmd_getcwndpost(char *argv[], int argc);
 static int cmd_getdefcookielife(char *argv[], int argc);
@@ -281,6 +283,8 @@ static struct command commands[] = {
      cmd_getautoasconf},
     {"getautoclose", "getautoclose - get autoclose value",
      cmd_getautoclose},
+    {"getblocking", "get blocking/non-blocking state (FIONBIO)",
+     cmd_getblocking},
     {"getcurcookielife", "getcurcookielife - display current assoc cookieLife",
      cmd_getcurcookielife},
     {"getcwndpost", "getcwndpost - display cwnd post information collected",
@@ -701,8 +705,9 @@ sctpSEND(int fd, int defStream, char *s_buff, int sndsz, struct sockaddr *to,
 	sz = sctp_sendmsg(fd, s_buff, sndsz, to, to_len, payload, options,
 			  defStream, time_to_live, 0);
 	if((sz <=0) && (errno != ENOBUFS)){
-		printf("Return from sctp_sendmsg is %d errno %d\n",
-		       sz,errno);
+		if(errno != EAGAIN)
+			printf("Return from sctp_sendmsg is %d errno %d\n",
+			       sz,errno);
 	}
 	return(sz);
 }
@@ -849,45 +854,54 @@ sendBulkTransfer(int fd,int sz)
 void
 checkBulkTranfer(void *v,void *xxx)
 {	
-  int fd;
-  int ret,cnt;
+	int fd;
+	int ret,cnt;
 
-  cnt = 0;
-  ret = 0;
-  fd = (int)v;
-  printf("[Re-]enter checkBulkTransfer bulkCount:%d\n", bulkCount);
-  while(bulkCount > 0){
-    if(bulkPingMode == 0){
-      fillPingBuffer(fd,(bulkBufSize-4));
-      ret = sctpSEND(fd,bulkStream,pingBuffer,bulkBufSize,SCTP_getAddr(NULL),sendOptions,0,0);
-    }else{
-      ret = sendBulkTransfer(fd,bulkBufSize);
-    }
-    if(ret < 0){
-      printf("blocked fd ret < 0 errno:%d start timer", errno);
-      if(errno == ECONNRESET) {
-	printf("Connection reset, should really give up\n");
-      }
-      dist_TimerStart(dist,checkBulkTranfer,0,
-		      20000,v,xxx);
-      return;
-    }
-    cnt++;
-    bulkCount--;
-  }
-  /* ask for the time again */
-  if(bulkPingMode == 0){
-    strcpy(pingBuffer,"time");
-    ret = sctpSEND(fd,bulkStream,pingBuffer,5,SCTP_getAddr(NULL),sendOptions,0,0);
-    if(ret < 0){
-      printf("Could not get time in, will wait ret:%d\n",ret);
-      dist_TimerStart(dist,checkBulkTranfer,0,
-		      20000,v,xxx);
-      return;
-    }
-  }
-  bulkInProgress = 0;
-  printf("bulk message are now queued time q ret:%d\n",ret);
+	cnt = 0;
+	ret = 0;
+	fd = (int)v;
+	while(bulkCount > 0){
+		if(bulkPingMode == 0){
+			fillPingBuffer(fd,(bulkBufSize-4));
+			ret = sctpSEND(fd,bulkStream,pingBuffer,bulkBufSize,SCTP_getAddr(NULL),sendOptions,0,0);
+		}else{
+			ret = sendBulkTransfer(fd,bulkBufSize);
+		}
+		if(ret < 0){
+			if(errno == ECONNRESET) {
+				printf("Connection reset, should really give up\n");
+			}
+			if(errno != EAGAIN) {
+				printf("Error was %d on send?\n", errno);
+			}
+			dist_TimerStart(dist,checkBulkTranfer,0,
+					20000,v,xxx);
+			return;
+		}
+		cnt++;
+		bulkCount--;
+	}
+	/* ask for the time again */
+	if(bulkPingMode == 0){
+		strcpy(pingBuffer,"time");
+		ret = sctpSEND(fd,bulkStream,pingBuffer,5,SCTP_getAddr(NULL),sendOptions,0,0);
+		if(ret < 0){
+			printf("Could not get time in, will wait ret:%d\n",ret);
+			dist_TimerStart(dist,checkBulkTranfer,0,
+					200000,v,xxx);
+			return;
+		}
+	}
+	bulkInProgress = 0;
+	if(block_mode) {
+		int on_off;
+		/* turn off non-blocking mode */
+		on_off = 0;
+		if(ioctl(adap->fd,FIONBIO,&block_mode) != 0) {
+			printf("IOCTL FIONBIO fails error:%d!\n",errno);
+		}
+	}
+	printf("bulk message are now queued time q ret:%d\n",ret);
 }
 
 
@@ -2380,25 +2394,36 @@ cmd_setfragmentation(char *argv[], int argc)
 static int 
 cmd_setblocking(char *argv[], int argc)
 {
-  int on_off;
-  if (argc < 1) {
-    printf("setblocking: expects an argument (on/off)\n");
-    return -1;
-  }
-  if(strcmp(argv[0],"on") == 0){
-    on_off = 1;
-  }else if(strcmp(argv[0],"off") == 0){
-    on_off = 0;
-  }else{
-    printf("Argument '%s' incorrect on/off please\n",argv[0]);
-    return(-1);
-  }
-  if(ioctl(adap->fd,FIONBIO,&on_off) != 0) {
-    printf("IOCTL FIONBIO fails error:%d!\n",errno);
-  }
-  return(0);
+	int on_off;
+	if (argc < 1) {
+		printf("setblocking: expects an argument (on/off)\n");
+		return -1;
+	}
+	if(strcmp(argv[0],"blocking") == 0){
+		block_mode = 1;
+		on_off = 0;
+	}else if(strcmp(argv[0],"non-blocking") == 0){
+		block_mode = 0;
+		on_off = 1;
+	}else{
+		printf("Argument '%s' incorrect on/off please\n",argv[0]);
+		return(-1);
+	}
+	if(ioctl(adap->fd,FIONBIO,&on_off) != 0) {
+		printf("IOCTL FIONBIO fails error:%d!\n",errno);
+	}
+	return(0);
 }
 
+static int 
+cmd_getblocking(char *argv[], int argc)
+{
+	if(block_mode)
+		printf("I/O is blocking\n");
+	else
+		printf("I/O is NON-blocking\n");		
+	return (0);
+}
 
 
 static int 
@@ -2687,6 +2712,7 @@ cmd_bindx(char *argv[], int argc)
   return 0;
 }
 
+
 /* bulk size stream count - send a bulk of messages
  */
 static int
@@ -2694,22 +2720,29 @@ cmd_bulk(char *argv[], int argc)
 {
     int fd = adap->fd;
     int ret;
-
+    int on_off=0;
     if (argc < 3) {
-	printf("bulk: expected 3 arguments\n");
-	return -1;
+	    printf("bulk: expected 3 arguments\n");
+	    return -1;
     }
     bulkBufSize = argv[0] != NULL ? strtol(argv[0], NULL, 0) : 0;
     bulkStream  = argv[1] != NULL ? strtol(argv[1], NULL, 0) : 0;
     bulkCount   = argv[2] != NULL ? strtol(argv[2], NULL, 0) : 0;
     if(bulkInProgress){
-	printf("bulk: sorry bulk already in progress\n");
-	return -1;
+	    printf("bulk: sorry bulk already in progress\n");
+	    return -1;
+    }
+    if(block_mode) {
+	    /* turn on non-blocking mode */
+	    on_off = 1;
+	    if(ioctl(adap->fd,FIONBIO,&block_mode) != 0) {
+		    printf("IOCTL FIONBIO fails error:%d!\n",errno);
+	    }
     }
     if(bulkBufSize > SCTP_MAX_READBUFFER){
-	printf("bulk: size %d is to large, overriding to largest I can"
-	       "handle %d\n", bulkBufSize, SCTP_MAX_READBUFFER);
-	bulkBufSize = SCTP_MAX_READBUFFER;
+	    printf("bulk: size %d is to large, overriding to largest I can"
+		   "handle %d\n", bulkBufSize, SCTP_MAX_READBUFFER);
+	    bulkBufSize = SCTP_MAX_READBUFFER;
     }else if (bulkBufSize <= 0) {
 	printf("bulk: size must be positive\n");
 	return -1;
@@ -2730,7 +2763,13 @@ cmd_bulk(char *argv[], int argc)
     if(bulkCount == 0){
 	printf("bulk: bulk message are now queued\n");
     }else{
-	printf("bulk: bulk transfer now in progress\n");
+	    printf("bulk: bulk transfer now in progress\n");
+	    if(block_mode) {
+		    on_off = 0;
+		    if(ioctl(adap->fd,FIONBIO,&block_mode) != 0) {
+			    printf("IOCTL FIONBIO fails error:%d!\n",errno);
+		    }
+	    }
     }
     return 0;
 }
