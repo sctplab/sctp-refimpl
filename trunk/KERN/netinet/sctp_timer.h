@@ -58,6 +58,8 @@ int  sctp_shutdown_timer(struct sctp_inpcb *, struct sctp_tcb *,
 int  sctp_heartbeat_timer(struct sctp_inpcb *, struct sctp_tcb *,
 	struct sctp_nets *);
 
+int sctp_is_hb_timer_running(struct sctp_tcb *stcb);
+
 int  sctp_cookie_timer(struct sctp_inpcb *, struct sctp_tcb *,
 	struct sctp_nets *);
 
