@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.31 2006-02-17 14:05:36 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.32 2006-02-20 13:57:50 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -3578,6 +3578,7 @@ cmd_heart(char *argv[], int argc)
 			if(sp.spp_hbinterval == 0){
 				/* Set to a postive value */
 				sp.spp_hbinterval = 30000;
+				sp.spp_flags = SPP_HB_ENABLE;
 			}
 			if(setsockopt(adap->fd,IPPROTO_SCTP,
 				      SCTP_PEER_ADDR_PARAMS, &sp, siz) != 0) {
@@ -3593,7 +3594,9 @@ cmd_heart(char *argv[], int argc)
 			printf("Destination is already NOT heartbeating\n");
 		}else{
 			sp.spp_hbinterval = 0;
+			sp.spp_flags = SPP_HB_DISABLE;
 			siz = sizeof(sp);
+			memcpy((caddr_t)&sp.spp_address, sa, sa_len);
 			if(setsockopt(adap->fd,IPPROTO_SCTP,
 				      SCTP_PEER_ADDR_PARAMS, &sp, siz) != 0) {
 				printf("Failed to set option %d\n",errno);
@@ -3609,7 +3612,8 @@ cmd_heart(char *argv[], int argc)
 		}
 		if(sp.spp_hbinterval){
 			memset((caddr_t)&sp,0,sizeof(sp));
-			sp.spp_hbinterval = SCTP_NO_HB;
+			sp.spp_hbinterval = 0;
+			sp.spp_flags = SPP_HB_DISABLE;
 			if(setsockopt(adap->fd,IPPROTO_SCTP,
 				      SCTP_PEER_ADDR_PARAMS, &sp, siz) != 0) {
 				printf("Failed to set option %d\n",errno);
