@@ -4398,6 +4398,8 @@ sctp_usr_recvd(struct socket *so, int flags)
 			/* we keep our tag up there since we are not done */
 			inp->sctp_vtag_first = stcb->asoc.my_vtag;
 		}
+		SOCKBUF_UNLOCK(&so->so_rcv);
+
 		if ((TAILQ_EMPTY(&stcb->asoc.delivery_queue) == 0) ||
 		    (TAILQ_EMPTY(&stcb->asoc.reasmqueue) == 0)) {
 			/* Deliver if there is something to be delivered */
@@ -4429,12 +4431,11 @@ sctp_usr_recvd(struct socket *so, int flags)
 		        /* assoc removed aka it closed */
 			stcb = sctp_remove_from_socket_q(inp);
 		}
-#ifdef SCTP_LOCK_LOGGING
-		sctp_log_lock(inp, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
-#endif
-		SOCKBUF_LOCK(&so->so_rcv);
 	}
-
+#ifdef SCTP_LOCK_LOGGING
+	sctp_log_lock(inp, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
+#endif
+	SOCKBUF_LOCK(&so->so_rcv);
 	if (( so->so_rcv.sb_mb == NULL ) &&
 	    (TAILQ_EMPTY(&inp->sctp_queue_list) == 0)) {
 		int sq_cnt=0;
