@@ -366,7 +366,7 @@ struct sctp_inpcb {
 	struct sctpsocketq sctp_queue_list;
 	struct sctp_iterator *inp_starting_point_for_iterator;
 	uint32_t sctp_frag_point;
-	uint32_t sctp_vtag_first;
+	uint32_t sctp_vtag_first;	/* this field locked by socket buffer lock */
 	uint32_t partial_delivery_point;
 	struct mbuf *pkt, *pkt_last, *sb_last_mpkt;
 	struct mbuf *control;
