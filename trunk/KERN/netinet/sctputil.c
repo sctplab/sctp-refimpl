@@ -2361,7 +2361,7 @@ sctp_notify_assoc_change(u_int32_t event, struct sctp_tcb *stcb,
 	 * can to the socket rcv queue.
 	 */
 	if ((event == SCTP_SHUTDOWN_COMP) || (event == SCTP_COMM_LOST)) {
-		sctp_deliver_data(stcb, &stcb->asoc, NULL, 0);
+		sctp_deliver_data(stcb, &stcb->asoc, NULL);
 	}
 
 	/*

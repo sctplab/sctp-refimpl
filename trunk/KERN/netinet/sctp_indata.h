@@ -42,7 +42,7 @@
 
 #if defined(_KERNEL)
 int sctp_deliver_data(struct sctp_tcb *, struct sctp_association *,
-    struct sctp_tmit_chunk *, int);
+    struct sctp_tmit_chunk *);
 
 struct mbuf *
 sctp_build_ctl_nchunk(struct sctp_tcb *stcb, uint32_t tsn, uint32_t ppid,
@@ -60,7 +60,7 @@ void sctp_handle_forward_tsn(struct sctp_tcb *,
 struct sctp_tmit_chunk *
 sctp_try_advance_peer_ack_point(struct sctp_tcb *, struct sctp_association *);
 
-void sctp_service_queues(struct sctp_tcb *, struct sctp_association *, int have_lock);
+void sctp_service_queues(struct sctp_tcb *, struct sctp_association *);
 
 void sctp_update_acked(struct sctp_tcb *, struct sctp_shutdown_chunk *,
 	struct sctp_nets *, int *);

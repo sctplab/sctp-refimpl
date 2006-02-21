@@ -4330,7 +4330,7 @@ sctp_usr_recvd(struct socket *so, int flags)
 		    if ((TAILQ_EMPTY(&stcb->asoc.delivery_queue) == 0) ||
 			(TAILQ_EMPTY(&stcb->asoc.reasmqueue) == 0)) {
 		      /* Deliver if there is something to be delivered */
-		      sctp_service_queues(stcb, &stcb->asoc, 1);
+		      sctp_service_queues(stcb, &stcb->asoc);
 		    }
 		    sctp_set_rwnd(stcb, &stcb->asoc);
 		    incr = stcb->asoc.my_rwnd - stcb->asoc.my_last_reported_rwnd;
@@ -4362,6 +4362,11 @@ sctp_usr_recvd(struct socket *so, int flags)
 		 * we must release the inp write lock.
 		 */
 		SCTP_TCB_LOCK(stcb);
+#ifdef SCTP_LOCK_LOGGING
+		sctp_log_lock(inp, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
+#endif
+		SOCKBUF_LOCK(&so->so_rcv);
+
 		if (flags & MSG_EOR) {
 			/* Ok the other part of our grubby tracking
 			 * socket buffer (if any). We could maybe 
@@ -4396,7 +4401,7 @@ sctp_usr_recvd(struct socket *so, int flags)
 		if ((TAILQ_EMPTY(&stcb->asoc.delivery_queue) == 0) ||
 		    (TAILQ_EMPTY(&stcb->asoc.reasmqueue) == 0)) {
 			/* Deliver if there is something to be delivered */
-			sctp_service_queues(stcb, &stcb->asoc, 1);
+			sctp_service_queues(stcb, &stcb->asoc);
 		}
 		sctp_set_rwnd(stcb, &stcb->asoc);
 		/* if we increase by 1 or more MTU's (smallest MTUs of all
@@ -4424,11 +4429,12 @@ sctp_usr_recvd(struct socket *so, int flags)
 		        /* assoc removed aka it closed */
 			stcb = sctp_remove_from_socket_q(inp);
 		}
-	}
 #ifdef SCTP_LOCK_LOGGING
-	sctp_log_lock(inp, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
+		sctp_log_lock(inp, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
 #endif
-	SOCKBUF_LOCK(&so->so_rcv);
+		SOCKBUF_LOCK(&so->so_rcv);
+	}
+
 	if (( so->so_rcv.sb_mb == NULL ) &&
 	    (TAILQ_EMPTY(&inp->sctp_queue_list) == 0)) {
 		int sq_cnt=0;
