@@ -4446,8 +4446,8 @@ sctp_usr_recvd(struct socket *so, int flags)
 				(void)sctp_remove_from_socket_q(inp);
 				done_yet = TAILQ_EMPTY(&inp->sctp_queue_list);
 			}
-			printf("Hmm. mb empty and queue_list empty remove sq's:%d\n",
-			       sq_cnt);
+			printf("Hmm. mb empty and queue_list empty remove sq's:%d inpflags:%x \n",
+			       sq_cnt, (u_int)inp->sctp_flags);
 		}
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_USRREQ2)
