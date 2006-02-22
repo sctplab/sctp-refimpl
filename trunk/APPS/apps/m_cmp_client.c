@@ -1,3 +1,4 @@
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -950,7 +951,7 @@ main(int argc, char **argv)
 		}else{
 		    log_measurement(IPPROTO_SCTP,&ctl[i],&start,&end);
 		}
-		sleep(2);
+		sleep(1);
 	    } else {
 		sctp_skip++;
 	    }
@@ -963,7 +964,7 @@ main(int argc, char **argv)
 		}else{
 		    log_measurement(IPPROTO_TCP,&ctl[i],&start,&end);
 		}
-		sleep(2);
+		sleep(1);
 	    } else {
 		tcp_skip++;
 	    }
