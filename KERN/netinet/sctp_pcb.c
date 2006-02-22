@@ -2503,6 +2503,24 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		/* now is there some left in our SHUTDOWN state? */
 		if (cnt_in_sd) {
 			inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_GONE;
+			/*
+			 * Now the question comes as to if this EP was ever bound at all.
+			 * If it was, then we must pull it out of the EP hash list.
+			 */
+			if ((inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) !=
+			    SCTP_PCB_FLAGS_UNBOUND) {
+				/*
+				 * ok, this guy has been bound. It's port is somewhere
+				 * in the sctppcbinfo hash table. Remove it!
+				 *
+				 * Note we are depending on lookup by vtag to
+				 * find associations that are dieing. This
+				 * free's the port so we don't have to block
+				 * its useage. The SOCKET_GONE flags will
+				 * prevent us from doing this again.
+				 */
+				LIST_REMOVE(inp, sctp_hash);
+			}
 			splx(s);
 			SCTP_INP_WUNLOCK(inp);
 			SCTP_ASOC_CREATE_UNLOCK(inp);
@@ -2510,6 +2528,21 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 			  SOCK_UNLOCK(so);
 			}
 			return;
+		}
+	}
+
+	if((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
+		/*
+		 * Now the question comes as to if this EP was ever bound at all.
+		 * If it was, then we must pull it out of the EP hash list.
+		 */
+		if ((inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) !=
+		    SCTP_PCB_FLAGS_UNBOUND) {
+			/*
+			 * ok, this guy has been bound. It's port is somewhere
+			 * in the sctppcbinfo hash table. Remove it!
+			 */
+			LIST_REMOVE(inp, sctp_hash);
 		}
 	}
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
@@ -2686,18 +2719,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 
 	inp_save = LIST_NEXT(inp, sctp_list);
 	LIST_REMOVE(inp, sctp_list);
-	/*
-	 * Now the question comes as to if this EP was ever bound at all.
-	 * If it was, then we must pull it out of the EP hash list.
-	 */
-	if ((inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) !=
-	    SCTP_PCB_FLAGS_UNBOUND) {
-		/*
-		 * ok, this guy has been bound. It's port is somewhere
-		 * in the sctppcbinfo hash table. Remove it!
-		 */
-		LIST_REMOVE(inp, sctp_hash);
-	}
+
         /* fix any iterators only after out of the list */
 	sctp_iterator_inp_being_freed(inp, inp_save);
 	SCTP_ITERATOR_UNLOCK();
