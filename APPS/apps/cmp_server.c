@@ -317,11 +317,6 @@ main(int argc, char **argv)
 	fprintf(outlog,"Client would like %d bytes in %d byte blocks %d total sends sndbuf:%d\n",
 		sizetosend,blksize,numblk,optval);
 	fclose(outlog);
-	if(protocol_touse == IPPROTO_TCP){
-		sprintf(cmd, "/usr/bin/netstat -s -p tcp >> %s", name);
-	} else {
-		sprintf(cmd, "/usr/bin/dump_pegs >> %s", name);
-	}
 	system(cmd);
 	sprintf(cmd, "/bin/echo *************** >> %s", name);
 	system(cmd);
