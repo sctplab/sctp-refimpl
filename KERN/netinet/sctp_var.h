@@ -242,7 +242,6 @@ int sctp_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,
 }
 
 #define sctp_sballoc(stcb, sb, m)  { \
-        mtx_owned(&(sb->sb_mtx)); \
 	(sb)->sb_cc += (m)->m_len; \
         if(stcb) \
   	  (stcb)->asoc.sb_cc += (m)->m_len; \
