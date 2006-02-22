@@ -3595,9 +3595,24 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 		 * first check if it's an ASCONF with an unknown src addr
 		 * we need to look inside to find the association
 		 */
+
 		if (ch->chunk_type == SCTP_ASCONF && stcb == NULL) {
+			/* inp's refcount may be reduced */
+			SCTP_INP_WLOCK(inp);
+			SCTP_INP_INCR_REF(inp);
+			SCTP_INP_WUNLOCK(inp);
+
 			stcb = sctp_findassociation_ep_asconf(m, iphlen,
 			    *offset, sh, &inp, netp);
+			if (stcb == NULL) {
+				/*
+				 * reduce inp's refcount if not reduced in
+				 * sctp_findassociation_ep_asconf().
+				 */
+				SCTP_INP_WLOCK(inp);
+				SCTP_INP_DECR_REF(inp);
+				SCTP_INP_WUNLOCK(inp);
+			}
 		}
 		if (stcb == NULL) {
 			/* no association, so it's out of the blue... */
