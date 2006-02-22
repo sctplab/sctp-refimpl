@@ -208,7 +208,6 @@ int sctp_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,
 
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 #define sctp_sbfree(stcb, sb, m) { \
-        mtx_owned(&((sb)->sb_mtx)); \
         if((sb)->sb_cc >= (m)->m_len) { \
   	   (sb)->sb_cc -= (m)->m_len; \
         } else { \
