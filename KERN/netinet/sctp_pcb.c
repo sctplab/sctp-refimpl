@@ -351,6 +351,10 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 			continue;
 		}
 		SCTP_INP_RLOCK(inp);
+		if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
+			SCTP_INP_RUNLOCK(inp);
+			continue;
+		}
 		/* check to see if the ep has one of the addresses */
 		if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) == 0) {
 			/* We are NOT bound all, so look further */
@@ -577,6 +581,15 @@ sctp_findassociation_ep_asconf(struct mbuf *m, int iphlen, int offset,
 	return (stcb);
 }
 
+/* 
+ * rules for use
+ *
+ * 1) If I return a NULL you must decrement any INP ref cnt.
+ * 2) If I find an stcb, both will be locked (locked_tcb and stcb)
+ *    but decrement will be done (if locked == NULL).
+ * 3) Decrement happens on return ONLY if locked == NULL.
+ */
+
 struct sctp_tcb *
 sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
     struct sctp_nets **netp, struct sockaddr *local, struct sctp_tcb *locked_tcb)
@@ -620,17 +633,18 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 				SCTP_INP_DECR_REF(inp);
 				SCTP_INP_WUNLOCK(inp);
 			}
-			if (locked_tcb != NULL) {
+			if ((locked_tcb != NULL) && (locked_tcb != stcb)){
 				SCTP_INP_RLOCK(locked_tcb->sctp_ep);
 				SCTP_TCB_LOCK(locked_tcb);
 				SCTP_INP_RUNLOCK(locked_tcb->sctp_ep);
-				if (stcb != NULL)
-					SCTP_TCB_UNLOCK(stcb);
 			}
 			SCTP_INP_INFO_RUNLOCK();
 			return (stcb);
 		} else {
 			SCTP_INP_WLOCK(inp);
+			if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
+				goto null_return;
+			}
 			stcb = LIST_FIRST(&inp->sctp_asoc_list);
 			if (stcb == NULL) {
 				goto null_return;
@@ -661,6 +675,10 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 						}
 						if (locked_tcb == NULL) {
 							SCTP_INP_DECR_REF(inp);
+						} else if(locked_tcb != stcb) {
+							SCTP_INP_RLOCK(locked_tcb->sctp_ep);
+							SCTP_TCB_LOCK(locked_tcb);
+							SCTP_INP_RUNLOCK(locked_tcb->sctp_ep);
 						}
 						SCTP_INP_WUNLOCK(inp);
 						SCTP_INP_INFO_RUNLOCK();
@@ -678,6 +696,10 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 						}
 						if (locked_tcb == NULL) {
 							SCTP_INP_DECR_REF(inp);
+						} else if(locked_tcb != stcb) {
+							SCTP_INP_RLOCK(locked_tcb->sctp_ep);
+							SCTP_TCB_LOCK(locked_tcb);
+							SCTP_INP_RUNLOCK(locked_tcb->sctp_ep);
 						}
 						SCTP_INP_WUNLOCK(inp);
 						SCTP_INP_INFO_RUNLOCK();
@@ -689,6 +711,9 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 		}
 	} else {
 		SCTP_INP_WLOCK(inp);
+		if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
+			goto null_return;
+		}
 		head = &inp->sctp_tcbhash[SCTP_PCBHASH_ALLADDR(rport,
 							       inp->sctp_hashmark)];
 		if (head == NULL) {
@@ -720,6 +745,10 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 						}
 						if (locked_tcb == NULL) {
 							SCTP_INP_DECR_REF(inp);
+						} else if(locked_tcb != stcb) {
+							SCTP_INP_RLOCK(locked_tcb->sctp_ep);
+							SCTP_TCB_LOCK(locked_tcb);
+							SCTP_INP_RUNLOCK(locked_tcb->sctp_ep);
 						}
 						SCTP_INP_WUNLOCK(inp);
 						SCTP_INP_INFO_RUNLOCK();
@@ -738,6 +767,10 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 						}
 						if (locked_tcb == NULL) {
 							SCTP_INP_DECR_REF(inp);
+						} else if(locked_tcb != stcb) {
+							SCTP_INP_RLOCK(locked_tcb->sctp_ep);
+							SCTP_TCB_LOCK(locked_tcb);
+							SCTP_INP_RUNLOCK(locked_tcb->sctp_ep);
 						}
 						SCTP_INP_WUNLOCK(inp);
 						SCTP_INP_INFO_RUNLOCK();
@@ -791,6 +824,11 @@ sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, caddr_t asoc_id)
 	}
 	LIST_FOREACH(stcb, head, sctp_asocs) {
 		SCTP_INP_RLOCK(stcb->sctp_ep);
+		if(stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
+			SCTP_INP_RUNLOCK(stcb->sctp_ep);
+			SCTP_INP_INFO_RUNLOCK();
+			return (NULL);
+		}
 		SCTP_TCB_LOCK(stcb);
 		SCTP_INP_RUNLOCK(stcb->sctp_ep);
 		if (stcb->asoc.assoc_id == id) {
@@ -818,6 +856,11 @@ sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, caddr_t asoc_id)
 	}
 	LIST_FOREACH(stcb, head, sctp_tcbrestarhash) {
 		SCTP_INP_RLOCK(stcb->sctp_ep);
+		if(stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
+			SCTP_INP_RUNLOCK(stcb->sctp_ep);
+			SCTP_INP_INFO_RUNLOCK();
+			return (NULL);
+		}
 		SCTP_TCB_LOCK(stcb);
 		SCTP_INP_RUNLOCK(stcb->sctp_ep);
 		if (stcb->asoc.assoc_id == id) {
@@ -865,7 +908,10 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 		return (NULL);
 	LIST_FOREACH(inp, head, sctp_hash) {
 		SCTP_INP_RLOCK(inp);
-
+		if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
+			SCTP_INP_RUNLOCK(inp);
+			continue;
+		}
 		if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) &&
 		    (inp->sctp_lport == lport)) {
 			/* got it */
@@ -917,6 +963,10 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 #endif
 	LIST_FOREACH(inp, head, sctp_hash) {
 		SCTP_INP_RLOCK(inp);
+		if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
+			SCTP_INP_RUNLOCK(inp);
+			continue;
+		}
 		if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL)) {
 			SCTP_INP_RUNLOCK(inp);
 			continue;
@@ -1264,6 +1314,11 @@ sctp_findassoc_by_vtag(struct sockaddr *from, uint32_t vtag,
 	}
 	LIST_FOREACH(stcb, head, sctp_asocs) {
 		SCTP_INP_RLOCK(stcb->sctp_ep);
+		if(stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
+			SCTP_INP_RUNLOCK(stcb->sctp_ep);
+			SCTP_INP_INFO_RUNLOCK();
+			return (NULL);
+		}
 		SCTP_TCB_LOCK(stcb);
 		SCTP_INP_RUNLOCK(stcb->sctp_ep);
 		if (stcb->asoc.my_vtag == vtag) {
@@ -4549,6 +4604,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 	/* does the source address already exist? if so skip it */
 	l_inp = inp = stcb->sctp_ep;
 	stcb_tmp = sctp_findassociation_ep_addr(&inp, sa, &net_tmp, local_sa, stcb);
+
 	if ((stcb_tmp == NULL && inp == stcb->sctp_ep) || inp == NULL) {
 		/* we must add the source address */
 		/* no scope set here since we have a tcb already. */
@@ -4568,6 +4624,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			net_tmp->dest_state &= ~SCTP_ADDR_NOT_IN_ASSOC;
 		} else if (stcb_tmp != stcb) {
 			/* It belongs to another association? */
+			SCTP_TCB_UNLOCK(stcb_tmp);
 			return (-1);
 		}
 	}
