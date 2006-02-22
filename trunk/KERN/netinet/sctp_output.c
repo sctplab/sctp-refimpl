@@ -9745,7 +9745,7 @@ sctp_output(inp, m, addr, control, p, flags)
 
 
 		if (((inp->sctp_flags & SCTP_PCB_FLAGS_NODELAY) == 0) &&
-		    (stcb->asoc.total_flight < stcb->asoc.smallest_mtu) && 
+		    (stcb->asoc.total_flight > 0) && 
 		    (un_sent < (int)stcb->asoc.smallest_mtu)) {
 			/* Ok, Nagle is set on and we have
 			 * data outstanding. Don't send anything
@@ -12624,7 +12624,7 @@ sctp_lower_sosend(struct socket *so,
 		 * be outstanding. Does this need to be changed for CMT?
 		 */
 		if (((inp->sctp_flags & SCTP_PCB_FLAGS_NODELAY) == 0) &&
-		    (stcb->asoc.total_flight < stcb->asoc.smallest_mtu) && 
+		    (stcb->asoc.total_flight > 0) && 
 		    (un_sent < (int)stcb->asoc.smallest_mtu)) {
 
 			/* Ok, Nagle is set on and we have data outstanding. Don't
