@@ -10,7 +10,7 @@ main(int argc, char **argv)
 	int i, map, m_size=8, all_ones;
 	uint8_t map_array[2];
 	map_array[1] = 0;
-	printf("uint8_t sctp_map_lookup_tab[256] = {\n");
+	printf("int8_t sctp_map_lookup_tab[256] = {\n");
 	printf("    ");
 	for (map = 0; map <= 0xff; map++) {
 		map_array[0] = map;
