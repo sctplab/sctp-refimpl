@@ -952,8 +952,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 {
 	struct mbuf *oper;
 	u_int16_t nxt_todel;
-	u_int32_t cum_ackp1, last_tsn, prev_tsn, post_tsn;
-	int tsize;
+	u_int32_t cum_ackp1, last_tsn, prev_tsn, post_tsn, tsize;
 	u_char last_flags;
 	struct sctp_tmit_chunk *at, *prev, *next;
 
@@ -2432,7 +2431,8 @@ void
 sctp_service_queues(struct sctp_tcb *stcb, struct sctp_association *asoc)
 {
 	struct sctp_tmit_chunk *chk;
-	int tsize, cntDel;
+	int cntDel;
+	u_int32_t tsize;
 	u_int16_t nxt_todel;
 
 	cntDel = 0;
