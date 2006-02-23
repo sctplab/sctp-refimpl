@@ -411,6 +411,7 @@ SCTP_RTTVAR_LOGGING     opt_sctp.h
 SCTP_SB_LOGGING         opt_sctp.h
 SCTP_WITH_NO_CSUM       opt_sctp.h
 SCTP_EARLYFR_LOGGING    opt_sctp.h
+SCTP_NAGLE_LOGGING      opt_sctp.h
 INVARIANTS_SCTP         opt_sctp.h
 #
 
