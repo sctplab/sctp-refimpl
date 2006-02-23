@@ -238,12 +238,18 @@ main(int argc, char **argv)
 				       (int)log.x.cwnd.cnt_in_str);
 			}
 		}else if(log.event_type == SCTP_LOG_EVENT_NAGLE) {
-			printf("%d: stcb:%x total_flight:%u unsent:%u mtu:%u %s\n",
+			int un_sent;
+			un_sent = log.x.nagle.total_in_queue - log.x.nagle.total_flight;
+			un_sent += ((log.x.nagle.count_in_queue - log.x.nagle.count_in_flight) * 16);
+
+			printf("%d: stcb:%x total_flight:%u total_in_queue:%u c_in_que:%d c_in_flt:%d  un_sent:%d %s\n",
 			       at,
 			       log.x.nagle.stcb,
 			       log.x.nagle.total_flight,
-			       log.x.nagle.unsent,
-			       log.x.nagle.smallest_mtu,
+			       log.x.nagle.total_in_queue,
+			       log.x.nagle.count_in_queue,
+			       log.x.nagle.count_in_flight,
+			       (un_sent),
 			       from_str[log.from]);
 			
 		}else if(log.event_type == SCTP_LOG_EVENT_SB) {
