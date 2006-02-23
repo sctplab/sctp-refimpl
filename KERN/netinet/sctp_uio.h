@@ -558,6 +558,13 @@ struct sctp_rto_log {
 	u_int8_t  direction;
 };
 
+struct sctp_nagle_log {
+	u_int32_t stcb;
+	u_int32_t total_flight;
+	u_int32_t unsent;
+	u_int32_t smallest_mtu;
+};
+
 struct sctp_cwnd_log{
 	u_int32_t time_event;
 	u_int8_t from;
@@ -575,6 +582,7 @@ struct sctp_cwnd_log{
 		struct sctp_lock_log lock;
 		struct sctp_rto_log rto;
 		struct sctp_sb_log sb;
+		struct sctp_nagle_log nagle;
 	} x;
 };
 
