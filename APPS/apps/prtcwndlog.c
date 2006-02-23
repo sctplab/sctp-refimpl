@@ -104,7 +104,9 @@ main(int argc, char **argv)
 		/* 69 */ "fill_out_queue_called",
 		/* 70 */ "fill_out_queue_fills",
 		/* 71 */ "log_free_sent",
-		/* 72 */ "unknown"
+		/* 72 */ "Nagle stops  transmit",
+		/* 73 */ "Nagle allows transmit",
+		/* 74 */ "Unknown"
 	};
 #define FROM_STRING_MAX 72
 	FILE *out;
@@ -235,6 +237,15 @@ main(int argc, char **argv)
 				       (int)log.x.cwnd.cnt_in_send,
 				       (int)log.x.cwnd.cnt_in_str);
 			}
+		}else if(log.event_type == SCTP_LOG_EVENT_NAGLE) {
+			printf("%d: stcb:%x total_flight:%u unsent:%u mtu:%u %s",
+			       at,
+			       log.x.nagle.stcb,
+			       log.x.nagle.total_flight,
+			       log.x.nagle.unsent,
+			       log.x.nagle.smallest_mtu,
+			       from_str[log.from]);
+			
 		}else if(log.event_type == SCTP_LOG_EVENT_SB) {
 			printf("%d: %s stcb:%x sb_cc:%x stcb_sbcc:%x %s:%d\n",
 			       at,
