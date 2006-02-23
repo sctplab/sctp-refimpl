@@ -2134,6 +2134,41 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	return (1);
 }
 
+uint8_t sctp_map_lookup_tab[256] = {
+    -1, 0, -1, 1, -1, 0, -1, 2, 
+    -1, 0, -1, 1, -1, 0, -1, 3, 
+    -1, 0, -1, 1, -1, 0, -1, 2, 
+    -1, 0, -1, 1, -1, 0, -1, 4, 
+    -1, 0, -1, 1, -1, 0, -1, 2, 
+    -1, 0, -1, 1, -1, 0, -1, 3, 
+    -1, 0, -1, 1, -1, 0, -1, 2, 
+    -1, 0, -1, 1, -1, 0, -1, 5, 
+    -1, 0, -1, 1, -1, 0, -1, 2, 
+    -1, 0, -1, 1, -1, 0, -1, 3, 
+    -1, 0, -1, 1, -1, 0, -1, 2, 
+    -1, 0, -1, 1, -1, 0, -1, 4, 
+    -1, 0, -1, 1, -1, 0, -1, 2, 
+    -1, 0, -1, 1, -1, 0, -1, 3, 
+    -1, 0, -1, 1, -1, 0, -1, 2, 
+    -1, 0, -1, 1, -1, 0, -1, 6, 
+    -1, 0, -1, 1, -1, 0, -1, 2, 
+    -1, 0, -1, 1, -1, 0, -1, 3, 
+    -1, 0, -1, 1, -1, 0, -1, 2, 
+    -1, 0, -1, 1, -1, 0, -1, 4, 
+    -1, 0, -1, 1, -1, 0, -1, 2, 
+    -1, 0, -1, 1, -1, 0, -1, 3, 
+    -1, 0, -1, 1, -1, 0, -1, 2, 
+    -1, 0, -1, 1, -1, 0, -1, 5, 
+    -1, 0, -1, 1, -1, 0, -1, 2, 
+    -1, 0, -1, 1, -1, 0, -1, 3, 
+    -1, 0, -1, 1, -1, 0, -1, 2, 
+    -1, 0, -1, 1, -1, 0, -1, 4, 
+    -1, 0, -1, 1, -1, 0, -1, 2, 
+    -1, 0, -1, 1, -1, 0, -1, 3, 
+    -1, 0, -1, 1, -1, 0, -1, 2, 
+    -1, 0, -1, 1, -1, 0, -1, 7, 
+} ;
+
 
 void
 sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort_flag)
@@ -2144,7 +2179,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 	 */
 	struct sctp_association *asoc;
 	int i, at;
-	int m_size, all_ones;
+	int all_ones;
 	int slide_from, slide_end, lgap, distance;
 #ifdef SCTP_MAP_LOGGING
 	uint32_t old_cumack, old_base, old_highest;
@@ -2171,22 +2206,21 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 	 * offset of the current cum-ack as the starting point.
 	 */
 	all_ones = 1;
-	m_size = stcb->asoc.mapping_array_size << 3;
-	
-
-	for (i = 0; i < m_size; i++) {
-		if (!SCTP_IS_TSN_PRESENT(asoc->mapping_array, i)) {
-			/*
-			 * Ok we found the first place that we are
-			 * missing a TSN.
-			 */
-			at = i;
+	at = 0;
+	for (i = 0; i < stcb->asoc.mapping_array_size; i++) {
+		if(asoc->mapping_array[i] == 0xff) {
+			at += 8;
+		} else {
+			/* there is a 0 bit */
 			all_ones = 0;
-			asoc->cumulative_tsn = asoc->mapping_array_base_tsn +
-			    (i - 1);
+			at += sctp_map_lookup_tab[asoc->mapping_array[i]];
 			break;
 		}
 	}
+	asoc->cumulative_tsn = asoc->mapping_array_base_tsn + at;
+	/* at is one off, since in the table a embedded -1 is present */
+	at++;
+
 	if (compare_with_wrap(asoc->cumulative_tsn,
 			      asoc->highest_tsn_inside_map,
 			      MAX_TSN)) {
