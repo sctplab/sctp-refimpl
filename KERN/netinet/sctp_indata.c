@@ -2134,7 +2134,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	return (1);
 }
 
-uint8_t sctp_map_lookup_tab[256] = {
+int8_t sctp_map_lookup_tab[256] = {
     -1, 0, -1, 1, -1, 0, -1, 2, 
     -1, 0, -1, 1, -1, 0, -1, 3, 
     -1, 0, -1, 1, -1, 0, -1, 2, 
