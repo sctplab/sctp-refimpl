@@ -6079,6 +6079,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 	int mbcnt = 0;
 	int mbcnt_e = 0;
 	int error = 0;
+	uint8_t cal_oh;
 
 	if ((stcb == NULL) || (net == NULL) || (m == NULL) || (srcv == NULL)) {
 		/* Software fault, you blew it on the call */
@@ -6320,7 +6321,9 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			SOCKBUF_LOCK(&so->so_snd);
 			goto release;
 		}
-		pad_oh = (4 - (dataout % 4));
+		calc_oh = (dataout % 4);
+		if(calc_oh)
+			pad_oh = (4 - calc_oh);
 		sctp_prepare_chunk(chk, stcb, srcv, strq, net);
 		chk->no_fr_allowed = 0;
 		chk->rec.data.rcv_flags |= SCTP_DATA_NOT_FRAG;
@@ -6392,11 +6395,15 @@ sctp_msg_append(struct sctp_tcb *stcb,
 				SOCKBUF_LOCK(&so->so_snd);
 				goto release;
 			}
-			pad_oh += (4 - (siz % 4));
+			calc_oh = (siz % 4);
+			if(calc_oh)
+				pad_oh = (4 - calc_oh);
 			dataout -= siz;
 			n = n->m_nextpkt;
 		}
-		pad_oh += (4 - (dataout % 4));
+		calc_oh = (dataout % 4);
+		if(calc_oh)
+			pad_oh = (4 - calc_oh);
 		/* relock to stay sane */
 		SCTP_INP_RLOCK(stcb->sctp_ep);
 		if(be.error) {
@@ -11613,6 +11620,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 	struct sctp_stream_out *strq;
 	uint32_t my_vtag;
 	int resv_in_first;
+	uint8_t calc_oh;
 
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
@@ -11894,7 +11902,9 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 			error = ENOMEM;
 			goto clean_up;
 		}
-		pad_oh = (4 - (tot_out % 4));
+		calc_oh = (tot_out % 4);
+		if(calc_oh)
+			pad_oh = (4 - calc_oh);
 		error = sctp_copy_one(mm, uio, tot_out, resv_in_first, &mbcnt_e);
 		if (error || be.error) {
 			goto clean_up;
@@ -12005,7 +12015,10 @@ clean_up:
 				goto temp_clean_up;
 			}
 			tot_demand = min(tot_out, frag_size);
-			pad_oh += (4 - (tot_demand % 4));
+			calc_oh = (tot_demand % 4);
+			if(calc_oh)
+				pad_oh = (4 - calc_oh);
+
 			error = sctp_copy_one(chk->data, uio, tot_demand , resv_in_first, &mbcnt_e);
 			if (error || be.error) {
 				goto temp_clean_up;
