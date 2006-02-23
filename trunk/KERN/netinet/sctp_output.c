@@ -9751,9 +9751,16 @@ sctp_output(inp, m, addr, control, p, flags)
 			 * data outstanding. Don't send anything
 			 * and let the SACK drive out the data.
 			 */
+#ifdef SCTP_NAGLE_LOGGING
+			sctp_log_nagle_event(stcb, un_sent, SCTP_NAGLE_APPLIED);
+#endif
 			sctp_pegs[SCTP_NAGLE_NOQ]++;
 			queue_only = 1;
 		} else {
+#ifdef SCTP_NAGLE_LOGGING
+			if((inp->sctp_flags & SCTP_PCB_FLAGS_NODELAY) == 0)
+				sctp_log_nagle_event(stcb, un_sent, SCTP_NAGLE_SKIPPED);
+#endif
 			sctp_pegs[SCTP_NAGLE_OFF]++;
 		}
 	}
@@ -12631,9 +12638,16 @@ sctp_lower_sosend(struct socket *so,
 			 * send anything and let SACKs drive out the data unless we
 			 * have a "full" segment to send.
 			 */
+#ifdef SCTP_NAGLE_LOGGING
+			sctp_log_nagle_event(stcb, un_sent, SCTP_NAGLE_APPLIED);
+#endif
 			sctp_pegs[SCTP_NAGLE_NOQ]++;
 			queue_only = 1;
 		} else {
+#ifdef SCTP_NAGLE_LOGGING
+			if((inp->sctp_flags & SCTP_PCB_FLAGS_NODELAY) == 0)
+				sctp_log_nagle_event(stcb, un_sent, SCTP_NAGLE_SKIPPED);
+#endif
 			sctp_pegs[SCTP_NAGLE_OFF]++;
 		}
 	}

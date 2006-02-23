@@ -229,6 +229,23 @@ sctp_log_strm_del_alt(u_int32_t tsn, u_int16_t sseq, int from)
 }
 
 void
+sctp_log_nagle_event(struct sctp_tcb *stcb, int unsent, int action)
+{
+	sctp_clog[sctp_cwnd_log_at].from = (u_int8_t)action;
+	sctp_clog[sctp_cwnd_log_at].event_type = (u_int8_t)SCTP_LOG_EVENT_NAGLE;
+	sctp_clog[sctp_cwnd_log_at].x.nagle.stcb = (u_int32_t)stcb;
+	sctp_clog[sctp_cwnd_log_at].x.nagle.total_flight = stcb->asoc.total_flight;
+	sctp_clog[sctp_cwnd_log_at].x.nagle.unsent = (u_int32_t)unsent;
+	sctp_clog[sctp_cwnd_log_at].x.nagle.smallest_mtu = stcb->asoc.smallest_mtu;
+	sctp_cwnd_log_at++;
+	if (sctp_cwnd_log_at >= SCTP_STAT_LOG_SIZE) {
+		sctp_cwnd_log_at = 0;
+		sctp_cwnd_log_rolled = 1;
+	}
+	
+}
+
+void
 sctp_log_sack(u_int32_t old_cumack, u_int32_t cumack, u_int32_t tsn, u_int16_t gaps, u_int16_t dups, int from)
 {
 	sctp_clog[sctp_cwnd_log_at].from = (u_int8_t)from;

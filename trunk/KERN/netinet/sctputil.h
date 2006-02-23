@@ -249,6 +249,8 @@ sctp_sbappend( struct sockbuf *sb,
 #ifdef SCTP_STAT_LOGGING
 void sctp_log_strm_del_alt(u_int32_t, u_int16_t, int);
 
+void sctp_log_nagle_event(struct sctp_tcb *stcb, int unsent, int action);
+
 void sctp_sblog(struct sockbuf *sb, 
 		struct sctp_tcb *stcb, int from, int incr);
 
