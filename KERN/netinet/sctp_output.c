@@ -7686,7 +7686,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 					return (ENOMEM);
 				}
 				/* update our MTU size */
-				if(mtu > chk->data->m_pkthdr.len)
+				if((int)mtu > chk->data->m_pkthdr.len)
 					mtu -= chk->data->m_pkthdr.len;
 				else
 					mtu = 0;
