@@ -6079,7 +6079,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 	int mbcnt = 0;
 	int mbcnt_e = 0;
 	int error = 0;
-	uint8_t cal_oh;
+	uint8_t calc_oh;
 
 	if ((stcb == NULL) || (net == NULL) || (m == NULL) || (srcv == NULL)) {
 		/* Software fault, you blew it on the call */
