@@ -1045,7 +1045,7 @@ sctp6_disconnect(struct socket *so)
 					sctp_send_abort_tcb(stcb, err);
 				}
 				SCTP_INP_RUNLOCK(inp);
-				sctp_free_assoc(inp, stcb);
+				sctp_free_assoc(inp, stcb, 0);
 				/* No unlock tcb assoc is gone */
 				splx(s);
 				return (0);

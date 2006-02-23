@@ -113,7 +113,8 @@
 #define SCTP_CWND_LOG_FILL_OUTQ_CALLED 69
 #define SCTP_CWND_LOG_FILL_OUTQ_FILLS  70
 #define SCTP_LOG_FREE_SENT             71
-
+#define SCTP_NAGLE_APPLIED          72
+#define SCTP_NAGLE_SKIPPED          73
 /*
  * To turn on various logging, you must first define SCTP_STAT_LOGGING.
  * Then to get something to log you define one of the logging defines i.e.
@@ -137,7 +138,7 @@
 #define SCTP_LOG_LOCK_EVENT 10
 #define SCTP_LOG_EVENT_RTT  11
 #define SCTP_LOG_EVENT_SB   12
-
+#define SCTP_LOG_EVENT_NAGLE 13
 #define SCTP_LOCK_UNKNOWN 2
 
 /* number of associations by default for zone allocation */
@@ -296,7 +297,7 @@
 #define SCTP_ERROR_CAUSE_IND		0xc003
 #define SCTP_SET_PRIM_ADDR		0xc004
 #define SCTP_SUCCESS_REPORT		0xc005
-#define SCTP_ULP_ADAPTION		0xc006
+#define SCTP_ULP_ADAPTATION		0xc006
 
 /* Notification error codes */
 #define SCTP_NOTIFY_DATAGRAM_UNSENT	0x0001
@@ -639,6 +640,8 @@
 #define SCTP_NOTIFY_ASCONF_DELETE_IP	16
 #define SCTP_NOTIFY_ASCONF_SET_PRIMARY	17
 #define SCTP_NOTIFY_PARTIAL_DELVIERY_INDICATION 18
+#define SCTP_NOTIFY_ADAPTATION_INDICATION       19
+/* same as above */
 #define SCTP_NOTIFY_ADAPTION_INDICATION         19
 #define SCTP_NOTIFY_INTERFACE_CONFIRMED 20
 #define SCTP_NOTIFY_STR_RESET_RECV      21

@@ -1537,6 +1537,31 @@ sctp_heartbeat_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	return (0);
 }
 
+int
+sctp_is_hb_timer_running(struct sctp_tcb *stcb)
+{
+	if (callout_pending(&stcb->asoc.hb_timer.timer)) {
+		/* its running */
+		return (1);
+	} else {
+		/* nope */
+		return (0);
+	}
+}
+
+int
+sctp_is_sack_timer_running(struct sctp_tcb *stcb)
+{
+	if (callout_pending(&stcb->asoc.dack_timer.timer)) {
+		/* its running */
+		return (1);
+	} else {
+		/* nope */
+		return (0);
+	}
+}
+
+
 #define SCTP_NUMBER_OF_MTU_SIZES 18
 static u_int32_t mtu_sizes[]={
 	68,
