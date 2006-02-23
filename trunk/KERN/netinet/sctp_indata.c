@@ -2134,6 +2134,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	return (1);
 }
 
+
 void
 sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort_flag)
 {
@@ -2171,6 +2172,8 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 	 */
 	all_ones = 1;
 	m_size = stcb->asoc.mapping_array_size << 3;
+	
+
 	for (i = 0; i < m_size; i++) {
 		if (!SCTP_IS_TSN_PRESENT(asoc->mapping_array, i)) {
 			/*
