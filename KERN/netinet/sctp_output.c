@@ -6075,6 +6075,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 	struct mbuf *mm;
 	struct sctp_block_entry be;
 	unsigned int dataout, siz;
+	int pad_oh = 0;
 	int mbcnt = 0;
 	int mbcnt_e = 0;
 	int error = 0;
@@ -6319,6 +6320,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			SOCKBUF_LOCK(&so->so_snd);
 			goto release;
 		}
+		pad_oh = (dataout % 4);
 		sctp_prepare_chunk(chk, stcb, srcv, strq, net);
 		chk->no_fr_allowed = 0;
 		chk->rec.data.rcv_flags |= SCTP_DATA_NOT_FRAG;
@@ -6337,7 +6339,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 		/* fix up the send_size if it is not present */
 		chk->no_fr_allowed = 0;
 		chk->send_size = dataout;
-		chk->book_size = chk->send_size;
+		chk->book_size = SCTP_SIZE32(chk->send_size);
 		chk->mbcnt = mbcnt;
 		chk->whoTo->ref_count++;
 		asoc->chunks_on_out_queue++;
@@ -6390,9 +6392,11 @@ sctp_msg_append(struct sctp_tcb *stcb,
 				SOCKBUF_LOCK(&so->so_snd);
 				goto release;
 			}
+			pad_oh += (siz % 4);
 			dataout -= siz;
 			n = n->m_nextpkt;
 		}
+		pad_oh += (dataout % 4);
 		/* relock to stay sane */
 		SCTP_INP_RLOCK(stcb->sctp_ep);
 		if(be.error) {
@@ -6464,7 +6468,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 					chk->send_size += nn->m_len;
 				}
 			}
-			chk->book_size = chk->send_size;
+			chk->book_size = SCTP_SIZE32(chk->send_size);
 			chk->mbcnt = mbcnt_e;
 			mbcnt += mbcnt_e;
 			if (PR_SCTP_BUF_ENABLED(chk->flags)) {
@@ -6580,7 +6584,7 @@ zap_by_it_all:
 		       asoc->total_output_mbuf_queue_size,
 		       mbcnt);
 #endif
-	asoc->total_output_queue_size += dataout;
+	asoc->total_output_queue_size += (dataout + pad_oh);
 	asoc->total_output_mbuf_queue_size += mbcnt;
 	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
@@ -9746,20 +9750,20 @@ sctp_output(inp, m, addr, control, p, flags)
 
 		if (((inp->sctp_flags & SCTP_PCB_FLAGS_NODELAY) == 0) &&
 		    (stcb->asoc.total_flight > 0) && 
-		    (un_sent < (int)stcb->asoc.smallest_mtu)) {
+		    (un_sent < (int)(stcb->asoc.smallest_mtu - SCTP_MIN_OVERHEAD))) {
 			/* Ok, Nagle is set on and we have
 			 * data outstanding. Don't send anything
 			 * and let the SACK drive out the data.
 			 */
 #ifdef SCTP_NAGLE_LOGGING
-			sctp_log_nagle_event(stcb, un_sent, SCTP_NAGLE_APPLIED);
+			sctp_log_nagle_event(stcb, SCTP_NAGLE_APPLIED);
 #endif
 			sctp_pegs[SCTP_NAGLE_NOQ]++;
 			queue_only = 1;
 		} else {
 #ifdef SCTP_NAGLE_LOGGING
 			if((inp->sctp_flags & SCTP_PCB_FLAGS_NODELAY) == 0)
-				sctp_log_nagle_event(stcb, un_sent, SCTP_NAGLE_SKIPPED);
+				sctp_log_nagle_event(stcb, SCTP_NAGLE_SKIPPED);
 #endif
 			sctp_pegs[SCTP_NAGLE_OFF]++;
 		}
@@ -10809,8 +10813,8 @@ sctp_send_packet_dropped(struct sctp_tcb *stcb, struct sctp_nets *net,
 		/* Only one cluster worth of data MAX */
 		small_one = MCLBYTES;
 	}
-	chk->book_size = (chk->send_size + sizeof(struct sctp_pktdrop_chunk) +
-			  sizeof(struct sctphdr) + SCTP_MED_OVERHEAD);
+	chk->book_size = SCTP_SIZE32((chk->send_size + sizeof(struct sctp_pktdrop_chunk) +
+				      sizeof(struct sctphdr) + SCTP_MED_OVERHEAD));
 	if (chk->book_size > small_one) {
 		drp->ch.chunk_flags = SCTP_PACKET_TRUNCATED;
 		drp->trunc_len = htons(chk->send_size);
@@ -10954,7 +10958,7 @@ sctp_add_stream_reset_out(struct sctp_tmit_chunk *chk,
 	/* now fix the chunk length */
 	ch->chunk_length = htons(len + old_len);
 	chk->send_size = len + old_len;
-	chk->book_size = chk->send_size;
+	chk->book_size = SCTP_SIZE32(chk->send_size);
 	chk->data->m_pkthdr.len = chk->data->m_len = SCTP_SIZE32(chk->send_size);
 	return;
 }
@@ -10996,7 +11000,7 @@ sctp_add_stream_reset_in(struct sctp_tmit_chunk *chk,
 	/* now fix the chunk length */
 	ch->chunk_length = htons(len + old_len);
 	chk->send_size = len + old_len;
-	chk->book_size = chk->send_size;
+	chk->book_size = SCTP_SIZE32(chk->send_size);
 	chk->data->m_pkthdr.len = chk->data->m_len = SCTP_SIZE32(chk->send_size);
 	return;
 }
@@ -11025,7 +11029,7 @@ sctp_add_stream_reset_tsn(struct sctp_tmit_chunk *chk,
 	/* now fix the chunk length */
 	ch->chunk_length = htons(len + old_len);
 	chk->send_size = len + old_len;
-	chk->book_size = chk->send_size;
+	chk->book_size = SCTP_SIZE32(chk->send_size);
 	chk->data->m_pkthdr.len = chk->data->m_len = SCTP_SIZE32(chk->send_size);
 	return;
 }
@@ -11054,7 +11058,7 @@ sctp_add_stream_reset_result(struct sctp_tmit_chunk *chk,
 	/* now fix the chunk length */
 	ch->chunk_length = htons(len + old_len);
 	chk->send_size = len + old_len;
-	chk->book_size = chk->send_size;
+	chk->book_size = SCTP_SIZE32(chk->send_size);
 	chk->data->m_pkthdr.len = chk->data->m_len = SCTP_SIZE32(chk->send_size);
 	return;
 
@@ -11088,7 +11092,7 @@ sctp_add_stream_reset_result_tsn(struct sctp_tmit_chunk *chk,
 	/* now fix the chunk length */
 	ch->chunk_length = htons(len + old_len);
 	chk->send_size = len + old_len;
-	chk->book_size = chk->send_size;
+	chk->book_size = SCTP_SIZE32(chk->send_size);
 	chk->data->m_pkthdr.len = chk->data->m_len = SCTP_SIZE32(chk->send_size);
 	return;
 }
@@ -11130,7 +11134,7 @@ sctp_send_str_reset_req(struct sctp_tcb *stcb,
 	SCTP_INCR_CHK_COUNT();
 	chk->rec.chunk_id = SCTP_STREAM_RESET;
 	chk->asoc = &stcb->asoc;
-	chk->book_size = chk->send_size = sizeof(struct sctp_chunkhdr);
+	chk->book_size = SCTP_SIZE32(chk->send_size = sizeof(struct sctp_chunkhdr));
 
 	MGETHDR(chk->data, M_DONTWAIT, MT_DATA);
 	if (chk->data == NULL) {
@@ -11598,6 +11602,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 	struct socket *so;
 	int error = 0;
 	int s;
+	int pad_oh = 0;
 	int frag_size, mbcnt = 0, mbcnt_e = 0;
 	unsigned int sndlen;
 	unsigned int tot_demand;
@@ -11889,6 +11894,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 			error = ENOMEM;
 			goto clean_up;
 		}
+		pad_oh = (tot_out % 4);
 		error = sctp_copy_one(mm, uio, tot_out, resv_in_first, &mbcnt_e);
 		if (error || be.error) {
 			goto clean_up;
@@ -11906,7 +11912,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 
 		/* fix up the send_size if it is not present */
 		chk->send_size = tot_out;
-		chk->book_size = chk->send_size;
+		chk->book_size = SCTP_SIZE32(chk->send_size);
 		/* ok, we are commited */
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 		s = splsoftnet();
@@ -11999,6 +12005,7 @@ clean_up:
 				goto temp_clean_up;
 			}
 			tot_demand = min(tot_out, frag_size);
+			pad_oh += (tot_demand % 4);
 			error = sctp_copy_one(chk->data, uio, tot_demand , resv_in_first, &mbcnt_e);
 			if (error || be.error) {
 				goto temp_clean_up;
@@ -12010,7 +12017,7 @@ clean_up:
 			chk->no_fr_allowed = 0;
 			chk->send_size = tot_demand;
 			chk->data->m_pkthdr.len = tot_demand;
-			chk->book_size = chk->send_size;
+			chk->book_size = SCTP_SIZE32(chk->send_size);
 			remove_cnt++;
 			TAILQ_INSERT_TAIL(&tmp, chk, sctp_next);
 			tot_out -= tot_demand;
@@ -12116,7 +12123,7 @@ zap_by_it_now:
 #else
 	s = splnet();
 #endif
-	asoc->total_output_queue_size += dataout;
+	asoc->total_output_queue_size += (dataout + pad_oh);
 	asoc->total_output_mbuf_queue_size += mbcnt;
 	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
@@ -12632,21 +12639,21 @@ sctp_lower_sosend(struct socket *so,
 		 */
 		if (((inp->sctp_flags & SCTP_PCB_FLAGS_NODELAY) == 0) &&
 		    (stcb->asoc.total_flight > 0) && 
-		    (un_sent < (int)stcb->asoc.smallest_mtu)) {
+		    (un_sent < (int)(stcb->asoc.smallest_mtu- SCTP_MIN_OVERHEAD))) {
 
 			/* Ok, Nagle is set on and we have data outstanding. Don't
 			 * send anything and let SACKs drive out the data unless we
 			 * have a "full" segment to send.
 			 */
 #ifdef SCTP_NAGLE_LOGGING
-			sctp_log_nagle_event(stcb, un_sent, SCTP_NAGLE_APPLIED);
+			sctp_log_nagle_event(stcb,  SCTP_NAGLE_APPLIED);
 #endif
 			sctp_pegs[SCTP_NAGLE_NOQ]++;
 			queue_only = 1;
 		} else {
 #ifdef SCTP_NAGLE_LOGGING
 			if((inp->sctp_flags & SCTP_PCB_FLAGS_NODELAY) == 0)
-				sctp_log_nagle_event(stcb, un_sent, SCTP_NAGLE_SKIPPED);
+				sctp_log_nagle_event(stcb, SCTP_NAGLE_SKIPPED);
 #endif
 			sctp_pegs[SCTP_NAGLE_OFF]++;
 		}

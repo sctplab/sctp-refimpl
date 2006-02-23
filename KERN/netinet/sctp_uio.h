@@ -561,8 +561,9 @@ struct sctp_rto_log {
 struct sctp_nagle_log {
 	u_int32_t stcb;
 	u_int32_t total_flight;
-	u_int32_t unsent;
-	u_int32_t smallest_mtu;
+	u_int32_t total_in_queue;
+	u_int16_t count_in_queue;
+	u_int16_t count_in_flight;
 };
 
 struct sctp_cwnd_log{
