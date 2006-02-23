@@ -3147,7 +3147,7 @@ sctp_abort_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	sctp_send_abort(m, iphlen, sh, vtag, op_err);
 	if (stcb != NULL) {
 		/* Ok, now lets free it */
-		sctp_free_assoc(inp, stcb);
+		sctp_free_assoc(inp, stcb, 0);
 	} else {
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 			if (LIST_FIRST(&inp->sctp_asoc_list) == NULL) {
@@ -3179,7 +3179,7 @@ sctp_abort_an_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	/* notify the peer */
 	sctp_send_abort_tcb(stcb, op_err);
 	/* now free the asoc */
-	sctp_free_assoc(inp, stcb);
+	sctp_free_assoc(inp, stcb, 0);
 }
 
 void

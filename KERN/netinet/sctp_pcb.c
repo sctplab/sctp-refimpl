@@ -2447,7 +2447,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 				/* Just abandon things in the front states */
 				SCTP_TCB_LOCK(asoc);
 				SCTP_INP_WUNLOCK(inp);
-				sctp_free_assoc(inp, asoc);
+				sctp_free_assoc(inp, asoc, 1);
 				SCTP_INP_WLOCK(inp);
 				continue;
 			} else {
@@ -2476,7 +2476,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 				sctp_send_abort_tcb(asoc, op_err);
 
 				SCTP_INP_WUNLOCK(inp);
-				sctp_free_assoc(inp, asoc);
+				sctp_free_assoc(inp, asoc, 1);
 				SCTP_INP_WLOCK(inp);
 				continue;
 			} else if (TAILQ_EMPTY(&asoc->asoc.send_queue) &&
@@ -2689,15 +2689,8 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 			sctp_send_abort_tcb(asoc, op_err);
 		}
 		cnt++;
-		/*
-		 * sctp_free_assoc() will call sctp_inpcb_free(),
-		 * if SCTP_PCB_FLAGS_SOCKET_GONE set.
-		 * So, we clear it before sctp_free_assoc() making sure
-		 * no double sctp_inpcb_free().
-		 */
-		inp->sctp_flags &= ~SCTP_PCB_FLAGS_SOCKET_GONE;
 		SCTP_INP_WUNLOCK(inp);
-		sctp_free_assoc(inp, asoc);
+		sctp_free_assoc(inp, asoc, 1);
 		SCTP_INP_WLOCK(inp);
 	}
 	while ((sq = TAILQ_FIRST(&inp->sctp_queue_list)) != NULL) {
@@ -3568,7 +3561,7 @@ sctp_iterator_asoc_being_freed(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
  * Free the association after un-hashing the remote port.
  */
 void
-sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
+sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfree)
 {
 	struct sctp_association *asoc;
 	struct sctp_nets *net, *prev;
@@ -3899,7 +3892,8 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 			}
 		}
 	}
-	if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
+	if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) &&
+	    (from_inpcbfree == 0)){
 		sctp_inpcb_free(inp, 0);
 	}
 	splx(s);

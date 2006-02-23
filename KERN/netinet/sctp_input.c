@@ -374,7 +374,7 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 			 * No sense in further INIT's since
 			 * we will get the same param back
 			 */
-			sctp_free_assoc(stcb->sctp_ep, stcb);
+			sctp_free_assoc(stcb->sctp_ep, stcb, 0);
 		}
 		return (-1);
 	}
@@ -392,7 +392,7 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 	    NULL)) {
 		/* Huh, we should abort */
 		sctp_abort_notification(stcb, 0);
-		sctp_free_assoc(stcb->sctp_ep, stcb);
+		sctp_free_assoc(stcb->sctp_ep, stcb, 0);
 		return (-1);
 	}
 	if (op_err) {
@@ -554,7 +554,7 @@ sctp_handle_abort(struct sctp_abort_chunk *cp,
 	sctp_abort_notification(stcb, 0);
 	/* free the tcb */
 	inp = stcb->sctp_ep;
-	sctp_free_assoc(stcb->sctp_ep, stcb);
+	sctp_free_assoc(stcb->sctp_ep, stcb, 0);
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INPUT2) {
 		printf("sctp_handle_abort: finished\n");
@@ -720,7 +720,7 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
 		*/
 	}
 	/* free the TCB but first save off the ep */
-	sctp_free_assoc(stcb->sctp_ep, stcb);
+	sctp_free_assoc(stcb->sctp_ep, stcb, 0);
 }
 
 /*
@@ -871,7 +871,7 @@ sctp_handle_error(struct sctp_chunkhdr *ch,
 				    asoc->max_init_times) {
 					sctp_abort_notification(stcb, 0);
 					/* now free the asoc */
-					sctp_free_assoc(stcb->sctp_ep, stcb);
+					sctp_free_assoc(stcb->sctp_ep, stcb, 0);
 					return (-1);
 				}
 				/* blast back to INIT state */
@@ -1635,14 +1635,14 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 			printf("process_cookie_new: INIT processing failed\n");
 		}
 #endif
-		sctp_free_assoc(inp, stcb);
+		sctp_free_assoc(inp, stcb, 0);
 		return (NULL);
 	}
 	/* load all addresses */
 	if (sctp_load_addresses_from_init(stcb, m, iphlen,
 	    init_offset + sizeof(struct sctp_init_chunk), initack_offset, sh,
 	    init_src)) {
-		sctp_free_assoc(inp, stcb);
+		sctp_free_assoc(inp, stcb, 0);
 		return (NULL);
 	}
 
@@ -1690,7 +1690,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		memcpy(&sin6->sin6_addr, cookie->laddress,
 		    sizeof(sin6->sin6_addr));
 	} else {
-		sctp_free_assoc(inp, stcb);
+		sctp_free_assoc(inp, stcb, 0);
 		return (NULL);
 	}
 
@@ -2205,7 +2205,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 				op_err = sctp_generate_invmanparam(SCTP_CAUSE_OUT_OF_RESC);
 				sctp_abort_association(*inp_p, NULL, m, iphlen,
 				    sh, op_err);
-				sctp_free_assoc(*inp_p, *stcb);
+				sctp_free_assoc(*inp_p, *stcb, 0);
 				return (NULL);
 			}
 			inp = (struct sctp_inpcb *)so->so_pcb;
@@ -2473,7 +2473,7 @@ sctp_handle_shutdown_complete(struct sctp_shutdown_complete_chunk *cp,
 	/* stop the timer */
 	sctp_timer_stop(SCTP_TIMER_TYPE_SHUTDOWN, stcb->sctp_ep, stcb, net);
 	/* free the TCB */
-	sctp_free_assoc(stcb->sctp_ep, stcb);
+	sctp_free_assoc(stcb->sctp_ep, stcb, 0);
 	return;
 }
 
@@ -3831,7 +3831,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					SCTP_TCB_UNLOCK(locked_tcb);
 				*offset = length;
 				if (stcb) {
-					sctp_free_assoc(inp, stcb);
+					sctp_free_assoc(inp, stcb, 0);
 				} else {
 					if (LIST_FIRST(&inp->sctp_asoc_list) == NULL) {
 						/* finish the job now */
@@ -4073,7 +4073,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 				/* We are not interested anymore */
-				sctp_free_assoc(inp, stcb);
+				sctp_free_assoc(inp, stcb, 0);
 				*offset = length;
 				return (NULL);
 			}
