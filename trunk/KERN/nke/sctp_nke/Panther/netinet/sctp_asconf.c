@@ -754,7 +754,7 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset, struct sctp_asconf_chunk
 		case SCTP_SUCCESS_REPORT:
 			/* not valid in an ASCONF chunk */
 			break;
-		case SCTP_ULP_ADAPTION:
+		case SCTP_ULP_ADAPTATION:
 			/* FIX */
 			break;
 		default:

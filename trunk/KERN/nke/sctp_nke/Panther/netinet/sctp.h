@@ -79,6 +79,8 @@ struct sctp_paramhdr {
 #define SCTP_AUTOCLOSE			0x00000005
 #define SCTP_SET_PEER_PRIMARY_ADDR	0x00000006
 #define SCTP_PRIMARY_ADDR		0x00000007
+#define SCTP_ADAPTATION_LAYER		0x00000008
+/* same as above */
 #define SCTP_ADAPTION_LAYER		0x00000008
 #define SCTP_DISABLE_FRAGMENTS		0x00000009
 #define SCTP_PEER_ADDR_PARAMS 		0x0000000a
@@ -94,7 +96,8 @@ struct sctp_paramhdr {
 #define SCTP_AUTH_KEY 			0x00000011
 #define SCTP_HMAC_IDENT 		0x00000012
 #define SCTP_AUTH_SETKEY_ACTIVE 	0x00000013
-
+#define SCTP_FRAGMENT_INTERLEAVE        0x00000014
+#define SCTP_PARTIAL_DELIVERY_POINT     0x00000015
 /*
  * read-only options
  */
@@ -172,7 +175,8 @@ struct sctp_paramhdr {
 #define SCTP_CONNECT_X_COMPLETE         0x00008009
 /* hidden socket option based sctp_peeloff */
 #define SCTP_PEELOFF                    0x0000800a
-
+/* the real worker for sctp_getaddrlen() */
+#define SCTP_GET_ADDR_LEN               0x0000800b
 /* Debug things that need to be purged */
 #define SCTP_SET_INITIAL_DBG_SEQ	0x00009f00
 

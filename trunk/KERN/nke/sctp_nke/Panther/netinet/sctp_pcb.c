@@ -351,6 +351,10 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 			continue;
 		}
 		SCTP_INP_RLOCK(inp);
+		if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
+			SCTP_INP_RUNLOCK(inp);
+			continue;
+		}
 		/* check to see if the ep has one of the addresses */
 		if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) == 0) {
 			/* We are NOT bound all, so look further */
@@ -577,6 +581,15 @@ sctp_findassociation_ep_asconf(struct mbuf *m, int iphlen, int offset,
 	return (stcb);
 }
 
+/* 
+ * rules for use
+ *
+ * 1) If I return a NULL you must decrement any INP ref cnt.
+ * 2) If I find an stcb, both will be locked (locked_tcb and stcb)
+ *    but decrement will be done (if locked == NULL).
+ * 3) Decrement happens on return ONLY if locked == NULL.
+ */
+
 struct sctp_tcb *
 sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
     struct sctp_nets **netp, struct sockaddr *local, struct sctp_tcb *locked_tcb)
@@ -620,17 +633,18 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 				SCTP_INP_DECR_REF(inp);
 				SCTP_INP_WUNLOCK(inp);
 			}
-			if (locked_tcb != NULL) {
+			if ((locked_tcb != NULL) && (locked_tcb != stcb)){
 				SCTP_INP_RLOCK(locked_tcb->sctp_ep);
 				SCTP_TCB_LOCK(locked_tcb);
 				SCTP_INP_RUNLOCK(locked_tcb->sctp_ep);
-				if (stcb != NULL)
-					SCTP_TCB_UNLOCK(stcb);
 			}
 			SCTP_INP_INFO_RUNLOCK();
 			return (stcb);
 		} else {
 			SCTP_INP_WLOCK(inp);
+			if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
+				goto null_return;
+			}
 			stcb = LIST_FIRST(&inp->sctp_asoc_list);
 			if (stcb == NULL) {
 				goto null_return;
@@ -661,6 +675,10 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 						}
 						if (locked_tcb == NULL) {
 							SCTP_INP_DECR_REF(inp);
+						} else if(locked_tcb != stcb) {
+							SCTP_INP_RLOCK(locked_tcb->sctp_ep);
+							SCTP_TCB_LOCK(locked_tcb);
+							SCTP_INP_RUNLOCK(locked_tcb->sctp_ep);
 						}
 						SCTP_INP_WUNLOCK(inp);
 						SCTP_INP_INFO_RUNLOCK();
@@ -678,6 +696,10 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 						}
 						if (locked_tcb == NULL) {
 							SCTP_INP_DECR_REF(inp);
+						} else if(locked_tcb != stcb) {
+							SCTP_INP_RLOCK(locked_tcb->sctp_ep);
+							SCTP_TCB_LOCK(locked_tcb);
+							SCTP_INP_RUNLOCK(locked_tcb->sctp_ep);
 						}
 						SCTP_INP_WUNLOCK(inp);
 						SCTP_INP_INFO_RUNLOCK();
@@ -689,6 +711,9 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 		}
 	} else {
 		SCTP_INP_WLOCK(inp);
+		if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
+			goto null_return;
+		}
 		head = &inp->sctp_tcbhash[SCTP_PCBHASH_ALLADDR(rport,
 							       inp->sctp_hashmark)];
 		if (head == NULL) {
@@ -720,6 +745,10 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 						}
 						if (locked_tcb == NULL) {
 							SCTP_INP_DECR_REF(inp);
+						} else if(locked_tcb != stcb) {
+							SCTP_INP_RLOCK(locked_tcb->sctp_ep);
+							SCTP_TCB_LOCK(locked_tcb);
+							SCTP_INP_RUNLOCK(locked_tcb->sctp_ep);
 						}
 						SCTP_INP_WUNLOCK(inp);
 						SCTP_INP_INFO_RUNLOCK();
@@ -738,6 +767,10 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 						}
 						if (locked_tcb == NULL) {
 							SCTP_INP_DECR_REF(inp);
+						} else if(locked_tcb != stcb) {
+							SCTP_INP_RLOCK(locked_tcb->sctp_ep);
+							SCTP_TCB_LOCK(locked_tcb);
+							SCTP_INP_RUNLOCK(locked_tcb->sctp_ep);
 						}
 						SCTP_INP_WUNLOCK(inp);
 						SCTP_INP_INFO_RUNLOCK();
@@ -791,6 +824,11 @@ sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, caddr_t asoc_id)
 	}
 	LIST_FOREACH(stcb, head, sctp_asocs) {
 		SCTP_INP_RLOCK(stcb->sctp_ep);
+		if(stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
+			SCTP_INP_RUNLOCK(stcb->sctp_ep);
+			SCTP_INP_INFO_RUNLOCK();
+			return (NULL);
+		}
 		SCTP_TCB_LOCK(stcb);
 		SCTP_INP_RUNLOCK(stcb->sctp_ep);
 		if (stcb->asoc.assoc_id == id) {
@@ -818,6 +856,11 @@ sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, caddr_t asoc_id)
 	}
 	LIST_FOREACH(stcb, head, sctp_tcbrestarhash) {
 		SCTP_INP_RLOCK(stcb->sctp_ep);
+		if(stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
+			SCTP_INP_RUNLOCK(stcb->sctp_ep);
+			SCTP_INP_INFO_RUNLOCK();
+			return (NULL);
+		}
 		SCTP_TCB_LOCK(stcb);
 		SCTP_INP_RUNLOCK(stcb->sctp_ep);
 		if (stcb->asoc.assoc_id == id) {
@@ -865,7 +908,10 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 		return (NULL);
 	LIST_FOREACH(inp, head, sctp_hash) {
 		SCTP_INP_RLOCK(inp);
-
+		if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
+			SCTP_INP_RUNLOCK(inp);
+			continue;
+		}
 		if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) &&
 		    (inp->sctp_lport == lport)) {
 			/* got it */
@@ -917,6 +963,10 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 #endif
 	LIST_FOREACH(inp, head, sctp_hash) {
 		SCTP_INP_RLOCK(inp);
+		if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
+			SCTP_INP_RUNLOCK(inp);
+			continue;
+		}
 		if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL)) {
 			SCTP_INP_RUNLOCK(inp);
 			continue;
@@ -1264,6 +1314,11 @@ sctp_findassoc_by_vtag(struct sockaddr *from, uint32_t vtag,
 	}
 	LIST_FOREACH(stcb, head, sctp_asocs) {
 		SCTP_INP_RLOCK(stcb->sctp_ep);
+		if(stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
+			SCTP_INP_RUNLOCK(stcb->sctp_ep);
+			SCTP_INP_INFO_RUNLOCK();
+			return (NULL);
+		}
 		SCTP_TCB_LOCK(stcb);
 		SCTP_INP_RUNLOCK(stcb->sctp_ep);
 		if (stcb->asoc.my_vtag == vtag) {
@@ -1566,6 +1621,7 @@ sctp_inpcb_alloc(struct socket *so)
 	/* setup socket pointers */
 	inp->sctp_socket = so;
 
+	inp->partial_delivery_point = so->so_rcv.sb_hiwat - 6000;
 	/* setup inpcb socket too */
 	inp->ip_inp.inp.inp_socket = so;
 	inp->sctp_frag_point = SCTP_DEFAULT_MAXSEGMENT;
@@ -1690,8 +1746,8 @@ sctp_inpcb_alloc(struct socket *so)
 	/* number of streams to pre-open on a association */
 	m->pre_open_stream_count = sctp_nr_outgoing_streams_default;
 
-	/* Add adaption cookie */
-	m->adaption_layer_indicator = 0x504C5253;
+	/* Add adaptation cookie */
+	m->adaptation_layer_indicator = 0x504C5253;
 
 	/* seed random number generator */
 	m->random_counter = 1;
@@ -2391,7 +2447,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 				/* Just abandon things in the front states */
 				SCTP_TCB_LOCK(asoc);
 				SCTP_INP_WUNLOCK(inp);
-				sctp_free_assoc(inp, asoc);
+				sctp_free_assoc(inp, asoc, 1);
 				SCTP_INP_WLOCK(inp);
 				continue;
 			} else {
@@ -2420,7 +2476,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 				sctp_send_abort_tcb(asoc, op_err);
 
 				SCTP_INP_WUNLOCK(inp);
-				sctp_free_assoc(inp, asoc);
+				sctp_free_assoc(inp, asoc, 1);
 				SCTP_INP_WLOCK(inp);
 				continue;
 			} else if (TAILQ_EMPTY(&asoc->asoc.send_queue) &&
@@ -2447,6 +2503,24 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		/* now is there some left in our SHUTDOWN state? */
 		if (cnt_in_sd) {
 			inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_GONE;
+			/*
+			 * Now the question comes as to if this EP was ever bound at all.
+			 * If it was, then we must pull it out of the EP hash list.
+			 */
+			if ((inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) !=
+			    SCTP_PCB_FLAGS_UNBOUND) {
+				/*
+				 * ok, this guy has been bound. It's port is somewhere
+				 * in the sctppcbinfo hash table. Remove it!
+				 *
+				 * Note we are depending on lookup by vtag to
+				 * find associations that are dieing. This
+				 * free's the port so we don't have to block
+				 * its useage. The SOCKET_GONE flags will
+				 * prevent us from doing this again.
+				 */
+				LIST_REMOVE(inp, sctp_hash);
+			}
 			splx(s);
 			SCTP_INP_WUNLOCK(inp);
 			SCTP_ASOC_CREATE_UNLOCK(inp);
@@ -2454,6 +2528,21 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 			  SOCK_UNLOCK(so);
 			}
 			return;
+		}
+	}
+
+	if((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
+		/*
+		 * Now the question comes as to if this EP was ever bound at all.
+		 * If it was, then we must pull it out of the EP hash list.
+		 */
+		if ((inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) !=
+		    SCTP_PCB_FLAGS_UNBOUND) {
+			/*
+			 * ok, this guy has been bound. It's port is somewhere
+			 * in the sctppcbinfo hash table. Remove it!
+			 */
+			LIST_REMOVE(inp, sctp_hash);
 		}
 	}
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
@@ -2475,29 +2564,32 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	callout_stop(&inp->sctp_ep.signature_change.timer);
 
 	if (locked_so) {
-	/* First take care of socket level things */
-	  if((so->so_rcv.sb_mb == NULL) && (so->so_rcv.sb_cc)) {
-	    printf("Strange, so->so_rcv.sb_mb was NULL count was %d?\n",
-		   (int)so->so_rcv.sb_cc);
-	    so->so_rcv.sb_cc = 0;
-	  }
-	  if((so->so_rcv.sb_mb == NULL) && (so->so_rcv.sb_mbcnt)) {
-	    printf("Strange, so->so_rcv.sb_mb was NULL mb count was %d?\n",
-		   (int)so->so_rcv.sb_mbcnt);
-	    so->so_rcv.sb_mbcnt = 0;
-	  }
-	  if(so->so_snd.sb_cc > 0) {
-	    /* we never really use the send buf
-	     * so its always safe to zero it.
-	     */
- 	    so->so_snd.sb_cc = 0;
-	  }
-	  if(so->so_rcv.sb_mb && (so->so_rcv.sb_mb->m_len == 0)) {
-	    printf("Shutdown recovery in progress adding %d to cc:%d\n",
-		   (int)so->so_rcv.sb_mb->m_pkthdr.len,
-		   (int)so->so_rcv.sb_cc);
-	    so->so_rcv.sb_cc += so->so_rcv.sb_mb->m_pkthdr.len;
-	  }
+		/* First take care of socket level things */
+		if((so->so_rcv.sb_mb == NULL) && (so->so_rcv.sb_cc)) {
+			printf("Strange, so->so_rcv.sb_mb was NULL count was %d?\n",
+			       (int)so->so_rcv.sb_cc);
+			so->so_rcv.sb_cc = 0;
+			panic("strange case 1");
+		}
+		if((so->so_rcv.sb_mb == NULL) && (so->so_rcv.sb_mbcnt)) {
+			printf("Strange, so->so_rcv.sb_mb was NULL mb count was %d?\n",
+			       (int)so->so_rcv.sb_mbcnt);
+			so->so_rcv.sb_mbcnt = 0;
+			panic("strange case 2");
+		}
+		if(so->so_snd.sb_cc > 0) {
+			/* we never really use the send buf
+			 * so its always safe to zero it.
+			 */
+			so->so_snd.sb_cc = 0;
+		}
+		if(so->so_rcv.sb_mb && (so->so_rcv.sb_mb->m_len == 0)) {
+			printf("Shutdown recovery in progress adding %d to cc:%d\n",
+			       (int)so->so_rcv.sb_mb->m_pkthdr.len,
+			       (int)so->so_rcv.sb_cc);
+			so->so_rcv.sb_cc += so->so_rcv.sb_mb->m_pkthdr.len;
+			panic("strange case 3");
+		}
 #ifdef IPSEC
 #ifdef __OpenBSD__
 	/* XXX IPsec cleanup here */
@@ -2597,15 +2689,8 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 			sctp_send_abort_tcb(asoc, op_err);
 		}
 		cnt++;
-		/*
-		 * sctp_free_assoc() will call sctp_inpcb_free(),
-		 * if SCTP_PCB_FLAGS_SOCKET_GONE set.
-		 * So, we clear it before sctp_free_assoc() making sure
-		 * no double sctp_inpcb_free().
-		 */
-		inp->sctp_flags &= ~SCTP_PCB_FLAGS_SOCKET_GONE;
 		SCTP_INP_WUNLOCK(inp);
-		sctp_free_assoc(inp, asoc);
+		sctp_free_assoc(inp, asoc, 1);
 		SCTP_INP_WLOCK(inp);
 	}
 	while ((sq = TAILQ_FIRST(&inp->sctp_queue_list)) != NULL) {
@@ -2627,18 +2712,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 
 	inp_save = LIST_NEXT(inp, sctp_list);
 	LIST_REMOVE(inp, sctp_list);
-	/*
-	 * Now the question comes as to if this EP was ever bound at all.
-	 * If it was, then we must pull it out of the EP hash list.
-	 */
-	if ((inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) !=
-	    SCTP_PCB_FLAGS_UNBOUND) {
-		/*
-		 * ok, this guy has been bound. It's port is somewhere
-		 * in the sctppcbinfo hash table. Remove it!
-		 */
-		LIST_REMOVE(inp, sctp_hash);
-	}
+
         /* fix any iterators only after out of the list */
 	sctp_iterator_inp_being_freed(inp, inp_save);
 	SCTP_ITERATOR_UNLOCK();
@@ -2913,7 +2987,15 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	net->RTO = stcb->asoc.initial_rto;
 	stcb->asoc.numnets++;
 	net->ref_count = 1;
-
+	net->tos_flowlabel = 0;
+#ifdef AF_INET
+	if(newaddr->sa_family == AF_INET)
+		net->tos_flowlabel = stcb->asoc.default_tos;
+#endif
+#ifdef AF_INET6
+	if(newaddr->sa_family == AF_INET6)
+		net->tos_flowlabel = stcb->asoc.default_flowlabel;
+#endif
 	/* Init the timer structure */
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 	callout_init(&net->rxt_timer.timer, 1);
@@ -3479,7 +3561,7 @@ sctp_iterator_asoc_being_freed(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
  * Free the association after un-hashing the remote port.
  */
 void
-sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
+sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfree)
 {
 	struct sctp_association *asoc;
 	struct sctp_nets *net, *prev;
@@ -3810,7 +3892,8 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 			}
 		}
 	}
-	if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
+	if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) &&
+	    (from_inpcbfree == 0)){
 		sctp_inpcb_free(inp, 0);
 	}
 	splx(s);
@@ -4537,6 +4620,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 	/* does the source address already exist? if so skip it */
 	l_inp = inp = stcb->sctp_ep;
 	stcb_tmp = sctp_findassociation_ep_addr(&inp, sa, &net_tmp, local_sa, stcb);
+
 	if ((stcb_tmp == NULL && inp == stcb->sctp_ep) || inp == NULL) {
 		/* we must add the source address */
 		/* no scope set here since we have a tcb already. */
@@ -4556,6 +4640,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			net_tmp->dest_state &= ~SCTP_ADDR_NOT_IN_ASSOC;
 		} else if (stcb_tmp != stcb) {
 			/* It belongs to another association? */
+			SCTP_TCB_UNLOCK(stcb_tmp);
 			return (-1);
 		}
 	}
@@ -4723,14 +4808,14 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			}
 		} else if (ptype == SCTP_ECN_CAPABLE) {
 			stcb->asoc.ecn_allowed = 1;
-		} else if (ptype == SCTP_ULP_ADAPTION) {
+		} else if (ptype == SCTP_ULP_ADAPTATION) {
 			if (stcb->asoc.state != SCTP_STATE_OPEN) {
-				struct sctp_adaption_layer_indication ai, *aip;
+				struct sctp_adaptation_layer_indication ai, *aip;
 
 				phdr = sctp_get_next_param(m, offset,
 							   (struct sctp_paramhdr *)&ai, sizeof(ai));
-				aip = (struct sctp_adaption_layer_indication *)phdr;
-				sctp_ulp_notify(SCTP_NOTIFY_ADAPTION_INDICATION,
+				aip = (struct sctp_adaptation_layer_indication *)phdr;
+				sctp_ulp_notify(SCTP_NOTIFY_ADAPTATION_INDICATION,
 						stcb, ntohl(aip->indication), NULL);
 			}
 		} else if (ptype == SCTP_SET_PRIM_ADDR) {

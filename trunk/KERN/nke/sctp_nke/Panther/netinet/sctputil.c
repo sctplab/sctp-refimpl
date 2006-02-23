@@ -229,6 +229,24 @@ sctp_log_strm_del_alt(u_int32_t tsn, u_int16_t sseq, int from)
 }
 
 void
+sctp_log_nagle_event(struct sctp_tcb *stcb, int action)
+{
+	sctp_clog[sctp_cwnd_log_at].from = (u_int8_t)action;
+	sctp_clog[sctp_cwnd_log_at].event_type = (u_int8_t)SCTP_LOG_EVENT_NAGLE;
+	sctp_clog[sctp_cwnd_log_at].x.nagle.stcb = (u_int32_t)stcb;
+	sctp_clog[sctp_cwnd_log_at].x.nagle.total_flight = stcb->asoc.total_flight;
+	sctp_clog[sctp_cwnd_log_at].x.nagle.total_in_queue = stcb->asoc.total_output_queue_size;
+	sctp_clog[sctp_cwnd_log_at].x.nagle.count_in_queue = stcb->asoc.chunks_on_out_queue;
+	sctp_clog[sctp_cwnd_log_at].x.nagle.count_in_flight = stcb->asoc.total_flight_count;
+	sctp_cwnd_log_at++;
+	if (sctp_cwnd_log_at >= SCTP_STAT_LOG_SIZE) {
+		sctp_cwnd_log_at = 0;
+		sctp_cwnd_log_rolled = 1;
+	}
+	
+}
+
+void
 sctp_log_sack(u_int32_t old_cumack, u_int32_t cumack, u_int32_t tsn, u_int16_t gaps, u_int16_t dups, int from)
 {
 	sctp_clog[sctp_cwnd_log_at].from = (u_int8_t)from;
@@ -895,6 +913,23 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	asoc->heart_beat_delay = TICKS_TO_MSEC(m->sctp_ep.sctp_timeoutticks[SCTP_TIMER_HEARTBEAT]);
 	asoc->cookie_life = m->sctp_ep.def_cookie_life;
 
+#ifdef AF_INET
+#if defined(__FreeBSD__) || defined(__APPLE__)
+	asoc->default_tos = m->ip_inp.inp.inp_ip_tos;
+#elif defined(__NetBSD__)
+	asoc->default_tos = m->ip_inp.inp.inp_ip.ip_tos;
+#else
+	asoc->default_tos  = m->inp_ip_tos;
+#endif
+#else
+	asoc->default_tos = 0;
+#endif
+
+#ifdef AF_INET6
+	asoc->default_flowlabel = ((struct in6pcb *)m)->in6p_flowinfo;
+#else
+	asoc->default_flowlabel = 0;
+#endif
 	if (override_tag) {
 		asoc->my_vtag = override_tag;
 	} else {
@@ -2344,7 +2379,7 @@ sctp_notify_assoc_change(u_int32_t event, struct sctp_tcb *stcb,
 	 * can to the socket rcv queue.
 	 */
 	if ((event == SCTP_SHUTDOWN_COMP) || (event == SCTP_COMM_LOST)) {
-		sctp_deliver_data(stcb, &stcb->asoc, NULL, 0);
+		sctp_deliver_data(stcb, &stcb->asoc, NULL);
 	}
 
 	/*
@@ -2613,15 +2648,15 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, u_int32_t error,
 }
 
 static void
-sctp_notify_adaption_layer(struct sctp_tcb *stcb,
+sctp_notify_adaptation_layer(struct sctp_tcb *stcb,
 			   u_int32_t error)
 {
 	struct mbuf *m_notify;
-	struct sctp_adaption_event *sai;
+	struct sctp_adaptation_event *sai;
 	struct sockaddr_in6 sin6, lsa6;
 	struct sockaddr *to;
 
-	if (!(stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_ADAPTIONEVNT))
+	if (!(stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_ADAPTATIONEVNT))
 		/* event not enabled */
 		return;
 
@@ -2630,17 +2665,17 @@ sctp_notify_adaption_layer(struct sctp_tcb *stcb,
 		/* no space left */
 		return;
 	m_notify->m_len = 0;
-	sai = mtod(m_notify, struct sctp_adaption_event *);
-	sai->sai_type = SCTP_ADAPTION_INDICATION;
+	sai = mtod(m_notify, struct sctp_adaptation_event *);
+	sai->sai_type = SCTP_ADAPTATION_INDICATION;
 	sai->sai_flags = 0;
-	sai->sai_length = sizeof(struct sctp_adaption_event);
-	sai->sai_adaption_ind = error;
+	sai->sai_length = sizeof(struct sctp_adaptation_event);
+	sai->sai_adaptation_ind = error;
 	sai->sai_assoc_id = sctp_get_associd(stcb);
 
 	m_notify->m_flags |= M_EOR | M_NOTIFICATION;
-	m_notify->m_pkthdr.len = sizeof(struct sctp_adaption_event);
+	m_notify->m_pkthdr.len = sizeof(struct sctp_adaptation_event);
 	m_notify->m_pkthdr.rcvif = 0;
-	m_notify->m_len = sizeof(struct sctp_adaption_event);
+	m_notify->m_len = sizeof(struct sctp_adaptation_event);
 	m_notify->m_next = NULL;
 
 	to = (struct sockaddr *)(struct sockaddr *)&stcb->asoc.primary_destination->ro._l_addr;
@@ -2963,9 +2998,9 @@ sctp_ulp_notify(u_int32_t notification, struct sctp_tcb *stcb,
 		sctp_notify_send_failed(stcb, error,
 		    (struct sctp_tmit_chunk *)data);
 		break;
-	case SCTP_NOTIFY_ADAPTION_INDICATION:
-		/* Here the error is the adaption indication */
-		sctp_notify_adaption_layer(stcb, error);
+	case SCTP_NOTIFY_ADAPTATION_INDICATION:
+		/* Here the error is the adaptation indication */
+		sctp_notify_adaptation_layer(stcb, error);
 		break;
 	case SCTP_NOTIFY_PARTIAL_DELVIERY_INDICATION:
 		sctp_notify_partial_delivery_indication(stcb, error);
@@ -3130,7 +3165,7 @@ sctp_abort_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	sctp_send_abort(m, iphlen, sh, vtag, op_err);
 	if (stcb != NULL) {
 		/* Ok, now lets free it */
-		sctp_free_assoc(inp, stcb);
+		sctp_free_assoc(inp, stcb, 0);
 	} else {
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 			if (LIST_FIRST(&inp->sctp_asoc_list) == NULL) {
@@ -3162,7 +3197,7 @@ sctp_abort_an_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	/* notify the peer */
 	sctp_send_abort_tcb(stcb, op_err);
 	/* now free the asoc */
-	sctp_free_assoc(inp, stcb);
+	sctp_free_assoc(inp, stcb, 0);
 }
 
 void
