@@ -1157,7 +1157,7 @@ void sctp_inpcb_free(struct sctp_inpcb *, int);
 struct sctp_tcb *sctp_aloc_assoc(struct sctp_inpcb *, struct sockaddr *,
 	int, int *, uint32_t);
 
-void sctp_free_assoc(struct sctp_inpcb *, struct sctp_tcb *);
+void sctp_free_assoc(struct sctp_inpcb *, struct sctp_tcb *, int);
 
 int sctp_add_local_addr_ep(struct sctp_inpcb *, struct ifaddr *);
 

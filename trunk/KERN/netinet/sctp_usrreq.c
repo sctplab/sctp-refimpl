@@ -483,7 +483,7 @@ sctp_notify(struct sctp_inpcb *inp,
 			 * either case treat it like a OOTB abort with no TCB
 			 */
 			sctp_abort_notification(stcb, SCTP_PEER_FAULTY);
-			sctp_free_assoc(inp, stcb);
+			sctp_free_assoc(inp, stcb, 0);
 			/* no need to unlock here, since the TCB is gone */
 		}
 	} else {
@@ -1110,7 +1110,7 @@ sctp_disconnect(struct socket *so)
 					sctp_send_abort_tcb(stcb, err);
 				}
 				SCTP_INP_RUNLOCK(inp);
-				sctp_free_assoc(inp, stcb);
+				sctp_free_assoc(inp, stcb, 0);
 				/* No unlock tcb assoc is gone */
 				splx(s);
 				return (0);
@@ -1712,7 +1712,7 @@ sctp_do_connect_x(struct socket *so,
 			incr = sizeof(struct sockaddr_in);
 			if (sctp_add_remote_addr(stcb, sa, 0, 8)) {
 				/* assoc gone no un-lock */
-				sctp_free_assoc(inp, stcb);
+				sctp_free_assoc(inp, stcb, 0);
 				SCTP_ASOC_CREATE_UNLOCK(inp);
 				splx(s);
 				return (ENOBUFS);
@@ -1722,7 +1722,7 @@ sctp_do_connect_x(struct socket *so,
 			incr = sizeof(struct sockaddr_in6);
 			if (sctp_add_remote_addr(stcb, sa, 0, 8)) {
 				/* assoc gone no un-lock */
-				sctp_free_assoc(inp, stcb);
+				sctp_free_assoc(inp, stcb, 0);
 				SCTP_ASOC_CREATE_UNLOCK(inp);
 				splx(s);
 				return (ENOBUFS);
