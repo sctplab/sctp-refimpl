@@ -238,7 +238,7 @@ main(int argc, char **argv)
 				       (int)log.x.cwnd.cnt_in_str);
 			}
 		}else if(log.event_type == SCTP_LOG_EVENT_NAGLE) {
-			printf("%d: stcb:%x total_flight:%u unsent:%u mtu:%u %s",
+			printf("%d: stcb:%x total_flight:%u unsent:%u mtu:%u %s\n",
 			       at,
 			       log.x.nagle.stcb,
 			       log.x.nagle.total_flight,
