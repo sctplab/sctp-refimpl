@@ -213,7 +213,7 @@
 #define SCTP_NO_FR_UNLESS_SEGMENT_SMALLER 1
 
 /* default max I can burst out after a fast retransmit */
-#define SCTP_DEF_MAX_BURST 8
+#define SCTP_DEF_MAX_BURST 4
 
 /* Packet transmit states in the sent field */
 #define SCTP_DATAGRAM_UNSENT		0
