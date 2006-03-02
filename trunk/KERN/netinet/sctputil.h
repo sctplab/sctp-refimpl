@@ -260,7 +260,7 @@ void rto_logging(struct sctp_nets *net, int from);
 
 void sctp_log_lock(struct sctp_inpcb *inp, struct sctp_tcb *stcb, uint8_t from);
 void sctp_log_maxburst(struct sctp_tcb *stcb, struct sctp_nets *, int, int, uint8_t);
-void sctp_log_block(uint8_t, struct socket *, struct sctp_association *);
+void sctp_log_block(uint8_t, struct socket *, struct sctp_association *, int);
 void sctp_log_rwnd(uint8_t, u_int32_t, u_int32_t, u_int32_t );
 void sctp_log_mbcnt(uint8_t, u_int32_t, u_int32_t, u_int32_t, u_int32_t);
 void sctp_log_rwnd_set(uint8_t, u_int32_t, u_int32_t, u_int32_t, u_int32_t);
