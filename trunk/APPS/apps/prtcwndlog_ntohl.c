@@ -226,14 +226,14 @@ main(int argc, char **argv)
 				       (int)log.x.cwnd.cnt_in_str);
 			}else {
 				printf("%u Network:%x at cwnd_event (CWND) cwnd:%d flight:%d pq:%x atpc:%d needpc:%d (tsn:%x,sendcnt:%d,strcnt:%d) \n",
-				       (u_int)log.time_event,
-				       (u_int)log.x.cwnd.net,
-				       log.x.cwnd.cwnd_new_value,
-				       log.x.cwnd.inflight,
-				       (u_int)log.x.cwnd.pseudo_cumack,
+				       ntohl((u_int)log.time_event),
+				       ntohl((u_int)log.x.cwnd.net),
+				       ntohl(log.x.cwnd.cwnd_new_value),
+				       ntohl(log.x.cwnd.inflight),
+				       (u_int)ntohl(log.x.cwnd.pseudo_cumack),
 				       log.x.cwnd.meets_pseudo_cumack,
 				       log.x.cwnd.need_new_pseudo_cumack,
-				       (u_int)log.x.cwnd.cwnd_augment,
+				       ntohl((u_int)log.x.cwnd.cwnd_augment),
 				       (int)log.x.cwnd.cnt_in_send,
 				       (int)log.x.cwnd.cnt_in_str);
 			}
@@ -365,11 +365,11 @@ main(int argc, char **argv)
 		}else if(log.event_type == SCTP_LOG_EVENT_MAXBURST) {
 			if(log.from == SCTP_MAX_BURST_ERROR_STOP) {
 				printf("%u: Network:%x Flight:%d burst cnt:%d - send error:%d %s (sendcnt:%d strcnt:%d)\n",
-				       (u_int)log.time_event,
-				       (u_int)log.x.cwnd.net,
-				       (int)log.x.cwnd.inflight,
-				       (int)log.x.cwnd.cwnd_augment,
-				       (int)log.x.cwnd.cwnd_new_value,
+				       ntohl((u_int)log.time_event),
+				       ntohl((u_int)log.x.cwnd.net),
+				       (int)ntohl(log.x.cwnd.inflight),
+				       (int)ntohl(log.x.cwnd.cwnd_augment),
+				       (int)ntohl(log.x.cwnd.cwnd_new_value),
 				       from_str[log.from],
 				       (int)log.x.cwnd.cnt_in_send,
 				       (int)log.x.cwnd.cnt_in_str
@@ -398,15 +398,19 @@ main(int argc, char **argv)
 			}
 
 		}else if(log.event_type == SCTP_LOG_EVENT_BLOCK) {
-			printf("%d:mb-max:%d mb-used:%d sb-max:%d sb-used:%d send/sent cnt:%d strq_cnt:%d from %s\n",
+			printf("%d:(mbmx:%d < mb-use:%d) || (sb_mx:%d < sb_cc:%d + snd:%d) || (%d > MAX CHUNK) %s(BLK_EVENT %d:%d)\n",
 			       at,
 			       (ntohs(log.x.blk.maxmb)*1024),
 			       (int)ntohl(log.x.blk.onmb),
+
 			       (ntohs(log.x.blk.maxsb)*1024),
 			       (int)ntohl(log.x.blk.onsb),
+			       (int)ntohs(log.x.blk.sndlen),
+			       ntohs(log.x.blk.chunks_on_oque),
+			       from_str[log.from],
 			       ntohs(log.x.blk.send_sent_qcnt),
-			       ntohs(log.x.blk.stream_qcnt),
-			       from_str[log.from]);
+			       ntohs(log.x.blk.stream_qcnt)
+				);
 		}else if(log.event_type == SCTP_LOG_EVENT_STRM) {
 			if((log.from == SCTP_STR_LOG_FROM_INSERT_MD) ||
 			   (log.from == SCTP_STR_LOG_FROM_INSERT_TL)) {
