@@ -460,6 +460,9 @@ struct sctp_blk_args {
 	u_int16_t maxsb;		/* in 1k bytes */
 	u_int16_t send_sent_qcnt;	/* chnk cnt */
 	u_int16_t stream_qcnt;		/* chnk cnt */
+	u_int16_t chunks_on_oque;       /* chunks out */
+	u_int16_t sndlen;		/* len of send being attempted */
+
 };
 
 /*
