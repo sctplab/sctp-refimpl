@@ -398,15 +398,18 @@ main(int argc, char **argv)
 			}
 
 		}else if(log.event_type == SCTP_LOG_EVENT_BLOCK) {
-			printf("%d:mb-max:%d mb-used:%d sb-max:%d sb-used:%d send/sent cnt:%d strq_cnt:%d from %s\n",
+			printf("%d:(mbmx:%d < mb-use:%d) || (sb_mx:%d < sb_cc:%d + snd:%d) || (%d > MAX CHUNK) %s(BLK_EVENT %d:%d)\n",
 			       at,
 			       (log.x.blk.maxmb*1024),
 			       (int)log.x.blk.onmb,
 			       (log.x.blk.maxsb*1024),
 			       (int)log.x.blk.onsb,
+			       (int)log.x.blk.sndlen,
+			       log.x.blk.chunks_on_oque,
+			       from_str[log.from],
 			       log.x.blk.send_sent_qcnt,
-			       log.x.blk.stream_qcnt,
-			       from_str[log.from]);
+			       log.x.blk.stream_qcnt
+				);
 		}else if(log.event_type == SCTP_LOG_EVENT_STRM) {
 			if((log.from == SCTP_STR_LOG_FROM_INSERT_MD) ||
 			   (log.from == SCTP_STR_LOG_FROM_INSERT_TL)) {
