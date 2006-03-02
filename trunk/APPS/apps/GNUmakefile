@@ -8,7 +8,7 @@ include $(TOPDIR)/GNUmakeconfig
 #
 include $(TOPDIR)/GNUmakerules
 
-LOCAL_CFLAGS=
+LOCAL_CFLAGS=-g
 LDFLAGS=
 
 ifeq ($(GUESS_HOST),Darwin)
