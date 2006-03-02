@@ -11688,7 +11688,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 			}
 #ifdef SCTP_BLK_LOGGING
 			sctp_log_block(SCTP_BLOCK_LOG_INTO_BLK,
-			    so, asoc);
+			    so, asoc, sndlen);
 #endif
 #if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
 			sbunlock(&so->so_snd, 0); /* MT: FIXME */
@@ -11712,7 +11712,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 			}
 #ifdef SCTP_BLK_LOGGING
 			sctp_log_block(SCTP_BLOCK_LOG_OUTOF_BLK,
-			    so, asoc);
+			    so, asoc, sndlen);
 #endif
 			SCTP_INP_RLOCK(inp);
 			SOCKBUF_UNLOCK(&so->so_snd);

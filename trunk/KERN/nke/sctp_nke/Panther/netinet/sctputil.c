@@ -482,7 +482,7 @@ sctp_log_mbcnt(uint8_t from, u_int32_t total_oq , u_int32_t book, u_int32_t tota
 }
 
 void
-sctp_log_block(uint8_t from, struct socket *so, struct sctp_association *asoc)
+sctp_log_block(uint8_t from, struct socket *so, struct sctp_association *asoc, int sendlen)
 {
 
 	sctp_clog[sctp_cwnd_log_at].from = (u_int8_t)from;
@@ -493,6 +493,12 @@ sctp_log_block(uint8_t from, struct socket *so, struct sctp_association *asoc)
 	sctp_clog[sctp_cwnd_log_at].x.blk.onsb = asoc->total_output_queue_size;
 	sctp_clog[sctp_cwnd_log_at].x.blk.send_sent_qcnt = (u_int16_t)(asoc->send_queue_cnt + asoc->sent_queue_cnt);
 	sctp_clog[sctp_cwnd_log_at].x.blk.stream_qcnt = (u_int16_t)asoc->stream_queue_cnt;
+	sctp_clog[sctp_cwnd_log_at].x.blk.chunks_on_oque = (u_int16_t)asoc->chunks_on_out_queue;
+	if(sendlen > 0x0000ffff){
+		sctp_clog[sctp_cwnd_log_at].x.blk.sndlen = 0xffff;
+	} else {
+		sctp_clog[sctp_cwnd_log_at].x.blk.sndlen = sendlen;
+	}
 	sctp_cwnd_log_at++;
 	if (sctp_cwnd_log_at >= SCTP_STAT_LOG_SIZE) {
 		sctp_cwnd_log_at = 0;
