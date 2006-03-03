@@ -11516,7 +11516,7 @@ extern int sctp_mbuf_threshold_count;
 
 
 static struct mbuf *
-sctp_get_mbuf_for_msg(int space_needed, int *mbcnt, int *error, int want_header)
+sctp_get_mbuf_for_msg(unsigned int space_needed, int *mbcnt, int *error, int want_header)
 {
 	struct mbuf *m = NULL;
 
