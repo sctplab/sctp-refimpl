@@ -139,6 +139,7 @@ int sctp_recvspace = 128 * (1024 +
 				sizeof(struct sockaddr_in)
 #endif
 	);
+int sctp_mbuf_threshold_count = SCTP_DEFAULT_MBUFS_IN_CHAIN;
 int sctp_auto_asconf = SCTP_DEFAULT_AUTO_ASCONF;
 int sctp_ecn_enable = 1;
 int sctp_ecn_nonce = 0;
@@ -696,6 +697,10 @@ SYSCTL_INT(_net_inet_sctp, OID_AUTO, maxburst, CTLFLAG_RW,
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, cwnd_maxburst, CTLFLAG_RW,
 	    &sctp_use_cwnd_based_maxburst, 0,
 	    "Use a CWND adjusting maxburst");
+
+SYSCTL_INT(_net_inet_sctp, OID_AUTO, max_chained_mbufs, CTLFLAG_RW,
+	   &sctp_mbuf_threshold_count, 0,
+	   "Default max number of small mbufs on a chain");
 
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, maxchunks, CTLFLAG_RW,
 	   &sctp_max_chunks_on_queue, 0,
@@ -5151,6 +5156,10 @@ sctp_sysctl(name, namelen, oldp, oldlenp, newp, newlen)
  	case SCTPCTL_MAXCHUNKONQ:
  		return (sysctl_int(oldp, oldlenp, newp, newlen,
  				   &sctp_max_chunks_on_queue));
+
+	case SCTPCTL_MAX_MBUF_CHAIN:
+ 		return (sysctl_int(oldp, oldlenp, newp, newlen,
+				   &sctp_max_mbuf_threshold_count));
  	case SCTPCTL_DELAYED_SACK:
  		return (sysctl_int(oldp, oldlenp, newp, newlen,
  				   &sctp_delayed_sack_time_default));
@@ -5349,6 +5358,14 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
                        SYSCTL_DESCR("Default max chunks on queue per asoc"),
                        NULL, 0, &sctp_max_chunks_on_queue, 0,
                        CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_MAXCHUNKONQ,
+                       CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "max_chained_mbufs",
+                       SYSCTL_DESCR("Default max number of small mbufs on a chain"),
+                       NULL, 0, &sctp_mbuf_threshold_count, 0,
+ 		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_MAX_MBUF_CHAIN,
                        CTL_EOL);
 
        sysctl_createv(clog, 0, NULL, NULL,
