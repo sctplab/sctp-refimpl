@@ -362,6 +362,12 @@
 #define SCTP_BOUND_V6		0x01
 #define SCTP_BOUND_V4		0x02
 
+/* what is the default number of mbufs in a chain I
+ * allow before switching to a
+ * cluster
+ */
+#define SCTP_DEFAULT_MBUFS_IN_CHAIN 5
+
 /* How long a cookie lives in seconds */
 #define SCTP_DEFAULT_COOKIE_LIFE	60
 

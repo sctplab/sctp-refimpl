@@ -11512,31 +11512,56 @@ sctp_send_operr_to(struct mbuf *m, int iphlen,
 	}
 }
 
-static int
-sctp_copy_one(struct mbuf *m, struct uio *uio, int cpsz, int resv_upfront, int *mbcnt)
-{
-	int left, cancpy, willcpy, error;
-	left = cpsz;
+extern int sctp_mbuf_threshold_count;
 
-	if (m == NULL) {
-		/* TSNH */
-		*mbcnt = 0;
-		return (ENOMEM);
+
+static struct mbuf *
+sctp_get_mbuf_for_msg(unsigned int space_needed, int *mbcnt, int *error, int want_header)
+{
+	struct mbuf *m = NULL;
+
+	if (want_header) {
+		MGETHDR(m, M_WAIT, MT_DATA);
+	} else {
+		MGET(m, M_WAIT, MT_DATA);
 	}
-	m->m_len = 0;
-	if ((left+resv_upfront) > (int)MHLEN) {
+	if(m == NULL) {
+		return(NULL);
+	}
+	if(space_needed > (((sctp_mbuf_threshold_count-1) * MLEN) + MHLEN)) {
 		MCLGET(m, M_WAIT);
 		if (m == NULL) {
-			*mbcnt = 0;
-			return (ENOMEM);
+			*error = ENOMEM;
+			return(NULL);
 		}
 		if ((m->m_flags & M_EXT) == 0) {
-			*mbcnt = 0;
-			return (ENOMEM);
+			sctp_m_freem(m);
+			*error = ENOMEM;
+			return(NULL);
 		}
 		*mbcnt += m->m_ext.ext_size;
 	}
 	*mbcnt += MSIZE;
+	return (m);
+}
+
+
+static int
+sctp_copy_one(struct mbuf **mm, struct uio *uio, int cpsz, int resv_upfront, int *mbcnt)
+{
+	int left, cancpy, willcpy, error;
+	struct mbuf *m, *head;
+
+	*mm = NULL;
+	left = cpsz;
+        /* First one gets a header */
+	head = m = sctp_get_mbuf_for_msg((left+resv_upfront), mbcnt, &error, 1);
+	if(m == NULL) {
+		return(error);
+	}
+	/* Add this one for m in now, that way 
+	 * if the alloc fails we won't have a bad cnt.
+	 */
 	cancpy = M_TRAILINGSPACE(m);
 	willcpy = min(cancpy, left);
 	if ((willcpy + resv_upfront) > cancpy) {
@@ -11553,38 +11578,34 @@ sctp_copy_one(struct mbuf *m, struct uio *uio, int cpsz, int resv_upfront, int *
 		} else {
 			MC_ALIGN(m, willcpy);
 		}
+		/* move in user data */
 		error = uiomove(mtod(m, caddr_t), willcpy, uio);
 		if (error) {
+			/* the head goes back to caller, he
+			 * can free the rest 
+			 */
+			*mm = head;
 			return (error);
 		}
 		m->m_len = willcpy;
 		m->m_nextpkt = 0;
 		left -= willcpy;
 		if (left > 0) {
-			MGET(m->m_next, M_WAIT, MT_DATA);
+			m->m_next = sctp_get_mbuf_for_msg(left, mbcnt, &error, 0);
 			if (m->m_next == NULL) {
+				/* the head goes back to caller, he
+				 * can free the rest 
+				 */
+				*mm = head;
 				*mbcnt = 0;
 				return (ENOMEM);
 			}
 			m = m->m_next;
-			m->m_len = 0;
-			*mbcnt += MSIZE;
-			if (left > (int)MHLEN) {
-				MCLGET(m, M_WAIT);
-				if (m == NULL) {
-					*mbcnt = 0;
-					return (ENOMEM);
-				}
-				if ((m->m_flags & M_EXT) == 0) {
-					*mbcnt = 0;
-					return (ENOMEM);
-				}
-				*mbcnt += m->m_ext.ext_size;
-			}
 			cancpy = M_TRAILINGSPACE(m);
 			willcpy = min(cancpy, left);
 		}
 	}
+	*mm = head;
 	return (0);
 }
 
@@ -11897,15 +11918,10 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 		}
 		chk->no_fr_allowed = 0;
 		SCTP_INCR_CHK_COUNT();
-		MGETHDR(mm, M_WAIT, MT_DATA);
-		if (mm == NULL) {
-			error = ENOMEM;
-			goto clean_up;
-		}
 		calc_oh = (tot_out % 4);
 		if(calc_oh)
 			pad_oh = (4 - calc_oh);
-		error = sctp_copy_one(mm, uio, tot_out, resv_in_first, &mbcnt_e);
+		error = sctp_copy_one(&mm, uio, tot_out, resv_in_first, &mbcnt_e);
 		if (error || be.error) {
 			goto clean_up;
 		}
@@ -12009,17 +12025,12 @@ clean_up:
 			cnt_on_queue++;
 			*chk = template;
 			ref_count_add++;
-			MGETHDR(chk->data, M_WAIT, MT_DATA);
-			if (chk->data == NULL) {
-				error = ENOMEM;
-				goto temp_clean_up;
-			}
 			tot_demand = min(tot_out, frag_size);
 			calc_oh = (tot_demand % 4);
 			if(calc_oh)
 				pad_oh = (4 - calc_oh);
 
-			error = sctp_copy_one(chk->data, uio, tot_demand , resv_in_first, &mbcnt_e);
+			error = sctp_copy_one(&chk->data, uio, tot_demand , resv_in_first, &mbcnt_e);
 			if (error || be.error) {
 				goto temp_clean_up;
 			}
@@ -12033,6 +12044,7 @@ clean_up:
 			chk->book_size = SCTP_SIZE32(chk->send_size);
 			remove_cnt++;
 			TAILQ_INSERT_TAIL(&tmp, chk, sctp_next);
+			/* only the first mbuf needs the reservation */
 			tot_out -= tot_demand;
 		}
 		/* Mark the first/last flags. This will
