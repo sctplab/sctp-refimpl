@@ -85,14 +85,17 @@
 #define SCTPCTL_AUTH_DISABLE        32
 #define SCTPCTL_AUTH_HMAC_ID        33
 #define SCTPCTL_ABC_L_VAR           34
+#define SCTPCTL_MAX_MBUF_CHAIN      35
+#define SCTPCTL_CMT_USE_DAC         36
+
 #ifdef SCTP_DEBUG
-#define SCTPCTL_DEBUG               35
-#define SCTPCTL_MAXID		    36
+#define SCTPCTL_DEBUG               37
+#define SCTPCTL_MAXID		    37
 #else
-#define SCTPCTL_MAXID		    35
+#define SCTPCTL_MAXID		    36
 #endif
 
-#define SCTPCTL_CMT_USE_DAC         37
+
 #endif
 
 #ifdef SCTP_DEBUG
@@ -132,8 +135,12 @@
         { "early_fast_retran_msec", CTLTYPE_INT }, \
 	{ "auth_disable", CTLTYPE_INT }, \
 	{ "auth_hmac_id", CTLTYPE_INT }, \
+	{ "abc_l_var", CTLTYPE_INT }, \
+	{ "max_mbuf_chain", CTLTYPE_INT }, \
+	{ "cmt_use_dac", CTLTYPE_INT }, \
 	{ "debug", CTLTYPE_INT }, \
 }
+
 #else
 #define SCTPCTL_NAMES { \
 	{ 0, 0 }, \
@@ -171,6 +178,9 @@
         { "early_fast_retran_msec", CTLTYPE_INT }, \
 	{ "auth_disable", CTLTYPE_INT }, \
 	{ "auth_hmac_id", CTLTYPE_INT }, \
+	{ "abc_l_var", CTLTYPE_INT }, \
+	{ "max_mbuf_chain", CTLTYPE_INT }, \
+	{ "cmt_use_dac", CTLTYPE_INT }, \
 }
 #endif
 
