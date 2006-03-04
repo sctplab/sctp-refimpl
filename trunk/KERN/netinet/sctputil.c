@@ -4022,6 +4022,8 @@ sctp_free_bufspace(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	}
 	if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) &&
 	    ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_CONNECTED))) {
+		SOCKBUF_LOCK(&stcb->sctp_socket->so_snd);
+
 		if (stcb->sctp_socket->so_snd.sb_cc >= tp1->book_size) {
 			stcb->sctp_socket->so_snd.sb_cc -= tp1->book_size;
 		} else {
@@ -4033,6 +4035,8 @@ sctp_free_bufspace(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		} else {
 			stcb->sctp_socket->so_snd.sb_mbcnt = 0;
 		}
+
+		SOCKBUF_UNLOCK(&stcb->sctp_socket->so_snd);
 	}
 }
 

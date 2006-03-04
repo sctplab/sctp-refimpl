@@ -710,8 +710,10 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
 		stcb->sctp_ep->sctp_flags &= ~SCTP_PCB_FLAGS_CONNECTED;
 		/* Set the connected flag to disconnected */
+		SOCKBUF_LOCK(&stcb->sctp_ep->sctp_socket->so_snd);
 		stcb->sctp_ep->sctp_socket->so_snd.sb_cc = 0;
 		stcb->sctp_ep->sctp_socket->so_snd.sb_mbcnt = 0;
+		SOCKBUF_UNLOCK(&stcb->sctp_ep->sctp_socket->so_snd);
 		if(((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) == 0) &&
 		   ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0))
 		  soisdisconnected(stcb->sctp_ep->sctp_socket);

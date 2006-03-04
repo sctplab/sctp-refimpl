@@ -6593,8 +6593,8 @@ zap_by_it_all:
 #endif
 	asoc->total_output_queue_size += (dataout + pad_oh);
 	asoc->total_output_mbuf_queue_size += mbcnt;
-	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
-	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
+	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) ||
+	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
 		so->so_snd.sb_cc += dataout;
 		so->so_snd.sb_mbcnt += mbcnt;
 	}
@@ -8530,7 +8530,9 @@ sctp_send_shutdown(struct sctp_tcb *stcb, struct sctp_nets *net)
 
 	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
+		SOCKBUF_LOCK(&stcb->sctp_ep->sctp_socket->so_snd);
 		stcb->sctp_ep->sctp_socket->so_snd.sb_cc = 0;
+		SOCKBUF_UNLOCK(&stcb->sctp_ep->sctp_socket->so_snd);
 		if(((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) == 0) &&
 		   ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0))
 		  soisdisconnecting(stcb->sctp_ep->sctp_socket);
@@ -10294,7 +10296,11 @@ sctp_send_shutdown_complete(struct sctp_tcb *stcb,
 	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
 		stcb->sctp_ep->sctp_flags &= ~SCTP_PCB_FLAGS_CONNECTED;
+
+		SOCKBUF_LOCK(&stcb->sctp_ep->sctp_socket->so_snd);
 		stcb->sctp_ep->sctp_socket->so_snd.sb_cc = 0;
+		SOCKBUF_UNLOCK(&stcb->sctp_ep->sctp_socket->so_snd);
+
 		if(((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) == 0) &&
 		   ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0))
 		  soisdisconnected(stcb->sctp_ep->sctp_socket);
