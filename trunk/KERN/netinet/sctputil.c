@@ -4020,8 +4020,8 @@ sctp_free_bufspace(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	} else {
 		asoc->total_output_mbuf_queue_size = 0;
 	}
-	if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) &&
-	    ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
+	if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) &&
+	    ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_CONNECTED))) {
 		if (stcb->sctp_socket->so_snd.sb_cc >= tp1->book_size) {
 			stcb->sctp_socket->so_snd.sb_cc -= tp1->book_size;
 		} else {
