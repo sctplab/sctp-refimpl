@@ -11542,6 +11542,7 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int *mbcnt, int *error, int wan
 		*mbcnt += m->m_ext.ext_size;
 	}
 	*mbcnt += MSIZE;
+	m->m_len = 0;
 	return (m);
 }
 
