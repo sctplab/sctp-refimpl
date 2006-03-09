@@ -239,16 +239,16 @@ main(int argc, char **argv)
 			}
 		}else if(log.event_type == SCTP_LOG_EVENT_NAGLE) {
 			int un_sent;
-			un_sent = log.x.nagle.total_in_queue - log.x.nagle.total_flight;
-			un_sent += ((log.x.nagle.count_in_queue - log.x.nagle.count_in_flight) * 16);
+			un_sent = ntohl(log.x.nagle.total_in_queue) - ntohl(log.x.nagle.total_flight);
+			un_sent += ((ntohs(log.x.nagle.count_in_queue) - ntohs(log.x.nagle.count_in_flight)) * 16);
 
 			printf("%d: stcb:%x total_flight:%u total_in_queue:%u c_in_que:%d c_in_flt:%d  un_sent:%d %s\n",
 			       at,
-			       log.x.nagle.stcb,
-			       log.x.nagle.total_flight,
-			       log.x.nagle.total_in_queue,
-			       log.x.nagle.count_in_queue,
-			       log.x.nagle.count_in_flight,
+			       ntohl(log.x.nagle.stcb),
+			       ntohl(log.x.nagle.total_flight),
+			       ntohl(log.x.nagle.total_in_queue),
+			       ntohs(log.x.nagle.count_in_queue),
+			       ntohs(log.x.nagle.count_in_flight),
 			       (un_sent),
 			       from_str[log.from]);
 			
@@ -256,11 +256,11 @@ main(int argc, char **argv)
 			printf("%d: %s stcb:%x sb_cc:%x stcb_sbcc:%x %s:%d\n",
 			       at,
 			       from_str[log.from],
-			       log.x.sb.stcb,
-			       log.x.sb.so_sbcc,
-			       log.x.sb.stcb_sbcc,
+			       ntohl(log.x.sb.stcb),
+			       ntohl(log.x.sb.so_sbcc),
+			       ntohl(log.x.sb.stcb_sbcc),
 			       ((log.from == SCTP_LOG_SBALLOC) ? "increment" : "decrement"),
-			       log.x.sb.incr);
+			       ntohl(log.x.sb.incr));
 		}else if(log.event_type == SCTP_LOG_EVENT_RTT) {
 			if(log.x.rto.rttvar) {
 				printf("%d: Net:%x  Old-Rtt:%d Change:%d Direction=%s from:%s\n",
