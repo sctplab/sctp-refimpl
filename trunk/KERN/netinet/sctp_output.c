@@ -4115,6 +4115,9 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		if ((have_mtu) && (net) && (have_mtu > net->mtu)) {
 			ro->ro_rt->rt_ifp->if_mtu = net->mtu;
 		}
+		if (ro != &iproute) {
+			memcpy(&iproute, ro, sizeof(*ro));
+		}
 		ret = ip_output(m, inp->ip_inp.inp.inp_options,
 				ro, o_flgs, inp->ip_inp.inp.inp_moptions
 #if defined(__OpenBSD__) || (defined(__FreeBSD__) && __FreeBSD_version >= 480000)
