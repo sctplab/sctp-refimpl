@@ -9185,7 +9185,7 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 		/* Ok, it is retransmission time only, we send out only ONE
 		 * packet with a single call off to the retran code.
 		 */
-		if(from_where == SCTP_OUTPUT_FROM_T3) {
+		if(from_where != SCTP_OUTPUT_HB_TMR)
                         /* if its not from a HB then do it */
 			ret = sctp_chunk_retransmission(inp, stcb, asoc, &num_out, &now, &now_filled);
 		} else {
