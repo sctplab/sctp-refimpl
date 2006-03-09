@@ -3808,7 +3808,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				sctp_send_shutdown_ack(stcb,
 				    stcb->asoc.primary_destination);
 				*offset = length;
-				sctp_chunk_output(inp, stcb, 3);
+				sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_CONTROL_PROC);
 				if (locked_tcb)
 					SCTP_TCB_UNLOCK(locked_tcb);
 				return (NULL);
@@ -3863,7 +3863,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			 * to get the cookie echoed
 			 */
 			if ((stcb) && ret == 0)
-				sctp_chunk_output(stcb->sctp_ep, stcb, 2);
+				sctp_chunk_output(stcb->sctp_ep, stcb, SCTP_OUTPUT_FROM_CONTROL_PROC);
 			*offset = length;
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_INPUT3) {
@@ -4537,7 +4537,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 			printf("Calling chunk OUTPUT\n");
 		}
 #endif
-		sctp_chunk_output(inp, stcb, 3);
+		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_CONTROL_PROC);
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_INPUT3) {
 			printf("chunk OUTPUT returns\n");
@@ -4709,7 +4709,7 @@ sctp_input(m, va_alist)
 			if ((inp) && (stcb)) {
 				sctp_send_packet_dropped(stcb, net, m, iphlen,
 							 1);
-				sctp_chunk_output(inp, stcb, 2);
+				sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_INPUT_ERROR);
 			} else if ((inp != NULL) && (stcb == NULL)) {
 				refcount_up = 1;
 			}

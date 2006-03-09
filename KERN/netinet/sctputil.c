@@ -1227,7 +1227,7 @@ sctp_timeout_handler(void *t)
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
 #endif
-		sctp_chunk_output(inp, stcb, 1);
+		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_T3);
 		if ((stcb->asoc.num_send_timers_up == 0) &&
 		    (stcb->asoc.sent_queue_cnt > 0)
 			) {
@@ -1258,7 +1258,7 @@ sctp_timeout_handler(void *t)
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
 #endif
-		sctp_chunk_output(inp, stcb, 4);
+		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_SACK_TMR);
 		break;
 	case SCTP_TIMER_TYPE_SHUTDOWN:
 		if (sctp_shutdown_timer(inp, stcb, net) ) {
@@ -1268,7 +1268,7 @@ sctp_timeout_handler(void *t)
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
 #endif
-		sctp_chunk_output(inp, stcb, 5);
+		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_SHUT_TMR);
 		break;
 	case SCTP_TIMER_TYPE_HEARTBEAT:
 		if (sctp_heartbeat_timer(inp, stcb, net)) {
@@ -1278,7 +1278,7 @@ sctp_timeout_handler(void *t)
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
 #endif
-		sctp_chunk_output(inp, stcb, 6);
+		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_HB_TMR);
 		break;
 	case SCTP_TIMER_TYPE_COOKIE:
 		if (sctp_cookie_timer(inp, stcb, net)) {
@@ -1288,7 +1288,10 @@ sctp_timeout_handler(void *t)
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
 #endif
-		sctp_chunk_output(inp, stcb, 1);
+		/* We consider T3 and Cookie timer pretty much the same 
+		 * with respect to where from in chunk_output.
+		 */
+		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_T3);
 		break;
 	case SCTP_TIMER_TYPE_NEWCOOKIE:
 	{
@@ -1326,7 +1329,7 @@ sctp_timeout_handler(void *t)
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
 #endif
-		sctp_chunk_output(inp, stcb, 7);
+		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_SHUT_ACK_TMR);
 		break;
 	case SCTP_TIMER_TYPE_SHUTDOWNGUARD:
 		sctp_abort_an_association(inp, stcb,
@@ -1340,7 +1343,7 @@ sctp_timeout_handler(void *t)
 			/* no need to unlock on tcb its gone */
 			goto out_decr;
 		}
-		sctp_chunk_output(inp, stcb, 9);
+		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_STRRST_TMR);
 		break;
 	case SCTP_TIMER_TYPE_EARLYFR:
 	        /* Need to do FR of things for net */
@@ -1355,12 +1358,12 @@ sctp_timeout_handler(void *t)
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
 #endif
-		sctp_chunk_output(inp, stcb, 8);
+		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_ASCONF_TMR);
 		break;
 
 	case SCTP_TIMER_TYPE_AUTOCLOSE:
 		sctp_autoclose_timer(inp, stcb, net);
-		sctp_chunk_output(inp, stcb, 10);
+		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_AUTOCLOSE_TMR);
 		did_output = 0;
 		break;
 	case SCTP_TIMER_TYPE_INPKILL:

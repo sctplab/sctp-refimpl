@@ -2491,7 +2491,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 							 asoc->asoc.primary_destination);
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD, asoc->sctp_ep, asoc,
 							 asoc->asoc.primary_destination);
-					sctp_chunk_output(inp, asoc, 1);
+					sctp_chunk_output(inp, asoc, SCTP_OUTPUT_FROM_SHUT_TMR);
 					SCTP_TCB_UNLOCK(asoc);
 				}
 			} else {
