@@ -1151,7 +1151,7 @@ sctp_disconnect(struct socket *so)
 #endif
 					sctp_send_shutdown(stcb,
 							   stcb->asoc.primary_destination);
-					sctp_chunk_output(stcb->sctp_ep, stcb, 1);
+					sctp_chunk_output(stcb->sctp_ep, stcb, SCTP_OUTPUT_FROM_T3);
 					asoc->state = SCTP_STATE_SHUTDOWN_SENT;
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN,
 							 stcb->sctp_ep, stcb,
@@ -1265,7 +1265,7 @@ sctp_shutdown(struct socket *so)
 #endif
 				sctp_send_shutdown(stcb,
 						   stcb->asoc.primary_destination);
-				sctp_chunk_output(stcb->sctp_ep, stcb, 1);
+				sctp_chunk_output(stcb->sctp_ep, stcb, SCTP_OUTPUT_FROM_T3);
 				asoc->state = SCTP_STATE_SHUTDOWN_SENT;
 				sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN,
 						 stcb->sctp_ep, stcb,
@@ -3247,7 +3247,7 @@ sctp_optsset(struct socket *so,
 #else
 		s = splnet();
 #endif
-		sctp_chunk_output(inp, stcb, 12);
+		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_STRRST_REQ);
 		SCTP_TCB_UNLOCK(stcb);
 		splx(s);
 
@@ -4352,7 +4352,7 @@ sctp_usr_recvd(struct socket *so, int flags)
 		      /* Send the sack, with the new rwnd */
 		      sctp_send_sack(stcb);
 		      /* Now do the output */
-		      sctp_chunk_output(inp, stcb, 10);
+		      sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_USR_RCVD);
 		    }
 		    SCTP_TCB_UNLOCK(stcb);
 		  }
@@ -4428,7 +4428,7 @@ sctp_usr_recvd(struct socket *so, int flags)
 			/* Send the sack, with the new rwnd */
 			sctp_send_sack(stcb);
 			/* Now do the output */
-			sctp_chunk_output(inp, stcb, 10);
+			sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_USR_RCVD);
 		}
 	} else {
 		if ((( sq ) && (flags & MSG_EOR) && ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0))

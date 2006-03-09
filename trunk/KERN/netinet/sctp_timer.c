@@ -208,7 +208,7 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 		int old_cwnd;
 		old_cwnd = net->cwnd;
 #endif
-		sctp_chunk_output(inp, stcb, 9);
+		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_EARLY_FR_TMR);
 		/* make a small adjustment to cwnd and
 		 * force to CA.
 		 */
@@ -223,7 +223,7 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 		sctp_log_cwnd(stcb, net,(old_cwnd-net->cwnd) , SCTP_CWND_LOG_FROM_FR);
 #endif
 	} else if (cnt_resend) {
-		sctp_chunk_output(inp, stcb, 9);
+		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_EARLY_FR_TMR);
 	}
 	/* Restart it? */
 	if (net->flight_size < net->cwnd) {
@@ -1479,7 +1479,7 @@ sctp_audit_stream_queues_for_size(struct sctp_inpcb *inp,
 	}
 	if (chks_in_queue) {
 		/* call the output queue function */
-		sctp_chunk_output(inp, stcb, 1);
+		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_T3);
 		if ((TAILQ_EMPTY(&stcb->asoc.send_queue)) &&
 		    (TAILQ_EMPTY(&stcb->asoc.sent_queue))) {
 			/* Probably should go in and make it go back through and add fragments allowed */
@@ -1661,7 +1661,7 @@ void sctp_autoclose_timer(struct sctp_inpcb *inp,
 			 * have hanging data. We can then safely check the
 			 * queues and know that we are clear to send shutdown
 			 */
-			sctp_chunk_output(inp, stcb, 9);
+			sctp_chunk_output(inp, stcb,SCTP_OUTPUT_FROM_AUTOCLOSE_TMR);
 			/* Are we clean? */
 			if (TAILQ_EMPTY(&asoc->send_queue) &&
 			    TAILQ_EMPTY(&asoc->sent_queue)) {
@@ -1781,7 +1781,11 @@ sctp_iterator_timer(struct sctp_iterator *it)
 		/* run function on this one */
 		SCTP_INP_RUNLOCK(it->inp);
 		(*it->function_toapply)(it->inp, it->stcb, it->pointer, it->val);
-		sctp_chunk_output(it->inp, it->stcb, 1);
+
+		/* we lie here, it really needs to have its own type
+		 * but first I must verify that this won't effect things :-0
+		 */
+		sctp_chunk_output(it->inp, it->stcb, SCTP_OUTPUT_FROM_T3);
 		SCTP_TCB_UNLOCK(it->stcb);
 		/* see if we have limited out */
 		if (cnt > SCTP_MAX_ITERATOR_AT_ONCE) {
