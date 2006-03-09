@@ -5921,6 +5921,7 @@ sctp_prepare_chunk(struct sctp_tmit_chunk *template,
 {
 	bzero(template, sizeof(struct sctp_tmit_chunk));
 	template->sent = SCTP_DATAGRAM_UNSENT;
+	template->last_mbuf = NULL;
 	template->flags = 0;
 	/* PR sctp flags */
 	if (stcb->asoc.peer_supports_prsctp) {
@@ -6337,6 +6338,9 @@ sctp_msg_append(struct sctp_tcb *stcb,
 		m = NULL;
 		/* Total in the MSIZE */
 		for (mm = chk->data; mm; mm = mm->m_next) {
+			if(mm->m_next == NULL) {
+				chk->last_mbuf = mm;
+			}
 			mbcnt += MSIZE;
 			if (mm->m_flags & M_EXT) {
 				mbcnt += chk->data->m_ext.ext_size;
@@ -6464,6 +6468,9 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			mbcnt_e = 0;
 			for (mm = chk->data; mm; mm = mm->m_next) {
 				mbcnt_e += MSIZE;
+				if(mm->m_next == NULL) {
+					chk->last_mbuf = mm;
+				}
 				if (mm->m_flags & M_EXT) {
 					mbcnt_e += chk->data->m_ext.ext_size;
 				}
@@ -6635,8 +6642,11 @@ out:
 
 static struct mbuf *
 sctp_copy_mbufchain(struct mbuf *clonechain,
-		    struct mbuf *outchain)
+		    struct mbuf *outchain,
+		    struct mbuf **endofchain)
+
 {
+	struct mbuf *m;
 	struct mbuf *appendchain;
 #if defined(__FreeBSD__) || defined(__NetBSD__)
 	/* Supposedly m_copypacket is an optimization, use it if we can */
@@ -6659,14 +6669,18 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 	}
 	if (outchain) {
 		/* tack on to the end */
-		struct mbuf *m;
-		m = outchain;
-		while (m) {
-			if (m->m_next == NULL) {
-				m->m_next = appendchain;
-				break;
+		if ((endofchain != NULL) &&
+		    (*endofchain != NULL)){
+			(*endofchain)->m_next = appendchain;
+		} else {
+			m = outchain;
+			while (m) {
+				if (m->m_next == NULL) {
+					m->m_next = appendchain;
+					break;
+				}
+				m = m->m_next;
 			}
-			m = m->m_next;
 		}
 		if (outchain->m_flags & M_PKTHDR) {
 			int append_tot;
@@ -6679,8 +6693,30 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 			}
 			outchain->m_pkthdr.len += append_tot;
 		}
+		if(endofchain) {
+			/* save off the end and update the end-chain postion */
+			m = appendchain;
+			while(m) {
+				if(m->m_next == NULL) {
+					*endofchain = m;
+					break;
+				}
+				m = m->m_next;
+			}
+		}
 		return (outchain);
 	} else {
+		if(endofchain) {
+			/* save off the end and update the end-chain postion */
+			m = appendchain;
+			while(m) {
+				if(m->m_next == NULL) {
+					*endofchain = m;
+					break;
+				}
+				m = m->m_next;
+			}
+		}
 		return (appendchain);
 	}
 }
@@ -6700,7 +6736,7 @@ sctp_sendall_iterator(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr, 
 		/* TSNH */
 		return;
 	}
-	m = sctp_copy_mbufchain(ca->m, NULL);
+	m = sctp_copy_mbufchain(ca->m, NULL, NULL);
 	if (m == NULL) {
 		/* can't copy so we are done */
 		ca->cnt_failed++;
@@ -7106,7 +7142,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb,
 			/* For fragmented messages this should not
 			 * run except possibly on the last chunk
 			 */
-			if (sctp_pad_lastmbuf(chk->data, (4 - padval))) {
+			if (sctp_pad_lastmbuf(chk->data, (4 - padval), chk->last_mbuf)) {
 				/* we are in big big trouble no mbufs :< */
 				failed++;
 				break;
@@ -7373,7 +7409,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	 *    sure to combine any control in the control chunk queue also.
 	 */
 	struct sctp_nets *net;
-	struct mbuf *outchain;
+	struct mbuf *outchain, *endoutchain;
 	struct sctp_tmit_chunk *chk, *nchk;
 	struct sctphdr *shdr;
 	/* temp arrays for unlinking */
@@ -7595,7 +7631,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
  			continue;
 		}
 		ctl_cnt = bundle_at = 0;
-		outchain = NULL;
+		endoutchain = outchain = NULL;
 		no_fragmentflg = 1;
 		one_chunk = 0;
 
@@ -7684,7 +7720,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 				 * we take the easy way and do the copy
 				 */
 				outchain = sctp_copy_mbufchain(chk->data,
-							       outchain);
+							       outchain, &endoutchain);
 				if (outchain == NULL) {
 					return (ENOMEM);
 				}
@@ -7846,6 +7882,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 					 * cookie is sent we don't tell them
 					 * any was sent out.
 					 */
+					outchain = endoutchain = NULL;
 					if (!no_out_cnt)
 						*num_out +=  ctl_cnt;
 					/* recalc a clean slate and setup */
@@ -7945,7 +7982,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 						printf("Picking up the chunk\n");
 					}
 #endif
-					outchain = sctp_copy_mbufchain(chk->data, outchain);
+					outchain = sctp_copy_mbufchain(chk->data, outchain, &endoutchain);
 					if (outchain == NULL) {
 #ifdef SCTP_DEBUG
 						if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
@@ -8120,6 +8157,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 			} else {
 				asoc->ifp_had_enobuf = 0;
 			}
+			outchain = endoutchain = NULL;
 			if (bundle_at || hbflag) {
 				/* For data/asconf and hb set time */
 				if (*now_filled == 0) {
@@ -8692,7 +8730,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 	 */
 	struct sctp_tmit_chunk *data_list[SCTP_MAX_DATA_BUNDLING];
 	struct sctp_tmit_chunk *chk, *fwd;
-	struct mbuf *m;
+	struct mbuf *m, *endofchain;
 	struct sctphdr *shdr;
 	int asconf;
 	struct sctp_nets *net;
@@ -8708,7 +8746,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 	fwd_tsn = 0;
 	*cnt_out = 0;
 	fwd = NULL;
-	m = NULL;
+	endofchain = m = NULL;
 #ifdef SCTP_AUDITING_ENABLED
 	sctp_audit_log(0xC3, 1);
 #endif
@@ -8742,7 +8780,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 				fwd_tsn = 1;
 				fwd = chk;
 			}
-			m = sctp_copy_mbufchain(chk->data, m);
+			m = sctp_copy_mbufchain(chk->data, m, &endofchain);
 			break;
 		}
 	}
@@ -8781,6 +8819,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 			sctp_pegs[SCTP_DATA_OUT_ERR]++;
 			return (error);
 		}
+		m = endofchain = NULL;
 		/*
 		 *We don't want to mark the net->sent time here since this
 		 * we use this for HB and retrans cannot measure RTT
@@ -8882,7 +8921,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 
 		if ((chk->send_size <= mtu) || (chk->flags & CHUNK_FLAGS_FRAGMENT_OK)) {
 			/* ok we will add this one */
-			m = sctp_copy_mbufchain(chk->data, m);
+			m = sctp_copy_mbufchain(chk->data, m, &endofchain);
 			if (m == NULL) {
 				return (ENOMEM);
 			}
@@ -8916,7 +8955,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 					continue;
 				}
 				if (fwd->send_size <= mtu) {
-					m = sctp_copy_mbufchain(fwd->data, m);
+					m = sctp_copy_mbufchain(fwd->data, m, &endofchain);
 					if (m == NULL) {
 						return (ENOMEM);
 					}
@@ -8977,6 +9016,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 				sctp_pegs[SCTP_DATA_OUT_ERR]++;
 				return (error);
 			}
+			m = endofchain = NULL;
 			/* For HB's */
 			/*
 			 * We don't want to mark the net->sent time here since
@@ -11563,7 +11603,8 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int *mbcnt, int *error, int wan
 
 
 static int
-sctp_copy_one(struct mbuf **mm, struct uio *uio, int cpsz, int resv_upfront, int *mbcnt)
+sctp_copy_one(struct mbuf **mm, struct uio *uio, int cpsz, int resv_upfront, int *mbcnt, 
+	      int pad, struct mbuf **last_mbuf)
 {
 	int left, cancpy, willcpy, error;
 	struct mbuf *m, *head;
@@ -11571,7 +11612,7 @@ sctp_copy_one(struct mbuf **mm, struct uio *uio, int cpsz, int resv_upfront, int
 	*mm = NULL;
 	left = cpsz;
         /* First one gets a header */
-	head = m = sctp_get_mbuf_for_msg((left+resv_upfront), mbcnt, &error, 1);
+	head = m = sctp_get_mbuf_for_msg((left+resv_upfront+pad), mbcnt, &error, 1);
 	if(m == NULL) {
 		return(error);
 	}
@@ -11579,20 +11620,21 @@ sctp_copy_one(struct mbuf **mm, struct uio *uio, int cpsz, int resv_upfront, int
 	 * if the alloc fails we won't have a bad cnt.
 	 */
 	cancpy = M_TRAILINGSPACE(m);
-	willcpy = min(cancpy, left);
+	willcpy = min((cancpy-pad), left);
 	if ((willcpy + resv_upfront) > cancpy) {
 		willcpy -= resv_upfront;
 	}
+
 	while (left > 0) {
 		/* Align data to the end */
 		if ((m->m_flags & M_EXT) == 0) {
 			if (m->m_flags & M_PKTHDR) {
-				MH_ALIGN(m, willcpy);
+				MH_ALIGN(m, (willcpy+pad));
 			} else {
-				M_ALIGN(m, willcpy);
+				M_ALIGN(m, (willcpy+pad));
 			}
 		} else {
-			MC_ALIGN(m, willcpy);
+			MC_ALIGN(m, (willcpy+pad));
 		}
 		/* move in user data */
 		error = uiomove(mtod(m, caddr_t), willcpy, uio);
@@ -11607,7 +11649,7 @@ sctp_copy_one(struct mbuf **mm, struct uio *uio, int cpsz, int resv_upfront, int
 		m->m_nextpkt = 0;
 		left -= willcpy;
 		if (left > 0) {
-			m->m_next = sctp_get_mbuf_for_msg(left, mbcnt, &error, 0);
+			m->m_next = sctp_get_mbuf_for_msg((left+pad), mbcnt, &error, 0);
 			if (m->m_next == NULL) {
 				/* the head goes back to caller, he
 				 * can free the rest 
@@ -11618,7 +11660,9 @@ sctp_copy_one(struct mbuf **mm, struct uio *uio, int cpsz, int resv_upfront, int
 			}
 			m = m->m_next;
 			cancpy = M_TRAILINGSPACE(m);
-			willcpy = min(cancpy, left);
+			willcpy = min((cancpy-pad), left);
+		} else {
+			*last_mbuf = m;
 		}
 	}
 	*mm = head;
@@ -11633,6 +11677,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 		struct sctp_sndrcvinfo *srcv,
 		struct uio *uio,
 		int flags)
+
 {
 	/* This routine must be very careful in
 	 * its work. Protocol processing is
@@ -11934,14 +11979,15 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 		}
 		chk->no_fr_allowed = 0;
 		SCTP_INCR_CHK_COUNT();
+		sctp_prepare_chunk(chk, stcb, srcv, strq, net);
+
 		calc_oh = (tot_out % 4);
 		if(calc_oh)
 			pad_oh = (4 - calc_oh);
-		error = sctp_copy_one(&mm, uio, tot_out, resv_in_first, &mbcnt_e);
+		error = sctp_copy_one(&mm, uio, tot_out, resv_in_first, &mbcnt_e, pad_oh, &chk->last_mbuf);
 		if (error || be.error) {
 			goto clean_up;
 		}
-		sctp_prepare_chunk(chk, stcb, srcv, strq, net);
 		chk->mbcnt = mbcnt_e;
 		mbcnt += mbcnt_e;
 		mbcnt_e = 0;
@@ -12046,7 +12092,8 @@ clean_up:
 			if(calc_oh)
 				pad_oh = (4 - calc_oh);
 
-			error = sctp_copy_one(&chk->data, uio, tot_demand , resv_in_first, &mbcnt_e);
+			error = sctp_copy_one(&chk->data, uio, tot_demand , resv_in_first, &mbcnt_e, pad_oh,
+					      &chk->last_mbuf);
 			if (error || be.error) {
 				goto temp_clean_up;
 			}
