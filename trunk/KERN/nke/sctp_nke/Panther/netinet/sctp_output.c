@@ -4115,6 +4115,9 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		if ((have_mtu) && (net) && (have_mtu > net->mtu)) {
 			ro->ro_rt->rt_ifp->if_mtu = net->mtu;
 		}
+		if (ro != &iproute) {
+			memcpy(&iproute, ro, sizeof(*ro));
+		}
 		ret = ip_output(m, inp->ip_inp.inp.inp_options,
 				ro, o_flgs, inp->ip_inp.inp.inp_moptions
 #if defined(__OpenBSD__) || (defined(__FreeBSD__) && __FreeBSD_version >= 480000)
@@ -6593,8 +6596,8 @@ zap_by_it_all:
 #endif
 	asoc->total_output_queue_size += (dataout + pad_oh);
 	asoc->total_output_mbuf_queue_size += mbcnt;
-	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
-	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
+	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) ||
+	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
 		so->so_snd.sb_cc += dataout;
 		so->so_snd.sb_mbcnt += mbcnt;
 	}
@@ -8530,7 +8533,9 @@ sctp_send_shutdown(struct sctp_tcb *stcb, struct sctp_nets *net)
 
 	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
+		SOCKBUF_LOCK(&stcb->sctp_ep->sctp_socket->so_snd);
 		stcb->sctp_ep->sctp_socket->so_snd.sb_cc = 0;
+		SOCKBUF_UNLOCK(&stcb->sctp_ep->sctp_socket->so_snd);
 		if(((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) == 0) &&
 		   ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0))
 		  soisdisconnecting(stcb->sctp_ep->sctp_socket);
@@ -9140,7 +9145,13 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 		/* Ok, it is retransmission time only, we send out only ONE
 		 * packet with a single call off to the retran code.
 		 */
-		ret = sctp_chunk_retransmission(inp, stcb, asoc, &num_out, &now, &now_filled);
+		if(from_where == SCTP_OUTPUT_FROM_T3) {
+                        /* if its not from a HB then do it */
+			ret = sctp_chunk_retransmission(inp, stcb, asoc, &num_out, &now, &now_filled);
+		} else {
+			/* its from any other place, we don't allow retran output (only control) */
+			ret = 1;
+		}
 		if (ret > 0) {
 			/* Can't send anymore */
 #ifdef SCTP_DEBUG
@@ -9181,7 +9192,7 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 #endif
 			break;
 		}
-		if (from_where == 1) {
+		if (from_where == SCTP_OUTPUT_FROM_T3) {
 			/* Only one transmission allowed out of a timeout */
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
@@ -9787,7 +9798,7 @@ sctp_output(inp, m, addr, control, p, flags)
 		sctp_auditing(6, inp, stcb, net);
 #endif
 		sctp_pegs[SCTP_OUTPUT_FRM_SND]++;
-		sctp_chunk_output(inp, stcb, 0);
+		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_USR_SEND);
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_audit_log(0xC0, 2);
 		sctp_auditing(7, inp, stcb, net);
@@ -10294,7 +10305,11 @@ sctp_send_shutdown_complete(struct sctp_tcb *stcb,
 	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
 		stcb->sctp_ep->sctp_flags &= ~SCTP_PCB_FLAGS_CONNECTED;
+
+		SOCKBUF_LOCK(&stcb->sctp_ep->sctp_socket->so_snd);
 		stcb->sctp_ep->sctp_socket->so_snd.sb_cc = 0;
+		SOCKBUF_UNLOCK(&stcb->sctp_ep->sctp_socket->so_snd);
+
 		if(((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) == 0) &&
 		   ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0))
 		  soisdisconnected(stcb->sctp_ep->sctp_socket);
@@ -11542,6 +11557,7 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int *mbcnt, int *error, int wan
 		*mbcnt += m->m_ext.ext_size;
 	}
 	*mbcnt += MSIZE;
+	m->m_len = 0;
 	return (m);
 }
 
@@ -12709,7 +12725,7 @@ sctp_lower_sosend(struct socket *so,
 		s = splnet();
 #endif
 		sctp_pegs[SCTP_OUTPUT_FRM_SND]++;
-		sctp_chunk_output(inp, stcb, 0);
+		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_USR_SEND);
 		splx(s);
 	} else if ((queue_only == 0) &&
 		   (stcb->asoc.peers_rwnd == 0) &&
@@ -12721,7 +12737,7 @@ sctp_lower_sosend(struct socket *so,
 		s = splnet();
 #endif
 		sctp_from_user_send = 1;
-		sctp_chunk_output(inp, stcb, 0);
+		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_USR_SEND);
 		sctp_from_user_send = 0;
 		splx(s);
 

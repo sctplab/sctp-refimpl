@@ -227,6 +227,21 @@
 #define SCTP_DATAGRAM_MARKED		20010
 #define SCTP_FORWARD_TSN_SKIP		30010
 
+/* chunk output send from locations */
+#define SCTP_OUTPUT_FROM_USR_SEND       0
+#define SCTP_OUTPUT_FROM_T3       	1
+#define SCTP_OUTPUT_FROM_INPUT_ERROR    2
+#define SCTP_OUTPUT_FROM_CONTROL_PROC   3
+#define SCTP_OUTPUT_FROM_SACK_TMR       4
+#define SCTP_OUTPUT_FROM_SHUT_TMR       5
+#define SCTP_OUTPUT_FROM_HB_TMR         6
+#define SCTP_OUTPUT_FROM_SHUT_ACK_TMR   7
+#define SCTP_OUTPUT_FROM_ASCONF_TMR     8
+#define SCTP_OUTPUT_FROM_STRRST_TMR     9
+#define SCTP_OUTPUT_FROM_AUTOCLOSE_TMR  10
+#define SCTP_OUTPUT_FROM_EARLY_FR_TMR   11
+#define SCTP_OUTPUT_FROM_STRRST_REQ     12
+#define SCTP_OUTPUT_FROM_USR_RCVD       13
 /* SCTP chunk types are moved sctp.h for application (NAT, FW) use */
 
 /* align to 32-bit sizes */
