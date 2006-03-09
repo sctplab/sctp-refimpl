@@ -2402,11 +2402,11 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	SCTP_INP_WUNLOCK(inp);
 
 	if(so && ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) == 0)) {
-	  locked_so = 1;
+		locked_so = 1;
 #ifdef SCTP_LOCK_LOGGING
-	  sctp_log_lock(inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_SOCK);
+		sctp_log_lock(inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_SOCK);
 #endif
-	  SOCK_LOCK(so);
+		SOCK_LOCK(so);
 	}
 	SCTP_ASOC_CREATE_LOCK(inp);
 
@@ -2491,7 +2491,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 							 asoc->asoc.primary_destination);
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD, asoc->sctp_ep, asoc,
 							 asoc->asoc.primary_destination);
-					sctp_chunk_output(inp, asoc, 1);
+					sctp_chunk_output(inp, asoc, SCTP_OUTPUT_FROM_SHUT_TMR);
 					SCTP_TCB_UNLOCK(asoc);
 				}
 			} else {
@@ -2525,7 +2525,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 			SCTP_INP_WUNLOCK(inp);
 			SCTP_ASOC_CREATE_UNLOCK(inp);
 			if(locked_so) {
-			  SOCK_UNLOCK(so);
+				SOCK_UNLOCK(so);
 			}
 			return;
 		}
@@ -2551,7 +2551,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		SCTP_INP_WUNLOCK(inp);
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		if(locked_so) {
-		  SOCK_UNLOCK(so);
+			SOCK_UNLOCK(so);
 		}
 		return;
 	}
@@ -3852,8 +3852,14 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	if ((inp->sctp_socket->so_snd.sb_cc) ||
 	    (inp->sctp_socket->so_snd.sb_mbcnt)) {
 		/* This will happen when a abort is done */
+		if (from_inpcbfree == 0) {
+			SOCKBUF_LOCK(&inp->sctp_socket->so_snd);
+		}
 		inp->sctp_socket->so_snd.sb_cc = 0;
 		inp->sctp_socket->so_snd.sb_mbcnt = 0;
+		if (from_inpcbfree == 0) {
+			SOCKBUF_UNLOCK(&inp->sctp_socket->so_snd);
+		}
 	}
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)){
@@ -3876,9 +3882,13 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				 * so that it can start a new assoc if it desires.
 				 */
 				inp->sctp_flags &= ~SCTP_PCB_FLAGS_CONNECTED;
-				SOCK_LOCK(inp->sctp_socket);
+				if (from_inpcbfree == 0) {
+					SOCK_LOCK(inp->sctp_socket);
+				}
 				inp->sctp_socket->so_state &= ~(SS_ISCONNECTING|SS_ISDISCONNECTING|SS_ISCONFIRMING|SS_ISCONNECTED);
-				SOCK_UNLOCK(inp->sctp_socket);
+				if (from_inpcbfree == 0) {
+					SOCK_UNLOCK(inp->sctp_socket);
+				}
 			} else {
 				/* For TCP Pool types including
 				 * peeled off ones, we just disconnect
@@ -3888,7 +3898,13 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				 * too since the can't send more flags are
 				 * also set.
 				 */
+				if (from_inpcbfree) {
+					SOCK_UNLOCK(inp->sctp_socket);
+				}
 				soisdisconnected(inp->sctp_socket);
+				if (from_inpcbfree) {
+					SOCK_LOCK(inp->sctp_socket);
+				}
 			}
 		}
 	}
