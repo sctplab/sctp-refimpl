@@ -9145,7 +9145,11 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 		/* Ok, it is retransmission time only, we send out only ONE
 		 * packet with a single call off to the retran code.
 		 */
-		ret = sctp_chunk_retransmission(inp, stcb, asoc, &num_out, &now, &now_filled);
+		if(from != 6) /* if its not from a HB then do it */
+			ret = sctp_chunk_retransmission(inp, stcb, asoc, &num_out, &now, &now_filled);
+		else    /* its from a HB, force a control only path */
+			ret = 1;
+
 		if (ret > 0) {
 			/* Can't send anymore */
 #ifdef SCTP_DEBUG
