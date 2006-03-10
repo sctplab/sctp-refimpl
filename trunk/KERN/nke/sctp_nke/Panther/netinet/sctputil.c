@@ -2360,16 +2360,20 @@ sctp_add_pad_tombuf(struct mbuf *m, int padlen)
 }
 
 int
-sctp_pad_lastmbuf(struct mbuf *m, int padval)
+sctp_pad_lastmbuf(struct mbuf *m, int padval, struct mbuf *last_mbuf)
 {
 	/* find the last mbuf in chain and pad it */
 	struct mbuf *m_at;
 	m_at = m;
-	while (m_at) {
-		if (m_at->m_next == NULL) {
-			return (sctp_add_pad_tombuf(m_at, padval));
+	if(last_mbuf) {
+		return (sctp_add_pad_tombuf(last_mbuf, padval));
+	} else {
+		while (m_at) {
+			if (m_at->m_next == NULL) {
+				return (sctp_add_pad_tombuf(m_at, padval));
+			}
+			m_at = m_at->m_next;
 		}
-		m_at = m_at->m_next;
 	}
 	return (EFAULT);
 }
