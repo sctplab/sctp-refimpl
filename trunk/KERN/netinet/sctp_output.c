@@ -7148,6 +7148,8 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb,
 					failed++;
 					break;
 				}
+			} else {
+				chk->last_mbuf->m_len += (4 - padval);
 			}
 			chk->send_size += (4 - padval);
 		}
@@ -11671,8 +11673,7 @@ sctp_copy_one(struct mbuf **mm, struct uio *uio, int cpsz, int resv_upfront, int
 			if(pad) {
 				/* fix up the pad bytes at the end */
 			        uint8_t *p;
-				
-				p = (uint8_t *)((mtod(m, caddr_t) + m->m_len));
+				p = (u_int8_t *)(mtod(m, caddr_t) + m->m_len);
 				memset(p, 0, pad);
 			}
 		}
