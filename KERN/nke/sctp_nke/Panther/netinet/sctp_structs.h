@@ -297,6 +297,7 @@ struct sctp_tmit_chunk {
 	struct sctp_association *asoc;	/* bp to asoc this belongs to */
 	struct timeval sent_rcv_time;	/* filled in if RTT being calculated */
 	struct mbuf *data;		/* pointer to mbuf chain of data */
+	struct mbuf *last_mbuf;		/* pointer to last mbuf in chain */
 	struct sctp_nets *whoTo;
 	TAILQ_ENTRY(sctp_tmit_chunk) sctp_next;	/* next link */
 	uint8_t do_rtt;
