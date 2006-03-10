@@ -229,8 +229,42 @@ u_int32_t sctp_get_first_vtag_from_sb(struct socket *);
 void sctp_grub_through_socket_buffer(struct sctp_inpcb *, struct socket *,
 				     struct socket *, struct sctp_tcb *);
 
+
+#ifdef SCTP_MBCNT_LOGGING
 void sctp_free_bufspace(struct sctp_tcb *, struct sctp_association *,
 	struct sctp_tmit_chunk *);
+
+#else
+#define sctp_free_bufspace(stcb, asoc, tp1)  \
+	if (tp1->data != NULL) { \
+		if ((asoc)->total_output_queue_size >= tp1->book_size) { \
+			(asoc)->total_output_queue_size -= tp1->book_size; \
+		} else { \
+			(asoc)->total_output_queue_size = 0; \
+		} \
+		if ((asoc)->total_output_mbuf_queue_size >= tp1->mbcnt) { \
+			(asoc)->total_output_mbuf_queue_size -= tp1->mbcnt; \
+		} else { \
+			(asoc)->total_output_mbuf_queue_size = 0; \
+		} \
+		if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) && \
+		    ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_CONNECTED))) { \
+			SOCKBUF_LOCK(&stcb->sctp_socket->so_snd); \
+			if (stcb->sctp_socket->so_snd.sb_cc >= tp1->book_size) { \
+				stcb->sctp_socket->so_snd.sb_cc -= tp1->book_size; \
+			} else { \
+				stcb->sctp_socket->so_snd.sb_cc = 0; \
+			} \
+			if (stcb->sctp_socket->so_snd.sb_mbcnt >= tp1->mbcnt) { \
+				stcb->sctp_socket->so_snd.sb_mbcnt -= tp1->mbcnt; \
+			} else { \
+				stcb->sctp_socket->so_snd.sb_mbcnt = 0; \
+			} \
+			SOCKBUF_UNLOCK(&stcb->sctp_socket->so_snd); \
+		} \
+	} 
+
+#endif
 
 #ifdef HAVE_SCTP_SORECEIVE
 int
