@@ -288,25 +288,27 @@ struct sctp_tmit_chunk {
 		struct sctp_data_chunkrec data;
 		int chunk_id;
 	} rec;
-	int32_t   sent;		/* the send status */
-	int32_t   snd_count;			/* number of times I sent */
-	u_int32_t flags;		/* flags, such as FRAGMENT_OK */
-	u_int32_t   send_size;
-	u_int32_t   book_size;
-	u_int32_t   mbcnt;
 	struct sctp_association *asoc;	/* bp to asoc this belongs to */
 	struct timeval sent_rcv_time;	/* filled in if RTT being calculated */
 	struct mbuf *data;		/* pointer to mbuf chain of data */
 	struct mbuf *last_mbuf;		/* pointer to last mbuf in chain */
 	struct sctp_nets *whoTo;
 	TAILQ_ENTRY(sctp_tmit_chunk) sctp_next;	/* next link */
-	uint8_t do_rtt;
-	uint8_t book_size_scale;
-        u_int8_t addr_over; /* flag which is set if the dest address for this chunk
-			     * is overridden by user. Used for CMT
-			     * (iyengar@cis.udel.edu, 2005/06/21)
-			     */
-	u_int8_t no_fr_allowed; 
+	int32_t    sent;		/* the send status */
+	uint16_t   snd_count;	/* number of times I sent */
+	uint16_t   flags;	/* flags, such as FRAGMENT_OK */
+	uint16_t   send_size;
+	uint16_t   book_size;
+	uint16_t   mbcnt;
+	uint8_t    pad_inplace;
+	uint8_t    do_rtt;
+	uint8_t    book_size_scale;
+        uint8_t    addr_over; /* flag which is set if the dest address for this chunk
+			        * is overridden by user. Used for CMT
+			        * (iyengar@cis.udel.edu, 2005/06/21)
+			        */
+	uint8_t    no_fr_allowed; 
+	uint8_t    reserved;
 };
 
 
