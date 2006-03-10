@@ -5923,6 +5923,8 @@ sctp_prepare_chunk(struct sctp_tmit_chunk *template,
 	template->sent = SCTP_DATAGRAM_UNSENT;
 	template->last_mbuf = NULL;
 	template->flags = 0;
+	template->pad_inplace = 0;
+	template->no_fr_allowed = 0;
 	/* PR sctp flags */
 	if (stcb->asoc.peer_supports_prsctp) {
 		/*
@@ -6329,7 +6331,6 @@ sctp_msg_append(struct sctp_tcb *stcb,
 		if(calc_oh)
 			pad_oh = (4 - calc_oh);
 		sctp_prepare_chunk(chk, stcb, srcv, strq, net);
-		chk->no_fr_allowed = 0;
 		chk->rec.data.rcv_flags |= SCTP_DATA_NOT_FRAG;
 
 		/* no flags yet, FRAGMENT_OK goes here */
@@ -6347,7 +6348,6 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			}
 		}
 		/* fix up the send_size if it is not present */
-		chk->no_fr_allowed = 0;
 		chk->send_size = dataout;
 		chk->book_size = SCTP_SIZE32(chk->send_size);
 		chk->mbcnt = mbcnt;
@@ -6461,7 +6461,6 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			asoc->chunks_on_out_queue++;
 
 			*chk = template;
-			chk->no_fr_allowed = 0;
 			chk->whoTo->ref_count++;
 			chk->data = n;
 			/* Total in the MSIZE */
@@ -7142,10 +7141,13 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb,
 			/* For fragmented messages this should not
 			 * run except possibly on the last chunk
 			 */
-			if (sctp_pad_lastmbuf(chk->data, (4 - padval), chk->last_mbuf)) {
-				/* we are in big big trouble no mbufs :< */
-				failed++;
-				break;
+			if(chk->pad_inplace == 0) {
+				/* this only happens if we did not move the data */
+				if (sctp_pad_lastmbuf(chk->data, (4 - padval), chk->last_mbuf)) {
+					/* we are in big big trouble no mbufs :< */
+					failed++;
+					break;
+				}
 			}
 			chk->send_size += (4 - padval);
 		}
@@ -11606,7 +11608,7 @@ static int
 sctp_copy_one(struct mbuf **mm, struct uio *uio, int cpsz, int resv_upfront, int *mbcnt, 
 	      int pad, struct mbuf **last_mbuf)
 {
-	int left, cancpy, willcpy, error;
+	int left, cancpy, willcpy, error, first=1;
 	struct mbuf *m, *head;
 
 	*mm = NULL;
@@ -11620,21 +11622,24 @@ sctp_copy_one(struct mbuf **mm, struct uio *uio, int cpsz, int resv_upfront, int
 	 * if the alloc fails we won't have a bad cnt.
 	 */
 	cancpy = M_TRAILINGSPACE(m);
-	willcpy = min((cancpy-pad), left);
+	willcpy = min(cancpy, left);
 	if ((willcpy + resv_upfront) > cancpy) {
 		willcpy -= resv_upfront;
 	}
 
 	while (left > 0) {
-		/* Align data to the end */
-		if ((m->m_flags & M_EXT) == 0) {
-			if (m->m_flags & M_PKTHDR) {
-				MH_ALIGN(m, (willcpy+pad));
+		if(first) {
+			/* Align data to the end, first time through */
+			if ((m->m_flags & M_EXT) == 0) {
+				if (m->m_flags & M_PKTHDR) {
+					MH_ALIGN(m, willcpy);
+				} else {
+					M_ALIGN(m, willcpy);
+				}
 			} else {
-				M_ALIGN(m, (willcpy+pad));
+				MC_ALIGN(m, willcpy);
 			}
-		} else {
-			MC_ALIGN(m, (willcpy+pad));
+			first = 0;
 		}
 		/* move in user data */
 		error = uiomove(mtod(m, caddr_t), willcpy, uio);
@@ -11660,9 +11665,16 @@ sctp_copy_one(struct mbuf **mm, struct uio *uio, int cpsz, int resv_upfront, int
 			}
 			m = m->m_next;
 			cancpy = M_TRAILINGSPACE(m);
-			willcpy = min((cancpy-pad), left);
+			willcpy = min(cancpy, left);
 		} else {
 			*last_mbuf = m;
+			if(pad) {
+				/* fix up the pad bytes at the end */
+			        uint8_t *p;
+				
+				p = (uint8_t *)((mtod(m, caddr_t) + m->m_len));
+				memset(p, 0, pad);
+			}
 		}
 	}
 	*mm = head;
@@ -11977,10 +11989,10 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 			SOCKBUF_LOCK(&so->so_snd);
 			goto release;
 		}
-		chk->no_fr_allowed = 0;
 		SCTP_INCR_CHK_COUNT();
 		sctp_prepare_chunk(chk, stcb, srcv, strq, net);
-
+		/* our sctp_copy_one routine always leaves a pad if needed */
+		chk->pad_inplace = 1;
 		calc_oh = (tot_out % 4);
 		if(calc_oh)
 			pad_oh = (4 - calc_oh);
@@ -12086,6 +12098,9 @@ clean_up:
 			SCTP_INCR_CHK_COUNT();
 			cnt_on_queue++;
 			*chk = template;
+			/* our sctp_copy_one routine always leaves a pad, if needed */
+			chk->pad_inplace = 1;
+
 			ref_count_add++;
 			tot_demand = min(tot_out, frag_size);
 			calc_oh = (tot_demand % 4);
@@ -12101,7 +12116,6 @@ clean_up:
 			chk->mbcnt = mbcnt_e;
 			mbcnt += mbcnt_e;
 			mbcnt_e = 0;
-			chk->no_fr_allowed = 0;
 			chk->send_size = tot_demand;
 			chk->data->m_pkthdr.len = tot_demand;
 			chk->book_size = SCTP_SIZE32(chk->send_size);
