@@ -6642,7 +6642,8 @@ out:
 static struct mbuf *
 sctp_copy_mbufchain(struct mbuf *clonechain,
 		    struct mbuf *outchain,
-		    struct mbuf **endofchain)
+		    struct mbuf **endofchain,
+		    int insert_leading_mbuf_for_headers)
 
 {
 	struct mbuf *m;
@@ -6665,6 +6666,22 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 		if (outchain)
 			sctp_m_freem(outchain);
 		return (NULL);
+	}
+	/* if outchain is null, check our special reservation flag */
+	if((outchain == NULL) && (insert_leading_mbuf_for_headers)) {
+		/* yep we need a lead mbuf in this one */
+		MGETHDR(outchain, M_DONTWAIT, MT_HEADER);
+		if(outchain) {
+			/* if we don't hit here we have a problem anyway :o 
+			 * We reserve all the mbuf for prepends.
+			 */
+			outchain->m_data += (MHLEN - 8);
+		}
+		outchain->m_pkthdr.len = 0;
+		outchain->m_len = 0;
+		if(endofchain) {
+			*endofchain = outchain;
+		}
 	}
 	if (outchain) {
 		/* tack on to the end */
@@ -6735,7 +6752,7 @@ sctp_sendall_iterator(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr, 
 		/* TSNH */
 		return;
 	}
-	m = sctp_copy_mbufchain(ca->m, NULL, NULL);
+	m = sctp_copy_mbufchain(ca->m, NULL, NULL, 0);
 	if (m == NULL) {
 		/* can't copy so we are done */
 		ca->cnt_failed++;
@@ -6808,6 +6825,9 @@ sctp_copy_out_all(struct uio *uio, int len)
 		m_freem (ret);
 		return (NULL);
 	}
+	/* save space for the data chunk header */
+	ret->m_data += sizeof(struct sctp_data_chunk);
+
 	cancpy = M_TRAILINGSPACE(ret);
 	willcpy = min(cancpy, left);
 	at = ret;
@@ -7724,7 +7744,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 				 * we take the easy way and do the copy
 				 */
 				outchain = sctp_copy_mbufchain(chk->data,
-							       outchain, &endoutchain);
+							       outchain, &endoutchain, 1);
 				if (outchain == NULL) {
 					return (ENOMEM);
 				}
@@ -7798,21 +7818,11 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 						sctp_timer_start(SCTP_TIMER_TYPE_COOKIE, inp, stcb, net);
 						cookie = 0;
 					}
-					if (outchain->m_len == 0) {
-						/*
-						 * Special case for when you
-						 * get a 0 len mbuf at the
-						 * head due to the lack of a
-						 * MHDR at the beginning.
-						 */
-						outchain->m_len = sizeof(struct sctphdr);
-					} else {
-						M_PREPEND(outchain, sizeof(struct sctphdr), M_DONTWAIT);
-						if (outchain == NULL) {
-							/* no memory */
-							error = ENOBUFS;
-							goto error_out_again;
-						}
+					M_PREPEND(outchain, sizeof(struct sctphdr), M_DONTWAIT);
+					if (outchain == NULL) {
+						/* no memory */
+						error = ENOBUFS;
+						goto error_out_again;
 					}
 					shdr = mtod(outchain, struct sctphdr *);
 					shdr->src_port = inp->sctp_lport;
@@ -7986,7 +7996,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 						printf("Picking up the chunk\n");
 					}
 #endif
-					outchain = sctp_copy_mbufchain(chk->data, outchain, &endoutchain);
+					outchain = sctp_copy_mbufchain(chk->data, outchain, &endoutchain, 1);
 					if (outchain == NULL) {
 #ifdef SCTP_DEBUG
 						if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
@@ -8070,39 +8080,11 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 				sctp_timer_start(SCTP_TIMER_TYPE_SEND, inp, stcb, net);
 			}
 			/* Now send it, if there is anything to send :> */
-			if ((outchain->m_flags & M_PKTHDR) == 0) {
-				struct mbuf *t;
-
-				MGETHDR(t, M_DONTWAIT, MT_HEADER);
-				if (t == NULL) {
-					sctp_m_freem(outchain);
-					return (ENOMEM);
-				}
-				t->m_next = outchain;
-				t->m_pkthdr.len = 0;
-				t->m_pkthdr.rcvif = 0;
-				t->m_len = 0;
-
-				outchain = t;
-				while (t) {
-					outchain->m_pkthdr.len += t->m_len;
-					t = t->m_next;
-				}
-			}
-			if (outchain->m_len == 0) {
-				/* Special case for when you get a 0 len
-				 * mbuf at the head due to the lack
-				 * of a MHDR at the beginning.
-				 */
-				MH_ALIGN(outchain, sizeof(struct sctphdr));
-				outchain->m_len = sizeof(struct sctphdr);
-			} else {
-				M_PREPEND(outchain, sizeof(struct sctphdr), M_DONTWAIT);
-				if (outchain == NULL) {
-					/* out of mbufs */
-					error = ENOBUFS;
-					goto errored_send;
-				}
+			M_PREPEND(outchain, sizeof(struct sctphdr), M_DONTWAIT);
+			if (outchain == NULL) {
+				/* out of mbufs */
+				error = ENOBUFS;
+				goto errored_send;
 			}
 			shdr = mtod(outchain, struct sctphdr *);
 			shdr->src_port = inp->sctp_lport;
@@ -8784,7 +8766,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 				fwd_tsn = 1;
 				fwd = chk;
 			}
-			m = sctp_copy_mbufchain(chk->data, m, &endofchain);
+			m = sctp_copy_mbufchain(chk->data, m, &endofchain, 1);
 			break;
 		}
 	}
@@ -8925,7 +8907,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 
 		if ((chk->send_size <= mtu) || (chk->flags & CHUNK_FLAGS_FRAGMENT_OK)) {
 			/* ok we will add this one */
-			m = sctp_copy_mbufchain(chk->data, m, &endofchain);
+			m = sctp_copy_mbufchain(chk->data, m, &endofchain, 1);
 			if (m == NULL) {
 				return (ENOMEM);
 			}
@@ -8959,7 +8941,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 					continue;
 				}
 				if (fwd->send_size <= mtu) {
-					m = sctp_copy_mbufchain(fwd->data, m, &endofchain);
+					m = sctp_copy_mbufchain(fwd->data, m, &endofchain, 1);
 					if (m == NULL) {
 						return (ENOMEM);
 					}
@@ -11610,7 +11592,8 @@ static int
 sctp_copy_one(struct mbuf **mm, struct uio *uio, int cpsz, int resv_upfront, int *mbcnt, 
 	      int pad, struct mbuf **last_mbuf)
 {
-	int left, cancpy, willcpy, error, first=1;
+	int left, cancpy, willcpy, error;
+	int first=1;
 	struct mbuf *m, *head;
 
 	*mm = NULL;
@@ -11851,12 +11834,15 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 		}
 	}
 	dataout = tot_out = uio->uio_resid;
+#ifdef _DONT_COMPILE_THIS
  	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) {
 		resv_in_first = SCTP_MED_OVERHEAD;
 	} else {
 		resv_in_first = SCTP_MED_V4_OVERHEAD;
 	}
-
+#else
+	resv_in_first = sizeof(struct sctp_data_chunk);
+#endif
 	/* Are we aborting? */
 	if (srcv->sinfo_flags & SCTP_ABORT) {
 		if ((SCTP_GET_STATE(asoc) != SCTP_STATE_COOKIE_WAIT) &&
