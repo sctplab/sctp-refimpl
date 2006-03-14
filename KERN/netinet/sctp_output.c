@@ -7187,17 +7187,22 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb,
 			/* For fragmented messages this should not
 			 * run except possibly on the last chunk
 			 */
+			int dif;
+			dif = 4 - padval;
 			if(chk->pad_inplace == 0) {
 				/* this only happens if we did not move the data */
-				if (sctp_pad_lastmbuf(chk->data, (4 - padval), chk->last_mbuf)) {
+				if (sctp_pad_lastmbuf(chk->data, dif, chk->last_mbuf)) {
 					/* we are in big big trouble no mbufs :< */
 					failed++;
 					break;
 				}
 			} else {
-				chk->last_mbuf->m_len += (4 - padval);
+				chk->last_mbuf->m_len += dif;
+				if(chk->data->m_flags & M_PKTHDR) {
+					chk->data->m_pkthdr.len += dif;
+				}
 			}
-			chk->send_size += (4 - padval);
+			chk->send_size += dif;
 		}
 		/* pull from stream queue */
 		TAILQ_REMOVE(&strq->outqueue, chk, sctp_next);
@@ -11610,6 +11615,10 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int *mbcnt, int *error, int wan
 	}
 	*mbcnt += MSIZE;
 	m->m_len = 0;
+	m->m_next = m->m_nextpkt = NULL;
+	if(want_header) {
+		m->m_pkthdr.len = 0;
+	}
 	return (m);
 }
 
