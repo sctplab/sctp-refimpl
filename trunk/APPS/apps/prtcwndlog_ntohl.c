@@ -338,26 +338,26 @@ main(int argc, char **argv)
 			if(log.from == SCTP_INCREASE_PEER_RWND) {
 				printf("%s - rwnd:%d increase:(%d + overhead:%d) -> %d\n",
 				       from_str[log.from],
-				       log.x.rwnd.rwnd,
-				       log.x.rwnd.send_size,
-				       log.x.rwnd.overhead,
-				       (log.x.rwnd.rwnd + log.x.rwnd.send_size + log.x.rwnd.overhead));
+				       ntohl(log.x.rwnd.rwnd),
+				       ntohl(log.x.rwnd.send_size),
+				       ntohl(log.x.rwnd.overhead),
+				       (ntohl(log.x.rwnd.rwnd) + ntohl(log.x.rwnd.send_size) + ntohl(log.x.rwnd.overhead)));
 			} else if (log.from == SCTP_DECREASE_PEER_RWND) {
 				printf("%s - rwnd:%d decrease:(%d + overhead:%d) -> %d\n",
  				       from_str[log.from],
-				       log.x.rwnd.rwnd,
-				       log.x.rwnd.send_size,
-				       log.x.rwnd.overhead,
-				       (log.x.rwnd.rwnd - (log.x.rwnd.send_size + log.x.rwnd.overhead)));
+				       ntohl(log.x.rwnd.rwnd),
+				       ntohl(log.x.rwnd.send_size),
+				       ntohl(log.x.rwnd.overhead),
+				       (ntohl(log.x.rwnd.rwnd) - (ntohl(log.x.rwnd.send_size) + ntohl(log.x.rwnd.overhead))));
 
 			} else if (log.from == SCTP_SET_PEER_RWND_VIA_SACK) {
 				printf("%s - rwnd:%d decrease:(%d + overhead:%d) arwnd:%d ->%d\n",
  				       from_str[log.from],
-				       log.x.rwnd.rwnd,
-				       log.x.rwnd.send_size,
-				       log.x.rwnd.overhead,
-				       log.x.rwnd.new_rwnd,
-				       (log.x.rwnd.new_rwnd - (log.x.rwnd.send_size + log.x.rwnd.overhead))
+				       ntohl(log.x.rwnd.rwnd),
+				       ntohl(log.x.rwnd.send_size),
+				       ntohl(log.x.rwnd.overhead),
+				       ntohl(log.x.rwnd.new_rwnd),
+				       (ntohl(log.x.rwnd.new_rwnd) - (ntohl(log.x.rwnd.send_size) + ntohl(log.x.rwnd.overhead)))
 					);
 			} else {
 				printf("Unknown RWND event\n");
