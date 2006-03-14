@@ -3945,6 +3945,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		sctp_m_freem(m);
 		return (EFAULT);
 	}
+#ifdef DONT_COMPILE_THIS
 	/* special audit */
 	{
 		struct mbuf *foo;
@@ -3966,7 +3967,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			foo = foo->m_next;
 		}
 	}
-
+#endif
 	/* Calculate the csum and fill in the length of the packet */
 	sctphdr = mtod(m, struct sctphdr *);
 	have_mtu = 0;
