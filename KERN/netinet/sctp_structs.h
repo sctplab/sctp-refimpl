@@ -724,6 +724,8 @@ struct sctp_association {
 	u_int8_t saw_sack_with_frags;
 	u_int8_t in_restart_hash;
 
+	u_int8_t sctp_packet_authenticated;
+
         /* CMT variables */
         u_int8_t cmt_dac_pkts_rcvd;
 	/*
