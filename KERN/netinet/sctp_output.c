@@ -3945,6 +3945,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		sctp_m_freem(m);
 		return (EFAULT);
 	}
+#ifdef RANDYS_SPECIAL_AUDIT
 	/* special audit */
 	{
 		struct mbuf *foo;
@@ -3969,6 +3970,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			foo = foo->m_next;
 		}
 	}
+#endif
 	/* Calculate the csum and fill in the length of the packet */
 	sctphdr = mtod(m, struct sctphdr *);
 	have_mtu = 0;
@@ -3976,6 +3978,11 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 	     (stcb) &&
 	     (stcb->asoc.loopback_scope)) {
 		sctphdr->checksum = 0;
+		/* This can probably now be taken out
+		 * since my audit shows no more 
+		 * bad pktlen's coming in. But we will
+		 * wait a while yet.
+		 */
 		m->m_pkthdr.len = sctp_calculate_len(m);
 	} else {
 		sctphdr->checksum = 0;
