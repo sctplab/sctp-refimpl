@@ -141,6 +141,7 @@
 #define SCTP_LOG_EVENT_NAGLE 13
 #define SCTP_LOCK_UNKNOWN 2
 
+
 /* number of associations by default for zone allocation */
 #define SCTP_MAX_NUM_OF_ASOC	40000
 /* how many addresses per assoc remote and local */
