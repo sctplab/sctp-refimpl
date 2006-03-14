@@ -6722,15 +6722,14 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 		}
 		if (outchain->m_flags & M_PKTHDR) {
 			int append_tot;
-			struct mbuf *t;
-			t = appendchain;
+			m = appendchain;
 			append_tot = 0;
 			while (t) {
-				append_tot += t->m_len;
-				if(endofchain && (t->m_next == NULL)) {
+				append_tot += m->m_len;
+				if(endofchain && (m->m_next == NULL)) {
 					*endofchain = m;
 				}
-				t = t->m_next;
+				m = m->m_next;
 			}
 			outchain->m_pkthdr.len += append_tot;
 		} else {
