@@ -500,6 +500,11 @@ struct sctp_auth_chunk {
 	u_int8_t  hmac[0];
 };
 
+#define SCTP_AUTH_HMAC_ID_SHA1 1
+#define SCTP_AUTH_HMAC_ID_MD5  2
+
+
+
 
 /*
  * we pre-reserve enough room for a ECNE or CWR AND a SACK with no
