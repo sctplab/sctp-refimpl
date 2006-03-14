@@ -3945,6 +3945,28 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		sctp_m_freem(m);
 		return (EFAULT);
 	}
+	/* special audit */
+	{
+		struct mbuf *foo;
+		int foo_len = 0;
+		int foo_goal = 0;
+		foo = m;
+		foo_goal = m->m_pkthdr.len;
+		if(foo_goal == 0) {
+			panic("pkt header len not set");
+		}
+		while(foo) {
+			foo_len += foo->m_len;
+			if(foo_len == foo_goal) {
+				if(foo->m_next != NULL) {
+					panic("Bad chain");
+				}
+				break;
+			}
+			foo = foo->m_next;
+		}
+	}
+
 	/* Calculate the csum and fill in the length of the packet */
 	sctphdr = mtod(m, struct sctphdr *);
 	have_mtu = 0;
@@ -6705,19 +6727,23 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 			append_tot = 0;
 			while (t) {
 				append_tot += t->m_len;
+				if(endofchain && (t->m_next == NULL)) {
+					*endofchain = m;
+				}
 				t = t->m_next;
 			}
 			outchain->m_pkthdr.len += append_tot;
-		}
-		if(endofchain) {
-			/* save off the end and update the end-chain postion */
-			m = appendchain;
-			while(m) {
-				if(m->m_next == NULL) {
-					*endofchain = m;
-					break;
+		} else {
+			if(endofchain) {
+				/* save off the end and update the end-chain postion */
+				m = appendchain;
+				while(m) {
+					if(m->m_next == NULL) {
+						*endofchain = m;
+						break;
+					}
+					m = m->m_next;
 				}
-				m = m->m_next;
 			}
 		}
 		return (outchain);
