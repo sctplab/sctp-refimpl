@@ -401,7 +401,7 @@ struct sctp_pktdrop_chunk {
 struct sctp_stream_reset_out_request {
 	struct sctp_paramhdr ph;
 	u_int32_t request_seq;           /* monotonically increasing seq no */
-	u_int32_t response_seq;		   /* if a reponse, the resp seq no */
+	u_int32_t response_seq;		   /* if a response, the resp seq no */
 	u_int32_t send_reset_at_tsn;       /* last TSN I assigned outbound */
 	u_int16_t list_of_streams[0];      /* if not all list of streams */
 };
@@ -420,13 +420,13 @@ struct sctp_stream_reset_tsn_request {
 
 struct sctp_stream_reset_response {
 	struct sctp_paramhdr ph;
-	u_int32_t response_seq;		   /* if a reponse, the resp seq no */
+	u_int32_t response_seq;		   /* if a response, the resp seq no */
 	u_int32_t result;
 };
 
 struct sctp_stream_reset_response_tsn {
 	struct sctp_paramhdr ph;
-	u_int32_t response_seq;		   /* if a reponse, the resp seq no */
+	u_int32_t response_seq;		   /* if a response, the resp seq no */
 	u_int32_t result;
 	u_int32_t senders_next_tsn;
 	u_int32_t receivers_next_tsn;
@@ -492,18 +492,9 @@ struct sctp_auth_hmac_algo {
 	struct sctp_paramhdr ph;	/* type = 0x8004 */
 	u_int16_t hmac_ids[0];
 };
-/* AUTH hmac_id */
-#define SCTP_AUTH_HMAC_ID_RSVD		0x0000
-#define SCTP_AUTH_HMAC_ID_SHA1		0x0001	/* SHA-1 160 */
-#define SCTP_AUTH_HMAC_ID_MD5		0x0002
-/* temp/private hash algorithms */
-#define SCTP_AUTH_HMAC_ID_MMH		0x8000
-#define SCTP_AUTH_HMAC_ID_SHA256	0x8001
-#define SCTP_AUTH_HMAC_ID_SHA384	0x8002
-#define SCTP_AUTH_HMAC_ID_SHA512	0x8003
 
 struct sctp_auth_chunk {
-	struct sctp_chunkhdr ch;	/* type = 0x84 */
+	struct sctp_chunkhdr ch;
 	u_int16_t shared_key_id;
 	u_int16_t hmac_id;
 	u_int8_t  hmac[0];

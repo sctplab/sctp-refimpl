@@ -1998,15 +1998,6 @@ sctp_optsget(struct socket *so,
 
 	}
 	break;
-#if 0
-	case SCTP_PEER_PUBLIC_KEY:
-	case SCTP_MY_PUBLIC_KEY:
-	case SCTP_SET_AUTH_CHUNKS:
-	case SCTP_SET_AUTH_SECRET:
-		/* not supported yet and until we refine the draft */
-		error = EOPNOTSUPP;
-		break;
-#endif
 	case SCTP_DELAYED_ACK_TIME:
 	{
 		struct sctp_assoc_value *tm;
@@ -3125,14 +3116,6 @@ sctp_optsset(struct socket *so,
 			sctp_cmt_sockopt_use_dac = 1;
 	}
 	break;
-#if 0
-	case SCTP_MY_PUBLIC_KEY:    /* set my public key */
-	case SCTP_SET_AUTH_CHUNKS:  /* set the authenticated chunks required */
-	case SCTP_SET_AUTH_SECRET:  /* set the actual secret for the endpoint */
-		/* not supported yet and until we refine the draft */
-		error = EOPNOTSUPP;
-		break;
-#endif
 	case SCTP_CLR_STAT_LOG:
 #ifdef SCTP_STAT_LOGGING
 		sctp_clr_stat_log();
