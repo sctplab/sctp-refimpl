@@ -303,10 +303,10 @@ struct sctp_tmit_chunk {
 	uint8_t    pad_inplace;
 	uint8_t    do_rtt;
 	uint8_t    book_size_scale;
-        uint8_t    addr_over; /* flag which is set if the dest address for this chunk
-			        * is overridden by user. Used for CMT
-			        * (iyengar@cis.udel.edu, 2005/06/21)
-			        */
+        uint8_t    addr_over; /* flag which is set if the dest address for
+			       * this chunk is overridden by user. Used for
+			       * CMT (iyengar@cis.udel.edu, 2005/06/21)
+			       */
 	uint8_t    no_fr_allowed; 
 	uint8_t    reserved;
 };
@@ -445,8 +445,6 @@ struct sctp_association {
 	/* queue of chunks waiting to be sent into the local stack */
 	struct sctpchunk_listhead pending_reply_queue;
 
-	u_int8_t *chks_that_require_auth;
-
 	u_int32_t cookie_preserve_req;
 	/* ASCONF next seq I am sending out, inits at init-tsn */
 	u_int32_t asconf_seq_out;
@@ -465,7 +463,7 @@ struct sctp_association {
 				 * The tag to be used. if assoc is
 				 * re-initited by remote end, and
 				 * I have unlocked this will be
-				 * regenrated to a new random value.
+				 * regenerated to a new random value.
 				 */
 	u_int32_t peer_vtag;	/* The peers last tag */
 
@@ -690,7 +688,8 @@ struct sctp_association {
 	uint8_t peer_supports_asconf_setprim; /* possibly removable REM */
 	/* pr-sctp support flag */
 	uint8_t peer_supports_prsctp;
-
+	/* peer authentication support flag */
+	uint8_t peer_supports_auth;
 	/* stream resets are supported by the peer */
 	uint8_t peer_supports_strreset;
 
@@ -724,7 +723,6 @@ struct sctp_association {
 	u_int8_t ifp_had_enobuf;
 	u_int8_t saw_sack_with_frags;
 	u_int8_t in_restart_hash;
-	u_int8_t packet_authenticated;
 
         /* CMT variables */
         u_int8_t cmt_dac_pkts_rcvd;

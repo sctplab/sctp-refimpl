@@ -50,6 +50,7 @@ struct sctp_event_subscribe {
 	u_int8_t sctp_shutdown_event;
 	u_int8_t sctp_partial_delivery_event;
 	u_int8_t sctp_adaptation_layer_event;
+	u_int8_t sctp_authentication_event;
 	u_int8_t sctp_stream_reset_events;
 };
 
