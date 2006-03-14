@@ -4374,7 +4374,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 #endif /* SCTP_DEBUG */
 	if(stcb) {
 		/* we always clear this before beginning a packet */
-		stcb->asoc.packet_authenticated = 0;
+		stcb->asoc.sctp_packet_authenticated = 0;
 	}
 	if (IS_SCTP_CONTROL(ch)) {
 		/* process the control portion of the SCTP packet */
