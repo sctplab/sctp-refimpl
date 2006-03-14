@@ -6724,7 +6724,7 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 			int append_tot;
 			m = appendchain;
 			append_tot = 0;
-			while (t) {
+			while (m) {
 				append_tot += m->m_len;
 				if(endofchain && (m->m_next == NULL)) {
 					*endofchain = m;
