@@ -2,12 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
-#ifdef WIN32
-#include <winsock2.h>
-typedef unsigned short u_int16_t;
-#define IPPROTO_SCTP	132
-#define close		closesocket
-#else
 #include <unistd.h>
 #include <sys/time.h>
 #include <netinet/in.h>
@@ -17,98 +11,8 @@ typedef unsigned short u_int16_t;
 #include <sys/signal.h>
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
+#include "cmp_msg.h"
 
-#endif /* WIN32 */
-#ifdef __NetBSD__
-#include <sys/inttypes.h>
-#endif
-
-#ifdef WIN32
-/* getopt() stuff... */
-int	opterr = 1,		/* if error message should be printed */
-	optind = 1,		/* index into parent argv vector */
-	optopt,			/* character checked for validity */
-	optreset;		/* reset getopt */
-char	*optarg;		/* argument associated with option */
-
-#define	BADCH	(int)'?'
-#define	BADARG	(int)':'
-#define	EMSG	""
-
-/*
- * getopt --
- *	Parse argc/argv argument vector.
- */
-int
-getopt(nargc, nargv, ostr)
-	int nargc;
-	char * const *nargv;
-	const char *ostr;
-{
-	static char *place = EMSG;		/* option letter processing */
-	char *oli;				/* option letter list index */
-
-	if (optreset || !*place) {		/* update scanning pointer */
-		optreset = 0;
-		if (optind >= nargc || *(place = nargv[optind]) != '-') {
-			place = EMSG;
-			return (EOF);
-		}
-		if (place[1] && *++place == '-') {	/* found "--" */
-			++optind;
-			place = EMSG;
-			return (EOF);
-		}
-	}      					/* option letter okay? */
-	if ((optopt = (int)*place++) == (int)':' ||
-	    !(oli = strchr(ostr, optopt))) {
-		/*
-		 * if the user didn't specify '-' as an option,
-		 * assume it means EOF.
-		 */
-		if (optopt == (int)'-')
-			return (EOF);
-		if (!*place)
-			++optind;
-		if (opterr && *ostr != ':')
-			(void)fprintf(stderr,
-			    "%s: illegal option -- %c\n", __FILE__, optopt);
-		return (BADCH);
-	}
-	if (*++oli != ':') {			/* don't need argument */
-		optarg = NULL;
-		if (!*place)
-			++optind;
-	}
-	else {					/* need an argument */
-		if (*place)			/* no white space */
-			optarg = place;
-		else if (nargc <= ++optind) {	/* no arg */
-			place = EMSG;
-			if (*ostr == ':')
-				return (BADARG);
-			if (opterr)
-				(void)fprintf(stderr,
-				    "%s: option requires an argument -- %c\n",
-				    __FILE__, optopt);
-			return (BADCH);
-		}
-	 	else				/* white space */
-			optarg = nargv[optind];
-		place = EMSG;
-		++optind;
-	}
-	return (optopt);			/* dump back option letter */
-}
-#endif /* WIN32 */
-
-struct txfr_request{
-	int sizetosend;
-	int blksize;
-	int snd_window;
-	int rcv_window;
-	u_int8_t tos_value;
-};
 
 int
 main(int argc, char **argv)
@@ -122,25 +26,15 @@ main(int argc, char **argv)
 	int snd_buf=200;
 	char *addr_to_bind=NULL;
 	int maxburst=0;
-#ifdef WIN32
-	unsigned short versionReq = MAKEWORD(2,2);
-	WSADATA wsaData;
-	int status;
-	int protocol_touse = IPPROTO_TCP;
-#else
-	int protocol_touse = IPPROTO_SCTP;
-#endif /* WIN32 */
 	struct sockaddr_in bindto,got,from;
 	int cnt_written=0;
 	int maxseg=0;
 	int print_before_write=0;
 	FILE *outlog;
-	char name[64];
-	char cmd[256];	
 
 	optlen = sizeof(optval);
 	sb = 0;
-	while((i= getopt(argc,argv,"tsp:b:Pz:S:m:B:")) != EOF){
+	while((i= getopt(argc,argv,"p:b:Pz:S:m:B:")) != EOF){
 		switch(i){
 		case 'B':
 			addr_to_bind = optarg;
@@ -160,16 +54,6 @@ main(int argc, char **argv)
 		case 'P':
 			print_before_write = 1;
 			break;
-		case 's':
-#ifdef WIN32
-			printf("windows doesn't support SCTP... ignoring...\n");
-#else
-			protocol_touse = IPPROTO_SCTP;
-#endif /* WIN32 */
-			break;
-		case 't':
-			protocol_touse = IPPROTO_TCP;
-			break;
 		case 'p':
 			port = (u_int16_t)strtol(optarg,NULL,0);
 			break;
@@ -178,39 +62,12 @@ main(int argc, char **argv)
 			break;
 		};
 	}
-#ifdef WIN32
-	/* init winsock library */
-	status = WSAStartup( versionReq, &wsaData );
-	if (status != 0 ) {
-		printf("can't init winsock library!\n");
-		return(-1);
-	}
-
-#else
 	signal(SIGPIPE,SIG_IGN);
-#endif /* !WIN32 */
-	fd = socket(AF_INET, SOCK_STREAM, protocol_touse);
+	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
 	if(fd == -1){
 		printf("can't open socket:%d\n",errno);
 		return(-1);
 	}
-	sprintf(name,"./out_log_oferr_tcp.txt");
-#ifndef WIN32
-	if((protocol_touse == IPPROTO_SCTP) && maxburst){
-		int sz;
-		sz = sizeof(maxburst);
-		printf("Setting max burst to %d\n",maxburst);
-
-		if(setsockopt(fd,IPPROTO_SCTP,
-			      SCTP_MAXBURST,
-			      &maxburst, sz) != 0) {
-			perror("Failed maxburst set");
-		}
-		sprintf(name,"./out_log_oferr_sctp.txt");
-
-	}
-#endif /* WIN32 */
-
 	memset(&bindto,0,sizeof(bindto));
 	sa_len = sizeof(bindto);
 #if defined (HAVE_SA_LEN)
@@ -251,9 +108,6 @@ main(int argc, char **argv)
 		return(-1);
 	}
 	if(maxseg){
-#ifdef WIN32
-		printf("windoze doesn't support TCP_MAXSEG... ignorning...\n");
-#else
 		optval = maxseg;	
 		if(protocol_touse == IPPROTO_SCTP){
 			if(setsockopt(newfd, IPPROTO_SCTP, SCTP_MAXSEG, &optval, optlen) != 0){
@@ -264,7 +118,6 @@ main(int argc, char **argv)
 				printf("err:%d could not set maxseg to %d\n",errno,optval);
 			}
 		}
-#endif /* WIN32 */
 	}
 	printf("Got a connection from %x:%d fd:%d\n",
 	       (u_int)ntohl(from.sin_addr.s_addr),
@@ -309,22 +162,12 @@ main(int argc, char **argv)
 	if((sizetosend % blksize) > 0){
 		numblk++;
 	}
-	outlog = fopen(name,"w+");
-
-	printf("Client would like %d bytes in %d byte blocks %d total sends sndbuf:%d\n",
-	       sizetosend,blksize,numblk,optval);
-
-	fprintf(outlog,"Client would like %d bytes in %d byte blocks %d total sends sndbuf:%d\n",
-		sizetosend,blksize,numblk,optval);
-	fclose(outlog);
-	system(cmd);
-	sprintf(cmd, "/bin/echo *************** >> %s", name);
-	system(cmd);
-
 	if(blksize > sizeof(buffer))
 		blksize = sizeof(buffer);
+
 	memset(buffer,0,blksize);
 	strcpy(buffer,"inbetween");
+
 	while(numblk > 0){
 		if(print_before_write){
 			printf("Writting block %8.8d  - %d\r",cnt_written,
@@ -347,9 +190,6 @@ main(int argc, char **argv)
 	close(newfd);
 	printf("\nclosed and done with client\n");
 	goto again;
-#ifdef WIN32
-	WSACleanup();
-#endif /* WIN32 */
 	return(0);
 }
 
