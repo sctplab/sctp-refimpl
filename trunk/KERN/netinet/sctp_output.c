@@ -6709,18 +6709,25 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 	}
 	/* if outchain is null, check our special reservation flag */
 	if((outchain == NULL) && (insert_leading_mbuf_for_headers)) {
-		/* yep we need a lead mbuf in this one */
-		MGETHDR(outchain, M_DONTWAIT, MT_HEADER);
-		if(outchain) {
-			/* if we don't hit here we have a problem anyway :o 
-			 * We reserve all the mbuf for prepends.
-			 */
-			outchain->m_data += (MHLEN - 8);
-			outchain->m_pkthdr.len = 0;
-			outchain->m_len = 0;
-			outchain->m_next = NULL;
-			if(endofchain) {
-				*endofchain = outchain;
+		/* yep we need a lead mbuf in this one if
+		 * we don't have space for:
+		 * - E-net header (12+2+2)
+		 * - IP header (20/40)
+		 * - SCTP Common Header (12)
+		 */
+		if(M_LEADINGSPACE(appendchain) < (SCTP_FIRST_MBUF_RESV)) {
+			MGETHDR(outchain, M_DONTWAIT, MT_HEADER);
+			if(outchain) {
+				/* if we don't hit here we have a problem anyway :o 
+				 * We reserve all the mbuf for prepends.
+				 */
+				outchain->m_data += (MHLEN - 8);
+				outchain->m_pkthdr.len = 0;
+				outchain->m_len = 0;
+				outchain->m_next = NULL;
+				if(endofchain) {
+					*endofchain = outchain;
+				}
 			}
 		}
 	}
