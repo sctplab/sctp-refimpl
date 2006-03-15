@@ -215,7 +215,8 @@
 
 /* default max I can burst out after a fast retransmit */
 #define SCTP_DEF_MAX_BURST 4
-
+/* IP hdr (20/40) + 12+2+2 (enet) + sctp common 12 */
+#define SCTP_FIRST_MBUF_RESV 68 
 /* Packet transmit states in the sent field */
 #define SCTP_DATAGRAM_UNSENT		0
 #define SCTP_DATAGRAM_SENT		1
