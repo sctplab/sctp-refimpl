@@ -501,7 +501,7 @@ sctp6_notify_mbuf(struct sctp_inpcb *inp,
 		  struct sctp_tcb *stcb,
 		  struct sctp_nets *net)
 {
-	unsigned int nxtsz;
+	u_int32_t nxtsz;
 
 	if ((inp == NULL) || (stcb == NULL) || (net == NULL) ||
 	    (icmp6 == NULL) || (sh == NULL)) {
@@ -539,12 +539,12 @@ sctp6_notify_mbuf(struct sctp_inpcb *inp,
 		/* now off to subtract IP_DF flag if needed */
 
 		TAILQ_FOREACH(chk, &stcb->asoc.send_queue, sctp_next) {
-			if ((chk->send_size+IP_HDR_SIZE) > nxtsz) {
+			if ((u_int32_t)(chk->send_size+IP_HDR_SIZE) > nxtsz) {
 				chk->flags |= CHUNK_FLAGS_FRAGMENT_OK;
 			}
 		}
 		TAILQ_FOREACH(chk, &stcb->asoc.sent_queue, sctp_next) {
-			if ((chk->send_size+IP_HDR_SIZE) > nxtsz) {
+			if ((u_int32_t)(chk->send_size+IP_HDR_SIZE) > nxtsz) {
 				/*
 				 * For this guy we also mark for immediate
 				 * resend since we sent to big of chunk
@@ -565,7 +565,7 @@ sctp6_notify_mbuf(struct sctp_inpcb *inp,
 		}
 		TAILQ_FOREACH(strm, &stcb->asoc.out_wheel, next_spoke) {
 			TAILQ_FOREACH(chk, &strm->outqueue, sctp_next) {
-				if ((chk->send_size+IP_HDR_SIZE) > nxtsz) {
+				if ((u_int32_t)(chk->send_size+IP_HDR_SIZE) > nxtsz) {
 					chk->flags |= CHUNK_FLAGS_FRAGMENT_OK;
 				}
 			}
