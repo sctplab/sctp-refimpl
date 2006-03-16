@@ -4,7 +4,7 @@
 #define __sctp_header_h__
 
 /*
- * Copyright (c) 2001, 2002, 2003, 2004, 2005 Cisco Systems, Inc.
+ * Copyright (c) 2001-2006 Cisco Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without

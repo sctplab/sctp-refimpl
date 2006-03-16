@@ -4,7 +4,7 @@
 #define __sctp_uio_h__
 
 /*
- * Copyright (c) 2001-2006 Cisco Systems, Inc.
+ * Copyright (c) 2001, 2002, 2003, 2004, 2005 Cisco Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -239,6 +239,9 @@ struct sctp_adaptation_event {
 	sctp_assoc_t	sai_assoc_id;
 };
 
+struct sctp_setadaptation {
+	u_int32_t	ssb_adaptation_ind;
+};
 /* compatable old spelling */
 struct sctp_adaption_event {
 	u_int16_t	sai_type;
@@ -246,6 +249,10 @@ struct sctp_adaption_event {
 	u_int32_t	sai_length;
 	u_int32_t	sai_adaption_ind;
 	sctp_assoc_t	sai_assoc_id;
+};
+
+struct sctp_setadaption {
+	u_int32_t	ssb_adaption_ind;
 };
 
 
@@ -338,46 +345,6 @@ union sctp_notification {
  * socket option structs
  */
 
-/* SCTP_RTOINFO */
-struct sctp_rtoinfo {
-	sctp_assoc_t srto_assoc_id;
-	u_int32_t srto_initial;
-	u_int32_t srto_max;
-	u_int32_t srto_min;
-};
-
-/* SCTP_ASSOCINFO */
-struct sctp_assocparams {
-	sctp_assoc_t sasoc_assoc_id;
-	u_int16_t sasoc_asocmaxrxt;
-	u_int16_t sasoc_number_peer_destinations;
-	u_int32_t sasoc_peer_rwnd;
-	u_int32_t sasoc_local_rwnd;
-	u_int32_t sasoc_cookie_life;
-};
-
-/* SCTP_SET_PEER_PRIMARY_ADDR */
-struct sctp_setpeerprim {
-	sctp_assoc_t sspp_assoc_id;
-	struct sockaddr_storage sspp_addr;
-};
-
-/* SCTP_PRIMARY_ADDR */
-struct sctp_setprim {
-	sctp_assoc_t ssp_assoc_id;
-	struct sockaddr_storage ssp_addr;
-};
-
-/* SCTP_ADAPTION_LAYER / SCTP_ADAPTATION_LAYER */
-struct sctp_setadaptation {
-	u_int32_t	ssb_adaptation_ind;
-};
-/* compatiable old spelling */
-struct sctp_setadaption {
-	u_int32_t	ssb_adaption_ind;
-};
-
-/* SCTP_PEER_ADDR_PARAMS */
 struct sctp_paddrparams {
 	sctp_assoc_t spp_assoc_id;
 	struct sockaddr_storage spp_address;
@@ -390,7 +357,7 @@ struct sctp_paddrparams {
 	u_int8_t  spp_ipv4_tos;
 
 };
-/* spp_flags */
+
 #define SPP_HB_ENABLE		0x00000001
 #define SPP_HB_DISABLE		0x00000002
 #define SPP_HB_DEMAND		0x00000004
@@ -402,28 +369,70 @@ struct sctp_paddrparams {
 #define SPP_IPV6_FLOWLABEL      0x00000100
 #define SPP_IPV4_TOS            0x00000200
 
-/* SCTP_STREAM_RESET */
-/*
- * Max we can reset in one setting, note this is dictated not by the
- * define but the size of a mbuf cluster so don't change this define
- * and think you can specify more. You must do multiple resets if you
- * want to reset more than SCTP_MAX_EXPLICIT_STR_RESET.
- */
-#define SCTP_MAX_EXPLICT_STR_RESET   1000
-
-struct sctp_stream_reset {
-	sctp_assoc_t strrst_assoc_id;
-	u_int16_t    strrst_flags;
-	u_int16_t    strrst_num_streams;	/* 0 == ALL */
-	u_int16_t    strrst_list[0];		/* list if strrst_num_streams is not 0*/
+struct sctp_paddrinfo {
+	sctp_assoc_t spinfo_assoc_id;
+	struct sockaddr_storage spinfo_address;
+	int32_t spinfo_state;
+	u_int32_t spinfo_cwnd;
+	u_int32_t spinfo_srtt;
+	u_int32_t spinfo_rto;
+	u_int32_t spinfo_mtu;
 };
-/* strrst_flags values */
-#define SCTP_RESET_LOCAL_RECV  0x0001
-#define SCTP_RESET_LOCAL_SEND  0x0002
-#define SCTP_RESET_BOTH        0x0003
-#define SCTP_RESET_TSN         0x0004
 
+struct sctp_rtoinfo {
+	sctp_assoc_t srto_assoc_id;
+	u_int32_t srto_initial;
+	u_int32_t srto_max;
+	u_int32_t srto_min;
+};
 
+struct sctp_assocparams {
+	sctp_assoc_t sasoc_assoc_id;
+	u_int16_t sasoc_asocmaxrxt;
+	u_int16_t sasoc_number_peer_destinations;
+	u_int32_t sasoc_peer_rwnd;
+	u_int32_t sasoc_local_rwnd;
+	u_int32_t sasoc_cookie_life;
+};
+
+struct sctp_setprim {
+	sctp_assoc_t ssp_assoc_id;
+	struct sockaddr_storage ssp_addr;
+};
+
+struct sctp_setpeerprim {
+	sctp_assoc_t sspp_assoc_id;
+	struct sockaddr_storage sspp_addr;
+};
+
+struct sctp_getaddresses {
+	sctp_assoc_t sget_assoc_id;
+	/* addr is filled in for N * sockaddr_storage */
+	struct sockaddr addr[1];
+};
+
+struct sctp_setstrm_timeout {
+	sctp_assoc_t ssto_assoc_id;
+	u_int32_t ssto_timeout;
+	u_int32_t ssto_streamid_start;
+	u_int32_t ssto_streamid_end;
+};
+
+struct sctp_status {
+	sctp_assoc_t sstat_assoc_id;
+	int32_t sstat_state;
+	u_int32_t sstat_rwnd;
+	u_int16_t sstat_unackdata;
+	u_int16_t sstat_penddata;
+	u_int16_t sstat_instrms;
+	u_int16_t sstat_outstrms;
+	u_int32_t sstat_fragmentation_point;
+	struct sctp_paddrinfo sstat_primary;
+};
+
+/*
+ * AUTHENTICATION support
+ */
 /* SCTP_AUTH_CHUNK */
 struct sctp_authchunk {
     uint8_t sauth_chunk;
@@ -433,6 +442,9 @@ struct sctp_authchunk {
 struct sctp_authkey {
     sctp_assoc_t sca_assoc_id;
     uint32_t sca_keynumber;
+/* FIX ME: do we need this??
+    uint32_t sca_sec_old;
+*/
     struct sockaddr_storage sca_address;
     uint8_t sca_key[0];
 };
@@ -450,6 +462,7 @@ struct sctp_hmacalgo {
 #define SCTP_AUTH_HMAC_ID_SHA384	0x8003
 #define SCTP_AUTH_HMAC_ID_SHA512	0x8004
 
+
 /* SCTP_AUTH_ACTIVE_KEY */
 struct sctp_authactivekey {
     sctp_assoc_t scact_assoc_id;
@@ -464,51 +477,17 @@ struct sctp_authdeletekey {
     struct sockaddr_storage scdel_address;
 };
 
-/* generic: SCTP_CONTEXT, SCTP_DELAYED_ACK_TIME, SCTP_MAXBURST... */
-struct sctp_assoc_value {
-	sctp_assoc_t assoc_id;
-	u_int32_t assoc_value;
-};
-
-/*
- * READ ONLY socket options
- */
-
-/* SCTP_GET_PEER_ADDR_INFO */
-struct sctp_paddrinfo {
-	sctp_assoc_t spinfo_assoc_id;
-	struct sockaddr_storage spinfo_address;
-	int32_t spinfo_state;
-	u_int32_t spinfo_cwnd;
-	u_int32_t spinfo_srtt;
-	u_int32_t spinfo_rto;
-	u_int32_t spinfo_mtu;
-};
-
-/* SCTP_STATUS */
-struct sctp_status {
-	sctp_assoc_t sstat_assoc_id;
-	int32_t sstat_state;
-	u_int32_t sstat_rwnd;
-	u_int16_t sstat_unackdata;
-	u_int16_t sstat_penddata;
-	u_int16_t sstat_instrms;
-	u_int16_t sstat_outstrms;
-	u_int32_t sstat_fragmentation_point;
-	struct sctp_paddrinfo sstat_primary;
-};
-
 /* SCTP_PEER_AUTH_CHUNKS/SCTP_LOCAL_AUTH_CHUNKS */
 struct sctp_authchunks {
     sctp_assoc_t gauth_assoc_id;
     uint8_t gauth_chunks[0];
 };
 
+struct sctp_assoc_value {
+	sctp_assoc_t assoc_id;
+	u_int32_t assoc_value;
+};
 
-/*
- * BSD specific socket options
- */
-/* SCTP_GET_ASOC_ID_LIST */
 #define MAX_ASOC_IDS_RET 255
 struct sctp_assoc_ids {
 	u_int16_t asls_assoc_start;	/* array of index's start at 0 */
@@ -516,25 +495,6 @@ struct sctp_assoc_ids {
 	u_int8_t asls_more_to_get;
 	sctp_assoc_t asls_assoc_id[MAX_ASOC_IDS_RET];
 };
-
-/* SCTP_GET_NONCE_VALUES */
-struct sctp_get_nonce_values {
-	sctp_assoc_t gn_assoc_id;
-	u_int32_t    gn_peers_tag;
-	u_int32_t    gn_local_tag;
-};
-
-/*
- * Hidden socket options
- */
-
-/* SCTP_GET_PEER_ADDRESSES / SCTP_GET_LOCAL_ADDRESSES */
-struct sctp_getaddresses {
-	sctp_assoc_t sget_assoc_id;
-	/* addr is filled in for N * sockaddr_storage */
-	struct sockaddr addr[1];
-};
-
 
 struct sctp_cwnd_args {
 	struct sctp_nets *net;		/* network to */
@@ -560,10 +520,34 @@ struct sctp_blk_args {
 
 };
 
-
 /*
- * Debugging logs
+ * Max we can reset in one setting, note this is dictated not by the
+ * define but the size of a mbuf cluster so don't change this define
+ * and think you can specify more. You must do multiple resets if you
+ * want to reset more than SCTP_MAX_EXPLICIT_STR_RESET.
  */
+#define SCTP_MAX_EXPLICT_STR_RESET   1000
+
+#define SCTP_RESET_LOCAL_RECV  0x0001
+#define SCTP_RESET_LOCAL_SEND  0x0002
+#define SCTP_RESET_BOTH        0x0003
+#define SCTP_RESET_TSN         0x0004
+
+struct sctp_stream_reset {
+	sctp_assoc_t strrst_assoc_id;
+	u_int16_t    strrst_flags;
+	u_int16_t    strrst_num_streams;	/* 0 == ALL */
+	u_int16_t    strrst_list[0];		/* list if strrst_num_streams is not 0*/
+};
+
+
+struct sctp_get_nonce_values {
+	sctp_assoc_t gn_assoc_id;
+	u_int32_t    gn_peers_tag;
+	u_int32_t    gn_local_tag;
+};
+
+/* Debugging logs */
 struct sctp_str_log {
 	u_int32_t n_tsn;
 	u_int32_t e_tsn;
