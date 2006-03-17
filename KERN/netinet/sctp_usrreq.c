@@ -91,6 +91,9 @@
 #include <netinet/sctp_indata.h>
 #include <netinet/sctp_asconf.h>
 #include <netinet/sctp_timer.h>
+#ifdef HAVE_SCTP_AUTH
+#include <netinet/sctp_auth.h>
+#endif /* HAVE_SCTP_AUTH */
 #ifdef IPSEC
 #ifndef __OpenBSD__
 #include <netinet6/ipsec.h>
@@ -1936,13 +1939,13 @@ sctp_optsget(struct socket *so,
 		orig = ids->asls_assoc_start;
 		stcb = LIST_FIRST(&inp->sctp_asoc_list);
 		while( orig ) {
-			stcb = LIST_NEXT(stcb , sctp_tcblist);
+			stcb = LIST_NEXT(stcb, sctp_tcblist);
 			orig--;
 			cnt--;
-			if ( stcb == NULL)
+			if (stcb == NULL)
 				goto none_out_now;
 		}
-		if ( stcb == NULL)
+		if (stcb == NULL)
 			goto none_out_now;
 
 		at = 0;
@@ -1952,7 +1955,7 @@ sctp_optsget(struct socket *so,
 			ids->asls_assoc_id[at] = sctp_get_associd(stcb);
 			at++;
 			ids->asls_numb_present++;
-			stcb = LIST_NEXT(stcb , sctp_tcblist);
+			stcb = LIST_NEXT(stcb, sctp_tcblist);
 			if (stcb == NULL) {
 				ids->asls_more_to_get = 0;
 				break;
@@ -2966,6 +2969,187 @@ sctp_optsget(struct socket *so,
 	}
 	break;
 
+#ifdef HAVE_SCTP_AUTH
+    case SCTP_HMAC_IDENT:
+    {
+	struct sctp_hmacalgo *shmac;
+	sctp_hmaclist_t *hmaclist;
+	uint32_t size;
+	int i;
+	if ((size_t)(m->m_len) < sizeof(*shmac)) {
+	    error = EINVAL;
+	    break;
+	}
+	shmac = mtod(m, struct sctp_hmacalgo *);
+	SCTP_INP_RLOCK(inp);
+	hmaclist = inp->sctp_ep.local_hmacs;
+	if (hmaclist == NULL) {
+	    /* no HMACs to return */
+	    m->m_len = sizeof(*shmac);
+	    break;
+	}
+	/* is there room for all of the hmac ids? */
+	size = sizeof(*shmac) + (hmaclist->num_algo *
+				 sizeof(shmac->shmac_idents[0]));
+	if ((size_t)(m->m_len) < size) {
+	    error = EINVAL;
+	    SCTP_INP_RUNLOCK(inp);
+	    break;
+	}
+	/* copy in the list */
+	for (i=0; i < hmaclist->num_algo; i++)
+	    shmac->shmac_idents[i] = hmaclist->hmac[i];
+	SCTP_INP_RUNLOCK(inp);
+	m->m_len = size;
+	break;
+    }
+    case SCTP_AUTH_ACTIVE_KEY:
+    {
+	struct sctp_authactivekey *scact;
+	if ((size_t)(m->m_len) < sizeof(*scact)) {
+	    error = EINVAL;
+	    break;
+	}
+	scact = mtod(m, struct sctp_authactivekey *);
+	if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
+	    /* if one-to-one, get the active key on the assoc, if connected */
+	    SCTP_INP_RLOCK(inp);
+	    stcb = LIST_FIRST(&inp->sctp_asoc_list);
+	    if (stcb != NULL)
+		SCTP_TCB_LOCK(stcb);
+	    SCTP_INP_RUNLOCK(inp);
+	} else if (scact->scact_assoc_id) {
+	    stcb = sctp_findassociation_ep_asocid(inp, scact->scact_assoc_id);
+	    if (stcb == NULL) {
+		error = ENOENT;
+		break;
+	    }
+	}
+	if (stcb != NULL) {
+	    /* get the active key on the assoc */
+	    scact->scact_keynumber = stcb->asoc.authinfo.assoc_keyid;
+	    SCTP_TCB_UNLOCK(stcb);
+	} else {
+	    /* get the endpoint active key */
+	    SCTP_INP_RLOCK(inp);
+	    scact->scact_keynumber = inp->sctp_ep.default_keyid;
+	    SCTP_INP_RUNLOCK(inp);
+	}
+	m->m_len = sizeof(*scact);
+	break;
+    }
+    case SCTP_LOCAL_AUTH_CHUNKS:
+    {
+	struct sctp_authchunks *sac;
+	sctp_auth_chklist_t *chklist = NULL;
+	int size = 0;
+	if ((size_t)(m->m_len) < sizeof(*sac)) {
+	    error = EINVAL;
+	    break;
+	}
+	sac = mtod(m, struct sctp_authchunks *);
+	if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
+	    /* if one-to-one, get from the connected assoc */
+	    SCTP_INP_RLOCK(inp);
+	    stcb = LIST_FIRST(&inp->sctp_asoc_list);
+	    if (stcb != NULL)
+		SCTP_TCB_LOCK(stcb);
+	    SCTP_INP_RUNLOCK(inp);
+	} else if (sac->gauth_assoc_id) {
+	    stcb = sctp_findassociation_ep_asocid(inp, sac->gauth_assoc_id);
+	    if (stcb == NULL) {
+		error = ENOENT;
+		break;
+	    }
+	}
+	if (stcb != NULL) {
+	    /* get off the assoc */
+	    chklist = stcb->asoc.local_auth_chunks;
+	    if (chklist == NULL) {
+		error = EINVAL;
+		SCTP_TCB_UNLOCK(stcb);
+		break;
+	    }
+	    /* is there enough space? */
+	    size = sctp_auth_get_chklist_size(chklist);
+	    if ((size_t)m->m_len < (sizeof(struct sctp_authchunks) + size)) {
+		error = EINVAL;
+		SCTP_TCB_UNLOCK(stcb);
+		break;
+	    }
+	    /* copy in the chunks */
+	    sctp_serialize_auth_chunks(chklist, sac->gauth_chunks);
+	    SCTP_TCB_UNLOCK(stcb);
+	} else {
+	    /* get off the endpoint */
+	    SCTP_INP_RLOCK(inp);
+	    chklist = inp->sctp_ep.local_auth_chunks;
+	    if (chklist == NULL) {
+		error = EINVAL;
+		SCTP_INP_RUNLOCK(inp);
+		break;
+	    }
+	    /* is there enough space? */
+	    size = sctp_auth_get_chklist_size(chklist);
+	    if ((size_t)m->m_len < (sizeof(struct sctp_authchunks) + size)) {
+		error = EINVAL;
+		SCTP_INP_RUNLOCK(inp);
+		break;
+	    }
+	    /* copy in the chunks */
+	    sctp_serialize_auth_chunks(chklist, sac->gauth_chunks);
+	    SCTP_INP_RUNLOCK(inp);
+	}
+	m->m_len = sizeof(struct sctp_authchunks) + size;
+	break;
+    }
+    case SCTP_PEER_AUTH_CHUNKS:
+    {
+	struct sctp_authchunks *sac;
+	sctp_auth_chklist_t *chklist = NULL;
+	int size = 0;
+	if ((size_t)(m->m_len) < sizeof(*sac)) {
+	    error = EINVAL;
+	    break;
+	}
+	sac = mtod(m, struct sctp_authchunks *);
+	if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
+	    /* if one-to-one, get from the connected assoc */
+	    SCTP_INP_RLOCK(inp);
+	    stcb = LIST_FIRST(&inp->sctp_asoc_list);
+	    if (stcb != NULL)
+		SCTP_TCB_LOCK(stcb);
+	    SCTP_INP_RUNLOCK(inp);
+	} else if (sac->gauth_assoc_id) {
+	    stcb = sctp_findassociation_ep_asocid(inp, sac->gauth_assoc_id);
+	}
+	if (stcb == NULL) {
+	    error = ENOENT;
+	    break;
+	}
+
+	/* get off the assoc */
+	chklist = stcb->asoc.peer_auth_chunks;
+	if (chklist == NULL) {
+	    error = EINVAL;
+	    SCTP_TCB_UNLOCK(stcb);
+	    break;
+	}
+	/* is there enough space? */
+	size = sctp_auth_get_chklist_size(chklist);
+	if ((size_t)m->m_len < (sizeof(struct sctp_authchunks) + size)) {
+	    error = EINVAL;
+	    SCTP_TCB_UNLOCK(stcb);
+	    break;
+	}
+	/* copy in the chunks */
+	sctp_serialize_auth_chunks(chklist, sac->gauth_chunks);
+	SCTP_TCB_UNLOCK(stcb);
+	m->m_len = sizeof(struct sctp_authchunks) + size;
+	break;
+    }
+#endif /* HAVE_SCTP_AUTH */
+
 #if defined(HAVE_SCTP_PEELOFF_SOCKOPT)
 	case SCTP_PEELOFF:
 	{
@@ -3167,11 +3351,212 @@ sctp_optsset(struct socket *so,
 		}
 	}
 	break;
+
+#ifdef HAVE_SCTP_AUTH
+    case SCTP_AUTH_CHUNK:
+    {
+	struct sctp_authchunk *sauth;
+	if ((size_t)m->m_len < sizeof(*sauth)) {
+	    error = EINVAL;
+	    break;
+	}
+	sauth = mtod(m, struct sctp_authchunk *);
+	if (sctp_auth_add_chunk(sauth->sauth_chunk,
+				inp->sctp_ep.local_auth_chunks))
+	    error = EINVAL;
+	break;
+    }
+    case SCTP_AUTH_KEY:
+    {
+	struct sctp_authkey *sca;
+	struct sctp_keyhead *shared_keys;
+	sctp_sharedkey_t *shared_key;
+	sctp_key_t *key;
+	int size;
+
+	size = m->m_len - sizeof(*sca);
+	if (size <= 0) {
+	    error = EINVAL;
+	    break;
+	}
+	sca = mtod(m, struct sctp_authkey *);
+	if (sca->sca_keynumber == 0) {
+	    /* can't set key id 0 */
+	    error = EINVAL;
+	    break;
+	}
+	if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
+	    /* if one-to-one, add/replace the key on the assoc, if connected */
+	    SCTP_INP_RLOCK(inp);
+	    stcb = LIST_FIRST(&inp->sctp_asoc_list);
+	    if (stcb != NULL)
+		SCTP_TCB_LOCK(stcb);
+	    SCTP_INP_RUNLOCK(inp);
+	} else if (sca->sca_assoc_id) {
+	    stcb = sctp_findassociation_ep_asocid(inp, sca->sca_assoc_id);
+	    if (stcb == NULL) {
+		error = ENOENT;
+		break;
+	    }
+	}
+
+	if (stcb != NULL) {
+	    /* set it on the assoc */
+	    shared_keys = &stcb->asoc.shared_keys;
+	    /* clear the cached keys for this key id */
+	    sctp_clear_cachedkeys(stcb, sca->sca_keynumber);
+	    /* create the new shared key and insert/replace it */
+	    key = sctp_set_key(sca->sca_key, size);
+	    if (key == NULL) {
+		error = ENOMEM;
+		SCTP_TCB_UNLOCK(stcb);
+		break;
+	    }
+	    shared_key = sctp_alloc_sharedkey();
+	    if (shared_key == NULL) {
+		sctp_free_key(key);
+		error = ENOMEM;	
+		SCTP_TCB_UNLOCK(stcb);
+		break;
+	    }
+	    shared_key->key = key;
+	    shared_key->keyid = sca->sca_keynumber;
+	    sctp_insert_sharedkey(shared_keys, shared_key);
+	    SCTP_TCB_UNLOCK(stcb);
+	} else {
+	    /* set it on the endpoint */
+	    SCTP_INP_WLOCK(inp);
+	    shared_keys = &inp->sctp_ep.shared_keys;
+	    /* clear the cached keys on all assocs for this key id */
+	    sctp_clear_cachedkeys_ep(inp, sca->sca_keynumber);
+	    /* create the new shared key and insert/replace it */
+	    key = sctp_set_key(sca->sca_key, size);
+	    if (key == NULL) {
+		error = ENOMEM;
+		SCTP_INP_WUNLOCK(inp);
+		break;
+	    }
+	    shared_key = sctp_alloc_sharedkey();
+	    if (shared_key == NULL) {
+		sctp_free_key(key);
+		error = ENOMEM;
+		SCTP_INP_WUNLOCK(inp);
+		break;
+	    }
+	    shared_key->key = key;
+	    shared_key->keyid = sca->sca_keynumber;
+	    sctp_insert_sharedkey(shared_keys, shared_key);
+	    SCTP_INP_WUNLOCK(inp);
+	}
+	break;
+    }
+    case SCTP_HMAC_IDENT:
+    {
+	struct sctp_hmacalgo *shmac;
+	sctp_hmaclist_t *hmaclist;
+	uint32_t hmacid;
+	int size, i;
+
+	size = m->m_len - sizeof(*shmac);
+	if (size < 0) {
+	    error = EINVAL;
+	    break;
+	}
+	shmac = mtod(m, struct sctp_hmacalgo *);
+	size = size / sizeof(shmac->shmac_idents[0]);
+	hmaclist = sctp_alloc_hmaclist(size);
+	for (i=0; i < size; i++) {
+	    hmacid = shmac->shmac_idents[i] & 0xFFFF;
+	    sctp_auth_add_hmacid(hmaclist, (uint16_t)hmacid);
+	}
+	/* set it on the endpoint */
+	SCTP_INP_WLOCK(inp);
+	if (inp->sctp_ep.local_hmacs)
+	    sctp_free_hmaclist(inp->sctp_ep.local_hmacs);
+	inp->sctp_ep.local_hmacs = hmaclist;
+	SCTP_INP_WUNLOCK(inp);
+	break;
+    }
+    case SCTP_AUTH_ACTIVE_KEY:
+    {
+	struct sctp_authactivekey *scact;
+
+	if ((size_t)m->m_len < sizeof(*scact)) {
+	    error = EINVAL;
+	    break;
+	}
+	scact = mtod(m, struct sctp_authactivekey *);
+	if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
+	    /* if one-to-one, set the active key on the assoc, if connected */
+	    SCTP_INP_RLOCK(inp);
+	    stcb = LIST_FIRST(&inp->sctp_asoc_list);
+	    if (stcb != NULL)
+		SCTP_TCB_LOCK(stcb);
+	    SCTP_INP_RUNLOCK(inp);
+	} else if (scact->scact_assoc_id) {
+	    stcb = sctp_findassociation_ep_asocid(inp, scact->scact_assoc_id);
+	    if (stcb == NULL) {
+		error = ENOENT;
+		break;
+	    }
+	}
+	/* set the active key on the right place */
+	if (stcb != NULL) {
+	    /* set the active key on the assoc */
+	    if (sctp_auth_setactivekey(stcb, scact->scact_keynumber))
+		error = EINVAL;
+	    SCTP_TCB_UNLOCK(stcb);
+	} else {
+	    /* set the active key on the endpoint */
+	    SCTP_INP_WLOCK(inp);
+	    if (sctp_auth_setactivekey_ep(inp, scact->scact_keynumber))
+		error = EINVAL;
+	    SCTP_INP_WUNLOCK(inp);
+	}
+	break;
+    }
+    case SCTP_AUTH_DELETE_KEY:
+    {
+	struct sctp_authdeletekey *scdel;
+
+	if ((size_t)m->m_len < sizeof(*scdel)) {
+	    error = EINVAL;
+	    break;
+	}
+	scdel = mtod(m, struct sctp_authdeletekey *);
+	if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
+	    /* if one-to-one, delete it from the assoc, if connected */
+	    SCTP_INP_RLOCK(inp);
+	    stcb = LIST_FIRST(&inp->sctp_asoc_list);
+	    if (stcb != NULL)
+		SCTP_TCB_LOCK(stcb);
+	    SCTP_INP_RUNLOCK(inp);
+	} else if (scdel->scdel_assoc_id) {
+	    stcb = sctp_findassociation_ep_asocid(inp, scdel->scdel_assoc_id);
+	    if (stcb == NULL) {
+		error = ENOENT;
+		break;
+	    }
+	}
+	/* delete the key from the right place */
+	if (stcb != NULL) {
+	    if (sctp_delete_sharedkey(stcb, scdel->scdel_keynumber))
+		error = EINVAL;
+	    SCTP_TCB_UNLOCK(stcb);
+	} else {
+	    SCTP_INP_WLOCK(inp);
+	    if (sctp_delete_sharedkey_ep(inp, scdel->scdel_keynumber))
+		error = EINVAL;
+	    SCTP_INP_WUNLOCK(inp);
+	}
+	break;
+    }
+#endif /* HAVE_SCTP_AUTH */
+
 	case SCTP_RESET_STREAMS:
 	{
 		struct sctp_stream_reset *strrst;
 		uint8_t send_in=0, send_tsn=0, send_out=0;
-		int i;
 
 		if ((size_t)m->m_len < sizeof(struct sctp_stream_reset)) {
 			error = EINVAL;
@@ -3221,21 +3606,6 @@ sctp_optsset(struct socket *so,
 			SCTP_TCB_UNLOCK(stcb);
 			break;
 		}
-		for (i=0;i<strrst->strrst_num_streams;i++) {
-			if((send_in) &&
-
-			   (strrst->strrst_list[i] > stcb->asoc.streamincnt)) {
-				error = EINVAL;
-				break;
-			}
-			if((send_out) &&
-			   (strrst->strrst_list[i] > stcb->asoc.streamoutcnt)) {
-				error = EINVAL;
-				break;
-			}
-		}
-		if(error)
-			break;
 		error = sctp_send_str_reset_req(stcb, strrst->strrst_num_streams,
 						strrst->strrst_list, 
 						send_out, (stcb->asoc.str_reset_seq_in-3),
@@ -3426,6 +3796,12 @@ sctp_optsset(struct socket *so,
 			inp->sctp_flags |= SCTP_PCB_FLAGS_ADAPTATIONEVNT;
 		} else {
 			inp->sctp_flags &= ~SCTP_PCB_FLAGS_ADAPTATIONEVNT;
+		}
+
+		if (events->sctp_authentication_event) {
+			inp->sctp_flags |= SCTP_PCB_FLAGS_AUTHEVNT;
+		} else {
+			inp->sctp_flags &= ~SCTP_PCB_FLAGS_AUTHEVNT;
 		}
 
 		if (events->sctp_stream_reset_events) {
