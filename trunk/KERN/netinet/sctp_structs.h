@@ -4,7 +4,7 @@
 #define __sctp_structs_h__
 
 /*
- * Copyright (c) 2001, 2002, 2003, 2004 Cisco Systems, Inc.
+ * Copyright (c) 2001-2006 Cisco Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,6 +43,7 @@
 #else
 #include <sys/callout.h>
 #endif
+#include <sys/socket.h>
 
 #ifdef IPSEC
 #ifndef __OpenBSD__
@@ -53,6 +54,9 @@
 
 #include <netinet/sctp_header.h>
 #include <netinet/sctp_uio.h>
+#ifdef HAVE_SCTP_AUTH
+#include <netinet/sctp_auth.h>
+#endif /* HAVE_SCTP_AUTH */
 
 struct sctp_timer {
 #if defined(__OpenBSD__)
@@ -71,7 +75,8 @@ struct sctp_timer {
 };
 
 /*
- * This is the information we track on each interface that we know about	* from the distant end.
+ * This is the information we track on each interface that we know about
+ * from the distant end.
  */
 TAILQ_HEAD(sctpnetlisthead, sctp_nets);
 
@@ -622,7 +627,21 @@ struct sctp_association {
 	unsigned int initial_rto;		/* initial send RTO */
 	unsigned int minrto;			/* per assoc RTO-MIN */
 	unsigned int maxrto;			/* per assoc RTO-MAX */
-	/* Being that we have no bag to collect stale cookies, and
+
+#ifdef HAVE_SCTP_AUTH
+    /* authentication fields */
+    sctp_auth_chklist_t  *local_auth_chunks;
+    sctp_auth_chklist_t  *peer_auth_chunks;
+    sctp_hmaclist_t      *local_hmacs;		/* local HMACs supported */
+    sctp_hmaclist_t      *peer_hmacs;		/* peer HMACs supported */
+    struct sctp_keyhead  shared_keys;		/* assoc's shared keys */
+    sctp_authinfo_t      authinfo;		/* randoms, cached keys */
+    uint16_t             peer_hmac_id;		/* peer HMAC id to send */
+    uint8_t              disable_authkey0;	/* disable null key id 0 */
+#endif /* HAVE_SCTP_AUTH */
+
+	/*
+	 * Being that we have no bag to collect stale cookies, and
 	 * that we really would not want to anyway.. we will count
 	 * them in this counter. We of course feed them to the
 	 * pigeons right away (I have always thought of pigeons
@@ -635,7 +654,6 @@ struct sctp_association {
 	 */
 	u_int16_t str_of_pdapi;
 	u_int16_t ssn_of_pdapi;
-
 
 	/* counts of actual built streams. Allocation may be more however */
 	/* could re-arrange to optimize space here. */

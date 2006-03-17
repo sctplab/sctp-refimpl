@@ -4,7 +4,7 @@
 #define __sctp_pcb_h__
 
 /*
- * Copyright (c) 2001-2005 Cisco Systems, Inc.
+ * Copyright (c) 2001-2006 Cisco Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -47,15 +47,20 @@
 #endif
 #endif
 
+#include <sys/socket.h>
+#include <sys/socketvar.h>
 #include <net/if.h>
-#ifdef __FreeBSD__
+#include <net/if_types.h>
+#if defined( __FreeBSD__) || defined(__APPLE__)
 #include <net/if_var.h>
 #endif
+#include <net/route.h>
+#include <netinet/in.h>
 #include <netinet/ip6.h>
 #include <netinet6/ip6_var.h>
 #include <netinet6/ip6protosw.h>
 #include <netinet6/in6_var.h>
-#if defined(__OpenBSD__)
+#if defined(__OpenBSD__) || defined(__APPLE__)
 #include <netinet/in_pcb.h>
 #else
 #include <netinet6/in6_pcb.h>
@@ -74,7 +79,6 @@
 #define HAVE_SCTP_SORECEIVE 1
 #endif
 
-
 #include <netinet/sctp.h>
 #include <netinet/sctp_constants.h>
 
@@ -85,6 +89,9 @@ LIST_HEAD(sctpladdr, sctp_laddr);
 LIST_HEAD(sctpvtaghead, sctp_tagblock);
 #include <netinet/sctp_structs.h>
 #include <netinet/sctp_uio.h>
+#ifdef HAVE_SCTP_AUTH
+#include <netinet/sctp_auth.h>
+#endif /* HAVE_SCTP_AUTH */
 
 /*
  * PCB flags
@@ -107,22 +114,23 @@ LIST_HEAD(sctpvtaghead, sctp_tagblock);
 #define SCTP_PCB_FLAGS_RECVSHUTDOWNEVNT	0x00008000
 #define SCTP_PCB_FLAGS_ADAPTATIONEVNT	0x00010000
 #define SCTP_PCB_FLAGS_PDAPIEVNT	0x00020000
-#define SCTP_PCB_FLAGS_STREAM_RESETEVNT 0x00040000
-#define SCTP_PCB_FLAGS_NO_FRAGMENT	0x00080000
+#define SCTP_PCB_FLAGS_AUTHEVNT		0x00040000
+#define SCTP_PCB_FLAGS_STREAM_RESETEVNT 0x00080000
+#define SCTP_PCB_FLAGS_NO_FRAGMENT	0x00100000
 /* TCP model support */
-#define SCTP_PCB_FLAGS_CONNECTED	0x00100000
-#define SCTP_PCB_FLAGS_IN_TCPPOOL	0x00200000
-#define SCTP_PCB_FLAGS_DONT_WAKE	0x00400000
-#define SCTP_PCB_FLAGS_WAKEOUTPUT	0x00800000
-#define SCTP_PCB_FLAGS_WAKEINPUT	0x01000000
-#define SCTP_PCB_FLAGS_BOUND_V6		0x02000000
-#define SCTP_PCB_FLAGS_NEEDS_MAPPED_V4	0x04000000
-#define SCTP_PCB_FLAGS_BLOCKING_IO	0x08000000
-#define SCTP_PCB_FLAGS_SOCKET_GONE	0x10000000
-#define SCTP_PCB_FLAGS_SOCKET_ALLGONE	0x20000000
+#define SCTP_PCB_FLAGS_CONNECTED	0x00200000
+#define SCTP_PCB_FLAGS_IN_TCPPOOL	0x00400000
+#define SCTP_PCB_FLAGS_DONT_WAKE	0x00800000
+#define SCTP_PCB_FLAGS_WAKEOUTPUT	0x01000000
+#define SCTP_PCB_FLAGS_WAKEINPUT	0x02000000
+#define SCTP_PCB_FLAGS_BOUND_V6		0x04000000
+#define SCTP_PCB_FLAGS_NEEDS_MAPPED_V4	0x08000000
+#define SCTP_PCB_FLAGS_BLOCKING_IO	0x10000000
+#define SCTP_PCB_FLAGS_SOCKET_GONE	0x20000000
+#define SCTP_PCB_FLAGS_SOCKET_ALLGONE	0x40000000
 
 /* flags to copy to new PCB */
-#define SCTP_PCB_COPY_FLAGS		0x0707ff64
+#define SCTP_PCB_COPY_FLAGS		0x0e1fff64
 
 #define SCTP_PCBHASH_ALLADDR(port, mask) (port & mask)
 #define SCTP_PCBHASH_ASOC(tag, mask) (tag & mask)
@@ -283,6 +291,15 @@ struct sctp_pcb {
 
 	uint32_t sctp_sws_sender;
 	uint32_t sctp_sws_receiver;
+
+#ifdef HAVE_SCTP_AUTH
+    /* authentication related fields */
+    struct sctp_keyhead     shared_keys;
+    sctp_auth_chklist_t     *local_auth_chunks;
+    sctp_hmaclist_t         *local_hmacs;
+    uint16_t                default_keyid;
+    uint8_t                 disable_authkey0;	/* disable null key id 0 */
+#endif /* HAVE_SCTP_AUTH */
 
 	/* various thresholds */
 	/* Max times I will init at a guy */
@@ -1198,7 +1215,6 @@ int sctp_destination_is_reachable(struct sctp_tcb *, struct sockaddr *);
 int sctp_add_to_socket_q(struct sctp_inpcb *, struct sctp_tcb *);
 
 struct sctp_tcb *sctp_remove_from_socket_q(struct sctp_inpcb *);
-
 
 /*
  * Null in last arg inpcb indicate run on ALL ep's. Specific inp in last
