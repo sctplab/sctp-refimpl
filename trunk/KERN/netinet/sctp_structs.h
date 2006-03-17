@@ -311,6 +311,23 @@ struct sctp_tmit_chunk {
 	uint8_t    reserved;
 };
 
+struct sctp_queued_to_read {         /* sinfo structure for the most part */
+	u_int16_t sinfo_stream;      /* off the wire */
+	u_int16_t sinfo_ssn;         /* off the wire */
+	u_int16_t sinfo_flags;       /* SCTP_UNORDERED from wire use SCTP_EOF for EOR */
+	u_int32_t sinfo_ppid;        /* off the wire */
+	u_int32_t sinfo_context;     /* pick this up from assoc def context? */
+	u_int32_t sinfo_timetolive;  /* not used by kernel */
+	u_int32_t sinfo_tsn;         /* Use this in reassembly as first TSN */
+	u_int32_t sinfo_cumtsn;      /* Use this in reassembly as last TSN */
+	sctp_assoc_t sinfo_assoc_id; /* our assoc id */
+	struct sctp_nets *whoFrom;   /* where it came from */
+	struct mbuf *data;           /* front of the mbuf chain of data with PKT_HDR */
+	struct mbuf *tail_mbuf;      /* used for multi-part data */
+	struct sctp_tcb *stcb;	     /* assoc, used for window update */
+	LIST_ENTRY (sctp_read_queue) *next;
+};
+
 
 /*
  * this struct contains info that is used to track inbound stream data
