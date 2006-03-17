@@ -143,7 +143,7 @@ SHA1_Update(struct sha1_context *ctx, const unsigned char *ptr, int siz)
 			number_left -= left_to_fill;
 			ctx->running_total += left_to_fill;
 			ctx->how_many_in_block = 0;
-			ptr = (unsigned char *)((caddr_t)ptr + left_to_fill);
+			ptr = (const unsigned char *)(ptr + left_to_fill);
 		}
 	}
 }
