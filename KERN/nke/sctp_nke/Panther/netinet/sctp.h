@@ -91,13 +91,15 @@ struct sctp_paramhdr {
 #define SCTP_I_WANT_MAPPED_V4_ADDR	0x0000000d
 #define SCTP_MAXSEG 			0x0000000e
 #define SCTP_DELAYED_ACK_TIME           0x0000000f
+#define SCTP_FRAGMENT_INTERLEAVE        0x00000010
+#define SCTP_PARTIAL_DELIVERY_POINT     0x00000011
 /* authentication support */
-#define SCTP_AUTH_CHUNK 		0x00000010
-#define SCTP_AUTH_KEY 			0x00000011
-#define SCTP_HMAC_IDENT 		0x00000012
-#define SCTP_AUTH_SETKEY_ACTIVE 	0x00000013
-#define SCTP_FRAGMENT_INTERLEAVE        0x00000014
-#define SCTP_PARTIAL_DELIVERY_POINT     0x00000015
+#define SCTP_AUTH_CHUNK 		0x00000012
+#define SCTP_AUTH_KEY 			0x00000013
+#define SCTP_HMAC_IDENT 		0x00000014
+#define SCTP_AUTH_ACTIVE_KEY 		0x00000015
+#define SCTP_AUTH_DELETE_KEY 		0x00000016
+
 /*
  * read-only options
  */
@@ -271,7 +273,7 @@ struct sctp_error_unrecognized_chunk {
 #define HAVE_SCTP_MULTIBUF              1
 #define HAVE_SCTP_NOCONNECT             0
 #define HAVE_SCTP_ECN_NONCE             1  /* ECN Nonce option */
-#define HAVE_SCTP_AUTH			1
+/* #define HAVE_SCTP_AUTH			1 */
 
 /*
  * Main SCTP chunk types

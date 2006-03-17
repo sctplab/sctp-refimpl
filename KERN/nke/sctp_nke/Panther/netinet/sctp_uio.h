@@ -34,7 +34,9 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-
+#if ! defined(_KERNEL)
+#include <stdint.h>
+#endif
 #include <sys/types.h>
 #include <sys/socket.h>
 
@@ -50,6 +52,7 @@ struct sctp_event_subscribe {
 	u_int8_t sctp_shutdown_event;
 	u_int8_t sctp_partial_delivery_event;
 	u_int8_t sctp_adaptation_layer_event;
+	u_int8_t sctp_authentication_event;
 	u_int8_t sctp_stream_reset_events;
 };
 
@@ -426,6 +429,59 @@ struct sctp_status {
 	u_int16_t sstat_outstrms;
 	u_int32_t sstat_fragmentation_point;
 	struct sctp_paddrinfo sstat_primary;
+};
+
+/*
+ * AUTHENTICATION support
+ */
+/* SCTP_AUTH_CHUNK */
+struct sctp_authchunk {
+    uint8_t sauth_chunk;
+};
+
+/* SCTP_AUTH_KEY */
+struct sctp_authkey {
+    sctp_assoc_t sca_assoc_id;
+    uint32_t sca_keynumber;
+/* FIX ME: do we need this??
+    uint32_t sca_sec_old;
+*/
+    struct sockaddr_storage sca_address;
+    uint8_t sca_key[0];
+};
+
+/* SCTP_HMAC_IDENT */
+struct sctp_hmacalgo {
+    uint32_t shmac_idents[0];
+};
+/* AUTH hmac_id */
+#define SCTP_AUTH_HMAC_ID_RSVD		0x0000
+#define SCTP_AUTH_HMAC_ID_SHA1		0x0001	/* default, mandatory */
+#define SCTP_AUTH_HMAC_ID_MD5		0x0002
+#define SCTP_AUTH_HMAC_ID_SHA224	0x8001
+#define SCTP_AUTH_HMAC_ID_SHA256	0x8002
+#define SCTP_AUTH_HMAC_ID_SHA384	0x8003
+#define SCTP_AUTH_HMAC_ID_SHA512	0x8004
+
+
+/* SCTP_AUTH_ACTIVE_KEY */
+struct sctp_authactivekey {
+    sctp_assoc_t scact_assoc_id;
+    uint32_t scact_keynumber;
+    struct sockaddr_storage scact_address;
+};
+
+/* SCTP_AUTH_DELETE_KEY */
+struct sctp_authdeletekey {
+    sctp_assoc_t scdel_assoc_id;
+    uint32_t scdel_keynumber;
+    struct sockaddr_storage scdel_address;
+};
+
+/* SCTP_PEER_AUTH_CHUNKS/SCTP_LOCAL_AUTH_CHUNKS */
+struct sctp_authchunks {
+    sctp_assoc_t gauth_assoc_id;
+    uint8_t gauth_chunks[0];
 };
 
 struct sctp_assoc_value {
