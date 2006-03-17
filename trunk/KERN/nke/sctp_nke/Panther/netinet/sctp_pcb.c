@@ -31,6 +31,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+#include <sys/types.h>
+#include <sys/md5.h>
 #if !(defined(__OpenBSD__) || defined(__APPLE__))
 #include "opt_ipsec.h"
 #endif
