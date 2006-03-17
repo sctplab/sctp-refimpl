@@ -3557,6 +3557,7 @@ sctp_optsset(struct socket *so,
 	{
 		struct sctp_stream_reset *strrst;
 		uint8_t send_in=0, send_tsn=0, send_out=0;
+		int i;
 
 		if ((size_t)m->m_len < sizeof(struct sctp_stream_reset)) {
 			error = EINVAL;
@@ -3606,6 +3607,21 @@ sctp_optsset(struct socket *so,
 			SCTP_TCB_UNLOCK(stcb);
 			break;
 		}
+		for (i=0;i<strrst->strrst_num_streams;i++) {
+			if((send_in) &&
+
+			   (strrst->strrst_list[i] > stcb->asoc.streamincnt)) {
+				error = EINVAL;
+				break;
+			}
+			if((send_out) &&
+			   (strrst->strrst_list[i] > stcb->asoc.streamoutcnt)) {
+				error = EINVAL;
+				break;
+			}
+		}
+		if(error)
+			break;
 		error = sctp_send_str_reset_req(stcb, strrst->strrst_num_streams,
 						strrst->strrst_list, 
 						send_out, (stcb->asoc.str_reset_seq_in-3),
