@@ -72,21 +72,15 @@
 #endif
 #endif
 
-#if defined(__FreeBSD__) || defined(__NetBSD__)
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-#define HAVE_SCTP_SO_LASTRECORD 1
-#endif
-#define HAVE_SCTP_SORECEIVE 1
-#endif
-
 #include <netinet/sctp.h>
 #include <netinet/sctp_constants.h>
 
 LIST_HEAD(sctppcbhead, sctp_inpcb);
 LIST_HEAD(sctpasochead, sctp_tcb);
-TAILQ_HEAD(sctpsocketq, sctp_socket_q_list);
 LIST_HEAD(sctpladdr, sctp_laddr);
 LIST_HEAD(sctpvtaghead, sctp_tagblock);
+TAILQ_HEAD(sctp_readhead, sctp_queued_to_read);
+
 #include <netinet/sctp_structs.h>
 #include <netinet/sctp_uio.h>
 #ifdef HAVE_SCTP_AUTH
@@ -193,14 +187,14 @@ struct sctp_epinfo {
 	struct uma_zone *ipi_zone_laddr;
 	struct uma_zone *ipi_zone_net;
 	struct uma_zone *ipi_zone_chunk;
-	struct uma_zone *ipi_zone_sockq;
+	struct uma_zone *ipi_zone_readq;
 #else
 	struct vm_zone *ipi_zone_ep;
 	struct vm_zone *ipi_zone_asoc;
 	struct vm_zone *ipi_zone_laddr;
 	struct vm_zone *ipi_zone_net;
 	struct vm_zone *ipi_zone_chunk;
-	struct vm_zone *ipi_zone_sockq;
+	struct vm_zone *ipi_zone_readq;
 #endif
 #endif
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -209,7 +203,7 @@ struct sctp_epinfo {
 	struct pool ipi_zone_laddr;
 	struct pool ipi_zone_net;
 	struct pool ipi_zone_chunk;
-	struct pool ipi_zone_sockq;
+	struct pool ipi_zone_readq;
 #endif
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
@@ -253,8 +247,8 @@ struct sctp_epinfo {
 	u_quad_t ipi_gencnt_chunk;
 
 	/* socket queue zone info */
-	u_int ipi_count_sockq;
-	u_quad_t ipi_gencnt_sockq;
+	u_int ipi_count_readq;
+	u_quad_t ipi_gencnt_readq;
 
 	struct sctpvtaghead vtag_timewait[SCTP_STACK_VTAG_HASH_SIZE];
 
@@ -360,6 +354,10 @@ struct sctp_inpcb {
 		char align[(sizeof(struct in6pcb) + SCTP_ALIGNM1) &
 			  ~SCTP_ALIGNM1];
 	} ip_inp;
+
+	/* Socket buffer lock protects read_queue and of course sb_cc */
+	struct sctp_readhead read_queue;
+
 	LIST_ENTRY(sctp_inpcb) sctp_list;	/* lists all endpoints */
 	/* hash of all endpoints for model */
         LIST_ENTRY(sctp_inpcb) sctp_hash;
@@ -379,8 +377,6 @@ struct sctp_inpcb {
 	u_long sctp_hashmark;
 	/* head of the list of all associations */
 	struct sctpasochead sctp_asoc_list;
-	/* queue of TCB's waiting to stuff data up the socket */
-	struct sctpsocketq sctp_queue_list;
 	struct sctp_iterator *inp_starting_point_for_iterator;
 	uint32_t sctp_frag_point;
 	uint32_t sctp_vtag_first;	/* this field locked by socket buffer lock */
@@ -402,18 +398,18 @@ struct sctp_inpcb {
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
 	struct mtx inp_mtx;
 	struct mtx inp_create_mtx;
-	struct mtx inp_sockq_mtx;
+	struct mtx inp_readq_mtx;
 	u_int32_t refcount;
 #elif defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
 #ifdef _KERN_LOCKS_H_
 	lck_mtx_t *inp_mtx;
 	lck_mtx_t *inp_create_mtx;
-	lck_mtx_t *inp_sockq_mtx;
+	lck_mtx_t *inp_readq_mtx;
 	u_int32_t refcount;
 #else
 	void *inp_mtx;
 	void *inp_create_mtx;
-	void *inp_sockq_mtx;
+	void *inp_readq_mtx;
 	u_int32_t refcount;
 #endif /* _KERN_LOCKS_H_ */
 #endif
@@ -535,8 +531,8 @@ void sctp_verify_no_locks(void);
 	mtx_init(&(_inp)->inp_create_mtx, "sctp-create", "inp_create", \
 		 MTX_DEF | MTX_DUPOK)
 
-#define SCTP_INP_SOCKQ_LOCK_INIT(_inp) \
-	mtx_init(&(_inp)->inp_sockq_mtx, "sctp-inp_sockq", "inp_sockq", \
+#define SCTP_INP_READQ_LOCK_INIT(_inp) \
+	mtx_init(&(_inp)->inp_readq_mtx, "sctp-inp_readq", "inp_readq", \
 		 MTX_DEF | MTX_DUPOK)
 
 #define SCTP_INP_LOCK_DESTROY(_inp) \
@@ -545,8 +541,8 @@ void sctp_verify_no_locks(void);
 #define SCTP_ASOC_CREATE_LOCK_DESTROY(_inp) \
 	mtx_destroy(&(_inp)->inp_create_mtx)
 
-#define SCTP_INP_SOCKQ_LOCK_DESTROY(_inp) \
-	mtx_destroy(&(_inp)->inp_sockq_mtx)
+#define SCTP_INP_READQ_LOCK_DESTROY(_inp) \
+	mtx_destroy(&(_inp)->inp_readq_mtx)
 
 #ifdef INVARIANTS_SCTP
 void SCTP_INP_RLOCK(struct sctp_inpcb *);
@@ -604,8 +600,8 @@ void SCTP_ASOC_CREATE_LOCK(struct sctp_inpcb *inp);
 #endif
 #endif
 
-#define SCTP_INP_SOCKQ_LOCK(_inp)	mtx_lock(&(_inp)->inp_sockq_mtx)
-#define SCTP_INP_SOCKQ_UNLOCK(_inp)	mtx_unlock(&(_inp)->inp_sockq_mtx)
+#define SCTP_INP_READQ_LOCK(_inp)	mtx_lock(&(_inp)->inp_readq_mtx)
+#define SCTP_INP_READQ_UNLOCK(_inp)	mtx_unlock(&(_inp)->inp_readq_mtx)
 
 #define SCTP_INP_RUNLOCK(_inp)		mtx_unlock(&(_inp)->inp_mtx)
 #define SCTP_INP_WUNLOCK(_inp)		mtx_unlock(&(_inp)->inp_mtx)
@@ -708,20 +704,20 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #define SCTP_INP_LOCK_INIT(_inp) \
 	(_inp)->inp_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
 
-#define SCTP_INP_SOCKQ_LOCK_INIT(_inp) \
-	(_inp)->inp_sockq_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
+#define SCTP_INP_READQ_LOCK_INIT(_inp) \
+	(_inp)->inp_readq_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
 
 #define SCTP_INP_LOCK_DESTROY(_inp) \
 	lck_mtx_free((_inp)->inp_mtx, SCTP_MTX_GRP)
 
-#define SCTP_INP_SOCKQ_LOCK_DESTROY(_inp) \
-	lck_mtx_free((_inp)->inp_sockq_mtx, SCTP_MTX_GRP)
+#define SCTP_INP_READQ_LOCK_DESTROY(_inp) \
+	lck_mtx_free((_inp)->inp_readq_mtx, SCTP_MTX_GRP)
 
-#define SCTP_INP_SOCKQ_LOCK(_inp) \
-	lck_mtx_lock((_inp)->inp_sockq_mtx)
+#define SCTP_INP_READQ_LOCK(_inp) \
+	lck_mtx_lock((_inp)->inp_readq_mtx)
 
-#define SCTP_INP_SOCKQ_UNLOCK(_inp) \
-	lck_mtx_unlock((_inp)->inp_sockq_mtx)
+#define SCTP_INP_READQ_UNLOCK(_inp) \
+	lck_mtx_unlock((_inp)->inp_readq_mtx)
 
 
 #define SCTP_INP_RLOCK(_inp) \
@@ -807,10 +803,10 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #define SCTP_INP_RLOCK(_inp)
 #define SCTP_INP_RUNLOCK(_inp)
 #define SCTP_INP_WLOCK(_inp)
-#define SCTP_INP_SOCKQ_LOCK_INIT(_inp)
-#define SCTP_INP_SOCKQ_LOCK_DESTROY(_inp)
-#define SCTP_INP_SOCKQ_LOCK(_inp)
-#define SCTP_INP_SOCKQ_UNLOCK(_inp)
+#define SCTP_INP_READQ_LOCK_INIT(_inp)
+#define SCTP_INP_READQ_LOCK_DESTROY(_inp)
+#define SCTP_INP_READQ_LOCK(_inp)
+#define SCTP_INP_READQ_UNLOCK(_inp)
 #define SCTP_INP_INCR_REF(_inp)
 #define SCTP_INP_DECR_REF(_inp)
 #define SCTP_INP_WUNLOCK(_inp)
@@ -923,17 +919,17 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
                        mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
 	        } while (0)
 
-#define SCTP_INCR_SOCKQ_COUNT() \
+#define SCTP_INCR_READQ_COUNT() \
                 do { \
                        mtx_lock(&sctppcbinfo.ipi_count_mtx); \
-		       sctppcbinfo.ipi_count_sockq++; \
+		       sctppcbinfo.ipi_count_readq++; \
                        mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
 	        } while (0)
 
-#define SCTP_DECR_SOCKQ_COUNT() \
+#define SCTP_DECR_READQ_COUNT() \
                 do { \
                        mtx_lock(&sctppcbinfo.ipi_count_mtx); \
-		       sctppcbinfo.ipi_count_sockq--; \
+		       sctppcbinfo.ipi_count_readq--; \
                        mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
 	        } while (0)
 #endif
@@ -1022,17 +1018,17 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
                        lck_mtx_unlock(sctppcbinfo.ipi_count_mtx); \
 	        } while (0)
 
-#define SCTP_INCR_SOCKQ_COUNT() \
+#define SCTP_INCR_READQ_COUNT() \
                 do { \
                        lck_mtx_lock(sctppcbinfo.ipi_count_mtx); \
-		       sctppcbinfo.ipi_count_sockq++; \
+		       sctppcbinfo.ipi_count_readq++; \
                        lck_mtx_unlock(sctppcbinfo.ipi_count_mtx); \
 	        } while (0)
 
-#define SCTP_DECR_SOCKQ_COUNT() \
+#define SCTP_DECR_READQ_COUNT() \
                 do { \
                        lck_mtx_lock(sctppcbinfo.ipi_count_mtx); \
-		       sctppcbinfo.ipi_count_sockq--; \
+		       sctppcbinfo.ipi_count_readq--; \
                        lck_mtx_unlock(sctppcbinfo.ipi_count_mtx); \
 	        } while (0)
 /***************BEGIN APPLE PANTHER count stuff**********************/
@@ -1102,14 +1098,14 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
                        sctppcbinfo.ipi_gencnt_chunk++; \
 	        } while (0)
 
-#define SCTP_INCR_SOCKQ_COUNT() \
+#define SCTP_INCR_READQ_COUNT() \
                 do { \
-		       sctppcbinfo.ipi_count_sockq++; \
+		       sctppcbinfo.ipi_count_readq++; \
 	        } while (0)
 
-#define SCTP_DECR_SOCKQ_COUNT() \
+#define SCTP_DECR_READQQ_COUNT() \
                 do { \
-		       sctppcbinfo.ipi_count_sockq--; \
+		       sctppcbinfo.ipi_count_readq--; \
 	        } while (0)
 
 #endif

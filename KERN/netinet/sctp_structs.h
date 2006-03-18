@@ -326,11 +326,13 @@ struct sctp_queued_to_read {         /* sinfo structure for the most part */
 	u_int32_t sinfo_tsn;         /* Use this in reassembly as first TSN */
 	u_int32_t sinfo_cumtsn;      /* Use this in reassembly as last TSN */
 	sctp_assoc_t sinfo_assoc_id; /* our assoc id */
+	u_int32_t length;	     /* length of data */
 	struct sctp_nets *whoFrom;   /* where it came from */
 	struct mbuf *data;           /* front of the mbuf chain of data with PKT_HDR */
 	struct mbuf *tail_mbuf;      /* used for multi-part data */
 	struct sctp_tcb *stcb;	     /* assoc, used for window update */
-	LIST_ENTRY (sctp_read_queue) *next;
+	TAILQ_ENTRY (sctp_read_queue) *next;
+	u_int16_t port_from;
 };
 
 
@@ -340,7 +342,7 @@ struct sctp_queued_to_read {         /* sinfo structure for the most part */
  */
 TAILQ_HEAD(sctpwheelunrel_listhead, sctp_stream_in);
 struct sctp_stream_in {
-	struct sctpchunk_listhead inqueue;
+	struct sctp_readhead inqueue;
 	TAILQ_ENTRY(sctp_stream_in) next_spoke;
 	uint16_t stream_no;
 	uint16_t last_sequence_delivered;	/* used for re-order */
@@ -417,8 +419,6 @@ struct sctp_association {
 	 * queue and set our rwnd to the space in the socket minus also
 	 * the size_on_delivery_queue.
 	 */
-	struct sctpchunk_listhead delivery_queue;
-
 	struct sctpwheel_listhead out_wheel;
 
 	/* If an iterator is looking at me, this is it */
@@ -464,8 +464,9 @@ struct sctp_association {
 	 * req on the list.
 	 */
 	struct sctp_resethead resetHead;	
+
 	/* queue of chunks waiting to be sent into the local stack */
-	struct sctpchunk_listhead pending_reply_queue;
+	struct sctp_readhead pending_reply_queue;
 
 	u_int32_t cookie_preserve_req;
 	/* ASCONF next seq I am sending out, inits at init-tsn */
@@ -540,8 +541,19 @@ struct sctp_association {
 	u_int32_t last_cwr_tsn;
 	u_int32_t fast_recovery_tsn;
 	u_int32_t sat_t3_recovery_tsn;
-
 	u_int32_t tsn_last_delivered;
+	/* For the pd-api we should re-write this
+	 * a bit more efficent. We could have
+	 * multiple sctp_queued_to_read's that
+	 * we are building at once. Now we only
+	 * do this when we get ready to deliver to
+	 * the socket buffer. Note that we depend
+	 * on the fact that the struct is "stuck" on
+	 * the read queue until we finish all the
+	 * pd-api. 
+	 */
+	struct sctp_queued_to_read *control_pdapi;
+
 	u_int32_t tsn_of_pdapi_last_delivered;
         u_int32_t pdapi_ppid;
         u_int32_t context;
@@ -594,9 +606,6 @@ struct sctp_association {
 
 	/* Total error count on this association */
 	unsigned int overall_error_count;
-
-	unsigned int size_on_delivery_queue;
-	unsigned int cnt_on_delivery_queue;
 
 	unsigned int cnt_msg_on_sb;
 
