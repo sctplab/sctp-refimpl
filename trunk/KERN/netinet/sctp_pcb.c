@@ -1707,6 +1707,7 @@ sctp_inpcb_alloc(struct socket *so)
 	LIST_INSERT_HEAD(&sctppcbinfo.listhead, inp, sctp_list);
 	SCTP_INP_INFO_WUNLOCK();
 
+	TAILQ_INIT(&inp->read_queue);
 	LIST_INIT(&inp->sctp_addr_list);
 	LIST_INIT(&inp->sctp_asoc_list);
 	TAILQ_INIT(&inp->sctp_queue_list);
@@ -2386,7 +2387,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	struct inpcb *ip_pcb;
 	struct socket *so;
 	uint8_t locked_so=0;
-	struct sctp_socket_q_list *sq;
+	struct sctp_queued_to_read *sq;
 #if !defined(__FreeBSD__) || __FreeBSD_version < 500000
  	struct rtentry *rt;
 #endif
@@ -2693,10 +2694,18 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		sctp_free_assoc(inp, asoc, 1);
 		SCTP_INP_WLOCK(inp);
 	}
-	while ((sq = TAILQ_FIRST(&inp->sctp_queue_list)) != NULL) {
-		TAILQ_REMOVE(&inp->sctp_queue_list, sq, next_sq);
-		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_sockq, sq);
-		SCTP_DECR_SOCKQ_COUNT();
+	while ((sq = TAILQ_FIRST(&inp->read_queue)) != NULL) {
+		TAILQ_REMOVE(&inp->read_queue, sq, next);
+		sctp_free_remote_addr(sq->whoFrom);
+		if(sq->data) {
+			sctp_m_freem(sq->data);
+			sq->data = NULL;
+		}
+		/* no need to free the net count, since
+		 * at this point all assoc's are gone.
+		 */
+ 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, sq);
+		SCTP_DECR_READQ_COUNT();
 	}
 	inp->sctp_socket = 0;
 	/* Now first we remove ourselves from the overall list of all EP's */
@@ -2735,7 +2744,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	}
 	SCTP_INP_WUNLOCK(inp);
 	SCTP_ASOC_CREATE_UNLOCK(inp);
-	SCTP_INP_SOCKQ_LOCK_DESTROY(inp);
+	SCTP_INP_READQ_LOCK_DESTROY(inp);
 	SCTP_INP_LOCK_DESTROY(inp);
 	SCTP_ASOC_CREATE_LOCK_DESTROY(inp);
 
@@ -3569,7 +3578,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	struct sctp_tmit_chunk *chk;
 	struct sctp_asconf_addr *aparam;
 	struct sctp_stream_reset_list *liste;
-	struct sctp_socket_q_list *sq;
+	struct sctp_queued_to_read *sq;
 	int s;
 
 	/* first, lets purge the entry from the hash table. */
@@ -3580,7 +3589,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 #endif
 	if (stcb->asoc.state == 0) {
 		printf("Freeing already free association:%p - huh??\n",
-		    stcb);
+		       stcb);
 		splx(s);
 		return;
 	}
@@ -3609,33 +3618,16 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	SCTP_TCB_UNLOCK(stcb);
 	sctp_iterator_asoc_being_freed(inp, stcb);
 
-	/* check the hidden socket buffer thing */
-	if(asoc->fragmented_delivery_inprogress) {
-	  /* yep we were in the middle of fragmented delivery */
-	  if(inp->sctp_socket->so_rcv.sb_mb) {
-	    struct mbuf *m;
-	    m = inp->sctp_socket->so_rcv.sb_mb;
-	    if (m->m_len == 0) {
-	      /* opps. the head of the buffer is in process */
-	      sq = TAILQ_FIRST(&inp->sctp_queue_list);
-	      if(sq && (sq->tcb == stcb)) {
-		/* yep I hid it, must fix the sb_cc */
-		printf("Doing double duty restoral\n");
-		inp->sctp_socket->so_rcv.sb_cc = m->m_pkthdr.len;
-	      }
-	    }
-	  }
-	}
-	/* Null all of my entry's on the socket q */
-	TAILQ_FOREACH(sq, &inp->sctp_queue_list, next_sq) {
-		if (sq->tcb == stcb) {
+	/* Null all of my entry's on the socket read queue */
+	TAILQ_FOREACH(sq, &inp->read_queue, next_sq) {
+		if (sq->stcb == stcb) {
 			sq->tcb = NULL;
+			sq->sinfo_cumtsn = stcb->asoc.cumulative_tsn;
 		}
 	}
-
 	if(stcb->block_entry) {
-	  stcb->block_entry->error = ECONNRESET;
-	  stcb->block_entry = NULL;
+		stcb->block_entry->error = ECONNRESET;
+		stcb->block_entry = NULL;
 	}
 	if (inp->sctp_tcbhash) {
 		LIST_REMOVE(stcb, sctp_tcbhash);
@@ -3706,19 +3698,19 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		FREE(liste, M_PCB);
 	}
 
-	chk = TAILQ_FIRST(&asoc->pending_reply_queue);
-	while (chk) {
-		TAILQ_REMOVE(&asoc->pending_reply_queue, chk, sctp_next);
-		if (chk->data) {
-			sctp_m_freem(chk->data);
-			chk->data = NULL;
+	sq = TAILQ_FIRST(&asoc->pending_reply_queue);
+	while (sq) {
+		TAILQ_REMOVE(&asoc->pending_reply_queue, sq, next);
+		if (sq->data) {
+			sctp_m_freem(sq->data);
+			sq->data = NULL;
 		}
-		chk->whoTo = NULL;
-		chk->asoc = NULL;
-		/* Free the chunk */
-		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-		SCTP_DECR_CHK_COUNT();
-		chk = TAILQ_FIRST(&asoc->pending_reply_queue);
+		sq->whoFrom = NULL;
+		sq->stcb = NULL;
+		/* Free the ctl entry */
+		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, sq);
+		SCTP_DECR_READQ_COUNT();
+		sq = TAILQ_FIRST(&asoc->pending_reply_queue);
 	}
 	/* pending send queue SHOULD be empty */
 	if (!TAILQ_EMPTY(&asoc->send_queue)) {
@@ -3800,22 +3792,25 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	}
 	asoc->streamoutcnt = 0;
 	if (asoc->strmin) {
-		int i;
+		struct sctp_queued_to_read *ctl
+			int i;
 		for (i = 0; i < asoc->streamincnt; i++) {
 			if (!TAILQ_EMPTY(&asoc->strmin[i].inqueue)) {
 				/* We have somethings on the streamin queue */
-				chk = TAILQ_FIRST(&asoc->strmin[i].inqueue);
-				while (chk) {
+				ctl = TAILQ_FIRST(&asoc->strmin[i].inqueue);
+				while (ctl) {
 					TAILQ_REMOVE(&asoc->strmin[i].inqueue,
-					    chk, sctp_next);
-					if (chk->data) {
+						     ctl, sctp_next);
+					if (ctl->data) {
 						sctp_m_freem(chk->data);
-						chk->data = NULL;
+						ctl->data = NULL;
 					}
-					SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk,
-					    chk);
-					SCTP_DECR_CHK_COUNT();
-					chk = TAILQ_FIRST(&asoc->strmin[i].inqueue);
+					/* We don't free the address here since
+					 * all the net's were freed above.
+					 */
+ 					SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, ctl);
+					SCTP_DECR_READQ_COUNT();
+					ctl = TAILQ_FIRST(&asoc->strmin[i].inqueue);
 				}
 			}
 		}
@@ -4495,8 +4490,8 @@ sctp_pcb_init()
 	    (sctp_max_number_of_assoc * sctp_scale_up_for_address *
 	    sctp_chunkscale));
 
-	SCTP_ZONE_INIT(sctppcbinfo.ipi_zone_sockq, "sctp_sockq",
-	    sizeof(struct sctp_socket_q_list),
+	SCTP_ZONE_INIT(sctppcbinfo.ipi_zone_readq, "sctp_readq",
+	    sizeof(struct sctp_queued_to_read),
 	    (sctp_max_number_of_assoc * sctp_scale_up_for_address *
 	    sctp_chunkscale));
 
@@ -4532,8 +4527,8 @@ sctp_pcb_init()
 	sctppcbinfo.ipi_gencnt_chunk = 0;
 
 	/* socket queue zone info */
-	sctppcbinfo.ipi_count_sockq = 0;
-	sctppcbinfo.ipi_gencnt_sockq = 0;
+	sctppcbinfo.ipi_count_readq = 0;
+	sctppcbinfo.ipi_gencnt_readq = 0;
 
 	/* mbuf tracker */
 	sctppcbinfo.mbuf_track = 0;
@@ -5372,7 +5367,7 @@ sctp_add_to_socket_q(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		return (0);
 	}
 	sq = (struct sctp_socket_q_list *)SCTP_ZONE_GET(
-	    sctppcbinfo.ipi_zone_sockq);
+	    sctppcbinfo.ipi_zone_readq);
 	if (sq == NULL) {
 		/* out of sq structs */
 		printf("add_to_sq, no zone space inp:%x stcb:%x\n",

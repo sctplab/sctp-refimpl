@@ -2038,8 +2038,7 @@ sctp_optsget(struct socket *so,
 				asoc = &stcb->asoc;
 				ss->ss_total_sndbuf = (u_int32_t)asoc->total_output_queue_size;
 				ss->ss_total_mbuf_sndbuf = (u_int32_t)asoc->total_output_mbuf_queue_size;
-				ss->ss_total_recv_buf = (u_int32_t)(asoc->size_on_delivery_queue +
-								    asoc->size_on_reasm_queue +
+				ss->ss_total_recv_buf = (u_int32_t)(asoc->size_on_reasm_queue +
 								    asoc->size_on_all_streams);
 				SCTP_TCB_UNLOCK(stcb);
 				error = 0;
@@ -2745,8 +2744,7 @@ sctp_optsget(struct socket *so,
 		 * We can't include chunks that have been passed
 		 * to the socket layer. Only things in queue.
 		 */
-		sstat->sstat_penddata = (stcb->asoc.cnt_on_delivery_queue +
-					 stcb->asoc.cnt_on_reasm_queue +
+		sstat->sstat_penddata = (stcb->asoc.cnt_on_reasm_queue +
 					 stcb->asoc.cnt_on_all_streams);
 
 
@@ -5308,13 +5306,8 @@ struct pr_usrreqs sctp_usrreqs = {
 	sctp_shutdown,
 	sctp_ingetaddr,
 	sctp_sosend,
-#ifndef HAVE_SCTP_SORECEIVE
-	soreceive,
-#else
 	sctp_soreceive,	
-#endif
 	sopoll
-
 #endif
 };
 

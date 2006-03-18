@@ -163,6 +163,23 @@ u_int32_t sctp_calculate_sum(struct mbuf *, int32_t *, u_int32_t);
 void sctp_mtu_size_reset(struct sctp_inpcb *, struct sctp_association *,
 	u_long);
 
+void
+sctp_add_to_readq(struct sctp_inpcb *inp,
+		  struct sctp_tcb *stcb,
+		  struct sctp_queued_to_read *control,
+		  struct sockbuf *sb,
+		  int end);
+
+int
+sctp_append_to_readq(struct sctp_inpcb *inp,
+		     struct sctp_tcb *stcb,
+		     struct sctp_queued_to_read *control,
+		     struct mbuf *m,
+		     int end,
+		     int new_cumack,
+		     struct sockbuf *sb);
+
+
 int find_next_best_mtu(int);
 
 u_int32_t sctp_calculate_rto(struct sctp_tcb *, struct sctp_association *,
@@ -207,11 +224,6 @@ int sctp_cmpaddr(struct sockaddr *, struct sockaddr *);
 
 void sctp_print_address(struct sockaddr *);
 void sctp_print_address_pkt(struct ip *, struct sctphdr *);
-
-int sbappendaddr_nocheck __P((struct sockbuf *, struct sockaddr *,
-	struct mbuf *, struct mbuf *, u_int32_t, struct sctp_inpcb *,
-	struct sctp_tcb *));
-
 
 int sctp_release_pr_sctp_chunk(struct sctp_tcb *, struct sctp_tmit_chunk *,
 	int, struct sctpchunk_listhead *);
@@ -273,11 +285,6 @@ sctp_soreceive(	struct socket *so, struct sockaddr **psa,
 		struct mbuf **mp0,
 		struct mbuf **controlp,
 		int *flagsp);
-void
-sctp_sbappend( struct sockbuf *sb,
-	       struct mbuf *m,
-	       struct sctp_tcb *stcb);
-
 #endif
 
 #ifdef SCTP_STAT_LOGGING
