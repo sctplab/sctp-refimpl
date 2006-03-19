@@ -278,14 +278,12 @@ void sctp_free_bufspace(struct sctp_tcb *, struct sctp_association *,
 
 #endif
 
-#ifdef HAVE_SCTP_SORECEIVE
 int
 sctp_soreceive(	struct socket *so, struct sockaddr **psa,
 		struct uio *uio,
 		struct mbuf **mp0,
 		struct mbuf **controlp,
 		int *flagsp);
-#endif
 
 #ifdef SCTP_STAT_LOGGING
 void sctp_log_strm_del_alt(u_int32_t, u_int16_t, int);

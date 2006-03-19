@@ -1641,7 +1641,7 @@ void sctp_autoclose_timer(struct sctp_inpcb *inp,
 
 	SCTP_GETTIME_TIMEVAL(&tn);
 	if (stcb->asoc.sctp_autoclose_ticks &&
-	    (inp->sctp_flags & SCTP_PCB_FLAGS_AUTOCLOSE)) {
+	    sctp_is_feature_on(inp, SCTP_PCB_FLAGS_AUTOCLOSE)) {
 		/* Auto close is on */
 		asoc = &stcb->asoc;
 		/* pick the time to use */

@@ -1260,7 +1260,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			net->hb_responded = 1;
 
 			if (stcb->asoc.sctp_autoclose_ticks &&
-			    (inp->sctp_flags & SCTP_PCB_FLAGS_AUTOCLOSE)) {
+			    (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_AUTOCLOSE))) {
 				sctp_timer_start(SCTP_TIMER_TYPE_AUTOCLOSE,
 				    inp, stcb, NULL);
 			}
@@ -1319,7 +1319,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		 */
 		net->hb_responded = 1;
 		if (stcb->asoc.sctp_autoclose_ticks &&
-		    (inp->sctp_flags & SCTP_PCB_FLAGS_AUTOCLOSE)) {
+		    sctp_is_feature_on(inp,SCTP_PCB_FLAGS_AUTOCLOSE)) {
 			sctp_timer_start(SCTP_TIMER_TYPE_AUTOCLOSE, inp, stcb,
 			    NULL);
 		}
@@ -1735,7 +1735,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	(*netp)->hb_responded = 1;
 
 	if (stcb->asoc.sctp_autoclose_ticks &&
-	    (inp->sctp_flags & SCTP_PCB_FLAGS_AUTOCLOSE)) {
+	    sctp_is_feature_on(inp,SCTP_PCB_FLAGS_AUTOCLOSE)) {
 		sctp_timer_start(SCTP_TIMER_TYPE_AUTOCLOSE, inp, stcb, NULL);
 	}
 
@@ -2292,7 +2292,7 @@ sctp_handle_cookie_ack(struct sctp_cookie_ack_chunk *cp,
 		net->hb_responded = 1;
 
 		if (stcb->asoc.sctp_autoclose_ticks &&
-		    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_AUTOCLOSE)) {
+		    sctp_is_feature_on(stcb->sctp_ep,SCTP_PCB_FLAGS_AUTOCLOSE)) {
 			sctp_timer_start(SCTP_TIMER_TYPE_AUTOCLOSE,
 			    stcb->sctp_ep, stcb, NULL);
 		}
@@ -2301,7 +2301,7 @@ sctp_handle_cookie_ack(struct sctp_cookie_ack_chunk *cp,
 		 * set ASCONF timer if ASCONFs are pending and allowed
 		 * (eg. addresses changed when init/cookie echo in flight)
 		 */
-		if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_DO_ASCONF) &&
+		if ((sctp_is_feature_on(stcb->sctp_ep->sctp_flags,SCTP_PCB_FLAGS_DO_ASCONF)) &&
 		    (stcb->asoc.peer_supports_asconf) &&
 		    (!TAILQ_EMPTY(&stcb->asoc.asconf_queue))) {
 			sctp_timer_start(SCTP_TIMER_TYPE_ASCONF,

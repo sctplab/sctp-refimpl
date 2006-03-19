@@ -285,7 +285,7 @@ sctp_build_ctl_nchunk(struct sctp_tcb *stcb,
 	struct cmsghdr *cmh;
 	struct mbuf *ret;
 
-	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_RECVDATAIOEVNT) == 0) {
+	if (sctp_is_feature_off(stcb->sctp_ep,SCTP_PCB_FLAGS_RECVDATAIOEVNT)) {
 		/* user does not want the sndrcv ctl */
 		return (NULL);
 	}
@@ -336,7 +336,7 @@ sctp_build_ctl(struct sctp_tcb *stcb, struct sctp_tmit_chunk *chk)
 	struct sctp_sndrcvinfo *outinfo;
 	struct cmsghdr *cmh;
 	struct mbuf *ret;
-	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_RECVDATAIOEVNT) == 0) {
+	if (sctp_is_feature_off(stcb->sctp_ep, SCTP_PCB_FLAGS_RECVDATAIOEVNT)) {
 		/* user does not want the sndrcv ctl */
 		return (NULL);
 	}
