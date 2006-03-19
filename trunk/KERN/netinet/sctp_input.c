@@ -2216,6 +2216,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			    SCTP_PCB_FLAGS_IN_TCPPOOL |
 			    (SCTP_PCB_COPY_FLAGS & (*inp_p)->sctp_flags) |
 			    SCTP_PCB_FLAGS_DONT_WAKE);
+			inp->sctp_features = (*inp_p)->sctp_features;
 			inp->sctp_socket = so;
 
 			/*
@@ -2224,8 +2225,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			 */
 			sctp_move_pcb_and_assoc(*inp_p, inp, *stcb);
 
-			/* move any events */
-			sctp_grub_through_socket_buffer((*inp_p), oso, so, (*stcb));
+			sctp_pull_off_control_to_new_inp((*inp_p), inp, *stcb);
 
 			/* Switch over to the new guy */
 			*inp_p = inp;
@@ -2292,7 +2292,7 @@ sctp_handle_cookie_ack(struct sctp_cookie_ack_chunk *cp,
 		net->hb_responded = 1;
 
 		if (stcb->asoc.sctp_autoclose_ticks &&
-		    sctp_is_feature_on(stcb->sctp_ep,SCTP_PCB_FLAGS_AUTOCLOSE)) {
+		    sctp_is_feature_on(stcb->sctp_ep, SCTP_PCB_FLAGS_AUTOCLOSE)) {
 			sctp_timer_start(SCTP_TIMER_TYPE_AUTOCLOSE,
 			    stcb->sctp_ep, stcb, NULL);
 		}
@@ -2301,7 +2301,7 @@ sctp_handle_cookie_ack(struct sctp_cookie_ack_chunk *cp,
 		 * set ASCONF timer if ASCONFs are pending and allowed
 		 * (eg. addresses changed when init/cookie echo in flight)
 		 */
-		if ((sctp_is_feature_on(stcb->sctp_ep->sctp_flags,SCTP_PCB_FLAGS_DO_ASCONF)) &&
+		if ((sctp_is_feature_on(stcb->sctp_ep, SCTP_PCB_FLAGS_DO_ASCONF)) &&
 		    (stcb->asoc.peer_supports_asconf) &&
 		    (!TAILQ_EMPTY(&stcb->asoc.asconf_queue))) {
 			sctp_timer_start(SCTP_TIMER_TYPE_ASCONF,

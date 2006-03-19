@@ -151,11 +151,8 @@ sctp_do_peeloff(struct socket *head, struct socket *so, caddr_t assoc_id)
 	 * the stcb in the right place.
 	 */
 	sctp_move_pcb_and_assoc(inp, n_inp, stcb);
-	/*
-	 * And now the final hack. We move data in the pending side
-	 * i.e. head to the new socket buffer. Let the GRUBBING begin :-0
-	 */
-	sctp_grub_through_socket_buffer(inp, head, so, stcb);
+
+	sctp_pull_off_control_to_new_inp(n_inp, inp, stcb);
 
 	SCTP_TCB_UNLOCK(stcb);
 	return (0);
@@ -207,6 +204,7 @@ sctp_get_peeloff(struct socket *head, caddr_t assoc_id, int *error)
 	    SCTP_PCB_FLAGS_CONNECTED |
 	    SCTP_PCB_FLAGS_IN_TCPPOOL | /* Turn on Blocking IO */
 	    (SCTP_PCB_COPY_FLAGS & inp->sctp_flags));
+	n_inp->sctp_features = inp->sctp_features;
 	n_inp->sctp_socket = newso;
 	/* Turn off any non-blocking semantic. */
 	newso->so_state &= ~SS_NBIO;
@@ -240,7 +238,8 @@ sctp_get_peeloff(struct socket *head, caddr_t assoc_id, int *error)
 	 * And now the final hack. We move data in the pending side
 	 * i.e. head to the new socket buffer. Let the GRUBBING begin :-0
 	 */
-	sctp_grub_through_socket_buffer(inp, head, newso, stcb);
+	sctp_pull_off_control_to_new_inp(n_inp, inp, stcb);
+
 	SCTP_TCB_UNLOCK(stcb);
 	return (newso);
 }

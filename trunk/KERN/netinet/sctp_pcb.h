@@ -346,11 +346,6 @@ struct sctp_pcb {
 
 #define sctp_lport ip_inp.inp.inp_lport
 
-struct sctp_socket_q_list {
-	struct sctp_tcb *tcb;
-	TAILQ_ENTRY(sctp_socket_q_list) next_sq;
-};
-
 struct sctp_inpcb {
 	/*
 	 * put an inpcb in front of it all, kind of a waste but we need
@@ -1215,10 +1210,6 @@ int sctp_is_vtag_good(struct sctp_inpcb *, uint32_t, struct timeval *);
 /*void sctp_drain(void);*/
 
 int sctp_destination_is_reachable(struct sctp_tcb *, struct sockaddr *);
-
-int sctp_add_to_socket_q(struct sctp_inpcb *, struct sctp_tcb *);
-
-struct sctp_tcb *sctp_remove_from_socket_q(struct sctp_inpcb *);
 
 /*
  * Null in last arg inpcb indicate run on ALL ep's. Specific inp in last

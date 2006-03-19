@@ -300,7 +300,7 @@ sctp_log_strm_del(struct sctp_queued_to_read *control, struct sctp_queued_to_rea
     int from)
 {
 
-	if (chk == NULL) {
+	if (control == NULL) {
 		printf("Gak log of NULL?\n");
 		return;
 	}
@@ -1071,7 +1071,6 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	TAILQ_INIT(&asoc->sent_queue);
 	TAILQ_INIT(&asoc->reasmqueue);
 	TAILQ_INIT(&asoc->resetHead);
-	TAILQ_INIT(&asoc->delivery_queue);
 	asoc->max_inbound_streams = m->sctp_ep.max_open_streams_intome;
 
 	TAILQ_INIT(&asoc->asconf_queue);
@@ -2382,8 +2381,7 @@ sctp_notify_assoc_change(u_int32_t event, struct sctp_tcb *stcb,
 {
 	struct mbuf *m_notify;
 	struct sctp_assoc_change *sac;
-	struct sockaddr *to;
-	struct sockaddr_in6 sin6, lsa6;
+	struct sctp_queued_to_read *control;
 
 	/*
 	 * First if we are are going down dump everything we
@@ -2412,7 +2410,7 @@ sctp_notify_assoc_change(u_int32_t event, struct sctp_tcb *stcb,
 		 soisconnected(stcb->sctp_socket);
 	}
 #endif
-	if (sctp_is_feature_off(stcb->sctp_ep,SCTP_PCB_FLAGS_RECVASSOCEVNT)) {
+	if (sctp_is_feature_off(stcb->sctp_ep, SCTP_PCB_FLAGS_RECVASSOCEVNT)) {
 		/* event not enabled */
 		return;
 	}
@@ -2450,7 +2448,7 @@ sctp_notify_assoc_change(u_int32_t event, struct sctp_tcb *stcb,
 	control->tail_mbuf = m_notify;
 	sctp_add_to_readq(stcb->sctp_ep, stcb,
 			  control,
-			  &stcb->sctp_socket->so_rcv);
+			  &stcb->sctp_socket->so_rcv, 1);
 	/* Wake up any sleeper */
 	sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 	sctp_sowwakeup(stcb->sctp_ep, stcb->sctp_socket);
@@ -2462,8 +2460,7 @@ sctp_notify_peer_addr_change(struct sctp_tcb *stcb, uint32_t state,
 {
 	struct mbuf *m_notify;
 	struct sctp_paddr_change *spc;
-	struct sockaddr *to;
-	struct sockaddr_in6 sin6, lsa6;
+	struct sctp_queued_to_read *control;
 
 	if (sctp_is_feature_off(stcb->sctp_ep, SCTP_PCB_FLAGS_RECVPADDREVNT))
 		/* event not enabled */
@@ -2513,7 +2510,7 @@ sctp_notify_peer_addr_change(struct sctp_tcb *stcb, uint32_t state,
 	control->tail_mbuf = m_notify;
 	sctp_add_to_readq(stcb->sctp_ep, stcb,
 			  control,
-			  &stcb->sctp_socket->so_rcv);
+			  &stcb->sctp_socket->so_rcv, 1);
 	sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 }
 
@@ -2524,8 +2521,7 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, u_int32_t error,
 {
 	struct mbuf *m_notify;
 	struct sctp_send_failed *ssf;
-	struct sockaddr_in6 sin6, lsa6;
-	struct sockaddr *to;
+	struct sctp_queued_to_read *control;
 	int length;
 
 	if (sctp_is_feature_off(stcb->sctp_ep, SCTP_PCB_FLAGS_RECVSENDFAILEVNT))
@@ -2591,7 +2587,7 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, u_int32_t error,
 	/* not that we need this */
 	sctp_add_to_readq(stcb->sctp_ep, stcb,
 			  control,
-			  &stcb->sctp_socket->so_rcv);
+			  &stcb->sctp_socket->so_rcv, 1);
 	sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 }
 
@@ -2601,8 +2597,7 @@ sctp_notify_adaptation_layer(struct sctp_tcb *stcb,
 {
 	struct mbuf *m_notify;
 	struct sctp_adaptation_event *sai;
-	struct sockaddr_in6 sin6, lsa6;
-	struct sockaddr *to;
+	struct sctp_queued_to_read *control;
 
 	if (sctp_is_feature_off(stcb->sctp_ep, SCTP_PCB_FLAGS_ADAPTATIONEVNT))
 		/* event not enabled */
@@ -2639,7 +2634,7 @@ sctp_notify_adaptation_layer(struct sctp_tcb *stcb,
 	control->tail_mbuf = m_notify;
 	sctp_add_to_readq(stcb->sctp_ep, stcb,
 			  control,
-			  &stcb->sctp_socket->so_rcv);
+			  &stcb->sctp_socket->so_rcv, 1);
 	sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 }
 
@@ -2649,10 +2644,9 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
 {
 	struct mbuf *m_notify;
 	struct sctp_pdapi_event *pdapi;
-	struct sockaddr_in6 sin6, lsa6;
-	struct sockaddr *to;
+	struct sctp_queued_to_read *control;
 
-	if (sctp_is_feature_off(stcb->sctp_ep->sctp_flags, SCTP_PCB_FLAGS_PDAPIEVNT))
+	if (sctp_is_feature_off(stcb->sctp_ep, SCTP_PCB_FLAGS_PDAPIEVNT))
 		/* event not enabled */
 		return;
 
@@ -2684,7 +2678,7 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
 			/* clear up by freeing mbufs */
 			m = control->data;
 			while(m) {
-				sctp_sbfree(stcb, sb, m);
+				sctp_sbfree(stcb,(&stcb->sctp_socket->so_rcv) , m);
 				m = m->m_next;
 			}
 			sctp_m_freem(control->data);
@@ -2707,7 +2701,7 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
 		control->tail_mbuf = m_notify;
 		sctp_add_to_readq(stcb->sctp_ep, stcb,
 				  control,
-				  &stcb->sctp_socket->so_rcv);
+				  &stcb->sctp_socket->so_rcv, 1);
 	}
 	sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 }
@@ -2717,8 +2711,7 @@ sctp_notify_shutdown_event(struct sctp_tcb *stcb)
 {
 	struct mbuf *m_notify;
 	struct sctp_shutdown_event *sse;
-	struct sockaddr_in6 sin6, lsa6;
-	struct sockaddr *to;
+	struct sctp_queued_to_read *control;
 
 	/*
 	 * For TCP model AND UDP connected sockets we will send
@@ -2731,7 +2724,7 @@ sctp_notify_shutdown_event(struct sctp_tcb *stcb)
 		socantsendmore(stcb->sctp_socket);
 	}
 
-	if (sctp_is_feature_off(stcb->sctp_ep->sctp_flags, SCTP_PCB_FLAGS_RECVSHUTDOWNEVNT))
+	if (sctp_is_feature_off(stcb->sctp_ep, SCTP_PCB_FLAGS_RECVSHUTDOWNEVNT))
 		/* event not enabled */
 		return;
 
@@ -2752,28 +2745,6 @@ sctp_notify_shutdown_event(struct sctp_tcb *stcb)
 	m_notify->m_len = sizeof(struct sctp_shutdown_event);
 	m_notify->m_next = NULL;
 
-	to = (struct sockaddr *)(struct sockaddr *)&stcb->asoc.primary_destination->ro._l_addr;
-	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_NEEDS_MAPPED_V4) &&
-	    to->sa_family == AF_INET) {
-		struct sockaddr_in *sin;
-
-		sin = (struct sockaddr_in *)to;
-		bzero(&sin6, sizeof(sin6));
-		sin6.sin6_family = AF_INET6;
-		sin6.sin6_len = sizeof(struct sockaddr_in6);
-		sin6.sin6_addr.s6_addr16[2] = 0xffff;
-		bcopy(&sin->sin_addr, &sin6.sin6_addr.s6_addr16[3],
-		    sizeof(sin6.sin6_addr.s6_addr16[3]));
-		sin6.sin6_port = sin->sin_port;
-		to = (struct sockaddr *)&sin6;
-	}
-	/* check and strip embedded scope junk */
-	to = (struct sockaddr *)sctp_recover_scope((struct sockaddr_in6 *)to,
-	    &lsa6);
-	if (sctp_sbspace(&stcb->asoc, &stcb->sctp_socket->so_rcv) < m_notify->m_len) {
-		sctp_m_freem(m_notify);
-		return;
-	}
 	/* append to socket */
 	control = sctp_build_readq_entry(stcb, stcb->asoc.primary_destination,
 					 0, 0, 0, 0, 0, 0,
@@ -2788,7 +2759,7 @@ sctp_notify_shutdown_event(struct sctp_tcb *stcb)
 	control->tail_mbuf = m_notify;
 	sctp_add_to_readq(stcb->sctp_ep, stcb,
 			  control,
-			  &stcb->sctp_socket->so_rcv);
+			  &stcb->sctp_socket->so_rcv, 1);
 	sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 }
 
@@ -2799,11 +2770,9 @@ sctp_notify_stream_reset(struct sctp_tcb *stcb,
 	struct mbuf *m_notify;
 	struct sctp_queued_to_read *control;
 	struct sctp_stream_reset_event *strreset;
-	struct sockaddr_in6 sin6, lsa6;
-	struct sockaddr *to;
 	int len;
 
-	if (sctp_is_feature_off(stcb->sctp_ep->sctp_flags, SCTP_PCB_FLAGS_STREAM_RESETEVNT))
+	if (sctp_is_feature_off(stcb->sctp_ep, SCTP_PCB_FLAGS_STREAM_RESETEVNT))
 		/* event not enabled */
 		return;
 
@@ -2850,24 +2819,6 @@ sctp_notify_stream_reset(struct sctp_tcb *stcb,
 		sctp_m_freem(m_notify);
 		return;
 	}
-	to = (struct sockaddr *)(struct sockaddr *)&stcb->asoc.primary_destination->ro._l_addr;
-	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_NEEDS_MAPPED_V4) &&
-	    to->sa_family == AF_INET) {
-		struct sockaddr_in *sin;
-
-		sin = (struct sockaddr_in *)to;
-		bzero(&sin6, sizeof(sin6));
-		sin6.sin6_family = AF_INET6;
-		sin6.sin6_len = sizeof(struct sockaddr_in6);
-		sin6.sin6_addr.s6_addr16[2] = 0xffff;
-		bcopy(&sin->sin_addr, &sin6.sin6_addr.s6_addr16[3],
-		    sizeof(sin6.sin6_addr.s6_addr16[3]));
-		sin6.sin6_port = sin->sin_port;
-		to = (struct sockaddr *)&sin6;
-	}
-	/* check and strip embedded scope junk */
-	to = (struct sockaddr *)sctp_recover_scope((struct sockaddr_in6 *)to,
-	    &lsa6);
 	/* append to socket */
 	control = sctp_build_readq_entry(stcb, stcb->asoc.primary_destination,
 					 0, 0, 0, 0, 0, 0,
@@ -2882,7 +2833,7 @@ sctp_notify_stream_reset(struct sctp_tcb *stcb,
 	control->tail_mbuf = m_notify;
 	sctp_add_to_readq(stcb->sctp_ep, stcb,
 			  control,
-			  &stcb->sctp_socket->so_rcv);
+			  &stcb->sctp_socket->so_rcv, 1);
 	sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 }
 
@@ -3405,6 +3356,40 @@ sctp_print_address_pkt(struct ip *iph, struct sctphdr *sh)
 } while (/*CONSTCOND*/0)
 #endif
 
+void
+sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp, 
+				 struct sctp_inpcb *new_inp, 
+				 struct sctp_tcb *stcb)
+{
+	/* go through our old INP and pull off
+	 * any control structures that belong to
+	 * stcb and move then to
+	 * the new inp.
+	 */
+	struct socket *old_so, *new_so;
+	struct sctp_queued_to_read *control, *nctl;
+	
+	old_so = old_inp->sctp_socket;
+	new_so = new_inp->sctp_socket;
+	/* lock the socket buffers */
+	SOCKBUF_LOCK((&old_so->so_rcv));
+	SOCKBUF_LOCK((&new_so->so_rcv));
+
+	control = TAILQ_FIRST(&old_inp->read_queue);
+	while(control) {
+		nctl = TAILQ_NEXT(control, next);
+		if(control->stcb == stcb) {
+			/* remove it we want it */
+			TAILQ_REMOVE(&old_inp->read_queue, control, next);
+			TAILQ_INSERT_TAIL(&new_inp->read_queue, control, next);
+		}
+		control = nctl;
+	}
+	SOCKBUF_UNLOCK((&old_so->so_rcv));
+	SOCKBUF_UNLOCK((&new_so->so_rcv));
+
+}
+
 
 void
 sctp_add_to_readq(struct sctp_inpcb *inp,
@@ -3520,238 +3505,6 @@ sctp_generate_invmanparam(int err)
 		ph->param_type = htons(err);
 	}
 	return (m);
-}
-
-static int
-sctp_should_be_moved(struct mbuf *this, struct sctp_association *asoc)
-{
-	struct mbuf *m;
-	/*
-	 * given a mbuf chain, look through it finding
-	 * the M_PKTHDR and return 1 if it belongs to
-	 * the association given. We tell this by
-	 * a kludge where we stuff the my_vtag of the asoc
-	 * into the m->m_pkthdr.csum_data/csum field.
-	 */
-	m = this;
-	while (m) {
-		if (m->m_flags & M_PKTHDR) {
-			/* check it */
-#if defined(__OpenBSD__)
-			if ((u_int32_t)m->m_pkthdr.csum == asoc->my_vtag)
-#else
-			if ((u_int32_t)m->m_pkthdr.csum_data == asoc->my_vtag)
-#endif
-			{
-				/* Yep */
-				return (1);
-			} 
-
-		}
-		m = m->m_next;
-	}
-	return (0);
-}
-
-u_int32_t
-sctp_get_first_vtag_from_sb(struct socket *so)
-{
-	struct sctp_socket_q_list *sq=NULL;
-	struct sctp_inpcb *inp;
-	struct sctp_tcb *stcb=NULL;
-
-	inp = (struct sctp_inpcb *)so->so_pcb;
-	if(inp == NULL)
-		return (0);
-
-	if (((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) &&
-	    ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
- 		sq = TAILQ_FIRST(&inp->sctp_queue_list);
-		if (sq) {
-			stcb = sq->tcb;
-		} else {
-			return (0);
-		}
-	}
-	if(stcb) {
-		return(stcb->asoc.my_vtag);
-	}
-	return (0);
-}
-
-void
-sctp_grub_through_socket_buffer(struct sctp_inpcb *inp, struct socket *old,
-    struct socket *new, struct sctp_tcb *stcb)
-{
-	struct mbuf **put, **take, *next, *this, *lastrec, *endlastrec;
-	struct sockbuf *old_sb, *new_sb;
-	struct sctp_association *asoc;
-	int moved_top = 0;
-	u_int before;
-	struct sctp_socket_q_list *sq, *nsq;
-
-	asoc = &stcb->asoc;
-	old_sb = &old->so_rcv;
-	new_sb = &new->so_rcv;
-	if (old_sb->sb_mb == NULL) {
-		/* Nothing to move */
-		return;
-	}
-#ifdef SCTP_LOCK_LOGGING
-	sctp_log_lock(inp, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
-#endif
-	SOCKBUF_LOCK(old_sb);
-	SOCKBUF_LOCK(new_sb);
-	before = stcb->asoc.sb_cc;
-
-	SCTP_INP_SOCKQ_LOCK(inp);
-	sq = TAILQ_FIRST(&inp->sctp_queue_list);
-	while(sq) {
-		nsq = TAILQ_NEXT(sq, next_sq);
-		if (sq->tcb == stcb) {
-			TAILQ_REMOVE(&inp->sctp_queue_list, sq, next_sq);
-			sq->tcb = NULL;
-			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_sockq, sq);
-			SCTP_DECR_SOCKQ_COUNT();
-			if (stcb) {
-				sctp_ucount_decr(stcb->asoc.cnt_msg_on_sb);
-			}
-		}
-		sq = nsq;
-	}
-	SCTP_INP_SOCKQ_UNLOCK(inp);
-
-
-	if (inp->sctp_vtag_first == asoc->my_vtag) {
-		/* First one must be moved */
-		struct mbuf *mm;
-		for (mm = old_sb->sb_mb; mm; mm = mm->m_next) {
-			/*
-			 * Go down the chain and fix
-			 * the space allocation of the
-			 * two sockets.
-			 */
-#ifdef SCTP_SB_LOGGING
-			sctp_sblog(old_sb, stcb, SCTP_LOG_SBFREE, mm->m_len);
-#endif
-			sctp_sbfree(stcb, old_sb, mm);
-#ifdef SCTP_SB_LOGGING
-			sctp_sblog(new_sb, stcb, SCTP_LOG_SBALLOC, mm->m_len);
-#endif
-			sctp_sballoc(stcb, new_sb, mm);
-		}
-		if(old_sb->sb_mb == inp->pkt_last) {
-			stcb->sctp_ep->pkt_last = inp->pkt_last;
-			stcb->sctp_ep->pkt = inp->pkt;
-			inp->pkt = inp->pkt_last = NULL;
-		}
-		new_sb->sb_mb = old_sb->sb_mb;
-		old_sb->sb_mb = new_sb->sb_mb->m_nextpkt;
-		new_sb->sb_mb->m_nextpkt = NULL;
-		put = &new_sb->sb_mb->m_nextpkt;
-		moved_top = 1;
-	} else {
-		put = &new_sb->sb_mb;
-	}
-
-	take = &old_sb->sb_mb;
-	next = old_sb->sb_mb;
-	while (next) {
-		this = next;
-		/* postion for next one */
-		next = this->m_nextpkt;
-		/* check the tag of this packet */
-		if (sctp_should_be_moved(this, asoc)) {
-			/* yes this needs to be moved */
-			struct mbuf *mm;
-			if(this == inp->pkt_last) {
-				stcb->sctp_ep->pkt_last = inp->pkt_last;
-				stcb->sctp_ep->pkt = inp->pkt;
-				inp->pkt = inp->pkt_last = NULL;
-			}
-			*take = this->m_nextpkt;
-			
-			this->m_nextpkt = NULL;
-
-			*put = this;
-			for (mm = this; mm; mm = mm->m_next) {
-				/*
-				 * Go down the chain and fix
-				 * the space allocation of the
-				 * two sockets.
-				 */
-#ifdef SCTP_SB_LOGGING
-				sctp_sblog(old_sb, stcb, 
-					   SCTP_LOG_SBFREE, mm->m_len);
-#endif
-				sctp_sbfree(stcb, old_sb, mm);
-#ifdef SCTP_SB_LOGGING
-				sctp_sblog(new_sb, stcb, 
-					   SCTP_LOG_SBALLOC, mm->m_len);
-#endif
-				sctp_sballoc(stcb, new_sb, mm);
-			}
-			put = &this->m_nextpkt;
-		} else {
-			/* no advance our take point. */
-			take = &this->m_nextpkt;
-		}
-	}
-	if (moved_top) {
-		/*
-		 * Ok so now we must re-postion vtag_first to
-		 * match the new first one since we moved the
-		 * mbuf at the top.
-		 */
-		inp->sctp_vtag_first = sctp_get_first_vtag_from_sb(old);
-	}
-	/* get old sb's last record now */
-	lastrec = old_sb->sb_mb;
-	while(lastrec) {
-		if(lastrec->m_nextpkt == NULL) {
-			break;
-		}
-		lastrec = lastrec->m_nextpkt;
-	}
-	/* find end of that chain */
-	endlastrec = lastrec;
-	while(endlastrec) {
-		if(endlastrec->m_next == NULL)
-			break;
-		else
-			endlastrec = endlastrec->m_next;
-	}
-#ifdef HAVE_SCTP_SO_LASTRECORD
-	old_sb->sb_lastrecord = lastrec;
-	old_sb->sb_mbtail = endlastrec;
-#else
-	inp->sb_last_mpkt = lastrec;
-#endif
-
-	/* get new sb's last record setup */
-	lastrec = new_sb->sb_mb;
-	while(lastrec) {
-		if(lastrec->m_nextpkt == NULL) {
-			break;
-		}
-		lastrec = lastrec->m_nextpkt;
-	}
-	/* find end of that chain */
-	endlastrec = lastrec;
-	while(endlastrec) {
-		if(endlastrec->m_next == NULL)
-			break;
-		else
-			endlastrec = endlastrec->m_next;
-	}
-#ifdef HAVE_SCTP_SO_LASTRECORD
-	new_sb->sb_lastrecord = lastrec;
-	new_sb->sb_mbtail = endlastrec;
-#else
-	stcb->sctp_ep->sb_last_mpkt = lastrec;
-#endif
-	SOCKBUF_UNLOCK(old_sb);
-	SOCKBUF_UNLOCK(new_sb);
 }
 
 #ifdef SCTP_MBCNT_LOGGING
@@ -4073,7 +3826,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 	int orig_resid = uio->uio_resid;
 	int special_mark=0;
 	struct sctp_inpcb *inp;
-	struct sctp_tcb *stcb;
+	struct sctp_tcb *stcb=NULL;
 	struct sctp_socket_q_list *sq=NULL;
 
 
@@ -4105,22 +3858,8 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		if(stcb && (stcb->last_record_insert == NULL)) {
 			at_eor = 1;
 		}
-	} else {
-		sq = TAILQ_FIRST(&inp->sctp_queue_list);
-		if(sq != NULL) {
-			stcb = sq->tcb;
-			if(stcb) {
-				if(stcb->last_record_insert == NULL) {
-					at_eor = 1;
-				}
-			} else {
-				at_eor = 1;			  
-			}
-		} else {
-			stcb = NULL;
-			at_eor = 0;
-		}
 	}
+
 	SCTP_INP_RUNLOCK(inp);
 	mp = mp0;
 	if (psa != NULL)
@@ -4312,21 +4051,6 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 			stcb = LIST_FIRST(&inp->sctp_asoc_list);
 			if(stcb && (stcb->last_record_insert == NULL)) {
 				at_eor = 1;
-			}
-		} else {
-			sq = TAILQ_FIRST(&inp->sctp_queue_list);
-			if(sq != NULL) {
-				stcb = sq->tcb;
-				if(stcb) {
-					if(stcb->last_record_insert == NULL) {
-						at_eor = 1;
-					}
-				} else {
-					at_eor = 1;
-				}
-			} else {
-				stcb = NULL;
-				at_eor = 0;
 			}
 		}
 		SCTP_INP_RUNLOCK(inp);
