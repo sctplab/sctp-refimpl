@@ -88,13 +88,30 @@ TAILQ_HEAD(sctp_readhead, sctp_queued_to_read);
 #endif /* HAVE_SCTP_AUTH */
 
 /*
- * PCB flags
+ * PCB flags (in sctp_flags bitmask)
  */
 #define SCTP_PCB_FLAGS_UDPTYPE		0x00000001
 #define SCTP_PCB_FLAGS_TCPTYPE		0x00000002
 #define SCTP_PCB_FLAGS_BOUNDALL		0x00000004
 #define SCTP_PCB_FLAGS_ACCEPTING	0x00000008
 #define SCTP_PCB_FLAGS_UNBOUND		0x00000010
+/* TCP model support */
+#define SCTP_PCB_FLAGS_CONNECTED	0x00200000
+#define SCTP_PCB_FLAGS_IN_TCPPOOL	0x00400000
+#define SCTP_PCB_FLAGS_DONT_WAKE	0x00800000
+#define SCTP_PCB_FLAGS_WAKEOUTPUT	0x01000000
+#define SCTP_PCB_FLAGS_WAKEINPUT	0x02000000
+#define SCTP_PCB_FLAGS_BOUND_V6		0x04000000
+#define SCTP_PCB_FLAGS_NEEDS_MAPPED_V4	0x08000000
+#define SCTP_PCB_FLAGS_BLOCKING_IO	0x10000000
+#define SCTP_PCB_FLAGS_SOCKET_GONE	0x20000000
+#define SCTP_PCB_FLAGS_SOCKET_ALLGONE	0x40000000
+
+
+/*
+ * PCB Features (in sctp_features bitmask)
+ */
+#define SCTP_PCB_FLAGS_FRAG_INTERLEAVE  0x00000010
 #define SCTP_PCB_FLAGS_DO_ASCONF	0x00000020
 #define SCTP_PCB_FLAGS_AUTO_ASCONF	0x00000040
 /* socket options */
@@ -111,17 +128,7 @@ TAILQ_HEAD(sctp_readhead, sctp_queued_to_read);
 #define SCTP_PCB_FLAGS_AUTHEVNT		0x00040000
 #define SCTP_PCB_FLAGS_STREAM_RESETEVNT 0x00080000
 #define SCTP_PCB_FLAGS_NO_FRAGMENT	0x00100000
-/* TCP model support */
-#define SCTP_PCB_FLAGS_CONNECTED	0x00200000
-#define SCTP_PCB_FLAGS_IN_TCPPOOL	0x00400000
-#define SCTP_PCB_FLAGS_DONT_WAKE	0x00800000
-#define SCTP_PCB_FLAGS_WAKEOUTPUT	0x01000000
-#define SCTP_PCB_FLAGS_WAKEINPUT	0x02000000
-#define SCTP_PCB_FLAGS_BOUND_V6		0x04000000
-#define SCTP_PCB_FLAGS_NEEDS_MAPPED_V4	0x08000000
-#define SCTP_PCB_FLAGS_BLOCKING_IO	0x10000000
-#define SCTP_PCB_FLAGS_SOCKET_GONE	0x20000000
-#define SCTP_PCB_FLAGS_SOCKET_ALLGONE	0x40000000
+
 
 /* flags to copy to new PCB */
 #define SCTP_PCB_COPY_FLAGS		0x0e1fff64
@@ -370,7 +377,8 @@ struct sctp_inpcb {
 	struct ifnet *next_ifn_touse;
 	/* back pointer to our socket */
 	struct socket *sctp_socket;
-	uint32_t sctp_flags;			/* flag set */
+	uint32_t sctp_flags;			/* INP state flag set */
+	uint32_t sctp_features;                 /* Feature flags */
 	struct sctp_pcb sctp_ep;		/* SCTP ep data */
 	/* head of the hash of all associations */
 	struct sctpasochead *sctp_tcbhash;

@@ -2412,7 +2412,7 @@ sctp_notify_assoc_change(u_int32_t event, struct sctp_tcb *stcb,
 		 soisconnected(stcb->sctp_socket);
 	}
 #endif
-	if (!(stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_RECVASSOCEVNT)) {
+	if (sctp_is_feature_off(stcb->sctp_ep,SCTP_PCB_FLAGS_RECVASSOCEVNT)) {
 		/* event not enabled */
 		return;
 	}
@@ -2465,7 +2465,7 @@ sctp_notify_peer_addr_change(struct sctp_tcb *stcb, uint32_t state,
 	struct sockaddr *to;
 	struct sockaddr_in6 sin6, lsa6;
 
-	if (!(stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_RECVPADDREVNT))
+	if (sctp_is_feature_off(stcb->sctp_ep, SCTP_PCB_FLAGS_RECVPADDREVNT))
 		/* event not enabled */
 		return;
 
@@ -2528,7 +2528,7 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, u_int32_t error,
 	struct sockaddr *to;
 	int length;
 
-	if (!(stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_RECVSENDFAILEVNT))
+	if (sctp_is_feature_off(stcb->sctp_ep, SCTP_PCB_FLAGS_RECVSENDFAILEVNT))
 		/* event not enabled */
 		return;
 
@@ -2604,7 +2604,7 @@ sctp_notify_adaptation_layer(struct sctp_tcb *stcb,
 	struct sockaddr_in6 sin6, lsa6;
 	struct sockaddr *to;
 
-	if (!(stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_ADAPTATIONEVNT))
+	if (sctp_is_feature_off(stcb->sctp_ep, SCTP_PCB_FLAGS_ADAPTATIONEVNT))
 		/* event not enabled */
 		return;
 
@@ -2652,7 +2652,7 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
 	struct sockaddr_in6 sin6, lsa6;
 	struct sockaddr *to;
 
-	if (!(stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_PDAPIEVNT))
+	if (sctp_is_feature_off(stcb->sctp_ep->sctp_flags, SCTP_PCB_FLAGS_PDAPIEVNT))
 		/* event not enabled */
 		return;
 
@@ -2731,7 +2731,7 @@ sctp_notify_shutdown_event(struct sctp_tcb *stcb)
 		socantsendmore(stcb->sctp_socket);
 	}
 
-	if (!(stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_RECVSHUTDOWNEVNT))
+	if (sctp_is_feature_off(stcb->sctp_ep->sctp_flags, SCTP_PCB_FLAGS_RECVSHUTDOWNEVNT))
 		/* event not enabled */
 		return;
 
@@ -2803,7 +2803,7 @@ sctp_notify_stream_reset(struct sctp_tcb *stcb,
 	struct sockaddr *to;
 	int len;
 
-	if (!(stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_STREAM_RESETEVNT))
+	if (sctp_is_feature_off(stcb->sctp_ep->sctp_flags, SCTP_PCB_FLAGS_STREAM_RESETEVNT))
 		/* event not enabled */
 		return;
 
@@ -3969,9 +3969,6 @@ sctp_m_copym(struct mbuf *m, int off, int len, int wait)
 #endif /* __APPLE__ */
 
 
-#if defined(HAVE_SCTP_SORECEIVE)
-
-
 
 /*
  * Following replacement or removal of the first mbuf on the first mbuf chain
@@ -4823,7 +4820,6 @@ out:
 	return (error);
 }
 
-#endif
 
 int
 sctp_sorecvmsg(struct socket *so, 

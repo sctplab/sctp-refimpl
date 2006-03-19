@@ -1459,7 +1459,7 @@ sctp_fill_up_addresses(struct sctp_inpcb *inp,
 		 * the list on the association is a list of addresses that
 		 * are NOT part of the association.
 		 */
-		if (inp->sctp_flags & SCTP_PCB_FLAGS_DO_ASCONF) {
+		if (sctp_is_feature_on(inp,SCTP_PCB_FLAGS_DO_ASCONF)) {
 			/* The list is a NEGATIVE list */
 			LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
 				if (stcb) {
@@ -1820,20 +1820,19 @@ sctp_optsget(struct socket *so,
 		SCTP_INP_RLOCK(inp);
 		switch (opt) {
 		case SCTP_DISABLE_FRAGMENTS:
-			optval = inp->sctp_flags & SCTP_PCB_FLAGS_NO_FRAGMENT;
+			optval = sctp_is_feature_on(inp,SCTP_PCB_FLAGS_NO_FRAGMENT);
 			break;
 		case SCTP_I_WANT_MAPPED_V4_ADDR:
-			optval = inp->sctp_flags & SCTP_PCB_FLAGS_NEEDS_MAPPED_V4;
+			optval = sctp_is_feature_on(inp,SCTP_PCB_FLAGS_NEEDS_MAPPED_V4);
 			break;
 		case SCTP_AUTO_ASCONF:
-			optval = inp->sctp_flags & SCTP_PCB_FLAGS_AUTO_ASCONF;
+			optval = sctp_is_feature_on(inp,SCTP_PCB_FLAGS_AUTO_ASCONF);
 			break;
 		case SCTP_NODELAY:
-			optval = inp->sctp_flags & SCTP_PCB_FLAGS_NODELAY;
+			optval = sctp_is_feature_on(inp,SCTP_PCB_FLAGS_NODELAY);
 			break;
 		case SCTP_AUTOCLOSE:
-			if ((inp->sctp_flags & SCTP_PCB_FLAGS_AUTOCLOSE) ==
-			    SCTP_PCB_FLAGS_AUTOCLOSE)
+			if (sctp_is_feature_on(inp,SCTP_PCB_FLAGS_AUTOCLOSE))
 				optval = inp->sctp_ep.auto_close_time;
 			else
 				optval = 0;
@@ -1872,7 +1871,7 @@ sctp_optsget(struct socket *so,
 			error = EINVAL;
 			break;
 		}
-		*mtod(m, unsigned int *) = 0;
+		*mtod(m, unsigned int *) = sctp_is_feature_on(inp,SCTP_PCB_FLAGS_FRAG_INTERLEAVE );
 		m->m_len = sizeof(unsigned int);
 	}
 		break;
@@ -2170,31 +2169,31 @@ sctp_optsget(struct socket *so,
 		events = mtod(m, struct sctp_event_subscribe *);
 		memset(events, 0, sizeof(events));
 		SCTP_INP_RLOCK(inp);
-		if (inp->sctp_flags & SCTP_PCB_FLAGS_RECVDATAIOEVNT)
+		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_RECVDATAIOEVNT))
 			events->sctp_data_io_event = 1;
 
-		if (inp->sctp_flags & SCTP_PCB_FLAGS_RECVASSOCEVNT)
+		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_RECVASSOCEVNT))
 			events->sctp_association_event = 1;
 
-		if (inp->sctp_flags & SCTP_PCB_FLAGS_RECVPADDREVNT)
+		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_RECVPADDREVNT))
 			events->sctp_address_event = 1;
 
-		if (inp->sctp_flags & SCTP_PCB_FLAGS_RECVSENDFAILEVNT)
+		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_RECVSENDFAILEVNT))
 			events->sctp_send_failure_event = 1;
 
-		if (inp->sctp_flags & SCTP_PCB_FLAGS_RECVPEERERR)
+		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_RECVPEERERR))
 			events->sctp_peer_error_event = 1;
 
-		if (inp->sctp_flags & SCTP_PCB_FLAGS_RECVSHUTDOWNEVNT)
+		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_RECVSHUTDOWNEVNT))
 			events->sctp_shutdown_event = 1;
 
-		if (inp->sctp_flags & SCTP_PCB_FLAGS_PDAPIEVNT)
+		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_PDAPIEVNT))
 			events->sctp_partial_delivery_event = 1;
 
-		if (inp->sctp_flags & SCTP_PCB_FLAGS_ADAPTATIONEVNT)
+		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_ADAPTATIONEVNT))
 			events->sctp_adaptation_layer_event = 1;
 
-		if (inp->sctp_flags & SCTP_PCB_FLAGS_STREAM_RESETEVNT)
+		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_STREAM_RESETEVNT))
 			events->sctp_stream_reset_events = 1;
 		SCTP_INP_RUNLOCK(inp);
 		m->m_len = sizeof(struct sctp_event_subscribe);
@@ -3257,9 +3256,9 @@ sctp_optsset(struct socket *so,
 		}
 		SCTP_INP_WLOCK(inp);
 		if (*mopt != 0) {
-			inp->sctp_flags |= set_opt;
+			sctp_feature_on(inp,set_opt);
 		} else {
-			inp->sctp_flags &= ~set_opt;
+			sctp_feature_off(inp,set_opt);
 		}
 		SCTP_INP_WUNLOCK(inp);
 		break;
@@ -3274,8 +3273,20 @@ sctp_optsset(struct socket *so,
 	}
 	case SCTP_FRAGMENT_INTERLEAVE:
 		/* not yet until we re-write sctp_recvmsg() */
-		error = EOPNOTSUPP;
-		break;
+	{
+		int on_off;
+		if((size_t)m->m_len < sizeof(int)) {
+			error = EINVAL;
+			break;
+		}
+		on_off = (mtod(m, int));
+		if(on_off) {
+			sctp_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE);
+		} else {
+			sctp_feature_off(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE);
+		}
+	}
+	break;
 	case SCTP_CMT_ON_OFF:
 	{
 		if ((size_t)m->m_len < sizeof(unsigned int)) {
@@ -3765,63 +3776,63 @@ sctp_optsset(struct socket *so,
 		SCTP_INP_WLOCK(inp);
 		events = mtod(m, struct sctp_event_subscribe *);
 		if (events->sctp_data_io_event) {
-			inp->sctp_flags |= SCTP_PCB_FLAGS_RECVDATAIOEVNT;
+			sctp_feature_on(inp, SCTP_PCB_FLAGS_RECVDATAIOEVNT);
 		} else {
-			inp->sctp_flags &= ~SCTP_PCB_FLAGS_RECVDATAIOEVNT;
+			sctp_feature_off(inp, SCTP_PCB_FLAGS_RECVDATAIOEVNT);
 		}
 
 		if (events->sctp_association_event) {
-			inp->sctp_flags |= SCTP_PCB_FLAGS_RECVASSOCEVNT;
+			sctp_feature_on(inp, SCTP_PCB_FLAGS_RECVASSOCEVNT);
 		} else {
-			inp->sctp_flags &= ~SCTP_PCB_FLAGS_RECVASSOCEVNT;
+			sctp_feature_off(inp, SCTP_PCB_FLAGS_RECVASSOCEVNT);
 		}
 
 		if (events->sctp_address_event) {
-			inp->sctp_flags |= SCTP_PCB_FLAGS_RECVPADDREVNT;
+			sctp_feature_on(inp, SCTP_PCB_FLAGS_RECVPADDREVNT);
 		} else {
-			inp->sctp_flags &= ~SCTP_PCB_FLAGS_RECVPADDREVNT;
+			sctp_feature_off(inp, SCTP_PCB_FLAGS_RECVPADDREVNT);
 		}
 
 		if (events->sctp_send_failure_event) {
-			inp->sctp_flags |= SCTP_PCB_FLAGS_RECVSENDFAILEVNT;
+			sctp_feature_on(inp, SCTP_PCB_FLAGS_RECVSENDFAILEVNT);
 		} else {
-			inp->sctp_flags &= ~SCTP_PCB_FLAGS_RECVSENDFAILEVNT;
+			sctp_feature_off(inp,SCTP_PCB_FLAGS_RECVSENDFAILEVNT);
 		}
 
 		if (events->sctp_peer_error_event) {
-			inp->sctp_flags |= SCTP_PCB_FLAGS_RECVPEERERR;
+			sctp_feature_on(inp, SCTP_PCB_FLAGS_RECVPEERERR);
 		} else {
-			inp->sctp_flags &= ~SCTP_PCB_FLAGS_RECVPEERERR;
+			sctp_feature_off(inp, SCTP_PCB_FLAGS_RECVPEERERR);
 		}
 
 		if (events->sctp_shutdown_event) {
-			inp->sctp_flags |= SCTP_PCB_FLAGS_RECVSHUTDOWNEVNT;
+			sctp_feature_on(inp, SCTP_PCB_FLAGS_RECVSHUTDOWNEVNT);
 		} else {
-			inp->sctp_flags &= ~SCTP_PCB_FLAGS_RECVSHUTDOWNEVNT;
+			sctp_feature_off(inp, SCTP_PCB_FLAGS_RECVSHUTDOWNEVNT);
 		}
 
 		if (events->sctp_partial_delivery_event) {
-			inp->sctp_flags |= SCTP_PCB_FLAGS_PDAPIEVNT;
+			sctp_feature_on(inp, SCTP_PCB_FLAGS_PDAPIEVNT);
 		} else {
-			inp->sctp_flags &= ~SCTP_PCB_FLAGS_PDAPIEVNT;
+			sctp_feature_off(inp, SCTP_PCB_FLAGS_PDAPIEVNT);
 		}
 
 		if (events->sctp_adaptation_layer_event) {
-			inp->sctp_flags |= SCTP_PCB_FLAGS_ADAPTATIONEVNT;
+			sctp_feature_on(inp, SCTP_PCB_FLAGS_ADAPTATIONEVNT);
 		} else {
-			inp->sctp_flags &= ~SCTP_PCB_FLAGS_ADAPTATIONEVNT;
+			sctp_feature_off(inp, SCTP_PCB_FLAGS_ADAPTATIONEVNT);
 		}
 
 		if (events->sctp_authentication_event) {
-			inp->sctp_flags |= SCTP_PCB_FLAGS_AUTHEVNT;
+			sctp_feature_on(inp, SCTP_PCB_FLAGS_AUTHEVNT);
 		} else {
-			inp->sctp_flags &= ~SCTP_PCB_FLAGS_AUTHEVNT;
+			sctp_feature_off(inp, SCTP_PCB_FLAGS_AUTHEVNT);
 		}
 
 		if (events->sctp_stream_reset_events) {
-			inp->sctp_flags |= SCTP_PCB_FLAGS_STREAM_RESETEVNT;
+			sctp_feature_on(inp, SCTP_PCB_FLAGS_STREAM_RESETEVNT);
 		} else {
-			inp->sctp_flags &= ~SCTP_PCB_FLAGS_STREAM_RESETEVNT;
+			sctp_feature_off(inp, SCTP_PCB_FLAGS_STREAM_RESETEVNT);
 		}
 		SCTP_INP_WUNLOCK(inp);
 	}
@@ -4784,8 +4795,8 @@ sctp_usr_recvd(struct socket *so, int flags)
 
  			stcb->asoc.my_rwnd_control_len = sctp_sbspace_sub(stcb->asoc.my_rwnd_control_len,
  									  sizeof(struct mbuf));
-			if (inp->sctp_flags & SCTP_PCB_FLAGS_RECVDATAIOEVNT) {
- 				stcb->asoc.my_rwnd_control_len = sctp_sbspace_sub(stcb->asoc.my_rwnd_control_len,
+			if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_RECVDATAIOEVNT)) {
+ 				stcb->asoc.my_rwnd_control_len = sctp_sbspace_sub(s'tcb->asoc.my_rwnd_control_len,
  										  CMSG_LEN(sizeof(struct sctp_sndrcvinfo)));
 			}
 		} else {

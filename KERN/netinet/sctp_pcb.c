@@ -1662,14 +1662,14 @@ sctp_inpcb_alloc(struct socket *so)
 		/* UDP style socket */
 		inp->sctp_flags = (SCTP_PCB_FLAGS_UDPTYPE |
 		    SCTP_PCB_FLAGS_UNBOUND);
-		inp->sctp_flags |= (SCTP_PCB_FLAGS_RECVDATAIOEVNT);
+		sctp_feature_on(inp, SCTP_PCB_FLAGS_RECVDATAIOEVNT);
 		/* Be sure it is NON-BLOCKING IO for UDP */
 		/*so->so_state |= SS_NBIO;*/
 	} else if (so->so_type == SOCK_STREAM) {
 		/* TCP style socket */
 		inp->sctp_flags = (SCTP_PCB_FLAGS_TCPTYPE |
 		    SCTP_PCB_FLAGS_UNBOUND);
-		inp->sctp_flags |= (SCTP_PCB_FLAGS_RECVDATAIOEVNT);
+		sctp_feature_on(inp, SCTP_PCB_FLAGS_RECVDATAIOEVNT);
 		/* Be sure we have blocking IO by default */
 		so->so_state &= ~SS_NBIO;
 	} else {
@@ -2208,13 +2208,13 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 	/* ok we look clear to give out this port, so lets setup the binding */
 	if (bindall) {
 		/* binding to all addresses, so just set in the proper flags */
-		inp->sctp_flags |= (SCTP_PCB_FLAGS_BOUNDALL |
-		    SCTP_PCB_FLAGS_DO_ASCONF);
+		inp->sctp_flags |= SCTP_PCB_FLAGS_BOUNDALL;
+		sctp_feature_on(inp, SCTP_PCB_FLAGS_DO_ASCONF);
 		/* set the automatic addr changes from kernel flag */
 		if (sctp_auto_asconf == 0) {
-			inp->sctp_flags &= ~SCTP_PCB_FLAGS_AUTO_ASCONF;
+			sctp_feature_off(inp,SCTP_PCB_FLAGS_AUTO_ASCONF);
 		} else {
-			inp->sctp_flags |= SCTP_PCB_FLAGS_AUTO_ASCONF;
+			sctp_feature_on(inp,SCTP_PCB_FLAGS_AUTO_ASCONF);
 		}
 	} else {
 		/*
@@ -2275,16 +2275,16 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 		inp->sctp_flags &= ~SCTP_PCB_FLAGS_BOUNDALL;
 #if 0 /* use sysctl now */
 		/* don't allow automatic addr changes from kernel */
-		inp->sctp_flags &= ~SCTP_PCB_FLAGS_AUTO_ASCONF;
+		sctp_feature_off(inp,SCTP_PCB_FLAGS_AUTO_ASCONF);
 #endif
 		/* set the automatic addr changes from kernel flag */
 		if (sctp_auto_asconf == 0) {
-			inp->sctp_flags &= ~SCTP_PCB_FLAGS_AUTO_ASCONF;
+			sctp_feature_off(inp,SCTP_PCB_FLAGS_AUTO_ASCONF);
 		} else {
-			inp->sctp_flags |= SCTP_PCB_FLAGS_AUTO_ASCONF;
+			sctp_feature_on(inp,SCTP_PCB_FLAGS_AUTO_ASCONF);
 		}
 		/* allow bindx() to send ASCONF's for binding changes */
-		inp->sctp_flags |= SCTP_PCB_FLAGS_DO_ASCONF;
+		sctp_feature_on(inp,SCTP_PCB_FLAGS_DO_ASCONF);
 		/* add this address to the endpoint list */
 		error = sctp_insert_laddr(&inp->sctp_addr_list, ifa);
 		if (error != 0) {
@@ -4271,7 +4271,7 @@ sctp_del_local_addr_assoc(struct sctp_tcb *stcb, struct ifaddr *ifa)
 	inp = stcb->sctp_ep;
 	/* if subset bound and don't allow ASCONF's, can't delete last */
 	if (((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) == 0) &&
-	    ((inp->sctp_flags & SCTP_PCB_FLAGS_DO_ASCONF) == 0)) {
+	    (sctp_is_feature_off(inp,SCTP_PCB_FLAGS_DO_ASCONF) == 0)) {
 		if (stcb->asoc.numnets < 2) {
 			/* can't delete last address */
 			return (-1);
@@ -4312,7 +4312,7 @@ sctp_del_local_addr_assoc_sa(struct sctp_tcb *stcb, struct sockaddr *sa)
 	inp = stcb->sctp_ep;
 	/* if subset bound and don't allow ASCONF's, can't delete last */
 	if (((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) == 0) &&
-	    ((inp->sctp_flags & SCTP_PCB_FLAGS_DO_ASCONF) == 0)) {
+	    (sctp_is_feature_off(inp,SCTP_PCB_FLAGS_DO_ASCONF) == 0)) {
 		if (stcb->asoc.numnets < 2) {
 			/* can't delete last address */
 			return (-1);

@@ -207,6 +207,11 @@ int sctp_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,
 		      struct mbuf *));
 #endif
 
+#define sctp_feature_on(inp, feature)  (inp->sctp_features |= feature)
+#define sctp_feature_off(inp, feature) (inp->sctp_features &= ~feature)
+#define sctp_is_feature_on(inp, feature) (inp->sctp_features & feature)
+#define sctp_is_feature_off(inp, feature) ((inp->sctp_features & feature) == 0)
+
 #define	sctp_sbspace(asoc, sb) ((long) (((sb)->sb_hiwat > (asoc)->sb_cc) ? ((sb)->sb_hiwat - (asoc)->sb_cc) : 0))
 
 #define	sctp_sbspace_failedmsgs(sb) ((long) (((sb)->sb_hiwat > (sb)->sb_cc) ? ((sb)->sb_hiwat - (sb)->sb_cc) : 0))
