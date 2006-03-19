@@ -2479,7 +2479,7 @@ sctp_choose_v4_boundspecific_stcb(struct sctp_inpcb *inp,
 	 */
 	ifn = rt->rt_ifp;
 
- 	if (sctp_is_feature_on(inp->sctp_flags,SCTP_PCB_FLAGS_DO_ASCONF)) {
+ 	if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_DO_ASCONF)) {
 		/*
 		 * Here we use the list of addresses on the endpoint. Then
 		 * the addresses listed on the "restricted" list is just that,
@@ -3143,7 +3143,7 @@ sctp_choose_v6_boundspecific_stcb(struct sctp_inpcb *inp,
 	struct ifaddr *ifa;
 
 	ifn = rt->rt_ifp;
- 	if (sctp_is_feature_on(inp->sctp_flags,SCTP_PCB_FLAGS_DO_ASCONF)) {
+ 	if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_DO_ASCONF)) {
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
 			printf("Have a STCB - asconf allowed, not bound all have a netgative list\n");
@@ -10935,8 +10935,7 @@ sctp_send_packet_dropped(struct sctp_tcb *stcb, struct sctp_nets *net,
 	}
 	drp->bottle_bw = htonl(spc);
 	if(asoc->my_rwnd) {
-		drp->current_onq = htonl(asoc->size_on_delivery_queue +
-					 asoc->size_on_reasm_queue +
+		drp->current_onq = htonl(asoc->size_on_reasm_queue +
 					 asoc->size_on_all_streams +
 					 asoc->my_rwnd_control_len +
 					 stcb->sctp_socket->so_rcv.sb_cc);
@@ -12767,7 +12766,7 @@ sctp_lower_sosend(struct socket *so,
 		/* @@@ JRI: This check for Nagle assumes only one small packet can 
 		 * be outstanding. Does this need to be changed for CMT?
 		 */
-		if ((sctp_feature_is_off(inp,SCTP_PCB_FLAGS_NODELAY)) &&
+		if ((sctp_is_feature_off(inp,SCTP_PCB_FLAGS_NODELAY)) &&
 		    (stcb->asoc.total_flight > 0) && 
 		    (un_sent < (int)(stcb->asoc.smallest_mtu- SCTP_MIN_OVERHEAD))) {
 

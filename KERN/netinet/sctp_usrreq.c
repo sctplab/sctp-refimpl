@@ -152,6 +152,8 @@ int sctp_strict_init = 1;
 int sctp_peer_chunk_oh = sizeof(struct mbuf);
 int sctp_max_burst_default = SCTP_DEF_MAX_BURST;
 int sctp_use_cwnd_based_maxburst = 1;
+int sctp_do_drain = 1;
+
 unsigned int sctp_max_chunks_on_queue = SCTP_ASOC_MAX_CHUNKS_ON_QUEUE;
 unsigned int sctp_delayed_sack_time_default = SCTP_RECV_MSEC;
 unsigned int sctp_heartbeat_interval_default = SCTP_HB_DEFAULT_MSEC;
@@ -776,6 +778,11 @@ SYSCTL_UINT(_net_inet_sctp, OID_AUTO, cmt_use_dac, CTLFLAG_RW,
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, abc_l_var , CTLFLAG_RW,
 	    &sctp_L2_abc_variable, 0,
 	    "SCTP ABC max increase per SACK (L)");
+
+SYSCTL_INT(_net_inet_sctp, OID_AUTO, do_sctp_drain , CTLFLAG_RW,
+	    &sctp_do_drain, 0,
+	    "Should SCTP respond to the drain calls");
+
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, early_fast_retran, CTLFLAG_RW,
 	    &sctp_early_fr, 0,
@@ -4688,14 +4695,11 @@ int
 sctp_usr_recvd(struct socket *so, int flags)
 {
 	int s;
-	long incr;
-	struct sctp_socket_q_list *sq=NULL;
 	/*
 	 * The user has received some data, we may be able to stuff more
 	 * up the socket. And we need to possibly update the rwnd.
 	 */
 	struct sctp_inpcb *inp;
-	struct sctp_tcb *stcb=NULL;
 
 	inp = (struct sctp_inpcb *)so->so_pcb;
 #ifdef SCTP_DEBUG
@@ -4717,159 +4721,6 @@ sctp_usr_recvd(struct socket *so, int flags)
 #else
 	s = splnet();
 #endif
-	/*
-	 * Grab the first one on the list. It will re-insert itself if
-	 * it runs out of room
-	 */
-	SCTP_INP_WLOCK(inp);
-	if (((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) &&
-	    ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
- 		sq = TAILQ_FIRST(&inp->sctp_queue_list);
-		if (sq) {
-			stcb = sq->tcb;
-		} else {
-		  printf("Audit of sb, no sq struct found!\n");
-		  /* RRS hack alert */
-		  LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
-		    SCTP_TCB_LOCK(stcb);
-		    if ((TAILQ_EMPTY(&stcb->asoc.delivery_queue) == 0) ||
-			(TAILQ_EMPTY(&stcb->asoc.reasmqueue) == 0)) {
-		      /* Deliver if there is something to be delivered */
-		      sctp_service_queues(stcb, &stcb->asoc);
-		    }
-		    sctp_set_rwnd(stcb, &stcb->asoc);
-		    incr = stcb->asoc.my_rwnd - stcb->asoc.my_last_reported_rwnd;
-		    if (incr < 0) {
-		      incr = 0;
-		    }
-		    if (((uint32_t)incr >= (stcb->asoc.smallest_mtu * SCTP_SEG_TO_RWND_UPD)) ||
-			((((uint32_t)incr)*SCTP_SCALE_OF_RWND_TO_UPD) >= so->so_rcv.sb_hiwat)) {
-		      if (callout_pending(&stcb->asoc.dack_timer.timer)) {
-			/* If the timer is up, stop it */
-			sctp_timer_stop(SCTP_TIMER_TYPE_RECV,
-					stcb->sctp_ep, stcb, NULL);
-		      }
-		      /* Send the sack, with the new rwnd */
-		      sctp_send_sack(stcb);
-		      /* Now do the output */
-		      sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_USR_RCVD);
-		    }
-		    SCTP_TCB_UNLOCK(stcb);
-		  }
-		  stcb = NULL;
-		}
-	} else {
-		stcb = LIST_FIRST(&inp->sctp_asoc_list);
-	}
-	if (stcb) {
-		/* all code in normal stcb path assumes
-		 * that you have a tcb_lock only. Thus
-		 * we must release the inp write lock.
-		 */
-		SCTP_TCB_LOCK(stcb);
-#ifdef SCTP_LOCK_LOGGING
-		sctp_log_lock(inp, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
-#endif
-		SOCKBUF_LOCK(&so->so_rcv);
-
-		if (flags & MSG_EOR) {
-			/* Ok the other part of our grubby tracking
-			 * socket buffer (if any). We could maybe 
-			 * use the sq queue to find the next stcb
-			 * but in theory it should be on the 
-			 * csum field. We may want to change this so
-			 * that we use the sq since only 1-2-m model
-			 * needs this and then we could get rid of
-			 * the csum field useage.
-			 */
-			if (((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) 
-			   && ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
-				stcb = sctp_remove_from_socket_q(inp);
-				inp->sctp_vtag_first = sctp_get_first_vtag_from_sb(so);
-			}
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_USRREQ2)
-				printf("remove from socket queue for inp:%x tcbret:%x\n",
-				       (u_int)inp, (u_int)stcb);
-#endif
-
- 			stcb->asoc.my_rwnd_control_len = sctp_sbspace_sub(stcb->asoc.my_rwnd_control_len,
- 									  sizeof(struct mbuf));
-			if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_RECVDATAIOEVNT)) {
- 				stcb->asoc.my_rwnd_control_len = sctp_sbspace_sub(s'tcb->asoc.my_rwnd_control_len,
- 										  CMSG_LEN(sizeof(struct sctp_sndrcvinfo)));
-			}
-		} else {
-			/* we keep our tag up there since we are not done */
-			inp->sctp_vtag_first = stcb->asoc.my_vtag;
-		}
-		SOCKBUF_UNLOCK(&so->so_rcv);
-
-		if ((TAILQ_EMPTY(&stcb->asoc.delivery_queue) == 0) ||
-		    (TAILQ_EMPTY(&stcb->asoc.reasmqueue) == 0)) {
-			/* Deliver if there is something to be delivered */
-			sctp_service_queues(stcb, &stcb->asoc);
-		}
-		sctp_set_rwnd(stcb, &stcb->asoc);
-		/* if we increase by 1 or more MTU's (smallest MTUs of all
-		 * nets) we send a window update sack
-		 */
-		incr = stcb->asoc.my_rwnd - stcb->asoc.my_last_reported_rwnd;
-		if (incr < 0) {
-			incr = 0;
-		}
-		if (((uint32_t)incr >= (stcb->asoc.smallest_mtu * SCTP_SEG_TO_RWND_UPD)) ||
-		    ((((uint32_t)incr)*SCTP_SCALE_OF_RWND_TO_UPD) >= so->so_rcv.sb_hiwat)) {
-			if (callout_pending(&stcb->asoc.dack_timer.timer)) {
-				/* If the timer is up, stop it */
-				sctp_timer_stop(SCTP_TIMER_TYPE_RECV,
-						stcb->sctp_ep, stcb, NULL);
-			}
-			/* Send the sack, with the new rwnd */
-			sctp_send_sack(stcb);
-			/* Now do the output */
-			sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_USR_RCVD);
-		}
-	} else {
-		if ((( sq ) && (flags & MSG_EOR) && ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0))
-		    && ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
-		        /* assoc removed aka it closed */
-			stcb = sctp_remove_from_socket_q(inp);
-		}
-	}
-#ifdef SCTP_LOCK_LOGGING
-	sctp_log_lock(inp, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
-#endif
-	SOCKBUF_LOCK(&so->so_rcv);
-	if (( so->so_rcv.sb_mb == NULL ) &&
-	    (TAILQ_EMPTY(&inp->sctp_queue_list) == 0)) {
-		int sq_cnt=0;
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_USRREQ2)
-			printf("Something off, inp:%x so->so_rcv->sb_mb is empty and sockq is not.. cleaning\n",
-			       (u_int)inp);
-#endif
-		if (((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0)
-		   && ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
-			int done_yet;
-			done_yet = TAILQ_EMPTY(&inp->sctp_queue_list);
-			while (!done_yet) {
-				sq_cnt++;
-				(void)sctp_remove_from_socket_q(inp);
-				done_yet = TAILQ_EMPTY(&inp->sctp_queue_list);
-			}
-			printf("Hmm. mb empty and queue_list empty remove sq's:%d inpflags:%x \n",
-			       sq_cnt, (u_int)inp->sctp_flags);
-		}
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_USRREQ2)
-			printf("Cleaned up %d sockq's\n", sq_cnt);
-#endif
-	}
-	SOCKBUF_UNLOCK(&so->so_rcv);
-	if (stcb)
-		SCTP_TCB_UNLOCK(stcb);
-	SCTP_INP_WUNLOCK(inp);
 	splx(s);
 	return (0);
 }
@@ -5606,6 +5457,10 @@ sctp_sysctl(name, namelen, oldp, oldlenp, newp, newlen)
 	case SCTPCTL_ABC_L_VAR:
  		return (sysctl_int(oldp, oldlenp, newp, newlen,
  				   &sctp_L2_abc_variable));
+
+	case SCTPCTL_DO_DRAIN:
+ 		return (sysctl_int(oldp, oldlenp, newp, newlen,
+				   &sctp_do_drain));
  	case SCTPCTL_EARLY_FR:
  		return (sysctl_int(oldp, oldlenp, newp, newlen,
  				   &sctp_early_fr));
@@ -5926,6 +5781,14 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
                        CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_EARLY_FR_MSEC,
                        CTL_EOL);
 
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "do_sctp_drain",
+                       SYSCTL_DESCR("Should SCTP respond to the drain calls"),
+                       NULL, 0, &sctp_do_drain, 0,
+                       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_DO_DRAIN,
+                       CTL_EOL);
+          
        sysctl_createv(clog, 0, NULL, NULL,
                        CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
                        CTLTYPE_INT, "use_rttvar_congctrl",

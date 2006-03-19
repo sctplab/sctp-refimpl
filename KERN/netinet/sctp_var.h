@@ -87,14 +87,13 @@
 #define SCTPCTL_ABC_L_VAR           34
 #define SCTPCTL_MAX_MBUF_CHAIN      35
 #define SCTPCTL_CMT_USE_DAC         36
-
+#define SCTPCTL_DO_DRAIN            37
 #ifdef SCTP_DEBUG
-#define SCTPCTL_DEBUG               37
-#define SCTPCTL_MAXID		    37
+#define SCTPCTL_DEBUG               38
+#define SCTPCTL_MAXID		    38
 #else
-#define SCTPCTL_MAXID		    36
+#define SCTPCTL_MAXID		    37
 #endif
-
 
 #endif
 
@@ -138,6 +137,7 @@
 	{ "abc_l_var", CTLTYPE_INT }, \
 	{ "max_mbuf_chain", CTLTYPE_INT }, \
 	{ "cmt_use_dac", CTLTYPE_INT }, \
+	{ "do_sctp_drain", CTLTYPE_INT }, \
 	{ "debug", CTLTYPE_INT }, \
 }
 
@@ -181,6 +181,7 @@
 	{ "abc_l_var", CTLTYPE_INT }, \
 	{ "max_mbuf_chain", CTLTYPE_INT }, \
 	{ "cmt_use_dac", CTLTYPE_INT }, \
+	{ "do_sctp_drain", CTLTYPE_INT }, \
 }
 #endif
 

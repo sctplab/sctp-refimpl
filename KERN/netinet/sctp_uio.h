@@ -117,7 +117,7 @@ struct sctp_pcbinfo {
 	u_int32_t laddr_count;
 	u_int32_t raddr_count;
 	u_int32_t chk_count;
-	u_int32_t sockq_count;
+	u_int32_t readq_count;
 	u_int32_t mbuf_track;
 };
 

@@ -198,6 +198,11 @@ int sctp_pad_lastmbuf(struct mbuf *, int, struct mbuf *);
 
 void sctp_ulp_notify(u_int32_t, struct sctp_tcb *, u_int32_t, void *);
 
+void sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp, 
+				      struct sctp_inpcb *new_inp, 
+				      struct sctp_tcb *stcb);
+
+
 void sctp_report_all_outbound(struct sctp_tcb *);
 
 int sctp_expand_mapping_array(struct sctp_association *);
@@ -229,17 +234,6 @@ int sctp_release_pr_sctp_chunk(struct sctp_tcb *, struct sctp_tmit_chunk *,
 	int, struct sctpchunk_listhead *);
 
 struct mbuf *sctp_generate_invmanparam(int);
-
-/*
- * this is an evil layer violation that I think is a hack.. but I stand
- * alone on the tsvwg in this thought... everyone else considers it part
- * of the sockets layer (along with all of the peeloff code :<)
- */
-u_int32_t sctp_get_first_vtag_from_sb(struct socket *);
-
-
-void sctp_grub_through_socket_buffer(struct sctp_inpcb *, struct socket *,
-				     struct socket *, struct sctp_tcb *);
 
 
 #ifdef SCTP_MBCNT_LOGGING
@@ -293,7 +287,9 @@ void sctp_log_nagle_event(struct sctp_tcb *stcb, int action);
 void sctp_sblog(struct sockbuf *sb, 
 		struct sctp_tcb *stcb, int from, int incr);
 
-void sctp_log_strm_del(struct sctp_tmit_chunk *, struct sctp_tmit_chunk *, int);
+void sctp_log_strm_del(struct sctp_queued_to_read *control, 
+		       struct sctp_queued_to_read *poschk, 
+		       int from);
 void sctp_log_cwnd(struct sctp_tcb *stcb, struct sctp_nets *, int, uint8_t);
 void rto_logging(struct sctp_nets *net, int from);
 
