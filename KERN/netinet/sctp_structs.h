@@ -316,7 +316,12 @@ struct sctp_tmit_chunk {
 	uint8_t    reserved;
 };
 
-struct sctp_queued_to_read {         /* sinfo structure for the most part */
+/* The first part of this structure MUST be the entire
+ * sinfo structure. Maybe I should have made it a
+ * sub structure... we can circle back later and
+ * do that if we want.
+ */
+struct sctp_queued_to_read {         /* sinfo structure Pluse more */
 	u_int16_t sinfo_stream;      /* off the wire */
 	u_int16_t sinfo_ssn;         /* off the wire */
 	u_int16_t sinfo_flags;       /* SCTP_UNORDERED from wire use SCTP_EOF for EOR */
@@ -326,7 +331,9 @@ struct sctp_queued_to_read {         /* sinfo structure for the most part */
 	u_int32_t sinfo_tsn;         /* Use this in reassembly as first TSN */
 	u_int32_t sinfo_cumtsn;      /* Use this in reassembly as last TSN */
 	sctp_assoc_t sinfo_assoc_id; /* our assoc id */
+	/* Non sinfo stuff */
 	u_int32_t length;	     /* length of data */
+	u_int32_t held_length;	     /* length held in sb */
 	struct sctp_nets *whoFrom;   /* where it came from */
 	struct mbuf *data;           /* front of the mbuf chain of data with PKT_HDR */
 	struct mbuf *tail_mbuf;      /* used for multi-part data */

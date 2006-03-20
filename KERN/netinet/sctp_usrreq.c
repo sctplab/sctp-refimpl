@@ -4692,40 +4692,6 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 }
 
 int
-sctp_usr_recvd(struct socket *so, int flags)
-{
-	int s;
-	/*
-	 * The user has received some data, we may be able to stuff more
-	 * up the socket. And we need to possibly update the rwnd.
-	 */
-	struct sctp_inpcb *inp;
-
-	inp = (struct sctp_inpcb *)so->so_pcb;
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_USRREQ2)
-		printf("Read for so:%x inp:%x Flags:%x\n",
-		       (u_int)so, (u_int)inp, (u_int)flags);
-#endif
-
-	if (inp == 0) {
-		/* I made the same as TCP since we are not setup? */
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_USRREQ2)
-			printf("Nope, connection reset\n");
-#endif
-		return (ECONNRESET);
-	}
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	s = splsoftnet();
-#else
-	s = splnet();
-#endif
-	splx(s);
-	return (0);
-}
-
-int
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 #if __FreeBSD_version >= 600000
 sctp_listen(struct socket *so, int backlog,  struct thread *p)
@@ -5142,7 +5108,6 @@ struct pr_usrreqs sctp_usrreqs = {
 	.pru_disconnect =	sctp_disconnect,
 	.pru_listen =		sctp_listen,
 	.pru_peeraddr =		sctp_peeraddr,
-	.pru_rcvd =		sctp_usr_recvd,
 	.pru_send =		sctp_sendm,
 	.pru_shutdown =		sctp_shutdown,
 	.pru_sockaddr =		sctp_ingetaddr,	
@@ -5161,7 +5126,7 @@ struct pr_usrreqs sctp_usrreqs = {
 	sctp_disconnect,
 	sctp_listen,
 	sctp_peeraddr,
-	sctp_usr_recvd,
+	NULL,
 	pru_rcvoob_notsupp,
 	sctp_sendm,
 	pru_sense_null,
@@ -5296,7 +5261,6 @@ sctp_usrreq(so, req, m, nam, control)
 		 * (by soreceive()) is the int flags c
 		 * ast as a (mbuf *) yuck!
 		 */
- 		error = sctp_usr_recvd(so, (int)((long)nam));
 		break;
 
 	case PRU_SEND:

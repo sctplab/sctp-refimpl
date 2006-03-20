@@ -54,8 +54,8 @@ sctp_build_readq_entry(struct sctp_tcb *stcb,
 		       struct mbuf *dm);
 
 struct mbuf *
-sctp_build_ctl_nchunk(struct sctp_tcb *stcb, uint32_t tsn, uint32_t ppid,
-		      uint32_t context, uint16_t stream_no, uint16_t stream_seq, uint8_t flags);
+sctp_build_ctl_nchunk(struct sctp_inpcb *inp,
+		      struct sctp_sndrcvinfo *sinfo);
 
 void sctp_set_rwnd(struct sctp_tcb *, struct sctp_association *);
 

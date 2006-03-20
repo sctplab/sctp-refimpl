@@ -1699,7 +1699,6 @@ sctp_inpcb_alloc(struct socket *so)
         /* LOCK init's */
 	SCTP_INP_LOCK_INIT(inp);
 	SCTP_ASOC_CREATE_LOCK_INIT(inp);
-	SCTP_INP_READQ_LOCK_INIT(inp);
 	/* lock the new ep */
 	SCTP_INP_WLOCK(inp);
 
@@ -2743,7 +2742,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	}
 	SCTP_INP_WUNLOCK(inp);
 	SCTP_ASOC_CREATE_UNLOCK(inp);
-	SCTP_INP_READQ_LOCK_DESTROY(inp);
 	SCTP_INP_LOCK_DESTROY(inp);
 	SCTP_ASOC_CREATE_LOCK_DESTROY(inp);
 
@@ -3618,12 +3616,19 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	sctp_iterator_asoc_being_freed(inp, stcb);
 
 	/* Null all of my entry's on the socket read queue */
+	if (from_inpcbfree == 0) {
+		SOCKBUF_LOCK(&inp->sctp_socket->so_snd);
+	}
 	TAILQ_FOREACH(sq, &inp->read_queue, next) {
 		if (sq->stcb == stcb) {
 			sq->stcb = NULL;
 			sq->sinfo_cumtsn = stcb->asoc.cumulative_tsn;
 		}
 	}
+	if (from_inpcbfree == 0) {
+		SOCKBUF_UNLOCK(&inp->sctp_socket->so_snd);
+	}
+
 	if(stcb->block_entry) {
 		stcb->block_entry->error = ECONNRESET;
 		stcb->block_entry = NULL;

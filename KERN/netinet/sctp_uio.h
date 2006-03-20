@@ -674,11 +674,14 @@ sctp_lower_sosend(struct socket *so,
 		  struct proc *p
 #endif
 	);
+
 int
-sctp_sorecvmsg(struct socket *so, 
-	       struct sockaddr **fromsa,
+sctp_sorecvmsg(struct socket *so,
 	       struct uio *uio,
-	       int *msg_flag,
+	       struct mbuf **mp,
+	       struct sockaddr *from,
+	       int fromlen,
+	       int *msg_flags, 
 	       struct sctp_sndrcvinfo *sinfo);
 #endif
 
