@@ -2479,7 +2479,7 @@ sctp_choose_v4_boundspecific_stcb(struct sctp_inpcb *inp,
 	 */
 	ifn = rt->rt_ifp;
 
- 	if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_DO_ASCONF)) {
+ 	if (inp->sctp_flags & SCTP_PCB_FLAGS_DO_ASCONF) {
 		/*
 		 * Here we use the list of addresses on the endpoint. Then
 		 * the addresses listed on the "restricted" list is just that,
@@ -3143,7 +3143,7 @@ sctp_choose_v6_boundspecific_stcb(struct sctp_inpcb *inp,
 	struct ifaddr *ifa;
 
 	ifn = rt->rt_ifp;
- 	if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_DO_ASCONF)) {
+	if (inp->sctp_flags & SCTP_PCB_FLAGS_DO_ASCONF) {
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
 			printf("Have a STCB - asconf allowed, not bound all have a netgative list\n");
@@ -4078,6 +4078,11 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 				((struct sockaddr_in *)&net->ro._s_addr)->sin_addr = sctp_ipv4_source_address_selection(inp,
 				    stcb,
 				    ro, net, out_of_asoc_ok);
+				if (((struct sockaddr_in *)&net->ro._s_addr)->sin_addr.s_addr == INADDR_ANY &&
+				    ro->ro_rt) {
+					RTFREE(ro->ro_rt);
+					ro->ro_rt = NULL;
+				}
 				if (ro->ro_rt)
 					net->src_addr_selected = 1;
 			}
@@ -4274,6 +4279,13 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 				/* Cache the source address */
 				((struct sockaddr_in6 *)&net->ro._s_addr)->sin6_addr = sctp_ipv6_source_address_selection(inp,
 				    stcb, ro, net, out_of_asoc_ok);
+
+				if (IN6_IS_ADDR_UNSPECIFIED(
+					&((struct sockaddr_in6 *)&net->ro._s_addr)->sin6_addr) &&
+				    ro->ro_rt) {
+					RTFREE(ro->ro_rt);
+					ro->ro_rt = NULL;
+				}
 
 				if (ro->ro_rt)
 					net->src_addr_selected = 1;
@@ -4616,6 +4628,7 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	sup_addr->addr_type[1] = htons(SCTP_IPV6_ADDRESS);
 	m->m_len += sizeof(*sup_addr) + sizeof(uint16_t);
 
+/*	if (inp->sctp_flags & SCTP_PCB_FLAGS_ADAPTATIONEVNT) {*/
 	if (inp->sctp_ep.adaptation_layer_indicator) {
 		struct sctp_adaptation_layer_indication *ali;
 		ali = (struct sctp_adaptation_layer_indication *)(
@@ -5590,6 +5603,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	    htons(inp->sctp_ep.max_open_streams_intome);
 	/* setup the ECN pointer */
 
+/*	if (inp->sctp_flags & SCTP_PCB_FLAGS_ADAPTATIONEVNT) {*/
 	if (inp->sctp_ep.adaptation_layer_indicator) {
 		struct sctp_adaptation_layer_indication *ali;
 		ali = (struct sctp_adaptation_layer_indication *)(
@@ -6409,7 +6423,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 		}
 	} else if ((dataout) && (dataout > siz)) {
 		/* Slow path */
-		if (sctp_is_feature_on(stcb->sctp_ep, SCTP_PCB_FLAGS_NO_FRAGMENT) &&
+		if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_NO_FRAGMENT) &&
 		    (dataout > siz)) {
 			error = EMSGSIZE;
 #ifdef SCTP_LOCK_LOGGING
@@ -9829,7 +9843,7 @@ sctp_output(inp, m, addr, control, p, flags)
 			   ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) * sizeof(struct sctp_data_chunk)));
 
 
-		if ((sctp_is_feature_off(inp,SCTP_PCB_FLAGS_NODELAY)) &&
+		if (((inp->sctp_flags & SCTP_PCB_FLAGS_NODELAY) == 0) &&
 		    (stcb->asoc.total_flight > 0) && 
 		    (un_sent < (int)(stcb->asoc.smallest_mtu - SCTP_MIN_OVERHEAD))) {
 			/* Ok, Nagle is set on and we have
@@ -9843,7 +9857,7 @@ sctp_output(inp, m, addr, control, p, flags)
 			queue_only = 1;
 		} else {
 #ifdef SCTP_NAGLE_LOGGING
-			if(sctp_is_feature_off(inp,SCTP_PCB_FLAGS_NODELAY))
+			if((inp->sctp_flags & SCTP_PCB_FLAGS_NODELAY) == 0)
 				sctp_log_nagle_event(stcb, SCTP_NAGLE_SKIPPED);
 #endif
 			sctp_pegs[SCTP_NAGLE_OFF]++;
@@ -10935,7 +10949,8 @@ sctp_send_packet_dropped(struct sctp_tcb *stcb, struct sctp_nets *net,
 	}
 	drp->bottle_bw = htonl(spc);
 	if(asoc->my_rwnd) {
-		drp->current_onq = htonl(asoc->size_on_reasm_queue +
+		drp->current_onq = htonl(asoc->size_on_delivery_queue +
+					 asoc->size_on_reasm_queue +
 					 asoc->size_on_all_streams +
 					 asoc->my_rwnd_control_len +
 					 stcb->sctp_socket->so_rcv.sb_cc);
@@ -12766,12 +12781,12 @@ sctp_lower_sosend(struct socket *so,
 		/* @@@ JRI: This check for Nagle assumes only one small packet can 
 		 * be outstanding. Does this need to be changed for CMT?
 		 */
-		if ((sctp_is_feature_off(inp,SCTP_PCB_FLAGS_NODELAY)) &&
+		if (((inp->sctp_flags & SCTP_PCB_FLAGS_NODELAY) == 0) &&
 		    (stcb->asoc.total_flight > 0) && 
 		    (un_sent < (int)(stcb->asoc.smallest_mtu- SCTP_MIN_OVERHEAD))) {
 
 			/* Ok, Nagle is set on and we have data outstanding. Don't
-			 * send anything and let SACKs drive out the data unless wen
+			 * send anything and let SACKs drive out the data unless we
 			 * have a "full" segment to send.
 			 */
 #ifdef SCTP_NAGLE_LOGGING
@@ -12781,7 +12796,7 @@ sctp_lower_sosend(struct socket *so,
 			queue_only = 1;
 		} else {
 #ifdef SCTP_NAGLE_LOGGING
-			if(sctp_is_feature_off(inp,SCTP_PCB_FLAGS_NODELAY))
+			if((inp->sctp_flags & SCTP_PCB_FLAGS_NODELAY) == 0)
 				sctp_log_nagle_event(stcb, SCTP_NAGLE_SKIPPED);
 #endif
 			sctp_pegs[SCTP_NAGLE_OFF]++;
