@@ -150,6 +150,9 @@
 /* default AUTO_ASCONF mode enable(1)/disable(0) value (sysctl) */
 #define SCTP_DEFAULT_AUTO_ASCONF	0
 
+/* Theshold for rwnd updates */
+#define SCTP_RWND_UPDATE_THESHOLD 4096
+
 /*
  * If you wish to use MD5 instead of SLA uncomment the line below.
  * Why you would like to do this:

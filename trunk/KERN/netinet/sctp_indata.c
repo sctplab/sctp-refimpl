@@ -273,16 +273,14 @@ sctp_build_readq_entry_chk(struct sctp_tcb *stcb,
 
 
 struct mbuf *
-sctp_build_ctl_nchunk(struct sctp_tcb *stcb,
-		      uint32_t tsn, uint32_t ppid,
-		      uint32_t context, uint16_t stream_no, 
-		      uint16_t stream_seq, uint8_t flags)
+sctp_build_ctl_nchunk(struct sctp_inpcb *inp,
+		      struct sctp_sndrcvinfo *sinfo)
 {
 	struct sctp_sndrcvinfo *outinfo;
 	struct cmsghdr *cmh;
 	struct mbuf *ret;
 
-	if (sctp_is_feature_off(stcb->sctp_ep,SCTP_PCB_FLAGS_RECVDATAIOEVNT)) {
+	if (sctp_is_feature_off(inp, SCTP_PCB_FLAGS_RECVDATAIOEVNT)) {
 		/* user does not want the sndrcv ctl */
 		return (NULL);
 	}
@@ -298,27 +296,7 @@ sctp_build_ctl_nchunk(struct sctp_tcb *stcb,
 	cmh->cmsg_level = IPPROTO_SCTP;
 	cmh->cmsg_type = SCTP_SNDRCV;
 	cmh->cmsg_len = CMSG_LEN(sizeof(struct sctp_sndrcvinfo));
-	outinfo->sinfo_stream = stream_no;
-	outinfo->sinfo_ssn = stream_seq;
-	if (flags & SCTP_DATA_UNORDERED) {
-		outinfo->sinfo_flags = SCTP_UNORDERED;
-	} else {
-		outinfo->sinfo_flags = 0;
-	}
-	outinfo->sinfo_ppid = ppid;
-	outinfo->sinfo_context = context;
-	outinfo->sinfo_assoc_id = sctp_get_associd(stcb);
-	outinfo->sinfo_tsn = tsn;
-	outinfo->sinfo_cumtsn = stcb->asoc.cumulative_tsn;
-	ret->m_len = cmh->cmsg_len;
-	ret->m_pkthdr.len = ret->m_len;
-	/*
-	 * We track how many control len's have gone upon the sb
-	 * and do not count these in the rwnd calculation.
-	 */
-	stcb->asoc.my_rwnd_control_len +=
-	    CMSG_LEN(sizeof(struct sctp_sndrcvinfo));
-
+	*outinfo = *sinfo;
 	return (ret);
 }
 

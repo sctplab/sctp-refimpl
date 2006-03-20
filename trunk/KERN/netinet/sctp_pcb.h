@@ -106,6 +106,8 @@ TAILQ_HEAD(sctp_readhead, sctp_queued_to_read);
 #define SCTP_PCB_FLAGS_BLOCKING_IO	0x10000000
 #define SCTP_PCB_FLAGS_SOCKET_GONE	0x20000000
 #define SCTP_PCB_FLAGS_SOCKET_ALLGONE	0x40000000
+/* flags to copy to new PCB */
+#define SCTP_PCB_COPY_FLAGS		0x0e000004
 
 
 /*
@@ -130,8 +132,6 @@ TAILQ_HEAD(sctp_readhead, sctp_queued_to_read);
 #define SCTP_PCB_FLAGS_NO_FRAGMENT	0x00100000
 
 
-/* flags to copy to new PCB */
-#define SCTP_PCB_COPY_FLAGS		0x0e1fff64
 
 #define SCTP_PCBHASH_ALLADDR(port, mask) (port & mask)
 #define SCTP_PCBHASH_ASOC(tag, mask) (tag & mask)
@@ -401,18 +401,15 @@ struct sctp_inpcb {
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
 	struct mtx inp_mtx;
 	struct mtx inp_create_mtx;
-	struct mtx inp_readq_mtx;
 	u_int32_t refcount;
 #elif defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
 #ifdef _KERN_LOCKS_H_
 	lck_mtx_t *inp_mtx;
 	lck_mtx_t *inp_create_mtx;
-	lck_mtx_t *inp_readq_mtx;
 	u_int32_t refcount;
 #else
 	void *inp_mtx;
 	void *inp_create_mtx;
-	void *inp_readq_mtx;
 	u_int32_t refcount;
 #endif /* _KERN_LOCKS_H_ */
 #endif
@@ -534,18 +531,12 @@ void sctp_verify_no_locks(void);
 	mtx_init(&(_inp)->inp_create_mtx, "sctp-create", "inp_create", \
 		 MTX_DEF | MTX_DUPOK)
 
-#define SCTP_INP_READQ_LOCK_INIT(_inp) \
-	mtx_init(&(_inp)->inp_readq_mtx, "sctp-inp_readq", "inp_readq", \
-		 MTX_DEF | MTX_DUPOK)
-
 #define SCTP_INP_LOCK_DESTROY(_inp) \
 	mtx_destroy(&(_inp)->inp_mtx)
 
 #define SCTP_ASOC_CREATE_LOCK_DESTROY(_inp) \
 	mtx_destroy(&(_inp)->inp_create_mtx)
 
-#define SCTP_INP_READQ_LOCK_DESTROY(_inp) \
-	mtx_destroy(&(_inp)->inp_readq_mtx)
 
 #ifdef INVARIANTS_SCTP
 void SCTP_INP_RLOCK(struct sctp_inpcb *);
@@ -602,9 +593,6 @@ void SCTP_ASOC_CREATE_LOCK(struct sctp_inpcb *inp);
 	} while (0)
 #endif
 #endif
-
-#define SCTP_INP_READQ_LOCK(_inp)	mtx_lock(&(_inp)->inp_readq_mtx)
-#define SCTP_INP_READQ_UNLOCK(_inp)	mtx_unlock(&(_inp)->inp_readq_mtx)
 
 #define SCTP_INP_RUNLOCK(_inp)		mtx_unlock(&(_inp)->inp_mtx)
 #define SCTP_INP_WUNLOCK(_inp)		mtx_unlock(&(_inp)->inp_mtx)
@@ -707,20 +695,9 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #define SCTP_INP_LOCK_INIT(_inp) \
 	(_inp)->inp_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
 
-#define SCTP_INP_READQ_LOCK_INIT(_inp) \
-	(_inp)->inp_readq_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
-
 #define SCTP_INP_LOCK_DESTROY(_inp) \
 	lck_mtx_free((_inp)->inp_mtx, SCTP_MTX_GRP)
 
-#define SCTP_INP_READQ_LOCK_DESTROY(_inp) \
-	lck_mtx_free((_inp)->inp_readq_mtx, SCTP_MTX_GRP)
-
-#define SCTP_INP_READQ_LOCK(_inp) \
-	lck_mtx_lock((_inp)->inp_readq_mtx)
-
-#define SCTP_INP_READQ_UNLOCK(_inp) \
-	lck_mtx_unlock((_inp)->inp_readq_mtx)
 
 
 #define SCTP_INP_RLOCK(_inp) \
@@ -806,10 +783,6 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #define SCTP_INP_RLOCK(_inp)
 #define SCTP_INP_RUNLOCK(_inp)
 #define SCTP_INP_WLOCK(_inp)
-#define SCTP_INP_READQ_LOCK_INIT(_inp)
-#define SCTP_INP_READQ_LOCK_DESTROY(_inp)
-#define SCTP_INP_READQ_LOCK(_inp)
-#define SCTP_INP_READQ_UNLOCK(_inp)
 #define SCTP_INP_INCR_REF(_inp)
 #define SCTP_INP_DECR_REF(_inp)
 #define SCTP_INP_WUNLOCK(_inp)
