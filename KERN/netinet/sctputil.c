@@ -1169,12 +1169,20 @@ sctp_timeout_handler(void *t)
 		SCTP_INP_WUNLOCK(inp);
 		return;
 	}
+
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	socket_lock(inp->sctp_socket, 1);
+#endif
+
 	if (stcb) {
 		if (stcb->asoc.state == 0) {
 			splx(s);
 #if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
 			/* release BSD kernel funnel/mutex */
 			(void) thread_funnel_set(network_flock, FALSE);
+#endif
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			socket_unlock(inp->sctp_socket, 1);
 #endif
 			SCTP_INP_WUNLOCK(inp);
 			return;
@@ -1191,6 +1199,9 @@ sctp_timeout_handler(void *t)
 #if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
 		/* release BSD kernel funnel/mutex */
 		(void) thread_funnel_set(network_flock, FALSE);
+#endif
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		socket_unlock(inp->sctp_socket, 1);
 #endif
 		SCTP_INP_WUNLOCK(inp);
 		return;
@@ -1428,6 +1439,10 @@ sctp_timeout_handler(void *t)
 	/* release BSD kernel funnel/mutex */
 	(void) thread_funnel_set(network_flock, FALSE);
 #endif
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	socket_unlock(inp->sctp_socket, 1);
+#endif
+
 }
 
 int
@@ -4294,6 +4309,9 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		fromlen = 0;
 	}
 
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	socket_lock(inp->sctp_socket, 1);
+#endif
 	error = sctp_sorecvmsg(so, uio, mp0, from, fromlen, flagsp, &sinfo);
 	if(controlp) {
 		/* copy back the sinfo in a CMSG format */
@@ -4310,5 +4328,9 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		*psa = dup_sockaddr(from, mp0 == 0);
 #endif
 	}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	socket_unlock(inp->sctp_socket, 1);
+#endif
+
 	return (error);
 }

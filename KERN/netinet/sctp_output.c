@@ -11808,8 +11808,8 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 			sctp_log_block(SCTP_BLOCK_LOG_INTO_BLK,
 			    so, asoc, sndlen);
 #endif
-#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
-			sbunlock(&so->so_snd, 0); /* MT: FIXME */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			sbunlock(&so->so_snd, 1); /* MT: FIXME */
 #else
 			sbunlock(&so->so_snd);
 #endif
@@ -11846,7 +11846,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 			}
 			stcb->block_entry = NULL;
 			SCTP_INP_RUNLOCK(inp);
-			error = sblock(&so->so_snd, M_WAITOK);
+			error = sblock(&so->so_snd, SBLOCKWAIT(flags));
 			if (error) {
 				/* Can't aquire the lock */
 				splx(s);
@@ -11933,8 +11933,8 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 					mm = NULL;
 				}
 			}
-#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
-			sbunlock(&so->so_snd, 0); /* MT: FIXME */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			sbunlock(&so->so_snd, 1); /* MT: FIXME */
 #else
 			sbunlock(&so->so_snd);
 #endif
@@ -12002,6 +12002,9 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 	 */
 	splx(s);
 	SOCKBUF_UNLOCK(&so->so_snd);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sbunlock(&so->so_snd, 1);
+#endif
 	stcb->block_entry = &be;
 	be.error = 0;
 	SCTP_TCB_UNLOCK(stcb);
@@ -12014,6 +12017,9 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 			sctp_log_lock(stcb->sctp_ep, stcb, SCTP_LOG_LOCK_SOCKBUF_S);
 #endif
 			SOCKBUF_LOCK(&so->so_snd);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			sbunlock(&so->so_snd, 1);
+#endif
 			goto release;
 		}
 		SCTP_INCR_CHK_COUNT();
@@ -12325,8 +12331,8 @@ zap_by_it_now:
 #endif
 
 release:
-#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
-	sbunlock(&so->so_snd, 0); /* MT: FIXME */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sbunlock(&so->so_snd, 1); /* MT: FIXME */
 #else
 	sbunlock(&so->so_snd);
 #endif
@@ -12386,6 +12392,10 @@ sctp_sosend(struct socket *so,
 	s = splnet();
 #endif
 
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	socket_lock(so, 1);
+#endif
+
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 	    (inp->sctp_socket->so_qlimit)) {
 		/* The listner can NOT send */
@@ -12395,6 +12405,9 @@ sctp_sosend(struct socket *so,
 			sctp_m_freem(top);
 		if (control)
 			sctp_m_freem(control);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			socket_unlock(so, 1);
+#endif
 		return (error);
 	}
 
@@ -12409,6 +12422,9 @@ sctp_sosend(struct socket *so,
 				sctp_m_freem(control);
 				error = sctp_sendall(inp, uio, top, &srcv);
 				splx(s);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+				socket_unlock(so, 1);
+#endif
 				return (error);
 			}
 			use_rcvinfo = 1;
@@ -12416,6 +12432,10 @@ sctp_sosend(struct socket *so,
 	}
 	error = sctp_lower_sosend(so, addr, uio, top, control, flags, use_rcvinfo, &srcv, p);
 	splx(s);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	socket_unlock(so, 1);
+#endif
+
 	return (error);
 }
 
