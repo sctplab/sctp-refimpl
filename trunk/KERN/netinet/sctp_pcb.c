@@ -1696,7 +1696,14 @@ sctp_inpcb_alloc(struct socket *so)
 		return (ENOBUFS);
 	}
 	SCTP_INP_INFO_WLOCK();
-        /* LOCK init's */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+    /* LOCK init's */
+	inp->ip_inp.inp.inpcb_mtx = lck_mtx_alloc_init(sctppcbinfo.mtx_grp, sctppcbinfo.mtx_attr);
+	if (inp->ip_inp.inp.inpcb_mtx == NULL) {
+		printf("in_pcballoc: can't alloc mutex! so=%x\n", so);
+		return(ENOMEM);
+	}
+#endif
 	SCTP_INP_LOCK_INIT(inp);
 	SCTP_ASOC_CREATE_LOCK_INIT(inp);
 	/* lock the new ep */
@@ -2730,6 +2737,11 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	SCTP_ASOC_CREATE_UNLOCK(inp);
 	SCTP_INP_LOCK_DESTROY(inp);
 	SCTP_ASOC_CREATE_LOCK_DESTROY(inp);
+
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	lck_mtx_unlock(inp->ip_inp.inp.inpcb_mtx);	
+	lck_mtx_free(inp->ip_inp.inp.inpcb_mtx, sctppcbinfo.mtx_grp);	
+#endif
 
 	/* Now we must put the ep memory back into the zone pool */
 	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, inp);
