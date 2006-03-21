@@ -1277,7 +1277,7 @@ dontblock:
 	SBLASTRECORDCHK(&so->so_rcv);
 	SBLASTMBUFCHK(&so->so_rcv);
 	nextrecord = m->m_nextpkt;
-	if (pr->pr_flags & PR_ADDR)
+	if ((pr->pr_flags & PR_ADDR)
 #ifdef SCTP
 	    || (pr->pr_flags & PR_ADDR_OPT && m->m_type == MT_SONAME)
 #endif
