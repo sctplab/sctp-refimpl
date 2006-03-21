@@ -11606,7 +11606,16 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int *mbcnt, int *error, int wan
 		return(NULL);
 	}
 	if(space_needed > (((sctp_mbuf_threshold_count-1) * MLEN) + MHLEN)) {
-		MCLGET(m, M_WAIT);
+			MCLGET(m, M_WAIT);
+/*
+  if(space_needed <= MCLBYTES) {
+  } else if (space_needed <= MJUMPAGESIZE) {
+  } else if (space_needed <= MJUM9BYTES) {
+  } else if (space_needed <= MJUM9BYTES) {
+  } else if (space_needed <= MJUM16BYTES){
+  } else {
+  }
+*/
 		if (m == NULL) {
 			*error = ENOMEM;
 			return(NULL);
@@ -11616,6 +11625,7 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int *mbcnt, int *error, int wan
 			*error = ENOMEM;
 			return(NULL);
 		}
+		printf("Attached a cluster of %d bytes\n", m->m_ext.ext_size);
 		*mbcnt += m->m_ext.ext_size;
 	}
 	*mbcnt += MSIZE;
