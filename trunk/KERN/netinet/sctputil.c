@@ -4310,7 +4310,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 	}
 
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	socket_lock(inp->sctp_socket, 1);
+	socket_lock(so, 1);
 #endif
 	error = sctp_sorecvmsg(so, uio, mp0, from, fromlen, flagsp, &sinfo);
 	if(controlp) {
@@ -4329,7 +4329,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 #endif
 	}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	socket_unlock(inp->sctp_socket, 1);
+	socket_unlock(so, 1);
 #endif
 
 	return (error);
