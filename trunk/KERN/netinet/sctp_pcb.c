@@ -2562,32 +2562,31 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 
 	callout_stop(&inp->sctp_ep.signature_change.timer);
 
+	while ((sq = TAILQ_FIRST(&inp->read_queue)) != NULL) {
+		TAILQ_REMOVE(&inp->read_queue, sq, next);
+		sctp_free_remote_addr(sq->whoFrom);
+		so->so_rcv.sb_cc -= sq->length;
+		if(sq->data) {
+			sctp_m_freem(sq->data);
+			sq->data = NULL;
+		}
+		/* no need to free the net count, since
+		 * at this point all assoc's are gone.
+		 */
+ 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, sq);
+		SCTP_DECR_READQ_COUNT();
+	}
+
+	
+
 	if (locked_so) {
 		/* First take care of socket level things */
-		if((so->so_rcv.sb_mb == NULL) && (so->so_rcv.sb_cc)) {
+		so->so_rcv.sb_mbcnt = 0;
+		if(so->so_rcv.sb_cc) {
 			printf("Strange, so->so_rcv.sb_mb was NULL count was %d?\n",
 			       (int)so->so_rcv.sb_cc);
 			so->so_rcv.sb_cc = 0;
 			panic("strange case 1");
-		}
-		if((so->so_rcv.sb_mb == NULL) && (so->so_rcv.sb_mbcnt)) {
-			printf("Strange, so->so_rcv.sb_mb was NULL mb count was %d?\n",
-			       (int)so->so_rcv.sb_mbcnt);
-			so->so_rcv.sb_mbcnt = 0;
-			panic("strange case 2");
-		}
-		if(so->so_snd.sb_cc > 0) {
-			/* we never really use the send buf
-			 * so its always safe to zero it.
-			 */
-			so->so_snd.sb_cc = 0;
-		}
-		if(so->so_rcv.sb_mb && (so->so_rcv.sb_mb->m_len == 0)) {
-			printf("Shutdown recovery in progress adding %d to cc:%d\n",
-			       (int)so->so_rcv.sb_mb->m_pkthdr.len,
-			       (int)so->so_rcv.sb_cc);
-			so->so_rcv.sb_cc += so->so_rcv.sb_mb->m_pkthdr.len;
-			panic("strange case 3");
 		}
 #ifdef IPSEC
 #ifdef __OpenBSD__
@@ -2691,19 +2690,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		SCTP_INP_WUNLOCK(inp);
 		sctp_free_assoc(inp, asoc, 1);
 		SCTP_INP_WLOCK(inp);
-	}
-	while ((sq = TAILQ_FIRST(&inp->read_queue)) != NULL) {
-		TAILQ_REMOVE(&inp->read_queue, sq, next);
-		sctp_free_remote_addr(sq->whoFrom);
-		if(sq->data) {
-			sctp_m_freem(sq->data);
-			sq->data = NULL;
-		}
-		/* no need to free the net count, since
-		 * at this point all assoc's are gone.
-		 */
- 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, sq);
-		SCTP_DECR_READQ_COUNT();
 	}
 	inp->sctp_socket = 0;
 	/* Now first we remove ourselves from the overall list of all EP's */
@@ -3665,10 +3651,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		}
 		prev = net;
 		TAILQ_REMOVE(&asoc->nets, net, sctp_next);
-		/* free it */
-		net->ref_count = 0;
-		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_net, net);
-		SCTP_DECR_RADDR_COUNT();
+		sctp_free_remote_addr(net);
 	}
 	/*
 	 * The chunk lists and such SHOULD be empty but we check them
