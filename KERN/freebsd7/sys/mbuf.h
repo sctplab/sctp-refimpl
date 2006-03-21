@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)mbuf.h	8.5 (Berkeley) 2/19/95
- * $FreeBSD: src/sys/sys/mbuf.h,v 1.188 2006/02/17 14:14:15 andre Exp $
+ * $FreeBSD: src/sys/sys/mbuf.h,v 1.189 2006/03/15 21:11:11 sam Exp $
  */
 
 #ifndef _SYS_MBUF_H_
@@ -167,7 +167,7 @@ struct mbuf {
 #define	M_PROTO3	0x0040	/* protocol-specific */
 #define	M_PROTO4	0x0080	/* protocol-specific */
 #define	M_PROTO5	0x0100	/* protocol-specific */
-#define M_NOTIFICATION  0x2000  /* SCTP notification becomes MSG_NOTIFICATION */
+#define M_NOTIFICATION  0x2000  /* SCTP notification */
 #define	M_SKIP_FIREWALL	0x4000	/* skip firewall processing */
 #define	M_FREELIST	0x8000	/* mbuf is on the free list */
 
@@ -678,6 +678,7 @@ struct	mbuf	*m_pullup(struct mbuf *, int);
 int		m_sanity(struct mbuf *, int);
 struct	mbuf	*m_split(struct mbuf *, int, int);
 struct	mbuf	*m_uiotombuf(struct uio *, int, int, int);
+struct	mbuf	*m_unshare(struct mbuf *, int how);
 
 /*-
  * Network packets may have annotations attached by affixing a list

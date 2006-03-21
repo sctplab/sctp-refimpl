@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)protosw.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: src/sys/sys/protosw.h,v 1.48 2005/10/30 19:44:40 rwatson Exp $
+ * $FreeBSD: src/sys/sys/protosw.h,v 1.50 2006/03/15 20:41:15 rwatson Exp $
  */
 
 #ifndef _SYS_PROTOSW_H_
@@ -127,7 +127,6 @@ struct protosw {
 #define PR_IMPLOPCL	0x20		/* implied open/close */
 #define	PR_LASTHDR	0x40		/* enforce ipsec policy; last header */
 #define PR_ADDR_OPT     0x80            /* Address optional w/msg */
-
 /*
  * The arguments to usrreq are:
  *	(*protosw[].pr_usrreq)(up, req, m, nam, opt);
