@@ -2482,23 +2482,21 @@ int sctp_recvmsg(td, uap)
 					     } */ *uap;
 {
 #ifdef SCTP
+	u_int8_t sockbufstore[256];
 	struct uio auio;
 	struct iovec aiov;
 	struct sctp_sndrcvinfo sinfo;
 	struct socket *so;
 	struct file *fp;
-	struct sockaddr *fromsa = 0;
+	struct sockaddr *fromsa;
 	int fromlen;
 	int len, msg_flags=0;
 	int error=0;
 #ifdef KTRACE
 	struct uio *ktruio = NULL;
 #endif
-
-	NET_LOCK_GIANT();
 	error = getsock(td->td_proc->p_fd, uap->sd, &fp);
 	if (error) {
-		NET_UNLOCK_GIANT();
 		return (error);
 	}
 	so = fp->f_data;
@@ -2508,7 +2506,6 @@ int sctp_recvmsg(td, uap)
 	SOCK_UNLOCK(so);
 	if (error) {
 		fdrop(fp, td);
-		NET_UNLOCK_GIANT();
 		return (error);
 	}
 #endif
@@ -2531,11 +2528,13 @@ int sctp_recvmsg(td, uap)
 	auio.uio_offset = 0;
 	auio.uio_resid = uap->len;
 	len = uap->len;
+	fromsa = (struct sockaddr *)sockbufstore;
 #ifdef KTRACE
 	if (KTRPOINT(td, KTR_GENIO))
 		ktruio = cloneuio(&auio);
 #endif
-	error = sctp_sorecvmsg(so, &fromsa, &auio, &msg_flags, &sinfo);
+	error = sctp_sorecvmsg(so, &auio, (struct mbuf **)NULL,
+			       fromsa, fromlen, &msg_flags, &sinfo);
 	if (error) {
 		if (auio.uio_resid != (int)len && (error == ERESTART ||
 		    error == EINTR || error == EWOULDBLOCK))
@@ -2563,7 +2562,7 @@ int sctp_recvmsg(td, uap)
 			if (error)
 				goto out;
 		}
-		error = copyout(&len, uap->fromlenaddr, sizeof (socklen_t));		
+		error = copyout(&len, uap->fromlenaddr, sizeof (socklen_t));
 		if(error) {
 			goto out;
 		}
@@ -2576,9 +2575,6 @@ int sctp_recvmsg(td, uap)
 	}
 out:
 	fdrop(fp, td);
-	NET_UNLOCK_GIANT();
-	if (fromsa)
-		FREE(fromsa, M_SONAME);
 	return (error);
 #else
 	return (EOPNOTSUPP);
