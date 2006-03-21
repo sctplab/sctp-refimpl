@@ -41,8 +41,6 @@
 
 
 #if defined(_KERNEL)
-int sctp_deliver_data(struct sctp_tcb *, struct sctp_association *,
-    struct sctp_tmit_chunk *);
 
 
 struct sctp_queued_to_read *

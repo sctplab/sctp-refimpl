@@ -2398,9 +2398,6 @@ sctp_notify_assoc_change(u_int32_t event, struct sctp_tcb *stcb,
 	 * First if we are are going down dump everything we
 	 * can to the socket rcv queue.
 	 */
-	if ((event == SCTP_SHUTDOWN_COMP) || (event == SCTP_COMM_LOST)) {
-		sctp_deliver_data(stcb, &stcb->asoc, NULL);
-	}
 
 	/*
 	 * For TCP model AND UDP connected sockets we will send
@@ -3755,6 +3752,7 @@ sctp_user_rcvd(struct sctp_tcb *stcb)
 	/* User pulled some data, do we need a rwnd update? */
 	uint32_t old_rwnd;
 
+	SOCKBUF_UNLOCK(&stcb->sctp_socket->so_rcv);
 	SCTP_INP_RLOCK(stcb->sctp_ep);
 	SCTP_TCB_LOCK(stcb);
 	SCTP_INP_RUNLOCK(stcb->sctp_ep);
@@ -3768,6 +3766,7 @@ sctp_user_rcvd(struct sctp_tcb *stcb)
 		}
 	}
 	SCTP_TCB_UNLOCK(stcb);
+	SOCKBUF_LOCK(&stcb->sctp_socket->so_rcv);
 }
 
 int
@@ -3829,10 +3828,11 @@ sctp_sorecvmsg(struct socket *so,
 	if((so->so_rcv.sb_cc == 0) && block_allowed) {
 		/* we need to wait for data */
 		error = sbwait(&so->so_rcv);
-		if (error)
+		if (error) {
 			goto out;
+		}
 		goto restart;
-	} else {
+	} else if (so->so_rcv.sb_cc == 0) {
 		error = EWOULDBLOCK;
 		goto out;
 	}
@@ -3847,7 +3847,7 @@ sctp_sorecvmsg(struct socket *so,
 		/* find a more suitable one then this */
 		ctl = TAILQ_NEXT(control, next);
 		while(ctl) {
-			if((ctl->stcb != stcb) && (ctl->length)) {
+			if((ctl->stcb != control->stcb) && (ctl->length)) {
 				/* found one */
 				control = ctl;
 				goto found_one;
@@ -3931,9 +3931,10 @@ sctp_sorecvmsg(struct socket *so,
 			/* move out the data, unlocked (our sblock flag protects us from a reader) */
 			error = uiomove(mtod(m, char *), cp_len, uio);
 			SOCKBUF_LOCK(&so->so_rcv);
-			if (error)
+			if (error) {
 				/* error we are out of here */
 				goto release;
+			}
 			if(cp_len == m->m_len) {
 				if (m->m_flags & M_EOR)
 					out_flags |= MSG_EOR;
@@ -3999,8 +4000,9 @@ sctp_sorecvmsg(struct socket *so,
 				}
 			}
 			if((out_flags & MSG_EOR) ||
-			   (uio->uio_resid == 0))
+			   (uio->uio_resid == 0)) {
 				break;
+			}
 		}
 		/* At this point we have looked at it all and
 		 * we either have a MSG_EOR/or read all the user

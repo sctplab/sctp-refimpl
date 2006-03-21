@@ -300,54 +300,6 @@ sctp_build_ctl_nchunk(struct sctp_inpcb *inp,
 	return (ret);
 }
 
-int
-sctp_deliver_data(struct sctp_tcb *stcb, struct sctp_association *asoc,
-    struct sctp_tmit_chunk *chk)
-{
-	struct sctp_queued_to_read *control;
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_INDATA1) {
-		printf("I am now in Deliver data! (%p)\n", chk);
-	}
-#endif
-	/* We always add it to the queue */
-	if (stcb && (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
-		/* socket above is long gone */
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INDATA1) {
-			printf("gone is gone!\n");
-		}
-#endif
-		if (chk != NULL) {
-			if (chk->data)
-				sctp_m_freem(chk->data);
-			chk->data = NULL;
-			sctp_free_remote_addr(chk->whoTo);
-			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-			SCTP_DECR_CHK_COUNT();
-		}
-		return (0);
-	}
-	if ((chk->rec.data.rcv_flags & SCTP_DATA_NOT_FRAG) != SCTP_DATA_NOT_FRAG) {
-		panic("Huh, how can a fragment get here?");
-	}
-	control = sctp_build_readq_entry_chk(stcb, chk);
-	if(control == NULL) {
-		/* We probably are in real trouble :-0 */
-		return(1);
-	}
-	sctp_add_to_readq(stcb->sctp_ep, stcb,
-			  control,
-			  &stcb->sctp_socket->so_rcv, 1);
-	
-	sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
-	chk->data = NULL;
-	sctp_free_remote_addr(chk->whoTo);
-	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-	SCTP_DECR_CHK_COUNT();
-	return (0);
-}
-
 /*
  * We are delivering currently from the reassembly queue. We must continue to
  * deliver until we either:
