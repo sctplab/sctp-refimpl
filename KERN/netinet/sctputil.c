@@ -3811,6 +3811,8 @@ sctp_sorecvmsg(struct socket *so,
 	if((in_flags & (MSG_DONTWAIT 
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 			| MSG_NBIO)
+#else
+			)
 #endif
 		   ) ||
 	   (so->so_state & SS_NBIO)) {
