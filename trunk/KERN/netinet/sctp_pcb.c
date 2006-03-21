@@ -2625,7 +2625,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 		ACCEPT_LOCK();
 #endif
-		so->so_pcb = 0;
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 		sotryfree(so);
 #else
