@@ -1,8 +1,8 @@
 /*-
- * Copyright (c) 2004 The FreeBSD Foundation
- * Copyright (c) 2004-2005 Robert N. M. Watson
  * Copyright (c) 1982, 1986, 1988, 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
+ * Copyright (c) 2004 The FreeBSD Foundation
+ * Copyright (c) 2004-2006 Robert N. M. Watson
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/uipc_socket.c,v 1.257 2006/02/12 15:00:27 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/uipc_socket.c,v 1.259 2006/03/16 07:03:14 rwatson Exp $");
 
 #include "opt_inet.h"
 #include "opt_mac.h"
@@ -347,7 +347,7 @@ sofree(so)
 	SOCK_LOCK_ASSERT(so);
 
 	if (so->so_pcb != NULL || (so->so_state & SS_NOFDREF) == 0 ||
-	    so->so_count != 0) {
+	    so->so_count != 0 || (so->so_state & SS_PROTOREF)) {
 		SOCK_UNLOCK(so);
 		ACCEPT_UNLOCK();
 		return;
@@ -435,7 +435,7 @@ soclose(so)
 			sp->so_qstate &= ~SQ_INCOMP;
 			sp->so_head = NULL;
 			ACCEPT_UNLOCK();
-			(void) soabort(sp);
+			soabort(sp);
 			ACCEPT_LOCK();
 		}
 		while ((sp = TAILQ_FIRST(&so->so_comp)) != NULL) {
@@ -444,7 +444,7 @@ soclose(so)
 			sp->so_qstate &= ~SQ_COMP;
 			sp->so_head = NULL;
 			ACCEPT_UNLOCK();
-			(void) soabort(sp);
+			soabort(sp);
 			ACCEPT_LOCK();
 		}
 		ACCEPT_UNLOCK();
@@ -490,7 +490,7 @@ discard:
  * it to acquire additional socket locks that may cause recursion or lock
  * order reversals.
  */
-int
+void
 soabort(so)
 	struct socket *so;
 {
@@ -501,9 +501,7 @@ soabort(so)
 		ACCEPT_LOCK();
 		SOCK_LOCK(so);
 		sotryfree(so);	/* note: does not decrement the ref count */
-		return (error);
 	}
-	return (0);
 }
 
 int
@@ -1279,7 +1277,7 @@ dontblock:
 	SBLASTRECORDCHK(&so->so_rcv);
 	SBLASTMBUFCHK(&so->so_rcv);
 	nextrecord = m->m_nextpkt;
-	if (pr->pr_flags & PR_ADDR
+	if (pr->pr_flags & PR_ADDR)
 #ifdef SCTP
 	    || (pr->pr_flags & PR_ADDR_OPT && m->m_type == MT_SONAME)
 #endif
