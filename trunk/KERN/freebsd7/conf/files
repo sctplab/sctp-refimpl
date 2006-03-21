@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/conf/files,v 1.1096 2006/02/07 18:41:56 imp Exp $
+# $FreeBSD: src/sys/conf/files,v 1.1103 2006/03/19 16:03:43 rwatson Exp $
 #
 # The long compile-with and dependency lines are required because of
 # limitations in config: backslash-newline doesn't work in strings, and
@@ -11,7 +11,7 @@ acpi_quirks.h			optional acpi				   \
 	clean		"acpi_quirks.h"
 aicasm				optional ahc | ahd			   \
 	dependency	"$S/dev/aic7xxx/aicasm/*.[chyl]"		   \
-	compile-with	"CC=${CC} ${MAKE} -f $S/dev/aic7xxx/aicasm/Makefile MAKESRCPATH=$S/dev/aic7xxx/aicasm" \
+	compile-with	"CC='${CC}' ${MAKE} -f $S/dev/aic7xxx/aicasm/Makefile MAKESRCPATH=$S/dev/aic7xxx/aicasm" \
 	no-obj no-implicit-rule						   \
 	clean		"aicasm* y.tab.h"
 aic7xxx_seq.h			optional ahc				   \
@@ -52,7 +52,7 @@ aic79xx_reg_print.o		optional ahd pci ahd_reg_pretty_print	   \
 	no-implicit-rule local
 emu10k1-alsa%diked.h		optional snd_emu10k1 pci			   \
 	dependency	"$S/tools/emu10k1-mkalsa.sh $S/gnu/dev/sound/pci/emu10k1-alsa.h" \
-	compile-with	"CC=${CC} AWK=${AWK} sh $S/tools/emu10k1-mkalsa.sh $S/gnu/dev/sound/pci/emu10k1-alsa.h emu10k1-alsa%diked.h" \
+	compile-with	"CC='${CC}' AWK=${AWK} sh $S/tools/emu10k1-mkalsa.sh $S/gnu/dev/sound/pci/emu10k1-alsa.h emu10k1-alsa%diked.h" \
 	no-obj no-implicit-rule before-depend				   \
 	clean		"emu10k1-alsa%diked.h"
 miidevs.h			optional miibus | mii			   \
@@ -334,8 +334,8 @@ contrib/pf/net/pf_osfp.c	optional pf \
 contrib/pf/netinet/in4_cksum.c	optional pf inet
 crypto/blowfish/bf_ecb.c	optional ipsec ipsec_esp
 crypto/blowfish/bf_skey.c	optional crypto | ipsec ipsec_esp
-crypto/des/des_ecb.c		optional crypto | ipsec ipsec_esp | netsmbcrypto
-crypto/des/des_setkey.c		optional crypto | ipsec ipsec_esp | netsmbcrypto
+crypto/des/des_ecb.c		optional crypto | ipsec ipsec_esp | netsmb
+crypto/des/des_setkey.c		optional crypto | ipsec ipsec_esp | netsmb
 crypto/rc4/rc4.c		optional netgraph_mppc_encryption
 crypto/rijndael/rijndael-alg-fst.c optional crypto | geom_bde | \
 					 ipsec | random | wlan_ccmp
@@ -458,6 +458,7 @@ dev/ata/ata-lowlevel.c		optional ata
 dev/ata/ata-pci.c		optional ata pci
 dev/ata/ata-queue.c		optional ata
 dev/ata/ata-raid.c		optional ataraid
+dev/ata/ata-usb.c		optional atausb
 dev/ata/atapi-cam.c		optional atapicam
 dev/ata/atapi-cd.c		optional atapicd
 dev/ata/atapi-fd.c		optional atapifd
@@ -507,6 +508,7 @@ dev/dc/pnphy.c			optional dc pci
 dev/dcons/dcons.c		optional dcons
 dev/dcons/dcons_crom.c		optional dcons_crom
 dev/dcons/dcons_os.c		optional dcons
+dev/de/if_de.c			optional de pci
 dev/digi/CX.c			optional digi_CX
 dev/digi/CX_PCI.c		optional digi_CX_PCI
 dev/digi/EPCX.c			optional digi_EPCX
@@ -798,9 +800,9 @@ dev/puc/puc_pccard.c		optional puc pccard
 dev/puc/puc_pci.c		optional puc pci
 dev/puc/puc_sbus.c		optional puc fhc | puc sbus
 dev/puc/pucdata.c		optional puc pci
-dev/ral/if_ral.c		optional ral
+dev/ral/rt2560.c		optional ral
+dev/ral/rt2661.c		optional ral
 dev/ral/if_ralrate.c		optional ral
-dev/ral/if_ral_pccard.c		optional ral pccard
 dev/ral/if_ral_pci.c		optional ral pci
 dev/random/harvest.c		standard
 dev/random/hash.c		optional random
@@ -913,6 +915,7 @@ dev/syscons/rain/rain_saver.c	optional rain_saver
 dev/syscons/snake/snake_saver.c	optional snake_saver
 dev/syscons/star/star_saver.c	optional star_saver
 dev/syscons/warp/warp_saver.c	optional warp_saver
+dev/tdfx/tdfx_linux.c		optional tdfx_linux tdfx compat_linux
 dev/tdfx/tdfx_pci.c		optional tdfx pci
 dev/ti/if_ti.c			optional ti pci
 dev/trm/trm.c			optional trm
@@ -1825,7 +1828,6 @@ pci/agp_if.m			optional agp pci
 pci/alpm.c			optional alpm pci
 pci/amdpm.c			optional amdpm pci | nfpm pci
 pci/amdsmb.c			optional amdsmb pci
-pci/if_de.c			optional de pci
 pci/if_mn.c			optional mn pci
 pci/if_pcn.c			optional pcn pci
 pci/if_rl.c			optional rl pci
@@ -1854,6 +1856,7 @@ security/audit/audit_bsm_token.c	optional audit
 security/audit/audit_pipe.c	optional audit
 security/audit/audit_syscalls.c	standard
 security/audit/audit_trigger.c	optional audit
+security/audit/audit_worker.c	optional audit
 security/mac/mac_inet.c		optional mac inet
 security/mac/mac_label.c	optional mac
 security/mac/mac_net.c		optional mac

@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/conf/options,v 1.528 2006/02/01 21:00:16 rwatson Exp $
+# $FreeBSD: src/sys/conf/options,v 1.531 2006/03/05 22:52:16 yar Exp $
 #
 #        On the handling of kernel options
 #
@@ -242,8 +242,7 @@ UFS_DIRHASH	opt_ufs.h
 NFS_ROOT	opt_nfsroot.h
 
 # SMB/CIFS requester
-NETSMB			opt_netsmb.h
-NETSMBCRYPTO		opt_netsmb.h
+NETSMB		opt_netsmb.h
 
 # Experimental support for large MS-DOS filesystems; SEE WARNING IN "NOTES"!
 MSDOSFS_LARGE	opt_msdosfs.h
@@ -414,7 +413,6 @@ SCTP_EARLYFR_LOGGING    opt_sctp.h
 SCTP_NAGLE_LOGGING      opt_sctp.h
 INVARIANTS_SCTP         opt_sctp.h
 #
-
 
 # Netgraph(4). Use option NETGRAPH to enable the base netgraph code.
 # Each netgraph node type can be either be compiled into the kernel
@@ -624,7 +622,6 @@ ROOTDEVNAME
 FDC_DEBUG		opt_fdc.h
 PCFCLOCK_VERBOSE	opt_pcfclock.h
 PCFCLOCK_MAX_RETRIES	opt_pcfclock.h
-TDFX_LINUX		opt_tdfx.h
 
 KTR			opt_global.h
 KTR_ALQ			opt_ktr.h
@@ -745,6 +742,9 @@ LOOKUP_SHARED		opt_vfs.h
 
 # HWPMC options
 HWPMC_HOOKS
+
+# XBOX options for FreeBSD/i386, but some files are MI
+XBOX			opt_xbox.h
 
 # XFS
 XFS
