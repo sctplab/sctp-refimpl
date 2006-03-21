@@ -423,10 +423,13 @@ struct sctp_tcb {
 	LIST_ENTRY(sctp_tcb) sctp_tcbrestarhash; /* next link in restart hash table */
 	LIST_ENTRY(sctp_tcb) sctp_asocs;         /* vtag hash list */
         struct sctp_block_entry *block_entry;
-        /* last place we began inserting a record */
-        struct mbuf *last_record_insert;
 	struct sctp_association asoc;
-	uint32_t hidden_from_sb;
+	/* freed_by_sorcv_sincelast is protected by 
+	 * the sockbuf_lock NOT the tcb_lock. Its special
+	 * in this way to help avoid extra mutex calls
+	 * in the reading of data.
+	 */
+	uint32_t freed_by_sorcv_sincelast;
 	uint16_t rport;			/* remote port in network format */
 	uint16_t resv;
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000

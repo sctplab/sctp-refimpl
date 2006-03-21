@@ -3747,26 +3747,31 @@ sctp_m_copym(struct mbuf *m, int off, int len, int wait)
 #define	SBLOCKWAIT(f)	(((f) & MSG_DONTWAIT) ? M_NOWAIT : M_WAITOK)
 
 static void
-sctp_user_rcvd(struct sctp_tcb *stcb)
+sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far)
 {
 	/* User pulled some data, do we need a rwnd update? */
 	uint32_t old_rwnd;
 
-	SOCKBUF_UNLOCK(&stcb->sctp_socket->so_rcv);
-	SCTP_INP_RLOCK(stcb->sctp_ep);
-	SCTP_TCB_LOCK(stcb);
-	SCTP_INP_RUNLOCK(stcb->sctp_ep);
-	old_rwnd = stcb->asoc.my_rwnd;
-	sctp_set_rwnd(stcb, &stcb->asoc);
-	if(old_rwnd < stcb->asoc.my_rwnd) {
-		if((stcb->asoc.my_rwnd-old_rwnd) > SCTP_RWND_UPDATE_THESHOLD) {
-			sctp_send_sack(stcb);
-			sctp_chunk_output(stcb->sctp_ep, stcb, 
-					  SCTP_OUTPUT_FROM_USR_RCVD);
+	stcb->freed_by_sorcv_sincelast += (*freed_so_far);
+	*freed_so_far = 0;
+	if(stcb->freed_by_sorcv_sincelast > SCTP_RWND_UPDATE_THESHOLD) {
+		stcb->freed_by_sorcv_sincelast = 0;
+		SOCKBUF_UNLOCK(&stcb->sctp_socket->so_rcv);
+		SCTP_INP_RLOCK(stcb->sctp_ep);
+		SCTP_TCB_LOCK(stcb);
+		SCTP_INP_RUNLOCK(stcb->sctp_ep);
+		old_rwnd = stcb->asoc.my_rwnd;
+		sctp_set_rwnd(stcb, &stcb->asoc);
+		if(old_rwnd < stcb->asoc.my_rwnd) {
+			if((stcb->asoc.my_rwnd-old_rwnd) > SCTP_RWND_UPDATE_THESHOLD) {
+				sctp_send_sack(stcb);
+				sctp_chunk_output(stcb->sctp_ep, stcb, 
+						  SCTP_OUTPUT_FROM_USR_RCVD);
+			}
 		}
+		SCTP_TCB_UNLOCK(stcb);
+		SOCKBUF_LOCK(&stcb->sctp_socket->so_rcv);
 	}
-	SCTP_TCB_UNLOCK(stcb);
-	SOCKBUF_LOCK(&stcb->sctp_socket->so_rcv);
 }
 
 int
@@ -3798,7 +3803,8 @@ sctp_sorecvmsg(struct socket *so,
 	int wakeup_read_socket=0;
 	int out_flags=0, in_flags;
 	int block_allowed=1;
-	
+	int freed_so_far=0;
+
 	in_flags = *msg_flags;
 	/* Pull in and set up our int flags */
 	if(in_flags & MSG_OOB) {
@@ -3826,7 +3832,6 @@ sctp_sorecvmsg(struct socket *so,
 	}
 	SOCKBUF_LOCK(&so->so_rcv);
  restart:
-	SOCKBUF_LOCK_ASSERT(&so->so_rcv);
 	if((so->so_rcv.sb_cc == 0) && block_allowed) {
 		/* we need to wait for data */
 		error = sbwait(&so->so_rcv);
@@ -3961,6 +3966,7 @@ sctp_sorecvmsg(struct socket *so,
 					if(control->length < cp_len) {
 						panic("Impossible length");
 					}
+					freed_so_far += cp_len;
 					control->length -= cp_len;
 					control->data = m_free(m);
 					m = control->data;
@@ -3991,6 +3997,7 @@ sctp_sorecvmsg(struct socket *so,
 					if(stcb) {
 						stcb->asoc.sb_cc = sctp_sbspace_sub(stcb->asoc.sb_cc, (uint32_t)cp_len);
 					}
+					freed_so_far += cp_len;
 #ifdef SCTP_SB_LOGGING
 					sctp_sblog(&so->so_rcv, stcb, 
 						   SCTP_LOG_SBRESULT, 0);
@@ -4029,14 +4036,14 @@ sctp_sorecvmsg(struct socket *so,
 		}
 		if(out_flags & MSG_EOR) {
 			if(stcb) {
-				sctp_user_rcvd(stcb);
+				sctp_user_rcvd(stcb, &freed_so_far);
 			}
 			goto release;
 		}
 		if(uio->uio_resid == 0) {
 			/* got all we can */
 			if(stcb) {
-				sctp_user_rcvd(stcb);
+				sctp_user_rcvd(stcb, &freed_so_far);
 			}
 			goto release;
 		}
@@ -4048,7 +4055,7 @@ sctp_sorecvmsg(struct socket *so,
 		if((block_allowed == 0) ||
 		   ((in_flags & MSG_WAITALL) == 0)){
 			if(stcb) {
-				sctp_user_rcvd(stcb);
+				sctp_user_rcvd(stcb, &freed_so_far);
 			}
 			goto release;
 		}
@@ -4060,7 +4067,7 @@ sctp_sorecvmsg(struct socket *so,
 
 		if(sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE)) {
 			if(stcb) {
-				sctp_user_rcvd(stcb);
+				sctp_user_rcvd(stcb, &freed_so_far);
 			}
 			goto release;
 		}
@@ -4073,7 +4080,7 @@ sctp_sorecvmsg(struct socket *so,
 
 		/* Tell the transport a rwnd update might be needed */
 		if(stcb) {
-			sctp_user_rcvd(stcb);
+			sctp_user_rcvd(stcb, &freed_so_far);
 		}
 	wait_some_more:
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
@@ -4122,6 +4129,7 @@ sctp_sorecvmsg(struct socket *so,
 					   stcb, SCTP_LOG_SBFREE, m->m_len);
 #endif
 				sctp_sbfree(stcb, &so->so_rcv, m);
+				freed_so_far += m->m_len;
 #ifdef SCTP_SB_LOGGING
 				sctp_sblog(&so->so_rcv, 
 					   stcb, SCTP_LOG_SBRESULT, 0);
@@ -4139,7 +4147,7 @@ sctp_sorecvmsg(struct socket *so,
 			if((block_allowed == 0) ||
 			   ((in_flags & MSG_WAITALL) == 0)){
 				if(stcb) {
-					sctp_user_rcvd(stcb);
+					sctp_user_rcvd(stcb, &freed_so_far);
 				}
 				goto release;
 			}
@@ -4150,7 +4158,7 @@ sctp_sorecvmsg(struct socket *so,
 			 */
 			if(sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE)) {
 				if(stcb) {
-					sctp_user_rcvd(stcb);
+					sctp_user_rcvd(stcb, &freed_so_far);
 				}
 				goto release;
 			}
@@ -4197,6 +4205,7 @@ sctp_sorecvmsg(struct socket *so,
 						   stcb, SCTP_LOG_SBFREE, m->m_len);
 #endif
 					sctp_sbfree(stcb, &so->so_rcv, m);
+					freed_so_far += m->m_len;
 #ifdef SCTP_SB_LOGGING
 					sctp_sblog(&so->so_rcv, 
 						   stcb, SCTP_LOG_SBRESULT, 0);
@@ -4226,10 +4235,11 @@ sctp_sorecvmsg(struct socket *so,
 #ifdef SCTP_SB_LOGGING
 					sctp_sblog(&so->so_rcv, stcb, SCTP_LOG_SBFREE, cp_len);
 #endif
+					freed_so_far += cp_len;
 					so->so_rcv.sb_cc = sctp_sbspace_sub(so->so_rcv.sb_cc, (uint32_t)cp_len);
 					if(stcb) {
 						stcb->asoc.sb_cc = sctp_sbspace_sub(stcb->asoc.sb_cc, (uint32_t)cp_len);
-						sctp_user_rcvd(stcb);
+						sctp_user_rcvd(stcb, &freed_so_far);
 					}
 #ifdef SCTP_SB_LOGGING
 					sctp_sblog(&so->so_rcv, stcb, 
@@ -4248,14 +4258,12 @@ sctp_sorecvmsg(struct socket *so,
 	}
  release:
 	*msg_flags |= out_flags; 	
-	SOCKBUF_LOCK_ASSERT(&so->so_rcv);
 #if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
 	sbunlock(&so->so_rcv, 1);
 #else
 	sbunlock(&so->so_rcv);
 #endif
  out:
-	SOCKBUF_LOCK_ASSERT(&so->so_rcv);
 	SOCKBUF_UNLOCK(&so->so_rcv);
 	if (wakeup_read_socket) {
 		sctp_sorwakeup(inp, so);
