@@ -1781,11 +1781,7 @@ struct pr_usrreqs sctp6_usrreqs = {
 	sctp_shutdown,
 	sctp6_in6getaddr,
 	sctp_sosend,
-#ifndef HAVE_SCTP_SORECEIVE
-	soreceive,
-#else
 	sctp_soreceive,
-#endif
 	sopoll
 #endif
 };

@@ -3820,7 +3820,11 @@ sctp_sorecvmsg(struct socket *so,
 	int block_allowed=1;
 	int freed_so_far=0;
 
-	in_flags = *msg_flags;
+	if(msg_flags) {
+		in_flags = *msg_flags;
+	} else {
+		in_flags = 0;
+	}
 	/* Pull in and set up our int flags */
 	if(in_flags & MSG_OOB) {
 		/* Out of band's NOT supported */
@@ -4272,7 +4276,8 @@ sctp_sorecvmsg(struct socket *so,
 		}
 	}
  release:
-	*msg_flags |= out_flags; 	
+	if(msg_flags)
+		*msg_flags |= out_flags; 	
 #if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
 	sbunlock(&so->so_rcv, 1);
 #else
