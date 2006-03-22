@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.15 2006-02-17 14:05:36 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.16 2006-03-22 19:41:17 lei Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -95,6 +95,7 @@ handle_notification(int fd,char *notify_buf) {
 	struct sctp_send_failed *ssf;
 	struct sctp_shutdown_event *sse;
 #if defined(__BSD_SCTP_STACK__)
+	struct sctp_authkey_event *auth;
 	struct sctp_stream_reset_event *strrst;
 #endif
 	int asocDown;
@@ -178,6 +179,25 @@ handle_notification(int fd,char *notify_buf) {
 		break;
 
 #if defined(__BSD_SCTP_STACK__)
+	case SCTP_AUTHENTICATION_EVENT:
+	{
+		auth = (struct sctp_authkey_event *)&snp->sn_auth_event;
+		printf("SCTP_AUTHKEY_EVENT: assoc=%xh - ",
+		       (uint32_t)auth->auth_assoc_id);
+		switch(auth->auth_indication) {
+		case SCTP_AUTH_NEWKEY:
+			printf("AUTH_NEWKEY");
+			break;
+		case SCTP_KEY_CONFLICT:
+			printf("KEY_CONFLICT");
+			break;
+		default:
+			printf("Indication 0x%x", auth->auth_indication);
+		}
+		printf(" key %u, alt_key %u\n", auth->auth_keynumber,
+		       auth->auth_altkeynumber);
+		break;
+	}
 	case SCTP_STREAM_RESET_EVENT:
 	{
 		int len;
@@ -749,6 +769,7 @@ create_SCTP_adaptor(distributor *o,uint16_t port, int model, int rwnd , int swnd
   event.sctp_partial_delivery_event = 1;
   event.sctp_adaptation_layer_event = 1;
 #if defined(__BSD_SCTP_STACK__)
+  event.sctp_authentication_event = 1;
   event.sctp_stream_reset_events = 1;
 #endif
 

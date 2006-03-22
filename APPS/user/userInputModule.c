@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.33 2006-02-20 15:46:29 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.34 2006-03-22 19:41:17 lei Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -209,6 +209,16 @@ static int cmd_setmsdelay(char *argv[], int argc);
 
 static int cmd_getv4mapped(char *argv[], int argc);
 static int cmd_setv4mapped(char *argv[], int argc);
+
+static int cmd_addauth(char *argv[], int argc);
+static int cmd_setkey(char *argv[], int argc);
+static int cmd_deletekey(char *argv[], int argc);
+static int cmd_setactivekey(char *argv[], int argc);
+static int cmd_getactivekey(char *argv[], int argc);
+static int cmd_sethmac(char *argv[], int argc);
+static int cmd_gethmac(char *argv[], int argc);
+static int cmd_getlocalauth(char *argv[], int argc);
+static int cmd_getpeerauth(char *argv[], int argc);
 
 static int cmd_setdebug(char *argv[], int argc);
 
@@ -494,6 +504,26 @@ static struct command commands[] = {
      cmd_term},
     {"whereto", "whereto - tell where the default sends",
      cmd_whereto},
+
+    {"addauth", "addauth - add a chunk as requiring auth",
+     cmd_addauth},
+    {"setkey", "setkey - set a shared key",
+     cmd_setkey},
+    {"deletekey", "deletekey - delete a shared key",
+     cmd_deletekey},
+    {"setactivekey", "setactivekey - set a shared key as active",
+     cmd_setactivekey},
+    {"getactivekey", "getactivekey - get the current active shared key",
+     cmd_getactivekey},
+    {"sethmac", "sethmac - set the local hmac list for auth",
+      cmd_sethmac},
+    {"gethmac", "gethmac - get the local hmac list for auth",
+      cmd_gethmac},
+    {"getlocalauth", "getlocalauth - get the local chunks requiring auth",
+     cmd_getlocalauth},
+    {"getpeerauth", "getpeerauth - get the peer chunks requiring auth",
+     cmd_getpeerauth},
+
     {NULL, NULL, NULL}
 };
 static sctpAdaptorMod *adap;
@@ -1801,7 +1831,7 @@ cmd_setdebug(char *argv[], int argc)
   if(argc == 0){
     printf("Current settings are %x\n",num);
   }else{
-    newlevel = strtol(argv[0],NULL,0);
+    newlevel = strtoul(argv[0],NULL,0);
     if(newlevel == 0){
       if(strcmp(argv[0],"off") == 0){
 	printf("Turning all debug off\n");
@@ -3531,7 +3561,7 @@ cmd_getsnd(char *argv[], int argc)
 		return -1;
 	}
 	memset(&so,0,sizeof(so));
-	so.ss_assoc_id = (caddr_t)strtoul(argv[0],NULL,0);
+	so.ss_assoc_id = (sctp_assoc_t)strtoul(argv[0],NULL,0);
 	siz = sizeof(so);
 	if(getsockopt(adap->fd,IPPROTO_SCTP,SCTP_GET_SNDBUF_USE,
 		      &so, &siz) != 0) {
@@ -4361,6 +4391,14 @@ cmd_getevents(char *argv[], int argc)
 
   printf("Adaption layer events %s be received\n",
 	 (event.sctp_adaptation_layer_event ? "Will" : "Will NOT"));
+
+#if defined(__BSD_SCTP_STACK__) 
+  printf("AUTHentication layer events %s be received\n",
+	 (event.sctp_authentication_event ? "Will" : "Will NOT"));
+
+  printf("Stream Reset events %s be received\n",
+	 (event.sctp_stream_reset_events ? "Will" : "Will NOT"));
+#endif
   return(0);
 }
 
@@ -5151,7 +5189,7 @@ cmd_setscope(char *argv[], int argc)
 	printf("setscope: expected 1 argument\n");
 	return -1;
     }
-    scop = (uint32_t)strtol(argv[0],NULL,0);
+    scop = (uint32_t)strtoul(argv[0],NULL,0);
     /* XXX add input validation */
     SCTP_setIPv6scope(scop);
     printf("Set scope id of %d address\n",scop);
@@ -5261,4 +5299,259 @@ cmd_whereto(char *argv[], int argc)
     printf("Currently sending to:");
     SCTPPrintAnAddress(SCTP_getAddr(NULL));
     return 0;
+}
+
+/*
+ * authentication support
+ */
+static int cmd_addauth(char *argv[], int argc) {
+#if defined(__BSD_SCTP_STACK__)
+    struct sctp_authchunk auth;
+
+    if (argc != 1) {
+	printf("Expected: addauth <chunk_type>\n");
+	return (-1);
+    }
+    bzero(&auth, sizeof(auth));
+    auth.sauth_chunk = (uint8_t)strtoul(argv[0], NULL, 0);
+    if (setsockopt(adap->fd, IPPROTO_SCTP, SCTP_AUTH_CHUNK,
+		   &auth, sizeof(auth)) != 0) {
+	printf("Can't add chunk %u, errno %d\n", auth.sauth_chunk, errno);
+	return (-1);
+    } else {
+	printf("Added chunk %u to required list\n", auth.sauth_chunk);
+    }
+#else
+    printf("Not supported on this OS\n");
+#endif
+    return (0);
+}
+
+static int cmd_setkey(char *argv[], int argc) {
+#if defined(__BSD_SCTP_STACK__)
+    char optval[512];
+    struct sctp_authkey *key;
+    int keylen;
+
+    if ((argc < 2) || (argc > 3)) {
+	printf("Expected: setkey <key_id> <key_text> [<optional assoc id>]\n");
+	return (-1);
+    }
+    bzero(optval, sizeof(optval));
+    key = (struct sctp_authkey *)optval;
+    key->sca_keynumber = (uint32_t)strtoul(argv[0], NULL, 0);
+    keylen = strlen(argv[1]);
+    strncpy(key->sca_key, argv[1], keylen);
+    /* use the optional assoc id, if given */
+    if (argc == 3)
+	key->sca_assoc_id = (uint32_t)strtoul(argv[2], NULL, 0);
+    else
+	key->sca_assoc_id = get_assoc_id();
+
+    if (setsockopt(adap->fd, IPPROTO_SCTP, SCTP_AUTH_KEY, optval,
+		   sizeof(*key) + keylen) != 0) {
+	printf("Can't add key id %u, errno %d\n", key->sca_keynumber, errno);
+	return (-1);
+    } else {
+	printf("Added key id %u: %s\n", key->sca_keynumber, argv[1]);
+    }
+#else
+    printf("Not supported on this OS\n");
+#endif
+    return (0);
+}
+
+static int cmd_deletekey(char *argv[], int argc) {
+#if defined(__BSD_SCTP_STACK__)
+    struct sctp_authdeletekey key;
+
+    if ((argc < 1) || (argc > 2)) {
+	printf("Expected: deletekey <key_id> [<optional assoc id>]\n");
+	return (-1);
+    }
+    bzero(&key, sizeof(key));
+    key.scdel_keynumber = (uint32_t)strtoul(argv[0], NULL, 0);
+    /* use the optional assoc id, if given */
+    if (argc == 2)
+	key.scdel_assoc_id = (uint32_t)strtoul(argv[1], NULL, 0);
+    else
+	key.scdel_assoc_id = get_assoc_id();
+
+    if (setsockopt(adap->fd, IPPROTO_SCTP, SCTP_AUTH_DELETE_KEY, &key,
+		   sizeof(key)) != 0) {
+	printf("Can't delete key id %u, errno %d\n", key.scdel_keynumber,
+	       errno);
+	return (-1);
+    } else {
+	printf("Deleted key id %u\n", key.scdel_keynumber);
+    }
+#else
+    printf("Not supported on this OS\n");
+#endif
+    return (0);
+}
+
+static int cmd_setactivekey(char *argv[], int argc) {
+#if defined(__BSD_SCTP_STACK__)
+    struct sctp_authactivekey key;
+
+    if ((argc < 1) || (argc > 2)) {
+	printf("Expected: setactivekey <key_id> [<optional assoc id>]\n");
+	return (-1);
+    }
+    bzero(&key, sizeof(key));
+    key.scact_keynumber = (uint32_t)strtoul(argv[0], NULL, 0);
+    /* use the optional assoc id, if given */
+    if (argc == 2)
+	key.scact_assoc_id = (uint32_t)strtoul(argv[1], NULL, 0);
+    else
+	key.scact_assoc_id = get_assoc_id();
+
+    if (setsockopt(adap->fd, IPPROTO_SCTP, SCTP_AUTH_ACTIVE_KEY, &key,
+		   sizeof(key)) != 0) {
+	printf("Can't set key id %u active, errno %d\n", key.scact_keynumber,
+	       errno);
+	return (-1);
+    } else {
+	printf("Set key id %u as active send key\n", key.scact_keynumber);
+    }
+#else
+    printf("Not supported on this OS\n");
+#endif
+    return (0);
+}
+
+static int cmd_getactivekey(char *argv[], int argc) {
+#if defined(__BSD_SCTP_STACK__)
+    struct sctp_authactivekey key;
+    int optlen;
+
+    if (argc > 1) {
+	printf("Expected: getactivekey [<optional assoc id>]\n");
+	return (-1);
+    }
+    bzero(&key, sizeof(key));
+    /* use the optional assoc id, if given */
+    if (argc == 1)
+	key.scact_assoc_id = (uint32_t)strtoul(argv[0], NULL, 0);
+    else
+	key.scact_assoc_id = get_assoc_id();
+
+    optlen = sizeof(key);
+    if (getsockopt(adap->fd, IPPROTO_SCTP, SCTP_AUTH_ACTIVE_KEY, &key,
+		   &optlen) != 0) {
+	printf("Can't get active key, errno %d\n", errno);
+	return (-1);
+    } else {
+	printf("Key id %u is active send key\n", key.scact_keynumber);
+    }
+#else
+    printf("Not supported on this OS\n");
+#endif
+    return (0);
+}
+
+static int cmd_sethmac(char *argv[], int argc) {
+#if defined(__BSD_SCTP_STACK__)
+    char optval[512];
+    struct sctp_hmacalgo *hmacs;
+    socklen_t optlen;
+    int num_hmacs, i;
+
+    if (argc < 1) {
+	printf("Expected: sethmac <list of hmac ids>]\n");
+	return (-1);
+    }
+    hmacs = (struct sctp_hmacalgo *)optval;
+    optlen = sizeof(optval);
+    num_hmacs = argc;
+    for (i=0; i < num_hmacs; i++)
+	hmacs->shmac_idents[i] = (uint32_t)strtoul(argv[i], NULL, 0);
+    optlen = sizeof(*hmacs) + (num_hmacs * sizeof(hmacs->shmac_idents[0]));
+    if (setsockopt(adap->fd, IPPROTO_SCTP, SCTP_HMAC_IDENT, optval,
+		   optlen) != 0) {
+	printf("Can't set hmacs, errno:%d\n", errno);
+	return (-1);
+    }
+    printf("%u HMAC id's were set\n", num_hmacs);
+#else
+    printf("Not supported on this OS\n");
+#endif
+    return (0);
+}
+
+static int cmd_gethmac(char *argv[], int argc) {
+#if defined(__BSD_SCTP_STACK__)
+    char optval[512];
+    struct sctp_hmacalgo *hmacs;
+    socklen_t optlen;
+    int num_hmacs, i;
+
+    hmacs = (struct sctp_hmacalgo *)optval;
+    optlen = sizeof(optval);
+    if (getsockopt(adap->fd, IPPROTO_SCTP, SCTP_HMAC_IDENT, optval,
+		   &optlen) != 0) {
+	printf("Can't get hmacs, errno:%d\n", errno);
+	return (-1);
+    }
+    num_hmacs = (optlen - sizeof(*hmacs)) / sizeof(hmacs->shmac_idents[0]);
+    printf("%u HMAC id's\n", num_hmacs);
+    for (i=0; i < num_hmacs; i++)
+	printf(" HMAC id: %u (0x%02x)\n", hmacs->shmac_idents[i],
+	       hmacs->shmac_idents[i]);
+#else
+    printf("Not supported on this OS\n");
+#endif
+    return (0);
+}
+
+static int cmd_getlocalauth(char *argv[], int argc) {
+#if defined(__BSD_SCTP_STACK__)
+    char optval[512];
+    struct sctp_authchunks *chunks;
+    socklen_t optlen;
+    int size, i;
+
+    chunks = (struct sctp_authchunks *)optval;
+    chunks->gauth_assoc_id = get_assoc_id();
+    optlen = sizeof(optval);
+    if (getsockopt(adap->fd, IPPROTO_SCTP, SCTP_LOCAL_AUTH_CHUNKS,
+		   optval, &optlen) != 0) {
+	printf("Can't get local auth chunks, errno:%d\n",errno);
+	return (-1);
+    }
+    size = optlen - sizeof(*chunks);
+    printf("%u Local chunks requiring AUTH\n", size);
+    for (i=0; i < size; i++)
+	printf(" chunk type: %u (0x%02x)\n", chunks->gauth_chunks[i],
+	       chunks->gauth_chunks[i]);
+#else
+    printf("Not supported on this OS\n");
+#endif
+    return (0);
+}
+
+static int cmd_getpeerauth(char *argv[], int argc) {
+#if defined(__BSD_SCTP_STACK__)
+    char optval[512];
+    struct sctp_authchunks *chunks;
+    socklen_t optlen;
+    int size, i;
+
+    chunks = (struct sctp_authchunks *)optval;
+    optlen = sizeof(optval);
+    if (getsockopt(adap->fd, IPPROTO_SCTP, SCTP_PEER_AUTH_CHUNKS,
+		   optval, &optlen) != 0) {
+	printf("Can't get peer auth chunks, errno:%d\n",errno);
+	return (-1);
+    }
+    size = optlen - sizeof(*chunks);
+    printf("%u Peer chunks requiring AUTH\n", size);
+    for (i=0; i < size; i++)
+	printf(" chunk type: %u (0x%02x)\n", chunks->gauth_chunks[i],
+	       chunks->gauth_chunks[i]);
+#else
+    printf("Not supported on this OS\n");
+#endif
+    return (0);
 }
