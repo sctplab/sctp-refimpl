@@ -2442,13 +2442,6 @@ sctp_notify_assoc_change(u_int32_t event, struct sctp_tcb *stcb,
 		sowwakeup(stcb->sctp_socket);
 		sorwakeup(stcb->sctp_socket);
 	}
-#if 0
-	if ((event == SCTP_COMM_UP) &&
-	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
- 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
-		 soisconnected(stcb->sctp_socket);
-	}
-#endif
 	if (sctp_is_feature_off(stcb->sctp_ep, SCTP_PCB_FLAGS_RECVASSOCEVNT)) {
 		/* event not enabled */
 		return;
@@ -3865,11 +3858,9 @@ sctp_sorecvmsg(struct socket *so,
 	}
 	if((in_flags & (MSG_DONTWAIT 
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
-			| MSG_NBIO)
-#else
-			)
+			| MSG_NBIO
 #endif
-		   ) ||
+		     )) ||
 	   (so->so_state & SS_NBIO)) {
 		block_allowed = 0;
 	}
@@ -3880,7 +3871,15 @@ sctp_sorecvmsg(struct socket *so,
 		return (EFAULT);
 	}
 	SOCKBUF_LOCK(&so->so_rcv);
+
  restart:
+#if defined(__FreeBSD__) && __FreeBSD_version > 500000
+	if (so->so_error || so->so_rcv.sb_state & SBS_CANTRCVMORE)
+		goto out;
+#else
+	if (so->so_error || so->so_state & SS_CANTRCVMORE) 
+		goto out;
+#endif
 	if((so->so_rcv.sb_cc == 0) && block_allowed) {
 		/* we need to wait for data */
 		error = sbwait(&so->so_rcv);
