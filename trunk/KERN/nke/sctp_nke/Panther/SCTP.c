@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005 Michael Tuexen, tuexen@fh-muenster.de,
+ * Copyright (C) 2004, 2005, 2006 Michael Tuexen, tuexen@fh-muenster.de,
  *
  * All rights reserved.
  *
@@ -51,15 +51,13 @@
 
 #include <net/route.h>
 #ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
-#include <sys/socketvar.h> /* needed by netinet/in_pcb.h */
+#include <sys/socketvar.h>
 #endif
 #include <netinet/in_pcb.h>
 #include <netinet/sctp_pcb.h>
 #include <netinet/sctp.h>
 #include <netinet/sctp_var.h>
 #include <netinet6/sctp6_var.h>
-
-#define PR_LISTEN 0
 
 SYSCTL_DECL(_net_inet);
 SYSCTL_DECL(_net_inet6);
@@ -267,7 +265,7 @@ kern_return_t SCTP_start (kmod_info_t * ki, void * d) {
 	sctp6_stream.pr_domain       = &inet6domain;
 	sctp6_stream.pr_protocol     = IPPROTO_SCTP;
 #ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
-	sctp6_stream.pr_flags        = PR_CONNREQUIRED|PR_WANTRCVD|PR_LISTEN|PR_PCBLOCK|PR_PROTOLOCK;
+	sctp6_stream.pr_flags        = PR_CONNREQUIRED|PR_WANTRCVD|PR_PCBLOCK|PR_PROTOLOCK;
 #else
 	sctp6_seqpacket.pr_flags     = PR_ADDR_OPT|PR_WANTRCVD;
 #endif
