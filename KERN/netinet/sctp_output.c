@@ -2377,7 +2377,7 @@ sctp_is_addr_in_ep(struct sctp_inpcb *inp, struct ifaddr *ifa)
 
 static struct in_addr
 sctp_choose_v4_boundspecific_inp(struct sctp_inpcb *inp,
-				 struct rtentry *rt,
+				 struct route *ro,
 				 uint8_t ipv4_scope,
 				 uint8_t loopscope)
 {
@@ -2387,10 +2387,12 @@ sctp_choose_v4_boundspecific_inp(struct sctp_inpcb *inp,
 	struct ifnet *ifn;
 	struct ifaddr *ifa;
 	uint8_t sin_loop, sin_local;
+	struct rtentry *rt;
 
 	/* first question, is the ifn we will emit on
 	 * in our list, if so, we want that one.
 	 */
+	rt = ro->ro_rt;
 	ifn = rt->rt_ifp;
 	if (ifn) {
 		/* is a prefered one on the interface we route out? */
@@ -2447,6 +2449,8 @@ sctp_choose_v4_boundspecific_inp(struct sctp_inpcb *inp,
 		printf("Src address selection for EP, no acceptable src address found for address\n");
 	}
 #endif
+	RTFREE(ro->ro_rt);
+	ro->ro_rt = NULL;
 	memset(&ans, 0, sizeof(ans));
 	return (ans);
 }
@@ -2457,7 +2461,7 @@ static struct in_addr
 sctp_choose_v4_boundspecific_stcb(struct sctp_inpcb *inp,
 				  struct sctp_tcb *stcb,
 				  struct sctp_nets *net,
-				  struct rtentry *rt,
+				  struct route *ro,
  			          uint8_t ipv4_scope,
 				  uint8_t loopscope,
 				  int non_asoc_addr_ok)
@@ -2473,10 +2477,12 @@ sctp_choose_v4_boundspecific_stcb(struct sctp_inpcb *inp,
 	struct ifaddr *ifa;
 	uint8_t sin_loop, sin_local, start_at_beginning=0;
 	struct sockaddr_in *sin;
+	struct rtentry *rt;
 
 	/* first question, is the ifn we will emit on
 	 * in our list, if so, we want that one.
 	 */
+	rt = ro->ro_rt;
 	ifn = rt->rt_ifp;
 
  	if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_DO_ASCONF)) {
@@ -2672,6 +2678,8 @@ sctp_choose_v4_boundspecific_stcb(struct sctp_inpcb *inp,
 			return (sin->sin_addr);
 		}
 	}
+	RTFREE(ro->ro_rt);
+	ro->ro_rt = NULL;
 	memset(&ans, 0, sizeof(ans));
 	return (ans);
 }
@@ -2734,7 +2742,7 @@ static struct in_addr
 sctp_choose_v4_boundall(struct sctp_inpcb *inp,
 			struct sctp_tcb *stcb,
 			struct sctp_nets *net,
-			struct rtentry *rt,
+			struct route *ro,
 			uint8_t ipv4_scope,
 			uint8_t loopscope,
 			int non_asoc_addr_ok)
@@ -2745,6 +2753,7 @@ sctp_choose_v4_boundall(struct sctp_inpcb *inp,
 	struct sockaddr_in *sin;
 	struct in_addr ans;
 	struct ifaddr *ifa;
+	struct rtentry *rt;
 	/*
 	 * For v4 we can use (in boundall) any address in the association. If
 	 * non_asoc_addr_ok is set we can use any address (at least in theory).
@@ -2758,6 +2767,7 @@ sctp_choose_v4_boundall(struct sctp_inpcb *inp,
 	 * fill in the address of the route ifn, which means we probably already
 	 * rejected it.. i.e. here comes an abort :-<.
 	 */
+	rt = ro->ro_rt;
 	ifn = rt->rt_ifp;
 	if (net) {
 		cur_addr_num = net->indx_of_eligible_next_to_use;
@@ -2907,6 +2917,8 @@ sctp_choose_v4_boundall(struct sctp_inpcb *inp,
 	if (non_asoc_addr_ok) {
 		return (((struct sockaddr_in *)(rt->rt_ifa->ifa_addr))->sin_addr);
 	} else {
+		RTFREE(ro->ro_rt);
+		ro->ro_rt = NULL;
 		memset(&ans, 0, sizeof(ans));
 		return (ans);
 	}
@@ -3020,7 +3032,7 @@ sctp_ipv4_source_address_selection(struct sctp_inpcb *inp,
 		 * it is a negative list. Addresses being added
 		 * by asconf.
 		 */
-		return (sctp_choose_v4_boundall(inp, stcb, net, ro->ro_rt,
+		return (sctp_choose_v4_boundall(inp, stcb, net, ro,
 		    ipv4_scope, loopscope, non_asoc_addr_ok));
         }
 	/*
@@ -3044,9 +3056,9 @@ sctp_ipv4_source_address_selection(struct sctp_inpcb *inp,
 	 */
 	if (stcb) {
 		return (sctp_choose_v4_boundspecific_stcb(inp, stcb, net,
-		    ro->ro_rt, ipv4_scope, loopscope, non_asoc_addr_ok));
+		    ro, ipv4_scope, loopscope, non_asoc_addr_ok));
 	} else {
-		return (sctp_choose_v4_boundspecific_inp(inp, ro->ro_rt,
+		return (sctp_choose_v4_boundspecific_inp(inp, ro,
 		    ipv4_scope, loopscope));
 	}
 	/* this should not be reached */
@@ -3116,7 +3128,7 @@ static struct sockaddr_in6 *
 sctp_choose_v6_boundspecific_stcb(struct sctp_inpcb *inp,
 				  struct sctp_tcb *stcb,
 				  struct sctp_nets *net,
-				  struct rtentry *rt,
+				  struct route *ro,
  			          uint8_t loc_scope,
 				  uint8_t loopscope,
 				  int non_asoc_addr_ok)
@@ -3141,7 +3153,9 @@ sctp_choose_v6_boundspecific_stcb(struct sctp_inpcb *inp,
 	int start_at_beginning=0;
 	struct ifnet *ifn;
 	struct ifaddr *ifa;
-
+	struct rtentry *rt;
+	
+	rt = ro->ro_rt;
 	ifn = rt->rt_ifp;
  	if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_DO_ASCONF)) {
 #ifdef SCTP_DEBUG
@@ -3305,12 +3319,14 @@ sctp_choose_v6_boundspecific_stcb(struct sctp_inpcb *inp,
 			return (sin6);
 		}
 	}
+	RTFREE(ro->ro_rt);
+	ro->ro_rt = NULL;
 	return (NULL);
 }
 
 static struct sockaddr_in6 *
 sctp_choose_v6_boundspecific_inp(struct sctp_inpcb *inp,
-				 struct rtentry *rt,
+				 struct route *ro,
 				 uint8_t loc_scope,
 				 uint8_t loopscope)
 {
@@ -3326,11 +3342,13 @@ sctp_choose_v6_boundspecific_inp(struct sctp_inpcb *inp,
 	struct ifnet *ifn;
 	struct ifaddr *ifa;
 	int sin_loop, sin_local;
+	struct rtentry *rt;
 
 	/* first question, is the ifn we will emit on
 	 * in our list, if so, we want that one.
 	 */
 
+	rt = ro->ro_rt;
 	ifn = rt->rt_ifp;
 	if (ifn) {
 		TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
@@ -3390,6 +3408,8 @@ sctp_choose_v6_boundspecific_inp(struct sctp_inpcb *inp,
 		printf("Src address selection for EP, no acceptable src address found for address\n");
 	}
 #endif
+	RTFREE(ro->ro_rt);
+	ro->ro_rt = NULL;
 	return (NULL);
 }
 
@@ -3473,7 +3493,7 @@ static struct sockaddr_in6 *
 sctp_choose_v6_boundall(struct sctp_inpcb *inp,
 			struct sctp_tcb *stcb,
 			struct sctp_nets *net,
-			struct rtentry *rt,
+			struct route *ro,
 			uint8_t loc_scope,
 			uint8_t loopscope,
 			int non_asoc_addr_ok)
@@ -3492,7 +3512,9 @@ sctp_choose_v6_boundall(struct sctp_inpcb *inp,
 	 */
 	struct ifnet *ifn;
 	struct sockaddr_in6 *sin6;
+	struct rtentry *rt;
 
+	rt = ro->ro_rt;
 	ifn = rt->rt_ifp;
 	if (net) {
 		cur_addr_num = net->indx_of_eligible_next_to_use;
@@ -3669,6 +3691,8 @@ sctp_choose_v6_boundall(struct sctp_inpcb *inp,
 		inp->next_ifn_touse = NULL;
 		goto bound_all_v6_plan_b;
 	}
+	RTFREE(ro->ro_rt);
+	ro->ro_rt = NULL;
 	return (NULL);
 
 }
@@ -3816,7 +3840,7 @@ sctp_ipv6_source_address_selection(struct sctp_inpcb *inp,
 			printf("Calling bound-all src addr selection for v6\n");
 		}
 #endif
-		rt_addr = sctp_choose_v6_boundall(inp, stcb, net, ro->ro_rt, loc_scope, loopscope, non_asoc_addr_ok);
+		rt_addr = sctp_choose_v6_boundall(inp, stcb, net, ro, loc_scope, loopscope, non_asoc_addr_ok);
 	} else {
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
@@ -3824,10 +3848,10 @@ sctp_ipv6_source_address_selection(struct sctp_inpcb *inp,
 		}
 #endif
 		if (stcb)
-			rt_addr = sctp_choose_v6_boundspecific_stcb(inp, stcb, net, ro->ro_rt, loc_scope, loopscope,  non_asoc_addr_ok);
+			rt_addr = sctp_choose_v6_boundspecific_stcb(inp, stcb, net, ro, loc_scope, loopscope,  non_asoc_addr_ok);
 		else
 			/* we can't have a non-asoc address since we have no association */
-			rt_addr = sctp_choose_v6_boundspecific_inp(inp,  ro->ro_rt, loc_scope, loopscope);
+			rt_addr = sctp_choose_v6_boundspecific_inp(inp,  ro, loc_scope, loopscope);
 	}
 	if (rt_addr == NULL) {
 		/* no suitable address? */
