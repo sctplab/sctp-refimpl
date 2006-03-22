@@ -180,7 +180,7 @@ void sctp_hash_digest_m(char *key, int key_len, struct mbuf *m, int offset,
 		SHA1_Init(&tctx);
 		SHA1_Update(&tctx, (unsigned char *)key, key_len);
 		SHA1_Final(tk, &tctx);
-		key = tk;
+		key = (char *)tk;
 		key_len = 20;
 #endif /* USE_MD5 */
 	}
