@@ -41,7 +41,9 @@
 
 #include <sys/callout.h>
 
+#if !defined(__APPLE__)
 #include <sys/limits.h>
+#endif
 #include <machine/cpu.h>
 
 #include <net/if.h>
@@ -74,10 +76,6 @@
 #include <netinet/sctp_indata.h>
 #include <netinet/sctp_output.h>
 #include <netinet/sctp_auth.h>
-
-
-
-
 
 #ifdef SCTP_DEBUG
 extern u_int32_t sctp_debug_on;
