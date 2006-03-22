@@ -6233,7 +6233,7 @@ sctp_get_frag_point(struct sctp_tcb *stcb,
 #ifdef HAVE_SCTP_AUTH
 	/* adjust for an AUTH chunk if DATA requires auth */
 	if (sctp_auth_is_required_chunk(SCTP_DATA, stcb->asoc.peer_auth_chunks))
-		size -= sctp_get_auth_chunk_len(stcb->asoc.peer_hmac_id);
+		siz -= sctp_get_auth_chunk_len(stcb->asoc.peer_hmac_id);
 #endif /* HAVE_SCTP_AUTH */
 
 	if (siz % 4) {
