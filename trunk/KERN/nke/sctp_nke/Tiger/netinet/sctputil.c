@@ -855,9 +855,9 @@ sctp_fill_random_store(struct sctp_pcb *m)
 	 * is random as well :->
 	 */
 	m->store_at = 0;
-	sctp_hash_digest((char *)m->random_numbers, sizeof(m->random_numbers),
-			 (char *)&m->random_counter, sizeof(m->random_counter),
-			 (char *)m->random_store);
+	sctp_hash_digest((char *)m->random_numbers, (int)sizeof(m->random_numbers),
+			 (char *)&m->random_counter, (int)sizeof(m->random_counter),
+			 (unsigned char *)m->random_store);
 	m->random_counter++;
 }
 
@@ -2091,11 +2091,13 @@ sctp_calculate_sum(struct mbuf *m, int32_t *pktlen, uint32_t offset)
 
 	while (at != NULL) {
 #ifdef SCTP_USE_ADLER32
-		base = update_adler32(base, at->m_data + offset,
-		    at->m_len - offset);
+		base = update_adler32(base, 
+				      (unsigned char *)(at->m_data + offset),
+				      (unsigned int)(at->m_len - offset));
 #else
-		base = update_crc32(base, at->m_data + offset,
-		    at->m_len - offset);
+		base = update_crc32(base, 
+				    (unsigned char *)(at->m_data + offset),
+				    (unsigned int)(at->m_len - offset));
 #endif /* SCTP_USE_ADLER32 */
 		tlen += at->m_len - offset;
 		/* we only offset once into the first mbuf */
@@ -2442,13 +2444,6 @@ sctp_notify_assoc_change(u_int32_t event, struct sctp_tcb *stcb,
 		sowwakeup(stcb->sctp_socket);
 		sorwakeup(stcb->sctp_socket);
 	}
-#if 0
-	if ((event == SCTP_COMM_UP) &&
-	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
- 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
-		 soisconnected(stcb->sctp_socket);
-	}
-#endif
 	if (sctp_is_feature_off(stcb->sctp_ep, SCTP_PCB_FLAGS_RECVASSOCEVNT)) {
 		/* event not enabled */
 		return;
@@ -3192,7 +3187,7 @@ sctp_handle_ootb(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
  * inside it, if there is return 1, else return 0.
  */
 int
-sctp_is_there_an_abort_here(struct mbuf *m, int iphlen, int *vtagfill)
+sctp_is_there_an_abort_here(struct mbuf *m, int iphlen, uint32_t *vtagfill)
 {
 	struct sctp_chunkhdr *ch;
 	struct sctp_init_chunk *init_chk, chunk_buf;
@@ -3841,7 +3836,7 @@ sctp_sorecvmsg(struct socket *so,
 	 * 
 	 */
 	struct sctp_inpcb *inp;
-	int cp_len, error;
+	int cp_len, error=0;
 	struct sctp_queued_to_read *control, *ctl;
 	struct mbuf *m;
 	struct sctp_tcb *stcb;
@@ -3865,11 +3860,9 @@ sctp_sorecvmsg(struct socket *so,
 	}
 	if((in_flags & (MSG_DONTWAIT 
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
-			| MSG_NBIO)
-#else
-			)
+			| MSG_NBIO
 #endif
-		   ) ||
+		     )) ||
 	   (so->so_state & SS_NBIO)) {
 		block_allowed = 0;
 	}
@@ -3880,7 +3873,15 @@ sctp_sorecvmsg(struct socket *so,
 		return (EFAULT);
 	}
 	SOCKBUF_LOCK(&so->so_rcv);
+
  restart:
+#if defined(__FreeBSD__) && __FreeBSD_version > 500000
+	if (so->so_error || so->so_rcv.sb_state & SBS_CANTRCVMORE)
+		goto out;
+#else
+	if (so->so_error || so->so_state & SS_CANTRCVMORE) 
+		goto out;
+#endif
 	if((so->so_rcv.sb_cc == 0) && block_allowed) {
 		/* we need to wait for data */
 		error = sbwait(&so->so_rcv);

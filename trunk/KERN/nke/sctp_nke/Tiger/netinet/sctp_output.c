@@ -4732,34 +4732,40 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 
 	/* attach RANDOM parameter, if available */
 	if (stcb->asoc.authinfo.random != NULL) {
-	    random = (struct sctp_auth_random *)(m->m_data + m->m_len);
+	    random = (struct sctp_auth_random *)(mtod(m, caddr_t) + m->m_len);
 	    random->ph.param_type = htons(SCTP_RANDOM);
 	    p_len = sizeof(*random) + stcb->asoc.authinfo.random->keylen;
 	    random->ph.param_length = htons(p_len);
 	    bcopy(stcb->asoc.authinfo.random->key, random->random_data,
 		  stcb->asoc.authinfo.random->keylen);
+	    /* zero out any padding required */
+	    bzero((caddr_t)random + p_len, SCTP_SIZE32(p_len) - p_len);
 	    m->m_len += SCTP_SIZE32(p_len);
 	}
 
 	/* add HMAC_ALGO parameter */
-	hmacs = (struct sctp_auth_hmac_algo *)(m->m_data + m->m_len);
+	hmacs = (struct sctp_auth_hmac_algo *)(mtod(m, caddr_t) + m->m_len);
 	p_len = sctp_serialize_hmaclist(stcb->asoc.local_hmacs,
 					(uint8_t *)hmacs->hmac_ids);
 	if (p_len > 0) {
 	    p_len += sizeof(*hmacs);
 	    hmacs->ph.param_type = htons(SCTP_HMAC_LIST);
 	    hmacs->ph.param_length = htons(p_len);
+	    /* zero out any padding required */
+	    bzero((caddr_t)hmacs + p_len, SCTP_SIZE32(p_len) - p_len);
 	    m->m_len += SCTP_SIZE32(p_len);
 	}
 
 	/* add CHUNKS parameter */
-	chunks = (struct sctp_auth_chunk_list *)(m->m_data + m->m_len);
+	chunks = (struct sctp_auth_chunk_list *)(mtod(m, caddr_t) + m->m_len);
 	p_len = sctp_serialize_auth_chunks(stcb->asoc.local_auth_chunks,
 					   chunks->chunk_types);
 	if (p_len > 0) {
 	    p_len += sizeof(*chunks);
 	    chunks->ph.param_type = htons(SCTP_CHUNK_LIST);
 	    chunks->ph.param_length = htons(p_len);
+	    /* zero out any padding required */
+	    bzero((caddr_t)chunks + p_len, SCTP_SIZE32(p_len) - p_len);
 	    m->m_len += SCTP_SIZE32(p_len);
 	}
 	}
@@ -5621,7 +5627,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	stc.peers_vtag = init_chk->init.initiate_tag;
 	initackm_out->sh.checksum = 0;	/* calculate later */
 	/* who are we */
-	strncpy(stc.identification, SCTP_VERSION_STRING,
+	memcpy(stc.identification, SCTP_VERSION_STRING,
 	   min(strlen(SCTP_VERSION_STRING), sizeof(stc.identification)));
 	/* now the chunk header */
 	initackm_out->msg.ch.chunk_type = SCTP_INITIATION_ACK;
@@ -5741,33 +5747,39 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 
 	/* generate and add RANDOM parameter */
 	random_key = sctp_generate_random_key(SCTP_AUTH_RANDOM_SIZE_DEFAULT);
-	random = (struct sctp_auth_random *)(m->m_data + m->m_len);
+	random = (struct sctp_auth_random *)(mtod(m, caddr_t) + m->m_len);
 	random->ph.param_type = htons(SCTP_RANDOM);
 	p_len = sizeof(*random) + random_key->keylen;
 	random->ph.param_length = htons(p_len);
 	bcopy(random_key->key, random->random_data, random_key->keylen);
+	/* zero out any padding required */
+	bzero((caddr_t)random + p_len, SCTP_SIZE32(p_len) - p_len);
 	m->m_len += SCTP_SIZE32(p_len);
 	sctp_free_key(random_key);
 
 	/* add HMAC_ALGO parameter */
-	hmacs = (struct sctp_auth_hmac_algo *)(m->m_data + m->m_len);
+	hmacs = (struct sctp_auth_hmac_algo *)(mtod(m, caddr_t) + m->m_len);
 	p_len = sctp_serialize_hmaclist(inp->sctp_ep.local_hmacs,
 					(uint8_t *)hmacs->hmac_ids);
 	if (p_len > 0) {
 	    p_len += sizeof(*hmacs);
 	    hmacs->ph.param_type = htons(SCTP_HMAC_LIST);
 	    hmacs->ph.param_length = htons(p_len);
+	    /* zero out any padding required */
+	    bzero((caddr_t)hmacs + p_len, SCTP_SIZE32(p_len) - p_len);
 	    m->m_len += SCTP_SIZE32(p_len);
 	}
 
 	/* add CHUNKS parameter */
-	chunks = (struct sctp_auth_chunk_list *)(m->m_data + m->m_len);
+	chunks = (struct sctp_auth_chunk_list *)(mtod(m, caddr_t) + m->m_len);
 	p_len = sctp_serialize_auth_chunks(inp->sctp_ep.local_auth_chunks,
 					   chunks->chunk_types);
 	if (p_len > 0) {
 	    p_len += sizeof(*chunks);
 	    chunks->ph.param_type = htons(SCTP_CHUNK_LIST);
 	    chunks->ph.param_length = htons(p_len);
+	    /* zero out any padding required */
+	    bzero((caddr_t)chunks + p_len, SCTP_SIZE32(p_len) - p_len);
 	    m->m_len += SCTP_SIZE32(p_len);
 	}
 	}
@@ -6197,8 +6209,8 @@ sctp_get_frag_point(struct sctp_tcb *stcb,
 {
 	int siz, ovh;
 
-	/* For endpoints that have both 6 and 4 addresses
-	 * we must reserver room for the 6 ip header, for
+	/* For endpoints that have both v6 and v4 addresses
+	 * we must reserve room for the ipv6 header, for
 	 * those that are only dealing with V4 we use
 	 * a larger frag point.
 	 */
@@ -6217,6 +6229,12 @@ sctp_get_frag_point(struct sctp_tcb *stcb,
 		/* A data chunk MUST fit in a cluster */
 /*		siz = (MCLBYTES - sizeof(struct sctp_data_chunk));*/
 /*	}*/
+
+#ifdef HAVE_SCTP_AUTH
+	/* adjust for an AUTH chunk if DATA requires auth */
+	if (sctp_auth_is_required_chunk(SCTP_DATA, stcb->asoc.peer_auth_chunks))
+		siz -= sctp_get_auth_chunk_len(stcb->asoc.peer_hmac_id);
+#endif /* HAVE_SCTP_AUTH */
 
 	if (siz % 4) {
 		/* make it an even word boundary please */
@@ -6476,9 +6494,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 	if (m->m_flags & M_PKTHDR) {
 		m->m_pkthdr.len = dataout;
 	}
-	/* use the smallest one, user set value or
-	 * smallest mtu of the asoc
-	 */
+	/* use the smallest one, user set value or smallest mtu of the asoc */
 	siz = sctp_get_frag_point(stcb, asoc);
 	SOCKBUF_UNLOCK(&so->so_snd);
 	if ((dataout) && (dataout <= siz)) {
@@ -8147,8 +8163,6 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 		 * yet, account for this in the mtu now... if no data can be
 		 * bundled, this adjustment won't matter anyways since the
 		 * packet will be going out...
-		 * NOTE: we blindly assume that all the chk->rec.chunk_id
-		 * are DATA on the send queue (as they should be)
 		 */
 		if ((auth == NULL) &&
 		    sctp_auth_is_required_chunk(SCTP_DATA,
@@ -8252,7 +8266,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 									   &auth,
 									   &auth_offset,
 									   stcb,
-									   chk->rec.chunk_id);
+									   SCTP_DATA);
 					}
 #endif /* HAVE_SCTP_AUTH */
 					outchain = sctp_copy_mbufchain(chk->data, outchain, &endoutchain, 1, 0);
@@ -9195,7 +9209,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 		 * below in case there is no room for this chunk.
 		 */
 		if ((auth == NULL) &&
-		    sctp_auth_is_required_chunk(chk->rec.chunk_id,
+		    sctp_auth_is_required_chunk(SCTP_DATA,
 						stcb->asoc.peer_auth_chunks)) {
 			dmtu = sctp_get_auth_chunk_len(stcb->asoc.peer_hmac_id);
 		} else
@@ -9209,8 +9223,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 			if (auth == NULL) {
 				m = sctp_add_auth_chunk(m, &endofchain,
 							&auth, &auth_offset,
-							stcb,
-							chk->rec.chunk_id);
+							stcb, SCTP_DATA);
 			}
 #endif /* HAVE_SCTP_AUTH */
 			m = sctp_copy_mbufchain(chk->data, m, &endofchain, 1,
@@ -9249,7 +9262,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 				}
 #ifdef HAVE_SCTP_AUTH
 				if ((auth == NULL) &&
-				    sctp_auth_is_required_chunk(fwd->rec.chunk_id,
+				    sctp_auth_is_required_chunk(SCTP_DATA,
 								stcb->asoc.peer_auth_chunks)) {
 					dmtu = sctp_get_auth_chunk_len(stcb->asoc.peer_hmac_id);
 				} else
@@ -9264,7 +9277,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 									&endofchain,
 									&auth, &auth_offset,
 									stcb,
-									chk->rec.chunk_id);
+									SCTP_DATA);
 					}
 #endif /* HAVE_SCTP_AUTH */
 					m = sctp_copy_mbufchain(fwd->data, m,
@@ -9832,7 +9845,6 @@ sctp_output(inp, m, addr, control, p, flags)
 				}
 				/*
 				 * Question: Should I error here if the
-
 				 * assoc_id is no longer valid?
 				 * i.e. I can't find it?
 				 */
@@ -9920,7 +9932,7 @@ sctp_output(inp, m, addr, control, p, flags)
 		splx(s);
 		return (ENOENT);
 	} else if (stcb == NULL) {
-		/* UDP mode, we must go ahead and start the INIT process */
+		/* 1-many mode, we must go ahead and start the INIT process */
 		if ((use_rcvinfo) && (srcv.sinfo_flags & SCTP_ABORT)) {
 			/* Strange user to do this */
 			if (control) {
@@ -11262,7 +11274,7 @@ sctp_send_packet_dropped(struct sctp_tcb *stcb, struct sctp_nets *net,
 	}
 	drp->reserved = 0;
 	datap = drp->data;
-        m_copydata(m, iphlen, len, datap);
+        m_copydata(m, iphlen, len, (caddr_t)datap);
 	TAILQ_INSERT_TAIL(&stcb->asoc.control_send_queue, chk, sctp_next);
 	asoc->ctrl_queue_cnt++;
 }
