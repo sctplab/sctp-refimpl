@@ -1,7 +1,7 @@
 /*	$KAME: sctp_peeloff.c,v 1.13 2005/03/06 16:04:18 itojun Exp $	*/
 
 /*
- * Copyright (C) 2002-2005 Cisco Systems Inc,
+ * Copyright (C) 2002-2006 Cisco Systems Inc,
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -109,7 +109,7 @@ extern u_int32_t sctp_debug_on;
 
 
 int
-sctp_can_peel_off(struct socket *head, caddr_t assoc_id)
+sctp_can_peel_off(struct socket *head, sctp_assoc_t assoc_id)
 {
 	struct sctp_inpcb *inp;
 	struct sctp_tcb *stcb;
@@ -127,7 +127,7 @@ sctp_can_peel_off(struct socket *head, caddr_t assoc_id)
 }
 
 int
-sctp_do_peeloff(struct socket *head, struct socket *so, caddr_t assoc_id)
+sctp_do_peeloff(struct socket *head, struct socket *so, sctp_assoc_t assoc_id)
 {
 	struct sctp_inpcb *inp, *n_inp;
 	struct sctp_tcb *stcb;
@@ -159,7 +159,7 @@ sctp_do_peeloff(struct socket *head, struct socket *so, caddr_t assoc_id)
 }
 
 struct socket *
-sctp_get_peeloff(struct socket *head, caddr_t assoc_id, int *error)
+sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 {
 	struct socket *newso;
 	struct sctp_inpcb *inp, *n_inp;

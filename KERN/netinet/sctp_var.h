@@ -1,7 +1,7 @@
 /*	$KAME: sctp_var.h,v 1.24 2005/03/06 16:04:19 itojun Exp $	*/
 
 /*
- * Copyright (c) 2001-2005 Cisco Systems, Inc.
+ * Copyright (c) 2001-2006 Cisco Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -358,7 +358,6 @@ int	sctp_shutdown __P((struct socket *));
 void	sctp_notify __P((struct sctp_inpcb *, int, struct sctphdr *,
 			 struct sockaddr *, struct sctp_tcb *,
 			 struct sctp_nets *));
-int sctp_usr_recvd __P((struct socket *, int));
 
 #if defined(INET6)
 void ip_2_ip6_hdr __P((struct ip6_hdr *, struct ip *));

@@ -1052,7 +1052,7 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 		       sctppcbinfo.ipi_count_readq++; \
 	        } while (0)
 
-#define SCTP_DECR_READQQ_COUNT() \
+#define SCTP_DECR_READQ_COUNT() \
                 do { \
 		       sctppcbinfo.ipi_count_readq--; \
 	        } while (0)
@@ -1102,9 +1102,11 @@ void sctp_move_pcb_and_assoc(struct sctp_inpcb *, struct sctp_inpcb *,
  * this is why it is passed.
  */
 struct sctp_tcb *sctp_findassociation_ep_addr(struct sctp_inpcb **,
-	struct sockaddr *, struct sctp_nets **, struct sockaddr *, struct sctp_tcb *);
+	struct sockaddr *, struct sctp_nets **, struct sockaddr *,
+	struct sctp_tcb *);
 
-struct sctp_tcb *sctp_findassociation_ep_asocid(struct sctp_inpcb *, caddr_t);
+struct sctp_tcb *sctp_findassociation_ep_asocid(struct sctp_inpcb *,
+						sctp_assoc_t);
 
 struct sctp_tcb *sctp_findassociation_ep_asconf(struct mbuf *, int, int,
     struct sctphdr *, struct sctp_inpcb **, struct sctp_nets **);

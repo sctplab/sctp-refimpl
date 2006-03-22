@@ -1,7 +1,7 @@
 /*	$KAME: sctp_pcb.c,v 1.38 2005/03/06 16:04:18 itojun Exp $	*/
 
 /*
- * Copyright (c) 2001-2005 Cisco Systems, Inc.
+ * Copyright (c) 2001-2006 Cisco Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -802,7 +802,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
  * given out in the COMM_UP notification
  */
 struct sctp_tcb *
-sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, caddr_t asoc_id)
+sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, sctp_assoc_t asoc_id)
 {
 	/*
 	 * Use my the assoc_id to find a endpoint
@@ -1801,6 +1801,16 @@ sctp_inpcb_alloc(struct socket *so)
 
 	/* How long is a cookie good for ? */
 	m->def_cookie_life = sctp_valid_cookie_life_default;
+
+#ifdef HAVE_SCTP_AUTH
+	/* Initialize authentication parameters */
+	m->disable_authkey0 = 0;
+	LIST_INIT(&m->shared_keys);
+	m->local_hmacs = sctp_default_supported_hmaclist();
+	m->local_auth_chunks = sctp_alloc_chunklist();
+	sctp_auth_set_default_chunks(m->local_auth_chunks);
+#endif /* HAVE_SCTP_AUTH */
+
 	SCTP_INP_WUNLOCK(inp);
 	return (error);
 }
@@ -2398,6 +2408,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
  	struct rtentry *rt;
 #endif
 	int s, cnt;
+#ifdef HAVE_SCTP_AUTH
+	sctp_sharedkey_t *shared_key;
+#endif /* HAVE_SCTP_AUTH */
 
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
@@ -2698,8 +2711,23 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		SCTP_INP_WLOCK(inp);
 	}
 	inp->sctp_socket = 0;
-	/* Now first we remove ourselves from the overall list of all EP's */
 
+#ifdef HAVE_SCTP_AUTH
+	/* free up authentication fields */
+	if (inp->sctp_ep.local_auth_chunks != NULL)
+		sctp_free_chunklist(inp->sctp_ep.local_auth_chunks);
+	if (inp->sctp_ep.local_hmacs != NULL)
+		sctp_free_hmaclist(inp->sctp_ep.local_hmacs);
+
+	shared_key = LIST_FIRST(&inp->sctp_ep.shared_keys);
+	while (shared_key) {
+		LIST_REMOVE(shared_key, next);
+		sctp_free_sharedkey(shared_key);
+		shared_key = LIST_FIRST(&inp->sctp_ep.shared_keys);
+	}
+#endif /* HAVE_SCTP_AUTH */
+
+	/* Now first we remove ourselves from the overall list of all EP's */
 	/* Unlock inp first, need correct order */
 	SCTP_INP_WUNLOCK(inp);
 	/* now iterator lock */
@@ -3294,6 +3322,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		*error = err;
 		return (NULL);
 	}
+
 	/* and the port */
 	stcb->rport = rport;
 	SCTP_INP_INFO_WLOCK();
@@ -3315,13 +3344,12 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	}
 	SCTP_TCB_LOCK(stcb);
 
-	/* now that my_vtag is set, add it to the  hash */
+	/* now that my_vtag is set, add it to the hash */
 	head = &sctppcbinfo.sctp_asochash[SCTP_PCBHASH_ASOC(stcb->asoc.my_vtag,
 	     sctppcbinfo.hashasocmark)];
 	/* put it in the bucket in the vtag hash of assoc's for the system */
 	LIST_INSERT_HEAD(head, stcb, sctp_asocs);
 	SCTP_INP_INFO_WUNLOCK();
-
 
 	if ((err = sctp_add_remote_addr(stcb, firstaddr, 1, 1))) {
 		/* failure.. memory error? */
@@ -3570,6 +3598,9 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	struct sctp_asconf_addr *aparam;
 	struct sctp_stream_reset_list *liste;
 	struct sctp_queued_to_read *sq;
+#ifdef HAVE_SCTP_AUTH
+	sctp_sharedkey_t *shared_key;
+#endif /* HAVE_SCTP_AUTH */
 	int s;
 
 	/* first, lets purge the entry from the hash table. */
@@ -3817,6 +3848,29 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		sctp_m_freem(asoc->last_asconf_ack_sent);
 		asoc->last_asconf_ack_sent = NULL;
 	}
+
+#ifdef HAVE_SCTP_AUTH
+	/* clean up auth stuff */
+	if (asoc->local_hmacs)
+		sctp_free_hmaclist(asoc->local_hmacs);
+	if (asoc->peer_hmacs)
+		sctp_free_hmaclist(asoc->peer_hmacs);
+
+	if (asoc->local_auth_chunks)
+		sctp_free_chunklist(asoc->local_auth_chunks);
+	if (asoc->peer_auth_chunks)
+		sctp_free_chunklist(asoc->peer_auth_chunks);
+
+	sctp_free_authinfo(&asoc->authinfo);
+
+	shared_key = LIST_FIRST(&asoc->shared_keys);
+	while (shared_key) {
+		LIST_REMOVE(shared_key, next);
+		sctp_free_sharedkey(shared_key);
+		shared_key = LIST_FIRST(&asoc->shared_keys);
+	}
+#endif /* HAVE_SCTP_AUTH */
+
 	/* Insert new items here :> */
 
 	/* Get rid of LOCK */
@@ -4556,6 +4610,9 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 	struct sockaddr *local_sa = (struct sockaddr *)&dest_store;
 	struct sockaddr_in sin;
 	struct sockaddr_in6 sin6;
+#ifdef HAVE_SCTP_AUTH
+	int got_random = 0, got_hmacs = 0;
+#endif /* HAVE_SCTP_AUTH */
 
 	/* First get the destination address setup too. */
 	memset(&sin, 0, sizeof(sin));
@@ -4877,6 +4934,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			stcb->asoc.peer_supports_prsctp = 0;
 			stcb->asoc.peer_supports_pktdrop = 0;
 			stcb->asoc.peer_supports_strreset = 0;
+			stcb->asoc.peer_supports_auth = 0;
 			pr_supported = (struct sctp_supported_chunk_types_param *)phdr;
 			num_ent = plen - sizeof(struct sctp_paramhdr);
 			for (i=0; i<num_ent; i++) {
@@ -4898,6 +4956,11 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 				case SCTP_STREAM_RESET:
 					stcb->asoc.peer_supports_strreset = 1;
 					break;
+#ifdef HAVE_SCTP_AUTH
+				case SCTP_AUTHENTICATION:
+					stcb->asoc.peer_supports_auth = 1;
+					break;
+#endif /* HAVE_SCTP_AUTH */
 				default:
 					/* one I have not learned yet */
 					break;
@@ -4908,6 +4971,77 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			/* Peer supports ECN-nonce */
 			stcb->asoc.peer_supports_ecn_nonce = 1;
 			stcb->asoc.ecn_nonce_allowed = 1;
+#ifdef HAVE_SCTP_AUTH
+		} else if (ptype == SCTP_RANDOM) {
+		    uint8_t store[256];
+		    struct sctp_auth_random *random;
+		    uint32_t keylen;
+
+		    if (plen > sizeof(store))
+			break;
+		    phdr = sctp_get_next_param(m, offset,
+					       (struct sctp_paramhdr *)store,
+					       plen);
+		    if (phdr == NULL)
+			return (-1);
+		    random = (struct sctp_auth_random *)phdr;
+		    keylen = plen - sizeof(*random);
+		    if (stcb->asoc.authinfo.peer_random != NULL)
+			sctp_free_key(stcb->asoc.authinfo.peer_random);
+		    stcb->asoc.authinfo.peer_random =
+			sctp_set_key(random->random_data, keylen);
+sctp_print_key(stcb->asoc.authinfo.peer_random, "LOAD ADDRS: peer key");
+		    got_random = 1;
+		} else if (ptype == SCTP_HMAC_LIST) {
+		    uint8_t store[256];
+		    struct sctp_auth_hmac_algo *hmacs;
+		    int num_hmacs, i;
+
+		    if (plen > sizeof(store))
+			break;
+		    phdr = sctp_get_next_param(m, offset,
+					       (struct sctp_paramhdr *)store,
+					       plen);
+		    if (phdr == NULL)
+			return (-1);
+		    hmacs = (struct sctp_auth_hmac_algo *)phdr;
+		    num_hmacs = (plen - sizeof(*hmacs)) /
+			sizeof(hmacs->hmac_ids[0]);
+		    if (stcb->asoc.peer_hmacs != NULL)
+			sctp_free_hmaclist(stcb->asoc.peer_hmacs);
+		    stcb->asoc.peer_hmacs = sctp_alloc_hmaclist(num_hmacs);
+		    if (stcb->asoc.peer_hmacs != NULL) {
+			for (i=0; i < num_hmacs; i++) {
+			    sctp_auth_add_hmacid(stcb->asoc.peer_hmacs,
+						 hmacs->hmac_ids[i]);
+			}
+		    }
+		    got_hmacs = 1;
+printf("LOAD ADDRS: peer hmacs = %u\n", num_hmacs);
+		} else if (ptype == SCTP_CHUNK_LIST) {
+		    uint8_t store[384];
+		    struct sctp_auth_chunk_list *chunks;
+		    int size, i;
+
+		    if (plen > sizeof(store))
+			break;
+		    phdr = sctp_get_next_param(m, offset,
+					       (struct sctp_paramhdr *)store,
+					       plen);
+		    if (phdr == NULL)
+			return (-1);
+		    chunks = (struct sctp_auth_chunk_list *)phdr;
+		    size = plen - sizeof(*chunks);
+		    if (stcb->asoc.peer_auth_chunks != NULL)
+			sctp_clear_chunklist(stcb->asoc.peer_auth_chunks);
+		    else
+			stcb->asoc.peer_auth_chunks = sctp_alloc_chunklist();
+		    for (i=0; i < size; i++) {
+			    sctp_auth_add_chunk(chunks->chunk_types[i],
+						stcb->asoc.peer_auth_chunks);
+		    }
+printf("LOAD ADDRS: peer auth chunks = %u\n", size);
+#endif /* HAVE_SCTP_AUTH */
 		} else if ((ptype == SCTP_HEARTBEAT_INFO) ||
 			   (ptype == SCTP_STATE_COOKIE) ||
 			   (ptype == SCTP_UNRECOG_PARAM) ||
@@ -4951,6 +5085,12 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			}
 		}
 	}
+#ifdef HAVE_SCTP_AUTH
+	/* validate authentication required parameters */
+	if (!got_random && !got_hmacs)
+	    stcb->asoc.peer_supports_auth = 0;
+#endif /* HAVE_SCTP_AUTH */
+
 	return (0);
 }
 
