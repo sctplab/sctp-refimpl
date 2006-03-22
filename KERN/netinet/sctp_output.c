@@ -11274,7 +11274,7 @@ sctp_send_packet_dropped(struct sctp_tcb *stcb, struct sctp_nets *net,
 	}
 	drp->reserved = 0;
 	datap = drp->data;
-        m_copydata(m, iphlen, len, datap);
+        m_copydata(m, iphlen, len, (caddr_t)datap);
 	TAILQ_INSERT_TAIL(&stcb->asoc.control_send_queue, chk, sctp_next);
 	asoc->ctrl_queue_cnt++;
 }
