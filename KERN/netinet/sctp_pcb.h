@@ -914,8 +914,8 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #endif
 
 
-#if defined(__APPLE__) && defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-/***************BEGIN APPLE PANTHER count stuff**********************/
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+/***************BEGIN APPLE Tiger count stuff**********************/
 #define SCTP_INCRS_DEFINED 1
 #define SCTP_INCR_EP_COUNT() \
                 do { \
@@ -978,7 +978,7 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
                        lck_mtx_lock(sctppcbinfo.ipi_count_mtx); \
  	               sctppcbinfo.ipi_count_raddr--; \
 		       sctppcbinfo.ipi_gencnt_raddr++; \
-                       (sctppcbinfo.ipi_count_mtx); \
+                       lck_mtx_unlock(sctppcbinfo.ipi_count_mtx); \
 	        } while (0)
 
 #define SCTP_INCR_CHK_COUNT() \

@@ -2627,7 +2627,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 #endif
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 		sotryfree(so);
-#else
+#elif !(defined __APPLE__)
 		sofree(so);
 #endif
 		/* Unlocks not needed since the socket is gone now */
@@ -2737,15 +2737,12 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	SCTP_INP_LOCK_DESTROY(inp);
 	SCTP_ASOC_CREATE_LOCK_DESTROY(inp);
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	lck_mtx_unlock(inp->ip_inp.inp.inpcb_mtx);	
-	lck_mtx_free(inp->ip_inp.inp.inpcb_mtx, sctppcbinfo.mtx_grp);	
-#endif
-
 	/* Now we must put the ep memory back into the zone pool */
+	/* For Tiger, we will do this later... FIXME MT */
+#if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, inp);
 	SCTP_DECR_EP_COUNT();
-
+#endif
 	SCTP_INP_INFO_WUNLOCK();
 	splx(s);
 }
