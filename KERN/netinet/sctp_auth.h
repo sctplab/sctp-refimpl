@@ -108,6 +108,10 @@ typedef struct sctp_authinfo {
 /* random number generation */
 extern void sctp_read_random(void *buffer, uint32_t bytes);
 
+int
+sctp_auth_is_supported_hmac (sctp_hmaclist_t *list, uint16_t id);
+
+
 /* socket option api functions */
 extern sctp_auth_chklist_t *sctp_alloc_chunklist(void);
 extern void sctp_free_chunklist(sctp_auth_chklist_t *chklist);

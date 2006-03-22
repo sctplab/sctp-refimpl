@@ -27,17 +27,57 @@
  * SUCH DAMAGE.
  */
 #include <sys/param.h>
-#include <sys/mbuf.h>
+#include <sys/systm.h>
 #include <sys/malloc.h>
+#include <sys/mbuf.h>
+#include <sys/domain.h>
+#include <sys/protosw.h>
 #include <sys/socket.h>
+#include <sys/socketvar.h>
+#include <sys/proc.h>
+#include <sys/kernel.h>
+#include <sys/sysctl.h>
+#include <sys/random.h>
+
+#include <sys/callout.h>
+
+#include <sys/limits.h>
+#include <machine/cpu.h>
+
+#include <net/if.h>
+#include <net/if_types.h>
+#include <net/route.h>
+#include <netinet/in.h>
+#include <netinet/in_systm.h>
+#include <netinet/ip.h>
+#include <netinet/in_pcb.h>
+#include <netinet/in_var.h>
+#include <netinet/ip_var.h>
+
+#ifdef INET6
+#include <netinet/ip6.h>
+#include <netinet6/ip6_var.h>
+#include <netinet6/scope6_var.h>
+#include <netinet6/in6_pcb.h>
+#endif /* INET6 */
+
+#ifdef IPSEC
+#include <netinet6/ipsec.h>
+#include <netkey/key.h>
+#endif /* IPSEC */
+
 #include <netinet/sctp.h>
 #include <netinet/sctp_header.h>
 #include <netinet/sctp_pcb.h>
 #include <netinet/sctp_var.h>
 #include <netinet/sctputil.h>
 #include <netinet/sctp_indata.h>
-#ifdef HAVE_SCTP_AUTH
+#include <netinet/sctp_output.h>
 #include <netinet/sctp_auth.h>
+
+
+
+
 
 #ifdef SCTP_DEBUG
 extern u_int32_t sctp_debug_on;
@@ -2218,4 +2258,3 @@ int main(void)
 }
 #endif /* STANDALONE_HMAC_TEST */
 
-#endif /* HAVE_SCTP_AUTH */
