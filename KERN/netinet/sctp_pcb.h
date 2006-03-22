@@ -729,10 +729,10 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 	lck_mtx_free(sctppcbinfo.it_mtx, SCTP_MTX_GRP)
 
 /* socket locks */
-#define SOCK_LOCK(_so) socket_lock(_so, 0)
-#define SOCK_UNLOCK(_so) socket_unlock(_so, 0)
-#define SOCKBUF_LOCK(_so_buf) sblock(_so_buf, 0)
-#define SOCKBUF_UNLOCK(_so_buf) sbunlock(_so_buf, 0)
+#define SOCK_LOCK(_so) 
+#define SOCK_UNLOCK(_so)
+#define SOCKBUF_LOCK(_so_buf)
+#define SOCKBUF_UNLOCK(_so_buf)
 #define SOCKBUF_LOCK_ASSERT(_so_buf)
 
 #else
