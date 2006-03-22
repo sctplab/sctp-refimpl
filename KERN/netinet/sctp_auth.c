@@ -1833,6 +1833,7 @@ sctp_notify_authentication (struct sctp_tcb *stcb, uint32_t indication,
 }
 
 
+#ifdef SCTP_HMAC_TEST
 /*
  * HMAC and key concatenation tests
  */
@@ -2255,3 +2256,4 @@ int main(void)
 }
 #endif /* STANDALONE_HMAC_TEST */
 
+#endif /* SCTP_HMAC_TEST */
