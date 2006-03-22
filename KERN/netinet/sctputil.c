@@ -3834,7 +3834,7 @@ sctp_sorecvmsg(struct socket *so,
 	 * 
 	 */
 	struct sctp_inpcb *inp;
-	int cp_len, error;
+	int cp_len, error=0;
 	struct sctp_queued_to_read *control, *ctl;
 	struct mbuf *m;
 	struct sctp_tcb *stcb;
