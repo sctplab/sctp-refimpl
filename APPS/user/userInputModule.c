@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.34 2006-03-22 19:41:17 lei Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.35 2006-03-22 19:49:33 lei Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -3283,7 +3283,7 @@ static int cmd_getpcbinfo(char *argv[], int argc)
     printf("Number of SCTP laddr's in use is %d\n",optval.laddr_count);
     printf("Number of SCTP raddr's in use is %d\n",optval.raddr_count);
     printf("Number of SCTP chunks in use is %d\n",optval.chk_count);
-    printf("Number of SCTP sockq in use is %d\n",optval.sockq_count);
+    printf("Number of SCTP readq in use is %d\n",optval.readq_count);
     printf("Mbuf track:%d\n",optval.mbuf_track);
   }
   return 0;
@@ -5512,8 +5512,17 @@ static int cmd_getlocalauth(char *argv[], int argc) {
     socklen_t optlen;
     int size, i;
 
+    if (argc > 1) {
+	printf("Expected: getlocalauth [<optional assoc id>]\n");
+	return (-1);
+    }
+    bzero(optval, sizeof(optval));
     chunks = (struct sctp_authchunks *)optval;
-    chunks->gauth_assoc_id = get_assoc_id();
+    /* use the optional assoc id, if given */
+    if (argc == 1)
+	chunks->gauth_assoc_id = (uint32_t)strtoul(argv[0], NULL, 0);
+    else
+	chunks->gauth_assoc_id = get_assoc_id();
     optlen = sizeof(optval);
     if (getsockopt(adap->fd, IPPROTO_SCTP, SCTP_LOCAL_AUTH_CHUNKS,
 		   optval, &optlen) != 0) {
@@ -5538,7 +5547,17 @@ static int cmd_getpeerauth(char *argv[], int argc) {
     socklen_t optlen;
     int size, i;
 
+    if (argc > 1) {
+	printf("Expected: getlocalauth [<optional assoc id>]\n");
+	return (-1);
+    }
+    bzero(optval, sizeof(optval));
     chunks = (struct sctp_authchunks *)optval;
+    /* use the optional assoc id, if given */
+    if (argc == 1)
+	chunks->gauth_assoc_id = (uint32_t)strtoul(argv[0], NULL, 0);
+    else
+	chunks->gauth_assoc_id = get_assoc_id();
     optlen = sizeof(optval);
     if (getsockopt(adap->fd, IPPROTO_SCTP, SCTP_PEER_AUTH_CHUNKS,
 		   optval, &optlen) != 0) {
