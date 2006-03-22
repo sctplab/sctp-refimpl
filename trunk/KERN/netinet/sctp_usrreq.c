@@ -5802,7 +5802,7 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
  * additional protosw entries for Mac OS X 10.4
  * lr is temporarily being used for socket lock/unlock LR debug
  */
-#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 
 int sctp_lock (struct socket *so, int refcount, int lr) {
 	int lr_saved;
@@ -5813,19 +5813,15 @@ int sctp_lock (struct socket *so, int refcount, int lr) {
 	} else
 		lr_saved = lr;
 #endif
-
+        /*
+	printf("sctp_lock called for so=%p with so->so_pcb=%p, so->type=%d, so->so_usecount=%d.\n", so, so->so_pcb, so->so_type, so->so_usecount);
+	*/
 	if (so->so_pcb) {
-#if 0
-		lck_mtx_assert(((struct inpcb *)so->so_pcb)->inpcb_mtx,
-			       LCK_MTX_ASSERT_NOTOWNED);
+		lck_mtx_assert(((struct inpcb *)so->so_pcb)->inpcb_mtx, LCK_MTX_ASSERT_NOTOWNED);
 		lck_mtx_lock(((struct inpcb *)so->so_pcb)->inpcb_mtx);
-#else
-		SCTP_INP_WLOCK((struct sctp_inpcb *)so->so_pcb);
-#endif
 	} else {
 		panic("sctp_lock: so=%x NO PCB! lr =%x\n", so, lr_saved);
-		lck_mtx_assert(so->so_proto->pr_domain->dom_mtx,
-			       LCK_MTX_ASSERT_NOTOWNED);
+		lck_mtx_assert(so->so_proto->pr_domain->dom_mtx, LCK_MTX_ASSERT_NOTOWNED);
 		lck_mtx_lock(so->so_proto->pr_domain->dom_mtx);
 	}
 
@@ -5836,6 +5832,7 @@ int sctp_lock (struct socket *so, int refcount, int lr) {
 	if (refcount)
 		so->so_usecount++;
 	so->reserved3 = (void *)lr_saved;
+	printf("sctp_lock returning for %p.\n", so);
 	return (0);
 }
 
@@ -5848,52 +5845,42 @@ int sctp_unlock (struct socket *so, int refcount, int lr) {
 	} else
 		lr_saved = lr;
 #endif
-
+        /*
+	printf("sctp_unlock called for so=%p with so->so_pcb=%p, so->type=%d, so->so_usecount=%d.\n", so, so->so_pcb, so->so_type, so->so_usecount);
+	*/
 	if (refcount)
 		so->so_usecount--;
 
 	if (so->so_usecount < 0)
-		panic("sctp_unlock: so=%x usecount=%x\n",
-		      so, so->so_usecount);
+		panic("sctp_unlock: so=%x usecount=%x\n", so, so->so_usecount);
 
 	if (so->so_pcb == NULL) {
 		panic("sctp_unlock: so=%x NO PCB! lr =%x\n", so, lr_saved);
-		lck_mtx_assert(so->so_proto->pr_domain->dom_mtx,
-			       LCK_MTX_ASSERT_OWNED);
+		lck_mtx_assert(so->so_proto->pr_domain->dom_mtx, LCK_MTX_ASSERT_OWNED);
 		lck_mtx_unlock(so->so_proto->pr_domain->dom_mtx);
 	} else {
-#if 0
-		lck_mtx_assert(((struct inpcb *)so->so_pcb)->inpcb_mtx,
-			       LCK_MTX_ASSERT_OWNED);
+		lck_mtx_assert(((struct inpcb *)so->so_pcb)->inpcb_mtx, LCK_MTX_ASSERT_OWNED);
 		lck_mtx_unlock(((struct inpcb *)so->so_pcb)->inpcb_mtx);
-#else
-		SCTP_INP_WUNLOCK((struct sctp_inpcb *)so->so_pcb);
-#endif
 	}
 	so->reserved4 = (void *)lr_saved;
+	printf("sctp_unlock returning for so=%p\n", so);
 	return (0);
 }
 
 lck_mtx_t *sctp_getlock(struct socket *so, int locktype) {
-#if 0
-	struct inpcb *inp = sotoinpcb(so);
-#else
-	struct sctp_inpcb *inp = (struct sctp_inpcb *)so->so_pcb;
-#endif
 
+        /*
+	printf("sctp_getlock called for so=%p with so->so_pcb=%p, so->type=%d, so->so_usecount=%d.\n", so, so->so_pcb, so->so_type, so->so_usecount);
+	*/
 	if (so->so_pcb) {
 		if (so->so_usecount < 0)
-			panic("sctp_getlock: so=%x usecount=%x\n", so,
-			      so->so_usecount);
-#if 0
-		return (inp->inpcb_mtx);
-#else
-		return (inp->inp_mtx);
-#endif
+			panic("sctp_getlock: so=%x usecount=%x\n", so, so->so_usecount);
+		printf("sctp_getlock returning %p.\n", ((struct inpcb *)so->so_pcb)->inpcb_mtx);
+		return (((struct inpcb *)so->so_pcb)->inpcb_mtx);
 	} else {
 		panic("sctp_getlock: so=%x NULL so_pcb\n", so);
 		return (so->so_proto->pr_domain->dom_mtx);
 	}
 }
 
-#endif /* __APPLE__ */
+#endif /* SCTP_APPLE_FINE_GRAINED_LOCKING */
