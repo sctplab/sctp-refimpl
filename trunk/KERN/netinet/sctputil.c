@@ -1182,7 +1182,9 @@ sctp_timeout_handler(void *t)
 			(void) thread_funnel_set(network_flock, FALSE);
 #endif
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			socket_unlock(inp->sctp_socket, 1);
+			if (!(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
+				socket_unlock(inp->sctp_socket, 1);
+			}
 #endif
 			SCTP_INP_WUNLOCK(inp);
 			return;
