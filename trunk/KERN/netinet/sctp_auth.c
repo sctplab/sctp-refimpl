@@ -431,7 +431,6 @@ sctp_generate_random_key (int keylen)
     }
     sctp_read_random(new_key->key, keylen);
     new_key->keylen = keylen;
-sctp_print_key(new_key, "generated RANDOM");
     return (new_key);
 }
 
@@ -631,21 +630,20 @@ sctp_insert_sharedkey (struct sctp_keyhead *shared_keys,
     /* insert into an empty list? */
     if (LIST_EMPTY(shared_keys)) {
 	LIST_INSERT_HEAD(shared_keys, new_skey, next);
-printf("new list: inserting head, shared key id %u\n", new_skey->keyid);
 	return;
     }
     /* insert into the existing list, ordered by key id */
     LIST_FOREACH(skey, shared_keys, next) {
 	if (new_skey->keyid < skey->keyid) {
 	    /* insert it before here */
-printf("inserting shared key id %u before id %u\n", new_skey->keyid,
-	   skey->keyid);
 	    LIST_INSERT_BEFORE(skey, new_skey, next);
 	    return;
 	} else if (new_skey->keyid == skey->keyid) {
 	    /* replace the existing key */
-/* FIX ME: */
-printf("replacing shared key id %u\n", new_skey->keyid);
+#ifdef SCTP_DEBUG
+	    if (SCTP_AUTH_DEBUG)
+		printf("replacing shared key id %u\n", new_skey->keyid);
+#endif
 	    LIST_INSERT_BEFORE(skey, new_skey, next);
 	    LIST_REMOVE(skey, next);
 	    sctp_free_sharedkey(skey);
@@ -654,8 +652,6 @@ printf("replacing shared key id %u\n", new_skey->keyid);
 	if (LIST_NEXT(skey, next) == NULL) {
 	    /* belongs at the end of the list */
 	    LIST_INSERT_AFTER(skey, new_skey, next);
-printf("inserting shared key id %u after id %u\n", new_skey->keyid,
-	   skey->keyid);
 	    return;
 	}
     }
@@ -1838,7 +1834,7 @@ sctp_notify_authentication (struct sctp_tcb *stcb, uint32_t indication,
  * HMAC and key concatenation tests
  */
 static void
-sctp_print_digest (uint8_t *digest, uint32_t digestlen, const uint8_t *str)
+sctp_print_digest (uint8_t *digest, uint32_t digestlen, const char *str)
 {
     uint32_t i;
     printf("\n%s: 0x", str);
