@@ -4,7 +4,7 @@
 #define __sctp_header_h__
 
 /*
- * Copyright (c) 2001, 2002, 2003, 2004, 2005 Cisco Systems, Inc.
+ * Copyright (c) 2001-2006 Cisco Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -113,16 +113,17 @@ struct sctp_asconf_addrv4_param {	/* an ASCONF address (v4) parameter */
 	struct sctp_ipv4addr_param  addrp;	/* max storage size */
 };
 
+struct sctp_supported_chunk_types_param {
+	struct sctp_paramhdr ph;	/* type = 0x8008  len = x */
+	u_int8_t chunk_types[0];
+};
+
 
 /* ECN Nonce: draft-ladha-sctp-ecn-nonce */
 struct sctp_ecn_nonce_supported_param {
 	struct sctp_paramhdr ph;	/* type = 0x8001  len = 4 */
 };
 
-struct sctp_supported_chunk_types_param {
-	struct sctp_paramhdr ph;	/* type = 0x8002  len = x */
-	u_int8_t chunk_types[0];
-};
 
 /*
  * Structures for DATA chunks
@@ -324,7 +325,7 @@ struct sctp_stale_cookie_msg {
 	u_int32_t time_usec;
 };
 
-struct sctp_adaption_layer_indication {
+struct sctp_adaptation_layer_indication {
 	struct sctp_paramhdr ph;
 	u_int32_t indication;
 };
@@ -400,7 +401,7 @@ struct sctp_pktdrop_chunk {
 struct sctp_stream_reset_out_request {
 	struct sctp_paramhdr ph;
 	u_int32_t request_seq;           /* monotonically increasing seq no */
-	u_int32_t response_seq;		   /* if a reponse, the resp seq no */
+	u_int32_t response_seq;		   /* if a response, the resp seq no */
 	u_int32_t send_reset_at_tsn;       /* last TSN I assigned outbound */
 	u_int16_t list_of_streams[0];      /* if not all list of streams */
 };
@@ -419,13 +420,13 @@ struct sctp_stream_reset_tsn_request {
 
 struct sctp_stream_reset_response {
 	struct sctp_paramhdr ph;
-	u_int32_t response_seq;		   /* if a reponse, the resp seq no */
+	u_int32_t response_seq;		   /* if a response, the resp seq no */
 	u_int32_t result;
 };
 
 struct sctp_stream_reset_response_tsn {
 	struct sctp_paramhdr ph;
-	u_int32_t response_seq;		   /* if a reponse, the resp seq no */
+	u_int32_t response_seq;		   /* if a response, the resp seq no */
 	u_int32_t result;
 	u_int32_t senders_next_tsn;
 	u_int32_t receivers_next_tsn;
@@ -438,6 +439,7 @@ struct sctp_stream_reset_response_tsn {
 #define SCTP_STREAM_RESET_DENIED    0x00000002 /* refused to do it */
 #define SCTP_STREAM_RESET_ERROR_STR 0x00000003 /* bad Stream no */
 #define SCTP_STREAM_RESET_TRY_LATER 0x00000004 /* collision, try again */
+#define SCTP_STREAM_RESET_BAD_SEQNO 0x00000005 /* bad str-reset seq no */
 
 /*
  * convience structures, note that if you are making a request for specific
@@ -490,13 +492,9 @@ struct sctp_auth_hmac_algo {
 	struct sctp_paramhdr ph;	/* type = 0x8004 */
 	u_int16_t hmac_ids[0];
 };
-/* AUTH hmac_id */
-#define SCTP_AUTH_HMAC_ID_RSVD	0x00000000
-#define SCTP_AUTH_HMAC_ID_SHA1	0x00000001
-#define SCTP_AUTH_HMAC_ID_MD5	0x00000002    
 
 struct sctp_auth_chunk {
-	struct sctp_chunkhdr ch;	/* type = 0x84 */
+	struct sctp_chunkhdr ch;
 	u_int16_t shared_key_id;
 	u_int16_t hmac_id;
 	u_int8_t  hmac[0];

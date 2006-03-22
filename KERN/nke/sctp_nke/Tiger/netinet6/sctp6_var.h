@@ -34,7 +34,14 @@
 #ifndef _NETINET6_SCTP6_VAR_H_
 #define _NETINET6_SCTP6_VAR_H_
 
-#if defined(_KERNEL) || (defined(__APPLE__) && defined(KERNEL))
+
+#if (defined(__APPLE__) && defined(KERNEL))
+#ifndef _KERNEL
+#define _KERNEL
+#endif
+#endif
+
+#if defined(_KERNEL)
 
 #if defined(__FreeBSD__) || (__APPLE__)
 SYSCTL_DECL(_net_inet6_sctp6);

@@ -32,7 +32,13 @@
  * SUCH DAMAGE.
  */
 
-#if defined(_KERNEL) || (defined(__APPLE__) && defined(KERNEL))
+#if (defined(__APPLE__) && defined(KERNEL))
+#ifndef _KERNEL
+#define _KERNEL
+#endif
+#endif
+
+#if defined(_KERNEL)
 
 #ifdef SCTP_MBUF_DEBUG
 #define sctp_m_freem(m) do { \
@@ -157,6 +163,23 @@ u_int32_t sctp_calculate_sum(struct mbuf *, int32_t *, u_int32_t);
 void sctp_mtu_size_reset(struct sctp_inpcb *, struct sctp_association *,
 	u_long);
 
+void
+sctp_add_to_readq(struct sctp_inpcb *inp,
+		  struct sctp_tcb *stcb,
+		  struct sctp_queued_to_read *control,
+		  struct sockbuf *sb,
+		  int end);
+
+int
+sctp_append_to_readq(struct sctp_inpcb *inp,
+		     struct sctp_tcb *stcb,
+		     struct sctp_queued_to_read *control,
+		     struct mbuf *m,
+		     int end,
+		     int new_cumack,
+		     struct sockbuf *sb);
+
+
 int find_next_best_mtu(int);
 
 u_int32_t sctp_calculate_rto(struct sctp_tcb *, struct sctp_association *,
@@ -171,9 +194,14 @@ struct sctp_paramhdr *sctp_get_next_param(struct mbuf *, int,
 
 int sctp_add_pad_tombuf(struct mbuf *, int);
 
-int sctp_pad_lastmbuf(struct mbuf *, int);
+int sctp_pad_lastmbuf(struct mbuf *, int, struct mbuf *);
 
 void sctp_ulp_notify(u_int32_t, struct sctp_tcb *, u_int32_t, void *);
+
+void sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp, 
+				      struct sctp_inpcb *new_inp, 
+				      struct sctp_tcb *stcb);
+
 
 void sctp_report_all_outbound(struct sctp_tcb *);
 
@@ -202,57 +230,72 @@ int sctp_cmpaddr(struct sockaddr *, struct sockaddr *);
 void sctp_print_address(struct sockaddr *);
 void sctp_print_address_pkt(struct ip *, struct sctphdr *);
 
-int sbappendaddr_nocheck __P((struct sockbuf *, struct sockaddr *,
-	struct mbuf *, struct mbuf *, u_int32_t, struct sctp_inpcb *,
-	struct sctp_tcb *));
-
-
 int sctp_release_pr_sctp_chunk(struct sctp_tcb *, struct sctp_tmit_chunk *,
 	int, struct sctpchunk_listhead *);
 
 struct mbuf *sctp_generate_invmanparam(int);
 
-/*
- * this is an evil layer violation that I think is a hack.. but I stand
- * alone on the tsvwg in this thought... everyone else considers it part
- * of the sockets layer (along with all of the peeloff code :<)
- */
-u_int32_t sctp_get_first_vtag_from_sb(struct socket *);
 
-
-void sctp_grub_through_socket_buffer(struct sctp_inpcb *, struct socket *,
-				     struct socket *, struct sctp_tcb *);
-
+#ifdef SCTP_MBCNT_LOGGING
 void sctp_free_bufspace(struct sctp_tcb *, struct sctp_association *,
 	struct sctp_tmit_chunk *);
 
-#ifdef HAVE_SCTP_SORECEIVE
+#else
+#define sctp_free_bufspace(stcb, asoc, tp1)  \
+	if (tp1->data != NULL) { \
+		if ((asoc)->total_output_queue_size >= tp1->book_size) { \
+			(asoc)->total_output_queue_size -= tp1->book_size; \
+		} else { \
+			(asoc)->total_output_queue_size = 0; \
+		} \
+		if ((asoc)->total_output_mbuf_queue_size >= tp1->mbcnt) { \
+			(asoc)->total_output_mbuf_queue_size -= tp1->mbcnt; \
+		} else { \
+			(asoc)->total_output_mbuf_queue_size = 0; \
+		} \
+		if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) && \
+		    ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_CONNECTED))) { \
+			SOCKBUF_LOCK(&stcb->sctp_socket->so_snd); \
+			if (stcb->sctp_socket->so_snd.sb_cc >= tp1->book_size) { \
+				stcb->sctp_socket->so_snd.sb_cc -= tp1->book_size; \
+			} else { \
+				stcb->sctp_socket->so_snd.sb_cc = 0; \
+			} \
+			if (stcb->sctp_socket->so_snd.sb_mbcnt >= tp1->mbcnt) { \
+				stcb->sctp_socket->so_snd.sb_mbcnt -= tp1->mbcnt; \
+			} else { \
+				stcb->sctp_socket->so_snd.sb_mbcnt = 0; \
+			} \
+			SOCKBUF_UNLOCK(&stcb->sctp_socket->so_snd); \
+		} \
+	} 
+
+#endif
+
 int
 sctp_soreceive(	struct socket *so, struct sockaddr **psa,
 		struct uio *uio,
 		struct mbuf **mp0,
 		struct mbuf **controlp,
 		int *flagsp);
-void
-sctp_sbappend( struct sockbuf *sb,
-	       struct mbuf *m,
-	       struct sctp_tcb *stcb);
-
-#endif
 
 #ifdef SCTP_STAT_LOGGING
 void sctp_log_strm_del_alt(u_int32_t, u_int16_t, int);
 
+void sctp_log_nagle_event(struct sctp_tcb *stcb, int action);
+
 void sctp_sblog(struct sockbuf *sb, 
 		struct sctp_tcb *stcb, int from, int incr);
 
-void sctp_log_strm_del(struct sctp_tmit_chunk *, struct sctp_tmit_chunk *, int);
+void sctp_log_strm_del(struct sctp_queued_to_read *control, 
+		       struct sctp_queued_to_read *poschk, 
+		       int from);
 void sctp_log_cwnd(struct sctp_tcb *stcb, struct sctp_nets *, int, uint8_t);
 void rto_logging(struct sctp_nets *net, int from);
 
 void sctp_log_lock(struct sctp_inpcb *inp, struct sctp_tcb *stcb, uint8_t from);
 void sctp_log_maxburst(struct sctp_tcb *stcb, struct sctp_nets *, int, int, uint8_t);
-void sctp_log_block(uint8_t, struct socket *, struct sctp_association *);
+void sctp_log_block(uint8_t, struct socket *, struct sctp_association *, int);
 void sctp_log_rwnd(uint8_t, u_int32_t, u_int32_t, u_int32_t );
 void sctp_log_mbcnt(uint8_t, u_int32_t, u_int32_t, u_int32_t, u_int32_t);
 void sctp_log_rwnd_set(uint8_t, u_int32_t, u_int32_t, u_int32_t, u_int32_t);

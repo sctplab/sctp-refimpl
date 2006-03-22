@@ -30,13 +30,10 @@
 
 /*
  * TODO: - daemon for address reconfiguration.
- *       - understand the changes necessary in uipc_socket.c
- *       - provide an installer.
  */
 
 //#include <sys/systm.h>
 //#include <mach/mach_types.h>
-
 #include <sys/sysctl.h>
 #include <netinet/in.h>
 #include <sys/protosw.h>
@@ -59,7 +56,7 @@ SYSCTL_DECL(_net_inet6);
 SYSCTL_NODE(_net_inet, IPPROTO_SCTP,    sctp,   CTLFLAG_RW, 0,  "SCTP");
 SYSCTL_NODE(_net_inet6, IPPROTO_SCTP,   sctp6,  CTLFLAG_RW, 0,  "SCTP6");
 
-extern struct sysctl_oid sysctl__net_inet_sctp_maxdgram;
+extern struct sysctl_oid sysctl__net_inet_sctp_sendspace;
 extern struct sysctl_oid sysctl__net_inet_sctp_recvspace;
 extern struct sysctl_oid sysctl__net_inet_sctp_auto_asconf;
 extern struct sysctl_oid sysctl__net_inet_sctp_ecn_enable;
@@ -122,7 +119,7 @@ kern_return_t SCTP_start (kmod_info_t * ki, void * d) {
 	sctp4_dgram.pr_type	     = SOCK_DGRAM;
 	sctp4_dgram.pr_domain 	     = &inetdomain;
 	sctp4_dgram.pr_protocol      = IPPROTO_SCTP;
-	sctp4_dgram.pr_flags 	     = PR_ADDR_OPT|PR_WANTRCVD;
+	sctp4_dgram.pr_flags 	     = PR_WANTRCVD|PR_PCBLOCK|PR_PROTOLOCK;
 	sctp4_dgram.pr_input         = sctp_input;
 	sctp4_dgram.pr_output        = 0;
 	sctp4_dgram.pr_ctlinput      = sctp_ctlinput;
@@ -134,14 +131,14 @@ kern_return_t SCTP_start (kmod_info_t * ki, void * d) {
 	sctp4_dgram.pr_drain         = sctp_drain;
 	sctp4_dgram.pr_sysctl        = 0;
 	sctp4_dgram.pr_usrreqs 	     = &sctp_usrreqs;
-	sctp4_dgram.pr_lock          = 0;
-	sctp4_dgram.pr_unlock        = 0;
-	sctp4_dgram.pr_getlock       = 0;
+	sctp4_dgram.pr_lock          = sctp_lock;
+	sctp4_dgram.pr_unlock        = sctp_unlock;
+	sctp4_dgram.pr_getlock       = sctp_getlock;
 	
 	sctp4_seqpacket.pr_type	     = SOCK_SEQPACKET;
 	sctp4_seqpacket.pr_domain    = &inetdomain;
 	sctp4_seqpacket.pr_protocol  = IPPROTO_SCTP;
-	sctp4_seqpacket.pr_flags     = PR_ADDR_OPT|PR_WANTRCVD;
+	sctp4_seqpacket.pr_flags     = PR_WANTRCVD|PR_PCBLOCK|PR_PROTOLOCK;
 	sctp4_seqpacket.pr_input     = sctp_input;
 	sctp4_seqpacket.pr_output    = 0;
 	sctp4_seqpacket.pr_ctlinput  = sctp_ctlinput;
@@ -153,14 +150,14 @@ kern_return_t SCTP_start (kmod_info_t * ki, void * d) {
 	sctp4_seqpacket.pr_drain     = sctp_drain;
 	sctp4_seqpacket.pr_sysctl    = 0;
 	sctp4_seqpacket.pr_usrreqs   = &sctp_usrreqs;
-	sctp4_seqpacket.pr_lock      = 0;
-	sctp4_seqpacket.pr_unlock    = 0;
-	sctp4_seqpacket.pr_getlock   = 0;
+	sctp4_seqpacket.pr_lock      = sctp_lock;
+	sctp4_seqpacket.pr_unlock    = sctp_unlock;
+	sctp4_seqpacket.pr_getlock   = sctp_getlock;
 	
 	sctp4_stream.pr_type	     = SOCK_STREAM;
 	sctp4_stream.pr_domain       = &inetdomain;
 	sctp4_stream.pr_protocol     = IPPROTO_SCTP;
-	sctp4_stream.pr_flags        = PR_CONNREQUIRED|PR_ADDR_OPT|PR_WANTRCVD;
+	sctp4_stream.pr_flags        = PR_CONNREQUIRED|PR_WANTRCVD|PR_PCBLOCK|PR_PROTOLOCK;
 	sctp4_stream.pr_input        = sctp_input;
 	sctp4_stream.pr_output       = 0;
 	sctp4_stream.pr_ctlinput     = sctp_ctlinput;
@@ -172,14 +169,14 @@ kern_return_t SCTP_start (kmod_info_t * ki, void * d) {
 	sctp4_stream.pr_drain        = sctp_drain;
 	sctp4_stream.pr_sysctl       = 0;
 	sctp4_stream.pr_usrreqs      = &sctp_usrreqs;
-	sctp4_stream.pr_lock         = 0;
-	sctp4_stream.pr_unlock       = 0;
-	sctp4_stream.pr_getlock      = 0;
+	sctp4_stream.pr_lock         = sctp_lock;
+	sctp4_stream.pr_unlock       = sctp_unlock;
+	sctp4_stream.pr_getlock      = sctp_getlock;
 
 	sctp6_dgram.pr_type	     = SOCK_DGRAM;
 	sctp6_dgram.pr_domain 	     = &inet6domain;
 	sctp6_dgram.pr_protocol      = IPPROTO_SCTP;
-	sctp6_dgram.pr_flags 	     = PR_ADDR_OPT|PR_WANTRCVD;
+	sctp6_dgram.pr_flags 	     = PR_WANTRCVD|PR_PCBLOCK|PR_PROTOLOCK;
 	sctp6_dgram.pr_input         = (void (*) (struct mbuf *, int)) sctp6_input;
 	sctp6_dgram.pr_output        = 0;
 	sctp6_dgram.pr_ctlinput      = sctp6_ctlinput;
@@ -191,14 +188,14 @@ kern_return_t SCTP_start (kmod_info_t * ki, void * d) {
 	sctp6_dgram.pr_drain         = sctp_drain;
 	sctp6_dgram.pr_sysctl        = 0;
 	sctp6_dgram.pr_usrreqs 	     = &sctp6_usrreqs;
-	sctp6_dgram.pr_lock          = 0;
-	sctp6_dgram.pr_unlock        = 0;
-	sctp6_dgram.pr_getlock       = 0;
+	sctp6_dgram.pr_lock          = sctp_lock;
+	sctp6_dgram.pr_unlock        = sctp_unlock;
+	sctp6_dgram.pr_getlock       = sctp_getlock;
 	
 	sctp6_seqpacket.pr_type	     = SOCK_SEQPACKET;
 	sctp6_seqpacket.pr_domain    = &inet6domain;
 	sctp6_seqpacket.pr_protocol  = IPPROTO_SCTP;
-	sctp6_seqpacket.pr_flags     = PR_ADDR_OPT|PR_WANTRCVD;
+	sctp6_seqpacket.pr_flags     = PR_WANTRCVD|PR_PCBLOCK|PR_PROTOLOCK;
 	sctp6_seqpacket.pr_input     = (void (*) (struct mbuf *, int)) sctp6_input;
 	sctp6_seqpacket.pr_output    = 0;
 	sctp6_seqpacket.pr_ctlinput  = sctp6_ctlinput;
@@ -210,14 +207,14 @@ kern_return_t SCTP_start (kmod_info_t * ki, void * d) {
 	sctp6_seqpacket.pr_drain     = sctp_drain;
 	sctp6_seqpacket.pr_sysctl    = 0;
 	sctp6_seqpacket.pr_usrreqs   = &sctp6_usrreqs;
-	sctp6_seqpacket.pr_lock      = 0;
-	sctp6_seqpacket.pr_unlock    = 0;
-	sctp6_seqpacket.pr_getlock   = 0;
+	sctp6_seqpacket.pr_lock      = sctp_lock;
+	sctp6_seqpacket.pr_unlock    = sctp_unlock;
+	sctp6_seqpacket.pr_getlock   = sctp_getlock;
 	
 	sctp6_stream.pr_type	     = SOCK_STREAM;
 	sctp6_stream.pr_domain       = &inet6domain;
 	sctp6_stream.pr_protocol     = IPPROTO_SCTP;
-	sctp6_stream.pr_flags        = PR_CONNREQUIRED|PR_ADDR_OPT|PR_WANTRCVD|PR_LISTEN;
+	sctp6_stream.pr_flags        = PR_CONNREQUIRED|PR_WANTRCVD|PR_LISTEN|PR_PCBLOCK|PR_PROTOLOCK;
 	sctp6_stream.pr_input        = (void (*) (struct mbuf *, int)) sctp6_input;
 	sctp6_stream.pr_output       = 0;
 	sctp6_stream.pr_ctlinput     = sctp6_ctlinput;
@@ -229,9 +226,9 @@ kern_return_t SCTP_start (kmod_info_t * ki, void * d) {
 	sctp6_stream.pr_drain        = sctp_drain;
 	sctp6_stream.pr_sysctl       = 0;
 	sctp6_stream.pr_usrreqs      = &sctp6_usrreqs;
-	sctp6_stream.pr_lock         = 0;
-	sctp6_stream.pr_unlock       = 0;
-	sctp6_stream.pr_getlock      = 0;
+	sctp6_stream.pr_lock         = sctp_lock;
+	sctp6_stream.pr_unlock       = sctp_unlock;
+	sctp6_stream.pr_getlock      = sctp_getlock;
 		
 	lck_mtx_lock(inetdomain.dom_mtx);	
 	err  = net_add_proto(&sctp4_dgram,     &inetdomain);
@@ -249,7 +246,7 @@ kern_return_t SCTP_start (kmod_info_t * ki, void * d) {
 	err |= net_add_proto(&sctp6_dgram,     &inet6domain);
 	err |= net_add_proto(&sctp6_seqpacket, &inet6domain);
 	err |= net_add_proto(&sctp6_stream,    &inet6domain);
-
+ 
 	if (err) {
 		lck_mtx_unlock(inet6domain.dom_mtx);
 		printf("SCTP NKE: Not all protocol handlers could be installed.\n");
@@ -259,7 +256,7 @@ kern_return_t SCTP_start (kmod_info_t * ki, void * d) {
 	lck_mtx_unlock(inet6domain.dom_mtx);
 	
 	sysctl_register_oid(&sysctl__net_inet_sctp);
-	sysctl_register_oid(&sysctl__net_inet_sctp_maxdgram);
+	sysctl_register_oid(&sysctl__net_inet_sctp_sendspace);
 	sysctl_register_oid(&sysctl__net_inet_sctp_recvspace);
 	sysctl_register_oid(&sysctl__net_inet_sctp_auto_asconf);
 	sysctl_register_oid(&sysctl__net_inet_sctp_ecn_enable);
@@ -301,8 +298,7 @@ kern_return_t SCTP_stop (kmod_info_t * ki, void * d) {
 		printf("SCTP NKE: There are still SCTP enpoints. NKE not unloaded\n");
 		return KERN_FAILURE;
 	}
-	sysctl_unregister_oid(&sysctl__net_inet_sctp);
-	sysctl_unregister_oid(&sysctl__net_inet_sctp_maxdgram);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_sendspace);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_recvspace);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_auto_asconf);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_ecn_enable);
@@ -330,12 +326,15 @@ kern_return_t SCTP_stop (kmod_info_t * ki, void * d) {
 #ifdef SCTP_DEBUG
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_debug);
 #endif
+	sysctl_unregister_oid(&sysctl__net_inet_sctp);
+
 	lck_mtx_lock(inetdomain.dom_mtx);
 	ip_protox[IPPROTO_SCTP]  = old_pr4;
 	err  = net_del_proto(sctp4_dgram.pr_type,     sctp4_dgram.pr_protocol,     &inetdomain);
 	err |= net_del_proto(sctp4_seqpacket.pr_type, sctp4_seqpacket.pr_protocol, &inetdomain);
 	err |= net_del_proto(sctp4_stream.pr_type,    sctp4_stream.pr_protocol,    &inetdomain);
 	lck_mtx_unlock(inetdomain.dom_mtx);
+
 
 	lck_mtx_lock(inet6domain.dom_mtx);
 	ip6_protox[IPPROTO_SCTP] = old_pr6;

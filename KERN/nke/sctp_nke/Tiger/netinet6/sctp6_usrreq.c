@@ -109,7 +109,7 @@
 
 extern struct protosw inetsw[];
 
-#if defined(HAVE_NRL_INPCB) || defined(__FreeBSD__)
+#if defined(HAVE_NRL_INPCB) 
 #ifndef in6pcb
 #define in6pcb		inpcb
 #endif
@@ -117,6 +117,16 @@ extern struct protosw inetsw[];
 #define sotoin6pcb      sotoinpcb
 #endif
 #endif
+
+#if defined(__FreeBSD__)
+#ifndef in6pcb
+#define in6pcb		inpcb
+#endif
+#ifndef sotoin6pcb
+#define sotoin6pcb      sotoinpcb
+#endif
+#endif
+
 
 #ifdef SCTP_DEBUG
 extern u_int32_t sctp_debug_on;
@@ -403,8 +413,10 @@ sctp_skip_csum:
 #else
 	if (ipsec6_in_reject_so(m, in6p->sctp_socket)) {
 /* XXX */
+#ifdef __APPLE__
+	/* FIX ME: need to find right stat for __APPLE__ */
+#endif
 #ifndef __APPLE__
-		/* FIX ME: need to find right stat for __APPLE__ */
 		ipsec6stat.in_polvio++;
 #endif
 		goto bad;
@@ -489,7 +501,7 @@ sctp6_notify_mbuf(struct sctp_inpcb *inp,
 		  struct sctp_tcb *stcb,
 		  struct sctp_nets *net)
 {
-	unsigned int nxtsz;
+	u_int32_t nxtsz;
 
 	if ((inp == NULL) || (stcb == NULL) || (net == NULL) ||
 	    (icmp6 == NULL) || (sh == NULL)) {
@@ -527,12 +539,12 @@ sctp6_notify_mbuf(struct sctp_inpcb *inp,
 		/* now off to subtract IP_DF flag if needed */
 
 		TAILQ_FOREACH(chk, &stcb->asoc.send_queue, sctp_next) {
-			if ((chk->send_size+IP_HDR_SIZE) > nxtsz) {
+			if ((u_int32_t)(chk->send_size+IP_HDR_SIZE) > nxtsz) {
 				chk->flags |= CHUNK_FLAGS_FRAGMENT_OK;
 			}
 		}
 		TAILQ_FOREACH(chk, &stcb->asoc.sent_queue, sctp_next) {
-			if ((chk->send_size+IP_HDR_SIZE) > nxtsz) {
+			if ((u_int32_t)(chk->send_size+IP_HDR_SIZE) > nxtsz) {
 				/*
 				 * For this guy we also mark for immediate
 				 * resend since we sent to big of chunk
@@ -553,7 +565,7 @@ sctp6_notify_mbuf(struct sctp_inpcb *inp,
 		}
 		TAILQ_FOREACH(strm, &stcb->asoc.out_wheel, next_spoke) {
 			TAILQ_FOREACH(chk, &strm->outqueue, sctp_next) {
-				if ((chk->send_size+IP_HDR_SIZE) > nxtsz) {
+				if ((u_int32_t)(chk->send_size+IP_HDR_SIZE) > nxtsz) {
 					chk->flags |= CHUNK_FLAGS_FRAGMENT_OK;
 				}
 			}
@@ -1033,7 +1045,7 @@ sctp6_disconnect(struct socket *so)
 					sctp_send_abort_tcb(stcb, err);
 				}
 				SCTP_INP_RUNLOCK(inp);
-				sctp_free_assoc(inp, stcb);
+				sctp_free_assoc(inp, stcb, 0);
 				/* No unlock tcb assoc is gone */
 				splx(s);
 				return (0);
@@ -1105,10 +1117,10 @@ sctp6_disconnect(struct socket *so)
 
 int
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-sctp_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
+sctp_sendm(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
 	  struct mbuf *control, struct thread *p);
 #else
-sctp_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
+sctp_sendm(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
 	  struct mbuf *control, struct proc *p);
 #endif
 
@@ -1194,7 +1206,7 @@ sctp6_send(struct socket *so, int flags, struct mbuf *m, struct mbuf *nam,
 			struct sockaddr_in sin;
 			/* convert v4-mapped into v4 addr and send */
 			in6_sin6_2_sin(&sin, sin6);
-			return sctp_send(so, flags,  m, (struct sockaddr *)&sin,
+			return sctp_sendm(so, flags,  m, (struct sockaddr *)&sin,
 					   control, p);
 		} else {
 			/* mapped addresses aren't enabled */
@@ -1733,6 +1745,24 @@ sctp6_getpeeraddr(struct socket *so, struct mbuf *nam)
 
 #if defined(__FreeBSD__) || defined(__APPLE__)
 struct pr_usrreqs sctp6_usrreqs = {
+#if __FreeBSD_version > 600000
+	.pru_abort =		sctp6_abort,
+	.pru_accept =		sctp_accept,
+	.pru_attach =		sctp6_attach,
+	.pru_bind =		sctp6_bind,
+	.pru_connect =		sctp6_connect,
+	.pru_control =		in6_control,
+	.pru_detach =		sctp6_detach,
+	.pru_disconnect =	sctp6_disconnect,
+	.pru_listen =		sctp_listen,
+	.pru_peeraddr =		sctp6_getpeeraddr,
+	.pru_send =		sctp6_send,
+	.pru_shutdown =		sctp_shutdown,
+	.pru_sockaddr =         sctp6_in6getaddr,
+        .pru_sopoll =	        sopoll,
+	.pru_sosend =           sctp_sosend,
+	.pru_soreceive =        sctp_soreceive
+#else
 	sctp6_abort,
 	sctp_accept,
 	sctp6_attach,
@@ -1744,19 +1774,16 @@ struct pr_usrreqs sctp6_usrreqs = {
 	sctp6_disconnect,
 	sctp_listen,
 	sctp6_getpeeraddr,
-	sctp_usr_recvd,
+	NULL,
 	pru_rcvoob_notsupp,
 	sctp6_send,
 	pru_sense_null,	
 	sctp_shutdown,
 	sctp6_in6getaddr,
 	sctp_sosend,
-#ifndef HAVE_SCTP_SORECEIVE
-	soreceive,
-#else
 	sctp_soreceive,
-#endif
 	sopoll
+#endif
 };
 
 #else

@@ -1,7 +1,7 @@
 /*	$KAME: sctp_sha1.c,v 1.9 2005/03/06 16:04:18 itojun Exp $	*/
 
 /*
- * Copyright (c) 2001, 2002, 2003, 2004 Cisco Systems, Inc.
+ * Copyright (c) 2001-2006 Cisco Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -120,7 +120,7 @@ sha1_process_a_block(struct sha1_context *ctx, unsigned int *block)
 
 
 void
-SHA1_Process(struct sha1_context *ctx, unsigned char *ptr, int siz)
+SHA1_Update(struct sha1_context *ctx, const unsigned char *ptr, int siz)
 {
 	int number_left, left_to_fill;
 	number_left = siz;
@@ -143,13 +143,13 @@ SHA1_Process(struct sha1_context *ctx, unsigned char *ptr, int siz)
 			number_left -= left_to_fill;
 			ctx->running_total += left_to_fill;
 			ctx->how_many_in_block = 0;
-			ptr = (unsigned char *)((caddr_t)ptr + left_to_fill);
+			ptr = (const unsigned char *)(ptr + left_to_fill);
 		}
 	}
 }
 
 void
-SHA1_Final(struct sha1_context *ctx, unsigned char *digest)
+SHA1_Final(unsigned char *digest, struct sha1_context *ctx)
 {
 	/*
 	 * if any left in block fill with padding and process. Then
@@ -250,10 +250,3 @@ SHA1_Final(struct sha1_context *ctx, unsigned char *digest)
 	digest[17] = ((ctx->H4 >> 16) & 0xff);
 	digest[16] = ((ctx->H4 >> 24) & 0xff);
 }
-
-
-
-
-
-
-

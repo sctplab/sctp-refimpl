@@ -4,7 +4,7 @@
 #define __sctp_pcb_h__
 
 /*
- * Copyright (c) 2001-2005 Cisco Systems, Inc.
+ * Copyright (c) 2001-2006 Cisco Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -40,19 +40,27 @@
  * we would not allocate enough for Net/Open BSD :-<
  */
 
-#if defined(__FreeBSD__) && __FreeBSD_version > 500000 && defined(_KERNEL)
+#if defined(__FreeBSD__) && __FreeBSD_version > 500000 
+#if defined(_KERNEL)
 #include "opt_global.h"
 #include <net/pfil.h>
 #endif
+#endif
+
+#include <sys/socket.h>
+#include <sys/socketvar.h>
 #include <net/if.h>
-#ifdef __FreeBSD__
+#include <net/if_types.h>
+#if defined( __FreeBSD__) || defined(__APPLE__)
 #include <net/if_var.h>
 #endif
+#include <net/route.h>
+#include <netinet/in.h>
 #include <netinet/ip6.h>
 #include <netinet6/ip6_var.h>
 #include <netinet6/ip6protosw.h>
 #include <netinet6/in6_var.h>
-#if defined(__OpenBSD__)
+#if defined(__OpenBSD__) || defined(__APPLE__)
 #include <netinet/in_pcb.h>
 #else
 #include <netinet6/in6_pcb.h>
@@ -64,33 +72,48 @@
 #endif
 #endif
 
-#if defined(__FreeBSD__) || defined(__NetBSD__)
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-#define HAVE_SCTP_SO_LASTRECORD 1
-#endif
-#define HAVE_SCTP_SORECEIVE 1
-#endif
-
-
 #include <netinet/sctp.h>
 #include <netinet/sctp_constants.h>
 
 LIST_HEAD(sctppcbhead, sctp_inpcb);
 LIST_HEAD(sctpasochead, sctp_tcb);
-TAILQ_HEAD(sctpsocketq, sctp_socket_q_list);
 LIST_HEAD(sctpladdr, sctp_laddr);
 LIST_HEAD(sctpvtaghead, sctp_tagblock);
+TAILQ_HEAD(sctp_readhead, sctp_queued_to_read);
+
 #include <netinet/sctp_structs.h>
 #include <netinet/sctp_uio.h>
+#ifdef HAVE_SCTP_AUTH
+#include <netinet/sctp_auth.h>
+#endif /* HAVE_SCTP_AUTH */
 
 /*
- * PCB flags
+ * PCB flags (in sctp_flags bitmask)
  */
 #define SCTP_PCB_FLAGS_UDPTYPE		0x00000001
 #define SCTP_PCB_FLAGS_TCPTYPE		0x00000002
 #define SCTP_PCB_FLAGS_BOUNDALL		0x00000004
 #define SCTP_PCB_FLAGS_ACCEPTING	0x00000008
 #define SCTP_PCB_FLAGS_UNBOUND		0x00000010
+/* TCP model support */
+#define SCTP_PCB_FLAGS_CONNECTED	0x00200000
+#define SCTP_PCB_FLAGS_IN_TCPPOOL	0x00400000
+#define SCTP_PCB_FLAGS_DONT_WAKE	0x00800000
+#define SCTP_PCB_FLAGS_WAKEOUTPUT	0x01000000
+#define SCTP_PCB_FLAGS_WAKEINPUT	0x02000000
+#define SCTP_PCB_FLAGS_BOUND_V6		0x04000000
+#define SCTP_PCB_FLAGS_NEEDS_MAPPED_V4	0x08000000
+#define SCTP_PCB_FLAGS_BLOCKING_IO	0x10000000
+#define SCTP_PCB_FLAGS_SOCKET_GONE	0x20000000
+#define SCTP_PCB_FLAGS_SOCKET_ALLGONE	0x40000000
+/* flags to copy to new PCB */
+#define SCTP_PCB_COPY_FLAGS		0x0e000004
+
+
+/*
+ * PCB Features (in sctp_features bitmask)
+ */
+#define SCTP_PCB_FLAGS_FRAG_INTERLEAVE  0x00000010
 #define SCTP_PCB_FLAGS_DO_ASCONF	0x00000020
 #define SCTP_PCB_FLAGS_AUTO_ASCONF	0x00000040
 /* socket options */
@@ -102,24 +125,13 @@ LIST_HEAD(sctpvtaghead, sctp_tagblock);
 #define SCTP_PCB_FLAGS_RECVPEERERR	0x00002000
 #define SCTP_PCB_FLAGS_RECVSENDFAILEVNT	0x00004000
 #define SCTP_PCB_FLAGS_RECVSHUTDOWNEVNT	0x00008000
-#define SCTP_PCB_FLAGS_ADAPTIONEVNT	0x00010000
+#define SCTP_PCB_FLAGS_ADAPTATIONEVNT	0x00010000
 #define SCTP_PCB_FLAGS_PDAPIEVNT	0x00020000
-#define SCTP_PCB_FLAGS_STREAM_RESETEVNT 0x00040000
-#define SCTP_PCB_FLAGS_NO_FRAGMENT	0x00080000
-/* TCP model support */
-#define SCTP_PCB_FLAGS_CONNECTED	0x00100000
-#define SCTP_PCB_FLAGS_IN_TCPPOOL	0x00200000
-#define SCTP_PCB_FLAGS_DONT_WAKE	0x00400000
-#define SCTP_PCB_FLAGS_WAKEOUTPUT	0x00800000
-#define SCTP_PCB_FLAGS_WAKEINPUT	0x01000000
-#define SCTP_PCB_FLAGS_BOUND_V6		0x02000000
-#define SCTP_PCB_FLAGS_NEEDS_MAPPED_V4	0x04000000
-#define SCTP_PCB_FLAGS_BLOCKING_IO	0x08000000
-#define SCTP_PCB_FLAGS_SOCKET_GONE	0x10000000
-#define SCTP_PCB_FLAGS_SOCKET_ALLGONE	0x20000000
+#define SCTP_PCB_FLAGS_AUTHEVNT		0x00040000
+#define SCTP_PCB_FLAGS_STREAM_RESETEVNT 0x00080000
+#define SCTP_PCB_FLAGS_NO_FRAGMENT	0x00100000
 
-/* flags to copy to new PCB */
-#define SCTP_PCB_COPY_FLAGS		0x0707ff64
+
 
 #define SCTP_PCBHASH_ALLADDR(port, mask) (port & mask)
 #define SCTP_PCBHASH_ASOC(tag, mask) (tag & mask)
@@ -182,14 +194,14 @@ struct sctp_epinfo {
 	struct uma_zone *ipi_zone_laddr;
 	struct uma_zone *ipi_zone_net;
 	struct uma_zone *ipi_zone_chunk;
-	struct uma_zone *ipi_zone_sockq;
+	struct uma_zone *ipi_zone_readq;
 #else
 	struct vm_zone *ipi_zone_ep;
 	struct vm_zone *ipi_zone_asoc;
 	struct vm_zone *ipi_zone_laddr;
 	struct vm_zone *ipi_zone_net;
 	struct vm_zone *ipi_zone_chunk;
-	struct vm_zone *ipi_zone_sockq;
+	struct vm_zone *ipi_zone_readq;
 #endif
 #endif
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -198,7 +210,7 @@ struct sctp_epinfo {
 	struct pool ipi_zone_laddr;
 	struct pool ipi_zone_net;
 	struct pool ipi_zone_chunk;
-	struct pool ipi_zone_sockq;
+	struct pool ipi_zone_readq;
 #endif
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
@@ -242,8 +254,8 @@ struct sctp_epinfo {
 	u_quad_t ipi_gencnt_chunk;
 
 	/* socket queue zone info */
-	u_int ipi_count_sockq;
-	u_quad_t ipi_gencnt_sockq;
+	u_int ipi_count_readq;
+	u_quad_t ipi_gencnt_readq;
 
 	struct sctpvtaghead vtag_timewait[SCTP_STACK_VTAG_HASH_SIZE];
 
@@ -281,6 +293,15 @@ struct sctp_pcb {
 	uint32_t sctp_sws_sender;
 	uint32_t sctp_sws_receiver;
 
+#ifdef HAVE_SCTP_AUTH
+    /* authentication related fields */
+    struct sctp_keyhead     shared_keys;
+    sctp_auth_chklist_t     *local_auth_chunks;
+    sctp_hmaclist_t         *local_hmacs;
+    uint16_t                default_keyid;
+    uint8_t                 disable_authkey0;	/* disable null key id 0 */
+#endif /* HAVE_SCTP_AUTH */
+
 	/* various thresholds */
 	/* Max times I will init at a guy */
 	uint16_t max_init_times;
@@ -308,7 +329,7 @@ struct sctp_pcb {
 	/* defaults to 0 */
 	int auto_close_time;
 	uint32_t initial_sequence_debug;
-	uint32_t adaption_layer_indicator;
+	uint32_t adaptation_layer_indicator;
 	char store_at;
 	uint8_t max_burst;
 	char current_secret_number;
@@ -325,11 +346,6 @@ struct sctp_pcb {
 
 #define sctp_lport ip_inp.inp.inp_lport
 
-struct sctp_socket_q_list {
-	struct sctp_tcb *tcb;
-	TAILQ_ENTRY(sctp_socket_q_list) next_sq;
-};
-
 struct sctp_inpcb {
 	/*
 	 * put an inpcb in front of it all, kind of a waste but we need
@@ -340,6 +356,10 @@ struct sctp_inpcb {
 		char align[(sizeof(struct in6pcb) + SCTP_ALIGNM1) &
 			  ~SCTP_ALIGNM1];
 	} ip_inp;
+
+	/* Socket buffer lock protects read_queue and of course sb_cc */
+	struct sctp_readhead read_queue;
+
 	LIST_ENTRY(sctp_inpcb) sctp_list;	/* lists all endpoints */
 	/* hash of all endpoints for model */
         LIST_ENTRY(sctp_inpcb) sctp_hash;
@@ -352,18 +372,18 @@ struct sctp_inpcb {
 	struct ifnet *next_ifn_touse;
 	/* back pointer to our socket */
 	struct socket *sctp_socket;
-	uint32_t sctp_flags;			/* flag set */
+	uint32_t sctp_flags;			/* INP state flag set */
+	uint32_t sctp_features;                 /* Feature flags */
 	struct sctp_pcb sctp_ep;		/* SCTP ep data */
 	/* head of the hash of all associations */
 	struct sctpasochead *sctp_tcbhash;
 	u_long sctp_hashmark;
 	/* head of the list of all associations */
 	struct sctpasochead sctp_asoc_list;
-	/* queue of TCB's waiting to stuff data up the socket */
-	struct sctpsocketq sctp_queue_list;
 	struct sctp_iterator *inp_starting_point_for_iterator;
 	uint32_t sctp_frag_point;
-	uint32_t sctp_vtag_first;
+	uint32_t sctp_vtag_first;	/* this field locked by socket buffer lock */
+	uint32_t partial_delivery_point;
 	struct mbuf *pkt, *pkt_last, *sb_last_mpkt;
 	struct mbuf *control;
 #if !(defined(__FreeBSD__) || defined(__APPLE__))
@@ -381,18 +401,15 @@ struct sctp_inpcb {
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
 	struct mtx inp_mtx;
 	struct mtx inp_create_mtx;
-	struct mtx inp_sockq_mtx;
 	u_int32_t refcount;
 #elif defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
 #ifdef _KERN_LOCKS_H_
 	lck_mtx_t *inp_mtx;
 	lck_mtx_t *inp_create_mtx;
-	lck_mtx_t *inp_sockq_mtx;
 	u_int32_t refcount;
 #else
 	void *inp_mtx;
 	void *inp_create_mtx;
-	void *inp_sockq_mtx;
 	u_int32_t refcount;
 #endif /* _KERN_LOCKS_H_ */
 #endif
@@ -406,10 +423,13 @@ struct sctp_tcb {
 	LIST_ENTRY(sctp_tcb) sctp_tcbrestarhash; /* next link in restart hash table */
 	LIST_ENTRY(sctp_tcb) sctp_asocs;         /* vtag hash list */
         struct sctp_block_entry *block_entry;
-        /* last place we began inserting a record */
-        struct mbuf *last_record_insert;
 	struct sctp_association asoc;
-	uint32_t hidden_from_sb;
+	/* freed_by_sorcv_sincelast is protected by 
+	 * the sockbuf_lock NOT the tcb_lock. Its special
+	 * in this way to help avoid extra mutex calls
+	 * in the reading of data.
+	 */
+	uint32_t freed_by_sorcv_sincelast;
 	uint16_t rport;			/* remote port in network format */
 	uint16_t resv;
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
@@ -457,10 +477,14 @@ struct sctp_tcb {
  * can blatantly put locks everywhere and they reduce to nothing on
  * NetBSD/OpenBSD and FreeBSD 4.x
  *
+ */
+#ifdef __APPLE__
+/*
  * Appropriate macros are also provided for Apple Mac OS 10.4.x systems.
  * 10.3.x systems (SCTP_APPLE_PANTHER defined) builds use the emtpy
  * macros.
  */
+#endif
 
 /*
  * When working with the global SCTP lists we lock and unlock the INP_INFO
@@ -510,18 +534,12 @@ void sctp_verify_no_locks(void);
 	mtx_init(&(_inp)->inp_create_mtx, "sctp-create", "inp_create", \
 		 MTX_DEF | MTX_DUPOK)
 
-#define SCTP_INP_SOCKQ_LOCK_INIT(_inp) \
-	mtx_init(&(_inp)->inp_sockq_mtx, "sctp-inp_sockq", "inp_sockq", \
-		 MTX_DEF | MTX_DUPOK)
-
 #define SCTP_INP_LOCK_DESTROY(_inp) \
 	mtx_destroy(&(_inp)->inp_mtx)
 
 #define SCTP_ASOC_CREATE_LOCK_DESTROY(_inp) \
 	mtx_destroy(&(_inp)->inp_create_mtx)
 
-#define SCTP_INP_SOCKQ_LOCK_DESTROY(_inp) \
-	mtx_destroy(&(_inp)->inp_sockq_mtx)
 
 #ifdef INVARIANTS_SCTP
 void SCTP_INP_RLOCK(struct sctp_inpcb *);
@@ -578,9 +596,6 @@ void SCTP_ASOC_CREATE_LOCK(struct sctp_inpcb *inp);
 	} while (0)
 #endif
 #endif
-
-#define SCTP_INP_SOCKQ_LOCK(_inp)	mtx_lock(&(_inp)->inp_sockq_mtx)
-#define SCTP_INP_SOCKQ_UNLOCK(_inp)	mtx_unlock(&(_inp)->inp_sockq_mtx)
 
 #define SCTP_INP_RUNLOCK(_inp)		mtx_unlock(&(_inp)->inp_mtx)
 #define SCTP_INP_WUNLOCK(_inp)		mtx_unlock(&(_inp)->inp_mtx)
@@ -655,10 +670,11 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #define SCTP_ITERATOR_UNLOCK()	        mtx_unlock(&sctppcbinfo.it_mtx)
 #define SCTP_ITERATOR_LOCK_DESTROY()	mtx_destroy(&sctppcbinfo.it_mtx)
 
+
+#elif defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 /*
  * Apple MacOS X 10.4 "Tiger"
  */
-#elif defined(__APPLE__) && defined(SCTP_APPLE_FINE_GRAINED_LOCKING1)
 
 /* for now, all locks use this group and attributes */
 #define SCTP_MTX_GRP sctppcbinfo.mtx_grp
@@ -679,67 +695,28 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 	lck_rw_done(sctppcbinfo.ipi_ep_mtx)
 
 /* Lock for INP */
-#define SCTP_INP_LOCK_INIT(_inp) \
-	(_inp)->inp_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
+#define SCTP_INP_LOCK_INIT(_inp)
+#define SCTP_INP_LOCK_DESTROY(_inp)
 
-#define SCTP_INP_SOCKQ_LOCK_INIT(_inp) \
-	(_inp)->inp_sockq_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
+#define SCTP_INP_RLOCK(_inp)
+#define SCTP_INP_RUNLOCK(_inp)
+#define SCTP_INP_WLOCK(_inp)
+#define SCTP_INP_WUNLOCK(_inp)
+#define SCTP_INP_INCR_REF(_inp)
+#define SCTP_INP_DECR_REF(_inp)
 
-#define SCTP_INP_LOCK_DESTROY(_inp) \
-	lck_mtx_free((_inp)->inp_mtx, SCTP_MTX_GRP)
-
-#define SCTP_INP_SOCKQ_LOCK_DESTROY(_inp) \
-	lck_mtx_free((_inp)->inp_sockq_mtx, SCTP_MTX_GRP)
-
-#define SCTP_INP_SOCKQ_LOCK(_inp) \
-	lck_mtx_lock((_inp)->inp_sockq_mtx)
-
-#define SCTP_INP_SOCKQ_UNLOCK(_inp) \
-	lck_mtx_unlock((_inp)->inp_sockq_mtx)
-
-
-#define SCTP_INP_RLOCK(_inp) \
-	lck_mtx_lock((_inp)->inp_mtx)
-#define SCTP_INP_RUNLOCK(_inp) \
-	lck_mtx_unlock((_inp)->inp_mtx)
-#define SCTP_INP_WLOCK(_inp) \
-	lck_mtx_lock((_inp)->inp_mtx)
-#define SCTP_INP_WUNLOCK(_inp) \
-	lck_mtx_unlock((_inp)->inp_mtx)
-#define SCTP_INP_INCR_REF(_inp) \
-	(_inp)->refcount++
-#define SCTP_INP_DECR_REF(_inp) { \
-		if ((_inp)->refcount > 0) \
-			(_inp)->refcount--; \
-		else \
-			panic("bad inp refcount"); \
-	}
-
-#define SCTP_ASOC_CREATE_LOCK_INIT(_inp) \
-	(_inp)->inp_create_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
-#define SCTP_ASOC_CREATE_LOCK_DESTROY(_inp) \
-	lck_mtx_free((_inp)->inp_create_mtx, SCTP_MTX_GRP)
-#define SCTP_ASOC_CREATE_LOCK(_inp) \
-	lck_mtx_lock((_inp)->inp_create_mtx)
-#define SCTP_ASOC_CREATE_UNLOCK(_inp) \
-	lck_mtx_unlock((_inp)->inp_create_mtx)
+#define SCTP_ASOC_CREATE_LOCK_INIT(_inp)
+#define SCTP_ASOC_CREATE_LOCK_DESTROY(_inp)
+#define SCTP_ASOC_CREATE_LOCK(_inp)
+#define SCTP_ASOC_CREATE_UNLOCK(_inp)
 
 /* Lock for TCB */
-#define SCTP_TCB_LOCK_INIT(_tcb) \
-	(_tcb)->tcb_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
-/* FIXME takes second parameter */
-#define SCTP_TCB_LOCK_DESTROY(_tcb) \
-	lck_mtx_free((_tcb)->tcb_mtx, 0)
-#define SCTP_TCB_LOCK(_tcb) \
-	lck_mtx_lock((_tcb)->tcb_mtx)
-#define SCTP_TCB_UNLOCK(_tcb) \
-	lck_mtx_unlock((_tcb)->tcb_mtx)
-/* FIXME: check ownership */
-#define SCTP_TCB_UNLOCK_IFOWNED(_tcb)	      do { \
-                                                     lck_mtx_unlock((_tcb)->tcb_mtx); \
-                                              } while (0)
-#define STCB_TCB_LOCK_ASSERT(_tcb) \
-	lck_mtx_assert((_tcb)->tcb_mtx, LCK_MTX_ASSERT_OWNED)
+#define SCTP_TCB_LOCK_INIT(_tcb)
+#define SCTP_TCB_LOCK_DESTROY(_tcb)
+#define SCTP_TCB_LOCK(_tcb)
+#define SCTP_TCB_UNLOCK(_tcb)
+#define SCTP_TCB_UNLOCK_IFOWNED(_tcb)
+#define STCB_TCB_LOCK_ASSERT(_tcb)
 
 /* iterator locks */
 #define SCTP_ITERATOR_LOCK_INIT() \
@@ -752,12 +729,10 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 	lck_mtx_free(sctppcbinfo.it_mtx, SCTP_MTX_GRP)
 
 /* socket locks */
-/* FIX ME: takes second parameter = refcount */
-#define SOCK_LOCK(_so) socket_lock(_so, 0)
-#define SOCK_UNLOCK(_so) socket_unlock(_so, 0)
-/* FIX ME: need second parameter */
-#define SOCKBUF_LOCK(_so_buf) sblock(_so_buf, 0)
-#define SOCKBUF_UNLOCK(_so_buf) sbunlock(_so_buf, 0)
+#define SOCK_LOCK(_so) 
+#define SOCK_UNLOCK(_so)
+#define SOCKBUF_LOCK(_so_buf)
+#define SOCKBUF_UNLOCK(_so_buf)
 #define SOCKBUF_LOCK_ASSERT(_so_buf)
 
 #else
@@ -781,10 +756,6 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #define SCTP_INP_RLOCK(_inp)
 #define SCTP_INP_RUNLOCK(_inp)
 #define SCTP_INP_WLOCK(_inp)
-#define SCTP_INP_SOCKQ_LOCK_INIT(_inp)
-#define SCTP_INP_SOCKQ_LOCK_DESTROY(_inp)
-#define SCTP_INP_SOCKQ_LOCK(_inp)
-#define SCTP_INP_SOCKQ_UNLOCK(_inp)
 #define SCTP_INP_INCR_REF(_inp)
 #define SCTP_INP_DECR_REF(_inp)
 #define SCTP_INP_WUNLOCK(_inp)
@@ -812,7 +783,6 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #define SCTP_ITERATOR_LOCK_DESTROY()
 #endif
 
-/***************BEGIN FREEBSD 5 count stuff**********************/
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
 #define SCTP_INCRS_DEFINED 1
 
@@ -898,24 +868,24 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
                        mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
 	        } while (0)
 
-#define SCTP_INCR_SOCKQ_COUNT() \
+#define SCTP_INCR_READQ_COUNT() \
                 do { \
                        mtx_lock(&sctppcbinfo.ipi_count_mtx); \
-		       sctppcbinfo.ipi_count_sockq++; \
+		       sctppcbinfo.ipi_count_readq++; \
                        mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
 	        } while (0)
 
-#define SCTP_DECR_SOCKQ_COUNT() \
+#define SCTP_DECR_READQ_COUNT() \
                 do { \
                        mtx_lock(&sctppcbinfo.ipi_count_mtx); \
-		       sctppcbinfo.ipi_count_sockq--; \
+		       sctppcbinfo.ipi_count_readq--; \
                        mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
 	        } while (0)
 #endif
-/***************END FREEBSD 5 count stuff**********************/
 
-/***************BEGIN APPLE PANTHER count stuff**********************/
-#if defined(__APPLE__) && defined(SCTP_APPLE_FINE_GRAINED_LOCKING1)
+
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+/***************BEGIN APPLE Tiger count stuff**********************/
 #define SCTP_INCRS_DEFINED 1
 #define SCTP_INCR_EP_COUNT() \
                 do { \
@@ -978,7 +948,7 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
                        lck_mtx_lock(sctppcbinfo.ipi_count_mtx); \
  	               sctppcbinfo.ipi_count_raddr--; \
 		       sctppcbinfo.ipi_gencnt_raddr++; \
-                       (sctppcbinfo.ipi_count_mtx); \
+                       lck_mtx_unlock(sctppcbinfo.ipi_count_mtx); \
 	        } while (0)
 
 #define SCTP_INCR_CHK_COUNT() \
@@ -997,25 +967,26 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
                        lck_mtx_unlock(sctppcbinfo.ipi_count_mtx); \
 	        } while (0)
 
-#define SCTP_INCR_SOCKQ_COUNT() \
+#define SCTP_INCR_READQ_COUNT() \
                 do { \
                        lck_mtx_lock(sctppcbinfo.ipi_count_mtx); \
-		       sctppcbinfo.ipi_count_sockq++; \
+		       sctppcbinfo.ipi_count_readq++; \
                        lck_mtx_unlock(sctppcbinfo.ipi_count_mtx); \
 	        } while (0)
 
-#define SCTP_DECR_SOCKQ_COUNT() \
+#define SCTP_DECR_READQ_COUNT() \
                 do { \
                        lck_mtx_lock(sctppcbinfo.ipi_count_mtx); \
-		       sctppcbinfo.ipi_count_sockq--; \
+		       sctppcbinfo.ipi_count_readq--; \
                        lck_mtx_unlock(sctppcbinfo.ipi_count_mtx); \
 	        } while (0)
-#endif
 /***************BEGIN APPLE PANTHER count stuff**********************/
+#endif
 
 
-/***************BEGIN all othher count stuff**********************/
+
 #ifndef SCTP_INCRS_DEFINED
+/***************BEGIN all othher count stuff**********************/
 #define SCTP_INCR_EP_COUNT() \
                 do { \
 		       sctppcbinfo.ipi_count_ep++; \
@@ -1076,19 +1047,25 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
                        sctppcbinfo.ipi_gencnt_chunk++; \
 	        } while (0)
 
-#define SCTP_INCR_SOCKQ_COUNT() \
+#define SCTP_INCR_READQ_COUNT() \
                 do { \
-		       sctppcbinfo.ipi_count_sockq++; \
+		       sctppcbinfo.ipi_count_readq++; \
 	        } while (0)
 
-#define SCTP_DECR_SOCKQ_COUNT() \
+#define SCTP_DECR_READQ_COUNT() \
                 do { \
-		       sctppcbinfo.ipi_count_sockq--; \
+		       sctppcbinfo.ipi_count_readq--; \
 	        } while (0)
 
 #endif
 
-#if defined(_KERNEL) || (defined(__APPLE__) && defined(KERNEL))
+#if (defined(__APPLE__) && defined(KERNEL))
+#ifndef _KERNEL
+#define _KERNEL
+#endif
+#endif
+
+#if defined(_KERNEL)
 
 extern struct sctp_epinfo sctppcbinfo;
 extern int sctp_auto_asconf;
@@ -1125,9 +1102,11 @@ void sctp_move_pcb_and_assoc(struct sctp_inpcb *, struct sctp_inpcb *,
  * this is why it is passed.
  */
 struct sctp_tcb *sctp_findassociation_ep_addr(struct sctp_inpcb **,
-	struct sockaddr *, struct sctp_nets **, struct sockaddr *, struct sctp_tcb *);
+	struct sockaddr *, struct sctp_nets **, struct sockaddr *,
+	struct sctp_tcb *);
 
-struct sctp_tcb *sctp_findassociation_ep_asocid(struct sctp_inpcb *, caddr_t);
+struct sctp_tcb *sctp_findassociation_ep_asocid(struct sctp_inpcb *,
+						sctp_assoc_t);
 
 struct sctp_tcb *sctp_findassociation_ep_asconf(struct mbuf *, int, int,
     struct sctphdr *, struct sctp_inpcb **, struct sctp_nets **);
@@ -1142,7 +1121,7 @@ void sctp_inpcb_free(struct sctp_inpcb *, int);
 struct sctp_tcb *sctp_aloc_assoc(struct sctp_inpcb *, struct sockaddr *,
 	int, int *, uint32_t);
 
-void sctp_free_assoc(struct sctp_inpcb *, struct sctp_tcb *);
+void sctp_free_assoc(struct sctp_inpcb *, struct sctp_tcb *, int);
 
 int sctp_add_local_addr_ep(struct sctp_inpcb *, struct ifaddr *);
 
@@ -1179,11 +1158,6 @@ int sctp_is_vtag_good(struct sctp_inpcb *, uint32_t, struct timeval *);
 /*void sctp_drain(void);*/
 
 int sctp_destination_is_reachable(struct sctp_tcb *, struct sockaddr *);
-
-int sctp_add_to_socket_q(struct sctp_inpcb *, struct sctp_tcb *);
-
-struct sctp_tcb *sctp_remove_from_socket_q(struct sctp_inpcb *);
-
 
 /*
  * Null in last arg inpcb indicate run on ALL ep's. Specific inp in last

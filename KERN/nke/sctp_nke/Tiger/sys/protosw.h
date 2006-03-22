@@ -179,7 +179,6 @@ struct protosw {
 #define	PR_PROTOLOCK		0x80		/* protocol takes care of it's own locking */
 #define	PR_PCBLOCK		0x100	/* protocol supports per pcb finer grain locking */
 #define	PR_DISPOSE		0x200	/* protocol requires late lists disposal */
-#define PR_ADDR_OPT             0x400   /* SCTP: allow addresses during delivery */
 
 /*
  * The arguments to usrreq are:

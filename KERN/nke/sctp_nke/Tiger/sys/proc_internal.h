@@ -93,7 +93,7 @@ struct	pgrp {
 
 struct proc;
 
-#define PROC_NULL (struct proc *)0;
+#define PROC_NULL (struct proc *)0
 
 #define	p_session	p_pgrp->pg_session
 #define	p_pgid		p_pgrp->pg_id
@@ -224,6 +224,7 @@ struct	proc {
 	int		p_fpdrainwait;
 	unsigned int		p_lflag;		/* local flags */
 	unsigned int		p_ladvflag;		/* local adv flags*/
+	unsigned int		p_internalref;	/* temp refcount field */
 #if DIAGNOSTIC
 #if SIGNAL_DEBUG
 	unsigned int lockpc[8];
@@ -240,6 +241,9 @@ struct	proc {
 #define P_LPEXIT		0x8
 #define P_LBACKGROUND_IO	0x10
 #define P_LWAITING		0x20
+#define P_LREFDRAIN		0x40
+#define P_LREFDRAINWAIT		0x80
+#define P_LREFDEAD		0x100
 
 /* advisory flags in the proc */
 #define P_LADVLOCK		0x01
@@ -370,6 +374,9 @@ extern int	tsleep0(void *chan, int pri, const char *wmesg, int timo, int (*conti
 extern int	tsleep1(void *chan, int pri, const char *wmesg, u_int64_t abstime, int (*continuation)(int));
 extern int	msleep0(void *chan, lck_mtx_t *mtx, int pri, const char *wmesg, int timo, int (*continuation)(int));
 extern void	vfork_return(thread_t th_act, struct proc *p, struct proc *p2, register_t *retval);
-
+extern struct proc * proc_findref(pid_t pid);
+extern void  proc_dropref(struct proc *  p);
+extern struct proc * proc_refinternal(proc_t  p, int funneled);
+extern void  proc_dropinternal(struct proc *  p, int funneled);
 
 #endif	/* !_SYS_PROC_INTERNAL_H_ */
