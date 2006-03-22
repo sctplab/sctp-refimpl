@@ -1,7 +1,7 @@
 /*	$KAME: sctp_input.c,v 1.27 2005/03/06 16:04:17 itojun Exp $	*/
 
 /*
- * Copyright (C) 2002, 2003, 2004, 2005 Cisco Systems Inc,
+ * Copyright (C) 2002-2006 Cisco Systems Inc,
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -395,6 +395,10 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 		sctp_free_assoc(stcb->sctp_ep, stcb, 0);
 		return (-1);
 	}
+#ifdef HAVE_SCTP_AUTH
+	stcb->asoc.peer_hmac_id = sctp_negotiate_hmacid(stcb->asoc.peer_hmacs,
+							stcb->asoc.local_hmacs);
+#endif /* HAVE_SCTP_AUTH */
 	if (op_err) {
 		sctp_queue_op_err(stcb, op_err);
 		/* queuing will steal away the mbuf chain to the out queue */
@@ -1579,7 +1583,8 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	 * now that we know the INIT/INIT-ACK are in place,
 	 * create a new TCB and popluate
 	 */
- 	stcb = sctp_aloc_assoc(inp, init_src, 0, &error, ntohl(initack_cp->init.initiate_tag));
+ 	stcb = sctp_aloc_assoc(inp, init_src, 0, &error,
+			       ntohl(initack_cp->init.initiate_tag));
 	if (stcb == NULL) {
 		struct mbuf *op_err;
 		/* memory problem? */
@@ -1695,6 +1700,13 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		sctp_free_assoc(inp, stcb, 0);
 		return (NULL);
 	}
+
+#ifdef HAVE_SCTP_AUTH
+	/* pull the local authentication parameters from the cookie/init-ack */
+	sctp_auth_get_cookie_params(stcb, m,
+	    initack_offset + sizeof(struct sctp_init_ack_chunk),
+	    initack_limit - (initack_offset + sizeof(struct sctp_init_ack_chunk)));
+#endif /* HAVE_SCTP_AUTH */
 
 	sctp_check_address_list(stcb, m,
 	    initack_offset + sizeof(struct sctp_init_ack_chunk),
@@ -3549,7 +3561,6 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 	int num_chunks = 0;	/* number of control chunks processed */
 	int chk_length;
 	int ret;
-
 	/*
 	 * How big should this be, and should it be alloc'd?
 	 * Lets try the d-mtu-ceiling for now (2k) and that should
@@ -3557,6 +3568,9 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 	 */
 	u_int8_t chunk_buf[DEFAULT_CHUNK_BUFFER];
 	struct sctp_tcb *locked_tcb = stcb;
+#ifdef HAVE_SCTP_AUTH
+	int authenticated = 0, got_auth = 0;
+#endif /* HAVE_SCTP_AUTH */
 
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
@@ -3579,6 +3593,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 	}
 #endif /* SCTP_DEBUG */
 	vtag_in = ntohl(sh->v_tag);
+
 	if (ch->chunk_type == SCTP_INITIATION) {
 		if (vtag_in != 0) {
 			/* protocol error- silently discard... */
@@ -3593,11 +3608,17 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			return (NULL);
 		}
 	} else if (ch->chunk_type != SCTP_COOKIE_ECHO) {
+
+/*
+ * FIX ME: need to temporary skip AUTH chunk if ASCONF and stcb is NULL
+ * Find the assoc with the lookup address, then validate the AUTH chunk,
+ * and continue only if it passes.  Otherwise, toss the rest of the
+ * packet.
+ */
 		/*
 		 * first check if it's an ASCONF with an unknown src addr
 		 * we need to look inside to find the association
 		 */
-
 		if (ch->chunk_type == SCTP_ASCONF && stcb == NULL) {
 			/* inp's refcount may be reduced */
 			SCTP_INP_WLOCK(inp);
@@ -3663,7 +3684,6 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			}
 		} else {
 			/* for all other chunks, vtag must match */
-
 			if (vtag_in != asoc->my_vtag) {
 				/* invalid vtag... */
 #ifdef SCTP_DEBUG
@@ -3766,7 +3786,6 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					SCTP_TCB_UNLOCK(locked_tcb);
 				return (NULL);
 			}
-
 		}
 		num_chunks++;
 		/* Save off the last place we got a control from */
@@ -3776,6 +3795,20 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_audit_log(0xB0, ch->chunk_type);
 #endif
+
+#ifdef HAVE_SCTP_AUTH
+		/* check to see if this chunk required auth, but isn't */
+		if ((stcb != NULL) &&
+		    sctp_auth_is_required_chunk(ch->chunk_type,
+						stcb->asoc.local_auth_chunks) &&
+		    !authenticated) {
+			/* "silently" ignore */
+			sctp_pegs[SCTP_AUTH_MISSING]++;
+printf("Chunk %u requires AUTH, ignored\n", ch->chunk_type);			
+			goto next_chunk;
+		}
+#endif /* HAVE_SCTP_AUTH */
+
 		switch (ch->chunk_type) {
 		case SCTP_INITIATION:
 			/* must be first and only chunk */
@@ -4206,8 +4239,38 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			sctp_handle_packet_dropped((struct sctp_pktdrop_chunk *)ch,
 			    stcb, *netp);
 
-
 			break;
+#ifdef HAVE_SCTP_AUTH
+		case SCTP_AUTHENTICATION:
+#ifdef SCTP_DEBUG
+			if (sctp_debug_on & SCTP_DEBUG_INPUT3) {
+				printf("SCTP_AUTHENTICATION\n");
+			}
+#endif /* SCTP_DEBUG */
+			if (got_auth == 1) {
+				/* skip this chunk... it's already auth'd */
+				goto next_chunk;
+printf("multiple AUTH in one packet!\n");
+			}
+			ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, *offset,
+			    chk_length, chunk_buf);
+			if (stcb->asoc.peer_supports_auth == 0) {
+				/* peer should have announced this */
+			}
+			got_auth = 1;
+			if (sctp_handle_auth(stcb, (struct sctp_auth_chunk *)ch,
+					     m, *offset)) {
+				/* auth HMAC failed so dump the packet */
+				*offset = length;
+				return (NULL);
+			} else {
+				/* remaining chunks are HMAC checked */
+				authenticated = 1;
+				stcb->asoc.authenticated = 1;
+			}
+			break;
+#endif /* HAVE_SCTP_AUTH */
+
 		default:
 			/* it's an unknown chunk! */
 			if ((ch->chunk_type & 0x40) && (stcb != NULL)) {
@@ -4261,6 +4324,10 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			} /* else skip this bad chunk and continue... */
 			break;
 		} /* switch (ch->chunk_type) */
+
+#ifdef HAVE_SCTP_AUTH
+	next_chunk:
+#endif /* HAVE_SCTP_AUTH */
 		/* get the next chunk */
 		*offset += SCTP_SIZE32(chk_length);
 		if (*offset >= length) {
@@ -4372,6 +4439,12 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		       (u_int)m, iphlen, offset);
 	}
 #endif /* SCTP_DEBUG */
+#ifdef HAVE_SCTP_AUTH
+	if (stcb) {
+		/* always clear this before beginning a packet */
+		stcb->asoc.authenticated = 0;
+	}
+#endif /* HAVE_SCTP_AUTH */
 	if (IS_SCTP_CONTROL(ch)) {
 		/* process the control portion of the SCTP packet */
 #ifdef SCTP_DEBUG
@@ -4488,9 +4561,10 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		data_processed = 1;
 		if (retval == 0) {
 			/* take care of ecn part 2. */
-			if (stcb->asoc.ecn_allowed && (ecn_bits & (SCTP_ECT0_BIT|SCTP_ECT1_BIT)) ) {
-				sctp_process_ecn_marked_b(stcb, net, high_tsn, ecn_bits);
-
+			if (stcb->asoc.ecn_allowed &&
+			    (ecn_bits & (SCTP_ECT0_BIT|SCTP_ECT1_BIT)) ) {
+				sctp_process_ecn_marked_b(stcb, net, high_tsn,
+							  ecn_bits);
 			}
 		}
 

@@ -647,15 +647,16 @@ struct sctp_association {
 	unsigned int maxrto;			/* per assoc RTO-MAX */
 
 #ifdef HAVE_SCTP_AUTH
-    /* authentication fields */
-    sctp_auth_chklist_t  *local_auth_chunks;
-    sctp_auth_chklist_t  *peer_auth_chunks;
-    sctp_hmaclist_t      *local_hmacs;		/* local HMACs supported */
-    sctp_hmaclist_t      *peer_hmacs;		/* peer HMACs supported */
-    struct sctp_keyhead  shared_keys;		/* assoc's shared keys */
-    sctp_authinfo_t      authinfo;		/* randoms, cached keys */
-    uint16_t             peer_hmac_id;		/* peer HMAC id to send */
-    uint8_t              disable_authkey0;	/* disable null key id 0 */
+	/* authentication fields */
+	sctp_auth_chklist_t  *local_auth_chunks;
+	sctp_auth_chklist_t  *peer_auth_chunks;
+	sctp_hmaclist_t      *local_hmacs;	/* local HMACs supported */
+	sctp_hmaclist_t      *peer_hmacs;	/* peer HMACs supported */
+	struct sctp_keyhead  shared_keys;	/* assoc's shared keys */
+	sctp_authinfo_t      authinfo;		/* randoms, cached keys */
+	uint16_t             peer_hmac_id;	/* peer HMAC id to send */
+	uint8_t              disable_authkey0;	/* disable null key id 0 */
+	uint8_t              authenticated;	/* packet authenticated ok */
 #endif /* HAVE_SCTP_AUTH */
 
 	/*
@@ -776,8 +777,6 @@ struct sctp_association {
 	u_int8_t ifp_had_enobuf;
 	u_int8_t saw_sack_with_frags;
 	u_int8_t in_restart_hash;
-
-	u_int8_t sctp_packet_authenticated;
 
         /* CMT variables */
         u_int8_t cmt_dac_pkts_rcvd;

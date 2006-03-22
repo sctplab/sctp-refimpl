@@ -1,7 +1,7 @@
 /*	$KAME: sctputil.c,v 1.37 2005/03/07 23:26:09 itojun Exp $	*/
 
 /*
- * Copyright (c) 2001-2005 Cisco Systems, Inc.
+ * Copyright (c) 2001-2006 Cisco Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -155,6 +155,10 @@
 #include <netinet/sctp_timer.h>
 #include <netinet/sctp_crc32.h>
 #include <netinet/sctp_indata.h>	/* for sctp_deliver_data() */
+#ifdef HAVE_SCTP_AUTH
+#include <netinet/sctp_auth.h>
+#endif /* HAVE_SCTP_AUTH */
+
 #define NUMBER_OF_MTU_SIZES 18
 
 #ifdef SCTP_DEBUG
@@ -1083,8 +1087,18 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	TAILQ_INIT(&asoc->reasmqueue);
 	TAILQ_INIT(&asoc->resetHead);
 	asoc->max_inbound_streams = m->sctp_ep.max_open_streams_intome;
-
 	TAILQ_INIT(&asoc->asconf_queue);
+#ifdef HAVE_SCTP_AUTH
+	/* authentication fields */
+	asoc->disable_authkey0     = 0;
+	asoc->authinfo.random      = NULL;
+	asoc->authinfo.assoc_key   = NULL;
+	asoc->authinfo.assoc_keyid = 0;
+	asoc->authinfo.recv_key    = NULL;
+	asoc->authinfo.recv_keyid  = 0;
+	LIST_INIT(&asoc->shared_keys);
+#endif /* HAVE_SCTP_AUTH */
+
 	return (0);
 }
 
@@ -2645,6 +2659,7 @@ sctp_notify_adaptation_layer(struct sctp_tcb *stcb,
 	m_notify->m_pkthdr.rcvif = 0;
 	m_notify->m_len = sizeof(struct sctp_adaptation_event);
 	m_notify->m_next = NULL;
+
 	/* append to socket */
 	control = sctp_build_readq_entry(stcb, stcb->asoc.primary_destination,
 					 0, 0, 0, 0, 0, 0,
@@ -2964,6 +2979,19 @@ sctp_ulp_notify(u_int32_t notification, struct sctp_tcb *stcb,
 	case SCTP_NOTIFY_PEER_SHUTDOWN:
 		sctp_notify_shutdown_event(stcb);
 		break;
+#ifdef HAVE_SCTP_AUTH
+	case SCTP_NOTIFY_AUTH_NEW_KEY:
+	    sctp_notify_authentication(stcb, SCTP_AUTH_NEWKEY, error,
+				       (uint32_t)data);
+	    break;
+#if 0
+	case SCTP_NOTIFY_AUTH_KEY_CONFLICT:
+	    sctp_notify_authentication(stcb, SCTP_AUTH_KEY_CONFLICT,
+				       error, (uint32_t)data);
+	    break;
+#endif /* not yet? remove? */
+#endif /* HAVE_SCTP_AUTH */
+
 	default:
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_UTIL1) {
@@ -3921,7 +3949,7 @@ sctp_sorecvmsg(struct socket *so,
 #if defined(AF_INET) && defined(AF_INET6)
 		if ((inp->sctp_flags & SCTP_PCB_FLAGS_NEEDS_MAPPED_V4) &&
 		    (to->sa_family == AF_INET) &&
-		    (fromlen >= sizeof(struct sockaddr_in6))){
+		    ((size_t)fromlen >= sizeof(struct sockaddr_in6))){
 			struct sockaddr_in *sin;
 			struct sockaddr_in6 sin6;
 			sin = (struct sockaddr_in *)to;
@@ -3984,7 +4012,7 @@ sctp_sorecvmsg(struct socket *so,
 					sctp_sblog(&so->so_rcv, 
 						   stcb, SCTP_LOG_SBRESULT, 0);
 #endif
-					if(control->length < cp_len) {
+					if(control->length < (uint32_t)cp_len) {
 						panic("Impossible length");
 					}
 					freed_so_far += cp_len;
@@ -4023,7 +4051,7 @@ sctp_sorecvmsg(struct socket *so,
 					sctp_sblog(&so->so_rcv, stcb, 
 						   SCTP_LOG_SBRESULT, 0);
 #endif
-					if(control->length < cp_len) {
+					if(control->length < (uint32_t)cp_len) {
 						panic("Impossible length");
 					}
 					control->length -= cp_len;
@@ -4133,7 +4161,7 @@ sctp_sorecvmsg(struct socket *so,
 		/* copy out the mbuf chain */
 	get_more_data2:
 		cp_len = uio->uio_resid;
-		if(cp_len >= control->length) {
+		if((uint32_t)cp_len >= control->length) {
 			/* easy way */
 			if(control->tail_mbuf->m_flags & M_EOR) {
 				out_flags |= MSG_EOR;
