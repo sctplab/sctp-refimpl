@@ -729,7 +729,7 @@ sctp_queue_data_to_stream(struct sctp_tcb *stcb, struct sctp_association *asoc,
  * all of the message is ready or a 0 back if the message is still incomplete
  */
 static int
-sctp_is_all_msg_on_reasm(struct sctp_association *asoc, int *t_size)
+sctp_is_all_msg_on_reasm(struct sctp_association *asoc, uint32_t *t_size)
 {
 	struct sctp_tmit_chunk *chk;
 	u_int32_t tsn;
