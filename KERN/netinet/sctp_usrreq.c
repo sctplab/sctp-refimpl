@@ -5832,7 +5832,9 @@ int sctp_lock (struct socket *so, int refcount, int lr) {
 	if (refcount)
 		so->so_usecount++;
 	so->reserved3 = (void *)lr_saved;
+	/*
 	printf("sctp_lock returning for %p.\n", so);
+	*/
 	return (0);
 }
 
@@ -5863,7 +5865,9 @@ int sctp_unlock (struct socket *so, int refcount, int lr) {
 		lck_mtx_unlock(((struct inpcb *)so->so_pcb)->inpcb_mtx);
 	}
 	so->reserved4 = (void *)lr_saved;
+	/*
 	printf("sctp_unlock returning for so=%p\n", so);
+	*/
 	return (0);
 }
 
@@ -5875,7 +5879,9 @@ lck_mtx_t *sctp_getlock(struct socket *so, int locktype) {
 	if (so->so_pcb) {
 		if (so->so_usecount < 0)
 			panic("sctp_getlock: so=%x usecount=%x\n", so, so->so_usecount);
+		/*
 		printf("sctp_getlock returning %p.\n", ((struct inpcb *)so->so_pcb)->inpcb_mtx);
+		*/
 		return (((struct inpcb *)so->so_pcb)->inpcb_mtx);
 	} else {
 		panic("sctp_getlock: so=%x NULL so_pcb\n", so);
