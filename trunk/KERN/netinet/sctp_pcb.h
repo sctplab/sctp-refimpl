@@ -671,7 +671,7 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #define SCTP_ITERATOR_LOCK_DESTROY()	mtx_destroy(&sctppcbinfo.it_mtx)
 
 
-#elif defined(__APPLE__) && defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#elif defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 /*
  * Apple MacOS X 10.4 "Tiger"
  */
@@ -695,56 +695,28 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 	lck_rw_done(sctppcbinfo.ipi_ep_mtx)
 
 /* Lock for INP */
-#define SCTP_INP_LOCK_INIT(_inp) \
-	(_inp)->inp_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
+#define SCTP_INP_LOCK_INIT(_inp)
+#define SCTP_INP_LOCK_DESTROY(_inp)
 
-#define SCTP_INP_LOCK_DESTROY(_inp) \
-	lck_mtx_free((_inp)->inp_mtx, SCTP_MTX_GRP)
+#define SCTP_INP_RLOCK(_inp)
+#define SCTP_INP_RUNLOCK(_inp)
+#define SCTP_INP_WLOCK(_inp)
+#define SCTP_INP_WUNLOCK(_inp)
+#define SCTP_INP_INCR_REF(_inp)
+#define SCTP_INP_DECR_REF(_inp)
 
-
-
-#define SCTP_INP_RLOCK(_inp) \
-	lck_mtx_lock((_inp)->inp_mtx)
-#define SCTP_INP_RUNLOCK(_inp) \
-	lck_mtx_unlock((_inp)->inp_mtx)
-#define SCTP_INP_WLOCK(_inp) \
-	lck_mtx_lock((_inp)->inp_mtx)
-#define SCTP_INP_WUNLOCK(_inp) \
-	lck_mtx_unlock((_inp)->inp_mtx)
-#define SCTP_INP_INCR_REF(_inp) \
-	(_inp)->refcount++
-#define SCTP_INP_DECR_REF(_inp) { \
-		if ((_inp)->refcount > 0) \
-			(_inp)->refcount--; \
-		else \
-			panic("bad inp refcount"); \
-	}
-
-#define SCTP_ASOC_CREATE_LOCK_INIT(_inp) \
-	(_inp)->inp_create_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
-#define SCTP_ASOC_CREATE_LOCK_DESTROY(_inp) \
-	lck_mtx_free((_inp)->inp_create_mtx, SCTP_MTX_GRP)
-#define SCTP_ASOC_CREATE_LOCK(_inp) \
-	lck_mtx_lock((_inp)->inp_create_mtx)
-#define SCTP_ASOC_CREATE_UNLOCK(_inp) \
-	lck_mtx_unlock((_inp)->inp_create_mtx)
+#define SCTP_ASOC_CREATE_LOCK_INIT(_inp)
+#define SCTP_ASOC_CREATE_LOCK_DESTROY(_inp)
+#define SCTP_ASOC_CREATE_LOCK(_inp)
+#define SCTP_ASOC_CREATE_UNLOCK(_inp)
 
 /* Lock for TCB */
-#define SCTP_TCB_LOCK_INIT(_tcb) \
-	(_tcb)->tcb_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
-/* FIXME takes second parameter */
-#define SCTP_TCB_LOCK_DESTROY(_tcb) \
-	lck_mtx_free((_tcb)->tcb_mtx, 0)
-#define SCTP_TCB_LOCK(_tcb) \
-	lck_mtx_lock((_tcb)->tcb_mtx)
-#define SCTP_TCB_UNLOCK(_tcb) \
-	lck_mtx_unlock((_tcb)->tcb_mtx)
-/* FIXME: check ownership */
-#define SCTP_TCB_UNLOCK_IFOWNED(_tcb)	      do { \
-                                                     lck_mtx_unlock((_tcb)->tcb_mtx); \
-                                              } while (0)
-#define STCB_TCB_LOCK_ASSERT(_tcb) \
-	lck_mtx_assert((_tcb)->tcb_mtx, LCK_MTX_ASSERT_OWNED)
+#define SCTP_TCB_LOCK_INIT(_tcb)
+#define SCTP_TCB_LOCK_DESTROY(_tcb)
+#define SCTP_TCB_LOCK(_tcb)
+#define SCTP_TCB_UNLOCK(_tcb)
+#define SCTP_TCB_UNLOCK_IFOWNED(_tcb)
+#define STCB_TCB_LOCK_ASSERT(_tcb)
 
 /* iterator locks */
 #define SCTP_ITERATOR_LOCK_INIT() \
@@ -757,10 +729,8 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 	lck_mtx_free(sctppcbinfo.it_mtx, SCTP_MTX_GRP)
 
 /* socket locks */
-/* FIX ME: takes second parameter = refcount */
 #define SOCK_LOCK(_so) socket_lock(_so, 0)
 #define SOCK_UNLOCK(_so) socket_unlock(_so, 0)
-/* FIX ME: need second parameter */
 #define SOCKBUF_LOCK(_so_buf) sblock(_so_buf, 0)
 #define SOCKBUF_UNLOCK(_so_buf) sbunlock(_so_buf, 0)
 #define SOCKBUF_LOCK_ASSERT(_so_buf)
