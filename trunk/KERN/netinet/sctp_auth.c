@@ -39,12 +39,11 @@
 #include <sys/sysctl.h>
 #include <sys/random.h>
 
-#include <sys/callout.h>
-
 #if !defined(__APPLE__)
+#include <sys/callout.h>
 #include <sys/limits.h>
-#endif
 #include <machine/cpu.h>
+#endif
 
 #include <net/if.h>
 #include <net/if_types.h>
