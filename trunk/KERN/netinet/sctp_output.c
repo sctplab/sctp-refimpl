@@ -6209,8 +6209,8 @@ sctp_get_frag_point(struct sctp_tcb *stcb,
 {
 	int siz, ovh;
 
-	/* For endpoints that have both 6 and 4 addresses
-	 * we must reserver room for the 6 ip header, for
+	/* For endpoints that have both v6 and v4 addresses
+	 * we must reserve room for the ipv6 header, for
 	 * those that are only dealing with V4 we use
 	 * a larger frag point.
 	 */
@@ -6229,6 +6229,12 @@ sctp_get_frag_point(struct sctp_tcb *stcb,
 		/* A data chunk MUST fit in a cluster */
 /*		siz = (MCLBYTES - sizeof(struct sctp_data_chunk));*/
 /*	}*/
+
+#ifdef HAVE_SCTP_AUTH
+	/* adjust for an AUTH chunk if DATA requires auth */
+	if (sctp_auth_is_required_chunk(SCTP_DATA, stcb->asoc.peer_auth_chunks))
+		size -= sctp_get_auth_chunk_len(stcb->asoc.peer_hmac_id);
+#endif /* HAVE_SCTP_AUTH */
 
 	if (siz % 4) {
 		/* make it an even word boundary please */
@@ -6488,9 +6494,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 	if (m->m_flags & M_PKTHDR) {
 		m->m_pkthdr.len = dataout;
 	}
-	/* use the smallest one, user set value or
-	 * smallest mtu of the asoc
-	 */
+	/* use the smallest one, user set value or smallest mtu of the asoc */
 	siz = sctp_get_frag_point(stcb, asoc);
 	SOCKBUF_UNLOCK(&so->so_snd);
 	if ((dataout) && (dataout <= siz)) {
@@ -8159,8 +8163,6 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 		 * yet, account for this in the mtu now... if no data can be
 		 * bundled, this adjustment won't matter anyways since the
 		 * packet will be going out...
-		 * NOTE: we blindly assume that all the chk->rec.chunk_id
-		 * are DATA on the send queue (as they should be)
 		 */
 		if ((auth == NULL) &&
 		    sctp_auth_is_required_chunk(SCTP_DATA,
@@ -8264,7 +8266,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 									   &auth,
 									   &auth_offset,
 									   stcb,
-									   chk->rec.chunk_id);
+									   SCTP_DATA);
 					}
 #endif /* HAVE_SCTP_AUTH */
 					outchain = sctp_copy_mbufchain(chk->data, outchain, &endoutchain, 1, 0);
@@ -9207,7 +9209,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 		 * below in case there is no room for this chunk.
 		 */
 		if ((auth == NULL) &&
-		    sctp_auth_is_required_chunk(chk->rec.chunk_id,
+		    sctp_auth_is_required_chunk(SCTP_DATA,
 						stcb->asoc.peer_auth_chunks)) {
 			dmtu = sctp_get_auth_chunk_len(stcb->asoc.peer_hmac_id);
 		} else
@@ -9221,8 +9223,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 			if (auth == NULL) {
 				m = sctp_add_auth_chunk(m, &endofchain,
 							&auth, &auth_offset,
-							stcb,
-							chk->rec.chunk_id);
+							stcb, SCTP_DATA);
 			}
 #endif /* HAVE_SCTP_AUTH */
 			m = sctp_copy_mbufchain(chk->data, m, &endofchain, 1,
@@ -9261,7 +9262,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 				}
 #ifdef HAVE_SCTP_AUTH
 				if ((auth == NULL) &&
-				    sctp_auth_is_required_chunk(fwd->rec.chunk_id,
+				    sctp_auth_is_required_chunk(SCTP_DATA,
 								stcb->asoc.peer_auth_chunks)) {
 					dmtu = sctp_get_auth_chunk_len(stcb->asoc.peer_hmac_id);
 				} else
@@ -9276,7 +9277,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 									&endofchain,
 									&auth, &auth_offset,
 									stcb,
-									chk->rec.chunk_id);
+									SCTP_DATA);
 					}
 #endif /* HAVE_SCTP_AUTH */
 					m = sctp_copy_mbufchain(fwd->data, m,
@@ -9844,7 +9845,6 @@ sctp_output(inp, m, addr, control, p, flags)
 				}
 				/*
 				 * Question: Should I error here if the
-
 				 * assoc_id is no longer valid?
 				 * i.e. I can't find it?
 				 */
@@ -9932,7 +9932,7 @@ sctp_output(inp, m, addr, control, p, flags)
 		splx(s);
 		return (ENOENT);
 	} else if (stcb == NULL) {
-		/* UDP mode, we must go ahead and start the INIT process */
+		/* 1-many mode, we must go ahead and start the INIT process */
 		if ((use_rcvinfo) && (srcv.sinfo_flags & SCTP_ABORT)) {
 			/* Strange user to do this */
 			if (control) {
