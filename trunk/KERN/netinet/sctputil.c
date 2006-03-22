@@ -2091,11 +2091,13 @@ sctp_calculate_sum(struct mbuf *m, int32_t *pktlen, uint32_t offset)
 
 	while (at != NULL) {
 #ifdef SCTP_USE_ADLER32
-		base = update_adler32(base, at->m_data + offset,
-		    at->m_len - offset);
+		base = update_adler32(base, 
+				      (unsigned char *)(at->m_data + offset),
+				      (unsigned int)(at->m_len - offset));
 #else
-		base = update_crc32(base, at->m_data + offset,
-		    at->m_len - offset);
+		base = update_crc32(base, 
+				    (unsigned char *)(at->m_data + offset),
+				    (unsigned int)(at->m_len - offset));
 #endif /* SCTP_USE_ADLER32 */
 		tlen += at->m_len - offset;
 		/* we only offset once into the first mbuf */
