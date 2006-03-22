@@ -5627,7 +5627,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	stc.peers_vtag = init_chk->init.initiate_tag;
 	initackm_out->sh.checksum = 0;	/* calculate later */
 	/* who are we */
-	strncpy(stc.identification, SCTP_VERSION_STRING,
+	memcpy(stc.identification, SCTP_VERSION_STRING,
 	   min(strlen(SCTP_VERSION_STRING), sizeof(stc.identification)));
 	/* now the chunk header */
 	initackm_out->msg.ch.chunk_type = SCTP_INITIATION_ACK;
