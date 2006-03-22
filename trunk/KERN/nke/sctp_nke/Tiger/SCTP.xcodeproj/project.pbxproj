@@ -10,6 +10,7 @@
 		32A4FEBC0562C75700D090E7 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 089C167DFE841241C02AAC07 /* InfoPlist.strings */; };
 		32A4FEBE0562C75700D090E7 /* SCTP.c in Sources */ = {isa = PBXBuildFile; fileRef = 1A224C3CFF42312311CA2CB7 /* SCTP.c */; settings = {ATTRIBUTES = (); }; };
 		500D736D0729B00A008D8EA9 /* sctp_sys_calls.c in Sources */ = {isa = PBXBuildFile; fileRef = 500D736C0729B00A008D8EA9 /* sctp_sys_calls.c */; };
+		503E5D4608A1778B00714243 /* proc_internal.h in Headers */ = {isa = PBXBuildFile; fileRef = 503E5D4508A1778B00714243 /* proc_internal.h */; };
 		5062336E0848C2CA002D5963 /* route.h in Headers */ = {isa = PBXBuildFile; fileRef = 5062336D0848C2CA002D5963 /* route.h */; };
 		506233720848C378002D5963 /* radix.h in Headers */ = {isa = PBXBuildFile; fileRef = 506233710848C378002D5963 /* radix.h */; };
 		506233C30848C49F002D5963 /* socketvar.h in Headers */ = {isa = PBXBuildFile; fileRef = 506233C20848C49F002D5963 /* socketvar.h */; };
@@ -30,6 +31,8 @@
 		507959400893C59400D7E924 /* protosw.h in Headers */ = {isa = PBXBuildFile; fileRef = 5079593C0893C59400D7E924 /* protosw.h */; };
 		507959410893C59400D7E924 /* uio_internal.h in Headers */ = {isa = PBXBuildFile; fileRef = 5079593D0893C59400D7E924 /* uio_internal.h */; };
 		5088D5D80850BBA2005ABAF2 /* nd6.h in Headers */ = {isa = PBXBuildFile; fileRef = 5088D5D70850BBA2005ABAF2 /* nd6.h */; };
+		5097D9BB09D1D436001F0DDD /* sctp_auth.c in Sources */ = {isa = PBXBuildFile; fileRef = 5097D9B909D1D436001F0DDD /* sctp_auth.c */; };
+		5097D9BC09D1D436001F0DDD /* sctp_auth.h in Headers */ = {isa = PBXBuildFile; fileRef = 5097D9BA09D1D436001F0DDD /* sctp_auth.h */; };
 		50D42F0C06D8C0DF004DAC5C /* sctp.h in Headers */ = {isa = PBXBuildFile; fileRef = 50D42EEE06D8C0DF004DAC5C /* sctp.h */; };
 		50D42F0D06D8C0DF004DAC5C /* sctp_asconf.c in Sources */ = {isa = PBXBuildFile; fileRef = 50D42EEF06D8C0DF004DAC5C /* sctp_asconf.c */; };
 		50D42F0E06D8C0DF004DAC5C /* sctp_asconf.h in Headers */ = {isa = PBXBuildFile; fileRef = 50D42EF006D8C0DF004DAC5C /* sctp_asconf.h */; };
@@ -68,7 +71,7 @@
 /* Begin PBXBuildRule section */
 		50168A43083938B700BCBA11 /* PBXBuildRule */ = {
 			isa = PBXBuildRule;
-			compilerSpec = com.apple.compilers.gcc.3_3;
+			compilerSpec = com.apple.compilers.gcc;
 			fileType = sourcecode.c;
 			isEditable = 1;
 			outputFiles = (
@@ -120,6 +123,7 @@
 		32A4FEC40562C75800D090E7 /* SCTP.kext */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SCTP.kext; sourceTree = BUILT_PRODUCTS_DIR; };
 		500D736C0729B00A008D8EA9 /* sctp_sys_calls.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sctp_sys_calls.c; sourceTree = "<group>"; };
 		50394AB00729AF7200F8D390 /* libsctp.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libsctp.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
+		503E5D4508A1778B00714243 /* proc_internal.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = proc_internal.h; sourceTree = "<group>"; };
 		5062336D0848C2CA002D5963 /* route.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = route.h; path = net/route.h; sourceTree = "<group>"; };
 		506233710848C378002D5963 /* radix.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = radix.h; path = net/radix.h; sourceTree = "<group>"; };
 		506233C20848C49F002D5963 /* socketvar.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = socketvar.h; sourceTree = "<group>"; };
@@ -138,6 +142,8 @@
 		5079593C0893C59400D7E924 /* protosw.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = protosw.h; sourceTree = "<group>"; };
 		5079593D0893C59400D7E924 /* uio_internal.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = uio_internal.h; sourceTree = "<group>"; };
 		5088D5D70850BBA2005ABAF2 /* nd6.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = nd6.h; sourceTree = "<group>"; };
+		5097D9B909D1D436001F0DDD /* sctp_auth.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sctp_auth.c; sourceTree = "<group>"; };
+		5097D9BA09D1D436001F0DDD /* sctp_auth.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sctp_auth.h; sourceTree = "<group>"; };
 		50D42EEE06D8C0DF004DAC5C /* sctp.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sctp.h; sourceTree = "<group>"; };
 		50D42EEF06D8C0DF004DAC5C /* sctp_asconf.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sctp_asconf.c; sourceTree = "<group>"; };
 		50D42EF006D8C0DF004DAC5C /* sctp_asconf.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sctp_asconf.h; sourceTree = "<group>"; };
@@ -250,6 +256,7 @@
 		5045DCE006DE7B870057890E /* sys */ = {
 			isa = PBXGroup;
 			children = (
+				503E5D4508A1778B00714243 /* proc_internal.h */,
 				5079593A0893C59400D7E924 /* domain.h */,
 				5079593B0893C59400D7E924 /* kernel.h */,
 				5079593C0893C59400D7E924 /* protosw.h */,
@@ -272,6 +279,8 @@
 		50D42EED06D8C0DF004DAC5C /* netinet */ = {
 			isa = PBXGroup;
 			children = (
+				5097D9B909D1D436001F0DDD /* sctp_auth.c */,
+				5097D9BA09D1D436001F0DDD /* sctp_auth.h */,
 				5077CEC508465AAB004818A2 /* in_pcb.h */,
 				5077CBA408464F52004818A2 /* in.h */,
 				50D42EEE06D8C0DF004DAC5C /* sctp.h */,
@@ -287,9 +296,9 @@
 				50D42EF806D8C0DF004DAC5C /* sctp_indata.c */,
 				50D42EF906D8C0DF004DAC5C /* sctp_indata.h */,
 				50D42EFA06D8C0DF004DAC5C /* sctp_input.c */,
-				50D42EFB06D8C0DF004DAC5C /* sctp_input.h */,
 				50D42EFC06D8C0DF004DAC5C /* sctp_output.c */,
 				50D42EFD06D8C0DF004DAC5C /* sctp_output.h */,
+				50D42EFB06D8C0DF004DAC5C /* sctp_input.h */,
 				50D42EFE06D8C0DF004DAC5C /* sctp_pcb.c */,
 				50D42EFF06D8C0DF004DAC5C /* sctp_pcb.h */,
 				50D42F0006D8C0DF004DAC5C /* sctp_peeloff.c */,
@@ -375,6 +384,8 @@
 				5079593F0893C59400D7E924 /* kernel.h in Headers */,
 				507959400893C59400D7E924 /* protosw.h in Headers */,
 				507959410893C59400D7E924 /* uio_internal.h in Headers */,
+				503E5D4608A1778B00714243 /* proc_internal.h in Headers */,
+				5097D9BC09D1D436001F0DDD /* sctp_auth.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -541,6 +552,7 @@
 				50D42F2606D8C0DF004DAC5C /* sctp_usrreq.c in Sources */,
 				50D42F2806D8C0DF004DAC5C /* sctputil.c in Sources */,
 				50D42F2F06D8C0F3004DAC5C /* sctp6_usrreq.c in Sources */,
+				5097D9BB09D1D436001F0DDD /* sctp_auth.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -575,13 +587,13 @@
 				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = (
-					APPLE_NKE,
-					SCTP,
 					INET6,
 					PRIVATE,
 					BSD_BUILD,
 					SCTP_DEBUG,
 					HAVE_SCTP_SORECEIVE,
+					SCTP_APPLE_FINE_GRAINED_LOCKING,
+					HAVE_SCTP_AUTH,
 				);
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = NO;
 				GCC_WARN_ALLOW_INCOMPLETE_PROTOCOL = NO;
@@ -658,6 +670,7 @@
 				HEADER_SEARCH_PATHS = "$(SRCROOT)";
 				INSTALL_PATH = /usr/local/lib;
 				LIBRARY_STYLE = DYNAMIC;
+				MACH_O_TYPE = mh_dylib;
 				OPTIMIZATION_CFLAGS = "-O0";
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "";
@@ -683,6 +696,7 @@
 				HEADER_SEARCH_PATHS = "$(SRCROOT)";
 				INSTALL_PATH = /usr/local/lib;
 				LIBRARY_STYLE = DYNAMIC;
+				MACH_O_TYPE = mh_dylib;
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "";
 				OTHER_REZFLAGS = "";
@@ -705,6 +719,7 @@
 				HEADER_SEARCH_PATHS = "$(SRCROOT)";
 				INSTALL_PATH = /usr/local/lib;
 				LIBRARY_STYLE = DYNAMIC;
+				MACH_O_TYPE = mh_dylib;
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "";
 				OTHER_REZFLAGS = "";
@@ -721,8 +736,15 @@
 		50C5C69E08560FAC0054138C /* Development */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = ppc;
-				GCC_PREPROCESSOR_DEFINITIONS = HAVE_SCTP_SORECEIVE;
+				ARCHS = (
+					ppc,
+					i386,
+				);
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					HAVE_SCTP_SORECEIVE,
+					SCTP_APPLE_FINE_GRAINED_LOCKING,
+					HAVE_SCTP_AUTH,
+				);
 				MACOSX_DEPLOYMENT_TARGET = 10.4;
 			};
 			name = Development;
@@ -730,7 +752,10 @@
 		50C5C69F08560FAC0054138C /* Deployment */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = ppc;
+				ARCHS = (
+					ppc,
+					i386,
+				);
 				MACOSX_DEPLOYMENT_TARGET = 10.4;
 				SDKROOT = /Developer/SDKs/MacOSX10.4u.sdk;
 			};
@@ -739,7 +764,10 @@
 		50C5C6A008560FAC0054138C /* Default */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = ppc;
+				ARCHS = (
+					ppc,
+					i386,
+				);
 				MACOSX_DEPLOYMENT_TARGET = 10.4;
 				SDKROOT = /Developer/SDKs/MacOSX10.4u.sdk;
 			};
