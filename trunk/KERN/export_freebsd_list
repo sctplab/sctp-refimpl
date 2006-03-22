@@ -1,6 +1,8 @@
 netinet/sctp.h
 netinet/sctp_asconf.c
 netinet/sctp_asconf.h
+netinet/sctp_auth.c
+netinet/sctp_auth.h
 netinet/sctp_constants.h
 netinet/sctp_crc32.c
 netinet/sctp_crc32.h
