@@ -35,7 +35,15 @@
 
 
 #include <netinet/sctp_header.h>
-#if defined(_KERNEL) || (defined(__APPLE__) && defined(KERNEL))
+
+#if (defined(__APPLE__) && defined(KERNEL))
+#ifndef _KERNEL
+#define _KERNEL
+#endif
+#endif
+
+
+#if defined(_KERNEL)
 void sctp_send_initiate(struct sctp_inpcb *, struct sctp_tcb *);
 
 void sctp_send_initiate_ack(struct sctp_inpcb *, struct sctp_tcb *,

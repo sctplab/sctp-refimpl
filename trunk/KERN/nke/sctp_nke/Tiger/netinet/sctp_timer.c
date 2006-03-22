@@ -1,7 +1,7 @@
 /*	$KAME: sctp_timer.c,v 1.29 2005/03/06 16:04:18 itojun Exp $	*/
 
 /*
- * Copyright (C) 2002-2005 Cisco Systems Inc,
+ * Copyright (C) 2002-2006 Cisco Systems Inc,
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -208,7 +208,7 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 		int old_cwnd;
 		old_cwnd = net->cwnd;
 #endif
-		sctp_chunk_output(inp, stcb, 9);
+		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_EARLY_FR_TMR);
 		/* make a small adjustment to cwnd and
 		 * force to CA.
 		 */
@@ -223,7 +223,7 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 		sctp_log_cwnd(stcb, net,(old_cwnd-net->cwnd) , SCTP_CWND_LOG_FROM_FR);
 #endif
 	} else if (cnt_resend) {
-		sctp_chunk_output(inp, stcb, 9);
+		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_EARLY_FR_TMR);
 	}
 	/* Restart it? */
 	if (net->flight_size < net->cwnd) {
@@ -278,7 +278,7 @@ sctp_threshold_management(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			    net->failure_threshold);
 		}
 #endif /* SCTP_DEBUG */
-		if (net->error_count >= net->failure_threshold) {
+		if (net->error_count > net->failure_threshold) {
 			/* We had a threshold failure */
 			if (net->dest_state & SCTP_ADDR_REACHABLE) {
 				net->dest_state &= ~SCTP_ADDR_REACHABLE;
@@ -573,11 +573,14 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	 * ssthresh for any retransmission.
 	 * (iyengar@cis.udel.edu, 2005/08/12)
 	 */
-	if ((sctp_cmt_on_off) &&
-	    ((alt->dest_state & SCTP_ADDR_REACHABLE) == SCTP_ADDR_REACHABLE) &&
-	    (alt->ro.ro_rt != NULL) &&
-	    (!(alt->dest_state & SCTP_ADDR_UNCONFIRMED))) {
-		alt = sctp_find_alternate_net(stcb, alt, 1);
+	if (sctp_cmt_on_off) {
+		alt = sctp_find_alternate_net(stcb, net, 1);
+		/* CUCv2: If a different dest is picked for the retransmission,
+		 * then new (rtx-)pseudo_cumack needs to be tracked for orig dest.
+		 * Let CUCv2 track new (rtx-) pseudo-cumack always.
+		 */
+		net->find_pseudo_cumack = 1;
+		net->find_rtx_pseudo_cumack = 1;
 	}
 	/* none in flight now */
 	audit_tf = 0;
@@ -973,6 +976,9 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 	sctp_mark_all_for_resend(stcb, net, alt, win_probe, &num_mk);
 	/* FR Loss recovery just ended with the T3. */
 	stcb->asoc.fast_retran_loss_recovery = 0;
+
+	/* CMT FR loss recovery ended with the T3 */
+	net->fast_retran_loss_recovery = 0;
 
 	/* setup the sat loss recovery that prevents
 	 * satellite cwnd advance.
@@ -1473,7 +1479,7 @@ sctp_audit_stream_queues_for_size(struct sctp_inpcb *inp,
 	}
 	if (chks_in_queue) {
 		/* call the output queue function */
-		sctp_chunk_output(inp, stcb, 1);
+		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_T3);
 		if ((TAILQ_EMPTY(&stcb->asoc.send_queue)) &&
 		    (TAILQ_EMPTY(&stcb->asoc.sent_queue))) {
 			/* Probably should go in and make it go back through and add fragments allowed */
@@ -1530,6 +1536,31 @@ sctp_heartbeat_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	}
 	return (0);
 }
+
+int
+sctp_is_hb_timer_running(struct sctp_tcb *stcb)
+{
+	if (callout_pending(&stcb->asoc.hb_timer.timer)) {
+		/* its running */
+		return (1);
+	} else {
+		/* nope */
+		return (0);
+	}
+}
+
+int
+sctp_is_sack_timer_running(struct sctp_tcb *stcb)
+{
+	if (callout_pending(&stcb->asoc.dack_timer.timer)) {
+		/* its running */
+		return (1);
+	} else {
+		/* nope */
+		return (0);
+	}
+}
+
 
 #define SCTP_NUMBER_OF_MTU_SIZES 18
 static u_int32_t mtu_sizes[]={
@@ -1610,7 +1641,7 @@ void sctp_autoclose_timer(struct sctp_inpcb *inp,
 
 	SCTP_GETTIME_TIMEVAL(&tn);
 	if (stcb->asoc.sctp_autoclose_ticks &&
-	    (inp->sctp_flags & SCTP_PCB_FLAGS_AUTOCLOSE)) {
+	    sctp_is_feature_on(inp, SCTP_PCB_FLAGS_AUTOCLOSE)) {
 		/* Auto close is on */
 		asoc = &stcb->asoc;
 		/* pick the time to use */
@@ -1630,7 +1661,7 @@ void sctp_autoclose_timer(struct sctp_inpcb *inp,
 			 * have hanging data. We can then safely check the
 			 * queues and know that we are clear to send shutdown
 			 */
-			sctp_chunk_output(inp, stcb, 9);
+			sctp_chunk_output(inp, stcb,SCTP_OUTPUT_FROM_AUTOCLOSE_TMR);
 			/* Are we clean? */
 			if (TAILQ_EMPTY(&asoc->send_queue) &&
 			    TAILQ_EMPTY(&asoc->sent_queue)) {
@@ -1750,7 +1781,11 @@ sctp_iterator_timer(struct sctp_iterator *it)
 		/* run function on this one */
 		SCTP_INP_RUNLOCK(it->inp);
 		(*it->function_toapply)(it->inp, it->stcb, it->pointer, it->val);
-		sctp_chunk_output(it->inp, it->stcb, 1);
+
+		/* we lie here, it really needs to have its own type
+		 * but first I must verify that this won't effect things :-0
+		 */
+		sctp_chunk_output(it->inp, it->stcb, SCTP_OUTPUT_FROM_T3);
 		SCTP_TCB_UNLOCK(it->stcb);
 		/* see if we have limited out */
 		if (cnt > SCTP_MAX_ITERATOR_AT_ONCE) {

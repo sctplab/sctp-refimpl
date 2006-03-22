@@ -3,7 +3,7 @@
 #ifndef __SCTP_SLA1_h__
 #define __SCTP_SLA1_h__
 /*
- * Copyright (c) 2001, 2002, 2004 Cisco Systems, Inc.
+ * Copyright (c) 2001, 2002, 2004, 2006 Cisco Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -54,7 +54,7 @@ struct sha1_context {
 	int how_many_in_block;
 	unsigned int running_total;
 };
-
+typedef struct sha1_context SHA1_CTX;
 
 #define F1(B,C,D) (((B & C) | ((~B) & D)))	/*  0  <= t <= 19 */
 #define F2(B,C,D) (B ^ C ^ D)			/*  20 <= t <= 39 */
@@ -75,11 +75,18 @@ struct sha1_context {
 #define H3INIT 0x10325476
 #define H4INIT 0xc3d2e1f0
 
-#if defined(_KERNEL) || (defined(__APPLE__) && defined(KERNEL))
+
+#if (defined(__APPLE__) && defined(KERNEL))
+#ifndef _KERNEL
+#define _KERNEL
+#endif
+#endif
+
+#if defined(_KERNEL)
 
 void SHA1_Init(struct sha1_context *);
-void SHA1_Process(struct sha1_context *, unsigned char *, int);
-void SHA1_Final(struct sha1_context *, unsigned char *);
+void SHA1_Update(struct sha1_context *, const unsigned char *, int);
+void SHA1_Final(unsigned char *, struct sha1_context *);
 
 #endif /* _KERNEL */
 #endif

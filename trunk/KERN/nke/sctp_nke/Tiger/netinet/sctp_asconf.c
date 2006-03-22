@@ -754,7 +754,7 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset, struct sctp_asconf_chunk
 		case SCTP_SUCCESS_REPORT:
 			/* not valid in an ASCONF chunk */
 			break;
-		case SCTP_ULP_ADAPTION:
+		case SCTP_ULP_ADAPTATION:
 			/* FIX */
 			break;
 		default:
@@ -1611,7 +1611,7 @@ sctp_addr_mgmt_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 #endif
 
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) == 0 &&
-	    (inp->sctp_flags & SCTP_PCB_FLAGS_DO_ASCONF) == 0) {
+	    sctp_is_feature_off(inp, SCTP_PCB_FLAGS_DO_ASCONF)) {
 		/* subset bound, no ASCONF allowed case, so ignore */
 		return;
 	}
@@ -1768,7 +1768,8 @@ sctp_addr_mgmt_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	}
 
 	/* queue an asconf for this address add/delete */
-	if (inp->sctp_flags & SCTP_PCB_FLAGS_DO_ASCONF) {
+	
+	if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_DO_ASCONF)) {
 		/* does the peer do asconf? */
 		if (stcb->asoc.peer_supports_asconf) {
 			/* queue an asconf for this addr */
@@ -1852,7 +1853,7 @@ sctp_addr_mgmt_ep(struct sctp_inpcb *inp, struct ifaddr *ifa, uint16_t type)
 	/* is this endpoint subset bound ? */
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) == 0) {
 		/* subset bound endpoint */
-		if ((inp->sctp_flags & SCTP_PCB_FLAGS_DO_ASCONF) == 0) {
+		if (sctp_is_feature_off(inp, SCTP_PCB_FLAGS_DO_ASCONF)) {
 			/*
 			 * subset bound, but ASCONFs not allowed...
 			 * if adding, nothing to do, since not allowed
@@ -1970,7 +1971,7 @@ sctp_addr_mgmt(struct ifaddr *ifa, uint16_t type) {
 
 	/* go through all our PCB's */
 	LIST_FOREACH(inp, &sctppcbinfo.listhead, sctp_list) {
-		if (inp->sctp_flags & SCTP_PCB_FLAGS_AUTO_ASCONF) {
+		if (sctp_is_feature_on(inp,SCTP_PCB_FLAGS_AUTO_ASCONF)) {
 			sctp_addr_mgmt_ep(inp, ifa, type);
 		} else {
 			/* this address is going away anyways... */
@@ -2553,7 +2554,7 @@ sctp_process_initack_addresses(struct sctp_tcb *stcb, struct mbuf *m,
 		} else {
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_ASCONF2) {
-				printf("process_initack_addrs: skipping param type=%xh\n", ptype);
+				printf("process_initack_addrs: skipping param type=%xh, len=%d\n", ptype, plen);
 			}
 #endif /* SCTP_DEBUG */
 			goto next_addr;
@@ -2565,7 +2566,7 @@ sctp_process_initack_addresses(struct sctp_tcb *stcb, struct mbuf *m,
 			/* address doesn't exist anymore */
 			int status;
 			/* are ASCONFs allowed ? */
-			if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_DO_ASCONF) &&
+			if ((sctp_is_feature_on(stcb->sctp_ep, SCTP_PCB_FLAGS_DO_ASCONF)) &&
 			    stcb->asoc.peer_supports_asconf) {
 				/* queue an ASCONF DEL_IP_ADDRESS */
 				status = sctp_asconf_queue_add_sa(stcb, sa,
@@ -2590,8 +2591,7 @@ sctp_process_initack_addresses(struct sctp_tcb *stcb, struct mbuf *m,
 			 */
 			if ((stcb->sctp_ep->sctp_flags &
 			     SCTP_PCB_FLAGS_BOUNDALL) == 0 &&
-			    (stcb->sctp_ep->sctp_flags &
-			     SCTP_PCB_FLAGS_DO_ASCONF) == 0) {
+			    (sctp_is_feature_off(stcb->sctp_ep, SCTP_PCB_FLAGS_DO_ASCONF))) {
 #ifdef SCTP_DEBUG
 				if (sctp_debug_on & SCTP_DEBUG_ASCONF2) {
 					printf("process_initack_addrs: adding local addr to asoc\n");
@@ -2602,6 +2602,14 @@ sctp_process_initack_addresses(struct sctp_tcb *stcb, struct mbuf *m,
 		}
 
 	next_addr:
+		/* Sanity check:  Make sure the length isn't 0, otherwise
+		 * we'll be stuck in this loop for a long time...
+		 */
+		if (SCTP_SIZE32(plen) == 0) {
+			printf("process_initack_addrs: bad len (%d) type=%xh\n",
+				plen, ptype);
+			return;
+		}
 		/* get next parameter */
 		offset += SCTP_SIZE32(plen);
 		if ((offset + sizeof(struct sctp_paramhdr)) > length)
@@ -2874,7 +2882,7 @@ sctp_check_address_list(struct sctp_tcb *stcb, struct mbuf *m, int offset,
 		    local_scope, site_scope, ipv4_scope, loopback_scope);
 	} else {
 		/* subset bound case */
-	 	if (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_DO_ASCONF) {
+		if (sctp_is_feature_on(stcb->sctp_ep, SCTP_PCB_FLAGS_DO_ASCONF)) {
 			/* asconf's allowed */
 			sctp_check_address_list_ep(stcb, m, offset, length,
 			    init_addr);

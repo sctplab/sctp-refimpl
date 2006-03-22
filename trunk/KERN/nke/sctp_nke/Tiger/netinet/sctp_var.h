@@ -1,7 +1,7 @@
 /*	$KAME: sctp_var.h,v 1.24 2005/03/06 16:04:19 itojun Exp $	*/
 
 /*
- * Copyright (c) 2001-2005 Cisco Systems, Inc.
+ * Copyright (c) 2001-2006 Cisco Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -82,11 +82,17 @@
 #define SCTPCTL_RTTVAR_CC           29
 #define SCTPCTL_DEADLOCK_DET        30
 #define SCTPCTL_EARLY_FR_MSEC       31
+#define SCTPCTL_AUTH_DISABLE        32
+#define SCTPCTL_AUTH_HMAC_ID        33
+#define SCTPCTL_ABC_L_VAR           34
+#define SCTPCTL_MAX_MBUF_CHAIN      35
+#define SCTPCTL_CMT_USE_DAC         36
+#define SCTPCTL_DO_DRAIN            37
 #ifdef SCTP_DEBUG
-#define SCTPCTL_DEBUG               32
-#define SCTPCTL_MAXID		    33
+#define SCTPCTL_DEBUG               38
+#define SCTPCTL_MAXID		    38
 #else
-#define SCTPCTL_MAXID		    32
+#define SCTPCTL_MAXID		    37
 #endif
 
 #endif
@@ -94,7 +100,7 @@
 #ifdef SCTP_DEBUG
 #define SCTPCTL_NAMES { \
 	{ 0, 0 }, \
-	{ "maxdgram", CTLTYPE_INT }, \
+	{ "sendspace", CTLTYPE_INT }, \
 	{ "recvspace", CTLTYPE_INT }, \
 	{ "autoasconf", CTLTYPE_INT }, \
 	{ "ecn_enable", CTLTYPE_INT }, \
@@ -120,16 +126,25 @@
 	{ "path_rtx_max", CTLTYPE_INT }, \
 	{ "nr_outgoing_streams", CTLTYPE_INT }, \
 	{ "cmt_on_off", CTLTYPE_INT }, \
+	{ "cmt_use_dac", CTLTYPE_INT }, \
 	{ "cwnd_maxburst", CTLTYPE_INT }, \
         { "early_fast_retran", CTLTYPE_INT }, \
         { "use_rttvar_congctrl", CTLTYPE_INT }, \
         { "deadlock_detect", CTLTYPE_INT }, \
+        { "early_fast_retran_msec", CTLTYPE_INT }, \
+	{ "auth_disable", CTLTYPE_INT }, \
+	{ "auth_hmac_id", CTLTYPE_INT }, \
+	{ "abc_l_var", CTLTYPE_INT }, \
+	{ "max_mbuf_chain", CTLTYPE_INT }, \
+	{ "cmt_use_dac", CTLTYPE_INT }, \
+	{ "do_sctp_drain", CTLTYPE_INT }, \
 	{ "debug", CTLTYPE_INT }, \
 }
+
 #else
 #define SCTPCTL_NAMES { \
 	{ 0, 0 }, \
-	{ "maxdgram", CTLTYPE_INT }, \
+	{ "sendspace", CTLTYPE_INT }, \
 	{ "recvspace", CTLTYPE_INT }, \
 	{ "autoasconf", CTLTYPE_INT }, \
 	{ "ecn_enable", CTLTYPE_INT }, \
@@ -155,14 +170,30 @@
 	{ "path_rtx_max", CTLTYPE_INT }, \
 	{ "nr_outgoing_streams", CTLTYPE_INT }, \
 	{ "cmt_on_off", CTLTYPE_INT }, \
+	{ "cmt_use_dac", CTLTYPE_INT }, \
 	{ "cwnd_maxburst", CTLTYPE_INT }, \
         { "early_fast_retran", CTLTYPE_INT }, \
         { "use_rttvar_congctrl", CTLTYPE_INT }, \
         { "deadlock_detect", CTLTYPE_INT }, \
+        { "early_fast_retran_msec", CTLTYPE_INT }, \
+	{ "auth_disable", CTLTYPE_INT }, \
+	{ "auth_hmac_id", CTLTYPE_INT }, \
+	{ "abc_l_var", CTLTYPE_INT }, \
+	{ "max_mbuf_chain", CTLTYPE_INT }, \
+	{ "cmt_use_dac", CTLTYPE_INT }, \
+	{ "do_sctp_drain", CTLTYPE_INT }, \
 }
 #endif
 
-#if defined(_KERNEL) || (defined(__APPLE__) && defined(KERNEL))
+
+
+#if (defined(__APPLE__) && defined(KERNEL))
+#ifndef _KERNEL
+#define _KERNEL
+#endif
+#endif
+
+#if defined(_KERNEL)
 
 #if defined(__FreeBSD__) || defined(__APPLE__)
 #ifdef SYSCTL_DECL
@@ -176,11 +207,13 @@ int sctp_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,
 int sctp_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,
 		      struct mbuf *));
 #endif
-#if defined(HAVE_SCTP_SORECEIVE)
+
+#define sctp_feature_on(inp, feature)  (inp->sctp_features |= feature)
+#define sctp_feature_off(inp, feature) (inp->sctp_features &= ~feature)
+#define sctp_is_feature_on(inp, feature) (inp->sctp_features & feature)
+#define sctp_is_feature_off(inp, feature) ((inp->sctp_features & feature) == 0)
+
 #define	sctp_sbspace(asoc, sb) ((long) (((sb)->sb_hiwat > (asoc)->sb_cc) ? ((sb)->sb_hiwat - (asoc)->sb_cc) : 0))
-#else
-#define	sctp_sbspace(asoc, sb) ((long) (((sb)->sb_hiwat > (sb)->sb_cc) ? ((sb)->sb_hiwat - (sb)->sb_cc) : 0))
-#endif
 
 #define	sctp_sbspace_failedmsgs(sb) ((long) (((sb)->sb_hiwat > (sb)->sb_cc) ? ((sb)->sb_hiwat - (sb)->sb_cc) : 0))
 
@@ -234,7 +267,6 @@ int sctp_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,
 }
 
 #else
-#if defined(HAVE_SCTP_SORECEIVE)
 #define sctp_sbfree(stcb, sb, m) { \
         if((sb)->sb_cc >= (uint32_t)(m)->m_len) { \
   	   (sb)->sb_cc -= (m)->m_len; \
@@ -271,23 +303,6 @@ int sctp_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,
 		(sb)->sb_mbcnt += (m)->m_ext.ext_size; \
 }
 
-#else
-
-#define sctp_sbfree(stcb, sb, m) { \
-	(sb)->sb_cc -= (m)->m_len; \
-	(sb)->sb_mbcnt -= MSIZE; \
-	if ((m)->m_flags & M_EXT) \
-		(sb)->sb_mbcnt -= (m)->m_ext.ext_size; \
-}
-
-#define sctp_sballoc(stcb, sb, m)  { \
-	(sb)->sb_cc += (m)->m_len; \
-	(sb)->sb_mbcnt += MSIZE; \
-	if ((m)->m_flags & M_EXT) \
-		(sb)->sb_mbcnt += (m)->m_ext.ext_size; \
-}
-
-#endif
 #endif
 
 #define sctp_ucount_incr(val) { \
@@ -313,10 +328,11 @@ int sctp_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,
  
 extern int	sctp_sendspace;
 extern int	sctp_recvspace;
-extern int      sctp_ecn;
+extern int      sctp_ecn_enable;
 extern int      sctp_ecn_nonce;
 extern int      sctp_use_cwnd_based_maxburst;
 extern unsigned int sctp_cmt_on_off;
+extern unsigned int sctp_cmt_use_dac;
 extern unsigned int sctp_cmt_sockopt_on_off;
 struct sctp_nets;
 struct sctp_inpcb;
@@ -342,7 +358,6 @@ int	sctp_shutdown __P((struct socket *));
 void	sctp_notify __P((struct sctp_inpcb *, int, struct sctphdr *,
 			 struct sockaddr *, struct sctp_tcb *,
 			 struct sctp_nets *));
-int sctp_usr_recvd __P((struct socket *, int));
 
 #if defined(INET6)
 void ip_2_ip6_hdr __P((struct ip6_hdr *, struct ip *));
@@ -376,7 +391,11 @@ int sctp_peeraddr(struct socket *,
 );
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+#if __FreeBSD_version >= 600000
+int sctp_listen(struct socket *, int,  struct thread *);
+#else
 int sctp_listen(struct socket *, struct thread *);
+#endif
 #else
 int sctp_listen(struct socket *, struct proc *);
 #endif
@@ -391,12 +410,13 @@ int sctp_accept(struct socket *, struct mbuf *);
 int sctp_sysctl(int *, u_int, void *, size_t *, void *, size_t);
 #endif
 
+#ifdef __OpenBSD__
 /*
  * compatibility defines for OpenBSD, Apple
  */
 
 /* map callout into timeout for OpenBSD */
-#ifdef __OpenBSD__
+
 #ifndef callout_init
 #define callout_init(args)
 #define callout_reset(c, ticks, func, arg) \
@@ -410,8 +430,10 @@ do { \
 #endif
 #endif
 
-/* XXX: Hopefully temporary until APPLE changes to newer defs like other BSDs */
+
 #if defined(__APPLE__)
+
+/* XXX: Hopefully temporary until APPLE changes to newer defs like other BSDs */
 #define if_addrlist	if_addrhead
 #define if_list		if_link
 #define ifa_list	ifa_link

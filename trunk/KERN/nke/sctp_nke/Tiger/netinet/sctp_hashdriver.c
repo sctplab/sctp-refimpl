@@ -1,7 +1,7 @@
 /*	$KAME: sctp_hashdriver.c,v 1.6 2004/02/24 21:52:26 itojun Exp $	*/
 
 /*
- * Copyright (c) 2001, 2002, 2003, 2004 Cisco Systems, Inc.
+ * Copyright (c) 2001-2006 Cisco Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -62,7 +62,7 @@
  * that is what the FIP-180.1 web page says.
  */
 
-void sctp_hash_digest(char *key, int key_len, char *text, int text_len,
+void sctp_hash_digest(unsigned char *key, int key_len, char *text, int text_len,
     unsigned char *digest)
 {
 #ifdef USE_MD5
@@ -88,8 +88,8 @@ void sctp_hash_digest(char *key, int key_len, char *text, int text_len,
 #else
 		struct sha1_context tctx;
 		SHA1_Init(&tctx);
-		SHA1_Process(&tctx, key, key_len);
-		SHA1_Final(&tctx, tk);
+		SHA1_Update(&tctx, key, key_len);
+		SHA1_Final(tk, &tctx);
 		key = tk;
 		key_len = 20;
 #endif /* USE_MD5 */
@@ -127,9 +127,9 @@ void sctp_hash_digest(char *key, int key_len, char *text, int text_len,
 	MD5Final(digest, &context);		/* finish up 1st pass */
 #else
 	SHA1_Init(&context);			/* init context for 1st pass */
-	SHA1_Process(&context, k_ipad, 64);	/* start with inner pad */
-	SHA1_Process(&context, text, text_len);	/* then text of datagram */
-	SHA1_Final(&context, digest);		/* finish up 1st pass */
+	SHA1_Update(&context, k_ipad, 64);	/* start with inner pad */
+	SHA1_Update(&context, text, text_len);	/* then text of datagram */
+	SHA1_Final(digest, &context);		/* finish up 1st pass */
 #endif /* USE_MD5 */
 
 	/*
@@ -142,9 +142,9 @@ void sctp_hash_digest(char *key, int key_len, char *text, int text_len,
 	MD5Final(digest, &context);		/* finish up 2nd pass */
 #else
 	SHA1_Init(&context);			/* init context for 2nd pass */
-	SHA1_Process(&context, k_opad, 64);	/* start with outer pad */
-	SHA1_Process(&context, digest, 20);	/* then results of 1st hash */
-	SHA1_Final(&context, digest);		/* finish up 2nd pass */
+	SHA1_Update(&context, k_opad, 64);	/* start with outer pad */
+	SHA1_Update(&context, digest, 20);	/* then results of 1st hash */
+	SHA1_Final(digest, &context);		/* finish up 2nd pass */
 #endif /* USE_MD5 */
 }
 
@@ -175,8 +175,8 @@ void sctp_hash_digest_m(char *key, int key_len, struct mbuf *m, int offset,
 #else
 		struct sha1_context tctx;
 		SHA1_Init(&tctx);
-		SHA1_Process(&tctx, key, key_len);
-		SHA1_Final(&tctx, tk);
+		SHA1_Update(&tctx, key, key_len);
+		SHA1_Final(tk, &tctx);
 		key = tk;
 		key_len = 20;
 #endif /* USE_MD5 */
@@ -230,18 +230,18 @@ void sctp_hash_digest_m(char *key, int key_len, struct mbuf *m, int offset,
 	MD5Final(digest, &context);		/* finish up 1st pass */
 #else
 	SHA1_Init(&context);			/* init context for 1st pass */
-	SHA1_Process(&context, k_ipad, 64);	/* start with inner pad */
+	SHA1_Update(&context, k_ipad, 64);	/* start with inner pad */
 	/******/
 	while (m_at != NULL) {
 		/* then text of datagram */
-		SHA1_Process(&context, mtod(m_at, char *)+offset,
+		SHA1_Update(&context, mtod(m_at, char *)+offset,
 			     m_at->m_len-offset);
 		/* only offset on the first mbuf */
 		offset = 0;
 		m_at = m_at->m_next;
 	}
 	/******/
-	SHA1_Final(&context, digest);             /* finish up 1st pass */
+	SHA1_Final(digest, &context);             /* finish up 1st pass */
 #endif /* USE_MD5 */
 
 	/*
@@ -254,8 +254,8 @@ void sctp_hash_digest_m(char *key, int key_len, struct mbuf *m, int offset,
 	MD5Final(digest, &context);		/* finish up 2nd pass */
 #else
 	SHA1_Init(&context);			/* init context for 2nd pass */
-	SHA1_Process(&context, k_opad, 64);	/* start with outer pad */
-	SHA1_Process(&context, digest, 20);	/* then results of 1st hash */
-	SHA1_Final(&context, digest);		/* finish up 2nd pass */
+	SHA1_Update(&context, k_opad, 64);	/* start with outer pad */
+	SHA1_Update(&context, digest, 20);	/* then results of 1st hash */
+	SHA1_Final(digest, &context);		/* finish up 2nd pass */
 #endif /* USE_MD5 */
 }

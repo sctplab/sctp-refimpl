@@ -32,7 +32,13 @@
  * SUCH DAMAGE.
  */
 
-#if defined(_KERNEL) || (defined(__APPLE__) && defined(KERNEL))
+#if (defined(__APPLE__) && defined(KERNEL))
+#ifndef _KERNEL
+#define _KERNEL
+#endif
+#endif
+
+#if defined(_KERNEL)
 
 void sctp_early_fr_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	struct sctp_nets *net);
@@ -51,6 +57,9 @@ int  sctp_shutdown_timer(struct sctp_inpcb *, struct sctp_tcb *,
 	struct sctp_nets *);
 int  sctp_heartbeat_timer(struct sctp_inpcb *, struct sctp_tcb *,
 	struct sctp_nets *);
+
+int sctp_is_hb_timer_running(struct sctp_tcb *stcb);
+int sctp_is_sack_timer_running(struct sctp_tcb *stcb);
 
 int  sctp_cookie_timer(struct sctp_inpcb *, struct sctp_tcb *,
 	struct sctp_nets *);

@@ -33,13 +33,27 @@
  */
 
 
-#if defined(_KERNEL) || (defined(__APPLE__) && defined(KERNEL))
-int sctp_deliver_data(struct sctp_tcb *, struct sctp_association *,
-    struct sctp_tmit_chunk *, int);
+#if (defined(__APPLE__) && defined(KERNEL))
+#ifndef _KERNEL
+#define _KERNEL
+#endif
+#endif
+
+
+#if defined(_KERNEL)
+
+
+struct sctp_queued_to_read *
+sctp_build_readq_entry(struct sctp_tcb *stcb,
+		       struct sctp_nets *net,
+		       uint32_t tsn, uint32_t ppid,
+		       uint32_t context, uint16_t stream_no, 
+		       uint16_t stream_seq, uint8_t flags,
+		       struct mbuf *dm);
 
 struct mbuf *
-sctp_build_ctl_nchunk(struct sctp_tcb *stcb, uint32_t tsn, uint32_t ppid,
-		      uint32_t context, uint16_t stream_no, uint16_t stream_seq, uint8_t flags);
+sctp_build_ctl_nchunk(struct sctp_inpcb *inp,
+		      struct sctp_sndrcvinfo *sinfo);
 
 void sctp_set_rwnd(struct sctp_tcb *, struct sctp_association *);
 
@@ -53,7 +67,7 @@ void sctp_handle_forward_tsn(struct sctp_tcb *,
 struct sctp_tmit_chunk *
 sctp_try_advance_peer_ack_point(struct sctp_tcb *, struct sctp_association *);
 
-void sctp_service_queues(struct sctp_tcb *, struct sctp_association *, int have_lock);
+void sctp_service_queues(struct sctp_tcb *, struct sctp_association *);
 
 void sctp_update_acked(struct sctp_tcb *, struct sctp_shutdown_chunk *,
 	struct sctp_nets *, int *);

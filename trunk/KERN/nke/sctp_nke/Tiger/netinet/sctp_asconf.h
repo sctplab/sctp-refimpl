@@ -33,7 +33,14 @@
  */
 #include <sys/malloc.h>
 
-#if defined(_KERNEL) || (defined(__APPLE__) && defined(KERNEL))
+
+#if (defined(__APPLE__) && defined(KERNEL))
+#ifndef _KERNEL
+#define _KERNEL
+#endif
+#endif
+
+#if defined(_KERNEL)
 
 extern void sctp_asconf_cleanup(struct sctp_tcb *, struct sctp_nets *);
 
