@@ -3804,7 +3804,11 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 		    !authenticated) {
 			/* "silently" ignore */
 			sctp_pegs[SCTP_AUTH_MISSING]++;
-printf("Chunk %u requires AUTH, ignored\n", ch->chunk_type);			
+#ifdef SCTP_DEBUG	
+			if (sctp_debug_on & SCTP_DEBUG_AUTH1)
+				printf("Chunk %u requires AUTH, skipped\n",
+				       ch->chunk_type);
+#endif
 			goto next_chunk;
 		}
 #endif /* HAVE_SCTP_AUTH */
@@ -4250,7 +4254,6 @@ printf("Chunk %u requires AUTH, ignored\n", ch->chunk_type);
 			if (got_auth == 1) {
 				/* skip this chunk... it's already auth'd */
 				goto next_chunk;
-printf("multiple AUTH in one packet!\n");
 			}
 			ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, *offset,
 			    chk_length, chunk_buf);
