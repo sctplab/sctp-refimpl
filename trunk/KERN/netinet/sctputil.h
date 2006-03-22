@@ -220,7 +220,7 @@ void sctp_abort_an_association(struct sctp_inpcb *, struct sctp_tcb *, int,
 void sctp_handle_ootb(struct mbuf *, int, int, struct sctphdr *,
     struct sctp_inpcb *, struct mbuf *);
 
-int sctp_is_there_an_abort_here(struct mbuf *, int, int *);
+int sctp_is_there_an_abort_here(struct mbuf *, int, uint32_t *);
 uint32_t sctp_is_same_scope(struct sockaddr_in6 *, struct sockaddr_in6 *);
 struct sockaddr_in6 *sctp_recover_scope(struct sockaddr_in6 *,
 	struct sockaddr_in6 *);

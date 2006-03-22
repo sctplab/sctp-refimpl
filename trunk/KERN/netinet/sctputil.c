@@ -855,9 +855,9 @@ sctp_fill_random_store(struct sctp_pcb *m)
 	 * is random as well :->
 	 */
 	m->store_at = 0;
-	sctp_hash_digest((char *)m->random_numbers, sizeof(m->random_numbers),
-			 (char *)&m->random_counter, sizeof(m->random_counter),
-			 (char *)m->random_store);
+	sctp_hash_digest((char *)m->random_numbers, (int)sizeof(m->random_numbers),
+			 (char *)&m->random_counter, (int)sizeof(m->random_counter),
+			 (unsigned char *)m->random_store);
 	m->random_counter++;
 }
 
@@ -3185,7 +3185,7 @@ sctp_handle_ootb(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
  * inside it, if there is return 1, else return 0.
  */
 int
-sctp_is_there_an_abort_here(struct mbuf *m, int iphlen, int *vtagfill)
+sctp_is_there_an_abort_here(struct mbuf *m, int iphlen, uint32_t *vtagfill)
 {
 	struct sctp_chunkhdr *ch;
 	struct sctp_init_chunk *init_chk, chunk_buf;
