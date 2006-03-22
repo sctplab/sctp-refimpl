@@ -42,6 +42,7 @@
 #include <netinet/ip.h>
 #include <sys/protosw.h>
 #ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
+#include <netinet/ip.h>
 #include <sys/lock.h>
 #include <sys/domain.h>
 #else
