@@ -3946,6 +3946,10 @@ sctp_sorecvmsg(struct socket *so,
 		 */
 		if(stcb)
 			sinfo->sinfo_cumtsn = stcb->asoc.cumulative_tsn;
+		/* mask off the high bits, we keep the actual
+		 * chunk bits in there.
+		 */
+		sinfo->sinfo_flags &= 0x00ff;
 	}
 	if(fromlen && from) {
 		struct sockaddr *to;
@@ -4098,8 +4102,8 @@ sctp_sorecvmsg(struct socket *so,
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, control);
 			SCTP_DECR_READQ_COUNT();
 		}
-		if(out_flags & MSG_EOR) {
-			if(stcb) {
+		if(out_flags & MSG_EOR){
+			if((stcb) && (in_flags & MSG_PEEK) == 0){
 				sctp_user_rcvd(stcb, &freed_so_far);
 			}
 			goto release;
@@ -4118,7 +4122,7 @@ sctp_sorecvmsg(struct socket *so,
 		 */
 		if((block_allowed == 0) ||
 		   ((in_flags & MSG_WAITALL) == 0)){
-			if(stcb) {
+			if((stcb) && (in_flags & MSG_PEEK) == 0){
 				sctp_user_rcvd(stcb, &freed_so_far);
 			}
 			goto release;
@@ -4130,7 +4134,7 @@ sctp_sorecvmsg(struct socket *so,
 		 */
 
 		if(sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE)) {
-			if(stcb) {
+			if((stcb) && (in_flags & MSG_PEEK) == 0){
 				sctp_user_rcvd(stcb, &freed_so_far);
 			}
 			goto release;
@@ -4143,7 +4147,7 @@ sctp_sorecvmsg(struct socket *so,
 		 */
 
 		/* Tell the transport a rwnd update might be needed */
-		if(stcb) {
+		if((stcb) && (in_flags & MSG_PEEK) == 0){
 			sctp_user_rcvd(stcb, &freed_so_far);
 		}
 	wait_some_more:
