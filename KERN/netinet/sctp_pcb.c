@@ -4990,7 +4990,6 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			sctp_free_key(stcb->asoc.authinfo.peer_random);
 		    stcb->asoc.authinfo.peer_random =
 			sctp_set_key(random->random_data, keylen);
-sctp_print_key(stcb->asoc.authinfo.peer_random, "LOAD ADDRS: peer key");
 		    got_random = 1;
 		} else if (ptype == SCTP_HMAC_LIST) {
 		    uint8_t store[256];
@@ -5017,7 +5016,6 @@ sctp_print_key(stcb->asoc.authinfo.peer_random, "LOAD ADDRS: peer key");
 			}
 		    }
 		    got_hmacs = 1;
-printf("LOAD ADDRS: peer hmacs = %u\n", num_hmacs);
 		} else if (ptype == SCTP_CHUNK_LIST) {
 		    uint8_t store[384];
 		    struct sctp_auth_chunk_list *chunks;
@@ -5040,7 +5038,6 @@ printf("LOAD ADDRS: peer hmacs = %u\n", num_hmacs);
 			    sctp_auth_add_chunk(chunks->chunk_types[i],
 						stcb->asoc.peer_auth_chunks);
 		    }
-printf("LOAD ADDRS: peer auth chunks = %u\n", size);
 #endif /* HAVE_SCTP_AUTH */
 		} else if ((ptype == SCTP_HEARTBEAT_INFO) ||
 			   (ptype == SCTP_STATE_COOKIE) ||
