@@ -2550,7 +2550,7 @@ int sctp_recvmsg(td, uap)
 		ktruio = cloneuio(&auio);
 #endif
 	error = sctp_sorecvmsg(so, &auio, (struct mbuf **)NULL,
-			       fromsa, fromlen, &msg_flags, &sinfo);
+			       fromsa, fromlen, &msg_flags, &sinfo, 1);
 	if (error) {
 		if (auio.uio_resid != (int)len && (error == ERESTART ||
 		    error == EINTR || error == EWOULDBLOCK))
