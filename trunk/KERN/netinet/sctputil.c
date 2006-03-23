@@ -954,6 +954,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	} else {
 		asoc->my_vtag = sctp_select_a_tag(m);
 	}
+	asoc->assoc_up_sent = 0;
 	asoc->assoc_id = asoc->my_vtag;
 	asoc->asconf_seq_out = asoc->str_reset_seq_out = asoc->init_seq_number = asoc->sending_seq =
 		sctp_select_initial_TSN(&m->sctp_ep);
@@ -2885,9 +2886,16 @@ sctp_ulp_notify(u_int32_t notification, struct sctp_tcb *stcb,
 		/* Can't send up to a closed socket any notifications */
 		return;
 	}
+	if(stcb && (stcb->asoc.assoc_up_sent == 0) && (notification != SCTP_NOTIFY_ASSOC_UP)){
+		sctp_notify_assoc_change(SCTP_COMM_UP, stcb, 0, NULL);
+		stcb->asoc.assoc_up_sent = 1;
+	}
 	switch (notification) {
 	case SCTP_NOTIFY_ASSOC_UP:
-		sctp_notify_assoc_change(SCTP_COMM_UP, stcb, error, NULL);
+		if(stcb->asoc.assoc_up_sent == 0) {
+			sctp_notify_assoc_change(SCTP_COMM_UP, stcb, error, NULL);
+			stcb->asoc.assoc_up_sent = 1;
+		}
 		break;
 	case SCTP_NOTIFY_ASSOC_DOWN:
 		sctp_notify_assoc_change(SCTP_SHUTDOWN_COMP, stcb, error, NULL);
