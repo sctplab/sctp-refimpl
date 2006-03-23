@@ -4011,8 +4011,13 @@ printf("SCTP_AUTH_DELETE_KEY: deleting endpoint key id %u\n", scdel->scdel_keynu
 					/* we do NOT support turning it off (yet). only
 					 * setting the delay.
 					 */
-					if( paddrp->spp_sackdelay >= SCTP_CLOCK_GRANULARITY )
+					if(paddrp->spp_sackdelay >= SCTP_CLOCK_GRANULARITY )
 						stcb->asoc.delayed_ack = paddrp->spp_sackdelay;
+					else
+						stcb->asoc.delayed_ack = SCTP_CLOCK_GRANULARITY;
+
+				} else if(paddrp->spp_flags & SPP_SACKDELAY_DISABLE){
+					stcb->asoc.delayed_ack = 0;
 				}
 				/* do we change the timer for HB, we run only one? */
 				if(paddrp->spp_hbinterval)
@@ -4115,8 +4120,14 @@ printf("SCTP_AUTH_DELETE_KEY: deleting endpoint key id %u\n", scdel->scdel_keynu
 				if (paddrp->spp_hbinterval && (paddrp->spp_flags & SPP_HB_ENABLE) ) {
 					inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_HEARTBEAT] = MSEC_TO_TICKS(paddrp->spp_hbinterval);
 				}
-				if ((paddrp->spp_sackdelay > SCTP_CLOCK_GRANULARITY ) && (paddrp->spp_flags & SPP_SACKDELAY_ENABLE)) {
-					inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV] = MSEC_TO_TICKS(paddrp->spp_sackdelay);
+				if (paddrp->spp_flags & SPP_SACKDELAY_ENABLE) {
+					if(paddrp->spp_sackdelay > SCTP_CLOCK_GRANULARITY )
+						inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV] = MSEC_TO_TICKS(paddrp->spp_sackdelay);
+					else
+						inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV] = MSEC_TO_TICKS(SCTP_CLOCK_GRANULARITY);
+
+				} else if (paddrp->spp_flags & SPP_SACKDELAY_DISABLE) {
+					inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV] = 0;
 				}
 				SCTP_INP_WUNLOCK(inp);
 			}
