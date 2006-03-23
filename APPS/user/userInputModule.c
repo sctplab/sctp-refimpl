@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.36 2006-03-23 19:33:07 lei Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.37 2006-03-23 19:45:32 lei Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -211,7 +211,7 @@ static int cmd_getv4mapped(char *argv[], int argc);
 static int cmd_setv4mapped(char *argv[], int argc);
 
 static int cmd_addauth(char *argv[], int argc);
-static int cmd_setkey(char *argv[], int argc);
+static int cmd_addkey(char *argv[], int argc);
 static int cmd_deletekey(char *argv[], int argc);
 static int cmd_setactivekey(char *argv[], int argc);
 static int cmd_getactivekey(char *argv[], int argc);
@@ -507,8 +507,8 @@ static struct command commands[] = {
 
     {"addauth", "addauth - add a chunk(s) as requiring auth",
      cmd_addauth},
-    {"setkey", "setkey - set a shared key",
-     cmd_setkey},
+    {"addkey", "addkey - set a shared key",
+     cmd_addkey},
     {"deletekey", "deletekey - delete a shared key",
      cmd_deletekey},
     {"setactivekey", "setactivekey - set a shared key as active",
@@ -5330,14 +5330,14 @@ static int cmd_addauth(char *argv[], int argc) {
     return (0);
 }
 
-static int cmd_setkey(char *argv[], int argc) {
+static int cmd_addkey(char *argv[], int argc) {
 #if defined(__BSD_SCTP_STACK__)
     char optval[512];
     struct sctp_authkey *key;
     int keylen;
 
     if ((argc < 2) || (argc > 3)) {
-	printf("Expected: setkey <key_id> <key_text> [<optional assoc id>]\n");
+	printf("Expected: addkey <key_id> <key_text> [<optional assoc id>]\n");
 	return (-1);
     }
     bzero(optval, sizeof(optval));
