@@ -668,13 +668,14 @@
 				GCC_WARN_FOUR_CHARACTER_CONSTANTS = NO;
 				GCC_WARN_PEDANTIC = NO;
 				HEADER_SEARCH_PATHS = "$(SRCROOT)";
-				INSTALL_PATH = /usr/local/lib;
+				INSTALL_PATH = /usr/lib;
 				LIBRARY_STYLE = DYNAMIC;
-				MACH_O_TYPE = mh_dylib;
+				MACH_O_TYPE = staticlib;
 				OPTIMIZATION_CFLAGS = "-O0";
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "";
 				OTHER_REZFLAGS = "";
+				PREBINDING = NO;
 				PRODUCT_NAME = libsctp;
 				SECTORDER_FLAGS = "";
 				WARNING_CFLAGS = (
