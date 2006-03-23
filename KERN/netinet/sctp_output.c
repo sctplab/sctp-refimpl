@@ -6856,8 +6856,7 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 	}
 	/* if outchain is null, check our special reservation flag */
 	if ((outchain == NULL) && (insert_leading_mbuf_for_headers)) {
-		/* yep we need a lead mbuf in this one if
-		 * we don't have space for:
+		/* need a lead mbuf in this one if we don't have space for:
 		 * - E-net header (12+2+2)
 		 * - IP header (20/40)
 		 * - SCTP Common Header (12)
@@ -6865,7 +6864,8 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 		if (M_LEADINGSPACE(appendchain) < (SCTP_FIRST_MBUF_RESV)) {
 			MGETHDR(outchain, M_DONTWAIT, MT_HEADER);
 			if (outchain) {
-				/* if we don't hit here we have a problem anyway :o 
+				/* if we don't hit here we have a problem
+				 * anyway :o 
 				 * We reserve all the mbuf for prepends.
 				 */
 				outchain->m_data += (MHLEN - 8);
@@ -7065,7 +7065,8 @@ sctp_copy_out_all(struct uio *uio, int len)
 }
 
 static int
-sctp_sendall (struct sctp_inpcb *inp, struct uio *uio, struct mbuf *m, struct sctp_sndrcvinfo *srcv)
+sctp_sendall (struct sctp_inpcb *inp, struct uio *uio, struct mbuf *m,
+	      struct sctp_sndrcvinfo *srcv)
 {
 	int ret;
 	struct sctp_copy_all *ca;
@@ -7107,8 +7108,10 @@ sctp_sendall (struct sctp_inpcb *inp, struct uio *uio, struct mbuf *m, struct sc
 		ca->m = m;
 	}
 
-	ret = sctp_initiate_iterator(sctp_sendall_iterator, SCTP_PCB_ANY_FLAGS, SCTP_ASOC_ANY_STATE,
-				     (void *)ca, 0, sctp_sendall_completes, inp);
+	ret = sctp_initiate_iterator(sctp_sendall_iterator,
+				     SCTP_PCB_ANY_FLAGS, SCTP_ASOC_ANY_STATE,
+				     (void *)ca, 0,
+				     sctp_sendall_completes, inp);
 	if (ret) {
 #ifdef SCTP_DEBUG
 		printf("Failed to initate iterator to takeover associations\n");
@@ -7397,7 +7400,8 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb,
 			TAILQ_REMOVE(&tmp, chk, sctp_next);
 
 			sctp_ulp_notify(SCTP_NOTIFY_DG_FAIL, stcb,
-					(SCTP_NOTIFY_DATAGRAM_UNSENT|SCTP_INTERNAL_ERROR),
+					(SCTP_NOTIFY_DATAGRAM_UNSENT |
+					 SCTP_INTERNAL_ERROR),
 					chk);
 
 			if (chk->data) {
@@ -8070,9 +8074,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 					shdr->dest_port = stcb->rport;
 					shdr->v_tag = htonl(stcb->asoc.peer_vtag);
 					shdr->checksum = 0;
-#ifdef HAVE_SCTP_AUTH
 					auth_offset += sizeof(struct sctphdr);
-#endif /* HAVE_SCTP_AUTH */
 					if ((error = sctp_lowlevel_chunk_output(inp, stcb, net,
 										(struct sockaddr *)&net->ro._l_addr,
 										outchain, auth_offset, auth,
@@ -8364,9 +8366,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 			shdr->dest_port = stcb->rport;
 			shdr->v_tag = htonl(stcb->asoc.peer_vtag);
 			shdr->checksum = 0;
-#ifdef HAVE_SCTP_AUTH
 			auth_offset += sizeof(struct sctphdr);
-#endif /* HAVE_SCTP_AUTH */
 			if ((error = sctp_lowlevel_chunk_output(inp, stcb, net,
 								(struct sockaddr *)&net->ro._l_addr,
 								outchain,
@@ -8681,7 +8681,8 @@ sctp_send_heartbeat_ack(struct sctp_tcb *stcb,
 		u_int32_t cpthis=0;
 		int padlen;
 		padlen = 4 - (outchain->m_pkthdr.len % 4);
-		m_copyback(outchain, outchain->m_pkthdr.len, padlen, (caddr_t)&cpthis);
+		m_copyback(outchain, outchain->m_pkthdr.len, padlen,
+			   (caddr_t)&cpthis);
 	}
 	chk = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk);
 	if (chk == NULL) {
@@ -9088,9 +9089,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 		shdr->dest_port = stcb->rport;
 		shdr->v_tag = htonl(stcb->asoc.peer_vtag);
 		shdr->checksum = 0;
-#ifdef HAVE_SCTP_AUTH
 		auth_offset += sizeof(struct sctphdr);
-#endif /* HAVE_SCTP_AUTH */
 		chk->snd_count++;		/* update our count */
 
 		if ((error = sctp_lowlevel_chunk_output(inp, stcb, chk->whoTo,
@@ -9328,9 +9327,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 			shdr->dest_port = stcb->rport;
 			shdr->v_tag = htonl(stcb->asoc.peer_vtag);
 			shdr->checksum = 0;
-#ifdef HAVE_SCTP_AUTH
 			auth_offset += sizeof(struct sctphdr);
-#endif /* HAVE_SCTP_AUTH */
 			/* Now lets send it, if there is anything to send :> */
 			if ((error = sctp_lowlevel_chunk_output(inp, stcb, net,
 			    (struct sockaddr *)&net->ro._l_addr, m, auth_offset,
@@ -10614,25 +10611,36 @@ sctp_send_sack(struct sctp_tcb *stcb)
 	return;
 }
 
-/*
- * FIX ME: if TCB available, we can auth this
- */
+
 void
 sctp_send_abort_tcb(struct sctp_tcb *stcb, struct mbuf *operr)
 {
 	struct mbuf *m_abort;
-	struct sctp_abort_msg *abort_m;
+	struct mbuf *m_out = NULL, *m_end = NULL;
+	struct sctp_abort_chunk *abort = NULL;
 	int sz;
-	abort_m = NULL;
+	uint32_t auth_offset = 0;
+	struct sctp_auth_chunk *auth = NULL;
+	struct sctphdr *shdr;
+
+#ifdef HAVE_SCTP_AUTH
+	/*
+	 * Add an AUTH chunk, if chunk requires it and save the offset
+	 * into the chain for AUTH
+	 */
+	m_out = sctp_add_auth_chunk(m_out, &m_end, &auth, &auth_offset,
+				    stcb, SCTP_ABORT_ASSOCIATION);
+#endif /* HAVE_SCTP_AUTH */
+
 	STCB_TCB_LOCK_ASSERT(stcb);
 	MGETHDR(m_abort, M_DONTWAIT, MT_HEADER);
 	if (m_abort == NULL) {
 		/* no mbuf's */
+		if (m_out)
+			sctp_m_freem(m_out);
 		return;
 	}
-	m_abort->m_data += SCTP_MIN_OVERHEAD;
-	abort_m = mtod(m_abort, struct sctp_abort_msg *);
-	m_abort->m_len = sizeof(struct sctp_abort_msg);
+	/* link in any error */
 	m_abort->m_next = operr;
 	sz = 0;
 	if (operr) {
@@ -10643,21 +10651,42 @@ sctp_send_abort_tcb(struct sctp_tcb *stcb, struct mbuf *operr)
 			n = n->m_next;
 		}
 	}
-	abort_m->msg.ch.chunk_type = SCTP_ABORT_ASSOCIATION;
-	abort_m->msg.ch.chunk_flags = 0;
-	abort_m->msg.ch.chunk_length = htons(sizeof(struct sctp_abort_chunk) +
-					     sz);
-	abort_m->sh.src_port = stcb->sctp_ep->sctp_lport;
-	abort_m->sh.dest_port = stcb->rport;
-	abort_m->sh.v_tag = htonl(stcb->asoc.peer_vtag);
-	abort_m->sh.checksum = 0;
+	m_abort->m_len = sizeof(*abort);
 	m_abort->m_pkthdr.len = m_abort->m_len + sz;
 	m_abort->m_pkthdr.rcvif = 0;
+	if (m_out == NULL) {
+		/* NO Auth chunk prepended, so reserve space in front */
+		m_abort->m_data += SCTP_MIN_OVERHEAD;
+		m_out = m_abort;
+	} else {
+		/* Put AUTH chunk at the front of the chain */
+		m_out->m_pkthdr.len += m_abort->m_pkthdr.len;
+		m_end->m_next = m_abort;
+	}
+
+	/* fill in the ABORT chunk */
+	abort = mtod(m_abort, struct sctp_abort_chunk *);
+	abort->ch.chunk_type = SCTP_ABORT_ASSOCIATION;
+	abort->ch.chunk_flags = 0;
+	abort->ch.chunk_length = htons(sizeof(*abort) + sz);
+
+	/* prepend and fill in the SCTP header */
+	M_PREPEND(m_out, sizeof(struct sctphdr), M_DONTWAIT);
+	if (m_out == NULL) {
+		/* TSNH: no memory */
+		return;
+	}
+	shdr = mtod(m_out, struct sctphdr *);
+	shdr->src_port = stcb->sctp_ep->sctp_lport;
+	shdr->dest_port = stcb->rport;
+	shdr->v_tag = htonl(stcb->asoc.peer_vtag);
+	shdr->checksum = 0;
+	auth_offset += sizeof(struct sctphdr);
 
 	sctp_lowlevel_chunk_output(stcb->sctp_ep, stcb,
 	    stcb->asoc.primary_destination,
 	    (struct sockaddr *)&stcb->asoc.primary_destination->ro._l_addr,
-				   m_abort, 0, NULL, 1, 0, NULL, 0);
+	    m_out, auth_offset, auth, 1, 0, NULL, 0);
 }
 
 int
@@ -11964,8 +11993,8 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int *mbcnt, int *error, int wan
 
 
 static int
-sctp_copy_one(struct mbuf **mm, struct uio *uio, int cpsz, int resv_upfront, int *mbcnt, 
-	      int pad, struct mbuf **last_mbuf)
+sctp_copy_one(struct mbuf **mm, struct uio *uio, int cpsz, int resv_upfront,
+	      int *mbcnt, int pad, struct mbuf **last_mbuf)
 {
 	int left, cancpy, willcpy, error;
 	int first=1;
@@ -11974,7 +12003,8 @@ sctp_copy_one(struct mbuf **mm, struct uio *uio, int cpsz, int resv_upfront, int
 	*mm = NULL;
 	left = cpsz;
         /* First one gets a header */
-	head = m = sctp_get_mbuf_for_msg((left+resv_upfront+pad), mbcnt, &error, 1);
+	head = m = sctp_get_mbuf_for_msg((left+resv_upfront+pad), mbcnt,
+					 &error, 1);
 	if(m == NULL) {
 		return(error);
 	}
@@ -12014,7 +12044,8 @@ sctp_copy_one(struct mbuf **mm, struct uio *uio, int cpsz, int resv_upfront, int
 		m->m_nextpkt = 0;
 		left -= willcpy;
 		if (left > 0) {
-			m->m_next = sctp_get_mbuf_for_msg((left+pad), mbcnt, &error, 0);
+			m->m_next = sctp_get_mbuf_for_msg((left+pad), mbcnt,
+							  &error, 0);
 			if (m->m_next == NULL) {
 				/* the head goes back to caller, he
 				 * can free the rest 
@@ -13282,6 +13313,10 @@ sctp_add_auth_chunk (struct mbuf *m, struct mbuf **m_end,
 	/* no mbuf's */
 	return (m);
     }
+    /* reserve some space if this will be the first mbuf */
+    if (m == NULL)
+	m_auth->m_data += SCTP_MIN_OVERHEAD;
+    /* fill in the AUTH chunk details */
     auth = mtod(m_auth, struct sctp_auth_chunk *);
     bzero(auth, sizeof(*auth));
     auth->ch.chunk_type = SCTP_AUTHENTICATION;
@@ -13303,7 +13338,7 @@ sctp_add_auth_chunk (struct mbuf *m, struct mbuf **m_end,
     m = sctp_copy_mbufchain(m_auth, m, m_end, 1, 1);
     if (auth_ret != NULL)
 	*auth_ret = auth;
-printf("TEMP: add AUTH Chunk: added AUTH for chunk %u\n", chunk);
+
     return (m);
 }
 #endif /* HAVE_SCTP_AUTH */
