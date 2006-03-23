@@ -13267,15 +13267,13 @@ sctp_add_auth_chunk (struct mbuf *m, struct mbuf **m_end,
 	(stcb == NULL))
 	return (m);
 
+    /* peer doesn't do auth... */
     if (!stcb->asoc.peer_supports_auth) {
-printf("TEMP: add AUTH Chunk: peer doesn't support auth\n");
 	return (m);
     }
 
     /* does the requested chunk require auth? */
     if (!sctp_auth_is_required_chunk(chunk, stcb->asoc.peer_auth_chunks)) {
-printf("TEMP: add AUTH Chunk: auth not required for chunk %u\n",
-	chunk);	
 	return (m);
     }
 
