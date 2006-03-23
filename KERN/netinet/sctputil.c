@@ -3867,6 +3867,8 @@ sctp_sorecvmsg(struct socket *so,
 	if((in_flags & MSG_PEEK) && (mp != NULL)) {
 		return (EINVAL);
 	}
+	printf("Flags are %x\n", in_flags);
+
 	if((in_flags & (MSG_DONTWAIT 
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 			| MSG_NBIO
@@ -4011,6 +4013,9 @@ sctp_sorecvmsg(struct socket *so,
 				goto release;
 			}
 			if(cp_len == m->m_len) {
+				printf("cp_len:%d mbuf len:%d getting all, in_flags:%x\n",
+				       cp_len, m->m_len,
+				       in_flags);				       
 				if (m->m_flags & M_EOR)
 					out_flags |= MSG_EOR;
 				if (m->m_flags & M_NOTIFICATION)
@@ -4019,9 +4024,11 @@ sctp_sorecvmsg(struct socket *so,
 				/* we ate up the mbuf */
 				if(in_flags & MSG_PEEK) {
 					/* just looking */
+					printf("MSG_PEEK flag is set, skip to next mbuf\n");
 					m = m->m_next;
 				} else {
 					/* dispose of the mbuf */
+					printf("NO MSG_PEEK - eat the data\n");
 #ifdef SCTP_SB_LOGGING
 					sctp_sblog(&so->so_rcv, 
 						   stcb, SCTP_LOG_SBFREE, m->m_len);
@@ -4045,10 +4052,16 @@ sctp_sorecvmsg(struct socket *so,
 				}
 			} else {
 				/* Do we need to trim the mbuf? */
+				printf("cp_len:%d mbuf len:%d NOT GETTING ALL, in_flags:%x\n",
+				       cp_len, m->m_len,
+				       in_flags);				       
 				if (m->m_flags & M_NOTIFICATION)
 					out_flags |= MSG_NOTIFICATION;
 
 				if((in_flags & MSG_PEEK) == 0) {
+					printf("MSG_PEEK is OFF, eat it up! (partial) %d of %d\n",
+					       cp_len, m->m_len);
+
 					if(out_flags & MSG_NOTIFICATION) {
 						/* remark this one with 
 						 * the notify flag, they read
@@ -4078,6 +4091,8 @@ sctp_sorecvmsg(struct socket *so,
 			}
 			if((out_flags & MSG_EOR) ||
 			   (uio->uio_resid == 0)) {
+				printf("Breaking out_flags:%x uio_resid:%d\n",
+				       out_flags, uio->uio_resid);
 				break;
 			}
 		}
@@ -4088,6 +4103,7 @@ sctp_sorecvmsg(struct socket *so,
 		if((out_flags & MSG_EOR) &&
 		   ((in_flags & MSG_PEEK) == 0)) {
 			/* we are done with this control */
+			printf("No peek, clean up control\n");
 			if(control->data) {
 				panic("control->data not null at read eor?");
 			}
@@ -4103,14 +4119,18 @@ sctp_sorecvmsg(struct socket *so,
 			SCTP_DECR_READQ_COUNT();
 		}
 		if(out_flags & MSG_EOR){
+			printf("MSG EOR, we are done\n");
 			if((stcb) && (in_flags & MSG_PEEK) == 0){
+				printf("Call user rcv\n");
 				sctp_user_rcvd(stcb, &freed_so_far);
 			}
 			goto release;
 		}
 		if(uio->uio_resid == 0) {
 			/* got all we can */
-			if(stcb) {
+			printf("User buf exhausted\n");
+			if((stcb) && (in_flags & MSG_PEEK) == 0){
+				printf("Call user rcv\n");
 				sctp_user_rcvd(stcb, &freed_so_far);
 			}
 			goto release;
@@ -4125,6 +4145,7 @@ sctp_sorecvmsg(struct socket *so,
 			if((stcb) && (in_flags & MSG_PEEK) == 0){
 				sctp_user_rcvd(stcb, &freed_so_far);
 			}
+			printf("Can't wait for more\n");
 			goto release;
 		}
 		/* Here MSG_WAITALL is set and we are
@@ -4158,7 +4179,7 @@ sctp_sorecvmsg(struct socket *so,
 		if (so->so_error || so->so_state & SS_CANTRCVMORE) 
 			goto release;
 #endif
-		
+		printf("Off to sleep for more\n");
 		error = sbwait(&so->so_rcv);
 		if (error)
 			goto release;
@@ -4178,6 +4199,7 @@ sctp_sorecvmsg(struct socket *so,
 		goto get_more_data;
 	} else {
 		/* copy out the mbuf chain */
+		printf("In copy the mbuf chain?\n");
 	get_more_data2:
 		cp_len = uio->uio_resid;
 		if((uint32_t)cp_len >= control->length) {
