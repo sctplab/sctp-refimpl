@@ -777,7 +777,7 @@ struct sctp_association {
 	u_int8_t ifp_had_enobuf;
 	u_int8_t saw_sack_with_frags;
 	u_int8_t in_restart_hash;
-
+	u_int8_t assoc_up_sent;
         /* CMT variables */
         u_int8_t cmt_dac_pkts_rcvd;
 	/*
