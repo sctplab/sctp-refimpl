@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.16 2006-03-22 19:41:17 lei Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.17 2006-03-23 21:33:40 lei Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -260,8 +260,8 @@ handle_notification(int fd,char *notify_buf) {
 	  {
 	    struct sctp_adaption_event *ae;
 	    ae = &snp->sn_adaption_event;
-	    printf("\nSCTP_adaption_indication ind:0x%x\n",
-		   (uint32_t)ae->sai_adaption_ind);
+	    printf("SCTP_ADAPTION_INDICATION: assoc=%xh - indication:0x%x\n",
+		   (uint32_t)ae->sai_assoc_id, (uint32_t)ae->sai_adaption_ind);
 	  }
 	  break;
 	case SCTP_PARTIAL_DELIVERY_EVENT:
