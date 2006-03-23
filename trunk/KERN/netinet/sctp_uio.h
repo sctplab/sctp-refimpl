@@ -682,7 +682,8 @@ sctp_sorecvmsg(struct socket *so,
 	       struct sockaddr *from,
 	       int fromlen,
 	       int *msg_flags, 
-	       struct sctp_sndrcvinfo *sinfo);
+	       struct sctp_sndrcvinfo *sinfo,
+	       int filling_sinfo);
 #endif
 
 /*
