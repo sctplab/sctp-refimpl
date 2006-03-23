@@ -3821,7 +3821,8 @@ sctp_sorecvmsg(struct socket *so,
 	       struct sockaddr *from,
 	       int fromlen,
 	       int *msg_flags, 
-	       struct sctp_sndrcvinfo *sinfo)
+	       struct sctp_sndrcvinfo *sinfo,
+	       int filling_sinfo)
 {
 	/* MSG flags we will look at 
 	 * MSG_DONTWAIT - non-blocking IO.
@@ -3900,7 +3901,9 @@ sctp_sorecvmsg(struct socket *so,
 		so->so_rcv.sb_cc = 0;
 		goto restart;
 	}
-	if((control->length == 0) && sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE)) {
+	if((control->length == 0) && 
+	   (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE)) &&
+	    (filling_sinfo)) {
 		/* find a more suitable one then this */
 		ctl = TAILQ_NEXT(control, next);
 		while(ctl) {
@@ -3915,6 +3918,9 @@ sctp_sorecvmsg(struct socket *so,
 		 * <or> fragment interleave is NOT on. So stuff the sb_cc
 		 * into the our held count, and its time to sleep again.
 		 */
+		control->held_length += so->so_rcv.sb_cc;
+		goto restart;
+	} else if (control->length == 0){
 		control->held_length += so->so_rcv.sb_cc;
 		goto restart;
 	}
@@ -4335,8 +4341,21 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 	u_int8_t sockbuf[256];
 	struct sockaddr *from;
 	struct sctp_sndrcvinfo sinfo;
+	int filling_sinfo=1;
+	struct sctp_inpcb *inp;
 
+	inp = (struct sctp_inpcb *)so->so_pcb;
 	/* pickup the assoc we are reading from */
+	if(inp == NULL) {
+		return (EINVAL);
+	}
+	if ((sctp_is_feature_off(inp,
+				 SCTP_PCB_FLAGS_RECVDATAIOEVNT)) ||
+	    (controlp == NULL)) {
+		/* user does not want the sndrcv ctl */
+		filling_sinfo=0;
+	}
+
 	if(psa) {
 		from = (struct sockaddr *)sockbuf;
 		fromlen = sizeof(sockbuf);
@@ -4348,12 +4367,10 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	socket_lock(so, 1);
 #endif
-	error = sctp_sorecvmsg(so, uio, mp0, from, fromlen, flagsp, &sinfo);
+	error = sctp_sorecvmsg(so, uio, mp0, from, fromlen, flagsp, &sinfo, filling_sinfo);
 	if(controlp) {
 		/* copy back the sinfo in a CMSG format */
-		struct sctp_inpcb *inp;
 
-		inp = (struct sctp_inpcb *)so->so_pcb;
 		*controlp = sctp_build_ctl_nchunk(inp, &sinfo);
 	}
 	if(psa) {
