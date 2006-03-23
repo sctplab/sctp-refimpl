@@ -1,7 +1,7 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.35 2006-03-22 19:49:33 lei Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.36 2006-03-23 19:33:07 lei Exp $ */
 
 /*
- * Copyright (C) 2002 Cisco Systems Inc,
+ * Copyright (C) 2002-2006 Cisco Systems Inc,
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -505,7 +505,7 @@ static struct command commands[] = {
     {"whereto", "whereto - tell where the default sends",
      cmd_whereto},
 
-    {"addauth", "addauth - add a chunk as requiring auth",
+    {"addauth", "addauth - add a chunk(s) as requiring auth",
      cmd_addauth},
     {"setkey", "setkey - set a shared key",
      cmd_setkey},
@@ -5307,19 +5307,22 @@ cmd_whereto(char *argv[], int argc)
 static int cmd_addauth(char *argv[], int argc) {
 #if defined(__BSD_SCTP_STACK__)
     struct sctp_authchunk auth;
+    int count;
 
-    if (argc != 1) {
-	printf("Expected: addauth <chunk_type>\n");
+    if (argc < 1) {
+	printf("Expected: addauth <chunk_type> [<chunk_type> ...]\n");
 	return (-1);
     }
     bzero(&auth, sizeof(auth));
-    auth.sauth_chunk = (uint8_t)strtoul(argv[0], NULL, 0);
-    if (setsockopt(adap->fd, IPPROTO_SCTP, SCTP_AUTH_CHUNK,
-		   &auth, sizeof(auth)) != 0) {
-	printf("Can't add chunk %u, errno %d\n", auth.sauth_chunk, errno);
-	return (-1);
-    } else {
-	printf("Added chunk %u to required list\n", auth.sauth_chunk);
+    for (count=0; count < argc; count++) {
+	auth.sauth_chunk = (uint8_t)strtoul(argv[count], NULL, 0);
+	if (setsockopt(adap->fd, IPPROTO_SCTP, SCTP_AUTH_CHUNK,
+		       &auth, sizeof(auth)) != 0) {
+	    printf("Can't add chunk %u, errno %d\n", auth.sauth_chunk, errno);
+	    return (-1);
+	} else {
+	    printf("Added chunk %u to required list\n", auth.sauth_chunk);
+	}
     }
 #else
     printf("Not supported on this OS\n");
