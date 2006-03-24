@@ -2164,7 +2164,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	}
 #endif
 	if(*stcb) {
-		sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, inp,
+		sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, *inp_p,
 				 *stcb, NULL);
 	}
 
