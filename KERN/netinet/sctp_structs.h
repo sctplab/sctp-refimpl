@@ -718,6 +718,7 @@ struct sctp_association {
 	u_int8_t last_flags_delivered;
 	u_int8_t hb_ect_randombit;
         u_int8_t hb_random_idx;
+	u_int8_t hb_is_disabled; 	/* is the hb disabled? */
 	u_int8_t default_tos;
 
 	/* ECN Nonce stuff */

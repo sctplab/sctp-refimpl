@@ -954,6 +954,11 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	} else {
 		asoc->my_vtag = sctp_select_a_tag(m);
 	}
+	if(sctp_is_feature_on(m, SCTP_PCB_FLAGS_DONOT_HEARTBEAT))
+		asoc->hb_is_disabled = 1;
+	else	
+		asoc->hb_is_disabled = 0;
+
 	asoc->assoc_up_sent = 0;
 	asoc->assoc_id = asoc->my_vtag;
 	asoc->asconf_seq_out = asoc->str_reset_seq_out = asoc->init_seq_number = asoc->sending_seq =
@@ -1306,16 +1311,31 @@ sctp_timeout_handler(void *t)
 #endif
 		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_SHUT_TMR);
 		break;
-	case SCTP_TIMER_TYPE_HEARTBEAT:
-		if (sctp_heartbeat_timer(inp, stcb, net)) {
-			/* no need to unlock on tcb its gone */
-			goto out_decr;
+	case SCTP_TIMER_TYPE_HEARTBEAT: 
+	{
+		struct sctp_nets *net;
+		int cnt_of_unconf = 0;
+
+		TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
+			if ((net->dest_state & SCTP_ADDR_UNCONFIRMED) &&
+			    (net->dest_state & SCTP_ADDR_REACHABLE)) {
+				cnt_of_unconf++;
+			}
+		}
+		if(cnt_of_unconf == 0) {
+			if (sctp_heartbeat_timer(inp, stcb, net, cnt_of_unconf)) {
+				/* no need to unlock on tcb its gone */
+				goto out_decr;
+			}
 		}
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
 #endif
+		sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep,
+				 stcb, net);
 		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_HB_TMR);
-		break;
+	}
+	break;
 	case SCTP_TIMER_TYPE_COOKIE:
 		if (sctp_cookie_timer(inp, stcb, net)) {
 			/* no need to unlock on tcb its gone */
@@ -1561,6 +1581,10 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 					cnt_of_unconf++;
 				}
 			}
+			if(cnt_of_unconf) {
+				lnet = NULL;
+				sctp_heartbeat_timer(inp, stcb, lnet, cnt_of_unconf);
+			}
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_TIMER1) {
 				printf("HB timer to start unconfirmed:%d hb_delay:%d\n",
@@ -1583,10 +1607,9 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			 * this_random will be 0 - 256 ms
 			 * RTO is in ms.
 			 */
-			if ((stcb->asoc.heart_beat_delay == 0) &&
-			    (cnt_of_unconf == 0)) {
-				/* no HB on this inp after confirmations */
-				return (0);
+			if((stcb->asoc.hb_is_disabled) &&
+			   (cnt_of_unconf == 0)) {
+				return(0);
 			}
 			if (net) {
 				struct sctp_nets *lnet;
