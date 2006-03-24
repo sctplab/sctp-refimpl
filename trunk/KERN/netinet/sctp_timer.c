@@ -1494,9 +1494,8 @@ sctp_audit_stream_queues_for_size(struct sctp_inpcb *inp,
 
 int
 sctp_heartbeat_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
-    struct sctp_nets *net)
+    struct sctp_nets *net, int cnt_of_unconf)
 {
-	int cnt_of_unconf=0;
 	if (net) {
 		if (net->hb_responded == 0) {
 			sctp_backoff_on_timeout(stcb, net, 1, 0);
@@ -1506,32 +1505,32 @@ sctp_heartbeat_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			net->partial_bytes_acked = 0;
 		}
 	}
-	TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
-		if ((net->dest_state & SCTP_ADDR_UNCONFIRMED) &&
-		    (net->dest_state & SCTP_ADDR_REACHABLE)) {
-			cnt_of_unconf++;
-		}
-	}
 	if ((stcb->asoc.total_output_queue_size > 0) &&
 	    (TAILQ_EMPTY(&stcb->asoc.send_queue)) &&
 	    (TAILQ_EMPTY(&stcb->asoc.sent_queue))) {
 		sctp_audit_stream_queues_for_size(inp, stcb);
 	}
 	/* Send a new HB, this will do threshold managment, pick a new dest */
-	if (sctp_send_hb(stcb, 0, NULL) < 0) {
-		return (1);
-	}
-	if (cnt_of_unconf > 1) {
+	if (cnt_of_unconf == 0) {
+		if (sctp_send_hb(stcb, 0, NULL) < 0) {
+			return (1);
+		}
+	} else {
 		/*
 		 * this will send out extra hb's up to maxburst if
 		 * there are any unconfirmed addresses.
 		 */
-		int cnt_sent = 1;
-		while ((cnt_sent < stcb->asoc.max_burst) && (cnt_of_unconf > 1)) {
-			if (sctp_send_hb(stcb, 0, NULL) == 0)
-				break;
-			cnt_of_unconf--;
-			cnt_sent++;
+		int cnt_sent = 0;
+		TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
+			if ((net->dest_state & SCTP_ADDR_UNCONFIRMED) &&
+			    (net->dest_state & SCTP_ADDR_REACHABLE)) {
+				cnt_sent++;
+				if (sctp_send_hb(stcb, 1, net) == 0) {
+					break;
+				}
+				if(cnt_sent >= stcb->asoc.max_burst)
+					break;
+			}
 		}
 	}
 	return (0);

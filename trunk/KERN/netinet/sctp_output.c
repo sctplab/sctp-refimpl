@@ -9489,6 +9489,7 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 	struct sctp_association *asoc;
 	struct sctp_nets *net;
 	int error, num_out, tot_out, ret, reason_code, burst_cnt, burst_limit;
+	int sending_one_packet=0;
 	struct timeval now;
 	int now_filled=0;
 	int cwnd_full=0;
@@ -9631,6 +9632,13 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 
 	}
 	/* Fill up what we can to the destination */
+	if (sctp_is_feature_off(inp,SCTP_PCB_FLAGS_NODELAY) &&
+	    (from_where == SCTP_OUTPUT_FROM_USR_SEND)) {
+		/* Nagle is on, and we want only one
+		 * packet to be sent to EACH destination.
+ 		 */
+	 	sending_one_packet = 1;
+	}
 	burst_cnt = 0;
 	cwnd_full = 0;
 	do {
@@ -9671,6 +9679,9 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 			sctp_log_cwnd(stcb, NULL, reason_code, SCTP_SEND_NOW_COMPLETES);
 		}
 #endif
+	 	if(sending_one_packet) {
+			break;
+		}
 	} while (num_out && (sctp_use_cwnd_based_maxburst  || 
 			     (burst_cnt < burst_limit)));
 
@@ -11120,11 +11131,6 @@ sctp_send_hb(struct sctp_tcb *stcb, int user_req, struct sctp_nets *u_net)
 	 * always tumble out control chunks aka HB but it may even tumble
 	 * out data too.
 	 */
-	if (user_req == 0) {
-		/* Ok now lets start the HB timer if it is NOT a user req */
-		sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep,
-				 stcb, net);
-	}
 	return (1);
 }
 
