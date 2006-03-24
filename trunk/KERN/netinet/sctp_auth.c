@@ -663,12 +663,13 @@ sctp_copy_sharedkey (const sctp_sharedkey_t *skey)
     sctp_sharedkey_t *new_skey;
 
     if (skey == NULL)
-	return;
+	return(NULL);
     new_skey = sctp_alloc_sharedkey();
     if (new_skey == NULL)
-	return;
+	return(NULL);
     new_skey->key = sctp_set_key(skey->key->key, skey->key->keylen);
     new_skey->keyid = skey->keyid;
+    return(new_skey);
 }
 
 int
