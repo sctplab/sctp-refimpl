@@ -146,6 +146,8 @@ extern sctp_sharedkey_t *sctp_find_sharedkey(struct sctp_keyhead *shared_keys,
 					     uint16_t key_id);
 extern void sctp_insert_sharedkey(struct sctp_keyhead *shared_keys,
 				  sctp_sharedkey_t *new_skey);
+extern int sctp_copy_skeylist(const struct sctp_keyhead *src,
+			      struct sctp_keyhead *dest);
 
 /* hmac list handling */
 extern sctp_hmaclist_t *sctp_alloc_hmaclist(uint8_t num_hmacs);

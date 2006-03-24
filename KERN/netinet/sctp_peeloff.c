@@ -79,6 +79,9 @@
 #include <netinet/sctp_var.h>
 #include <netinet/sctp_peeloff.h>
 #include <netinet/sctputil.h>
+#ifdef HAVE_SCTP_AUTH
+#include <netinet/sctp_auth.h>
+#endif /* HAVE_SCTP_AUTH */
 
 #ifdef IPSEC
 #ifndef __OpenBSD__
@@ -205,6 +208,23 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 	    SCTP_PCB_FLAGS_IN_TCPPOOL | /* Turn on Blocking IO */
 	    (SCTP_PCB_COPY_FLAGS & inp->sctp_flags));
 	n_inp->sctp_features = inp->sctp_features;
+
+#ifdef HAVE_SCTP_AUTH
+	/* copy in the authentication parameters from the original endpoint */
+printf("Peeloff copying in auth parameters to new endpoint\n");
+	n_inp->sctp_ep.disable_authkey0 = inp->sctp_ep.disable_authkey0;
+	if (n_inp->sctp_ep.local_hmacs)
+	    sctp_free_hmaclist(n_inp->sctp_ep.local_hmacs);
+	n_inp->sctp_ep.local_hmacs =
+		sctp_copy_hmaclist(inp->sctp_ep.local_hmacs);
+	if (n_inp->sctp_ep.local_auth_chunks)
+		sctp_free_chunklist(n_inp->sctp_ep.local_auth_chunks);
+	n_inp->sctp_ep.local_auth_chunks =
+		sctp_copy_chunklist(inp->sctp_ep.local_auth_chunks);
+	(void)sctp_copy_skeylist(&inp->sctp_ep.shared_keys,
+				 &n_inp->sctp_ep.shared_keys);
+#endif /* HAVE_SCTP_AUTH */
+
 	n_inp->sctp_socket = newso;
 	/* Turn off any non-blocking semantic. */
 	newso->so_state &= ~SS_NBIO;
@@ -401,4 +421,3 @@ out:
 #endif /* __APPLE__ */
 
 #endif /* HAVE_SCTP_PEELOFF_SOCKOPT */
-
