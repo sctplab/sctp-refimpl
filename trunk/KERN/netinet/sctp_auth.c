@@ -657,6 +657,39 @@ sctp_insert_sharedkey (struct sctp_keyhead *shared_keys,
     }
 }
 
+static sctp_sharedkey_t *
+sctp_copy_sharedkey (const sctp_sharedkey_t *skey)
+{
+    sctp_sharedkey_t *new_skey;
+
+    if (skey == NULL)
+	return;
+    new_skey = sctp_alloc_sharedkey();
+    if (new_skey == NULL)
+	return;
+    new_skey->key = sctp_set_key(skey->key->key, skey->key->keylen);
+    new_skey->keyid = skey->keyid;
+}
+
+int
+sctp_copy_skeylist (const struct sctp_keyhead *src, struct sctp_keyhead *dest)
+{
+    sctp_sharedkey_t *skey, *new_skey;
+    int count = 0;
+
+    if ((src == NULL) || (dest == NULL))
+	return (0);
+    LIST_FOREACH(skey, src, next) {
+	new_skey = sctp_copy_sharedkey(skey);
+	if (new_skey != NULL) {
+	    sctp_insert_sharedkey(dest, new_skey);
+	    count++;
+	}
+    }
+    return (count);
+}
+
+
 sctp_hmaclist_t *
 sctp_alloc_hmaclist (uint8_t num_hmacs)
 {
@@ -1653,7 +1686,7 @@ sctp_handle_auth (struct sctp_tcb *stcb, struct sctp_auth_chunk *auth,
     /* is the indicated HMAC supported? */
     if (!sctp_auth_is_supported_hmac(stcb->asoc.local_hmacs, hmac_id)) {
 	struct mbuf *m_err;
-	struct sctp_paramhdr *phdr;
+	struct sctp_auth_invalid_hmac *err;
 
 	sctp_pegs[SCTP_AUTH_HMAC_ID_INVAL]++;
 #ifdef SCTP_DEBUG
@@ -1666,9 +1699,12 @@ sctp_handle_auth (struct sctp_tcb *stcb, struct sctp_auth_chunk *auth,
 	    /* pre-reserve some space */
 	    m_err->m_data += sizeof(struct sctp_chunkhdr);
 	    /* fill in the error */
-	    phdr = mtod(m_err, struct sctp_paramhdr *);
-	    phdr->param_type = htons(SCTP_CAUSE_UNSUPPORTED_HMACID);
-	    phdr->param_length = htons(sizeof(*phdr));
+	    err = mtod(m_err, struct sctp_auth_invalid_hmac *);
+	    bzero(err, sizeof(*err));
+	    err->ph.param_type = htons(SCTP_CAUSE_UNSUPPORTED_HMACID);
+	    err->ph.param_length = htons(sizeof(*err));
+	    err->hmac_id = hmac_id;
+	    m_err->m_pkthdr.len = m_err->m_len = sizeof(*err);
 	    /* queue it */
 	    sctp_queue_op_err(stcb, m_err);
 	}
