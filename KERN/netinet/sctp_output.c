@@ -9637,7 +9637,7 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 		/* Nagle is on, and we want only one
 		 * packet to be sent to EACH destination.
  		 */
-	 	sending_one_packet = 1;
+ 	 	sending_one_packet = 1;
 	}
 	burst_cnt = 0;
 	cwnd_full = 0;
