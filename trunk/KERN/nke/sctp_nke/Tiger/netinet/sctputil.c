@@ -954,6 +954,12 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	} else {
 		asoc->my_vtag = sctp_select_a_tag(m);
 	}
+	if(sctp_is_feature_on(m, SCTP_PCB_FLAGS_DONOT_HEARTBEAT))
+		asoc->hb_is_disabled = 1;
+	else	
+		asoc->hb_is_disabled = 0;
+
+	asoc->assoc_up_sent = 0;
 	asoc->assoc_id = asoc->my_vtag;
 	asoc->asconf_seq_out = asoc->str_reset_seq_out = asoc->init_seq_number = asoc->sending_seq =
 		sctp_select_initial_TSN(&m->sctp_ep);
@@ -1305,16 +1311,31 @@ sctp_timeout_handler(void *t)
 #endif
 		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_SHUT_TMR);
 		break;
-	case SCTP_TIMER_TYPE_HEARTBEAT:
-		if (sctp_heartbeat_timer(inp, stcb, net)) {
-			/* no need to unlock on tcb its gone */
-			goto out_decr;
+	case SCTP_TIMER_TYPE_HEARTBEAT: 
+	{
+		struct sctp_nets *net;
+		int cnt_of_unconf = 0;
+
+		TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
+			if ((net->dest_state & SCTP_ADDR_UNCONFIRMED) &&
+			    (net->dest_state & SCTP_ADDR_REACHABLE)) {
+				cnt_of_unconf++;
+			}
+		}
+		if(cnt_of_unconf == 0) {
+			if (sctp_heartbeat_timer(inp, stcb, net, cnt_of_unconf)) {
+				/* no need to unlock on tcb its gone */
+				goto out_decr;
+			}
 		}
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
 #endif
+		sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep,
+				 stcb, net);
 		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_HB_TMR);
-		break;
+	}
+	break;
 	case SCTP_TIMER_TYPE_COOKIE:
 		if (sctp_cookie_timer(inp, stcb, net)) {
 			/* no need to unlock on tcb its gone */
@@ -1560,6 +1581,10 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 					cnt_of_unconf++;
 				}
 			}
+			if(cnt_of_unconf) {
+				lnet = NULL;
+				sctp_heartbeat_timer(inp, stcb, lnet, cnt_of_unconf);
+			}
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_TIMER1) {
 				printf("HB timer to start unconfirmed:%d hb_delay:%d\n",
@@ -1582,10 +1607,9 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			 * this_random will be 0 - 256 ms
 			 * RTO is in ms.
 			 */
-			if ((stcb->asoc.heart_beat_delay == 0) &&
-			    (cnt_of_unconf == 0)) {
-				/* no HB on this inp after confirmations */
-				return (0);
+			if((stcb->asoc.hb_is_disabled) &&
+			   (cnt_of_unconf == 0)) {
+				return(0);
 			}
 			if (net) {
 				struct sctp_nets *lnet;
@@ -2885,9 +2909,16 @@ sctp_ulp_notify(u_int32_t notification, struct sctp_tcb *stcb,
 		/* Can't send up to a closed socket any notifications */
 		return;
 	}
+	if(stcb && (stcb->asoc.assoc_up_sent == 0) && (notification != SCTP_NOTIFY_ASSOC_UP)){
+		sctp_notify_assoc_change(SCTP_COMM_UP, stcb, 0, NULL);
+		stcb->asoc.assoc_up_sent = 1;
+	}
 	switch (notification) {
 	case SCTP_NOTIFY_ASSOC_UP:
-		sctp_notify_assoc_change(SCTP_COMM_UP, stcb, error, NULL);
+		if(stcb->asoc.assoc_up_sent == 0) {
+			sctp_notify_assoc_change(SCTP_COMM_UP, stcb, error, NULL);
+			stcb->asoc.assoc_up_sent = 1;
+		}
 		break;
 	case SCTP_NOTIFY_ASSOC_DOWN:
 		sctp_notify_assoc_change(SCTP_SHUTDOWN_COMP, stcb, error, NULL);
@@ -3821,7 +3852,8 @@ sctp_sorecvmsg(struct socket *so,
 	       struct sockaddr *from,
 	       int fromlen,
 	       int *msg_flags, 
-	       struct sctp_sndrcvinfo *sinfo)
+	       struct sctp_sndrcvinfo *sinfo,
+	       int filling_sinfo)
 {
 	/* MSG flags we will look at 
 	 * MSG_DONTWAIT - non-blocking IO.
@@ -3900,7 +3932,9 @@ sctp_sorecvmsg(struct socket *so,
 		so->so_rcv.sb_cc = 0;
 		goto restart;
 	}
-	if((control->length == 0) && sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE)) {
+	if((control->length == 0) && 
+	   (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE)) &&
+	    (filling_sinfo)) {
 		/* find a more suitable one then this */
 		ctl = TAILQ_NEXT(control, next);
 		while(ctl) {
@@ -3915,6 +3949,9 @@ sctp_sorecvmsg(struct socket *so,
 		 * <or> fragment interleave is NOT on. So stuff the sb_cc
 		 * into the our held count, and its time to sleep again.
 		 */
+		control->held_length += so->so_rcv.sb_cc;
+		goto restart;
+	} else if (control->length == 0){
 		control->held_length += so->so_rcv.sb_cc;
 		goto restart;
 	}
@@ -3932,6 +3969,10 @@ sctp_sorecvmsg(struct socket *so,
 		 */
 		if(stcb)
 			sinfo->sinfo_cumtsn = stcb->asoc.cumulative_tsn;
+		/* mask off the high bits, we keep the actual
+		 * chunk bits in there.
+		 */
+		sinfo->sinfo_flags &= 0x00ff;
 	}
 	if(fromlen && from) {
 		struct sockaddr *to;
@@ -4031,6 +4072,7 @@ sctp_sorecvmsg(struct socket *so,
 					out_flags |= MSG_NOTIFICATION;
 
 				if((in_flags & MSG_PEEK) == 0) {
+
 					if(out_flags & MSG_NOTIFICATION) {
 						/* remark this one with 
 						 * the notify flag, they read
@@ -4084,15 +4126,15 @@ sctp_sorecvmsg(struct socket *so,
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, control);
 			SCTP_DECR_READQ_COUNT();
 		}
-		if(out_flags & MSG_EOR) {
-			if(stcb) {
+		if(out_flags & MSG_EOR){
+			if((stcb) && (in_flags & MSG_PEEK) == 0){
 				sctp_user_rcvd(stcb, &freed_so_far);
 			}
 			goto release;
 		}
 		if(uio->uio_resid == 0) {
 			/* got all we can */
-			if(stcb) {
+			if((stcb) && (in_flags & MSG_PEEK) == 0){
 				sctp_user_rcvd(stcb, &freed_so_far);
 			}
 			goto release;
@@ -4104,7 +4146,7 @@ sctp_sorecvmsg(struct socket *so,
 		 */
 		if((block_allowed == 0) ||
 		   ((in_flags & MSG_WAITALL) == 0)){
-			if(stcb) {
+			if((stcb) && (in_flags & MSG_PEEK) == 0){
 				sctp_user_rcvd(stcb, &freed_so_far);
 			}
 			goto release;
@@ -4116,7 +4158,7 @@ sctp_sorecvmsg(struct socket *so,
 		 */
 
 		if(sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE)) {
-			if(stcb) {
+			if((stcb) && (in_flags & MSG_PEEK) == 0){
 				sctp_user_rcvd(stcb, &freed_so_far);
 			}
 			goto release;
@@ -4129,7 +4171,7 @@ sctp_sorecvmsg(struct socket *so,
 		 */
 
 		/* Tell the transport a rwnd update might be needed */
-		if(stcb) {
+		if((stcb) && (in_flags & MSG_PEEK) == 0){
 			sctp_user_rcvd(stcb, &freed_so_far);
 		}
 	wait_some_more:
@@ -4140,7 +4182,6 @@ sctp_sorecvmsg(struct socket *so,
 		if (so->so_error || so->so_state & SS_CANTRCVMORE) 
 			goto release;
 #endif
-		
 		error = sbwait(&so->so_rcv);
 		if (error)
 			goto release;
@@ -4335,8 +4376,21 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 	u_int8_t sockbuf[256];
 	struct sockaddr *from;
 	struct sctp_sndrcvinfo sinfo;
+	int filling_sinfo=1;
+	struct sctp_inpcb *inp;
 
+	inp = (struct sctp_inpcb *)so->so_pcb;
 	/* pickup the assoc we are reading from */
+	if(inp == NULL) {
+		return (EINVAL);
+	}
+	if ((sctp_is_feature_off(inp,
+				 SCTP_PCB_FLAGS_RECVDATAIOEVNT)) ||
+	    (controlp == NULL)) {
+		/* user does not want the sndrcv ctl */
+		filling_sinfo=0;
+	}
+
 	if(psa) {
 		from = (struct sockaddr *)sockbuf;
 		fromlen = sizeof(sockbuf);
@@ -4348,12 +4402,10 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	socket_lock(so, 1);
 #endif
-	error = sctp_sorecvmsg(so, uio, mp0, from, fromlen, flagsp, &sinfo);
+	error = sctp_sorecvmsg(so, uio, mp0, from, fromlen, flagsp, &sinfo, filling_sinfo);
 	if(controlp) {
 		/* copy back the sinfo in a CMSG format */
-		struct sctp_inpcb *inp;
 
-		inp = (struct sctp_inpcb *)so->so_pcb;
 		*controlp = sctp_build_ctl_nchunk(inp, &sinfo);
 	}
 	if(psa) {

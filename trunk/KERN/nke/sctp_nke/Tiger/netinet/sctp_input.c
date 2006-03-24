@@ -1255,8 +1255,6 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			}
 			/* notify upper layer */
 			*notification = SCTP_NOTIFY_ASSOC_UP;
-			sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb,
-			    net);
 			/*
 			 * since we did not send a HB make sure we don't double
 			 * things
@@ -1317,7 +1315,6 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net);
 		sctp_timer_stop(SCTP_TIMER_TYPE_INIT, inp, stcb, net);
 		sctp_stop_all_cookie_timers(stcb);
-		sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net);
 		/*
 		 * since we did not send a HB make sure we don't double things
 		 */
@@ -1447,7 +1444,6 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			return (NULL);
 		}
 
-		sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net);
 		/*
 		 * since we did not send a HB make sure we don't double things
 		 */
@@ -1731,7 +1727,6 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		 */
 		stcb->sctp_ep->sctp_flags |= SCTP_PCB_FLAGS_CONNECTED;
 		soisconnected(stcb->sctp_ep->sctp_socket);
-		sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, *netp);
 	} else if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 		   (inp->sctp_socket->so_qlimit)) {
 		/*
@@ -1740,8 +1735,6 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		 * get started for accepted connections in the caller.
 		 */
 		;
-	} else {
-		sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, *netp);
 	}
 	/* since we did not send a HB make sure we don't double things */
 	(*netp)->hb_responded = 1;
@@ -2170,6 +2163,10 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		printf("Could not add source address for some reason\n");
 	}
 #endif
+	if(*stcb) {
+		sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, *inp_p,
+				 *stcb, NULL);
+	}
 
 	if ((*inp_p)->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) {
 		if (!had_a_existing_tcb ||
@@ -2242,8 +2239,6 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			/* Switch over to the new guy */
 			*inp_p = inp;
 
-			sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, inp,
-			    *stcb, *netp);
 
 			sctp_ulp_notify(notification, *stcb, 0, NULL);
 			return (m);
@@ -3804,7 +3799,11 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 		    !authenticated) {
 			/* "silently" ignore */
 			sctp_pegs[SCTP_AUTH_MISSING]++;
-printf("Chunk %u requires AUTH, ignored\n", ch->chunk_type);			
+#ifdef SCTP_DEBUG	
+			if (sctp_debug_on & SCTP_DEBUG_AUTH1)
+				printf("Chunk %u requires AUTH, skipped\n",
+				       ch->chunk_type);
+#endif
 			goto next_chunk;
 		}
 #endif /* HAVE_SCTP_AUTH */
@@ -4250,7 +4249,6 @@ printf("Chunk %u requires AUTH, ignored\n", ch->chunk_type);
 			if (got_auth == 1) {
 				/* skip this chunk... it's already auth'd */
 				goto next_chunk;
-printf("multiple AUTH in one packet!\n");
 			}
 			ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, *offset,
 			    chk_length, chunk_buf);
@@ -4466,6 +4464,25 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		}
 #endif /* SCTP_DEBUG */
 
+#ifdef HAVE_SCTP_AUTH
+		/*
+		 * if DATA only packet, and auth is required, then punt...
+		 * can't have authenticated without any AUTH (control) chunks
+		 */
+		if ((stcb != NULL) &&
+		    sctp_auth_is_required_chunk(SCTP_DATA,
+						stcb->asoc.local_auth_chunks)) {
+			/* "silently" ignore */
+			sctp_pegs[SCTP_AUTH_MISSING]++;
+#ifdef SCTP_DEBUG	
+			if (sctp_debug_on & SCTP_DEBUG_AUTH1)
+				printf("Data only packet requires AUTH, skipped\n");
+#endif
+			SCTP_TCB_UNLOCK(stcb);
+			return (1);
+		}
+#endif /* HAVE_SCTP_AUTH */
+
 		if (stcb == NULL) {
 			/* out of the blue DATA chunk */
 			sctp_handle_ootb(m, iphlen, offset, sh, inp, NULL);
@@ -4498,6 +4515,26 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 	 */
 	/* plow through the data chunks while length > offset */
 	stcb->asoc.seen_a_sack_this_pkt = 0;
+
+#ifdef HAVE_SCTP_AUTH
+	/*
+	 * Rest should be DATA only.  Check authentication state if AUTH
+	 * for DATA is required.
+	 */
+	if ((stcb != NULL) &&
+	    sctp_auth_is_required_chunk(SCTP_DATA,
+					stcb->asoc.local_auth_chunks) &&
+	    !stcb->asoc.authenticated) {
+		/* "silently" ignore */
+		sctp_pegs[SCTP_AUTH_MISSING]++;
+#ifdef SCTP_DEBUG	
+		if (sctp_debug_on & SCTP_DEBUG_AUTH1)
+			printf("Data chunk requires AUTH, skipped\n");
+#endif
+		SCTP_TCB_UNLOCK(stcb);
+		return (1);
+	}
+#endif /* HAVE_SCTP_AUTH */
 
 	if (length > offset) {
 		int retval;
