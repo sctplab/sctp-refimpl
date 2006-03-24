@@ -4469,6 +4469,25 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		}
 #endif /* SCTP_DEBUG */
 
+#ifdef HAVE_SCTP_AUTH
+		/*
+		 * if DATA only packet, and auth is required, then punt...
+		 * can't have authenticated without any AUTH (control) chunks
+		 */
+		if ((stcb != NULL) &&
+		    sctp_auth_is_required_chunk(SCTP_DATA,
+						stcb->asoc.local_auth_chunks)) {
+			/* "silently" ignore */
+			sctp_pegs[SCTP_AUTH_MISSING]++;
+#ifdef SCTP_DEBUG	
+			if (sctp_debug_on & SCTP_DEBUG_AUTH1)
+				printf("Data only packet requires AUTH, skipped\n");
+#endif
+			SCTP_TCB_UNLOCK(stcb);
+			return (1);
+		}
+#endif /* HAVE_SCTP_AUTH */
+
 		if (stcb == NULL) {
 			/* out of the blue DATA chunk */
 			sctp_handle_ootb(m, iphlen, offset, sh, inp, NULL);
@@ -4501,6 +4520,26 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 	 */
 	/* plow through the data chunks while length > offset */
 	stcb->asoc.seen_a_sack_this_pkt = 0;
+
+#ifdef HAVE_SCTP_AUTH
+	/*
+	 * Rest should be DATA only.  Check authentication state if AUTH
+	 * for DATA is required.
+	 */
+	if ((stcb != NULL) &&
+	    sctp_auth_is_required_chunk(SCTP_DATA,
+					stcb->asoc.local_auth_chunks) &&
+	    !stcb->asoc.authenticated) {
+		/* "silently" ignore */
+		sctp_pegs[SCTP_AUTH_MISSING]++;
+#ifdef SCTP_DEBUG	
+		if (sctp_debug_on & SCTP_DEBUG_AUTH1)
+			printf("Data chunk requires AUTH, skipped\n");
+#endif
+		SCTP_TCB_UNLOCK(stcb);
+		return (1);
+	}
+#endif /* HAVE_SCTP_AUTH */
 
 	if (length > offset) {
 		int retval;
