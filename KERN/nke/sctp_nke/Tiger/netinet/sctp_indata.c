@@ -2190,6 +2190,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 			    ((was_a_gap) && (is_a_gap == 0)) || /* was a gap, but no longer is one */
 			    (stcb->asoc.numduptsns) ||		/* we have dup's */
 			    (is_a_gap) ||			/* is still a gap */
+			    (stcb->asoc.delayed_ack == 0) ||
 			    (callout_pending(&stcb->asoc.dack_timer.timer)) /* timer was up . second packet */
 				) {
 

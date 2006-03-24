@@ -718,6 +718,7 @@ struct sctp_association {
 	u_int8_t last_flags_delivered;
 	u_int8_t hb_ect_randombit;
         u_int8_t hb_random_idx;
+	u_int8_t hb_is_disabled; 	/* is the hb disabled? */
 	u_int8_t default_tos;
 
 	/* ECN Nonce stuff */
@@ -777,7 +778,7 @@ struct sctp_association {
 	u_int8_t ifp_had_enobuf;
 	u_int8_t saw_sack_with_frags;
 	u_int8_t in_restart_hash;
-
+	u_int8_t assoc_up_sent;
         /* CMT variables */
         u_int8_t cmt_dac_pkts_rcvd;
 	/*

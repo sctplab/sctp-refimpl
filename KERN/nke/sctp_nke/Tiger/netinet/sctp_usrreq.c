@@ -4011,8 +4011,13 @@ printf("SCTP_AUTH_DELETE_KEY: deleting endpoint key id %u\n", scdel->scdel_keynu
 					/* we do NOT support turning it off (yet). only
 					 * setting the delay.
 					 */
-					if( paddrp->spp_sackdelay >= SCTP_CLOCK_GRANULARITY )
+					if(paddrp->spp_sackdelay >= SCTP_CLOCK_GRANULARITY )
 						stcb->asoc.delayed_ack = paddrp->spp_sackdelay;
+					else
+						stcb->asoc.delayed_ack = SCTP_CLOCK_GRANULARITY;
+
+				} else if(paddrp->spp_flags & SPP_SACKDELAY_DISABLE){
+					stcb->asoc.delayed_ack = 0;
 				}
 				/* do we change the timer for HB, we run only one? */
 				if(paddrp->spp_hbinterval)
@@ -4070,13 +4075,15 @@ printf("SCTP_AUTH_DELETE_KEY: deleting endpoint key id %u\n", scdel->scdel_keynu
 						stcb->asoc.def_net_failure = paddrp->spp_pathmaxrxt;
 
 					if ( paddrp->spp_flags & SPP_HB_ENABLE ) {
-						/* Turn back on the timer */
+						/* Turn back on the timer */	
+						stcb->asoc.hb_is_disabled = 0;
 						sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net);
 					}
 
 					if ( paddrp->spp_flags & SPP_HB_DISABLE ) {		
 						int cnt_of_unconf = 0;
 						struct sctp_nets *lnet;
+						stcb->asoc.hb_is_disabled = 1;
 						TAILQ_FOREACH(lnet, &stcb->asoc.nets, sctp_next) {
 							if (lnet->dest_state & SCTP_ADDR_UNCONFIRMED) {
 								cnt_of_unconf++;
@@ -4086,8 +4093,6 @@ printf("SCTP_AUTH_DELETE_KEY: deleting endpoint key id %u\n", scdel->scdel_keynu
 						 */
 						if (cnt_of_unconf == 0) {
 							sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net);
-						} else {
-							error = EADDRINUSE;
 						}
 					}
 					if ( paddrp->spp_flags & SPP_HB_ENABLE ) {
@@ -4112,11 +4117,20 @@ printf("SCTP_AUTH_DELETE_KEY: deleting endpoint key id %u\n", scdel->scdel_keynu
 				if (paddrp->spp_pathmaxrxt) {
 					inp->sctp_ep.def_net_failure = paddrp->spp_pathmaxrxt;
 				}
-				if (paddrp->spp_hbinterval && (paddrp->spp_flags & SPP_HB_ENABLE) ) {
+				if (paddrp->spp_flags & SPP_HB_ENABLE) {
 					inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_HEARTBEAT] = MSEC_TO_TICKS(paddrp->spp_hbinterval);
+					sctp_feature_off(inp, SCTP_PCB_FLAGS_DONOT_HEARTBEAT);
+				} else if (paddrp->spp_flags & SPP_HB_DISABLE){
+					sctp_feature_on(inp, SCTP_PCB_FLAGS_DONOT_HEARTBEAT);
 				}
-				if ((paddrp->spp_sackdelay > SCTP_CLOCK_GRANULARITY ) && (paddrp->spp_flags & SPP_SACKDELAY_ENABLE)) {
-					inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV] = MSEC_TO_TICKS(paddrp->spp_sackdelay);
+				if (paddrp->spp_flags & SPP_SACKDELAY_ENABLE) {
+					if(paddrp->spp_sackdelay > SCTP_CLOCK_GRANULARITY )
+						inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV] = MSEC_TO_TICKS(paddrp->spp_sackdelay);
+					else
+						inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV] = MSEC_TO_TICKS(SCTP_CLOCK_GRANULARITY);
+
+				} else if (paddrp->spp_flags & SPP_SACKDELAY_DISABLE) {
+					inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV] = 0;
 				}
 				SCTP_INP_WUNLOCK(inp);
 			}
