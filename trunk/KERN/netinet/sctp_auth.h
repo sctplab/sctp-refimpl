@@ -54,6 +54,7 @@
 #define SCTP_AUTH_RANDOM_SIZE_DEFAULT	32
 #define SCTP_AUTH_RANDOM_SIZE_MAX	256
 
+
 /* union of all supported HMAC algorithm contexts */
 typedef union sctp_hash_context {
     SHA1_CTX	sha1;
@@ -103,14 +104,16 @@ typedef struct sctp_authinfo {
 
 
 /*
+ * global variables
+ */
+extern uint32_t sctp_auth_disable;	/* sysctl for temp feature interop */
+extern uint32_t sctp_auth_random_len;	/* sysctl */
+
+/*
  * function prototypes
  */
 /* random number generation */
 extern void sctp_read_random(void *buffer, uint32_t bytes);
-
-int
-sctp_auth_is_supported_hmac (sctp_hmaclist_t *list, uint16_t id);
-
 
 /* socket option api functions */
 extern sctp_auth_chklist_t *sctp_alloc_chunklist(void);
@@ -134,8 +137,8 @@ extern sctp_key_t *sctp_alloc_key(uint32_t keylen);
 extern void sctp_free_key(sctp_key_t *key);
 extern void sctp_print_key(sctp_key_t *key, const char *str);
 extern void sctp_show_key(sctp_key_t *key, const char *str);
-extern sctp_key_t *sctp_generate_random_key(int keylen);
-extern sctp_key_t *sctp_set_key(uint8_t *key, int keylen);
+extern sctp_key_t *sctp_generate_random_key(uint32_t keylen);
+extern sctp_key_t *sctp_set_key(uint8_t *key, uint32_t keylen);
 extern sctp_key_t *sctp_compute_hashkey(sctp_key_t *key1, sctp_key_t *key2,	
 					sctp_key_t *shared);
 
@@ -174,6 +177,8 @@ extern int sctp_verify_hmac(uint16_t hmac_algo, uint8_t *key, uint32_t keylen,
 extern uint32_t sctp_compute_hmac(uint16_t hmac_algo, sctp_key_t *key,
 				  const uint8_t *text, uint32_t textlen,
 				  uint8_t *digest);
+extern int sctp_auth_is_supported_hmac (sctp_hmaclist_t *list, uint16_t id);
+
 /* mbuf versions */
 extern uint32_t sctp_hmac_m(uint16_t hmac_algo, uint8_t *key, uint32_t keylen,
 			    struct mbuf *m, uint32_t m_offset, uint8_t *digest);

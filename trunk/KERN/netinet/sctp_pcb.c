@@ -1570,6 +1570,9 @@ sctp_inpcb_alloc(struct socket *so)
 #endif
 	struct sctp_pcb *m;
 	struct timeval time;
+#ifdef HAVE_SCTP_AUTH
+	sctp_sharedkey_t *null_key;
+#endif /* HAVE_SCTP_AUTH */
 
 	error = 0;
 
@@ -1803,12 +1806,16 @@ sctp_inpcb_alloc(struct socket *so)
 	m->def_cookie_life = sctp_valid_cookie_life_default;
 
 #ifdef HAVE_SCTP_AUTH
-	/* Initialize authentication parameters */
-	m->disable_authkey0 = 0;
-	LIST_INIT(&m->shared_keys);
+	/*
+	 * Initialize authentication parameters
+	 */
 	m->local_hmacs = sctp_default_supported_hmaclist();
 	m->local_auth_chunks = sctp_alloc_chunklist();
 	sctp_auth_set_default_chunks(m->local_auth_chunks);
+	LIST_INIT(&m->shared_keys);
+	/* add default NULL key as key id 0 */
+	null_key = sctp_alloc_sharedkey();
+	sctp_insert_sharedkey(&m->shared_keys, null_key);
 #endif /* HAVE_SCTP_AUTH */
 
 	SCTP_INP_WUNLOCK(inp);

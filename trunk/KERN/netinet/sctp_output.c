@@ -5746,7 +5746,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	int p_len;
 
 	/* generate and add RANDOM parameter */
-	random_key = sctp_generate_random_key(SCTP_AUTH_RANDOM_SIZE_DEFAULT);
+	random_key = sctp_generate_random_key(sctp_auth_random_len);
 	random = (struct sctp_auth_random *)(mtod(m, caddr_t) + m->m_len);
 	random->ph.param_type = htons(SCTP_RANDOM);
 	p_len = sizeof(*random) + random_key->keylen;
@@ -9989,7 +9989,7 @@ sctp_output(inp, m, addr, control, p, flags)
 		 */
 		/* generate a RANDOM for this assoc */
 		asoc->authinfo.random =
-			sctp_generate_random_key(SCTP_AUTH_RANDOM_SIZE_DEFAULT);
+			sctp_generate_random_key(sctp_auth_random_len);
 		/* initialize hmac list from endpoint */
 		asoc->local_hmacs =
 			sctp_copy_hmaclist(inp->sctp_ep.local_hmacs);
@@ -9998,7 +9998,6 @@ sctp_output(inp, m, addr, control, p, flags)
 			sctp_copy_chunklist(inp->sctp_ep.local_auth_chunks);
 		/* copy defaults from the endpoint */
 		asoc->authinfo.assoc_keyid = inp->sctp_ep.default_keyid;
-		asoc->disable_authkey0 = inp->sctp_ep.disable_authkey0;
 #endif /* HAVE_SCTP_AUTH */
 
 		if (control) {
@@ -12993,7 +12992,7 @@ sctp_lower_sosend(struct socket *so,
 		 */
 		/* generate a RANDOM for this assoc */
 		asoc->authinfo.random =
-			sctp_generate_random_key(SCTP_AUTH_RANDOM_SIZE_DEFAULT);
+			sctp_generate_random_key(sctp_auth_random_len);
 		/* initialize hmac list from endpoint */
 		asoc->local_hmacs =
 			sctp_copy_hmaclist(inp->sctp_ep.local_hmacs);
@@ -13002,7 +13001,6 @@ sctp_lower_sosend(struct socket *so,
 			sctp_copy_chunklist(inp->sctp_ep.local_auth_chunks);
 		/* copy defaults from the endpoint */
 		asoc->authinfo.assoc_keyid = inp->sctp_ep.default_keyid;
-		asoc->disable_authkey0 = inp->sctp_ep.disable_authkey0;
 #endif /* HAVE_SCTP_AUTH */
 
 		if (control) {

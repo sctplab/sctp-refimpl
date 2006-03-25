@@ -655,7 +655,6 @@ struct sctp_association {
 	struct sctp_keyhead  shared_keys;	/* assoc's shared keys */
 	sctp_authinfo_t      authinfo;		/* randoms, cached keys */
 	uint16_t             peer_hmac_id;	/* peer HMAC id to send */
-	uint8_t              disable_authkey0;	/* disable null key id 0 */
 	uint8_t              authenticated;	/* packet authenticated ok */
 #endif /* HAVE_SCTP_AUTH */
 
