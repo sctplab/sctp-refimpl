@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.17 2006-03-23 21:33:40 lei Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.18 2006-03-25 07:23:34 lei Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -188,9 +188,11 @@ handle_notification(int fd,char *notify_buf) {
 		case SCTP_AUTH_NEWKEY:
 			printf("AUTH_NEWKEY");
 			break;
+#if 0
 		case SCTP_KEY_CONFLICT:
 			printf("KEY_CONFLICT");
 			break;
+#endif
 		default:
 			printf("Indication 0x%x", auth->auth_indication);
 		}

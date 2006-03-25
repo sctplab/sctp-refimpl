@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.37 2006-03-23 19:45:32 lei Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.38 2006-03-25 07:23:34 lei Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -4258,6 +4258,7 @@ cmd_restorefd(char *argv[], int argc)
 static int
 cmd_peeloff(char *argv[], int argc)
 {
+#if defined(__BSD_SCTP_STACK__) 
   sctp_assoc_t assoc_id;
   int newfd;
   if(adap->model & SCTP_TCP_TYPE){
@@ -4269,15 +4270,18 @@ cmd_peeloff(char *argv[], int argc)
     printf("Can't find association\n");
     return(-1);
   }
-  printf("Peel off fd:%d assoc_id:%xh\n",
+  printf("Peeling off fd:%d assoc_id:%xh\n",
 	 adap->fd,(uint32_t)assoc_id);
-  /*newfd = sctp_peeloff(adap->fd,&assoc_id); */
+  newfd = sctp_peeloff(adap->fd, assoc_id);
   if(newfd < 0){
     printf("Peel-off failed errno:%d\n",errno);
   }else{
-    printf("Peeled off fd is now set to %d\n",newfd);
+    printf("Peeled off fd is %d\n",newfd);
     dist_addFd(adap->o,newfd,sctpFdInput,POLLIN,(void *)adap);
   }
+#else
+  printf("Not supported on this OS\n");
+#endif
   return(0);
 }
 #endif /* !SCTP_NO_TCP_MODEL */
@@ -5366,27 +5370,27 @@ static int cmd_addkey(char *argv[], int argc) {
 
 static int cmd_deletekey(char *argv[], int argc) {
 #if defined(__BSD_SCTP_STACK__)
-    struct sctp_authdeletekey key;
+    struct sctp_authkeyid key;
 
     if ((argc < 1) || (argc > 2)) {
 	printf("Expected: deletekey <key_id> [<optional assoc id>]\n");
 	return (-1);
     }
     bzero(&key, sizeof(key));
-    key.scdel_keynumber = (uint32_t)strtoul(argv[0], NULL, 0);
+    key.scact_keynumber = (uint32_t)strtoul(argv[0], NULL, 0);
     /* use the optional assoc id, if given */
     if (argc == 2)
-	key.scdel_assoc_id = (uint32_t)strtoul(argv[1], NULL, 0);
+	key.scact_assoc_id = (uint32_t)strtoul(argv[1], NULL, 0);
     else
-	key.scdel_assoc_id = get_assoc_id();
+	key.scact_assoc_id = get_assoc_id();
 
     if (setsockopt(adap->fd, IPPROTO_SCTP, SCTP_AUTH_DELETE_KEY, &key,
 		   sizeof(key)) != 0) {
-	printf("Can't delete key id %u, errno %d\n", key.scdel_keynumber,
+	printf("Can't delete key id %u, errno %d\n", key.scact_keynumber,
 	       errno);
 	return (-1);
     } else {
-	printf("Deleted key id %u\n", key.scdel_keynumber);
+	printf("Deleted key id %u\n", key.scact_keynumber);
     }
 #else
     printf("Not supported on this OS\n");
@@ -5396,7 +5400,7 @@ static int cmd_deletekey(char *argv[], int argc) {
 
 static int cmd_setactivekey(char *argv[], int argc) {
 #if defined(__BSD_SCTP_STACK__)
-    struct sctp_authactivekey key;
+    struct sctp_authkeyid key;
 
     if ((argc < 1) || (argc > 2)) {
 	printf("Expected: setactivekey <key_id> [<optional assoc id>]\n");
@@ -5426,7 +5430,7 @@ static int cmd_setactivekey(char *argv[], int argc) {
 
 static int cmd_getactivekey(char *argv[], int argc) {
 #if defined(__BSD_SCTP_STACK__)
-    struct sctp_authactivekey key;
+    struct sctp_authkeyid key;
     int optlen;
 
     if (argc > 1) {
