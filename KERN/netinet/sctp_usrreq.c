@@ -3432,7 +3432,6 @@ sctp_optsset(struct socket *so,
 	} else if (sca->sca_assoc_id) {
 	    stcb = sctp_findassociation_ep_asocid(inp, sca->sca_assoc_id);
 	    if (stcb == NULL) {
-printf("SCTP_AUTH_KEY: can't find assoc id %xh\n", sca->sca_assoc_id);
 		error = ENOENT;
 		break;
 	    }
@@ -3445,7 +3444,7 @@ printf("SCTP_AUTH_KEY: can't find assoc id %xh\n", sca->sca_assoc_id);
 	    sctp_clear_cachedkeys(stcb, sca->sca_keynumber);
 	    /* create the new shared key and insert/replace it */
 	    if (size > 0) {
-		key = sctp_set_key(sca->sca_key, size);
+		key = sctp_set_key(sca->sca_key, (uint32_t)size);
 		if (key == NULL) {
 		    error = ENOMEM;
 		    SCTP_TCB_UNLOCK(stcb);
@@ -3463,17 +3462,21 @@ printf("SCTP_AUTH_KEY: can't find assoc id %xh\n", sca->sca_assoc_id);
 	    shared_key->keyid = sca->sca_keynumber;
 	    sctp_insert_sharedkey(shared_keys, shared_key);
 	    SCTP_TCB_UNLOCK(stcb);
-printf("SCTP_AUTH_KEY: adding assoc key id %u, assoc %xh\n",
-       shared_key->keyid, sctp_get_associd(stcb));
+#ifdef SCTP_DEBUG
+	    if (sctp_debug_on & SCTP_DEBUG_AUTH1) {
+		printf("SCTP_AUTH_KEY: adding assoc key id %u, len %u, assoc %xh\n",
+		       shared_key->keyid, size, sctp_get_associd(stcb));
+	    }
+#endif /* SCTP_DEBUG */
 	} else {
-	    /* set it on the endpoint */
+	    /* ste it on the endpoint */
 	    SCTP_INP_WLOCK(inp);
 	    shared_keys = &inp->sctp_ep.shared_keys;
 	    /* clear the cached keys on all assocs for this key id */
 	    sctp_clear_cachedkeys_ep(inp, sca->sca_keynumber);
 	    /* create the new shared key and insert/replace it */
 	    if (size > 0) {
-		key = sctp_set_key(sca->sca_key, size);
+		key = sctp_set_key(sca->sca_key, (uint32_t)size);
 		if (key == NULL) {
 		    error = ENOMEM;
 		    SCTP_INP_WUNLOCK(inp);
@@ -3491,7 +3494,12 @@ printf("SCTP_AUTH_KEY: adding assoc key id %u, assoc %xh\n",
 	    shared_key->keyid = sca->sca_keynumber;
 	    sctp_insert_sharedkey(shared_keys, shared_key);
 	    SCTP_INP_WUNLOCK(inp);
-printf("SCTP_AUTH_KEY: adding endpoint key id %u\n", shared_key->keyid);
+#ifdef SCTP_DEBUG
+	    if (sctp_debug_on & SCTP_DEBUG_AUTH1) {
+		printf("SCTP_AUTH_KEY: adding endpoint key id %u, len %u\n",
+		       shared_key->keyid, size);
+	    }
+#endif /* SCTP_DEBUG */
 	}
 	break;
     }
@@ -3541,7 +3549,6 @@ printf("SCTP_AUTH_KEY: adding endpoint key id %u\n", shared_key->keyid);
 	} else if (scact->scact_assoc_id) {
 	    stcb = sctp_findassociation_ep_asocid(inp, scact->scact_assoc_id);
 	    if (stcb == NULL) {
-printf("SCTP_AUTH_ACTIVE_KEY: can't find assoc id %xh\n", scact->scact_assoc_id);
 		error = ENOENT;
 		break;
 	    }
@@ -3552,15 +3559,24 @@ printf("SCTP_AUTH_ACTIVE_KEY: can't find assoc id %xh\n", scact->scact_assoc_id)
 	    if (sctp_auth_setactivekey(stcb, scact->scact_keynumber))
 		error = EINVAL;
 	    SCTP_TCB_UNLOCK(stcb);
-printf("SCTP_AUTH_ACTIVE_KEY: setting key id %u active for assoc %xh\n",
-       scact->scact_keynumber, sctp_get_associd(stcb));
+#ifdef SCTP_DEBUG
+	    if (sctp_debug_on & SCTP_DEBUG_AUTH1) {
+		printf("SCTP_AUTH_ACTIVE_KEY: setting key id %u active for assoc %xh\n",
+		       scact->scact_keynumber, sctp_get_associd(stcb));
+	    }
+#endif /* SCTP_DEBUG */
 	} else {
 	    /* set the active key on the endpoint */
 	    SCTP_INP_WLOCK(inp);
 	    if (sctp_auth_setactivekey_ep(inp, scact->scact_keynumber))
 		error = EINVAL;
 	    SCTP_INP_WUNLOCK(inp);
-printf("SCTP_AUTH_ACTIVE_KEY: setting default endpoint key id %u\n", scact->scact_keynumber);
+#ifdef SCTP_DEBUG
+	    if (sctp_debug_on & SCTP_DEBUG_AUTH1) {
+		printf("SCTP_AUTH_ACTIVE_KEY: setting default endpoint key id %u\n",
+		       scact->scact_keynumber);
+	    }
+#endif /* SCTP_DEBUG */
 	}
 	break;
     }
@@ -3583,7 +3599,6 @@ printf("SCTP_AUTH_ACTIVE_KEY: setting default endpoint key id %u\n", scact->scac
 	} else if (scdel->scact_assoc_id) {
 	    stcb = sctp_findassociation_ep_asocid(inp, scdel->scact_assoc_id);
 	    if (stcb == NULL) {
-printf("SCTP_AUTH_DELETE_KEY: can't find assoc id %xh\n", scdel->scact_assoc_id);
 		error = ENOENT;
 		break;
 	    }
@@ -3593,14 +3608,23 @@ printf("SCTP_AUTH_DELETE_KEY: can't find assoc id %xh\n", scdel->scact_assoc_id)
 	    if (sctp_delete_sharedkey(stcb, scdel->scact_keynumber))
 		error = EINVAL;
 	    SCTP_TCB_UNLOCK(stcb);
-printf("SCTP_AUTH_DELETE_KEY: deleting key id %u from assoc %xh\n",
-       scdel->scact_keynumber, sctp_get_associd(stcb));
+#ifdef SCTP_DEBUG
+	    if (sctp_debug_on & SCTP_DEBUG_AUTH1) {
+		printf("SCTP_AUTH_DELETE_KEY: deleting key id %u from assoc %xh\n",
+		       scdel->scact_keynumber, sctp_get_associd(stcb));
+	    }
+#endif /* SCTP_DEBUG */
 	} else {
 	    SCTP_INP_WLOCK(inp);
 	    if (sctp_delete_sharedkey_ep(inp, scdel->scact_keynumber))
 		error = EINVAL;
 	    SCTP_INP_WUNLOCK(inp);
-printf("SCTP_AUTH_DELETE_KEY: deleting endpoint key id %u\n", scdel->scact_keynumber);
+#ifdef SCTP_DEBUG
+	    if (sctp_debug_on & SCTP_DEBUG_AUTH1) {
+		printf("SCTP_AUTH_DELETE_KEY: deleting endpoint key id %u\n",
+		       scdel->scact_keynumber);
+	    }
+#endif /* SCTP_DEBUG */
 	}
 	break;
     }
@@ -4825,9 +4849,7 @@ sctp_listen(struct socket *so, struct proc *p)
 	}
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 #if __FreeBSD_version > 600000
-	/* It appears for 6.0 and on, we must
-	 * always call this.
-	 */
+	/* It appears for 6.0 and on, we must always call this. */
 	solisten_proto(so, backlog);
 #else
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE) == 0) {

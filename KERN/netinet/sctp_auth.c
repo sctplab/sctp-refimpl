@@ -670,7 +670,10 @@ sctp_copy_sharedkey (const sctp_sharedkey_t *skey)
     new_skey = sctp_alloc_sharedkey();
     if (new_skey == NULL)
 	return (NULL);
-    new_skey->key = sctp_set_key(skey->key->key, skey->key->keylen);
+    if (skey->key != NULL)
+	new_skey->key = sctp_set_key(skey->key->key, skey->key->keylen);
+    else
+	new_skey->key = NULL;
     new_skey->keyid = skey->keyid;
     return (new_skey);
 }
@@ -690,8 +693,8 @@ sctp_copy_skeylist (const struct sctp_keyhead *src, struct sctp_keyhead *dest)
 	    count++;
 	}
     }
-    return (count);
 printf("sctp_copy_skeylist copied %u keys\n", count);
+    return (count);
 }
 
 
