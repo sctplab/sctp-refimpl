@@ -11984,7 +11984,6 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int *mbcnt, int *error, int wan
 			*error = ENOMEM;
 			return(NULL);
 		}
-		printf("Attached a cluster of %d bytes\n", m->m_ext.ext_size);
 		*mbcnt += m->m_ext.ext_size;
 	}
 	*mbcnt += MSIZE;

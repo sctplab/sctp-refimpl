@@ -693,7 +693,7 @@ sctp_copy_skeylist (const struct sctp_keyhead *src, struct sctp_keyhead *dest)
 	    count++;
 	}
     }
-printf("sctp_copy_skeylist copied %u keys\n", count);
+/*printf("sctp_copy_skeylist copied %u keys\n", count);*/
     return (count);
 }
 
