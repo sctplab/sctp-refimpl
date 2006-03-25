@@ -159,6 +159,8 @@
 #include <netinet/sctp_auth.h>
 #endif /* HAVE_SCTP_AUTH */
 
+extern int sctp_warm_the_crc32_table;
+
 #define NUMBER_OF_MTU_SIZES 18
 
 #ifdef SCTP_DEBUG
@@ -169,7 +171,6 @@ extern u_int32_t sctp_debug_on;
 int sctp_cwnd_log_at=0;
 int sctp_cwnd_log_rolled=0;
 struct sctp_cwnd_log sctp_clog[SCTP_STAT_LOG_SIZE];
-
 
 static uint32_t sctp_get_time_of_event(void)
 {
@@ -2111,7 +2112,10 @@ sctp_calculate_sum(struct mbuf *m, int32_t *pktlen, uint32_t offset)
 		offset -= at->m_len;	/* update remaining offset left */
 		at = at->m_next;
 	}
-
+#ifndef SCTP_USE_ADLER32
+	if(sctp_warm_the_crc32_table)
+		sctp_warm_tables();
+#endif
 	while (at != NULL) {
 #ifdef SCTP_USE_ADLER32
 		base = update_adler32(base, 

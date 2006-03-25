@@ -153,6 +153,7 @@ int sctp_peer_chunk_oh = sizeof(struct mbuf);
 int sctp_max_burst_default = SCTP_DEF_MAX_BURST;
 int sctp_use_cwnd_based_maxburst = 1;
 int sctp_do_drain = 1;
+int sctp_warm_the_crc32_table=0;
 
 unsigned int sctp_max_chunks_on_queue = SCTP_ASOC_MAX_CHUNKS_ON_QUEUE;
 unsigned int sctp_delayed_sack_time_default = SCTP_RECV_MSEC;
@@ -784,6 +785,9 @@ SYSCTL_INT(_net_inet_sctp, OID_AUTO, do_sctp_drain , CTLFLAG_RW,
 	    &sctp_do_drain, 0,
 	    "Should SCTP respond to the drain calls");
 
+SYSCTL_INT(_net_inet_sctp, OID_AUTO, warm_crc_table , CTLFLAG_RW,
+	    &sctp_warm_the_crc32_table, 0,
+	    "Should the CRC32c tables be warmed before checksum?");
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, early_fast_retran, CTLFLAG_RW,
 	    &sctp_early_fr, 0,
@@ -5512,6 +5516,9 @@ sctp_sysctl(name, namelen, oldp, oldlenp, newp, newlen)
 	case SCTPCTL_DO_DRAIN:
  		return (sysctl_int(oldp, oldlenp, newp, newlen,
 				   &sctp_do_drain));
+	case SCTPCTL_WARM_CRC32:
+ 		return (sysctl_int(oldp, oldlenp, newp, newlen,
+				   &sctp_warm_the_crc32_table));
  	case SCTPCTL_EARLY_FR:
  		return (sysctl_int(oldp, oldlenp, newp, newlen,
  				   &sctp_early_fr));
@@ -5842,7 +5849,16 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
                        NULL, 0, &sctp_do_drain, 0,
                        CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_DO_DRAIN,
                        CTL_EOL);
-          
+
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "warm_crc_table",
+                       SYSCTL_DESCR("Should the CRC32c tables be warmed before checksum?"),
+                       NULL, 0, &sctp_sctp_warm_the_crc32_table, 0,
+                       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_WARM_CRC32,
+                       CTL_EOL);
+
        sysctl_createv(clog, 0, NULL, NULL,
                        CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
                        CTLTYPE_INT, "use_rttvar_congctrl",
