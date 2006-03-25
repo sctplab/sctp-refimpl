@@ -133,7 +133,6 @@ TAILQ_HEAD(sctp_readhead, sctp_queued_to_read);
 #define SCTP_PCB_FLAGS_NO_FRAGMENT	0x00100000
 
 
-
 #define SCTP_PCBHASH_ALLADDR(port, mask) (port & mask)
 #define SCTP_PCBHASH_ASOC(tag, mask) (tag & mask)
 
@@ -295,12 +294,11 @@ struct sctp_pcb {
 	uint32_t sctp_sws_receiver;
 
 #ifdef HAVE_SCTP_AUTH
-    /* authentication related fields */
-    struct sctp_keyhead     shared_keys;
-    sctp_auth_chklist_t     *local_auth_chunks;
-    sctp_hmaclist_t         *local_hmacs;
-    uint16_t                default_keyid;
-    uint8_t                 disable_authkey0;	/* disable null key id 0 */
+	/* authentication related fields */
+	struct sctp_keyhead shared_keys;
+	sctp_auth_chklist_t *local_auth_chunks;
+	sctp_hmaclist_t     *local_hmacs;
+	uint16_t            default_keyid;
 #endif /* HAVE_SCTP_AUTH */
 
 	/* various thresholds */

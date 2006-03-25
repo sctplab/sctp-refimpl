@@ -1096,7 +1096,6 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	TAILQ_INIT(&asoc->asconf_queue);
 #ifdef HAVE_SCTP_AUTH
 	/* authentication fields */
-	asoc->disable_authkey0     = 0;
 	asoc->authinfo.random      = NULL;
 	asoc->authinfo.assoc_key   = NULL;
 	asoc->authinfo.assoc_keyid = 0;

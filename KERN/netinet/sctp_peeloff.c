@@ -211,10 +211,8 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 
 #ifdef HAVE_SCTP_AUTH
 	/* copy in the authentication parameters from the original endpoint */
-printf("Peeloff copying in auth parameters to new endpoint\n");
-	n_inp->sctp_ep.disable_authkey0 = inp->sctp_ep.disable_authkey0;
 	if (n_inp->sctp_ep.local_hmacs)
-	    sctp_free_hmaclist(n_inp->sctp_ep.local_hmacs);
+		sctp_free_hmaclist(n_inp->sctp_ep.local_hmacs);
 	n_inp->sctp_ep.local_hmacs =
 		sctp_copy_hmaclist(inp->sctp_ep.local_hmacs);
 	if (n_inp->sctp_ep.local_auth_chunks)
