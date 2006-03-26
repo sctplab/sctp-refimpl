@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/conf/files,v 1.1103 2006/03/19 16:03:43 rwatson Exp $
+# $FreeBSD: src/sys/conf/files,v 1.1104 2006/03/23 23:06:14 sam Exp $
 #
 # The long compile-with and dependency lines are required because of
 # limitations in config: backslash-newline doesn't work in strings, and
@@ -1088,6 +1088,7 @@ fs/umapfs/umap_vnops.c		optional umapfs
 fs/unionfs/union_subr.c		optional unionfs
 fs/unionfs/union_vfsops.c	optional unionfs
 fs/unionfs/union_vnops.c	optional unionfs
+gdb/gdb_cons.c			optional gdb
 gdb/gdb_main.c			optional gdb
 gdb/gdb_packet.c		optional gdb
 geom/bde/g_bde.c		optional geom_bde
