@@ -407,7 +407,7 @@ sctp_show_key (sctp_key_t *key, const char *str)
     printf("\n");
 }
 
-static inline int
+static inline uint32_t
 sctp_get_keylen (sctp_key_t *key)
 {
     if (key != NULL)
@@ -420,9 +420,13 @@ sctp_get_keylen (sctp_key_t *key)
  * generate a new random key of length 'keylen'
  */
 sctp_key_t *
-sctp_generate_random_key (int keylen)
+sctp_generate_random_key (uint32_t keylen)
 {
     sctp_key_t *new_key;
+
+    /* validate keylen */
+     if (keylen > SCTP_AUTH_RANDOM_SIZE_MAX)
+	keylen = SCTP_AUTH_RANDOM_SIZE_MAX;
 
     new_key = sctp_alloc_key(keylen);
     if (new_key == NULL) {
@@ -435,7 +439,7 @@ sctp_generate_random_key (int keylen)
 }
 
 sctp_key_t *
-sctp_set_key (uint8_t *key, int keylen)
+sctp_set_key (uint8_t *key, uint32_t keylen)
 {
     sctp_key_t *new_key;
 
@@ -611,9 +615,8 @@ sctp_find_sharedkey (struct sctp_keyhead *shared_keys, uint16_t key_id)
     sctp_sharedkey_t *skey;
 
     LIST_FOREACH(skey, shared_keys, next) {
-	if (skey->keyid == key_id) {
+	if (skey->keyid == key_id)
 	    return (skey);
-	}
     }
     return (NULL);
 }
@@ -663,13 +666,16 @@ sctp_copy_sharedkey (const sctp_sharedkey_t *skey)
     sctp_sharedkey_t *new_skey;
 
     if (skey == NULL)
-	return(NULL);
+	return (NULL);
     new_skey = sctp_alloc_sharedkey();
     if (new_skey == NULL)
-	return(NULL);
-    new_skey->key = sctp_set_key(skey->key->key, skey->key->keylen);
+	return (NULL);
+    if (skey->key != NULL)
+	new_skey->key = sctp_set_key(skey->key->key, skey->key->keylen);
+    else
+	new_skey->key = NULL;
     new_skey->keyid = skey->keyid;
-    return(new_skey);
+    return (new_skey);
 }
 
 int
@@ -1308,12 +1314,6 @@ sctp_delete_sharedkey (struct sctp_tcb *stcb, uint16_t keyid)
     if (stcb == NULL)
 	return (-1);
 
-    /* is this a request to disable null key 0? */
-    if (keyid == 0) {
-	stcb->asoc.disable_authkey0 = 1;
-	goto clear_skey;
-    }
-
     /* is the keyid the assoc active sending key */
     if (keyid == stcb->asoc.authinfo.assoc_keyid)
 	return (-1);
@@ -1327,7 +1327,6 @@ sctp_delete_sharedkey (struct sctp_tcb *stcb, uint16_t keyid)
     LIST_REMOVE(skey, next);
     sctp_free_sharedkey(skey);	/* frees skey->key as well */
 
-clear_skey:
     /* clear any cached keys */
     sctp_clear_cachedkeys(stcb, keyid);
     return (0);
@@ -1345,12 +1344,6 @@ sctp_delete_sharedkey_ep (struct sctp_inpcb *inp, uint16_t keyid)
 
     if (inp == NULL)
 	return (-1);
-
-    /* is this a request to disable null key 0? */
-    if (keyid == 0) {
-	inp->sctp_ep.disable_authkey0 = 1;
-	goto clear_skey_ep;
-    }
 
     /* is the keyid the active sending key on the endpoint or any assoc */
     if (keyid == inp->sctp_ep.default_keyid)
@@ -1373,7 +1366,6 @@ sctp_delete_sharedkey_ep (struct sctp_inpcb *inp, uint16_t keyid)
     LIST_REMOVE(skey, next);
     sctp_free_sharedkey(skey);	/* frees skey->key as well */
 
-clear_skey_ep:
     /* clear any cached keys */
     sctp_clear_cachedkeys_ep(inp, keyid);
     return (0);
@@ -1390,30 +1382,23 @@ sctp_auth_setactivekey (struct sctp_tcb *stcb, uint16_t keyid)
     sctp_key_t *key = NULL;
     int using_ep_key = 0;
 
-    if (keyid == 0) {
-	if (stcb->asoc.disable_authkey0) {
-	    /* it's been disabled! */
-	    return (-1);
-	}
-    } else {
-	/* find the key on the assoc */
-	skey = sctp_find_sharedkey(&stcb->asoc.shared_keys, keyid);
-	if (skey == NULL) {
-	    /* if not on the assoc, find the key on the endpoint */
-	    SCTP_INP_RLOCK(stcb->sctp_ep);
-	    skey = sctp_find_sharedkey(&stcb->sctp_ep->sctp_ep.shared_keys,
-				       keyid);
-	    using_ep_key = 1;
-	}
-	if (skey == NULL) {
-	    /* that key doesn't exist */
-	    if (using_ep_key)
-		SCTP_INP_RUNLOCK(stcb->sctp_ep);
-	    return (-1);
-	}
-	/* get the shared key text */
-	key = skey->key;
+    /* find the key on the assoc */
+    skey = sctp_find_sharedkey(&stcb->asoc.shared_keys, keyid);
+    if (skey == NULL) {
+	/* if not on the assoc, find the key on the endpoint */
+	SCTP_INP_RLOCK(stcb->sctp_ep);
+	skey = sctp_find_sharedkey(&stcb->sctp_ep->sctp_ep.shared_keys,
+				   keyid);
+	using_ep_key = 1;
     }
+    if (skey == NULL) {
+	/* that key doesn't exist */
+	if (using_ep_key)
+	    SCTP_INP_RUNLOCK(stcb->sctp_ep);
+	return (-1);
+    }
+    /* get the shared key text */
+    key = skey->key;
 
     /* free any existing cached key */
     if (stcb->asoc.authinfo.assoc_key != NULL)
@@ -1442,18 +1427,11 @@ sctp_auth_setactivekey_ep (struct sctp_inpcb *inp, uint16_t keyid)
 {
     sctp_sharedkey_t *skey;
 
-    if (keyid == 0) {
-	if (inp->sctp_ep.disable_authkey0) {
-	    /* it's been disabled! */
-	    return (-1);
-	}
-    } else if (keyid != 0) {
-	/* find the key */
-	skey = sctp_find_sharedkey(&inp->sctp_ep.shared_keys, keyid);
-	if (skey == NULL) {
-	    /* that key doesn't exist */
-	    return (-1);
-	}
+    /* find the key */
+    skey = sctp_find_sharedkey(&inp->sctp_ep.shared_keys, keyid);
+    if (skey == NULL) {
+	/* that key doesn't exist */
+	return (-1);
     }
     inp->sctp_ep.default_keyid = keyid;
     return (0);
@@ -1557,7 +1535,6 @@ sctp_auth_get_cookie_params (struct sctp_tcb *stcb, struct mbuf *m,
     /* copy defaults from the endpoint */
 /* FIX ME: put in cookie? */
     stcb->asoc.authinfo.assoc_keyid = stcb->sctp_ep->sctp_ep.default_keyid;
-    stcb->asoc.disable_authkey0 = stcb->sctp_ep->sctp_ep.disable_authkey0;
 }
 
 /*
@@ -1658,7 +1635,6 @@ sctp_handle_auth (struct sctp_tcb *stcb, struct sctp_auth_chunk *auth,
     uint16_t shared_key_id;
     uint16_t hmac_id;
     sctp_sharedkey_t *skey;
-    sctp_key_t *key = NULL;
     uint32_t digestlen;
     uint8_t digest[SCTP_AUTH_DIGEST_LEN_MAX];
     uint8_t computed_digest[SCTP_AUTH_DIGEST_LEN_MAX];
@@ -1674,15 +1650,6 @@ sctp_handle_auth (struct sctp_tcb *stcb, struct sctp_auth_chunk *auth,
 	printf("SCTP AUTH Chunk: shared key %u, HMAC id %u\n",
 	       shared_key_id, hmac_id);
 #endif
-
-    if ((shared_key_id == 0) && (stcb->asoc.disable_authkey0)) {
-	/* null key 0 is disabled... discard this chunk */
-#ifdef SCTP_DEBUG
-	if (SCTP_AUTH_DEBUG)
-	    printf("SCTP Auth: null key id 0 disabled\n");
-#endif
-	return (-1);
-    }
 
     /* is the indicated HMAC supported? */
     if (!sctp_auth_is_supported_hmac(stcb->asoc.local_hmacs, hmac_id)) {
@@ -1715,49 +1682,23 @@ sctp_handle_auth (struct sctp_tcb *stcb, struct sctp_auth_chunk *auth,
     /* get the indicated shared key, if available */
     if ((stcb->asoc.authinfo.recv_key == NULL) ||
 	(stcb->asoc.authinfo.recv_keyid != shared_key_id)) {
-	/* if null key is used (and allowed), use a null key... */
-	if (shared_key_id == 0)
-	    goto compute_recv_key;
-
-	/* else, find the shared key on the assoc first */
+	/* find the shared key on the assoc first */
 	skey = sctp_find_sharedkey(&stcb->asoc.shared_keys, shared_key_id);
 	if (skey == NULL) {
 	    /* if not on the assoc, find it on the endpoint */
 	    skey = sctp_find_sharedkey(&stcb->sctp_ep->sctp_ep.shared_keys,
 				       shared_key_id);
 	}
-	/* if the shared key lists are not empty, discard the chunk */
+	/* if the shared key isn't found, discard the chunk */
 	if (skey == NULL) {
-	    /* is it a valid key id? */
-	    if (!LIST_EMPTY(&stcb->asoc.shared_keys) ||
-		!LIST_EMPTY(&stcb->sctp_ep->sctp_ep.shared_keys)) {
-		/* assoc or endpoint shared key list NOT empty */
-		sctp_pegs[SCTP_AUTH_NO_SECRET_KEY]++;
-#ifdef SCTP_DEBUG
-		if (SCTP_AUTH_DEBUG)
-		    printf("SCTP Auth: unknown key id %u\n", shared_key_id);
-#endif
-		return (-1);
-	    }
-	}
-/*
- * FIX ME:
- * Is key 0 the only allowed NULL key now in the draft?? we allow more...
- */
-	/* use the appropriate key-- this could be the NULL key */
-	if (skey != NULL)
-	    key = skey->key;
-	else {
-	    key = NULL;
-	    sctp_pegs[SCTP_AUTH_RCVD_NULL_KEY]++;
+	    sctp_pegs[SCTP_AUTH_NO_SECRET_KEY]++;
 #ifdef SCTP_DEBUG
 	    if (SCTP_AUTH_DEBUG)
-		printf("SCTP Auth: using NULL key for key id %u\n",
-		       shared_key_id);
+		printf("SCTP Auth: unknown key id %u\n", shared_key_id);
 #endif
+	    return (-1);
 	}
 
-    compute_recv_key:
 	/* generate a notification if this is a new key id */
 	if (stcb->asoc.authinfo.recv_keyid != shared_key_id)
 /*
@@ -1771,7 +1712,7 @@ sctp_handle_auth (struct sctp_tcb *stcb, struct sctp_auth_chunk *auth,
 	    sctp_free_key(stcb->asoc.authinfo.recv_key);
 	stcb->asoc.authinfo.recv_key =	
 	    sctp_compute_hashkey(stcb->asoc.authinfo.random,
-				 stcb->asoc.authinfo.peer_random, key);
+				 stcb->asoc.authinfo.peer_random, skey->key);
 	stcb->asoc.authinfo.recv_keyid = shared_key_id;
 #ifdef SCTP_DEBUG
 	if (SCTP_AUTH_DEBUG)

@@ -1570,6 +1570,7 @@ sctp_inpcb_alloc(struct socket *so)
 #endif
 	struct sctp_pcb *m;
 	struct timeval time;
+	sctp_sharedkey_t *null_key;
 
 	error = 0;
 
@@ -1616,6 +1617,7 @@ sctp_inpcb_alloc(struct socket *so)
 	bzero(inp, sizeof(*inp));
 
 	/* bump generations */
+	inp->ip_inp.inp.inp_state = INPCB_STATE_INUSE;
 	inp->ip_inp.inp.inp_socket = so;
 
 	/* setup socket pointers */
@@ -1711,6 +1713,9 @@ sctp_inpcb_alloc(struct socket *so)
 
 	/* add it to the info area */
 	LIST_INSERT_HEAD(&sctppcbinfo.listhead, inp, sctp_list);
+#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
+	LIST_INSERT_HEAD(&sctppcbinfo.inplisthead, &inp->ip_inp.inp, inp_list);
+#endif
 	SCTP_INP_INFO_WUNLOCK();
 
 	TAILQ_INIT(&inp->read_queue);
@@ -1802,14 +1807,16 @@ sctp_inpcb_alloc(struct socket *so)
 	/* How long is a cookie good for ? */
 	m->def_cookie_life = sctp_valid_cookie_life_default;
 
-#ifdef HAVE_SCTP_AUTH
-	/* Initialize authentication parameters */
-	m->disable_authkey0 = 0;
-	LIST_INIT(&m->shared_keys);
+	/*
+	 * Initialize authentication parameters
+	 */
 	m->local_hmacs = sctp_default_supported_hmaclist();
 	m->local_auth_chunks = sctp_alloc_chunklist();
 	sctp_auth_set_default_chunks(m->local_auth_chunks);
-#endif /* HAVE_SCTP_AUTH */
+	LIST_INIT(&m->shared_keys);
+	/* add default NULL key as key id 0 */
+	null_key = sctp_alloc_sharedkey();
+	sctp_insert_sharedkey(&m->shared_keys, null_key);
 
 	SCTP_INP_WUNLOCK(inp);
 	return (error);
@@ -2408,9 +2415,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
  	struct rtentry *rt;
 #endif
 	int s, cnt;
-#ifdef HAVE_SCTP_AUTH
 	sctp_sharedkey_t *shared_key;
-#endif /* HAVE_SCTP_AUTH */
 
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
@@ -2712,7 +2717,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	}
 	inp->sctp_socket = 0;
 
-#ifdef HAVE_SCTP_AUTH
 	/* free up authentication fields */
 	if (inp->sctp_ep.local_auth_chunks != NULL)
 		sctp_free_chunklist(inp->sctp_ep.local_auth_chunks);
@@ -2725,7 +2729,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		sctp_free_sharedkey(shared_key);
 		shared_key = LIST_FIRST(&inp->sctp_ep.shared_keys);
 	}
-#endif /* HAVE_SCTP_AUTH */
 
 	/* Now first we remove ourselves from the overall list of all EP's */
 	/* Unlock inp first, need correct order */
@@ -2738,8 +2741,11 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	SCTP_INP_WLOCK(inp);
 
 	inp_save = LIST_NEXT(inp, sctp_list);
+#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
+	inp->ip_inp.inp.inp_state = INPCB_STATE_DEAD;
+#endif
 	LIST_REMOVE(inp, sctp_list);
-
+	
         /* fix any iterators only after out of the list */
 	sctp_iterator_inp_being_freed(inp, inp_save);
 	SCTP_ITERATOR_UNLOCK();
@@ -2766,7 +2772,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	SCTP_ASOC_CREATE_LOCK_DESTROY(inp);
 
 	/* Now we must put the ep memory back into the zone pool */
-	/* For Tiger, we will do this later... FIXME MT */
+	/* For Tiger, we will do this later... */
 #if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, inp);
 	SCTP_DECR_EP_COUNT();
@@ -3597,9 +3603,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	struct sctp_asconf_addr *aparam;
 	struct sctp_stream_reset_list *liste;
 	struct sctp_queued_to_read *sq;
-#ifdef HAVE_SCTP_AUTH
 	sctp_sharedkey_t *shared_key;
-#endif /* HAVE_SCTP_AUTH */
 	int s;
 
 	/* first, lets purge the entry from the hash table. */
@@ -3848,7 +3852,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		asoc->last_asconf_ack_sent = NULL;
 	}
 
-#ifdef HAVE_SCTP_AUTH
 	/* clean up auth stuff */
 	if (asoc->local_hmacs)
 		sctp_free_hmaclist(asoc->local_hmacs);
@@ -3868,7 +3871,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		sctp_free_sharedkey(shared_key);
 		shared_key = LIST_FIRST(&asoc->shared_keys);
 	}
-#endif /* HAVE_SCTP_AUTH */
 
 	/* Insert new items here :> */
 
@@ -4436,6 +4438,9 @@ sctp_pcb_init()
 
 	/* init the empty list of (All) Endpoints */
 	LIST_INIT(&sctppcbinfo.listhead);
+#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
+	LIST_INIT(&sctppcbinfo.inplisthead);
+#endif
 
 	/* init the iterator head */
 	LIST_INIT(&sctppcbinfo.iteratorhead);
@@ -4584,6 +4589,47 @@ sctp_pcb_init()
 
 }
 
+#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
+void
+sctp_pcb_finish(void)
+{
+    /* FIXME MT*/
+	
+    SCTP_INP_INFO_LOCK_DESTROY();
+    SCTP_ITERATOR_LOCK_DESTROY();
+    SCTP_IPI_COUNT_DESTROY();
+    lck_grp_attr_free(sctppcbinfo.mtx_grp_attr);
+    lck_grp_free(sctppcbinfo.mtx_grp);
+    lck_attr_free(sctppcbinfo.mtx_attr);
+
+    /*
+    	SCTP_ZONE_INIT(sctppcbinfo.ipi_zone_ep, "sctp_ep",
+	    sizeof(struct sctp_inpcb), maxsockets);
+
+	SCTP_ZONE_INIT(sctppcbinfo.ipi_zone_asoc, "sctp_asoc",
+	    sizeof(struct sctp_tcb), sctp_max_number_of_assoc);
+
+	SCTP_ZONE_INIT(sctppcbinfo.ipi_zone_laddr, "sctp_laddr",
+	    sizeof(struct sctp_laddr),
+	    (sctp_max_number_of_assoc * sctp_scale_up_for_address));
+
+	SCTP_ZONE_INIT(sctppcbinfo.ipi_zone_net, "sctp_raddr",
+	    sizeof(struct sctp_nets),
+	    (sctp_max_number_of_assoc * sctp_scale_up_for_address));
+
+	SCTP_ZONE_INIT(sctppcbinfo.ipi_zone_chunk, "sctp_chunk",
+	    sizeof(struct sctp_tmit_chunk),
+	    (sctp_max_number_of_assoc * sctp_scale_up_for_address *
+	    sctp_chunkscale));
+
+	SCTP_ZONE_INIT(sctppcbinfo.ipi_zone_readq, "sctp_readq",
+	    sizeof(struct sctp_queued_to_read),
+	    (sctp_max_number_of_assoc * sctp_scale_up_for_address *
+	    sctp_chunkscale));
+    */
+}
+#endif
+
 int
 sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
     int iphlen, int offset, int limit, struct sctphdr *sh,
@@ -4609,9 +4655,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 	struct sockaddr *local_sa = (struct sockaddr *)&dest_store;
 	struct sockaddr_in sin;
 	struct sockaddr_in6 sin6;
-#ifdef HAVE_SCTP_AUTH
 	int got_random = 0, got_hmacs = 0;
-#endif /* HAVE_SCTP_AUTH */
 
 	/* First get the destination address setup too. */
 	memset(&sin, 0, sizeof(sin));
@@ -4955,11 +4999,9 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 				case SCTP_STREAM_RESET:
 					stcb->asoc.peer_supports_strreset = 1;
 					break;
-#ifdef HAVE_SCTP_AUTH
 				case SCTP_AUTHENTICATION:
 					stcb->asoc.peer_supports_auth = 1;
 					break;
-#endif /* HAVE_SCTP_AUTH */
 				default:
 					/* one I have not learned yet */
 					break;
@@ -4970,7 +5012,6 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			/* Peer supports ECN-nonce */
 			stcb->asoc.peer_supports_ecn_nonce = 1;
 			stcb->asoc.ecn_nonce_allowed = 1;
-#ifdef HAVE_SCTP_AUTH
 		} else if (ptype == SCTP_RANDOM) {
 		    uint8_t store[256];
 		    struct sctp_auth_random *random;
@@ -5037,7 +5078,6 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			    sctp_auth_add_chunk(chunks->chunk_types[i],
 						stcb->asoc.peer_auth_chunks);
 		    }
-#endif /* HAVE_SCTP_AUTH */
 		} else if ((ptype == SCTP_HEARTBEAT_INFO) ||
 			   (ptype == SCTP_STATE_COOKIE) ||
 			   (ptype == SCTP_UNRECOG_PARAM) ||
@@ -5081,12 +5121,9 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			}
 		}
 	}
-#ifdef HAVE_SCTP_AUTH
 	/* validate authentication required parameters */
 	if (!got_random && !got_hmacs)
 	    stcb->asoc.peer_supports_auth = 0;
-#endif /* HAVE_SCTP_AUTH */
-
 	return (0);
 }
 

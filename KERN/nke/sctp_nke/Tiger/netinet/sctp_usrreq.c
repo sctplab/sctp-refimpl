@@ -91,9 +91,7 @@
 #include <netinet/sctp_indata.h>
 #include <netinet/sctp_asconf.h>
 #include <netinet/sctp_timer.h>
-#ifdef HAVE_SCTP_AUTH
 #include <netinet/sctp_auth.h>
-#endif /* HAVE_SCTP_AUTH */
 #ifdef IPSEC
 #ifndef __OpenBSD__
 #include <netinet6/ipsec.h>
@@ -153,6 +151,7 @@ int sctp_peer_chunk_oh = sizeof(struct mbuf);
 int sctp_max_burst_default = SCTP_DEF_MAX_BURST;
 int sctp_use_cwnd_based_maxburst = 1;
 int sctp_do_drain = 1;
+int sctp_warm_the_crc32_table=0;
 
 unsigned int sctp_max_chunks_on_queue = SCTP_ASOC_MAX_CHUNKS_ON_QUEUE;
 unsigned int sctp_delayed_sack_time_default = SCTP_RECV_MSEC;
@@ -179,6 +178,7 @@ unsigned int sctp_early_fr_msec = SCTP_MINFR_MSEC_TIMER;
 unsigned int sctp_use_rttvar_cc = 0;
 int sctp_says_check_for_deadlock = 0;
 unsigned int sctp_auth_disable = 0;
+unsigned int sctp_auth_random_len = SCTP_AUTH_RANDOM_SIZE_DEFAULT;
 unsigned int sctp_auth_hmac_id_default = SCTP_AUTH_HMAC_ID_SHA1;
 #ifdef SCTP_DEBUG
 extern u_int32_t sctp_debug_on;
@@ -224,6 +224,14 @@ sctp_init(void)
 #undef nmbclusters
 #endif
 }
+
+#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
+void
+sctp_finish(void)
+{
+    sctp_pcb_finish();
+}
+#endif
 
 #ifdef INET6
 void
@@ -783,6 +791,9 @@ SYSCTL_INT(_net_inet_sctp, OID_AUTO, do_sctp_drain , CTLFLAG_RW,
 	    &sctp_do_drain, 0,
 	    "Should SCTP respond to the drain calls");
 
+SYSCTL_INT(_net_inet_sctp, OID_AUTO, warm_crc_table , CTLFLAG_RW,
+	    &sctp_warm_the_crc32_table, 0,
+	    "Should the CRC32c tables be warmed before checksum?");
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, early_fast_retran, CTLFLAG_RW,
 	    &sctp_early_fr, 0,
@@ -803,6 +814,10 @@ SYSCTL_UINT(_net_inet_sctp, OID_AUTO, deadlock_detect, CTLFLAG_RW,
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, auth_disable, CTLFLAG_RW,
 	    &sctp_auth_disable, 0,
 	    "Disable SCTP AUTH chunk requirement/function");
+
+SYSCTL_UINT(_net_inet_sctp, OID_AUTO, auth_random_len, CTLFLAG_RW,
+	    &sctp_auth_random_len, 0,
+	    "Length of AUTH RANDOMs");
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, auth_hmac_id, CTLFLAG_RW,
 	    &sctp_auth_hmac_id_default, 0,
@@ -1746,13 +1761,12 @@ sctp_do_connect_x(struct socket *so,
 		sa = (struct sockaddr *)((caddr_t)sa + incr);
 	}
 	stcb->asoc.state = SCTP_STATE_COOKIE_WAIT;
-#ifdef HAVE_SCTP_AUTH
 	/*
 	 * initialize authentication parameters for the assoc
 	 */
 	/* generate a RANDOM for this assoc */
 	stcb->asoc.authinfo.random =
-		sctp_generate_random_key(SCTP_AUTH_RANDOM_SIZE_DEFAULT);
+		sctp_generate_random_key(sctp_auth_random_len);
 	/* initialize hmac list from endpoint */
 	stcb->asoc.local_hmacs = sctp_copy_hmaclist(inp->sctp_ep.local_hmacs);
 	/* initialize auth chunks list from endpoint */
@@ -1760,8 +1774,6 @@ sctp_do_connect_x(struct socket *so,
 		sctp_copy_chunklist(inp->sctp_ep.local_auth_chunks);
 	/* copy defaults from the endpoint */
 	stcb->asoc.authinfo.assoc_keyid = inp->sctp_ep.default_keyid;
-	stcb->asoc.disable_authkey0 = inp->sctp_ep.disable_authkey0;
-#endif /* HAVE_SCTP_AUTH */
 
 	if (delay) {
 		/* doing delayed connection */
@@ -2217,10 +2229,8 @@ sctp_optsget(struct socket *so,
 		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_ADAPTATIONEVNT))
 			events->sctp_adaptation_layer_event = 1;
 
-#ifdef HAVE_SCTP_AUTH
 		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_AUTHEVNT))
 			events->sctp_authentication_event = 1;
-#endif /* HAVE_SCTP_AUTH */
 
 		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_STREAM_RESETEVNT))
 			events->sctp_stream_reset_events = 1;
@@ -2995,7 +3005,6 @@ sctp_optsget(struct socket *so,
 	}
 	break;
 
-#ifdef HAVE_SCTP_AUTH
     case SCTP_HMAC_IDENT:
     {
 	struct sctp_hmacalgo *shmac;
@@ -3031,17 +3040,17 @@ sctp_optsget(struct socket *so,
     }
     case SCTP_AUTH_ACTIVE_KEY:
     {
-	struct sctp_authactivekey *scact;
+	struct sctp_authkeyid *scact;
 	if ((size_t)(m->m_len) < sizeof(*scact)) {
 	    error = EINVAL;
 	    break;
 	}
-	scact = mtod(m, struct sctp_authactivekey *);
+	scact = mtod(m, struct sctp_authkeyid *);
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
-	    /* if one-to-one, get the active key on the assoc, if connected */
+	    /* if one-to-one, get from the connected assoc; else endpoint */
 	    SCTP_INP_RLOCK(inp);
 	    stcb = LIST_FIRST(&inp->sctp_asoc_list);
-	    if (stcb != NULL)
+	    if (stcb)
 		SCTP_TCB_LOCK(stcb);
 	    SCTP_INP_RUNLOCK(inp);
 	} else if (scact->scact_assoc_id) {
@@ -3075,7 +3084,7 @@ sctp_optsget(struct socket *so,
 	}
 	sac = mtod(m, struct sctp_authchunks *);
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
-	    /* if one-to-one, get from the connected assoc */
+	    /* if one-to-one, get from the connected assoc; else endpoint */
 	    SCTP_INP_RLOCK(inp);
 	    stcb = LIST_FIRST(&inp->sctp_asoc_list);
 	    if (stcb != NULL)
@@ -3140,7 +3149,7 @@ sctp_optsget(struct socket *so,
 	}
 	sac = mtod(m, struct sctp_authchunks *);
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
-	    /* if one-to-one, get from the connected assoc */
+	    /* if one-to-one, get from the connected assoc, else endpoint */
 	    SCTP_INP_RLOCK(inp);
 	    stcb = LIST_FIRST(&inp->sctp_asoc_list);
 	    if (stcb != NULL)
@@ -3174,7 +3183,6 @@ sctp_optsget(struct socket *so,
 	m->m_len = sizeof(struct sctp_authchunks) + size;
 	break;
     }
-#endif /* HAVE_SCTP_AUTH */
 
 #if defined(HAVE_SCTP_PEELOFF_SOCKOPT)
 	case SCTP_PEELOFF:
@@ -3390,7 +3398,6 @@ sctp_optsset(struct socket *so,
 	}
 	break;
 
-#ifdef HAVE_SCTP_AUTH
     case SCTP_AUTH_CHUNK:
     {
 	struct sctp_authchunk *sauth;
@@ -3409,32 +3416,25 @@ sctp_optsset(struct socket *so,
 	struct sctp_authkey *sca;
 	struct sctp_keyhead *shared_keys;
 	sctp_sharedkey_t *shared_key;
-	sctp_key_t *key;
+	sctp_key_t *key = NULL;
 	int size;
 
 	size = m->m_len - sizeof(*sca);
-	/* NOTE: we allow NULL keys to be set */
 	if (size < 0) {
 	    error = EINVAL;
 	    break;
 	}
 	sca = mtod(m, struct sctp_authkey *);
-	if (sca->sca_keynumber == 0) {
-	    /* can't set key id 0 */
-	    error = EINVAL;
-	    break;
-	}
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
-	    /* if one-to-one, add/replace the key on the assoc, if connected */
+	    /* if one-to-one, set it on the connected assoc; else endpoint */
 	    SCTP_INP_RLOCK(inp);
 	    stcb = LIST_FIRST(&inp->sctp_asoc_list);
-	    if (stcb != NULL)
+	    if (stcb)
 		SCTP_TCB_LOCK(stcb);
 	    SCTP_INP_RUNLOCK(inp);
 	} else if (sca->sca_assoc_id) {
 	    stcb = sctp_findassociation_ep_asocid(inp, sca->sca_assoc_id);
 	    if (stcb == NULL) {
-printf("SCTP_AUTH_KEY: can't find assoc id %xh\n", sca->sca_assoc_id);
 		error = ENOENT;
 		break;
 	    }
@@ -3446,11 +3446,13 @@ printf("SCTP_AUTH_KEY: can't find assoc id %xh\n", sca->sca_assoc_id);
 	    /* clear the cached keys for this key id */
 	    sctp_clear_cachedkeys(stcb, sca->sca_keynumber);
 	    /* create the new shared key and insert/replace it */
-	    key = sctp_set_key(sca->sca_key, size);
-	    if (key == NULL) {
-		error = ENOMEM;
-		SCTP_TCB_UNLOCK(stcb);
-		break;
+	    if (size > 0) {
+		key = sctp_set_key(sca->sca_key, (uint32_t)size);
+		if (key == NULL) {
+		    error = ENOMEM;
+		    SCTP_TCB_UNLOCK(stcb);
+		    break;
+		}
 	    }
 	    shared_key = sctp_alloc_sharedkey();
 	    if (shared_key == NULL) {
@@ -3463,20 +3465,26 @@ printf("SCTP_AUTH_KEY: can't find assoc id %xh\n", sca->sca_assoc_id);
 	    shared_key->keyid = sca->sca_keynumber;
 	    sctp_insert_sharedkey(shared_keys, shared_key);
 	    SCTP_TCB_UNLOCK(stcb);
-printf("SCTP_AUTH_KEY: adding assoc key id %u, assoc %xh\n",
-       shared_key->keyid, sctp_get_associd(stcb));
+#ifdef SCTP_DEBUG
+	    if (sctp_debug_on & SCTP_DEBUG_AUTH1) {
+		printf("SCTP_AUTH_KEY: adding assoc key id %u, len %u, assoc %xh\n",
+		       shared_key->keyid, size, sctp_get_associd(stcb));
+	    }
+#endif /* SCTP_DEBUG */
 	} else {
-	    /* set it on the endpoint */
+	    /* ste it on the endpoint */
 	    SCTP_INP_WLOCK(inp);
 	    shared_keys = &inp->sctp_ep.shared_keys;
 	    /* clear the cached keys on all assocs for this key id */
 	    sctp_clear_cachedkeys_ep(inp, sca->sca_keynumber);
 	    /* create the new shared key and insert/replace it */
-	    key = sctp_set_key(sca->sca_key, size);
-	    if (key == NULL) {
-		error = ENOMEM;
-		SCTP_INP_WUNLOCK(inp);
-		break;
+	    if (size > 0) {
+		key = sctp_set_key(sca->sca_key, (uint32_t)size);
+		if (key == NULL) {
+		    error = ENOMEM;
+		    SCTP_INP_WUNLOCK(inp);
+		    break;
+		}
 	    }
 	    shared_key = sctp_alloc_sharedkey();
 	    if (shared_key == NULL) {
@@ -3489,7 +3497,12 @@ printf("SCTP_AUTH_KEY: adding assoc key id %u, assoc %xh\n",
 	    shared_key->keyid = sca->sca_keynumber;
 	    sctp_insert_sharedkey(shared_keys, shared_key);
 	    SCTP_INP_WUNLOCK(inp);
-printf("SCTP_AUTH_KEY: adding endpoint key id %u\n", shared_key->keyid);
+#ifdef SCTP_DEBUG
+	    if (sctp_debug_on & SCTP_DEBUG_AUTH1) {
+		printf("SCTP_AUTH_KEY: adding endpoint key id %u, len %u\n",
+		       shared_key->keyid, size);
+	    }
+#endif /* SCTP_DEBUG */
 	}
 	break;
     }
@@ -3522,24 +3535,23 @@ printf("SCTP_AUTH_KEY: adding endpoint key id %u\n", shared_key->keyid);
     }
     case SCTP_AUTH_ACTIVE_KEY:
     {
-	struct sctp_authactivekey *scact;
+	struct sctp_authkeyid *scact;
 
 	if ((size_t)m->m_len < sizeof(*scact)) {
 	    error = EINVAL;
 	    break;
 	}
-	scact = mtod(m, struct sctp_authactivekey *);
+	scact = mtod(m, struct sctp_authkeyid *);
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
-	    /* if one-to-one, set the active key on the assoc, if connected */
+	    /* if one-to-one, set it on the connected assoc; else endpoint */
 	    SCTP_INP_RLOCK(inp);
 	    stcb = LIST_FIRST(&inp->sctp_asoc_list);
-	    if (stcb != NULL)
+	    if (stcb)
 		SCTP_TCB_LOCK(stcb);
 	    SCTP_INP_RUNLOCK(inp);
 	} else if (scact->scact_assoc_id) {
 	    stcb = sctp_findassociation_ep_asocid(inp, scact->scact_assoc_id);
 	    if (stcb == NULL) {
-printf("SCTP_AUTH_ACTIVE_KEY: can't find assoc id %xh\n", scact->scact_assoc_id);
 		error = ENOENT;
 		break;
 	    }
@@ -3550,59 +3562,75 @@ printf("SCTP_AUTH_ACTIVE_KEY: can't find assoc id %xh\n", scact->scact_assoc_id)
 	    if (sctp_auth_setactivekey(stcb, scact->scact_keynumber))
 		error = EINVAL;
 	    SCTP_TCB_UNLOCK(stcb);
-printf("SCTP_AUTH_ACTIVE_KEY: setting key id %u active for assoc %xh\n",
-       scact->scact_keynumber, sctp_get_associd(stcb));
+#ifdef SCTP_DEBUG
+	    if (sctp_debug_on & SCTP_DEBUG_AUTH1) {
+		printf("SCTP_AUTH_ACTIVE_KEY: setting key id %u active for assoc %xh\n",
+		       scact->scact_keynumber, sctp_get_associd(stcb));
+	    }
+#endif /* SCTP_DEBUG */
 	} else {
 	    /* set the active key on the endpoint */
 	    SCTP_INP_WLOCK(inp);
 	    if (sctp_auth_setactivekey_ep(inp, scact->scact_keynumber))
 		error = EINVAL;
 	    SCTP_INP_WUNLOCK(inp);
-printf("SCTP_AUTH_ACTIVE_KEY: setting default endpoint key id %u\n", scact->scact_keynumber);
+#ifdef SCTP_DEBUG
+	    if (sctp_debug_on & SCTP_DEBUG_AUTH1) {
+		printf("SCTP_AUTH_ACTIVE_KEY: setting default endpoint key id %u\n",
+		       scact->scact_keynumber);
+	    }
+#endif /* SCTP_DEBUG */
 	}
 	break;
     }
     case SCTP_AUTH_DELETE_KEY:
     {
-	struct sctp_authdeletekey *scdel;
+	struct sctp_authkeyid *scdel;
 
 	if ((size_t)m->m_len < sizeof(*scdel)) {
 	    error = EINVAL;
 	    break;
 	}
-	scdel = mtod(m, struct sctp_authdeletekey *);
+	scdel = mtod(m, struct sctp_authkeyid *);
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
-	    /* if one-to-one, delete it from the assoc, if connected */
+	    /* if one-to-one, delete from the connected assoc; else endpoint */
 	    SCTP_INP_RLOCK(inp);
 	    stcb = LIST_FIRST(&inp->sctp_asoc_list);
-	    if (stcb != NULL)
+	    if (stcb)
 		SCTP_TCB_LOCK(stcb);
 	    SCTP_INP_RUNLOCK(inp);
-	} else if (scdel->scdel_assoc_id) {
-	    stcb = sctp_findassociation_ep_asocid(inp, scdel->scdel_assoc_id);
+	} else if (scdel->scact_assoc_id) {
+	    stcb = sctp_findassociation_ep_asocid(inp, scdel->scact_assoc_id);
 	    if (stcb == NULL) {
-printf("SCTP_AUTH_DELETE_KEY: can't find assoc id %xh\n", scdel->scdel_assoc_id);
 		error = ENOENT;
 		break;
 	    }
 	}
 	/* delete the key from the right place */
 	if (stcb != NULL) {
-	    if (sctp_delete_sharedkey(stcb, scdel->scdel_keynumber))
+	    if (sctp_delete_sharedkey(stcb, scdel->scact_keynumber))
 		error = EINVAL;
 	    SCTP_TCB_UNLOCK(stcb);
-printf("SCTP_AUTH_DELETE_KEY: deleting key id %u from assoc %xh\n",
-       scdel->scdel_keynumber, sctp_get_associd(stcb));
+#ifdef SCTP_DEBUG
+	    if (sctp_debug_on & SCTP_DEBUG_AUTH1) {
+		printf("SCTP_AUTH_DELETE_KEY: deleting key id %u from assoc %xh\n",
+		       scdel->scact_keynumber, sctp_get_associd(stcb));
+	    }
+#endif /* SCTP_DEBUG */
 	} else {
 	    SCTP_INP_WLOCK(inp);
-	    if (sctp_delete_sharedkey_ep(inp, scdel->scdel_keynumber))
+	    if (sctp_delete_sharedkey_ep(inp, scdel->scact_keynumber))
 		error = EINVAL;
 	    SCTP_INP_WUNLOCK(inp);
-printf("SCTP_AUTH_DELETE_KEY: deleting endpoint key id %u\n", scdel->scdel_keynumber);
+#ifdef SCTP_DEBUG
+	    if (sctp_debug_on & SCTP_DEBUG_AUTH1) {
+		printf("SCTP_AUTH_DELETE_KEY: deleting endpoint key id %u\n",
+		       scdel->scact_keynumber);
+	    }
+#endif /* SCTP_DEBUG */
 	}
 	break;
     }
-#endif /* HAVE_SCTP_AUTH */
 
 	case SCTP_RESET_STREAMS:
 	{
@@ -4733,13 +4761,12 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	}
 	stcb->asoc.state = SCTP_STATE_COOKIE_WAIT;
 	SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_entered);
-#ifdef HAVE_SCTP_AUTH
 	/*
 	 * initialize authentication parameters for the assoc
 	 */
 	/* generate a RANDOM for this assoc */
 	stcb->asoc.authinfo.random =
-		sctp_generate_random_key(SCTP_AUTH_RANDOM_SIZE_DEFAULT);
+		sctp_generate_random_key(sctp_auth_random_len);
 	/* initialize hmac list from endpoint */
 	stcb->asoc.local_hmacs = sctp_copy_hmaclist(inp->sctp_ep.local_hmacs);
 	/* initialize auth chunks list from endpoint */
@@ -4747,8 +4774,6 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		sctp_copy_chunklist(inp->sctp_ep.local_auth_chunks);
 	/* copy defaults from the endpoint */
 	stcb->asoc.authinfo.assoc_keyid = inp->sctp_ep.default_keyid;
-	stcb->asoc.disable_authkey0 = inp->sctp_ep.disable_authkey0;
-#endif /* HAVE_SCTP_AUTH */
 
 	sctp_send_initiate(inp, stcb);
 	SCTP_ASOC_CREATE_UNLOCK(inp);
@@ -4824,9 +4849,7 @@ sctp_listen(struct socket *so, struct proc *p)
 	}
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 #if __FreeBSD_version > 600000
-	/* It appears for 6.0 and on, we must
-	 * always call this.
-	 */
+	/* It appears for 6.0 and on, we must always call this. */
 	solisten_proto(so, backlog);
 #else
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE) == 0) {
@@ -5489,6 +5512,9 @@ sctp_sysctl(name, namelen, oldp, oldlenp, newp, newlen)
 	case SCTPCTL_DO_DRAIN:
  		return (sysctl_int(oldp, oldlenp, newp, newlen,
 				   &sctp_do_drain));
+	case SCTPCTL_WARM_CRC32:
+ 		return (sysctl_int(oldp, oldlenp, newp, newlen,
+				   &sctp_warm_the_crc32_table));
  	case SCTPCTL_EARLY_FR:
  		return (sysctl_int(oldp, oldlenp, newp, newlen,
  				   &sctp_early_fr));
@@ -5504,6 +5530,9 @@ sctp_sysctl(name, namelen, oldp, oldlenp, newp, newlen)
 	case SCTPCTL_AUTH_DISABLE:
  		return (sysctl_int(oldp, oldlenp, newp, newlen,
  				   &sctp_auth_disable));
+	case SCTPCTL_AUTH_RANDOM_LEN:
+ 		return (sysctl_int(oldp, oldlenp, newp, newlen,
+ 				   &sctp_auth_random_len));
 	case SCTPCTL_AUTH_HMAC_ID:
  		return (sysctl_int(oldp, oldlenp, newp, newlen,
  				   &sctp_auth_hmac_id_default));
@@ -5816,7 +5845,16 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
                        NULL, 0, &sctp_do_drain, 0,
                        CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_DO_DRAIN,
                        CTL_EOL);
-          
+
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "warm_crc_table",
+                       SYSCTL_DESCR("Should the CRC32c tables be warmed before checksum?"),
+                       NULL, 0, &sctp_sctp_warm_the_crc32_table, 0,
+                       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_WARM_CRC32,
+                       CTL_EOL);
+
        sysctl_createv(clog, 0, NULL, NULL,
                        CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
                        CTLTYPE_INT, "use_rttvar_congctrl",
@@ -5839,6 +5877,14 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
                        SYSCTL_DESCR("Disable SCTP AUTH requirement/function"),
                        NULL, 0, &sctp_auth_disable, 0,
 		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_AUTH_DISABLE,
+                       CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "auth_random_len",
+                       SYSCTL_DESCR("Length of AUTH RANDOMs"),
+                       NULL, 0, &sctp_auth_random_len, 0,
+		       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_AUTH_RANDOM_LEN,
                        CTL_EOL);
 
        sysctl_createv(clog, 0, NULL, NULL,

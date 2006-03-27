@@ -297,6 +297,8 @@ sctp_build_ctl_nchunk(struct sctp_inpcb *inp,
 	cmh->cmsg_type = SCTP_SNDRCV;
 	cmh->cmsg_len = CMSG_LEN(sizeof(struct sctp_sndrcvinfo));
 	*outinfo = *sinfo;
+	ret->m_len = cmh->cmsg_len;
+	ret->m_pkthdr.len = ret->m_len;
 	return (ret);
 }
 
