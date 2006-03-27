@@ -307,13 +307,8 @@
  *   83 = Authentication
  */
 #define SCTP_SUPPORTED_CHUNK_EXT    0x8008
-#ifdef HAVE_SCTP_AUTH
 #define SCTP_EXT_COUNT		6   /* # extensions supported chunk wise */
 #define SCTP_PAD_EXT_COUNT	2   /* # pad bytes needed for 32 bit boundary */
-#else
-#define SCTP_EXT_COUNT		5   /* # extensions supported chunk wise */
-#define SCTP_PAD_EXT_COUNT	3   /* # pad bytes needed for 32 bit boundary */
-#endif /* HAVE_SCTP_AUTH */
 
 /*************0xC000 series*************/
 #define SCTP_PRSCTP_SUPPORTED		0xc000
