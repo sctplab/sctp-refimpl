@@ -3907,11 +3907,25 @@ sctp_sorecvmsg(struct socket *so,
  restart:
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 	if (so->so_error || so->so_rcv.sb_state & SBS_CANTRCVMORE)
-		goto out;
 #else
 	if (so->so_error || so->so_state & SS_CANTRCVMORE) 
-		goto out;
 #endif
+	{
+		/* Check the data in-queue situation */
+		control = TAILQ_FIRST(&inp->read_queue);
+		if(control == NULL) {
+			/* nothing */
+			goto out;
+		}
+		if ((control->length == 0) || so->so_rcv.sb_cc == 0) {
+			/* we are blocked on pd-api but
+			 * its not all here?
+			 */
+			goto out;
+		}
+		/* read it */
+		goto found_one;
+	}
 	if((so->so_rcv.sb_cc == 0) && block_allowed) {
 		/* we need to wait for data */
 		error = sbwait(&so->so_rcv);
