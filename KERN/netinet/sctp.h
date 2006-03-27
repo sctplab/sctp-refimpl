@@ -273,7 +273,7 @@ struct sctp_error_unrecognized_chunk {
 #define HAVE_SCTP_MULTIBUF              1
 #define HAVE_SCTP_NOCONNECT             0
 #define HAVE_SCTP_ECN_NONCE             1  /* ECN Nonce option */
-/* #define HAVE_SCTP_AUTH			1 */
+#define HAVE_SCTP_AUTH			1
 
 /*
  * Main SCTP chunk types

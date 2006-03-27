@@ -54,9 +54,7 @@
 
 #include <netinet/sctp_header.h>
 #include <netinet/sctp_uio.h>
-#ifdef HAVE_SCTP_AUTH
 #include <netinet/sctp_auth.h>
-#endif /* HAVE_SCTP_AUTH */
 
 struct sctp_timer {
 #if defined(__OpenBSD__)
@@ -646,7 +644,6 @@ struct sctp_association {
 	unsigned int minrto;			/* per assoc RTO-MIN */
 	unsigned int maxrto;			/* per assoc RTO-MAX */
 
-#ifdef HAVE_SCTP_AUTH
 	/* authentication fields */
 	sctp_auth_chklist_t  *local_auth_chunks;
 	sctp_auth_chklist_t  *peer_auth_chunks;
@@ -656,7 +653,6 @@ struct sctp_association {
 	sctp_authinfo_t      authinfo;		/* randoms, cached keys */
 	uint16_t             peer_hmac_id;	/* peer HMAC id to send */
 	uint8_t              authenticated;	/* packet authenticated ok */
-#endif /* HAVE_SCTP_AUTH */
 
 	/*
 	 * Being that we have no bag to collect stale cookies, and

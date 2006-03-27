@@ -1570,9 +1570,7 @@ sctp_inpcb_alloc(struct socket *so)
 #endif
 	struct sctp_pcb *m;
 	struct timeval time;
-#ifdef HAVE_SCTP_AUTH
 	sctp_sharedkey_t *null_key;
-#endif /* HAVE_SCTP_AUTH */
 
 	error = 0;
 
@@ -1805,7 +1803,6 @@ sctp_inpcb_alloc(struct socket *so)
 	/* How long is a cookie good for ? */
 	m->def_cookie_life = sctp_valid_cookie_life_default;
 
-#ifdef HAVE_SCTP_AUTH
 	/*
 	 * Initialize authentication parameters
 	 */
@@ -1816,7 +1813,6 @@ sctp_inpcb_alloc(struct socket *so)
 	/* add default NULL key as key id 0 */
 	null_key = sctp_alloc_sharedkey();
 	sctp_insert_sharedkey(&m->shared_keys, null_key);
-#endif /* HAVE_SCTP_AUTH */
 
 	SCTP_INP_WUNLOCK(inp);
 	return (error);
@@ -2415,9 +2411,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
  	struct rtentry *rt;
 #endif
 	int s, cnt;
-#ifdef HAVE_SCTP_AUTH
 	sctp_sharedkey_t *shared_key;
-#endif /* HAVE_SCTP_AUTH */
 
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
@@ -2719,7 +2713,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	}
 	inp->sctp_socket = 0;
 
-#ifdef HAVE_SCTP_AUTH
 	/* free up authentication fields */
 	if (inp->sctp_ep.local_auth_chunks != NULL)
 		sctp_free_chunklist(inp->sctp_ep.local_auth_chunks);
@@ -2732,7 +2725,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		sctp_free_sharedkey(shared_key);
 		shared_key = LIST_FIRST(&inp->sctp_ep.shared_keys);
 	}
-#endif /* HAVE_SCTP_AUTH */
 
 	/* Now first we remove ourselves from the overall list of all EP's */
 	/* Unlock inp first, need correct order */
@@ -3604,9 +3596,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	struct sctp_asconf_addr *aparam;
 	struct sctp_stream_reset_list *liste;
 	struct sctp_queued_to_read *sq;
-#ifdef HAVE_SCTP_AUTH
 	sctp_sharedkey_t *shared_key;
-#endif /* HAVE_SCTP_AUTH */
 	int s;
 
 	/* first, lets purge the entry from the hash table. */
@@ -3855,7 +3845,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		asoc->last_asconf_ack_sent = NULL;
 	}
 
-#ifdef HAVE_SCTP_AUTH
 	/* clean up auth stuff */
 	if (asoc->local_hmacs)
 		sctp_free_hmaclist(asoc->local_hmacs);
@@ -3875,7 +3864,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		sctp_free_sharedkey(shared_key);
 		shared_key = LIST_FIRST(&asoc->shared_keys);
 	}
-#endif /* HAVE_SCTP_AUTH */
 
 	/* Insert new items here :> */
 
@@ -4616,9 +4604,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 	struct sockaddr *local_sa = (struct sockaddr *)&dest_store;
 	struct sockaddr_in sin;
 	struct sockaddr_in6 sin6;
-#ifdef HAVE_SCTP_AUTH
 	int got_random = 0, got_hmacs = 0;
-#endif /* HAVE_SCTP_AUTH */
 
 	/* First get the destination address setup too. */
 	memset(&sin, 0, sizeof(sin));
@@ -4962,11 +4948,9 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 				case SCTP_STREAM_RESET:
 					stcb->asoc.peer_supports_strreset = 1;
 					break;
-#ifdef HAVE_SCTP_AUTH
 				case SCTP_AUTHENTICATION:
 					stcb->asoc.peer_supports_auth = 1;
 					break;
-#endif /* HAVE_SCTP_AUTH */
 				default:
 					/* one I have not learned yet */
 					break;
@@ -4977,7 +4961,6 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			/* Peer supports ECN-nonce */
 			stcb->asoc.peer_supports_ecn_nonce = 1;
 			stcb->asoc.ecn_nonce_allowed = 1;
-#ifdef HAVE_SCTP_AUTH
 		} else if (ptype == SCTP_RANDOM) {
 		    uint8_t store[256];
 		    struct sctp_auth_random *random;
@@ -5044,7 +5027,6 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			    sctp_auth_add_chunk(chunks->chunk_types[i],
 						stcb->asoc.peer_auth_chunks);
 		    }
-#endif /* HAVE_SCTP_AUTH */
 		} else if ((ptype == SCTP_HEARTBEAT_INFO) ||
 			   (ptype == SCTP_STATE_COOKIE) ||
 			   (ptype == SCTP_UNRECOG_PARAM) ||
@@ -5088,12 +5070,9 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			}
 		}
 	}
-#ifdef HAVE_SCTP_AUTH
 	/* validate authentication required parameters */
 	if (!got_random && !got_hmacs)
 	    stcb->asoc.peer_supports_auth = 0;
-#endif /* HAVE_SCTP_AUTH */
-
 	return (0);
 }
 

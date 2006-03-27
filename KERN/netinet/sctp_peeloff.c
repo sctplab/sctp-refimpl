@@ -79,9 +79,7 @@
 #include <netinet/sctp_var.h>
 #include <netinet/sctp_peeloff.h>
 #include <netinet/sctputil.h>
-#ifdef HAVE_SCTP_AUTH
 #include <netinet/sctp_auth.h>
-#endif /* HAVE_SCTP_AUTH */
 
 #ifdef IPSEC
 #ifndef __OpenBSD__
@@ -209,7 +207,6 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 	    (SCTP_PCB_COPY_FLAGS & inp->sctp_flags));
 	n_inp->sctp_features = inp->sctp_features;
 
-#ifdef HAVE_SCTP_AUTH
 	/* copy in the authentication parameters from the original endpoint */
 	if (n_inp->sctp_ep.local_hmacs)
 		sctp_free_hmaclist(n_inp->sctp_ep.local_hmacs);
@@ -221,7 +218,6 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 		sctp_copy_chunklist(inp->sctp_ep.local_auth_chunks);
 	(void)sctp_copy_skeylist(&inp->sctp_ep.shared_keys,
 				 &n_inp->sctp_ep.shared_keys);
-#endif /* HAVE_SCTP_AUTH */
 
 	n_inp->sctp_socket = newso;
 	/* Turn off any non-blocking semantic. */

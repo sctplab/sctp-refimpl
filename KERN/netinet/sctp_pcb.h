@@ -83,9 +83,7 @@ TAILQ_HEAD(sctp_readhead, sctp_queued_to_read);
 
 #include <netinet/sctp_structs.h>
 #include <netinet/sctp_uio.h>
-#ifdef HAVE_SCTP_AUTH
 #include <netinet/sctp_auth.h>
-#endif /* HAVE_SCTP_AUTH */
 
 /*
  * PCB flags (in sctp_flags bitmask)
@@ -293,13 +291,11 @@ struct sctp_pcb {
 	uint32_t sctp_sws_sender;
 	uint32_t sctp_sws_receiver;
 
-#ifdef HAVE_SCTP_AUTH
 	/* authentication related fields */
 	struct sctp_keyhead shared_keys;
 	sctp_auth_chklist_t *local_auth_chunks;
 	sctp_hmaclist_t     *local_hmacs;
 	uint16_t            default_keyid;
-#endif /* HAVE_SCTP_AUTH */
 
 	/* various thresholds */
 	/* Max times I will init at a guy */

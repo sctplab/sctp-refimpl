@@ -91,9 +91,7 @@
 #include <netinet/sctp_indata.h>
 #include <netinet/sctp_asconf.h>
 #include <netinet/sctp_timer.h>
-#ifdef HAVE_SCTP_AUTH
 #include <netinet/sctp_auth.h>
-#endif /* HAVE_SCTP_AUTH */
 #ifdef IPSEC
 #ifndef __OpenBSD__
 #include <netinet6/ipsec.h>
@@ -1755,7 +1753,6 @@ sctp_do_connect_x(struct socket *so,
 		sa = (struct sockaddr *)((caddr_t)sa + incr);
 	}
 	stcb->asoc.state = SCTP_STATE_COOKIE_WAIT;
-#ifdef HAVE_SCTP_AUTH
 	/*
 	 * initialize authentication parameters for the assoc
 	 */
@@ -1769,7 +1766,6 @@ sctp_do_connect_x(struct socket *so,
 		sctp_copy_chunklist(inp->sctp_ep.local_auth_chunks);
 	/* copy defaults from the endpoint */
 	stcb->asoc.authinfo.assoc_keyid = inp->sctp_ep.default_keyid;
-#endif /* HAVE_SCTP_AUTH */
 
 	if (delay) {
 		/* doing delayed connection */
@@ -2225,10 +2221,8 @@ sctp_optsget(struct socket *so,
 		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_ADAPTATIONEVNT))
 			events->sctp_adaptation_layer_event = 1;
 
-#ifdef HAVE_SCTP_AUTH
 		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_AUTHEVNT))
 			events->sctp_authentication_event = 1;
-#endif /* HAVE_SCTP_AUTH */
 
 		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_STREAM_RESETEVNT))
 			events->sctp_stream_reset_events = 1;
@@ -3003,7 +2997,6 @@ sctp_optsget(struct socket *so,
 	}
 	break;
 
-#ifdef HAVE_SCTP_AUTH
     case SCTP_HMAC_IDENT:
     {
 	struct sctp_hmacalgo *shmac;
@@ -3182,7 +3175,6 @@ sctp_optsget(struct socket *so,
 	m->m_len = sizeof(struct sctp_authchunks) + size;
 	break;
     }
-#endif /* HAVE_SCTP_AUTH */
 
 #if defined(HAVE_SCTP_PEELOFF_SOCKOPT)
 	case SCTP_PEELOFF:
@@ -3398,7 +3390,6 @@ sctp_optsset(struct socket *so,
 	}
 	break;
 
-#ifdef HAVE_SCTP_AUTH
     case SCTP_AUTH_CHUNK:
     {
 	struct sctp_authchunk *sauth;
@@ -3632,7 +3623,6 @@ sctp_optsset(struct socket *so,
 	}
 	break;
     }
-#endif /* HAVE_SCTP_AUTH */
 
 	case SCTP_RESET_STREAMS:
 	{
@@ -4763,7 +4753,6 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	}
 	stcb->asoc.state = SCTP_STATE_COOKIE_WAIT;
 	SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_entered);
-#ifdef HAVE_SCTP_AUTH
 	/*
 	 * initialize authentication parameters for the assoc
 	 */
@@ -4777,7 +4766,6 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		sctp_copy_chunklist(inp->sctp_ep.local_auth_chunks);
 	/* copy defaults from the endpoint */
 	stcb->asoc.authinfo.assoc_keyid = inp->sctp_ep.default_keyid;
-#endif /* HAVE_SCTP_AUTH */
 
 	sctp_send_initiate(inp, stcb);
 	SCTP_ASOC_CREATE_UNLOCK(inp);

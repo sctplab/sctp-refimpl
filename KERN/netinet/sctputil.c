@@ -155,9 +155,7 @@
 #include <netinet/sctp_timer.h>
 #include <netinet/sctp_crc32.h>
 #include <netinet/sctp_indata.h>	/* for sctp_deliver_data() */
-#ifdef HAVE_SCTP_AUTH
 #include <netinet/sctp_auth.h>
-#endif /* HAVE_SCTP_AUTH */
 
 extern int sctp_warm_the_crc32_table;
 
@@ -1095,7 +1093,6 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	TAILQ_INIT(&asoc->resetHead);
 	asoc->max_inbound_streams = m->sctp_ep.max_open_streams_intome;
 	TAILQ_INIT(&asoc->asconf_queue);
-#ifdef HAVE_SCTP_AUTH
 	/* authentication fields */
 	asoc->authinfo.random      = NULL;
 	asoc->authinfo.assoc_key   = NULL;
@@ -1103,7 +1100,6 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	asoc->authinfo.recv_key    = NULL;
 	asoc->authinfo.recv_keyid  = 0;
 	LIST_INIT(&asoc->shared_keys);
-#endif /* HAVE_SCTP_AUTH */
 
 	return (0);
 }
@@ -3008,7 +3004,6 @@ sctp_ulp_notify(u_int32_t notification, struct sctp_tcb *stcb,
 	case SCTP_NOTIFY_PEER_SHUTDOWN:
 		sctp_notify_shutdown_event(stcb);
 		break;
-#ifdef HAVE_SCTP_AUTH
 	case SCTP_NOTIFY_AUTH_NEW_KEY:
 	    sctp_notify_authentication(stcb, SCTP_AUTH_NEWKEY, error,
 				       (uint32_t)data);
@@ -3019,7 +3014,7 @@ sctp_ulp_notify(u_int32_t notification, struct sctp_tcb *stcb,
 				       error, (uint32_t)data);
 	    break;
 #endif /* not yet? remove? */
-#endif /* HAVE_SCTP_AUTH */
+
 
 	default:
 #ifdef SCTP_DEBUG

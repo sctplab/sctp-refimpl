@@ -3998,12 +3998,10 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		}
 	}
 #endif
-#ifdef HAVE_SCTP_AUTH
 	/* fill in the HMAC digest for any AUTH chunk in the packet */
 	if ((auth != NULL) && (stcb != NULL)) {
 	    sctp_fill_hmac_digest_m(m, auth_offset, auth, stcb);
 	}
-#endif /* HAVE_SCTP_AUTH */
 
 	/* Calculate the csum and fill in the length of the packet */
 	sctphdr = mtod(m, struct sctphdr *);
@@ -4704,11 +4702,7 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	pr_supported->chunk_types[2] = SCTP_FORWARD_CUM_TSN;
 	pr_supported->chunk_types[3] = SCTP_PACKET_DROPPED;
 	pr_supported->chunk_types[4] = SCTP_STREAM_RESET;
-#ifdef HAVE_SCTP_AUTH
 	pr_supported->chunk_types[5] = SCTP_AUTHENTICATION;
-#else
-	pr_supported->chunk_types[5] = 0; /* pad */
-#endif /* HAVE_SCTP_AUTH */
 	pr_supported->chunk_types[6] = 0; /* pad */
 	pr_supported->chunk_types[7] = 0; /* pad */
 
@@ -4722,7 +4716,6 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		m->m_len += sizeof(*ecn_nonce);
 	}
 
-#ifdef HAVE_SCTP_AUTH
 	/* add authentication parameters */
 	{
 	struct sctp_auth_random *random;
@@ -4769,7 +4762,6 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	    m->m_len += SCTP_SIZE32(p_len);
 	}
 	}
-#endif /* HAVE_SCTP_AUTH */
 
 	m_at = m;
 	/* now the addresses */
@@ -5718,11 +5710,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	pr_supported->chunk_types[2] = SCTP_FORWARD_CUM_TSN;
 	pr_supported->chunk_types[3] = SCTP_PACKET_DROPPED;
 	pr_supported->chunk_types[4] = SCTP_STREAM_RESET;
-#ifdef HAVE_SCTP_AUTH
 	pr_supported->chunk_types[5] = SCTP_AUTHENTICATION;
-#else
-	pr_supported->chunk_types[5] = 0; /* pad */
-#endif /* HAVE_SCTP_AUTH */
 	pr_supported->chunk_types[6] = 0; /* pad */
 	pr_supported->chunk_types[7] = 0; /* pad */
 
@@ -5736,7 +5724,6 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		m->m_len += sizeof(*ecn_nonce);
 	}
 
-#ifdef HAVE_SCTP_AUTH
 	/* add authentication parameters */
 	{
 	struct sctp_key *random_key;
@@ -5783,7 +5770,6 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	    m->m_len += SCTP_SIZE32(p_len);
 	}
 	}
-#endif /* HAVE_SCTP_AUTH */
 
 	m_at = m;
 	/* now the addresses */
@@ -6230,11 +6216,9 @@ sctp_get_frag_point(struct sctp_tcb *stcb,
 /*		siz = (MCLBYTES - sizeof(struct sctp_data_chunk));*/
 /*	}*/
 
-#ifdef HAVE_SCTP_AUTH
 	/* adjust for an AUTH chunk if DATA requires auth */
 	if (sctp_auth_is_required_chunk(SCTP_DATA, stcb->asoc.peer_auth_chunks))
 		siz -= sctp_get_auth_chunk_len(stcb->asoc.peer_hmac_id);
-#endif /* HAVE_SCTP_AUTH */
 
 	if (siz % 4) {
 		/* make it an even word boundary please */
@@ -7943,7 +7927,6 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 				 */
 				continue;
 			}
-#ifdef HAVE_SCTP_AUTH
 			/*
 			 * if no AUTH is yet included and this chunk requires
 			 * it, make sure to account for it.  We don't apply
@@ -7957,9 +7940,6 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 				omtu = sctp_get_auth_chunk_len(stcb->asoc.peer_hmac_id);
 			} else
 				omtu = 0;
-#else
-			omtu = 0;
-#endif /* HAVE_SCTP_AUTH */
 			/* Here we do NOT factor the r_mtu */
 			if ((chk->data->m_pkthdr.len < (int)(mtu - omtu)) ||
 			    (chk->flags & CHUNK_FLAGS_FRAGMENT_OK)) {
@@ -7972,7 +7952,6 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 				 * merged control chain.. el yucko.. for now
 				 * we take the easy way and do the copy
 				 */
-#ifdef HAVE_SCTP_AUTH
 				/*
 				 * Add an AUTH chunk, if chunk requires it
 				 * save the offset into the chain for AUTH
@@ -7985,7 +7964,6 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 								   stcb,
 								   chk->rec.chunk_id);
 				}
-#endif /* HAVE_SCTP_AUTH */
 				outchain = sctp_copy_mbufchain(chk->data,
 							       outchain,
 							       &endoutchain,
@@ -8159,7 +8137,6 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 		/*********************/
 		/* Data transmission */
 		/*********************/
-#ifdef HAVE_SCTP_AUTH
 		/*
 		 * if AUTH for DATA is required and no AUTH has been added
 		 * yet, account for this in the mtu now... if no data can be
@@ -8171,7 +8148,6 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 						stcb->asoc.peer_auth_chunks)) {
 			mtu -= sctp_get_auth_chunk_len(stcb->asoc.peer_hmac_id);
 		}
-#endif /* HAVE_SCTP_AUTH */
 		/* now lets add any data within the MTU constraints */
 		if (((struct sockaddr *)&net->ro._l_addr)->sa_family == AF_INET) {
 			if(net->mtu > (sizeof(struct ip) + sizeof(struct sctphdr)))
@@ -8256,7 +8232,6 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 						printf("Picking up the chunk\n");
 					}
 #endif
-#ifdef HAVE_SCTP_AUTH
 					/*
 					 * Add an AUTH chunk, if chunk requires
 					 * it, save the offset into the chain
@@ -8270,7 +8245,6 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 									   stcb,
 									   SCTP_DATA);
 					}
-#endif /* HAVE_SCTP_AUTH */
 					outchain = sctp_copy_mbufchain(chk->data, outchain, &endoutchain, 1, 0);
 					if (outchain == NULL) {
 #ifdef SCTP_DEBUG
@@ -9053,7 +9027,6 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 				fwd_tsn = 1;
 				fwd = chk;
 			}
-#ifdef HAVE_SCTP_AUTH
 			/*
 			 * Add an AUTH chunk, if chunk requires it
 			 * save the offset into the chain for AUTH
@@ -9064,7 +9037,6 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 							stcb,
 							chk->rec.chunk_id);
 			}
-#endif /* HAVE_SCTP_AUTH */
 			m = sctp_copy_mbufchain(chk->data, m, &endofchain, 1,
 						0);
 			break;
@@ -9200,7 +9172,6 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 			net->fast_retran_ip = 1;
 		}
 
-#ifdef HAVE_SCTP_AUTH
 		/*
 		 * if no AUTH is yet included and this chunk requires
 		 * it, make sure to account for it.  We don't apply
@@ -9213,18 +9184,15 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 			dmtu = sctp_get_auth_chunk_len(stcb->asoc.peer_hmac_id);
 		} else
 			dmtu = 0;
-#endif /* HAVE_SCTP_AUTH */
 
 		if ((chk->send_size <= (mtu - dmtu)) ||
 		    (chk->flags & CHUNK_FLAGS_FRAGMENT_OK)) {
 			/* ok we will add this one */
-#ifdef HAVE_SCTP_AUTH
 			if (auth == NULL) {
 				m = sctp_add_auth_chunk(m, &endofchain,
 							&auth, &auth_offset,
 							stcb, SCTP_DATA);
 			}
-#endif /* HAVE_SCTP_AUTH */
 			m = sctp_copy_mbufchain(chk->data, m, &endofchain, 1,
 						0);
 			if (m == NULL) {
@@ -9259,18 +9227,13 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 					fwd = TAILQ_NEXT(fwd, sctp_next);
 					continue;
 				}
-#ifdef HAVE_SCTP_AUTH
 				if ((auth == NULL) &&
 				    sctp_auth_is_required_chunk(SCTP_DATA,
 								stcb->asoc.peer_auth_chunks)) {
 					dmtu = sctp_get_auth_chunk_len(stcb->asoc.peer_hmac_id);
 				} else
 					dmtu = 0;
-#else
-				dmtu = 0;
-#endif /* HAVE_SCTP_AUTH */
 				if (fwd->send_size <= (mtu - dmtu)) {
-#ifdef HAVE_SCTP_AUTH
 					if (auth == NULL) {
 						m = sctp_add_auth_chunk(m,
 									&endofchain,
@@ -9278,7 +9241,6 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 									stcb,
 									SCTP_DATA);
 					}
-#endif /* HAVE_SCTP_AUTH */
 					m = sctp_copy_mbufchain(fwd->data, m,
 								&endofchain, 1,
 								0);
@@ -9983,7 +9945,6 @@ sctp_output(inp, m, addr, control, p, flags)
 		asoc->state = SCTP_STATE_COOKIE_WAIT;
 		SCTP_GETTIME_TIMEVAL(&asoc->time_entered);
 
-#ifdef HAVE_SCTP_AUTH
 		/*
 		 * initialize authentication parameters for the assoc
 		 */
@@ -9998,7 +9959,6 @@ sctp_output(inp, m, addr, control, p, flags)
 			sctp_copy_chunklist(inp->sctp_ep.local_auth_chunks);
 		/* copy defaults from the endpoint */
 		asoc->authinfo.assoc_keyid = inp->sctp_ep.default_keyid;
-#endif /* HAVE_SCTP_AUTH */
 
 		if (control) {
 			/* see if a init structure exists in cmsg headers */
@@ -10633,14 +10593,12 @@ sctp_send_abort_tcb(struct sctp_tcb *stcb, struct mbuf *operr)
 	struct sctp_auth_chunk *auth = NULL;
 	struct sctphdr *shdr;
 
-#ifdef HAVE_SCTP_AUTH
 	/*
 	 * Add an AUTH chunk, if chunk requires it and save the offset
 	 * into the chain for AUTH
 	 */
 	m_out = sctp_add_auth_chunk(m_out, &m_end, &auth, &auth_offset,
 				    stcb, SCTP_ABORT_ASSOCIATION);
-#endif /* HAVE_SCTP_AUTH */
 
 	STCB_TCB_LOCK_ASSERT(stcb);
 	MGETHDR(m_abort, M_DONTWAIT, MT_HEADER);
@@ -12985,7 +12943,6 @@ sctp_lower_sosend(struct socket *so,
 		asoc->state = SCTP_STATE_COOKIE_WAIT;
 		SCTP_GETTIME_TIMEVAL(&asoc->time_entered);
 
-#ifdef HAVE_SCTP_AUTH
 		/*
 		 * initialize authentication parameters for the assoc
 		 */
@@ -13000,7 +12957,6 @@ sctp_lower_sosend(struct socket *so,
 			sctp_copy_chunklist(inp->sctp_ep.local_auth_chunks);
 		/* copy defaults from the endpoint */
 		asoc->authinfo.assoc_keyid = inp->sctp_ep.default_keyid;
-#endif /* HAVE_SCTP_AUTH */
 
 		if (control) {
 			/* see if a init structure exists in cmsg headers */
@@ -13284,7 +13240,6 @@ sctp_lower_sosend(struct socket *so,
 }
 
 
-#ifdef HAVE_SCTP_AUTH
 /*
  * generate an AUTHentication chunk, if required
  */
@@ -13344,4 +13299,3 @@ sctp_add_auth_chunk (struct mbuf *m, struct mbuf **m_end,
 
     return (m);
 }
-#endif /* HAVE_SCTP_AUTH */
