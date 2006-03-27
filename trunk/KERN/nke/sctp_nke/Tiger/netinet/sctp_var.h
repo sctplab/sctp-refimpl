@@ -83,16 +83,18 @@
 #define SCTPCTL_DEADLOCK_DET        30
 #define SCTPCTL_EARLY_FR_MSEC       31
 #define SCTPCTL_AUTH_DISABLE        32
-#define SCTPCTL_AUTH_HMAC_ID        33
-#define SCTPCTL_ABC_L_VAR           34
-#define SCTPCTL_MAX_MBUF_CHAIN      35
-#define SCTPCTL_CMT_USE_DAC         36
-#define SCTPCTL_DO_DRAIN            37
+#define SCTPCTL_AUTH_RANDOM_LEN     33
+#define SCTPCTL_AUTH_HMAC_ID        34
+#define SCTPCTL_ABC_L_VAR           35
+#define SCTPCTL_MAX_MBUF_CHAIN      36
+#define SCTPCTL_CMT_USE_DAC         37
+#define SCTPCTL_DO_DRAIN            38
+#define SCTPCTL_WARM_CRC32          39
 #ifdef SCTP_DEBUG
-#define SCTPCTL_DEBUG               38
-#define SCTPCTL_MAXID		    38
+#define SCTPCTL_DEBUG               40
+#define SCTPCTL_MAXID		    40
 #else
-#define SCTPCTL_MAXID		    37
+#define SCTPCTL_MAXID		    39
 #endif
 
 #endif
@@ -133,14 +135,15 @@
         { "deadlock_detect", CTLTYPE_INT }, \
         { "early_fast_retran_msec", CTLTYPE_INT }, \
 	{ "auth_disable", CTLTYPE_INT }, \
+	{ "auth_random_len", CTLTYPE_INT }, \
 	{ "auth_hmac_id", CTLTYPE_INT }, \
 	{ "abc_l_var", CTLTYPE_INT }, \
 	{ "max_mbuf_chain", CTLTYPE_INT }, \
 	{ "cmt_use_dac", CTLTYPE_INT }, \
 	{ "do_sctp_drain", CTLTYPE_INT }, \
+	{ "warm_crc_table", CTLTYPE_INT }, \
 	{ "debug", CTLTYPE_INT }, \
 }
-
 #else
 #define SCTPCTL_NAMES { \
 	{ 0, 0 }, \
@@ -177,10 +180,12 @@
         { "deadlock_detect", CTLTYPE_INT }, \
         { "early_fast_retran_msec", CTLTYPE_INT }, \
 	{ "auth_disable", CTLTYPE_INT }, \
+	{ "auth_random_len", CTLTYPE_INT }, \
 	{ "auth_hmac_id", CTLTYPE_INT }, \
 	{ "abc_l_var", CTLTYPE_INT }, \
 	{ "max_mbuf_chain", CTLTYPE_INT }, \
 	{ "cmt_use_dac", CTLTYPE_INT }, \
+	{ "warm_crc_table", CTLTYPE_INT }, \
 	{ "do_sctp_drain", CTLTYPE_INT }, \
 }
 #endif
@@ -354,6 +359,9 @@ void	sctp_input __P((struct mbuf *, ... ));
 #endif
 void	sctp_drain __P((void));
 void	sctp_init __P((void));
+#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
+void sctp_finish(void);
+#endif
 int	sctp_shutdown __P((struct socket *));
 void	sctp_notify __P((struct sctp_inpcb *, int, struct sctphdr *,
 			 struct sockaddr *, struct sctp_tcb *,

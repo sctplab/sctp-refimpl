@@ -83,9 +83,7 @@ TAILQ_HEAD(sctp_readhead, sctp_queued_to_read);
 
 #include <netinet/sctp_structs.h>
 #include <netinet/sctp_uio.h>
-#ifdef HAVE_SCTP_AUTH
 #include <netinet/sctp_auth.h>
-#endif /* HAVE_SCTP_AUTH */
 
 /*
  * PCB flags (in sctp_flags bitmask)
@@ -131,7 +129,6 @@ TAILQ_HEAD(sctp_readhead, sctp_queued_to_read);
 #define SCTP_PCB_FLAGS_AUTHEVNT		0x00040000
 #define SCTP_PCB_FLAGS_STREAM_RESETEVNT 0x00080000
 #define SCTP_PCB_FLAGS_NO_FRAGMENT	0x00100000
-
 
 
 #define SCTP_PCBHASH_ALLADDR(port, mask) (port & mask)
@@ -184,7 +181,9 @@ struct sctp_epinfo {
 	uint32_t hashtblsize;
 
 	struct sctppcbhead listhead;
-
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	struct inpcbhead inplisthead;
+#endif
 	struct sctpiterators iteratorhead;
 
 	/* ep zone info */
@@ -294,14 +293,11 @@ struct sctp_pcb {
 	uint32_t sctp_sws_sender;
 	uint32_t sctp_sws_receiver;
 
-#ifdef HAVE_SCTP_AUTH
-    /* authentication related fields */
-    struct sctp_keyhead     shared_keys;
-    sctp_auth_chklist_t     *local_auth_chunks;
-    sctp_hmaclist_t         *local_hmacs;
-    uint16_t                default_keyid;
-    uint8_t                 disable_authkey0;	/* disable null key id 0 */
-#endif /* HAVE_SCTP_AUTH */
+	/* authentication related fields */
+	struct sctp_keyhead shared_keys;
+	sctp_auth_chklist_t *local_auth_chunks;
+	sctp_hmaclist_t     *local_hmacs;
+	uint16_t            default_keyid;
 
 	/* various thresholds */
 	/* Max times I will init at a guy */
@@ -684,8 +680,6 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 /* Lock for INFO stuff */
 #define SCTP_INP_INFO_LOCK_INIT() \
 	sctppcbinfo.ipi_ep_mtx = lck_rw_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
-#define SCTP_IPI_COUNT_INIT() \
-	sctppcbinfo.ipi_count_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
 #define SCTP_INP_INFO_RLOCK() \
 	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx)
 #define SCTP_INP_INFO_RUNLOCK() \
@@ -694,6 +688,12 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx)
 #define SCTP_INP_INFO_WUNLOCK() \
 	lck_rw_done(sctppcbinfo.ipi_ep_mtx)
+#define SCTP_INP_INFO_LOCK_DESTROY() \
+        lck_rw_free(sctppcbinfo.ipi_ep_mtx, SCTP_MTX_GRP)
+#define SCTP_IPI_COUNT_INIT() \
+	sctppcbinfo.ipi_count_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
+#define SCTP_IPI_COUNT_DESTROY() \
+        lck_mtx_free(sctppcbinfo.ipi_count_mtx, SCTP_MTX_GRP)
 
 /* Lock for INP */
 #define SCTP_INP_LOCK_INIT(_inp)

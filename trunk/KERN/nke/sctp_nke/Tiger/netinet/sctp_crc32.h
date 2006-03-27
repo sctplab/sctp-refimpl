@@ -49,6 +49,8 @@ u_int32_t update_crc32(u_int32_t, unsigned char *, unsigned int);
 
 u_int32_t sctp_csum_finalize(u_int32_t);
 
+void sctp_warm_tables(void);
+
 #endif /* _KERNEL */
 #endif /* !SCTP_USE_ADLER32 */
 #endif /* __crc32c_h__ */

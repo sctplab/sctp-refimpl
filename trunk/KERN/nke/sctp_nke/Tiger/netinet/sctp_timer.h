@@ -82,5 +82,9 @@ void sctp_audit_retranmission_queue(struct sctp_association *);
 
 void sctp_iterator_timer(struct sctp_iterator *it);
 
+#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
+void sctp_slowtimo();
+#endif
+
 #endif
 #endif

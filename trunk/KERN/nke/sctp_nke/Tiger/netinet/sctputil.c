@@ -155,9 +155,9 @@
 #include <netinet/sctp_timer.h>
 #include <netinet/sctp_crc32.h>
 #include <netinet/sctp_indata.h>	/* for sctp_deliver_data() */
-#ifdef HAVE_SCTP_AUTH
 #include <netinet/sctp_auth.h>
-#endif /* HAVE_SCTP_AUTH */
+
+extern int sctp_warm_the_crc32_table;
 
 #define NUMBER_OF_MTU_SIZES 18
 
@@ -169,7 +169,6 @@ extern u_int32_t sctp_debug_on;
 int sctp_cwnd_log_at=0;
 int sctp_cwnd_log_rolled=0;
 struct sctp_cwnd_log sctp_clog[SCTP_STAT_LOG_SIZE];
-
 
 static uint32_t sctp_get_time_of_event(void)
 {
@@ -1094,16 +1093,13 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	TAILQ_INIT(&asoc->resetHead);
 	asoc->max_inbound_streams = m->sctp_ep.max_open_streams_intome;
 	TAILQ_INIT(&asoc->asconf_queue);
-#ifdef HAVE_SCTP_AUTH
 	/* authentication fields */
-	asoc->disable_authkey0     = 0;
 	asoc->authinfo.random      = NULL;
 	asoc->authinfo.assoc_key   = NULL;
 	asoc->authinfo.assoc_keyid = 0;
 	asoc->authinfo.recv_key    = NULL;
 	asoc->authinfo.recv_keyid  = 0;
 	LIST_INIT(&asoc->shared_keys);
-#endif /* HAVE_SCTP_AUTH */
 
 	return (0);
 }
@@ -2112,7 +2108,10 @@ sctp_calculate_sum(struct mbuf *m, int32_t *pktlen, uint32_t offset)
 		offset -= at->m_len;	/* update remaining offset left */
 		at = at->m_next;
 	}
-
+#ifndef SCTP_USE_ADLER32
+	if(sctp_warm_the_crc32_table)
+		sctp_warm_tables();
+#endif
 	while (at != NULL) {
 #ifdef SCTP_USE_ADLER32
 		base = update_adler32(base, 
@@ -3005,7 +3004,6 @@ sctp_ulp_notify(u_int32_t notification, struct sctp_tcb *stcb,
 	case SCTP_NOTIFY_PEER_SHUTDOWN:
 		sctp_notify_shutdown_event(stcb);
 		break;
-#ifdef HAVE_SCTP_AUTH
 	case SCTP_NOTIFY_AUTH_NEW_KEY:
 	    sctp_notify_authentication(stcb, SCTP_AUTH_NEWKEY, error,
 				       (uint32_t)data);
@@ -3016,7 +3014,7 @@ sctp_ulp_notify(u_int32_t notification, struct sctp_tcb *stcb,
 				       error, (uint32_t)data);
 	    break;
 #endif /* not yet? remove? */
-#endif /* HAVE_SCTP_AUTH */
+
 
 	default:
 #ifdef SCTP_DEBUG
