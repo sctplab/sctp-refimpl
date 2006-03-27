@@ -3685,6 +3685,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					sctp_m_getptr(m, auth_offset,
 						      auth_len, chunk_buf);
 				got_auth = 1;
+				auth_skipped = 0;
 				if (sctp_handle_auth(stcb, (struct sctp_auth_chunk *)ch,
 						     m, auth_offset)) {
 					/* auth HMAC failed so dump it */
@@ -4169,7 +4170,7 @@ process_control_chunks:
 							      auth_len,
 							      chunk_buf);
 					got_auth = 1;
-					
+					auth_skipped = 0;
 					if (sctp_handle_auth(stcb, (struct sctp_auth_chunk *)ch,
 						     m, auth_offset)) {
 						/* auth HMAC failed */
@@ -4180,7 +4181,7 @@ process_control_chunks:
 						authenticated = 1;
 						stcb->asoc.authenticated = 1;
 					}
-#ifdef SCTP_DEBUG	
+#ifdef SCTP_DEBUG
 					if (sctp_debug_on & SCTP_DEBUG_AUTH1)
 						printf("COOKIE-ECHO: AUTH verified\n");
 #endif /* SCTP_DEBUG */
@@ -4350,14 +4351,16 @@ process_control_chunks:
 			}
 #endif /* SCTP_DEBUG */
 			if (stcb == NULL) {
-				/* save this chunk for later processing */
-				auth_skipped = 1;
-				auth_offset = *offset;
-				auth_len = chk_length;
+				/* save the first AUTH for later processing */
+				if (auth_skipped == 0) {
+					auth_offset = *offset;
+					auth_len = chk_length;
+					auth_skipped = 1;
 #ifdef SCTP_DEBUG	
-			if (sctp_debug_on & SCTP_DEBUG_AUTH1)
-				printf("Saved AUTH chunk for later check: offset %u, len %u\n",
-				       auth_offset, auth_len);
+					if (sctp_debug_on & SCTP_DEBUG_AUTH1)
+						printf("Saved AUTH chunk for later check: offset %u, len %u\n",
+						       auth_offset, auth_len);
+				}
 #endif /* SCTP_DEBUG */
 				/* skip this chunk (temporarily) */
 				goto next_chunk;
