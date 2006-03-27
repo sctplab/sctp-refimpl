@@ -3578,6 +3578,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 	struct sctp_tcb *locked_tcb = stcb;
 #ifdef HAVE_SCTP_AUTH
 	int authenticated = 0, got_auth = 0;
+	uint32_t auth_offset, auth_len;
+	int auth_skipped = 0;
 #endif /* HAVE_SCTP_AUTH */
 
 #ifdef SCTP_DEBUG
@@ -3616,13 +3618,41 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			return (NULL);
 		}
 	} else if (ch->chunk_type != SCTP_COOKIE_ECHO) {
-
-/*
- * FIX ME: need to temporary skip AUTH chunk if ASCONF and stcb is NULL
- * Find the assoc with the lookup address, then validate the AUTH chunk,
- * and continue only if it passes.  Otherwise, toss the rest of the
- * packet.
- */
+#ifdef HAVE_SCTP_AUTH
+		/*
+		 * If there is no stcb, skip the AUTH chunk and process
+		 * later after a stcb is found (to validate the lookup
+		 * was valid.
+		 */
+		if ((ch->chunk_type == SCTP_AUTHENTICATION) &&
+		    (stcb == NULL)) {
+			/* save this chunk for later processing */
+			auth_skipped = 1;
+			auth_offset = *offset;
+			auth_len = ntohs(ch->chunk_length);
+#ifdef SCTP_DEBUG	
+			if (sctp_debug_on & SCTP_DEBUG_AUTH1)
+				printf("Saved AUTH chunk for later check: offset %u, len %u\n",
+				       auth_offset, auth_len);
+#endif /* SCTP_DEBUG */
+			/* (temporarily) move past this chunk */
+			*offset += SCTP_SIZE32(auth_len);
+			if (*offset >= length) {
+				/* no more data left in the mbuf chain */
+				*offset = length;
+				return (NULL);
+			}
+			ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, *offset,
+				sizeof(struct sctp_chunkhdr), chunk_buf);
+		}
+		if (ch->chunk_type == SCTP_COOKIE_ECHO) {
+#ifdef SCTP_DEBUG	
+			if (sctp_debug_on & SCTP_DEBUG_AUTH1)
+				printf("Skipping to process_control_chunks\n");
+#endif /* SCTP_DEBUG */
+			goto process_control_chunks;
+		}
+#endif /* HAVE_SCTP_AUTH */
 		/*
 		 * first check if it's an ASCONF with an unknown src addr
 		 * we need to look inside to find the association
@@ -3644,6 +3674,33 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				SCTP_INP_DECR_REF(inp);
 				SCTP_INP_WUNLOCK(inp);
 			}
+#ifdef HAVE_SCTP_AUTH
+			/* now go back and verify any auth chunk to be sure */
+			if (auth_skipped) {
+#ifdef SCTP_DEBUG
+				if (sctp_debug_on & SCTP_DEBUG_AUTH1)
+					printf("ASCONF: verifying AUTH\n");
+#endif /* SCTP_DEBUG */
+				ch = (struct sctp_chunkhdr *)
+					sctp_m_getptr(m, auth_offset,
+						      auth_len, chunk_buf);
+				got_auth = 1;
+				if (sctp_handle_auth(stcb, (struct sctp_auth_chunk *)ch,
+						     m, auth_offset)) {
+					/* auth HMAC failed so dump it */
+					*offset = length;
+					return (NULL);
+				} else {
+					/* remaining chunks are HMAC checked */
+					authenticated = 1;
+					stcb->asoc.authenticated = 1;
+				}
+#ifdef SCTP_DEBUG	
+				if (sctp_debug_on & SCTP_DEBUG_AUTH1)
+					printf("ASCONF: AUTH verified\n");
+#endif /* SCTP_DEBUG */
+			}
+#endif /* HAVE_SCTP_AUTH */
 		}
 		if (stcb == NULL) {
 			/* no association, so it's out of the blue... */
@@ -3722,9 +3779,13 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 	    (SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_COOKIE_ECHOED)) {
 	    /* implied cookie-ack.. we must have lost the ack */
 	    stcb->asoc.overall_error_count = 0;
-	    sctp_handle_cookie_ack((struct sctp_cookie_ack_chunk *)ch, stcb, *netp);
+	    sctp_handle_cookie_ack((struct sctp_cookie_ack_chunk *)ch, stcb,
+				   *netp);
 	}
 
+#ifdef HAVE_SCTP_AUTH
+process_control_chunks:
+#endif /* HAVE_SCTP_AUTH */
 	while (IS_SCTP_CONTROL(ch)) {
 		/* validate chunk length */
 		chk_length = ntohs(ch->chunk_length);
@@ -4096,6 +4157,35 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					*offset = length;
 					return (NULL);
 				}
+#ifdef HAVE_SCTP_AUTH
+				/* TCB exists, so process any pending AUTH */
+				if (auth_skipped) {
+#ifdef SCTP_DEBUG
+					if (sctp_debug_on & SCTP_DEBUG_AUTH1)
+						printf("COOKIE-ECHO: verifying AUTH\n");
+#endif /* SCTP_DEBUG */
+					ch = (struct sctp_chunkhdr *)
+						sctp_m_getptr(m, auth_offset,
+							      auth_len,
+							      chunk_buf);
+					got_auth = 1;
+					
+					if (sctp_handle_auth(stcb, (struct sctp_auth_chunk *)ch,
+						     m, auth_offset)) {
+						/* auth HMAC failed */
+						*offset = length;
+						return (NULL);
+					} else {
+						/* remaining chunks checked */
+						authenticated = 1;
+						stcb->asoc.authenticated = 1;
+					}
+#ifdef SCTP_DEBUG	
+					if (sctp_debug_on & SCTP_DEBUG_AUTH1)
+						printf("COOKIE-ECHO: AUTH verified\n");
+#endif /* SCTP_DEBUG */
+				}
+#endif /* HAVE_SCTP_AUTH */
 				if (!TAILQ_EMPTY(&stcb->asoc.sent_queue)) {
 					/*
 					 * Restart the timer if we have pending
@@ -4259,6 +4349,19 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				printf("SCTP_AUTHENTICATION\n");
 			}
 #endif /* SCTP_DEBUG */
+			if (stcb == NULL) {
+				/* save this chunk for later processing */
+				auth_skipped = 1;
+				auth_offset = *offset;
+				auth_len = chk_length;
+#ifdef SCTP_DEBUG	
+			if (sctp_debug_on & SCTP_DEBUG_AUTH1)
+				printf("Saved AUTH chunk for later check: offset %u, len %u\n",
+				       auth_offset, auth_len);
+#endif /* SCTP_DEBUG */
+				/* skip this chunk (temporarily) */
+				goto next_chunk;
+			}
 			if (got_auth == 1) {
 				/* skip this chunk... it's already auth'd */
 				goto next_chunk;
