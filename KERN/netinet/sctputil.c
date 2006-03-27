@@ -2109,8 +2109,10 @@ sctp_calculate_sum(struct mbuf *m, int32_t *pktlen, uint32_t offset)
 		at = at->m_next;
 	}
 #ifndef SCTP_USE_ADLER32
+#if BYTE_ORDER == LITTLE_ENDIAN
 	if(sctp_warm_the_crc32_table)
 		sctp_warm_tables();
+#endif
 #endif
 	while (at != NULL) {
 #ifdef SCTP_USE_ADLER32
