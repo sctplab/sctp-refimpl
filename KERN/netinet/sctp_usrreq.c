@@ -225,6 +225,14 @@ sctp_init(void)
 #endif
 }
 
+#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
+void
+sctp_finish(void)
+{
+    sctp_pcb_finish();
+}
+#endif
+
 #ifdef INET6
 void
 ip_2_ip6_hdr(struct ip6_hdr *ip6, struct ip *ip)
