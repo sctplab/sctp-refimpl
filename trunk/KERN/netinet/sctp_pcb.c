@@ -1617,7 +1617,9 @@ sctp_inpcb_alloc(struct socket *so)
 	bzero(inp, sizeof(*inp));
 
 	/* bump generations */
+#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
 	inp->ip_inp.inp.inp_state = INPCB_STATE_INUSE;
+#endif
 	inp->ip_inp.inp.inp_socket = so;
 
 	/* setup socket pointers */
