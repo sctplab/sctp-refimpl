@@ -676,18 +676,32 @@ sctp_crc32c_sb8_64_bit(uint32_t crc,
 	running_length = ((length - init_bytes)/8)*8;
 	end_bytes = length - init_bytes - running_length; 
 
-	for(li=0; li < init_bytes; li++) 
+	for(li=0; li < init_bytes; li++)
 		crc = sctp_crc_tableil8_o32[(crc ^ *p_buf++) & 0x000000FF] ^ (crc >> 8);	
 	for(li=0; li < running_length/8; li++) 
 	{
+#if BYTE_ORDER == BIG_ENDIAN
+		crc ^= *p_buf++;
+		crc ^= (*p_buf++) << 8;
+		crc ^= (*p_buf++) << 16;
+		crc ^= (*p_buf++) << 24;
+#else
 		crc ^= *(uint32_t *)p_buf;
 		p_buf += 4;
+#endif
 		term1 = sctp_crc_tableil8_o88[crc & 0x000000FF] ^
 			sctp_crc_tableil8_o80[(crc >> 8) & 0x000000FF];
 		term2 = crc >> 16;
 		crc = term1 ^
 			sctp_crc_tableil8_o72[term2 & 0x000000FF] ^ 
 			sctp_crc_tableil8_o64[(term2 >> 8) & 0x000000FF];
+
+#if BYTE_ORDER == BIG_ENDIAN
+		term1  = sctp_crc_tableil8_o56[*p_buf++];
+		term1 ^= sctp_crc_tableil8_o48[*p_buf++];
+		crc = crc ^ term1 ^ sctp_crc_tableil8_o40[*p_buf++];
+		crc ^= sctp_crc_tableil8_o32[*p_buf++];
+#else
 		term1 = sctp_crc_tableil8_o56[(*(uint32_t *)p_buf) & 0x000000FF] ^
 			sctp_crc_tableil8_o48[((*(uint32_t *)p_buf) >> 8) & 0x000000FF];
 		
@@ -697,8 +711,9 @@ sctp_crc32c_sb8_64_bit(uint32_t crc,
 			sctp_crc_tableil8_o40[term2  & 0x000000FF] ^	
 			sctp_crc_tableil8_o32[(term2 >> 8) & 0x000000FF];	
 		p_buf += 4;
+#endif
 	}
-	for(li=0; li < end_bytes; li++) 
+	for(li=0; li < end_bytes; li++)
 		crc = sctp_crc_tableil8_o32[(crc ^ *p_buf++) & 0x000000FF] ^ (crc >> 8);
 	return crc;
 }
@@ -770,8 +785,7 @@ sctp_csum_finalize(u_int32_t crc32)
 	byte1 = (result >> 8) & 0x000000ff;
 	byte2 = (result >> 16) & 0x000000ff;
 	byte3 = (result >> 24) & 0x000000ff;
-	result = ((byte0 << 24) | (byte1 << 16) | (byte2 << 8) | byte3);
-	crc32 = htonl(result);
+	crc32 = ((byte0 << 24) | (byte1 << 16) | (byte2 << 8) | byte3);
 #else
 	/*
 	 * For INTEL platforms the result comes out in network order.
