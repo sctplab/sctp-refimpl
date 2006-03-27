@@ -4561,6 +4561,8 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	struct sctp_supported_chunk_types_param *pr_supported;
 	int cnt_inits_to=0;
 	int padval, ret;
+	int num_ext;
+	int p_len;
 
 	/* INIT's always go to the primary (and usually ONLY address) */
 	m_last = NULL;
@@ -4693,35 +4695,36 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	m->m_len += sizeof(*prsctp);
 
 	/* And now tell the peer we do all the extensions */
-	pr_supported = (struct sctp_supported_chunk_types_param *)((caddr_t)prsctp +
-	   sizeof(*prsctp));
+	pr_supported = (struct sctp_supported_chunk_types_param *)
+		((caddr_t)prsctp + sizeof(*prsctp));
 	pr_supported->ph.param_type = htons(SCTP_SUPPORTED_CHUNK_EXT);
-	pr_supported->ph.param_length = htons(sizeof(*pr_supported) + SCTP_EXT_COUNT);
-	pr_supported->chunk_types[0] = SCTP_ASCONF;
-	pr_supported->chunk_types[1] = SCTP_ASCONF_ACK;
-	pr_supported->chunk_types[2] = SCTP_FORWARD_CUM_TSN;
-	pr_supported->chunk_types[3] = SCTP_PACKET_DROPPED;
-	pr_supported->chunk_types[4] = SCTP_STREAM_RESET;
-	pr_supported->chunk_types[5] = SCTP_AUTHENTICATION;
-	pr_supported->chunk_types[6] = 0; /* pad */
-	pr_supported->chunk_types[7] = 0; /* pad */
+	num_ext = 0;
+	pr_supported->chunk_types[num_ext++] = SCTP_ASCONF;
+	pr_supported->chunk_types[num_ext++] = SCTP_ASCONF_ACK;
+	pr_supported->chunk_types[num_ext++] = SCTP_FORWARD_CUM_TSN;
+	pr_supported->chunk_types[num_ext++] = SCTP_PACKET_DROPPED;
+	pr_supported->chunk_types[num_ext++] = SCTP_STREAM_RESET;
+	if (!sctp_auth_disable)
+	    pr_supported->chunk_types[num_ext++] = SCTP_AUTHENTICATION;
+	p_len = sizeof(*pr_supported) + num_ext;
+	pr_supported->ph.param_length = htons(p_len);
+	bzero((caddr_t)pr_supported + p_len, SCTP_SIZE32(p_len) - p_len);
+	m->m_len += SCTP_SIZE32(p_len);
 
-	m->m_len += (sizeof(*pr_supported) + SCTP_EXT_COUNT + SCTP_PAD_EXT_COUNT);
 	/* ECN nonce: And now tell the peer we support ECN nonce */
 	if (sctp_ecn_nonce) {
-		ecn_nonce = (struct sctp_ecn_nonce_supported_param *)((caddr_t)pr_supported +
-		    sizeof(*pr_supported) + SCTP_EXT_COUNT + SCTP_PAD_EXT_COUNT);
+		ecn_nonce = (struct sctp_ecn_nonce_supported_param *)
+			((caddr_t)pr_supported + SCTP_SIZE32(p_len));
 		ecn_nonce->ph.param_type = htons(SCTP_ECN_NONCE_SUPPORTED);
 		ecn_nonce->ph.param_length = htons(sizeof(*ecn_nonce));
 		m->m_len += sizeof(*ecn_nonce);
 	}
 
 	/* add authentication parameters */
-	{
+	if (!sctp_auth_disable) {
 	struct sctp_auth_random *random;
 	struct sctp_auth_hmac_algo *hmacs;
 	struct sctp_auth_chunk_list *chunks;
-	int p_len;
 
 	/* attach RANDOM parameter, if available */
 	if (stcb->asoc.authinfo.random != NULL) {
@@ -5292,6 +5295,8 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	int cnt_inits_to=0;
 	uint16_t his_limit, i_want;
 	int abort_flag, padval, sz_of;
+	int num_ext;
+	int p_len;
 
 	if (stcb) {
 		asoc = &stcb->asoc;
@@ -5698,39 +5703,40 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	prsctp->ph.param_length = htons(sizeof(*prsctp));
 	m->m_len += sizeof(*prsctp);
 
-
 	/* And now tell the peer we do all the extensions */
-	pr_supported = (struct sctp_supported_chunk_types_param *)((caddr_t)prsctp +
-	   sizeof(*prsctp));
+	pr_supported = (struct sctp_supported_chunk_types_param *)
+		((caddr_t)prsctp + sizeof(*prsctp));
 
 	pr_supported->ph.param_type = htons(SCTP_SUPPORTED_CHUNK_EXT);
-	pr_supported->ph.param_length = htons(sizeof(*pr_supported) + SCTP_EXT_COUNT);
-	pr_supported->chunk_types[0] = SCTP_ASCONF;
-	pr_supported->chunk_types[1] = SCTP_ASCONF_ACK;
-	pr_supported->chunk_types[2] = SCTP_FORWARD_CUM_TSN;
-	pr_supported->chunk_types[3] = SCTP_PACKET_DROPPED;
-	pr_supported->chunk_types[4] = SCTP_STREAM_RESET;
-	pr_supported->chunk_types[5] = SCTP_AUTHENTICATION;
-	pr_supported->chunk_types[6] = 0; /* pad */
-	pr_supported->chunk_types[7] = 0; /* pad */
+	num_ext = 0;
+	pr_supported->chunk_types[num_ext++] = SCTP_ASCONF;
+	pr_supported->chunk_types[num_ext++] = SCTP_ASCONF_ACK;
+	pr_supported->chunk_types[num_ext++] = SCTP_FORWARD_CUM_TSN;
+	pr_supported->chunk_types[num_ext++] = SCTP_PACKET_DROPPED;
+	pr_supported->chunk_types[num_ext++] = SCTP_STREAM_RESET;
+	if (!sctp_auth_disable)
+	    pr_supported->chunk_types[num_ext++] = SCTP_AUTHENTICATION;
+	p_len = sizeof(*pr_supported) + num_ext;
+	pr_supported->ph.param_length = htons(p_len);
+	bzero((caddr_t)pr_supported + p_len, SCTP_SIZE32(p_len) - p_len);
+	m->m_len += SCTP_SIZE32(p_len);
 
-	m->m_len += (sizeof(*pr_supported) + SCTP_EXT_COUNT + SCTP_PAD_EXT_COUNT);
+	/* ECN nonce: And now tell the peer we support ECN nonce */
 	if (sctp_ecn_nonce) {
-		/* ECN nonce: And now tell the peer we support ECN nonce */
-		ecn_nonce = (struct sctp_ecn_nonce_supported_param *)((caddr_t)pr_supported +
-		     sizeof(*pr_supported) + SCTP_EXT_COUNT + SCTP_PAD_EXT_COUNT);
+		ecn_nonce = (struct sctp_ecn_nonce_supported_param *)
+			((caddr_t)pr_supported + SCTP_SIZE32(p_len));
 		ecn_nonce->ph.param_type = htons(SCTP_ECN_NONCE_SUPPORTED);
 		ecn_nonce->ph.param_length = htons(sizeof(*ecn_nonce));
 		m->m_len += sizeof(*ecn_nonce);
 	}
 
 	/* add authentication parameters */
+	if (!sctp_auth_disable)
 	{
 	struct sctp_key *random_key;
 	struct sctp_auth_random *random;
 	struct sctp_auth_hmac_algo *hmacs;
 	struct sctp_auth_chunk_list *chunks;
-	int p_len;
 
 	/* generate and add RANDOM parameter */
 	random_key = sctp_generate_random_key(sctp_auth_random_len);
@@ -13255,6 +13261,10 @@ sctp_add_auth_chunk (struct mbuf *m, struct mbuf **m_end,
     if ((m_end == NULL) || (auth_ret == NULL) || (offset == NULL) ||
 	(stcb == NULL))
 	return (m);
+
+    /* sysctl disabled auth? */
+    if (sctp_auth_disable)
+	return(m);
 
     /* peer doesn't do auth... */
     if (!stcb->asoc.peer_supports_auth) {
