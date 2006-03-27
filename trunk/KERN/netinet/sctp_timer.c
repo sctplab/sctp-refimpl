@@ -1814,3 +1814,21 @@ sctp_iterator_timer(struct sctp_iterator *it)
 	}
 	goto select_a_new_ep;
 }
+
+#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
+void
+sctp_slowtimo()
+{
+    struct inpcb *inp;
+
+    lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+    LIST_FOREACH(inp, &sctppcbinfo.inplisthead, inp_list) {
+	if (inp->inp_state == INPCB_STATE_DEAD) {
+	    LIST_REMOVE(inp, inp_list);
+	    SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, (struct  sctp_inpcb *)inp);
+	    SCTP_DECR_EP_COUNT();
+	}
+    }
+    lck_rw_done(sctppcbinfo.ipi_ep_mtx);
+}
+#endif

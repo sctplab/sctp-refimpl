@@ -1617,6 +1617,7 @@ sctp_inpcb_alloc(struct socket *so)
 	bzero(inp, sizeof(*inp));
 
 	/* bump generations */
+	inp->ip_inp.inp.inp_state = INPCB_STATE_INUSE;
 	inp->ip_inp.inp.inp_socket = so;
 
 	/* setup socket pointers */
@@ -1712,6 +1713,9 @@ sctp_inpcb_alloc(struct socket *so)
 
 	/* add it to the info area */
 	LIST_INSERT_HEAD(&sctppcbinfo.listhead, inp, sctp_list);
+#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
+	LIST_INSERT_HEAD(&sctppcbinfo.inplisthead, &inp->ip_inp.inp, inp_list);
+#endif
 	SCTP_INP_INFO_WUNLOCK();
 
 	TAILQ_INIT(&inp->read_queue);
@@ -2737,8 +2741,11 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	SCTP_INP_WLOCK(inp);
 
 	inp_save = LIST_NEXT(inp, sctp_list);
+#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
+	inp->ip_inp.inp.inp_state = INPCB_STATE_DEAD;
+#endif
 	LIST_REMOVE(inp, sctp_list);
-
+	
         /* fix any iterators only after out of the list */
 	sctp_iterator_inp_being_freed(inp, inp_save);
 	SCTP_ITERATOR_UNLOCK();
@@ -2765,7 +2772,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	SCTP_ASOC_CREATE_LOCK_DESTROY(inp);
 
 	/* Now we must put the ep memory back into the zone pool */
-	/* For Tiger, we will do this later... FIXME MT */
+	/* For Tiger, we will do this later... */
 #if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, inp);
 	SCTP_DECR_EP_COUNT();
@@ -4431,6 +4438,9 @@ sctp_pcb_init()
 
 	/* init the empty list of (All) Endpoints */
 	LIST_INIT(&sctppcbinfo.listhead);
+#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
+	LIST_INIT(&sctppcbinfo.inplisthead);
+#endif
 
 	/* init the iterator head */
 	LIST_INIT(&sctppcbinfo.iteratorhead);
@@ -4578,6 +4588,47 @@ sctp_pcb_init()
 #endif
 
 }
+
+#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
+void
+sctp_pcb_finish(void)
+{
+    /* FIXME MT*/
+	
+    SCTP_INP_INFO_LOCK_DESTROY();
+    SCTP_ITERATOR_LOCK_DESTROY();
+    SCTP_IPI_COUNT_DESTROY();
+    lck_grp_attr_free(sctppcbinfo.mtx_grp_attr);
+    lck_grp_free(sctppcbinfo.mtx_grp);
+    lck_attr_free(sctppcbinfo.mtx_attr);
+
+    /*
+    	SCTP_ZONE_INIT(sctppcbinfo.ipi_zone_ep, "sctp_ep",
+	    sizeof(struct sctp_inpcb), maxsockets);
+
+	SCTP_ZONE_INIT(sctppcbinfo.ipi_zone_asoc, "sctp_asoc",
+	    sizeof(struct sctp_tcb), sctp_max_number_of_assoc);
+
+	SCTP_ZONE_INIT(sctppcbinfo.ipi_zone_laddr, "sctp_laddr",
+	    sizeof(struct sctp_laddr),
+	    (sctp_max_number_of_assoc * sctp_scale_up_for_address));
+
+	SCTP_ZONE_INIT(sctppcbinfo.ipi_zone_net, "sctp_raddr",
+	    sizeof(struct sctp_nets),
+	    (sctp_max_number_of_assoc * sctp_scale_up_for_address));
+
+	SCTP_ZONE_INIT(sctppcbinfo.ipi_zone_chunk, "sctp_chunk",
+	    sizeof(struct sctp_tmit_chunk),
+	    (sctp_max_number_of_assoc * sctp_scale_up_for_address *
+	    sctp_chunkscale));
+
+	SCTP_ZONE_INIT(sctppcbinfo.ipi_zone_readq, "sctp_readq",
+	    sizeof(struct sctp_queued_to_read),
+	    (sctp_max_number_of_assoc * sctp_scale_up_for_address *
+	    sctp_chunkscale));
+    */
+}
+#endif
 
 int
 sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,

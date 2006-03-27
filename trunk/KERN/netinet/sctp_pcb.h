@@ -181,7 +181,9 @@ struct sctp_epinfo {
 	uint32_t hashtblsize;
 
 	struct sctppcbhead listhead;
-
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	struct inpcbhead inplisthead;
+#endif
 	struct sctpiterators iteratorhead;
 
 	/* ep zone info */
@@ -678,8 +680,6 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 /* Lock for INFO stuff */
 #define SCTP_INP_INFO_LOCK_INIT() \
 	sctppcbinfo.ipi_ep_mtx = lck_rw_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
-#define SCTP_IPI_COUNT_INIT() \
-	sctppcbinfo.ipi_count_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
 #define SCTP_INP_INFO_RLOCK() \
 	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx)
 #define SCTP_INP_INFO_RUNLOCK() \
@@ -688,6 +688,12 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx)
 #define SCTP_INP_INFO_WUNLOCK() \
 	lck_rw_done(sctppcbinfo.ipi_ep_mtx)
+#define SCTP_INP_INFO_LOCK_DESTROY() \
+        lck_rw_free(sctppcbinfo.ipi_ep_mtx, SCTP_MTX_GRP)
+#define SCTP_IPI_COUNT_INIT() \
+	sctppcbinfo.ipi_count_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
+#define SCTP_IPI_COUNT_DESTROY() \
+        lck_mtx_free(sctppcbinfo.ipi_count_mtx, SCTP_MTX_GRP)
 
 /* Lock for INP */
 #define SCTP_INP_LOCK_INIT(_inp)
