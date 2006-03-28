@@ -96,7 +96,7 @@
 #include <netinet/sctp_indata.h>
 #include <netinet/sctp_asconf.h>
 
-#if __FreeBSD_version >= 600000
+#if __FreeBSD_version >= 700000
 #include <netinet/ip_options.h>
 #endif
 
