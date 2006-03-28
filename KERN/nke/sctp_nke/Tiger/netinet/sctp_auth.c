@@ -26,6 +26,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+#ifdef __APPLE__
+#include <sctp.h>
+#elif !defined(__OpenBSD__)
+#include "opt_sctp.h"
+#endif
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/malloc.h>
@@ -1496,7 +1501,7 @@ sctp_auth_get_cookie_params (struct sctp_tcb *stcb, struct mbuf *m,
 	    if (stcb->asoc.local_hmacs != NULL) {
 		for (i=0; i < num_hmacs; i++) {
 		    sctp_auth_add_hmacid(stcb->asoc.local_hmacs,
-					 hmacs->hmac_ids[i]);
+					 ntohs(hmacs->hmac_ids[i]));
 		}
 	    }
 	} else if (ptype == SCTP_CHUNK_LIST) {

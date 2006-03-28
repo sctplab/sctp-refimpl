@@ -88,9 +88,9 @@ void sctp_hash_digest(char *key, int key_len, char *text, int text_len,
 #else
 		struct sha1_context tctx;
 		SHA1_Init(&tctx);
-		SHA1_Update(&tctx, key, key_len);
+		SHA1_Update(&tctx, (unsigned char *)key, key_len);
 		SHA1_Final(tk, &tctx);
-		key = tk;
+		key = (char *)tk;
 		key_len = 20;
 #endif /* USE_MD5 */
 	}
@@ -128,7 +128,9 @@ void sctp_hash_digest(char *key, int key_len, char *text, int text_len,
 #else
 	SHA1_Init(&context);			/* init context for 1st pass */
 	SHA1_Update(&context, k_ipad, 64);	/* start with inner pad */
-	SHA1_Update(&context, text, text_len);	/* then text of datagram */
+	SHA1_Update(&context, 
+		    (unsigned char *)text, 
+		    text_len);	/* then text of datagram */
 	SHA1_Final(digest, &context);		/* finish up 1st pass */
 #endif /* USE_MD5 */
 
@@ -143,7 +145,8 @@ void sctp_hash_digest(char *key, int key_len, char *text, int text_len,
 #else
 	SHA1_Init(&context);			/* init context for 2nd pass */
 	SHA1_Update(&context, k_opad, 64);	/* start with outer pad */
-	SHA1_Update(&context, digest, 20);	/* then results of 1st hash */
+	SHA1_Update(&context, 
+		    (unsigned char *)digest, 20);	/* then results of 1st hash */
 	SHA1_Final(digest, &context);		/* finish up 2nd pass */
 #endif /* USE_MD5 */
 }
@@ -175,9 +178,9 @@ void sctp_hash_digest_m(char *key, int key_len, struct mbuf *m, int offset,
 #else
 		struct sha1_context tctx;
 		SHA1_Init(&tctx);
-		SHA1_Update(&tctx, key, key_len);
+		SHA1_Update(&tctx, (unsigned char *)key, key_len);
 		SHA1_Final(tk, &tctx);
-		key = tk;
+		key = (char *)tk;
 		key_len = 20;
 #endif /* USE_MD5 */
 	}
@@ -234,7 +237,7 @@ void sctp_hash_digest_m(char *key, int key_len, struct mbuf *m, int offset,
 	/******/
 	while (m_at != NULL) {
 		/* then text of datagram */
-		SHA1_Update(&context, mtod(m_at, char *)+offset,
+		SHA1_Update(&context, mtod(m_at, unsigned char *)+offset,
 			     m_at->m_len-offset);
 		/* only offset on the first mbuf */
 		offset = 0;

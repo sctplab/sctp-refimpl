@@ -4,7 +4,7 @@
 #define _NETINET_SCTP_H_
 
 /*
- * Copyright (c) 2001, 2002, 2003, 2004, 2005 Cisco Systems, Inc.
+ * Copyright (c) 2001-2006 Cisco Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -273,7 +273,7 @@ struct sctp_error_unrecognized_chunk {
 #define HAVE_SCTP_MULTIBUF              1
 #define HAVE_SCTP_NOCONNECT             0
 #define HAVE_SCTP_ECN_NONCE             1  /* ECN Nonce option */
-/* #define HAVE_SCTP_AUTH			1 */
+#define HAVE_SCTP_AUTH			1
 
 /*
  * Main SCTP chunk types
@@ -295,6 +295,8 @@ struct sctp_error_unrecognized_chunk {
 #define SCTP_ECN_ECHO		0x0c
 #define SCTP_ECN_CWR		0x0d
 #define SCTP_SHUTDOWN_COMPLETE	0x0e
+/* draft-ietf-tsvwg-sctp-auth */
+#define SCTP_AUTHENTICATION     0x0f
 /************0x40 series ***********/
 /************0x80 series ***********/
 /* draft-ietf-tsvwg-addip-sctp */
@@ -303,8 +305,6 @@ struct sctp_error_unrecognized_chunk {
 #define SCTP_PACKET_DROPPED	0x81
 /* draft-ietf-stewart-strreset-xxx */
 #define SCTP_STREAM_RESET       0x82
-/* draft-ietf-tsvwg-sctp-auth */
-#define SCTP_AUTHENTICATION     0x83
 /************0xc0 series ***********/
 /* RFC3758 */
 #define SCTP_FORWARD_CUM_TSN	0xc0

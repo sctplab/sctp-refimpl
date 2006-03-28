@@ -1,7 +1,7 @@
 /*	$KAME: sctp_var.h,v 1.24 2005/03/06 16:04:19 itojun Exp $	*/
 
 /*
- * Copyright (c) 2001-2005 Cisco Systems, Inc.
+ * Copyright (c) 2001-2006 Cisco Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -83,18 +83,19 @@
 #define SCTPCTL_DEADLOCK_DET        30
 #define SCTPCTL_EARLY_FR_MSEC       31
 #define SCTPCTL_AUTH_DISABLE        32
-#define SCTPCTL_AUTH_HMAC_ID        33
-#define SCTPCTL_ABC_L_VAR           34
-#define SCTPCTL_MAX_MBUF_CHAIN      35
-#define SCTPCTL_CMT_USE_DAC         36
-
+#define SCTPCTL_AUTH_RANDOM_LEN     33
+#define SCTPCTL_AUTH_HMAC_ID        34
+#define SCTPCTL_ABC_L_VAR           35
+#define SCTPCTL_MAX_MBUF_CHAIN      36
+#define SCTPCTL_CMT_USE_DAC         37
+#define SCTPCTL_DO_DRAIN            38
+#define SCTPCTL_WARM_CRC32          39
 #ifdef SCTP_DEBUG
-#define SCTPCTL_DEBUG               37
-#define SCTPCTL_MAXID		    37
+#define SCTPCTL_DEBUG               40
+#define SCTPCTL_MAXID		    40
 #else
-#define SCTPCTL_MAXID		    36
+#define SCTPCTL_MAXID		    39
 #endif
-
 
 #endif
 
@@ -134,13 +135,15 @@
         { "deadlock_detect", CTLTYPE_INT }, \
         { "early_fast_retran_msec", CTLTYPE_INT }, \
 	{ "auth_disable", CTLTYPE_INT }, \
+	{ "auth_random_len", CTLTYPE_INT }, \
 	{ "auth_hmac_id", CTLTYPE_INT }, \
 	{ "abc_l_var", CTLTYPE_INT }, \
 	{ "max_mbuf_chain", CTLTYPE_INT }, \
 	{ "cmt_use_dac", CTLTYPE_INT }, \
+	{ "do_sctp_drain", CTLTYPE_INT }, \
+	{ "warm_crc_table", CTLTYPE_INT }, \
 	{ "debug", CTLTYPE_INT }, \
 }
-
 #else
 #define SCTPCTL_NAMES { \
 	{ 0, 0 }, \
@@ -177,10 +180,13 @@
         { "deadlock_detect", CTLTYPE_INT }, \
         { "early_fast_retran_msec", CTLTYPE_INT }, \
 	{ "auth_disable", CTLTYPE_INT }, \
+	{ "auth_random_len", CTLTYPE_INT }, \
 	{ "auth_hmac_id", CTLTYPE_INT }, \
 	{ "abc_l_var", CTLTYPE_INT }, \
 	{ "max_mbuf_chain", CTLTYPE_INT }, \
 	{ "cmt_use_dac", CTLTYPE_INT }, \
+	{ "warm_crc_table", CTLTYPE_INT }, \
+	{ "do_sctp_drain", CTLTYPE_INT }, \
 }
 #endif
 
@@ -206,11 +212,13 @@ int sctp_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,
 int sctp_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,
 		      struct mbuf *));
 #endif
-#if defined(HAVE_SCTP_SORECEIVE)
+
+#define sctp_feature_on(inp, feature)  (inp->sctp_features |= feature)
+#define sctp_feature_off(inp, feature) (inp->sctp_features &= ~feature)
+#define sctp_is_feature_on(inp, feature) (inp->sctp_features & feature)
+#define sctp_is_feature_off(inp, feature) ((inp->sctp_features & feature) == 0)
+
 #define	sctp_sbspace(asoc, sb) ((long) (((sb)->sb_hiwat > (asoc)->sb_cc) ? ((sb)->sb_hiwat - (asoc)->sb_cc) : 0))
-#else
-#define	sctp_sbspace(asoc, sb) ((long) (((sb)->sb_hiwat > (sb)->sb_cc) ? ((sb)->sb_hiwat - (sb)->sb_cc) : 0))
-#endif
 
 #define	sctp_sbspace_failedmsgs(sb) ((long) (((sb)->sb_hiwat > (sb)->sb_cc) ? ((sb)->sb_hiwat - (sb)->sb_cc) : 0))
 
@@ -264,7 +272,6 @@ int sctp_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,
 }
 
 #else
-#if defined(HAVE_SCTP_SORECEIVE)
 #define sctp_sbfree(stcb, sb, m) { \
         if((sb)->sb_cc >= (uint32_t)(m)->m_len) { \
   	   (sb)->sb_cc -= (m)->m_len; \
@@ -301,23 +308,6 @@ int sctp_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,
 		(sb)->sb_mbcnt += (m)->m_ext.ext_size; \
 }
 
-#else
-
-#define sctp_sbfree(stcb, sb, m) { \
-	(sb)->sb_cc -= (m)->m_len; \
-	(sb)->sb_mbcnt -= MSIZE; \
-	if ((m)->m_flags & M_EXT) \
-		(sb)->sb_mbcnt -= (m)->m_ext.ext_size; \
-}
-
-#define sctp_sballoc(stcb, sb, m)  { \
-	(sb)->sb_cc += (m)->m_len; \
-	(sb)->sb_mbcnt += MSIZE; \
-	if ((m)->m_flags & M_EXT) \
-		(sb)->sb_mbcnt += (m)->m_ext.ext_size; \
-}
-
-#endif
 #endif
 
 #define sctp_ucount_incr(val) { \
@@ -369,11 +359,13 @@ void	sctp_input __P((struct mbuf *, ... ));
 #endif
 void	sctp_drain __P((void));
 void	sctp_init __P((void));
+#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
+void sctp_finish(void);
+#endif
 int	sctp_shutdown __P((struct socket *));
 void	sctp_notify __P((struct sctp_inpcb *, int, struct sctphdr *,
 			 struct sockaddr *, struct sctp_tcb *,
 			 struct sctp_nets *));
-int sctp_usr_recvd __P((struct socket *, int));
 
 #if defined(INET6)
 void ip_2_ip6_hdr __P((struct ip6_hdr *, struct ip *));
@@ -407,7 +399,7 @@ int sctp_peeraddr(struct socket *,
 );
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-#if __FreeBSD_version >= 600000
+#if __FreeBSD_version >= 700000
 int sctp_listen(struct socket *, int,  struct thread *);
 #else
 int sctp_listen(struct socket *, struct thread *);

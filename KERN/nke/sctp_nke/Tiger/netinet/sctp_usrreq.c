@@ -4784,7 +4784,7 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 
 int
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-#if __FreeBSD_version >= 600000
+#if __FreeBSD_version >= 700000
 sctp_listen(struct socket *so, int backlog,  struct thread *p)
 #else
 sctp_listen(struct socket *so, struct thread *p)
@@ -4848,8 +4848,8 @@ sctp_listen(struct socket *so, struct proc *p)
 		SCTP_INP_RUNLOCK(inp);
 	}
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
-#if __FreeBSD_version > 600000
-	/* It appears for 6.0 and on, we must always call this. */
+#if __FreeBSD_version >= 700000
+	/* It appears for 7.0 and on, we must always call this. */
 	solisten_proto(so, backlog);
 #else
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE) == 0) {
@@ -4862,10 +4862,10 @@ sctp_listen(struct socket *so, struct proc *p)
 		/* remove the ACCEPTCONN flag for one-to-many sockets */
 		so->so_options &= ~SO_ACCEPTCONN;
 	}
-#if __FreeBSD_version > 600000
+#if __FreeBSD_version >= 700000
 	if (backlog == 0) {
 		/* turning off listen */
-		so->so_options &= ~SO_ACCEPTCONN;		
+		so->so_options &= ~SO_ACCEPTCONN;
 	}
 #endif
 	SOCK_UNLOCK(so);

@@ -500,6 +500,11 @@ struct sctp_auth_chunk {
 	u_int8_t  hmac[0];
 };
 
+struct sctp_auth_invalid_hmac {
+	struct sctp_paramhdr ph;
+	uint16_t hmac_id;
+	uint16_t padding;
+};
 
 /*
  * we pre-reserve enough room for a ECNE or CWR AND a SACK with no

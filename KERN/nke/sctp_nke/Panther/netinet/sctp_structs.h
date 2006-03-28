@@ -4,7 +4,7 @@
 #define __sctp_structs_h__
 
 /*
- * Copyright (c) 2001, 2002, 2003, 2004 Cisco Systems, Inc.
+ * Copyright (c) 2001-2006 Cisco Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,6 +43,7 @@
 #else
 #include <sys/callout.h>
 #endif
+#include <sys/socket.h>
 
 #ifdef IPSEC
 #ifndef __OpenBSD__
@@ -53,6 +54,7 @@
 
 #include <netinet/sctp_header.h>
 #include <netinet/sctp_uio.h>
+#include <netinet/sctp_auth.h>
 
 struct sctp_timer {
 #if defined(__OpenBSD__)
@@ -71,7 +73,8 @@ struct sctp_timer {
 };
 
 /*
- * This is the information we track on each interface that we know about	* from the distant end.
+ * This is the information we track on each interface that we know about
+ * from the distant end.
  */
 TAILQ_HEAD(sctpnetlisthead, sctp_nets);
 
@@ -311,6 +314,34 @@ struct sctp_tmit_chunk {
 	uint8_t    reserved;
 };
 
+/* The first part of this structure MUST be the entire
+ * sinfo structure. Maybe I should have made it a
+ * sub structure... we can circle back later and
+ * do that if we want.
+ */
+struct sctp_queued_to_read {         /* sinfo structure Pluse more */
+	u_int16_t sinfo_stream;      /* off the wire */
+	u_int16_t sinfo_ssn;         /* off the wire */
+	u_int16_t sinfo_flags;       /* SCTP_UNORDERED from wire use SCTP_EOF for EOR */
+	u_int32_t sinfo_ppid;        /* off the wire */
+	u_int32_t sinfo_context;     /* pick this up from assoc def context? */
+	u_int32_t sinfo_timetolive;  /* not used by kernel */
+	u_int32_t sinfo_tsn;         /* Use this in reassembly as first TSN */
+	u_int32_t sinfo_cumtsn;      /* Use this in reassembly as last TSN */
+	sctp_assoc_t sinfo_assoc_id; /* our assoc id */
+	/* Non sinfo stuff */
+	u_int32_t length;	     /* length of data */
+	u_int32_t held_length;	     /* length held in sb */
+	struct sctp_nets *whoFrom;   /* where it came from */
+	struct mbuf *data;           /* front of the mbuf chain of data with PKT_HDR */
+	struct mbuf *tail_mbuf;      /* used for multi-part data */
+	struct sctp_tcb *stcb;	     /* assoc, used for window update */
+	TAILQ_ENTRY (sctp_queued_to_read) next;
+	u_int16_t port_from;
+};
+
+
+
 
 /*
  * this struct contains info that is used to track inbound stream data
@@ -318,7 +349,7 @@ struct sctp_tmit_chunk {
  */
 TAILQ_HEAD(sctpwheelunrel_listhead, sctp_stream_in);
 struct sctp_stream_in {
-	struct sctpchunk_listhead inqueue;
+	struct sctp_readhead inqueue;
 	TAILQ_ENTRY(sctp_stream_in) next_spoke;
 	uint16_t stream_no;
 	uint16_t last_sequence_delivered;	/* used for re-order */
@@ -395,8 +426,6 @@ struct sctp_association {
 	 * queue and set our rwnd to the space in the socket minus also
 	 * the size_on_delivery_queue.
 	 */
-	struct sctpchunk_listhead delivery_queue;
-
 	struct sctpwheel_listhead out_wheel;
 
 	/* If an iterator is looking at me, this is it */
@@ -442,8 +471,9 @@ struct sctp_association {
 	 * req on the list.
 	 */
 	struct sctp_resethead resetHead;	
+
 	/* queue of chunks waiting to be sent into the local stack */
-	struct sctpchunk_listhead pending_reply_queue;
+	struct sctp_readhead pending_reply_queue;
 
 	u_int32_t cookie_preserve_req;
 	/* ASCONF next seq I am sending out, inits at init-tsn */
@@ -518,8 +548,19 @@ struct sctp_association {
 	u_int32_t last_cwr_tsn;
 	u_int32_t fast_recovery_tsn;
 	u_int32_t sat_t3_recovery_tsn;
-
 	u_int32_t tsn_last_delivered;
+	/* For the pd-api we should re-write this
+	 * a bit more efficent. We could have
+	 * multiple sctp_queued_to_read's that
+	 * we are building at once. Now we only
+	 * do this when we get ready to deliver to
+	 * the socket buffer. Note that we depend
+	 * on the fact that the struct is "stuck" on
+	 * the read queue until we finish all the
+	 * pd-api. 
+	 */
+	struct sctp_queued_to_read *control_pdapi;
+
 	u_int32_t tsn_of_pdapi_last_delivered;
         u_int32_t pdapi_ppid;
         u_int32_t context;
@@ -573,9 +614,6 @@ struct sctp_association {
 	/* Total error count on this association */
 	unsigned int overall_error_count;
 
-	unsigned int size_on_delivery_queue;
-	unsigned int cnt_on_delivery_queue;
-
 	unsigned int cnt_msg_on_sb;
 
 	/* All stream count of chunks for delivery */
@@ -605,7 +643,19 @@ struct sctp_association {
 	unsigned int initial_rto;		/* initial send RTO */
 	unsigned int minrto;			/* per assoc RTO-MIN */
 	unsigned int maxrto;			/* per assoc RTO-MAX */
-	/* Being that we have no bag to collect stale cookies, and
+
+	/* authentication fields */
+	sctp_auth_chklist_t  *local_auth_chunks;
+	sctp_auth_chklist_t  *peer_auth_chunks;
+	sctp_hmaclist_t      *local_hmacs;	/* local HMACs supported */
+	sctp_hmaclist_t      *peer_hmacs;	/* peer HMACs supported */
+	struct sctp_keyhead  shared_keys;	/* assoc's shared keys */
+	sctp_authinfo_t      authinfo;		/* randoms, cached keys */
+	uint16_t             peer_hmac_id;	/* peer HMAC id to send */
+	uint8_t              authenticated;	/* packet authenticated ok */
+
+	/*
+	 * Being that we have no bag to collect stale cookies, and
 	 * that we really would not want to anyway.. we will count
 	 * them in this counter. We of course feed them to the
 	 * pigeons right away (I have always thought of pigeons
@@ -618,7 +668,6 @@ struct sctp_association {
 	 */
 	u_int16_t str_of_pdapi;
 	u_int16_t ssn_of_pdapi;
-
 
 	/* counts of actual built streams. Allocation may be more however */
 	/* could re-arrange to optimize space here. */
@@ -664,6 +713,7 @@ struct sctp_association {
 	u_int8_t last_flags_delivered;
 	u_int8_t hb_ect_randombit;
         u_int8_t hb_random_idx;
+	u_int8_t hb_is_disabled; 	/* is the hb disabled? */
 	u_int8_t default_tos;
 
 	/* ECN Nonce stuff */
@@ -723,9 +773,7 @@ struct sctp_association {
 	u_int8_t ifp_had_enobuf;
 	u_int8_t saw_sack_with_frags;
 	u_int8_t in_restart_hash;
-
-	u_int8_t sctp_packet_authenticated;
-
+	u_int8_t assoc_up_sent;
         /* CMT variables */
         u_int8_t cmt_dac_pkts_rcvd;
 	/*
