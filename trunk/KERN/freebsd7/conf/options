@@ -397,6 +397,7 @@ SCTP_DEBUG		opt_sctp.h
 SCTP_USE_ADLER32	opt_sctp.h # SHOULD NOT BE USED
 SCTP_HIGH_SPEED		opt_sctp.h
 SCTP_LOG_MAXBURST       opt_sctp.h
+SCTP_LOG_RWND           opt_sctp.h	
 SCTP_STAT_LOGGING	opt_sctp.h
 SCTP_CWND_LOGGING	opt_sctp.h
 SCTP_CWND_MONITOR	opt_sctp.h
