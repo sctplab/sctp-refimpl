@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.38 2006-03-25 07:23:34 lei Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.39 2006-03-28 19:09:06 lei Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -212,6 +212,7 @@ static int cmd_setv4mapped(char *argv[], int argc);
 
 static int cmd_addauth(char *argv[], int argc);
 static int cmd_addkey(char *argv[], int argc);
+static int cmd_addnullkey(char *argv[], int argc);
 static int cmd_deletekey(char *argv[], int argc);
 static int cmd_setactivekey(char *argv[], int argc);
 static int cmd_getactivekey(char *argv[], int argc);
@@ -509,6 +510,8 @@ static struct command commands[] = {
      cmd_addauth},
     {"addkey", "addkey - set a shared key",
      cmd_addkey},
+    {"addnullkey", "addkey - set a shared null key",
+     cmd_addnullkey},
     {"deletekey", "deletekey - delete a shared key",
      cmd_deletekey},
     {"setactivekey", "setactivekey - set a shared key as active",
@@ -5361,6 +5364,40 @@ static int cmd_addkey(char *argv[], int argc) {
 	return (-1);
     } else {
 	printf("Added key id %u: %s\n", key->sca_keynumber, argv[1]);
+    }
+#else
+    printf("Not supported on this OS\n");
+#endif
+    return (0);
+}
+
+static int cmd_addnullkey(char *argv[], int argc) {
+#if defined(__BSD_SCTP_STACK__)
+    char optval[512];
+    struct sctp_authkey *key;
+    int keylen;
+
+    if ((argc < 1) || (argc > 2)) {
+	printf("Expected: addnullkey <key_id> [<optional assoc id>]\n");
+	return (-1);
+    }
+    bzero(optval, sizeof(optval));
+    key = (struct sctp_authkey *)optval;
+    key->sca_keynumber = (uint32_t)strtoul(argv[0], NULL, 0);
+    keylen = 0;
+    /* use the optional assoc id, if given */
+    if (argc == 2)
+	key->sca_assoc_id = (uint32_t)strtoul(argv[1], NULL, 0);
+    else
+	key->sca_assoc_id = get_assoc_id();
+
+    if (setsockopt(adap->fd, IPPROTO_SCTP, SCTP_AUTH_KEY, optval,
+		   sizeof(*key) + keylen) != 0) {
+	printf("Can't add null key id %u, errno %d\n", key->sca_keynumber,
+	       errno);
+	return (-1);
+    } else {
+	printf("Added null key id %u\n", key->sca_keynumber);
     }
 #else
     printf("Not supported on this OS\n");
