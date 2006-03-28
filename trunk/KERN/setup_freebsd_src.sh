@@ -45,12 +45,12 @@ echo "You may now go to your kernel source tree $srcTree"
 echo "Configure a new kernel with:"
 echo "options SCTP"
 echo "And build as normal"
-echo "This script as already did a 
-echo "'make sysent'"
+echo "This script as already did a "
+echo "make sysent"
 echo "In $srcTree/kern so the syscalls are present"
-echo "in the kernel. However you probably need to
-echo "copy these to /usr/include/sys and also
+echo "in the kernel. However you probably need to"
+echo "copy these to /usr/include/sys and also"
 echo "do a  make buildworld and make installworld"
-echo "which will get the sctp_xxx() calls into libc"
+echo "which will get the sctp_xxx calls into libc"
 
 
