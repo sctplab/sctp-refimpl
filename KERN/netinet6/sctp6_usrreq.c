@@ -1745,7 +1745,7 @@ sctp6_getpeeraddr(struct socket *so, struct mbuf *nam)
 
 #if defined(__FreeBSD__) || defined(__APPLE__)
 struct pr_usrreqs sctp6_usrreqs = {
-#if __FreeBSD_version > 600000
+#if __FreeBSD_version >= 600000
 	.pru_abort =		sctp6_abort,
 	.pru_accept =		sctp_accept,
 	.pru_attach =		sctp6_attach,
