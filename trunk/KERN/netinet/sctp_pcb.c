@@ -4657,7 +4657,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 	struct sockaddr *local_sa = (struct sockaddr *)&dest_store;
 	struct sockaddr_in sin;
 	struct sockaddr_in6 sin6;
-	int got_random = 0, got_hmacs = 0;
+	int got_random = 0, got_hmacs = 0, got_chklist = 0;
 
 	/* First get the destination address setup too. */
 	memset(&sin, 0, sizeof(sin));
@@ -5021,6 +5021,14 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 
 		    if (plen > sizeof(store))
 			break;
+		    if (got_random) {
+			/* already processed a RANDOM */
+#ifdef SCTP_DEBUG
+			if (sctp_debug_on & SCTP_DEBUG_AUTH1)
+			    printf("SCTP: ignoring duplicate peer RANDOM\n");
+#endif
+			break;
+		    }
 		    phdr = sctp_get_next_param(m, offset,
 					       (struct sctp_paramhdr *)store,
 					       plen);
@@ -5040,6 +5048,14 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 
 		    if (plen > sizeof(store))
 			break;
+		    if (got_hmacs) {
+			/* already processed a HMAC list */
+#ifdef SCTP_DEBUG
+			if (sctp_debug_on & SCTP_DEBUG_AUTH1)
+			    printf("SCTP: ignoring duplicate peer HMAC list\n");
+#endif
+			break;
+		    }
 		    phdr = sctp_get_next_param(m, offset,
 					       (struct sctp_paramhdr *)store,
 					       plen);
@@ -5065,6 +5081,14 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 
 		    if (plen > sizeof(store))
 			break;
+		    if (got_chklist) {
+			/* already processed a Chunks list */
+#ifdef SCTP_DEBUG
+			if (sctp_debug_on & SCTP_DEBUG_AUTH1)
+			    printf("SCTP: ignoring duplicate peer Chunks list\n");
+#endif
+			break;
+		    }
 		    phdr = sctp_get_next_param(m, offset,
 					       (struct sctp_paramhdr *)store,
 					       plen);
@@ -5080,6 +5104,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			    sctp_auth_add_chunk(chunks->chunk_types[i],
 						stcb->asoc.peer_auth_chunks);
 		    }
+		    got_chklist = 1;
 		} else if ((ptype == SCTP_HEARTBEAT_INFO) ||
 			   (ptype == SCTP_STATE_COOKIE) ||
 			   (ptype == SCTP_UNRECOG_PARAM) ||
