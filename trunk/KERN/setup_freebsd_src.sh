@@ -14,13 +14,25 @@ if test ! -d $srcTree/dev
     echo "I cant see the dev directory there sorry"
     exit
 fi
-cd $cvsPath/KERN/freebsd7 
+echo "Will you be using 7.0 Current or FreeBSD 6.1 (7 or 6)?
+read ans
+if test $ans = 7
+then
+echo "I will use 7.0 then, if unsure hit ctl-c else return"
+read ans
+BSD_PATH=freebsd7
+else
+echo "I will use 6.1 then, if unsure hit ctl-c else return"
+read ans
+BSD_PATH=freebsd6_1
+fi
+cd $cvsPath/KERN/$BSD_PATH 
 for j in conf/files conf/options kern/syscalls.master \
-    kern/uipc_socket.c kern/uipc_syscalls.c net/rtsock.c netinet/in_proto.c \
-    netinet6/in6_proto.c sys/mbuf.h sys/protosw.h sys/socket.h
+    kern/uipc_syscalls.c net/rtsock.c netinet/in_proto.c \
+    netinet6/in6_proto.c sys/mbuf.h sys/socket.h
   do
   rm -f $srcTree/$j
-  ln -s $cvsPath/KERN/freebsd7/$j $srcTree/$j
+  ln -s $cvsPath/KERN/$BSD_PATH/$j $srcTree/$j
 done
 cd $cvsPath/KERN
 echo "Preparing kernel SCTP sources now"
