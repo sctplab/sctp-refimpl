@@ -26,6 +26,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+#ifdef __APPLE__
+#include <sctp.h>
+#elif !defined(__OpenBSD__)
+#include "opt_sctp.h"
+#endif
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/malloc.h>
