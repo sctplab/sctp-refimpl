@@ -393,9 +393,13 @@ sctp_print_key (sctp_key_t *key, const char *str)
 	return;
 
     printf("%s: len %u, ", str, key->keylen);
-    for (i = 0; i < key->keylen; i++)
-	printf("%02x", key->key[i]);
-    printf("\n");
+    if (key->keylen) {
+	for (i = 0; i < key->keylen; i++)
+	    printf("%02x", key->key[i]);
+	printf("\n");
+    } else {
+	printf("[Null key]\n");\
+    }
 }
 
 void
@@ -407,9 +411,13 @@ sctp_show_key (sctp_key_t *key, const char *str)
 	return;
 
     printf("%s: len %u, ", str, key->keylen);
-    for (i = 0; i < key->keylen; i++)
-	printf("%02x", key->key[i]);
-    printf("\n");
+    if (key->keylen) {
+	for (i = 0; i < key->keylen; i++)
+	    printf("%02x", key->key[i]);
+	printf("\n");
+    } else {
+	printf("[Null key]\n");
+    }
 }
 
 static inline uint32_t
