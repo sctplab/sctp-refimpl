@@ -5054,7 +5054,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 		    if (stcb->asoc.peer_hmacs != NULL) {
 			for (i=0; i < num_hmacs; i++) {
 			    sctp_auth_add_hmacid(stcb->asoc.peer_hmacs,
-						 hmacs->hmac_ids[i]);
+						 ntohs(hmacs->hmac_ids[i]));
 			}
 		    }
 		    got_hmacs = 1;
