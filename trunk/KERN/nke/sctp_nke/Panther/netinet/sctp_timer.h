@@ -56,7 +56,7 @@ int  sctp_t1init_timer(struct sctp_inpcb *, struct sctp_tcb *,
 int  sctp_shutdown_timer(struct sctp_inpcb *, struct sctp_tcb *,
 	struct sctp_nets *);
 int  sctp_heartbeat_timer(struct sctp_inpcb *, struct sctp_tcb *,
-	struct sctp_nets *);
+	struct sctp_nets *, int);
 
 int sctp_is_hb_timer_running(struct sctp_tcb *stcb);
 int sctp_is_sack_timer_running(struct sctp_tcb *stcb);
@@ -81,6 +81,10 @@ void sctp_autoclose_timer(struct sctp_inpcb *, struct sctp_tcb *,
 void sctp_audit_retranmission_queue(struct sctp_association *);
 
 void sctp_iterator_timer(struct sctp_iterator *it);
+
+#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
+void sctp_slowtimo();
+#endif
 
 #endif
 #endif

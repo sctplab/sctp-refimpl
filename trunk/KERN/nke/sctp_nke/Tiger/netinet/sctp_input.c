@@ -96,7 +96,7 @@
 #include <netinet/sctp_indata.h>
 #include <netinet/sctp_asconf.h>
 
-#if __FreeBSD_version >= 600000
+#if __FreeBSD_version >= 700000
 #include <netinet/ip_options.h>
 #endif
 
@@ -3616,7 +3616,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 		 * was valid.
 		 */
 		if ((ch->chunk_type == SCTP_AUTHENTICATION) &&
-		    (stcb == NULL)) {
+		    (stcb == NULL) && !sctp_auth_disable) {
 			/* save this chunk for later processing */
 			auth_skipped = 1;
 			auth_offset = *offset;
@@ -3854,7 +3854,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 #endif
 
 		/* check to see if this chunk required auth, but isn't */
-		if ((stcb != NULL) &&
+		if ((stcb != NULL) && !sctp_auth_disable &&
 		    sctp_auth_is_required_chunk(ch->chunk_type,
 						stcb->asoc.local_auth_chunks) &&
 		    !authenticated) {
@@ -4333,6 +4333,9 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				printf("SCTP_AUTHENTICATION\n");
 			}
 #endif /* SCTP_DEBUG */
+			if (sctp_auth_disable)
+				goto unknown_chunk;
+
 			if (stcb == NULL) {
 				/* save the first AUTH for later processing */
 				if (auth_skipped == 0) {
@@ -4371,6 +4374,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			break;
 
 		default:
+		unknown_chunk:
 			/* it's an unknown chunk! */
 			if ((ch->chunk_type & 0x40) && (stcb != NULL)) {
 				struct mbuf *mm;
@@ -4565,7 +4569,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		 * if DATA only packet, and auth is required, then punt...
 		 * can't have authenticated without any AUTH (control) chunks
 		 */
-		if ((stcb != NULL) &&
+		if ((stcb != NULL) && !sctp_auth_disable &&
 		    sctp_auth_is_required_chunk(SCTP_DATA,
 						stcb->asoc.local_auth_chunks)) {
 			/* "silently" ignore */
@@ -4611,12 +4615,11 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 	/* plow through the data chunks while length > offset */
 	stcb->asoc.seen_a_sack_this_pkt = 0;
 
-
 	/*
 	 * Rest should be DATA only.  Check authentication state if AUTH
 	 * for DATA is required.
 	 */
-	if ((stcb != NULL) &&
+	if ((stcb != NULL) && !sctp_auth_disable &&
 	    sctp_auth_is_required_chunk(SCTP_DATA,
 					stcb->asoc.local_auth_chunks) &&
 	    !stcb->asoc.authenticated) {

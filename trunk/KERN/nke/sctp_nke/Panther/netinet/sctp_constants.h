@@ -150,6 +150,9 @@
 /* default AUTO_ASCONF mode enable(1)/disable(0) value (sysctl) */
 #define SCTP_DEFAULT_AUTO_ASCONF	0
 
+/* Theshold for rwnd updates */
+#define SCTP_RWND_UPDATE_THESHOLD 4096
+
 /*
  * If you wish to use MD5 instead of SLA uncomment the line below.
  * Why you would like to do this:
@@ -280,9 +283,9 @@
 /* ECN Nonce: draft-ladha-sctp-ecn-nonce */
 #define SCTP_ECN_NONCE_SUPPORTED	0x8001
 /* draft-ietf-tsvwg-auth-xxx */
-#define SCTP_AUTH_RANDOM		0x8002
-#define SCTP_AUTH_CHUNK_LIST		0x8003
-#define SCTP_AUTH_HMAC_ALGO		0x8004
+#define SCTP_RANDOM			0x8002
+#define SCTP_CHUNK_LIST			0x8003
+#define SCTP_HMAC_LIST			0x8004
 /*
  * draft-ietf-tsvwg-addip-sctp-xx 
  *   param=0x8008  len=0xNNNN
@@ -301,10 +304,9 @@
  *   C1, 80 = ASCONF (addip draft)
  *   81 = Packet Drop
  *   82 = Stream Reset
+ *   83 = Authentication
  */
 #define SCTP_SUPPORTED_CHUNK_EXT    0x8008
-#define SCTP_EXT_COUNT		5   /* num of extensions we support chunk wise */
-#define SCTP_PAD_EXT_COUNT	3   /* num of pad bytes needed to get to 32 bit boundary */
 
 /*************0xC000 series*************/
 #define SCTP_PRSCTP_SUPPORTED		0xc000
@@ -592,7 +594,7 @@
 #define SCTP_DEBUG_USRREQ2	0x20000000
 #define SCTP_DEBUG_PEEL1	0x40000000
 #define SCTP_DEBUG_XXXXX	0x80000000
-#define SCTP_DEBUG_ALL		0x7ff3f3ff
+#define SCTP_DEBUG_ALL		0x7ff3ffff
 #define SCTP_DEBUG_NOISY	0x00040000
 
 /* What sender needs to see to avoid SWS or we consider peers rwnd 0 */
@@ -671,7 +673,9 @@
 #define SCTP_NOTIFY_STR_RESET_SEND      22
 #define SCTP_NOTIFY_STR_RESET_FAILED_OUT 23
 #define SCTP_NOTIFY_STR_RESET_FAILED_IN 24
-#define SCTP_NOTIFY_MAX			24
+#define SCTP_NOTIFY_AUTH_NEW_KEY	25
+#define SCTP_NOTIFY_AUTH_KEY_CONFLICT	26
+#define SCTP_NOTIFY_MAX			26
 
 
 /* clock variance is 10ms */

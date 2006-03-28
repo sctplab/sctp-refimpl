@@ -132,7 +132,8 @@ in6_sin6_2_sin(struct sockaddr_in *sin, struct sockaddr_in6 *sin6)
 int
 sctp_getaddrlen(sa_family_t family)
 {
-	int error,siz,sd;
+	int error,sd;
+	socklen_t siz;
 	struct sctp_assoc_value av;
 	av.assoc_value = family;
 	siz = sizeof(av);

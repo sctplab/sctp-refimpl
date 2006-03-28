@@ -4,7 +4,7 @@
 #define __sctp_uio_h__
 
 /*
- * Copyright (c) 2001, 2002, 2003, 2004, 2005 Cisco Systems, Inc.
+ * Copyright (c) 2001-2006 Cisco Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -40,7 +40,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
-typedef caddr_t sctp_assoc_t;
+typedef u_int32_t sctp_assoc_t;
 
 /* On/Off setup for subscription to events */
 struct sctp_event_subscribe {
@@ -117,7 +117,7 @@ struct sctp_pcbinfo {
 	u_int32_t laddr_count;
 	u_int32_t raddr_count;
 	u_int32_t chk_count;
-	u_int32_t sockq_count;
+	u_int32_t readq_count;
 	u_int32_t mbuf_track;
 };
 
@@ -285,7 +285,6 @@ struct sctp_authkey_event {
 };
 /* indication values */
 #define SCTP_AUTH_NEWKEY	0x0001
-#define SCTP_KEY_CONFLICT	0x0002 
 
 
 /*
@@ -443,10 +442,6 @@ struct sctp_authchunk {
 struct sctp_authkey {
     sctp_assoc_t sca_assoc_id;
     uint32_t sca_keynumber;
-/* FIX ME: do we need this??
-    uint32_t sca_sec_old;
-*/
-    struct sockaddr_storage sca_address;
     uint8_t sca_key[0];
 };
 
@@ -464,21 +459,13 @@ struct sctp_hmacalgo {
 #define SCTP_AUTH_HMAC_ID_SHA512	0x8004
 
 
-/* SCTP_AUTH_ACTIVE_KEY */
-struct sctp_authactivekey {
+/* SCTP_AUTH_ACTIVE_KEY / SCTP_AUTH_DELETE_KEY */
+struct sctp_authkeyid {
     sctp_assoc_t scact_assoc_id;
     uint32_t scact_keynumber;
-    struct sockaddr_storage scact_address;
 };
 
-/* SCTP_AUTH_DELETE_KEY */
-struct sctp_authdeletekey {
-    sctp_assoc_t scdel_assoc_id;
-    uint32_t scdel_keynumber;
-    struct sockaddr_storage scdel_address;
-};
-
-/* SCTP_PEER_AUTH_CHUNKS/SCTP_LOCAL_AUTH_CHUNKS */
+/* SCTP_PEER_AUTH_CHUNKS / SCTP_LOCAL_AUTH_CHUNKS */
 struct sctp_authchunks {
     sctp_assoc_t gauth_assoc_id;
     uint8_t gauth_chunks[0];
@@ -674,12 +661,16 @@ sctp_lower_sosend(struct socket *so,
 		  struct proc *p
 #endif
 	);
+
 int
-sctp_sorecvmsg(struct socket *so, 
-	       struct sockaddr **fromsa,
+sctp_sorecvmsg(struct socket *so,
 	       struct uio *uio,
-	       int *msg_flag,
-	       struct sctp_sndrcvinfo *sinfo);
+	       struct mbuf **mp,
+	       struct sockaddr *from,
+	       int fromlen,
+	       int *msg_flags, 
+	       struct sctp_sndrcvinfo *sinfo,
+	       int filling_sinfo);
 #endif
 
 /*

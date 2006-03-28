@@ -57,6 +57,7 @@
 #include <netinet/sctp_pcb.h>
 #include <netinet/sctp.h>
 #include <netinet/sctp_var.h>
+#include <netinet/sctp_timer.h>
 #include <netinet6/sctp6_var.h>
 
 SYSCTL_DECL(_net_inet);
@@ -151,7 +152,11 @@ kern_return_t SCTP_start (kmod_info_t * ki, void * d) {
 	sctp4_dgram.pr_ousrreq       = 0;
 	sctp4_dgram.pr_init          = sctp_init;
 	sctp4_dgram.pr_fasttimo      = 0;
+#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
+	sctp4_dgram.pr_slowtimo      = sctp_slowtimo;
+#else
 	sctp4_dgram.pr_slowtimo      = 0;
+#endif
 	sctp4_dgram.pr_drain         = sctp_drain;
 	sctp4_dgram.pr_sysctl        = 0;
 	sctp4_dgram.pr_usrreqs       = &sctp_usrreqs;
@@ -451,6 +456,7 @@ kern_return_t SCTP_stop (kmod_info_t * ki, void * d) {
 	err |= net_del_proto(sctp6_stream.pr_type,    sctp6_stream.pr_protocol,    &inet6domain);
 
 #ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
+	sctp_finish();
 	lck_mtx_unlock(inet6domain.dom_mtx);
 	lck_mtx_unlock(inetdomain.dom_mtx);
 #else
