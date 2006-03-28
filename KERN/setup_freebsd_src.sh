@@ -38,17 +38,19 @@ do
 rm -f $srcTree/netinet6/$j
 ln -s $cvsPath/KERN/export_freebsd/netinet6/$j $srcTree/netinet6/$j
 done
+cd $srcTree/kern
+touch syscalls.master
+make sysent
 echo "You may now go to your kernel source tree $srcTree"
 echo "Configure a new kernel with:"
 echo "options SCTP"
 echo "And build as normal"
-echo "To build the librarys you will also need to go to"
-echo "$srcTree/kern"
-echo "And do 'make sysent'"
-echo "Before building your kernel sources. This makes"
-echo "the system calls."
-echo "Afterwards copy form $srcTree/sys the syscall* header"
-echo "files into /usr/include/sys/"
-echo "Then when you make buildworld and make installworld"
-echo "libc will hold sctp_peeloff() and friends"
+echo "This script as already did a 
+echo "'make sysent'"
+echo "In $srcTree/kern so the syscalls are present"
+echo "in the kernel. However you probably need to
+echo "copy these to /usr/include/sys and also
+echo "do a  make buildworld and make installworld"
+echo "which will get the sctp_xxx() calls into libc"
+
 
