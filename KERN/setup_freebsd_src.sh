@@ -31,8 +31,12 @@ for j in conf/files conf/options kern/syscalls.master \
     kern/uipc_syscalls.c net/rtsock.c netinet/in_proto.c \
     netinet6/in6_proto.c sys/mbuf.h sys/socket.h
   do
-  rm -f $srcTree/$j
-  ln -s $cvsPath/KERN/$BSD_PATH/$j $srcTree/$j
+  if test -f $cvsPath/KERN/$BSD_PATH/$j $srcTree/$j
+      then
+      echo Linking $cvsPath/KERN/$BSD_PATH/$j
+      rm -f $srcTree/$j
+      ln -s $cvsPath/KERN/$BSD_PATH/$j $srcTree/$j
+  fi
 done
 cd $cvsPath/KERN
 echo "Preparing kernel SCTP sources now"
