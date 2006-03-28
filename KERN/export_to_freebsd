@@ -1,5 +1,11 @@
 #!/bin/sh
+if test $# -lt 1 
+then
+echo "$0 version [600000 or 700000]"
+exit
+fi
+
 for j in `cat export_freebsd_list`
 do
-	./freebsd_prepare $j
+	./freebsd_prepare $1 $j
 done
