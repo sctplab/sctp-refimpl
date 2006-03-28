@@ -28,10 +28,6 @@
  * SUCH DAMAGE.
  */
 
-/*
- * TODO: - daemon for address reconfiguration.
- */
-
 #ifndef SCTP_APPLE_FINE_GRAINED_LOCKING
 #include <sys/systm.h>
 #include <mach/mach_types.h>
@@ -39,7 +35,6 @@
 
 #include <sys/sysctl.h>
 #include <netinet/in.h>
-#include <netinet/ip.h>
 #include <sys/protosw.h>
 #ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
 #include <netinet/ip.h>
@@ -67,7 +62,9 @@ SYSCTL_NODE(_net_inet6, IPPROTO_SCTP,   sctp6,  CTLFLAG_RW, 0,  "SCTP6");
 
 extern struct sysctl_oid sysctl__net_inet_sctp_sendspace;
 extern struct sysctl_oid sysctl__net_inet_sctp_recvspace;
+/*
 extern struct sysctl_oid sysctl__net_inet_sctp_auto_asconf;
+*/
 extern struct sysctl_oid sysctl__net_inet_sctp_ecn_enable;
 extern struct sysctl_oid sysctl__net_inet_sctp_ecn_nonce;
 extern struct sysctl_oid sysctl__net_inet_sctp_strict_sacks;
@@ -329,7 +326,9 @@ kern_return_t SCTP_start (kmod_info_t * ki, void * d) {
 	sysctl_register_oid(&sysctl__net_inet_sctp);
 	sysctl_register_oid(&sysctl__net_inet_sctp_sendspace);
 	sysctl_register_oid(&sysctl__net_inet_sctp_recvspace);
+/*
 	sysctl_register_oid(&sysctl__net_inet_sctp_auto_asconf);
+*/
 	sysctl_register_oid(&sysctl__net_inet_sctp_ecn_enable);
 	sysctl_register_oid(&sysctl__net_inet_sctp_ecn_nonce);
 	sysctl_register_oid(&sysctl__net_inet_sctp_strict_sacks);
@@ -404,7 +403,9 @@ kern_return_t SCTP_stop (kmod_info_t * ki, void * d) {
 
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_sendspace);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_recvspace);
+/*
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_auto_asconf);
+*/
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_ecn_enable);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_ecn_nonce);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_strict_sacks);
