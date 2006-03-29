@@ -115,7 +115,8 @@ main(int argc, char **argv)
 {
 	struct txfr_request *req;
 	char buffer[200000];
-	int i,fd,newfd,ret,sizetosend,blksize,numblk,sb;
+	int i,fd,newfd,ret;
+	uint32_t sizetosend,blksize,numblk,sb;
 	u_int16_t port=0;
 	int optval,optlen;
 	socklen_t sa_len;
@@ -284,8 +285,8 @@ main(int argc, char **argv)
 		goto again;
 	}
 	req = (struct txfr_request *)buffer;
-	sizetosend = (int)ntohl(req->sizetosend);
-	blksize =  (int)ntohl(req->blksize);
+	sizetosend = (uint32_t)ntohl(req->sizetosend);
+	blksize =  (uint32_t)ntohl(req->blksize);
 	if(req->snd_window) {
 		optval = (int)ntohl(req->snd_window);
 		if(setsockopt(newfd, SOL_SOCKET, SO_SNDBUF, (const char *)&optval, optlen) != 0) {
@@ -311,10 +312,10 @@ main(int argc, char **argv)
 	}
 	outlog = fopen(name,"w+");
 
-	printf("Client would like %d bytes in %d byte blocks %d total sends sndbuf:%d\n",
+	printf("Client would like %u bytes in %u byte blocks %u total sends sndbuf:%d\n",
 	       sizetosend,blksize,numblk,optval);
 
-	fprintf(outlog,"Client would like %d bytes in %d byte blocks %d total sends sndbuf:%d\n",
+	fprintf(outlog,"Client would like %u bytes in %u byte blocks %u total sends sndbuf:%d\n",
 		sizetosend,blksize,numblk,optval);
 	fclose(outlog);
 	system(cmd);

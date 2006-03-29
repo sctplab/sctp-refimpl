@@ -416,7 +416,8 @@ measure_one(struct control_info *req,
 	    int sctp_tcpmode)
 {
     int optlen,optval;
-    int fd,cnt,sz,ret;
+    int fd,ret;
+    uint32_t sz,cnt;
     int blksize;
     char buffer[200000];
 #ifndef WIN32
@@ -616,14 +617,14 @@ log_measurement(int proto,struct control_info *ctl, struct timeval *start,
     }
     /* We output "Error_rate time */
     if(blocks_is_error) {
-	    fprintf(out_log,"%d %d.%6.6d # rb:%d size:%d:%s:",
+	    fprintf(out_log,"%u %d.%6.6d # rb:%d size:%u:%s:",
 		    (int)htonl(ctl->req.blksize),
 		    sec,usec,
 		    (int)ntohl(ctl->req.rcv_buf),
 		    (int)ntohl(ctl->req.sizetosend),
 		    ((proto == IPPROTO_SCTP) ? "sctp" : "tcp"));
     } else {
-	    fprintf(out_log,"%s %d.%6.6d # rb:%d size:%d:%s:",
+	    fprintf(out_log,"%s %d.%6.6d # rb:%d size:%u:%s:",
 		    error_rate,sec,usec,
 		    (int)ntohl(ctl->req.rcv_buf),
 		    (int)ntohl(ctl->req.sizetosend),
@@ -754,12 +755,12 @@ load_control_file(char *control,int *num_ctl)
 	    continue;
 	}
 	ctl[cnt].req.tos_value = tos_value;
-	ctl[cnt].req.sizetosend = htonl(strtol(tok,NULL,0));
+	ctl[cnt].req.sizetosend = htonl(strtoul(tok,NULL,0));
 	tok = strtok(NULL,colon);
 	if(tok == NULL){
 	    continue;
 	}
-	ctl[cnt].req.blksize = htonl(strtol(tok,NULL,0));
+	ctl[cnt].req.blksize = htonl(strtoul(tok,NULL,0));
 	tok = strtok(NULL,colon);
 	if(tok == NULL){
 	    continue;
@@ -771,7 +772,7 @@ load_control_file(char *control,int *num_ctl)
 	}
 	ctl[cnt].req.rcv_buf = htonl(strtol(tok,NULL,0) * 1024);
 	if(blocks_is_error == 0) {
-		printf("%d: error_rate:%s transfer:%d in blocks of %d snd_buf:%d rcv_buf %d\n",
+		printf("%d: error_rate:%s transfer:%u in blocks of %u snd_buf:%d rcv_buf %d\n",
 		       cnt,
 		       error_rate,
 		       (int)ntohl(ctl[cnt].req.sizetosend),
@@ -779,7 +780,7 @@ load_control_file(char *control,int *num_ctl)
 		       (int)ntohl(ctl[cnt].req.snd_buf),
 		       (int)ntohl(ctl[cnt].req.rcv_buf));
 	} else {
-		printf("%d: (block size is error-rate) transfer:%d in blocks of %d snd_buf:%d rcv_buf %d\n",
+		printf("%d: (block size is error-rate) transfer:%u in blocks of %u snd_buf:%d rcv_buf %d\n",
 		       cnt,
 		       (int)ntohl(ctl[cnt].req.sizetosend),
 		       (int)ntohl(ctl[cnt].req.blksize),
