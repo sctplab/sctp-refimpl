@@ -5044,6 +5044,9 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			sctp_free_key(stcb->asoc.authinfo.peer_random);
 		    stcb->asoc.authinfo.peer_random =
 			sctp_set_key(random->random_data, keylen);
+		    sctp_clear_cachedkeys(stcb,
+					  stcb->asoc.authinfo.assoc_keyid);
+		    sctp_clear_cachedkeys(stcb, stcb->asoc.authinfo.recv_keyid);
 		    got_random = 1;
 		} else if (ptype == SCTP_HMAC_LIST) {
 		    uint8_t store[256];

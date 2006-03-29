@@ -1494,6 +1494,8 @@ sctp_auth_get_cookie_params (struct sctp_tcb *stcb, struct mbuf *m,
 		sctp_free_key(stcb->asoc.authinfo.random);
 	    stcb->asoc.authinfo.random =
 		sctp_set_key(random->random_data, keylen);
+	    sctp_clear_cachedkeys(stcb, stcb->asoc.authinfo.assoc_keyid);
+	    sctp_clear_cachedkeys(stcb, stcb->asoc.authinfo.recv_keyid);
 	} else if (ptype == SCTP_HMAC_LIST) {
 	    uint8_t store[256];
 	    struct sctp_auth_hmac_algo *hmacs;
