@@ -3175,7 +3175,8 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	if (stcb->asoc.primary_destination == 0) {
 		stcb->asoc.primary_destination = net;
 	} else if ((stcb->asoc.primary_destination->ro.ro_rt == NULL) &&
-		   (net->ro.ro_rt)) {
+		   (net->ro.ro_rt) &&
+		   ((net->dest_state & SCTP_ADDR_UNCONFIRMED) == 0)) {
 		/* No route to current primary adopt new primary */
 		stcb->asoc.primary_destination = net;
 	}
@@ -3700,6 +3701,8 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	sctp_add_vtag_to_timewait(inp, asoc->my_vtag);
 	SCTP_INP_INFO_WUNLOCK();
 	prev = NULL;
+	if (mtx_owned(&stcb->tcb_mtx) == 0)
+		panic("Don't own TCB lock - remove from assoc r");	
 	while (!TAILQ_EMPTY(&asoc->nets)) {
 		net = TAILQ_FIRST(&asoc->nets);
 		/* pull from list */
@@ -4127,6 +4130,9 @@ static void
 sctp_select_primary_destination(struct sctp_tcb *stcb)
 {
 	struct sctp_nets *net;
+
+	if (mtx_owned(&stcb->tcb_mtx) == 0)
+		panic("Don't own TCB lock - select primary?");	
 
 	TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 		/* for now, we'll just pick the first reachable one we find */
