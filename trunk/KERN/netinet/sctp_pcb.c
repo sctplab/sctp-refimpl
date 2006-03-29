@@ -517,7 +517,7 @@ sctp_findassociation_ep_asconf(struct mbuf *m, int iphlen, int offset,
 	if (phdr == NULL) {
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_INPUT3) {
-			printf("sctp_process_control: failed to get asconf lookup addr\n");
+			printf("findassociation_ep_asconf: failed to get asconf lookup addr\n");
 		}
 #endif /* SCTP_DEBUG */
 		return NULL;
@@ -537,7 +537,7 @@ sctp_findassociation_ep_asconf(struct mbuf *m, int iphlen, int offset,
 		if (p6 == NULL) {
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_INPUT3) {
-				printf("sctp_process_control: failed to get asconf v6 lookup addr\n");
+				printf("findassociation_ep_asconf: failed to get asconf v6 lookup addr\n");
 			}
 #endif /* SCTP_DEBUG */
 			return (NULL);
@@ -560,7 +560,7 @@ sctp_findassociation_ep_asconf(struct mbuf *m, int iphlen, int offset,
 		if (p4 == NULL) {
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_INPUT3) {
-				printf("sctp_process_control: failed to get asconf v4 lookup addr\n");
+				printf("findassociation_ep_asconf: failed to get asconf v4 lookup addr\n");
 			}
 #endif /* SCTP_DEBUG */
 			return (NULL);
@@ -3372,7 +3372,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 			printf("aloc_assoc: couldn't add remote addr!\n");
 		}
 #endif
-		SCTP_TCB_LOCK_DESTROY (stcb);
+		SCTP_TCB_LOCK_DESTROY(stcb);
 		*error = ENOBUFS;
 		return (NULL);
 	}

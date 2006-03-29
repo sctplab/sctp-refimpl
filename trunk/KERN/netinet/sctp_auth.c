@@ -389,8 +389,10 @@ sctp_print_key (sctp_key_t *key, const char *str)
 {
     uint32_t i;
 
-    if (key == NULL)
+    if (key == NULL) {
+	printf(" [Null key]\n");
 	return;
+    }
 
     printf("%s: len %u, ", str, key->keylen);
     if (key->keylen) {
@@ -407,8 +409,10 @@ sctp_show_key (sctp_key_t *key, const char *str)
 {
     uint32_t i;
 
-    if (key == NULL)
+    if (key == NULL) {
+	printf(" [Null key]\n");
 	return;
+    }
 
     printf("%s: len %u, ", str, key->keylen);
     if (key->keylen) {
