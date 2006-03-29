@@ -2867,7 +2867,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 		sctp_print_address(newaddr);
 	}
 #endif
-	if (mtx_owned(stcb->tcb_mtx) == 0)
+	if (mtx_owned(&stcb->tcb_mtx) == 0)
 		panic("Don't own TCB lock");	
 
 
