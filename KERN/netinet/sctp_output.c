@@ -10430,7 +10430,7 @@ sctp_send_sack(struct sctp_tcb *stcb)
 		a_chk->whoTo = asoc->last_data_chunk_from;
 	}
 	if (a_chk->whoTo) {
-		atomic_add_int(&chk->whoTo->ref_count, 1);
+		atomic_add_int(&a_chk->whoTo->ref_count, 1);
 	}
 
 	/* Ok now lets formulate a MBUF with our sack */
@@ -10443,7 +10443,7 @@ sctp_send_sack(struct sctp_tcb *stcb)
 			sctp_m_freem(a_chk->data);
 			a_chk->data = NULL;
 		}
-		atomic_subtract_int(&chk->whoTo->ref_count, 1);
+		atomic_subtract_int(&a_chk->whoTo->ref_count, 1);
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, a_chk);
 		SCTP_DECR_CHK_COUNT();
 		sctp_timer_stop(SCTP_TIMER_TYPE_RECV,
@@ -10460,7 +10460,7 @@ sctp_send_sack(struct sctp_tcb *stcb)
 		if (a_chk->data)
 			sctp_m_freem(a_chk->data);
 		a_chk->data = NULL;
-		atomic_subtract_int(&chk->whoTo->ref_count, 1);
+		atomic_subtract_int(&a_chk->whoTo->ref_count, 1);
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, a_chk);
 		SCTP_DECR_CHK_COUNT();
 		sctp_timer_stop(SCTP_TIMER_TYPE_RECV,
