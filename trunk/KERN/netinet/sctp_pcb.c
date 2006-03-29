@@ -3032,7 +3032,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	}
 	net->RTO = stcb->asoc.initial_rto;
 	stcb->asoc.numnets++;
-	net->ref_count = 1;
+	*(&net->ref_count) = 1;
 	net->tos_flowlabel = 0;
 #ifdef AF_INET
 	if(newaddr->sa_family == AF_INET)
@@ -3426,7 +3426,7 @@ sctp_free_remote_addr(struct sctp_nets *net)
 {
 	if (net == NULL)
 		return;
-	net->ref_count--;
+	atomic_subtract_int(&net->ref_count, 1);
 	if (net->ref_count <= 0) {
 		/* stop timer if running */
 		callout_stop(&net->rxt_timer.timer);

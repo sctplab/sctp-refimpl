@@ -3233,7 +3233,7 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_out_req
 	chk->sent = SCTP_DATAGRAM_UNSENT;
 	chk->snd_count = 0;
 	chk->whoTo = stcb->asoc.primary_destination;
-	chk->whoTo->ref_count++;
+	atomic_add_int(&chk->whoTo->ref_count, 1);
 
 	ch = mtod(chk->data, struct sctp_chunkhdr *);
 	ch->chunk_type = SCTP_STREAM_RESET;

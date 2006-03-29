@@ -226,7 +226,7 @@ sctp_build_readq_entry(struct sctp_tcb *stcb,
 	read_queue_e->sinfo_assoc_id = sctp_get_associd(stcb);
 	read_queue_e->whoFrom = net;
 	read_queue_e->length = 0;
-	net->ref_count++;
+	atomic_add_int(&net->ref_count, 1);
 	read_queue_e->data = dm;
 	read_queue_e->tail_mbuf = NULL;
 	read_queue_e->stcb = stcb;
@@ -261,7 +261,7 @@ sctp_build_readq_entry_chk(struct sctp_tcb *stcb,
 	read_queue_e->sinfo_assoc_id = sctp_get_associd(stcb);
 	read_queue_e->whoFrom = chk->whoTo;
 	read_queue_e->length = 0;
-	chk->whoTo->ref_count++;
+	atomic_add_int(&chk->whoTo->ref_count, 1);
 	read_queue_e->data = chk->data;
 	read_queue_e->tail_mbuf = NULL;
 	read_queue_e->stcb = stcb;
@@ -1700,7 +1700,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		chk->asoc = asoc;
 		chk->send_size = the_len;
 		chk->whoTo = net;
-		net->ref_count++;
+		atomic_add_int(&net->ref_count, 1);
 		chk->data = dmbuf;
 	} else {
 		control = sctp_build_readq_entry(stcb, net, tsn, 
@@ -3169,7 +3169,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				/* yes, there is an alternate. */
 				sctp_free_remote_addr(tp1->whoTo);
 				tp1->whoTo = alt;
-				alt->ref_count++;
+				atomic_add_int(&alt->ref_count, 1);
 			}
 		}
 		tp1 = TAILQ_NEXT(tp1, sctp_next);
