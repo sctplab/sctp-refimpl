@@ -3455,6 +3455,9 @@ sctp_del_remote_addr(struct sctp_tcb *stcb, struct sockaddr *remaddr)
 	struct sctp_association *asoc;
 	struct sctp_nets *net, *net_tmp;
 	asoc = &stcb->asoc;
+	if (mtx_owned(&stcb->tcb_mtx) == 0)
+		panic("Don't own TCB lock - del remote addr");	
+
 	if (asoc->numnets < 2) {
 		/* Must have at LEAST two remote addresses */
 		return (-1);
@@ -5152,6 +5155,8 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 		    SCTP_ADDR_NOT_IN_ASSOC) {
 			/* This address has been removed from the asoc */
 			/* remove and free it */
+			if (mtx_owned(&stcb->tcb_mtx) == 0)
+				panic("Don't own TCB lock - load addresses at end");	
 			stcb->asoc.numnets--;
 			TAILQ_REMOVE(&stcb->asoc.nets, net, sctp_next);
 			sctp_free_remote_addr(net);
