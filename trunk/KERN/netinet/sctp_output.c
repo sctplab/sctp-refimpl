@@ -6440,13 +6440,14 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			  }
 			  goto out_locked;
 			}
+			SOCKBUF_UNLOCK(&so->so_snd);
 			SCTP_INP_RLOCK(inp);
 			if(be.error) {
 			  error = be.error;
 			  SCTP_INP_RUNLOCK(inp);
+			  SOCKBUF_LOCK(&so->so_snd);
 			  goto out_locked;
 			}
-			SOCKBUF_UNLOCK(&so->so_snd);
 			SCTP_TCB_LOCK(stcb);
 			SOCKBUF_LOCK(&so->so_snd);
 			if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
@@ -12167,8 +12168,8 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 			sctp_log_block(SCTP_BLOCK_LOG_OUTOF_BLK,
 			    so, asoc, sndlen);
 #endif
-			SCTP_INP_RLOCK(inp);
 			SOCKBUF_UNLOCK(&so->so_snd);
+			SCTP_INP_RLOCK(inp);
 			SCTP_TCB_LOCK(stcb);
 			SOCKBUF_LOCK(&so->so_snd);
 			if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
