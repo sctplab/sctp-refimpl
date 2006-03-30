@@ -446,6 +446,10 @@ do { \
 #define if_list		if_link
 #define ifa_list	ifa_link
 
+#include <kern/simple_lock.h>
+#define atomic_add_int(addr, val)	hw_atomic_add(addr, val)
+#define atomic_subtract_int(addr, val)	hw_atomic_sub(addr, val)
+
 /* additional protosw entries for Mac OS X 10.4 */
 #if !defined(SCTP_APPLE_PANTHER)
 int sctp_lock (struct socket *so, int refcount, int lr);
@@ -455,14 +459,7 @@ lck_mtx_t *sctp_getlock(struct socket *so, int locktype);
 #else
 void * sctp_getlock(struct socket *so, int locktype);
 #endif /* _KERN_LOCKS_H_ */
-#endif /* !SCTP_APPLE_PANTER */
-
-#if defined(SCTP_APPLE_PANTHER) 
-/* emulate the atomic_xxx() functions for Panther (non-SMP) */
-#define atomic_add_int(addr, val)	(*(addr) += val)
-#define atomic_subtract_int(addr, val)	(*(addr) -= val)
-#endif /* SCTP_APPLE_PANTHER */
-
+#endif /* !SCTP_APPLE_PANTHER */
 #endif /* __APPLE__ */
 
 #endif /* _KERNEL */
