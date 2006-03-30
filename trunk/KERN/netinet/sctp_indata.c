@@ -2199,6 +2199,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 			       if ((sctp_cmt_on_off) && (sctp_cmt_use_dac) &&
 				   (stcb->asoc.first_ack_sent == 1) &&
 				   (stcb->asoc.numduptsns == 0) &&
+				   (stcb->asoc.delayed_ack) &&
 				   (!callout_pending(&stcb->asoc.dack_timer.timer))) {
 
 				 /* CMT DAC algorithm: With CMT, delay acks even in the face of reordering.
