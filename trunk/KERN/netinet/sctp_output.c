@@ -10082,6 +10082,7 @@ sctp_output(inp, m, addr, control, p, flags)
 		return(EAGAIN);
 	}
 
+	SCTP_TCB_FREE_LOCK(stcb);
 
 	if (use_rcvinfo == 0) {
 		srcv = stcb->asoc.def_send;
@@ -10109,6 +10110,7 @@ sctp_output(inp, m, addr, control, p, flags)
 		net = stcb->asoc.primary_destination;
 	}
 	if ((error = sctp_msg_append(stcb, net, m, &srcv, flags))) {
+		SCTP_TCB_FREE_UNLOCK(stcb);
 		SCTP_TCB_UNLOCK(stcb);
 		splx(s);
 		return (error);
@@ -10178,6 +10180,8 @@ sctp_output(inp, m, addr, control, p, flags)
 	 * thats what the forced panic showed... so I can't relock
 	 * if the sbwait() or mutex returns an error :-0
 	 */
+
+	SCTP_TCB_FREE_UNLOCK(stcb);
  	SCTP_TCB_UNLOCK_IFOWNED(stcb);
 	splx(s);
 	return (0);
@@ -12794,6 +12798,7 @@ sctp_lower_sosend(struct socket *so,
  	unsigned int sndlen;
 	int error;
 	int s, queue_only = 0, queue_only_for_init=0;
+	int free_lock_applied = 0;
 	int un_sent = 0;
 	int now_filled=0;
 	struct sctp_inpcb *inp;
@@ -13031,7 +13036,6 @@ sctp_lower_sosend(struct socket *so,
 		}
 		/* out with the INIT */
 		queue_only_for_init = 1;
-		sctp_send_initiate(inp, stcb);
 		/*
 		 * we may want to dig in after this call and adjust the MTU
 		 * value. It defaulted to 1500 (constant) but the ro structure
@@ -13043,6 +13047,10 @@ sctp_lower_sosend(struct socket *so,
 	} else {
 		asoc = &stcb->asoc;
 	}
+	/* Keep the stcb from being freed under our feet */
+	SCTP_TCB_FREE_LOCK(stcb);
+	free_lock_applied = 1;
+
 	if (create_lock_applied) {
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		create_lock_applied = 0;
@@ -13106,8 +13114,9 @@ sctp_lower_sosend(struct socket *so,
 		 */
  		splx(s);
 		error = sctp_copy_it_in(inp, stcb, asoc, net, srcv, uio, flags);
-		if (error)
+		if (error) {
 			goto out;
+		}
 	} else {
 		/* Here we must either pull in the user data to chunk
 		 * buffers, or use top to do a msg_append.
@@ -13160,19 +13169,11 @@ sctp_lower_sosend(struct socket *so,
 			sctp_pegs[SCTP_NAGLE_OFF]++;
 		}
 	}
-	if (queue_only_for_init) {
-		/* It is possible to have a turn around of the
-		 * INIT/INIT-ACK/COOKIE before I have a chance to
-		 * copy in the data. In such a case I DO want to
-		 * send it out by reversing the queue only flag.
-		 */
-		if ((SCTP_GET_STATE(asoc) != SCTP_STATE_COOKIE_WAIT) ||
-		    (SCTP_GET_STATE(asoc) != SCTP_STATE_COOKIE_ECHOED)) {
-			/* yep, reverse it */
-			queue_only = 0;
-		}
- 	}
 	STCB_TCB_LOCK_ASSERT(stcb);
+	if (queue_only_for_init) {
+		sctp_send_initiate(inp, stcb);
+		queue_only_for_init = 0;
+ 	}
 	if ((queue_only == 0) && (stcb->asoc.peers_rwnd  && un_sent)) {
 		/* we can attempt to send too.*/
 #ifdef SCTP_DEBUG
@@ -13223,6 +13224,10 @@ sctp_lower_sosend(struct socket *so,
 	}
 #endif
  out:
+	if(free_lock_applied)
+		SCTP_TCB_FREE_UNLOCK(stcb);
+
+
 	if (create_lock_applied) {
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		create_lock_applied = 0;

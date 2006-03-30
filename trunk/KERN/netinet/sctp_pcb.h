@@ -431,6 +431,7 @@ struct sctp_tcb {
 	uint16_t resv;
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
 	struct mtx tcb_mtx;
+	struct mtx tcb_canfree_mtx;
 #elif defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
 #ifdef _KERN_LOCKS_H_
 	lck_mtx_t *tcb_mtx;
@@ -609,7 +610,20 @@ void SCTP_ASOC_CREATE_LOCK(struct sctp_inpcb *inp);
 
 #define SCTP_TCB_LOCK_INIT(_tcb) \
 	mtx_init(&(_tcb)->tcb_mtx, "sctp-tcb", "tcb", MTX_DEF | MTX_DUPOK)
+
+#define SCTP_TCB_FREE_LOCK_INIT(_tcb) \
+	mtx_init(&(_tcb)->tcb_canfree_mtx, "sctp-tcb-free", "tcb-free", MTX_DEF | MTX_DUPOK)
+
 #define SCTP_TCB_LOCK_DESTROY(_tcb)	mtx_destroy(&(_tcb)->tcb_mtx)
+
+#define SCTP_TCB_FREE_LOCK_DESTROY(_tcb)	mtx_destroy(&(_tcb)->tcb_canfree_mtx)
+
+
+#define SCTP_TCB_FREE_LOCK(_tcb)  do {					\
+	mtx_lock(&(_tcb)->tcb_canfree_mtx);                             \
+} while (0)
+
+#define SCTP_TCB_FREE_UNLOCK(_tcb)		mtx_unlock(&(_tcb)->tcb_canfree_mtx)
 
 #ifdef INVARIANTS_SCTP
 struct sctp_tcb;
@@ -712,6 +726,11 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #define SCTP_ASOC_CREATE_UNLOCK(_inp)
 
 /* Lock for TCB */
+#define SCTP_TCB_FREE_LOCK_INIT(_tcb)
+#define SCTP_TCB_FREE_LOCK_DESTROY(_tcb)
+#define SCTP_TCB_FREE_LOCK(_tcb)
+#define SCTP_TCB_FREE_UNLOCK(_tcb)
+
 #define SCTP_TCB_LOCK_INIT(_tcb)
 #define SCTP_TCB_LOCK_DESTROY(_tcb)
 #define SCTP_TCB_LOCK(_tcb)
@@ -765,6 +784,12 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #define SCTP_ASOC_CREATE_LOCK(_inp)
 #define SCTP_ASOC_CREATE_UNLOCK(_inp)
 /* Lock for TCB */
+#define SCTP_TCB_FREE_LOCK_INIT(_tcb)
+#define SCTP_TCB_FREE_LOCK_DESTROY(_tcb)
+#define SCTP_TCB_FREE_LOCK(_tcb)
+#define SCTP_TCB_FREE_UNLOCK(_tcb)
+
+
 #define SCTP_TCB_LOCK_INIT(_tcb)
 #define SCTP_TCB_LOCK_DESTROY(_tcb)
 #define SCTP_TCB_LOCK(_tcb)
