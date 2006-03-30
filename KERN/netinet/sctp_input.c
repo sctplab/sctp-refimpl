@@ -538,7 +538,6 @@ static void
 sctp_handle_abort(struct sctp_abort_chunk *cp,
     struct sctp_tcb *stcb, struct sctp_nets *net)
 {
-	struct sctp_inpcb *inp;
 
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INPUT2) {
@@ -555,7 +554,6 @@ sctp_handle_abort(struct sctp_abort_chunk *cp,
 	/* notify user of the abort and clean up... */
 	sctp_abort_notification(stcb, 0);
 	/* free the tcb */
-	inp = stcb->sctp_ep;
 	sctp_free_assoc(stcb->sctp_ep, stcb, 0);
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INPUT2) {

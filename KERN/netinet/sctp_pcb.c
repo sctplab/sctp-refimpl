@@ -2873,9 +2873,6 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 		sctp_print_address(newaddr);
 	}
 #endif
-	if (mtx_owned(&stcb->tcb_mtx) == 0)
-		panic("Don't own TCB lock");	
-
 
 	netfirst = sctp_findnet(stcb, newaddr);
 	if (netfirst) {
@@ -3120,7 +3117,6 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	 */
 	net->find_pseudo_cumack = 1;
 	net->find_rtx_pseudo_cumack = 1;
-
 	net->src_addr_selected = 0;
 	netfirst = TAILQ_FIRST(&stcb->asoc.nets);
 	if (net->ro.ro_rt == NULL) {
@@ -3171,6 +3167,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 			netfirst = netlook;
 		} while (netlook != NULL);
 	}
+	
 	/* got to have a primary set */
 	if (stcb->asoc.primary_destination == 0) {
 		stcb->asoc.primary_destination = net;
@@ -3324,12 +3321,14 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	bzero(stcb, sizeof(*stcb));
 	asoc = &stcb->asoc;
 	SCTP_TCB_LOCK_INIT(stcb);
+	SCTP_TCB_FREE_LOCK_INIT(stcb);
 	/* setup back pointer's */
 	stcb->sctp_ep = inp;
 	stcb->sctp_socket = inp->sctp_socket;
 	if ((err = sctp_init_asoc(inp, asoc, for_a_init, override_tag))) {
 		/* failed */
 		SCTP_TCB_LOCK_DESTROY (stcb);
+		SCTP_TCB_FREE_LOCK_DESTROY (stcb);
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
 		SCTP_DECR_ASOC_COUNT();
 #ifdef SCTP_DEBUG
@@ -3348,6 +3347,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	if (inp->sctp_flags & (SCTP_PCB_FLAGS_SOCKET_GONE|SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
 		/* inpcb freed while alloc going on */
 		SCTP_TCB_LOCK_DESTROY (stcb);
+		SCTP_TCB_FREE_LOCK_DESTROY (stcb);
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
 		SCTP_INP_WUNLOCK(inp);
 		SCTP_INP_INFO_WUNLOCK();
@@ -3384,6 +3384,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		}
 #endif
 		SCTP_TCB_LOCK_DESTROY(stcb);
+		SCTP_TCB_FREE_LOCK_DESTROY (stcb);
 		*error = ENOBUFS;
 		return (NULL);
 	}
@@ -3426,8 +3427,9 @@ sctp_free_remote_addr(struct sctp_nets *net)
 {
 	if (net == NULL)
 		return;
+
 	atomic_subtract_int(&net->ref_count, 1);
-	if (net->ref_count <= 0) {
+	if(net->ref_count == 0) {
 		/* stop timer if running */
 		callout_stop(&net->rxt_timer.timer);
 		callout_stop(&net->pmtu_timer.timer);
@@ -3456,8 +3458,6 @@ sctp_del_remote_addr(struct sctp_tcb *stcb, struct sockaddr *remaddr)
 	struct sctp_association *asoc;
 	struct sctp_nets *net, *net_tmp;
 	asoc = &stcb->asoc;
-	if (mtx_owned(&stcb->tcb_mtx) == 0)
-		panic("Don't own TCB lock - del remote addr");	
 
 	if (asoc->numnets < 2) {
 		/* Must have at LEAST two remote addresses */
@@ -3612,6 +3612,7 @@ sctp_iterator_asoc_being_freed(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 void
 sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfree)
 {
+	int i;
 	struct sctp_association *asoc;
 	struct sctp_nets *net, *prev;
 	struct sctp_laddr *laddr;
@@ -3629,6 +3630,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 #else
 	s = splnet();
 #endif
+	SCTP_TCB_FREE_LOCK(stcb);
 	if (stcb->asoc.state == 0) {
 		printf("Freeing already free association:%p - huh??\n",
 		       stcb);
@@ -3666,20 +3668,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	SCTP_TCB_UNLOCK(stcb);
 	sctp_iterator_asoc_being_freed(inp, stcb);
 
-	/* Null all of my entry's on the socket read queue */
-	if ((from_inpcbfree == 0) && so){
-		SOCKBUF_LOCK(&so->so_snd);
-	}
-	TAILQ_FOREACH(sq, &inp->read_queue, next) {
-		if (sq->stcb == stcb) {
-			sq->stcb = NULL;
-			sq->sinfo_cumtsn = stcb->asoc.cumulative_tsn;
-		}
-	}
-	if ((from_inpcbfree == 0) && so) {
-		SOCKBUF_UNLOCK(&so->so_snd);
-	}
-
 	if(stcb->block_entry) {
 		stcb->block_entry->error = ECONNRESET;
 		stcb->block_entry = NULL;
@@ -3699,36 +3687,30 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	/* pull from vtag hash */
 	LIST_REMOVE(stcb, sctp_asocs);
 
-	/*
-	 * Now before we can free the assoc, we must  remove all of the
-	 * networks and any other allocated space.. i.e. add removes here
-	 * before the SCTP_ZONE_FREE() of the tasoc entry.
-	 */
 
 	sctp_add_vtag_to_timewait(inp, asoc->my_vtag);
 	SCTP_INP_INFO_WUNLOCK();
 	prev = NULL;
-	if (mtx_owned(&stcb->tcb_mtx) == 0)
-		panic("Don't own TCB lock - remove from assoc r");	
-	while (!TAILQ_EMPTY(&asoc->nets)) {
-		net = TAILQ_FIRST(&asoc->nets);
-		/* pull from list */
-		if ((sctppcbinfo.ipi_count_raddr == 0) || (prev == net)) {
-			break;
+
+	/* Null all of my entry's on the socket read queue */
+	if ((from_inpcbfree == 0) && so){
+		SOCKBUF_LOCK(&so->so_snd);
+		SOCKBUF_LOCK(&so->so_rcv);
+	}
+	TAILQ_FOREACH(sq, &inp->read_queue, next) {
+		if (sq->stcb == stcb) {
+			sq->stcb = NULL;
+			sq->sinfo_cumtsn = stcb->asoc.cumulative_tsn;
 		}
-		prev = net;
-		TAILQ_REMOVE(&asoc->nets, net, sctp_next);
-		sctp_free_remote_addr(net);
 	}
 	/*
 	 * The chunk lists and such SHOULD be empty but we check them
 	 * just in case.
 	 */
 	/* anything on the wheel needs to be removed */
-	while (!TAILQ_EMPTY(&asoc->out_wheel)) {
+	for(i=0;i<asoc->streamoutcnt;i++) {
 		struct sctp_stream_out *outs;
-		outs = TAILQ_FIRST(&asoc->out_wheel);
-		TAILQ_REMOVE(&asoc->out_wheel, outs, next_spoke);
+		outs = &asoc->strmout[i];
 		/* now clean up any chunks here */
 		chk = TAILQ_FIRST(&outs->outqueue);
 		while (chk) {
@@ -3737,7 +3719,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				sctp_m_freem(chk->data);
 				chk->data = NULL;
 			}
-			chk->whoTo = NULL;
+			sctp_free_remote_addr(chk->whoTo);
 			chk->asoc = NULL;
 			/* Free the chunk */
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
@@ -3759,6 +3741,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			sctp_m_freem(sq->data);
 			sq->data = NULL;
 		}
+		sctp_free_remote_addr(sq->whoFrom);
 		sq->whoFrom = NULL;
 		sq->stcb = NULL;
 		/* Free the ctl entry */
@@ -3775,6 +3758,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				sctp_m_freem(chk->data);
 				chk->data = NULL;
 			}
+			sctp_free_remote_addr(chk->whoTo);
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
 			SCTP_DECR_CHK_COUNT();
 			chk = TAILQ_FIRST(&asoc->send_queue);
@@ -3789,6 +3773,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				sctp_m_freem(chk->data);
 				chk->data = NULL;
 			}
+			sctp_free_remote_addr(chk->whoTo);
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
 			SCTP_DECR_CHK_COUNT();
 			chk = TAILQ_FIRST(&asoc->sent_queue);
@@ -3803,6 +3788,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				sctp_m_freem(chk->data);
 				chk->data = NULL;
 			}
+			sctp_free_remote_addr(chk->whoTo);
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
 			SCTP_DECR_CHK_COUNT();
 			chk = TAILQ_FIRST(&asoc->control_send_queue);
@@ -3816,6 +3802,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				sctp_m_freem(chk->data);
 				chk->data = NULL;
 			}
+			sctp_free_remote_addr(chk->whoTo);
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
 			SCTP_DECR_CHK_COUNT();
 			chk = TAILQ_FIRST(&asoc->reasmqueue);
@@ -3842,6 +3829,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				while (ctl) {
 					TAILQ_REMOVE(&asoc->strmin[i].inqueue,
 						     ctl, next);
+					sctp_free_remote_addr(ctl->whoFrom);
 					if (ctl->data) {
 						sctp_m_freem(ctl->data);
 						ctl->data = NULL;
@@ -3858,7 +3846,22 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		FREE(asoc->strmin, M_PCB);
 		asoc->strmin = NULL;
 	}
+
 	asoc->streamincnt = 0;
+	while (!TAILQ_EMPTY(&asoc->nets)) {
+		net = TAILQ_FIRST(&asoc->nets);
+		/* pull from list */
+		if ((sctppcbinfo.ipi_count_raddr == 0) || (prev == net)) {
+			break;
+		}
+		prev = net;
+		TAILQ_REMOVE(&asoc->nets, net, sctp_next);
+		sctp_free_remote_addr(net);
+	}
+	if ((from_inpcbfree == 0) && so) {
+		SOCKBUF_UNLOCK(&so->so_snd);
+		SOCKBUF_UNLOCK(&so->so_rcv);
+	}
 	/* local addresses, if any */
 	while (!LIST_EMPTY(&asoc->sctp_local_addr_list)) {
 		laddr = LIST_FIRST(&asoc->sctp_local_addr_list);
@@ -3900,6 +3903,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	/* Insert new items here :> */
 
 	/* Get rid of LOCK */
+	SCTP_TCB_FREE_LOCK_DESTROY (stcb);
 	SCTP_TCB_LOCK_DESTROY(stcb);
 
 	/* now clean up the tasoc itself */
@@ -4141,9 +4145,6 @@ static void
 sctp_select_primary_destination(struct sctp_tcb *stcb)
 {
 	struct sctp_nets *net;
-
-	if (mtx_owned(&stcb->tcb_mtx) == 0)
-		panic("Don't own TCB lock - select primary?");	
 
 	TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 		/* for now, we'll just pick the first reachable one we find */
@@ -5172,8 +5173,6 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 		    SCTP_ADDR_NOT_IN_ASSOC) {
 			/* This address has been removed from the asoc */
 			/* remove and free it */
-			if (mtx_owned(&stcb->tcb_mtx) == 0)
-				panic("Don't own TCB lock - load addresses at end");	
 			stcb->asoc.numnets--;
 			TAILQ_REMOVE(&stcb->asoc.nets, net, sctp_next);
 			sctp_free_remote_addr(net);
