@@ -620,8 +620,6 @@
 				 * limitations on the stream/socket.
 				 */
 
-#define SCTP_MAX_BUNDLE_UP	256	/* max number of chunks to bundle */
-
 /*  I can handle a 1meg re-assembly */
 #define SCTP_DEFAULT_MAXMSGREASM 1048576
 
@@ -690,7 +688,7 @@
 #define IPPROTO_SCTP 132	/* the Official IANA number :-) */
 #endif /* !IPPROTO_SCTP */
 
-#define SCTP_MAX_DATA_BUNDLING		256
+#define SCTP_MAX_DATA_BUNDLING		820
 #define SCTP_MAX_CONTROL_BUNDLING	20
 
 /* modular comparison */
