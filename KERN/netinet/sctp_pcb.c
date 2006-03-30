@@ -3620,6 +3620,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	struct sctp_stream_reset_list *liste;
 	struct sctp_queued_to_read *sq;
 	sctp_sharedkey_t *shared_key;
+	struct socket *so;
 	int s;
 
 	/* first, lets purge the entry from the hash table. */
@@ -3636,6 +3637,12 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	}
 	asoc = &stcb->asoc;
 	asoc->state = 0;
+	if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)
+		/* nothing around */
+		so = NULL;
+	else 
+		so = inp->sctp_socket;
+
 	/* now clean up any other timers */
 	callout_stop(&asoc->hb_timer.timer);
 	callout_stop(&asoc->dack_timer.timer);
@@ -3660,8 +3667,8 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	sctp_iterator_asoc_being_freed(inp, stcb);
 
 	/* Null all of my entry's on the socket read queue */
-	if (from_inpcbfree == 0) {
-		SOCKBUF_LOCK(&inp->sctp_socket->so_snd);
+	if ((from_inpcbfree == 0) && so){
+		SOCKBUF_LOCK(&so->so_snd);
 	}
 	TAILQ_FOREACH(sq, &inp->read_queue, next) {
 		if (sq->stcb == stcb) {
@@ -3669,8 +3676,8 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			sq->sinfo_cumtsn = stcb->asoc.cumulative_tsn;
 		}
 	}
-	if (from_inpcbfree == 0) {
-		SOCKBUF_UNLOCK(&inp->sctp_socket->so_snd);
+	if ((from_inpcbfree == 0) && so) {
+		SOCKBUF_UNLOCK(&so->so_snd);
 	}
 
 	if(stcb->block_entry) {
@@ -3899,16 +3906,16 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
 	SCTP_DECR_ASOC_COUNT();
 
-	if ((inp->sctp_socket->so_snd.sb_cc) ||
-	    (inp->sctp_socket->so_snd.sb_mbcnt)) {
+	if (so && ((so->so_snd.sb_cc) ||
+		   (so->so_snd.sb_mbcnt))) {
 		/* This will happen when a abort is done */
 		if (from_inpcbfree == 0) {
-			SOCKBUF_LOCK(&inp->sctp_socket->so_snd);
+			SOCKBUF_LOCK(&so->so_snd);
 		}
-		inp->sctp_socket->so_snd.sb_cc = 0;
-		inp->sctp_socket->so_snd.sb_mbcnt = 0;
+		so->so_snd.sb_cc = 0;
+		so->so_snd.sb_mbcnt = 0;
 		if (from_inpcbfree == 0) {
-			SOCKBUF_UNLOCK(&inp->sctp_socket->so_snd);
+			SOCKBUF_UNLOCK(&so->so_snd);
 		}
 	}
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
@@ -3932,12 +3939,14 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				 * so that it can start a new assoc if it desires.
 				 */
 				inp->sctp_flags &= ~SCTP_PCB_FLAGS_CONNECTED;
-				if (from_inpcbfree == 0) {
-					SOCK_LOCK(inp->sctp_socket);
-				}
-				inp->sctp_socket->so_state &= ~(SS_ISCONNECTING|SS_ISDISCONNECTING|SS_ISCONFIRMING|SS_ISCONNECTED);
-				if (from_inpcbfree == 0) {
-					SOCK_UNLOCK(inp->sctp_socket);
+				if(so) {
+					if (from_inpcbfree == 0) {
+						SOCK_LOCK(so);
+					}
+					so->so_state &= ~(SS_ISCONNECTING|SS_ISDISCONNECTING|SS_ISCONFIRMING|SS_ISCONNECTED);
+					if (from_inpcbfree == 0) {
+						SOCK_UNLOCK(so);
+					}
 				}
 			} else {
 				/* For TCP Pool types including
@@ -3948,12 +3957,14 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				 * too since the can't send more flags are
 				 * also set.
 				 */
-				if (from_inpcbfree) {
-					SOCK_UNLOCK(inp->sctp_socket);
-				}
-				soisdisconnected(inp->sctp_socket);
-				if (from_inpcbfree) {
-					SOCK_LOCK(inp->sctp_socket);
+				if(so) {
+					if (from_inpcbfree) {
+						SOCK_UNLOCK(so);
+					}
+					soisdisconnected(so);
+					if (from_inpcbfree) {
+						SOCK_LOCK(so);
+					}
 				}
 			}
 		}
