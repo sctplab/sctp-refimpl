@@ -10129,7 +10129,9 @@ sctp_output(inp, m, addr, control, p, flags)
 
 		if ((sctp_is_feature_off(inp,SCTP_PCB_FLAGS_NODELAY)) &&
 		    (stcb->asoc.total_flight > 0) && 
-		    (un_sent < (int)(stcb->asoc.smallest_mtu - SCTP_MIN_OVERHEAD))) {
+		    (un_sent < (int)(stcb->asoc.smallest_mtu - SCTP_MIN_OVERHEAD)) &&
+		    ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) < SCTP_MAX_DATA_BUNDLING)
+			) {
 			/* Ok, Nagle is set on and we have
 			 * data outstanding. Don't send anything
 			 * and let the SACK drive out the data.
@@ -13151,7 +13153,9 @@ sctp_lower_sosend(struct socket *so,
 		 */
 		if ((sctp_is_feature_off(inp,SCTP_PCB_FLAGS_NODELAY)) &&
 		    (stcb->asoc.total_flight > 0) && 
-		    (un_sent < (int)(stcb->asoc.smallest_mtu- SCTP_MIN_OVERHEAD))) {
+		    (un_sent < (int)(stcb->asoc.smallest_mtu- SCTP_MIN_OVERHEAD)) &&
+		    ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) < SCTP_MAX_DATA_BUNDLING)
+			) {
 
 			/* Ok, Nagle is set on and we have data outstanding. Don't
 			 * send anything and let SACKs drive out the data unless wen
