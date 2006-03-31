@@ -21,13 +21,15 @@ struct txfr_request{
 int
 main(int argc, char **argv)
 {
-	int in_fd;
+	int in_fd,i,ret;
+	char buffer[1024];
+	uint16_t port;
 	struct txfr_request *req;
 	struct sockaddr_in bindto,got,from;
 	char *addr_to_bind=NULL;
 	struct sctp_sndrcvinfo sinfo;
 	socklen_t sa_len;
-	int fd, failed_cnt=0;
+	int fd, failed_cnt=0, newfd;
 	uint32_t flags;
 
 	while((i= getopt(argc,argv,"B:p::")) != EOF){
@@ -103,7 +105,6 @@ main(int argc, char **argv)
 	}
 	if(ret < sizeof(struct txfr_request)){
 		printf("Huh not the right request\n");
-	exit_now:
 		close(newfd);
 		goto again;
 	}
