@@ -423,7 +423,9 @@ measure_one(struct control_info *req,
 #ifndef WIN32
     char controlbuf[3000];
     struct sockaddr_in from;
+    struct sctp_sndrcvinfo sinfo;
     int notification;
+    socklen_t flen;
     struct msghdr msg;
     struct sctp_event_subscribe events;
     struct iovec iov[2];
@@ -522,7 +524,7 @@ measure_one(struct control_info *req,
 	    return(-1);
 	}
     }
-
+    flen = sizeof(struct sockaddr_in);
     if ((protocol_touse == IPPROTO_SCTP) && (sctp_tcpmode == 0)) {
 #ifndef WIN32
 	ret = sendto(fd,&req->req,sizeof(req->req),0,
@@ -547,7 +549,12 @@ measure_one(struct control_info *req,
 	if (ret <= 0)
 	    goto exit_now;
 #else
-	ret = recvmsg(fd,&msg,0);
+	if(protocol_touse == IPPROTO_SCTP)
+		ret = sctp_recvmsg (fd, buffer, sizeof(buffer), 	
+				    (struct sockaddr *)&from,
+				    &flen, &sinfo, &msg.msg_flags);
+	else
+		ret = recvmsg(fd,&msg,0);
 	if(ret <= 0){
 	    goto exit_now;
 	}
