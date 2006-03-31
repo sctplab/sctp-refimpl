@@ -50,7 +50,7 @@ PROGSRCS= block_test.c sctp_test_app.c cmp_server.c cmp_client.c \
 m_cmp_client.c data_sorter.c client_manyconn.c \
 server.c interest_client.c interest_server.c getcwndlog.c prtcwndlog.c \
 tcp_server.c tcp_client.c  peel_client.c peel_server.c tsctp.c dump_pegs.c \
-prtcwndlog_ntohl.c cmp_sendfile.c
+prtcwndlog_ntohl.c cmp_sendfile.c cmp_recvfile.c
 
 
 #LOCAL_LIBS+=-lsctp
