@@ -150,13 +150,17 @@
 /* default AUTO_ASCONF mode enable(1)/disable(0) value (sysctl) */
 #define SCTP_DEFAULT_AUTO_ASCONF	0
 
-/* Theshold for rwnd updates before we even
- * examine the assoc details..This means
- * we have to have read that value before we look 
- * into sending a window update sack.
+/* Theshold for rwnd updates, we have
+ * to read (sb_hiwat >> SCTP_RWND_HIWAT_SHIFT)
+ * before we will look to see if we need to send
+ * a window update sack. When we look, we compare the
+ * last rwnd we sent vs the current rwnd. It too must
+ * be greater than this value. Using 3 divdes the
+ * hiwat by 8, so for 200k rwnd we need to read
+ * 25k. For a 64k rwnd we need to read 8k. This
+ * seems about right.
  */
-#define SCTP_RWND_UPDATE_THESHOLD 8192
-#define SCTP_RWND_HIWAT_SHIFT 8
+#define SCTP_RWND_HIWAT_SHIFT 3
 /*
  * If you wish to use MD5 instead of SLA uncomment the line below.
  * Why you would like to do this:

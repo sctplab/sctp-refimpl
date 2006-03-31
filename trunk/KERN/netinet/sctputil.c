@@ -3819,11 +3819,13 @@ static void
 sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far)
 {
 	/* User pulled some data, do we need a rwnd update? */
+	uint32_t rwnd_req;
 
-	stcb->freed_by_sorcv_sincelast += (*freed_so_far);
+	rwnd_req = (stcb->sctp_socket->so_snd.sb_hiwat >> SCTP_RWND_HIWAT_SHIFT);
+	stcb->freed_by_sorcv_sincelast += *freed_so_far;
 	*freed_so_far = 0;
 	/* Have you have freed enough to look */
-	if(stcb->freed_by_sorcv_sincelast > SCTP_RWND_UPDATE_THESHOLD) {
+	if(stcb->freed_by_sorcv_sincelast > rwnd_req) {
 		/* Yep, its worth a look and the lock overhead */
 		stcb->freed_by_sorcv_sincelast = 0;
 		SOCKBUF_UNLOCK(&stcb->sctp_socket->so_rcv);
@@ -3835,7 +3837,7 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far)
 		if(stcb->asoc.my_last_reported_rwnd < stcb->asoc.my_rwnd) {
 			uint32_t dif;
 			dif = stcb->asoc.my_rwnd - stcb->asoc.my_last_reported_rwnd;
-			if(dif > (stcb->sctp_socket->so_snd.sb_hiwat >> SCTP_RWND_HIWAT_SHIFT)) {
+			if(dif > rwnd_req) {
 				sctp_send_sack(stcb);
 				sctp_chunk_output(stcb->sctp_ep, stcb, 
 						  SCTP_OUTPUT_FROM_USR_RCVD);
