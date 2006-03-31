@@ -4,7 +4,7 @@
 #define __sctputil_h__
 
 /*
- * Copyright (C) 2002, 2003, 2004 Cisco Systems Inc,
+ * Copyright (C) 2002-2006 Cisco Systems Inc,
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -87,8 +87,9 @@ struct mbuf *sctp_m_copym(struct mbuf *m, int off, int len, int wait);
 	zone = zinit(name, size, number, ZONE_INTERRUPT, 0);
 #endif
 #elif defined(__APPLE__)
+extern zone_t kalloc_zone(vm_size_t);	/* XXX */
 #define SCTP_ZONE_INIT(zone, name, size, number) \
-	zone = (void *)zinit(size, number * size, number, name);
+	zone = (void *)kalloc_zone(size);
 #elif defined(__OpenBSD__) || defined(__NetBSD__)
 #define SCTP_ZONE_INIT(zone, name, size, number) \
 	pool_init(&(zone), size, 0, 0, 0, name, NULL);
