@@ -6242,7 +6242,8 @@ sctp_msg_append(struct sctp_tcb *stcb,
 		struct sctp_nets *net,
 		struct mbuf *m,
 		struct sctp_sndrcvinfo *srcv,
-		int flags)
+		int flags,
+		int hold_sockbuflock)
 {
 	struct socket *so;
 	struct sctp_association *asoc;
@@ -6352,10 +6353,11 @@ sctp_msg_append(struct sctp_tcb *stcb,
 	sctp_log_lock(stcb->sctp_ep, stcb, SCTP_LOG_LOCK_SOCKBUF_S);
 #endif
 	SOCKBUF_LOCK(&so->so_snd);
-	error = sblock(&so->so_snd, SBLOCKWAIT(flags));
-	if (error)
-		goto out_locked;
-
+	if(hold_sockbuflock == 0) {
+		error = sblock(&so->so_snd, SBLOCKWAIT(flags));
+		if (error)
+			goto out_locked;
+	}
 	if (dataout > so->so_snd.sb_hiwat) {
 		/* It will NEVER fit */
 		error = EMSGSIZE;
@@ -6790,11 +6792,14 @@ zap_by_it_all:
 #endif
 
 release:
+	if(hold_sockbuflock == 0) {
+
 #if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
-	sbunlock(&so->so_snd, 0); /* MT: FIXME */
+		sbunlock(&so->so_snd, 0); /* MT: FIXME */
 #else
-	sbunlock(&so->so_snd);
+		sbunlock(&so->so_snd);
 #endif
+	}
 out_locked:
 	SOCKBUF_UNLOCK(&so->so_snd);
 out:
@@ -6955,7 +6960,7 @@ sctp_sendall_iterator(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
 		stcb->sctp_socket->so_state |= SS_NBIO;
 	}
 	ret = sctp_msg_append(stcb, stcb->asoc.primary_destination, m,
-			      &ca->sndrcv, 0);
+			      &ca->sndrcv, 0, 0);
 	if (turned_on_nonblock) {
 		/* we turned on non-blocking so turn it off */
 		stcb->sctp_socket->so_state &= ~SS_NBIO;
@@ -10056,7 +10061,7 @@ sctp_output(inp, m, addr, control, p, flags)
 			}
 			if ((use_rcvinfo) &&
 			    (srcv.sinfo_flags & SCTP_ABORT)) {
-				sctp_msg_append(stcb, net, m, &srcv, flags);
+				sctp_msg_append(stcb, net, m, &srcv, flags, 1);
 				error = 0;
 			} else {
 				if (m)
@@ -10110,7 +10115,7 @@ sctp_output(inp, m, addr, control, p, flags)
 	} else {
 		net = stcb->asoc.primary_destination;
 	}
-	if ((error = sctp_msg_append(stcb, net, m, &srcv, flags))) {
+	if ((error = sctp_msg_append(stcb, net, m, &srcv, flags, 1))) {
 		SCTP_TCB_FREE_UNLOCK(stcb);
 		SCTP_TCB_UNLOCK(stcb);
 		splx(s);
@@ -13124,7 +13129,7 @@ sctp_lower_sosend(struct socket *so,
 		/* Here we must either pull in the user data to chunk
 		 * buffers, or use top to do a msg_append.
 		 */
- 		error = sctp_msg_append(stcb, net, top, srcv, flags);
+ 		error = sctp_msg_append(stcb, net, top, srcv, flags, 0);
  		splx(s);
 		if (error)
 			goto out;
