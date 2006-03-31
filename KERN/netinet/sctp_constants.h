@@ -150,9 +150,13 @@
 /* default AUTO_ASCONF mode enable(1)/disable(0) value (sysctl) */
 #define SCTP_DEFAULT_AUTO_ASCONF	0
 
-/* Theshold for rwnd updates */
-#define SCTP_RWND_UPDATE_THESHOLD 4096
-
+/* Theshold for rwnd updates before we even
+ * examine the assoc details..This means
+ * we have to have read that value before we look 
+ * into sending a window update sack.
+ */
+#define SCTP_RWND_UPDATE_THESHOLD 8192
+#define SCTP_RWND_HIWAT_SHIFT 8
 /*
  * If you wish to use MD5 instead of SLA uncomment the line below.
  * Why you would like to do this:
