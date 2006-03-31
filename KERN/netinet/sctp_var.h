@@ -245,7 +245,7 @@ int sctp_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,
 		(sb)->sb_ctl -= (m)->m_len; \
         if((sb)->sb_mbcnt >= MSIZE) { \
            (sb)->sb_mbcnt -= MSIZE; \
-	    if ((m)->m_flags & M_EXT) { \
+ 	   if (((m)->m_flags & M_EXT) && (*((m)->m_ext.ref_cnt) <= 2)) { \
 		if((sb)->sb_mbcnt >= (m)->m_ext.ext_size) { \
 		   (sb)->sb_mbcnt -= (m)->m_ext.ext_size; \
                 } else  { \
@@ -267,7 +267,7 @@ int sctp_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,
 	    (m)->m_type != MT_OOBDATA) \
 		(sb)->sb_ctl += (m)->m_len; \
 	(sb)->sb_mbcnt += MSIZE; \
-	if ((m)->m_flags & M_EXT) \
+	if (((m)->m_flags & M_EXT) && (*((m)->m_ext.ref_cnt) <= 2)) \
 		(sb)->sb_mbcnt += (m)->m_ext.ext_size; \
 }
 
@@ -287,7 +287,7 @@ int sctp_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,
         } \
         if((sb)->sb_mbcnt >= MSIZE) { \
            (sb)->sb_mbcnt -= MSIZE; \
-	    if ((m)->m_flags & M_EXT) { \
+	    if (((m)->m_flags & M_EXT) && (*((m)->m_ext.ref_cnt) <= 2)) { \
 		if((sb)->sb_mbcnt >= (uint32_t)(m)->m_ext.ext_size) { \
 		   (sb)->sb_mbcnt -= (m)->m_ext.ext_size; \
                 } else  { \
@@ -304,7 +304,7 @@ int sctp_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,
         if(stcb) \
   	  (stcb)->asoc.sb_cc += (m)->m_len; \
 	(sb)->sb_mbcnt += MSIZE; \
-	if ((m)->m_flags & M_EXT) \
+	 if (((m)->m_flags & M_EXT) && (*((m)->m_ext.ref_cnt) <= 2)) \
 		(sb)->sb_mbcnt += (m)->m_ext.ext_size; \
 }
 
