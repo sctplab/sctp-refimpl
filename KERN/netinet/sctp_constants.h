@@ -190,7 +190,6 @@
 #define SCTP_ADLER32_BASE 65521
 #endif
 
-#define SCTP_CWND_POSTS_LIST 256
 /*
  * the SCTP protocol signature
  * this includes the version number encoded in the last 4 bits
