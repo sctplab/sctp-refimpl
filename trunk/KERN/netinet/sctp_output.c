@@ -6427,11 +6427,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			 * further dooms the UDP model NOT to
 			 * allow this.
 			 */
-			if ((error) || (so->so_error) || (be.error)){
-			  if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
-			      (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
-			    error = EFAULT;
-			  }
+			if ((error) || (so->so_error)){
 			  if(!error) {
 			    if(so->so_error)
 			      error = so->so_error;
@@ -6442,8 +6438,13 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			}
 			SOCKBUF_UNLOCK(&so->so_snd);
 			SCTP_INP_RLOCK(inp);
-			if(be.error) {
-			  error = be.error;
+			if((be.error)  ||
+			   (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
+			   (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
+				if(be.error)
+					error = be.error;
+				else
+					error = EFAULT;
 			  SCTP_INP_RUNLOCK(inp);
 			  SOCKBUF_LOCK(&so->so_snd);
 			  goto out_locked;

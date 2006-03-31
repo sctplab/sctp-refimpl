@@ -2440,7 +2440,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		sctp_log_lock(inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_SOCK);
 #endif
 		SOCK_LOCK(so);
-		so->so_pcb = NULL;
 	}
 	SCTP_ASOC_CREATE_LOCK(inp);
 
@@ -2448,7 +2447,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
 		/* been here before */
 		splx(s);
-		printf("Endpoint was all gone (dup free)?\n");
 		SCTP_INP_WUNLOCK(inp);
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		return;
@@ -2469,7 +2467,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 				   * pointer here but I will
 				   * be nice :> (i.e. ip_pcb = ep;)
 				   */
-
 	if (immediate == 0) {
 		int cnt_in_sd;
 		cnt_in_sd = 0;
@@ -2513,7 +2510,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 				SCTP_INP_WLOCK(inp);
 				continue;
 			} else if (TAILQ_EMPTY(&asoc->asoc.send_queue) &&
-			    TAILQ_EMPTY(&asoc->asoc.sent_queue)) {
+				   TAILQ_EMPTY(&asoc->asoc.sent_queue)) {
 				if ((SCTP_GET_STATE(&asoc->asoc) != SCTP_STATE_SHUTDOWN_SENT) &&
 				    (SCTP_GET_STATE(&asoc->asoc) != SCTP_STATE_SHUTDOWN_ACK_SENT)) {
 					/* there is nothing queued to send, so I send shutdown */
@@ -2563,7 +2560,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 			return;
 		}
 	}
-
 	if((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
 		/*
 		 * Now the question comes as to if this EP was ever bound at all.
@@ -2589,13 +2585,16 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		return;
 	}
 #endif
+	if(so) {
+		so->so_pcb = NULL;
+	}
 	inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_ALLGONE;
 #if !defined(__FreeBSD__) || __FreeBSD_version < 500000
  	rt = ip_pcb->inp_route.ro_rt;
 #endif
-
 	callout_stop(&inp->sctp_ep.signature_change.timer);
 
+	/* Clear the read queue */
 	while ((sq = TAILQ_FIRST(&inp->read_queue)) != NULL) {
 		TAILQ_REMOVE(&inp->read_queue, sq, next);
 		sctp_free_remote_addr(sq->whoFrom);
@@ -2611,40 +2610,78 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		SCTP_DECR_READQ_COUNT();
 	}
 
-	
+	/* Now the sctp_pcb things */
+	/*
+	 * free each asoc if it is not already closed/free. we can't use
+	 * the macro here since le_next will get freed as part of the
+	 * sctp_free_assoc() call.
+	 */
+	cnt = 0;
+	for ((asoc = LIST_FIRST(&inp->sctp_asoc_list)); asoc != NULL;
+	     asoc = nasoc) {
+		nasoc = LIST_NEXT(asoc, sctp_tcblist);
+		SCTP_TCB_LOCK(asoc);
+		if (SCTP_GET_STATE(&asoc->asoc) != SCTP_STATE_COOKIE_WAIT) {
+			struct mbuf *op_err;
+			MGET(op_err, M_DONTWAIT, MT_DATA);
+			if (op_err) {
+				/* Fill in the user initiated abort */
+				struct sctp_paramhdr *ph;
+				op_err->m_len = sizeof(struct sctp_paramhdr);
+				ph = mtod(op_err, struct sctp_paramhdr *);
+				ph->param_type = htons(
+				    SCTP_CAUSE_USER_INITIATED_ABT);
+				ph->param_length = htons(op_err->m_len);
+			}
+			sctp_send_abort_tcb(asoc, op_err);
+		}
+		cnt++;
+		SCTP_INP_WUNLOCK(inp);
+		sctp_free_assoc(inp, asoc, 1);
+		SCTP_INP_WLOCK(inp);
+	}
 
 	if (locked_so) {
 		/* First take care of socket level things */
 		so->so_rcv.sb_mbcnt = 0;
 		if(so->so_rcv.sb_cc) {
-			printf("Strange, so->so_rcv.sb_mb was NULL count was %d?\n",
+			printf("Strange, so->so_rcv.sb_cc > 0 was %d?\n",
 			       (int)so->so_rcv.sb_cc);
 			so->so_rcv.sb_cc = 0;
 			panic("strange case 1");
 		}
+		so->so_snd.sb_mbcnt = 0;
+		if(so->so_snd.sb_cc) {
+			printf("Strange, so->so_snd.sb_cc >0 was %d?\n",
+			       (int)so->so_snd.sb_cc);
+			so->so_snd.sb_cc = 0;
+			panic("strange case 2");
+		}
 #ifdef IPSEC
 #ifdef __OpenBSD__
 	/* XXX IPsec cleanup here */
-		int s2 = spltdb();
-		if (ip_pcb->inp_tdb_in)
-		    TAILQ_REMOVE(&ip_pcb->inp_tdb_in->tdb_inp_in,
-				 ip_pcb, inp_tdb_in_next);
-		if (ip_pcb->inp_tdb_out)
-		    TAILQ_REMOVE(&ip_pcb->inp_tdb_out->tdb_inp_out, ip_pcb,
-				 inp_tdb_out_next);
-		if (ip_pcb->inp_ipsec_localid)
-		    ipsp_reffree(ip_pcb->inp_ipsec_localid);
-		if (ip_pcb->inp_ipsec_remoteid)
-		    ipsp_reffree(ip_pcb->inp_ipsec_remoteid);
-		if (ip_pcb->inp_ipsec_localcred)
-		    ipsp_reffree(ip_pcb->inp_ipsec_localcred);
-		if (ip_pcb->inp_ipsec_remotecred)
-		    ipsp_reffree(ip_pcb->inp_ipsec_remotecred);
-		if (ip_pcb->inp_ipsec_localauth)
-		    ipsp_reffree(ip_pcb->inp_ipsec_localauth);
-		if (ip_pcb->inp_ipsec_remoteauth)
-		    ipsp_reffree(ip_pcb->inp_ipsec_remoteauth);
-		splx(s2);
+		{
+			int s2 = spltdb();
+			if (ip_pcb->inp_tdb_in)
+				TAILQ_REMOVE(&ip_pcb->inp_tdb_in->tdb_inp_in,
+					     ip_pcb, inp_tdb_in_next);
+			if (ip_pcb->inp_tdb_out)
+				TAILQ_REMOVE(&ip_pcb->inp_tdb_out->tdb_inp_out, ip_pcb,
+					     inp_tdb_out_next);
+			if (ip_pcb->inp_ipsec_localid)
+				ipsp_reffree(ip_pcb->inp_ipsec_localid);
+			if (ip_pcb->inp_ipsec_remoteid)
+				ipsp_reffree(ip_pcb->inp_ipsec_remoteid);
+			if (ip_pcb->inp_ipsec_localcred)
+				ipsp_reffree(ip_pcb->inp_ipsec_localcred);
+			if (ip_pcb->inp_ipsec_remotecred)
+				ipsp_reffree(ip_pcb->inp_ipsec_remotecred);
+			if (ip_pcb->inp_ipsec_localauth)
+				ipsp_reffree(ip_pcb->inp_ipsec_localauth);
+			if (ip_pcb->inp_ipsec_remoteauth)
+				ipsp_reffree(ip_pcb->inp_ipsec_remoteauth);
+			splx(s2);
+		}
 #else
 		ipsec4_delete_pcbpolicy(ip_pcb);
 #endif
@@ -2693,37 +2730,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	ip_pcb->inp_vflag = 0;
 #endif
 
-	/* Now the sctp_pcb things */
-
-	/*
-	 * free each asoc if it is not already closed/free. we can't use
-	 * the macro here since le_next will get freed as part of the
-	 * sctp_free_assoc() call.
-	 */
-	cnt = 0;
-	for ((asoc = LIST_FIRST(&inp->sctp_asoc_list)); asoc != NULL;
-	     asoc = nasoc) {
-		nasoc = LIST_NEXT(asoc, sctp_tcblist);
-		SCTP_TCB_LOCK(asoc);
-		if (SCTP_GET_STATE(&asoc->asoc) != SCTP_STATE_COOKIE_WAIT) {
-			struct mbuf *op_err;
-			MGET(op_err, M_DONTWAIT, MT_DATA);
-			if (op_err) {
-				/* Fill in the user initiated abort */
-				struct sctp_paramhdr *ph;
-				op_err->m_len = sizeof(struct sctp_paramhdr);
-				ph = mtod(op_err, struct sctp_paramhdr *);
-				ph->param_type = htons(
-				    SCTP_CAUSE_USER_INITIATED_ABT);
-				ph->param_length = htons(op_err->m_len);
-			}
-			sctp_send_abort_tcb(asoc, op_err);
-		}
-		cnt++;
-		SCTP_INP_WUNLOCK(inp);
-		sctp_free_assoc(inp, asoc, 1);
-		SCTP_INP_WLOCK(inp);
-	}
 	inp->sctp_socket = 0;
 
 	/* free up authentication fields */
