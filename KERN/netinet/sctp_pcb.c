@@ -2440,6 +2440,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		sctp_log_lock(inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_SOCK);
 #endif
 		SOCK_LOCK(so);
+		so->so_pcb = NULL;
 	}
 	SCTP_ASOC_CREATE_LOCK(inp);
 
