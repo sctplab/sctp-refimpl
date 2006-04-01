@@ -4436,7 +4436,10 @@ sctp_del_local_addr_assoc_sa(struct sctp_tcb *stcb, struct sockaddr *sa)
 
 static char sctp_pcb_initialized = 0;
 
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__)
+/*
+ * Temporarily remove for __APPLE__ until we use the Tiger equivalents
+ */
 /* sysctl */
 static int sctp_max_number_of_assoc = SCTP_MAX_NUM_OF_ASOC;
 static int sctp_scale_up_for_address = SCTP_SCALE_FOR_ADDR;
@@ -4461,7 +4464,10 @@ sctp_pcb_init()
 	int i;
 	int hashtblsize = SCTP_TCBHASHSIZE;
 
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__)
+/*
+ * Temporarily remove for __APPLE__ until we use the Tiger equivalents
+ */
 	int sctp_chunkscale = SCTP_CHUNKQUEUE_SCALE;
 #endif
 
