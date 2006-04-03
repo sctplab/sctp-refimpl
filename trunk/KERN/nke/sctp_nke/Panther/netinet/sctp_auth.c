@@ -44,12 +44,6 @@
 #include <sys/sysctl.h>
 #include <sys/random.h>
 
-#if !defined(__APPLE__)
-#include <sys/callout.h>
-#include <sys/limits.h>
-#include <machine/cpu.h>
-#endif
-
 #include <net/if.h>
 #include <net/if_types.h>
 #include <net/route.h>
@@ -59,18 +53,6 @@
 #include <netinet/in_pcb.h>
 #include <netinet/in_var.h>
 #include <netinet/ip_var.h>
-
-#ifdef INET6
-#include <netinet/ip6.h>
-#include <netinet6/ip6_var.h>
-#include <netinet6/scope6_var.h>
-#include <netinet6/in6_pcb.h>
-#endif /* INET6 */
-
-#ifdef IPSEC
-#include <netinet6/ipsec.h>
-#include <netkey/key.h>
-#endif /* IPSEC */
 
 #include <netinet/sctp.h>
 #include <netinet/sctp_header.h>
@@ -87,7 +69,7 @@ extern u_int32_t sctp_debug_on;
 #define SCTP_AUTH_DEBUG2	(sctp_debug_on & SCTP_DEBUG_AUTH2)
 #endif /* SCTP_DEBUG */
 #define SCTP_MALLOC_NAMED(var, type, size, name) \
-    MALLOC(var, type, size, M_PCB, M_WAIT)
+    MALLOC(var, type, size, M_PCB, M_NOWAIT)
 #define SCTP_FREE(var)	FREE(var, M_PCB)
 
 
@@ -389,13 +371,19 @@ sctp_print_key (sctp_key_t *key, const char *str)
 {
     uint32_t i;
 
-    if (key == NULL)
+    if (key == NULL) {
+	printf(" [Null key]\n");
 	return;
+    }
 
     printf("%s: len %u, ", str, key->keylen);
-    for (i = 0; i < key->keylen; i++)
-	printf("%02x", key->key[i]);
-    printf("\n");
+    if (key->keylen) {
+	for (i = 0; i < key->keylen; i++)
+	    printf("%02x", key->key[i]);
+	printf("\n");
+    } else {
+	printf("[Null key]\n");\
+    }
 }
 
 void
@@ -403,13 +391,19 @@ sctp_show_key (sctp_key_t *key, const char *str)
 {
     uint32_t i;
 
-    if (key == NULL)
+    if (key == NULL) {
+	printf(" [Null key]\n");
 	return;
+    }
 
     printf("%s: len %u, ", str, key->keylen);
-    for (i = 0; i < key->keylen; i++)
-	printf("%02x", key->key[i]);
-    printf("\n");
+    if (key->keylen) {
+	for (i = 0; i < key->keylen; i++)
+	    printf("%02x", key->key[i]);
+	printf("\n");
+    } else {
+	printf("[Null key]\n");
+    }
 }
 
 static inline uint32_t
@@ -1482,6 +1476,8 @@ sctp_auth_get_cookie_params (struct sctp_tcb *stcb, struct mbuf *m,
 		sctp_free_key(stcb->asoc.authinfo.random);
 	    stcb->asoc.authinfo.random =
 		sctp_set_key(random->random_data, keylen);
+	    sctp_clear_cachedkeys(stcb, stcb->asoc.authinfo.assoc_keyid);
+	    sctp_clear_cachedkeys(stcb, stcb->asoc.authinfo.recv_keyid);
 	} else if (ptype == SCTP_HMAC_LIST) {
 	    uint8_t store[256];
 	    struct sctp_auth_hmac_algo *hmacs;

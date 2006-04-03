@@ -776,7 +776,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 				sctp_free_remote_addr(chk->whoTo);
 				chk->no_fr_allowed = 1; 
 				chk->whoTo = alt;
-				alt->ref_count++;
+				atomic_add_int(&alt->ref_count, 1);
 			} else {
 				chk->no_fr_allowed = 0;
 				if (TAILQ_EMPTY(&stcb->asoc.send_queue) ) {
@@ -853,7 +853,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 				chk->sent = SCTP_DATAGRAM_RESEND;
 				sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
 			}
-			alt->ref_count++;
+			atomic_add_int(&alt->ref_count, 1);
 		}
 	}
 	if (audit_tf) {
@@ -925,7 +925,7 @@ sctp_move_all_chunks_to_alt(struct sctp_tcb *stcb,
 			if (chk->whoTo == net) {
 				sctp_free_remote_addr(chk->whoTo);
 				chk->whoTo = alt;
-				alt->ref_count++;
+				atomic_add_int(&alt->ref_count, 1);
 			}
 		}
 	}
@@ -934,7 +934,7 @@ sctp_move_all_chunks_to_alt(struct sctp_tcb *stcb,
 		if (chk->whoTo == net) {
 			sctp_free_remote_addr(chk->whoTo);
 			chk->whoTo = alt;
-			alt->ref_count++;
+			atomic_add_int(&alt->ref_count, 1);
 		}
 	}
 
@@ -1186,7 +1186,7 @@ int  sctp_cookie_timer(struct sctp_inpcb *inp,
 	if (alt != cookie->whoTo) {
 		sctp_free_remote_addr(cookie->whoTo);
 		cookie->whoTo = alt;
-		alt->ref_count++;
+		atomic_add_int(&alt->ref_count, 1);
 	}
 	/* Now mark the retran info */
 	if (cookie->sent != SCTP_DATAGRAM_RESEND) {
@@ -1239,7 +1239,7 @@ int sctp_strreset_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	alt = sctp_find_alternate_net(stcb, strrst->whoTo, 0);
 	sctp_free_remote_addr(strrst->whoTo);
 	strrst->whoTo = alt;
-	alt->ref_count++;
+	atomic_add_int(&alt->ref_count, 1);
 
 	/* See if a ECN Echo is also stranded */
 	TAILQ_FOREACH(chk, &stcb->asoc.control_send_queue, sctp_next) {
@@ -1251,7 +1251,7 @@ int sctp_strreset_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
 			}
 			chk->whoTo = alt;
-			alt->ref_count++;
+			atomic_add_int(&alt->ref_count, 1);
 		}
 	}
 	if (net->dest_state & SCTP_ADDR_NOT_REACHABLE) {
@@ -1332,7 +1332,7 @@ int sctp_asconf_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		alt = sctp_find_alternate_net(stcb, asconf->whoTo, 0);
 		sctp_free_remote_addr(asconf->whoTo);
 		asconf->whoTo = alt;
-		alt->ref_count++;
+		atomic_add_int(&alt->ref_count, 1);
 
 		/* See if a ECN Echo is also stranded */
 		TAILQ_FOREACH(chk, &stcb->asoc.control_send_queue, sctp_next) {
@@ -1344,8 +1344,7 @@ int sctp_asconf_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 					chk->sent = SCTP_DATAGRAM_RESEND;
 					sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
 				}
-				alt->ref_count++;
-
+				atomic_add_int(&alt->ref_count, 1);
 			}
 		}
 		if (net->dest_state & SCTP_ADDR_NOT_REACHABLE) {

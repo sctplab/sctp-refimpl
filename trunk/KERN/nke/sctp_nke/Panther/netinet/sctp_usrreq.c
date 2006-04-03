@@ -308,7 +308,7 @@ sctp_split_chunks(struct sctp_association *asoc,
 	}
 	/* Increase ref count if dest is set */
 	if (chk->whoTo) {
-		new_chk->whoTo->ref_count++;
+		atomic_add_int(&new_chk->whoTo->ref_count, 1);
 	}
 	/* now drop it on the end of the list*/
 	asoc->stream_queue_cnt++;
@@ -5186,7 +5186,7 @@ sctp_peeraddr(struct socket *so, struct mbuf *nam)
 
 #if defined(__FreeBSD__) || defined(__APPLE__)
 struct pr_usrreqs sctp_usrreqs = {
-#if __FreeBSD_version > 600000
+#if __FreeBSD_version >= 600000
 	.pru_abort =		sctp_abort,
 	.pru_accept =		sctp_accept,
 	.pru_attach =		sctp_attach,

@@ -245,8 +245,6 @@ struct sctp_nets {
 					    expected for this destination */
         u_int8_t new_pseudo_cumack; /* CMT CUC algorithm. Flag used to indicate 
 				       if a new pseudo-cumack or rtx-pseudo-cumack has been received */
-
-
 #ifdef SCTP_HIGH_SPEED
 	u_int8_t last_hs_used;		/* index into the last HS table entry we used */
 #endif
