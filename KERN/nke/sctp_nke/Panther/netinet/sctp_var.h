@@ -245,7 +245,7 @@ int sctp_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,
 		(sb)->sb_ctl -= (m)->m_len; \
         if((sb)->sb_mbcnt >= MSIZE) { \
            (sb)->sb_mbcnt -= MSIZE; \
-	    if ((m)->m_flags & M_EXT) { \
+ 	   if ((m)->m_flags & M_EXT) { \
 		if((sb)->sb_mbcnt >= (m)->m_ext.ext_size) { \
 		   (sb)->sb_mbcnt -= (m)->m_ext.ext_size; \
                 } else  { \
@@ -304,7 +304,7 @@ int sctp_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,
         if(stcb) \
   	  (stcb)->asoc.sb_cc += (m)->m_len; \
 	(sb)->sb_mbcnt += MSIZE; \
-	if ((m)->m_flags & M_EXT) \
+	 if ((m)->m_flags & M_EXT) \
 		(sb)->sb_mbcnt += (m)->m_ext.ext_size; \
 }
 
@@ -445,10 +445,13 @@ do { \
 #define if_addrlist	if_addrhead
 #define if_list		if_link
 #define ifa_list	ifa_link
-#endif /* __APPLE__ **/
+
+#include <kern/simple_lock.h>
+#define atomic_add_int(addr, val)	hw_atomic_add(addr, val)
+#define atomic_subtract_int(addr, val)	hw_atomic_sub(addr, val)
 
 /* additional protosw entries for Mac OS X 10.4 */
-#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+#if !defined(SCTP_APPLE_PANTHER)
 int sctp_lock (struct socket *so, int refcount, int lr);
 int sctp_unlock (struct socket *so, int refcount, int lr);
 #ifdef _KERN_LOCKS_H_
@@ -456,6 +459,7 @@ lck_mtx_t *sctp_getlock(struct socket *so, int locktype);
 #else
 void * sctp_getlock(struct socket *so, int locktype);
 #endif /* _KERN_LOCKS_H_ */
+#endif /* !SCTP_APPLE_PANTHER */
 #endif /* __APPLE__ */
 
 #endif /* _KERNEL */

@@ -150,9 +150,17 @@
 /* default AUTO_ASCONF mode enable(1)/disable(0) value (sysctl) */
 #define SCTP_DEFAULT_AUTO_ASCONF	0
 
-/* Theshold for rwnd updates */
-#define SCTP_RWND_UPDATE_THESHOLD 4096
-
+/* Theshold for rwnd updates, we have
+ * to read (sb_hiwat >> SCTP_RWND_HIWAT_SHIFT)
+ * before we will look to see if we need to send
+ * a window update sack. When we look, we compare the
+ * last rwnd we sent vs the current rwnd. It too must
+ * be greater than this value. Using 3 divdes the
+ * hiwat by 8, so for 200k rwnd we need to read
+ * 25k. For a 64k rwnd we need to read 8k. This
+ * seems about right.
+ */
+#define SCTP_RWND_HIWAT_SHIFT 3
 /*
  * If you wish to use MD5 instead of SLA uncomment the line below.
  * Why you would like to do this:
@@ -182,7 +190,6 @@
 #define SCTP_ADLER32_BASE 65521
 #endif
 
-#define SCTP_CWND_POSTS_LIST 256
 /*
  * the SCTP protocol signature
  * this includes the version number encoded in the last 4 bits
@@ -620,8 +627,6 @@
 				 * limitations on the stream/socket.
 				 */
 
-#define SCTP_MAX_BUNDLE_UP	256	/* max number of chunks to bundle */
-
 /*  I can handle a 1meg re-assembly */
 #define SCTP_DEFAULT_MAXMSGREASM 1048576
 
@@ -705,7 +710,7 @@
 #define SCTP_UNSET_TSN_PRESENT(arry, gap) (arry[(gap >> 3)] &= ((~(0x01 << ((gap & 0x07)))) & 0xff))
 
 /* pegs */
-#define SCTP_NUMBER_OF_PEGS	128
+#define SCTP_NUMBER_OF_PEGS	132
 /* peg index's */
 #define SCTP_PEG_SACKS_SEEN	0
 #define SCTP_PEG_SACKS_SENT	1
@@ -836,7 +841,10 @@
 #define SCTP_AUTH_NO_SECRET_KEY  125
 #define SCTP_AUTH_SENT_NULL_KEY  126
 #define SCTP_AUTH_RCVD_NULL_KEY  127
-
+#define SCTP_NOSEND_NET_INPUT    128
+#define SCTP_RESV1               129
+#define SCTP_RESV2               130
+#define SCTP_RESV3               131
 /*
  * This value defines the number of vtag block time wait entry's
  * per list element.  Each entry will take 2 4 byte ints (and of

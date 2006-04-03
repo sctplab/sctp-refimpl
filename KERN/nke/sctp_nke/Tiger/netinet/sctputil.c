@@ -3819,23 +3819,30 @@ static void
 sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far)
 {
 	/* User pulled some data, do we need a rwnd update? */
-	uint32_t old_rwnd;
+	uint32_t rwnd_req;
 
-	stcb->freed_by_sorcv_sincelast += (*freed_so_far);
+	rwnd_req = (stcb->sctp_socket->so_snd.sb_hiwat >> SCTP_RWND_HIWAT_SHIFT);
+	stcb->freed_by_sorcv_sincelast += *freed_so_far;
 	*freed_so_far = 0;
-	if(stcb->freed_by_sorcv_sincelast > SCTP_RWND_UPDATE_THESHOLD) {
+	/* Have you have freed enough to look */
+	if(stcb->freed_by_sorcv_sincelast > rwnd_req) {
+		/* Yep, its worth a look and the lock overhead */
 		stcb->freed_by_sorcv_sincelast = 0;
 		SOCKBUF_UNLOCK(&stcb->sctp_socket->so_rcv);
 		SCTP_INP_RLOCK(stcb->sctp_ep);
 		SCTP_TCB_LOCK(stcb);
 		SCTP_INP_RUNLOCK(stcb->sctp_ep);
-		old_rwnd = stcb->asoc.my_rwnd;
+		/* calculate the rwnd */
 		sctp_set_rwnd(stcb, &stcb->asoc);
-		if(old_rwnd < stcb->asoc.my_rwnd) {
-			if((stcb->asoc.my_rwnd-old_rwnd) > SCTP_RWND_UPDATE_THESHOLD) {
+		if(stcb->asoc.my_last_reported_rwnd < stcb->asoc.my_rwnd) {
+			uint32_t dif;
+			dif = stcb->asoc.my_rwnd - stcb->asoc.my_last_reported_rwnd;
+			if(dif > rwnd_req) {
 				sctp_send_sack(stcb);
 				sctp_chunk_output(stcb->sctp_ep, stcb, 
 						  SCTP_OUTPUT_FROM_USR_RCVD);
+				/* make sure no timer is running */
+				sctp_timer_stop(SCTP_TIMER_TYPE_RECV, stcb->sctp_ep, stcb, NULL);
 			}
 		}
 		SCTP_TCB_UNLOCK(stcb);
