@@ -44,12 +44,6 @@
 #include <sys/sysctl.h>
 #include <sys/random.h>
 
-#if !defined(__APPLE__)
-#include <sys/callout.h>
-#include <sys/limits.h>
-#include <machine/cpu.h>
-#endif
-
 #include <net/if.h>
 #include <net/if_types.h>
 #include <net/route.h>
@@ -59,18 +53,6 @@
 #include <netinet/in_pcb.h>
 #include <netinet/in_var.h>
 #include <netinet/ip_var.h>
-
-#ifdef INET6
-#include <netinet/ip6.h>
-#include <netinet6/ip6_var.h>
-#include <netinet6/scope6_var.h>
-#include <netinet6/in6_pcb.h>
-#endif /* INET6 */
-
-#ifdef IPSEC
-#include <netinet6/ipsec.h>
-#include <netkey/key.h>
-#endif /* IPSEC */
 
 #include <netinet/sctp.h>
 #include <netinet/sctp_header.h>
@@ -87,7 +69,7 @@ extern u_int32_t sctp_debug_on;
 #define SCTP_AUTH_DEBUG2	(sctp_debug_on & SCTP_DEBUG_AUTH2)
 #endif /* SCTP_DEBUG */
 #define SCTP_MALLOC_NAMED(var, type, size, name) \
-    MALLOC(var, type, size, M_PCB, M_WAIT)
+    MALLOC(var, type, size, M_PCB, M_NOWAIT)
 #define SCTP_FREE(var)	FREE(var, M_PCB)
 
 
