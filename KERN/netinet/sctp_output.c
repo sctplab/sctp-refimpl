@@ -9681,6 +9681,9 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 #endif
 	if (tot_out == 0) {
 		sctp_pegs[SCTP_CO_NODATASNT]++;
+		if(from_where == SCTP_OUTPUT_FROM_CONTROL_PROC)
+			sctp_pegs[SCTP_NOSEND_NET_INPUT]++;
+
 		if (asoc->stream_queue_cnt > 0) {
 			sctp_pegs[SCTP_SOS_NOSNT]++;
 		} else {
