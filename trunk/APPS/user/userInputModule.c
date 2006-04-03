@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.39 2006-03-28 19:09:06 lei Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.40 2006-04-03 11:40:21 randall Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -3453,6 +3453,10 @@ cmd_getpegs(char *argv[], int argc)
 	"authnoky", /* 125 */
 	"authnutx", /* 126 */
 	"authnurx", /* 127 */
+	"nosd_net", /* 128 */
+	"resv1   ", /* 129 */
+	"resv2   ", /* 130 */
+	"resv3   ", /* 131 */
     };
     printf("there are %d pegs\n",
 	   SCTP_NUMBER_OF_PEGS);
