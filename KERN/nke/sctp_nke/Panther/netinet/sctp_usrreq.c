@@ -1869,7 +1869,7 @@ sctp_optsget(struct socket *so,
 			break;
 		case SCTP_AUTOCLOSE:
 			if (sctp_is_feature_on(inp,SCTP_PCB_FLAGS_AUTOCLOSE))
-				optval = inp->sctp_ep.auto_close_time;
+				optval = TICKS_TO_SEC(inp->sctp_ep.auto_close_time);
 			else
 				optval = 0;
 			break;
