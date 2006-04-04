@@ -447,8 +447,8 @@ do { \
 #define ifa_list	ifa_link
 
 #include <kern/simple_lock.h>
-#define atomic_add_int(addr, val)	hw_atomic_add(addr, val)
-#define atomic_subtract_int(addr, val)	hw_atomic_sub(addr, val)
+#define atomic_add_int(addr, val)	hw_atomic_add((uint32_t *)addr, val)
+#define atomic_subtract_int(addr, val)	hw_atomic_sub((uint32_t *)addr, val)
 
 /* additional protosw entries for Mac OS X 10.4 */
 #if !defined(SCTP_APPLE_PANTHER)
