@@ -2585,9 +2585,11 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		return;
 	}
 #endif
+#ifndef SCTP_APPLE_FINE_GRAINED_LOCKING
 	if(so) {
 		so->so_pcb = NULL;
 	}
+#endif
 	inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_ALLGONE;
 #if !defined(__FreeBSD__) || __FreeBSD_version < 500000
  	rt = ip_pcb->inp_route.ro_rt;
