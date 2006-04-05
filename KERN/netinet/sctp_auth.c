@@ -212,7 +212,8 @@ sctp_auth_delete_chunk (uint8_t chunk, sctp_auth_chklist_t *list)
 	return (-1);
 
     /* is chunk restricted? */
-    if (chunk == SCTP_ASCONF) {
+    if ((chunk == SCTP_ASCONF) ||
+	(chunk == SCTP_ASCONF_ACK)) {
 #ifdef SCTP_DEBUG
 	if (SCTP_AUTH_DEBUG)
 	    printf("SCTP: cannot delete chunk %u (0x%02x) from Auth list\n",
@@ -255,6 +256,7 @@ void
 sctp_auth_set_default_chunks (sctp_auth_chklist_t *list)
 {
     sctp_auth_add_chunk(SCTP_ASCONF, list);
+    sctp_auth_add_chunk(SCTP_ASCONF_ACK, list);
 }
 
 /*
