@@ -2464,13 +2464,17 @@ sctp_notify_assoc_change(u_int32_t event, struct sctp_tcb *stcb,
 	    (event == SCTP_COMM_LOST)) {
 		stcb->sctp_socket->so_error = ECONNRESET;
 		/* Wake ANY sleepers */
+#ifndef __APPLE__
 		if (mtx_owned(&(stcb->sctp_socket->so_snd.sb_mtx))) {
 			panic("so_snd owns lock, at asoc change");
 		}
+#endif
 		sowwakeup(stcb->sctp_socket);
+#ifndef __APPLE__
 		if (mtx_owned(&(stcb->sctp_socket->so_rcv.sb_mtx))) {
 			panic("so_rcv owns lock, at asoc change");
 		}
+#endif
 		sorwakeup(stcb->sctp_socket);
 	}
 	if (sctp_is_feature_off(stcb->sctp_ep, SCTP_PCB_FLAGS_RECVASSOCEVNT)) {
@@ -3503,9 +3507,11 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 	} else {
 		SOCKBUF_UNLOCK(sb);
 	}
+#ifndef __APPLE__
 	if (mtx_owned(&(sb->sb_mtx))) {
 		panic("add_to_readq leaves sb locked?");
 	}
+#endif
 }
 
 int
@@ -3581,9 +3587,11 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 		} else 
 			SOCKBUF_UNLOCK(sb);
 	}
+#ifndef __APPLE__
 	if (mtx_owned(&(sb->sb_mtx))) {
 		panic("append_to_readq leaves sb locked?");
 	}
+#endif
 	return(0);
 }
 		     
