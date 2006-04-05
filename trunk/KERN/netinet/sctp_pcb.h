@@ -419,7 +419,7 @@ struct sctp_tcb {
 	LIST_ENTRY(sctp_tcb) sctp_tcblist;	 /* list of all of the TCB's */
 	LIST_ENTRY(sctp_tcb) sctp_tcbrestarhash; /* next link in restart hash table */
 	LIST_ENTRY(sctp_tcb) sctp_asocs;         /* vtag hash list */
-        struct sctp_block_entry *block_entry;
+        struct sctp_block_entry *block_entry;    /* pointer locked by  socket send buffer */
 	struct sctp_association asoc;
 	/* freed_by_sorcv_sincelast is protected by 
 	 * the sockbuf_lock NOT the tcb_lock. Its special
