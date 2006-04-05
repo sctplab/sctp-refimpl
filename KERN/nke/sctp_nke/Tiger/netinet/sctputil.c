@@ -2464,7 +2464,17 @@ sctp_notify_assoc_change(u_int32_t event, struct sctp_tcb *stcb,
 	    (event == SCTP_COMM_LOST)) {
 		stcb->sctp_socket->so_error = ECONNRESET;
 		/* Wake ANY sleepers */
+#ifndef __APPLE__
+		if (mtx_owned(&(stcb->sctp_socket->so_snd.sb_mtx))) {
+			panic("so_snd owns lock, at asoc change");
+		}
+#endif
 		sowwakeup(stcb->sctp_socket);
+#ifndef __APPLE__
+		if (mtx_owned(&(stcb->sctp_socket->so_rcv.sb_mtx))) {
+			panic("so_rcv owns lock, at asoc change");
+		}
+#endif
 		sorwakeup(stcb->sctp_socket);
 	}
 	if (sctp_is_feature_off(stcb->sctp_ep, SCTP_PCB_FLAGS_RECVASSOCEVNT)) {
@@ -2507,7 +2517,6 @@ sctp_notify_assoc_change(u_int32_t event, struct sctp_tcb *stcb,
 			  control,
 			  &stcb->sctp_socket->so_rcv, 1);
 	/* Wake up any sleeper */
-	sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 	sctp_sowwakeup(stcb->sctp_ep, stcb->sctp_socket);
 }
 
@@ -2568,7 +2577,6 @@ sctp_notify_peer_addr_change(struct sctp_tcb *stcb, uint32_t state,
 	sctp_add_to_readq(stcb->sctp_ep, stcb,
 			  control,
 			  &stcb->sctp_socket->so_rcv, 1);
-	sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 }
 
 
@@ -2645,7 +2653,6 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, u_int32_t error,
 	sctp_add_to_readq(stcb->sctp_ep, stcb,
 			  control,
 			  &stcb->sctp_socket->so_rcv, 1);
-	sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 }
 
 static void
@@ -2693,7 +2700,6 @@ sctp_notify_adaptation_layer(struct sctp_tcb *stcb,
 	sctp_add_to_readq(stcb->sctp_ep, stcb,
 			  control,
 			  &stcb->sctp_socket->so_rcv, 1);
-	sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 }
 
 static void
@@ -2761,7 +2767,6 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
 				  control,
 				  &stcb->sctp_socket->so_rcv, 1);
 	}
-	sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 }
 
 static void
@@ -2818,7 +2823,6 @@ sctp_notify_shutdown_event(struct sctp_tcb *stcb)
 	sctp_add_to_readq(stcb->sctp_ep, stcb,
 			  control,
 			  &stcb->sctp_socket->so_rcv, 1);
-	sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 }
 
 static void
@@ -2892,7 +2896,6 @@ sctp_notify_stream_reset(struct sctp_tcb *stcb,
 	sctp_add_to_readq(stcb->sctp_ep, stcb,
 			  control,
 			  &stcb->sctp_socket->so_rcv, 1);
-	sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 }
 
 
@@ -3490,13 +3493,25 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 		control->length += m->m_len;
 		if(m->m_next == NULL) {
 			control->tail_mbuf = m;
-			if(end)
+			if(end) {
 				m->m_flags |= M_EOR;
+
+			}
 		}
 		m = m->m_next;
 	}
 	TAILQ_INSERT_TAIL(&inp->read_queue, control, next);
-	SOCKBUF_UNLOCK(sb);	
+	if(inp && inp->sctp_socket) {
+		SOCKBUF_LOCK_ASSERT(sb);
+		sctp_sorwakeup_locked(inp, inp->sctp_socket);
+	} else {
+		SOCKBUF_UNLOCK(sb);
+	}
+#ifndef __APPLE__
+	if (mtx_owned(&(sb->sb_mtx))) {
+		panic("add_to_readq leaves sb locked?");
+	}
+#endif
 }
 
 int
@@ -3563,8 +3578,20 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 		control->tail_mbuf->m_flags |= M_EOR;
 	}
 	if(sb) {
-		SOCKBUF_UNLOCK(sb);
+		if(inp && inp->sctp_socket) {
+			sctp_sorwakeup_locked(inp, inp->sctp_socket);
+		}
+	}else {
+		if(inp && inp->sctp_socket) {
+			sctp_sorwakeup(inp, inp->sctp_socket);
+		} else 
+			SOCKBUF_UNLOCK(sb);
 	}
+#ifndef __APPLE__
+	if (mtx_owned(&(sb->sb_mtx))) {
+		panic("append_to_readq leaves sb locked?");
+	}
+#endif
 	return(0);
 }
 		     
@@ -3621,8 +3648,8 @@ sctp_free_bufspace(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	} else {
 		asoc->total_output_mbuf_queue_size = 0;
 	}
-	if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) &&
-	    ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_CONNECTED))) {
+	if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) ||
+	    ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE))) {
 		SOCKBUF_LOCK(&stcb->sctp_socket->so_snd);
 
 		if (stcb->sctp_socket->so_snd.sb_cc >= tp1->book_size) {

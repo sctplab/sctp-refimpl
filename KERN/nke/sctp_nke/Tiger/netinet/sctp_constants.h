@@ -925,5 +925,16 @@ do { \
 	} \
 } while (0)
 
+#define sctp_sorwakeup_locked(inp, so) \
+do { \
+	if (inp->sctp_flags & SCTP_PCB_FLAGS_DONT_WAKE) { \
+		inp->sctp_flags |= SCTP_PCB_FLAGS_WAKEINPUT; \
+                SOCKBUF_UNLOCK(&((so)->so_rcv)); \
+	} else { \
+		sorwakeup_locked(so); \
+	} \
+} while (0)
+
+
 #endif /* _KERNEL */
 #endif

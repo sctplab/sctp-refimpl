@@ -254,8 +254,8 @@ void sctp_free_bufspace(struct sctp_tcb *, struct sctp_association *,
 		} else { \
 			(asoc)->total_output_mbuf_queue_size = 0; \
 		} \
-		if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) && \
-		    ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_CONNECTED))) { \
+	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) || \
+	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) { \
 			SOCKBUF_LOCK(&stcb->sctp_socket->so_snd); \
 			if (stcb->sctp_socket->so_snd.sb_cc >= tp1->book_size) { \
 				stcb->sctp_socket->so_snd.sb_cc -= tp1->book_size; \
