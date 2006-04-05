@@ -346,18 +346,10 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 	do {
 		chk = TAILQ_FIRST(&asoc->reasmqueue);
 		if (chk == NULL) {
-			if (cntDel) {
-				sctp_sorwakeup(stcb->sctp_ep,
-					       stcb->sctp_socket);
-			}
 			return;
 		}
 		if (chk->rec.data.TSN_seq != (asoc->tsn_last_delivered + 1)) {
 			/* Can't deliver more :< */
-			if (cntDel) {
-				sctp_sorwakeup(stcb->sctp_ep,
-					       stcb->sctp_socket);
-			}
 			return;
 		}
 		stream_no = chk->rec.data.stream_number;
@@ -368,10 +360,6 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 			 * Not the next sequence to deliver in its stream OR
 			 * unordered
 			 */
-			if (cntDel) {
-				sctp_sorwakeup(stcb->sctp_ep,
-					       stcb->sctp_socket);
-			}
 			return;
 		}
 
@@ -404,8 +392,6 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 			control = sctp_build_readq_entry_chk(stcb, chk);
 			if(control == NULL) {
 				/* out of memory? */
-				sctp_sorwakeup(stcb->sctp_ep,
-					       stcb->sctp_socket);
 				return;
 			}
 			/* save it off for our future deliveries */
@@ -505,9 +491,6 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 		}
 		chk = TAILQ_FIRST(&asoc->reasmqueue);
 	} while (chk);
-	if (cntDel) {
-		sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
-	}
 }
 
 /*
@@ -618,7 +601,6 @@ sctp_queue_data_to_stream(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		sctp_add_to_readq(stcb->sctp_ep, stcb,
 				  control,
 				  &stcb->sctp_socket->so_rcv, 1);
-		sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 		control = TAILQ_FIRST(&strm->inqueue);
 		while (control != NULL) {
 			/* all delivered */
@@ -642,7 +624,6 @@ sctp_queue_data_to_stream(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				sctp_add_to_readq(stcb->sctp_ep, stcb,
 						  control,
 						  &stcb->sctp_socket->so_rcv, 1);
-				sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 				control = at;
 				continue;
 			}
@@ -1655,7 +1636,6 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 #endif
 		}
 		sctp_add_to_readq(stcb->sctp_ep, stcb, control,  &stcb->sctp_socket->so_rcv, 1);
-		sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 		if ((ch->ch.chunk_flags & SCTP_DATA_UNORDERED) == 0) {
 			/* for ordered, bump what we delivered */
 			asoc->strmin[strmno].last_sequence_delivered++;
@@ -1843,7 +1823,6 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			sctp_add_to_readq(stcb->sctp_ep, stcb,
 					  control,
 					  &stcb->sctp_socket->so_rcv, 1);
-			sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 		} else {
 			/* Special check for when streams are resetting.
 			 * We could be more smart about this and check the

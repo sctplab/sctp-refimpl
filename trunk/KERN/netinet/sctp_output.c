@@ -6777,8 +6777,8 @@ zap_by_it_all:
 #endif
 	asoc->total_output_queue_size += (dataout + pad_oh);
 	asoc->total_output_mbuf_queue_size += mbcnt;
-	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) ||
-	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
+	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
+	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
 		so->so_snd.sb_cc += dataout;
 		so->so_snd.sb_mbcnt += mbcnt;
 	}
@@ -12615,6 +12615,7 @@ zap_by_it_now:
 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
 		so->so_snd.sb_cc += dataout;
 		so->so_snd.sb_mbcnt += mbcnt;
+
 	}
 	if ((srcv->sinfo_flags & SCTP_EOF) &&
 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE)
