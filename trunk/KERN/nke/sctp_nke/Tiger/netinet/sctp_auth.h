@@ -66,15 +66,11 @@ typedef struct sctp_key {
     uint8_t	key[0];
 } sctp_key_t;
 
-struct sctp_shared_key {
+typedef struct sctp_shared_key {
     LIST_ENTRY(sctp_shared_key) next;
     sctp_key_t	*key;		/* key text */
-#if 0 /* FIX ME: use if we keep address/port keys */
-    sockaddr	*dest;		/* destination address/port */
-#endif
     uint16_t	keyid;		/* shared key ID */
-};
-typedef struct sctp_shared_key sctp_sharedkey_t;
+} sctp_sharedkey_t;
 LIST_HEAD(sctp_keyhead, sctp_shared_key);
 
 /* authentication chunks list */
