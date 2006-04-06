@@ -3919,8 +3919,10 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 		tp1 = tp2;
 	} while (tp1 != NULL);
 
-	if(wake_him)
-	  sctp_sowwakeup(stcb->sctp_ep, stcb->sctp_socket);
+	if(wake_him) {
+		sctp_pegs[SCTP_SACK_CALL_WAKEUP]++;
+		sctp_sowwakeup(stcb->sctp_ep, stcb->sctp_socket);
+	}
 
 	if ((sctp_cmt_on_off == 0) && asoc->fast_retran_loss_recovery && accum_moved) {
 		if (compare_with_wrap(asoc->last_acked_seq,

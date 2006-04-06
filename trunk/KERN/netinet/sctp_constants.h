@@ -843,9 +843,9 @@
 #define SCTP_AUTH_SENT_NULL_KEY  126
 #define SCTP_AUTH_RCVD_NULL_KEY  127
 #define SCTP_NOSEND_NET_INPUT    128
-#define SCTP_RESV1               129
-#define SCTP_RESV2               130
-#define SCTP_RESV3               131
+#define SCTP_SACK_CALL_WAKEUP    129
+#define SCTP_WAKEUP_DEFERED      130
+#define SCTP_WAKEUP_CALLED       131
 /*
  * This value defines the number of vtag block time wait entry's
  * per list element.  Each entry will take 2 4 byte ints (and of
@@ -910,8 +910,10 @@
 #define sctp_sowwakeup(inp, so) \
 do { \
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_DONT_WAKE) { \
+		sctp_pegs[SCTP_WAKEUP_DEFERED]++; \
 		inp->sctp_flags |= SCTP_PCB_FLAGS_WAKEOUTPUT; \
 	} else { \
+		sctp_pegs[SCTP_WAKEUP_CALLED]++; \
 		sowwakeup(so); \
 	} \
 } while (0)
