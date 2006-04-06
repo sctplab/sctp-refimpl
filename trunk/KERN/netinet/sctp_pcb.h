@@ -644,6 +644,8 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #endif
 #endif
 
+#define SCTP_TCB_TRYLOCK(_tcb) 	mtx_trylock(&(_tcb)->tcb_mtx)
+
 #define SCTP_TCB_UNLOCK(_tcb)		mtx_unlock(&(_tcb)->tcb_mtx)
 
 #define SCTP_TCB_UNLOCK_IFOWNED(_tcb)	      do { \
@@ -734,6 +736,7 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #define SCTP_TCB_LOCK_INIT(_tcb)
 #define SCTP_TCB_LOCK_DESTROY(_tcb)
 #define SCTP_TCB_LOCK(_tcb)
+#define SCTP_TCB_TRYLOCK(_tcb)
 #define SCTP_TCB_UNLOCK(_tcb)
 #define SCTP_TCB_UNLOCK_IFOWNED(_tcb)
 #define STCB_TCB_LOCK_ASSERT(_tcb)
@@ -793,6 +796,7 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #define SCTP_TCB_LOCK_INIT(_tcb)
 #define SCTP_TCB_LOCK_DESTROY(_tcb)
 #define SCTP_TCB_LOCK(_tcb)
+#define SCTP_TCB_TRYLOCK(_tcb)
 #define SCTP_TCB_UNLOCK(_tcb)
 #define SCTP_TCB_UNLOCK_IFOWNED(_tcb)
 #define STCB_TCB_LOCK_ASSERT(_tcb)

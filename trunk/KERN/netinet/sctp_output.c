@@ -12428,7 +12428,10 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 #endif
 		  goto clean_up;
 		}
-		SCTP_TCB_LOCK(stcb);
+		if(SCTP_TCB_TRYLOCK(stcb) == 0) {
+			sctp_pegs[SCTP_SND_WAIT_OLOCK]++;
+			SCTP_TCB_LOCK(stcb);
+		}
 #ifdef SCTP_INVARIENTS
 		SCTP_INP_RUNLOCK(inp);
 #endif
