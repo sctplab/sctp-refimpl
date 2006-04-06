@@ -6419,6 +6419,8 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			be.error = 0;
 			stcb->block_entry = &be;
 			SCTP_TCB_UNLOCK(stcb);
+			
+			sctp_pegs[SCTP_SBWAIT_ON_SEND]++;
 			error = sbwait(&so->so_snd);
 			/*
 			 * XXX: This is ugly but I have
@@ -12179,6 +12181,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 			be.error = 0;
 			stcb->block_entry = &be;
 			SCTP_TCB_UNLOCK(stcb);
+			sctp_pegs[SCTP_SBWAIT_ON_SEND]++;
 			error = sbwait(&so->so_snd);
 			if (error || so->so_error || be.error) {
 				splx(s);
