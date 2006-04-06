@@ -843,7 +843,7 @@
 #define SCTP_AUTH_SENT_NULL_KEY  126
 #define SCTP_AUTH_RCVD_NULL_KEY  127
 #define SCTP_NOSEND_NET_INPUT    128
-#define SCTP_SACK_CALL_WAKEUP    129
+#define SCTP_SBWAIT_ON_SEND      129
 #define SCTP_WAKEUP_DEFERED      130
 #define SCTP_WAKEUP_CALLED       131
 /*
@@ -912,10 +912,6 @@ do { \
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_DONT_WAKE) { \
 		inp->sctp_flags |= SCTP_PCB_FLAGS_WAKEOUTPUT; \
 	} else { \
-               	if (sb_notify(&(so)->so_rcv))	\
- 		    sctp_pegs[SCTP_WAKEUP_DEFERED]++; \
-                else \
- 		    sctp_pegs[SCTP_WAKEUP_CALLED]++; \
 		sowwakeup(so); \
 	} \
 } while (0)
