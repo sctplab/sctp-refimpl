@@ -7395,6 +7395,8 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb,
 		while (chk) {
 			nchk = TAILQ_NEXT(chk, sctp_next);
 			TAILQ_REMOVE(&tmp, chk, sctp_next);
+			if(chk->send_size >= sizeof(struct sctp_data_chunk))
+				m_adj(chk->data, sizeof(struct sctp_data_chunk));
 
 			sctp_ulp_notify(SCTP_NOTIFY_DG_FAIL, stcb,
 					(SCTP_NOTIFY_DATAGRAM_UNSENT |
