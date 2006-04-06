@@ -239,6 +239,17 @@ int sctp_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,
               panic("assoc sb_cc would go negative"); \
              (stcb)->asoc.sb_cc = 0; \
           } \
+          if((stcb)->asoc.sb_mbcnt >= MSIZE) { \
+             (stcb)->asoc.sb_mbcnt -= MSIZE; \
+          } \
+	  if ((m)->m_flags & M_EXT) { \
+		if((stcb)->asoc.sb_mbcnt >= (m)->m_ext.ext_size) { \
+		   (stcb)->asoc.sb_mbcnt -= (m)->m_ext.ext_size; \
+                } else  { \
+                   panic("assoc stcb->mbcnt would go negative"); \
+		   (stcb)->asoc.sb_mbcnt = 0; \
+                } \
+          } \
         } \
 	if ((m)->m_type != MT_DATA && (m)->m_type != MT_HEADER && \
 	    (m)->m_type != MT_OOBDATA) \
@@ -261,8 +272,12 @@ int sctp_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,
 
 #define sctp_sballoc(stcb, sb, m)  { \
 	(sb)->sb_cc += (m)->m_len; \
-        if(stcb) \
+        if(stcb) { \
   	  (stcb)->asoc.sb_cc += (m)->m_len; \
+          (stcb)->asoc.sb_mbcnt += MSIZE; \
+	  if ((m)->m_flags & M_EXT) \
+		(stcb)->asoc.sb_mbcnt += (m)->m_ext.ext_size; \
+        } \
 	if ((m)->m_type != MT_DATA && (m)->m_type != MT_HEADER && \
 	    (m)->m_type != MT_OOBDATA) \
 		(sb)->sb_ctl += (m)->m_len; \
@@ -284,6 +299,17 @@ int sctp_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,
           } else  {\
              (stcb)->asoc.sb_cc = 0; \
           } \
+          if((stcb)->asoc.sb_mbcnt >= MSIZE) { \
+             (stcb)->asoc.sb_mbcnt -= MSIZE; \
+          } \
+	  if ((m)->m_flags & M_EXT) { \
+		if((stcb)->asoc.sb_mbcnt >= (m)->m_ext.ext_size) { \
+		   (stcb)->asoc.sb_mbcnt -= (m)->m_ext.ext_size; \
+                } else  { \
+                   panic("assoc stcb->mbcnt would go negative"); \
+		   (stcb)->asoc.sb_mbcnt = 0; \
+                } \
+          } \
         } \
         if((sb)->sb_mbcnt >= MSIZE) { \
            (sb)->sb_mbcnt -= MSIZE; \
@@ -301,8 +327,12 @@ int sctp_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,
 
 #define sctp_sballoc(stcb, sb, m)  { \
 	(sb)->sb_cc += (m)->m_len; \
-        if(stcb) \
+        if(stcb) { \
   	  (stcb)->asoc.sb_cc += (m)->m_len; \
+          (stcb)->asoc.sb_mbcnt += MSIZE; \
+	  if ((m)->m_flags & M_EXT) \
+		(stcb)->asoc.sb_mbcnt += (m)->m_ext.ext_size; \
+        } \
 	(sb)->sb_mbcnt += MSIZE; \
 	 if ((m)->m_flags & M_EXT) \
 		(sb)->sb_mbcnt += (m)->m_ext.ext_size; \
