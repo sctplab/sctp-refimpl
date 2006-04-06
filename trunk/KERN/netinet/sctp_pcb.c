@@ -752,9 +752,13 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 						if (locked_tcb == NULL) {
 							SCTP_INP_DECR_REF(inp);
 						} else if(locked_tcb != stcb) {
+#ifdef SCTP_INVARIENTS
 							SCTP_INP_RLOCK(locked_tcb->sctp_ep);
+#endif
 							SCTP_TCB_LOCK(locked_tcb);
+#ifdef SCTP_INVARIENTS
 							SCTP_INP_RUNLOCK(locked_tcb->sctp_ep);
+#endif
 						}
 						SCTP_INP_WUNLOCK(inp);
 						SCTP_INP_INFO_RUNLOCK();
@@ -774,9 +778,13 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 						if (locked_tcb == NULL) {
 							SCTP_INP_DECR_REF(inp);
 						} else if(locked_tcb != stcb) {
+#ifdef SCTP_INVARIENTS
 							SCTP_INP_RLOCK(locked_tcb->sctp_ep);
+#endif
 							SCTP_TCB_LOCK(locked_tcb);
+#ifdef SCTP_INVARIENTS
 							SCTP_INP_RUNLOCK(locked_tcb->sctp_ep);
+#endif
 						}
 						SCTP_INP_WUNLOCK(inp);
 						SCTP_INP_INFO_RUNLOCK();
@@ -791,9 +799,13 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 	/* clean up for returning null */
 	if (locked_tcb){
 		if (locked_tcb->sctp_ep != inp) {
+#ifdef SCTP_INVARIENTS
 			SCTP_INP_RLOCK(locked_tcb->sctp_ep);
+#endif
 			SCTP_TCB_LOCK(locked_tcb);
+#ifdef SCTP_INVARIENTS
 			SCTP_INP_RUNLOCK(locked_tcb->sctp_ep);
+#endif
 		} else
 			SCTP_TCB_LOCK(locked_tcb);
 	}
@@ -1868,8 +1880,12 @@ sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
 	/* lock sockets */
 	SOCKBUF_LOCK(&(old_inp->sctp_socket)->so_rcv);
 	SOCKBUF_LOCK(&(new_inp->sctp_socket)->so_rcv);
-	if(stcb->asoc.sb_cc) {
-		/* stuff to read */
+	if ((stcb->asoc.sb_cc) && (old_inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE)) {
+		/* stuff to read, move over the
+		 * counts on the 1-2-1 type.. 1-2-M type
+		 * do NOT need to do this since they do NOT
+		 * maintain the sb_cc and sb_mbcnt.
+		 */
 		if((old_inp->sctp_socket)->so_rcv.sb_cc >= stcb->asoc.sb_cc) {
 			(old_inp->sctp_socket)->so_rcv.sb_cc -= stcb->asoc.sb_cc;
 		} else {
@@ -1881,6 +1897,7 @@ sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
 		} else {
 			(old_inp->sctp_socket)->so_rcv.sb_mbcnt = 0;
 		}
+		(new_inp->sctp_socket)->so_rcv.sb_mbcnt += stcb->asoc.total_output_mbuf_queue_size;
 	}
 	/* make it so new data pours into the new socket */
 	stcb->sctp_socket = new_inp->sctp_socket;

@@ -3843,9 +3843,13 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far)
 		/* Yep, its worth a look and the lock overhead */
 		stcb->freed_by_sorcv_sincelast = 0;
 		SOCKBUF_UNLOCK(&stcb->sctp_socket->so_rcv);
+#ifdef SCTP_INVARIENTS
 		SCTP_INP_RLOCK(stcb->sctp_ep);
+#endif
 		SCTP_TCB_LOCK(stcb);
+#ifdef SCTP_INVARIENTS
 		SCTP_INP_RUNLOCK(stcb->sctp_ep);
+#endif
 		/* calculate the rwnd */
 		sctp_set_rwnd(stcb, &stcb->asoc);
 		if(stcb->asoc.my_last_reported_rwnd < stcb->asoc.my_rwnd) {
