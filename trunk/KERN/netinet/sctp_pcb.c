@@ -1853,6 +1853,7 @@ sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
 		    stcb, net);
 	}
 
+
 	new_inp->sctp_ep.time_of_secret_change =
 	    old_inp->sctp_ep.time_of_secret_change;
 	memcpy(new_inp->sctp_ep.secret_key, old_inp->sctp_ep.secret_key,
@@ -1862,6 +1863,30 @@ sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
 	new_inp->sctp_ep.last_secret_number =
 	    old_inp->sctp_ep.last_secret_number;
 	new_inp->sctp_ep.size_of_a_cookie = old_inp->sctp_ep.size_of_a_cookie;
+
+	/* fix up the socket buffer counts */
+	/* lock sockets */
+	SOCKBUF_LOCK(&(old_inp->sctp_socket)->so_rcv);
+	SOCKBUF_LOCK(&(new_inp->sctp_socket)->so_rcv);
+	if(stcb->asoc.sb_cc) {
+		/* stuff to read */
+		if((old_inp->sctp_socket)->so_rcv.sb_cc >= stcb->asoc.sb_cc) {
+			(old_inp->sctp_socket)->so_rcv.sb_cc -= stcb->asoc.sb_cc;
+		} else {
+			(old_inp->sctp_socket)->so_rcv.sb_cc = 0;
+		}
+		(new_inp->sctp_socket)->so_rcv.sb_cc += stcb->asoc.sb_cc;
+		if((old_inp->sctp_socket)->so_rcv.sb_mbcnt >= stcb->asoc.total_output_mbuf_queue_size) {
+			(old_inp->sctp_socket)->so_rcv.sb_mbcnt -= stcb->asoc.total_output_mbuf_queue_size;
+		} else {
+			(old_inp->sctp_socket)->so_rcv.sb_mbcnt = 0;
+		}
+	}
+	/* make it so new data pours into the new socket */
+	stcb->sctp_socket = new_inp->sctp_socket;
+	stcb->sctp_ep = new_inp;
+	SOCKBUF_UNLOCK(&(old_inp->sctp_socket)->so_rcv);
+	SOCKBUF_UNLOCK(&(new_inp->sctp_socket)->so_rcv);
 
 	/* Copy the port across */
 	lport = new_inp->sctp_lport = old_inp->sctp_lport;
@@ -1891,8 +1916,6 @@ sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
 	}
 
 	SCTP_INP_INFO_WUNLOCK();
-	stcb->sctp_socket = new_inp->sctp_socket;
-	stcb->sctp_ep = new_inp;
 	if (new_inp->sctp_tcbhash != NULL) {
 		FREE(new_inp->sctp_tcbhash, M_PCB);
 		new_inp->sctp_tcbhash = NULL;
