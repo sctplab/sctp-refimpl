@@ -578,6 +578,7 @@ struct sctp_association {
 	u_int32_t total_output_mbuf_queue_size; /* sb_mbcnt equiv */
 
         u_int32_t sb_cc; /* shadow of sb_cc in one-2-one */
+	u_int32_t sb_mbcnt; /* shadow of sb_mbcnt in one-2-one */
 	/* 32 bit nonce stuff */
 	u_int32_t nonce_resync_tsn;
 	u_int32_t nonce_wait_tsn;

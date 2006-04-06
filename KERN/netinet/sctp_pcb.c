@@ -1892,12 +1892,12 @@ sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
 			(old_inp->sctp_socket)->so_rcv.sb_cc = 0;
 		}
 		(new_inp->sctp_socket)->so_rcv.sb_cc += stcb->asoc.sb_cc;
-		if((old_inp->sctp_socket)->so_rcv.sb_mbcnt >= stcb->asoc.total_output_mbuf_queue_size) {
-			(old_inp->sctp_socket)->so_rcv.sb_mbcnt -= stcb->asoc.total_output_mbuf_queue_size;
+		if((old_inp->sctp_socket)->so_rcv.sb_mbcnt >= stcb->asoc.sb_mbcnt) {
+			(old_inp->sctp_socket)->so_rcv.sb_mbcnt -= stcb->asoc.sb_mbcnt;
 		} else {
 			(old_inp->sctp_socket)->so_rcv.sb_mbcnt = 0;
 		}
-		(new_inp->sctp_socket)->so_rcv.sb_mbcnt += stcb->asoc.total_output_mbuf_queue_size;
+		(new_inp->sctp_socket)->so_rcv.sb_mbcnt += stcb->asoc.sb_mbcnt;
 	}
 	/* make it so new data pours into the new socket */
 	stcb->sctp_socket = new_inp->sctp_socket;
