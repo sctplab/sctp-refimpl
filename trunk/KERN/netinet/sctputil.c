@@ -2464,17 +2464,7 @@ sctp_notify_assoc_change(u_int32_t event, struct sctp_tcb *stcb,
 	    (event == SCTP_COMM_LOST)) {
 		stcb->sctp_socket->so_error = ECONNRESET;
 		/* Wake ANY sleepers */
-#ifndef __APPLE__
-		if (mtx_owned(&(stcb->sctp_socket->so_snd.sb_mtx))) {
-			panic("so_snd owns lock, at asoc change");
-		}
-#endif
 		sowwakeup(stcb->sctp_socket);
-#ifndef __APPLE__
-		if (mtx_owned(&(stcb->sctp_socket->so_rcv.sb_mtx))) {
-			panic("so_rcv owns lock, at asoc change");
-		}
-#endif
 		sorwakeup(stcb->sctp_socket);
 	}
 	if (sctp_is_feature_off(stcb->sctp_ep, SCTP_PCB_FLAGS_RECVASSOCEVNT)) {
@@ -2616,15 +2606,11 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, u_int32_t error,
 	ssf->ssf_info.sinfo_assoc_id = sctp_get_associd(stcb);
 	ssf->ssf_assoc_id = sctp_get_associd(stcb);
 	m_notify->m_next = chk->data;
-	if (m_notify->m_next == NULL)
+	if (chk->rec.data.rcv_flags & SCTP_DATA_LAST_FRAG)
+		/* If the data has last bit, we M_EOR */
 		m_notify->m_flags |= M_EOR | M_NOTIFICATION;
 	else {
-		struct mbuf *m;
 		m_notify->m_flags |= M_NOTIFICATION;
-		m = m_notify;
-		while (m->m_next != NULL)
-			m = m->m_next;
-		m->m_flags |= M_EOR;
 	}
 	m_notify->m_pkthdr.len = length;
 	m_notify->m_pkthdr.rcvif = 0;
@@ -3071,6 +3057,12 @@ sctp_report_all_outbound(struct sctp_tcb *stcb)
 		chk = TAILQ_FIRST(&asoc->send_queue);
 		while (chk) {
 			TAILQ_REMOVE(&asoc->send_queue, chk, sctp_next);
+			if(chk->data) {
+				/* trim off the sctp chunk header(it should be there) */
+				if(chk->send_size >= sizeof(struct sctp_data_chunk))
+					m_adj(chk->data, sizeof(struct sctp_data_chunk));
+
+			}
 			sctp_ulp_notify(SCTP_NOTIFY_DG_FAIL, stcb, SCTP_NOTIFY_DATAGRAM_UNSENT, chk);
 			if (chk->data) {
 				sctp_m_freem(chk->data);
@@ -3089,6 +3081,12 @@ sctp_report_all_outbound(struct sctp_tcb *stcb)
 		chk = TAILQ_FIRST(&asoc->sent_queue);
 		while (chk) {
 			TAILQ_REMOVE(&asoc->sent_queue, chk, sctp_next);
+			if(chk->data) {
+				/* trim off the sctp chunk header(it should be there) */
+				if(chk->send_size >= sizeof(struct sctp_data_chunk))
+					m_adj(chk->data, sizeof(struct sctp_data_chunk));
+
+			}
 			sctp_ulp_notify(SCTP_NOTIFY_DG_FAIL, stcb,
 			    SCTP_NOTIFY_DATAGRAM_SENT, chk);
 			if (chk->data) {
@@ -3495,7 +3493,6 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 			control->tail_mbuf = m;
 			if(end) {
 				m->m_flags |= M_EOR;
-
 			}
 		}
 		m = m->m_next;
@@ -3507,11 +3504,6 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 	} else {
 		SOCKBUF_UNLOCK(sb);
 	}
-#ifndef __APPLE__
-	if (mtx_owned(&(sb->sb_mtx))) {
-		panic("add_to_readq leaves sb locked?");
-	}
-#endif
 }
 
 int
@@ -3587,11 +3579,6 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 		} else 
 			SOCKBUF_UNLOCK(sb);
 	}
-#ifndef __APPLE__
-	if (mtx_owned(&(sb->sb_mtx))) {
-		panic("append_to_readq leaves sb locked?");
-	}
-#endif
 	return(0);
 }
 		     
