@@ -910,10 +910,12 @@
 #define sctp_sowwakeup(inp, so) \
 do { \
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_DONT_WAKE) { \
-		sctp_pegs[SCTP_WAKEUP_DEFERED]++; \
 		inp->sctp_flags |= SCTP_PCB_FLAGS_WAKEOUTPUT; \
 	} else { \
-		sctp_pegs[SCTP_WAKEUP_CALLED]++; \
+               	if (sb_notify(&(so)->so_rcv))	\
+ 		    sctp_pegs[SCTP_WAKEUP_DEFERED]++; \
+                else \
+ 		    sctp_pegs[SCTP_WAKEUP_CALLED]++; \
 		sowwakeup(so); \
 	} \
 } while (0)
