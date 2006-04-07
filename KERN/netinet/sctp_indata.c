@@ -3265,6 +3265,9 @@ sctp_try_advance_peer_ack_point(struct sctp_tcb *stcb,
 				    tp1);
 				sctp_m_freem(tp1->data);
 				tp1->data = NULL;
+#ifdef SCTP_WAKE_LOGGING
+				sctp_wakeup_log(stcb, tp1->rec.data.TSN_seq, 1, SCTP_WAKESND_FROM_FWDTSN);
+#endif
 				sctp_sowwakeup(stcb->sctp_ep,
 				    stcb->sctp_socket);
 			}
@@ -3922,6 +3925,9 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 
 	if(wake_him) {
 		sctp_sowwakeup(stcb->sctp_ep, stcb->sctp_socket);
+#ifdef SCTP_WAKE_LOGGING
+		sctp_wakeup_log(stcb, cum_ack, wake_him, SCTP_WAKESND_FROM_SACK);
+#endif
 	}
 
 	if ((sctp_cmt_on_off == 0) && asoc->fast_retran_loss_recovery && accum_moved) {
