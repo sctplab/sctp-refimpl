@@ -12428,10 +12428,12 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 #endif
 		  goto clean_up;
 		}
+#if defined(__FreeBSD__) && __FreeBSD_version >= 503000
 		if(SCTP_TCB_TRYLOCK(stcb) == 0) {
 			sctp_pegs[SCTP_SND_WAIT_OLOCK]++;
 			SCTP_TCB_LOCK(stcb);
 		}
+#endif
 #ifdef SCTP_INVARIENTS
 		SCTP_INP_RUNLOCK(inp);
 #endif
