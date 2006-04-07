@@ -30,6 +30,9 @@
 #include <sctp.h>
 #elif !defined(__OpenBSD__)
 #include "opt_sctp.h"
+#ifdef __FreeBSD__
+#include "opt_global.h"
+#endif
 #endif
 #include <sys/param.h>
 #include <sys/systm.h>

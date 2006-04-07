@@ -38,6 +38,7 @@
 #include "opt_compat.h"
 #include "opt_inet6.h"
 #include "opt_inet.h"
+#include "opt_global.h"
 #endif
 #if defined(__NetBSD__)
 #include "opt_inet.h"
@@ -657,9 +658,11 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 			}
 			/* now look at the list of remote addresses */
 			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
+#ifdef INVARIENTS
 				if(net == (TAILQ_NEXT(net,sctp_next))) {
 					panic("Corrupt net list");
 				}
+#endif
 				if (net->ro._l_addr.sa.sa_family !=
 				    remote->sa_family) {
 					/* not the same family */
@@ -730,9 +733,11 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 			/* now look at the list of remote addresses */
 			SCTP_TCB_LOCK(stcb);
 			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
+#ifdef INVARIENTS
 				if(net == (TAILQ_NEXT(net,sctp_next))) {
 					panic("Corrupt net list");
 				}
+#endif
 				if (net->ro._l_addr.sa.sa_family !=
 				    remote->sa_family) {
 					/* not the same family */
@@ -2690,14 +2695,18 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 			printf("Strange, so->so_rcv.sb_cc > 0 was %d?\n",
 			       (int)so->so_rcv.sb_cc);
 			so->so_rcv.sb_cc = 0;
+#ifdef INVARIENTS
 			panic("strange case 1");
+#endif
 		}
 		so->so_snd.sb_mbcnt = 0;
 		if(so->so_snd.sb_cc) {
 			printf("Strange, so->so_snd.sb_cc >0 was %d?\n",
 			       (int)so->so_snd.sb_cc);
 			so->so_snd.sb_cc = 0;
+#ifdef INVARIENTS
 			panic("strange case 2");
+#endif
 		}
 #ifdef IPSEC
 #ifdef __OpenBSD__
