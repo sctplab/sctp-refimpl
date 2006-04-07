@@ -45,7 +45,15 @@
 #include <sys/proc.h>
 #include <sys/kernel.h>
 #include <sys/sysctl.h>
+
+#if defined(__FreeBSD__) || defined(__APPLE__)
 #include <sys/random.h>
+#endif
+#if defined(__NetBSD__)
+#include "rnd.h"
+#include <sys/rnd.h>
+#endif
+
 
 #include <net/if.h>
 #include <net/if_types.h>

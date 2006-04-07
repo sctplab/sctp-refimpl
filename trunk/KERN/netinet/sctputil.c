@@ -75,7 +75,7 @@
 #endif
 #include <sys/sysctl.h>
 #include <sys/uio.h>
-#ifndef __APPLE__
+#ifdef __FreeBSD__
 #include <sys/jail.h>
 #endif
 
@@ -1165,6 +1165,21 @@ sctp_timeout_handler(void *t)
 	sctp_audit_log(0xF0, (u_int8_t)tmr->type);
 	sctp_auditing(3, inp, stcb, net);
 #endif
+
+        /* sanity checks... */
+	if (tmr->self != (void *)tmr) {
+		sctp_pegs[SCTP_BOGUS_TIMER]++;
+		/*printf("Stale SCTP timer fired (%p), ignoring...\n", tmr);*/
+		splx(s);
+		return;
+	}
+	if (!SCTP_IS_TIMER_TYPE_VALID(tmr->type)) {
+		sctp_pegs[SCTP_BOGUS_TIMER]++;
+		printf("SCTP timer fired with invalid type: 0x%x\n", tmr->type);
+		splx(s);
+		return;
+	}
+
 	sctp_pegs[SCTP_TIMERS_EXP]++;
 
 	if (inp == NULL) {
@@ -1819,6 +1834,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	tmr->ep = (void *)inp;
 	tmr->tcb = (void *)stcb;
 	tmr->net = (void *)net;
+	tmr->self = (void *)tmr;
 	callout_reset(&tmr->timer, to_ticks, sctp_timeout_handler, tmr);
 	return (0);
 }
@@ -1969,6 +1985,7 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			stcb->asoc.num_send_timers_up = 0;
 		}
 	}
+	tmr->self = NULL;
 	callout_stop(&tmr->timer);
 	return (0);
 }
@@ -3904,6 +3921,7 @@ sctp_sorecvmsg(struct socket *so,
 	int out_flags=0, in_flags;
 	int block_allowed=1;
 	int freed_so_far=0;
+	int s;
 
 	if(msg_flags) {
 		in_flags = *msg_flags;
@@ -3932,6 +3950,11 @@ sctp_sorecvmsg(struct socket *so,
 	if(inp == NULL) {
 		return (EFAULT);
 	}
+#if defined(__NetBSD__) || defined(__OpenBSD__)
+	s = splsoftnet();
+#else
+	s = splnet();
+#endif
 	SOCKBUF_LOCK(&so->so_rcv);
 
  restart:
@@ -4068,9 +4091,17 @@ sctp_sorecvmsg(struct socket *so,
 				/* not enough in this buf */
 				cp_len = (int)m->m_len;
 			SOCKBUF_UNLOCK(&so->so_rcv);
+			splx(s);
 			/* move out the data, unlocked (our sblock flag protects us from a reader) */
 			error = uiomove(mtod(m, char *), cp_len, uio);
+#if defined(__NetBSD__) || defined(__OpenBSD__)
+			s = splsoftnet();
+#else
+			s = splnet();
+#endif
 			SOCKBUF_LOCK(&so->so_rcv);
+			/* re-read */
+			stcb = control->stcb;
 			if (error) {
 				/* error we are out of here */
 				goto release;
@@ -4352,6 +4383,7 @@ sctp_sorecvmsg(struct socket *so,
 					uio->uio_resid -= m->m_len;
 					cp_len -= m->m_len;
 					SOCKBUF_UNLOCK(&so->so_rcv);
+					splx(s);
 					*mp = sctp_m_copym(m, 0, cp_len, 
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 							   M_TRYWAIT
@@ -4359,10 +4391,16 @@ sctp_sorecvmsg(struct socket *so,
 							   M_WAIT
 #endif
 						);
+#if defined(__NetBSD__) || defined(__OpenBSD__)
+					s = splsoftnet();
+#else
+					s = splnet();
+#endif
 #ifdef SCTP_LOCK_LOGGING
 					sctp_log_lock(inp, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
 #endif
 					SOCKBUF_LOCK(&so->so_rcv);
+					stcb = control->stcb;
 					m->m_data += cp_len;
 					m->m_len -= cp_len;
 #ifdef SCTP_SB_LOGGING
@@ -4399,12 +4437,81 @@ sctp_sorecvmsg(struct socket *so,
 #endif
  out:
 	SOCKBUF_UNLOCK(&so->so_rcv);
+	splx(s);
 	if (wakeup_read_socket) {
 		sctp_sorwakeup(inp, so);
 	}
 	return (error);
 }
-		  
+
+#if defined(__NetBSD__)
+int
+sctp_soreceive(so, paddr, uio, mp0, controlp, flagsp)
+	struct socket *so;
+	struct mbuf **paddr;
+	struct uio *uio;
+	struct mbuf **mp0;
+	struct mbuf **controlp;
+	int *flagsp;
+{
+	int error,fromlen;
+	u_int8_t sockbuf[256];
+	struct sockaddr *from;
+	struct sctp_sndrcvinfo sinfo;
+	int filling_sinfo=1;
+	struct sctp_inpcb *inp;
+	struct mbuf* maddr;
+
+	inp = (struct sctp_inpcb *)so->so_pcb;
+	/* pickup the assoc we are reading from */
+	if(inp == NULL) {
+		return (EINVAL);
+	}
+	if ((sctp_is_feature_off(inp,
+				 SCTP_PCB_FLAGS_RECVDATAIOEVNT)) ||
+	    (controlp == NULL)) {
+		/* user does not want the sndrcv ctl */
+		filling_sinfo=0;
+	}
+	/* pickup the assoc we are reading from */
+	if(paddr) {
+		from = (struct sockaddr *)sockbuf;
+		fromlen = sizeof(sockbuf);
+	} else {
+		from = NULL;
+		fromlen = 0;
+	}
+
+	error = sctp_sorecvmsg(so, uio, mp0, from, fromlen, flagsp, &sinfo, filling_sinfo);
+	if(controlp) {
+		/* copy back the sinfo in a CMSG format */
+		struct sctp_inpcb *inp;
+
+		inp = (struct sctp_inpcb *)so->so_pcb;
+		*controlp = sctp_build_ctl_nchunk(inp, &sinfo);
+	}
+	if(paddr) {
+		MGET(maddr, M_DONTWAIT, MT_SONAME);
+		if (maddr == 0) {
+			return (ENOMEM);
+		}
+		if (fromlen > MLEN) {
+			MEXTMALLOC(maddr, fromlen, M_NOWAIT);
+			if ((maddr->m_flags & M_EXT) == 0) {
+				m_free(maddr);
+				return (ENOMEM);
+			}
+		}
+		maddr->m_len = fromlen;
+		memcpy(mtod(maddr, caddr_t), (caddr_t) from, fromlen);
+		*paddr = maddr;
+
+	}
+	return (error);
+}
+
+#else
+
 int
 sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 	struct socket *so;
@@ -4469,3 +4576,30 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 
 	return (error);
 }
+#endif
+
+
+
+#if defined(__NetBSD__) || defined(__OpenBSD__)
+void*
+sctp_pool_get(struct pool* pp, int flags)
+{
+	int     s;
+	void*   ptr;
+
+	s = splsoftnet();
+	ptr = pool_get(pp, flags);
+	splx(s);
+	return ptr;
+}
+void
+sctp_pool_put(struct pool* pp, void* ptr)
+{
+	int     s;
+
+	s = splsoftnet();
+	pool_put(pp, ptr);
+	splx(s);
+}
+#endif
+

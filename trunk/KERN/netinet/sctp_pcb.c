@@ -67,6 +67,7 @@
 #include <sys/random.h>
 #endif
 #if defined(__NetBSD__)
+#include "rnd.h"
 #include <sys/rnd.h>
 #endif
 #if defined(__OpenBSD__)

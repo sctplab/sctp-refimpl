@@ -444,6 +444,12 @@
 #define SCTP_TIMER_TYPE_INPKILL         15
 #define SCTP_TIMER_TYPE_ITERATOR        16
 #define SCTP_TIMER_TYPE_EARLYFR         17
+/* add new timers here - and increment LAST */
+#define SCTP_TIMER_TYPE_LAST            18
+
+#define SCTP_IS_TIMER_TYPE_VALID(t)	(((t) > SCTP_TIMER_TYPE_NONE) && \
+					 ((t) < SCTP_TIMER_TYPE_LAST))
+
 
 /*
  * Number of ticks before the soxwakeup() event that
@@ -711,7 +717,7 @@
 #define SCTP_UNSET_TSN_PRESENT(arry, gap) (arry[(gap >> 3)] &= ((~(0x01 << ((gap & 0x07)))) & 0xff))
 
 /* pegs */
-#define SCTP_NUMBER_OF_PEGS	132
+#define SCTP_NUMBER_OF_PEGS	136
 /* peg index's */
 #define SCTP_PEG_SACKS_SEEN	0
 #define SCTP_PEG_SACKS_SENT	1
@@ -846,6 +852,12 @@
 #define SCTP_SBWAIT_ON_SEND      129
 #define SCTP_SND_WAIT_OLOCK      130
 #define SCTP_WAKEUP_CALLED       131
+#define SCTP_BOGUS_TIMER         132
+#define SCTP_RESV1               133
+#define SCTP_RESV2               134
+#define SCTP_RESV3               135
+
+
 /*
  * This value defines the number of vtag block time wait entry's
  * per list element.  Each entry will take 2 4 byte ints (and of
@@ -926,7 +938,7 @@ do { \
 } while (0)
 
 /* FIXME */
-#ifdef __APPLE__
+#if defined(__APPLE__) || defined(__NetBSD__)
 #define sctp_sorwakeup_locked(inp, so) \
 do { \
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_DONT_WAKE) { \

@@ -70,6 +70,9 @@ struct sctp_timer {
 	void *ep;
 	void *tcb;
 	void *net;
+
+	/* for sanity checking */
+	void *self;
 };
 
 /*
