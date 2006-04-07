@@ -115,6 +115,8 @@
 #define SCTP_LOG_FREE_SENT             71
 #define SCTP_NAGLE_APPLIED          72
 #define SCTP_NAGLE_SKIPPED          73
+#define SCTP_WAKESND_FROM_SACK      74
+#define SCTP_WAKESND_FROM_FWDTSN    75
 /*
  * To turn on various logging, you must first define SCTP_STAT_LOGGING.
  * Then to get something to log you define one of the logging defines i.e.
@@ -139,6 +141,7 @@
 #define SCTP_LOG_EVENT_RTT  11
 #define SCTP_LOG_EVENT_SB   12
 #define SCTP_LOG_EVENT_NAGLE 13
+#define SCTP_LOG_EVENT_WAKE 14
 #define SCTP_LOCK_UNKNOWN 2
 
 
