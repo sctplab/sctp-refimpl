@@ -2463,10 +2463,11 @@ sctp_notify_assoc_change(u_int32_t event, struct sctp_tcb *stcb,
 	     (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) &&
 	    (event == SCTP_COMM_LOST)) {
 		stcb->sctp_socket->so_error = ECONNRESET;
-		/* Wake ANY sleepers */
-		sowwakeup(stcb->sctp_socket);
-		sorwakeup(stcb->sctp_socket);
 	}
+	/* Wake ANY sleepers */
+	sowwakeup(stcb->sctp_socket);
+	sorwakeup(stcb->sctp_socket);
+
 	if (sctp_is_feature_off(stcb->sctp_ep, SCTP_PCB_FLAGS_RECVASSOCEVNT)) {
 		/* event not enabled */
 		return;
@@ -3036,6 +3037,7 @@ sctp_report_all_outbound(struct sctp_tcb *stcb)
 		while (chk) {
 			stcb->asoc.stream_queue_cnt--;
 			TAILQ_REMOVE(&outs->outqueue, chk, sctp_next);
+			sctp_free_bufspace(stcb, asoc, chk);
 			sctp_ulp_notify(SCTP_NOTIFY_DG_FAIL, stcb,
 			    SCTP_NOTIFY_DATAGRAM_UNSENT, chk);
 			if (chk->data) {
@@ -3063,6 +3065,7 @@ sctp_report_all_outbound(struct sctp_tcb *stcb)
 					m_adj(chk->data, sizeof(struct sctp_data_chunk));
 
 			}
+			sctp_free_bufspace(stcb, asoc, chk);
 			sctp_ulp_notify(SCTP_NOTIFY_DG_FAIL, stcb, SCTP_NOTIFY_DATAGRAM_UNSENT, chk);
 			if (chk->data) {
 				sctp_m_freem(chk->data);
@@ -3087,6 +3090,7 @@ sctp_report_all_outbound(struct sctp_tcb *stcb)
 					m_adj(chk->data, sizeof(struct sctp_data_chunk));
 
 			}
+			sctp_free_bufspace(stcb, asoc, chk);
 			sctp_ulp_notify(SCTP_NOTIFY_DG_FAIL, stcb,
 			    SCTP_NOTIFY_DATAGRAM_SENT, chk);
 			if (chk->data) {
@@ -4431,6 +4435,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 	if(psa) {
 		from = (struct sockaddr *)sockbuf;
 		fromlen = sizeof(sockbuf);
+		from->sa_len = 0;
 	} else {
 		from = NULL;
 		fromlen = 0;
@@ -4447,11 +4452,15 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 	}
 	if(psa) {
 		/* copy back the address info */
+		if(from && from->sa_len) {
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
-		*psa = sodupsockaddr(from, M_NOWAIT);
+			*psa = sodupsockaddr(from, M_NOWAIT);
 #else
-		*psa = dup_sockaddr(from, mp0 == 0);
+			*psa = dup_sockaddr(from, mp0 == 0);
 #endif
+		} else {
+			*psa = NULL;
+		}
 	}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	socket_unlock(so, 1);
