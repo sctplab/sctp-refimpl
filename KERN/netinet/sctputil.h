@@ -56,6 +56,13 @@ struct mbuf *sctp_m_copym(struct mbuf *m, int off, int len, int wait);
 #define sctp_m_copym	m_copym
 #endif /* __APPLE__ */
 
+#if defined(__NetBSD__) || defined(__OpenBSD__)
+void* sctp_pool_get(struct pool*, int);
+void sctp_pool_put(struct pool*, void*);
+#endif
+
+
+
 /*
  * Zone(pool) allocation routines: MUST be defined for each OS
  * zone = zone/pool pointer
@@ -112,7 +119,7 @@ extern zone_t kalloc_zone(vm_size_t);	/* XXX */
 	zalloc(zone);
 #elif defined(__NetBSD__) || defined(__OpenBSD__)
 #define SCTP_ZONE_GET(zone) \
-	pool_get(&zone, PR_NOWAIT);
+	sctp_pool_get(&zone, PR_NOWAIT);
 #else
 	/* don't know this OS! */
 	force_comile_error;
@@ -132,7 +139,7 @@ extern zone_t kalloc_zone(vm_size_t);	/* XXX */
 	zfree(zone, element);
 #elif defined(__NetBSD__) || defined(__OpenBSD__)
 #define SCTP_ZONE_FREE(zone, element) \
-	pool_put(&zone, element);
+	sctp_pool_put(&zone, element);
 #else
 	/* don't know this OS! */
 	force_comile_error;
@@ -273,12 +280,21 @@ void sctp_free_bufspace(struct sctp_tcb *, struct sctp_association *,
 
 #endif
 
+#if defined(__NetBSD__)
+int
+sctp_soreceive(	struct socket *so, struct mbuf **paddr,
+		struct uio *uio,
+		struct mbuf **mp0,
+		struct mbuf **controlp,
+		int *flagsp);
+#else
 int
 sctp_soreceive(	struct socket *so, struct sockaddr **psa,
 		struct uio *uio,
 		struct mbuf **mp0,
 		struct mbuf **controlp,
 		int *flagsp);
+#endif
 
 #ifdef SCTP_STAT_LOGGING
 void sctp_log_strm_del_alt(u_int32_t, u_int16_t, int);

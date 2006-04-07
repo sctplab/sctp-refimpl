@@ -538,6 +538,12 @@ void * sctp_getlock(struct socket *so, int locktype);
 #endif /* !SCTP_APPLE_PANTHER */
 #endif /* __APPLE__ */
 
+#if defined(__NetBSD__) 
+/* emulate the atomic_xxx() functions... */
+#define atomic_add_int(addr, val)	(*(addr) += val)
+#define atomic_subtract_int(addr, val)	(*(addr) -= val)
+#endif /* __NetBSD__ */
+
 #endif /* _KERNEL */
 
 #endif /* !_NETINET_SCTP_VAR_H_ */

@@ -904,6 +904,7 @@ sctp_attach(struct socket *so, int proto, struct proc *p)
 	SCTP_INP_WUNLOCK(inp);
 #if defined(__NetBSD__)
 	so->so_send = sctp_sosend;
+	so->so_receive = sctp_soreceive;
 #endif
 	splx(s);
 	return 0;
@@ -5748,14 +5749,6 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
 
        sysctl_createv(clog, 0, NULL, NULL,
                        CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
-                       CTLTYPE_INT, "",
-                       SYSCTL_DESCR(),
-                       NULL, 0, &, 0,
-		       CTL_NET, PF_INET, IPPROTO_SCTP, 
-                       CTL_EOL);
-
-       sysctl_createv(clog, 0, NULL, NULL,
-                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
                        CTLTYPE_INT, "valid_cookie_life",
                        SYSCTL_DESCR("Default cookie lifetime in sec"),
                        NULL, 0, &sctp_valid_cookie_life_default, 0,
@@ -5850,7 +5843,7 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
                        CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
                        CTLTYPE_INT, "warm_crc_table",
                        SYSCTL_DESCR("Should the CRC32c tables be warmed before checksum?"),
-                       NULL, 0, &sctp_sctp_warm_the_crc32_table, 0,
+                       NULL, 0, &sctp_warm_the_crc32_table, 0,
                        CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_WARM_CRC32,
                        CTL_EOL);
 
