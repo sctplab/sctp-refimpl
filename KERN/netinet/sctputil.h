@@ -251,6 +251,7 @@ void sctp_free_bufspace(struct sctp_tcb *, struct sctp_association *,
 #else
 #define sctp_free_bufspace(stcb, asoc, tp1)  \
 	if (tp1->data != NULL) { \
+		SOCKBUF_LOCK(&stcb->sctp_socket->so_snd); \
 		if ((asoc)->total_output_queue_size >= tp1->book_size) { \
 			(asoc)->total_output_queue_size -= tp1->book_size; \
 		} else { \
@@ -261,9 +262,8 @@ void sctp_free_bufspace(struct sctp_tcb *, struct sctp_association *,
 		} else { \
 			(asoc)->total_output_mbuf_queue_size = 0; \
 		} \
-	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) || \
-	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) { \
-			SOCKBUF_LOCK(&stcb->sctp_socket->so_snd); \
+   	        if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) || \
+	            (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) { \
 			if (stcb->sctp_socket->so_snd.sb_cc >= tp1->book_size) { \
 				stcb->sctp_socket->so_snd.sb_cc -= tp1->book_size; \
 			} else { \
@@ -274,8 +274,8 @@ void sctp_free_bufspace(struct sctp_tcb *, struct sctp_association *,
 			} else { \
 				stcb->sctp_socket->so_snd.sb_mbcnt = 0; \
 			} \
-			SOCKBUF_UNLOCK(&stcb->sctp_socket->so_snd); \
 		} \
+		SOCKBUF_UNLOCK(&stcb->sctp_socket->so_snd); \
 	} 
 
 #endif
@@ -297,6 +297,11 @@ sctp_soreceive(	struct socket *so, struct sockaddr **psa,
 #endif
 
 #ifdef SCTP_STAT_LOGGING
+
+void sctp_wakeup_log(struct sctp_tcb *stcb, 
+		     uint32_t cumtsn, 
+		     uint32_t wake_cnt, int from);
+
 void sctp_log_strm_del_alt(u_int32_t, u_int16_t, int);
 
 void sctp_log_nagle_event(struct sctp_tcb *stcb, int action);
