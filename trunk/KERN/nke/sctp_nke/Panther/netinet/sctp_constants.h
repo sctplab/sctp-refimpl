@@ -843,9 +843,9 @@
 #define SCTP_AUTH_SENT_NULL_KEY  126
 #define SCTP_AUTH_RCVD_NULL_KEY  127
 #define SCTP_NOSEND_NET_INPUT    128
-#define SCTP_RESV1               129
-#define SCTP_RESV2               130
-#define SCTP_RESV3               131
+#define SCTP_SBWAIT_ON_SEND      129
+#define SCTP_SND_WAIT_OLOCK      130
+#define SCTP_WAKEUP_CALLED       131
 /*
  * This value defines the number of vtag block time wait entry's
  * per list element.  Each entry will take 2 4 byte ints (and of
@@ -925,6 +925,18 @@ do { \
 	} \
 } while (0)
 
+/* FIXME */
+#ifdef __APPLE__
+#define sctp_sorwakeup_locked(inp, so) \
+do { \
+	if (inp->sctp_flags & SCTP_PCB_FLAGS_DONT_WAKE) { \
+		inp->sctp_flags |= SCTP_PCB_FLAGS_WAKEINPUT; \
+                SOCKBUF_UNLOCK(&((so)->so_rcv)); \
+	} else { \
+		sorwakeup(so); \
+	} \
+} while (0)
+#else
 #define sctp_sorwakeup_locked(inp, so) \
 do { \
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_DONT_WAKE) { \
@@ -934,7 +946,7 @@ do { \
 		sorwakeup_locked(so); \
 	} \
 } while (0)
-
+#endif
 
 #endif /* _KERNEL */
 #endif

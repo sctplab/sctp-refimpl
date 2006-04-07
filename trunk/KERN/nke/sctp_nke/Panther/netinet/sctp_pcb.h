@@ -419,7 +419,7 @@ struct sctp_tcb {
 	LIST_ENTRY(sctp_tcb) sctp_tcblist;	 /* list of all of the TCB's */
 	LIST_ENTRY(sctp_tcb) sctp_tcbrestarhash; /* next link in restart hash table */
 	LIST_ENTRY(sctp_tcb) sctp_asocs;         /* vtag hash list */
-        struct sctp_block_entry *block_entry;
+        struct sctp_block_entry *block_entry;    /* pointer locked by  socket send buffer */
 	struct sctp_association asoc;
 	/* freed_by_sorcv_sincelast is protected by 
 	 * the sockbuf_lock NOT the tcb_lock. Its special
@@ -644,6 +644,8 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #endif
 #endif
 
+#define SCTP_TCB_TRYLOCK(_tcb) 	mtx_trylock(&(_tcb)->tcb_mtx)
+
 #define SCTP_TCB_UNLOCK(_tcb)		mtx_unlock(&(_tcb)->tcb_mtx)
 
 #define SCTP_TCB_UNLOCK_IFOWNED(_tcb)	      do { \
@@ -734,6 +736,7 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #define SCTP_TCB_LOCK_INIT(_tcb)
 #define SCTP_TCB_LOCK_DESTROY(_tcb)
 #define SCTP_TCB_LOCK(_tcb)
+#define SCTP_TCB_TRYLOCK(_tcb)
 #define SCTP_TCB_UNLOCK(_tcb)
 #define SCTP_TCB_UNLOCK_IFOWNED(_tcb)
 #define STCB_TCB_LOCK_ASSERT(_tcb)
@@ -793,6 +796,7 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #define SCTP_TCB_LOCK_INIT(_tcb)
 #define SCTP_TCB_LOCK_DESTROY(_tcb)
 #define SCTP_TCB_LOCK(_tcb)
+#define SCTP_TCB_TRYLOCK(_tcb)
 #define SCTP_TCB_UNLOCK(_tcb)
 #define SCTP_TCB_UNLOCK_IFOWNED(_tcb)
 #define STCB_TCB_LOCK_ASSERT(_tcb)

@@ -6419,6 +6419,8 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			be.error = 0;
 			stcb->block_entry = &be;
 			SCTP_TCB_UNLOCK(stcb);
+			
+			sctp_pegs[SCTP_SBWAIT_ON_SEND]++;
 			error = sbwait(&so->so_snd);
 			/*
 			 * XXX: This is ugly but I have
@@ -6587,14 +6589,20 @@ sctp_msg_append(struct sctp_tcb *stcb,
 		if(calc_oh)
 			pad_oh = (4 - calc_oh);
 		/* relock to stay sane */
+#ifdef SCTP_INVARIENTS
 		SCTP_INP_RLOCK(stcb->sctp_ep);
+#endif
 		if(be.error) {
 		  error = be.error;
+#ifdef SCTP_INVARIENTS
 		  SCTP_INP_RUNLOCK(stcb->sctp_ep);
+#endif
 		  goto release;
 		}
 		SCTP_TCB_LOCK(stcb);
+#ifdef SCTP_INVARIENTS
 		SCTP_INP_RUNLOCK(stcb->sctp_ep);
+#endif
 		stcb->block_entry = NULL;
 		/*
 		 * ok, now we have a chain on m where m->m_nextpkt points to
@@ -7395,6 +7403,8 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb,
 		while (chk) {
 			nchk = TAILQ_NEXT(chk, sctp_next);
 			TAILQ_REMOVE(&tmp, chk, sctp_next);
+			if(chk->send_size >= sizeof(struct sctp_data_chunk))
+				m_adj(chk->data, sizeof(struct sctp_data_chunk));
 
 			sctp_ulp_notify(SCTP_NOTIFY_DG_FAIL, stcb,
 					(SCTP_NOTIFY_DATAGRAM_UNSENT |
@@ -10010,9 +10020,13 @@ sctp_output(inp, m, addr, control, p, flags)
 					 asoc->streamoutcnt *
 					 sizeof(struct sctp_stream_out), M_PCB,
 					 M_WAIT);
+#ifdef SCTP_INVARIENTS
 				  SCTP_INP_RLOCK(inp);
+#endif
 				  SCTP_TCB_LOCK(stcb);
+#ifdef SCTP_INVARIENTS
 				  SCTP_INP_RUNLOCK(inp);
+#endif
 				  asoc->strmout = tmp_str;
 				}
 				for (i = 0; i < asoc->streamoutcnt; i++) {
@@ -12167,6 +12181,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 			be.error = 0;
 			stcb->block_entry = &be;
 			SCTP_TCB_UNLOCK(stcb);
+			sctp_pegs[SCTP_SBWAIT_ON_SEND]++;
 			error = sbwait(&so->so_snd);
 			if (error || so->so_error || be.error) {
 				splx(s);
@@ -12403,14 +12418,25 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 #else
 		s = splnet();
 #endif
+#ifdef SCTP_INVARIENTS
 		SCTP_INP_RLOCK(inp);
+#endif
 		if(be.error) {
 		  error = be.error;
+#ifdef SCTP_INVARIENTS
 		  SCTP_INP_RUNLOCK(inp);
+#endif
 		  goto clean_up;
 		}
-		SCTP_TCB_LOCK(stcb);
+#if defined(__FreeBSD__) && __FreeBSD_version >= 503000
+		if(SCTP_TCB_TRYLOCK(stcb) == 0) {
+			sctp_pegs[SCTP_SND_WAIT_OLOCK]++;
+			SCTP_TCB_LOCK(stcb);
+		}
+#endif
+#ifdef SCTP_INVARIENTS
 		SCTP_INP_RUNLOCK(inp);
+#endif
 		asoc->chunks_on_out_queue++;
 		stcb->block_entry = NULL;
 		if ((srcv->sinfo_flags & SCTP_UNORDERED) == 0) {
@@ -12523,14 +12549,20 @@ clean_up:
 #else
  		s = splnet();
 #endif
+#ifdef SCTP_INVARIENTS
 		SCTP_INP_RLOCK(inp);
+#endif
 		if(be.error) {
 		  error = be.error;
+#ifdef SCTP_INVARIENTS
 		  SCTP_INP_RUNLOCK(inp);
+#endif
 		  goto temp_clean_up;
 		}
 		SCTP_TCB_LOCK(stcb);
+#ifdef SCTP_INVARIENTS
 		SCTP_INP_RUNLOCK(inp);
+#endif
 		stcb->block_entry = NULL;
 		/* add in the stored removeable count possibly */
 		if (PR_SCTP_BUF_ENABLED(chk->flags)) {
@@ -13019,9 +13051,13 @@ sctp_lower_sosend(struct socket *so,
 						 asoc->streamoutcnt *
 						 sizeof(struct sctp_stream_out),
 						 M_PCB, M_WAIT);
+#ifdef SCTP_INVARIENTS
 					  SCTP_INP_RLOCK(inp);
+#endif
 					  SCTP_TCB_LOCK(stcb);
+#ifdef SCTP_INVARIENTS
 					  SCTP_INP_RUNLOCK(inp);
+#endif
 					  asoc->strmout = tmp_str;
 					}
 					for (i = 0; i < asoc->streamoutcnt; i++) {
