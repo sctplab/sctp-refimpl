@@ -2253,17 +2253,17 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			inp->sctp_features = (*inp_p)->sctp_features;
 			inp->sctp_socket = so;
 
-	/* copy in the authentication parameters from the original endpoint */
-	if (inp->sctp_ep.local_hmacs)
-		sctp_free_hmaclist(inp->sctp_ep.local_hmacs);
-	inp->sctp_ep.local_hmacs =
-		sctp_copy_hmaclist((*inp_p)->sctp_ep.local_hmacs);
-	if (inp->sctp_ep.local_auth_chunks)
-		sctp_free_chunklist(inp->sctp_ep.local_auth_chunks);
-	inp->sctp_ep.local_auth_chunks =
-		sctp_copy_chunklist((*inp_p)->sctp_ep.local_auth_chunks);
-	(void)sctp_copy_skeylist(&(*inp_p)->sctp_ep.shared_keys,
-				 &inp->sctp_ep.shared_keys);
+			/* copy in the authentication parameters from the original endpoint */
+			if (inp->sctp_ep.local_hmacs)
+				sctp_free_hmaclist(inp->sctp_ep.local_hmacs);
+			inp->sctp_ep.local_hmacs =
+				sctp_copy_hmaclist((*inp_p)->sctp_ep.local_hmacs);
+			if (inp->sctp_ep.local_auth_chunks)
+				sctp_free_chunklist(inp->sctp_ep.local_auth_chunks);
+			inp->sctp_ep.local_auth_chunks =
+				sctp_copy_chunklist((*inp_p)->sctp_ep.local_auth_chunks);
+			(void)sctp_copy_skeylist(&(*inp_p)->sctp_ep.shared_keys,
+						 &inp->sctp_ep.shared_keys);
 
 			/*
 			 * Now we must move it from one hash table to another
