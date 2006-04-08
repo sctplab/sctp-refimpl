@@ -3248,7 +3248,7 @@ sctp_try_advance_peer_ack_point(struct sctp_tcb *stcb,
 			 * the chunk will be droped in the normal fashion.
 			 */
 			if (tp1->data) {
-				sctp_free_bufspace(stcb, asoc, tp1);
+				sctp_free_bufspace(stcb, asoc, tp1, 1);
 #ifdef SCTP_DEBUG
 				if (sctp_debug_on & SCTP_DEBUG_OUTPUT2) {
 					printf("--total out:%lu total_mbuf_out:%lu\n",
@@ -3889,7 +3889,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 			       asoc->total_flight);
 		}
 		if (tp1->data) {
-			sctp_free_bufspace(stcb, asoc, tp1);
+			sctp_free_bufspace(stcb, asoc, tp1, 1);
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_OUTPUT2) {
 				printf("--total out:%lu total_mbuf_out:%lu\n",
@@ -3916,7 +3916,6 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 		asoc->sent_queue_cnt--;
 		sctp_free_remote_addr(tp1->whoTo);
 
-		asoc->chunks_on_out_queue--;
 		SCTP_DECR_CHK_COUNT();
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, tp1);
 		wake_him = 1;

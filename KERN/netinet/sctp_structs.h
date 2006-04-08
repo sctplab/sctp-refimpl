@@ -693,7 +693,7 @@ struct sctp_association {
 	u_int16_t last_strm_seq_delivered;
 	u_int16_t last_strm_no_delivered;
 
-	u_int16_t chunks_on_out_queue; /* total chunks floating around */
+	u_int16_t chunks_on_out_queue; /* total chunks floating around, locked by send socket buffer */
 	u_int16_t last_revoke_count;
 	int16_t num_send_timers_up;
 	/*

@@ -3070,7 +3070,7 @@ sctp_report_all_outbound(struct sctp_tcb *stcb)
 		while (chk) {
 			stcb->asoc.stream_queue_cnt--;
 			TAILQ_REMOVE(&outs->outqueue, chk, sctp_next);
-			sctp_free_bufspace(stcb, asoc, chk);
+			sctp_free_bufspace(stcb, asoc, chk, 1);
 			sctp_ulp_notify(SCTP_NOTIFY_DG_FAIL, stcb,
 			    SCTP_NOTIFY_DATAGRAM_UNSENT, chk);
 			if (chk->data) {
@@ -3098,7 +3098,7 @@ sctp_report_all_outbound(struct sctp_tcb *stcb)
 					m_adj(chk->data, sizeof(struct sctp_data_chunk));
 
 			}
-			sctp_free_bufspace(stcb, asoc, chk);
+			sctp_free_bufspace(stcb, asoc, chk, 1);
 			sctp_ulp_notify(SCTP_NOTIFY_DG_FAIL, stcb, SCTP_NOTIFY_DATAGRAM_UNSENT, chk);
 			if (chk->data) {
 				sctp_m_freem(chk->data);
@@ -3123,7 +3123,7 @@ sctp_report_all_outbound(struct sctp_tcb *stcb)
 					m_adj(chk->data, sizeof(struct sctp_data_chunk));
 
 			}
-			sctp_free_bufspace(stcb, asoc, chk);
+			sctp_free_bufspace(stcb, asoc, chk, 1);
 			sctp_ulp_notify(SCTP_NOTIFY_DG_FAIL, stcb,
 			    SCTP_NOTIFY_DATAGRAM_SENT, chk);
 			if (chk->data) {
@@ -3649,12 +3649,13 @@ sctp_generate_invmanparam(int err)
 #ifdef SCTP_MBCNT_LOGGING
 void
 sctp_free_bufspace(struct sctp_tcb *stcb, struct sctp_association *asoc,
-    struct sctp_tmit_chunk *tp1)
+    struct sctp_tmit_chunk *tp1, int chk_cnt)
 {
 	if (tp1->data == NULL) {
 		return;
 	}
 	SOCKBUF_LOCK(&stcb->sctp_socket->so_snd);
+        asoc->chunks_on_out_queue -= chk_cnt;
 	sctp_log_mbcnt(SCTP_LOG_MBCNT_DECREASE,
 		       asoc->total_output_queue_size,
 		       tp1->book_size,
@@ -3702,7 +3703,7 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
 		ret_sz += tp1->book_size;
 		tp1->sent = SCTP_FORWARD_TSN_SKIP;
 		if (tp1->data) {
-			sctp_free_bufspace(stcb, &stcb->asoc, tp1);
+			sctp_free_bufspace(stcb, &stcb->asoc, tp1, 1);
 			sctp_ulp_notify(SCTP_NOTIFY_DG_FAIL, stcb, reason, tp1);
 			sctp_m_freem(tp1->data);
 			tp1->data = NULL;
