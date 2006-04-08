@@ -4038,6 +4038,10 @@ sctp_sorecvmsg(struct socket *so,
 	 * us to read off. Note that stcb COULD be NULL.
 	 */
 	stcb = control->stcb;
+	if(stcb) {
+		/* you can't free it on me please */
+		SCTP_TCB_FREE_LOCK(stcb);
+	}
  	error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
 	/* First lets get off the sinfo and sockaddr info */
 	if(sinfo) {
@@ -4441,6 +4445,9 @@ sctp_sorecvmsg(struct socket *so,
 		}
 	}
  release:
+	if(stcb)
+		SCTP_TCB_FREE_UNLOCK(stcb);
+
 	if(msg_flags)
 		*msg_flags |= out_flags; 	
 #if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
