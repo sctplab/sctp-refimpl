@@ -3689,7 +3689,19 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 #else
 	s = splnet();
 #endif
+	SCTP_TCB_UNLOCK(stcb);
+	/* We need to have the INP lock to
+	 * get the create lock to protect against
+	 * freeing on the reader. The writer holds
+	 * the TCB lock when it gets the FREE lock
+	 * so we are protected when we re-get the TCB
+	 * lock and then the FREE lock.
+	 */
+	SCTP_INP_RLOCK(inp);
+	SCTP_TCB_LOCK(stcb);
 	SCTP_TCB_FREE_LOCK(stcb);
+
+	SCTP_INP_RUNLOCK(inp);
 	if (stcb->asoc.state == 0) {
 		printf("Freeing already free association:%p - huh??\n",
 		       stcb);

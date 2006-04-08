@@ -4037,11 +4037,17 @@ sctp_sorecvmsg(struct socket *so,
 	/* If we reach here, control has a some data for
 	 * us to read off. Note that stcb COULD be NULL.
 	 */
+
 	stcb = control->stcb;
 	if(stcb) {
 		/* you can't free it on me please */
-		SCTP_TCB_FREE_LOCK(stcb);
+		SCTP_INP_RLOCK(inp);
+		stcb = control->stcb;
+		if(stcb)
+			SCTP_TCB_FREE_LOCK(stcb);
+		SCTP_INP_RUNLOCK(inp);
 	}
+
  	error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
 	/* First lets get off the sinfo and sockaddr info */
 	if(sinfo) {
