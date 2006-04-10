@@ -385,7 +385,7 @@ sctp_print_key (sctp_key_t *key, const char *str)
     uint32_t i;
 
     if (key == NULL) {
-	printf("%s: [Null key]\n");
+	printf("%s: [Null key]\n", str);
 	return;
     }
 
@@ -405,7 +405,7 @@ sctp_show_key (sctp_key_t *key, const char *str)
     uint32_t i;
 
     if (key == NULL) {
-	printf("%s: [Null key]\n");
+	printf("%s: [Null key]\n", str);
 	return;
     }
 
