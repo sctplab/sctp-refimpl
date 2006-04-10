@@ -6243,7 +6243,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 		struct mbuf *m,
 		struct sctp_sndrcvinfo *srcv,
 		int flags,
-		int hold_sockbuflock, int hold_freelock)
+		int hold_sockbuflock, int hold_freelock, int *data_len)
 {
 	struct socket *so;
 	struct sctp_association *asoc;
@@ -6351,6 +6351,9 @@ sctp_msg_append(struct sctp_tcb *stcb,
 		       dataout);
 	}
 #endif
+	if(data_len) {
+		*data_len = dataout;
+	}
 
 	/* lock the socket buf */
 #ifdef SCTP_LOCK_LOGGING
@@ -6971,7 +6974,7 @@ sctp_sendall_iterator(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
 		stcb->sctp_socket->so_state |= SS_NBIO;
 	}
 	ret = sctp_msg_append(stcb, stcb->asoc.primary_destination, m,
-			      &ca->sndrcv, 0, 0, 0);
+			      &ca->sndrcv, 0, 0, 0, NULL);
 	if (turned_on_nonblock) {
 		/* we turned on non-blocking so turn it off */
 		stcb->sctp_socket->so_state &= ~SS_NBIO;
@@ -10088,7 +10091,7 @@ sctp_output(inp, m, addr, control, p, flags)
 			}
 			if ((use_rcvinfo) &&
 			    (srcv.sinfo_flags & SCTP_ABORT)) {
-				sctp_msg_append(stcb, net, m, &srcv, flags, 1, 0);
+				sctp_msg_append(stcb, net, m, &srcv, flags, 1, 0, NULL);
 				error = 0;
 				splx(s);
 				return(error);
@@ -10156,7 +10159,7 @@ sctp_output(inp, m, addr, control, p, flags)
 	} else {
 		net = stcb->asoc.primary_destination;
 	}
-	if ((error = sctp_msg_append(stcb, net, m, &srcv, flags, 1, 1))) {
+	if ((error = sctp_msg_append(stcb, net, m, &srcv, flags, 1, 1, NULL))) {
 		if((srcv.sinfo_flags & SCTP_ABORT) == 0) {
 			/* You can't unlock locks that are gone 
 			 * so only if ABORT is not present do this.
@@ -12856,7 +12859,7 @@ sctp_lower_sosend(struct socket *so,
 	)
 {
  	unsigned int sndlen;
-	int error;
+	int error, len;
 	int s, queue_only = 0, queue_only_for_init=0;
 	int free_lock_applied = 0;
 	int un_sent = 0;
@@ -13233,6 +13236,7 @@ sctp_lower_sosend(struct socket *so,
 		 * send/queue it.
 		 */
  		splx(s);
+		len = uio->uio_resid;
 		error = sctp_copy_it_in(inp, stcb, asoc, net, srcv, uio, flags);
 		if(srcv->sinfo_flags & SCTP_ABORT) {
 			/* we lost the tcb too */
@@ -13246,7 +13250,8 @@ sctp_lower_sosend(struct socket *so,
 		/* Here we must either pull in the user data to chunk
 		 * buffers, or use top to do a msg_append.
 		 */
- 		error = sctp_msg_append(stcb, net, top, srcv, flags, 0, 1);
+		len = 0;
+ 		error = sctp_msg_append(stcb, net, top, srcv, flags, 0, 1, &len);
  		splx(s);
 		if(srcv->sinfo_flags & SCTP_ABORT) {
 			stcb = NULL;
@@ -13257,6 +13262,7 @@ sctp_lower_sosend(struct socket *so,
 		/* zap the top since it is now being used */
 		top = 0;
 	}
+	un_sent += len;
 
 	if (queue_only_for_init) {
 #ifdef SCTP_INVARIENTS
