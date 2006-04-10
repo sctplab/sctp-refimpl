@@ -1106,6 +1106,10 @@ sctp_t1init_timer(struct sctp_inpcb *inp,
 		sctp_send_initiate(inp, stcb);
 		return (0);
 	}
+
+	if (SCTP_GET_STATE((&stcb->asoc)) != SCTP_STATE_COOKIE_WAIT) {
+		return (0);
+	}
 	if (sctp_threshold_management(inp, stcb, net,
 				      stcb->asoc.max_init_times)) {
 		/* Association was destroyed */

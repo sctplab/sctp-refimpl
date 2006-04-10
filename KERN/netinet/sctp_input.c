@@ -163,6 +163,7 @@ sctp_handle_init(struct mbuf *m, int iphlen, int offset,
 			printf("sctp_handle_init: Abort, so_qlimit:%d\n", inp->sctp_socket->so_qlimit);
 		}
 #endif
+		/* FIX ME ?? What about TCP model and we have a match/restart case? */
 		sctp_abort_association(inp, stcb, m, iphlen, sh, op_err);
 		return;
 	}
@@ -406,6 +407,16 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 	/* extract the cookie and queue it to "echo" it back... */
 	stcb->asoc.overall_error_count = 0;
 	net->error_count = 0;
+
+	/*
+	 * Cancel the INIT timer, We do this first before queueing
+	 * the cookie. We always cancel at the primary to assue that
+	 * we are canceling the timer started by the INIT which always
+	 * goes to the primary.
+	 */
+	sctp_timer_stop(SCTP_TIMER_TYPE_INIT, stcb->sctp_ep, stcb,
+			asoc->primary_destination);
+
 	retval = sctp_send_cookie_echo(m, offset, stcb, net);
 	if (retval < 0) {
 		/*
@@ -440,16 +451,6 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 		}
 		return (retval);
 	}
-
-	/*
-	 * Cancel the INIT timer, We do this first before queueing
-	 * the cookie. We always cancel at the primary to assue that
-	 * we are canceling the timer started by the INIT which always
-	 * goes to the primary.
-	 */
-	sctp_timer_stop(SCTP_TIMER_TYPE_INIT, stcb->sctp_ep, stcb,
-	    asoc->primary_destination);
-
 	/* calculate the RTO */
 	net->RTO = sctp_calculate_rto(stcb, asoc, net, &asoc->time_entered);
 
