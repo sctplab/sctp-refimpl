@@ -1850,6 +1850,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	tmr->tcb = (void *)stcb;
 	tmr->net = (void *)net;
 	tmr->self = (void *)tmr;
+
 	callout_reset(&tmr->timer, to_ticks, sctp_timeout_handler, tmr);
 	return (0);
 }
@@ -1982,8 +1983,9 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 #endif /* SCTP_DEBUG */
 		break;
 	};
-	if (tmr == NULL)
+	if (tmr == NULL) {
 		return (EFAULT);
+	}
 
 	if ((tmr->type != t_type) && tmr->type) {
 		/*
@@ -3864,20 +3866,35 @@ sctp_m_copym(struct mbuf *m, int off, int len, int wait)
 
 #define	SBLOCKWAIT(f)	(((f) & MSG_DONTWAIT) ? M_NOWAIT : M_WAITOK)
 
-static void
+static int
 sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far)
 {
 	/* User pulled some data, do we need a rwnd update? */
 	uint32_t rwnd_req;
+	struct socket *so;
 
-	rwnd_req = (stcb->sctp_socket->so_snd.sb_hiwat >> SCTP_RWND_HIWAT_SHIFT);
+	so = stcb->sctp_socket;
+	rwnd_req = (so->so_snd.sb_hiwat >> SCTP_RWND_HIWAT_SHIFT);
+	if(stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+		/* Pre-check If we are freeing  */
+		SCTP_TCB_FREE_UNLOCK(stcb);
+		return(-1);
+	}
 	stcb->freed_by_sorcv_sincelast += *freed_so_far;
 	*freed_so_far = 0;
 	/* Have you have freed enough to look */
 	if(stcb->freed_by_sorcv_sincelast > rwnd_req) {
 		/* Yep, its worth a look and the lock overhead */
 		stcb->freed_by_sorcv_sincelast = 0;
-		SOCKBUF_UNLOCK(&stcb->sctp_socket->so_rcv);
+		SOCKBUF_UNLOCK(&so->so_rcv);
+		if(stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+			/* One last check before we 
+			 * allow the guy possibly to get in.
+			 * There is a race, where the guy has not
+			 * reached the gate. In that case
+			 */
+			goto get_out;
+		}
 #ifdef SCTP_INVARIENTS
 		SCTP_INP_RLOCK(stcb->sctp_ep);
 #endif
@@ -3885,6 +3902,14 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far)
 #ifdef SCTP_INVARIENTS
 		SCTP_INP_RUNLOCK(stcb->sctp_ep);
 #endif
+		if(stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+			/* No reports here */
+			SCTP_TCB_UNLOCK(stcb);
+		get_out:
+			SCTP_TCB_FREE_UNLOCK(stcb);
+			SOCKBUF_LOCK(&so->so_rcv);
+			return(-1);
+		}
 		/* calculate the rwnd */
 		sctp_set_rwnd(stcb, &stcb->asoc);
 		if(stcb->asoc.my_last_reported_rwnd < stcb->asoc.my_rwnd) {
@@ -3899,8 +3924,9 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far)
 			}
 		}
 		SCTP_TCB_UNLOCK(stcb);
-		SOCKBUF_LOCK(&stcb->sctp_socket->so_rcv);
+		SOCKBUF_LOCK(&so->so_rcv);
 	}
+	return(0);
 }
 
 int
@@ -4043,11 +4069,19 @@ sctp_sorecvmsg(struct socket *so,
 		/* you can't free it on me please */
 		SCTP_INP_RLOCK(inp);
 		stcb = control->stcb;
-		if(stcb)
+		if(stcb) {
 			SCTP_TCB_FREE_LOCK(stcb);
-		SCTP_INP_RUNLOCK(inp);
+			SCTP_INP_RUNLOCK(inp);
+			if(stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+				/* its about to be killed, don't refer to it  */
+				control->stcb = NULL;
+				SCTP_TCB_FREE_UNLOCK(stcb);
+				stcb = NULL;
+			}
+		} else {
+			SCTP_INP_RUNLOCK(inp);
+		}
 	}
-
  	error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
 	/* First lets get off the sinfo and sockaddr info */
 	if(sinfo) {
@@ -4124,7 +4158,11 @@ sctp_sorecvmsg(struct socket *so,
 #endif
 			SOCKBUF_LOCK(&so->so_rcv);
 			/* re-read */
-			stcb = control->stcb;
+			if(stcb && 
+			   stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+				SCTP_TCB_FREE_UNLOCK(stcb);
+				stcb = NULL;
+			}
 			if (error) {
 				/* error we are out of here */
 				goto release;
@@ -4224,14 +4262,18 @@ sctp_sorecvmsg(struct socket *so,
 		}
 		if(out_flags & MSG_EOR){
 			if((stcb) && (in_flags & MSG_PEEK) == 0){
-				sctp_user_rcvd(stcb, &freed_so_far);
+				if(sctp_user_rcvd(stcb, &freed_so_far)) {
+					stcb = NULL;
+				}
 			}
 			goto release;
 		}
 		if(uio->uio_resid == 0) {
 			/* got all we can */
 			if((stcb) && (in_flags & MSG_PEEK) == 0){
-				sctp_user_rcvd(stcb, &freed_so_far);
+				if(sctp_user_rcvd(stcb, &freed_so_far)) {
+					stcb = NULL;
+				}
 			}
 			goto release;
 		}
@@ -4243,7 +4285,9 @@ sctp_sorecvmsg(struct socket *so,
 		if((block_allowed == 0) ||
 		   ((in_flags & MSG_WAITALL) == 0)){
 			if((stcb) && (in_flags & MSG_PEEK) == 0){
-				sctp_user_rcvd(stcb, &freed_so_far);
+				if(sctp_user_rcvd(stcb, &freed_so_far)) {
+					stcb = NULL;
+				}
 			}
 			goto release;
 		}
@@ -4255,7 +4299,9 @@ sctp_sorecvmsg(struct socket *so,
 
 		if(sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE)) {
 			if((stcb) && (in_flags & MSG_PEEK) == 0){
-				sctp_user_rcvd(stcb, &freed_so_far);
+				if(sctp_user_rcvd(stcb, &freed_so_far)) {
+					stcb = NULL;
+				}
 			}
 			goto release;
 		}
@@ -4268,7 +4314,9 @@ sctp_sorecvmsg(struct socket *so,
 
 		/* Tell the transport a rwnd update might be needed */
 		if((stcb) && (in_flags & MSG_PEEK) == 0){
-			sctp_user_rcvd(stcb, &freed_so_far);
+			if(sctp_user_rcvd(stcb, &freed_so_far)) {
+				stcb = NULL;
+			}
 		}
 	wait_some_more:
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
@@ -4334,7 +4382,9 @@ sctp_sorecvmsg(struct socket *so,
 			if((block_allowed == 0) ||
 			   ((in_flags & MSG_WAITALL) == 0)){
 				if(stcb) {
-					sctp_user_rcvd(stcb, &freed_so_far);
+					if(sctp_user_rcvd(stcb, &freed_so_far)) {
+						stcb = NULL;
+					}
 				}
 				goto release;
 			}
@@ -4345,7 +4395,9 @@ sctp_sorecvmsg(struct socket *so,
 			 */
 			if(sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE)) {
 				if(stcb) {
-					sctp_user_rcvd(stcb, &freed_so_far);
+					if(sctp_user_rcvd(stcb, &freed_so_far)) {
+						stcb = NULL;
+					}
 				}
 				goto release;
 			}
@@ -4423,7 +4475,11 @@ sctp_sorecvmsg(struct socket *so,
 					sctp_log_lock(inp, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
 #endif
 					SOCKBUF_LOCK(&so->so_rcv);
-					stcb = control->stcb;
+					if(stcb &&
+					   stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+						SCTP_TCB_FREE_UNLOCK(stcb);
+						stcb = NULL;
+					}
 					m->m_data += cp_len;
 					m->m_len -= cp_len;
 #ifdef SCTP_SB_LOGGING
@@ -4433,7 +4489,10 @@ sctp_sorecvmsg(struct socket *so,
 					so->so_rcv.sb_cc = sctp_sbspace_sub(so->so_rcv.sb_cc, (uint32_t)cp_len);
 					if(stcb) {
 						stcb->asoc.sb_cc = sctp_sbspace_sub(stcb->asoc.sb_cc, (uint32_t)cp_len);
-						sctp_user_rcvd(stcb, &freed_so_far);
+						if(sctp_user_rcvd(stcb, &freed_so_far)) {
+							stcb = NULL;
+						}
+
 					}
 #ifdef SCTP_SB_LOGGING
 					sctp_sblog(&so->so_rcv, stcb, 

@@ -6255,7 +6255,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 	struct mbuf *mm;
 	struct sctp_block_entry be;
 	unsigned int dataout, siz;
-	int tcb_locked = 1;
+
 	int pad_oh = 0;
 	int mbcnt = 0;
 	int mbcnt_e = 0;
@@ -6359,8 +6359,6 @@ sctp_msg_append(struct sctp_tcb *stcb,
 	SOCKBUF_LOCK(&so->so_snd);
 	/* use the smallest one, user set value or smallest mtu of the asoc */
 	siz = sctp_get_frag_point(stcb, asoc);
-	SCTP_TCB_UNLOCK(stcb);
-	tcb_locked = 0;	
 	if(hold_sockbuflock == 0) {
 		error = sblock(&so->so_snd, SBLOCKWAIT(flags));
 		if (error)
@@ -6815,16 +6813,6 @@ release:
 	}
 out_locked:
 	SOCKBUF_UNLOCK(&so->so_snd);
-	if(tcb_locked == 0) {
-#ifdef SCTP_INVARIENTS
-		SCTP_INP_RLOCK(stcb->sctp_ep);
-#endif
-		SCTP_TCB_LOCK(stcb);
-#ifdef SCTP_INVARIENTS
-		SCTP_INP_RUNLOCK(stcb->sctp_ep);
-#endif
-		tcb_locked = 1;
-	}
 out:
 	if (m && m->m_nextpkt) {
 		n = m;
@@ -10128,7 +10116,20 @@ sctp_output(inp, m, addr, control, p, flags)
 		SCTP_TCB_UNLOCK(stcb);
 		return(EAGAIN);
 	}
+	SCTP_TCB_UNLOCK(stcb);
+#ifdef SCTP_INVARIENTS
+	SCTP_INP_RLOCK(inp);
+#endif
 	SCTP_TCB_FREE_LOCK(stcb);
+	SCTP_TCB_LOCK(stcb);
+#ifdef SCTP_INVARIENTS
+	SCTP_INP_RUNLOCK(inp);
+#endif
+	if(stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+		SCTP_TCB_UNLOCK(stcb);
+		SCTP_TCB_FREE_UNLOCK(stcb);
+		return(ECONNRESET);
+	}
 
 	if (use_rcvinfo == 0) {
 		srcv = stcb->asoc.def_send;
@@ -10235,7 +10236,7 @@ sctp_output(inp, m, addr, control, p, flags)
 	 */
 
 	SCTP_TCB_FREE_UNLOCK(stcb);
- 	SCTP_TCB_UNLOCK_IFOWNED(stcb);
+ 	SCTP_TCB_UNLOCK(stcb);
 	splx(s);
 	return (0);
 }
@@ -12121,7 +12122,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 	int error = 0;
 	int s;
 	int pad_oh = 0;
-	int got_tcblock=0;
+
 	int frag_size, mbcnt = 0, mbcnt_e = 0;
 	unsigned int sndlen;
 	unsigned int tot_demand;
@@ -12153,7 +12154,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 
 	/* First lets figure out the "chunking" point */
 	frag_size = sctp_get_frag_point(stcb, asoc);
-	SCTP_TCB_UNLOCK(stcb);
+
 	error = sblock(&so->so_snd, SBLOCKWAIT(flags));
 	if (error) {
 		splx(s);
@@ -12657,16 +12658,6 @@ zap_by_it_now:
 #else
 	s = splnet();
 #endif
-	SOCKBUF_UNLOCK(&so->so_snd);
-#ifdef SCTP_INVARIENTS
-	SCTP_INP_RLOCK(inp);
-#endif
-	SCTP_TCB_LOCK(stcb);
-	got_tcblock = 1;
-#ifdef SCTP_INVARIENTS
-	SCTP_INP_RUNLOCK(inp);
-#endif
-	SOCKBUF_LOCK(&so->so_snd);
 	asoc->total_output_queue_size += (dataout + pad_oh);
 	asoc->total_output_mbuf_queue_size += mbcnt;
 	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
@@ -12747,15 +12738,6 @@ release:
 #endif
 out_locked:
 	SOCKBUF_UNLOCK(&so->so_snd);
-	if(got_tcblock == 0) {
-#ifdef SCTP_INVARIENTS
-		SCTP_INP_RLOCK(inp);
-#endif
-		SCTP_TCB_LOCK(stcb);
-#ifdef SCTP_INVARIENTS
-		SCTP_INP_RUNLOCK(inp);
-#endif
-	}
 out_notlocked:
 	if (mm)
 		sctp_m_freem(mm);
@@ -12886,6 +12868,8 @@ sctp_lower_sosend(struct socket *so,
 	struct sctp_association *asoc;
 	struct sctp_inpcb *t_inp;
 	int create_lock_applied = 0;
+	int some_on_control = 0;
+	int hold_tcblock = 0;
 
 	error = 0;
 	net = NULL;
@@ -13125,8 +13109,21 @@ sctp_lower_sosend(struct socket *so,
 		asoc = &stcb->asoc;
 	}
 	/* Keep the stcb from being freed under our feet */
+	SCTP_TCB_UNLOCK(stcb);
+#ifdef SCTP_INVARIENTS
+	SCTP_INP_RLOCK(inp);
+#endif
 	SCTP_TCB_FREE_LOCK(stcb);
+	SCTP_TCB_LOCK(stcb);
+#ifdef SCTP_INVARIENTS
+	SCTP_INP_RUNLOCK(inp);
+#endif
 	free_lock_applied = 1;
+	hold_tcblock = 1;
+	if(stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+		error = ECONNRESET;
+		goto out;
+	}
 
 	if (create_lock_applied) {
 		SCTP_ASOC_CREATE_UNLOCK(inp);
@@ -13182,39 +13179,6 @@ sctp_lower_sosend(struct socket *so,
 			net = stcb->asoc.primary_destination;
 		}
 	}
-
-	if (top == NULL) {
-		/* Must copy it all in from user land. The
-		 * socket buf is locked but we don't suspend
-		 * protocol processing until we are ready to
-		 * send/queue it.
-		 */
- 		splx(s);
-		error = sctp_copy_it_in(inp, stcb, asoc, net, srcv, uio, flags);
-		if(srcv->sinfo_flags & SCTP_ABORT) {
-			/* we lost the tcb too */
-			stcb = NULL;
-			goto out_nofreelock;
-		}
-		if(error) {
-			goto out;
-		}
-	} else {
-		/* Here we must either pull in the user data to chunk
-		 * buffers, or use top to do a msg_append.
-		 */
- 		error = sctp_msg_append(stcb, net, top, srcv, flags, 0, 1);
- 		splx(s);
-		if(srcv->sinfo_flags & SCTP_ABORT) {
-			stcb = NULL;
-			goto out_nofreelock;
-		}
-		if (error)
-			goto out;
-		/* zap the top since it is now being used */
-		top = 0;
-	}
-
 	if ((net->flight_size > net->cwnd) && (sctp_cmt_on_off == 0)) {
 	      /* CMT: Added check for CMT above. net above is the primary dest. If CMT is ON, sender should 
 	       * always attempt to send with the output routine sctp_fill_outqueue() that loops
@@ -13257,10 +13221,55 @@ sctp_lower_sosend(struct socket *so,
 			sctp_pegs[SCTP_NAGLE_OFF]++;
 		}
 	}
-	STCB_TCB_LOCK_ASSERT(stcb);
+	if(!TAILQ_EMPTY(&stcb->asoc.control_send_queue)){
+		some_on_control = 1;
+	}
+	SCTP_TCB_UNLOCK(stcb);	
+	hold_tcblock = 0;
+	if (top == NULL) {
+		/* Must copy it all in from user land. The
+		 * socket buf is locked but we don't suspend
+		 * protocol processing until we are ready to
+		 * send/queue it.
+		 */
+ 		splx(s);
+		error = sctp_copy_it_in(inp, stcb, asoc, net, srcv, uio, flags);
+		if(srcv->sinfo_flags & SCTP_ABORT) {
+			/* we lost the tcb too */
+			stcb = NULL;
+			goto out_nofreelock;
+		}
+		if(error) {
+			goto out;
+		}
+	} else {
+		/* Here we must either pull in the user data to chunk
+		 * buffers, or use top to do a msg_append.
+		 */
+ 		error = sctp_msg_append(stcb, net, top, srcv, flags, 0, 1);
+ 		splx(s);
+		if(srcv->sinfo_flags & SCTP_ABORT) {
+			stcb = NULL;
+			goto out_nofreelock;
+		}
+		if (error)
+			goto out;
+		/* zap the top since it is now being used */
+		top = 0;
+	}
+
 	if (queue_only_for_init) {
+#ifdef SCTP_INVARIENTS
+		SCTP_INP_RLOCK(inp);
+#endif
+		SCTP_TCB_LOCK(stcb);
+#ifdef SCTP_INVARIENTS
+		SCTP_INP_RUNLOCK(inp);
+#endif
 		sctp_send_initiate(inp, stcb);
 		queue_only_for_init = 0;
+		hold_tcblock = 1;
+
  	}
 	if ((queue_only == 0) && (stcb->asoc.peers_rwnd  && un_sent)) {
 		/* we can attempt to send too.*/
@@ -13274,6 +13283,16 @@ sctp_lower_sosend(struct socket *so,
 #else
 		s = splnet();
 #endif
+		if(hold_tcblock == 0) {
+			hold_tcblock = 1;
+#ifdef SCTP_INVARIENTS
+			SCTP_INP_RLOCK(inp);
+#endif
+			SCTP_TCB_LOCK(stcb);
+#ifdef SCTP_INVARIENTS
+			SCTP_INP_RUNLOCK(inp);
+#endif
+		}
 		sctp_pegs[SCTP_OUTPUT_FRM_SND]++;
 		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_USR_SEND);
 		splx(s);
@@ -13286,12 +13305,22 @@ sctp_lower_sosend(struct socket *so,
 #else
 		s = splnet();
 #endif
+		if(hold_tcblock == 0) {
+			hold_tcblock = 1;
+#ifdef SCTP_INVARIENTS
+			SCTP_INP_RLOCK(inp);
+#endif
+			SCTP_TCB_LOCK(stcb);
+#ifdef SCTP_INVARIENTS
+			SCTP_INP_RUNLOCK(inp);
+#endif
+		}
 		sctp_from_user_send = 1;
 		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_USR_SEND);
 		sctp_from_user_send = 0;
 		splx(s);
 
-	} else if (!TAILQ_EMPTY(&stcb->asoc.control_send_queue)) {
+	} else if (some_on_control) {
 		int num_out, reason, cwnd_full;
 		/* Here we do control only */
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -13299,6 +13328,16 @@ sctp_lower_sosend(struct socket *so,
 #else
 		s = splnet();
 #endif
+		if(hold_tcblock == 0) {
+			hold_tcblock = 1;
+#ifdef SCTP_INVARIENTS
+			SCTP_INP_RLOCK(inp);
+#endif
+			SCTP_TCB_LOCK(stcb);
+#ifdef SCTP_INVARIENTS
+			SCTP_INP_RUNLOCK(inp);
+#endif
+		}
 		sctp_med_chunk_output(inp, stcb, &stcb->asoc, &num_out,
 				      &reason, 1, &cwnd_full, 1, &now, &now_filled);
 		splx(s);
@@ -13320,7 +13359,7 @@ sctp_lower_sosend(struct socket *so,
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		create_lock_applied = 0;
 	}
-	if (stcb) {
+	if ((stcb) && hold_tcblock){
 	  SCTP_TCB_UNLOCK(stcb);
 	}
 	if (top)
