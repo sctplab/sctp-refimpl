@@ -522,9 +522,11 @@ do { \
 #define if_list		if_link
 #define ifa_list	ifa_link
 
-#include <kern/simple_lock.h>
-#define atomic_add_int(addr, val)	hw_atomic_add((uint32_t *)addr, val)
-#define atomic_subtract_int(addr, val)	hw_atomic_sub((uint32_t *)addr, val)
+/* Apple KPI defines for atomic operations */
+#include <libkern/OSAtomic.h>
+#define atomic_add_int(addr, val)	OSAddAtomic(val, (SInt32 *)addr)
+#define atomic_subtract_int(addr, val)	OSAddAtomic((-val), (SInt32 *)addr)
+#define atomic_add_16(addr, val)	OSAddAtomic16(val, (SInt16 *)addr)
 
 /* additional protosw entries for Mac OS X 10.4 */
 #if !defined(SCTP_APPLE_PANTHER)
