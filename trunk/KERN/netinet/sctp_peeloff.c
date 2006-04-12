@@ -197,7 +197,12 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 		*error = ENOMEM;
 		SCTP_TCB_UNLOCK(stcb);
 		return (NULL);
-	}
+#ifndef SCTP_APPLE_FINE_GRAINED_LOCKING
+ 	}
+#else
+	} else
+	    socket_lock(newso,1);
+#endif
 	n_inp = (struct sctp_inpcb *)newso->so_pcb;
 	SOCK_LOCK(head);
 	SCTP_INP_WLOCK(inp);
@@ -400,9 +405,7 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 	so->so_state &= ~SS_COMP;
 	so->so_state &= ~SS_NOFDREF;
 	so->so_head = NULL;
-	/* sctp_get_peeloff should return the socket locked... 
 	socket_unlock(so, 1);
-	*/
 out:
 	file_drop(fd);
 	return (error);
