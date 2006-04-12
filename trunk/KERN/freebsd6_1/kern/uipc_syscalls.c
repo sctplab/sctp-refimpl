@@ -2183,7 +2183,6 @@ sctp_peeloff(td, uap)
 	u_int fflag;
 
 	fdp = td->td_proc->p_fd;
-	NET_LOCK_GIANT();
 	error = fgetsock(td, uap->sd, &head, &fflag);
 	if (error)
 		goto done2;
@@ -2253,7 +2252,6 @@ sctp_peeloff(td, uap)
 		fdrop(nfp, td);
 	fputsock(head);
  done2:
-	NET_UNLOCK_GIANT();
 	return (error);
 #else
 	return (EOPNOTSUPP);
@@ -2292,7 +2290,6 @@ sctp_send(td, uap)
 	* this code. If getsock/fdrop does not need
 	* giant, then we can remove these locks.
 	*/
-	NET_LOCK_GIANT();
 	error = getsock(td->td_proc->p_fd, uap->sd, &fp);
 	if (error)
 		goto sctp_bad2;
@@ -2350,7 +2347,6 @@ sctp_bad:
 #endif
 	fdrop(fp, td);
 sctp_bad2:
-	NET_UNLOCK_GIANT();
 	return (error);
 #else
 	return (EOPNOTSUPP);
@@ -2385,7 +2381,6 @@ int sctp_sendmsg(td, uap)
 	struct uio auio;
 	struct iovec aiov;
 
-	NET_LOCK_GIANT();
 	error = getsockaddr(&to, uap->to, uap->tolen);
 	if (error) {
 		to = NULL;
@@ -2459,7 +2454,6 @@ sctp_bad:
 sctp_bad2:
 	if (to)
 		FREE(to, M_SONAME);
-	NET_UNLOCK_GIANT();
 	return (error);
 #else
 	return (EOPNOTSUPP);
