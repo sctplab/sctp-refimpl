@@ -96,10 +96,10 @@
 #include <sys/filedesc.h>
 
 #ifdef __APPLE__
-/* #include <bsm/audit_kernel.h>*/
 extern struct fileops socketops;
 #ifndef SCTP_APPLE_PANTHER
-#include <kern/lock.h>
+#include <sys/proc_internal.h>
+#include <sys/file_internal.h>
 #endif /* !SCTP_APPLE_PANTHER */
 #endif /* __APPLE__ */
 
@@ -328,10 +328,19 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 }
 #else
 /* TIGER */
+
+#define f_flag f_fglob->fg_flag
+#define f_type f_fglob->fg_type
+#define f_msgcount f_fglob->fg_msgcount
+#define f_cred f_fglob->fg_cred
+#define f_ops f_fglob->fg_ops
+#define f_offset f_fglob->fg_offset
+#define f_data f_fglob->fg_data
+
 int
 sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 {
-	struct file *fp;
+	struct fileproc *fp;
 	int error;
 	struct socket *head, *so = NULL;
 	lck_mtx_t *mutex_held;
@@ -341,7 +350,7 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 	int dosocklock = 0;
 
 /*	AUDIT_ARG(fd, uap->s);*/
-	error = fp_getsock(p, fd, &fp, &head);
+	error = fp_getfsock(p, fd, &fp, &head);
 	if (error) {
 		if (error == EOPNOTSUPP)
 			error = ENOTSOCK;
@@ -354,19 +363,10 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 		goto out;
 	}
 
-	socket_lock(head, 1);
-
-	if (head->so_proto->pr_getlock != NULL) {
-		mutex_held = (*head->so_proto->pr_getlock)(head, 0);
-		dosocklock = 1;
-	} else {
-		mutex_held = head->so_proto->pr_domain->dom_mtx;
-		dosocklock = 0;
-	}
+	mutex_held = (*head->so_proto->pr_getlock)(head, 0);
 
 	error = sctp_can_peel_off(head, uap->assoc_id);
 	if (error) {
-		splx(s);
 		return (error);
 	}
 
@@ -387,27 +387,22 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 		goto out;
 	}
 
-	*fdflags(p, fd) &= ~UF_RESERVED;
-	uap->new_sd = fd; /* return the new descriptor to the caller */
+	*fdflags(p, newfd) &= ~UF_RESERVED;
+	uap->new_sd = newfd; /* return the new descriptor to the caller */
+	socket_lock(head, 0);
+	so = sctp_get_peeloff(head, uap->assoc_id, &error);
 	fp->f_type = DTYPE_SOCKET;
 	fp->f_flag = fflag;
 	fp->f_ops = &socketops;
 	fp->f_data = (caddr_t)so;
 	fp_drop(p, newfd, fp, 1);
 	proc_fdunlock(p);
-	socket_lock(head, 0);
-	if (dosocklock)
-		socket_lock(so, 1);
 	so->so_state &= ~SS_COMP;
 	so->so_state &= ~SS_NOFDREF;
 	so->so_head = NULL;
-
-	so = sctp_get_peeloff(head, uap->assoc_id, &error);
-
-	socket_unlock(head, 1);
-	if (dosocklock)
-		socket_unlock(so, 1);
-
+	/* sctp_get_peeloff should return the socket locked... 
+	socket_unlock(so, 1);
+	*/
 out:
 	file_drop(fd);
 	return (error);
