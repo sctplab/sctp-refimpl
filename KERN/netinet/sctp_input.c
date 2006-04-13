@@ -3699,17 +3699,18 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			}
 			/* now go back and verify any auth chunk to be sure */
 			if (auth_skipped) {
+				struct sctp_auth_chunk *auth;
 #ifdef SCTP_DEBUG
 				if (sctp_debug_on & SCTP_DEBUG_AUTH1)
 					printf("ASCONF: verifying AUTH\n");
 #endif /* SCTP_DEBUG */
-				ch = (struct sctp_chunkhdr *)
+				auth = (struct sctp_auth_chunk *)
 					sctp_m_getptr(m, auth_offset,
 						      auth_len, chunk_buf);
 				got_auth = 1;
 				auth_skipped = 0;
-				if (sctp_handle_auth(stcb, (struct sctp_auth_chunk *)ch,
-						     m, auth_offset)) {
+				if (sctp_handle_auth(stcb, auth, m,
+						     auth_offset)) {
 					/* auth HMAC failed so dump it */
 					*offset = length;
 					return (NULL);
@@ -3819,7 +3820,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_INPUT3) {
 				printf("sctp_process_control: chunk length invalid! *offset:%u, chk_length:%u > length:%u\n",
-				       *offset, length, chk_length);
+				       *offset, chk_length, length);
 			}
 #endif /* SCTP_DEBUG */
 			*offset = length;
@@ -3878,8 +3879,14 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 		}
 		num_chunks++;
 		/* Save off the last place we got a control from */
-		if ((*netp) && stcb) {
+		if (stcb != NULL) {
+		    if ((*netp != NULL) || (ch->chunk_type == SCTP_ASCONF)) {
+			/*
+			 * allow last_control to be NULL if ASCONF...
+			 * ASCONF processing will find the right net later
+			 */
 			stcb->asoc.last_control_chunk_from = *netp;
+		    }
 		}
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_audit_log(0xB0, ch->chunk_type);
