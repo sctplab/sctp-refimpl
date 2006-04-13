@@ -3979,7 +3979,7 @@ sctp_sorecvmsg(struct socket *so,
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 			| MSG_NBIO
 #endif
-		     )) ||
+		    )) ||
 	   (so->so_state & SS_NBIO)) {
 		block_allowed = 0;
 	}
@@ -4000,24 +4000,24 @@ sctp_sorecvmsg(struct socket *so,
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 	if (so->so_error || so->so_rcv.sb_state & SBS_CANTRCVMORE)
 #else
-	if (so->so_error || so->so_state & SS_CANTRCVMORE) 
+		if (so->so_error || so->so_state & SS_CANTRCVMORE) 
 #endif
-	{
-		/* Check the data in-queue situation */
-		control = TAILQ_FIRST(&inp->read_queue);
-		if(control == NULL) {
-			/* nothing */
-			goto out;
+		{
+			/* Check the data in-queue situation */
+			control = TAILQ_FIRST(&inp->read_queue);
+			if(control == NULL) {
+				/* nothing */
+				goto out;
+			}
+			if ((control->length == 0) || so->so_rcv.sb_cc == 0) {
+				/* we are blocked on pd-api but
+				 * its not all here?
+				 */
+				goto out;
+			}
+			/* read it */
+			goto found_one;
 		}
-		if ((control->length == 0) || so->so_rcv.sb_cc == 0) {
-			/* we are blocked on pd-api but
-			 * its not all here?
-			 */
-			goto out;
-		}
-		/* read it */
-		goto found_one;
-	}
 	if((so->so_rcv.sb_cc == 0) && block_allowed) {
 		/* we need to wait for data */
 		error = sbwait(&so->so_rcv);
@@ -4038,7 +4038,7 @@ sctp_sorecvmsg(struct socket *so,
 	}
 	if((control->length == 0) && 
 	   (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE)) &&
-	    (filling_sinfo)) {
+	   (filling_sinfo)) {
 		/* find a more suitable one then this */
 		ctl = TAILQ_NEXT(control, next);
 		while(ctl) {
@@ -4141,7 +4141,7 @@ sctp_sorecvmsg(struct socket *so,
 		/* copy out each mbuf in the chain up to length */
 	get_more_data:
 		m = control->data;
-		while(m) {
+		while (m) {
 			/* Move out all we can */
 			cp_len = (int)uio->uio_resid;
 			if (cp_len > m->m_len)
@@ -4189,8 +4189,15 @@ sctp_sorecvmsg(struct socket *so,
 						   stcb, SCTP_LOG_SBRESULT, 0);
 #endif
 					if(control->length < (uint32_t)cp_len) {
+#ifdef INVARIENTS
 						panic("Impossible length");
+#else
+						cp_len = control->length;
+#endif
 					}
+
+					
+
 					freed_so_far += cp_len;
 					control->length -= cp_len;
 					control->data = m_free(m);
@@ -4229,7 +4236,11 @@ sctp_sorecvmsg(struct socket *so,
 						   SCTP_LOG_SBRESULT, 0);
 #endif
 					if(control->length < (uint32_t)cp_len) {
+#ifdef INVARIENTS
 						panic("Impossible length");
+#else
+						cp_len = control->length;
+#endif
 					}
 					control->length -= cp_len;
 				}
@@ -4246,19 +4257,34 @@ sctp_sorecvmsg(struct socket *so,
 		if((out_flags & MSG_EOR) &&
 		   ((in_flags & MSG_PEEK) == 0)) {
 			/* we are done with this control */
-			if(control->data) {
-				panic("control->data not null at read eor?");
+			if(control->length == 0) {
+				if(control->data) {
+#ifdef INVARIENTS
+					panic("control->data not null at read eor?");
+#else
+					printf("Strange, data left in the control buffer .. invarients would panic?\n");
+					m_freem(control->data);
+					control->data = NULL;
+#endif
+				}
+
+			done_with_control:
+				TAILQ_REMOVE(&inp->read_queue, control, next);
+				/* Add back any hiddend data */
+				if (control->held_length) {
+					so->so_rcv.sb_cc += control->held_length;
+					wakeup_read_socket = 1;
+				}
+				sctp_free_remote_addr(control->whoFrom);
+				SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, control);
+				SCTP_DECR_READQ_COUNT();
+			} else {
+				/* The user did not read all of this message, turn
+				 * off the MSG_EOR since we are leaving more behind
+				 * on the control to read.
+				 */
+ 				out_flags &= ~MSG_EOR;
 			}
-		done_with_control:
-			TAILQ_REMOVE(&inp->read_queue, control, next);
-			/* Add back any hiddend data */
-			if (control->held_length) {
-				so->so_rcv.sb_cc += control->held_length;
-				wakeup_read_socket = 1;
-			}
-			sctp_free_remote_addr(control->whoFrom);
-			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, control);
-			SCTP_DECR_READQ_COUNT();
 		}
 		if(out_flags & MSG_EOR){
 			if((stcb) && (in_flags & MSG_PEEK) == 0){
@@ -4401,7 +4427,7 @@ sctp_sorecvmsg(struct socket *so,
 				}
 				goto release;
 			}
-	wait_some_more2:
+		wait_some_more2:
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 			if (so->so_error || so->so_rcv.sb_state & SBS_CANTRCVMORE)
 				goto release;
