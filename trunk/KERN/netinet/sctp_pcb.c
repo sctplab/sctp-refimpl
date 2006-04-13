@@ -3565,9 +3565,8 @@ sctp_del_remote_addr(struct sctp_tcb *stcb, struct sockaddr *remaddr)
 				    TAILQ_FIRST(&asoc->nets);
 			}
 			if (net == asoc->last_control_chunk_from) {
-				/* Reset primary */
-				asoc->last_control_chunk_from =
-				    TAILQ_FIRST(&asoc->nets);
+				/* Clear net */
+				asoc->last_control_chunk_from = NULL;
 			}
 			if (net == asoc->asconf_last_sent_to) {
 				/* Reset primary */
