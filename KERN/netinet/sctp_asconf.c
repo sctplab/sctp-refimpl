@@ -816,7 +816,7 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 	ack_cp->ch.chunk_length = htons(ack_cp->ch.chunk_length);
 	/* save the ASCONF-ACK reply */
 	asoc->last_asconf_ack_sent = m_ack;
-
+#ifdef PETER_FIX_ME
 	/* see if last_control_chunk_from is set properly (use IP src addr) */
 	if (stcb->asoc.last_control_chunk_from == NULL) {
 	    /* this could happen if the source address was just newly added */
@@ -882,7 +882,7 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 	    }
 #endif /* SCTP_DEBUG */
 	}
-
+#endif /* Peter fix me */
 	/* and send it (a new one) out... */
 	sctp_send_asconf_ack(stcb, 0);
 }
