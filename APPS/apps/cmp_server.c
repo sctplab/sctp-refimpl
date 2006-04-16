@@ -334,9 +334,22 @@ main(int argc, char **argv)
 		}
 		cnt_written++;
 		sprintf(buffer,"%6.6d",numblk);
-		ret = sendto(newfd,buffer,blksize,0,
-			     (struct sockaddr *)&from,
-			     sizeof(from));
+		if (protocol_touse == IPPROTO_SCTP){
+			ret = sctp_sendmsg(newfd, 
+					   buffer, 
+					   blksize,
+					   (struct sockaddr *)&from,
+					   sizeof(from),
+					   0,
+					   0,
+					   0,
+					   0,
+					   0);
+		} else {
+			ret = sendto(newfd,buffer,blksize,0,
+				     (struct sockaddr *)&from,
+				     sizeof(from));
+		}
 		if(ret < 0){
 			printf("Gak, error %d on send\n",
 			       errno);

@@ -326,6 +326,7 @@ main(int argc, char **argv)
 		int blksize;
 		int snd_window;
 		int rcv_window;
+		u_int8_t tos_value;
 	}buf;
 	struct sockaddr_in bindto,got,to;
 
@@ -336,6 +337,7 @@ main(int argc, char **argv)
 	buf.blksize = htonl(1000);
 	buf.snd_window = 0;
 	buf.rcv_window = 0;
+	buf.tos_value = 0;
 	while((i= getopt(argc,argv,"tsp:h:S:B:b:N:z:")) != EOF){
 		switch(i){
 		case 'z':
