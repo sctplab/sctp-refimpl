@@ -549,10 +549,11 @@ measure_one(struct control_info *req,
 	if (ret <= 0)
 	    goto exit_now;
 #else
-	if(protocol_touse == IPPROTO_SCTP)
-		ret = sctp_recvmsg (fd, buffer, sizeof(buffer), 	
+	if(protocol_touse == IPPROTO_SCTP) {
+ 		ret = sctp_recvmsg (fd, buffer, sizeof(buffer), 	
 				    (struct sockaddr *)&from,
 				    &flen, &sinfo, &msg.msg_flags);
+	}
 	else
 		ret = recvmsg(fd,&msg,0);
 	if(ret <= 0){
