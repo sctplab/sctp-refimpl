@@ -3485,6 +3485,7 @@ sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
 	 */
 	struct socket *old_so, *new_so;
 	struct sctp_queued_to_read *control, *nctl;
+	struct mbuf *m;
 	
 	old_so = old_inp->sctp_socket;
 	new_so = new_inp->sctp_socket;
@@ -3499,6 +3500,12 @@ sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
 			/* remove it we want it */
 			TAILQ_REMOVE(&old_inp->read_queue, control, next);
 			TAILQ_INSERT_TAIL(&new_inp->read_queue, control, next);
+			m = control->data;
+			while(m) {
+				sctp_sbfree(stcb, &old_so->so_rcv, m);
+				sctp_sballoc(stcb, &new_so->so_rcv, m);
+				m = m->m_next;
+			}
 		}
 		control = nctl;
 	}

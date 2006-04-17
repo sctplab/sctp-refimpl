@@ -154,7 +154,7 @@ sctp_do_peeloff(struct socket *head, struct socket *so, sctp_assoc_t assoc_id)
 	 */
 	sctp_move_pcb_and_assoc(inp, n_inp, stcb);
 
-	sctp_pull_off_control_to_new_inp(n_inp, inp, stcb);
+	sctp_pull_off_control_to_new_inp(inp, n_inp, stcb);
 
 	SCTP_TCB_UNLOCK(stcb);
 	return (0);
@@ -258,7 +258,7 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 	 * And now the final hack. We move data in the pending side
 	 * i.e. head to the new socket buffer. Let the GRUBBING begin :-0
 	 */
-	sctp_pull_off_control_to_new_inp(n_inp, inp, stcb);
+	sctp_pull_off_control_to_new_inp(inp, n_inp, stcb);
 
 	SCTP_TCB_UNLOCK(stcb);
 	return (newso);
