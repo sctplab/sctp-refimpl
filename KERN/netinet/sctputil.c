@@ -1186,12 +1186,20 @@ sctp_timeout_handler(void *t)
 		sctp_pegs[SCTP_BOGUS_TIMER]++;
 		/*printf("Stale SCTP timer fired (%p), ignoring...\n", tmr);*/
 		splx(s);
+#if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
+		/* release BSD kernel funnel/mutex */
+		(void)thread_funnel_set(network_flock, FALSE);
+#endif
 		return;
 	}
 	if (!SCTP_IS_TIMER_TYPE_VALID(tmr->type)) {
 		sctp_pegs[SCTP_BOGUS_TIMER]++;
 /*		printf("SCTP timer fired with invalid type: 0x%x\n", tmr->type);*/
 		splx(s);
+#if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
+		/* release BSD kernel funnel/mutex */
+		(void)thread_funnel_set(network_flock, FALSE);
+#endif
 		return;
 	}
 
@@ -1201,7 +1209,7 @@ sctp_timeout_handler(void *t)
 		splx(s);
 #if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
 		/* release BSD kernel funnel/mutex */
-		(void) thread_funnel_set(network_flock, FALSE);
+		(void)thread_funnel_set(network_flock, FALSE);
 #endif
 		return;
 	}
@@ -1211,7 +1219,7 @@ sctp_timeout_handler(void *t)
 		splx(s);
 #if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
 		/* release BSD kernel funnel/mutex */
-		(void) thread_funnel_set(network_flock, FALSE);
+		(void)thread_funnel_set(network_flock, FALSE);
 #endif
 		SCTP_INP_WUNLOCK(inp);
 		return;
@@ -1226,7 +1234,7 @@ sctp_timeout_handler(void *t)
 			splx(s);
 #if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
 			/* release BSD kernel funnel/mutex */
-			(void) thread_funnel_set(network_flock, FALSE);
+			(void)thread_funnel_set(network_flock, FALSE);
 #endif
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			if (!(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
@@ -1247,7 +1255,7 @@ sctp_timeout_handler(void *t)
 		splx(s);
 #if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
 		/* release BSD kernel funnel/mutex */
-		(void) thread_funnel_set(network_flock, FALSE);
+		(void)thread_funnel_set(network_flock, FALSE);
 #endif
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		socket_unlock(inp->sctp_socket, 1);
@@ -1501,7 +1509,7 @@ sctp_timeout_handler(void *t)
 	splx(s);
 #if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
 	/* release BSD kernel funnel/mutex */
-	(void) thread_funnel_set(network_flock, FALSE);
+	(void)thread_funnel_set(network_flock, FALSE);
 #endif
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	socket_unlock(inp->sctp_socket, 1);
