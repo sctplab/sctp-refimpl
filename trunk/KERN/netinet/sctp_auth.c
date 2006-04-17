@@ -1422,7 +1422,7 @@ sctp_auth_setactivekey (struct sctp_tcb *stcb, uint16_t keyid)
     stcb->asoc.authinfo.assoc_keyid = keyid;
 #ifdef SCTP_DEBUG
     if (SCTP_AUTH_DEBUG)
-	sctp_print_key(stcb->asoc.authinfo.assoc_key, "TEMP Assoc Key");
+	sctp_print_key(stcb->asoc.authinfo.assoc_key, "Assoc Key");
 #endif
 
     if (using_ep_key)
@@ -1588,9 +1588,9 @@ sctp_fill_hmac_digest_m (struct mbuf *m, uint32_t auth_offset,
 				 stcb->asoc.authinfo.peer_random, key);
 #ifdef SCTP_DEBUG
 	if (SCTP_AUTH_DEBUG) {
-		printf("TEMP caching key id %u\n",
+		printf("caching key id %u\n",
 		       stcb->asoc.authinfo.assoc_keyid);
-		sctp_print_key(stcb->asoc.authinfo.assoc_key, "TEMP Assoc Key");
+		sctp_print_key(stcb->asoc.authinfo.assoc_key, "Assoc Key");
 	}
 #endif
     }
@@ -1730,7 +1730,7 @@ sctp_handle_auth (struct sctp_tcb *stcb, struct sctp_auth_chunk *auth,
 	stcb->asoc.authinfo.recv_keyid = shared_key_id;
 #ifdef SCTP_DEBUG
 	if (SCTP_AUTH_DEBUG)
-	    sctp_print_key(stcb->asoc.authinfo.recv_key, "TEMP Recv Key");
+	    sctp_print_key(stcb->asoc.authinfo.recv_key, "Recv Key");
 #endif
     }
 
