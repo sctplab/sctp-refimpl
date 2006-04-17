@@ -857,8 +857,8 @@
 #define SCTP_SND_WAIT_OLOCK      130
 #define SCTP_WAKEUP_CALLED       131
 #define SCTP_BOGUS_TIMER         132
-#define SCTP_RESV1               133
-#define SCTP_RESV2               134
+#define SCTP_IN_BLOCK            133
+#define SCTP_LOOP_IN_WHILE       134
 #define SCTP_RESV3               135
 
 

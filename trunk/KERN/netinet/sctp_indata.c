@@ -1999,7 +1999,12 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 	if (compare_with_wrap(asoc->cumulative_tsn,
 			      asoc->highest_tsn_inside_map,
 			      MAX_TSN)) {
+#ifdef INVARIENTS
 		panic("huh, cumack greater than high-tsn in map");
+#else
+		printf("huh, cumack greater than high-tsn in map - should panic?\n");
+		asoc->highest_tsn_inside_map = asoc->cumulative_tsn;
+#endif
 	}
 	if (all_ones ||
 	    (asoc->cumulative_tsn == asoc->highest_tsn_inside_map && at >= 8)) {

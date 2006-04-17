@@ -1171,7 +1171,12 @@ int  sctp_cookie_timer(struct sctp_inpcb *inp,
 			sctp_abort_an_association(inp, stcb, SCTP_INTERNAL_ERROR,
 			    oper);
 		} else {
+#ifdef INVARIENTS
 			panic("Cookie timer expires in wrong state?");
+#else
+			printf("Strange in state %d not cookie-echoed yet c-e timer expires?\n", SCTP_GET_STATE(&stcb->asoc));
+			return(0);
+#endif			
 		}
 		return (0);
 	}

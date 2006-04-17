@@ -12179,6 +12179,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 	    so->so_snd.sb_mbmax)
 	) {
 		/* prune any prsctp bufs out */
+		sctp_pegs[SCTP_IN_BLOCK]++;
 		if ((asoc->peer_supports_prsctp) && (asoc->sent_queue_cnt_removeable > 0)) {
 			/* This is ugly but we must assure locking order */
 			SOCKBUF_UNLOCK(&so->so_snd);
@@ -12240,6 +12241,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 				}
 				goto out_locked;
 			}
+			sctp_pegs[SCTP_LOOP_IN_WHILE]++;
 #ifdef SCTP_BLK_LOGGING
 			sctp_log_block(SCTP_BLOCK_LOG_OUTOF_BLK,
 			    so, asoc, sndlen);
@@ -12275,7 +12277,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 				goto release;
 			}
 /*     **** We need locking here if we really want to do this */
-/*			if (asoc->peer_supports_prsctp) {*/
+/*			if ((asoc->peer_supports_prsctp)&& (asoc->sent_queue_cnt_removeable > 0)) {*/
 /*				sctp_prune_prsctp(stcb, asoc, srcv, sndlen);*/
 /*			}*/
 		}
