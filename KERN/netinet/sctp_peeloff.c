@@ -244,8 +244,19 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 #else
 	newso = head->so_q;
 #endif
-	if (soqremque(newso, 1) == 0)
+        if (soqremque(newso, 1) == 0) {
+#ifdef INVARIENTS
 		panic("sctp_peeloff");
+#else
+		printf("soremque failed, peeloff-fails (invarients would panic)\n");
+		SCTP_INP_WUNLOCK(inp);
+		SCTP_INP_WUNLOCK(n_inp);
+		SCTP_TCB_UNLOCK(stcb);
+		*error = ENOTCONN;
+		return (NULL);
+		
+#endif
+	}
 #endif /* __FreeBSD__ */
 	/*
 	 * Now we must move it from one hash table to another and get

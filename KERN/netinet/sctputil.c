@@ -1190,7 +1190,7 @@ sctp_timeout_handler(void *t)
 	}
 	if (!SCTP_IS_TIMER_TYPE_VALID(tmr->type)) {
 		sctp_pegs[SCTP_BOGUS_TIMER]++;
-		printf("SCTP timer fired with invalid type: 0x%x\n", tmr->type);
+/*		printf("SCTP timer fired with invalid type: 0x%x\n", tmr->type);*/
 		splx(s);
 		return;
 	}
