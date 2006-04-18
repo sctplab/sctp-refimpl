@@ -3326,13 +3326,27 @@ sctp_optsset(struct socket *so,
 	break;
 	case SCTP_CMT_ON_OFF:
 	{
-		if ((size_t)m->m_len < sizeof(unsigned int)) {
+		struct sctp_assoc_value *av;
+		if ((size_t)m->m_len < sizeof(struct sctp_assoc_value)) {
 			error = EINVAL;
 			break;
 		}
-		sctp_cmt_sockopt_on_off = *mtod(m, unsigned int *);
-		if (sctp_cmt_sockopt_on_off != 0) 
-			sctp_cmt_sockopt_on_off = 1;
+		av = mtod(m, struct sctp_assoc_value *);
+		stcb = sctp_findassociation_ep_asocid(inp, av->assoc_id);
+		if (stcb == NULL) {
+			error = ENOTCONN;
+		} else {
+			if(sctp_cmt_on_off) {
+				stcb->asoc.sctp_cmt_on_off = (u_int8_t)av->assoc_value;
+			} else {
+				if ((stcb->asoc.sctp_cmt_on_off) && (av->assoc_value == 0)) {
+					stcb->asoc.sctp_cmt_on_off = 0;
+				} else {
+					error = EACCES;
+				}
+			}
+			SCTP_TCB_UNLOCK(stcb);
+		}
 	}
 	break;
 	case SCTP_CMT_USE_DAC:
