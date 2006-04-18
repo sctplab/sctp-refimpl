@@ -946,7 +946,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	asoc->max_burst = m->sctp_ep.max_burst;
 	asoc->heart_beat_delay = TICKS_TO_MSEC(m->sctp_ep.sctp_timeoutticks[SCTP_TIMER_HEARTBEAT]);
 	asoc->cookie_life = m->sctp_ep.def_cookie_life;
-
+	asoc->sctp_cmt_on_off = (u_int8_t)sctp_cmt_on_off;
 #ifdef AF_INET
 #if defined(__FreeBSD__) || defined(__APPLE__)
 	asoc->default_tos = m->ip_inp.inp.inp_ip_tos;
