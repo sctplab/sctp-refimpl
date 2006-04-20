@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.18 2006-03-25 07:23:34 lei Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.19 2006-04-20 16:13:08 lei Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -814,6 +814,13 @@ create_SCTP_adaptor(distributor *o,uint16_t port, int model, int rwnd , int swnd
   if(model & SCTP_UDP_TYPE){
     printf("Calling listen for one-to-many model\n");
     listen(r->fd,1);
+#ifdef __APPLE__
+    {
+   	int opt = 0;
+	/* fix Apple listen() issue */
+	setsockopt(r->fd, IPPROTO_SCTP, SCTP_LISTEN_FIX, &opt, sizeof(opt));
+    }
+#endif
   }
   dist_addFd(o,r->fd,sctpFdInput,POLLIN,(void *)r);
   object_in = r;

@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.41 2006-04-17 20:55:48 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.42 2006-04-20 16:13:08 lei Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -4246,6 +4246,13 @@ cmd_listen(char *argv[], int argc)
       printf("Listen with backlog=%d fail's error %d\n",
 	     backlog,errno);
     }
+#ifdef __APPLE__
+    {
+   	int opt = 0;
+	/* fix Apple listen() issue */
+	setsockopt(adap->fd, IPPROTO_SCTP, SCTP_LISTEN_FIX, &opt, sizeof(opt));
+    }
+#endif
     if(adap->model & SCTP_TCP_TYPE){
       if(backlog){
 	printf("Turning on the listening flag\n");
