@@ -30,6 +30,10 @@
 		5079593F0893C59400D7E924 /* kernel.h in Headers */ = {isa = PBXBuildFile; fileRef = 5079593B0893C59400D7E924 /* kernel.h */; };
 		507959400893C59400D7E924 /* protosw.h in Headers */ = {isa = PBXBuildFile; fileRef = 5079593C0893C59400D7E924 /* protosw.h */; };
 		507959410893C59400D7E924 /* uio_internal.h in Headers */ = {isa = PBXBuildFile; fileRef = 5079593D0893C59400D7E924 /* uio_internal.h */; };
+		5088BC1809DD83FB00FA2E68 /* kern_types.h in Headers */ = {isa = PBXBuildFile; fileRef = 5088BC1409DD83FB00FA2E68 /* kern_types.h */; };
+		5088BC1909DD83FB00FA2E68 /* locks.h in Headers */ = {isa = PBXBuildFile; fileRef = 5088BC1509DD83FB00FA2E68 /* locks.h */; };
+		5088BC1A09DD83FB00FA2E68 /* simple_lock.h in Headers */ = {isa = PBXBuildFile; fileRef = 5088BC1609DD83FB00FA2E68 /* simple_lock.h */; };
+		5088BC1B09DD83FB00FA2E68 /* wait_queue.h in Headers */ = {isa = PBXBuildFile; fileRef = 5088BC1709DD83FB00FA2E68 /* wait_queue.h */; };
 		5088D5D80850BBA2005ABAF2 /* nd6.h in Headers */ = {isa = PBXBuildFile; fileRef = 5088D5D70850BBA2005ABAF2 /* nd6.h */; };
 		5097D9BB09D1D436001F0DDD /* sctp_auth.c in Sources */ = {isa = PBXBuildFile; fileRef = 5097D9B909D1D436001F0DDD /* sctp_auth.c */; };
 		5097D9BC09D1D436001F0DDD /* sctp_auth.h in Headers */ = {isa = PBXBuildFile; fileRef = 5097D9BA09D1D436001F0DDD /* sctp_auth.h */; };
@@ -141,6 +145,10 @@
 		5079593B0893C59400D7E924 /* kernel.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = kernel.h; sourceTree = "<group>"; };
 		5079593C0893C59400D7E924 /* protosw.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = protosw.h; sourceTree = "<group>"; };
 		5079593D0893C59400D7E924 /* uio_internal.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = uio_internal.h; sourceTree = "<group>"; };
+		5088BC1409DD83FB00FA2E68 /* kern_types.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = kern_types.h; path = kern/kern_types.h; sourceTree = SOURCE_ROOT; };
+		5088BC1509DD83FB00FA2E68 /* locks.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = locks.h; path = kern/locks.h; sourceTree = SOURCE_ROOT; };
+		5088BC1609DD83FB00FA2E68 /* simple_lock.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = simple_lock.h; path = kern/simple_lock.h; sourceTree = SOURCE_ROOT; };
+		5088BC1709DD83FB00FA2E68 /* wait_queue.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = wait_queue.h; path = kern/wait_queue.h; sourceTree = SOURCE_ROOT; };
 		5088D5D70850BBA2005ABAF2 /* nd6.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = nd6.h; sourceTree = "<group>"; };
 		5097D9B909D1D436001F0DDD /* sctp_auth.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sctp_auth.c; sourceTree = "<group>"; };
 		5097D9BA09D1D436001F0DDD /* sctp_auth.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sctp_auth.h; sourceTree = "<group>"; };
@@ -311,6 +319,10 @@
 				50D42F0706D8C0DF004DAC5C /* sctp_uio.h */,
 				50D42F0806D8C0DF004DAC5C /* sctp_usrreq.c */,
 				50D42F0906D8C0DF004DAC5C /* sctp_var.h */,
+				5088BC1409DD83FB00FA2E68 /* kern_types.h */,
+				5088BC1509DD83FB00FA2E68 /* locks.h */,
+				5088BC1609DD83FB00FA2E68 /* simple_lock.h */,
+				5088BC1709DD83FB00FA2E68 /* wait_queue.h */,
 				50D42F0A06D8C0DF004DAC5C /* sctputil.c */,
 				50D42F0B06D8C0DF004DAC5C /* sctputil.h */,
 			);
@@ -386,6 +398,10 @@
 				507959410893C59400D7E924 /* uio_internal.h in Headers */,
 				503E5D4608A1778B00714243 /* proc_internal.h in Headers */,
 				5097D9BC09D1D436001F0DDD /* sctp_auth.h in Headers */,
+				5088BC1809DD83FB00FA2E68 /* kern_types.h in Headers */,
+				5088BC1909DD83FB00FA2E68 /* locks.h in Headers */,
+				5088BC1A09DD83FB00FA2E68 /* simple_lock.h in Headers */,
+				5088BC1B09DD83FB00FA2E68 /* wait_queue.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -587,6 +603,7 @@
 				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = (
+					HAVE_SCTP_PEELOFF_SOCKOPT,
 					INET6,
 					PRIVATE,
 					BSD_BUILD,
@@ -656,8 +673,7 @@
 				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = (
-					APPLE_NKE,
-					SCTP_DEBUG,
+					HAVE_SCTP_PEELOFF_SOCKOPT,
 					SCTP,
 					INET6,
 					PRIVATE,
@@ -670,7 +686,7 @@
 				HEADER_SEARCH_PATHS = "$(SRCROOT)";
 				INSTALL_PATH = /usr/lib;
 				LIBRARY_STYLE = DYNAMIC;
-				MACH_O_TYPE = staticlib;
+				MACH_O_TYPE = mh_dylib;
 				OPTIMIZATION_CFLAGS = "-O0";
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "";
@@ -742,11 +758,13 @@
 					i386,
 				);
 				GCC_PREPROCESSOR_DEFINITIONS = (
+					HAVE_SCTP_PEELOFF_SOCKOPT,
 					HAVE_SCTP_SORECEIVE,
 					SCTP_APPLE_FINE_GRAINED_LOCKING,
 					HAVE_SCTP_AUTH,
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.4;
+				SDKROOT = /Developer/SDKs/MacOSX10.4u.sdk;
 			};
 			name = Development;
 		};
