@@ -740,7 +740,7 @@ sctp_peeloff(int sd, sctp_assoc_t assoc_id)
 {
 	struct sctp_peeloff_opt peeloff;
 	int error;
-	int optlen;
+	socklen_t optlen;
 
 	/* set in the socket option params */
 	memset(&peeloff, 0, sizeof(peeloff));
