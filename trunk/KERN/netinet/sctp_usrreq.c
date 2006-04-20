@@ -4492,6 +4492,18 @@ sctp_optsset(struct socket *so,
 		}
 	}
 	break;
+#ifdef __APPLE__
+	case SCTP_LISTEN_FIX:
+		/* only applies to one-to-many sockets */
+		if (inp->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE) {	
+			/* make sure the ACCEPTCONN flag is OFF */
+			so->so_options &= ~SO_ACCEPTCONN;
+		} else {
+			/* otherwise, not allowed */
+			error = EINVAL;
+		}
+	break;
+#endif /* __APPLE__ */
 	default:
 		error = ENOPROTOOPT;
 		break;
