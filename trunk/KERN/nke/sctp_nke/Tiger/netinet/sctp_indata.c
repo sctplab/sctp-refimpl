@@ -35,6 +35,7 @@
 #if defined(__FreeBSD__)
 #include "opt_inet6.h"
 #include "opt_inet.h"
+#include "opt_global.h"
 #endif
 #if defined(__NetBSD__)
 #include "opt_inet.h"
@@ -1998,7 +1999,12 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 	if (compare_with_wrap(asoc->cumulative_tsn,
 			      asoc->highest_tsn_inside_map,
 			      MAX_TSN)) {
+#ifdef INVARIENTS
 		panic("huh, cumack greater than high-tsn in map");
+#else
+		printf("huh, cumack greater than high-tsn in map - should panic?\n");
+		asoc->highest_tsn_inside_map = asoc->cumulative_tsn;
+#endif
 	}
 	if (all_ones ||
 	    (asoc->cumulative_tsn == asoc->highest_tsn_inside_map && at >= 8)) {
@@ -3247,7 +3253,7 @@ sctp_try_advance_peer_ack_point(struct sctp_tcb *stcb,
 			 * the chunk will be droped in the normal fashion.
 			 */
 			if (tp1->data) {
-				sctp_free_bufspace(stcb, asoc, tp1);
+				sctp_free_bufspace(stcb, asoc, tp1, 1);
 #ifdef SCTP_DEBUG
 				if (sctp_debug_on & SCTP_DEBUG_OUTPUT2) {
 					printf("--total out:%lu total_mbuf_out:%lu\n",
@@ -3264,6 +3270,9 @@ sctp_try_advance_peer_ack_point(struct sctp_tcb *stcb,
 				    tp1);
 				sctp_m_freem(tp1->data);
 				tp1->data = NULL;
+#ifdef SCTP_WAKE_LOGGING
+				sctp_wakeup_log(stcb, tp1->rec.data.TSN_seq, 1, SCTP_WAKESND_FROM_FWDTSN);
+#endif
 				sctp_sowwakeup(stcb->sctp_ep,
 				    stcb->sctp_socket);
 			}
@@ -3885,7 +3894,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 			       asoc->total_flight);
 		}
 		if (tp1->data) {
-			sctp_free_bufspace(stcb, asoc, tp1);
+			sctp_free_bufspace(stcb, asoc, tp1, 1);
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_OUTPUT2) {
 				printf("--total out:%lu total_mbuf_out:%lu\n",
@@ -3912,7 +3921,6 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 		asoc->sent_queue_cnt--;
 		sctp_free_remote_addr(tp1->whoTo);
 
-		asoc->chunks_on_out_queue--;
 		SCTP_DECR_CHK_COUNT();
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, tp1);
 		wake_him = 1;
@@ -3921,6 +3929,9 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 
 	if(wake_him) {
 		sctp_sowwakeup(stcb->sctp_ep, stcb->sctp_socket);
+#ifdef SCTP_WAKE_LOGGING
+		sctp_wakeup_log(stcb, cum_ack, wake_him, SCTP_WAKESND_FROM_SACK);
+#endif
 	}
 
 	if ((sctp_cmt_on_off == 0) && asoc->fast_retran_loss_recovery && accum_moved) {

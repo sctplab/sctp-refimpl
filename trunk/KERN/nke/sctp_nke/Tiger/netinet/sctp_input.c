@@ -36,6 +36,7 @@
 #include "opt_compat.h"
 #include "opt_inet6.h"
 #include "opt_inet.h"
+#include "opt_global.h"
 #endif
 #if defined(__NetBSD__)
 #include "opt_inet.h"
@@ -162,6 +163,7 @@ sctp_handle_init(struct mbuf *m, int iphlen, int offset,
 			printf("sctp_handle_init: Abort, so_qlimit:%d\n", inp->sctp_socket->so_qlimit);
 		}
 #endif
+		/* FIX ME ?? What about TCP model and we have a match/restart case? */
 		sctp_abort_association(inp, stcb, m, iphlen, sh, op_err);
 		return;
 	}
@@ -405,6 +407,16 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 	/* extract the cookie and queue it to "echo" it back... */
 	stcb->asoc.overall_error_count = 0;
 	net->error_count = 0;
+
+	/*
+	 * Cancel the INIT timer, We do this first before queueing
+	 * the cookie. We always cancel at the primary to assue that
+	 * we are canceling the timer started by the INIT which always
+	 * goes to the primary.
+	 */
+	sctp_timer_stop(SCTP_TIMER_TYPE_INIT, stcb->sctp_ep, stcb,
+			asoc->primary_destination);
+
 	retval = sctp_send_cookie_echo(m, offset, stcb, net);
 	if (retval < 0) {
 		/*
@@ -439,16 +451,6 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 		}
 		return (retval);
 	}
-
-	/*
-	 * Cancel the INIT timer, We do this first before queueing
-	 * the cookie. We always cancel at the primary to assue that
-	 * we are canceling the timer started by the INIT which always
-	 * goes to the primary.
-	 */
-	sctp_timer_stop(SCTP_TIMER_TYPE_INIT, stcb->sctp_ep, stcb,
-	    asoc->primary_destination);
-
 	/* calculate the RTO */
 	net->RTO = sctp_calculate_rto(stcb, asoc, net, &asoc->time_entered);
 
@@ -3697,17 +3699,18 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			}
 			/* now go back and verify any auth chunk to be sure */
 			if (auth_skipped) {
+				struct sctp_auth_chunk *auth;
 #ifdef SCTP_DEBUG
 				if (sctp_debug_on & SCTP_DEBUG_AUTH1)
 					printf("ASCONF: verifying AUTH\n");
 #endif /* SCTP_DEBUG */
-				ch = (struct sctp_chunkhdr *)
+				auth = (struct sctp_auth_chunk *)
 					sctp_m_getptr(m, auth_offset,
 						      auth_len, chunk_buf);
 				got_auth = 1;
 				auth_skipped = 0;
-				if (sctp_handle_auth(stcb, (struct sctp_auth_chunk *)ch,
-						     m, auth_offset)) {
+				if (sctp_handle_auth(stcb, auth, m,
+						     auth_offset)) {
 					/* auth HMAC failed so dump it */
 					*offset = length;
 					return (NULL);
@@ -3817,7 +3820,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_INPUT3) {
 				printf("sctp_process_control: chunk length invalid! *offset:%u, chk_length:%u > length:%u\n",
-				       *offset, length, chk_length);
+				       *offset, chk_length, length);
 			}
 #endif /* SCTP_DEBUG */
 			*offset = length;
@@ -3876,8 +3879,14 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 		}
 		num_chunks++;
 		/* Save off the last place we got a control from */
-		if ((*netp) && stcb) {
+		if (stcb != NULL) {
+		    if ((*netp != NULL) || (ch->chunk_type == SCTP_ASCONF)) {
+			/*
+			 * allow last_control to be NULL if ASCONF...
+			 * ASCONF processing will find the right net later
+			 */
 			stcb->asoc.last_control_chunk_from = *netp;
+		    }
 		}
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_audit_log(0xB0, ch->chunk_type);
@@ -4937,7 +4946,7 @@ sctp_input(m, va_alist)
 		mlen = m->m_pkthdr.len;
 	}
 	/* validate mbuf chain length with IP payload length */
-#ifdef __OpenBSD__
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 	/* Open BSD gives us the len in network order, fix it */
 	NTOHS(ip->ip_len);
 #endif

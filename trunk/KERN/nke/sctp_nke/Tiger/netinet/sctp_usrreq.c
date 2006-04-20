@@ -37,6 +37,7 @@
 #if defined(__FreeBSD__)
 #include "opt_inet6.h"
 #include "opt_inet.h"
+#include "opt_global.h"
 #endif
 #if defined(__NetBSD__)
 #include "opt_inet.h"
@@ -903,6 +904,7 @@ sctp_attach(struct socket *so, int proto, struct proc *p)
 	SCTP_INP_WUNLOCK(inp);
 #if defined(__NetBSD__)
 	so->so_send = sctp_sosend;
+	so->so_receive = sctp_soreceive;
 #endif
 	splx(s);
 	return 0;
@@ -3324,13 +3326,27 @@ sctp_optsset(struct socket *so,
 	break;
 	case SCTP_CMT_ON_OFF:
 	{
-		if ((size_t)m->m_len < sizeof(unsigned int)) {
+		struct sctp_assoc_value *av;
+		if ((size_t)m->m_len < sizeof(struct sctp_assoc_value)) {
 			error = EINVAL;
 			break;
 		}
-		sctp_cmt_sockopt_on_off = *mtod(m, unsigned int *);
-		if (sctp_cmt_sockopt_on_off != 0) 
-			sctp_cmt_sockopt_on_off = 1;
+		av = mtod(m, struct sctp_assoc_value *);
+		stcb = sctp_findassociation_ep_asocid(inp, av->assoc_id);
+		if (stcb == NULL) {
+			error = ENOTCONN;
+		} else {
+			if(sctp_cmt_on_off) {
+				stcb->asoc.sctp_cmt_on_off = (u_int8_t)av->assoc_value;
+			} else {
+				if ((stcb->asoc.sctp_cmt_on_off) && (av->assoc_value == 0)) {
+					stcb->asoc.sctp_cmt_on_off = 0;
+				} else {
+					error = EACCES;
+				}
+			}
+			SCTP_TCB_UNLOCK(stcb);
+		}
 	}
 	break;
 	case SCTP_CMT_USE_DAC:
@@ -5747,14 +5763,6 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
 
        sysctl_createv(clog, 0, NULL, NULL,
                        CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
-                       CTLTYPE_INT, "",
-                       SYSCTL_DESCR(),
-                       NULL, 0, &, 0,
-		       CTL_NET, PF_INET, IPPROTO_SCTP, 
-                       CTL_EOL);
-
-       sysctl_createv(clog, 0, NULL, NULL,
-                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
                        CTLTYPE_INT, "valid_cookie_life",
                        SYSCTL_DESCR("Default cookie lifetime in sec"),
                        NULL, 0, &sctp_valid_cookie_life_default, 0,
@@ -5849,7 +5857,7 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
                        CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
                        CTLTYPE_INT, "warm_crc_table",
                        SYSCTL_DESCR("Should the CRC32c tables be warmed before checksum?"),
-                       NULL, 0, &sctp_sctp_warm_the_crc32_table, 0,
+                       NULL, 0, &sctp_warm_the_crc32_table, 0,
                        CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_WARM_CRC32,
                        CTL_EOL);
 
