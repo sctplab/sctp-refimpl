@@ -2255,7 +2255,8 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 			}
 			/* try two half's added together */
 		last_try:
-			port_attempt = (((port_guess >> 16) &  0x0000ffff) + (port_guess & 0x0000ffff));
+			port_attempt = (((port_guess >> 16) &  0x0000ffff) +
+					(port_guess & 0x0000ffff));
 			if (port_attempt == 0) {
 				/* get a new random number */
 				continue;
@@ -2273,7 +2274,8 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 		lport = htons(port_attempt);
 	}
 	SCTP_INP_DECR_REF(inp);
-	if (inp->sctp_flags & (SCTP_PCB_FLAGS_SOCKET_GONE|SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
+	if (inp->sctp_flags & (SCTP_PCB_FLAGS_SOCKET_GONE |
+			       SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
 		/* this really should not happen. The guy
 		 * did a non-blocking bind and then did a close
 		 * at the same time.
@@ -2289,9 +2291,9 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 		sctp_feature_on(inp, SCTP_PCB_FLAGS_DO_ASCONF);
 		/* set the automatic addr changes from kernel flag */
 		if (sctp_auto_asconf == 0) {
-			sctp_feature_off(inp,SCTP_PCB_FLAGS_AUTO_ASCONF);
+			sctp_feature_off(inp, SCTP_PCB_FLAGS_AUTO_ASCONF);
 		} else {
-			sctp_feature_on(inp,SCTP_PCB_FLAGS_AUTO_ASCONF);
+			sctp_feature_on(inp, SCTP_PCB_FLAGS_AUTO_ASCONF);
 		}
 	} else {
 		/*
@@ -2350,18 +2352,14 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 		}
 		/* we're not bound all */
 		inp->sctp_flags &= ~SCTP_PCB_FLAGS_BOUNDALL;
-#if 0 /* use sysctl now */
-		/* don't allow automatic addr changes from kernel */
-		sctp_feature_off(inp,SCTP_PCB_FLAGS_AUTO_ASCONF);
-#endif
 		/* set the automatic addr changes from kernel flag */
 		if (sctp_auto_asconf == 0) {
-			sctp_feature_off(inp,SCTP_PCB_FLAGS_AUTO_ASCONF);
+			sctp_feature_off(inp, SCTP_PCB_FLAGS_AUTO_ASCONF);
 		} else {
-			sctp_feature_on(inp,SCTP_PCB_FLAGS_AUTO_ASCONF);
+			sctp_feature_on(inp, SCTP_PCB_FLAGS_AUTO_ASCONF);
 		}
 		/* allow bindx() to send ASCONF's for binding changes */
-		sctp_feature_on(inp,SCTP_PCB_FLAGS_DO_ASCONF);
+		sctp_feature_on(inp, SCTP_PCB_FLAGS_DO_ASCONF);
 		/* add this address to the endpoint list */
 		error = sctp_insert_laddr(&inp->sctp_addr_list, ifa);
 		if (error != 0) {
@@ -4450,7 +4448,7 @@ sctp_del_local_addr_assoc(struct sctp_tcb *stcb, struct ifaddr *ifa)
 	inp = stcb->sctp_ep;
 	/* if subset bound and don't allow ASCONF's, can't delete last */
 	if (((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) == 0) &&
-	    (sctp_is_feature_off(inp,SCTP_PCB_FLAGS_DO_ASCONF) == 0)) {
+	    (sctp_is_feature_off(inp, SCTP_PCB_FLAGS_DO_ASCONF) == 0)) {
 		if (stcb->asoc.numnets < 2) {
 			/* can't delete last address */
 			return (-1);
@@ -4491,7 +4489,7 @@ sctp_del_local_addr_assoc_sa(struct sctp_tcb *stcb, struct sockaddr *sa)
 	inp = stcb->sctp_ep;
 	/* if subset bound and don't allow ASCONF's, can't delete last */
 	if (((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) == 0) &&
-	    (sctp_is_feature_off(inp,SCTP_PCB_FLAGS_DO_ASCONF) == 0)) {
+	    (sctp_is_feature_off(inp, SCTP_PCB_FLAGS_DO_ASCONF) == 0)) {
 		if (stcb->asoc.numnets < 2) {
 			/* can't delete last address */
 			return (-1);
