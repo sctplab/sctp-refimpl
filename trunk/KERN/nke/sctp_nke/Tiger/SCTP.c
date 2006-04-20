@@ -95,6 +95,7 @@ extern struct sysctl_oid sysctl__net_inet_sctp_early_fast_retran;
 extern struct sysctl_oid sysctl__net_inet_sctp_early_fast_retran_msec;
 extern struct sysctl_oid sysctl__net_inet_sctp_use_rttvar_congctrl;
 extern struct sysctl_oid sysctl__net_inet_sctp_auth_disable;
+extern struct sysctl_oid sysctl__net_inet_sctp_auth_random_len;
 extern struct sysctl_oid sysctl__net_inet_sctp_auth_hmac_id;
 #ifdef SCTP_DEBUG
 extern struct sysctl_oid sysctl__net_inet_sctp_debug;
@@ -359,6 +360,7 @@ kern_return_t SCTP_start (kmod_info_t * ki, void * d) {
 	sysctl_register_oid(&sysctl__net_inet_sctp_early_fast_retran_msec);
 	sysctl_register_oid(&sysctl__net_inet_sctp_use_rttvar_congctrl);
 	sysctl_register_oid(&sysctl__net_inet_sctp_auth_disable);
+	sysctl_register_oid(&sysctl__net_inet_sctp_auth_random_len);
 	sysctl_register_oid(&sysctl__net_inet_sctp_auth_hmac_id);
 #ifdef SCTP_DEBUG
 	sysctl_register_oid(&sysctl__net_inet_sctp_debug);
@@ -391,10 +393,13 @@ kern_return_t SCTP_stop (kmod_info_t * ki, void * d) {
 	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
 #endif
 	if (!LIST_EMPTY(&sctppcbinfo.listhead)) {
+		printf("SCTP NKE: There are still SCTP enpoints. NKE not unloaded\n");
 #ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
 		lck_rw_done(sctppcbinfo.ipi_ep_mtx);
+#else
+		splx(s);
+		(void)thread_funnel_set(network_flock, funnel_state);
 #endif
-		printf("SCTP NKE: There are still SCTP enpoints. NKE not unloaded\n");
 		return KERN_FAILURE;
 	}
 #ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
@@ -436,6 +441,7 @@ kern_return_t SCTP_stop (kmod_info_t * ki, void * d) {
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_early_fast_retran_msec);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_use_rttvar_congctrl);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_auth_disable);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_auth_random_len);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_auth_hmac_id);
 #ifdef SCTP_DEBUG
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_debug);
