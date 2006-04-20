@@ -4678,10 +4678,10 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	socket_lock(so, 1);
 #endif
-	error = sctp_sorecvmsg(so, uio, mp0, from, fromlen, flagsp, &sinfo, filling_sinfo);
+	error = sctp_sorecvmsg(so, uio, mp0, from, fromlen, flagsp, &sinfo,
+			       filling_sinfo);
 	if(controlp) {
 		/* copy back the sinfo in a CMSG format */
-
 		*controlp = sctp_build_ctl_nchunk(inp, &sinfo);
 	}
 	if(psa) {
@@ -4728,4 +4728,3 @@ sctp_pool_put(struct pool* pp, void* ptr)
 	splx(s);
 }
 #endif
-
