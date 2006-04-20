@@ -70,6 +70,9 @@ struct sctp_timer {
 	void *ep;
 	void *tcb;
 	void *net;
+
+	/* for sanity checking */
+	void *self;
 };
 
 /*
@@ -454,8 +457,6 @@ struct sctp_association {
 	struct sctp_nets *primary_destination;
 	/* For CMT */
 	struct sctp_nets *last_net_data_came_from;
-
-
 	/* last place I got a data chunk from */
 	struct sctp_nets *last_data_chunk_from;
 	/* last place I got a control from */
@@ -690,7 +691,7 @@ struct sctp_association {
 	u_int16_t last_strm_seq_delivered;
 	u_int16_t last_strm_no_delivered;
 
-	u_int16_t chunks_on_out_queue; /* total chunks floating around */
+	u_int16_t chunks_on_out_queue; /* total chunks floating around, locked by send socket buffer */
 	u_int16_t last_revoke_count;
 	int16_t num_send_timers_up;
 	/*
@@ -775,6 +776,7 @@ struct sctp_association {
 	u_int8_t assoc_up_sent;
         /* CMT variables */
         u_int8_t cmt_dac_pkts_rcvd;
+	u_int8_t sctp_cmt_on_off;
 	/*
 	 * The mapping array is used to track out of order sequences above
 	 * last_acked_seq. 0 indicates packet missing 1 indicates packet

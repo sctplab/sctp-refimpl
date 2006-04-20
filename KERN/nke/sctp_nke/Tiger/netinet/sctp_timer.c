@@ -35,6 +35,7 @@
 #include "opt_compat.h"
 #include "opt_inet6.h"
 #include "opt_inet.h"
+#include "opt_global.h"
 #endif
 #if defined(__NetBSD__)
 #include "opt_inet.h"
@@ -1105,6 +1106,10 @@ sctp_t1init_timer(struct sctp_inpcb *inp,
 		sctp_send_initiate(inp, stcb);
 		return (0);
 	}
+
+	if (SCTP_GET_STATE((&stcb->asoc)) != SCTP_STATE_COOKIE_WAIT) {
+		return (0);
+	}
 	if (sctp_threshold_management(inp, stcb, net,
 				      stcb->asoc.max_init_times)) {
 		/* Association was destroyed */
@@ -1166,7 +1171,12 @@ int  sctp_cookie_timer(struct sctp_inpcb *inp,
 			sctp_abort_an_association(inp, stcb, SCTP_INTERNAL_ERROR,
 			    oper);
 		} else {
+#ifdef INVARIENTS
 			panic("Cookie timer expires in wrong state?");
+#else
+			printf("Strange in state %d not cookie-echoed yet c-e timer expires?\n", SCTP_GET_STATE(&stcb->asoc));
+			return(0);
+#endif			
 		}
 		return (0);
 	}

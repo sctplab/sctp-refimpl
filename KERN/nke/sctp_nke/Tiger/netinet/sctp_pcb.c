@@ -38,6 +38,7 @@
 #include "opt_compat.h"
 #include "opt_inet6.h"
 #include "opt_inet.h"
+#include "opt_global.h"
 #endif
 #if defined(__NetBSD__)
 #include "opt_inet.h"
@@ -66,6 +67,7 @@
 #include <sys/random.h>
 #endif
 #if defined(__NetBSD__)
+#include "rnd.h"
 #include <sys/rnd.h>
 #endif
 #if defined(__OpenBSD__)
@@ -657,9 +659,11 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 			}
 			/* now look at the list of remote addresses */
 			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
+#ifdef INVARIENTS
 				if(net == (TAILQ_NEXT(net,sctp_next))) {
 					panic("Corrupt net list");
 				}
+#endif
 				if (net->ro._l_addr.sa.sa_family !=
 				    remote->sa_family) {
 					/* not the same family */
@@ -730,9 +734,11 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 			/* now look at the list of remote addresses */
 			SCTP_TCB_LOCK(stcb);
 			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
+#ifdef INVARIENTS
 				if(net == (TAILQ_NEXT(net,sctp_next))) {
 					panic("Corrupt net list");
 				}
+#endif
 				if (net->ro._l_addr.sa.sa_family !=
 				    remote->sa_family) {
 					/* not the same family */
@@ -2518,12 +2524,18 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 				/* Just abandon things in the front states */
 				SCTP_TCB_LOCK(asoc);
 				SCTP_INP_WUNLOCK(inp);
+				if(locked_so) {
+					SOCK_UNLOCK(so);
+				}
 				sctp_free_assoc(inp, asoc, 1);
 				SCTP_INP_WLOCK(inp);
+				if(locked_so) {
+					SOCK_LOCK(so);
+				}
 				continue;
-			} else {
-				asoc->asoc.state |= SCTP_STATE_CLOSED_SOCKET;
 			}
+			SCTP_TCB_LOCK(asoc);			
+			asoc->asoc.state |= SCTP_STATE_CLOSED_SOCKET;
 			if ((asoc->asoc.size_on_reasm_queue > 0) ||
 			    (asoc->asoc.size_on_all_streams > 0) ||
 			    (so && (so->so_rcv.sb_cc > 0))
@@ -2542,19 +2554,26 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 					    SCTP_CAUSE_USER_INITIATED_ABT);
 					ph->param_length = htons(op_err->m_len);
 				}
-				SCTP_TCB_LOCK(asoc);
+				if(locked_so) {
+					SOCK_UNLOCK(so);
+				}
 				sctp_send_abort_tcb(asoc, op_err);
 
 				SCTP_INP_WUNLOCK(inp);
 				sctp_free_assoc(inp, asoc, 1);
 				SCTP_INP_WLOCK(inp);
+				if(locked_so) {
+					SOCK_LOCK(so);
+				}
 				continue;
 			} else if (TAILQ_EMPTY(&asoc->asoc.send_queue) &&
 				   TAILQ_EMPTY(&asoc->asoc.sent_queue)) {
 				if ((SCTP_GET_STATE(&asoc->asoc) != SCTP_STATE_SHUTDOWN_SENT) &&
 				    (SCTP_GET_STATE(&asoc->asoc) != SCTP_STATE_SHUTDOWN_ACK_SENT)) {
 					/* there is nothing queued to send, so I send shutdown */
-					SCTP_TCB_LOCK(asoc);
+					if(locked_so) {
+						SOCK_UNLOCK(so);
+					}
 					sctp_send_shutdown(asoc, asoc->asoc.primary_destination);
 					asoc->asoc.state = SCTP_STATE_SHUTDOWN_SENT;
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN, asoc->sctp_ep, asoc,
@@ -2562,12 +2581,15 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD, asoc->sctp_ep, asoc,
 							 asoc->asoc.primary_destination);
 					sctp_chunk_output(inp, asoc, SCTP_OUTPUT_FROM_SHUT_TMR);
-					SCTP_TCB_UNLOCK(asoc);
+					if(locked_so) {
+						SOCK_LOCK(so);
+					}
 				}
 			} else {
 				/* mark into shutdown pending */
 				asoc->asoc.state |= SCTP_STATE_SHUTDOWN_PENDING;
 			}
+			SCTP_TCB_UNLOCK(asoc);
 			cnt_in_sd++;
 		}
 		/* now is there some left in our SHUTDOWN state? */
@@ -2616,7 +2638,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	}
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
 	if (inp->refcount) {
+		callout_stop(&inp->sctp_ep.signature_change.timer);
 		sctp_timer_start(SCTP_TIMER_TYPE_INPKILL, inp, NULL, NULL);
+		inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_GONE;
 		SCTP_INP_WUNLOCK(inp);
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		if(locked_so) {
@@ -2635,7 +2659,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
  	rt = ip_pcb->inp_route.ro_rt;
 #endif
 	callout_stop(&inp->sctp_ep.signature_change.timer);
-
 	/* Clear the read queue */
 	while ((sq = TAILQ_FIRST(&inp->read_queue)) != NULL) {
 		TAILQ_REMOVE(&inp->read_queue, sq, next);
@@ -2690,14 +2713,18 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 			printf("Strange, so->so_rcv.sb_cc > 0 was %d?\n",
 			       (int)so->so_rcv.sb_cc);
 			so->so_rcv.sb_cc = 0;
+#ifdef INVARIENTS
 			panic("strange case 1");
+#endif
 		}
 		so->so_snd.sb_mbcnt = 0;
 		if(so->so_snd.sb_cc) {
 			printf("Strange, so->so_snd.sb_cc >0 was %d?\n",
 			       (int)so->so_snd.sb_cc);
 			so->so_snd.sb_cc = 0;
+#ifdef INVARIENTS
 			panic("strange case 2");
+#endif
 		}
 #ifdef IPSEC
 #ifdef __OpenBSD__
@@ -3143,9 +3170,11 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	} else {
 		net->mtu = stcb->asoc.smallest_mtu;
 	}
+
 	if (stcb->asoc.smallest_mtu > net->mtu) {
 		stcb->asoc.smallest_mtu = net->mtu;
 	}
+
 	/* We take the max of the burst limit times a MTU or the INITIAL_CWND.
 	 * We then limit this to 4 MTU's of sending.
 	 */
@@ -3538,9 +3567,8 @@ sctp_del_remote_addr(struct sctp_tcb *stcb, struct sockaddr *remaddr)
 				    TAILQ_FIRST(&asoc->nets);
 			}
 			if (net == asoc->last_control_chunk_from) {
-				/* Reset primary */
-				asoc->last_control_chunk_from =
-				    TAILQ_FIRST(&asoc->nets);
+				/* Clear net */
+				asoc->last_control_chunk_from = NULL;
 			}
 			if (net == asoc->asconf_last_sent_to) {
 				/* Reset primary */
@@ -3630,7 +3658,9 @@ sctp_iterator_asoc_being_freed(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	SCTP_ITERATOR_LOCK();
 	SCTP_INP_INFO_WLOCK();
 	SCTP_INP_WLOCK(inp);
+	SCTP_TCB_FREE_LOCK(stcb);
 	SCTP_TCB_LOCK(stcb);
+
 
 	it = stcb->asoc.stcb_starting_point_for_iterator;
 	if (it == NULL) {
@@ -3679,7 +3709,13 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 #else
 	s = splnet();
 #endif
-	SCTP_TCB_FREE_LOCK(stcb);
+	/* We need to have the INP lock to
+	 * get the create lock to protect against
+	 * freeing on the reader. The writer holds
+	 * the TCB lock when it gets the FREE lock
+	 * so we are protected when we re-get the TCB
+	 * lock and then the FREE lock.
+	 */
 	if (stcb->asoc.state == 0) {
 		printf("Freeing already free association:%p - huh??\n",
 		       stcb);
@@ -3687,7 +3723,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		return;
 	}
 	asoc = &stcb->asoc;
-	asoc->state = 0;
 	if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)
 		/* nothing around */
 		so = NULL;
@@ -3702,21 +3737,53 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	callout_stop(&asoc->shut_guard_timer.timer);
 	callout_stop(&asoc->autoclose_timer.timer);
 	callout_stop(&asoc->delayed_event_timer.timer);
+
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 		callout_stop(&net->fr_timer.timer);
 		callout_stop(&net->rxt_timer.timer);
 		callout_stop(&net->pmtu_timer.timer);
 	}
 
+
 	/* Iterator asoc being freed we send an
 	 * unlocked TCB. It returns with INP_INFO
-	 * and INP write locked and the TCB locked
-	 * too and of course the iterator lock
+	 * and INP write locked and both TCB lock's
+	 * the tcb lock itself and the create lock
+	 * too and, of course the iterator lock
 	 * in place as well..
 	 */
+	stcb->asoc.state |= SCTP_STATE_ABOUT_TO_BE_FREED;
 	SCTP_TCB_UNLOCK(stcb);
+	if ((from_inpcbfree == 0) && so){
+		SOCKBUF_LOCK(&so->so_rcv);
+	}
+	TAILQ_FOREACH(sq, &inp->read_queue, next) {
+		if (sq->stcb == stcb) {
+			sq->stcb = NULL;
+			sq->sinfo_cumtsn = stcb->asoc.cumulative_tsn;
+		}
+	}
+	if ((from_inpcbfree == 0) && so){
+		SOCKBUF_UNLOCK(&so->so_rcv);
+	}
 	sctp_iterator_asoc_being_freed(inp, stcb);
 
+	/* now restop the timers to be sure */
+	callout_stop(&asoc->hb_timer.timer);
+	callout_stop(&asoc->dack_timer.timer);
+	callout_stop(&asoc->strreset_timer.timer);
+	callout_stop(&asoc->asconf_timer.timer);
+	callout_stop(&asoc->shut_guard_timer.timer);
+	callout_stop(&asoc->autoclose_timer.timer);
+	callout_stop(&asoc->delayed_event_timer.timer);
+
+
+	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
+		callout_stop(&net->fr_timer.timer);
+		callout_stop(&net->rxt_timer.timer);
+		callout_stop(&net->pmtu_timer.timer);
+	}
+	asoc->state = 0;
 	if(stcb->block_entry) {
 		stcb->block_entry->error = ECONNRESET;
 		stcb->block_entry = NULL;
@@ -3741,16 +3808,9 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	SCTP_INP_INFO_WUNLOCK();
 	prev = NULL;
 
-	/* Null all of my entry's on the socket read queue */
 	if ((from_inpcbfree == 0) && so){
 		SOCKBUF_LOCK(&so->so_snd);
 		SOCKBUF_LOCK(&so->so_rcv);
-	}
-	TAILQ_FOREACH(sq, &inp->read_queue, next) {
-		if (sq->stcb == stcb) {
-			sq->stcb = NULL;
-			sq->sinfo_cumtsn = stcb->asoc.cumulative_tsn;
-		}
 	}
 	/*
 	 * The chunk lists and such SHOULD be empty but we check them
