@@ -88,15 +88,21 @@ extern struct sysctl_oid sysctl__net_inet_sctp_assoc_rtx_max;
 extern struct sysctl_oid sysctl__net_inet_sctp_path_rtx_max;
 extern struct sysctl_oid sysctl__net_inet_sctp_nr_outgoing_streams;
 extern struct sysctl_oid sysctl__net_inet_sctp_cmt_on_off;
-extern struct sysctl_oid sysctl__net_inet_sctp_abc_l_var;
 extern struct sysctl_oid sysctl__net_inet_sctp_cwnd_maxburst;
-extern struct sysctl_oid sysctl__net_inet_sctp_max_chained_mbufs;
 extern struct sysctl_oid sysctl__net_inet_sctp_early_fast_retran;
-extern struct sysctl_oid sysctl__net_inet_sctp_early_fast_retran_msec;
 extern struct sysctl_oid sysctl__net_inet_sctp_use_rttvar_congctrl;
+extern struct sysctl_oid sysctl__net_inet_sctp_deadlock_detect;
+extern struct sysctl_oid sysctl__net_inet_sctp_early_fast_retran_msec;
 extern struct sysctl_oid sysctl__net_inet_sctp_auth_disable;
 extern struct sysctl_oid sysctl__net_inet_sctp_auth_random_len;
 extern struct sysctl_oid sysctl__net_inet_sctp_auth_hmac_id;
+extern struct sysctl_oid sysctl__net_inet_sctp_abc_l_var;
+extern struct sysctl_oid sysctl__net_inet_sctp_max_chained_mbufs;
+extern struct sysctl_oid sysctl__net_inet_sctp_cmt_use_dac;
+extern struct sysctl_oid sysctl__net_inet_sctp_do_sctp_drain;
+extern struct sysctl_oid sysctl__net_inet_sctp_warm_crc_table;
+extern struct sysctl_oid sysctl__net_inet_sctp_abort_at_limit;
+extern struct sysctl_oid sysctl__net_inet_sctp_strict_data_order;
 #ifdef SCTP_DEBUG
 extern struct sysctl_oid sysctl__net_inet_sctp_debug;
 #endif
@@ -337,8 +343,6 @@ kern_return_t SCTP_start (kmod_info_t * ki, void * d) {
 	sysctl_register_oid(&sysctl__net_inet_sctp_strict_init);
 	sysctl_register_oid(&sysctl__net_inet_sctp_peer_chkoh);
 	sysctl_register_oid(&sysctl__net_inet_sctp_maxburst);
-	sysctl_register_oid(&sysctl__net_inet_sctp_cwnd_maxburst);
-	sysctl_register_oid(&sysctl__net_inet_sctp_max_chained_mbufs);
 	sysctl_register_oid(&sysctl__net_inet_sctp_maxchunks);
 	sysctl_register_oid(&sysctl__net_inet_sctp_delayed_sack_time);
 	sysctl_register_oid(&sysctl__net_inet_sctp_heartbeat_interval);
@@ -355,13 +359,21 @@ kern_return_t SCTP_start (kmod_info_t * ki, void * d) {
 	sysctl_register_oid(&sysctl__net_inet_sctp_path_rtx_max);
 	sysctl_register_oid(&sysctl__net_inet_sctp_nr_outgoing_streams);
 	sysctl_register_oid(&sysctl__net_inet_sctp_cmt_on_off);
-	sysctl_register_oid(&sysctl__net_inet_sctp_abc_l_var);
+	sysctl_register_oid(&sysctl__net_inet_sctp_cwnd_maxburst);
 	sysctl_register_oid(&sysctl__net_inet_sctp_early_fast_retran);
-	sysctl_register_oid(&sysctl__net_inet_sctp_early_fast_retran_msec);
 	sysctl_register_oid(&sysctl__net_inet_sctp_use_rttvar_congctrl);
+	sysctl_register_oid(&sysctl__net_inet_sctp_deadlock_detect);
+	sysctl_register_oid(&sysctl__net_inet_sctp_early_fast_retran_msec);
 	sysctl_register_oid(&sysctl__net_inet_sctp_auth_disable);
 	sysctl_register_oid(&sysctl__net_inet_sctp_auth_random_len);
 	sysctl_register_oid(&sysctl__net_inet_sctp_auth_hmac_id);
+	sysctl_register_oid(&sysctl__net_inet_sctp_abc_l_var);
+	sysctl_register_oid(&sysctl__net_inet_sctp_max_chained_mbufs);
+	sysctl_register_oid(&sysctl__net_inet_sctp_cmt_use_dac);
+	sysctl_register_oid(&sysctl__net_inet_sctp_do_sctp_drain);
+	sysctl_register_oid(&sysctl__net_inet_sctp_warm_crc_table);
+	sysctl_register_oid(&sysctl__net_inet_sctp_abort_at_limit);
+	sysctl_register_oid(&sysctl__net_inet_sctp_strict_data_order);
 #ifdef SCTP_DEBUG
 	sysctl_register_oid(&sysctl__net_inet_sctp_debug);
 #endif
@@ -434,15 +446,21 @@ kern_return_t SCTP_stop (kmod_info_t * ki, void * d) {
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_path_rtx_max);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_nr_outgoing_streams);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_cmt_on_off);
-	sysctl_unregister_oid(&sysctl__net_inet_sctp_abc_l_var);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_cwnd_maxburst);
-	sysctl_unregister_oid(&sysctl__net_inet_sctp_max_chained_mbufs);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_early_fast_retran);
-	sysctl_unregister_oid(&sysctl__net_inet_sctp_early_fast_retran_msec);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_use_rttvar_congctrl);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_deadlock_detect);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_early_fast_retran_msec);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_auth_disable);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_auth_random_len);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_auth_hmac_id);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_abc_l_var);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_max_chained_mbufs);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_cmt_use_dac);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_do_sctp_drain);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_warm_crc_table);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_abort_at_limit);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_strict_data_order);
 #ifdef SCTP_DEBUG
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_debug);
 #endif
