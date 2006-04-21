@@ -2356,7 +2356,7 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 
 	*high_tsn = asoc->cumulative_tsn;
 	break_flag = 0;
-	while (stop_proc != 0) {
+	while (stop_proc == 0) {
 		/* validate chunk length */
 		chk_length = ntohs(ch->ch.chunk_length);
 		if (length - *offset < chk_length) {
