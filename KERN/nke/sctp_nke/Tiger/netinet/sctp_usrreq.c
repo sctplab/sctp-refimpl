@@ -149,6 +149,7 @@ int sctp_strict_sacks = 0;
 int sctp_no_csum_on_loopback = 1;
 int sctp_strict_init = 1;
 int sctp_abort_if_one_2_one_hits_limit = 0;
+int sctp_strict_data_order = 0;
 
 int sctp_peer_chunk_oh = sizeof(struct mbuf);
 int sctp_max_burst_default = SCTP_DEF_MAX_BURST;
@@ -827,6 +828,10 @@ SYSCTL_INT(_net_inet_sctp, OID_AUTO, warm_crc_table , CTLFLAG_RW,
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, abort_at_limit, CTLFLAG_RW,
 	   &sctp_abort_if_one_2_one_hits_limit, 0,
 	   "When one-2-one hits qlimit abort");
+
+SYSCTL_INT(_net_inet_sctp, OID_AUTO, strict_data_order, CTLFLAG_RW,
+	   &sctp_strict_data_order, 0,
+	   "Enforce strict data ordering, abort if control inside data");
 
 #ifdef SCTP_DEBUG
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, debug, CTLFLAG_RW,
@@ -5571,6 +5576,11 @@ sctp_sysctl(name, namelen, oldp, oldlenp, newp, newlen)
 	case SCTPCTL_QLIMIT_ABORT:
 		return (sysctl_int(oldp, oldlenp, newp, newlen,
 				   &sctp_abort_if_one_2_one_hits_limit));
+
+	case SCTPCTL_STRICT_ORDER:
+		return (sysctl_int(oldp, oldlenp, newp, newlen,
+				   &sctp_strict_data_order));
+
 #ifdef SCTP_DEBUG
  	case SCTPCTL_DEBUG:
  		return (sysctl_int(oldp, oldlenp, newp, newlen,
@@ -5927,6 +5937,14 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
                        SYSCTL_DESCR("When one-2-one hits qlimit abort"),
                        NULL, 0, &sctp_abort_if_one_2_one_hits_limit, 0,
                        CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_QLIMIT_ABORT,
+                       CTL_EOL);
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "strict_data_order",
+                       SYSCTL_DESCR("Enforce strict data ordering, abort if control inside data"),
+                       NULL, 0, &sctp_strict_data_order, 0,
+                       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_STRICT_ORDER,
                        CTL_EOL);
 
 #ifdef SCTP_DEBUG
