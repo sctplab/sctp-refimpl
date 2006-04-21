@@ -2462,6 +2462,7 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 				 * possibly process them.
 				 */
 				if(sctp_strict_data_order) {
+					struct mbuf *op_err;
 					op_err = sctp_generate_invmanparam(SCTP_CAUSE_PROTOCOL_VIOLATION);
 					sctp_abort_association(inp, stcb, m, iphlen, sh, op_err);
 					return (2);
