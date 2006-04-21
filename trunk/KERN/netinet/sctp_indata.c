@@ -2276,6 +2276,7 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 	struct sctp_data_chunk *ch, chunk_buf;
 	struct sctp_association *asoc;
 	int num_chunks = 0;	/* number of control chunks processed */
+	int stop_proc = 0;
 	int chk_length, break_flag, last_chunk;
 	int abort_flag = 0, was_a_gap = 0;
 	struct mbuf *m;
@@ -2287,7 +2288,7 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 	STCB_TCB_LOCK_ASSERT(stcb);
 	asoc = &stcb->asoc;
 	if (compare_with_wrap(stcb->asoc.highest_tsn_inside_map,
-	    stcb->asoc.cumulative_tsn, MAX_TSN)) {
+			      stcb->asoc.cumulative_tsn, MAX_TSN)) {
 		/* there was a gap before this data was processed */
 		was_a_gap = 1;
 	}
@@ -2338,9 +2339,8 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 	}
 	/* get pointer to the first chunk header */
 	ch = (struct sctp_data_chunk *)sctp_m_getptr(m, *offset,
-	    sizeof(chunk_buf), (u_int8_t *)&chunk_buf);
+						     sizeof(struct sctp_chunkhdr), (u_int8_t *)&chunk_buf);
 	if (ch == NULL) {
-		printf(" ... its short\n");
 		return (1);
 	}
 	/*
@@ -2350,87 +2350,183 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
 		printf("In process data off:%d length:%d iphlen:%d ch->type:%d\n",
-		    *offset, length, iphlen, (int)ch->ch.chunk_type);
+		       *offset, length, iphlen, (int)ch->ch.chunk_type);
 	}
 #endif
 
 	*high_tsn = asoc->cumulative_tsn;
 	break_flag = 0;
-	while (ch->ch.chunk_type == SCTP_DATA) {
+	while (stop_proc != 0) {
 		/* validate chunk length */
 		chk_length = ntohs(ch->ch.chunk_length);
-		if ((size_t)chk_length < sizeof(struct sctp_data_chunk) + 1 ||
-		    length - *offset < chk_length) {
-			/*
-			 * Need to send an abort since we had a invalid
-			 * data chunk.
-			 */
-			struct mbuf *op_err;
-			MGET(op_err, M_DONTWAIT, MT_DATA);
-			if (op_err) {
-				struct sctp_paramhdr *ph;
-				u_int32_t *ippp;
+		if (length - *offset < chk_length) {
+			/* all done, mutulated chunk */
+			stop_proc = 1;
+			break;
+		}
+		if(ch->ch.chunk_type == SCTP_DATA) {
+			ch = (struct sctp_data_chunk *)sctp_m_getptr(m, *offset,
+								     sizeof(chunk_buf), (u_int8_t *)&chunk_buf);
+			if ((size_t)chk_length < sizeof(struct sctp_data_chunk) + 1) {
+				/*
+				 * Need to send an abort since we had a invalid
+				 * data chunk.
+				 */
+				struct mbuf *op_err;
+				MGET(op_err, M_DONTWAIT, MT_DATA);
+				if (op_err) {
+					struct sctp_paramhdr *ph;
+					u_int32_t *ippp;
 
-				op_err->m_len = sizeof(struct sctp_paramhdr) +
-				    sizeof(*ippp);
-				ph = mtod(op_err, struct sctp_paramhdr *);
-				ph->param_type =
-				    htons(SCTP_CAUSE_PROTOCOL_VIOLATION);
-				ph->param_length = htons(op_err->m_len);
-				ippp = (u_int32_t *)(ph + 1);
-				*ippp = htonl(0x30000001);
+					op_err->m_len = sizeof(struct sctp_paramhdr) +
+						sizeof(*ippp);
+					ph = mtod(op_err, struct sctp_paramhdr *);
+					ph->param_type =
+						htons(SCTP_CAUSE_PROTOCOL_VIOLATION);
+					ph->param_length = htons(op_err->m_len);
+					ippp = (u_int32_t *)(ph + 1);
+					*ippp = htonl(0x30000001);
+				}
+				sctp_abort_association(inp, stcb, m, iphlen, sh,
+						       op_err);
+				return (2);
 			}
-			sctp_abort_association(inp, stcb, m, iphlen, sh,
-			    op_err);
-			return (2);
-		}
 #ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-			printf("A chunk of len:%d to process (tot:%d)\n",
-			    chk_length, length - *offset);
-		}
+			if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
+				printf("A chunk of len:%d to process (tot:%d)\n",
+				       chk_length, length - *offset);
+			}
 #endif
 
 #ifdef SCTP_AUDITING_ENABLED
-		sctp_audit_log(0xB1, 0);
+			sctp_audit_log(0xB1, 0);
 #endif
-		if (SCTP_SIZE32(chk_length) == *offset - length) {
-			last_chunk = 1;
-		} else {
-			last_chunk = 0;
-		}
-		if (sctp_process_a_data_chunk(stcb, asoc, mm, *offset, ch,
-		    chk_length, net, high_tsn, &abort_flag, &break_flag,
-		    last_chunk)) {
-			num_chunks++;
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-				printf("Now incr num_chunks to %d\n",
-				    num_chunks);
+			if (SCTP_SIZE32(chk_length) == *offset - length) {
+				last_chunk = 1;
+			} else {
+				last_chunk = 0;
 			}
+			if (sctp_process_a_data_chunk(stcb, asoc, mm, *offset, ch,
+						      chk_length, net, high_tsn, &abort_flag, &break_flag,
+						      last_chunk)) {
+				num_chunks++;
+#ifdef SCTP_DEBUG
+				if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
+					printf("Now incr num_chunks to %d\n",
+					       num_chunks);
+				}
 #endif
-		}
-		if (abort_flag)
-			return (2);
+			}
+			if (abort_flag) 
+				return (2);
 
-		if (break_flag) {
-			/*
-			 * Set because of out of rwnd space and no drop rep
-			 * space left.
-			 */
-			break;
+			if (break_flag) {
+				/*
+				 * Set because of out of rwnd space and no drop rep
+				 * space left.
+				 */
+				stop_proc = 1;
+				break;
+			}
+		} else {
+			/* not a data chunk in the data region */
+			switch(ch->ch.chunk_type) {
+			case SCTP_INITIATION:
+			case SCTP_INITIATION_ACK:
+			case SCTP_SELECTIVE_ACK:
+			case SCTP_HEARTBEAT_REQUEST:
+			case SCTP_HEARTBEAT_ACK:
+			case SCTP_ABORT_ASSOCIATION:
+			case SCTP_SHUTDOWN:
+			case SCTP_SHUTDOWN_ACK:
+			case SCTP_OPERATION_ERROR:
+			case SCTP_COOKIE_ECHO:
+			case SCTP_COOKIE_ACK:
+			case SCTP_ECN_ECHO:
+			case SCTP_ECN_CWR:
+			case SCTP_SHUTDOWN_COMPLETE:
+			case SCTP_AUTHENTICATION:
+			case SCTP_ASCONF_ACK:
+			case SCTP_PACKET_DROPPED:
+			case SCTP_STREAM_RESET:
+			case SCTP_FORWARD_CUM_TSN:
+			case SCTP_ASCONF:
+				/* Now, what do we do with KNOWN chunks that
+				 * are NOT in the right place? 
+				 *
+				 * For now, I do nothing but ignore them. We
+				 * may later want to add sysctl stuff to 
+				 * switch out and do either an ABORT() or
+				 * possibly process them.
+				 */
+				break;
+			default:
+				/* unknown chunk type, use bit rules */
+				if (ch->ch.chunk_type & 0x40) {
+					/* Add a error report to the queue */
+					struct mbuf *mm;
+					struct sctp_paramhdr *phd;
+					MGETHDR(mm, M_DONTWAIT, MT_HEADER);
+					if (mm) {
+						phd = mtod(mm, struct sctp_paramhdr *);
+						/* We cheat and use param type since we
+						 * did not bother to define a error
+						 * cause struct.
+						 * They are the same basic format with
+						 * different names.
+						 */
+						phd->param_type =
+							htons(SCTP_CAUSE_UNRECOG_CHUNK);
+						phd->param_length =
+							htons(chk_length + sizeof(*phd));
+						mm->m_len = sizeof(*phd);
+						mm->m_next = sctp_m_copym(m, *offset,
+									  SCTP_SIZE32(chk_length),
+									  M_DONTWAIT);
+						if (mm->m_next) {
+							mm->m_pkthdr.len =
+								SCTP_SIZE32(chk_length) +
+								sizeof(*phd);
+							sctp_queue_op_err(stcb, mm);
+						} else {
+							sctp_m_freem(mm);
+#ifdef SCTP_DEBUG
+							if (sctp_debug_on &
+							    SCTP_DEBUG_INPUT1) {
+								printf("Gak can't copy the chunk into operr %d bytes\n",
+								       chk_length);
+							}
+#endif
+						}
+					}
+#ifdef SCTP_DEBUG
+					else {
+						if (sctp_debug_on & SCTP_DEBUG_INPUT3) {
+							printf("Gak can't mgethdr for op-err of unrec chunk\n");
+						}
+					}
+#endif
+				}
+				if ((ch->ch.chunk_type & 0x80) == 0) {
+					/* discard the rest of this packet */
+					stop_proc = 1;
+				} /* else skip this bad chunk and continue... */
+				break;
+			}; /* switch of chunk type */
 		}
-
 		*offset += SCTP_SIZE32(chk_length);
-		if (*offset >= length) {
+		if ((*offset >= length) || stop_proc) {
 			/* no more data left in the mbuf chain */
-			break;
+			stop_proc = 1;
+			continue;
 		}
 		ch = (struct sctp_data_chunk *)sctp_m_getptr(m, *offset,
-		    sizeof(chunk_buf), (u_int8_t *)&chunk_buf);
+							     sizeof(struct sctp_chunkhdr), (u_int8_t *)&chunk_buf);
 		if (ch == NULL) {
 			*offset = length;
+			stop_proc = 1;
 			break;
+
 		}
 	} /* while */
 	if (break_flag) {
@@ -2458,7 +2554,7 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 		 * sack_check will send a sack.
 		 */
 		sctp_timer_start(SCTP_TIMER_TYPE_RECV, stcb->sctp_ep, stcb,
-		    net);
+				 net);
 	}
 	/* Start a sack timer or QUEUE a SACK for sending */
 	sctp_sack_check(stcb, 1, was_a_gap, &abort_flag);
