@@ -2042,7 +2042,7 @@ sctp_addr_mgmt(struct ifaddr *ifa, uint16_t type) {
 
 	/* go through all our PCB's */
 	LIST_FOREACH(inp, &sctppcbinfo.listhead, sctp_list) {
-		if (sctp_is_feature_on(inp,SCTP_PCB_FLAGS_AUTO_ASCONF)) {
+		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_AUTO_ASCONF)) {
 			sctp_addr_mgmt_ep(inp, ifa, type);
 		} else {
 			/* this address is going away anyways... */
@@ -2637,7 +2637,8 @@ sctp_process_initack_addresses(struct sctp_tcb *stcb, struct mbuf *m,
 			/* address doesn't exist anymore */
 			int status;
 			/* are ASCONFs allowed ? */
-			if ((sctp_is_feature_on(stcb->sctp_ep, SCTP_PCB_FLAGS_DO_ASCONF)) &&
+			if ((sctp_is_feature_on(stcb->sctp_ep,
+						SCTP_PCB_FLAGS_DO_ASCONF)) &&
 			    stcb->asoc.peer_supports_asconf) {
 				/* queue an ASCONF DEL_IP_ADDRESS */
 				status = sctp_asconf_queue_add_sa(stcb, sa,
@@ -2662,7 +2663,8 @@ sctp_process_initack_addresses(struct sctp_tcb *stcb, struct mbuf *m,
 			 */
 			if ((stcb->sctp_ep->sctp_flags &
 			     SCTP_PCB_FLAGS_BOUNDALL) == 0 &&
-			    (sctp_is_feature_off(stcb->sctp_ep, SCTP_PCB_FLAGS_DO_ASCONF))) {
+			    (sctp_is_feature_off(stcb->sctp_ep,
+						 SCTP_PCB_FLAGS_DO_ASCONF))) {
 #ifdef SCTP_DEBUG
 				if (sctp_debug_on & SCTP_DEBUG_ASCONF2) {
 					printf("process_initack_addrs: adding local addr to asoc\n");
@@ -2953,7 +2955,8 @@ sctp_check_address_list(struct sctp_tcb *stcb, struct mbuf *m, int offset,
 		    local_scope, site_scope, ipv4_scope, loopback_scope);
 	} else {
 		/* subset bound case */
-		if (sctp_is_feature_on(stcb->sctp_ep, SCTP_PCB_FLAGS_DO_ASCONF)) {
+		if (sctp_is_feature_on(stcb->sctp_ep,
+				       SCTP_PCB_FLAGS_DO_ASCONF)) {
 			/* asconf's allowed */
 			sctp_check_address_list_ep(stcb, m, offset, length,
 			    init_addr);
