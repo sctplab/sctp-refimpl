@@ -90,14 +90,15 @@
 #define SCTPCTL_CMT_USE_DAC         37
 #define SCTPCTL_DO_DRAIN            38
 #define SCTPCTL_WARM_CRC32          39
+#define SCTPCTL_QLIMIT_ABORT        40
 #ifdef SCTP_DEBUG
-#define SCTPCTL_DEBUG               40
-#define SCTPCTL_MAXID		    40
+#define SCTPCTL_DEBUG               41
+#define SCTPCTL_MAXID		    41
 #else
-#define SCTPCTL_MAXID		    39
+#define SCTPCTL_MAXID		    40
+#endif
 #endif
 
-#endif
 
 #ifdef SCTP_DEBUG
 #define SCTPCTL_NAMES { \
@@ -128,7 +129,6 @@
 	{ "path_rtx_max", CTLTYPE_INT }, \
 	{ "nr_outgoing_streams", CTLTYPE_INT }, \
 	{ "cmt_on_off", CTLTYPE_INT }, \
-	{ "cmt_use_dac", CTLTYPE_INT }, \
 	{ "cwnd_maxburst", CTLTYPE_INT }, \
         { "early_fast_retran", CTLTYPE_INT }, \
         { "use_rttvar_congctrl", CTLTYPE_INT }, \
@@ -142,8 +142,10 @@
 	{ "cmt_use_dac", CTLTYPE_INT }, \
 	{ "do_sctp_drain", CTLTYPE_INT }, \
 	{ "warm_crc_table", CTLTYPE_INT }, \
+	{ "abort_at_limit", CTLTYPE_INT }, \
 	{ "debug", CTLTYPE_INT }, \
 }
+
 #else
 #define SCTPCTL_NAMES { \
 	{ 0, 0 }, \
@@ -173,7 +175,6 @@
 	{ "path_rtx_max", CTLTYPE_INT }, \
 	{ "nr_outgoing_streams", CTLTYPE_INT }, \
 	{ "cmt_on_off", CTLTYPE_INT }, \
-	{ "cmt_use_dac", CTLTYPE_INT }, \
 	{ "cwnd_maxburst", CTLTYPE_INT }, \
         { "early_fast_retran", CTLTYPE_INT }, \
         { "use_rttvar_congctrl", CTLTYPE_INT }, \
@@ -185,8 +186,9 @@
 	{ "abc_l_var", CTLTYPE_INT }, \
 	{ "max_mbuf_chain", CTLTYPE_INT }, \
 	{ "cmt_use_dac", CTLTYPE_INT }, \
-	{ "warm_crc_table", CTLTYPE_INT }, \
 	{ "do_sctp_drain", CTLTYPE_INT }, \
+	{ "warm_crc_table", CTLTYPE_INT }, \
+	{ "abort_at_limit", CTLTYPE_INT }, \
 }
 #endif
 
