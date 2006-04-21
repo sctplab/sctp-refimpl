@@ -148,6 +148,8 @@ int sctp_ecn_nonce = 0;
 int sctp_strict_sacks = 0;
 int sctp_no_csum_on_loopback = 1;
 int sctp_strict_init = 1;
+int sctp_abort_if_one_2_one_hits_limit = 0;
+
 int sctp_peer_chunk_oh = sizeof(struct mbuf);
 int sctp_max_burst_default = SCTP_DEF_MAX_BURST;
 int sctp_use_cwnd_based_maxburst = 1;
@@ -697,6 +699,11 @@ SYSCTL_INT(_net_inet_sctp, OID_AUTO, loopback_nocsum, CTLFLAG_RW,
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, strict_init, CTLFLAG_RW,
 	   &sctp_strict_init, 0,
 	   "Enable strict INIT/INIT-ACK singleton enforcement");
+
+SYSCTL_INT(_net_inet_sctp, OID_AUTO, abort_at_limit, CTLFLAG_RW,
+	   &sctp_abort_if_one_2_one_hits_limit, 0,
+	   "When one-2-one hits qlimit abort");
+
 
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, peer_chkoh, CTLFLAG_RW,
 	   &sctp_peer_chunk_oh, 0,
@@ -5469,6 +5476,11 @@ sctp_sysctl(name, namelen, oldp, oldlenp, newp, newlen)
 	case SCTPCTL_STRICT_INIT:
 		return (sysctl_int(oldp, oldlenp, newp, newlen,
 				   &sctp_strict_init));
+
+	case SCTPCTL_QLIMIT_ABORT:
+		return (sysctl_int(oldp, oldlenp, newp, newlen,
+				   &sctp_abort_if_one_2_one_hits_limit));
+
  	case SCTPCTL_PEER_CHK_OH:
  		return (sysctl_int(oldp, oldlenp, newp, newlen,
  				   &sctp_peer_chunk_oh));
@@ -5643,6 +5655,15 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
                        SYSCTL_DESCR("Enable SCTP Strict SACK checking"),
                        NULL, 0, &sctp_strict_sacks, 0,
                        CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_STRICT_SACK,
+                       CTL_EOL);
+
+
+       sysctl_createv(clog, 0, NULL, NULL,
+                       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+                       CTLTYPE_INT, "abort_at_limit",
+                       SYSCTL_DESCR("When one-2-one hits qlimit abort"),
+                       NULL, 0, &sctp_abort_if_one_2_one_hits_limit, 0,
+                       CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_QLIMIT_ABORT,
                        CTL_EOL);
 
        sysctl_createv(clog, 0, NULL, NULL,
