@@ -2268,6 +2268,8 @@ sctp_service_queues(struct sctp_tcb *stcb, struct sctp_association *asoc)
 	}
 }
 
+extern int sctp_strict_data_order;
+
 int
 sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
     struct sctphdr *sh, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
@@ -2459,6 +2461,11 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 				 * switch out and do either an ABORT() or
 				 * possibly process them.
 				 */
+				if(sctp_strict_data_order) {
+					op_err = sctp_generate_invmanparam(SCTP_CAUSE_PROTOCOL_VIOLATION);
+					sctp_abort_association(inp, stcb, m, iphlen, sh, op_err);
+					return (2);
+				}
 				break;
 			default:
 				/* unknown chunk type, use bit rules */
