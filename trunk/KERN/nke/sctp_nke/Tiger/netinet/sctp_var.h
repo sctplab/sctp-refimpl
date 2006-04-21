@@ -91,14 +91,14 @@
 #define SCTPCTL_DO_DRAIN            38
 #define SCTPCTL_WARM_CRC32          39
 #define SCTPCTL_QLIMIT_ABORT        40
+#define SCTPCTL_STRICT_ORDER        41
 #ifdef SCTP_DEBUG
-#define SCTPCTL_DEBUG               41
-#define SCTPCTL_MAXID		    41
+#define SCTPCTL_DEBUG               42
+#define SCTPCTL_MAXID		    42
 #else
-#define SCTPCTL_MAXID		    40
+#define SCTPCTL_MAXID		    41
 #endif
 #endif
-
 
 #ifdef SCTP_DEBUG
 #define SCTPCTL_NAMES { \
@@ -143,6 +143,7 @@
 	{ "do_sctp_drain", CTLTYPE_INT }, \
 	{ "warm_crc_table", CTLTYPE_INT }, \
 	{ "abort_at_limit", CTLTYPE_INT }, \
+	{ "strict_data_order", CTLTYPE_INT }, \
 	{ "debug", CTLTYPE_INT }, \
 }
 
@@ -189,6 +190,7 @@
 	{ "do_sctp_drain", CTLTYPE_INT }, \
 	{ "warm_crc_table", CTLTYPE_INT }, \
 	{ "abort_at_limit", CTLTYPE_INT }, \
+	{ "strict_data_order", CTLTYPE_INT }, \
 }
 #endif
 
