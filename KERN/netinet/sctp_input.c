@@ -3572,7 +3572,7 @@ sctp_handle_packet_dropped(struct sctp_pktdrop_chunk *cp,
 }
 
 extern int sctp_strict_init;
-
+extern int sctp_abort_if_one_2_one_hits_limit;
 /*
  * handles all control chunks in a packet
  * inputs:
@@ -3880,13 +3880,13 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 		num_chunks++;
 		/* Save off the last place we got a control from */
 		if (stcb != NULL) {
-		    if ((*netp != NULL) || (ch->chunk_type == SCTP_ASCONF)) {
-			/*
-			 * allow last_control to be NULL if ASCONF...
-			 * ASCONF processing will find the right net later
-			 */
-			stcb->asoc.last_control_chunk_from = *netp;
-		    }
+			if ((*netp != NULL) || (ch->chunk_type == SCTP_ASCONF)) {
+				/*
+				 * allow last_control to be NULL if ASCONF...
+				 * ASCONF processing will find the right net later
+				 */
+				stcb->asoc.last_control_chunk_from = *netp;
+			}
 		}
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_audit_log(0xB0, ch->chunk_type);
@@ -4137,21 +4137,23 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					/* no space */
 					struct mbuf *oper;
 					struct sctp_paramhdr *phdr;
-					oper = NULL;
-					MGETHDR(oper, M_DONTWAIT, MT_HEADER);
-					if (oper) {
-						oper->m_len =
-							oper->m_pkthdr.len =
-							sizeof(struct sctp_paramhdr);
-						phdr = mtod(oper,
-							    struct sctp_paramhdr *);
-						phdr->param_type =
-							htons(SCTP_CAUSE_OUT_OF_RESC);
-						phdr->param_length =
-							htons(sizeof(struct sctp_paramhdr));
+					if (sctp_abort_if_one_2_one_hits_limit) {
+						oper = NULL;
+						MGETHDR(oper, M_DONTWAIT, MT_HEADER);
+						if (oper) {
+							oper->m_len =
+								oper->m_pkthdr.len =
+								sizeof(struct sctp_paramhdr);
+							phdr = mtod(oper,
+								    struct sctp_paramhdr *);
+							phdr->param_type =
+								htons(SCTP_CAUSE_OUT_OF_RESC);
+							phdr->param_length =
+								htons(sizeof(struct sctp_paramhdr));
+						}
+						sctp_abort_association(inp, stcb, m,
+								       iphlen, sh, oper);
 					}
-					sctp_abort_association(inp, stcb, m,
-							       iphlen, sh, oper);
 					*offset = length;
 					return (NULL);
 				}
@@ -4160,13 +4162,13 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			{
 				struct mbuf *ret_buf;
 				ret_buf =
-				    sctp_handle_cookie_echo(m, iphlen,
-							    *offset, sh,
-							    (struct sctp_cookie_echo_chunk *)ch,
-							    &inp, &stcb, netp,
-							    auth_skipped,
-							    auth_offset,
-							    auth_len);
+					sctp_handle_cookie_echo(m, iphlen,
+								*offset, sh,
+								(struct sctp_cookie_echo_chunk *)ch,
+								&inp, &stcb, netp,
+								auth_skipped,
+								auth_offset,
+								auth_len);
 #ifdef SCTP_DEBUG
 				if (sctp_debug_on & SCTP_DEBUG_INPUT3) {
 					printf("ret_buf:%p length:%d off:%d\n",
