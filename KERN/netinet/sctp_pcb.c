@@ -3766,7 +3766,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	}
 	sctp_iterator_asoc_being_freed(inp, stcb);
 
-	/* now restop the timers to be sure */
+	/* now restop the timers to be sure - this is paranoia at is finest! */
 	callout_stop(&asoc->hb_timer.timer);
 	callout_stop(&asoc->dack_timer.timer);
 	callout_stop(&asoc->strreset_timer.timer);
@@ -3959,6 +3959,9 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		net = TAILQ_FIRST(&asoc->nets);
 		/* pull from list */
 		if ((sctppcbinfo.ipi_count_raddr == 0) || (prev == net)) {
+#ifdef INVARIENTS
+			panic("no net's left alloc'ed, or list points to itself");
+#endif
 			break;
 		}
 		prev = net;
