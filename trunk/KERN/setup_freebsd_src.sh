@@ -14,7 +14,7 @@ if test ! -d $srcTree/dev
     echo "I cant see the dev directory there sorry"
     exit
 fi
-echo "Will you be using 7.0 Current or FreeBSD 6.1 (7 or 6)?"
+echo "Will you be using 7.0 Current or FreeBSD 6.1 or 6.0 (7 or 61 or 60)?"
 read ans
 if test $ans = 7
 then
@@ -22,11 +22,21 @@ echo "I will use 7.0 then, if unsure hit ctl-c else return"
 read ans
 BSD_PATH=freebsd7
 BSD_VER=700000
-else
+elif test $ans = 60
+then
+echo "I will use 6.0 then, if unsure hit ctl-c else return"
+read ans
+BSD_PATH=freebsd6
+BSD_VER=600000
+elif test $ans = 61
+then
 echo "I will use 6.1 then, if unsure hit ctl-c else return"
 read ans
 BSD_PATH=freebsd6_1
 BSD_VER=600000
+else
+echo "Unknown release sorry"
+exit
 fi
 cd $cvsPath/KERN/$BSD_PATH 
 for j in conf/files conf/options kern/syscalls.master \
