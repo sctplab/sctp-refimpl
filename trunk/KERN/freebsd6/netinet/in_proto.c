@@ -135,40 +135,30 @@ struct protosw inetsw[] = {
   &tcp_usrreqs
 },
 #ifdef SCTP
-{ 
-	.pr_type = 	SOCK_DGRAM,
-	.pr_domain =  	&inetdomain,
-        .pr_protocol = 	IPPROTO_SCTP,
-        .pr_flags = 	PR_WANTRCVD,
-        .pr_input = 	sctp_input,
-        .pr_ctlinput =  sctp_ctlinput,	
-        .pr_ctloutput = sctp_ctloutput,
-        .pr_init = 	sctp_init,	
-        .pr_drain = 	sctp_drain,
-        .pr_usrreqs = 	&sctp_usrreqs
+/*
+ * Order is very important here, we add the good one in
+ * in this postion so it maps to the right ip_protox[]
+ * postion for SCTP. Don't move the one above below
+ * this one or IPv6/4 compatability will break
+ */
+{ SOCK_DGRAM,	&inetdomain,	IPPROTO_SCTP,	PR_ADDR_OPT|PR_WANTRCVD,
+  sctp_input,	0,		sctp_ctlinput,	sctp_ctloutput,
+  0,
+  sctp_init,	0,		0,		sctp_drain,
+  &sctp_usrreqs
 },
-{
-	.pr_type = 	SOCK_SEQPACKET,
-	.pr_domain =  	&inetdomain,
-        .pr_protocol = 	IPPROTO_SCTP,
-        .pr_flags = 	PR_WANTRCVD,
-        .pr_input = 	sctp_input,
-        .pr_ctlinput =  sctp_ctlinput,	
-        .pr_ctloutput = sctp_ctloutput,
-        .pr_drain = 	sctp_drain,
-        .pr_usrreqs = 	&sctp_usrreqs
+{ SOCK_SEQPACKET,&inetdomain,	IPPROTO_SCTP,	PR_ADDR_OPT|PR_WANTRCVD,
+  sctp_input,	0,		sctp_ctlinput,	sctp_ctloutput,
+  0,
+  0,		0,		0,		sctp_drain,
+  &sctp_usrreqs
 },
 
-{ 
-	.pr_type = 	SOCK_STREAM,
-	.pr_domain =  	&inetdomain,
-        .pr_protocol = 	IPPROTO_SCTP,
-        .pr_flags = 	PR_WANTRCVD,
-        .pr_input = 	sctp_input,
-        .pr_ctlinput =  sctp_ctlinput,	
-        .pr_ctloutput = sctp_ctloutput,
-        .pr_drain = 	sctp_drain,
-        .pr_usrreqs = 	&sctp_usrreqs
+{ SOCK_STREAM,	&inetdomain,	IPPROTO_SCTP,	PR_CONNREQUIRED|PR_ADDR_OPT|PR_WANTRCVD,
+  sctp_input,	0,		sctp_ctlinput,	sctp_ctloutput,
+  0,
+  0,		0,		0,		sctp_drain,
+  &sctp_usrreqs
 },
 #endif /* SCTP */
 { SOCK_RAW,	&inetdomain,	IPPROTO_RAW,	PR_ATOMIC|PR_ADDR,
@@ -331,6 +321,9 @@ SYSCTL_NODE(_net_inet, IPPROTO_IP,	ip,	CTLFLAG_RW, 0,	"IP");
 SYSCTL_NODE(_net_inet, IPPROTO_ICMP,	icmp,	CTLFLAG_RW, 0,	"ICMP");
 SYSCTL_NODE(_net_inet, IPPROTO_UDP,	udp,	CTLFLAG_RW, 0,	"UDP");
 SYSCTL_NODE(_net_inet, IPPROTO_TCP,	tcp,	CTLFLAG_RW, 0,	"TCP");
+#ifdef SCTP
+SYSCTL_NODE(_net_inet, IPPROTO_SCTP,	sctp,	CTLFLAG_RW, 0,	"SCTP");
+#endif
 SYSCTL_NODE(_net_inet, IPPROTO_IGMP,	igmp,	CTLFLAG_RW, 0,	"IGMP");
 #ifdef FAST_IPSEC
 /* XXX no protocol # to use, pick something "reserved" */
