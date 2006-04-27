@@ -10467,7 +10467,7 @@ sctp_send_sack(struct sctp_tcb *stcb)
 		 */
 		if ((!(asoc->last_data_chunk_from->dest_state &
 		       SCTP_ADDR_NOT_REACHABLE)) &&
-		    (asoc->used_alt_onsack > 2)) {
+		    (asoc->used_alt_onsack > asoc->numnets)) {
 			/* We used an alt last time, don't this time */
 			a_chk->whoTo = NULL;
 		} else {
