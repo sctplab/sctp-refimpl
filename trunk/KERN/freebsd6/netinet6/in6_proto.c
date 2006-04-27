@@ -66,6 +66,7 @@
 #include "opt_ipsec.h"
 #include "opt_ipstealth.h"
 #include "opt_carp.h"
+#include "opt_sctp.h"
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -136,6 +137,14 @@
 #define	ipcomp6_input	ipsec6_common_input
 #endif /* FAST_IPSEC */
 
+#ifdef SCTP
+#include <netinet/in_pcb.h>
+#include <netinet/sctp_pcb.h>
+#include <netinet/sctp.h>
+#include <netinet/sctp_var.h>
+#include <netinet6/sctp6_var.h>
+#endif /* SCTP */
+
 #include <netinet6/ip6protosw.h>
 
 #include <net/net_osdep.h>
@@ -173,6 +182,25 @@ struct ip6protosw inet6sw[] = {
 #endif
   &tcp6_usrreqs,
 },
+#ifdef SCTP
+{ SOCK_DGRAM,	&inet6domain,	IPPROTO_SCTP,	PR_ADDR_OPT|PR_WANTRCVD,
+  sctp6_input,	0,		sctp6_ctlinput,	sctp_ctloutput,
+  0,   0,		0,		0,		sctp_drain,
+  &sctp6_usrreqs
+},
+{ SOCK_SEQPACKET,	&inet6domain,	IPPROTO_SCTP,	PR_ADDR_OPT|PR_WANTRCVD,
+  sctp6_input,	0,		sctp6_ctlinput,	sctp_ctloutput,
+  0,   
+  0,		0,		0,		sctp_drain,
+  &sctp6_usrreqs
+},
+{ SOCK_STREAM,	&inet6domain,	IPPROTO_SCTP,	PR_CONNREQUIRED|PR_ADDR_OPT|PR_WANTRCVD|PR_LISTEN,
+  sctp6_input,	0,		sctp6_ctlinput,	sctp_ctloutput,
+  0,
+  0,		0,		0,		sctp_drain,
+  &sctp6_usrreqs
+},
+#endif /* SCTP */
 { SOCK_RAW,	&inet6domain,	IPPROTO_RAW,	PR_ATOMIC|PR_ADDR,
   rip6_input,	rip6_output,	rip6_ctlinput,	rip6_ctloutput,
   0,
@@ -356,6 +384,9 @@ SYSCTL_NODE(_net_inet6,	IPPROTO_IPV6,	ip6,	CTLFLAG_RW, 0,	"IP6");
 SYSCTL_NODE(_net_inet6,	IPPROTO_ICMPV6,	icmp6,	CTLFLAG_RW, 0,	"ICMP6");
 SYSCTL_NODE(_net_inet6,	IPPROTO_UDP,	udp6,	CTLFLAG_RW, 0,	"UDP6");
 SYSCTL_NODE(_net_inet6,	IPPROTO_TCP,	tcp6,	CTLFLAG_RW, 0,	"TCP6");
+#ifdef SCTP
+SYSCTL_NODE(_net_inet6,	IPPROTO_SCTP,	sctp6,	CTLFLAG_RW, 0,	"SCTP6");
+#endif
 #ifdef IPSEC
 SYSCTL_NODE(_net_inet6,	IPPROTO_ESP,	ipsec6,	CTLFLAG_RW, 0,	"IPSEC6");
 #endif /* IPSEC */
