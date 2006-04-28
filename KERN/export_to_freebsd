@@ -5,7 +5,14 @@ echo "$0 version [600000 or 700000]"
 exit
 fi
 
+if test $# -eq 2
+then
+prepare_script=$2
+else
+prepare_script=freebsd_prepare
+fi
+
 for j in `cat export_freebsd_list`
 do
-	./freebsd_prepare $1 $j
+	./$prepare_script $1 $j
 done
