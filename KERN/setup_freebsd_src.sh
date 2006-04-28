@@ -20,18 +20,21 @@ if test $ans = 7
 then
 echo "I will use 7.0 then, if unsure hit ctl-c else return"
 read ans
+BSD_PREPARE=freebsd_prepare
 BSD_PATH=freebsd7
 BSD_VER=700000
 elif test $ans = 60
 then
 echo "I will use 6.0 then, if unsure hit ctl-c else return"
 read ans
+BSD_PREPARE=freebsd_prepare6
 BSD_PATH=freebsd6
 BSD_VER=600000
 elif test $ans = 61
 then
 echo "I will use 6.1 then, if unsure hit ctl-c else return"
 read ans
+BSD_PREPARE=freebsd_prepare
 BSD_PATH=freebsd6_1
 BSD_VER=600000
 else
@@ -52,7 +55,7 @@ for j in conf/files conf/options kern/syscalls.master \
 done
 cd $cvsPath/KERN
 echo "Preparing kernel SCTP sources now"
-./export_to_freebsd $BSD_VER
+./export_to_freebsd $BSD_VER $BSD_PREPARE
 echo "Linking in SCTP sources"
 cd $cvsPath/KERN/export_freebsd/netinet
 for j in `ls`
