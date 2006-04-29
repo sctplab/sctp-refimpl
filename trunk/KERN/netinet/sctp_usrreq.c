@@ -2062,6 +2062,7 @@ sctp_optsget(struct socket *so,
 				tm->assoc_value = 0;
 			} else {
 				tm->assoc_value = stcb->asoc.delayed_ack;
+				SCTP_TCB_UNLOCK(stcb);
 			}
 		}else {
 			tm->assoc_value = TICKS_TO_MSEC(inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV]);
@@ -2535,7 +2536,7 @@ sctp_optsget(struct socket *so,
 				break;
 			}
 		}
-		if (	(stcb == NULL) &&
+		if ((stcb == NULL) &&
 			((((struct sockaddr *)&paddrp->spp_address)->sa_family == AF_INET) ||
 			 (((struct sockaddr *)&paddrp->spp_address)->sa_family == AF_INET6))) {
 			/* Lookup via address */
@@ -2570,14 +2571,6 @@ sctp_optsget(struct socket *so,
 				error = ENOENT;
 				break;
 			}
-		} else {
-			/* Effects the Endpoint */
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_USRREQ1) {
-				printf("User wants EP level info\n");
-			}
-#endif /* SCTP_DEBUG */
-			stcb = NULL;
 		}
 		if (stcb) {
 			/* Applys to the specific association */
@@ -2723,6 +2716,9 @@ sctp_optsget(struct socket *so,
 			stcb = NULL;
 		}
 		if ((stcb == NULL) || (net == NULL)) {
+			if(stcb) {
+				SCTP_TCB_UNLOCK(stcb);
+			}
 			error = ENOENT;
 			break;
 		}
@@ -2879,11 +2875,12 @@ sctp_optsget(struct socket *so,
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
 			SCTP_INP_RLOCK(inp);
 			stcb = LIST_FIRST(&inp->sctp_asoc_list);
-			if (stcb)
+			if (stcb) {
+				
 				SCTP_TCB_LOCK(stcb);
+			}
 			SCTP_INP_RUNLOCK(inp);
-		}
-		if ((sasoc->sasoc_assoc_id) && (stcb == NULL)) {
+		} else if (sasoc->sasoc_assoc_id) {
 			stcb = sctp_findassociation_ep_asocid(inp,
 							      sasoc->sasoc_assoc_id);
 			if (stcb == NULL) {
@@ -2893,7 +2890,6 @@ sctp_optsget(struct socket *so,
 		} else {
 			stcb = NULL;
 		}
-
 		if (stcb) {
 			sasoc->sasoc_asocmaxrxt = stcb->asoc.max_send_times;
 			sasoc->sasoc_number_peer_destinations = stcb->asoc.numnets;
@@ -3716,16 +3712,19 @@ sctp_optsset(struct socket *so,
 
 			   (strrst->strrst_list[i] > stcb->asoc.streamincnt)) {
 				error = EINVAL;
-				break;
+				goto get_out;
 			}
 			if((send_out) &&
 			   (strrst->strrst_list[i] > stcb->asoc.streamoutcnt)) {
 				error = EINVAL;
-				break;
+				goto get_out;
 			}
 		}
-		if(error)
+		if(error) {
+		get_out:
+			SCTP_TCB_UNLOCK(stcb);
 			break;
+		}
 		error = sctp_send_str_reset_req(stcb, strrst->strrst_num_streams,
 						strrst->strrst_list, 
 						send_out, (stcb->asoc.str_reset_seq_in-3),
@@ -4026,7 +4025,7 @@ sctp_optsset(struct socket *so,
 					break;
 				}
 
-			}
+			} 
 			if ((stcb == NULL) &&
 			    ((((struct sockaddr *)&paddrp->spp_address)->sa_family == AF_INET) ||
 			     (((struct sockaddr *)&paddrp->spp_address)->sa_family == AF_INET6))) {
@@ -4053,9 +4052,6 @@ sctp_optsset(struct socket *so,
 						SCTP_INP_WUNLOCK(inp);
 					}
 				}
-			} else {
-				/* Effects the Endpoint */
-				stcb = NULL;
 			}
 			if (stcb) {
 				/************************TCB SPECIFIC SET ******************/

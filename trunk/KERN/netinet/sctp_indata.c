@@ -3996,6 +3996,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 		   (asoc->total_flight > 0)) {
 			printf("Warning flight size incorrect should be 0 is %d\n",
 			       asoc->total_flight);
+			asoc->total_flight = 0;
 		}
 		if (tp1->data) {
 			sctp_free_bufspace(stcb, asoc, tp1, 1);
