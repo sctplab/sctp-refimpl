@@ -10467,7 +10467,7 @@ sctp_send_sack(struct sctp_tcb *stcb)
 		 */
 		if ((!(asoc->last_data_chunk_from->dest_state &
 		       SCTP_ADDR_NOT_REACHABLE)) &&
-		    (asoc->used_alt_onsack > 2)) {
+		    (asoc->used_alt_onsack > asoc->numnets)) {
 			/* We used an alt last time, don't this time */
 			a_chk->whoTo = NULL;
 		} else {
@@ -12902,6 +12902,7 @@ sctp_lower_sosend(struct socket *so,
 	}
 	if (addr) {
 		SCTP_ASOC_CREATE_LOCK(inp);
+		create_lock_applied = 1;
 		if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
 		    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
 			/* Should I really unlock ? */
@@ -12910,7 +12911,6 @@ sctp_lower_sosend(struct socket *so,
 			goto out;
 
 		}
-		create_lock_applied = 1;
 		if (((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0) &&
 		    (addr->sa_family == AF_INET6)) {
 			error = EINVAL;
@@ -12929,6 +12929,7 @@ sctp_lower_sosend(struct socket *so,
 			goto out;
 		}
 		SCTP_TCB_LOCK(stcb);
+		hold_tcblock = 1;
 		SCTP_INP_RUNLOCK(inp);
 		net = stcb->asoc.primary_destination;
 	}
@@ -12945,6 +12946,9 @@ sctp_lower_sosend(struct socket *so,
 			    (addr != NULL)) {
 				/* Must locate the net structure */
 				net = sctp_findnet(stcb, addr);
+			}
+			if(stcb){
+				hold_tcblock = 1;
 			}
 		}
 		if((stcb) && ((so->so_state & SS_NBIO)
@@ -12977,6 +12981,8 @@ sctp_lower_sosend(struct socket *so,
 					SCTP_INP_WLOCK(inp);
 					SCTP_INP_DECR_REF(inp);
 					SCTP_INP_WUNLOCK(inp);
+				} else {
+					hold_tcblock = 1;
 				}
 			}
 		}
@@ -13060,7 +13066,7 @@ sctp_lower_sosend(struct socket *so,
 					asoc->strmout = NULL;
 					asoc->streamoutcnt = asoc->pre_open_streams;
 
-					/* What happesn if this fails? .. we panic ...*/
+					/* What happens if this fails? .. we panic ...*/
 					{
 					  struct sctp_stream_out *tmp_str;
 					  SCTP_TCB_UNLOCK(stcb);
@@ -13076,6 +13082,7 @@ sctp_lower_sosend(struct socket *so,
 #ifdef SCTP_INVARIENTS
 					  SCTP_INP_RUNLOCK(inp);
 #endif
+					  hold_tcblock = 1;
 					  asoc->strmout = tmp_str;
 					}
 					for (i = 0; i < asoc->streamoutcnt; i++) {
