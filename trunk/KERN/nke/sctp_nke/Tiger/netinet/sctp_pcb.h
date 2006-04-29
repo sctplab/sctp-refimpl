@@ -653,6 +653,8 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
                                                      mtx_unlock(&(_tcb)->tcb_mtx); \
                                               } while (0)
 
+
+
 #ifdef INVARIANTS_SCTP
 #define STCB_TCB_LOCK_ASSERT(_tcb) do { \
                             if (mtx_owned(&(_tcb)->tcb_mtx) == 0) \
