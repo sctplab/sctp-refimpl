@@ -187,15 +187,24 @@ void SCTP_ASOC_CREATE_LOCK(struct sctp_inpcb *inp)
 void
 SCTP_INP_RLOCK(struct sctp_inpcb *inp)
 {
-	struct sctp_tcb *stcb;
+/*	struct sctp_tcb *stcb;*/
 #ifdef SCTP_LOCK_LOGGING
 	sctp_log_lock(inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_INP);
 #endif
-
+/*
 	LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
 		if (mtx_owned(&(stcb)->tcb_mtx))
 			panic("I own TCB lock?");
 	}
+*/
+	if(inp->sctp_socket) 
+		if (mtx_owned(&(inp->sctp_socket->so_rcv.sb_mtx))) {
+			panic("own rcv socket mtx at lock of inp");
+		}
+	if(inp->sctp_socket) 
+		if (mtx_owned(&(inp->sctp_socket->so_snd.sb_mtx))) {
+			panic("own snd socket mtx at lock of inp");
+		}
         if (mtx_owned(&(inp)->inp_mtx))
 		panic("INP Recursive Lock-R");
         mtx_lock(&(inp)->inp_mtx);
@@ -213,10 +222,21 @@ SCTP_TCB_LOCK(struct sctp_tcb *stcb)
 #ifdef SCTP_LOCK_LOGGING
 	sctp_log_lock(stcb->sctp_ep, stcb, SCTP_LOG_LOCK_TCB);
 #endif
+/*
 	if (!mtx_owned(&(stcb->sctp_ep->inp_mtx)))
 		panic("TCB locking and no INP lock");
+*/
 	if (mtx_owned(&(stcb)->tcb_mtx)) 
 		panic("TCB Lock-recursive");
+
+	if(stcb->sctp_socket) 
+		if (mtx_owned(&(stcb->sctp_socket->so_rcv.sb_mtx))) {
+			panic("own rcv socket mtx at lock of tcb");
+		}
+	if(stcb->sctp_socket) 
+		if (mtx_owned(&(stcb->sctp_socket->so_snd.sb_mtx))) {
+			panic("own snd socket mtx at lock of tcb");
+		}
 	mtx_lock(&(stcb)->tcb_mtx);
 }
 
@@ -2474,10 +2494,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 #else
 	s = splnet();
 #endif
+	SCTP_ASOC_CREATE_LOCK(inp);
 	SCTP_INP_WLOCK(inp);
 	so  = inp->sctp_socket;
-	SCTP_INP_WUNLOCK(inp);
-
 	if(so && ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) == 0)) {
 		locked_so = 1;
 #ifdef SCTP_LOCK_LOGGING
@@ -2485,9 +2504,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 #endif
 		SOCK_LOCK(so);
 	}
-	SCTP_ASOC_CREATE_LOCK(inp);
-
-	SCTP_INP_WLOCK(inp);
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
 		/* been here before */
 		splx(s);
@@ -2520,11 +2536,11 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 			if ((SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_COOKIE_WAIT) ||
 			    (SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_COOKIE_ECHOED)) {
 				/* Just abandon things in the front states */
-				SCTP_TCB_LOCK(asoc);
-				SCTP_INP_WUNLOCK(inp);
 				if(locked_so) {
 					SOCK_UNLOCK(so);
 				}
+				SCTP_TCB_LOCK(asoc);
+				SCTP_INP_WUNLOCK(inp);
 				sctp_free_assoc(inp, asoc, 1);
 				SCTP_INP_WLOCK(inp);
 				if(locked_so) {
@@ -2532,7 +2548,13 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 				}
 				continue;
 			}
+			if(locked_so) {
+				SOCK_UNLOCK(so);
+			}
 			SCTP_TCB_LOCK(asoc);			
+			if(locked_so) {
+				SOCK_LOCK(so);
+			}
 			asoc->asoc.state |= SCTP_STATE_CLOSED_SOCKET;
 			if ((asoc->asoc.size_on_reasm_queue > 0) ||
 			    (asoc->asoc.size_on_all_streams > 0) ||
@@ -2754,7 +2776,24 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 #endif
 #endif /*IPSEC*/
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
+		/* It appears that witness tells
+		 * us that the other time we get called (probably
+		 * from the socket layer) the accept lock is applied
+		 * and then the INP lock gets applied. So, to keep witness
+		 * happy and maintain proper order we unlock and then relock.
+		 */
+		SCTP_INP_WUNLOCK(inp);		
+		SCTP_ASOC_CREATE_UNLOCK(inp);
+		if(locked_so) {
+			SOCK_UNLOCK(so);			
+		}
 		ACCEPT_LOCK();
+		SCTP_ASOC_CREATE_LOCK(inp);
+		SCTP_INP_WLOCK(inp);		
+		if(locked_so) {
+			SOCK_LOCK(so);			
+		}
+
 #endif
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 		sotryfree(so);
@@ -3397,14 +3436,12 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	bzero(stcb, sizeof(*stcb));
 	asoc = &stcb->asoc;
 	SCTP_TCB_LOCK_INIT(stcb);
-	SCTP_TCB_FREE_LOCK_INIT(stcb);
 	/* setup back pointer's */
 	stcb->sctp_ep = inp;
 	stcb->sctp_socket = inp->sctp_socket;
 	if ((err = sctp_init_asoc(inp, asoc, for_a_init, override_tag))) {
 		/* failed */
 		SCTP_TCB_LOCK_DESTROY (stcb);
-		SCTP_TCB_FREE_LOCK_DESTROY (stcb);
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
 		SCTP_DECR_ASOC_COUNT();
 #ifdef SCTP_DEBUG
@@ -3423,7 +3460,6 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	if (inp->sctp_flags & (SCTP_PCB_FLAGS_SOCKET_GONE|SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
 		/* inpcb freed while alloc going on */
 		SCTP_TCB_LOCK_DESTROY (stcb);
-		SCTP_TCB_FREE_LOCK_DESTROY (stcb);
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
 		SCTP_INP_WUNLOCK(inp);
 		SCTP_INP_INFO_WUNLOCK();
@@ -3460,7 +3496,6 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		}
 #endif
 		SCTP_TCB_LOCK_DESTROY(stcb);
-		SCTP_TCB_FREE_LOCK_DESTROY (stcb);
 		*error = ENOBUFS;
 		return (NULL);
 	}
@@ -3656,7 +3691,6 @@ sctp_iterator_asoc_being_freed(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	SCTP_ITERATOR_LOCK();
 	SCTP_INP_INFO_WLOCK();
 	SCTP_INP_WLOCK(inp);
-	SCTP_TCB_FREE_LOCK(stcb);
 	SCTP_TCB_LOCK(stcb);
 
 
@@ -3686,7 +3720,7 @@ sctp_iterator_asoc_being_freed(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 /*
  * Free the association after un-hashing the remote port.
  */
-void
+int
 sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfree)
 {
 	int i;
@@ -3707,18 +3741,12 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 #else
 	s = splnet();
 #endif
-	/* We need to have the INP lock to
-	 * get the create lock to protect against
-	 * freeing on the reader. The writer holds
-	 * the TCB lock when it gets the FREE lock
-	 * so we are protected when we re-get the TCB
-	 * lock and then the FREE lock.
-	 */
 	if (stcb->asoc.state == 0) {
 		printf("Freeing already free association:%p - huh??\n",
 		       stcb);
 		splx(s);
-		return;
+		/* there is no asoc, really TSNH :-0 */
+		return(1);
 	}
 	asoc = &stcb->asoc;
 	if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)
@@ -3727,6 +3755,37 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	else 
 		so = inp->sctp_socket;
 
+	/*
+	 * We used timer based freeing if a reader or writer 
+	 * is in the way. So we first check if we are
+	 * actually being called from a timer, if so
+	 * we abort early if a reader or writer
+	 * is still in the way.
+	 */
+	if ((stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) &&
+	    (from_inpcbfree == 0)){
+		/* is it the timer driving us? if
+		 * so are the reader/writers gone?
+		 */
+		if(so) {
+			SOCKBUF_LOCK(&so->so_rcv);
+		}
+		if(stcb->asoc.refcnt) {
+			/* nope, reader or writer in the way */
+			sctp_timer_start(SCTP_TIMER_TYPE_ASOCKILL, inp, stcb, NULL);
+			if(so) {
+				SOCKBUF_UNLOCK(&so->so_rcv);
+			}
+			/* no asoc destroyed */
+			SCTP_TCB_UNLOCK(stcb);
+			splx(s);
+			return(0);
+		}
+		if(so) {
+			SOCKBUF_UNLOCK(&so->so_rcv);
+		}
+		
+	}
 	/* now clean up any other timers */
 	callout_stop(&asoc->hb_timer.timer);
 	callout_stop(&asoc->dack_timer.timer);
@@ -3750,22 +3809,39 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	 * too and, of course the iterator lock
 	 * in place as well..
 	 */
-	stcb->asoc.state |= SCTP_STATE_ABOUT_TO_BE_FREED;
-	SCTP_TCB_UNLOCK(stcb);
 	if ((from_inpcbfree == 0) && so){
+		/* We lock the socket buffer to be SURE 
+		 * that the receive side sees our flag
+		 * properly.
+		 */
 		SOCKBUF_LOCK(&so->so_rcv);
 	}
+	stcb->asoc.state |= SCTP_STATE_ABOUT_TO_BE_FREED;
+
+	/* Now the read queue needs to be cleaned up */
 	TAILQ_FOREACH(sq, &inp->read_queue, next) {
 		if (sq->stcb == stcb) {
 			sq->stcb = NULL;
 			sq->sinfo_cumtsn = stcb->asoc.cumulative_tsn;
 		}
 	}
+	if(stcb->asoc.refcnt) {
+		/* reader or writer in the way */
+		sctp_timer_start(SCTP_TIMER_TYPE_ASOCKILL, inp, stcb, NULL);
+		if ((from_inpcbfree == 0) && so){
+			SOCKBUF_UNLOCK(&so->so_rcv);
+		}
+		SCTP_TCB_UNLOCK(stcb);
+		splx(s);
+		/* no asoc destroyed */
+		return(0);
+	}
 	if ((from_inpcbfree == 0) && so){
 		SOCKBUF_UNLOCK(&so->so_rcv);
 	}
-	sctp_iterator_asoc_being_freed(inp, stcb);
+	SCTP_TCB_UNLOCK(stcb);
 
+	sctp_iterator_asoc_being_freed(inp, stcb);
 	/* now restop the timers to be sure - this is paranoia at is finest! */
 	callout_stop(&asoc->hb_timer.timer);
 	callout_stop(&asoc->dack_timer.timer);
@@ -4013,7 +4089,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	/* Insert new items here :> */
 
 	/* Get rid of LOCK */
-	SCTP_TCB_FREE_LOCK_DESTROY (stcb);
 	SCTP_TCB_LOCK_DESTROY(stcb);
 
 	/* now clean up the tasoc itself */
@@ -4088,6 +4163,8 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		sctp_inpcb_free(inp, 0);
 	}
 	splx(s);
+	/* destroyed the asoc */
+	return(1);
 }
 
 
