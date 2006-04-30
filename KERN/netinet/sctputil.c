@@ -974,6 +974,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	else	
 		asoc->hb_is_disabled = 0;
 
+	asoc->refcnt = 0;
 	asoc->assoc_up_sent = 0;
 	asoc->assoc_id = asoc->my_vtag;
 	asoc->asconf_seq_out = asoc->str_reset_seq_out = asoc->init_seq_number = asoc->sending_seq =
@@ -1457,6 +1458,16 @@ sctp_timeout_handler(void *t)
 		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_AUTOCLOSE_TMR);
 		did_output = 0;
 		break;
+	case SCTP_TIMER_TYPE_ASOCKILL:
+		/* Can we free it yet? */
+		sctp_timer_stop(SCTP_TIMER_TYPE_ASOCKILL, inp, stcb, NULL);
+		sctp_free_assoc(inp, stcb, 0);
+		/* free asoc, always unlocks
+		 * (or destroy's) so prevent duplicate unlock or
+		 * unlock of a free mtx :-0
+		 */
+		stcb = NULL;
+		break;
 	case SCTP_TIMER_TYPE_INPKILL:
 		/* special case, take away our
 		 * increment since WE are the killer
@@ -1481,7 +1492,7 @@ sctp_timeout_handler(void *t)
 	sctp_audit_log(0xF1, (u_int8_t)tmr->type);
 	sctp_auditing(5, inp, stcb, net);
 #endif
-	if (did_output) {
+	if ((did_output) && stcb){
 		/*
 		 * Now we need to clean up the control chunk chain if an
 		 * ECNE is on it. It must be marked as UNSENT again so next
@@ -1710,6 +1721,10 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		tmr = &inp->sctp_ep.signature_change;
 		to_ticks = inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_SIGNATURE];
 		break;
+	case SCTP_TIMER_TYPE_ASOCKILL:
+		tmr = &stcb->asoc.strreset_timer;
+		to_ticks = MSEC_TO_TICKS(SCTP_ASOC_KILL_TIMEOUT);
+		break;
 	case SCTP_TIMER_TYPE_INPKILL:
 		/*
 		 * The inp is setup to die. We re-use the
@@ -1937,6 +1952,13 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		 * that we do not kill it by accident.
 		 */
 		break;
+	case SCTP_TIMER_TYPE_ASOCKILL:
+		/*
+		 * Stop the asoc kill timer.
+		 */
+ 		tmr = &stcb->asoc.strreset_timer;
+		break;
+
 	case SCTP_TIMER_TYPE_INPKILL:
 		/*
 		 * The inp is setup to die. We re-use the
@@ -3894,7 +3916,6 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far)
 	rwnd_req = (so->so_snd.sb_hiwat >> SCTP_RWND_HIWAT_SHIFT);
 	if(stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 		/* Pre-check If we are freeing  */
-		SCTP_TCB_FREE_UNLOCK(stcb);
 		return(-1);
 	}
 	stcb->freed_by_sorcv_sincelast += *freed_so_far;
@@ -3923,7 +3944,6 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far)
 			/* No reports here */
 			SCTP_TCB_UNLOCK(stcb);
 		get_out:
-			SCTP_TCB_FREE_UNLOCK(stcb);
 			SOCKBUF_LOCK(&so->so_rcv);
 			return(-1);
 		}
@@ -3972,8 +3992,9 @@ sctp_sorecvmsg(struct socket *so,
 	int cp_len, error=0;
 	struct sctp_queued_to_read *control, *ctl;
 	struct mbuf *m;
-	struct sctp_tcb *stcb;
+	struct sctp_tcb *stcb=NULL;
 	int wakeup_read_socket=0;
+	int freecnt_applied=0;
 	int out_flags=0, in_flags;
 	int block_allowed=1;
 	int freed_so_far=0;
@@ -4082,22 +4103,26 @@ sctp_sorecvmsg(struct socket *so,
 	 */
 
 	stcb = control->stcb;
-	if(stcb) {
+	if (stcb) {
 		/* you can't free it on me please */
-		SCTP_INP_RLOCK(inp);
 		stcb = control->stcb;
 		if(stcb) {
-			SCTP_TCB_FREE_LOCK(stcb);
-			SCTP_INP_RUNLOCK(inp);
 			if(stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 				/* its about to be killed, don't refer to it  */
 				control->stcb = NULL;
-				SCTP_TCB_FREE_UNLOCK(stcb);
 				stcb = NULL;
 			}
-		} else {
-			SCTP_INP_RUNLOCK(inp);
-		}
+		} 
+	}
+	if (stcb) {
+		/* The lock on the socket buffer protects
+		 * us so the free code will stop. But since
+		 * we used the socketbuf lock and the sender
+		 * uses the tcb_lock to increment, we need
+		 * to use the atomic add to the refcnt.
+		 */
+		atomic_add_16(&stcb->asoc.refcnt, 1);
+		freecnt_applied = 1;
 	}
  	error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
 	/* First lets get off the sinfo and sockaddr info */
@@ -4177,7 +4202,6 @@ sctp_sorecvmsg(struct socket *so,
 			/* re-read */
 			if(stcb && 
 			   stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
-				SCTP_TCB_FREE_UNLOCK(stcb);
 				stcb = NULL;
 			}
 			if (error) {
@@ -4520,7 +4544,6 @@ sctp_sorecvmsg(struct socket *so,
 					SOCKBUF_LOCK(&so->so_rcv);
 					if(stcb &&
 					   stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
-						SCTP_TCB_FREE_UNLOCK(stcb);
 						stcb = NULL;
 					}
 					m->m_data += cp_len;
@@ -4553,8 +4576,6 @@ sctp_sorecvmsg(struct socket *so,
 		}
 	}
  release:
-	if(stcb)
-		SCTP_TCB_FREE_UNLOCK(stcb);
 
 	if(msg_flags)
 		*msg_flags |= out_flags; 	
@@ -4564,6 +4585,16 @@ sctp_sorecvmsg(struct socket *so,
 	sbunlock(&so->so_rcv);
 #endif
  out:
+	if ((stcb) && freecnt_applied) {
+		/* The lock on the socket buffer protects
+		 * us so the free code will stop. But since
+		 * we used the socketbuf lock and the sender
+		 * uses the tcb_lock to increment, we need
+		 * to use the atomic add to the refcnt.
+		 */
+		atomic_add_16(&stcb->asoc.refcnt, -1);
+		freecnt_applied = 0;
+	}
 	SOCKBUF_UNLOCK(&so->so_rcv);
 	splx(s);
 	if (wakeup_read_socket) {
