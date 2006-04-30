@@ -2966,8 +2966,12 @@ sctp_ulp_notify(u_int32_t notification, struct sctp_tcb *stcb,
 		return;
 	}
 	if(stcb && (stcb->asoc.assoc_up_sent == 0) && (notification != SCTP_NOTIFY_ASSOC_UP)){
-		sctp_notify_assoc_change(SCTP_COMM_UP, stcb, 0, NULL);
-		stcb->asoc.assoc_up_sent = 1;
+		if ((notification != SCTP_NOTIFY_ASSOC_DOWN) &&
+		    (notification != SCTP_NOTIFY_ASSOC_ABORTED) &&
+		    (notification != SCTP_NOTIFY_PEER_SHUTDOWN)) {
+			sctp_notify_assoc_change(SCTP_COMM_UP, stcb, 0, NULL);
+			stcb->asoc.assoc_up_sent = 1;
+		}
 	}
 	switch (notification) {
 	case SCTP_NOTIFY_ASSOC_UP:

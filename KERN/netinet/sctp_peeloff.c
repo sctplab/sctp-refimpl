@@ -207,12 +207,11 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 	SOCK_LOCK(head);
 	SCTP_INP_WLOCK(inp);
 	SCTP_INP_WLOCK(n_inp);
-	n_inp->sctp_flags = (SCTP_PCB_FLAGS_UDPTYPE |
+        n_inp->sctp_flags = (SCTP_PCB_FLAGS_UDPTYPE |
 	    SCTP_PCB_FLAGS_CONNECTED |
 	    SCTP_PCB_FLAGS_IN_TCPPOOL | /* Turn on Blocking IO */
 	    (SCTP_PCB_COPY_FLAGS & inp->sctp_flags));
-	n_inp->sctp_features = inp->sctp_features;
-
+        n_inp->sctp_features = inp->sctp_features;
 	/* copy in the authentication parameters from the original endpoint */
 	if (n_inp->sctp_ep.local_hmacs)
 		sctp_free_hmaclist(n_inp->sctp_ep.local_hmacs);
@@ -226,6 +225,10 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 				 &n_inp->sctp_ep.shared_keys);
 
 	n_inp->sctp_socket = newso;
+        if(sctp_is_feature_on(inp, SCTP_PCB_FLAGS_AUTOCLOSE)) {
+		n_inp->sctp_features &= SCTP_PCB_FLAGS_AUTOCLOSE;
+		sctp_timer_stop(SCTP_TIMER_TYPE_AUTOCLOSE, n_inp, stcb, NULL);
+        }
 	/* Turn off any non-blocking semantic. */
 	newso->so_state &= ~SS_NBIO;
 	newso->so_state |= SS_ISCONNECTED;
