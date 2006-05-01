@@ -225,7 +225,6 @@ struct sctp_nets {
 	/* error stats on destination */
 	u_int16_t error_count;
 	/* Flags that probably can be combined into dest_state */
-
         u_int8_t rto_variance_dir;      /* increase = 1, decreasing = 0 */
 	u_int8_t rto_pending;		/* is segment marked for RTO update  ** if we split?*/
 	u_int8_t fast_retran_ip;	/* fast retransmit in progress */
@@ -652,6 +651,10 @@ struct sctp_association {
 	struct sctp_keyhead  shared_keys;	/* assoc's shared keys */
 	sctp_authinfo_t      authinfo;		/* randoms, cached keys */
 	uint16_t             peer_hmac_id;	/* peer HMAC id to send */
+	/* refcnt to block freeing when a sender or receiver is
+	 * off coping user data in.
+	 */
+	u_int16_t refcnt;
 	uint8_t              authenticated;	/* packet authenticated ok */
 
 	/*

@@ -6243,7 +6243,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 		struct mbuf *m,
 		struct sctp_sndrcvinfo *srcv,
 		int flags,
-		int hold_sockbuflock, int hold_freelock, int *data_len)
+		int hold_sockbuflock, int hold_freecnt, int *data_len)
 {
 	struct socket *so;
 	struct sctp_association *asoc;
@@ -6255,7 +6255,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 	struct mbuf *mm;
 	struct sctp_block_entry be;
 	unsigned int dataout, siz;
-
+	int free_cnt_applied=0;
 	int pad_oh = 0;
 	int mbcnt = 0;
 	int mbcnt_e = 0;
@@ -6300,8 +6300,6 @@ sctp_msg_append(struct sctp_tcb *stcb,
 				ph->param_length = htons(m->m_len);
 			}
 			/* We can't wait on ourselves */
-			if(hold_freelock)
-				SCTP_TCB_FREE_UNLOCK(stcb);
 			sctp_abort_an_association(stcb->sctp_ep, stcb, SCTP_RESPONSE_TO_USER_REQ, m);
 			m = NULL;
 		} else {
@@ -6333,6 +6331,13 @@ sctp_msg_append(struct sctp_tcb *stcb,
 #endif
 		error = EFAULT;
 		goto out;
+	}
+	if(hold_freecnt) {
+		/* we incr the count, since
+		 * we don't want free's to catch us up.
+		 */
+		atomic_add_16(&stcb->asoc.refcnt, 1);
+		free_cnt_applied = 1;
 	}
 	strq = &asoc->strmout[srcv->sinfo_stream];
 	/* how big is it ? */
@@ -6727,10 +6732,17 @@ sctp_msg_append(struct sctp_tcb *stcb,
 zap_by_it_all:
 
 	if ((srcv->sinfo_flags & SCTP_EOF) &&
+	    ((stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) == 0) &&
 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE)) {
-
 		int some_on_streamwheel = 0;
-
+		SOCKBUF_UNLOCK(&so->so_snd);
+#ifdef SCTP_INVARIENTS
+		SCTP_INP_RLOCK(stcb->sctp_ep);
+#endif
+		SCTP_TCB_LOCK(stcb);
+#ifdef SCTP_INVARIENTS
+		SCTP_INP_RUNLOCK(stcb->sctp_ep);
+#endif
 		if (!TAILQ_EMPTY(&asoc->out_wheel)) {
 			/* Check to see if some data queued */
 			struct sctp_stream_out *outs;
@@ -6746,6 +6758,7 @@ zap_by_it_all:
 		    TAILQ_EMPTY(&asoc->sent_queue) &&
 		    (some_on_streamwheel == 0)) {
 			/* there is nothing queued to send, so I'm done... */
+
 			if ((SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_SENT) &&
 			    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_RECEIVED) &&
 			    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_ACK_SENT)) {
@@ -6781,6 +6794,8 @@ zap_by_it_all:
 				asoc->state |= SCTP_STATE_SHUTDOWN_PENDING;
 			}
 		}
+		SOCKBUF_LOCK(&so->so_snd);
+		SCTP_TCB_UNLOCK(stcb);
 	}
 #ifdef SCTP_MBCNT_LOGGING
 	sctp_log_mbcnt(SCTP_LOG_MBCNT_INCREASE,
@@ -6817,6 +6832,10 @@ release:
 out_locked:
 	SOCKBUF_UNLOCK(&so->so_snd);
 out:
+	if (free_cnt_applied && stcb) {
+		atomic_add_16(&stcb->asoc.refcnt, -1);
+		free_cnt_applied = 0;
+	}
 	if (m && m->m_nextpkt) {
 		n = m;
 		while (n) {
@@ -10123,14 +10142,12 @@ sctp_output(inp, m, addr, control, p, flags)
 #ifdef SCTP_INVARIENTS
 	SCTP_INP_RLOCK(inp);
 #endif
-	SCTP_TCB_FREE_LOCK(stcb);
 	SCTP_TCB_LOCK(stcb);
 #ifdef SCTP_INVARIENTS
 	SCTP_INP_RUNLOCK(inp);
 #endif
 	if(stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 		SCTP_TCB_UNLOCK(stcb);
-		SCTP_TCB_FREE_UNLOCK(stcb);
 		return(ECONNRESET);
 	}
 
@@ -10159,12 +10176,11 @@ sctp_output(inp, m, addr, control, p, flags)
 	} else {
 		net = stcb->asoc.primary_destination;
 	}
-	if ((error = sctp_msg_append(stcb, net, m, &srcv, flags, 1, 1, NULL))) {
+	if ((error = sctp_msg_append(stcb, net, m, &srcv, flags, 1, 0, NULL))) {
 		if((srcv.sinfo_flags & SCTP_ABORT) == 0) {
 			/* You can't unlock locks that are gone 
 			 * so only if ABORT is not present do this.
 			 */
-			SCTP_TCB_FREE_UNLOCK(stcb);
 			SCTP_TCB_UNLOCK(stcb);
 		}
 		splx(s);
@@ -10238,7 +10254,6 @@ sctp_output(inp, m, addr, control, p, flags)
 	 * if the sbwait() or mutex returns an error :-0
 	 */
 
-	SCTP_TCB_FREE_UNLOCK(stcb);
  	SCTP_TCB_UNLOCK(stcb);
 	splx(s);
 	return (0);
@@ -12297,6 +12312,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 			 */
 
 		        /* unlock all due to m_wait */
+			SOCKBUF_UNLOCK(&so->so_snd);
 			stcb->block_entry = NULL;
  			MGETHDR(mm, M_WAIT, MT_DATA);
 			if (mm) {
@@ -12334,6 +12350,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 					mm = NULL;
 				}
 			}
+			SOCKBUF_LOCK(&so->so_snd);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			sbunlock(&so->so_snd, 1); /* MT: FIXME */
 #else
@@ -12348,7 +12365,6 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 			SCTP_INP_RUNLOCK(inp);
 #endif
 			/* release this lock, otherwise we hang on ourselves */
-			SCTP_TCB_FREE_UNLOCK(stcb);
 			sctp_abort_an_association(stcb->sctp_ep, stcb,
 						  SCTP_RESPONSE_TO_USER_REQ,
 						  mm);
@@ -12686,6 +12702,15 @@ zap_by_it_now:
 				}
 			}
 		}
+		SOCKBUF_UNLOCK(&so->so_snd);
+#ifdef SCTP_INVARIENTS
+		SCTP_INP_RLOCK(inp);
+#endif
+		SCTP_TCB_LOCK(stcb);
+#ifdef SCTP_INVARIENTS
+		SCTP_INP_RUNLOCK(inp);
+#endif
+
 		if (TAILQ_EMPTY(&asoc->send_queue) &&
 		    TAILQ_EMPTY(&asoc->sent_queue) &&
 		    (some_on_streamwheel == 0)) {
@@ -12725,6 +12750,8 @@ zap_by_it_now:
 				asoc->state |= SCTP_STATE_SHUTDOWN_PENDING;
 			}
 		}
+		SOCKBUF_LOCK(&so->so_snd);
+		SCTP_TCB_UNLOCK(stcb);
 	}
 	splx(s);
 #ifdef SCTP_DEBUG
@@ -12863,7 +12890,7 @@ sctp_lower_sosend(struct socket *so,
  	unsigned int sndlen;
 	int error, len;
 	int s, queue_only = 0, queue_only_for_init=0;
-	int free_lock_applied = 0;
+	int free_cnt_applied = 0;
 	int un_sent = 0;
 	int now_filled=0;
 	struct sctp_inpcb *inp;
@@ -13121,16 +13148,8 @@ sctp_lower_sosend(struct socket *so,
 		asoc = &stcb->asoc;
 	}
 	/* Keep the stcb from being freed under our feet */
-	SCTP_TCB_UNLOCK(stcb);
-#ifdef SCTP_INVARIENTS
-	SCTP_INP_RLOCK(inp);
-#endif
-	SCTP_TCB_FREE_LOCK(stcb);
-	SCTP_TCB_LOCK(stcb);
-#ifdef SCTP_INVARIENTS
-	SCTP_INP_RUNLOCK(inp);
-#endif
-	free_lock_applied = 1;
+	atomic_add_16(&stcb->asoc.refcnt, 1);
+	free_cnt_applied = 1;
 	hold_tcblock = 1;
 	if(stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 		error = ECONNRESET;
@@ -13249,8 +13268,12 @@ sctp_lower_sosend(struct socket *so,
 		error = sctp_copy_it_in(inp, stcb, asoc, net, srcv, uio, flags);
 		if(srcv->sinfo_flags & SCTP_ABORT) {
 			/* we lost the tcb too */
+			if (free_cnt_applied) {
+				atomic_add_16(&stcb->asoc.refcnt, -1);
+				free_cnt_applied = 0;
+			}
 			stcb = NULL;
-			goto out_nofreelock;
+			goto out;
 		}
 		if(error) {
 			goto out;
@@ -13263,8 +13286,12 @@ sctp_lower_sosend(struct socket *so,
  		error = sctp_msg_append(stcb, net, top, srcv, flags, 0, 1, &len);
  		splx(s);
 		if(srcv->sinfo_flags & SCTP_ABORT) {
+			if (free_cnt_applied) {
+				atomic_add_16(&stcb->asoc.refcnt, -1);
+				free_cnt_applied = 0;
+			}
 			stcb = NULL;
-			goto out_nofreelock;
+			goto out;
 		}
 		if (error)
 			goto out;
@@ -13366,10 +13393,9 @@ sctp_lower_sosend(struct socket *so,
 	}
 #endif
  out:
-	if(free_lock_applied)
-		SCTP_TCB_FREE_UNLOCK(stcb);
+	if ((stcb) && (free_cnt_applied))
+		atomic_add_16(&stcb->asoc.refcnt, -1);
 
- out_nofreelock:
 	if (create_lock_applied) {
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		create_lock_applied = 0;

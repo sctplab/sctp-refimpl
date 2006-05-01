@@ -448,8 +448,9 @@
 #define SCTP_TIMER_TYPE_INPKILL         15
 #define SCTP_TIMER_TYPE_ITERATOR        16
 #define SCTP_TIMER_TYPE_EARLYFR         17
+#define SCTP_TIMER_TYPE_ASOCKILL        18
 /* add new timers here - and increment LAST */
-#define SCTP_TIMER_TYPE_LAST            18
+#define SCTP_TIMER_TYPE_LAST            19
 
 #define SCTP_IS_TIMER_TYPE_VALID(t)	(((t) > SCTP_TIMER_TYPE_NONE) && \
 					 ((t) < SCTP_TIMER_TYPE_LAST))
@@ -550,7 +551,8 @@
 #define SCTP_RTO_INITIAL	(3000)	/* 3 sec in ms */
 
 
-#define SCTP_INP_KILL_TIMEOUT 1000 /* number of ms to retry kill of inpcb*/
+#define SCTP_INP_KILL_TIMEOUT 1000 /* number of ms to retry kill of inpcb */
+#define SCTP_ASOC_KILL_TIMEOUT 100 /* number of ms to retry kill of inpcb */
 
 #define SCTP_DEF_MAX_INIT	8
 #define SCTP_DEF_MAX_SEND	10
