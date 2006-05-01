@@ -2674,12 +2674,7 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, u_int32_t error,
 	ssf->ssf_info.sinfo_assoc_id = sctp_get_associd(stcb);
 	ssf->ssf_assoc_id = sctp_get_associd(stcb);
 	m_notify->m_next = chk->data;
-	if (chk->rec.data.rcv_flags & SCTP_DATA_LAST_FRAG)
-		/* If the data has last bit, we M_EOR */
-		m_notify->m_flags |= M_EOR | M_NOTIFICATION;
-	else {
-		m_notify->m_flags |= M_NOTIFICATION;
-	}
+	m_notify->m_flags |= M_NOTIFICATION;
 	m_notify->m_pkthdr.len = length;
 	m_notify->m_pkthdr.rcvif = 0;
 	m_notify->m_len = sizeof(struct sctp_send_failed);
@@ -2703,7 +2698,6 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, u_int32_t error,
 		sctp_m_freem(m_notify);
 		return;
 	}
-	/* not that we need this */
 	sctp_add_to_readq(stcb->sctp_ep, stcb,
 			  control,
 			  &stcb->sctp_socket->so_rcv, 1);
@@ -4109,7 +4103,6 @@ sctp_sorecvmsg(struct socket *so,
 
 	stcb = control->stcb;
 	if (stcb) {
-		/* you can't free it on me please */
 		stcb = control->stcb;
 		if(stcb) {
 			if(stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
@@ -4119,6 +4112,7 @@ sctp_sorecvmsg(struct socket *so,
 			}
 		} 
 	}
+	/* you can't free it on me please */
 	if (stcb) {
 		/* The lock on the socket buffer protects
 		 * us so the free code will stop. But since
@@ -4191,9 +4185,10 @@ sctp_sorecvmsg(struct socket *so,
 		while (m) {
 			/* Move out all we can */
 			cp_len = (int)uio->uio_resid;
-			if (cp_len > m->m_len)
+			if (cp_len > m->m_len) {
 				/* not enough in this buf */
 				cp_len = (int)m->m_len;
+			}
 			SOCKBUF_UNLOCK(&so->so_rcv);
 			splx(s);
 			/* move out the data, unlocked (our sblock flag protects us from a reader) */
@@ -4214,10 +4209,12 @@ sctp_sorecvmsg(struct socket *so,
 				goto release;
 			}
 			if(cp_len == m->m_len) {
-				if (m->m_flags & M_EOR)
+				if (m->m_flags & M_EOR) {
 					out_flags |= MSG_EOR;
-				if (m->m_flags & M_NOTIFICATION)
+				}
+				if (m->m_flags & M_NOTIFICATION) {
 					out_flags |= MSG_NOTIFICATION;
+				}
 
 				/* we ate up the mbuf */
 				if(in_flags & MSG_PEEK) {
@@ -4241,9 +4238,6 @@ sctp_sorecvmsg(struct socket *so,
 						cp_len = control->length;
 #endif
 					}
-
-					
-
 					freed_so_far += cp_len;
 					control->length -= cp_len;
 					control->data = m_free(m);
@@ -4255,8 +4249,9 @@ sctp_sorecvmsg(struct socket *so,
 				}
 			} else {
 				/* Do we need to trim the mbuf? */
-				if (m->m_flags & M_NOTIFICATION)
+				if (m->m_flags & M_NOTIFICATION) {
 					out_flags |= MSG_NOTIFICATION;
+				}
 
 				if((in_flags & MSG_PEEK) == 0) {
 
