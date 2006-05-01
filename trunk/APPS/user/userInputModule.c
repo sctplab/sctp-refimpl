@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.42 2006-04-20 16:13:08 lei Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.43 2006-05-01 11:25:36 tuexen Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -1452,7 +1452,8 @@ sctpInput(void *arg, messageEnvolope *msg)
 					SCTPPrintAnAddress(msg->to);
 				}
 				((char *)msg->data)[msg->siz] = 0;
-				printf("strm:%d seq:%d %d:'%s'\n",
+				printf("PPID:%d strm:%d seq:%d %d:'%s'\n",
+				       msg->protocolId,
 				       msg->streamNo,
 				       msg->streamSeq,
 				       msg->siz,
@@ -1466,7 +1467,8 @@ sctpInput(void *arg, messageEnvolope *msg)
 					printf("To:");
 					SCTPPrintAnAddress(msg->to);
 				}
-				printf("strm:%d seq:%d %d:\n",
+				printf("PPID:%d strm:%d seq:%d %d:\n",
+				       msg->protocolId,
 				       msg->streamNo,
 				       msg->streamSeq,
 				       msg->siz);
