@@ -4848,6 +4848,7 @@ sctp_listen(struct socket *so, struct proc *p)
 		/* I made the same as TCP since we are not setup? */
 		return (ECONNRESET);
 	}
+	SCTP_INP_RLOCK(inp);
 #ifdef SCTP_LOCK_LOGGING
 	sctp_log_lock(inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_SOCK);
 #endif
@@ -4859,7 +4860,6 @@ sctp_listen(struct socket *so, struct proc *p)
 		return (error);
 	}
 #endif
-	SCTP_INP_RLOCK(inp);
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
 		/* We are already connected AND the TCP model */
