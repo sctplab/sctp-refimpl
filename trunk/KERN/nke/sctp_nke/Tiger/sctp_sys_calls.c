@@ -1,7 +1,7 @@
 /*	$KAME: sctp_sys_calls.c,v 1.9 2004/08/17 06:08:53 itojun Exp $ */
 
 /*
- * Copyright (C) 2002-2005 Cisco Systems Inc,
+ * Copyright (C) 2002-2006 Cisco Systems Inc,
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -261,7 +261,10 @@ sctp_opt_info(int sd, sctp_assoc_t id, int opt, void *arg, socklen_t *size)
 	    (opt == SCTP_SET_PEER_PRIMARY_ADDR) || 
 	    (opt == SCTP_PEER_ADDR_PARAMS) || 
 	    (opt == SCTP_STATUS) || 
-	    (opt == SCTP_GET_PEER_ADDR_INFO)) { 
+	    (opt == SCTP_GET_PEER_ADDR_INFO) ||
+	    (opt == SCTP_AUTH_ACTIVE_KEY) ||
+	    (opt == SCTP_PEER_AUTH_CHUNKS) ||
+	    (opt == SCTP_LOCAL_AUTH_CHUNKS)) {
 		*(sctp_assoc_t *)arg = id;
 		return(getsockopt(sd, IPPROTO_SCTP, opt, arg, size));
 	}else{
