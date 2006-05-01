@@ -183,18 +183,18 @@ struct ip6protosw inet6sw[] = {
   &tcp6_usrreqs,
 },
 #ifdef SCTP
-{ SOCK_DGRAM,	&inet6domain,	IPPROTO_SCTP,	PR_ADDR_OPT|PR_WANTRCVD,
+{ SOCK_DGRAM,	&inet6domain,	IPPROTO_SCTP,	PR_WANTRCVD,
   sctp6_input,	0,		sctp6_ctlinput,	sctp_ctloutput,
   0,   0,		0,		0,		sctp_drain,
   &sctp6_usrreqs
 },
-{ SOCK_SEQPACKET,	&inet6domain,	IPPROTO_SCTP,	PR_ADDR_OPT|PR_WANTRCVD,
+{ SOCK_SEQPACKET,	&inet6domain,	IPPROTO_SCTP,	PR_WANTRCVD,
   sctp6_input,	0,		sctp6_ctlinput,	sctp_ctloutput,
   0,   
   0,		0,		0,		sctp_drain,
   &sctp6_usrreqs
 },
-{ SOCK_STREAM,	&inet6domain,	IPPROTO_SCTP,	PR_CONNREQUIRED|PR_ADDR_OPT|PR_WANTRCVD|PR_LISTEN,
+{ SOCK_STREAM,	&inet6domain,	IPPROTO_SCTP,	PR_CONNREQUIRED|PR_WANTRCVD|PR_LISTEN,
   sctp6_input,	0,		sctp6_ctlinput,	sctp_ctloutput,
   0,
   0,		0,		0,		sctp_drain,
