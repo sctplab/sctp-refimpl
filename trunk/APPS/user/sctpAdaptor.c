@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.19 2006-04-20 16:13:08 lei Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.20 2006-05-01 11:26:40 tuexen Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -387,6 +387,7 @@ sctpReadInput(int fd, distributor *o,sctpAdaptorMod *r)
 		     &from_len,
 		     &o_info,
 		     &msg.msg_flags);
+  printf("sctp_recvmsg returned %d.\n", sz);
   s_info = &o_info;
 
   if(sz <= 0){
