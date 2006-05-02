@@ -38,6 +38,7 @@
 #include "opt_compat.h"
 #include "opt_inet6.h"
 #include "opt_inet.h"
+#include "opt_global.h"
 #endif
 #if defined(__NetBSD__)
 #include "opt_inet.h"
@@ -66,6 +67,7 @@
 #include <sys/random.h>
 #endif
 #if defined(__NetBSD__)
+#include "rnd.h"
 #include <sys/rnd.h>
 #endif
 #if defined(__OpenBSD__)
@@ -185,15 +187,24 @@ void SCTP_ASOC_CREATE_LOCK(struct sctp_inpcb *inp)
 void
 SCTP_INP_RLOCK(struct sctp_inpcb *inp)
 {
-	struct sctp_tcb *stcb;
+/*	struct sctp_tcb *stcb;*/
 #ifdef SCTP_LOCK_LOGGING
 	sctp_log_lock(inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_INP);
 #endif
-
+/*
 	LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
 		if (mtx_owned(&(stcb)->tcb_mtx))
 			panic("I own TCB lock?");
 	}
+*/
+	if(inp->sctp_socket) 
+		if (mtx_owned(&(inp->sctp_socket->so_rcv.sb_mtx))) {
+			panic("own rcv socket mtx at lock of inp");
+		}
+	if(inp->sctp_socket) 
+		if (mtx_owned(&(inp->sctp_socket->so_snd.sb_mtx))) {
+			panic("own snd socket mtx at lock of inp");
+		}
         if (mtx_owned(&(inp)->inp_mtx))
 		panic("INP Recursive Lock-R");
         mtx_lock(&(inp)->inp_mtx);
@@ -211,10 +222,21 @@ SCTP_TCB_LOCK(struct sctp_tcb *stcb)
 #ifdef SCTP_LOCK_LOGGING
 	sctp_log_lock(stcb->sctp_ep, stcb, SCTP_LOG_LOCK_TCB);
 #endif
+/*
 	if (!mtx_owned(&(stcb->sctp_ep->inp_mtx)))
 		panic("TCB locking and no INP lock");
+*/
 	if (mtx_owned(&(stcb)->tcb_mtx)) 
 		panic("TCB Lock-recursive");
+
+	if(stcb->sctp_socket) 
+		if (mtx_owned(&(stcb->sctp_socket->so_rcv.sb_mtx))) {
+			panic("own rcv socket mtx at lock of tcb");
+		}
+	if(stcb->sctp_socket) 
+		if (mtx_owned(&(stcb->sctp_socket->so_snd.sb_mtx))) {
+			panic("own snd socket mtx at lock of tcb");
+		}
 	mtx_lock(&(stcb)->tcb_mtx);
 }
 
@@ -657,9 +679,11 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 			}
 			/* now look at the list of remote addresses */
 			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
+#ifdef INVARIENTS
 				if(net == (TAILQ_NEXT(net,sctp_next))) {
 					panic("Corrupt net list");
 				}
+#endif
 				if (net->ro._l_addr.sa.sa_family !=
 				    remote->sa_family) {
 					/* not the same family */
@@ -730,9 +754,11 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 			/* now look at the list of remote addresses */
 			SCTP_TCB_LOCK(stcb);
 			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
+#ifdef INVARIENTS
 				if(net == (TAILQ_NEXT(net,sctp_next))) {
 					panic("Corrupt net list");
 				}
+#endif
 				if (net->ro._l_addr.sa.sa_family !=
 				    remote->sa_family) {
 					/* not the same family */
@@ -2249,7 +2275,8 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 			}
 			/* try two half's added together */
 		last_try:
-			port_attempt = (((port_guess >> 16) &  0x0000ffff) + (port_guess & 0x0000ffff));
+			port_attempt = (((port_guess >> 16) &  0x0000ffff) +
+					(port_guess & 0x0000ffff));
 			if (port_attempt == 0) {
 				/* get a new random number */
 				continue;
@@ -2267,7 +2294,8 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 		lport = htons(port_attempt);
 	}
 	SCTP_INP_DECR_REF(inp);
-	if (inp->sctp_flags & (SCTP_PCB_FLAGS_SOCKET_GONE|SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
+	if (inp->sctp_flags & (SCTP_PCB_FLAGS_SOCKET_GONE |
+			       SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
 		/* this really should not happen. The guy
 		 * did a non-blocking bind and then did a close
 		 * at the same time.
@@ -2283,9 +2311,9 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 		sctp_feature_on(inp, SCTP_PCB_FLAGS_DO_ASCONF);
 		/* set the automatic addr changes from kernel flag */
 		if (sctp_auto_asconf == 0) {
-			sctp_feature_off(inp,SCTP_PCB_FLAGS_AUTO_ASCONF);
+			sctp_feature_off(inp, SCTP_PCB_FLAGS_AUTO_ASCONF);
 		} else {
-			sctp_feature_on(inp,SCTP_PCB_FLAGS_AUTO_ASCONF);
+			sctp_feature_on(inp, SCTP_PCB_FLAGS_AUTO_ASCONF);
 		}
 	} else {
 		/*
@@ -2344,18 +2372,14 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 		}
 		/* we're not bound all */
 		inp->sctp_flags &= ~SCTP_PCB_FLAGS_BOUNDALL;
-#if 0 /* use sysctl now */
-		/* don't allow automatic addr changes from kernel */
-		sctp_feature_off(inp,SCTP_PCB_FLAGS_AUTO_ASCONF);
-#endif
 		/* set the automatic addr changes from kernel flag */
 		if (sctp_auto_asconf == 0) {
-			sctp_feature_off(inp,SCTP_PCB_FLAGS_AUTO_ASCONF);
+			sctp_feature_off(inp, SCTP_PCB_FLAGS_AUTO_ASCONF);
 		} else {
-			sctp_feature_on(inp,SCTP_PCB_FLAGS_AUTO_ASCONF);
+			sctp_feature_on(inp, SCTP_PCB_FLAGS_AUTO_ASCONF);
 		}
 		/* allow bindx() to send ASCONF's for binding changes */
-		sctp_feature_on(inp,SCTP_PCB_FLAGS_DO_ASCONF);
+		sctp_feature_on(inp, SCTP_PCB_FLAGS_DO_ASCONF);
 		/* add this address to the endpoint list */
 		error = sctp_insert_laddr(&inp->sctp_addr_list, ifa);
 		if (error != 0) {
@@ -2470,10 +2494,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 #else
 	s = splnet();
 #endif
+	SCTP_ASOC_CREATE_LOCK(inp);
 	SCTP_INP_WLOCK(inp);
 	so  = inp->sctp_socket;
-	SCTP_INP_WUNLOCK(inp);
-
 	if(so && ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) == 0)) {
 		locked_so = 1;
 #ifdef SCTP_LOCK_LOGGING
@@ -2481,9 +2504,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 #endif
 		SOCK_LOCK(so);
 	}
-	SCTP_ASOC_CREATE_LOCK(inp);
-
-	SCTP_INP_WLOCK(inp);
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
 		/* been here before */
 		splx(s);
@@ -2516,14 +2536,26 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 			if ((SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_COOKIE_WAIT) ||
 			    (SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_COOKIE_ECHOED)) {
 				/* Just abandon things in the front states */
+				if(locked_so) {
+					SOCK_UNLOCK(so);
+				}
 				SCTP_TCB_LOCK(asoc);
 				SCTP_INP_WUNLOCK(inp);
 				sctp_free_assoc(inp, asoc, 1);
 				SCTP_INP_WLOCK(inp);
+				if(locked_so) {
+					SOCK_LOCK(so);
+				}
 				continue;
-			} else {
-				asoc->asoc.state |= SCTP_STATE_CLOSED_SOCKET;
 			}
+			if(locked_so) {
+				SOCK_UNLOCK(so);
+			}
+			SCTP_TCB_LOCK(asoc);			
+			if(locked_so) {
+				SOCK_LOCK(so);
+			}
+			asoc->asoc.state |= SCTP_STATE_CLOSED_SOCKET;
 			if ((asoc->asoc.size_on_reasm_queue > 0) ||
 			    (asoc->asoc.size_on_all_streams > 0) ||
 			    (so && (so->so_rcv.sb_cc > 0))
@@ -2542,19 +2574,26 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 					    SCTP_CAUSE_USER_INITIATED_ABT);
 					ph->param_length = htons(op_err->m_len);
 				}
-				SCTP_TCB_LOCK(asoc);
+				if(locked_so) {
+					SOCK_UNLOCK(so);
+				}
 				sctp_send_abort_tcb(asoc, op_err);
 
 				SCTP_INP_WUNLOCK(inp);
 				sctp_free_assoc(inp, asoc, 1);
 				SCTP_INP_WLOCK(inp);
+				if(locked_so) {
+					SOCK_LOCK(so);
+				}
 				continue;
 			} else if (TAILQ_EMPTY(&asoc->asoc.send_queue) &&
 				   TAILQ_EMPTY(&asoc->asoc.sent_queue)) {
 				if ((SCTP_GET_STATE(&asoc->asoc) != SCTP_STATE_SHUTDOWN_SENT) &&
 				    (SCTP_GET_STATE(&asoc->asoc) != SCTP_STATE_SHUTDOWN_ACK_SENT)) {
 					/* there is nothing queued to send, so I send shutdown */
-					SCTP_TCB_LOCK(asoc);
+					if(locked_so) {
+						SOCK_UNLOCK(so);
+					}
 					sctp_send_shutdown(asoc, asoc->asoc.primary_destination);
 					asoc->asoc.state = SCTP_STATE_SHUTDOWN_SENT;
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN, asoc->sctp_ep, asoc,
@@ -2562,12 +2601,15 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD, asoc->sctp_ep, asoc,
 							 asoc->asoc.primary_destination);
 					sctp_chunk_output(inp, asoc, SCTP_OUTPUT_FROM_SHUT_TMR);
-					SCTP_TCB_UNLOCK(asoc);
+					if(locked_so) {
+						SOCK_LOCK(so);
+					}
 				}
 			} else {
 				/* mark into shutdown pending */
 				asoc->asoc.state |= SCTP_STATE_SHUTDOWN_PENDING;
 			}
+			SCTP_TCB_UNLOCK(asoc);
 			cnt_in_sd++;
 		}
 		/* now is there some left in our SHUTDOWN state? */
@@ -2616,7 +2658,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	}
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
 	if (inp->refcount) {
+		callout_stop(&inp->sctp_ep.signature_change.timer);
 		sctp_timer_start(SCTP_TIMER_TYPE_INPKILL, inp, NULL, NULL);
+		inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_GONE;
 		SCTP_INP_WUNLOCK(inp);
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		if(locked_so) {
@@ -2635,7 +2679,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
  	rt = ip_pcb->inp_route.ro_rt;
 #endif
 	callout_stop(&inp->sctp_ep.signature_change.timer);
-
 	/* Clear the read queue */
 	while ((sq = TAILQ_FIRST(&inp->read_queue)) != NULL) {
 		TAILQ_REMOVE(&inp->read_queue, sq, next);
@@ -2690,14 +2733,18 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 			printf("Strange, so->so_rcv.sb_cc > 0 was %d?\n",
 			       (int)so->so_rcv.sb_cc);
 			so->so_rcv.sb_cc = 0;
+#ifdef INVARIENTS
 			panic("strange case 1");
+#endif
 		}
 		so->so_snd.sb_mbcnt = 0;
 		if(so->so_snd.sb_cc) {
 			printf("Strange, so->so_snd.sb_cc >0 was %d?\n",
 			       (int)so->so_snd.sb_cc);
 			so->so_snd.sb_cc = 0;
+#ifdef INVARIENTS
 			panic("strange case 2");
+#endif
 		}
 #ifdef IPSEC
 #ifdef __OpenBSD__
@@ -2729,7 +2776,24 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 #endif
 #endif /*IPSEC*/
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
+		/* It appears that witness tells
+		 * us that the other time we get called (probably
+		 * from the socket layer) the accept lock is applied
+		 * and then the INP lock gets applied. So, to keep witness
+		 * happy and maintain proper order we unlock and then relock.
+		 */
+		SCTP_INP_WUNLOCK(inp);		
+		SCTP_ASOC_CREATE_UNLOCK(inp);
+		if(locked_so) {
+			SOCK_UNLOCK(so);			
+		}
 		ACCEPT_LOCK();
+		SCTP_ASOC_CREATE_LOCK(inp);
+		SCTP_INP_WLOCK(inp);		
+		if(locked_so) {
+			SOCK_LOCK(so);			
+		}
+
 #endif
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 		sotryfree(so);
@@ -3143,9 +3207,11 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	} else {
 		net->mtu = stcb->asoc.smallest_mtu;
 	}
+
 	if (stcb->asoc.smallest_mtu > net->mtu) {
 		stcb->asoc.smallest_mtu = net->mtu;
 	}
+
 	/* We take the max of the burst limit times a MTU or the INITIAL_CWND.
 	 * We then limit this to 4 MTU's of sending.
 	 */
@@ -3370,14 +3436,12 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	bzero(stcb, sizeof(*stcb));
 	asoc = &stcb->asoc;
 	SCTP_TCB_LOCK_INIT(stcb);
-	SCTP_TCB_FREE_LOCK_INIT(stcb);
 	/* setup back pointer's */
 	stcb->sctp_ep = inp;
 	stcb->sctp_socket = inp->sctp_socket;
 	if ((err = sctp_init_asoc(inp, asoc, for_a_init, override_tag))) {
 		/* failed */
 		SCTP_TCB_LOCK_DESTROY (stcb);
-		SCTP_TCB_FREE_LOCK_DESTROY (stcb);
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
 		SCTP_DECR_ASOC_COUNT();
 #ifdef SCTP_DEBUG
@@ -3396,7 +3460,6 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	if (inp->sctp_flags & (SCTP_PCB_FLAGS_SOCKET_GONE|SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
 		/* inpcb freed while alloc going on */
 		SCTP_TCB_LOCK_DESTROY (stcb);
-		SCTP_TCB_FREE_LOCK_DESTROY (stcb);
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
 		SCTP_INP_WUNLOCK(inp);
 		SCTP_INP_INFO_WUNLOCK();
@@ -3433,7 +3496,6 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		}
 #endif
 		SCTP_TCB_LOCK_DESTROY(stcb);
-		SCTP_TCB_FREE_LOCK_DESTROY (stcb);
 		*error = ENOBUFS;
 		return (NULL);
 	}
@@ -3538,9 +3600,8 @@ sctp_del_remote_addr(struct sctp_tcb *stcb, struct sockaddr *remaddr)
 				    TAILQ_FIRST(&asoc->nets);
 			}
 			if (net == asoc->last_control_chunk_from) {
-				/* Reset primary */
-				asoc->last_control_chunk_from =
-				    TAILQ_FIRST(&asoc->nets);
+				/* Clear net */
+				asoc->last_control_chunk_from = NULL;
 			}
 			if (net == asoc->asconf_last_sent_to) {
 				/* Reset primary */
@@ -3632,6 +3693,7 @@ sctp_iterator_asoc_being_freed(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	SCTP_INP_WLOCK(inp);
 	SCTP_TCB_LOCK(stcb);
 
+
 	it = stcb->asoc.stcb_starting_point_for_iterator;
 	if (it == NULL) {
 		return;
@@ -3658,7 +3720,7 @@ sctp_iterator_asoc_being_freed(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 /*
  * Free the association after un-hashing the remote port.
  */
-void
+int
 sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfree)
 {
 	int i;
@@ -3679,21 +3741,51 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 #else
 	s = splnet();
 #endif
-	SCTP_TCB_FREE_LOCK(stcb);
 	if (stcb->asoc.state == 0) {
 		printf("Freeing already free association:%p - huh??\n",
 		       stcb);
 		splx(s);
-		return;
+		/* there is no asoc, really TSNH :-0 */
+		return(1);
 	}
 	asoc = &stcb->asoc;
-	asoc->state = 0;
 	if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)
 		/* nothing around */
 		so = NULL;
 	else 
 		so = inp->sctp_socket;
 
+	/*
+	 * We used timer based freeing if a reader or writer 
+	 * is in the way. So we first check if we are
+	 * actually being called from a timer, if so
+	 * we abort early if a reader or writer
+	 * is still in the way.
+	 */
+	if ((stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) &&
+	    (from_inpcbfree == 0)){
+		/* is it the timer driving us? if
+		 * so are the reader/writers gone?
+		 */
+		if(so) {
+			SOCKBUF_LOCK(&so->so_rcv);
+		}
+		if(stcb->asoc.refcnt) {
+			/* nope, reader or writer in the way */
+			sctp_timer_start(SCTP_TIMER_TYPE_ASOCKILL, inp, stcb, NULL);
+			if(so) {
+				SOCKBUF_UNLOCK(&so->so_rcv);
+			}
+			/* no asoc destroyed */
+			SCTP_TCB_UNLOCK(stcb);
+			splx(s);
+			return(0);
+		}
+		if(so) {
+			SOCKBUF_UNLOCK(&so->so_rcv);
+		}
+		
+	}
 	/* now clean up any other timers */
 	callout_stop(&asoc->hb_timer.timer);
 	callout_stop(&asoc->dack_timer.timer);
@@ -3702,21 +3794,70 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	callout_stop(&asoc->shut_guard_timer.timer);
 	callout_stop(&asoc->autoclose_timer.timer);
 	callout_stop(&asoc->delayed_event_timer.timer);
+
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 		callout_stop(&net->fr_timer.timer);
 		callout_stop(&net->rxt_timer.timer);
 		callout_stop(&net->pmtu_timer.timer);
 	}
 
+
 	/* Iterator asoc being freed we send an
 	 * unlocked TCB. It returns with INP_INFO
-	 * and INP write locked and the TCB locked
-	 * too and of course the iterator lock
+	 * and INP write locked and both TCB lock's
+	 * the tcb lock itself and the create lock
+	 * too and, of course the iterator lock
 	 * in place as well..
 	 */
-	SCTP_TCB_UNLOCK(stcb);
-	sctp_iterator_asoc_being_freed(inp, stcb);
+	if ((from_inpcbfree == 0) && so){
+		/* We lock the socket buffer to be SURE 
+		 * that the receive side sees our flag
+		 * properly.
+		 */
+		SOCKBUF_LOCK(&so->so_rcv);
+	}
+	stcb->asoc.state |= SCTP_STATE_ABOUT_TO_BE_FREED;
 
+	/* Now the read queue needs to be cleaned up */
+	TAILQ_FOREACH(sq, &inp->read_queue, next) {
+		if (sq->stcb == stcb) {
+			sq->stcb = NULL;
+			sq->sinfo_cumtsn = stcb->asoc.cumulative_tsn;
+		}
+	}
+	if(stcb->asoc.refcnt) {
+		/* reader or writer in the way */
+		sctp_timer_start(SCTP_TIMER_TYPE_ASOCKILL, inp, stcb, NULL);
+		if ((from_inpcbfree == 0) && so){
+			SOCKBUF_UNLOCK(&so->so_rcv);
+		}
+		SCTP_TCB_UNLOCK(stcb);
+		splx(s);
+		/* no asoc destroyed */
+		return(0);
+	}
+	if ((from_inpcbfree == 0) && so){
+		SOCKBUF_UNLOCK(&so->so_rcv);
+	}
+	SCTP_TCB_UNLOCK(stcb);
+
+	sctp_iterator_asoc_being_freed(inp, stcb);
+	/* now restop the timers to be sure - this is paranoia at is finest! */
+	callout_stop(&asoc->hb_timer.timer);
+	callout_stop(&asoc->dack_timer.timer);
+	callout_stop(&asoc->strreset_timer.timer);
+	callout_stop(&asoc->asconf_timer.timer);
+	callout_stop(&asoc->shut_guard_timer.timer);
+	callout_stop(&asoc->autoclose_timer.timer);
+	callout_stop(&asoc->delayed_event_timer.timer);
+
+
+	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
+		callout_stop(&net->fr_timer.timer);
+		callout_stop(&net->rxt_timer.timer);
+		callout_stop(&net->pmtu_timer.timer);
+	}
+	asoc->state = 0;
 	if(stcb->block_entry) {
 		stcb->block_entry->error = ECONNRESET;
 		stcb->block_entry = NULL;
@@ -3741,16 +3882,9 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	SCTP_INP_INFO_WUNLOCK();
 	prev = NULL;
 
-	/* Null all of my entry's on the socket read queue */
 	if ((from_inpcbfree == 0) && so){
 		SOCKBUF_LOCK(&so->so_snd);
 		SOCKBUF_LOCK(&so->so_rcv);
-	}
-	TAILQ_FOREACH(sq, &inp->read_queue, next) {
-		if (sq->stcb == stcb) {
-			sq->stcb = NULL;
-			sq->sinfo_cumtsn = stcb->asoc.cumulative_tsn;
-		}
 	}
 	/*
 	 * The chunk lists and such SHOULD be empty but we check them
@@ -3901,6 +4035,9 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		net = TAILQ_FIRST(&asoc->nets);
 		/* pull from list */
 		if ((sctppcbinfo.ipi_count_raddr == 0) || (prev == net)) {
+#ifdef INVARIENTS
+			panic("no net's left alloc'ed, or list points to itself");
+#endif
 			break;
 		}
 		prev = net;
@@ -3952,7 +4089,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	/* Insert new items here :> */
 
 	/* Get rid of LOCK */
-	SCTP_TCB_FREE_LOCK_DESTROY (stcb);
 	SCTP_TCB_LOCK_DESTROY(stcb);
 
 	/* now clean up the tasoc itself */
@@ -4027,6 +4163,8 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		sctp_inpcb_free(inp, 0);
 	}
 	splx(s);
+	/* destroyed the asoc */
+	return(1);
 }
 
 
@@ -4390,7 +4528,7 @@ sctp_del_local_addr_assoc(struct sctp_tcb *stcb, struct ifaddr *ifa)
 	inp = stcb->sctp_ep;
 	/* if subset bound and don't allow ASCONF's, can't delete last */
 	if (((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) == 0) &&
-	    (sctp_is_feature_off(inp,SCTP_PCB_FLAGS_DO_ASCONF) == 0)) {
+	    (sctp_is_feature_off(inp, SCTP_PCB_FLAGS_DO_ASCONF) == 0)) {
 		if (stcb->asoc.numnets < 2) {
 			/* can't delete last address */
 			return (-1);
@@ -4431,7 +4569,7 @@ sctp_del_local_addr_assoc_sa(struct sctp_tcb *stcb, struct sockaddr *sa)
 	inp = stcb->sctp_ep;
 	/* if subset bound and don't allow ASCONF's, can't delete last */
 	if (((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) == 0) &&
-	    (sctp_is_feature_off(inp,SCTP_PCB_FLAGS_DO_ASCONF) == 0)) {
+	    (sctp_is_feature_off(inp, SCTP_PCB_FLAGS_DO_ASCONF) == 0)) {
 		if (stcb->asoc.numnets < 2) {
 			/* can't delete last address */
 			return (-1);

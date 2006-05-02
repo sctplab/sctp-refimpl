@@ -90,13 +90,14 @@
 #define SCTPCTL_CMT_USE_DAC         37
 #define SCTPCTL_DO_DRAIN            38
 #define SCTPCTL_WARM_CRC32          39
+#define SCTPCTL_QLIMIT_ABORT        40
+#define SCTPCTL_STRICT_ORDER        41
 #ifdef SCTP_DEBUG
-#define SCTPCTL_DEBUG               40
-#define SCTPCTL_MAXID		    40
+#define SCTPCTL_DEBUG               42
+#define SCTPCTL_MAXID		    42
 #else
-#define SCTPCTL_MAXID		    39
+#define SCTPCTL_MAXID		    41
 #endif
-
 #endif
 
 #ifdef SCTP_DEBUG
@@ -128,7 +129,6 @@
 	{ "path_rtx_max", CTLTYPE_INT }, \
 	{ "nr_outgoing_streams", CTLTYPE_INT }, \
 	{ "cmt_on_off", CTLTYPE_INT }, \
-	{ "cmt_use_dac", CTLTYPE_INT }, \
 	{ "cwnd_maxburst", CTLTYPE_INT }, \
         { "early_fast_retran", CTLTYPE_INT }, \
         { "use_rttvar_congctrl", CTLTYPE_INT }, \
@@ -142,8 +142,11 @@
 	{ "cmt_use_dac", CTLTYPE_INT }, \
 	{ "do_sctp_drain", CTLTYPE_INT }, \
 	{ "warm_crc_table", CTLTYPE_INT }, \
+	{ "abort_at_limit", CTLTYPE_INT }, \
+	{ "strict_data_order", CTLTYPE_INT }, \
 	{ "debug", CTLTYPE_INT }, \
 }
+
 #else
 #define SCTPCTL_NAMES { \
 	{ 0, 0 }, \
@@ -173,7 +176,6 @@
 	{ "path_rtx_max", CTLTYPE_INT }, \
 	{ "nr_outgoing_streams", CTLTYPE_INT }, \
 	{ "cmt_on_off", CTLTYPE_INT }, \
-	{ "cmt_use_dac", CTLTYPE_INT }, \
 	{ "cwnd_maxburst", CTLTYPE_INT }, \
         { "early_fast_retran", CTLTYPE_INT }, \
         { "use_rttvar_congctrl", CTLTYPE_INT }, \
@@ -185,8 +187,10 @@
 	{ "abc_l_var", CTLTYPE_INT }, \
 	{ "max_mbuf_chain", CTLTYPE_INT }, \
 	{ "cmt_use_dac", CTLTYPE_INT }, \
-	{ "warm_crc_table", CTLTYPE_INT }, \
 	{ "do_sctp_drain", CTLTYPE_INT }, \
+	{ "warm_crc_table", CTLTYPE_INT }, \
+	{ "abort_at_limit", CTLTYPE_INT }, \
+	{ "strict_data_order", CTLTYPE_INT }, \
 }
 #endif
 
@@ -225,6 +229,7 @@ int sctp_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,
 #define sctp_sbspace_sub(a,b) ((a > b) ? (a - b) : 0)
 
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
+#ifdef INVARIENTS
 #define sctp_sbfree(stcb, sb, m) { \
         if((sb)->sb_cc >= (m)->m_len) { \
   	   (sb)->sb_cc -= (m)->m_len; \
@@ -270,6 +275,50 @@ int sctp_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,
         } \
 }
 
+#else /* NOT INVARIENTS */
+
+#define sctp_sbfree(stcb, sb, m) { \
+        if((sb)->sb_cc >= (m)->m_len) { \
+  	   (sb)->sb_cc -= (m)->m_len; \
+        } else { \
+           (sb)->sb_cc = 0; \
+        } \
+        if(stcb) {\
+          if((stcb)->asoc.sb_cc >= (m)->m_len) {\
+             (stcb)->asoc.sb_cc -= (m)->m_len; \
+          } else  {\
+             (stcb)->asoc.sb_cc = 0; \
+          } \
+          if((stcb)->asoc.sb_mbcnt >= MSIZE) { \
+             (stcb)->asoc.sb_mbcnt -= MSIZE; \
+          } \
+	  if ((m)->m_flags & M_EXT) { \
+		if((stcb)->asoc.sb_mbcnt >= (m)->m_ext.ext_size) { \
+		   (stcb)->asoc.sb_mbcnt -= (m)->m_ext.ext_size; \
+                } else  { \
+		   (stcb)->asoc.sb_mbcnt = 0; \
+                } \
+          } \
+        } \
+	if ((m)->m_type != MT_DATA && (m)->m_type != MT_HEADER && \
+	    (m)->m_type != MT_OOBDATA) \
+		(sb)->sb_ctl -= (m)->m_len; \
+        if((sb)->sb_mbcnt >= MSIZE) { \
+           (sb)->sb_mbcnt -= MSIZE; \
+ 	   if ((m)->m_flags & M_EXT) { \
+		if((sb)->sb_mbcnt >= (m)->m_ext.ext_size) { \
+		   (sb)->sb_mbcnt -= (m)->m_ext.ext_size; \
+                } else  { \
+		   (sb)->sb_mbcnt = 0; \
+                } \
+            } \
+        } else  { \
+            (sb)->sb_mbcnt = 0; \
+        } \
+}
+
+#endif /* INVARIENTS */
+
 #define sctp_sballoc(stcb, sb, m)  { \
 	(sb)->sb_cc += (m)->m_len; \
         if(stcb) { \
@@ -286,7 +335,8 @@ int sctp_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,
 		(sb)->sb_mbcnt += (m)->m_ext.ext_size; \
 }
 
-#else
+#else /* FreeBSD Version < 500000  */
+
 #define sctp_sbfree(stcb, sb, m) { \
         if((sb)->sb_cc >= (uint32_t)(m)->m_len) { \
   	   (sb)->sb_cc -= (m)->m_len; \
@@ -476,9 +526,11 @@ do { \
 #define if_list		if_link
 #define ifa_list	ifa_link
 
-#include <kern/simple_lock.h>
-#define atomic_add_int(addr, val)	hw_atomic_add((uint32_t *)addr, val)
-#define atomic_subtract_int(addr, val)	hw_atomic_sub((uint32_t *)addr, val)
+/* Apple KPI defines for atomic operations */
+#include <libkern/OSAtomic.h>
+#define atomic_add_int(addr, val)	OSAddAtomic(val, (SInt32 *)addr)
+#define atomic_subtract_int(addr, val)	OSAddAtomic((-val), (SInt32 *)addr)
+#define atomic_add_16(addr, val)	OSAddAtomic16(val, (SInt16 *)addr)
 
 /* additional protosw entries for Mac OS X 10.4 */
 #if !defined(SCTP_APPLE_PANTHER)
@@ -491,6 +543,12 @@ void * sctp_getlock(struct socket *so, int locktype);
 #endif /* _KERN_LOCKS_H_ */
 #endif /* !SCTP_APPLE_PANTHER */
 #endif /* __APPLE__ */
+
+#if defined(__NetBSD__) 
+/* emulate the atomic_xxx() functions... */
+#define atomic_add_int(addr, val)	(*(addr) += val)
+#define atomic_subtract_int(addr, val)	(*(addr) -= val)
+#endif /* __NetBSD__ */
 
 #endif /* _KERNEL */
 

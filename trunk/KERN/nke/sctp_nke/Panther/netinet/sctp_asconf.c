@@ -1,7 +1,7 @@
 /*	$KAME: sctp_asconf.c,v 1.24 2005/03/06 16:04:16 itojun Exp $	*/
 
 /*
- * Copyright (c) 2001-2005 Cisco Systems, Inc.
+ * Copyright (c) 2001-2006 Cisco Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -35,6 +35,7 @@
 #include "opt_compat.h"
 #include "opt_inet6.h"
 #include "opt_inet.h"
+#include "opt_global.h"
 #endif
 #if defined(__NetBSD__)
 #include "opt_inet.h"
@@ -584,8 +585,8 @@ sctp_process_asconf_set_primary(struct sctp_asconf_paramhdr *aph,
  * if all parameters are processed ok, send a plain (empty) ASCONF-ACK
  */
 void
-sctp_handle_asconf(struct mbuf *m, unsigned int offset, struct sctp_asconf_chunk *cp,
-    struct sctp_tcb *stcb, struct sctp_nets *net)
+sctp_handle_asconf(struct mbuf *m, unsigned int offset,
+    struct sctp_asconf_chunk *cp, struct sctp_tcb *stcb, struct sctp_nets *net)
 {
 	struct sctp_association *asoc;
 	uint32_t serial_num;
@@ -815,7 +816,74 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset, struct sctp_asconf_chunk
 	ack_cp->ch.chunk_length = htons(ack_cp->ch.chunk_length);
 	/* save the ASCONF-ACK reply */
 	asoc->last_asconf_ack_sent = m_ack;
-	/* and send (a new one) it out... */
+
+	/* see if last_control_chunk_from is set properly (use IP src addr) */
+	if (stcb->asoc.last_control_chunk_from == NULL) {
+	    /* this could happen if the source address was just newly added */
+	    struct ip *iph;
+	    struct sctphdr *sh;
+	    struct sockaddr_storage from_store;
+	    struct sockaddr *from = (struct sockaddr *)&from_store;
+#ifdef SCTP_DEBUG
+	    if (sctp_debug_on & SCTP_DEBUG_ASCONF1)
+		printf("handle_asconf: looking up net for IP source address\n");
+#endif /* SCTP_DEBUG */
+	    /* pullup already done, IP options already stripped */
+	    iph = mtod(m, struct ip *);
+	    sh = (struct sctphdr *)((caddr_t)iph + sizeof(*iph));
+	    if (iph->ip_v == IPVERSION) {
+		struct sockaddr_in *from4;
+		from4 = (struct sockaddr_in *)&from_store;
+		bzero(from4, sizeof(*from4));
+		from4->sin_family = AF_INET;
+		from4->sin_len = sizeof(struct sockaddr_in);
+		from4->sin_addr.s_addr = iph->ip_src.s_addr;
+		from4->sin_port = sh->src_port;
+	    } else if (iph->ip_v == (IPV6_VERSION >> 4)) {
+		struct ip6_hdr *ip6;
+		struct sockaddr_in6 *from6;
+		ip6 = mtod(m, struct ip6_hdr *);
+		from6 = (struct sockaddr_in6 *)&from_store;
+		bzero(from6, sizeof(*from6));
+		from6->sin6_family = AF_INET6;
+		from6->sin6_len = sizeof(struct sockaddr_in6);
+		from6->sin6_addr = ip6->ip6_src;
+		from6->sin6_port = sh->src_port;
+		/* Get the scopes in properly to the sin6 addr's */
+#ifdef SCTP_KAME
+		/* we probably don't need these operations */
+		(void)sa6_recoverscope(from6);
+		sa6_embedscope(from6, ip6_use_defzone);
+#else
+		(void)in6_recoverscope(from6, &from6->sin6_addr, NULL);
+#if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
+		(void)in6_embedscope(&from6->sin6_addr, from6, NULL, NULL);
+#else
+		(void)in6_embedscope(&from6->sin6_addr, from6);
+#endif /* SCTP_BASE_FREEBSD || __APPLE__  */
+#endif /* SCTP_KAME */
+	    } else {
+		/* unknown address type */
+		from = NULL;
+	    }
+	    if (from != NULL) {
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
+		    printf("Looking for IP source: ");
+		    sctp_print_address(from);
+		}
+#endif /* SCTP_DEBUG */
+		/* look up the from address */
+		stcb->asoc.last_control_chunk_from = sctp_findnet(stcb, from);
+#ifdef SCTP_DEBUG
+		if ((stcb->asoc.last_control_chunk_from == NULL) &&
+		    (sctp_debug_on & SCTP_DEBUG_ASCONF1))
+		    printf("handle_asconf: IP source address not found?!\n");
+#endif /* SCTP_DEBUG */
+	    }
+	}
+
+	/* and send it (a new one) out... */
 	sctp_send_asconf_ack(stcb, 0);
 }
 
@@ -1974,7 +2042,7 @@ sctp_addr_mgmt(struct ifaddr *ifa, uint16_t type) {
 
 	/* go through all our PCB's */
 	LIST_FOREACH(inp, &sctppcbinfo.listhead, sctp_list) {
-		if (sctp_is_feature_on(inp,SCTP_PCB_FLAGS_AUTO_ASCONF)) {
+		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_AUTO_ASCONF)) {
 			sctp_addr_mgmt_ep(inp, ifa, type);
 		} else {
 			/* this address is going away anyways... */
@@ -2569,7 +2637,8 @@ sctp_process_initack_addresses(struct sctp_tcb *stcb, struct mbuf *m,
 			/* address doesn't exist anymore */
 			int status;
 			/* are ASCONFs allowed ? */
-			if ((sctp_is_feature_on(stcb->sctp_ep, SCTP_PCB_FLAGS_DO_ASCONF)) &&
+			if ((sctp_is_feature_on(stcb->sctp_ep,
+						SCTP_PCB_FLAGS_DO_ASCONF)) &&
 			    stcb->asoc.peer_supports_asconf) {
 				/* queue an ASCONF DEL_IP_ADDRESS */
 				status = sctp_asconf_queue_add_sa(stcb, sa,
@@ -2594,7 +2663,8 @@ sctp_process_initack_addresses(struct sctp_tcb *stcb, struct mbuf *m,
 			 */
 			if ((stcb->sctp_ep->sctp_flags &
 			     SCTP_PCB_FLAGS_BOUNDALL) == 0 &&
-			    (sctp_is_feature_off(stcb->sctp_ep, SCTP_PCB_FLAGS_DO_ASCONF))) {
+			    (sctp_is_feature_off(stcb->sctp_ep,
+						 SCTP_PCB_FLAGS_DO_ASCONF))) {
 #ifdef SCTP_DEBUG
 				if (sctp_debug_on & SCTP_DEBUG_ASCONF2) {
 					printf("process_initack_addrs: adding local addr to asoc\n");
@@ -2885,7 +2955,8 @@ sctp_check_address_list(struct sctp_tcb *stcb, struct mbuf *m, int offset,
 		    local_scope, site_scope, ipv4_scope, loopback_scope);
 	} else {
 		/* subset bound case */
-		if (sctp_is_feature_on(stcb->sctp_ep, SCTP_PCB_FLAGS_DO_ASCONF)) {
+		if (sctp_is_feature_on(stcb->sctp_ep,
+				       SCTP_PCB_FLAGS_DO_ASCONF)) {
 			/* asconf's allowed */
 			sctp_check_address_list_ep(stcb, m, offset, length,
 			    init_addr);
