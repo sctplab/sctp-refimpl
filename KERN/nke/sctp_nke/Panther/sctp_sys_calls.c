@@ -1,7 +1,7 @@
 /*	$KAME: sctp_sys_calls.c,v 1.9 2004/08/17 06:08:53 itojun Exp $ */
 
 /*
- * Copyright (C) 2002-2005 Cisco Systems Inc,
+ * Copyright (C) 2002-2006 Cisco Systems Inc,
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -261,7 +261,10 @@ sctp_opt_info(int sd, sctp_assoc_t id, int opt, void *arg, socklen_t *size)
 	    (opt == SCTP_SET_PEER_PRIMARY_ADDR) || 
 	    (opt == SCTP_PEER_ADDR_PARAMS) || 
 	    (opt == SCTP_STATUS) || 
-	    (opt == SCTP_GET_PEER_ADDR_INFO)) { 
+	    (opt == SCTP_GET_PEER_ADDR_INFO) ||
+	    (opt == SCTP_AUTH_ACTIVE_KEY) ||
+	    (opt == SCTP_PEER_AUTH_CHUNKS) ||
+	    (opt == SCTP_LOCAL_AUTH_CHUNKS)) {
 		*(sctp_assoc_t *)arg = id;
 		return(getsockopt(sd, IPPROTO_SCTP, opt, arg, size));
 	}else{
@@ -393,7 +396,6 @@ void sctp_freeladdrs(struct sockaddr *addrs)
 }
 
 
-#ifndef SYS_sctp_sendmsg
 ssize_t
 sctp_sendmsg(int s, 
 	     const void *data, 
@@ -406,6 +408,10 @@ sctp_sendmsg(int s,
 	     u_int32_t timetolive,
 	     u_int32_t context)
 {
+#ifdef SYS_sctp_sendmsg
+	return (syscall(SYS_sctp_sendmsg, s, data, len, to, tolen,
+			ppid, flags, stream_no, timetolive, context));
+#else
 
 	ssize_t sz;
 	struct msghdr msg;
@@ -483,9 +489,9 @@ sctp_sendmsg(int s,
 	msg.msg_controllen = cmsg->cmsg_len;
 	sz = sendmsg(s, &msg, 0);
 	return(sz);
-
-}
 #endif
+}
+
 
 sctp_assoc_t
 sctp_getassocid(int sd, struct sockaddr *sa)
@@ -506,13 +512,15 @@ sctp_getassocid(int sd, struct sockaddr *sa)
   return(sp.spp_assoc_id);
 }
 
-#ifndef SYS_sctp_send
 ssize_t
 sctp_send(int sd, const void *data, size_t len,
 	  const struct sctp_sndrcvinfo *sinfo,
 	  int flags)
 {
 
+#ifdef SYS_sctp_send
+	return (syscall(SYS_sctp_send, sd, data, len, sinfo, flags));
+#else
 	ssize_t sz;
 	struct msghdr msg;
 	struct iovec iov[2];
@@ -546,9 +554,9 @@ sctp_send(int sd, const void *data, size_t len,
 	msg.msg_controllen = cmsg->cmsg_len;
 	sz = sendmsg(sd, &msg, flags);
 	return(sz);
-
-}
 #endif
+}
+
 
 
 ssize_t
@@ -650,7 +658,6 @@ sctp_sendmsgx(int sd,
 	return sctp_sendx(sd, msg, len, addrs, addrcnt, &sinfo, 0);
 }
 
-#ifndef SYS_sctp_recvmsg
 ssize_t
 sctp_recvmsg (int s, 
 	      void *dbuf, 
@@ -660,7 +667,9 @@ sctp_recvmsg (int s,
 	      struct sctp_sndrcvinfo *sinfo,
 	      int *msg_flags)
 {
-
+#ifdef SYS_sctp_recvmsg
+	return (syscall(SYS_sctp_recvmsg, s, dbuf, len, from, fromlen, sinfo, msg_flags));
+#else
 	struct sctp_sndrcvinfo *s_info;
 	ssize_t sz;
 	int sinfo_found=0;
@@ -722,8 +731,9 @@ sctp_recvmsg (int s,
 		}
 	}
 	return(sz);
-}
 #endif
+}
+
 
 #if defined(HAVE_SCTP_PEELOFF_SOCKOPT)
 #include <netinet/sctp_peeloff.h>
@@ -733,7 +743,7 @@ sctp_peeloff(int sd, sctp_assoc_t assoc_id)
 {
 	struct sctp_peeloff_opt peeloff;
 	int error;
-	int optlen;
+	socklen_t optlen;
 
 	/* set in the socket option params */
 	memset(&peeloff, 0, sizeof(peeloff));
@@ -761,3 +771,11 @@ sctp_peeloff(int sd, sctp_assoc_t assoc_id)
 	return (-1);
 }
 #endif
+#if defined(SYS_sctp_peeloff) && !defined(HAVE_SCTP_PEELOFF_SOCKOPT)
+int
+sctp_peeloff(int sd, sctp_assoc_t assoc_id)
+{
+	return (syscall(SYS_sctp_peeloff, sd, assoc_id));
+}
+#endif
+
