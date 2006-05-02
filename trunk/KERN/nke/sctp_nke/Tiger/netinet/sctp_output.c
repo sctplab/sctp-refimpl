@@ -7149,11 +7149,10 @@ sctp_sendall (struct sctp_inpcb *inp, struct uio *uio, struct mbuf *m,
 				     sctp_sendall_completes, inp);
 	if (ret) {
 #ifdef SCTP_DEBUG
-		printf("Failed to initate iterator to takeover associations\n");
+		printf("Failed to initate iterator for sendall\n");
 #endif
 		FREE(ca, M_PCB);
 		return (EFAULT);
-
 	}
 	return (0);
 }
