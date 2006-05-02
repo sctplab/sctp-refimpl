@@ -34,6 +34,7 @@
 #if defined(__FreeBSD__)
 #include "opt_inet6.h"
 #include "opt_inet.h"
+#include "opt_global.h"
 #endif
 #if defined(__NetBSD__)
 #include "opt_inet.h"
@@ -95,10 +96,10 @@
 #include <sys/filedesc.h>
 
 #ifdef __APPLE__
-/* #include <bsm/audit_kernel.h>*/
 extern struct fileops socketops;
 #ifndef SCTP_APPLE_PANTHER
-#include <kern/lock.h>
+#include <sys/proc_internal.h>
+#include <sys/file_internal.h>
 #endif /* !SCTP_APPLE_PANTHER */
 #endif /* __APPLE__ */
 
@@ -153,7 +154,7 @@ sctp_do_peeloff(struct socket *head, struct socket *so, sctp_assoc_t assoc_id)
 	 */
 	sctp_move_pcb_and_assoc(inp, n_inp, stcb);
 
-	sctp_pull_off_control_to_new_inp(n_inp, inp, stcb);
+	sctp_pull_off_control_to_new_inp(inp, n_inp, stcb);
 
 	SCTP_TCB_UNLOCK(stcb);
 	return (0);
@@ -196,17 +197,21 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 		*error = ENOMEM;
 		SCTP_TCB_UNLOCK(stcb);
 		return (NULL);
-	}
+#ifndef SCTP_APPLE_FINE_GRAINED_LOCKING
+ 	}
+#else
+	} else
+	    socket_lock(newso,1);
+#endif
 	n_inp = (struct sctp_inpcb *)newso->so_pcb;
 	SOCK_LOCK(head);
 	SCTP_INP_WLOCK(inp);
 	SCTP_INP_WLOCK(n_inp);
-	n_inp->sctp_flags = (SCTP_PCB_FLAGS_UDPTYPE |
+        n_inp->sctp_flags = (SCTP_PCB_FLAGS_UDPTYPE |
 	    SCTP_PCB_FLAGS_CONNECTED |
 	    SCTP_PCB_FLAGS_IN_TCPPOOL | /* Turn on Blocking IO */
 	    (SCTP_PCB_COPY_FLAGS & inp->sctp_flags));
-	n_inp->sctp_features = inp->sctp_features;
-
+        n_inp->sctp_features = inp->sctp_features;
 	/* copy in the authentication parameters from the original endpoint */
 	if (n_inp->sctp_ep.local_hmacs)
 		sctp_free_hmaclist(n_inp->sctp_ep.local_hmacs);
@@ -220,6 +225,11 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 				 &n_inp->sctp_ep.shared_keys);
 
 	n_inp->sctp_socket = newso;
+        if(sctp_is_feature_on(inp, SCTP_PCB_FLAGS_AUTOCLOSE)) {
+		sctp_feature_off(n_inp, SCTP_PCB_FLAGS_AUTOCLOSE);
+		n_inp->sctp_ep.auto_close_time = 0;
+		sctp_timer_stop(SCTP_TIMER_TYPE_AUTOCLOSE, n_inp, stcb, NULL);
+        }
 	/* Turn off any non-blocking semantic. */
 	newso->so_state &= ~SS_NBIO;
 	newso->so_state |= SS_ISCONNECTED;
@@ -238,8 +248,19 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 #else
 	newso = head->so_q;
 #endif
-	if (soqremque(newso, 1) == 0)
+        if (soqremque(newso, 1) == 0) {
+#ifdef INVARIENTS
 		panic("sctp_peeloff");
+#else
+		printf("soremque failed, peeloff-fails (invarients would panic)\n");
+		SCTP_INP_WUNLOCK(inp);
+		SCTP_INP_WUNLOCK(n_inp);
+		SCTP_TCB_UNLOCK(stcb);
+		*error = ENOTCONN;
+		return (NULL);
+		
+#endif
+	}
 #endif /* __FreeBSD__ */
 	/*
 	 * Now we must move it from one hash table to another and get
@@ -252,7 +273,7 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 	 * And now the final hack. We move data in the pending side
 	 * i.e. head to the new socket buffer. Let the GRUBBING begin :-0
 	 */
-	sctp_pull_off_control_to_new_inp(n_inp, inp, stcb);
+	sctp_pull_off_control_to_new_inp(inp, n_inp, stcb);
 
 	SCTP_TCB_UNLOCK(stcb);
 	return (newso);
@@ -327,10 +348,19 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 }
 #else
 /* TIGER */
+
+#define f_flag f_fglob->fg_flag
+#define f_type f_fglob->fg_type
+#define f_msgcount f_fglob->fg_msgcount
+#define f_cred f_fglob->fg_cred
+#define f_ops f_fglob->fg_ops
+#define f_offset f_fglob->fg_offset
+#define f_data f_fglob->fg_data
+
 int
 sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 {
-	struct file *fp;
+	struct fileproc *fp;
 	int error;
 	struct socket *head, *so = NULL;
 	lck_mtx_t *mutex_held;
@@ -340,7 +370,7 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 	int dosocklock = 0;
 
 /*	AUDIT_ARG(fd, uap->s);*/
-	error = fp_getsock(p, fd, &fp, &head);
+	error = fp_getfsock(p, fd, &fp, &head);
 	if (error) {
 		if (error == EOPNOTSUPP)
 			error = ENOTSOCK;
@@ -353,19 +383,10 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 		goto out;
 	}
 
-	socket_lock(head, 1);
-
-	if (head->so_proto->pr_getlock != NULL) {
-		mutex_held = (*head->so_proto->pr_getlock)(head, 0);
-		dosocklock = 1;
-	} else {
-		mutex_held = head->so_proto->pr_domain->dom_mtx;
-		dosocklock = 0;
-	}
+	mutex_held = (*head->so_proto->pr_getlock)(head, 0);
 
 	error = sctp_can_peel_off(head, uap->assoc_id);
 	if (error) {
-		splx(s);
 		return (error);
 	}
 
@@ -386,27 +407,20 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 		goto out;
 	}
 
-	*fdflags(p, fd) &= ~UF_RESERVED;
-	uap->new_sd = fd; /* return the new descriptor to the caller */
+	*fdflags(p, newfd) &= ~UF_RESERVED;
+	uap->new_sd = newfd; /* return the new descriptor to the caller */
+	socket_lock(head, 0);
+	so = sctp_get_peeloff(head, uap->assoc_id, &error);
 	fp->f_type = DTYPE_SOCKET;
 	fp->f_flag = fflag;
 	fp->f_ops = &socketops;
 	fp->f_data = (caddr_t)so;
 	fp_drop(p, newfd, fp, 1);
 	proc_fdunlock(p);
-	socket_lock(head, 0);
-	if (dosocklock)
-		socket_lock(so, 1);
 	so->so_state &= ~SS_COMP;
 	so->so_state &= ~SS_NOFDREF;
 	so->so_head = NULL;
-
-	so = sctp_get_peeloff(head, uap->assoc_id, &error);
-
-	socket_unlock(head, 1);
-	if (dosocklock)
-		socket_unlock(so, 1);
-
+	socket_unlock(so, 1);
 out:
 	file_drop(fd);
 	return (error);

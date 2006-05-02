@@ -70,6 +70,9 @@ struct sctp_timer {
 	void *ep;
 	void *tcb;
 	void *net;
+
+	/* for sanity checking */
+	void *self;
 };
 
 /*
@@ -222,7 +225,6 @@ struct sctp_nets {
 	/* error stats on destination */
 	u_int16_t error_count;
 	/* Flags that probably can be combined into dest_state */
-
         u_int8_t rto_variance_dir;      /* increase = 1, decreasing = 0 */
 	u_int8_t rto_pending;		/* is segment marked for RTO update  ** if we split?*/
 	u_int8_t fast_retran_ip;	/* fast retransmit in progress */
@@ -454,8 +456,6 @@ struct sctp_association {
 	struct sctp_nets *primary_destination;
 	/* For CMT */
 	struct sctp_nets *last_net_data_came_from;
-
-
 	/* last place I got a data chunk from */
 	struct sctp_nets *last_data_chunk_from;
 	/* last place I got a control from */
@@ -651,6 +651,10 @@ struct sctp_association {
 	struct sctp_keyhead  shared_keys;	/* assoc's shared keys */
 	sctp_authinfo_t      authinfo;		/* randoms, cached keys */
 	uint16_t             peer_hmac_id;	/* peer HMAC id to send */
+	/* refcnt to block freeing when a sender or receiver is
+	 * off coping user data in.
+	 */
+	u_int16_t refcnt;
 	uint8_t              authenticated;	/* packet authenticated ok */
 
 	/*
@@ -690,7 +694,7 @@ struct sctp_association {
 	u_int16_t last_strm_seq_delivered;
 	u_int16_t last_strm_no_delivered;
 
-	u_int16_t chunks_on_out_queue; /* total chunks floating around */
+	u_int16_t chunks_on_out_queue; /* total chunks floating around, locked by send socket buffer */
 	u_int16_t last_revoke_count;
 	int16_t num_send_timers_up;
 	/*
@@ -775,6 +779,7 @@ struct sctp_association {
 	u_int8_t assoc_up_sent;
         /* CMT variables */
         u_int8_t cmt_dac_pkts_rcvd;
+	u_int8_t sctp_cmt_on_off;
 	/*
 	 * The mapping array is used to track out of order sequences above
 	 * last_acked_seq. 0 indicates packet missing 1 indicates packet

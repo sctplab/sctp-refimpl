@@ -431,7 +431,6 @@ struct sctp_tcb {
 	uint16_t resv;
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
 	struct mtx tcb_mtx;
-	struct mtx tcb_canfree_mtx;
 #elif defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
 #ifdef _KERN_LOCKS_H_
 	lck_mtx_t *tcb_mtx;
@@ -496,7 +495,7 @@ struct sctp_tcb {
  * that I don't have any lock recursion going on.
  */
 #define SCTP_IPI_COUNT_INIT() \
-        mtx_init(&sctppcbinfo.ipi_count_mtx, "sctp-count", "inp_info", MTX_DEF)
+        mtx_init(&sctppcbinfo.ipi_count_mtx, "sctp-count", "inp_info_count", MTX_DEF)
 
 #define SCTP_INP_INFO_LOCK_INIT() \
         mtx_init(&sctppcbinfo.ipi_ep_mtx, "sctp-info", "inp_info", MTX_DEF)
@@ -611,19 +610,7 @@ void SCTP_ASOC_CREATE_LOCK(struct sctp_inpcb *inp);
 #define SCTP_TCB_LOCK_INIT(_tcb) \
 	mtx_init(&(_tcb)->tcb_mtx, "sctp-tcb", "tcb", MTX_DEF | MTX_DUPOK)
 
-#define SCTP_TCB_FREE_LOCK_INIT(_tcb) \
-	mtx_init(&(_tcb)->tcb_canfree_mtx, "sctp-tcb-free", "tcb-free", MTX_DEF | MTX_DUPOK)
-
 #define SCTP_TCB_LOCK_DESTROY(_tcb)	mtx_destroy(&(_tcb)->tcb_mtx)
-
-#define SCTP_TCB_FREE_LOCK_DESTROY(_tcb)	mtx_destroy(&(_tcb)->tcb_canfree_mtx)
-
-
-#define SCTP_TCB_FREE_LOCK(_tcb)  do {					\
-	mtx_lock(&(_tcb)->tcb_canfree_mtx);                             \
-} while (0)
-
-#define SCTP_TCB_FREE_UNLOCK(_tcb)		mtx_unlock(&(_tcb)->tcb_canfree_mtx)
 
 #ifdef INVARIANTS_SCTP
 struct sctp_tcb;
@@ -652,6 +639,8 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
                                                 if (mtx_owned(&(_tcb)->tcb_mtx)) \
                                                      mtx_unlock(&(_tcb)->tcb_mtx); \
                                               } while (0)
+
+
 
 #ifdef INVARIANTS_SCTP
 #define STCB_TCB_LOCK_ASSERT(_tcb) do { \
@@ -728,11 +717,6 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #define SCTP_ASOC_CREATE_UNLOCK(_inp)
 
 /* Lock for TCB */
-#define SCTP_TCB_FREE_LOCK_INIT(_tcb)
-#define SCTP_TCB_FREE_LOCK_DESTROY(_tcb)
-#define SCTP_TCB_FREE_LOCK(_tcb)
-#define SCTP_TCB_FREE_UNLOCK(_tcb)
-
 #define SCTP_TCB_LOCK_INIT(_tcb)
 #define SCTP_TCB_LOCK_DESTROY(_tcb)
 #define SCTP_TCB_LOCK(_tcb)
@@ -787,11 +771,6 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #define SCTP_ASOC_CREATE_LOCK(_inp)
 #define SCTP_ASOC_CREATE_UNLOCK(_inp)
 /* Lock for TCB */
-#define SCTP_TCB_FREE_LOCK_INIT(_tcb)
-#define SCTP_TCB_FREE_LOCK_DESTROY(_tcb)
-#define SCTP_TCB_FREE_LOCK(_tcb)
-#define SCTP_TCB_FREE_UNLOCK(_tcb)
-
 
 #define SCTP_TCB_LOCK_INIT(_tcb)
 #define SCTP_TCB_LOCK_DESTROY(_tcb)
@@ -1151,7 +1130,7 @@ void sctp_inpcb_free(struct sctp_inpcb *, int);
 struct sctp_tcb *sctp_aloc_assoc(struct sctp_inpcb *, struct sockaddr *,
 	int, int *, uint32_t);
 
-void sctp_free_assoc(struct sctp_inpcb *, struct sctp_tcb *, int);
+int sctp_free_assoc(struct sctp_inpcb *, struct sctp_tcb *, int);
 
 int sctp_add_local_addr_ep(struct sctp_inpcb *, struct ifaddr *);
 

@@ -612,6 +612,12 @@ struct sctp_nagle_log {
 	u_int16_t count_in_flight;
 };
 
+struct sctp_sbwake_log {
+	u_int32_t stcb;
+	u_int32_t tsn;
+	u_int32_t wake_cnt;
+};
+
 struct sctp_cwnd_log{
 	u_int32_t time_event;
 	u_int8_t from;
@@ -630,6 +636,7 @@ struct sctp_cwnd_log{
 		struct sctp_rto_log rto;
 		struct sctp_sb_log sb;
 		struct sctp_nagle_log nagle;
+		struct sctp_sbwake_log wake;
 	} x;
 };
 

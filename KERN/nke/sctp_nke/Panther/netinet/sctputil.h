@@ -56,6 +56,13 @@ struct mbuf *sctp_m_copym(struct mbuf *m, int off, int len, int wait);
 #define sctp_m_copym	m_copym
 #endif /* __APPLE__ */
 
+#if defined(__NetBSD__) || defined(__OpenBSD__)
+void* sctp_pool_get(struct pool*, int);
+void sctp_pool_put(struct pool*, void*);
+#endif
+
+
+
 /*
  * Zone(pool) allocation routines: MUST be defined for each OS
  * zone = zone/pool pointer
@@ -112,7 +119,7 @@ extern zone_t kalloc_zone(vm_size_t);	/* XXX */
 	zalloc(zone);
 #elif defined(__NetBSD__) || defined(__OpenBSD__)
 #define SCTP_ZONE_GET(zone) \
-	pool_get(&zone, PR_NOWAIT);
+	sctp_pool_get(&zone, PR_NOWAIT);
 #else
 	/* don't know this OS! */
 	force_comile_error;
@@ -132,7 +139,7 @@ extern zone_t kalloc_zone(vm_size_t);	/* XXX */
 	zfree(zone, element);
 #elif defined(__NetBSD__) || defined(__OpenBSD__)
 #define SCTP_ZONE_FREE(zone, element) \
-	pool_put(&zone, element);
+	sctp_pool_put(&zone, element);
 #else
 	/* don't know this OS! */
 	force_comile_error;
@@ -242,8 +249,10 @@ void sctp_free_bufspace(struct sctp_tcb *, struct sctp_association *,
 	struct sctp_tmit_chunk *);
 
 #else
-#define sctp_free_bufspace(stcb, asoc, tp1)  \
+#define sctp_free_bufspace(stcb, asoc, tp1, chk_cnt)  \
 	if (tp1->data != NULL) { \
+		SOCKBUF_LOCK(&stcb->sctp_socket->so_snd); \
+                (asoc)->chunks_on_out_queue -= chk_cnt; \
 		if ((asoc)->total_output_queue_size >= tp1->book_size) { \
 			(asoc)->total_output_queue_size -= tp1->book_size; \
 		} else { \
@@ -254,9 +263,8 @@ void sctp_free_bufspace(struct sctp_tcb *, struct sctp_association *,
 		} else { \
 			(asoc)->total_output_mbuf_queue_size = 0; \
 		} \
-	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) || \
-	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) { \
-			SOCKBUF_LOCK(&stcb->sctp_socket->so_snd); \
+   	        if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) || \
+	            (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) { \
 			if (stcb->sctp_socket->so_snd.sb_cc >= tp1->book_size) { \
 				stcb->sctp_socket->so_snd.sb_cc -= tp1->book_size; \
 			} else { \
@@ -267,20 +275,34 @@ void sctp_free_bufspace(struct sctp_tcb *, struct sctp_association *,
 			} else { \
 				stcb->sctp_socket->so_snd.sb_mbcnt = 0; \
 			} \
-			SOCKBUF_UNLOCK(&stcb->sctp_socket->so_snd); \
 		} \
+		SOCKBUF_UNLOCK(&stcb->sctp_socket->so_snd); \
 	} 
 
 #endif
 
+#if defined(__NetBSD__)
+int
+sctp_soreceive(	struct socket *so, struct mbuf **paddr,
+		struct uio *uio,
+		struct mbuf **mp0,
+		struct mbuf **controlp,
+		int *flagsp);
+#else
 int
 sctp_soreceive(	struct socket *so, struct sockaddr **psa,
 		struct uio *uio,
 		struct mbuf **mp0,
 		struct mbuf **controlp,
 		int *flagsp);
+#endif
 
 #ifdef SCTP_STAT_LOGGING
+
+void sctp_wakeup_log(struct sctp_tcb *stcb, 
+		     uint32_t cumtsn, 
+		     uint32_t wake_cnt, int from);
+
 void sctp_log_strm_del_alt(u_int32_t, u_int16_t, int);
 
 void sctp_log_nagle_event(struct sctp_tcb *stcb, int action);
