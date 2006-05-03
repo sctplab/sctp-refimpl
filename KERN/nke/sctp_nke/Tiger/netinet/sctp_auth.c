@@ -131,8 +131,10 @@ sctp_alloc_chunklist (void)
 {
     sctp_auth_chklist_t *chklist;
 
-    SCTP_MALLOC_NAMED(chklist, sctp_auth_chklist_t *, sizeof(*chklist),
-		      "AUTH chklist");
+    SCTP_MALLOC_NAMED(chklist, sctp_auth_chklist_t *, sizeof(*chklist), "AUTH chklist");
+    if (chklist == NULL) {
+	panic("sctp_alloc_chunklist: Could NOT get memory");
+    }
     sctp_clear_chunklist(chklist);
     return (chklist);
 }
