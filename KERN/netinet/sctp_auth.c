@@ -79,8 +79,18 @@ extern u_int32_t sctp_debug_on;
 #define SCTP_AUTH_DEBUG		(sctp_debug_on & SCTP_DEBUG_AUTH1)
 #define SCTP_AUTH_DEBUG2	(sctp_debug_on & SCTP_DEBUG_AUTH2)
 #endif /* SCTP_DEBUG */
+
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 #define SCTP_MALLOC_NAMED(var, type, size, name) \
-    MALLOC(var, type, size, M_PCB, M_NOWAIT)
+    do{ \
+	MALLOC(var, type, size, M_PCB, M_WAITOK); \
+    } while (0)
+#else
+#define SCTP_MALLOC_NAMED(var, type, size, name) \
+    do{ \
+	MALLOC(var, type, size, M_PCB, M_NOWAIT); \
+    } while (0)
+#endif
 #define SCTP_FREE(var)	FREE(var, M_PCB)
 
 
@@ -131,9 +141,16 @@ sctp_alloc_chunklist (void)
 {
     sctp_auth_chklist_t *chklist;
 
-    SCTP_MALLOC_NAMED(chklist, sctp_auth_chklist_t *, sizeof(*chklist),
-		      "AUTH chklist");
-    sctp_clear_chunklist(chklist);
+    SCTP_MALLOC_NAMED(chklist, sctp_auth_chklist_t *, sizeof(*chklist), "AUTH chklist");
+    if (chklist == NULL) {
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_AUTH_DEBUG) {
+	    printf("sctp_alloc_chunklist: failed to get memory!\n");
+	}
+#endif /* SCTP_DEBUG */
+    } else {
+	sctp_clear_chunklist(chklist);
+    }
     return (chklist);
 }
 

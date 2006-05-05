@@ -1035,7 +1035,11 @@ sctp_asconf_queue_add(struct sctp_tcb *stcb, struct ifaddr *ifa, uint16_t type)
 	} /* for each aa */
 
 	/* adding new request to the queue */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	MALLOC(aa, struct sctp_asconf_addr *, sizeof(*aa), M_PCB, M_WAITOK);
+#else
 	MALLOC(aa, struct sctp_asconf_addr *, sizeof(*aa), M_PCB, M_NOWAIT);
+#endif
 	if (aa == NULL) {
 		/* didn't get memory */
 #ifdef SCTP_DEBUG
@@ -1191,7 +1195,11 @@ sctp_asconf_queue_add_sa(struct sctp_tcb *stcb, struct sockaddr *sa,
 	} /* for each aa */
 
 	/* adding new request to the queue */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	MALLOC(aa, struct sctp_asconf_addr *, sizeof(*aa), M_PCB, M_WAITOK);
+#else
 	MALLOC(aa, struct sctp_asconf_addr *, sizeof(*aa), M_PCB, M_NOWAIT);
+#endif
 	if (aa == NULL) {
 		/* didn't get memory */
 #ifdef SCTP_DEBUG
