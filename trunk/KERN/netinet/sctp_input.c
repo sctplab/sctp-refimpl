@@ -299,8 +299,13 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 		/* Free the old ones */
 		FREE(asoc->strmin, M_PCB);
 	}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	MALLOC(asoc->strmin, struct sctp_stream_in *, asoc->streamincnt *
+	       sizeof(struct sctp_stream_in), M_PCB, M_WAITOK);
+#else
 	MALLOC(asoc->strmin, struct sctp_stream_in *, asoc->streamincnt *
 	       sizeof(struct sctp_stream_in), M_PCB, M_NOWAIT);
+#endif
 	if (asoc->strmin == NULL) {
 		/* we didn't get memory for the streams! */
 #ifdef SCTP_DEBUG
@@ -3152,7 +3157,11 @@ sctp_handle_str_reset_request_out(struct sctp_tcb *stcb,
 			struct sctp_stream_reset_list *liste;
 			int siz;
 			siz = sizeof(struct sctp_stream_reset_list) + (number_entries * sizeof(uint16_t));
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			MALLOC(liste, struct sctp_stream_reset_list *, siz, M_PCB, M_WAITOK);
+#else
 			MALLOC(liste, struct sctp_stream_reset_list *, siz, M_PCB, M_NOWAIT);
+#endif
 			if(liste == NULL) {
 				/* gak out of memory */
 				sctp_add_stream_reset_result(chk, seq, SCTP_STREAM_RESET_DENIED);
