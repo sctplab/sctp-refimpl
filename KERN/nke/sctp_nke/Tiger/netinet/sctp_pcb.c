@@ -3661,8 +3661,13 @@ sctp_add_vtag_to_timewait(struct sctp_inpcb *inp, u_int32_t tag)
 	}
 	/* Need to add a new block to chain */
 	if (!set) {
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		MALLOC(twait_block, struct sctp_tagblock *,
+		       sizeof(struct sctp_tagblock), M_PCB, M_WAITOK);
+#else
 		MALLOC(twait_block, struct sctp_tagblock *,
 		       sizeof(struct sctp_tagblock), M_PCB, M_NOWAIT);
+#endif
 		if (twait_block == NULL) {
 			return;
 		}
