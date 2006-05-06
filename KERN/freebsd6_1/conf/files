@@ -291,10 +291,10 @@ crypto/blowfish/bf_skey.c	optional crypto
 crypto/blowfish/bf_skey.c	optional ipsec ipsec_esp
 crypto/des/des_ecb.c		optional crypto
 crypto/des/des_ecb.c		optional ipsec ipsec_esp
-crypto/des/des_ecb.c		optional netsmbcrypto
+crypto/des/des_ecb.c		optional netsmb
 crypto/des/des_setkey.c		optional crypto
 crypto/des/des_setkey.c		optional ipsec ipsec_esp
-crypto/des/des_setkey.c		optional netsmbcrypto
+crypto/des/des_setkey.c		optional netsmb
 crypto/rc4/rc4.c		optional netgraph_mppc_encryption
 crypto/rijndael/rijndael-alg-fst.c optional crypto
 crypto/rijndael/rijndael-alg-fst.c optional geom_bde
@@ -439,6 +439,7 @@ dev/ath/if_ath_pci.c		optional ath pci
 dev/awi/am79c930.c		optional awi
 dev/awi/awi.c			optional awi
 dev/awi/if_awi_pccard.c		optional awi pccard
+dev/bce/if_bce.c		optional bce
 dev/bfe/if_bfe.c		optional bfe
 dev/bge/if_bge.c		optional bge
 dev/bktr/bktr_audio.c		optional bktr pci
@@ -655,6 +656,9 @@ dev/mcd/mcd.c			optional mcd isa nowerror
 dev/mcd/mcd_isa.c		optional mcd isa nowerror
 dev/md/md.c			optional md
 dev/mem/memdev.c		optional mem
+dev/mfi/mfi.c			optional mfi
+dev/mfi/mfi_pci.c		optional mfi pci
+dev/mfi/mfi_disk.c		optional mfi
 dev/mii/acphy.c			optional miibus
 dev/mii/amphy.c			optional miibus
 dev/mii/bmtphy.c		optional miibus
@@ -1800,6 +1804,7 @@ posix4/ksched.c			optional _kposix_priority_scheduling
 posix4/p1003_1b.c		standard
 posix4/posix4_mib.c		standard
 rpc/rpcclnt.c			optional nfsclient
+security/audit/audit_syscalls.c	standard
 security/mac/mac_inet.c		optional mac inet
 security/mac/mac_label.c	optional mac
 security/mac/mac_net.c		optional mac
