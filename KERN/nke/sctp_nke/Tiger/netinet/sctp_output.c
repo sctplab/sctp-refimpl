@@ -4045,7 +4045,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 #endif
 		}
 		if (nofragment_flag) {
-#if defined(WITH_CONVERT_IP_OFF) || defined(__FreeBSD__)
+#if defined(WITH_CONVERT_IP_OFF) || defined(__FreeBSD__) || __APPLE__
 #ifdef __OpenBSD__
 			/* OpenBSD has WITH_CONVERT_IP_OFF defined?? */
 			ip->ip_off = htons(IP_DF);
@@ -10885,7 +10885,7 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh)
 		}
 #endif
 		/* set IPv4 length */
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined (__APPLE__)
 		iph_out->ip_len = mout->m_pkthdr.len;
 #else
 		iph_out->ip_len = htons(mout->m_pkthdr.len);
@@ -11801,7 +11801,7 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
                 }
 #endif
 		/* set IPv4 length */
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined (__APPLE__)
 		iph_out->ip_len = mout->m_pkthdr.len;
 #else
 		iph_out->ip_len = htons(mout->m_pkthdr.len);
@@ -11919,7 +11919,7 @@ sctp_send_operr_to(struct mbuf *m, int iphlen,
 		out->ip_sum = 0;
 		out->ip_src = iph->ip_dst;
 		out->ip_dst = iph->ip_src;
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__APPLE__)
 		out->ip_len = scm->m_pkthdr.len;
 #else
 		out->ip_len = htons(scm->m_pkthdr.len);
