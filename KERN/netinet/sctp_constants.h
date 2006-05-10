@@ -449,8 +449,9 @@
 #define SCTP_TIMER_TYPE_ITERATOR        16
 #define SCTP_TIMER_TYPE_EARLYFR         17
 #define SCTP_TIMER_TYPE_ASOCKILL        18
+#define SCTP_TIMER_TYPE_ADDR_WQ         19
 /* add new timers here - and increment LAST */
-#define SCTP_TIMER_TYPE_LAST            19
+#define SCTP_TIMER_TYPE_LAST            20
 
 #define SCTP_IS_TIMER_TYPE_VALID(t)	(((t) > SCTP_TIMER_TYPE_NONE) && \
 					 ((t) < SCTP_TIMER_TYPE_LAST))

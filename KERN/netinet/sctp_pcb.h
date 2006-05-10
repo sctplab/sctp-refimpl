@@ -137,6 +137,7 @@ TAILQ_HEAD(sctp_readhead, sctp_queued_to_read);
 struct sctp_laddr {
 	LIST_ENTRY(sctp_laddr) sctp_nxt_addr;	/* next in list */
 	struct ifaddr *ifa;
+	int action;	/* Only used in delayed asconf stuff */
 };
 
 struct sctp_block_entry {
@@ -181,6 +182,8 @@ struct sctp_epinfo {
 	uint32_t hashtblsize;
 
 	struct sctppcbhead listhead;
+	struct sctpladdr addr_wq;
+
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	struct inpcbhead inplisthead;
 #endif
@@ -217,6 +220,7 @@ struct sctp_epinfo {
 	struct mtx ipi_ep_mtx;
 	struct mtx it_mtx;
         struct mtx ipi_count_mtx;
+	struct mtx ipi_addr_mtx;
 #elif defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
 #ifdef _KERN_LOCKS_H_
 	lck_grp_attr_t *mtx_grp_attr;
@@ -263,6 +267,7 @@ struct sctp_epinfo {
 	struct calloutlist callqueue;
 #endif /* _SCTP_NEEDS_CALLOUT_ */
 
+	struct sctp_timer addr_wq_timer;
 	uint32_t mbuf_track;
 
 	/* for port allocations */
@@ -516,6 +521,27 @@ void sctp_verify_no_locks(void);
 } while (0)
 
 #endif
+
+#define SCTP_IPI_ADDR_INIT() \
+        mtx_init(&sctppcbinfo.ipi_addr_mtx, "sctp-addr-wq", "sctp_addr_wq", MTX_DEF)
+
+#define SCTP_IPI_ADDR_DESTROY(_inp) \
+	mtx_destroy(&sctppcbinfo.ipi_addr_mtx)
+
+#define SCTP_IPI_ADDR_RLOCK()	do { 					\
+             mtx_lock(&sctppcbinfo.ipi_addr_mtx);                         \
+} while (0)
+
+#define SCTP_IPI_ADDR_RUNLOCK()		mtx_unlock(&sctppcbinfo.ipi_addr_mtx)
+#define SCTP_IPI_ADDR_WUNLOCK()		mtx_unlock(&sctppcbinfo.ipi_addr_mtx)
+
+
+
+#define SCTP_IPI_ADDR_WLOCK()	do { 					\
+             mtx_lock(&sctppcbinfo.ipi_addr_mtx);                         \
+} while (0)
+
+
 
 #define SCTP_INP_INFO_RUNLOCK()		mtx_unlock(&sctppcbinfo.ipi_ep_mtx)
 #define SCTP_INP_INFO_WUNLOCK()		mtx_unlock(&sctppcbinfo.ipi_ep_mtx)

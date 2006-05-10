@@ -3016,3 +3016,36 @@ sctp_addr_mgmt_ep_sa(struct sctp_inpcb *inp, struct sockaddr *sa, uint16_t type)
 	}
 	return (0);
 }
+
+void sctp_addr_change(struct ifaddr *ifa, int cmd)
+{
+	struct sctp_laddr *wi;
+	wi = (struct sctp_laddr *)SCTP_ZONE_GET(
+		sctppcbinfo.ipi_zone_laddr);
+	if (wi == NULL) {
+		/*
+		 * Gak, what can we do? We have lost an address change
+		 * can you say HOSED?
+		 */
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_PCB1) {
+			printf("Lost and address change ???\n");
+		}
+#endif /* SCTP_DEBUG */
+		return;
+	}
+	SCTP_INCR_LADDR_COUNT();
+	bzero(wi, sizeof(*wi));
+	wi->ifa = ifa;
+	wi->action = cmd;
+	SCTP_IPI_ADDR_WLOCK();
+       /* Should this really be a tailq? As it
+	* is we will process the newest first :-0
+	*/
+ 	LIST_INSERT_HEAD(&sctppcbinfo.addr_wq, wi,sctp_nxt_addr);
+	sctp_timer_start(SCTP_TIMER_TYPE_ADDR_WQ,
+			 (struct sctp_inpcb *)NULL, 
+			 (struct sctp_tcb *)NULL,
+			 (struct sctp_nets *)NULL);
+	SCTP_IPI_ADDR_WUNLOCK();
+}
