@@ -59,6 +59,8 @@ extern void sctp_add_ip_address(struct ifaddr *);
 
 extern void sctp_delete_ip_address(struct ifaddr *);
 
+extern void sctp_addr_change(struct ifaddr *ifa, int cmd);
+
 extern int32_t sctp_set_primary_ip_address_sa(struct sctp_tcb *,
 	struct sockaddr *);
 
