@@ -726,6 +726,13 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #define SCTP_IPI_COUNT_DESTROY() \
         lck_mtx_free(sctppcbinfo.ipi_count_mtx, SCTP_MTX_GRP)
 
+#define SCTP_IPI_ADDR_INIT()
+#define SCTP_IPI_ADDR_DESTROY(_inp)
+#define SCTP_IPI_ADDR_RLOCK()
+#define SCTP_IPI_ADDR_WLOCK()
+#define SCTP_IPI_ADDR_RUNLOCK()
+#define SCTP_IPI_ADDR_WUNLOCK()
+
 /* Lock for INP */
 #define SCTP_INP_LOCK_INIT(_inp)
 #define SCTP_INP_LOCK_DESTROY(_inp)
@@ -780,6 +787,13 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #define SCTP_INP_INFO_RLOCK()
 #define SCTP_INP_INFO_WLOCK()
 #define SCTP_IPI_COUNT_INIT()
+
+#define SCTP_IPI_ADDR_INIT()
+#define SCTP_IPI_ADDR_DESTROY(_inp)
+#define SCTP_IPI_ADDR_RLOCK()
+#define SCTP_IPI_ADDR_WLOCK()
+#define SCTP_IPI_ADDR_RUNLOCK()
+#define SCTP_IPI_ADDR_WUNLOCK()
 
 #define SCTP_INP_INFO_RUNLOCK()
 #define SCTP_INP_INFO_WUNLOCK()
