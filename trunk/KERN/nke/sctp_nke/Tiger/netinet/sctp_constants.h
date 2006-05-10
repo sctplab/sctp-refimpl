@@ -553,7 +553,7 @@
 
 
 #define SCTP_INP_KILL_TIMEOUT 1000 /* number of ms to retry kill of inpcb */
-#define SCTP_ASOC_KILL_TIMEOUT 100 /* number of ms to retry kill of inpcb */
+#define SCTP_ASOC_KILL_TIMEOUT 10 /* number of ms to retry kill of inpcb */
 
 #define SCTP_DEF_MAX_INIT	8
 #define SCTP_DEF_MAX_SEND	10

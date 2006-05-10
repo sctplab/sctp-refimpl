@@ -4806,6 +4806,13 @@ sctp_pcb_init()
 
 	/* mbuf tracker */
 	sctppcbinfo.mbuf_track = 0;
+
+#if defined (__FreeBSD__) && __FreeBSD_version >= 500000
+	callout_init(&sctppcbinfo.addr_wq_timer.timer, 1);
+#else
+	callout_init(&sctppcbinfo.addr_wq_timer.timer);
+#endif
+
 	/* port stuff */
 #if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__APPLE__)
 	sctppcbinfo.lastlow = ipport_firstauto;
