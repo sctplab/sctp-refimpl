@@ -1328,9 +1328,10 @@ sctp_timeout_handler(void *t)
 	/* mark as being serviced now */
 	callout_deactivate(&tmr->timer);
 
-	SCTP_INP_INCR_REF(inp);
-	SCTP_INP_WUNLOCK(inp);
-
+	if(inp) {
+		SCTP_INP_INCR_REF(inp);
+		SCTP_INP_WUNLOCK(inp);
+	}
 	typ = tmr->type;
 	switch (tmr->type) {
 	case SCTP_TIMER_TYPE_ADDR_WQ:
