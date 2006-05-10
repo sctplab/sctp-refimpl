@@ -157,6 +157,7 @@
 #include <netinet/sctp_crc32.h>
 #include <netinet/sctp_indata.h>	/* for sctp_deliver_data() */
 #include <netinet/sctp_auth.h>
+#include <netinet/sctp_asconf.h>
 
 extern int sctp_warm_the_crc32_table;
 
@@ -1166,6 +1167,36 @@ sctp_expand_mapping_array(struct sctp_association *asoc)
 extern unsigned int sctp_early_fr_msec;
 
 static void
+sctp_handle_addr_wq(void)
+{
+	/* deal with the ADDR wq from the rtsock calls */
+	struct sctp_laddr *wi;
+
+	SCTP_IPI_ADDR_WLOCK();
+	wi = LIST_FIRST(&sctppcbinfo.addr_wq);
+	if(wi == NULL) {
+		SCTP_IPI_ADDR_WUNLOCK();
+		return;
+	}
+	LIST_REMOVE(wi, sctp_nxt_addr);
+	if(!LIST_EMPTY(&sctppcbinfo.addr_wq)) {
+		sctp_timer_start(SCTP_TIMER_TYPE_ADDR_WQ,
+				 (struct sctp_inpcb *)NULL, 
+				 (struct sctp_tcb *)NULL,
+				 (struct sctp_nets *)NULL);
+	}
+	SCTP_IPI_ADDR_WUNLOCK();
+	if (wi->action == RTM_ADD) {
+		sctp_add_ip_address(wi->ifa);
+	} else if (wi->action == RTM_DELETE) {
+		sctp_delete_ip_address(wi->ifa);
+	}
+	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_laddr, wi);
+	SCTP_DECR_LADDR_COUNT();
+}
+
+
+static void
 sctp_timeout_handler(void *t)
 {
 	struct sctp_inpcb *inp;
@@ -1220,7 +1251,8 @@ sctp_timeout_handler(void *t)
 
 	sctp_pegs[SCTP_TIMERS_EXP]++;
 
-	if (inp == NULL) {
+	if ((tmr->type != SCTP_TIMER_TYPE_ADDR_WQ) &&
+	    (inp == NULL)) {
 		splx(s);
 #if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
 		/* release BSD kernel funnel/mutex */
@@ -1228,21 +1260,22 @@ sctp_timeout_handler(void *t)
 #endif
 		return;
 	}
-
-	SCTP_INP_WLOCK(inp);
-	if (inp->sctp_socket == 0) {
-		splx(s);
+	if(inp) {
+		SCTP_INP_WLOCK(inp);
+		if (inp->sctp_socket == 0) {
+			splx(s);
 #if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
-		/* release BSD kernel funnel/mutex */
-		(void)thread_funnel_set(network_flock, FALSE);
+			/* release BSD kernel funnel/mutex */
+			(void)thread_funnel_set(network_flock, FALSE);
 #endif
-		SCTP_INP_WUNLOCK(inp);
-		return;
-	}
+			SCTP_INP_WUNLOCK(inp);
+			return;
+		}
 
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	socket_lock(inp->sctp_socket, 1);
+		socket_lock(inp->sctp_socket, 1);
 #endif
+	}
 
 	if (stcb) {
 		if (stcb->asoc.state == 0) {
@@ -1251,12 +1284,14 @@ sctp_timeout_handler(void *t)
 			/* release BSD kernel funnel/mutex */
 			(void)thread_funnel_set(network_flock, FALSE);
 #endif
+			if(inp) {
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			if (!(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
-				socket_unlock(inp->sctp_socket, 1);
-			}
+				if (!(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
+					socket_unlock(inp->sctp_socket, 1);
+				}
 #endif
-			SCTP_INP_WUNLOCK(inp);
+				SCTP_INP_WUNLOCK(inp);
+			}
 			return;
 		}
 	}
@@ -1272,10 +1307,12 @@ sctp_timeout_handler(void *t)
 		/* release BSD kernel funnel/mutex */
 		(void)thread_funnel_set(network_flock, FALSE);
 #endif
+		if(inp) {
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		socket_unlock(inp->sctp_socket, 1);
+			socket_unlock(inp->sctp_socket, 1);
 #endif
-		SCTP_INP_WUNLOCK(inp);
+			SCTP_INP_WUNLOCK(inp);
+		}
 		return;
 	}
 #endif
@@ -1296,6 +1333,9 @@ sctp_timeout_handler(void *t)
 
 	typ = tmr->type;
 	switch (tmr->type) {
+	case SCTP_TIMER_TYPE_ADDR_WQ:
+		sctp_handle_addr_wq();
+		break;
 	case SCTP_TIMER_TYPE_ITERATOR:
 	{
 		struct sctp_iterator *it;
@@ -1504,7 +1544,8 @@ sctp_timeout_handler(void *t)
 	};
 #ifdef SCTP_AUDITING_ENABLED
 	sctp_audit_log(0xF1, (u_int8_t)tmr->type);
-	sctp_auditing(5, inp, stcb, net);
+	if(inp) 
+		sctp_auditing(5, inp, stcb, net);
 #endif
 	if ((did_output) && stcb){
 		/*
@@ -1520,10 +1561,11 @@ sctp_timeout_handler(void *t)
 		SCTP_TCB_UNLOCK(stcb);
 	}
  out_decr:
-	SCTP_INP_WLOCK(inp);
-	SCTP_INP_DECR_REF(inp);
-	SCTP_INP_WUNLOCK(inp);
-
+	if(inp) {
+		SCTP_INP_WLOCK(inp);
+		SCTP_INP_DECR_REF(inp);
+		SCTP_INP_WUNLOCK(inp);
+	}
  out_no_decr:
 
 #ifdef SCTP_DEBUG
@@ -1536,12 +1578,13 @@ sctp_timeout_handler(void *t)
 	/* release BSD kernel funnel/mutex */
 	(void)thread_funnel_set(network_flock, FALSE);
 #endif
+	if(inp) {
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	if (!(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
-		socket_unlock(inp->sctp_socket, 1);
-	}
+		if (!(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
+			socket_unlock(inp->sctp_socket, 1);
+		}
 #endif
-
+	}
 }
 
 int
@@ -1551,7 +1594,9 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	int to_ticks;
 	struct sctp_timer *tmr;
 
-	if (inp == NULL)
+
+	if ((t_type != SCTP_TIMER_TYPE_ADDR_WQ) &&
+	    (inp == NULL)) 
 		return (EFAULT);
 
 	to_ticks = 0;
@@ -1561,6 +1606,11 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		STCB_TCB_LOCK_ASSERT(stcb);
 	}
 	switch (t_type) {
+	case SCTP_TIMER_TYPE_ADDR_WQ:
+		/* Only 1 tick away :-) */
+		tmr = &sctppcbinfo.addr_wq_timer;
+		to_ticks = 1;
+		break;
 	case SCTP_TIMER_TYPE_ITERATOR:
 	{
 		struct sctp_iterator *it;
@@ -1900,7 +1950,8 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 {
 	struct sctp_timer *tmr;
 
-	if (inp == NULL)
+	if ((t_type != SCTP_TIMER_TYPE_ADDR_WQ) &&
+	    (inp == NULL)) 
 		return (EFAULT);
 
 	tmr = NULL;
@@ -1908,6 +1959,9 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		STCB_TCB_LOCK_ASSERT(stcb);
 	}
 	switch (t_type) {
+	case SCTP_TIMER_TYPE_ADDR_WQ:
+		tmr = &sctppcbinfo.addr_wq_timer;
+		break;
 	case SCTP_TIMER_TYPE_EARLYFR:
 		if ((stcb == NULL) || (net == NULL)) {
 			return (EFAULT);
