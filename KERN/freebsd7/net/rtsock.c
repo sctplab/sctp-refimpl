@@ -53,8 +53,7 @@
 #include <netinet/in.h>
 
 #ifdef SCTP
-extern void sctp_add_ip_address(struct ifaddr *ifa);
-extern void sctp_delete_ip_address(struct ifaddr *ifa);
+extern void sctp_addr_change(struct ifaddr *ifa, int cmd);
 #endif /* SCTP */
 
 MALLOC_DEFINE(M_RTABLE, "routetbl", "routing tables");
@@ -885,11 +884,7 @@ rt_newaddrmsg(int cmd, struct ifaddr *ifa, int error, struct rtentry *rt)
 	 * this will only get called when an address is added/deleted
 	 * XXX pass the ifaddr struct instead if ifa->ifa_addr...
 	 */
-	if (cmd == RTM_ADD) {
-		sctp_add_ip_address(ifa);
-	} else if (cmd == RTM_DELETE) {
-		sctp_delete_ip_address(ifa);
-	}
+	sctp_addr_change(ifa, cmd);
 #endif /* SCTP */
 	for (pass = 1; pass < 3; pass++) {
 		bzero((caddr_t)&info, sizeof(info));
