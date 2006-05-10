@@ -4045,7 +4045,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 #endif
 		}
 		if (nofragment_flag) {
-#if defined(WITH_CONVERT_IP_OFF) || defined(__FreeBSD__) || __APPLE__
+#if defined(WITH_CONVERT_IP_OFF) || defined(__FreeBSD__) || defined(__APPLE__)
 #ifdef __OpenBSD__
 			/* OpenBSD has WITH_CONVERT_IP_OFF defined?? */
 			ip->ip_off = htons(IP_DF);
