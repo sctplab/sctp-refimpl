@@ -1191,6 +1191,7 @@ sctp_handle_addr_wq(void)
 	} else if (wi->action == RTM_DELETE) {
 		sctp_delete_ip_address(wi->ifa);
 	}
+	IFAFREE(wi->ifa);
 	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_laddr, wi);
 	SCTP_DECR_LADDR_COUNT();
 }
