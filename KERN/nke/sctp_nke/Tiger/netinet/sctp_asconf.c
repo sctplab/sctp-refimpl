@@ -3037,6 +3037,8 @@ void sctp_addr_change(struct ifaddr *ifa, int cmd)
 	SCTP_INCR_LADDR_COUNT();
 	bzero(wi, sizeof(*wi));
 	wi->ifa = ifa;
+	IFAREF(ifa);
+
 	wi->action = cmd;
 	SCTP_IPI_ADDR_WLOCK();
        /* Should this really be a tailq? As it

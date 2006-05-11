@@ -12837,7 +12837,7 @@ sctp_sosend(struct socket *so,
 		if (control)
 			sctp_m_freem(control);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			socket_unlock(so, 1);
+		socket_unlock(so, 1);
 #endif
 		return (error);
 	}
