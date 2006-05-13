@@ -3586,33 +3586,45 @@ sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
 	 */
 	struct socket *old_so, *new_so;
 	struct sctp_queued_to_read *control, *nctl;
+	struct sctp_readhead tmp_queue;
 	struct mbuf *m;
 	
 	old_so = old_inp->sctp_socket;
 	new_so = new_inp->sctp_socket;
+	TAILQ_INIT(&tmp_queue);
 	/* lock the socket buffers */
 	SOCKBUF_LOCK((&old_so->so_rcv));
-	SOCKBUF_LOCK((&new_so->so_rcv));
-
 	control = TAILQ_FIRST(&old_inp->read_queue);
+	/* Pull off all for out target stcb */
 	while(control) {
 		nctl = TAILQ_NEXT(control, next);
 		if(control->stcb == stcb) {
 			/* remove it we want it */
 			TAILQ_REMOVE(&old_inp->read_queue, control, next);
-			TAILQ_INSERT_TAIL(&new_inp->read_queue, control, next);
+			TAILQ_INSERT_TAIL(&tmp_queue, control, next);
 			m = control->data;
 			while(m) {
 				sctp_sbfree(stcb, &old_so->so_rcv, m);
-				sctp_sballoc(stcb, &new_so->so_rcv, m);
 				m = m->m_next;
 			}
 		}
 		control = nctl;
 	}
 	SOCKBUF_UNLOCK((&old_so->so_rcv));
+	/* Now we move them over to the new socket buffer */
+	control = TAILQ_FIRST(&tmp_queue);
+	SOCKBUF_LOCK((&new_so->so_rcv));
+	while(control) {
+		nctl = TAILQ_NEXT(control, next);
+		TAILQ_INSERT_TAIL(&new_inp->read_queue, control, next);
+		m = control->data;
+		while(m) {
+			sctp_sballoc(stcb, &new_so->so_rcv, m);
+			m = m->m_next;
+		}
+		control = nctl;
+	}
 	SOCKBUF_UNLOCK((&new_so->so_rcv));
-
 }
 
 

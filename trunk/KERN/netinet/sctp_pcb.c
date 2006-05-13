@@ -2787,13 +2787,12 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		if(locked_so) {
 			SOCK_UNLOCK(so);			
 		}
-		ACCEPT_LOCK();
 		SCTP_ASOC_CREATE_LOCK(inp);
 		SCTP_INP_WLOCK(inp);		
+		ACCEPT_LOCK();
 		if(locked_so) {
 			SOCK_LOCK(so);			
 		}
-
 #endif
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 		sotryfree(so);
