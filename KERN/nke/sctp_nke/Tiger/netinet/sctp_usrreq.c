@@ -2079,18 +2079,28 @@ sctp_optsget(struct socket *so,
 				break;
 			}
 			tm = mtod(m, struct sctp_assoc_value *);
-			if (tm->assoc_id) {
-				stcb = sctp_findassociation_ep_asocid(inp, tm->assoc_id);
-				if (stcb == NULL) {
-					error = ENOTCONN;
-					tm->assoc_value = 0;
-				} else {
+
+			if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
+				SCTP_INP_RLOCK(inp);
+				stcb = LIST_FIRST(&inp->sctp_asoc_list);
+				if (stcb) {
+					SCTP_TCB_LOCK(stcb);
 					tm->assoc_value = stcb->asoc.delayed_ack;
 					SCTP_TCB_UNLOCK(stcb);
-				}
+                                } else {
+                                        tm->assoc_value = TICKS_TO_MSEC(inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV]);
+                                }
+				SCTP_INP_RUNLOCK(inp);
 			} else {
-				tm->assoc_value = TICKS_TO_MSEC(inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV]);
-			}
+				stcb = sctp_findassociation_ep_asocid(inp, tm->assoc_id);
+                                if (stcb == NULL) {
+                                        error = ENOTCONN;
+                                        tm->assoc_value = 0;
+                                } else {
+                                        stcb->asoc.delayed_ack = tm->assoc_value;
+                                        SCTP_TCB_UNLOCK(stcb);
+                                }
+                        }
 		}
 		break;
 
@@ -3438,16 +3448,27 @@ sctp_optsset(struct socket *so,
 				break;
 			}
 			tm = mtod(m, struct sctp_assoc_value *);
-			if (tm->assoc_id) {
-				stcb = sctp_findassociation_ep_asocid(inp, tm->assoc_id);
-				if (stcb == NULL) {
-					error = ENOTCONN;
-				} else {
-					stcb->asoc.delayed_ack = tm->assoc_value;
-				}
+
+			if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
+				SCTP_INP_RLOCK(inp);
+				stcb = LIST_FIRST(&inp->sctp_asoc_list);
+				if (stcb) {
+					SCTP_TCB_LOCK(stcb);
+                                        stcb->asoc.delayed_ack = tm->assoc_value;
+					SCTP_TCB_UNLOCK(stcb);
+                                } else {
+                                        inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV] = MSEC_TO_TICKS(tm->assoc_value);
+                                }
+				SCTP_INP_RUNLOCK(inp);
 			} else {
-                                inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV] = MSEC_TO_TICKS(tm->assoc_value);
-			}
+				stcb = sctp_findassociation_ep_asocid(inp, tm->assoc_id);
+                                if (stcb == NULL) {
+                                        error = ENOTCONN;
+                                } else {
+                                        stcb->asoc.delayed_ack = tm->assoc_value;
+                                        SCTP_TCB_UNLOCK(stcb);
+                                }
+                        }
 		}
 		break;
 
