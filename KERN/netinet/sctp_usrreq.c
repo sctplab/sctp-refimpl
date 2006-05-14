@@ -32,6 +32,10 @@
 
 /*	$KAME: sctp_usrreq.c,v 1.48 2005/03/07 23:26:08 itojun Exp $	*/
 
+#ifdef __FreeBSD__
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD:$");
+#endif
 
 
 #if !(defined(__OpenBSD__) || defined(__APPLE__))

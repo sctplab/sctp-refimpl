@@ -32,6 +32,12 @@
 
 /*	$KAME: sctp_sha1.h,v 1.5 2004/08/17 04:06:19 itojun Exp $	*/
 
+#ifdef __FreeBSD__
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD:$");
+#endif
+
+
 #ifndef __SCTP_SLA1_h__
 #define __SCTP_SLA1_h__
 

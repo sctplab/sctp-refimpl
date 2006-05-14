@@ -27,6 +27,11 @@
  * SUCH DAMAGE.
  */
 
+#ifdef __FreeBSD__
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD:$");
+#endif
+
 #ifndef __SCTP_SACK_H__
 #define __SCTP_SACK_H__
 
