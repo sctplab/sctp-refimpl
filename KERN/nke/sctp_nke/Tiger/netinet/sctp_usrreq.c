@@ -3443,16 +3443,10 @@ sctp_optsset(struct socket *so,
 				if (stcb == NULL) {
 					error = ENOTCONN;
 				} else {
-					if (tm->assoc_value)
-						stcb->asoc.delayed_ack = tm->assoc_value;
-					else
-						error = EINVAL;
+					stcb->asoc.delayed_ack = tm->assoc_value;
 				}
 			} else {
-				if (tm->assoc_value)
-					inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV] = MSEC_TO_TICKS(tm->assoc_value);
-				else
-					error = EINVAL;
+                                inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV] = MSEC_TO_TICKS(tm->assoc_value);
 			}
 		}
 		break;
