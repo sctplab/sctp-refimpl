@@ -1,8 +1,3 @@
-/*	$KAME: sctp_output.h,v 1.14 2005/03/06 16:04:18 itojun Exp $	*/
-
-#ifndef __sctp_output_h__
-#define __sctp_output_h__
-
 /*-
  * Copyright (C) 2002, 2003, 2004 Cisco Systems Inc,
  * All rights reserved.
@@ -31,6 +26,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+
+/*	$KAME: sctp_output.h,v 1.14 2005/03/06 16:04:18 itojun Exp $	*/
+
+#ifndef __sctp_output_h__
+#define __sctp_output_h__
+
 
 
 

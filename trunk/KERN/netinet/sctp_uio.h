@@ -1,8 +1,3 @@
-/*	$KAME: sctp_uio.h,v 1.11 2005/03/06 16:04:18 itojun Exp $	*/
-
-#ifndef __sctp_uio_h__
-#define __sctp_uio_h__
-
 /*-
  * Copyright (c) 2001-2006 Cisco Systems, Inc.
  * All rights reserved.
@@ -34,6 +29,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+
+/*	$KAME: sctp_uio.h,v 1.11 2005/03/06 16:04:18 itojun Exp $	*/
+
+#ifndef __sctp_uio_h__
+#define __sctp_uio_h__
+
+
+
+
 #if ! defined(_KERNEL)
 #include <stdint.h>
 #endif

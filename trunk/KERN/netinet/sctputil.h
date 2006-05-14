@@ -1,8 +1,3 @@
-/*	$KAME: sctputil.h,v 1.15 2005/03/06 16:04:19 itojun Exp $	*/
-
-#ifndef __sctputil_h__
-#define __sctputil_h__
-
 /*-
  * Copyright (C) 2002-2006 Cisco Systems Inc,
  * All rights reserved.
@@ -31,6 +26,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+
+
+/*	$KAME: sctputil.h,v 1.15 2005/03/06 16:04:19 itojun Exp $	*/
+
+#ifndef __sctputil_h__
+#define __sctputil_h__
+
+
 
 #if (defined(__APPLE__) && defined(KERNEL))
 #ifndef _KERNEL

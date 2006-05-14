@@ -1,8 +1,3 @@
-/*	$KAME: sctp_peeloff.h,v 1.6 2005/03/06 16:04:18 itojun Exp $	*/
-
-#ifndef __sctp_peeloff_h__
-#define __sctp_peeloff_h__
-
 /*-
  * Copyright (C) 2002-2006 Cisco Systems Inc,
  * All rights reserved.
@@ -31,6 +26,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+
+/*	$KAME: sctp_peeloff.h,v 1.6 2005/03/06 16:04:18 itojun Exp $	*/
+
+#ifndef __sctp_peeloff_h__
+#define __sctp_peeloff_h__
 
 #include <sys/types.h>
 #if !defined(__OpenBSD__)

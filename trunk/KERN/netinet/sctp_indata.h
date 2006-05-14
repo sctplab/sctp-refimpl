@@ -1,8 +1,3 @@
-/*	$KAME: sctp_indata.h,v 1.9 2005/03/06 16:04:17 itojun Exp $	*/
-
-#ifndef __sctp_indata_h__
-#define __sctp_indata_h__
-
 /*-
  * Copyright (C) 2002, 2003, 2004 Cisco Systems Inc,
  * All rights reserved.
@@ -31,6 +26,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+
+/*	$KAME: sctp_indata.h,v 1.9 2005/03/06 16:04:17 itojun Exp $	*/
+
+#ifndef __sctp_indata_h__
+#define __sctp_indata_h__
+
 
 
 #if (defined(__APPLE__) && defined(KERNEL))

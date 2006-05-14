@@ -1,8 +1,3 @@
-/*	$KAME: sctp_hashdriver.h,v 1.4 2003/11/25 06:40:52 ono Exp $	*/
-
-#ifndef __sctp_hashdriver_h__
-#define __sctp_hashdriver_h__
-
 /*-
  * Copyright (c) 2001, 2002 Cisco Systems, Inc.
  * All rights reserved.
@@ -34,6 +29,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+
+/*	$KAME: sctp_hashdriver.h,v 1.4 2003/11/25 06:40:52 ono Exp $	*/
+
+#ifndef __sctp_hashdriver_h__
+#define __sctp_hashdriver_h__
+
 
 void sctp_hash_digest(char *, int, char *, int, unsigned char *);
 

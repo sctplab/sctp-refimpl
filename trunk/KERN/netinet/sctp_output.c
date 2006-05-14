@@ -1,5 +1,3 @@
-/*	$KAME: sctp_output.c,v 1.46 2005/03/06 16:04:17 itojun Exp $	*/
-
 /*-
  * Copyright (C) 2002-2006 Cisco Systems Inc,
  * All rights reserved.
@@ -28,6 +26,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+
+/*	$KAME: sctp_output.c,v 1.46 2005/03/06 16:04:17 itojun Exp $	*/
 
 #if !(defined(__OpenBSD__) || defined (__APPLE__))
 #include "opt_ipsec.h"

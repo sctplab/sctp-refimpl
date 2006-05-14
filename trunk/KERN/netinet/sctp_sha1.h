@@ -1,7 +1,3 @@
-/*	$KAME: sctp_sha1.h,v 1.5 2004/08/17 04:06:19 itojun Exp $	*/
-
-#ifndef __SCTP_SLA1_h__
-#define __SCTP_SLA1_h__
 /*-
  * Copyright (c) 2001, 2002, 2004, 2006 Cisco Systems, Inc.
  * All rights reserved.
@@ -33,6 +29,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+
+/*	$KAME: sctp_sha1.h,v 1.5 2004/08/17 04:06:19 itojun Exp $	*/
+
+#ifndef __SCTP_SLA1_h__
+#define __SCTP_SLA1_h__
+
 #include <sys/types.h>
 
 struct sha1_context {

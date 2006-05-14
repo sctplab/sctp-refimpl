@@ -1,8 +1,3 @@
-/*	$KAME: sctp_pcb.h,v 1.21 2005/07/16 01:18:47 suz Exp $	*/
-
-#ifndef __sctp_pcb_h__
-#define __sctp_pcb_h__
-
 /*-
  * Copyright (c) 2001-2006 Cisco Systems, Inc.
  * All rights reserved.
@@ -34,6 +29,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+
+/*	$KAME: sctp_pcb.h,v 1.21 2005/07/16 01:18:47 suz Exp $	*/
+
+#ifndef __sctp_pcb_h__
+#define __sctp_pcb_h__
+
+
 
 /*
  * We must have V6 so the size of the proto can be calculated. Otherwise

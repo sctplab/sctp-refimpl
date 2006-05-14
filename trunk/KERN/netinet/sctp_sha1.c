@@ -1,5 +1,3 @@
-/*	$KAME: sctp_sha1.c,v 1.9 2005/03/06 16:04:18 itojun Exp $	*/
-
 /*-
  * Copyright (c) 2001-2006 Cisco Systems, Inc.
  * All rights reserved.
@@ -31,6 +29,9 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+
+/*	$KAME: sctp_sha1.c,v 1.9 2005/03/06 16:04:18 itojun Exp $	*/
+
 #include <netinet/sctp_sha1.h>
 #include <sys/param.h>
 #include <sys/systm.h>

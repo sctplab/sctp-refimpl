@@ -1,8 +1,3 @@
-/*	$KAME: sctp_timer.h,v 1.6 2005/03/06 16:04:18 itojun Exp $	*/
-
-#ifndef __sctp_timer_h__
-#define __sctp_timer_h__
-
 /*-
  * Copyright (C) 2002, 2004 Cisco Systems Inc,
  * All rights reserved.
@@ -31,6 +26,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+
+/*	$KAME: sctp_timer.h,v 1.6 2005/03/06 16:04:18 itojun Exp $	*/
+
+#ifndef __sctp_timer_h__
+#define __sctp_timer_h__
+
 
 #if (defined(__APPLE__) && defined(KERNEL))
 #ifndef _KERNEL

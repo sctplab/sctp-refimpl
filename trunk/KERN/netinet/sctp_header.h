@@ -1,8 +1,3 @@
-/*	$KAME: sctp_header.h,v 1.14 2005/03/06 16:04:17 itojun Exp $	*/
-
-#ifndef __sctp_header_h__
-#define __sctp_header_h__
-
 /*-
  * Copyright (c) 2001-2006 Cisco Systems, Inc.
  * All rights reserved.
@@ -34,6 +29,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+
+/*	$KAME: sctp_header.h,v 1.14 2005/03/06 16:04:17 itojun Exp $	*/
+
+#ifndef __sctp_header_h__
+#define __sctp_header_h__
+
 
 #include <sys/time.h>
 #include <netinet/sctp.h>

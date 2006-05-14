@@ -1,8 +1,3 @@
-/*	$KAME: sctp_asconf.h,v 1.8 2005/03/06 16:04:16 itojun Exp $	*/
-
-#ifndef _NETINET_SCTP_ASCONF_H_
-#define _NETINET_SCTP_ASCONF_H_
-
 /*-
  * Copyright (c) 2001-2006 Cisco Systems, Inc.
  * All rights reserved.
@@ -31,6 +26,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+
+/*	$KAME: sctp_asconf.h,v 1.8 2005/03/06 16:04:16 itojun Exp $	*/
+
+#ifndef _NETINET_SCTP_ASCONF_H_
+#define _NETINET_SCTP_ASCONF_H_
+
+
 #include <sys/malloc.h>
 
 

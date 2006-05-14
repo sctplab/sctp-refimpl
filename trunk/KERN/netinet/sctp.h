@@ -1,8 +1,3 @@
-/*	$KAME: sctp.h,v 1.18 2005/03/06 16:04:16 itojun Exp $	*/
-
-#ifndef _NETINET_SCTP_H_
-#define _NETINET_SCTP_H_
-
 /*-
  * Copyright (c) 2001-2006 Cisco Systems, Inc.
  * All rights reserved.
@@ -34,6 +29,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+
+/*	$KAME: sctp.h,v 1.18 2005/03/06 16:04:16 itojun Exp $	*/
+
+#ifndef _NETINET_SCTP_H_
+#define _NETINET_SCTP_H_
+
+
 #include <sys/types.h>
 
 /*
