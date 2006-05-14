@@ -3,7 +3,7 @@
 #ifndef __crc32c_h__
 #define __crc32c_h__
 
-/*
+/*-
  * Copyright (c) 2001, 2002, 2004 Cisco Systems, Inc.
  * All rights reserved.
  *

@@ -6,7 +6,7 @@
 #if defined(_KERNEL)
 #include <sys/kernel.h>
 #endif
-/*
+/*-
  * Copyright (c) 2001-2006 Cisco Systems, Inc.
  * All rights reserved.
  *

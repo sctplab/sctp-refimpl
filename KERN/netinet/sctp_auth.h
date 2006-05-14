@@ -1,4 +1,4 @@
-/*
+/*-
  * Copyright (C) 2006 Cisco Systems Inc,
  * All rights reserved.
  *

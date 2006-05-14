@@ -3,7 +3,7 @@
 #ifndef _NETINET_SCTP_H_
 #define _NETINET_SCTP_H_
 
-/*
+/*-
  * Copyright (c) 2001-2006 Cisco Systems, Inc.
  * All rights reserved.
  *

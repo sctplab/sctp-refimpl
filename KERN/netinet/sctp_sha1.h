@@ -2,7 +2,7 @@
 
 #ifndef __SCTP_SLA1_h__
 #define __SCTP_SLA1_h__
-/*
+/*-
  * Copyright (c) 2001, 2002, 2004, 2006 Cisco Systems, Inc.
  * All rights reserved.
  *

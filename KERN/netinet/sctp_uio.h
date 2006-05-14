@@ -3,7 +3,7 @@
 #ifndef __sctp_uio_h__
 #define __sctp_uio_h__
 
-/*
+/*-
  * Copyright (c) 2001-2006 Cisco Systems, Inc.
  * All rights reserved.
  *

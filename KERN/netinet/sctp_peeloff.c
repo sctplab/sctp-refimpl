@@ -1,6 +1,6 @@
 /*	$KAME: sctp_peeloff.c,v 1.13 2005/03/06 16:04:18 itojun Exp $	*/
 
-/*
+/*-
  * Copyright (C) 2002-2006 Cisco Systems Inc,
  * All rights reserved.
  *

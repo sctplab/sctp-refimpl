@@ -3,7 +3,7 @@
 #ifndef __sctp_timer_h__
 #define __sctp_timer_h__
 
-/*
+/*-
  * Copyright (C) 2002, 2004 Cisco Systems Inc,
  * All rights reserved.
  *

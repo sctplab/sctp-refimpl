@@ -3,7 +3,7 @@
 #ifndef __sctp_pcb_h__
 #define __sctp_pcb_h__
 
-/*
+/*-
  * Copyright (c) 2001-2006 Cisco Systems, Inc.
  * All rights reserved.
  *
