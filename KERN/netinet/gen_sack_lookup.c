@@ -5,15 +5,15 @@
 #define SCTP_MAX_GAPS_INARRAY 4
 
 struct sctp_gap_ack_block {
-	u_int16_t	start;	/* Gap Ack block start */
-	u_int16_t	end;	/* Gap Ack block end */
+	uint16_t	start;	/* Gap Ack block start */
+	uint16_t	end;	/* Gap Ack block end */
 };
 
 struct sack_track {
-	u_int8_t	right_edge;
-	u_int8_t	left_edge;
-	u_int8_t	num_entries;
-	u_int8_t	spare;
+	uint8_t	right_edge;
+	uint8_t	left_edge;
+	uint8_t	num_entries;
+	uint8_t	spare;
 	struct sctp_gap_ack_block gaps[SCTP_MAX_GAPS_INARRAY];
 };
 
@@ -78,7 +78,7 @@ out:
 		       sack_array.left_edge,
 		       sack_array.num_entries,
 		       sack_array.spare,
-		       (u_int) i);
+		       (uint) i);
 		printf(" { { %d, %d},\n",
 		       sack_array.gaps[0].start,
 		       sack_array.gaps[0].end);

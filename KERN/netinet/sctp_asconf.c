@@ -100,7 +100,7 @@ __FBSDID("$FreeBSD:$");
  * SCTP_DEBUG_ASCONF2: detailed info
  */
 #ifdef SCTP_DEBUG
-extern u_int32_t sctp_debug_on;
+extern uint32_t sctp_debug_on;
 
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
 #define strlcpy strncpy
@@ -595,7 +595,7 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 	unsigned int	asconf_limit;
 	int		error = 0;	/* did an error occur? */
 	/* asconf param buffer */
-	static u_int8_t	aparam_buf[DEFAULT_PARAM_BUFFER];
+	static uint8_t	aparam_buf[DEFAULT_PARAM_BUFFER];
 
 	/* verify minimum length */
 	if (ntohs(cp->ch.chunk_length) < sizeof(struct sctp_asconf_chunk)) {
@@ -1410,7 +1410,7 @@ sctp_handle_asconf_ack(struct mbuf *m, int offset,
 	uint32_t	id;
 	struct sctp_asconf_addr *ap;
 	/* asconf param buffer */
-	static u_int8_t	aparam_buf[DEFAULT_PARAM_BUFFER];
+	static uint8_t	aparam_buf[DEFAULT_PARAM_BUFFER];
 
 	/* verify minimum length */
 	if (ntohs(cp->ch.chunk_length) < sizeof(struct sctp_asconf_ack_chunk)) {

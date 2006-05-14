@@ -608,8 +608,8 @@ sctp_warm_tables(void)
 };
 
 
-u_int32_t
-update_crc32(u_int32_t crc32,
+uint32_t
+update_crc32(uint32_t crc32,
 	     unsigned char *buffer,
 	     unsigned int length)
 {
@@ -623,12 +623,12 @@ update_crc32(u_int32_t crc32,
 }
 
 
-u_int32_t
-sctp_csum_finalize(u_int32_t crc32)
+uint32_t
+sctp_csum_finalize(uint32_t crc32)
 {
-	u_int32_t	result;
+	uint32_t	result;
 #if BYTE_ORDER == BIG_ENDIAN
-	u_int8_t	byte0 , byte1, byte2, byte3;
+	uint8_t	byte0 , byte1, byte2, byte3;
 #endif
 	/* Complement the result */
 	result = ~crc32;

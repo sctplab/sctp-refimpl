@@ -112,7 +112,7 @@ extern struct fileops socketops;
 #endif				/* HAVE_SCTP_PEELOFF_SOCKOPT */
 
 #ifdef SCTP_DEBUG
-extern u_int32_t sctp_debug_on;
+extern uint32_t sctp_debug_on;
 #endif				/* SCTP_DEBUG */
 
 

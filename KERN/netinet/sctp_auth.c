@@ -81,7 +81,7 @@ __FBSDID("$FreeBSD:$");
 #include <netinet/sctp_auth.h>
 
 #ifdef SCTP_DEBUG
-extern u_int32_t sctp_debug_on;
+extern uint32_t sctp_debug_on;
 #define SCTP_AUTH_DEBUG		(sctp_debug_on & SCTP_DEBUG_AUTH1)
 #define SCTP_AUTH_DEBUG2	(sctp_debug_on & SCTP_DEBUG_AUTH2)
 #endif				/* SCTP_DEBUG */

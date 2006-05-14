@@ -83,7 +83,7 @@ sctp_update_acked(struct sctp_tcb *, struct sctp_shutdown_chunk *,
 
 int 
 sctp_process_data(struct mbuf **, int, int *, int, struct sctphdr *,
-   struct sctp_inpcb *, struct sctp_tcb *, struct sctp_nets *, u_int32_t *);
+   struct sctp_inpcb *, struct sctp_tcb *, struct sctp_nets *, uint32_t *);
 
 void		sctp_sack_check(struct sctp_tcb *, int, int, int *);
 #endif

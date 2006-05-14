@@ -11,12 +11,12 @@ int		verbose = 0;
 #define MAX_TSN 0xfffffff
 
 struct sctp_sack {
-	u_int32_t	cum_tsn_ack;	/* cumulative TSN Ack */
-	u_int32_t	a_rwnd;	/* updated a_rwnd of sender */
-	u_int16_t	num_gap_ack_blks;	/* number of Gap Ack blocks */
-	u_int16_t	num_dup_tsns;	/* number of duplicate TSNs */
+	uint32_t	cum_tsn_ack;	/* cumulative TSN Ack */
+	uint32_t	a_rwnd;	/* updated a_rwnd of sender */
+	uint16_t	num_gap_ack_blks;	/* number of Gap Ack blocks */
+	uint16_t	num_dup_tsns;	/* number of duplicate TSNs */
 	/* struct sctp_gap_ack_block's follow */
-	/* u_int32_t duplicate_tsn's follow */
+	/* uint32_t duplicate_tsn's follow */
 };
 
 struct sctp_sack_chunk {
@@ -26,10 +26,10 @@ struct sctp_sack_chunk {
 
 
 int
-sctp_generate_sack(u_int8_t * mapping_array,
-		   u_int32_t highest_tsn_inside_map,
-		   u_int32_t mapping_array_base_tsn,
-		   u_int32_t cumulative_tsn,
+sctp_generate_sack(uint8_t * mapping_array,
+		   uint32_t highest_tsn_inside_map,
+		   uint32_t mapping_array_base_tsn,
+		   uint32_t cumulative_tsn,
 		   struct sctp_sack_chunk *sack)
 {
 	struct sctp_gap_ack_block *gap_descriptor;
@@ -109,10 +109,10 @@ sctp_generate_sack(u_int8_t * mapping_array,
 
 
 int
-sctp_generate_sack_new(u_int8_t * mapping_array,
-		       u_int32_t highest_tsn_inside_map,
-		       u_int32_t mapping_array_base_tsn,
-		       u_int32_t cumulative_tsn,
+sctp_generate_sack_new(uint8_t * mapping_array,
+		       uint32_t highest_tsn_inside_map,
+		       uint32_t mapping_array_base_tsn,
+		       uint32_t cumulative_tsn,
 		       struct sctp_sack_chunk *sack)
 {
 	struct sctp_gap_ack_block *gap_descriptor;
@@ -204,14 +204,14 @@ extern void    *optarg;
 int
 main(int argc, char **argv)
 {
-	u_int8_t	sack1_buf[2048];
-	u_int8_t	sack2_buf[2048];
+	uint8_t	sack1_buf[2048];
+	uint8_t	sack2_buf[2048];
 	struct sctp_sack_chunk *sack1, *sack2;
 	int		j         , i;
-	u_int32_t	num_skip = 0, num_compared = 0, num_diff = 0, max, startat;
-	u_int8_t	mapping_array[32];
-	u_int32_t	counter, *point;
-	u_int32_t	highest_tsn_inside_map, mapping_array_base_tsn, cumulative_tsn;
+	uint32_t	num_skip = 0, num_compared = 0, num_diff = 0, max, startat;
+	uint8_t	mapping_array[32];
+	uint32_t	counter, *point;
+	uint32_t	highest_tsn_inside_map, mapping_array_base_tsn, cumulative_tsn;
 	startat = 1;
 	max = 0xffffffff;
 
@@ -233,7 +233,7 @@ main(int argc, char **argv)
 	}
 	sack1 = (struct sctp_sack_chunk *)sack1_buf;
 	sack2 = (struct sctp_sack_chunk *)sack2_buf;
-	point = (u_int32_t *) mapping_array;
+	point = (uint32_t *) mapping_array;
 	mapping_array_base_tsn = 0x100;
 	for (i = startat; i <= max; i++) {
 		memset(sack1_buf, 0, sizeof(sack1_buf));

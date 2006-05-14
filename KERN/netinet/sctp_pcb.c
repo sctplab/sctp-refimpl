@@ -142,10 +142,10 @@ __FBSDID("$FreeBSD:$");
 #endif
 
 #ifdef SCTP_DEBUG
-u_int32_t	sctp_debug_on = 0;
+uint32_t	sctp_debug_on = 0;
 #endif				/* SCTP_DEBUG */
 
-u_int32_t	sctp_pegs[SCTP_NUMBER_OF_PEGS];
+uint32_t	sctp_pegs[SCTP_NUMBER_OF_PEGS];
 
 int		sctp_pcbtblsize = SCTP_PCBHASHSIZE;
 
@@ -547,7 +547,7 @@ sctp_findassociation_ep_asconf(struct mbuf *m, int iphlen, int offset,
 #endif				/* SCTP_DEBUG */
 		return NULL;
 	}
-	ptype = (int)((u_int) ntohs(phdr->param_type));
+	ptype = (int)((uint) ntohs(phdr->param_type));
 	/* get the correlation address */
 	if (ptype == SCTP_IPV6_ADDRESS) {
 		/* ipv6 address param */
@@ -855,12 +855,12 @@ sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, sctp_assoc_t asoc_id)
 	 */
 	struct sctpasochead *head;
 	struct sctp_tcb *stcb;
-	u_int32_t	id;
+	uint32_t	id;
 	if (asoc_id == 0 || inp == NULL) {
 		return (NULL);
 	}
 	SCTP_INP_INFO_RLOCK();
-	id = (u_int32_t) asoc_id;
+	id = (uint32_t) asoc_id;
 	head = &sctppcbinfo.sctp_asochash[SCTP_PCBHASH_ASOC(id,
 						 sctppcbinfo.hashasocmark)];
 	if (head == NULL) {
@@ -1268,7 +1268,7 @@ sctp_findassociation_special_addr(struct mbuf *m, int iphlen, int offset,
 	struct sockaddr_in6 sin6;
 	struct sctp_paramhdr *phdr, parm_buf;
 	struct sctp_tcb *retval;
-	u_int32_t	ptype, plen;
+	uint32_t	ptype, plen;
 
 	memset(&sin4, 0, sizeof(sin4));
 	memset(&sin6, 0, sizeof(sin6));
@@ -1823,12 +1823,12 @@ sctp_inpcb_alloc(struct socket *so)
 			 RND_EXTRACT_ANY);
 #else
 	{
-		u_int32_t      *ranm, *ranp;
-		ranp = (u_int32_t *) & m->random_numbers;
-		ranm = ranp + (SCTP_SIGNATURE_ALOC_SIZE / sizeof(u_int32_t));
+		uint32_t      *ranm, *ranp;
+		ranp = (uint32_t *) & m->random_numbers;
+		ranm = ranp + (SCTP_SIGNATURE_ALOC_SIZE / sizeof(uint32_t));
 		if ((u_long) ranp % 4) {
 			/* not a even boundary? */
-			ranp = (u_int32_t *) SCTP_SIZE32((u_long) ranp);
+			ranp = (uint32_t *) SCTP_SIZE32((u_long) ranp);
 		}
 		while (ranp < ranm) {
 			*ranp = random();
@@ -3622,7 +3622,7 @@ sctp_del_remote_addr(struct sctp_tcb *stcb, struct sockaddr *remaddr)
 
 
 static void
-sctp_add_vtag_to_timewait(struct sctp_inpcb *inp, u_int32_t tag)
+sctp_add_vtag_to_timewait(struct sctp_inpcb *inp, uint32_t tag)
 {
 	struct sctpvtaghead *chain;
 	struct sctp_tagblock *twait_block;
@@ -4885,7 +4885,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 	struct ip      *iph;
 	struct sctp_paramhdr *phdr, parm_buf;
 	struct sctp_tcb *stcb_tmp;
-	u_int16_t	ptype, plen;
+	uint16_t	ptype, plen;
 	struct sockaddr *sa;
 	struct sockaddr_storage dest_store;
 	struct sockaddr *local_sa = (struct sockaddr *)&dest_store;
@@ -4991,7 +4991,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 		ptype = ntohs(phdr->param_type);
 		plen = ntohs(phdr->param_length);
 		/*
-		 * printf("ptype => %0x, plen => %d\n", (u_int)ptype,
+		 * printf("ptype => %0x, plen => %d\n", (uint)ptype,
 		 * (int)plen);
 		 */
 		if (offset + plen > limit) {
@@ -5440,7 +5440,7 @@ sctp_set_primary_addr(struct sctp_tcb *stcb, struct sockaddr *sa,
 
 
 int
-sctp_is_vtag_good(struct sctp_inpcb *inp, u_int32_t tag, struct timeval *now)
+sctp_is_vtag_good(struct sctp_inpcb *inp, uint32_t tag, struct timeval *now)
 {
 	/*
 	 * This function serves two purposes. It will see if a TAG can be
@@ -5616,7 +5616,7 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	 */
 	struct sctp_association *asoc;
 	struct sctp_tmit_chunk *chk, *nchk;
-	u_int32_t	cumulative_tsn_p1, tsn;
+	uint32_t	cumulative_tsn_p1, tsn;
 	struct sctp_queued_to_read *ctl, *nctl;
 	int		cnt       , strmat, gap;
 	/* We look for anything larger than the cum-ack + 1 */
