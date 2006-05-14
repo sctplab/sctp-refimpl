@@ -192,7 +192,7 @@ unsigned int	sctp_auth_disable = 0;
 unsigned int	sctp_auth_random_len = SCTP_AUTH_RANDOM_SIZE_DEFAULT;
 unsigned int	sctp_auth_hmac_id_default = SCTP_AUTH_HMAC_ID_SHA1;
 #ifdef SCTP_DEBUG
-extern uint32_t sctp_debug_on;
+extern uint32_t	sctp_debug_on;
 #endif				/* SCTP_DEBUG */
 
 
@@ -1351,7 +1351,7 @@ sctp_fill_user_address(struct sockaddr_storage *ss, struct sockaddr *sa)
  * On NetBSD and OpenBSD in6_sin_2_v4mapsin6() not used and not exported, so
  * we have to export it here.
  */
-void in6_sin_2_v4mapsin6 
+void		in6_sin_2_v4mapsin6
 __P((struct sockaddr_in *sin,
      struct sockaddr_in6 *sin6));
 #endif
@@ -2087,20 +2087,20 @@ sctp_optsget(struct socket *so,
 					SCTP_TCB_LOCK(stcb);
 					tm->assoc_value = stcb->asoc.delayed_ack;
 					SCTP_TCB_UNLOCK(stcb);
-                                } else {
-                                        tm->assoc_value = TICKS_TO_MSEC(inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV]);
-                                }
+				} else {
+					tm->assoc_value = TICKS_TO_MSEC(inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV]);
+				}
 				SCTP_INP_RUNLOCK(inp);
 			} else {
 				stcb = sctp_findassociation_ep_asocid(inp, tm->assoc_id);
-                                if (stcb == NULL) {
-                                        error = ENOTCONN;
-                                        tm->assoc_value = 0;
-                                } else {
-                                        stcb->asoc.delayed_ack = tm->assoc_value;
-                                        SCTP_TCB_UNLOCK(stcb);
-                                }
-                        }
+				if (stcb == NULL) {
+					error = ENOTCONN;
+					tm->assoc_value = 0;
+				} else {
+					stcb->asoc.delayed_ack = tm->assoc_value;
+					SCTP_TCB_UNLOCK(stcb);
+				}
+			}
 		}
 		break;
 
@@ -2129,7 +2129,7 @@ sctp_optsget(struct socket *so,
 		break;
 	case SCTP_MAXBURST:
 		{
-			uint8_t       *burst;
+			uint8_t        *burst;
 			burst = mtod(m, uint8_t *);
 			SCTP_INP_RLOCK(inp);
 			*burst = inp->sctp_ep.max_burst;
@@ -2139,7 +2139,7 @@ sctp_optsget(struct socket *so,
 		break;
 	case SCTP_MAXSEG:
 		{
-			uint32_t      *segsize;
+			uint32_t       *segsize;
 			sctp_assoc_t   *assoc_id;
 			int		ovh;
 
@@ -2195,7 +2195,7 @@ sctp_optsget(struct socket *so,
 	case SCTP_SET_DEBUG_LEVEL:
 #ifdef SCTP_DEBUG
 		{
-			uint32_t      *level;
+			uint32_t       *level;
 			if ((size_t) m->m_len < sizeof(uint32_t)) {
 				error = EINVAL;
 				break;
@@ -2220,7 +2220,7 @@ sctp_optsget(struct socket *so,
 		break;
 	case SCTP_GET_PEGS:
 		{
-			uint32_t      *pt;
+			uint32_t       *pt;
 			if ((size_t) m->m_len < sizeof(sctp_pegs)) {
 				error = EINVAL;
 				break;
@@ -2335,7 +2335,7 @@ sctp_optsget(struct socket *so,
 	case SCTP_GET_REMOTE_ADDR_SIZE:
 		{
 			sctp_assoc_t   *assoc_id;
-			uint32_t      *val, sz;
+			uint32_t       *val, sz;
 			struct sctp_nets *net;
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_USRREQ1) {
@@ -3450,25 +3450,31 @@ sctp_optsset(struct socket *so,
 			tm = mtod(m, struct sctp_assoc_value *);
 
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
-				SCTP_INP_RLOCK(inp);
+				SCTP_INP_WLOCK(inp);
 				stcb = LIST_FIRST(&inp->sctp_asoc_list);
 				if (stcb) {
 					SCTP_TCB_LOCK(stcb);
-                                        stcb->asoc.delayed_ack = tm->assoc_value;
+					stcb->asoc.delayed_ack = tm->assoc_value;
 					SCTP_TCB_UNLOCK(stcb);
-                                } else {
-                                        inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV] = MSEC_TO_TICKS(tm->assoc_value);
-                                }
-				SCTP_INP_RUNLOCK(inp);
+				} else {
+					inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV] = MSEC_TO_TICKS(tm->assoc_value);
+				}
+				SCTP_INP_WUNLOCK(inp);
 			} else {
-				stcb = sctp_findassociation_ep_asocid(inp, tm->assoc_id);
-                                if (stcb == NULL) {
-                                        error = ENOTCONN;
-                                } else {
-                                        stcb->asoc.delayed_ack = tm->assoc_value;
-                                        SCTP_TCB_UNLOCK(stcb);
-                                }
-                        }
+				if (tm->assoc_id) {
+					stcb = sctp_findassociation_ep_asocid(inp, tm->assoc_id);
+					if (stcb == NULL) {
+						error = ENOTCONN;
+					} else {
+						stcb->asoc.delayed_ack = tm->assoc_value;
+						SCTP_TCB_UNLOCK(stcb);
+					}
+				} else {
+					SCTP_INP_WLOCK(inp);
+					inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV] = MSEC_TO_TICKS(tm->assoc_value);
+					SCTP_INP_WUNLOCK(inp);
+				}
+			}
 		}
 		break;
 
@@ -3882,7 +3888,7 @@ sctp_optsset(struct socket *so,
 		break;
 	case SCTP_MAXBURST:
 		{
-			uint8_t       *burst;
+			uint8_t        *burst;
 			SCTP_INP_WLOCK(inp);
 			burst = mtod(m, uint8_t *);
 			if (*burst) {
@@ -3893,7 +3899,7 @@ sctp_optsset(struct socket *so,
 		break;
 	case SCTP_MAXSEG:
 		{
-			uint32_t      *segsize;
+			uint32_t       *segsize;
 			int		ovh;
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) {
 				ovh = SCTP_MED_OVERHEAD;
@@ -3916,7 +3922,7 @@ sctp_optsset(struct socket *so,
 	case SCTP_SET_DEBUG_LEVEL:
 #ifdef SCTP_DEBUG
 		{
-			uint32_t      *level;
+			uint32_t       *level;
 			if ((size_t) m->m_len < sizeof(uint32_t)) {
 				error = EINVAL;
 				break;
@@ -4020,7 +4026,7 @@ sctp_optsset(struct socket *so,
 		break;
 	case SCTP_SET_INITIAL_DBG_SEQ:
 		{
-			uint32_t      *vvv;
+			uint32_t       *vvv;
 			if ((size_t) m->m_len < sizeof(uint32_t)) {
 				error = EINVAL;
 				break;
@@ -6061,7 +6067,7 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
  */
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 
-int 
+int
 sctp_lock(struct socket *so, int refcount, int lr)
 {
 	int		lr_saved;
@@ -6099,7 +6105,7 @@ sctp_lock(struct socket *so, int refcount, int lr)
 	return (0);
 }
 
-int 
+int
 sctp_unlock(struct socket *so, int refcount, int lr)
 {
 	int		lr_saved;
