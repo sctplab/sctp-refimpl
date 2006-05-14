@@ -99,7 +99,7 @@ TAILQ_HEAD(sctp_resethead, sctp_stream_reset_list);
 /*
  * Users of the iterator need to malloc a iterator with a call to
  * sctp_initiate_iterator(func, pcb_flags, asoc_state, void-ptr-arg,
- * u_int32_t, u_int32-arg, end_func, inp);
+ * uint32_t, uint32-arg, end_func, inp);
  * 
  * Use the following two defines if you don't care what pcb flags are on the EP
  * and/or you don't care what state the association is in.
@@ -114,8 +114,8 @@ TAILQ_HEAD(sctp_resethead, sctp_stream_reset_list);
 #define SCTP_ASOC_ANY_STATE 0x00000000
 
 typedef void    (*asoc_func) (struct sctp_inpcb *, struct sctp_tcb *, void *ptr,
-			      		u_int32_t	val);
-typedef void    (*end_func) (void *ptr, u_int32_t val);
+			      		uint32_t	val);
+typedef void    (*end_func) (void *ptr, uint32_t val);
 
 #define SCTP_ITERATOR_DO_ALL_INP	0x00000001
 #define SCTP_ITERATOR_DO_SINGLE_INP	0x00000002
@@ -128,10 +128,10 @@ struct sctp_iterator {
 	asoc_func	function_toapply;
 	end_func	function_atend;
 	void           *pointer;/* pointer for apply func to use */
-	u_int32_t	val;	/* value for apply func to use */
-	u_int32_t	pcb_flags;
-	u_int32_t	asoc_state;
-	u_int32_t	iterator_flags;
+	uint32_t	val;	/* value for apply func to use */
+	uint32_t	pcb_flags;
+	uint32_t	asoc_state;
+	uint32_t	iterator_flags;
 };
 
 LIST_HEAD(sctpiterators, sctp_iterator);
@@ -174,8 +174,8 @@ struct sctp_nets {
 		union sctp_sockstore _s_addr;	/* our selected src addr */
 	}		ro;
 	/* mtu discovered so far */
-	u_int32_t	mtu;
-	u_int32_t	ssthresh;	/* not sure about this one for split */
+	uint32_t	mtu;
+	uint32_t	ssthresh;	/* not sure about this one for split */
 
 	/* smoothed average things for RTT and RTO itself */
 	int		lastsa;
@@ -195,13 +195,13 @@ struct sctp_nets {
 	 * flight size variables and such, sorry Vern, I could not avoid this
 	 * if I wanted performance :>
 	 */
-	u_int32_t	flight_size;
-	u_int32_t	cwnd;	/* actual cwnd */
-	u_int32_t	prev_cwnd;	/* cwnd before any processing */
-	u_int32_t	partial_bytes_acked;	/* in CA tracks when to incr
+	uint32_t	flight_size;
+	uint32_t	cwnd;	/* actual cwnd */
+	uint32_t	prev_cwnd;	/* cwnd before any processing */
+	uint32_t	partial_bytes_acked;	/* in CA tracks when to incr
 						 * a MTU */
-	u_int32_t	rtt_variance;
-	u_int32_t	prev_rtt;
+	uint32_t	rtt_variance;
+	uint32_t	prev_rtt;
 	/* tracking variables to avoid the aloc/free in sack processing */
 	unsigned int	net_ack;
 	unsigned int	net_ack2;
@@ -209,52 +209,52 @@ struct sctp_nets {
 	/*
 	 * CMT variables (iyengar@cis.udel.edu)
 	 */
-	u_int32_t	this_sack_highest_newack;	/* tracks highest TSN
+	uint32_t	this_sack_highest_newack;	/* tracks highest TSN
 							 * newly acked for a
 							 * given dest in the
 							 * current SACK. Used in
 							 * SFR and HTNA algos */
-	u_int32_t	pseudo_cumack;	/* CMT CUC algorithm. Maintains next
+	uint32_t	pseudo_cumack;	/* CMT CUC algorithm. Maintains next
 					 * expected pseudo-cumack for this
 					 * destination */
-	u_int32_t	rtx_pseudo_cumack;	/* CMT CUC algorithm.
+	uint32_t	rtx_pseudo_cumack;	/* CMT CUC algorithm.
 						 * Maintains next expected
 						 * pseudo-cumack for this
 						 * destination */
 
 	/* CMT fast recovery variables */
-	u_int32_t	fast_recovery_tsn;
-	u_int8_t	fast_retran_loss_recovery;
-	u_int8_t	will_exit_fast_recovery;
+	uint32_t	fast_recovery_tsn;
+	uint8_t	fast_retran_loss_recovery;
+	uint8_t	will_exit_fast_recovery;
 
 
-	u_int32_t	heartbeat_random1;
-	u_int32_t	heartbeat_random2;
-	u_int32_t	tos_flowlabel;
+	uint32_t	heartbeat_random1;
+	uint32_t	heartbeat_random2;
+	uint32_t	tos_flowlabel;
 
 	/* if this guy is ok or not ... status */
-	u_int16_t	dest_state;
+	uint16_t	dest_state;
 	/* number of transmit failures to down this guy */
-	u_int16_t	failure_threshold;
+	uint16_t	failure_threshold;
 	/* error stats on destination */
-	u_int16_t	error_count;
+	uint16_t	error_count;
 	/* Flags that probably can be combined into dest_state */
-	u_int8_t	rto_variance_dir;	/* increase = 1, decreasing =
+	uint8_t	rto_variance_dir;	/* increase = 1, decreasing =
 						 * 0 */
-	u_int8_t	rto_pending;	/* is segment marked for RTO update  **
+	uint8_t	rto_pending;	/* is segment marked for RTO update  **
 					 * if we split? */
-	u_int8_t	fast_retran_ip;	/* fast retransmit in progress */
-	u_int8_t	hb_responded;
-	u_int8_t	saw_newack;	/* CMT's SFR algorithm flag */
-	u_int8_t	src_addr_selected;	/* if we split we move */
-	u_int8_t	indx_of_eligible_next_to_use;
-	u_int8_t	addr_is_local;	/* its a local address (if known)
+	uint8_t	fast_retran_ip;	/* fast retransmit in progress */
+	uint8_t	hb_responded;
+	uint8_t	saw_newack;	/* CMT's SFR algorithm flag */
+	uint8_t	src_addr_selected;	/* if we split we move */
+	uint8_t	indx_of_eligible_next_to_use;
+	uint8_t	addr_is_local;	/* its a local address (if known)
 					 * could move in split */
 
 	/*
 	 * CMT variables (iyengar@cis.udel.edu)
 	 */
-	u_int8_t	find_pseudo_cumack;	/* CMT CUC algorithm. Flag
+	uint8_t	find_pseudo_cumack;	/* CMT CUC algorithm. Flag
 						 * used to find a new
 						 * pseudocumack. This flag is
 						 * set after a new
@@ -264,7 +264,7 @@ struct sctp_nets {
 						 * find the next
 						 * pseudo-cumack expected for
 						 * this destination */
-	u_int8_t	find_rtx_pseudo_cumack;	/* CMT CUCv2 algorithm. Flag
+	uint8_t	find_rtx_pseudo_cumack;	/* CMT CUCv2 algorithm. Flag
 						 * used to find a new
 						 * rtx-pseudocumack. This
 						 * flag is set after a new
@@ -274,42 +274,42 @@ struct sctp_nets {
 						 * find the next
 						 * rtx-pseudo-cumack expected
 						 * for this destination */
-	u_int8_t	new_pseudo_cumack;	/* CMT CUC algorithm. Flag
+	uint8_t	new_pseudo_cumack;	/* CMT CUC algorithm. Flag
 						 * used to indicate if a new
 						 * pseudo-cumack or
 						 * rtx-pseudo-cumack has been
 						 * received */
 #ifdef SCTP_HIGH_SPEED
-	u_int8_t	last_hs_used;	/* index into the last HS table entry
+	uint8_t	last_hs_used;	/* index into the last HS table entry
 					 * we used */
 #endif
 };
 
 
 struct sctp_data_chunkrec {
-	u_int32_t	TSN_seq;/* the TSN of this transmit */
-	u_int16_t	stream_seq;	/* the stream sequence number of this
+	uint32_t	TSN_seq;/* the TSN of this transmit */
+	uint16_t	stream_seq;	/* the stream sequence number of this
 					 * transmit */
-	u_int16_t	stream_number;	/* the stream number of this guy */
-	u_int32_t	payloadtype;
-	u_int32_t	context;/* from send */
+	uint16_t	stream_number;	/* the stream number of this guy */
+	uint32_t	payloadtype;
+	uint32_t	context;/* from send */
 
 	/* ECN Nonce: Nonce Value for this chunk */
-	u_int8_t	ect_nonce;
+	uint8_t	ect_nonce;
 
 	/*
 	 * part of the Highest sacked algorithm to be able to stroke counts
 	 * on ones that are FR'd.
 	 */
-	u_int32_t	fast_retran_tsn;	/* sending_seq at the time of
+	uint32_t	fast_retran_tsn;	/* sending_seq at the time of
 						 * FR */
 	struct timeval	timetodrop;	/* time we drop it from queue */
-	u_int8_t	doing_fast_retransmit;
-	u_int8_t	rcv_flags;	/* flags pulled from data chunk on
+	uint8_t	doing_fast_retransmit;
+	uint8_t	rcv_flags;	/* flags pulled from data chunk on
 					 * inbound for outbound holds sending
 					 * flags. */
-	u_int8_t	state_flags;
-	u_int8_t	chunk_was_revoked;
+	uint8_t	state_flags;
+	uint8_t	chunk_was_revoked;
 };
 
 TAILQ_HEAD(sctpchunk_listhead, sctp_tmit_chunk);
@@ -356,28 +356,28 @@ struct sctp_tmit_chunk {
  * that if we want.
  */
 struct sctp_queued_to_read {	/* sinfo structure Pluse more */
-	u_int16_t	sinfo_stream;	/* off the wire */
-	u_int16_t	sinfo_ssn;	/* off the wire */
-	u_int16_t	sinfo_flags;	/* SCTP_UNORDERED from wire use
+	uint16_t	sinfo_stream;	/* off the wire */
+	uint16_t	sinfo_ssn;	/* off the wire */
+	uint16_t	sinfo_flags;	/* SCTP_UNORDERED from wire use
 					 * SCTP_EOF for EOR */
-	u_int32_t	sinfo_ppid;	/* off the wire */
-	u_int32_t	sinfo_context;	/* pick this up from assoc def
+	uint32_t	sinfo_ppid;	/* off the wire */
+	uint32_t	sinfo_context;	/* pick this up from assoc def
 					 * context? */
-	u_int32_t	sinfo_timetolive;	/* not used by kernel */
-	u_int32_t	sinfo_tsn;	/* Use this in reassembly as first
+	uint32_t	sinfo_timetolive;	/* not used by kernel */
+	uint32_t	sinfo_tsn;	/* Use this in reassembly as first
 					 * TSN */
-	u_int32_t	sinfo_cumtsn;	/* Use this in reassembly as last TSN */
+	uint32_t	sinfo_cumtsn;	/* Use this in reassembly as last TSN */
 	sctp_assoc_t	sinfo_assoc_id;	/* our assoc id */
 	/* Non sinfo stuff */
-	u_int32_t	length;	/* length of data */
-	u_int32_t	held_length;	/* length held in sb */
+	uint32_t	length;	/* length of data */
+	uint32_t	held_length;	/* length held in sb */
 	struct sctp_nets *whoFrom;	/* where it came from */
 	struct mbuf    *data;	/* front of the mbuf chain of data with
 				 * PKT_HDR */
 	struct mbuf    *tail_mbuf;	/* used for multi-part data */
 	struct sctp_tcb *stcb;	/* assoc, used for window update */
 			TAILQ_ENTRY   (sctp_queued_to_read) next;
-	u_int16_t	port_from;
+	uint16_t	port_from;
 };
 
 
@@ -411,7 +411,7 @@ struct sctp_asconf_addr {
 	TAILQ_ENTRY(sctp_asconf_addr) next;
 	struct sctp_asconf_addr_param ap;
 	struct ifaddr  *ifa;	/* save the ifa for add/del ip */
-	u_int8_t	sent;	/* has this been sent yet? */
+	uint8_t	sent;	/* has this been sent yet? */
 };
 
 
@@ -494,7 +494,7 @@ struct sctp_association {
 	/* stream arrays */
 	struct sctp_stream_in *strmin;
 	struct sctp_stream_out *strmout;
-	u_int8_t       *mapping_array;
+	uint8_t       *mapping_array;
 	/* primary destination to use */
 	struct sctp_nets *primary_destination;
 	/* For CMT */
@@ -516,78 +516,78 @@ struct sctp_association {
 	/* queue of chunks waiting to be sent into the local stack */
 	struct sctp_readhead pending_reply_queue;
 
-	u_int32_t	cookie_preserve_req;
+	uint32_t	cookie_preserve_req;
 	/* ASCONF next seq I am sending out, inits at init-tsn */
-	u_int32_t	asconf_seq_out;
+	uint32_t	asconf_seq_out;
 	/* ASCONF last received ASCONF from peer, starts at peer's TSN-1 */
-	u_int32_t	asconf_seq_in;
+	uint32_t	asconf_seq_in;
 
 	/* next seq I am sending in str reset messages */
-	u_int32_t	str_reset_seq_out;
+	uint32_t	str_reset_seq_out;
 
 	/* next seq I am expecting in str reset messages */
-	u_int32_t	str_reset_seq_in;
+	uint32_t	str_reset_seq_in;
 
 
 	/* various verification tag information */
-	u_int32_t	my_vtag;/* The tag to be used. if assoc is
+	uint32_t	my_vtag;/* The tag to be used. if assoc is
 				 * re-initited by remote end, and I have
 				 * unlocked this will be regenerated to a new
 				 * random value. */
-	u_int32_t	peer_vtag;	/* The peers last tag */
+	uint32_t	peer_vtag;	/* The peers last tag */
 
-	u_int32_t	my_vtag_nonce;
-	u_int32_t	peer_vtag_nonce;
+	uint32_t	my_vtag_nonce;
+	uint32_t	peer_vtag_nonce;
 
-	u_int32_t	assoc_id;
+	uint32_t	assoc_id;
 
 	/* This is the SCTP fragmentation threshold */
-	u_int32_t	smallest_mtu;
+	uint32_t	smallest_mtu;
 
 	/*
 	 * Special hook for Fast retransmit, allows us to track the highest
 	 * TSN that is NEW in this SACK if gap ack blocks are present.
 	 */
-	u_int32_t	this_sack_highest_gap;
+	uint32_t	this_sack_highest_gap;
 
 	/*
 	 * The highest consecutive TSN that has been acked by peer on my
 	 * sends
 	 */
-	u_int32_t	last_acked_seq;
+	uint32_t	last_acked_seq;
 
 	/* The next TSN that I will use in sending. */
-	u_int32_t	sending_seq;
+	uint32_t	sending_seq;
 
 	/* Original seq number I used ??questionable to keep?? */
-	u_int32_t	init_seq_number;
+	uint32_t	init_seq_number;
 
 
 	/* The Advanced Peer Ack Point, as required by the PR-SCTP */
 	/* (A1 in Section 4.2) */
-	u_int32_t	advanced_peer_ack_point;
+	uint32_t	advanced_peer_ack_point;
 
 	/*
 	 * The highest consequetive TSN at the bottom of the mapping array
 	 * (for his sends).
 	 */
-	u_int32_t	cumulative_tsn;
+	uint32_t	cumulative_tsn;
 	/*
 	 * Used to track the mapping array and its offset bits. This MAY be
 	 * lower then cumulative_tsn.
 	 */
-	u_int32_t	mapping_array_base_tsn;
+	uint32_t	mapping_array_base_tsn;
 	/*
 	 * used to track highest TSN we have received and is listed in the
 	 * mapping array.
 	 */
-	u_int32_t	highest_tsn_inside_map;
+	uint32_t	highest_tsn_inside_map;
 
-	u_int32_t	last_echo_tsn;
-	u_int32_t	last_cwr_tsn;
-	u_int32_t	fast_recovery_tsn;
-	u_int32_t	sat_t3_recovery_tsn;
-	u_int32_t	tsn_last_delivered;
+	uint32_t	last_echo_tsn;
+	uint32_t	last_cwr_tsn;
+	uint32_t	fast_recovery_tsn;
+	uint32_t	sat_t3_recovery_tsn;
+	uint32_t	tsn_last_delivered;
 	/*
 	 * For the pd-api we should re-write this a bit more efficent. We
 	 * could have multiple sctp_queued_to_read's that we are building at
@@ -597,30 +597,30 @@ struct sctp_association {
 	 */
 	struct sctp_queued_to_read *control_pdapi;
 
-	u_int32_t	tsn_of_pdapi_last_delivered;
-	u_int32_t	pdapi_ppid;
-	u_int32_t	context;
-	u_int32_t	last_reset_action[SCTP_MAX_RESET_PARAMS];
-	u_int32_t	last_sending_seq[SCTP_MAX_RESET_PARAMS];
-	u_int32_t	last_base_tsnsent[SCTP_MAX_RESET_PARAMS];
+	uint32_t	tsn_of_pdapi_last_delivered;
+	uint32_t	pdapi_ppid;
+	uint32_t	context;
+	uint32_t	last_reset_action[SCTP_MAX_RESET_PARAMS];
+	uint32_t	last_sending_seq[SCTP_MAX_RESET_PARAMS];
+	uint32_t	last_base_tsnsent[SCTP_MAX_RESET_PARAMS];
 	/*
 	 * window state information and smallest MTU that I use to bound
 	 * segmentation
 	 */
-	u_int32_t	peers_rwnd;
-	u_int32_t	my_rwnd;
-	u_int32_t	my_last_reported_rwnd;
-	u_int32_t	my_rwnd_control_len;
+	uint32_t	peers_rwnd;
+	uint32_t	my_rwnd;
+	uint32_t	my_last_reported_rwnd;
+	uint32_t	my_rwnd_control_len;
 
-	u_int32_t	total_output_queue_size;
-	u_int32_t	total_output_mbuf_queue_size;	/* sb_mbcnt equiv */
+	uint32_t	total_output_queue_size;
+	uint32_t	total_output_mbuf_queue_size;	/* sb_mbcnt equiv */
 
-	u_int32_t	sb_cc;	/* shadow of sb_cc in one-2-one */
-	u_int32_t	sb_mbcnt;	/* shadow of sb_mbcnt in one-2-one */
+	uint32_t	sb_cc;	/* shadow of sb_cc in one-2-one */
+	uint32_t	sb_mbcnt;	/* shadow of sb_mbcnt in one-2-one */
 	/* 32 bit nonce stuff */
-	u_int32_t	nonce_resync_tsn;
-	u_int32_t	nonce_wait_tsn;
-	u_int32_t	default_flowlabel;
+	uint32_t	nonce_resync_tsn;
+	uint32_t	nonce_wait_tsn;
+	uint32_t	default_flowlabel;
 
 	int		ctrl_queue_cnt;	/* could be removed  REM */
 	/*
@@ -694,7 +694,7 @@ struct sctp_association {
 	 * refcnt to block freeing when a sender or receiver is off coping
 	 * user data in.
 	 */
-	u_int16_t	refcnt;
+	uint16_t	refcnt;
 	uint8_t		authenticated;	/* packet authenticated ok */
 
 	/*
@@ -703,75 +703,75 @@ struct sctp_association {
 	 * counter. We of course feed them to the pigeons right away (I have
 	 * always thought of pigeons as flying rats).
 	 */
-	u_int16_t	stale_cookie_count;
+	uint16_t	stale_cookie_count;
 
 	/*
 	 * For the partial delivery API, if up, invoked this is what last TSN
 	 * I delivered
 	 */
-	u_int16_t	str_of_pdapi;
-	u_int16_t	ssn_of_pdapi;
+	uint16_t	str_of_pdapi;
+	uint16_t	ssn_of_pdapi;
 
 	/* counts of actual built streams. Allocation may be more however */
 	/* could re-arrange to optimize space here. */
-	u_int16_t	streamincnt;
-	u_int16_t	streamoutcnt;
+	uint16_t	streamincnt;
+	uint16_t	streamoutcnt;
 
 	/* my maximum number of retrans of INIT and SEND */
 	/* copied from SCTP but should be individually setable */
-	u_int16_t	max_init_times;
-	u_int16_t	max_send_times;
+	uint16_t	max_init_times;
+	uint16_t	max_send_times;
 
-	u_int16_t	def_net_failure;
+	uint16_t	def_net_failure;
 
 	/*
 	 * lock flag: 0 is ok to send, 1+ (duals as a retran count) is
 	 * awaiting ACK
 	 */
-	u_int16_t	asconf_sent;	/* possibly removable REM */
-	u_int16_t	mapping_array_size;
+	uint16_t	asconf_sent;	/* possibly removable REM */
+	uint16_t	mapping_array_size;
 
-	u_int16_t	last_strm_seq_delivered;
-	u_int16_t	last_strm_no_delivered;
+	uint16_t	last_strm_seq_delivered;
+	uint16_t	last_strm_no_delivered;
 
-	u_int16_t	chunks_on_out_queue;	/* total chunks floating
+	uint16_t	chunks_on_out_queue;	/* total chunks floating
 						 * around, locked by send
 						 * socket buffer */
-	u_int16_t	last_revoke_count;
+	uint16_t	last_revoke_count;
 	int16_t		num_send_timers_up;
 	/*
 	 * This flag indicates that we need to send the first SACK. If in
 	 * place it says we have NOT yet sent a SACK and need to.
 	 */
-	u_int8_t	first_ack_sent;
+	uint8_t	first_ack_sent;
 
 	/* max burst after fast retransmit completes */
-	u_int8_t	max_burst;
+	uint8_t	max_burst;
 
-	u_int8_t	sat_network;	/* RTT is in range of sat net or
+	uint8_t	sat_network;	/* RTT is in range of sat net or
 					 * greater */
-	u_int8_t	sat_network_lockout;	/* lockout code */
-	u_int8_t	burst_limit_applied;	/* Burst limit in effect at
+	uint8_t	sat_network_lockout;	/* lockout code */
+	uint8_t	burst_limit_applied;	/* Burst limit in effect at
 						 * last send? */
 	/* flag goes on when we are doing a partial delivery api */
-	u_int8_t	hb_random_values[4];
-	u_int8_t	fragmented_delivery_inprogress;
-	u_int8_t	fragment_flags;
-	u_int8_t	last_flags_delivered;
-	u_int8_t	hb_ect_randombit;
-	u_int8_t	hb_random_idx;
-	u_int8_t	hb_is_disabled;	/* is the hb disabled? */
-	u_int8_t	default_tos;
+	uint8_t	hb_random_values[4];
+	uint8_t	fragmented_delivery_inprogress;
+	uint8_t	fragment_flags;
+	uint8_t	last_flags_delivered;
+	uint8_t	hb_ect_randombit;
+	uint8_t	hb_random_idx;
+	uint8_t	hb_is_disabled;	/* is the hb disabled? */
+	uint8_t	default_tos;
 
 	/* ECN Nonce stuff */
-	u_int8_t	receiver_nonce_sum;	/* nonce I sum and put in my
+	uint8_t	receiver_nonce_sum;	/* nonce I sum and put in my
 						 * sack */
-	u_int8_t	ecn_nonce_allowed;	/* Tells us if ECN nonce is
+	uint8_t	ecn_nonce_allowed;	/* Tells us if ECN nonce is
 						 * on */
-	u_int8_t	nonce_sum_check;	/* On off switch used during
+	uint8_t	nonce_sum_check;	/* On off switch used during
 						 * re-sync */
-	u_int8_t	nonce_wait_for_ecne;	/* flag when we expect a ECN */
-	u_int8_t	peer_supports_ecn_nonce;
+	uint8_t	nonce_wait_for_ecne;	/* flag when we expect a ECN */
+	uint8_t	peer_supports_ecn_nonce;
 
 	/*
 	 * This value, plus all other ack'd but above cum-ack is added
@@ -779,9 +779,9 @@ struct sctp_association {
 	 * (probably in the SACK). When the cum-ack is updated, this sum is
 	 * updated as well.
 	 */
-	u_int8_t	nonce_sum_expect_base;
+	uint8_t	nonce_sum_expect_base;
 	/* Flag to tell if ECN is allowed */
-	u_int8_t	ecn_allowed;
+	uint8_t	ecn_allowed;
 
 	/* flag to indicate if peer can do asconf */
 	uint8_t		peer_supports_asconf;
@@ -801,33 +801,33 @@ struct sctp_association {
 	uint8_t		peer_supports_pktdrop;
 
 	/* Do we allow V6/V4? */
-	u_int8_t	ipv4_addr_legal;
-	u_int8_t	ipv6_addr_legal;
+	uint8_t	ipv4_addr_legal;
+	uint8_t	ipv6_addr_legal;
 	/* Address scoping flags */
 	/* scope value for IPv4 */
-	u_int8_t	ipv4_local_scope;
+	uint8_t	ipv4_local_scope;
 	/* scope values for IPv6 */
-	u_int8_t	local_scope;
-	u_int8_t	site_scope;
+	uint8_t	local_scope;
+	uint8_t	site_scope;
 	/* loopback scope */
-	u_int8_t	loopback_scope;
+	uint8_t	loopback_scope;
 	/* flags to handle send alternate net tracking */
-	u_int8_t	used_alt_onsack;
-	u_int8_t	used_alt_asconfack;
-	u_int8_t	fast_retran_loss_recovery;
-	u_int8_t	sat_t3_loss_recovery;
-	u_int8_t	dropped_special_cnt;
-	u_int8_t	seen_a_sack_this_pkt;
-	u_int8_t	stream_reset_outstanding;
-	u_int8_t	stream_reset_out_is_outstanding;
-	u_int8_t	delayed_connection;
-	u_int8_t	ifp_had_enobuf;
-	u_int8_t	saw_sack_with_frags;
-	u_int8_t	in_restart_hash;
-	u_int8_t	assoc_up_sent;
+	uint8_t	used_alt_onsack;
+	uint8_t	used_alt_asconfack;
+	uint8_t	fast_retran_loss_recovery;
+	uint8_t	sat_t3_loss_recovery;
+	uint8_t	dropped_special_cnt;
+	uint8_t	seen_a_sack_this_pkt;
+	uint8_t	stream_reset_outstanding;
+	uint8_t	stream_reset_out_is_outstanding;
+	uint8_t	delayed_connection;
+	uint8_t	ifp_had_enobuf;
+	uint8_t	saw_sack_with_frags;
+	uint8_t	in_restart_hash;
+	uint8_t	assoc_up_sent;
 	/* CMT variables */
-	u_int8_t	cmt_dac_pkts_rcvd;
-	u_int8_t	sctp_cmt_on_off;
+	uint8_t	cmt_dac_pkts_rcvd;
+	uint8_t	sctp_cmt_on_off;
 	/*
 	 * The mapping array is used to track out of order sequences above
 	 * last_acked_seq. 0 indicates packet missing 1 indicates packet

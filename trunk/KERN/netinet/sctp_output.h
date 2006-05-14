@@ -140,25 +140,25 @@ void		sctp_send_cwr(struct sctp_tcb *, struct sctp_nets *, uint32_t);
 void
 sctp_add_stream_reset_out(struct sctp_tmit_chunk *chk,
 			  int number_entries, uint16_t * list,
-		    u_int32_t seq, u_int32_t resp_seq, u_int32_t last_sent);
+		    uint32_t seq, uint32_t resp_seq, uint32_t last_sent);
 
 void
 sctp_add_stream_reset_in(struct sctp_tmit_chunk *chk,
 			 int number_entries, uint16_t * list,
-			 u_int32_t seq);
+			 uint32_t seq);
 
 void
 sctp_add_stream_reset_tsn(struct sctp_tmit_chunk *chk,
-			  u_int32_t seq);
+			  uint32_t seq);
 
 void
 sctp_add_stream_reset_result(struct sctp_tmit_chunk *chk,
-			     u_int32_t resp_seq, u_int32_t result);
+			     uint32_t resp_seq, uint32_t result);
 
 void
 sctp_add_stream_reset_result_tsn(struct sctp_tmit_chunk *chk,
-				 u_int32_t resp_seq, u_int32_t result,
-				 u_int32_t send_una, u_int32_t recv_next);
+				 uint32_t resp_seq, uint32_t result,
+				 uint32_t send_una, uint32_t recv_next);
 
 int
 sctp_send_str_reset_req(struct sctp_tcb *stcb,

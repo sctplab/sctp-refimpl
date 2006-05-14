@@ -156,9 +156,9 @@ force_comile_error;
  */
 struct ifaddr  *sctp_find_ifa_by_addr(struct sockaddr *sa);
 
-u_int32_t	sctp_select_initial_TSN(struct sctp_pcb *);
+uint32_t	sctp_select_initial_TSN(struct sctp_pcb *);
 
-u_int32_t	sctp_select_a_tag(struct sctp_inpcb *);
+uint32_t	sctp_select_a_tag(struct sctp_inpcb *);
 
 int		sctp_init_asoc(struct sctp_inpcb *, struct sctp_association *, int, uint32_t);
 
@@ -172,7 +172,7 @@ int
 sctp_timer_stop(int, struct sctp_inpcb *, struct sctp_tcb *,
 		struct sctp_nets *);
 
-u_int32_t	sctp_calculate_sum(struct mbuf *, int32_t *, u_int32_t);
+uint32_t	sctp_calculate_sum(struct mbuf *, int32_t *, uint32_t);
 
 void 
 sctp_mtu_size_reset(struct sctp_inpcb *, struct sctp_association *,
@@ -197,13 +197,13 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 
 int		find_next_best_mtu(int);
 
-u_int32_t 
+uint32_t 
 sctp_calculate_rto(struct sctp_tcb *, struct sctp_association *,
 		   struct sctp_nets *, struct timeval *);
 
-u_int32_t	sctp_calculate_len(struct mbuf *);
+uint32_t	sctp_calculate_len(struct mbuf *);
 
-caddr_t		sctp_m_getptr(struct mbuf *, int, int, u_int8_t *);
+caddr_t		sctp_m_getptr(struct mbuf *, int, int, uint8_t *);
 
 struct sctp_paramhdr *
 sctp_get_next_param(struct mbuf *, int,
@@ -213,7 +213,7 @@ int		sctp_add_pad_tombuf(struct mbuf *, int);
 
 int		sctp_pad_lastmbuf(struct mbuf *, int, struct mbuf *);
 
-void		sctp_ulp_notify(u_int32_t, struct sctp_tcb *, u_int32_t, void *);
+void		sctp_ulp_notify(uint32_t, struct sctp_tcb *, uint32_t, void *);
 
 void 
 sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
@@ -320,7 +320,7 @@ sctp_wakeup_log(struct sctp_tcb *stcb,
 		uint32_t cumtsn,
 		uint32_t wake_cnt, int from);
 
-void		sctp_log_strm_del_alt(u_int32_t, u_int16_t, int);
+void		sctp_log_strm_del_alt(uint32_t, uint16_t, int);
 
 void		sctp_log_nagle_event(struct sctp_tcb *stcb, int action);
 
@@ -338,12 +338,12 @@ void		rto_logging(struct sctp_nets *net, int from);
 void		sctp_log_lock(struct sctp_inpcb *inp, struct sctp_tcb *stcb, uint8_t from);
 void		sctp_log_maxburst(struct sctp_tcb *stcb, struct sctp_nets *, int, int, uint8_t);
 void		sctp_log_block(uint8_t, struct socket *, struct sctp_association *, int);
-void		sctp_log_rwnd(uint8_t, u_int32_t, u_int32_t, u_int32_t);
-void		sctp_log_mbcnt(uint8_t, u_int32_t, u_int32_t, u_int32_t, u_int32_t);
-void		sctp_log_rwnd_set(uint8_t, u_int32_t, u_int32_t, u_int32_t, u_int32_t);
+void		sctp_log_rwnd(uint8_t, uint32_t, uint32_t, uint32_t);
+void		sctp_log_mbcnt(uint8_t, uint32_t, uint32_t, uint32_t, uint32_t);
+void		sctp_log_rwnd_set(uint8_t, uint32_t, uint32_t, uint32_t, uint32_t);
 int		sctp_fill_stat_log(struct mbuf *);
 void		sctp_log_fr(uint32_t, uint32_t, uint32_t, int);
-void		sctp_log_sack(u_int32_t, u_int32_t, u_int32_t, u_int16_t, u_int16_t, int);
+void		sctp_log_sack(uint32_t, uint32_t, uint32_t, uint16_t, uint16_t, int);
 void		sctp_log_map(uint32_t, uint32_t, uint32_t, int);
 
 void		sctp_clr_stat_log(void);
@@ -354,7 +354,7 @@ void		sctp_clr_stat_log(void);
 void 
 sctp_auditing(int, struct sctp_inpcb *, struct sctp_tcb *,
 	      struct sctp_nets *);
-void		sctp_audit_log(u_int8_t, u_int8_t);
+void		sctp_audit_log(uint8_t, uint8_t);
 
 #endif
 
