@@ -3,7 +3,7 @@
 #ifndef __sctputil_h__
 #define __sctputil_h__
 
-/*
+/*-
  * Copyright (C) 2002-2006 Cisco Systems Inc,
  * All rights reserved.
  *

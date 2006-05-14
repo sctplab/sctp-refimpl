@@ -3,8 +3,8 @@
 #ifndef _NETINET_SCTP_ASCONF_H_
 #define _NETINET_SCTP_ASCONF_H_
 
-/*
- * Copyright (c) 2001, 2002, 2003, 2004 Cisco Systems, Inc.
+/*-
+ * Copyright (c) 2001-2006 Cisco Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without

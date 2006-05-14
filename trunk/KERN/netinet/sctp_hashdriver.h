@@ -3,7 +3,7 @@
 #ifndef __sctp_hashdriver_h__
 #define __sctp_hashdriver_h__
 
-/*
+/*-
  * Copyright (c) 2001, 2002 Cisco Systems, Inc.
  * All rights reserved.
  *

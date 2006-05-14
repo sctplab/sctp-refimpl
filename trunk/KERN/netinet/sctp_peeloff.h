@@ -3,8 +3,8 @@
 #ifndef __sctp_peeloff_h__
 #define __sctp_peeloff_h__
 
-/*
- * Copyright (C) 2002, 2004-2006 Cisco Systems Inc,
+/*-
+ * Copyright (C) 2002-2006 Cisco Systems Inc,
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without

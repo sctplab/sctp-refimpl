@@ -1,6 +1,6 @@
 /*	$kejKAME: sctp_indata.c,v 1.36 2005/03/06 16:04:17 itojun Exp $	*/
 
-/*
+/*-
  * Copyright (C) 2002, 2003, 2004 Cisco Systems Inc,
  * All rights reserved.
  *

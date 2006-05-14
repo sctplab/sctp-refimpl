@@ -1,6 +1,6 @@
 /*	$KAME: sctp_input.c,v 1.27 2005/03/06 16:04:17 itojun Exp $	*/
 
-/*
+/*-
  * Copyright (C) 2002-2006 Cisco Systems Inc,
  * All rights reserved.
  *

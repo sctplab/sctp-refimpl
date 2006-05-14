@@ -3,8 +3,8 @@
 #ifndef __SCTP_CALLOUT__
 #define __SCTP_CALLOUT__
 
-/*
- * Copyright (C) 2002, 2003, 2004 Cisco Systems Inc,
+/*-
+ * Copyright (C) 2001-2006 Cisco Systems Inc,
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without

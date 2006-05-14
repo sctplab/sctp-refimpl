@@ -3,7 +3,7 @@
 #ifndef __sctp_input_h__
 #define __sctp_input_h__
 
-/*
+/*-
  * Copyright (C) 2002 Cisco Systems Inc,
  * All rights reserved.
  *
