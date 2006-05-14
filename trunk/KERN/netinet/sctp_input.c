@@ -126,7 +126,7 @@ __FBSDID("$FreeBSD:$");
 #endif
 
 #ifdef SCTP_DEBUG
-extern u_int32_t sctp_debug_on;
+extern uint32_t sctp_debug_on;
 #endif
 
 static void
@@ -765,7 +765,7 @@ sctp_process_unrecog_chunk(struct sctp_tcb *stcb, struct sctp_paramhdr *phdr,
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_INPUT2) {
 			printf("Peer does not support chunk type %d(%x)??\n",
-			       chk->chunk_type, (u_int) chk->chunk_type);
+			       chk->chunk_type, (uint) chk->chunk_type);
 		}
 #endif
 		break;
@@ -818,7 +818,7 @@ sctp_process_unrecog_param(struct sctp_tcb *stcb, struct sctp_paramhdr *phdr)
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_INPUT2) {
 			printf("Peer does not support base param type %d(%x)??\n",
-			       pbad->param_type, (u_int) pbad->param_type);
+			       pbad->param_type, (uint) pbad->param_type);
 		}
 #endif
 		break;
@@ -1159,7 +1159,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 
 	init_cp = (struct sctp_init_chunk *)
 		sctp_m_getptr(m, init_offset, sizeof(struct sctp_init_chunk),
-			      (u_int8_t *) & init_buf);
+			      (uint8_t *) & init_buf);
 	if (init_cp == NULL) {
 		/* could not pull a INIT chunk in cookie */
 #ifdef SCTP_DEBUG
@@ -1185,7 +1185,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 	initack_offset = init_offset + SCTP_SIZE32(chk_length);
 	initack_cp = (struct sctp_init_ack_chunk *)
 		sctp_m_getptr(m, initack_offset, sizeof(struct sctp_init_ack_chunk),
-			      (u_int8_t *) & initack_buf);
+			      (uint8_t *) & initack_buf);
 	if (initack_cp == NULL) {
 		/* could not pull INIT-ACK chunk in cookie */
 #ifdef SCTP_DEBUG
@@ -1508,7 +1508,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	int		init_offset, initack_offset, initack_limit;
 	int		retval;
 	int		error = 0;
-	u_int32_t	old_tag;
+	uint32_t	old_tag;
 	uint8_t		chunk_buf[DEFAULT_CHUNK_BUFFER];
 
 	/*
@@ -1519,7 +1519,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	init_offset = offset + sizeof(struct sctp_cookie_echo_chunk);
 	init_cp = (struct sctp_init_chunk *)
 		sctp_m_getptr(m, init_offset, sizeof(struct sctp_init_chunk),
-			      (u_int8_t *) & init_buf);
+			      (uint8_t *) & init_buf);
 	if (init_cp == NULL) {
 		/* could not pull a INIT chunk in cookie */
 #ifdef SCTP_DEBUG
@@ -1545,7 +1545,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	 */
 	initack_cp = (struct sctp_init_ack_chunk *)
 		sctp_m_getptr(m, initack_offset, sizeof(struct sctp_init_ack_chunk),
-			      (u_int8_t *) & initack_buf);
+			      (uint8_t *) & initack_buf);
 	if (initack_cp == NULL) {
 		/* could not pull INIT-ACK chunk in cookie */
 #ifdef SCTP_DEBUG
@@ -1559,12 +1559,12 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	if (initack_cp->ch.chunk_type != SCTP_INITIATION_ACK) {
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_INPUT2) {
-			u_int8_t       *pp;
-			pp = (u_int8_t *) initack_cp;
+			uint8_t       *pp;
+			pp = (uint8_t *) initack_cp;
 			printf("process_cookie_new: could not find INIT-ACK chunk!\n");
 			printf("Found bytes %x %x %x %x at postion %d\n",
-			       (u_int) pp[0], (u_int) pp[1], (u_int) pp[2],
-			       (u_int) pp[3], initack_offset);
+			       (uint) pp[0], (uint) pp[1], (uint) pp[2],
+			       (uint) pp[3], initack_offset);
 		}
 #endif				/* SCTP_DEBUG */
 		return (NULL);
@@ -1946,7 +1946,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	}
 	/* get the signature */
 	SCTP_INP_RUNLOCK(l_inp);
-	sig = (u_int8_t *) sctp_m_getptr(m_sig, 0, SCTP_SIGNATURE_SIZE, (u_int8_t *) & tmp_sig);
+	sig = (uint8_t *) sctp_m_getptr(m_sig, 0, SCTP_SIGNATURE_SIZE, (uint8_t *) & tmp_sig);
 	if (sig == NULL) {
 		/* couldn't find signature */
 #ifdef SCTP_DEBUG
@@ -2019,7 +2019,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		if (sctp_debug_on & SCTP_DEBUG_INPUT2) {
 			printf("handle_cookie_echo: cookie signature validation failed!\n");
 			printf("offset = %u, cookie_offset = %u, sig_offset = %u\n",
-			     (u_int32_t) offset, cookie_offset, sig_offset);
+			     (uint32_t) offset, cookie_offset, sig_offset);
 		}
 #endif
 		return (NULL);
@@ -2046,7 +2046,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		/* cookie is stale! */
 		struct mbuf    *op_err;
 		struct sctp_stale_cookie_msg *scm;
-		u_int32_t	tim;
+		uint32_t	tim;
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_INPUT3) {
 			printf("sctp_handle_cookie: got a STALE cookie!\n");
@@ -2067,7 +2067,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		scm = mtod(op_err, struct sctp_stale_cookie_msg *);
 		scm->ph.param_type = htons(SCTP_CAUSE_STALE_COOKIE);
 		scm->ph.param_length = htons((sizeof(struct sctp_paramhdr) +
-					      (sizeof(u_int32_t))));
+					      (sizeof(uint32_t))));
 		/* seconds to usec */
 		tim = (now.tv_sec - time_expires.tv_sec) * 1000000;
 		/* add in usec */
@@ -2368,7 +2368,7 @@ sctp_handle_ecn_echo(struct sctp_ecne_chunk *cp,
 {
 	struct sctp_nets *net;
 	struct sctp_tmit_chunk *lchk;
-	u_int32_t	tsn;
+	uint32_t	tsn;
 	if (ntohs(cp->ch.chunk_length) != sizeof(struct sctp_ecne_chunk)) {
 		return;
 	}
@@ -2522,13 +2522,13 @@ sctp_handle_shutdown_complete(struct sctp_shutdown_complete_chunk *cp,
 
 static int
 process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
-		   struct sctp_nets *net, u_int8_t flg)
+		   struct sctp_nets *net, uint8_t flg)
 {
 	switch (desc->chunk_type) {
 		case SCTP_DATA:
 		/* find the tsn to resend (possibly */
 		{
-			u_int32_t	tsn;
+			uint32_t	tsn;
 			struct sctp_tmit_chunk *tp1;
 			tsn = ntohl(desc->tsn_ifany);
 			tp1 = TAILQ_FIRST(&stcb->asoc.sent_queue);
@@ -2564,7 +2564,7 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 				sctp_pegs[SCTP_PDRP_TSNNF]++;
 			}
 			if ((tp1) && (tp1->sent < SCTP_DATAGRAM_ACKED)) {
-				u_int8_t       *ddp;
+				uint8_t       *ddp;
 				if ((stcb->asoc.peers_rwnd == 0) &&
 				    ((flg & SCTP_FROM_MIDDLE_BOX) == 0)) {
 					sctp_pegs[SCTP_PDRP_DIWNP]++;
@@ -2575,7 +2575,7 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 					sctp_pegs[SCTP_PDRP_DIZRW]++;
 					return (0);
 				}
-				ddp = (u_int8_t *) (mtod(tp1->data, caddr_t) +
+				ddp = (uint8_t *) (mtod(tp1->data, caddr_t) +
 					    sizeof(struct sctp_data_chunk));
 				{
 					unsigned int	iii;
@@ -2787,7 +2787,7 @@ sctp_reset_in_stream(struct sctp_tcb *stcb, int number_entries, uint16_t * list)
 }
 
 static void
-sctp_reset_out_streams(struct sctp_tcb *stcb, int number_entries, u_int16_t * list)
+sctp_reset_out_streams(struct sctp_tcb *stcb, int number_entries, uint16_t * list)
 {
 	int		i;
 
@@ -2813,7 +2813,7 @@ sctp_reset_out_streams(struct sctp_tcb *stcb, int number_entries, u_int16_t * li
 
 
 struct sctp_stream_reset_out_request *
-sctp_find_stream_reset(struct sctp_tcb *stcb, u_int32_t seq, struct sctp_tmit_chunk **bchk)
+sctp_find_stream_reset(struct sctp_tcb *stcb, uint32_t seq, struct sctp_tmit_chunk **bchk)
 {
 	struct sctp_association *asoc;
 	struct sctp_stream_reset_out_req *req;
@@ -2887,11 +2887,11 @@ sctp_clean_up_stream_reset(struct sctp_tcb *stcb)
 
 static int
 sctp_handle_stream_reset_response(struct sctp_tcb *stcb,
-				  u_int32_t seq, u_int32_t action,
+				  uint32_t seq, uint32_t action,
 				  struct sctp_stream_reset_response *respin
 )
 {
-	u_int16_t	type;
+	uint16_t	type;
 	int		lparm_len;
 	struct sctp_association *asoc = &stcb->asoc;
 	struct sctp_tmit_chunk *chk;
@@ -2956,8 +2956,8 @@ sctp_handle_stream_reset_response(struct sctp_tcb *stcb,
 					stcb->asoc.sending_seq = ntohl(resp->receivers_next_tsn);
 					stcb->asoc.last_acked_seq = stcb->asoc.cumulative_tsn;
 
-					sctp_reset_out_streams(stcb, 0, (u_int16_t *) NULL);
-					sctp_reset_in_stream(stcb, 0, (u_int16_t *) NULL);
+					sctp_reset_out_streams(stcb, 0, (uint16_t *) NULL);
+					sctp_reset_in_stream(stcb, 0, (uint16_t *) NULL);
 
 				}
 			}
@@ -2985,10 +2985,10 @@ sctp_handle_str_reset_request_in(struct sctp_tcb *stcb,
 				 struct sctp_tmit_chunk *chk,
 				 struct sctp_stream_reset_in_request *req)
 {
-	u_int32_t	seq;
+	uint32_t	seq;
 	int		len       , i;
 	int		number_entries;
-	u_int16_t	temp;
+	uint16_t	temp;
 	/*
 	 * peer wants me to send a str-reset to him for my outgoing seq's if
 	 * seq_in is right.
@@ -3028,7 +3028,7 @@ sctp_handle_str_reset_request_in(struct sctp_tcb *stcb,
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
 			printf("SCTP:Peer sends a old str-reset seq %x, I expect %x\n",
-			       (u_int) seq, (u_int) asoc->str_reset_seq_in);
+			       (uint) seq, (uint) asoc->str_reset_seq_in);
 		}
 #endif
 		sctp_add_stream_reset_result(chk, seq, SCTP_STREAM_RESET_BAD_SEQNO);
@@ -3049,7 +3049,7 @@ sctp_handle_str_reset_request_tsn(struct sctp_tcb *stcb,
 	struct sctp_forward_tsn_chunk fwdtsn;
 	struct sctp_association *asoc = &stcb->asoc;
 	int		abort_flag = 0;
-	u_int32_t	seq;
+	uint32_t	seq;
 
 	seq = ntohl(req->request_seq);
 	if (asoc->str_reset_seq_in == seq) {
@@ -3077,8 +3077,8 @@ sctp_handle_str_reset_request_tsn(struct sctp_tcb *stcb,
 						 SCTP_STREAM_RESET_PERFORMED,
 						 stcb->asoc.sending_seq,
 					 stcb->asoc.mapping_array_base_tsn);
-		sctp_reset_out_streams(stcb, 0, (u_int16_t *) NULL);
-		sctp_reset_in_stream(stcb, 0, (u_int16_t *) NULL);
+		sctp_reset_out_streams(stcb, 0, (uint16_t *) NULL);
+		sctp_reset_in_stream(stcb, 0, (uint16_t *) NULL);
 		stcb->asoc.last_reset_action[1] = stcb->asoc.last_reset_action[0];
 		stcb->asoc.last_reset_action[0] = SCTP_STREAM_RESET_PERFORMED;
 
@@ -3097,7 +3097,7 @@ sctp_handle_str_reset_request_tsn(struct sctp_tcb *stcb,
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
 			printf("SCTP:Peer sends a old str-reset seq %x, I expect %x\n",
-			       (u_int) seq, (u_int) asoc->str_reset_seq_in);
+			       (uint) seq, (uint) asoc->str_reset_seq_in);
 		}
 #endif
 		sctp_add_stream_reset_result(chk, seq, SCTP_STREAM_RESET_BAD_SEQNO);
@@ -3180,7 +3180,7 @@ sctp_handle_str_reset_request_out(struct sctp_tcb *stcb,
 #ifdef SCTP_DEBUG
 		/* if (sctp_debug_on & SCTP_DEBUG_INPUT1) { */
 		printf("SCTP:Peer sends a old str-reset seq %x, I expect %x\n",
-		       (u_int) seq, (u_int) asoc->str_reset_seq_in);
+		       (uint) seq, (uint) asoc->str_reset_seq_in);
 		/* } */
 #endif
 		sctp_add_stream_reset_result(chk, seq, SCTP_STREAM_RESET_BAD_SEQNO);
@@ -3191,7 +3191,7 @@ static int
 sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_out_req *sr_req)
 {
 	int		chk_length, param_len, ptype;
-	u_int32_t	seq;
+	uint32_t	seq;
 	int		num_req = 0;
 	struct sctp_tmit_chunk *chk;
 	struct sctp_chunkhdr *ch;
@@ -3285,7 +3285,7 @@ strres_nochunk:
 			break;
 		} else if (ptype == SCTP_STR_RESET_RESPONSE) {
 			struct sctp_stream_reset_response *resp;
-			u_int32_t	result;
+			uint32_t	result;
 
 			resp = (struct sctp_stream_reset_response *)ph;
 			seq = ntohl(resp->response_seq);
@@ -3324,8 +3324,8 @@ static void
 sctp_handle_packet_dropped(struct sctp_pktdrop_chunk *cp,
 			   struct sctp_tcb *stcb, struct sctp_nets *net)
 {
-	u_int32_t	bottle_bw, on_queue;
-	u_int16_t	trunc_len;
+	uint32_t	bottle_bw, on_queue;
+	uint16_t	trunc_len;
 	unsigned int	chlen;
 	unsigned int	at;
 	struct sctp_chunk_desc desc;
@@ -3344,7 +3344,7 @@ sctp_handle_packet_dropped(struct sctp_pktdrop_chunk *cp,
 		/* XXX possible chlen underflow */
 		memset(&desc, 0, sizeof(desc));
 	}
-	trunc_len = (u_int16_t) ntohs(cp->trunc_len);
+	trunc_len = (uint16_t) ntohs(cp->trunc_len);
 	/* now the chunks themselves */
 	while ((ch != NULL) && (chlen >= sizeof(struct sctp_chunkhdr))) {
 		desc.chunk_type = ch->chunk_type;
@@ -3380,13 +3380,13 @@ sctp_handle_packet_dropped(struct sctp_pktdrop_chunk *cp,
 			if ((cp->ch.chunk_flags & SCTP_FROM_MIDDLE_BOX))
 				sctp_pegs[SCTP_PDRP_MB_DA]++;
 
-			if (chlen >= (sizeof(struct sctp_data_chunk) + sizeof(u_int32_t))) {
+			if (chlen >= (sizeof(struct sctp_data_chunk) + sizeof(uint32_t))) {
 				/* yep */
 				struct sctp_data_chunk *dcp;
-				u_int8_t       *ddp;
+				uint8_t       *ddp;
 				unsigned int	iii;
 				dcp = (struct sctp_data_chunk *)ch;
-				ddp = (u_int8_t *) (dcp + 1);
+				ddp = (uint8_t *) (dcp + 1);
 				for (iii = 0; iii < sizeof(desc.data_bytes); iii++) {
 					desc.data_bytes[iii] = ddp[iii];
 				}
@@ -3418,7 +3418,7 @@ sctp_handle_packet_dropped(struct sctp_pktdrop_chunk *cp,
 	/* Now update any rwnd --- possibly */
 	if ((cp->ch.chunk_flags & SCTP_FROM_MIDDLE_BOX) == 0) {
 		/* From a peer, we get a rwnd report */
-		u_int32_t	a_rwnd;
+		uint32_t	a_rwnd;
 
 		sctp_pegs[SCTP_PDRP_FEHOS]++;
 
@@ -3460,7 +3460,7 @@ sctp_handle_packet_dropped(struct sctp_pktdrop_chunk *cp,
 		 * Note if a T3 timer has went off, we will prohibit any
 		 * changes to cwnd until we exit the t3 loss recovery.
 		 */
-		u_int32_t	bw_avail;
+		uint32_t	bw_avail;
 		int		rtt       , incr;
 #ifdef SCTP_CWND_MONITOR
 		int		old_cwnd = net->cwnd;
@@ -3584,7 +3584,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 	  struct sctp_tcb *stcb, struct sctp_nets **netp, int *fwd_tsn_seen)
 {
 	struct sctp_association *asoc;
-	u_int32_t	vtag_in;
+	uint32_t	vtag_in;
 	int		num_chunks = 0;	/* number of control chunks processed */
 	int		chk_length;
 	int		ret;
@@ -3593,7 +3593,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 	 * d-mtu-ceiling for now (2k) and that should hopefully work ...
 	 * until we get into jumbo grams and such..
 	 */
-	u_int8_t	chunk_buf[DEFAULT_CHUNK_BUFFER];
+	uint8_t	chunk_buf[DEFAULT_CHUNK_BUFFER];
 	struct sctp_tcb *locked_tcb = stcb;
 	int		got_auth = 0;
 	uint32_t	auth_offset = 0, auth_len = 0;
@@ -4468,7 +4468,7 @@ next_chunk:
  */
 static void
 sctp_process_ecn_marked_a(struct sctp_tcb *stcb, struct sctp_nets *net,
-			  u_int8_t ecn_bits)
+			  uint8_t ecn_bits)
 {
 	if ((ecn_bits & SCTP_CE_BITS) == SCTP_CE_BITS) {
 		;
@@ -4507,7 +4507,7 @@ sctp_process_ecn_marked_a(struct sctp_tcb *stcb, struct sctp_nets *net,
 
 static void
 sctp_process_ecn_marked_b(struct sctp_tcb *stcb, struct sctp_nets *net,
-			  u_int32_t high_tsn, u_int8_t ecn_bits)
+			  uint32_t high_tsn, uint8_t ecn_bits)
 {
 	if ((ecn_bits & SCTP_CE_BITS) == SCTP_CE_BITS) {
 		/*
@@ -4532,12 +4532,12 @@ int
 sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		   int length, struct sctphdr *sh, struct sctp_chunkhdr *ch,
        struct sctp_inpcb *inp, struct sctp_tcb *stcb, struct sctp_nets *net,
-			     u_int8_t ecn_bits)
+			     uint8_t ecn_bits)
 {
 	/*
 	 * Control chunk processing
 	 */
-	u_int32_t	high_tsn;
+	uint32_t	high_tsn;
 	int		fwd_tsn_seen = 0, data_processed = 0;
 	struct mbuf    *m = *mm;
 	int		abort_flag = 0;
@@ -4551,7 +4551,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
 		printf("Ok, Common input processing called, m:%x iphlen:%d offset:%d\n",
-		       (u_int) m, iphlen, offset);
+		       (uint) m, iphlen, offset);
 	}
 #endif				/* SCTP_DEBUG */
 	if (stcb) {
@@ -4797,7 +4797,7 @@ sctp_input(m, va_alist)
 {
 	int		iphlen;
 	int		s;
-	u_int8_t	ecn_bits;
+	uint8_t	ecn_bits;
 	struct ip      *ip;
 	struct sctphdr *sh;
 	struct sctp_inpcb *inp = NULL;
@@ -4807,7 +4807,7 @@ sctp_input(m, va_alist)
 	/* struct ip6_recvpktopts opts6; */
 	/* #endif INET6 */
 
-	u_int32_t	check, calc_check;
+	uint32_t	check, calc_check;
 	struct sctp_nets *net;
 	struct sctp_tcb *stcb = NULL;
 	struct sctp_chunkhdr *ch;
@@ -4910,7 +4910,7 @@ sctp_input(m, va_alist)
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
 				printf("Bad CSUM on SCTP packet calc_check:%x check:%x  m:%x mlen:%d iphlen:%d\n",
-				calc_check, check, (u_int) m, mlen, iphlen);
+				calc_check, check, (uint) m, mlen, iphlen);
 			}
 #endif
 
@@ -4980,7 +4980,7 @@ sctp_skip_csum_4:
 			 */
 			init_chk = (struct sctp_init_chunk *)sctp_m_getptr(m,
 				    iphlen + sizeof(*sh), sizeof(*init_chk),
-						  (u_int8_t *) & chunk_buf);
+						  (uint8_t *) & chunk_buf);
 			if (init_chk != NULL)
 				sh->v_tag = init_chk->init.initiate_tag;
 		}

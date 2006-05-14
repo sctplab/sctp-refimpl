@@ -123,7 +123,7 @@ __FBSDID("$FreeBSD:$");
 #endif
 
 #ifdef SCTP_DEBUG
-extern u_int32_t sctp_debug_on;
+extern uint32_t sctp_debug_on;
 #endif				/* SCTP_DEBUG */
 
 extern unsigned int sctp_early_fr_msec;
@@ -325,8 +325,8 @@ sctp_threshold_management(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		printf("Overall error count for %p now %d thresh:%u state:%x\n",
 		       &stcb->asoc,
 		       stcb->asoc.overall_error_count,
-		       (u_int) threshold,
-		     ((net == NULL) ? (u_int) 0 : (u_int) net->dest_state));
+		       (uint) threshold,
+		     ((net == NULL) ? (uint) 0 : (uint) net->dest_state));
 	}
 #endif				/* SCTP_DEBUG */
 	/*
@@ -339,14 +339,14 @@ sctp_threshold_management(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		MGET(oper, M_DONTWAIT, MT_DATA);
 		if (oper) {
 			struct sctp_paramhdr *ph;
-			u_int32_t      *ippp;
+			uint32_t      *ippp;
 
 			oper->m_len = sizeof(struct sctp_paramhdr) +
 				sizeof(*ippp);
 			ph = mtod(oper, struct sctp_paramhdr *);
 			ph->param_type = htons(SCTP_CAUSE_PROTOCOL_VIOLATION);
 			ph->param_length = htons(oper->m_len);
-			ippp = (u_int32_t *) (ph + 1);
+			ippp = (uint32_t *) (ph + 1);
 			*ippp = htonl(0x40000001);
 		}
 		sctp_abort_an_association(inp, stcb, SCTP_FAILED_THRESHOLD, oper);
@@ -363,7 +363,7 @@ sctp_find_alternate_net(struct sctp_tcb *stcb,
 	/* Find and return an alternate network if possible */
 	struct sctp_nets *alt, *mnet, *hthresh = NULL;
 	int		once;
-	u_int32_t	val = 0;
+	uint32_t	val = 0;
 
 	if (stcb->asoc.numnets == 1) {
 		/* No others but net */
@@ -575,8 +575,8 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	int		cur_rtt;
 	int		orig_rwnd , audit_tf, num_mk, fir;
 	unsigned int	cnt_mk;
-	u_int32_t	orig_flight;
-	u_int32_t	tsnlast, tsnfirst;
+	uint32_t	orig_flight;
+	uint32_t	tsnlast, tsnfirst;
 
 
 	/*
@@ -1175,14 +1175,14 @@ sctp_cookie_timer(struct sctp_inpcb *inp,
 			MGET(oper, M_DONTWAIT, MT_DATA);
 			if (oper) {
 				struct sctp_paramhdr *ph;
-				u_int32_t      *ippp;
+				uint32_t      *ippp;
 
 				oper->m_len = sizeof(struct sctp_paramhdr) +
 					sizeof(*ippp);
 				ph = mtod(oper, struct sctp_paramhdr *);
 				ph->param_type = htons(SCTP_CAUSE_PROTOCOL_VIOLATION);
 				ph->param_length = htons(oper->m_len);
-				ippp = (u_int32_t *) (ph + 1);
+				ippp = (uint32_t *) (ph + 1);
 				*ippp = htonl(0x40000002);
 			}
 			sctp_abort_an_association(inp, stcb, SCTP_INTERNAL_ERROR,
@@ -1591,7 +1591,7 @@ sctp_is_sack_timer_running(struct sctp_tcb *stcb)
 
 
 #define SCTP_NUMBER_OF_MTU_SIZES 18
-static u_int32_t mtu_sizes[] = {
+static uint32_t mtu_sizes[] = {
 	68,
 	296,
 	508,
@@ -1613,8 +1613,8 @@ static u_int32_t mtu_sizes[] = {
 };
 
 
-static		u_int32_t
-sctp_getnext_mtu(struct sctp_inpcb *inp, u_int32_t cur_mtu)
+static		uint32_t
+sctp_getnext_mtu(struct sctp_inpcb *inp, uint32_t cur_mtu)
 {
 	/* select another MTU that is just bigger than this one */
 	int		i;
@@ -1635,7 +1635,7 @@ sctp_pathmtu_timer(struct sctp_inpcb *inp,
 		   struct sctp_tcb *stcb,
 		   struct sctp_nets *net)
 {
-	u_int32_t	next_mtu;
+	uint32_t	next_mtu;
 
 	/* restart the timer in any case */
 	next_mtu = sctp_getnext_mtu(inp, net->mtu);
@@ -1783,7 +1783,7 @@ select_a_new_ep:
 	if ((it->inp->inp_starting_point_for_iterator != NULL) &&
 	    (it->inp->inp_starting_point_for_iterator != it)) {
 		printf("Iterator collision, we must wait for other iterator at %x\n",
-		       (u_int) it->inp);
+		       (uint) it->inp);
 		SCTP_INP_WUNLOCK(it->inp);
 		goto start_timer_return;
 	}

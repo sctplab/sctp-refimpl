@@ -192,7 +192,7 @@ unsigned int	sctp_auth_disable = 0;
 unsigned int	sctp_auth_random_len = SCTP_AUTH_RANDOM_SIZE_DEFAULT;
 unsigned int	sctp_auth_hmac_id_default = SCTP_AUTH_HMAC_ID_SHA1;
 #ifdef SCTP_DEBUG
-extern u_int32_t sctp_debug_on;
+extern uint32_t sctp_debug_on;
 #endif				/* SCTP_DEBUG */
 
 
@@ -1989,7 +1989,7 @@ sctp_optsget(struct socket *so,
 		{
 			struct sctp_assoc_ids *ids;
 			int		cnt       , at;
-			u_int16_t	orig;
+			uint16_t	orig;
 
 			if ((size_t) m->m_len < sizeof(struct sctp_assoc_ids)) {
 				error = EINVAL;
@@ -2107,9 +2107,9 @@ sctp_optsget(struct socket *so,
 				error = ENOTCONN;
 			} else {
 				asoc = &stcb->asoc;
-				ss->ss_total_sndbuf = (u_int32_t) asoc->total_output_queue_size;
-				ss->ss_total_mbuf_sndbuf = (u_int32_t) asoc->total_output_mbuf_queue_size;
-				ss->ss_total_recv_buf = (u_int32_t) (asoc->size_on_reasm_queue +
+				ss->ss_total_sndbuf = (uint32_t) asoc->total_output_queue_size;
+				ss->ss_total_mbuf_sndbuf = (uint32_t) asoc->total_output_mbuf_queue_size;
+				ss->ss_total_recv_buf = (uint32_t) (asoc->size_on_reasm_queue +
 						 asoc->size_on_all_streams);
 				SCTP_TCB_UNLOCK(stcb);
 				error = 0;
@@ -2119,21 +2119,21 @@ sctp_optsget(struct socket *so,
 		break;
 	case SCTP_MAXBURST:
 		{
-			u_int8_t       *burst;
-			burst = mtod(m, u_int8_t *);
+			uint8_t       *burst;
+			burst = mtod(m, uint8_t *);
 			SCTP_INP_RLOCK(inp);
 			*burst = inp->sctp_ep.max_burst;
 			SCTP_INP_RUNLOCK(inp);
-			m->m_len = sizeof(u_int8_t);
+			m->m_len = sizeof(uint8_t);
 		}
 		break;
 	case SCTP_MAXSEG:
 		{
-			u_int32_t      *segsize;
+			uint32_t      *segsize;
 			sctp_assoc_t   *assoc_id;
 			int		ovh;
 
-			if ((size_t) m->m_len < sizeof(u_int32_t)) {
+			if ((size_t) m->m_len < sizeof(uint32_t)) {
 				error = EINVAL;
 				break;
 			}
@@ -2142,8 +2142,8 @@ sctp_optsget(struct socket *so,
 				break;
 			}
 			assoc_id = mtod(m, sctp_assoc_t *);
-			segsize = mtod(m, u_int32_t *);
-			m->m_len = sizeof(u_int32_t);
+			segsize = mtod(m, uint32_t *);
+			m->m_len = sizeof(uint32_t);
 
 			if (((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 			     (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) ||
@@ -2185,17 +2185,17 @@ sctp_optsget(struct socket *so,
 	case SCTP_SET_DEBUG_LEVEL:
 #ifdef SCTP_DEBUG
 		{
-			u_int32_t      *level;
-			if ((size_t) m->m_len < sizeof(u_int32_t)) {
+			uint32_t      *level;
+			if ((size_t) m->m_len < sizeof(uint32_t)) {
 				error = EINVAL;
 				break;
 			}
-			level = mtod(m, u_int32_t *);
+			level = mtod(m, uint32_t *);
 			error = 0;
 			*level = sctp_debug_on;
-			m->m_len = sizeof(u_int32_t);
+			m->m_len = sizeof(uint32_t);
 			printf("Returning DEBUG LEVEL %x is set\n",
-			       (u_int) sctp_debug_on);
+			       (uint) sctp_debug_on);
 		}
 #else				/* SCTP_DEBUG */
 		error = EOPNOTSUPP;
@@ -2210,12 +2210,12 @@ sctp_optsget(struct socket *so,
 		break;
 	case SCTP_GET_PEGS:
 		{
-			u_int32_t      *pt;
+			uint32_t      *pt;
 			if ((size_t) m->m_len < sizeof(sctp_pegs)) {
 				error = EINVAL;
 				break;
 			}
-			pt = mtod(m, u_int32_t *);
+			pt = mtod(m, uint32_t *);
 			memcpy(pt, sctp_pegs, sizeof(sctp_pegs));
 			m->m_len = sizeof(sctp_pegs);
 		}
@@ -2325,7 +2325,7 @@ sctp_optsget(struct socket *so,
 	case SCTP_GET_REMOTE_ADDR_SIZE:
 		{
 			sctp_assoc_t   *assoc_id;
-			u_int32_t      *val, sz;
+			uint32_t      *val, sz;
 			struct sctp_nets *net;
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_USRREQ1) {
@@ -2341,7 +2341,7 @@ sctp_optsget(struct socket *so,
 				break;
 			}
 			stcb = NULL;
-			val = mtod(m, u_int32_t *);
+			val = mtod(m, uint32_t *);
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
 				SCTP_INP_RLOCK(inp);
 				stcb = LIST_FIRST(&inp->sctp_asoc_list);
@@ -2373,7 +2373,7 @@ sctp_optsget(struct socket *so,
 			}
 			SCTP_TCB_UNLOCK(stcb);
 			*val = sz;
-			m->m_len = sizeof(u_int32_t);
+			m->m_len = sizeof(uint32_t);
 		}
 		break;
 	case SCTP_GET_PEER_ADDRESSES:
@@ -3382,7 +3382,7 @@ sctp_optsset(struct socket *so,
 				error = ENOTCONN;
 			} else {
 				if (sctp_cmt_on_off) {
-					stcb->asoc.sctp_cmt_on_off = (u_int8_t) av->assoc_value;
+					stcb->asoc.sctp_cmt_on_off = (uint8_t) av->assoc_value;
 				} else {
 					if ((stcb->asoc.sctp_cmt_on_off) && (av->assoc_value == 0)) {
 						stcb->asoc.sctp_cmt_on_off = 0;
@@ -3867,9 +3867,9 @@ sctp_optsset(struct socket *so,
 		break;
 	case SCTP_MAXBURST:
 		{
-			u_int8_t       *burst;
+			uint8_t       *burst;
 			SCTP_INP_WLOCK(inp);
-			burst = mtod(m, u_int8_t *);
+			burst = mtod(m, uint8_t *);
 			if (*burst) {
 				inp->sctp_ep.max_burst = *burst;
 			}
@@ -3878,14 +3878,14 @@ sctp_optsset(struct socket *so,
 		break;
 	case SCTP_MAXSEG:
 		{
-			u_int32_t      *segsize;
+			uint32_t      *segsize;
 			int		ovh;
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) {
 				ovh = SCTP_MED_OVERHEAD;
 			} else {
 				ovh = SCTP_MED_V4_OVERHEAD;
 			}
-			segsize = mtod(m, u_int32_t *);
+			segsize = mtod(m, uint32_t *);
 			if (*segsize < 1) {
 				error = EINVAL;
 				break;
@@ -3901,17 +3901,17 @@ sctp_optsset(struct socket *so,
 	case SCTP_SET_DEBUG_LEVEL:
 #ifdef SCTP_DEBUG
 		{
-			u_int32_t      *level;
-			if ((size_t) m->m_len < sizeof(u_int32_t)) {
+			uint32_t      *level;
+			if ((size_t) m->m_len < sizeof(uint32_t)) {
 				error = EINVAL;
 				break;
 			}
-			level = mtod(m, u_int32_t *);
+			level = mtod(m, uint32_t *);
 			error = 0;
 			sctp_debug_on = (*level & (SCTP_DEBUG_ALL |
 						   SCTP_DEBUG_NOISY));
 			printf("SETTING DEBUG LEVEL to %x\n",
-			       (u_int) sctp_debug_on);
+			       (uint) sctp_debug_on);
 
 		}
 #else
@@ -4005,13 +4005,13 @@ sctp_optsset(struct socket *so,
 		break;
 	case SCTP_SET_INITIAL_DBG_SEQ:
 		{
-			u_int32_t      *vvv;
-			if ((size_t) m->m_len < sizeof(u_int32_t)) {
+			uint32_t      *vvv;
+			if ((size_t) m->m_len < sizeof(uint32_t)) {
 				error = EINVAL;
 				break;
 			}
 			SCTP_INP_WLOCK(inp);
-			vvv = mtod(m, u_int32_t *);
+			vvv = mtod(m, uint32_t *);
 			inp->sctp_ep.initial_sequence_debug = *vvv;
 			SCTP_INP_WUNLOCK(inp);
 		}
@@ -5523,7 +5523,7 @@ sctp_usrreq(so, req, m, nam, control)
 int
 sctp_sysctl(name, namelen, oldp, oldlenp, newp, newlen)
 	int            *name;
-	u_int		namelen;
+	uint		namelen;
 	void           *oldp;
 	size_t         *oldlenp;
 	void           *newp;

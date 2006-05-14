@@ -11,12 +11,12 @@ int		verbose = 0;
 #define MAX_TSN 0xfffffff
 
 struct sctp_sack {
-	u_int32_t	cum_tsn_ack;	/* cumulative TSN Ack */
-	u_int32_t	a_rwnd;	/* updated a_rwnd of sender */
-	u_int16_t	num_gap_ack_blks;	/* number of Gap Ack blocks */
-	u_int16_t	num_dup_tsns;	/* number of duplicate TSNs */
+	uint32_t	cum_tsn_ack;	/* cumulative TSN Ack */
+	uint32_t	a_rwnd;	/* updated a_rwnd of sender */
+	uint16_t	num_gap_ack_blks;	/* number of Gap Ack blocks */
+	uint16_t	num_dup_tsns;	/* number of duplicate TSNs */
 	/* struct sctp_gap_ack_block's follow */
-	/* u_int32_t duplicate_tsn's follow */
+	/* uint32_t duplicate_tsn's follow */
 };
 
 struct sctp_sack_chunk {
@@ -32,7 +32,7 @@ struct sctp_sack_chunk {
  * 
  */
 
-u_int8_t	map_table[8][8] = {
+uint8_t	map_table[8][8] = {
 	 /* row 0 */ 0x01, 0x03, 0x07, 0x0f, 0x1f, 0x3f, 0x7f, 0xff,
 	 /* row 1 */ 0x02, 0x06, 0x0e, 0x1e, 0x3e, 0x7e, 0xfe, 0x00,
 	 /* row 2 */ 0x04, 0x0c, 0x1c, 0x3c, 0x7c, 0xfc, 0x00, 0x00,
