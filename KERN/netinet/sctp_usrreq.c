@@ -1364,7 +1364,8 @@ __P((struct sockaddr_in *sin,
 {
 	struct ifnet   *ifn;
 	struct ifaddr  *ifa;
-	int		loopback_scope, ipv4_local_scope, local_scope, site_scope, actual;
+	int		loopback_scope, ipv4_local_scope, local_scope, site_scope,
+			actual;
 	int		ipv4_addr_legal, ipv6_addr_legal;
 	actual = 0;
 	if (limit <= 0)
@@ -3469,7 +3470,7 @@ sctp_optsset(struct socket *so,
 						SCTP_TCB_UNLOCK(stcb);
 					}
 				} else {
-					if (tm->assoc_value) { 
+					if (tm->assoc_value) {
 						SCTP_INP_WLOCK(inp);
 						inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV] = MSEC_TO_TICKS(tm->assoc_value);
 						SCTP_INP_WUNLOCK(inp);
