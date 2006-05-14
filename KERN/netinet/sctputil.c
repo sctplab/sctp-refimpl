@@ -1,5 +1,3 @@
-/*	$KAME: sctputil.c,v 1.37 2005/03/07 23:26:09 itojun Exp $	*/
-
 /*-
  * Copyright (c) 2001-2006 Cisco Systems, Inc.
  * All rights reserved.
@@ -31,6 +29,9 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+
+/*	$KAME: sctputil.c,v 1.37 2005/03/07 23:26:09 itojun Exp $	*/
+
 
 #if !(defined(__OpenBSD__) || defined(__APPLE__))
 #include "opt_ipsec.h"

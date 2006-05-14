@@ -1,8 +1,3 @@
-/*	$KAME: sctp_crc32.h,v 1.5 2004/08/17 04:06:16 itojun Exp $	*/
-
-#ifndef __crc32c_h__
-#define __crc32c_h__
-
 /*-
  * Copyright (c) 2001, 2002, 2004 Cisco Systems, Inc.
  * All rights reserved.
@@ -34,6 +29,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+
+/*	$KAME: sctp_crc32.h,v 1.5 2004/08/17 04:06:16 itojun Exp $	*/
+
+#ifndef __crc32c_h__
+#define __crc32c_h__
+
 
 #include <sys/types.h>
 

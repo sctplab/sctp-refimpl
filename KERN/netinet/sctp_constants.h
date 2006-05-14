@@ -1,11 +1,3 @@
-/*	$KAME: sctp_constants.h,v 1.17 2005/03/06 16:04:17 itojun Exp $	*/
-
-#ifndef __sctp_constants_h__
-#define __sctp_constants_h__
-
-#if defined(_KERNEL)
-#include <sys/kernel.h>
-#endif
 /*-
  * Copyright (c) 2001-2006 Cisco Systems, Inc.
  * All rights reserved.
@@ -37,6 +29,17 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+
+/*	$KAME: sctp_constants.h,v 1.17 2005/03/06 16:04:17 itojun Exp $	*/
+
+#ifndef __sctp_constants_h__
+#define __sctp_constants_h__
+
+#if defined(_KERNEL)
+#include <sys/kernel.h>
+#endif
+
+
 #define SCTP_VERSION_STRING "KAME-BSD 1.1"
 /*#define SCTP_AUDITING_ENABLED 1 used for debug/auditing */
 #define SCTP_AUDIT_SIZE 256
