@@ -1783,7 +1783,7 @@ select_a_new_ep:
 	if ((it->inp->inp_starting_point_for_iterator != NULL) &&
 	    (it->inp->inp_starting_point_for_iterator != it)) {
 		printf("Iterator collision, we must wait for other iterator at %x\n",
-		       (uint) it->inp);
+		       (uint32_t) it->inp);
 		SCTP_INP_WUNLOCK(it->inp);
 		goto start_timer_return;
 	}

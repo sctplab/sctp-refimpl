@@ -246,27 +246,27 @@ struct sctp_epinfo {
 	void           *ipi_count_mtx;
 #endif				/* _KERN_LOCKS_H_ */
 #endif
-	uint		ipi_count_ep;
+	uint32_t	ipi_count_ep;
 	u_quad_t	ipi_gencnt_ep;
 
 	/* assoc/tcb zone info */
-	uint		ipi_count_asoc;
+	uint32_t	ipi_count_asoc;
 	u_quad_t	ipi_gencnt_asoc;
 
 	/* local addrlist zone info */
-	uint		ipi_count_laddr;
+	uint32_t	ipi_count_laddr;
 	u_quad_t	ipi_gencnt_laddr;
 
 	/* remote addrlist zone info */
-	uint		ipi_count_raddr;
+	uint32_t	ipi_count_raddr;
 	u_quad_t	ipi_gencnt_raddr;
 
 	/* chunk structure list for output */
-	uint		ipi_count_chunk;
+	uint32_t	ipi_count_chunk;
 	u_quad_t	ipi_gencnt_chunk;
 
 	/* socket queue zone info */
-	uint		ipi_count_readq;
+	uint32_t	ipi_count_readq;
 	u_quad_t	ipi_gencnt_readq;
 
 	struct sctpvtaghead vtag_timewait[SCTP_STACK_VTAG_HASH_SIZE];

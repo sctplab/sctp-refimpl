@@ -547,7 +547,7 @@ sctp_findassociation_ep_asconf(struct mbuf *m, int iphlen, int offset,
 #endif				/* SCTP_DEBUG */
 		return NULL;
 	}
-	ptype = (int)((uint) ntohs(phdr->param_type));
+	ptype = (int)((uint32_t) ntohs(phdr->param_type));
 	/* get the correlation address */
 	if (ptype == SCTP_IPV6_ADDRESS) {
 		/* ipv6 address param */
