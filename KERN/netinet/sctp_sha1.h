@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  */
 
-/*	$KAME: sctp_sha1.h,v 1.5 2004/08/17 04:06:19 itojun Exp $	*/
+/* $KAME: sctp_sha1.h,v 1.5 2004/08/17 04:06:19 itojun Exp $	 */
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
@@ -44,38 +44,38 @@ __FBSDID("$FreeBSD:$");
 #include <sys/types.h>
 
 struct sha1_context {
-	unsigned int A;
-	unsigned int B;
-	unsigned int C;
-	unsigned int D;
-	unsigned int E;
-	unsigned int H0;
-	unsigned int H1;
-	unsigned int H2;
-	unsigned int H3;
-	unsigned int H4;
-	unsigned int words[80];
-	unsigned int TEMP;
+	unsigned int	A;
+	unsigned int	B;
+	unsigned int	C;
+	unsigned int	D;
+	unsigned int	E;
+	unsigned int	H0;
+	unsigned int	H1;
+	unsigned int	H2;
+	unsigned int	H3;
+	unsigned int	H4;
+	unsigned int	words[80];
+	unsigned int	TEMP;
 	/* block I am collecting to process */
-	char sha_block[64];
+	char		sha_block [64];
 	/* collected so far */
-	int how_many_in_block;
-	unsigned int running_total;
+	int		how_many_in_block;
+	unsigned int	running_total;
 };
 typedef struct sha1_context SHA1_CTX;
 
-#define F1(B,C,D) (((B & C) | ((~B) & D)))	/*  0  <= t <= 19 */
-#define F2(B,C,D) (B ^ C ^ D)			/*  20 <= t <= 39 */
-#define F3(B,C,D) ((B & C) | (B & D) | (C & D))	/*  40 <= t <= 59 */
-#define F4(B,C,D) (B ^ C ^ D)			/* 600 <= t <= 79 */
+#define F1(B,C,D) (((B & C) | ((~B) & D)))	/* 0  <= t <= 19 */
+#define F2(B,C,D) (B ^ C ^ D)	/* 20 <= t <= 39 */
+#define F3(B,C,D) ((B & C) | (B & D) | (C & D))	/* 40 <= t <= 59 */
+#define F4(B,C,D) (B ^ C ^ D)	/* 600 <= t <= 79 */
 
 /* circular shift */
 #define CSHIFT(A,B) ((B << A) | (B >> (32-A)))
 
-#define K1 0x5a827999       /* 0  <= t <= 19 */
-#define K2 0x6ed9eba1       /* 20 <= t <= 39 */
-#define K3 0x8f1bbcdc       /* 40 <= t <= 59 */
-#define K4 0xca62c1d6       /* 60 <= t <= 79 */
+#define K1 0x5a827999		/* 0  <= t <= 19 */
+#define K2 0x6ed9eba1		/* 20 <= t <= 39 */
+#define K3 0x8f1bbcdc		/* 40 <= t <= 59 */
+#define K4 0xca62c1d6		/* 60 <= t <= 79 */
 
 #define H0INIT 0x67452301
 #define H1INIT 0xefcdab89
@@ -92,9 +92,9 @@ typedef struct sha1_context SHA1_CTX;
 
 #if defined(_KERNEL)
 
-void SHA1_Init(struct sha1_context *);
-void SHA1_Update(struct sha1_context *, const unsigned char *, int);
-void SHA1_Final(unsigned char *, struct sha1_context *);
+void		SHA1_Init (struct sha1_context *);
+void		SHA1_Update(struct sha1_context *, const unsigned char *, int);
+void		SHA1_Final(unsigned char *, struct sha1_context *);
 
-#endif /* _KERNEL */
+#endif				/* _KERNEL */
 #endif

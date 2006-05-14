@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  */
 
-/*	$KAME: sctp_callout.h,v 1.9 2005/03/06 16:04:17 itojun Exp $	*/
+/* $KAME: sctp_callout.h,v 1.9 2005/03/06 16:04:17 itojun Exp $	 */
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
@@ -44,30 +44,30 @@ __FBSDID("$FreeBSD:$");
 #ifndef __NetBSD__
 struct callout {
 	TAILQ_ENTRY(callout) tqe;
-	int	c_time;				/* ticks to the event */
-	void	*c_arg;				/* function argument */
-	void	(*c_func) __P((void *));	/* function to call */
-	int	c_flags;			/* state of this entry */
+	int		c_time;	/* ticks to the event */
+	void           *c_arg;	/* function argument */
+	void            (*c_func) __P((void *));	/* function to call */
+	int		c_flags;/* state of this entry */
 };
 #endif
-#define SCTP_TICKS_PER_FASTTIMO 20		/* we get called about */
-                                                /* every 20ms */
+#define SCTP_TICKS_PER_FASTTIMO 20	/* we get called about */
+/* every 20ms */
 
 TAILQ_HEAD(calloutlist, callout);
 
-#define	CALLOUT_ACTIVE		0x0002 /* callout is currently active */
+#define	CALLOUT_ACTIVE		0x0002	/* callout is currently active */
 #ifndef __NetBSD__
-#define	CALLOUT_PENDING		0x0004 /* callout is waiting for timeout */
-#define CALLOUT_FIRED		0x0008 /* it expired */
+#define	CALLOUT_PENDING		0x0004	/* callout is waiting for timeout */
+#define CALLOUT_FIRED		0x0008	/* it expired */
 #endif
 
 #define	callout_active(c)	((c)->c_flags & CALLOUT_ACTIVE)
 #define	callout_deactivate(c)	((c)->c_flags &= ~CALLOUT_ACTIVE)
-void	callout_init __P((struct callout *));
+void callout_init __P((struct callout *));
 #define	callout_pending(c)	((c)->c_flags & CALLOUT_PENDING)
 
-void	callout_reset __P((struct callout *, int, void (*)(void *), void *));
+void callout_reset __P((struct callout *, int, void (*) (void *), void *));
 #ifndef __NetBSD__
-int	callout_stop __P((struct callout *));
+int callout_stop __P((struct callout *));
 #endif
 #endif

@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  */
 
-/*	$KAME: sctp_sha1.c,v 1.9 2005/03/06 16:04:18 itojun Exp $	*/
+/* $KAME: sctp_sha1.c,v 1.9 2005/03/06 16:04:18 itojun Exp $	 */
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
@@ -63,7 +63,7 @@ SHA1_Init(struct sha1_context *ctx)
 static void
 sha1_process_a_block(struct sha1_context *ctx, unsigned int *block)
 {
-	int i;
+	int		i;
 	/* init the W0-W15 to the block of words being hashed. */
 	/* step a) */
 	for (i = 0; i < 16; i++) {
@@ -71,10 +71,10 @@ sha1_process_a_block(struct sha1_context *ctx, unsigned int *block)
 	}
 	/* now init the rest based on the SHA-1 formula, step b) */
 	for (i = 16; i < 80; i++) {
-		ctx->words[i] = CSHIFT(1, ((ctx->words[(i-3)]) ^
-					   (ctx->words[(i-8)]) ^
-					   (ctx->words[(i-14)]) ^
-					   (ctx->words[(i-16)])));
+		ctx->words[i] = CSHIFT(1, ((ctx->words[(i - 3)]) ^
+					   (ctx->words[(i - 8)]) ^
+					   (ctx->words[(i - 14)]) ^
+					   (ctx->words[(i - 16)])));
 	}
 	/* step c) */
 	ctx->A = ctx->H0;
@@ -128,7 +128,7 @@ sha1_process_a_block(struct sha1_context *ctx, unsigned int *block)
 void
 SHA1_Update(struct sha1_context *ctx, const unsigned char *ptr, int siz)
 {
-	int number_left, left_to_fill;
+	int		number_left, left_to_fill;
 	number_left = siz;
 	while (number_left > 0) {
 		left_to_fill = sizeof(ctx->sha_block) - ctx->how_many_in_block;
@@ -158,25 +158,24 @@ void
 SHA1_Final(unsigned char *digest, struct sha1_context *ctx)
 {
 	/*
-	 * if any left in block fill with padding and process. Then
-	 * transfer the digest to the pointer. At the last block some
-	 * special rules need to apply. We must add a 1 bit following
-	 * the message, then we pad with 0's. The total size is encoded
-	 * as a 64 bit number at the end. Now if the last buffer has
-	 * more than 55 octets in it we cannot fit the 64 bit number +
-	 * 10000000 pad on the end and must add the 10000000 pad, pad
-	 * the rest of the message with 0's and then create an all 0
-	 * message with just the 64 bit size at the end and run this
-	 * block through by itself.  Also the 64 bit int must be in
-	 * network byte order.
+	 * if any left in block fill with padding and process. Then transfer
+	 * the digest to the pointer. At the last block some special rules
+	 * need to apply. We must add a 1 bit following the message, then we
+	 * pad with 0's. The total size is encoded as a 64 bit number at the
+	 * end. Now if the last buffer has more than 55 octets in it we
+	 * cannot fit the 64 bit number + 10000000 pad on the end and must
+	 * add the 10000000 pad, pad the rest of the message with 0's and
+	 * then create an all 0 message with just the 64 bit size at the end
+	 * and run this block through by itself.  Also the 64 bit int must be
+	 * in network byte order.
 	 */
-	int left_to_fill;
-	unsigned int i, *ptr;
+	int		left_to_fill;
+	unsigned int	i , *ptr;
 	if (ctx->how_many_in_block > 55) {
 		/*
-		 * special case, we need to process two blocks here.
-		 * One for the current stuff plus possibly the pad.
-		 * The other for the size.
+		 * special case, we need to process two blocks here. One for
+		 * the current stuff plus possibly the pad. The other for the
+		 * size.
 		 */
 		left_to_fill = sizeof(ctx->sha_block) - ctx->how_many_in_block;
 		if (left_to_fill == 0) {
@@ -196,7 +195,7 @@ SHA1_Final(unsigned char *digest, struct sha1_context *ctx)
 			memset(ctx->sha_block, 0, sizeof(ctx->sha_block));
 		} else {
 			ctx->sha_block[ctx->how_many_in_block] = 0x80;
-			for (i =( ctx->how_many_in_block + 1);
+			for (i = (ctx->how_many_in_block + 1);
 			     i < sizeof(ctx->sha_block);
 			     i++) {
 				ctx->sha_block[i] = 0x0;
@@ -215,8 +214,8 @@ SHA1_Final(unsigned char *digest, struct sha1_context *ctx)
 		/*
 		 * easy case, we just pad this message to size - end with 0
 		 * add the magic 0x80 to the next word and then put the
-		 * network byte order size in the last spot and process
-		 * the block.
+		 * network byte order size in the last spot and process the
+		 * block.
 		 */
 		ctx->sha_block[ctx->how_many_in_block] = 0x80;
 		for (i = (ctx->how_many_in_block + 1);

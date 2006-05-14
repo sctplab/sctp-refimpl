@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  */
 
-/*	$KAME: sctp_crc32.h,v 1.5 2004/08/17 04:06:16 itojun Exp $	*/
+/* $KAME: sctp_crc32.h,v 1.5 2004/08/17 04:06:16 itojun Exp $	 */
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
@@ -51,12 +51,12 @@ __FBSDID("$FreeBSD:$");
 #endif
 
 #if defined(_KERNEL)
-u_int32_t update_crc32(u_int32_t, unsigned char *, unsigned int);
+u_int32_t	update_crc32(u_int32_t, unsigned char *, unsigned int);
 
-u_int32_t sctp_csum_finalize(u_int32_t);
+u_int32_t	sctp_csum_finalize(u_int32_t);
 
-void sctp_warm_tables(void);
+void		sctp_warm_tables(void);
 
-#endif /* _KERNEL */
-#endif /* !SCTP_USE_ADLER32 */
-#endif /* __crc32c_h__ */
+#endif				/* _KERNEL */
+#endif				/* !SCTP_USE_ADLER32 */
+#endif				/* __crc32c_h__ */
