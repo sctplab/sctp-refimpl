@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  */
 
-/*	$KAME: sctp_timer.h,v 1.6 2005/03/06 16:04:18 itojun Exp $	*/
+/* $KAME: sctp_timer.h,v 1.6 2005/03/06 16:04:18 itojun Exp $	 */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD:$");
@@ -45,50 +45,63 @@ __FBSDID("$FreeBSD:$");
 
 #if defined(_KERNEL)
 
-void sctp_early_fr_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
-	struct sctp_nets *net);
+void 
+sctp_early_fr_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
+		    struct sctp_nets *net);
 
-struct sctp_nets *sctp_find_alternate_net(struct sctp_tcb *,
-	struct sctp_nets *, int high_ssthresh);
+struct sctp_nets *
+sctp_find_alternate_net(struct sctp_tcb *,
+			struct sctp_nets *, int high_ssthresh);
 
-int sctp_threshold_management(struct sctp_inpcb *, struct sctp_tcb *,
-	struct sctp_nets *, uint16_t);
+int 
+sctp_threshold_management(struct sctp_inpcb *, struct sctp_tcb *,
+			  struct sctp_nets *, uint16_t);
 
-int  sctp_t3rxt_timer(struct sctp_inpcb *, struct sctp_tcb *,
-	struct sctp_nets *);
-int  sctp_t1init_timer(struct sctp_inpcb *, struct sctp_tcb *,
-	struct sctp_nets *);
-int  sctp_shutdown_timer(struct sctp_inpcb *, struct sctp_tcb *,
-	struct sctp_nets *);
-int  sctp_heartbeat_timer(struct sctp_inpcb *, struct sctp_tcb *,
-	struct sctp_nets *, int);
+int 
+sctp_t3rxt_timer(struct sctp_inpcb *, struct sctp_tcb *,
+		 struct sctp_nets *);
+int 
+sctp_t1init_timer(struct sctp_inpcb *, struct sctp_tcb *,
+		  struct sctp_nets *);
+int 
+sctp_shutdown_timer(struct sctp_inpcb *, struct sctp_tcb *,
+		    struct sctp_nets *);
+int 
+sctp_heartbeat_timer(struct sctp_inpcb *, struct sctp_tcb *,
+		     struct sctp_nets *, int);
 
-int sctp_is_hb_timer_running(struct sctp_tcb *stcb);
-int sctp_is_sack_timer_running(struct sctp_tcb *stcb);
+int		sctp_is_hb_timer_running(struct sctp_tcb *stcb);
+int		sctp_is_sack_timer_running(struct sctp_tcb *stcb);
 
-int  sctp_cookie_timer(struct sctp_inpcb *, struct sctp_tcb *,
-	struct sctp_nets *);
+int 
+sctp_cookie_timer(struct sctp_inpcb *, struct sctp_tcb *,
+		  struct sctp_nets *);
 
-void sctp_pathmtu_timer(struct sctp_inpcb *, struct sctp_tcb *,
-	struct sctp_nets *);
+void 
+sctp_pathmtu_timer(struct sctp_inpcb *, struct sctp_tcb *,
+		   struct sctp_nets *);
 
-int  sctp_shutdownack_timer(struct sctp_inpcb *, struct sctp_tcb *,
-	struct sctp_nets *);
-int  sctp_strreset_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
-			 struct sctp_nets *net);
+int 
+sctp_shutdownack_timer(struct sctp_inpcb *, struct sctp_tcb *,
+		       struct sctp_nets *);
+int 
+sctp_strreset_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
+		    struct sctp_nets *net);
 
-int  sctp_asconf_timer(struct sctp_inpcb *, struct sctp_tcb *,
-	struct sctp_nets *);
+int 
+sctp_asconf_timer(struct sctp_inpcb *, struct sctp_tcb *,
+		  struct sctp_nets *);
 
-void sctp_autoclose_timer(struct sctp_inpcb *, struct sctp_tcb *,
-	struct sctp_nets *net);
+void 
+sctp_autoclose_timer(struct sctp_inpcb *, struct sctp_tcb *,
+		     struct sctp_nets *net);
 
-void sctp_audit_retranmission_queue(struct sctp_association *);
+void		sctp_audit_retranmission_queue(struct sctp_association *);
 
-void sctp_iterator_timer(struct sctp_iterator *it);
+void		sctp_iterator_timer(struct sctp_iterator *it);
 
 #ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
-void sctp_slowtimo();
+void		sctp_slowtimo();
 #endif
 
 #endif

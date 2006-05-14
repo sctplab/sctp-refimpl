@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  */
 
-/*	$KAME: sctp_constants.h,v 1.17 2005/03/06 16:04:17 itojun Exp $	*/
+/* $KAME: sctp_constants.h,v 1.17 2005/03/06 16:04:17 itojun Exp $	 */
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
@@ -46,7 +46,7 @@ __FBSDID("$FreeBSD:$");
 
 
 #define SCTP_VERSION_STRING "KAME-BSD 1.1"
-/*#define SCTP_AUDITING_ENABLED 1 used for debug/auditing */
+/* #define SCTP_AUDITING_ENABLED 1 used for debug/auditing */
 #define SCTP_AUDIT_SIZE 256
 #define SCTP_STAT_LOG_SIZE 40000
 
@@ -126,14 +126,11 @@ __FBSDID("$FreeBSD:$");
 #define SCTP_WAKESND_FROM_SACK      74
 #define SCTP_WAKESND_FROM_FWDTSN    75
 /*
- * To turn on various logging, you must first define SCTP_STAT_LOGGING.
- * Then to get something to log you define one of the logging defines i.e.
- *
- * SCTP_CWND_LOGGING
- * SCTP_BLK_LOGGING
- * SCTP_STR_LOGGING
- * SCTP_FR_LOGGING
- *
+ * To turn on various logging, you must first define SCTP_STAT_LOGGING. Then
+ * to get something to log you define one of the logging defines i.e.
+ * 
+ * SCTP_CWND_LOGGING SCTP_BLK_LOGGING SCTP_STR_LOGGING SCTP_FR_LOGGING
+ * 
  * Any one or a combination of the logging can be turned on.
  */
 #define SCTP_LOG_EVENT_CWND  1
@@ -161,50 +158,46 @@ __FBSDID("$FreeBSD:$");
 /* default AUTO_ASCONF mode enable(1)/disable(0) value (sysctl) */
 #define SCTP_DEFAULT_AUTO_ASCONF	0
 
-/* Theshold for rwnd updates, we have
- * to read (sb_hiwat >> SCTP_RWND_HIWAT_SHIFT)
- * before we will look to see if we need to send
- * a window update sack. When we look, we compare the
- * last rwnd we sent vs the current rwnd. It too must
- * be greater than this value. Using 3 divdes the
- * hiwat by 8, so for 200k rwnd we need to read
- * 25k. For a 64k rwnd we need to read 8k. This
- * seems about right.
+/*
+ * Theshold for rwnd updates, we have to read (sb_hiwat >>
+ * SCTP_RWND_HIWAT_SHIFT) before we will look to see if we need to send a
+ * window update sack. When we look, we compare the last rwnd we sent vs the
+ * current rwnd. It too must be greater than this value. Using 3 divdes the
+ * hiwat by 8, so for 200k rwnd we need to read 25k. For a 64k rwnd we need
+ * to read 8k. This seems about right.
  */
 #define SCTP_RWND_HIWAT_SHIFT 3
 /*
- * If you wish to use MD5 instead of SLA uncomment the line below.
- * Why you would like to do this:
- * a) There may be IPR on SHA-1, or so the FIP-180-1 page says,
- * b) MD5 is 3 times faster (has coded here).
- *
+ * If you wish to use MD5 instead of SLA uncomment the line below. Why you
+ * would like to do this: a) There may be IPR on SHA-1, or so the FIP-180-1
+ * page says, b) MD5 is 3 times faster (has coded here).
+ * 
  * The disadvantage is it is thought that MD5 has been cracked... see RFC2104.
  */
-/*#define USE_MD5 1 */
+/* #define USE_MD5 1 */
 /*
- * Note: I can't seem to get this to compile now for some reason- the
- * kernel can't link in the md5 crypto
+ * Note: I can't seem to get this to compile now for some reason- the kernel
+ * can't link in the md5 crypto
  */
 
 /* DEFINE HERE WHAT CRC YOU WANT TO USE */
 #define SCTP_USECRC_RFC2960  1
-/*#define SCTP_USECRC_FLETCHER 1*/
-/*#define SCTP_USECRC_SSHCRC32 1*/
-/*#define SCTP_USECRC_FASTCRC32 1*/
-/*#define SCTP_USECRC_CRC32 1*/
-/*#define SCTP_USECRC_TCP32 1*/
-/*#define SCTP_USECRC_CRC16SMAL 1*/
-/*#define SCTP_USECRC_CRC16 1 */
-/*#define SCTP_USECRC_MODADLER 1*/
+/* #define SCTP_USECRC_FLETCHER 1 */
+/* #define SCTP_USECRC_SSHCRC32 1 */
+/* #define SCTP_USECRC_FASTCRC32 1 */
+/* #define SCTP_USECRC_CRC32 1 */
+/* #define SCTP_USECRC_TCP32 1 */
+/* #define SCTP_USECRC_CRC16SMAL 1 */
+/* #define SCTP_USECRC_CRC16 1 */
+/* #define SCTP_USECRC_MODADLER 1 */
 
 #ifndef SCTP_ADLER32_BASE
 #define SCTP_ADLER32_BASE 65521
 #endif
 
 /*
- * the SCTP protocol signature
- * this includes the version number encoded in the last 4 bits
- * of the signature.
+ * the SCTP protocol signature this includes the version number encoded in
+ * the last 4 bits of the signature.
  */
 #define PROTO_SIGNATURE_A	0x30000000
 #define SCTP_VERSION_NUMBER	0x3
@@ -218,31 +211,31 @@ __FBSDID("$FreeBSD:$");
 /* number of clock ticks between iterator executions */
 #define SCTP_ITERATOR_TICKS 1
 
-/* option:
- * If you comment out the following you will receive the old
- * behavior of obeying cwnd for the fast retransmit algorithm.
- * With this defined a FR happens right away with-out waiting
- * for the flightsize to drop below the cwnd value (which is
- * reduced by the FR to 1/2 the inflight packets).
+/*
+ * option: If you comment out the following you will receive the old behavior
+ * of obeying cwnd for the fast retransmit algorithm. With this defined a FR
+ * happens right away with-out waiting for the flightsize to drop below the
+ * cwnd value (which is reduced by the FR to 1/2 the inflight packets).
  */
 #define SCTP_IGNORE_CWND_ON_FR 1
 
 /*
- * Adds implementors guide behavior to only use newest highest
- * update in SACK gap ack's to figure out if you need to stroke
- * a chunk for FR.
+ * Adds implementors guide behavior to only use newest highest update in SACK
+ * gap ack's to figure out if you need to stroke a chunk for FR.
  */
 #define SCTP_NO_FR_UNLESS_SEGMENT_SMALLER 1
 
 /* default max I can burst out after a fast retransmit */
 #define SCTP_DEF_MAX_BURST 4
 /* IP hdr (20/40) + 12+2+2 (enet) + sctp common 12 */
-#define SCTP_FIRST_MBUF_RESV 68 
+#define SCTP_FIRST_MBUF_RESV 68
 /* Packet transmit states in the sent field */
 #define SCTP_DATAGRAM_UNSENT		0
 #define SCTP_DATAGRAM_SENT		1
-#define SCTP_DATAGRAM_RESEND1		2 /* not used (in code, but may hit this value) */
-#define SCTP_DATAGRAM_RESEND2		3 /* not used (in code, but may hit this value) */
+#define SCTP_DATAGRAM_RESEND1		2	/* not used (in code, but may
+						 * hit this value) */
+#define SCTP_DATAGRAM_RESEND2		3	/* not used (in code, but may
+						 * hit this value) */
 #define SCTP_DATAGRAM_RESEND		4
 #define SCTP_DATAGRAM_ACKED		10010
 #define SCTP_DATAGRAM_INBOUND		10011
@@ -305,24 +298,16 @@ __FBSDID("$FreeBSD:$");
 #define SCTP_CHUNK_LIST			0x8003
 #define SCTP_HMAC_LIST			0x8004
 /*
- * draft-ietf-tsvwg-addip-sctp-xx 
- *   param=0x8008  len=0xNNNN
- *   Byte | Byte | Byte | Byte
- *   Byte | Byte ...
- *
- *  Where each byte is a chunk type extension supported.
- *  For example, to support all chunks one would have (in hex):
- *
- *  80 01 00 09
- *  C0 C1 80 81
- *  82 00 00 00
- *
- *  Has the parameter.
- *   C0 = PR-SCTP    (RFC3758)
- *   C1, 80 = ASCONF (addip draft)
- *   81 = Packet Drop
- *   82 = Stream Reset
- *   83 = Authentication
+ * draft-ietf-tsvwg-addip-sctp-xx param=0x8008  len=0xNNNN Byte | Byte | Byte
+ * | Byte Byte | Byte ...
+ * 
+ * Where each byte is a chunk type extension supported. For example, to support
+ * all chunks one would have (in hex):
+ * 
+ * 80 01 00 09 C0 C1 80 81 82 00 00 00
+ * 
+ * Has the parameter. C0 = PR-SCTP    (RFC3758) C1, 80 = ASCONF (addip draft) 81
+ * = Packet Drop 82 = Stream Reset 83 = Authentication
  */
 #define SCTP_SUPPORTED_CHUNK_EXT    0x8008
 
@@ -364,8 +349,7 @@ __FBSDID("$FreeBSD:$");
 #define SCTP_WINDOW_PROBE	0x01
 
 /*
- * SCTP states for internal state machine
- * XXX (should match "user" values)
+ * SCTP states for internal state machine XXX (should match "user" values)
  */
 #define SCTP_STATE_EMPTY		0x0000
 #define SCTP_STATE_INUSE		0x0001
@@ -400,9 +384,9 @@ __FBSDID("$FreeBSD:$");
 #define SCTP_BOUND_V6		0x01
 #define SCTP_BOUND_V4		0x02
 
-/* what is the default number of mbufs in a chain I
- * allow before switching to a
- * cluster
+/*
+ * what is the default number of mbufs in a chain I allow before switching to
+ * a cluster
  */
 #define SCTP_DEFAULT_MBUFS_IN_CHAIN 5
 
@@ -421,8 +405,8 @@ __FBSDID("$FreeBSD:$");
 #define SCTP_MAPPING_ARRAY_INCR     32
 
 /*
- * Here we define the timer types used by the implementation
- * as arguments in the set/get timer type calls.
+ * Here we define the timer types used by the implementation as arguments in
+ * the set/get timer type calls.
  */
 #define SCTP_TIMER_INIT 	0
 #define SCTP_TIMER_RECV 	1
@@ -432,8 +416,8 @@ __FBSDID("$FreeBSD:$");
 #define SCTP_TIMER_MAXSHUTDOWN	5
 #define SCTP_TIMER_SIGNATURE	6
 /*
- * number of timer types in the base SCTP structure used in
- * the set/get and has the base default.
+ * number of timer types in the base SCTP structure used in the set/get and
+ * has the base default.
  */
 #define SCTP_NUM_TMRS	7
 
@@ -466,18 +450,17 @@ __FBSDID("$FreeBSD:$");
 
 
 /*
- * Number of ticks before the soxwakeup() event that
- * is delayed is sent AFTER the accept() call
+ * Number of ticks before the soxwakeup() event that is delayed is sent AFTER
+ * the accept() call
  */
 #define SCTP_EVENTWAKEUP_WAIT_TICKS	3000
 
 /*
- * Of course we really don't collect stale cookies, being folks
- * of decerning taste. However we do count them, if we get too
- * many before the association comes up.. we give up. Below is
- * the constant that dictates when we give it up...this is a
- * implemenation dependent treatment. In ours we do not ask for
- * a extension of time, but just retry this many times...
+ * Of course we really don't collect stale cookies, being folks of decerning
+ * taste. However we do count them, if we get too many before the association
+ * comes up.. we give up. Below is the constant that dictates when we give it
+ * up...this is a implemenation dependent treatment. In ours we do not ask
+ * for a extension of time, but just retry this many times...
  */
 #define SCTP_MAX_STALE_COOKIES_I_COLLECT 10
 
@@ -497,26 +480,25 @@ __FBSDID("$FreeBSD:$");
 /* How many drop re-attempts we make on  INIT/COOKIE-ECHO */
 #define SCTP_RETRY_DROPPED_THRESH 4
 
-/* And the max we will keep a history of in the tcb
- * which MUST be lower than 256.
+/*
+ * And the max we will keep a history of in the tcb which MUST be lower than
+ * 256.
  */
 #define SCTP_MAX_DROP_SAVE_REPORT 16
 
 /*
- * Here we define the default timers and the default number
- * of attemts we make for each respective side (send/init).
+ * Here we define the default timers and the default number of attemts we
+ * make for each respective side (send/init).
  */
 
-/* Maxmium number of chunks a single association can have
- * on it. Note that this is a squishy number since
- * the count can run over this if the user sends a large
- * message down .. the fragmented chunks don't count until
- * AFTER the message is on queue.. it would be the next
- * send that blocks things. This number will get tuned
- * up at boot in the sctp_init and use the number
- * of clusters as a base. This way high bandwidth
- * environments will not get impacted by the lower
- * bandwidth sending a bunch of 1 byte chunks
+/*
+ * Maxmium number of chunks a single association can have on it. Note that
+ * this is a squishy number since the count can run over this if the user
+ * sends a large message down .. the fragmented chunks don't count until
+ * AFTER the message is on queue.. it would be the next send that blocks
+ * things. This number will get tuned up at boot in the sctp_init and use the
+ * number of clusters as a base. This way high bandwidth environments will
+ * not get impacted by the lower bandwidth sending a bunch of 1 byte chunks
  */
 #define SCTP_ASOC_MAX_CHUNKS_ON_QUEUE 512
 
@@ -526,8 +508,8 @@ __FBSDID("$FreeBSD:$");
 #define TICKS_TO_SEC(x) ((x) / hz)
 
 /*
- * Basically the minimum amount of time before I do a early FR.
- * Making this value to low will cause duplicate retransmissions.
+ * Basically the minimum amount of time before I do a early FR. Making this
+ * value to low will cause duplicate retransmissions.
  */
 #define SCTP_MINFR_MSEC_TIMER 250
 /* The floor this value is allowed to fall to when starting a timer. */
@@ -549,8 +531,9 @@ __FBSDID("$FreeBSD:$");
 #define SCTP_DEF_MAX_SHUTDOWN_SEC 180
 
 
-/* This is how long a secret lives, NOT how long a cookie lives
- * how many ticks the current secret will live.
+/*
+ * This is how long a secret lives, NOT how long a cookie lives how many
+ * ticks the current secret will live.
  */
 #define SCTP_DEFAULT_SECRET_LIFE_SEC 3600
 
@@ -560,14 +543,16 @@ __FBSDID("$FreeBSD:$");
 #define SCTP_RTO_INITIAL	(3000)	/* 3 sec in ms */
 
 
-#define SCTP_INP_KILL_TIMEOUT 1000 /* number of ms to retry kill of inpcb */
-#define SCTP_ASOC_KILL_TIMEOUT 10 /* number of ms to retry kill of inpcb */
+#define SCTP_INP_KILL_TIMEOUT 1000	/* number of ms to retry kill of
+					 * inpcb */
+#define SCTP_ASOC_KILL_TIMEOUT 10	/* number of ms to retry kill of
+					 * inpcb */
 
 #define SCTP_DEF_MAX_INIT	8
 #define SCTP_DEF_MAX_SEND	10
 #define SCTP_DEF_MAX_PATH_RTX	4
 
-#define SCTP_DEF_PMTU_RAISE_SEC	600  /* 10 min between raise attempts */
+#define SCTP_DEF_PMTU_RAISE_SEC	600	/* 10 min between raise attempts */
 #define SCTP_DEF_PMTU_MIN	600
 
 #define SCTP_MSEC_IN_A_SEC	1000
@@ -580,13 +565,13 @@ __FBSDID("$FreeBSD:$");
 #define SCTP_OSTREAM_INITIAL 10
 
 /*
- * How many smallest_mtu's need to increase before a window update sack
- * is sent (should be a power of 2).
+ * How many smallest_mtu's need to increase before a window update sack is
+ * sent (should be a power of 2).
  */
 #define SCTP_SEG_TO_RWND_UPD 32
 /* Send window update (incr * this > hiwat). Should be a power of 2 */
 #define SCTP_SCALE_OF_RWND_TO_UPD       4
-#define SCTP_MINIMAL_RWND		(4096) /* minimal rwnd */
+#define SCTP_MINIMAL_RWND		(4096)	/* minimal rwnd */
 
 #define SCTP_ADDRMAX		20
 
@@ -630,8 +615,8 @@ __FBSDID("$FreeBSD:$");
 #define SCTP_SWS_SENDER_DEF	1420
 
 /*
- * SWS is scaled to the sb_hiwat of the socket.
- * A value of 2 is hiwat/4, 1 would be hiwat/2 etc.
+ * SWS is scaled to the sb_hiwat of the socket. A value of 2 is hiwat/4, 1
+ * would be hiwat/2 etc.
  */
 /* What receiver needs to see in sockbuf or we tell peer its 1 */
 #define SCTP_SWS_RECEIVER_DEF	3000
@@ -642,14 +627,12 @@ __FBSDID("$FreeBSD:$");
 #define SCTP_MIN_RWND	1500
 
 #define SCTP_WINDOW_MIN	1500	/* smallest rwnd can be */
-#define SCTP_WINDOW_MAX 1048576	/* biggest I can grow rwnd to
-				 * My playing around suggests a
-				 * value greater than 64k does not
-				 * do much, I guess via the kernel
-				 * limitations on the stream/socket.
-				 */
+#define SCTP_WINDOW_MAX 1048576	/* biggest I can grow rwnd to My playing
+				 * around suggests a value greater than 64k
+				 * does not do much, I guess via the kernel
+				 * limitations on the stream/socket. */
 
-/*  I can handle a 1meg re-assembly */
+/* I can handle a 1meg re-assembly */
 #define SCTP_DEFAULT_MAXMSGREASM 1048576
 
 #define SCTP_DEFAULT_MAXSEGMENT 65535
@@ -667,7 +650,7 @@ __FBSDID("$FreeBSD:$");
 #define SCTP_SIGNATURE_SIZE	16	/* size of a MD5 signature */
 #else
 #define SCTP_SIGNATURE_SIZE	20	/* size of a SLA-1 signature */
-#endif /* USE_MD5 */
+#endif				/* USE_MD5 */
 
 #define SCTP_SIGNATURE_ALOC_SIZE 20
 
@@ -708,14 +691,13 @@ __FBSDID("$FreeBSD:$");
 /* clock variance is 10ms */
 #define SCTP_CLOCK_GRANULARITY	10
 
-#define IP_HDR_SIZE 40		/* we use the size of a IP6 header here
-				 * this detracts a small amount for ipv4
-				 * but it simplifies the ipv6 addition
-				 */
+#define IP_HDR_SIZE 40		/* we use the size of a IP6 header here this
+				 * detracts a small amount for ipv4 but it
+				 * simplifies the ipv6 addition */
 
 #ifndef IPPROTO_SCTP
 #define IPPROTO_SCTP 132	/* the Official IANA number :-) */
-#endif /* !IPPROTO_SCTP */
+#endif				/* !IPPROTO_SCTP */
 
 #define SCTP_MAX_DATA_BUNDLING		256
 #define SCTP_MAX_CONTROL_BUNDLING	20
@@ -874,31 +856,30 @@ __FBSDID("$FreeBSD:$");
 
 
 /*
- * This value defines the number of vtag block time wait entry's
- * per list element.  Each entry will take 2 4 byte ints (and of
- * course the overhead of the next pointer as well). Using 15 as
- * an example will yield * ((8 * 15) + 8) or 128 bytes of overhead
- * for each timewait block that gets initialized. Increasing it to
- * 31 would yeild 256 bytes per block.
+ * This value defines the number of vtag block time wait entry's per list
+ * element.  Each entry will take 2 4 byte ints (and of course the overhead
+ * of the next pointer as well). Using 15 as an example will yield * ((8 *
+ * 15) + 8) or 128 bytes of overhead for each timewait block that gets
+ * initialized. Increasing it to 31 would yeild 256 bytes per block.
  */
 #define SCTP_NUMBER_IN_VTAG_BLOCK 15
 /*
- * If we use the STACK option, we have an array of this size head
- * pointers. This array is mod'd the with the size to find which
- * bucket and then all entries must be searched to see if the tag
- * is in timed wait. If so we reject it.
+ * If we use the STACK option, we have an array of this size head pointers.
+ * This array is mod'd the with the size to find which bucket and then all
+ * entries must be searched to see if the tag is in timed wait. If so we
+ * reject it.
  */
 #define SCTP_STACK_VTAG_HASH_SIZE 31
 
 /*
- * If we use the per-endpoint model than we do not have a hash
- * table of entries but instead have a single head pointer and
- * we must crawl through the entire list.
+ * If we use the per-endpoint model than we do not have a hash table of
+ * entries but instead have a single head pointer and we must crawl through
+ * the entire list.
  */
 
 /*
- * Number of seconds of time wait, tied to MSL value (2 minutes),
- * so 2 * MSL = 4 minutes or 480 seconds.
+ * Number of seconds of time wait, tied to MSL value (2 minutes), so 2 * MSL
+ * = 4 minutes or 480 seconds.
  */
 #define SCTP_TIME_WAIT 480
 
@@ -932,7 +913,7 @@ __FBSDID("$FreeBSD:$");
 #else
 #define SCTP_GETTIME_TIMEVAL(x)	(microtime(x))
 #define SCTP_GETTIME_TIMESPEC(x) (nanotime(x))
-#endif /* __FreeBSD__ */
+#endif				/* __FreeBSD__ */
 
 #define sctp_sowwakeup(inp, so) \
 do { \
@@ -975,5 +956,5 @@ do { \
 } while (0)
 #endif
 
-#endif /* _KERNEL */
+#endif				/* _KERNEL */
 #endif

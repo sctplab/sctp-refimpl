@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  */
 
-/*	$KAME: sctp_hashdriver.c,v 1.6 2004/02/24 21:52:26 itojun Exp $	*/
+/* $KAME: sctp_hashdriver.c,v 1.6 2004/02/24 21:52:26 itojun Exp $	 */
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
@@ -54,38 +54,38 @@ __FBSDID("$FreeBSD:$");
 #include <crypto/md5.h>
 #else
 #include <netinet/sctp_sha1.h>
-#endif /* USE_MD5 */
+#endif				/* USE_MD5 */
 #include <netinet/sctp_hashdriver.h>
 
 /*
- * Main driver for SCTP's hashing.
- * passing a two pointers and two lengths, returning a digest pointer
- * filled. The md5 code was taken directly from the RFC (2104) so to
- * understand it you may want to go look at the RFC referenced in the
- * SCTP spec. We did modify this code to either user OURs implementation
- * of SLA1 or the MD5 that comes from its RFC. SLA1 may have IPR issues
- * so you need to check in to this if you wish to use it... Or at least
- * that is what the FIP-180.1 web page says.
+ * Main driver for SCTP's hashing. passing a two pointers and two lengths,
+ * returning a digest pointer filled. The md5 code was taken directly from
+ * the RFC (2104) so to understand it you may want to go look at the RFC
+ * referenced in the SCTP spec. We did modify this code to either user OURs
+ * implementation of SLA1 or the MD5 that comes from its RFC. SLA1 may have
+ * IPR issues so you need to check in to this if you wish to use it... Or at
+ * least that is what the FIP-180.1 web page says.
  */
 
-void sctp_hash_digest(char *key, int key_len, char *text, int text_len,
-    unsigned char *digest)
+void 
+sctp_hash_digest(char *key, int key_len, char *text, int text_len,
+		 unsigned char *digest)
 {
 #ifdef USE_MD5
-	md5_ctxt context;
+	md5_ctxt	context;
 #else
 	struct sha1_context context;
-#endif /* USE_MD5 */
+#endif				/* USE_MD5 */
 	/* inner padding - key XORd with ipad */
-	unsigned char k_ipad[65];
+	unsigned char	k_ipad[65];
 	/* outer padding - key XORd with opad */
-	unsigned char k_opad[65];
-	unsigned char tk[20];
-	int i;
+	unsigned char	k_opad[65];
+	unsigned char	tk[20];
+	int		i;
 
 	if (key_len > 64) {
 #ifdef USE_MD5
-		md5_ctxt tctx;
+		md5_ctxt	tctx;
 		MD5Init(&tctx);
 		MD5Update(&tctx, key, key_len);
 		MD5Final(tk, &tctx);
@@ -98,18 +98,16 @@ void sctp_hash_digest(char *key, int key_len, char *text, int text_len,
 		SHA1_Final(tk, &tctx);
 		key = (char *)tk;
 		key_len = 20;
-#endif /* USE_MD5 */
+#endif				/* USE_MD5 */
 	}
-
 	/*
 	 * the HMAC_MD5 transform looks like:
-	 *
+	 * 
 	 * MD5(K XOR opad, MD5(K XOR ipad, text))
-	 *
-	 * where K is an n byte key
-	 * ipad is the byte 0x36 repeated 64 times
-	 * opad is the byte 0x5c repeated 64 times
-	 * and text is the data being protected
+	 * 
+	 * where K is an n byte key ipad is the byte 0x36 repeated 64 times opad
+	 * is the byte 0x5c repeated 64 times and text is the data being
+	 * protected
 	 */
 
 	/* start out by storing key in pads */
@@ -127,55 +125,57 @@ void sctp_hash_digest(char *key, int key_len, char *text, int text_len,
 	 * perform inner MD5
 	 */
 #ifdef USE_MD5
-	MD5Init(&context);			/* init context for 1st pass */
+	MD5Init(&context);	/* init context for 1st pass */
 	MD5Update(&context, k_ipad, 64);	/* start with inner pad */
 	MD5Update(&context, text, text_len);	/* then text of datagram */
-	MD5Final(digest, &context);		/* finish up 1st pass */
+	MD5Final(digest, &context);	/* finish up 1st pass */
 #else
-	SHA1_Init(&context);			/* init context for 1st pass */
+	SHA1_Init(&context);	/* init context for 1st pass */
 	SHA1_Update(&context, k_ipad, 64);	/* start with inner pad */
-	SHA1_Update(&context, 
-		    (unsigned char *)text, 
+	SHA1_Update(&context,
+		    (unsigned char *)text,
 		    text_len);	/* then text of datagram */
-	SHA1_Final(digest, &context);		/* finish up 1st pass */
-#endif /* USE_MD5 */
+	SHA1_Final(digest, &context);	/* finish up 1st pass */
+#endif				/* USE_MD5 */
 
 	/*
 	 * perform outer MD5
 	 */
 #ifdef USE_MD5
-	MD5Init(&context);			/* init context for 2nd pass */
+	MD5Init(&context);	/* init context for 2nd pass */
 	MD5Update(&context, k_opad, 64);	/* start with outer pad */
 	MD5Update(&context, digest, 16);	/* then results of 1st hash */
-	MD5Final(digest, &context);		/* finish up 2nd pass */
+	MD5Final(digest, &context);	/* finish up 2nd pass */
 #else
-	SHA1_Init(&context);			/* init context for 2nd pass */
+	SHA1_Init(&context);	/* init context for 2nd pass */
 	SHA1_Update(&context, k_opad, 64);	/* start with outer pad */
-	SHA1_Update(&context, 
-		    (unsigned char *)digest, 20);	/* then results of 1st hash */
-	SHA1_Final(digest, &context);		/* finish up 2nd pass */
-#endif /* USE_MD5 */
+	SHA1_Update(&context,
+		    (unsigned char *)digest, 20);	/* then results of 1st
+							 * hash */
+	SHA1_Final(digest, &context);	/* finish up 2nd pass */
+#endif				/* USE_MD5 */
 }
 
-void sctp_hash_digest_m(char *key, int key_len, struct mbuf *m, int offset,
-    unsigned char *digest)
+void 
+sctp_hash_digest_m(char *key, int key_len, struct mbuf *m, int offset,
+		   unsigned char *digest)
 {
-	struct mbuf *m_at;
+	struct mbuf    *m_at;
 #ifdef USE_MD5
-	md5_ctxt context;
+	md5_ctxt	context;
 #else
 	struct sha1_context context;
-#endif /* USE_MD5 */
+#endif				/* USE_MD5 */
 	/* inner padding - key XORd with ipad */
-	unsigned char k_ipad[65];
+	unsigned char	k_ipad[65];
 	/* outer padding - key XORd with opad */
-	unsigned char k_opad[65];
-	unsigned char tk[20];
-	int i;
+	unsigned char	k_opad[65];
+	unsigned char	tk[20];
+	int		i;
 
 	if (key_len > 64) {
 #ifdef USE_MD5
-		md5_ctxt tctx;
+		md5_ctxt	tctx;
 		MD5Init(&tctx);
 		MD5Update(&tctx, key, key_len);
 		MD5Final(tk, &tctx);
@@ -188,18 +188,16 @@ void sctp_hash_digest_m(char *key, int key_len, struct mbuf *m, int offset,
 		SHA1_Final(tk, &tctx);
 		key = (char *)tk;
 		key_len = 20;
-#endif /* USE_MD5 */
+#endif				/* USE_MD5 */
 	}
-
 	/*
 	 * the HMAC_MD5 transform looks like:
-	 *
+	 * 
 	 * MD5(K XOR opad, MD5(K XOR ipad, text))
-	 *
-	 * where K is an n byte key
-	 * ipad is the byte 0x36 repeated 64 times
-	 * opad is the byte 0x5c repeated 64 times
-	 * and text is the data being protected
+	 * 
+	 * where K is an n byte key ipad is the byte 0x36 repeated 64 times opad
+	 * is the byte 0x5c repeated 64 times and text is the data being
+	 * protected
 	 */
 
 	/* start out by storing key in pads */
@@ -224,47 +222,47 @@ void sctp_hash_digest_m(char *key, int key_len, struct mbuf *m, int offset,
 	 * perform inner MD5
 	 */
 #ifdef USE_MD5
-	MD5Init(&context);			/* init context for 1st pass */
+	MD5Init(&context);	/* init context for 1st pass */
 	MD5Update(&context, k_ipad, 64);	/* start with inner pad */
 	/******/
 	while (m_at != NULL) {
 		/* then text of datagram... */
 		MD5Update(&context, mtod(m_at, char *)+offset,
-			  m_at->m_len-offset);
+			  m_at->m_len - offset);
 		/* only offset on the first mbuf */
 		offset = 0;
 		m_at = m_at->m_next;
 	}
 	/******/
-	MD5Final(digest, &context);		/* finish up 1st pass */
+	MD5Final(digest, &context);	/* finish up 1st pass */
 #else
-	SHA1_Init(&context);			/* init context for 1st pass */
+	SHA1_Init(&context);	/* init context for 1st pass */
 	SHA1_Update(&context, k_ipad, 64);	/* start with inner pad */
 	/******/
 	while (m_at != NULL) {
 		/* then text of datagram */
 		SHA1_Update(&context, mtod(m_at, unsigned char *)+offset,
-			     m_at->m_len-offset);
+			    m_at->m_len - offset);
 		/* only offset on the first mbuf */
 		offset = 0;
 		m_at = m_at->m_next;
 	}
 	/******/
-	SHA1_Final(digest, &context);             /* finish up 1st pass */
-#endif /* USE_MD5 */
+	SHA1_Final(digest, &context);	/* finish up 1st pass */
+#endif				/* USE_MD5 */
 
 	/*
 	 * perform outer MD5
 	 */
 #ifdef USE_MD5
-	MD5Init(&context);			/* init context for 2nd pass */
+	MD5Init(&context);	/* init context for 2nd pass */
 	MD5Update(&context, k_opad, 64);	/* start with outer pad */
 	MD5Update(&context, digest, 16);	/* then results of 1st hash */
-	MD5Final(digest, &context);		/* finish up 2nd pass */
+	MD5Final(digest, &context);	/* finish up 2nd pass */
 #else
-	SHA1_Init(&context);			/* init context for 2nd pass */
+	SHA1_Init(&context);	/* init context for 2nd pass */
 	SHA1_Update(&context, k_opad, 64);	/* start with outer pad */
 	SHA1_Update(&context, digest, 20);	/* then results of 1st hash */
-	SHA1_Final(digest, &context);		/* finish up 2nd pass */
-#endif /* USE_MD5 */
+	SHA1_Final(digest, &context);	/* finish up 2nd pass */
+#endif				/* USE_MD5 */
 }
