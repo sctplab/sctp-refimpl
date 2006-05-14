@@ -48,10 +48,10 @@ __FBSDID("$FreeBSD:$");
  */
 
 struct sctphdr {
-	u_int16_t	src_port;	/* source port */
-	u_int16_t	dest_port;	/* destination port */
-	u_int32_t	v_tag;	/* verification tag of packet */
-	u_int32_t	checksum;	/* Adler32 C-Sum */
+	uint16_t	src_port;	/* source port */
+	uint16_t	dest_port;	/* destination port */
+	uint32_t	v_tag;	/* verification tag of packet */
+	uint32_t	checksum;	/* Adler32 C-Sum */
 	/* chunks follow... */
 };
 
@@ -59,9 +59,9 @@ struct sctphdr {
  * SCTP Chunks
  */
 struct sctp_chunkhdr {
-	u_int8_t	chunk_type;	/* chunk type */
-	u_int8_t	chunk_flags;	/* chunk flags */
-	u_int16_t	chunk_length;	/* chunk length */
+	uint8_t	chunk_type;	/* chunk type */
+	uint8_t	chunk_flags;	/* chunk flags */
+	uint16_t	chunk_length;	/* chunk length */
 	/* optional params follow */
 };
 
@@ -69,8 +69,8 @@ struct sctp_chunkhdr {
  * SCTP chunk parameters
  */
 struct sctp_paramhdr {
-	u_int16_t	param_type;	/* parameter type */
-	u_int16_t	param_length;	/* parameter length */
+	uint16_t	param_type;	/* parameter type */
+	uint16_t	param_length;	/* parameter length */
 };
 
 /*
@@ -235,27 +235,27 @@ struct sctp_paramhdr {
  * error cause parameters (user visisble)
  */
 struct sctp_error_cause {
-	u_int16_t	code;
-	u_int16_t	length;
+	uint16_t	code;
+	uint16_t	length;
 	/* optional cause-specific info may follow */
 };
 
 struct sctp_error_invalid_stream {
 	struct sctp_error_cause cause;	/* code=SCTP_ERROR_INVALID_STREAM */
-	u_int16_t	stream_id;	/* stream id of the DATA in error */
-	u_int16_t	reserved;
+	uint16_t	stream_id;	/* stream id of the DATA in error */
+	uint16_t	reserved;
 };
 
 struct sctp_error_missing_param {
 	struct sctp_error_cause cause;	/* code=SCTP_ERROR_MISSING_PARAM */
-	u_int32_t	num_missing_params;	/* number of missing
+	uint32_t	num_missing_params;	/* number of missing
 						 * parameters */
-	/* u_int16_t param_type's follow */
+	/* uint16_t param_type's follow */
 };
 
 struct sctp_error_stale_cookie {
 	struct sctp_error_cause cause;	/* code=SCTP_ERROR_STALE_COOKIE */
-	u_int32_t	stale_time;	/* time in usec of staleness */
+	uint32_t	stale_time;	/* time in usec of staleness */
 };
 
 struct sctp_error_out_of_resource {

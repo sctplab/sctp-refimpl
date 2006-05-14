@@ -246,27 +246,27 @@ struct sctp_epinfo {
 	void           *ipi_count_mtx;
 #endif				/* _KERN_LOCKS_H_ */
 #endif
-	u_int		ipi_count_ep;
+	uint		ipi_count_ep;
 	u_quad_t	ipi_gencnt_ep;
 
 	/* assoc/tcb zone info */
-	u_int		ipi_count_asoc;
+	uint		ipi_count_asoc;
 	u_quad_t	ipi_gencnt_asoc;
 
 	/* local addrlist zone info */
-	u_int		ipi_count_laddr;
+	uint		ipi_count_laddr;
 	u_quad_t	ipi_gencnt_laddr;
 
 	/* remote addrlist zone info */
-	u_int		ipi_count_raddr;
+	uint		ipi_count_raddr;
 	u_quad_t	ipi_gencnt_raddr;
 
 	/* chunk structure list for output */
-	u_int		ipi_count_chunk;
+	uint		ipi_count_chunk;
 	u_quad_t	ipi_gencnt_chunk;
 
 	/* socket queue zone info */
-	u_int		ipi_count_readq;
+	uint		ipi_count_readq;
 	u_quad_t	ipi_gencnt_readq;
 
 	struct sctpvtaghead vtag_timewait[SCTP_STACK_VTAG_HASH_SIZE];
@@ -413,16 +413,16 @@ struct sctp_inpcb {
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
 	struct mtx	inp_mtx;
 	struct mtx	inp_create_mtx;
-	u_int32_t	refcount;
+	uint32_t	refcount;
 #elif defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
 #ifdef _KERN_LOCKS_H_
 	lck_mtx_t      *inp_mtx;
 	lck_mtx_t      *inp_create_mtx;
-	u_int32_t	refcount;
+	uint32_t	refcount;
 #else
 	void           *inp_mtx;
 	void           *inp_create_mtx;
-	u_int32_t	refcount;
+	uint32_t	refcount;
 #endif				/* _KERN_LOCKS_H_ */
 #endif
 };

@@ -51,9 +51,9 @@ __FBSDID("$FreeBSD:$");
 #endif
 
 #if defined(_KERNEL)
-u_int32_t	update_crc32(u_int32_t, unsigned char *, unsigned int);
+uint32_t	update_crc32(uint32_t, unsigned char *, unsigned int);
 
-u_int32_t	sctp_csum_finalize(u_int32_t);
+uint32_t	sctp_csum_finalize(uint32_t);
 
 void		sctp_warm_tables(void);
 
