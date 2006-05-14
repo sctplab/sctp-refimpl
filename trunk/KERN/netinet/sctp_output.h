@@ -29,6 +29,11 @@
 
 /*	$KAME: sctp_output.h,v 1.14 2005/03/06 16:04:18 itojun Exp $	*/
 
+#ifdef __FreeBSD__
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD:$");
+#endif
+
 #ifndef __sctp_output_h__
 #define __sctp_output_h__
 

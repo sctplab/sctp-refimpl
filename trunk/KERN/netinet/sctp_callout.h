@@ -29,6 +29,11 @@
 
 /*	$KAME: sctp_callout.h,v 1.9 2005/03/06 16:04:17 itojun Exp $	*/
 
+#ifdef __FreeBSD__
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD:$");
+#endif
+
 #ifndef __SCTP_CALLOUT__
 #define __SCTP_CALLOUT__
 

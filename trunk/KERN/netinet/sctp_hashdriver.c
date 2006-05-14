@@ -32,6 +32,11 @@
 
 /*	$KAME: sctp_hashdriver.c,v 1.6 2004/02/24 21:52:26 itojun Exp $	*/
 
+#ifdef __FreeBSD__
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD:$");
+#endif
+
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/malloc.h>

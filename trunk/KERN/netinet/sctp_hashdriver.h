@@ -32,6 +32,11 @@
 
 /*	$KAME: sctp_hashdriver.h,v 1.4 2003/11/25 06:40:52 ono Exp $	*/
 
+#ifdef __FreeBSD__
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD:$");
+#endif
+
 #ifndef __sctp_hashdriver_h__
 #define __sctp_hashdriver_h__
 
