@@ -536,8 +536,8 @@ sctp_queue_data_to_stream(struct sctp_tcb *stcb, struct sctp_association *asoc,
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INDATA1) {
 		printf("queue to stream called for ssn:%u lastdel:%u nxt:%u\n",
-		       (uint) control->sinfo_stream,
-		  (uint) strm->last_sequence_delivered, (uint) nxt_todel);
+		       (uint32_t) control->sinfo_stream,
+		  (uint32_t) strm->last_sequence_delivered, (uint32_t) nxt_todel);
 	}
 #endif
 	if (compare_with_wrap(strm->last_sequence_delivered,
@@ -3284,7 +3284,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			/* mark the sending seq for possible subsequent FR's */
 			/*
 			 * printf("Marking TSN for FR new value %x\n",
-			 * (uint)tpi->rec.data.TSN_seq);
+			 * (uint32_t)tpi->rec.data.TSN_seq);
 			 */
 			if (TAILQ_EMPTY(&asoc->send_queue)) {
 				/*
@@ -3803,7 +3803,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_INDATA1) {
 			printf("cum_ack:%lx num_seg:%u last_acked_seq:%x\n",
-			    cum_ack, (uint) num_seg, asoc->last_acked_seq);
+			    cum_ack, (uint32_t) num_seg, asoc->last_acked_seq);
 		}
 #endif
 	}

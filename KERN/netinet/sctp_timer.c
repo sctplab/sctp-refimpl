@@ -325,8 +325,8 @@ sctp_threshold_management(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		printf("Overall error count for %p now %d thresh:%u state:%x\n",
 		       &stcb->asoc,
 		       stcb->asoc.overall_error_count,
-		       (uint) threshold,
-		     ((net == NULL) ? (uint) 0 : (uint) net->dest_state));
+		       (uint32_t) threshold,
+		     ((net == NULL) ? (uint32_t) 0 : (uint32_t) net->dest_state));
 	}
 #endif				/* SCTP_DEBUG */
 	/*

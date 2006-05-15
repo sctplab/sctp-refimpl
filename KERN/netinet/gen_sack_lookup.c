@@ -78,7 +78,7 @@ out:
 		       sack_array.left_edge,
 		       sack_array.num_entries,
 		       sack_array.spare,
-		       (uint) i);
+		       (uint32_t) i);
 		printf(" { { %d, %d},\n",
 		       sack_array.gaps[0].start,
 		       sack_array.gaps[0].end);
