@@ -1,9 +1,4 @@
-/*	$KAME: sctp_hashdriver.h,v 1.4 2003/11/25 06:40:52 ono Exp $	*/
-
-#ifndef __sctp_hashdriver_h__
-#define __sctp_hashdriver_h__
-
-/*
+/*-
  * Copyright (c) 2001, 2002 Cisco Systems, Inc.
  * All rights reserved.
  *
@@ -35,8 +30,19 @@
  * SUCH DAMAGE.
  */
 
-void sctp_hash_digest(char *, int, char *, int, unsigned char *);
+/* $KAME: sctp_hashdriver.h,v 1.4 2003/11/25 06:40:52 ono Exp $	 */
 
-void sctp_hash_digest_m(char *, int, struct mbuf *, int, unsigned char *);
+#ifdef __FreeBSD__
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD:$");
+#endif
+
+#ifndef __sctp_hashdriver_h__
+#define __sctp_hashdriver_h__
+
+
+void		sctp_hash_digest(char *, int, char *, int, unsigned char *);
+
+void		sctp_hash_digest_m(char *, int, struct mbuf *, int, unsigned char *);
 
 #endif
