@@ -1,9 +1,4 @@
-/*	$KAME: sctp_crc32.h,v 1.5 2004/08/17 04:06:16 itojun Exp $	*/
-
-#ifndef __crc32c_h__
-#define __crc32c_h__
-
-/*
+/*-
  * Copyright (c) 2001, 2002, 2004 Cisco Systems, Inc.
  * All rights reserved.
  *
@@ -35,6 +30,17 @@
  * SUCH DAMAGE.
  */
 
+/* $KAME: sctp_crc32.h,v 1.5 2004/08/17 04:06:16 itojun Exp $	 */
+
+#ifdef __FreeBSD__
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD:$");
+#endif
+
+#ifndef __crc32c_h__
+#define __crc32c_h__
+
+
 #include <sys/types.h>
 
 #ifndef SCTP_USE_ADLER32
@@ -45,12 +51,12 @@
 #endif
 
 #if defined(_KERNEL)
-u_int32_t update_crc32(u_int32_t, unsigned char *, unsigned int);
+uint32_t	update_crc32(uint32_t, unsigned char *, unsigned int);
 
-u_int32_t sctp_csum_finalize(u_int32_t);
+uint32_t	sctp_csum_finalize(uint32_t);
 
-void sctp_warm_tables(void);
+void		sctp_warm_tables(void);
 
-#endif /* _KERNEL */
-#endif /* !SCTP_USE_ADLER32 */
-#endif /* __crc32c_h__ */
+#endif				/* _KERNEL */
+#endif				/* !SCTP_USE_ADLER32 */
+#endif				/* __crc32c_h__ */
