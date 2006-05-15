@@ -2205,7 +2205,7 @@ sctp_optsget(struct socket *so,
 			*level = sctp_debug_on;
 			m->m_len = sizeof(uint32_t);
 			printf("Returning DEBUG LEVEL %x is set\n",
-			       (uint) sctp_debug_on);
+			       (uint32_t) sctp_debug_on);
 		}
 #else				/* SCTP_DEBUG */
 		error = EOPNOTSUPP;
@@ -3932,7 +3932,7 @@ sctp_optsset(struct socket *so,
 			sctp_debug_on = (*level & (SCTP_DEBUG_ALL |
 						   SCTP_DEBUG_NOISY));
 			printf("SETTING DEBUG LEVEL to %x\n",
-			       (uint) sctp_debug_on);
+			       (uint32_t) sctp_debug_on);
 
 		}
 #else
@@ -5544,7 +5544,7 @@ sctp_usrreq(so, req, m, nam, control)
 int
 sctp_sysctl(name, namelen, oldp, oldlenp, newp, newlen)
 	int            *name;
-	uint		namelen;
+	uint32_t       namelen;
 	void           *oldp;
 	size_t         *oldlenp;
 	void           *newp;
