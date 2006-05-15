@@ -40,7 +40,9 @@ __FBSDID("$FreeBSD:$");
 #ifndef _NETINET_SCTP_H_
 #define _NETINET_SCTP_H_
 
-
+#ifdef __APPLE__
+#include <stdint.h>
+#endif
 #include <sys/types.h>
 
 /*
