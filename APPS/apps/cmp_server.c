@@ -196,7 +196,7 @@ main(int argc, char **argv)
 		return(-1);
 	}
 	sprintf(name,"./out_log_oferr_tcp.txt");
-#ifndef WIN32
+#if !defined(WIN32) && !defined(linux)
 	if((protocol_touse == IPPROTO_SCTP) && maxburst){
 		int sz;
 		sz = sizeof(maxburst);
@@ -210,7 +210,7 @@ main(int argc, char **argv)
 		sprintf(name,"./out_log_oferr_sctp.txt");
 
 	}
-#endif /* WIN32 */
+#endif /* !WIN32 && !linux */
 
 	memset(&bindto,0,sizeof(bindto));
 	sa_len = sizeof(bindto);
