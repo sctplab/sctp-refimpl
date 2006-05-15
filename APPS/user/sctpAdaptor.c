@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.20 2006-05-01 11:26:40 tuexen Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.21 2006-05-15 16:35:39 lei Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -770,7 +770,11 @@ create_SCTP_adaptor(distributor *o,uint16_t port, int model, int rwnd , int swnd
   event.sctp_peer_error_event = 1;
   event.sctp_shutdown_event = 1;
   event.sctp_partial_delivery_event = 1;
+#if defined(__BSD_SCTP_STACK__)
   event.sctp_adaptation_layer_event = 1;
+#else
+  event.sctp_adaption_layer_event = 1;
+#endif
 #if defined(__BSD_SCTP_STACK__)
   event.sctp_authentication_event = 1;
   event.sctp_stream_reset_events = 1;

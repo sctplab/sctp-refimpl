@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.43 2006-05-01 11:25:36 tuexen Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.44 2006-05-15 16:35:39 lei Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -59,8 +59,10 @@
 #include <stdint.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#ifndef linux
 #include <net/if_dl.h>
 #include <sys/filio.h>
+#endif
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <stdarg.h>
@@ -4413,8 +4415,13 @@ cmd_getevents(char *argv[], int argc)
   printf("PD-API events %s be received\n",
 	 (event.sctp_partial_delivery_event ? "Will" : "Will NOT"));
 
+#if defined(__BSD_SCTP_STACK__) 
   printf("Adaption layer events %s be received\n",
 	 (event.sctp_adaptation_layer_event ? "Will" : "Will NOT"));
+#else
+  printf("Adaption layer events %s be received\n",
+	 (event.sctp_adaption_layer_event ? "Will" : "Will NOT"));
+#endif
 
 #if defined(__BSD_SCTP_STACK__) 
   printf("AUTHentication layer events %s be received\n",
