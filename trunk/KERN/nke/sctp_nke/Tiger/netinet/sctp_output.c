@@ -2855,7 +2855,7 @@ bound_all_v4_plan_c:
 			      loopscope, ipv4_scope, &sin_loop, &sin_local);
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
-			printf("Found ifn:%x %d prefered source addresses\n", (uint) ifn, num_prefered);
+			printf("Found ifn:%x %d prefered source addresses\n", (uint32_t) ifn, num_prefered);
 		}
 #endif
 		if (num_prefered == 0) {
@@ -3574,7 +3574,7 @@ sctp_choose_v6_boundall(struct sctp_inpcb *inp,
 	if (sin6) {
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
-			printf("Selected address %d ifn:%x for the route\n", cur_addr_num, (uint) ifn);
+			printf("Selected address %d ifn:%x for the route\n", cur_addr_num, (uint32_t) ifn);
 		}
 #endif
 		if (net) {
@@ -3605,14 +3605,14 @@ bound_all_v6_plan_b:
 		inp->next_ifn_touse = TAILQ_FIRST(&ifnet);
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
-			printf("Start at first IFN:%x\n", (uint) inp->next_ifn_touse);
+			printf("Start at first IFN:%x\n", (uint32_t) inp->next_ifn_touse);
 		}
 #endif
 	} else {
 		inp->next_ifn_touse = TAILQ_NEXT(inp->next_ifn_touse, if_list);
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
-			printf("Resume at IFN:%x\n", (uint) inp->next_ifn_touse);
+			printf("Resume at IFN:%x\n", (uint32_t) inp->next_ifn_touse);
 		}
 #endif
 		if (inp->next_ifn_touse == NULL) {
@@ -3656,7 +3656,7 @@ bound_all_v6_plan_b:
 		num_eligible_addr = sctp_count_v6_num_eligible_boundall(ifn, stcb, non_asoc_addr_ok, loopscope, loc_scope);
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
-			printf("IFN:%x has %d eligible\n", (uint) ifn, num_eligible_addr);
+			printf("IFN:%x has %d eligible\n", (uint32_t) ifn, num_eligible_addr);
 		}
 #endif
 		if (num_eligible_addr == 0) {
@@ -3689,7 +3689,7 @@ bound_all_v6_plan_b:
 		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
 			printf("Selected the %d'th address of ifn:%x\n",
 			       cur_addr_num,
-			       (uint) ifn);
+			       (uint32_t) ifn);
 		}
 #endif
 		return (sin6);
@@ -4136,7 +4136,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
 				printf("low_level_output: dropped v4 packet- no valid source addr\n");
-				printf("Destination was %x\n", (uint) (ntohl(ip->ip_dst.s_addr)));
+				printf("Destination was %x\n", (uint32_t) (ntohl(ip->ip_dst.s_addr)));
 			}
 #endif				/* SCTP_DEBUG */
 			if (net) {
@@ -4173,8 +4173,8 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
 			printf("Calling ipv4 output routine from low level src addr:%x\n",
-			       (uint) (ntohl(ip->ip_src.s_addr)));
-			printf("Destination is %x\n", (uint) (ntohl(ip->ip_dst.s_addr)));
+			       (uint32_t) (ntohl(ip->ip_src.s_addr)));
+			printf("Destination is %x\n", (uint32_t) (ntohl(ip->ip_dst.s_addr)));
 			printf("RTP route is %p through\n", ro->ro_rt);
 		}
 #endif
@@ -4903,7 +4903,7 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
 		printf("Calling lowlevel output stcb:%x net:%x\n",
-		       (uint) stcb, (uint) net);
+		       (uint32_t) stcb, (uint32_t) net);
 	}
 #endif
 	ret = sctp_lowlevel_chunk_output(inp, stcb, net,
@@ -5056,7 +5056,7 @@ sctp_arethere_unrecognized_parameters(struct mbuf *in_initpkt,
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
 				printf("Got parameter type %x - unknown\n",
-				       (uint) ptype);
+				       (uint32_t) ptype);
 			}
 #endif
 			if ((ptype & 0x4000) == 0x4000) {
@@ -7635,7 +7635,7 @@ done_it:
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
 		printf("Ok we moved %d chunks to send queue for net:%x\n",
-		       moved, (uint) net);
+		       moved, (uint32_t) net);
 	}
 #endif
 	if (sctp_pegs[SCTP_MOVED_QMAX] < cnt_mvd) {
@@ -7916,7 +7916,7 @@ skip_the_fill_from_streams:
 again_one_more_time:
 	for (net = send_start_at; net != NULL; net = TAILQ_NEXT(net, sctp_next)) {
 		/* how much can we send? */
-		/* printf("Examine for sending net:%x\n", (uint)net); */
+		/* printf("Examine for sending net:%x\n", (uint32_t)net); */
 		if (old_startat && (old_startat == net)) {
 			/* through list ocmpletely. */
 			break;
@@ -10202,7 +10202,7 @@ sctp_output(inp, m, addr, control, p, flags)
 	else {
 		if (sctp_debug_on & SCTP_DEBUG_OUTPUT5) {
 			printf("stream:%d\n", srcv.sinfo_stream);
-			printf("flags:%x\n", (uint) srcv.sinfo_flags);
+			printf("flags:%x\n", (uint32_t) srcv.sinfo_flags);
 			printf("ppid:%d\n", srcv.sinfo_ppid);
 			printf("context:%d\n", srcv.sinfo_context);
 		}

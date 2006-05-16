@@ -4991,7 +4991,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 		ptype = ntohs(phdr->param_type);
 		plen = ntohs(phdr->param_length);
 		/*
-		 * printf("ptype => %0x, plen => %d\n", (uint)ptype,
+		 * printf("ptype => %0x, plen => %d\n", (uint32_t)ptype,
 		 * (int)plen);
 		 */
 		if (offset + plen > limit) {

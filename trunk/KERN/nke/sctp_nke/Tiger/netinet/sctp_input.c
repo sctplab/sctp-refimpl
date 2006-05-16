@@ -765,7 +765,7 @@ sctp_process_unrecog_chunk(struct sctp_tcb *stcb, struct sctp_paramhdr *phdr,
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_INPUT2) {
 			printf("Peer does not support chunk type %d(%x)??\n",
-			       chk->chunk_type, (uint) chk->chunk_type);
+			       chk->chunk_type, (uint32_t) chk->chunk_type);
 		}
 #endif
 		break;
@@ -818,7 +818,7 @@ sctp_process_unrecog_param(struct sctp_tcb *stcb, struct sctp_paramhdr *phdr)
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_INPUT2) {
 			printf("Peer does not support base param type %d(%x)??\n",
-			       pbad->param_type, (uint) pbad->param_type);
+			       pbad->param_type, (uint32_t) pbad->param_type);
 		}
 #endif
 		break;
@@ -1563,8 +1563,8 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 			pp = (uint8_t *) initack_cp;
 			printf("process_cookie_new: could not find INIT-ACK chunk!\n");
 			printf("Found bytes %x %x %x %x at postion %d\n",
-			       (uint) pp[0], (uint) pp[1], (uint) pp[2],
-			       (uint) pp[3], initack_offset);
+			       (uint32_t) pp[0], (uint32_t) pp[1], (uint32_t) pp[2],
+			       (uint32_t) pp[3], initack_offset);
 		}
 #endif				/* SCTP_DEBUG */
 		return (NULL);
@@ -3028,7 +3028,7 @@ sctp_handle_str_reset_request_in(struct sctp_tcb *stcb,
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
 			printf("SCTP:Peer sends a old str-reset seq %x, I expect %x\n",
-			       (uint) seq, (uint) asoc->str_reset_seq_in);
+			       (uint32_t) seq, (uint32_t) asoc->str_reset_seq_in);
 		}
 #endif
 		sctp_add_stream_reset_result(chk, seq, SCTP_STREAM_RESET_BAD_SEQNO);
@@ -3097,7 +3097,7 @@ sctp_handle_str_reset_request_tsn(struct sctp_tcb *stcb,
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
 			printf("SCTP:Peer sends a old str-reset seq %x, I expect %x\n",
-			       (uint) seq, (uint) asoc->str_reset_seq_in);
+			       (uint32_t) seq, (uint32_t) asoc->str_reset_seq_in);
 		}
 #endif
 		sctp_add_stream_reset_result(chk, seq, SCTP_STREAM_RESET_BAD_SEQNO);
@@ -3180,7 +3180,7 @@ sctp_handle_str_reset_request_out(struct sctp_tcb *stcb,
 #ifdef SCTP_DEBUG
 		/* if (sctp_debug_on & SCTP_DEBUG_INPUT1) { */
 		printf("SCTP:Peer sends a old str-reset seq %x, I expect %x\n",
-		       (uint) seq, (uint) asoc->str_reset_seq_in);
+		       (uint32_t) seq, (uint32_t) asoc->str_reset_seq_in);
 		/* } */
 #endif
 		sctp_add_stream_reset_result(chk, seq, SCTP_STREAM_RESET_BAD_SEQNO);
@@ -4551,7 +4551,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
 		printf("Ok, Common input processing called, m:%x iphlen:%d offset:%d\n",
-		       (uint) m, iphlen, offset);
+		       (uint32_t) m, iphlen, offset);
 	}
 #endif				/* SCTP_DEBUG */
 	if (stcb) {
@@ -4910,7 +4910,7 @@ sctp_input(m, va_alist)
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
 				printf("Bad CSUM on SCTP packet calc_check:%x check:%x  m:%x mlen:%d iphlen:%d\n",
-				calc_check, check, (uint) m, mlen, iphlen);
+				calc_check, check, (uint32_t) m, mlen, iphlen);
 			}
 #endif
 
