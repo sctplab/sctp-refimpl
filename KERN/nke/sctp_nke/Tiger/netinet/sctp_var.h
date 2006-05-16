@@ -500,7 +500,7 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 #endif
 
 #if defined(__NetBSD__) || defined(__OpenBSD__)
-	int		sctp_sysctl(int *, uint, void *, size_t *, void *, size_t);
+	int		sctp_sysctl(int *, uint32_t, void *, size_t *, void *, size_t);
 #endif
 
 #ifdef __OpenBSD__
