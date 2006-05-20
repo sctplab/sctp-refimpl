@@ -3287,6 +3287,9 @@ sctp_optsset(struct socket *so,
 	struct sctp_tcb *stcb = NULL;
 	struct sctp_inpcb *inp;
 
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sctp_lock_assert(so);
+#endif
 	if (mp == NULL) {
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_USRREQ1) {
@@ -6142,7 +6145,7 @@ sctp_unlock(struct socket *so, int refcount, int lr)
 	return (0);
 }
 
-lck_mtx_t      *
+lck_mtx_t*
 sctp_getlock(struct socket *so, int locktype)
 {
 
@@ -6162,6 +6165,26 @@ sctp_getlock(struct socket *so, int locktype)
 	} else {
 		panic("sctp_getlock: so=%x NULL so_pcb\n", so);
 		return (so->so_proto->pr_domain->dom_mtx);
+	}
+}
+
+void
+sctp_lock_assert(struct socket *so)
+{
+	if (so->so_pcb) {
+		lck_mtx_assert(((struct inpcb *)so->so_pcb)->inpcb_mtx, LCK_MTX_ASSERT_OWNED);
+	} else {
+		panic("sctp_lock_assert: so=%p has sp->so_pcb==NULL.\n", so);
+	}
+}
+
+void
+sctp_unlock_assert(struct socket *so)
+{
+	if (so->so_pcb) {
+		lck_mtx_assert(((struct inpcb *)so->so_pcb)->inpcb_mtx, LCK_MTX_ASSERT_NOTOWNED);
+	} else {
+		panic("sctp_lock_assert: so=%p has sp->so_pcb==NULL.\n", so);
 	}
 }
 

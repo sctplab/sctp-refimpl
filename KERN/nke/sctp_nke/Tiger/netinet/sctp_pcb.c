@@ -494,7 +494,6 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 			}
 		}
 		SCTP_TCB_UNLOCK(stcb);
-
 		SCTP_INP_RUNLOCK(inp);
 	}
 	return (NULL);
@@ -511,6 +510,10 @@ sctp_findassociation_ep_asconf(struct mbuf *m, int iphlen, int offset,
 	struct ip      *iph;
 	struct sctp_paramhdr parm_buf, *phdr;
 	int		ptype;
+
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sctp_lock_assert((*inp_p)->sctp_socket);
+#endif
 
 	memset(&local_store, 0, sizeof(local_store));
 	memset(&remote_store, 0, sizeof(remote_store));
@@ -624,6 +627,10 @@ struct sctp_nets **netp, struct sockaddr *local, struct sctp_tcb *locked_tcb)
 	uint16_t	rport;
 
 	inp = *inp_p;
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sctp_lock_assert(inp->sctp_socket);
+#endif
+
 	if (remote->sa_family == AF_INET) {
 		rport = (((struct sockaddr_in *)remote)->sin_port);
 	} else if (remote->sa_family == AF_INET6) {
@@ -638,6 +645,9 @@ struct sctp_nets **netp, struct sockaddr *local, struct sctp_tcb *locked_tcb)
 		 */
 		SCTP_TCB_UNLOCK(locked_tcb);
 	}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	socket_unlock(inp->sctp_socket, 0);
+#endif
 	SCTP_INP_INFO_RLOCK();
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) {
 		/*
@@ -662,6 +672,9 @@ struct sctp_nets **netp, struct sockaddr *local, struct sctp_tcb *locked_tcb)
 				SCTP_TCB_LOCK(locked_tcb);
 				SCTP_INP_RUNLOCK(locked_tcb->sctp_ep);
 			}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			socket_lock(inp->sctp_socket, 0);
+#endif
 			SCTP_INP_INFO_RUNLOCK();
 			return (stcb);
 		} else {
@@ -710,6 +723,9 @@ struct sctp_nets **netp, struct sockaddr *local, struct sctp_tcb *locked_tcb)
 							SCTP_INP_RUNLOCK(locked_tcb->sctp_ep);
 						}
 						SCTP_INP_WUNLOCK(inp);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+						socket_lock(inp->sctp_socket, 0);
+#endif
 						SCTP_INP_INFO_RUNLOCK();
 						return (stcb);
 					}
@@ -731,6 +747,9 @@ struct sctp_nets **netp, struct sockaddr *local, struct sctp_tcb *locked_tcb)
 							SCTP_INP_RUNLOCK(locked_tcb->sctp_ep);
 						}
 						SCTP_INP_WUNLOCK(inp);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+						socket_lock(inp->sctp_socket, 0);
+#endif
 						SCTP_INP_INFO_RUNLOCK();
 						return (stcb);
 					}
@@ -789,6 +808,9 @@ struct sctp_nets **netp, struct sockaddr *local, struct sctp_tcb *locked_tcb)
 #endif
 						}
 						SCTP_INP_WUNLOCK(inp);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+						socket_lock(inp->sctp_socket, 0);
+#endif
 						SCTP_INP_INFO_RUNLOCK();
 						return (stcb);
 					}
@@ -815,6 +837,9 @@ struct sctp_nets **netp, struct sockaddr *local, struct sctp_tcb *locked_tcb)
 #endif
 						}
 						SCTP_INP_WUNLOCK(inp);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+						socket_lock(inp->sctp_socket, 0);
+#endif
 						SCTP_INP_INFO_RUNLOCK();
 						return (stcb);
 					}
@@ -838,6 +863,9 @@ null_return:
 			SCTP_TCB_LOCK(locked_tcb);
 	}
 	SCTP_INP_WUNLOCK(inp);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	socket_lock(inp->sctp_socket, 0);
+#endif
 	SCTP_INP_INFO_RUNLOCK();
 	/* not found */
 	return (NULL);
@@ -847,6 +875,7 @@ null_return:
  * Find an association for a specific endpoint using the association id given
  * out in the COMM_UP notification
  */
+
 struct sctp_tcb *
 sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, sctp_assoc_t asoc_id)
 {
@@ -859,6 +888,9 @@ sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, sctp_assoc_t asoc_id)
 	if (asoc_id == 0 || inp == NULL) {
 		return (NULL);
 	}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sctp_lock_assert(inp->sctp_socket);
+#endif
 	SCTP_INP_INFO_RLOCK();
 	id = (uint32_t) asoc_id;
 	head = &sctppcbinfo.sctp_asochash[SCTP_PCBHASH_ASOC(id,
@@ -931,6 +963,12 @@ sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, sctp_assoc_t asoc_id)
 	return (NULL);
 }
 
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+/*
+ * The returned inp->sctp_socket is unlocked.
+ */
+#endif
+
 static struct sctp_inpcb *
 sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 		    uint16_t lport)
@@ -960,6 +998,9 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 			SCTP_INP_RUNLOCK(inp);
 			continue;
 		}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		socket_lock(inp->sctp_socket, 1);
+#endif
 		if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) &&
 		    (inp->sctp_lport == lport)) {
 			/* got it */
@@ -977,18 +1018,30 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 				) {
 				/* IPv4 on a IPv6 socket with ONLY IPv6 set */
 				SCTP_INP_RUNLOCK(inp);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+				socket_unlock(inp->sctp_socket, 1);
+#endif
 				continue;
 			}
 			/* A V6 address and the endpoint is NOT bound V6 */
 			if (nam->sa_family == AF_INET6 &&
 			 (inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0) {
 				SCTP_INP_RUNLOCK(inp);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+				socket_unlock(inp->sctp_socket, 1);
+#endif
 				continue;
 			}
 			SCTP_INP_RUNLOCK(inp);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			socket_unlock(inp->sctp_socket, 1);
+#endif
 			return (inp);
 		}
 		SCTP_INP_RUNLOCK(inp);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		socket_unlock(inp->sctp_socket, 1);
+#endif
 	}
 
 	if ((nam->sa_family == AF_INET) &&
@@ -1015,8 +1068,14 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 			SCTP_INP_RUNLOCK(inp);
 			continue;
 		}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		socket_lock(inp->sctp_socket, 1);
+#endif
 		if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL)) {
 			SCTP_INP_RUNLOCK(inp);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			socket_unlock(inp->sctp_socket, 1);
+#endif
 			continue;
 		}
 		/*
@@ -1025,6 +1084,9 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 		 */
 		if (inp->sctp_lport != lport) {
 			SCTP_INP_RUNLOCK(inp);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			socket_unlock(inp->sctp_socket, 1);
+#endif
 			continue;
 		}
 #ifdef SCTP_DEBUG
@@ -1078,6 +1140,9 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 						}
 #endif
 						SCTP_INP_RUNLOCK(inp);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+						socket_unlock(inp->sctp_socket, 1);
+#endif
 						return (inp);
 					}
 				} else if (nam->sa_family == AF_INET6) {
@@ -1092,12 +1157,18 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 						}
 #endif
 						SCTP_INP_RUNLOCK(inp);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+						socket_unlock(inp->sctp_socket, 1);
+#endif
 						return (inp);
 					}
 				}
 			}
 		}
 		SCTP_INP_RUNLOCK(inp);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		socket_unlock(inp->sctp_socket, 1);
+#endif
 	}
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_PCB1) {
@@ -1107,6 +1178,11 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 	return (NULL);
 }
 
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+/*
+ * The returned inp->sctp_socket is unlocked.
+ */
+#endif
 
 struct sctp_inpcb *
 sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool, int have_lock)
@@ -1227,6 +1303,9 @@ sctp_findassociation_addr_sa(struct sockaddr *to, struct sockaddr *from,
 			retval = sctp_tcb_special_locate(&inp, from, to, netp);
 		}
 		if (retval != NULL) {
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			socket_lock(inp->sctp_socket, 1);
+#endif
 			SCTP_INP_INFO_RUNLOCK();
 			return (retval);
 		}
@@ -1235,11 +1314,18 @@ sctp_findassociation_addr_sa(struct sockaddr *to, struct sockaddr *from,
 	if (inp_p != NULL) {
 		*inp_p = inp;
 	}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	if (inp != NULL)
+		socket_lock(inp->sctp_socket, 1);
+#endif
 	SCTP_INP_INFO_RUNLOCK();
 
 	if (inp == NULL) {
 		return (NULL);
 	}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sctp_lock_assert(inp->sctp_socket);
+#endif
 	/*
 	 * ok, we have an endpoint, now lets find the assoc for it (if any)
 	 * we now place the source address or from in the to of the find
@@ -1270,6 +1356,9 @@ sctp_findassociation_special_addr(struct mbuf *m, int iphlen, int offset,
 	struct sctp_tcb *retval;
 	uint32_t	ptype, plen;
 
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sctp_lock_assert((*inp_p)->sctp_socket);
+#endif
 	memset(&sin4, 0, sizeof(sin4));
 	memset(&sin6, 0, sizeof(sin6));
 	sin4.sin_len = sizeof(sin4);
@@ -1339,6 +1428,15 @@ sctp_findassociation_special_addr(struct mbuf *m, int iphlen, int offset,
 	return (NULL);
 }
 
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+/*
+ * sctp_findassoc_by_vtag returns NULL and does not modify *inp_p and *netp
+ * if no association is found.
+ * If it finds an association, it finds the sctp_tcb, sets the *inp_p and
+ * *netp and does socket_lock(*inp_p->sctp_socket).
+ */
+#endif
+
 static struct sctp_tcb *
 sctp_findassoc_by_vtag(struct sockaddr *from, uint32_t vtag,
 	 struct sctp_inpcb **inp_p, struct sctp_nets **netp, uint16_t rport,
@@ -1368,6 +1466,9 @@ sctp_findassoc_by_vtag(struct sockaddr *from, uint32_t vtag,
 			return (NULL);
 		}
 		SCTP_TCB_LOCK(stcb);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		socket_lock(stcb->sctp_socket, 1);
+#endif
 		SCTP_INP_RUNLOCK(stcb->sctp_ep);
 		if (stcb->asoc.my_vtag == vtag) {
 			/* candidate */
@@ -1377,6 +1478,9 @@ sctp_findassoc_by_vtag(struct sockaddr *from, uint32_t vtag,
 				 * across the system.
 				 */
 				SCTP_TCB_UNLOCK(stcb);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+				socket_unlock(stcb->sctp_socket, 1);
+#endif
 				continue;
 			}
 			if (stcb->sctp_ep->sctp_lport != lport) {
@@ -1385,6 +1489,9 @@ sctp_findassoc_by_vtag(struct sockaddr *from, uint32_t vtag,
 				 * across the system.
 				 */
 				SCTP_TCB_UNLOCK(stcb);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+				socket_unlock(stcb->sctp_socket, 1);
+#endif
 				continue;
 			}
 			net = sctp_findnet(stcb, from);
@@ -1404,6 +1511,9 @@ sctp_findassoc_by_vtag(struct sockaddr *from, uint32_t vtag,
 			}
 		}
 		SCTP_TCB_UNLOCK(stcb);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		socket_unlock(stcb->sctp_socket, 1);
+#endif
 	}
 	SCTP_INP_INFO_RUNLOCK();
 	return (NULL);
@@ -2079,6 +2189,9 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 	uint16_t	lport;
 	int		error;
 
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sctp_lock_assert(so);
+#endif
 	lport = 0;
 	error = 0;
 	bindall = 1;
