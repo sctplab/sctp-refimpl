@@ -4542,6 +4542,9 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 	struct mbuf    *m = *mm;
 	int		abort_flag = 0;
 
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sctp_lock_assert(inp->sctp_socket);
+#endif
 	sctp_pegs[SCTP_DATAGRAMS_RCVD]++;
 #ifdef SCTP_AUDITING_ENABLED
 	sctp_audit_log(0xE0, 1);
@@ -4918,9 +4921,11 @@ sctp_input(m, va_alist)
 						       offset - sizeof(*ch),
 							 sh, ch, &inp, &net);
 			if ((inp) && (stcb)) {
-				sctp_send_packet_dropped(stcb, net, m, iphlen,
-							 1);
+				sctp_send_packet_dropped(stcb, net, m, iphlen, 1);
 				sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_INPUT_ERROR);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+				socket_unlock(inp->sctp_socket, 1);
+#endif				
 			} else if ((inp != NULL) && (stcb == NULL)) {
 				refcount_up = 1;
 			}
@@ -5061,8 +5066,9 @@ sctp_skip_csum_4:
 #endif
 #endif				/* IPSEC */
 
+
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	socket_lock(inp->sctp_socket, 1);
+	sctp_lock_assert(inp->sctp_socket);
 #endif
 
 	/*

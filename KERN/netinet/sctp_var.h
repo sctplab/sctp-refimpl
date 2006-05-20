@@ -538,7 +538,7 @@ do { \
 #define atomic_add_16(addr, val)	OSAddAtomic16(val, (SInt16 *)addr)
 
 /* additional protosw entries for Mac OS X 10.4 */
-#if !defined(SCTP_APPLE_PANTHER)
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	int		sctp_lock  (struct socket *so, int refcount, int lr);
 	int		sctp_unlock(struct socket *so, int refcount, int lr);
 #ifdef _KERN_LOCKS_H_
@@ -546,7 +546,9 @@ do { \
 #else
 	void           *sctp_getlock(struct socket *so, int locktype);
 #endif				/* _KERN_LOCKS_H_ */
-#endif				/* !SCTP_APPLE_PANTHER */
+	void sctp_lock_assert(struct socket *so);
+	void sctp_unlock_assert(struct socket *so);
+#endif				/* SCTP_APPLE_FINE_GRAINED_LOCKING */
 #endif				/* __APPLE__ */
 
 #if defined(__NetBSD__)
