@@ -133,7 +133,6 @@ extern u_int32_t sctp_debug_on;
 
 #endif
 
-static int sctp6_detach __P((struct socket *so));
 
 #if !(defined(__FreeBSD__) || defined(__APPLE__))
 extern void 
@@ -769,7 +768,11 @@ SYSCTL_PROC(_net_inet6_sctp6, OID_AUTO, getcred, CTLTYPE_OPAQUE | CTLFLAG_RW,
 #endif
 
 /* This is the same as the sctp_abort() could be made common */
+#if defined(__FreeBSD__) && __FreeBSD_version > 690000
+static void
+#else
 static int
+#endif
 sctp6_abort(struct socket *so)
 {
 	struct sctp_inpcb *inp;
@@ -777,7 +780,11 @@ sctp6_abort(struct socket *so)
 
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (inp == 0)
-		return EINVAL;	/* ??? possible? panic instead? */
+#if defined(__FreeBSD__) && __FreeBSD_version > 690000
+		return;
+#else
+		return EINVAL;
+#endif
 	soisdisconnected(so);
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
@@ -786,7 +793,11 @@ sctp6_abort(struct socket *so)
 #endif
 	sctp_inpcb_free(inp, 1);
 	splx(s);
-	return 0;
+#if defined(__FreeBSD__) && __FreeBSD_version > 690000
+	return;
+#else
+	return(0);
+#endif
 }
 
 static int
@@ -986,7 +997,11 @@ sctp6_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 }
 
 /*This could be made common with sctp_detach() since they are identical */
+#if defined(__FreeBSD__) && __FreeBSD_version > 690000
+static void
+#else
 static int
+#endif
 sctp6_detach(struct socket *so)
 {
 	struct sctp_inpcb *inp;
@@ -994,7 +1009,12 @@ sctp6_detach(struct socket *so)
 
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (inp == 0)
+#if defined(__FreeBSD__) && __FreeBSD_version > 690000
+		return;
+#else
 		return EINVAL;
+#endif
+
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
 #else
@@ -1006,7 +1026,11 @@ sctp6_detach(struct socket *so)
 	else
 		sctp_inpcb_free(inp, 0);
 	splx(s);
-	return 0;
+#if defined(__FreeBSD__) && __FreeBSD_version > 690000
+	return;
+#else
+	return(0);
+#endif
 }
 
 static int
