@@ -657,7 +657,7 @@ struct sctp_nets **netp, struct sockaddr *local, struct sctp_tcb *locked_tcb)
 		 * acceptor, then do the special_lookup to hash and find the
 		 * real inp.
 		 */
-		if (inp->sctp_socket->so_qlimit) {
+		if ((inp->sctp_socket) && (inp->sctp_socket->so_qlimit)) {
 			/* to is peer addr, from is my addr */
 			stcb = sctp_tcb_special_locate(inp_p, remote, local,
 						       netp);
