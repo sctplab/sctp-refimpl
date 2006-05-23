@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/conf/options,v 1.531 2006/03/05 22:52:16 yar Exp $
+# $FreeBSD: src/sys/conf/options,v 1.543 2006/05/18 23:30:47 ambrisko Exp $
 #
 #        On the handling of kernel options
 #
@@ -115,14 +115,17 @@ MAC_STUB	opt_dontuse.h
 MAC_TEST	opt_dontuse.h
 MD_ROOT		opt_md.h
 MD_ROOT_SIZE	opt_md.h
+MFI_DEBUG	opt_mfi.h
+MFI_DECODE_LOG	opt_mfi.h
 MPROF_BUFFERS	opt_mprof.h
 MPROF_HASH_SIZE	opt_mprof.h
 MUTEX_WAKE_ALL
 NSWBUF_MIN	opt_swap.h
 PANIC_REBOOT_WAIT_TIME	opt_panic.h
+PPC_DEBUG	opt_ppc.h
+PPC_PROBE_CHIPSET opt_ppc.h
 PPS_SYNC	opt_ntp.h
 PREEMPTION	opt_sched.h
-PUC_FASTINTR	opt_puc.h
 QUOTA
 SCHED_4BSD	opt_sched.h
 SCHED_ULE	opt_sched.h
@@ -156,6 +159,7 @@ SW_WATCHDOG	opt_watchdog.h
 TURNSTILE_PROFILING
 TTYHOG		opt_tty.h
 VFS_AIO
+VERBOSE_SYSINIT	opt_global.h
 WLCACHE		opt_wavelan.h
 WLDEBUG		opt_wavelan.h
 
@@ -176,7 +180,6 @@ CODA		opt_dontuse.h
 EXT2FS		opt_dontuse.h
 FDESCFS		opt_dontuse.h
 HPFS		opt_dontuse.h
-LINPROCFS	opt_dontuse.h
 MSDOSFS		opt_dontuse.h
 NTFS		opt_dontuse.h
 NULLFS		opt_dontuse.h
@@ -312,6 +315,7 @@ SCSI_NCR_MYADDR		opt_ncr.h
 # Options used only in dev/isp/*
 ISP_TARGET_MODE		opt_isp.h
 ISP_FW_CRASH_DUMP	opt_isp.h
+ISP_DEFAULT_ROLES	opt_isp.h
 
 # Options used in the 'ata' ATA/ATAPI driver
 ATA_STATIC_ID		opt_ata.h
@@ -363,10 +367,6 @@ IPFIREWALL_VERBOSE_LIMIT	opt_ipfw.h
 IPFIREWALL_DEFAULT_TO_ACCEPT	opt_ipfw.h
 IPFIREWALL_FORWARD	opt_ipfw.h
 IPFIREWALL_FORWARD_EXTENDED	opt_ipfw.h
-IPV6FIREWALL		opt_ip6fw.h
-IPV6FIREWALL_VERBOSE	opt_ip6fw.h
-IPV6FIREWALL_VERBOSE_LIMIT	opt_ip6fw.h
-IPV6FIREWALL_DEFAULT_TO_ACCEPT	opt_ip6fw.h
 IPSTEALTH
 IPX
 IPXIP			opt_ipx.h
@@ -660,8 +660,8 @@ ED_HPP			opt_ed.h
 ED_3C503		opt_ed.h
 ED_SIC			opt_ed.h
 
-# bge driver
-BGE_FAKE_AUTONEG	opt_bge.h
+# bce driver
+BCE_DEBUG		opt_bce.h
 
 # wi driver
 WI_SYMBOL_FIRMWARE	opt_wi.h
@@ -714,6 +714,13 @@ KBD_MAXWAIT		opt_kbd.h
 KBD_RESETDELAY		opt_kbd.h
 KBDIO_DEBUG		opt_kbd.h
 
+# options for the Atheros driver
+ATH_DEBUG		opt_ath.h
+ATH_TXBUF		opt_ath.h
+ATH_RXBUF		opt_ath.h
+ATH_DIAGAPI		opt_ath.h
+ATH_TX99_DIAG		opt_ath.h
+
 # options for the Atheros HAL (only useful with source code)
 AH_SUPPORT_AR5210	opt_ah.h
 AH_SUPPORT_AR5211	opt_ah.h
@@ -721,9 +728,11 @@ AH_SUPPORT_AR5212	opt_ah.h
 AH_SUPPORT_5111		opt_ah.h
 AH_SUPPORT_5112		opt_ah.h
 AH_SUPPORT_2413		opt_ah.h
+AH_SUPPORT_5413		opt_ah.h
 AH_DEBUG		opt_ah.h
 AH_DEBUG_ALQ		opt_ah.h
 AH_ASSERT		opt_ah.h
+AH_REGOPS_FUNC		opt_ah.h
 
 # dcons options 
 DCONS_BUF_SIZE		opt_dcons.h
