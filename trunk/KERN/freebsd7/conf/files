@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/conf/files,v 1.1104 2006/03/23 23:06:14 sam Exp $
+# $FreeBSD: src/sys/conf/files,v 1.1118 2006/05/18 23:30:47 ambrisko Exp $
 #
 # The long compile-with and dependency lines are required because of
 # limitations in config: backslash-newline doesn't work in strings, and
@@ -99,7 +99,6 @@ coda/coda_subr.c		optional vcoda
 coda/coda_venus.c		optional vcoda
 coda/coda_vfsops.c		optional vcoda
 coda/coda_vnops.c		optional vcoda
-compat/linprocfs/linprocfs.c	optional linprocfs
 contrib/altq/altq/altq_cbq.c	optional altq \
 	compile-with "${NORMAL_C} -I$S/contrib/pf"
 contrib/altq/altq/altq_cdnr.c	optional altq
@@ -407,6 +406,7 @@ dev/acpica/acpi_thermal.c	optional acpi
 dev/acpica/acpi_throttle.c	optional acpi
 dev/acpica/acpi_timer.c		optional acpi
 dev/acpica/acpi_video.c		optional acpi_video acpi
+dev/acpica/acpi_dock.c		optional acpi_dock acpi
 dev/adlink/adlink.c		optional adlink
 dev/advansys/adv_eisa.c		optional adv eisa
 dev/advansys/adv_pci.c		optional adv pci
@@ -475,6 +475,7 @@ dev/ath/if_ath_pci.c		optional ath pci \
 dev/awi/am79c930.c		optional awi
 dev/awi/awi.c			optional awi
 dev/awi/if_awi_pccard.c		optional awi pccard
+dev/bce/if_bce.c		optional bce
 dev/bfe/if_bfe.c		optional bfe
 dev/bge/if_bge.c		optional bge
 dev/bktr/bktr_audio.c		optional bktr pci
@@ -689,14 +690,16 @@ dev/le/lance.c			optional le
 dev/led/led.c			standard
 dev/lge/if_lge.c		optional lge
 dev/lmc/if_lmc.c		optional lmc
-dev/lnc/if_lnc.c		optional lnc
-dev/lnc/if_lnc_pci.c		optional lnc pci
 dev/mc146818/mc146818.c		optional mc146818
 dev/mca/mca_bus.c		optional mca
 dev/mcd/mcd.c			optional mcd isa nowerror
 dev/mcd/mcd_isa.c		optional mcd isa nowerror
 dev/md/md.c			optional md
 dev/mem/memdev.c		optional mem
+dev/mfi/mfi.c			optional mfi
+dev/mfi/mfi_pci.c		optional mfi pci
+dev/mfi/mfi_disk.c		optional mfi
+dev/mfi/mfi_linux.c		optional mfi compat_linux
 dev/mii/acphy.c			optional miibus | acphy
 dev/mii/amphy.c			optional miibus | amphy
 dev/mii/bmtphy.c		optional miibus | bmtphy
@@ -791,14 +794,18 @@ dev/ppbus/ppi.c			optional ppi
 dev/ppbus/pps.c			optional pps
 dev/ppbus/vpo.c			optional vpo
 dev/ppbus/vpoio.c		optional vpo
+dev/ppc/ppc.c			optional ppc
+dev/ppc/ppc_acpi.c		optional ppc acpi
+dev/ppc/ppc_isa.c		optional ppc isa
+dev/ppc/ppc_pci.c		optional ppc pci
+dev/ppc/ppc_puc.c		optional ppc puc
 dev/pst/pst-iop.c		optional pst
 dev/pst/pst-pci.c		optional pst pci
 dev/pst/pst-raid.c		optional pst
 dev/puc/puc.c			optional puc
-dev/puc/puc_ebus.c		optional puc ebus
+dev/puc/puc_cfg.c		optional puc
 dev/puc/puc_pccard.c		optional puc pccard
 dev/puc/puc_pci.c		optional puc pci
-dev/puc/puc_sbus.c		optional puc fhc | puc sbus
 dev/puc/pucdata.c		optional puc pci
 dev/ral/rt2560.c		optional ral
 dev/ral/rt2661.c		optional ral
@@ -817,9 +824,14 @@ dev/rndtest/rndtest.c		optional rndtest
 dev/rp/rp.c			optional rp
 dev/rp/rp_isa.c			optional rp isa
 dev/rp/rp_pci.c			optional rp pci
-dev/sab/sab.c			optional sab ebus
 dev/safe/safe.c			optional safe
 dev/sbsh/if_sbsh.c		optional sbsh
+dev/scc/scc_if.m		optional	scc
+dev/scc/scc_bfe_ebus.c		optional	scc ebus
+dev/scc/scc_bfe_sbus.c		optional	scc fhc | scc sbus
+dev/scc/scc_core.c		optional	scc
+dev/scc/scc_dev_sab82532.c	optional	scc
+dev/scc/scc_dev_z8530.c		optional	scc
 dev/scd/scd.c			optional scd isa
 dev/scd/scd_isa.c		optional scd isa
 dev/si/si.c			optional si
@@ -830,7 +842,8 @@ dev/si/si_isa.c			optional si isa
 dev/si/si_pci.c			optional si pci
 dev/sio/sio_pccard.c		optional sio pccard
 dev/sio/sio_pci.c		optional sio pci
-dev/sio/sio_puc.c		optional sio puc pci
+dev/sio/sio_puc.c		optional sio puc
+dev/sk/if_sk.c			optional sk pci
 dev/smbus/smb.c			optional smb
 dev/smbus/smbconf.c		optional smbus
 dev/smbus/smbus.c		optional smbus
@@ -840,7 +853,6 @@ dev/sn/if_sn_isa.c		optional sn isa
 dev/sn/if_sn_pccard.c		optional sn pccard
 dev/snp/snp.c			optional snp
 dev/sound/isa/ad1816.c		optional snd_ad1816 isa
-dev/sound/isa/es1888.c		optional snd_ess isa
 dev/sound/isa/ess.c		optional snd_ess isa
 dev/sound/isa/gusc.c		optional snd_gusc isa
 dev/sound/isa/mss.c		optional snd_mss isa
@@ -944,6 +956,7 @@ dev/uart/uart_bus_isa.c		optional	uart isa
 dev/uart/uart_bus_pccard.c	optional	uart pccard
 dev/uart/uart_bus_pci.c		optional	uart pci
 dev/uart/uart_bus_puc.c		optional	uart puc
+dev/uart/uart_bus_scc.c		optional	uart scc
 dev/uart/uart_core.c		optional	uart
 dev/uart/uart_dbg.c		optional	uart gdb
 dev/uart/uart_dev_ns8250.c	optional	uart
@@ -1304,6 +1317,7 @@ kern/md4c.c			optional netsmb
 kern/md5c.c			standard
 kern/sched_4bsd.c		optional sched_4bsd
 kern/sched_ule.c		optional sched_ule
+kern/serdev_if.m		optional puc | scc
 kern/subr_autoconf.c		standard
 kern/subr_blist.c		standard
 kern/subr_bus.c			standard
@@ -1724,7 +1738,6 @@ netinet6/in6_proto.c		optional inet6
 netinet6/in6_rmx.c		optional inet6
 netinet6/in6_src.c		optional inet6
 netinet6/ip6_forward.c		optional inet6
-netinet6/ip6_fw.c		optional inet6 ipv6firewall
 netinet6/ip6_id.c		optional inet6
 netinet6/ip6_input.c		optional inet6
 netinet6/ip6_mroute.c		optional inet6
@@ -1835,7 +1848,6 @@ pci/if_pcn.c			optional pcn pci
 pci/if_rl.c			optional rl pci
 pci/if_sf.c			optional sf pci
 pci/if_sis.c			optional sis pci
-pci/if_sk.c			optional sk pci
 pci/if_ste.c			optional ste pci
 pci/if_tl.c			optional tl pci
 pci/if_vr.c			optional vr pci
