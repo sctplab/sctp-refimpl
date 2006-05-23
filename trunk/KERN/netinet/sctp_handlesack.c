@@ -3,7 +3,7 @@
 #include "sctp_sack.h"
 #include <netinet/sctp.h>
 
-int		verbose = 0;
+int verbose = 0;
 
 #define SCTP_IS_TSN_PRESENT(arry, gap) ((arry[(gap >> 3)] >> (gap & 0x07)) & 0x01)
 #define SCTP_SET_TSN_PRESENT(arry, gap) (arry[(gap >> 3)] |= (0x01 << ((gap & 0x07))))
@@ -11,10 +11,10 @@ int		verbose = 0;
 #define MAX_TSN 0xfffffff
 
 struct sctp_sack {
-	uint32_t	cum_tsn_ack;	/* cumulative TSN Ack */
-	uint32_t	a_rwnd;	/* updated a_rwnd of sender */
-	uint16_t	num_gap_ack_blks;	/* number of Gap Ack blocks */
-	uint16_t	num_dup_tsns;	/* number of duplicate TSNs */
+	uint32_t cum_tsn_ack;	/* cumulative TSN Ack */
+	uint32_t a_rwnd;	/* updated a_rwnd of sender */
+	uint16_t num_gap_ack_blks;	/* number of Gap Ack blocks */
+	uint16_t num_dup_tsns;	/* number of duplicate TSNs */
 	/* struct sctp_gap_ack_block's follow */
 	/* uint32_t duplicate_tsn's follow */
 };
@@ -29,10 +29,10 @@ struct sctp_sack_chunk {
  * -- 2  04 0c 1c 3c 7c fc -- -- 3  08 18 38 78 f8 -- -- -- 4  10 30 70 f0 --
  * -- -- -- 5  20 60 e0 -- -- -- -- -- 6  40 c0 -- -- -- -- -- -- 7  80 -- --
  * -- -- -- -- --
- * 
+ *
  */
 
-uint8_t	map_table[8][8] = {
+uint8_t map_table[8][8] = {
 	 /* row 0 */ 0x01, 0x03, 0x07, 0x0f, 0x1f, 0x3f, 0x7f, 0xff,
 	 /* row 1 */ 0x02, 0x06, 0x0e, 0x1e, 0x3e, 0x7e, 0xfe, 0x00,
 	 /* row 2 */ 0x04, 0x0c, 0x1c, 0x3c, 0x7c, 0xfc, 0x00, 0x00,
@@ -46,14 +46,14 @@ uint8_t	map_table[8][8] = {
 void
 process_a_sack(uint8_t * mapping_array, uint32_t mapping_array_base_tsn, struct sctp_sack_chunk *ch)
 {
-	int		i         , nblks, indx, bit;
+	int i, nblks, indx, bit;
 	struct sctp_gap_ack_block *blk;
-	uint32_t	pos   , cumack;
-	int32_t		bit_pos_start;
-	int32_t		bit_run_length, bit_run;
-	uint16_t	start , end;
+	uint32_t pos, cumack;
+	int32_t bit_pos_start;
+	int32_t bit_run_length, bit_run;
+	uint16_t start, end;
 
-	blk = (struct sctp_gap_ack_block *)((caddr_t) ch + sizeof(struct sctp_sack_chunk));
+	blk = (struct sctp_gap_ack_block *)((caddr_t)ch + sizeof(struct sctp_sack_chunk));
 	nblks = (ch->sack.num_gap_ack_blks);
 	cumack = (ch->sack.cum_tsn_ack);
 
@@ -97,14 +97,14 @@ again:
 void
 process_a_sack2(uint8_t * mapping_array, uint32_t mapping_array_base_tsn, struct sctp_sack_chunk *ch)
 {
-	int		i         , nblks, gap, j;
+	int i, nblks, gap, j;
 	struct sctp_gap_ack_block *blk;
-	uint32_t	pos   , cumack;
-	int32_t		bit_pos_start;
-	int32_t		bit_run_length;
-	uint16_t	start , end;
+	uint32_t pos, cumack;
+	int32_t bit_pos_start;
+	int32_t bit_run_length;
+	uint16_t start, end;
 
-	blk = (struct sctp_gap_ack_block *)((caddr_t) ch + sizeof(struct sctp_sack_chunk));
+	blk = (struct sctp_gap_ack_block *)((caddr_t)ch + sizeof(struct sctp_sack_chunk));
 	nblks = (ch->sack.num_gap_ack_blks);
 	cumack = ch->sack.cum_tsn_ack;
 	for (i = 0; i < nblks; i++) {
@@ -128,17 +128,18 @@ struct sack_block {
 	struct sctp_chunkhdr ch;
 	struct sctp_sack sack;
 	struct sctp_gap_ack_block blocks[20];
-}		sack;
+}          sack;
 
 int
 main(int argc, char **argv)
 {
-	int		blks      , cumack, gap, numgaps;
-	int		start     , end;
-	uint32_t	mapping_array_base_tsn;
-	uint8_t		mapping_array1[512];
-	uint8_t		mapping_array2[512];
+	int blks, cumack, gap, numgaps;
+	int start, end;
+	uint32_t mapping_array_base_tsn;
+	uint8_t mapping_array1[512];
+	uint8_t mapping_array2[512];
 	struct sctp_sack_chunk *ch;
+
 	sack.ch.chunk_type = SCTP_SELECTIVE_ACK;
 	sack.ch.chunk_flags = 0;
 	sack.ch.chunk_length = 0;
@@ -161,11 +162,11 @@ main(int argc, char **argv)
 				memset(mapping_array1, 0, sizeof(mapping_array1));
 				memset(mapping_array2, 0, sizeof(mapping_array1));
 				process_a_sack(mapping_array1,
-					       mapping_array_base_tsn,
-					   (struct sctp_sack_chunk *)&sack);
+				    mapping_array_base_tsn,
+				    (struct sctp_sack_chunk *)&sack);
 				process_a_sack2(mapping_array2,
-						mapping_array_base_tsn,
-					   (struct sctp_sack_chunk *)&sack);
+				    mapping_array_base_tsn,
+				    (struct sctp_sack_chunk *)&sack);
 				if (memcmp(mapping_array1, mapping_array2, sizeof(mapping_array1))) {
 					printf("Did not match\n");
 				}
