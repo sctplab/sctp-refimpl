@@ -851,7 +851,11 @@ SYSCTL_INT(_net_inet_sctp, OID_AUTO, debug, CTLFLAG_RW,
 #endif				/* SCTP_DEBUG */
 #endif
 
+#if defined(__FreeBSD__) && __FreeBSD_version > 690000
+static void
+#else
 static int
+#endif
 sctp_abort(struct socket *so)
 {
 	struct sctp_inpcb *inp;
@@ -859,7 +863,11 @@ sctp_abort(struct socket *so)
 
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (inp == 0)
-		return EINVAL;	/* ??? possible? panic instead? */
+#if defined(__FreeBSD__) && __FreeBSD_version > 690000
+		return;
+#else
+		return EINVAL;
+#endif
 
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
@@ -868,7 +876,11 @@ sctp_abort(struct socket *so)
 #endif
 	sctp_inpcb_free(inp, 1);
 	splx(s);
-	return 0;
+#if defined(__FreeBSD__) && __FreeBSD_version > 690000
+	return;
+#else
+	return(0);
+#endif
 }
 
 static int
@@ -969,7 +981,11 @@ sctp_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 }
 
 
+#if defined(__FreeBSD__) && __FreeBSD_version > 690000
+static void
+#else
 static int
+#endif
 sctp_detach(struct socket *so)
 {
 	struct sctp_inpcb *inp;
@@ -977,7 +993,11 @@ sctp_detach(struct socket *so)
 
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (inp == 0)
+#if defined(__FreeBSD__) && __FreeBSD_version > 690000
+		return;
+#else
 		return EINVAL;
+#endif
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
 #else
@@ -990,7 +1010,11 @@ sctp_detach(struct socket *so)
 		sctp_inpcb_free(inp, 0);
 	}
 	splx(s);
-	return 0;
+#if defined(__FreeBSD__) && __FreeBSD_version > 690000
+	return;
+#else
+	return(0);
+#endif
 }
 
 int
