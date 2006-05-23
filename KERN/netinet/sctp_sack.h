@@ -37,15 +37,15 @@ __FBSDID("$FreeBSD:$");
 
 #define SCTP_MAX_GAPS_INARRAY 4
 struct sctp_gap_ack_block {
-	uint16_t	start;	/* Gap Ack block start */
-	uint16_t	end;	/* Gap Ack block end */
+	uint16_t start;		/* Gap Ack block start */
+	uint16_t end;		/* Gap Ack block end */
 };
 
 struct sack_track {
-	uint8_t	right_edge;	/* mergable on the right edge */
-	uint8_t	left_edge;	/* mergable on the left edge */
-	uint8_t	num_entries;
-	uint8_t	spare;
+	uint8_t right_edge;	/* mergable on the right edge */
+	uint8_t left_edge;	/* mergable on the left edge */
+	uint8_t num_entries;
+	uint8_t spare;
 	struct sctp_gap_ack_block gaps[SCTP_MAX_GAPS_INARRAY];
 };
 

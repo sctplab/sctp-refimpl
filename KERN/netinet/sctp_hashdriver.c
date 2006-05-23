@@ -67,25 +67,29 @@ __FBSDID("$FreeBSD:$");
  * least that is what the FIP-180.1 web page says.
  */
 
-void 
+void
 sctp_hash_digest(char *key, int key_len, char *text, int text_len,
-		 unsigned char *digest)
+    unsigned char *digest)
 {
 #ifdef USE_MD5
-	md5_ctxt	context;
+	md5_ctxt context;
+
 #else
 	struct sha1_context context;
+
 #endif				/* USE_MD5 */
 	/* inner padding - key XORd with ipad */
-	unsigned char	k_ipad[65];
+	unsigned char k_ipad[65];
+
 	/* outer padding - key XORd with opad */
-	unsigned char	k_opad[65];
-	unsigned char	tk[20];
-	int		i;
+	unsigned char k_opad[65];
+	unsigned char tk[20];
+	int i;
 
 	if (key_len > 64) {
 #ifdef USE_MD5
-		md5_ctxt	tctx;
+		md5_ctxt tctx;
+
 		MD5Init(&tctx);
 		MD5Update(&tctx, key, key_len);
 		MD5Final(tk, &tctx);
@@ -93,6 +97,7 @@ sctp_hash_digest(char *key, int key_len, char *text, int text_len,
 		key_len = 16;
 #else
 		struct sha1_context tctx;
+
 		SHA1_Init(&tctx);
 		SHA1_Update(&tctx, (unsigned char *)key, key_len);
 		SHA1_Final(tk, &tctx);
@@ -105,9 +110,9 @@ sctp_hash_digest(char *key, int key_len, char *text, int text_len,
 	 * 
 	 * MD5(K XOR opad, MD5(K XOR ipad, text))
 	 * 
-	 * where K is an n byte key ipad is the byte 0x36 repeated 64 times opad
-	 * is the byte 0x5c repeated 64 times and text is the data being
-	 * protected
+	 * where K is an n byte key ipad is the byte 0x36 repeated 64 times
+	 * opad is the byte 0x5c repeated 64 times and text is the data
+	 * being protected
 	 */
 
 	/* start out by storing key in pads */
@@ -133,8 +138,8 @@ sctp_hash_digest(char *key, int key_len, char *text, int text_len,
 	SHA1_Init(&context);	/* init context for 1st pass */
 	SHA1_Update(&context, k_ipad, 64);	/* start with inner pad */
 	SHA1_Update(&context,
-		    (unsigned char *)text,
-		    text_len);	/* then text of datagram */
+	    (unsigned char *)text,
+	    text_len);		/* then text of datagram */
 	SHA1_Final(digest, &context);	/* finish up 1st pass */
 #endif				/* USE_MD5 */
 
@@ -150,32 +155,36 @@ sctp_hash_digest(char *key, int key_len, char *text, int text_len,
 	SHA1_Init(&context);	/* init context for 2nd pass */
 	SHA1_Update(&context, k_opad, 64);	/* start with outer pad */
 	SHA1_Update(&context,
-		    (unsigned char *)digest, 20);	/* then results of 1st
-							 * hash */
+	    (unsigned char *)digest, 20);	/* then results of 1st hash */
 	SHA1_Final(digest, &context);	/* finish up 2nd pass */
 #endif				/* USE_MD5 */
 }
 
-void 
+void
 sctp_hash_digest_m(char *key, int key_len, struct mbuf *m, int offset,
-		   unsigned char *digest)
+    unsigned char *digest)
 {
-	struct mbuf    *m_at;
+	struct mbuf *m_at;
+
 #ifdef USE_MD5
-	md5_ctxt	context;
+	md5_ctxt context;
+
 #else
 	struct sha1_context context;
+
 #endif				/* USE_MD5 */
 	/* inner padding - key XORd with ipad */
-	unsigned char	k_ipad[65];
+	unsigned char k_ipad[65];
+
 	/* outer padding - key XORd with opad */
-	unsigned char	k_opad[65];
-	unsigned char	tk[20];
-	int		i;
+	unsigned char k_opad[65];
+	unsigned char tk[20];
+	int i;
 
 	if (key_len > 64) {
 #ifdef USE_MD5
-		md5_ctxt	tctx;
+		md5_ctxt tctx;
+
 		MD5Init(&tctx);
 		MD5Update(&tctx, key, key_len);
 		MD5Final(tk, &tctx);
@@ -183,6 +192,7 @@ sctp_hash_digest_m(char *key, int key_len, struct mbuf *m, int offset,
 		key_len = 16;
 #else
 		struct sha1_context tctx;
+
 		SHA1_Init(&tctx);
 		SHA1_Update(&tctx, (unsigned char *)key, key_len);
 		SHA1_Final(tk, &tctx);
@@ -195,9 +205,9 @@ sctp_hash_digest_m(char *key, int key_len, struct mbuf *m, int offset,
 	 * 
 	 * MD5(K XOR opad, MD5(K XOR ipad, text))
 	 * 
-	 * where K is an n byte key ipad is the byte 0x36 repeated 64 times opad
-	 * is the byte 0x5c repeated 64 times and text is the data being
-	 * protected
+	 * where K is an n byte key ipad is the byte 0x36 repeated 64 times
+	 * opad is the byte 0x5c repeated 64 times and text is the data
+	 * being protected
 	 */
 
 	/* start out by storing key in pads */
@@ -228,7 +238,7 @@ sctp_hash_digest_m(char *key, int key_len, struct mbuf *m, int offset,
 	while (m_at != NULL) {
 		/* then text of datagram... */
 		MD5Update(&context, mtod(m_at, char *)+offset,
-			  m_at->m_len - offset);
+		    m_at->m_len - offset);
 		/* only offset on the first mbuf */
 		offset = 0;
 		m_at = m_at->m_next;
@@ -242,7 +252,7 @@ sctp_hash_digest_m(char *key, int key_len, struct mbuf *m, int offset,
 	while (m_at != NULL) {
 		/* then text of datagram */
 		SHA1_Update(&context, mtod(m_at, unsigned char *)+offset,
-			    m_at->m_len - offset);
+		    m_at->m_len - offset);
 		/* only offset on the first mbuf */
 		offset = 0;
 		m_at = m_at->m_next;

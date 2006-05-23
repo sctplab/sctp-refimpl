@@ -5,15 +5,15 @@
 #define SCTP_MAX_GAPS_INARRAY 4
 
 struct sctp_gap_ack_block {
-	uint16_t	start;	/* Gap Ack block start */
-	uint16_t	end;	/* Gap Ack block end */
+	uint16_t start;		/* Gap Ack block start */
+	uint16_t end;		/* Gap Ack block end */
 };
 
 struct sack_track {
-	uint8_t	right_edge;
-	uint8_t	left_edge;
-	uint8_t	num_entries;
-	uint8_t	spare;
+	uint8_t right_edge;
+	uint8_t left_edge;
+	uint8_t num_entries;
+	uint8_t spare;
 	struct sctp_gap_ack_block gaps[SCTP_MAX_GAPS_INARRAY];
 };
 
@@ -22,13 +22,13 @@ int
 main(int argc, char **argv)
 {
 	struct sack_track sack_array;
-	int		num       , i, bits, at, copyof, j;
-	int		seeing_one;
+	int num, i, bits, at, copyof, j;
+	int seeing_one;
 
 	if (argc != 2) {
 out:
 		printf("Use %s num (where 0 < num <= 256) \n",
-		       argv[0]);
+		    argv[0]);
 		exit(0);
 	}
 	num = strtol(argv[1], NULL, 0);
@@ -74,23 +74,23 @@ out:
 		}
 		sack_array.num_entries = at;
 		printf("{%d, %d, %d, %d,     /* 0x%2.2x */\n",
-		       sack_array.right_edge,
-		       sack_array.left_edge,
-		       sack_array.num_entries,
-		       sack_array.spare,
-		       (uint32_t) i);
+		    sack_array.right_edge,
+		    sack_array.left_edge,
+		    sack_array.num_entries,
+		    sack_array.spare,
+		    (uint32_t) i);
 		printf(" { { %d, %d},\n",
-		       sack_array.gaps[0].start,
-		       sack_array.gaps[0].end);
+		    sack_array.gaps[0].start,
+		    sack_array.gaps[0].end);
 		printf("   { %d, %d},\n",
-		       sack_array.gaps[1].start,
-		       sack_array.gaps[1].end);
+		    sack_array.gaps[1].start,
+		    sack_array.gaps[1].end);
 		printf("   { %d, %d},\n",
-		       sack_array.gaps[2].start,
-		       sack_array.gaps[2].end);
+		    sack_array.gaps[2].start,
+		    sack_array.gaps[2].end);
 		printf("   { %d, %d}\n",
-		       sack_array.gaps[3].start,
-		       sack_array.gaps[3].end);
+		    sack_array.gaps[3].start,
+		    sack_array.gaps[3].end);
 		printf(" }\n");
 		if (i == (num - 1)) {
 			printf("}\n");

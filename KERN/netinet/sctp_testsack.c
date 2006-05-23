@@ -3,7 +3,7 @@
 #include "sctp_sack.h"
 #include <netinet/sctp.h>
 
-int		verbose = 0;
+int verbose = 0;
 
 #define SCTP_IS_TSN_PRESENT(arry, gap) ((arry[(gap >> 3)] >> (gap & 0x07)) & 0x01)
 #define SCTP_SET_TSN_PRESENT(arry, gap) (arry[(gap >> 3)] |= (0x01 << ((gap & 0x07))))
@@ -11,10 +11,10 @@ int		verbose = 0;
 #define MAX_TSN 0xfffffff
 
 struct sctp_sack {
-	uint32_t	cum_tsn_ack;	/* cumulative TSN Ack */
-	uint32_t	a_rwnd;	/* updated a_rwnd of sender */
-	uint16_t	num_gap_ack_blks;	/* number of Gap Ack blocks */
-	uint16_t	num_dup_tsns;	/* number of duplicate TSNs */
+	uint32_t cum_tsn_ack;	/* cumulative TSN Ack */
+	uint32_t a_rwnd;	/* updated a_rwnd of sender */
+	uint16_t num_gap_ack_blks;	/* number of Gap Ack blocks */
+	uint16_t num_dup_tsns;	/* number of duplicate TSNs */
 	/* struct sctp_gap_ack_block's follow */
 	/* uint32_t duplicate_tsn's follow */
 };
@@ -27,18 +27,18 @@ struct sctp_sack_chunk {
 
 int
 sctp_generate_sack(uint8_t * mapping_array,
-		   uint32_t highest_tsn_inside_map,
-		   uint32_t mapping_array_base_tsn,
-		   uint32_t cumulative_tsn,
-		   struct sctp_sack_chunk *sack)
+    uint32_t highest_tsn_inside_map,
+    uint32_t mapping_array_base_tsn,
+    uint32_t cumulative_tsn,
+    struct sctp_sack_chunk *sack)
 {
 	struct sctp_gap_ack_block *gap_descriptor;
-	int		num_gap_discriptor = 0;
-	int		seeing_ones, i;
-	int		start     , maxi, m_size;
+	int num_gap_discriptor = 0;
+	int seeing_ones, i;
+	int start, maxi, m_size;
 
 	start = maxi = 0;
-	gap_descriptor = (struct sctp_gap_ack_block *)((caddr_t) sack + sizeof(struct sctp_sack_chunk));
+	gap_descriptor = (struct sctp_gap_ack_block *)((caddr_t)sack + sizeof(struct sctp_sack_chunk));
 	seeing_ones = 0;
 
 	if (highest_tsn_inside_map >= mapping_array_base_tsn) {
@@ -110,23 +110,24 @@ sctp_generate_sack(uint8_t * mapping_array,
 
 int
 sctp_generate_sack_new(uint8_t * mapping_array,
-		       uint32_t highest_tsn_inside_map,
-		       uint32_t mapping_array_base_tsn,
-		       uint32_t cumulative_tsn,
-		       struct sctp_sack_chunk *sack)
+    uint32_t highest_tsn_inside_map,
+    uint32_t mapping_array_base_tsn,
+    uint32_t cumulative_tsn,
+    struct sctp_sack_chunk *sack)
 {
 	struct sctp_gap_ack_block *gap_descriptor;
-	int		num_gap_discriptor = 0;
+	int num_gap_discriptor = 0;
 	struct sack_track *selector;
-	int		siz       , offset, i, j, jstart;
-	int		mergeable = 0, need_incr = 0;
-	gap_descriptor = (struct sctp_gap_ack_block *)((caddr_t) sack + sizeof(struct sctp_sack_chunk));
+	int siz, offset, i, j, jstart;
+	int mergeable = 0, need_incr = 0;
+
+	gap_descriptor = (struct sctp_gap_ack_block *)((caddr_t)sack + sizeof(struct sctp_sack_chunk));
 	/* calculate the number of bufs to work on */
 	siz = (((highest_tsn_inside_map - mapping_array_base_tsn) + 1) + 7) / 8;
 	if (verbose)
 		printf("Highest:%d mapping_array_base:%d cum_ack:%d siz:%d\n",
-		       highest_tsn_inside_map, mapping_array_base_tsn,
-		       cumulative_tsn, siz);
+		    highest_tsn_inside_map, mapping_array_base_tsn,
+		    cumulative_tsn, siz);
 
 	if (cumulative_tsn < mapping_array_base_tsn) {
 		offset = 1;
@@ -158,8 +159,8 @@ sctp_generate_sack_new(uint8_t * mapping_array,
 			for (j = jstart; j < selector->num_entries; j++) {
 				if (mergeable && selector->right_edge) {
 					/*
-					 * do a merge by NOT setting the left
-					 * side
+					 * do a merge by NOT setting the
+					 * left side
 					 */
 					mergeable = 0;
 				} else {
@@ -185,33 +186,35 @@ sctp_generate_sack_new(uint8_t * mapping_array,
 void
 dump_out_sack(struct sctp_sack_chunk *sack)
 {
-	int		i;
+	int i;
 	struct sctp_gap_ack_block *gap;
+
 	if (sack == NULL)
 		return;
 	printf("Number of gaps:%d\n",
-	       sack->sack.num_gap_ack_blks);
-	gap = (struct sctp_gap_ack_block *)((caddr_t) sack + sizeof(struct sctp_sack_chunk));
+	    sack->sack.num_gap_ack_blks);
+	gap = (struct sctp_gap_ack_block *)((caddr_t)sack + sizeof(struct sctp_sack_chunk));
 	for (i = 0; i < sack->sack.num_gap_ack_blks; i++) {
 		printf("Start:%d End:%d\n",
-		       ntohs(gap->start), ntohs(gap->end));
+		    ntohs(gap->start), ntohs(gap->end));
 		gap++;
 	}
 }
 
-extern void    *optarg;
+extern void *optarg;
 
 int
 main(int argc, char **argv)
 {
-	uint8_t	sack1_buf[2048];
-	uint8_t	sack2_buf[2048];
+	uint8_t sack1_buf[2048];
+	uint8_t sack2_buf[2048];
 	struct sctp_sack_chunk *sack1, *sack2;
-	int		j         , i;
-	uint32_t	num_skip = 0, num_compared = 0, num_diff = 0, max, startat;
-	uint8_t	mapping_array[32];
-	uint32_t	counter, *point;
-	uint32_t	highest_tsn_inside_map, mapping_array_base_tsn, cumulative_tsn;
+	int j, i;
+	uint32_t num_skip = 0, num_compared = 0, num_diff = 0, max, startat;
+	uint8_t mapping_array[32];
+	uint32_t counter, *point;
+	uint32_t highest_tsn_inside_map, mapping_array_base_tsn, cumulative_tsn;
+
 	startat = 1;
 	max = 0xffffffff;
 
@@ -272,16 +275,16 @@ main(int argc, char **argv)
 		num_compared++;
 		/* generate gap ack blocks */
 		sack1->sack.num_gap_ack_blks = sctp_generate_sack(mapping_array,
-						     highest_tsn_inside_map,
-						     mapping_array_base_tsn,
-							     cumulative_tsn,
-								  sack1);
+		    highest_tsn_inside_map,
+		    mapping_array_base_tsn,
+		    cumulative_tsn,
+		    sack1);
 
 		sack2->sack.num_gap_ack_blks = sctp_generate_sack_new(mapping_array,
-						     highest_tsn_inside_map,
-						     mapping_array_base_tsn,
-							     cumulative_tsn,
-								      sack2);
+		    highest_tsn_inside_map,
+		    mapping_array_base_tsn,
+		    cumulative_tsn,
+		    sack2);
 		if (verbose) {
 			printf("Value %x\n", i);
 			printf("Sack1 (old method)\n");
@@ -291,12 +294,13 @@ main(int argc, char **argv)
 		}
 		if (sack1->sack.num_gap_ack_blks != sack2->sack.num_gap_ack_blks) {
 			printf("had a difference with count:%x sack1->num:%d sack2->num:%d\n",
-			       i,
-			       sack1->sack.num_gap_ack_blks, sack2->sack.num_gap_ack_blks);
+			    i,
+			    sack1->sack.num_gap_ack_blks, sack2->sack.num_gap_ack_blks);
 			num_diff++;
 		} else {
-			int		cmp_size = ((sack1->sack.num_gap_ack_blks * sizeof(struct sctp_gap_ack_block)) +
-					 sizeof(struct sctp_sack_chunk));
+			int cmp_size = ((sack1->sack.num_gap_ack_blks * sizeof(struct sctp_gap_ack_block)) +
+			    sizeof(struct sctp_sack_chunk));
+
 			if (memcmp(sack1, sack2, cmp_size)) {
 				printf("Value %x came up with different blocks\n", i);
 				num_diff++;
@@ -304,14 +308,14 @@ main(int argc, char **argv)
 		}
 		if (i && ((i % 10000000) == 0)) {
 			printf("At %d compared:%d total skipped %d total diffs %d\n",
-			       i,
-			       num_compared,
-			       num_skip,
-			       num_diff);
+			    i,
+			    num_compared,
+			    num_skip,
+			    num_diff);
 		}
 	}
 	printf("Total compared:%d total skipped %d total diffs %d\n",
-	       num_compared,
-	       num_skip,
-	       num_diff);
+	    num_compared,
+	    num_skip,
+	    num_diff);
 }

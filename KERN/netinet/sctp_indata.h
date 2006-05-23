@@ -51,40 +51,41 @@ __FBSDID("$FreeBSD:$");
 
 struct sctp_queued_to_read *
 sctp_build_readq_entry(struct sctp_tcb *stcb,
-		       struct sctp_nets *net,
-		       uint32_t tsn, uint32_t ppid,
-		       uint32_t context, uint16_t stream_no,
-		       uint16_t stream_seq, uint8_t flags,
-		       struct mbuf *dm);
+    struct sctp_nets *net,
+    uint32_t tsn, uint32_t ppid,
+    uint32_t context, uint16_t stream_no,
+    uint16_t stream_seq, uint8_t flags,
+    struct mbuf *dm);
 
-struct mbuf    *
+struct mbuf *
 sctp_build_ctl_nchunk(struct sctp_inpcb *inp,
-		      struct sctp_sndrcvinfo *sinfo);
+    struct sctp_sndrcvinfo *sinfo);
 
-void		sctp_set_rwnd(struct sctp_tcb *, struct sctp_association *);
+void sctp_set_rwnd(struct sctp_tcb *, struct sctp_association *);
 
-void 
+void
 sctp_handle_sack(struct sctp_sack_chunk *, struct sctp_tcb *,
-		 struct sctp_nets *, int *);
+    struct sctp_nets *, int *);
 
 /* draft-ietf-tsvwg-usctp */
-void 
+void
 sctp_handle_forward_tsn(struct sctp_tcb *,
-			struct sctp_forward_tsn_chunk *, int *);
+    struct sctp_forward_tsn_chunk *, int *);
 
 struct sctp_tmit_chunk *
-		sctp_try_advance_peer_ack_point(struct sctp_tcb *, struct sctp_association *);
+                sctp_try_advance_peer_ack_point(struct sctp_tcb *, struct sctp_association *);
 
-void		sctp_service_queues(struct sctp_tcb *, struct sctp_association *);
+void sctp_service_queues(struct sctp_tcb *, struct sctp_association *);
 
-void 
+void
 sctp_update_acked(struct sctp_tcb *, struct sctp_shutdown_chunk *,
-		  struct sctp_nets *, int *);
+    struct sctp_nets *, int *);
 
-int 
+int
 sctp_process_data(struct mbuf **, int, int *, int, struct sctphdr *,
-   struct sctp_inpcb *, struct sctp_tcb *, struct sctp_nets *, uint32_t *);
+    struct sctp_inpcb *, struct sctp_tcb *, struct sctp_nets *, uint32_t *);
 
-void		sctp_sack_check(struct sctp_tcb *, int, int, int *);
+void sctp_sack_check(struct sctp_tcb *, int, int, int *);
+
 #endif
 #endif
