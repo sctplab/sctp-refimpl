@@ -386,25 +386,25 @@ struct msghdr {
 	int		 msg_flags;		/* flags on received message */
 };
 
-#define	MSG_OOB		 0x1		/* process out-of-band data */
-#define	MSG_PEEK	 0x2		/* peek at incoming message */
-#define	MSG_DONTROUTE	 0x4		/* send without using routing tables */
-#define	MSG_EOR		 0x8		/* data completes record */
-#define	MSG_TRUNC	 0x10		/* data discarded before delivery */
-#define	MSG_CTRUNC	 0x20		/* control data lost before delivery */
-#define	MSG_WAITALL	 0x40		/* wait for full request or error */
+#define	MSG_OOB		0x1		/* process out-of-band data */
+#define	MSG_PEEK	0x2		/* peek at incoming message */
+#define	MSG_DONTROUTE	0x4		/* send without using routing tables */
+#define	MSG_EOR		0x8		/* data completes record */
+#define	MSG_TRUNC	0x10		/* data discarded before delivery */
+#define	MSG_CTRUNC	0x20		/* control data lost before delivery */
+#define	MSG_WAITALL	0x40		/* wait for full request or error */
 #define MSG_NOTIFICATION 0x2000         /* SCTP notification */
 #if __BSD_VISIBLE
-#define	MSG_DONTWAIT	 0x80		/* this message should be nonblocking */
-#define	MSG_EOF		 0x100		/* data completes connection */
-#define	MSG_NBIO	 0x4000		/* FIONBIO mode, used by fifofs */
-#define	MSG_COMPAT       0x8000		/* used in sendit() */
+#define	MSG_DONTWAIT	0x80		/* this message should be nonblocking */
+#define	MSG_EOF		0x100		/* data completes connection */
+#define	MSG_NBIO	0x4000		/* FIONBIO mode, used by fifofs */
+#define	MSG_COMPAT      0x8000		/* used in sendit() */
 #endif
 #ifdef _KERNEL
-#define	MSG_SOCALLBCK    0x10000	/* for use by socket callbacks - soreceive (TCP) */
+#define	MSG_SOCALLBCK   0x10000		/* for use by socket callbacks - soreceive (TCP) */
 #endif
 #if __BSD_VISIBLE
-#define	MSG_NOSIGNAL	 0x20000	/* do not generate SIGPIPE on EOF */
+#define	MSG_NOSIGNAL	0x20000		/* do not generate SIGPIPE on EOF */
 #endif
 
 /*
