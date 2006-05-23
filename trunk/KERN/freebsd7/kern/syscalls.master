@@ -1,4 +1,4 @@
- $FreeBSD: src/sys/kern/syscalls.master,v 1.213 2006/03/23 08:46:41 davidxu Exp $
+ $FreeBSD: src/sys/kern/syscalls.master,v 1.215 2006/03/28 14:32:37 des Exp $
 ;	from: @(#)syscalls.master	8.2 (Berkeley) 1/13/94
 ;
 ; System call name/number master file.
@@ -827,6 +827,5 @@
 469     AUE_NULL        MSTD    { int sctp_recvmsg(int sd, caddr_t buf, size_t len, \
 				    struct sockaddr * from, __socklen_t *fromlenaddr, \
 				    struct sctp_sndrcvinfo *sinfo, int *msg_flags); }
-
 ; Please copy any additions and changes to the following compatability tables:
 ; sys/compat/freebsd32/syscalls.master
