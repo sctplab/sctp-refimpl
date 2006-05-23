@@ -2339,7 +2339,7 @@ sctp_send(td, uap)
 	* this code. If getsock/fdrop does not need
 	* giant, then we can remove these locks.
 	*/
-	error = getsock(td->td_proc->p_fd, uap->sd, &fp);
+	error = getsock(td->td_proc->p_fd, uap->sd, &fp, NULL);
 	if (error)
 		goto sctp_bad2;
 
@@ -2435,7 +2435,7 @@ int sctp_sendmsg(td, uap)
 		to = NULL;
 		goto sctp_bad2;
 	}
-	error = getsock(td->td_proc->p_fd, uap->sd, &fp);
+	error = getsock(td->td_proc->p_fd, uap->sd, &fp, NULL);
 	if (error)
 		goto sctp_bad2;
 
@@ -2536,7 +2536,7 @@ int sctp_recvmsg(td, uap)
 #ifdef KTRACE
 	struct uio *ktruio = NULL;
 #endif
-	error = getsock(td->td_proc->p_fd, uap->sd, &fp);
+	error = getsock(td->td_proc->p_fd, uap->sd, &fp, NULL);
 	if (error) {
 		return (error);
 	}
