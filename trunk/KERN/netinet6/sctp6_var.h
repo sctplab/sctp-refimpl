@@ -46,26 +46,34 @@
 #if defined(__FreeBSD__) || (__APPLE__)
 SYSCTL_DECL(_net_inet6_sctp6);
 extern struct pr_usrreqs sctp6_usrreqs;
-int	sctp6_ctloutput __P((struct socket *, struct sockopt *));
+int sctp6_ctloutput __P((struct socket *, struct sockopt *));
+
 #else
-int	sctp6_ctloutput __P((int, struct socket *, int, int, struct mbuf **));
+int sctp6_ctloutput __P((int, struct socket *, int, int, struct mbuf **));
+
 #if defined(__NetBSD__) || defined(__OpenBSD__)
-int	sctp6_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,
-			   struct mbuf *, struct proc *));
+int sctp6_usrreq 
+__P((struct socket *, int, struct mbuf *, struct mbuf *,
+    struct mbuf *, struct proc *));
+
 #else
-int	sctp6_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,
-			   struct mbuf *));
-#endif /* __NetBSD__ || __OpenBSD__ */
-#endif /* __FreeBSD__ */
+int sctp6_usrreq 
+__P((struct socket *, int, struct mbuf *, struct mbuf *,
+    struct mbuf *));
+
+#endif				/* __NetBSD__ || __OpenBSD__ */
+#endif				/* __FreeBSD__ */
 
 #if defined(__APPLE__)
-int	sctp6_input __P((struct mbuf **, int *));
-#else
-int	sctp6_input __P((struct mbuf **, int *, int));
-#endif
-int	sctp6_output __P((struct sctp_inpcb *, struct mbuf *, struct sockaddr *,
-	struct mbuf *, struct proc *));
-void	sctp6_ctlinput __P((int, struct sockaddr *, void *));
+	int sctp6_input __P((struct mbuf **, int *));
 
-#endif /* _KERNEL */
+#else
+	int sctp6_input __P((struct mbuf **, int *, int));
+
+#endif
+	int sctp6_output __P((struct sctp_inpcb *, struct mbuf *, struct sockaddr *,
+                 struct mbuf *, struct proc *));
+	void sctp6_ctlinput __P((int, struct sockaddr *, void *));
+
+#endif				/* _KERNEL */
 #endif
