@@ -718,9 +718,7 @@ struct sctp_nets **netp, struct sockaddr *local, struct sctp_tcb *locked_tcb)
 						if (locked_tcb == NULL) {
 							SCTP_INP_DECR_REF(inp);
 						} else if (locked_tcb != stcb) {
-							SCTP_INP_RLOCK(locked_tcb->sctp_ep);
 							SCTP_TCB_LOCK(locked_tcb);
-							SCTP_INP_RUNLOCK(locked_tcb->sctp_ep);
 						}
 						SCTP_INP_WUNLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
@@ -742,9 +740,7 @@ struct sctp_nets **netp, struct sockaddr *local, struct sctp_tcb *locked_tcb)
 						if (locked_tcb == NULL) {
 							SCTP_INP_DECR_REF(inp);
 						} else if (locked_tcb != stcb) {
-							SCTP_INP_RLOCK(locked_tcb->sctp_ep);
 							SCTP_TCB_LOCK(locked_tcb);
-							SCTP_INP_RUNLOCK(locked_tcb->sctp_ep);
 						}
 						SCTP_INP_WUNLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
@@ -799,13 +795,7 @@ struct sctp_nets **netp, struct sockaddr *local, struct sctp_tcb *locked_tcb)
 						if (locked_tcb == NULL) {
 							SCTP_INP_DECR_REF(inp);
 						} else if (locked_tcb != stcb) {
-#ifdef SCTP_INVARIENTS
-							SCTP_INP_RLOCK(locked_tcb->sctp_ep);
-#endif
 							SCTP_TCB_LOCK(locked_tcb);
-#ifdef SCTP_INVARIENTS
-							SCTP_INP_RUNLOCK(locked_tcb->sctp_ep);
-#endif
 						}
 						SCTP_INP_WUNLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
@@ -828,13 +818,7 @@ struct sctp_nets **netp, struct sockaddr *local, struct sctp_tcb *locked_tcb)
 						if (locked_tcb == NULL) {
 							SCTP_INP_DECR_REF(inp);
 						} else if (locked_tcb != stcb) {
-#ifdef SCTP_INVARIENTS
-							SCTP_INP_RLOCK(locked_tcb->sctp_ep);
-#endif
 							SCTP_TCB_LOCK(locked_tcb);
-#ifdef SCTP_INVARIENTS
-							SCTP_INP_RUNLOCK(locked_tcb->sctp_ep);
-#endif
 						}
 						SCTP_INP_WUNLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
@@ -851,16 +835,7 @@ struct sctp_nets **netp, struct sockaddr *local, struct sctp_tcb *locked_tcb)
 null_return:
 	/* clean up for returning null */
 	if (locked_tcb) {
-		if (locked_tcb->sctp_ep != inp) {
-#ifdef SCTP_INVARIENTS
-			SCTP_INP_RLOCK(locked_tcb->sctp_ep);
-#endif
-			SCTP_TCB_LOCK(locked_tcb);
-#ifdef SCTP_INVARIENTS
-			SCTP_INP_RUNLOCK(locked_tcb->sctp_ep);
-#endif
-		} else
-			SCTP_TCB_LOCK(locked_tcb);
+		SCTP_TCB_LOCK(locked_tcb);
 	}
 	SCTP_INP_WUNLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
