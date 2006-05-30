@@ -1,11 +1,11 @@
-#ifndef __Rserpool_h__
-#define __Rserpool_h__
+#ifndef __Rserpool_io_h__
+#define __Rserpool_io_h__
 #include <sys/types.h>
 #include <netinet/sctp.h>
 #include <netinet/in.h>
 
 /*
- * RSERPOOL parameters
+ * RSERPOOL parameters on the wire.
  */
 
 #define RSP_SKIP_PARAM     0x8000
