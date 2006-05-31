@@ -9,7 +9,7 @@ vvvvvvv  STEP 1   vvvvvvvvvvvvvvv
 cd ~
 mkdir sctpCode
 cd sctpCode
-tar -zxf ~/tarball.tgz
+tar -zxf ~/sctp_tarball.tgz
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Now with that done go in to
