@@ -4189,13 +4189,13 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	SCTP_TCB_UNLOCK(stcb);
 
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	if !(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
+	if (!(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
 		sctp_lock_assert(inp->sctp_socket);
 	}
 #endif
 	SCTP_ITERATOR_LOCK();
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	if !(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
+	if (!(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
 		if (!lck_rw_try_lock_exclusive(sctppcbinfo.ipi_ep_mtx)) {
 			socket_unlock(inp->sctp_socket, 0);
 			lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
