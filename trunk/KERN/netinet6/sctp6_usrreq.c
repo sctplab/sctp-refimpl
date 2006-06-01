@@ -488,7 +488,7 @@ sctp_skip_csum:
 	}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	if (!(in6p->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
-		socket_unlock(in6qp->sctp_socket, 1);
+		socket_unlock(in6p->sctp_socket, 1);
 	}
 #endif
 
