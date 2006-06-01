@@ -453,6 +453,7 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 
 #ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
 	void sctp_finish(void);
+
 #endif
 	int sctp_shutdown __P((struct socket *));
 	void sctp_notify __P((struct sctp_inpcb *, int, struct sctphdr *,
