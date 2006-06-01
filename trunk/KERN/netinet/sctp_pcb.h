@@ -725,14 +725,10 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 /* Lock for INFO stuff */
 #define SCTP_INP_INFO_LOCK_INIT() \
 	sctppcbinfo.ipi_ep_mtx = lck_rw_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
-#define SCTP_INP_INFO_RLOCK() \
-	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx)
-#define SCTP_INP_INFO_RUNLOCK() \
-	lck_rw_done(sctppcbinfo.ipi_ep_mtx)
-#define SCTP_INP_INFO_WLOCK() \
-	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx)
-#define SCTP_INP_INFO_WUNLOCK() \
-	lck_rw_done(sctppcbinfo.ipi_ep_mtx)
+#define SCTP_INP_INFO_RLOCK()
+#define SCTP_INP_INFO_RUNLOCK() 
+#define SCTP_INP_INFO_WLOCK() 
+#define SCTP_INP_INFO_WUNLOCK()
 #define SCTP_INP_INFO_LOCK_DESTROY() \
         lck_rw_free(sctppcbinfo.ipi_ep_mtx, SCTP_MTX_GRP)
 #define SCTP_IPI_COUNT_INIT() \
@@ -949,6 +945,10 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 /***************BEGIN APPLE Tiger count stuff**********************/
+#define I_AM_HERE \
+                do { \
+			printf("%s:%d at %s\n", __FILE__, __LINE__ , __FUNCTION__); \
+		} while (0)
 #define SCTP_INCRS_DEFINED 1
 #define SCTP_INCR_EP_COUNT() \
                 do { \
