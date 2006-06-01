@@ -49,37 +49,37 @@ __FBSDID("$FreeBSD:$");
 
 #if defined(_KERNEL)
 
-extern void	sctp_asconf_cleanup(struct sctp_tcb *, struct sctp_nets *);
+extern void sctp_asconf_cleanup(struct sctp_tcb *, struct sctp_nets *);
 
 extern struct mbuf *sctp_compose_asconf(struct sctp_tcb *);
 
-extern void 
+extern void
 sctp_handle_asconf(struct mbuf *, unsigned int, struct sctp_asconf_chunk *,
-		   struct sctp_tcb *, struct sctp_nets *);
+    struct sctp_tcb *, struct sctp_nets *);
 
-extern void 
+extern void
 sctp_handle_asconf_ack(struct mbuf *, int,
-     struct sctp_asconf_ack_chunk *, struct sctp_tcb *, struct sctp_nets *);
+    struct sctp_asconf_ack_chunk *, struct sctp_tcb *, struct sctp_nets *);
 
-extern uint32_t 
+extern uint32_t
 sctp_addr_mgmt_ep_sa(struct sctp_inpcb *, struct sockaddr *,
-		     uint16_t);
+    uint16_t);
 
-extern void	sctp_add_ip_address(struct ifaddr *);
+extern void sctp_add_ip_address(struct ifaddr *);
 
-extern void	sctp_delete_ip_address(struct ifaddr *);
+extern void sctp_delete_ip_address(struct ifaddr *);
 
-extern void	sctp_addr_change(struct ifaddr *ifa, int cmd);
+extern void sctp_addr_change(struct ifaddr *ifa, int cmd);
 
-extern int32_t 
+extern int32_t
 sctp_set_primary_ip_address_sa(struct sctp_tcb *,
-			       struct sockaddr *);
+    struct sockaddr *);
 
-extern void	sctp_set_primary_ip_address(struct ifaddr *);
+extern void sctp_set_primary_ip_address(struct ifaddr *);
 
-extern void 
+extern void
 sctp_check_address_list(struct sctp_tcb *, struct mbuf *, int, int,
-		 struct sockaddr *, uint16_t, uint16_t, uint16_t, uint16_t);
+    struct sockaddr *, uint16_t, uint16_t, uint16_t, uint16_t);
 
 #endif				/* _KERNEL */
 

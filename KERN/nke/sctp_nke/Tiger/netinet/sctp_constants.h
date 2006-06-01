@@ -128,9 +128,9 @@ __FBSDID("$FreeBSD:$");
 /*
  * To turn on various logging, you must first define SCTP_STAT_LOGGING. Then
  * to get something to log you define one of the logging defines i.e.
- * 
+ *
  * SCTP_CWND_LOGGING SCTP_BLK_LOGGING SCTP_STR_LOGGING SCTP_FR_LOGGING
- * 
+ *
  * Any one or a combination of the logging can be turned on.
  */
 #define SCTP_LOG_EVENT_CWND  1
@@ -171,7 +171,7 @@ __FBSDID("$FreeBSD:$");
  * If you wish to use MD5 instead of SLA uncomment the line below. Why you
  * would like to do this: a) There may be IPR on SHA-1, or so the FIP-180-1
  * page says, b) MD5 is 3 times faster (has coded here).
- * 
+ *
  * The disadvantage is it is thought that MD5 has been cracked... see RFC2104.
  */
 /* #define USE_MD5 1 */
@@ -300,12 +300,12 @@ __FBSDID("$FreeBSD:$");
 /*
  * draft-ietf-tsvwg-addip-sctp-xx param=0x8008  len=0xNNNN Byte | Byte | Byte
  * | Byte Byte | Byte ...
- * 
+ *
  * Where each byte is a chunk type extension supported. For example, to support
  * all chunks one would have (in hex):
- * 
+ *
  * 80 01 00 09 C0 C1 80 81 82 00 00 00
- * 
+ *
  * Has the parameter. C0 = PR-SCTP    (RFC3758) C1, 80 = ASCONF (addip draft) 81
  * = Packet Drop 82 = Stream Reset 83 = Authentication
  */
@@ -543,10 +543,8 @@ __FBSDID("$FreeBSD:$");
 #define SCTP_RTO_INITIAL	(3000)	/* 3 sec in ms */
 
 
-#define SCTP_INP_KILL_TIMEOUT 1000	/* number of ms to retry kill of
-					 * inpcb */
-#define SCTP_ASOC_KILL_TIMEOUT 10	/* number of ms to retry kill of
-					 * inpcb */
+#define SCTP_INP_KILL_TIMEOUT 1000	/* number of ms to retry kill of inpcb */
+#define SCTP_ASOC_KILL_TIMEOUT 10	/* number of ms to retry kill of inpcb */
 
 #define SCTP_DEF_MAX_INIT	8
 #define SCTP_DEF_MAX_SEND	10

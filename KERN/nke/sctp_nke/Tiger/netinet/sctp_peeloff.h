@@ -46,10 +46,11 @@ __FBSDID("$FreeBSD:$");
 #if defined(HAVE_SCTP_PEELOFF_SOCKOPT)
 /* socket option peeloff */
 struct sctp_peeloff_opt {
-	int		s;
-	sctp_assoc_t	assoc_id;
-	int		new_sd;
+	int s;
+	sctp_assoc_t assoc_id;
+	int new_sd;
 };
+
 #endif				/* HAVE_SCTP_PEELOFF_SOCKOPT */
 
 
@@ -61,21 +62,23 @@ struct sctp_peeloff_opt {
 
 #if defined(_KERNEL)
 
-int		sctp_can_peel_off(struct socket *, sctp_assoc_t);
-int		sctp_do_peeloff(struct socket *, struct socket *, sctp_assoc_t);
-struct socket  *sctp_get_peeloff(struct socket *, sctp_assoc_t, int *);
+int sctp_can_peel_off(struct socket *, sctp_assoc_t);
+int sctp_do_peeloff(struct socket *, struct socket *, sctp_assoc_t);
+struct socket *sctp_get_peeloff(struct socket *, sctp_assoc_t, int *);
 
 #if defined(HAVE_SCTP_PEELOFF_SOCKOPT)
 #include <sys/proc.h>
-int		sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *peeloff);
+int sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *peeloff);
+
 #endif				/* HAVE_SCTP_PEELOFF_SOCKOPT */
 
 #ifdef __APPLE__
 /* sctp_peeloff() syscall arguments */
 struct sctp_peeloff_args {
-	int		s;
-	caddr_t		name;
+	int s;
+	caddr_t name;
 };
+
 #endif				/* __APPLE__ */
 
 #endif				/* _KERNEL */
