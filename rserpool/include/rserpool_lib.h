@@ -36,7 +36,6 @@
 
 /* The extern socket hash */
 struct rsp_global_info {
-	int			rsp_inited;	/* boolean have_inited */
 	int			rsp_timers_up;	/* count of timers on list */
 	int			rsp_number_sd;	/* count of sd's when 0 un-init */
 	HashedTbl		*sd_pool;	/* hashed pool of sd's */
@@ -48,7 +47,7 @@ struct rsp_global_info {
 };
 
 extern struct rsp_global_info rsp_pcbinfo;
-
+extern int rsp_inited;	/* boolean have_inited */
 
 /* when we make an ENRP request we save it
  * in one of these, stick it on the sd list
@@ -77,20 +76,22 @@ struct rsp_socket_hash {
 	int	 	sd;			/* sctp socket */
 	dlist_t 	*allPools;		/* list of all pools */
 	HashedTbl	*cache;			/* cache of names */
-	HashedTbl	*vtagHash;		/* assoc id-> rsp_pool */
+	HashedTbl	*vtagHash;		/* assoc id-> rsp_pool_element */
 	HashedTbl	*ipaddrPortHash		/* ipadd -> rsp_pool_element */
-	dlist		*enrp_reqs;		/* ENRP requests outstanding */
-	dlist		*address_reg;		/* setup w/addrlist w/ctl&data seperate */
-	uint32_t 	refcnt;			/* number of names in use */
+	dlist_t		*enrp_reqs;		/* ENRP requests outstanding */
+	dlist_t		*address_reg;		/* setup w/addrlist w/ctl&data seperate */
 	dlist_t 	*enrpAddrList;		/* Home ENRP server */
+	uint32_t 	refcnt;			/* number of names in use */
 	uint32_t	enrpID;			/* ID of home ENRP server */
 	char 		*registeredName;	/* our name if registered */
 	uint32_t 	timers[RSP_NUMBER_TIMERS]; /* sd timers */
+	uint32_t        stale_cache_ms;
 	uint32_t	myPEid;			/* my 32 bit PE id */
 	uint32_t	reglifetime;		/* how long my reg is good for */
 	uint32_t        myPolicy;
 	uint16_t	registration_count;	/* times I have attempted to reg */
-	uint16_t	registration_threshold;	/* threshold where I fail reg */
+	uint16_t	registration_threshold;	/* threshold where I fail reg and start server hunt*/
+	uint16_t        max_request_retransmit; /* max request retransmit value */
 	uint16_t	port;			/* our port number */
 	uint8_t		registered;		/* boolean flag if we are reg'd */
 	uint8_t		useThisSd;		/* flag say's if sd is data channel */
@@ -148,5 +149,30 @@ struct pe_address {
 	}sa;
 };
 
+
+/* default settings and such */
+#define RSP_SD_HASH_TABLE_NAME "rsp_sd_hashtable" 
+#define RSP_SD_HASH_TBL_SIZE 4
+
+#define RSP_CACHE_HASH_TABLE_NAME "rsp_names_to_pool"
+#define RSP_CACHE_HASH_TBL_SIZE 25
+
+#define RSP_VTAG_HASH_TABLE_NAME "rsp_vtag_to_pe"
+#define RSP_VTAG_HASH_TBL_SIZE 10
+
+#define RSP_IPADDR_HASH_TABLE_NAME "rsp_ipaddr_to_pe"
+#define RSP_IPADDR_HASH_TBL_SIZE 50
+
+#define DEF_RSP_T1_ENRP_REQUEST		15000
+#define DEF_RSP_T2_REGISTRATION		30000
+#define DEF_RSP_T3_DEREGISTRATION	30000
+#define DEF_RSP_T4_REREGISTRATION	20000
+#define DEF_RSP_T5_SERVERHUNT	       120000
+#define DEF_RSP_T6_SERVERANNOUNCE	1000
+#define DEF_RSP_T7_ENRPOUTDATE		5000
+
+#define DEF_MAX_REG_ATTEMPT	    2
+#define DEF_MAX_REQUEST_RETRANSMIT  2 
+#define DEF_STALE_CACHE_VALUE       30000
 
 #endif
