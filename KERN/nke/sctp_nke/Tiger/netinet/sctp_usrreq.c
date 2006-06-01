@@ -6322,7 +6322,7 @@ sctp_unlock_assert(struct socket *so)
 	if (so->so_pcb) {
 		lck_mtx_assert(((struct inpcb *)so->so_pcb)->inpcb_mtx, LCK_MTX_ASSERT_NOTOWNED);
 	} else {
-		panic("sctp_lock_assert: so=%p has sp->so_pcb==NULL.\n", so);
+		panic("sctp_unlock_assert: so=%p has sp->so_pcb==NULL.\n", so);
 	}
 }
 
