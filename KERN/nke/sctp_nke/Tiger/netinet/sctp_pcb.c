@@ -1564,10 +1564,11 @@ sctp_findassoc_by_vtag(struct sockaddr *from, uint32_t vtag,
 			SCTP_INP_INFO_RUNLOCK();
 			return (NULL);
 		}
-		SCTP_TCB_LOCK(stcb);
+
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		socket_lock(stcb->sctp_socket, 1);
 #endif
+		SCTP_TCB_LOCK(stcb);
 		SCTP_INP_RUNLOCK(stcb->sctp_ep);
 		if (stcb->asoc.my_vtag == vtag) {
 			/* candidate */
@@ -1576,10 +1577,10 @@ sctp_findassoc_by_vtag(struct sockaddr *from, uint32_t vtag,
 				 * we could remove this if vtags are unique
 				 * across the system.
 				 */
-				SCTP_TCB_UNLOCK(stcb);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 				socket_unlock(stcb->sctp_socket, 1);
 #endif
+				SCTP_TCB_UNLOCK(stcb);
 				continue;
 			}
 			if (stcb->sctp_ep->sctp_lport != lport) {
@@ -1587,10 +1588,10 @@ sctp_findassoc_by_vtag(struct sockaddr *from, uint32_t vtag,
 				 * we could remove this if vtags are unique
 				 * across the system.
 				 */
-				SCTP_TCB_UNLOCK(stcb);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 				socket_unlock(stcb->sctp_socket, 1);
 #endif
+				SCTP_TCB_UNLOCK(stcb);
 				continue;
 			}
 			net = sctp_findnet(stcb, from);
@@ -1612,10 +1613,10 @@ sctp_findassoc_by_vtag(struct sockaddr *from, uint32_t vtag,
 				sctp_pegs[SCTP_VTAG_BOGUS]++;
 			}
 		}
-		SCTP_TCB_UNLOCK(stcb);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		socket_unlock(stcb->sctp_socket, 1);
 #endif
+		SCTP_TCB_UNLOCK(stcb);
 	}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
@@ -2800,6 +2801,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		return;
 	}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sctp_lock_assert(inp->sctp_socket);
+#endif
 	sctp_timer_stop(SCTP_TIMER_TYPE_NEWCOOKIE, inp, NULL, NULL);
 
 	if (inp->control) {
@@ -3200,6 +3204,8 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 #if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, inp);
 	SCTP_DECR_EP_COUNT();
+#endif
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 #endif
 	SCTP_INP_INFO_WUNLOCK();

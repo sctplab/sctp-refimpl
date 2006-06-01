@@ -1902,7 +1902,7 @@ sctp_slowtimo()
 			SCTP_DECR_EP_COUNT();
 		}
 	}
-	lck_rw_done(sctppcbinfo.ipi_ep_mtx);
+	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 }
 
 #endif
