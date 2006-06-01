@@ -2144,10 +2144,10 @@ sctp_delete_ip_address(struct ifaddr *ifa)
 			}
 			laddr = laddr_next;
 		}
-		SCTP_INP_RUNLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		socket_lock(inp->sctp_socket, 1);
+		socket_unlock(inp->sctp_socket, 1);
 #endif
+		SCTP_INP_RUNLOCK(inp);
 	}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);

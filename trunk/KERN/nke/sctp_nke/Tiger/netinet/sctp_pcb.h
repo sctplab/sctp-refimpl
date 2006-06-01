@@ -945,6 +945,10 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 /***************BEGIN APPLE Tiger count stuff**********************/
+#define I_AM_HERE \
+                do { \
+			printf("%s:%d at %s\n", __FILE__, __LINE__ , __FUNCTION__); \
+		} while (0)
 #define SCTP_INCRS_DEFINED 1
 #define SCTP_INCR_EP_COUNT() \
                 do { \
