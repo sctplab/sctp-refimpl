@@ -402,22 +402,21 @@ kern_return_t SCTP_stop (kmod_info_t * ki, void * d) {
 #endif
 
 #ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
-	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+	if (!lck_rw_try_lock_exclusive(sctppcbinfo.ipi_ep_mtx)) {
+		printf("SCTP NKE: Someone else holds the lock\n");
+		return KERN_FAILURE;
+	}
 #endif
 	if (!LIST_EMPTY(&sctppcbinfo.listhead)) {
 		printf("SCTP NKE: There are still SCTP enpoints. NKE not unloaded\n");
 #ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
-		lck_rw_done(sctppcbinfo.ipi_ep_mtx);
+		lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 #else
 		splx(s);
 		(void)thread_funnel_set(network_flock, funnel_state);
 #endif
 		return KERN_FAILURE;
 	}
-#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
-	lck_rw_done(sctppcbinfo.ipi_ep_mtx);
-#endif
-
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_sendspace);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_recvspace);
 /*
@@ -481,6 +480,7 @@ kern_return_t SCTP_stop (kmod_info_t * ki, void * d) {
 	err |= net_del_proto(sctp6_stream.pr_type,    sctp6_stream.pr_protocol,    &inet6domain);
 
 #ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
+	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 	sctp_finish();
 	lck_mtx_unlock(inet6domain.dom_mtx);
 	lck_mtx_unlock(inetdomain.dom_mtx);
