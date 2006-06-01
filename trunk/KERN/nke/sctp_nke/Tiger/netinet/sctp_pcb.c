@@ -4049,11 +4049,15 @@ sctp_iterator_asoc_being_freed(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	 * waiting on the iterator lock.
 	 */
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	sctp_unlock_assert(inp->sctp_socket);
+	sctp_lock_assert(inp->sctp_socket);
 #endif
 	SCTP_ITERATOR_LOCK();
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+	if (!lck_rw_try_lock_exclusive(sctppcbinfo.ipi_ep_mtx)) {
+		socket_unlock(inp->sctp_socket, 0);
+		lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+		socket_lock(inp->sctp_socket, 0);
+	}
 #endif
 	SCTP_INP_INFO_WLOCK();
 	SCTP_INP_WLOCK(inp);
@@ -4203,10 +4207,11 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		SOCKBUF_UNLOCK(&so->so_rcv);
 	}
 	SCTP_TCB_UNLOCK(stcb);
-
+	
 	sctp_iterator_asoc_being_freed(inp, stcb);
 	/*
 	 * sctp_iterator_assoc_being_freed does
+         * 	SCTP_ITERATOR_LOCK();
 	 *	SCTP_INP_INFO_WLOCK();
 	 *	SCTP_INP_WLOCK(inp);
 	 *	SCTP_TCB_LOCK(stcb);
@@ -4247,7 +4252,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	SCTP_INP_WUNLOCK(inp);
 	SCTP_ITERATOR_UNLOCK();
 
-
 	/* pull from vtag hash */
 	LIST_REMOVE(stcb, sctp_asocs);
 
@@ -4257,7 +4261,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 #endif
 	SCTP_INP_INFO_WUNLOCK();
 	prev = NULL;
-
 	if ((from_inpcbfree == 0) && so) {
 		SOCKBUF_LOCK(&so->so_snd);
 		SOCKBUF_LOCK(&so->so_rcv);
