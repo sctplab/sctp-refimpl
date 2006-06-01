@@ -1,8 +1,11 @@
 #ifndef __rserpool_lib_h__
 #define __rserpool_lib_h__
-
+#include <stdio.h>
+#include <sys/types.h>
+#include <pthread.h>
 #include <dlist.h>
-
+#include <HashedTbl.h>
+#include <sys/time.h>
 /*
  * We first need to have the base structure
  * of a Pool that is kept inside the library.
@@ -32,44 +35,113 @@
  */
 
 /* The extern socket hash */
-extern HashedTbl *sd_pool;
-/* do I need a mutex? */
+struct rsp_global_info {
+	int			rsp_inited;	/* boolean have_inited */
+	int			rsp_timers_up;	/* count of timers on list */
+	int			rsp_number_sd;	/* count of sd's when 0 un-init */
+	HashedTbl		*sd_pool;	/* hashed pool of sd's */
+	dlist_t			*timer_list;	/* list of timers running */
+	pthread 		tmr_thread; 	/* thread for timeouts */
+	pthread_mutex_t		sd_pool_mtx;	/* mutex for sd_pool   */
+	pthread_cond_t		rsp_tmr_cnd;	/* condition sleep when num tmr == 0 */
+	pthread_mutex_t		rsp_tmr_mtx;	/* mutex for timers   */
+};
 
+extern struct rsp_global_info rsp_pcbinfo;
+
+
+/* when we make an ENRP request we save it
+ * in one of these, stick it on the sd list
+ * and have a timer pointing to it.
+ */
+
+struct rsp_enrp_req {
+	char *req;
+	int len;
+	int request_type;
+	char *name;
+};
+
+/* timer const's */
+#define RSP_T1_ENRP_REQUEST		0x0000
+#define RSP_T2_REGISTRATION		0x0001
+#define RSP_T3_DEREGISTRATION		0x0002
+#define RSP_T4_REREGISTRATION		0x0003
+#define RSP_T5_SERVERHUNT		0x0004
+#define RSP_T6_SERVERANNOUNCE		0x0005
+#define RSP_T7_ENRPOUTDATE		0x0006
+#define RSP_NUMBER_TIMERS 7
+
+/* For each socket descriptor we will have one of these */
 struct rsp_socket_hash {
 	int	 	sd;			/* sctp socket */
+	dlist_t 	*allPools;		/* list of all pools */
 	HashedTbl	*cache;			/* cache of names */
 	HashedTbl	*vtagHash;		/* assoc id-> rsp_pool */
 	HashedTbl	*ipaddrPortHash		/* ipadd -> rsp_pool_element */
+	dlist		*enrp_reqs;		/* ENRP requests outstanding */
+	dlist		*address_reg;		/* setup w/addrlist w/ctl&data seperate */
 	uint32_t 	refcnt;			/* number of names in use */
 	dlist_t 	*enrpAddrList;		/* Home ENRP server */
+	uint32_t	enrpID;			/* ID of home ENRP server */
 	char 		*registeredName;	/* our name if registered */
+	uint32_t 	timers[RSP_NUMBER_TIMERS]; /* sd timers */
+	uint32_t	myPEid;			/* my 32 bit PE id */
+	uint32_t	reglifetime;		/* how long my reg is good for */
+	uint32_t        myPolicy;
+	uint16_t	registration_count;	/* times I have attempted to reg */
+	uint16_t	registration_threshold;	/* threshold where I fail reg */
 	uint16_t	port;			/* our port number */
-	uint8_t		registered;		/* boolean flag */
+	uint8_t		registered;		/* boolean flag if we are reg'd */
+	uint8_t		useThisSd;		/* flag say's if sd is data channel */
+};
+
+/* Timers will have this in a list */
+struct rsp_timer_entry{
+	struct timeval started;
+	struct timeval expireTime;
+	struct rsp_socket_hash *sd;
+	struct rsp_enrp_req *req;
+	int timer_type;
 };
 
 /* A pool entry */
 struct rsp_pool {
-	char 		*name;
-	uint32_t 	name_len;
-	dlist_t 	*peList;
-	uint32_t 	refcnt;
-	uint32_t	regType;
-	uint32_t	policy_value;
-	uint32_t	policy_actvalue;
-	uint8_t         auto_update;
+	char 		*name;			/* string name */
+	uint32_t 	name_len;		/* len of string */
+	dlist_t 	*peList;		/* list of all pe's */
+	void		*lastCookie;		/* last cookie received */
+	int32		cookieSize;		/* length of cookie */
+	uint32_t 	refcnt;			/* number of PE's pointing to me */
+	uint32_t	regType;		/* reg type */
+	uint32_t	policy_value;		/* policy/count */
+	uint32_t	policy_actvalue;	/* current count */
+	uint8_t		failover_allowed;	/* auto failover of queued messages? */
+	uint8_t         auto_update;		/* did we subscribe to upds */
 };
+
+
+#define RSP_PE_STATE_ACTIVE	0x00000001	/* reachable */
+#define RSP_PE_STATE_INACTIVE   0x00000002	/* can't reach it */
+#define RSP_PE_STATE_BEING_DEL  0x00000004	/* being deleted */
+#define RSP_PE_STATE_REPORTED   0x00000008	/* reported state to ENRP */
 
 /* Each entry aka the actual PE */
 struct rsp_pool_element {
 	char 		*name; 		/* pointer to pool name */
 	struct rsp_pool *pool;		/* pointer to pool entry */
 	dlist_t 	*addrList;	/* list of addresses */
+	struct rsp_pool_element *failover_list;
+	uint32_t	pe_identifer;	/* identifier of this PE */
+	uint32_t	state;		/* What state we think its in */
 	sctp_assoc_t	asocid;		/* sctp asoc id */
-	int		sd;		/* sctp socket */
+	int		sd;		/* sctp socket it belongs to */
+	int		failoverlist_size;
 };
 
 /* An address entry in the list */
 struct pe_address {
+	int	protocol_type;
 	union {
 		struct sockaddr_in  sin;
 		struct sockaddr_in6 sin6;
