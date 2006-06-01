@@ -1959,9 +1959,6 @@ sctp_inpcb_alloc(struct socket *so)
 		 * in protosw
 		 */
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, inp);
-		/* FIXME: MT Needs to be removed?
-		SCTP_INP_INFO_WUNLOCK();
-		*/
 		return (EOPNOTSUPP);
 	}
 	inp->sctp_tcbhash = hashinit(sctp_pcbtblsize,
@@ -4040,30 +4037,13 @@ static void
 sctp_iterator_asoc_being_freed(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 {
 	struct sctp_iterator *it;
-
-
-
+	
 	/*
 	 * Unlock the tcb lock we do this so we avoid a dead lock scenario
 	 * where the iterator is waiting on the TCB lock and the TCB lock is
 	 * waiting on the iterator lock.
 	 */
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	sctp_lock_assert(inp->sctp_socket);
-#endif
-	SCTP_ITERATOR_LOCK();
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	if (!lck_rw_try_lock_exclusive(sctppcbinfo.ipi_ep_mtx)) {
-		socket_unlock(inp->sctp_socket, 0);
-		lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
-		socket_lock(inp->sctp_socket, 0);
-	}
-#endif
-	SCTP_INP_INFO_WLOCK();
-	SCTP_INP_WLOCK(inp);
-	SCTP_TCB_LOCK(stcb);
-
-
+	
 	it = stcb->asoc.stcb_starting_point_for_iterator;
 	if (it == NULL) {
 		return;
@@ -4207,20 +4187,30 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		SOCKBUF_UNLOCK(&so->so_rcv);
 	}
 	SCTP_TCB_UNLOCK(stcb);
+
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	if !(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
+		sctp_lock_assert(inp->sctp_socket);
+	}
+#endif
+	SCTP_ITERATOR_LOCK();
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	if !(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
+		if (!lck_rw_try_lock_exclusive(sctppcbinfo.ipi_ep_mtx)) {
+			socket_unlock(inp->sctp_socket, 0);
+			lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+			socket_lock(inp->sctp_socket, 0);
+		}
+	} else {
+		lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+	}
+#endif
+	SCTP_INP_INFO_WLOCK();
+	SCTP_INP_WLOCK(inp);
+	SCTP_TCB_LOCK(stcb);
 	
 	sctp_iterator_asoc_being_freed(inp, stcb);
-	/*
-	 * sctp_iterator_assoc_being_freed does
-         * 	SCTP_ITERATOR_LOCK();
-	 *	SCTP_INP_INFO_WLOCK();
-	 *	SCTP_INP_WLOCK(inp);
-	 *	SCTP_TCB_LOCK(stcb);
-	 */
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	/*
-	 * On Tiger it does lock sctppcbinfo.ipi_ep_mtx
-	 */
-#endif
+
 	/* now restop the timers to be sure - this is paranoia at is finest! */
 	callout_stop(&asoc->hb_timer.timer);
 	callout_stop(&asoc->dack_timer.timer);
