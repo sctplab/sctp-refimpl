@@ -304,6 +304,11 @@ sctp_fill_pcbinfo(struct sctp_pcbinfo *spcb)
 	 * We really don't need to lock this, but I will just because it
 	 * does not hurt.
 	 */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	/*
+	 * On Tiger the caller MUST do all necessary locking.
+	 */
+#endif
 	SCTP_INP_INFO_RLOCK();
 	spcb->ep_count = sctppcbinfo.ipi_count_ep;
 	spcb->asoc_count = sctppcbinfo.ipi_count_asoc;
@@ -331,6 +336,13 @@ sctp_fill_pcbinfo(struct sctp_pcbinfo *spcb)
  * with the "to" address given. This can be a "from" address, too, for
  * inbound packets. For outbound packets it is a true "to" address.
  */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+/*
+ * sctppcbinfo.ipi_ep_mtx must be locked by the caller. *inp_p->sctp_socket
+ * is not locked.
+ */ 
+#endif
+
 static struct sctp_tcb *
 sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
     struct sockaddr *to, struct sctp_nets **netp)
@@ -626,6 +638,13 @@ sctp_findassociation_ep_asconf(struct mbuf *m, int iphlen, int offset,
  * (if locked == NULL). 3) Decrement happens on return ONLY if locked ==
  * NULL.
  */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+/*
+ * It is assumed that the *inp_p->sctp_socket is locked.
+ * sctppcbinfo.ipi_ep_mtx is locked during during the search
+ * and unlocked before exiting.
+ */ 
+#endif
 
 struct sctp_tcb *
 sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
@@ -637,11 +656,18 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 	struct sctp_nets *net;
 	uint16_t rport;
 
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	if (inp_p == NULL) {
+		return (NULL);
+	}
+#endif
 	inp = *inp_p;
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	if (inp == NULL) {
+		return (NULL);
+	}
 	sctp_lock_assert(inp->sctp_socket);
 #endif
-
 	if (remote->sa_family == AF_INET) {
 		rport = (((struct sockaddr_in *)remote)->sin_port);
 	} else if (remote->sa_family == AF_INET6) {
@@ -657,7 +683,11 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 		SCTP_TCB_UNLOCK(locked_tcb);
 	}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	socket_unlock(inp->sctp_socket, 0);
+	if (!lck_rw_try_lock_shared(sctppcbinfo.ipi_ep_mtx)) {
+		socket_unlock(inp->sctp_socket, 0);
+		lck_rw_lock_shared(sctppcbinfo.ipi_ep_mtx);
+		socket_lock(inp->sctp_socket, 0);
+	}
 #endif
 	SCTP_INP_INFO_RLOCK();
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) {
@@ -684,7 +714,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 				SCTP_INP_RUNLOCK(locked_tcb->sctp_ep);
 			}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			socket_lock(inp->sctp_socket, 0);
+			lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
 #endif
 			SCTP_INP_INFO_RUNLOCK();
 			return (stcb);
@@ -734,7 +764,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 						}
 						SCTP_INP_WUNLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-						socket_lock(inp->sctp_socket, 0);
+						lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
 #endif
 						SCTP_INP_INFO_RUNLOCK();
 						return (stcb);
@@ -757,7 +787,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 						}
 						SCTP_INP_WUNLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-						socket_lock(inp->sctp_socket, 0);
+						lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
 #endif
 						SCTP_INP_INFO_RUNLOCK();
 						return (stcb);
@@ -813,7 +843,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 						}
 						SCTP_INP_WUNLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-						socket_lock(inp->sctp_socket, 0);
+						lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
 #endif
 						SCTP_INP_INFO_RUNLOCK();
 						return (stcb);
@@ -837,7 +867,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 						}
 						SCTP_INP_WUNLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-						socket_lock(inp->sctp_socket, 0);
+						lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
 #endif
 						SCTP_INP_INFO_RUNLOCK();
 						return (stcb);
@@ -854,7 +884,7 @@ null_return:
 	}
 	SCTP_INP_WUNLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	socket_lock(inp->sctp_socket, 0);
+	lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
 #endif
 	SCTP_INP_INFO_RUNLOCK();
 	/* not found */
@@ -865,6 +895,13 @@ null_return:
  * Find an association for a specific endpoint using the association id given
  * out in the COMM_UP notification
  */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+/*
+ * It is assumed that the inp->sctp_socket is locked.
+ * sctppcbinfo.ipi_ep_mtx is locked during during the search
+ * and unlocked before exiting.
+ */ 
+#endif
 
 struct sctp_tcb *
 sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, sctp_assoc_t asoc_id)
@@ -881,6 +918,11 @@ sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, sctp_assoc_t asoc_id)
 	}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	sctp_lock_assert(inp->sctp_socket);
+	if (!lck_rw_try_lock_shared(sctppcbinfo.ipi_ep_mtx)) {
+		socket_unlock(inp->sctp_socket, 0);
+		lck_rw_lock_shared(sctppcbinfo.ipi_ep_mtx);
+		socket_lock(inp->sctp_socket, 0);
+	}
 #endif
 	SCTP_INP_INFO_RLOCK();
 	id = (uint32_t) asoc_id;
@@ -888,6 +930,9 @@ sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, sctp_assoc_t asoc_id)
 	    sctppcbinfo.hashasocmark)];
 	if (head == NULL) {
 		/* invalid id TSNH */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+#endif
 		SCTP_INP_INFO_RUNLOCK();
 		return (NULL);
 	}
@@ -895,6 +940,9 @@ sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, sctp_assoc_t asoc_id)
 		SCTP_INP_RLOCK(stcb->sctp_ep);
 		if (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
 			SCTP_INP_RUNLOCK(stcb->sctp_ep);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+#endif
 			SCTP_INP_INFO_RUNLOCK();
 			return (NULL);
 		}
@@ -912,6 +960,9 @@ sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, sctp_assoc_t asoc_id)
 				continue;
 			}
 			sctp_pegs[SCTP_BY_ASSOCID]++;
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+#endif
 			SCTP_INP_INFO_RUNLOCK();
 			return (stcb);
 		}
@@ -921,6 +972,9 @@ sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, sctp_assoc_t asoc_id)
 	head = &sctppcbinfo.sctp_asochash[SCTP_PCBHASH_ASOC(id, sctppcbinfo.hashrestartmark)];
 	if (head == NULL) {
 		/* invalid id TSNH */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+#endif
 		SCTP_INP_INFO_RUNLOCK();
 		return (NULL);
 	}
@@ -928,6 +982,9 @@ sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, sctp_assoc_t asoc_id)
 		SCTP_INP_RLOCK(stcb->sctp_ep);
 		if (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
 			SCTP_INP_RUNLOCK(stcb->sctp_ep);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+#endif
 			SCTP_INP_INFO_RUNLOCK();
 			return (NULL);
 		}
@@ -945,18 +1002,27 @@ sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, sctp_assoc_t asoc_id)
 				continue;
 			}
 			sctp_pegs[SCTP_BY_ASSOCID]++;
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+#endif
 			SCTP_INP_INFO_RUNLOCK();
 			return (stcb);
 		}
 		SCTP_TCB_UNLOCK(stcb);
 	}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+#endif
 	SCTP_INP_INFO_RUNLOCK();
 	return (NULL);
 }
 
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 /*
+ * The caller must hold the sctppcbinfo.ipi_ep_mtx lock.
  * The returned inp->sctp_socket is unlocked.
+ * FIXME MT: Is the locking/unlocking of the socket
+ *           necessary?
  */
 #endif
 
@@ -1174,7 +1240,9 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 /*
- * The returned inp->sctp_socket is unlocked.
+ * The returned inp->sctp_socket is unlocked. If the caller does
+ * not hold the sctppcbinfo.ipi_ep_mtx mutex, it is locked during
+ * this function.
  */
 #endif
 
@@ -1214,8 +1282,13 @@ sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool, int have_lock)
 	 * type too.
 	 */
 	/* Find the head of the ALLADDR chain */
-	if (have_lock == 0)
+	if (have_lock == 0) {
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		lck_rw_lock_shared(sctppcbinfo.ipi_ep_mtx);
+#endif
 		SCTP_INP_INFO_RLOCK();
+	
+	}
 	head = &sctppcbinfo.sctp_ephash[SCTP_PCBHASH_ALLADDR(lport,
 	    sctppcbinfo.hashmark)];
 #ifdef SCTP_DEBUG
@@ -1262,20 +1335,18 @@ sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool, int have_lock)
 		printf("EP to return is %p\n", inp);
 	}
 #endif
-	if (have_lock == 0) {
-		if (inp) {
-			SCTP_INP_WLOCK(inp);
-			SCTP_INP_INCR_REF(inp);
-			SCTP_INP_WUNLOCK(inp);
-		}
-		SCTP_INP_INFO_RUNLOCK();
-	} else {
-		if (inp) {
-			SCTP_INP_WLOCK(inp);
-			SCTP_INP_INCR_REF(inp);
-			SCTP_INP_WUNLOCK(inp);
-		}
+	if (inp) {
+		SCTP_INP_WLOCK(inp);
+		SCTP_INP_INCR_REF(inp);
+		SCTP_INP_WUNLOCK(inp);
 	}
+	if (have_lock == 0) {
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+#endif
+		SCTP_INP_INFO_RUNLOCK();
+	}
+	
 	return (inp);
 }
 
@@ -1284,6 +1355,13 @@ sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool, int have_lock)
  * send to and the endpoint pointer. The address can be IPv4 or IPv6. We may
  * need to change the *to to some other struct like a mbuf...
  */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+/*
+ * The returned stcb->sctp_socket is locked. 
+ * The sctppcbinfo.ipi_ep_mtx mutex is locked during
+ * this function.
+ */
+#endif
 struct sctp_tcb *
 sctp_findassociation_addr_sa(struct sockaddr *to, struct sockaddr *from,
     struct sctp_inpcb **inp_p, struct sctp_nets **netp, int find_tcp_pool)
@@ -1291,6 +1369,9 @@ sctp_findassociation_addr_sa(struct sockaddr *to, struct sockaddr *from,
 	struct sctp_inpcb *inp;
 	struct sctp_tcb *retval;
 
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	lck_rw_lock_shared(sctppcbinfo.ipi_ep_mtx);
+#endif
 	SCTP_INP_INFO_RLOCK();
 	if (find_tcp_pool) {
 		if (inp_p != NULL) {
@@ -1300,7 +1381,12 @@ sctp_findassociation_addr_sa(struct sockaddr *to, struct sockaddr *from,
 		}
 		if (retval != NULL) {
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			socket_lock(inp->sctp_socket, 1);
+			if (inp_p != NULL) {
+				socket_lock((*inp_p)->sctp_socket, 1);
+			} else {
+				socket_lock(inp->sctp_socket, 1);
+			}
+			lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
 #endif
 			SCTP_INP_INFO_RUNLOCK();
 			return (retval);
@@ -1313,6 +1399,7 @@ sctp_findassociation_addr_sa(struct sockaddr *to, struct sockaddr *from,
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	if (inp != NULL)
 		socket_lock(inp->sctp_socket, 1);
+	lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
 #endif
 	SCTP_INP_INFO_RUNLOCK();
 
@@ -1341,6 +1428,11 @@ sctp_findassociation_addr_sa(struct sockaddr *to, struct sockaddr *from,
  * find all addresses that the sender has specified in any address list. Each
  * address will be used to lookup the TCB and see if one exits.
  */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+/*
+ * The caller must hold the *inp_p->sctp_socket lock. 
+ */
+#endif
 static struct sctp_tcb *
 sctp_findassociation_special_addr(struct mbuf *m, int iphlen, int offset,
     struct sctphdr *sh, struct sctp_inpcb **inp_p, struct sctp_nets **netp,
@@ -1430,6 +1522,7 @@ sctp_findassociation_special_addr(struct mbuf *m, int iphlen, int offset,
  * if no association is found.
  * If it finds an association, it finds the sctp_tcb, sets the *inp_p and
  * *netp and does socket_lock(*inp_p->sctp_socket).
+ * sctppcbinfo.ipi_ep_mtx is locked during this function.
  */
 #endif
 
@@ -1447,11 +1540,17 @@ sctp_findassoc_by_vtag(struct sockaddr *from, uint32_t vtag,
 	struct sctp_nets *net;
 	struct sctp_tcb *stcb;
 
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	lck_rw_lock_shared(sctppcbinfo.ipi_ep_mtx);
+#endif
 	SCTP_INP_INFO_RLOCK();
 	head = &sctppcbinfo.sctp_asochash[SCTP_PCBHASH_ASOC(vtag,
 	    sctppcbinfo.hashasocmark)];
 	if (head == NULL) {
 		/* invalid vtag */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+#endif
 		SCTP_INP_INFO_RUNLOCK();
 		return (NULL);
 	}
@@ -1459,13 +1558,17 @@ sctp_findassoc_by_vtag(struct sockaddr *from, uint32_t vtag,
 		SCTP_INP_RLOCK(stcb->sctp_ep);
 		if (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
 			SCTP_INP_RUNLOCK(stcb->sctp_ep);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+#endif
 			SCTP_INP_INFO_RUNLOCK();
 			return (NULL);
 		}
-		SCTP_TCB_LOCK(stcb);
+
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		socket_lock(stcb->sctp_socket, 1);
 #endif
+		SCTP_TCB_LOCK(stcb);
 		SCTP_INP_RUNLOCK(stcb->sctp_ep);
 		if (stcb->asoc.my_vtag == vtag) {
 			/* candidate */
@@ -1474,10 +1577,10 @@ sctp_findassoc_by_vtag(struct sockaddr *from, uint32_t vtag,
 				 * we could remove this if vtags are unique
 				 * across the system.
 				 */
-				SCTP_TCB_UNLOCK(stcb);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 				socket_unlock(stcb->sctp_socket, 1);
 #endif
+				SCTP_TCB_UNLOCK(stcb);
 				continue;
 			}
 			if (stcb->sctp_ep->sctp_lport != lport) {
@@ -1485,10 +1588,10 @@ sctp_findassoc_by_vtag(struct sockaddr *from, uint32_t vtag,
 				 * we could remove this if vtags are unique
 				 * across the system.
 				 */
-				SCTP_TCB_UNLOCK(stcb);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 				socket_unlock(stcb->sctp_socket, 1);
 #endif
+				SCTP_TCB_UNLOCK(stcb);
 				continue;
 			}
 			net = sctp_findnet(stcb, from);
@@ -1497,6 +1600,9 @@ sctp_findassoc_by_vtag(struct sockaddr *from, uint32_t vtag,
 				*netp = net;
 				sctp_pegs[SCTP_VTAG_EXPR]++;
 				*inp_p = stcb->sctp_ep;
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+				lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+#endif
 				SCTP_INP_INFO_RUNLOCK();
 				return (stcb);
 			} else {
@@ -1507,11 +1613,14 @@ sctp_findassoc_by_vtag(struct sockaddr *from, uint32_t vtag,
 				sctp_pegs[SCTP_VTAG_BOGUS]++;
 			}
 		}
-		SCTP_TCB_UNLOCK(stcb);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		socket_unlock(stcb->sctp_socket, 1);
 #endif
+		SCTP_TCB_UNLOCK(stcb);
 	}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+#endif
 	SCTP_INP_INFO_RUNLOCK();
 	return (NULL);
 }
@@ -1761,10 +1870,16 @@ sctp_inpcb_alloc(struct socket *so)
 	SCTP_INP_INFO_RUNLOCK();
 #endif				/* INVARIANTS_SCTP */
 
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+#endif
 	SCTP_INP_INFO_WLOCK();
 	inp = (struct sctp_inpcb *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_ep);
 	if (inp == NULL) {
 		printf("Out of SCTP-INPCB structures - no resources\n");
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
+#endif
 		SCTP_INP_INFO_WUNLOCK();
 		return (ENOBUFS);
 	}
@@ -1801,6 +1916,9 @@ sctp_inpcb_alloc(struct socket *so)
 #endif
 	if (error != 0) {
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, inp);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
+#endif
 		SCTP_INP_INFO_WUNLOCK();
 		return error;
 	}
@@ -1812,6 +1930,9 @@ sctp_inpcb_alloc(struct socket *so)
 #else
 	inp->inp_ip_ttl = ip_defttl;
 	inp->inp_ip_tos = 0;
+#endif
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 #endif
 	SCTP_INP_INFO_WUNLOCK();
 
@@ -1838,7 +1959,6 @@ sctp_inpcb_alloc(struct socket *so)
 		 * in protosw
 		 */
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, inp);
-		SCTP_INP_INFO_WUNLOCK();
 		return (EOPNOTSUPP);
 	}
 	inp->sctp_tcbhash = hashinit(sctp_pcbtblsize,
@@ -1855,7 +1975,6 @@ sctp_inpcb_alloc(struct socket *so)
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, inp);
 		return (ENOBUFS);
 	}
-	SCTP_INP_INFO_WLOCK();
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	/* LOCK init's */
 	inp->ip_inp.inp.inpcb_mtx = lck_mtx_alloc_init(sctppcbinfo.mtx_grp, sctppcbinfo.mtx_attr);
@@ -1864,6 +1983,10 @@ sctp_inpcb_alloc(struct socket *so)
 		return (ENOMEM);
 	}
 #endif
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+#endif
+	SCTP_INP_INFO_WLOCK();
 	SCTP_INP_LOCK_INIT(inp);
 	SCTP_ASOC_CREATE_LOCK_INIT(inp);
 	/* lock the new ep */
@@ -1873,6 +1996,7 @@ sctp_inpcb_alloc(struct socket *so)
 	LIST_INSERT_HEAD(&sctppcbinfo.listhead, inp, sctp_list);
 #ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
 	LIST_INSERT_HEAD(&sctppcbinfo.inplisthead, &inp->ip_inp.inp, inp_list);
+	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 #endif
 	SCTP_INP_INFO_WUNLOCK();
 
@@ -1992,6 +2116,9 @@ sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
 	struct sctp_laddr *laddr, *oladdr;
 
 	SCTP_TCB_UNLOCK(stcb);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+#endif
 	SCTP_INP_INFO_WLOCK();
 	SCTP_INP_WLOCK(old_inp);
 	SCTP_INP_WLOCK(new_inp);
@@ -2073,6 +2200,9 @@ sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
 		    stcb, net);
 	}
 
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
+#endif
 	SCTP_INP_INFO_WUNLOCK();
 	if (new_inp->sctp_tcbhash != NULL) {
 		FREE(new_inp->sctp_tcbhash, M_PCB);
@@ -2281,6 +2411,13 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 			return (EAFNOSUPPORT);
 		}
 	}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	if (!lck_rw_try_lock_exclusive(sctppcbinfo.ipi_ep_mtx)) {
+		socket_unlock(so, 0);
+		lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+		socket_lock(so, 0);
+	}
+#endif
 	SCTP_INP_INFO_WLOCK();
 	SCTP_INP_WLOCK(inp);
 	/* increase our count due to the unlock we do */
@@ -2307,6 +2444,9 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 			    )) {
 				SCTP_INP_DECR_REF(inp);
 				SCTP_INP_WUNLOCK(inp);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+				lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
+#endif
 				SCTP_INP_INFO_WUNLOCK();
 				return (error);
 			}
@@ -2314,6 +2454,9 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 		if (p == NULL) {
 			SCTP_INP_DECR_REF(inp);
 			SCTP_INP_WUNLOCK(inp);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
+#endif
 			SCTP_INP_INFO_WUNLOCK();
 			return (error);
 		}
@@ -2334,6 +2477,9 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 			SCTP_INP_DECR_REF(inp);
 			SCTP_INP_WUNLOCK(inp);
 			/* unlock info */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
+#endif
 			SCTP_INP_INFO_WUNLOCK();
 			return (EADDRNOTAVAIL);
 		}
@@ -2344,6 +2490,9 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 				/* Sorry someone already has this one bound */
 				SCTP_INP_DECR_REF(inp);
 				SCTP_INP_WUNLOCK(inp);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+				lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
+#endif
 				SCTP_INP_INFO_WUNLOCK();
 				return (EADDRNOTAVAIL);
 			}
@@ -2418,6 +2567,9 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 		 * bind and then did a close at the same time.
 		 */
 		SCTP_INP_WUNLOCK(inp);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
+#endif
 		SCTP_INP_INFO_WUNLOCK();
 		return (EINVAL);
 	}
@@ -2469,6 +2621,9 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 		if (ifa == NULL) {
 			/* Can't find an interface with that address */
 			SCTP_INP_WUNLOCK(inp);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
+#endif
 			SCTP_INP_INFO_WUNLOCK();
 			return (EADDRNOTAVAIL);
 		}
@@ -2485,6 +2640,9 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 			    IN6_IFF_NOTREADY)) {
 				/* Can't bind a non-existent addr. */
 				SCTP_INP_WUNLOCK(inp);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+				lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
+#endif
 				SCTP_INP_INFO_WUNLOCK();
 				return (EINVAL);
 			}
@@ -2503,6 +2661,9 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 		error = sctp_insert_laddr(&inp->sctp_addr_list, ifa);
 		if (error != 0) {
 			SCTP_INP_WUNLOCK(inp);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
+#endif
 			SCTP_INP_INFO_WUNLOCK();
 			return (error);
 		}
@@ -2524,6 +2685,9 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 	/* turn off just the unbound flag */
 	inp->sctp_flags &= ~SCTP_PCB_FLAGS_UNBOUND;
 	SCTP_INP_WUNLOCK(inp);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
+#endif
 	SCTP_INP_INFO_WUNLOCK();
 	return (0);
 }
@@ -2634,6 +2798,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		return;
 	}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sctp_lock_assert(inp->sctp_socket);
+#endif
 	sctp_timer_stop(SCTP_TIMER_TYPE_NEWCOOKIE, inp, NULL, NULL);
 
 	if (inp->control) {
@@ -2991,6 +3158,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	/* now iterator lock */
 	SCTP_ITERATOR_LOCK();
 	/* now info lock */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+#endif
 	SCTP_INP_INFO_WLOCK();
 	/* now reget the inp lock */
 	SCTP_INP_WLOCK(inp);
@@ -3031,6 +3201,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 #if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, inp);
 	SCTP_DECR_EP_COUNT();
+#endif
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 #endif
 	SCTP_INP_INFO_WUNLOCK();
 	splx(s);
@@ -3454,6 +3627,12 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
  * careful to add all additional addresses once they are know right away or
  * else the assoc will be may experience a blackout scenario.
  */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+/*
+ * The caller must lock inp->sctp_socket.
+ * During the operation sctppcbinfo.ipi_ep_mtx is locked exclusively.
+ */
+#endif
 struct sctp_tcb *
 sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
     int for_a_init, int *error, uint32_t override_tag)
@@ -3464,6 +3643,9 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	uint16_t rport;
 	int err;
 
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sctp_lock_assert(inp->sctp_socket);
+#endif
 	/*
 	 * Assumption made here: Caller has done a
 	 * sctp_findassociation_ep_addr(ep, addr's); to make sure the
@@ -3606,6 +3788,13 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	}
 	/* and the port */
 	stcb->rport = rport;
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	if (!lck_rw_try_lock_exclusive(sctppcbinfo.ipi_ep_mtx)) {
+		socket_unlock(inp->sctp_socket, 0);
+		lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+		socket_lock(inp->sctp_socket, 0);
+	}
+#endif	
 	SCTP_INP_INFO_WLOCK();
 	SCTP_INP_WLOCK(inp);
 	if (inp->sctp_flags & (SCTP_PCB_FLAGS_SOCKET_GONE | SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
@@ -3613,6 +3802,9 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		SCTP_TCB_LOCK_DESTROY(stcb);
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
 		SCTP_INP_WUNLOCK(inp);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
+#endif
 		SCTP_INP_INFO_WUNLOCK();
 		SCTP_DECR_ASOC_COUNT();
 #ifdef SCTP_DEBUG
@@ -3630,6 +3822,9 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	    sctppcbinfo.hashasocmark)];
 	/* put it in the bucket in the vtag hash of assoc's for the system */
 	LIST_INSERT_HEAD(head, stcb, sctp_asocs);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
+#endif
 	SCTP_INP_INFO_WUNLOCK();
 
 	if ((err = sctp_add_remote_addr(stcb, firstaddr, 1, 1))) {
@@ -3832,6 +4027,11 @@ sctp_add_vtag_to_timewait(struct sctp_inpcb *inp, uint32_t tag)
 	}
 }
 
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+/*
+ * FIXME MT: I do not know what is going on here...
+ */
+#endif
 
 static void
 sctp_iterator_asoc_being_freed(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
@@ -3845,11 +4045,6 @@ sctp_iterator_asoc_being_freed(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	 * where the iterator is waiting on the TCB lock and the TCB lock is
 	 * waiting on the iterator lock.
 	 */
-	SCTP_ITERATOR_LOCK();
-	SCTP_INP_INFO_WLOCK();
-	SCTP_INP_WLOCK(inp);
-	SCTP_TCB_LOCK(stcb);
-
 
 	it = stcb->asoc.stcb_starting_point_for_iterator;
 	if (it == NULL) {
@@ -3995,6 +4190,27 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	}
 	SCTP_TCB_UNLOCK(stcb);
 
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	if (!(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
+		sctp_lock_assert(inp->sctp_socket);
+	}
+#endif
+	SCTP_ITERATOR_LOCK();
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	if (!(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
+		if (!lck_rw_try_lock_exclusive(sctppcbinfo.ipi_ep_mtx)) {
+			socket_unlock(inp->sctp_socket, 0);
+			lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+			socket_lock(inp->sctp_socket, 0);
+		}
+	} else {
+		lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+	}
+#endif
+	SCTP_INP_INFO_WLOCK();
+	SCTP_INP_WLOCK(inp);
+	SCTP_TCB_LOCK(stcb);
+	
 	sctp_iterator_asoc_being_freed(inp, stcb);
 	/* now restop the timers to be sure - this is paranoia at is finest! */
 	callout_stop(&asoc->hb_timer.timer);
@@ -4033,6 +4249,9 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 
 
 	sctp_add_vtag_to_timewait(inp, asoc->my_vtag);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
+#endif
 	SCTP_INP_INFO_WUNLOCK();
 	prev = NULL;
 
@@ -5601,6 +5820,11 @@ sctp_set_primary_addr(struct sctp_tcb *stcb, struct sockaddr *sa,
 	}
 }
 
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+/*
+ * This function locks sctppcbinfo.ipi_ep_mtx exclusively during operation.
+ */
+#endif
 
 int
 sctp_is_vtag_good(struct sctp_inpcb *inp, uint32_t tag, struct timeval *now)
@@ -5617,6 +5841,9 @@ sctp_is_vtag_good(struct sctp_inpcb *inp, uint32_t tag, struct timeval *now)
 	struct sctp_tcb *stcb;
 	int i;
 
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+#endif
 	SCTP_INP_INFO_WLOCK();
 	chain = &sctppcbinfo.vtag_timewait[(tag % SCTP_STACK_VTAG_HASH_SIZE)];
 	/* First is the vtag in use ? */
@@ -5636,6 +5863,9 @@ sctp_is_vtag_good(struct sctp_inpcb *inp, uint32_t tag, struct timeval *now)
 			 */
 			if (inp == stcb->sctp_ep) {
 				/* bad tag, in use */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+				lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
+#endif
 				SCTP_INP_INFO_WUNLOCK();
 				return (0);
 			}
@@ -5653,6 +5883,9 @@ check_restart:
 			/* candidate */
 			if (inp == stcb->sctp_ep) {
 				/* bad tag, in use */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+				lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
+#endif
 				SCTP_INP_INFO_WUNLOCK();
 				return (0);
 			}
@@ -5678,6 +5911,9 @@ check_time_wait:
 				} else if (twait_block->vtag_block[i].v_tag ==
 				    tag) {
 					/* Bad tag, sorry :< */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+					lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
+#endif
 					SCTP_INP_INFO_WUNLOCK();
 					return (0);
 				}
@@ -5685,6 +5921,9 @@ check_time_wait:
 		}
 	}
 	/* Not found, ok to use the tag */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
+#endif
 	SCTP_INP_INFO_WUNLOCK();
 	return (1);
 }
@@ -5952,9 +6191,15 @@ sctp_drain()
 	struct sctp_inpcb *inp;
 	struct sctp_tcb *stcb;
 
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	lck_rw_lock_shared(sctppcbinfo.ipi_ep_mtx);
+#endif
 	SCTP_INP_INFO_RLOCK();
 	LIST_FOREACH(inp, &sctppcbinfo.listhead, sctp_list) {
 		/* For each endpoint */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		socket_lock(inp->sctp_socket, 1);
+#endif
 		SCTP_INP_RLOCK(inp);
 		LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
 			/* For each association */
@@ -5962,8 +6207,14 @@ sctp_drain()
 			sctp_drain_mbufs(inp, stcb);
 			SCTP_TCB_UNLOCK(stcb);
 		}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		socket_unlock(inp->sctp_socket, 1);
+#endif
 		SCTP_INP_RUNLOCK(inp);
 	}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+#endif
 	SCTP_INP_INFO_RUNLOCK();
 }
 
@@ -5994,8 +6245,14 @@ sctp_initiate_iterator(asoc_func af, uint32_t pcb_state, uint32_t asoc_state,
 		it->inp = s_inp;
 		it->iterator_flags = SCTP_ITERATOR_DO_SINGLE_INP;
 	} else {
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		lck_rw_lock_shared(sctppcbinfo.ipi_ep_mtx);
+#endif
 		SCTP_INP_INFO_RLOCK();
 		it->inp = LIST_FIRST(&sctppcbinfo.listhead);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+#endif
 		SCTP_INP_INFO_RUNLOCK();
 		it->iterator_flags = SCTP_ITERATOR_DO_ALL_INP;
 
@@ -6007,8 +6264,14 @@ sctp_initiate_iterator(asoc_func af, uint32_t pcb_state, uint32_t asoc_state,
 	callout_init(&it->tmr.timer);
 #endif
 	/* add to the list of all iterators */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+#endif
 	SCTP_INP_INFO_WLOCK();
 	LIST_INSERT_HEAD(&sctppcbinfo.iteratorhead, it, sctp_nxt_itr);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
+#endif
 	SCTP_INP_INFO_WUNLOCK();
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();

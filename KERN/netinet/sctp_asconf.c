@@ -2096,12 +2096,18 @@ sctp_delete_ip_address(struct ifaddr *ifa)
 		return;
 	}
 	/* go through all our PCB's */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	lck_rw_lock_shared(sctppcbinfo.ipi_ep_mtx);
+#endif
 	SCTP_INP_INFO_RLOCK();
 	LIST_FOREACH(inp, &sctppcbinfo.listhead, sctp_list) {
 		struct sctp_tcb *stcb;
 		struct sctp_laddr *laddr, *laddr_next;
 
 		/* process for all associations for this endpoint */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		socket_lock(inp->sctp_socket, 1);
+#endif
 		SCTP_INP_RLOCK(inp);
 		LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
 			struct sctp_nets *net;
@@ -2138,8 +2144,14 @@ sctp_delete_ip_address(struct ifaddr *ifa)
 			}
 			laddr = laddr_next;
 		}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		socket_unlock(inp->sctp_socket, 1);
+#endif
 		SCTP_INP_RUNLOCK(inp);
 	}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+#endif
 	SCTP_INP_INFO_RUNLOCK();
 }
 

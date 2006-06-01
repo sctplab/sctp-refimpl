@@ -1776,12 +1776,18 @@ sctp_iterator_timer(struct sctp_iterator *it)
 		/* iterator is complete */
 done_with_iterator:
 		SCTP_ITERATOR_UNLOCK();
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+#endif
 		SCTP_INP_INFO_WLOCK();
 		LIST_REMOVE(it, sctp_nxt_itr);
 		/*
 		 * stopping the callout is not needed, in theory, but I am
 		 * paranoid.
 		 */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
+#endif
 		SCTP_INP_INFO_WUNLOCK();
 		callout_stop(&it->tmr.timer);
 		if (it->function_atend != NULL) {
@@ -1866,8 +1872,14 @@ select_a_new_ep:
 	if (it->iterator_flags & SCTP_ITERATOR_DO_SINGLE_INP) {
 		it->inp = NULL;
 	} else {
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		lck_rw_lock_shared(sctppcbinfo.ipi_ep_mtx);
+#endif
 		SCTP_INP_INFO_RLOCK();
 		it->inp = LIST_NEXT(it->inp, sctp_list);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+#endif
 		SCTP_INP_INFO_RUNLOCK();
 	}
 	if (it->inp == NULL) {
@@ -1890,7 +1902,7 @@ sctp_slowtimo()
 			SCTP_DECR_EP_COUNT();
 		}
 	}
-	lck_rw_done(sctppcbinfo.ipi_ep_mtx);
+	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 }
 
 #endif
