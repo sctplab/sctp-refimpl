@@ -4037,13 +4037,15 @@ static void
 sctp_iterator_asoc_being_freed(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 {
 	struct sctp_iterator *it;
-	
+
+
+
 	/*
 	 * Unlock the tcb lock we do this so we avoid a dead lock scenario
 	 * where the iterator is waiting on the TCB lock and the TCB lock is
 	 * waiting on the iterator lock.
 	 */
-	
+
 	it = stcb->asoc.stcb_starting_point_for_iterator;
 	if (it == NULL) {
 		return;
@@ -4210,7 +4212,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	SCTP_TCB_LOCK(stcb);
 	
 	sctp_iterator_asoc_being_freed(inp, stcb);
-
 	/* now restop the timers to be sure - this is paranoia at is finest! */
 	callout_stop(&asoc->hb_timer.timer);
 	callout_stop(&asoc->dack_timer.timer);
@@ -4242,8 +4243,10 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	SCTP_INP_WUNLOCK(inp);
 	SCTP_ITERATOR_UNLOCK();
 
+
 	/* pull from vtag hash */
 	LIST_REMOVE(stcb, sctp_asocs);
+
 
 	sctp_add_vtag_to_timewait(inp, asoc->my_vtag);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
@@ -4251,6 +4254,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 #endif
 	SCTP_INP_INFO_WUNLOCK();
 	prev = NULL;
+
 	if ((from_inpcbfree == 0) && so) {
 		SOCKBUF_LOCK(&so->so_snd);
 		SOCKBUF_LOCK(&so->so_rcv);
@@ -6211,6 +6215,7 @@ sctp_drain()
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
 #endif
+	SCTP_INP_INFO_RUNLOCK();
 }
 
 int
