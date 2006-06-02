@@ -192,6 +192,7 @@ struct asap_message {
 	uint16_t	asap_length;
 };
 
-
+#define RSERPOOL_ASAP_PPID 11
+#define RSERPOOL_ENRP_PPID 12
 
 #endif

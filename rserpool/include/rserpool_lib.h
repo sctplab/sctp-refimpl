@@ -34,6 +34,7 @@
  *
  */
 
+
 /* The extern socket hash */
 struct rsp_global_info {
 	int			rsp_number_sd;	/* count of sd's when 0 un-init */
@@ -59,6 +60,7 @@ struct rsp_enrp_req {
 	int len;
 	int request_type;
 	char *name;
+	uint32_t timerval;
 };
 
 /* timer const's */
@@ -71,6 +73,14 @@ struct rsp_enrp_req {
 #define RSP_T7_ENRPOUTDATE		0x0006
 #define RSP_NUMBER_TIMERS 7
 
+struct rsp_enrp_entry {
+	uint32_t enrpId;
+	sctp_assoc_t	asocid;		/* sctp asoc id */
+	struct sockaddr *addrList;	        /* list of addresses, gotten from sctp_getpaddr() */	
+	int number_of_addresses;
+	int size_of_addrList;
+};
+
 /* For each socket descriptor we will have one of these */
 struct rsp_socket_hash {
 	int	 	sd;			/* sctp socket */
@@ -80,7 +90,8 @@ struct rsp_socket_hash {
 	HashedTbl	*ipaddrPortHash;		/* ipadd -> rsp_pool_ele */
 	dlist_t		*enrp_reqs;		/* ENRP requests outstanding */
 	dlist_t		*address_reg;		/* setup w/addrlist w/ctl&data seperate */
-	dlist_t 	*enrpAddrList;		/* Home ENRP server */
+	dlist_t 	*enrpList;		/* List of ENRP servers */
+	struct rsp_enrp_entry *homeServer;	/* direct pointer to home server */
 	uint32_t 	refcnt;			/* number of names in use */
 	uint32_t	enrpID;			/* ID of home ENRP server */
 	char 		*registeredName;	/* our name if registered */
@@ -135,10 +146,12 @@ struct rsp_pool {
 struct rsp_pool_ele {
 	char 		*name; 		/* pointer to pool name */
 	struct rsp_pool *pool;		/* pointer to pool entry */
-	dlist_t 	*addrList;	/* list of addresses */
+	struct sockaddr	*addrList;	/* list of addresses, gotten from sctp_getpaddr() */
+	uint32_t	number_of_addr;	/* cnt of addresses */
 	struct rsp_pool_ele *failover_list;
 	uint32_t	pe_identifer;	/* identifier of this PE */
 	uint32_t	state;		/* What state we think its in */
+	int		protocol_type;	/* what type of protocol are we using */
 	sctp_assoc_t	asocid;		/* sctp asoc id */
 	int		sd;		/* sctp socket it belongs to */
 	int		failoverlist_size;
@@ -146,7 +159,6 @@ struct rsp_pool_ele {
 
 /* An address entry in the list */
 struct pe_address {
-	int	protocol_type;
 	union {
 		struct sockaddr_in  sin;
 		struct sockaddr_in6 sin6;
@@ -180,5 +192,7 @@ struct pe_address {
 #define DEF_STALE_CACHE_VALUE       30000
 
 #define DEF_MINIMUM_TIMER_QUANTUM   500	/* minimum poll fd ms */
+
+#define ENRP_DEFAULT_PORT_FOR_ASAP  5555
 
 #endif
