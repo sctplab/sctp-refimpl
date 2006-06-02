@@ -36,7 +36,6 @@
 
 /* The extern socket hash */
 struct rsp_global_info {
-	int			rsp_timers_up;	/* count of timers on list */
 	int			rsp_number_sd;	/* count of sd's when 0 un-init */
 	HashedTbl		*sd_pool;	/* hashed pool of sd's */
 	dlist_t			*timer_list;	/* list of timers running */
@@ -44,6 +43,7 @@ struct rsp_global_info {
 	pthread_mutex_t		sd_pool_mtx;	/* mutex for sd_pool   */
 	pthread_cond_t		rsp_tmr_cnd;	/* condition sleep when no entries on timer_list */
 	pthread_mutex_t		rsp_tmr_mtx;	/* mutex for timers   */
+	uint32_t       		minimumTimerQuantum;	/* shortest wait time used by timer thread */
 };
 
 extern struct rsp_global_info rsp_pcbinfo;
@@ -102,8 +102,10 @@ struct rsp_timer_entry {
 	struct timeval 		started;	/* time of start */
 	struct timeval 		expireTime;	/* time of expire */
 	struct rsp_socket_hash 	*sd;		/* pointer back to sd */
+	/* The Req field is filled in if timer does something for you */
 	struct rsp_enrp_req 	*req;		/* data being sent */
 	int 			timer_type;	/* type of timer */
+	/* If the rsp_sleeper/cond_awake are used then req should be NULL */
 	pthread_cond_t		rsp_sleeper;	/* sleeper to awake */
 	uint8_t 		cond_awake; 	/* is there a sleeper */
 };
@@ -176,5 +178,7 @@ struct pe_address {
 #define DEF_MAX_REG_ATTEMPT	    2
 #define DEF_MAX_REQUEST_RETRANSMIT  2 
 #define DEF_STALE_CACHE_VALUE       30000
+
+#define DEF_MINIMUM_TIMER_QUANTUM   500	/* minimum poll fd ms */
 
 #endif
