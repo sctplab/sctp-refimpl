@@ -1658,6 +1658,7 @@ int
 sctp_handle_auth(struct sctp_tcb *stcb, struct sctp_auth_chunk *auth,
     struct mbuf *m, uint32_t offset)
 {
+	uint16_t chunklen;
 	uint16_t shared_key_id;
 	uint16_t hmac_id;
 	sctp_sharedkey_t *skey;
@@ -1665,7 +1666,16 @@ sctp_handle_auth(struct sctp_tcb *stcb, struct sctp_auth_chunk *auth,
 	uint8_t digest[SCTP_AUTH_DIGEST_LEN_MAX];
 	uint8_t computed_digest[SCTP_AUTH_DIGEST_LEN_MAX];
 
-	/* auth is checked for NULL and chunk length checked by caller */
+	/* auth is checked for NULL by caller */
+	chunklen = ntohs(auth->ch.chunk_length);
+	if (chunklen < sizeof(*auth)) {
+		sctp_pegs[SCTP_AUTH_INVALID]++;
+#ifdef SCTP_DEBUG
+		if (SCTP_AUTH_DEBUG)
+			printf("SCTP AUTH Chunk: chunk too short\n");
+#endif
+		return (-1);
+	}
 	sctp_pegs[SCTP_AUTH_RCVD]++;
 
 	/* get the auth params */
@@ -1700,7 +1710,7 @@ sctp_handle_auth(struct sctp_tcb *stcb, struct sctp_auth_chunk *auth,
 			bzero(err, sizeof(*err));
 			err->ph.param_type = htons(SCTP_CAUSE_UNSUPPORTED_HMACID);
 			err->ph.param_length = htons(sizeof(*err));
-			err->hmac_id = hmac_id;
+			err->hmac_id = ntohs(hmac_id);
 			m_err->m_pkthdr.len = m_err->m_len = sizeof(*err);
 			/* queue it */
 			sctp_queue_op_err(stcb, m_err);
@@ -1749,7 +1759,7 @@ sctp_handle_auth(struct sctp_tcb *stcb, struct sctp_auth_chunk *auth,
 	}
 	/* validate the digest length */
 	digestlen = sctp_get_hmac_digest_len(hmac_id);
-	if (auth->ch.chunk_length < (sizeof(*auth) + digestlen)) {
+	if (chunklen < (sizeof(*auth) + digestlen)) {
 		/* invalid digest length */
 		sctp_pegs[SCTP_AUTH_INVALID]++;
 #ifdef SCTP_DEBUG
