@@ -3,7 +3,11 @@
 
 
 /* in rsp_timer.c */
-void rsp_timer_check (struct rsp_timer_entry *v);
 
+void rsp_free_req(struct rsp_enrp_req *req);
+
+struct rsp_enrp_req *rsp_aloc_req(char *name, int namelen, void *msg, int msglen)
+
+void rsp_timer_check ( void );
 
 #endif
