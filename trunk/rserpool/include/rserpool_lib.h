@@ -79,7 +79,13 @@ struct rsp_enrp_entry {
 	struct sockaddr *addrList;	        /* list of addresses, gotten from sctp_getpaddr() */	
 	int number_of_addresses;
 	int size_of_addrList;
+	uint8_t state;
 };
+
+#define RSP_NO_ASSOCIATION 	1
+#define RSP_START_ASSOCIATION   2
+#define RSP_ASSOCIATION_UP      3
+#define RSP_ASSOCIATION_FAILED  4
 
 /* For each socket descriptor we will have one of these */
 struct rsp_socket_hash {
