@@ -10,6 +10,7 @@
 #include <sys/errno.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <arpa/inet.h>
 
 int rsp_inited = 0;
 int rsp_debug = 1;
@@ -125,8 +126,184 @@ rsp_init()
 	return (0);
 }
 
+static void
+rsp_add_addr_to_enrp_entry(struct rsp_enrp_entry *re, struct sockaddr *sa)
+{
+	char *al;
+	int len = 0;
+#ifdef HAVE_SA_LEN
+	len = sa->sa_len;;
+#else
+	if(sa->sa_family == AF_INET) {
+		len = sizeof(struct sockaddr_in);
+	} else if (sa->sa_family == AF_INET6) {
+		len = sizeof(struct sockaddr_in6);
+	}
+#endif
+	al = malloc((re->size_of_addrList + len));
+	if(al == NULL) {
+		fprintf(stderr, "error can't get allocate memory %d \n", errno);
+		return;
+	}
+	if(re->addrList) {
+		memcpy(al, re->addrList, re->size_of_addrList);
+		free(re->addrList);
+	}
+	memcpy(&al[re->size_of_addrList], (caddr_t)sa, len);
+	re->size_of_addrList += len;
+	re->number_of_addresses++;
+	re->addrList = (struct sockaddr *)al;
+}
+
+static void
+rsp_add_enrp_server(struct rsp_socket_hash *sdata, uint32_t enrpid, struct sockaddr *sa)
+{
+	struct rsp_enrp_entry *re;
+
+	dlist_reset(sdata->enrpList);
+	while((re = (struct rsp_enrp_entry *)dlist_get(sdata->enrpList)) != NULL) {
+		if(enrpid == re->enrpId) {
+			rsp_add_addr_to_enrp_entry(re, sa);
+			return;
+		}
+	}
+	re = (struct rsp_enrp_entry *)malloc(sizeof(struct rsp_enrp_entry));
+	if(re == NULL) {
+		fprintf(stderr,"Can't get memory for rsp_enrp_entry - error:%d\n", errno);
+		return;
+	}
+	re->enrpId = enrpid;
+	re->number_of_addresses = 0;
+	re->size_of_addrList = 0;
+	re->asocid = 0;
+	rsp_add_addr_to_enrp_entry(re, sa);
+	dlist_append(sdata->enrpList, (void *)re);
+	if ((sdata->homeServer == NULL) && re->number_of_addresses) {
+		/* Note this will get changed when we get the H bit from
+		 * our true home (if we register).
+		 */
+		sdata->homeServer = re;
+	}
+}
+
+static void
+rsp_load_file(struct rsp_socket_hash *sdata, FILE *io, char *file)
+{
+	/* load the enrp control file opened at io */
+	int line=0;
+	uint32_t enrpid;
+	uint16_t port;
+	struct sockaddr_in sin;
+	struct sockaddr_in6 sin6;
+
+	/* Format is
+	 * id:port:address
+	 *
+	 * if port is 0 it goes to the default port for
+	 * ENRP.
+	 */
+	char string[256], *p1, *p2, *p3;
+	while(fgets(string, sizeof(string), io) != NULL) {
+		line++;
+		if(string[0] == '#')
+			continue;
+		if(string[0] == ';')
+			continue;
+
+		p1 = strtok(string,":" );
+		if(p1 == NULL) {
+			printf("config file %s line %d can't find a ':' seperating id from port\n", file, line);
+			continue;
+		}
+		p2 = strtok(NULL, ":");
+		if(p2 == NULL) {
+			printf("config file %s line %d can't find a ':' seperating port from address\n", file, line);
+			continue;
+		}
+		p3 = strtok(NULL, "\n");
+		if(p2 == NULL) {
+			printf("config file %s line %d can't find a terminating char after address?\n", file, line);
+			continue;
+		}
+		/* ok p1 points to a int. p2 points to an address */
+		enrpid = strtoul(p1, NULL, 0);
+		if(enrpid == 0) {
+			printf("config file %s line %d reserved enrpid found aka 0?\n", file, line);
+		}
+		port = htons((uint16_t)strtol(p2, NULL, 0));
+		if(port == 0) {
+			port = htons(ENRP_DEFAULT_PORT_FOR_ASAP);
+		}
+		memset(&sin6, 0, sizeof(sin6));
+		if(inet_pton(AF_INET6, p3 , &sin6.sin6_addr ) == 1) {
+			sin6.sin6_family = AF_INET6;
+#ifdef HAVE_SA_LEN
+			sin6.sin6_len = sizeof(sin6);
+#endif			
+			sin6.sin6_port = port;
+			rsp_add_enrp_server(sdata, enrpid, (struct sockaddr *)&sin6);
+			continue;
+		}
+		memset(&sin, 0, sizeof(sin));
+		if(inet_pton(AF_INET, p3 , &sin.sin_addr ) == 1) {
+			sin.sin_family = AF_INET;
+#ifdef HAVE_SA_LEN
+			sin.sin_len = sizeof(sin);
+#endif			
+			sin.sin_port = port;
+			rsp_add_enrp_server(sdata, enrpid, (struct sockaddr *)&sin);
+			continue;
+		}
+		printf("config file %s line %d can't translate the address?\n", file, line);
+		
+	}
+}
+
+static void
+rsp_load_config_file(struct rsp_socket_hash *sdata, const char *confprefix)
+{
+	char file[256];
+	char prefix[100];
+	FILE *io;
+
+	if(confprefix) {
+		int len;
+		len = strlen(confprefix);
+		if(len > 99)
+			len = 99;
+		prefix[len] = 0;
+		memcpy(prefix, confprefix, len);
+	} else {
+		prefix[0] = 0;
+	}
+	sprintf(file, "~/.%senrp.conf", prefix);
+	if ((io = fopen(file, "r")) != NULL) {
+		rsp_load_file(sdata, io, file);
+		fclose(io);
+		return;
+	}
+	sprintf(file, "/usr/local/etc/.%senrp.conf", prefix);
+	if ((io = fopen(file, "r")) != NULL) {
+		rsp_load_file(sdata, io, file);
+		fclose(io);
+		return;
+	}
+	sprintf(file,"/usr/local/etc/enrp.conf");
+	if ((io = fopen(file, "r")) != NULL) {
+		rsp_load_file(sdata, io, file);
+		fclose(io);
+		return;
+	}
+	sprintf(file, "/etc/enrp.conf");
+	if ((io = fopen(file, "r")) != NULL) {
+		rsp_load_file(sdata, io, file);
+		fclose(io);
+		return;
+	}
+}
+
 int
-rsp_socket(int domain, int protocol, uint16_t port)
+rsp_socket(int domain, int protocol, uint16_t port, const char *confprefix)
 {
 	int sd, ret;
 	struct rsp_socket_hash *sdata;
@@ -134,6 +311,7 @@ rsp_socket(int domain, int protocol, uint16_t port)
 	struct sockaddr_in sin;
 	struct sockaddr_in6 sin6;
 	socklen_t addrlen;
+	struct sctp_event_subscribe event;
 
 	if(protocol != IPPROTO_SCTP) {
 		errno = ENOTSUP;
@@ -143,6 +321,30 @@ rsp_socket(int domain, int protocol, uint16_t port)
 	if(sd == -1) {
 		return (sd);
 	}
+	/* enable selected event notifications */
+	event.sctp_data_io_event = 1;
+	event.sctp_association_event = 1;
+	event.sctp_address_event = 0;
+	event.sctp_send_failure_event = 1;
+	event.sctp_peer_error_event = 0;
+	event.sctp_shutdown_event = 1;
+	event.sctp_partial_delivery_event = 1;
+#if defined(__FreeBSD__)
+	event.sctp_adaptation_layer_event = 0;
+#else
+	event.sctp_adaption_layer_event = 0;
+#endif
+#if defined(__FreeBSD__)
+	event.sctp_authentication_event = 0;
+	event.sctp_stream_reset_events = 0;
+#endif
+	if (setsockopt(sd, IPPROTO_SCTP, SCTP_EVENTS, &event, sizeof(event)) != 0) {
+		fprintf(stderr, "Can't do SET_EVENTS socket option! err:%d\n", errno);
+		close(sd);
+		errno = EFAULT;
+		return(-1);
+	}
+
 	sdata = (struct rsp_socket_hash *) sizeof(struct rsp_socket_hash);
 	if(sdata == NULL) {
 		if(rsp_debug) {
@@ -272,9 +474,9 @@ rsp_socket(int domain, int protocol, uint16_t port)
 		goto out_ofe;
 	}
 
-	/* Home ENRP server address list*/
-	sdata->enrpAddrList = dlist_create();
-	if (sdata->enrpAddrList == NULL) {
+	/* ENRP server  list */
+	sdata->enrpList = dlist_create();
+	if (sdata->enrpList == NULL) {
 		if(rsp_debug) {
 			fprintf(stderr, "can't get memory for enrp home addr dlist\n");
 		}
@@ -282,6 +484,8 @@ rsp_socket(int domain, int protocol, uint16_t port)
 		dlist_destroy(sdata->address_reg);
 		goto out_off;
 	}
+	sdata->homeServer = NULL;
+
 	/* number of names in use */
 	sdata->refcnt = 0;
 
@@ -342,6 +546,11 @@ rsp_socket(int domain, int protocol, uint16_t port)
 					sizeof(sdata->sd))) ) {	/* size of key */
 		printf("Failed to enter into hash table error:%d\n", ret);
 	}
+	rsp_load_config_file(sdata, confprefix);
+	if (sdata->homeServer == NULL) {
+		printf("Warning, could load config file, no ENRP servers\n");
+	}
+
 	if (pthread_mutex_unlock(&rsp_pcbinfo.sd_pool_mtx) ) {
 		printf("Unsafe access, thread unlock failed for sd_pool_mtx:%d\n", errno);
 	}

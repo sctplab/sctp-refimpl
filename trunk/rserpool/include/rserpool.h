@@ -2,7 +2,7 @@
 #define __Rserpool_h__
 
 
-int rsp_socket(int domain, int protocol, uint16_t port);
+int rsp_socket(int domain, int protocol, uint16_t port, const char *confdomain);
 
 int rsp_close(int sockfd);
 
