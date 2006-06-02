@@ -176,14 +176,9 @@ rsp_add_enrp_server(struct rsp_socket_hash *sdata, uint32_t enrpid, struct socka
 	re->number_of_addresses = 0;
 	re->size_of_addrList = 0;
 	re->asocid = 0;
+	re->state = RSP_NO_ASSOCIATION;
 	rsp_add_addr_to_enrp_entry(re, sa);
 	dlist_append(sdata->enrpList, (void *)re);
-	if ((sdata->homeServer == NULL) && re->number_of_addresses) {
-		/* Note this will get changed when we get the H bit from
-		 * our true home (if we register).
-		 */
-		sdata->homeServer = re;
-	}
 }
 
 static void
@@ -300,6 +295,19 @@ rsp_load_config_file(struct rsp_socket_hash *sdata, const char *confprefix)
 		fclose(io);
 		return;
 	}
+}
+
+static void
+rsp_start_enrp_server_hunt(struct rsp_socket_hash *sd)
+{
+	/* 
+	 * Formulate and set up an association to a
+	 * max of 3 enrp servers. Once we get an association
+	 * up we will choose the first one of them has the home ENRP
+	 * server.
+	 *
+	 */
+	
 }
 
 int
@@ -553,6 +561,12 @@ rsp_socket(int domain, int protocol, uint16_t port, const char *confprefix)
 
 	if (pthread_mutex_unlock(&rsp_pcbinfo.sd_pool_mtx) ) {
 		printf("Unsafe access, thread unlock failed for sd_pool_mtx:%d\n", errno);
+	}
+	if (sdata->homeServer == NULL) {
+		/* We need a home ENRP server, start
+		 * server hunt procedures.
+		 */
+		rsp_start_enrp_server_hunt(sdata);
 	}
 	return(sd);
 }
