@@ -13,7 +13,6 @@ int rsp_debug = 1;
 static
 void rsp_timer_thread_run( void * )
 {
-	void *v;
 	if (pthread_mutex_lock(&rsp_pcbinfo.rsp_tmr_mtx)) {
 		fprintf(stderr, "Pre-Timer start thread mutex lock fails error:%d -- help\n",
 			errno);
@@ -25,13 +24,7 @@ void rsp_timer_thread_run( void * )
 			fprintf(stderr, "Condition wait fails error:%d -- help\n", errno);
 			return;
 		}
-		dlist_reset(rsp_pcbinfo.timer_list);
-		v = dlist_get( rsp_pcbinfo.timer_list);
-		if(v == NULL) {
-			/* none on list.. hmm false wakeup */
-			continue;
-		}
-		rsp_timer_check ((struct rsp_timer_entry *)v);
+		rsp_timer_check ( void );
 	}
 
 }
@@ -44,9 +37,11 @@ rsp_init()
 		return;
 
 
-	rsp_pcbinfo.rsp_timers_up = 0;
+	/* number of sd's */
 	rsp_pcbinfo.rsp_number_sd = 0;
 
+	/* shortest wait time used by timer thread */
+	rsp_pcbinfo.minimumTimerQuantum = DEF_MINIMUM_TIMER_QUANTUM;
 	/* create socket descriptor hash table */
 	rsp_pcbinfo.sd_pool = HashedTbl_create(RSP_SD_HASH_TABLE_NAME, 
 					       RSP_SD_HASH_TBL_SIZE);
@@ -123,7 +118,7 @@ rsp_init()
 int
 rsp_socket(int domain, int protocol, uint16_t port)
 {
-	int sd;
+	int sd, ret;
 	struct rsp_socket_hash *sdata;
 	struct sockaddr *sa;
 	struct sockaddr_in sin;
@@ -325,7 +320,20 @@ rsp_socket(int domain, int protocol, uint16_t port)
 	/* unknown until registered */
 	sdata->useThisSd = 0 ;
 
-	
+	if( pthread_mutex_lock(&rsp_pcbinfo.sd_pool_mtx) ) {
+		printf("Unsafe access, thread lock failed for sd_pool_mtx:%d\n", errno);
+	}
+	rsp_pcbinfo.rsp_number_sd++;
+	if( (ret = HashedTbl_enterKeyed(rsp_pcbinfo.sd_pool , 	/* table */
+					sdata->sd, 		/* key-int */
+					(void*)sdata , 		/* dataum */
+					(void *)&sdata->sd, 	/* keyp */
+					sizeof(sdata->sd))) ) {	/* size of key */
+		printf("Failed to enter into hash table error:%d\n", ret);
+	}
+	if (pthread_mutex_unlock(&rsp_pcbinfo.sd_pool_mtx) ) {
+		printf("Unsafe access, thread unlock failed for sd_pool_mtx:%d\n", errno);
+	}
 }
 
 int 
