@@ -1,7 +1,7 @@
 # This is the top level of make. We only deal with the common
 # directories.
 
-DIRS= lib
+DIRS= lib rsplib
 
 all depend clean clobber release:
 	@for i in $(DIRS); do \

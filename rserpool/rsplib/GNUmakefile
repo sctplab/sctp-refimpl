@@ -16,7 +16,7 @@ SRCS= rsp_lib.c rsp_timer.c
 
 OBJS= $(SRCS:%.c=$(OBJDIR)/%.o)
 
-all:: $(OBJDIR) $(OBJDIR)/$(LIBBASE)($(OBJS)) 
+all:: $(OBJDIR) $(OBJDIR)/$(LIBRSERPOOL)($(OBJS)) 
 
 include $(TOPDIR)/GNUmaketargets
 

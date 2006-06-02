@@ -40,7 +40,7 @@ struct rsp_ipv4_address {
 	struct in_addr      in;
 };
 
-struct rsp_ipv4_address {
+struct rsp_ipv6_address {
 	struct rsp_paramhdr ph;
 	struct in6_addr     in6;
 };
@@ -67,7 +67,7 @@ struct rsp_tcp_transport {
 	union rsp_address_union  address;
 };
 
-struct rsp_tcp_transport {
+struct rsp_udp_transport {
 	struct rsp_paramhdr      ph;
 	uint16_t	         port;  /* Is this in network order?? */
 	uint16_t                 reserved;
@@ -160,12 +160,11 @@ struct rsp_cookie {
 struct rsp_pe_identifier {
 	struct rsp_paramhdr       ph;
 	uint32_t                  id;
-}
-
+};
 
 struct rsp_checksum {
 	struct rsp_paramhdr       ph;
-	uint16_t                  sum;
+ 	uint16_t                  sum;
 	uint16_t                  pad;
 };
 

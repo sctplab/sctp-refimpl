@@ -1,11 +1,11 @@
 #ifndef __rserpool_lib_h__
 #define __rserpool_lib_h__
-#include <stdio.h>
-#include <sys/types.h>
 #include <pthread.h>
 #include <dlist.h>
 #include <HashedTbl.h>
 #include <sys/time.h>
+#include <netinet/in.h>
+#include <netinet/sctp.h>
 /*
  * We first need to have the base structure
  * of a Pool that is kept inside the library.
@@ -39,7 +39,7 @@ struct rsp_global_info {
 	int			rsp_number_sd;	/* count of sd's when 0 un-init */
 	HashedTbl		*sd_pool;	/* hashed pool of sd's */
 	dlist_t			*timer_list;	/* list of timers running */
-	pthread 		tmr_thread; 	/* thread for timeouts */
+	pthread_t 		tmr_thread; 	/* thread for timeouts */
 	pthread_mutex_t		sd_pool_mtx;	/* mutex for sd_pool   */
 	pthread_cond_t		rsp_tmr_cnd;	/* condition sleep when no entries on timer_list */
 	pthread_mutex_t		rsp_tmr_mtx;	/* mutex for timers   */
@@ -77,7 +77,7 @@ struct rsp_socket_hash {
 	dlist_t 	*allPools;		/* list of all pools */
 	HashedTbl	*cache;			/* cache of names */
 	HashedTbl	*vtagHash;		/* assoc id-> rsp_pool_element */
-	HashedTbl	*ipaddrPortHash		/* ipadd -> rsp_pool_element */
+	HashedTbl	*ipaddrPortHash;		/* ipadd -> rsp_pool_ele */
 	dlist_t		*enrp_reqs;		/* ENRP requests outstanding */
 	dlist_t		*address_reg;		/* setup w/addrlist w/ctl&data seperate */
 	dlist_t 	*enrpAddrList;		/* Home ENRP server */
@@ -116,7 +116,7 @@ struct rsp_pool {
 	uint32_t 	name_len;		/* len of string */
 	dlist_t 	*peList;		/* list of all pe's */
 	void		*lastCookie;		/* last cookie received */
-	int32		cookieSize;		/* length of cookie */
+	int32_t		cookieSize;		/* length of cookie */
 	uint32_t 	refcnt;			/* number of PE's pointing to me */
 	uint32_t	regType;		/* reg type */
 	uint32_t	policy_value;		/* policy/count */
@@ -132,11 +132,11 @@ struct rsp_pool {
 #define RSP_PE_STATE_REPORTED   0x00000008	/* reported state to ENRP */
 
 /* Each entry aka the actual PE */
-struct rsp_pool_element {
+struct rsp_pool_ele {
 	char 		*name; 		/* pointer to pool name */
 	struct rsp_pool *pool;		/* pointer to pool entry */
 	dlist_t 	*addrList;	/* list of addresses */
-	struct rsp_pool_element *failover_list;
+	struct rsp_pool_ele *failover_list;
 	uint32_t	pe_identifer;	/* identifier of this PE */
 	uint32_t	state;		/* What state we think its in */
 	sctp_assoc_t	asocid;		/* sctp asoc id */

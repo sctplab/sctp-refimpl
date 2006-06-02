@@ -1,32 +1,42 @@
-#include <rserpool_util.h>
+#include <sys/types.h>
+#include <stdio.h>
 #include <rserpool_lib.h>
 #include <rserpool.h>
 #include <rserpool_io.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/sctp.h>
+#include <rserpool_util.h>
+#include <sys/errno.h>
+#include <stdlib.h>
+#include <unistd.h>
 
-struct rsp_global_info rsp_pcbinfo;
 int rsp_inited = 0;
 int rsp_debug = 1;
 
-static
-void rsp_timer_thread_run( void * )
+struct rsp_global_info rsp_pcbinfo;
+
+
+void *rsp_timer_thread_run( void *arg )
 {
+	static int done = 0;
+	if(arg != NULL)
+		return((void *)&done);
+
 	if (pthread_mutex_lock(&rsp_pcbinfo.rsp_tmr_mtx)) {
 		fprintf(stderr, "Pre-Timer start thread mutex lock fails error:%d -- help\n",
 			errno);
-		return;
+		return((void *)&done);
 	}
 	while (1) {
 		if(pthread_cond_wait(&rsp_pcbinfo.rsp_tmr_cnd, 
 				     &rsp_pcbinfo.rsp_tmr_mtx)) {
 			fprintf(stderr, "Condition wait fails error:%d -- help\n", errno);
-			return;
+			return((void *)&done);
 		}
-		rsp_timer_check ( void );
+		rsp_timer_check ( );
 	}
-
+	return((void *)&done);
 }
 
 
@@ -34,7 +44,7 @@ static int
 rsp_init()
 {
 	if (rsp_inited)
-		return;
+		return(0);
 
 
 	/* number of sd's */
@@ -73,7 +83,7 @@ rsp_init()
 	}
 
 	/* create condition variable to have timer thread sleep on */
-	if(pthread_mutex_cond_init(&rsp_pcbinfo.rsp_tmr_cnd, NULL)) {
+	if(pthread_cond_init(&rsp_pcbinfo.rsp_tmr_cnd, NULL)) {
 		if(rsp_debug) {
 			fprintf(stderr, "Could not init tmr cond var\n");
 		}
@@ -99,7 +109,7 @@ rsp_init()
 	if(pthread_create(&rsp_pcbinfo.tmr_thread,
 			  NULL,
 			  rsp_timer_thread_run,
-			  NULL) ) {
+			  (void *)NULL) ) {
 		if(rsp_debug) {
 			fprintf(stderr, "Could not start tmr thread\n");
 		}
@@ -126,7 +136,7 @@ rsp_socket(int domain, int protocol, uint16_t port)
 	socklen_t addrlen;
 
 	if(protocol != IPPROTO_SCTP) {
-		errno = ENOSUPPORT;
+		errno = ENOTSUP;
 		return (-1);
 	}
 	sd = socket(domain, SOCK_SEQPACKET, protocol);
@@ -150,12 +160,12 @@ rsp_socket(int domain, int protocol, uint16_t port)
 		memset(&sin, 0, sizeof(sin));
 		sin.sin_port = port;
 		sa = (struct sockaddr *)&sin;
-		addrlen = sizeof(struct sin);
+		addrlen = sizeof(sin);
 	}else if (domain == AF_INET6) {
 		memset(&sin6, 0, sizeof(sin6));
 		sin6.sin6_port = port;
 		sa = (struct sockaddr *)&sin6;
-		addrlen = sizeof(struct sin6);
+		addrlen = sizeof(sin6);
 	} else {
 		if(rsp_debug) {
 			fprintf(stderr, "unknown protocol:%d\n", domain);
@@ -227,10 +237,10 @@ rsp_socket(int domain, int protocol, uint16_t port)
 		}
 	out_ofc:
 		HashedTbl_destroy(sdata->cache);
-		goto out_ofb:
+		goto out_ofb;
 	}
 
-	/* ipadd -> rsp_pool_element */
+	/* ipadd -> rsp_pool_ele */
 	sdata->ipaddrPortHash= HashedTbl_create(RSP_IPADDR_HASH_TABLE_NAME, 
 						RSP_IPADDR_HASH_TBL_SIZE);
 	if (sdata->ipaddrPortHash == NULL) {
@@ -259,6 +269,7 @@ rsp_socket(int domain, int protocol, uint16_t port)
 		}
 	out_off:
 		dlist_destroy(sdata->enrp_reqs);		
+		goto out_ofe;
 	}
 
 	/* Home ENRP server address list*/
@@ -334,54 +345,66 @@ rsp_socket(int domain, int protocol, uint16_t port)
 	if (pthread_mutex_unlock(&rsp_pcbinfo.sd_pool_mtx) ) {
 		printf("Unsafe access, thread unlock failed for sd_pool_mtx:%d\n", errno);
 	}
-}
-
-int 
-rsp_register(sockfd, name)
-{
-}
-
-int 
-rsp_deregister(sockfd, name)
-{
+	return(sd);
 }
 
 int 
 rsp_close(int sockfd)
 {
+	return (0);
 }
 
 int 
-rsp_connect(sockfd, name)
+rsp_connect(int sockfd, const char *name)
 {
-}
-
-
-struct xxx 
-rsp_getPoolInfo(sockfd, xxx )
-{
+	return (0);
 }
 
 int 
-rsp_reportfailure(sockfd, xxx)
+rsp_register(int sockfd, const char *name)
 {
+	return (0);	
 }
 
-ssize_t 
+int
+rsp_deregister(int sockfd, const char *name)
+{
+	return (0);
+}
+
+int 
+rsp_getPoolInfo(int sockfd/*, xxx */)
+{
+	return (0);
+}
+
+int 
+rsp_reportfailure(int sockfd/*, xxx*/)
+{
+	return (0);
+}
+
+size_t 
 rsp_sendmsg(int sockfd,         /* HA socket descriptor */
-            struct msghdr *msg, /* message header struct */
-            int flags)         /* Options flags */
+	    struct msghdr *msg, /* message header struct */
+	    int flags)         /* Options flags */
 {
+	return (0);
 }
 
 ssize_t 
 rsp_rcvmsg(int sockfd,         /* HA socket descriptor */
-           struct msghdr *msg, /* msg header struct */
-           int flags)         /* Options flags */
+	   struct msghdr *msg, /* msg header struct */
+	   int flags)         /* Options flags */
 {
+	return (0);
 }
 
 
-int rsp_forcefailover(sockfd, xxx)
+int 
+rsp_forcefailover(int sockfd/*, xxx*/)
 {
+	return (0);
 }
+
+
