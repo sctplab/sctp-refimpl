@@ -2,19 +2,19 @@
 #define __Rserpool_h__
 
 
-int rsp_socket();
+int rsp_socket(int domain, int protocol, uint16_t port);
 
 int rsp_close(int sockfd);
 
-int rsp_connect(sockfd, name);
+int rsp_connect(int sockfd, const char *name);
 
-int rsp_register(sockfd, name);
+int rsp_register(int sockfd, const char *name);
 
-int rsp_deregister(sockfd, name);
+int rsp_deregister(int sockfd, const char *name);
 
-struct xxx rsp_getPoolInfo(sockfd, xxx );
+int rsp_getPoolInfo(int sockfd/*, xxx */);
 
-int rsp_reportfailure(sockfd, xxx);
+int rsp_reportfailure(int sockfd/*, xxx*/);
 
 size_t rsp_sendmsg(int sockfd,         /* HA socket descriptor */
                    struct msghdr *msg, /* message header struct */
@@ -25,6 +25,6 @@ ssize_t rsp_rcvmsg(int sockfd,         /* HA socket descriptor */
                    int flags);         /* Options flags */
 
 
-int rsp_forcefailover(sockfd, xxx);
+int rsp_forcefailover(int sockfd/*, xxx*/);
 
 #endif

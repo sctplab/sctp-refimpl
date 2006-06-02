@@ -225,6 +225,10 @@ BASE_DIR=$(TOPDIR)/lib
 BASE_INCLUDE=-I$(BASE_DIR)
 LIBBASE=libbaselib.a
 
+RSP_DIR=$(TOPDIR)/rsplib
+RSP_INCLUDE=-I$(RSP_DIR)
+LIBRSERPOOL=librsplib.a
+
 # Getopt
 LIBGETOPT=libgetopt.a
 
@@ -235,6 +239,7 @@ APPS_INCLUDE=-I$(APPS_DIR)
 INCLUDE_CFLAGS= $(INCLUDE_INCLUDE) \
 	-I$(TOPDIR)/../KERN \
 	$(BASE_INCLUDE) \
+	$(RSP_INCLUDE) \
 	$(APPS_INCLUDE)
 
 ##################################
@@ -269,7 +274,7 @@ C++FLAGS=$(CFLAGS)
 LDLIBS= $(APPLICATION_LIBS) \
         $(CFLAGS) \
         $(BASE_DIR)/$(OBJDIR)/$(LIBBASE) \
-	$(SCTP_DIR)/$(OBJDIR)/$(LIBSCTP) \
+	$(RSP_DIR)/$(OBJDIR)/$(LIBRSERPOOL) \
         $(LOCAL_LIBS) \
         $(GPROF_LIBS)
 #        -L/opt/FSFlibg++/lib

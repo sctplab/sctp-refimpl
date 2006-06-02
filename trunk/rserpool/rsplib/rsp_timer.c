@@ -5,7 +5,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/sctp.h>
-
+#include <sys/errno.h>
+#include <poll.h>
 
 void
 rsp_free_req(struct rsp_enrp_req *req)
@@ -83,8 +84,8 @@ void rsp_expire_timer(struct rsp_timer_entry *entry)
 		printf("List inconsistency .. hmm\n");
 	}
 	/* Now unlock the list before we do the timeout */
-	if (pthread_mutex_unlock(&rsp_pcbinfo.sd_tmr_mtx) ) {
-		fprintf(stderr, "Unsafe access, thread unlock failed for sd_tmr_mtx:%d\n", errno);
+	if (pthread_mutex_unlock(&rsp_pcbinfo.rsp_tmr_mtx) ) {
+		fprintf(stderr, "Unsafe access, thread unlock failed for rsp_tmr_mtx:%d\n", errno);
 	}
 	switch(entry->timer_type) {
 	case RSP_T1_ENRP_REQUEST:
@@ -119,8 +120,8 @@ void rsp_expire_timer(struct rsp_timer_entry *entry)
 		}
 		break;
 	};
-	if (pthread_mutex_lock(&rsp_pcbinfo.sd_tmr_mtx) ) {
-		fprintf(stderr, "Unsafe access, thread lock failed for sd_tmr_mtx:%d\n", errno);
+	if (pthread_mutex_lock(&rsp_pcbinfo.rsp_tmr_mtx) ) {
+		fprintf(stderr, "Unsafe access, thread lock failed for rsp_tmr_mtx:%d\n", errno);
 	}
 }
 
@@ -184,16 +185,16 @@ void rsp_timer_check ( void )
 		if(min_timeout > rsp_pcbinfo.minimumTimerQuantum)
 			min_timeout = rsp_pcbinfo.minimumTimerQuantum;
 
-		if (pthread_mutex_unlock(&rsp_pcbinfo.sd_tmr_mtx) ) {
-			fprintf(stderr, "Unsafe access, thread unlock failed for sd_tmr_mtx:%d\n", errno);
+		if (pthread_mutex_unlock(&rsp_pcbinfo.rsp_tmr_mtx) ) {
+			fprintf(stderr, "Unsafe access, thread unlock failed for rsp_tmr_mtx:%d\n", errno);
 		}
 		/* delay min_timeout */
 		if(poll(pfd, 0, min_timeout)) {
 			fprintf(stderr, "hmm. poll returns non-zero errno:%d\n", errno);
 		}
 
-		if (pthread_mutex_lock(&rsp_pcbinfo.sd_tmr_mtx) ) {
-			fprintf(stderr, "Unsafe access, thread lock failed for sd_tmr_mtx:%d\n", errno);
+		if (pthread_mutex_lock(&rsp_pcbinfo.rsp_tmr_mtx) ) {
+			fprintf(stderr, "Unsafe access, thread lock failed for rsp_tmr_mtx:%d\n", errno);
 		}
 		if (gettimeofday(&now , NULL) ) {
 			fprintf(stderr, "Gak, system error can't get time of day?? -- failed:%d\n", errno);
