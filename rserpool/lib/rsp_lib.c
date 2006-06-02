@@ -1,3 +1,4 @@
+#include <rserpool_util.h>
 #include <rserpool_lib.h>
 #include <rserpool.h>
 #include <rserpool_io.h>
@@ -12,6 +13,26 @@ int rsp_debug = 1;
 static
 void rsp_timer_thread_run( void * )
 {
+	void *v;
+	if (pthread_mutex_lock(&rsp_pcbinfo.rsp_tmr_mtx)) {
+		fprintf(stderr, "Pre-Timer start thread mutex lock fails error:%d -- help\n",
+			errno);
+		return;
+	}
+	while (1) {
+		if(pthread_cond_wait(&rsp_pcbinfo.rsp_tmr_cnd, 
+				     &rsp_pcbinfo.rsp_tmr_mtx)) {
+			fprintf(stderr, "Condition wait fails error:%d -- help\n", errno);
+			return;
+		}
+		dlist_reset(rsp_pcbinfo.timer_list);
+		v = dlist_get( rsp_pcbinfo.timer_list);
+		if(v == NULL) {
+			/* none on list.. hmm false wakeup */
+			continue;
+		}
+		rsp_timer_check ((struct rsp_timer_entry *)v);
+	}
 
 }
 
@@ -47,7 +68,7 @@ rsp_init()
 	}
 
 	/* create mutex to lock sd pool */
-	if (pthread_mutex_init(rsp_pcbinfo.sd_pool_mtx, NULL)) {
+	if (pthread_mutex_init(&rsp_pcbinfo.sd_pool_mtx, NULL)) {
 		if(rsp_debug) {
 			fprintf(stderr, "Could not init sd_pool mtx\n");
 		}
@@ -57,39 +78,39 @@ rsp_init()
 	}
 
 	/* create condition variable to have timer thread sleep on */
-	if(pthread_mutex_cond_init(rsp_pcbinfo.rsp_tmr_cnd, NULL)) {
+	if(pthread_mutex_cond_init(&rsp_pcbinfo.rsp_tmr_cnd, NULL)) {
 		if(rsp_debug) {
 			fprintf(stderr, "Could not init tmr cond var\n");
 		}
-		pthread_mutex_destroy(rsp_pcbinfo.sd_pool_mtx);
+		pthread_mutex_destroy(&rsp_pcbinfo.sd_pool_mtx);
 		HashedTbl_destroy(rsp_pcbinfo.sd_pool);
 		dlist_destroy(rsp_pcbinfo.timer_list);
 		return (-1);
 	}
 
 	/* create mutex for timer list */
-	if(pthread_mutex_init(rsp_pcbinfo.rsp_tmr_mtx, NULL)) {
+	if(pthread_mutex_init(&rsp_pcbinfo.rsp_tmr_mtx, NULL)) {
 		if(rsp_debug) {
 			fprintf(stderr, "Could not init tmr mtx\n");
 		}
-		pthread_cond_destroy(rsp_pcbinfo.rsp_tmr_cnd);
-		pthread_mutex_destroy(rsp_pcbinfo.sd_pool_mtx);
+		pthread_cond_destroy(&rsp_pcbinfo.rsp_tmr_cnd);
+		pthread_mutex_destroy(&rsp_pcbinfo.sd_pool_mtx);
 		HashedTbl_destroy(rsp_pcbinfo.sd_pool);
 		dlist_destroy(rsp_pcbinfo.timer_list);
 		return (-1);
 	}
 	
 	/* now we must create the timer thread */
-	if(pthread_create(rsp_pcbinfo.tmr_thread,
+	if(pthread_create(&rsp_pcbinfo.tmr_thread,
 			  NULL,
 			  rsp_timer_thread_run,
 			  NULL) ) {
 		if(rsp_debug) {
 			fprintf(stderr, "Could not start tmr thread\n");
 		}
-		pthread_mutex_destroy(rsp_pcbinfo.rsp_tmr_mtx);
-		pthread_cond_destroy(rsp_pcbinfo.rsp_tmr_cnd);
-		pthread_mutex_destroy(rsp_pcbinfo.sd_pool_mtx);
+		pthread_mutex_destroy(&rsp_pcbinfo.rsp_tmr_mtx);
+		pthread_cond_destroy(&rsp_pcbinfo.rsp_tmr_cnd);
+		pthread_mutex_destroy(&rsp_pcbinfo.sd_pool_mtx);
 		HashedTbl_destroy(rsp_pcbinfo.sd_pool);
 		dlist_destroy(rsp_pcbinfo.timer_list);
 		return (-1);

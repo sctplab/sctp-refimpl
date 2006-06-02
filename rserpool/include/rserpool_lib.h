@@ -42,7 +42,7 @@ struct rsp_global_info {
 	dlist_t			*timer_list;	/* list of timers running */
 	pthread 		tmr_thread; 	/* thread for timeouts */
 	pthread_mutex_t		sd_pool_mtx;	/* mutex for sd_pool   */
-	pthread_cond_t		rsp_tmr_cnd;	/* condition sleep when num tmr == 0 */
+	pthread_cond_t		rsp_tmr_cnd;	/* condition sleep when no entries on timer_list */
 	pthread_mutex_t		rsp_tmr_mtx;	/* mutex for timers   */
 };
 
@@ -98,12 +98,14 @@ struct rsp_socket_hash {
 };
 
 /* Timers will have this in a list */
-struct rsp_timer_entry{
-	struct timeval started;
-	struct timeval expireTime;
-	struct rsp_socket_hash *sd;
-	struct rsp_enrp_req *req;
-	int timer_type;
+struct rsp_timer_entry {
+	struct timeval 		started;	/* time of start */
+	struct timeval 		expireTime;	/* time of expire */
+	struct rsp_socket_hash 	*sd;		/* pointer back to sd */
+	struct rsp_enrp_req 	*req;		/* data being sent */
+	int 			timer_type;	/* type of timer */
+	pthread_cond_t		rsp_sleeper;	/* sleeper to awake */
+	uint8_t 		cond_awake; 	/* is there a sleeper */
 };
 
 /* A pool entry */
