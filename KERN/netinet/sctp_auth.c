@@ -421,7 +421,6 @@ sctp_print_key(sctp_key_t * key, const char *str)
 		printf("\n");
 	} else {
 		printf("[Null key]\n");
-		\
 	}
 }
 
@@ -828,7 +827,7 @@ sctp_negotiate_hmacid(sctp_hmaclist_t * peer, sctp_hmaclist_t * local)
 				/* found the "best" one */
 #ifdef SCTP_DEBUG
 				if (SCTP_AUTH_DEBUG)
-					printf("\nSCTP: negotiated peer HMAC id %u", peer->hmac[i]);
+					printf("SCTP: negotiated peer HMAC id %u\n", peer->hmac[i]);
 #endif
 				return (peer->hmac[i]);
 			}
