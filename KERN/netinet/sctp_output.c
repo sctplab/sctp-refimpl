@@ -7812,6 +7812,9 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	}
 #endif
 	STCB_TCB_LOCK_ASSERT(stcb);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sctp_lock_assert(inp->sctp_socket);
+#endif
 	hbflag = 0;
 	if ((control_only) || (asoc->stream_reset_outstanding))
 		no_data_chunks = 1;
@@ -9649,6 +9652,9 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 	}
 #endif
 	STCB_TCB_LOCK_ASSERT(stcb);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sctp_lock_assert(inp->sctp_socket);
+#endif
 	while (asoc->sent_queue_retran_cnt) {
 		/*
 		 * Ok, it is retransmission time only, we send out only ONE
