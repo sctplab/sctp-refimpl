@@ -4447,7 +4447,7 @@ process_control_chunks:
 			    m, *offset)) {
 				/* auth HMAC failed so dump the packet */
 				*offset = length;
-				return (NULL);
+				return (stcb);
 			} else {
 				/* remaining chunks are HMAC checked */
 				stcb->asoc.authenticated = 1;
