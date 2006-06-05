@@ -709,6 +709,29 @@ rsp_close(int sockfd)
 int 
 rsp_connect(int sockfd, const char *name, size_t namelen)
 {
+	/* lookup a name, if you have
+	 * already pre-loaded the cache, your
+	 * done. If not, do the pre-load. 
+	 *
+	 * Note: we don't block since its possible
+	 * to get some other user message which would
+	 * get in the way of us reading and if we
+	 * read and hold we have an issue with select/poll
+	 * since we let the user do his/her own call to
+	 * the base select/poll not an rsp_ version.
+	 */
+
+	
+	/* steps:
+	 *
+	 * 1) see if we have a hs, if not start blocking
+	 *    server hunt procedures.
+	 * 2) once we have a hs, lookup the name -> cache
+	 * 3) If cache hit, request update and return.
+	 * 4) If cache miss, request update and return.
+	 *
+	 */
+
 
 	return (0);
 }
