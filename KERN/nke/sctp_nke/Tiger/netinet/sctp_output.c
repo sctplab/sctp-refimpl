@@ -6578,6 +6578,9 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			SOCKBUF_LOCK(&so->so_snd);
 			goto release;
 		}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		bzero((void *)chk, sizeof(struct sctp_tmit_chunk)); /* FIXME MT */
+#endif
 		calc_oh = (dataout % 4);
 		if (calc_oh)
 			pad_oh = (4 - calc_oh);
@@ -6710,6 +6713,9 @@ sctp_msg_append(struct sctp_tcb *stcb,
 				SOCKBUF_LOCK(&so->so_snd);
 				goto release;
 			}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			bzero((void *)chk, sizeof(struct sctp_tmit_chunk)); /* FIXME MT */
+#endif
 			SCTP_INCR_CHK_COUNT();
 			*chk = template;
 			chk_cnt++;
@@ -8659,6 +8665,9 @@ sctp_queue_op_err(struct sctp_tcb *stcb, struct mbuf *op_err)
 		sctp_m_freem(op_err);
 		return;
 	}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	bzero((void *)chk, sizeof(struct sctp_tmit_chunk)); /* FIXME MT */
+#endif
 	SCTP_INCR_CHK_COUNT();
 	M_PREPEND(op_err, sizeof(struct sctp_chunkhdr), M_DONTWAIT);
 	if (op_err == NULL) {
@@ -8766,6 +8775,9 @@ sctp_send_cookie_echo(struct mbuf *m,
 		sctp_m_freem(cookie);
 		return (-5);
 	}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	bzero((void *)chk, sizeof(struct sctp_tmit_chunk)); /* FIXME MT */
+#endif
 	SCTP_INCR_CHK_COUNT();
 	chk->send_size = cookie->m_pkthdr.len;
 	chk->rec.chunk_id = SCTP_COOKIE_ECHO;
@@ -8837,6 +8849,9 @@ sctp_send_heartbeat_ack(struct sctp_tcb *stcb,
 		sctp_m_freem(outchain);
 		return;
 	}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	bzero((void *)chk, sizeof(struct sctp_tmit_chunk)); /* FIXME MT */
+#endif
 	SCTP_INCR_CHK_COUNT();
 	chk->send_size = chk_length;
 	chk->rec.chunk_id = SCTP_HEARTBEAT_ACK;
@@ -8873,6 +8888,9 @@ sctp_send_cookie_ack(struct sctp_tcb *stcb)
 		sctp_m_freem(cookie_ack);
 		return (-1);
 	}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	bzero((void *)chk, sizeof(struct sctp_tmit_chunk)); /* FIXME MT */
+#endif
 	SCTP_INCR_CHK_COUNT();
 
 	chk->send_size = sizeof(struct sctp_chunkhdr);
@@ -8921,6 +8939,9 @@ sctp_send_shutdown_ack(struct sctp_tcb *stcb, struct sctp_nets *net)
 		sctp_m_freem(m_shutdown_ack);
 		return (-1);
 	}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	bzero((void *)chk, sizeof(struct sctp_tmit_chunk)); /* FIXME MT */
+#endif
 	SCTP_INCR_CHK_COUNT();
 
 	chk->send_size = sizeof(struct sctp_chunkhdr);
@@ -8965,6 +8986,9 @@ sctp_send_shutdown(struct sctp_tcb *stcb, struct sctp_nets *net)
 		sctp_m_freem(m_shutdown);
 		return (-1);
 	}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	bzero((void *)chk, sizeof(struct sctp_tmit_chunk)); /* FIXME MT */
+#endif
 	SCTP_INCR_CHK_COUNT();
 
 	chk->send_size = sizeof(struct sctp_shutdown_chunk);
@@ -9024,6 +9048,9 @@ sctp_send_asconf(struct sctp_tcb *stcb, struct sctp_nets *net)
 		sctp_m_freem(m_asconf);
 		return (-1);
 	}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	bzero((void *)chk, sizeof(struct sctp_tmit_chunk)); /* FIXME MT */
+#endif
 	SCTP_INCR_CHK_COUNT();
 
 	chk->data = m_asconf;
@@ -9083,6 +9110,9 @@ sctp_send_asconf_ack(struct sctp_tcb *stcb, uint32_t retrans)
 			sctp_m_freem(m_ack);
 		return (-1);
 	}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	bzero((void *)chk, sizeof(struct sctp_tmit_chunk)); /* FIXME MT */
+#endif
 	SCTP_INCR_CHK_COUNT();
 
 	/* figure out where it goes to */
@@ -10435,6 +10465,9 @@ send_forward_tsn(struct sctp_tcb *stcb,
 	if (chk == NULL) {
 		return;
 	}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	bzero((void *)chk, sizeof(struct sctp_tmit_chunk)); /* FIXME MT */
+#endif
 	SCTP_INCR_CHK_COUNT();
 	chk->rec.chunk_id = SCTP_FORWARD_CUM_TSN;
 	chk->asoc = asoc;
@@ -10623,6 +10656,9 @@ sctp_send_sack(struct sctp_tcb *stcb)
 			    stcb->sctp_ep, stcb, NULL);
 			return;
 		}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		bzero((void *)a_chk, sizeof(struct sctp_tmit_chunk)); /* FIXME MT */
+#endif
 		SCTP_INCR_CHK_COUNT();
 		a_chk->rec.chunk_id = SCTP_SELECTIVE_ACK;
 	}
@@ -11215,6 +11251,9 @@ sctp_send_hb(struct sctp_tcb *stcb, int user_req, struct sctp_nets *u_net)
 	struct sockaddr_in6 *sin6;
 
 	STCB_TCB_LOCK_ASSERT(stcb);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sctp_lock_assert(stcb->sctp_socket);
+#endif
 	if (user_req == 0) {
 		net = sctp_select_hb_destination(stcb, &now);
 		if (net == NULL) {
@@ -11254,6 +11293,9 @@ sctp_send_hb(struct sctp_tcb *stcb, int user_req, struct sctp_nets *u_net)
 #endif
 		return (0);
 	}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	bzero((void *)chk, sizeof(struct sctp_tmit_chunk)); /* FIXME MT */
+#endif
 	SCTP_INCR_CHK_COUNT();
 	chk->rec.chunk_id = SCTP_HEARTBEAT_REQUEST;
 	chk->asoc = &stcb->asoc;
@@ -11373,6 +11415,9 @@ sctp_send_ecn_echo(struct sctp_tcb *stcb, struct sctp_nets *net,
 	if (chk == NULL) {
 		return;
 	}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	bzero((void *)chk, sizeof(struct sctp_tmit_chunk)); /* FIXME MT */
+#endif
 	sctp_pegs[SCTP_ECNE_SENT]++;
 	SCTP_INCR_CHK_COUNT();
 	chk->rec.chunk_id = SCTP_ECN_ECHO;
@@ -11425,6 +11470,9 @@ sctp_send_packet_dropped(struct sctp_tcb *stcb, struct sctp_nets *net,
 	if (chk == NULL) {
 		return;
 	}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	bzero((void *)chk, sizeof(struct sctp_tmit_chunk)); /* FIXME MT */
+#endif
 	SCTP_INCR_CHK_COUNT();
 	iph = mtod(m, struct ip *);
 	if (iph == NULL) {
@@ -11557,6 +11605,9 @@ sctp_send_cwr(struct sctp_tcb *stcb, struct sctp_nets *net, uint32_t high_tsn)
 	if (chk == NULL) {
 		return;
 	}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	bzero((void *)chk, sizeof(struct sctp_tmit_chunk)); /* FIXME MT */
+#endif
 	SCTP_INCR_CHK_COUNT();
 	chk->rec.chunk_id = SCTP_ECN_CWR;
 	chk->asoc = &stcb->asoc;
@@ -11797,6 +11848,9 @@ sctp_send_str_reset_req(struct sctp_tcb *stcb,
 	if (chk == NULL) {
 		return (ENOMEM);
 	}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	bzero((void *)chk, sizeof(struct sctp_tmit_chunk)); /* FIXME MT */
+#endif
 	SCTP_INCR_CHK_COUNT();
 	chk->rec.chunk_id = SCTP_STREAM_RESET;
 	chk->asoc = &stcb->asoc;
@@ -12643,6 +12697,9 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 #endif
 			goto release;
 		}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		bzero((void *)chk, sizeof(struct sctp_tmit_chunk)); /* FIXME MT */
+#endif
 		SCTP_INCR_CHK_COUNT();
 		sctp_prepare_chunk(chk, stcb, srcv, strq, net);
 		/* our sctp_copy_one routine always leaves a pad if needed */
@@ -12752,6 +12809,9 @@ clean_up:
 				 */
 				error = ENOMEM;
 			}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			bzero((void *)chk, sizeof(struct sctp_tmit_chunk)); /* FIXME MT */
+#endif
 			SCTP_INCR_CHK_COUNT();
 			cnt_on_queue++;
 			*chk = template;
