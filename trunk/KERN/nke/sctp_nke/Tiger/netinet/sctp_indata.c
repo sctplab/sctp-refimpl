@@ -1670,6 +1670,9 @@ failed_express_del:
 			}
 			return (0);
 		}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		bzero((void *)chk, sizeof(struct sctp_tmit_chunk)); /* FIXME MT */
+#endif
 		SCTP_INCR_CHK_COUNT();
 		chk->rec.data.TSN_seq = tsn;
 		chk->no_fr_allowed = 0;

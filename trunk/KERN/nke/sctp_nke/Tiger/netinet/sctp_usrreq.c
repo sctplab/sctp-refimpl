@@ -278,6 +278,9 @@ sctp_split_chunks(struct sctp_association *asoc,
 		chk->flags |= CHUNK_FLAGS_FRAGMENT_OK;
 		return;
 	}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	bzero((void *)new_chk, sizeof(struct sctp_tmit_chunk)); /* FIXME MT */
+#endif
 	SCTP_INCR_CHK_COUNT();
 	/* Copy it all */
 	*new_chk = *chk;
