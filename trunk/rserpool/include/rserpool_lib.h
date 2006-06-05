@@ -90,10 +90,10 @@ struct rsp_enrp_entry {
 /* For each socket descriptor we will have one of these */
 struct rsp_socket_hash {
 	int	 	sd;			/* sctp socket */
-	dlist_t 	*allPools;		/* list of all pools */
-	HashedTbl	*cache;			/* cache of names */
-	HashedTbl	*vtagHash;		/* assoc id-> rsp_pool_element */
-	HashedTbl	*ipaddrPortHash;		/* ipadd -> rsp_pool_ele */
+	dlist_t 	*allPools;		/* list of all rsp_pool */
+	HashedTbl	*cache;			/* cache name->rsp_poll */
+	HashedTbl	*vtagHash;		/* assoc id-> rsp_pool_ele */
+	HashedTbl	*ipaddrPortHash;	/* ipadd -> rsp_pool_ele */
 	dlist_t		*enrp_reqs;		/* ENRP requests outstanding */
 	dlist_t		*address_reg;		/* setup w/addrlist w/ctl&data seperate */
 	dlist_t 	*enrpList;		/* List of ENRP servers */
