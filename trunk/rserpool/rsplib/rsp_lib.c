@@ -331,7 +331,7 @@ rsp_load_config_file(struct rsp_socket_hash *sdata, const char *confprefix)
 }
 
 void
-rsp_start_enrp_server_hunt(struct rsp_socket_hash *sd, struct rsp_timer_entry *te)
+rsp_start_enrp_server_hunt(struct rsp_socket_hash *sd, struct rsp_timer_entry *te, int non_blocking)
 {
 	/* 
 	 * Formulate and set up an association to a
@@ -353,6 +353,9 @@ rsp_start_enrp_server_hunt(struct rsp_socket_hash *sd, struct rsp_timer_entry *t
 		struct rsp_timer_entry *ete;
 		int found = 0;
 
+		if(non_blocking == 1) {
+			return;
+		}
 		if (pthread_mutex_lock(&rsp_pcbinfo.rsp_tmr_mtx) ) {
 			fprintf(stderr, "Unsafe access %d can't look up timed server hunt in progress, \n", errno);
 			return;
@@ -693,7 +696,7 @@ rsp_socket(int domain, int protocol, uint16_t port, const char *confprefix)
 	/* We need a home ENRP server, start
 	 * server hunt procedures.
 	 */
-	rsp_start_enrp_server_hunt(sdata, (struct rsp_timer_entry *)NULL);
+	rsp_start_enrp_server_hunt(sdata, (struct rsp_timer_entry *)NULL, 1);
 	return(sd);
 }
 
@@ -704,54 +707,72 @@ rsp_close(int sockfd)
 }
 
 int 
-rsp_connect(int sockfd, const char *name)
+rsp_connect(int sockfd, const char *name, size_t namelen)
 {
+
 	return (0);
 }
 
 int 
-rsp_register(int sockfd, const char *name)
+rsp_register(int sockfd, const char *name, size_t namelen, uint32_t policy, uint32_t policy_value )
 {
 	return (0);	
 }
 
 int
-rsp_deregister(int sockfd, const char *name)
+rsp_deregister(int sockfd)
 {
 	return (0);
 }
 
-int 
-rsp_getPoolInfo(int sockfd/*, xxx */)
+struct rsp_info *
+rsp_getPoolInfo(int sockfd, char *name, size_t namelen)
 {
-	return (0);
+	return (NULL);
 }
 
 int 
-rsp_reportfailure(int sockfd/*, xxx*/)
+rsp_reportfailure(int sockfd, char *name,size_t namelen,  const struct sockaddr *to, const sctp_assoc_t id)
 {
 	return (0);
 }
 
 size_t 
 rsp_sendmsg(int sockfd,         /* HA socket descriptor */
-	    struct msghdr *msg, /* message header struct */
+	    const char *msg,
+	    size_t len,
+	    struct sockaddr *to,
+	    socklen_t *tolen,
+	    char *name,
+	    size_t *namelen,
+	    struct sctp_sndrcvinfo *sinfo,
 	    int flags)         /* Options flags */
 {
 	return (0);
 }
 
 ssize_t 
-rsp_rcvmsg(int sockfd,         /* HA socket descriptor */
-	   struct msghdr *msg, /* msg header struct */
-	   int flags)         /* Options flags */
+rsp_rcvmsg(int sockfd,		/* HA socket descriptor */
+	   const char *msg,
+	   size_t len,
+	   char *name, 		/* in-out/limit */
+	   size_t *namelen,
+	   struct sockaddr *from,
+	   socklen_t *fromlen,	/* in-out/limit */
+	   struct sctp_sndrcvinfo *sinfo,
+	   int flags)		/* Options flags */
 {
 	return (0);
 }
 
 
 int 
-rsp_forcefailover(int sockfd/*, xxx*/)
+rsp_forcefailover(int sockfd, 
+		  char *name, 
+		  size_t namelen,
+		  const struct sockaddr *to, 
+		  const socklen_t tolen,	  
+		  const sctp_assoc_t id)
 {
 	return (0);
 }
