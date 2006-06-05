@@ -18,6 +18,39 @@ int rsp_debug = 1;
 struct rsp_global_info rsp_pcbinfo;
 
 
+
+static sctp_assoc_t
+get_asocid(int sd, struct sockaddr *sa)
+{
+	struct sctp_paddrinfo sp;
+	socklen_t siz;
+	socklen_t sa_len;
+
+	/* First get the assoc id */
+	siz = sizeof(sp);
+	memset(&sp,0,sizeof(sp));
+
+#ifdef HAVE_SA_LEN
+	sa_len = sa->sa_len;
+#else
+	if(sa->sa_family == AF_INET) {
+		sa_len = sizeof(struct sockaddr_in);
+	} else if (sa->sa_family == AF_INET6) {
+		sa_len = sizeof(struct sockaddr_in6);
+	}
+#endif
+	memcpy((caddr_t)&sp.spinfo_address, sa, sa_len);
+	errno = 0;
+	if(getsockopt(sd, IPPROTO_SCTP, SCTP_GET_PEER_ADDR_INFO,
+		      &sp, &siz) != 0) {
+		fprintf(stderr, "Failed to get assoc_id with GET_PEER_ADDR_INFO, errno:%d\n", errno);
+		return (0);
+	}
+	/* BSD: We depend on the fact that 0 can never be returned */
+	return (sp.spinfo_assoc_id);
+}
+
+
 void *rsp_timer_thread_run( void *arg )
 {
 	static int done = 0;
@@ -297,17 +330,108 @@ rsp_load_config_file(struct rsp_socket_hash *sdata, const char *confprefix)
 	}
 }
 
-static void
-rsp_start_enrp_server_hunt(struct rsp_socket_hash *sd)
+void
+rsp_start_enrp_server_hunt(struct rsp_socket_hash *sd, struct rsp_timer_entry *te)
 {
 	/* 
 	 * Formulate and set up an association to a
 	 * max of 3 enrp servers. Once we get an association
 	 * up we will choose the first one of them has the home ENRP
-	 * server.
+	 * server. Use sctp_connectx() to use multi-homed startup.
 	 *
+	 * Note this routine is used by both users requesting a SH and
+	 * the time-out routine. For the t-o te will be set to non-NULL.
+	 * For new users requests (from failures and such) te will be NULL.
+	 * Thus if we see a te of NULL and we are in the SERVER_HUNT state, we
+	 * don't continue, its already happening we just add to the sleeper
+	 * count.
 	 */
-	
+	int cnt = 0;
+	struct rsp_enrp_entry *re;
+
+	if ((te == NULL) && (sd->state & RSP_SERVER_HUNT_IP)) {
+		struct rsp_timer_entry *ete;
+		int found = 0;
+
+		if (pthread_mutex_lock(&rsp_pcbinfo.rsp_tmr_mtx) ) {
+			fprintf(stderr, "Unsafe access %d can't look up timed server hunt in progress, \n", errno);
+			return;
+		}
+		dlist_reset(rsp_pcbinfo.timer_list);
+		while ((ete = (struct rsp_timer_entry *)dlist_get(rsp_pcbinfo.timer_list)) != NULL) {
+			if (ete->timer_type == RSP_T5_SERVERHUNT) {
+				found = 1;
+				ete->sleeper_count++;
+				if(pthread_cond_wait(&rsp_pcbinfo.rsp_tmr_cnd, &rsp_pcbinfo.rsp_tmr_mtx)) {
+					fprintf(stderr, "Cond wait for s-h fails error:%d\n", errno);
+				}
+				break;
+			}
+		}
+		if (pthread_mutex_unlock(&rsp_pcbinfo.rsp_tmr_mtx) ) {
+			fprintf(stderr, "Unsafe access, thread unlock failed for s-h rsp_tmr_mtx:%d\n", errno);
+		}
+		if(found == 0) {
+			/* hmm, this should not happen */
+			fprintf(stderr, "In server hunt state, but cannot find the timer?\n");
+		} else {
+			return;
+		}
+	}
+	/* start server hunt */
+	sd->state |= RSP_SERVER_HUNT_IP;
+	dlist_reset(sd->enrpList);
+	while((re = (struct rsp_enrp_entry *)dlist_get(sd->enrpList)) != NULL) {
+		if (re->state == RSP_NO_ASSOCIATION) { 
+			if((sctp_connectx(sd->sd, re->addrList, re->number_of_addresses)) < 0) {
+				re->state = RSP_ASSOCIATION_FAILED;
+			} else {
+				re->state = RSP_START_ASSOCIATION;
+				/* try to get assoc id */
+				re->asocid = get_asocid(sd->sd, re->addrList);
+			}
+			cnt++;
+		} else if (re->state == RSP_ASSOCIATION_UP) {
+			/* we have one, set to this guy */
+			sd->homeServer = re;
+			sd->state |= RSP_ENRP_HS_FOUND;
+			sd->state &= ~RSP_SERVER_HUNT_IP;
+			if(te) {
+				if ((te->cond_awake) && (te->sleeper_count > 0)) {
+					pthread_cond_broadcast(&te->rsp_sleeper);
+				} 
+				pthread_cond_destroy(&te->rsp_sleeper);
+				free(te);
+			}
+			return;
+		}
+		if(cnt >= ENRP_MAX_SERVER_HUNTS)
+			/* As far as we will go */
+			break;
+	}
+
+	/* If we did not get our max, try looking for
+	 * some that failed to start.
+	 */
+	if(cnt < ENRP_MAX_SERVER_HUNTS) {
+		dlist_reset(sd->enrpList);
+		while((re = (struct rsp_enrp_entry *)dlist_get(sd->enrpList)) != NULL) {
+			if (re->state == RSP_ASSOCIATION_FAILED) {
+				if((sctp_connectx(sd->sd, re->addrList, re->number_of_addresses)) < 0) {
+					re->state = RSP_ASSOCIATION_FAILED;
+				} else {
+					re->state = RSP_START_ASSOCIATION;
+					/* try to get assoc id */
+					re->asocid = get_asocid(sd->sd, re->addrList);
+				}
+				cnt++;
+			}
+			if(cnt >= ENRP_MAX_SERVER_HUNTS)
+				/* As far as we will go */
+				break;
+		}
+	}
+	rsp_start_timer(sd, sd->timers[RSP_T5_SERVERHUNT], (struct rsp_enrp_req *)NULL, RSP_T5_SERVERHUNT, 1, 0, te);
 }
 
 int
@@ -493,6 +617,7 @@ rsp_socket(int domain, int protocol, uint16_t port, const char *confprefix)
 		goto out_off;
 	}
 	sdata->homeServer = NULL;
+	sdata->state = RSP_NO_ENRP_SERVER;
 
 	/* number of names in use */
 	sdata->refcnt = 0;
@@ -502,7 +627,6 @@ rsp_socket(int domain, int protocol, uint16_t port, const char *confprefix)
 
 	/* unknown until we register */
 	sdata->registeredName = NULL;
-
 	/* sd default timers */
 	sdata->timers[RSP_T1_ENRP_REQUEST] = DEF_RSP_T1_ENRP_REQUEST;
 	sdata->timers[RSP_T2_REGISTRATION] = DEF_RSP_T2_REGISTRATION;
@@ -543,8 +667,13 @@ rsp_socket(int domain, int protocol, uint16_t port, const char *confprefix)
 	/* unknown until registered */
 	sdata->useThisSd = 0 ;
 
+	if(pthread_mutex_init(&sdata->rsp_sd_mtx, NULL) ) {
+		fprintf(stderr, "Warning - Mutex init fails for socket? errno%d\n", errno);
+
+	}
+
 	if( pthread_mutex_lock(&rsp_pcbinfo.sd_pool_mtx) ) {
-		printf("Unsafe access, thread lock failed for sd_pool_mtx:%d\n", errno);
+		fprintf(stderr, "Unsafe access, thread lock failed for sd_pool_mtx:%d\n", errno);
 	}
 	rsp_pcbinfo.rsp_number_sd++;
 	if( (ret = HashedTbl_enterKeyed(rsp_pcbinfo.sd_pool , 	/* table */
@@ -552,22 +681,19 @@ rsp_socket(int domain, int protocol, uint16_t port, const char *confprefix)
 					(void*)sdata , 		/* dataum */
 					(void *)&sdata->sd, 	/* keyp */
 					sizeof(sdata->sd))) ) {	/* size of key */
-		printf("Failed to enter into hash table error:%d\n", ret);
+		fprintf(stderr, "Failed to enter into hash table error:%d\n", ret);
 	}
 	rsp_load_config_file(sdata, confprefix);
-	if (sdata->homeServer == NULL) {
-		printf("Warning, could load config file, no ENRP servers\n");
-	}
 
 	if (pthread_mutex_unlock(&rsp_pcbinfo.sd_pool_mtx) ) {
-		printf("Unsafe access, thread unlock failed for sd_pool_mtx:%d\n", errno);
+		fprintf(stderr, "Unsafe access, thread unlock failed for sd_pool_mtx:%d\n", errno);
 	}
-	if (sdata->homeServer == NULL) {
-		/* We need a home ENRP server, start
-		 * server hunt procedures.
-		 */
-		rsp_start_enrp_server_hunt(sdata);
-	}
+
+
+	/* We need a home ENRP server, start
+	 * server hunt procedures.
+	 */
+	rsp_start_enrp_server_hunt(sdata, (struct rsp_timer_entry *)NULL);
 	return(sd);
 }
 

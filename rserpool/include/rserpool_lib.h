@@ -81,7 +81,7 @@ struct rsp_enrp_entry {
 	int size_of_addrList;
 	uint8_t state;
 };
-
+/* State values for rsp_enrp_entry's */
 #define RSP_NO_ASSOCIATION 	1
 #define RSP_START_ASSOCIATION   2
 #define RSP_ASSOCIATION_UP      3
@@ -100,8 +100,10 @@ struct rsp_socket_hash {
 	struct rsp_enrp_entry *homeServer;	/* direct pointer to home server */
 	uint32_t 	refcnt;			/* number of names in use */
 	uint32_t	enrpID;			/* ID of home ENRP server */
+	pthread_mutex_t	rsp_sd_mtx;		/* mutex for sleepers to serialize upon  */
 	char 		*registeredName;	/* our name if registered */
 	uint32_t 	timers[RSP_NUMBER_TIMERS]; /* sd timers */
+	uint32_t	state;
 	uint32_t        stale_cache_ms;
 	uint32_t	myPEid;			/* my 32 bit PE id */
 	uint32_t	reglifetime;		/* how long my reg is good for */
@@ -114,6 +116,13 @@ struct rsp_socket_hash {
 	uint8_t		useThisSd;		/* flag say's if sd is data channel */
 };
 
+/* State values for rsp_socket_hash */
+#define RSP_NO_ENRP_SERVER   0x00000000
+#define RSP_SERVER_HUNT_IP   0x00000001
+#define RSP_ENRP_HS_FOUND    0x00000002
+#define RSP_ENRP_REGISTERED  0x00000004
+
+
 /* Timers will have this in a list */
 struct rsp_timer_entry {
 	struct timeval 		started;	/* time of start */
@@ -124,7 +133,8 @@ struct rsp_timer_entry {
 	int 			timer_type;	/* type of timer */
 	/* If the rsp_sleeper/cond_awake are used then req should be NULL */
 	pthread_cond_t		rsp_sleeper;	/* sleeper to awake */
-	uint8_t 		cond_awake; 	/* is there a sleeper */
+	uint16_t		sleeper_count;  /* number of professed sleepers */
+	uint8_t 		cond_awake; 	/* Has a condition var been made */
 };
 
 /* A pool entry */
@@ -200,5 +210,7 @@ struct pe_address {
 #define DEF_MINIMUM_TIMER_QUANTUM   500	/* minimum poll fd ms */
 
 #define ENRP_DEFAULT_PORT_FOR_ASAP  5555
+
+#define ENRP_MAX_SERVER_HUNTS       3
 
 #endif

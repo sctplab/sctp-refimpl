@@ -10,4 +10,15 @@ struct rsp_enrp_req *rsp_aloc_req(char *name, int namelen, void *msg, int msglen
 
 void rsp_timer_check ( void );
 
+void rsp_start_enrp_server_hunt(struct rsp_socket_hash *sd, struct rsp_timer_entry *te);
+
+int
+rsp_start_timer(struct rsp_socket_hash 	*sd, 
+		uint32_t time_out_ms, 
+		struct rsp_enrp_req *msg,
+		int type, 
+		uint8_t want_cond, 
+		uint16_t sleeper_cnt,
+		struct rsp_timer_entry *ote);
+
 #endif
