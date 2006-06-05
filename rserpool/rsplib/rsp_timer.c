@@ -61,7 +61,7 @@ handle_t4_rereg_timer(struct rsp_timer_entry *entry)
 void
 handle_t5_hunt_timer(struct rsp_timer_entry *entry)
 {
-	rsp_start_enrp_server_hunt(entry->sd, entry);
+	rsp_start_enrp_server_hunt(entry->sd, entry, 1);
 }
 
 void

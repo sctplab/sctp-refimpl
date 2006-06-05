@@ -145,13 +145,19 @@ struct rsp_pool {
 	void		*lastCookie;		/* last cookie received */
 	int32_t		cookieSize;		/* length of cookie */
 	uint32_t 	refcnt;			/* number of PE's pointing to me */
-	uint32_t	regType;		/* reg type */
+	uint32_t	regType;		/* reg type - the policy */
 	uint32_t	policy_value;		/* policy/count */
 	uint32_t	policy_actvalue;	/* current count */
 	uint8_t		failover_allowed;	/* auto failover of queued messages? */
 	uint8_t         auto_update;		/* did we subscribe to upds */
 };
 
+
+struct rsp_info {
+	char 		*name;
+	uint32_t	namelen;
+	uint32_t	number_entries;
+};
 
 #define RSP_PE_STATE_ACTIVE	0x00000001	/* reachable */
 #define RSP_PE_STATE_INACTIVE   0x00000002	/* can't reach it */
