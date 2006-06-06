@@ -14,9 +14,22 @@
 
 int rsp_inited = 0;
 int rsp_debug = 1;
+int rsp_scope_counter = 0;
 
 struct rsp_global_info rsp_pcbinfo;
 
+/*
+static void
+rsp_free_enrp_ent(struct rsp_enrp_entry *re)
+{
+	if(re->refcount == 1) {
+		free(re->addrList);
+		free(re);
+	} else {
+		re->refcount--;
+	}
+}
+*/
 
 
 static sctp_assoc_t
@@ -81,6 +94,9 @@ rsp_init()
 		return(0);
 
 
+	/* Init so we have true random number from random() */
+	srandomdev();
+
 	/* number of sd's */
 	rsp_pcbinfo.rsp_number_sd = 0;
 
@@ -106,6 +122,16 @@ rsp_init()
 		return (-1);
 	}
 
+	rsp_pcbinfo.scopes = dlist_create();
+	if(rsp_pcbinfo.scopes == NULL) {
+		if(rsp_debug) {
+			fprintf(stderr, "Could not alloc tmr dlist\n");
+		}
+		HashedTbl_destroy(rsp_pcbinfo.sd_pool);
+		dlist_destroy(rsp_pcbinfo.timer_list);
+		return (-1);
+	}
+
 	/* create mutex to lock sd pool */
 	if (pthread_mutex_init(&rsp_pcbinfo.sd_pool_mtx, NULL)) {
 		if(rsp_debug) {
@@ -113,6 +139,7 @@ rsp_init()
 		}
 		HashedTbl_destroy(rsp_pcbinfo.sd_pool);
 		dlist_destroy(rsp_pcbinfo.timer_list);
+		dlist_destroy(rsp_pcbinfo.scopes);
 		return (-1);
 	}
 
@@ -132,13 +159,31 @@ rsp_init()
 		if(rsp_debug) {
 			fprintf(stderr, "Could not init tmr mtx\n");
 		}
+	bail_out:
 		pthread_cond_destroy(&rsp_pcbinfo.rsp_tmr_cnd);
 		pthread_mutex_destroy(&rsp_pcbinfo.sd_pool_mtx);
 		HashedTbl_destroy(rsp_pcbinfo.sd_pool);
+		dlist_destroy(rsp_pcbinfo.scopes);
 		dlist_destroy(rsp_pcbinfo.timer_list);
 		return (-1);
 	}
-	
+	/* now If we are in good shape for that, setup the poll array for the thread */
+	rsp_pcbinfo.watchfds = malloc((sizeof(struct pollfd) * RSP_DEF_POLLARRAY_SZ));
+	if(rsp_pcbinfo.watchfds == NULL) {
+		goto bail_out;
+	}
+	/* now the socket pair for our reader thread */
+	if(socketpair(AF_UNIX, SOCK_STREAM, PF_UNSPEC, rsp_pcbinfo.lsd) ) {
+		free(rsp_pcbinfo.watchfds);
+		fprintf( stderr, "Could not initialize socket pair err:%d\n", errno);
+		goto bail_out;
+	}
+	rsp_pcbinfo.num_fds = 1;
+	rsp_pcbinfo.siz_fds = RSP_DEF_POLLARRAY_SZ;
+	rsp_pcbinfo.watchfds[0].fd = rsp_pcbinfo.lsd[0];
+	rsp_pcbinfo.watchfds[0].events = POLLIN;
+	rsp_pcbinfo.watchfds[0].revents = 0;
+
 	/* now we must create the timer thread */
 	if(pthread_create(&rsp_pcbinfo.tmr_thread,
 			  NULL,
@@ -151,6 +196,7 @@ rsp_init()
 		pthread_cond_destroy(&rsp_pcbinfo.rsp_tmr_cnd);
 		pthread_mutex_destroy(&rsp_pcbinfo.sd_pool_mtx);
 		HashedTbl_destroy(rsp_pcbinfo.sd_pool);
+		dlist_destroy(rsp_pcbinfo.scopes);
 		dlist_destroy(rsp_pcbinfo.timer_list);
 		return (-1);
 	}
@@ -158,6 +204,8 @@ rsp_init()
 	rsp_inited = 1;
 	return (0);
 }
+
+
 
 static void
 rsp_add_addr_to_enrp_entry(struct rsp_enrp_entry *re, struct sockaddr *sa)
@@ -189,12 +237,12 @@ rsp_add_addr_to_enrp_entry(struct rsp_enrp_entry *re, struct sockaddr *sa)
 }
 
 static void
-rsp_add_enrp_server(struct rsp_socket_hash *sdata, uint32_t enrpid, struct sockaddr *sa)
+rsp_add_enrp_server(struct rsp_enrp_scope *es, uint32_t enrpid, struct sockaddr *sa)
 {
 	struct rsp_enrp_entry *re;
 
-	dlist_reset(sdata->enrpList);
-	while((re = (struct rsp_enrp_entry *)dlist_get(sdata->enrpList)) != NULL) {
+	dlist_reset(es->enrpList);
+	while((re = (struct rsp_enrp_entry *)dlist_get(es->enrpList)) != NULL) {
 		if(enrpid == re->enrpId) {
 			rsp_add_addr_to_enrp_entry(re, sa);
 			return;
@@ -208,29 +256,101 @@ rsp_add_enrp_server(struct rsp_socket_hash *sdata, uint32_t enrpid, struct socka
 	re->enrpId = enrpid;
 	re->number_of_addresses = 0;
 	re->size_of_addrList = 0;
+	re->refcount = 1;
 	re->asocid = 0;
 	re->state = RSP_NO_ASSOCIATION;
 	rsp_add_addr_to_enrp_entry(re, sa);
-	dlist_append(sdata->enrpList, (void *)re);
+	dlist_append(es->enrpList, (void *)re);
 }
 
-static void
-rsp_load_file(struct rsp_socket_hash *sdata, FILE *io, char *file)
+static int
+rsp_load_file(FILE *io, char *file)
 {
 	/* load the enrp control file opened at io */
-	int line=0;
+	int line=0, val, ret;
 	uint32_t enrpid;
 	uint16_t port;
 	struct sockaddr_in sin;
 	struct sockaddr_in6 sin6;
+	char string[256], *p1, *p2, *p3, *p4;
+	struct rsp_enrp_scope *es;
+	struct sctp_event_subscribe event;
+
 
 	/* Format is
-	 * id:port:address
-	 *
+	 * ENRP:id:port:address
+	 * <or>
+	 * TIMER:TIMERNAME:value:\n
+	 * TIMERNAME = T1 - T7
 	 * if port is 0 it goes to the default port for
 	 * ENRP.
 	 */
-	char string[256], *p1, *p2, *p3;
+	es = malloc(sizeof(struct rsp_enrp_scope));
+	if (es == NULL) {
+		fprintf(stderr, "Can't get memory for enrp_scope err:%d\n", errno);
+		return(-1);
+	}
+	ret = dlist_append(rsp_pcbinfo.scopes,(void *)es);
+	if (ret) {
+		fprintf(stderr, "Can't get memory for enrp_scope dlist err:%d ret:%d\n", errno, ret);
+		free(es);
+		return(-1);
+	}
+
+	es->sd = socket(AF_INET6, SOCK_SEQPACKET, IPPROTO_SCTP);
+	if(es->sd  == -1) {
+		fprintf(stderr, "Can't get 1-2-many sctp socket for scope struct err:%d\n", errno);
+		free(es);
+		return(-1);
+	}
+
+	es->enrpList = dlist_create();
+	if(es->enrpList == NULL) {
+		fprintf(stderr, "Can't get memory for enrp_scope dlist err:%d\n", errno);
+		close(es->sd);
+		free(es);
+		return(-1);
+	}
+
+	es->scopeId =  rsp_scope_counter;
+	rsp_scope_counter++;
+
+	es->refcount = 0;
+	/* enable selected event notifications */
+	event.sctp_data_io_event = 1;
+	event.sctp_association_event = 1;
+	event.sctp_address_event = 0;
+	event.sctp_send_failure_event = 1;
+	event.sctp_peer_error_event = 0;
+	event.sctp_shutdown_event = 1;
+	event.sctp_partial_delivery_event = 1;
+#if defined(__FreeBSD__)
+	event.sctp_adaptation_layer_event = 0;
+#else
+	event.sctp_adaption_layer_event = 0;
+#endif
+#if defined(__FreeBSD__)
+	event.sctp_authentication_event = 0;
+	event.sctp_stream_reset_events = 0;
+#endif
+	if (setsockopt(es->sd, IPPROTO_SCTP, SCTP_EVENTS, &event, sizeof(event)) != 0) {
+		fprintf(stderr, "Can't do SET_EVENTS socket option! err:%d\n", errno);
+		errno = EFAULT;
+		close(es->sd);
+		dlist_destroy(es->enrpList);
+		free(es);
+		return(-1);
+	}
+	es->timers[RSP_T1_ENRP_REQUEST] = DEF_RSP_T1_ENRP_REQUEST;
+	es->timers[RSP_T2_REGISTRATION] = DEF_RSP_T2_REGISTRATION;
+	es->timers[RSP_T3_DEREGISTRATION] = DEF_RSP_T3_DEREGISTRATION;
+	es->timers[RSP_T4_REREGISTRATION] = DEF_RSP_T4_REREGISTRATION;
+	es->timers[RSP_T5_SERVERHUNT] = DEF_RSP_T5_SERVERHUNT;
+	es->timers[RSP_T6_SERVERANNOUNCE] = DEF_RSP_T6_SERVERANNOUNCE;
+	es->timers[RSP_T7_ENRPOUTDATE] = DEF_RSP_T7_ENRPOUTDATE;
+	es->homeServer = NULL;
+	es->state = RSP_NO_ENRP_SERVER;
+
 	while(fgets(string, sizeof(string), io) != NULL) {
 		line++;
 		if(string[0] == '#')
@@ -238,61 +358,138 @@ rsp_load_file(struct rsp_socket_hash *sdata, FILE *io, char *file)
 		if(string[0] == ';')
 			continue;
 
+
 		p1 = strtok(string,":" );
 		if(p1 == NULL) {
-			printf("config file %s line %d can't find a ':' seperating id from port\n", file, line);
+			fprintf(stderr,"config file %s line %d can't find a ':' seperating type from id/time\n", file, line);
 			continue;
 		}
 		p2 = strtok(NULL, ":");
 		if(p2 == NULL) {
-			printf("config file %s line %d can't find a ':' seperating port from address\n", file, line);
+			fprintf(stderr,"config file %s line %d can't find a ':' seperating id/time from val/port\n", file, line);
 			continue;
 		}
-		p3 = strtok(NULL, "\n");
+		p3 = strtok(NULL, ":");
 		if(p2 == NULL) {
-			printf("config file %s line %d can't find a terminating char after address?\n", file, line);
+			fprintf(stderr,"config file %s line %d can't find a ':' seperating val/port from address/nullcr\n",
+			       file, line);
+			continue;
+		}
+		p4 = strtok(NULL, ":");
+		if(p2 == NULL) {
+			fprintf(stderr,"config file %s line %d can't find a terminating char after address?\n", file, line);
 			continue;
 		}
 		/* ok p1 points to a int. p2 points to an address */
-		enrpid = strtoul(p1, NULL, 0);
-		if(enrpid == 0) {
-			printf("config file %s line %d reserved enrpid found aka 0?\n", file, line);
-		}
-		port = htons((uint16_t)strtol(p2, NULL, 0));
-		if(port == 0) {
-			port = htons(ENRP_DEFAULT_PORT_FOR_ASAP);
-		}
-		memset(&sin6, 0, sizeof(sin6));
-		if(inet_pton(AF_INET6, p3 , &sin6.sin6_addr ) == 1) {
-			sin6.sin6_family = AF_INET6;
+		if ((strncmp(p1, "ENRP", 4) == 0) ||
+		   (strncmp(p1, "enrp", 4) == 0)) {
+			enrpid = strtoul(p2, NULL, 0);
+			if(enrpid == 0) {
+				fprintf(stderr,"config file %s line %d reserved enrpid found aka 0?\n", file, line);
+			}
+			port = htons((uint16_t)strtol(p3, NULL, 0));
+			if(port == 0) {
+				port = htons(ENRP_DEFAULT_PORT_FOR_ASAP);
+			}
+			memset(&sin6, 0, sizeof(sin6));
+			if(inet_pton(AF_INET6, p4 , &sin6.sin6_addr ) == 1) {
+				sin6.sin6_family = AF_INET6;
 #ifdef HAVE_SA_LEN
-			sin6.sin6_len = sizeof(sin6);
+				sin6.sin6_len = sizeof(sin6);
 #endif			
-			sin6.sin6_port = port;
-			rsp_add_enrp_server(sdata, enrpid, (struct sockaddr *)&sin6);
-			continue;
-		}
-		memset(&sin, 0, sizeof(sin));
-		if(inet_pton(AF_INET, p3 , &sin.sin_addr ) == 1) {
-			sin.sin_family = AF_INET;
+				sin6.sin6_port = port;
+				rsp_add_enrp_server(es, enrpid, (struct sockaddr *)&sin6);
+				continue;
+			}
+			memset(&sin, 0, sizeof(sin));
+			if(inet_pton(AF_INET, p3 , &sin.sin_addr ) == 1) {
+				sin.sin_family = AF_INET;
 #ifdef HAVE_SA_LEN
-			sin.sin_len = sizeof(sin);
+				sin.sin_len = sizeof(sin);
 #endif			
-			sin.sin_port = port;
-			rsp_add_enrp_server(sdata, enrpid, (struct sockaddr *)&sin);
-			continue;
+				sin.sin_port = port;
+				rsp_add_enrp_server(es, enrpid, (struct sockaddr *)&sin);
+				continue;
+			}
+			fprintf(stderr,"config file %s line %d can't translate the address?\n", file, line);
+		} else if ((strncmp(p1, "TIMER", 2) == 0) ||
+			   (strncmp(p1, "timer", 2) == 0)) {
+			if (strncmp(p2, "T1", 2) == 0) {
+				val = strtol(p3, NULL, 0);
+				if(val < 1) {
+					printf("config file error, Timer %s line at %d can't be less than 1 ms\n",
+					       p2, line);
+				} else {
+					es->timers[RSP_T1_ENRP_REQUEST] = val;
+				}
+
+			} else if (strncmp(p2, "T2", 2) == 0) {
+				val = strtol(p3, NULL, 0);
+				if(val < 1) {
+					printf("config file error, Timer %s line at %d can't be less than 1 ms\n",
+					       p2, line);
+				} else {
+					es->timers[RSP_T2_REGISTRATION] = val;
+				}
+			} else if (strncmp(p2, "T3", 2) == 0) {
+				val = strtol(p3, NULL, 0);
+				if(val < 1) {
+					printf("config file error, Timer %s line at %d can't be less than 1 ms\n",
+					       p2, line);
+				} else {
+					es->timers[RSP_T3_DEREGISTRATION] = val;
+				}
+			} else if (strncmp(p2, "T4", 2) == 0) {
+				val = strtol(p3, NULL, 0);
+				if(val < 1) {
+					printf("config file error, Timer %s line at %d can't be less than 1 ms\n",
+					       p2, line);
+				} else {
+					es->timers[RSP_T4_REREGISTRATION] = val;
+				}
+			} else if (strncmp(p2, "T5", 2) == 0) {
+				val = strtol(p3, NULL, 0);
+				if(val < 1) {
+					printf("config file error, Timer %s line at %d can't be less than 1 ms\n",
+					       p2, line);
+				} else {
+					es->timers[RSP_T5_SERVERHUNT] =  val;
+				}
+			} else if (strncmp(p2, "T6", 2) == 0) {
+				val = strtol(p3, NULL, 0);
+				if(val < 1) {
+					printf("config file error, Timer %s line at %d can't be less than 1 ms\n",
+					       p2, line);
+				} else {
+					es->timers[RSP_T6_SERVERANNOUNCE] = val;
+				}
+			} else if (strncmp(p2, "T7", 2) == 0) {
+				val = strtol(p3, NULL, 0);
+				if(val < 1) {
+					printf("config file error, Timer %s line at %d can't be less than 1 ms\n",
+					       p2, line);
+				} else {
+					es->timers[RSP_T7_ENRPOUTDATE] = val;
+				}
+			} else {
+				fprintf(stderr,"config file %s line %d TIMER unknown type %s\n", file, line , p2);
+			}
 		}
-		printf("config file %s line %d can't translate the address?\n", file, line);
-		
 	}
+	/* Here we must send off the id to the reading thread 
+	 * this will get it to add it to the fd list its watching
+	 */
+	
+	return (es->scopeId);
 }
 
-static void
-rsp_load_config_file(struct rsp_socket_hash *sdata, const char *confprefix)
+static int
+rsp_load_config_file(const char *confprefix)
 {
 	char file[256];
 	char prefix[100];
 	FILE *io;
+	int id= -1;
 
 	if(confprefix) {
 		int len;
@@ -306,32 +503,33 @@ rsp_load_config_file(struct rsp_socket_hash *sdata, const char *confprefix)
 	}
 	sprintf(file, "~/.%senrp.conf", prefix);
 	if ((io = fopen(file, "r")) != NULL) {
-		rsp_load_file(sdata, io, file);
+		id = rsp_load_file(io, file);
 		fclose(io);
-		return;
+		return(id);
 	}
 	sprintf(file, "/usr/local/etc/.%senrp.conf", prefix);
 	if ((io = fopen(file, "r")) != NULL) {
-		rsp_load_file(sdata, io, file);
+		id = rsp_load_file(io, file);
 		fclose(io);
-		return;
+		return(id);
 	}
 	sprintf(file,"/usr/local/etc/enrp.conf");
 	if ((io = fopen(file, "r")) != NULL) {
-		rsp_load_file(sdata, io, file);
+		id = rsp_load_file(io, file);
 		fclose(io);
-		return;
+		return(id);
 	}
 	sprintf(file, "/etc/enrp.conf");
 	if ((io = fopen(file, "r")) != NULL) {
-		rsp_load_file(sdata, io, file);
+		id = rsp_load_file(io, file);
 		fclose(io);
-		return;
+		return(id);
 	}
+	return(id);
 }
 
 void
-rsp_start_enrp_server_hunt(struct rsp_socket_hash *sd, struct rsp_timer_entry *te, int non_blocking)
+rsp_start_enrp_server_hunt(struct rsp_enrp_scope *sd, struct rsp_timer_entry *te, int non_blocking)
 {
 	/* 
 	 * Formulate and set up an association to a
@@ -434,50 +632,31 @@ rsp_start_enrp_server_hunt(struct rsp_socket_hash *sd, struct rsp_timer_entry *t
 				break;
 		}
 	}
-	rsp_start_timer(sd, sd->timers[RSP_T5_SERVERHUNT], (struct rsp_enrp_req *)NULL, RSP_T5_SERVERHUNT, 1, 0, te);
+	rsp_start_timer(sd, (struct rsp_socket_hash *)NULL, 
+			sd->timers[RSP_T5_SERVERHUNT], 
+			(struct rsp_enrp_req *)NULL, 
+			RSP_T5_SERVERHUNT, 1, 0, te);
 }
 
 int
-rsp_socket(int domain, int protocol, uint16_t port, const char *confprefix)
+rsp_socket(int domain, int type,  int protocol, int op_scope)
 {
 	int sd, ret;
 	struct rsp_socket_hash *sdata;
-	struct sockaddr *sa;
-	struct sockaddr_in sin;
-	struct sockaddr_in6 sin6;
-	socklen_t addrlen;
-	struct sctp_event_subscribe event;
 
-	if(protocol != IPPROTO_SCTP) {
+	if (rsp_inited == 0) {
+		errno = EINVAL;
+		return (-1);
+	}
+
+	if ((type != SOCK_SEQPACKET) &&
+	    (type != SOCK_DGRAM)){
 		errno = ENOTSUP;
 		return (-1);
 	}
-	sd = socket(domain, SOCK_SEQPACKET, protocol);
+	sd = socket(domain, type, protocol);
 	if(sd == -1) {
 		return (sd);
-	}
-	/* enable selected event notifications */
-	event.sctp_data_io_event = 1;
-	event.sctp_association_event = 1;
-	event.sctp_address_event = 0;
-	event.sctp_send_failure_event = 1;
-	event.sctp_peer_error_event = 0;
-	event.sctp_shutdown_event = 1;
-	event.sctp_partial_delivery_event = 1;
-#if defined(__FreeBSD__)
-	event.sctp_adaptation_layer_event = 0;
-#else
-	event.sctp_adaption_layer_event = 0;
-#endif
-#if defined(__FreeBSD__)
-	event.sctp_authentication_event = 0;
-	event.sctp_stream_reset_events = 0;
-#endif
-	if (setsockopt(sd, IPPROTO_SCTP, SCTP_EVENTS, &event, sizeof(event)) != 0) {
-		fprintf(stderr, "Can't do SET_EVENTS socket option! err:%d\n", errno);
-		close(sd);
-		errno = EFAULT;
-		return(-1);
 	}
 
 	sdata = (struct rsp_socket_hash *) sizeof(struct rsp_socket_hash);
@@ -490,55 +669,11 @@ rsp_socket(int domain, int protocol, uint16_t port, const char *confprefix)
 		return(-1);
 	}
 	/* setup and bind the port */
-
 	memset(sdata, 0, sizeof(struct rsp_socket_hash));
 	sdata->sd = sd;
-	if(domain == AF_INET) {
-		memset(&sin, 0, sizeof(sin));
-		sin.sin_port = port;
-		sa = (struct sockaddr *)&sin;
-		addrlen = sizeof(sin);
-	}else if (domain == AF_INET6) {
-		memset(&sin6, 0, sizeof(sin6));
-		sin6.sin6_port = port;
-		sa = (struct sockaddr *)&sin6;
-		addrlen = sizeof(sin6);
-	} else {
-		if(rsp_debug) {
-			fprintf(stderr, "unknown protocol:%d\n", domain);
-		}
-		close(sd);
-		free(sdata);
-		errno = ESOCKTNOSUPPORT;
-		return (-1);
-	}
-	sa->sa_len = addrlen;
-	if(bind(sd, sa, addrlen) == -1) {
-		if(rsp_debug) {
-			fprintf(stderr, "bind of socket failed errno:%d\n", errno);
-		}
-	out_of_here:
-		close(sd);
-		free(sdata);
-		return (-1);
-	} 
-	if(getsockname(sd, sa, &addrlen) == -1) {
-		if(rsp_debug) {
-			fprintf(stderr, "can't do getsockname():%d\n", errno);
-		}
-		goto out_of_here;
-	}
-	sdata->port = ((struct sockaddr_in *)sa)->sin_port;
-
-	if (rsp_inited == 0) {
-		if(rsp_init() != 0) {
-			errno = EFAULT;
-			free(sdata);
-			close(sd);
-			return(-1);
-		}
-	}
-	/* now init the rest of the structures */
+	sdata->port = 0; /* unbound */
+	sdata->type = type;
+	sdata->domain = domain;
 
 	/* list of all pools */
 	sdata->allPools = dlist_create();
@@ -615,13 +750,9 @@ rsp_socket(int domain, int protocol, uint16_t port, const char *confprefix)
 		if(rsp_debug) {
 			fprintf(stderr, "can't get memory for enrp home addr dlist\n");
 		}
-/*	out_ofg: to add more start here */
 		dlist_destroy(sdata->address_reg);
 		goto out_off;
 	}
-	sdata->homeServer = NULL;
-	sdata->state = RSP_NO_ENRP_SERVER;
-
 	/* number of names in use */
 	sdata->refcnt = 0;
 
@@ -686,23 +817,21 @@ rsp_socket(int domain, int protocol, uint16_t port, const char *confprefix)
 					sizeof(sdata->sd))) ) {	/* size of key */
 		fprintf(stderr, "Failed to enter into hash table error:%d\n", ret);
 	}
-	rsp_load_config_file(sdata, confprefix);
 
 	if (pthread_mutex_unlock(&rsp_pcbinfo.sd_pool_mtx) ) {
 		fprintf(stderr, "Unsafe access, thread unlock failed for sd_pool_mtx:%d\n", errno);
 	}
 
-
-	/* We need a home ENRP server, start
-	 * server hunt procedures.
-	 */
-	rsp_start_enrp_server_hunt(sdata, (struct rsp_timer_entry *)NULL, 1);
 	return(sd);
 }
 
 int 
 rsp_close(int sockfd)
 {
+	if (rsp_inited == 0) {
+		errno = EINVAL;
+		return (-1);
+	}
 	return (0);
 }
 
@@ -732,6 +861,10 @@ rsp_connect(int sockfd, const char *name, size_t namelen)
 	 *
 	 */
 
+	if (rsp_inited == 0) {
+		errno = EINVAL;
+		return (-1);
+	}
 
 	return (0);
 }
@@ -739,24 +872,44 @@ rsp_connect(int sockfd, const char *name, size_t namelen)
 int 
 rsp_register(int sockfd, const char *name, size_t namelen, uint32_t policy, uint32_t policy_value )
 {
+	if (rsp_inited == 0) {
+		errno = EINVAL;
+		return (-1);
+	}
+
 	return (0);	
 }
 
 int
 rsp_deregister(int sockfd)
 {
+	if (rsp_inited == 0) {
+		errno = EINVAL;
+		return (-1);
+	}
+
 	return (0);
 }
 
-struct rsp_info *
+struct rsp_info_found *
 rsp_getPoolInfo(int sockfd, char *name, size_t namelen)
 {
+	if (rsp_inited == 0) {
+		errno = EINVAL;
+		return (NULL);
+	}
+
 	return (NULL);
 }
 
 int 
 rsp_reportfailure(int sockfd, char *name,size_t namelen,  const struct sockaddr *to, const sctp_assoc_t id)
 {
+	if (rsp_inited == 0) {
+		errno = EINVAL;
+		return (-1);
+	}
+
 	return (0);
 }
 
@@ -771,6 +924,11 @@ rsp_sendmsg(int sockfd,         /* HA socket descriptor */
 	    struct sctp_sndrcvinfo *sinfo,
 	    int flags)         /* Options flags */
 {
+	if (rsp_inited == 0) {
+		errno = EINVAL;
+		return (-1);
+	}
+
 	return (0);
 }
 
@@ -785,6 +943,11 @@ rsp_rcvmsg(int sockfd,		/* HA socket descriptor */
 	   struct sctp_sndrcvinfo *sinfo,
 	   int flags)		/* Options flags */
 {
+	if (rsp_inited == 0) {
+		errno = EINVAL;
+		return (-1);
+	}
+
 	return (0);
 }
 
@@ -797,7 +960,34 @@ rsp_forcefailover(int sockfd,
 		  const socklen_t tolen,	  
 		  const sctp_assoc_t id)
 {
+	if (rsp_inited == 0) {
+		errno = EINVAL;
+		return (-1);
+	}
+
 	return (0);
 }
 
 
+int
+rsp_initialize(struct rsp_info *info)
+{
+	/* First do we do major initialization? */
+	int id;
+	if (rsp_inited == 0) {
+		/* yep */
+		if(rsp_init() != 0) {
+			return(-1);
+		}
+	}
+
+	rsp_inited = 1;
+	if( pthread_mutex_lock(&rsp_pcbinfo.sd_pool_mtx) ) {
+		fprintf(stderr, "Unsafe access, thread lock failed for sd_pool_mtx:%d - rsp_initialize\n", errno);
+	}
+	id = rsp_load_config_file(info->rsp_prefix);
+	if (pthread_mutex_unlock(&rsp_pcbinfo.sd_pool_mtx) ) {
+		fprintf(stderr, "Unsafe access, thread unlock failed for sd_pool_mtx:%d - rsp_initialize\n", errno);
+	}
+	return(id);
+}

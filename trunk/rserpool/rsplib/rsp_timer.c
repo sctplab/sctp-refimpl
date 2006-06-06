@@ -211,7 +211,8 @@ void rsp_timer_check ( void )
 
 /* Start, or restart a timer */
 int
-rsp_start_timer(struct rsp_socket_hash 	*sd, 
+rsp_start_timer(struct rsp_enrp_scope *sd,
+		struct rsp_socket_hash 	*sdata, 
 		uint32_t time_out_ms, 
 		struct rsp_enrp_req *msg,
 		int type, 
@@ -268,6 +269,7 @@ rsp_start_timer(struct rsp_socket_hash 	*sd,
 
 	if(ote == NULL) {
 		te->sd = sd;
+		te->sdata = sdata;
 		te->req = msg;
 		te->timer_type = type;
 		if(want_cond) {
