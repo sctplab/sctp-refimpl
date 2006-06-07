@@ -4271,6 +4271,9 @@ found_one:
 			*extended = 1;
 			if(nxt) {
 				s_extra->next_flags = SCTP_NEXT_MSG_AVAIL;
+				if(nxt->sinfo_flags & SCTP_UNORDERED) {
+					s_extra->next_flags |= SCTP_NEXT_MSG_IS_UNORDERED;
+				}
 				s_extra->next_asocid = nxt->sinfo_assoc_id;
 				s_extra->next_length = nxt->length;
 				s_extra->next_ppid = nxt->sinfo_ppid;
