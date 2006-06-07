@@ -118,6 +118,7 @@ TAILQ_HEAD(sctp_readhead, sctp_queued_to_read);
 /*
  * PCB Features (in sctp_features bitmask)
  */
+#define SCTP_PCB_FLAGS_EXT_RCVINFO      0x00000004
 #define SCTP_PCB_FLAGS_DONOT_HEARTBEAT  0x00000008
 #define SCTP_PCB_FLAGS_FRAG_INTERLEAVE  0x00000010
 #define SCTP_PCB_FLAGS_DO_ASCONF	0x00000020
@@ -396,6 +397,8 @@ struct sctp_inpcb {
 	uint32_t sctp_vtag_first;	/* this field locked by socket buffer
 					 * lock */
 	uint32_t partial_delivery_point;
+	uint32_t sctp_context;
+	struct sctp_sndrcvinfo def_send;
 	struct mbuf *pkt, *pkt_last, *sb_last_mpkt;
 	struct mbuf *control;
 #if !(defined(__FreeBSD__) || defined(__APPLE__))
