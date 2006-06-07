@@ -3256,9 +3256,6 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_out_req
 	if (chk == NULL) {
 		return (ret_code);
 	}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	bzero((void *)chk, sizeof(struct sctp_tmit_chunk)); /* FIXME MT */
-#endif
 	SCTP_INCR_CHK_COUNT();
 	chk->rec.chunk_id = SCTP_STREAM_RESET;
 	chk->asoc = &stcb->asoc;
