@@ -1024,6 +1024,8 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	asoc->def_net_failure = m->sctp_ep.def_net_failure;
 
 	/* ECN Nonce initialization */
+	asoc->context = m->sctp_context;
+	asoc->def_send = m->def_send;
 	asoc->ecn_nonce_allowed = 0;
 	asoc->receiver_nonce_sum = 1;
 	asoc->nonce_sum_expect_base = 1;

@@ -229,7 +229,7 @@ sctp_build_readq_entry(struct sctp_tcb *stcb,
 	read_queue_e->sinfo_ssn = stream_seq;
 	read_queue_e->sinfo_flags = (flags << 8);
 	read_queue_e->sinfo_ppid = ppid;
-	read_queue_e->sinfo_context = context;
+	read_queue_e->sinfo_context = stcb->asoc.context;
 	read_queue_e->sinfo_timetolive = 0;
 	read_queue_e->sinfo_tsn = tsn;
 	read_queue_e->sinfo_cumtsn = tsn;
@@ -264,7 +264,7 @@ sctp_build_readq_entry_chk(struct sctp_tcb *stcb,
 	read_queue_e->sinfo_ssn = chk->rec.data.stream_seq;
 	read_queue_e->sinfo_flags = (chk->rec.data.rcv_flags << 8);
 	read_queue_e->sinfo_ppid = chk->rec.data.payloadtype;
-	read_queue_e->sinfo_context = chk->rec.data.context;
+	read_queue_e->sinfo_context = stcb->asoc.context;
 	read_queue_e->sinfo_timetolive = 0;
 	read_queue_e->sinfo_tsn = chk->rec.data.TSN_seq;
 	read_queue_e->sinfo_cumtsn = chk->rec.data.TSN_seq;

@@ -397,6 +397,8 @@ struct sctp_inpcb {
 	uint32_t sctp_vtag_first;	/* this field locked by socket buffer
 					 * lock */
 	uint32_t partial_delivery_point;
+	uint32_t sctp_context;
+	struct sctp_sndrcvinfo def_send;
 	struct mbuf *pkt, *pkt_last, *sb_last_mpkt;
 	struct mbuf *control;
 #if !(defined(__FreeBSD__) || defined(__APPLE__))
