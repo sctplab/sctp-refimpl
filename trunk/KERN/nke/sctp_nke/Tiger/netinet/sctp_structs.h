@@ -316,7 +316,7 @@ struct sctp_tmit_chunk {
 	struct mbuf *data;	/* pointer to mbuf chain of data */
 	struct mbuf *last_mbuf;	/* pointer to last mbuf in chain */
 	struct sctp_nets *whoTo;
-	          TAILQ_ENTRY(sctp_tmit_chunk) sctp_next;	/* next link */
+	TAILQ_ENTRY(sctp_tmit_chunk) sctp_next;	/* next link */
 	int32_t sent;		/* the send status */
 	uint16_t snd_count;	/* number of times I sent */
 	uint16_t flags;		/* flags, such as FRAGMENT_OK */
@@ -357,7 +357,7 @@ struct sctp_queued_to_read {	/* sinfo structure Pluse more */
 				 * PKT_HDR */
 	struct mbuf *tail_mbuf;	/* used for multi-part data */
 	struct sctp_tcb *stcb;	/* assoc, used for window update */
-	         TAILQ_ENTRY(sctp_queued_to_read) next;
+	TAILQ_ENTRY(sctp_queued_to_read) next;
 	uint16_t port_from;
 };
 

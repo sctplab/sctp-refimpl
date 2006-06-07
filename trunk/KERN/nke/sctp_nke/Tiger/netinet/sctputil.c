@@ -1024,6 +1024,8 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	asoc->def_net_failure = m->sctp_ep.def_net_failure;
 
 	/* ECN Nonce initialization */
+	asoc->context = m->sctp_context;
+	asoc->def_send = m->def_send;
 	asoc->ecn_nonce_allowed = 0;
 	asoc->receiver_nonce_sum = 1;
 	asoc->nonce_sum_expect_base = 1;
@@ -4109,7 +4111,8 @@ sctp_sorecvmsg(struct socket *so,
     int fromlen,
     int *msg_flags,
     struct sctp_sndrcvinfo *sinfo,
-    int filling_sinfo)
+    int filling_sinfo,
+    int *extended)
 {
 	/*
 	 * MSG flags we will look at MSG_DONTWAIT - non-blocking IO.
@@ -4121,7 +4124,7 @@ sctp_sorecvmsg(struct socket *so,
 	 */
 	struct sctp_inpcb *inp;
 	int cp_len, error = 0;
-	struct sctp_queued_to_read *control, *ctl;
+	struct sctp_queued_to_read *control, *ctl, *nxt;
 	struct mbuf *m;
 	struct sctp_tcb *stcb = NULL;
 	int wakeup_read_socket = 0;
@@ -4261,6 +4264,37 @@ found_one:
 	/* First lets get off the sinfo and sockaddr info */
 	if (sinfo) {
 		memcpy(sinfo, control, sizeof(struct sctp_sndrcvinfo));
+		nxt = TAILQ_NEXT(control, next);
+		if(sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXT_RCVINFO)) {
+			struct sctp_extrcvinfo *s_extra;
+			s_extra = (struct sctp_extrcvinfo *)sinfo;
+			*extended = 1;
+			if(nxt) {
+				s_extra->next_flags = SCTP_NEXT_MSG_AVAIL;
+				if(nxt->sinfo_flags & SCTP_UNORDERED) {
+					s_extra->next_flags |= SCTP_NEXT_MSG_IS_UNORDERED;
+				}
+				s_extra->next_asocid = nxt->sinfo_assoc_id;
+				s_extra->next_length = nxt->length;
+				s_extra->next_ppid = nxt->sinfo_ppid;
+				s_extra->next_stream = nxt->sinfo_stream;
+				if(nxt->tail_mbuf != NULL) {
+					if(nxt->tail_mbuf->m_flags & M_EOR) {
+						s_extra->next_flags |= SCTP_NEXT_MSG_ISCOMPLETE;
+					}
+				}
+			} else {
+				/* we explicitly 0 this, since the memcpy got
+				 * some other things beyond the older sinfo_
+				 * that is on the control's structure :-D
+				 */
+				s_extra->next_flags = SCTP_NO_NEXT_MSG;
+				s_extra->next_asocid = 0;
+				s_extra->next_length = 0;
+				s_extra->next_ppid = 0;
+				s_extra->next_stream = 0;
+			}
+		}
 		/*
 		 * update off the real current cum-ack, if we have an stcb.
 		 */
@@ -4758,10 +4792,10 @@ sctp_soreceive(so, paddr, uio, mp0, controlp, flagsp)
 	struct mbuf **controlp;
 	int *flagsp;
 {
-	int error, fromlen;
+	int error, fromlen, extended=0;
 	uint8_t sockbuf[256];
 	struct sockaddr *from;
-	struct sctp_sndrcvinfo sinfo;
+	struct sctp_extrcvinfo sinfo;
 	int filling_sinfo = 1;
 	struct sctp_inpcb *inp;
 	struct mbuf *maddr;
@@ -4786,13 +4820,14 @@ sctp_soreceive(so, paddr, uio, mp0, controlp, flagsp)
 		fromlen = 0;
 	}
 
-	error = sctp_sorecvmsg(so, uio, mp0, from, fromlen, flagsp, &sinfo, filling_sinfo);
+	error = sctp_sorecvmsg(so, uio, mp0, from, fromlen, flagsp,
+			       (struct sctp_sndrcvinfo *)&sinfo, filling_sinfo, &extended);
 	if (controlp) {
 		/* copy back the sinfo in a CMSG format */
 		struct sctp_inpcb *inp;
 
 		inp = (struct sctp_inpcb *)so->so_pcb;
-		*controlp = sctp_build_ctl_nchunk(inp, &sinfo);
+		*controlp = sctp_build_ctl_nchunk(inp, (struct sctp_sndrcvinfo *)&sinfo);
 	}
 	if (paddr) {
 		MGET(maddr, M_DONTWAIT, MT_SONAME);
@@ -4828,7 +4863,8 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 	int error, fromlen;
 	uint8_t sockbuf[256];
 	struct sockaddr *from;
-	struct sctp_sndrcvinfo sinfo;
+	struct sctp_extrcvinfo sinfo;
+	int extended = 0;
 	int filling_sinfo = 1;
 	struct sctp_inpcb *inp;
 
@@ -4855,11 +4891,12 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	socket_lock(so, 1);
 #endif
-	error = sctp_sorecvmsg(so, uio, mp0, from, fromlen, flagsp, &sinfo,
-	    filling_sinfo);
+	error = sctp_sorecvmsg(so, uio, mp0, from, fromlen, flagsp, 
+	    (struct sctp_sndrcvinfo *)&sinfo,filling_sinfo, &extended);
 	if (controlp) {
 		/* copy back the sinfo in a CMSG format */
-		*controlp = sctp_build_ctl_nchunk(inp, &sinfo);
+		*controlp = sctp_build_ctl_nchunk(inp, 
+                         (struct sctp_sndrcvinfo *)&sinfo);
 	}
 	if (psa) {
 		/* copy back the address info */
