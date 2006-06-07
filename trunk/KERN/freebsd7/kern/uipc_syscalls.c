@@ -2526,12 +2526,13 @@ int sctp_recvmsg(td, uap)
 	u_int8_t sockbufstore[256];
 	struct uio auio;
 	struct iovec aiov;
-	struct sctp_sndrcvinfo sinfo;
+	struct sctp_extrcvinfo sinfo;
 	struct socket *so;
 	struct file *fp;
 	struct sockaddr *fromsa;
 	int fromlen;
 	int len, msg_flags=0;
+	int extended = 0;
 	int error=0;
 #ifdef KTRACE
 	struct uio *ktruio = NULL;
@@ -2576,13 +2577,18 @@ int sctp_recvmsg(td, uap)
 		ktruio = cloneuio(&auio);
 #endif
 	error = sctp_sorecvmsg(so, &auio, (struct mbuf **)NULL,
-			       fromsa, fromlen, &msg_flags, &sinfo, 1);
+			       fromsa, fromlen, &msg_flags, (struct sctp_sndrcvinfo *)&sinfo, 
+			       1, &extended);
 	if (error) {
 		if (auio.uio_resid != (int)len && (error == ERESTART ||
 		    error == EINTR || error == EWOULDBLOCK))
 			error = 0;
 	} else {
-		error = copyout(&sinfo, uap->sinfo, sizeof (sinfo));
+		if(extended == 0) { 
+			error = copyout(&sinfo, uap->sinfo, sizeof (struct sctp_sndrcvinfo));
+		} else {
+			error = copyout(&sinfo, uap->sinfo, sizeof (sinfo));
+		}
 	}
 #ifdef KTRACE
 	if (ktruio != NULL) {
@@ -2598,7 +2604,6 @@ int sctp_recvmsg(td, uap)
 		if (len <= 0 || fromsa == 0)
 			len = 0;
 		else {
-			/* save sa_len before it is destroyed by MSG_COMPAT */
 			len = MIN(len, fromsa->sa_len);
 			error = copyout(fromsa, uap->from, (unsigned)len);
 			if (error)

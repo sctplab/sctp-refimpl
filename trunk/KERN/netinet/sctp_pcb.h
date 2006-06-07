@@ -118,6 +118,7 @@ TAILQ_HEAD(sctp_readhead, sctp_queued_to_read);
 /*
  * PCB Features (in sctp_features bitmask)
  */
+#define SCTP_PCB_FLAGS_EXT_RCVINFO      0x00000004
 #define SCTP_PCB_FLAGS_DONOT_HEARTBEAT  0x00000008
 #define SCTP_PCB_FLAGS_FRAG_INTERLEAVE  0x00000010
 #define SCTP_PCB_FLAGS_DO_ASCONF	0x00000020

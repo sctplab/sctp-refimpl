@@ -108,6 +108,7 @@ struct sctp_paramhdr {
 #define SCTP_HMAC_IDENT 		0x00000014
 #define SCTP_AUTH_ACTIVE_KEY 		0x00000015
 #define SCTP_AUTH_DELETE_KEY 		0x00000016
+#define SCTP_USE_EXT_RCVINFO		0x00000017
 
 /*
  * read-only options
@@ -283,7 +284,7 @@ struct sctp_error_unrecognized_chunk {
 #define HAVE_SCTP_NOCONNECT             0
 #define HAVE_SCTP_ECN_NONCE             1	/* ECN Nonce option */
 #define HAVE_SCTP_AUTH			1
-
+#define HAVE_SCTP_EXT_RCVINFO		1
 /*
  * Main SCTP chunk types we place these here so natd and f/w's in user land
  * can find them.
