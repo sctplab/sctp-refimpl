@@ -7819,6 +7819,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 #endif
 	STCB_TCB_LOCK_ASSERT(stcb);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	I_AM_HERE;
 	sctp_lock_assert(inp->sctp_socket);
 #endif
 	hbflag = 0;
@@ -9683,6 +9684,7 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 #endif
 	STCB_TCB_LOCK_ASSERT(stcb);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	I_AM_HERE;
 	sctp_lock_assert(inp->sctp_socket);
 #endif
 	while (asoc->sent_queue_retran_cnt) {
@@ -11252,6 +11254,7 @@ sctp_send_hb(struct sctp_tcb *stcb, int user_req, struct sctp_nets *u_net)
 
 	STCB_TCB_LOCK_ASSERT(stcb);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	I_AM_HERE;
 	sctp_lock_assert(stcb->sctp_socket);
 #endif
 	if (user_req == 0) {
@@ -11261,7 +11264,7 @@ sctp_send_hb(struct sctp_tcb *stcb, int user_req, struct sctp_nets *u_net)
 			 * All our busy none to send to, just start the
 			 * timer again.
 			 */
-			if (stcb->asoc.state == 0) {
+			if (stcb->asoc.state == SCTP_STATE_EMPTY) {
 				return (0);
 			}
 			sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT,

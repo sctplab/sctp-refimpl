@@ -229,7 +229,7 @@ sctp_build_readq_entry(struct sctp_tcb *stcb,
 	read_queue_e->sinfo_ssn = stream_seq;
 	read_queue_e->sinfo_flags = (flags << 8);
 	read_queue_e->sinfo_ppid = ppid;
-	read_queue_e->sinfo_context = context;
+	read_queue_e->sinfo_context = stcb->asoc.context;
 	read_queue_e->sinfo_timetolive = 0;
 	read_queue_e->sinfo_tsn = tsn;
 	read_queue_e->sinfo_cumtsn = tsn;
@@ -264,7 +264,7 @@ sctp_build_readq_entry_chk(struct sctp_tcb *stcb,
 	read_queue_e->sinfo_ssn = chk->rec.data.stream_seq;
 	read_queue_e->sinfo_flags = (chk->rec.data.rcv_flags << 8);
 	read_queue_e->sinfo_ppid = chk->rec.data.payloadtype;
-	read_queue_e->sinfo_context = chk->rec.data.context;
+	read_queue_e->sinfo_context = stcb->asoc.context;
 	read_queue_e->sinfo_timetolive = 0;
 	read_queue_e->sinfo_tsn = chk->rec.data.TSN_seq;
 	read_queue_e->sinfo_cumtsn = chk->rec.data.TSN_seq;
@@ -289,10 +289,13 @@ sctp_build_ctl_nchunk(struct sctp_inpcb *inp,
 	struct sctp_sndrcvinfo *outinfo;
 	struct cmsghdr *cmh;
 	struct mbuf *ret;
-
+	int use_extended = 0;
 	if (sctp_is_feature_off(inp, SCTP_PCB_FLAGS_RECVDATAIOEVNT)) {
 		/* user does not want the sndrcv ctl */
 		return (NULL);
+	}
+	if(sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXT_RCVINFO)) {
+		use_extended = 1;
 	}
 	MGETHDR(ret, M_DONTWAIT, MT_CONTROL);
 	if (ret == NULL) {
@@ -303,9 +306,15 @@ sctp_build_ctl_nchunk(struct sctp_inpcb *inp,
 	cmh = mtod(ret, struct cmsghdr *);
 	outinfo = (struct sctp_sndrcvinfo *)CMSG_DATA(cmh);
 	cmh->cmsg_level = IPPROTO_SCTP;
-	cmh->cmsg_type = SCTP_SNDRCV;
-	cmh->cmsg_len = CMSG_LEN(sizeof(struct sctp_sndrcvinfo));
-	*outinfo = *sinfo;
+	if(use_extended) {
+		cmh->cmsg_type = SCTP_EXTRCV;
+		cmh->cmsg_len = CMSG_LEN(sizeof(struct sctp_extrcvinfo));
+		memcpy(outinfo, sinfo, sizeof(struct sctp_extrcvinfo));
+	} else {
+		cmh->cmsg_type = SCTP_SNDRCV;
+		cmh->cmsg_len = CMSG_LEN(sizeof(struct sctp_sndrcvinfo));
+		*outinfo = *sinfo;
+	}
 	ret->m_len = cmh->cmsg_len;
 	ret->m_pkthdr.len = ret->m_len;
 	return (ret);
@@ -1670,9 +1679,6 @@ failed_express_del:
 			}
 			return (0);
 		}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		bzero((void *)chk, sizeof(struct sctp_tmit_chunk)); /* FIXME MT */
-#endif
 		SCTP_INCR_CHK_COUNT();
 		chk->rec.data.TSN_seq = tsn;
 		chk->no_fr_allowed = 0;
