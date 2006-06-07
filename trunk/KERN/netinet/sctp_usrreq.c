@@ -2105,12 +2105,16 @@ sctp_optsget(struct socket *so,
 				break;
 			}
 			av = mtod(m, struct sctp_assoc_value *);
-			stcb = sctp_findassociation_ep_asocid(inp, av->assoc_id);
-			if (stcb == NULL) {
-				error = ENOTCONN;
+			if(av->assoc_id) {
+				stcb = sctp_findassociation_ep_asocid(inp, av->assoc_id);
+				if (stcb == NULL) {
+					error = ENOTCONN;
+				} else {
+					av->assoc_value = stcb->asoc.context;
+					SCTP_TCB_UNLOCK(stcb);
+				}
 			} else {
-				av->assoc_value = stcb->asoc.context;
-				SCTP_TCB_UNLOCK(stcb);
+				av->assoc_value = inp->sctp_context;
 			}
 		}
 		break;
@@ -3534,12 +3538,16 @@ sctp_optsset(struct socket *so,
 				break;
 			}
 			av = mtod(m, struct sctp_assoc_value *);
-			stcb = sctp_findassociation_ep_asocid(inp, av->assoc_id);
-			if (stcb == NULL) {
-				error = ENOTCONN;
+			if(av->assoc_id) {
+				stcb = sctp_findassociation_ep_asocid(inp, av->assoc_id);
+				if (stcb == NULL) {
+					error = ENOTCONN;
+				} else {
+					stcb->asoc.context = av->assoc_value;
+					SCTP_TCB_UNLOCK(stcb);
+				}
 			} else {
-				stcb->asoc.context = av->assoc_value;
-				SCTP_TCB_UNLOCK(stcb);
+				inp->sctp_context = av->assoc_value;
 			}
 		}
 		break;
@@ -4150,7 +4158,7 @@ sctp_optsset(struct socket *so,
 		}
 		break;
 	case SCTP_DEFAULT_SEND_PARAM:
-		{
+	{
 			struct sctp_sndrcvinfo *s_info;
 
 			if (m->m_len != sizeof(struct sctp_sndrcvinfo)) {
@@ -4165,10 +4173,17 @@ sctp_optsset(struct socket *so,
 				if (stcb)
 					SCTP_TCB_LOCK(stcb);
 				SCTP_INP_RUNLOCK(inp);
-			} else
-				stcb = sctp_findassociation_ep_asocid(inp, s_info->sinfo_assoc_id);
-
-			if (stcb == NULL) {
+			} else {
+				if(s_info->sinfo_assoc_id) {
+					stcb = sctp_findassociation_ep_asocid(inp, s_info->sinfo_assoc_id);
+				} else {
+					stcb = NULL;
+				}
+			}
+			if ((s_info->sinfo_assoc_id == 0) &&
+			    (stcb == NULL)) {
+				inp->def_send = *s_info;
+			} else  if (stcb == NULL) {
 				error = ENOENT;
 				break;
 			}

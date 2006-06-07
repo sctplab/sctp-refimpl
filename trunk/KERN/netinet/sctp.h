@@ -142,12 +142,14 @@ struct sctp_paramhdr {
  */
 
 /* these should probably go into sockets API */
-#define SCTP_AUTO_ASCONF		0x00001001
-#define SCTP_MAXBURST			0x00001002
+#define SCTP_AUTO_ASCONF		0x00001001 /* rw */
+#define SCTP_MAXBURST			0x00001002 /* rw */
 /* assoc level context */
-#define SCTP_CONTEXT                    0x00001003
-#define SCTP_RESET_STREAMS		0x00001004
+#define SCTP_CONTEXT                    0x00001003 /* rw */
+#define SCTP_RESET_STREAMS		0x00001004 /* wo */
 
+
+/* here on down are more implementation specific */
 #define SCTP_SET_DEBUG_LEVEL		0x00001005
 #define SCTP_RESET_PEGS                 0x00001006
 #define SCTP_CLR_STAT_LOG               0x00001007
@@ -159,7 +161,7 @@ struct sctp_paramhdr {
 #define SCTP_GET_SNDBUF_USE		0x00001101
 #define SCTP_GET_PEGS			0x00001102
 #define SCTP_GET_STAT_LOG		0x00001103
-#define SCTP_GET_ASOC_ID_LIST           0x00001104
+#define SCTP_GET_ASOC_ID_LIST           0x00001104 /* ro */
 #define SCTP_PCB_STATUS			0x00001105
 #define SCTP_GET_NONCE_VALUES           0x00001106
 

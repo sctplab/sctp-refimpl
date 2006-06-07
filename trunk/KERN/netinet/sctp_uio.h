@@ -107,9 +107,9 @@ struct sctp_extrcvinfo {
 	uint32_t next_ppid;
 };
 
-#define SCTP_NO_NEXT_MSG         0x0000
-#define SCTP_NEXT_MSG_AVAIL      0x0001
-#define SCTP_NEXT_MSG_ISCOMPLETE 0x0002
+#define SCTP_NO_NEXT_MSG         0x0001
+#define SCTP_NEXT_MSG_AVAIL      0x0002
+#define SCTP_NEXT_MSG_ISCOMPLETE 0x0004
 
 struct sctp_snd_all_completes {
 	uint16_t sall_stream;
