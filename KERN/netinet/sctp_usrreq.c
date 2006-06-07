@@ -1939,6 +1939,7 @@ sctp_optsget(struct socket *so,
 	case SCTP_AUTO_ASCONF:
 	case SCTP_DISABLE_FRAGMENTS:
 	case SCTP_I_WANT_MAPPED_V4_ADDR:
+	case SCTP_USE_EXT_RCVINFO:
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_USRREQ2) {
 			printf("other stuff\n");
@@ -1957,6 +1958,9 @@ sctp_optsget(struct socket *so,
 			break;
 		case SCTP_NODELAY:
 			optval = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_NODELAY);
+			break;
+		case SCTP_USE_EXT_RCVINFO:			
+			optval = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXT_RCVINFO);
 			break;
 		case SCTP_AUTOCLOSE:
 			if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_AUTOCLOSE))
@@ -2199,6 +2203,7 @@ sctp_optsget(struct socket *so,
 			m->m_len = sizeof(uint8_t);
 		}
 		break;
+
 	case SCTP_MAXSEG:
 		{
 			uint32_t *segsize;
@@ -3401,6 +3406,7 @@ sctp_optsset(struct socket *so,
 	case SCTP_AUTOCLOSE:
 	case SCTP_AUTO_ASCONF:
 	case SCTP_DISABLE_FRAGMENTS:
+	case SCTP_USE_EXT_RCVINFO:
 	case SCTP_I_WANT_MAPPED_V4_ADDR:
 		/* copy in the option value */
 		if ((size_t)m->m_len < sizeof(int)) {
@@ -3418,7 +3424,9 @@ sctp_optsset(struct socket *so,
 		case SCTP_AUTO_ASCONF:
 			set_opt = SCTP_PCB_FLAGS_AUTO_ASCONF;
 			break;
-
+		case SCTP_USE_EXT_RCVINFO:			
+			set_opt = SCTP_PCB_FLAGS_EXT_RCVINFO;
+			break;
 		case SCTP_I_WANT_MAPPED_V4_ADDR:
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) {
 				set_opt = SCTP_PCB_FLAGS_NEEDS_MAPPED_V4;

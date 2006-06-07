@@ -67,7 +67,7 @@ struct sctp_event_subscribe {
 /* ancillary data types */
 #define SCTP_INIT	0x0001
 #define SCTP_SNDRCV	0x0002
-
+#define SCTP_EXTRCV	0x0003
 /*
  * ancillary data structures
  */
@@ -89,6 +89,27 @@ struct sctp_sndrcvinfo {
 	uint32_t sinfo_cumtsn;
 	sctp_assoc_t sinfo_assoc_id;
 };
+
+struct sctp_extrcvinfo {
+	uint16_t sinfo_stream;
+	uint16_t sinfo_ssn;
+	uint16_t sinfo_flags;
+	uint32_t sinfo_ppid;
+	uint32_t sinfo_context;
+	uint32_t sinfo_timetolive;
+	uint32_t sinfo_tsn;
+	uint32_t sinfo_cumtsn;
+	sctp_assoc_t sinfo_assoc_id; 
+	uint16_t next_flags;
+	uint16_t next_stream; 
+	uint32_t next_asocid;
+	uint32_t next_length;
+	uint32_t next_ppid;
+};
+
+#define SCTP_NO_NEXT_MSG         0x0000
+#define SCTP_NEXT_MSG_AVAIL      0x0001
+#define SCTP_NEXT_MSG_ISCOMPLETE 0x0002
 
 struct sctp_snd_all_completes {
 	uint16_t sall_stream;
@@ -692,7 +713,8 @@ sctp_sorecvmsg(struct socket *so,
     int fromlen,
     int *msg_flags,
     struct sctp_sndrcvinfo *sinfo,
-    int filling_sinfo);
+    int filling_sinfo,
+    int *extra);
 
 #endif
 
