@@ -59,11 +59,13 @@
 #define RSP_ENRP_HS_FOUND    0x00000002
 #define RSP_ENRP_REGISTERED  0x00000004
 
+struct rsp_timer_entry;
 
 struct rsp_enrp_scope {
 	uint32_t	scopeId;	           /* unique scope id we have for this one */
-	struct rsp_enrp_entry *homeServer;	/* direct pointer to home server */
+	struct rsp_enrp_entry *homeServer;	   /* direct pointer to home server */
 	dlist_t		*enrpList;	           /* current list of ENRP servers */
+	struct rsp_timer_entry *enrp_tmr;
 	uint32_t 	timers[RSP_NUMBER_TIMERS]; /* default timers */
 	uint32_t refcount;                         /* how man enrp entries refer to this guy */
 	uint32_t	state;
