@@ -131,7 +131,7 @@ struct rsp_socket_hash {
 	dlist_t		*enrp_reqs;		/* ENRP requests outstanding */
 	dlist_t		*address_reg;		/* setup w/addrlist w/ctl&data seperate */
 	dlist_t 	*enrpList;		/* List of ENRP servers */
-	struct rsp_enrp_entry *homeServer;	/* direct pointer to home server */
+	struct rsp_enrp_scope *homeScope;	/* Scope of enrp */
 	uint32_t 	refcnt;			/* number of names in use */
 	uint32_t	enrpID;			/* ID of home ENRP server */
 	pthread_mutex_t	rsp_sd_mtx;		/* mutex for sleepers to serialize upon  */
