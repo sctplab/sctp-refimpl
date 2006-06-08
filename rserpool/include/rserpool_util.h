@@ -20,9 +20,9 @@ rsp_start_timer(struct rsp_enrp_scope *sd,
 		struct rsp_enrp_req *msg,
 		int type, 
 		uint8_t want_cond, 
-		uint16_t sleeper_cnt,
 		struct rsp_timer_entry **ote);
 
 int rsp_stop_timer(struct rsp_timer_entry *te);
 
+void rsp_process_fds(int poll_ret);
 #endif

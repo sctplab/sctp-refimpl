@@ -134,25 +134,19 @@ void rsp_timer_check ( void )
 	/* we enter with the timer mutex asserted */
 	struct rsp_timer_entry *entry;
 	struct timeval now;
-	int not_done = 1;
-	int min_timeout;
-	struct pollfd pfd[1];
-
-	/* setup empty poll array */
-	pfd[0].fd = -1;
-	pfd[0].events = 0;
+	int min_timeout, poll_ret;
 
 	if (gettimeofday(&now , NULL) ) {
 		fprintf(stderr, "Gak, system error can't get time of day?? -- failed:%d\n", errno);
 		return;
 	}
-	while(not_done) {
+	while(1) {
+		/* Deal with any timers */
 		dlist_reset(rsp_pcbinfo.timer_list);
 		entry = (struct rsp_timer_entry *)dlist_get( rsp_pcbinfo.timer_list);
 		if(entry == NULL) {
 			/* none left, we are done */
-			not_done = 0;
-			continue;
+			goto do_poll;
 		}
 		/* Has it expired? */
 		if ((now.tv_sec > entry->expireTime.tv_sec) ||
@@ -160,11 +154,18 @@ void rsp_timer_check ( void )
 		     (now.tv_sec >= entry->expireTime.tv_usec))) {
 			/* Yep, this one has expired */
 			rsp_expire_timer(entry);
-			/* go get the next one */
+			/* Go get the next one, this works because
+			 * rsp_expire_timer removes the head of the list
+			 * aka the one that just expired. So we come
+			 * back to the while(1) and reset, and get the
+			 * next one. We consume all timers ready to go until
+			 * we reach a point where one with time is left, or none
+			 * our left.
+			 */
 			continue;
 		}
 		/* ok, at this point entry points to an un-expired timer and
-		 * the next one to expire at that.
+		 * the next one to expire at that... so adjust its time.
 		 */
 		if(now.tv_sec > entry->expireTime.tv_sec) {
 			min_timeout = (now.tv_sec - entry->expireTime.tv_sec) * 1000;
@@ -189,20 +190,25 @@ void rsp_timer_check ( void )
 		if(min_timeout > rsp_pcbinfo.minimumTimerQuantum)
 			min_timeout = rsp_pcbinfo.minimumTimerQuantum;
 
+	do_poll:
 		if (pthread_mutex_unlock(&rsp_pcbinfo.rsp_tmr_mtx) ) {
 			fprintf(stderr, "Unsafe access, thread unlock failed for rsp_tmr_mtx:%d\n", errno);
 		}
 		/* delay min_timeout */
-		if(poll(pfd, 0, min_timeout)) {
-			fprintf(stderr, "hmm. poll returns non-zero errno:%d\n", errno);
+		poll_ret = poll(rsp_pcbinfo.watchfds, rsp_pcbinfo.num_fds , min_timeout);
+		if(poll_ret > 0) {
+			/* we have some to deal with */
+			rsp_process_fds(poll_ret);
 		}
-
+		if(poll_ret < 0) {
+			/* we have an error to deal with? */
+			fprintf(stderr, "Error in poll?? errno:%d\n", errno);
+		}
 		if (pthread_mutex_lock(&rsp_pcbinfo.rsp_tmr_mtx) ) {
 			fprintf(stderr, "Unsafe access, thread lock failed for rsp_tmr_mtx:%d\n", errno);
 		}
 		if (gettimeofday(&now , NULL) ) {
 			fprintf(stderr, "Gak, system error can't get time of day?? -- failed:%d\n", errno);
-			not_done = 0;
 		}
 	}
 	/* we leave with the timer mutex asserted */
@@ -217,7 +223,6 @@ rsp_start_timer(struct rsp_enrp_scope *sd,
 		struct rsp_enrp_req *msg,
 		int type, 
 		uint8_t want_cond, 
-		uint16_t sleeper_cnt,
 		struct rsp_timer_entry **ote)
 {
 	int sec, usec, ret;
@@ -279,7 +284,16 @@ rsp_start_timer(struct rsp_enrp_scope *sd,
 				te->cond_awake = 1;
 			}
 		}
-		te->sleeper_count = sleeper_cnt;
+		te->sleeper_count = 0;
+	}
+	if ((te->cond_awake == 0) && (want_cond)) {
+		/* This guy is re-used with a cond */
+		if(pthread_cond_init(&te->rsp_sleeper, NULL)) {
+			fprintf(stderr, "Warning timer can't gen cond variable error:%d\n", errno);
+		} else {
+			te->cond_awake = 1;
+		}
+		te->sleeper_count = 0;
 	}
 
 	/* Now add it to timer queue */
@@ -308,16 +322,7 @@ rsp_start_timer(struct rsp_enrp_scope *sd,
 			goto failed_insert;
 		}
 	}
-	/* Now wakeup timer thread, if it is sleeping */
-	if ((*ote == NULL) && (dlist_getCnt(rsp_pcbinfo.timer_list) == 1)) {
-		/* we were the only ones on the list, we must
-		 * wake up the sleeping thread.
-		 */
-		if(pthread_cond_signal(&rsp_pcbinfo.rsp_tmr_cnd)) {
-			fprintf(stderr, "Can't wake timeout thread? error:%d\n",
-				errno);
-		}
-	}
+
 	/* unlock, your done */
 	if (pthread_mutex_unlock(&rsp_pcbinfo.rsp_tmr_mtx) ) {
 		fprintf(stderr, "Unsafe access, thread unlock failed for timer start rsp_tmr_mtx:%d\n", errno);

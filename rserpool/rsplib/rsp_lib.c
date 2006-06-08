@@ -24,7 +24,7 @@ rsp_free_enrp_ent(struct rsp_enrp_entry *re)
 {
 	if(re->refcount == 1) {
 		free(re->addrList);
-		free(re);
+ 		free(re);
 	} else {
 		re->refcount--;
 	}
@@ -75,14 +75,8 @@ void *rsp_timer_thread_run( void *arg )
 			errno);
 		return((void *)&done);
 	}
-	while (1) {
-		if(pthread_cond_wait(&rsp_pcbinfo.rsp_tmr_cnd, 
-				     &rsp_pcbinfo.rsp_tmr_mtx)) {
-			fprintf(stderr, "Condition wait fails error:%d -- help\n", errno);
-			return((void *)&done);
-		}
-		rsp_timer_check ( );
-	}
+	rsp_timer_check ( );
+
 	return((void *)&done);
 }
 
@@ -90,6 +84,7 @@ void *rsp_timer_thread_run( void *arg )
 static int
 rsp_init()
 {
+	int i;
 	if (rsp_inited)
 		return(0);
 
@@ -143,24 +138,12 @@ rsp_init()
 		return (-1);
 	}
 
-	/* create condition variable to have timer thread sleep on */
-	if(pthread_cond_init(&rsp_pcbinfo.rsp_tmr_cnd, NULL)) {
-		if(rsp_debug) {
-			fprintf(stderr, "Could not init tmr cond var\n");
-		}
-		pthread_mutex_destroy(&rsp_pcbinfo.sd_pool_mtx);
-		HashedTbl_destroy(rsp_pcbinfo.sd_pool);
-		dlist_destroy(rsp_pcbinfo.timer_list);
-		return (-1);
-	}
-
 	/* create mutex for timer list */
 	if(pthread_mutex_init(&rsp_pcbinfo.rsp_tmr_mtx, NULL)) {
 		if(rsp_debug) {
 			fprintf(stderr, "Could not init tmr mtx\n");
 		}
 	bail_out:
-		pthread_cond_destroy(&rsp_pcbinfo.rsp_tmr_cnd);
 		pthread_mutex_destroy(&rsp_pcbinfo.sd_pool_mtx);
 		HashedTbl_destroy(rsp_pcbinfo.sd_pool);
 		dlist_destroy(rsp_pcbinfo.scopes);
@@ -172,6 +155,8 @@ rsp_init()
 	if(rsp_pcbinfo.watchfds == NULL) {
 		goto bail_out;
 	}
+	memset(rsp_pcbinfo.watchfds, 0, ((sizeof(struct pollfd) * RSP_DEF_POLLARRAY_SZ)));
+
 	/* now the socket pair for our reader thread */
 	if(socketpair(AF_UNIX, SOCK_STREAM, PF_UNSPEC, rsp_pcbinfo.lsd) ) {
 		free(rsp_pcbinfo.watchfds);
@@ -180,10 +165,14 @@ rsp_init()
 	}
 	rsp_pcbinfo.num_fds = 1;
 	rsp_pcbinfo.siz_fds = RSP_DEF_POLLARRAY_SZ;
-	rsp_pcbinfo.watchfds[0].fd = rsp_pcbinfo.lsd[0];
+	rsp_pcbinfo.watchfds[0].fd = rsp_pcbinfo.lsd[RSP_LSD_INTERNAL_READ];
 	rsp_pcbinfo.watchfds[0].events = POLLIN;
 	rsp_pcbinfo.watchfds[0].revents = 0;
 
+	for(i=1; i<RSP_DEF_POLLARRAY_SZ; i++) {
+		/* mark all others unused */
+		rsp_pcbinfo.watchfds[i].fd = -1;
+	}
 	/* now we must create the timer thread */
 	if(pthread_create(&rsp_pcbinfo.tmr_thread,
 			  NULL,
@@ -193,7 +182,6 @@ rsp_init()
 			fprintf(stderr, "Could not start tmr thread\n");
 		}
 		pthread_mutex_destroy(&rsp_pcbinfo.rsp_tmr_mtx);
-		pthread_cond_destroy(&rsp_pcbinfo.rsp_tmr_cnd);
 		pthread_mutex_destroy(&rsp_pcbinfo.sd_pool_mtx);
 		HashedTbl_destroy(rsp_pcbinfo.sd_pool);
 		dlist_destroy(rsp_pcbinfo.scopes);
@@ -477,6 +465,11 @@ rsp_load_file(FILE *io, char *file)
 			}
 		}
 	}
+	/* Tell the thread that we are now happy with this enrp scope (the sd) */
+
+	if (write(rsp_pcbinfo.lsd[RSP_LSD_WAKE_WRITE], &es->sd, sizeof(es->sd))  < sizeof(es->sd)) {
+		fprintf(stderr,"Lost domain - write of sd to thread fails error:%d\n", errno);
+	}
 	/* start server hunt procedures */
 	rsp_start_enrp_server_hunt(es, 1);
 
@@ -553,8 +546,6 @@ rsp_start_enrp_server_hunt(struct rsp_enrp_scope *sd, int non_blocking)
 
 	tmr = sd->enrp_tmr;
 	if ((tmr != NULL) && (sd->state & RSP_SERVER_HUNT_IP)) {
-		struct rsp_timer_entry *ete;
-
 		if(non_blocking == 1) {
 			return;
 		}
@@ -566,8 +557,8 @@ rsp_start_enrp_server_hunt(struct rsp_enrp_scope *sd, int non_blocking)
 			fprintf(stderr, "Warning waiting to do server hunt on timer:%d\n",
 				sd->enrp_tmr->timer_type);
 		}
-		ete->sleeper_count++;
-		if(pthread_cond_wait(&rsp_pcbinfo.rsp_tmr_cnd, &rsp_pcbinfo.rsp_tmr_mtx)) {
+		tmr->sleeper_count++;
+		if(pthread_cond_wait(&tmr->rsp_sleeper, &rsp_pcbinfo.rsp_tmr_mtx)) {
 			fprintf(stderr, "Cond wait for s-h fails error:%d\n", errno);
 		}
 		if (pthread_mutex_unlock(&rsp_pcbinfo.rsp_tmr_mtx) ) {
@@ -632,8 +623,164 @@ rsp_start_enrp_server_hunt(struct rsp_enrp_scope *sd, int non_blocking)
 	rsp_start_timer(sd, (struct rsp_socket_hash *)NULL, 
 			sd->timers[RSP_T5_SERVERHUNT], 
 			(struct rsp_enrp_req *)NULL, 
-			RSP_T5_SERVERHUNT, 1, 0, &sd->enrp_tmr);
+			RSP_T5_SERVERHUNT, 1, &sd->enrp_tmr);
 }
+
+static struct rsp_enrp_scope *
+rsp_find_scope_with_sd(int fd)
+{
+	int fail_lock = 0;
+	struct rsp_enrp_scope *scp;
+
+	if( pthread_mutex_lock(&rsp_pcbinfo.sd_pool_mtx) ) {
+		fprintf(stderr, "Unsafe access, thread lock failed for sd_pool_mtx:%d - find_scope w/sd\n", errno);
+		fail_lock = 1;
+	}
+	dlist_reset(rsp_pcbinfo.scopes);
+	while((scp = (struct rsp_enrp_scope *)dlist_get(rsp_pcbinfo.scopes)) != NULL) {
+		if(scp->sd == fd) {
+			break;
+		}
+	}
+	if(fail_lock == 0) {
+		if( pthread_mutex_unlock(&rsp_pcbinfo.sd_pool_mtx) ) {
+			fprintf(stderr, "Unsafe access, thread unlock failed for sd_pool_mtx:%d - find_scope w/sd\n", errno);
+		}
+	}
+	return(scp);
+}
+
+void
+rsp_process_fd_for_scope (struct rsp_enrp_scope *scp)
+{
+	/* Some ENRP message is waiting on the sd, or an
+	 * event at least :-D
+	 */
+/*	char readbuf[RSERPOOL_STACK_BUF_SPACE];*/
+	
+}
+
+static int
+rsp_process_new_sd()
+{
+	void *temp_space;
+	struct rsp_enrp_scope *scp;
+	int sd,i, orig;
+	int fail_lock = 0;
+	int ret, retcode= -1;
+
+	ret = read(rsp_pcbinfo.lsd[RSP_LSD_INTERNAL_READ], (char *)&sd, sizeof(sd));
+	if (ret < sizeof(sd)) {
+		fprintf(stderr, "Bad read, not %d but %d errno:%d\n",
+			sizeof(sd), ret, errno);
+		return(-1);
+	}
+	/* ok sd now contains our new sd, validate it */
+	scp = rsp_find_scope_with_sd(sd);
+	if(scp == NULL) {
+		fprintf(stderr, "Can not find sd:%d in scope array\n",
+			sd);
+		return(-1);
+	}
+	/* insert it in read array */
+	if( pthread_mutex_lock(&rsp_pcbinfo.sd_pool_mtx) ) {
+		fprintf(stderr, "Unsafe access, thread lock failed for sd_pool_mtx:%d - process_new_sd\n", errno);
+		fail_lock = 1;
+	}
+	for(i=1; i<rsp_pcbinfo.siz_fds; i++) {
+		if(rsp_pcbinfo.watchfds[i].fd == -1) {
+			/* found a slot */
+			rsp_pcbinfo.watchfds[i].fd = sd;
+			rsp_pcbinfo.watchfds[i].events = POLLIN; 
+			rsp_pcbinfo.watchfds[i].revents = 0;
+			if(i > rsp_pcbinfo.num_fds) {
+				/* update the count */
+				rsp_pcbinfo.num_fds = i;
+			}
+			retcode = 0;
+			goto out_locked;
+		}
+	}
+	/* If we fall out, we are out of descriptors 
+	 * and must allocate new space. Double the current
+	 * size.
+	 */
+	orig = (sizeof(struct pollfd) * rsp_pcbinfo.siz_fds);
+	i = 2 * orig;
+
+	temp_space = malloc(i);
+	if(temp_space == NULL) {
+		/* no room */
+		fprintf(stderr, "Can't malloc more memory for expansion err:%d\n", errno);
+		return (-1);
+	}
+	memset(temp_space, 0, i);
+	rsp_pcbinfo.siz_fds *= 2;
+	memcpy(temp_space, rsp_pcbinfo.watchfds, orig);
+	for(i=rsp_pcbinfo.num_fds; i<rsp_pcbinfo.siz_fds; i++) {
+		rsp_pcbinfo.watchfds[i].fd = -1;
+	}
+	rsp_pcbinfo.watchfds[rsp_pcbinfo.num_fds].fd = sd;
+	rsp_pcbinfo.watchfds[rsp_pcbinfo.num_fds].events = POLLIN;
+	rsp_pcbinfo.num_fds++;
+	retcode = 0;
+ out_locked:
+	if(fail_lock == 0) {
+		if( pthread_mutex_unlock(&rsp_pcbinfo.sd_pool_mtx) ) {
+			fprintf(stderr, 
+				"Unsafe access, thread unlock failed for sd_pool_mtx:%d - process new sd\n", errno);
+		}
+	}
+	return (retcode);
+}
+
+void rsp_process_fds(int ret)
+{
+	/* Look at all sockets we are watching. These
+	 * include all 
+	 */
+	int i=1;
+	struct rsp_enrp_scope *scp;
+
+	/* two types of handling, type
+	 * one is special, notification of new
+	 * sd's. Type two is an actual sd awakens.
+	 * For these we read what happened, interpret
+	 * any events to enrp.. and process.
+	 */
+
+	/* check for new fd's */
+	if(rsp_pcbinfo.watchfds[0].revents) {
+		/* yep, its my lsd socket */
+		ret--;
+		if(rsp_process_new_sd()) {
+			fprintf(stderr, "Warning - failed to add new sd - a scope is unwatched\n");
+		}
+		rsp_pcbinfo.watchfds[0].revents = 0;
+	} 
+	i = 1;
+	while(ret > 0) {
+		for(; i< rsp_pcbinfo.num_fds; i++) {
+			if(rsp_pcbinfo.watchfds[i].revents) {
+				/* this one woke up, find the scope */
+				scp = rsp_find_scope_with_sd(rsp_pcbinfo.watchfds[i].fd);
+				if(scp == NULL) {
+					fprintf (stderr, "fd:%d does not belong to any scope? - nulling", rsp_pcbinfo.watchfds[i].fd);
+					rsp_pcbinfo.watchfds[i].fd = -1;
+					rsp_pcbinfo.watchfds[i].events = 0;
+					rsp_pcbinfo.watchfds[i].revents = 0;
+					ret--;
+				} else {
+					rsp_process_fd_for_scope (scp);
+					rsp_pcbinfo.watchfds[i].revents = 0;
+					ret--;
+				}
+				break;
+			}
+		}
+	}
+}
+
 
 int
 rsp_socket(int domain, int type,  int protocol, int op_scope)
