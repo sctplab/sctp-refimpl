@@ -195,4 +195,7 @@ struct asap_message {
 #define RSERPOOL_ASAP_PPID 11
 #define RSERPOOL_ENRP_PPID 12
 
+/* largest message we read must fit in here */
+#define RSERPOOL_STACK_BUF_SPACE   65535
 #endif
+

@@ -104,11 +104,9 @@ struct rsp_global_info {
 	HashedTbl		*sd_pool;	/* hashed pool of sd's */
 	dlist_t			*timer_list;	/* list of timers running */
 	dlist_t			*scopes;	/* the list of all scopes */
-	pthread_t 		tmr_thread; 	/* thread for timeouts */
-	pthread_t		enrp_thread;	/* thread that reads from ENRP socket's */
-	pthread_cond_t		rsp_tmr_cnd;	/* condition sleep when no entries on timer_list */
 	pthread_mutex_t		sd_pool_mtx;	/* mutex for sd_pool locks global_info except timer stuff  */
 	pthread_mutex_t		rsp_tmr_mtx;	/* mutex for timers (timer_list and cond)  */
+	pthread_t		tmr_thread;	/* the actual timer/sd thread */
 	int 			num_fds;	/* Number of fd's in poll array used */
 	int			siz_fds;	/* size of the fd array */
 	uint32_t       		minimumTimerQuantum;	/* shortest wait time used by timer thread */
@@ -216,6 +214,10 @@ struct pe_address {
 	}sa;
 };
 
+/* lsd read/write const */
+
+#define RSP_LSD_INTERNAL_READ 0
+#define RSP_LSD_WAKE_WRITE 1
 
 /* default settings and such */
 #define RSP_SD_HASH_TABLE_NAME "rsp_sd_hashtable" 
