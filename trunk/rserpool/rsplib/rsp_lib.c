@@ -349,6 +349,7 @@ rsp_load_file(FILE *io, char *file)
 	es->timers[RSP_T6_SERVERANNOUNCE] = DEF_RSP_T6_SERVERANNOUNCE;
 	es->timers[RSP_T7_ENRPOUTDATE] = DEF_RSP_T7_ENRPOUTDATE;
 	es->homeServer = NULL;
+	es->enrp_tmr = NULL;
 	es->state = RSP_NO_ENRP_SERVER;
 
 	while(fgets(string, sizeof(string), io) != NULL) {
@@ -476,10 +477,12 @@ rsp_load_file(FILE *io, char *file)
 			}
 		}
 	}
+	/* start server hunt procedures */
+	rsp_start_enrp_server_hunt(es, 1);
+
 	/* Here we must send off the id to the reading thread 
 	 * this will get it to add it to the fd list its watching
 	 */
-	
 	return (es->scopeId);
 }
 
@@ -529,7 +532,7 @@ rsp_load_config_file(const char *confprefix)
 }
 
 void
-rsp_start_enrp_server_hunt(struct rsp_enrp_scope *sd, struct rsp_timer_entry *te, int non_blocking)
+rsp_start_enrp_server_hunt(struct rsp_enrp_scope *sd, int non_blocking)
 {
 	/* 
 	 * Formulate and set up an association to a
@@ -546,10 +549,11 @@ rsp_start_enrp_server_hunt(struct rsp_enrp_scope *sd, struct rsp_timer_entry *te
 	 */
 	int cnt = 0;
 	struct rsp_enrp_entry *re;
+	struct rsp_timer_entry *tmr;
 
-	if ((te == NULL) && (sd->state & RSP_SERVER_HUNT_IP)) {
+	tmr = sd->enrp_tmr;
+	if ((tmr != NULL) && (sd->state & RSP_SERVER_HUNT_IP)) {
 		struct rsp_timer_entry *ete;
-		int found = 0;
 
 		if(non_blocking == 1) {
 			return;
@@ -558,27 +562,24 @@ rsp_start_enrp_server_hunt(struct rsp_enrp_scope *sd, struct rsp_timer_entry *te
 			fprintf(stderr, "Unsafe access %d can't look up timed server hunt in progress, \n", errno);
 			return;
 		}
-		dlist_reset(rsp_pcbinfo.timer_list);
-		while ((ete = (struct rsp_timer_entry *)dlist_get(rsp_pcbinfo.timer_list)) != NULL) {
-			if (ete->timer_type == RSP_T5_SERVERHUNT) {
-				found = 1;
-				ete->sleeper_count++;
-				if(pthread_cond_wait(&rsp_pcbinfo.rsp_tmr_cnd, &rsp_pcbinfo.rsp_tmr_mtx)) {
-					fprintf(stderr, "Cond wait for s-h fails error:%d\n", errno);
-				}
-				break;
-			}
+		if (sd->enrp_tmr->timer_type != RSP_T5_SERVERHUNT) {
+			fprintf(stderr, "Warning waiting to do server hunt on timer:%d\n",
+				sd->enrp_tmr->timer_type);
+		}
+		ete->sleeper_count++;
+		if(pthread_cond_wait(&rsp_pcbinfo.rsp_tmr_cnd, &rsp_pcbinfo.rsp_tmr_mtx)) {
+			fprintf(stderr, "Cond wait for s-h fails error:%d\n", errno);
 		}
 		if (pthread_mutex_unlock(&rsp_pcbinfo.rsp_tmr_mtx) ) {
 			fprintf(stderr, "Unsafe access, thread unlock failed for s-h rsp_tmr_mtx:%d\n", errno);
 		}
-		if(found == 0) {
-			/* hmm, this should not happen */
-			fprintf(stderr, "In server hunt state, but cannot find the timer?\n");
-		} else {
+		/* are we ok now? */
+		if(sd->state & RSP_ENRP_HS_FOUND) {
+			/* Yep, we are ok */
 			return;
 		}
 	}
+
 	/* start server hunt */
 	sd->state |= RSP_SERVER_HUNT_IP;
 	dlist_reset(sd->enrpList);
@@ -597,12 +598,8 @@ rsp_start_enrp_server_hunt(struct rsp_enrp_scope *sd, struct rsp_timer_entry *te
 			sd->homeServer = re;
 			sd->state |= RSP_ENRP_HS_FOUND;
 			sd->state &= ~RSP_SERVER_HUNT_IP;
-			if(te) {
-				if ((te->cond_awake) && (te->sleeper_count > 0)) {
-					pthread_cond_broadcast(&te->rsp_sleeper);
-				} 
-				pthread_cond_destroy(&te->rsp_sleeper);
-				free(te);
+			if ((tmr->cond_awake) && (tmr->sleeper_count > 0)) {
+				pthread_cond_broadcast(&tmr->rsp_sleeper);
 			}
 			return;
 		}
@@ -635,7 +632,7 @@ rsp_start_enrp_server_hunt(struct rsp_enrp_scope *sd, struct rsp_timer_entry *te
 	rsp_start_timer(sd, (struct rsp_socket_hash *)NULL, 
 			sd->timers[RSP_T5_SERVERHUNT], 
 			(struct rsp_enrp_req *)NULL, 
-			RSP_T5_SERVERHUNT, 1, 0, te);
+			RSP_T5_SERVERHUNT, 1, 0, &sd->enrp_tmr);
 }
 
 int

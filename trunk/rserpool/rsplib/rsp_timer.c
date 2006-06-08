@@ -61,7 +61,7 @@ handle_t4_rereg_timer(struct rsp_timer_entry *entry)
 void
 handle_t5_hunt_timer(struct rsp_timer_entry *entry)
 {
-	rsp_start_enrp_server_hunt(entry->sd, entry, 1);
+	rsp_start_enrp_server_hunt(entry->sd, 1);
 }
 
 void
@@ -218,19 +218,19 @@ rsp_start_timer(struct rsp_enrp_scope *sd,
 		int type, 
 		uint8_t want_cond, 
 		uint16_t sleeper_cnt,
-		struct rsp_timer_entry *ote)
+		struct rsp_timer_entry **ote)
 {
 	int sec, usec, ret;
 	struct rsp_timer_entry *te, *ete;
 
-	if(ote == NULL) {
+	if(*ote == NULL) {
 		te = malloc(sizeof(struct rsp_timer_entry));
 		if(te == NULL) {
 			fprintf(stderr, "No memory for timer err:%d\n", errno);
 			return(-1);
 		}
 	} else {
-		te = ote;
+		te = *ote;
 		/* sanity check */
 		dlist_reset(rsp_pcbinfo.timer_list);
 		while ((ete = (struct rsp_timer_entry *)dlist_get(rsp_pcbinfo.timer_list)) != NULL) {
@@ -267,7 +267,7 @@ rsp_start_timer(struct rsp_enrp_scope *sd,
 		return(-1);
 	}
 
-	if(ote == NULL) {
+	if(*ote == NULL) {
 		te->sd = sd;
 		te->sdata = sdata;
 		te->req = msg;
@@ -309,7 +309,7 @@ rsp_start_timer(struct rsp_enrp_scope *sd,
 		}
 	}
 	/* Now wakeup timer thread, if it is sleeping */
-	if ((ote == NULL) && (dlist_getCnt(rsp_pcbinfo.timer_list) == 1)) {
+	if ((*ote == NULL) && (dlist_getCnt(rsp_pcbinfo.timer_list) == 1)) {
 		/* we were the only ones on the list, we must
 		 * wake up the sleeping thread.
 		 */
@@ -322,6 +322,55 @@ rsp_start_timer(struct rsp_enrp_scope *sd,
 	if (pthread_mutex_unlock(&rsp_pcbinfo.rsp_tmr_mtx) ) {
 		fprintf(stderr, "Unsafe access, thread unlock failed for timer start rsp_tmr_mtx:%d\n", errno);
 	}
+
+	/* give back the running entry */
+	if(*ote == NULL)
+		*ote = te;
 	return (0);
 }
 
+int
+rsp_stop_timer(struct rsp_timer_entry *te)
+{
+	/* lock mutex */
+	struct rsp_timer_entry *ent;
+	int ret = -1;
+
+	/* The dis-advantage to this dlist object is that
+	 * in effect we cannot help but walk the whole list
+	 * looking for our element. If we had the TAILQ_ from
+	 * kernel land you can pull one off.. or get the next
+	 * one simply by having a pointer to it. For this
+	 * enrp timer in this particular instance its not
+	 * to bad. BUT if I were to make this general purpose
+	 * I would have to change it so that instead we use
+	 * either a kernel copied TAILQ or some such. Cut
+	 * down on list walks (especially for large lists)...
+	 */
+	if (pthread_mutex_lock(&rsp_pcbinfo.rsp_tmr_mtx) ) {
+		fprintf(stderr, "Unsafe access, thread lock failed for rsp_tmr_mtx:%d - refusing\n", errno);
+		free(te);
+		return(-1);
+	}
+	dlist_reset(rsp_pcbinfo.timer_list);	
+	while ((ent = (struct rsp_timer_entry *)dlist_get(rsp_pcbinfo.timer_list)) != NULL) {
+		if(ent == te) {
+			/* found him. */
+			ent = dlist_getThis(rsp_pcbinfo.timer_list);
+			if(te->cond_awake) {
+				/* clean up cond stuff */
+				if(te->sleeper_count) {
+					pthread_cond_broadcast(&te->rsp_sleeper);
+				}
+				pthread_cond_destroy(&te->rsp_sleeper);
+			}
+			free(ent);
+			ret = 0;
+		}
+	}
+	/* unlock, your done */
+	if (pthread_mutex_unlock(&rsp_pcbinfo.rsp_tmr_mtx) ) {
+		fprintf(stderr, "Unsafe access, thread unlock failed for timer start rsp_tmr_mtx:%d\n", errno);
+	}
+	return(ret);
+}
