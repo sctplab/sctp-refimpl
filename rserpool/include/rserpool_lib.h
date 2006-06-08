@@ -6,6 +6,7 @@
 #include <sys/time.h>
 #include <netinet/in.h>
 #include <netinet/sctp.h>
+#include <poll.h>
 /*
  * We first need to have the base structure
  * of a Pool that is kept inside the library.
@@ -34,21 +35,51 @@
  *
  */
 
+/* State values for rsp_enrp_entry's */
+#define RSP_NO_ASSOCIATION 	1
+#define RSP_START_ASSOCIATION   2
+#define RSP_ASSOCIATION_UP      3
+#define RSP_ASSOCIATION_FAILED  4
 
-/* The extern socket hash */
-struct rsp_global_info {
-	int			rsp_number_sd;	/* count of sd's when 0 un-init */
-	HashedTbl		*sd_pool;	/* hashed pool of sd's */
-	dlist_t			*timer_list;	/* list of timers running */
-	pthread_t 		tmr_thread; 	/* thread for timeouts */
-	pthread_mutex_t		sd_pool_mtx;	/* mutex for sd_pool   */
-	pthread_cond_t		rsp_tmr_cnd;	/* condition sleep when no entries on timer_list */
-	pthread_mutex_t		rsp_tmr_mtx;	/* mutex for timers   */
-	uint32_t       		minimumTimerQuantum;	/* shortest wait time used by timer thread */
+
+/* timer const's */
+#define RSP_T1_ENRP_REQUEST		0x0000
+#define RSP_T2_REGISTRATION		0x0001
+#define RSP_T3_DEREGISTRATION		0x0002
+#define RSP_T4_REREGISTRATION		0x0003
+#define RSP_T5_SERVERHUNT		0x0004
+#define RSP_T6_SERVERANNOUNCE		0x0005
+#define RSP_T7_ENRPOUTDATE		0x0006
+#define RSP_NUMBER_TIMERS 7
+
+
+/* State values for rsp_socket_hash */
+#define RSP_NO_ENRP_SERVER   0x00000000
+#define RSP_SERVER_HUNT_IP   0x00000001
+#define RSP_ENRP_HS_FOUND    0x00000002
+#define RSP_ENRP_REGISTERED  0x00000004
+
+
+struct rsp_enrp_scope {
+	uint32_t	scopeId;	           /* unique scope id we have for this one */
+	struct rsp_enrp_entry *homeServer;	/* direct pointer to home server */
+	dlist_t		*enrpList;	           /* current list of ENRP servers */
+	uint32_t 	timers[RSP_NUMBER_TIMERS]; /* default timers */
+	uint32_t refcount;                         /* how man enrp entries refer to this guy */
+	uint32_t	state;
+	int sd;				           /* SCTP socket descriptor */
 };
 
-extern struct rsp_global_info rsp_pcbinfo;
-extern int rsp_inited;	/* boolean have_inited */
+struct rsp_enrp_entry {
+	struct rsp_enrp_scope *scp;  /* scope this guy belongs to */
+	uint32_t enrpId;	     /* id of the enrp deamon, if know or local config */
+	sctp_assoc_t	asocid;	     /* sctp asoc id */
+	struct sockaddr *addrList;   /* list of addresses, gotten from sctp_getpaddr() */	
+	int number_of_addresses;     /* count of addresses in addrList */
+	int size_of_addrList;        /* length of the addrList alloc */
+	uint32_t refcount;           /* how man sd's refer to us */
+	uint8_t state;               /* state of the ENRP association */
+};
 
 /* when we make an ENRP request we save it
  * in one of these, stick it on the sd list
@@ -63,33 +94,36 @@ struct rsp_enrp_req {
 	uint32_t timerval;
 };
 
-/* timer const's */
-#define RSP_T1_ENRP_REQUEST		0x0000
-#define RSP_T2_REGISTRATION		0x0001
-#define RSP_T3_DEREGISTRATION		0x0002
-#define RSP_T4_REREGISTRATION		0x0003
-#define RSP_T5_SERVERHUNT		0x0004
-#define RSP_T6_SERVERANNOUNCE		0x0005
-#define RSP_T7_ENRPOUTDATE		0x0006
-#define RSP_NUMBER_TIMERS 7
+/* The extern socket hash */
+struct rsp_global_info {
+	int			rsp_number_sd;	/* count of sd's when 0 un-init */
+	struct pollfd           *watchfds;	/* fd's the thread is watching for us */
+	int			lsd[2];		/* local 'unix-domain' socket pair for enrp_thread */
+	HashedTbl		*sd_pool;	/* hashed pool of sd's */
+	dlist_t			*timer_list;	/* list of timers running */
+	dlist_t			*scopes;	/* the list of all scopes */
+	pthread_t 		tmr_thread; 	/* thread for timeouts */
+	pthread_t		enrp_thread;	/* thread that reads from ENRP socket's */
+	pthread_cond_t		rsp_tmr_cnd;	/* condition sleep when no entries on timer_list */
+	pthread_mutex_t		sd_pool_mtx;	/* mutex for sd_pool locks global_info except timer stuff  */
+	pthread_mutex_t		rsp_tmr_mtx;	/* mutex for timers (timer_list and cond)  */
+	int 			num_fds;	/* Number of fd's in poll array used */
+	int			siz_fds;	/* size of the fd array */
+	uint32_t       		minimumTimerQuantum;	/* shortest wait time used by timer thread */
 
-struct rsp_enrp_entry {
-	uint32_t enrpId;
-	sctp_assoc_t	asocid;		/* sctp asoc id */
-	struct sockaddr *addrList;	        /* list of addresses, gotten from sctp_getpaddr() */	
-	int number_of_addresses;
-	int size_of_addrList;
-	uint8_t state;
 };
-/* State values for rsp_enrp_entry's */
-#define RSP_NO_ASSOCIATION 	1
-#define RSP_START_ASSOCIATION   2
-#define RSP_ASSOCIATION_UP      3
-#define RSP_ASSOCIATION_FAILED  4
+
+
+extern int rsp_scope_counter;
+extern struct rsp_global_info rsp_pcbinfo;
+extern int rsp_inited;	/* boolean have_inited */
+
 
 /* For each socket descriptor we will have one of these */
 struct rsp_socket_hash {
 	int	 	sd;			/* sctp socket */
+	int		type;			/* socket type */
+	int 		domain;			/* domain af_inet/af_inet6 */
 	dlist_t 	*allPools;		/* list of all rsp_pool */
 	HashedTbl	*cache;			/* cache name->rsp_poll */
 	HashedTbl	*vtagHash;		/* assoc id-> rsp_pool_ele */
@@ -103,7 +137,6 @@ struct rsp_socket_hash {
 	pthread_mutex_t	rsp_sd_mtx;		/* mutex for sleepers to serialize upon  */
 	char 		*registeredName;	/* our name if registered */
 	uint32_t 	timers[RSP_NUMBER_TIMERS]; /* sd timers */
-	uint32_t	state;
 	uint32_t        stale_cache_ms;
 	uint32_t	myPEid;			/* my 32 bit PE id */
 	uint32_t	reglifetime;		/* how long my reg is good for */
@@ -116,18 +149,12 @@ struct rsp_socket_hash {
 	uint8_t		useThisSd;		/* flag say's if sd is data channel */
 };
 
-/* State values for rsp_socket_hash */
-#define RSP_NO_ENRP_SERVER   0x00000000
-#define RSP_SERVER_HUNT_IP   0x00000001
-#define RSP_ENRP_HS_FOUND    0x00000002
-#define RSP_ENRP_REGISTERED  0x00000004
-
-
 /* Timers will have this in a list */
 struct rsp_timer_entry {
 	struct timeval 		started;	/* time of start */
 	struct timeval 		expireTime;	/* time of expire */
-	struct rsp_socket_hash 	*sd;		/* pointer back to sd */
+	struct rsp_enrp_scope   *sd;
+	struct rsp_socket_hash 	*sdata;		/* pointer back to sd */
 	/* The Req field is filled in if timer does something for you */
 	struct rsp_enrp_req 	*req;		/* data being sent */
 	int 			timer_type;	/* type of timer */
@@ -153,7 +180,7 @@ struct rsp_pool {
 };
 
 
-struct rsp_info {
+struct rsp_info_found {
 	char 		*name;
 	uint32_t	namelen;
 	uint32_t	number_entries;
@@ -218,5 +245,5 @@ struct pe_address {
 #define ENRP_DEFAULT_PORT_FOR_ASAP  5555
 
 #define ENRP_MAX_SERVER_HUNTS       3
-
+#define RSP_DEF_POLLARRAY_SZ        8
 #endif
