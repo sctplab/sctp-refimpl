@@ -8,9 +8,9 @@ struct rsp_info {
 };
 
 
-int rsp_initialize(struct rsp_info *);
+uint32_t rsp_initialize(struct rsp_info *);
 
-int rsp_socket(int domain, int type,  int protocol, int op_scope);
+int rsp_socket(int domain, int type,  int protocol, uint32_t op_scope);
 
 int rsp_close(int sockfd);
 

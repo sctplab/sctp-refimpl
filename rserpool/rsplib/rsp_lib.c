@@ -311,7 +311,7 @@ rsp_load_file(FILE *io, char *file)
 	event.sctp_send_failure_event = 1;
 	event.sctp_peer_error_event = 0;
 	event.sctp_shutdown_event = 1;
-	event.sctp_partial_delivery_event = 1;
+	event.sctp_partial_delivery_event = 0;
 #if defined(__FreeBSD__)
 	event.sctp_adaptation_layer_event = 0;
 #else
@@ -525,7 +525,7 @@ rsp_load_config_file(const char *confprefix)
 }
 
 void
-rsp_start_enrp_server_hunt(struct rsp_enrp_scope *sd, int non_blocking)
+rsp_start_enrp_server_hunt(struct rsp_enrp_scope *scp, int non_blocking)
 {
 	/* 
 	 * Formulate and set up an association to a
@@ -544,8 +544,8 @@ rsp_start_enrp_server_hunt(struct rsp_enrp_scope *sd, int non_blocking)
 	struct rsp_enrp_entry *re;
 	struct rsp_timer_entry *tmr;
 
-	tmr = sd->enrp_tmr;
-	if ((tmr != NULL) && (sd->state & RSP_SERVER_HUNT_IP)) {
+	tmr = scp->enrp_tmr;
+	if ((tmr != NULL) && (scp->state & RSP_SERVER_HUNT_IP)) {
 		if(non_blocking == 1) {
 			return;
 		}
@@ -553,9 +553,9 @@ rsp_start_enrp_server_hunt(struct rsp_enrp_scope *sd, int non_blocking)
 			fprintf(stderr, "Unsafe access %d can't look up timed server hunt in progress, \n", errno);
 			return;
 		}
-		if (sd->enrp_tmr->timer_type != RSP_T5_SERVERHUNT) {
+		if (scp->enrp_tmr->timer_type != RSP_T5_SERVERHUNT) {
 			fprintf(stderr, "Warning waiting to do server hunt on timer:%d\n",
-				sd->enrp_tmr->timer_type);
+				scp->enrp_tmr->timer_type);
 		}
 		tmr->sleeper_count++;
 		if(pthread_cond_wait(&tmr->rsp_sleeper, &rsp_pcbinfo.rsp_tmr_mtx)) {
@@ -565,18 +565,17 @@ rsp_start_enrp_server_hunt(struct rsp_enrp_scope *sd, int non_blocking)
 			fprintf(stderr, "Unsafe access, thread unlock failed for s-h rsp_tmr_mtx:%d\n", errno);
 		}
 		/* are we ok now? */
-		if(sd->state & RSP_ENRP_HS_FOUND) {
+		if(scp->state & RSP_ENRP_HS_FOUND) {
 			/* Yep, we are ok */
 			return;
 		}
 	}
-
 	/* start server hunt */
-	sd->state |= RSP_SERVER_HUNT_IP;
-	dlist_reset(sd->enrpList);
-	while((re = (struct rsp_enrp_entry *)dlist_get(sd->enrpList)) != NULL) {
+	scp->state |= RSP_SERVER_HUNT_IP;
+	dlist_reset(scp->enrpList);
+	while((re = (struct rsp_enrp_entry *)dlist_get(scp->enrpList)) != NULL) {
 		if (re->state == RSP_NO_ASSOCIATION) { 
-			if((sctp_connectx(sd->sd, re->addrList, re->number_of_addresses)) < 0) {
+			if((sctp_connectx(scp->sd, re->addrList, re->number_of_addresses)) < 0) {
 				re->state = RSP_ASSOCIATION_FAILED;
 			} else {
 				re->state = RSP_START_ASSOCIATION;
@@ -586,9 +585,9 @@ rsp_start_enrp_server_hunt(struct rsp_enrp_scope *sd, int non_blocking)
 			cnt++;
 		} else if (re->state == RSP_ASSOCIATION_UP) {
 			/* we have one, set to this guy */
-			sd->homeServer = re;
-			sd->state |= RSP_ENRP_HS_FOUND;
-			sd->state &= ~RSP_SERVER_HUNT_IP;
+			scp->homeServer = re;
+			scp->state |= RSP_ENRP_HS_FOUND;
+			scp->state &= ~RSP_SERVER_HUNT_IP;
 			if ((tmr->cond_awake) && (tmr->sleeper_count > 0)) {
 				pthread_cond_broadcast(&tmr->rsp_sleeper);
 			}
@@ -603,10 +602,10 @@ rsp_start_enrp_server_hunt(struct rsp_enrp_scope *sd, int non_blocking)
 	 * some that failed to start.
 	 */
 	if(cnt < ENRP_MAX_SERVER_HUNTS) {
-		dlist_reset(sd->enrpList);
-		while((re = (struct rsp_enrp_entry *)dlist_get(sd->enrpList)) != NULL) {
+		dlist_reset(scp->enrpList);
+		while((re = (struct rsp_enrp_entry *)dlist_get(scp->enrpList)) != NULL) {
 			if (re->state == RSP_ASSOCIATION_FAILED) {
-				if((sctp_connectx(sd->sd, re->addrList, re->number_of_addresses)) < 0) {
+				if((sctp_connectx(scp->sd, re->addrList, re->number_of_addresses)) < 0) {
 					re->state = RSP_ASSOCIATION_FAILED;
 				} else {
 					re->state = RSP_START_ASSOCIATION;
@@ -620,17 +619,17 @@ rsp_start_enrp_server_hunt(struct rsp_enrp_scope *sd, int non_blocking)
 				break;
 		}
 	}
-	rsp_start_timer(sd, (struct rsp_socket_hash *)NULL, 
-			sd->timers[RSP_T5_SERVERHUNT], 
+	rsp_start_timer(scp, (struct rsp_socket_hash *)NULL, 
+			scp->timers[RSP_T5_SERVERHUNT], 
 			(struct rsp_enrp_req *)NULL, 
-			RSP_T5_SERVERHUNT, 1, &sd->enrp_tmr);
+			RSP_T5_SERVERHUNT, 1, &scp->enrp_tmr);
 }
 
 static struct rsp_enrp_scope *
 rsp_find_scope_with_sd(int fd)
 {
 	int fail_lock = 0;
-	struct rsp_enrp_scope *scp;
+	struct rsp_enrp_scope *scp=NULL;
 
 	if( pthread_mutex_lock(&rsp_pcbinfo.sd_pool_mtx) ) {
 		fprintf(stderr, "Unsafe access, thread lock failed for sd_pool_mtx:%d - find_scope w/sd\n", errno);
@@ -650,14 +649,129 @@ rsp_find_scope_with_sd(int fd)
 	return(scp);
 }
 
+static struct rsp_enrp_scope *
+rsp_find_scope_with_id(uint32_t op_scope)
+{
+	int fail_lock = 0;
+	struct rsp_enrp_scope *scp = NULL;
+	if( pthread_mutex_lock(&rsp_pcbinfo.sd_pool_mtx) ) {
+		fprintf(stderr, "Unsafe access, thread lock failed for sd_pool_mtx:%d - find_scope w/sd\n", errno);
+		fail_lock = 1;
+	}
+
+	dlist_reset(rsp_pcbinfo.scopes);
+	while((scp = (struct rsp_enrp_scope *)dlist_get(rsp_pcbinfo.scopes)) != NULL) {
+		if(scp->scopeId == op_scope) {
+			break;
+		}
+	}
+	if(fail_lock == 0) {
+		if( pthread_mutex_unlock(&rsp_pcbinfo.sd_pool_mtx) ) {
+			fprintf(stderr, "Unsafe access, thread unlock failed for sd_pool_mtx:%d - find_scope w/sd\n", errno);
+		}
+	}
+	return(scp);
+}
+
+void
+handle_enrpserver_notification (struct rsp_enrp_scope *scp, char *buf, struct sctp_sndrcvinfo *sinfo, ssize_t sz)
+{
+	union sctp_notification *notify;
+	struct sctp_send_failed  *sf;
+	struct sctp_assoc_change *ac;
+	struct sctp_shutdown_event *sh;
+	struct rsp_enrp_entry *enrp;
+
+	notify = (union sctp_notification *)buf;
+	switch(notify->sn_header.sn_type) {
+	case SCTP_ASSOC_CHANGE:
+		ac = &notify->sn_assoc_change;
+		if(sz < sizeof(*ac)) {
+			fprintf(stderr, "Event ac size:%d got:%d -- to small\n",
+				sizeof(*ac), sz);
+			return;
+		}
+		switch(ac->sac_state) {
+		case SCTP_RESTART:
+		case SCTP_COMM_UP:
+			/* Find this guy and mark it up */
+			enrp = rsp_find_enrp_entry_by_asocid(scp, ac->sac_assoc_id);
+			break;
+		case SCTP_COMM_LOST:
+		case SCTP_CANT_STR_ASSOC:
+		case SCTP_SHUTDOWN_COMP:
+			/* Find this guy and mark it down */
+			enrp = rsp_find_enrp_entry_by_asocid(scp, ac->sac_assoc_id);
+
+			break;
+		default:
+			fprintf( stderr, "Unknown assoc state %d\n", ac->sac_state);
+			break;
+		struct sctp_assoc_change {
+
+
+		break;
+	case SCTP_SHUTDOWN_EVENT:
+		sh = &notify->sn_shutdown_event;
+		if(sz < sizeof(*sh)) {
+			fprintf(stderr, "Event sh size:%d got:%d -- to small\n",
+				sizeof(*sh), sz);
+			return;
+		}
+
+		break;
+	case SCTP_SEND_FAILED:
+		sf = &notify->sn_send_failed;
+		if(sz < sizeof(*sf)) {
+			fprintf(stderr, "Event sf size:%d got:%d -- to small\n",
+				sizeof(*sf), sz);
+			return;
+		}
+		/* FIX ME */
+		break;
+	default:
+		fprintf(stderr, "Got event type %d I did not subscibe for?\n",
+			notify->sn_heaer.sn_type);
+		break;
+	}
+}
+
+
+handle_enrpmsg (struct rsp_enrp_scope *scp, char *buf, struct sctp_sndrcvinfo *sinfo, ssize_t sz)
+{
+
+}
+
 void
 rsp_process_fd_for_scope (struct rsp_enrp_scope *scp)
 {
 	/* Some ENRP message is waiting on the sd, or an
 	 * event at least :-D
 	 */
-/*	char readbuf[RSERPOOL_STACK_BUF_SPACE];*/
-	
+	ssize_t sz;
+	struct pe_address from;
+	socklen_t from_len;
+	struct sctp_sndrcvinfo info;
+	int msg_flags=0;
+	char readbuf[RSERPOOL_STACK_BUF_SPACE];
+
+	from_len = sizeof(from);
+	sz = sctp_recvmsg (scp->sd, 
+			   readbuf, 
+			   sizeof(readbuf),
+			   (struct sockaddr *)&from,
+			   &from_len,
+			   &info,
+			   &msg_flags);
+	if(! (msg_flags & MSG_EOR)) {
+		fprintf(stderr, "Warning got a partial message size:%d can't re-assemble .. gak, enrp msg lost!\n", sz);
+		return;
+	}
+	if(msg_flags & MSG_NOTIFICATION) {
+		handle_enrpserver_notification(scp, readbuf, &info, sz);
+	} else {
+		handle_enrpmsg(scp, readbuf, &info, sz);
+	}
 }
 
 static int
@@ -783,7 +897,7 @@ void rsp_process_fds(int ret)
 
 
 int
-rsp_socket(int domain, int type,  int protocol, int op_scope)
+rsp_socket(int domain, int type,  int protocol, uint32_t op_scope)
 {
 	int sd, ret;
 	struct rsp_socket_hash *sdata;
@@ -798,20 +912,28 @@ rsp_socket(int domain, int type,  int protocol, int op_scope)
 		errno = ENOTSUP;
 		return (-1);
 	}
-	sd = socket(domain, type, protocol);
-	if(sd == -1) {
-		return (sd);
-	}
-
 	sdata = (struct rsp_socket_hash *) sizeof(struct rsp_socket_hash);
 	if(sdata == NULL) {
 		if(rsp_debug) {
 			fprintf(stderr, "Can't get memory for rsp_socket_hash\n");
 		}
 		errno = ENOMEM;
-		close(sd);
 		return(-1);
 	}
+	sdata->homeScope = rsp_find_scope_with_id(op_scope);
+	if(sdata->homeScope == NULL) {
+		if(rsp_debug) {
+			fprintf(stderr, "Can't find scope id:%d\n", op_scope);
+		}
+		free(sdata);
+		return (-1);
+	}
+
+	sd = socket(domain, type, protocol);
+	if(sd == -1) {
+		return (sd);
+	}
+
 	/* setup and bind the port */
 	memset(sdata, 0, sizeof(struct rsp_socket_hash));
 	sdata->sd = sd;
@@ -1113,15 +1235,15 @@ rsp_forcefailover(int sockfd,
 }
 
 
-int
+uint32_t
 rsp_initialize(struct rsp_info *info)
 {
 	/* First do we do major initialization? */
-	int id;
+	uint32_t id;
 	if (rsp_inited == 0) {
 		/* yep */
 		if(rsp_init() != 0) {
-			return(-1);
+			return(0);
 		}
 	}
 
