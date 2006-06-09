@@ -2269,6 +2269,9 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 				sctp_free_assoc(*inp_p, *stcb, 0);
 				return (NULL);
 			}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			socket_lock(so, 1);
+#endif
 			inp = (struct sctp_inpcb *)so->so_pcb;
 			inp->sctp_flags = (SCTP_PCB_FLAGS_TCPTYPE |
 			    SCTP_PCB_FLAGS_CONNECTED |
@@ -2305,6 +2308,9 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			*inp_p = inp;
 
 			sctp_ulp_notify(notification, *stcb, 0, NULL);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			socket_unlock(so, 1);
+#endif
 			return (m);
 		}
 	}
