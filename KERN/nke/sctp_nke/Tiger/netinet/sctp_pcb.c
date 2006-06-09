@@ -1890,8 +1890,6 @@ sctp_inpcb_alloc(struct socket *so)
 #ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
 	inp->ip_inp.inp.inp_state = INPCB_STATE_INUSE;
 #endif
-	inp->ip_inp.inp.inp_socket = so;
-
 	/* setup socket pointers */
 	inp->sctp_socket = so;
 
@@ -1996,6 +1994,7 @@ sctp_inpcb_alloc(struct socket *so)
 	LIST_INSERT_HEAD(&sctppcbinfo.listhead, inp, sctp_list);
 #ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
 	LIST_INSERT_HEAD(&sctppcbinfo.inplisthead, &inp->ip_inp.inp, inp_list);
+	socket_lock(inp->sctp_socket, 1);
 	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 #endif
 	SCTP_INP_INFO_WUNLOCK();
@@ -2100,7 +2099,9 @@ sctp_inpcb_alloc(struct socket *so)
 	/* add default NULL key as key id 0 */
 	null_key = sctp_alloc_sharedkey();
 	sctp_insert_sharedkey(&m->shared_keys, null_key);
-
+#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
+	socket_unlock(inp->sctp_socket, 1);
+#endif
 	SCTP_INP_WUNLOCK(inp);
 	return (error);
 }
