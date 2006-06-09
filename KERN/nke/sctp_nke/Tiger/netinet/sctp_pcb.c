@@ -2124,16 +2124,6 @@ sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
 	SCTP_INP_WLOCK(new_inp);
 	SCTP_TCB_LOCK(stcb);
 
-	/*
-	 * Change the timer's argument of old_inp, to new_inp, so stop it at
-	 * first.
-	 */
-	TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
-		sctp_timer_stop(SCTP_TIMER_TYPE_PATHMTURAISE, old_inp,
-		    stcb, net);
-	}
-
-
 	new_inp->sctp_ep.time_of_secret_change =
 	    old_inp->sctp_ep.time_of_secret_change;
 	memcpy(new_inp->sctp_ep.secret_key, old_inp->sctp_ep.secret_key,
@@ -2233,6 +2223,25 @@ sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
 			    sctp_nxt_addr);
 			new_inp->laddr_count++;
 		}
+	}
+	/* Now any running timers need to be adjusted 
+	 * since we really don't care if they are running
+	 * or not just blast in the new_inp into all of
+	 * them.
+	 */
+
+	stcb->asoc.hb_timer.ep = (void *)new_inp;
+	stcb->asoc.dack_timer.ep = (void *)new_inp;
+	stcb->asoc.asconf_timer.ep = (void *)new_inp;
+	stcb->asoc.strreset_timer.ep = (void *)new_inp;
+	stcb->asoc.shut_guard_timer.ep = (void *)new_inp;
+	stcb->asoc.autoclose_timer.ep = (void *)new_inp;
+	stcb->asoc.delayed_event_timer.ep = (void *)new_inp;
+	/* now what about the nets? */
+	TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
+		net->pmtu_timer.ep = (void *)new_inp;
+		net->rxt_timer.ep = (void *)new_inp;
+		net->fr_timer.ep = (void *)new_inp;
 	}
 	SCTP_INP_WUNLOCK(new_inp);
 	SCTP_INP_WUNLOCK(old_inp);
