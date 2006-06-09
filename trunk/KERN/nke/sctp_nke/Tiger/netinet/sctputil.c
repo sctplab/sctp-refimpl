@@ -1347,6 +1347,9 @@ sctp_timeout_handler(void *t)
 
 	if (stcb) {
 		SCTP_TCB_LOCK(stcb);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		sctp_lock_assert(stcb->sctp_socket);
+#endif
 	}
 	/* mark as being serviced now */
 	callout_deactivate(&tmr->timer);
@@ -1358,6 +1361,9 @@ sctp_timeout_handler(void *t)
 	typ = tmr->type;
 	switch (tmr->type) {
 	case SCTP_TIMER_TYPE_ADDR_WQ:
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		/* if inp == 0 we do not have any lock here... FIXME MT */
+#endif
 		sctp_handle_addr_wq();
 		break;
 	case SCTP_TIMER_TYPE_ITERATOR:
@@ -1633,7 +1639,15 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	tmr = NULL;
 	if (stcb) {
 		STCB_TCB_LOCK_ASSERT(stcb);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		sctp_lock_assert(stcb->sctp_socket);
+#endif
 	}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	if (inp) {
+		sctp_lock_assert(inp->sctp_socket);
+	}
+#endif
 	switch (t_type) {
 	case SCTP_TIMER_TYPE_ADDR_WQ:
 		/* Only 1 tick away :-) */
@@ -1991,7 +2005,15 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	tmr = NULL;
 	if (stcb) {
 		STCB_TCB_LOCK_ASSERT(stcb);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		sctp_lock_assert(stcb->sctp_socket);
+#endif
 	}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	if (inp) {
+		sctp_lock_assert(inp->sctp_socket);
+	}
+#endif
 	switch (t_type) {
 	case SCTP_TIMER_TYPE_ADDR_WQ:
 		tmr = &sctppcbinfo.addr_wq_timer;

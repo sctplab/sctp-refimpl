@@ -2115,10 +2115,19 @@ sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
 	struct sctppcbhead *head;
 	struct sctp_laddr *laddr, *oladdr;
 
-	SCTP_TCB_UNLOCK(stcb);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+	sctp_lock_assert(old_inp->sctp_socket);
+	sctp_lock_assert(new_inp->sctp_socket);
+	sctp_lock_assert(stcb->sctp_socket);
+	if (!lck_rw_try_lock_exclusive(sctppcbinfo.ipi_ep_mtx)) {
+		socket_unlock(old_inp->sctp_socket, 0);
+		socket_unlock(new_inp->sctp_socket, 0);
+		lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+		socket_lock(old_inp->sctp_socket, 0);
+		socket_lock(new_inp->sctp_socket, 0);
+	}
 #endif
+	SCTP_TCB_UNLOCK(stcb);
 	SCTP_INP_INFO_WLOCK();
 	SCTP_INP_WLOCK(old_inp);
 	SCTP_INP_WLOCK(new_inp);
