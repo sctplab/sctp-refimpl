@@ -136,6 +136,9 @@ sctp_stop_all_cookie_timers(struct sctp_tcb *stcb)
 	struct sctp_nets *net;
 
 	STCB_TCB_LOCK_ASSERT(stcb);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sctp_lock_assert(stcb->sctp_socket);
+#endif
 	TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 		if ((callout_pending(&net->rxt_timer.timer)) &&
 		    (net->rxt_timer.type == SCTP_TIMER_TYPE_COOKIE)) {
