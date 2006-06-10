@@ -229,7 +229,7 @@ struct sctp_epinfo {
 	struct mtx it_mtx;
 	struct mtx ipi_count_mtx;
 	struct mtx ipi_addr_mtx;
-#elif defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+#elif defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 #ifdef _KERN_LOCKS_H_
 	lck_grp_attr_t *mtx_grp_attr;
 	lck_grp_t *mtx_grp;
@@ -417,16 +417,9 @@ struct sctp_inpcb {
 	struct mtx inp_mtx;
 	struct mtx inp_create_mtx;
 	uint32_t refcount;
-#elif defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
-#ifdef _KERN_LOCKS_H_
-	lck_mtx_t *inp_mtx;
-	lck_mtx_t *inp_create_mtx;
+#endif
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	uint32_t refcount;
-#else
-	void *inp_mtx;
-	void *inp_create_mtx;
-	uint32_t refcount;
-#endif				/* _KERN_LOCKS_H_ */
 #endif
 };
 
@@ -453,12 +446,6 @@ struct sctp_tcb {
 	uint16_t resv;
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
 	struct mtx tcb_mtx;
-#elif defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
-#ifdef _KERN_LOCKS_H_
-	lck_mtx_t *tcb_mtx;
-#else
-	void *tcb_mtx;
-#endif				/* _KERN_LOCKS_H_ */
 #endif
 };
 

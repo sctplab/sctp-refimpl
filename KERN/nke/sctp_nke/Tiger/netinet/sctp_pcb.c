@@ -1892,10 +1892,9 @@ sctp_inpcb_alloc(struct socket *so)
 #endif
 	/* setup socket pointers */
 	inp->sctp_socket = so;
+	inp->ip_inp.inp.inp_socket = so;
 
 	inp->partial_delivery_point = so->so_rcv.sb_hiwat - 6000;
-	/* setup inpcb socket too */
-	inp->ip_inp.inp.inp_socket = so;
 	inp->sctp_frag_point = SCTP_DEFAULT_MAXSEGMENT;
 
 #ifdef IPSEC
