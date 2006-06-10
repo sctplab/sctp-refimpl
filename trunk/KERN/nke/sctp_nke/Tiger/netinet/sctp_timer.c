@@ -1912,10 +1912,16 @@ sctp_slowtimo()
 
 	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
 	LIST_FOREACH(inp, &sctppcbinfo.inplisthead, inp_list) {
-		if (inp->inp_state == INPCB_STATE_DEAD) {
-			LIST_REMOVE(inp, inp_list);
-			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, (struct sctp_inpcb *)inp);
-			SCTP_DECR_EP_COUNT();
+		if (lck_mtx_try_lock(inp->inpcb_mtx)) {
+			if (inp->inp_state == INPCB_STATE_DEAD) {
+				LIST_REMOVE(inp, inp_list);
+				lck_mtx_unlock(inp->inpcb_mtx);
+				lck_mtx_free(inp->inpcb_mtx, sctppcbinfo.mtx_grp);
+				SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, (struct sctp_inpcb *)inp);
+				SCTP_DECR_EP_COUNT();
+			} else {
+				lck_mtx_unlock(inp->inpcb_mtx);
+			}
 		}
 	}
 	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
