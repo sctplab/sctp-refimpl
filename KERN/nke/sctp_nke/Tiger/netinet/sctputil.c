@@ -1215,7 +1215,16 @@ sctp_handle_addr_wq(void)
 	SCTP_DECR_LADDR_COUNT();
 }
 
-
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+/*
+ * The timeout handler doesn't lock any socket in case of
+ * tmr->type == SCTP_TIMER_TYPE_ADDR_WQ or
+ * tmr->type == SCTP_TIMER_TYPE_ITERATOR.
+ * In all other cases the inp->sctp_socket is locked and
+ * if the stcb is not NULL it is verified that the
+ * stcb->sctp_socket is locked.
+ */
+#endif
 static void
 sctp_timeout_handler(void *t)
 {
@@ -1223,7 +1232,7 @@ sctp_timeout_handler(void *t)
 	struct sctp_tcb *stcb;
 	struct sctp_nets *net;
 	struct sctp_timer *tmr;
-	int s, did_output, typ;
+	int s, did_output;
 
 #if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
 	boolean_t funnel_state;
@@ -1298,7 +1307,8 @@ sctp_timeout_handler(void *t)
 			return;
 		}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		socket_lock(inp->sctp_socket, 1);
+		if (tmr->type != SCTP_TIMER_TYPE_ITERATOR)
+			socket_lock(inp->sctp_socket, 1);
 #endif
 	}
 	if (stcb) {
@@ -1358,12 +1368,8 @@ sctp_timeout_handler(void *t)
 		SCTP_INP_INCR_REF(inp);
 		SCTP_INP_WUNLOCK(inp);
 	}
-	typ = tmr->type;
 	switch (tmr->type) {
 	case SCTP_TIMER_TYPE_ADDR_WQ:
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		/* if inp == 0 we do not have any lock here... FIXME MT */
-#endif
 		sctp_handle_addr_wq();
 		break;
 	case SCTP_TIMER_TYPE_ITERATOR:
@@ -1605,7 +1611,7 @@ out_no_decr:
 
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_TIMER1) {
-		printf("Timer now complete (type %d)\n", typ);
+		printf("Timer now complete (type %d)\n", tmr->type);
 	}
 #endif				/* SCTP_DEBUG */
 	splx(s);
@@ -1615,7 +1621,8 @@ out_no_decr:
 #endif
 	if (inp) {
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		if (!(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
+		if ((tmr->type != SCTP_TIMER_TYPE_ITERATOR) &&
+		    (!(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE))) {
 			socket_unlock(inp->sctp_socket, 1);
 		}
 #endif
@@ -1644,7 +1651,11 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 #endif
 	}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	if (inp) {
+	/*
+	 * In case of t_type == SCTP_TIMER_TYPE_ITERATOR inp points
+	 * to an interator.
+	 */ 
+	if ((inp != NULL) && (t_type != SCTP_TIMER_TYPE_ITERATOR)) {
 		sctp_lock_assert(inp->sctp_socket);
 	}
 #endif
@@ -1830,6 +1841,9 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		to_ticks = inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_SIGNATURE];
 		break;
 	case SCTP_TIMER_TYPE_ASOCKILL:
+		if (stcb == NULL) {
+			return (EFAULT);
+		}
 		tmr = &stcb->asoc.strreset_timer;
 		to_ticks = MSEC_TO_TICKS(SCTP_ASOC_KILL_TIMEOUT);
 		break;
@@ -2010,7 +2024,11 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 #endif
 	}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	if (inp) {
+	/*
+	 * In case of t_type == SCTP_TIMER_TYPE_ITERATOR inp points
+	 * to an interator.
+	 */ 
+	if ((inp != NULL) && (t_type != SCTP_TIMER_TYPE_ITERATOR)) {
 		sctp_lock_assert(inp->sctp_socket);
 	}
 #endif
@@ -2081,6 +2099,9 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		/*
 		 * Stop the asoc kill timer.
 		 */
+		if (stcb == NULL) {
+			return (EFAULT);
+		}
 		tmr = &stcb->asoc.strreset_timer;
 		break;
 
@@ -2093,10 +2114,7 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		tmr = &inp->sctp_ep.signature_change;
 		break;
 	case SCTP_TIMER_TYPE_PATHMTURAISE:
-		if (stcb == NULL) {
-			return (EFAULT);
-		}
-		if (net == NULL) {
+		if ((stcb == NULL) || (net == NULL)) {
 			return (EFAULT);
 		}
 		tmr = &net->pmtu_timer;

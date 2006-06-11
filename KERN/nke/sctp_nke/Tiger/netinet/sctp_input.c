@@ -4622,7 +4622,8 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 	int abort_flag = 0;
 
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	sctp_lock_assert(inp->sctp_socket);
+	if (inp != NULL)
+		sctp_lock_assert(inp->sctp_socket);
 #endif
 	sctp_pegs[SCTP_DATAGRAMS_RCVD]++;
 #ifdef SCTP_AUDITING_ENABLED
@@ -4639,6 +4640,9 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 	if (stcb) {
 		/* always clear this before beginning a packet */
 		stcb->asoc.authenticated = 0;
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		sctp_lock_assert(stcb->sctp_socket);
+#endif
 	}
 	if (IS_SCTP_CONTROL(ch)) {
 		/* process the control portion of the SCTP packet */
