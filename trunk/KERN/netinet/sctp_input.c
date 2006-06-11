@@ -136,6 +136,9 @@ sctp_stop_all_cookie_timers(struct sctp_tcb *stcb)
 	struct sctp_nets *net;
 
 	STCB_TCB_LOCK_ASSERT(stcb);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sctp_lock_assert(stcb->sctp_socket);
+#endif
 	TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 		if ((callout_pending(&net->rxt_timer.timer)) &&
 		    (net->rxt_timer.type == SCTP_TIMER_TYPE_COOKIE)) {
@@ -2266,6 +2269,9 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 				sctp_free_assoc(*inp_p, *stcb, 0);
 				return (NULL);
 			}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			socket_lock(so, 1);
+#endif
 			inp = (struct sctp_inpcb *)so->so_pcb;
 			inp->sctp_flags = (SCTP_PCB_FLAGS_TCPTYPE |
 			    SCTP_PCB_FLAGS_CONNECTED |
@@ -2302,6 +2308,9 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			*inp_p = inp;
 
 			sctp_ulp_notify(notification, *stcb, 0, NULL);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			socket_unlock(so, 1);
+#endif
 			return (m);
 		}
 	}
@@ -4613,7 +4622,8 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 	int abort_flag = 0;
 
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	sctp_lock_assert(inp->sctp_socket);
+	if (inp != NULL)
+		sctp_lock_assert(inp->sctp_socket);
 #endif
 	sctp_pegs[SCTP_DATAGRAMS_RCVD]++;
 #ifdef SCTP_AUDITING_ENABLED
@@ -4630,6 +4640,9 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 	if (stcb) {
 		/* always clear this before beginning a packet */
 		stcb->asoc.authenticated = 0;
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		sctp_lock_assert(stcb->sctp_socket);
+#endif
 	}
 	if (IS_SCTP_CONTROL(ch)) {
 		/* process the control portion of the SCTP packet */

@@ -585,7 +585,9 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	uint32_t orig_flight;
 	uint32_t tsnlast, tsnfirst;
 
-
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sctp_lock_assert(stcb->sctp_socket);
+#endif
 	/*
 	 * CMT: Using RTX_SSTHRESH policy for CMT. If CMT is being used,
 	 * then pick dest with largest ssthresh for any retransmission.
@@ -934,6 +936,9 @@ sctp_move_all_chunks_to_alt(struct sctp_tcb *stcb,
 	struct sctp_stream_out *outs;
 	struct sctp_tmit_chunk *chk;
 
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sctp_lock_assert(stcb->sctp_socket);
+#endif
 	if (net == alt)
 		/* nothing to do */
 		return;
@@ -973,7 +978,9 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 	struct sctp_nets *alt;
 	int win_probe, num_mk;
 
-
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sctp_lock_assert(stcb->sctp_socket);
+#endif
 #ifdef SCTP_FR_LOGGING
 	sctp_log_fr(sctp_pegs[SCTP_PEG_TSNS_SENT], 0, 0, SCTP_FR_T3_TIMEOUT);
 #ifdef SCTP_CWND_LOGGING
@@ -1126,6 +1133,9 @@ sctp_t1init_timer(struct sctp_inpcb *inp,
     struct sctp_tcb *stcb,
     struct sctp_nets *net)
 {
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sctp_lock_assert(stcb->sctp_socket);
+#endif
 	/* bump the thresholds */
 	if (stcb->asoc.delayed_connection) {
 		/*
@@ -1177,6 +1187,9 @@ sctp_cookie_timer(struct sctp_inpcb *inp,
 	struct sctp_nets *alt;
 	struct sctp_tmit_chunk *cookie;
 
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sctp_lock_assert(stcb->sctp_socket);
+#endif
 	/* first before all else we must find the cookie */
 	TAILQ_FOREACH(cookie, &stcb->asoc.control_send_queue, sctp_next) {
 		if (cookie->rec.chunk_id == SCTP_COOKIE_ECHO) {
@@ -1546,6 +1559,9 @@ int
 sctp_heartbeat_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
     struct sctp_nets *net, int cnt_of_unconf)
 {
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sctp_lock_assert(stcb->sctp_socket);
+#endif
 	if (net) {
 		if (net->hb_responded == 0) {
 			sctp_backoff_on_timeout(stcb, net, 1, 0);
@@ -1896,10 +1912,16 @@ sctp_slowtimo()
 
 	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
 	LIST_FOREACH(inp, &sctppcbinfo.inplisthead, inp_list) {
-		if (inp->inp_state == INPCB_STATE_DEAD) {
-			LIST_REMOVE(inp, inp_list);
-			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, (struct sctp_inpcb *)inp);
-			SCTP_DECR_EP_COUNT();
+		if (lck_mtx_try_lock(inp->inpcb_mtx)) {
+			if (inp->inp_state == INPCB_STATE_DEAD) {
+				LIST_REMOVE(inp, inp_list);
+				lck_mtx_unlock(inp->inpcb_mtx);
+				lck_mtx_free(inp->inpcb_mtx, sctppcbinfo.mtx_grp);
+				SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, (struct sctp_inpcb *)inp);
+				SCTP_DECR_EP_COUNT();
+			} else {
+				lck_mtx_unlock(inp->inpcb_mtx);
+			}
 		}
 	}
 	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
