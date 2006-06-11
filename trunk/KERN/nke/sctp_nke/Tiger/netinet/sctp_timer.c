@@ -1909,7 +1909,9 @@ void
 sctp_slowtimo()
 {
 	struct inpcb *inp;
+	unsigned int n1, n2;
 
+	n1 = n2 = 0;
 	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
 	LIST_FOREACH(inp, &sctppcbinfo.inplisthead, inp_list) {
 		if (lck_mtx_try_lock(inp->inpcb_mtx)) {
@@ -1922,9 +1924,16 @@ sctp_slowtimo()
 			} else {
 				lck_mtx_unlock(inp->inpcb_mtx);
 			}
+		} else {
+			n1++;
+			if (inp->inp_state == INPCB_STATE_DEAD) {
+				n2++;
+			}
 		}
 	}
 	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
+	if (n2 > 0)
+		printf("sctp_slowtimo: %d inps were locked, %d of them were dead.\n",
+		       n1, n2);
 }
-
 #endif
