@@ -1890,14 +1890,11 @@ sctp_inpcb_alloc(struct socket *so)
 #ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
 	inp->ip_inp.inp.inp_state = INPCB_STATE_INUSE;
 #endif
-	inp->ip_inp.inp.inp_socket = so;
-
 	/* setup socket pointers */
 	inp->sctp_socket = so;
+	inp->ip_inp.inp.inp_socket = so;
 
 	inp->partial_delivery_point = so->so_rcv.sb_hiwat - 6000;
-	/* setup inpcb socket too */
-	inp->ip_inp.inp.inp_socket = so;
 	inp->sctp_frag_point = SCTP_DEFAULT_MAXSEGMENT;
 
 #ifdef IPSEC
@@ -1996,6 +1993,7 @@ sctp_inpcb_alloc(struct socket *so)
 	LIST_INSERT_HEAD(&sctppcbinfo.listhead, inp, sctp_list);
 #ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
 	LIST_INSERT_HEAD(&sctppcbinfo.inplisthead, &inp->ip_inp.inp, inp_list);
+	socket_lock(inp->sctp_socket, 1);
 	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 #endif
 	SCTP_INP_INFO_WUNLOCK();
@@ -2100,7 +2098,9 @@ sctp_inpcb_alloc(struct socket *so)
 	/* add default NULL key as key id 0 */
 	null_key = sctp_alloc_sharedkey();
 	sctp_insert_sharedkey(&m->shared_keys, null_key);
-
+#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
+	socket_unlock(inp->sctp_socket, 1);
+#endif
 	SCTP_INP_WUNLOCK(inp);
 	return (error);
 }
@@ -2115,10 +2115,19 @@ sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
 	struct sctppcbhead *head;
 	struct sctp_laddr *laddr, *oladdr;
 
-	SCTP_TCB_UNLOCK(stcb);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+	sctp_lock_assert(old_inp->sctp_socket);
+	sctp_lock_assert(new_inp->sctp_socket);
+	sctp_lock_assert(stcb->sctp_socket);
+	if (!lck_rw_try_lock_exclusive(sctppcbinfo.ipi_ep_mtx)) {
+		socket_unlock(old_inp->sctp_socket, 0);
+		socket_unlock(new_inp->sctp_socket, 0);
+		lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+		socket_lock(old_inp->sctp_socket, 0);
+		socket_lock(new_inp->sctp_socket, 0);
+	}
 #endif
+	SCTP_TCB_UNLOCK(stcb);
 	SCTP_INP_INFO_WLOCK();
 	SCTP_INP_WLOCK(old_inp);
 	SCTP_INP_WLOCK(new_inp);
