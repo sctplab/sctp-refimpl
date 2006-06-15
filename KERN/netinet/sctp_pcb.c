@@ -5683,7 +5683,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 				if (sctp_debug_on & SCTP_DEBUG_AUTH1)
 					printf("SCTP: ignoring duplicate peer RANDOM\n");
 #endif
-				break;
+				goto next_param;
 			}
 			phdr = sctp_get_next_param(m, offset,
 			    (struct sctp_paramhdr *)store,
@@ -5713,7 +5713,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 				if (sctp_debug_on & SCTP_DEBUG_AUTH1)
 					printf("SCTP: ignoring duplicate peer HMAC list\n");
 #endif
-				break;
+				goto next_param;
 			}
 			phdr = sctp_get_next_param(m, offset,
 			    (struct sctp_paramhdr *)store,
@@ -5746,7 +5746,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 				if (sctp_debug_on & SCTP_DEBUG_AUTH1)
 					printf("SCTP: ignoring duplicate peer Chunks list\n");
 #endif
-				break;
+				goto next_param;
 			}
 			phdr = sctp_get_next_param(m, offset,
 			    (struct sctp_paramhdr *)store,
@@ -5786,6 +5786,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 				break;
 			}
 		}
+	next_param:
 		offset += SCTP_SIZE32(plen);
 		if (offset >= limit) {
 			break;
@@ -5810,8 +5811,11 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 		}
 	}
 	/* validate authentication required parameters */
-	if (!got_random && !got_hmacs)
+	if (got_random && got_hmacs) {
+		stcb->asoc.peer_supports_auth = 1;
+	} else {
 		stcb->asoc.peer_supports_auth = 0;
+	}
 	return (0);
 }
 
