@@ -1793,6 +1793,7 @@ sctp_iterator_timer(struct sctp_iterator *it)
 done_with_iterator:
 		SCTP_ITERATOR_UNLOCK();
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		I_AM_HERE;
 		lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
 #endif
 		SCTP_INP_INFO_WLOCK();
@@ -1910,9 +1911,11 @@ sctp_slowtimo()
 {
 	struct inpcb *inp;
 	struct socket *so;
- 
+	unsigned int n = 0;
+	
 	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
 	LIST_FOREACH(inp, &sctppcbinfo.inplisthead, inp_list) {
+		n++;
 		if (inp->inp_wantcnt != WNT_STOPUSING) 
 			continue;
 		if (lck_mtx_try_lock(inp->inpcb_mtx)) {
@@ -1923,6 +1926,8 @@ sctp_slowtimo()
 			}
 			if (inp->inp_state == INPCB_STATE_DEAD) {
 				LIST_REMOVE(inp, inp_list);
+				inp->inp_socket = NULL;
+				so->so_pcb      = NULL;
 				lck_mtx_unlock(inp->inpcb_mtx);
 				lck_mtx_free(inp->inpcb_mtx, sctppcbinfo.mtx_grp);
 				SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, (struct sctp_inpcb *)inp);
@@ -1934,5 +1939,7 @@ sctp_slowtimo()
 		}
 	}
 	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
+	if (n > 0)
+		printf("Number of inps: %u.\n", n);
 }
 #endif

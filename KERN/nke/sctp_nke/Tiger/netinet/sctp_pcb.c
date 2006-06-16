@@ -2824,6 +2824,11 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	sctp_lock_assert(inp->ip_inp.inp.inp_socket);
+	if (in_pcb_checkstate((struct inpcb *)inp, WNT_STOPUSING, 1) != WNT_STOPUSING)
+	{
+		panic("in_pcbdetach so=%x prot=%x couldn't set to STOPUSING\n",
+		       so, so->so_proto->pr_protocol);
+	}
 	if (!lck_mtx_try_lock(sctppcbinfo.it_mtx)) {
 		socket_unlock(inp->ip_inp.inp.inp_socket, 0);
 		lck_mtx_lock(sctppcbinfo.it_mtx);
