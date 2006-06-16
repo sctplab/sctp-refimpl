@@ -1003,6 +1003,14 @@ sctp_detach(struct socket *so)
 #else
 	s = splnet();
 #endif
+	/* mark socket state as dead */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	if (in_pcb_checkstate((struct inpcb *)inp, WNT_STOPUSING, 1) != WNT_STOPUSING)
+	{
+		panic("in_pcbdetach so=%x prot=%x couldn't set to STOPUSING\n",
+		       so, so->so_proto->pr_protocol);
+	}
+#endif
 	if (((so->so_options & SO_LINGER) && (so->so_linger == 0)) ||
 	    (so->so_rcv.sb_cc > 0)) {
 		sctp_inpcb_free(inp, 1);
@@ -2864,9 +2872,9 @@ sctp_optsget(struct socket *so,
 			spcb = mtod(m, struct sctp_pcbinfo *);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			if (!lck_rw_try_lock_shared(sctppcbinfo.ipi_ep_mtx)) {
-				socket_unlock(inp->sctp_socket, 0);
+				socket_unlock(inp->ip_inp.inp.inp_socket, 0);
 				lck_rw_lock_shared(sctppcbinfo.ipi_ep_mtx);
-				socket_lock(inp->sctp_socket, 0);
+				socket_lock(inp->ip_inp.inp.inp_socket, 0);
 			}
 #endif
 			sctp_fill_pcbinfo(spcb);
