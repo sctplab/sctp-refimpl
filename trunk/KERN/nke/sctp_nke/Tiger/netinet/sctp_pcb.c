@@ -2824,11 +2824,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	sctp_lock_assert(inp->ip_inp.inp.inp_socket);
-	if (in_pcb_checkstate((struct inpcb *)inp, WNT_STOPUSING, 1) != WNT_STOPUSING)
-	{
-		panic("in_pcbdetach so=%x prot=%x couldn't set to STOPUSING\n",
-		       so, so->so_proto->pr_protocol);
-	}
 	if (!lck_mtx_try_lock(sctppcbinfo.it_mtx)) {
 		socket_unlock(inp->ip_inp.inp.inp_socket, 0);
 		lck_mtx_lock(sctppcbinfo.it_mtx);
@@ -2850,7 +2845,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		sctp_m_freem(inp->pkt);
 		inp->pkt = NULL;
 	}
-	so = inp->sctp_socket;
 	m = &inp->sctp_ep;
 	ip_pcb = &inp->ip_inp.inp;	/* we could just cast the main pointer
 					 * here but I will be nice :> (i.e.
@@ -2982,6 +2976,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 			return;
 		}
 	}
+
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
 		/*
 		 * Now the question comes as to if this EP was ever bound at
@@ -3150,6 +3145,14 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 #elif !(defined __APPLE__)
 		sofree(so);
 #endif
+#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
+		if (in_pcb_checkstate((struct inpcb *)inp, WNT_STOPUSING, 1) != WNT_STOPUSING)
+		{
+			panic("in_pcbdetach so=%x prot=%x couldn't set to STOPUSING\n",
+			      so, so->so_proto->pr_protocol);
+		}
+		so->so_flags |= SOF_PCBCLEARING;
+#endif
 		/* Unlocks not needed since the socket is gone now */
 	}
 	if (ip_pcb->inp_options) {
@@ -3214,7 +3217,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	inp_save = LIST_NEXT(inp, sctp_list);
 #ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
 	inp->ip_inp.inp.inp_state = INPCB_STATE_DEAD;
-	so->so_flags |= SOF_PCBCLEARING;
 #endif
 	LIST_REMOVE(inp, sctp_list);
 
