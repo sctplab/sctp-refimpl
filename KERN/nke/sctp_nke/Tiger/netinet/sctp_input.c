@@ -137,7 +137,7 @@ sctp_stop_all_cookie_timers(struct sctp_tcb *stcb)
 
 	STCB_TCB_LOCK_ASSERT(stcb);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	sctp_lock_assert(stcb->sctp_socket);
+	sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
 #endif
 	TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 		if ((callout_pending(&net->rxt_timer.timer)) &&
@@ -4623,7 +4623,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	if (inp != NULL)
-		sctp_lock_assert(inp->sctp_socket);
+		sctp_lock_assert(inp->ip_inp.inp.inp_socket);
 #endif
 	sctp_pegs[SCTP_DATAGRAMS_RCVD]++;
 #ifdef SCTP_AUDITING_ENABLED
@@ -4641,7 +4641,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		/* always clear this before beginning a packet */
 		stcb->asoc.authenticated = 0;
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		sctp_lock_assert(stcb->sctp_socket);
+		sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
 #endif
 	}
 	if (IS_SCTP_CONTROL(ch)) {
@@ -5016,7 +5016,7 @@ sctp_input(m, va_alist)
 				sctp_send_packet_dropped(stcb, net, m, iphlen, 1);
 				sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_INPUT_ERROR);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-				socket_unlock(inp->sctp_socket, 1);
+				socket_unlock(inp->ip_inp.inp.inp_socket, 1);
 #endif
 			} else if ((inp != NULL) && (stcb == NULL)) {
 				refcount_up = 1;
@@ -5160,7 +5160,7 @@ sctp_skip_csum_4:
 
 
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	sctp_lock_assert(inp->sctp_socket);
+	sctp_lock_assert(inp->ip_inp.inp.inp_socket);
 #endif
 
 	/*
@@ -5214,9 +5214,7 @@ sctp_skip_csum_4:
 	sctp_verify_no_locks();
 #endif
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	if (!(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
-		socket_unlock(inp->sctp_socket, 1);
-	}
+	socket_unlock(inp->ip_inp.inp.inp_socket, 1);
 #endif
 	return;
 bad:
