@@ -1793,7 +1793,6 @@ sctp_iterator_timer(struct sctp_iterator *it)
 done_with_iterator:
 		SCTP_ITERATOR_UNLOCK();
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		I_AM_HERE;
 		lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
 #endif
 		SCTP_INP_INFO_WLOCK();
@@ -1911,17 +1910,23 @@ sctp_slowtimo()
 {
 	struct inpcb *inp;
 	struct socket *so;
-	unsigned int n = 0;
-	
+#ifdef SCTP_DEBUG
+	unsigned int n, n1, n2, n3, n4;
+
+	n = n1 = n2 = n3 = n4 = 0;
+#endif
 	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
 	LIST_FOREACH(inp, &sctppcbinfo.inplisthead, inp_list) {
 		n++;
-		if (inp->inp_wantcnt != WNT_STOPUSING) 
+		if (inp->inp_wantcnt != WNT_STOPUSING) {
+			n1++;
 			continue;
+		}
 		if (lck_mtx_try_lock(inp->inpcb_mtx)) {
 			so = inp->inp_socket;
 			if (so->so_usecount != 0) {
-				lck_mtx_unlock(inp->inpcb_mtx);	
+				lck_mtx_unlock(inp->inpcb_mtx);
+				n2++;
 				continue;
 			}
 			if (inp->inp_state == INPCB_STATE_DEAD) {
@@ -1935,11 +1940,18 @@ sctp_slowtimo()
 				SCTP_DECR_EP_COUNT();
 			} else {
 				lck_mtx_unlock(inp->inpcb_mtx);
+				n3++;
 			}
+		} else {
+			n4++;
 		}
 	}
 	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
-	if (n > 0)
-		printf("Number of inps: %u.\n", n);
+#ifdef SCTP_DEBUG
+	if ((sctp_debug_on & SCTP_DEBUG_PCB2) && (n > 0)) {
+		printf("sctp_slowtimo: inps: %u, inp_wantcnt: %u, so_usecount : %u, inp_state: %u, inpcb_mtx: %u\n",
+		       n, n1, n2, n3, n4);
+	}
+#endif
 }
 #endif
