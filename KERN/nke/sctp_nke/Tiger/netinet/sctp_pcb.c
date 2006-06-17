@@ -2806,6 +2806,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 #else
 	s = splnet();
 #endif
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sctp_lock_assert(inp->ip_inp.inp.inp_socket);
+#endif
 	SCTP_ASOC_CREATE_LOCK(inp);
 	SCTP_INP_WLOCK(inp);
 	so = inp->sctp_socket;
@@ -2823,19 +2826,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		return;
 	}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	sctp_lock_assert(inp->ip_inp.inp.inp_socket);
-	if (!lck_mtx_try_lock(sctppcbinfo.it_mtx)) {
-		socket_unlock(inp->ip_inp.inp.inp_socket, 0);
-		lck_mtx_lock(sctppcbinfo.it_mtx);
-		socket_lock(inp->ip_inp.inp.inp_socket, 0);
-	}
-	if (!lck_rw_try_lock_exclusive(sctppcbinfo.ipi_ep_mtx)) {
-		socket_unlock(inp->ip_inp.inp.inp_socket, 0);
-		lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
-		socket_lock(inp->ip_inp.inp.inp_socket, 0);
-	}
-#endif
 	sctp_timer_stop(SCTP_TIMER_TYPE_NEWCOOKIE, inp, NULL, NULL);
 
 	if (inp->control) {
@@ -2970,10 +2960,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 			if (locked_so) {
 				SOCK_UNLOCK(so);
 			}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
-			SCTP_ITERATOR_UNLOCK();
-#endif
 			return;
 		}
 	}
@@ -3004,14 +2990,10 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		if (locked_so) {
 			SOCK_UNLOCK(so);
 		}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
-		SCTP_ITERATOR_UNLOCK();
-#endif
 		return;
 	}
 #endif
-#ifndef SCTP_APPLE_FINE_GRAINED_LOCKING
+#if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	if (so) {
 		so->so_pcb = NULL;
 	}
@@ -3214,16 +3196,27 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	SCTP_INP_INFO_WLOCK();
 	/* now reget the inp lock */
 	SCTP_INP_WLOCK(inp);
-
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	if (!lck_mtx_try_lock(sctppcbinfo.it_mtx)) {
+		socket_unlock(inp->ip_inp.inp.inp_socket, 0);
+		lck_mtx_lock(sctppcbinfo.it_mtx);
+		socket_lock(inp->ip_inp.inp.inp_socket, 0);
+	}
+	if (!lck_rw_try_lock_exclusive(sctppcbinfo.ipi_ep_mtx)) {
+		socket_unlock(inp->ip_inp.inp.inp_socket, 0);
+		lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+		socket_lock(inp->ip_inp.inp.inp_socket, 0);
+	}
+#endif
 	inp_save = LIST_NEXT(inp, sctp_list);
-#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	inp->ip_inp.inp.inp_state = INPCB_STATE_DEAD;
 #endif
 	LIST_REMOVE(inp, sctp_list);
 
 	/* fix any iterators only after out of the list */
 	sctp_iterator_inp_being_freed(inp, inp_save);
-#ifndef SCTP_APPLE_FINE_GRAINED_LOCKING
+#if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	SCTP_ITERATOR_UNLOCK();
 #endif
 	/*
@@ -4141,6 +4134,10 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 #else
 	s = splnet();
 #endif
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sctp_lock_assert(inp->ip_inp.inp.inp_socket);
+#endif
+
 	if (stcb->asoc.state == 0) {
 		printf("Freeing already free association:%p - huh??\n",
 		    stcb);
@@ -4238,9 +4235,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	}
 	SCTP_TCB_UNLOCK(stcb);
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	sctp_lock_assert(inp->ip_inp.inp.inp_socket);
-#endif
 #if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	SCTP_ITERATOR_LOCK();
 #endif
@@ -4290,8 +4284,9 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	/* Now lets remove it from the list of ALL associations in the EP */
 	LIST_REMOVE(stcb, sctp_tcblist);
 	SCTP_INP_WUNLOCK(inp);
+#if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	SCTP_ITERATOR_UNLOCK();
-
+#endif
 
 	/* pull from vtag hash */
 	LIST_REMOVE(stcb, sctp_asocs);
@@ -4300,6 +4295,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	sctp_add_vtag_to_timewait(inp, asoc->my_vtag);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
+	SCTP_ITERATOR_UNLOCK();
 #endif
 	SCTP_INP_INFO_WUNLOCK();
 	prev = NULL;
