@@ -1986,6 +1986,7 @@ sctp_inpcb_alloc(struct socket *so)
 	inp->ip_inp.inp.inpcb_mtx = lck_mtx_alloc_init(sctppcbinfo.mtx_grp, sctppcbinfo.mtx_attr);
 	if (inp->ip_inp.inp.inpcb_mtx == NULL) {
 		printf("in_pcballoc: can't alloc mutex! so=%x\n", so);
+		lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 		return (ENOMEM);
 	}
 	socket_lock(inp->ip_inp.inp.inp_socket, 1);
@@ -4244,20 +4245,15 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	SCTP_ITERATOR_LOCK();
 #endif
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	if (!(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
-		if (!lck_mtx_try_lock(sctppcbinfo.it_mtx)) {
-			socket_unlock(inp->ip_inp.inp.inp_socket, 0);
-			lck_mtx_lock(sctppcbinfo.it_mtx);
-			socket_lock(inp->ip_inp.inp.inp_socket, 0);
-		}
-		if (!lck_rw_try_lock_exclusive(sctppcbinfo.ipi_ep_mtx)) {
-			socket_unlock(inp->ip_inp.inp.inp_socket, 0);
-			lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
-			socket_lock(inp->ip_inp.inp.inp_socket, 0);
-		}
-	} else {
+	if (!lck_mtx_try_lock(sctppcbinfo.it_mtx)) {
+		socket_unlock(inp->ip_inp.inp.inp_socket, 0);
 		lck_mtx_lock(sctppcbinfo.it_mtx);
+		socket_lock(inp->ip_inp.inp.inp_socket, 0);
+	}
+	if (!lck_rw_try_lock_exclusive(sctppcbinfo.ipi_ep_mtx)) {
+		socket_unlock(inp->ip_inp.inp.inp_socket, 0);
 		lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+		socket_lock(inp->ip_inp.inp.inp_socket, 0);
 	}
 #endif
 	SCTP_INP_INFO_WLOCK();
@@ -5895,8 +5891,13 @@ sctp_is_vtag_good(struct sctp_inpcb *inp, uint32_t tag, struct timeval *now)
 	int i;
 
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
-#endif
+	sctp_lock_assert(inp->ip_inp.inp.inp_socket);
+	if (!lck_rw_try_lock_exclusive(sctppcbinfo.ipi_ep_mtx)) {
+		socket_unlock(inp->ip_inp.inp.inp_socket, 0);
+		lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+		socket_lock(inp->ip_inp.inp.inp_socket, 0);
+	}
+#endif	
 	SCTP_INP_INFO_WLOCK();
 	chain = &sctppcbinfo.vtag_timewait[(tag % SCTP_STACK_VTAG_HASH_SIZE)];
 	/* First is the vtag in use ? */
