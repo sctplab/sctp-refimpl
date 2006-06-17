@@ -2106,7 +2106,7 @@ sctp_delete_ip_address(struct ifaddr *ifa)
 
 		/* process for all associations for this endpoint */
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		socket_lock(inp->sctp_socket, 1);
+		socket_lock(inp->ip_inp.inp.inp_socket, 1);
 #endif
 		SCTP_INP_RLOCK(inp);
 		LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
@@ -2145,7 +2145,7 @@ sctp_delete_ip_address(struct ifaddr *ifa)
 			laddr = laddr_next;
 		}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		socket_unlock(inp->sctp_socket, 1);
+		socket_unlock(inp->ip_inp.inp.inp_socket, 1);
 #endif
 		SCTP_INP_RUNLOCK(inp);
 	}

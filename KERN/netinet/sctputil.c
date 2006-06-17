@@ -1308,7 +1308,7 @@ sctp_timeout_handler(void *t)
 		}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		if (tmr->type != SCTP_TIMER_TYPE_ITERATOR)
-			socket_lock(inp->sctp_socket, 1);
+			socket_lock(inp->ip_inp.inp.inp_socket, 1);
 #endif
 	}
 	if (stcb) {
@@ -1320,9 +1320,7 @@ sctp_timeout_handler(void *t)
 #endif
 			if (inp) {
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-				if (!(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
-					socket_unlock(inp->sctp_socket, 1);
-				}
+				socket_unlock(inp->ip_inp.inp.inp_socket, 1);
 #endif
 				SCTP_INP_WUNLOCK(inp);
 			}
@@ -1343,7 +1341,7 @@ sctp_timeout_handler(void *t)
 #endif
 		if (inp) {
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			socket_unlock(inp->sctp_socket, 1);
+			socket_unlock(inp->ip_inp.inp.inp_socket, 1);
 #endif
 			SCTP_INP_WUNLOCK(inp);
 		}
@@ -1358,7 +1356,7 @@ sctp_timeout_handler(void *t)
 	if (stcb) {
 		SCTP_TCB_LOCK(stcb);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		sctp_lock_assert(stcb->sctp_socket);
+		sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
 #endif
 	}
 	/* mark as being serviced now */
@@ -1621,9 +1619,8 @@ out_no_decr:
 #endif
 	if (inp) {
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		if ((tmr->type != SCTP_TIMER_TYPE_ITERATOR) &&
-		    (!(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE))) {
-			socket_unlock(inp->sctp_socket, 1);
+		if (tmr->type != SCTP_TIMER_TYPE_ITERATOR) {
+			socket_unlock(inp->ip_inp.inp.inp_socket, 1);
 		}
 #endif
 	}
@@ -1647,7 +1644,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	if (stcb) {
 		STCB_TCB_LOCK_ASSERT(stcb);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		sctp_lock_assert(stcb->sctp_socket);
+		sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
 #endif
 	}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
@@ -1656,7 +1653,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	 * to an interator.
 	 */ 
 	if ((inp != NULL) && (t_type != SCTP_TIMER_TYPE_ITERATOR)) {
-		sctp_lock_assert(inp->sctp_socket);
+		sctp_lock_assert(inp->ip_inp.inp.inp_socket);
 	}
 #endif
 	switch (t_type) {
@@ -2020,7 +2017,7 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	if (stcb) {
 		STCB_TCB_LOCK_ASSERT(stcb);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		sctp_lock_assert(stcb->sctp_socket);
+		sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
 #endif
 	}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
@@ -2029,7 +2026,7 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	 * to an interator.
 	 */ 
 	if ((inp != NULL) && (t_type != SCTP_TIMER_TYPE_ITERATOR)) {
-		sctp_lock_assert(inp->sctp_socket);
+		sctp_lock_assert(inp->ip_inp.inp.inp_socket);
 	}
 #endif
 	switch (t_type) {
