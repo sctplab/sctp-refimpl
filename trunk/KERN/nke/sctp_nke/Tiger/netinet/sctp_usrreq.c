@@ -1003,7 +1003,6 @@ sctp_detach(struct socket *so)
 #else
 	s = splnet();
 #endif
-	/* mark socket state as dead */
 	if (((so->so_options & SO_LINGER) && (so->so_linger == 0)) ||
 	    (so->so_rcv.sb_cc > 0)) {
 		sctp_inpcb_free(inp, 1);

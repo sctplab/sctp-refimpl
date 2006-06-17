@@ -1904,7 +1904,7 @@ select_a_new_ep:
 	goto select_a_new_ep;
 }
 
-#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 void
 sctp_slowtimo()
 {
