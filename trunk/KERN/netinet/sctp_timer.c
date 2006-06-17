@@ -586,7 +586,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	uint32_t tsnlast, tsnfirst;
 
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	sctp_lock_assert(stcb->sctp_socket);
+	sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
 #endif
 	/*
 	 * CMT: Using RTX_SSTHRESH policy for CMT. If CMT is being used,
@@ -937,7 +937,7 @@ sctp_move_all_chunks_to_alt(struct sctp_tcb *stcb,
 	struct sctp_tmit_chunk *chk;
 
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	sctp_lock_assert(stcb->sctp_socket);
+	sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
 #endif
 	if (net == alt)
 		/* nothing to do */
@@ -979,7 +979,7 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 	int win_probe, num_mk;
 
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	sctp_lock_assert(stcb->sctp_socket);
+	sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
 #endif
 #ifdef SCTP_FR_LOGGING
 	sctp_log_fr(sctp_pegs[SCTP_PEG_TSNS_SENT], 0, 0, SCTP_FR_T3_TIMEOUT);
@@ -1134,7 +1134,7 @@ sctp_t1init_timer(struct sctp_inpcb *inp,
     struct sctp_nets *net)
 {
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	sctp_lock_assert(stcb->sctp_socket);
+	sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
 #endif
 	/* bump the thresholds */
 	if (stcb->asoc.delayed_connection) {
@@ -1188,7 +1188,7 @@ sctp_cookie_timer(struct sctp_inpcb *inp,
 	struct sctp_tmit_chunk *cookie;
 
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	sctp_lock_assert(stcb->sctp_socket);
+	sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
 #endif
 	/* first before all else we must find the cookie */
 	TAILQ_FOREACH(cookie, &stcb->asoc.control_send_queue, sctp_next) {
@@ -1560,7 +1560,7 @@ sctp_heartbeat_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
     struct sctp_nets *net, int cnt_of_unconf)
 {
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	sctp_lock_assert(stcb->sctp_socket);
+	sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
 #endif
 	if (net) {
 		if (net->hb_responded == 0) {
@@ -1904,27 +1904,54 @@ select_a_new_ep:
 	goto select_a_new_ep;
 }
 
-#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 void
 sctp_slowtimo()
 {
 	struct inpcb *inp;
+	struct socket *so;
+#ifdef SCTP_DEBUG
+	unsigned int n, n1, n2, n3, n4;
 
+	n = n1 = n2 = n3 = n4 = 0;
+#endif
 	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
 	LIST_FOREACH(inp, &sctppcbinfo.inplisthead, inp_list) {
+		n++;
+		if (inp->inp_wantcnt != WNT_STOPUSING) {
+			n1++;
+			continue;
+		}
 		if (lck_mtx_try_lock(inp->inpcb_mtx)) {
+			so = inp->inp_socket;
+			if (so->so_usecount != 0) {
+				lck_mtx_unlock(inp->inpcb_mtx);
+				n2++;
+				continue;
+			}
 			if (inp->inp_state == INPCB_STATE_DEAD) {
 				LIST_REMOVE(inp, inp_list);
+				inp->inp_socket = NULL;
+				so->so_pcb      = NULL;
 				lck_mtx_unlock(inp->inpcb_mtx);
 				lck_mtx_free(inp->inpcb_mtx, sctppcbinfo.mtx_grp);
 				SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, (struct sctp_inpcb *)inp);
+				sodealloc(so);
 				SCTP_DECR_EP_COUNT();
 			} else {
 				lck_mtx_unlock(inp->inpcb_mtx);
+				n3++;
 			}
+		} else {
+			n4++;
 		}
 	}
 	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
+#ifdef SCTP_DEBUG
+	if ((sctp_debug_on & SCTP_DEBUG_PCB2) && (n > 0)) {
+		printf("sctp_slowtimo: inps: %u, inp_wantcnt: %u, so_usecount : %u, inp_state: %u, inpcb_mtx: %u\n",
+		       n, n1, n2, n3, n4);
+	}
+#endif
 }
-
 #endif

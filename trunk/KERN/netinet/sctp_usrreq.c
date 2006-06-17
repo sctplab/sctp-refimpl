@@ -2864,9 +2864,9 @@ sctp_optsget(struct socket *so,
 			spcb = mtod(m, struct sctp_pcbinfo *);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			if (!lck_rw_try_lock_shared(sctppcbinfo.ipi_ep_mtx)) {
-				socket_unlock(inp->sctp_socket, 0);
+				socket_unlock(inp->ip_inp.inp.inp_socket, 0);
 				lck_rw_lock_shared(sctppcbinfo.ipi_ep_mtx);
-				socket_lock(inp->sctp_socket, 0);
+				socket_lock(inp->ip_inp.inp.inp_socket, 0);
 			}
 #endif
 			sctp_fill_pcbinfo(spcb);
