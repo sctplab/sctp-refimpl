@@ -1131,7 +1131,7 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
 			SCTP_INP_RUNLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		socket_unlock(inp->ip_inp.inp.inp_socket, 1);
+			socket_unlock(inp->ip_inp.inp.inp_socket, 1);
 #endif
 			continue;
 		}
@@ -2963,7 +2963,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 			return;
 		}
 	}
-
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
 		/*
 		 * Now the question comes as to if this EP was ever bound at
@@ -3189,7 +3188,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	/* Unlock inp first, need correct order */
 	SCTP_INP_WUNLOCK(inp);
 	/* now iterator lock */
-#ifndef SCTP_APPLE_FINE_GRAINED_LOCKING
+#if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	SCTP_ITERATOR_LOCK();
 #endif
 	/* now info lock */
@@ -4137,7 +4136,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	sctp_lock_assert(inp->ip_inp.inp.inp_socket);
 #endif
-
 	if (stcb->asoc.state == 0) {
 		printf("Freeing already free association:%p - huh??\n",
 		    stcb);
@@ -5710,7 +5708,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 				if (sctp_debug_on & SCTP_DEBUG_AUTH1)
 					printf("SCTP: ignoring duplicate peer RANDOM\n");
 #endif
-				break;
+				goto next_param;
 			}
 			phdr = sctp_get_next_param(m, offset,
 			    (struct sctp_paramhdr *)store,
@@ -5740,7 +5738,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 				if (sctp_debug_on & SCTP_DEBUG_AUTH1)
 					printf("SCTP: ignoring duplicate peer HMAC list\n");
 #endif
-				break;
+				goto next_param;
 			}
 			phdr = sctp_get_next_param(m, offset,
 			    (struct sctp_paramhdr *)store,
@@ -5773,7 +5771,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 				if (sctp_debug_on & SCTP_DEBUG_AUTH1)
 					printf("SCTP: ignoring duplicate peer Chunks list\n");
 #endif
-				break;
+				goto next_param;
 			}
 			phdr = sctp_get_next_param(m, offset,
 			    (struct sctp_paramhdr *)store,
@@ -5813,6 +5811,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 				break;
 			}
 		}
+	next_param:
 		offset += SCTP_SIZE32(plen);
 		if (offset >= limit) {
 			break;
@@ -5837,8 +5836,11 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 		}
 	}
 	/* validate authentication required parameters */
-	if (!got_random && !got_hmacs)
+	if (got_random && got_hmacs) {
+		stcb->asoc.peer_supports_auth = 1;
+	} else {
 		stcb->asoc.peer_supports_auth = 0;
+	}
 	return (0);
 }
 
@@ -5893,7 +5895,7 @@ sctp_is_vtag_good(struct sctp_inpcb *inp, uint32_t tag, struct timeval *now)
 		lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
 		socket_lock(inp->ip_inp.inp.inp_socket, 0);
 	}
-#endif	
+#endif
 	SCTP_INP_INFO_WLOCK();
 	chain = &sctppcbinfo.vtag_timewait[(tag % SCTP_STACK_VTAG_HASH_SIZE)];
 	/* First is the vtag in use ? */
