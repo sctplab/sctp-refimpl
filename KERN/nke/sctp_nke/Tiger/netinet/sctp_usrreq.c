@@ -3726,7 +3726,7 @@ sctp_optsset(struct socket *so,
 			size = size / sizeof(shmac->shmac_idents[0]);
 			hmaclist = sctp_alloc_hmaclist(size);
 			for (i = 0; i < size; i++) {
-				hmacid = shmac->shmac_idents[i] & 0xFFFF;
+				hmacid = shmac->shmac_idents[i];
 				sctp_auth_add_hmacid(hmaclist, (uint16_t) hmacid);
 			}
 			/* set it on the endpoint */

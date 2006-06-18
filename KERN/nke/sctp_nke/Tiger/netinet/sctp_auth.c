@@ -1795,7 +1795,7 @@ sctp_handle_auth(struct sctp_tcb *stcb, struct sctp_auth_chunk *auth,
  */
 void
 sctp_notify_authentication(struct sctp_tcb *stcb, uint32_t indication,
-    uint32_t keyid, uint32_t alt_keyid)
+    uint16_t keyid, uint16_t alt_keyid)
 {
 	struct mbuf *m_notify;
 	struct sctp_authkey_event *auth;
