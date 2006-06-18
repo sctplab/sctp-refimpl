@@ -124,18 +124,19 @@ __FBSDID("$FreeBSD:$");
 
 #ifdef SCTP_DEBUG
 extern uint32_t sctp_debug_on;
+
 #endif				/* SCTP_DEBUG */
 
 extern unsigned int sctp_early_fr_msec;
 
 void
 sctp_early_fr_timer(struct sctp_inpcb *inp,
-		    struct sctp_tcb *stcb,
-		    struct sctp_nets *net)
+    struct sctp_tcb *stcb,
+    struct sctp_nets *net)
 {
 	struct sctp_tmit_chunk *chk, *tp2;
-	struct timeval	now, min_wait, tv;
-	unsigned int	cur_rtt, cnt = 0, cnt_resend = 0;
+	struct timeval now, min_wait, tv;
+	unsigned int cur_rtt, cnt = 0, cnt_resend = 0;
 
 	/* an early FR is occuring. */
 	SCTP_GETTIME_TIMEVAL(&now);
@@ -163,8 +164,8 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 		/*
 		 * if we hit here, we don't have enough seconds on the clock
 		 * to account for the RTO. We just let the lower seconds be
-		 * the bounds and don't worry about it. This may mean we will
-		 * mark a lot more than we should.
+		 * the bounds and don't worry about it. This may mean we
+		 * will mark a lot more than we should.
 		 */
 		min_wait.tv_sec = min_wait.tv_usec = 0;
 	}
@@ -177,18 +178,19 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 		if (chk->sent == SCTP_DATAGRAM_RESEND)
 			cnt_resend++;
 		else if ((chk->sent > SCTP_DATAGRAM_UNSENT) &&
-			 (chk->sent < SCTP_DATAGRAM_RESEND)) {
+		    (chk->sent < SCTP_DATAGRAM_RESEND)) {
 			/* pending, may need retran */
 			if (chk->sent_rcv_time.tv_sec > min_wait.tv_sec) {
 				/*
-				 * we have reached a chunk that was sent some
-				 * seconds past our min.. forget it we will
-				 * find no more to send.
+				 * we have reached a chunk that was sent
+				 * some seconds past our min.. forget it we
+				 * will find no more to send.
 				 */
 				continue;
 			} else if (chk->sent_rcv_time.tv_sec == min_wait.tv_sec) {
 				/*
-				 * we must look at the micro seconds to know.
+				 * we must look at the micro seconds to
+				 * know.
 				 */
 				if (chk->sent_rcv_time.tv_usec >= min_wait.tv_usec) {
 					/*
@@ -200,7 +202,7 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 			}
 #ifdef SCTP_EARLYFR_LOGGING
 			sctp_log_fr(chk->rec.data.TSN_seq, chk->snd_count,
-				    4, SCTP_FR_MARKED_EARLY);
+			    4, SCTP_FR_MARKED_EARLY);
 #endif
 			sctp_pegs[SCTP_EARLYFR_MRK_RETR]++;
 			chk->sent = SCTP_DATAGRAM_RESEND;
@@ -216,7 +218,8 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 	}
 	if (cnt) {
 #ifdef SCTP_CWND_MONITOR
-		int		old_cwnd;
+		int old_cwnd;
+
 		old_cwnd = net->cwnd;
 #endif
 		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_EARLY_FR_TMR);
@@ -247,11 +250,12 @@ void
 sctp_audit_retranmission_queue(struct sctp_association *asoc)
 {
 	struct sctp_tmit_chunk *chk;
+
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_TIMER4) {
 		printf("Audit invoked on send queue cnt:%d onqueue:%d\n",
-		       asoc->sent_queue_retran_cnt,
-		       asoc->sent_queue_cnt);
+		    asoc->sent_queue_retran_cnt,
+		    asoc->sent_queue_cnt);
 	}
 #endif				/* SCTP_DEBUG */
 	asoc->sent_queue_retran_cnt = 0;
@@ -270,23 +274,23 @@ sctp_audit_retranmission_queue(struct sctp_association *asoc)
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_TIMER4) {
 		printf("Audit completes retran:%d onqueue:%d\n",
-		       asoc->sent_queue_retran_cnt,
-		       asoc->sent_queue_cnt);
+		    asoc->sent_queue_retran_cnt,
+		    asoc->sent_queue_cnt);
 	}
 #endif				/* SCTP_DEBUG */
 }
 
 int
 sctp_threshold_management(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
-			  struct sctp_nets *net, uint16_t threshold)
+    struct sctp_nets *net, uint16_t threshold)
 {
 	if (net) {
 		net->error_count++;
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_TIMER4) {
 			printf("Error count for %p now %d thresh:%d\n",
-			       net, net->error_count,
-			       net->failure_threshold);
+			    net, net->error_count,
+			    net->failure_threshold);
 		}
 #endif				/* SCTP_DEBUG */
 		if (net->error_count > net->failure_threshold) {
@@ -298,9 +302,9 @@ sctp_threshold_management(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 					net->dest_state |= SCTP_ADDR_WAS_PRIMARY;
 				}
 				sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_DOWN,
-						stcb,
-						SCTP_FAILED_THRESHOLD,
-						(void *)net);
+				    stcb,
+				    SCTP_FAILED_THRESHOLD,
+				    (void *)net);
 			}
 		}
 		/*********HOLD THIS COMMENT FOR PATCH OF ALTERNATE
@@ -323,10 +327,10 @@ sctp_threshold_management(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_TIMER4) {
 		printf("Overall error count for %p now %d thresh:%u state:%x\n",
-		       &stcb->asoc,
-		       stcb->asoc.overall_error_count,
-		       (uint) threshold,
-		     ((net == NULL) ? (uint) 0 : (uint) net->dest_state));
+		    &stcb->asoc,
+		    stcb->asoc.overall_error_count,
+		    (uint32_t) threshold,
+		    ((net == NULL) ? (uint32_t) 0 : (uint32_t) net->dest_state));
 	}
 #endif				/* SCTP_DEBUG */
 	/*
@@ -335,14 +339,15 @@ sctp_threshold_management(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	 */
 	if (stcb->asoc.overall_error_count > threshold) {
 		/* Abort notification sends a ULP notify */
-		struct mbuf    *oper;
+		struct mbuf *oper;
+
 		MGET(oper, M_DONTWAIT, MT_DATA);
 		if (oper) {
 			struct sctp_paramhdr *ph;
-			uint32_t      *ippp;
+			uint32_t *ippp;
 
 			oper->m_len = sizeof(struct sctp_paramhdr) +
-				sizeof(*ippp);
+			    sizeof(*ippp);
 			ph = mtod(oper, struct sctp_paramhdr *);
 			ph->param_type = htons(SCTP_CAUSE_PROTOCOL_VIOLATION);
 			ph->param_length = htons(oper->m_len);
@@ -357,13 +362,13 @@ sctp_threshold_management(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 
 struct sctp_nets *
 sctp_find_alternate_net(struct sctp_tcb *stcb,
-			struct sctp_nets *net,
-			int highest_ssthresh)
+    struct sctp_nets *net,
+    int highest_ssthresh)
 {
 	/* Find and return an alternate network if possible */
 	struct sctp_nets *alt, *mnet, *hthresh = NULL;
-	int		once;
-	uint32_t	val = 0;
+	int once;
+	uint32_t val = 0;
 
 	if (stcb->asoc.numnets == 1) {
 		/* No others but net */
@@ -373,7 +378,7 @@ sctp_find_alternate_net(struct sctp_tcb *stcb,
 		TAILQ_FOREACH(mnet, &stcb->asoc.nets, sctp_next) {
 			if (((mnet->dest_state & SCTP_ADDR_REACHABLE) != SCTP_ADDR_REACHABLE) ||
 			    (mnet->dest_state & SCTP_ADDR_UNCONFIRMED)
-				) {
+			    ) {
 				/*
 				 * will skip ones that are not-reachable or
 				 * unconfirmed
@@ -384,13 +389,13 @@ sctp_find_alternate_net(struct sctp_tcb *stcb,
 				hthresh = mnet;
 				val = mnet->ssthresh;
 			} else if (val == mnet->ssthresh) {
-				uint32_t	rndval;
-				uint8_t		this_random;
+				uint32_t rndval;
+				uint8_t this_random;
 
 				if (stcb->asoc.hb_random_idx > 3) {
 					rndval = sctp_select_initial_TSN(&stcb->sctp_ep->sctp_ep);
 					memcpy(stcb->asoc.hb_random_values, &rndval,
-					sizeof(stcb->asoc.hb_random_values));
+					    sizeof(stcb->asoc.hb_random_values));
 					this_random = stcb->asoc.hb_random_values[0];
 					stcb->asoc.hb_random_idx = 0;
 					stcb->asoc.hb_ect_randombit = 0;
@@ -427,11 +432,12 @@ sctp_find_alternate_net(struct sctp_tcb *stcb,
 		if (alt->ro.ro_rt == NULL) {
 #ifndef SCOPEDROUTING
 			struct sockaddr_in6 *sin6;
+
 			sin6 = (struct sockaddr_in6 *)&alt->ro._l_addr;
 			if (sin6->sin6_family == AF_INET6) {
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
 				(void)in6_embedscope(&sin6->sin6_addr, sin6,
-						     NULL, NULL);
+				    NULL, NULL);
 #else
 #ifdef SCTP_KAME
 				(void)sa6_embedscope(sin6, ip6_use_defzone);
@@ -452,7 +458,7 @@ sctp_find_alternate_net(struct sctp_tcb *stcb,
 				(void)sa6_recoverscope(sin6);
 #else
 				(void)in6_recoverscope(sin6, &sin6->sin6_addr,
-						       NULL);
+				    NULL);
 #endif				/* SCTP_KAME */
 			}
 #endif
@@ -462,7 +468,7 @@ sctp_find_alternate_net(struct sctp_tcb *stcb,
 		    ((alt->dest_state & SCTP_ADDR_REACHABLE) == SCTP_ADDR_REACHABLE) &&
 		    (alt->ro.ro_rt != NULL) &&
 		    (!(alt->dest_state & SCTP_ADDR_UNCONFIRMED))
-			) {
+		    ) {
 			/* Found a reachable address */
 			break;
 		}
@@ -499,12 +505,12 @@ sctp_find_alternate_net(struct sctp_tcb *stcb,
 
 static void
 sctp_backoff_on_timeout(struct sctp_tcb *stcb,
-			struct sctp_nets *net,
-			int win_probe,
-			int num_marked)
+    struct sctp_nets *net,
+    int win_probe,
+    int num_marked)
 {
 #ifdef SCTP_DEBUG
-	int		oldRTO;
+	int oldRTO;
 
 	oldRTO = net->RTO;
 #endif				/* SCTP_DEBUG */
@@ -512,7 +518,7 @@ sctp_backoff_on_timeout(struct sctp_tcb *stcb,
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_TIMER2) {
 		printf("Timer doubles from %d ms -to-> %d ms\n",
-		       oldRTO, net->RTO);
+		    oldRTO, net->RTO);
 	}
 #endif				/* SCTP_DEBUG */
 
@@ -521,14 +527,15 @@ sctp_backoff_on_timeout(struct sctp_tcb *stcb,
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_TIMER2) {
 			printf("Growth capped by maxrto %d\n",
-			       net->RTO);
+			    net->RTO);
 		}
 #endif				/* SCTP_DEBUG */
 	}
 	if ((win_probe == 0) && num_marked) {
 		/* We don't apply penalty to window probe scenarios */
 #ifdef SCTP_CWND_MONITOR
-		int		old_cwnd = net->cwnd;
+		int old_cwnd = net->cwnd;
+
 #endif
 		net->ssthresh = net->cwnd >> 1;
 		if (net->ssthresh < (net->mtu << 1)) {
@@ -546,42 +553,44 @@ sctp_backoff_on_timeout(struct sctp_tcb *stcb,
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_TIMER1) {
 			printf("collapse cwnd to 1MTU ssthresh to %d\n",
-			       net->ssthresh);
+			    net->ssthresh);
 		}
 #endif
 
 	}
 }
 
-extern int	sctp_peer_chunk_oh;
+extern int sctp_peer_chunk_oh;
 
 static int
 sctp_mark_all_for_resend(struct sctp_tcb *stcb,
-			 struct sctp_nets *net,
-			 struct sctp_nets *alt,
-			 int window_probe,
-			 int *num_marked)
+    struct sctp_nets *net,
+    struct sctp_nets *alt,
+    int window_probe,
+    int *num_marked)
 {
 
 	/*
 	 * Mark all chunks (well not all) that were sent to *net for
 	 * retransmission. Move them to alt for there destination as well...
-	 * We only mark chunks that have been outstanding long enough to have
-	 * received feed-back.
+	 * We only mark chunks that have been outstanding long enough to
+	 * have received feed-back.
 	 */
 	struct sctp_tmit_chunk *chk, *tp2, *could_be_sent = NULL;
 	struct sctp_nets *lnets;
-	struct timeval	now, min_wait, tv;
-	int		cur_rtt;
-	int		orig_rwnd , audit_tf, num_mk, fir;
-	unsigned int	cnt_mk;
-	uint32_t	orig_flight;
-	uint32_t	tsnlast, tsnfirst;
+	struct timeval now, min_wait, tv;
+	int cur_rtt;
+	int orig_rwnd, audit_tf, num_mk, fir;
+	unsigned int cnt_mk;
+	uint32_t orig_flight;
+	uint32_t tsnlast, tsnfirst;
 
-
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
+#endif
 	/*
-	 * CMT: Using RTX_SSTHRESH policy for CMT. If CMT is being used, then
-	 * pick dest with largest ssthresh for any retransmission.
+	 * CMT: Using RTX_SSTHRESH policy for CMT. If CMT is being used,
+	 * then pick dest with largest ssthresh for any retransmission.
 	 * (iyengar@cis.udel.edu, 2005/08/12)
 	 */
 	if (sctp_cmt_on_off) {
@@ -608,13 +617,13 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	cur_rtt *= 1000;
 #if defined(SCTP_FR_LOGGING) || defined(SCTP_EARLYFR_LOGGING)
 	sctp_log_fr(cur_rtt,
-		    stcb->asoc.peers_rwnd,
-		    window_probe,
-		    SCTP_FR_T3_MARK_TIME);
+	    stcb->asoc.peers_rwnd,
+	    window_probe,
+	    SCTP_FR_T3_MARK_TIME);
 	sctp_log_fr(net->flight_size,
-		    callout_pending(&net->fr_timer.timer),
-		    callout_active(&net->fr_timer.timer),
-		    SCTP_FR_CWND_REPORT);
+	    callout_pending(&net->fr_timer.timer),
+	    callout_active(&net->fr_timer.timer),
+	    SCTP_FR_CWND_REPORT);
 	sctp_log_fr(net->flight_size, net->cwnd, stcb->asoc.total_flight, SCTP_FR_CWND_REPORT);
 #endif
 	tv.tv_sec = cur_rtt / 1000000;
@@ -629,8 +638,8 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 		/*
 		 * if we hit here, we don't have enough seconds on the clock
 		 * to account for the RTO. We just let the lower seconds be
-		 * the bounds and don't worry about it. This may mean we will
-		 * mark a lot more than we should.
+		 * the bounds and don't worry about it. This may mean we
+		 * will mark a lot more than we should.
 		 */
 		min_wait.tv_sec = min_wait.tv_usec = 0;
 	}
@@ -658,8 +667,8 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	for (; chk != NULL; chk = tp2) {
 		tp2 = TAILQ_NEXT(chk, sctp_next);
 		if ((compare_with_wrap(stcb->asoc.last_acked_seq,
-				       chk->rec.data.TSN_seq,
-				       MAX_TSN)) ||
+		    chk->rec.data.TSN_seq,
+		    MAX_TSN)) ||
 		    (stcb->asoc.last_acked_seq == chk->rec.data.TSN_seq)) {
 			/* Strange case our list got out of order? */
 			printf("Our list is out of order?\n");
@@ -682,34 +691,36 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 			/*
 			 * found one to mark: If it is less than
 			 * DATAGRAM_ACKED it MUST not be a skipped or marked
-			 * TSN but instead one that is either already set for
-			 * retransmission OR one that needs retransmission.
+			 * TSN but instead one that is either already set
+			 * for retransmission OR one that needs
+			 * retransmission.
 			 */
 
 			/* validate its been outstanding long enough */
 #if defined(SCTP_FR_LOGGING) || defined(SCTP_EARLYFR_LOGGING)
 			sctp_log_fr(chk->rec.data.TSN_seq,
-				    chk->sent_rcv_time.tv_sec,
-				    chk->sent_rcv_time.tv_usec,
-				    SCTP_FR_T3_MARK_TIME);
+			    chk->sent_rcv_time.tv_sec,
+			    chk->sent_rcv_time.tv_usec,
+			    SCTP_FR_T3_MARK_TIME);
 #endif
 			if ((chk->sent_rcv_time.tv_sec > min_wait.tv_sec) && (window_probe == 0)) {
 				/*
-				 * we have reached a chunk that was sent some
-				 * seconds past our min.. forget it we will
-				 * find no more to send.
+				 * we have reached a chunk that was sent
+				 * some seconds past our min.. forget it we
+				 * will find no more to send.
 				 */
 #if defined(SCTP_FR_LOGGING) || defined(SCTP_EARLYFR_LOGGING)
 				sctp_log_fr(0,
-					    chk->sent_rcv_time.tv_sec,
-					    chk->sent_rcv_time.tv_usec,
-					    SCTP_FR_T3_STOPPED);
+				    chk->sent_rcv_time.tv_sec,
+				    chk->sent_rcv_time.tv_usec,
+				    SCTP_FR_T3_STOPPED);
 #endif
 				continue;
 			} else if ((chk->sent_rcv_time.tv_sec == min_wait.tv_sec) &&
-				   (window_probe == 0)) {
+			    (window_probe == 0)) {
 				/*
-				 * we must look at the micro seconds to know.
+				 * we must look at the micro seconds to
+				 * know.
 				 */
 				if (chk->sent_rcv_time.tv_usec >= min_wait.tv_usec) {
 					/*
@@ -718,9 +729,9 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 					 */
 #if defined(SCTP_FR_LOGGING) || defined(SCTP_EARLYFR_LOGGING)
 					sctp_log_fr(0,
-						  chk->sent_rcv_time.tv_sec,
-						 chk->sent_rcv_time.tv_usec,
-						    SCTP_FR_T3_STOPPED);
+					    chk->sent_rcv_time.tv_sec,
+					    chk->sent_rcv_time.tv_usec,
+					    SCTP_FR_T3_STOPPED);
 #endif
 					continue;
 				}
@@ -729,12 +740,12 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 				/* Is it expired? */
 				if ((now.tv_sec > chk->rec.data.timetodrop.tv_sec) ||
 				    ((chk->rec.data.timetodrop.tv_sec == now.tv_sec) &&
-				     (now.tv_usec > chk->rec.data.timetodrop.tv_usec))) {
+				    (now.tv_usec > chk->rec.data.timetodrop.tv_usec))) {
 					/* Yes so drop it */
 					if (chk->data) {
 						sctp_release_pr_sctp_chunk(stcb,
-									chk,
-									   (SCTP_RESPONSE_TO_USER_REQ | SCTP_NOTIFY_DATAGRAM_SENT),
+						    chk,
+						    (SCTP_RESPONSE_TO_USER_REQ | SCTP_NOTIFY_DATAGRAM_SENT),
 						    &stcb->asoc.sent_queue);
 					}
 				}
@@ -745,8 +756,8 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 				if (chk->snd_count > chk->rec.data.timetodrop.tv_sec) {
 					if (chk->data) {
 						sctp_release_pr_sctp_chunk(stcb,
-									chk,
-									   (SCTP_RESPONSE_TO_USER_REQ | SCTP_NOTIFY_DATAGRAM_SENT),
+						    chk,
+						    (SCTP_RESPONSE_TO_USER_REQ | SCTP_NOTIFY_DATAGRAM_SENT),
 						    &stcb->asoc.sent_queue);
 					}
 				}
@@ -760,7 +771,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 #ifdef SCTP_DEBUG
 					if (sctp_debug_on & SCTP_DEBUG_TIMER1) {
 						printf("First TSN marked was %x\n",
-						     chk->rec.data.TSN_seq);
+						    chk->rec.data.TSN_seq);
 					}
 #endif
 					tsnfirst = chk->rec.data.TSN_seq;
@@ -768,7 +779,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 				tsnlast = chk->rec.data.TSN_seq;
 #if defined(SCTP_FR_LOGGING) || defined(SCTP_EARLYFR_LOGGING)
 				sctp_log_fr(chk->rec.data.TSN_seq, chk->snd_count,
-					    0, SCTP_FR_T3_MARKED);
+				    0, SCTP_FR_T3_MARKED);
 
 #endif
 			}
@@ -830,12 +841,12 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 		if (num_mk) {
 			printf("LAST TSN marked was %x\n", tsnlast);
 			printf("Num marked for retransmission was %d peer-rwd:%ld\n",
-			       num_mk, (u_long) stcb->asoc.peers_rwnd);
+			    num_mk, (u_long)stcb->asoc.peers_rwnd);
 			printf("LAST TSN marked was %x\n", tsnlast);
 			printf("Num marked for retransmission was %d peer-rwd:%d\n",
-			       num_mk,
-			       (int)stcb->asoc.peers_rwnd
-				);
+			    num_mk,
+			    (int)stcb->asoc.peers_rwnd
+			    );
 		}
 	}
 #endif
@@ -848,7 +859,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	}
 	if (stcb->asoc.sent_queue_retran_cnt != cnt_mk) {
 		printf("Local Audit says there are %d for retran asoc cnt:%d\n",
-		       cnt_mk, stcb->asoc.sent_queue_retran_cnt);
+		    cnt_mk, stcb->asoc.sent_queue_retran_cnt);
 #ifndef SCTP_AUDITING_ENABLED
 		stcb->asoc.sent_queue_retran_cnt = cnt_mk;
 #endif
@@ -876,7 +887,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_TIMER4) {
 			printf("Audit total flight due to negative value net:%p\n",
-			       net);
+			    net);
 		}
 #endif				/* SCTP_DEBUG */
 		stcb->asoc.total_flight = 0;
@@ -887,7 +898,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_TIMER4) {
 				printf("Net:%p c-f cwnd:%d ssthresh:%d\n",
-				       lnets, lnets->cwnd, lnets->ssthresh);
+				    lnets, lnets->cwnd, lnets->ssthresh);
 			}
 #endif				/* SCTP_DEBUG */
 		}
@@ -900,9 +911,9 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 		}
 	}
 	/*
-	 * Setup the ecn nonce re-sync point. We do this since retranmissions
-	 * are NOT setup for ECN. This means that do to Karn's rule, we don't
-	 * know the total of the peers ecn bits.
+	 * Setup the ecn nonce re-sync point. We do this since
+	 * retranmissions are NOT setup for ECN. This means that do to
+	 * Karn's rule, we don't know the total of the peers ecn bits.
 	 */
 	chk = TAILQ_FIRST(&stcb->asoc.send_queue);
 	if (chk == NULL) {
@@ -918,12 +929,16 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 
 static void
 sctp_move_all_chunks_to_alt(struct sctp_tcb *stcb,
-			    struct sctp_nets *net,
-			    struct sctp_nets *alt)
+    struct sctp_nets *net,
+    struct sctp_nets *alt)
 {
 	struct sctp_association *asoc;
 	struct sctp_stream_out *outs;
 	struct sctp_tmit_chunk *chk;
+
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
+#endif
 	if (net == alt)
 		/* nothing to do */
 		return;
@@ -957,18 +972,21 @@ sctp_move_all_chunks_to_alt(struct sctp_tcb *stcb,
 
 int
 sctp_t3rxt_timer(struct sctp_inpcb *inp,
-		 struct sctp_tcb *stcb,
-		 struct sctp_nets *net)
+    struct sctp_tcb *stcb,
+    struct sctp_nets *net)
 {
 	struct sctp_nets *alt;
-	int		win_probe , num_mk;
+	int win_probe, num_mk;
 
-
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
+#endif
 #ifdef SCTP_FR_LOGGING
 	sctp_log_fr(sctp_pegs[SCTP_PEG_TSNS_SENT], 0, 0, SCTP_FR_T3_TIMEOUT);
 #ifdef SCTP_CWND_LOGGING
 	{
 		struct sctp_nets *lnet;
+
 		TAILQ_FOREACH(lnet, &stcb->asoc.nets, sctp_next) {
 			if (net == lnet) {
 				sctp_log_cwnd(stcb, lnet, 1, SCTP_CWND_LOG_FROM_T3);
@@ -1006,14 +1024,15 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 	if (win_probe == 0) {
 		/* We don't do normal threshold management on window probes */
 		if (sctp_threshold_management(inp, stcb, net,
-					      stcb->asoc.max_send_times)) {
+		    stcb->asoc.max_send_times)) {
 			/* Association was destroyed */
 			return (1);
 		} else {
 			if (net != stcb->asoc.primary_destination) {
 				/* send a immediate HB if our RTO is stale */
-				struct timeval	now;
-				unsigned int	ms_goneby;
+				struct timeval now;
+				unsigned int ms_goneby;
+
 				SCTP_GETTIME_TIMEVAL(&now);
 				if (net->last_sent_time.tv_sec) {
 					ms_goneby = (now.tv_sec - net->last_sent_time.tv_sec) * 1000;
@@ -1037,7 +1056,7 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 		 * continue to hold things waiting for rwnd to raise
 		 */
 		if (sctp_threshold_management(inp, stcb, NULL,
-					      stcb->asoc.max_send_times)) {
+		    stcb->asoc.max_send_times)) {
 			/* Association was destroyed */
 			return (1);
 		}
@@ -1051,12 +1070,12 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 			 * Yes, note it as such and find an alternate note:
 			 * this means HB code must use this to resent the
 			 * primary if it goes active AND if someone does a
-			 * change-primary then this flag must be cleared from
-			 * any net structures.
+			 * change-primary then this flag must be cleared
+			 * from any net structures.
 			 */
 			if (sctp_set_primary_addr(stcb,
-						  (struct sockaddr *)NULL,
-						  alt) == 0) {
+			    (struct sockaddr *)NULL,
+			    alt) == 0) {
 				net->dest_state |= SCTP_ADDR_WAS_PRIMARY;
 				net->src_addr_selected = 0;
 			}
@@ -1068,8 +1087,8 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 	 */
 	if (SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_COOKIE_ECHOED) {
 		/*
-		 * Here we just reset the timer and start again since we have
-		 * not established the asoc
+		 * Here we just reset the timer and start again since we
+		 * have not established the asoc
 		 */
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_TIMER1) {
@@ -1081,14 +1100,15 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 	}
 	if (stcb->asoc.peer_supports_prsctp) {
 		struct sctp_tmit_chunk *lchk;
+
 		lchk = sctp_try_advance_peer_ack_point(stcb, &stcb->asoc);
 		/* C3. See if we need to send a Fwd-TSN */
 		if (compare_with_wrap(stcb->asoc.advanced_peer_ack_point,
-				      stcb->asoc.last_acked_seq, MAX_TSN)) {
+		    stcb->asoc.last_acked_seq, MAX_TSN)) {
 			/*
 			 * ISSUE with ECN, see FWD-TSN processing for notes
-			 * on issues that will occur when the ECN NONCE stuff
-			 * is put into SCTP for cross checking.
+			 * on issues that will occur when the ECN NONCE
+			 * stuff is put into SCTP for cross checking.
 			 */
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_TIMER1) {
@@ -1110,9 +1130,12 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 
 int
 sctp_t1init_timer(struct sctp_inpcb *inp,
-		  struct sctp_tcb *stcb,
-		  struct sctp_nets *net)
+    struct sctp_tcb *stcb,
+    struct sctp_nets *net)
 {
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
+#endif
 	/* bump the thresholds */
 	if (stcb->asoc.delayed_connection) {
 		/*
@@ -1127,7 +1150,7 @@ sctp_t1init_timer(struct sctp_inpcb *inp,
 		return (0);
 	}
 	if (sctp_threshold_management(inp, stcb, net,
-				      stcb->asoc.max_init_times)) {
+	    stcb->asoc.max_init_times)) {
 		/* Association was destroyed */
 		return (1);
 	}
@@ -1139,6 +1162,7 @@ sctp_t1init_timer(struct sctp_inpcb *inp,
 	if (stcb->asoc.numnets > 1) {
 		/* If we have more than one addr use it */
 		struct sctp_nets *alt;
+
 		alt = sctp_find_alternate_net(stcb, stcb->asoc.primary_destination, 0);
 		if ((alt != NULL) && (alt != stcb->asoc.primary_destination)) {
 			sctp_move_all_chunks_to_alt(stcb, stcb->asoc.primary_destination, alt);
@@ -1155,13 +1179,17 @@ sctp_t1init_timer(struct sctp_inpcb *inp,
  * increment the resend counter (after all the threshold management stuff of
  * course).
  */
-int 
+int
 sctp_cookie_timer(struct sctp_inpcb *inp,
-		  struct sctp_tcb *stcb,
-		  struct sctp_nets *net)
+    struct sctp_tcb *stcb,
+    struct sctp_nets *net)
 {
 	struct sctp_nets *alt;
 	struct sctp_tmit_chunk *cookie;
+
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
+#endif
 	/* first before all else we must find the cookie */
 	TAILQ_FOREACH(cookie, &stcb->asoc.control_send_queue, sctp_next) {
 		if (cookie->rec.chunk_id == SCTP_COOKIE_ECHO) {
@@ -1171,14 +1199,15 @@ sctp_cookie_timer(struct sctp_inpcb *inp,
 	if (cookie == NULL) {
 		if (SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_COOKIE_ECHOED) {
 			/* FOOBAR! */
-			struct mbuf    *oper;
+			struct mbuf *oper;
+
 			MGET(oper, M_DONTWAIT, MT_DATA);
 			if (oper) {
 				struct sctp_paramhdr *ph;
-				uint32_t      *ippp;
+				uint32_t *ippp;
 
 				oper->m_len = sizeof(struct sctp_paramhdr) +
-					sizeof(*ippp);
+				    sizeof(*ippp);
 				ph = mtod(oper, struct sctp_paramhdr *);
 				ph->param_type = htons(SCTP_CAUSE_PROTOCOL_VIOLATION);
 				ph->param_length = htons(oper->m_len);
@@ -1186,7 +1215,7 @@ sctp_cookie_timer(struct sctp_inpcb *inp,
 				*ippp = htonl(0x40000002);
 			}
 			sctp_abort_an_association(inp, stcb, SCTP_INTERNAL_ERROR,
-						  oper);
+			    oper);
 		} else {
 #ifdef INVARIENTS
 			panic("Cookie timer expires in wrong state?");
@@ -1199,7 +1228,7 @@ sctp_cookie_timer(struct sctp_inpcb *inp,
 	}
 	/* Ok we found the cookie, threshold management next */
 	if (sctp_threshold_management(inp, stcb, cookie->whoTo,
-				      stcb->asoc.max_init_times)) {
+	    stcb->asoc.max_init_times)) {
 		/* Assoc is over */
 		return (1);
 	}
@@ -1228,9 +1257,9 @@ sctp_cookie_timer(struct sctp_inpcb *inp,
 	return (0);
 }
 
-int 
+int
 sctp_strreset_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
-		    struct sctp_nets *net)
+    struct sctp_nets *net)
 {
 	struct sctp_nets *alt;
 	struct sctp_tmit_chunk *strrst = NULL, *chk = NULL;
@@ -1254,7 +1283,7 @@ sctp_strreset_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	}
 	/* do threshold management */
 	if (sctp_threshold_management(inp, stcb, strrst->whoTo,
-				      stcb->asoc.max_send_times)) {
+	    stcb->asoc.max_send_times)) {
 		/* Assoc is over */
 		return (1);
 	}
@@ -1298,12 +1327,13 @@ sctp_strreset_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	return (0);
 }
 
-int 
+int
 sctp_asconf_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
-		  struct sctp_nets *net)
+    struct sctp_nets *net)
 {
 	struct sctp_nets *alt;
 	struct sctp_tmit_chunk *asconf, *chk;
+
 	/* is this the first send, or a retransmission? */
 	if (stcb->asoc.asconf_sent == 0) {
 		/* compose a new ASCONF chunk and send it */
@@ -1313,7 +1343,7 @@ sctp_asconf_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 
 		/* find the existing ASCONF */
 		TAILQ_FOREACH(asconf, &stcb->asoc.control_send_queue,
-			      sctp_next) {
+		    sctp_next) {
 			if (asconf->rec.chunk_id == SCTP_ASCONF) {
 				break;
 			}
@@ -1328,7 +1358,7 @@ sctp_asconf_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		}
 		/* do threshold management */
 		if (sctp_threshold_management(inp, stcb, asconf->whoTo,
-					      stcb->asoc.max_send_times)) {
+		    stcb->asoc.max_send_times)) {
 			/* Assoc is over */
 			return (1);
 		}
@@ -1353,8 +1383,8 @@ sctp_asconf_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			return (0);
 		}
 		/*
-		 * cleared theshold management now lets backoff the address &
-		 * select an alternate
+		 * cleared theshold management now lets backoff the address
+		 * & select an alternate
 		 */
 		sctp_backoff_on_timeout(stcb, asconf->whoTo, 1, 0);
 		alt = sctp_find_alternate_net(stcb, asconf->whoTo, 0);
@@ -1397,9 +1427,10 @@ sctp_asconf_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
  */
 int
 sctp_shutdown_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
-		    struct sctp_nets *net)
+    struct sctp_nets *net)
 {
 	struct sctp_nets *alt;
+
 	/* first threshold managment */
 	if (sctp_threshold_management(inp, stcb, net, stcb->asoc.max_send_times)) {
 		/* Assoc is over */
@@ -1412,9 +1443,9 @@ sctp_shutdown_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
 		printf("%s:%d sends a shutdown\n",
-		       __FILE__,
-		       __LINE__
-			);
+		    __FILE__,
+		    __LINE__
+		    );
 	}
 #endif
 	if (alt) {
@@ -1430,11 +1461,12 @@ sctp_shutdown_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	return (0);
 }
 
-int 
+int
 sctp_shutdownack_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
-		       struct sctp_nets *net)
+    struct sctp_nets *net)
 {
 	struct sctp_nets *alt;
+
 	/* first threshold managment */
 	if (sctp_threshold_management(inp, stcb, net, stcb->asoc.max_send_times)) {
 		/* Assoc is over */
@@ -1453,11 +1485,12 @@ sctp_shutdownack_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 
 static void
 sctp_audit_stream_queues_for_size(struct sctp_inpcb *inp,
-				  struct sctp_tcb *stcb)
+    struct sctp_tcb *stcb)
 {
 	struct sctp_stream_out *outs;
 	struct sctp_tmit_chunk *chk;
-	unsigned int	chks_in_queue = 0;
+	unsigned int chks_in_queue = 0;
+
 	/*
 	 * This function is ONLY called when the send/sent queues are empty.
 	 */
@@ -1466,13 +1499,14 @@ sctp_audit_stream_queues_for_size(struct sctp_inpcb *inp,
 
 	if (stcb->asoc.sent_queue_retran_cnt) {
 		printf("Hmm, sent_queue_retran_cnt is non-zero %d\n",
-		       stcb->asoc.sent_queue_retran_cnt);
+		    stcb->asoc.sent_queue_retran_cnt);
 		stcb->asoc.sent_queue_retran_cnt = 0;
 	}
 	if (TAILQ_EMPTY(&stcb->asoc.out_wheel)) {
-		int		i         , cnt = 0;
+		int i, cnt = 0;
+
 		printf("Strange, out_wheel empty nothing on sent/send and  tot=%lu, audit outwheel?\n",
-		       (u_long) stcb->asoc.total_output_queue_size);
+		    (u_long)stcb->asoc.total_output_queue_size);
 
 		/* Check to see if a spoke fell off the wheel */
 		for (i = 0; i < stcb->asoc.streamoutcnt; i++) {
@@ -1501,7 +1535,7 @@ sctp_audit_stream_queues_for_size(struct sctp_inpcb *inp,
 	}
 	if (chks_in_queue != stcb->asoc.stream_queue_cnt) {
 		printf("Hmm, stream queue cnt at %d I counted %d in stream out wheel\n",
-		       stcb->asoc.stream_queue_cnt, chks_in_queue);
+		    stcb->asoc.stream_queue_cnt, chks_in_queue);
 	}
 	if (chks_in_queue) {
 		/* call the output queue function */
@@ -1516,15 +1550,18 @@ sctp_audit_stream_queues_for_size(struct sctp_inpcb *inp,
 		}
 	} else {
 		printf("Found no chunks on any queue tot:%lu\n",
-		       (u_long) stcb->asoc.total_output_queue_size);
+		    (u_long)stcb->asoc.total_output_queue_size);
 		stcb->asoc.total_output_queue_size = 0;
 	}
 }
 
 int
 sctp_heartbeat_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
-		     struct sctp_nets *net, int cnt_of_unconf)
+    struct sctp_nets *net, int cnt_of_unconf)
 {
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
+#endif
 	if (net) {
 		if (net->hb_responded == 0) {
 			sctp_backoff_on_timeout(stcb, net, 1, 0);
@@ -1549,7 +1586,8 @@ sctp_heartbeat_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		 * this will send out extra hb's up to maxburst if there are
 		 * any unconfirmed addresses.
 		 */
-		int		cnt_sent = 0;
+		int cnt_sent = 0;
+
 		TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 			if ((net->dest_state & SCTP_ADDR_UNCONFIRMED) &&
 			    (net->dest_state & SCTP_ADDR_REACHABLE)) {
@@ -1613,11 +1651,11 @@ static uint32_t mtu_sizes[] = {
 };
 
 
-static		uint32_t
+static uint32_t
 sctp_getnext_mtu(struct sctp_inpcb *inp, uint32_t cur_mtu)
 {
 	/* select another MTU that is just bigger than this one */
-	int		i;
+	int i;
 
 	for (i = 0; i < SCTP_NUMBER_OF_MTU_SIZES; i++) {
 		if (cur_mtu < mtu_sizes[i]) {
@@ -1630,12 +1668,12 @@ sctp_getnext_mtu(struct sctp_inpcb *inp, uint32_t cur_mtu)
 }
 
 
-void 
+void
 sctp_pathmtu_timer(struct sctp_inpcb *inp,
-		   struct sctp_tcb *stcb,
-		   struct sctp_nets *net)
+    struct sctp_tcb *stcb,
+    struct sctp_nets *net)
 {
-	uint32_t	next_mtu;
+	uint32_t next_mtu;
 
 	/* restart the timer in any case */
 	next_mtu = sctp_getnext_mtu(inp, net->mtu);
@@ -1646,8 +1684,8 @@ sctp_pathmtu_timer(struct sctp_inpcb *inp,
 	if (net->ro.ro_rt != NULL) {
 		/*
 		 * only if we have a route and interface do we set anything.
-		 * Note we always restart the timer though just in case it is
-		 * updated (i.e. the ifp) or route/ifp is populated.
+		 * Note we always restart the timer though just in case it
+		 * is updated (i.e. the ifp) or route/ifp is populated.
 		 */
 		if (net->ro.ro_rt->rt_ifp != NULL) {
 			if (net->ro.ro_rt->rt_ifp->if_mtu > next_mtu) {
@@ -1660,14 +1698,14 @@ sctp_pathmtu_timer(struct sctp_inpcb *inp,
 	sctp_timer_start(SCTP_TIMER_TYPE_PATHMTURAISE, inp, stcb, net);
 }
 
-void 
+void
 sctp_autoclose_timer(struct sctp_inpcb *inp,
-		     struct sctp_tcb *stcb,
-		     struct sctp_nets *net)
+    struct sctp_tcb *stcb,
+    struct sctp_nets *net)
 {
-	struct timeval	tn, *tim_touse;
+	struct timeval tn, *tim_touse;
 	struct sctp_association *asoc;
-	int		ticks_gone_by;
+	int ticks_gone_by;
 
 	SCTP_GETTIME_TIMEVAL(&tn);
 	if (stcb->asoc.sctp_autoclose_ticks &&
@@ -1689,7 +1727,8 @@ sctp_autoclose_timer(struct sctp_inpcb *inp,
 			 * autoclose time has hit, call the output routine,
 			 * which should do nothing just to be SURE we don't
 			 * have hanging data. We can then safely check the
-			 * queues and know that we are clear to send shutdown
+			 * queues and know that we are clear to send
+			 * shutdown
 			 */
 			sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_AUTOCLOSE_TMR);
 			/* Are we clean? */
@@ -1705,19 +1744,19 @@ sctp_autoclose_timer(struct sctp_inpcb *inp,
 #ifdef SCTP_DEBUG
 					if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
 						printf("%s:%d sends a shutdown\n",
-						       __FILE__,
-						       __LINE__
-							);
+						    __FILE__,
+						    __LINE__
+						    );
 					}
 #endif
 					sctp_send_shutdown(stcb, stcb->asoc.primary_destination);
 					asoc->state = SCTP_STATE_SHUTDOWN_SENT;
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN,
-							 stcb->sctp_ep, stcb,
-						 asoc->primary_destination);
+					    stcb->sctp_ep, stcb,
+					    asoc->primary_destination);
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD,
-							 stcb->sctp_ep, stcb,
-						 asoc->primary_destination);
+					    stcb->sctp_ep, stcb,
+					    asoc->primary_destination);
 				}
 			}
 		} else {
@@ -1725,12 +1764,13 @@ sctp_autoclose_timer(struct sctp_inpcb *inp,
 			 * No auto close at this time, reset t-o to check
 			 * later
 			 */
-			int		tmp;
+			int tmp;
+
 			/* fool the timer startup to use the time left */
 			tmp = asoc->sctp_autoclose_ticks;
 			asoc->sctp_autoclose_ticks -= ticks_gone_by;
 			sctp_timer_start(SCTP_TIMER_TYPE_AUTOCLOSE, inp, stcb,
-					 net);
+			    net);
 			/* restore the real tick value */
 			asoc->sctp_autoclose_ticks = tmp;
 		}
@@ -1740,7 +1780,8 @@ sctp_autoclose_timer(struct sctp_inpcb *inp,
 void
 sctp_iterator_timer(struct sctp_iterator *it)
 {
-	int		cnt = 0;
+	int cnt = 0;
+
 	/*
 	 * only one iterator can run at a time. This is the only way we can
 	 * cleanly pull ep's from underneath all the running interators when
@@ -1751,12 +1792,18 @@ sctp_iterator_timer(struct sctp_iterator *it)
 		/* iterator is complete */
 done_with_iterator:
 		SCTP_ITERATOR_UNLOCK();
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+#endif
 		SCTP_INP_INFO_WLOCK();
 		LIST_REMOVE(it, sctp_nxt_itr);
 		/*
 		 * stopping the callout is not needed, in theory, but I am
 		 * paranoid.
 		 */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
+#endif
 		SCTP_INP_INFO_WUNLOCK();
 		callout_stop(&it->tmr.timer);
 		if (it->function_atend != NULL) {
@@ -1766,24 +1813,39 @@ done_with_iterator:
 		return;
 	}
 select_a_new_ep:
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	socket_lock(it->inp->ip_inp.inp.inp_socket, 1);
+#endif
 	SCTP_INP_WLOCK(it->inp);
 	while ((it->pcb_flags) && ((it->inp->sctp_flags & it->pcb_flags) != it->pcb_flags)) {
 		/* we do not like this ep */
 		if (it->iterator_flags & SCTP_ITERATOR_DO_SINGLE_INP) {
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			socket_unlock(it->inp->ip_inp.inp.inp_socket, 1);
+#endif
 			SCTP_INP_WUNLOCK(it->inp);
 			goto done_with_iterator;
 		}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		socket_unlock(it->inp->ip_inp.inp.inp_socket, 1);
+#endif
 		SCTP_INP_WUNLOCK(it->inp);
 		it->inp = LIST_NEXT(it->inp, sctp_list);
 		if (it->inp == NULL) {
 			goto done_with_iterator;
 		}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			socket_lock(it->inp->ip_inp.inp.inp_socket, 1);
+#endif
 		SCTP_INP_WLOCK(it->inp);
 	}
 	if ((it->inp->inp_starting_point_for_iterator != NULL) &&
 	    (it->inp->inp_starting_point_for_iterator != it)) {
 		printf("Iterator collision, we must wait for other iterator at %x\n",
-		       (uint32_t) it->inp);
+		    (uint32_t) it->inp);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		/* Unlock done at start_timer_return */
+#endif
 		SCTP_INP_WUNLOCK(it->inp);
 		goto start_timer_return;
 	}
@@ -1823,6 +1885,9 @@ select_a_new_ep:
 		if (cnt > SCTP_MAX_ITERATOR_AT_ONCE) {
 			it->stcb->asoc.stcb_starting_point_for_iterator = it;
 	start_timer_return:
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			socket_unlock(it->inp->ip_inp.inp.inp_socket, 1);
+#endif
 			SCTP_ITERATOR_UNLOCK();
 			sctp_timer_start(SCTP_TIMER_TYPE_ITERATOR, (struct sctp_inpcb *)it, NULL, NULL);
 			return;
@@ -1838,11 +1903,20 @@ select_a_new_ep:
 	SCTP_INP_WLOCK(it->inp);
 	it->inp->inp_starting_point_for_iterator = NULL;
 	SCTP_INP_WUNLOCK(it->inp);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	socket_unlock(it->inp->ip_inp.inp.inp_socket, 1);
+#endif
 	if (it->iterator_flags & SCTP_ITERATOR_DO_SINGLE_INP) {
 		it->inp = NULL;
 	} else {
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		lck_rw_lock_shared(sctppcbinfo.ipi_ep_mtx);
+#endif
 		SCTP_INP_INFO_RLOCK();
 		it->inp = LIST_NEXT(it->inp, sctp_list);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+#endif
 		SCTP_INP_INFO_RUNLOCK();
 	}
 	if (it->inp == NULL) {
@@ -1851,20 +1925,54 @@ select_a_new_ep:
 	goto select_a_new_ep;
 }
 
-#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 void
 sctp_slowtimo()
 {
-	struct inpcb   *inp;
+	struct inpcb *inp;
+	struct socket *so;
+#ifdef SCTP_DEBUG
+	unsigned int n, n1, n2, n3, n4;
 
+	n = n1 = n2 = n3 = n4 = 0;
+#endif
 	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
 	LIST_FOREACH(inp, &sctppcbinfo.inplisthead, inp_list) {
-		if (inp->inp_state == INPCB_STATE_DEAD) {
-			LIST_REMOVE(inp, inp_list);
-			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, (struct sctp_inpcb *)inp);
-			SCTP_DECR_EP_COUNT();
+		n++;
+		if (inp->inp_wantcnt != WNT_STOPUSING) {
+			n1++;
+			continue;
+		}
+		if (lck_mtx_try_lock(inp->inpcb_mtx)) {
+			so = inp->inp_socket;
+			if (so->so_usecount != 0) {
+				lck_mtx_unlock(inp->inpcb_mtx);
+				n2++;
+				continue;
+			}
+			if (inp->inp_state == INPCB_STATE_DEAD) {
+				LIST_REMOVE(inp, inp_list);
+				inp->inp_socket = NULL;
+				so->so_pcb      = NULL;
+				lck_mtx_unlock(inp->inpcb_mtx);
+				lck_mtx_free(inp->inpcb_mtx, sctppcbinfo.mtx_grp);
+				SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, (struct sctp_inpcb *)inp);
+				sodealloc(so);
+				SCTP_DECR_EP_COUNT();
+			} else {
+				lck_mtx_unlock(inp->inpcb_mtx);
+				n3++;
+			}
+		} else {
+			n4++;
 		}
 	}
-	lck_rw_done(sctppcbinfo.ipi_ep_mtx);
+	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
+#ifdef SCTP_DEBUG
+	if ((sctp_debug_on & SCTP_DEBUG_PCB2) && (n > 0)) {
+		printf("sctp_slowtimo: inps: %u, inp_wantcnt: %u, so_usecount : %u, inp_state: %u, inpcb_mtx: %u\n",
+		       n, n1, n2, n3, n4);
+	}
+#endif
 }
 #endif
