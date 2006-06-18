@@ -50,148 +50,150 @@ __FBSDID("$FreeBSD:$");
 
 
 #if defined(_KERNEL)
-void		sctp_send_initiate(struct sctp_inpcb *, struct sctp_tcb *);
+void sctp_send_initiate(struct sctp_inpcb *, struct sctp_tcb *);
 
-void 
+void
 sctp_send_initiate_ack(struct sctp_inpcb *, struct sctp_tcb *,
-       struct mbuf *, int, int, struct sctphdr *, struct sctp_init_chunk *);
+    struct mbuf *, int, int, struct sctphdr *, struct sctp_init_chunk *);
 
-struct mbuf    *
+struct mbuf *
 sctp_arethere_unrecognized_parameters(struct mbuf *, int, int *,
-				      struct sctp_chunkhdr *);
-void		sctp_queue_op_err(struct sctp_tcb *, struct mbuf *);
+    struct sctp_chunkhdr *);
+void sctp_queue_op_err(struct sctp_tcb *, struct mbuf *);
 
-int 
+int
 sctp_send_cookie_echo(struct mbuf *, int, struct sctp_tcb *,
-		      struct sctp_nets *);
-int		sctp_send_cookie_ack(struct sctp_tcb *);
+    struct sctp_nets *);
+int sctp_send_cookie_ack(struct sctp_tcb *);
 
-void 
+void
 sctp_send_heartbeat_ack(struct sctp_tcb *, struct mbuf *, int, int,
-			struct sctp_nets *);
+    struct sctp_nets *);
 
-int		sctp_is_addr_restricted(struct sctp_tcb *, struct sockaddr *);
+int sctp_is_addr_restricted(struct sctp_tcb *, struct sockaddr *);
 
-struct in_addr 
+struct in_addr
 sctp_ipv4_source_address_selection(struct sctp_inpcb *,
-		struct sctp_tcb *, struct route *, struct sctp_nets *, int);
+    struct sctp_tcb *, struct route *, struct sctp_nets *, int);
 
 
-struct in6_addr 
+struct in6_addr
 sctp_ipv6_source_address_selection(struct sctp_inpcb *,
-		struct sctp_tcb *, struct route *, struct sctp_nets *, int);
+    struct sctp_tcb *, struct route *, struct sctp_nets *, int);
 
 
-int		sctp_send_shutdown(struct sctp_tcb *, struct sctp_nets *);
+int sctp_send_shutdown(struct sctp_tcb *, struct sctp_nets *);
 
-int		sctp_send_shutdown_ack(struct sctp_tcb *, struct sctp_nets *);
+int sctp_send_shutdown_ack(struct sctp_tcb *, struct sctp_nets *);
 
-int		sctp_send_shutdown_complete(struct sctp_tcb *, struct sctp_nets *);
+int sctp_send_shutdown_complete(struct sctp_tcb *, struct sctp_nets *);
 
-int		sctp_send_shutdown_complete2(struct mbuf *, int, struct sctphdr *);
+int sctp_send_shutdown_complete2(struct mbuf *, int, struct sctphdr *);
 
-int		sctp_send_asconf(struct sctp_tcb *, struct sctp_nets *);
+int sctp_send_asconf(struct sctp_tcb *, struct sctp_nets *);
 
-int		sctp_send_asconf_ack(struct sctp_tcb *, uint32_t);
+int sctp_send_asconf_ack(struct sctp_tcb *, uint32_t);
 
-int		sctp_get_frag_point(struct sctp_tcb *, struct sctp_association *);
+int sctp_get_frag_point(struct sctp_tcb *, struct sctp_association *);
 
-void		sctp_toss_old_cookies(struct sctp_association *);
+void sctp_toss_old_cookies(struct sctp_association *);
 
-void		sctp_toss_old_asconf(struct sctp_tcb *);
+void sctp_toss_old_asconf(struct sctp_tcb *);
 
-void		sctp_fix_ecn_echo(struct sctp_association *);
+void sctp_fix_ecn_echo(struct sctp_association *);
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-int 
+int
 sctp_output(struct sctp_inpcb *, struct mbuf *, struct sockaddr *,
-	    struct mbuf *, struct thread *, int);
+    struct mbuf *, struct thread *, int);
+
 #else
-int 
+int
 sctp_output(struct sctp_inpcb *, struct mbuf *, struct sockaddr *,
-	    struct mbuf *, struct proc *, int);
+    struct mbuf *, struct proc *, int);
+
 #endif
 
 void
 sctp_insert_on_wheel(struct sctp_association *asoc,
-		     struct sctp_stream_out *strq);
+    struct sctp_stream_out *strq);
 
-int		sctp_chunk_output(struct sctp_inpcb *, struct sctp_tcb *, int);
-void		sctp_send_abort_tcb(struct sctp_tcb *, struct mbuf *);
+int sctp_chunk_output(struct sctp_inpcb *, struct sctp_tcb *, int);
+void sctp_send_abort_tcb(struct sctp_tcb *, struct mbuf *);
 
-void		send_forward_tsn(struct sctp_tcb *, struct sctp_association *);
+void send_forward_tsn(struct sctp_tcb *, struct sctp_association *);
 
-void		sctp_send_sack(struct sctp_tcb *);
+void sctp_send_sack(struct sctp_tcb *);
 
-int		sctp_send_hb(struct sctp_tcb *, int, struct sctp_nets *);
+int sctp_send_hb(struct sctp_tcb *, int, struct sctp_nets *);
 
-void		sctp_send_ecn_echo(struct sctp_tcb *, struct sctp_nets *, uint32_t);
+void sctp_send_ecn_echo(struct sctp_tcb *, struct sctp_nets *, uint32_t);
 
 
 void
 sctp_send_packet_dropped(struct sctp_tcb *, struct sctp_nets *, struct mbuf *,
-			 int, int);
+    int, int);
 
 
 
-void		sctp_send_cwr(struct sctp_tcb *, struct sctp_nets *, uint32_t);
+void sctp_send_cwr(struct sctp_tcb *, struct sctp_nets *, uint32_t);
 
 
 void
 sctp_add_stream_reset_out(struct sctp_tmit_chunk *chk,
-			  int number_entries, uint16_t * list,
-		    uint32_t seq, uint32_t resp_seq, uint32_t last_sent);
+    int number_entries, uint16_t * list,
+    uint32_t seq, uint32_t resp_seq, uint32_t last_sent);
 
 void
 sctp_add_stream_reset_in(struct sctp_tmit_chunk *chk,
-			 int number_entries, uint16_t * list,
-			 uint32_t seq);
+    int number_entries, uint16_t * list,
+    uint32_t seq);
 
 void
 sctp_add_stream_reset_tsn(struct sctp_tmit_chunk *chk,
-			  uint32_t seq);
+    uint32_t seq);
 
 void
 sctp_add_stream_reset_result(struct sctp_tmit_chunk *chk,
-			     uint32_t resp_seq, uint32_t result);
+    uint32_t resp_seq, uint32_t result);
 
 void
 sctp_add_stream_reset_result_tsn(struct sctp_tmit_chunk *chk,
-				 uint32_t resp_seq, uint32_t result,
-				 uint32_t send_una, uint32_t recv_next);
+    uint32_t resp_seq, uint32_t result,
+    uint32_t send_una, uint32_t recv_next);
 
 int
 sctp_send_str_reset_req(struct sctp_tcb *stcb,
-			int number_entries, uint16_t * list,
-			uint8_t send_out_req, uint32_t resp_seq,
-			uint8_t send_in_req,
-			uint8_t send_tsn_req);
+    int number_entries, uint16_t * list,
+    uint8_t send_out_req, uint32_t resp_seq,
+    uint8_t send_in_req,
+    uint8_t send_tsn_req);
 
 
-void 
+void
 sctp_send_abort(struct mbuf *, int, struct sctphdr *, uint32_t,
-		struct mbuf *);
+    struct mbuf *);
 
-void		sctp_send_operr_to(struct mbuf *, int, struct mbuf *, uint32_t);
+void sctp_send_operr_to(struct mbuf *, int, struct mbuf *, uint32_t);
 
 int
 sctp_sosend(struct socket *so,
 #ifdef __NetBSD__
-	    struct mbuf *addr_mbuf,
+    struct mbuf *addr_mbuf,
 #else
-	    struct sockaddr *addr,
+    struct sockaddr *addr,
 #endif
-	    struct uio *uio,
-	    struct mbuf *top,
-	    struct mbuf *control,
+    struct uio *uio,
+    struct mbuf *top,
+    struct mbuf *control,
 #if defined(__NetBSD__) || defined(__APPLE__)
-	    int flags
+    int flags
 #else
-	    int flags,
+    int flags,
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-	    struct thread *p
+    struct thread *p
 #else
-	    struct proc *p
+    struct proc *p
 #endif
 #endif
 );

@@ -50,10 +50,10 @@ __FBSDID("$FreeBSD:$");
  */
 
 struct sctphdr {
-	uint16_t	src_port;	/* source port */
-	uint16_t	dest_port;	/* destination port */
-	uint32_t	v_tag;	/* verification tag of packet */
-	uint32_t	checksum;	/* Adler32 C-Sum */
+	uint16_t src_port;	/* source port */
+	uint16_t dest_port;	/* destination port */
+	uint32_t v_tag;		/* verification tag of packet */
+	uint32_t checksum;	/* Adler32 C-Sum */
 	/* chunks follow... */
 };
 
@@ -61,9 +61,9 @@ struct sctphdr {
  * SCTP Chunks
  */
 struct sctp_chunkhdr {
-	uint8_t	chunk_type;	/* chunk type */
-	uint8_t	chunk_flags;	/* chunk flags */
-	uint16_t	chunk_length;	/* chunk length */
+	uint8_t chunk_type;	/* chunk type */
+	uint8_t chunk_flags;	/* chunk flags */
+	uint16_t chunk_length;	/* chunk length */
 	/* optional params follow */
 };
 
@@ -71,8 +71,8 @@ struct sctp_chunkhdr {
  * SCTP chunk parameters
  */
 struct sctp_paramhdr {
-	uint16_t	param_type;	/* parameter type */
-	uint16_t	param_length;	/* parameter length */
+	uint16_t param_type;	/* parameter type */
+	uint16_t param_length;	/* parameter length */
 };
 
 /*
@@ -108,6 +108,7 @@ struct sctp_paramhdr {
 #define SCTP_HMAC_IDENT 		0x00000014
 #define SCTP_AUTH_ACTIVE_KEY 		0x00000015
 #define SCTP_AUTH_DELETE_KEY 		0x00000016
+#define SCTP_USE_EXT_RCVINFO		0x00000017
 
 /*
  * read-only options
@@ -135,18 +136,20 @@ struct sctp_paramhdr {
  * is fine. It probably does NOT make sense to set this on SS_NBIO on a TCP
  * model OR peeled off UDP model, but we do allow you to do so. You just use
  * the normal syscall to toggle SS_NBIO the way you want.
- * 
+ *
  * Blocking I/O is controled by the SS_NBIO flag on the socket state so_state
  * field.
  */
 
 /* these should probably go into sockets API */
-#define SCTP_AUTO_ASCONF		0x00001001
-#define SCTP_MAXBURST			0x00001002
+#define SCTP_AUTO_ASCONF		0x00001001 /* rw */
+#define SCTP_MAXBURST			0x00001002 /* rw */
 /* assoc level context */
-#define SCTP_CONTEXT                    0x00001003
-#define SCTP_RESET_STREAMS		0x00001004
+#define SCTP_CONTEXT                    0x00001003 /* rw */
+#define SCTP_RESET_STREAMS		0x00001004 /* wo */
 
+
+/* here on down are more implementation specific */
 #define SCTP_SET_DEBUG_LEVEL		0x00001005
 #define SCTP_RESET_PEGS                 0x00001006
 #define SCTP_CLR_STAT_LOG               0x00001007
@@ -158,7 +161,7 @@ struct sctp_paramhdr {
 #define SCTP_GET_SNDBUF_USE		0x00001101
 #define SCTP_GET_PEGS			0x00001102
 #define SCTP_GET_STAT_LOG		0x00001103
-#define SCTP_GET_ASOC_ID_LIST           0x00001104
+#define SCTP_GET_ASOC_ID_LIST           0x00001104 /* ro */
 #define SCTP_PCB_STATUS			0x00001105
 #define SCTP_GET_NONCE_VALUES           0x00001106
 
@@ -237,27 +240,26 @@ struct sctp_paramhdr {
  * error cause parameters (user visisble)
  */
 struct sctp_error_cause {
-	uint16_t	code;
-	uint16_t	length;
+	uint16_t code;
+	uint16_t length;
 	/* optional cause-specific info may follow */
 };
 
 struct sctp_error_invalid_stream {
 	struct sctp_error_cause cause;	/* code=SCTP_ERROR_INVALID_STREAM */
-	uint16_t	stream_id;	/* stream id of the DATA in error */
-	uint16_t	reserved;
+	uint16_t stream_id;	/* stream id of the DATA in error */
+	uint16_t reserved;
 };
 
 struct sctp_error_missing_param {
 	struct sctp_error_cause cause;	/* code=SCTP_ERROR_MISSING_PARAM */
-	uint32_t	num_missing_params;	/* number of missing
-						 * parameters */
+	uint32_t num_missing_params;	/* number of missing parameters */
 	/* uint16_t param_type's follow */
 };
 
 struct sctp_error_stale_cookie {
 	struct sctp_error_cause cause;	/* code=SCTP_ERROR_STALE_COOKIE */
-	uint32_t	stale_time;	/* time in usec of staleness */
+	uint32_t stale_time;	/* time in usec of staleness */
 };
 
 struct sctp_error_out_of_resource {
@@ -284,7 +286,7 @@ struct sctp_error_unrecognized_chunk {
 #define HAVE_SCTP_NOCONNECT             0
 #define HAVE_SCTP_ECN_NONCE             1	/* ECN Nonce option */
 #define HAVE_SCTP_AUTH			1
-
+#define HAVE_SCTP_EXT_RCVINFO		1
 /*
  * Main SCTP chunk types we place these here so natd and f/w's in user land
  * can find them.
@@ -332,8 +334,8 @@ struct sctp_error_unrecognized_chunk {
 
 #define SCTP_SAT_NETWORK_MIN	400	/* min ms for RTT to set satellite
 					 * time */
-#define SCTP_SAT_NETWORK_BURST_INCR  2	/* how many times to multiply
-					 * maxburst in sat */
+#define SCTP_SAT_NETWORK_BURST_INCR  2	/* how many times to multiply maxburst
+					 * in sat */
 
 /* Data Chuck Specific Flags */
 #define SCTP_DATA_FRAG_MASK	0x03

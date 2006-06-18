@@ -716,6 +716,7 @@ sctp_recvmsg (int s,
 			if((cmsg->cmsg_len == 0) || (cmsg->cmsg_len > msg.msg_controllen)) {
 				break;
 			}
+			
 			if (cmsg->cmsg_level == IPPROTO_SCTP) {
 				if (cmsg->cmsg_type == SCTP_SNDRCV) {
 					/* Got it */
@@ -725,6 +726,19 @@ sctp_recvmsg (int s,
 						*sinfo = *s_info;
 					sinfo_found = 1;
 					break;
+				} else if (cmsg->cmsg_type == SCTP_EXTRCV) {
+					/* Got it, presumably the user
+					 * has asked for this extra info, so
+					 * the structure holds more room :-D
+					 */
+					s_info = (struct sctp_sndrcvinfo *)CMSG_DATA(cmsg);
+					/* Copy it to the user */
+					if(sinfo) {
+						memcpy(sinfo, s_info, sizeof(struct sctp_extrcvinfo));
+					}
+					sinfo_found = 1;
+					break;
+
 				}
 			}
 			cmsg = CMSG_NXTHDR(&msg,cmsg);

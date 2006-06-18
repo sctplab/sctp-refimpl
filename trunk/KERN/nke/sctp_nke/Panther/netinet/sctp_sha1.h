@@ -44,23 +44,23 @@ __FBSDID("$FreeBSD:$");
 #include <sys/types.h>
 
 struct sha1_context {
-	unsigned int	A;
-	unsigned int	B;
-	unsigned int	C;
-	unsigned int	D;
-	unsigned int	E;
-	unsigned int	H0;
-	unsigned int	H1;
-	unsigned int	H2;
-	unsigned int	H3;
-	unsigned int	H4;
-	unsigned int	words[80];
-	unsigned int	TEMP;
+	unsigned int A;
+	unsigned int B;
+	unsigned int C;
+	unsigned int D;
+	unsigned int E;
+	unsigned int H0;
+	unsigned int H1;
+	unsigned int H2;
+	unsigned int H3;
+	unsigned int H4;
+	unsigned int words[80];
+	unsigned int TEMP;
 	/* block I am collecting to process */
-	char		sha_block [64];
+	char sha_block[64];
 	/* collected so far */
-	int		how_many_in_block;
-	unsigned int	running_total;
+	int how_many_in_block;
+	unsigned int running_total;
 };
 typedef struct sha1_context SHA1_CTX;
 
@@ -92,9 +92,9 @@ typedef struct sha1_context SHA1_CTX;
 
 #if defined(_KERNEL)
 
-void		SHA1_Init (struct sha1_context *);
-void		SHA1_Update(struct sha1_context *, const unsigned char *, int);
-void		SHA1_Final(unsigned char *, struct sha1_context *);
+void SHA1_Init(struct sha1_context *);
+void SHA1_Update(struct sha1_context *, const unsigned char *, int);
+void SHA1_Final(unsigned char *, struct sha1_context *);
 
 #endif				/* _KERNEL */
 #endif

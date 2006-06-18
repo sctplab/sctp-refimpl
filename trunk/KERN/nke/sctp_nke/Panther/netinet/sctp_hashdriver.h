@@ -41,8 +41,8 @@ __FBSDID("$FreeBSD:$");
 #define __sctp_hashdriver_h__
 
 
-void		sctp_hash_digest(char *, int, char *, int, unsigned char *);
+void sctp_hash_digest(char *, int, char *, int, unsigned char *);
 
-void		sctp_hash_digest_m(char *, int, struct mbuf *, int, unsigned char *);
+void sctp_hash_digest_m(char *, int, struct mbuf *, int, unsigned char *);
 
 #endif
