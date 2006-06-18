@@ -102,8 +102,8 @@ typedef struct sctp_authinfo {
 	 * keyid 0"
 	 */
 	/* valid keyid are uint16_t. A negative keyid is "invalid" */
-	int assoc_keyid;	/* current send keyid (cached) */
-	int recv_keyid;		/* last recv keyid (cached) */
+	uint16_t assoc_keyid;	/* current send keyid (cached) */
+	uint16_t recv_keyid;	/* last recv keyid (cached) */
 	sctp_key_t *assoc_key;	/* cached send key */
 	sctp_key_t *recv_key;	/* cached recv key */
 }             sctp_authinfo_t;
@@ -238,7 +238,7 @@ sctp_handle_auth(struct sctp_tcb *stcb, struct sctp_auth_chunk *ch,
     struct mbuf *m, uint32_t offset);
 extern void
 sctp_notify_authentication(struct sctp_tcb *stcb,
-    uint32_t indication, uint32_t keyid,
-    uint32_t alt_keyid);
+    uint32_t indication, uint16_t keyid,
+    uint16_t alt_keyid);
 
 #endif				/* __SCTP_AUTH_H__ */

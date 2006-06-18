@@ -312,8 +312,8 @@ struct sctp_authkey_event {
 	uint16_t auth_type;
 	uint16_t auth_flags;
 	uint32_t auth_length;
-	uint32_t auth_keynumber;
-	uint32_t auth_altkeynumber;
+	uint16_t auth_keynumber;
+	uint16_t auth_altkeynumber;
 	uint32_t auth_indication;
 	sctp_assoc_t auth_assoc_id;
 };
@@ -477,13 +477,13 @@ struct sctp_authchunk {
 /* SCTP_AUTH_KEY */
 struct sctp_authkey {
 	sctp_assoc_t sca_assoc_id;
-	uint32_t sca_keynumber;
+	uint16_t sca_keynumber;
 	uint8_t sca_key[0];
 };
 
 /* SCTP_HMAC_IDENT */
 struct sctp_hmacalgo {
-	uint32_t shmac_idents[0];
+	uint16_t shmac_idents[0];
 };
 
 /* AUTH hmac_id */
@@ -499,7 +499,7 @@ struct sctp_hmacalgo {
 /* SCTP_AUTH_ACTIVE_KEY / SCTP_AUTH_DELETE_KEY */
 struct sctp_authkeyid {
 	sctp_assoc_t scact_assoc_id;
-	uint32_t scact_keynumber;
+	uint16_t scact_keynumber;
 };
 
 /* SCTP_PEER_AUTH_CHUNKS / SCTP_LOCAL_AUTH_CHUNKS */
