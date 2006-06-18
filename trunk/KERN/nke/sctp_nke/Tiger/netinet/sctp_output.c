@@ -7045,6 +7045,9 @@ sctp_sendall_iterator(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
 	struct mbuf *m;
 	int turned_on_nonblock = 0, ret;
 
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sctp_lock_assert(inp->ip_inp.inp.inp_socket);
+#endif
 	ca = (struct sctp_copy_all *)ptr;
 	if (ca->m == NULL) {
 		return;

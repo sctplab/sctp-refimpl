@@ -1813,24 +1813,39 @@ done_with_iterator:
 		return;
 	}
 select_a_new_ep:
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	socket_lock(it->inp->ip_inp.inp.inp_socket, 1);
+#endif
 	SCTP_INP_WLOCK(it->inp);
 	while ((it->pcb_flags) && ((it->inp->sctp_flags & it->pcb_flags) != it->pcb_flags)) {
 		/* we do not like this ep */
 		if (it->iterator_flags & SCTP_ITERATOR_DO_SINGLE_INP) {
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			socket_unlock(it->inp->ip_inp.inp.inp_socket, 1);
+#endif
 			SCTP_INP_WUNLOCK(it->inp);
 			goto done_with_iterator;
 		}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		socket_unlock(it->inp->ip_inp.inp.inp_socket, 1);
+#endif
 		SCTP_INP_WUNLOCK(it->inp);
 		it->inp = LIST_NEXT(it->inp, sctp_list);
 		if (it->inp == NULL) {
 			goto done_with_iterator;
 		}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			socket_lock(it->inp->ip_inp.inp.inp_socket, 1);
+#endif
 		SCTP_INP_WLOCK(it->inp);
 	}
 	if ((it->inp->inp_starting_point_for_iterator != NULL) &&
 	    (it->inp->inp_starting_point_for_iterator != it)) {
 		printf("Iterator collision, we must wait for other iterator at %x\n",
 		    (uint32_t) it->inp);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		/* Unlock done at start_timer_return */
+#endif
 		SCTP_INP_WUNLOCK(it->inp);
 		goto start_timer_return;
 	}
@@ -1870,6 +1885,9 @@ select_a_new_ep:
 		if (cnt > SCTP_MAX_ITERATOR_AT_ONCE) {
 			it->stcb->asoc.stcb_starting_point_for_iterator = it;
 	start_timer_return:
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			socket_unlock(it->inp->ip_inp.inp.inp_socket, 1);
+#endif
 			SCTP_ITERATOR_UNLOCK();
 			sctp_timer_start(SCTP_TIMER_TYPE_ITERATOR, (struct sctp_inpcb *)it, NULL, NULL);
 			return;
@@ -1885,6 +1903,9 @@ select_a_new_ep:
 	SCTP_INP_WLOCK(it->inp);
 	it->inp->inp_starting_point_for_iterator = NULL;
 	SCTP_INP_WUNLOCK(it->inp);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	socket_unlock(it->inp->ip_inp.inp.inp_socket, 1);
+#endif
 	if (it->iterator_flags & SCTP_ITERATOR_DO_SINGLE_INP) {
 		it->inp = NULL;
 	} else {
