@@ -4664,7 +4664,13 @@ sctp_optsset(struct socket *so,
 				struct sctp_inpcb *lep;
 
 				((struct sockaddr_in *)addr_touse)->sin_port = inp->sctp_lport;
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+				socket_unlock(inp->ip_inp.inp.inp_socket, 0);
+#endif
 				lep = sctp_pcb_findep(addr_touse, 1, 0);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+				socket_lock(inp->ip_inp.inp.inp_socket, 0);
+#endif
 				if (lep != NULL) {
 					/*
 					 * We must decrement the refcount

@@ -1058,7 +1058,7 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
 			SCTP_INP_RUNLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		socket_unlock(inp->ip_inp.inp.inp_socket, 1);
+			socket_unlock(inp->ip_inp.inp.inp_socket, 1);
 #endif
 			continue;
 		}
