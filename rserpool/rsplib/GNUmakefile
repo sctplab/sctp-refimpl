@@ -11,7 +11,7 @@ include $(TOPDIR)/GNUmakerules
 LOCAL_CFLAGS=
 
 
-SRCS= rsp_lib.c rsp_timer.c
+SRCS= rsp_lib.c rsp_timer.c rsp_enrp.c
 
 
 OBJS= $(SRCS:%.c=$(OBJDIR)/%.o)

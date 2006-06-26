@@ -21,17 +21,20 @@ rsp_find_enrp_entry_by_asocid(struct rsp_enrp_scope *scp, sctp_assoc_t asoc_id)
 	}
 	dlist_reset(scp->enrpList);
 	while((re = (struct rsp_enrp_entry *)dlist_get(scp->enrpList)) != NULL) {
-		if(re->asoc_id == asocid) 
+		if(re->asocid == asoc_id) 
 			break;
 	}
 	return(re);
 }
 
 struct rsp_enrp_entry *
-rsp_find_enrp_entry_by_addr(struct sockaddr *from, socklen_t  from_len)
+rsp_find_enrp_entry_by_addr(struct rsp_enrp_scope *scp, 
+			    struct sockaddr *from, 
+			    socklen_t  from_len)
 {
 	struct rsp_enrp_entry *re = NULL;
 	struct sockaddr *at;
+	int i;
 
 	dlist_reset(scp->enrpList);
 	while((re = (struct rsp_enrp_entry *)dlist_get(scp->enrpList)) != NULL) {
@@ -51,6 +54,7 @@ rsp_find_enrp_entry_by_addr(struct sockaddr *from, socklen_t  from_len)
 						/* found */
 						return(re);
 					}
+				}
 			}
 			/* Move to next address */
 			at = (struct sockaddr *)(((caddr_t)at) + from->sa_len);
@@ -86,7 +90,7 @@ handle_enrpserver_notification (struct rsp_enrp_scope *scp, char *buf,
 			/* Find this guy and mark it up */
 			enrp = rsp_find_enrp_entry_by_asocid(scp, ac->sac_assoc_id);
 			if (enrp == NULL) {
-				enrp = rsp_find_enrp_entry_by_addr(from, from_len);
+				enrp = rsp_find_enrp_entry_by_addr(scp, from, from_len);
 			}
 			if(enrp == NULL) {
 				/* huh? */
@@ -107,7 +111,7 @@ handle_enrpserver_notification (struct rsp_enrp_scope *scp, char *buf,
 			/* Find this guy and mark it down */
 			enrp = rsp_find_enrp_entry_by_asocid(scp, ac->sac_assoc_id);
 			if (enrp == NULL) {
-				enrp = rsp_find_enrp_entry_by_addr(from, from_len);
+				enrp = rsp_find_enrp_entry_by_addr(scp, from, from_len);
 			}
 			if(enrp == NULL) {
 				/* huh? */
@@ -140,7 +144,7 @@ handle_enrpserver_notification (struct rsp_enrp_scope *scp, char *buf,
 		}
 		enrp = rsp_find_enrp_entry_by_asocid(scp, sh->sse_assoc_id);
 		if (enrp == NULL) {
-			enrp = rsp_find_enrp_entry_by_addr(from, from_len);
+			enrp = rsp_find_enrp_entry_by_addr(scp, from, from_len);
 		}
 		if(enrp == NULL) {
 			/* huh? */
@@ -167,7 +171,7 @@ handle_enrpserver_notification (struct rsp_enrp_scope *scp, char *buf,
 		}
 		enrp = rsp_find_enrp_entry_by_asocid(scp, sf->ssf_assoc_id);
 		if(enrp == NULL) {
-			enrp = rsp_find_enrp_entry_by_addr(from, from_len);
+			enrp = rsp_find_enrp_entry_by_addr(scp, from, from_len);
 		}
 		if(enrp == NULL) {
 			/* huh? */
@@ -190,14 +194,14 @@ handle_enrpserver_notification (struct rsp_enrp_scope *scp, char *buf,
 		break;
 	default:
 		fprintf(stderr, "Got event type %d I did not subscibe for?\n",
-			notify->sn_heaer.sn_type);
+			notify->sn_header.sn_type);
 		break;
 	};
 }
 
 void
-handle_enrpmsg (struct rsp_enrp_scope *scp, char *buf, struct sctp_sndrcvinfo *sinfo, ssize_t sz,
-		struct sockaddr *from, socklen_t from_len)
+handle_asapmsg_fromenrp (struct rsp_enrp_scope *scp, char *buf, struct sctp_sndrcvinfo *sinfo, ssize_t sz,
+			 struct sockaddr *from, socklen_t from_len)
 {
 	struct rsp_enrp_entry *enrp;	
 	struct asap_message *msg;
@@ -211,7 +215,7 @@ handle_enrpmsg (struct rsp_enrp_scope *scp, char *buf, struct sctp_sndrcvinfo *s
 	/* Get ENRP server we are talking to please */
 	enrp = rsp_find_enrp_entry_by_asocid(scp, sinfo->sinfo_assoc_id);
 	if (enrp == NULL) {
-		enrp = rsp_find_enrp_entry_by_addr(from, from_len);
+		enrp = rsp_find_enrp_entry_by_addr(scp, from, from_len);
 	}
 	if(enrp == NULL) {
 		/* huh? */
@@ -228,17 +232,46 @@ handle_enrpmsg (struct rsp_enrp_scope *scp, char *buf, struct sctp_sndrcvinfo *s
 	/* Now what is the message it is sending us? */
 	switch (msg->asap_type) {
 	case ASAP_REGISTRATION_RESPONSE:
-		break;
+		/*
+		 * Ok, now we need to figure out if we
+		 * got registered ok. If yes, then we must
+		 * wake our sleeper. If no, then we must
+		 * setup the error condition and wake our
+		 * sleeper so it can unblock and realize it
+		 * failed.
+		 */
+ 		break;
 	case ASAP_DEREGISTRATION_RESPONSE:
-		break;
+		/* Here we can check our de-reg response, it
+		 * should be ok since the ENRP server should
+		 * not refuse to let us deregister. 
+		 */
+ 		break;
 	case ASAP_HANDLE_RESOLUTION_RESPONSE:
+		/* Ok we must find the pending response
+		 * that we have asked for and then digest the
+		 * name space PE list into the cache. If we
+		 * have someone blocked on this action (aka first
+		 * send to a name) then we must wake the sleeper's
+		 * afterwards.
+		 */
 		break;
 	case ASAP_ENDPOINT_KEEP_ALIVE:
+		/* its a keep-alive, we must declare
+		 * this to be our new home server if it is not already 
+		 * and send back an ASAP_ENDPOINT_KEEP_ALIVE_ACK.
+		 */
 		break;
 	case ASAP_SERVER_ANNOUNCE:
+		/* Server announce, this is usually a multi-cast
+		 * msg to add to our server pool... we do not
+		 * support this currently since we are configured.
+		 */
 		break;
 	case ASAP_ERROR:
-		break;
+		/* Hmm, some sort of error.
+		 */
+ 		break;
 	case ASAP_ENDPOINT_UNREACHABLE:
 	case ASAP_ENDPOINT_KEEP_ALIVE_ACK:
 	case ASAP_REGISTRATION:
@@ -257,4 +290,5 @@ handle_enrpmsg (struct rsp_enrp_scope *scp, char *buf, struct sctp_sndrcvinfo *s
 	default:
 		fprintf(stderr, "Unknown message type %d\n", msg->asap_type);
 		break;
+	};
 }
