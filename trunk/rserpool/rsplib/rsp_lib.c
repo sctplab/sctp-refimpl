@@ -278,12 +278,7 @@ rsp_load_file(FILE *io, char *file)
 		fprintf(stderr, "Can't get memory for enrp_scope err:%d\n", errno);
 		return(-1);
 	}
-	ret = dlist_append(rsp_pcbinfo.scopes,(void *)es);
-	if (ret) {
-		fprintf(stderr, "Can't get memory for enrp_scope dlist err:%d ret:%d\n", errno, ret);
-		free(es);
-		return(-1);
-	}
+	memset(es, 0, sizeof(struct rsp_enrp_scope));
 
 	es->sd = socket(AF_INET6, SOCK_SEQPACKET, IPPROTO_SCTP);
 	if(es->sd  == -1) {
@@ -292,12 +287,48 @@ rsp_load_file(FILE *io, char *file)
 		return(-1);
 	}
 
+	/* cache of names */
+	es->cache = HashedTbl_create(RSP_CACHE_HASH_TABLE_NAME, 
+					RSP_CACHE_HASH_TBL_SIZE);
+	if(es->cache == NULL) {
+		if(rsp_debug) {
+			fprintf(stderr, "can't get memory for hashtable of name cache\n");
+		}
+		goto out_with_error;
+	}
+
+        /* assoc id-> pe */
+	es->vtagHash = HashedTbl_create(RSP_VTAG_HASH_TABLE_NAME, 
+					   RSP_VTAG_HASH_TBL_SIZE);
+	if(es->vtagHash == NULL) {
+		if(rsp_debug) {
+			fprintf(stderr, "can't get memory for hashtable of vtags\n");
+		}
+		goto out_with_error;
+	}
+
+	/* ipadd -> rsp_pool_ele */
+	es->ipaddrPortHash= HashedTbl_create(RSP_IPADDR_HASH_TABLE_NAME, 
+						RSP_IPADDR_HASH_TBL_SIZE);
+	if (es->ipaddrPortHash == NULL) {
+		if(rsp_debug) {
+			fprintf(stderr, "can't get memory for hashtable of ipaddr\n");
+		}
+		goto out_with_error;
+	}
+
 	es->enrpList = dlist_create();
 	if(es->enrpList == NULL) {
 		fprintf(stderr, "Can't get memory for enrp_scope dlist err:%d\n", errno);
-		close(es->sd);
-		free(es);
-		return(-1);
+		goto out_with_error;
+	}
+	/* list of all pools */
+	es->allPools = dlist_create();
+	if(es->allPools == NULL) {
+		if(rsp_debug) {
+			fprintf(stderr, "can't get memory for dlist of all pools\n");
+		}
+		goto out_with_error;
 	}
 
 	es->scopeId =  rsp_scope_counter;
@@ -323,11 +354,7 @@ rsp_load_file(FILE *io, char *file)
 #endif
 	if (setsockopt(es->sd, IPPROTO_SCTP, SCTP_EVENTS, &event, sizeof(event)) != 0) {
 		fprintf(stderr, "Can't do SET_EVENTS socket option! err:%d\n", errno);
-		errno = EFAULT;
-		close(es->sd);
-		dlist_destroy(es->enrpList);
-		free(es);
-		return(-1);
+		goto out_with_error;
 	}
 	es->timers[RSP_T1_ENRP_REQUEST] = DEF_RSP_T1_ENRP_REQUEST;
 	es->timers[RSP_T2_REGISTRATION] = DEF_RSP_T2_REGISTRATION;
@@ -339,6 +366,14 @@ rsp_load_file(FILE *io, char *file)
 	es->homeServer = NULL;
 	es->enrp_tmr = NULL;
 	es->state = RSP_NO_ENRP_SERVER;
+
+	/* all good, we can add it to the list of scopes */
+	ret = dlist_append(rsp_pcbinfo.scopes,(void *)es);
+	if (ret) {
+		fprintf(stderr, "Can't get memory for enrp_scope dlist err:%d ret:%d\n", errno, ret);
+		goto out_with_error;
+	}
+
 
 	while(fgets(string, sizeof(string), io) != NULL) {
 		line++;
@@ -477,6 +512,26 @@ rsp_load_file(FILE *io, char *file)
 	 * this will get it to add it to the fd list its watching
 	 */
 	return (es->scopeId);
+
+ out_with_error:
+	close(es->sd);
+	if(es->cache)
+		HashedTbl_destroy(es->cache);
+	
+	if(es->vtagHash)
+		HashedTbl_destroy(es->vtagHash);
+
+	if (es->ipaddrPortHash)
+		HashedTbl_destroy(es->ipaddrPortHash);
+
+	if (es->enrpList) 
+		dlist_destroy(es->enrpList);
+
+	if (es->allPools) 
+		dlist_destroy(es->allPools);
+
+	free(es);
+	return(-1);
 }
 
 static int
@@ -858,17 +913,20 @@ rsp_socket(int domain, int type,  int protocol, uint32_t op_scope)
 		errno = ENOMEM;
 		return(-1);
 	}
-	sdata->homeScope = rsp_find_scope_with_id(op_scope);
-	if(sdata->homeScope == NULL) {
+	memset(sdata, 0, sizeof(struct rsp_socket_hash));
+	sdata->scp = rsp_find_scope_with_id(op_scope);
+	if(sdata->scp == NULL) {
 		if(rsp_debug) {
 			fprintf(stderr, "Can't find scope id:%d\n", op_scope);
 		}
 		free(sdata);
 		return (-1);
 	}
+	/* FIX? If we refcount scp, we need a bump here? */
 
 	sd = socket(domain, type, protocol);
 	if(sd == -1) {
+		free(sdata);
 		return (sd);
 	}
 
@@ -879,63 +937,13 @@ rsp_socket(int domain, int type,  int protocol, uint32_t op_scope)
 	sdata->type = type;
 	sdata->domain = domain;
 
-	/* list of all pools */
-	sdata->allPools = dlist_create();
-	if(sdata->allPools == NULL) {
-		if(rsp_debug) {
-			fprintf(stderr, "can't get memory for dlist of all pools\n");
-		}
-	out_ofa:
-		free(sdata);
-		close(sd);
-		errno = ENOMEM;
-		return (-1);
-	}
-
-	/* cache of names */
-	sdata->cache = HashedTbl_create(RSP_CACHE_HASH_TABLE_NAME, 
-					RSP_CACHE_HASH_TBL_SIZE);
-	if(sdata->cache == NULL) {
-		if(rsp_debug) {
-			fprintf(stderr, "can't get memory for hashtable of name cache\n");
-		}
-	out_ofb:
-		dlist_destroy(sdata->allPools);
-		goto out_ofa;
-	}
-
-        /* assoc id-> pe */
-	sdata->vtagHash = HashedTbl_create(RSP_VTAG_HASH_TABLE_NAME, 
-					   RSP_VTAG_HASH_TBL_SIZE);
-	if(sdata->vtagHash == NULL) {
-		if(rsp_debug) {
-			fprintf(stderr, "can't get memory for hashtable of vtags\n");
-		}
-	out_ofc:
-		HashedTbl_destroy(sdata->cache);
-		goto out_ofb;
-	}
-
-	/* ipadd -> rsp_pool_ele */
-	sdata->ipaddrPortHash= HashedTbl_create(RSP_IPADDR_HASH_TABLE_NAME, 
-						RSP_IPADDR_HASH_TBL_SIZE);
-	if (sdata->ipaddrPortHash == NULL) {
-		if(rsp_debug) {
-			fprintf(stderr, "can't get memory for hashtable of ipaddr\n");
-		}
-	out_ofd:
-		HashedTbl_destroy(sdata->vtagHash);
-		goto out_ofc;
-	}
         /* ENRP requests outstanding */
 	sdata->enrp_reqs = dlist_create();
 	if (sdata->enrp_reqs == NULL) {
 		if(rsp_debug) {
 			fprintf(stderr, "can't get memory for enrp req dlist\n");
 		}
-	out_ofe:
-		HashedTbl_destroy(sdata->ipaddrPortHash);
-		goto out_ofd;
+		goto error_out;
 	}
 	/* setup w/addrlist w/ctl&data seperate */
 	sdata->address_reg = dlist_create();
@@ -943,20 +951,9 @@ rsp_socket(int domain, int type,  int protocol, uint32_t op_scope)
 		if(rsp_debug) {
 			fprintf(stderr, "can't get memory for addr_reg req dlist\n");
 		}
-	out_off:
-		dlist_destroy(sdata->enrp_reqs);		
-		goto out_ofe;
+		goto error_out;
 	}
 
-	/* ENRP server  list */
-	sdata->enrpList = dlist_create();
-	if (sdata->enrpList == NULL) {
-		if(rsp_debug) {
-			fprintf(stderr, "can't get memory for enrp home addr dlist\n");
-		}
-		dlist_destroy(sdata->address_reg);
-		goto out_off;
-	}
 	/* number of names in use */
 	sdata->refcnt = 0;
 
@@ -1020,13 +1017,24 @@ rsp_socket(int domain, int type,  int protocol, uint32_t op_scope)
 					(void *)&sdata->sd, 	/* keyp */
 					sizeof(sdata->sd))) ) {	/* size of key */
 		fprintf(stderr, "Failed to enter into hash table error:%d\n", ret);
+		if (pthread_mutex_unlock(&rsp_pcbinfo.sd_pool_mtx) ) {
+			fprintf(stderr, "Unsafe access, thread unlock failed for sd_pool_mtx:%d\n", errno);
+		}
+		goto error_out;
 	}
 
 	if (pthread_mutex_unlock(&rsp_pcbinfo.sd_pool_mtx) ) {
 		fprintf(stderr, "Unsafe access, thread unlock failed for sd_pool_mtx:%d\n", errno);
 	}
-
 	return(sd);
+ error_out:
+	close(sdata->sd);
+	if (sdata->enrp_reqs)
+		dlist_destroy(sdata->enrp_reqs);
+	if(sdata->address_reg)
+		dlist_destroy(sdata->address_reg);
+	free(sdata);
+	return(-1);
 }
 
 int 
