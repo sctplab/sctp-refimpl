@@ -12,6 +12,80 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 
+static struct rsp_paramhdr *
+get_next_parameter (uint8_t *buf, uint8_t *limit, uint8_t **nxt, uint16_t *type)
+{
+	struct rsp_paramhdr *ph;
+	uint16_t len;
+
+	*type = RSP_PARAM_RSVD;
+	if( ((caddr_t)limit - (caddr_t)buf)  < (sizeof(struct rsp_paramhdr))) {
+		/* not even enough space for a param. */
+		return(NULL);
+	}
+	ph = (struct rsp_paramhdr *)buf;
+	len = ntohs(ph->param_length);
+	if((buf + len) >= limit) {
+		/* to long */
+		return(NULL);
+	}
+	/* save back the len in local byte order */
+	ph->param_length = len;
+	*type = ntohs(ph->param_type);
+
+	/* save back the type in local byte order */
+	ph->param_type = *type;
+	if(nxt) {
+		*nxt = (uint8_t *)(((caddr_t)ph) + len);
+	}
+	return(ph);
+}
+
+void
+asap_handle_name_resolution_response(struct rsp_enrp_scope *scp, 
+				     struct rsp_enrp_entry *enrp, 
+				     uint8_t *buf, 
+				     ssize_t sz, 
+				     struct sctp_sndrcvinfo *sinfo)
+{
+	struct rsp_pool_handle *ph;
+	struct rsp_select_policy *sp;
+
+	uint8_t *limit, *at;
+	uint16_t this_param;
+
+	/* at all times our pointer must be less than limit */
+	limit = (buf + sz);
+	at = buf + sizeof(struct asap_message);
+
+	/* Now we must first we get the pool handle parameter */
+	ph  = (struct rsp_pool_handle *)get_next_parameter(at, limit, &at, &this_param);
+	if ((this_param != RSP_PARAM_POOL_HANDLE) || (ph == NULL)) {
+		fprintf(stderr, "Did not find first req param, pool handle in msg found %d\n",
+			this_param);
+		return;
+	}
+
+	/* Now we get the selection policy */
+	sp = (struct rsp_select_policy *)get_next_parameter(at, limit, &at, &this_param);
+	if ((sp == NULL) || (this_param != RSP_PARAM_SELECT_POLICY)) {
+		fprintf(stderr, "Did not find second req param, selection policy in msg found %d\n",
+			this_param);
+
+		return;
+	}
+	/* Now we must:
+	 * 1: find the pool.	   
+	 * 2: if it does not exist build it.
+	 * 3: once we have the pool, go through all
+	 *    the pe's and load up the data structures, pruning
+	 *    out guys that were removed (if we had a previous ds)..
+	 * 4: If there is a blocking hanger(s) on this pool, wake it/them up.
+	 */
+	
+}
+
+
 struct rsp_enrp_entry *
 rsp_find_enrp_entry_by_asocid(struct rsp_enrp_scope *scp, sctp_assoc_t asoc_id)
 {
@@ -255,6 +329,7 @@ handle_asapmsg_fromenrp (struct rsp_enrp_scope *scp, char *buf, struct sctp_sndr
 		 * send to a name) then we must wake the sleeper's
 		 * afterwards.
 		 */
+		asap_handle_name_resolution_response(scp, enrp, buf, sz, sinfo);
 		break;
 	case ASAP_ENDPOINT_KEEP_ALIVE:
 		/* its a keep-alive, we must declare
