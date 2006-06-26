@@ -673,74 +673,6 @@ rsp_find_scope_with_id(uint32_t op_scope)
 	return(scp);
 }
 
-void
-handle_enrpserver_notification (struct rsp_enrp_scope *scp, char *buf, struct sctp_sndrcvinfo *sinfo, ssize_t sz)
-{
-	union sctp_notification *notify;
-	struct sctp_send_failed  *sf;
-	struct sctp_assoc_change *ac;
-	struct sctp_shutdown_event *sh;
-	struct rsp_enrp_entry *enrp;
-
-	notify = (union sctp_notification *)buf;
-	switch(notify->sn_header.sn_type) {
-	case SCTP_ASSOC_CHANGE:
-		ac = &notify->sn_assoc_change;
-		if(sz < sizeof(*ac)) {
-			fprintf(stderr, "Event ac size:%d got:%d -- to small\n",
-				sizeof(*ac), sz);
-			return;
-		}
-		switch(ac->sac_state) {
-		case SCTP_RESTART:
-		case SCTP_COMM_UP:
-			/* Find this guy and mark it up */
-			enrp = rsp_find_enrp_entry_by_asocid(scp, ac->sac_assoc_id);
-			break;
-		case SCTP_COMM_LOST:
-		case SCTP_CANT_STR_ASSOC:
-		case SCTP_SHUTDOWN_COMP:
-			/* Find this guy and mark it down */
-			enrp = rsp_find_enrp_entry_by_asocid(scp, ac->sac_assoc_id);
-
-			break;
-		default:
-			fprintf( stderr, "Unknown assoc state %d\n", ac->sac_state);
-			break;
-		struct sctp_assoc_change {
-
-
-		break;
-	case SCTP_SHUTDOWN_EVENT:
-		sh = &notify->sn_shutdown_event;
-		if(sz < sizeof(*sh)) {
-			fprintf(stderr, "Event sh size:%d got:%d -- to small\n",
-				sizeof(*sh), sz);
-			return;
-		}
-
-		break;
-	case SCTP_SEND_FAILED:
-		sf = &notify->sn_send_failed;
-		if(sz < sizeof(*sf)) {
-			fprintf(stderr, "Event sf size:%d got:%d -- to small\n",
-				sizeof(*sf), sz);
-			return;
-		}
-		/* FIX ME */
-		break;
-	default:
-		fprintf(stderr, "Got event type %d I did not subscibe for?\n",
-			notify->sn_heaer.sn_type);
-		break;
-	}
-}
-
-
-handle_enrpmsg (struct rsp_enrp_scope *scp, char *buf, struct sctp_sndrcvinfo *sinfo, ssize_t sz)
-{
-
-}
 
 void
 rsp_process_fd_for_scope (struct rsp_enrp_scope *scp)
@@ -768,9 +700,9 @@ rsp_process_fd_for_scope (struct rsp_enrp_scope *scp)
 		return;
 	}
 	if(msg_flags & MSG_NOTIFICATION) {
-		handle_enrpserver_notification(scp, readbuf, &info, sz);
+		handle_enrpserver_notification(scp, readbuf, &info, sz, from, from_len);
 	} else {
-		handle_enrpmsg(scp, readbuf, &info, sz);
+		handle_enrpmsg(scp, readbuf, &info, sz, from, from_len);
 	}
 }
 
