@@ -580,7 +580,7 @@ rsp_start_enrp_server_hunt(struct rsp_enrp_scope *scp, int non_blocking)
 			} else {
 				re->state = RSP_START_ASSOCIATION;
 				/* try to get assoc id */
-				re->asocid = get_asocid(sd->sd, re->addrList);
+				re->asocid = get_asocid(scp->sd, re->addrList);
 			}
 			cnt++;
 		} else if (re->state == RSP_ASSOCIATION_UP) {
@@ -610,7 +610,7 @@ rsp_start_enrp_server_hunt(struct rsp_enrp_scope *scp, int non_blocking)
 				} else {
 					re->state = RSP_START_ASSOCIATION;
 					/* try to get assoc id */
-					re->asocid = get_asocid(sd->sd, re->addrList);
+					re->asocid = get_asocid(scp->sd, re->addrList);
 				}
 				cnt++;
 			}
@@ -677,8 +677,10 @@ rsp_find_scope_with_id(uint32_t op_scope)
 void
 rsp_process_fd_for_scope (struct rsp_enrp_scope *scp)
 {
-	/* Some ENRP message is waiting on the sd, or an
-	 * event at least :-D
+	/* Some ASAP message is waiting on the sd from
+	 * an ENRP server or an event at least :-D
+	 *
+	 * Read and process it.
 	 */
 	ssize_t sz;
 	struct pe_address from;
@@ -700,9 +702,12 @@ rsp_process_fd_for_scope (struct rsp_enrp_scope *scp)
 		return;
 	}
 	if(msg_flags & MSG_NOTIFICATION) {
-		handle_enrpserver_notification(scp, readbuf, &info, sz, from, from_len);
+		handle_enrpserver_notification(scp, readbuf, &info, sz, 
+					       (struct sockaddr *)&from, from_len);
 	} else {
-		handle_enrpmsg(scp, readbuf, &info, sz, from, from_len);
+		/* we call the handle_asapmsg_fromenrp routine here */
+		handle_asapmsg_fromenrp(scp, readbuf, &info, sz, 
+					(struct sockaddr *)&from, from_len);
 	}
 }
 
@@ -811,7 +816,8 @@ void rsp_process_fds(int ret)
 				/* this one woke up, find the scope */
 				scp = rsp_find_scope_with_sd(rsp_pcbinfo.watchfds[i].fd);
 				if(scp == NULL) {
-					fprintf (stderr, "fd:%d does not belong to any scope? - nulling", rsp_pcbinfo.watchfds[i].fd);
+					fprintf (stderr, "fd:%d does not belong to any scope? - nulling",
+						 rsp_pcbinfo.watchfds[i].fd);
 					rsp_pcbinfo.watchfds[i].fd = -1;
 					rsp_pcbinfo.watchfds[i].events = 0;
 					rsp_pcbinfo.watchfds[i].revents = 0;
