@@ -66,6 +66,13 @@ struct rsp_enrp_scope {
 	struct rsp_enrp_entry *homeServer;	   /* direct pointer to home server */
 	dlist_t		*enrpList;	           /* current list of ENRP servers */
 	struct rsp_timer_entry *enrp_tmr;
+        /* Caches aka PE's and Pools */
+	dlist_t 	*allPools;		/* list of all rsp_pool */
+	HashedTbl	*cache;			/* cache name->rsp_pool */
+	HashedTbl	*ipaddrPortHash;	/* ipadd -> rsp_pool_ele */
+	HashedTbl	*vtagHash;		/* assoc id-> rsp_pool_ele */
+
+	/* other stuff */
 	uint32_t 	timers[RSP_NUMBER_TIMERS]; /* default timers */
 	uint32_t refcount;                         /* how man enrp entries refer to this guy */
 	uint32_t	state;
@@ -101,7 +108,7 @@ struct rsp_global_info {
 	int			rsp_number_sd;	/* count of sd's when 0 un-init */
 	struct pollfd           *watchfds;	/* fd's the thread is watching for us */
 	int			lsd[2];		/* local 'unix-domain' socket pair for enrp_thread */
-	HashedTbl		*sd_pool;	/* hashed pool of sd's */
+	HashedTbl		*sd_pool;	/* hashed pool of sd aka sd->sd_socke_hash  entry*/
 	dlist_t			*timer_list;	/* list of timers running */
 	dlist_t			*scopes;	/* the list of all scopes */
 	pthread_mutex_t		sd_pool_mtx;	/* mutex for sd_pool locks global_info except timer stuff  */
@@ -124,14 +131,9 @@ struct rsp_socket_hash {
 	int	 	sd;			/* sctp socket */
 	int		type;			/* socket type */
 	int 		domain;			/* domain af_inet/af_inet6 */
-	dlist_t 	*allPools;		/* list of all rsp_pool */
-	HashedTbl	*cache;			/* cache name->rsp_poll */
-	HashedTbl	*vtagHash;		/* assoc id-> rsp_pool_ele */
-	HashedTbl	*ipaddrPortHash;	/* ipadd -> rsp_pool_ele */
+	struct rsp_enrp_scope *scp;
 	dlist_t		*enrp_reqs;		/* ENRP requests outstanding */
 	dlist_t		*address_reg;		/* setup w/addrlist w/ctl&data seperate */
-	dlist_t 	*enrpList;		/* List of ENRP servers */
-	struct rsp_enrp_scope *homeScope;	/* Scope of enrp */
 	uint32_t 	refcnt;			/* number of names in use */
 	uint32_t	enrpID;			/* ID of home ENRP server */
 	pthread_mutex_t	rsp_sd_mtx;		/* mutex for sleepers to serialize upon  */
@@ -173,8 +175,6 @@ struct rsp_pool {
 	int32_t		cookieSize;		/* length of cookie */
 	uint32_t 	refcnt;			/* number of PE's pointing to me */
 	uint32_t	regType;		/* reg type - the policy */
-	uint32_t	policy_value;		/* policy/count */
-	uint32_t	policy_actvalue;	/* current count */
 	uint8_t		failover_allowed;	/* auto failover of queued messages? */
 	uint8_t         auto_update;		/* did we subscribe to upds */
 };
@@ -193,17 +193,18 @@ struct rsp_info_found {
 
 /* Each entry aka the actual PE */
 struct rsp_pool_ele {
-	char 		*name; 		/* pointer to pool name */
 	struct rsp_pool *pool;		/* pointer to pool entry */
-	struct sockaddr	*addrList;	/* list of addresses, gotten from sctp_getpaddr() */
+	struct sockaddr	*addrList;	/* list of addresses, gotten from sctp_getpaddr() or
+					 * initially at name resolution.
+					 */
 	uint32_t	number_of_addr;	/* cnt of addresses */
-	struct rsp_pool_ele *failover_list;
+	dlist_t         *failover_list; /* business card failover list */
 	uint32_t	pe_identifer;	/* identifier of this PE */
 	uint32_t	state;		/* What state we think its in */
 	int		protocol_type;	/* what type of protocol are we using */
 	sctp_assoc_t	asocid;		/* sctp asoc id */
-	int		sd;		/* sctp socket it belongs to */
-	int		failoverlist_size;
+	uint32_t	policy_value;	/* policy/count */
+	uint32_t	policy_actvalue;/* current count */
 };
 
 /* An address entry in the list */

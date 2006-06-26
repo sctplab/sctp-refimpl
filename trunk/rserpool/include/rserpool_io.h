@@ -102,7 +102,7 @@ struct rsp_select_policy_value {
 
 struct rsp_pool_handle {
 	struct rsp_paramhdr      ph;
-	uint8_t                  pool_handle[4]; /* variable length */
+	uint8_t                  pool_handle[0]; /* variable length */
 };
 
 

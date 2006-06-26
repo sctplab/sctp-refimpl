@@ -25,4 +25,22 @@ rsp_start_timer(struct rsp_enrp_scope *sd,
 int rsp_stop_timer(struct rsp_timer_entry *te);
 
 void rsp_process_fds(int poll_ret);
+
+
+
+void
+handle_enrpserver_notification (struct rsp_enrp_scope *scp, 
+				char *buf, 
+				struct sctp_sndrcvinfo *sinfo, 
+				ssize_t sz,
+				struct sockaddr *from, 
+				socklen_t from_len);
+
+void
+handle_asapmsg_fromenrp (struct rsp_enrp_scope *scp, 
+			 char *buf, 
+			 struct sctp_sndrcvinfo *sinfo, 
+			 ssize_t sz,
+			 struct sockaddr *from, 
+			 socklen_t from_len);
 #endif
