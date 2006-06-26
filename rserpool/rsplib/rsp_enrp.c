@@ -42,6 +42,45 @@ get_next_parameter (uint8_t *buf, uint8_t *limit, uint8_t **nxt, uint16_t *type)
 }
 
 void
+asap_decode_pe_entry_and_add(struct rsp_pool *pool,
+			     struct rsp_pool_element *pe,
+			     uint8_t *limit)
+{
+	struct rsp_pool_ele *pes;
+	/*
+	 * 1. See if pe is already in, if so just mark it to present.
+	 * 2. If not in, build a new one from this.
+	 */
+	uint32_t id;
+
+	id = ntohl(pe->id);
+
+	/* Note: pe-identifer unique to pool <OR>
+	 *       unique to pool + home server?
+	 *       Maybe homeserver id should always be 0 from ENRP to PU/PE?
+	 */
+	dlist_reset(pool->peList);
+	while((pes = (struct rsp_pool_ele *)dlist_get(pool->peList)) != NULL) {
+		if(pes->pe_identifer == id) {
+			pes->state &= ~RSP_PE_STATE_BEING_DEL;
+			return;
+		}
+	}
+	/* if we reach here we are at step 2. */
+	pes = malloc(sizeof(struct rsp_pool_ele));
+	if(pes == NULL) {
+		/* no memory ? */
+		return;
+	}
+	memset(pes, 0, sizeof(*pes));
+	pes->pool = pool;
+	pool->refcnt++;
+
+}
+
+
+
+void
 asap_handle_name_resolution_response(struct rsp_enrp_scope *scp, 
 				     struct rsp_enrp_entry *enrp, 
 				     uint8_t *buf, 
@@ -50,9 +89,12 @@ asap_handle_name_resolution_response(struct rsp_enrp_scope *scp,
 {
 	struct rsp_pool_handle *ph;
 	struct rsp_select_policy *sp;
-
-	uint8_t *limit, *at;
+	struct rsp_pool *pool;
+	struct rsp_pool_element *pe;
+	struct rsp_pool_ele *pes;
+	uint8_t *limit, *at, new_ent=0;
 	uint16_t this_param;
+	int pool_nm_len;
 
 	/* at all times our pointer must be less than limit */
 	limit = (buf + sz);
@@ -82,7 +124,64 @@ asap_handle_name_resolution_response(struct rsp_enrp_scope *scp,
 	 *    out guys that were removed (if we had a previous ds)..
 	 * 4: If there is a blocking hanger(s) on this pool, wake it/them up.
 	 */
-	
+	pool_nm_len = ph->ph.param_length - sizeof(struct rsp_paramhdr);
+
+	pool = (struct rsp_pool *)HashedTbl_lookup(scp->cache ,ph->pool_handle, pool_nm_len, NULL);
+	if(pool == NULL) {
+		/* new entry - point 2*/
+		new_ent = 1;
+		pool = (struct rsp_pool *)malloc(sizeof(struct rsp_pool));
+		if(pool == NULL) {
+			/* no memory */
+			return;
+		}
+		memset(pool, 0, sizeof(struct rsp_pool));
+		pool->name_len = pool_nm_len;
+		pool->name = malloc(pool_nm_len + 1);
+		if(pool->name == NULL) {
+			/* no memory */
+			free(pool);
+			return;
+		}
+		memset(pool->name, 0, (pool_nm_len + 1));
+		memcpy(pool->name, ph->pool_handle, pool->name_len);
+		pool->peList = dlist_create();
+		if(pool->peList == NULL) {
+			/* no memory */
+		failed:
+			free(pool->name);
+			free(pool);
+			return;
+		}
+		/* The cookie stuff is inited to NULL/0 len */
+		pool->refcnt = 1;
+
+		/* we don't worry about the value, it only
+		 * has meaning on the individual PE's
+		 */
+		pool->regType = sp->policy_type;
+		if(HashedTbl_enter(scp->cache, pool->name, pool, pool->name_len) != 0) {
+			fprintf(stderr, "Can't add entry to global name cache?\n");
+			dlist_destroy(pool->peList);
+			goto failed;
+		}
+	}
+	/* First lets mark any PE in the list currently to being deleted */
+	dlist_reset(pool->peList);
+	while((pes = (struct rsp_pool_ele *)dlist_get(pool->peList)) != NULL) {
+		pes->state |= RSP_PE_STATE_BEING_DEL;
+	}
+	/* From here on down we have a pool, we are to point 3. */
+	pe = (struct rsp_pool_element *)get_next_parameter(at, limit, &at, &this_param);
+	while (pe != NULL) {
+		if (this_param !=  RSP_PARAM_POOL_ELEMENT) {
+			fprintf(stderr,"Wanted PE-Handle found type:%d - corrupt/malformed msg??\n",
+				this_param);
+		}
+		/* note here that at becomes the new limit with in this message */
+		asap_decode_pe_entry_and_add(pool, pe, at);
+		pe = (struct rsp_pool_element *)get_next_parameter(at, limit, &at, &this_param);
+	}
 }
 
 
