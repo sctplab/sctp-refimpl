@@ -197,14 +197,18 @@ struct rsp_pool_ele {
 	struct sockaddr	*addrList;	/* list of addresses, gotten from sctp_getpaddr() or
 					 * initially at name resolution.
 					 */
+	size_t		len;		/* length of address list */
 	uint32_t	number_of_addr;	/* cnt of addresses */
 	dlist_t         *failover_list; /* business card failover list */
 	uint32_t	pe_identifer;	/* identifier of this PE */
 	uint32_t	state;		/* What state we think its in */
+	uint32_t        reglife;	/* reg life of this element */
 	int		protocol_type;	/* what type of protocol are we using */
-	sctp_assoc_t	asocid;		/* sctp asoc id */
 	uint32_t	policy_value;	/* policy/count */
 	uint32_t	policy_actvalue;/* current count */
+	sctp_assoc_t	asocid;		/* sctp asoc id if sctp is transport type */
+	uint16_t        transport_use;	/* 0000 = Data only, 0001 = data+ctl */
+	uint16_t	port;		/* keep it here too in network order */
 };
 
 /* An address entry in the list */
