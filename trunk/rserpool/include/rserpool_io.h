@@ -46,8 +46,9 @@ struct rsp_ipv6_address {
 };
 
 union rsp_address_union {
+	struct rsp_paramhdr ph;
 	struct rsp_ipv4_address ipv4;
-	struct rsp_ipv4_address ipv6;
+	struct rsp_ipv6_address ipv6;
 };
 
 #define RSP_USE_DATA_ONLY    0x0000
