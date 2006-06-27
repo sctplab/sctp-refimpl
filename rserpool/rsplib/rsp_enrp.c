@@ -13,7 +13,10 @@
 #include <arpa/inet.h>
 
 static struct rsp_paramhdr *
-get_next_parameter (uint8_t *buf, uint8_t *limit, uint8_t **nxt, uint16_t *type)
+get_next_parameter (uint8_t *buf, 
+		    uint8_t *limit, 
+		    uint8_t **nxt, 
+		    uint16_t *type)
 {
 	struct rsp_paramhdr *ph;
 	uint16_t len;
@@ -42,7 +45,11 @@ get_next_parameter (uint8_t *buf, uint8_t *limit, uint8_t **nxt, uint16_t *type)
 }
 
 struct sockaddr *
-asap_pull_and_alloc_an_address(struct sockaddr **loc, int ttype, union rsp_address_union *address, uint16_t port, size_t *len )
+asap_pull_and_alloc_an_address(struct sockaddr **loc, 
+			       int ttype, 
+			       union rsp_address_union *address, 
+			       uint16_t port, 
+			       size_t *len )
 {
 	struct sockaddr *to;
 	if((loc == NULL) || (*loc == NULL)){
@@ -120,9 +127,72 @@ asap_pull_and_alloc_an_address(struct sockaddr **loc, int ttype, union rsp_addre
 		return(to);
 }
 
+void
+asap_destroy_pe(struct rsp_pool_ele *pes, int remove_from_cache)
+{
+	void *v;
+	struct sockaddr *sa;
+	struct rsp_pool *pool;
+	struct rsp_pool_ele *ele;
+	struct rsp_enrp_scope *scp; 
+	int i;
+	/* First un-hash the old SCTP addresses if relevant */
+
+	pool = pes->pool;
+	scp = pool->scp;
+
+	if((pes->protocol_type == RSP_PARAM_SCTP_TRANSPORT) &&
+	   (remove_from_cache)){
+		sa = pes->addrList;
+		for (i=0; i<pes->number_of_addr; i++) {
+			v = HashedTbl_remove(scp->ipaddrPortHash, sa, sa->sa_len, NULL);
+			sa = (struct sockaddr *)((char *)sa + sa->sa_len);
+		}
+	}
+	pes->pool->refcnt--;
+	if(pes->addrList)
+		free(pes->addrList);
+	pes->addrList = NULL;
+	pes->len = 0;
+	pes->number_of_addr = 0;
+	while ((v = dlist_getNext(pes->failover_list)) != NULL) {
+		;
+	}
+	dlist_destroy(pes->failover_list);
+	pes->failover_list = NULL;
+
+	/* now lets find and remove from the pool master list */
+	dlist_reset(pool->peList);
+	while ((v = dlist_get(pool->peList)) != NULL) {
+		/* here is another pes, is it me? */
+		if (v == (void *)pes) {
+			/* yep remove it */
+			dlist_getThis(pool->peList);
+			break;
+		}
+	}
+
+	/* now lets make sure there are NO secondary references to us */
+	dlist_reset(pool->peList);
+	while ((v = dlist_get(pool->peList)) != NULL) {
+		ele = (struct rsp_pool_ele *)v;
+		dlist_reset(ele->failover_list); 
+		while ((v = dlist_get(ele->failover_list)) != NULL) {
+			if(v == (void *)pes) {
+				/* found me ref'ed by a peer */
+				dlist_getThis(ele->failover_list);
+				break;
+			}
+		}
+	}
+	/* now purge the memory, and we are done. */
+	free(pes);
+}
+
 
 struct rsp_pool_ele *
-asap_build_pool_element(struct rsp_pool *pool,
+asap_build_pool_element(struct rsp_enrp_scope *scp, 
+			struct rsp_pool *pool,
 			struct rsp_pool_element *pe,
 			uint8_t* limit,
 			uint32_t id)
@@ -134,7 +204,8 @@ asap_build_pool_element(struct rsp_pool *pool,
 	 */
 	uint16_t transport, ttype, ptype;
 	uint8_t *calc, *at, *nxt ;
-	int siz;
+	int siz,i;
+	struct sockaddr *sa;
 	struct rsp_paramhdr *ph;
 	struct rsp_pool_ele *pes;
 	struct rsp_sctp_transport *sctp;
@@ -211,9 +282,9 @@ asap_build_pool_element(struct rsp_pool *pool,
 			local_at = local_nxt;
 			ph = get_next_parameter (local_at, local_limit, &local_nxt, &local_type);			
 		}
-		
+	
 	}
-		break;
+	break;
 	case RSP_PARAM_TCP_TRANSPORT:
 		tcp = (struct rsp_tcp_transport *)&pe->user_transport;
 		pes->transport_use = ntohs(tcp->transport_use);
@@ -226,6 +297,8 @@ asap_build_pool_element(struct rsp_pool *pool,
 				ttype);
 			goto destroy_it;
 		}
+		/* enter it in the hash */
+		
 		break;
 	case RSP_PARAM_UDP_TRANSPORT:
 		udp = (struct rsp_udp_transport *)&pe->user_transport;
@@ -240,6 +313,8 @@ asap_build_pool_element(struct rsp_pool *pool,
 				ttype);
 			goto destroy_it;
 		}
+		/* enter it in the hash */
+
 		break;
 	default:
 		fprintf(stderr, "Unknown transport parameter type %d? -- ignoring PE\n", transport);
@@ -284,23 +359,68 @@ asap_build_pool_element(struct rsp_pool *pool,
 	 * I don't see the value, so I won't for now. FIX ME FIX ME!
 	 * maybe when I do enrp I will get this out.
 	 */
-
 	pool->refcnt++;
+	/* Now if we need to place it in sctp address cache to pe 
+	 * this is used for a reverse PE lookup if we are the PE
+	 * and receive a message from a PU that is also a PE, we
+	 * can find the guy with this, also we can associate
+	 * responses with the right guy.
+	 */
+	if(pes->protocol_type == RSP_PARAM_SCTP_TRANSPORT) {
+		sa = pes->addrList;
+		for (i=0; i<pes->number_of_addr; i++) {
+			if(HashedTbl_enter(scp->ipaddrPortHash, sa, pes, sa->sa_len)) {
+				fprintf(stderr, "Cross ref in hash ipadd/port to pe fails to enter\n");
+			}
+			sa = (struct sockaddr *)((char *)sa + sa->sa_len);
+		}
+	}
 	return(pes);
 }
 
 void
-asap_decode_pe_entry_and_update(struct rsp_pool *pool,
+asap_decode_pe_entry_and_update(struct rsp_enrp_scope *scp, 
+				struct rsp_pool *pool,
 				struct rsp_pool_element *pe,
 				uint8_t *limit,
 				struct rsp_pool_ele *pes
 				)
 {
+	/* Ok, here we have a pes. The easiest
+	 * way to do this is to build a new one,
+	 * and then save off the important things from the
+	 * old.. and then remove the old.
+	 */
+	struct sockaddr *sa;
+	struct rsp_pool_ele *new_pes;
+	void *v;
+	int i;
 
+	/* First un-hash the old SCTP addresses if relevant */
+	if(pes->protocol_type == RSP_PARAM_SCTP_TRANSPORT) {
+		sa = pes->addrList;
+		for (i=0; i<pes->number_of_addr; i++) {
+			v = HashedTbl_remove(scp->ipaddrPortHash, sa, sa->sa_len, NULL);
+			sa = (struct sockaddr *)((char *)sa + sa->sa_len);
+		}
+	}
+	new_pes = asap_build_pool_element(scp, pool, pe, limit, pes->pe_identifer);
+	if(new_pes == NULL) {
+		/* do nothing since we can't build a new one */
+		return;
+	}
+	new_pes->policy_actvalue = pes->policy_actvalue;
+	new_pes->asocid = pes->asocid;
+	dlist_reset(pes->failover_list);
+	while ((v = dlist_getNext(pes->failover_list)) != NULL) {
+		dlist_append(new_pes->failover_list, v);
+	}
+	asap_destroy_pe(pes, 0);
 }
 
 void
-asap_decode_pe_entry_and_add(struct rsp_pool *pool,
+asap_decode_pe_entry_and_add(struct rsp_enrp_scope *scp, 
+			     struct rsp_pool *pool,
 			     struct rsp_pool_element *pe,
 			     uint8_t *limit)
 {
@@ -322,11 +442,11 @@ asap_decode_pe_entry_and_add(struct rsp_pool *pool,
 		if(pes->pe_identifer == id) {
 			pes->state &= ~RSP_PE_STATE_BEING_DEL;
 			/* Call the update routine to get new entries etc */
-			asap_decode_pe_entry_and_update(pool, pe, limit, pes);
+			asap_decode_pe_entry_and_update(scp, pool, pe, limit, pes);
 			return;
 		}
 	}
-	pes = asap_build_pool_element(pool, pe, limit, id);
+	pes = asap_build_pool_element(scp, pool, pe, limit, id);
 	if (pes) {
 		/* add it */
 		dlist_append(pool->peList, pes);
@@ -391,6 +511,7 @@ asap_handle_name_resolution_response(struct rsp_enrp_scope *scp,
 			return;
 		}
 		memset(pool, 0, sizeof(struct rsp_pool));
+		pool->scp = scp;
 		pool->name_len = pool_nm_len;
 		pool->name = malloc(pool_nm_len + 1);
 		if(pool->name == NULL) {
@@ -434,9 +555,10 @@ asap_handle_name_resolution_response(struct rsp_enrp_scope *scp,
 				this_param);
 		}
 		/* note here that at becomes the new limit with in this message */
-		asap_decode_pe_entry_and_add(pool, pe, at);
+		asap_decode_pe_entry_and_add(scp, pool, pe, at);
 		pe = (struct rsp_pool_element *)get_next_parameter(at, limit, &at, &this_param);
 	}
+	
 }
 
 

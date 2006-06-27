@@ -69,7 +69,7 @@ struct rsp_enrp_scope {
         /* Caches aka PE's and Pools */
 	dlist_t 	*allPools;		/* list of all rsp_pool */
 	HashedTbl	*cache;			/* cache name->rsp_pool */
-	HashedTbl	*ipaddrPortHash;	/* ipadd -> rsp_pool_ele */
+	HashedTbl	*ipaddrPortHash;	/* ipadd -> rsp_pool_ele for sctp transport guys*/
 	HashedTbl	*vtagHash;		/* assoc id-> rsp_pool_ele */
 
 	/* other stuff */
@@ -168,6 +168,7 @@ struct rsp_timer_entry {
 
 /* A pool entry */
 struct rsp_pool {
+	struct rsp_enrp_scope *scp;		/* pointer to its scope */
 	char 		*name;			/* string name */
 	uint32_t 	name_len;		/* len of string */
 	dlist_t 	*peList;		/* list of all pe's */
@@ -194,6 +195,7 @@ struct rsp_info_found {
 /* Each entry aka the actual PE */
 struct rsp_pool_ele {
 	struct rsp_pool *pool;		/* pointer to pool entry */
+	int		protocol_type;	/* what type of protocol are we using */
 	struct sockaddr	*addrList;	/* list of addresses, gotten from sctp_getpaddr() or
 					 * initially at name resolution.
 					 */
@@ -203,7 +205,6 @@ struct rsp_pool_ele {
 	uint32_t	pe_identifer;	/* identifier of this PE */
 	uint32_t	state;		/* What state we think its in */
 	uint32_t        reglife;	/* reg life of this element */
-	int		protocol_type;	/* what type of protocol are we using */
 	uint32_t	policy_value;	/* policy/count */
 	uint32_t	policy_actvalue;/* current count */
 	sctp_assoc_t	asocid;		/* sctp asoc id if sctp is transport type */
