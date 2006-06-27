@@ -41,17 +41,275 @@ get_next_parameter (uint8_t *buf, uint8_t *limit, uint8_t **nxt, uint16_t *type)
 	return(ph);
 }
 
+struct sockaddr *
+asap_pull_and_alloc_an_address(struct sockaddr **loc, int ttype, union rsp_address_union *address, uint16_t port, size_t *len )
+{
+	struct sockaddr *to;
+	if((loc == NULL) || (*loc == NULL)){
+		/* New, get new memory */
+ 		if(ttype == RSP_PARAM_IPV4_ADDR) {
+			to = (struct sockaddr *)malloc(sizeof(struct sockaddr_in));
+			*len = sizeof(struct sockaddr_in);
+		} else if (ttype == RSP_PARAM_IPV6_ADDR) {
+			to = (struct sockaddr *)malloc(sizeof(struct sockaddr_in6));
+			*len = sizeof(struct sockaddr_in6);
+		} else {
+			*len = 0;
+			if(loc == NULL)
+				return(NULL);
+			else
+				return(*loc);
+		}
+		if(to == NULL) {
+			*len = 0;
+			if(loc == NULL)
+				return (NULL);
+			else
+				return(*loc);
+		}
+		if(loc)
+			*loc = to;
+	} else {
+		/* do realloc thing, *len is old size */
+		size_t old_siz, new_siz;
+		void *old, *new;
+		old_siz = *len;
+		old = (void *)*loc;
+		if(ttype == RSP_PARAM_IPV4_ADDR) {
+			new_siz = old_siz + sizeof(struct sockaddr_in); 
+			new = realloc(old, new_siz);
+			if(new == NULL) {
+				return(*loc);
+			}
+			to = (struct sockaddr *)((caddr_t)new + old_siz);
+			memset(to, 0, sizeof(struct sockaddr_in));
+		} else if (ttype == RSP_PARAM_IPV6_ADDR) {
+			new_siz = old_siz + sizeof(struct sockaddr_in6); 
+			new = realloc(old, new_siz);
+			if(new == NULL) {
+				return(*loc);
+			}
+			to = (struct sockaddr *)((caddr_t)new + old_siz);
+			memset(to, 0, sizeof(struct sockaddr_in6));
+		} else {
+			/* *len is untouched */
+			return (*loc);
+		}
+	}
+	if(ttype == RSP_PARAM_IPV4_ADDR) {
+		struct sockaddr_in *sin;
+		sin = (struct sockaddr_in *)to;
+		memset(sin, 0, sizeof(struct sockaddr_in));
+		sin->sin_family = AF_INET;
+		sin->sin_port = port;
+		sin->sin_len = sizeof(struct sockaddr_in);
+		sin->sin_addr = address->ipv4.in;
+	} else if (ttype == RSP_PARAM_IPV6_ADDR) {
+		struct sockaddr_in6 *sin6;
+		sin6 = (struct sockaddr_in6 *)to;
+
+		memset(sin6, 0, sizeof(struct sockaddr_in6));
+		sin6->sin6_family = AF_INET6;
+		sin6->sin6_port = port;
+		sin6->sin6_len = sizeof(struct sockaddr_in6);
+		sin6->sin6_addr = address->ipv6.in6;
+	}
+	if(loc)
+		return(*loc);
+	else
+		return(to);
+}
+
+
+struct rsp_pool_ele *
+asap_build_pool_element(struct rsp_pool *pool,
+			struct rsp_pool_element *pe,
+			uint8_t* limit,
+			uint32_t id)
+{
+	/* This takes a PE from the wire and makes a
+	 * NEW internal representation, note it does NOT
+	 * append to the pool in the dlist but does
+	 * increment the pool use count. 
+	 */
+	uint16_t transport, ttype, ptype;
+	uint8_t *calc, *at, *nxt ;
+	int siz;
+	struct rsp_paramhdr *ph;
+	struct rsp_pool_ele *pes;
+	struct rsp_sctp_transport *sctp;
+	struct rsp_tcp_transport *tcp;
+	struct rsp_udp_transport *udp;
+	struct rsp_select_policy  *policy;
+
+	/* if we reach here we are at step 2 and this is a new name */
+	pes = malloc(sizeof(struct rsp_pool_ele));
+	if(pes == NULL) {
+		/* no memory ? */
+		return(NULL);
+	}
+	memset(pes, 0, sizeof(*pes));
+	pes->failover_list = dlist_create();
+	if(pes->failover_list == NULL) {
+		/* no memory */
+		free(pes);
+		return(NULL);
+	}
+	pes->pool = pool;
+	pes->state = RSP_PE_STATE_ACTIVE;
+	pes->pe_identifer = id;
+	pes->reglife = htonl(pe->registration_life);
+	/* pull/check transport */
+	at = (uint8_t *)&pe->user_transport;
+	
+	siz = ntohs(pe->user_transport.param_length);
+	calc = (uint8_t *)pe;
+	calc += siz;
+	if(calc >= limit) {
+		/* The parameter does not fit */
+		fprintf(stderr, "Mis-sized transport parameter %d size:%d limit %x start:%x - skipped\n",
+			transport,
+			ntohs(pe->user_transport.param_length), 
+			(u_int)limit,
+			(u_int)&pe->user_transport);
+		goto destroy_it;
+	}
+
+	ph = get_next_parameter (at, limit, &nxt, &transport);
+	if(ph == NULL) {
+		fprintf(stderr, "Can't get a parameter out of the user transport\n");
+		goto destroy_it;
+	}
+	pes->protocol_type = transport;
+	switch(transport) {
+	case RSP_PARAM_SCTP_TRANSPORT:
+	{
+		uint8_t *local_at, *local_nxt, *local_limit;
+		uint16_t local_type;
+		size_t len;
+		sctp = (struct rsp_sctp_transport *)&pe->user_transport;
+		/* sanity check */
+		pes->transport_use = ntohs(sctp->transport_use);
+		pes->port = udp->port;
+		/* special handling needed for SCTP */
+		pes->addrList = NULL;
+		pes->port = sctp->port;
+		/* we set the local limit to nxt, the next param */
+		local_limit = nxt;
+		/* set the local_at to first transport address */
+		local_at = (uint8_t *)&sctp->address[0];
+		pes->number_of_addr = 0;
+		ph = get_next_parameter (local_at, local_limit, &local_nxt, &local_type);
+		while(ph) {
+			len = pes->len;
+			pes->addrList = asap_pull_and_alloc_an_address(&pes->addrList, 
+								       local_type,
+								       (union rsp_address_union *)ph, 
+								       pes->port, &pes->len);
+			if(pes->len > len)
+				pes->number_of_addr++;
+			local_at = local_nxt;
+			ph = get_next_parameter (local_at, local_limit, &local_nxt, &local_type);			
+		}
+		
+	}
+		break;
+	case RSP_PARAM_TCP_TRANSPORT:
+		tcp = (struct rsp_tcp_transport *)&pe->user_transport;
+		pes->transport_use = ntohs(tcp->transport_use);
+		pes->port = tcp->port;
+		pes->number_of_addr = 1;
+		ttype = ntohs(tcp->address.ph.param_type);
+		pes->addrList = asap_pull_and_alloc_an_address(NULL, ttype, &tcp->address, pes->port, &pes->len);
+		if(pes->addrList == NULL) {
+			fprintf(stderr,"Unknown TCP transport address type %d - ignoring PE\n",
+				ttype);
+			goto destroy_it;
+		}
+		break;
+	case RSP_PARAM_UDP_TRANSPORT:
+		udp = (struct rsp_udp_transport *)&pe->user_transport;
+		pes->transport_use = 0x0000;
+		pes->number_of_addr = 1;
+		pes->port = udp->port;
+		pes->addrList = NULL;
+		ttype = ntohs(udp->address.ph.param_type);
+		pes->addrList = asap_pull_and_alloc_an_address(NULL, ttype, &udp->address, pes->port, &pes->len);
+		if (pes->addrList == NULL) {
+			fprintf(stderr,"Unknown UDP transport address type %d - ignoring PE\n",
+				ttype);
+			goto destroy_it;
+		}
+		break;
+	default:
+		fprintf(stderr, "Unknown transport parameter type %d? -- ignoring PE\n", transport);
+	destroy_it:
+		if(pes->addrList)
+			free(pes->addrList);
+		dlist_destroy(pes->failover_list);
+		free(pes);
+		return(NULL);
+	};
+        /* nxt points to member selection policy */
+	at = nxt;
+	ph = get_next_parameter (at, limit, &nxt, &ptype);
+	if ((ph == NULL) || (ptype != RSP_PARAM_SELECT_POLICY)) {
+		fprintf(stderr, "Expected a Member Selection policy and found %d? - ignoring PE\n",
+			ptype);
+		goto destroy_it;
+	}
+	/* Now we must get the policy.
+	 */
+	policy = (struct rsp_select_policy  *)ph;
+	switch(policy->policy_type) {
+	case RSP_POLICY_ROUND_ROBIN:
+		pes->policy_value = 0;
+		pes->policy_actvalue = 0;
+		break;
+	case RSP_POLICY_LEAST_USED:
+	case RSP_POLICY_LEAST_USED_DEGRADES:
+	case RSP_POLICY_WEIGHTED_ROUND_ROBIN:
+		pes->policy_value = ntohl(((struct rsp_select_policy_value *)policy)->policy_value);
+		pes->policy_actvalue = pes->policy_value;
+		break;
+	default:
+		pes->policy_value = 0;
+		pes->policy_actvalue = 0;
+		fprintf(stderr, "Unknown policy type %d - set to default values for RR\n", policy->policy_type);
+		break;
+	}
+	
+	/* 
+	 * Now we must get the actual ASAP transport out too. But
+	 * I don't see the value, so I won't for now. FIX ME FIX ME!
+	 * maybe when I do enrp I will get this out.
+	 */
+
+	pool->refcnt++;
+	return(pes);
+}
+
+void
+asap_decode_pe_entry_and_update(struct rsp_pool *pool,
+				struct rsp_pool_element *pe,
+				uint8_t *limit,
+				struct rsp_pool_ele *pes
+				)
+{
+
+}
+
 void
 asap_decode_pe_entry_and_add(struct rsp_pool *pool,
 			     struct rsp_pool_element *pe,
 			     uint8_t *limit)
 {
 	struct rsp_pool_ele *pes;
+	uint32_t id;	
 	/*
 	 * 1. See if pe is already in, if so just mark it to present.
 	 * 2. If not in, build a new one from this.
 	 */
-	uint32_t id;
 
 	id = ntohl(pe->id);
 
@@ -63,19 +321,16 @@ asap_decode_pe_entry_and_add(struct rsp_pool *pool,
 	while((pes = (struct rsp_pool_ele *)dlist_get(pool->peList)) != NULL) {
 		if(pes->pe_identifer == id) {
 			pes->state &= ~RSP_PE_STATE_BEING_DEL;
+			/* Call the update routine to get new entries etc */
+			asap_decode_pe_entry_and_update(pool, pe, limit, pes);
 			return;
 		}
 	}
-	/* if we reach here we are at step 2. */
-	pes = malloc(sizeof(struct rsp_pool_ele));
-	if(pes == NULL) {
-		/* no memory ? */
-		return;
+	pes = asap_build_pool_element(pool, pe, limit, id);
+	if (pes) {
+		/* add it */
+		dlist_append(pool->peList, pes);
 	}
-	memset(pes, 0, sizeof(*pes));
-	pes->pool = pool;
-	pool->refcnt++;
-
 }
 
 
