@@ -258,6 +258,7 @@ rsp_load_file(FILE *io, char *file)
 	int line=0, val, ret;
 	uint32_t enrpid;
 	uint16_t port;
+	uint16_t mutex_done=0;
 	struct sockaddr_in sin;
 	struct sockaddr_in6 sin6;
 	char string[256], *p1, *p2, *p3, *p4;
@@ -322,6 +323,10 @@ rsp_load_file(FILE *io, char *file)
 		fprintf(stderr, "Can't get memory for enrp_scope dlist err:%d\n", errno);
 		goto out_with_error;
 	}
+	if(pthread_mutex_init(&es->scp_mtx, NULL) ) {
+		fprintf(stderr, "Warning - Mutex init fails for scope? errno%d\n", errno);
+	}
+	mutex_done=1;
 	/* list of all pools */
 	es->allPools = dlist_create();
 	if(es->allPools == NULL) {
@@ -526,6 +531,9 @@ rsp_load_file(FILE *io, char *file)
 
 	if (es->enrpList) 
 		dlist_destroy(es->enrpList);
+
+	if(mutex_done)
+		pthread_mutex_destroy(&es->scp_mtx);
 
 	if (es->allPools) 
 		dlist_destroy(es->allPools);
@@ -737,6 +745,7 @@ rsp_process_fd_for_scope (struct rsp_enrp_scope *scp)
 	 *
 	 * Read and process it.
 	 */
+	int failed_lock=0;
 	ssize_t sz;
 	struct pe_address from;
 	socklen_t from_len;
@@ -757,8 +766,17 @@ rsp_process_fd_for_scope (struct rsp_enrp_scope *scp)
 		return;
 	}
 	if(msg_flags & MSG_NOTIFICATION) {
+ 		if (pthread_mutex_lock(&scp->scp_mtx)) {
+			fprintf (stderr, "failed lock error, with enrp notify:%d\n", errno);
+			failed_lock = 1;
+		}
 		handle_enrpserver_notification(scp, readbuf, &info, sz, 
 					       (struct sockaddr *)&from, from_len);
+		if(!failed_lock) {
+			if (pthread_mutex_unlock(&scp->scp_mtx)) {
+				fprintf (stderr,"Gak, failed ot unlock on enrp notify err:%d\n", errno);
+			}
+		}
 	} else {
 		/* we call the handle_asapmsg_fromenrp routine here */
 		handle_asapmsg_fromenrp(scp, readbuf, &info, sz, 
@@ -937,14 +955,6 @@ rsp_socket(int domain, int type,  int protocol, uint32_t op_scope)
 	sdata->type = type;
 	sdata->domain = domain;
 
-        /* ENRP requests outstanding */
-	sdata->enrp_reqs = dlist_create();
-	if (sdata->enrp_reqs == NULL) {
-		if(rsp_debug) {
-			fprintf(stderr, "can't get memory for enrp req dlist\n");
-		}
-		goto error_out;
-	}
 	/* setup w/addrlist w/ctl&data seperate */
 	sdata->address_reg = dlist_create();
 	if (sdata->address_reg == NULL) {
@@ -1029,8 +1039,6 @@ rsp_socket(int domain, int type,  int protocol, uint32_t op_scope)
 	return(sd);
  error_out:
 	close(sdata->sd);
-	if (sdata->enrp_reqs)
-		dlist_destroy(sdata->enrp_reqs);
 	if(sdata->address_reg)
 		dlist_destroy(sdata->address_reg);
 	free(sdata);
