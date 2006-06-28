@@ -1144,11 +1144,79 @@ rsp_sendmsg(int sockfd,         /* HA socket descriptor */
 	    struct sctp_sndrcvinfo *sinfo,
 	    int flags)         /* Options flags */
 {
+	struct rsp_socket_hash *sdata;
+	struct rsp_enrp_scope *scp;
+	struct rsp_timer_entry *tme;
+	int lock_failed = 0;
+
 	if (rsp_inited == 0) {
 		errno = EINVAL;
 		return (-1);
 	}
+	/* First prioity, if name == NULL its a PE
+	 * send and either the to or sinfo->sinfo_asocid
+	 * is set.
+	 * 
+	 */
+	/* First find the socket stuff */
+	if( pthread_mutex_lock(&rsp_pcbinfo.sd_pool_mtx) ) {
+		fprintf(stderr, "Unsafe access, thread lock failed for sd_pool_mtx:%d\n", errno);
+		lock_failed = 1;
+	}
+	sdata  = (struct rsp_socket_hash *)HashedTbl_lookup(rsp_pcbinfo.sd_pool ,
+							    sockfd, 	
+							    sizeof(sockfd),
+							    NULL);
+	if(!lock_failed) {
+		if (pthread_mutex_unlock(&rsp_pcbinfo.sd_pool_mtx) ) {
+			fprintf(stderr, "Unsafe access, thread unlock failed for sd_pool_mtx:%d\n", errno);
+		}
+	}
+	if(sdata == NULL) {
+		/* sockfd is not one of ours */
+		errno = EINVAL;
+		return (-1);
+	}
+	scp = sdata->scp;
 
+	if(name == NULL) {
+		/* must be a existing PE */
+
+	} else {
+		/* named based hunting, imply's using
+		 * load balancing policy after finding name.
+		 */
+		pool = (struct rsp_pool *)HashedTbl_lookup(scp->cache ,name, namelen, NULL);
+		if(pool == NULL) {
+			/* need to block and get info, first is
+			 * there already a request pending for this.
+			 * If so just join sleep, if not create and 
+			 * send, then sleep.
+			 */
+			tme = asap_find_req(scp, name,namelen, ASAP_REQUEST_RESOLUTION, 1);
+			if(tme) {
+				/* add our selves to list by blocking here on this resolution */
+				tmr->sleeper_count++;
+				if(pthread_cond_wait(&tmr->rsp_sleeper, &rsp_pcbinfo.rsp_tmr_mtx)) {
+					fprintf(stderr, "Cond wait for s-h fails error:%d\n", errno);
+				}
+				/* we awake and unlock, ready to proceed */
+				pthread_mutex_unlock(&rsp_pcbinfo.rsp_tmr_mtx);
+				
+			} else {
+				/* create message, and then send, then block on thie resolution */
+				
+			}
+			pool = (struct rsp_pool *)HashedTbl_lookup(scp->cache ,name, namelen, NULL);
+			if(pool == NULL) {
+				/* Still no entry have resolution, not found */
+				errno = ENOENT;
+				return (-1);
+			}
+		}
+		/* If we fall to here we have a pool to send to */
+
+	}
 	return (0);
 }
 

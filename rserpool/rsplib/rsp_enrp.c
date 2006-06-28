@@ -16,7 +16,8 @@ struct rsp_timer_entry *
 asap_find_req(struct rsp_enrp_scope *scp,
 	      char *name, 
 	      int name_len, 
-	      int type)
+	      int type,
+	      int leave_locked)
 {
 	struct rsp_timer_entry *tme=NULL;
 	int failed_lock =0;
@@ -48,7 +49,7 @@ asap_find_req(struct rsp_enrp_scope *scp,
 			}
 		}
 	}
-	if(!failed_lock) {
+	if((!failed_lock) && (leave_locked == 0)) {
 		if (pthread_mutex_unlock(&rsp_pcbinfo.rsp_tmr_mtx) ) {
 			fprintf(stderr, "Unsafe access,  unlock failed for rsp_tmr_mtx:%d during find entry\n", errno);
 		}
@@ -194,6 +195,9 @@ asap_destroy_pe(struct rsp_pool_ele *pes, int remove_from_cache)
 			sa = (struct sockaddr *)((char *)sa + sa->sa_len);
 		}
 	}
+	/* what about assoc id hash ? */
+
+
 	pes->pool->refcnt--;
 	if(pes->addrList)
 		free(pes->addrList);
@@ -449,6 +453,8 @@ asap_decode_pe_entry_and_update(struct rsp_enrp_scope *scp,
 			sa = (struct sockaddr *)((char *)sa + sa->sa_len);
 		}
 	}
+	/* what about assoc id hash ? */
+
 	new_pes = asap_build_pool_element(scp, pool, pe, limit, pes->pe_identifer);
 	if(new_pes == NULL) {
 		/* do nothing since we can't build a new one */
@@ -510,8 +516,9 @@ asap_handle_name_resolution_response(struct rsp_enrp_scope *scp,
 	struct rsp_pool_handle *ph;
 	struct rsp_select_policy *sp;
 	struct rsp_pool *pool;
-	struct rsp_pool_element *pe;
 	struct rsp_pool_ele *pes;
+	struct rsp_pool_element *pe;
+
 	uint8_t *limit, *at, new_ent=0;
 	struct rsp_enrp_req *req;
 	struct rsp_timer_entry *tme;
@@ -589,6 +596,10 @@ asap_handle_name_resolution_response(struct rsp_enrp_scope *scp,
 			goto failed;
 		}
 	}
+
+	/* mark time of update */
+	gettimeofday(&pool->received);
+
 	/* First lets mark any PE in the list currently to being deleted */
 	dlist_reset(pool->peList);
 	while((pes = (struct rsp_pool_ele *)dlist_get(pool->peList)) != NULL) {
@@ -607,7 +618,7 @@ asap_handle_name_resolution_response(struct rsp_enrp_scope *scp,
 	}
 
 	/* now we must stop any timers and wake any sleepers */
-	tme = asap_find_req(scp, pool->name, pool->name_len, ASAP_REQUEST_RESOLUTION);
+	tme = asap_find_req(scp, pool->name, pool->name_len, ASAP_REQUEST_RESOLUTION, 0);
 	if(tme == NULL) {
 		fprintf (stderr, "Error, can't find resolve request for pool\n");
 		return;
