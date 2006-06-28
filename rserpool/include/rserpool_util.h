@@ -13,6 +13,14 @@ void rsp_timer_check ( void );
 void rsp_start_enrp_server_hunt(struct rsp_enrp_scope *sd, int non_blocking);
 
 
+struct rsp_timer_entry *
+asap_find_req(struct rsp_enrp_scope *scp,
+	      char *name, 
+	      int name_len, 
+	      int type,
+	      int leave_locked);
+
+
 int
 rsp_start_timer(struct rsp_enrp_scope *sd,
 		struct rsp_socket_hash 	*sdata, 

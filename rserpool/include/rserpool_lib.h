@@ -183,6 +183,7 @@ struct rsp_pool {
 	int32_t		cookieSize;		/* length of cookie */
 	uint32_t 	refcnt;			/* number of PE's pointing to me */
 	uint32_t	regType;		/* reg type - the policy */
+	struct timeval  received;		/* Time we got it */
 	uint8_t		failover_allowed;	/* auto failover of queued messages? */
 	uint8_t         auto_update;		/* did we subscribe to upds */
 };
