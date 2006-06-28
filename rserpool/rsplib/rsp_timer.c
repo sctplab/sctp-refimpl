@@ -19,7 +19,7 @@ rsp_free_req(struct rsp_enrp_req *req)
 }
 
 struct rsp_enrp_req *
-rsp_aloc_req(char *name, int namelen, void *msg, int msglen)
+rsp_aloc_req(char *name, int namelen, void *msg, int msglen, int type)
 {
 	struct rsp_enrp_req *r;
 	r = malloc(sizeof(struct rsp_enrp_req));
@@ -28,7 +28,8 @@ rsp_aloc_req(char *name, int namelen, void *msg, int msglen)
 
 	r->req = msg;
 	r->len = msglen;
-	r->request_type = 0;
+	r->request_type = type;
+	r->namelen = namelen;
 	r->name = malloc(namelen);
 	if(r->name == NULL) {
 		free(r);
@@ -61,7 +62,7 @@ handle_t4_rereg_timer(struct rsp_timer_entry *entry)
 void
 handle_t5_hunt_timer(struct rsp_timer_entry *entry)
 {
-	rsp_start_enrp_server_hunt(entry->sd, 1);
+	rsp_start_enrp_server_hunt(entry->scp, 1);
 }
 
 void
@@ -217,7 +218,7 @@ void rsp_timer_check ( void )
 
 /* Start, or restart a timer */
 int
-rsp_start_timer(struct rsp_enrp_scope *sd,
+rsp_start_timer(struct rsp_enrp_scope *scp,
 		struct rsp_socket_hash 	*sdata, 
 		uint32_t time_out_ms, 
 		struct rsp_enrp_req *msg,
@@ -273,7 +274,7 @@ rsp_start_timer(struct rsp_enrp_scope *sd,
 	}
 
 	if(*ote == NULL) {
-		te->sd = sd;
+		te->scp = scp;
 		te->sdata = sdata;
 		te->req = msg;
 		te->timer_type = type;
@@ -329,7 +330,7 @@ rsp_start_timer(struct rsp_enrp_scope *sd,
 	}
 
 	/* give back the running entry */
-	if(*ote == NULL)
+	if(ote == NULL)
 		*ote = te;
 	return (0);
 }

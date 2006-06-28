@@ -6,7 +6,7 @@
 
 void rsp_free_req(struct rsp_enrp_req *req);
 
-struct rsp_enrp_req *rsp_aloc_req(char *name, int namelen, void *msg, int msglen);
+struct rsp_enrp_req *rsp_aloc_req(char *name, int namelen, void *msg, int msglen, int type);
 
 void rsp_timer_check ( void );
 

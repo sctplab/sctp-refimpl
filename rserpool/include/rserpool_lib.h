@@ -65,13 +65,14 @@ struct rsp_enrp_scope {
 	uint32_t	scopeId;	           /* unique scope id we have for this one */
 	struct rsp_enrp_entry *homeServer;	   /* direct pointer to home server */
 	dlist_t		*enrpList;	           /* current list of ENRP servers */
-	struct rsp_timer_entry *enrp_tmr;
+	struct rsp_timer_entry *enrp_tmr;	   /* server hunt timer entry */
         /* Caches aka PE's and Pools */
 	dlist_t 	*allPools;		/* list of all rsp_pool */
 	HashedTbl	*cache;			/* cache name->rsp_pool */
 	HashedTbl	*ipaddrPortHash;	/* ipadd -> rsp_pool_ele for sctp transport guys*/
 	HashedTbl	*vtagHash;		/* assoc id-> rsp_pool_ele */
-
+	/* Mutex for protection */
+	pthread_mutex_t		scp_mtx;	/* mutex for locks */
 	/* other stuff */
 	uint32_t 	timers[RSP_NUMBER_TIMERS]; /* default timers */
 	uint32_t refcount;                         /* how man enrp entries refer to this guy */
@@ -96,14 +97,21 @@ struct rsp_enrp_entry {
  */
 
 struct rsp_enrp_req {
-	char *req;
-	int len;
-	int request_type;
+	void *req;
+	int len;	
 	char *name;
-	uint32_t timerval;
+	int namelen;
+	int request_type;
 };
 
-/* The extern socket hash */
+/* types */
+#define ASAP_REQUEST_REGISTRATION     0x00000001
+#define ASAP_REQUEST_DEREGISTRATION   0x00000002
+#define ASAP_REQUEST_RESOLUTION       0x00000003
+
+
+
+/* The extern global info */
 struct rsp_global_info {
 	int			rsp_number_sd;	/* count of sd's when 0 un-init */
 	struct pollfd           *watchfds;	/* fd's the thread is watching for us */
@@ -132,7 +140,6 @@ struct rsp_socket_hash {
 	int		type;			/* socket type */
 	int 		domain;			/* domain af_inet/af_inet6 */
 	struct rsp_enrp_scope *scp;
-	dlist_t		*enrp_reqs;		/* ENRP requests outstanding */
 	dlist_t		*address_reg;		/* setup w/addrlist w/ctl&data seperate */
 	uint32_t 	refcnt;			/* number of names in use */
 	uint32_t	enrpID;			/* ID of home ENRP server */
@@ -155,7 +162,7 @@ struct rsp_socket_hash {
 struct rsp_timer_entry {
 	struct timeval 		started;	/* time of start */
 	struct timeval 		expireTime;	/* time of expire */
-	struct rsp_enrp_scope   *sd;
+	struct rsp_enrp_scope   *scp;
 	struct rsp_socket_hash 	*sdata;		/* pointer back to sd */
 	/* The Req field is filled in if timer does something for you */
 	struct rsp_enrp_req 	*req;		/* data being sent */
