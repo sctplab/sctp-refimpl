@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/conf/options,v 1.543 2006/05/18 23:30:47 ambrisko Exp $
+# $FreeBSD: src/sys/conf/options,v 1.550 2006/06/27 12:45:27 glebius Exp $
 #
 #        On the handling of kernel options
 #
@@ -128,6 +128,7 @@ PPS_SYNC	opt_ntp.h
 PREEMPTION	opt_sched.h
 QUOTA
 SCHED_4BSD	opt_sched.h
+SCHED_CORE	opt_sched.h
 SCHED_ULE	opt_sched.h
 SHOW_BUSYBUFS
 SLEEPQUEUE_PROFILING
@@ -339,6 +340,7 @@ BOOTP_NFSROOT		opt_bootp.h
 BOOTP_NFSV3		opt_bootp.h
 BOOTP_WIRED_TO		opt_bootp.h
 DEVICE_POLLING
+DEV_ENC			opt_enc.h
 DEV_PF			opt_pf.h
 DEV_PFLOG		opt_pf.h
 DEV_PFSYNC		opt_pf.h
@@ -437,6 +439,7 @@ NETGRAPH_RFC1490	opt_netgraph.h
 NETGRAPH_SOCKET		opt_netgraph.h
 NETGRAPH_SPLIT		opt_netgraph.h
 NETGRAPH_SPPP		opt_netgraph.h
+NETGRAPH_TAG		opt_netgraph.h
 NETGRAPH_TCPMSS		opt_netgraph.h
 NETGRAPH_TEE		opt_netgraph.h
 NETGRAPH_TTY		opt_netgraph.h
@@ -615,13 +618,16 @@ ACPI_MAX_THREADS	opt_acpi.h
 ACPI_NO_SEMAPHORES	opt_acpi.h
 ACPICA_PEDANTIC		opt_acpi.h
 
+# ISA support
+DEV_ISA			opt_isa.h
+ISAPNP			opt_isa.h
+
 # options for DEVFS, see sys/fs/devfs/devfs.h
 NDEVFSINO		opt_devfs.h
 NDEVFSOVERFLOW		opt_devfs.h
 
 # various 'device presence' options.
 DEV_BPF			opt_bpf.h
-DEV_ISA			opt_isa.h
 DEV_MCA			opt_mca.h
 DEV_CARP		opt_carp.h
 DEV_SPLASH		opt_splash.h
@@ -693,19 +699,6 @@ ATH_TXBUF		opt_ath.h
 ATH_RXBUF		opt_ath.h
 ATH_DIAGAPI		opt_ath.h
 ATH_TX99_DIAG		opt_ath.h
-
-# options for the Atheros HAL (only useful with source code)
-AH_SUPPORT_AR5210	opt_ah.h
-AH_SUPPORT_AR5211	opt_ah.h
-AH_SUPPORT_AR5212	opt_ah.h
-AH_SUPPORT_5111		opt_ah.h
-AH_SUPPORT_5112		opt_ah.h
-AH_SUPPORT_2413		opt_ah.h
-AH_SUPPORT_5413		opt_ah.h
-AH_DEBUG		opt_ah.h
-AH_DEBUG_ALQ		opt_ah.h
-AH_ASSERT		opt_ah.h
-AH_REGOPS_FUNC		opt_ah.h
 
 # dcons options 
 DCONS_BUF_SIZE		opt_dcons.h

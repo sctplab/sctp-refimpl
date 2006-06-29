@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/conf/files,v 1.1118 2006/05/18 23:30:47 ambrisko Exp $
+# $FreeBSD: src/sys/conf/files,v 1.1127 2006/06/27 12:45:27 glebius Exp $
 #
 # The long compile-with and dependency lines are required because of
 # limitations in config: backslash-newline doesn't work in strings, and
@@ -905,6 +905,12 @@ dev/sound/pcm/vchan.c		optional sound
 #dev/sound/usb/upcm.c		optional snd_upcm usb
 dev/sound/usb/uaudio.c		optional snd_uaudio usb
 dev/sound/usb/uaudio_pcm.c	optional snd_uaudio usb
+dev/sound/midi/midi.c		optional sound
+dev/sound/midi/mpu401.c		optional sound
+dev/sound/midi/mpu_if.m		optional sound
+dev/sound/midi/mpufoi_if.m	optional sound
+dev/sound/midi/sequencer.c	optional sound
+dev/sound/midi/synth_if.m	optional sound
 dev/sr/if_sr.c			optional sr
 dev/sr/if_sr_pci.c		optional sr pci
 dev/stg/tmc18c30.c		optional stg
@@ -959,9 +965,11 @@ dev/uart/uart_bus_puc.c		optional	uart puc
 dev/uart/uart_bus_scc.c		optional	uart scc
 dev/uart/uart_core.c		optional	uart
 dev/uart/uart_dbg.c		optional	uart gdb
-dev/uart/uart_dev_ns8250.c	optional	uart
-dev/uart/uart_dev_sab82532.c	optional	uart
-dev/uart/uart_dev_z8530.c	optional	uart
+dev/uart/uart_dev_ns8250.c	optional	uart uart_ns8250
+dev/uart/uart_dev_sab82532.c	optional	uart uart_sab82532
+dev/uart/uart_dev_sab82532.c	optional	uart scc
+dev/uart/uart_dev_z8530.c	optional	uart uart_z8530
+dev/uart/uart_dev_z8530.c	optional	uart scc
 dev/uart/uart_if.m		optional	uart
 dev/uart/uart_subr.c		optional	uart
 dev/uart/uart_tty.c		optional	uart
@@ -1112,7 +1120,9 @@ geom/concat/g_concat.c		optional geom_concat
 geom/eli/g_eli.c		optional geom_eli
 geom/eli/g_eli_crypto.c		optional geom_eli
 geom/eli/g_eli_ctl.c		optional geom_eli
+geom/eli/g_eli_integrity.c	optional geom_eli
 geom/eli/g_eli_key.c		optional geom_eli
+geom/eli/g_eli_privacy.c	optional geom_eli
 geom/eli/pkcs5v2.c		optional geom_eli
 geom/gate/g_gate.c		optional geom_gate
 geom/geom_aes.c			optional geom_aes
@@ -1237,8 +1247,8 @@ isa/isa_if.m			standard
 isa/isa_common.c		optional isa
 isa/isahint.c			optional isa
 isa/orm.c			optional isa
-isa/pnp.c			optional isa
-isa/pnpparse.c			optional isa
+isa/pnp.c			optional isa isapnp
+isa/pnpparse.c			optional isa isapnp
 isofs/cd9660/cd9660_bmap.c	optional cd9660
 isofs/cd9660/cd9660_lookup.c	optional cd9660
 isofs/cd9660/cd9660_node.c	optional cd9660
@@ -1316,6 +1326,7 @@ kern/linker_if.m		standard
 kern/md4c.c			optional netsmb
 kern/md5c.c			standard
 kern/sched_4bsd.c		optional sched_4bsd
+kern/sched_core.c		optional sched_core
 kern/sched_ule.c		optional sched_ule
 kern/serdev_if.m		optional puc | scc
 kern/subr_autoconf.c		standard
@@ -1448,6 +1459,7 @@ net/if_bridge.c			optional if_bridge
 net/if_clone.c			standard
 net/if_disc.c			optional disc
 net/if_ef.c			optional ef
+net/if_enc.c			optional enc
 net/if_ethersubr.c		optional ether
 net/if_faith.c			optional faith
 net/if_fddisubr.c		optional fddi
@@ -1650,6 +1662,7 @@ netgraph/ng_rfc1490.c		optional netgraph_rfc1490
 netgraph/ng_socket.c		optional netgraph_socket
 netgraph/ng_split.c		optional netgraph_split
 netgraph/ng_sppp.c		optional netgraph_sppp
+netgraph/ng_tag.c		optional netgraph_tag
 netgraph/ng_tcpmss.c		optional netgraph_tcpmss
 netgraph/ng_tee.c		optional netgraph_tee
 netgraph/ng_tty.c		optional netgraph_tty
@@ -1983,8 +1996,6 @@ gnu/fs/xfs/xfs_log.c		optional xfs \
 	compile-with "${NORMAL_C} -I$S/gnu/fs/xfs/FreeBSD -I$S/gnu/fs/xfs/FreeBSD/support -I$S/gnu/fs/xfs"
 gnu/fs/xfs/xfs_log_recover.c	optional xfs \
 	compile-with "${NORMAL_C} -I$S/gnu/fs/xfs/FreeBSD -I$S/gnu/fs/xfs/FreeBSD/support -I$S/gnu/fs/xfs"
-gnu/fs/xfs/xfs_macros.c		optional xfs \
-	compile-with "${NORMAL_C} -I$S/gnu/fs/xfs/FreeBSD -I$S/gnu/fs/xfs/FreeBSD/support -I$S/gnu/fs/xfs"
 gnu/fs/xfs/xfs_mount.c		optional xfs \
 	compile-with "${NORMAL_C} -I$S/gnu/fs/xfs/FreeBSD -I$S/gnu/fs/xfs/FreeBSD/support -I$S/gnu/fs/xfs"
 gnu/fs/xfs/xfs_rename.c		optional xfs \
@@ -2017,7 +2028,9 @@ gnu/fs/xfs/xfs_dmops.c		optional xfs \
 	compile-with "${NORMAL_C} -I$S/gnu/fs/xfs/FreeBSD -I$S/gnu/fs/xfs/FreeBSD/support -I$S/gnu/fs/xfs"
 gnu/fs/xfs/xfs_qmops.c		optional xfs \
 	compile-with "${NORMAL_C} -I$S/gnu/fs/xfs/FreeBSD -I$S/gnu/fs/xfs/FreeBSD/support -I$S/gnu/fs/xfs"
-gnu/fs/xfs/FreeBSD/xfs_iget.c	optional xfs \
+gnu/fs/xfs/xfs_iget.c	optional xfs \
+	compile-with "${NORMAL_C} -I$S/gnu/fs/xfs/FreeBSD -I$S/gnu/fs/xfs/FreeBSD/support -I$S/gnu/fs/xfs"
+gnu/fs/xfs/FreeBSD/xfs_freebsd_iget.c	optional xfs \
 	compile-with "${NORMAL_C} -I$S/gnu/fs/xfs/FreeBSD -I$S/gnu/fs/xfs/FreeBSD/support -I$S/gnu/fs/xfs"
 gnu/fs/xfs/FreeBSD/xfs_mountops.c	optional xfs \
 	compile-with "${NORMAL_C} -I$S/gnu/fs/xfs/FreeBSD -I$S/gnu/fs/xfs/FreeBSD/support -I$S/gnu/fs/xfs"
