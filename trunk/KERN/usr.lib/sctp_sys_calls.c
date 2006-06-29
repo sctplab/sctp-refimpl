@@ -408,9 +408,21 @@ sctp_sendmsg(int s,
 	     u_int32_t timetolive,
 	     u_int32_t context)
 {
-#ifdef SYS_sctp_sendmsg
-	return (syscall(SYS_sctp_sendmsg, s, data, len, to, tolen,
-			ppid, flags, stream_no, timetolive, context));
+#ifdef SYS_sctp_generic_sendmsg
+	struct iovec iov[2];
+	struct sctp_sndrcvinfo sinfo;
+
+	iov[0].iov_base = data;
+	iov[0].iov_len = len;
+
+	sinfo.sinfo_ppid = ppid;
+	sinfo.sinfo_flags = flags;
+	sinfo.sinfo_stream = stream_no;
+	sinfo.sinfo_timetolive = timetolive;
+	sinfo.sinfo_context = context;
+	sinfo.sinfo_assoc_id = 0;
+	return (syscall(SYS_sctp_generic_sendmsg, s, 
+			iov, 1, to, tolen, &sinfo, 0));
 #else
 
 	ssize_t sz;
@@ -518,8 +530,15 @@ sctp_send(int sd, const void *data, size_t len,
 	  int flags)
 {
 
-#ifdef SYS_sctp_send
-	return (syscall(SYS_sctp_send, sd, data, len, sinfo, flags));
+#ifdef SYS_sctp_generic_sendmsg
+	struct iovec iov[2];
+	struct sockaddr *to=NULL;
+
+	iov[0].iov_base = data;
+	iov[0].iov_len = len;
+
+	return (syscall(SYS_sctp_generic_sendmsg, sd, 
+			iov, 1, to, 0, sinfo, flags));
 #else
 	ssize_t sz;
 	struct msghdr msg;
@@ -667,8 +686,13 @@ sctp_recvmsg (int s,
 	      struct sctp_sndrcvinfo *sinfo,
 	      int *msg_flags)
 {
-#ifdef SYS_sctp_recvmsg
-	return (syscall(SYS_sctp_recvmsg, s, dbuf, len, from, fromlen, sinfo, msg_flags));
+
+#ifdef SYS_sctp_generic_recvmsg
+	struct iovec iov[2];
+	iov[0].iov_base = dbuf;
+	iov[0].iov_len = len;
+	return (syscall(SYS_sctp_generic_recvmsg, s, 
+			iov, 1, from, fromlen, sinfo, msg_flags));
 #else
 	struct sctp_sndrcvinfo *s_info;
 	ssize_t sz;
