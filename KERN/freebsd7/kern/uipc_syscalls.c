@@ -2333,6 +2333,10 @@ int sctp_generic_sendmsg(td, uap)
 	struct uio auio;
 	struct iovec *iov, *tiov;
 
+	error = copyin(uap->sinfo, &sinfo, sizeof (sinfo));
+	if (error)
+		return (error);
+
 	error = getsockaddr(&to, uap->to, uap->tolen);
 	if (error) {
 		to = NULL;
