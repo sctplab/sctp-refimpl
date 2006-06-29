@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/uipc_syscalls.c,v 1.227 2006/04/25 11:48:16 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/uipc_syscalls.c,v 1.230 2006/06/20 12:36:40 gnn Exp $");
 
 #include "opt_compat.h"
 #include "opt_ktrace.h"
@@ -98,7 +98,6 @@ int nsfbufs;
 int nsfbufspeak;
 int nsfbufsused;
 
-SYSCTL_DECL(_kern_ipc);
 SYSCTL_INT(_kern_ipc, OID_AUTO, nsfbufs, CTLFLAG_RDTUN, &nsfbufs, 0,
     "Maximum number of sendfile(2) sf_bufs available");
 SYSCTL_INT(_kern_ipc, OID_AUTO, nsfbufspeak, CTLFLAG_RD, &nsfbufspeak, 0,
@@ -1336,7 +1335,7 @@ kern_setsockopt(td, s, level, name, val, valseg, valsize)
 
 	if (val == NULL && valsize != 0)
 		return (EFAULT);
-	if (valsize < 0)
+	if ((int)valsize < 0)
 		return (EINVAL);
 
 	sopt.sopt_dir = SOPT_SET;
@@ -1419,7 +1418,7 @@ kern_getsockopt(td, s, level, name, val, valseg, valsize)
 
 	if (val == NULL)
 		*valsize = 0;
-	if (*valsize < 0)
+	if ((int)*valsize < 0)
 		return (EINVAL);
 
 	sopt.sopt_dir = SOPT_GET;
@@ -1808,6 +1807,7 @@ int
 kern_sendfile(struct thread *td, struct sendfile_args *uap,
     struct uio *hdr_uio, struct uio *trl_uio, int compat)
 {
+	struct file *sock_fp;
 	struct vnode *vp;
 	struct vm_object *obj = NULL;
 	struct socket *so = NULL;
@@ -1851,8 +1851,9 @@ kern_sendfile(struct thread *td, struct sendfile_args *uap,
 		error = EINVAL;
 		goto done;
 	}
-	if ((error = fgetsock(td, uap->s, &so, NULL)) != 0)
+	if ((error = getsock(td->td_proc->p_fd, uap->s, &sock_fp, NULL)) != 0)
 		goto done;
+	so = sock_fp->f_data;
 	if (so->so_type != SOCK_STREAM) {
 		error = EINVAL;
 		goto done;
@@ -2202,7 +2203,7 @@ done:
 		VFS_UNLOCK_GIANT(vfslocked);
 	}
 	if (so)
-		fputsock(so);
+		fdrop(sock_fp, td);
 	if (m_header)
 		m_freem(m_header);
 
@@ -2515,7 +2516,6 @@ int sctp_recvmsg(td, uap)
 					     int	sd;
 					     caddr_t	buf;
 					     size_t	len;
-					     int	flags;
 					     struct sockaddr *from;
 					     socklen_t *fromlenaddr;
 				             struct sctp_sndrcvinfo *sinfo, 
