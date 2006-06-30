@@ -2439,13 +2439,12 @@ int sctp_generic_recvmsg(td, uap)
 	u_int8_t sockbufstore[256];
 	struct uio auio;
 	struct iovec *iov, *tiov;
-	struct sctp_extrcvinfo sinfo;
+	struct sctp_sndrcvinfo sinfo;
 	struct socket *so;
 	struct file *fp;
 	struct sockaddr *fromsa;
 	int fromlen;
 	int len, i, msg_flags=0;
-	int extended = 0;
 	int error=0;
 #ifdef KTRACE
 	struct uio *ktruio = NULL;
@@ -2501,17 +2500,13 @@ int sctp_generic_recvmsg(td, uap)
 #endif
 	error = sctp_sorecvmsg(so, &auio, (struct mbuf **)NULL,
 			       fromsa, fromlen, &msg_flags, (struct sctp_sndrcvinfo *)&sinfo, 
-			       1, &extended);
+			       1);
 	if (error) {
 		if (auio.uio_resid != (int)len && (error == ERESTART ||
 		    error == EINTR || error == EWOULDBLOCK))
 			error = 0;
 	} else {
-		if(extended == 0) { 
-			error = copyout(&sinfo, uap->sinfo, sizeof (struct sctp_sndrcvinfo));
-		} else {
-			error = copyout(&sinfo, uap->sinfo, sizeof (sinfo));
-		}
+		error = copyout(&sinfo, uap->sinfo, sizeof (sinfo));
 	}
 #ifdef KTRACE
 	if (ktruio != NULL) {
