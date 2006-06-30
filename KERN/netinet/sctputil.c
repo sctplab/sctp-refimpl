@@ -4827,7 +4827,7 @@ sctp_soreceive(so, paddr, uio, mp0, controlp, flagsp)
 	struct mbuf **controlp;
 	int *flagsp;
 {
-	int error, fromlen, extended=0;
+	int error, fromlen;
 	uint8_t sockbuf[256];
 	struct sockaddr *from;
 	struct sctp_extrcvinfo sinfo;
@@ -4856,7 +4856,7 @@ sctp_soreceive(so, paddr, uio, mp0, controlp, flagsp)
 	}
 
 	error = sctp_sorecvmsg(so, uio, mp0, from, fromlen, flagsp,
-			       (struct sctp_sndrcvinfo *)&sinfo, filling_sinfo, &extended);
+			       (struct sctp_sndrcvinfo *)&sinfo, filling_sinfo);
 	if (controlp) {
 		/* copy back the sinfo in a CMSG format */
 		struct sctp_inpcb *inp;
@@ -4899,7 +4899,6 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 	uint8_t sockbuf[256];
 	struct sockaddr *from;
 	struct sctp_extrcvinfo sinfo;
-	int extended = 0;
 	int filling_sinfo = 1;
 	struct sctp_inpcb *inp;
 
@@ -4927,7 +4926,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 	socket_lock(so, 1);
 #endif
 	error = sctp_sorecvmsg(so, uio, mp0, from, fromlen, flagsp, 
-	    (struct sctp_sndrcvinfo *)&sinfo,filling_sinfo, &extended);
+	    (struct sctp_sndrcvinfo *)&sinfo,filling_sinfo);
 	if (controlp) {
 		/* copy back the sinfo in a CMSG format */
 		*controlp = sctp_build_ctl_nchunk(inp, 
