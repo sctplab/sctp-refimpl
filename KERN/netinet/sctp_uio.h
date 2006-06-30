@@ -78,6 +78,16 @@ struct sctp_initmsg {
 	uint16_t sinit_max_init_timeo;
 };
 
+/* We add 96 bytes to the size of sctp_sndrcvinfo.
+ * This makes the current structure 128 bytes long
+ * which is nicely 64 bit aligned but also has room
+ * for us to add more and keep ABI compatability.
+ * For example, already we have the sctp_extrcvinfo
+ * when enabled which is 48 bytes.
+ */
+
+#define SCTP_ALIGN_RESV_PAD 96
+
 struct sctp_sndrcvinfo {
 	uint16_t sinfo_stream;
 	uint16_t sinfo_ssn;
@@ -88,6 +98,7 @@ struct sctp_sndrcvinfo {
 	uint32_t sinfo_tsn;
 	uint32_t sinfo_cumtsn;
 	sctp_assoc_t sinfo_assoc_id;
+	uint8_t  __reserve_pad[SCTP_ALIGN_RESV_PAD];
 };
 
 struct sctp_extrcvinfo {
@@ -714,8 +725,8 @@ sctp_sorecvmsg(struct socket *so,
     int fromlen,
     int *msg_flags,
     struct sctp_sndrcvinfo *sinfo,
-    int filling_sinfo,
-    int *extra);
+    int filling_sinfo);
+
 
 #endif
 
