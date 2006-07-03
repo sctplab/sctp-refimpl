@@ -4148,8 +4148,7 @@ sctp_sorecvmsg(struct socket *so,
     int fromlen,
     int *msg_flags,
     struct sctp_sndrcvinfo *sinfo,
-    int filling_sinfo,
-    int *extended)
+    int filling_sinfo)
 {
 	/*
 	 * MSG flags we will look at MSG_DONTWAIT - non-blocking IO.
@@ -4300,12 +4299,11 @@ found_one:
 	error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
 	/* First lets get off the sinfo and sockaddr info */
 	if (sinfo) {
-		memcpy(sinfo, control, sizeof(struct sctp_sndrcvinfo));
+		memcpy(sinfo, control, sizeof(struct sctp_nonpad_sndrcvinfo));
 		nxt = TAILQ_NEXT(control, next);
 		if(sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXT_RCVINFO)) {
 			struct sctp_extrcvinfo *s_extra;
 			s_extra = (struct sctp_extrcvinfo *)sinfo;
-			*extended = 1;
 			if(nxt) {
 				s_extra->next_flags = SCTP_NEXT_MSG_AVAIL;
 				if(nxt->sinfo_flags & SCTP_UNORDERED) {
@@ -4829,7 +4827,7 @@ sctp_soreceive(so, paddr, uio, mp0, controlp, flagsp)
 	struct mbuf **controlp;
 	int *flagsp;
 {
-	int error, fromlen, extended=0;
+	int error, fromlen;
 	uint8_t sockbuf[256];
 	struct sockaddr *from;
 	struct sctp_extrcvinfo sinfo;
@@ -4858,7 +4856,7 @@ sctp_soreceive(so, paddr, uio, mp0, controlp, flagsp)
 	}
 
 	error = sctp_sorecvmsg(so, uio, mp0, from, fromlen, flagsp,
-			       (struct sctp_sndrcvinfo *)&sinfo, filling_sinfo, &extended);
+			       (struct sctp_sndrcvinfo *)&sinfo, filling_sinfo);
 	if (controlp) {
 		/* copy back the sinfo in a CMSG format */
 		struct sctp_inpcb *inp;
@@ -4901,7 +4899,6 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 	uint8_t sockbuf[256];
 	struct sockaddr *from;
 	struct sctp_extrcvinfo sinfo;
-	int extended = 0;
 	int filling_sinfo = 1;
 	struct sctp_inpcb *inp;
 
@@ -4929,7 +4926,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 	socket_lock(so, 1);
 #endif
 	error = sctp_sorecvmsg(so, uio, mp0, from, fromlen, flagsp, 
-	    (struct sctp_sndrcvinfo *)&sinfo,filling_sinfo, &extended);
+	    (struct sctp_sndrcvinfo *)&sinfo,filling_sinfo);
 	if (controlp) {
 		/* copy back the sinfo in a CMSG format */
 		*controlp = sctp_build_ctl_nchunk(inp, 
