@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.44 2006-05-15 16:35:39 lei Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.45 2006-07-08 19:03:07 lei Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -5375,7 +5375,7 @@ static int cmd_addkey(char *argv[], int argc) {
     key = (struct sctp_authkey *)optval;
     key->sca_keynumber = (uint32_t)strtoul(argv[0], NULL, 0);
     keylen = strlen(argv[1]);
-    strncpy(key->sca_key, argv[1], keylen);
+    strncpy((char *)key->sca_key, argv[1], keylen);
     /* use the optional assoc id, if given */
     if (argc == 3)
 	key->sca_assoc_id = (uint32_t)strtoul(argv[2], NULL, 0);
@@ -5492,7 +5492,7 @@ static int cmd_setactivekey(char *argv[], int argc) {
 static int cmd_getactivekey(char *argv[], int argc) {
 #if defined(__BSD_SCTP_STACK__)
     struct sctp_authkeyid key;
-    int optlen;
+    socklen_t optlen;
 
     if (argc > 1) {
 	printf("Expected: getactivekey [<optional assoc id>]\n");

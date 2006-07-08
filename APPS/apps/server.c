@@ -12,7 +12,8 @@
 
 int main (int argc, const char * argv[]) {
 
-  int fd, remote_addr_length, nfd;
+  int fd, nfd;
+  socklen_t remote_addr_length;
   struct sockaddr_in local_addr, remote_addr;
   struct sockaddr_storage addr_storage[2];
 

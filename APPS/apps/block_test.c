@@ -202,7 +202,7 @@ do_a_read()
 void
 do_listener()
 {
-	u_int8_t cmd[128];
+	char cmd[128];
 	int not_done = 1;
 	int i,len;
 
@@ -250,8 +250,8 @@ do_sender()
 	u_int32_t timetolive=0;
 	u_int32_t context=0;
 	u_int32_t msg_sz=0;
-	u_int8_t msg[2048];
-	u_int8_t cmd[128];
+	char msg[2048];
+	char cmd[128];
 	int not_done = 1;
 	int len,i,j,ret;
 	while(not_done) {
@@ -406,7 +406,7 @@ main(int argc, char **argv)
 	}
 	{
 		struct linger linger;
-		int oop;
+		socklen_t oop;
 		linger.l_onoff  = 0;
 		linger.l_linger = 0;
 		oop = sizeof(linger);
@@ -441,7 +441,7 @@ main(int argc, char **argv)
 	}
 	{
 		struct linger linger;
-		int oop;
+		socklen_t oop;
 		linger.l_onoff  = 0;
 		linger.l_linger = 0;
 		oop = sizeof(linger);

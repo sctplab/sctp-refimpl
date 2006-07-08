@@ -51,12 +51,12 @@
 /* IEEE Transactions on Communications, Vol.41, No.6, June 1993  */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-static char buffer1[4100];
-static char buffer2[4100];
-static char buffer3[4100];
-static char buffer4[4100];
+static unsigned char buffer1[4100];
+static unsigned char buffer2[4100];
+static unsigned char buffer3[4100];
+static unsigned char buffer4[4100];
 static struct sockaddr_in bindto,got,to;
-static int len;
+static socklen_t len;
 
 unsigned long  sctp_crc_c[256] = {
 	0x00000000L, 0xF26B8303L, 0xE13B70F7L, 0x1350F3F4L,
@@ -182,6 +182,7 @@ prepare_buffers()
 	int i;
 
 	p = (u_int32_t *)buffer1;
+	printf("Buffer1 data value starts at 0x%x", at);
 	for(i=0;i<(sizeof(buffer1)/4);i++){
 		*p = at;
 		at++;
@@ -193,8 +194,10 @@ prepare_buffers()
 	temp = 0xffffffff;
 	temp = update_crc32(temp,buffer1,(sizeof(buffer1)-4));
 	*p = sctp_csum_finalize(temp);
+	printf(", csum is 0x%x\n", *p);
 
 	p = (u_int32_t *)buffer2;
+	printf("Buffer2 data value starts at 0x%x", at);
 	for(i=0;i<(sizeof(buffer2)/4);i++){
 		*p = at;
 		at++;
@@ -205,8 +208,10 @@ prepare_buffers()
 	temp = 0xffffffff;
 	temp = update_crc32(temp,buffer2,(sizeof(buffer2)-4));
 	*p = sctp_csum_finalize(temp);
+	printf(", csum is 0x%x\n", *p);
 
 	p = (u_int32_t *)buffer3;
+	printf("Buffer3 data value starts at 0x%x", at);
 	for(i=0;i<(sizeof(buffer3)/4);i++){
 		*p = at;
 		at++;
@@ -217,8 +222,10 @@ prepare_buffers()
 	temp = 0xffffffff;
 	temp = update_crc32(temp,buffer3,(sizeof(buffer3)-4));
 	*p = sctp_csum_finalize(temp);
+	printf(", csum is 0x%x\n", *p);
 
 	p = (u_int32_t *)buffer4;
+	printf("Buffer4 data value starts at 0x%x", at);
 	for(i=0;i<(sizeof(buffer4)/4);i++){
 		*p = at;
 		at++;
@@ -229,6 +236,7 @@ prepare_buffers()
 	temp = 0xffffffff;
 	temp = update_crc32(temp,buffer4,(sizeof(buffer4)-4));
 	*p = sctp_csum_finalize(temp);
+	printf(", csum is 0x%x\n", *p);
 }
 
 static int
@@ -459,26 +467,28 @@ process_out_data(int fd,int fd1)
 		if(ret < sizeof(buffer1)){
 			printf("Gak1, error:%d ret:%d\n",errno,ret);
 		}
+		printf("Sent buffer1 to fd %d\n", fd);
 
 		ret = sendto(fd1,buffer2,sizeof(buffer1),0,
 			     (struct sockaddr *)&to,sizeof(to));
 		if(ret < sizeof(buffer2)){
 			printf("Gak2, error:%d ret:%d\n",errno,ret);
 		}
-
+		printf("Sent buffer2 to fd1 %d\n", fd1);
 
 		ret = sendto(fd,buffer3,sizeof(buffer1),0,
 			     (struct sockaddr *)&to,sizeof(to));
 		if(ret < sizeof(buffer3)){
 			printf("Gak3, error:%d ret:%d\n",errno,ret);
 		}
-
+		printf("Sent buffer3 to fd %d\n", fd);
 
 		ret = sendto(fd1,buffer4,sizeof(buffer1),0,
 			     (struct sockaddr *)&to,sizeof(to));
 		if(ret < sizeof(buffer4)){
 			printf("Gak4, error:%d ret:%d\n",errno,ret);
 		}
+		printf("Sent buffer4 to fd1 %d\n", fd1);
 
 		/*  now wait until we get a assoc failing */
 		notdone = 1;
@@ -511,7 +521,7 @@ main(int argc, char **argv)
 	}
 	memset(&to,0,sizeof(to));
 	if((addr == NULL) || (port == 0)){
-		printf("Sorry you must specify a to addr -h addr\n");
+		printf("Sorry you must specify -h addr and -p port\n");
 		return(-1);
 	}
 	if(inet_pton(AF_INET, addr, (void *) &to.sin_addr)){

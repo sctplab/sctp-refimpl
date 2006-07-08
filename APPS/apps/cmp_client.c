@@ -303,8 +303,9 @@ int
 main(int argc, char **argv)
 {
 	char buffer[200000];
-	int i,fd,len,ret,numblk,blksize,sizetos,cnt;
-        int optlen, optval;
+	int i,fd,ret,numblk,blksize,sizetos,cnt;
+	int optval;
+        socklen_t len, optlen;
 	char *addr=NULL;
 	u_int16_t port=0;
 	unsigned int no_READ=0;

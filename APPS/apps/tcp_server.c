@@ -302,10 +302,12 @@ int
 main(int argc, char **argv)
 {
 	char *buffer;
-	int i,fd,len,newfd,ret,sb;
+	int i,fd,newfd,ret,sb;
+	socklen_t len;
 	int numblk = 0;
 	u_int16_t port=0;
-	int optval,optlen;
+	int optval;
+	socklen_t optlen;
 	int protocol_touse = IPPROTO_TCP;
 	struct sockaddr_in bindto,got,from;
 	int sleep_period = 200000; /* 200 ms */

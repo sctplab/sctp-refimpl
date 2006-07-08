@@ -305,9 +305,11 @@ int
 main(int argc, char **argv)
 {
 	char *buffer;
-	int i,fd,len,ret,sb;
+	int i,fd,ret,sb;
+	socklen_t len;
 	u_int16_t port=0;
-	int optval,optlen;
+	int optval;
+	socklen_t optlen;
 	struct sockaddr_in sendaddr,from;
 	char *host_to=NULL;
 	int sleep_period = 200000; /* 200 ms */
