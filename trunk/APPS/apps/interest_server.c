@@ -52,7 +52,8 @@ int
 main (int argc, char **argv)
 {
 	char buf[65535];
-	int port,len,fromlen,cnt=0,flags,sleep_opt;
+	int port,len,cnt=0,flags,sleep_opt;
+	socklen_t fromlen;
 	struct sockaddr_in local_addr;
 	struct sockaddr_in from;
 	struct sctp_sndrcvinfo info;

@@ -85,7 +85,8 @@ struct sockaddr_in sinme;
 struct sockaddr_in sinhim;
 struct sockaddr_in frominet;
 
-int domain, fromlen;
+int domain;
+socklen_t fromlen;
 int fd;				/* fd of network socket */
 
 int buflen = 8 * 1024;		/* length of buffer */
@@ -401,7 +402,7 @@ char **argv;
 		if((fd=accept(fd, (struct sockaddr *)&frominet, &fromlen) ) < 0)
 			err("accept");
 		{ struct sockaddr_in peer;
-		  int peerlen = sizeof(peer);
+		  socklen_t peerlen = sizeof(peer);
 		  if (getpeername(fd, (struct sockaddr *) &peer, 
 				&peerlen) < 0) {
 			err("getpeername");
@@ -814,7 +815,7 @@ void *buf;
 int count;
 {
 	struct sockaddr_in from;
-	int len = sizeof(from);
+	socklen_t len = sizeof(from);
 	register int cnt;
 #ifdef DEBUG
 	mes("Nread");

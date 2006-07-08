@@ -36,7 +36,8 @@ main(int argc, char **argv)
 	int num,tot, numat;
 	struct sctp_cwnd_log_req *req;
 	struct sctp_cwnd_log *logp;
-	int sd,siz,at,ret;
+	int sd,at,ret;
+	socklen_t siz;
 	int clear=0;
 	int xxx;
 

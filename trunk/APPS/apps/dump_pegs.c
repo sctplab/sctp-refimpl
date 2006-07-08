@@ -37,7 +37,8 @@ static int
 cmd_getpegs(int fd)
 {
 	u_int32_t sctp_pegs[SCTP_NUMBER_OF_PEGS];
-	int siz,i;
+	socklen_t siz;
+	int i;
 	static char *pegnames[SCTP_NUMBER_OF_PEGS] = {
 		"sack_rcv", /* 00 */
 		"sack_snt", /* 01 */
