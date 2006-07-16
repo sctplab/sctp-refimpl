@@ -1668,14 +1668,14 @@ sctp_handle_auth(struct sctp_tcb *stcb, struct sctp_auth_chunk *auth,
 	/* auth is checked for NULL by caller */
 	chunklen = ntohs(auth->ch.chunk_length);
 	if (chunklen < sizeof(*auth)) {
-		sctp_pegs[SCTP_AUTH_INVALID]++;
+		SCTP_STAT_INCR(sctps_recvauthfailed);
 #ifdef SCTP_DEBUG
 		if (SCTP_AUTH_DEBUG)
 			printf("SCTP AUTH Chunk: chunk too short\n");
 #endif
 		return (-1);
 	}
-	sctp_pegs[SCTP_AUTH_RCVD]++;
+	SCTP_STAT_INCR(sctps_recvauth);
 
 	/* get the auth params */
 	shared_key_id = ntohs(auth->shared_key_id);
@@ -1691,7 +1691,7 @@ sctp_handle_auth(struct sctp_tcb *stcb, struct sctp_auth_chunk *auth,
 		struct mbuf *m_err;
 		struct sctp_auth_invalid_hmac *err;
 
-		sctp_pegs[SCTP_AUTH_HMAC_ID_INVAL]++;
+		SCTP_STAT_INCR(sctps_recvivalhmacid);
 #ifdef SCTP_DEBUG
 		if (SCTP_AUTH_DEBUG)
 			printf("SCTP Auth: unsupported HMAC id %u\n", hmac_id);
@@ -1728,7 +1728,7 @@ sctp_handle_auth(struct sctp_tcb *stcb, struct sctp_auth_chunk *auth,
 		}
 		/* if the shared key isn't found, discard the chunk */
 		if (skey == NULL) {
-			sctp_pegs[SCTP_AUTH_NO_SECRET_KEY]++;
+			SCTP_STAT_INCR(sctps_recvivalkeyid);
 #ifdef SCTP_DEBUG
 			if (SCTP_AUTH_DEBUG)
 				printf("SCTP Auth: unknown key id %u\n", shared_key_id);
@@ -1760,7 +1760,7 @@ sctp_handle_auth(struct sctp_tcb *stcb, struct sctp_auth_chunk *auth,
 	digestlen = sctp_get_hmac_digest_len(hmac_id);
 	if (chunklen < (sizeof(*auth) + digestlen)) {
 		/* invalid digest length */
-		sctp_pegs[SCTP_AUTH_INVALID]++;
+		SCTP_STAT_INCR(sctps_recvauthfailed);
 #ifdef SCTP_DEBUG
 		if (SCTP_AUTH_DEBUG)
 			printf("SCTP Auth: chunk too short for HMAC\n");
@@ -1775,7 +1775,7 @@ sctp_handle_auth(struct sctp_tcb *stcb, struct sctp_auth_chunk *auth,
 
 	/* compare the computed digest with the one in the AUTH chunk */
 	if (memcmp(digest, computed_digest, digestlen) != 0) {
-		sctp_pegs[SCTP_AUTH_INVALID]++;
+		SCTP_STAT_INCR(sctps_recvauthfailed);
 #ifdef SCTP_DEBUG
 		if (SCTP_AUTH_DEBUG)
 			printf("SCTP Auth: HMAC digest check failed\n");

@@ -204,7 +204,7 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 			sctp_log_fr(chk->rec.data.TSN_seq, chk->snd_count,
 			    4, SCTP_FR_MARKED_EARLY);
 #endif
-			sctp_pegs[SCTP_EARLYFR_MRK_RETR]++;
+			SCTP_STAT_INCR(sctps_earlyfrmrkretrans);
 			chk->sent = SCTP_DATAGRAM_RESEND;
 			sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
 			/* double book size since we are doing an early FR */
@@ -241,7 +241,7 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 	}
 	/* Restart it? */
 	if (net->flight_size < net->cwnd) {
-		sctp_pegs[SCTP_EARLYFR_STR_TMR]++;
+		SCTP_STAT_INCR(sctps_earlyfrstrtmr);
 		sctp_timer_start(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net);
 	}
 }
@@ -786,7 +786,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 			if (stcb->asoc.total_flight_count > 0)
 				stcb->asoc.total_flight_count--;
 			chk->sent = SCTP_DATAGRAM_RESEND;
-			sctp_pegs[SCTP_T3_MARKED_TSNS]++;
+			SCTP_STAT_INCR(sctps_markedretrans);
 			net->flight_size -= chk->book_size;
 			stcb->asoc.peers_rwnd += chk->send_size;
 			stcb->asoc.peers_rwnd += sctp_peer_chunk_oh;
@@ -982,7 +982,7 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 	sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
 #endif
 #ifdef SCTP_FR_LOGGING
-	sctp_log_fr(sctp_pegs[SCTP_PEG_TSNS_SENT], 0, 0, SCTP_FR_T3_TIMEOUT);
+	sctp_log_fr(sctps_datadropchklmt.sctps_senddata, 0, 0, SCTP_FR_T3_TIMEOUT);
 #ifdef SCTP_CWND_LOGGING
 	{
 		struct sctp_nets *lnet;
@@ -1000,7 +1000,7 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 	/* Find an alternate and mark those for retransmission */
 	if ((stcb->asoc.peers_rwnd == 0) &&
 	    (stcb->asoc.total_flight < net->mtu)) {
-		sctp_pegs[SCTP_T3_AT_WINPROBE]++;
+		SCTP_STAT_INCR(sctps_timowindowprobe);
 		win_probe = 1;
 	} else {
 		win_probe = 0;
