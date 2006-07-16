@@ -693,7 +693,6 @@ sctp_queue_data_to_stream(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					control->data = NULL;
 					asoc->size_on_all_streams -= control->length;
 					sctp_ucount_decr(asoc->cnt_on_all_streams);
-					sctp_pegs[SCTP_DUP_SSN_RCVD]++;
 					sctp_free_remote_addr(control->whoFrom);
 					SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, control);
 					SCTP_DECR_READQ_COUNT();
@@ -1414,7 +1413,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	if (compare_with_wrap(asoc->cumulative_tsn, tsn, MAX_TSN) ||
 	    asoc->cumulative_tsn == tsn) {
 		/* It is a duplicate */
-		sctp_pegs[SCTP_DUPTSN_RECVD]++;
+		SCTP_STAT_INCR(sctps_recvdupdata);
 		if (asoc->numduptsns < SCTP_MAX_DUP_TSNS) {
 			/* Record a dup for the next outbound sack */
 			asoc->dup_tsns[asoc->numduptsns] = tsn;
@@ -1443,7 +1442,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	}
 	/* See if we have received this one already */
 	if (SCTP_IS_TSN_PRESENT(asoc->mapping_array, gap)) {
-		sctp_pegs[SCTP_DUPTSN_RECVD]++;
+		SCTP_STAT_INCR(sctps_recvdupdata);
 		if (asoc->numduptsns < SCTP_MAX_DUP_TSNS) {
 			/* Record a dup for the next outbound sack */
 			asoc->dup_tsns[asoc->numduptsns] = tsn;
@@ -1512,9 +1511,9 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			if ((asoc->cnt_on_all_streams +
 			    asoc->cnt_on_reasm_queue +
 			    asoc->cnt_msg_on_sb) > sctp_max_chunks_on_queue) {
-				sctp_pegs[SCTP_MSGC_DROP]++;
+				SCTP_STAT_INCR(sctps_datadropchklmt);
 			} else {
-				sctp_pegs[SCTP_RWND_DROPS]++;
+				SCTP_STAT_INCR(sctps_datadroprwnd);
 			}
 			indx = *break_flag;
 			*break_flag = 1;
@@ -1548,7 +1547,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			phdr->param_length = 0;
 			sctp_queue_op_err(stcb, mb);
 		}
-		sctp_pegs[SCTP_BAD_STRMNO]++;
+		SCTP_STAT_INCR(sctps_badsid);
 		return (0);
 	}
 	/*
@@ -1591,7 +1590,6 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		}
 		sctp_abort_an_association(stcb->sctp_ep, stcb, SCTP_PEER_FAULTY,
 		    oper);
-		sctp_pegs[SCTP_BAD_SSN_WRAP]++;
 		*abort_flag = 1;
 		return (0);
 	}
@@ -1609,10 +1607,9 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			/* Trim the end round bytes off  too */
 			m_adj(dmbuf, -(dmbuf->m_pkthdr.len - the_len));
 		}
-		sctp_pegs[SCTP_NO_COPY_IN]++;
 	}
 	if (dmbuf == NULL) {
-		sctp_pegs[SCTP_DROP_NOMEMORY]++;
+		SCTP_STAT_INCR(sctps_nomem);
 		return (0);
 	}
 	if ((ch->ch.chunk_flags & SCTP_DATA_NOT_FRAG) == SCTP_DATA_NOT_FRAG &&
@@ -1652,7 +1649,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			/* for ordered, bump what we delivered */
 			asoc->strmin[strmno].last_sequence_delivered++;
 		}
-		sctp_pegs[SCTP_EXPRESS_ROUTE]++;
+		SCTP_STAT_INCR(sctps_recvexpress);
 #ifdef SCTP_STR_LOGGING
 		sctp_log_strm_del_alt(tsn, strmseq,
 		    SCTP_STR_LOG_FROM_EXPRS_DEL);
@@ -1672,7 +1669,7 @@ failed_express_del:
 		chk = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk);
 		if (chk == NULL) {
 			/* No memory so we drop the chunk */
-			sctp_pegs[SCTP_DROP_NOMEMORY]++;
+			SCTP_STAT_INCR(sctps_nomem);
 			if (last_chunk == 0) {
 				/* we copied it, free the copy */
 				sctp_m_freem(dmbuf);
@@ -1702,7 +1699,7 @@ failed_express_del:
 		    dmbuf);
 		if (control == NULL) {
 			/* No memory so we drop the chunk */
-			sctp_pegs[SCTP_DROP_NOMEMORY]++;
+			SCTP_STAT_INCR(sctps_nomem);
 			if (last_chunk == 0) {
 				/* we copied it, free the copy */
 				sctp_m_freem(dmbuf);
@@ -1753,7 +1750,6 @@ failed_express_del:
 				    SCTP_PEER_FAULTY, oper);
 
 				*abort_flag = 1;
-				sctp_pegs[SCTP_DROP_FRAG]++;
 				return (0);
 			} else {
 				if (sctp_does_tsn_belong_to_reasm(asoc, control->sinfo_tsn)) {
@@ -1784,7 +1780,6 @@ failed_express_del:
 					    stcb, SCTP_PEER_FAULTY, oper);
 
 					*abort_flag = 1;
-					sctp_pegs[SCTP_DROP_FRAG]++;
 					return (0);
 				}
 			}
@@ -1824,7 +1819,6 @@ failed_express_del:
 					    stcb, SCTP_PEER_FAULTY, oper);
 
 					*abort_flag = 1;
-					sctp_pegs[SCTP_DROP_FRAG]++;
 					return (0);
 				}
 			}
@@ -1897,7 +1891,6 @@ failed_express_del:
 		/* Into the re-assembly queue */
 		sctp_queue_data_for_reasm(stcb, asoc, chk, abort_flag);
 		if (*abort_flag) {
-			sctp_pegs[SCTP_DROP_FRAG]++;
 			return (0);
 		}
 	}
@@ -1912,7 +1905,7 @@ finish_express_del:
 	if (last_chunk) {
 		*m = NULL;
 	}
-	sctp_pegs[SCTP_PEG_TSNS_RCVD]++;
+	SCTP_STAT_INCR(sctps_recvdata);
 	/* Set it present please */
 #ifdef SCTP_STR_LOGGING
 	sctp_log_strm_del_alt(tsn, strmseq, SCTP_STR_LOG_FROM_MARK_TSN);
@@ -2590,7 +2583,7 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 		 * Did we get data, if so update the time for auto-close and
 		 * give peer credit for being alive.
 		 */
-		sctp_pegs[SCTP_DATA_DG_RECV]++;
+		SCTP_STAT_INCR(sctps_recvpktwithdata);
 		stcb->asoc.overall_error_count = 0;
 		SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_last_rcvd);
 	}
@@ -3295,10 +3288,9 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			sctp_log_fr(tp1->rec.data.TSN_seq, tp1->snd_count,
 			    0, SCTP_FR_MARKED);
 #endif
-			sctp_pegs[SCTP_REACHED_FR_MARK]++;
 			if (strike_flag) {
 				/* This is a subsequent FR */
-				sctp_pegs[SCTP_DUP_FR]++;
+				SCTP_STAT_INCR(sctps_sendmultfastretrans);
 			}
 			sctp_ucount_incr(asoc->sent_queue_retran_cnt);
 
@@ -3913,7 +3905,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 			    stcb, net);
 			if (sctp_early_fr) {
 				if (callout_pending(&net->fr_timer.timer)) {
-					sctp_pegs[SCTP_EARLYFR_STP_ID_SCK1]++;
+					SCTP_STAT_INCR(sctps_earlyfrstpidsck1);
 					sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net);
 				}
 			}
@@ -4246,7 +4238,6 @@ skip_segments:
 				}
 			}
 			if (cnt_revoked) {
-				sctp_pegs[SCTP_RENEGED_ALL]++;
 				reneged_all = 1;
 			}
 		}
@@ -4295,16 +4286,16 @@ skip_segments:
 				 * the others.
 				 */
 				if (callout_pending(&net->fr_timer.timer)) {
-					sctp_pegs[SCTP_EARLYFR_STP_ID_SCK2]++;
+					SCTP_STAT_INCR(sctps_earlyfrstpidsck2);
 					sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net);
 				}
-				sctp_pegs[SCTP_EARLYFR_STR_ID]++;
+				SCTP_STAT_INCR(sctps_earlyfrstrid);
 
 				sctp_timer_start(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net);
 			} else {
 				/* No, stop it if its running */
 				if (callout_pending(&net->fr_timer.timer)) {
-					sctp_pegs[SCTP_EARLYFR_STP_ID_SCK3]++;
+					SCTP_STAT_INCR(sctps_earlyfrstpidsck3);
 					sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net);
 				}
 			}
@@ -4348,7 +4339,6 @@ skip_segments:
 			 * If we are in loss recovery we skip any cwnd
 			 * update
 			 */
-			sctp_pegs[SCTP_CWND_SKIP]++;
 			goto skip_cwnd_update;
 		}
 		/*
@@ -4380,27 +4370,15 @@ skip_segments:
 
 					}
 #endif
-					sctp_pegs[SCTP_CWND_SS]++;
 				} else {
 					unsigned int dif;
 
-					sctp_pegs[SCTP_CWND_NOUSE_SS]++;
 					dif = net->cwnd - (net->flight_size +
 					    net->net_ack);
 #ifdef SCTP_CWND_LOGGING
 					sctp_log_cwnd(stcb, net, net->net_ack,
 					    SCTP_CWND_LOG_NOADV_SS);
 #endif
-					if (dif > sctp_pegs[SCTP_CWND_DIFF_SA]) {
-						sctp_pegs[SCTP_CWND_DIFF_SA] =
-						    dif;
-						sctp_pegs[SCTP_OQS_AT_SS] =
-						    asoc->total_output_queue_size;
-						sctp_pegs[SCTP_SQQ_AT_SS] =
-						    asoc->sent_queue_cnt;
-						sctp_pegs[SCTP_SQC_AT_SS] =
-						    asoc->send_queue_cnt;
-					}
 				}
 			} else {
 				/* We are in congestion avoidance */
@@ -4433,7 +4411,6 @@ skip_segments:
 						sctp_log_cwnd(stcb, net, net->mtu,
 						    SCTP_CWND_LOG_FROM_CA);
 #endif
-						sctp_pegs[SCTP_CWND_CA]++;
 					}
 #ifdef SCTP_CWND_LOGGING
 					else {
@@ -4444,24 +4421,12 @@ skip_segments:
 				} else {
 					unsigned int dif;
 
-					sctp_pegs[SCTP_CWND_NOUSE_CA]++;
 #ifdef SCTP_CWND_LOGGING
 					sctp_log_cwnd(stcb, net, net->net_ack,
 					    SCTP_CWND_LOG_NOADV_CA);
 #endif
 					dif = net->cwnd - (net->flight_size +
 					    net->net_ack);
-					if (dif > sctp_pegs[SCTP_CWND_DIFF_CA]) {
-						sctp_pegs[SCTP_CWND_DIFF_CA] =
-						    dif;
-						sctp_pegs[SCTP_OQS_AT_CA] =
-						    asoc->total_output_queue_size;
-						sctp_pegs[SCTP_SQQ_AT_CA] =
-						    asoc->sent_queue_cnt;
-						sctp_pegs[SCTP_SQC_AT_CA] =
-						    asoc->send_queue_cnt;
-
-					}
 				}
 			}
 		} else {
@@ -4469,7 +4434,6 @@ skip_segments:
 			sctp_log_cwnd(stcb, net, net->mtu,
 			    SCTP_CWND_LOG_NO_CUMACK);
 #endif
-			sctp_pegs[SCTP_CWND_NOCUM]++;
 		}
 skip_cwnd_update:
 		/*
@@ -4487,9 +4451,6 @@ skip_cwnd_update:
 			if (net->RTO > stcb->asoc.maxrto) {
 				net->RTO = stcb->asoc.maxrto;
 			}
-		}
-		if (net->cwnd > sctp_pegs[SCTP_MAX_CWND]) {
-			sctp_pegs[SCTP_MAX_CWND] = net->cwnd;
 		}
 	}
 	/**********************************/
@@ -4513,7 +4474,7 @@ skip_cwnd_update:
 			/* stop all timers */
 			if (sctp_early_fr) {
 				if (callout_pending(&net->fr_timer.timer)) {
-					sctp_pegs[SCTP_EARLYFR_STP_ID_SCK4]++;
+					SCTP_STAT_INCR(sctps_earlyfrstpidsck4);
 					sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net);
 				}
 			}
@@ -4699,7 +4660,7 @@ skip_cwnd_update:
 			 * Mark a peg that we WOULD have done a cwnd
 			 * reduction but RFC2582 prevented this action.
 			 */
-			sctp_pegs[SCTP_FR_INAWINDOW]++;
+			SCTP_STAT_INCR(sctps_fastretransinrtt);
 		}
 	}
 
