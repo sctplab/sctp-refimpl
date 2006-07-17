@@ -228,7 +228,7 @@ sctp6_input(mp, offp, proto)
 	/* Ensure that (sctphdr + sctp_chunkhdr) in a row. */
 	IP6_EXTHDR_GET(sh, struct sctphdr *, m, off, sizeof(*sh) + sizeof(*ch));
 	if (sh == NULL) {
-		sctp_pegs[SCTP_HDR_DROPS]++;
+		SCTP_STAT_INCR(sctps_hdrops);
 		return IPPROTO_DONE;
 	}
 	ch = (struct sctp_chunkhdr *)((caddr_t)sh + sizeof(struct sctphdr));
@@ -259,7 +259,7 @@ sctp6_input(mp, offp, proto)
 #endif				/* __FreeBSD_cc_version */
 
 #endif				/* NFAITH defined and > 0 */
-	sctp_pegs[SCTP_INPKTS]++;
+	SCTP_STAT_INCR(sctps_recvpackets);
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
 		printf("V6 input gets a packet iphlen:%d pktlen:%d\n", iphlen, m->m_pkthdr.len);
@@ -267,7 +267,6 @@ sctp6_input(mp, offp, proto)
 #endif
 	if (IN6_IS_ADDR_MULTICAST(&ip6->ip6_dst)) {
 		/* No multi-cast support in SCTP */
-		sctp_pegs[SCTP_IN_MCAST]++;
 		goto bad;
 	}
 	/* destination port of 0 is illegal, based on RFC2960. */
@@ -312,7 +311,7 @@ sctp6_input(mp, offp, proto)
 			} else if ((in6p != NULL) && (stcb == NULL)) {
 				refcount_up = 1;
 			}
-			sctp_pegs[SCTP_BAD_CSUM]++;
+			SCTP_STAT_INCR(sctps_badsum);
 			goto bad;
 		}
 		sh->checksum = calc_check;
@@ -336,7 +335,7 @@ sctp_skip_csum:
 	if (in6p == NULL) {
 		struct sctp_init_chunk *init_chk, chunk_buf;
 
-		sctp_pegs[SCTP_NOPORTS]++;
+		SCTP_STAT_INCR(sctps_noport);
 		if (ch->chunk_type == SCTP_INITIATION) {
 			/*
 			 * we do a trick here to get the INIT tag, dig in
