@@ -8,7 +8,6 @@ void rsp_free_req(struct rsp_enrp_req *req);
 
 struct rsp_enrp_req *rsp_aloc_req(char *name, int namelen, void *msg, int msglen, int type);
 
-void rsp_timer_check ( void );
 
 void rsp_start_enrp_server_hunt(struct rsp_enrp_scope *sd, int non_blocking);
 
@@ -30,8 +29,9 @@ rsp_start_timer(struct rsp_enrp_scope *scp,
 
 int rsp_stop_timer(struct rsp_timer_entry *te);
 
-void rsp_process_fds(int poll_ret);
+int rsp_process_fds(int poll_ret);
 
+void rsp_expire_timer(struct rsp_timer_entry *entry);
 
 
 void

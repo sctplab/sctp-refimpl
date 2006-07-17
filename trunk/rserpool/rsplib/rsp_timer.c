@@ -75,8 +75,6 @@ handle_t7_enrpoutdate_timer(struct rsp_timer_entry *entry)
 {
 }
 
-
-static
 void rsp_expire_timer(struct rsp_timer_entry *entry)
 {
 	void *v;
@@ -116,86 +114,6 @@ void rsp_expire_timer(struct rsp_timer_entry *entry)
 		break;
 	};
 }
-
-void rsp_timer_check ( void )
-{
-	/* we enter with the timer mutex asserted */
-	struct rsp_timer_entry *entry;
-	struct timeval now;
-	int min_timeout, poll_ret;
-
-	if (gettimeofday(&now , NULL) ) {
-		fprintf(stderr, "Gak, system error can't get time of day?? -- failed:%d\n", errno);
-		return;
-	}
-	while(1) {
-		/* Deal with any timers */
-		dlist_reset(rsp_pcbinfo.timer_list);
-		entry = (struct rsp_timer_entry *)dlist_get( rsp_pcbinfo.timer_list);
-		if(entry == NULL) {
-			/* none left, we are done */
-			goto do_poll;
-		}
-		/* Has it expired? */
-		if ((now.tv_sec > entry->expireTime.tv_sec) ||
-		    ((entry->expireTime.tv_sec ==  now.tv_sec) &&
-		     (now.tv_sec >= entry->expireTime.tv_usec))) {
-			/* Yep, this one has expired */
-			rsp_expire_timer(entry);
-			/* Go get the next one, this works because
-			 * rsp_expire_timer removes the head of the list
-			 * aka the one that just expired. So we come
-			 * back to the while(1) and reset, and get the
-			 * next one. We consume all timers ready to go until
-			 * we reach a point where one with time is left, or none
-			 * our left.
-			 */
-			continue;
-		}
-		/* ok, at this point entry points to an un-expired timer and
-		 * the next one to expire at that... so adjust its time.
-		 */
-		if(now.tv_sec > entry->expireTime.tv_sec) {
-			min_timeout = (now.tv_sec - entry->expireTime.tv_sec) * 1000;
-			if(now.tv_usec >= entry->expireTime.tv_usec) {
-				min_timeout += (now.tv_usec - entry->expireTime.tv_usec)/1000;
-			} else {
-				/* borrow a second */
-				min_timeout -= 1000;
-				/* add it to now */
-				now.tv_usec += 1000000;
-				min_timeout += (now.tv_usec - entry->expireTime.tv_usec)/1000;
-			}
-		} else if (now.tv_sec == entry->expireTime.tv_sec) {
-			min_timeout = (now.tv_usec - entry->expireTime.tv_usec)/1000;
-		} else {
-			/* wait a ms and reprocess */
-			min_timeout = 0;
-		}
-		if(min_timeout < 1) {
-			min_timeout = 1;
-		}
-		if(min_timeout > rsp_pcbinfo.minimumTimerQuantum)
-			min_timeout = rsp_pcbinfo.minimumTimerQuantum;
-
-	do_poll:
-		/* delay min_timeout */
-		poll_ret = poll(rsp_pcbinfo.watchfds, rsp_pcbinfo.num_fds , min_timeout);
-		if(poll_ret > 0) {
-			/* we have some to deal with */
-			rsp_process_fds(poll_ret);
-		}
-		if(poll_ret < 0) {
-			/* we have an error to deal with? */
-			fprintf(stderr, "Error in poll?? errno:%d\n", errno);
-		}
-		if (gettimeofday(&now , NULL) ) {
-			fprintf(stderr, "Gak, system error can't get time of day?? -- failed:%d\n", errno);
-		}
-	}
-	/* we leave with the timer mutex asserted */
-}
-
 
 /* Start, or restart a timer */
 int

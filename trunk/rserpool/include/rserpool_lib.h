@@ -113,7 +113,6 @@ struct rsp_enrp_req {
 struct rsp_global_info {
 	int			rsp_number_sd;	/* count of sd's when 0 un-init */
 	struct pollfd           *watchfds;	/* fd's the thread is watching for us */
-	int			lsd[2];		/* local 'unix-domain' socket pair for enrp_thread */
 	HashedTbl		*sd_pool;	/* hashed pool of sd aka sd->sd_socket */
 	dlist_t			*timer_list;	/* list of timers running */
 	dlist_t			*scopes;	/* the list of all scopes */
@@ -253,5 +252,7 @@ struct pe_address {
 #define ENRP_DEFAULT_PORT_FOR_ASAP  5555
 
 #define ENRP_MAX_SERVER_HUNTS       3
-#define RSP_DEF_POLLARRAY_SZ        8
+#define RSP_DEF_POLLARRAY_SZ        16
+#define RSP_WATCHFD_INCR            16
+
 #endif
