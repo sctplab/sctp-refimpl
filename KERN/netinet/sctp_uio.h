@@ -697,6 +697,25 @@ struct sctp_cwnd_log_req {
 };
 
 struct	sctpstat {
+	/* MIB */
+	u_long  sctps_currestab;           /* sctpStats  1   (Gauge32) */
+	u_long  sctps_activeestab;         /* sctpStats  2 (Counter32) */
+	u_long  sctps_passiveestab;        /* sctpStats  3 (Counter32) */
+	u_long  sctps_aborted;             /* sctpStats  4 (Counter32) */
+	u_long  sctps_shutdown;            /* sctpStats  5 (Counter32) */
+	u_long  sctps_outoftheblue;        /* sctpStats  6 (Counter32) */
+	u_long  sctps_checksumerrors;      /* sctpStats  7 (Counter32) */
+	u_long  sctps_outcontrolchunks;    /* sctpStats  8 (Counter64) */
+	u_long  sctps_outorderchunks;      /* sctpStats  9 (Counter64) */
+	u_long  sctps_outunorderchunks;    /* sctpStats 10 (Counter64) */
+	u_long  sctps_incontrolchunks;     /* sctpStats 11 (Counter64) */
+	u_long  sctps_inorderchunks;       /* sctpStats 12 (Counter64) */
+	u_long  sctps_inunorderchunks;     /* sctpStats 13 (Counter64) */
+	u_long  sctps_fragusrmegs;         /* sctpStats 14 (Counter64) */
+	u_long  sctps_reasmusrmsgs;        /* sctpStats 15 (Counter64) */
+	u_long  sctps_outpackets;          /* sctpStats 16 (Counter64) */
+	u_long  sctps_inpackets;           /* sctpStats 17 (Counter64) */
+	u_long  sctps_discontinuitytime;   /* sctpStats 18 (TimeStamp) */
 	/* input statistics: */
 	u_long	sctps_recvpackets;	   /* total input packets        */
 	u_long  sctps_recvpktwithdata;
@@ -792,8 +811,11 @@ struct	sctpstat {
 };
 
 #define SCTP_STAT_INCR(_x) SCTP_STAT_INCR_BY(_x,1)
+#if defined(__FreeBSD__)
+#define SCTP_STAT_INCR_BY(_x,_d) atomic_add_long(&sctpstat._x, _d)
+#else
 #define SCTP_STAT_INCR_BY(_x,_d) atomic_add_int(&sctpstat._x, _d)
-
+#endif
 /*
  * Kernel defined for sctp_send
  */
