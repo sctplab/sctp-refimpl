@@ -160,7 +160,26 @@ struct rsp_timer_entry {
 	/* The Req field is filled in if timer does something for you */
 	struct rsp_enrp_req 	*req;		/* data being sent */
 	int 			timer_type;	/* type of timer */
+	struct rsp_timer_entry *queued_next_entry;
 };
+/* We use the queued_next_entry to hook a chain
+ * of requests together. So for example, if we loose
+ * the home enrp server, and have no other assoc's up,
+ * this becomes the FIRST thing we do. The request
+ * to some name, that detected the death of the HS
+ * would get a enrp_server_hunt going, and then chain
+ * itself into queued_next_entry. Any other request that
+ * happen while that is going on, run out to the end of
+ * the list and set themselves on it. When we finally
+ * get a ENRP HS, we grab the first one, queue off a
+ * request. And in fact burn through all of them starting
+ * timers. As the answers come back.. tada.. we send out the
+ * data that may be queued in the req.
+ */
+
+#define RSP_POOL_STATE_REQUESTED       0x0001
+#define RSP_POOL_STATE_RESPONDED       0x0002
+#define RSP_POOL_STATE_TIMEDOUT        0x0003
 
 /* A pool entry */
 struct rsp_pool {
@@ -173,6 +192,7 @@ struct rsp_pool {
 	uint32_t 	refcnt;			/* number of PE's pointing to me */
 	uint32_t	regType;		/* reg type - the policy */
 	struct timeval  received;		/* Time we got it */
+	uint16_t        state;			/* State of this entry */
 	uint8_t		failover_allowed;	/* auto failover of queued messages? */
 	uint8_t         auto_update;		/* did we subscribe to upds */
 };

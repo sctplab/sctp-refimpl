@@ -470,7 +470,7 @@ rsp_load_file(FILE *io, char *file)
 	rsp_pcbinfo.num_fds++;
 
 	/* start server hunt procedures */
-	rsp_start_enrp_server_hunt(es, 1);
+	rsp_start_enrp_server_hunt(es, NULL);
 
 	/* Here we must send off the id to the reading thread 
 	 * this will get it to add it to the fd list its watching
@@ -544,7 +544,7 @@ rsp_load_config_file(const char *confprefix)
 }
 
 void
-rsp_start_enrp_server_hunt(struct rsp_enrp_scope *scp, int non_blocking)
+rsp_start_enrp_server_hunt(struct rsp_enrp_scope *scp, struct rsp_timer_entry *queue)
 {
 	/* 
 	 * Formulate and set up an association to a
@@ -563,22 +563,8 @@ rsp_start_enrp_server_hunt(struct rsp_enrp_scope *scp, int non_blocking)
 	struct rsp_enrp_entry *re;
 	struct rsp_timer_entry *tmr;
 
-	tmr = scp->enrp_tmr;
-	if ((tmr != NULL) && (scp->state & RSP_SERVER_HUNT_IP)) {
-		if(non_blocking == 1) {
-			return;
-		}
-		if (scp->enrp_tmr->timer_type != RSP_T5_SERVERHUNT) {
-			fprintf(stderr, "Warning waiting to do server hunt on timer:%d\n",
-				scp->enrp_tmr->timer_type);
-		}
-		/* are we ok now? */
-		if(scp->state & RSP_ENRP_HS_FOUND) {
-			/* Yep, we are ok */
-			return;
-		}
-	}
 	/* start server hunt */
+	tmr = scp->enrp_tmr;
 	scp->state |= RSP_SERVER_HUNT_IP;
 	dlist_reset(scp->enrpList);
 	while((re = (struct rsp_enrp_entry *)dlist_get(scp->enrpList)) != NULL) {
@@ -628,6 +614,16 @@ rsp_start_enrp_server_hunt(struct rsp_enrp_scope *scp, int non_blocking)
 			scp->timers[RSP_T5_SERVERHUNT], 
 			(struct rsp_enrp_req *)NULL, 
 			RSP_T5_SERVERHUNT, &scp->enrp_tmr);
+	if(queue) {
+		tmr = scp->enrp_tmr;
+		if(tmr) {
+			while(tmr->queued_next_entry != NULL) {
+				tmr = tmr->queued_next_entry;
+			}
+			tmr->queued_next_entry = queue;
+			queue->queued_next_entry = NULL;
+		}
+	}
 }
 
 static struct rsp_enrp_scope *
@@ -658,6 +654,18 @@ rsp_find_scope_with_id(uint32_t op_scope)
 	return(scp);
 }
 
+static struct rsp_socket *
+rsp_find_socket_with_sd(int sd)
+{
+	struct rsp_socket *sock;
+
+	sock = (struct rsp_socket *)HashedTbl_lookupKeyed(rsp_pcbinfo.sd_pool 
+							  sd,
+							  &sd,
+							  sizeof(sd),
+							  NULL);
+	return(sock);
+}
 
 void
 rsp_process_fd_for_scope (struct rsp_enrp_scope *scp)
@@ -877,15 +885,10 @@ rsp_connect(int sockfd, const char *name, size_t namelen)
 	 * already pre-loaded the cache, your
 	 * done. If not, do the pre-load. 
 	 *
-	 * Note: we don't block since its possible
-	 * to get some other user message which would
-	 * get in the way of us reading and if we
-	 * read and hold we have an issue with select/poll
-	 * since we let the user do his/her own call to
-	 * the base select/poll not an rsp_ version.
 	 */
+	struct rsp_pool *pool;
+	struct rsp_socket *scp;
 
-	
 	/* steps:
 	 *
 	 * 1) see if we have a hs, if not start blocking
@@ -897,10 +900,20 @@ rsp_connect(int sockfd, const char *name, size_t namelen)
 	 */
 
 	if (rsp_inited == 0) {
+	out:
 		errno = EINVAL;
 		return (-1);
 	}
-
+	
+	scp = rsp_find_socket_with_sd(sockfd);
+	if(scp == NULL) {
+		goto out;
+	}
+	/* now we have a socket, lets look for the name */
+	pool = (struct rsp_pool *)HashedTbl_lookup(scp->cache , name, namelen, NULL);
+	if(pool == NULL) {
+		/* we need to get the name first */
+	}
 	return (0);
 }
 
@@ -1284,9 +1297,8 @@ rsp_initialize(struct rsp_info *info)
 		if(rsp_init() != 0) {
 			return(0);
 		}
+		rsp_inited = 1;
 	}
-
-	rsp_inited = 1;
 	id = rsp_load_config_file(info->rsp_prefix);
 	return(id);
 }
