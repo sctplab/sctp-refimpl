@@ -64,18 +64,6 @@ get_asocid(int sd, struct sockaddr *sa)
 }
 
 
-void *rsp_timer_thread_run( void *arg )
-{
-	static int done = 0;
-	if(arg != NULL)
-		return((void *)&done);
-
-	rsp_timer_check ( );
-
-	return((void *)&done);
-}
-
-
 static int
 rsp_init()
 {
@@ -128,13 +116,9 @@ rsp_init()
 		goto bail_out;
 	}
 	memset(rsp_pcbinfo.watchfds, 0, ((sizeof(struct pollfd) * RSP_DEF_POLLARRAY_SZ)));
-	rsp_pcbinfo.num_fds = 1;
+	rsp_pcbinfo.num_fds = 0;
 	rsp_pcbinfo.siz_fds = RSP_DEF_POLLARRAY_SZ;
-	rsp_pcbinfo.watchfds[0].fd = rsp_pcbinfo.lsd[RSP_LSD_INTERNAL_READ];
-	rsp_pcbinfo.watchfds[0].events = POLLIN;
-	rsp_pcbinfo.watchfds[0].revents = 0;
-
-	for(i=1; i<RSP_DEF_POLLARRAY_SZ; i++) {
+	for(i=0; i<RSP_DEF_POLLARRAY_SZ; i++) {
 		/* mark all others unused */
 		rsp_pcbinfo.watchfds[i].fd = -1;
 	}
@@ -199,6 +183,31 @@ rsp_add_enrp_server(struct rsp_enrp_scope *es, uint32_t enrpid, struct sockaddr 
 	re->state = RSP_NO_ASSOCIATION;
 	rsp_add_addr_to_enrp_entry(re, sa);
 	dlist_append(es->enrpList, (void *)re);
+}
+
+static void
+rsp_expand_watchfd_array()
+{
+	struct pollfd *pol;
+
+	int new_sz, cp_siz, i;
+
+	new_sz = rsp_pcbinfo.siz_fds + RSP_WATCHFD_INCR;
+	pol = (struct pollfd *)malloc((new_sz * sizeof(struct pollfd)));
+	if(pol == NULL) {
+		fprintf(stderr, "Out of memory in expanding pollfd from %d to %d, core soon\n",
+			rsp_pcbinfo.siz_fds, new_sz);
+	}
+	cp_siz = rsp_pcbinfo.siz_fds * sizeof(struct pollfd);
+	memcpy(pol, rsp_pcbinfo.watchfds, cp_siz);
+	for(i=rsp_pcbinfo.siz_fds; i<new_sz; i++) {
+		pol[i].fd = -1;
+		pol[i].events = 0;
+		pol[i].revents = 0;
+	}
+	rsp_pcbinfo.siz_fds += RSP_WATCHFD_INCR;
+	free(rsp_pcbinfo.watchfds);
+	rsp_pcbinfo.watchfds = pol;
 }
 
 static int
@@ -451,10 +460,15 @@ rsp_load_file(FILE *io, char *file)
 		}
 	}
 	/* Tell the thread that we are now happy with this enrp scope (the sd) */
-
-	if (write(rsp_pcbinfo.lsd[RSP_LSD_WAKE_WRITE], &es->sd, sizeof(es->sd))  < sizeof(es->sd)) {
-		fprintf(stderr,"Lost domain - write of sd to thread fails error:%d\n", errno);
+	if ((rsp_pcbinfo.siz_fds - rsp_pcbinfo.num_fds) < 1) {
+		/* expand array */
+		rsp_expand_watchfd_array();
 	}
+	rsp_pcbinfo.watchfds[rsp_pcbinfo.num_fds].fd = es->sd;
+	rsp_pcbinfo.watchfds[rsp_pcbinfo.num_fds].events = POLLIN;
+	rsp_pcbinfo.watchfds[rsp_pcbinfo.num_fds].revents = 0;
+	rsp_pcbinfo.num_fds++;
+
 	/* start server hunt procedures */
 	rsp_start_enrp_server_hunt(es, 1);
 
@@ -682,115 +696,44 @@ rsp_process_fd_for_scope (struct rsp_enrp_scope *scp)
 	}
 }
 
-static int
-rsp_process_new_sd()
-{
-	void *temp_space;
-	struct rsp_enrp_scope *scp;
-	int sd,i, orig;
-	int ret, retcode= -1;
-
-	ret = read(rsp_pcbinfo.lsd[RSP_LSD_INTERNAL_READ], (char *)&sd, sizeof(sd));
-	if (ret < sizeof(sd)) {
-		fprintf(stderr, "Bad read, not %d but %d errno:%d\n",
-			sizeof(sd), ret, errno);
-		return(-1);
-	}
-	/* ok sd now contains our new sd, validate it */
-	scp = rsp_find_scope_with_sd(sd);
-	if(scp == NULL) {
-		fprintf(stderr, "Can not find sd:%d in scope array\n",
-			sd);
-		return(-1);
-	}
-	/* insert it in read array */
-	for(i=1; i<rsp_pcbinfo.siz_fds; i++) {
-		if(rsp_pcbinfo.watchfds[i].fd == -1) {
-			/* found a slot */
-			rsp_pcbinfo.watchfds[i].fd = sd;
-			rsp_pcbinfo.watchfds[i].events = POLLIN; 
-			rsp_pcbinfo.watchfds[i].revents = 0;
-			if(i > rsp_pcbinfo.num_fds) {
-				/* update the count */
-				rsp_pcbinfo.num_fds = i;
-			}
-			retcode = 0;
-			goto out_locked;
-		}
-	}
-	/* If we fall out, we are out of descriptors 
-	 * and must allocate new space. Double the current
-	 * size.
-	 */
-	orig = (sizeof(struct pollfd) * rsp_pcbinfo.siz_fds);
-	i = 2 * orig;
-
-	temp_space = malloc(i);
-	if(temp_space == NULL) {
-		/* no room */
-		fprintf(stderr, "Can't malloc more memory for expansion err:%d\n", errno);
-		return (-1);
-	}
-	memset(temp_space, 0, i);
-	rsp_pcbinfo.siz_fds *= 2;
-	memcpy(temp_space, rsp_pcbinfo.watchfds, orig);
-	for(i=rsp_pcbinfo.num_fds; i<rsp_pcbinfo.siz_fds; i++) {
-		rsp_pcbinfo.watchfds[i].fd = -1;
-	}
-	rsp_pcbinfo.watchfds[rsp_pcbinfo.num_fds].fd = sd;
-	rsp_pcbinfo.watchfds[rsp_pcbinfo.num_fds].events = POLLIN;
-	rsp_pcbinfo.num_fds++;
-	retcode = 0;
- out_locked:
-	return (retcode);
-}
-
-void rsp_process_fds(int ret)
+int rsp_process_fds(int ret)
 {
 	/* Look at all sockets we are watching. These
 	 * include all 
 	 */
 	int i=1;
+	int count_processed=0;
 	struct rsp_enrp_scope *scp;
 
-	/* two types of handling, type
-	 * one is special, notification of new
-	 * sd's. Type two is an actual sd awakens.
-	 * For these we read what happened, interpret
+	/* 
+	 * For sd's we read what happened, interpret
 	 * any events to enrp.. and process.
 	 */
 
 	/* check for new fd's */
-	if(rsp_pcbinfo.watchfds[0].revents) {
-		/* yep, its my lsd socket */
-		ret--;
-		if(rsp_process_new_sd()) {
-			fprintf(stderr, "Warning - failed to add new sd - a scope is unwatched\n");
-		}
-		rsp_pcbinfo.watchfds[0].revents = 0;
-	} 
-	i = 1;
-	while(ret > 0) {
-		for(; i< rsp_pcbinfo.num_fds; i++) {
-			if(rsp_pcbinfo.watchfds[i].revents) {
-				/* this one woke up, find the scope */
-				scp = rsp_find_scope_with_sd(rsp_pcbinfo.watchfds[i].fd);
-				if(scp == NULL) {
-					fprintf (stderr, "fd:%d does not belong to any scope? - nulling",
-						 rsp_pcbinfo.watchfds[i].fd);
-					rsp_pcbinfo.watchfds[i].fd = -1;
-					rsp_pcbinfo.watchfds[i].events = 0;
-					rsp_pcbinfo.watchfds[i].revents = 0;
-					ret--;
-				} else {
-					rsp_process_fd_for_scope (scp);
-					rsp_pcbinfo.watchfds[i].revents = 0;
-					ret--;
-				}
-				break;
+	for(i=0; i< rsp_pcbinfo.num_fds; i++) {
+		if(rsp_pcbinfo.watchfds[i].revents) {
+			/* this one woke up, find the scope */
+			scp = rsp_find_scope_with_sd(rsp_pcbinfo.watchfds[i].fd);
+			if(scp == NULL) {
+				fprintf (stderr, "fd:%d does not belong to any scope? - nulling",
+					 rsp_pcbinfo.watchfds[i].fd);
+				rsp_pcbinfo.watchfds[i].fd = -1;
+				rsp_pcbinfo.watchfds[i].events = 0;
+				rsp_pcbinfo.watchfds[i].revents = 0;
+				ret--;
+			} else {
+				count_processed++;
+				rsp_process_fd_for_scope (scp);
+				rsp_pcbinfo.watchfds[i].revents = 0;
+				ret--;
 			}
 		}
+		if(ret <= 0) {
+			break;
+		}
 	}
+	return(ret);
 }
 
 
@@ -1110,6 +1053,224 @@ rsp_forcefailover(int sockfd,
 	}
 
 	return (0);
+}
+
+static int
+rsp_inernal_poll(nfds_t nfds, int timeout)
+{
+	struct rsp_timer_entry *entry;
+	struct timeval now;
+	int min_timeout, poll_ret, ret;
+	int rem_to = 0;
+
+	if (gettimeofday(&now , NULL) ) {
+		fprintf(stderr, "Gak, system error can't get time of day?? -- failed:%d\n", errno);
+		return(-1);
+	}
+	while (1) {
+		/* Deal with any timers */
+		dlist_reset(rsp_pcbinfo.timer_list);
+		entry = (struct rsp_timer_entry *)dlist_get( rsp_pcbinfo.timer_list);
+		if(entry == NULL) {
+			/* none left, we are done */
+			goto do_poll;
+		}
+		/* Has it expired? */
+		if ((now.tv_sec > entry->expireTime.tv_sec) ||
+		    ((entry->expireTime.tv_sec ==  now.tv_sec) &&
+		     (now.tv_sec >= entry->expireTime.tv_usec))) {
+			/* Yep, this one has expired */
+			rsp_expire_timer(entry);
+			/* Go get the next one, this works because
+			 * rsp_expire_timer removes the head of the list
+			 * aka the one that just expired. So we come
+			 * back to the while(1) and reset, and get the
+			 * next one. We consume all timers ready to go until
+			 * we reach a point where one with time is left, or none
+			 * our left.
+			 */
+			continue;
+		}
+		/* ok, at this point entry points to an un-expired timer and
+		 * the next one to expire at that... so adjust its time.
+		 */
+		if(now.tv_sec > entry->expireTime.tv_sec) {
+			min_timeout = (now.tv_sec - entry->expireTime.tv_sec) * 1000;
+			if(now.tv_usec >= entry->expireTime.tv_usec) {
+				min_timeout += (now.tv_usec - entry->expireTime.tv_usec)/1000;
+			} else {
+				/* borrow a second */
+				min_timeout -= 1000;
+				/* add it to now */
+				now.tv_usec += 1000000;
+				min_timeout += (now.tv_usec - entry->expireTime.tv_usec)/1000;
+			}
+		} else if (now.tv_sec == entry->expireTime.tv_sec) {
+			min_timeout = (now.tv_usec - entry->expireTime.tv_usec)/1000;
+		} else {
+			/* wait a ms and reprocess */
+			min_timeout = 0;
+		}
+		if(min_timeout < 1) {
+			min_timeout = 1;
+		}
+		if(min_timeout > rsp_pcbinfo.minimumTimerQuantum)
+			min_timeout = rsp_pcbinfo.minimumTimerQuantum;
+
+	do_poll:
+		/* delay min_timeout */
+		
+		if ((timeout > 0) && (timeout < min_timeout)) {
+			rem_to = 1;
+			min_timeout = timeout;
+		} else {
+			rem_to = 0;
+		}
+		poll_ret = poll(rsp_pcbinfo.watchfds, rsp_pcbinfo.num_fds , min_timeout);
+		if(poll_ret > 0) {
+			/* we have some to deal with */
+			ret = rsp_process_fds(poll_ret);
+			if (poll_ret - ret) {
+				return(poll_ret - ret);
+			}
+		}
+		if(poll_ret < 0) {
+			/* we have an error to deal with? */
+			fprintf(stderr, "Error in poll?? errno:%d\n", errno);
+		}
+
+		if ((poll_ret == 0) && rem_to) {
+			return (0);
+		}
+
+		if (gettimeofday(&now , NULL) ) {
+			fprintf(stderr, "Gak, system error can't get time of day?? -- failed:%d\n", errno);
+		}
+	}
+}
+
+
+int
+rsp_select(int nfds, 
+	   fd_set *readfds,
+	   fd_set *writefds,
+	   fd_set *exceptfds,
+	   struct timeval *timeout
+	   )
+{
+	/* convert the rsp_select into the under-lying
+	 * rsp_poll that it is.
+	 */
+	int ms;
+	int at,nat, incr_needed, added_fds;
+	int ret,nret, didone;
+	
+	if(timeout == NULL) {
+		/* Infinity */
+		ms = INFTIM;
+	} else if ((timeout->tv_sec == 0) && (timeout->tv_usec == 0)) {
+		/* immediate return */
+		ms = 0;
+	} else {
+		/* some time */
+		ms = (timeout->tv_sec * 1000) + (timeout->tv_sec/1000);
+	}
+	at = rsp_pcbinfo.num_fds;
+	nat = 0;
+	added_fds = 0;
+	while(nat <= nfds) {
+		if(at >= rsp_pcbinfo.siz_fds) {
+			rsp_expand_watchfd_array();
+		}
+		incr_needed = 0;
+		if(readfds) {
+			if(FD_ISSET(nat, readfds)) {
+				incr_needed = 1;
+				rsp_pcbinfo.watchfds[at].fd = nat;
+				rsp_pcbinfo.watchfds[at].events |= POLLIN;
+				rsp_pcbinfo.watchfds[at].revents = 0;
+			}
+		}
+		if(writefds) {
+			if (FD_ISSET(nat, writefds)) {
+				incr_needed = 1;
+				rsp_pcbinfo.watchfds[at].fd = nat;
+				rsp_pcbinfo.watchfds[at].events |= POLLOUT;
+				rsp_pcbinfo.watchfds[at].revents = 0;
+			} 
+		}
+		if(exceptfds) {
+			if (FD_ISSET(nat, exceptfds)) {
+				incr_needed = 1;
+				rsp_pcbinfo.watchfds[at].fd = nat;
+				rsp_pcbinfo.watchfds[at].events |= POLLPRI;
+				rsp_pcbinfo.watchfds[at].revents = 0;
+			} 
+		}
+		if(incr_needed) {
+			at++;
+			added_fds++;
+		}
+		nat++;
+	}
+	ret = rsp_inernal_poll((nfds_t)(added_fds+rsp_pcbinfo.num_fds), ms);
+	nret = ret;
+	
+	if(readfds) {
+		FD_ZERO(readfds);
+	}
+	if(writefds) {
+		FD_ZERO(writefds);
+	}
+	if(exceptfds) {
+		FD_ZERO(exceptfds);
+	}
+	at = rsp_pcbinfo.num_fds;
+	while(nret > 0) {
+		if(at >= rsp_pcbinfo.siz_fds)
+			break;
+		didone = 0;
+		if (rsp_pcbinfo.watchfds[at].revents & POLLIN) {
+			didone = 1;
+			if(readfds) {
+				FD_SET(rsp_pcbinfo.watchfds[at].fd, readfds);
+			}
+		}
+		if (rsp_pcbinfo.watchfds[at].revents & POLLOUT) {
+			didone = 1;
+			if(writefds) {
+				FD_SET(rsp_pcbinfo.watchfds[at].fd, writefds);
+			}
+		}
+		if (rsp_pcbinfo.watchfds[at].revents & POLLPRI) {
+			didone = 1;
+			if(exceptfds) {
+				FD_SET(rsp_pcbinfo.watchfds[at].fd, exceptfds);
+			}
+		}
+		if(didone)
+			nret--;
+		at++;
+	}
+	return(ret);
+}
+
+int
+rsp_poll ( struct pollfd fds[], nfds_t nfds, int timeout)
+{
+	int ret, i;
+	while ((nfds + rsp_pcbinfo.num_fds) > rsp_pcbinfo.siz_fds) {
+		/* grow it big enough */
+		rsp_expand_watchfd_array();
+	}
+	for(i=0; i<nfds; i++) {
+		rsp_pcbinfo.watchfds[(i+rsp_pcbinfo.num_fds)] = fds[i];
+	}
+	ret = rsp_inernal_poll((nfds_t)(nfds+rsp_pcbinfo.num_fds), timeout);
+	for(i=0; i<nfds; i++) {
+		fds[i] = rsp_pcbinfo.watchfds[(i+rsp_pcbinfo.num_fds)];
+	}
+	return(ret);
 }
 
 
