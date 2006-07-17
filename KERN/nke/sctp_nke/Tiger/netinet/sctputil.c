@@ -1259,7 +1259,6 @@ sctp_timeout_handler(void *t)
 
 	/* sanity checks... */
 	if (tmr->self != (void *)tmr) {
-		sctp_pegs[SCTP_BOGUS_TIMER]++;
 		/*
 		 * printf("Stale SCTP timer fired (%p), ignoring...\n",
 		 * tmr);
@@ -1272,7 +1271,6 @@ sctp_timeout_handler(void *t)
 		return;
 	}
 	if (!SCTP_IS_TIMER_TYPE_VALID(tmr->type)) {
-		sctp_pegs[SCTP_BOGUS_TIMER]++;
 		/*
 		 * printf("SCTP timer fired with invalid type: 0x%x\n",
 		 * tmr->type);
@@ -1284,7 +1282,6 @@ sctp_timeout_handler(void *t)
 #endif
 		return;
 	}
-	sctp_pegs[SCTP_TIMERS_EXP]++;
 
 	if ((tmr->type != SCTP_TIMER_TYPE_ADDR_WQ) &&
 	    (inp == NULL)) {
@@ -1374,13 +1371,14 @@ sctp_timeout_handler(void *t)
 		{
 			struct sctp_iterator *it;
 
+			SCTP_STAT_INCR(sctps_timoiterator);
 			it = (struct sctp_iterator *)inp;
 			sctp_iterator_timer(it);
 		}
 		break;
 		/* call the handler for the appropriate timer type */
 	case SCTP_TIMER_TYPE_SEND:
-		sctp_pegs[SCTP_TMIT_TIMER]++;
+		SCTP_STAT_INCR(sctps_timodata);
 		stcb->asoc.num_send_timers_up--;
 		if (stcb->asoc.num_send_timers_up < 0) {
 			stcb->asoc.num_send_timers_up = 0;
@@ -1405,13 +1403,13 @@ sctp_timeout_handler(void *t)
 			 * wrong... so we start a timer on the first chunk
 			 * on the send queue on whatever net it is sent to.
 			 */
-			sctp_pegs[SCTP_T3_SAFEGRD]++;
 			chk = TAILQ_FIRST(&stcb->asoc.sent_queue);
 			sctp_timer_start(SCTP_TIMER_TYPE_SEND, inp, stcb,
 			    chk->whoTo);
 		}
 		break;
 	case SCTP_TIMER_TYPE_INIT:
+		SCTP_STAT_INCR(sctps_timoinit);
 		if (sctp_t1init_timer(inp, stcb, net)) {
 			/* no need to unlock on tcb its gone */
 			goto out_decr;
@@ -1420,7 +1418,7 @@ sctp_timeout_handler(void *t)
 		did_output = 0;
 		break;
 	case SCTP_TIMER_TYPE_RECV:
-		sctp_pegs[SCTP_RECV_TIMER]++;
+		SCTP_STAT_INCR(sctps_timosack);
 		sctp_send_sack(stcb);
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
@@ -1432,6 +1430,7 @@ sctp_timeout_handler(void *t)
 			/* no need to unlock on tcb its gone */
 			goto out_decr;
 		}
+		SCTP_STAT_INCR(sctps_timoshutdown);
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
 #endif
@@ -1442,6 +1441,7 @@ sctp_timeout_handler(void *t)
 			struct sctp_nets *net;
 			int cnt_of_unconf = 0;
 
+			SCTP_STAT_INCR(sctps_timoheartbeat);
 			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 				if ((net->dest_state & SCTP_ADDR_UNCONFIRMED) &&
 				    (net->dest_state & SCTP_ADDR_REACHABLE)) {
@@ -1467,6 +1467,7 @@ sctp_timeout_handler(void *t)
 			/* no need to unlock on tcb its gone */
 			goto out_decr;
 		}
+		SCTP_STAT_INCR(sctps_timocookie);
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
 #endif
@@ -1480,7 +1481,8 @@ sctp_timeout_handler(void *t)
 		{
 			struct timeval tv;
 			int i, secret;
-
+	
+			SCTP_STAT_INCR(sctps_timosecret);
 			SCTP_GETTIME_TIMEVAL(&tv);
 			SCTP_INP_WLOCK(inp);
 			inp->sctp_ep.time_of_secret_change = tv.tv_sec;
@@ -1502,6 +1504,7 @@ sctp_timeout_handler(void *t)
 		did_output = 0;
 		break;
 	case SCTP_TIMER_TYPE_PATHMTURAISE:
+		SCTP_STAT_INCR(sctps_timopathmtu);
 		sctp_pathmtu_timer(inp, stcb, net);
 		did_output = 0;
 		break;
@@ -1510,12 +1513,14 @@ sctp_timeout_handler(void *t)
 			/* no need to unlock on tcb its gone */
 			goto out_decr;
 		}
+		SCTP_STAT_INCR(sctps_timoshutdownack);
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
 #endif
 		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_SHUT_ACK_TMR);
 		break;
 	case SCTP_TIMER_TYPE_SHUTDOWNGUARD:
+		SCTP_STAT_INCR(sctps_timoshutdownguard);
 		sctp_abort_an_association(inp, stcb,
 		    SCTP_SHUTDOWN_GUARD_EXPIRES, NULL);
 		/* no need to unlock on tcb its gone */
@@ -1527,11 +1532,12 @@ sctp_timeout_handler(void *t)
 			/* no need to unlock on tcb its gone */
 			goto out_decr;
 		}
+		SCTP_STAT_INCR(sctps_timostrmrst);
 		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_STRRST_TMR);
 		break;
 	case SCTP_TIMER_TYPE_EARLYFR:
 		/* Need to do FR of things for net */
-		sctp_pegs[SCTP_EARLYFR_EXPI_TMR]++;
+		SCTP_STAT_INCR(sctps_timoearlyfr);
 		sctp_early_fr_timer(inp, stcb, net);
 		break;
 	case SCTP_TIMER_TYPE_ASCONF:
@@ -1539,6 +1545,7 @@ sctp_timeout_handler(void *t)
 			/* no need to unlock on tcb its gone */
 			goto out_decr;
 		}
+		SCTP_STAT_INCR(sctps_timoasconf);
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
 #endif
@@ -1546,11 +1553,13 @@ sctp_timeout_handler(void *t)
 		break;
 
 	case SCTP_TIMER_TYPE_AUTOCLOSE:
+		SCTP_STAT_INCR(sctps_timoautoclose);
 		sctp_autoclose_timer(inp, stcb, net);
 		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_AUTOCLOSE_TMR);
 		did_output = 0;
 		break;
 	case SCTP_TIMER_TYPE_ASOCKILL:
+		SCTP_STAT_INCR(sctps_timoassockill);
 		/* Can we free it yet? */
 		sctp_timer_stop(SCTP_TIMER_TYPE_ASOCKILL, inp, stcb, NULL);
 		sctp_free_assoc(inp, stcb, 0);
@@ -1561,6 +1570,7 @@ sctp_timeout_handler(void *t)
 		stcb = NULL;
 		break;
 	case SCTP_TIMER_TYPE_INPKILL:
+		SCTP_STAT_INCR(sctps_timoinpkill);
 		/*
 		 * special case, take away our increment since WE are the
 		 * killer
@@ -1917,7 +1927,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				/* no need to start */
 				return (0);
 			}
-			sctp_pegs[SCTP_EARLYFR_STRT_TMR]++;
+			SCTP_STAT_INCR(sctps_earlyfrstart);
 			if (net->lastsa == 0) {
 				/* Hmm no rtt estimate yet? */
 				msec = stcb->asoc.initial_rto >> 2;
@@ -2038,7 +2048,7 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			return (EFAULT);
 		}
 		tmr = &net->fr_timer;
-		sctp_pegs[SCTP_EARLYFR_STOP_TMR]++;
+		SCTP_STAT_INCR(sctps_earlyfrstop);
 		break;
 	case SCTP_TIMER_TYPE_ITERATOR:
 		{
@@ -4192,7 +4202,6 @@ sctp_sorecvmsg(struct socket *so,
 		block_allowed = 0;
 	}
 	/* setup the endpoint */
-	sctp_pegs[SCTP_ENTER_SCTPSORCV]++;
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (inp == NULL) {
 		return (EFAULT);

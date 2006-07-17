@@ -2413,7 +2413,7 @@ sctp_handle_ecn_echo(struct sctp_ecne_chunk *cp,
 	if (ntohs(cp->ch.chunk_length) != sizeof(struct sctp_ecne_chunk)) {
 		return;
 	}
-	sctp_pegs[SCTP_ECNE_RCVD]++;
+	SCTP_STAT_INCR(sctps_recvecne);
 	tsn = ntohl(cp->tsn);
 	/* ECN Nonce stuff: need a resync and disable the nonce sum check */
 	/* Also we make sure we disable the nonce_wait */
@@ -2448,7 +2448,7 @@ sctp_handle_ecn_echo(struct sctp_ecne_chunk *cp,
 
 		old_cwnd = net->cwnd;
 #endif
-		sctp_pegs[SCTP_CWR_PERFO]++;
+		SCTP_STAT_INCR(sctps_ecnereducedcwnd);
 		net->ssthresh = net->cwnd / 2;
 		if (net->ssthresh < net->mtu) {
 			net->ssthresh = net->mtu;
@@ -2593,7 +2593,7 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 				 * Do it the other way , aka without paying
 				 * attention to queue seq order.
 				 */
-				sctp_pegs[SCTP_PDRP_DNFND]++;
+				SCTP_STAT_INCR(sctps_pdrpdnfnd);
 				tp1 = TAILQ_FIRST(&stcb->asoc.sent_queue);
 				while (tp1) {
 					if (tp1->rec.data.TSN_seq == tsn) {
@@ -2604,19 +2604,19 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 				}
 			}
 			if (tp1 == NULL) {
-				sctp_pegs[SCTP_PDRP_TSNNF]++;
+				SCTP_STAT_INCR(sctps_pdrptsnnf);
 			}
 			if ((tp1) && (tp1->sent < SCTP_DATAGRAM_ACKED)) {
 				uint8_t *ddp;
 
 				if ((stcb->asoc.peers_rwnd == 0) &&
 				    ((flg & SCTP_FROM_MIDDLE_BOX) == 0)) {
-					sctp_pegs[SCTP_PDRP_DIWNP]++;
+					SCTP_STAT_INCR(sctps_pdrpdiwnp);
 					return (0);
 				}
 				if (stcb->asoc.peers_rwnd == 0 &&
 				    (flg & SCTP_FROM_MIDDLE_BOX)) {
-					sctp_pegs[SCTP_PDRP_DIZRW]++;
+					SCTP_STAT_INCR(sctps_pdrpdizrw);
 					return (0);
 				}
 				ddp = (uint8_t *) (mtod(tp1->data, caddr_t)+
@@ -2627,7 +2627,7 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 					for (iii = 0; iii < sizeof(desc->data_bytes);
 					    iii++) {
 						if (ddp[iii] != desc->data_bytes[iii]) {
-							sctp_pegs[SCTP_PDRP_BADD]++;
+							SCTP_STAT_INCR(sctps_pdrpbadd);
 							return (-1);
 						}
 					}
@@ -2646,7 +2646,7 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 					tp1->whoTo->rto_pending = 0;
 					tp1->do_rtt = 0;
 				}
-				sctp_pegs[SCTP_PDRP_MARK]++;
+				SCTP_STAT_INCR(sctps_pdrpmark);
 				if (tp1->sent != SCTP_DATAGRAM_RESEND)
 					sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
 				tp1->sent = SCTP_DATAGRAM_RESEND;
@@ -3399,7 +3399,7 @@ sctp_handle_packet_dropped(struct sctp_pktdrop_chunk *cp,
 	if (chlen == 0) {
 		ch = NULL;
 		if (cp->ch.chunk_flags & SCTP_FROM_MIDDLE_BOX)
-			sctp_pegs[SCTP_PDRP_BWRPT]++;
+			SCTP_STAT_INCR(sctps_pdrpbwrpt);
 	} else {
 		ch = (struct sctp_chunkhdr *)(cp->data + sizeof(struct sctphdr));
 		chlen -= sizeof(struct sctphdr);
@@ -3414,14 +3414,14 @@ sctp_handle_packet_dropped(struct sctp_pktdrop_chunk *cp,
 		at = ntohs(ch->chunk_length);
 		if (at < sizeof(struct sctp_chunkhdr)) {
 			/* corrupt chunk, maybe at the end? */
-			sctp_pegs[SCTP_PDRP_CRUPT]++;
+			SCTP_STAT_INCR(sctps_pdrpcrupt);
 			break;
 		}
 		if (trunc_len == 0) {
 			/* we are supposed to have all of it */
 			if (at > chlen) {
 				/* corrupt skip it */
-				sctp_pegs[SCTP_PDRP_CRUPT]++;
+				SCTP_STAT_INCR(sctps_pdrpcrupt);
 				break;
 			}
 		} else {
@@ -3440,7 +3440,7 @@ sctp_handle_packet_dropped(struct sctp_pktdrop_chunk *cp,
 		if (desc.chunk_type == SCTP_DATA) {
 			/* can we get out the tsn? */
 			if ((cp->ch.chunk_flags & SCTP_FROM_MIDDLE_BOX))
-				sctp_pegs[SCTP_PDRP_MB_DA]++;
+				SCTP_STAT_INCR(sctps_pdrpmbda);
 
 			if (chlen >= (sizeof(struct sctp_data_chunk) + sizeof(uint32_t))) {
 				/* yep */
@@ -3456,16 +3456,16 @@ sctp_handle_packet_dropped(struct sctp_pktdrop_chunk *cp,
 				desc.tsn_ifany = dcp->dp.tsn;
 			} else {
 				/* nope we are done. */
-				sctp_pegs[SCTP_PDRP_NEDAT]++;
+				SCTP_STAT_INCR(sctps_pdrpnedat);
 				break;
 			}
 		} else {
 			if ((cp->ch.chunk_flags & SCTP_FROM_MIDDLE_BOX))
-				sctp_pegs[SCTP_PDRP_MB_CT]++;
+				SCTP_STAT_INCR(sctps_pdrpmbct);
 		}
 
 		if (process_chunk_drop(stcb, &desc, net, cp->ch.chunk_flags)) {
-			sctp_pegs[SCTP_PDRP_PDBRK]++;
+			SCTP_STAT_INCR(sctps_pdrppdbrk);
 			break;
 		}
 		if (SCTP_SIZE32(at) > chlen) {
@@ -3483,7 +3483,7 @@ sctp_handle_packet_dropped(struct sctp_pktdrop_chunk *cp,
 		/* From a peer, we get a rwnd report */
 		uint32_t a_rwnd;
 
-		sctp_pegs[SCTP_PDRP_FEHOS]++;
+		SCTP_STAT_INCR(sctps_pdrpfehos);
 
 		bottle_bw = ntohl(cp->bottle_bw);
 		on_queue = ntohl(cp->current_onq);
@@ -3511,7 +3511,7 @@ sctp_handle_packet_dropped(struct sctp_pktdrop_chunk *cp,
 			}
 		}
 	} else {
-		sctp_pegs[SCTP_PDRP_FMBOX]++;
+		SCTP_STAT_INCR(sctps_pdrpfmbox);
 	}
 
 	/* now middle boxes in sat networks get a cwnd bump */
@@ -3697,7 +3697,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				printf("sctp_process_control: INIT with vtag != 0\n");
 			}
 #endif				/* SCTP_DEBUG */
-			sctp_pegs[SCTP_BAD_VTAGS]++;
+			SCTP_STAT_INCR(sctps_badvtag);
 			if (locked_tcb)
 				SCTP_TCB_UNLOCK(locked_tcb);
 			return (NULL);
@@ -3810,7 +3810,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				/* this is valid */
 			} else {
 				/* drop this packet... */
-				sctp_pegs[SCTP_BAD_VTAGS]++;
+				SCTP_STAT_INCR(sctps_badvtag);
 				if (locked_tcb)
 					SCTP_TCB_UNLOCK(locked_tcb);
 				return (NULL);
@@ -3839,7 +3839,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					printf("invalid vtag: %xh, expect %xh\n", vtag_in, asoc->my_vtag);
 				}
 #endif				/* SCTP_DEBUG */
-				sctp_pegs[SCTP_BAD_VTAGS]++;
+				SCTP_STAT_INCR(sctps_badvtag);
 				if (locked_tcb)
 					SCTP_TCB_UNLOCK(locked_tcb);
 				*offset = length;
@@ -3958,7 +3958,7 @@ process_control_chunks:
 		    stcb->asoc.local_auth_chunks) &&
 		    !stcb->asoc.authenticated) {
 			/* "silently" ignore */
-			sctp_pegs[SCTP_AUTH_MISSING]++;
+			SCTP_STAT_INCR(sctps_recvauthmissing);
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_AUTH1)
 				printf("Chunk %u requires AUTH, skipped\n",
@@ -4070,7 +4070,7 @@ process_control_chunks:
 				printf("SCTP_SACK\n");
 			}
 #endif				/* SCTP_DEBUG */
-			sctp_pegs[SCTP_PEG_SACKS_SEEN]++;
+			SCTP_STAT_INCR(sctps_recvsacks);
 			{
 				int abort_now = 0;
 
@@ -4090,7 +4090,7 @@ process_control_chunks:
 				printf("SCTP_HEARTBEAT\n");
 			}
 #endif				/* SCTP_DEBUG */
-			sctp_pegs[SCTP_HB_RECV]++;
+			SCTP_STAT_INCR(sctps_recvheartbeat);
 			sctp_send_heartbeat_ack(stcb, m, *offset, chk_length,
 			    *netp);
 
@@ -4106,8 +4106,7 @@ process_control_chunks:
 
 			/* He's alive so give him credit */
 			stcb->asoc.overall_error_count = 0;
-
-			sctp_pegs[SCTP_HB_ACK_RECV]++;
+			SCTP_STAT_INCR(sctps_recvheartbeatack);
 			sctp_handle_heartbeat_ack((struct sctp_heartbeat_chunk *)ch,
 			    stcb, *netp);
 			break;
@@ -4625,7 +4624,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 	if (inp != NULL)
 		sctp_lock_assert(inp->ip_inp.inp.inp_socket);
 #endif
-	sctp_pegs[SCTP_DATAGRAMS_RCVD]++;
+	SCTP_STAT_INCR(sctps_recvdata);
 #ifdef SCTP_AUDITING_ENABLED
 	sctp_audit_log(0xE0, 1);
 	sctp_auditing(0, inp, stcb, net);
@@ -4673,7 +4672,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		    sctp_auth_is_required_chunk(SCTP_DATA,
 		    stcb->asoc.local_auth_chunks)) {
 			/* "silently" ignore */
-			sctp_pegs[SCTP_AUTH_MISSING]++;
+			SCTP_STAT_INCR(sctps_recvauthmissing);
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_AUTH1)
 				printf("Data only packet requires AUTH, skipped\n");
@@ -4688,7 +4687,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		}
 		if (stcb->asoc.my_vtag != ntohl(sh->v_tag)) {
 			/* v_tag mismatch! */
-			sctp_pegs[SCTP_BAD_VTAGS]++;
+			SCTP_STAT_INCR(sctps_badvtag);
 			SCTP_TCB_UNLOCK(stcb);
 			return (1);
 		}
@@ -4722,7 +4721,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 	    stcb->asoc.local_auth_chunks) &&
 	    !stcb->asoc.authenticated) {
 		/* "silently" ignore */
-		sctp_pegs[SCTP_AUTH_MISSING]++;
+		SCTP_STAT_INCR(sctps_recvauthmissing);
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_AUTH1)
 			printf("Data chunk requires AUTH, skipped\n");
@@ -4929,7 +4928,7 @@ sctp_input(m, va_alist)
 	iphlen = off;
 #endif
 	net = NULL;
-	sctp_pegs[SCTP_INPKTS]++;
+	SCTP_STAT_INCR(sctps_recvpackets);
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
 		printf("V4 input gets a packet iphlen:%d pktlen:%d\n", iphlen, m->m_pkthdr.len);
@@ -4954,7 +4953,7 @@ sctp_input(m, va_alist)
 	offset = iphlen + sizeof(*sh) + sizeof(*ch);
 	if (m->m_len < offset) {
 		if ((m = m_pullup(m, offset)) == 0) {
-			sctp_pegs[SCTP_HDR_DROPS]++;
+			SCTP_STAT_INCR(sctps_hdrops);
 			return;
 		}
 		ip = mtod(m, struct ip *);
@@ -4969,16 +4968,14 @@ sctp_input(m, va_alist)
 	if (IN_MULTICAST(ntohl(ip->ip_dst.s_addr)))
 #endif
 	{
-		sctp_pegs[SCTP_IN_MCAST]++;
 		goto bad;
 	}
 	if (in_broadcast(ip->ip_dst, m->m_pkthdr.rcvif)) {
-		sctp_pegs[SCTP_IN_MCAST]++;
 		goto bad;
 	}
 	/* destination port of 0 is illegal, based on RFC2960. */
 	if (sh->dest_port == 0) {
-		sctp_pegs[SCTP_HDR_DROPS]++;
+		SCTP_STAT_INCR(sctps_hdrops);
 		goto bad;
 	}
 	/* validate SCTP checksum */
@@ -5021,7 +5018,7 @@ sctp_input(m, va_alist)
 			} else if ((inp != NULL) && (stcb == NULL)) {
 				refcount_up = 1;
 			}
-			sctp_pegs[SCTP_BAD_CSUM]++;
+			SCTP_STAT_INCR(sctps_badsum);
 			goto bad;
 		}
 		sh->checksum = calc_check;
@@ -5035,7 +5032,7 @@ sctp_skip_csum_4:
 	NTOHS(ip->ip_len);
 #endif
 	if (mlen < (ip->ip_len - iphlen)) {
-		sctp_pegs[SCTP_HDR_DROPS]++;
+		SCTP_STAT_INCR(sctps_hdrops);
 		goto bad;
 	}
 	/*
@@ -5054,7 +5051,7 @@ sctp_skip_csum_4:
 	if (inp == NULL) {
 		struct sctp_init_chunk *init_chk, chunk_buf;
 
-		sctp_pegs[SCTP_NOPORTS]++;
+		SCTP_STAT_INCR(sctps_noport);
 #ifdef ICMP_BANDLIM
 		/*
 		 * we use the bandwidth limiting to protect against sending
@@ -5108,7 +5105,7 @@ sctp_skip_csum_4:
 		    tdb, i_inp);
 		if (error) {
 			splx(s);
-			sctp_pegs[SCTP_HDR_DROPS]++;
+			SCTP_STAT_INCR(sctps_hdrops);
 			goto bad;
 		}
 		/* Latch SA */
@@ -5120,7 +5117,7 @@ sctp_skip_csum_4:
 					    IPSP_DIRECTION_OUT);
 					if (i_inp->inp_ipo == NULL) {
 						splx(s);
-						sctp_pegs[SCTP_HDR_DROPS]++;
+						SCTP_STAT_INCR(sctps_hdrops);
 						goto bad;
 					}
 				}
@@ -5152,7 +5149,7 @@ sctp_skip_csum_4:
 #else
 	if (ipsec4_in_reject_so(m, inp->ip_inp.inp.inp_socket)) {
 		ipsecstat.in_polvio++;
-		sctp_pegs[SCTP_HDR_DROPS]++;
+		SCTP_STAT_INCR(sctps_hdrops);
 		goto bad;
 	}
 #endif

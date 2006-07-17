@@ -285,8 +285,7 @@ struct sctp_epinfo {
 
 };
 
-extern uint32_t sctp_pegs[SCTP_NUMBER_OF_PEGS];
-
+extern struct sctpstat sctpstat;
 /*
  * Here we have all the relevant information for each SCTP entity created. We
  * will need to modify this as approprate. We also need to figure out how to
