@@ -20,7 +20,6 @@ asap_find_req(struct rsp_enrp_scope *scp,
 	      int leave_locked)
 {
 	struct rsp_timer_entry *tme=NULL;
-	int failed_lock =0;
 	/*
 	 * For now we look through the running timers. In
 	 * theory if we have multiple scopes in a process this
@@ -30,10 +29,6 @@ asap_find_req(struct rsp_enrp_scope *scp,
 	 * looking for a entry. This can be changed later
 	 * if we need to.
 	 */
-	if (pthread_mutex_lock(&rsp_pcbinfo.rsp_tmr_mtx) ) {
-		fprintf(stderr, "Unsafe access %d can't lock timer to find entry\n", errno);
-		failed_lock = 1;
-	}
 	dlist_reset(rsp_pcbinfo.timer_list);
 	while ((tme = (struct rsp_timer_entry *)dlist_get(rsp_pcbinfo.timer_list)) != NULL) {
 		if(tme->req == NULL) {
@@ -47,11 +42,6 @@ asap_find_req(struct rsp_enrp_scope *scp,
 				/* yep, we found it */
 				break;
 			}
-		}
-	}
-	if((!failed_lock) && (leave_locked == 0)) {
-		if (pthread_mutex_unlock(&rsp_pcbinfo.rsp_tmr_mtx) ) {
-			fprintf(stderr, "Unsafe access,  unlock failed for rsp_tmr_mtx:%d during find entry\n", errno);
 		}
 	}
 	return(tme);
@@ -598,7 +588,7 @@ asap_handle_name_resolution_response(struct rsp_enrp_scope *scp,
 	}
 
 	/* mark time of update */
-	gettimeofday(&pool->received);
+	gettimeofday(&pool->received, NULL);
 
 	/* First lets mark any PE in the list currently to being deleted */
 	dlist_reset(pool->peList);
@@ -827,7 +817,6 @@ handle_asapmsg_fromenrp (struct rsp_enrp_scope *scp, char *buf,
 	struct rsp_enrp_entry *enrp;	
 	struct asap_message *msg;
 	uint16_t len;
-	uint16_t failed_lock = 0;
 
 	if(sz < sizeof(struct asap_message)) {
 		/* bad message */
@@ -877,16 +866,7 @@ handle_asapmsg_fromenrp (struct rsp_enrp_scope *scp, char *buf,
 		 * send to a name) then we must wake the sleeper's
 		 * afterwards.
 		 */
-		if (pthread_mutex_lock(&scp->scp_mtx)) {
-			fprintf (stderr, "failed lock error, with address resolution resp:%d\n", errno);
-			failed_lock = 1;
-		}
 		asap_handle_name_resolution_response(scp, enrp, buf, sz, sinfo);
-		if(!failed_lock) {
-			if (pthread_mutex_unlock(&scp->scp_mtx)) {
-				fprintf (stderr,"Gak, failed ot unlock on address resolution resp:%d\n", errno);
-			}
-		}
 		break;
 	case ASAP_ENDPOINT_KEEP_ALIVE:
 		/* its a keep-alive, we must declare
