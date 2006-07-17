@@ -116,7 +116,7 @@ struct rsp_global_info {
 	int			rsp_number_sd;	/* count of sd's when 0 un-init */
 	struct pollfd           *watchfds;	/* fd's the thread is watching for us */
 	int			lsd[2];		/* local 'unix-domain' socket pair for enrp_thread */
-	HashedTbl		*sd_pool;	/* hashed pool of sd aka sd->sd_socke_hash  entry*/
+	HashedTbl		*sd_pool;	/* hashed pool of sd aka sd->sd_socket */
 	dlist_t			*timer_list;	/* list of timers running */
 	dlist_t			*scopes;	/* the list of all scopes */
 	pthread_mutex_t		sd_pool_mtx;	/* mutex for sd_pool locks global_info except timer stuff  */
@@ -135,7 +135,7 @@ extern int rsp_inited;	/* boolean have_inited */
 
 
 /* For each socket descriptor we will have one of these */
-struct rsp_socket_hash {
+struct rsp_socket {
 	int	 	sd;			/* sctp socket */
 	int		type;			/* socket type */
 	int 		domain;			/* domain af_inet/af_inet6 */
