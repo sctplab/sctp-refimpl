@@ -20,14 +20,12 @@ asap_find_req(struct rsp_enrp_scope *scp,
 	      int type,
 	      int leave_locked);
 
-
 int
-rsp_start_timer(struct rsp_enrp_scope *sd,
-		struct rsp_socket_hash 	*sdata, 
+rsp_start_timer(struct rsp_enrp_scope *scp,
+		struct rsp_socket	*sdata, 
 		uint32_t time_out_ms, 
 		struct rsp_enrp_req *msg,
 		int type, 
-		uint8_t want_cond, 
 		struct rsp_timer_entry **ote);
 
 int rsp_stop_timer(struct rsp_timer_entry *te);

@@ -1,6 +1,5 @@
 #ifndef __rserpool_lib_h__
 #define __rserpool_lib_h__
-#include <pthread.h>
 #include <dlist.h>
 #include <HashedTbl.h>
 #include <sys/time.h>
@@ -53,7 +52,7 @@
 #define RSP_NUMBER_TIMERS 7
 
 
-/* State values for rsp_socket_hash */
+/* State values for rsp_socket */
 #define RSP_NO_ENRP_SERVER   0x00000000
 #define RSP_SERVER_HUNT_IP   0x00000001
 #define RSP_ENRP_HS_FOUND    0x00000002
@@ -72,7 +71,6 @@ struct rsp_enrp_scope {
 	HashedTbl	*ipaddrPortHash;	/* ipadd -> rsp_pool_ele for sctp transport guys*/
 	HashedTbl	*vtagHash;		/* assoc id-> rsp_pool_ele */
 	/* Mutex for protection */
-	pthread_mutex_t		scp_mtx;	/* mutex for locks */
 	/* other stuff */
 	uint32_t 	timers[RSP_NUMBER_TIMERS]; /* default timers */
 	uint32_t refcount;                         /* how man enrp entries refer to this guy */
@@ -119,9 +117,6 @@ struct rsp_global_info {
 	HashedTbl		*sd_pool;	/* hashed pool of sd aka sd->sd_socket */
 	dlist_t			*timer_list;	/* list of timers running */
 	dlist_t			*scopes;	/* the list of all scopes */
-	pthread_mutex_t		sd_pool_mtx;	/* mutex for sd_pool locks global_info except timer stuff  */
-	pthread_mutex_t		rsp_tmr_mtx;	/* mutex for timers (timer_list and cond)  */
-	pthread_t		tmr_thread;	/* the actual timer/sd thread */
 	int 			num_fds;	/* Number of fd's in poll array used */
 	int			siz_fds;	/* size of the fd array */
 	uint32_t       		minimumTimerQuantum;	/* shortest wait time used by timer thread */
@@ -143,7 +138,6 @@ struct rsp_socket {
 	dlist_t		*address_reg;		/* setup w/addrlist w/ctl&data seperate */
 	uint32_t 	refcnt;			/* number of names in use */
 	uint32_t	enrpID;			/* ID of home ENRP server */
-	pthread_mutex_t	rsp_sd_mtx;		/* mutex for sleepers to serialize upon  */
 	char 		*registeredName;	/* our name if registered */
 	uint32_t 	timers[RSP_NUMBER_TIMERS]; /* sd timers */
 	uint32_t        stale_cache_ms;
@@ -163,14 +157,10 @@ struct rsp_timer_entry {
 	struct timeval 		started;	/* time of start */
 	struct timeval 		expireTime;	/* time of expire */
 	struct rsp_enrp_scope   *scp;
-	struct rsp_socket_hash 	*sdata;		/* pointer back to sd */
+	struct rsp_socket 	*sdata;		/* pointer back to sd */
 	/* The Req field is filled in if timer does something for you */
 	struct rsp_enrp_req 	*req;		/* data being sent */
 	int 			timer_type;	/* type of timer */
-	/* If the rsp_sleeper/cond_awake are used then req should be NULL */
-	pthread_cond_t		rsp_sleeper;	/* sleeper to awake */
-	uint16_t		sleeper_count;  /* number of professed sleepers */
-	uint8_t 		cond_awake; 	/* Has a condition var been made */
 };
 
 /* A pool entry */

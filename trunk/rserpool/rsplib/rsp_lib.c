@@ -70,11 +70,6 @@ void *rsp_timer_thread_run( void *arg )
 	if(arg != NULL)
 		return((void *)&done);
 
-	if (pthread_mutex_lock(&rsp_pcbinfo.rsp_tmr_mtx)) {
-		fprintf(stderr, "Pre-Timer start thread mutex lock fails error:%d -- help\n",
-			errno);
-		return((void *)&done);
-	}
 	rsp_timer_check ( );
 
 	return((void *)&done);
@@ -122,31 +117,8 @@ rsp_init()
 		if(rsp_debug) {
 			fprintf(stderr, "Could not alloc tmr dlist\n");
 		}
-		HashedTbl_destroy(rsp_pcbinfo.sd_pool);
-		dlist_destroy(rsp_pcbinfo.timer_list);
-		return (-1);
-	}
-
-	/* create mutex to lock sd pool */
-	if (pthread_mutex_init(&rsp_pcbinfo.sd_pool_mtx, NULL)) {
-		if(rsp_debug) {
-			fprintf(stderr, "Could not init sd_pool mtx\n");
-		}
-		HashedTbl_destroy(rsp_pcbinfo.sd_pool);
-		dlist_destroy(rsp_pcbinfo.timer_list);
-		dlist_destroy(rsp_pcbinfo.scopes);
-		return (-1);
-	}
-
-	/* create mutex for timer list */
-	if(pthread_mutex_init(&rsp_pcbinfo.rsp_tmr_mtx, NULL)) {
-		if(rsp_debug) {
-			fprintf(stderr, "Could not init tmr mtx\n");
-		}
 	bail_out:
-		pthread_mutex_destroy(&rsp_pcbinfo.sd_pool_mtx);
 		HashedTbl_destroy(rsp_pcbinfo.sd_pool);
-		dlist_destroy(rsp_pcbinfo.scopes);
 		dlist_destroy(rsp_pcbinfo.timer_list);
 		return (-1);
 	}
@@ -156,13 +128,6 @@ rsp_init()
 		goto bail_out;
 	}
 	memset(rsp_pcbinfo.watchfds, 0, ((sizeof(struct pollfd) * RSP_DEF_POLLARRAY_SZ)));
-
-	/* now the socket pair for our reader thread */
-	if(socketpair(AF_UNIX, SOCK_STREAM, PF_UNSPEC, rsp_pcbinfo.lsd) ) {
-		free(rsp_pcbinfo.watchfds);
-		fprintf( stderr, "Could not initialize socket pair err:%d\n", errno);
-		goto bail_out;
-	}
 	rsp_pcbinfo.num_fds = 1;
 	rsp_pcbinfo.siz_fds = RSP_DEF_POLLARRAY_SZ;
 	rsp_pcbinfo.watchfds[0].fd = rsp_pcbinfo.lsd[RSP_LSD_INTERNAL_READ];
@@ -172,21 +137,6 @@ rsp_init()
 	for(i=1; i<RSP_DEF_POLLARRAY_SZ; i++) {
 		/* mark all others unused */
 		rsp_pcbinfo.watchfds[i].fd = -1;
-	}
-	/* now we must create the timer thread */
-	if(pthread_create(&rsp_pcbinfo.tmr_thread,
-			  NULL,
-			  rsp_timer_thread_run,
-			  (void *)NULL) ) {
-		if(rsp_debug) {
-			fprintf(stderr, "Could not start tmr thread\n");
-		}
-		pthread_mutex_destroy(&rsp_pcbinfo.rsp_tmr_mtx);
-		pthread_mutex_destroy(&rsp_pcbinfo.sd_pool_mtx);
-		HashedTbl_destroy(rsp_pcbinfo.sd_pool);
-		dlist_destroy(rsp_pcbinfo.scopes);
-		dlist_destroy(rsp_pcbinfo.timer_list);
-		return (-1);
 	}
 	/* set the flag that we init'ed */
 	rsp_inited = 1;
@@ -258,7 +208,6 @@ rsp_load_file(FILE *io, char *file)
 	int line=0, val, ret;
 	uint32_t enrpid;
 	uint16_t port;
-	uint16_t mutex_done=0;
 	struct sockaddr_in sin;
 	struct sockaddr_in6 sin6;
 	char string[256], *p1, *p2, *p3, *p4;
@@ -323,10 +272,6 @@ rsp_load_file(FILE *io, char *file)
 		fprintf(stderr, "Can't get memory for enrp_scope dlist err:%d\n", errno);
 		goto out_with_error;
 	}
-	if(pthread_mutex_init(&es->scp_mtx, NULL) ) {
-		fprintf(stderr, "Warning - Mutex init fails for scope? errno%d\n", errno);
-	}
-	mutex_done=1;
 	/* list of all pools */
 	es->allPools = dlist_create();
 	if(es->allPools == NULL) {
@@ -532,9 +477,6 @@ rsp_load_file(FILE *io, char *file)
 	if (es->enrpList) 
 		dlist_destroy(es->enrpList);
 
-	if(mutex_done)
-		pthread_mutex_destroy(&es->scp_mtx);
-
 	if (es->allPools) 
 		dlist_destroy(es->allPools);
 
@@ -612,20 +554,9 @@ rsp_start_enrp_server_hunt(struct rsp_enrp_scope *scp, int non_blocking)
 		if(non_blocking == 1) {
 			return;
 		}
-		if (pthread_mutex_lock(&rsp_pcbinfo.rsp_tmr_mtx) ) {
-			fprintf(stderr, "Unsafe access %d can't look up timed server hunt in progress, \n", errno);
-			return;
-		}
 		if (scp->enrp_tmr->timer_type != RSP_T5_SERVERHUNT) {
 			fprintf(stderr, "Warning waiting to do server hunt on timer:%d\n",
 				scp->enrp_tmr->timer_type);
-		}
-		tmr->sleeper_count++;
-		if(pthread_cond_wait(&tmr->rsp_sleeper, &rsp_pcbinfo.rsp_tmr_mtx)) {
-			fprintf(stderr, "Cond wait for s-h fails error:%d\n", errno);
-		}
-		if (pthread_mutex_unlock(&rsp_pcbinfo.rsp_tmr_mtx) ) {
-			fprintf(stderr, "Unsafe access, thread unlock failed for s-h rsp_tmr_mtx:%d\n", errno);
 		}
 		/* are we ok now? */
 		if(scp->state & RSP_ENRP_HS_FOUND) {
@@ -651,9 +582,6 @@ rsp_start_enrp_server_hunt(struct rsp_enrp_scope *scp, int non_blocking)
 			scp->homeServer = re;
 			scp->state |= RSP_ENRP_HS_FOUND;
 			scp->state &= ~RSP_SERVER_HUNT_IP;
-			if ((tmr->cond_awake) && (tmr->sleeper_count > 0)) {
-				pthread_cond_broadcast(&tmr->rsp_sleeper);
-			}
 			return;
 		}
 		if(cnt >= ENRP_MAX_SERVER_HUNTS)
@@ -685,28 +613,18 @@ rsp_start_enrp_server_hunt(struct rsp_enrp_scope *scp, int non_blocking)
 	rsp_start_timer(scp, (struct rsp_socket *)NULL, 
 			scp->timers[RSP_T5_SERVERHUNT], 
 			(struct rsp_enrp_req *)NULL, 
-			RSP_T5_SERVERHUNT, 1, &scp->enrp_tmr);
+			RSP_T5_SERVERHUNT, &scp->enrp_tmr);
 }
 
 static struct rsp_enrp_scope *
 rsp_find_scope_with_sd(int fd)
 {
-	int fail_lock = 0;
 	struct rsp_enrp_scope *scp=NULL;
 
-	if( pthread_mutex_lock(&rsp_pcbinfo.sd_pool_mtx) ) {
-		fprintf(stderr, "Unsafe access, thread lock failed for sd_pool_mtx:%d - find_scope w/sd\n", errno);
-		fail_lock = 1;
-	}
 	dlist_reset(rsp_pcbinfo.scopes);
 	while((scp = (struct rsp_enrp_scope *)dlist_get(rsp_pcbinfo.scopes)) != NULL) {
 		if(scp->sd == fd) {
 			break;
-		}
-	}
-	if(fail_lock == 0) {
-		if( pthread_mutex_unlock(&rsp_pcbinfo.sd_pool_mtx) ) {
-			fprintf(stderr, "Unsafe access, thread unlock failed for sd_pool_mtx:%d - find_scope w/sd\n", errno);
 		}
 	}
 	return(scp);
@@ -715,22 +633,12 @@ rsp_find_scope_with_sd(int fd)
 static struct rsp_enrp_scope *
 rsp_find_scope_with_id(uint32_t op_scope)
 {
-	int fail_lock = 0;
 	struct rsp_enrp_scope *scp = NULL;
-	if( pthread_mutex_lock(&rsp_pcbinfo.sd_pool_mtx) ) {
-		fprintf(stderr, "Unsafe access, thread lock failed for sd_pool_mtx:%d - find_scope w/sd\n", errno);
-		fail_lock = 1;
-	}
 
 	dlist_reset(rsp_pcbinfo.scopes);
 	while((scp = (struct rsp_enrp_scope *)dlist_get(rsp_pcbinfo.scopes)) != NULL) {
 		if(scp->scopeId == op_scope) {
 			break;
-		}
-	}
-	if(fail_lock == 0) {
-		if( pthread_mutex_unlock(&rsp_pcbinfo.sd_pool_mtx) ) {
-			fprintf(stderr, "Unsafe access, thread unlock failed for sd_pool_mtx:%d - find_scope w/sd\n", errno);
 		}
 	}
 	return(scp);
@@ -745,7 +653,6 @@ rsp_process_fd_for_scope (struct rsp_enrp_scope *scp)
 	 *
 	 * Read and process it.
 	 */
-	int failed_lock=0;
 	ssize_t sz;
 	struct pe_address from;
 	socklen_t from_len;
@@ -766,17 +673,8 @@ rsp_process_fd_for_scope (struct rsp_enrp_scope *scp)
 		return;
 	}
 	if(msg_flags & MSG_NOTIFICATION) {
- 		if (pthread_mutex_lock(&scp->scp_mtx)) {
-			fprintf (stderr, "failed lock error, with enrp notify:%d\n", errno);
-			failed_lock = 1;
-		}
 		handle_enrpserver_notification(scp, readbuf, &info, sz, 
 					       (struct sockaddr *)&from, from_len);
-		if(!failed_lock) {
-			if (pthread_mutex_unlock(&scp->scp_mtx)) {
-				fprintf (stderr,"Gak, failed ot unlock on enrp notify err:%d\n", errno);
-			}
-		}
 	} else {
 		/* we call the handle_asapmsg_fromenrp routine here */
 		handle_asapmsg_fromenrp(scp, readbuf, &info, sz, 
@@ -790,7 +688,6 @@ rsp_process_new_sd()
 	void *temp_space;
 	struct rsp_enrp_scope *scp;
 	int sd,i, orig;
-	int fail_lock = 0;
 	int ret, retcode= -1;
 
 	ret = read(rsp_pcbinfo.lsd[RSP_LSD_INTERNAL_READ], (char *)&sd, sizeof(sd));
@@ -807,10 +704,6 @@ rsp_process_new_sd()
 		return(-1);
 	}
 	/* insert it in read array */
-	if( pthread_mutex_lock(&rsp_pcbinfo.sd_pool_mtx) ) {
-		fprintf(stderr, "Unsafe access, thread lock failed for sd_pool_mtx:%d - process_new_sd\n", errno);
-		fail_lock = 1;
-	}
 	for(i=1; i<rsp_pcbinfo.siz_fds; i++) {
 		if(rsp_pcbinfo.watchfds[i].fd == -1) {
 			/* found a slot */
@@ -849,12 +742,6 @@ rsp_process_new_sd()
 	rsp_pcbinfo.num_fds++;
 	retcode = 0;
  out_locked:
-	if(fail_lock == 0) {
-		if( pthread_mutex_unlock(&rsp_pcbinfo.sd_pool_mtx) ) {
-			fprintf(stderr, 
-				"Unsafe access, thread unlock failed for sd_pool_mtx:%d - process new sd\n", errno);
-		}
-	}
 	return (retcode);
 }
 
@@ -1011,15 +898,6 @@ rsp_socket(int domain, int type,  int protocol, uint32_t op_scope)
 	/* flag say's if sd is data channel */
 	/* unknown until registered */
 	sdata->useThisSd = 0 ;
-
-	if(pthread_mutex_init(&sdata->rsp_sd_mtx, NULL) ) {
-		fprintf(stderr, "Warning - Mutex init fails for socket? errno%d\n", errno);
-
-	}
-
-	if( pthread_mutex_lock(&rsp_pcbinfo.sd_pool_mtx) ) {
-		fprintf(stderr, "Unsafe access, thread lock failed for sd_pool_mtx:%d\n", errno);
-	}
 	rsp_pcbinfo.rsp_number_sd++;
 	if( (ret = HashedTbl_enterKeyed(rsp_pcbinfo.sd_pool , 	/* table */
 					sdata->sd, 		/* key-int */
@@ -1027,15 +905,9 @@ rsp_socket(int domain, int type,  int protocol, uint32_t op_scope)
 					(void *)&sdata->sd, 	/* keyp */
 					sizeof(sdata->sd))) ) {	/* size of key */
 		fprintf(stderr, "Failed to enter into hash table error:%d\n", ret);
-		if (pthread_mutex_unlock(&rsp_pcbinfo.sd_pool_mtx) ) {
-			fprintf(stderr, "Unsafe access, thread unlock failed for sd_pool_mtx:%d\n", errno);
-		}
 		goto error_out;
 	}
 
-	if (pthread_mutex_unlock(&rsp_pcbinfo.sd_pool_mtx) ) {
-		fprintf(stderr, "Unsafe access, thread unlock failed for sd_pool_mtx:%d\n", errno);
-	}
 	return(sd);
  error_out:
 	close(sdata->sd);
@@ -1145,9 +1017,9 @@ rsp_sendmsg(int sockfd,         /* HA socket descriptor */
 	    int flags)         /* Options flags */
 {
 	struct rsp_socket *sdata;
+	struct rsp_pool *pool;
 	struct rsp_enrp_scope *scp;
 	struct rsp_timer_entry *tme;
-	int lock_failed = 0;
 
 	if (rsp_inited == 0) {
 		errno = EINVAL;
@@ -1159,19 +1031,10 @@ rsp_sendmsg(int sockfd,         /* HA socket descriptor */
 	 * 
 	 */
 	/* First find the socket stuff */
-	if( pthread_mutex_lock(&rsp_pcbinfo.sd_pool_mtx) ) {
-		fprintf(stderr, "Unsafe access, thread lock failed for sd_pool_mtx:%d\n", errno);
-		lock_failed = 1;
-	}
 	sdata  = (struct rsp_socket *)HashedTbl_lookup(rsp_pcbinfo.sd_pool ,
-							    sockfd, 	
+							    (void *)&sockfd,
 							    sizeof(sockfd),
 							    NULL);
-	if(!lock_failed) {
-		if (pthread_mutex_unlock(&rsp_pcbinfo.sd_pool_mtx) ) {
-			fprintf(stderr, "Unsafe access, thread unlock failed for sd_pool_mtx:%d\n", errno);
-		}
-	}
 	if(sdata == NULL) {
 		/* sockfd is not one of ours */
 		errno = EINVAL;
@@ -1186,28 +1049,21 @@ rsp_sendmsg(int sockfd,         /* HA socket descriptor */
 		/* named based hunting, imply's using
 		 * load balancing policy after finding name.
 		 */
-		pool = (struct rsp_pool *)HashedTbl_lookup(scp->cache ,name, namelen, NULL);
+		pool = (struct rsp_pool *)HashedTbl_lookup(scp->cache ,name, *namelen, NULL);
 		if(pool == NULL) {
 			/* need to block and get info, first is
 			 * there already a request pending for this.
 			 * If so just join sleep, if not create and 
 			 * send, then sleep.
 			 */
-			tme = asap_find_req(scp, name,namelen, ASAP_REQUEST_RESOLUTION, 1);
+			tme = asap_find_req(scp, name, *namelen, ASAP_REQUEST_RESOLUTION, 1);
 			if(tme) {
 				/* add our selves to list by blocking here on this resolution */
-				tmr->sleeper_count++;
-				if(pthread_cond_wait(&tmr->rsp_sleeper, &rsp_pcbinfo.rsp_tmr_mtx)) {
-					fprintf(stderr, "Cond wait for s-h fails error:%d\n", errno);
-				}
-				/* we awake and unlock, ready to proceed */
-				pthread_mutex_unlock(&rsp_pcbinfo.rsp_tmr_mtx);
-				
 			} else {
 				/* create message, and then send, then block on thie resolution */
 				
 			}
-			pool = (struct rsp_pool *)HashedTbl_lookup(scp->cache ,name, namelen, NULL);
+			pool = (struct rsp_pool *)HashedTbl_lookup(scp->cache ,name, *namelen, NULL);
 			if(pool == NULL) {
 				/* Still no entry have resolution, not found */
 				errno = ENOENT;
@@ -1270,12 +1126,6 @@ rsp_initialize(struct rsp_info *info)
 	}
 
 	rsp_inited = 1;
-	if( pthread_mutex_lock(&rsp_pcbinfo.sd_pool_mtx) ) {
-		fprintf(stderr, "Unsafe access, thread lock failed for sd_pool_mtx:%d - rsp_initialize\n", errno);
-	}
 	id = rsp_load_config_file(info->rsp_prefix);
-	if (pthread_mutex_unlock(&rsp_pcbinfo.sd_pool_mtx) ) {
-		fprintf(stderr, "Unsafe access, thread unlock failed for sd_pool_mtx:%d - rsp_initialize\n", errno);
-	}
 	return(id);
 }

@@ -86,9 +86,6 @@ void rsp_expire_timer(struct rsp_timer_entry *entry)
 		printf("List inconsistency .. hmm\n");
 	}
 	/* Now unlock the list before we do the timeout */
-	if (pthread_mutex_unlock(&rsp_pcbinfo.rsp_tmr_mtx) ) {
-		fprintf(stderr, "Unsafe access, thread unlock failed for rsp_tmr_mtx:%d\n", errno);
-	}
 	switch(entry->timer_type) {
 	case RSP_T1_ENRP_REQUEST:
 		handle_t1_enrp_timer(entry);
@@ -113,21 +110,11 @@ void rsp_expire_timer(struct rsp_timer_entry *entry)
 		break;
 	default:
 		fprintf(stderr,"Unknown timer type %d??\n", entry->timer_type);
-		if ((entry->cond_awake) && (entry->sleeper_count > 0)) {
-			pthread_cond_broadcast(&entry->rsp_sleeper);
-	
-		} 
-		if(entry->cond_awake) 
-			pthread_cond_destroy(&entry->rsp_sleeper);
-
 		if(entry->req) {
 			rsp_free_req(entry->req);
 		}
 		break;
 	};
-	if (pthread_mutex_lock(&rsp_pcbinfo.rsp_tmr_mtx) ) {
-		fprintf(stderr, "Unsafe access, thread lock failed for rsp_tmr_mtx:%d\n", errno);
-	}
 }
 
 void rsp_timer_check ( void )
@@ -192,9 +179,6 @@ void rsp_timer_check ( void )
 			min_timeout = rsp_pcbinfo.minimumTimerQuantum;
 
 	do_poll:
-		if (pthread_mutex_unlock(&rsp_pcbinfo.rsp_tmr_mtx) ) {
-			fprintf(stderr, "Unsafe access, thread unlock failed for rsp_tmr_mtx:%d\n", errno);
-		}
 		/* delay min_timeout */
 		poll_ret = poll(rsp_pcbinfo.watchfds, rsp_pcbinfo.num_fds , min_timeout);
 		if(poll_ret > 0) {
@@ -204,9 +188,6 @@ void rsp_timer_check ( void )
 		if(poll_ret < 0) {
 			/* we have an error to deal with? */
 			fprintf(stderr, "Error in poll?? errno:%d\n", errno);
-		}
-		if (pthread_mutex_lock(&rsp_pcbinfo.rsp_tmr_mtx) ) {
-			fprintf(stderr, "Unsafe access, thread lock failed for rsp_tmr_mtx:%d\n", errno);
 		}
 		if (gettimeofday(&now , NULL) ) {
 			fprintf(stderr, "Gak, system error can't get time of day?? -- failed:%d\n", errno);
@@ -219,11 +200,10 @@ void rsp_timer_check ( void )
 /* Start, or restart a timer */
 int
 rsp_start_timer(struct rsp_enrp_scope *scp,
-		struct rsp_socket_hash 	*sdata, 
+		struct rsp_socket	*sdata, 
 		uint32_t time_out_ms, 
 		struct rsp_enrp_req *msg,
 		int type, 
-		uint8_t want_cond, 
 		struct rsp_timer_entry **ote)
 {
 	int sec, usec, ret;
@@ -267,36 +247,12 @@ rsp_start_timer(struct rsp_enrp_scope *scp,
 		te->expireTime.tv_sec += 1;
 		te->expireTime.tv_usec -= 1000000;
 	}
-	if (pthread_mutex_lock(&rsp_pcbinfo.rsp_tmr_mtx) ) {
-		fprintf(stderr, "Unsafe access, thread lock failed for rsp_tmr_mtx:%d - refusing\n", errno);
-		free(te);
-		return(-1);
-	}
-
 	if(*ote == NULL) {
 		te->scp = scp;
 		te->sdata = sdata;
 		te->req = msg;
 		te->timer_type = type;
-		if(want_cond) {
-			if(pthread_cond_init(&te->rsp_sleeper, NULL)) {
-				fprintf(stderr, "Warning timer can't gen cond variable error:%d\n", errno);
-			} else {
-				te->cond_awake = 1;
-			}
-		}
-		te->sleeper_count = 0;
 	}
-	if ((te->cond_awake == 0) && (want_cond)) {
-		/* This guy is re-used with a cond */
-		if(pthread_cond_init(&te->rsp_sleeper, NULL)) {
-			fprintf(stderr, "Warning timer can't gen cond variable error:%d\n", errno);
-		} else {
-			te->cond_awake = 1;
-		}
-		te->sleeper_count = 0;
-	}
-
 	/* Now add it to timer queue */
 	dlist_reset(rsp_pcbinfo.timer_list);
 	while ((ete = (struct rsp_timer_entry *)dlist_get(rsp_pcbinfo.timer_list)) != NULL) {
@@ -305,9 +261,6 @@ rsp_start_timer(struct rsp_enrp_scope *scp,
 			if((ret = dlist_insertHere(rsp_pcbinfo.timer_list, te))) {
 			failed_insert:
 				fprintf(stderr, "Can't insert entry on the timer list -- failed:%d\n", ret);
-				if(want_cond) {
-					pthread_cond_destroy(&te->rsp_sleeper);
-				}
 				free(te);
 				return(-1);
 			}
@@ -323,12 +276,6 @@ rsp_start_timer(struct rsp_enrp_scope *scp,
 			goto failed_insert;
 		}
 	}
-
-	/* unlock, your done */
-	if (pthread_mutex_unlock(&rsp_pcbinfo.rsp_tmr_mtx) ) {
-		fprintf(stderr, "Unsafe access, thread unlock failed for timer start rsp_tmr_mtx:%d\n", errno);
-	}
-
 	/* give back the running entry */
 	if(ote == NULL)
 		*ote = te;
@@ -353,30 +300,14 @@ rsp_stop_timer(struct rsp_timer_entry *te)
 	 * either a kernel copied TAILQ or some such. Cut
 	 * down on list walks (especially for large lists)...
 	 */
-	if (pthread_mutex_lock(&rsp_pcbinfo.rsp_tmr_mtx) ) {
-		fprintf(stderr, "Unsafe access, thread lock failed for rsp_tmr_mtx:%d - refusing\n", errno);
-		free(te);
-		return(-1);
-	}
 	dlist_reset(rsp_pcbinfo.timer_list);	
 	while ((ent = (struct rsp_timer_entry *)dlist_get(rsp_pcbinfo.timer_list)) != NULL) {
 		if(ent == te) {
 			/* found him. */
 			ent = dlist_getThis(rsp_pcbinfo.timer_list);
-			if(te->cond_awake) {
-				/* clean up cond stuff */
-				if(te->sleeper_count) {
-					pthread_cond_broadcast(&te->rsp_sleeper);
-				}
-				pthread_cond_destroy(&te->rsp_sleeper);
-			}
 			free(ent);
 			ret = 0;
 		}
-	}
-	/* unlock, your done */
-	if (pthread_mutex_unlock(&rsp_pcbinfo.rsp_tmr_mtx) ) {
-		fprintf(stderr, "Unsafe access, thread unlock failed for timer start rsp_tmr_mtx:%d\n", errno);
 	}
 	return(ret);
 }
