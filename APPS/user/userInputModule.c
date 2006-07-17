@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.45 2006-07-08 19:03:07 lei Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.46 2006-07-17 11:52:54 randall Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -119,8 +119,6 @@ static int cmd_getcurcookielife(char *argv[], int argc);
 static int cmd_getcwndpost(char *argv[], int argc);
 static int cmd_getdefcookielife(char *argv[], int argc);
 static int cmd_gethbdelay(char *argv[], int argc);
-static int cmd_getpegs(char *argv[], int argc);
-static int cmd_clrpegs(char *argv[], int argc);
 
 static int cmd_getprimary(char *argv[], int argc);
 static int cmd_getrtt(char *argv[], int argc);
@@ -333,10 +331,6 @@ static struct command commands[] = {
      cmd_getmsdelay},
     {"getnodelay", "getnodelay - get the setting of the nagle algorithm off or on",
      cmd_getnodelay},
-    {"getpegs", "getpegs - retrieve the peg counts",
-     cmd_getpegs},
-    {"clrpegs", "clrpegs - clear the peg counts",
-     cmd_clrpegs},
     {"getpcbinfo", "getpcbinfo- retrieve the pcb counts",
      cmd_getpcbinfo},
     {"getprimary", "getprimary - tells which net number is primary",
@@ -3272,8 +3266,6 @@ cmd_gethbdelay(char *argv[], int argc)
   return 0;
 }
 
-/* getpegs - retrieve the peg counts */
-
 static int cmd_getpcbinfo(char *argv[], int argc)
 {
 #if defined(__BSD_SCTP_STACK__)
@@ -3294,209 +3286,6 @@ static int cmd_getpcbinfo(char *argv[], int argc)
     printf("Mbuf track:%d\n",optval.mbuf_track);
   }
   return 0;
-#else
-	printf("Not supported on this OS\n");
-	return (0);
-#endif
-}
-
-static int
-cmd_clrpegs(char *argv[], int argc)
-{
-#if defined(__BSD_SCTP_STACK__)
-	int sctp_pegs,siz;
-	sctp_pegs = 0;
-	siz = sizeof(sctp_pegs);
-	if(setsockopt(adap->fd,IPPROTO_SCTP,
-		      SCTP_RESET_PEGS,
-		      &sctp_pegs,siz) != 0){
-		printf("Error %d could not clear pegs\n",errno);
-	} else {
-		printf("pegs cleared\n");
-	}
-	return 0;
-#else
-	printf("Not supported on this OS\n");
-	return (0);
-#endif
-}
-
-static int
-cmd_getpegs(char *argv[], int argc)
-{
-#if defined(__BSD_SCTP_STACK__)
-    uint32_t sctp_pegs[SCTP_NUMBER_OF_PEGS];
-    int i;
-    socklen_t siz;
-    static char *pegnames[SCTP_NUMBER_OF_PEGS] = {
-	"sack_rcv", /* 00 */
-	"sack_snt", /* 01 */
-	"tsns_snt", /* 02 */
-	"tsns_rcv", /* 03 */
-	"pkt_sent", /* 04 */
-	"pkt_rcvd", /* 05 */
-	"tsns_ret", /* 06 */
-	"dup_tsns", /* 07 */
-	"hbs__rcv", /* 08 */
-	"hbackrcv", /* 09 */
-	"htb__snt", /* 10 */
-	"win_prbe", /* 11 */
-	"pktswdat", /* 12 */
-	"t3-timeo", /* 13 */
-	"dsack-to", /* 14 */
-	"hb_timer", /* 15 */
-	"fst_rxts", /* 16 */
-	"timerexp", /* 17 */
-	"fr_inwin", /* 18 */
-	"blk_rwnd", /* 19 */
-	"blk_cwnd", /* 20 */
-	"rwnd_drp", /* 21 */
-	"bad_strm", /* 22 */
-	"bad_ssnw", /* 23 */
-	"drpnomem", /* 24 */
-	"drpfragm", /* 25 */
-	"badvtags", /* 26 */
-	"badcsumv", /* 27 */
-	"packetin", /* 28 */
-	"mcastrcv", /* 29 */
-	"hdrdrops", /* 30 */
-	"no_portn", /* 31 */
-	"cwnd_nf ", /* 32 */
-	"co_snds ", /* 33 */
-	"co_nodat", /* 34 */
-	"cw_nu_ss", /* 35 */
-	"max_brst", /* 36 */
-	"expr_del", /* 37 */
-	"no_cp_in", /* 38 */
-	"cach_src", /* 39 */
-	"cw_nocum", /* 40 */
-	"cw_incss", /* 41 */
-	"cw_incca", /* 42 */
-	"cw_skip ", /* 43 */
-	"cw_nu_ca", /* 44 */
-	"cw_maxcw", /* 45 */
-	"diff_ss ", /* 46 */
-	"diff_ca ", /* 47 */
-	"tqs @ ss", /* 48 */
-	"sqs @ ss", /* 49 */
-	"tqs @ ca", /* 50 */
-	"sqq @ ca", /* 51 */
-	"lmtu_mov", /* 52 */
-	"lcnt_mov", /* 53 */
-	"sndqctss", /* 54 */
-	"sndqctca", /* 55 */
-	"movemax ", /* 56 */
-	"move_equ", /* 57 */
-	"nagle_qo", /* 58 */
-	"nagle_of", /* 59 */
-	"out_fr_s", /* 60 */
-	"sostrnos", /* 61 */
-	"nostrnos", /* 62 */
-	"sosnqnos", /* 63 */
-	"nosnqnos", /* 64 */
-	"intoperr", /* 65 */
-	"dupssnrc", /* 66 */
-	"multi-fr", /* 67 */
-	"vtag-exp", /* 68 */
-	"vtag-bog", /* 69 */
-	"t3-safeg", /* 70 */
-	"pd--mbox", /* 71 */
-	"pd-ehost", /* 72 */
-	"pdmb_wda", /* 73 */
-	"pdmb_ctl", /* 74 */
-	"pdmb_bwr", /* 75 */
-	"pd_corup", /* 76 */
-	"pd_nedat", /* 77 */
-	"pd_errpd", /* 78 */
-	"fst_prep", /* 79 */
-	"pd_daNFo", /* 80 */
-	"pd_dIWin", /* 81 */
-	"pd_dIZrw", /* 82 */
-	"pd_BadDa", /* 83 */
-	"pd_dMark", /* 84 */
-	"ecne_rcv", /* 85 */
-	"cwr_perf", /* 86 */
-	"ecne_snt", /* 87 */
-	"chun_drp", /* 88 */
-        "nollsndq", /* 89 */
-	"ll_c_err", /* 90 */
-	"nollcwnd", /* 91 */
-	"nollbrst", /* 92 */
-	"no_ifqsp", /* 93 */
-        "rcvnotcb", /* 94 */
-        "rcvhadtc", /* 95 */
-        "pd_InRcv", /* 96 */
-        "pdhad2wa", /* 97 */
-	"pdhad2rc", /* 98 */
- 	"pdnostok", /* 99 */
- 	"entersor", /* 100 */
- 	"rch_frmk", /* 101 */
- 	"fndbyaid", /* 102 */
- 	"bad_asid", /* 103 */
-	"efr_strt", /* 104 */
-	"efr_stop", /* 105 */
-	"efr_expr", /* 106 */
-	"efr_mark", /* 107 */
-	"t3winprb", /* 108 */
-	"rengalls", /* 109 */
-	"irengeds", /* 110 */
-        "efr_stot", /* 111 */
-	"efr_sts1", /* 112 */
-	"efr_sts2", /* 113 */
-	"efr_sts3", /* 114 */
-	"efr_sts4", /* 115 */
-	"efr_stai", /* 116 */
-	"efr_stao", /* 117 */
-	"efr_stat", /* 118 */
-	"t3mktsns", /* 119 */
-	"authsent", /* 120 */
-	"authrcvd", /* 121 */
-	"authmiss", /* 122 */
-	"authhmid", /* 123 */
-	"authinvl", /* 124 */
-	"authnoky", /* 125 */
-	"authnutx", /* 126 */
-	"authnurx", /* 127 */
-	"nosd_net", /* 128 */
-	"sbwait_s", /* 129 */
-	"sndw_olk", /* 130 */
-	"wakeup_c", /* 131 */
-	"bog_tmre", /* 132 */
-	"blkf_spc", /* 133 */
-	"loop_blk", /* 134 */
-        "resv    "  /* 135 */
-    };
-    printf("there are %d pegs\n",
-	   SCTP_NUMBER_OF_PEGS);
-    siz = sizeof(sctp_pegs);
-    if(getsockopt(adap->fd,IPPROTO_SCTP,
-		  SCTP_GET_PEGS,
-		  sctp_pegs,&siz) != 0){
-	printf("Can't get peg counts err:%d\n",errno);
-	return(0);
-    }
-    for(i=0;i<SCTP_NUMBER_OF_PEGS;i+=4){
-	if((i+1 > SCTP_NUMBER_OF_PEGS) ||
-	   (i+2 > SCTP_NUMBER_OF_PEGS) ||
-	   (i+3 > SCTP_NUMBER_OF_PEGS)){
-	    break;
-	}
-	  
-	printf("%s:0x%8.8x %s:0x%8.8x %s:0x%8.8x %s:0x%8.8x\n",
-	       pegnames[i],sctp_pegs[i],
-	       pegnames[(i+1)],sctp_pegs[(i+1)],
-	       pegnames[(i+2)],sctp_pegs[(i+2)],
-	       pegnames[(i+3)],sctp_pegs[(i+3)]);
-    }
-    if((SCTP_NUMBER_OF_PEGS%4) != 0){
-	i-=4;
-	for(;i<SCTP_NUMBER_OF_PEGS;i++){
-	    printf("%s:0x%8.8x ",
-		   pegnames[i],sctp_pegs[i]);
-	}
-	printf("\n");
-    }
-    return(0);
 #else
 	printf("Not supported on this OS\n");
 	return (0);
