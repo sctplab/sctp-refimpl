@@ -682,7 +682,7 @@ rsp_start_enrp_server_hunt(struct rsp_enrp_scope *scp, int non_blocking)
 				break;
 		}
 	}
-	rsp_start_timer(scp, (struct rsp_socket_hash *)NULL, 
+	rsp_start_timer(scp, (struct rsp_socket *)NULL, 
 			scp->timers[RSP_T5_SERVERHUNT], 
 			(struct rsp_enrp_req *)NULL, 
 			RSP_T5_SERVERHUNT, 1, &scp->enrp_tmr);
@@ -911,7 +911,7 @@ int
 rsp_socket(int domain, int type,  int protocol, uint32_t op_scope)
 {
 	int sd, ret;
-	struct rsp_socket_hash *sdata;
+	struct rsp_socket *sdata;
 
 	if (rsp_inited == 0) {
 		errno = EINVAL;
@@ -923,15 +923,15 @@ rsp_socket(int domain, int type,  int protocol, uint32_t op_scope)
 		errno = ENOTSUP;
 		return (-1);
 	}
-	sdata = (struct rsp_socket_hash *) sizeof(struct rsp_socket_hash);
+	sdata = (struct rsp_socket *) sizeof(struct rsp_socket);
 	if(sdata == NULL) {
 		if(rsp_debug) {
-			fprintf(stderr, "Can't get memory for rsp_socket_hash\n");
+			fprintf(stderr, "Can't get memory for rsp_socket\n");
 		}
 		errno = ENOMEM;
 		return(-1);
 	}
-	memset(sdata, 0, sizeof(struct rsp_socket_hash));
+	memset(sdata, 0, sizeof(struct rsp_socket));
 	sdata->scp = rsp_find_scope_with_id(op_scope);
 	if(sdata->scp == NULL) {
 		if(rsp_debug) {
@@ -949,7 +949,7 @@ rsp_socket(int domain, int type,  int protocol, uint32_t op_scope)
 	}
 
 	/* setup and bind the port */
-	memset(sdata, 0, sizeof(struct rsp_socket_hash));
+	memset(sdata, 0, sizeof(struct rsp_socket));
 	sdata->sd = sd;
 	sdata->port = 0; /* unbound */
 	sdata->type = type;
@@ -1144,7 +1144,7 @@ rsp_sendmsg(int sockfd,         /* HA socket descriptor */
 	    struct sctp_sndrcvinfo *sinfo,
 	    int flags)         /* Options flags */
 {
-	struct rsp_socket_hash *sdata;
+	struct rsp_socket *sdata;
 	struct rsp_enrp_scope *scp;
 	struct rsp_timer_entry *tme;
 	int lock_failed = 0;
@@ -1163,7 +1163,7 @@ rsp_sendmsg(int sockfd,         /* HA socket descriptor */
 		fprintf(stderr, "Unsafe access, thread lock failed for sd_pool_mtx:%d\n", errno);
 		lock_failed = 1;
 	}
-	sdata  = (struct rsp_socket_hash *)HashedTbl_lookup(rsp_pcbinfo.sd_pool ,
+	sdata  = (struct rsp_socket *)HashedTbl_lookup(rsp_pcbinfo.sd_pool ,
 							    sockfd, 	
 							    sizeof(sockfd),
 							    NULL);
