@@ -191,6 +191,7 @@ int sctp_says_check_for_deadlock = 0;
 unsigned int sctp_auth_disable = 0;
 unsigned int sctp_auth_random_len = SCTP_AUTH_RANDOM_SIZE_DEFAULT;
 unsigned int sctp_auth_hmac_id_default = SCTP_AUTH_HMAC_ID_SHA1;
+struct sctpstat sctpstat;
 
 #ifdef SCTP_DEBUG
 extern uint32_t sctp_debug_on;
@@ -844,6 +845,10 @@ SYSCTL_INT(_net_inet_sctp, OID_AUTO, abort_at_limit, CTLFLAG_RW,
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, strict_data_order, CTLFLAG_RW,
     &sctp_strict_data_order, 0,
     "Enforce strict data ordering, abort if control inside data");
+
+SYSCTL_STRUCT(_net_inet_sctp, OID_AUTO, stats, CTLFLAG_RD,
+    &sctpstat, sctpstat,
+    "SCTP statistics (struct sctps_datadropchklmt, netinet/sctp.h");
 
 #ifdef SCTP_DEBUG
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, debug, CTLFLAG_RW,
@@ -2290,19 +2295,6 @@ sctp_optsget(struct socket *so,
 #else				/* SCTP_DEBUG */
 		error = EOPNOTSUPP;
 #endif
-		break;
-	case SCTP_GET_PEGS:
-		{
-			uint32_t *pt;
-
-			if ((size_t)m->m_len < sizeof(sctp_pegs)) {
-				error = EINVAL;
-				break;
-			}
-			pt = mtod(m, uint32_t *);
-			memcpy(pt, sctp_pegs, sizeof(sctp_pegs));
-			m->m_len = sizeof(sctp_pegs);
-		}
 		break;
 	case SCTP_EVENTS:
 		{
@@ -3929,10 +3921,6 @@ sctp_optsset(struct socket *so,
 			splx(s);
 
 		}
-		break;
-	case SCTP_RESET_PEGS:
-		memset(sctp_pegs, 0, sizeof(sctp_pegs));
-		error = 0;
 		break;
 	case SCTP_CONNECT_X:
 		if ((size_t)m->m_len < (sizeof(int) + sizeof(struct sockaddr_in))) {

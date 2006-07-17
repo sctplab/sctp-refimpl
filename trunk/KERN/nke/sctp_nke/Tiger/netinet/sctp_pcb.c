@@ -146,8 +146,6 @@ uint32_t sctp_debug_on = 0;
 
 #endif				/* SCTP_DEBUG */
 
-uint32_t sctp_pegs[SCTP_NUMBER_OF_PEGS];
-
 int sctp_pcbtblsize = SCTP_PCBHASHSIZE;
 
 struct sctp_epinfo sctppcbinfo;
@@ -955,11 +953,9 @@ sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, sctp_assoc_t asoc_id)
 				 * some other guy has the same id active (id
 				 * collision ??).
 				 */
-				sctp_pegs[SCTP_ASID_BOGUS]++;
 				SCTP_TCB_UNLOCK(stcb);
 				continue;
 			}
-			sctp_pegs[SCTP_BY_ASSOCID]++;
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
 #endif
@@ -997,11 +993,9 @@ sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, sctp_assoc_t asoc_id)
 				 * some other guy has the same id active (id
 				 * collision ??).
 				 */
-				sctp_pegs[SCTP_ASID_BOGUS]++;
 				SCTP_TCB_UNLOCK(stcb);
 				continue;
 			}
-			sctp_pegs[SCTP_BY_ASSOCID]++;
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
 #endif
@@ -1604,7 +1598,7 @@ sctp_findassoc_by_vtag(struct sockaddr *from, uint32_t vtag,
 			if (net) {
 				/* yep its him. */
 				*netp = net;
-				sctp_pegs[SCTP_VTAG_EXPR]++;
+				SCTP_STAT_INCR(sctps_vtagexpress);
 				*inp_p = stcb->sctp_ep;
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 				lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
@@ -1616,7 +1610,7 @@ sctp_findassoc_by_vtag(struct sockaddr *from, uint32_t vtag,
 				 * not him, this should only happen in rare
 				 * cases so I peg it.
 				 */
-				sctp_pegs[SCTP_VTAG_BOGUS]++;
+				SCTP_STAT_INCR(sctps_vtagbogus);
 			}
 		}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
@@ -5083,11 +5077,8 @@ sctp_pcb_init()
 	}
 	sctp_pcb_initialized = 1;
 
-	/* Init all peg counts */
-	for (i = 0; i < SCTP_NUMBER_OF_PEGS; i++) {
-		sctp_pegs[i] = 0;
-	}
-
+	bzero(&sctpstat, sizeof(struct sctpstat));
+	
 	/* init the empty list of (All) Endpoints */
 	LIST_INIT(&sctppcbinfo.listhead);
 #ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
@@ -6217,7 +6208,6 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		}
 		asoc->last_revoke_count = cnt;
 		sctp_send_sack(stcb);
-		sctp_pegs[SCTP_IRENEGED_ON_ASOC]++;
 		reneged_asoc_ids[reneged_at] = sctp_get_associd(stcb);
 		reneged_at++;
 	}

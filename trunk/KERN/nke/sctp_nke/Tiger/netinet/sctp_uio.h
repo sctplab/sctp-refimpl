@@ -696,7 +696,126 @@ struct sctp_cwnd_log_req {
 	struct sctp_cwnd_log log[0];
 };
 
+struct	sctpstat {
+	/* MIB */
+	u_long  sctps_currestab;           /* sctpStats  1   (Gauge32) */
+	u_long  sctps_activeestab;         /* sctpStats  2 (Counter32) */
+	u_long  sctps_passiveestab;        /* sctpStats  3 (Counter32) */
+	u_long  sctps_aborted;             /* sctpStats  4 (Counter32) */
+	u_long  sctps_shutdown;            /* sctpStats  5 (Counter32) */
+	u_long  sctps_outoftheblue;        /* sctpStats  6 (Counter32) */
+	u_long  sctps_checksumerrors;      /* sctpStats  7 (Counter32) */
+	u_long  sctps_outcontrolchunks;    /* sctpStats  8 (Counter64) */
+	u_long  sctps_outorderchunks;      /* sctpStats  9 (Counter64) */
+	u_long  sctps_outunorderchunks;    /* sctpStats 10 (Counter64) */
+	u_long  sctps_incontrolchunks;     /* sctpStats 11 (Counter64) */
+	u_long  sctps_inorderchunks;       /* sctpStats 12 (Counter64) */
+	u_long  sctps_inunorderchunks;     /* sctpStats 13 (Counter64) */
+	u_long  sctps_fragusrmegs;         /* sctpStats 14 (Counter64) */
+	u_long  sctps_reasmusrmsgs;        /* sctpStats 15 (Counter64) */
+	u_long  sctps_outpackets;          /* sctpStats 16 (Counter64) */
+	u_long  sctps_inpackets;           /* sctpStats 17 (Counter64) */
+	u_long  sctps_discontinuitytime;   /* sctpStats 18 (TimeStamp) */
+	/* input statistics: */
+	u_long	sctps_recvpackets;	   /* total input packets        */
+	u_long  sctps_recvpktwithdata;
+	u_long  sctps_recvsacks;           /* total input SACK chunks    */
+	u_long  sctps_recvdata;            /* total input DATA chunks    */
+	u_long  sctps_recvdupdata;         /* total input duplicate DATA chunks */
+	u_long  sctps_recvheartbeat;       /* total input HB chunks      */
+	u_long  sctps_recvheartbeatack;    /* total input HB-ACK chunks  */
+	u_long  sctps_recvecne;            /* total input ECNE chunks    */
+	u_long  sctps_recvauth;            /* total input AUTH chunks    */
+	u_long  sctps_recvauthmissing;     /* total input chunks missing AUTH */
+	u_long  sctps_recvivalhmacid;      /* total number of invalid HMAC ids received */
+	u_long  sctps_recvivalkeyid;       /* total number of invalid secret ids received */
+	u_long  sctps_recvauthfailed;      /* total number of auth failed */
+	u_long  sctps_recvexpress;         /* */
+	/* output statistics: */
+	u_long	sctps_sendpackets;	   /* total output packets       */
+	u_long  sctps_sendsacks;           /* total output SACKs         */
+	u_long  sctps_senddata;            /* total output DATA chunks   */
+	u_long  sctps_sendretransdata;     /* total output retransmitted DATA chunks */
+	u_long  sctps_sendfastretrans;     /* total output fast retransmitted DATA chunks */
+	u_long  sctps_sendmultfastretrans; /* U-del */
+	u_long  sctps_sendheartbeat;       /* total output HB chunks     */
+	u_long  sctps_sendecne;            /* total output ECNE chunks    */
+	u_long  sctps_sendauth;            /* total output AUTH chunks FIXME   */
+	/* PCKDROPREP statistics: */
+	u_long  sctps_pdrpfmbox;           /* */
+	u_long  sctps_pdrpfehos;           /* */
+	u_long  sctps_pdrpmbda;            /* */
+	u_long  sctps_pdrpmbct;            /* */
+	u_long  sctps_pdrpbwrpt;           /* */
+	u_long  sctps_pdrpcrupt;           /* */
+	u_long  sctps_pdrpnedat;           /* */
+	u_long  sctps_pdrppdbrk;           /* */
+	u_long  sctps_pdrptsnnf;           /* */
+	u_long  sctps_pdrpdnfnd;           /* */
+	u_long  sctps_pdrpdiwnp;           /* */
+	u_long  sctps_pdrpdizrw;           /* */
+	u_long  sctps_pdrpbadd;            /* */
+	u_long  sctps_pdrpmark;            /* */
+	/* timeouts */
+	u_long  sctps_timoiterator;        /* */
+	u_long  sctps_timodata;            /* */
+	u_long  sctps_timowindowprobe;     /* */
+	u_long  sctps_timoinit;            /* */
+	u_long  sctps_timosack;            /* */
+	u_long  sctps_timoshutdown;        /* */
+	u_long  sctps_timoheartbeat;       /* */
+	u_long  sctps_timocookie;          /* */
+	u_long  sctps_timosecret;          /* */
+	u_long  sctps_timopathmtu;         /* */
+	u_long  sctps_timoshutdownack;     /* */
+	u_long  sctps_timoshutdownguard;   /* */
+	u_long  sctps_timostrmrst;         /* */
+	u_long  sctps_timoearlyfr;         /* */
+	u_long  sctps_timoasconf;          /* */
+	u_long  sctps_timoautoclose;       /* */
+	u_long  sctps_timoassockill;       /* */
+	u_long  sctps_timoinpkill;         /* */
+	/* Early fast retransmission counters */
+	u_long  sctps_earlyfrstart;        
+	u_long  sctps_earlyfrstop;
+	u_long  sctps_earlyfrmrkretrans;
+	u_long  sctps_earlyfrstpout;
+	u_long  sctps_earlyfrstpidsck1;
+	u_long  sctps_earlyfrstpidsck2;
+	u_long  sctps_earlyfrstpidsck3;
+	u_long  sctps_earlyfrstpidsck4;
+	u_long  sctps_earlyfrstrid;
+	u_long  sctps_earlyfrstrout;
+	u_long  sctps_earlyfrstrtmr;
+	/* otheres */
+	u_long	sctps_hdrops;		/* packet shorter than header */
+	u_long	sctps_badsum;		/* checksum error             */
+	u_long  sctps_noport;           /* no endpoint for port       */
+	u_long  sctps_badvtag;          /* bad v-tag                  */
+	u_long  sctps_badsid;           /* bad SID                    */
+	u_long  sctps_nomem;            /* no memory                  */
+	u_long  sctps_fastretransinrtt; /* number of multiple FR in a RTT window */
+	u_long  sctps_markedretrans;
+	u_long  sctps_naglesent;        /* nagle allowed sending      */
+	u_long  sctps_naglequeued;      /* nagle does't allow sending */
+	u_long  sctps_maxburstqueued;   /* max burst dosn't allow sending */
+	u_long  sctps_ifnomemqueued;    /*  */
+	u_long  sctps_windowprobed;     /* total number of window probes sent */
+	u_long  sctps_lowlevelerr;
+	u_long  sctps_lowlevelerrusr;
+	u_long  sctps_datadropchklmt;
+	u_long  sctps_datadroprwnd;
+	u_long  sctps_ecnereducedcwnd;
+	u_long  sctps_vtagexpress;
+	u_long  sctps_vtagbogus;
+};
 
+#define SCTP_STAT_INCR(_x) SCTP_STAT_INCR_BY(_x,1)
+#if defined(__FreeBSD__)
+#define SCTP_STAT_INCR_BY(_x,_d) atomic_add_long(&sctpstat._x, _d)
+#else
+#define SCTP_STAT_INCR_BY(_x,_d) atomic_add_int(&sctpstat._x, _d)
+#endif
 /*
  * Kernel defined for sctp_send
  */
