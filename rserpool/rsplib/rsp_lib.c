@@ -614,6 +614,8 @@ rsp_start_enrp_server_hunt(struct rsp_enrp_scope *scp)
 			scp->timers[RSP_T5_SERVERHUNT], 
 			(struct rsp_enrp_req *)NULL, 
 			RSP_T5_SERVERHUNT, &scp->enrp_tmr);
+	/* empty we are just starting */
+	scp->enrp_tmr->chained_next = NULL;
 }
 
 static struct rsp_enrp_scope *
