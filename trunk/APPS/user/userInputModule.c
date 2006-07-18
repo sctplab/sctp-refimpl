@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.48 2006-07-18 16:30:46 lei Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.49 2006-07-18 16:36:18 lei Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -309,7 +309,7 @@ static struct command commands[] = {
      cmd_getevents},
     {"getpaddrs", "getpaddrs [asocid] - display the peers addresses",
      cmd_getpaddrs},
-    {"getstatus", "getstatus - display the associaiton status",
+    {"getstatus", "getstatus - display the association status",
      cmd_getstatus},
     {"heartctl", "heartctl on/off/allon/alloff - Turn HB on or off to the destination or all dests",
      cmd_heart},
@@ -2571,11 +2571,13 @@ int cmd_setinitparam(char *argv[], int argc)
 static int
 cmd_abort(char *argv[], int argc)
 {
-  char buf[4];
+    char buf[4];
 
-  memset(buf,0,sizeof(buf));
-  return(sctpSEND(adap->fd,0,buf,0,SCTP_getAddr(NULL),SCTP_ABORT,0,0));
+    memset(buf, 0, sizeof(buf));
+    return (sctpSEND(adap->fd, 0, buf, 0, SCTP_getAddr(NULL), SCTP_ABORT,
+		     0, 0));
 }
+
 /* assoc - associate with the set destination
  */
 static int
@@ -2675,79 +2677,73 @@ cmd_xconnect(char *argv[], int argc)
 static int
 cmd_bindx(char *argv[], int argc)
 {
-  int bindType = 0;
-  int bindOption = 0;
+    int bindType = 0;
+    int bindOption = 0;
 #if defined(__BSD_SCTP_STACK__)
-  char bindx_ss[sizeof(struct sctp_getaddresses) + sizeof(struct sockaddr_storage)];
-  struct sctp_getaddresses *optval;
+    char bindx_ss[sizeof(struct sctp_getaddresses) + sizeof(struct sockaddr_storage)];
+    struct sctp_getaddresses *optval;
 #else
-  char bindx_ss[sizeof(struct sockaddr_storage)];
+    char bindx_ss[sizeof(struct sockaddr_storage)];
 #endif
-  struct sockaddr_in6 *sin6;
-  struct sockaddr_in *sin;
-  socklen_t sa_len;
+    struct sockaddr_in6 *sin6;
+    struct sockaddr_in *sin;
+    socklen_t sa_len;
 
-  if (argc < 2) {
-    printf("bindx: invalid number of arguments\n");
-    return -1;
-  }
-  if (bindSpecific == 0) {
-    printf("Endpoint is BOUNDALL... ignoring\n");
-    return -1;
-  }
-  /* get the bindx type */
-  bindType = argv[0] != NULL ? strtol(argv[0], NULL, 0) : 0;
-  if (bindType == 0)
-    bindOption = SCTP_BINDX_ADD_ADDR;
-  else if (bindType == 1)
-    bindOption = SCTP_BINDX_REM_ADDR;
-  else {
-    printf("bindx: invalid 'type'=%u\n", bindType);
-     return -1;
-  }
+    if (argc < 2) {
+	printf("bindx: invalid number of arguments\n");
+	return -1;
+    }
+    if (bindSpecific == 0) {
+	printf("Endpoint is BOUNDALL... ignoring\n");
+	return -1;
+    }
+    /* get the bindx type */
+    bindType = argv[0] != NULL ? strtol(argv[0], NULL, 0) : 0;
+    if (bindType == 0)
+	bindOption = SCTP_BINDX_ADD_ADDR;
+    else if (bindType == 1)
+	bindOption = SCTP_BINDX_REM_ADDR;
+    else {
+	printf("bindx: invalid 'type'=%u\n", bindType);
+	return -1;
+    }
 #if defined(__BSD_SCTP_STACK__)
-  /* get the address and figure out what kind it is */
-  optval = (struct sctp_getaddresses *)bindx_ss;
-  optval->sget_assoc_id = 0;	/* for the entire endpoint */
-  /* try IPv6 first... */
-  sin6 = (struct sockaddr_in6 *)&optval->addr;
-  sin = (struct sockaddr_in *)&optval->addr;
+    /* get the address and figure out what kind it is */
+    optval = (struct sctp_getaddresses *)bindx_ss;
+    optval->sget_assoc_id = 0;	/* for the entire endpoint */
+    /* try IPv6 first... */
+    sin6 = (struct sockaddr_in6 *)&optval->addr;
+    sin = (struct sockaddr_in *)&optval->addr;
 #else
-  sin6 = (struct sockaddr_in6 *)bindx_ss;
-  sin = (struct sockaddr_in *)bindx_ss;
+    sin6 = (struct sockaddr_in6 *)bindx_ss;
+    sin = (struct sockaddr_in *)bindx_ss;
 #endif
-  if (inet_pton(AF_INET6, argv[1], &sin6->sin6_addr)) {
-    /* ipv6 address specified */
-    sin6->sin6_family = AF_INET6;
+    if (inet_pton(AF_INET6, argv[1], &sin6->sin6_addr)) {
+	/* ipv6 address specified */
+	sin6->sin6_family = AF_INET6;
 #ifdef HAVE_SA_LEN
-    sin6->sin6_len = sizeof(struct sockaddr_in6);
+	sin6->sin6_len = sizeof(struct sockaddr_in6);
 #endif
-    sa_len = sizeof(struct sockaddr_in6);
-    sin6->sin6_scope_id = scope_id;
-  } else if (inet_pton(AF_INET, argv[1], &sin->sin_addr)) {
-    /* ipv4 address specified */
-    sin->sin_family = AF_INET;
+	sa_len = sizeof(struct sockaddr_in6);
+	sin6->sin6_scope_id = scope_id;
+    } else if (inet_pton(AF_INET, argv[1], &sin->sin_addr)) {
+	/* ipv4 address specified */
+	sin->sin_family = AF_INET;
 #ifdef HAVE_SA_LEN
-    sin->sin_len = sizeof(struct sockaddr_in);
+	sin->sin_len = sizeof(struct sockaddr_in);
 #endif
-    sa_len = sizeof(struct sockaddr_in);
-  } else {
-    printf("bindx: invalid address\n");
-    return -1;
-  }
-  /* do the bindx... */
-#if 0
-  /* FIX: put in library/syscall later... */
-  if (setsockopt(adap->fd, IPPROTO_SCTP, bindOption, 
-		bindx_ss, sizeof(bindx_ss)) != 0) {
-#else
-  if (sctp_bindx(adap->fd, (struct sockaddr *)bindx_ss, 1, bindOption) == -1) {
-#endif
-    printf("Failed bindx() on socket err:%u!\n", errno);
-  } else {
-    printf("bindx() completed\n");
-  }
-  return 0;
+	sa_len = sizeof(struct sockaddr_in);
+    } else {
+	printf("bindx: invalid address\n");
+	return -1;
+    }
+    /* do the bindx... */
+    if (sctp_bindx(adap->fd, (struct sockaddr *)bindx_ss, 1, bindOption) == -1) {
+	printf("Failed bindx() on socket err:%u!\n", errno);
+    } else {
+	printf("bindx() completed\n");
+    }
+    return 0;
 }
 
 
