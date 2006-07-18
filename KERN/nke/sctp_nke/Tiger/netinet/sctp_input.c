@@ -4636,7 +4636,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 	if (inp != NULL)
 		sctp_lock_assert(inp->ip_inp.inp.inp_socket);
 #endif
-	SCTP_STAT_INCR(sctps_recvdata);
+	SCTP_STAT_INCR(sctps_recvdatagrams);
 #ifdef SCTP_AUDITING_ENABLED
 	sctp_audit_log(0xE0, 1);
 	sctp_auditing(0, inp, stcb, net);
