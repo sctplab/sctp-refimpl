@@ -850,7 +850,7 @@ SYSCTL_INT(_net_inet_sctp, OID_AUTO, strict_data_order, CTLFLAG_RW,
     &sctp_strict_data_order, 0,
     "Enforce strict data ordering, abort if control inside data");
 
-SYSCTL_STRUCT(_net_inet_sctp, OID_AUTO, stats, CTLFLAG_RD,
+SYSCTL_STRUCT(_net_inet_sctp, OID_AUTO, stats, CTLFLAG_RW,
     &sctpstat, sctpstat,
     "SCTP statistics (struct sctps_datadropchklmt, netinet/sctp.h");
 
