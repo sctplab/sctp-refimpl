@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.46 2006-07-17 11:52:54 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.47 2006-07-18 16:20:27 tuexen Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -56,6 +56,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <sys/sysctl.h>
 #include <stdint.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -119,6 +120,8 @@ static int cmd_getcurcookielife(char *argv[], int argc);
 static int cmd_getcwndpost(char *argv[], int argc);
 static int cmd_getdefcookielife(char *argv[], int argc);
 static int cmd_gethbdelay(char *argv[], int argc);
+static int cmd_getstat(char *argv[], int argc);
+static int cmd_clrstat(char *argv[], int argc);
 
 static int cmd_getprimary(char *argv[], int argc);
 static int cmd_getrtt(char *argv[], int argc);
@@ -331,6 +334,10 @@ static struct command commands[] = {
      cmd_getmsdelay},
     {"getnodelay", "getnodelay - get the setting of the nagle algorithm off or on",
      cmd_getnodelay},
+    {"getstat", "getstat - retrieve the stat",
+     cmd_getstat},
+    {"clrstat", "clrstat - clear the stat",
+     cmd_clrstat},
     {"getpcbinfo", "getpcbinfo- retrieve the pcb counts",
      cmd_getpcbinfo},
     {"getprimary", "getprimary - tells which net number is primary",
@@ -3286,6 +3293,309 @@ static int cmd_getpcbinfo(char *argv[], int argc)
     printf("Mbuf track:%d\n",optval.mbuf_track);
   }
   return 0;
+#else
+	printf("Not supported on this OS\n");
+	return (0);
+#endif
+}
+
+static int
+cmd_clrstat(char *argv[], int argc)
+{
+#if defined(__BSD_SCTP_STACK__)
+	struct sctpstat stat, zerostat;
+	size_t len = sizeof(struct sctpstat);
+	
+	memset(&zerostat, 0, sizeof(struct sctpstat));
+	if (sysctlbyname("net.inet.sctp.stats", &stat, &len, &zerostat, len) < 0) {
+		if (errno == EPERM)
+			printf("Error: You need to have root previledges to reset the stat.\n");
+		else
+			printf("Error %d (%s) could not reset the stat\n", errno, strerror(errno));
+	} else {
+		printf("stats reseted.\n");
+	}
+	return 0;
+#else
+	printf("Not supported on this OS\n");
+	return (0);
+#endif
+}
+
+static int
+cmd_getstat(char *argv[], int argc)
+{
+#if defined(__BSD_SCTP_STACK__)
+	struct sctpstat stat;
+	size_t len = sizeof(struct sctpstat);
+	unsigned int cnt = 0;
+#if 0
+    static char *pegnames[SCTP_NUMBER_OF_PEGS] = {
+	"sack_rcv", /* 00 */
+	"sack_snt", /* 01 */
+	"tsns_snt", /* 02 */
+	"tsns_rcv", /* 03 */
+	"pkt_sent", /* 04 */
+	"pkt_rcvd", /* 05 */
+	"tsns_ret", /* 06 */
+	"dup_tsns", /* 07 */
+	"hbs__rcv", /* 08 */
+	"hbackrcv", /* 09 */
+	"htb__snt", /* 10 */
+	"win_prbe", /* 11 */
+	"pktswdat", /* 12 */
+	"t3-timeo", /* 13 */
+	"dsack-to", /* 14 */
+	"hb_timer", /* 15 */
+	"fst_rxts", /* 16 */
+	"timerexp", /* 17 */
+	"fr_inwin", /* 18 */
+	"blk_rwnd", /* 19 */
+	"blk_cwnd", /* 20 */
+	"rwnd_drp", /* 21 */
+	"bad_strm", /* 22 */
+	"bad_ssnw", /* 23 */
+	"drpnomem", /* 24 */
+	"drpfragm", /* 25 */
+	"badvtags", /* 26 */
+	"badcsumv", /* 27 */
+	"packetin", /* 28 */
+	"mcastrcv", /* 29 */
+	"hdrdrops", /* 30 */
+	"no_portn", /* 31 */
+	"cwnd_nf ", /* 32 */
+	"co_snds ", /* 33 */
+	"co_nodat", /* 34 */
+	"cw_nu_ss", /* 35 */
+	"max_brst", /* 36 */
+	"expr_del", /* 37 */
+	"no_cp_in", /* 38 */
+	"cach_src", /* 39 */
+	"cw_nocum", /* 40 */
+	"cw_incss", /* 41 */
+	"cw_incca", /* 42 */
+	"cw_skip ", /* 43 */
+	"cw_nu_ca", /* 44 */
+	"cw_maxcw", /* 45 */
+	"diff_ss ", /* 46 */
+	"diff_ca ", /* 47 */
+	"tqs @ ss", /* 48 */
+	"sqs @ ss", /* 49 */
+	"tqs @ ca", /* 50 */
+	"sqq @ ca", /* 51 */
+	"lmtu_mov", /* 52 */
+	"lcnt_mov", /* 53 */
+	"sndqctss", /* 54 */
+	"sndqctca", /* 55 */
+	"movemax ", /* 56 */
+	"move_equ", /* 57 */
+	"nagle_qo", /* 58 */
+	"nagle_of", /* 59 */
+	"out_fr_s", /* 60 */
+	"sostrnos", /* 61 */
+	"nostrnos", /* 62 */
+	"sosnqnos", /* 63 */
+	"nosnqnos", /* 64 */
+	"intoperr", /* 65 */
+	"dupssnrc", /* 66 */
+	"multi-fr", /* 67 */
+	"vtag-exp", /* 68 */
+	"vtag-bog", /* 69 */
+	"t3-safeg", /* 70 */
+	"pd--mbox", /* 71 */
+	"pd-ehost", /* 72 */
+	"pdmb_wda", /* 73 */
+	"pdmb_ctl", /* 74 */
+	"pdmb_bwr", /* 75 */
+	"pd_corup", /* 76 */
+	"pd_nedat", /* 77 */
+	"pd_errpd", /* 78 */
+	"fst_prep", /* 79 */
+	"pd_daNFo", /* 80 */
+	"pd_dIWin", /* 81 */
+	"pd_dIZrw", /* 82 */
+	"pd_BadDa", /* 83 */
+	"pd_dMark", /* 84 */
+	"ecne_rcv", /* 85 */
+	"cwr_perf", /* 86 */
+	"ecne_snt", /* 87 */
+	"chun_drp", /* 88 */
+        "nollsndq", /* 89 */
+	"ll_c_err", /* 90 */
+	"nollcwnd", /* 91 */
+	"nollbrst", /* 92 */
+	"no_ifqsp", /* 93 */
+        "rcvnotcb", /* 94 */
+        "rcvhadtc", /* 95 */
+        "pd_InRcv", /* 96 */
+        "pdhad2wa", /* 97 */
+	"pdhad2rc", /* 98 */
+ 	"pdnostok", /* 99 */
+ 	"entersor", /* 100 */
+ 	"rch_frmk", /* 101 */
+ 	"fndbyaid", /* 102 */
+ 	"bad_asid", /* 103 */
+	"efr_strt", /* 104 */
+	"efr_stop", /* 105 */
+	"efr_expr", /* 106 */
+	"efr_mark", /* 107 */
+	"t3winprb", /* 108 */
+	"rengalls", /* 109 */
+	"irengeds", /* 110 */
+        "efr_stot", /* 111 */
+	"efr_sts1", /* 112 */
+	"efr_sts2", /* 113 */
+	"efr_sts3", /* 114 */
+	"efr_sts4", /* 115 */
+	"efr_stai", /* 116 */
+	"efr_stao", /* 117 */
+	"efr_stat", /* 118 */
+	"t3mktsns", /* 119 */
+	"authsent", /* 120 */
+	"authrcvd", /* 121 */
+	"authmiss", /* 122 */
+	"authhmid", /* 123 */
+	"authinvl", /* 124 */
+	"authnoky", /* 125 */
+	"authnutx", /* 126 */
+	"authnurx", /* 127 */
+	"nosd_net", /* 128 */
+	"sbwait_s", /* 129 */
+	"sndw_olk", /* 130 */
+	"wakeup_c", /* 131 */
+	"bog_tmre", /* 132 */
+	"blkf_spc", /* 133 */
+	"loop_blk", /* 134 */
+        "resv    "  /* 135 */
+    };
+#endif
+	if (sysctlbyname("net.inet.sctp.stats", &stat, &len, NULL, 0) < 0) {
+		printf("Error %d (%s) could not get the stat\n", errno, strerror(errno));
+		return(0);
+	}
+
+#define	p(f, n) \
+    printf("%-10.10s=%08lX%s", n, stat.f, ((cnt++&3)==3)?"\n":" ")
+#define nl(n) \
+	do { \
+		printf("%s%s\n", ((cnt&3)==0)?"":"\n", n);\
+		cnt = 0;\
+	} while(0)
+	
+	nl("MIB");
+	p(sctps_currestab,           "currentestab");
+	p(sctps_activeestab,         "activeestab");
+	p(sctps_passiveestab,        "passiveestab");
+	p(sctps_aborted,             "aborted");
+	p(sctps_shutdown,            "shutdown");
+	p(sctps_outoftheblue,        "outoftheblue");
+	p(sctps_checksumerrors,      "checksumerrors");
+	p(sctps_outcontrolchunks,    "outcontrolchunks");
+	p(sctps_outorderchunks,      "outorderchunks");
+	p(sctps_outunorderchunks,    "outunorderchunks");
+	p(sctps_incontrolchunks,     "incontrolchunks");
+	p(sctps_inorderchunks,       "inorderchunks");
+	p(sctps_inunorderchunks,     "inunorderchunks");
+	p(sctps_fragusrmegs,         "fragusrmsg");
+	p(sctps_reasmusrmsgs,        "reasmusrmsg");
+	p(sctps_outpackets,          "outpackets");
+	p(sctps_inpackets,           "inpackets");
+	nl("RECV");
+	p(sctps_recvpackets,         "packets");
+	p(sctps_recvpktwithdata,     "pktwithdata");
+	p(sctps_recvsacks,           "sacks");
+	p(sctps_recvdata,            "data");
+	p(sctps_recvdupdata,         "dupdata");
+	p(sctps_recvheartbeat,       "heartbeat");
+	p(sctps_recvheartbeatack,    "heartbeatack");
+	p(sctps_recvecne,            "ecne");
+	p(sctps_recvauth,            "auth");
+	p(sctps_recvauthmissing,     "authmissing");
+	p(sctps_recvivalhmacid,      "ivalhmacid");
+	p(sctps_recvivalkeyid,       "ivalkeyid");
+	p(sctps_recvauthfailed,      "authfailed");
+	p(sctps_recvexpress,         "expressb");
+	nl("SEND");
+	p(sctps_sendpackets,         "packets");
+	p(sctps_sendsacks,           "sacks");
+	p(sctps_senddata,            "data");
+	p(sctps_sendretransdata,     "retransdata");
+	p(sctps_sendfastretrans,     "fastretrans");
+	p(sctps_sendmultfastretrans, "multfastretrans");
+	p(sctps_sendheartbeat,       "heartbeat");
+	p(sctps_sendecne,            "ecne");
+	p(sctps_sendauth,            "auth");
+	nl("PDRP");
+	p(sctps_pdrpfmbox,           "fmbox");
+	p(sctps_pdrpfehos,           "fehos");
+	p(sctps_pdrpmbda,            "mbda");
+	p(sctps_pdrpmbct,            "mbct");
+	p(sctps_pdrpbwrpt,           "bwrpt");
+	p(sctps_pdrpcrupt,           "crupt");
+	p(sctps_pdrpnedat,           "nedat");
+	p(sctps_pdrppdbrk,           "pdbrk");
+	p(sctps_pdrptsnnf,           "tsnnf");
+	p(sctps_pdrpdnfnd,           "dnfnd");
+	p(sctps_pdrpdiwnp,           "diwnp");
+	p(sctps_pdrpdizrw,           "dizrw");
+	p(sctps_pdrpbadd,            "badd");
+	p(sctps_pdrpmark,            "mark");
+	nl("TIMEOUT");
+	p(sctps_timoiterator,        "iterator");
+	p(sctps_timodata,            "data");
+	p(sctps_timowindowprobe,     "windowprobe");
+	p(sctps_timoinit,            "init");
+	p(sctps_timosack,            "sack");
+	p(sctps_timoshutdown,        "shutdown");
+	p(sctps_timoheartbeat,       "heartbeat");
+	p(sctps_timocookie,          "cookie");
+	p(sctps_timosecret,          "secret");
+	p(sctps_timopathmtu,         "pathmtu");
+	p(sctps_timoshutdownack,     "shutdownack");
+	p(sctps_timoshutdownguard,   "shutdownguard");
+	p(sctps_timostrmrst,         "strmrst");
+	p(sctps_timoearlyfr,         "earlyfr");
+	p(sctps_timoasconf,          "asconf");
+	p(sctps_timoautoclose,       "autoclose");
+	p(sctps_timoassockill,       "assockill");
+	p(sctps_timoinpkill,         "inpkill");
+	nl("EARLY FR");
+	p(sctps_earlyfrstart,        "start");
+	p(sctps_earlyfrstop,         "stop");
+	p(sctps_earlyfrmrkretrans,   "mrkretrans");
+	p(sctps_earlyfrstpout,       "stpout");
+	p(sctps_earlyfrstpidsck1,    "stpidsck1");
+	p(sctps_earlyfrstpidsck2,    "stpidsck2");
+	p(sctps_earlyfrstpidsck3,    "stpidsck3");
+	p(sctps_earlyfrstpidsck4,    "stpidsck4");
+	p(sctps_earlyfrstrid,        "strid");
+	p(sctps_earlyfrstrout,       "strout");
+	p(sctps_earlyfrstrtmr,       "strtmr");
+	nl("OTHER");
+	p(sctps_hdrops,              "hdrops");
+	p(sctps_badsum,              "badsum");
+	p(sctps_noport,              "noport");
+	p(sctps_badvtag,             "badvtag");
+	p(sctps_badsid,              "badsid");
+	p(sctps_nomem,               "nomem");
+	p(sctps_fastretransinrtt,    "fastretransinrtt");
+	p(sctps_markedretrans,       "markedretrans");
+	p(sctps_naglesent,           "naglesent");
+	p(sctps_naglequeued,         "naglequeued");
+	p(sctps_maxburstqueued,      "maxburstqueued");
+	p(sctps_ifnomemqueued,       "ifnomemqueued");
+	p(sctps_windowprobed,        "windowprobed");
+	p(sctps_lowlevelerr,         "lowlevelerr");
+	p(sctps_lowlevelerrusr,      "lowlevelerrusr");
+	p(sctps_datadropchklmt,      "datadropchklmt");
+	p(sctps_datadroprwnd,        "datadroprwnd");
+	p(sctps_ecnereducedcwnd,     "ecnereducedcwnd");
+	p(sctps_vtagexpress,         "vtagexpress");
+	p(sctps_vtagbogus,           "vtagbogus");
+	nl("");
+#undef p
+#undef nl
+	return(0);
 #else
 	printf("Not supported on this OS\n");
 	return (0);
