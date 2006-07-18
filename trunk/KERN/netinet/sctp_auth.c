@@ -757,23 +757,32 @@ sctp_free_hmaclist(sctp_hmaclist_t * list)
 	}
 }
 
-void
+int
 sctp_auth_add_hmacid(sctp_hmaclist_t * list, uint16_t hmac_id)
 {
 	if (list == NULL)
-		return;
+		return (-1);
 	if (list->num_algo == list->max_algo) {
 #ifdef SCTP_DEBUG
 		if (SCTP_AUTH_DEBUG)
 			printf("SCTP: HMAC id list full, ignoring add %u\n", hmac_id);
 #endif
-		return;
+		return (-1);
 	}
+	if ((hmac_id != SCTP_AUTH_HMAC_ID_SHA1) &&
+	    (hmac_id != SCTP_AUTH_HMAC_ID_MD5)) {
+#ifdef SCTP_DEBUG
+		if (SCTP_AUTH_DEBUG)
+			printf("\nSCTP: cannot add unsupported HMAC id %u", hmac_id);
+#endif
+		return (-1);
+    }
 #ifdef SCTP_DEBUG
 	if (SCTP_AUTH_DEBUG)
 		printf("SCTP: add HMAC id %u to list\n", hmac_id);
 #endif
 	list->hmac[list->num_algo++] = hmac_id;
+	return (0);
 }
 
 sctp_hmaclist_t *
@@ -856,6 +865,25 @@ sctp_serialize_hmaclist(sctp_hmaclist_t * list, uint8_t * ptr)
 		ptr += sizeof(hmac_id);
 	}
 	return (list->num_algo * sizeof(hmac_id));
+}
+
+int
+sctp_verify_hmac_param (struct sctp_auth_hmac_algo *hmacs, uint32_t num_hmacs)
+{ 
+	uint32_t i;
+	uint16_t hmac_id;
+	uint32_t sha1_supported = 0;
+
+	for (i = 0; i < num_hmacs; i++) {
+		hmac_id = ntohs(hmacs->hmac_ids[i]);
+		if (hmac_id == SCTP_AUTH_HMAC_ID_SHA1)
+	 		sha1_supported = 1;
+	}
+	/* all HMAC id's are supported */
+	if (sha1_supported == 0)
+		return (-1);
+	else
+		return (0);
 }
 
 sctp_authinfo_t *
@@ -1841,6 +1869,110 @@ sctp_notify_authentication(struct sctp_tcb *stcb, uint32_t indication,
 	sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 }
 
+
+/*
+ * validates the AUTHentication related parameters in an INIT/INIT-ACK
+ * Note: currently only used for INIT as INIT-ACK is handled inline
+ * with sctp_load_addresses_from_init()
+ */
+int
+sctp_validate_init_auth_params(struct mbuf *m, int offset, int limit)
+{
+	struct sctp_paramhdr *phdr, parm_buf;
+	uint16_t ptype, plen;
+	int peer_supports_asconf = 0;
+	int peer_supports_auth = 0;
+	int got_random = 0, got_hmacs = 0;
+
+	/* go through each of the params. */
+	phdr = sctp_get_next_param(m, offset, &parm_buf, sizeof(parm_buf));
+	while (phdr) {
+		ptype = ntohs(phdr->param_type);
+		plen = ntohs(phdr->param_length);
+
+		if (offset + plen > limit) {
+			break;
+		}
+		if (plen == 0) {
+			break;
+		}
+		if (ptype == SCTP_SUPPORTED_CHUNK_EXT) {
+			/* A supported extension chunk */
+			struct sctp_supported_chunk_types_param *pr_supported;
+			uint8_t local_store[128];
+			int num_ent, i;
+
+			phdr = sctp_get_next_param(m, offset,
+			    (struct sctp_paramhdr *)&local_store, plen);
+			if (phdr == NULL) {
+				return (-1);
+			}
+			pr_supported = (struct sctp_supported_chunk_types_param *)phdr;
+			num_ent = plen - sizeof(struct sctp_paramhdr);
+			for (i = 0; i < num_ent; i++) {
+				switch (pr_supported->chunk_types[i]) {
+				case SCTP_ASCONF:
+				case SCTP_ASCONF_ACK:
+					peer_supports_asconf = 1;
+					break;
+				case SCTP_AUTHENTICATION:
+					peer_supports_auth = 1;
+					break;
+				default:
+					/* one we don't care about */
+					break;
+				}
+			}
+		} else if (ptype == SCTP_RANDOM) {
+			got_random = 1;
+		} else if (ptype == SCTP_HMAC_LIST) {
+			uint8_t store[256];
+			struct sctp_auth_hmac_algo *hmacs;
+			int num_hmacs;
+
+			if (plen > sizeof(store))
+				break;
+			phdr = sctp_get_next_param(m, offset,
+			    (struct sctp_paramhdr *)store, plen);
+			if (phdr == NULL)
+				return (-1);
+			hmacs = (struct sctp_auth_hmac_algo *)phdr;
+			num_hmacs = (plen - sizeof(*hmacs)) /
+			    sizeof(hmacs->hmac_ids[0]);
+			/* validate the hmac list */
+			if (sctp_verify_hmac_param(hmacs, num_hmacs)) {
+#ifdef SCTP_DEBUG
+				if (sctp_debug_on & SCTP_DEBUG_AUTH1)
+					printf("SCTP: invalid HMAC param\n");
+#endif
+				return (-1);
+			}
+			got_hmacs = 1;
+		}
+
+		offset += SCTP_SIZE32(plen);
+		if (offset >= limit) {
+			break;
+		}
+		phdr = sctp_get_next_param(m, offset, &parm_buf,
+		    sizeof(parm_buf));
+	}
+	/* validate authentication required parameters */
+	if (got_random && got_hmacs) {
+		peer_supports_auth = 1;
+	} else {
+		peer_supports_auth = 0;
+	}
+	if (!sctp_asconf_auth_nochk && peer_supports_asconf &&
+	    !peer_supports_auth) {
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_AUTH1)
+			printf("SCTP: peer supports ASCONF but not AUTH\n");
+#endif
+		return (-1);
+	}
+	return (0);
+}
 
 #ifdef SCTP_HMAC_TEST
 /*
