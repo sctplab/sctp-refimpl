@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.21 2006-05-15 16:35:39 lei Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.22 2006-07-18 16:30:46 lei Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -132,7 +132,8 @@ handle_notification(int fd,char *notify_buf) {
 		default:
 			str = "UNKNOWN";
 		} /* end switch(sac->sac_state) */
-		printf("SCTP_ASSOC_CHANGE: %s, sac_error=%xh assoc=%xh\n", str,
+		printf("SCTP_ASSOC_CHANGE: %s, sac_error=0x%x assoc=0x%x\n",
+		       str,
 		       (uint32_t)sac->sac_error,
 		       (uint32_t)sac->sac_assoc_id);
 		break;
@@ -169,12 +170,12 @@ handle_notification(int fd,char *notify_buf) {
 			sin = (struct sockaddr_in *)&spc->spc_aaddr;
 			inet_ntop(AF_INET, (char*)&sin->sin_addr, buf, sizeof(buf));
 		}
-		printf("SCTP_PEER_ADDR_CHANGE: %s, addr=%s, assoc=%xh\n", str,
-		       buf, (uint32_t)spc->spc_assoc_id);
+		printf("SCTP_PEER_ADDR_CHANGE: %s, addr=%s, assoc=0x%x\n",
+		       str, buf, (uint32_t)spc->spc_assoc_id);
 		break;
 	case SCTP_REMOTE_ERROR:
 		sre = &snp->sn_remote_error;
-		printf("SCTP_REMOTE_ERROR: assoc=%xh\n",
+		printf("SCTP_REMOTE_ERROR: assoc=0x%x\n",
 		       (uint32_t)sre->sre_assoc_id);
 		break;
 
@@ -182,7 +183,7 @@ handle_notification(int fd,char *notify_buf) {
 	case SCTP_AUTHENTICATION_EVENT:
 	{
 		auth = (struct sctp_authkey_event *)&snp->sn_auth_event;
-		printf("SCTP_AUTHKEY_EVENT: assoc=%xh - ",
+		printf("SCTP_AUTHKEY_EVENT: assoc=0x%x - ",
 		       (uint32_t)auth->auth_assoc_id);
 		switch(auth->auth_indication) {
 		case SCTP_AUTH_NEWKEY:
@@ -205,7 +206,7 @@ handle_notification(int fd,char *notify_buf) {
 		int len;
 		char *strscope="unknown";
 		strrst = (struct sctp_stream_reset_event *)&snp->sn_strreset_event;
-		printf("SCTP_STREAM_RESET_EVENT: assoc=%xh\n",
+		printf("SCTP_STREAM_RESET_EVENT: assoc=0x%x\n",
 		       (uint32_t)strrst->strreset_assoc_id);
 		if (strrst->strreset_flags & SCTP_STRRESET_INBOUND_STR) {
 			strscope = "inbound";
@@ -252,7 +253,7 @@ handle_notification(int fd,char *notify_buf) {
 			sprintf(msgbuf,"unknown flags:%d",ssf->ssf_flags);
 			msg = msgbuf;
 		}
-		printf("SCTP_SEND_FAILED: assoc=%xh flag indicate:%s\n",
+		printf("SCTP_SEND_FAILED: assoc=0x%x flag indicate:%s\n",
 		       (uint32_t)ssf->ssf_assoc_id,msg);
 
 	}
@@ -262,7 +263,7 @@ handle_notification(int fd,char *notify_buf) {
 	  {
 	    struct sctp_adaption_event *ae;
 	    ae = &snp->sn_adaption_event;
-	    printf("SCTP_ADAPTION_INDICATION: assoc=%xh - indication:0x%x\n",
+	    printf("SCTP_ADAPTION_INDICATION: assoc=0x%x - indication:0x%x\n",
 		   (uint32_t)ae->sai_assoc_id, (uint32_t)ae->sai_adaption_ind);
 	  }
 	  break;
@@ -310,11 +311,11 @@ handle_notification(int fd,char *notify_buf) {
 
 	case SCTP_SHUTDOWN_EVENT:
                 sse = &snp->sn_shutdown_event;
-		printf("SCTP_SHUTDOWN_EVENT: assoc=%xh\n",
+		printf("SCTP_SHUTDOWN_EVENT: assoc=0x%x\n",
 		       (uint32_t)sse->sse_assoc_id);
 		break;
 	default:
-		printf("Unknown notification event type=%xh\n", 
+		printf("Unknown notification event type=0x%x\n", 
 		       snp->sn_header.sn_type);
 	} /* end switch(snp->sn_header.sn_type) */
 	if(continualINIT && asocDown){
@@ -405,7 +406,7 @@ sctpReadInput(int fd, distributor *o,sctpAdaptorMod *r)
       }
     }
     if((errno != ENOBUFS) && (errno != EAGAIN))
-      printf("Read returns %d errno:%d control len is %d msgflg:%x\n",
+      printf("Read returns %d errno:%d control len is %d msgflg:0x%x\n",
 	     sz,errno,
 	     msg.msg_controllen,msg.msg_flags);
     if(errno == EBADF){

@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.47 2006-07-18 16:20:27 tuexen Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.48 2006-07-18 16:30:46 lei Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -685,7 +685,7 @@ SCTPPrintAnAddress(struct sockaddr *a)
     dl = (struct sockaddr_dl *)a;
     strncpy(tbuf,dl->sdl_data,dl->sdl_nlen);
     tbuf[dl->sdl_nlen] = 0;
-    printf("Intf:%s (len:%d)Interface index:%d type:%x(%d) ll-len:%d ",
+    printf("Intf:%s (len:%d)Interface index:%d type:0x%x(%d) ll-len:%d ",
 	   tbuf,
 	   dl->sdl_nlen,
 	   dl->sdl_index,
@@ -1689,7 +1689,7 @@ int cmd_getassocids(char *argv[], int argc)
 	       ids.asls_more_to_get
 		);
 	for (i=0; i < ids.asls_numb_present; i++ ) {
-		printf("id:%x ",(uint32_t)ids.asls_assoc_id[i]);
+		printf("id:0x%x ",(uint32_t)ids.asls_assoc_id[i]);
 		if((i+1) % 16 == 0){
 			printf("\n");
 		}
@@ -1709,7 +1709,7 @@ int cmd_getassocids(char *argv[], int argc)
 		       ids.asls_more_to_get
 			);
 		for (i=0; i < ids.asls_numb_present; i++ ) {
-			printf("id:%x ",(uint32_t)ids.asls_assoc_id[i]);
+			printf("id:0x%x ",(uint32_t)ids.asls_assoc_id[i]);
 			if((i+1) % 16 == 0){
 				printf("\n");
 			}
@@ -1837,7 +1837,7 @@ cmd_setdebug(char *argv[], int argc)
     return(0);
   }
   if(argc == 0){
-    printf("Current settings are %x\n",num);
+    printf("Current settings are 0x%x\n",num);
   }else{
     newlevel = strtoul(argv[0],NULL,0);
     if(newlevel == 0){
@@ -2402,7 +2402,7 @@ cmd_getfragmentation(char *argv[], int argc)
 		&adaption, &sz) != 0) {
     printf("Can't get fragmentation setting socket err:%d!\n",errno);
   }else{
-    printf("Adaption bits returned are %x\n",adaption);
+    printf("Adaption bits returned are 0x%x\n",adaption);
     if(adaption == 1){
       printf("Fragmentation is NOT being performed by SCTP\n");
     }else{
@@ -2532,7 +2532,7 @@ int cmd_getinittsn(char *argv[], int argc)
     printf("Can't get initial tsn on socket err:%d!\n",errno);
   }else{
     if(init_tsn){
-      printf("Initial TSN set to %x\n",init_tsn);
+      printf("Initial TSN set to 0x%x\n",init_tsn);
     }else{
       printf("Initial TSN will be a random number\n");
     }
@@ -2847,7 +2847,7 @@ cmd_getpaddrs(char *argv[], int argc)
 	} else {
 		asocid = (sctp_assoc_t)strtoul(argv[0], NULL, 0);
 	}
-	printf("Getting addresses for assoc id %x\n", (uint32_t)asocid);
+	printf("Getting addresses for assoc id 0x%x\n", (uint32_t)asocid);
 #ifdef SOLARIS
 	cnt = sctp_getpaddrs(adap->fd, asocid, (void *)&addrs);
 #else
@@ -2983,7 +2983,7 @@ static int cmd_cwndlog(char *argv[], int argc)
 			idx = SCTP_STR_LOG_FROM_EXPRS_DEL+1;
 		}
 		if(req->log[i].event_type == SCTP_LOG_EVENT_CWND) {
-			printf("%d: net:%x chg:%d cwnd:%d flight:%d  by:%s\n",
+			printf("%d: net:0x%x chg:%d cwnd:%d flight:%d  by:%s\n",
 			       i,
 			       (uint32_t)req->log[i].x.cwnd.net,
 			       (req->log[i].x.cwnd.cwnd_augment*1024),
@@ -3265,7 +3265,7 @@ cmd_gethbdelay(char *argv[], int argc)
   if(sp.spp_assoc_id) {
 	  printf("Current failure threshold is %d\n",sp.spp_pathmaxrxt);
 	  printf("Current HB interval is %d\n",sp.spp_hbinterval);
-	  printf("Assoc id is %x\n",(uint32_t)sp.spp_assoc_id);
+	  printf("Assoc id is 0x%x\n",(uint32_t)sp.spp_assoc_id);
   } else {
 	  printf("EP default failure threshold is %d\n",sp.spp_pathmaxrxt);
 	  printf("EP default HB interval is %d\n",sp.spp_hbinterval);
@@ -3656,7 +3656,7 @@ cmd_getrtt(char *argv[], int argc)
     printf("Failed to get dest info err:%d\n",errno);
     return 0;
   }
-  printf("Destination state is %x\n",so.spinfo_state);
+  printf("Destination state is 0x%x\n",so.spinfo_state);
   printf("Destination RTO is %d\n",so.spinfo_rto);
   printf("Destination srtt is %d\n",so.spinfo_srtt);
   printf("Destination cwnd is %d\n",so.spinfo_cwnd);
@@ -3682,7 +3682,7 @@ cmd_getsnd(char *argv[], int argc)
 		printf("Failed to get dest info err:%d\n",errno);
 		return 0;
 	}
-	printf("For association %x\n",(uint32_t)so.ss_assoc_id);
+	printf("For association 0x%x\n",(uint32_t)so.ss_assoc_id);
 	printf("Total sndbuf %d\n",(int)so.ss_total_sndbuf);
 	printf("Total sndbuf mbuf %d\n",(int)so.ss_total_mbuf_sndbuf);
  	printf("Total in recvbuf %d\n",(int)so.ss_total_recv_buf);
@@ -3721,11 +3721,11 @@ print_peer_addr_info(struct sctp_paddrinfo *so)
   }
   printf("Current fail thresh is %d\n",sp.spp_pathmaxrxt);
   printf("Current HB interval is %d\n",sp.spp_hbinterval);
-  printf("Destination state is %x\n",so->spinfo_state);
+  printf("Destination state is 0x%x\n",so->spinfo_state);
   printf("Destination RTO is %d\n",so->spinfo_rto);
   printf("Destination srtt is %d\n",so->spinfo_srtt);
   printf("Destination cwnd is %d\n",so->spinfo_cwnd);
-  printf("Assoc id is %x\n",(uint32_t)sp.spp_assoc_id);
+  printf("Assoc id is 0x%x\n",(uint32_t)sp.spp_assoc_id);
   /* Disable this so we don't change it */
   return(0);
 }
@@ -3813,7 +3813,7 @@ cmd_heart(char *argv[], int argc)
 		}
 		printf("Current fail thresh is %d\n",sp.spp_pathmaxrxt);
 		printf("Current HB interval is %d\n",sp.spp_hbinterval);
-		printf("Assoc id is %x\n",(uint32_t)sp.spp_assoc_id);
+		printf("Assoc id is 0x%x\n",(uint32_t)sp.spp_assoc_id);
 	}else if(strcmp(bool, "allon") == 0) {
 		memset((caddr_t)&sp.spp_address,0,sizeof(sp.spp_address));
 		if(getsockopt(adap->fd,IPPROTO_SCTP,
@@ -3841,7 +3841,7 @@ cmd_heart(char *argv[], int argc)
 		}
 		printf("Current fail thresh is %d\n",sp.spp_pathmaxrxt);
 		printf("Current HB interval is %d\n",sp.spp_hbinterval);
-		printf("Assoc id is %x\n",(uint32_t)sp.spp_assoc_id);
+		printf("Assoc id is 0x%x\n",(uint32_t)sp.spp_assoc_id);
 	}else{
 		printf("heart: expected on or off allon or alloff\n");
 		return -1;
@@ -4149,7 +4149,7 @@ cmd_netstats(char *argv[], int argc)
 	}
     }
 
-    printf("Setting on assoc id %x\n",(uint32_t)assoc_id);
+    printf("Setting on assoc id 0x%x\n",(uint32_t)assoc_id);
     /* Now we get the association parameters so we know how
      * many networks there are.
      */
@@ -4391,7 +4391,7 @@ cmd_peeloff(char *argv[], int argc)
     printf("Can't find association\n");
     return(-1);
   }
-  printf("Peeling off fd:%d assoc_id:%xh\n",
+  printf("Peeling off fd:%d assoc_id:0x%xh\n",
 	 adap->fd,(uint32_t)assoc_id);
   newfd = sctp_peeloff(adap->fd, assoc_id);
   if(newfd < 0){
@@ -4417,7 +4417,7 @@ static int cmd_getlocaladdrs(char *argv[], int argc)
 
   id = get_assoc_id();
   raddr = NULL;
-  printf("Got asoc id %x\n",(uint32_t)id);
+  printf("Got asoc id 0x%x\n",(uint32_t)id);
   cnt = sctp_getladdrs(adap->fd, id, (void *)&raddr);
   printf("Cnt returned is %d\n",cnt);
   if(raddr != NULL){
@@ -4462,10 +4462,10 @@ cmd_getstatus(char *argv[], int argc)
     printf("Can't do GET_STATUS socket option! err:%d\n", errno);
     return(-1);
   }
-  printf("Association Id:%x\n",(uint32_t)stat.sstat_assoc_id);
-  printf("      State   :%x\n",(uint32_t)stat.sstat_state);
-  printf("    unacked   :%x\n",(uint32_t)stat.sstat_unackdata);
-  printf("    pending   :%x\n",(uint32_t)stat.sstat_penddata);
+  printf("Association Id:0x%x\n",(uint32_t)stat.sstat_assoc_id);
+  printf("      State   :0x%x\n",(uint32_t)stat.sstat_state);
+  printf("    unacked   :0x%x\n",(uint32_t)stat.sstat_unackdata);
+  printf("    pending   :0x%x\n",(uint32_t)stat.sstat_penddata);
   printf("    in-strm   :%d\n",(int)stat.sstat_instrms);
   printf("   out-strm   :%d\n",(int)stat.sstat_outstrms);
   printf("   frag-point :%d\n",(int)stat.sstat_fragmentation_point);
@@ -4547,7 +4547,7 @@ cmd_rwnd(char *argv[], int argc)
     return(-1);
   }
 
-  printf("Setting on assoc id %x\n",(uint32_t)assoc_id);
+  printf("Setting on assoc id 0x%x\n",(uint32_t)assoc_id);
   sasoc.sasoc_assoc_id = assoc_id;
   sz = sizeof(sasoc);  
   if(getsockopt(adap->fd,IPPROTO_SCTP,
@@ -4927,7 +4927,7 @@ cmd_seterr(char *argv[], int argc)
     printf("Failed to get assoc id with HB info err:%d\n",errno);
     return 0;
   }
-  printf("Setting on assoc id %x\n",(uint32_t)sp.spp_assoc_id);
+  printf("Setting on assoc id 0x%x\n",(uint32_t)sp.spp_assoc_id);
   sasoc.sasoc_assoc_id = sp.spp_assoc_id;
   if(setsockopt(adap->fd,IPPROTO_SCTP,
 		SCTP_ASSOCINFO, &sasoc, sizeof(sasoc)) != 0) {
@@ -5091,25 +5091,25 @@ parse_send_opt(char *p)
 static int
 cmd_setopts(char *argv[], int argc)
 {
-  int len,i;
-  char *p;
-  if (argc != 1) {
-    printf("setopts: expected 1 argument\n");
-    return -1;
-  }
-  sendOptions = 0;
-  len = strlen(argv[0]);
-  p = argv[0];
-  for(i=0;i<len;i++){
-    if(argv[0][i] == '|'){
-      argv[0][i] = 0;
-      sendOptions |= parse_send_opt(p);
-      p = &argv[0][(i+1)];
+    int len, i;
+    char *p;
+    if (argc != 1) {
+	printf("setopts: expected 1 argument\n");
+	return -1;
     }
-  }
-  sendOptions |= parse_send_opt(p);
-  printf("Send options now set to %x\n",sendOptions);
-  return 0;
+    sendOptions = 0;
+    len = strlen(argv[0]);
+    p = argv[0];
+    for (i = 0; i < len; i++) {
+	if (argv[0][i] == '|') {
+	    argv[0][i] = 0;
+	    sendOptions |= parse_send_opt(p);
+	    p = &argv[0][(i + 1)];
+	}
+    }
+    sendOptions |= parse_send_opt(p);
+    printf("Send options now set to 0x%x\n", sendOptions);
+    return 0;
 }
 
 
