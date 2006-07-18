@@ -160,6 +160,7 @@ struct rsp_timer_entry {
 	/* The Req field is filled in if timer does something for you */
 	struct rsp_enrp_req 	*req;		/* data being sent */
 	int 			timer_type;	/* type of timer */
+	struct rsp_timer_entry *chained_next;
 };
 
 #define RSP_POOL_STATE_REQUESTED       0x0001

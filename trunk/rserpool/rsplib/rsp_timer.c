@@ -42,6 +42,26 @@ rsp_aloc_req(const char *name, int namelen, void *msg, int msglen, int type)
 void
 handle_t1_enrp_timer(struct rsp_timer_entry *entry)
 {
+	/* ok, we must start server hunt */
+	struct rsp_timer_entry *te;
+	struct rsp_enrp_scope *scp;
+
+	entry->chained_next = NULL;
+	scp = entry->scp;
+	scp->homeServer = NULL;
+	rsp_start_enrp_server_hunt(scp);
+	if(scp->homeServer == NULL) {
+		/* need to chain on, SH has begun */
+		if(scp->enrp_tmr->chained_next) {
+			te = scp->enrp_tmr->chained_next;
+			while(te->chained_next != NULL)
+				te = te->chained_next;
+			/* add myself to the list */
+			te->chained_next = entry;
+		} else {
+			scp->enrp_tmr->chained_next = entry;
+		}
+	}
 }
 
 void
@@ -133,6 +153,7 @@ rsp_start_timer(struct rsp_enrp_scope *scp,
 			fprintf(stderr, "No memory for timer err:%d\n", errno);
 			return(-1);
 		}
+		te->chained_next = NULL;
 	} else {
 		te = *ote;
 		/* sanity check */

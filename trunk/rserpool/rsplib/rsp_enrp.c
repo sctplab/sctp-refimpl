@@ -685,6 +685,51 @@ rsp_find_enrp_entry_by_addr(struct rsp_enrp_scope *scp,
 }
 
 void
+rsp_retry_after_sh(struct rsp_timer_entry *te)
+{
+	switch(te->timer_type) {
+	case RSP_T1_ENRP_REQUEST:
+		/* resend the ENRP request and
+		 * restart timer 
+		 */
+		rsp_send_enrp_req(te->sdata, te->req);
+		rsp_start_timer(te->scp, te->sdata, te->sdata->timers[RSP_T1_ENRP_REQUEST], 
+				te->req, RSP_T1_ENRP_REQUEST, &te);
+		break;
+	case RSP_T2_REGISTRATION:
+		/* resend the reg request and
+		 * restart timer FIX ME (yet to do)
+		 */
+		break;
+	case RSP_T3_DEREGISTRATION:
+		/* resend the dereg request and
+		 * restart timer FIX ME (yet to do)
+		 */
+		break;
+	case RSP_T4_REREGISTRATION:
+		/* resend the reg request and
+		 * restart any timer. FIX ME (yet to do)
+		 */
+		break;
+	case RSP_T5_SERVERHUNT:
+		/* should not happen */
+		fprintf(stderr, "Saw on retry a SH?\n");
+		break;
+	case RSP_T6_SERVERANNOUNCE:
+		fprintf(stderr, "Saw on retry a server announce?\n");
+		break;
+	case RSP_T7_ENRPOUTDATE:
+		/* don't care if cache is out of date */
+		break;
+	default:
+		fprintf(stderr, "Saw on retry an unknown type %d?\n",
+			te->timer_type);
+		break;
+	}
+}
+
+
+void
 handle_enrpserver_notification (struct rsp_enrp_scope *scp, char *buf, 
 				struct sctp_sndrcvinfo *sinfo, ssize_t sz,
 				struct sockaddr *from, socklen_t from_len)
@@ -719,10 +764,17 @@ handle_enrpserver_notification (struct rsp_enrp_scope *scp, char *buf,
 			enrp->state = RSP_ASSOCIATION_UP;
 			if(scp->homeServer == NULL) {
 				/* we have a home server */
+				struct rsp_timer_entry *te;
 				scp->homeServer = enrp;
 				scp->state &= ~RSP_SERVER_HUNT_IP;
 				scp->state |= RSP_ENRP_HS_FOUND;
 				rsp_stop_timer(scp->enrp_tmr);
+				te = scp->enrp_tmr->chained_next;
+				while(te) {
+					/* unwind and restart any guys waiting on this to finish */
+					rsp_retry_after_sh(te);
+					te = te->chained_next;
+				}
 			}
 			break;
 		case SCTP_COMM_LOST:
@@ -1027,7 +1079,9 @@ rsp_enrp_make_name_request(struct rsp_socket *sd,
 	free(req->req);
 	req->req = NULL;
 	rsp_free_req(req);
-	if(ote)
+	if(ote) {
+		rsp_stop_timer(ote);
 		free(ote);
+	}
 	return(0);
 }
