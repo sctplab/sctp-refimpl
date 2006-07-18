@@ -104,6 +104,7 @@ extern struct sysctl_oid sysctl__net_inet_sctp_do_sctp_drain;
 extern struct sysctl_oid sysctl__net_inet_sctp_warm_crc_table;
 extern struct sysctl_oid sysctl__net_inet_sctp_abort_at_limit;
 extern struct sysctl_oid sysctl__net_inet_sctp_strict_data_order;
+extern struct sysctl_oid sysctl__net_inet_sctp_stats;
 #ifdef SCTP_DEBUG
 extern struct sysctl_oid sysctl__net_inet_sctp_debug;
 #endif
@@ -376,6 +377,8 @@ kern_return_t SCTP_start (kmod_info_t * ki, void * d) {
 	sysctl_register_oid(&sysctl__net_inet_sctp_warm_crc_table);
 	sysctl_register_oid(&sysctl__net_inet_sctp_abort_at_limit);
 	sysctl_register_oid(&sysctl__net_inet_sctp_strict_data_order);
+	sysctl_register_oid(&sysctl__net_inet_sctp_stats);
+
 #ifdef SCTP_DEBUG
 	sysctl_register_oid(&sysctl__net_inet_sctp_debug);
 #endif
@@ -464,6 +467,7 @@ kern_return_t SCTP_stop (kmod_info_t * ki, void * d) {
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_warm_crc_table);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_abort_at_limit);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_strict_data_order);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_stats);
 #ifdef SCTP_DEBUG
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_debug);
 #endif
