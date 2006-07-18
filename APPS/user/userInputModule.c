@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.50 2006-07-18 17:38:57 tuexen Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.51 2006-07-18 19:46:25 tuexen Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -3359,6 +3359,7 @@ cmd_getstat(char *argv[], int argc)
 	p(sctps_inpackets,           "inpackets");
 	nl("RECV");
 	p(sctps_recvpackets,         "packets");
+	p(sctps_recvdatagrams,       "datagrams");
 	p(sctps_recvpktwithdata,     "pktwithdata");
 	p(sctps_recvsacks,           "sacks");
 	p(sctps_recvdata,            "data");
