@@ -19,7 +19,7 @@ rsp_free_req(struct rsp_enrp_req *req)
 }
 
 struct rsp_enrp_req *
-rsp_aloc_req(char *name, int namelen, void *msg, int msglen, int type)
+rsp_aloc_req(const char *name, int namelen, void *msg, int msglen, int type)
 {
 	struct rsp_enrp_req *r;
 	r = malloc(sizeof(struct rsp_enrp_req));
@@ -62,7 +62,7 @@ handle_t4_rereg_timer(struct rsp_timer_entry *entry)
 void
 handle_t5_hunt_timer(struct rsp_timer_entry *entry)
 {
-	rsp_start_enrp_server_hunt(entry->scp, 1);
+	rsp_start_enrp_server_hunt(entry->scp);
 }
 
 void

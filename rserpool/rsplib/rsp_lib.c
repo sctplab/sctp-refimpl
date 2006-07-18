@@ -470,7 +470,7 @@ rsp_load_file(FILE *io, char *file)
 	rsp_pcbinfo.num_fds++;
 
 	/* start server hunt procedures */
-	rsp_start_enrp_server_hunt(es, NULL);
+	rsp_start_enrp_server_hunt(es);
 
 	/* Here we must send off the id to the reading thread 
 	 * this will get it to add it to the fd list its watching
@@ -544,7 +544,7 @@ rsp_load_config_file(const char *confprefix)
 }
 
 void
-rsp_start_enrp_server_hunt(struct rsp_enrp_scope *scp, struct rsp_timer_entry *queue)
+rsp_start_enrp_server_hunt(struct rsp_enrp_scope *scp)
 {
 	/* 
 	 * Formulate and set up an association to a
@@ -614,16 +614,6 @@ rsp_start_enrp_server_hunt(struct rsp_enrp_scope *scp, struct rsp_timer_entry *q
 			scp->timers[RSP_T5_SERVERHUNT], 
 			(struct rsp_enrp_req *)NULL, 
 			RSP_T5_SERVERHUNT, &scp->enrp_tmr);
-	if(queue) {
-		tmr = scp->enrp_tmr;
-		if(tmr) {
-			while(tmr->queued_next_entry != NULL) {
-				tmr = tmr->queued_next_entry;
-			}
-			tmr->queued_next_entry = queue;
-			queue->queued_next_entry = NULL;
-		}
-	}
 }
 
 static struct rsp_enrp_scope *
@@ -659,7 +649,7 @@ rsp_find_socket_with_sd(int sd)
 {
 	struct rsp_socket *sock;
 
-	sock = (struct rsp_socket *)HashedTbl_lookupKeyed(rsp_pcbinfo.sd_pool 
+	sock = (struct rsp_socket *)HashedTbl_lookupKeyed(rsp_pcbinfo.sd_pool,
 							  sd,
 							  &sd,
 							  sizeof(sd),
@@ -887,7 +877,8 @@ rsp_connect(int sockfd, const char *name, size_t namelen)
 	 *
 	 */
 	struct rsp_pool *pool;
-	struct rsp_socket *scp;
+	struct rsp_socket *sd;
+	struct rsp_enrp_scope *scp;
 
 	/* steps:
 	 *
@@ -905,15 +896,33 @@ rsp_connect(int sockfd, const char *name, size_t namelen)
 		return (-1);
 	}
 	
-	scp = rsp_find_socket_with_sd(sockfd);
-	if(scp == NULL) {
+	sd = rsp_find_socket_with_sd(sockfd);
+	if(sd == NULL) {
 		goto out;
 	}
+	scp = sd->scp;
+
 	/* now we have a socket, lets look for the name */
 	pool = (struct rsp_pool *)HashedTbl_lookup(scp->cache , name, namelen, NULL);
-	if(pool == NULL) {
+	if ((pool == NULL) ||
+	    (pool->state == RSP_POOL_STATE_REQUESTED)) {
 		/* we need to get the name first */
+		rsp_enrp_make_name_request(sd, pool, name, namelen);
+	} else if ((pool->auto_update == 0) &&
+		   (pool->state != RSP_POOL_STATE_TIMEDOUT)){
+		/* check to see if its aged and needs update */
+		struct timeval now;
+		gettimeofday(&now, NULL);
+		if ((now.tv_sec - pool->received.tv_sec) >= (sd->timers[RSP_T7_ENRPOUTDATE]/1000)) {
+			pool->state = RSP_POOL_STATE_TIMEDOUT;
+			rsp_enrp_make_name_request(sd, pool, name, namelen);
+		}
 	}
+	/* If we wanted to pre-setup an assoc, we would do it
+	 * here. Right now I don't want to and I think its ok
+	 * just to get the caceh sync'd.. the first send will
+	 * implictly setup the assoc getting a piggyback CE+Data.
+	 */
 	return (0);
 }
 
@@ -1068,8 +1077,8 @@ rsp_forcefailover(int sockfd,
 	return (0);
 }
 
-static int
-rsp_inernal_poll(nfds_t nfds, int timeout)
+int
+rsp_internal_poll(nfds_t nfds, int timeout, int ret_from_enrp)
 {
 	struct rsp_timer_entry *entry;
 	struct timeval now;
@@ -1143,8 +1152,10 @@ rsp_inernal_poll(nfds_t nfds, int timeout)
 		if(poll_ret > 0) {
 			/* we have some to deal with */
 			ret = rsp_process_fds(poll_ret);
-			if (poll_ret - ret) {
+			if ((poll_ret - ret) > 0) {
 				return(poll_ret - ret);
+			} else if(ret_from_enrp) {
+				return (0);
 			}
 		}
 		if(poll_ret < 0) {
@@ -1226,7 +1237,7 @@ rsp_select(int nfds,
 		}
 		nat++;
 	}
-	ret = rsp_inernal_poll((nfds_t)(added_fds+rsp_pcbinfo.num_fds), ms);
+	ret = rsp_internal_poll((nfds_t)(added_fds+rsp_pcbinfo.num_fds), ms, 0);
 	nret = ret;
 	
 	if(readfds) {
@@ -1279,7 +1290,7 @@ rsp_poll ( struct pollfd fds[], nfds_t nfds, int timeout)
 	for(i=0; i<nfds; i++) {
 		rsp_pcbinfo.watchfds[(i+rsp_pcbinfo.num_fds)] = fds[i];
 	}
-	ret = rsp_inernal_poll((nfds_t)(nfds+rsp_pcbinfo.num_fds), timeout);
+	ret = rsp_internal_poll((nfds_t)(nfds+rsp_pcbinfo.num_fds), timeout, 0);
 	for(i=0; i<nfds; i++) {
 		fds[i] = rsp_pcbinfo.watchfds[(i+rsp_pcbinfo.num_fds)];
 	}
