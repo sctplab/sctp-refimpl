@@ -188,6 +188,7 @@ unsigned int sctp_early_fr = 0;
 unsigned int sctp_early_fr_msec = SCTP_MINFR_MSEC_TIMER;
 unsigned int sctp_use_rttvar_cc = 0;
 int sctp_says_check_for_deadlock = 0;
+unsigned int sctp_asconf_auth_nochk = 0;
 unsigned int sctp_auth_disable = 0;
 unsigned int sctp_auth_random_len = SCTP_AUTH_RANDOM_SIZE_DEFAULT;
 unsigned int sctp_auth_hmac_id_default = SCTP_AUTH_HMAC_ID_SHA1;
@@ -299,7 +300,6 @@ sctp_split_chunks(struct sctp_association *asoc,
 
 	chk->book_size >>= 1;
 	new_chk->book_size -= chk->book_size;
-
 
 	/* now adjust the marks */
 	if (chk->rec.data.rcv_flags & SCTP_DATA_NOT_FRAG) {
@@ -805,6 +805,10 @@ SYSCTL_UINT(_net_inet_sctp, OID_AUTO, deadlock_detect, CTLFLAG_RW,
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, early_fast_retran_msec, CTLFLAG_RW,
     &sctp_early_fr_msec, 0,
     "Early Fast Retransmit minimum timer value");
+
+SYSCTL_UINT(_net_inet_sctp, OID_AUTO, asconf_auth_nochk, CTLFLAG_RW,
+    &sctp_asconf_auth_nochk, 0,
+    "Disable SCTP ASCONF AUTH requirement");
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, auth_disable, CTLFLAG_RW,
     &sctp_auth_disable, 0,
@@ -3717,9 +3721,17 @@ sctp_optsset(struct socket *so,
 			shmac = mtod(m, struct sctp_hmacalgo *);
 			size = size / sizeof(shmac->shmac_idents[0]);
 			hmaclist = sctp_alloc_hmaclist(size);
+			if (hmaclist == NULL) {
+				error = ENOMEM;
+				break;
+			}
 			for (i = 0; i < size; i++) {
 				hmacid = shmac->shmac_idents[i];
-				sctp_auth_add_hmacid(hmaclist, (uint16_t) hmacid);
+				if (sctp_auth_add_hmacid(hmaclist, (uint16_t) hmacid)) {
+					/* invalid HMACs were found */;
+					error = EINVAL;
+					goto sctp_set_hmac_done;
+				}
 			}
 			/* set it on the endpoint */
 			SCTP_INP_WLOCK(inp);
@@ -3727,6 +3739,7 @@ sctp_optsset(struct socket *so,
 				sctp_free_hmaclist(inp->sctp_ep.local_hmacs);
 			inp->sctp_ep.local_hmacs = hmaclist;
 			SCTP_INP_WUNLOCK(inp);
+		sctp_set_hmac_done:
 			break;
 		}
 	case SCTP_AUTH_ACTIVE_KEY:
@@ -5806,6 +5819,9 @@ sctp_sysctl(name, namelen, oldp, oldlenp, newp, newlen)
 	case SCTPCTL_EARLY_FR_MSEC:
 		return (sysctl_int(oldp, oldlenp, newp, newlen,
 		    &sctp_early_fr_msec));
+	case SCTPCTL_ASCONF_AUTH_NOCHK:
+		return (sysctl_int(oldp, oldlenp, newp, newlen,
+		    &sctp_auth_disable));
 	case SCTPCTL_AUTH_DISABLE:
 		return (sysctl_int(oldp, oldlenp, newp, newlen,
 		    &sctp_auth_disable));
@@ -6122,6 +6138,14 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
 	    SYSCTL_DESCR("Early Fast Retransmit minimum Timer value"),
 	    NULL, 0, &sctp_early_fr_msec, 0,
 	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_EARLY_FR_MSEC,
+	    CTL_EOL);
+
+	sysctl_createv(clog, 0, NULL, NULL,
+	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
+	    CTLTYPE_INT, "asconf_auth_nochk",
+	    SYSCTL_DESCR("Disable SCTP ASCONF AUTH requirement"),
+	    NULL, 0, &sctp_asconf_auth_nochk, 0,
+	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_ASCONF_AUTH_NOCHK,
 	    CTL_EOL);
 
 	sysctl_createv(clog, 0, NULL, NULL,
