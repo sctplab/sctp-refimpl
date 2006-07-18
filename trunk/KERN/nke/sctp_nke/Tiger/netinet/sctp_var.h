@@ -85,21 +85,22 @@ __FBSDID("$FreeBSD:$");
 #define SCTPCTL_RTTVAR_CC           29
 #define SCTPCTL_DEADLOCK_DET        30
 #define SCTPCTL_EARLY_FR_MSEC       31
-#define SCTPCTL_AUTH_DISABLE        32
-#define SCTPCTL_AUTH_RANDOM_LEN     33
-#define SCTPCTL_AUTH_HMAC_ID        34
-#define SCTPCTL_ABC_L_VAR           35
-#define SCTPCTL_MAX_MBUF_CHAIN      36
-#define SCTPCTL_CMT_USE_DAC         37
-#define SCTPCTL_DO_DRAIN            38
-#define SCTPCTL_WARM_CRC32          39
-#define SCTPCTL_QLIMIT_ABORT        40
-#define SCTPCTL_STRICT_ORDER        41
+#define SCTPCTL_ASCONF_AUTH_NOCHK   32
+#define SCTPCTL_AUTH_DISABLE        33
+#define SCTPCTL_AUTH_RANDOM_LEN     34
+#define SCTPCTL_AUTH_HMAC_ID        35
+#define SCTPCTL_ABC_L_VAR           36
+#define SCTPCTL_MAX_MBUF_CHAIN      37
+#define SCTPCTL_CMT_USE_DAC         38
+#define SCTPCTL_DO_DRAIN            39
+#define SCTPCTL_WARM_CRC32          40
+#define SCTPCTL_QLIMIT_ABORT        41
+#define SCTPCTL_STRICT_ORDER        42
 #ifdef SCTP_DEBUG
-#define SCTPCTL_DEBUG               42
-#define SCTPCTL_MAXID		    42
+#define SCTPCTL_DEBUG               43
+#define SCTPCTL_MAXID		    43
 #else
-#define SCTPCTL_MAXID		    41
+#define SCTPCTL_MAXID		    42
 #endif
 #endif
 
@@ -137,6 +138,7 @@ __FBSDID("$FreeBSD:$");
         { "use_rttvar_congctrl", CTLTYPE_INT }, \
         { "deadlock_detect", CTLTYPE_INT }, \
         { "early_fast_retran_msec", CTLTYPE_INT }, \
+	{ "asconf_auth_nochk", CTLTYPE_INT }, \
 	{ "auth_disable", CTLTYPE_INT }, \
 	{ "auth_random_len", CTLTYPE_INT }, \
 	{ "auth_hmac_id", CTLTYPE_INT }, \
@@ -184,6 +186,7 @@ __FBSDID("$FreeBSD:$");
         { "use_rttvar_congctrl", CTLTYPE_INT }, \
         { "deadlock_detect", CTLTYPE_INT }, \
         { "early_fast_retran_msec", CTLTYPE_INT }, \
+	{ "asconf_auth_nochk", CTLTYPE_INT }, \
 	{ "auth_disable", CTLTYPE_INT }, \
 	{ "auth_random_len", CTLTYPE_INT }, \
 	{ "auth_hmac_id", CTLTYPE_INT }, \

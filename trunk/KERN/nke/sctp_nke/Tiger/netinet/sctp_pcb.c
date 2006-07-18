@@ -5739,6 +5739,14 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			hmacs = (struct sctp_auth_hmac_algo *)phdr;
 			num_hmacs = (plen - sizeof(*hmacs)) /
 			    sizeof(hmacs->hmac_ids[0]);
+			/* validate the hmac list */
+			if (sctp_verify_hmac_param(hmacs, num_hmacs)) {
+#ifdef SCTP_DEBUG
+				if (sctp_debug_on & SCTP_DEBUG_AUTH1)
+					printf("SCTP: invalid HMAC param\n");
+#endif
+				return (-2);
+			}
 			if (stcb->asoc.peer_hmacs != NULL)
 				sctp_free_hmaclist(stcb->asoc.peer_hmacs);
 			stcb->asoc.peer_hmacs = sctp_alloc_hmaclist(num_hmacs);
@@ -5831,6 +5839,14 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 		stcb->asoc.peer_supports_auth = 1;
 	} else {
 		stcb->asoc.peer_supports_auth = 0;
+	}
+	if (!sctp_asconf_auth_nochk && stcb->asoc.peer_supports_asconf &&
+	    !stcb->asoc.peer_supports_auth) {
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_AUTH1)
+			printf("SCTP: peer supports ASCONF but not AUTH\n");
+#endif
+		return (-2);
 	}
 	return (0);
 }

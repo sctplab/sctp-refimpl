@@ -152,12 +152,13 @@ sctp_stop_all_cookie_timers(struct sctp_tcb *stcb)
 
 /* INIT handler */
 static void
-sctp_handle_init(struct mbuf *m, int iphlen, int offset,
-    struct sctphdr *sh, struct sctp_init_chunk *cp, struct sctp_inpcb *inp,
-    struct sctp_tcb *stcb, struct sctp_nets *net)
+sctp_handle_init(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
+    struct sctp_init_chunk *cp, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
+    struct sctp_nets *net)
 {
 	struct sctp_init *init;
 	struct mbuf *op_err;
+	uint32_t init_limit;
 
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INPUT2) {
@@ -211,20 +212,27 @@ sctp_handle_init(struct mbuf *m, int iphlen, int offset,
 		sctp_abort_association(inp, stcb, m, iphlen, sh, op_err);
 		return;
 	}
+
+	init_limit = offset + ntohs(cp->ch.chunk_length);
+	if (sctp_validate_init_auth_params(m, offset + sizeof(*cp),
+					   init_limit)) {
+		/* auth parameter(s) error... send abort */
+		sctp_abort_association(inp, stcb, m, iphlen, sh, NULL);
+		return;
+	}
+
 	/* send an INIT-ACK w/cookie */
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INPUT3) {
 		printf("sctp_handle_init: sending INIT-ACK\n");
 	}
 #endif
-
 	sctp_send_initiate_ack(inp, stcb, m, iphlen, offset, sh, cp);
 }
 
 /*
  * process peer "INIT/INIT-ACK" chunk returns value < 0 on error
  */
-
 static int
 sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
     struct sctp_nets *net)
@@ -404,8 +412,12 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 	    (offset + sizeof(struct sctp_init_chunk)), initack_limit, sh,
 	    NULL)) {
 		/* Huh, we should abort */
+		sctp_abort_association(stcb->sctp_ep, stcb, m, iphlen, sh,
+		    NULL);
+#if 0
 		sctp_abort_notification(stcb, 0);
 		sctp_free_assoc(stcb->sctp_ep, stcb, 0);
+#endif
 		return (-1);
 	}
 	stcb->asoc.peer_hmac_id = sctp_negotiate_hmacid(stcb->asoc.peer_hmacs,

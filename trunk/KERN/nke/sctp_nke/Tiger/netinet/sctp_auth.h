@@ -112,6 +112,7 @@ typedef struct sctp_authinfo {
 /*
  * global variables
  */
+extern uint32_t sctp_asconf_auth_nochk;	/* sysctl to disable ASCONF auth chk */
 extern uint32_t sctp_auth_disable;	/* sysctl for temp feature interop */
 extern uint32_t sctp_auth_random_len;	/* sysctl */
 
@@ -168,13 +169,15 @@ sctp_copy_skeylist(const struct sctp_keyhead *src,
 /* hmac list handling */
 extern sctp_hmaclist_t *sctp_alloc_hmaclist(uint8_t num_hmacs);
 extern void sctp_free_hmaclist(sctp_hmaclist_t * list);
-extern void sctp_auth_add_hmacid(sctp_hmaclist_t * list, uint16_t hmac_id);
+extern int sctp_auth_add_hmacid(sctp_hmaclist_t * list, uint16_t hmac_id);
 extern sctp_hmaclist_t *sctp_copy_hmaclist(sctp_hmaclist_t * list);
 extern sctp_hmaclist_t *sctp_default_supported_hmaclist(void);
 extern uint16_t
 sctp_negotiate_hmacid(sctp_hmaclist_t * peer,
     sctp_hmaclist_t * local);
 extern int sctp_serialize_hmaclist(sctp_hmaclist_t * list, uint8_t * ptr);
+extern int sctp_verify_hmac_param(struct sctp_auth_hmac_algo *hmacs,
+    uint32_t num_hmacs);
 
 extern sctp_authinfo_t *sctp_alloc_authinfo(void);
 extern void sctp_free_authinfo(sctp_authinfo_t * authinfo);
@@ -184,16 +187,14 @@ extern uint32_t sctp_get_auth_chunk_len(uint16_t hmac_algo);
 extern uint32_t sctp_get_hmac_digest_len(uint16_t hmac_algo);
 extern uint32_t
 sctp_hmac(uint16_t hmac_algo, uint8_t * key, uint32_t keylen,
-    const uint8_t * text, uint32_t textlen,
-    uint8_t * digest);
+    const uint8_t * text, uint32_t textlen, uint8_t * digest);
 extern int
 sctp_verify_hmac(uint16_t hmac_algo, uint8_t * key, uint32_t keylen,
-    const uint8_t * text, uint32_t textlen,
-    uint8_t * digest, uint32_t digestlen);
+    const uint8_t * text, uint32_t textlen, uint8_t * digest,
+    uint32_t digestlen);
 extern uint32_t
 sctp_compute_hmac(uint16_t hmac_algo, sctp_key_t * key,
-    const uint8_t * text, uint32_t textlen,
-    uint8_t * digest);
+    const uint8_t * text, uint32_t textlen, uint8_t * digest);
 extern int sctp_auth_is_supported_hmac(sctp_hmaclist_t * list, uint16_t id);
 
 /* mbuf versions */
@@ -201,15 +202,8 @@ extern uint32_t
 sctp_hmac_m(uint16_t hmac_algo, uint8_t * key, uint32_t keylen,
     struct mbuf *m, uint32_t m_offset, uint8_t * digest);
 extern uint32_t
-sctp_compute_hmac_m(uint16_t hmac_algo, sctp_key_t * key,
-    struct mbuf *m, uint32_t m_offset,
-    uint8_t * digest);
-
-/* test functions */
-extern void sctp_test_hmac_sha1(void);
-extern void sctp_test_hmac_md5(void);
-extern void sctp_test_authkey(void);
-
+sctp_compute_hmac_m(uint16_t hmac_algo, sctp_key_t * key, struct mbuf *m,
+    uint32_t m_offset,  uint8_t * digest);
 
 /*
  * authentication routines
@@ -240,5 +234,13 @@ extern void
 sctp_notify_authentication(struct sctp_tcb *stcb,
     uint32_t indication, uint16_t keyid,
     uint16_t alt_keyid);
+extern int
+sctp_validate_init_auth_params(struct mbuf *m, int offset, int limit);
+
+
+/* test functions */
+extern void sctp_test_hmac_sha1(void);
+extern void sctp_test_hmac_md5(void);
+extern void sctp_test_authkey(void);
 
 #endif				/* __SCTP_AUTH_H__ */
