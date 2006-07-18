@@ -69,7 +69,7 @@ struct rsp_enrp_scope {
 	dlist_t 	*allPools;		/* list of all rsp_pool */
 	HashedTbl	*cache;			/* cache name->rsp_pool */
 	HashedTbl	*ipaddrPortHash;	/* ipadd -> rsp_pool_ele for sctp transport guys*/
-	HashedTbl	*vtagHash;		/* assoc id-> rsp_pool_ele */
+	HashedTbl	*asocidHash;		/* assoc id-> rsp_pool_ele */
 	/* Mutex for protection */
 	/* other stuff */
 	uint32_t 	timers[RSP_NUMBER_TIMERS]; /* default timers */
@@ -166,6 +166,9 @@ struct rsp_timer_entry {
 #define RSP_POOL_STATE_REQUESTED       0x0001
 #define RSP_POOL_STATE_RESPONDED       0x0002
 #define RSP_POOL_STATE_TIMEDOUT        0x0003
+#define RSP_POOL_STATE_NOTFOUND        0x0004
+
+struct rsp_pool_ele;
 
 /* A pool entry */
 struct rsp_pool {
@@ -178,6 +181,7 @@ struct rsp_pool {
 	uint32_t 	refcnt;			/* number of PE's pointing to me */
 	uint32_t	regType;		/* reg type - the policy */
 	struct timeval  received;		/* Time we got it */
+	struct rsp_pool_ele *lastUsed;
 	uint16_t        state;			/* State of this entry */
 	uint8_t		failover_allowed;	/* auto failover of queued messages? */
 	uint8_t         auto_update;		/* did we subscribe to upds */

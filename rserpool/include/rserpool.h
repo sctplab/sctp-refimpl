@@ -31,7 +31,7 @@ rsp_reportfailure(int sockfd, char *name,size_t namelen,  const struct sockaddr 
 
 size_t 
 rsp_sendmsg(int sockfd, const char *msg, size_t len, struct sockaddr *to,
-	    socklen_t *tolen, char *name, size_t *namelen, struct sctp_sndrcvinfo *sinfo,
+	    socklen_t tolen, const char *name, size_t *namelen, struct sctp_sndrcvinfo *sinfo,
 	    int flags); 
 
 
@@ -39,5 +39,15 @@ ssize_t
 rsp_rcvmsg(int sockfd, const char *msg, size_t len, char *name,
 	   size_t *namelen, struct sockaddr *from, socklen_t *fromlen,
 	   struct sctp_sndrcvinfo *sinfo, int flags);
+
+int
+rsp_poll ( struct pollfd fds[], nfds_t nfds, int timeout);
+
+int
+rsp_select(int nfds, 
+	   fd_set *readfds,
+	   fd_set *writefds,
+	   fd_set *exceptfds,
+	   struct timeval *timeout);
 
 #endif

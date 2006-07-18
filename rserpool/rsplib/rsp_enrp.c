@@ -541,6 +541,25 @@ build_a_pool(struct rsp_enrp_scope *scp, const char *name, int namelen, uint32_t
 }
 
 void
+handle_response_op_error(struct rsp_enrp_scope *scp, 
+			 struct rsp_enrp_entry *enrp, 
+			 struct rsp_pool_handle *ph, 
+			 struct rsp_operational_error *op) 
+{
+	int pool_nm_len;
+	struct rsp_pool *pool;
+
+	pool_nm_len = ph->ph.param_length - sizeof(struct rsp_paramhdr);
+
+	pool = (struct rsp_pool *)HashedTbl_lookup(scp->cache ,ph->pool_handle, pool_nm_len, NULL);
+	if(pool == NULL) {
+		/* no one waiting for it? */
+		return;
+	}
+	pool->state = RSP_POOL_STATE_NOTFOUND;
+}
+
+void
 asap_handle_name_resolution_response(struct rsp_enrp_scope *scp, 
 				     struct rsp_enrp_entry *enrp, 
 				     uint8_t *buf, 
@@ -573,6 +592,10 @@ asap_handle_name_resolution_response(struct rsp_enrp_scope *scp,
 	/* Now we get the selection policy */
 	sp = (struct rsp_select_policy *)get_next_parameter(at, limit, &at, &this_param);
 	if ((sp == NULL) || (this_param != RSP_PARAM_SELECT_POLICY)) {
+		if(this_param == RSP_PARAM_OPERATION_ERROR) {
+			handle_response_op_error(scp, enrp, ph, (struct rsp_operational_error *)sp); 
+			return;
+		}
 		fprintf(stderr, "Did not find second req param, selection policy in msg found %d\n",
 			this_param);
 
@@ -1015,8 +1038,10 @@ rsp_enrp_make_name_request(struct rsp_socket *sd,
 		if(pool == NULL) {
 			return(-1);
 		}
-		pool->state = RSP_POOL_STATE_REQUESTED;
 	}
+	if(pool->state != RSP_POOL_STATE_TIMEDOUT)
+		pool->state = RSP_POOL_STATE_REQUESTED;
+
 	len = RSP_SIZE32((sizeof(struct asap_message) + namelen));
 	req = rsp_aloc_req(name, namelen, (void *)NULL, 0, ASAP_HANDLE_RESOLUTION);
 	if(req == NULL) {
@@ -1085,3 +1110,159 @@ rsp_enrp_make_name_request(struct rsp_socket *sd,
 	}
 	return(0);
 }
+
+
+struct rsp_pool_ele *
+rsp_server_select(struct rsp_pool *pool)
+{
+	struct rsp_pool_ele *pe = NULL, *low=NULL;
+	uint32_t curval;
+	int cnt=0;
+
+	/* do the server selection policy */
+	switch (pool->regType) {
+	case RSP_POLICY_ROUND_ROBIN:
+		pe = (struct rsp_pool_ele *)dlist_get(pool->peList);
+		if(pe == NULL) {
+			dlist_reset(pool->peList);
+			pe = (struct rsp_pool_ele *)dlist_get(pool->peList);
+		}
+		break;
+	case RSP_POLICY_LEAST_USED:
+		dlist_reset(pool->peList);
+		low = (struct rsp_pool_ele *)dlist_get(pool->peList);
+		curval = low->policy_value;
+		while((pe = (struct rsp_pool_ele *)dlist_get(pool->peList)) != NULL) {
+			if(curval > pe->policy_value) {
+				curval = pe->policy_value;
+			}
+		}
+		/* Now we have the lowest value, lets find
+		 * the cnt of these.
+		 */
+		dlist_reset(pool->peList);
+		while((pe = (struct rsp_pool_ele *)dlist_get(pool->peList)) != NULL) {
+			if(curval == pe->policy_value) {
+				cnt++;
+				if(cnt == 1) {
+					/* remember first one */
+					low = pe;
+				}
+			}
+		}
+		if(cnt == 1) {
+			pe = low;
+			break;
+		}
+		if(pool->lastUsed == NULL) {
+			/* never given out yet */
+			pe = low;
+			break;
+		}
+		/* give out next one beyond last given out */
+		dlist_reset(pool->peList);
+		while((pe = (struct rsp_pool_ele *)dlist_get(pool->peList)) != NULL) {
+			if(pe == pool->lastUsed) {
+				pe = (struct rsp_pool_ele *)dlist_get(pool->peList);
+				if(pe == NULL) {
+					/* recall first one */
+					pe = low;
+				}
+				break;
+			}
+		}
+		break;
+	case RSP_POLICY_LEAST_USED_DEGRADES:
+		dlist_reset(pool->peList);
+		low = (struct rsp_pool_ele *)dlist_get(pool->peList);
+		curval = low->policy_value;
+		while((pe = (struct rsp_pool_ele *)dlist_get(pool->peList)) != NULL) {
+			if(curval > pe->policy_value) {
+				curval = pe->policy_value;
+			}
+		}
+		/* Now we have the lowest value, lets find
+		 * the cnt of these.
+		 */
+		dlist_reset(pool->peList);
+		while((pe = (struct rsp_pool_ele *)dlist_get(pool->peList)) != NULL) {
+			if(curval == pe->policy_value) {
+				cnt++;
+				if(cnt == 1) {
+					/* remember first one */
+					low = pe;
+				}
+			}
+		}
+		if(cnt == 1) {
+			pe = low;
+			pe->policy_value++;
+			break;
+		}
+		if(pool->lastUsed == NULL) {
+			/* never given out yet */
+			pe = low;
+			pe->policy_value++;
+			break;
+		}
+		/* give out next one beyond last given out */
+		dlist_reset(pool->peList);
+		while((pe = (struct rsp_pool_ele *)dlist_get(pool->peList)) != NULL) {
+			if(pe == pool->lastUsed) {
+				pe = (struct rsp_pool_ele *)dlist_get(pool->peList);
+				if(pe == NULL) {
+					/* recall first one */
+					pe = low;
+				}
+				pe->policy_value++;
+				break;
+			}
+		}
+		break;
+	case RSP_POLICY_WEIGHTED_ROUND_ROBIN:
+		pe = NULL;
+		cnt = 0;
+		if(pool->lastUsed == NULL) {
+		prep_it:
+			dlist_reset(pool->peList);
+			while((pe = (struct rsp_pool_ele *)dlist_get(pool->peList)) != NULL) {
+				pe->policy_actvalue = pe->policy_value;
+			}
+			dlist_reset(pool->peList);
+		}
+	try_again:
+		while((pe = (struct rsp_pool_ele *)dlist_get(pool->peList)) != NULL) {
+			if(pe->policy_actvalue == 0)
+				continue;
+			pe->policy_actvalue--;
+			break;
+		}
+		
+		if ((pe == NULL) && (cnt == 0)) {
+			/* go back to the beginning. */
+			cnt++;
+			dlist_reset(pool->peList);
+			goto try_again;
+		}
+		if ((pe == NULL) && (cnt == 1)) {
+			/* If we reach here, we have an all
+			 * zero set of policy values. Reset
+			 * all the values.
+			 */
+			cnt++;
+			goto prep_it;
+		}
+		if ((pe == NULL) && (cnt == 2)) {
+			/* no possible pe */
+			pe = NULL;
+		}
+		break;
+	default:
+		fprintf(stderr, "Unknown pool policy %d\n",
+			pool->regType);
+		break;
+
+	}
+	return (pe);
+}
+
