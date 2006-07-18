@@ -718,6 +718,7 @@ struct	sctpstat {
 	u_long  sctps_discontinuitytime;   /* sctpStats 18 (TimeStamp) */
 	/* input statistics: */
 	u_long	sctps_recvpackets;	   /* total input packets        */
+	u_long  sctps_recvdatagrams;       /* total input datagrams      */
 	u_long  sctps_recvpktwithdata;
 	u_long  sctps_recvsacks;           /* total input SACK chunks    */
 	u_long  sctps_recvdata;            /* total input DATA chunks    */
