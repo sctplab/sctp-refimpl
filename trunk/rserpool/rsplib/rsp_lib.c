@@ -257,11 +257,11 @@ rsp_load_file(FILE *io, char *file)
 	}
 
         /* assoc id-> pe */
-	es->vtagHash = HashedTbl_create(RSP_VTAG_HASH_TABLE_NAME, 
+	es->asocidHash = HashedTbl_create(RSP_VTAG_HASH_TABLE_NAME, 
 					   RSP_VTAG_HASH_TBL_SIZE);
-	if(es->vtagHash == NULL) {
+	if(es->asocidHash == NULL) {
 		if(rsp_debug) {
-			fprintf(stderr, "can't get memory for hashtable of vtags\n");
+			fprintf(stderr, "can't get memory for hashtable of asocids\n");
 		}
 		goto out_with_error;
 	}
@@ -482,8 +482,8 @@ rsp_load_file(FILE *io, char *file)
 	if(es->cache)
 		HashedTbl_destroy(es->cache);
 	
-	if(es->vtagHash)
-		HashedTbl_destroy(es->vtagHash);
+	if(es->asocidHash)
+		HashedTbl_destroy(es->asocidHash);
 
 	if (es->ipaddrPortHash)
 		HashedTbl_destroy(es->ipaddrPortHash);
@@ -777,7 +777,28 @@ rsp_socket(int domain, int type,  int protocol, uint32_t op_scope)
 		free(sdata);
 		return (sd);
 	}
-
+	if((type == SOCK_SEQPACKET) || (protocol == IPPROTO_SCTP)) {
+		struct sctp_event_subscribe event;
+		socklen_t len;
+		len = sizeof(event);
+		if (getsockopt(sd, IPPROTO_SCTP, SCTP_EVENTS, &event, &len) != 0) {
+			fprintf(stderr, "Can't do GET_EVENTS socket option! err:%d\n", errno);
+			goto skip_it;
+		}
+		/* We want these events, not sure how to pass them
+		 * to the app if they want them.... maybe we could
+		 * hold internal flags that could then key us
+		 * to pass the event on after we use it :-D FIX FIX?
+		 */
+		event.sctp_data_io_event = 1;
+		event.sctp_association_event = 1;
+		event.sctp_send_failure_event = 1;
+		event.sctp_shutdown_event = 1;
+		if (setsockopt(sd, IPPROTO_SCTP, SCTP_EVENTS, &event, sizeof(event)) != 0) {
+			fprintf(stderr, "Can't do SET_EVENTS socket option! err:%d\n", errno);
+		}
+	}
+ skip_it:
 	/* setup and bind the port */
 	memset(sdata, 0, sizeof(struct rsp_socket));
 	sdata->sd = sd;
@@ -907,7 +928,9 @@ rsp_connect(int sockfd, const char *name, size_t namelen)
 	/* now we have a socket, lets look for the name */
 	pool = (struct rsp_pool *)HashedTbl_lookup(scp->cache , name, namelen, NULL);
 	if ((pool == NULL) ||
-	    (pool->state == RSP_POOL_STATE_REQUESTED)) {
+	    (pool->state == RSP_POOL_STATE_REQUESTED) ||
+	    (pool->state == RSP_POOL_STATE_NOTFOUND)
+		) {
 		/* we need to get the name first */
 		rsp_enrp_make_name_request(sd, pool, name, namelen);
 	} else if ((pool->auto_update == 0) &&
@@ -972,13 +995,14 @@ rsp_reportfailure(int sockfd, char *name,size_t namelen,  const struct sockaddr 
 	return (0);
 }
 
+
 size_t 
 rsp_sendmsg(int sockfd,         /* HA socket descriptor */
 	    const char *msg,
 	    size_t len,
 	    struct sockaddr *to,
-	    socklen_t *tolen,
-	    char *name,
+	    socklen_t tolen,
+	    const char *name,
 	    size_t *namelen,
 	    struct sctp_sndrcvinfo *sinfo,
 	    int flags)         /* Options flags */
@@ -986,7 +1010,9 @@ rsp_sendmsg(int sockfd,         /* HA socket descriptor */
 	struct rsp_socket *sdata;
 	struct rsp_pool *pool;
 	struct rsp_enrp_scope *scp;
-	struct rsp_timer_entry *tme;
+	struct rsp_pool_ele  *pe;
+	int found_asocid=0;
+	int ret;
 
 	if (rsp_inited == 0) {
 		errno = EINVAL;
@@ -1010,8 +1036,25 @@ rsp_sendmsg(int sockfd,         /* HA socket descriptor */
 	scp = sdata->scp;
 
 	if(name == NULL) {
-		/* must be a existing PE */
-
+		/* must be a existing PE, check ipaddr and assoc-id */
+		if ((sinfo) && sinfo->sinfo_assoc_id) {
+			pe = (struct rsp_pool_ele  *)HashedTbl_lookupKeyed(scp->asocidHash, 
+									   sinfo->sinfo_assoc_id, 
+									   &sinfo->sinfo_assoc_id, 
+									   sizeof(sctp_assoc_t), 
+									   NULL);
+			if(pe)
+				found_asocid = 1;
+		}
+		if ((pe == NULL) && to)
+			pe = (struct rsp_pool_ele  *)HashedTbl_lookup(scp->ipaddrPortHash, to, to->sa_len, NULL);
+		if(pe == NULL) {
+			if(to) {
+				goto send_no_pe;
+			}
+			goto no_entry;
+		}
+		pool = pe->pool;
 	} else {
 		/* named based hunting, imply's using
 		 * load balancing policy after finding name.
@@ -1023,24 +1066,48 @@ rsp_sendmsg(int sockfd,         /* HA socket descriptor */
 			 * If so just join sleep, if not create and 
 			 * send, then sleep.
 			 */
-			tme = asap_find_req(scp, name, *namelen, ASAP_REQUEST_RESOLUTION, 1);
-			if(tme) {
-				/* add our selves to list by blocking here on this resolution */
-			} else {
-				/* create message, and then send, then block on thie resolution */
-				
-			}
+			rsp_connect(sockfd, name, *namelen);
 			pool = (struct rsp_pool *)HashedTbl_lookup(scp->cache ,name, *namelen, NULL);
-			if(pool == NULL) {
-				/* Still no entry have resolution, not found */
-				errno = ENOENT;
-				return (-1);
-			}
 		}
 		/* If we fall to here we have a pool to send to */
-
+		if ((pool == NULL) || (pool->state == RSP_POOL_STATE_NOTFOUND)) {
+		no_entry:
+			errno = ENOENT;
+			return (-1);
+		}
+		pe = rsp_server_select(pool);
 	}
-	return (0);
+	pool->lastUsed = pe;
+	/* Ok, we can send to our peer or new peer */
+	ret = 0;
+	if(pe->protocol_type != IPPROTO_SCTP) {
+		return(sendto(sdata->sd, msg, len, flags, pe->addrList, pe->addrList[0].sa_len));
+	}
+	if(sinfo) {
+		if(pe->asocid) {
+			sinfo->sinfo_assoc_id = pe->asocid;
+			ret = sctp_send(sdata->sd, msg, len, sinfo, flags);
+			if(found_asocid == 0) {
+				goto update_asocid;
+			}
+		} else {
+			goto use_addrs_collect_associd;
+		}
+	} else {
+	use_addrs_collect_associd:
+		ret = sctp_sendx (sdata->sd, msg, len, pe->addrList, pe->number_of_addr,
+				  sinfo, flags);
+	update_asocid:
+		pe->asocid = get_asocid(sdata->sd, pe->addrList);
+		/* now enter it into the db */
+		HashedTbl_enterKeyed(scp->asocidHash, pe->asocid, pe, &pe->asocid, sizeof(sctp_assoc_t));
+		if(sinfo) {
+			sinfo->sinfo_assoc_id = pe->asocid;
+		}
+	}
+	return (ret);
+ send_no_pe:	
+	return(sendto(sdata->sd, msg, len, flags, to, tolen));
 }
 
 ssize_t 

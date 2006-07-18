@@ -19,6 +19,9 @@ rsp_enrp_make_name_request(struct rsp_socket *sd,
 			   const char *name,
 			   int namelen);
 
+struct rsp_pool_ele *
+rsp_server_select(struct rsp_pool *pool);
+
 
 struct rsp_timer_entry *
 asap_find_req(struct rsp_enrp_scope *scp,
