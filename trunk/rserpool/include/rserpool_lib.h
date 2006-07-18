@@ -52,7 +52,7 @@
 #define RSP_NUMBER_TIMERS 7
 
 
-/* State values for rsp_socket */
+/* State values for rsp_enrp_scope */
 #define RSP_NO_ENRP_SERVER   0x00000000
 #define RSP_SERVER_HUNT_IP   0x00000001
 #define RSP_ENRP_HS_FOUND    0x00000002
@@ -160,22 +160,7 @@ struct rsp_timer_entry {
 	/* The Req field is filled in if timer does something for you */
 	struct rsp_enrp_req 	*req;		/* data being sent */
 	int 			timer_type;	/* type of timer */
-	struct rsp_timer_entry *queued_next_entry;
 };
-/* We use the queued_next_entry to hook a chain
- * of requests together. So for example, if we loose
- * the home enrp server, and have no other assoc's up,
- * this becomes the FIRST thing we do. The request
- * to some name, that detected the death of the HS
- * would get a enrp_server_hunt going, and then chain
- * itself into queued_next_entry. Any other request that
- * happen while that is going on, run out to the end of
- * the list and set themselves on it. When we finally
- * get a ENRP HS, we grab the first one, queue off a
- * request. And in fact burn through all of them starting
- * timers. As the answers come back.. tada.. we send out the
- * data that may be queued in the req.
- */
 
 #define RSP_POOL_STATE_REQUESTED       0x0001
 #define RSP_POOL_STATE_RESPONDED       0x0002

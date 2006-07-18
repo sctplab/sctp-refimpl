@@ -6,10 +6,18 @@
 
 void rsp_free_req(struct rsp_enrp_req *req);
 
-struct rsp_enrp_req *rsp_aloc_req(char *name, int namelen, void *msg, int msglen, int type);
+struct rsp_enrp_req *rsp_aloc_req(const char *name, int namelen, void *msg, int msglen, int type);
 
 
-void rsp_start_enrp_server_hunt(struct rsp_enrp_scope *sd, int non_blocking);
+void rsp_start_enrp_server_hunt(struct rsp_enrp_scope *sd);
+
+void rsp_send_enrp_req(struct rsp_socket *sd, struct rsp_enrp_req *req);
+
+int
+rsp_enrp_make_name_request(struct rsp_socket *sd,
+			   struct rsp_pool *pool,
+			   const char *name,
+			   int namelen);
 
 
 struct rsp_timer_entry *
@@ -49,4 +57,6 @@ handle_asapmsg_fromenrp (struct rsp_enrp_scope *scp,
 			 ssize_t sz,
 			 struct sockaddr *from, 
 			 socklen_t from_len);
+int
+rsp_internal_poll(nfds_t nfds, int timeout, int ret_from_enrp);
 #endif

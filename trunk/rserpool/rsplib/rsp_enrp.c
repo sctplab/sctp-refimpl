@@ -495,6 +495,50 @@ asap_decode_pe_entry_and_add(struct rsp_enrp_scope *scp,
 }
 
 
+static struct rsp_pool *
+build_a_pool(struct rsp_enrp_scope *scp, const char *name, int namelen, uint32_t policy_type)
+{
+	struct rsp_pool *pool;
+
+	pool = (struct rsp_pool *)malloc(sizeof(struct rsp_pool));
+	if(pool == NULL) {
+		/* no memory */
+		return(NULL);
+	}
+	memset(pool, 0, sizeof(struct rsp_pool));
+	pool->scp = scp;
+	pool->name_len = namelen;
+	pool->name = malloc(namelen + 1);
+	if(pool->name == NULL) {
+		/* no memory */
+		free(pool);
+		return(NULL);
+	}
+	memset(pool->name, 0, (namelen + 1));
+	memcpy(pool->name, name, namelen);
+	pool->peList = dlist_create();
+	if(pool->peList == NULL) {
+		/* no memory */
+	failed:
+		free(pool->name);
+		free(pool);
+		return(NULL);
+	}
+	/* The cookie stuff is inited to NULL/0 len */
+	pool->refcnt = 1;
+
+	/* we don't worry about the value, it only
+	 * has meaning on the individual PE's
+	 */
+	pool->state = RSP_POOL_STATE_RESPONDED;
+	pool->regType = policy_type;
+	if(HashedTbl_enter(scp->cache, pool->name, pool, pool->name_len) != 0) {
+		fprintf(stderr, "Can't add entry to global name cache?\n");
+		dlist_destroy(pool->peList);
+		goto failed;
+	}
+	return(pool);
+}
 
 void
 asap_handle_name_resolution_response(struct rsp_enrp_scope *scp, 
@@ -508,12 +552,11 @@ asap_handle_name_resolution_response(struct rsp_enrp_scope *scp,
 	struct rsp_pool *pool;
 	struct rsp_pool_ele *pes;
 	struct rsp_pool_element *pe;
-
+	int pool_nm_len;
 	uint8_t *limit, *at, new_ent=0;
 	struct rsp_enrp_req *req;
 	struct rsp_timer_entry *tme;
 	uint16_t this_param;
-	int pool_nm_len;
 
 	/* at all times our pointer must be less than limit */
 	limit = (buf + sz);
@@ -549,42 +592,9 @@ asap_handle_name_resolution_response(struct rsp_enrp_scope *scp,
 	if(pool == NULL) {
 		/* new entry - point 2*/
 		new_ent = 1;
-		pool = (struct rsp_pool *)malloc(sizeof(struct rsp_pool));
-		if(pool == NULL) {
-			/* no memory */
+		pool = build_a_pool (scp, ph->pool_handle, pool_nm_len, (uint32_t)sp->policy_type);
+		if(pool == NULL)
 			return;
-		}
-		memset(pool, 0, sizeof(struct rsp_pool));
-		pool->scp = scp;
-		pool->name_len = pool_nm_len;
-		pool->name = malloc(pool_nm_len + 1);
-		if(pool->name == NULL) {
-			/* no memory */
-			free(pool);
-			return;
-		}
-		memset(pool->name, 0, (pool_nm_len + 1));
-		memcpy(pool->name, ph->pool_handle, pool->name_len);
-		pool->peList = dlist_create();
-		if(pool->peList == NULL) {
-			/* no memory */
-		failed:
-			free(pool->name);
-			free(pool);
-			return;
-		}
-		/* The cookie stuff is inited to NULL/0 len */
-		pool->refcnt = 1;
-
-		/* we don't worry about the value, it only
-		 * has meaning on the individual PE's
-		 */
-		pool->regType = sp->policy_type;
-		if(HashedTbl_enter(scp->cache, pool->name, pool, pool->name_len) != 0) {
-			fprintf(stderr, "Can't add entry to global name cache?\n");
-			dlist_destroy(pool->peList);
-			goto failed;
-		}
 	}
 
 	/* mark time of update */
@@ -736,7 +746,7 @@ handle_enrpserver_notification (struct rsp_enrp_scope *scp, char *buf,
 					 */
 					scp->state &= ~RSP_SERVER_HUNT_IP;
 				}
-				rsp_start_enrp_server_hunt(scp, 1);
+				rsp_start_enrp_server_hunt(scp);
 			}
 			break;
 		default:
@@ -769,7 +779,7 @@ handle_enrpserver_notification (struct rsp_enrp_scope *scp, char *buf,
 				 */
 				scp->state &= ~RSP_SERVER_HUNT_IP;
 			}
-			rsp_start_enrp_server_hunt(scp, 1);
+			rsp_start_enrp_server_hunt(scp);
 		}
 		break;
 	case SCTP_SEND_FAILED:
@@ -796,7 +806,7 @@ handle_enrpserver_notification (struct rsp_enrp_scope *scp, char *buf,
 				 */
 				scp->state &= ~RSP_SERVER_HUNT_IP;
 			}
-			rsp_start_enrp_server_hunt(scp, 1);
+			rsp_start_enrp_server_hunt(scp);
 		}
 		/* FIX ME -- Need to add stuff here to
 		 * worry about retran after server hunt begins.
@@ -808,6 +818,33 @@ handle_enrpserver_notification (struct rsp_enrp_scope *scp, char *buf,
 		break;
 	};
 }
+
+void
+rsp_send_enrp_req(struct rsp_socket *sd,
+		  struct rsp_enrp_req *req)
+{
+	/* Pick the home ENRP server and send the mesg */
+	struct rsp_enrp_entry *hs;
+	struct sctp_sndrcvinfo sinfo;
+	struct rsp_enrp_scope *scp;
+	
+	scp = sd->scp;
+	hs = scp->homeServer;
+
+	if(hs == NULL)
+		return;
+
+	if (hs->state != RSP_ASSOCIATION_UP) 
+		return;
+
+	if (hs->asocid == 0)
+		return;
+	memset(&sinfo, 0, sizeof(sinfo));
+	sinfo.sinfo_assoc_id = hs->asocid;
+	sinfo.sinfo_flags = SCTP_UNORDERED;
+	sctp_send(sd->sd, req->req, req->len, &sinfo, 0);
+}
+
 
 void
 handle_asapmsg_fromenrp (struct rsp_enrp_scope *scp, char *buf, 
@@ -903,4 +940,94 @@ handle_asapmsg_fromenrp (struct rsp_enrp_scope *scp, char *buf,
 		fprintf(stderr, "Unknown message type %d\n", msg->asap_type);
 		break;
 	};
+}
+
+int
+rsp_enrp_make_name_request(struct rsp_socket *sd,
+			   struct rsp_pool *pool,
+			   const char *name,
+			   int namelen)
+
+{
+	int len;
+	struct rsp_enrp_req *req;
+	struct asap_message *msg;
+	struct rsp_enrp_scope *scp;
+	struct rsp_timer_entry *ote=NULL;
+	char *at;
+
+	scp = sd->scp;
+	if(pool == NULL) {
+		/* need to build a pool element */
+		pool = build_a_pool (scp, name, namelen, 0);
+		if(pool == NULL) {
+			return(-1);
+		}
+		pool->state = RSP_POOL_STATE_REQUESTED;
+	}
+	len = RSP_SIZE32((sizeof(struct asap_message) + namelen));
+	req = rsp_aloc_req(name, namelen, (void *)NULL, 0, ASAP_HANDLE_RESOLUTION);
+	if(req == NULL) {
+		return(-1);
+	}
+	req->req = malloc(len);
+	if(req->req == NULL) {
+		rsp_free_req(req);
+		return(-1);
+	}
+	req->len = (sizeof(struct asap_message) + namelen);
+	msg = (struct asap_message *)req->req;
+	msg->asap_type = ASAP_HANDLE_RESOLUTION;
+	msg->asap_length = htons(req->len);
+	at = (char *)((caddr_t)msg + sizeof(*msg));
+	memcpy(at, name, namelen);
+
+	/* Now we have a fully formed req, we do
+	 * one of two things.
+	 *
+	 * A) If there is a H-ENRP-S, start timer
+	 *    and send off the request.
+	 *
+	 * B) If no H-ENRP-S, find serverhunt, if happening,
+	 *    and then chain to end of that.
+	 *
+	 * In either case we will then run the select loop 
+	 * setting it up to return when a message is received
+	 * from ENRP as well.
+	 */
+	if(scp->state & RSP_ENRP_HS_FOUND) {
+		/* we have a HS */
+		;
+	} else {
+		/* Server Hunt may be IP */
+		if((scp->state & RSP_SERVER_HUNT_IP) == 0)
+			rsp_start_enrp_server_hunt(scp);
+
+		/* Block getting a server */
+		while((scp->state & RSP_ENRP_HS_FOUND) == 0) {
+			rsp_internal_poll(rsp_pcbinfo.num_fds, INFTIM, 1);
+		}
+	}
+	/* Now we must send off the request */
+	rsp_send_enrp_req(sd, req);
+	rsp_start_timer(scp,sd, sd->timers[RSP_T1_ENRP_REQUEST], req, RSP_T1_ENRP_REQUEST, &ote);
+	if(ote == NULL) {
+		fprintf(stderr, "Timer fails to start, enrp-request!\n");
+	}
+
+	/* For a thread safe library we probably
+	 * need to change INFTIM into a set amount.
+	 * Then check every so often to see if another
+	 * thread has gotten my response and thus we
+	 * would be done.
+	 */
+	while(pool->state == RSP_POOL_STATE_REQUESTED) {
+		rsp_internal_poll(rsp_pcbinfo.num_fds, INFTIM, 1);
+	}
+	free(req->req);
+	req->req = NULL;
+	rsp_free_req(req);
+	if(ote)
+		free(ote);
+	return(0);
 }
