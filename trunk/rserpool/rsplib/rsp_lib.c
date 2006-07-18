@@ -1125,6 +1125,23 @@ rsp_rcvmsg(int sockfd,		/* HA socket descriptor */
 		errno = EINVAL;
 		return (-1);
 	}
+	/* Game plan for receive 
+	 * 1) We do a select, which will cause our
+	 *    enrp messages to be processed like they should.
+	 *    Note:check to see if we handle the keepalive and
+	 *         send a keepalive response.
+	 * 2) When we have something on our sockfd, then read
+	 *    it in.
+	 * 3) If its a notification then pass it to the handler for
+	 *    our notifications. Note: do we need to keep shadow
+	 *    state for notifications we want, or do we just make
+	 *    the user loose them?
+	 * 3a) If its a ppid of ASAP, then we need to 
+	 *     process it has a cookie or bc
+	 * 4) If a message, then send it back to the user but
+	 *    fill in the name if possible to go with the address
+	 *    and associd.
+	 */
 
 	return (0);
 }
