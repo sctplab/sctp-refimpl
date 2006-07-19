@@ -733,21 +733,23 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
 	/* send SHUTDOWN-COMPLETE */
 	sctp_send_shutdown_complete(stcb, net);
 	/* notify upper layer protocol */
-	sctp_ulp_notify(SCTP_NOTIFY_ASSOC_DOWN, stcb, 0, NULL);
-	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
-	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
-		stcb->sctp_ep->sctp_flags &= ~SCTP_PCB_FLAGS_CONNECTED;
-		/* Set the connected flag to disconnected */
-		SOCKBUF_LOCK(&stcb->sctp_ep->sctp_socket->so_snd);
-		stcb->sctp_ep->sctp_socket->so_snd.sb_cc = 0;
-		stcb->sctp_ep->sctp_socket->so_snd.sb_mbcnt = 0;
-		SOCKBUF_UNLOCK(&stcb->sctp_ep->sctp_socket->so_snd);
-		if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) == 0) &&
-		    ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0))
-			soisdisconnected(stcb->sctp_ep->sctp_socket);
-		/*
-		 * else printf("SCTP(b):disconnect of unref socket\n");
-		 */
+	if(stcb->sctp_socket) {
+		sctp_ulp_notify(SCTP_NOTIFY_ASSOC_DOWN, stcb, 0, NULL);
+		if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
+		    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
+			stcb->sctp_ep->sctp_flags &= ~SCTP_PCB_FLAGS_CONNECTED;
+			/* Set the connected flag to disconnected */
+			SCTP_SND_BUF_LOCK(stcb);
+			stcb->sctp_ep->sctp_socket->so_snd.sb_cc = 0;
+			stcb->sctp_ep->sctp_socket->so_snd.sb_mbcnt = 0;
+			SCTP_SND_BUF_UNLOCK(stcb);
+			if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) == 0) &&
+			    ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0))
+				soisdisconnected(stcb->sctp_ep->sctp_socket);
+			/*
+			 * else printf("SCTP(b):disconnect of unref socket\n");
+			 */
+		}
 	}
 	/* free the TCB but first save off the ep */
 	sctp_free_assoc(stcb->sctp_ep, stcb, 0);
@@ -2546,26 +2548,28 @@ sctp_handle_shutdown_complete(struct sctp_shutdown_complete_chunk *cp,
 		return;
 	}
 	/* notify upper layer protocol */
-	sctp_ulp_notify(SCTP_NOTIFY_ASSOC_DOWN, stcb, 0, NULL);
-	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
-	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
-		stcb->sctp_ep->sctp_flags &= ~SCTP_PCB_FLAGS_CONNECTED;
-		SOCKBUF_LOCK(&stcb->sctp_ep->sctp_socket->so_snd);
-		stcb->sctp_ep->sctp_socket->so_snd.sb_cc = 0;
-		stcb->sctp_ep->sctp_socket->so_snd.sb_mbcnt = 0;
-		SOCKBUF_UNLOCK(&stcb->sctp_ep->sctp_socket->so_snd);
-		if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) == 0) &&
-		    ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0))
-			soisdisconnected(stcb->sctp_ep->sctp_socket);
-		/*
-		 * else printf("SCTP(a):disconnect of unref socket\n");
-		 */
-	}
-	/* are the queues empty? they should be */
-	if (!TAILQ_EMPTY(&asoc->send_queue) ||
-	    !TAILQ_EMPTY(&asoc->sent_queue) ||
-	    !TAILQ_EMPTY(&asoc->out_wheel)) {
-		sctp_report_all_outbound(stcb);
+	if(stcb->sctp_socket) {
+		sctp_ulp_notify(SCTP_NOTIFY_ASSOC_DOWN, stcb, 0, NULL);
+		if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
+		    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
+			stcb->sctp_ep->sctp_flags &= ~SCTP_PCB_FLAGS_CONNECTED;
+			SCTP_SND_BUF_LOCK(stcb);
+			stcb->sctp_ep->sctp_socket->so_snd.sb_cc = 0;
+			stcb->sctp_ep->sctp_socket->so_snd.sb_mbcnt = 0;
+			SCTP_SND_BUF_UNLOCK(stcb);
+			if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) == 0) &&
+			    ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0))
+				soisdisconnected(stcb->sctp_ep->sctp_socket);
+			/*
+			 * else printf("SCTP(a):disconnect of unref socket\n");
+			 */
+		}
+		/* are the queues empty? they should be */
+		if (!TAILQ_EMPTY(&asoc->send_queue) ||
+		    !TAILQ_EMPTY(&asoc->sent_queue) ||
+		    !TAILQ_EMPTY(&asoc->out_wheel)) {
+			sctp_report_all_outbound(stcb);
+		}
 	}
 	/* stop the timer */
 	sctp_timer_stop(SCTP_TIMER_TYPE_SHUTDOWN, stcb->sctp_ep, stcb, net);
@@ -4381,6 +4385,12 @@ process_control_chunks:
 
 				stcb->asoc.overall_error_count = 0;
 				*fwd_tsn_seen = 1;
+				if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
+					/* We are not interested anymore */
+					sctp_free_assoc(inp, stcb, 0);
+					*offset = length;
+					return (NULL);
+				}
 				sctp_handle_forward_tsn(stcb,
 				    (struct sctp_forward_tsn_chunk *)ch, &abort_flag);
 				if (abort_flag) {
@@ -4400,6 +4410,13 @@ process_control_chunks:
 #endif				/* SCTP_DEBUG */
 			ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, *offset,
 			    chk_length, chunk_buf);
+			if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
+				/* We are not interested anymore */
+				sctp_free_assoc(inp, stcb, 0);
+				*offset = length;
+				return (NULL);
+			}
+
 			if (stcb->asoc.peer_supports_strreset == 0) {
 				/*
 				 * hmm, peer should have annonced this, but
@@ -5178,7 +5195,7 @@ sctp_skip_csum_4:
 	 */
 	if ((inp->ip_inp.inp.inp_flags & INP_CONTROLOPTS)
 #ifndef __OpenBSD__
-	    || (inp->sctp_socket->so_options & SO_TIMESTAMP)
+	    || (inp->sctp_socket && (inp->sctp_socket->so_options & SO_TIMESTAMP))
 #endif
 	    ) {
 #ifdef __OpenBSD__

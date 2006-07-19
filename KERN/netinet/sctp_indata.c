@@ -3515,8 +3515,9 @@ sctp_try_advance_peer_ack_point(struct sctp_tcb *stcb,
 #ifdef SCTP_WAKE_LOGGING
 				sctp_wakeup_log(stcb, tp1->rec.data.TSN_seq, 1, SCTP_WAKESND_FROM_FWDTSN);
 #endif
-				sctp_sowwakeup(stcb->sctp_ep,
-				    stcb->sctp_socket);
+				if(stcb->sctp_socket)
+					sctp_sowwakeup(stcb->sctp_ep,
+						       stcb->sctp_socket);
 			}
 		} else {
 			/*
@@ -4188,7 +4189,7 @@ skip_segments:
 		tp1 = tp2;
 	} while (tp1 != NULL);
 
-	if (wake_him) {
+	if ((wake_him) && (stcb->sctp_socket)) {
 		sctp_sowwakeup(stcb->sctp_ep, stcb->sctp_socket);
 #ifdef SCTP_WAKE_LOGGING
 		sctp_wakeup_log(stcb, cum_ack, wake_him, SCTP_WAKESND_FROM_SACK);
@@ -4828,9 +4829,11 @@ sctp_kick_prsctp_reorder_queue(struct sctp_tcb *stcb,
 			asoc->size_on_all_streams -= ctl->length;
 			sctp_ucount_decr(asoc->cnt_on_all_streams);
 			/* deliver it to at least the delivery-q */
-			sctp_add_to_readq(stcb->sctp_ep, stcb,
-			    ctl,
-			    &stcb->sctp_socket->so_rcv, 1);
+			if(stcb->sctp_socket) {
+				sctp_add_to_readq(stcb->sctp_ep, stcb,
+						  ctl,
+						  &stcb->sctp_socket->so_rcv, 1);
+			}
 
 		} else {
 			/* no more delivery now. */
@@ -4854,9 +4857,11 @@ sctp_kick_prsctp_reorder_queue(struct sctp_tcb *stcb,
 			sctp_ucount_decr(asoc->cnt_on_all_streams);
 			/* deliver it to at least the delivery-q */
 			strmin->last_sequence_delivered = ctl->sinfo_ssn;
-			sctp_add_to_readq(stcb->sctp_ep, stcb,
-			    ctl,
-			    &stcb->sctp_socket->so_rcv, 1);
+			if(stcb->sctp_socket) {
+				sctp_add_to_readq(stcb->sctp_ep, stcb,
+						  ctl,
+						  &stcb->sctp_socket->so_rcv, 1);
+			}
 			tt = strmin->last_sequence_delivered + 1;
 		} else {
 			break;
