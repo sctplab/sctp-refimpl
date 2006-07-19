@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/conf/options,v 1.550 2006/06/27 12:45:27 glebius Exp $
+# $FreeBSD: src/sys/conf/options,v 1.554 2006/07/18 17:00:51 imp Exp $
 #
 #        On the handling of kernel options
 #
@@ -55,6 +55,8 @@ KDB		opt_global.h
 KDB_TRACE	opt_kdb.h
 KDB_UNATTENDED	opt_kdb.h
 SYSCTL_DEBUG	opt_sysctl.h
+
+NO_SYSCTL_DESCR	opt_global.h
 
 # Miscellaneous options.
 ADAPTIVE_GIANT	opt_adaptive_mutexes.h
@@ -206,6 +208,7 @@ FFS		opt_ffs_broken_fixme.h
 # filesystems will be enabled - but look below.
 NFSCLIENT	opt_nfs.h
 NFSSERVER	opt_nfs.h
+NFS4CLIENT	opt_nfs.h
 
 # filesystems and libiconv bridge
 CD9660_ICONV	opt_dontuse.h
@@ -255,7 +258,6 @@ MSDOSFS_LARGE	opt_msdosfs.h
 HZ		opt_param.h
 MAXFILES	opt_param.h
 NBUF		opt_param.h
-NMBCLUSTERS	opt_param.h
 NSFBUFS		opt_param.h
 VM_BCACHE_SIZE_MAX	opt_param.h
 VM_SWZONE_SIZE_MAX	opt_param.h
@@ -647,10 +649,6 @@ ACPICA_PEDANTIC		opt_acpi.h
 DEV_ISA			opt_isa.h
 ISAPNP			opt_isa.h
 
-# options for DEVFS, see sys/fs/devfs/devfs.h
-NDEVFSINO		opt_devfs.h
-NDEVFSOVERFLOW		opt_devfs.h
-
 # various 'device presence' options.
 DEV_BPF			opt_bpf.h
 DEV_MCA			opt_mca.h
@@ -750,3 +748,6 @@ XBOX			opt_xbox.h
 
 # XFS
 XFS
+
+# snd_emu10kx sound driver options
+SND_EMU10KX_MULTICHANNEL	opt_emu10kx.h
