@@ -4192,7 +4192,11 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			have_mtu = ro->ro_rt->rt_ifp->if_mtu;
 		}
 
-		o_flgs = (IP_RAWOUTPUT | (inp->sctp_socket->so_options & (SO_DONTROUTE | SO_BROADCAST)));
+		if(inp->sctp_socket) {
+			o_flgs = (IP_RAWOUTPUT | (inp->sctp_socket->so_options & (SO_DONTROUTE | SO_BROADCAST)));
+		} else {
+			o_flgs = IP_RAWOUTPUT;
+		}
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
 			printf("Calling ipv4 output routine from low level src addr:%x\n",
