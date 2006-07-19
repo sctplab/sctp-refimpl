@@ -794,14 +794,11 @@
 455	AUE_NULL	MSTD	{ int thr_new(struct thr_param *param, \
 				    int param_size); }
 456	AUE_NULL	MSTD	{ int sctp_peeloff(int sd,caddr_t name); }
-457     AUE_NULL        MSTD    { int sctp_send(int sd, caddr_t buf, size_t len, \
+457     AUE_NULL        MSTD    { int sctp_generic_sendmsg(int sd, struct iovec *iov, int iovlen, \
+	                            caddr_t to, __socklen_t tolen, \
 				    struct sctp_sndrcvinfo *sinfo, int flags); }
-458     AUE_NULL        MSTD    { int sctp_sendmsg(int sd, caddr_t buf, size_t len, \
-				    caddr_t to, __socklen_t tolen, u_int32_t ppid, u_int32_t flags, \
- 				    u_int16_t strm, u_int32_t timetolive, u_int32_t context); }
-459     AUE_NULL        MSTD    { int sctp_recvmsg(int sd, caddr_t buf, size_t len, \
+458     AUE_NULL        MSTD    { int sctp_generic_recvmsg(int sd, struct iovec *iov, int iovlen, \
 				    struct sockaddr * from, __socklen_t *fromlenaddr, \
 				    struct sctp_sndrcvinfo *sinfo, int *msg_flags); }
-
 ; Please copy any additions and changes to the following compatability tables:
 ; sys/compat/freebsd32/syscalls.master

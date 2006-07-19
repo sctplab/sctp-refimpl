@@ -2147,6 +2147,7 @@ done:
 	return (error);
 }
 
+
 int
 sctp_peeloff(td, uap)
 	struct thread *td;
@@ -2239,114 +2240,16 @@ sctp_peeloff(td, uap)
 #endif
 }
 
-int
-sctp_send(td, uap)
+int sctp_generic_sendmsg(td, uap)
 	struct thread *td;
-	register struct sctp_send_args /* {
-		int	sd;
-		void	*data;
-		size_t	len;
-		const struct sctp_sndrcvinfo *sinfo;
-		int	flags;
-	} */ *uap;
-{
-#ifdef SCTP
-	struct sctp_sndrcvinfo sinfo;
-	struct socket *so;
-	struct file *fp;
-	int use_rcvinfo=1;
-	int error=0, len;
-#ifdef KTRACE
-	struct uio *ktruio = NULL;
-#endif
-	struct uio auio;
-	struct iovec aiov;
-	error = copyin(uap->sinfo, &sinfo, sizeof (sinfo));
-	if (error)
-		return (error);
-
-       /* SCTP itself does not need GIANT. But
-	* the getsock()/fdrop() may. So for now
-	* we leave the giant in here to protect
-	* this code. If getsock/fdrop does not need
-	* giant, then we can remove these locks.
-	*/
-	error = getsock(td->td_proc->p_fd, uap->sd, &fp);
-	if (error)
-		goto sctp_bad2;
-
-	so = (struct socket *)fp->f_data;
-#ifdef MAC
-	SOCK_LOCK(so);
-	error = mac_check_socket_send(td->td_ucred, so);
-	SOCK_UNLOCK(so);
-	if (error)
-		goto sctp_bad;
-#endif
-	aiov.iov_base = uap->buf;
-	aiov.iov_len = uap->len;
-
-	auio.uio_iov =  &aiov;
-	auio.uio_iovcnt = 1;
-	auio.uio_segflg = UIO_USERSPACE;
-	auio.uio_rw = UIO_WRITE;
-	auio.uio_td = td;
-	auio.uio_offset = 0;			/* XXX */
-	len = auio.uio_resid = uap->len;
-	error = sctp_lower_sosend(so,
-				 (struct sockaddr *)NULL,
-				 &auio,
-				 (struct mbuf *)NULL,
-				 (struct mbuf *)NULL,
-				 uap->flags,
-				 use_rcvinfo,
-				 &sinfo,
-				 td );
-	
-	if (error) {
-		if (auio.uio_resid != len && (error == ERESTART ||
-		    error == EINTR || error == EWOULDBLOCK))
-			error = 0;
-		/* Generation of SIGPIPE can be controlled per socket */
-		if (error == EPIPE && !(so->so_options & SO_NOSIGPIPE) &&
-		    !(uap->flags & MSG_NOSIGNAL)) {
-			PROC_LOCK(td->td_proc);
-			psignal(td->td_proc, SIGPIPE);
-			PROC_UNLOCK(td->td_proc);
-		}
-	}
-	if (error == 0)
-		td->td_retval[0] = len - auio.uio_resid;
-#ifdef KTRACE
-	if (ktruio != NULL) {
-		ktruio->uio_resid = td->td_retval[0];
-		ktrgenio(uap->sd, UIO_WRITE, ktruio, error);
-	}
-#endif
-#ifdef MAC
-sctp_bad:
-#endif
-	fdrop(fp, td);
-sctp_bad2:
-	return (error);
-#else
-	return (EOPNOTSUPP);
-#endif
-}
-
-int sctp_sendmsg(td, uap)
-	struct thread *td;
-	register struct sctp_sendmsg_args /* {
-					     int sd, 
-					     caddr_t buf, 
-					     size_t len, 
-					     caddr_t to, 
-					     socklen_t tolen, 
-					     u_int32_t ppid, 
-					     u_int32_t flags,
-					     u_int16_t strm, 
-					     u_int32_t timetolive, 
-					     u_int32_t context 
+	register struct sctp_generic_sendmsg_args /* {
+					  int sd, 
+					  struct iovec *iov, 
+					  int iovlen, 
+					  caddr_t to, 
+					  __socklen_t tolen, 
+					  struct sctp_sndrcvinfo *sinfo, 
+					  int flags
 					     } */ *uap;
 {
 #ifdef SCTP
@@ -2354,22 +2257,31 @@ int sctp_sendmsg(td, uap)
 	struct socket *so;
 	struct file *fp;
 	int use_rcvinfo=1;
-	int error=0, len;
+	int error=0, len, i;
 	struct sockaddr *to;
 #ifdef KTRACE
 	struct uio *ktruio = NULL;
 #endif
 	struct uio auio;
-	struct iovec aiov;
+	struct iovec *iov, *tiov;
+
+	error = copyin(uap->sinfo, &sinfo, sizeof (sinfo));
+	if (error)
+		return (error);
 
 	error = getsockaddr(&to, uap->to, uap->tolen);
 	if (error) {
 		to = NULL;
 		goto sctp_bad2;
 	}
-	error = getsock(td->td_proc->p_fd, uap->sd, &fp);
+	error = getsock(td->td_proc->p_fd, uap->sd, &fp, NULL);
 	if (error)
-		goto sctp_bad2;
+		goto sctp_bad1;
+
+	error = copyiniov(uap->iov, uap->iovlen, &iov, EMSGSIZE);
+	if (error)
+		goto sctp_bad1;
+
 
 	so = (struct socket *)fp->f_data;
 #ifdef MAC
@@ -2379,24 +2291,23 @@ int sctp_sendmsg(td, uap)
 	if (error)
 		goto sctp_bad;
 #endif
-	sinfo.sinfo_stream = uap->strm;
-	sinfo.sinfo_ssn = 0;
-	sinfo.sinfo_flags = uap->flags;
-	sinfo.sinfo_ppid = uap->ppid;
-	sinfo.sinfo_context = uap->context;
-	sinfo.sinfo_assoc_id = 0;
-	sinfo.sinfo_timetolive = uap->timetolive;
 
-	aiov.iov_base = uap->buf;
-	aiov.iov_len = uap->len;
 
-	auio.uio_iov =  &aiov;
-	auio.uio_iovcnt = 1;
+	auio.uio_iov =  iov;
+	auio.uio_iovcnt = uap->iovlen;
 	auio.uio_segflg = UIO_USERSPACE;
 	auio.uio_rw = UIO_WRITE;
 	auio.uio_td = td;
 	auio.uio_offset = 0;			/* XXX */
-	len = auio.uio_resid = uap->len;
+	auio.uio_resid = 0;
+	tiov = iov;
+	for (i = 0; i <uap->iovlen; i++, tiov++) {
+		if ((auio.uio_resid += tiov->iov_len) < 0) {
+			error = EINVAL;
+			goto sctp_bad;
+		}
+	}
+	len = auio.uio_resid;
 	error = sctp_lower_sosend(so,
 				 to,
 				 &auio,
@@ -2427,51 +2338,53 @@ int sctp_sendmsg(td, uap)
 		ktrgenio(uap->sd, UIO_WRITE, ktruio, error);
 	}
 #endif
-
-#ifdef MAC
-sctp_bad:
-#endif
+ sctp_bad:
+	free(iov, M_IOV);
+ sctp_bad1:
 	fdrop(fp, td);
-sctp_bad2:
+ sctp_bad2:
 	if (to)
 		FREE(to, M_SONAME);
+
 	return (error);
 #else
 	return (EOPNOTSUPP);
 #endif
 }
 
-int sctp_recvmsg(td, uap)
+int sctp_generic_recvmsg(td, uap)
 	struct thread *td;
-	register struct sctp_recvmsg_args /* {
-					     int	sd;
-					     caddr_t	buf;
-					     size_t	len;
-					     int	flags;
-					     struct sockaddr *from;
-					     socklen_t *fromlenaddr;
-				             struct sctp_sndrcvinfo *sinfo, 
+	register struct sctp_generic_recvmsg_args /* {
+					     int sd, 
+					     struct iovec *iov, 
+					     int iovlen,
+					     struct sockaddr *from, 
+					     __socklen_t *fromlenaddr,
+					     struct sctp_sndrcvinfo *sinfo, 
 					     int *msg_flags
 					     } */ *uap;
 {
 #ifdef SCTP
 	u_int8_t sockbufstore[256];
 	struct uio auio;
-	struct iovec aiov;
-	struct sctp_extrcvinfo sinfo;
+	struct iovec *iov, *tiov;
+	struct sctp_sndrcvinfo sinfo;
 	struct socket *so;
 	struct file *fp;
 	struct sockaddr *fromsa;
 	int fromlen;
-	int len, msg_flags=0;
-	int extended = 0;
+	int len, i, msg_flags=0;
 	int error=0;
 #ifdef KTRACE
 	struct uio *ktruio = NULL;
 #endif
-	error = getsock(td->td_proc->p_fd, uap->sd, &fp);
+	error = getsock(td->td_proc->p_fd, uap->sd, &fp, NULL);
 	if (error) {
 		return (error);
+	}
+	error = copyiniov(uap->iov, uap->iovlen, &iov, EMSGSIZE);
+	if (error) {
+		goto out1;
 	}
 	so = fp->f_data;
 #ifdef MAC
@@ -2479,7 +2392,7 @@ int sctp_recvmsg(td, uap)
 	error = mac_check_socket_receive(td->td_ucred, so);
 	SOCK_UNLOCK(so);
 	if (error) {
-		fdrop(fp, td);
+		goto out;
 		return (error);
 	}
 #endif
@@ -2493,16 +2406,22 @@ int sctp_recvmsg(td, uap)
 		fromlen = 0;
 	}
 
-	aiov.iov_base = uap->buf;
-	aiov.iov_len = uap->len;
-	auio.uio_iov =  &aiov;
-	auio.uio_iovcnt = 1;
+
+	auio.uio_iov = iov;
+	auio.uio_iovcnt = uap->iovlen;
   	auio.uio_segflg = UIO_USERSPACE;
 	auio.uio_rw = UIO_READ;
 	auio.uio_td = td;
-	auio.uio_offset = 0;
-	auio.uio_resid = uap->len;
-	len = uap->len;
+	auio.uio_offset = 0;			/* XXX */
+	auio.uio_resid = 0;
+	tiov = iov;
+	for (i = 0; i <uap->iovlen; i++, tiov++) {
+		if ((auio.uio_resid += tiov->iov_len) < 0) {
+			error = EINVAL;
+			goto out;
+		}
+	}
+	len = auio.uio_resid;
 	fromsa = (struct sockaddr *)sockbufstore;
 #ifdef KTRACE
 	if (KTRPOINT(td, KTR_GENIO))
@@ -2510,17 +2429,13 @@ int sctp_recvmsg(td, uap)
 #endif
 	error = sctp_sorecvmsg(so, &auio, (struct mbuf **)NULL,
 			       fromsa, fromlen, &msg_flags, (struct sctp_sndrcvinfo *)&sinfo, 
-			       1, &extended);
+			       1);
 	if (error) {
 		if (auio.uio_resid != (int)len && (error == ERESTART ||
 		    error == EINTR || error == EWOULDBLOCK))
 			error = 0;
 	} else {
-		if(extended == 0) { 
-			error = copyout(&sinfo, uap->sinfo, sizeof (struct sctp_sndrcvinfo));
-		} else {
-			error = copyout(&sinfo, uap->sinfo, sizeof (sinfo));
-		}
+		error = copyout(&sinfo, uap->sinfo, sizeof (sinfo));
 	}
 #ifdef KTRACE
 	if (ktruio != NULL) {
@@ -2536,7 +2451,6 @@ int sctp_recvmsg(td, uap)
 		if (len <= 0 || fromsa == 0)
 			len = 0;
 		else {
-			/* save sa_len before it is destroyed by MSG_COMPAT */
 			len = MIN(len, fromsa->sa_len);
 			error = copyout(fromsa, uap->from, (unsigned)len);
 			if (error)
@@ -2554,6 +2468,8 @@ int sctp_recvmsg(td, uap)
 		}
 	}
 out:
+	free(iov, M_IOV);
+out1:
 	fdrop(fp, td);
 	return (error);
 #else
