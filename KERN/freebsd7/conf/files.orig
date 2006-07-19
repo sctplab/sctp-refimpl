@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/conf/files,v 1.1127 2006/06/27 12:45:27 glebius Exp $
+# $FreeBSD: src/sys/conf/files,v 1.1130 2006/07/15 20:22:40 netchild Exp $
 #
 # The long compile-with and dependency lines are required because of
 # limitations in config: backslash-newline doesn't work in strings, and
@@ -55,6 +55,21 @@ emu10k1-alsa%diked.h		optional snd_emu10k1 pci			   \
 	compile-with	"CC='${CC}' AWK=${AWK} sh $S/tools/emu10k1-mkalsa.sh $S/gnu/dev/sound/pci/emu10k1-alsa.h emu10k1-alsa%diked.h" \
 	no-obj no-implicit-rule before-depend				   \
 	clean		"emu10k1-alsa%diked.h"
+emu10k1-alsa%diked.h		optional snd_emu10kx pci			   \
+	dependency	"$S/tools/emu10k1-mkalsa.sh $S/gnu/dev/sound/pci/emu10k1-alsa.h" \
+	compile-with	"CC='${CC}' AWK=${AWK} sh $S/tools/emu10k1-mkalsa.sh $S/gnu/dev/sound/pci/emu10k1-alsa.h emu10k1-alsa%diked.h" \
+	no-obj no-implicit-rule before-depend				   \
+	clean		"emu10k1-alsa%diked.h"
+p16v-alsa%diked.h		optional snd_emu10kx pci			   \
+	dependency	"$S/tools/emu10k1-mkalsa.sh $S/gnu/dev/sound/pci/p16v-alsa.h" \
+	compile-with	"CC='${CC}' AWK=${AWK} sh $S/tools/emu10k1-mkalsa.sh $S/gnu/dev/sound/pci/p16v-alsa.h p16v-alsa%diked.h" \
+	no-obj no-implicit-rule before-depend				   \
+	clean		"p16v-alsa%diked.h"
+p17v-alsa%diked.h		optional snd_emu10kx pci			   \
+	dependency	"$S/tools/emu10k1-mkalsa.sh $S/gnu/dev/sound/pci/p17v-alsa.h" \
+	compile-with	"CC='${CC}' AWK=${AWK} sh $S/tools/emu10k1-mkalsa.sh $S/gnu/dev/sound/pci/p17v-alsa.h p17v-alsa%diked.h" \
+	no-obj no-implicit-rule before-depend				   \
+	clean		"p17v-alsa%diked.h"
 miidevs.h			optional miibus | mii			   \
 	dependency	"$S/tools/miidevs2h.awk $S/dev/mii/miidevs"	   \
 	compile-with	"${AWK} -f $S/tools/miidevs2h.awk $S/dev/mii/miidevs" \
@@ -607,6 +622,7 @@ dev/firewire/if_fwe.c		optional fwe
 dev/firewire/if_fwip.c		optional fwip
 dev/firewire/sbp.c		optional sbp
 dev/firewire/sbp_targ.c		optional sbp_targ
+dev/flash/at45.c		optional at45
 dev/fxp/if_fxp.c		optional fxp
 dev/gem/if_gem.c		optional gem
 dev/gem/if_gem_pci.c		optional gem pci
@@ -872,6 +888,19 @@ dev/sound/pci/ds1.c		optional snd_ds1 pci
 dev/sound/pci/emu10k1.c		optional snd_emu10k1 pci \
 	dependency "emu10k1-alsa%diked.h" \
 	warning "kernel contains GPL contaminated emu10k1 headers"
+dev/sound/pci/emu10kx.c		optional snd_emu10kx pci \
+	dependency "emu10k1-alsa%diked.h" \
+	dependency "p16v-alsa%diked.h" \
+	dependency "p17v-alsa%diked.h" \
+	warning "kernel contains GPL contaminated emu10kx headers"
+dev/sound/pci/emu10kx-pcm.c	optional snd_emu10kx pci \
+	dependency "emu10k1-alsa%diked.h" \
+	dependency "p16v-alsa%diked.h" \
+	dependency "p17v-alsa%diked.h" \
+	warning "kernel contains GPL contaminated emu10kx headers"
+dev/sound/pci/emu10kx-midi.c	optional snd_emu10kx pci \
+	dependency "emu10k1-alsa%diked.h" \
+	warning "kernel contains GPL contaminated emu10kx headers"
 dev/sound/pci/es137x.c		optional snd_es137x pci
 dev/sound/pci/fm801.c		optional snd_fm801 pci
 dev/sound/pci/ich.c		optional snd_ich pci
@@ -911,6 +940,9 @@ dev/sound/midi/mpu_if.m		optional sound
 dev/sound/midi/mpufoi_if.m	optional sound
 dev/sound/midi/sequencer.c	optional sound
 dev/sound/midi/synth_if.m	optional sound
+dev/spibus/spibus.c		optional spibus				\
+	dependency	"spibus_if.h"
+dev/spibus/spibus_if.m		optional spibus
 dev/sr/if_sr.c			optional sr
 dev/sr/if_sr_pci.c		optional sr pci
 dev/stg/tmc18c30.c		optional stg
@@ -1329,6 +1361,7 @@ kern/sched_4bsd.c		optional sched_4bsd
 kern/sched_core.c		optional sched_core
 kern/sched_ule.c		optional sched_ule
 kern/serdev_if.m		optional puc | scc
+kern/subr_acl_posix1e.c		standard
 kern/subr_autoconf.c		standard
 kern/subr_blist.c		standard
 kern/subr_bus.c			standard
