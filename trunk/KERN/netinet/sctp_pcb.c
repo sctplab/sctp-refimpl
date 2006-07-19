@@ -3828,14 +3828,12 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	bzero(stcb, sizeof(*stcb));
 	asoc = &stcb->asoc;
 	SCTP_TCB_LOCK_INIT(stcb);
-	SCTP_SND_BUF_LOCK_INIT(stcb);
 	/* setup back pointer's */
 	stcb->sctp_ep = inp;
 	stcb->sctp_socket = inp->sctp_socket;
 	if ((err = sctp_init_asoc(inp, asoc, for_a_init, override_tag))) {
 		/* failed */
 		SCTP_TCB_LOCK_DESTROY(stcb);
-		SCTP_SND_BUF_LOCK_DESTROY(stcb);
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
 		SCTP_DECR_ASOC_COUNT();
 #ifdef SCTP_DEBUG
@@ -3860,7 +3858,6 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	if (inp->sctp_flags & (SCTP_PCB_FLAGS_SOCKET_GONE | SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
 		/* inpcb freed while alloc going on */
 		SCTP_TCB_LOCK_DESTROY(stcb);
-		SCTP_SND_BUF_LOCK_DESTROY(stcb);
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
 		SCTP_INP_WUNLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
@@ -3903,7 +3900,6 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		}
 #endif
 		SCTP_TCB_LOCK_DESTROY(stcb);
-		SCTP_SND_BUF_LOCK_DESTROY(stcb);
 		*error = ENOBUFS;
 		return (NULL);
 	}
@@ -4316,7 +4312,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	prev = NULL;
 
 	if ((from_inpcbfree == 0) && so) {
-		SCTP_SND_BUF_LOCK(stcb);
+		SOCKBUF_LOCK(&so->so_snd);
 		SOCKBUF_LOCK(&so->so_rcv);
 	}
 	/*
@@ -4481,6 +4477,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	}
 	if ((from_inpcbfree == 0) && so) {
 		SOCKBUF_UNLOCK(&so->so_rcv);
+		SOCKBUF_UNLOCK(&so->so_snd);
 	}
 	/* local addresses, if any */
 	while (!LIST_EMPTY(&asoc->sctp_local_addr_list)) {
@@ -4523,7 +4520,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 
 	/* Get rid of LOCK */
 	SCTP_TCB_LOCK_DESTROY(stcb);
-	SCTP_SND_BUF_LOCK_DESTROY(stcb);
 	/* now clean up the tasoc itself */
 	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
 	SCTP_DECR_ASOC_COUNT();

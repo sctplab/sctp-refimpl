@@ -739,10 +739,10 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
 		    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
 			stcb->sctp_ep->sctp_flags &= ~SCTP_PCB_FLAGS_CONNECTED;
 			/* Set the connected flag to disconnected */
-			SCTP_SND_BUF_LOCK(stcb);
+			SOCKBUF_LOCK(&stcb->sctp_socket->so_snd);
 			stcb->sctp_ep->sctp_socket->so_snd.sb_cc = 0;
 			stcb->sctp_ep->sctp_socket->so_snd.sb_mbcnt = 0;
-			SCTP_SND_BUF_UNLOCK(stcb);
+			SOCKBUF_UNLOCK(&stcb->sctp_socket->so_snd);
 			if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) == 0) &&
 			    ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0))
 				soisdisconnected(stcb->sctp_ep->sctp_socket);
@@ -2553,10 +2553,10 @@ sctp_handle_shutdown_complete(struct sctp_shutdown_complete_chunk *cp,
 		if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 		    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
 			stcb->sctp_ep->sctp_flags &= ~SCTP_PCB_FLAGS_CONNECTED;
-			SCTP_SND_BUF_LOCK(stcb);
+			SOCKBUF_LOCK(&stcb->sctp_socket->so_snd);
 			stcb->sctp_ep->sctp_socket->so_snd.sb_cc = 0;
 			stcb->sctp_ep->sctp_socket->so_snd.sb_mbcnt = 0;
-			SCTP_SND_BUF_UNLOCK(stcb);
+			SOCKBUF_UNLOCK(&stcb->sctp_socket->so_snd);
 			if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) == 0) &&
 			    ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0))
 				soisdisconnected(stcb->sctp_ep->sctp_socket);

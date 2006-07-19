@@ -445,7 +445,6 @@ struct sctp_tcb {
 	uint16_t resv;
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
 	struct mtx tcb_mtx;
-	struct mtx tcb_snd_mtx;
 #endif
 };
 
@@ -662,19 +661,6 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #endif
 
 
-#define SCTP_SND_BUF_LOCK(_tcb) do {					\
-        mtx_lock(&(_tcb)->tcb_snd_mtx);                                 \
-} while (0)
-
-#define SCTP_SND_BUF_UNLOCK(_tcb)	mtx_unlock(&(_tcb)->tcb_snd_mtx)
-
-
-#define SCTP_SND_BUF_LOCK_INIT(_tcb) \
-	mtx_init(&(_tcb)->tcb_snd_mtx, "sctp-tcb-sndbuf", "tcbsend", MTX_DEF | MTX_DUPOK)
-
-#define SCTP_SND_BUF_LOCK_DESTROY(_tcb)	mtx_destroy(&(_tcb)->tcb_snd_mtx)
-
-
 #define SCTP_TCB_TRYLOCK(_tcb) 	mtx_trylock(&(_tcb)->tcb_mtx)
 
 #define SCTP_TCB_UNLOCK(_tcb)		mtx_unlock(&(_tcb)->tcb_mtx)
@@ -772,10 +758,6 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #define SCTP_TCB_UNLOCK_IFOWNED(_tcb)
 #define STCB_TCB_LOCK_ASSERT(_tcb)
 
-#define SCTP_SND_BUF_LOCK_INIT(_tcb)
-#define SCTP_SND_BUF_LOCK_DESTROY(_tcb)
-#define SCTP_SND_BUF_LOCK(_tcb)
-#define SCTP_SND_BUF_UNLOCK(_tcb)
 /* iterator locks */
 #define SCTP_ITERATOR_LOCK_INIT() \
 	sctppcbinfo.it_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
@@ -838,10 +820,6 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #define SCTP_TCB_UNLOCK_IFOWNED(_tcb)
 #define STCB_TCB_LOCK_ASSERT(_tcb)
 
-#define SCTP_SND_BUF_LOCK_INIT(_tcb)
-#define SCTP_SND_BUF_LOCK_DESTROY(_tcb)
-#define SCTP_SND_BUF_LOCK(_tcb)
-#define SCTP_SND_BUF_UNLOCK(_tcb)
 
 /* socket locks that are not here in other than 5.3 > FreeBSD */
 #define SOCK_LOCK(_so)
