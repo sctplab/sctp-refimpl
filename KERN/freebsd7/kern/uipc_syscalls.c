@@ -2340,7 +2340,7 @@ int sctp_generic_sendmsg(td, uap)
 	error = getsockaddr(&to, uap->to, uap->tolen);
 	if (error) {
 		to = NULL;
-		goto sctp_bad;
+		goto sctp_bad2;
 	}
 	error = getsock(td->td_proc->p_fd, uap->sd, &fp, NULL);
 	if (error)
@@ -2348,7 +2348,7 @@ int sctp_generic_sendmsg(td, uap)
 
 	error = copyiniov(uap->iov, uap->iovlen, &iov, EMSGSIZE);
 	if (error)
-		goto sctp_bad2;
+		goto sctp_bad1;
 
 
 	so = (struct socket *)fp->f_data;
@@ -2406,10 +2406,6 @@ int sctp_generic_sendmsg(td, uap)
 		ktrgenio(uap->sd, UIO_WRITE, ktruio, error);
 	}
 #endif
-
-#ifdef MAC
-sctp_bad:
-#endif
  sctp_bad:
 	free(iov, M_IOV);
  sctp_bad1:
@@ -2417,6 +2413,7 @@ sctp_bad:
  sctp_bad2:
 	if (to)
 		FREE(to, M_SONAME);
+
 	return (error);
 #else
 	return (EOPNOTSUPP);
