@@ -285,6 +285,7 @@ struct sctp_error_unrecognized_chunk {
 #define HAVE_SCTP_ECN_NONCE             1	/* ECN Nonce option */
 #define HAVE_SCTP_AUTH			1
 #define HAVE_SCTP_EXT_RCVINFO		1
+#define HAVE_SCTP_CONNECTX              1
 /*
  * Main SCTP chunk types we place these here so natd and f/w's in user land
  * can find them.

@@ -3874,7 +3874,7 @@ sctp_free_bufspace(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	if (tp1->data == NULL) {
 		return;
 	}
-	SOCKBUF_LOCK(&stcb->sctp_socket->so_snd);
+	SCTP_SND_BUF_LOCK(stcb);
 	asoc->chunks_on_out_queue -= chk_cnt;
 	sctp_log_mbcnt(SCTP_LOG_MBCNT_DECREASE,
 	    asoc->total_output_queue_size,
@@ -3893,8 +3893,8 @@ sctp_free_bufspace(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	} else {
 		asoc->total_output_mbuf_queue_size = 0;
 	}
-	if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) ||
-	    ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE))) {
+	if (stcb->sctp_socket && (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) ||
+	    ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE)))) {
 		if (stcb->sctp_socket->so_snd.sb_cc >= tp1->book_size) {
 			stcb->sctp_socket->so_snd.sb_cc -= tp1->book_size;
 		} else {
@@ -3907,7 +3907,7 @@ sctp_free_bufspace(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			stcb->sctp_socket->so_snd.sb_mbcnt = 0;
 		}
 	}
-	SOCKBUF_UNLOCK(&stcb->sctp_socket->so_snd);
+	SCTP_SND_BUF_UNLOCK(stcb);
 }
 
 #endif

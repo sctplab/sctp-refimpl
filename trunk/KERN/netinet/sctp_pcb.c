@@ -2863,6 +2863,8 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 			if (locked_so) {
 				SOCK_LOCK(so);
 			}
+			/* Disconnect the socket please */
+			asoc->sctp_socket = NULL;
 			asoc->asoc.state |= SCTP_STATE_CLOSED_SOCKET;
 			if ((asoc->asoc.size_on_reasm_queue > 0) ||
 			    (asoc->asoc.size_on_all_streams > 0) ||
@@ -3057,6 +3059,14 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 			panic("strange case 1");
 #endif
 		}
+		if (so->so_rcv.sb_mb) {
+			printf("Strange, so->so_rcv.sb_mb is not NULL (%x)?\n",
+			       (u_int)so->so_rcv.sb_mb);
+#ifdef INVARIENTS
+			panic("strange case 1a");
+#endif
+			so->so_rcv.sb_mb = NULL;
+		}
 		so->so_snd.sb_mbcnt = 0;
 		if (so->so_snd.sb_cc) {
 			printf("Strange, so->so_snd.sb_cc >0 was %d?\n",
@@ -3066,6 +3076,15 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 			panic("strange case 2");
 #endif
 		}
+		if (so->so_snd.sb_mb) {
+			printf("Strange, so->so_snd.sb_mb is not NULL (%x)?\n",
+			       (u_int)so->so_snd.sb_mb);
+#ifdef INVARIENTS
+			panic("strange case 2a");
+#endif
+			so->so_snd.sb_mb = NULL;
+		}
+
 #ifdef IPSEC
 #ifdef __OpenBSD__
 		/* XXX IPsec cleanup here */
@@ -3809,12 +3828,14 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	bzero(stcb, sizeof(*stcb));
 	asoc = &stcb->asoc;
 	SCTP_TCB_LOCK_INIT(stcb);
+	SCTP_SND_BUF_LOCK_INIT(stcb);
 	/* setup back pointer's */
 	stcb->sctp_ep = inp;
 	stcb->sctp_socket = inp->sctp_socket;
 	if ((err = sctp_init_asoc(inp, asoc, for_a_init, override_tag))) {
 		/* failed */
 		SCTP_TCB_LOCK_DESTROY(stcb);
+		SCTP_SND_BUF_LOCK_DESTROY(stcb);
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
 		SCTP_DECR_ASOC_COUNT();
 #ifdef SCTP_DEBUG
@@ -3839,6 +3860,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	if (inp->sctp_flags & (SCTP_PCB_FLAGS_SOCKET_GONE | SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
 		/* inpcb freed while alloc going on */
 		SCTP_TCB_LOCK_DESTROY(stcb);
+		SCTP_SND_BUF_LOCK_DESTROY(stcb);
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
 		SCTP_INP_WUNLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
@@ -3881,6 +3903,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		}
 #endif
 		SCTP_TCB_LOCK_DESTROY(stcb);
+		SCTP_SND_BUF_LOCK_DESTROY(stcb);
 		*error = ENOBUFS;
 		return (NULL);
 	}
@@ -4293,7 +4316,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	prev = NULL;
 
 	if ((from_inpcbfree == 0) && so) {
-		SOCKBUF_LOCK(&so->so_snd);
+		SCTP_SND_BUF_LOCK(stcb);
 		SOCKBUF_LOCK(&so->so_rcv);
 	}
 	/*
@@ -4457,7 +4480,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		sctp_free_remote_addr(net);
 	}
 	if ((from_inpcbfree == 0) && so) {
-		SOCKBUF_UNLOCK(&so->so_snd);
 		SOCKBUF_UNLOCK(&so->so_rcv);
 	}
 	/* local addresses, if any */
@@ -4501,7 +4523,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 
 	/* Get rid of LOCK */
 	SCTP_TCB_LOCK_DESTROY(stcb);
-
+	SCTP_SND_BUF_LOCK_DESTROY(stcb);
 	/* now clean up the tasoc itself */
 	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
 	SCTP_DECR_ASOC_COUNT();
@@ -4509,14 +4531,8 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	if (so && ((so->so_snd.sb_cc) ||
 	    (so->so_snd.sb_mbcnt))) {
 		/* This will happen when a abort is done */
-		if (from_inpcbfree == 0) {
-			SOCKBUF_LOCK(&so->so_snd);
-		}
 		so->so_snd.sb_cc = 0;
 		so->so_snd.sb_mbcnt = 0;
-		if (from_inpcbfree == 0) {
-			SOCKBUF_UNLOCK(&so->so_snd);
-		}
 	}
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
