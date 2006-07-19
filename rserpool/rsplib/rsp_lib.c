@@ -805,6 +805,7 @@ rsp_socket(int domain, int type,  int protocol, uint32_t op_scope)
 	sdata->port = 0; /* unbound */
 	sdata->type = type;
 	sdata->domain = domain;
+	sdata->protocol = protocol;
 
 	/* setup w/addrlist w/ctl&data seperate */
 	sdata->address_reg = dlist_create();
@@ -1110,41 +1111,6 @@ rsp_sendmsg(int sockfd,         /* HA socket descriptor */
 	return(sendto(sdata->sd, msg, len, flags, to, tolen));
 }
 
-ssize_t 
-rsp_rcvmsg(int sockfd,		/* HA socket descriptor */
-	   const char *msg,
-	   size_t len,
-	   char *name, 		/* in-out/limit */
-	   size_t *namelen,
-	   struct sockaddr *from,
-	   socklen_t *fromlen,	/* in-out/limit */
-	   struct sctp_sndrcvinfo *sinfo,
-	   int flags)		/* Options flags */
-{
-	if (rsp_inited == 0) {
-		errno = EINVAL;
-		return (-1);
-	}
-	/* Game plan for receive 
-	 * 1) We do a select, which will cause our
-	 *    enrp messages to be processed like they should.
-	 *    Note:check to see if we handle the keepalive and
-	 *         send a keepalive response.
-	 * 2) When we have something on our sockfd, then read
-	 *    it in.
-	 * 3) If its a notification then pass it to the handler for
-	 *    our notifications. Note: do we need to keep shadow
-	 *    state for notifications we want, or do we just make
-	 *    the user loose them?
-	 * 3a) If its a ppid of ASAP, then we need to 
-	 *     process it has a cookie or bc
-	 * 4) If a message, then send it back to the user but
-	 *    fill in the name if possible to go with the address
-	 *    and associd.
-	 */
-
-	return (0);
-}
 
 
 int 
@@ -1260,6 +1226,112 @@ rsp_internal_poll(nfds_t nfds, int timeout, int ret_from_enrp)
 }
 
 
+
+ssize_t 
+rsp_rcvmsg(int sockfd,		/* HA socket descriptor */
+	   const char *msg,
+	   size_t len,
+	   char *name, 		/* in-out/limit */
+	   size_t *namelen,
+	   struct sockaddr *from,
+	   socklen_t *fromlen,	/* in-out/limit */
+	   struct sctp_sndrcvinfo *sinfo,
+	   int flags)		/* Options flags */
+{
+	int ret;
+	struct rsp_socket *sdata;
+	struct rsp_enrp_scope *scp;
+
+	if (rsp_inited == 0) {
+		errno = EINVAL;
+		return (-1);
+	}
+	/* Game plan for receive 
+	 * 1) We do a select, which will cause our
+	 *    enrp messages to be processed like they should.
+	 *    Note:check to see if we handle the keepalive and
+	 *         send a keepalive response. NOPE, FIX FIX
+	 * 2) When we have something on our sockfd, then read
+	 *    it in.
+	 * 3) If its a notification then pass it to the handler for
+	 *    our notifications. Note: do we need to keep shadow
+	 *    state for notifications we want, or do we just make
+	 *    the user loose them?
+	 * 3a) If its a ppid of ASAP, then we need to 
+	 *     process it has a cookie or bc
+	 * 4) If a message, then send it back to the user but
+	 *    fill in the name if possible to go with the address
+	 *    and associd.
+	 */
+	/* First find the socket stuff */
+	sdata  = (struct rsp_socket *)HashedTbl_lookup(rsp_pcbinfo.sd_pool ,
+							    (void *)&sockfd,
+							    sizeof(sockfd),
+							    NULL);
+	if(sdata == NULL) {
+		/* sockfd is not one of ours */
+		errno = EINVAL;
+		return (-1);
+	}
+	if ((sdata->protocol == IPPROTO_SCTP) && (sinfo == NULL)) {
+		errno = EINVAL;
+		return (-1);
+	}
+
+	scp = sdata->scp;
+
+	if ((rsp_pcbinfo.num_fds+1) > rsp_pcbinfo.siz_fds) {
+		/* grow it big enough */
+		rsp_expand_watchfd_array();
+	}
+	if ((rsp_pcbinfo.num_fds+1) > rsp_pcbinfo.siz_fds) {
+		errno = EFAULT;
+		return(-1);
+	}
+ try_again:
+	rsp_pcbinfo.watchfds[rsp_pcbinfo.num_fds].fd = sdata->sd;
+	rsp_pcbinfo.watchfds[rsp_pcbinfo.num_fds].events = POLLIN;
+	rsp_pcbinfo.watchfds[rsp_pcbinfo.num_fds].revents = 0;
+	ret = rsp_internal_poll(rsp_pcbinfo.num_fds+1, INFTIM, 0);
+	if(ret < 1) {
+		if(ret < 0) {
+			if(errno == EAGAIN)
+				goto try_again;
+
+			fprintf(stderr, "Got error:%d on poll\n", errno);
+			return(-1);
+		}
+		goto try_again;
+	}
+	if (rsp_pcbinfo.watchfds[rsp_pcbinfo.num_fds].revents == 0) {
+		/* not me? */
+		goto try_again;
+	}
+	/* at this point we have an event on the fd we want! 
+	 * and are at 2)
+	 */
+	if(sdata->protocol == IPPROTO_SCTP) {
+		/* SCTP */
+		ret = sctp_recvmsg(sdata->sd, msg, len,
+				   from, fromlen, sinfo, &flags);
+		if(sinfo->sinfo_ppid == RSERPOOL_ASAP_PPID) {
+			handle_asap_message(sdata, msg, ret, from, *fromlen, sinfo, flags);
+			goto try_again;
+		} else if (sinfo->sinfo_flags & MSG_NOTIFICATION) {
+			handle_asap_sctp_notification(sdata, msg, ret, from, *fromlen, sinfo, flags);
+			goto try_again;
+		}
+		return(ret);
+	} else {
+		/* UDP */
+		return(recvfrom(sdata->sd, msg, len, flags,
+				from, fromlen));
+				
+	}
+	return (0);
+}
+
+
 int
 rsp_select(int nfds, 
 	   fd_set *readfds,
@@ -1369,9 +1441,15 @@ int
 rsp_poll ( struct pollfd fds[], nfds_t nfds, int timeout)
 {
 	int ret, i;
+	i=0;
 	while ((nfds + rsp_pcbinfo.num_fds) > rsp_pcbinfo.siz_fds) {
 		/* grow it big enough */
+		i++;
 		rsp_expand_watchfd_array();
+		if(i > RSP_GROW_LIMIT) {
+			errno = EFAULT;
+			return(-1);
+		}
 	}
 	for(i=0; i<nfds; i++) {
 		rsp_pcbinfo.watchfds[(i+rsp_pcbinfo.num_fds)] = fds[i];
