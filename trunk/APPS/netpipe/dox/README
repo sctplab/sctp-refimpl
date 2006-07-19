@@ -86,6 +86,8 @@ Compile NetPIPE with the desired communication interface by using:
 
   make tcp
   make tcp6       (for IPv6 enabled systems)
+  make ipx	  (for IPX enabled systems)
+  make sctp	  (for SCTP enabled systems)
   make gm         (for Myrinet cards, you will need to set some paths)
   make shmem      (1-sided library for Cray and SGI systems)
   make gpshmem    (SHMEM interface for other machines)
@@ -172,6 +174,32 @@ NetPIPE is run, and are in order of their general usefulness.
                        OR
 
       local_host>  nplaunch NPtcp6 -h remote_host [options]
+
+
+   IPX
+   ---
+
+      Compile NetPIPE using 'make ipx
+
+      remote_host> NPipx [options]
+      local_host>  NPipx -h remote_host [options]
+
+                       OR
+
+      local_host>  nplaunch NPipx -h remote_host [options]
+
+
+   SCTP
+   ----
+
+      Compile NetPIPE using 'make sctp
+
+      remote_host> NPsctp [options]
+      local_host>  NPsctp -h remote_host [options]
+
+                       OR
+
+      local_host>  nplaunch NPsctp -h remote_host [options]
 
 
 

@@ -32,7 +32,6 @@
 #include <ib_defs.h> /* ib_mtu_t */
 #endif
 
-
 #ifdef FINAL
   #define  TRIALS             7
   #define  RUNTM              0.25
@@ -74,22 +73,6 @@
       struct hostent          *addr;    /* Address of host                */
       int                     sndbufsz, /* Size of TCP send buffer        */
                               rcvbufsz; /* Size of TCP receive buffer     */
-#elif defined(SCTP)
-  #include <netdb.h>
-  #include <sys/socket.h>
-  #include <netinet/in.h>
-  #include <netinet/sctp.h>
-  #include <arpa/inet.h>
-  
-  typedef struct protocolstruct ProtocolStruct;
-  struct protocolstruct
-  {
-      struct sockaddr_in      sin1,   /* socket structure #1              */
-                              sin2;   /* socket structure #2              */
-      int                     nodelay;  /* Flag for TCP nodelay           */
-      struct hostent          *addr;    /* Address of host                */
-      int                     sndbufsz, /* Size of TCP send buffer        */
-                              rcvbufsz; /* Size of TCP receive buffer     */
 #if defined(INFINIBAND)
       IB_mtu_t                ib_mtu;   /* MTU Size for Infiniband HCA    */
       int                     commtype; /* Communications type            */
@@ -110,6 +93,24 @@ enum communication_types {
    NP_COMM_RDMAWRITE_WITH_IMM, /* Communication with rdma write & imm data   */
 };
 #endif
+
+#elif defined(SCTP)
+  #include <netdb.h>
+  #include <sys/socket.h>
+  #include <netinet/in.h>
+  #include <netinet/sctp.h>
+  #include <arpa/inet.h>
+  
+  typedef struct protocolstruct ProtocolStruct;
+  struct protocolstruct
+  {
+      struct sockaddr_in      sin1,   /* socket structure #1              */
+                              sin2;   /* socket structure #2              */
+      int                     nodelay;  /* Flag for TCP nodelay           */
+      struct hostent          *addr;    /* Address of host                */
+      int                     sndbufsz, /* Size of TCP send buffer        */
+                              rcvbufsz; /* Size of TCP receive buffer     */
+  };
 
 #elif defined(TCP6)
   #include <netdb.h>
@@ -251,7 +252,7 @@ enum communication_types {
   };
 
 #else
-  #error "One of TCP, TCP6, MPI, PVM, TCGMSG, LAPI, SHMEM, ATOLL, MEMCPY, DISK must be defined during compilation"
+  #error "One of TCP, TCP6, SCTP, IPX, MPI, PVM, TCGMSG, LAPI, SHMEM, ATOLL, MEMCPY, DISK must be defined during compilation"
 
 #endif
 

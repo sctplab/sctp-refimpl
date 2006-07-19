@@ -13,7 +13,7 @@
 .\" Created: Mon Jun 15 1998 by Guy Helmer
 .\" Rewritten:   Jun  1 2004 by Dave Turner
 .\"
-.\" $Id: netpipe.1,v 1.1 2006-04-04 11:27:09 randall Exp $
+.\" $Id: netpipe.1,v 1.2 2006-07-19 14:08:57 randall Exp $
 .\"
 .TH netpipe 1 "June 1, 2004" "NetPIPE" "netpipe"
 
@@ -164,6 +164,11 @@ The
 the maximum throughput on some systems.  A throughput graph that
 flattens out suddenly may be a sign of the performance being limited
 by the socket buffer sizes.
+.PP
+Several other protocols are testable in the same way as TCP.  These
+include TCP6 (TCP over IPv6), SCTP and IPX.  They are started in the
+same way but the program names are NPtcp6, NPsctp, and NPipx
+respectively.
 
 
 .SH TESTING MPI and MPI-2
