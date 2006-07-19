@@ -155,12 +155,12 @@ sctp_getaddrlen(sa_family_t family)
 }
 
 int
-sctp_connectx(int sd, struct sockaddr *addrs, int addrcnt)
+sctp_connectx(int sd, const struct sockaddr *addrs, int addrcnt)
 {
 	char buf[2048];
 	int i,ret,cnt,*aa;
 	char *cpto;
-	struct sockaddr *at;
+	const struct sockaddr *at;
 	size_t len = sizeof(int);
 	
 	at = addrs;
@@ -412,7 +412,7 @@ sctp_sendmsg(int s,
 	struct iovec iov[2];
 	struct sctp_sndrcvinfo sinfo;
 
-	iov[0].iov_base = data;
+	iov[0].iov_base = (void *)data;
 	iov[0].iov_len = len;
 
 	sinfo.sinfo_ppid = ppid;
@@ -534,7 +534,7 @@ sctp_send(int sd, const void *data, size_t len,
 	struct iovec iov[2];
 	struct sockaddr *to=NULL;
 
-	iov[0].iov_base = data;
+	iov[0].iov_base = (void *)data;
 	iov[0].iov_len = len;
 
 	return (syscall(SYS_sctp_generic_sendmsg, sd, 
