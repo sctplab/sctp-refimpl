@@ -7065,7 +7065,7 @@ sctp_sendall_iterator(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
 		ca->cnt_failed++;
 		return;
 	}
-	if ((stcb->sctp_socket->so_state & SS_NBIO) == 0) {
+	if (stcb->sctp_socket && (stcb->sctp_socket->so_state & SS_NBIO) == 0) {
 		/* we have to do this non-blocking */
 		turned_on_nonblock = 1;
 		stcb->sctp_socket->so_state |= SS_NBIO;
@@ -7450,8 +7450,9 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb,
 		}
 		if (orig != chk->data) {
 			/* A new mbuf was added, account for it */
-			if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
-			    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
+			if (stcb->sctp_socket && 
+			    ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
+			     (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL))) {
 				stcb->sctp_socket->so_snd.sb_mbcnt += MSIZE;
 			}
 #ifdef SCTP_MBCNT_LOGGING
@@ -8982,7 +8983,9 @@ sctp_send_shutdown(struct sctp_tcb *stcb, struct sctp_nets *net)
 	TAILQ_INSERT_TAIL(&chk->asoc->control_send_queue, chk, sctp_next);
 	chk->asoc->ctrl_queue_cnt++;
 
-	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
+	
+	if ((stcb->sctp_socket) && 
+	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
 		SCTP_SND_BUF_LOCK(stcb);
 		stcb->sctp_ep->sctp_socket->so_snd.sb_cc = 0;
@@ -8991,6 +8994,7 @@ sctp_send_shutdown(struct sctp_tcb *stcb, struct sctp_nets *net)
 		    ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0))
 			soisdisconnecting(stcb->sctp_ep->sctp_socket);
 	}
+
 	return (0);
 }
 
@@ -10910,7 +10914,8 @@ sctp_send_shutdown_complete(struct sctp_tcb *stcb,
 	sctp_lowlevel_chunk_output(stcb->sctp_ep, stcb, net,
 	    (struct sockaddr *)&net->ro._l_addr,
 	    m_shutdown_comp, 0, NULL, 1, 0, NULL, 0);
-	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
+	if ((stcb->sctp_socket) && 
+	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
 		stcb->sctp_ep->sctp_flags &= ~SCTP_PCB_FLAGS_CONNECTED;
 		SCTP_SND_BUF_LOCK(stcb);
@@ -11391,6 +11396,9 @@ sctp_send_packet_dropped(struct sctp_tcb *stcb, struct sctp_nets *net,
 		/*
 		 * peer must declare support before I send one.
 		 */
+		return;
+	}
+	if(stcb->sctp_socket == NULL) {
 		return;
 	}
 	chk = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk);
