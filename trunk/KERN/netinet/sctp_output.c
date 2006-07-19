@@ -7438,7 +7438,8 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb,
 	asoc = &stcb->asoc;
 	TAILQ_INIT(&tmp);
 	chk = TAILQ_FIRST(&strq->outqueue);
-	SOCKBUF_LOCK(&stcb->sctp_socket->so_snd);
+	if (stcb->sctp_socket)
+		SOCKBUF_LOCK(&stcb->sctp_socket->so_snd);
 	while (chk) {
 		nchk = TAILQ_NEXT(chk, sctp_next);
 		/* now put in the chunk header */
@@ -7522,7 +7523,8 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb,
 		}
 		chk = nchk;
 	}
-	SOCKBUF_UNLOCK(&stcb->sctp_socket->so_snd);
+	if (stcb->sctp_socket)
+		SOCKBUF_UNLOCK(&stcb->sctp_socket->so_snd);
 	if (failed) {
 		/* Gak, we just lost the user message */
 		chk = TAILQ_FIRST(&tmp);
