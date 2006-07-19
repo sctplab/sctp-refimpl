@@ -46,7 +46,7 @@
 .In sys/sctp.h
 .Ft ssize_t
 .Ft ssize_t
-.Fn sctp_recvmsg "int s" "const void *msg" "size_t len" "const struct sockaddr *from" "socklen_t fromlen" "struct sctp_sndrcvinfo *sinfo" "int *flags"
+.Fn sctp_recvmsg "int s" "void *msg" "size_t len" "struct sockaddr * restrict from" "socklen_t * restrict fromlen" "struct sctp_sndrcvinfo *sinfo" "int *flags"
 .Sh DESCRIPTION
 The
 .Fn sctp_recvmsg
