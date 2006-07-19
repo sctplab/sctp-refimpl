@@ -133,6 +133,7 @@ struct rsp_socket {
 	int	 	sd;			/* sctp socket */
 	int		type;			/* socket type */
 	int 		domain;			/* domain af_inet/af_inet6 */
+	int             protocol;		/* Protocol, IPPROTO_UDP or IPPROTO_SCTP */
 	struct rsp_enrp_scope *scp;
 	dlist_t		*address_reg;		/* setup w/addrlist w/ctl&data seperate */
 	uint32_t 	refcnt;			/* number of names in use */
@@ -244,6 +245,7 @@ struct pe_address {
 
 #define RSP_IPADDR_HASH_TABLE_NAME "rsp_ipaddr_to_pe"
 #define RSP_IPADDR_HASH_TBL_SIZE 50
+#define RSP_GROW_LIMITk 10 /* max times we will attempt to grow fd limit */
 
 #define DEF_RSP_T1_ENRP_REQUEST		15000
 #define DEF_RSP_T2_REGISTRATION		30000
@@ -257,12 +259,14 @@ struct pe_address {
 #define DEF_MAX_REQUEST_RETRANSMIT  2 
 #define DEF_STALE_CACHE_VALUE       30000
 
-#define DEF_MINIMUM_TIMER_QUANTUM   500	/* minimum poll fd ms */
+#define DEF_MINIMUM_TIMER_QUANTUM   50	/* minimum poll fd ms */
 
 #define ENRP_DEFAULT_PORT_FOR_ASAP  5555
 
 #define ENRP_MAX_SERVER_HUNTS       3
 #define RSP_DEF_POLLARRAY_SZ        16
 #define RSP_WATCHFD_INCR            16
+
+#define RSP_READ_ADDITIONAL_SZ 2048
 
 #endif

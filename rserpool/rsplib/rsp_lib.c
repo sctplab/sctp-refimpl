@@ -1314,13 +1314,13 @@ rsp_rcvmsg(int sockfd,		/* HA socket descriptor */
 		/* SCTP */
 		ret = sctp_recvmsg(sdata->sd, msg, len,
 				   from, fromlen, sinfo, &flags);
-		if(sinfo->sinfo_ppid == RSERPOOL_ASAP_PPID) {
-			handle_asap_message(sdata, msg, ret, from, *fromlen, sinfo, flags);
-			goto try_again;
-		} else if (sinfo->sinfo_flags & MSG_NOTIFICATION) {
+		if (sinfo->sinfo_flags & MSG_NOTIFICATION) {
 			handle_asap_sctp_notification(sdata, msg, ret, from, *fromlen, sinfo, flags);
 			goto try_again;
-		}
+		} else if(sinfo->sinfo_ppid == RSERPOOL_ASAP_PPID) {
+			handle_asap_message(sdata, msg, ret, from, *fromlen, sinfo, flags);
+			goto try_again;
+		} 
 		return(ret);
 	} else {
 		/* UDP */
