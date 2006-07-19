@@ -306,7 +306,7 @@ sctp6_input(mp, offp, proto)
 				sctp_send_packet_dropped(stcb, net, m, iphlen, 1);
 				sctp_chunk_output((struct sctp_inpcb *)in6p, stcb, 2);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-				socket_unlock(in6p->sctp_socket, 1);
+				socket_unlock(in6p->ip_inp.inp.inp_socket, 1);
 #endif
 			} else if ((in6p != NULL) && (stcb == NULL)) {
 				refcount_up = 1;
@@ -434,7 +434,7 @@ sctp_skip_csum:
 #endif				/* IPSEC */
 
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	sctp_lock_assert(in6p->sctp_socket);
+	sctp_lock_assert(in6p->ip_inp.inp.inp_socket);
 #endif
 
 	/*
@@ -486,9 +486,7 @@ sctp_skip_csum:
 		SCTP_INP_WUNLOCK(in6p);
 	}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	if (!(in6p->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
-		socket_unlock(in6p->sctp_socket, 1);
-	}
+	socket_unlock(in6p->ip_inp.inp.inp_socket, 1);
 #endif
 
 	return IPPROTO_DONE;
