@@ -2293,7 +2293,7 @@ int sctp_generic_sendmsg(td, uap)
 		to = NULL;
 		goto sctp_bad2;
 	}
-	error = getsock(td->td_proc->p_fd, uap->sd, &fp, NULL);
+	error = getsock(td->td_proc->p_fd, uap->sd, &fp);
 	if (error)
 		goto sctp_bad1;
 
@@ -2397,7 +2397,7 @@ int sctp_generic_recvmsg(td, uap)
 #ifdef KTRACE
 	struct uio *ktruio = NULL;
 #endif
-	error = getsock(td->td_proc->p_fd, uap->sd, &fp, NULL);
+	error = getsock(td->td_proc->p_fd, uap->sd, &fp);
 	if (error) {
 		return (error);
 	}
