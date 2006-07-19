@@ -3874,7 +3874,8 @@ sctp_free_bufspace(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	if (tp1->data == NULL) {
 		return;
 	}
-	SCTP_SND_BUF_LOCK(stcb);
+	if(stcb->sctp_socket)
+		SOCKBUF_LOCK(&stcb->sctp_socket->so_snd);
 	asoc->chunks_on_out_queue -= chk_cnt;
 	sctp_log_mbcnt(SCTP_LOG_MBCNT_DECREASE,
 	    asoc->total_output_queue_size,
@@ -3907,7 +3908,8 @@ sctp_free_bufspace(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			stcb->sctp_socket->so_snd.sb_mbcnt = 0;
 		}
 	}
-	SCTP_SND_BUF_UNLOCK(stcb);
+	if(stcb->sctp_socket)
+		SOCKBUF_UNLOCK(&stcb->sctp_socket->so-snd);
 }
 
 #endif
