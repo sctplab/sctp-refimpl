@@ -1,4 +1,4 @@
- $FreeBSD: src/sys/kern/syscalls.master,v 1.216 2006/06/27 14:46:31 jhb Exp $
+ $FreeBSD: src/sys/kern/syscalls.master,v 1.219 2006/07/13 06:26:43 davidxu Exp $
 ;	from: @(#)syscalls.master	8.2 (Berkeley) 1/13/94
 ;
 ; System call name/number master file.
@@ -304,7 +304,7 @@
 154	AUE_NULL	UNIMPL	nosys
 ; 155 is initialized by the NFS code, if present.
 155	AUE_NFSSVC	MNOIMPL	{ int nfssvc(int flag, caddr_t argp); }
-156	AUE_GETDIRENTRIES	COMPAT	{ int getdirentries(int fd, char *buf, \
+156	AUE_GETDIRENTRIES	MCOMPAT	{ int getdirentries(int fd, char *buf, \
 				    u_int count, long *basep); }
 157	AUE_STATFS	MCOMPAT4	{ int statfs(char *path, \
 				    struct ostatfs *buf); }
@@ -618,16 +618,18 @@
 				    acl_type_t type, struct acl *aclp); }
 354	AUE_NULL	MSTD	{ int __acl_aclcheck_fd(int filedes, \
 				    acl_type_t type, struct acl *aclp); }
-355	AUE_NULL	MSTD	{ int extattrctl(const char *path, int cmd, \
+355	AUE_EXTATTRCTL	MSTD	{ int extattrctl(const char *path, int cmd, \
 				    const char *filename, int attrnamespace, \
 				    const char *attrname); }
-356	AUE_NULL	MSTD	{ int extattr_set_file(const char *path, \
-				    int attrnamespace, const char *attrname, \
-				    void *data, size_t nbytes); }
-357	AUE_NULL	MSTD	{ ssize_t extattr_get_file(const char *path, \
-				    int attrnamespace, const char *attrname, \
-				    void *data, size_t nbytes); }
-358	AUE_NULL	MSTD	{ int extattr_delete_file(const char *path, \
+356	AUE_EXTATTR_SET_FILE	MSTD	{ int extattr_set_file( \
+				    const char *path, int attrnamespace, \
+				    const char *attrname, void *data, \
+				    size_t nbytes); }
+357	AUE_EXTATTR_GET_FILE	MSTD	{ ssize_t extattr_get_file( \
+				    const char *path, int attrnamespace, \
+				    const char *attrname, void *data, \
+				    size_t nbytes); }
+358	AUE_EXTATTR_DELETE_FILE	MSTD	{ int extattr_delete_file(const char *path, \
 				    int attrnamespace, \
 				    const char *attrname); }
 359	AUE_NULL	MNOSTD	{ int aio_waitcomplete( \
@@ -649,13 +651,13 @@
 368	AUE_NULL	UNIMPL	__cap_set_fd
 369	AUE_NULL	UNIMPL	__cap_set_file
 370	AUE_NULL	NODEF	lkmressys lkmressys nosys_args int
-371	AUE_NULL	MSTD	{ int extattr_set_fd(int fd, \
+371	AUE_EXTATTR_SET_FD	MSTD	{ int extattr_set_fd(int fd, \
 				    int attrnamespace, const char *attrname, \
 				    void *data, size_t nbytes); }
-372	AUE_NULL	MSTD	{ ssize_t extattr_get_fd(int fd, \
+372	AUE_EXTATTR_GET_FD	MSTD	{ ssize_t extattr_get_fd(int fd, \
 				    int attrnamespace, const char *attrname, \
 				    void *data, size_t nbytes); }
-373	AUE_NULL	MSTD	{ int extattr_delete_fd(int fd, \
+373	AUE_EXTATTR_DELETE_FD	MSTD	{ int extattr_delete_fd(int fd, \
 				    int attrnamespace, \
 				    const char *attrname); }
 374	AUE_NULL	MSTD	{ int __setugid(int flag); }
@@ -718,14 +720,16 @@
 				    struct mac *mac_p); }
 411	AUE_NULL	MSTD	{ int __mac_set_link(const char *path_p, \
 				    struct mac *mac_p); }
-412	AUE_NULL	MSTD	{ int extattr_set_link(const char *path, \
-				    int attrnamespace, const char *attrname, \
-				    void *data, size_t nbytes); }
-413	AUE_NULL	MSTD	{ ssize_t extattr_get_link(const char *path, \
-				    int attrnamespace, const char *attrname, \
-				    void *data, size_t nbytes); }
-414	AUE_NULL	MSTD	{ int extattr_delete_link(const char *path, \
-				    int attrnamespace, \
+412	AUE_EXTATTR_SET_LINK	MSTD	{ int extattr_set_link( \
+				    const char *path, int attrnamespace, \
+				    const char *attrname, void *data, \
+				    size_t nbytes); }
+413	AUE_EXTATTR_GET_LINK	MSTD	{ ssize_t extattr_get_link( \
+				    const char *path, int attrnamespace, \
+				    const char *attrname, void *data, \
+				    size_t nbytes); }
+414	AUE_EXTATTR_DELETE_LINK	MSTD	{ int extattr_delete_link( \
+				    const char *path, int attrnamespace, \
 				    const char *attrname); }
 415	AUE_NULL	MSTD	{ int __mac_execve(char *fname, char **argv, \
 				    char **envv, struct mac *mac_p); }
@@ -761,13 +765,13 @@
 434	AUE_NULL	MSTD	{ int _umtx_lock(struct umtx *umtx); }
 435	AUE_NULL	MSTD	{ int _umtx_unlock(struct umtx *umtx); }
 436	AUE_NULL	MSTD	{ int jail_attach(int jid); }
-437	AUE_NULL	MSTD	{ ssize_t extattr_list_fd(int fd, \
+437	AUE_EXTATTR_LIST_FD	MSTD	{ ssize_t extattr_list_fd(int fd, \
 				    int attrnamespace, void *data, \
 				    size_t nbytes); }
-438	AUE_NULL	MSTD	{ ssize_t extattr_list_file( \
+438	AUE_EXTATTR_LIST_FILE	MSTD	{ ssize_t extattr_list_file( \
 				    const char *path, int attrnamespace, \
 				    void *data, size_t nbytes); }
-439	AUE_NULL	MSTD	{ ssize_t extattr_list_link( \
+439	AUE_EXTATTR_LIST_LINK	MSTD	{ ssize_t extattr_list_link( \
 				    const char *path, int attrnamespace, \
 				    void *data, size_t nbytes); }
 440	AUE_NULL	MSTD	{ int kse_switchin( \
@@ -818,11 +822,20 @@
 463	AUE_NULL	MSTD	{ int abort2(const char *why, int nargs, void **args); }
 464	AUE_NULL	MSTD	{ int thr_set_name(long id, const char *name); }
 465	AUE_NULL	MNOSTD	{ int aio_fsync(int op, struct aiocb *aiocbp); }
-466	AUE_NULL	MSTD	{ int sctp_peeloff(int sd,caddr_t name); }
-467     AUE_NULL        MSTD    { int sctp_generic_sendmsg(int sd, struct iovec *iov, int iovlen, \
+466	AUE_NULL	MSTD	{ int thr_setscheduler(long id, int policy,\
+				    const struct sched_param *param, \
+				    int param_size); }
+467	AUE_NULL	MSTD	{ int thr_getscheduler(long id, int *policy,\
+				    struct sched_param *param, \
+				    int param_size); }
+468	AUE_NULL	MSTD	{ int thr_setschedparam(long id, \
+				    const struct sched_param *param, \
+				    int param_size); }
+469	AUE_NULL	MSTD	{ int sctp_peeloff(int sd,caddr_t name); }
+470     AUE_NULL        MSTD    { int sctp_generic_sendmsg(int sd, struct iovec *iov, int iovlen, \
 	                            caddr_t to, __socklen_t tolen, \
 				    struct sctp_sndrcvinfo *sinfo, int flags); }
-468     AUE_NULL        MSTD    { int sctp_generic_recvmsg(int sd, struct iovec *iov, int iovlen, \
+471     AUE_NULL        MSTD    { int sctp_generic_recvmsg(int sd, struct iovec *iov, int iovlen, \
 				    struct sockaddr * from, __socklen_t *fromlenaddr, \
 				    struct sctp_sndrcvinfo *sinfo, int *msg_flags); }
 ; Please copy any additions and changes to the following compatability tables:
