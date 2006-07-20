@@ -5198,6 +5198,7 @@ sctp_pcb_init()
 	lck_attr_setdefault(sctppcbinfo.mtx_attr);
 #endif				/* __APPLE__ */
 	SCTP_INP_INFO_LOCK_INIT();
+	SCTP_STATLOG_INIT_LOCK();
 	SCTP_ITERATOR_LOCK_INIT();
 	SCTP_IPI_COUNT_INIT();
 	SCTP_IPI_ADDR_INIT();
