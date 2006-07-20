@@ -4304,8 +4304,7 @@ process_control_chunks:
 			}
 			/* He's alive so give him credit */
 			stcb->asoc.overall_error_count = 0;
-			sctp_handle_cookie_ack((struct sctp_cookie_ack_chunk *)ch,
-			    stcb, *netp);
+			sctp_handle_cookie_ack((struct sctp_cookie_ack_chunk *)ch,stcb, *netp);
 			break;
 		case SCTP_ECN_ECHO:
 #ifdef SCTP_DEBUG
@@ -4671,6 +4670,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
 #endif
+		stcb->asoc.seen_a_sack_this_pkt = 0;
 	}
 	if (IS_SCTP_CONTROL(ch)) {
 		/* process the control portion of the SCTP packet */
@@ -4739,7 +4739,6 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 	 * DATA chunk processing
 	 */
 	/* plow through the data chunks while length > offset */
-	stcb->asoc.seen_a_sack_this_pkt = 0;
 
 	/*
 	 * Rest should be DATA only.  Check authentication state if AUTH for
@@ -4774,8 +4773,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 			 * there.
 			 */
 			stcb->asoc.overall_error_count = 0;
-			sctp_handle_cookie_ack(
-			    (struct sctp_cookie_ack_chunk *)ch, stcb, net);
+			sctp_handle_cookie_ack((struct sctp_cookie_ack_chunk *)ch, stcb, net);
 			break;
 		case SCTP_STATE_COOKIE_WAIT:
 			/*
@@ -4857,6 +4855,9 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		    TAILQ_EMPTY(&stcb->asoc.control_send_queue),
 		    stcb->asoc.total_flight);
 	}
+#endif
+#ifdef SCTP_WAKE_LOGGING
+	sctp_log_cwnd(stcb, stcb->asoc.primary_destination, 0, SCTP_CWNDLOG_PRESEND);
 #endif
 	if (stcb->asoc.peers_rwnd > 0 ||
 	    !TAILQ_EMPTY(&stcb->asoc.control_send_queue) ||

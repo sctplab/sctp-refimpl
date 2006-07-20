@@ -3782,6 +3782,9 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 			printf("Bad size on sack chunk .. to small\n");
 		}
 #endif
+#ifdef SCTP_WAKE_LOGGING
+		sctp_log_cwnd(stcb, asoc->primary_destination, 0, SCTP_CWND_LOG_FROM_SACK);
+#endif
 		return;
 	}
 	/* ECN Nonce */
@@ -3855,6 +3858,9 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 				*ippp = htonl(0x30000002);
 			}
 			sctp_abort_an_association(stcb->sctp_ep, stcb, SCTP_PEER_FAULTY, oper);
+#ifdef SCTP_WAKE_LOGGING
+			sctp_log_cwnd(stcb, asoc->primary_destination, 0, SCTP_CWND_LOG_FROM_SACK);
+#endif
 			return;
 		}
 	}
@@ -3880,6 +3886,9 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 			}
 #endif
 		}
+#ifdef SCTP_WAKE_LOGGING
+		sctp_log_cwnd(stcb, asoc->primary_destination, 0, SCTP_CWND_LOG_FROM_SACK);
+#endif
 		return;
 	}
 	if (TAILQ_EMPTY(&asoc->sent_queue)) {
@@ -3916,6 +3925,9 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 		}
 		asoc->total_flight = 0;
 		asoc->total_flight_count = 0;
+#ifdef SCTP_WAKE_LOGGING
+		sctp_log_cwnd(stcb, asoc->primary_destination, 0, SCTP_CWND_LOG_FROM_SACK);
+#endif
 		return;
 	}
 	/*
@@ -4199,7 +4211,6 @@ skip_segments:
 	} else {
 
 		sctp_wakeup_log(stcb, cum_ack, wake_him, SCTP_NOWAKE_FROM_SACK);
-		sctp_log_cwnd(stcb, stcb->asoc.primary_destination, 0, SCTP_NOWAKE_FROM_SACK);
 #endif
 	}
 	if ((sctp_cmt_on_off == 0) && asoc->fast_retran_loss_recovery && accum_moved) {
@@ -4532,6 +4543,9 @@ skip_cwnd_update:
 			sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNACK,
 			    stcb->sctp_ep, stcb, asoc->primary_destination);
 		}
+#ifdef SCTP_WAKE_LOGGING
+		sctp_log_cwnd(stcb, asoc->primary_destination, 0, SCTP_CWND_LOG_FROM_SACK);
+#endif
 		return;
 	}
 	/*
@@ -4782,6 +4796,9 @@ skip_cwnd_update:
 			}
 		}
 	}
+#ifdef SCTP_WAKE_LOGGING
+	sctp_log_cwnd(stcb, asoc->primary_destination, 0, SCTP_CWND_LOG_FROM_SACK);
+#endif
 }
 
 void

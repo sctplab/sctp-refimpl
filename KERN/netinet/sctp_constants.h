@@ -48,7 +48,7 @@ __FBSDID("$FreeBSD:$");
 #define SCTP_VERSION_STRING "KAME-BSD 1.1"
 /* #define SCTP_AUDITING_ENABLED 1 used for debug/auditing */
 #define SCTP_AUDIT_SIZE 256
-#define SCTP_STAT_LOG_SIZE 40000
+#define SCTP_STAT_LOG_SIZE 60000
 
 /* Places that CWND log can happen from */
 #define SCTP_CWND_LOG_FROM_FR	1
@@ -126,9 +126,10 @@ __FBSDID("$FreeBSD:$");
 #define SCTP_WAKESND_FROM_SACK      74
 #define SCTP_WAKESND_FROM_FWDTSN    75
 #define SCTP_NOWAKE_FROM_SACK       76
-#define SCTP_UNKNOWN_MAX            77
+#define SCTP_CWNDLOG_PRESEND        77
+#define SCTP_UNKNOWN_MAX            78
 
-#define SCTP_LOG_MAX_TYPES 78
+#define SCTP_LOG_MAX_TYPES 79
 /*
  * To turn on various logging, you must first define SCTP_STAT_LOGGING. Then
  * to get something to log you define one of the logging defines i.e.

@@ -747,6 +747,7 @@ struct	sctpstat {
 	u_long  sctps_sendheartbeat;       /* total output HB chunks     */
 	u_long  sctps_sendecne;            /* total output ECNE chunks    */
 	u_long  sctps_sendauth;            /* total output AUTH chunks FIXME   */
+	u_long  sctps_senderrors;	   /* ip_output error counter */
 	/* PCKDROPREP statistics: */
 	u_long  sctps_pdrpfmbox;           /* */
 	u_long  sctps_pdrpfehos;           /* */
