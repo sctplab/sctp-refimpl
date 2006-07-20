@@ -225,6 +225,7 @@ struct sctp_epinfo {
 #endif
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
+	struct mtx logging_mtx;
 	struct mtx ipi_ep_mtx;
 	struct mtx it_mtx;
 	struct mtx ipi_count_mtx;
@@ -503,8 +504,23 @@ struct sctp_tcb {
 #define SCTP_IPI_COUNT_INIT() \
         mtx_init(&sctppcbinfo.ipi_count_mtx, "sctp-count", "inp_info_count", MTX_DEF)
 
+#define SCTP_STATLOG_INIT_LOCK()  \
+        mtx_init(&sctppcbinfo.logging_mtx, "sctp-logging", "sctp-log_mtx", MTX_DEF)
+
+#define SCTP_STATLOG_LOCK() \
+	do {								\
+		mtx_lock(&sctppcbinfo.logging_mtx);				\
+	} while (0)
+
+#define SCTP_STATLOG_UNLOCK()		mtx_unlock(&sctppcbinfo.logging_mtx)
+
+#define SCTP_STATLOG_DESTROY() \
+	mtx_destroy(&sctppcbinfo.loggingr_mtx)
+
+
 #define SCTP_INP_INFO_LOCK_INIT() \
         mtx_init(&sctppcbinfo.ipi_ep_mtx, "sctp-info", "inp_info", MTX_DEF)
+
 
 #ifdef INVARIANTS_SCTP
 void SCTP_INP_INFO_RLOCK(void);
@@ -732,6 +748,13 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #define SCTP_IPI_ADDR_WLOCK()
 #define SCTP_IPI_ADDR_RUNLOCK()
 #define SCTP_IPI_ADDR_WUNLOCK()
+
+
+#define SCTP_STATLOG_INIT_LOCK()
+#define SCTP_STATLOG_LOCK() 
+#define SCTP_STATLOG_UNLOCK()
+#define SCTP_STATLOG_DESTROY()
+
 
 /* Lock for INP */
 #define SCTP_INP_LOCK_INIT(_inp)
