@@ -200,23 +200,6 @@ sctp_clr_stat_log(void)
 	sctp_cwnd_log_rolled = 0;
 }
 
-void
-sctp_wakeup_log(struct sctp_tcb *stcb, uint32_t cumtsn, uint32_t wake_cnt, int from)
-{
-	SCTP_STATLOG_LOCK();
-	sctp_clog[sctp_cwnd_log_at].time_event = sctp_get_time_of_event();
-	sctp_clog[sctp_cwnd_log_at].from = (uint8_t) from;
-	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t) SCTP_LOG_EVENT_WAKE;
-	sctp_clog[sctp_cwnd_log_at].x.wake.stcb = (uint32_t) stcb;
-	sctp_clog[sctp_cwnd_log_at].x.wake.tsn = cumtsn;
-	sctp_clog[sctp_cwnd_log_at].x.wake.wake_cnt = wake_cnt;
-	sctp_cwnd_log_at++;
-	if (sctp_cwnd_log_at >= SCTP_STAT_LOG_SIZE) {
-		sctp_cwnd_log_at = 0;
-		sctp_cwnd_log_rolled = 1;
-	}
-	SCTP_STATLOG_UNLOCK();
-}
 
 void
 sctp_sblog(struct sockbuf *sb,
@@ -539,6 +522,27 @@ sctp_log_mbcnt(uint8_t from, uint32_t total_oq, uint32_t book, uint32_t total_mb
 	sctp_clog[sctp_cwnd_log_at].x.mbcnt.size_change = book;
 	sctp_clog[sctp_cwnd_log_at].x.mbcnt.total_queue_mb_size = total_mbcnt_q;
 	sctp_clog[sctp_cwnd_log_at].x.mbcnt.mbcnt_change = mbcnt;
+	sctp_cwnd_log_at++;
+	if (sctp_cwnd_log_at >= SCTP_STAT_LOG_SIZE) {
+		sctp_cwnd_log_at = 0;
+		sctp_cwnd_log_rolled = 1;
+	}
+	SCTP_STATLOG_UNLOCK();
+}
+
+void
+sctp_wakeup_log(struct sctp_tcb *stcb, uint32_t cumtsn, uint32_t wake_cnt, int from)
+{
+	SCTP_STATLOG_LOCK();
+	sctp_clog[sctp_cwnd_log_at].time_event = sctp_get_time_of_event();
+	sctp_clog[sctp_cwnd_log_at].from = (uint8_t) from;
+	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t) SCTP_LOG_EVENT_WAKE;
+	sctp_clog[sctp_cwnd_log_at].x.wake.stcb = (uint32_t) stcb;
+	sctp_clog[sctp_cwnd_log_at].x.wake.tsn = cumtsn;
+	sctp_clog[sctp_cwnd_log_at].x.wake.wake_cnt = wake_cnt;
+	sctp_clog[sctp_cwnd_log_at].x.wake.flight = stcb->asoc.total_flight_count/1024;
+	sctp_clog[sctp_cwnd_log_at].x.wake.stream_qcnt = (uint16_t) stcb->asoc.stream_queue_cnt;
+	sctp_clog[sctp_cwnd_log_at].x.wake.chunks_on_oque = (uint16_t) stcb->asoc.chunks_on_out_queue;
 	sctp_cwnd_log_at++;
 	if (sctp_cwnd_log_at >= SCTP_STAT_LOG_SIZE) {
 		sctp_cwnd_log_at = 0;
