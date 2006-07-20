@@ -125,9 +125,10 @@ static char *from_str[]= {
 	/* 74 */ "Awake SND In SACK Processing",
 	/* 75 */ "Awake SND In FWD_TSN Processing",
 	/* 76 */ "No wake from sack",
-	/* 77 */ "unknown"
+	/* 77 */ "Pre-Send",
+	/* 78 */ "unknown"
 };
-#define FROM_STRING_MAX 77
+#define FROM_STRING_MAX 78
 
 
 static uint32_t cnt_event[SCTP_LOG_MAX_EVENT];
@@ -283,14 +284,12 @@ main(int argc, char **argv)
 				       (int)log.x.cwnd.cnt_in_send,
 				       (int)log.x.cwnd.cnt_in_str);
 			}else {
-				printf("%s Network:%x at cwnd_event (CWND) cwnd:%d flight:%d pq:%x atpc:%d needpc:%d (tsn:%x,sendcnt:%d,strcnt:%d) \n",
+				printf("%s:CWND %s net:%x cwnd:%d flight:%d aug:%d (sendcnt:%d,strcnt:%d)\n",
 				       ts,
+				       from_str[log.from],
 				       (u_int)log.x.cwnd.net,
 				       log.x.cwnd.cwnd_new_value,
 				       log.x.cwnd.inflight,
-				       (u_int)log.x.cwnd.pseudo_cumack,
-				       log.x.cwnd.meets_pseudo_cumack,
-				       log.x.cwnd.need_new_pseudo_cumack,
 				       (u_int)log.x.cwnd.cwnd_augment,
 				       (int)log.x.cwnd.cnt_in_send,
 				       (int)log.x.cwnd.cnt_in_str);
