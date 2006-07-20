@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.52 2006-07-20 16:11:06 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.53 2006-07-20 16:20:37 lei Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -738,6 +738,7 @@ sctpSEND(int fd, int defStream, char *s_buff, int sndsz, struct sockaddr *to,
 	else if (to->sa_family == AF_INET6)
 		to_len = sizeof(struct sockaddr_in6);
 #endif
+printf("sctp_sendmsg: options = 0x%x\n", options);
 	sz = sctp_sendmsg(fd, s_buff, sndsz, to, to_len, payload, options,
 			  defStream, time_to_live, 0);
 	if((sz <=0) && (errno != ENOBUFS)){
