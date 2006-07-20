@@ -662,7 +662,8 @@ struct sctp_nagle_log {
 
 struct sctp_sbwake_log {
 	uint32_t stcb;
-	uint32_t tsn;
+	uint16_t send_q;
+	uint16_t sent_q;
 	uint16_t flight;
 	uint16_t wake_cnt;
 	uint16_t stream_qcnt;	/* chnk cnt */
