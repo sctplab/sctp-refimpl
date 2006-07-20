@@ -127,10 +127,11 @@ static char *from_str[]= {
 	/* 76 */ "No wake from sack",
 	/* 77 */ "Pre-Send",
 	/* 78 */ "End-of-Send",
-	/* 79 */ "unknown"
+	/* 79 */ "Sack proc done",
+	/* 80 */ "unknown"
 
 };
-#define FROM_STRING_MAX 79
+#define FROM_STRING_MAX 80
 
 
 static uint32_t cnt_event[SCTP_LOG_MAX_EVENT];
