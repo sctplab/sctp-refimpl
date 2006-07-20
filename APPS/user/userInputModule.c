@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.51 2006-07-18 19:46:25 tuexen Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.52 2006-07-20 16:11:06 randall Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -3383,6 +3383,7 @@ cmd_getstat(char *argv[], int argc)
 	p(sctps_sendheartbeat,       "heartbeat");
 	p(sctps_sendecne,            "ecne");
 	p(sctps_sendauth,            "auth");
+	p(sctps_senderrors,            "auth");
 	nl("PDRP");
 	p(sctps_pdrpfmbox,           "fmbox");
 	p(sctps_pdrpfehos,           "fehos");
