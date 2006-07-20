@@ -136,6 +136,7 @@ int
 main(int argc, char **argv)
 {
 	int stat_only=0,i;
+	char ts[100];
 	FILE *out;
 	char *logfile=NULL;
 	int at;
@@ -180,11 +181,14 @@ main(int argc, char **argv)
 				printf("Event type %d greater than max\n", log.event_type);
 			continue;
 		}
+		sprintf(ts, "%d.%6.6d",
+			((log.time_event >> 20) & 0x0fff),
+			((log.time_event & 0x000fffff)));
 		if(log.event_type == SCTP_LOG_EVENT_CWND) {
 			if((log.from == SCTP_CWND_LOG_NOADV_CA) ||
 			   (log.from == SCTP_CWND_LOG_NOADV_SS)) {
-				printf("%u: Net:%x Cwnd:%d flt:%d flt+acked:%d (atpc:%d npc:%d) %s (pc=%x, sendcnt:%d,strcnt:%d)\n",
-				       (u_int)log.time_event,
+				printf("%s: Net:%x Cwnd:%d flt:%d flt+acked:%d (atpc:%d npc:%d) %s (pc=%x, sendcnt:%d,strcnt:%d)\n",
+				       ts,
 				       (u_int)log.x.cwnd.net,
 				       (int)log.x.cwnd.cwnd_new_value,
 				       (int)log.x.cwnd.inflight,
@@ -198,8 +202,8 @@ main(int argc, char **argv)
 					);
 
 			} else if (log.from == SCTP_CWND_LOG_FROM_T3){
-				printf("%u Network:%x at T3 cwnd:%d flight:%d pc:%x (net==lnet ?:%d,sendcnt:%d,strcnt:%d)\n",
-				       (u_int)log.time_event,
+				printf("%s Network:%x at T3 cwnd:%d flight:%d pc:%x (net==lnet ?:%d,sendcnt:%d,strcnt:%d)\n",
+				       ts,
 				       (u_int)log.x.cwnd.net,
 				       log.x.cwnd.cwnd_new_value,
 				       log.x.cwnd.inflight,
@@ -209,8 +213,8 @@ main(int argc, char **argv)
 				       (int)log.x.cwnd.cnt_in_str);
 
 			} else if (log.from == SCTP_CWND_LOG_FILL_OUTQ_FILLS) {
-				printf("%u fill_outqueue adds %d bytes onto net:%x cwnd:%d flight:%d (sendcnt:%d,strcnt:%d)\n",
-				       (u_int)log.time_event,
+				printf("%s fill_outqueue adds %d bytes onto net:%x cwnd:%d flight:%d (sendcnt:%d,strcnt:%d)\n",
+				       ts,
 				       (int)log.x.cwnd.cwnd_augment,
 				       (u_int)log.x.cwnd.net,
 				       log.x.cwnd.cwnd_new_value,
@@ -220,8 +224,8 @@ main(int argc, char **argv)
 
 
 			} else if (log.from == SCTP_CWND_LOG_FILL_OUTQ_CALLED) {
-				printf("%u fill_outqueue called on net:%x cwnd:%d flight:%d (sendcnt:%d,strcnt:%d)\n",
-				       (u_int)log.time_event,
+				printf("%s fill_outqueue called on net:%x cwnd:%d flight:%d (sendcnt:%d,strcnt:%d)\n",
+				       ts,
 				       (u_int)log.x.cwnd.net,
 				       log.x.cwnd.cwnd_new_value,
 				       (int)log.x.cwnd.inflight,
@@ -229,14 +233,14 @@ main(int argc, char **argv)
 				       (int)log.x.cwnd.cnt_in_str);
 
 			} else if (log.from == SCTP_SEND_NOW_COMPLETES) {
-				printf("%u Send completes sending %d (sendcnt:%d,strcnt:%d)\n",
-				       (u_int)log.time_event,
+				printf("%s Send completes sending %d (sendcnt:%d,strcnt:%d)\n",
+				       ts,
 				       (int)log.x.cwnd.cwnd_augment,
 				       (int)log.x.cwnd.cnt_in_send,
 				       (int)log.x.cwnd.cnt_in_str);
 			} else if (log.from == SCTP_CWND_LOG_FROM_BRST){
-				printf("%u Network:%x at cwnd_event (BURST) cwnd:%d flight:%d decrease by %d (sendcnt:%d,strcnt:%d)\n",
-				       (u_int)log.time_event,
+				printf("%s Network:%x at cwnd_event (BURST) cwnd:%d flight:%d decrease by %d (sendcnt:%d,strcnt:%d)\n",
+				       ts,
 				       (u_int)log.x.cwnd.net,
 				       log.x.cwnd.cwnd_new_value,
 				       log.x.cwnd.inflight,
@@ -245,8 +249,8 @@ main(int argc, char **argv)
 				       (int)log.x.cwnd.cnt_in_str);
 
 			} else if (log.from == SCTP_CWND_LOG_FROM_SACK){
-				printf("%u Net:%x at cwnd_event (SACK) cwnd:%d flight:%d pq:%x atpc:%d needpc:%d (tsn:%x,sendcnt:%d,strcnt:%d) \n",
-				       (u_int)log.time_event,
+				printf("%s Net:%x at cwnd_event (SACK) cwnd:%d flight:%d pq:%x atpc:%d needpc:%d (tsn:%x,sendcnt:%d,strcnt:%d) \n",
+				       ts,
 				       (u_int)log.x.cwnd.net,
 				       log.x.cwnd.cwnd_new_value,
 				       log.x.cwnd.inflight,
@@ -258,8 +262,8 @@ main(int argc, char **argv)
 				       (int)log.x.cwnd.cnt_in_str);
 
 			} else if (log.from == SCTP_CWND_INITIALIZATION){
-				printf("%u Network:%x initializes cwnd:%d flight:%d pq:%x (sendcnt:%d,strcnt:%d)\n",
-				       (u_int)log.time_event,
+				printf("%s Network:%x initializes cwnd:%d flight:%d pq:%x (sendcnt:%d,strcnt:%d)\n",
+				       ts,
 				       (u_int)log.x.cwnd.net,
 				       log.x.cwnd.cwnd_new_value,
 				       log.x.cwnd.inflight,
@@ -268,8 +272,8 @@ main(int argc, char **argv)
 				       (int)log.x.cwnd.cnt_in_str);
 			} else if ((log.from == SCTP_CWND_LOG_FROM_SEND) ||
 				   (log.from == SCTP_CWND_LOG_FROM_RESEND)){
-				printf("%u Network:%x cwnd:%d flight:%d pq:%x %s tsn:%x (sendcnt:%d,strcnt:%d)\n",
-				       (u_int)log.time_event,
+				printf("%s Network:%x cwnd:%d flight:%d pq:%x %s tsn:%x (sendcnt:%d,strcnt:%d)\n",
+				       ts,
 				       (u_int)log.x.cwnd.net,
 				       log.x.cwnd.cwnd_new_value,
 				       log.x.cwnd.inflight,
@@ -279,8 +283,8 @@ main(int argc, char **argv)
 				       (int)log.x.cwnd.cnt_in_send,
 				       (int)log.x.cwnd.cnt_in_str);
 			}else {
-				printf("%u Network:%x at cwnd_event (CWND) cwnd:%d flight:%d pq:%x atpc:%d needpc:%d (tsn:%x,sendcnt:%d,strcnt:%d) \n",
-				       (u_int)log.time_event,
+				printf("%s Network:%x at cwnd_event (CWND) cwnd:%d flight:%d pq:%x atpc:%d needpc:%d (tsn:%x,sendcnt:%d,strcnt:%d) \n",
+				       ts,
 				       (u_int)log.x.cwnd.net,
 				       log.x.cwnd.cwnd_new_value,
 				       log.x.cwnd.inflight,
@@ -418,8 +422,8 @@ main(int argc, char **argv)
 			}
 		}else if(log.event_type == SCTP_LOG_EVENT_MAXBURST) {
 			if(log.from == SCTP_MAX_BURST_ERROR_STOP) {
-				printf("%u: Network:%x Flight:%d burst cnt:%d - send error:%d %s (sendcnt:%d strcnt:%d)\n",
-				       (u_int)log.time_event,
+				printf("%s: Network:%x Flight:%d burst cnt:%d - send error:%d %s (sendcnt:%d strcnt:%d)\n",
+				       ts,
 				       (u_int)log.x.cwnd.net,
 				       (int)log.x.cwnd.inflight,
 				       (int)log.x.cwnd.cwnd_augment,
@@ -429,8 +433,8 @@ main(int argc, char **argv)
 				       (int)log.x.cwnd.cnt_in_str
 					);
 			} else if (log.from == SCTP_MAX_BURST_APPLIED) {
-				printf("%u: Network:%x Flight:%d burst cnt:%d %s (sendcnt:%d strcnt:%d)\n",
-				       (u_int)log.time_event,
+				printf("%s: Network:%x Flight:%d burst cnt:%d %s (sendcnt:%d strcnt:%d)\n",
+				       ts,
 				       (u_int)log.x.cwnd.net,
 				       (int)log.x.cwnd.inflight,
 				       (int)log.x.cwnd.cwnd_augment,
@@ -439,8 +443,8 @@ main(int argc, char **argv)
 				       (int)log.x.cwnd.cnt_in_str
 					);
 			} else if (log.from == SCTP_MAX_IFP_APPLIED) {
-				printf("%u: Network:%x Flight:%d ifp_send_qsize: %d ifp_send_qlimit:%d %s (sendcnt:%d strcnt:%d)\n",
-				       (u_int)log.time_event,
+				printf("%s: Network:%x Flight:%d ifp_send_qsize: %d ifp_send_qlimit:%d %s (sendcnt:%d strcnt:%d)\n",
+				       ts,
 				       (u_int)log.x.cwnd.net,
 				       (int)log.x.cwnd.inflight,
 				       (int)log.x.cwnd.cwnd_new_value,
@@ -452,8 +456,9 @@ main(int argc, char **argv)
 			}
 
 		} else if (log.event_type == SCTP_LOG_EVENT_WAKE) {
-			printf("WAKE:%u %s tcb:%x tsn:%x count:%d\n",
-			       (u_int)log.time_event,
+			printf("WUP:%s %s tcb:%x tsn:%x count:%d\n",
+			       
+			       ts,
 			       from_str[log.from],
 			       log.x.wake.stcb,
 			       log.x.wake.tsn,
@@ -461,7 +466,8 @@ main(int argc, char **argv)
 				);
 
 		}else if(log.event_type == SCTP_LOG_EVENT_BLOCK) {
-			printf("BLOCK:(mbmx:%d < mb-use:%d) || (sb_mx:%d < sb_cc:%d + snd:%d) || (%d > MAX CHUNK) %s(BLK_EVENT %d:%d)\n",
+			printf("BLK:%s:(mbmx:%d < mb-use:%d) || (mx:%d < cc:%d + snd:%d) || (%d > MC) %s(%d:%d)\n",
+			       ts,
 			       (log.x.blk.maxmb*1024),
 			       (int)log.x.blk.onmb,
 			       (log.x.blk.maxsb*1024),
