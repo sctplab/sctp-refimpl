@@ -538,9 +538,10 @@ sctp_wakeup_log(struct sctp_tcb *stcb, uint32_t cumtsn, uint32_t wake_cnt, int f
 	sctp_clog[sctp_cwnd_log_at].from = (uint8_t) from;
 	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t) SCTP_LOG_EVENT_WAKE;
 	sctp_clog[sctp_cwnd_log_at].x.wake.stcb = (uint32_t) stcb;
-	sctp_clog[sctp_cwnd_log_at].x.wake.tsn = cumtsn;
 	sctp_clog[sctp_cwnd_log_at].x.wake.wake_cnt = wake_cnt;
-	sctp_clog[sctp_cwnd_log_at].x.wake.flight = stcb->asoc.total_flight_count/1024;
+	sctp_clog[sctp_cwnd_log_at].x.wake.flight = stcb->asoc.total_flight_count;
+	sctp_clog[sctp_cwnd_log_at].x.wake.send_q = stcb->asoc.send_queue_cnt;
+	sctp_clog[sctp_cwnd_log_at].x.wake.sent_q = stcb->asoc.sent_queue_cnt;
 	sctp_clog[sctp_cwnd_log_at].x.wake.stream_qcnt = (uint16_t) stcb->asoc.stream_queue_cnt;
 	sctp_clog[sctp_cwnd_log_at].x.wake.chunks_on_oque = (uint16_t) stcb->asoc.chunks_on_out_queue;
 	sctp_cwnd_log_at++;
