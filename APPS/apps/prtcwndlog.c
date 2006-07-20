@@ -28,98 +28,136 @@
 #include <netinet/sctp_uio.h>
 #include <netinet/sctp.h>
 
+static char *event_names[] = {
+	"SCTP_LOG_EVENT_UNKNOWN",
+	"SCTP_LOG_EVENT_CWND",
+	"SCTP_LOG_EVENT_BLOCK",
+	"SCTP_LOG_EVENT_STRM",
+	"SCTP_LOG_EVENT_FR ",
+	"SCTP_LOG_EVENT_MAP",
+	"SCTP_LOG_EVENT_MAXBURST ",
+	"SCTP_LOG_EVENT_RWND",
+	"SCTP_LOG_EVENT_MBCNT",
+	"SCTP_LOG_EVENT_SACK",
+	"SCTP_LOG_LOCK_EVENT",
+	"SCTP_LOG_EVENT_RTT",
+	"SCTP_LOG_EVENT_SB",
+	"SCTP_LOG_EVENT_NAGLE",
+	"SCTP_LOG_EVENT_WAKE",
+	"SCTP_LOG_MAX_EVENT"
+};
+
+static char *from_str[]= {
+	/* 0  */ "Unknown",
+	/* 1  */ "FastRetransmit",
+	/* 2  */ "T3-Timer",
+	/* 3  */ "Max_burst",
+	/* 4  */ "Slow-Start",
+	/* 5  */ "Congestion-Avoidance",
+	/* 6  */ "Satellite",
+	/* 7  */ "Blocking",
+	/* 8  */ "Wakeup",
+	/* 9  */ "Check",
+	/* 10 */ "Del-2Strm",
+	/* 11 */ "Del-Immed",
+	/* 12 */ "Insert-hd",
+	/* 13 */ "Insert-md",
+	/* 14 */ "Insert-tl",
+	/* 15 */ "Mark_tsn ",
+	/* 16 */ "Express-D",
+	/* 17 */ "Set_biggest",
+	/* 18 */ "Test_strike",
+	/* 19 */ "Strike_second",
+	/* 20 */ "T3-Timeout",
+	/* 21 */ "slide_map",
+	/* 22 */ "slide_range",
+	/* 23 */ "slide_result",
+	/* 24 */ "slide_clear_arry",
+	/* 25 */ "slide_NONE",
+	/* 26 */ "T3-Mark time",
+	/* 27 */ "T3-Marked",
+	/* 28 */ "T3-Stopped Marking",
+	/* 29 */ "NOT-USED",
+	/* 30 */ "FR-Marked",
+	/* 31 */ "No Cwnd advance from SS",
+	/* 32 */ "No Cwnd advance from CA",
+	/* 33 */ "Max Burst Applied",
+	/* 34 */ "Max IFP Queue Stops Output",
+	/* 35 */ "Max Burst stops at Error",
+	/* 36 */ "SACK increases rwnd",     
+	/* 37 */ "SEND decreases rwnd",
+	/* 38 */ "SACK sets rwnd",
+	/* 39 */ "MBCNT Increase",
+	/* 40 */ "MBCNT Decrease",
+	/* 41 */ "MBCNT chkset",
+	/* 42 */ "New SACK",
+	/* 43 */ "Tsn Acked",
+	/* 44 */ "TSN Revoked",
+	/* 45 */ "Lock TCB",
+	/* 46 */ "Lock INP",
+	/* 47 */ "Lock Socket",
+	/* 48 */ "Lock Socket-rcvbuf",
+	/* 49 */ "Lock Socket-sndbuf",
+	/* 50 */ "Lock Create", 
+	/* 51 */ "Initial RTT",
+	/* 52 */ "RTT Variance",
+	/* 53 */ "SB Alloc",
+	/* 54 */ "SB Free",
+	/* 55 */ "SB result", 
+	/* 56 */ "Duplicate TSN sent",
+	/* 57 */ "Early FR",
+	/* 58 */ "Early FR cwnd report",
+	/* 59 */ "Early FR cwnd Start",
+	/* 60 */ "Early FR cwnd Stop",
+	/* 61 */ "Log from a Send",
+	/* 62 */ "Log at Initialization",
+	/* 63 */ "Log from T3 Timeout",
+	/* 64 */ "Log from SACK",
+	/* 65 */ "No new cumack",
+	/* 66 */ "Log from a re-transmission",
+	/* 67 */ "Check TSN to strike",
+	/* 68 */ "chunk output completes",
+	/* 69 */ "fill_out_queue_called",
+	/* 70 */ "fill_out_queue_fills",
+	/* 71 */ "log_free_sent",
+	/* 72 */ "Nagle stops  transmit",
+	/* 73 */ "Nagle allows transmit",
+	/* 74 */ "Awake SND In SACK Processing",
+	/* 75 */ "Awake SND In FWD_TSN Processing",
+	/* 76 */ "No wake from sack",
+	/* 77 */ "unknown"
+};
+#define FROM_STRING_MAX 77
+
+
+static uint32_t cnt_event[SCTP_LOG_MAX_EVENT];
+static uint32_t cnt_type[SCTP_LOG_MAX_TYPES];
 int
 main(int argc, char **argv)
 {
-	static char *from_str[]= {
-		/* 0  */ "Unknown",
-		/* 1  */ "FastRetransmit",
-		/* 2  */ "T3-Timer",
-		/* 3  */ "Max_burst",
-		/* 4  */ "Slow-Start",
-		/* 5  */ "Congestion-Avoidance",
-		/* 6  */ "Satellite",
-		/* 7  */ "Blocking",
-		/* 8  */ "Wakeup",
-		/* 9  */ "Check",
-		/* 10 */ "Del-2Strm",
-		/* 11 */ "Del-Immed",
-		/* 12 */ "Insert-hd",
-		/* 13 */ "Insert-md",
-		/* 14 */ "Insert-tl",
-		/* 15 */ "Mark_tsn ",
-		/* 16 */ "Express-D",
-		/* 17 */ "Set_biggest",
-		/* 18 */ "Test_strike",
-		/* 19 */ "Strike_second",
-		/* 20 */ "T3-Timeout",
-		/* 21 */ "slide_map",
-		/* 22 */ "slide_range",
-		/* 23 */ "slide_result",
-		/* 24 */ "slide_clear_arry",
-		/* 25 */ "slide_NONE",
-		/* 26 */ "T3-Mark time",
-		/* 27 */ "T3-Marked",
-		/* 28 */ "T3-Stopped Marking",
-		/* 29 */ "NOT-USED",
-		/* 30 */ "FR-Marked",
-		/* 31 */ "No Cwnd advance from SS",
-		/* 32 */ "No Cwnd advance from CA",
-                /* 33 */ "Max Burst Applied",
-                /* 34 */ "Max IFP Queue Stops Output",
-                /* 35 */ "Max Burst stops at Error",
-                /* 36 */ "SACK increases rwnd",     
-		/* 37 */ "SEND decreases rwnd",
-		/* 38 */ "SACK sets rwnd",
-		/* 39 */ "MBCNT Increase",
-		/* 40 */ "MBCNT Decrease",
-		/* 41 */ "MBCNT chkset",
-		/* 42 */ "New SACK",
-		/* 43 */ "Tsn Acked",
-		/* 44 */ "TSN Revoked",
-		/* 45 */ "Lock TCB",
-		/* 46 */ "Lock INP",
-		/* 47 */ "Lock Socket",
-		/* 48 */ "Lock Socket-rcvbuf",
-		/* 49 */ "Lock Socket-sndbuf",
-		/* 50 */ "Lock Create", 
-                /* 51 */ "Initial RTT",
-		/* 52 */ "RTT Variance",
-		/* 53 */ "SB Alloc",
-                /* 54 */ "SB Free",
-		/* 55 */ "SB result", 
-		/* 56 */ "Duplicate TSN sent",
-		/* 57 */ "Early FR",
-		/* 58 */ "Early FR cwnd report",
-		/* 59 */ "Early FR cwnd Start",
-                /* 60 */ "Early FR cwnd Stop",
-		/* 61 */ "Log from a Send",
-                /* 62 */ "Log at Initialization",
-		/* 63 */ "Log from T3 Timeout",
-		/* 64 */ "Log from SACK",
-		/* 65 */ "No new cumack",
-		/* 66 */ "Log from a re-transmission",
-		/* 67 */ "Check TSN to strike",
-		/* 68 */ "chunk output completes",
-		/* 69 */ "fill_out_queue_called",
-		/* 70 */ "fill_out_queue_fills",
-		/* 71 */ "log_free_sent",
-		/* 72 */ "Nagle stops  transmit",
-		/* 73 */ "Nagle allows transmit",
-		/* 74 */ "Awake SND In SACK Processing",
-		/* 75 */ "Awake SND In FWD_TSN Processing",
-		/* 76 */ "No wake from sack",
-		/* 77 */ "unknown"
-	};
-#define FROM_STRING_MAX 77
+	int stat_only=0,i;
 	FILE *out;
+	char *logfile=NULL;
 	int at;
 	struct sctp_cwnd_log log;
-	if(argc < 2){
-		printf("use %s log-file\n",argv[0]);
-		return (1);
+	while((i= getopt(argc,argv,"l:s")) != EOF)
+	{
+		switch(i) {
+		case 'l':
+			logfile = optarg;
+			break;
+		case 's':
+			stat_only = 1;
+			break;
+		default:
+			break;
+		};
 	}
-	out = fopen(argv[1],"r");
+	if (logfile == NULL) {
+		printf("Use %s -l binary_logfile [-s]\n", argv[0]);
+		return(1);
+	}
+	out = fopen(logfile,"r");
 	if(out == NULL) {
 		printf("Can't open file %d\n",errno);	
 		return(3);
@@ -128,7 +166,20 @@ main(int argc, char **argv)
 	if(log.from >=  FROM_STRING_MAX)
 		log.from = FROM_STRING_MAX;
 
+	if(stat_only) {
+		memset(cnt_type,0, sizeof(cnt_type));
+		memset(cnt_event,0, sizeof(cnt_type));
+	}
+
 	while(fread((void *)&log, sizeof(log), 1,out) > 0) {
+		if(stat_only) {
+			cnt_type[log.from]++;
+			if(log.event_type < SCTP_LOG_MAX_EVENT)
+				cnt_event[log.event_type]++;
+			else
+				printf("Event type %d greater than max\n", log.event_type);
+			continue;
+		}
 		if(log.event_type == SCTP_LOG_EVENT_CWND) {
 			if((log.from == SCTP_CWND_LOG_NOADV_CA) ||
 			   (log.from == SCTP_CWND_LOG_NOADV_SS)) {
@@ -164,7 +215,7 @@ main(int argc, char **argv)
 				       log.x.wake.stcb,
 				       log.x.wake.tsn,
 				       log.x.wake.wake_cnt
-				       );
+					);
 
 			} else if (log.from == SCTP_CWND_LOG_FILL_OUTQ_FILLS) {
 				printf("%u fill_outqueue adds %d bytes onto net:%x cwnd:%d flight:%d (sendcnt:%d,strcnt:%d)\n",
@@ -529,5 +580,13 @@ main(int argc, char **argv)
 		at++;
 	}
 	fclose(out);
+	if(stat_only) {
+		for(i=0;i< SCTP_LOG_MAX_EVENT;i++) {
+			printf("%s = %u\n", event_names[i], cnt_event[i]);
+		}
+		for(i=0;i<SCTP_LOG_MAX_TYPES;i++) {
+			printf("%s = %u\n", from_str[i], cnt_type[i]);
+		}
+	}
 	return(0);
 }
