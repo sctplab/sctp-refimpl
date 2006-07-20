@@ -4199,6 +4199,7 @@ skip_segments:
 	} else {
 
 		sctp_wakeup_log(stcb, cum_ack, wake_him, SCTP_NOWAKE_FROM_SACK);
+		sctp_log_cwnd(stcb, stcb->asoc.primary_destination, 0, SCTP_NOWAKE_FROM_SACK);
 #endif
 	}
 	if ((sctp_cmt_on_off == 0) && asoc->fast_retran_loss_recovery && accum_moved) {
