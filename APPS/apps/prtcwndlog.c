@@ -128,10 +128,11 @@ static char *from_str[]= {
 	/* 77 */ "Pre-Send",
 	/* 78 */ "End-of-Send",
 	/* 79 */ "Sack proc done",
-	/* 80 */ "unknown"
+	/* 80 */ "Reason CO Completes",
+	/* 81 */ "unknown"
 
 };
-#define FROM_STRING_MAX 80
+#define FROM_STRING_MAX 81
 
 
 static uint32_t cnt_event[SCTP_LOG_MAX_EVENT];
@@ -457,6 +458,25 @@ main(int argc, char **argv)
 					);
 			}
 
+		} else if (log.event_type == SCTP_LOG_MISC_EVENT) {
+			if(log.from == SCTP_REASON_FOR_SC) {
+				printf("%s:%s num_out:%u reason_code:%u cwnd_full:%u now_filled:%u\n",
+				       ts,
+				       from_str[log.from],
+				       log.x.misc.log1,
+				       log.x.misc.log2,
+				       log.x.misc.log3,
+				       log.x.misc.log4);
+				       
+			} else {
+				printf("%s:%s log1:%u log2:%u log3:%u log4:%u\n",
+				       ts,
+				       from_str[log.from],
+				       log.x.misc.log1,
+				       log.x.misc.log2,
+				       log.x.misc.log3,
+				       log.x.misc.log4);
+			}
 		} else if (log.event_type == SCTP_LOG_EVENT_WAKE) {
 			printf("WUP:%s %s tcb:%x cnt:%d fs:%d sd:%d st:%d str:%d co:%d)\n",
 			       

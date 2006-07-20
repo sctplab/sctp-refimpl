@@ -671,6 +671,13 @@ struct sctp_sbwake_log {
 
 };
 
+struct sctp_misc_info {
+	uint32_t log1;
+	uint32_t log2;
+	uint32_t log3;
+	uint32_t log4;
+};
+
 struct sctp_cwnd_log {
 	uint32_t time_event;
 	uint8_t from;
@@ -690,6 +697,7 @@ struct sctp_cwnd_log {
 		struct sctp_sb_log sb;
 		struct sctp_nagle_log nagle;
 		struct sctp_sbwake_log wake;
+		struct sctp_misc_info misc;
 	}     x;
 };
 

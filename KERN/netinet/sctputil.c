@@ -531,6 +531,25 @@ sctp_log_mbcnt(uint8_t from, uint32_t total_oq, uint32_t book, uint32_t total_mb
 }
 
 void
+sctp_misc_ints(uint8_t from, uint32_t a, uint32_t b, uint32_t c, uint32_t d)
+{
+	SCTP_STATLOG_LOCK();
+	sctp_clog[sctp_cwnd_log_at].time_event = sctp_get_time_of_event();
+	sctp_clog[sctp_cwnd_log_at].from = (uint8_t) from;
+	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t)SCTP_LOG_MISC_EVENT;
+	sctp_clog[sctp_cwnd_log_at].x.misc.log1 = a;
+	sctp_clog[sctp_cwnd_log_at].x.misc.log2 = b;
+	sctp_clog[sctp_cwnd_log_at].x.misc.log3 = c;
+	sctp_clog[sctp_cwnd_log_at].x.misc.log4 = d;
+	sctp_cwnd_log_at++;
+	if (sctp_cwnd_log_at >= SCTP_STAT_LOG_SIZE) {
+		sctp_cwnd_log_at = 0;
+		sctp_cwnd_log_rolled = 1;
+	}
+	SCTP_STATLOG_UNLOCK();
+}
+
+void
 sctp_wakeup_log(struct sctp_tcb *stcb, uint32_t cumtsn, uint32_t wake_cnt, int from)
 {
 	SCTP_STATLOG_LOCK();
