@@ -129,9 +129,10 @@ __FBSDID("$FreeBSD:$");
 #define SCTP_CWNDLOG_PRESEND        77
 #define SCTP_CWNDLOG_ENDSEND        78
 #define SCTP_AT_END_OF_SACK         79
-#define SCTP_UNKNOWN_MAX            80
+#define SCTP_REASON_FOR_SC          80
+#define SCTP_UNKNOWN_MAX            81
 
-#define SCTP_LOG_MAX_TYPES 81
+#define SCTP_LOG_MAX_TYPES 82
 /*
  * To turn on various logging, you must first define SCTP_STAT_LOGGING. Then
  * to get something to log you define one of the logging defines i.e.
@@ -155,7 +156,9 @@ __FBSDID("$FreeBSD:$");
 #define SCTP_LOG_EVENT_SB   12
 #define SCTP_LOG_EVENT_NAGLE 13
 #define SCTP_LOG_EVENT_WAKE 14
-#define SCTP_LOG_MAX_EVENT 15
+#define SCTP_LOG_MISC_EVENT 15 
+
+#define SCTP_LOG_MAX_EVENT 16
 
 #define SCTP_LOCK_UNKNOWN 2
 
