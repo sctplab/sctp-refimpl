@@ -3783,7 +3783,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 		}
 #endif
 #ifdef SCTP_WAKE_LOGGING
-		sctp_log_cwnd(stcb, asoc->primary_destination, 0, SCTP_CWND_LOG_FROM_SACK);
+		sctp_log_cwnd(stcb, asoc->primary_destination, 0, SCTP_AT_END_OF_SACK);
 #endif
 		return;
 	}
@@ -3859,7 +3859,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 			}
 			sctp_abort_an_association(stcb->sctp_ep, stcb, SCTP_PEER_FAULTY, oper);
 #ifdef SCTP_WAKE_LOGGING
-			sctp_log_cwnd(stcb, asoc->primary_destination, 0, SCTP_CWND_LOG_FROM_SACK);
+			sctp_log_cwnd(stcb, asoc->primary_destination, 0, SCTP_AT_END_OF_SACK);
 #endif
 			return;
 		}
@@ -3887,7 +3887,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 #endif
 		}
 #ifdef SCTP_WAKE_LOGGING
-		sctp_log_cwnd(stcb, asoc->primary_destination, 0, SCTP_CWND_LOG_FROM_SACK);
+		sctp_log_cwnd(stcb, asoc->primary_destination, 0, SCTP_AT_END_OF_SACK);
 #endif
 		return;
 	}
@@ -3926,7 +3926,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 		asoc->total_flight = 0;
 		asoc->total_flight_count = 0;
 #ifdef SCTP_WAKE_LOGGING
-		sctp_log_cwnd(stcb, asoc->primary_destination, 0, SCTP_CWND_LOG_FROM_SACK);
+		sctp_log_cwnd(stcb, asoc->primary_destination, 0, SCTP_AT_END_OF_SACK);
 #endif
 		return;
 	}
@@ -4209,7 +4209,6 @@ skip_segments:
 #endif
 #ifdef SCTP_WAKE_LOGGING
 	} else {
-
 		sctp_wakeup_log(stcb, cum_ack, wake_him, SCTP_NOWAKE_FROM_SACK);
 #endif
 	}
@@ -4544,7 +4543,7 @@ skip_cwnd_update:
 			    stcb->sctp_ep, stcb, asoc->primary_destination);
 		}
 #ifdef SCTP_WAKE_LOGGING
-		sctp_log_cwnd(stcb, asoc->primary_destination, 0, SCTP_CWND_LOG_FROM_SACK);
+		sctp_log_cwnd(stcb, asoc->primary_destination, 0, SCTP_AT_END_OF_SACK);
 #endif
 		return;
 	}
@@ -4797,7 +4796,7 @@ skip_cwnd_update:
 		}
 	}
 #ifdef SCTP_WAKE_LOGGING
-	sctp_log_cwnd(stcb, asoc->primary_destination, 0, SCTP_CWND_LOG_FROM_SACK);
+	sctp_log_cwnd(stcb, asoc->primary_destination, 0, SCTP_AT_END_OF_SACK);
 #endif
 }
 

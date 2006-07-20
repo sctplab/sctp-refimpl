@@ -9865,7 +9865,7 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 	}
 #endif
 #ifdef SCTP_WAKE_LOGGING
-	sctp_log_cwnd(stcb, asoc->primary_destination, tot_out, SCTP_SEND_NOW_COMPLETES);
+	sctp_log_cwnd(stcb, asoc->primary_destination, tot_out, SCTP_CWNDLOG_ENDSEND);
 #endif
 	/*
 	 * Now we need to clean up the control chunk chain if a ECNE is on
