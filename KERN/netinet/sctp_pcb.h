@@ -1229,8 +1229,8 @@ int sctp_destination_is_reachable(struct sctp_tcb *, struct sockaddr *);
  * indicates run on ONLY assoc's of the specified endpoint.
  */
 int
-sctp_initiate_iterator(asoc_func af, uint32_t, uint32_t, void *, uint32_t,
-    end_func ef, struct sctp_inpcb *);
+sctp_initiate_iterator(inp_func inpf, asoc_func af, uint32_t, uint32_t,
+    uint32_t, void *, uint32_t, end_func ef, struct sctp_inpcb *);
 
 #if defined(__APPLE__)
 void sctp_callout_alloc(struct sctp_timer *);

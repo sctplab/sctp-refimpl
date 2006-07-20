@@ -111,8 +111,8 @@ TAILQ_HEAD(sctp_resethead, sctp_stream_reset_list);
 
 /*
  * Users of the iterator need to malloc a iterator with a call to
- * sctp_initiate_iterator(func, pcb_flags, asoc_state, void-ptr-arg,
- * uint32_t, uint32-arg, end_func, inp);
+ * sctp_initiate_iterator(inp_func, assoc_func, pcb_flags, pcb_features,
+ *     asoc_state, void-ptr-arg, uint32-arg, end_func, inp);
  *
  * Use the following two defines if you don't care what pcb flags are on the EP
  * and/or you don't care what state the association is in.
@@ -123,29 +123,33 @@ TAILQ_HEAD(sctp_resethead, sctp_stream_reset_list);
  * what you put in pcb_flags nothing will happen. use SCTP_PCB_ANY_FLAGS to
  * assure the inp you specify gets treated.
  */
-#define SCTP_PCB_ANY_FLAGS  0x00000000
-#define SCTP_ASOC_ANY_STATE 0x00000000
+#define SCTP_PCB_ANY_FLAGS	0x00000000
+#define SCTP_PCB_ANY_FEATURES	0x00000000
+#define SCTP_ASOC_ANY_STATE	0x00000000
 
 typedef void (*asoc_func) (struct sctp_inpcb *, struct sctp_tcb *, void *ptr,
          uint32_t val);
+typedef void (*inp_func) (struct sctp_inpcb *, void *ptr, uint32_t val);
 typedef void (*end_func) (void *ptr, uint32_t val);
-
-#define SCTP_ITERATOR_DO_ALL_INP	0x00000001
-#define SCTP_ITERATOR_DO_SINGLE_INP	0x00000002
 
 struct sctp_iterator {
 	LIST_ENTRY(sctp_iterator) sctp_nxt_itr;
 	struct sctp_timer tmr;
-	struct sctp_inpcb *inp;	/* ep */
-	struct sctp_tcb *stcb;	/* assoc */
-	asoc_func function_toapply;
-	end_func function_atend;
-	void *pointer;		/* pointer for apply func to use */
-	uint32_t val;		/* value for apply func to use */
-	uint32_t pcb_flags;
-	uint32_t asoc_state;
+	struct sctp_inpcb *inp;		/* current endpoint */
+	struct sctp_tcb *stcb;		/* current* assoc */
+	asoc_func function_assoc;	/* per assoc function */
+	inp_func function_inp;		/* per endpoint function */
+	end_func function_atend;	/* iterator completion function */
+	void *pointer;			/* pointer for apply func to use */
+	uint32_t val;			/* value for apply func to use */
+	uint32_t pcb_flags;		/* endpoint flags being checked */
+	uint32_t pcb_features;		/* endpoint features being checked */
+	uint32_t asoc_state;		/* assoc state being checked */
 	uint32_t iterator_flags;
 };
+/* iterator_flags values */
+#define SCTP_ITERATOR_DO_ALL_INP	0x00000001
+#define SCTP_ITERATOR_DO_SINGLE_INP	0x00000002
 
 LIST_HEAD(sctpiterators, sctp_iterator);
 

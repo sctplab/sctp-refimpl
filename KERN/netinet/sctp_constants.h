@@ -206,7 +206,7 @@ __FBSDID("$FreeBSD:$");
 #define MAX_SEQ	0xffff
 
 /* how many executions every N tick's */
-#define SCTP_MAX_ITERATOR_AT_ONCE 20
+#define SCTP_ITERATOR_MAX_AT_ONCE 20
 
 /* number of clock ticks between iterator executions */
 #define SCTP_ITERATOR_TICKS 1

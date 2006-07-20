@@ -2718,7 +2718,7 @@ sctp_iterator_inp_being_freed(struct sctp_inpcb *inp, struct sctp_inpcb *inp_nex
 	struct sctp_iterator *it;
 
 	/*
-	 * We enter with the only the ITERATOR_LOCK in place and A write
+	 * We enter with the only the ITERATOR_LOCK in place and a write
 	 * lock on the inp_info stuff.
 	 */
 
@@ -2730,7 +2730,6 @@ sctp_iterator_inp_being_freed(struct sctp_inpcb *inp, struct sctp_inpcb *inp_nex
 	 * those guys. The list of iterators should never be very big
 	 * though.
 	 */
-
 	LIST_FOREACH(it, &sctppcbinfo.iteratorhead, sctp_nxt_itr) {
 		if (it == inp->inp_starting_point_for_iterator)
 			/* skip this guy, he's special */
@@ -3278,8 +3277,9 @@ sctp_findnet(struct sctp_tcb *stcb, struct sockaddr *addr)
 	/* use the peer's/remote port for lookup if unspecified */
 	sin = (struct sockaddr_in *)addr;
 	sin6 = (struct sockaddr_in6 *)addr;
-#if 0				/* why do we need to check the port for a nets
-				 * list on an assoc? */
+#if 0
+	/* why do we need to check the port for a nets list on an assoc? */
+
 	if (stcb->rport != sin->sin_port) {
 		/* we cheat and just a sin for this test */
 		return (NULL);
@@ -4091,20 +4091,17 @@ sctp_iterator_asoc_being_freed(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 {
 	struct sctp_iterator *it;
 
-
-
 	/*
 	 * Unlock the tcb lock we do this so we avoid a dead lock scenario
 	 * where the iterator is waiting on the TCB lock and the TCB lock is
 	 * waiting on the iterator lock.
 	 */
-
 	it = stcb->asoc.stcb_starting_point_for_iterator;
 	if (it == NULL) {
 		return;
 	}
 	if (it->inp != stcb->sctp_ep) {
-		/* hm, focused on the wrong one? */
+		/* hmm, focused on the wrong one? */
 		return;
 	}
 	if (it->stcb != stcb) {
@@ -4116,7 +4113,6 @@ sctp_iterator_asoc_being_freed(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		if (it->iterator_flags & SCTP_ITERATOR_DO_SINGLE_INP) {
 			it->inp = NULL;
 		} else {
-
 			it->inp = LIST_NEXT(inp, sctp_list);
 		}
 	}
@@ -4207,7 +4203,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		callout_stop(&net->pmtu_timer.timer);
 	}
 
-
 	/*
 	 * Iterator asoc being freed we send an unlocked TCB. It returns
 	 * with INP_INFO and INP write locked and both TCB lock's the tcb
@@ -4266,6 +4261,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	SCTP_TCB_LOCK(stcb);
 	
 	sctp_iterator_asoc_being_freed(inp, stcb);
+
 	/* now restop the timers to be sure - this is paranoia at is finest! */
 	callout_stop(&asoc->hb_timer.timer);
 	callout_stop(&asoc->dack_timer.timer);
@@ -4274,7 +4270,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	callout_stop(&asoc->shut_guard_timer.timer);
 	callout_stop(&asoc->autoclose_timer.timer);
 	callout_stop(&asoc->delayed_event_timer.timer);
-
 
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 		callout_stop(&net->fr_timer.timer);
@@ -6288,10 +6283,18 @@ sctp_drain()
 	SCTP_INP_INFO_RUNLOCK();
 }
 
+/*
+ * start a new iterator
+ * iterates through all endpoints and associations based on the pcb_state
+ * flags and asoc_state.  "af" (mandatory) is executed for all matching
+ * assocs and "ef" (optional) is executed when the iterator completes.
+ * "inpf" (optional) is executed for each new endpoint as it is being
+ * iterated through.
+ */
 int
-sctp_initiate_iterator(asoc_func af, uint32_t pcb_state, uint32_t asoc_state,
-    void *argp, uint32_t argi, end_func ef,
-    struct sctp_inpcb *s_inp)
+sctp_initiate_iterator(inp_func inpf, asoc_func af, uint32_t pcb_state,
+    uint32_t pcb_features, uint32_t asoc_state, void *argp, uint32_t argi,
+    end_func ef, struct sctp_inpcb *s_inp)
 {
 	struct sctp_iterator *it = NULL;
 	int s;
@@ -6305,11 +6308,13 @@ sctp_initiate_iterator(asoc_func af, uint32_t pcb_state, uint32_t asoc_state,
 		return (ENOMEM);
 	}
 	memset(it, 0, sizeof(*it));
-	it->function_toapply = af;
+	it->function_assoc = af;
+	it->function_inp = inpf;
 	it->function_atend = ef;
 	it->pointer = argp;
 	it->val = argi;
 	it->pcb_flags = pcb_state;
+	it->pcb_features = pcb_features;
 	it->asoc_state = asoc_state;
 	if (s_inp) {
 		it->inp = s_inp;
