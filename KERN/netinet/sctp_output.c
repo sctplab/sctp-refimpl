@@ -13006,40 +13006,17 @@ sctp_sosend(struct socket *so,
 #endif
 	struct sctp_inpcb *inp;
 	int s, error, use_rcvinfo = 0;
-	unsigned int sndlen;
 	struct sctp_sndrcvinfo srcv;
 
 	inp = (struct sctp_inpcb *)so->so_pcb;
-	if (uio)
-		sndlen = uio->uio_resid;
-	else
-		sndlen = top->m_pkthdr.len;
-
-
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
 #else
 	s = splnet();
 #endif
-
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	socket_lock(so, 1);
 #endif
-
-	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
-	    (inp->sctp_socket->so_qlimit)) {
-		/* The listener can NOT send */
-		error = EFAULT;
-		splx(s);
-		if (top)
-			sctp_m_freem(top);
-		if (control)
-			sctp_m_freem(control);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		socket_unlock(so, 1);
-#endif
-		return (error);
-	}
 	if (control) {
 		/* process cmsg snd/rcv info (maybe a assoc-id) */
 		if (sctp_find_cmsg(SCTP_SNDRCV, (void *)&srcv, control,
@@ -13054,7 +13031,6 @@ sctp_sosend(struct socket *so,
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	socket_unlock(so, 1);
 #endif
-
 	return (error);
 }
 
