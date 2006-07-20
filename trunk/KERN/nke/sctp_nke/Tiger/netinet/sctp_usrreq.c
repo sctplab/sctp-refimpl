@@ -1018,6 +1018,23 @@ sctp_detach(struct socket *so)
 	} else {
 		sctp_inpcb_free(inp, 0);
 	}
+	/* The socket is now detached, no matter what
+	 * the state of the SCTP association.
+	 */
+ 	if(inp->sctp_socket) {
+		/* we don't use these ever so clear them */
+		so->so_snd.sb_cc = 0;
+		so->so_snd.sb_mb = NULL;
+		so->so_snd.sb_mbcnt = 0;
+		/* same for the rcv ones, they are only
+		 * here for the accounting/select.
+		 */
+		so->so_rcv.sb_cc = 0;
+		so->so_rcv.sb_mb = NULL;
+		so->so_rcv.sb_mbcnt = 0;
+		/* Now disconnect */
+		inp->sctp_socket = NULL;
+	}
 	splx(s);
 #if defined(__FreeBSD__) && __FreeBSD_version > 690000
 	return;

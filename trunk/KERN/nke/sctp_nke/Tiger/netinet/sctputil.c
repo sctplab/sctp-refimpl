@@ -200,26 +200,12 @@ sctp_clr_stat_log(void)
 	sctp_cwnd_log_rolled = 0;
 }
 
-void
-sctp_wakeup_log(struct sctp_tcb *stcb, uint32_t cumtsn, uint32_t wake_cnt, int from)
-{
-	sctp_clog[sctp_cwnd_log_at].time_event = sctp_get_time_of_event();
-	sctp_clog[sctp_cwnd_log_at].from = (uint8_t) from;
-	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t) SCTP_LOG_EVENT_WAKE;
-	sctp_clog[sctp_cwnd_log_at].x.wake.stcb = (uint32_t) stcb;
-	sctp_clog[sctp_cwnd_log_at].x.wake.tsn = cumtsn;
-	sctp_clog[sctp_cwnd_log_at].x.wake.wake_cnt = wake_cnt;
-	sctp_cwnd_log_at++;
-	if (sctp_cwnd_log_at >= SCTP_STAT_LOG_SIZE) {
-		sctp_cwnd_log_at = 0;
-		sctp_cwnd_log_rolled = 1;
-	}
-}
 
 void
 sctp_sblog(struct sockbuf *sb,
     struct sctp_tcb *stcb, int from, int incr)
 {
+	SCTP_STATLOG_LOCK();
 	sctp_clog[sctp_cwnd_log_at].time_event = sctp_get_time_of_event();
 	sctp_clog[sctp_cwnd_log_at].from = (uint8_t) from;
 	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t) SCTP_LOG_EVENT_SB;
@@ -235,12 +221,14 @@ sctp_sblog(struct sockbuf *sb,
 		sctp_cwnd_log_at = 0;
 		sctp_cwnd_log_rolled = 1;
 	}
+	SCTP_STATLOG_UNLOCK();
 }
 
 
 void
 rto_logging(struct sctp_nets *net, int from)
 {
+	SCTP_STATLOG_LOCK();
 	sctp_clog[sctp_cwnd_log_at].time_event = sctp_get_time_of_event();
 	sctp_clog[sctp_cwnd_log_at].from = (uint8_t) from;
 	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t) SCTP_LOG_EVENT_RTT;
@@ -253,11 +241,13 @@ rto_logging(struct sctp_nets *net, int from)
 		sctp_cwnd_log_at = 0;
 		sctp_cwnd_log_rolled = 1;
 	}
+	SCTP_STATLOG_UNLOCK();
 }
 
 void
 sctp_log_strm_del_alt(uint32_t tsn, uint16_t sseq, int from)
 {
+	SCTP_STATLOG_LOCK();
 	sctp_clog[sctp_cwnd_log_at].time_event = sctp_get_time_of_event();
 	sctp_clog[sctp_cwnd_log_at].from = (uint8_t) from;
 	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t) SCTP_LOG_EVENT_STRM;
@@ -270,11 +260,13 @@ sctp_log_strm_del_alt(uint32_t tsn, uint16_t sseq, int from)
 		sctp_cwnd_log_at = 0;
 		sctp_cwnd_log_rolled = 1;
 	}
+	SCTP_STATLOG_UNLOCK();
 }
 
 void
 sctp_log_nagle_event(struct sctp_tcb *stcb, int action)
 {
+	SCTP_STATLOG_LOCK();
 	sctp_clog[sctp_cwnd_log_at].time_event = sctp_get_time_of_event();
 	sctp_clog[sctp_cwnd_log_at].from = (uint8_t) action;
 	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t) SCTP_LOG_EVENT_NAGLE;
@@ -288,11 +280,13 @@ sctp_log_nagle_event(struct sctp_tcb *stcb, int action)
 		sctp_cwnd_log_at = 0;
 		sctp_cwnd_log_rolled = 1;
 	}
+	SCTP_STATLOG_UNLOCK();
 }
 
 void
 sctp_log_sack(uint32_t old_cumack, uint32_t cumack, uint32_t tsn, uint16_t gaps, uint16_t dups, int from)
 {
+	SCTP_STATLOG_LOCK();
 	sctp_clog[sctp_cwnd_log_at].time_event = sctp_get_time_of_event();
 	sctp_clog[sctp_cwnd_log_at].from = (uint8_t) from;
 	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t) SCTP_LOG_EVENT_SACK;
@@ -306,11 +300,13 @@ sctp_log_sack(uint32_t old_cumack, uint32_t cumack, uint32_t tsn, uint16_t gaps,
 		sctp_cwnd_log_at = 0;
 		sctp_cwnd_log_rolled = 1;
 	}
+	SCTP_STATLOG_UNLOCK();
 }
 
 void
 sctp_log_map(uint32_t map, uint32_t cum, uint32_t high, int from)
 {
+	SCTP_STATLOG_LOCK();
 	sctp_clog[sctp_cwnd_log_at].time_event = sctp_get_time_of_event();
 	sctp_clog[sctp_cwnd_log_at].from = (uint8_t) from;
 	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t) SCTP_LOG_EVENT_MAP;
@@ -322,12 +318,14 @@ sctp_log_map(uint32_t map, uint32_t cum, uint32_t high, int from)
 		sctp_cwnd_log_at = 0;
 		sctp_cwnd_log_rolled = 1;
 	}
+	SCTP_STATLOG_UNLOCK();
 }
 
 void
 sctp_log_fr(uint32_t biggest_tsn, uint32_t biggest_new_tsn, uint32_t tsn,
     int from)
 {
+	SCTP_STATLOG_LOCK();
 	sctp_clog[sctp_cwnd_log_at].time_event = sctp_get_time_of_event();
 	sctp_clog[sctp_cwnd_log_at].from = (uint8_t) from;
 	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t) SCTP_LOG_EVENT_FR;
@@ -339,6 +337,7 @@ sctp_log_fr(uint32_t biggest_tsn, uint32_t biggest_new_tsn, uint32_t tsn,
 		sctp_cwnd_log_at = 0;
 		sctp_cwnd_log_rolled = 1;
 	}
+	SCTP_STATLOG_UNLOCK();
 }
 
 void
@@ -350,6 +349,7 @@ sctp_log_strm_del(struct sctp_queued_to_read *control, struct sctp_queued_to_rea
 		printf("Gak log of NULL?\n");
 		return;
 	}
+	SCTP_STATLOG_LOCK();
 	sctp_clog[sctp_cwnd_log_at].time_event = sctp_get_time_of_event();
 	sctp_clog[sctp_cwnd_log_at].from = (uint8_t) from;
 	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t) SCTP_LOG_EVENT_STRM;
@@ -367,11 +367,13 @@ sctp_log_strm_del(struct sctp_queued_to_read *control, struct sctp_queued_to_rea
 		sctp_cwnd_log_at = 0;
 		sctp_cwnd_log_rolled = 1;
 	}
+	SCTP_STATLOG_UNLOCK();
 }
 
 void
 sctp_log_cwnd(struct sctp_tcb *stcb, struct sctp_nets *net, int augment, uint8_t from)
 {
+	SCTP_STATLOG_LOCK();
 	sctp_clog[sctp_cwnd_log_at].time_event = sctp_get_time_of_event();
 	sctp_clog[sctp_cwnd_log_at].from = (uint8_t) from;
 	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t) SCTP_LOG_EVENT_CWND;
@@ -398,12 +400,14 @@ sctp_log_cwnd(struct sctp_tcb *stcb, struct sctp_nets *net, int augment, uint8_t
 		sctp_cwnd_log_at = 0;
 		sctp_cwnd_log_rolled = 1;
 	}
+	SCTP_STATLOG_UNLOCK();
 }
 
 
 void
 sctp_log_lock(struct sctp_inpcb *inp, struct sctp_tcb *stcb, uint8_t from)
 {
+	SCTP_STATLOG_LOCK();
 	sctp_clog[sctp_cwnd_log_at].time_event = sctp_get_time_of_event();
 	sctp_clog[sctp_cwnd_log_at].from = (uint8_t) from;
 	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t) SCTP_LOG_LOCK_EVENT;
@@ -438,11 +442,13 @@ sctp_log_lock(struct sctp_inpcb *inp, struct sctp_tcb *stcb, uint8_t from)
 		sctp_cwnd_log_at = 0;
 		sctp_cwnd_log_rolled = 1;
 	}
+	SCTP_STATLOG_UNLOCK();
 }
 
 void
 sctp_log_maxburst(struct sctp_tcb *stcb, struct sctp_nets *net, int error, int burst, uint8_t from)
 {
+	SCTP_STATLOG_LOCK();
 	sctp_clog[sctp_cwnd_log_at].time_event = sctp_get_time_of_event();
 	sctp_clog[sctp_cwnd_log_at].from = (uint8_t) from;
 	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t) SCTP_LOG_EVENT_MAXBURST;
@@ -464,11 +470,13 @@ sctp_log_maxburst(struct sctp_tcb *stcb, struct sctp_nets *net, int error, int b
 		sctp_cwnd_log_at = 0;
 		sctp_cwnd_log_rolled = 1;
 	}
+	SCTP_STATLOG_UNLOCK();
 }
 
 void
 sctp_log_rwnd(uint8_t from, uint32_t peers_rwnd, uint32_t snd_size, uint32_t overhead)
 {
+	SCTP_STATLOG_LOCK();
 	sctp_clog[sctp_cwnd_log_at].time_event = sctp_get_time_of_event();
 	sctp_clog[sctp_cwnd_log_at].from = (uint8_t) from;
 	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t) SCTP_LOG_EVENT_RWND;
@@ -481,11 +489,13 @@ sctp_log_rwnd(uint8_t from, uint32_t peers_rwnd, uint32_t snd_size, uint32_t ove
 		sctp_cwnd_log_at = 0;
 		sctp_cwnd_log_rolled = 1;
 	}
+	SCTP_STATLOG_UNLOCK();
 }
 
 void
 sctp_log_rwnd_set(uint8_t from, uint32_t peers_rwnd, uint32_t flight_size, uint32_t overhead, uint32_t a_rwndval)
 {
+	SCTP_STATLOG_LOCK();
 	sctp_clog[sctp_cwnd_log_at].time_event = sctp_get_time_of_event();
 	sctp_clog[sctp_cwnd_log_at].from = (uint8_t) from;
 	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t) SCTP_LOG_EVENT_RWND;
@@ -498,11 +508,13 @@ sctp_log_rwnd_set(uint8_t from, uint32_t peers_rwnd, uint32_t flight_size, uint3
 		sctp_cwnd_log_at = 0;
 		sctp_cwnd_log_rolled = 1;
 	}
+	SCTP_STATLOG_UNLOCK();
 }
 
 void
 sctp_log_mbcnt(uint8_t from, uint32_t total_oq, uint32_t book, uint32_t total_mbcnt_q, uint32_t mbcnt)
 {
+	SCTP_STATLOG_LOCK();
 	sctp_clog[sctp_cwnd_log_at].time_event = sctp_get_time_of_event();
 	sctp_clog[sctp_cwnd_log_at].from = (uint8_t) from;
 	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t) SCTP_LOG_EVENT_MBCNT;
@@ -515,12 +527,55 @@ sctp_log_mbcnt(uint8_t from, uint32_t total_oq, uint32_t book, uint32_t total_mb
 		sctp_cwnd_log_at = 0;
 		sctp_cwnd_log_rolled = 1;
 	}
+	SCTP_STATLOG_UNLOCK();
+}
+
+void
+sctp_misc_ints(uint8_t from, uint32_t a, uint32_t b, uint32_t c, uint32_t d)
+{
+	SCTP_STATLOG_LOCK();
+	sctp_clog[sctp_cwnd_log_at].time_event = sctp_get_time_of_event();
+	sctp_clog[sctp_cwnd_log_at].from = (uint8_t) from;
+	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t)SCTP_LOG_MISC_EVENT;
+	sctp_clog[sctp_cwnd_log_at].x.misc.log1 = a;
+	sctp_clog[sctp_cwnd_log_at].x.misc.log2 = b;
+	sctp_clog[sctp_cwnd_log_at].x.misc.log3 = c;
+	sctp_clog[sctp_cwnd_log_at].x.misc.log4 = d;
+	sctp_cwnd_log_at++;
+	if (sctp_cwnd_log_at >= SCTP_STAT_LOG_SIZE) {
+		sctp_cwnd_log_at = 0;
+		sctp_cwnd_log_rolled = 1;
+	}
+	SCTP_STATLOG_UNLOCK();
+}
+
+void
+sctp_wakeup_log(struct sctp_tcb *stcb, uint32_t cumtsn, uint32_t wake_cnt, int from)
+{
+	SCTP_STATLOG_LOCK();
+	sctp_clog[sctp_cwnd_log_at].time_event = sctp_get_time_of_event();
+	sctp_clog[sctp_cwnd_log_at].from = (uint8_t) from;
+	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t) SCTP_LOG_EVENT_WAKE;
+	sctp_clog[sctp_cwnd_log_at].x.wake.stcb = (uint32_t) stcb;
+	sctp_clog[sctp_cwnd_log_at].x.wake.wake_cnt = wake_cnt;
+	sctp_clog[sctp_cwnd_log_at].x.wake.flight = stcb->asoc.total_flight_count;
+	sctp_clog[sctp_cwnd_log_at].x.wake.send_q = stcb->asoc.send_queue_cnt;
+	sctp_clog[sctp_cwnd_log_at].x.wake.sent_q = stcb->asoc.sent_queue_cnt;
+	sctp_clog[sctp_cwnd_log_at].x.wake.stream_qcnt = (uint16_t) stcb->asoc.stream_queue_cnt;
+	sctp_clog[sctp_cwnd_log_at].x.wake.chunks_on_oque = (uint16_t) stcb->asoc.chunks_on_out_queue;
+	sctp_cwnd_log_at++;
+	if (sctp_cwnd_log_at >= SCTP_STAT_LOG_SIZE) {
+		sctp_cwnd_log_at = 0;
+		sctp_cwnd_log_rolled = 1;
+	}
+	SCTP_STATLOG_UNLOCK();
 }
 
 void
 sctp_log_block(uint8_t from, struct socket *so, struct sctp_association *asoc, int sendlen)
 {
 
+	SCTP_STATLOG_LOCK();
 	sctp_clog[sctp_cwnd_log_at].from = (uint8_t) from;
 	sctp_clog[sctp_cwnd_log_at].time_event = sctp_get_time_of_event();
 	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t) SCTP_LOG_EVENT_BLOCK;
@@ -541,6 +596,7 @@ sctp_log_block(uint8_t from, struct socket *so, struct sctp_association *asoc, i
 		sctp_cwnd_log_at = 0;
 		sctp_cwnd_log_rolled = 1;
 	}
+	SCTP_STATLOG_UNLOCK();
 }
 
 int
@@ -557,6 +613,7 @@ sctp_fill_stat_log(struct mbuf *m)
 	if (size_limit < sizeof(struct sctp_cwnd_log)) {
 		return (EINVAL);
 	}
+	SCTP_STATLOG_LOCK();
 	req = mtod(m, struct sctp_cwnd_log_req *);
 	num = size_limit / sizeof(struct sctp_cwnd_log);
 	if (sctp_cwnd_log_rolled) {
@@ -618,6 +675,7 @@ sctp_fill_stat_log(struct mbuf *m)
 			at = 0;
 	}
 	m->m_len = (cnt_out * sizeof(struct sctp_cwnd_log)) + sizeof(struct sctp_cwnd_log_req);
+	SCTP_STATLOG_UNLOCK();
 	return (0);
 }
 
@@ -1233,6 +1291,7 @@ sctp_timeout_handler(void *t)
 	struct sctp_nets *net;
 	struct sctp_timer *tmr;
 	int s, did_output;
+	struct sctp_iterator *it = NULL;
 
 #if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
 	boolean_t funnel_state;
@@ -1282,9 +1341,7 @@ sctp_timeout_handler(void *t)
 #endif
 		return;
 	}
-
-	if ((tmr->type != SCTP_TIMER_TYPE_ADDR_WQ) &&
-	    (inp == NULL)) {
+	if ((tmr->type != SCTP_TIMER_TYPE_ADDR_WQ) && (inp == NULL)) {
 		splx(s);
 #if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
 		/* release BSD kernel funnel/mutex */
@@ -1292,6 +1349,12 @@ sctp_timeout_handler(void *t)
 #endif
 		return;
 	}
+	/* if this is an iterator timeout, get the struct and clear inp */
+	if (tmr->type == SCTP_TIMER_TYPE_ITERATOR) {
+		it = (struct sctp_iterator *)inp;
+		inp = NULL;
+	}
+
 	if (inp) {
 		SCTP_INP_WLOCK(inp);
 		if (inp->sctp_socket == 0) {
@@ -1304,8 +1367,7 @@ sctp_timeout_handler(void *t)
 			return;
 		}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		if (tmr->type != SCTP_TIMER_TYPE_ITERATOR)
-			socket_lock(inp->ip_inp.inp.inp_socket, 1);
+		socket_lock(inp->ip_inp.inp.inp_socket, 1);
 #endif
 	}
 	if (stcb) {
@@ -1359,24 +1421,19 @@ sctp_timeout_handler(void *t)
 	/* mark as being serviced now */
 	callout_deactivate(&tmr->timer);
 
-	if (inp) {
+	if (inp && (tmr->type != SCTP_TIMER_TYPE_ITERATOR)) {
 		SCTP_INP_INCR_REF(inp);
 		SCTP_INP_WUNLOCK(inp);
 	}
+	/* call the handler for the appropriate timer type */
 	switch (tmr->type) {
 	case SCTP_TIMER_TYPE_ADDR_WQ:
 		sctp_handle_addr_wq();
 		break;
 	case SCTP_TIMER_TYPE_ITERATOR:
-		{
-			struct sctp_iterator *it;
-
-			SCTP_STAT_INCR(sctps_timoiterator);
-			it = (struct sctp_iterator *)inp;
-			sctp_iterator_timer(it);
-		}
+		SCTP_STAT_INCR(sctps_timoiterator);
+		sctp_iterator_timer(it);
 		break;
-		/* call the handler for the appropriate timer type */
 	case SCTP_TIMER_TYPE_SEND:
 		SCTP_STAT_INCR(sctps_timodata);
 		stcb->asoc.num_send_timers_up--;
@@ -3874,7 +3931,8 @@ sctp_free_bufspace(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	if (tp1->data == NULL) {
 		return;
 	}
-	SOCKBUF_LOCK(&stcb->sctp_socket->so_snd);
+	if(stcb->sctp_socket)
+		SOCKBUF_LOCK(&stcb->sctp_socket->so_snd);
 	asoc->chunks_on_out_queue -= chk_cnt;
 	sctp_log_mbcnt(SCTP_LOG_MBCNT_DECREASE,
 	    asoc->total_output_queue_size,
@@ -3893,8 +3951,8 @@ sctp_free_bufspace(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	} else {
 		asoc->total_output_mbuf_queue_size = 0;
 	}
-	if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) ||
-	    ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE))) {
+	if (stcb->sctp_socket && (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) ||
+	    ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE)))) {
 		if (stcb->sctp_socket->so_snd.sb_cc >= tp1->book_size) {
 			stcb->sctp_socket->so_snd.sb_cc -= tp1->book_size;
 		} else {
@@ -3907,7 +3965,8 @@ sctp_free_bufspace(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			stcb->sctp_socket->so_snd.sb_mbcnt = 0;
 		}
 	}
-	SOCKBUF_UNLOCK(&stcb->sctp_socket->so_snd);
+	if(stcb->sctp_socket)
+		SOCKBUF_UNLOCK(&stcb->sctp_socket->so-snd);
 }
 
 #endif

@@ -48,7 +48,7 @@ __FBSDID("$FreeBSD:$");
 #define SCTP_VERSION_STRING "KAME-BSD 1.1"
 /* #define SCTP_AUDITING_ENABLED 1 used for debug/auditing */
 #define SCTP_AUDIT_SIZE 256
-#define SCTP_STAT_LOG_SIZE 40000
+#define SCTP_STAT_LOG_SIZE 60000
 
 /* Places that CWND log can happen from */
 #define SCTP_CWND_LOG_FROM_FR	1
@@ -125,6 +125,14 @@ __FBSDID("$FreeBSD:$");
 #define SCTP_NAGLE_SKIPPED          73
 #define SCTP_WAKESND_FROM_SACK      74
 #define SCTP_WAKESND_FROM_FWDTSN    75
+#define SCTP_NOWAKE_FROM_SACK       76
+#define SCTP_CWNDLOG_PRESEND        77
+#define SCTP_CWNDLOG_ENDSEND        78
+#define SCTP_AT_END_OF_SACK         79
+#define SCTP_REASON_FOR_SC          80
+#define SCTP_UNKNOWN_MAX            81
+
+#define SCTP_LOG_MAX_TYPES 82
 /*
  * To turn on various logging, you must first define SCTP_STAT_LOGGING. Then
  * to get something to log you define one of the logging defines i.e.
@@ -133,6 +141,7 @@ __FBSDID("$FreeBSD:$");
  *
  * Any one or a combination of the logging can be turned on.
  */
+#define SCTP_LOG_EVENT_UNKNOWN 0
 #define SCTP_LOG_EVENT_CWND  1
 #define SCTP_LOG_EVENT_BLOCK 2
 #define SCTP_LOG_EVENT_STRM  3
@@ -147,6 +156,10 @@ __FBSDID("$FreeBSD:$");
 #define SCTP_LOG_EVENT_SB   12
 #define SCTP_LOG_EVENT_NAGLE 13
 #define SCTP_LOG_EVENT_WAKE 14
+#define SCTP_LOG_MISC_EVENT 15 
+
+#define SCTP_LOG_MAX_EVENT 16
+
 #define SCTP_LOCK_UNKNOWN 2
 
 
@@ -206,7 +219,7 @@ __FBSDID("$FreeBSD:$");
 #define MAX_SEQ	0xffff
 
 /* how many executions every N tick's */
-#define SCTP_MAX_ITERATOR_AT_ONCE 20
+#define SCTP_ITERATOR_MAX_AT_ONCE 20
 
 /* number of clock ticks between iterator executions */
 #define SCTP_ITERATOR_TICKS 1

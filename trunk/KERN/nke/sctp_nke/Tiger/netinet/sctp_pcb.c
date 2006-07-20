@@ -2718,7 +2718,7 @@ sctp_iterator_inp_being_freed(struct sctp_inpcb *inp, struct sctp_inpcb *inp_nex
 	struct sctp_iterator *it;
 
 	/*
-	 * We enter with the only the ITERATOR_LOCK in place and A write
+	 * We enter with the only the ITERATOR_LOCK in place and a write
 	 * lock on the inp_info stuff.
 	 */
 
@@ -2730,7 +2730,6 @@ sctp_iterator_inp_being_freed(struct sctp_inpcb *inp, struct sctp_inpcb *inp_nex
 	 * those guys. The list of iterators should never be very big
 	 * though.
 	 */
-
 	LIST_FOREACH(it, &sctppcbinfo.iteratorhead, sctp_nxt_itr) {
 		if (it == inp->inp_starting_point_for_iterator)
 			/* skip this guy, he's special */
@@ -2863,6 +2862,8 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 			if (locked_so) {
 				SOCK_LOCK(so);
 			}
+			/* Disconnect the socket please */
+			asoc->sctp_socket = NULL;
 			asoc->asoc.state |= SCTP_STATE_CLOSED_SOCKET;
 			if ((asoc->asoc.size_on_reasm_queue > 0) ||
 			    (asoc->asoc.size_on_all_streams > 0) ||
@@ -3057,6 +3058,14 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 			panic("strange case 1");
 #endif
 		}
+		if (so->so_rcv.sb_mb) {
+			printf("Strange, so->so_rcv.sb_mb is not NULL (%x)?\n",
+			       (u_int)so->so_rcv.sb_mb);
+#ifdef INVARIENTS
+			panic("strange case 1a");
+#endif
+			so->so_rcv.sb_mb = NULL;
+		}
 		so->so_snd.sb_mbcnt = 0;
 		if (so->so_snd.sb_cc) {
 			printf("Strange, so->so_snd.sb_cc >0 was %d?\n",
@@ -3066,6 +3075,15 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 			panic("strange case 2");
 #endif
 		}
+		if (so->so_snd.sb_mb) {
+			printf("Strange, so->so_snd.sb_mb is not NULL (%x)?\n",
+			       (u_int)so->so_snd.sb_mb);
+#ifdef INVARIENTS
+			panic("strange case 2a");
+#endif
+			so->so_snd.sb_mb = NULL;
+		}
+
 #ifdef IPSEC
 #ifdef __OpenBSD__
 		/* XXX IPsec cleanup here */
@@ -3259,8 +3277,9 @@ sctp_findnet(struct sctp_tcb *stcb, struct sockaddr *addr)
 	/* use the peer's/remote port for lookup if unspecified */
 	sin = (struct sockaddr_in *)addr;
 	sin6 = (struct sockaddr_in6 *)addr;
-#if 0				/* why do we need to check the port for a nets
-				 * list on an assoc? */
+#if 0
+	/* why do we need to check the port for a nets list on an assoc? */
+
 	if (stcb->rport != sin->sin_port) {
 		/* we cheat and just a sin for this test */
 		return (NULL);
@@ -4072,20 +4091,17 @@ sctp_iterator_asoc_being_freed(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 {
 	struct sctp_iterator *it;
 
-
-
 	/*
 	 * Unlock the tcb lock we do this so we avoid a dead lock scenario
 	 * where the iterator is waiting on the TCB lock and the TCB lock is
 	 * waiting on the iterator lock.
 	 */
-
 	it = stcb->asoc.stcb_starting_point_for_iterator;
 	if (it == NULL) {
 		return;
 	}
 	if (it->inp != stcb->sctp_ep) {
-		/* hm, focused on the wrong one? */
+		/* hmm, focused on the wrong one? */
 		return;
 	}
 	if (it->stcb != stcb) {
@@ -4097,7 +4113,6 @@ sctp_iterator_asoc_being_freed(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		if (it->iterator_flags & SCTP_ITERATOR_DO_SINGLE_INP) {
 			it->inp = NULL;
 		} else {
-
 			it->inp = LIST_NEXT(inp, sctp_list);
 		}
 	}
@@ -4188,7 +4203,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		callout_stop(&net->pmtu_timer.timer);
 	}
 
-
 	/*
 	 * Iterator asoc being freed we send an unlocked TCB. It returns
 	 * with INP_INFO and INP write locked and both TCB lock's the tcb
@@ -4247,6 +4261,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	SCTP_TCB_LOCK(stcb);
 	
 	sctp_iterator_asoc_being_freed(inp, stcb);
+
 	/* now restop the timers to be sure - this is paranoia at is finest! */
 	callout_stop(&asoc->hb_timer.timer);
 	callout_stop(&asoc->dack_timer.timer);
@@ -4255,7 +4270,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	callout_stop(&asoc->shut_guard_timer.timer);
 	callout_stop(&asoc->autoclose_timer.timer);
 	callout_stop(&asoc->delayed_event_timer.timer);
-
 
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 		callout_stop(&net->fr_timer.timer);
@@ -4457,8 +4471,8 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		sctp_free_remote_addr(net);
 	}
 	if ((from_inpcbfree == 0) && so) {
-		SOCKBUF_UNLOCK(&so->so_snd);
 		SOCKBUF_UNLOCK(&so->so_rcv);
+		SOCKBUF_UNLOCK(&so->so_snd);
 	}
 	/* local addresses, if any */
 	while (!LIST_EMPTY(&asoc->sctp_local_addr_list)) {
@@ -4501,7 +4515,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 
 	/* Get rid of LOCK */
 	SCTP_TCB_LOCK_DESTROY(stcb);
-
 	/* now clean up the tasoc itself */
 	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
 	SCTP_DECR_ASOC_COUNT();
@@ -4509,14 +4522,8 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	if (so && ((so->so_snd.sb_cc) ||
 	    (so->so_snd.sb_mbcnt))) {
 		/* This will happen when a abort is done */
-		if (from_inpcbfree == 0) {
-			SOCKBUF_LOCK(&so->so_snd);
-		}
 		so->so_snd.sb_cc = 0;
 		so->so_snd.sb_mbcnt = 0;
-		if (from_inpcbfree == 0) {
-			SOCKBUF_UNLOCK(&so->so_snd);
-		}
 	}
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
@@ -5191,6 +5198,7 @@ sctp_pcb_init()
 	lck_attr_setdefault(sctppcbinfo.mtx_attr);
 #endif				/* __APPLE__ */
 	SCTP_INP_INFO_LOCK_INIT();
+	SCTP_STATLOG_INIT_LOCK();
 	SCTP_ITERATOR_LOCK_INIT();
 	SCTP_IPI_COUNT_INIT();
 	SCTP_IPI_ADDR_INIT();
@@ -6276,10 +6284,18 @@ sctp_drain()
 	SCTP_INP_INFO_RUNLOCK();
 }
 
+/*
+ * start a new iterator
+ * iterates through all endpoints and associations based on the pcb_state
+ * flags and asoc_state.  "af" (mandatory) is executed for all matching
+ * assocs and "ef" (optional) is executed when the iterator completes.
+ * "inpf" (optional) is executed for each new endpoint as it is being
+ * iterated through.
+ */
 int
-sctp_initiate_iterator(asoc_func af, uint32_t pcb_state, uint32_t asoc_state,
-    void *argp, uint32_t argi, end_func ef,
-    struct sctp_inpcb *s_inp)
+sctp_initiate_iterator(inp_func inpf, asoc_func af, uint32_t pcb_state,
+    uint32_t pcb_features, uint32_t asoc_state, void *argp, uint32_t argi,
+    end_func ef, struct sctp_inpcb *s_inp)
 {
 	struct sctp_iterator *it = NULL;
 	int s;
@@ -6293,11 +6309,13 @@ sctp_initiate_iterator(asoc_func af, uint32_t pcb_state, uint32_t asoc_state,
 		return (ENOMEM);
 	}
 	memset(it, 0, sizeof(*it));
-	it->function_toapply = af;
+	it->function_assoc = af;
+	it->function_inp = inpf;
 	it->function_atend = ef;
 	it->pointer = argp;
 	it->val = argi;
 	it->pcb_flags = pcb_state;
+	it->pcb_features = pcb_features;
 	it->asoc_state = asoc_state;
 	if (s_inp) {
 		it->inp = s_inp;

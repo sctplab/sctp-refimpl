@@ -662,8 +662,20 @@ struct sctp_nagle_log {
 
 struct sctp_sbwake_log {
 	uint32_t stcb;
-	uint32_t tsn;
-	uint32_t wake_cnt;
+	uint16_t send_q;
+	uint16_t sent_q;
+	uint16_t flight;
+	uint16_t wake_cnt;
+	uint16_t stream_qcnt;	/* chnk cnt */
+	uint16_t chunks_on_oque;/* chunks out */
+
+};
+
+struct sctp_misc_info {
+	uint32_t log1;
+	uint32_t log2;
+	uint32_t log3;
+	uint32_t log4;
 };
 
 struct sctp_cwnd_log {
@@ -685,6 +697,7 @@ struct sctp_cwnd_log {
 		struct sctp_sb_log sb;
 		struct sctp_nagle_log nagle;
 		struct sctp_sbwake_log wake;
+		struct sctp_misc_info misc;
 	}     x;
 };
 
@@ -742,6 +755,7 @@ struct	sctpstat {
 	u_long  sctps_sendheartbeat;       /* total output HB chunks     */
 	u_long  sctps_sendecne;            /* total output ECNE chunks    */
 	u_long  sctps_sendauth;            /* total output AUTH chunks FIXME   */
+	u_long  sctps_senderrors;	   /* ip_output error counter */
 	/* PCKDROPREP statistics: */
 	u_long  sctps_pdrpfmbox;           /* */
 	u_long  sctps_pdrpfehos;           /* */
@@ -864,7 +878,7 @@ sctp_sorecvmsg(struct socket *so,
 __BEGIN_DECLS
 int sctp_peeloff __P((int, sctp_assoc_t));
 int sctp_bindx __P((int, struct sockaddr *, int, int));
-int sctp_connectx __P((int, struct sockaddr *, int));
+int sctp_connectx __P((int, const struct sockaddr *, int));
 int sctp_getaddrlen __P((sa_family_t));
 int sctp_getpaddrs __P((int, sctp_assoc_t, struct sockaddr **));
 void sctp_freepaddrs __P((struct sockaddr *));
