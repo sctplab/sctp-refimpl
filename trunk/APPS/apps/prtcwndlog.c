@@ -208,15 +208,6 @@ main(int argc, char **argv)
 				       (int)log.x.cwnd.cnt_in_send,
 				       (int)log.x.cwnd.cnt_in_str);
 
-			} else if (log.from == SCTP_LOG_EVENT_WAKE) {
-				printf("%u %s tcb:%x tsn:%x count:%d",
-				       (u_int)log.time_event,
-				       from_str[log.from],
-				       log.x.wake.stcb,
-				       log.x.wake.tsn,
-				       log.x.wake.wake_cnt
-					);
-
 			} else if (log.from == SCTP_CWND_LOG_FILL_OUTQ_FILLS) {
 				printf("%u fill_outqueue adds %d bytes onto net:%x cwnd:%d flight:%d (sendcnt:%d,strcnt:%d)\n",
 				       (u_int)log.time_event,
@@ -460,9 +451,17 @@ main(int argc, char **argv)
 					);
 			}
 
+		} else if (log.event_type == SCTP_LOG_EVENT_WAKE) {
+			printf("WAKE:%u %s tcb:%x tsn:%x count:%d\n",
+			       (u_int)log.time_event,
+			       from_str[log.from],
+			       log.x.wake.stcb,
+			       log.x.wake.tsn,
+			       log.x.wake.wake_cnt
+				);
+
 		}else if(log.event_type == SCTP_LOG_EVENT_BLOCK) {
-			printf("%d:(mbmx:%d < mb-use:%d) || (sb_mx:%d < sb_cc:%d + snd:%d) || (%d > MAX CHUNK) %s(BLK_EVENT %d:%d)\n",
-			       at,
+			printf("BLOCK:(mbmx:%d < mb-use:%d) || (sb_mx:%d < sb_cc:%d + snd:%d) || (%d > MAX CHUNK) %s(BLK_EVENT %d:%d)\n",
 			       (log.x.blk.maxmb*1024),
 			       (int)log.x.blk.onmb,
 			       (log.x.blk.maxsb*1024),
