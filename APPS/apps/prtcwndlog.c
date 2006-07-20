@@ -460,7 +460,7 @@ main(int argc, char **argv)
 
 		} else if (log.event_type == SCTP_LOG_MISC_EVENT) {
 			if(log.from == SCTP_REASON_FOR_SC) {
-				printf("%s:%s num_out:%u reason_code:%u cwnd_full:%u now_filled:%u\n",
+				printf("%s:%s num_out:%u reason_code:%u cwnd_full:%u sendonly1:%u\n",
 				       ts,
 				       from_str[log.from],
 				       log.x.misc.log1,
