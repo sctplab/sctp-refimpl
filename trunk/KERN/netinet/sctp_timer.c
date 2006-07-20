@@ -1780,7 +1780,7 @@ sctp_autoclose_timer(struct sctp_inpcb *inp,
 void
 sctp_iterator_timer(struct sctp_iterator *it)
 {
-	int cnt = 0;
+	int iteration_count = 0;
 
 	/*
 	 * only one iterator can run at a time. This is the only way we can
@@ -1797,15 +1797,15 @@ done_with_iterator:
 #endif
 		SCTP_INP_INFO_WLOCK();
 		LIST_REMOVE(it, sctp_nxt_itr);
-		/*
-		 * stopping the callout is not needed, in theory, but I am
-		 * paranoid.
-		 */
+		/* stopping the callout is not needed, in theory */
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 #endif
 		SCTP_INP_INFO_WUNLOCK();
 		callout_stop(&it->tmr.timer);
+#ifdef SCTP_DEBUG_ITERATOR
+		printf("ITERATOR: atend()\n");
+#endif
 		if (it->function_atend != NULL) {
 			(*it->function_atend) (it->pointer, it->val);
 		}
@@ -1817,8 +1817,11 @@ select_a_new_ep:
 	socket_lock(it->inp->ip_inp.inp.inp_socket, 1);
 #endif
 	SCTP_INP_WLOCK(it->inp);
-	while ((it->pcb_flags) && ((it->inp->sctp_flags & it->pcb_flags) != it->pcb_flags)) {
-		/* we do not like this ep */
+	while (((it->pcb_flags) &&
+		((it->inp->sctp_flags & it->pcb_flags) != it->pcb_flags)) ||
+	       ((it->pcb_features) &&
+		((it->inp->sctp_features & it->pcb_features) != it->pcb_features))) {
+		/* endpoint flags or features don't match, so keep looking */
 		if (it->iterator_flags & SCTP_ITERATOR_DO_SINGLE_INP) {
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			socket_unlock(it->inp->ip_inp.inp.inp_socket, 1);
@@ -1835,13 +1838,13 @@ select_a_new_ep:
 			goto done_with_iterator;
 		}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			socket_lock(it->inp->ip_inp.inp.inp_socket, 1);
+		socket_lock(it->inp->ip_inp.inp.inp_socket, 1);
 #endif
 		SCTP_INP_WLOCK(it->inp);
 	}
 	if ((it->inp->inp_starting_point_for_iterator != NULL) &&
 	    (it->inp->inp_starting_point_for_iterator != it)) {
-		printf("Iterator collision, we must wait for other iterator at %x\n",
+		printf("Iterator collision, waiting for one at 0x%x\n",
 		    (uint32_t) it->inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		/* Unlock done at start_timer_return */
@@ -1849,31 +1852,56 @@ select_a_new_ep:
 		SCTP_INP_WUNLOCK(it->inp);
 		goto start_timer_return;
 	}
-	/* now we do the actual write to this guy */
+	/* mark the current iterator on the endpoint */
 	it->inp->inp_starting_point_for_iterator = it;
 	SCTP_INP_WUNLOCK(it->inp);
 	SCTP_INP_RLOCK(it->inp);
-	/*
-	 * if we reach here we found a inp acceptable, now through each one
-	 * that has the association in the right state
-	 */
+	/* now go through each assoc which is in the desired state */
 	if (it->stcb == NULL) {
+		/* run the per instance function */
+#ifdef SCTP_DEBUG_ITERATOR
+		printf("ITERATOR: inp() inp 0x%x, ptr 0x%x, val 0x%x\n",
+		       (uint32_t)it->inp, (uint32_t)it->pointer, it->val);
+#endif
+		if (it->function_inp != NULL)
+	    		(*it->function_inp)(it->inp, it->pointer, it->val);
+
 		it->stcb = LIST_FIRST(&it->inp->sctp_asoc_list);
 	}
+	SCTP_INP_RUNLOCK(it->inp);
 	if (it->stcb->asoc.stcb_starting_point_for_iterator == it) {
 		it->stcb->asoc.stcb_starting_point_for_iterator = NULL;
 	}
 	while (it->stcb) {
 		SCTP_TCB_LOCK(it->stcb);
 		if (it->asoc_state && ((it->stcb->asoc.state & it->asoc_state) != it->asoc_state)) {
+			/* not in the right state... keep looking */
 			SCTP_TCB_UNLOCK(it->stcb);
-			it->stcb = LIST_NEXT(it->stcb, sctp_tcblist);
-			continue;
+			goto next_assoc;
 		}
-		cnt++;
+		/* see if we have limited out the iterator loop */
+		iteration_count++;
+		if (iteration_count > SCTP_ITERATOR_MAX_AT_ONCE) {
+			/* mark the current iterator on the assoc */
+			it->stcb->asoc.stcb_starting_point_for_iterator = it;
+	start_timer_return:
+			/* set a timer to continue this later */
+			SCTP_TCB_UNLOCK(it->stcb);
+			sctp_timer_start(SCTP_TIMER_TYPE_ITERATOR,
+			    (struct sctp_inpcb *)it, NULL, NULL);
+#ifdef SCTP_DEBUG_ITERATOR
+			printf("ITERATOR: starting timer\n");
+#endif
+			SCTP_ITERATOR_UNLOCK();
+			return;
+		}
 		/* run function on this one */
-		SCTP_INP_RUNLOCK(it->inp);
-		(*it->function_toapply) (it->inp, it->stcb, it->pointer, it->val);
+#ifdef SCTP_DEBUG_ITERATOR
+		printf("ITERATOR: assoc() - inp 0x%x, stcb 0x%x, ptr 0x%x, val 0x%x\n",
+		       (uint32_t)it->inp, (uint32_t)it->stcb,
+		       (uint32_t)it->pointer, it->val);
+#endif
+		(*it->function_assoc)(it->inp, it->stcb, it->pointer, it->val);
 
 		/*
 		 * we lie here, it really needs to have its own type but
@@ -1881,25 +1909,10 @@ select_a_new_ep:
 		 */
 		sctp_chunk_output(it->inp, it->stcb, SCTP_OUTPUT_FROM_T3);
 		SCTP_TCB_UNLOCK(it->stcb);
-		/* see if we have limited out */
-		if (cnt > SCTP_MAX_ITERATOR_AT_ONCE) {
-			it->stcb->asoc.stcb_starting_point_for_iterator = it;
-	start_timer_return:
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			socket_unlock(it->inp->ip_inp.inp.inp_socket, 1);
-#endif
-			SCTP_ITERATOR_UNLOCK();
-			sctp_timer_start(SCTP_TIMER_TYPE_ITERATOR, (struct sctp_inpcb *)it, NULL, NULL);
-			return;
-		}
-		SCTP_INP_RLOCK(it->inp);
+	next_assoc:
 		it->stcb = LIST_NEXT(it->stcb, sctp_tcblist);
 	}
-	/*
-	 * if we reach here, we ran out of stcb's in the inp we are looking
-	 * at
-	 */
-	SCTP_INP_RUNLOCK(it->inp);
+	/* done with all assocs on this endpoint, move on to next endpoint */
 	SCTP_INP_WLOCK(it->inp);
 	it->inp->inp_starting_point_for_iterator = NULL;
 	SCTP_INP_WUNLOCK(it->inp);

@@ -5360,7 +5360,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		/*
 		 * Send a ABORT, we don't add the new address error clause
 		 * though we even set the T bit and copy in the 0 tag.. this
-		 * looks no different than if no listner was present.
+		 * looks no different than if no listener was present.
 		 */
 		sctp_send_abort(init_pkt, iphlen, sh, 0, NULL);
 		return;
@@ -5416,7 +5416,8 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		 * likely this set of tests will protect us but there is a
 		 * chance not.
 		 */
-		if (inp->sctp_flags & (SCTP_PCB_FLAGS_SOCKET_GONE | SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
+		if (inp->sctp_flags & (SCTP_PCB_FLAGS_SOCKET_GONE |
+				       SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
 			if (op_err)
 				sctp_m_freem(op_err);
 			sctp_m_freem(m);
@@ -6528,7 +6529,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			}
 			if ((be.error) ||
 			    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
-			    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
+			    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
 				if (be.error)
 					error = be.error;
 				else
@@ -6536,7 +6537,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 				goto out_locked;
 			}
 			if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
-			    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
+			    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
 				/* Should I really unlock ? */
 				SCTP_INP_RUNLOCK(inp);
 				error = EFAULT;
@@ -7224,13 +7225,13 @@ sctp_sendall(struct sctp_inpcb *inp, struct uio *uio, struct mbuf *m,
 		ca->m = m;
 	}
 
-	ret = sctp_initiate_iterator(sctp_sendall_iterator,
-	    SCTP_PCB_ANY_FLAGS, SCTP_ASOC_ANY_STATE,
+	ret = sctp_initiate_iterator(NULL, sctp_sendall_iterator,
+	    SCTP_PCB_ANY_FLAGS, SCTP_PCB_ANY_FEATURES, SCTP_ASOC_ANY_STATE,
 	    (void *)ca, 0,
 	    sctp_sendall_completes, inp);
 	if (ret) {
 #ifdef SCTP_DEBUG
-		printf("Failed to initate iterator for sendall\n");
+		printf("Failed to initiate iterator for sendall\n");
 #endif
 		FREE(ca, M_PCB);
 		return (EFAULT);
@@ -9916,10 +9917,9 @@ sctp_output(inp, m, addr, control, p, flags)
 		printf("USR Send BEGINS\n");
 	}
 #endif
-
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 	    (inp->sctp_socket->so_qlimit)) {
-		/* The listner can NOT send */
+		/* The listener can NOT send */
 		if (control) {
 			sctppcbinfo.mbuf_track--;
 			sctp_m_freem(control);
@@ -9933,7 +9933,7 @@ sctp_output(inp, m, addr, control, p, flags)
 	if (addr) {
 		SCTP_ASOC_CREATE_LOCK(inp);
 		if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
-		    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
+		    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
 			/* Should I really unlock ? */
 			SCTP_ASOC_CREATE_UNLOCK(inp);
 			if (control) {
@@ -12430,7 +12430,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 			    so, asoc, sndlen);
 #endif
 			if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
-			    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
+			    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
 				/* Should I really unlock ? */
 				error = EFAULT;
 				splx(s);
@@ -13020,7 +13020,7 @@ sctp_sosend(struct socket *so,
 
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 	    (inp->sctp_socket->so_qlimit)) {
-		/* The listner can NOT send */
+		/* The listener can NOT send */
 		error = EFAULT;
 		splx(s);
 		if (top)
@@ -13037,21 +13037,11 @@ sctp_sosend(struct socket *so,
 		if (sctp_find_cmsg(SCTP_SNDRCV, (void *)&srcv, control,
 		    sizeof(srcv))) {
 			/* got one */
-			if (srcv.sinfo_flags & SCTP_SENDALL) {
-				/* its a sendall */
-				sctppcbinfo.mbuf_track--;
-				sctp_m_freem(control);
-				error = sctp_sendall(inp, uio, top, &srcv);
-				splx(s);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-				socket_unlock(so, 1);
-#endif
-				return (error);
-			}
 			use_rcvinfo = 1;
 		}
 	}
-	error = sctp_lower_sosend(so, addr, uio, top, control, flags, use_rcvinfo, &srcv, p);
+	error = sctp_lower_sosend(so, addr, uio, top, control, flags,
+				  use_rcvinfo, &srcv, p);
 	splx(s);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	socket_unlock(so, 1);
@@ -13102,7 +13092,6 @@ sctp_lower_sosend(struct socket *so,
 	else
 		sndlen = top->m_pkthdr.len;
 
-
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
 #else
@@ -13111,16 +13100,25 @@ sctp_lower_sosend(struct socket *so,
 
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 	    (inp->sctp_socket->so_qlimit)) {
-		/* The listner can NOT send */
+		/* The listener can NOT send */
 		error = EFAULT;
 		splx(s);
 		goto out;
+	}
+	if (use_rcvinfo) {
+		if (srcv->sinfo_flags & SCTP_SENDALL) {
+			/* its a sendall */
+			sctppcbinfo.mbuf_track--;
+			error = sctp_sendall(inp, uio, top, srcv);
+			splx(s);
+			goto out;
+		}
 	}
 	if (addr) {
 		SCTP_ASOC_CREATE_LOCK(inp);
 		create_lock_applied = 1;
 		if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
-		    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
+		    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
 			/* Should I really unlock ? */
 			error = EFAULT;
 			splx(s);

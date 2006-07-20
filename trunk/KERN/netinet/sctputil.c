@@ -1233,6 +1233,7 @@ sctp_timeout_handler(void *t)
 	struct sctp_nets *net;
 	struct sctp_timer *tmr;
 	int s, did_output;
+	struct sctp_iterator *it = NULL;
 
 #if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
 	boolean_t funnel_state;
@@ -1282,9 +1283,7 @@ sctp_timeout_handler(void *t)
 #endif
 		return;
 	}
-
-	if ((tmr->type != SCTP_TIMER_TYPE_ADDR_WQ) &&
-	    (inp == NULL)) {
+	if ((tmr->type != SCTP_TIMER_TYPE_ADDR_WQ) && (inp == NULL)) {
 		splx(s);
 #if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
 		/* release BSD kernel funnel/mutex */
@@ -1292,6 +1291,12 @@ sctp_timeout_handler(void *t)
 #endif
 		return;
 	}
+	/* if this is an iterator timeout, get the struct and clear inp */
+	if (tmr->type == SCTP_TIMER_TYPE_ITERATOR) {
+		it = (struct sctp_iterator *)inp;
+		inp = NULL;
+	}
+
 	if (inp) {
 		SCTP_INP_WLOCK(inp);
 		if (inp->sctp_socket == 0) {
@@ -1304,8 +1309,7 @@ sctp_timeout_handler(void *t)
 			return;
 		}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		if (tmr->type != SCTP_TIMER_TYPE_ITERATOR)
-			socket_lock(inp->ip_inp.inp.inp_socket, 1);
+		socket_lock(inp->ip_inp.inp.inp_socket, 1);
 #endif
 	}
 	if (stcb) {
@@ -1359,24 +1363,19 @@ sctp_timeout_handler(void *t)
 	/* mark as being serviced now */
 	callout_deactivate(&tmr->timer);
 
-	if (inp) {
+	if (inp && (tmr->type != SCTP_TIMER_TYPE_ITERATOR)) {
 		SCTP_INP_INCR_REF(inp);
 		SCTP_INP_WUNLOCK(inp);
 	}
+	/* call the handler for the appropriate timer type */
 	switch (tmr->type) {
 	case SCTP_TIMER_TYPE_ADDR_WQ:
 		sctp_handle_addr_wq();
 		break;
 	case SCTP_TIMER_TYPE_ITERATOR:
-		{
-			struct sctp_iterator *it;
-
-			SCTP_STAT_INCR(sctps_timoiterator);
-			it = (struct sctp_iterator *)inp;
-			sctp_iterator_timer(it);
-		}
+		SCTP_STAT_INCR(sctps_timoiterator);
+		sctp_iterator_timer(it);
 		break;
-		/* call the handler for the appropriate timer type */
 	case SCTP_TIMER_TYPE_SEND:
 		SCTP_STAT_INCR(sctps_timodata);
 		stcb->asoc.num_send_timers_up--;
