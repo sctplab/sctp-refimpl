@@ -127,9 +127,11 @@ __FBSDID("$FreeBSD:$");
 #define SCTP_WAKESND_FROM_FWDTSN    75
 #define SCTP_NOWAKE_FROM_SACK       76
 #define SCTP_CWNDLOG_PRESEND        77
-#define SCTP_UNKNOWN_MAX            78
+#define SCTP_CWNDLOG_ENDSEND        78
+#define SCTP_AT_END_OF_SACK         79
+#define SCTP_UNKNOWN_MAX            80
 
-#define SCTP_LOG_MAX_TYPES 79
+#define SCTP_LOG_MAX_TYPES 81
 /*
  * To turn on various logging, you must first define SCTP_STAT_LOGGING. Then
  * to get something to log you define one of the logging defines i.e.
