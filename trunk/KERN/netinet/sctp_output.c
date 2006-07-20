@@ -9864,10 +9864,6 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 		printf("Ok, we have put out %d chunks\n", tot_out);
 	}
 #endif
-#ifdef SCTP_WAKE_LOGGING
-	sctp_log_cwnd(stcb, asoc->primary_destination, tot_out, SCTP_CWNDLOG_ENDSEND);
-	sctp_misc_ints(SCTP_REASON_FOR_SC, num_out, reason_code, cwnd_full, sending_one_packet);
-#endif
 	/*
 	 * Now we need to clean up the control chunk chain if a ECNE is on
 	 * it. It must be marked as UNSENT again so next call will continue
