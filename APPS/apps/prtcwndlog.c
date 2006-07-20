@@ -456,14 +456,15 @@ main(int argc, char **argv)
 			}
 
 		} else if (log.event_type == SCTP_LOG_EVENT_WAKE) {
-			printf("WUP:%s %s tcb:%x tsn:%x count:%d fs:%d (%d:%d)\n",
+			printf("WUP:%s %s tcb:%x cnt:%d fs:%d sd:%d st:%d str:%d co:%d)\n",
 			       
 			       ts,
 			       from_str[log.from],
 			       log.x.wake.stcb,
-			       log.x.wake.tsn,
 			       log.x.wake.wake_cnt,
-			       (log.x.wake.flight*1024),
+			       log.x.wake.flight,
+			       log.x.wake.send_q,
+			       log.x.wake.sent_q,
 			       log.x.wake.stream_qcnt,
 			       log.x.wake.chunks_on_oque
 				);
