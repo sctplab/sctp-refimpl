@@ -4221,6 +4221,8 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			ro->ro_rt->rt_ifp->if_mtu = have_mtu;
 		}
 		SCTP_STAT_INCR(sctps_sendpackets);
+		if(ret)
+			SCTP_STAT_INCR(sctps_senderrors);
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
 			printf("Ip output returns %d\n", ret);
@@ -4473,6 +4475,8 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		}
 #endif				/* SCTP_DEBUG_OUTPUT */
 		SCTP_STAT_INCR(sctps_sendpackets);
+		if(ret)
+			SCTP_STAT_INCR(sctps_senderrors);
 		if (net == NULL) {
 			/* Now if we had a temp route free it */
 			if (ro->ro_rt) {
@@ -9859,6 +9863,9 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 	if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
 		printf("Ok, we have put out %d chunks\n", tot_out);
 	}
+#endif
+#ifdef SCTP_WAKE_LOGGING
+	sctp_log_cwnd(stcb, asoc->primary_destination, tot_out, SCTP_SEND_NOW_COMPLETES);
 #endif
 	/*
 	 * Now we need to clean up the control chunk chain if a ECNE is on
