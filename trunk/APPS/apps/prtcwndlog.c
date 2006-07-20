@@ -108,9 +108,10 @@ main(int argc, char **argv)
 		/* 73 */ "Nagle allows transmit",
 		/* 74 */ "Awake SND In SACK Processing",
 		/* 75 */ "Awake SND In FWD_TSN Processing",
-		/* 76 */ "unknown"
+		/* 76 */ "No wake from sack",
+		/* 77 */ "unknown"
 	};
-#define FROM_STRING_MAX 76
+#define FROM_STRING_MAX 77
 	FILE *out;
 	int at;
 	struct sctp_cwnd_log log;
