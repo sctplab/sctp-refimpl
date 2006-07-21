@@ -527,8 +527,9 @@ measure_one(struct control_info *req,
     flen = sizeof(struct sockaddr_in);
     if ((protocol_touse == IPPROTO_SCTP) && (sctp_tcpmode == 0)) {
 #ifndef WIN32
-	ret = sendto(fd,&req->req,sizeof(req->req),0,
-		     (struct sockaddr *)to,sizeof(*to));
+	ret = sctp_sendmsg(fd, &req->req, sizeof(req->req),
+			   (struct sockaddr *)to, sizeof(*to),
+			   0, 0, 0, 0, 0);
 #endif /* !WIN32 */
     } else {
 	ret = send(fd, (const char *)&req->req, sizeof(req->req), 0);
