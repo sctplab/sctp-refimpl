@@ -4175,13 +4175,7 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far)
 			 */
 			goto get_out;
 		}
-#ifdef SCTP_INVARIENTS
-		SCTP_INP_RLOCK(stcb->sctp_ep);
-#endif
 		SCTP_TCB_LOCK(stcb);
-#ifdef SCTP_INVARIENTS
-		SCTP_INP_RUNLOCK(stcb->sctp_ep);
-#endif
 		if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 			/* No reports here */
 			SCTP_TCB_UNLOCK(stcb);
