@@ -12857,6 +12857,7 @@ sctp_lower_sosend(struct socket *so,
 	len = 0;
 	/* We send in a 0, since we do NOT ever do a sblock */
 	error = sctp_msg_append(stcb, net, top, srcv, flags, 0, &len);
+	top = NULL;
 	if (srcv->sinfo_flags & SCTP_ABORT) {
 		if (free_cnt_applied) {
 			atomic_add_16(&stcb->asoc.refcnt, -1);
@@ -12868,7 +12869,6 @@ sctp_lower_sosend(struct socket *so,
 	if (error)
 		goto out;
 	/* zap the top since it is now being used */
-	top = 0;
 	un_sent += len;
 
 	if (queue_only_for_init) {
@@ -12940,16 +12940,18 @@ sctp_lower_sosend(struct socket *so,
 	}
 #endif
 out:
-	if ((stcb) && (free_cnt_applied))
-		atomic_add_16(&stcb->asoc.refcnt, -1);
-
 	if (create_lock_applied) {
+		printf("out: create lock was applied, releasing\n");
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		create_lock_applied = 0;
 	}
 	if ((stcb) && hold_tcblock) {
 		SCTP_TCB_UNLOCK(stcb);
 	}
+	if ((stcb) && (free_cnt_applied)) {
+		atomic_add_16(&stcb->asoc.refcnt, -1);
+	}
+
 	if (top)
 		sctp_m_freem(top);
 	if (control)
