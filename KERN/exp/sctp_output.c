@@ -12206,7 +12206,7 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header)
 static int
 sctp_copy_one(struct mbuf **mm, struct uio *uio, int cpsz, int resv_upfront, int pad)
 {
-	int left, cancpy, willcpy, error, alignto;
+	int left, cancpy, willcpy, error;
 	struct mbuf *m, *head;
 
 	*mm = NULL;
@@ -12220,26 +12220,9 @@ sctp_copy_one(struct mbuf **mm, struct uio *uio, int cpsz, int resv_upfront, int
 	 * Add this one for m in now, that way if the alloc fails we won't
 	 * have a bad cnt.
 	 */
+	m->m_data += resv_upfront;
 	cancpy = M_TRAILINGSPACE(m);
 	willcpy = min(cancpy, left);
-	if(cancpy < (left + resv_upfront)) {
-		willcpy -= resv_upfront;
-	}
-	alignto = willcpy;
-	if(cancpy >= (left + resv_upfront + pad)) {
-		/* all fits in one mbuf */
-		alignto += pad;
-	}
-	/* Align data to the first mbuf to end */
-	if ((m->m_flags & M_EXT) == 0) {
-		if (m->m_flags & M_PKTHDR) {
-			MH_ALIGN(m, alignto);
-		} else {
-			M_ALIGN(m, alignto);
-		}
-	} else {
-		MC_ALIGN(m, alignto);
-	}
 
 	/* take out for any pad */
 	while (left > 0) {
