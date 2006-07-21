@@ -1033,6 +1033,7 @@ sctp_detach(struct socket *so)
 		so->so_rcv.sb_mb = NULL;
 		so->so_rcv.sb_mbcnt = 0;
 		/* Now disconnect */
+		so->so_pcb = NULL;
 		inp->sctp_socket = NULL;
 	}
 	splx(s);
