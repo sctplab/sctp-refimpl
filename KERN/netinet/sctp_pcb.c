@@ -517,117 +517,6 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 	return (NULL);
 }
 
-struct sctp_tcb *
-sctp_findassociation_ep_asconf(struct mbuf *m, int iphlen, int offset,
-    struct sctphdr *sh, struct sctp_inpcb **inp_p, struct sctp_nets **netp)
-{
-	struct sctp_tcb *stcb;
-	struct sockaddr_in *sin;
-	struct sockaddr_in6 *sin6;
-	struct sockaddr_storage local_store, remote_store;
-	struct ip *iph;
-	struct sctp_paramhdr parm_buf, *phdr;
-	int ptype;
-
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	sctp_lock_assert((*inp_p)->ip_inp.inp.inp_socket);
-#endif
-
-	memset(&local_store, 0, sizeof(local_store));
-	memset(&remote_store, 0, sizeof(remote_store));
-
-	/* First get the destination address setup too. */
-	iph = mtod(m, struct ip *);
-	if (iph->ip_v == IPVERSION) {
-		/* its IPv4 */
-		sin = (struct sockaddr_in *)&local_store;
-		sin->sin_family = AF_INET;
-		sin->sin_len = sizeof(*sin);
-		sin->sin_port = sh->dest_port;
-		sin->sin_addr.s_addr = iph->ip_dst.s_addr;
-	} else if (iph->ip_v == (IPV6_VERSION >> 4)) {
-		/* its IPv6 */
-		struct ip6_hdr *ip6;
-
-		ip6 = mtod(m, struct ip6_hdr *);
-		sin6 = (struct sockaddr_in6 *)&local_store;
-		sin6->sin6_family = AF_INET6;
-		sin6->sin6_len = sizeof(*sin6);
-		sin6->sin6_port = sh->dest_port;
-		sin6->sin6_addr = ip6->ip6_dst;
-	} else {
-		return NULL;
-	}
-
-	phdr = sctp_get_next_param(m, offset + sizeof(struct sctp_asconf_chunk),
-	    &parm_buf, sizeof(struct sctp_paramhdr));
-	if (phdr == NULL) {
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INPUT3) {
-			printf("findassociation_ep_asconf: failed to get asconf lookup addr\n");
-		}
-#endif				/* SCTP_DEBUG */
-		return NULL;
-	}
-	ptype = (int)((uint32_t) ntohs(phdr->param_type));
-	/* get the correlation address */
-	if (ptype == SCTP_IPV6_ADDRESS) {
-		/* ipv6 address param */
-		struct sctp_ipv6addr_param *p6, p6_buf;
-
-		if (ntohs(phdr->param_length) != sizeof(struct sctp_ipv6addr_param)) {
-			return NULL;
-		}
-		p6 = (struct sctp_ipv6addr_param *)sctp_get_next_param(m,
-		    offset + sizeof(struct sctp_asconf_chunk),
-		    &p6_buf.ph, sizeof(*p6));
-		if (p6 == NULL) {
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_INPUT3) {
-				printf("findassociation_ep_asconf: failed to get asconf v6 lookup addr\n");
-			}
-#endif				/* SCTP_DEBUG */
-			return (NULL);
-		}
-		sin6 = (struct sockaddr_in6 *)&remote_store;
-		sin6->sin6_family = AF_INET6;
-		sin6->sin6_len = sizeof(*sin6);
-		sin6->sin6_port = sh->src_port;
-		memcpy(&sin6->sin6_addr, &p6->addr, sizeof(struct in6_addr));
-	} else if (ptype == SCTP_IPV4_ADDRESS) {
-		/* ipv4 address param */
-		struct sctp_ipv4addr_param *p4, p4_buf;
-
-		if (ntohs(phdr->param_length) != sizeof(struct sctp_ipv4addr_param)) {
-			return NULL;
-		}
-		p4 = (struct sctp_ipv4addr_param *)sctp_get_next_param(m,
-		    offset + sizeof(struct sctp_asconf_chunk),
-		    &p4_buf.ph, sizeof(*p4));
-		if (p4 == NULL) {
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_INPUT3) {
-				printf("findassociation_ep_asconf: failed to get asconf v4 lookup addr\n");
-			}
-#endif				/* SCTP_DEBUG */
-			return (NULL);
-		}
-		sin = (struct sockaddr_in *)&remote_store;
-		sin->sin_family = AF_INET;
-		sin->sin_len = sizeof(*sin);
-		sin->sin_port = sh->src_port;
-		memcpy(&sin->sin_addr, &p4->addr, sizeof(struct in_addr));
-	} else {
-		/* invalid address param type */
-		return NULL;
-	}
-
-	stcb = sctp_findassociation_ep_addr(inp_p,
-	    (struct sockaddr *)&remote_store, netp,
-	    (struct sockaddr *)&local_store, NULL);
-	return (stcb);
-}
-
 /*
  * rules for use
  *
@@ -1523,13 +1412,15 @@ sctp_findassociation_special_addr(struct mbuf *m, int iphlen, int offset,
  * If it finds an association, it finds the sctp_tcb, sets the *inp_p and
  * *netp and does socket_lock(*inp_p->ip_inp.inp.inp_socket).
  * sctppcbinfo.ipi_ep_mtx is locked during this function.
+ * If skip_src_check is non-zero, the source address is NOT checked against
+ * the association that is found.
  */
 #endif
 
 static struct sctp_tcb *
 sctp_findassoc_by_vtag(struct sockaddr *from, uint32_t vtag,
     struct sctp_inpcb **inp_p, struct sctp_nets **netp, uint16_t rport,
-    uint16_t lport)
+    uint16_t lport, int skip_src_check)
 {
 	/*
 	 * Use my vtag to hash. If we find it we then verify the source addr
@@ -1593,6 +1484,15 @@ sctp_findassoc_by_vtag(struct sockaddr *from, uint32_t vtag,
 #endif
 				SCTP_TCB_UNLOCK(stcb);
 				continue;
+			}
+			if (skip_src_check) {
+				*netp = NULL;	/* unknown */
+				*inp_p = stcb->sctp_ep;
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+				lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+#endif
+				SCTP_INP_INFO_RUNLOCK();
+				return (stcb);
 			}
 			net = sctp_findnet(stcb, from);
 			if (net) {
@@ -1714,7 +1614,7 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 	if (sh->v_tag) {
 		/* we only go down this path if vtag is non-zero */
 		retval = sctp_findassoc_by_vtag(from, ntohl(sh->v_tag),
-		    inp_p, netp, sh->src_port, sh->dest_port);
+		    inp_p, netp, sh->src_port, sh->dest_port, 0);
 		if (retval) {
 			return (retval);
 		}
@@ -1791,6 +1691,133 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 #endif
 	return (retval);
 }
+
+/*
+ * lookup an association by an ASCONF lookup address.
+ * if the lookup address is 0.0.0.0 or ::0, use the vtag to do the lookup
+ */
+struct sctp_tcb *
+sctp_findassociation_ep_asconf(struct mbuf *m, int iphlen, int offset,
+    struct sctphdr *sh, struct sctp_inpcb **inp_p, struct sctp_nets **netp)
+{
+	struct sctp_tcb *stcb;
+	struct sockaddr_in *sin;
+	struct sockaddr_in6 *sin6;
+	struct sockaddr_storage local_store, remote_store;
+	struct ip *iph;
+	struct sctp_paramhdr parm_buf, *phdr;
+	int ptype;
+	int zero_address = 0;
+
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sctp_lock_assert((*inp_p)->ip_inp.inp.inp_socket);
+#endif
+
+	memset(&local_store, 0, sizeof(local_store));
+	memset(&remote_store, 0, sizeof(remote_store));
+
+	/* First get the destination address setup too. */
+	iph = mtod(m, struct ip *);
+	if (iph->ip_v == IPVERSION) {
+		/* its IPv4 */
+		sin = (struct sockaddr_in *)&local_store;
+		sin->sin_family = AF_INET;
+		sin->sin_len = sizeof(*sin);
+		sin->sin_port = sh->dest_port;
+		sin->sin_addr.s_addr = iph->ip_dst.s_addr;
+	} else if (iph->ip_v == (IPV6_VERSION >> 4)) {
+		/* its IPv6 */
+		struct ip6_hdr *ip6;
+
+		ip6 = mtod(m, struct ip6_hdr *);
+		sin6 = (struct sockaddr_in6 *)&local_store;
+		sin6->sin6_family = AF_INET6;
+		sin6->sin6_len = sizeof(*sin6);
+		sin6->sin6_port = sh->dest_port;
+		sin6->sin6_addr = ip6->ip6_dst;
+	} else {
+		return NULL;
+	}
+
+	phdr = sctp_get_next_param(m, offset + sizeof(struct sctp_asconf_chunk),
+	    &parm_buf, sizeof(struct sctp_paramhdr));
+	if (phdr == NULL) {
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_INPUT3) {
+			printf("findassociation_ep_asconf: failed to get asconf lookup addr\n");
+		}
+#endif				/* SCTP_DEBUG */
+		return NULL;
+	}
+	ptype = (int)((uint32_t) ntohs(phdr->param_type));
+	/* get the correlation address */
+	if (ptype == SCTP_IPV6_ADDRESS) {
+		/* ipv6 address param */
+		struct sctp_ipv6addr_param *p6, p6_buf;
+
+		if (ntohs(phdr->param_length) != sizeof(struct sctp_ipv6addr_param)) {
+			return NULL;
+		}
+		p6 = (struct sctp_ipv6addr_param *)sctp_get_next_param(m,
+		    offset + sizeof(struct sctp_asconf_chunk),
+		    &p6_buf.ph, sizeof(*p6));
+		if (p6 == NULL) {
+#ifdef SCTP_DEBUG
+			if (sctp_debug_on & SCTP_DEBUG_INPUT3) {
+				printf("findassociation_ep_asconf: failed to get asconf v6 lookup addr\n");
+			}
+#endif				/* SCTP_DEBUG */
+			return (NULL);
+		}
+		sin6 = (struct sockaddr_in6 *)&remote_store;
+		sin6->sin6_family = AF_INET6;
+		sin6->sin6_len = sizeof(*sin6);
+		sin6->sin6_port = sh->src_port;
+		memcpy(&sin6->sin6_addr, &p6->addr, sizeof(struct in6_addr));
+		if (IN6_IS_ADDR_UNSPECIFIED(&sin6->sin6_addr))
+			zero_address = 1;
+	} else if (ptype == SCTP_IPV4_ADDRESS) {
+		/* ipv4 address param */
+		struct sctp_ipv4addr_param *p4, p4_buf;
+
+		if (ntohs(phdr->param_length) != sizeof(struct sctp_ipv4addr_param)) {
+			return NULL;
+		}
+		p4 = (struct sctp_ipv4addr_param *)sctp_get_next_param(m,
+		    offset + sizeof(struct sctp_asconf_chunk),
+		    &p4_buf.ph, sizeof(*p4));
+		if (p4 == NULL) {
+#ifdef SCTP_DEBUG
+			if (sctp_debug_on & SCTP_DEBUG_INPUT3) {
+				printf("findassociation_ep_asconf: failed to get asconf v4 lookup addr\n");
+			}
+#endif				/* SCTP_DEBUG */
+			return (NULL);
+		}
+		sin = (struct sockaddr_in *)&remote_store;
+		sin->sin_family = AF_INET;
+		sin->sin_len = sizeof(*sin);
+		sin->sin_port = sh->src_port;
+		memcpy(&sin->sin_addr, &p4->addr, sizeof(struct in_addr));
+		if (sin->sin_addr.s_addr == INADDR_ANY)
+			zero_address = 1;
+	} else {
+		/* invalid address param type */
+		return NULL;
+	}
+
+	if (zero_address) {
+		stcb = sctp_findassoc_by_vtag(NULL, ntohl(sh->v_tag), inp_p,
+		    netp, sh->src_port, sh->dest_port, 1);
+printf("findassociation_ep_asconf: zero lookup address finds stcb 0x%x\n", (uint32_t)stcb);
+	} else {
+		stcb = sctp_findassociation_ep_addr(inp_p,
+		    (struct sockaddr *)&remote_store, netp,
+		    (struct sockaddr *)&local_store, NULL);
+	}
+	return (stcb);
+}
+
 
 extern int sctp_max_burst_default;
 
@@ -3271,14 +3298,14 @@ struct sctp_nets *
 sctp_findnet(struct sctp_tcb *stcb, struct sockaddr *addr)
 {
 	struct sctp_nets *net;
+#if 0
+	/* why do we need to check the port for a nets list on an assoc? */
 	struct sockaddr_in *sin;
 	struct sockaddr_in6 *sin6;
 
 	/* use the peer's/remote port for lookup if unspecified */
 	sin = (struct sockaddr_in *)addr;
 	sin6 = (struct sockaddr_in6 *)addr;
-#if 0
-	/* why do we need to check the port for a nets list on an assoc? */
 
 	if (stcb->rport != sin->sin_port) {
 		/* we cheat and just a sin for this test */
@@ -3955,6 +3982,38 @@ sctp_free_remote_addr(struct sctp_nets *net)
 	}
 }
 
+void
+sctp_remove_net(struct sctp_tcb *stcb, struct sctp_nets *net)
+{
+	struct sctp_association *asoc;
+
+	asoc = &stcb->asoc;
+	asoc->numnets--;
+	TAILQ_REMOVE(&asoc->nets, net, sctp_next);
+	sctp_free_remote_addr(net);
+	if (net == asoc->primary_destination) {
+		/* Reset primary */
+		struct sctp_nets *lnet;
+
+		lnet = TAILQ_FIRST(&asoc->nets);
+		/* Try to find a confirmed primary */
+		asoc->primary_destination = sctp_find_alternate_net(stcb, lnet,
+		    0);
+	}
+	if (net == asoc->last_data_chunk_from) {
+		/* Reset primary */
+		asoc->last_data_chunk_from = TAILQ_FIRST(&asoc->nets);
+	}
+	if (net == asoc->last_control_chunk_from) {
+		/* Clear net */
+		asoc->last_control_chunk_from = NULL;
+	}
+	if (net == asoc->asconf_last_sent_to) {
+		/* Reset primary */
+		asoc->asconf_last_sent_to = TAILQ_FIRST(&asoc->nets);
+	}
+}
+
 /*
  * remove a remote endpoint address from an association, it will fail if the
  * address does not exist.
@@ -3987,32 +4046,7 @@ sctp_del_remote_addr(struct sctp_tcb *stcb, struct sockaddr *remaddr)
 		if (sctp_cmpaddr((struct sockaddr *)&net->ro._l_addr,
 		    remaddr)) {
 			/* we found the guy */
-			asoc->numnets--;
-			TAILQ_REMOVE(&asoc->nets, net, sctp_next);
-			sctp_free_remote_addr(net);
-			if (net == asoc->primary_destination) {
-				/* Reset primary */
-				struct sctp_nets *lnet;
-
-				lnet = TAILQ_FIRST(&asoc->nets);
-				/* Try to find a confirmed primary */
-				asoc->primary_destination =
-				    sctp_find_alternate_net(stcb, lnet, 0);
-			}
-			if (net == asoc->last_data_chunk_from) {
-				/* Reset primary */
-				asoc->last_data_chunk_from =
-				    TAILQ_FIRST(&asoc->nets);
-			}
-			if (net == asoc->last_control_chunk_from) {
-				/* Clear net */
-				asoc->last_control_chunk_from = NULL;
-			}
-			if (net == asoc->asconf_last_sent_to) {
-				/* Reset primary */
-				asoc->asconf_last_sent_to =
-				    TAILQ_FIRST(&asoc->nets);
-			}
+			sctp_remove_net(stcb, net);
 			return (0);
 		}
 	}
@@ -5602,7 +5636,6 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			struct sockaddr *lsa = NULL;
 
 			stcb->asoc.peer_supports_asconf = 1;
-			stcb->asoc.peer_supports_asconf_setprim = 1;
 			if (plen > sizeof(lstore)) {
 				return (-1);
 			}
@@ -5655,7 +5688,6 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 				return (-1);
 			}
 			stcb->asoc.peer_supports_asconf = 0;
-			stcb->asoc.peer_supports_asconf_setprim = 0;
 			stcb->asoc.peer_supports_prsctp = 0;
 			stcb->asoc.peer_supports_pktdrop = 0;
 			stcb->asoc.peer_supports_strreset = 0;
@@ -5665,12 +5697,8 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			for (i = 0; i < num_ent; i++) {
 				switch (pr_supported->chunk_types[i]) {
 				case SCTP_ASCONF:
-					stcb->asoc.peer_supports_asconf = 1;
-					stcb->asoc.peer_supports_asconf_setprim = 1;
-					break;
 				case SCTP_ASCONF_ACK:
 					stcb->asoc.peer_supports_asconf = 1;
-					stcb->asoc.peer_supports_asconf_setprim = 1;
 					break;
 				case SCTP_FORWARD_CUM_TSN:
 					stcb->asoc.peer_supports_prsctp = 1;
