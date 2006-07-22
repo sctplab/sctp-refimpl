@@ -612,8 +612,8 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
 			printf("Warning Shutdown NOT the expected size.. skipping (%d:%d)\n",
-			    ntohs(cp->ch.chunk_length),
-			    (int)sizeof(struct sctp_shutdown_chunk));
+			       ntohs(cp->ch.chunk_length),
+			       (int)sizeof(struct sctp_shutdown_chunk));
 		}
 #endif
 		return;
@@ -622,33 +622,35 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 	}
 	asoc = &stcb->asoc;
 	/* goto SHUTDOWN_RECEIVED state to block new requests */
-	if ((SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_RECEIVED) &&
-	    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_SENT)) {
-		asoc->state = SCTP_STATE_SHUTDOWN_RECEIVED;
+	if(stcb->sctp_socket) {
+		if ((SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_RECEIVED) &&
+		    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_SENT)) {
+			asoc->state = SCTP_STATE_SHUTDOWN_RECEIVED;
 #ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-			printf("Moving to SHUTDOWN-RECEIVED state\n");
-		}
+			if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
+				printf("Moving to SHUTDOWN-RECEIVED state\n");
+			}
 #endif
-		/* notify upper layer that peer has initiated a shutdown */
-		sctp_ulp_notify(SCTP_NOTIFY_PEER_SHUTDOWN, stcb, 0, NULL);
+			/* notify upper layer that peer has initiated a shutdown */
+			sctp_ulp_notify(SCTP_NOTIFY_PEER_SHUTDOWN, stcb, 0, NULL);
 
-		if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
-		    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
+			if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
+			    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
 
-			/*
-			 * Set the flag so we cannot send more, we would
-			 * call the function but we don't want to wake up
-			 * the ulp necessarily.
-			 */
+				/*
+				 * Set the flag so we cannot send more, we would
+				 * call the function but we don't want to wake up
+				 * the ulp necessarily.
+				 */
 #if defined(__FreeBSD__) && __FreeBSD_version >= 502115
-			stcb->sctp_ep->sctp_socket->so_rcv.sb_state |= SBS_CANTSENDMORE;
+				stcb->sctp_socket->so_rcv.sb_state |= SBS_CANTSENDMORE;
 #else
-			stcb->sctp_ep->sctp_socket->so_state |= SS_CANTSENDMORE;
+				stcb->sctp_socket->so_state |= SS_CANTSENDMORE;
 #endif
+			}
+			/* reset time */
+			SCTP_GETTIME_TIMEVAL(&asoc->time_entered);
 		}
-		/* reset time */
-		SCTP_GETTIME_TIMEVAL(&asoc->time_entered);
 	}
 	if (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_SENT) {
 		/*
@@ -673,9 +675,9 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
 		printf("some_on_streamwheel:%d send_q_empty:%d sent_q_empty:%d\n",
-		    some_on_streamwheel,
-		    !TAILQ_EMPTY(&asoc->send_queue),
-		    !TAILQ_EMPTY(&asoc->sent_queue));
+		       some_on_streamwheel,
+		       !TAILQ_EMPTY(&asoc->send_queue),
+		       !TAILQ_EMPTY(&asoc->sent_queue));
 	}
 #endif
 	if (!TAILQ_EMPTY(&asoc->send_queue) ||
@@ -696,7 +698,7 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 #endif
 		/* start SHUTDOWN timer */
 		sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNACK, stcb->sctp_ep,
-		    stcb, net);
+				 stcb, net);
 	}
 }
 
