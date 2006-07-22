@@ -55,7 +55,7 @@ extern struct mbuf *sctp_compose_asconf(struct sctp_tcb *);
 
 extern void
 sctp_handle_asconf(struct mbuf *, unsigned int, struct sctp_asconf_chunk *,
-    struct sctp_tcb *, struct sctp_nets *);
+    struct sctp_tcb *);
 
 extern void
 sctp_handle_asconf_ack(struct mbuf *, int,
