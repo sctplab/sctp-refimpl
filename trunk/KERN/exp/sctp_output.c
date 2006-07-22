@@ -12237,7 +12237,6 @@ sctp_copy_one(struct mbuf **mm, struct uio *uio, int cpsz, int resv_upfront, int
 			return (error);
 		}
 		m->m_len = willcpy;
-		m->m_nextpkt = 0;
 		left -= willcpy;
 		if (left > 0) {
 			m->m_next = sctp_get_mbuf_for_msg((left+pad), 0);
@@ -12258,7 +12257,7 @@ sctp_copy_one(struct mbuf **mm, struct uio *uio, int cpsz, int resv_upfront, int
 				uint8_t *p;
 				cancpy = M_TRAILINGSPACE(m);
 				if(pad >= cancpy) {
-					p = (uint8_t *) (mtod(m, caddr_t)+m->m_len);
+					p = (uint8_t *) (mtod(m, uint8_t *)+m->m_len);
 					memset(p, 0, pad);
 				} else {
 					/* add a single mbuf to end for the pad :-( */
@@ -12269,7 +12268,7 @@ sctp_copy_one(struct mbuf **mm, struct uio *uio, int cpsz, int resv_upfront, int
 					}
 					m = m->m_next;
 					m->m_len = 0;
-					p = (uint8_t *)mtod(m, caddr_t);
+					p = mtod(m, uint8_t *);
 					memset(p, 0, pad);
 				}
 			}
@@ -12310,8 +12309,7 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 	if (sndlen > stcb->sctp_socket->so_snd.sb_hiwat) {
 		/* It will NEVER fit */
 		*errno = EMSGSIZE;
-		splx(s);
-		return(mm);
+		goto out_now;
 	}
 	resv_in_first = sizeof(struct sctp_data_chunk);
 
@@ -12321,40 +12319,39 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 	    (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_RECEIVED) ||
 	    (asoc->state & SCTP_STATE_SHUTDOWN_PENDING)) {
 		/* got data while shutting down */
-		
-		splx(s);
 		*errno = ECONNRESET;
-		return(mm);
+		goto out_now;
 	}
 	/* Is the stream no. valid? */
 	if (srcv->sinfo_stream >= asoc->streamoutcnt) {
 		/* Invalid stream number */
 		*errno = EINVAL;
-		splx(s);
-		return(mm);
+		goto out_now;
 	}
 	if (asoc->strmout == NULL) {
 		/* huh? software error */
-		splx(s);
 		*errno = EFAULT;
-		return(mm);
+		goto out_now;
 	}
 	if (sndlen == 0) {
 		/* get an empty packet hdr mbuf */
 		MGETHDR(mm, M_WAIT, MT_DATA);
 		if(mm == NULL) {
 			*errno = ENOMEM;
-			return(mm);
+			goto out_now;
 		}
 		mm->m_pkthdr.len = 0;
 		mm->m_len = 0;
-		return(mm);
+		goto out_now;
+
 	}
 	pad = 4- (sndlen % 4);
 	*errno = sctp_copy_one(&mm, uio, sndlen, resv_in_first, pad);
 	if(mm) {
 		mm->m_pkthdr.len = sndlen;
 	}
+out_not:
+	splx(s);
 	return (mm);
 }
 
