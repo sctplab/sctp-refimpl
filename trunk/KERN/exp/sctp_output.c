@@ -12350,7 +12350,7 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 	if(mm) {
 		mm->m_pkthdr.len = sndlen;
 	}
-out_not:
+out_now:
 	splx(s);
 	return (mm);
 }
