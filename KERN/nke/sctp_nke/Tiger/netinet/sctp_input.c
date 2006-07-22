@@ -822,10 +822,8 @@ sctp_process_unrecog_param(struct sctp_tcb *stcb, struct sctp_paramhdr *phdr)
 		break;
 	case SCTP_ADD_IP_ADDRESS:
 	case SCTP_DEL_IP_ADDRESS:
-		stcb->asoc.peer_supports_asconf = 0;
-		break;
 	case SCTP_SET_PRIM_ADDR:
-		stcb->asoc.peer_supports_asconf_setprim = 0;
+		stcb->asoc.peer_supports_asconf = 0;
 		break;
 	case SCTP_SUCCESS_REPORT:
 	case SCTP_ERROR_CAUSE_IND:
@@ -836,7 +834,6 @@ sctp_process_unrecog_param(struct sctp_tcb *stcb, struct sctp_paramhdr *phdr)
 		}
 #endif
 		stcb->asoc.peer_supports_asconf = 0;
-		stcb->asoc.peer_supports_asconf_setprim = 0;
 		break;
 	default:
 #ifdef SCTP_DEBUG
@@ -3774,7 +3771,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				SCTP_INP_WUNLOCK(inp);
 			}
 			/* now go back and verify any auth chunk to be sure */
-			if (auth_skipped) {
+			if (auth_skipped && (stcb != NULL)) {
 				struct sctp_auth_chunk *auth;
 
 #ifdef SCTP_DEBUG
@@ -4358,7 +4355,7 @@ process_control_chunks:
 			stcb->asoc.overall_error_count = 0;
 
 			sctp_handle_asconf(m, *offset,
-			    (struct sctp_asconf_chunk *)ch, stcb, *netp);
+			    (struct sctp_asconf_chunk *)ch, stcb);
 			break;
 		case SCTP_ASCONF_ACK:
 #ifdef SCTP_DEBUG
