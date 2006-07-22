@@ -229,7 +229,7 @@ struct sctp_paramhdr {
 #define SCTP_CAUSE_RESOURCE_SHORTAGE	0x0101
 #define SCTP_CAUSE_DELETING_SRC_ADDR	0x0102
 #define SCTP_CAUSE_ILLEGAL_ASCONF_ACK	0x0103
-#define SCTP_CAUSE_NO_AUTH		0x0104
+#define SCTP_CAUSE_REQUEST_REFUSED	0x0104
 
 /* Error causes from draft-ietf-tsvwg-sctp-auth */
 #define SCTP_CAUSE_UNSUPPORTED_HMACID	0x0105

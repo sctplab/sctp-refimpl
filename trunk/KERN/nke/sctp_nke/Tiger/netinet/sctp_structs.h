@@ -775,7 +775,6 @@ struct sctp_association {
 
 	/* flag to indicate if peer can do asconf */
 	uint8_t peer_supports_asconf;
-	uint8_t peer_supports_asconf_setprim;	/* possibly removable REM */
 	/* pr-sctp support flag */
 	uint8_t peer_supports_prsctp;
 	/* peer authentication support flag */

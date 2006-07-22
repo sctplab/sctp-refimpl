@@ -1055,9 +1055,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	asoc->assoc_id = asoc->my_vtag;
 	asoc->asconf_seq_out = asoc->str_reset_seq_out = asoc->init_seq_number = asoc->sending_seq =
 	    sctp_select_initial_TSN(&m->sctp_ep);
-	/* we are opptimisitic here */
-	asoc->peer_supports_asconf = 1;
-	asoc->peer_supports_asconf_setprim = 1;
+	/* we are optimisitic here */
 	asoc->peer_supports_pktdrop = 1;
 
 	asoc->sent_queue_retran_cnt = 0;
@@ -4175,13 +4173,7 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far)
 			 */
 			goto get_out;
 		}
-#ifdef SCTP_INVARIENTS
-		SCTP_INP_RLOCK(stcb->sctp_ep);
-#endif
 		SCTP_TCB_LOCK(stcb);
-#ifdef SCTP_INVARIENTS
-		SCTP_INP_RUNLOCK(stcb->sctp_ep);
-#endif
 		if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 			/* No reports here */
 			SCTP_TCB_UNLOCK(stcb);

@@ -6464,13 +6464,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 		if ((asoc->peer_supports_prsctp) && (asoc->sent_queue_cnt_removeable > 0)) {
 			/* This is ugly but we must assure locking order */
 			SOCKBUF_UNLOCK(&stcb->sctp_socket->so_snd);
-#ifdef SCTP_INVARIENTS
-			SCTP_INP_RLOCK(stcb->sctp_ep);
-#endif
 			SCTP_TCB_LOCK(stcb);
-#ifdef SCTP_INVARIENTS
-			SCTP_INP_RUNLOCK(stcb->sctp_ep);
-#endif
 			sctp_prune_prsctp(stcb, asoc, srcv, dataout);
 			SCTP_TCB_UNLOCK(stcb);
 			SOCKBUF_LOCK(&stcb->sctp_socket->so_snd);
@@ -6811,13 +6805,7 @@ zap_by_it_all:
 		int some_on_streamwheel = 0;
 
 		SOCKBUF_UNLOCK(&stcb->sctp_socket->so_snd);
-#ifdef SCTP_INVARIENTS
-		SCTP_INP_RLOCK(stcb->sctp_ep);
-#endif
 		SCTP_TCB_LOCK(stcb);
-#ifdef SCTP_INVARIENTS
-		SCTP_INP_RUNLOCK(stcb->sctp_ep);
-#endif
 		if (!TAILQ_EMPTY(&asoc->out_wheel)) {
 			/* Check to see if some data queued */
 			struct sctp_stream_out *outs;
@@ -9864,10 +9852,6 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 		printf("Ok, we have put out %d chunks\n", tot_out);
 	}
 #endif
-#ifdef SCTP_WAKE_LOGGING
-	sctp_log_cwnd(stcb, asoc->primary_destination, tot_out, SCTP_CWNDLOG_ENDSEND);
-	sctp_misc_ints(SCTP_REASON_FOR_SC, num_out, reason_code, cwnd_full, now_filled);
-#endif
 	/*
 	 * Now we need to clean up the control chunk chain if a ECNE is on
 	 * it. It must be marked as UNSENT again so next call will continue
@@ -10188,13 +10172,7 @@ sctp_output(inp, m, addr, control, p, flags)
 					    asoc->streamoutcnt *
 					    sizeof(struct sctp_stream_out), M_PCB,
 					    M_WAIT);
-#ifdef SCTP_INVARIENTS
-					SCTP_INP_RLOCK(inp);
-#endif
 					SCTP_TCB_LOCK(stcb);
-#ifdef SCTP_INVARIENST
-					SCTP_INP_RUNLOCK(inp);
-#endif
 					asoc->strmout = tmp_str;
 				}
 				for (i = 0; i < asoc->streamoutcnt; i++) {
@@ -10277,13 +10255,7 @@ sctp_output(inp, m, addr, control, p, flags)
 		return (EAGAIN);
 	}
 	SCTP_TCB_UNLOCK(stcb);
-#ifdef SCTP_INVARIENTS
-	SCTP_INP_RLOCK(inp);
-#endif
 	SCTP_TCB_LOCK(stcb);
-#ifdef SCTP_INVARIENTS
-	SCTP_INP_RUNLOCK(inp);
-#endif
 	if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 		SCTP_TCB_UNLOCK(stcb);
 		return (ECONNRESET);
@@ -12376,13 +12348,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 		if ((asoc->peer_supports_prsctp) && (asoc->sent_queue_cnt_removeable > 0)) {
 			/* This is ugly but we must assure locking order */
 			SOCKBUF_UNLOCK(&stcb->sctp_socket->so_snd);
-#ifdef SCTP_INVARIENTS
-			SCTP_INP_RLOCK(inp);
-#endif
 			SCTP_TCB_LOCK(stcb);
-#ifdef SCTP_INVARIENTS
-			SCTP_INP_RUNLOCK(inp);
-#endif
 			sctp_prune_prsctp(stcb, asoc, srcv, sndlen);
 			SCTP_TCB_UNLOCK(stcb);
 			SOCKBUF_LOCK(&stcb->sctp_socket->so_snd);
@@ -12543,13 +12509,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 			sbunlock(&so->so_snd);
 #endif
 			SOCKBUF_UNLOCK(&stcb->sctp_socket->so_snd);
-#ifdef SCTP_INVARIENTS
-			SCTP_INP_RLOCK(inp);
-#endif
 			SCTP_TCB_LOCK(stcb);
-#ifdef SCTP_INVARIENTS
-			SCTP_INP_RUNLOCK(inp);
-#endif
 			/* release this lock, otherwise we hang on ourselves */
 			sctp_abort_an_association(stcb->sctp_ep, stcb,
 			    SCTP_RESPONSE_TO_USER_REQ,
@@ -12898,13 +12858,7 @@ zap_by_it_now:
 			}
 		}
 		SOCKBUF_UNLOCK(&stcb->sctp_socket->so_snd);
-#ifdef SCTP_INVARIENTS
-		SCTP_INP_RLOCK(inp);
-#endif
 		SCTP_TCB_LOCK(stcb);
-#ifdef SCTP_INVARIENTS
-		SCTP_INP_RUNLOCK(inp);
-#endif
 
 		if (TAILQ_EMPTY(&asoc->send_queue) &&
 		    TAILQ_EMPTY(&asoc->sent_queue) &&
@@ -13006,40 +12960,17 @@ sctp_sosend(struct socket *so,
 #endif
 	struct sctp_inpcb *inp;
 	int s, error, use_rcvinfo = 0;
-	unsigned int sndlen;
 	struct sctp_sndrcvinfo srcv;
 
 	inp = (struct sctp_inpcb *)so->so_pcb;
-	if (uio)
-		sndlen = uio->uio_resid;
-	else
-		sndlen = top->m_pkthdr.len;
-
-
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
 #else
 	s = splnet();
 #endif
-
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	socket_lock(so, 1);
 #endif
-
-	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
-	    (inp->sctp_socket->so_qlimit)) {
-		/* The listener can NOT send */
-		error = EFAULT;
-		splx(s);
-		if (top)
-			sctp_m_freem(top);
-		if (control)
-			sctp_m_freem(control);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		socket_unlock(so, 1);
-#endif
-		return (error);
-	}
 	if (control) {
 		/* process cmsg snd/rcv info (maybe a assoc-id) */
 		if (sctp_find_cmsg(SCTP_SNDRCV, (void *)&srcv, control,
@@ -13054,7 +12985,6 @@ sctp_sosend(struct socket *so,
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	socket_unlock(so, 1);
 #endif
-
 	return (error);
 }
 
@@ -13303,13 +13233,7 @@ sctp_lower_sosend(struct socket *so,
 						    asoc->streamoutcnt *
 						    sizeof(struct sctp_stream_out),
 						    M_PCB, M_WAIT);
-#ifdef SCTP_INVARIENTS
-						SCTP_INP_RLOCK(inp);
-#endif
 						SCTP_TCB_LOCK(stcb);
-#ifdef SCTP_INVARIENTS
-						SCTP_INP_RUNLOCK(inp);
-#endif
 						hold_tcblock = 1;
 						asoc->strmout = tmp_str;
 					}
@@ -13509,13 +13433,7 @@ sctp_lower_sosend(struct socket *so,
 	un_sent += len;
 
 	if (queue_only_for_init) {
-#ifdef SCTP_INVARIENTS
-		SCTP_INP_RLOCK(inp);
-#endif
 		SCTP_TCB_LOCK(stcb);
-#ifdef SCTP_INVARIENTS
-		SCTP_INP_RUNLOCK(inp);
-#endif
 		sctp_send_initiate(inp, stcb);
 		queue_only_for_init = 0;
 		hold_tcblock = 1;
@@ -13535,13 +13453,7 @@ sctp_lower_sosend(struct socket *so,
 #endif
 		if (hold_tcblock == 0) {
 			hold_tcblock = 1;
-#ifdef SCTP_INVARIENTS
-			SCTP_INP_RLOCK(inp);
-#endif
 			SCTP_TCB_LOCK(stcb);
-#ifdef SCTP_INVARIENTS
-			SCTP_INP_RUNLOCK(inp);
-#endif
 		}
 		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_USR_SEND);
 		splx(s);
@@ -13556,13 +13468,7 @@ sctp_lower_sosend(struct socket *so,
 #endif
 		if (hold_tcblock == 0) {
 			hold_tcblock = 1;
-#ifdef SCTP_INVARIENTS
-			SCTP_INP_RLOCK(inp);
-#endif
 			SCTP_TCB_LOCK(stcb);
-#ifdef SCTP_INVARIENTS
-			SCTP_INP_RUNLOCK(inp);
-#endif
 		}
 		sctp_from_user_send = 1;
 		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_USR_SEND);
@@ -13580,13 +13486,7 @@ sctp_lower_sosend(struct socket *so,
 #endif
 		if (hold_tcblock == 0) {
 			hold_tcblock = 1;
-#ifdef SCTP_INVARIENTS
-			SCTP_INP_RLOCK(inp);
-#endif
 			SCTP_TCB_LOCK(stcb);
-#ifdef SCTP_INVARIENTS
-			SCTP_INP_RUNLOCK(inp);
-#endif
 		}
 		sctp_med_chunk_output(inp, stcb, &stcb->asoc, &num_out,
 		    &reason, 1, &cwnd_full, 1, &now, &now_filled);

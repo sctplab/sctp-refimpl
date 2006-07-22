@@ -420,7 +420,7 @@ sctp_skip_csum:
 		splx(s);
 	}
 #else
-	if (ipsec6_in_reject_so(m, in6p->sctp_socket)) {
+	if (in6p->sctp_socket && (ipsec6_in_reject_so(m, in6p->sctp_socket)) {
 /* XXX */
 #ifdef __APPLE__
 		/* FIX ME: need to find right stat for __APPLE__ */
@@ -443,7 +443,7 @@ sctp_skip_csum:
 	 */
 	if ((in6p->ip_inp.inp.inp_flags & INP_CONTROLOPTS)
 #ifndef __OpenBSD__
-	    || (in6p->sctp_socket->so_options & SO_TIMESTAMP)
+	    || (in6p->sctp_socket && in6p->sctp_socket->so_options & SO_TIMESTAMP)
 #endif
 	    ) {
 #if defined(__FreeBSD__) || defined(__APPLE__)
