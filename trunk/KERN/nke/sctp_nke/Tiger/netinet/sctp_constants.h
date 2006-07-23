@@ -699,9 +699,25 @@ __FBSDID("$FreeBSD:$");
 #define SCTP_NOTIFY_MAX			26
 
 
-/* clock variance is 10ms */
-#define SCTP_CLOCK_GRANULARITY	10
+#ifndef SCTP_PCBHASHSIZE
+/* default number of association hash buckets in each endpoint */
+#define SCTP_PCBHASHSIZE 256
+#endif
+#ifndef SCTP_TCBHASHSIZE
+#define SCTP_TCBHASHSIZE 1024
+#endif
 
+#ifndef SCTP_CHUNKQUEUE_SCALE
+#define SCTP_CHUNKQUEUE_SCALE 10
+#endif
+
+#ifdef __FreeBSD__
+/* clock variance is 1 ms */
+#define SCTP_CLOCK_GRANULARITY	1
+#else
+/* clock variance is 10 ms */
+#define SCTP_CLOCK_GRANULARITY	10
+#endif
 #define IP_HDR_SIZE 40		/* we use the size of a IP6 header here this
 				 * detracts a small amount for ipv4 but it
 				 * simplifies the ipv6 addition */

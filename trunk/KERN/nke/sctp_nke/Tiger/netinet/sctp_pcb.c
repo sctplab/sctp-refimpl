@@ -136,17 +136,15 @@ __FBSDID("$FreeBSD:$");
 #include <netinet/sctp_output.h>
 #include <netinet/sctp_timer.h>
 
-#ifndef SCTP_PCBHASHSIZE
-/* default number of association hash buckets in each endpoint */
-#define SCTP_PCBHASHSIZE 256
-#endif
 
 #ifdef SCTP_DEBUG
 uint32_t sctp_debug_on = 0;
 
 #endif				/* SCTP_DEBUG */
 
-int sctp_pcbtblsize = SCTP_PCBHASHSIZE;
+extern int sctp_pcbtblsize;
+extern int sctp_hashtblsize;
+extern int sctp_chunkscale;
 
 struct sctp_epinfo sctppcbinfo;
 
@@ -4008,10 +4006,10 @@ sctp_remove_net(struct sctp_tcb *stcb, struct sctp_nets *net)
 		/* Clear net */
 		asoc->last_control_chunk_from = NULL;
 	}
-	if (net == asoc->asconf_last_sent_to) {
+/*	if (net == asoc->asconf_last_sent_to) {*/
 		/* Reset primary */
-		asoc->asconf_last_sent_to = TAILQ_FIRST(&asoc->nets);
-	}
+/*		asoc->asconf_last_sent_to = TAILQ_FIRST(&asoc->nets);*/
+/*	}*/
 }
 
 /*
@@ -5085,13 +5083,6 @@ static int sctp_scale_up_for_address = SCTP_SCALE_FOR_ADDR;
 
 #endif				/* FreeBSD || APPLE */
 
-#ifndef SCTP_TCBHASHSIZE
-#define SCTP_TCBHASHSIZE 1024
-#endif
-
-#ifndef SCTP_CHUNKQUEUE_SCALE
-#define SCTP_CHUNKQUEUE_SCALE 10
-#endif
 
 void
 sctp_pcb_init()
@@ -5101,16 +5092,6 @@ sctp_pcb_init()
 	 * the sctp_init() funciton.
 	 */
 	int i;
-	int hashtblsize = SCTP_TCBHASHSIZE;
-
-#if defined(__FreeBSD__)
-	/*
-	 * Temporarily remove for __APPLE__ until we use the Tiger
-	 * equivalents
-	 */
-	int sctp_chunkscale = SCTP_CHUNKQUEUE_SCALE;
-
-#endif
 
 	if (sctp_pcb_initialized != 0) {
 		/* error I was called twice */
@@ -5132,12 +5113,12 @@ sctp_pcb_init()
 	/* init the hash table of endpoints */
 #if defined(__FreeBSD__)
 #if defined(__FreeBSD_cc_version) && __FreeBSD_cc_version >= 440000
-	TUNABLE_INT_FETCH("net.inet.sctp.tcbhashsize", &hashtblsize);
+	TUNABLE_INT_FETCH("net.inet.sctp.tcbhashsize", &sctp_hashtblsize);
 	TUNABLE_INT_FETCH("net.inet.sctp.pcbhashsize", &sctp_pcbtblsize);
 	TUNABLE_INT_FETCH("net.inet.sctp.chunkscale", &sctp_chunkscale);
 #else
 	TUNABLE_INT_FETCH("net.inet.sctp.tcbhashsize", SCTP_TCBHASHSIZE,
-	    hashtblsize);
+	    sctp_hashtblsize);
 	TUNABLE_INT_FETCH("net.inet.sctp.pcbhashsize", SCTP_PCBHASHSIZE,
 	    sctp_pcbtblsize);
 	TUNABLE_INT_FETCH("net.inet.sctp.chunkscale", SCTP_CHUNKQUEUE_SCALE,
@@ -5145,7 +5126,7 @@ sctp_pcb_init()
 #endif
 #endif
 
-	sctppcbinfo.sctp_asochash = hashinit((hashtblsize * 31),
+	sctppcbinfo.sctp_asochash = hashinit((sctp_hashtblsize * 31),
 #ifdef __NetBSD__
 	    HASH_LIST,
 #endif
@@ -5155,7 +5136,7 @@ sctp_pcb_init()
 #endif
 	    &sctppcbinfo.hashasocmark);
 
-	sctppcbinfo.sctp_ephash = hashinit(hashtblsize,
+	sctppcbinfo.sctp_ephash = hashinit(sctp_hashtblsize,
 #ifdef __NetBSD__
 	    HASH_LIST,
 #endif
@@ -5165,7 +5146,7 @@ sctp_pcb_init()
 #endif
 	    &sctppcbinfo.hashmark);
 
-	sctppcbinfo.sctp_tcpephash = hashinit(hashtblsize,
+	sctppcbinfo.sctp_tcpephash = hashinit(sctp_hashtblsize,
 #ifdef __NetBSD__
 	    HASH_LIST,
 #endif
@@ -5175,7 +5156,7 @@ sctp_pcb_init()
 #endif
 	    &sctppcbinfo.hashtcpmark);
 
-	sctppcbinfo.hashtblsize = hashtblsize;
+	sctppcbinfo.hashtblsize = sctp_hashtblsize;
 
 	/*
 	 * init the small hash table we use to track restarted asoc's
@@ -5211,13 +5192,15 @@ sctp_pcb_init()
 
 	SCTP_ZONE_INIT(sctppcbinfo.ipi_zone_chunk, "sctp_chunk",
 	    sizeof(struct sctp_tmit_chunk),
-	    (sctp_max_number_of_assoc * sctp_scale_up_for_address *
-	    sctp_chunkscale));
+	    (sctp_max_number_of_assoc * sctp_chunkscale));
 
 	SCTP_ZONE_INIT(sctppcbinfo.ipi_zone_readq, "sctp_readq",
 	    sizeof(struct sctp_queued_to_read),
-	    (sctp_max_number_of_assoc * sctp_scale_up_for_address *
-	    sctp_chunkscale));
+	    (sctp_max_number_of_assoc * sctp_chunkscale));
+
+	SCTP_ZONE_INIT(sctppcbinfo.ipi_zone_strmoq, "sctp_stream_msg_out",
+	    sizeof(struct sctp_stream_queue_pending),
+	    (sctp_max_number_of_assoc * sctp_chunkscale));
 
 	/* Master Lock INIT for info structure */
 #if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)

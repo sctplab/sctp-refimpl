@@ -179,6 +179,11 @@ unsigned int sctp_init_rtx_max_default = SCTP_DEF_MAX_INIT;
 unsigned int sctp_assoc_rtx_max_default = SCTP_DEF_MAX_SEND;
 unsigned int sctp_path_rtx_max_default = SCTP_DEF_MAX_PATH_RTX;
 unsigned int sctp_nr_outgoing_streams_default = SCTP_OSTREAM_INITIAL;
+
+int sctp_pcbtblsize = SCTP_PCBHASHSIZE;
+int sctp_hashtblsize = SCTP_TCBHASHSIZE;
+int sctp_chunkscale = SCTP_CHUNKQUEUE_SCALE;
+
 unsigned int sctp_cmt_on_off = 0;
 unsigned int sctp_cmt_sockopt_on_off = 0;
 unsigned int sctp_cmt_use_dac = 0;
@@ -725,6 +730,19 @@ SYSCTL_INT(_net_inet_sctp, OID_AUTO, maxburst, CTLFLAG_RW,
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, maxchunks, CTLFLAG_RW,
     &sctp_max_chunks_on_queue, 0,
     "Default max chunks on queue per asoc");
+
+SYSCTL_INT(_net_inet_sctp, OID_AUTO, tcbhashsize, CTLFLAG_RW,
+    &sctp_hashtblsize, 0,
+    "Tuneable for Hash table sizes");
+
+SYSCTL_INT(_net_inet_sctp, OID_AUTO, pcbhashsize, CTLFLAG_RW,
+    &sctp_pcbtblsize, 0,
+    "Tuneable for PCB Hash table sizes");
+
+SYSCTL_INT(_net_inet_sctp, OID_AUTO, chunkscale, CTLFLAG_RW,
+    &sctp_chunkscale, 0,
+    "Tuneable for Scaling of number of chunks and messages");
+
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, delayed_sack_time, CTLFLAG_RW,
     &sctp_delayed_sack_time_default, 0,
@@ -5780,6 +5798,19 @@ sctp_sysctl(name, namelen, oldp, oldlenp, newp, newlen)
 	case SCTPCTL_MAXCHUNKONQ:
 		return (sysctl_int(oldp, oldlenp, newp, newlen,
 		    &sctp_max_chunks_on_queue));
+
+	case SCTPCTL_TCBHASHSIZE:
+		return (sysctl_int(oldp, oldlenp, newp, newlen,
+		    &sctp_hashtblsize));
+
+	case SCTPCTL_PCBHASHSIZE:
+		return (sysctl_int(oldp, oldlenp, newp, newlen,
+		    &sctp_pcbtblsize));
+
+	case SCTPCTL_CHUNKSCALE:
+		return (sysctl_int(oldp, oldlenp, newp, newlen,
+		    &sctp_chunkscale));
+
 	case SCTPCTL_DELAYED_SACK:
 		return (sysctl_int(oldp, oldlenp, newp, newlen,
 		    &sctp_delayed_sack_time_default));
@@ -5999,6 +6030,30 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
 	    SYSCTL_DESCR("Default max chunks on queue per asoc"),
 	    NULL, 0, &sctp_max_chunks_on_queue, 0,
 	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_MAXCHUNKONQ,
+	    CTL_EOL);
+
+	sysctl_createv(clog, 0, NULL, NULL,
+	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
+	    CTLTYPE_INT, "tcbhashsize",
+	    SYSCTL_DESCR("Tuneable for Hash table sizes"),
+	    NULL, 0, &sctp_hashtblsize, 0,
+	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_TCBHASHSIZE,
+	    CTL_EOL);
+
+	sysctl_createv(clog, 0, NULL, NULL,
+	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
+	    CTLTYPE_INT, "pcbhashsize",
+	    SYSCTL_DESCR("Tuneable for PCB Hash table sizes"),
+	    NULL, 0, &sctp_pcbtblsize, 0,
+	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_PCBHASHSIZE,
+	    CTL_EOL);
+
+	sysctl_createv(clog, 0, NULL, NULL,
+	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
+	    CTLTYPE_INT, "chunkscale",
+	    SYSCTL_DESCR("Tuneable for Scaling of number of chunks and messages"),
+	    NULL, 0, &sctp_chunscale, 0,
+	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_CHUNKSCALE,
 	    CTL_EOL);
 
 	sysctl_createv(clog, 0, NULL, NULL,
