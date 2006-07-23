@@ -1039,7 +1039,7 @@ sctp_detach(struct socket *so)
 	/* The socket is now detached, no matter what
 	 * the state of the SCTP association.
 	 */
- 	if(inp->sctp_socket) {
+ 	if(so) {
 		/* we don't use these ever so clear them */
 		so->so_snd.sb_cc = 0;
 		so->so_snd.sb_mb = NULL;
