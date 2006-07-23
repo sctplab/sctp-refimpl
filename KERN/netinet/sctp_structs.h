@@ -378,8 +378,34 @@ struct sctp_queued_to_read {	/* sinfo structure Pluse more */
 	uint16_t port_from;
 };
 
-
-
+/* This data structure will be on the outbound
+ * stream queues. Data will be pulled off from
+ * the front of the mbuf data and chunk-ified
+ * by the output routines. We will custom
+ * fit every chunk we pull to the send/sent
+ * queue to make up the next full packet
+ * if we can. An entry cannot be removed
+ * from the stream_out queue until 
+ * the msg_is_complete flag is set. This
+ * means at times data/tail_mbuf MIGHT
+ * be NULL.. If that occurs it happens
+ * for one of two reasons. Either the user
+ * is blocked on a send() call and has not
+ * awoken to copy more data down... OR
+ * the user is in the explict MSG_EOR mode
+ * and wrote some data, but has not completed
+ * sending. 
+ */
+struct sctp_stream_queue_pending {
+	struct mbuf *data;
+	struct mbuf *tail_mbuf;
+	TAILQ_ENTRY (sctp_stream_queue_pending ) next;
+	uint32_t length;
+	uint16_t stream;
+	uint16_t strseq;
+	uint8_t  msg_is_complete;
+	uint8_t  resv[3];
+};
 
 /*
  * this struct contains info that is used to track inbound stream data and
@@ -388,7 +414,7 @@ struct sctp_queued_to_read {	/* sinfo structure Pluse more */
 TAILQ_HEAD(sctpwheelunrel_listhead, sctp_stream_in);
 struct sctp_stream_in {
 	struct sctp_readhead inqueue;
-	              TAILQ_ENTRY(sctp_stream_in) next_spoke;
+	TAILQ_ENTRY(sctp_stream_in) next_spoke;
 	uint16_t stream_no;
 	uint16_t last_sequence_delivered;	/* used for re-order */
 };
@@ -396,8 +422,9 @@ struct sctp_stream_in {
 /* This struct is used to track the traffic on outbound streams */
 TAILQ_HEAD(sctpwheel_listhead, sctp_stream_out);
 struct sctp_stream_out {
-	struct sctpchunk_listhead outqueue;
-	                   TAILQ_ENTRY(sctp_stream_out) next_spoke;	/* next link in wheel */
+	/* struct sctp_streamhead outqueue */
+        struct sctpchunk_listhead outqueue;
+	TAILQ_ENTRY(sctp_stream_out) next_spoke;	/* next link in wheel */
 	uint16_t stream_no;
 	uint16_t next_sequence_sent;	/* next one I expect to send out */
 };
@@ -466,6 +493,29 @@ struct sctp_association {
 	 * size_on_delivery_queue.
 	 */
 	struct sctpwheel_listhead out_wheel;
+
+	/* This pointer will be set to NULL 
+	 * most of the time. But when we have
+	 * a fragmented message, where we could
+	 * not get out all of the message at
+	 * the last send then this will point
+	 * to the stream to go get data from.
+	 */
+	struct sctp_stream_out *locked_on_sending;
+
+	/* This pointer will ONLY get set if the user
+	 * has enabled the flag to indicate that they 
+	 * explicitly set a MSG_EOR at the end of sending
+	 * a message. The normal mode we operate in is
+	 * that we imply a MSG_EOR on each send. If the
+	 * user sets the flag, and does NOT send down an
+	 * MSG_EOR (or we cannot move all the data out
+	 * for whatever reason) then we set this pointer
+	 * to point to that message in the stream
+	 * queue being added to with each successive
+	 * send to this association.
+	 */
+	struct sctp_stream_out *locked_on_from_sender;
 
 	/* If an iterator is looking at me, this is it */
 	struct sctp_iterator *stcb_starting_point_for_iterator;

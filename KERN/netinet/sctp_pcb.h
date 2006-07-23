@@ -87,6 +87,7 @@ LIST_HEAD(sctpasochead, sctp_tcb);
 LIST_HEAD(sctpladdr, sctp_laddr);
 LIST_HEAD(sctpvtaghead, sctp_tagblock);
 TAILQ_HEAD(sctp_readhead, sctp_queued_to_read);
+TAILQ_HEAD(sctp_streamhead, sctp_stream_queue_pending);
 
 #include <netinet/sctp_structs.h>
 #include <netinet/sctp_uio.h>
@@ -206,6 +207,7 @@ struct sctp_epinfo {
 	struct uma_zone *ipi_zone_net;
 	struct uma_zone *ipi_zone_chunk;
 	struct uma_zone *ipi_zone_readq;
+	struct uma_zone *ipi_zone_strmoq;
 #else
 	struct vm_zone *ipi_zone_ep;
 	struct vm_zone *ipi_zone_asoc;
@@ -213,6 +215,7 @@ struct sctp_epinfo {
 	struct vm_zone *ipi_zone_net;
 	struct vm_zone *ipi_zone_chunk;
 	struct vm_zone *ipi_zone_readq;
+	struct vm_zone *ipi_zone_strmoq;
 #endif
 #endif
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -222,6 +225,7 @@ struct sctp_epinfo {
 	struct pool ipi_zone_net;
 	struct pool ipi_zone_chunk;
 	struct pool ipi_zone_readq;
+	struct pool ipi_zone_strmoq;
 #endif
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000

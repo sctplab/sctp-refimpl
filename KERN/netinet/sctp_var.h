@@ -96,11 +96,14 @@ __FBSDID("$FreeBSD:$");
 #define SCTPCTL_WARM_CRC32          40
 #define SCTPCTL_QLIMIT_ABORT        41
 #define SCTPCTL_STRICT_ORDER        42
+#define SCTPCTL_TCBHASHSIZE         43
+#define SCTPCTL_PCBHASHSIZE         44
+#define SCTPCTL_CHUNKSCALE          45
 #ifdef SCTP_DEBUG
-#define SCTPCTL_DEBUG               43
-#define SCTPCTL_MAXID		    43
+#define SCTPCTL_DEBUG               46
+#define SCTPCTL_MAXID		    46
 #else
-#define SCTPCTL_MAXID		    42
+#define SCTPCTL_MAXID		    45
 #endif
 #endif
 
