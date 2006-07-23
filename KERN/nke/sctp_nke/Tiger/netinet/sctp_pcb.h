@@ -87,6 +87,7 @@ LIST_HEAD(sctpasochead, sctp_tcb);
 LIST_HEAD(sctpladdr, sctp_laddr);
 LIST_HEAD(sctpvtaghead, sctp_tagblock);
 TAILQ_HEAD(sctp_readhead, sctp_queued_to_read);
+TAILQ_HEAD(sctp_streamhead, sctp_stream_queue_pending);
 
 #include <netinet/sctp_structs.h>
 #include <netinet/sctp_uio.h>
@@ -206,6 +207,7 @@ struct sctp_epinfo {
 	struct uma_zone *ipi_zone_net;
 	struct uma_zone *ipi_zone_chunk;
 	struct uma_zone *ipi_zone_readq;
+	struct uma_zone *ipi_zone_strmoq;
 #else
 	struct vm_zone *ipi_zone_ep;
 	struct vm_zone *ipi_zone_asoc;
@@ -213,6 +215,7 @@ struct sctp_epinfo {
 	struct vm_zone *ipi_zone_net;
 	struct vm_zone *ipi_zone_chunk;
 	struct vm_zone *ipi_zone_readq;
+	struct vm_zone *ipi_zone_strmoq;
 #endif
 #endif
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -222,6 +225,7 @@ struct sctp_epinfo {
 	struct pool ipi_zone_net;
 	struct pool ipi_zone_chunk;
 	struct pool ipi_zone_readq;
+	struct pool ipi_zone_strmoq;
 #endif
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
@@ -372,9 +376,9 @@ struct sctp_inpcb {
 	/* Socket buffer lock protects read_queue and of course sb_cc */
 	struct sctp_readhead read_queue;
 
-	              LIST_ENTRY(sctp_inpcb) sctp_list;	/* lists all endpoints */
-	/* hash of all endpoints for model */
-	              LIST_ENTRY(sctp_inpcb) sctp_hash;
+        LIST_ENTRY(sctp_inpcb) sctp_list;	/* lists all endpoints */
+        /* hash of all endpoints for model */
+	LIST_ENTRY(sctp_inpcb) sctp_hash;
 	/* count of local addresses bound, 0 if bound all */
 	int laddr_count;
 	/* list of addrs in use by the EP */
@@ -394,12 +398,18 @@ struct sctp_inpcb {
 	struct sctpasochead sctp_asoc_list;
 	struct sctp_iterator *inp_starting_point_for_iterator;
 	uint32_t sctp_frag_point;
-	uint32_t sctp_vtag_first;	/* this field locked by socket buffer
-					 * lock */
+
 	uint32_t partial_delivery_point;
 	uint32_t sctp_context;
 	struct sctp_sndrcvinfo def_send;
-	struct mbuf *pkt, *pkt_last, *sb_last_mpkt;
+	/* These three are here for the sosend_dgram
+	 * (pkt, pkt_last and control).
+	 * routine. However, I don't think anyone in
+	 * the current FreeBSD kernel calls this. So
+	 * they are candidates with sctp_sendm for
+	 * de-supporting.
+	 */
+	struct mbuf *pkt, *pkt_last;
 	struct mbuf *control;
 #if !(defined(__FreeBSD__) || defined(__APPLE__))
 #ifndef INP_IPV6
@@ -426,13 +436,13 @@ struct sctp_inpcb {
 struct sctp_tcb {
 	struct socket *sctp_socket;	/* back pointer to socket */
 	struct sctp_inpcb *sctp_ep;	/* back pointer to ep */
-	           LIST_ENTRY(sctp_tcb) sctp_tcbhash;	/* next link in hash
-							 * table */
-	           LIST_ENTRY(sctp_tcb) sctp_tcblist;	/* list of all of the
-							 * TCB's */
-	           LIST_ENTRY(sctp_tcb) sctp_tcbrestarhash;	/* next link in restart
-								 * hash table */
-	           LIST_ENTRY(sctp_tcb) sctp_asocs;	/* vtag hash list */
+	LIST_ENTRY(sctp_tcb) sctp_tcbhash;	/* next link in hash
+						 * table */
+        LIST_ENTRY(sctp_tcb) sctp_tcblist;	/* list of all of the
+						 * TCB's */
+        LIST_ENTRY(sctp_tcb) sctp_tcbrestarhash;	/* next link in restart
+							 * hash table */
+        LIST_ENTRY(sctp_tcb) sctp_asocs;	/* vtag hash list */
 	struct sctp_block_entry *block_entry;	/* pointer locked by  socket
 						 * send buffer */
 	struct sctp_association asoc;
