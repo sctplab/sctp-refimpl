@@ -398,7 +398,14 @@ struct sctp_inpcb {
 	uint32_t partial_delivery_point;
 	uint32_t sctp_context;
 	struct sctp_sndrcvinfo def_send;
-	struct mbuf *pkt, *pkt_last, *sb_last_mpkt;
+	/* These three are here for the sosend_dgram
+	 * (pkt, pkt_last and control).
+	 * routine. However, I don't think anyone in
+	 * the current FreeBSD kernel calls this. So
+	 * they are candidates with sctp_sendm for
+	 * de-supporting.
+	 */
+	struct mbuf *pkt, *pkt_last;
 	struct mbuf *control;
 #if !(defined(__FreeBSD__) || defined(__APPLE__))
 #ifndef INP_IPV6

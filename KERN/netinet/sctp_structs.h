@@ -471,11 +471,13 @@ struct sctp_association {
 	struct sctp_iterator *stcb_starting_point_for_iterator;
 
 	/* ASCONF destination address last sent to */
-	struct sctp_nets *asconf_last_sent_to;
+/*	struct sctp_nets *asconf_last_sent_to;*/
+/* Peter, greppign for the above shows only on strange set
+ * I don't think we need it so I have commented it out.
+ */
 
 	/* ASCONF save the last ASCONF-ACK so we can resend it if necessary */
 	struct mbuf *last_asconf_ack_sent;
-
 
 	/*
 	 * pointer to last stream reset queued to control queue by us with
