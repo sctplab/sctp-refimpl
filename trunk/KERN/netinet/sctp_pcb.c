@@ -4008,10 +4008,10 @@ sctp_remove_net(struct sctp_tcb *stcb, struct sctp_nets *net)
 		/* Clear net */
 		asoc->last_control_chunk_from = NULL;
 	}
-	if (net == asoc->asconf_last_sent_to) {
+/*	if (net == asoc->asconf_last_sent_to) {*/
 		/* Reset primary */
-		asoc->asconf_last_sent_to = TAILQ_FIRST(&asoc->nets);
-	}
+/*		asoc->asconf_last_sent_to = TAILQ_FIRST(&asoc->nets);*/
+/*	}*/
 }
 
 /*
