@@ -139,6 +139,8 @@ sctp_set_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 	 * sctp_soreceive then we will fix this so that ONLY this
 	 * associations data is taken into account.
 	 */
+	if(stcb->sctp_socket == NULL)
+		return;
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INDATA4) {
 		printf("sb_cc:%lu assoc_cc: %lu hiwat:%lu lowat:%lu mbcnt:%lu mbmax:%lu\n",
@@ -1463,7 +1465,9 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	 * Check to see about the GONE flag, duplicates would cause a sack
 	 * to be sent up above
 	 */
-	if (stcb && (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
+	if (stcb && ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
+		     (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)
+		    )) {
 		/*
 		 * wait a minute, this guy is gone, there is no longer a
 		 * receiver. Send peer an ABORT!
@@ -2319,6 +2323,19 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 	m = *mm;
 	STCB_TCB_LOCK_ASSERT(stcb);
 	asoc = &stcb->asoc;
+	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
+	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
+		/*
+		 * wait a minute, this guy is gone, there is no longer a
+		 * receiver. Send peer an ABORT!
+		 */
+		struct mbuf *op_err;
+
+		op_err = sctp_generate_invmanparam(SCTP_CAUSE_OUT_OF_RESC);
+		sctp_abort_an_association(stcb->sctp_ep, stcb, 0, op_err);
+		return (2);
+	}
+
 	if (compare_with_wrap(stcb->asoc.highest_tsn_inside_map,
 	    stcb->asoc.cumulative_tsn, MAX_TSN)) {
 		/* there was a gap before this data was processed */
