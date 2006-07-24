@@ -1983,6 +1983,12 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		sctp_hash_digest_m((char *)ep->secret_key[(int)ep->current_secret_number],
 		    SCTP_SECRET_SIZE, m, cookie_offset, calc_sig);
 	}
+	if((l_inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
+	   (l_inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
+		/* If the socket is gone we are out of here */
+		return (NULL);
+	}
+
 	/* get the signature */
 	SCTP_INP_RUNLOCK(l_inp);
 	sig = (uint8_t *) sctp_m_getptr(m_sig, 0, SCTP_SIGNATURE_SIZE, (uint8_t *) & tmp_sig);
@@ -2267,6 +2273,12 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			SCTP_INP_WLOCK((*stcb)->sctp_ep);
 			SCTP_TCB_LOCK((*stcb));
 			SCTP_INP_WUNLOCK((*stcb)->sctp_ep);
+			if(((*stcb)->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
+			   ((*stcb)->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
+				/* If the socket is gone we are out of here */
+				goto abandon;
+			}
+
 			if (so == NULL) {
 				struct mbuf *op_err;
 
@@ -2276,6 +2288,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 					printf("process_cookie_new: no room for another socket!\n");
 				}
 #endif				/* SCTP_DEBUG */
+			abandon:
 				op_err = sctp_generate_invmanparam(SCTP_CAUSE_OUT_OF_RESC);
 				sctp_abort_association(*inp_p, NULL, m, iphlen,
 				    sh, op_err);
@@ -3760,7 +3773,6 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			SCTP_INP_WLOCK(inp);
 			SCTP_INP_INCR_REF(inp);
 			SCTP_INP_WUNLOCK(inp);
-
 			stcb = sctp_findassociation_ep_asconf(m, iphlen,
 			    *offset, sh, &inp, netp);
 			if (stcb == NULL) {
