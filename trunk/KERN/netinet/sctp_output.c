@@ -11414,7 +11414,7 @@ sctp_send_packet_dropped(struct sctp_tcb *stcb, struct sctp_nets *net,
 	chk->asoc = &stcb->asoc;
 	MGETHDR(chk->data, M_DONTWAIT, MT_DATA);
 	if (chk->data == NULL) {
-jump_out:
+	jump_out:
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
 		SCTP_DECR_CHK_COUNT();
 		return;
@@ -11441,13 +11441,13 @@ jump_out:
 		small_one = MCLBYTES;
 	}
 	chk->book_size = SCTP_SIZE32((chk->send_size + sizeof(struct sctp_pktdrop_chunk) +
-	    sizeof(struct sctphdr) + SCTP_MED_OVERHEAD));
+				      sizeof(struct sctphdr) + SCTP_MED_OVERHEAD));
 	if (chk->book_size > small_one) {
 		drp->ch.chunk_flags = SCTP_PACKET_TRUNCATED;
 		drp->trunc_len = htons(chk->send_size);
 		chk->send_size = small_one - (SCTP_MED_OVERHEAD +
-		    sizeof(struct sctp_pktdrop_chunk) +
-		    sizeof(struct sctphdr));
+					      sizeof(struct sctp_pktdrop_chunk) +
+					      sizeof(struct sctphdr));
 		len = chk->send_size;
 	} else {
 		/* no truncation needed */
@@ -11477,10 +11477,16 @@ jump_out:
 	}
 	drp->bottle_bw = htonl(spc);
 	if (asoc->my_rwnd) {
-		drp->current_onq = htonl(asoc->size_on_reasm_queue +
-		    asoc->size_on_all_streams +
-		    asoc->my_rwnd_control_len +
-		    stcb->sctp_socket->so_rcv.sb_cc);
+		if(stcb->sctp_socket) {
+			drp->current_onq = htonl(asoc->size_on_reasm_queue +
+						 asoc->size_on_all_streams +
+						 asoc->my_rwnd_control_len +
+						 stcb->sctp_socket->so_rcv.sb_cc);
+		} else {
+			drp->current_onq = htonl(asoc->size_on_reasm_queue +
+						 asoc->size_on_all_streams +
+						 asoc->my_rwnd_control_len);
+		}
 	} else {
 		/*
 		 * If my rwnd is 0, possibly from mbuf depletion as well as

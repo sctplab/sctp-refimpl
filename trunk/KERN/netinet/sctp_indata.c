@@ -340,7 +340,9 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 	cntDel = stream_no = 0;
 	struct sctp_queued_to_read *control, *ctl, *ctlat;
 
-	if (stcb && (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
+	if (stcb && ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
+		     (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET))
+		    ) {
 		/* socket above is long gone */
 		asoc->fragmented_delivery_inprogress = 0;
 
@@ -1466,8 +1468,9 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	 * to be sent up above
 	 */
 	if (stcb && ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
-		     (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)
-		    )) {
+		     (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) ||
+		     (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET))
+		) {
 		/*
 		 * wait a minute, this guy is gone, there is no longer a
 		 * receiver. Send peer an ABORT!
@@ -2324,7 +2327,9 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 	STCB_TCB_LOCK_ASSERT(stcb);
 	asoc = &stcb->asoc;
 	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
-	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
+	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) ||
+	    (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET))
+	{
 		/*
 		 * wait a minute, this guy is gone, there is no longer a
 		 * receiver. Send peer an ABORT!
