@@ -12885,8 +12885,37 @@ sctp_lower_sosend(struct socket *so,
  * and then only appends it under a lock?
  * 
  * And what about all the stuff that we did
- * in the old copy_out?
+ * in the old copy_out? 
  *
+ * What did we do anyway.. lets see:
+ * a) SOCKBUF_LOCK(&so->so_snd)
+ * b) do the sblock(&so->so_snd, SBLOCKWAIT(flags))
+ * c) validate the send length of the message
+ *    will have some chance of fitting ever (don't need this)
+ * d) See if I need to block, if so:
+ *    1) try to prune the pr_sctp stuff.
+ *    2) If I still need to block and have NBIO on, send back EWOULDBLOCK
+ *    3) sbunlcock
+ *    4) sbwait
+ *    5) On return validate we still have assoc (GONE/ALLGONE)
+ *    6) validate the be.error (special block error control)
+ *    7) If no errors redo the sblock()
+ *    8) Validate that we don't have the CANTSENDMORE stuff on the socket
+ *    9) gotot 2)
+ * e) Figure out my size/resv
+ * f) check the ABORT flags which is not obeyed in
+ *    cookie_echoed or wait state... Here we would pull in
+ *    any data to go in the abort and call abort_an_assoc()
+ * g) Verify the assoc state has not went to SENT/ACK_SENT/RECEIVED
+ * h) Validate the stream number (we have this covered)
+ * i) Verify that asoc->strmout is not NULL.. else software fault.
+ * j) Don't pull any user data if its SCTP_EOF (this is strange).
+ * k) SOCKBUF_UNLOCK()
+ * l) Pull in all the data frag/or unfrag in chunks fitting in MTU at
+ *    end the sockbuf_lock is applied only.
+ * m) Update the counts.
+ * n) If EOF do the shutdown stuff (count chunks, go PENDING or send shutdown)
+ * o) On the way out sbunlock()
  */
 	splx(s);
 	if (top == NULL) {
