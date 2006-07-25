@@ -138,6 +138,7 @@ TAILQ_HEAD(sctp_streamhead, sctp_stream_queue_pending);
 #define SCTP_PCB_FLAGS_AUTHEVNT		0x00040000
 #define SCTP_PCB_FLAGS_STREAM_RESETEVNT 0x00080000
 #define SCTP_PCB_FLAGS_NO_FRAGMENT	0x00100000
+#define SCTP_PCB_FLAGS_EXPLICIT_EOR     0x00200000
 
 
 #define SCTP_PCBHASH_ALLADDR(port, mask) (port & mask)
