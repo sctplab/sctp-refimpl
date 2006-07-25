@@ -138,6 +138,8 @@ struct sctp_snd_all_completes {
 #define SCTP_UNORDERED 	  0x0400/* Message is un-ordered */
 #define SCTP_ADDR_OVER	  0x0800/* Override the primary-address */
 #define SCTP_SENDALL      0x1000/* Send this on all associations */
+#define SCTP_EOR          0x2000/* Its the end of the record */
+
 /* for the endpoint */
 
 /* The lower byte is an enumeration of PR-SCTP policies */

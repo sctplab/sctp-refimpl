@@ -2030,6 +2030,7 @@ sctp_optsget(struct socket *so,
 	case SCTP_AUTO_ASCONF:
 	case SCTP_DISABLE_FRAGMENTS:
 	case SCTP_I_WANT_MAPPED_V4_ADDR:
+	case SCTP_EXPLICIT_EOR:
 	case SCTP_USE_EXT_RCVINFO:
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_USRREQ2) {
@@ -2047,12 +2048,16 @@ sctp_optsget(struct socket *so,
 		case SCTP_AUTO_ASCONF:
 			optval = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_AUTO_ASCONF);
 			break;
+		case SCTP_EXPLICIT_EOR:
+			optval = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXPLICIT_EOR);
+			break;
 		case SCTP_NODELAY:
 			optval = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_NODELAY);
 			break;
 		case SCTP_USE_EXT_RCVINFO:			
 			optval = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXT_RCVINFO);
 			break;
+
 		case SCTP_AUTOCLOSE:
 			if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_AUTOCLOSE))
 				optval = TICKS_TO_SEC(inp->sctp_ep.auto_close_time);
@@ -3488,6 +3493,7 @@ sctp_optsset(struct socket *so,
 	case SCTP_AUTOCLOSE:
 	case SCTP_AUTO_ASCONF:
 	case SCTP_DISABLE_FRAGMENTS:
+	case SCTP_EXPLICIT_EOR:
 	case SCTP_USE_EXT_RCVINFO:
 	case SCTP_I_WANT_MAPPED_V4_ADDR:
 		/* copy in the option value */
@@ -3500,6 +3506,9 @@ sctp_optsset(struct socket *so,
 		if (error)
 			break;
 		switch (opt) {
+		case SCTP_EXPLICIT_EOR:
+			set_opt = SCTP_PCB_FLAGS_EXPLICIT_EOR;
+
 		case SCTP_DISABLE_FRAGMENTS:
 			set_opt = SCTP_PCB_FLAGS_NO_FRAGMENT;
 			break;
