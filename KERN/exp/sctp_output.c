@@ -12204,15 +12204,80 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header)
 
 
 static int
-sctp_copy_one(struct mbuf **mm, struct uio *uio, int cpsz, int resv_upfront, int pad)
+sctp_copy_resume(struct sctp_stream_queue_pending *ret, 
+		 struct uio *uio,
+		 int max_send_len, 
+		 int user_marks_eor)
+{
+	int left, cancpy, willcpy, error;
+	struct mbuf *m,*prev;
+	caddr_t to;
+
+        left = min(uio->uio_resid, max_send_len);
+	/* will this be the EOR? */
+	if ((ret->length == uio->uio_resid) &&
+	    ((user_marks_eor == 0) || 
+	     (user_marks_eor && (srcv->sinfo_flags & SCTP_EOR)))
+	   ){
+		ret-> msg_is_complete = 1;
+	} else {
+		ret-> msg_is_complete = 0;
+	}
+	m = ret->tail_mbuf;
+	cancpy = M_TRAILINGSPACE(m);
+	willcpy = min(cancpy, left);
+	to = mtod(m, caddr_t) + m->m_len;
+	error = uiomove(to, willcpy, uio);
+	if (error) {
+		return (error);
+	}
+	left -= willcpy;
+	m->m_len += willcpy;
+	ret->length += willcpy;
+	while (left > 0) {
+		/* move in user data */
+		m->m_next = sctp_get_mbuf_for_msg(left, 0);
+		if (m->m_next == NULL) {
+			return (ENOMEM);
+		}
+		prev = m;
+		m = m->m_next;
+		cancpy = M_TRAILINGSPACE(m);
+		willcpy = min(cancpy, left);
+		error = uiomove(mtod(m, caddr_t), willcpy, uio);
+		if (error) {
+			/*
+			 * the head goes back to caller, he can free the
+			 * rest
+			 */
+			prev->m_next = NULL;
+			sctp_m_freem(m);
+			return (error);
+		}
+		m->m_len = willcpy;
+		left -= willcpy;
+		ret->length += willcpy;
+		if (left == 0) {
+			ret->tail_mbuf = m;
+			m->m_next = NULL;
+		}
+	}
+	return(0);
+}
+
+static int
+sctp_copy_one(struct sctp_stream_queue_pending *ret, 
+	      struct uio *uio, 
+	      int resv_upfront) 
 {
 	int left, cancpy, willcpy, error;
 	struct mbuf *m, *head;
+	int need_front=1;
 
 	*mm = NULL;
 	/* First one gets a header */
-	left = cpsz;
-	head = m = sctp_get_mbuf_for_msg((left + resv_upfront + pad), 1);
+	left = ret->length;
+	head = m = sctp_get_mbuf_for_msg((left + resv_upfront), 1);
 	if (m == NULL) {
 		return (ENOMEM);
 	}
@@ -12221,68 +12286,49 @@ sctp_copy_one(struct mbuf **mm, struct uio *uio, int cpsz, int resv_upfront, int
 	 * have a bad cnt.
 	 */
 	m->m_data += resv_upfront;
+
 	cancpy = M_TRAILINGSPACE(m);
 	willcpy = min(cancpy, left);
 
-	/* take out for any pad */
 	while (left > 0) {
 		/* move in user data */
 		error = uiomove(mtod(m, caddr_t), willcpy, uio);
 		if (error) {
-			/*
-			 * the head goes back to caller, he can free the
-			 * rest
-			 */
-			*mm = head;
+			sctp_m_freem(head);
 			return (error);
 		}
 		m->m_len = willcpy;
 		left -= willcpy;
 		if (left > 0) {
-			m->m_next = sctp_get_mbuf_for_msg((left+pad), 0);
+			m->m_next = sctp_get_mbuf_for_msg(left, 0);
 			if (m->m_next == NULL) {
 				/*
 				 * the head goes back to caller, he can free
 				 * the rest
 				 */
-				*mm = head;
+				sctp_m_freem(head);
 				return (ENOMEM);
 			}
 			m = m->m_next;
 			cancpy = M_TRAILINGSPACE(m);
 			willcpy = min(cancpy, left);
 		} else {
-			if (pad) {
-				/* fix up the pad bytes at the end */
-				uint8_t *p;
-				cancpy = M_TRAILINGSPACE(m);
-				if(pad >= cancpy) {
-					p = (uint8_t *) (mtod(m, uint8_t *)+m->m_len);
-					memset(p, 0, pad);
-				} else {
-					/* add a single mbuf to end for the pad :-( */
-					m->m_next = sctp_get_mbuf_for_msg(pad, 0);
-					if(m->m_next == NULL) {
-						*mm = head;
-						return (ENOMEM);
-					}
-					m = m->m_next;
-					m->m_len = 0;
-					p = mtod(m, uint8_t *);
-					memset(p, 0, pad);
-				}
-			}
+			ret->tail_mbuf = m;
+			m->m_next = NULL;
 		}
 	}
-	*mm = head;
+	ret->data = head;
+	ret->length = cpsz;
 	return (0);
 }
 
-static struct mbuf *
+static struct sctp_stream_queue_pending *
 sctp_copy_it_in(struct sctp_tcb *stcb,
     struct sctp_association *asoc,
     struct sctp_sndrcvinfo *srcv,
     struct uio *uio,
+    int max_send_len,
+    int user_marks_eor,
     int *errno)
 {
 	/*
@@ -12292,27 +12338,17 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 	 * sb is locked however. When data is copied the protocol processing
 	 * should be enabled since this is a slower operation...
 	 */
+	struct sctp_stream_queue_pending *ret;
 	int s;
-	int pad = 0;
 	int resv_in_first;
 	unsigned int sndlen;
-	struct mbuf *mm=NULL;
-
+	int user_marks_eor;
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
 #else
 	s = splnet();
 #endif
 	*errno = 0;
-
-	sndlen = uio->uio_resid;
-	if (sndlen > stcb->sctp_socket->so_snd.sb_hiwat) {
-		/* It will NEVER fit */
-		*errno = EMSGSIZE;
-		goto out_now;
-	}
-	resv_in_first = sizeof(struct sctp_data_chunk);
-
 	/* Now can we send this? */
 	if ((SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_SENT) ||
 	    (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_ACK_SENT) ||
@@ -12333,8 +12369,24 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 		*errno = EFAULT;
 		goto out_now;
 	}
+	ret = (struct sctp_stream_queue_pending *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_strmoq);
+	if(ret == NULL) {
+		*errno = ENOMEM;
+		goto out_now;
+	}
+	ret->length = min(uio->uio_resid, max_send_len);
+	ret->stream = srcv->sinfo_stream;
+	if ((ret->length == uio->uio_resid) &&
+	    ((user_marks_eor == 0) || 
+	     (user_marks_eor && (srcv->sinfo_flags & SCTP_EOR)))
+	   ){
+		ret-> msg_is_complete = 1;
+	} else {
+		ret-> msg_is_complete = 0;
+	}
 	if (sndlen == 0) {
 		/* get an empty packet hdr mbuf */
+		struct mbuf *mm=NULL;
 		MGETHDR(mm, M_WAIT, MT_DATA);
 		if(mm == NULL) {
 			*errno = ENOMEM;
@@ -12342,17 +12394,23 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 		}
 		mm->m_pkthdr.len = 0;
 		mm->m_len = 0;
+		ret->data = ret->tail_mbuf = mm;
+		ret->strseq = 0;
 		goto out_now;
 
 	}
-	pad = 4- (sndlen % 4);
-	*errno = sctp_copy_one(&mm, uio, sndlen, resv_in_first, pad);
-	if(mm) {
-		mm->m_pkthdr.len = sndlen;
+	resv_in_first = sizeof(struct sctp_data_chunk);
+	ret->data = ret->tail_mbuf = NULL;
+	*errno = sctp_copy_one(ret, uio, resv_in_first);
+	if(*errno) {
+		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_strmoq, ret);
+		ret = NULL;
+	} else {
+		ret->data->m_pkthdr.len = sndlen;
 	}
 out_now:
 	splx(s);
-	return (mm);
+	return (ret);
 }
 
 
@@ -12433,7 +12491,7 @@ sctp_lower_sosend(struct socket *so,
 #endif
 )
 {
-	unsigned int sndlen;
+	unsigned int sndlen, max_len;
 	int error, len;
 	int s, queue_only = 0, queue_only_for_init = 0;
 	int free_cnt_applied = 0;
@@ -12533,15 +12591,15 @@ sctp_lower_sosend(struct socket *so,
 		}
 		if ((stcb) && ((so->so_state & SS_NBIO)
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-		    || (flags & MSG_NBIO)
+			       || (flags & MSG_NBIO)
 #endif
-		    )) {
+			    )) {
 			if ((so->so_snd.sb_hiwat <
-			    (sndlen + stcb->asoc.total_output_queue_size)) ||
+			     v			     (sndlen + stcb->asoc.total_output_queue_size)) ||
 			    (stcb->asoc.chunks_on_out_queue >
-			    sctp_max_chunks_on_queue) ||
+			     sctp_max_chunks_on_queue) ||
 			    (stcb->asoc.total_output_mbuf_queue_size >
-			    so->so_snd.sb_mbmax)) {
+			     so->so_snd.sb_mbmax)) {
 				error = EWOULDBLOCK;
 				splx(s);
 				goto out;
@@ -12610,13 +12668,13 @@ sctp_lower_sosend(struct socket *so,
 		 */
 		/* generate a RANDOM for this assoc */
 		asoc->authinfo.random =
-		    sctp_generate_random_key(sctp_auth_random_len);
+			sctp_generate_random_key(sctp_auth_random_len);
 		/* initialize hmac list from endpoint */
 		asoc->local_hmacs =
-		    sctp_copy_hmaclist(inp->sctp_ep.local_hmacs);
+			sctp_copy_hmaclist(inp->sctp_ep.local_hmacs);
 		/* initialize auth chunks list from endpoint */
 		asoc->local_auth_chunks =
-		    sctp_copy_chunklist(inp->sctp_ep.local_auth_chunks);
+			sctp_copy_chunklist(inp->sctp_ep.local_auth_chunks);
 		/* copy defaults from the endpoint */
 		asoc->authinfo.assoc_keyid = inp->sctp_ep.default_keyid;
 
@@ -12626,7 +12684,7 @@ sctp_lower_sosend(struct socket *so,
 			int i;
 
 			if (sctp_find_cmsg(SCTP_INIT, (void *)&initm, control,
-			    sizeof(initm))) {
+					   sizeof(initm))) {
 				/* we have an INIT override of the default */
 				if (initm.sinit_max_attempts)
 					asoc->max_init_times = initm.sinit_max_attempts;
@@ -12641,7 +12699,7 @@ sctp_lower_sosend(struct socket *so,
 #ifdef SCTP_DEBUG
 					if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
 						printf("Ok, defout:%d pre_open:%d\n",
-						    asoc->streamoutcnt, asoc->pre_open_streams);
+						       asoc->streamoutcnt, asoc->pre_open_streams);
 					}
 #endif
 					FREE(asoc->strmout, M_PCB);
@@ -12657,10 +12715,10 @@ sctp_lower_sosend(struct socket *so,
 
 						SCTP_TCB_UNLOCK(stcb);
 						MALLOC(tmp_str,
-						    struct sctp_stream_out *,
-						    asoc->streamoutcnt *
-						    sizeof(struct sctp_stream_out),
-						    M_PCB, M_WAIT);
+						       struct sctp_stream_out *,
+						       asoc->streamoutcnt *
+						       sizeof(struct sctp_stream_out),
+						       M_PCB, M_WAIT);
 						SCTP_TCB_LOCK(stcb);
 						hold_tcblock = 1;
 						asoc->strmout = tmp_str;
@@ -12753,7 +12811,7 @@ sctp_lower_sosend(struct socket *so,
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 		p->td_proc->p_stats->p_ru.ru_msgsnd++;
 #else
-		p->p_stats->p_ru.ru_msgsnd++;
+	p->p_stats->p_ru.ru_msgsnd++;
 #endif
 
 	if (stcb) {
@@ -12780,7 +12838,7 @@ sctp_lower_sosend(struct socket *so,
 		queue_only = 1;
 	} else {
 		un_sent = ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight) +
-		    ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) * sizeof(struct sctp_data_chunk)));
+			   ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) * sizeof(struct sctp_data_chunk)));
 
 		/*
 		 * @@@ JRI: This check for Nagle assumes only one small
@@ -12791,7 +12849,7 @@ sctp_lower_sosend(struct socket *so,
 		    (stcb->asoc.total_flight > 0) &&
 		    (un_sent < (int)(stcb->asoc.smallest_mtu - SCTP_MIN_OVERHEAD)) &&
 		    ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) < SCTP_MAX_DATA_BUNDLING)
-		    ) {
+			) {
 
 			/*
 			 * Ok, Nagle is set on and we have data outstanding.
@@ -12814,30 +12872,79 @@ sctp_lower_sosend(struct socket *so,
 	if (!TAILQ_EMPTY(&stcb->asoc.control_send_queue)) {
 		some_on_control = 1;
 	}
+	/* Calculate the maximum we can send */
+	max_len = so->so_snd.sb_hiwat -  stcb->asoc.total_output_queue_size;
 	SCTP_TCB_UNLOCK(stcb);
 	hold_tcblock = 0;
+/*****************************************************************/
+/*****************************************************************/
+/*****************************************************************/
+
+/* What about the locks here.. don't we need 
+ * to have a resume_copy that gathers the data
+ * and then only appends it under a lock?
+ * 
+ * And what about all the stuff that we did
+ * in the old copy_out?
+ *
+ */
+	splx(s);
 	if (top == NULL) {
-		/*
-		 * Must copy it all in from user land. The socket buf is
-		 * locked but we don't suspend protocol processing until we
-		 * are ready to send/queue it.
+		struct sctp_stream_queue_pending *snd;
+		int user_marks_eor;
+		user_marks_eor = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXPLICIT_EOR);
+		if(stcb->asoc.locked_on_from_sender == NULL) {
+			snd = sctp_copy_it_in(stcb, asoc, srcv, uio, max_len, user_marks_eor, &error);
+			if ((snd == NULL) || (error)) {
+				goto out;
+			}
+			TAILQ_INSERT_TAIL(&asoc->strmout[srcv->sinfo_stream].outqueue, snd, next);
+		} else {
+			snd = stcb->asoc.locked_on_from_sender;
+		}
+		/* We allowed a non-blocking send, and the
+		 * user specified some other stream to
+		 * send to. Or the user is in explicit
+		 * EOR mode (E_EOR) and did not send the
+		 * same stream info on the subsequent send
+		 * where he did not specify SCTP_EOR on the
+		 * previous send.
 		 */
-		splx(s);
-		top = sctp_copy_it_in(stcb, asoc, srcv, uio, &error);
-		if ((top == NULL) || (error)) {
+		if (snd->stream != srcv->sinfo_stream) {
+			error = EINVAL;
 			goto out;
 		}
+		while (uio->uio_resid > 0) {
+			/* How much room do we have? */
+			max_len = so->so_snd.sb_hiwat - stcb->asoc.total_output_queue_size;
+			if(max_len) {
+				if(sctp_copy_resume(snd, uio, max_len, user_marks_eor)) {
+					break;
+				}
+			}
+			/* wait for space now if non-blocking IO */
+			
+		}
+		if(snd->msg_is_complete == 0) {
+			stcb->asoc.locked_on_from_sender = snd;
+		} else {
+			stcb->asoc.locked_on_from_sender = NULL;
+		}
 	} else {
-		splx(s);
+		/*
+		 * We now have the message in a mbuf chain.
+		 * 
+		 */
+		len = 0;
+		/* We send in a 0, since we do NOT ever do a sblock */
+		error = sctp_msg_append(stcb, net, top, srcv, flags, 0, &len);
+		top = NULL;
 	}
-	/*
-	 * We now have the message in a mbuf chain.
-	 * 
-	 */
-	len = 0;
-	/* We send in a 0, since we do NOT ever do a sblock */
-	error = sctp_msg_append(stcb, net, top, srcv, flags, 0, &len);
-	top = NULL;
+
+/*****************************************************************/
+/*****************************************************************/
+/*****************************************************************/
+/*****************************************************************/
 	if (srcv->sinfo_flags & SCTP_ABORT) {
 		if (free_cnt_applied) {
 			atomic_add_16(&stcb->asoc.refcnt, -1);
@@ -12877,8 +12984,8 @@ sctp_lower_sosend(struct socket *so,
 		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_USR_SEND);
 		splx(s);
 	} else if ((queue_only == 0) &&
-		    (stcb->asoc.peers_rwnd == 0) &&
-	    (stcb->asoc.total_flight == 0)) {
+		   (stcb->asoc.peers_rwnd == 0) &&
+		   (stcb->asoc.total_flight == 0)) {
 		/* We get to have a probe outstanding */
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 		s = splsoftnet();
@@ -12908,18 +13015,18 @@ sctp_lower_sosend(struct socket *so,
 			SCTP_TCB_LOCK(stcb);
 		}
 		sctp_med_chunk_output(inp, stcb, &stcb->asoc, &num_out,
-		    &reason, 1, &cwnd_full, 1, &now, &now_filled);
+				      &reason, 1, &cwnd_full, 1, &now, &now_filled);
 		splx(s);
 	}
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
 		printf("USR Send complete qo:%d prw:%d unsent:%d tf:%d cooq:%d toqs:%d \n",
-		    queue_only, stcb->asoc.peers_rwnd, un_sent,
-		    stcb->asoc.total_flight, stcb->asoc.chunks_on_out_queue,
-		    stcb->asoc.total_output_queue_size);
+		       queue_only, stcb->asoc.peers_rwnd, un_sent,
+		       stcb->asoc.total_flight, stcb->asoc.chunks_on_out_queue,
+		       stcb->asoc.total_output_queue_size);
 	}
 #endif
-out:
+ out:
 	if (create_lock_applied) {
 		printf("out: create lock was applied, releasing\n");
 		SCTP_ASOC_CREATE_UNLOCK(inp);
