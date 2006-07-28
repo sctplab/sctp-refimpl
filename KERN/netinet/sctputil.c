@@ -2735,18 +2735,10 @@ sctp_notify_assoc_change(uint32_t event, struct sctp_tcb *stcb,
 	 * socket rcv queue.
 	 */
 
-	if((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
-	   (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) ||
-	    (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET)
-		) {
-		/* If the socket is gone we are out of here */
-		return;
-	}
 	/*
 	 * For TCP model AND UDP connected sockets we will send an error up
 	 * when an ABORT comes in.
 	 */
-
 	if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) &&
 	    (event == SCTP_COMM_LOST)) {
@@ -3173,10 +3165,7 @@ void
 sctp_ulp_notify(uint32_t notification, struct sctp_tcb *stcb,
     uint32_t error, void *data)
 {
-	if((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
-	   (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) ||
-	   (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) 
-		) {
+	if (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 		/* No notifications up when we are in a no socket state */
 		return;
 	}
@@ -3320,9 +3309,7 @@ sctp_report_all_outbound(struct sctp_tcb *stcb)
 
 	asoc = &stcb->asoc;
 
-	if((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
-	   (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) ||
-	   (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET)) {
+	if (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 		return;
 	}
 	/* now through all the gunk freeing chunks */
@@ -3413,9 +3400,7 @@ void
 sctp_abort_notification(struct sctp_tcb *stcb, int error)
 {
 
-	if((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
-	   (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) ||
-	   (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET)) {
+	if (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 		return;
 	}
 	/* Tell them we lost the asoc */
@@ -4283,13 +4268,6 @@ sctp_sorecvmsg(struct socket *so,
 	SOCKBUF_LOCK(&so->so_rcv);
 
 restart:
-	if((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
-	   (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
-		/* We should not really ever hit this
-		 * at least in theory.
-		 */
-		goto out;
-	}
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 	if (so->so_error || so->so_rcv.sb_state & SBS_CANTRCVMORE)
 #else
@@ -4878,7 +4856,7 @@ release:
 
 	if (msg_flags)
 		*msg_flags |= out_flags;
-#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	sbunlock(&so->so_rcv, 1);
 #else
 	sbunlock(&so->so_rcv);
