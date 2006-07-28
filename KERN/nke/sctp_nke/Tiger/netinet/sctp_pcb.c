@@ -2824,6 +2824,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 #else
 	s = splnet();
 #endif
+
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	sctp_lock_assert(inp->ip_inp.inp.inp_socket);
 #endif
@@ -3164,14 +3165,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 #elif !(defined __APPLE__)
 		sofree(so);
 #endif
-#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
-		if (in_pcb_checkstate((struct inpcb *)inp, WNT_STOPUSING, 1) != WNT_STOPUSING)
-		{
-			panic("in_pcbdetach so=%x prot=%x couldn't set to STOPUSING\n",
-			      so, so->so_proto->pr_protocol);
-		}
-		so->so_flags |= SOF_PCBCLEARING;
-#endif
 		/* Unlocks not needed since the socket is gone now */
 	}
 	if (ip_pcb->inp_options) {
@@ -3247,6 +3240,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	inp_save = LIST_NEXT(inp, sctp_list);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	inp->ip_inp.inp.inp_state = INPCB_STATE_DEAD;
+	if (in_pcb_checkstate(&inp->ip_inp.inp, WNT_STOPUSING, 1) != WNT_STOPUSING)
+		panic("sctp_inpcb_free inp = %x couldn't set to STOPUSING\n", inp);
+	inp->ip_inp.inp.inp_socket->so_flags |= SOF_PCBCLEARING;
 #endif
 	LIST_REMOVE(inp, sctp_list);
 

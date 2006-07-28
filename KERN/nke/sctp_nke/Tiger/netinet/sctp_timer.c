@@ -1969,7 +1969,7 @@ sctp_slowtimo()
 				so->so_pcb      = NULL;
 				lck_mtx_unlock(inp->inpcb_mtx);
 				lck_mtx_free(inp->inpcb_mtx, sctppcbinfo.mtx_grp);
-				SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, (struct sctp_inpcb *)inp);
+				SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, inp);
 				sodealloc(so);
 				SCTP_DECR_EP_COUNT();
 			} else {

@@ -1803,7 +1803,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	}
 	/* respond with a COOKIE-ACK */
 	sctp_send_cookie_ack(stcb);
-
+	SCTP_STAT_INCR_COUNTER32(sctps_passiveestab);
 	return (stcb);
 }
 
@@ -2365,6 +2365,7 @@ sctp_handle_cookie_ack(struct sctp_cookie_ack_chunk *cp,
 			asoc->state = SCTP_STATE_OPEN;
 		}
 		/* update RTO */
+		SCTP_STAT_INCR_COUNTER32(sctps_activeestab);
 		if (asoc->overall_error_count == 0) {
 			net->RTO = sctp_calculate_rto(stcb, asoc, net,
 			    &asoc->time_entered);

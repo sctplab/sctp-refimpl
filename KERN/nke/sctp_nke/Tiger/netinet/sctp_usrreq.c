@@ -1052,7 +1052,6 @@ sctp_detach(struct socket *so)
 		so->so_rcv.sb_mbcnt = 0;
 		/* Now disconnect */
 #if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		/* MT FIXME: Is there anything to do here for Tiger ? */
 		so->so_pcb = NULL;
 #endif
 		inp->sctp_socket = NULL;
