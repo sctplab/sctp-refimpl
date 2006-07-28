@@ -6501,8 +6501,8 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			 * I will drop to spl0() so that others can get in.
 			 */
 			
-#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
-			sbunlock(&so->so_snd, 0);	/* MT: FIXME */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			sbunlock(&so->so_snd, 1);
 #else
 			sbunlock(&so->so_snd);
 #endif
@@ -6886,8 +6886,8 @@ zap_by_it_all:
 release:
 	if (hold_sockbuflock == 0) {
 
-#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
-		sbunlock(&so->so_snd, 0);	/* MT: FIXME */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		sbunlock(&so->so_snd, 1);
 #else
 		sbunlock(&so->so_snd);
 #endif
@@ -9889,6 +9889,10 @@ sctp_output(inp, m, addr, control, p, flags)
 	struct sctp_sndrcvinfo srcv;
 	int un_sent = 0;
 	int use_rcvinfo = 0;
+
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sctp_lock_assert(inp->ip_inp.inp.inp_socket);
+#endif
 
 	t_inp = inp;
 	/* struct route ro; */
