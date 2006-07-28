@@ -427,6 +427,7 @@ struct sctp_stream_out {
 	TAILQ_ENTRY(sctp_stream_out) next_spoke;	/* next link in wheel */
 	uint16_t stream_no;
 	uint16_t next_sequence_sent;	/* next one I expect to send out */
+	uint8_t  last_msg_incomplete;
 };
 
 /* used to keep track of the addresses yet to try to add/delete */
@@ -503,17 +504,6 @@ struct sctp_association {
 	 */
 	struct sctp_stream_out *locked_on_sending;
 
-	/* This pointer will ONLY get set if the user
-	 * has enabled the flag to indicate that they 
-	 * explicitly set a MSG_EOR at the end of sending
-	 * a message.. OR... the user did a non-blocking
-	 * send of a message that will not fit entirely
-	 * in the socket send buffer at which point 
-	 * we copy just a part of the message down and
-	 * return to them.
-	 */
-	struct sctp_stream_queue_pending *locked_on_from_sender;
-	
 
 	/* If an iterator is looking at me, this is it */
 	struct sctp_iterator *stcb_starting_point_for_iterator;
@@ -784,6 +774,9 @@ struct sctp_association {
 					 * locked by send socket buffer */
 	uint16_t last_revoke_count;
 	int16_t num_send_timers_up;
+
+	uint16_t stream_locked_on;
+	uint8_t  stream_locked;
 	/*
 	 * This flag indicates that we need to send the first SACK. If in
 	 * place it says we have NOT yet sent a SACK and need to.
