@@ -4856,7 +4856,7 @@ release:
 
 	if (msg_flags)
 		*msg_flags |= out_flags;
-#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	sbunlock(&so->so_rcv, 1);
 #else
 	sbunlock(&so->so_rcv);
