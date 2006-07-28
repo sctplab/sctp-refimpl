@@ -1006,81 +1006,41 @@ sctp_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 	splx(s);
 	return error;
 }
+
+
 #if defined(__FreeBSD__) && __FreeBSD_version > 690000
-
-static void	
-sctp_close(struct socket *so)
-{
-	struct sctp_inpcb *inp;
-	inp = (struct sctp_inpcb *)so->so_pcb;
-	if (inp == 0)
-		return;
-
-	/* Inform all the lower layer assoc that we
-	 * are done.
-	 */
-	if((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
-		if (((so->so_options & SO_LINGER) && (so->so_linger == 0)) ||
-		    (so->so_rcv.sb_cc > 0)) {
-			sctp_inpcb_free(inp, 1);
-		} else {
-			sctp_inpcb_free(inp, 0);
-		}
-		/* The socket is now detached, no matter what
-		 * the state of the SCTP association.
-		 */
-		SOCK_LOCK(so);
-		so->so_snd.sb_cc = 0;
-		so->so_snd.sb_mb = NULL;
-		so->so_snd.sb_mbcnt = 0;
-		
-		/* same for the rcv ones, they are only
-		 * here for the accounting/select.
-		 */
-		so->so_rcv.sb_cc = 0;
-		so->so_rcv.sb_mb = NULL;
-		so->so_rcv.sb_mbcnt = 0;
-		/* Now null out the reference, we are
-		 * completely detached.
-		 */
-		so->so_pcb = NULL;
-		SOCK_UNLOCK(so);
-		SCTP_INP_WLOCK(inp);
-		inp->sctp_socket = NULL;
-		SCTP_INP_WUNLOCK(inp);
-	}
-	return;
-
-}
-
-
+static void
 #else
-
 static int
+#endif
 sctp_detach(struct socket *so)
 {
 	struct sctp_inpcb *inp;
-#if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s;
-#endif
+
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (inp == 0)
+#if defined(__FreeBSD__) && __FreeBSD_version > 690000
+		return;
+#else
 		return EINVAL;
+#endif
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
+#else
+	s = splnet();
 #endif
-	if((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
-		if (((so->so_options & SO_LINGER) && (so->so_linger == 0)) ||
-		    (so->so_rcv.sb_cc > 0)) {
-			sctp_inpcb_free(inp, 1);
-		} else {
-			sctp_inpcb_free(inp, 0);
-		}
-		/* The socket is now detached, no matter what
-		 * the state of the SCTP association.
-		 */
+	if (((so->so_options & SO_LINGER) && (so->so_linger == 0)) ||
+	    (so->so_rcv.sb_cc > 0)) {
+		sctp_inpcb_free(inp, 1);
+	} else {
+		sctp_inpcb_free(inp, 0);
+	}
+	/* The socket is now detached, no matter what
+	 * the state of the SCTP association.
+	 */
+ 	if(inp->sctp_socket) {
 		/* we don't use these ever so clear them */
-		SOCK_LOCK(so);
 		so->so_snd.sb_cc = 0;
 		so->so_snd.sb_mb = NULL;
 		so->so_snd.sb_mbcnt = 0;
@@ -1092,21 +1052,17 @@ sctp_detach(struct socket *so)
 		so->so_rcv.sb_mbcnt = 0;
 		/* Now disconnect */
 #if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		/* MT FIXME: Is there anything to do here for Tiger ? */
 		so->so_pcb = NULL;
 #endif
-		SOCK_UNLOCK(so);
-		SCTP_INP_WLOCK(inp);
 		inp->sctp_socket = NULL;
-		SCTP_INP_WUNLOCK(inp);
 	}
-#if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
-#endif
+#if defined(__FreeBSD__) && __FreeBSD_version > 690000
+	return;
+#else
 	return(0);
-}
-
 #endif
+}
 
 int
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
@@ -2030,7 +1986,6 @@ sctp_optsget(struct socket *so,
 	case SCTP_AUTO_ASCONF:
 	case SCTP_DISABLE_FRAGMENTS:
 	case SCTP_I_WANT_MAPPED_V4_ADDR:
-	case SCTP_EXPLICIT_EOR:
 	case SCTP_USE_EXT_RCVINFO:
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_USRREQ2) {
@@ -2048,16 +2003,12 @@ sctp_optsget(struct socket *so,
 		case SCTP_AUTO_ASCONF:
 			optval = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_AUTO_ASCONF);
 			break;
-		case SCTP_EXPLICIT_EOR:
-			optval = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXPLICIT_EOR);
-			break;
 		case SCTP_NODELAY:
 			optval = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_NODELAY);
 			break;
 		case SCTP_USE_EXT_RCVINFO:			
 			optval = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXT_RCVINFO);
 			break;
-
 		case SCTP_AUTOCLOSE:
 			if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_AUTOCLOSE))
 				optval = TICKS_TO_SEC(inp->sctp_ep.auto_close_time);
@@ -3493,7 +3444,6 @@ sctp_optsset(struct socket *so,
 	case SCTP_AUTOCLOSE:
 	case SCTP_AUTO_ASCONF:
 	case SCTP_DISABLE_FRAGMENTS:
-	case SCTP_EXPLICIT_EOR:
 	case SCTP_USE_EXT_RCVINFO:
 	case SCTP_I_WANT_MAPPED_V4_ADDR:
 		/* copy in the option value */
@@ -3506,9 +3456,6 @@ sctp_optsset(struct socket *so,
 		if (error)
 			break;
 		switch (opt) {
-		case SCTP_EXPLICIT_EOR:
-			set_opt = SCTP_PCB_FLAGS_EXPLICIT_EOR;
-
 		case SCTP_DISABLE_FRAGMENTS:
 			set_opt = SCTP_PCB_FLAGS_NO_FRAGMENT;
 			break;
@@ -5588,23 +5535,7 @@ struct pr_usrreqs sctp_usrreqs = {
 	.pru_bind = sctp_bind,
 	.pru_connect = sctp_connect,
 	.pru_control = in_control,
-#if __FreeBSD_version > 690000
-	/* Temporarily we put close and
-	 * detach to the same function. They
-	 * are re-entrante proof, and we need
-	 * to do this to make things work for
-	 * older 7.0 users without the latest
-	 * work from rwatson and yet make it
-	 * so things function for updated code
-	 * too. The detach should be removed once
-	 * enough time as propagated to get Roberts
-	 * code throughout 7.0.
-	 */
- 	.pru_close = sctp_close,
-	.pru_detach = sctp_close,
-#else
 	.pru_detach = sctp_detach,
-#endif
 	.pru_disconnect = sctp_disconnect,
 	.pru_listen = sctp_listen,
 	.pru_peeraddr = sctp_peeraddr,

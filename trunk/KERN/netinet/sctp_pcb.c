@@ -2824,12 +2824,12 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 #else
 	s = splnet();
 #endif
+
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	sctp_lock_assert(inp->ip_inp.inp.inp_socket);
 #endif
 	SCTP_ASOC_CREATE_LOCK(inp);
 	SCTP_INP_WLOCK(inp);
-
 	so = inp->sctp_socket;
 	if (so && ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) == 0)) {
 		locked_so = 1;
@@ -2837,7 +2837,8 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		sctp_log_lock(inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_SOCK);
 #endif
 		SOCK_LOCK(so);
-	} else 	if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
+	}
+	if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
 		/* been here before */
 		splx(s);
 		SCTP_INP_WUNLOCK(inp);
@@ -2845,11 +2846,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		return;
 	}
 	sctp_timer_stop(SCTP_TIMER_TYPE_NEWCOOKIE, inp, NULL, NULL);
-
-	inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_GONE;
-	if(locked_so) {
-		SOCK_UNLOCK(so);
-	}
 
 	if (inp->control) {
 		sctp_m_freem(inp->control);
@@ -2870,14 +2866,27 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		for ((asoc = LIST_FIRST(&inp->sctp_asoc_list)); asoc != NULL;
 		    asoc = nasoc) {
 			nasoc = LIST_NEXT(asoc, sctp_tcblist);
-			SCTP_TCB_LOCK(asoc);
 			if ((SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_COOKIE_WAIT) ||
 			    (SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_COOKIE_ECHOED)) {
 				/* Just abandon things in the front states */
+				if (locked_so) {
+					SOCK_UNLOCK(so);
+				}
+				SCTP_TCB_LOCK(asoc);
 				SCTP_INP_WUNLOCK(inp);
 				sctp_free_assoc(inp, asoc, 1);
 				SCTP_INP_WLOCK(inp);
+				if (locked_so) {
+					SOCK_LOCK(so);
+				}
 				continue;
+			}
+			if (locked_so) {
+				SOCK_UNLOCK(so);
+			}
+			SCTP_TCB_LOCK(asoc);
+			if (locked_so) {
+				SOCK_LOCK(so);
 			}
 			/* Disconnect the socket please */
 			asoc->sctp_socket = NULL;
@@ -2902,11 +2911,17 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 					    SCTP_CAUSE_USER_INITIATED_ABT);
 					ph->param_length = htons(op_err->m_len);
 				}
+				if (locked_so) {
+					SOCK_UNLOCK(so);
+				}
 				sctp_send_abort_tcb(asoc, op_err);
 
 				SCTP_INP_WUNLOCK(inp);
 				sctp_free_assoc(inp, asoc, 1);
 				SCTP_INP_WLOCK(inp);
+				if (locked_so) {
+					SOCK_LOCK(so);
+				}
 				continue;
 			} else if (TAILQ_EMPTY(&asoc->asoc.send_queue) &&
 			    TAILQ_EMPTY(&asoc->asoc.sent_queue)) {
@@ -2916,6 +2931,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 					 * there is nothing queued to send,
 					 * so I send shutdown
 					 */
+					if (locked_so) {
+						SOCK_UNLOCK(so);
+					}
 					sctp_send_shutdown(asoc, asoc->asoc.primary_destination);
 					asoc->asoc.state = SCTP_STATE_SHUTDOWN_SENT;
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN, asoc->sctp_ep, asoc,
@@ -2923,6 +2941,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD, asoc->sctp_ep, asoc,
 					    asoc->asoc.primary_destination);
 					sctp_chunk_output(inp, asoc, SCTP_OUTPUT_FROM_SHUT_TMR);
+					if (locked_so) {
+						SOCK_LOCK(so);
+					}
 				}
 			} else {
 				/* mark into shutdown pending */
@@ -2933,6 +2954,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		}
 		/* now is there some left in our SHUTDOWN state? */
 		if (cnt_in_sd) {
+			inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_GONE;
 			/*
 			 * Now the question comes as to if this EP was ever
 			 * bound at all. If it was, then we must pull it out
@@ -2952,32 +2974,48 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 				 * prevent us from doing this again.
 				 */
 				LIST_REMOVE(inp, sctp_hash);
-				inp->sctp_flags |= SCTP_PCB_FLAGS_UNBOUND;
 			}
 			splx(s);
 			SCTP_INP_WUNLOCK(inp);
 			SCTP_ASOC_CREATE_UNLOCK(inp);
-
+			if (locked_so) {
+				SOCK_UNLOCK(so);
+			}
 			return;
 		}
 	}
-	if ((inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) !=
-	    SCTP_PCB_FLAGS_UNBOUND) {
+	if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
 		/*
-		 * ok, this guy has been bound. It's port is
-		 * somewhere in the sctppcbinfo hash table. Remove
-		 * it!
+		 * Now the question comes as to if this EP was ever bound at
+		 * all. If it was, then we must pull it out of the EP hash
+		 * list.
 		 */
-		LIST_REMOVE(inp, sctp_hash);
-		inp->sctp_flags |= SCTP_PCB_FLAGS_UNBOUND;
+		if ((inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) !=
+		    SCTP_PCB_FLAGS_UNBOUND) {
+			/*
+			 * ok, this guy has been bound. It's port is
+			 * somewhere in the sctppcbinfo hash table. Remove
+			 * it!
+			 */
+			LIST_REMOVE(inp, sctp_hash);
+		}
 	}
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
 	if (inp->refcount) {
 		callout_stop(&inp->sctp_ep.signature_change.timer);
 		sctp_timer_start(SCTP_TIMER_TYPE_INPKILL, inp, NULL, NULL);
+		inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_GONE;
 		SCTP_INP_WUNLOCK(inp);
 		SCTP_ASOC_CREATE_UNLOCK(inp);
+		if (locked_so) {
+			SOCK_UNLOCK(so);
+		}
 		return;
+	}
+#endif
+#if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	if (so) {
+		so->so_pcb = NULL;
 	}
 #endif
 	inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_ALLGONE;
@@ -3034,6 +3072,44 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		sctp_free_assoc(inp, asoc, 1);
 		SCTP_INP_WLOCK(inp);
 	}
+
+	if (locked_so) {
+		/* First take care of socket level things */
+		so->so_rcv.sb_mbcnt = 0;
+		if (so->so_rcv.sb_cc) {
+			printf("Strange, so->so_rcv.sb_cc > 0 was %d?\n",
+			    (int)so->so_rcv.sb_cc);
+			so->so_rcv.sb_cc = 0;
+#ifdef INVARIENTS
+			panic("strange case 1");
+#endif
+		}
+		if (so->so_rcv.sb_mb) {
+			printf("Strange, so->so_rcv.sb_mb is not NULL (%x)?\n",
+			       (u_int)so->so_rcv.sb_mb);
+#ifdef INVARIENTS
+			panic("strange case 1a");
+#endif
+			so->so_rcv.sb_mb = NULL;
+		}
+		so->so_snd.sb_mbcnt = 0;
+		if (so->so_snd.sb_cc) {
+			printf("Strange, so->so_snd.sb_cc >0 was %d?\n",
+			    (int)so->so_snd.sb_cc);
+			so->so_snd.sb_cc = 0;
+#ifdef INVARIENTS
+			panic("strange case 2");
+#endif
+		}
+		if (so->so_snd.sb_mb) {
+			printf("Strange, so->so_snd.sb_mb is not NULL (%x)?\n",
+			       (u_int)so->so_snd.sb_mb);
+#ifdef INVARIENTS
+			panic("strange case 2a");
+#endif
+			so->so_snd.sb_mb = NULL;
+		}
+
 #ifdef IPSEC
 #ifdef __OpenBSD__
 		/* XXX IPsec cleanup here */
@@ -3064,19 +3140,33 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		ipsec4_delete_pcbpolicy(ip_pcb);
 #endif
 #endif				/* IPSEC */
-
-#if defined(__NetBSD__)
-		if(so)
-			sofree(so);
-#endif
-#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
-		if (in_pcb_checkstate((struct inpcb *)inp, WNT_STOPUSING, 1) != WNT_STOPUSING)
-		{
-			panic("in_pcbdetach so=%x prot=%x couldn't set to STOPUSING\n",
-			      so, so->so_proto->pr_protocol);
+#if defined(__FreeBSD__) && __FreeBSD_version > 500000
+		/*
+		 * It appears that witness tells us that the other time we
+		 * get called (probably from the socket layer) the accept
+		 * lock is applied and then the INP lock gets applied. So,
+		 * to keep witness happy and maintain proper order we unlock
+		 * and then relock.
+		 */
+		SCTP_INP_WUNLOCK(inp);
+		SCTP_ASOC_CREATE_UNLOCK(inp);
+		if (locked_so) {
+			SOCK_UNLOCK(so);
 		}
-		so->so_flags |= SOF_PCBCLEARING;
+		SCTP_ASOC_CREATE_LOCK(inp);
+		SCTP_INP_WLOCK(inp);
+		ACCEPT_LOCK();
+		if (locked_so) {
+			SOCK_LOCK(so);
+		}
 #endif
+#if defined(__FreeBSD__) && __FreeBSD_version > 500000
+		sotryfree(so);
+#elif !(defined __APPLE__)
+		sofree(so);
+#endif
+		/* Unlocks not needed since the socket is gone now */
+	}
 	if (ip_pcb->inp_options) {
 		(void)m_free(ip_pcb->inp_options);
 		ip_pcb->inp_options = 0;
@@ -3108,6 +3198,8 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 #else
 	ip_pcb->inp_vflag = 0;
 #endif
+
+	inp->sctp_socket = 0;
 
 	/* free up authentication fields */
 	if (inp->sctp_ep.local_auth_chunks != NULL)
@@ -3148,6 +3240,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	inp_save = LIST_NEXT(inp, sctp_list);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	inp->ip_inp.inp.inp_state = INPCB_STATE_DEAD;
+	if (in_pcb_checkstate(&inp->ip_inp.inp, WNT_STOPUSING, 1) != WNT_STOPUSING)
+		panic("sctp_inpcb_free inp = %x couldn't set to STOPUSING\n", inp);
+	inp->ip_inp.inp.inp_socket->so_flags |= SOF_PCBCLEARING;
 #endif
 	LIST_REMOVE(inp, sctp_list);
 
@@ -4458,9 +4553,8 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		so->so_snd.sb_cc = 0;
 		so->so_snd.sb_mbcnt = 0;
 	}
-	if (so && ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
-		   (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL))
-		) {
+	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
+	    (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
 		/*
 		 * For TCP type we need special handling when we are
 		 * connected. We also include the peel'ed off ones to.
@@ -4482,12 +4576,14 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				 * new assoc if it desires.
 				 */
 				inp->sctp_flags &= ~SCTP_PCB_FLAGS_CONNECTED;
-				if (from_inpcbfree == 0) {
-					SOCK_LOCK(so);
-				}
-				so->so_state &= ~(SS_ISCONNECTING | SS_ISDISCONNECTING | SS_ISCONFIRMING | SS_ISCONNECTED);
-				if (from_inpcbfree == 0) {
-					SOCK_UNLOCK(so);
+				if (so) {
+					if (from_inpcbfree == 0) {
+						SOCK_LOCK(so);
+					}
+					so->so_state &= ~(SS_ISCONNECTING | SS_ISDISCONNECTING | SS_ISCONFIRMING | SS_ISCONNECTED);
+					if (from_inpcbfree == 0) {
+						SOCK_UNLOCK(so);
+					}
 				}
 			} else {
 				/*
@@ -4499,12 +4595,14 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				 * since the can't send more flags are also
 				 * set.
 				 */
-				if (from_inpcbfree) {
-					SOCK_UNLOCK(so);
-				}
-				soisdisconnected(so);
-				if (from_inpcbfree) {
-					SOCK_LOCK(so);
+				if (so) {
+					if (from_inpcbfree) {
+						SOCK_UNLOCK(so);
+					}
+					soisdisconnected(so);
+					if (from_inpcbfree) {
+						SOCK_LOCK(so);
+					}
 				}
 			}
 		}

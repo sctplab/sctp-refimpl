@@ -138,8 +138,6 @@ struct sctp_snd_all_completes {
 #define SCTP_UNORDERED 	  0x0400/* Message is un-ordered */
 #define SCTP_ADDR_OVER	  0x0800/* Override the primary-address */
 #define SCTP_SENDALL      0x1000/* Send this on all associations */
-#define SCTP_EOR          0x2000/* Its the end of the record */
-
 /* for the endpoint */
 
 /* The lower byte is an enumeration of PR-SCTP policies */
@@ -712,7 +710,7 @@ struct sctp_cwnd_log_req {
 };
 
 struct	sctpstat {
-	/* MIB */
+	/* MIB accoring to RFC 3873 */
 	u_long  sctps_currestab;           /* sctpStats  1   (Gauge32) */
 	u_long  sctps_activeestab;         /* sctpStats  2 (Counter32) */
 	u_long  sctps_passiveestab;        /* sctpStats  3 (Counter32) */
@@ -833,6 +831,11 @@ struct	sctpstat {
 #else
 #define SCTP_STAT_INCR_BY(_x,_d) atomic_add_int(&sctpstat._x, _d)
 #endif
+/* The following macros are for handling MIB values, */
+#define SCTP_STAT_INCR_COUNTER32(_x) SCTP_STAT_INCR(_x)
+#define SCTP_STAT_INCR_COUNTER64(_x) SCTP_STAT_INCR(_x)
+#define SCTP_STAT_INCR_GAUGE32(_x) SCTP_STAT_INCR(_x)
+
 /*
  * Kernel defined for sctp_send
  */
