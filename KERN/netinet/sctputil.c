@@ -1128,7 +1128,8 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	asoc->maxrto = m->sctp_ep.sctp_maxrto;
 
 	asoc->locked_on_sending = NULL;
-	asoc->locked_on_from_sender = NULL;
+	asoc->stream_locked_on = 0;
+	asoc->stream_locked = 0;
 
 	LIST_INIT(&asoc->sctp_local_addr_list);
 	TAILQ_INIT(&asoc->nets);
