@@ -6934,6 +6934,8 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	chk->rec.data.context = sp->context;
 	chk->rec.data.doing_fast_retransmit = 0;
 	chk->rec.data.ect_nonce = 0;	/* ECN Nonce */
+	chk->whoTo = net;
+	atomic_add_int(&chk->whoTo->ref_count, 1);
 
 	sp->length -= to_move;
 	if(sp->mbcnt >= chk->mbcnt) {
@@ -7028,8 +7030,9 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
 	struct sctp_association *asoc;
 
 	struct sctp_stream_out *strq, *strqn;
-	int goal_mtu, moved_how_much, circled=0;
+	int goal_mtu, moved_how_much;
 	int locked, giveup;
+	struct sctp_stream_queue_pending *sp;
 
 	STCB_TCB_LOCK_ASSERT(stcb);
 	asoc = &stcb->asoc;
@@ -7054,7 +7057,36 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
 		strqn = strq = sctp_select_a_stream(stcb, asoc);
 		locked = 0;
 	}
-	while (goal_mtu > 0) {
+
+	while ((goal_mtu > 0) && strq) {
+		sp = TAILQ_FIRST(&strq->outqueue);
+		/* If CMT is off, we must validate that
+		 * the stream in question has the first
+		 * item pointed towards are network destionation 
+		 * requested by the caller. Note that if we
+		 * turn out to be locked to a stream (assigning
+		 * TSN's then we must stop, since we cannot
+		 * look for another stream with data to send
+		 * to that destination). In CMT's case, by
+		 * skipping this check, we will send one
+		 * data packet towards the requested net.
+		 */
+		if ((sp->net != net) && (sctp_cmt_on_off == 0)){
+			/* none for this network */
+			if(locked) {
+				break;
+			} else {
+				strq = sctp_select_a_stream(stcb, asoc);
+				if(strq == NULL)
+					/* none left */
+					break;
+				if(strqn == strq) {
+					/* I have circled */
+					break;
+				}
+				continue;
+			}
+		}
 		giveup = 0;
 		moved_how_much = sctp_move_to_outqueue(stcb, net, strq, goal_mtu, frag_point, &locked, &giveup);
 		asoc->last_out_stream = strq;
@@ -7071,15 +7103,11 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
 			if(giveup)
 				break;
 			strq = sctp_select_a_stream(stcb, asoc);
-			if(strq == NULL)
+			if(strq == NULL) 
 				break;
 			if(strqn == strq) {
 				/* I have circled */
-				circled++;
-				if(circled > 2) {
-					/* Went around the wheel twice */
-					break;
-				}
+				break;
 			}
 		}
 		goal_mtu -= moved_how_much;
@@ -9575,6 +9603,7 @@ sctp_output(inp, m, addr, control, p, flags)
 					asoc->strmout[i].next_sequence_sent = 0x0;
 					TAILQ_INIT(&asoc->strmout[i].outqueue);
 					asoc->strmout[i].stream_no = i;
+					asoc->strmout[i].last_msg_incomplete = 0;
 					asoc->strmout[i].next_spoke.tqe_next = 0;
 					asoc->strmout[i].next_spoke.tqe_prev = 0;
 				}
@@ -11678,7 +11707,7 @@ sctp_copy_one(struct sctp_stream_queue_pending *ret,
 		}
 		m->m_len = willcpy;
 		left -= willcpy;
-		cpsz += left;
+		cpsz += willcpy;
 		if (left > 0) {
 			m->m_next = sctp_get_mbuf_for_msg(left, 0, mbcnt);
 			if (m->m_next == NULL) {
@@ -12125,6 +12154,7 @@ sctp_lower_sosend(struct socket *so,
 						asoc->strmout[i].next_sequence_sent = 0x0;
 						TAILQ_INIT(&asoc->strmout[i].outqueue);
 						asoc->strmout[i].stream_no = i;
+						asoc->strmout[i].last_msg_incomplete = 0;
 						asoc->strmout[i].next_spoke.tqe_next = 0;
 						asoc->strmout[i].next_spoke.tqe_prev = 0;
 					}
@@ -12491,7 +12521,7 @@ sctp_lower_sosend(struct socket *so,
 		} else {
 			strm->last_msg_incomplete = 0;
 		}
-	} else {
+	} else if (top) {
 		/*
 		 * We now have the message in a mbuf chain.
 		 * 
