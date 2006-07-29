@@ -698,6 +698,7 @@ __FBSDID("$FreeBSD:$");
 #define SCTP_NOTIFY_AUTH_KEY_CONFLICT	26
 #define SCTP_NOTIFY_MAX			26
 
+#define SCTP_DEFAULT_SPLIT_POINT_MIN 256
 
 #ifndef SCTP_PCBHASHSIZE
 /* default number of association hash buckets in each endpoint */

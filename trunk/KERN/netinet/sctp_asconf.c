@@ -3154,7 +3154,7 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 	IFAREF(ifa);
 
 	wi->action = cmd;
-	SCTP_IPI_ADDR_WLOCK();
+	SCTP_IPI_ADDR_LOCK();
 	/*
 	 * Should this really be a tailq? As it is we will process the
 	 * newest first :-0
@@ -3164,5 +3164,5 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 	    (struct sctp_inpcb *)NULL,
 	    (struct sctp_tcb *)NULL,
 	    (struct sctp_nets *)NULL);
-	SCTP_IPI_ADDR_WUNLOCK();
+	SCTP_IPI_ADDR_UNLOCK();
 }
