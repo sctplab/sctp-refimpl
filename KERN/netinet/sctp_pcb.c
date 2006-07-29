@@ -6361,7 +6361,7 @@ sctp_initiate_iterator(inp_func inpf, asoc_func af, uint32_t pcb_state,
 #else
 	s = splnet();
 #endif
-	sctp_iterator_timer(it);
+	sctp_timer_start(SCTP_TIMER_TYPE_ITERATOR, (struct sctp_inpcb *)it, NULL, NULL);
 	splx(s);
 	return (0);
 }

@@ -1777,6 +1777,13 @@ sctp_autoclose_timer(struct sctp_inpcb *inp,
 	}
 }
 
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+/*
+ * This function assumes that no socket lock is locked. The function
+ * called per association gets the socket locked.
+ */
+#endif
+
 void
 sctp_iterator_timer(struct sctp_iterator *it)
 {
@@ -1885,6 +1892,9 @@ select_a_new_ep:
 			/* mark the current iterator on the assoc */
 			it->stcb->asoc.stcb_starting_point_for_iterator = it;
 	start_timer_return:
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			socket_unlock(it->inp->ip_inp.inp.inp_socket, 1);
+#endif
 			/* set a timer to continue this later */
 			SCTP_TCB_UNLOCK(it->stcb);
 			sctp_timer_start(SCTP_TIMER_TYPE_ITERATOR,
@@ -1923,12 +1933,12 @@ select_a_new_ep:
 		it->inp = NULL;
 	} else {
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		lck_rw_lock_shared(sctppcbinfo.ipi_ep_mtx);
+		lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
 #endif
 		SCTP_INP_INFO_RLOCK();
 		it->inp = LIST_NEXT(it->inp, sctp_list);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+		lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 #endif
 		SCTP_INP_INFO_RUNLOCK();
 	}
