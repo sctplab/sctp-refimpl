@@ -399,12 +399,18 @@ struct sctp_queued_to_read {	/* sinfo structure Pluse more */
 struct sctp_stream_queue_pending {
 	struct mbuf *data;
 	struct mbuf *tail_mbuf;
+	struct timeval ts;
+	struct sctp_nets *net;
 	TAILQ_ENTRY (sctp_stream_queue_pending ) next;
 	uint32_t length;
+	uint32_t timetolive;
+	uint32_t ppid;
+	uint32_t context;
+	uint16_t sinfo_flags;
 	uint16_t stream;
 	uint16_t strseq;
 	uint8_t  msg_is_complete;
-	uint8_t  resv[3];
+	uint8_t  some_taken;
 };
 
 /*

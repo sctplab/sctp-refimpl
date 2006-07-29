@@ -171,128 +171,6 @@ extern int ipport_hilastauto;
 
 #endif
 
-#if defined(__FreeBSD__) && __FreeBSD_version > 500000
-
-#ifdef INVARIANTS_SCTP
-
-void
-SCTP_ASOC_CREATE_LOCK(struct sctp_inpcb *inp)
-{
-#ifdef SCTP_LOCK_LOGGING
-	sctp_log_lock(inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_CREATE);
-#endif
-	if (mtx_owned(&inp->inp_mtx)) {
-		panic("Want Create lock, own INP");
-	}
-	if (mtx_owned(&inp->inp_create_mtx))
-		panic("INP Recursive CREATE");
-	mtx_lock(&inp->inp_create_mtx);
-}
-
-
-void
-SCTP_INP_RLOCK(struct sctp_inpcb *inp)
-{
-	/* struct sctp_tcb *stcb; */
-#ifdef SCTP_LOCK_LOGGING
-	sctp_log_lock(inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_INP);
-#endif
-	/*
-	 * LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) { if
-	 * (mtx_owned(&(stcb)->tcb_mtx)) panic("I own TCB lock?"); }
-	 */
-	if (inp->sctp_socket)
-		if (mtx_owned(&(inp->sctp_socket->so_rcv.sb_mtx))) {
-			panic("own rcv socket mtx at lock of inp");
-		}
-	if (inp->sctp_socket)
-		if (mtx_owned(&(inp->sctp_socket->so_snd.sb_mtx))) {
-			panic("own snd socket mtx at lock of inp");
-		}
-	if (mtx_owned(&(inp)->inp_mtx))
-		panic("INP Recursive Lock-R");
-	mtx_lock(&(inp)->inp_mtx);
-}
-
-void
-SCTP_INP_WLOCK(struct sctp_inpcb *inp)
-{
-	SCTP_INP_RLOCK(inp);
-}
-
-void
-SCTP_TCB_LOCK(struct sctp_tcb *stcb)
-{
-#ifdef SCTP_LOCK_LOGGING
-	sctp_log_lock(stcb->sctp_ep, stcb, SCTP_LOG_LOCK_TCB);
-#endif
-	/*
-	 * if (!mtx_owned(&(stcb->sctp_ep->inp_mtx))) panic("TCB locking and
-	 * no INP lock");
-	 */
-	if (mtx_owned(&(stcb)->tcb_mtx))
-		panic("TCB Lock-recursive");
-
-	if (stcb->sctp_socket)
-		if (mtx_owned(&(stcb->sctp_socket->so_rcv.sb_mtx))) {
-			panic("own rcv socket mtx at lock of tcb");
-		}
-	if (stcb->sctp_socket)
-		if (mtx_owned(&(stcb->sctp_socket->so_snd.sb_mtx))) {
-			panic("own snd socket mtx at lock of tcb");
-		}
-	mtx_lock(&(stcb)->tcb_mtx);
-}
-
-
-void
-SCTP_INP_INFO_RLOCK()
-{
-	struct sctp_inpcb *inp;
-	struct sctp_tcb *stcb;
-
-	LIST_FOREACH(inp, &sctppcbinfo.listhead, sctp_list) {
-		if (mtx_owned(&(inp)->inp_mtx))
-			panic("info-lock and own inp lock?");
-		LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
-			if (mtx_owned(&(stcb)->tcb_mtx))
-				panic("Info lock and own a tcb lock?");
-		}
-	}
-	if (mtx_owned(&sctppcbinfo.ipi_ep_mtx))
-		panic("INP INFO Recursive Lock-R");
-	mtx_lock(&sctppcbinfo.ipi_ep_mtx);
-}
-
-void
-SCTP_INP_INFO_WLOCK()
-{
-	SCTP_INP_INFO_RLOCK();
-}
-
-
-void
-sctp_verify_no_locks(void)
-{
-	struct sctp_inpcb *inp;
-	struct sctp_tcb *stcb;
-
-	if (mtx_owned(&sctppcbinfo.ipi_ep_mtx))
-		panic("INP INFO lock is owned?");
-
-	LIST_FOREACH(inp, &sctppcbinfo.listhead, sctp_list) {
-		if (mtx_owned(&(inp)->inp_mtx))
-			panic("You own an INP lock?");
-		LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
-			if (mtx_owned(&(stcb)->tcb_mtx))
-				panic("You own a TCB lock?");
-		}
-	}
-}
-
-#endif
-#endif
-
 void
 sctp_fill_pcbinfo(struct sctp_pcbinfo *spcb)
 {
@@ -312,7 +190,9 @@ sctp_fill_pcbinfo(struct sctp_pcbinfo *spcb)
 	spcb->raddr_count = sctppcbinfo.ipi_count_raddr;
 	spcb->chk_count = sctppcbinfo.ipi_count_chunk;
 	spcb->readq_count = sctppcbinfo.ipi_count_readq;
+	spcb->stream_oque = sctppcbinfo.ipi_count_strmoq;
 	spcb->mbuf_track = sctppcbinfo.mbuf_track;
+	
 	SCTP_INP_INFO_RUNLOCK();
 }
 
@@ -1947,7 +1827,6 @@ sctp_inpcb_alloc(struct socket *so)
 #endif				/* IPSEC */
 	SCTP_INCR_EP_COUNT();
 #if defined(__FreeBSD__) || defined(__APPLE__)
-	inp->ip_inp.inp.inp_gencnt = sctppcbinfo.ipi_gencnt_ep;
 	inp->ip_inp.inp.inp_ip_ttl = ip_defttl;
 #else
 	inp->inp_ip_ttl = ip_defttl;
@@ -5219,23 +5098,20 @@ sctp_pcb_init()
 
 	/* not sure if we need all the counts */
 	sctppcbinfo.ipi_count_ep = 0;
-	sctppcbinfo.ipi_gencnt_ep = 0;
 	/* assoc/tcb zone info */
 	sctppcbinfo.ipi_count_asoc = 0;
-	sctppcbinfo.ipi_gencnt_asoc = 0;
 	/* local addrlist zone info */
 	sctppcbinfo.ipi_count_laddr = 0;
-	sctppcbinfo.ipi_gencnt_laddr = 0;
 	/* remote addrlist zone info */
 	sctppcbinfo.ipi_count_raddr = 0;
-	sctppcbinfo.ipi_gencnt_raddr = 0;
 	/* chunk info */
 	sctppcbinfo.ipi_count_chunk = 0;
-	sctppcbinfo.ipi_gencnt_chunk = 0;
 
 	/* socket queue zone info */
 	sctppcbinfo.ipi_count_readq = 0;
-	sctppcbinfo.ipi_gencnt_readq = 0;
+
+	/* stream out queue cont */
+	sctppcbinfo.ipi_count_strmoq = 0;
 
 	/* mbuf tracker */
 	sctppcbinfo.mbuf_track = 0;

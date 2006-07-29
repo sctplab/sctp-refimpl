@@ -99,11 +99,12 @@ __FBSDID("$FreeBSD:$");
 #define SCTPCTL_TCBHASHSIZE         43
 #define SCTPCTL_PCBHASHSIZE         44
 #define SCTPCTL_CHUNKSCALE          45
+#define SCTPCTL_MINSPLIT            46
 #ifdef SCTP_DEBUG
-#define SCTPCTL_DEBUG               46
-#define SCTPCTL_MAXID		    46
+#define SCTPCTL_DEBUG               47
+#define SCTPCTL_MAXID		    47
 #else
-#define SCTPCTL_MAXID		    45
+#define SCTPCTL_MAXID		    46
 #endif
 #endif
 
@@ -152,6 +153,10 @@ __FBSDID("$FreeBSD:$");
 	{ "warm_crc_table", CTLTYPE_INT }, \
 	{ "abort_at_limit", CTLTYPE_INT }, \
 	{ "strict_data_order", CTLTYPE_INT }, \
+	{ "tcbhashsize", CTLTYPE_INT }, \
+	{ "pcbhashsize", CTLTYPE_INT }, \
+	{ "chunkscale", CTLTYPE_INT }, \
+	{ "min_split_point", CTLTYPE_INT }, \
 	{ "debug", CTLTYPE_INT }, \
 }
 
@@ -200,6 +205,10 @@ __FBSDID("$FreeBSD:$");
 	{ "warm_crc_table", CTLTYPE_INT }, \
 	{ "abort_at_limit", CTLTYPE_INT }, \
 	{ "strict_data_order", CTLTYPE_INT }, \
+	{ "tcbhashsize", CTLTYPE_INT }, \
+	{ "pcbhashsize", CTLTYPE_INT }, \
+	{ "chunkscale", CTLTYPE_INT }, \
+	{ "min_split_point", CTLTYPE_INT }, \
 }
 #endif
 
