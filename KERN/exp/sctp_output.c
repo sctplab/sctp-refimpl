@@ -6807,7 +6807,6 @@ sctp_set_prsctp_policy(struct sctp_tcb *stcb,
 	if (sp->sinfo_flags & SCTP_ADDR_OVER) {
 		chk->addr_over = 1;
 	}
-	atomic_add_int(&sp->net->ref_count, 1);
 }
 
 static int
@@ -6862,6 +6861,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 			SOCKBUF_UNLOCK(&stcb->sctp_socket->so_snd);
 		return(0);
 	}
+	SCTP_INCR_CHK_COUNT();
 	/* clear it */
 	memset(chk, sizeof(*chk), 0);
 	if ((goal_mtu >= sp->length) && (sp->msg_is_complete)) {
@@ -6894,35 +6894,48 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	if (sp->data == NULL) {
 		/* HELP */
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
+		SCTP_DECR_CHK_COUNT();
 		goto out_gu;
 	}
 	sp->length += sizeof(struct sctp_data_chunk);
 	to_move += sizeof(struct sctp_data_chunk);
-
-
-	chk->data = m_copym(sp->data, 0, to_move, M_DONTWAIT);
-	if(chk->data == NULL) {
-		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-		goto out_gu;
+	asoc->total_output_queue_size += sizeof(struct sctp_data_chunk);
+	if ((stcb->sctp_socket != NULL) &&
+	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
+	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
+		stcb->sctp_socket->so_snd.sb_cc += sizeof(struct sctp_data_chunk);
 	}
-	m_adj(sp->data, to_move);
-	chk->send_size = to_move;
-	chk->book_size = SCTP_SIZE32(chk->send_size);
 
+
+	if ((goal_mtu >= sp->length) && (sp->msg_is_complete)) {
+		/* we can steal the whole thing */
+		chk->data = sp->data;
+		chk->last_mbuf = sp->tail_mbuf;
+		sp->data = sp->tail_mbuf = NULL;
+	} else {
+		chk->data = m_copym(sp->data, 0, to_move, M_DONTWAIT);
+		chk->last_mbuf = NULL;
+		if(chk->data == NULL) {
+			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
+			SCTP_DECR_CHK_COUNT();
+			goto out_gu;
+		}
+		/* Pull off the data */
+		m_adj(sp->data, to_move);
+	}
+	sp->length -= to_move;
+	chk->send_size = to_move;
+	chk->book_size = to_move;
 	chk->sent = SCTP_DATAGRAM_UNSENT;
 
 	/* get last_mbuf and counts of mb useage
 	 * This is ugly but hopefully its only one mbuf.
 	 */
-	chk->last_mbuf = chk->data;
-	chk->mbcnt = MSIZE;
-	if(chk->data->m_flags & M_EXT) {
-		chk->mbcnt += chk->data->m_ext.ext_size;
-	}
-	while(chk->last_mbuf->m_next != NULL) {
-		chk->last_mbuf = chk->last_mbuf->m_next;
-		chk->mbcnt = MSIZE;
-		chk->mbcnt += chk->data->m_ext.ext_size;
+	if(chk->last_mbuf == NULL) {
+		chk->last_mbuf = chk->data;
+		while(chk->last_mbuf->m_next != NULL) {
+			chk->last_mbuf = chk->last_mbuf->m_next;
+		}
 	}
 	chk->flags = 0;
 	chk->asoc = &stcb->asoc;
@@ -6936,13 +6949,6 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	chk->rec.data.ect_nonce = 0;	/* ECN Nonce */
 	chk->whoTo = net;
 	atomic_add_int(&chk->whoTo->ref_count, 1);
-
-	sp->length -= to_move;
-	if(sp->mbcnt >= chk->mbcnt) {
-		sp->mbcnt -= chk->mbcnt;
-	} else {
-		sp->mbcnt = 0;
-	}
 
 	chk->rec.data.TSN_seq = asoc->sending_seq++;
 	dchkh = mtod(chk->data, struct sctp_data_chunk *);
@@ -6960,27 +6966,33 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	/* Now advance the chk->send_size by the actual
 	 * pad needed.
 	 */
-	if(chk->book_size > chk->send_size) {
+	if(chk->send_size < SCTP_SIZE32(chk->book_size)) {
 		/* need a pad */
 		struct mbuf *lm;
 		int pads;
-		pads = chk->book_size - chk->send_size;
+		pads = SCTP_SIZE32(chk->book_size) - chk->send_size;
 		if (sctp_pad_lastmbuf(chk->data, pads, chk->last_mbuf) == 0) {
 			chk->pad_inplace = 1;
 		}
 		if((lm = chk->last_mbuf->m_next) != NULL) {
 			/* pad added an mbuf */
-			chk->mbcnt += MSIZE;
 			chk->last_mbuf = lm;
-			asoc->total_output_mbuf_queue_size += MSIZE;
 		}
+		if(chk->data->m_flags & M_PKTHDR) {
+			chk->data->m_pkthdr.len += pads;
+		}
+		chk->send_size += pads;
 	}
+	sctp_set_prsctp_policy(stcb, chk, sp);
+
 	if(sp->msg_is_complete && (sp->length == 0)) {
 		/* All done pull and kill the message */
 		asoc->stream_queue_cnt--;
 		TAILQ_REMOVE(&strq->outqueue, sp, next);
 		sctp_free_remote_addr(sp->net);
-
+		if(sp->data) {
+			sctp_m_freem(sp->data);
+		}
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_strmoq, sp);
 		SCTP_DECR_STRMOQ_COUNT();
 		/* we can't be locked to it */
@@ -6990,7 +7002,6 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		*locked = 1;
 	}
 	asoc->chunks_on_out_queue++;
-	sctp_set_prsctp_policy(stcb, chk, sp);
 	TAILQ_INSERT_TAIL(&asoc->send_queue, chk, sctp_next);
 	asoc->send_queue_cnt++;
 	if (stcb->sctp_socket)
@@ -11569,7 +11580,7 @@ extern int sctp_mbuf_threshold_count;
 
 
 static struct mbuf *
-sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header, uint32_t *mbcnt)
+sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header)
 {
 	struct mbuf *m = NULL;
 
@@ -11597,10 +11608,6 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header, uint32_t *mbcn
 			return (NULL);
 		}
 	}
-	*mbcnt += sizeof(struct mbuf);
-	if(m->m_flags & M_EXT) {
-		*mbcnt += m->m_ext.ext_size;
-	}
 	m->m_len = 0;
 	m->m_next = m->m_nextpkt = NULL;
 	if (want_header) {
@@ -11617,7 +11624,6 @@ sctp_copy_resume(struct sctp_stream_queue_pending *ret,
 		 int user_marks_eor,
 		 int *error,
 		 uint32_t *sndout,
-		 uint32_t *mbcnt,
 		 struct mbuf **new_tail)
 {
 	int left, cancpy, willcpy;
@@ -11626,7 +11632,7 @@ sctp_copy_resume(struct sctp_stream_queue_pending *ret,
         left = min(uio->uio_resid, max_send_len);
 	/* will this be the EOR? */
 
-	head = sctp_get_mbuf_for_msg(left, 0, mbcnt);
+	head = sctp_get_mbuf_for_msg(left, 0);
 	cancpy = M_TRAILINGSPACE(head);
 	willcpy = min(cancpy, left);
 	*error = uiomove(mtod(head, caddr_t), willcpy, uio);
@@ -11641,7 +11647,7 @@ sctp_copy_resume(struct sctp_stream_queue_pending *ret,
 	*new_tail = head;
 	while (left > 0) {
 		/* move in user data */
-		m->m_next = sctp_get_mbuf_for_msg(left, 0, mbcnt);
+		m->m_next = sctp_get_mbuf_for_msg(left, 0);
 		if (m->m_next == NULL) {
 			sctp_m_freem(head);
 			*error = ENOMEM;
@@ -11678,7 +11684,7 @@ sctp_copy_resume(struct sctp_stream_queue_pending *ret,
 static int
 sctp_copy_one(struct sctp_stream_queue_pending *ret, 
 	      struct uio *uio, 
-	      int resv_upfront, uint32_t *mbcnt) 
+	      int resv_upfront)
 {
 	int left, cancpy, willcpy, error;
 	struct mbuf *m, *head;
@@ -11686,7 +11692,7 @@ sctp_copy_one(struct sctp_stream_queue_pending *ret,
 
 	/* First one gets a header */
 	left = ret->length;
-	head = m = sctp_get_mbuf_for_msg((left + resv_upfront), 1, mbcnt);
+	head = m = sctp_get_mbuf_for_msg((left + resv_upfront), 1);
 	if (m == NULL) {
 		return (ENOMEM);
 	}
@@ -11709,7 +11715,7 @@ sctp_copy_one(struct sctp_stream_queue_pending *ret,
 		left -= willcpy;
 		cpsz += willcpy;
 		if (left > 0) {
-			m->m_next = sctp_get_mbuf_for_msg(left, 0, mbcnt);
+			m->m_next = sctp_get_mbuf_for_msg(left, 0);
 			if (m->m_next == NULL) {
 				/*
 				 * the head goes back to caller, he can free
@@ -11739,8 +11745,8 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
     struct sctp_nets *net,
     int max_send_len,
     int user_marks_eor,
-    int *errno,
-    uint32_t *mbcnt)
+    int *errno)
+
 {
 	/*
 	 * This routine must be very careful in its work. Protocol
@@ -11758,7 +11764,6 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 	s = splnet();
 #endif
 	*errno = 0;
-	*mbcnt = 0;
         /* Unless E_EOR mode is on, we must make
 	 * a send FIT in one call.
 	 */
@@ -11805,13 +11810,12 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 	sp->some_taken = 0;
 	resv_in_first = sizeof(struct sctp_data_chunk);
 	sp->data = sp->tail_mbuf = NULL;
-	*errno = sctp_copy_one(sp, uio, resv_in_first, mbcnt);
+	*errno = sctp_copy_one(sp, uio, resv_in_first);
 	if(*errno) {
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_strmoq, sp);
 		SCTP_DECR_STRMOQ_COUNT();
 		sp = NULL;
 	} else {
-		sp->mbcnt = *mbcnt;
 		if(sp->sinfo_flags & SCTP_ADDR_OVER) 
 			sp->net = net;
 		else
@@ -12009,9 +12013,7 @@ sctp_lower_sosend(struct socket *so,
 			if ((so->so_snd.sb_hiwat <
 			     			     (sndlen + stcb->asoc.total_output_queue_size)) ||
 			    (stcb->asoc.chunks_on_out_queue >
-			     sctp_max_chunks_on_queue) ||
-			    (stcb->asoc.total_output_mbuf_queue_size >
-			     so->so_snd.sb_mbmax)) {
+			     sctp_max_chunks_on_queue)) {
 				error = EWOULDBLOCK;
 				splx(s);
 				goto out;
@@ -12396,7 +12398,6 @@ sctp_lower_sosend(struct socket *so,
 	if ((top == NULL) && uio->uio_resid > 0) {
 		struct sctp_stream_queue_pending *sp;
 		struct sctp_stream_out *strm;
-		uint32_t mbcnt;
 		uint32_t sndout;
 		int user_marks_eor;
 
@@ -12408,7 +12409,7 @@ sctp_lower_sosend(struct socket *so,
 		strm = &stcb->asoc.strmout[srcv->sinfo_stream];
 		user_marks_eor = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXPLICIT_EOR);
 		if(strm->last_msg_incomplete == 0) {
-			sp = sctp_copy_it_in(stcb, asoc, srcv, uio, net, max_len, user_marks_eor, &error, &mbcnt);
+			sp = sctp_copy_it_in(stcb, asoc, srcv, uio, net, max_len, user_marks_eor, &error);
 			if ((sp == NULL) || (error)) {
 				goto out;
 			}
@@ -12419,12 +12420,10 @@ sctp_lower_sosend(struct socket *so,
 			}
 			SOCKBUF_LOCK(&so->so_snd);
 			asoc->total_output_queue_size += sp->length;
-			asoc->total_output_mbuf_queue_size += mbcnt;
 			if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 			    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
 				len += sp->length;
 				so->so_snd.sb_cc += sp->length;
-				so->so_snd.sb_mbcnt += mbcnt;
 			}
 			asoc->stream_queue_cnt++;
 			TAILQ_INSERT_TAIL(&strm->outqueue, sp, next);
@@ -12452,20 +12451,18 @@ sctp_lower_sosend(struct socket *so,
 			else
 				max_len = 0;
 			if(max_len > 0) {
-				mbcnt = sndout = 0;
+				sndout = 0;
 				new_tail = NULL;
-				mm = sctp_copy_resume(sp, uio, srcv, max_len, user_marks_eor, &error, &sndout, &mbcnt, &new_tail);
+				mm = sctp_copy_resume(sp, uio, srcv, max_len, user_marks_eor, &error, &sndout, &new_tail);
 				if ((mm == NULL) || error) {
 					goto out;
 				}
 				/* Update the mbuf and count */
 				SOCKBUF_LOCK(&so->so_snd);
 				asoc->total_output_queue_size += sndout;
-				asoc->total_output_mbuf_queue_size += mbcnt;
 				if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 				    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
 					so->so_snd.sb_cc += sndout;
-					so->so_snd.sb_mbcnt += mbcnt;
 				}
 				sp->tail_mbuf->m_next = mm;
 				sp->tail_mbuf = new_tail;
