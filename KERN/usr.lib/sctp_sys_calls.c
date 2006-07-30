@@ -295,6 +295,8 @@ sctp_getpaddrs(int sd, sctp_assoc_t id, struct sockaddr **raddrs)
 		errno = ENOMEM;
 		return(-1);
 	}
+	/* size required is returned in 'asoc' */
+	siz = (uint32_t)asoc;
 	siz += sizeof(struct sctp_getaddresses);
 	addrs = calloc((unsigned long)1, (unsigned long)siz);
 	if (addrs == NULL) {
@@ -315,11 +317,9 @@ sctp_getpaddrs(int sd, sctp_assoc_t id, struct sockaddr **raddrs)
 	cnt = 0;
 	sa = (struct sockaddr *)&addrs->addr[0];
 	lim = (caddr_t)addrs + siz;
-	while ((caddr_t)sa < lim) {
-		cnt++;
+	while (((caddr_t)sa < lim) && (sa->sa_len > 0)) {
 		sa = (struct sockaddr *)((caddr_t)sa + sa->sa_len);
-		if (sa->sa_len == 0)
-			break;
+		cnt++;
 	}
 	return(cnt);
 }
@@ -380,11 +380,9 @@ sctp_getladdrs (int sd, sctp_assoc_t id, struct sockaddr **raddrs)
 	cnt = 0;
 	sa = (struct sockaddr *)&addrs->addr[0];
 	lim = (caddr_t)addrs + siz;
-	while ((caddr_t)sa < lim) {
-		cnt++;
+	while (((caddr_t)sa < lim) && (sa->sa_len > 0)) {
 		sa = (struct sockaddr *)((caddr_t)sa + sa->sa_len);
-		if (sa->sa_len == 0)
-			break;
+		cnt++;
 	}
 	return(cnt);
 }
