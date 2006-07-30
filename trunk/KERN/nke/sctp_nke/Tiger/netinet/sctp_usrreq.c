@@ -199,9 +199,11 @@ unsigned int sctp_auth_random_len = SCTP_AUTH_RANDOM_SIZE_DEFAULT;
 unsigned int sctp_auth_hmac_id_default = SCTP_AUTH_HMAC_ID_SHA1;
 struct sctpstat sctpstat;
 
+#if defined(__APPLE__)
+unsigned int sctp_main_timer = SCTP_MAIN_TIMER_DEFAULT;
+#endif
 #ifdef SCTP_DEBUG
 extern uint32_t sctp_debug_on;
-
 #endif				/* SCTP_DEBUG */
 
 
@@ -240,8 +242,14 @@ sctp_init(void)
 	 * now I will just copy.
 	 */
 	sctp_recvspace = sctp_sendspace;
+
 #ifdef __OpenBSD__
 #undef nmbclusters
+#endif
+
+#if defined(__APPLE__)
+	/* start the main timer */
+	sctp_start_main_timer();
 #endif
 }
 
@@ -876,6 +884,10 @@ SYSCTL_STRUCT(_net_inet_sctp, OID_AUTO, stats, CTLFLAG_RW,
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, debug, CTLFLAG_RW,
     &sctp_debug_on, 0, "Configure debug output");
 #endif				/* SCTP_DEBUG */
+#if defined(__APPLE__)
+SYSCTL_INT(_net_inet_sctp, OID_AUTO, main_timer, CTLFLAG_RW,
+    &sctp_main_timer, 0, "Main timer interval in ms");
+#endif
 #endif
 
 #if defined(__FreeBSD__) && __FreeBSD_version > 690000

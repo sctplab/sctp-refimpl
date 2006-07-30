@@ -108,6 +108,7 @@ extern struct sysctl_oid sysctl__net_inet_sctp_stats;
 #ifdef SCTP_DEBUG
 extern struct sysctl_oid sysctl__net_inet_sctp_debug;
 #endif
+extern struct sysctl_oid sysctl__net_inet_sctp_main_timer;
 
 extern struct domain inetdomain;
 extern struct domain inet6domain;
@@ -381,6 +382,7 @@ kern_return_t SCTP_start (kmod_info_t * ki, void * d) {
 #ifdef SCTP_DEBUG
 	sysctl_register_oid(&sysctl__net_inet_sctp_debug);
 #endif
+	sysctl_register_oid(&sysctl__net_inet_sctp_main_timer);
 
 #ifndef SCTP_APPLE_FINE_GRAINED_LOCKING
 	splx(s);
@@ -412,7 +414,7 @@ kern_return_t SCTP_stop (kmod_info_t * ki, void * d) {
 	}
 #endif
 	if (!LIST_EMPTY(&sctppcbinfo.listhead)) {
-		printf("SCTP NKE: There are still SCTP enpoints. NKE not unloaded\n");
+		printf("SCTP NKE: There are still SCTP endpoints. NKE not unloaded\n");
 #ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
 		lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 #else
@@ -421,6 +423,9 @@ kern_return_t SCTP_stop (kmod_info_t * ki, void * d) {
 #endif
 		return KERN_FAILURE;
 	}
+
+	sctp_stop_main_timer();
+
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_sendspace);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_recvspace);
 /*
@@ -469,6 +474,7 @@ kern_return_t SCTP_stop (kmod_info_t * ki, void * d) {
 #ifdef SCTP_DEBUG
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_debug);
 #endif
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_main_timer);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp);
 
 #ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
