@@ -6742,9 +6742,9 @@ sctp_can_we_split_this(struct sctp_stream_queue_pending *sp,
 	return(0);
 
 }
+
 static void 
 sctp_set_prsctp_policy(struct sctp_tcb *stcb,
-		       struct sctp_tmit_chunk *chk,
 		       struct sctp_stream_queue_pending *sp)
 {
 	if (stcb->asoc.peer_supports_prsctp) {
@@ -6756,40 +6756,41 @@ sctp_set_prsctp_policy(struct sctp_tcb *stcb,
 		 * change this to be no policy means NO PR-SCTP.
 		 */
 		if ((sp->timetolive > 0) && (!PR_SCTP_ENABLED(sp->sinfo_flags))) {
-			chk->flags |= CHUNK_FLAGS_PR_SCTP_TTL;
+			sp->act_flags |= CHUNK_FLAGS_PR_SCTP_TTL;
 		} else {
-			chk->flags |= PR_SCTP_POLICY(sp->sinfo_flags);
+			sp->act_flags |= PR_SCTP_POLICY(sp->sinfo_flags);
 			goto sctp_no_policy;
 		}
 		switch (PR_SCTP_POLICY(sp->sinfo_flags)) {
-			struct timeval tv;
-
 		case CHUNK_FLAGS_PR_SCTP_BUF:
 			/*
 			 * Time to live is a priority stored in tv_sec when
 			 * doing the buffer drop thing.
 			 */
-			chk->rec.data.timetodrop.tv_sec = sp->timetolive;
-			chk->rec.data.timetodrop.tv_usec = 0;
+			sp->ts.tv_sec = sp->timetolive;
+			sp->ts.tv_usec = 0;
 			break;
 		case CHUNK_FLAGS_PR_SCTP_TTL:
-			chk->rec.data.timetodrop = sp->ts;
+		{
+			struct timeval tv;
+			SCTP_GETTIME_TIMEVAL(&sp->ts);
 			tv.tv_sec = sp->timetolive / 1000;
 			tv.tv_usec = (sp->timetolive * 1000) % 1000000;
 #ifndef __FreeBSD__
-			timeradd(&chk->rec.data.timetodrop, &tv,
-				 &chk->rec.data.timetodrop);
+			timeradd(&sp->ts, &tv,
+				 &sp->ts);
 #else
-			timevaladd(&chk->rec.data.timetodrop, &tv);
+			timevaladd(&sp->ts, &tv);
 #endif
+		}
 			break;
 		case CHUNK_FLAGS_PR_SCTP_RTX:
 			/*
 			 * Time to live is a the number or retransmissions
 			 * stored in tv_sec.
 			 */
-			chk->rec.data.timetodrop.tv_sec = sp->timetolive;
-			chk->rec.data.timetodrop.tv_usec = 0;
+			sp->ts.tv_sec = sp->timetolive;
+			sp->ts.tv_usec = 0;
 			break;
 		default:
 #ifdef SCTP_DEBUG
@@ -6802,12 +6803,11 @@ sctp_set_prsctp_policy(struct sctp_tcb *stcb,
 	}
  sctp_no_policy:
 	if (sp->sinfo_flags & SCTP_UNORDERED)
-		chk->rec.data.rcv_flags |= SCTP_DATA_UNORDERED;
+		sp->act_flags |= SCTP_DATA_UNORDERED;
 
-	if (sp->sinfo_flags & SCTP_ADDR_OVER) {
-		chk->addr_over = 1;
-	}
 }
+
+uint32_t sctp_queue_pegs[8] = {0, 0, 0, 0, 0, 0, 0, 0 };
 
 static int
 sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
@@ -6839,6 +6839,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	}
 	if ((sp->length == 0) && (sp->msg_is_complete == 0)) {
 		/* Must wait for more data, must be last msg */
+		sctp_queue_pegs[0]++;
 		*locked = 1;
 		*giveup = 1;
 		return (0);
@@ -6857,25 +6858,30 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 			} else {
 				rcv_flags |= SCTP_DATA_NOT_FRAG;
 			}
+			sctp_queue_pegs[1]++;
 		} else {
 			/* Not getting it all, frag point overrides */
 			if(sp->some_taken == 0) {
 				rcv_flags |= SCTP_DATA_FIRST_FRAG;
 			}
 			sp->some_taken = 1;
+			sctp_queue_pegs[2]++;
 		}
 	} else {
+		sctp_queue_pegs[3]++;
 		to_move = sctp_can_we_split_this(sp, goal_mtu, frag_point);
 		if (to_move) {
 			if(sp->some_taken == 0) {
 				rcv_flags |= SCTP_DATA_FIRST_FRAG;
 			}
 			sp->some_taken = 1;
+			sctp_queue_pegs[4]++;
 		} else {
+			sctp_queue_pegs[5]++;
 			return (0);
 		}
 	}
-
+	sctp_queue_pegs[6]++;
 	/* If we reach here, we can copy out a chunk */
         chk = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk);
 	if (chk == NULL) {
@@ -6905,6 +6911,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	}
 	if ((goal_mtu >= sp->length) && (sp->msg_is_complete)) {
 		/* we can steal the whole thing */
+		sctp_queue_pegs[7]++;
 		chk->data = sp->data;
 		chk->last_mbuf = sp->tail_mbuf;
 		sp->data = sp->tail_mbuf = NULL;
@@ -6943,6 +6950,11 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	chk->rec.data.context = sp->context;
 	chk->rec.data.doing_fast_retransmit = 0;
 	chk->rec.data.ect_nonce = 0;	/* ECN Nonce */
+
+	chk->rec.data.timetodrop = sp->ts;
+	chk->flags = sp->act_flags;
+	chk->addr_over = sp->addr_over;
+
 	chk->whoTo = net;
 	atomic_add_int(&chk->whoTo->ref_count, 1);
 
@@ -6979,7 +6991,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		}
 		chk->send_size += pads;
 	}
-	sctp_set_prsctp_policy(stcb, chk, sp);
+	sctp_set_prsctp_policy(stcb, sp);
 
 	if(sp->msg_is_complete && (sp->length == 0)) {
 		/* All done pull and kill the message */
@@ -7252,7 +7264,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 		    (int)asoc->total_flight, (int)asoc->peers_rwnd);
 	}
 #endif
-	if (no_data_chunks == 0) {
+	if ((no_data_chunks == 0) && (!TAILQ_EMPTY(&asoc->out_wheel))) {
 		if (sctp_cmt_on_off) {
 			/*
 			 * for CMT we start at the next one past the one we
@@ -11570,6 +11582,7 @@ static struct mbuf *
 sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header)
 {
 	struct mbuf *m = NULL;
+	int aloc_size;
 
 	if (want_header) {
 		MGETHDR(m, M_WAIT, MT_DATA);
@@ -11580,13 +11593,31 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header)
 		return (NULL);
 	}
 	if (space_needed > (((sctp_mbuf_threshold_count - 1) * MLEN) + MHLEN)) {
+#if defined(__FreeBSD__) && __FreeBSD_version > 690000
+	try_again:
+		if(space_needed <= MCLBYTES){ 
+			aloc_size = MCLBYTES;
+		} else if (space_needed <=  MJUMPAGESIZE) {
+			aloc_size = MJUMPAGESIZE;
+		} else if (space_needed <= MJUM9BYTES) {
+			aloc_size = MJUM9BYTES;
+		} else { 
+			aloc_size = MJUM16BYTES;
+		}
+		m_cljget(m, M_WAIT, aloc_size);
+		if (m == NULL) {
+			return (NULL);
+		}
+		if ((m->m_flags & M_EXT) == 0) {
+			if(aloc_size != MCLBYTES) {
+				aloc_size -= 10;
+				goto try_again;
+			}
+			sctp_m_freem(m);
+			return (NULL);
+		} 
+#else
 		MCLGET(m, M_WAIT);
-		/*
-		 * if(space_needed <= MCLBYTES) { } else if (space_needed <=
-		 * MJUMPAGESIZE) { } else if (space_needed <= MJUM9BYTES) {
-		 * } else if (space_needed <= MJUM9BYTES) { } else if
-		 * (space_needed <= MJUM16BYTES){ } else { }
-		 */
 		if (m == NULL) {
 			return (NULL);
 		}
@@ -11594,6 +11625,7 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header)
 			sctp_m_freem(m);
 			return (NULL);
 		}
+#endif
 	}
 	m->m_len = 0;
 	m->m_next = m->m_nextpkt = NULL;
@@ -11776,6 +11808,7 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 		goto out_now;
 	}
 	SCTP_INCR_STRMOQ_COUNT();
+	sp->act_flags = 0;
 	sp->sinfo_flags = srcv->sinfo_flags;
 	sp->timetolive = srcv->sinfo_timetolive;
 	sp->ppid = srcv->sinfo_ppid;
@@ -11803,12 +11836,16 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 		SCTP_DECR_STRMOQ_COUNT();
 		sp = NULL;
 	} else {
-		if(sp->sinfo_flags & SCTP_ADDR_OVER) 
+		if(sp->sinfo_flags & SCTP_ADDR_OVER) {
 			sp->net = net;
-		else
+			sp->addr_over = 1;
+		} else {
 			sp->net = asoc->primary_destination;
+			sp->addr_over = 0;
+		}
 		atomic_add_int(&sp->net->ref_count, 1);
 		sp->data->m_pkthdr.len = sp->length;
+		sctp_set_prsctp_policy(stcb, sp);
 	}
 out_now:
 	splx(s);
