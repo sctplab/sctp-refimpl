@@ -292,9 +292,9 @@ sctp_getpaddrs(int sd, sctp_assoc_t id, struct sockaddr **raddrs)
 	siz = sizeof(sctp_assoc_t);  
 	if (getsockopt(sd, IPPROTO_SCTP, SCTP_GET_REMOTE_ADDR_SIZE,
 	    &asoc, (socklen_t *)&siz) != 0) {
+		errno = ENOMEM;
 		return(-1);
 	}
-	siz = (size_t)asoc;
 	siz += sizeof(struct sctp_getaddresses);
 	addrs = calloc((unsigned long)1, (unsigned long)siz);
 	if (addrs == NULL) {
@@ -307,6 +307,7 @@ sctp_getpaddrs(int sd, sctp_assoc_t id, struct sockaddr **raddrs)
 	if (getsockopt(sd, IPPROTO_SCTP, SCTP_GET_PEER_ADDRESSES,
 	    addrs, (socklen_t *)&siz) != 0) {
 		free(addrs);
+		errno = ENOMEM;
 		return(-1);
 	}
 	re = (struct sockaddr *)&addrs->addr[0];
@@ -351,6 +352,7 @@ sctp_getladdrs (int sd, sctp_assoc_t id, struct sockaddr **raddrs)
 	siz = sizeof(int);  
 	if (getsockopt(sd, IPPROTO_SCTP, SCTP_GET_LOCAL_ADDR_SIZE,
 	    &size_of_addresses, (socklen_t *)&siz) != 0) {
+		errno = ENOMEM;
 		return(-1);
 	}
 	if (size_of_addresses == 0) {
@@ -370,6 +372,7 @@ sctp_getladdrs (int sd, sctp_assoc_t id, struct sockaddr **raddrs)
 	if (getsockopt(sd, IPPROTO_SCTP, SCTP_GET_LOCAL_ADDRESSES, addrs,
 	    (socklen_t *)&siz) != 0) {
 		free(addrs);
+		errno = ENOMEM;
 		return(-1);
 	}
 	re = (struct sockaddr *)&addrs->addr[0];
