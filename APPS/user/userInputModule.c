@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.55 2006-07-21 21:31:21 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.56 2006-07-30 04:07:04 tuexen Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -2855,7 +2855,8 @@ cmd_getpaddrs(char *argv[], int argc)
 	} else {
 		printf("Got %d addresses back\n", cnt);
 	}
-	sctp_freepaddrs(addrs);
+	if (cnt > 0)
+		sctp_freepaddrs(addrs);
 	return 0;
 }
 

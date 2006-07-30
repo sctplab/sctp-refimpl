@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.23 2006-07-21 22:21:03 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.24 2006-07-30 04:07:04 tuexen Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -35,6 +35,7 @@
 #define HAVE_SA_LEN
 #endif
 #endif
+#include <netinet/in.h>
 
 #include <ctype.h>
 #include <stdio.h>
