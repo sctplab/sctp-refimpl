@@ -1270,6 +1270,8 @@ sctp_initiate_iterator(inp_func inpf, asoc_func af, uint32_t, uint32_t,
 void sctp_callout_alloc(struct sctp_timer *);
 void sctp_callout_free(struct callout *);
 
+void sctp_start_main_timer(void);
+void sctp_stop_main_timer(void);
 #endif
 
 #ifdef __NetBSD__
