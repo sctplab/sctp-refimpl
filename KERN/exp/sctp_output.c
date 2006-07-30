@@ -6823,10 +6823,11 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	struct sctp_tmit_chunk *chk;
 	struct sctp_data_chunk *dchkh;
 	int to_move;
-
+	uint8_t rcv_flags=0;
 	STCB_TCB_LOCK_ASSERT(stcb);
 	asoc = &stcb->asoc;
 	sp = TAILQ_FIRST(&strq->outqueue);
+
 	if(sp == NULL) {
 		*locked = 0;
 		if(strq->last_msg_incomplete) {
@@ -6836,19 +6837,43 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		}
 		return(0);
 	}
-	if (stcb->sctp_socket)
-		SOCKBUF_LOCK(&stcb->sctp_socket->so_snd);
-	
 	if ((sp->length == 0) && (sp->msg_is_complete == 0)) {
 		/* Must wait for more data, must be last msg */
 		*locked = 1;
 		*giveup = 1;
-		if (stcb->sctp_socket)
-			SOCKBUF_UNLOCK(&stcb->sctp_socket->so_snd);
 		return (0);
 	} else if(sp->length == 0) {
 		/* This should not happen */
 		panic("sp length is 0?");
+	}
+
+	if ((goal_mtu >= sp->length) && (sp->msg_is_complete)) {
+		/* It all fits and its a complete msg, no brainer */
+		to_move = min(sp->length, frag_point);
+		if(to_move == sp->length) {
+			/* Getting it all */
+			if (sp->some_taken)  {
+				rcv_flags |= SCTP_DATA_LAST_FRAG;
+			} else {
+				rcv_flags |= SCTP_DATA_NOT_FRAG;
+			}
+		} else {
+			/* Not getting it all, frag point overrides */
+			if(sp->some_taken == 0) {
+				rcv_flags |= SCTP_DATA_FIRST_FRAG;
+			}
+			sp->some_taken = 1;
+		}
+	} else {
+		to_move = sctp_can_we_split_this(sp, goal_mtu, frag_point);
+		if (to_move) {
+			if(sp->some_taken == 0) {
+				rcv_flags |= SCTP_DATA_FIRST_FRAG;
+			}
+			sp->some_taken = 1;
+		} else {
+			return (0);
+		}
 	}
 
 	/* If we reach here, we can copy out a chunk */
@@ -6857,39 +6882,11 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		/* No chunk memory */
 	out_gu:
 		*giveup = 1;
-		if (stcb->sctp_socket)
-			SOCKBUF_UNLOCK(&stcb->sctp_socket->so_snd);
 		return(0);
 	}
 	SCTP_INCR_CHK_COUNT();
 	/* clear it */
 	memset(chk, sizeof(*chk), 0);
-	if ((goal_mtu >= sp->length) && (sp->msg_is_complete)) {
-		/* It all fits and its a complete msg, no brainer */
-		to_move = min(sp->length, frag_point);
-		if(to_move == sp->length) {
-			/* Getting it all */
-			if (sp->some_taken)  {
-				chk->rec.data.rcv_flags |= SCTP_DATA_LAST_FRAG;
-			} else {
-				chk->rec.data.rcv_flags |= SCTP_DATA_NOT_FRAG;
-			}
-		} else {
-			/* Not getting it all, frag point overrides */
-			if(sp->some_taken == 0) {
-				chk->rec.data.rcv_flags |= SCTP_DATA_FIRST_FRAG;
-			}
-			sp->some_taken = 1;
-		}
-	} else {
-		to_move = sctp_can_we_split_this(sp, goal_mtu, frag_point);
-		if (to_move) {
-			if(sp->some_taken == 0) {
-				chk->rec.data.rcv_flags |= SCTP_DATA_FIRST_FRAG;
-			}
-			sp->some_taken = 1;
-		}
-	}
 	M_PREPEND(sp->data, sizeof(struct sctp_data_chunk), M_DONTWAIT);
 	if (sp->data == NULL) {
 		/* HELP */
@@ -6899,14 +6896,13 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	}
 	sp->length += sizeof(struct sctp_data_chunk);
 	to_move += sizeof(struct sctp_data_chunk);
+	chk->rec.data.rcv_flags = rcv_flags;
 	asoc->total_output_queue_size += sizeof(struct sctp_data_chunk);
 	if ((stcb->sctp_socket != NULL) &&
-	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
-	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
+	    ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
+	     (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL))) {
 		stcb->sctp_socket->so_snd.sb_cc += sizeof(struct sctp_data_chunk);
 	}
-
-
 	if ((goal_mtu >= sp->length) && (sp->msg_is_complete)) {
 		/* we can steal the whole thing */
 		chk->data = sp->data;
@@ -7004,9 +7000,6 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	asoc->chunks_on_out_queue++;
 	TAILQ_INSERT_TAIL(&asoc->send_queue, chk, sctp_next);
 	asoc->send_queue_cnt++;
-	if (stcb->sctp_socket)
-		SOCKBUF_UNLOCK(&stcb->sctp_socket->so_snd);
-
 	return (to_move);
 }
 
@@ -7039,7 +7032,6 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
     struct sctp_nets *net, int frag_point)
 {
 	struct sctp_association *asoc;
-
 	struct sctp_stream_out *strq, *strqn;
 	int goal_mtu, moved_how_much;
 	int locked, giveup;
@@ -8401,9 +8393,7 @@ sctp_send_shutdown(struct sctp_tcb *stcb, struct sctp_nets *net)
 	if ((stcb->sctp_socket) && 
 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
-		SOCKBUF_LOCK(&stcb->sctp_socket->so_snd);
 		stcb->sctp_ep->sctp_socket->so_snd.sb_cc = 0;
-		SOCKBUF_UNLOCK(&stcb->sctp_socket->so_snd);
 		if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) == 0) &&
 		    ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0))
 			soisdisconnecting(stcb->sctp_ep->sctp_socket);
@@ -10332,10 +10322,7 @@ sctp_send_shutdown_complete(struct sctp_tcb *stcb,
 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
 		stcb->sctp_ep->sctp_flags &= ~SCTP_PCB_FLAGS_CONNECTED;
-		SOCKBUF_LOCK(&stcb->sctp_socket->so_snd);
 		stcb->sctp_ep->sctp_socket->so_snd.sb_cc = 0;
-		SOCKBUF_UNLOCK(&stcb->sctp_socket->so_snd);
-
 		if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) == 0) &&
 		    ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0))
 			soisdisconnected(stcb->sctp_ep->sctp_socket);
@@ -12418,7 +12405,7 @@ sctp_lower_sosend(struct socket *so,
 			} else {
 				strm->last_msg_incomplete = 1;
 			}
-			SOCKBUF_LOCK(&so->so_snd);
+			SCTP_TCB_LOCK(stcb);
 			asoc->total_output_queue_size += sp->length;
 			if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 			    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
@@ -12431,14 +12418,13 @@ sctp_lower_sosend(struct socket *so,
 				sp->strseq = strm->next_sequence_sent;
 				strm->next_sequence_sent++;
 			}
-			SOCKBUF_UNLOCK(&so->so_snd);
+
 			if ((strm->next_spoke.tqe_next == NULL) &&
 			    (strm->next_spoke.tqe_prev == NULL)) {
 				/* Not on wheel, insert */
-				SCTP_TCB_LOCK(stcb);
 				sctp_insert_on_wheel(asoc, strm);
-				SCTP_TCB_UNLOCK(stcb);
 			}
+			SCTP_TCB_UNLOCK(stcb);
 		} else {
 			sp = TAILQ_LAST(&strm->outqueue, sctp_streamhead);
 		}
@@ -12458,7 +12444,7 @@ sctp_lower_sosend(struct socket *so,
 					goto out;
 				}
 				/* Update the mbuf and count */
-				SOCKBUF_LOCK(&so->so_snd);
+				SCTP_TCB_LOCK(stcb);
 				asoc->total_output_queue_size += sndout;
 				if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 				    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
@@ -12468,7 +12454,7 @@ sctp_lower_sosend(struct socket *so,
 				sp->tail_mbuf = new_tail;
 				sp->length += sndout;
 				len += sndout;
-				SOCKBUF_UNLOCK(&so->so_snd);
+				SCTP_TCB_UNLOCK(stcb);
 			}
 			/* PR-SCTP? */
 			if ((asoc->peer_supports_prsctp) && (asoc->sent_queue_cnt_removeable > 0)) {
@@ -12511,6 +12497,7 @@ sctp_lower_sosend(struct socket *so,
 			}
 			SOCKBUF_UNLOCK(&so->so_snd);
 		}
+		SCTP_TCB_LOCK(stcb);
 		if(sp->msg_is_complete == 0) {
 			strm->last_msg_incomplete = 1;
 			asoc->stream_locked = 1;
@@ -12518,6 +12505,7 @@ sctp_lower_sosend(struct socket *so,
 		} else {
 			strm->last_msg_incomplete = 0;
 		}
+		SCTP_TCB_UNLOCK(stcb);
 	} else if (top) {
 		/*
 		 * We now have the message in a mbuf chain.
@@ -12532,8 +12520,9 @@ sctp_lower_sosend(struct socket *so,
 		error = EOPNOTSUPP;
 		goto out;
 	}
-	if (error)
+	if (error) {
 		goto out;
+	}
 
 	/* EOF thing ? */
 	if ((srcv->sinfo_flags & SCTP_EOF) &&
@@ -12686,6 +12675,7 @@ sctp_lower_sosend(struct socket *so,
 		sctp_m_freem(top);
 	if (control)
 		sctp_m_freem(control);
+
 	return (error);
 }
 
