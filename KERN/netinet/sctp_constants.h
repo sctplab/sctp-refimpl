@@ -462,6 +462,11 @@ __FBSDID("$FreeBSD:$");
 					 ((t) < SCTP_TIMER_TYPE_LAST))
 
 
+#if defined(__APPLE__)
+/* Number of ticks to run the main timer at in msec */
+#define SCTP_MAIN_TIMER_DEFAULT		10
+#endif
+
 /*
  * Number of ticks before the soxwakeup() event that is delayed is sent AFTER
  * the accept() call

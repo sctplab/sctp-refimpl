@@ -5133,7 +5133,7 @@ sctp_pcb_init()
 		LIST_INIT(&sctppcbinfo.vtag_timewait[i]);
 	}
 
-#if defined(_SCTP_NEEDS_CALLOUT_) && !defined(__APPLE__)
+#if defined(_SCTP_NEEDS_CALLOUT_) && !defined(__APPLE0__)
 	TAILQ_INIT(&sctppcbinfo.callqueue);
 #endif
 
@@ -6237,7 +6237,8 @@ sctp_initiate_iterator(inp_func inpf, asoc_func af, uint32_t pcb_state,
 #else
 	s = splnet();
 #endif
-	sctp_timer_start(SCTP_TIMER_TYPE_ITERATOR, (struct sctp_inpcb *)it, NULL, NULL);
+	sctp_timer_start(SCTP_TIMER_TYPE_ITERATOR, (struct sctp_inpcb *)it,
+			 NULL, NULL);
 	splx(s);
 	return (0);
 }
@@ -6249,7 +6250,8 @@ sctp_initiate_iterator(inp_func inpf, asoc_func af, uint32_t pcb_state,
 #ifdef _SCTP_NEEDS_CALLOUT_
 #ifndef __APPLE__
 extern int ticks;
-
+#else
+int ticks = 0;
 #endif
 
 void
@@ -6259,7 +6261,8 @@ callout_init(struct callout *c)
 }
 
 void
-     callout_reset(struct callout *c, int to_ticks, void (*ftn) (void *), void *arg){
+callout_reset(struct callout *c, int to_ticks, void (*ftn) (void *),
+	      void *arg) {
 	int s;
 
 	s = splhigh();
@@ -6276,7 +6279,7 @@ void
 	c->c_arg = arg;
 	c->c_flags |= (CALLOUT_ACTIVE | CALLOUT_PENDING);
 	c->c_func = ftn;
-#ifdef __APPLE__
+#ifdef __APPLE0__
 	c->c_time = to_ticks;	/* just store the requested timeout */
 	timeout(ftn, arg, to_ticks);
 #else
@@ -6301,7 +6304,7 @@ callout_stop(struct callout *c)
 		return (0);
 	}
 	c->c_flags &= ~(CALLOUT_ACTIVE | CALLOUT_PENDING | CALLOUT_FIRED);
-#ifdef __APPLE__
+#ifdef __APPLE0__
 	/* thread_call_cancel(c->c_call); */
 	untimeout(c->c_func, c->c_arg);
 #else
@@ -6312,7 +6315,15 @@ callout_stop(struct callout *c)
 	return (1);
 }
 
-#if !defined(__APPLE__)
+#if defined(__APPLE__)
+extern unsigned int sctp_main_timer;
+int sctp_main_timer_ticks = 0;
+
+/*
+ * For __APPLE__, use a single main timer at a faster resolution than
+ * fastim.  The timer just calls this existing callout infrastructure.
+ */
+#endif
 void
 sctp_fasttim(void)
 {
@@ -6322,6 +6333,15 @@ sctp_fasttim(void)
 	int s;
 
 	s = splhigh();
+#if defined(__APPLE__)
+	/* update our tick count */
+	ticks += sctp_main_timer_ticks;
+/*
+printf("sctp_fasttim: ticks = %u (added %u)\n", (uint32_t)ticks,
+       (uint32_t)sctp_main_timer_ticks);
+*/
+#endif
+
 	/* run through and subtract and mark all callouts */
 	c = TAILQ_FIRST(&sctppcbinfo.callqueue);
 	while (c) {
@@ -6355,8 +6375,29 @@ sctp_fasttim(void)
 			c = TAILQ_FIRST(&locallist);
 		}
 	}
+#if defined(__APPLE__)
+	/* restart the main timer */
+	sctp_start_main_timer();
+#endif
 	splx(s);
 }
 
+#if defined(__APPLE__)
+void
+sctp_start_main_timer(void) {
+	/* bound the timer (in msec) */
+	if ((int)sctp_main_timer <= 1000/hz)
+		sctp_main_timer = 1000/hz;
+	sctp_main_timer_ticks = MSEC_TO_TICKS(sctp_main_timer);
+/*  printf("start main timer: interval %d\n", sctp_main_timer_ticks); */
+	timeout(sctp_fasttim, NULL, sctp_main_timer_ticks);
+}
+
+void
+sctp_stop_main_timer(void) {
+printf("stop main timer\n");
+	untimeout(sctp_fasttim, NULL);
+}
 #endif
+
 #endif				/* _SCTP_NEEDS_CALLOUT_ */

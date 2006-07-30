@@ -447,9 +447,8 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 	struct sctp_tcb;
 	struct sctphdr;
 
-#if defined(__OpenBSD__)
+#if defined(__OpenBSD__) || defined(__APPLE__)
 	void sctp_fasttim(void);
-
 #endif
 
 #if defined(__FreeBSD__) || defined(__APPLE__)
