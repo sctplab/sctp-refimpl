@@ -139,7 +139,6 @@ __FBSDID("$FreeBSD:$");
 
 #ifdef SCTP_DEBUG
 uint32_t sctp_debug_on = 0;
-
 #endif				/* SCTP_DEBUG */
 
 extern int sctp_pcbtblsize;
@@ -171,6 +170,128 @@ extern int ipport_hilastauto;
 
 #endif
 
+#if defined(__FreeBSD__) && __FreeBSD_version > 500000
+
+#ifdef INVARIANTS_SCTP
+
+void
+SCTP_ASOC_CREATE_LOCK(struct sctp_inpcb *inp)
+{
+#ifdef SCTP_LOCK_LOGGING
+	sctp_log_lock(inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_CREATE);
+#endif
+	if (mtx_owned(&inp->inp_mtx)) {
+		panic("Want Create lock, own INP");
+	}
+	if (mtx_owned(&inp->inp_create_mtx))
+		panic("INP Recursive CREATE");
+	mtx_lock(&inp->inp_create_mtx);
+}
+
+
+void
+SCTP_INP_RLOCK(struct sctp_inpcb *inp)
+{
+	/* struct sctp_tcb *stcb; */
+#ifdef SCTP_LOCK_LOGGING
+	sctp_log_lock(inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_INP);
+#endif
+	/*
+	 * LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) { if
+	 * (mtx_owned(&(stcb)->tcb_mtx)) panic("I own TCB lock?"); }
+	 */
+	if (inp->sctp_socket)
+		if (mtx_owned(&(inp->sctp_socket->so_rcv.sb_mtx))) {
+			panic("own rcv socket mtx at lock of inp");
+		}
+	if (inp->sctp_socket)
+		if (mtx_owned(&(inp->sctp_socket->so_snd.sb_mtx))) {
+			panic("own snd socket mtx at lock of inp");
+		}
+	if (mtx_owned(&(inp)->inp_mtx))
+		panic("INP Recursive Lock-R");
+	mtx_lock(&(inp)->inp_mtx);
+}
+
+void
+SCTP_INP_WLOCK(struct sctp_inpcb *inp)
+{
+	SCTP_INP_RLOCK(inp);
+}
+
+void
+SCTP_TCB_LOCK(struct sctp_tcb *stcb)
+{
+#ifdef SCTP_LOCK_LOGGING
+	sctp_log_lock(stcb->sctp_ep, stcb, SCTP_LOG_LOCK_TCB);
+#endif
+	/*
+	 * if (!mtx_owned(&(stcb->sctp_ep->inp_mtx))) panic("TCB locking and
+	 * no INP lock");
+	 */
+	if (mtx_owned(&(stcb)->tcb_mtx))
+		panic("TCB Lock-recursive");
+
+	if (stcb->sctp_socket)
+		if (mtx_owned(&(stcb->sctp_socket->so_rcv.sb_mtx))) {
+			panic("own rcv socket mtx at lock of tcb");
+		}
+	if (stcb->sctp_socket)
+		if (mtx_owned(&(stcb->sctp_socket->so_snd.sb_mtx))) {
+			panic("own snd socket mtx at lock of tcb");
+		}
+	mtx_lock(&(stcb)->tcb_mtx);
+}
+
+
+void
+SCTP_INP_INFO_RLOCK()
+{
+	struct sctp_inpcb *inp;
+	struct sctp_tcb *stcb;
+
+	LIST_FOREACH(inp, &sctppcbinfo.listhead, sctp_list) {
+		if (mtx_owned(&(inp)->inp_mtx))
+			panic("info-lock and own inp lock?");
+		LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
+			if (mtx_owned(&(stcb)->tcb_mtx))
+				panic("Info lock and own a tcb lock?");
+		}
+	}
+	if (mtx_owned(&sctppcbinfo.ipi_ep_mtx))
+		panic("INP INFO Recursive Lock-R");
+	mtx_lock(&sctppcbinfo.ipi_ep_mtx);
+}
+
+void
+SCTP_INP_INFO_WLOCK()
+{
+	SCTP_INP_INFO_RLOCK();
+}
+
+
+void
+sctp_verify_no_locks(void)
+{
+	struct sctp_inpcb *inp;
+	struct sctp_tcb *stcb;
+
+	if (mtx_owned(&sctppcbinfo.ipi_ep_mtx))
+		panic("INP INFO lock is owned?");
+
+	LIST_FOREACH(inp, &sctppcbinfo.listhead, sctp_list) {
+		if (mtx_owned(&(inp)->inp_mtx))
+			panic("You own an INP lock?");
+		LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
+			if (mtx_owned(&(stcb)->tcb_mtx))
+				panic("You own a TCB lock?");
+		}
+	}
+}
+
+#endif
+#endif
+
 void
 sctp_fill_pcbinfo(struct sctp_pcbinfo *spcb)
 {
@@ -190,9 +311,7 @@ sctp_fill_pcbinfo(struct sctp_pcbinfo *spcb)
 	spcb->raddr_count = sctppcbinfo.ipi_count_raddr;
 	spcb->chk_count = sctppcbinfo.ipi_count_chunk;
 	spcb->readq_count = sctppcbinfo.ipi_count_readq;
-	spcb->stream_oque = sctppcbinfo.ipi_count_strmoq;
 	spcb->mbuf_track = sctppcbinfo.mbuf_track;
-	
 	SCTP_INP_INFO_RUNLOCK();
 }
 
@@ -1333,7 +1452,6 @@ sctp_findassoc_by_vtag(struct sockaddr *from, uint32_t vtag,
 			SCTP_INP_INFO_RUNLOCK();
 			return (NULL);
 		}
-
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		socket_lock(stcb->sctp_ep->ip_inp.inp.inp_socket, 1);
 #endif
@@ -1388,10 +1506,12 @@ sctp_findassoc_by_vtag(struct sockaddr *from, uint32_t vtag,
 				 * not him, this should only happen in rare
 				 * cases so I peg it.
 				 */
+
 				SCTP_STAT_INCR(sctps_vtagbogus);
 			}
 		}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+
 		socket_unlock(stcb->sctp_ep->ip_inp.inp.inp_socket, 1);
 #endif
 		SCTP_TCB_UNLOCK(stcb);
@@ -1696,7 +1816,6 @@ printf("findassociation_ep_asconf: zero lookup address finds stcb 0x%x\n", (uint
 	return (stcb);
 }
 
-
 extern int sctp_max_burst_default;
 
 extern unsigned int sctp_delayed_sack_time_default;
@@ -1827,6 +1946,7 @@ sctp_inpcb_alloc(struct socket *so)
 #endif				/* IPSEC */
 	SCTP_INCR_EP_COUNT();
 #if defined(__FreeBSD__) || defined(__APPLE__)
+	inp->ip_inp.inp.inp_gencnt = sctppcbinfo.ipi_gencnt_ep;
 	inp->ip_inp.inp.inp_ip_ttl = ip_defttl;
 #else
 	inp->inp_ip_ttl = ip_defttl;
@@ -2838,18 +2958,20 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 				struct sctp_stream_queue_pending *sp;
 
 				asoc->asoc.state |= SCTP_STATE_SHUTDOWN_PENDING;
-				sp = TAILQ_LAST(&((asoc->asoc.locked_on_sending)->outqueue), 
-						sctp_streamhead);
-				if(sp == NULL) {
-					printf("Error, sp is NULL, locked on sending is %x strm:%d\n",
-					       (u_int)asoc->asoc.locked_on_sending,
-					       asoc->asoc.locked_on_sending->stream_no);
-				} else {
-					if ((sp->length == 0)  && (sp-> msg_is_complete == 0)) {
-						/* Huh, the SCTP_EOF should have did a implicit
-						 * end of record!!
-						 */
-						asoc->asoc.state |= SCTP_STATE_PARTIAL_MSG_LEFT;
+				if (asoc->asoc.locked_on_sending) {
+					sp = TAILQ_LAST(&((asoc->asoc.locked_on_sending)->outqueue), 
+							sctp_streamhead);
+					if(sp == NULL) {
+						printf("Error, sp is NULL, locked on sending is %x strm:%d\n",
+						       (u_int)asoc->asoc.locked_on_sending,
+						       asoc->asoc.locked_on_sending->stream_no);
+					} else {
+						if ((sp->length == 0)  && (sp-> msg_is_complete == 0)) {
+							/* Huh, the SCTP_EOF should have did a implicit
+							 * end of record!!
+							 */
+							asoc->asoc.state |= SCTP_STATE_PARTIAL_MSG_LEFT;
+						}
 					}
 				}
 				if (TAILQ_EMPTY(&asoc->asoc.send_queue) &&
@@ -5023,9 +5145,15 @@ static char sctp_pcb_initialized = 0;
 /* sysctl */
 static int sctp_max_number_of_assoc = SCTP_MAX_NUM_OF_ASOC;
 static int sctp_scale_up_for_address = SCTP_SCALE_FOR_ADDR;
-
 #endif				/* FreeBSD || APPLE */
 
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#ifdef _KERN_LOCKS_H_
+lck_rw_t *sctp_calloutq_mtx;
+#else
+void *sctp_calloutq_mtx;
+#endif
+#endif
 
 void
 sctp_pcb_init()
@@ -5156,6 +5284,8 @@ sctp_pcb_init()
 	/* allocate the lock attribute for SCTP PCB mutexes */
 	sctppcbinfo.mtx_attr = lck_attr_alloc_init();
 	lck_attr_setdefault(sctppcbinfo.mtx_attr);
+	/* allocate the lock for the callout queue */
+	sctp_calloutq_mtx = lck_rw_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR);
 #endif				/* __APPLE__ */
 	SCTP_INP_INFO_LOCK_INIT();
 	SCTP_STATLOG_INIT_LOCK();
@@ -5166,20 +5296,23 @@ sctp_pcb_init()
 
 	/* not sure if we need all the counts */
 	sctppcbinfo.ipi_count_ep = 0;
+	sctppcbinfo.ipi_gencnt_ep = 0;
 	/* assoc/tcb zone info */
 	sctppcbinfo.ipi_count_asoc = 0;
+	sctppcbinfo.ipi_gencnt_asoc = 0;
 	/* local addrlist zone info */
 	sctppcbinfo.ipi_count_laddr = 0;
+	sctppcbinfo.ipi_gencnt_laddr = 0;
 	/* remote addrlist zone info */
 	sctppcbinfo.ipi_count_raddr = 0;
+	sctppcbinfo.ipi_gencnt_raddr = 0;
 	/* chunk info */
 	sctppcbinfo.ipi_count_chunk = 0;
+	sctppcbinfo.ipi_gencnt_chunk = 0;
 
 	/* socket queue zone info */
 	sctppcbinfo.ipi_count_readq = 0;
-
-	/* stream out queue cont */
-	sctppcbinfo.ipi_count_strmoq = 0;
+	sctppcbinfo.ipi_gencnt_readq = 0;
 
 	/* mbuf tracker */
 	sctppcbinfo.mbuf_track = 0;
@@ -5201,10 +5334,9 @@ sctp_pcb_init()
 		LIST_INIT(&sctppcbinfo.vtag_timewait[i]);
 	}
 
-#if defined(_SCTP_NEEDS_CALLOUT_) && !defined(__APPLE0__)
+#if defined(_SCTP_NEEDS_CALLOUT_)
 	TAILQ_INIT(&sctppcbinfo.callqueue);
 #endif
-
 }
 
 #ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
@@ -5212,7 +5344,7 @@ void
 sctp_pcb_finish(void)
 {
 	/* FIXME MT */
-
+	lck_rw_free(sctp_calloutq_mtx, SCTP_MTX_GRP);
 	SCTP_INP_INFO_LOCK_DESTROY();
 	SCTP_ITERATOR_LOCK_DESTROY();
 	SCTP_IPI_COUNT_DESTROY();
@@ -6316,10 +6448,10 @@ sctp_initiate_iterator(inp_func inpf, asoc_func af, uint32_t pcb_state,
  * Callout/Timer routines for OS that doesn't have them
  */
 #ifdef _SCTP_NEEDS_CALLOUT_
-#ifndef __APPLE__
-extern int ticks;
-#else
+#if defined(__APPLE__)
 int ticks = 0;
+#else
+extern int ticks;
 #endif
 
 void
@@ -6330,7 +6462,7 @@ callout_init(struct callout *c)
 
 void
 callout_reset(struct callout *c, int to_ticks, void (*ftn) (void *),
-	      void *arg) {
+    void *arg) {
 	int s;
 
 	s = splhigh();
@@ -6347,12 +6479,13 @@ callout_reset(struct callout *c, int to_ticks, void (*ftn) (void *),
 	c->c_arg = arg;
 	c->c_flags |= (CALLOUT_ACTIVE | CALLOUT_PENDING);
 	c->c_func = ftn;
-#ifdef __APPLE0__
-	c->c_time = to_ticks;	/* just store the requested timeout */
-	timeout(ftn, arg, to_ticks);
-#else
 	c->c_time = ticks + to_ticks;
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	lck_rw_lock_exclusive(sctp_calloutq_mtx);
+#endif
 	TAILQ_INSERT_TAIL(&sctppcbinfo.callqueue, c, tqe);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	lck_rw_unlock_exclusive(sctp_calloutq_mtx);
 #endif
 	splx(s);
 }
@@ -6372,13 +6505,14 @@ callout_stop(struct callout *c)
 		return (0);
 	}
 	c->c_flags &= ~(CALLOUT_ACTIVE | CALLOUT_PENDING | CALLOUT_FIRED);
-#ifdef __APPLE0__
-	/* thread_call_cancel(c->c_call); */
-	untimeout(c->c_func, c->c_arg);
-#else
-	TAILQ_REMOVE(&sctppcbinfo.callqueue, c, tqe);
-	c->c_func = NULL;
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	lck_rw_lock_exclusive(sctp_calloutq_mtx);
 #endif
+	TAILQ_REMOVE(&sctppcbinfo.callqueue, c, tqe);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	lck_rw_unlock_exclusive(sctp_calloutq_mtx);
+#endif
+	c->c_func = NULL;
 	splx(s);
 	return (1);
 }
@@ -6410,6 +6544,9 @@ printf("sctp_fasttim: ticks = %u (added %u)\n", (uint32_t)ticks,
 */
 #endif
 
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	lck_rw_lock_exclusive(sctp_calloutq_mtx);
+#endif
 	/* run through and subtract and mark all callouts */
 	c = TAILQ_FIRST(&sctppcbinfo.callqueue);
 	while (c) {
@@ -6437,12 +6574,21 @@ printf("sctp_fasttim: ticks = %u (added %u)\n", (uint32_t)ticks,
 			if (c->c_flags & CALLOUT_FIRED) {
 				c->c_flags &= ~CALLOUT_PENDING;
 				splx(s);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+				lck_rw_unlock_exclusive(sctp_calloutq_mtx);
+#endif
 				(*c->c_func) (c->c_arg);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+				lck_rw_lock_exclusive(sctp_calloutq_mtx);
+#endif
 				s = splhigh();
 			}
 			c = TAILQ_FIRST(&locallist);
 		}
 	}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	lck_rw_unlock_exclusive(sctp_calloutq_mtx);
+#endif
 #if defined(__APPLE__)
 	/* restart the main timer */
 	sctp_start_main_timer();
