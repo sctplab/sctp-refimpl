@@ -397,7 +397,6 @@ struct sctp_inpcb {
 	struct sctpasochead sctp_asoc_list;
 	struct sctp_iterator *inp_starting_point_for_iterator;
 	uint32_t sctp_frag_point;
-
 	uint32_t partial_delivery_point;
 	uint32_t sctp_context;
 	struct sctp_sndrcvinfo def_send;

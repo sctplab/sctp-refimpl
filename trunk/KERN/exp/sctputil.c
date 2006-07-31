@@ -3385,7 +3385,7 @@ sctp_report_all_outbound(struct sctp_tcb *stcb)
 	struct sctp_association *asoc;
 	struct sctp_stream_out *outs;
 	struct sctp_tmit_chunk *chk;
-	struct sctp_stream_queue_pending *sp;
+	struct sctp_stream_queue_pending *sp,*spl;
 	asoc = &stcb->asoc;
 
 	if((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
@@ -3397,8 +3397,21 @@ sctp_report_all_outbound(struct sctp_tcb *stcb)
 
 	TAILQ_FOREACH(outs, &asoc->out_wheel, next_spoke) {
 		/* now clean up any chunks here */
+		if(stcb->asoc.locked_on_sending &&
+		   (outs == stcb->asoc.locked_on_sending)) {
+			spl = TAILQ_LAST(&outs->outqueue, sctp_streamhead);
+		} else {
+			spl = NULL;
+		}
 		sp = TAILQ_FIRST(&outs->outqueue);
 		while (sp) {
+			if (sp == spl) 
+				/* If they are equal its the
+				 * last on the stuck outbound.
+				 * Need to leave it on the queue for
+				 * now.
+				 */
+				break;
 			stcb->asoc.stream_queue_cnt--;
 			TAILQ_REMOVE(&outs->outqueue, sp, next);
 			sctp_free_spbufspace(stcb, asoc, sp);
@@ -3417,6 +3430,7 @@ sctp_report_all_outbound(struct sctp_tcb *stcb)
 			sp = TAILQ_FIRST(&outs->outqueue);
 		}
 	}
+
 	/* pending send queue SHOULD be empty */
 	if (!TAILQ_EMPTY(&asoc->send_queue)) {
 		chk = TAILQ_FIRST(&asoc->send_queue);
@@ -4299,7 +4313,8 @@ sctp_sorecvmsg(struct socket *so,
 	int out_flags = 0, in_flags;
 	int block_allowed = 1;
 	int freed_so_far = 0;
-	int s;
+	int copied_so_far = 0;
+	int s,in_eeor_mode=0;
 
 	if (msg_flags) {
 		in_flags = *msg_flags;
@@ -4332,6 +4347,7 @@ sctp_sorecvmsg(struct socket *so,
 #else
 	s = splnet();
 #endif
+	in_eeor_mode = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXPLICIT_EOR);
 	SOCKBUF_LOCK(&so->so_rcv);
 
 restart:
@@ -4400,9 +4416,11 @@ restart:
 		 * into the our held count, and its time to sleep again.
 		 */
 		control->held_length += so->so_rcv.sb_cc;
+		so->so_rcv.sb_cc = 0;
 		goto restart;
 	} else if (control->length == 0) {
 		control->held_length += so->so_rcv.sb_cc;
+		so->so_rcv.sb_cc = 0;
 		goto restart;
 	}
 found_one:
@@ -4410,7 +4428,6 @@ found_one:
 	 * If we reach here, control has a some data for us to read off.
 	 * Note that stcb COULD be NULL.
 	 */
-
 	stcb = control->stcb;
 	if (stcb) {
 		stcb = control->stcb;
@@ -4566,6 +4583,7 @@ get_more_data:
 				if (in_flags & MSG_PEEK) {
 					/* just looking */
 					m = m->m_next;
+					copied_so_far += cp_len;
 				} else {
 					/* dispose of the mbuf */
 #ifdef SCTP_SB_LOGGING
@@ -4584,6 +4602,7 @@ get_more_data:
 						cp_len = control->length;
 #endif
 					}
+					copied_so_far += cp_len;
 					freed_so_far += cp_len;
 					control->length -= cp_len;
 					control->data = m_free(m);
@@ -4618,6 +4637,7 @@ get_more_data:
 					if (stcb) {
 						stcb->asoc.sb_cc = sctp_sbspace_sub(stcb->asoc.sb_cc, (uint32_t) cp_len);
 					}
+					copied_so_far += cp_len;
 					freed_so_far += cp_len;
 #ifdef SCTP_SB_LOGGING
 					sctp_sblog(&so->so_rcv, stcb,
@@ -4631,13 +4651,16 @@ get_more_data:
 #endif
 					}
 					control->length -= cp_len;
+				} else {
+					copied_so_far += cp_len;
 				}
 			}
 			if ((out_flags & MSG_EOR) ||
-			    (uio->uio_resid == 0)) {
+			    (uio->uio_resid == 0)
+				) {
 				break;
 			}
-		}
+		} /* end while(m) */
 		/*
 		 * At this point we have looked at it all and we either have
 		 * a MSG_EOR/or read all the user wants... <OR>
@@ -4684,8 +4707,9 @@ get_more_data:
 			}
 			goto release;
 		}
-		if (uio->uio_resid == 0) {
-			/* got all we can */
+		if ((uio->uio_resid == 0) ||
+		    ((in_eeor_mode) && (copied_so_far >= so->so_rcv.sb_lowat))
+			) {
 			if ((stcb) && (in_flags & MSG_PEEK) == 0) {
 				if (sctp_user_rcvd(stcb, &freed_so_far)) {
 					stcb = NULL;
@@ -4927,7 +4951,6 @@ get_more_data2:
 		}
 	}
 release:
-
 	if (msg_flags)
 		*msg_flags |= out_flags;
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
