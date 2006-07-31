@@ -6929,23 +6929,25 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		}
 		/* Pull off the data */
 		m_adj(sp->data, to_move);
-		/* Now lets work our way down and compact it */
-		m = sp->data;
-		while(m->m_len == 0) {
-			sp->data = m->m_next;
+		/* Now lets work our way down and compact it 
+		 * we leave the first mbuf, since it will
+		 * be a m_pkthdr, we hope :-)
+		 */
+		m = sp->data->m_next;
+		while(m && (m->m_len == 0)) {
+			sp->data->m_next = m->m_next;
 			m->m_next = NULL;
-			m_free(m);
-			if(sp->data == sp->tail_mbuf) {
-				/* stop if we get to last mbuf */
-				break;
+			if(sp->tail_mbuf == m) {
+				/* freeing tail */
+				sp->tail_mbuf = sp->data;
 			}
-			m = sp->data;
-		}
-		if((sp->data == sp->tail_mbuf) &&
-		   (sp->data->m_len == 0)){
-			/* should have hit the top case */
-			m_free(sp->data);
-			sp->data = sp->tail_mbuf = NULL;
+			m_free(m);
+			m = sp->data->m_next;
+/* invarients */
+			if ((sp->tail_mbuf == sp->data) && m) {
+				panic("Huh, tail is head but there is a next?");
+			}
+/*************/
 		}
 	}
 	if(to_move > sp->length) {
@@ -7031,10 +7033,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		SCTP_DECR_STRMOQ_COUNT();
 		/* we can't be locked to it */
 		*locked = 0;		
-		if (TAILQ_EMPTY(&strq->outqueue) &&
-		    (stcb->asoc.locked_on_sending == strq)){
-			panic("Huh, no more SP's and I am locked?");
-		}
+		stcb->asoc.locked_on_sending = NULL;
 	} else {
 		/* more to go, we are locked */
 		*locked = 1;
@@ -11669,7 +11668,7 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header)
 }
 
 static struct mbuf *
-sctp_copy_resume(struct sctp_stream_queue_pending *ret, 
+sctp_copy_resume(struct sctp_stream_queue_pending *sp, 
 		 struct uio *uio,
 		 struct sctp_sndrcvinfo *srcv,
 		 int max_send_len, 
@@ -11678,13 +11677,15 @@ sctp_copy_resume(struct sctp_stream_queue_pending *ret,
 		 uint32_t *sndout,
 		 struct mbuf **new_tail)
 {
-	int left, cancpy, willcpy;
+	int left, cancpy, willcpy, need_hdr=0;
 	struct mbuf *m,*prev, *head;
 
         left = min(uio->uio_resid, max_send_len);
 	/* will this be the EOR? */
-
-	head = sctp_get_mbuf_for_msg(left, 0);
+	if (sp->data == NULL) {
+		need_hdr = 1;
+	}
+	head = sctp_get_mbuf_for_msg(left, need_hdr);
 	cancpy = M_TRAILINGSPACE(head);
 	willcpy = min(cancpy, left);
 	*error = uiomove(mtod(head, caddr_t), willcpy, uio);
@@ -11726,9 +11727,9 @@ sctp_copy_resume(struct sctp_stream_queue_pending *ret,
 	    ((user_marks_eor == 0) || 
 	     (user_marks_eor && (srcv->sinfo_flags & SCTP_EOR)))
 	   ){
-		ret->msg_is_complete = 1;
+		sp->msg_is_complete = 1;
 	} else {
-		ret->msg_is_complete = 0;
+		sp->msg_is_complete = 0;
 	}
 	return(head);
 }
@@ -12539,6 +12540,10 @@ sctp_lower_sosend(struct socket *so,
 				}
 				sp->length += sndout;
 				len += sndout;
+				if(sp->data->m_flags & M_PKTHDR) {
+					/* update length */
+					sp->data->m_pkthdr.len = sp->length;
+				}
 			}
 			if(uio->uio_resid == 0) {
 				/* got it all? */

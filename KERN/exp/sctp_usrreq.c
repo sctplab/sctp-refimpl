@@ -5216,6 +5216,8 @@ sctp_listen(struct socket *so, struct proc *p)
 	return (error);
 }
 
+static int sctp_defered_wakeup_cnt = 0;
+
 int
 #if defined(__FreeBSD__) || defined(__APPLE__)
 sctp_accept(struct socket *so, struct sockaddr **addr)
@@ -5325,18 +5327,27 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 		inp->sctp_flags &= ~SCTP_PCB_FLAGS_DONT_WAKE;
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_WAKEOUTPUT) {
 			inp->sctp_flags &= ~SCTP_PCB_FLAGS_WAKEOUTPUT;
+			SOCKBUF_LOCK(&inp->sctp_socket->so_snd);
 #if defined(__NetBSD__)
 			if (sowritable(inp->sctp_socket))
 				sowwakeup(inp->sctp_socket);
 #else
-			if (sowriteable(inp->sctp_socket))
-				sowwakeup(inp->sctp_socket);
+			if (sowriteable(inp->sctp_socket)) {
+				sowwakeup_locked(inp->sctp_socket);
+			} else {
+				SOCKBUF_UNLOCK(&inp->sctp_socket->so_snd);
+			}
 #endif
 		}
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_WAKEINPUT) {
 			inp->sctp_flags &= ~SCTP_PCB_FLAGS_WAKEINPUT;
-			if (soreadable(inp->sctp_socket))
-				sorwakeup(inp->sctp_socket);
+			SOCKBUF_LOCK(&inp->sctp_socket->so_rcv);
+			if (soreadable(inp->sctp_socket)) {
+				sctp_defered_wakeup_cnt++;
+				sorwakeup_locked(inp->sctp_socket);
+			} else {
+				SOCKBUF_UNLOCK(&inp->sctp_socket->so_rcv);
+			}
 		}
 	}
 	splx(s);
