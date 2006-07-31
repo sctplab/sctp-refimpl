@@ -1150,7 +1150,6 @@ sctp_disconnect(struct socket *so)
 			SCTP_INP_RUNLOCK(inp);
 			return (0);
 		} else {
-			int some_on_streamwheel = 0;
 			struct sctp_association *asoc;
 			struct sctp_tcb *stcb;
 
@@ -1162,6 +1161,12 @@ sctp_disconnect(struct socket *so)
 			}
 			SCTP_TCB_LOCK(stcb);
 			asoc = &stcb->asoc;
+			if(stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+				/* We are about to be freed, out of here */
+				SCTP_TCB_UNLOCK(stcb);
+				SCTP_INP_RUNLOCK(inp);
+				return (0);
+			}
 			if (((so->so_options & SO_LINGER) &&
 			    (so->so_linger == 0)) ||
 			    (so->so_rcv.sb_cc > 0)) {
@@ -1192,22 +1197,13 @@ sctp_disconnect(struct socket *so)
 				splx(s);
 				return (0);
 			}
-			if (!TAILQ_EMPTY(&asoc->out_wheel)) {
-				/* Check to see if some data queued */
-				struct sctp_stream_out *outs;
-
-				TAILQ_FOREACH(outs, &asoc->out_wheel,
-				    next_spoke) {
-					if (!TAILQ_EMPTY(&outs->outqueue)) {
-						some_on_streamwheel = 1;
-						break;
-					}
-				}
-			}
 			if (TAILQ_EMPTY(&asoc->send_queue) &&
 			    TAILQ_EMPTY(&asoc->sent_queue) &&
-			    (some_on_streamwheel == 0)) {
+			    (asoc->stream_queue_cnt == 0)) {
 				/* there is nothing queued to send, so done */
+				if (asoc->locked_on_sending) {
+					goto abort_anyway;
+				}
 				if ((SCTP_GET_STATE(asoc) !=
 				    SCTP_STATE_SHUTDOWN_SENT) &&
 				    (SCTP_GET_STATE(asoc) !=
@@ -1244,6 +1240,47 @@ sctp_disconnect(struct socket *so)
 				 * and move to SHUTDOWN-PENDING
 				 */
 				asoc->state |= SCTP_STATE_SHUTDOWN_PENDING;
+				if (asoc->locked_on_sending) {
+					/* Locked to send out the data */
+					struct sctp_stream_queue_pending *sp;
+					sp = TAILQ_LAST(&asoc->locked_on_sending->outqueue, sctp_streamhead);
+					if(sp == NULL) {
+						printf("Error, sp is NULL, locked on sending is %x strm:%d\n",
+						       (u_int)asoc->locked_on_sending,
+						       asoc->locked_on_sending->stream_no);
+					} else {
+						if ((sp->length == 0)  && (sp-> msg_is_complete == 0)) {
+							asoc->state |= SCTP_STATE_PARTIAL_MSG_LEFT;
+						}
+					}
+				}
+				if (TAILQ_EMPTY(&asoc->send_queue) &&
+				    TAILQ_EMPTY(&asoc->sent_queue) &&
+				    (asoc->state & SCTP_STATE_PARTIAL_MSG_LEFT)){
+					struct mbuf *op_err;
+				abort_anyway:
+					MGET(op_err, M_DONTWAIT, MT_DATA);
+					if (op_err) {
+						/* Fill in the user initiated abort */
+						struct sctp_paramhdr *ph;
+						uint32_t *ippp;
+
+						op_err->m_len =
+							sizeof(struct sctp_paramhdr) + sizeof(*ippp);
+						ph = mtod(op_err,
+							  struct sctp_paramhdr *);
+						ph->param_type = htons(
+							SCTP_CAUSE_USER_INITIATED_ABT);
+						ph->param_length = htons(op_err->m_len);
+						ippp = (uint32_t *) (ph + 1);
+						*ippp = htonl(0x30000007);
+					}
+					sctp_send_abort_tcb(stcb, op_err);
+					SCTP_INP_RUNLOCK(inp);
+					sctp_free_assoc(inp, stcb, 0);
+					splx(s);
+					return (0);
+				}
 			}
 			SCTP_TCB_UNLOCK(stcb);
 			SCTP_INP_RUNLOCK(inp);
@@ -1294,7 +1331,6 @@ sctp_shutdown(struct socket *so)
 	 * or SHUT_RDWR. This means we put the shutdown flag against it.
 	 */
 	{
-		int some_on_streamwheel = 0;
 		struct sctp_tcb *stcb;
 		struct sctp_association *asoc;
 
@@ -1312,21 +1348,12 @@ sctp_shutdown(struct socket *so)
 		}
 		SCTP_TCB_LOCK(stcb);
 		asoc = &stcb->asoc;
-
-		if (!TAILQ_EMPTY(&asoc->out_wheel)) {
-			/* Check to see if some data queued */
-			struct sctp_stream_out *outs;
-
-			TAILQ_FOREACH(outs, &asoc->out_wheel, next_spoke) {
-				if (!TAILQ_EMPTY(&outs->outqueue)) {
-					some_on_streamwheel = 1;
-					break;
-				}
-			}
-		}
 		if (TAILQ_EMPTY(&asoc->send_queue) &&
 		    TAILQ_EMPTY(&asoc->sent_queue) &&
-		    (some_on_streamwheel == 0)) {
+		    (asoc->stream_queue_cnt == 0)) {
+			if (asoc->locked_on_sending) {
+				goto abort_anyway;
+			}
 			/* there is nothing queued to send, so I'm done... */
 			if (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_SENT) {
 				/* only send SHUTDOWN the first time through */
@@ -1355,9 +1382,50 @@ sctp_shutdown(struct socket *so)
 			 * SHUTDOWN_PENDING
 			 */
 			asoc->state |= SCTP_STATE_SHUTDOWN_PENDING;
+			if (asoc->locked_on_sending) {
+				/* Locked to send out the data */
+				struct sctp_stream_queue_pending *sp;
+				sp = TAILQ_LAST(&asoc->locked_on_sending->outqueue, sctp_streamhead);
+				if(sp == NULL) {
+					printf("Error, sp is NULL, locked on sending is %x strm:%d\n",
+					       (u_int)asoc->locked_on_sending,
+					       asoc->locked_on_sending->stream_no);
+				} else {
+					if ((sp->length == 0)  && (sp-> msg_is_complete == 0)) {
+						asoc->state |= SCTP_STATE_PARTIAL_MSG_LEFT;
+					}
+				}
+			}
+			if(TAILQ_EMPTY(&asoc->send_queue) &&
+			    TAILQ_EMPTY(&asoc->sent_queue) &&
+			    (asoc->state & SCTP_STATE_PARTIAL_MSG_LEFT)) {
+				struct mbuf *op_err;
+			abort_anyway:
+				MGET(op_err, M_DONTWAIT, MT_DATA);
+				if (op_err) {
+					/* Fill in the user initiated abort */
+					struct sctp_paramhdr *ph;
+					uint32_t *ippp;
+
+					op_err->m_len =
+						sizeof(struct sctp_paramhdr) + sizeof(*ippp);
+					ph = mtod(op_err,
+						  struct sctp_paramhdr *);
+					ph->param_type = htons(
+						SCTP_CAUSE_USER_INITIATED_ABT);
+					ph->param_length = htons(op_err->m_len);
+					ippp = (uint32_t *) (ph + 1);
+					*ippp = htonl(0x30000008);
+				}
+				sctp_abort_an_association(stcb->sctp_ep, stcb,
+							  SCTP_RESPONSE_TO_USER_REQ,
+							  op_err);
+				goto skip_unlock;
+			}
 		}
 		SCTP_TCB_UNLOCK(stcb);
 	}
+ skip_unlock:
 	SCTP_INP_RUNLOCK(inp);
 	splx(s);
 	return 0;
@@ -1925,6 +1993,7 @@ sctp_optsget(struct socket *so,
 	switch (opt) {
 	case SCTP_NODELAY:
 	case SCTP_AUTOCLOSE:
+	case SCTP_EXPLICIT_EOR:
 	case SCTP_AUTO_ASCONF:
 	case SCTP_DISABLE_FRAGMENTS:
 	case SCTP_I_WANT_MAPPED_V4_ADDR:
@@ -1944,6 +2013,9 @@ sctp_optsget(struct socket *so,
 			break;
 		case SCTP_AUTO_ASCONF:
 			optval = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_AUTO_ASCONF);
+			break;
+		case SCTP_EXPLICIT_EOR:
+			optval = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXPLICIT_EOR);
 			break;
 		case SCTP_NODELAY:
 			optval = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_NODELAY);
@@ -3384,6 +3456,7 @@ sctp_optsset(struct socket *so,
 	case SCTP_NODELAY:
 	case SCTP_AUTOCLOSE:
 	case SCTP_AUTO_ASCONF:
+	case SCTP_EXPLICIT_EOR:
 	case SCTP_DISABLE_FRAGMENTS:
 	case SCTP_USE_EXT_RCVINFO:
 	case SCTP_I_WANT_MAPPED_V4_ADDR:
@@ -3402,6 +3475,9 @@ sctp_optsset(struct socket *so,
 			break;
 		case SCTP_AUTO_ASCONF:
 			set_opt = SCTP_PCB_FLAGS_AUTO_ASCONF;
+			break;
+		case SCTP_EXPLICIT_EOR:
+			set_opt = SCTP_PCB_FLAGS_EXPLICIT_EOR;
 			break;
 		case SCTP_USE_EXT_RCVINFO:			
 			set_opt = SCTP_PCB_FLAGS_EXT_RCVINFO;

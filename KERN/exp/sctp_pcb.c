@@ -2717,6 +2717,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 #endif
 		SOCK_LOCK(so);
 	}
+	inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_GONE;
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
 		/* been here before */
 		splx(s);
@@ -2781,14 +2782,17 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 				if (op_err) {
 					/* Fill in the user initiated abort */
 					struct sctp_paramhdr *ph;
+					uint32_t *ippp;
 
 					op_err->m_len =
-					    sizeof(struct sctp_paramhdr);
+					    sizeof(struct sctp_paramhdr) + sizeof(*ippp);
 					ph = mtod(op_err,
 					    struct sctp_paramhdr *);
 					ph->param_type = htons(
 					    SCTP_CAUSE_USER_INITIATED_ABT);
 					ph->param_length = htons(op_err->m_len);
+					ippp = (uint32_t *) (ph + 1);
+					*ippp = htonl(0x30000004);
 				}
 				if (locked_so) {
 					SOCK_UNLOCK(so);
@@ -2803,7 +2807,12 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 				}
 				continue;
 			} else if (TAILQ_EMPTY(&asoc->asoc.send_queue) &&
-			    TAILQ_EMPTY(&asoc->asoc.sent_queue)) {
+			           TAILQ_EMPTY(&asoc->asoc.sent_queue) &&
+				   (asoc->asoc.stream_queue_cnt == 0)
+				) {
+				if (asoc->asoc.locked_on_sending) {
+					goto abort_anyway;
+				}
 				if ((SCTP_GET_STATE(&asoc->asoc) != SCTP_STATE_SHUTDOWN_SENT) &&
 				    (SCTP_GET_STATE(&asoc->asoc) != SCTP_STATE_SHUTDOWN_ACK_SENT)) {
 					/*
@@ -2823,22 +2832,65 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 					if (locked_so) {
 						SOCK_LOCK(so);
 					}
-				}
+				} 
 			} else {
 				/* mark into shutdown pending */
+				struct sctp_stream_queue_pending *sp;
+
 				asoc->asoc.state |= SCTP_STATE_SHUTDOWN_PENDING;
+				sp = TAILQ_LAST(&((asoc->asoc.locked_on_sending)->outqueue), 
+						sctp_streamhead);
+				if(sp == NULL) {
+					printf("Error, sp is NULL, locked on sending is %x strm:%d\n",
+					       (u_int)asoc->asoc.locked_on_sending,
+					       asoc->asoc.locked_on_sending->stream_no);
+				} else {
+					if ((sp->length == 0)  && (sp-> msg_is_complete == 0)) {
+						/* Huh, the SCTP_EOF should have did a implicit
+						 * end of record!!
+						 */
+						asoc->asoc.state |= SCTP_STATE_PARTIAL_MSG_LEFT;
+					}
+				}
+				if (TAILQ_EMPTY(&asoc->asoc.send_queue) &&
+				    TAILQ_EMPTY(&asoc->asoc.sent_queue) &&
+				    (asoc->asoc.state & SCTP_STATE_PARTIAL_MSG_LEFT)) {
+					struct mbuf *op_err;
+				abort_anyway:
+					MGET(op_err, M_DONTWAIT, MT_DATA);
+					if (op_err) {
+						/* Fill in the user initiated abort */
+						struct sctp_paramhdr *ph;
+						uint32_t *ippp;
+						op_err->m_len =
+							(sizeof(struct sctp_paramhdr) +
+							 sizeof(*ippp));
+						ph = mtod(op_err,
+							  struct sctp_paramhdr *);
+						ph->param_type = htons(
+							SCTP_CAUSE_USER_INITIATED_ABT);
+						ph->param_length = htons(op_err->m_len);
+						ippp = (uint32_t *) (ph + 1);
+						*ippp = htonl(0x30000005);
+					}
+					if (locked_so) {
+						SOCK_UNLOCK(so);
+					}
+					sctp_send_abort_tcb(asoc, op_err);
+					SCTP_INP_WUNLOCK(inp);
+					sctp_free_assoc(inp, asoc, 1);
+					SCTP_INP_WLOCK(inp);
+					if (locked_so) {
+						SOCK_LOCK(so);
+					}
+					continue;
+				}
 			}
 			SCTP_TCB_UNLOCK(asoc);
 			cnt_in_sd++;
 		}
 		/* now is there some left in our SHUTDOWN state? */
 		if (cnt_in_sd) {
-			inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_GONE;
-			/*
-			 * Now the question comes as to if this EP was ever
-			 * bound at all. If it was, then we must pull it out
-			 * of the EP hash list.
-			 */
 			if ((inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) !=
 			    SCTP_PCB_FLAGS_UNBOUND) {
 				/*
@@ -2853,6 +2905,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 				 * prevent us from doing this again.
 				 */
 				LIST_REMOVE(inp, sctp_hash);
+				inp->sctp_flags |= SCTP_PCB_FLAGS_UNBOUND;
 			}
 			splx(s);
 			SCTP_INP_WUNLOCK(inp);
@@ -2863,27 +2916,20 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 			return;
 		}
 	}
-	if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
+	if ((inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) !=
+	    SCTP_PCB_FLAGS_UNBOUND) {
 		/*
-		 * Now the question comes as to if this EP was ever bound at
-		 * all. If it was, then we must pull it out of the EP hash
-		 * list.
+		 * ok, this guy has been bound. It's port is
+		 * somewhere in the sctppcbinfo hash table. Remove
+		 * it!
 		 */
-		if ((inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) !=
-		    SCTP_PCB_FLAGS_UNBOUND) {
-			/*
-			 * ok, this guy has been bound. It's port is
-			 * somewhere in the sctppcbinfo hash table. Remove
-			 * it!
-			 */
-			LIST_REMOVE(inp, sctp_hash);
-		}
+		LIST_REMOVE(inp, sctp_hash);
+		inp->sctp_flags |= SCTP_PCB_FLAGS_UNBOUND;
 	}
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
 	if (inp->refcount) {
 		callout_stop(&inp->sctp_ep.signature_change.timer);
 		sctp_timer_start(SCTP_TIMER_TYPE_INPKILL, inp, NULL, NULL);
-		inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_GONE;
 		SCTP_INP_WUNLOCK(inp);
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		if (locked_so) {
@@ -2932,17 +2978,21 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		SCTP_TCB_LOCK(asoc);
 		if (SCTP_GET_STATE(&asoc->asoc) != SCTP_STATE_COOKIE_WAIT) {
 			struct mbuf *op_err;
-
+			uint32_t *ippp;
 			MGET(op_err, M_DONTWAIT, MT_DATA);
 			if (op_err) {
 				/* Fill in the user initiated abort */
 				struct sctp_paramhdr *ph;
 
-				op_err->m_len = sizeof(struct sctp_paramhdr);
+				op_err->m_len = (sizeof(struct sctp_paramhdr) +
+						 sizeof(*ippp));
 				ph = mtod(op_err, struct sctp_paramhdr *);
 				ph->param_type = htons(
 				    SCTP_CAUSE_USER_INITIATED_ABT);
 				ph->param_length = htons(op_err->m_len);
+				ippp = (uint32_t *) (ph + 1);
+				*ippp = htonl(0x30000006);
+
 			}
 			sctp_send_abort_tcb(asoc, op_err);
 		}
@@ -4146,6 +4196,22 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	if ((from_inpcbfree == 0) && so) {
 		SOCKBUF_UNLOCK(&so->so_rcv);
 	}
+	/* When I reach here, no others want
+	 * to kill the assoc yet.. and I own
+	 * the lock. Now its possible an abort
+	 * comes in when I do the lock exchange
+	 * below to grab all the locks to do
+	 * the final take out. to prevent this
+	 * we increment the count, which will
+	 * start a timer and blow out above thus
+	 * assuring us that we hold exclusive
+	 * killing of the asoc. Note that
+	 * after getting back the TCB lock
+	 * we will go ahead and increment the
+	 * counter back up and stop any timer
+	 * a passing stranger may have started :-S
+	 */
+	atomic_add_16(&stcb->asoc.refcnt, 1);
 	SCTP_TCB_UNLOCK(stcb);
 
 #if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
@@ -4166,6 +4232,10 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	SCTP_INP_INFO_WLOCK();
 	SCTP_INP_WLOCK(inp);
 	SCTP_TCB_LOCK(stcb);
+	/* Stop any timer someone may have started */
+	callout_stop(&asoc->strreset_timer.timer);	
+	/* re-increment the lock */
+	atomic_add_16(&stcb->asoc.refcnt, -1);
 	
 	sctp_iterator_asoc_being_freed(inp, stcb);
 

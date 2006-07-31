@@ -3742,7 +3742,6 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	uint8_t wake_him = 0;
 	unsigned int sack_length;
 	uint32_t send_s;
-	int some_on_streamwheel;
 	long j;
 	int accum_moved = 0;
 	int will_exit_fast_recovery = 0;
@@ -4483,18 +4482,6 @@ skip_cwnd_update:
 	/**********************************/
 	/* Now what about shutdown issues */
 	/**********************************/
-	some_on_streamwheel = 0;
-	if (!TAILQ_EMPTY(&asoc->out_wheel)) {
-		/* Check to see if some data queued */
-		struct sctp_stream_out *outs;
-
-		TAILQ_FOREACH(outs, &asoc->out_wheel, next_spoke) {
-			if (!TAILQ_EMPTY(&outs->outqueue)) {
-				some_on_streamwheel = 1;
-				break;
-			}
-		}
-	}
 	if (TAILQ_EMPTY(&asoc->sent_queue)) {
 		/* nothing left in-flight */
 		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
@@ -4514,7 +4501,7 @@ skip_cwnd_update:
 		asoc->total_flight_count = 0;
 	}
 	if (TAILQ_EMPTY(&asoc->send_queue) && TAILQ_EMPTY(&asoc->sent_queue) &&
-	    some_on_streamwheel == 0) {
+	    (asoc->stream_queue_cnt == 0)) {
 		/* nothing left on sendqueue.. consider done */
 #ifdef SCTP_LOG_RWND
 		sctp_log_rwnd_set(SCTP_SET_PEER_RWND_VIA_SACK,
@@ -4536,12 +4523,34 @@ skip_cwnd_update:
 				    );
 			}
 #endif
-			sctp_send_shutdown(stcb,
-			    stcb->asoc.primary_destination);
-			sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN,
-			    stcb->sctp_ep, stcb, asoc->primary_destination);
-			sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD,
-			    stcb->sctp_ep, stcb, asoc->primary_destination);
+			if(asoc->state & SCTP_STATE_PARTIAL_MSG_LEFT) {
+				/* Need to abort here */
+				struct mbuf *oper;
+				*abort_now = 1;
+				/* XXX */
+				MGET(oper, M_DONTWAIT, MT_DATA);
+				if (oper) {
+					struct sctp_paramhdr *ph;
+					uint32_t *ippp;
+					
+					oper->m_len = sizeof(struct sctp_paramhdr) +
+						sizeof(*ippp);
+					ph = mtod(oper, struct sctp_paramhdr *);
+					ph->param_type = htons(SCTP_CAUSE_USER_INITIATED_ABT);
+					ph->param_length = htons(oper->m_len);
+					ippp = (uint32_t *) (ph + 1);
+					*ippp = htonl(0x30000003);
+				}
+				sctp_abort_an_association(stcb->sctp_ep, stcb, SCTP_RESPONSE_TO_USER_REQ, oper);
+				return;
+			} else {
+				sctp_send_shutdown(stcb,
+						   stcb->asoc.primary_destination);
+				sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN,
+						 stcb->sctp_ep, stcb, asoc->primary_destination);
+				sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD,
+						 stcb->sctp_ep, stcb, asoc->primary_destination);
+			}
 		} else if (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_RECEIVED) {
 			asoc->state = SCTP_STATE_SHUTDOWN_ACK_SENT;
 

@@ -285,6 +285,8 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 					sctp_free_remote_addr(sp->net);
 					sp->net = NULL;
 					/* Free the chunk */
+					printf("sp:%x tcb:%x weird free case\n",
+					       (u_int)sp, (u_int)stcb);
 					SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_strmoq, sp);
 					SCTP_DECR_STRMOQ_COUNT();
 					sp = TAILQ_FIRST(&outs->outqueue);
@@ -1264,6 +1266,9 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			if (asoc->state & SCTP_STATE_SHUTDOWN_PENDING) {
 				asoc->state = SCTP_STATE_OPEN |
 				    SCTP_STATE_SHUTDOWN_PENDING;
+				sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD,
+						 stcb->sctp_ep, stcb, asoc->primary_destination);
+
 			} else if ((asoc->state & SCTP_STATE_SHUTDOWN_SENT) == 0) {
 				/* if ok, move to OPEN state */
 				asoc->state = SCTP_STATE_OPEN;
@@ -1398,6 +1403,9 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		if (asoc->state & SCTP_STATE_SHUTDOWN_PENDING) {
 			asoc->state = SCTP_STATE_OPEN |
 			    SCTP_STATE_SHUTDOWN_PENDING;
+			sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD,
+					 stcb->sctp_ep, stcb, asoc->primary_destination);
+
 		} else {
 			asoc->state = SCTP_STATE_OPEN;
 		}
@@ -1491,6 +1499,9 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		if (asoc->state & SCTP_STATE_SHUTDOWN_PENDING) {
 			asoc->state = SCTP_STATE_OPEN |
 			    SCTP_STATE_SHUTDOWN_PENDING;
+			sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD,
+					 stcb->sctp_ep, stcb, asoc->primary_destination);
+
 		} else if (!(asoc->state & SCTP_STATE_SHUTDOWN_SENT)) {
 			/* move to OPEN state, if not in SHUTDOWN_SENT */
 			asoc->state = SCTP_STATE_OPEN;
@@ -1719,6 +1730,8 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 #endif
 	if (asoc->state & SCTP_STATE_SHUTDOWN_PENDING) {
 		asoc->state = SCTP_STATE_OPEN | SCTP_STATE_SHUTDOWN_PENDING;
+		sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD,
+				 stcb->sctp_ep, stcb, asoc->primary_destination);
 	} else {
 		asoc->state = SCTP_STATE_OPEN;
 	}
@@ -2289,7 +2302,10 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			    SCTP_PCB_FLAGS_DONT_WAKE);
 			inp->sctp_features = (*inp_p)->sctp_features;
 			inp->sctp_socket = so;
-
+			inp->sctp_frag_point = (*inp_p)->sctp_frag_point;
+			inp->partial_delivery_point = (*inp_p)->partial_delivery_point;
+			inp->sctp_context = (*inp_p)->sctp_context;
+			inp->inp_starting_point_for_iterator = NULL;
 			/*
 			 * copy in the authentication parameters from the
 			 * original endpoint
@@ -2357,6 +2373,9 @@ sctp_handle_cookie_ack(struct sctp_cookie_ack_chunk *cp,
 #endif
 		if (asoc->state & SCTP_STATE_SHUTDOWN_PENDING) {
 			asoc->state = SCTP_STATE_OPEN | SCTP_STATE_SHUTDOWN_PENDING;
+			sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD,
+					 stcb->sctp_ep, stcb, asoc->primary_destination);
+
 		} else {
 			asoc->state = SCTP_STATE_OPEN;
 		}
