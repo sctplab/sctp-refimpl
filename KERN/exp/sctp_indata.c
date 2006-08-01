@@ -3742,7 +3742,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	struct sctp_tmit_chunk *tp1, *tp2;
 	u_long cum_ack, last_tsn, biggest_tsn_acked, biggest_tsn_newly_acked, this_sack_lowest_newack;
 	uint16_t num_seg, num_dup;
-	uint8_t wake_him = 0;
+	uint16_t wake_him = 0;
 	unsigned int sack_length;
 	uint32_t send_s;
 	long j;
@@ -4503,8 +4503,7 @@ skip_cwnd_update:
 		asoc->total_flight = 0;
 		asoc->total_flight_count = 0;
 	}
-	if (TAILQ_EMPTY(&asoc->send_queue) && TAILQ_EMPTY(&asoc->sent_queue) &&
-	    (asoc->stream_queue_cnt == 0)) {
+	if (TAILQ_EMPTY(&asoc->send_queue) && TAILQ_EMPTY(&asoc->sent_queue)) {
 		/* nothing left on sendqueue.. consider done */
 #ifdef SCTP_LOG_RWND
 		sctp_log_rwnd_set(SCTP_SET_PEER_RWND_VIA_SACK,
@@ -4516,7 +4515,26 @@ skip_cwnd_update:
 			asoc->peers_rwnd = 0;
 		}
 		/* clean up */
-		if (asoc->state & SCTP_STATE_SHUTDOWN_PENDING) {
+		if((asoc->stream_queue_cnt == 1) &&
+		   (asoc->state & SCTP_STATE_SHUTDOWN_PENDING) &&
+		   (asoc->locked_on_sending)
+			) {
+			struct sctp_stream_queue_pending *sp;
+			/* I may be in a state where we got
+			 * all across.. but cannot write more due
+			 * to a shutdown... we abort since the
+			 * user did not indicate EOR in this case.
+			 */
+			sp = TAILQ_LAST(&((asoc->locked_on_sending)->outqueue), 
+					sctp_streamhead);
+			if ((sp) && (sp->length == 0) && (sp->msg_is_complete == 0)) {
+				asoc->state |= SCTP_STATE_PARTIAL_MSG_LEFT;
+				asoc->locked_on_sending = NULL;
+				asoc->stream_queue_cnt--;
+			}
+		}
+		if ((asoc->state & SCTP_STATE_SHUTDOWN_PENDING) &&
+		    (asoc->stream_queue_cnt == 0)){
 			asoc->state = SCTP_STATE_SHUTDOWN_SENT;
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
@@ -4554,6 +4572,7 @@ skip_cwnd_update:
 				sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD,
 						 stcb->sctp_ep, stcb, asoc->primary_destination);
 			}
+			return;
 		} else if (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_RECEIVED) {
 			asoc->state = SCTP_STATE_SHUTDOWN_ACK_SENT;
 
@@ -4562,8 +4581,8 @@ skip_cwnd_update:
 
 			sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNACK,
 			    stcb->sctp_ep, stcb, asoc->primary_destination);
+			return;
 		}
-		return;
 	}
 	/*
 	 * Now here we are going to recycle net_ack for a different use...

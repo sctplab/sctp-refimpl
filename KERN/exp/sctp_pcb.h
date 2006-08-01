@@ -573,11 +573,6 @@ struct sctp_tcb {
 	mtx_destroy(&(_inp)->inp_create_mtx)
 
 
-#ifdef INVARIANTS_SCTP
-void SCTP_INP_RLOCK(struct sctp_inpcb *);
-void SCTP_INP_WLOCK(struct sctp_inpcb *);
-
-#else
 #ifdef SCTP_LOCK_LOGGING
 #define SCTP_INP_RLOCK(_inp)	do { 					\
 	sctp_log_lock(_inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_INP);\
@@ -600,7 +595,6 @@ void SCTP_INP_WLOCK(struct sctp_inpcb *);
 } while (0)
 
 #endif
-#endif
 
 #define SCTP_INP_INCR_REF(_inp)        _inp->refcount++
 #define SCTP_INP_DECR_REF(_inp) \
@@ -611,10 +605,6 @@ void SCTP_INP_WLOCK(struct sctp_inpcb *);
 			panic("bad inp refcount");			\
 	} while (0)
 
-#ifdef INVARIANTS_SCTP
-void SCTP_ASOC_CREATE_LOCK(struct sctp_inpcb *inp);
-
-#else
 #ifdef SCTP_LOCK_LOGGING
 #define SCTP_ASOC_CREATE_LOCK(_inp) \
 	do {								\
@@ -627,7 +617,6 @@ void SCTP_ASOC_CREATE_LOCK(struct sctp_inpcb *inp);
 	do {								\
 		mtx_lock(&(_inp)->inp_create_mtx);			\
 	} while (0)
-#endif
 #endif
 
 #define SCTP_INP_RUNLOCK(_inp)		mtx_unlock(&(_inp)->inp_mtx)
@@ -647,12 +636,6 @@ void SCTP_ASOC_CREATE_LOCK(struct sctp_inpcb *inp);
 
 #define SCTP_TCB_LOCK_DESTROY(_tcb)	mtx_destroy(&(_tcb)->tcb_mtx)
 
-#ifdef INVARIANTS_SCTP
-struct sctp_tcb;
-
-void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
-
-#else
 #ifdef SCTP_LOCK_LOGGING
 #define SCTP_TCB_LOCK(_tcb)  do {					\
         sctp_log_lock(_tcb->sctp_ep, _tcb, SCTP_LOG_LOCK_TCB);          \
@@ -664,7 +647,6 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 	mtx_lock(&(_tcb)->tcb_mtx);                                     \
 } while (0)
 
-#endif
 #endif
 
 
@@ -679,7 +661,7 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 
 
 
-#ifdef INVARIANTS_SCTP
+#ifdef INVARIANTS
 #define STCB_TCB_LOCK_ASSERT(_tcb) do { \
                             if (mtx_owned(&(_tcb)->tcb_mtx) == 0) \
                                 panic("Don't own TCB lock"); \
@@ -691,7 +673,7 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #define SCTP_ITERATOR_LOCK_INIT() \
         mtx_init(&sctppcbinfo.it_mtx, "sctp-it", "iterator", MTX_DEF)
 
-#ifdef INVARIANTS_SCTP
+#ifdef INVARIANTS
 #define SCTP_ITERATOR_LOCK() \
 	do {								\
 		if (mtx_owned(&sctppcbinfo.it_mtx))			\

@@ -949,6 +949,49 @@ sctp_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 	return error;
 }
 
+#if defined(__FreeBSD__) && __FreeBSD_version > 690000
+static void
+sctp_close(struct socket *so)
+{
+	struct sctp_inpcb *inp;
+	inp = (struct sctp_inpcb *)so->so_pcb;
+	if (inp == 0)
+		return;
+
+	/* Inform all the lower layer assoc that we
+	 * are done.
+	 */
+	if((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
+		if (((so->so_options & SO_LINGER) && (so->so_linger == 0)) ||
+		    (so->so_rcv.sb_cc > 0)) {
+			sctp_inpcb_free(inp, 1);
+		} else {
+			sctp_inpcb_free(inp, 0);
+		}
+		/* The socket is now detached, no matter what
+		 * the state of the SCTP association.
+		 */
+		SOCK_LOCK(so);
+		so->so_snd.sb_cc = 0;
+		so->so_snd.sb_mb = NULL;
+		so->so_snd.sb_mbcnt = 0;
+		
+		/* same for the rcv ones, they are only
+		 * here for the accounting/select.
+		 */
+		so->so_rcv.sb_cc = 0;
+		so->so_rcv.sb_mb = NULL;
+		so->so_rcv.sb_mbcnt = 0;
+		/* Now null out the reference, we are
+		 * completely detached.
+		 */
+		so->so_pcb = NULL;
+		SOCK_UNLOCK(so);
+	}
+	return;
+}
+
+#else
 
 #if defined(__FreeBSD__) && __FreeBSD_version > 690000
 static void
@@ -1005,6 +1048,8 @@ sctp_detach(struct socket *so)
 	return(0);
 #endif
 }
+
+#endif
 
 int
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
@@ -1249,9 +1294,8 @@ sctp_disconnect(struct socket *so)
 						       (u_int)asoc->locked_on_sending,
 						       asoc->locked_on_sending->stream_no);
 					} else {
-						if ((sp->length == 0)  && (sp-> msg_is_complete == 0)) {
+						if ((sp->length == 0) && (sp->msg_is_complete == 0))
 							asoc->state |= SCTP_STATE_PARTIAL_MSG_LEFT;
-						}
 					}
 				}
 				if (TAILQ_EMPTY(&asoc->send_queue) &&
@@ -5563,7 +5607,12 @@ struct pr_usrreqs sctp_usrreqs = {
 	.pru_bind = sctp_bind,
 	.pru_connect = sctp_connect,
 	.pru_control = in_control,
+#if __FreeBSD_version >= 690000
+	.pru_close = sctp_close,
+	.pru_detach = sctp_close,
+#else
 	.pru_detach = sctp_detach,
+#endif
 	.pru_disconnect = sctp_disconnect,
 	.pru_listen = sctp_listen,
 	.pru_peeraddr = sctp_peeraddr,
