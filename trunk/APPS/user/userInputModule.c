@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.56 2006-07-30 04:07:04 tuexen Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.57 2006-08-01 15:58:06 randall Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -738,7 +738,6 @@ sctpSEND(int fd, int defStream, char *s_buff, int sndsz, struct sockaddr *to,
 	else if (to->sa_family == AF_INET6)
 		to_len = sizeof(struct sockaddr_in6);
 #endif
-/*printf("sctp_sendmsg: options = 0x%x\n", options); */
 	sz = sctp_sendmsg(fd, s_buff, sndsz, to, to_len, payload, options,
 			  defStream, time_to_live, 0);
 	if((sz <=0) && (errno != ENOBUFS)){
@@ -3288,6 +3287,7 @@ static int cmd_getpcbinfo(char *argv[], int argc)
     printf("Number of SCTP raddr's in use is %d\n",optval.raddr_count);
     printf("Number of SCTP chunks in use is %d\n",optval.chk_count);
     printf("Number of SCTP readq in use is %d\n",optval.readq_count);
+    printf("Number of SCTP str-outq in use is %d\n", optval.stream_oque);
     printf("Mbuf track:%d\n",optval.mbuf_track);
   }
   return 0;
@@ -3545,7 +3545,6 @@ cmd_getsnd(char *argv[], int argc)
 	}
 	printf("For association 0x%x\n",(uint32_t)so.ss_assoc_id);
 	printf("Total sndbuf %d\n",(int)so.ss_total_sndbuf);
-	printf("Total sndbuf mbuf %d\n",(int)so.ss_total_mbuf_sndbuf);
  	printf("Total in recvbuf %d\n",(int)so.ss_total_recv_buf);
 	return 0;
 #else
@@ -4446,7 +4445,6 @@ cmd_send(char *argv[], int argc)
     }
     ret = sctpSEND(fd, defStream, argv[0], strlen(argv[0]), SCTP_getAddr(NULL),
 		   sendOptions, payload, 0);
-    printf("Returned %d from the send\n",ret);
     return 0;
 }
 
