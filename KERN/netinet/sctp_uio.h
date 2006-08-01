@@ -160,7 +160,6 @@ struct sctp_pcbinfo {
 	uint32_t chk_count;
 	uint32_t readq_count;
 	uint32_t mbuf_track;
-	uint32_t stream_oque;
 };
 
 struct sctp_sockstat {
@@ -711,7 +710,7 @@ struct sctp_cwnd_log_req {
 };
 
 struct	sctpstat {
-	/* MIB accoring to RFC 3873 */
+	/* MIB according to RFC 3873 */
 	u_long  sctps_currestab;           /* sctpStats  1   (Gauge32) */
 	u_long  sctps_activeestab;         /* sctpStats  2 (Counter32) */
 	u_long  sctps_passiveestab;        /* sctpStats  3 (Counter32) */
