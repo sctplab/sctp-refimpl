@@ -5385,6 +5385,7 @@ sctp_pcb_finish(void)
 	SCTP_INP_INFO_LOCK_DESTROY();
 	SCTP_ITERATOR_LOCK_DESTROY();
 	SCTP_IPI_COUNT_DESTROY();
+	SCTP_STATLOG_DESTROY();
 	lck_grp_attr_free(sctppcbinfo.mtx_grp_attr);
 	lck_grp_free(sctppcbinfo.mtx_grp);
 	lck_attr_free(sctppcbinfo.mtx_attr);
