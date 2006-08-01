@@ -138,6 +138,7 @@ struct sctp_snd_all_completes {
 #define SCTP_UNORDERED 	  0x0400/* Message is un-ordered */
 #define SCTP_ADDR_OVER	  0x0800/* Override the primary-address */
 #define SCTP_SENDALL      0x1000/* Send this on all associations */
+#define SCTP_EOR          0x2000/* end of message signal */
 /* for the endpoint */
 
 /* The lower byte is an enumeration of PR-SCTP policies */
@@ -160,12 +161,12 @@ struct sctp_pcbinfo {
 	uint32_t chk_count;
 	uint32_t readq_count;
 	uint32_t mbuf_track;
+	uint32_t stream_oque;
 };
 
 struct sctp_sockstat {
 	sctp_assoc_t ss_assoc_id;
 	uint32_t ss_total_sndbuf;
-	uint32_t ss_total_mbuf_sndbuf;
 	uint32_t ss_total_recv_buf;
 };
 
@@ -666,9 +667,10 @@ struct sctp_sbwake_log {
 	uint16_t sent_q;
 	uint16_t flight;
 	uint16_t wake_cnt;
-	uint16_t stream_qcnt;	/* chnk cnt */
-	uint16_t chunks_on_oque;/* chunks out */
-
+	uint8_t stream_qcnt;	/* chnk cnt */
+	uint8_t chunks_on_oque;/* chunks out */
+	uint8_t sbflags;
+	uint8_t sctpflags;
 };
 
 struct sctp_misc_info {
@@ -710,7 +712,7 @@ struct sctp_cwnd_log_req {
 };
 
 struct	sctpstat {
-	/* MIB according to RFC 3873 */
+	/* MIB accoring to RFC 3873 */
 	u_long  sctps_currestab;           /* sctpStats  1   (Gauge32) */
 	u_long  sctps_activeestab;         /* sctpStats  2 (Counter32) */
 	u_long  sctps_passiveestab;        /* sctpStats  3 (Counter32) */
