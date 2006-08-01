@@ -459,6 +459,110 @@ main(int argc, char **argv)
 			}
 
 		} else if (log.event_type == SCTP_LOG_MISC_EVENT) {
+#ifdef __APPLE__
+			/* APPLE lock logging */
+			char *filename;
+			char *operation;
+			/*
+			 * log1 = file number
+			 * log2 = line number
+			 * log3 = lock/mutex addr,
+			 * log4 = lock/mutex operation
+			 */
+#define BEFORE_LOCK_SHARED        0x01
+#define BEFORE_LOCK_EXCLUSIVE     0x02
+#define BEFORE_TRY_LOCK_EXCLUSIVE 0x05
+#define BEFORE_LOCK_SOCKET        0x06
+
+#define AFTER_LOCK_SHARED         0x11
+#define AFTER_LOCK_EXCLUSIVE      0x12
+#define AFTER_TRY_LOCK_EXCLUSIVE  0x13
+#define AFTER_LOCK_SOCKET         0x14
+
+#define UNLOCK_SHARED             0x21
+#define UNLOCK_EXCLUSIVE          0x22
+#define UNLOCK_SOCKET             0x23
+
+			switch (log.x.misc.log1) {
+			case 1:
+				filename = "sctp_asconf.c";
+				break;
+			case 2:
+				filename = "sctp_input.c";
+				break;
+			case 3:
+				filename = "sctp_output.c";
+				break;
+			case 4:
+				filename = "sctp_pcb.c";
+				break;
+			case 5:
+				filename = "sctp_peeloff.c";
+				break;
+			case 6:
+				filename = "sctp_timer.c";
+				break;
+			case 7:
+				filename = "sctp_usrreq.c";
+				break;
+			case 8:
+				filename = "sctp_util.c";
+				break;
+			case 9:
+				filename = "sctp_usrreq6.c";
+				break;
+			default:
+				filename = "unknown file";
+				break;
+			}
+
+			switch (log.x.misc.log4) {
+			case BEFORE_LOCK_SHARED:
+				operation = "before lock shared";
+				break;
+			case BEFORE_LOCK_EXCLUSIVE:
+				operation = "before lock exclusive";
+				break;
+			case BEFORE_TRY_LOCK_EXCLUSIVE:
+				operation = "before try lock exclusive";
+				break;
+			case BEFORE_LOCK_SOCKET:
+				operation = "before lock socket";
+				break;
+
+			case AFTER_LOCK_SHARED:
+				operation = "after lock shared";
+				break;
+			case AFTER_LOCK_EXCLUSIVE:
+				operation = "after lock exclusive";
+				break;
+			case AFTER_TRY_LOCK_EXCLUSIVE:
+				operation = "after try lock exclusive";
+				break;
+			case AFTER_LOCK_SOCKET:
+				operation = "after lock socket";
+				break;
+
+			case UNLOCK_SHARED:
+				operation = "unlock shared";
+				break;
+			case UNLOCK_EXCLUSIVE:
+				operation = "unlock exclusive";
+				break;
+			case UNLOCK_SOCKET:
+				operation = "unlock socket";
+				break;
+
+			default:
+				operation = "unknown operation";
+				break;
+			}
+			printf("%s Line %u: %s, addr 0x%x\n",
+				filename,
+				log.x.misc.log2,
+				operation,
+				log.x.misc.log3);
+#else
 			if(log.from == SCTP_REASON_FOR_SC) {
 				printf("%s:%s num_out:%u reason_code:%u cwnd_full:%u sendonly1:%u\n",
 				       ts,
@@ -477,6 +581,7 @@ main(int argc, char **argv)
 				       log.x.misc.log3,
 				       log.x.misc.log4);
 			}
+#endif
 		} else if (log.event_type == SCTP_LOG_EVENT_WAKE) {
 			char *str;
 			switch(log.x.wake.sctpflags) {
