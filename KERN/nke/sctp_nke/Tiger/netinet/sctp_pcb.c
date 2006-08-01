@@ -141,6 +141,10 @@ __FBSDID("$FreeBSD:$");
 uint32_t sctp_debug_on = 0;
 #endif				/* SCTP_DEBUG */
 
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#define APPLE_FILE_NO 4
+#endif
+
 extern int sctp_pcbtblsize;
 extern int sctp_hashtblsize;
 extern int sctp_chunkscale;
@@ -493,7 +497,10 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 					/* Update the endpoint pointer */
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 					socket_unlock((*inp_p)->ip_inp.inp.inp_socket, 1);
+					TIGER_LOCK_LOG((*inp_p)->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
+					TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, BEFORE_LOCK_SOCKET);
 					socket_lock(inp->ip_inp.inp.inp_socket, 1);
+					TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, AFTER_LOCK_SOCKET);
 #endif
 					*inp_p = inp;
 					SCTP_INP_RUNLOCK(inp);
@@ -513,7 +520,10 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 					/* Update the endpoint pointer */
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 					socket_unlock((*inp_p)->ip_inp.inp.inp_socket, 1);
+					TIGER_LOCK_LOG((*inp_p)->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
+					TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, BEFORE_LOCK_SOCKET);
 					socket_lock(inp->ip_inp.inp.inp_socket, 1);
+					TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, AFTER_LOCK_SOCKET);
 #endif
 					*inp_p = inp;
 					SCTP_INP_RUNLOCK(inp);
@@ -584,8 +594,11 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	if (!lck_rw_try_lock_shared(sctppcbinfo.ipi_ep_mtx)) {
 		socket_unlock(inp->ip_inp.inp.inp_socket, 0);
+		TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 		lck_rw_lock_shared(sctppcbinfo.ipi_ep_mtx);
+		TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, BEFORE_LOCK_SOCKET);
 		socket_lock(inp->ip_inp.inp.inp_socket, 0);
+		TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, AFTER_LOCK_SOCKET);
 	}
 #endif
 	SCTP_INP_INFO_RLOCK();
@@ -819,8 +832,11 @@ sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, sctp_assoc_t asoc_id)
 	sctp_lock_assert(inp->ip_inp.inp.inp_socket);
 	if (!lck_rw_try_lock_shared(sctppcbinfo.ipi_ep_mtx)) {
 		socket_unlock(inp->ip_inp.inp.inp_socket, 0);
+		TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 		lck_rw_lock_shared(sctppcbinfo.ipi_ep_mtx);
+		TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, BEFORE_LOCK_SOCKET);
 		socket_lock(inp->ip_inp.inp.inp_socket, 0);
+		TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, AFTER_LOCK_SOCKET);
 	}
 #endif
 	SCTP_INP_INFO_RLOCK();
@@ -948,12 +964,15 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 	LIST_FOREACH(inp, head, sctp_hash) {
 		SCTP_INP_RLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, BEFORE_LOCK_SOCKET);
 		socket_lock(inp->ip_inp.inp.inp_socket, 1);
+		TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, AFTER_LOCK_SOCKET);
 #endif
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
 			SCTP_INP_RUNLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			socket_unlock(inp->ip_inp.inp.inp_socket, 1);
+			TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 #endif
 			continue;
 		}
@@ -976,6 +995,7 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 				SCTP_INP_RUNLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 				socket_unlock(inp->ip_inp.inp.inp_socket, 1);
+				TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 #endif
 				continue;
 			}
@@ -985,18 +1005,21 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 				SCTP_INP_RUNLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 				socket_unlock(inp->ip_inp.inp.inp_socket, 1);
+				TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 #endif
 				continue;
 			}
 			SCTP_INP_RUNLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			socket_unlock(inp->ip_inp.inp.inp_socket, 1);
+			TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 #endif
 			return (inp);
 		}
 		SCTP_INP_RUNLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		socket_unlock(inp->ip_inp.inp.inp_socket, 1);
+		TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 #endif
 	}
 
@@ -1021,12 +1044,15 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 	LIST_FOREACH(inp, head, sctp_hash) {
 		SCTP_INP_RLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, BEFORE_LOCK_SOCKET);
 		socket_lock(inp->ip_inp.inp.inp_socket, 1);
+		TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, AFTER_LOCK_SOCKET);
 #endif
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
 			SCTP_INP_RUNLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			socket_unlock(inp->ip_inp.inp.inp_socket, 1);
+			TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 #endif
 			continue;
 		}
@@ -1034,6 +1060,7 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 			SCTP_INP_RUNLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			socket_unlock(inp->ip_inp.inp.inp_socket, 1);
+			TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 #endif
 			continue;
 		}
@@ -1045,6 +1072,7 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 			SCTP_INP_RUNLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			socket_unlock(inp->ip_inp.inp.inp_socket, 1);
+			TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 #endif
 			continue;
 		}
@@ -1102,6 +1130,7 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 						SCTP_INP_RUNLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 						socket_unlock(inp->ip_inp.inp.inp_socket, 1);
+						TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 #endif
 						return (inp);
 					}
@@ -1120,6 +1149,7 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 						SCTP_INP_RUNLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 						socket_unlock(inp->ip_inp.inp.inp_socket, 1);
+						TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 #endif
 						return (inp);
 					}
@@ -1129,6 +1159,7 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 		SCTP_INP_RUNLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		socket_unlock(inp->ip_inp.inp.inp_socket, 1);
+		TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 #endif
 	}
 #ifdef SCTP_DEBUG
@@ -1286,9 +1317,13 @@ sctp_findassociation_addr_sa(struct sockaddr *to, struct sockaddr *from,
 		if (retval != NULL) {
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			if (inp_p != NULL) {
+				TIGER_LOCK_LOG((*inp_p)->ip_inp.inp.inp_socket, BEFORE_LOCK_SOCKET);
 				socket_lock((*inp_p)->ip_inp.inp.inp_socket, 1);
+				TIGER_LOCK_LOG((*inp_p)->ip_inp.inp.inp_socket, AFTER_LOCK_SOCKET);
 			} else {
+				TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, BEFORE_LOCK_SOCKET);
 				socket_lock(inp->ip_inp.inp.inp_socket, 1);
+				TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, AFTER_LOCK_SOCKET);
 			}
 			lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
 #endif
@@ -1301,8 +1336,11 @@ sctp_findassociation_addr_sa(struct sockaddr *to, struct sockaddr *from,
 		*inp_p = inp;
 	}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	if (inp != NULL)
+	if (inp != NULL) {
+		TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, BEFORE_LOCK_SOCKET);
 		socket_lock(inp->ip_inp.inp.inp_socket, 1);
+		TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, AFTER_LOCK_SOCKET);
+	}
 	lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
 #endif
 	SCTP_INP_INFO_RUNLOCK();
@@ -1330,6 +1368,7 @@ sctp_findassociation_addr_sa(struct sockaddr *to, struct sockaddr *from,
 	 */
 	if ((retval == NULL) && (inp_p == NULL)) {
 		socket_unlock(inp->ip_inp.inp.inp_socket, 1);
+		TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 	}
 #endif	
 	return retval;
@@ -1507,7 +1546,10 @@ sctp_findassoc_by_vtag(struct sockaddr *from, uint32_t vtag,
 			if (skip_src_check) {
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 				socket_unlock((*inp_p)->ip_inp.inp.inp_socket, 1);
+				TIGER_LOCK_LOG((*inp_p)->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
+				TIGER_LOCK_LOG(stcb->sctp_ep->ip_inp.inp.inp_socket, BEFORE_LOCK_SOCKET);
 				socket_lock(stcb->sctp_ep->ip_inp.inp.inp_socket, 1);
+				TIGER_LOCK_LOG(stcb->sctp_ep->ip_inp.inp.inp_socket, AFTER_LOCK_SOCKET);
 				lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
 #endif
 				*netp = NULL;	/* unknown */
@@ -1522,7 +1564,9 @@ sctp_findassoc_by_vtag(struct sockaddr *from, uint32_t vtag,
 				SCTP_STAT_INCR(sctps_vtagexpress);
 				*inp_p = stcb->sctp_ep;
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+				TIGER_LOCK_LOG(stcb->sctp_ep->ip_inp.inp.inp_socket, BEFORE_LOCK_SOCKET);
 				socket_lock(stcb->sctp_ep->ip_inp.inp.inp_socket, 1);
+				TIGER_LOCK_LOG(stcb->sctp_ep->ip_inp.inp.inp_socket, AFTER_LOCK_SOCKET);
 				lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
 #endif
 				SCTP_INP_INFO_RUNLOCK();
@@ -1703,7 +1747,7 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 				}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 				socket_unlock(inp->ip_inp.inp.inp_socket, 1);
-
+				TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 #endif				return (NULL);
 			}
 #ifdef SCTP_DEBUG
@@ -2043,7 +2087,9 @@ sctp_inpcb_alloc(struct socket *so)
 		lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 		return (ENOMEM);
 	}
+	TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, BEFORE_LOCK_SOCKET);
 	socket_lock(inp->ip_inp.inp.inp_socket, 1);
+	TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, AFTER_LOCK_SOCKET);
 #endif
 	SCTP_INP_INFO_WLOCK();
 	SCTP_INP_LOCK_INIT(inp);
@@ -2161,6 +2207,7 @@ sctp_inpcb_alloc(struct socket *so)
 	sctp_insert_sharedkey(&m->shared_keys, null_key);
 #ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
 	socket_unlock(inp->ip_inp.inp.inp_socket, 1);
+	TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 #endif
 	SCTP_INP_WUNLOCK(inp);
 	return (error);
@@ -2182,10 +2229,16 @@ sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
 	sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
 	if (!lck_rw_try_lock_exclusive(sctppcbinfo.ipi_ep_mtx)) {
 		socket_unlock(old_inp->ip_inp.inp.inp_socket, 0);
+		TIGER_LOCK_LOG(old_inp->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 		socket_unlock(new_inp->ip_inp.inp.inp_socket, 0);
+		TIGER_LOCK_LOG(new_inp->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 		lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+		TIGER_LOCK_LOG(old_inp->ip_inp.inp.inp_socket, BEFORE_LOCK_SOCKET);
 		socket_lock(old_inp->ip_inp.inp.inp_socket, 0);
+		TIGER_LOCK_LOG(old_inp->ip_inp.inp.inp_socket, AFTER_LOCK_SOCKET);
+		TIGER_LOCK_LOG(new_inp->ip_inp.inp.inp_socket, BEFORE_LOCK_SOCKET);
 		socket_lock(new_inp->ip_inp.inp.inp_socket, 0);
+		TIGER_LOCK_LOG(new_inp->ip_inp.inp.inp_socket, AFTER_LOCK_SOCKET);
 	}
 #endif
 	SCTP_TCB_UNLOCK(stcb);
@@ -2493,8 +2546,11 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	if (!lck_rw_try_lock_exclusive(sctppcbinfo.ipi_ep_mtx)) {
 		socket_unlock(so, 0);
+		TIGER_LOCK_LOG(so, UNLOCK_SOCKET);
 		lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+		TIGER_LOCK_LOG(so, BEFORE_LOCK_SOCKET);
 		socket_lock(so, 0);
+		TIGER_LOCK_LOG(so, AFTER_LOCK_SOCKET);
 	}
 #endif
 	SCTP_INP_INFO_WLOCK();
@@ -3263,13 +3319,19 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	if (!lck_mtx_try_lock(sctppcbinfo.it_mtx)) {
 		socket_unlock(inp->ip_inp.inp.inp_socket, 0);
+		TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 		lck_mtx_lock(sctppcbinfo.it_mtx);
+		TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, BEFORE_LOCK_SOCKET);
 		socket_lock(inp->ip_inp.inp.inp_socket, 0);
+		TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, AFTER_LOCK_SOCKET);
 	}
 	if (!lck_rw_try_lock_exclusive(sctppcbinfo.ipi_ep_mtx)) {
 		socket_unlock(inp->ip_inp.inp.inp_socket, 0);
+		TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 		lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+		TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, BEFORE_LOCK_SOCKET);
 		socket_lock(inp->ip_inp.inp.inp_socket, 0);
+		TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, AFTER_LOCK_SOCKET);
 	}
 #endif
 	inp_save = LIST_NEXT(inp, sctp_list);
@@ -3905,8 +3967,11 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	if (!lck_rw_try_lock_exclusive(sctppcbinfo.ipi_ep_mtx)) {
 		socket_unlock(inp->ip_inp.inp.inp_socket, 0);
+		TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 		lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+		TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, BEFORE_LOCK_SOCKET);
 		socket_lock(inp->ip_inp.inp.inp_socket, 0);
+		TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, AFTER_LOCK_SOCKET);
 	}
 #endif	
 	SCTP_INP_INFO_WLOCK();
@@ -4310,13 +4375,19 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	if (!lck_mtx_try_lock(sctppcbinfo.it_mtx)) {
 		socket_unlock(inp->ip_inp.inp.inp_socket, 0);
+		TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 		lck_mtx_lock(sctppcbinfo.it_mtx);
+		TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, BEFORE_LOCK_SOCKET);
 		socket_lock(inp->ip_inp.inp.inp_socket, 0);
+		TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, AFTER_LOCK_SOCKET);
 	}
 	if (!lck_rw_try_lock_exclusive(sctppcbinfo.ipi_ep_mtx)) {
 		socket_unlock(inp->ip_inp.inp.inp_socket, 0);
+		TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 		lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+		TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, BEFORE_LOCK_SOCKET);
 		socket_lock(inp->ip_inp.inp.inp_socket, 0);
+		TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, AFTER_LOCK_SOCKET);
 	}
 #endif
 	SCTP_INP_INFO_WLOCK();
@@ -5956,8 +6027,11 @@ sctp_is_vtag_good(struct sctp_inpcb *inp, uint32_t tag, struct timeval *now)
 	sctp_lock_assert(inp->ip_inp.inp.inp_socket);
 	if (!lck_rw_try_lock_exclusive(sctppcbinfo.ipi_ep_mtx)) {
 		socket_unlock(inp->ip_inp.inp.inp_socket, 0);
+		TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 		lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+		TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, BEFORE_LOCK_SOCKET);
 		socket_lock(inp->ip_inp.inp.inp_socket, 0);
+		TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, AFTER_LOCK_SOCKET);
 	}
 #endif
 	SCTP_INP_INFO_WLOCK();
@@ -6313,7 +6387,9 @@ sctp_drain()
 	LIST_FOREACH(inp, &sctppcbinfo.listhead, sctp_list) {
 		/* For each endpoint */
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, BEFORE_LOCK_SOCKET);
 		socket_lock(inp->ip_inp.inp.inp_socket, 1);
+		TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, AFTER_LOCK_SOCKET);
 #endif
 		SCTP_INP_RLOCK(inp);
 		LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
@@ -6324,6 +6400,7 @@ sctp_drain()
 		}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		socket_unlock(inp->ip_inp.inp.inp_socket, 1);
+		TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 #endif
 		SCTP_INP_RUNLOCK(inp);
 	}

@@ -127,6 +127,10 @@ extern uint32_t sctp_debug_on;
 
 #endif				/* SCTP_DEBUG */
 
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#define APPLE_FILE_NO 6
+#endif
+
 extern unsigned int sctp_early_fr_msec;
 
 void
@@ -1821,7 +1825,9 @@ done_with_iterator:
 	}
 select_a_new_ep:
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	TIGER_LOCK_LOG(it->inp->ip_inp.inp.inp_socket, BEFORE_LOCK_SOCKET);
 	socket_lock(it->inp->ip_inp.inp.inp_socket, 1);
+	TIGER_LOCK_LOG(it->inp->ip_inp.inp.inp_socket, AFTER_LOCK_SOCKET);
 #endif
 	SCTP_INP_WLOCK(it->inp);
 	while (((it->pcb_flags) &&
@@ -1831,13 +1837,15 @@ select_a_new_ep:
 		/* endpoint flags or features don't match, so keep looking */
 		if (it->iterator_flags & SCTP_ITERATOR_DO_SINGLE_INP) {
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			socket_unlock(it->inp->ip_inp.inp.inp_socket, 1);
+		socket_unlock(it->inp->ip_inp.inp.inp_socket, 1);
+		TIGER_LOCK_LOG(it->inp->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 #endif
 			SCTP_INP_WUNLOCK(it->inp);
 			goto done_with_iterator;
 		}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		socket_unlock(it->inp->ip_inp.inp.inp_socket, 1);
+		TIGER_LOCK_LOG(it->inp->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 #endif
 		SCTP_INP_WUNLOCK(it->inp);
 		it->inp = LIST_NEXT(it->inp, sctp_list);
@@ -1845,7 +1853,9 @@ select_a_new_ep:
 			goto done_with_iterator;
 		}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		socket_lock(it->inp->ip_inp.inp.inp_socket, 1);
+	TIGER_LOCK_LOG(it->inp->ip_inp.inp.inp_socket, BEFORE_LOCK_SOCKET);
+	socket_lock(it->inp->ip_inp.inp.inp_socket, 1);
+	TIGER_LOCK_LOG(it->inp->ip_inp.inp.inp_socket, AFTER_LOCK_SOCKET);
 #endif
 		SCTP_INP_WLOCK(it->inp);
 	}
@@ -1894,6 +1904,7 @@ select_a_new_ep:
 	start_timer_return:
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			socket_unlock(it->inp->ip_inp.inp.inp_socket, 1);
+			TIGER_LOCK_LOG(it->inp->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 #endif
 			/* set a timer to continue this later */
 			SCTP_TCB_UNLOCK(it->stcb);
@@ -1928,6 +1939,7 @@ select_a_new_ep:
 	SCTP_INP_WUNLOCK(it->inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	socket_unlock(it->inp->ip_inp.inp.inp_socket, 1);
+	TIGER_LOCK_LOG(it->inp->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 #endif
 	if (it->iterator_flags & SCTP_ITERATOR_DO_SINGLE_INP) {
 		it->inp = NULL;

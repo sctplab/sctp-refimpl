@@ -974,6 +974,26 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
                 do { \
 			printf("%s:%d at %s\n", __FILE__, __LINE__ , __FUNCTION__); \
 		} while (0)
+
+#define BEFORE_LOCK_SHARED        0x01
+#define BEFORE_LOCK_EXCLUSIVE     0x02
+#define BEFORE_TRY_LOCK_EXCLUSIVE 0x05
+#define BEFORE_LOCK_SOCKET        0x06
+
+#define AFTER_LOCK_SHARED         0x11
+#define AFTER_LOCK_EXCLUSIVE      0x12
+#define AFTER_TRY_LOCK_EXCLUSIVE  0x13
+#define AFTER_LOCK_SOCKET         0x14
+
+#define UNLOCK_SHARED             0x21
+#define UNLOCK_EXCLUSIVE          0x22
+#define UNLOCK_SOCKET             0x23
+
+#define TIGER_LOCK_LOG(_addr, _type) \
+		do { \
+		    sctp_misc_ints(0, APPLE_FILE_NO, __LINE__, _addr, _type); \
+		} while (0)
+
 #define SCTP_INCRS_DEFINED 1
 #define SCTP_INCR_EP_COUNT() \
                 do { \
