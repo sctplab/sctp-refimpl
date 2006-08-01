@@ -2688,7 +2688,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 #endif
 		SOCK_LOCK(so);
 	}
-	inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_GONE;
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
 		/* been here before */
 		splx(s);
@@ -2855,8 +2854,8 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 					continue;
 				}
 			}
-			SCTP_TCB_UNLOCK(asoc);
 			cnt_in_sd++;
+			SCTP_TCB_UNLOCK(asoc);
 		}
 		/* now is there some left in our SHUTDOWN state? */
 		if (cnt_in_sd) {
@@ -4094,6 +4093,10 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		/* no asoc destroyed */
 		return (0);
 	}
+	if (stcb->block_entry) {
+		stcb->block_entry->error = ECONNRESET;
+		stcb->block_entry = NULL;
+	}
 	if ((from_inpcbfree == 0) && so) {
 		SOCKBUF_UNLOCK(&so->so_rcv);
 	}
@@ -4158,10 +4161,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		callout_stop(&net->pmtu_timer.timer);
 	}
 	asoc->state = 0;
-	if (stcb->block_entry) {
-		stcb->block_entry->error = ECONNRESET;
-		stcb->block_entry = NULL;
-	}
 	if (inp->sctp_tcbhash) {
 		LIST_REMOVE(stcb, sctp_tcbhash);
 	}
@@ -4463,9 +4462,17 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			}
 		}
 	}
-	if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) &&
-	    (from_inpcbfree == 0)) {
+	SCTP_INP_RLOCK(inp);
+	if ((from_inpcbfree == 0) && 
+	    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
+		/* If its NOT the inp_free calling us AND
+		 * sctp_close as been called, we 
+		 * call back (we might be the timer 
+ 		 */
+		SCTP_INP_RUNLOCK(inp);
 		sctp_inpcb_free(inp, 0);
+	} else {
+		SCTP_INP_RUNLOCK(inp);
 	}
 	splx(s);
 	/* destroyed the asoc */

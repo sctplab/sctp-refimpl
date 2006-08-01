@@ -561,8 +561,33 @@ sctp_wakeup_log(struct sctp_tcb *stcb, uint32_t cumtsn, uint32_t wake_cnt, int f
 	sctp_clog[sctp_cwnd_log_at].x.wake.flight = stcb->asoc.total_flight_count;
 	sctp_clog[sctp_cwnd_log_at].x.wake.send_q = stcb->asoc.send_queue_cnt;
 	sctp_clog[sctp_cwnd_log_at].x.wake.sent_q = stcb->asoc.sent_queue_cnt;
-	sctp_clog[sctp_cwnd_log_at].x.wake.stream_qcnt = (uint16_t) stcb->asoc.stream_queue_cnt;
-	sctp_clog[sctp_cwnd_log_at].x.wake.chunks_on_oque = (uint16_t) stcb->asoc.chunks_on_out_queue;
+
+	if(stcb->asoc.stream_queue_cnt < 0xff)
+		sctp_clog[sctp_cwnd_log_at].x.wake.stream_qcnt = (uint8_t) stcb->asoc.stream_queue_cnt;
+	else
+		sctp_clog[sctp_cwnd_log_at].x.wake.stream_qcnt = 0xff;
+
+	if(stcb->asoc.chunks_on_out_queue < 0xff)
+		sctp_clog[sctp_cwnd_log_at].x.wake.chunks_on_oque = (uint8_t) stcb->asoc.chunks_on_out_queue;
+	else 
+		sctp_clog[sctp_cwnd_log_at].x.wake.chunks_on_oque = 0xff;
+
+	sctp_clog[sctp_cwnd_log_at].x.wake.sctpflags = 0;
+	/* set in the defered mode stuff */
+	if(stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_DONT_WAKE)
+		sctp_clog[sctp_cwnd_log_at].x.wake.sctpflags |= 1;
+	if(stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_WAKEOUTPUT)
+		sctp_clog[sctp_cwnd_log_at].x.wake.sctpflags |= 2;
+	if(stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_WAKEINPUT)
+		sctp_clog[sctp_cwnd_log_at].x.wake.sctpflags |= 4;
+        /* what about the sb */
+	if(stcb->sctp_socket) {
+		struct socket *so = stcb->sctp_socket;
+		
+		sctp_clog[sctp_cwnd_log_at].x.wake.sbflags = (uint8_t)((so->so_snd.sb_flags & 0x00ff));
+	} else {
+		sctp_clog[sctp_cwnd_log_at].x.wake.sbflags = 0xff;
+	}
 	sctp_cwnd_log_at++;
 	if (sctp_cwnd_log_at >= SCTP_STAT_LOG_SIZE) {
 		sctp_cwnd_log_at = 0;
@@ -581,15 +606,16 @@ sctp_log_block(uint8_t from, struct socket *so, struct sctp_association *asoc, i
 	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t) SCTP_LOG_EVENT_BLOCK;
 	sctp_clog[sctp_cwnd_log_at].x.blk.maxmb = (uint16_t) (so->so_snd.sb_mbmax / 1024);
 	sctp_clog[sctp_cwnd_log_at].x.blk.onmb = 0;
-	sctp_clog[sctp_cwnd_log_at].x.blk.maxsb = (uint16_t) (so->so_snd.sb_hiwat / 1024);
+	sctp_clog[sctp_cwnd_log_at].x.blk.maxsb = 0;
 	sctp_clog[sctp_cwnd_log_at].x.blk.onsb = asoc->total_output_queue_size;
 	sctp_clog[sctp_cwnd_log_at].x.blk.send_sent_qcnt = (uint16_t) (asoc->send_queue_cnt + asoc->sent_queue_cnt);
 	sctp_clog[sctp_cwnd_log_at].x.blk.stream_qcnt = (uint16_t) asoc->stream_queue_cnt;
 	sctp_clog[sctp_cwnd_log_at].x.blk.chunks_on_oque = (uint16_t) asoc->chunks_on_out_queue;
 	if (sendlen > 0x0000ffff) {
-		sctp_clog[sctp_cwnd_log_at].x.blk.sndlen = 0xffff;
-	} else {
-		sctp_clog[sctp_cwnd_log_at].x.blk.sndlen = sendlen;
+		if((sendlen/1024) > 0xffff)
+			sctp_clog[sctp_cwnd_log_at].x.blk.sndlen = 0xffff;
+		else
+			sctp_clog[sctp_cwnd_log_at].x.blk.sndlen = (sendlen/1024);
 	}
 	sctp_cwnd_log_at++;
 	if (sctp_cwnd_log_at >= SCTP_STAT_LOG_SIZE) {
@@ -1361,7 +1387,9 @@ sctp_timeout_handler(void *t)
 	}
 	if (inp) {
 		SCTP_INP_WLOCK(inp);
-		if (inp->sctp_socket == 0) {
+		
+		if ((inp->sctp_socket == 0) && 
+		    (tmr->type !=  SCTP_TIMER_TYPE_INPKILL)) {
 			splx(s);
 #if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
 			/* release BSD kernel funnel/mutex */
@@ -1922,7 +1950,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		 * state.
 		 */
 		tmr = &inp->sctp_ep.signature_change;
-		to_ticks = MSEC_TO_TICKS(SCTP_INP_KILL_TIMEOUT);
+ 		to_ticks = MSEC_TO_TICKS(SCTP_INP_KILL_TIMEOUT);
 		break;
 	case SCTP_TIMER_TYPE_PATHMTURAISE:
 		/*
