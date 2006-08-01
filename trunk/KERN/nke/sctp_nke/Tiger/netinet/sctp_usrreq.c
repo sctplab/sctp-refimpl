@@ -135,6 +135,9 @@ __FBSDID("$FreeBSD:$");
 #endif
 #endif
 
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#define APPLE_FILE_NO 7
+#endif
 
 
 /*
@@ -643,7 +646,8 @@ sctp_ctlinput(cmd, sa, vip)
 		}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		if (inp != NULL) {
-			socket_unlock(inp->ip_inp.inp.inp_socket, 0);
+			socket_unlock(inp->ip_inp.inp.inp_socket, 1);
+			TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 		}
 #endif
 		splx(s);
@@ -2948,8 +2952,11 @@ sctp_optsget(struct socket *so,
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			if (!lck_rw_try_lock_shared(sctppcbinfo.ipi_ep_mtx)) {
 				socket_unlock(inp->ip_inp.inp.inp_socket, 0);
+				TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 				lck_rw_lock_shared(sctppcbinfo.ipi_ep_mtx);
+				TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, BEFORE_LOCK_SOCKET);
 				socket_lock(inp->ip_inp.inp.inp_socket, 0);
+				TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, AFTER_LOCK_SOCKET);
 			}
 #endif
 			sctp_fill_pcbinfo(spcb);
@@ -4754,10 +4761,13 @@ sctp_optsset(struct socket *so,
 				((struct sockaddr_in *)addr_touse)->sin_port = inp->sctp_lport;
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 				socket_unlock(inp->ip_inp.inp.inp_socket, 0);
+				TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 #endif
 				lep = sctp_pcb_findep(addr_touse, 1, 0);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+				TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, BEFORE_LOCK_SOCKET);
 				socket_lock(inp->ip_inp.inp.inp_socket, 0);
+				TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, AFTER_LOCK_SOCKET);
 #endif
 				if (lep != NULL) {
 					/*

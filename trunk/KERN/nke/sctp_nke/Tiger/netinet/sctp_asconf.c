@@ -107,7 +107,9 @@ extern uint32_t sctp_debug_on;
 #define strlcpy strncpy
 #endif
 #endif				/* SCTP_DEBUG */
-
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#define APPLE_FILE_NO 1
+#endif
 static int
 sctp_asconf_get_source_ip(struct mbuf *m, struct sockaddr *sa)
 {
@@ -2209,7 +2211,9 @@ sctp_delete_ip_address(struct ifaddr *ifa)
 
 		/* process for all associations for this endpoint */
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, BEFORE_LOCK_SOCKET);
 		socket_lock(inp->ip_inp.inp.inp_socket, 1);
+		TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, AFTER_LOCK_SOCKET);
 #endif
 		SCTP_INP_RLOCK(inp);
 		LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
@@ -2249,6 +2253,7 @@ sctp_delete_ip_address(struct ifaddr *ifa)
 		}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		socket_unlock(inp->ip_inp.inp.inp_socket, 1);
+		TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 #endif
 		SCTP_INP_RUNLOCK(inp);
 	}
