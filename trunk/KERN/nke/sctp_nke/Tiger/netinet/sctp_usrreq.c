@@ -696,6 +696,34 @@ SYSCTL_PROC(_net_inet_sctp, OID_AUTO, getcred, CTLTYPE_OPAQUE | CTLFLAG_RW,
     0, 0, sctp_getcred, "S,ucred", "Get the ucred of a SCTP connection");
 #endif				/* #if defined(__FreeBSD__) */
 
+#if defined(__FreeBSD__) || defined (__APPLE__)
+static int
+sctp_assoclist SYSCTL_HANDLER_ARGS
+{
+	unsigned int n;
+	struct sctp_inpcb *inp;
+	
+	lck_rw_lock_shared(sctppcbinfo.ipi_ep_mtx);
+	if (req->oldptr == USER_ADDR_NULL) {
+		LIST_FOREACH(inp, &sctppcbinfo.listhead, sctp_list) {
+			n++;
+		}
+		req->oldidx = n;
+		lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+		return 0;
+	}
+
+	if (req->newptr != USER_ADDR_NULL) {
+		lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+		return EPERM;
+	}
+	printf("OK, I have been here...");
+	lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+
+	return 0;
+}
+#endif
+
 /*
  * sysctl definitions
  */
@@ -878,7 +906,11 @@ SYSCTL_INT(_net_inet_sctp, OID_AUTO, strict_data_order, CTLFLAG_RW,
 
 SYSCTL_STRUCT(_net_inet_sctp, OID_AUTO, stats, CTLFLAG_RW,
     &sctpstat, sctpstat,
-    "SCTP statistics (struct sctps_datadropchklmt, netinet/sctp.h");
+    "SCTP statistics (struct sctps_stat, netinet/sctp.h");
+
+SYSCTL_PROC(_net_inet_sctp, OID_AUTO, assoclist, CTLFLAG_RD,
+    0, 0, sctp_assoclist,
+    "S,xassoc", "List of active SCTP associations");
 
 #ifdef SCTP_DEBUG
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, debug, CTLFLAG_RW,
