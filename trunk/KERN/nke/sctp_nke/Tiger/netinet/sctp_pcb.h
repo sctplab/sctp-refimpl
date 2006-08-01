@@ -242,6 +242,7 @@ struct sctp_epinfo {
 	lck_rw_t *ipi_ep_mtx;
 	lck_mtx_t *it_mtx;
 	lck_mtx_t *ipi_count_mtx;
+	lck_mtx_t *logging_mtx;
 #else
 	void *mtx_grp_attr;
 	void *mtx_grp;
@@ -249,6 +250,7 @@ struct sctp_epinfo {
 	void *ipi_ep_mtx;
 	void *it_mtx;
 	void *ipi_count_mtx;
+	void *logging_mtx;
 #endif				/* _KERN_LOCKS_H_ */
 #endif
 	uint32_t ipi_count_ep;
@@ -760,10 +762,14 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #define SCTP_IPI_ADDR_WUNLOCK()
 
 
-#define SCTP_STATLOG_INIT_LOCK()
-#define SCTP_STATLOG_LOCK() 
-#define SCTP_STATLOG_UNLOCK()
-#define SCTP_STATLOG_DESTROY()
+#define SCTP_STATLOG_INIT_LOCK() \
+	sctppcbinfo.logging_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
+#define SCTP_STATLOG_LOCK() \
+	lck_mtx_lock(sctppcbinfo.logging_mtx)
+#define SCTP_STATLOG_UNLOCK() \
+	lck_mtx_unlock(sctppcbinfo.logging_mtx)
+#define SCTP_STATLOG_DESTROY() \
+	lck_mtx_free(sctppcbinfo.logging_mtx, SCTP_MTX_GRP)
 
 
 /* Lock for INP */
