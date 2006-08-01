@@ -478,8 +478,36 @@ main(int argc, char **argv)
 				       log.x.misc.log4);
 			}
 		} else if (log.event_type == SCTP_LOG_EVENT_WAKE) {
-			printf("WUP:%s %s tcb:%x cnt:%d fs:%d sd:%d st:%d str:%d co:%d)\n",
-			       
+			char *str;
+			switch(log.x.wake.sctpflags) {
+			case 0:
+				str = "Will send wakeup";
+				break;
+			case 1:
+				str = "Defer wakeup";
+				break;
+			case 2:
+				str = "Needs output wakeup";
+				break;
+			case 3:
+				str = "Deferred and needs output wakeup";
+				break;
+			case 4:
+				str = "Needs input wakeup";
+				break;
+			case 5:
+				str = "Deferred and needs input wakeup";
+				break;
+			case 6:
+				str = "Needs input/output wakeup";
+				break;
+			case 7:
+				str = "Deferred and needs input/output wakeup";
+				break;
+			default:
+				str = "Unknown";
+			}
+			printf("WUP:%s %s tcb:%x cnt:%d fs:%d sd:%d st:%d str:%d co:%d) s:%s sb:%x\n",
 			       ts,
 			       from_str[log.from],
 			       log.x.wake.stcb,
@@ -488,9 +516,10 @@ main(int argc, char **argv)
 			       log.x.wake.send_q,
 			       log.x.wake.sent_q,
 			       log.x.wake.stream_qcnt,
-			       log.x.wake.chunks_on_oque
+			       log.x.wake.chunks_on_oque,
+			       str,
+			       (u_int)log.x.wake.sbflags
 				);
-
 		}else if(log.event_type == SCTP_LOG_EVENT_BLOCK) {
 			printf("BLK:%s:(mbmx:%d < mb-use:%d) || (mx:%d < cc:%d + snd:%d) || (%d > MC) %s(%d:%d)\n",
 			       ts,

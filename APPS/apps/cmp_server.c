@@ -102,6 +102,9 @@ getopt(nargc, nargv, ostr)
 }
 #endif /* WIN32 */
 
+static int immitation_mode = 0;
+
+
 struct txfr_request{
 	int sizetosend;
 	int blksize;
@@ -141,8 +144,11 @@ main(int argc, char **argv)
 
 	optlen = sizeof(optval);
 	sb = 0;
-	while((i= getopt(argc,argv,"tsp:b:Pz:S:m:B:")) != EOF){
+	while((i= getopt(argc,argv,"itsp:b:Pz:S:m:B:")) != EOF){
 		switch(i){
+		case 'i':
+			immitation_mode = 1;
+			break;
 		case 'B':
 			addr_to_bind = optarg;
 			break;
@@ -194,6 +200,15 @@ main(int argc, char **argv)
 	if(fd == -1){
 		printf("can't open socket:%d\n",errno);
 		return(-1);
+	}
+	if ((protocol_touse == IPPROTO_SCTP) && immitation_mode) {
+		int one = 1;
+		if(setsockopt(fd, protocol_touse, SCTP_EXPLICIT_EOR, &one, sizeof(one)) < 0) {
+			printf("cmp_server: setsockopt: SCTP_EXPLICIT_EOR failed! errno=%d\n", errno);
+		}
+		if(setsockopt(fd, protocol_touse, SCTP_PARTIAL_DELIVERY_POINT, &one, sizeof(one)) < 0) {
+			printf("cmp_server: setsockopt: SCTP_PARTIAL_DELIVERY_POINT failed! errno=%d\n", errno);
+		}
 	}
 	sprintf(name,"./out_log_oferr_tcp.txt");
 #if !defined(WIN32) && !defined(linux)

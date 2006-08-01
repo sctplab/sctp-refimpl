@@ -36,6 +36,8 @@ DWORD tmpUptime;	/* in milliseconds */
 #include <sys/inttypes.h>
 #endif
 
+static int imitation_mode = 0;
+
 struct txfr_request {
 	int sizetosend;
 	int blksize;
@@ -415,30 +417,41 @@ measure_one(struct control_info *req,
 	    struct sockaddr_in *laddr,
 	    int sctp_tcpmode)
 {
-    int optlen,optval;
-    int fd,ret;
-    uint32_t sz,cnt;
-    int blksize;
-    char buffer[200000];
+	int optlen,optval;
+	int fd,ret;
+	uint32_t sz,cnt;
+	int blksize;
+	char buffer[200000];
 #ifndef WIN32
-    char controlbuf[3000];
-    struct sockaddr_in from;
-    struct sctp_sndrcvinfo sinfo;
-    int notification;
-    socklen_t flen;
-    struct msghdr msg;
-    struct sctp_event_subscribe events;
-    struct iovec iov[2];
+	char controlbuf[3000];
+	struct sockaddr_in from;
+	struct sctp_sndrcvinfo sinfo;
+	int notification;
+	socklen_t flen;
+	struct msghdr msg;
+	struct sctp_event_subscribe events;
+	struct iovec iov[2];
 
 #endif /* !WIN32 */
 
-    if (protocol_touse == IPPROTO_TCP){
-	fd = socket(AF_INET, SOCK_STREAM, protocol_touse);
-    } else {
-	if(sctp_tcpmode) 
-	   fd = socket(AF_INET, SOCK_STREAM, protocol_touse);
-	else
-	   fd = socket(AF_INET, SOCK_SEQPACKET, protocol_touse);
+	if (protocol_touse == IPPROTO_TCP){
+		fd = socket(AF_INET, SOCK_STREAM, protocol_touse);
+	} else {
+		if(sctp_tcpmode) 
+			fd = socket(AF_INET, SOCK_STREAM, protocol_touse);
+		else {
+			fd = socket(AF_INET, SOCK_SEQPACKET, protocol_touse);
+			if((fd > 0) && (imitation_mode)) {
+				int one = 1;
+				if(setsockopt(fd, protocol_touse, SCTP_EXPLICIT_EOR, &one, sizeof(one)) < 0) {
+					printf("m_cmp_client: setsockopt: SCTP_EXPLICIT_EOR failed! errno=%d\n", errno);
+				}
+				if(setsockopt(fd, protocol_touse, SCTP_PARTIAL_DELIVERY_POINT, &one, sizeof(one)) < 0) {
+					printf("m_cmp_client: setsockopt: SCTP_PARTIAL_DELIVERY_POINT failed! errno=%d\n", errno);
+				}
+			}
+		}
+	}
 #ifndef WIN32
 	memset(&events,0, sizeof(events));
 	events.sctp_association_event = 1;
@@ -448,7 +461,6 @@ measure_one(struct control_info *req,
 		perror("Can't set SCTP assoc events, we may hang");
 	}
 #endif
-    }
     if(laddr) {
 	if (bind(fd, (struct sockaddr *)laddr, sizeof(struct sockaddr_in))) {
 	    perror("Bind failed?");
@@ -827,8 +839,11 @@ main(int argc, char **argv)
 #endif /* WIN32 */
 
     error_rate = NULL;
-    while((i= getopt(argc,argv,"bp:h:f:M:ste:?B:P:TAQ:")) != EOF){
+    while((i= getopt(argc,argv,"bp:h:f:M:ste:?B:P:TAQ:i")) != EOF){
 	switch(i){
+	case 'i':
+		imitation_mode = 1;
+		break;
 	case 'P':
 	    lport = (u_int16_t)strtol(optarg,NULL,0);
 	    break;
