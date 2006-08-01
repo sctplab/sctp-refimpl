@@ -5047,6 +5047,9 @@ sctp_input(m, va_alist)
 #endif
 			} else if ((inp != NULL) && (stcb == NULL)) {
 				refcount_up = 1;
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+				socket_unlock(inp->ip_inp.inp.inp_socket, 1);
+#endif
 			}
 			SCTP_STAT_INCR(sctps_badsum);
 			goto bad;
