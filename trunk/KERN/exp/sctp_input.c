@@ -5249,9 +5249,6 @@ sctp_skip_csum_4:
 		SCTP_INP_DECR_REF(inp);
 		SCTP_INP_WUNLOCK(inp);
 	}
-#ifdef INVARIANTS_SCTP
-	sctp_verify_no_locks();
-#endif
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	socket_unlock(inp->ip_inp.inp.inp_socket, 1);
 #endif
@@ -5272,8 +5269,5 @@ bad:
 	if (opts)
 		sctp_m_freem(opts);
 
-#ifdef INVARIANTS_SCTP
-	sctp_verify_no_locks();
-#endif
 	return;
 }

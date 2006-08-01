@@ -1287,6 +1287,7 @@ sctp_handle_addr_wq(void)
  * stcb->sctp_socket is locked.
  */
 #endif
+
 static void
 sctp_timeout_handler(void *t)
 {
@@ -1358,7 +1359,6 @@ sctp_timeout_handler(void *t)
 		it = (struct sctp_iterator *)inp;
 		inp = NULL;
 	}
-
 	if (inp) {
 		SCTP_INP_WLOCK(inp);
 		if (inp->sctp_socket == 0) {
@@ -3391,7 +3391,7 @@ sctp_report_all_outbound(struct sctp_tcb *stcb)
 	struct sctp_association *asoc;
 	struct sctp_stream_out *outs;
 	struct sctp_tmit_chunk *chk;
-	struct sctp_stream_queue_pending *sp,*spl;
+	struct sctp_stream_queue_pending *sp;
 	asoc = &stcb->asoc;
 
 	if((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
@@ -3403,21 +3403,9 @@ sctp_report_all_outbound(struct sctp_tcb *stcb)
 
 	TAILQ_FOREACH(outs, &asoc->out_wheel, next_spoke) {
 		/* now clean up any chunks here */
-		if(stcb->asoc.locked_on_sending &&
-		   (outs == stcb->asoc.locked_on_sending)) {
-			spl = TAILQ_LAST(&outs->outqueue, sctp_streamhead);
-		} else {
-			spl = NULL;
-		}
+		stcb->asoc.locked_on_sending = NULL;
 		sp = TAILQ_FIRST(&outs->outqueue);
 		while (sp) {
-			if (sp == spl) 
-				/* If they are equal its the
-				 * last on the stuck outbound.
-				 * Need to leave it on the queue for
-				 * now.
-				 */
-				break;
 			stcb->asoc.stream_queue_cnt--;
 			TAILQ_REMOVE(&outs->outqueue, sp, next);
 			sctp_free_spbufspace(stcb, asoc, sp);
@@ -3956,6 +3944,9 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 		return (-1);
 	}
 	mm = m;
+	if (inp && inp->sctp_socket) {
+		SOCKBUF_LOCK(sb);
+	}
 	while (mm) {
 		len += mm->m_len;
 		if (sb) {
@@ -3964,9 +3955,6 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 		if (mm->m_next == NULL)
 			tail = mm;
 		mm = mm->m_next;
-	}
-	if (inp && inp->sctp_socket) {
-		SOCKBUF_LOCK(sb);
 	}
 	if (control->tail_mbuf) {
 		/* append */
@@ -4291,12 +4279,6 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far)
 	return (0);
 }
 
-static int sctp_so_recv_queue_cnts[16] = {
-	0, 0, 0, 0, 0, 
-	0, 0, 0, 0, 0, 
-	0, 0, 0, 0, 0,
-        0};
-
 int
 sctp_sorecvmsg(struct socket *so,
     struct uio *uio,
@@ -4380,7 +4362,6 @@ restart:
  * - In and error or stop recv why would we
  *   ever consider reading?
  */
-		sctp_so_recv_queue_cnts[0]++;
 #ifdef PURGE_THIS_CODE
 		/* Check the data in-queue situation */
 		control = TAILQ_FIRST(&inp->read_queue);
@@ -4415,7 +4396,6 @@ restart:
 	control = TAILQ_FIRST(&inp->read_queue);
 	if (control == NULL) {
 		/* nothing there? TSNH! */
-		sctp_so_recv_queue_cnts[1]++;
 		so->so_rcv.sb_cc = 0;
 		goto restart;
 	}
@@ -4423,7 +4403,6 @@ restart:
 	    (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE)) &&
 	    (filling_sinfo)) {
 		/* find a more suitable one then this */
-		sctp_so_recv_queue_cnts[2]++;
 		ctl = TAILQ_NEXT(control, next);
 		while (ctl) {
 			if ((ctl->stcb != control->stcb) && (ctl->length)) {
@@ -4442,15 +4421,6 @@ restart:
 		so->so_rcv.sb_cc = 0;
 		goto restart;
 	} else if (control->length == 0) {
-		sctp_so_recv_queue_cnts[3]++;
-		if (control->data == NULL) {
-			sctp_so_recv_queue_cnts[4]++;
-		}
-		ctl = TAILQ_NEXT(control, next);
-		if(ctl == NULL) {
-			sctp_so_recv_queue_cnts[15]++;
-			panic("How can this be?");
-		}
 		control->held_length += so->so_rcv.sb_cc;
 		so->so_rcv.sb_cc = 0;
 		goto restart;
@@ -4715,7 +4685,6 @@ get_more_data:
 				TAILQ_REMOVE(&inp->read_queue, control, next);
 				/* Add back any hiddend data */
 				if (control->held_length) {
-					sctp_so_recv_queue_cnts[5]++;
 					so->so_rcv.sb_cc += control->held_length;
 					wakeup_read_socket = 1;
 				}
@@ -4733,7 +4702,6 @@ get_more_data:
 			}
 		}
 		if (out_flags & MSG_EOR) {
-			sctp_so_recv_queue_cnts[6]++;
 			if ((stcb) && (in_flags & MSG_PEEK) == 0) {
 				if (sctp_user_rcvd(stcb, &freed_so_far)) {
 					stcb = NULL;
@@ -4744,7 +4712,6 @@ get_more_data:
 		if ((uio->uio_resid == 0) ||
 		    ((in_eeor_mode) && (copied_so_far >= so->so_rcv.sb_lowat))
 			) {
-			sctp_so_recv_queue_cnts[7]++;
 			if ((stcb) && (in_flags & MSG_PEEK) == 0) {
 				if (sctp_user_rcvd(stcb, &freed_so_far)) {
 					stcb = NULL;
@@ -4759,7 +4726,6 @@ get_more_data:
 		 */
 		if ((block_allowed == 0) ||
 		    ((in_flags & MSG_WAITALL) == 0)) {
-			sctp_so_recv_queue_cnts[8]++;
 			if ((stcb) && (in_flags & MSG_PEEK) == 0) {
 				if (sctp_user_rcvd(stcb, &freed_so_far)) {
 					stcb = NULL;
@@ -4774,7 +4740,6 @@ get_more_data:
 		 */
 
 		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE)) {
-			sctp_so_recv_queue_cnts[9]++;
 			if ((stcb) && (in_flags & MSG_PEEK) == 0) {
 				if (sctp_user_rcvd(stcb, &freed_so_far)) {
 					stcb = NULL;
@@ -4791,7 +4756,6 @@ get_more_data:
 
 		/* Tell the transport a rwnd update might be needed */
 		if ((stcb) && (in_flags & MSG_PEEK) == 0) {
-			sctp_so_recv_queue_cnts[10]++;
 			if (sctp_user_rcvd(stcb, &freed_so_far)) {
 				stcb = NULL;
 			}
@@ -4810,12 +4774,7 @@ wait_some_more:
 
 		if (control->length == 0) {
 			/* still nothing here */
-			sctp_so_recv_queue_cnts[11]++;
 			if (so->so_rcv.sb_cc) {
-				sctp_so_recv_queue_cnts[12]++;
-				if(control->data == NULL) {
-					sctp_so_recv_queue_cnts[13]++;
-				} 
 				control->held_length += so->so_rcv.sb_cc;
 				so->so_rcv.sb_cc = 0;
 			}
@@ -5015,7 +4974,6 @@ out:
 	SOCKBUF_UNLOCK(&so->so_rcv);
 	splx(s);
 	if (wakeup_read_socket) {
-		sctp_so_recv_queue_cnts[14]++;
 		sctp_sorwakeup(inp, so);
 	}
 	return (error);
