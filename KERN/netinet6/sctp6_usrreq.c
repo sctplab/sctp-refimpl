@@ -547,7 +547,6 @@ sctp6_notify_mbuf(struct sctp_inpcb *inp,
 	/* now what about the ep? */
 	if (stcb->asoc.smallest_mtu > nxtsz) {
 		struct sctp_tmit_chunk *chk;
-		struct sctp_stream_out *strm;
 
 		/* Adjust that too */
 		stcb->asoc.smallest_mtu = nxtsz;
@@ -576,13 +575,6 @@ sctp6_notify_mbuf(struct sctp_inpcb *inp,
 				chk->sent_rcv_time.tv_usec = 0;
 				stcb->asoc.total_flight -= chk->send_size;
 				net->flight_size -= chk->send_size;
-			}
-		}
-		TAILQ_FOREACH(strm, &stcb->asoc.out_wheel, next_spoke) {
-			TAILQ_FOREACH(chk, &strm->outqueue, sctp_next) {
-				if ((u_int32_t) (chk->send_size + IP_HDR_SIZE) > nxtsz) {
-					chk->flags |= CHUNK_FLAGS_FRAGMENT_OK;
-				}
 			}
 		}
 	}
@@ -1007,6 +999,9 @@ sctp6_close(struct socket *so)
 	 * are done.
 	 */
 	if((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
+		SCTP_INP_WLOCK(inp);
+		inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_GONE;
+		SCTP_INP_WUNLOCK(inp);
 		if (((so->so_options & SO_LINGER) && (so->so_linger == 0)) ||
 		    (so->so_rcv.sb_cc > 0)) {
 			sctp_inpcb_free(inp, 1);
@@ -1032,11 +1027,7 @@ sctp6_close(struct socket *so)
 		 */
 		so->so_pcb = NULL;
 		SOCK_UNLOCK(so);
-		SCTP_INP_WLOCK(inp);
-		inp->sctp_socket = NULL;
-		SCTP_INP_WUNLOCK(inp);
 	}
-
 	return;
 
 }
