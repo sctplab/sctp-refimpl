@@ -667,9 +667,10 @@ struct sctp_sbwake_log {
 	uint16_t sent_q;
 	uint16_t flight;
 	uint16_t wake_cnt;
-	uint16_t stream_qcnt;	/* chnk cnt */
-	uint16_t chunks_on_oque;/* chunks out */
-
+	uint8_t stream_qcnt;	/* chnk cnt */
+	uint8_t chunks_on_oque;/* chunks out */
+	uint8_t sbflags;
+	uint8_t sctpflags;
 };
 
 struct sctp_misc_info {

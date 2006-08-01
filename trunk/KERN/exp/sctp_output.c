@@ -6807,6 +6807,66 @@ sctp_set_prsctp_policy(struct sctp_tcb *stcb,
 
 }
 
+extern int sctp_mbuf_threshold_count;
+
+static struct mbuf *
+sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header, int how)
+{
+	struct mbuf *m = NULL;
+	int aloc_size;
+
+	if (want_header) {
+		MGETHDR(m, how, MT_DATA);
+	} else {
+		MGET(m, how, MT_DATA);
+	}
+	if (m == NULL) {
+		return (NULL);
+	}
+	if (space_needed > (((sctp_mbuf_threshold_count - 1) * MLEN) + MHLEN)) {
+#if defined(__FreeBSD__) && __FreeBSD_version > 690000
+	try_again:
+		if(space_needed <= MCLBYTES){ 
+			aloc_size = MCLBYTES;
+		} else if (space_needed <=  MJUMPAGESIZE) {
+			aloc_size = MJUMPAGESIZE;
+		} else if (space_needed <= MJUM9BYTES) {
+			aloc_size = MJUM9BYTES;
+		} else { 
+			aloc_size = MJUM16BYTES;
+		}
+		m_cljget(m, how, aloc_size);
+		if (m == NULL) {
+			return (NULL);
+		}
+		if ((m->m_flags & M_EXT) == 0) {
+			if(aloc_size != MCLBYTES) {
+				aloc_size -= 10;
+				goto try_again;
+			}
+			sctp_m_freem(m);
+			return (NULL);
+		} 
+#else
+		MCLGET(m, how);
+		if (m == NULL) {
+			return (NULL);
+		}
+		if ((m->m_flags & M_EXT) == 0) {
+			sctp_m_freem(m);
+			return (NULL);
+		}
+#endif
+	}
+	m->m_len = 0;
+	m->m_next = m->m_nextpkt = NULL;
+	if (want_header) {
+		m->m_pkthdr.len = 0;
+	}
+	return (m);
+}
+
+
 
 static int
 sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
@@ -6845,7 +6905,9 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		/* This should not happen */
 		panic("sp length is 0?");
 	}
-
+        /* We may not have a m_pkthder due to the way the sbwait/awake
+	 * thing works... assure that we do!
+	 */
 	if ((goal_mtu >= sp->length) && (sp->msg_is_complete)) {
 		/* It all fits and its a complete msg, no brainer */
 		to_move = min(sp->length, frag_point);
@@ -6888,15 +6950,6 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	SCTP_INCR_CHK_COUNT();
 	/* clear it */
 	memset(chk, sizeof(*chk), 0);
-	M_PREPEND(sp->data, sizeof(struct sctp_data_chunk), M_DONTWAIT);
-	if (sp->data == NULL) {
-		/* HELP */
-		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-		SCTP_DECR_CHK_COUNT();
-		goto out_gu;
-	}
-	sp->length += sizeof(struct sctp_data_chunk);
-	to_move += sizeof(struct sctp_data_chunk);
 	chk->rec.data.rcv_flags = rcv_flags;
 	sctp_snd_sb_alloc(stcb, sizeof(struct sctp_data_chunk));
 	if (to_move >= sp->length) {
@@ -6919,16 +6972,16 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		 * we leave the first mbuf, since it will
 		 * be a m_pkthdr, we hope :-)
 		 */
-		m = sp->data->m_next;
+		m = sp->data;
 		while(m && (m->m_len == 0)) {
-			sp->data->m_next = m->m_next;
+			sp->data  = m->m_next;
 			m->m_next = NULL;
 			if(sp->tail_mbuf == m) {
 				/* freeing tail */
 				sp->tail_mbuf = sp->data;
 			}
 			m_free(m);
-			m = sp->data->m_next;
+			m = sp->data;
 #ifdef INVARIANTS
 			if ((sp->tail_mbuf == sp->data) && m) {
 				panic("Huh, tail is head but there is a next?");
@@ -6941,8 +6994,26 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	} else
 		sp->length -= to_move;
 
-	chk->send_size = to_move;
-	chk->book_size = to_move;
+	if ((chk->data->m_flags & M_PKTHDR) == 0) {
+		struct mbuf *m;
+		m = sctp_get_mbuf_for_msg(1, 1, M_DONTWAIT);
+		if(m == NULL) {
+			printf("We will Panic maybe, out of mbufs\n");
+		} else {
+			m->m_len = 0;
+			m->m_next = chk->data;
+			chk->data = m;
+			chk->data->m_pkthdr.len = to_move;
+		}
+	}
+	M_PREPEND(chk->data, sizeof(struct sctp_data_chunk), M_DONTWAIT);
+	if (chk->data == NULL) {
+		/* HELP */
+		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
+		SCTP_DECR_CHK_COUNT();
+		goto out_gu;
+	}
+	chk->book_size = chk->send_size = (to_move + sizeof(struct sctp_data_chunk));
 	chk->sent = SCTP_DATAGRAM_UNSENT;
 
 	/* get last_mbuf and counts of mb useage
@@ -7024,6 +7095,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		/* more to go, we are locked */
 		*locked = 1;
 	}
+	printf("Insert stcb:%x chk:%x on send_queue\n", (u_int)stcb, (u_int)chk);
 	asoc->chunks_on_out_queue++;
 	TAILQ_INSERT_TAIL(&asoc->send_queue, chk, sctp_next);
 	asoc->send_queue_cnt++;
@@ -11592,65 +11664,7 @@ sctp_send_operr_to(struct mbuf *m, int iphlen,
 	}
 }
 
-extern int sctp_mbuf_threshold_count;
 
-
-static struct mbuf *
-sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header)
-{
-	struct mbuf *m = NULL;
-	int aloc_size;
-
-	if (want_header) {
-		MGETHDR(m, M_WAIT, MT_DATA);
-	} else {
-		MGET(m, M_WAIT, MT_DATA);
-	}
-	if (m == NULL) {
-		return (NULL);
-	}
-	if (space_needed > (((sctp_mbuf_threshold_count - 1) * MLEN) + MHLEN)) {
-#if defined(__FreeBSD__) && __FreeBSD_version > 690000
-	try_again:
-		if(space_needed <= MCLBYTES){ 
-			aloc_size = MCLBYTES;
-		} else if (space_needed <=  MJUMPAGESIZE) {
-			aloc_size = MJUMPAGESIZE;
-		} else if (space_needed <= MJUM9BYTES) {
-			aloc_size = MJUM9BYTES;
-		} else { 
-			aloc_size = MJUM16BYTES;
-		}
-		m_cljget(m, M_WAIT, aloc_size);
-		if (m == NULL) {
-			return (NULL);
-		}
-		if ((m->m_flags & M_EXT) == 0) {
-			if(aloc_size != MCLBYTES) {
-				aloc_size -= 10;
-				goto try_again;
-			}
-			sctp_m_freem(m);
-			return (NULL);
-		} 
-#else
-		MCLGET(m, M_WAIT);
-		if (m == NULL) {
-			return (NULL);
-		}
-		if ((m->m_flags & M_EXT) == 0) {
-			sctp_m_freem(m);
-			return (NULL);
-		}
-#endif
-	}
-	m->m_len = 0;
-	m->m_next = m->m_nextpkt = NULL;
-	if (want_header) {
-		m->m_pkthdr.len = 0;
-	}
-	return (m);
-}
 
 static struct mbuf *
 sctp_copy_resume(struct sctp_stream_queue_pending *sp, 
@@ -11670,7 +11684,7 @@ sctp_copy_resume(struct sctp_stream_queue_pending *sp,
 	if (sp->data == NULL) {
 		need_hdr = 1;
 	}
-	head = sctp_get_mbuf_for_msg(left, need_hdr);
+	head = sctp_get_mbuf_for_msg(left, need_hdr, M_WAIT);
 	cancpy = M_TRAILINGSPACE(head);
 	willcpy = min(cancpy, left);
 	*error = uiomove(mtod(head, caddr_t), willcpy, uio);
@@ -11685,7 +11699,7 @@ sctp_copy_resume(struct sctp_stream_queue_pending *sp,
 	*new_tail = head;
 	while (left > 0) {
 		/* move in user data */
-		m->m_next = sctp_get_mbuf_for_msg(left, 0);
+		m->m_next = sctp_get_mbuf_for_msg(left, 0, M_WAIT);
 		if (m->m_next == NULL) {
 			sctp_m_freem(head);
 			*error = ENOMEM;
@@ -11730,7 +11744,7 @@ sctp_copy_one(struct sctp_stream_queue_pending *ret,
 
 	/* First one gets a header */
 	left = ret->length;
-	head = m = sctp_get_mbuf_for_msg((left + resv_upfront), 1);
+	head = m = sctp_get_mbuf_for_msg((left + resv_upfront), 1, M_WAIT);
 	if (m == NULL) {
 		return (ENOMEM);
 	}
@@ -11753,7 +11767,7 @@ sctp_copy_one(struct sctp_stream_queue_pending *ret,
 		left -= willcpy;
 		cpsz += willcpy;
 		if (left > 0) {
-			m->m_next = sctp_get_mbuf_for_msg(left, 0);
+			m->m_next = sctp_get_mbuf_for_msg(left, 0, M_WAIT);
 			if (m->m_next == NULL) {
 				/*
 				 * the head goes back to caller, he can free
@@ -11783,7 +11797,8 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
     struct sctp_nets *net,
     int max_send_len,
     int user_marks_eor,
-    int *errno)
+    int *errno,
+    int non_blocking)
 
 {
 	/*
@@ -11805,7 +11820,7 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
         /* Unless E_EOR mode is on, we must make
 	 * a send FIT in one call.
 	 */
-	if ((user_marks_eor == 0)  && 
+	if (((user_marks_eor == 0) && non_blocking) && 
 	    (uio->uio_resid > stcb->sctp_socket->so_snd.sb_hiwat)) {
 		/* It will NEVER fit */
 		*errno = EMSGSIZE;
@@ -11967,6 +11982,8 @@ sctp_lower_sosend(struct socket *so,
 	int some_on_control = 0;
 	int got_all_of_the_send = 0;
 	int hold_tcblock = 0;
+	int non_blocking = 0;
+
 	error = 0;
 	net = NULL;
 	stcb = NULL;
@@ -11982,6 +11999,13 @@ sctp_lower_sosend(struct socket *so,
 #else
 	s = splnet();
 #endif
+	if ((stcb) && ((so->so_state & SS_NBIO)
+#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+		       || (flags & MSG_NBIO)
+#endif
+		    )) {
+		non_blocking = 1;
+	}
 
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 	    (inp->sctp_socket->so_qlimit)) {
@@ -12050,13 +12074,9 @@ sctp_lower_sosend(struct socket *so,
 				hold_tcblock = 1;
 			}
 		}
-		if ((stcb) && ((so->so_state & SS_NBIO)
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-			       || (flags & MSG_NBIO)
-#endif
-			    )) {
+		if (non_blocking) {
 			if ((so->so_snd.sb_hiwat <
-			     			     (sndlen + stcb->asoc.total_output_queue_size)) ||
+			     (sndlen + stcb->asoc.total_output_queue_size)) ||
 			    (stcb->asoc.chunks_on_out_queue >
 			     sctp_max_chunks_on_queue)) {
 				error = EWOULDBLOCK;
@@ -12461,7 +12481,7 @@ sctp_lower_sosend(struct socket *so,
 		strm = &stcb->asoc.strmout[srcv->sinfo_stream];
 		user_marks_eor = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXPLICIT_EOR);
 		if(strm->last_msg_incomplete == 0) {
-			sp = sctp_copy_it_in(stcb, asoc, srcv, uio, net, max_len, user_marks_eor, &error);
+			sp = sctp_copy_it_in(stcb, asoc, srcv, uio, net, max_len, user_marks_eor, &error, non_blocking);
 			if ((sp == NULL) || (error)) {
 				goto out;
 			}
@@ -12554,11 +12574,7 @@ sctp_lower_sosend(struct socket *so,
 				hold_tcblock = 0;
 			}
 			/* wait for space now */
-			if ((so->so_state & SS_NBIO)
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-			    || (flags & MSG_NBIO)
-#endif
-				) {
+			if (non_blocking) {
 				/* Non-blocking io in place out */
 				goto skip_out_eof;
 			}
@@ -12584,22 +12600,45 @@ sctp_lower_sosend(struct socket *so,
 #endif
 			}
 			SOCKBUF_LOCK(&so->so_snd);
-			be.error = 0;
-			stcb->block_entry = &be;
-			error = sbwait(&so->so_snd);
-			stcb->block_entry = NULL;
-			if (error || so->so_error || be.error) {
-				if (error == 0) {
-					if (so->so_error)
-						error = so->so_error;
-					if (be.error) {
-						error = be.error;
+			/* This is a bit strange, but I think it will
+			 * work. The total_output_queue_size is locked and
+			 * protected by the TCB_LOCK, which we just released.
+			 * There is a race that can occur between releasing it
+			 * above, and me getting the socket lock, where sacks
+			 * come in but we have not put the SB_WAIT on the
+			 * so_snd buffer to get the wakeup. After the LOCK
+			 * is applied the sack_processing will also need to
+			 * LOCK the so->so_snd to do the actual sowwakeup(). So
+			 * once we have the socket buffer lock if we recheck the
+			 * size we KNOW we will get to sleep safely with the
+			 * wakeup flag in place.
+			 */
+			if(so->so_snd.sb_hiwat <= stcb->asoc.total_output_queue_size) {
+#ifdef SCTP_BLK_LOGGING
+				sctp_log_block(SCTP_BLOCK_LOG_INTO_BLK,
+					       so, asoc, uio->uio_resid);
+#endif
+				be.error = 0;
+				stcb->block_entry = &be;
+				error = sbwait(&so->so_snd);
+				stcb->block_entry = NULL;
+				if (error || so->so_error || be.error) {
+					if (error == 0) {
+						if (so->so_error)
+							error = so->so_error;
+						if (be.error) {
+							error = be.error;
+						}
 					}
+					SOCKBUF_UNLOCK(&so->so_snd);
+					goto out;
 				}
-				SOCKBUF_UNLOCK(&so->so_snd);
-				goto out;
 			}
 			SOCKBUF_UNLOCK(&so->so_snd);
+#ifdef SCTP_BLK_LOGGING
+			sctp_log_block(SCTP_BLOCK_LOG_OUTOF_BLK,
+				       so, asoc, stcb->asoc.total_output_queue_size);
+#endif
 		}
 		if (hold_tcblock == 0) {
 			SCTP_TCB_LOCK(stcb);
@@ -12659,17 +12698,17 @@ sctp_lower_sosend(struct socket *so,
 #ifdef SCTP_DEBUG
 				if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
 					printf("%s:%d sends a shutdown\n",
-					    __FILE__,
-					    __LINE__
-					    );
+					       __FILE__,
+					       __LINE__
+						);
 				}
 #endif
 				sctp_send_shutdown(stcb, stcb->asoc.primary_destination);
 				asoc->state = SCTP_STATE_SHUTDOWN_SENT;
 				sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN, stcb->sctp_ep, stcb,
-				    asoc->primary_destination);
+						 asoc->primary_destination);
 				sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD, stcb->sctp_ep, stcb,
-				    asoc->primary_destination);
+						 asoc->primary_destination);
 			}
 		} else {
 			/*
