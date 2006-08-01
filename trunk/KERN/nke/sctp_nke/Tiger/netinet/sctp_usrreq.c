@@ -641,6 +641,11 @@ sctp_ctlinput(cmd, sa, vip)
 				SCTP_INP_WUNLOCK(inp);
 			}
 		}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		if (inp != NULL) {
+			socket_unlock(inp->ip_inp.inp.inp_socket, 0);
+		}
+#endif
 		splx(s);
 	}
 #if defined(__FreeBSD__) || defined(__APPLE__)

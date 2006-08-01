@@ -309,6 +309,9 @@ sctp6_input(mp, offp, proto)
 				socket_unlock(in6p->ip_inp.inp.inp_socket, 1);
 #endif
 			} else if ((in6p != NULL) && (stcb == NULL)) {
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+				socket_unlock(in6p->ip_inp.inp.inp_socket, 1);
+#endif
 				refcount_up = 1;
 			}
 			SCTP_STAT_INCR(sctps_badsum);
@@ -698,6 +701,11 @@ sctp6_ctlinput(cmd, pktdst, d)
 			if (stcb)
 				SCTP_TCB_UNLOCK(stcb);
 		}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		if (inp != NULL) {
+			socket_unlock(inp->ip_inp.inp.inp_socket, 0);
+		}
+#endif
 		splx(s);
 	}
 }
