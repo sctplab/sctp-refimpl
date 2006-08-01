@@ -991,7 +991,7 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 
 #define TIGER_LOCK_LOG(_addr, _type) \
 		do { \
-		    sctp_misc_ints(0, APPLE_FILE_NO, __LINE__, _addr, _type); \
+		    sctp_misc_ints(0, APPLE_FILE_NO, __LINE__, (uint32_t)_addr, _type); \
 		} while (0)
 
 #define SCTP_INCRS_DEFINED 1
