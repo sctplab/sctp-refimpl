@@ -4677,9 +4677,15 @@ wait_some_more:
 		if (so->so_error || so->so_state & SS_CANTRCVMORE)
 			goto release;
 #endif
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		sbunlock(&so->so_snd, 1);
+#else
+		sbunlock(&so->so_snd);
+#endif
 		error = sbwait(&so->so_rcv);
 		if (error)
-			goto release;
+			goto release_unlocked;
+		error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
 
 		if (control->length == 0) {
 			/* still nothing here */
@@ -4761,9 +4767,16 @@ get_more_data2:
 			if (so->so_error || so->so_state & SS_CANTRCVMORE)
 				goto release;
 #endif
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			sbunlock(&so->so_snd, 1);
+#else
+			sbunlock(&so->so_snd);
+#endif
 			error = sbwait(&so->so_rcv);
 			if (error)
-				goto release;
+				goto release_unlocked;
+			error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
+
 			if (control->length == 0) {
 				/* still nothing here */
 				if (so->so_rcv.sb_cc) {
@@ -4862,14 +4875,14 @@ get_more_data2:
 		}
 	}
 release:
-
-	if (msg_flags)
-		*msg_flags |= out_flags;
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	sbunlock(&so->so_rcv, 1);
 #else
 	sbunlock(&so->so_rcv);
 #endif
+release_unlocked:
+	if (msg_flags)
+		*msg_flags |= out_flags;
 out:
 	if ((stcb) && freecnt_applied) {
 		/*
