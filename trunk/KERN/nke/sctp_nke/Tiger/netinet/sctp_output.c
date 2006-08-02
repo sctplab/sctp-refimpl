@@ -6504,7 +6504,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			 * suspended at is not known deep down where we are.
 			 * I will drop to spl0() so that others can get in.
 			 */
-			
+
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			sbunlock(&so->so_snd, 1);
 #else
@@ -12394,7 +12394,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 			    so, asoc, sndlen);
 #endif
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			sbunlock(&so->so_snd, 1);	/* MT: FIXME */
+			sbunlock(&so->so_snd, 1);
 #else
 			sbunlock(&so->so_snd);
 #endif
