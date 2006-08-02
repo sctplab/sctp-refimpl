@@ -1804,13 +1804,16 @@ sctp_iterator_timer(struct sctp_iterator *it)
 done_with_iterator:
 		SCTP_ITERATOR_UNLOCK();
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, BEFORE_LOCK_EXCLUSIVE);
 		lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+		TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, AFTER_LOCK_EXCLUSIVE);
 #endif
 		SCTP_INP_INFO_WLOCK();
 		LIST_REMOVE(it, sctp_nxt_itr);
 		/* stopping the callout is not needed, in theory */
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
+		lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+		TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, UNLOCK_EXCLUSIVE);
 #endif
 		SCTP_INP_INFO_WUNLOCK();
 		callout_stop(&it->tmr.timer);
@@ -1945,12 +1948,15 @@ select_a_new_ep:
 		it->inp = NULL;
 	} else {
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, BEFORE_LOCK_EXCLUSIVE);
 		lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+		TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, AFTER_LOCK_EXCLUSIVE);
 #endif
 		SCTP_INP_INFO_RLOCK();
 		it->inp = LIST_NEXT(it->inp, sctp_list);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
+		lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+		TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, UNLOCK_EXCLUSIVE);
 #endif
 		SCTP_INP_INFO_RUNLOCK();
 	}
@@ -1971,7 +1977,9 @@ sctp_slowtimo()
 
 	n = n1 = n2 = n3 = n4 = 0;
 #endif
+	TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, BEFORE_LOCK_EXCLUSIVE);
 	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+	TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, AFTER_LOCK_EXCLUSIVE);
 	LIST_FOREACH(inp, &sctppcbinfo.inplisthead, inp_list) {
 		n++;
 		if (inp->inp_wantcnt != WNT_STOPUSING) {
@@ -2002,7 +2010,8 @@ sctp_slowtimo()
 			n4++;
 		}
 	}
-	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
+	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+	TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, UNLOCK_EXCLUSIVE);
 #ifdef SCTP_DEBUG
 	if ((sctp_debug_on & SCTP_DEBUG_PCB2) && (n > 0)) {
 		printf("sctp_slowtimo: inps: %u, inp_wantcnt: %u, so_usecount : %u, inp_state: %u, inpcb_mtx: %u\n",

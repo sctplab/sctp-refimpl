@@ -983,13 +983,15 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 
 #define BEFORE_LOCK_SHARED        0x01
 #define BEFORE_LOCK_EXCLUSIVE     0x02
+#define BEFORE_TRY_LOCK_SHARED    0x03
 #define BEFORE_TRY_LOCK_EXCLUSIVE 0x05
 #define BEFORE_LOCK_SOCKET        0x06
 
 #define AFTER_LOCK_SHARED         0x11
 #define AFTER_LOCK_EXCLUSIVE      0x12
-#define AFTER_TRY_LOCK_EXCLUSIVE  0x13
-#define AFTER_LOCK_SOCKET         0x14
+#define AFTER_TRY_LOCK_SHARED     0x13
+#define AFTER_TRY_LOCK_EXCLUSIVE  0x14
+#define AFTER_LOCK_SOCKET         0x15
 
 #define UNLOCK_SHARED             0x21
 #define UNLOCK_EXCLUSIVE          0x22
