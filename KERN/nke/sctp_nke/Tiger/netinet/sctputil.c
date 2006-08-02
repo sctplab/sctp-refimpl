@@ -5020,6 +5020,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 	}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	socket_unlock(so, 1);
+	TIGER_LOCK_LOG(so, UNLOCK_SOCKET);
 #endif
 
 	return (error);
