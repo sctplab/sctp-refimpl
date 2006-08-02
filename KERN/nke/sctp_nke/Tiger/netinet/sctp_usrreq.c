@@ -6400,12 +6400,6 @@ sctp_lock(struct socket *so, int refcount, int lr)
 {
 	int lr_saved;
 
-#ifdef __ppc__
-	if (lr == 0) {
-		__asm__ volatile ("mflr %0":"=r" (lr_saved));
-	} else
-		lr_saved = lr;
-#endif
 	/*
 	 * printf("sctp_lock called for so=%p with so->so_pcb=%p,
 	 * so->type=%d, so->so_usecount=%d.\n", so, so->so_pcb, so->so_type,
@@ -6413,12 +6407,12 @@ sctp_lock(struct socket *so, int refcount, int lr)
 	 */
 	if (so->so_pcb) {
 		lck_mtx_assert(((struct inpcb *)so->so_pcb)->inpcb_mtx, LCK_MTX_ASSERT_NOTOWNED);
+	
 		lck_mtx_lock(((struct inpcb *)so->so_pcb)->inpcb_mtx);
 	} else {
 		panic("sctp_lock: so=%x NO PCB! lr =%x\n", so, lr_saved);
 		lck_mtx_assert(so->so_proto->pr_domain->dom_mtx, LCK_MTX_ASSERT_NOTOWNED);
 		lck_mtx_lock(so->so_proto->pr_domain->dom_mtx);
-		TIGER_LOCK_LOG(so, INSIDE_LOCK_SOCKET);
 	}
 
 	if (so->so_usecount < 0)
@@ -6439,12 +6433,6 @@ sctp_unlock(struct socket *so, int refcount, int lr)
 {
 	int lr_saved;
 
-#ifdef __ppc__
-	if (lr == 0) {
-		__asm__ volatile ("mflr %0":"=r" (lr_saved));
-	} else
-		lr_saved = lr;
-#endif
 	/*
 	 * printf("sctp_unlock called for so=%p with so->so_pcb=%p,
 	 * so->type=%d, so->so_usecount=%d.\n", so, so->so_pcb, so->so_type,
@@ -6463,7 +6451,6 @@ sctp_unlock(struct socket *so, int refcount, int lr)
 	} else {
 		lck_mtx_assert(((struct inpcb *)so->so_pcb)->inpcb_mtx, LCK_MTX_ASSERT_OWNED);
 		lck_mtx_unlock(((struct inpcb *)so->so_pcb)->inpcb_mtx);
-		TIGER_LOCK_LOG(so, INSIDE_UNLOCK_SOCKET);
 	}
 	so->reserved4 = (void *)lr_saved;
 	/*

@@ -370,7 +370,9 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 		return (NULL);
 	}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	sctp_lock_assert((*inp_p)->ip_inp.inp.inp_socket);
+	if (*inp_p != NULL) {
+		sctp_lock_assert((*inp_p)->ip_inp.inp.inp_socket);
+	}
 #endif
 
 	if (to->sa_family == AF_INET && from->sa_family == AF_INET) {
@@ -496,8 +498,10 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 					}
 					/* Update the endpoint pointer */
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-					socket_unlock((*inp_p)->ip_inp.inp.inp_socket, 1);
-					TIGER_LOCK_LOG((*inp_p)->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
+					if (*inp_p != NULL) {
+						socket_unlock((*inp_p)->ip_inp.inp.inp_socket, 1);
+						TIGER_LOCK_LOG((*inp_p)->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
+					}
 					TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, BEFORE_LOCK_SOCKET);
 					socket_lock(inp->ip_inp.inp.inp_socket, 1);
 					TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, AFTER_LOCK_SOCKET);
@@ -519,8 +523,10 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 					}
 					/* Update the endpoint pointer */
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-					socket_unlock((*inp_p)->ip_inp.inp.inp_socket, 1);
-					TIGER_LOCK_LOG((*inp_p)->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
+					if (*inp_p != NULL) {
+						socket_unlock((*inp_p)->ip_inp.inp.inp_socket, 1);
+						TIGER_LOCK_LOG((*inp_p)->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
+					}
 					TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, BEFORE_LOCK_SOCKET);
 					socket_lock(inp->ip_inp.inp.inp_socket, 1);
 					TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, AFTER_LOCK_SOCKET);
