@@ -1812,7 +1812,7 @@ done_with_iterator:
 		LIST_REMOVE(it, sctp_nxt_itr);
 		/* stopping the callout is not needed, in theory */
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+		lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 		TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, UNLOCK_EXCLUSIVE);
 #endif
 		SCTP_INP_INFO_WUNLOCK();
@@ -1955,7 +1955,7 @@ select_a_new_ep:
 		SCTP_INP_INFO_RLOCK();
 		it->inp = LIST_NEXT(it->inp, sctp_list);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+		lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 		TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, UNLOCK_EXCLUSIVE);
 #endif
 		SCTP_INP_INFO_RUNLOCK();
@@ -2010,7 +2010,7 @@ sctp_slowtimo()
 			n4++;
 		}
 	}
-	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 	TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, UNLOCK_EXCLUSIVE);
 #ifdef SCTP_DEBUG
 	if ((sctp_debug_on & SCTP_DEBUG_PCB2) && (n > 0)) {
