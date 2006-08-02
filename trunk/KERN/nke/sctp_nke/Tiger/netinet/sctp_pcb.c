@@ -2023,7 +2023,7 @@ sctp_inpcb_alloc(struct socket *so)
 	if (inp == NULL) {
 		printf("Out of SCTP-INPCB structures - no resources\n");
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+		lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 		TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, UNLOCK_EXCLUSIVE);
 #endif
 		SCTP_INP_INFO_WUNLOCK();
@@ -2060,7 +2060,7 @@ sctp_inpcb_alloc(struct socket *so)
 	if (error != 0) {
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+		lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 		TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, UNLOCK_EXCLUSIVE);
 #endif
 		SCTP_INP_INFO_WUNLOCK();
@@ -2101,7 +2101,7 @@ sctp_inpcb_alloc(struct socket *so)
 		 */
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+		lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 		TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, UNLOCK_EXCLUSIVE);
 #endif
 		return (EOPNOTSUPP);
@@ -2119,7 +2119,7 @@ sctp_inpcb_alloc(struct socket *so)
 		printf("Out of SCTP-INPCB->hashinit - no resources\n");
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+		lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 		TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, UNLOCK_EXCLUSIVE);
 #endif
 		return (ENOBUFS);
@@ -2129,7 +2129,7 @@ sctp_inpcb_alloc(struct socket *so)
 	inp->ip_inp.inp.inpcb_mtx = lck_mtx_alloc_init(sctppcbinfo.mtx_grp, sctppcbinfo.mtx_attr);
 	if (inp->ip_inp.inp.inpcb_mtx == NULL) {
 		printf("in_pcballoc: can't alloc mutex! so=%x\n", so);
-		lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+		lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 		TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, UNLOCK_EXCLUSIVE);
 		return (ENOMEM);
 	}
@@ -2147,7 +2147,7 @@ sctp_inpcb_alloc(struct socket *so)
 	LIST_INSERT_HEAD(&sctppcbinfo.listhead, inp, sctp_list);
 #ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
 	LIST_INSERT_HEAD(&sctppcbinfo.inplisthead, &inp->ip_inp.inp, inp_list);
-	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 	TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, UNLOCK_EXCLUSIVE);
 #endif
 	SCTP_INP_INFO_WUNLOCK();
@@ -2367,7 +2367,7 @@ sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
 	}
 
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 	TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, UNLOCK_EXCLUSIVE);
 #endif
 	SCTP_INP_INFO_WUNLOCK();
@@ -2640,7 +2640,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 				SCTP_INP_DECR_REF(inp);
 				SCTP_INP_WUNLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-				lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+				lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 				TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, UNLOCK_EXCLUSIVE);
 #endif
 				SCTP_INP_INFO_WUNLOCK();
@@ -2651,7 +2651,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 			SCTP_INP_DECR_REF(inp);
 			SCTP_INP_WUNLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+			lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 			TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, UNLOCK_EXCLUSIVE);
 #endif
 			SCTP_INP_INFO_WUNLOCK();
@@ -2675,7 +2675,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 			SCTP_INP_WUNLOCK(inp);
 			/* unlock info */
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+			lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 			TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, UNLOCK_EXCLUSIVE);
 #endif
 			SCTP_INP_INFO_WUNLOCK();
@@ -2689,7 +2689,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 				SCTP_INP_DECR_REF(inp);
 				SCTP_INP_WUNLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-				lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+				lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 				TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, UNLOCK_EXCLUSIVE);
 #endif
 				SCTP_INP_INFO_WUNLOCK();
@@ -2767,7 +2767,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 		 */
 		SCTP_INP_WUNLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+		lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 		TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, UNLOCK_EXCLUSIVE);
 #endif
 		SCTP_INP_INFO_WUNLOCK();
@@ -2822,7 +2822,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 			/* Can't find an interface with that address */
 			SCTP_INP_WUNLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+			lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 			TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, UNLOCK_EXCLUSIVE);
 #endif
 			SCTP_INP_INFO_WUNLOCK();
@@ -2842,7 +2842,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 				/* Can't bind a non-existent addr. */
 				SCTP_INP_WUNLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-				lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+				lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 				TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, UNLOCK_EXCLUSIVE);
 #endif
 				SCTP_INP_INFO_WUNLOCK();
@@ -2864,7 +2864,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 		if (error != 0) {
 			SCTP_INP_WUNLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+			lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 			TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, UNLOCK_EXCLUSIVE);
 #endif
 			SCTP_INP_INFO_WUNLOCK();
@@ -2889,7 +2889,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 	inp->sctp_flags &= ~SCTP_PCB_FLAGS_UNBOUND;
 	SCTP_INP_WUNLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 	TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, UNLOCK_EXCLUSIVE);
 #endif
 	SCTP_INP_INFO_WUNLOCK();
@@ -3452,7 +3452,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	SCTP_DECR_EP_COUNT();
 #endif
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 	TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, UNLOCK_EXCLUSIVE);
 	SCTP_ITERATOR_UNLOCK();
 #endif
@@ -4064,7 +4064,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
 		SCTP_INP_WUNLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+		lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 		TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, UNLOCK_EXCLUSIVE);
 #endif
 		SCTP_INP_INFO_WUNLOCK();
@@ -4085,7 +4085,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	/* put it in the bucket in the vtag hash of assoc's for the system */
 	LIST_INSERT_HEAD(head, stcb, sctp_asocs);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 	TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, UNLOCK_EXCLUSIVE);
 #endif
 	SCTP_INP_INFO_WUNLOCK();
@@ -4524,7 +4524,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 
 	sctp_add_vtag_to_timewait(inp, asoc->my_vtag);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 	TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, UNLOCK_EXCLUSIVE);
 	SCTP_ITERATOR_UNLOCK();
 #endif
@@ -6152,7 +6152,7 @@ sctp_is_vtag_good(struct sctp_inpcb *inp, uint32_t tag, struct timeval *now)
 			if (inp == stcb->sctp_ep) {
 				/* bad tag, in use */
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-				lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+				lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 				TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, UNLOCK_EXCLUSIVE);
 #endif
 				SCTP_INP_INFO_WUNLOCK();
@@ -6173,7 +6173,7 @@ check_restart:
 			if (inp == stcb->sctp_ep) {
 				/* bad tag, in use */
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-				lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+				lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 				TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, UNLOCK_EXCLUSIVE);
 #endif
 				SCTP_INP_INFO_WUNLOCK();
@@ -6202,7 +6202,7 @@ check_time_wait:
 				    tag) {
 					/* Bad tag, sorry :< */
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-					lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+					lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 					TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, UNLOCK_EXCLUSIVE);
 #endif
 					SCTP_INP_INFO_WUNLOCK();
@@ -6213,7 +6213,7 @@ check_time_wait:
 	}
 	/* Not found, ok to use the tag */
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 	TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, UNLOCK_EXCLUSIVE);
 #endif
 	SCTP_INP_INFO_WUNLOCK();
@@ -6582,7 +6582,7 @@ sctp_initiate_iterator(inp_func inpf, asoc_func af, uint32_t pcb_state,
 	SCTP_INP_INFO_WLOCK();
 	LIST_INSERT_HEAD(&sctppcbinfo.iteratorhead, it, sctp_nxt_itr);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 	TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, UNLOCK_EXCLUSIVE);
 #endif
 	SCTP_INP_INFO_WUNLOCK();
