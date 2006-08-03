@@ -3111,6 +3111,8 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
 					     &stcb->sctp_socket->so_rcv, 
 					     m_notify);
 			}
+			control->length = m_notify->m_len;
+
 		} else if ((control->tail_mbuf->m_flags & M_EOR) != M_EOR) {
 			/* no end of record so pdapi is not complete */
 			struct mbuf *m;
