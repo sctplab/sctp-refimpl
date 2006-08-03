@@ -6981,12 +6981,10 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 				sp->tail_mbuf = sp->data;
 			}
 			m_free(m);
-			m = sp->data;
-#ifdef INVARIANTS
-			if ((sp->tail_mbuf == sp->data) && m) {
-				panic("Huh, tail is head but there is a next?");
-			}
-#endif
+			if(sp->data->m_next)
+				m = sp->data;
+			else
+				m = NULL;
 		}
 	}
 	if(to_move > sp->length) {
@@ -7095,7 +7093,6 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		/* more to go, we are locked */
 		*locked = 1;
 	}
-	printf("Insert stcb:%x chk:%x on send_queue\n", (u_int)stcb, (u_int)chk);
 	asoc->chunks_on_out_queue++;
 	TAILQ_INSERT_TAIL(&asoc->send_queue, chk, sctp_next);
 	asoc->send_queue_cnt++;
@@ -9137,10 +9134,10 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 	struct sctp_association *asoc;
 	struct sctp_nets *net;
 	int error, num_out, tot_out, ret, reason_code, burst_cnt, burst_limit;
-	int sending_one_packet = 0;
 	struct timeval now;
 	int now_filled = 0;
 	int cwnd_full = 0;
+	int nagle_on = 0;
 
 	asoc = &stcb->asoc;
 	tot_out = 0;
@@ -9151,6 +9148,13 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 		printf("in co - retran count:%d\n", asoc->sent_queue_retran_cnt);
 	}
 #endif
+	if(from_where == SCTP_OUTPUT_FROM_USR_SEND) {
+		if(sctp_is_feature_on(inp, SCTP_PCB_FLAGS_NODELAY)) {
+			nagle_on = 0;
+		} else {
+			nagle_on = 1;
+		}
+	}
 	STCB_TCB_LOCK_ASSERT(stcb);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	sctp_lock_assert(inp->ip_inp.inp.inp_socket);
@@ -9287,15 +9291,6 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 		}
 
 	}
-	/* Fill up what we can to the destination */
-	if (sctp_is_feature_off(inp, SCTP_PCB_FLAGS_NODELAY) &&
-	    (from_where == SCTP_OUTPUT_FROM_USR_SEND)) {
-		/*
-		 * Nagle is on, and we want only one packet to be sent to
-		 * EACH destination.
-		 */
-		sending_one_packet = 1;
-	}
 	burst_cnt = 0;
 	cwnd_full = 0;
 	do {
@@ -9336,8 +9331,19 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 			sctp_log_cwnd(stcb, NULL, reason_code, SCTP_SEND_NOW_COMPLETES);
 		}
 #endif
-		if (sending_one_packet) {
-			break;
+		if (nagle_on) {
+			int un_sent;
+			/* When nagle is on, we look at how much is un_sent, then
+			 * if its smaller than an MTU and we have data in
+			 * flight we stop.
+			 */
+			un_sent = ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight) +
+				   ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) 
+				    * sizeof(struct sctp_data_chunk)));
+			if((un_sent < (int)(stcb->asoc.smallest_mtu - SCTP_MIN_OVERHEAD)) &&
+			   (stcb->asoc.total_flight > 0)){
+				break;
+			}
 		}
 	} while (num_out && (sctp_use_cwnd_based_maxburst ||
 	    (burst_cnt < burst_limit)));
@@ -9380,519 +9386,30 @@ sctp_output(inp, m, addr, control, p, flags)
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 	struct thread *p;
-
 #else
 	struct proc *p;
-
 #endif
 	int flags;
 {
-	struct inpcb *ip_inp;
-	struct sctp_inpcb *t_inp;
-	struct sctp_tcb *stcb;
-	struct sctp_nets *net;
-	struct sctp_association *asoc;
-	int create_lock_applied = 0;
-	int queue_only, error = 0;
-	int s;
-	struct sctp_sndrcvinfo srcv;
-	int un_sent = 0;
-	int use_rcvinfo = 0;
-
-	/* Entry on this function assumes that
-	 * the caller has done the sblock() but does
-	 * NOT hold SOCKBUF_LOCK(&so->so_snd);
-	 */
-
-	t_inp = inp;
-	/* struct route ro; */
-
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	s = splsoftnet();
-#else
-	s = splnet();
-#endif
-	queue_only = 0;
-	ip_inp = (struct inpcb *)inp;
-	stcb = NULL;
-	asoc = NULL;
-	net = NULL;
-
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
-		printf("USR Send BEGINS\n");
-	}
-#endif
-	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
-	    (inp->sctp_socket->so_qlimit)) {
-		/* The listener can NOT send */
-		if (control) {
-			sctppcbinfo.mbuf_track--;
-			sctp_m_freem(control);
-			control = NULL;
-		}
-		sctp_m_freem(m);
-		splx(s);
-		return (EFAULT);
-	}
-	/* Can't allow a V6 address on a non-v6 socket */
-	if (addr) {
-		SCTP_ASOC_CREATE_LOCK(inp);
-		if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
-		    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
-			/* Should I really unlock ? */
-			SCTP_ASOC_CREATE_UNLOCK(inp);
-			if (control) {
-				sctppcbinfo.mbuf_track--;
-				sctp_m_freem(control);
-				control = NULL;
-			}
-			sctp_m_freem(m);
-			splx(s);
-			return (EFAULT);
-		}
-		create_lock_applied = 1;
-		if (((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0) &&
-		    (addr->sa_family == AF_INET6)) {
-			SCTP_ASOC_CREATE_UNLOCK(inp);
-			if (control) {
-				sctppcbinfo.mbuf_track--;
-				sctp_m_freem(control);
-				control = NULL;
-			}
-			sctp_m_freem(m);
-			splx(s);
-			return (EINVAL);
-		}
-	}
-	if (control) {
-		sctppcbinfo.mbuf_track++;
-		if (sctp_find_cmsg(SCTP_SNDRCV, (void *)&srcv, control,
-		    sizeof(srcv))) {
-			if (srcv.sinfo_flags & SCTP_SENDALL) {
-				/* its a sendall */
-				sctppcbinfo.mbuf_track--;
-				sctp_m_freem(control);
-				splx(s);
-				if (create_lock_applied) {
-					SCTP_ASOC_CREATE_UNLOCK(inp);
-					create_lock_applied = 0;
-				}
-				return (sctp_sendall(inp, NULL, m, &srcv));
-			}
-			if (srcv.sinfo_assoc_id) {
-				if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
-					SCTP_INP_RLOCK(inp);
-					stcb = LIST_FIRST(&inp->sctp_asoc_list);
-					if (stcb)
-						SCTP_TCB_LOCK(stcb);
-					SCTP_INP_RUNLOCK(inp);
-
-					if (stcb == NULL) {
-						if (create_lock_applied) {
-							SCTP_ASOC_CREATE_UNLOCK(inp);
-							create_lock_applied = 0;
-						}
-						sctppcbinfo.mbuf_track--;
-						sctp_m_freem(control);
-						sctp_m_freem(m);
-						splx(s);
-						return (ENOTCONN);
-					}
-					net = stcb->asoc.primary_destination;
-				} else {
-					stcb = sctp_findassociation_ep_asocid(inp, srcv.sinfo_assoc_id);
-				}
-				/*
-				 * Question: Should I error here if the
-				 * assoc_id is no longer valid? i.e. I can't
-				 * find it?
-				 */
-				if ((stcb) &&
-				    (addr != NULL)) {
-					/* Must locate the net structure */
-					if (addr)
-						net = sctp_findnet(stcb, addr);
-				}
-				if (net == NULL)
-					net = stcb->asoc.primary_destination;
-			}
-			use_rcvinfo = 1;
-		}
-	}
-	if (stcb == NULL) {
-		if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
-			SCTP_INP_RLOCK(inp);
-			stcb = LIST_FIRST(&inp->sctp_asoc_list);
-			if (stcb)
-				SCTP_TCB_LOCK(stcb);
-			SCTP_INP_RUNLOCK(inp);
-			if (stcb == NULL) {
-				splx(s);
-				if (create_lock_applied) {
-					SCTP_ASOC_CREATE_UNLOCK(inp);
-					create_lock_applied = 0;
-				}
-				if (control) {
-					sctppcbinfo.mbuf_track--;
-					sctp_m_freem(control);
-					control = NULL;
-				}
-				sctp_m_freem(m);
-				return (ENOTCONN);
-			}
-			if (addr == NULL) {
-				net = stcb->asoc.primary_destination;
-			} else {
-				net = sctp_findnet(stcb, addr);
-				if (net == NULL) {
-					net = stcb->asoc.primary_destination;
-				}
-			}
-		} else {
-			if (addr != NULL) {
-				SCTP_INP_WLOCK(inp);
-				SCTP_INP_INCR_REF(inp);
-				SCTP_INP_WUNLOCK(inp);
-				stcb = sctp_findassociation_ep_addr(&t_inp, addr, &net, NULL, NULL);
-				if (stcb == NULL) {
-					SCTP_INP_WLOCK(inp);
-					SCTP_INP_DECR_REF(inp);
-					SCTP_INP_WUNLOCK(inp);
-				}
-			}
-		}
-	}
-	if ((stcb == NULL) &&
-	    (inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE)) {
-		if (control) {
-			sctppcbinfo.mbuf_track--;
-			sctp_m_freem(control);
-			control = NULL;
-		}
-		if (create_lock_applied) {
-			SCTP_ASOC_CREATE_UNLOCK(inp);
-			create_lock_applied = 0;
-		}
-		sctp_m_freem(m);
-		splx(s);
-		return (ENOTCONN);
-	} else if ((stcb == NULL) &&
-	    (addr == NULL)) {
-		if (control) {
-			sctppcbinfo.mbuf_track--;
-			sctp_m_freem(control);
-			control = NULL;
-		}
-		if (create_lock_applied) {
-			SCTP_ASOC_CREATE_UNLOCK(inp);
-			create_lock_applied = 0;
-		}
-		sctp_m_freem(m);
-		splx(s);
-		return (ENOENT);
-	} else if (stcb == NULL) {
-		/* 1-many mode, we must go ahead and start the INIT process */
-		if ((use_rcvinfo) && (srcv.sinfo_flags & SCTP_ABORT)) {
-			/* Strange user to do this */
-			if (control) {
-				sctppcbinfo.mbuf_track--;
-				sctp_m_freem(control);
-				control = NULL;
-			}
-			if (create_lock_applied) {
-				SCTP_ASOC_CREATE_UNLOCK(inp);
-				create_lock_applied = 0;
-			}
-			sctp_m_freem(m);
-			splx(s);
-			return (ENOENT);
-		}
-		stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0);
-		if (stcb == NULL) {
-			if (control) {
-				sctppcbinfo.mbuf_track--;
-				sctp_m_freem(control);
-				control = NULL;
-			}
-			if (create_lock_applied) {
-				SCTP_ASOC_CREATE_UNLOCK(inp);
-				create_lock_applied = 0;
-			}
-			sctp_m_freem(m);
-			splx(s);
-			return (error);
-		}
-		if (create_lock_applied) {
-			SCTP_ASOC_CREATE_UNLOCK(inp);
-			create_lock_applied = 0;
-		} else {
-			printf("Huh-1, create lock should have been applied!\n");
-		}
-		/* Turn on queue only flag to prevent data from being sent */
-		queue_only = 1;
-		asoc = &stcb->asoc;
-		asoc->state = SCTP_STATE_COOKIE_WAIT;
-		SCTP_GETTIME_TIMEVAL(&asoc->time_entered);
-
-		/*
-		 * initialize authentication parameters for the assoc
-		 */
-		/* generate a RANDOM for this assoc */
-		asoc->authinfo.random =
-		    sctp_generate_random_key(sctp_auth_random_len);
-		/* initialize hmac list from endpoint */
-		asoc->local_hmacs =
-		    sctp_copy_hmaclist(inp->sctp_ep.local_hmacs);
-		/* initialize auth chunks list from endpoint */
-		asoc->local_auth_chunks =
-		    sctp_copy_chunklist(inp->sctp_ep.local_auth_chunks);
-		/* copy defaults from the endpoint */
-		asoc->authinfo.assoc_keyid = inp->sctp_ep.default_keyid;
-
-		if (control) {
-			/* see if a init structure exists in cmsg headers */
-			struct sctp_initmsg initm;
-			int i;
-
-			if (sctp_find_cmsg(SCTP_INIT, (void *)&initm, control,
-			    sizeof(initm))) {
-				/* we have an INIT override of the default */
-				if (initm.sinit_max_attempts)
-					asoc->max_init_times = initm.sinit_max_attempts;
-				if (initm.sinit_num_ostreams)
-					asoc->pre_open_streams = initm.sinit_num_ostreams;
-				if (initm.sinit_max_instreams)
-					asoc->max_inbound_streams = initm.sinit_max_instreams;
-				if (initm.sinit_max_init_timeo)
-					asoc->initial_init_rto_max = initm.sinit_max_init_timeo;
-			}
-			if (asoc->streamoutcnt < asoc->pre_open_streams) {
-				/* Default is NOT correct */
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
-					printf("Ok, defout:%d pre_open:%d\n",
-					    asoc->streamoutcnt, asoc->pre_open_streams);
-				}
-#endif
-				FREE(asoc->strmout, M_PCB);
-				asoc->strmout = NULL;
-				asoc->streamoutcnt = asoc->pre_open_streams;
-				{
-					struct sctp_stream_out *tmp_str;
-
-					SCTP_TCB_UNLOCK(stcb);
-					MALLOC(tmp_str, struct sctp_stream_out *,
-					    asoc->streamoutcnt *
-					    sizeof(struct sctp_stream_out), M_PCB,
-					    M_WAIT);
-					SCTP_TCB_LOCK(stcb);
-					asoc->strmout = tmp_str;
-				}
-				for (i = 0; i < asoc->streamoutcnt; i++) {
-					/*
-					 * inbound side must be set to
-					 * 0xffff, also NOTE when we get the
-					 * INIT-ACK back (for INIT sender)
-					 * we MUST reduce the count
-					 * (streamoutcnt) but first check if
-					 * we sent to any of the upper
-					 * streams that were dropped (if
-					 * some were). Those that were
-					 * dropped must be notified to the
-					 * upper layer as failed to send.
-					 */
-					asoc->strmout[i].next_sequence_sent = 0x0;
-					TAILQ_INIT(&asoc->strmout[i].outqueue);
-					asoc->strmout[i].stream_no = i;
-					asoc->strmout[i].last_msg_incomplete = 0;
-					asoc->strmout[i].next_spoke.tqe_next = 0;
-					asoc->strmout[i].next_spoke.tqe_prev = 0;
-				}
-			}
-		}
-		sctp_send_initiate(inp, stcb);
-		/*
-		 * we may want to dig in after this call and adjust the MTU
-		 * value. It defaulted to 1500 (constant) but the ro
-		 * structure may now have an update and thus we may need to
-		 * change it BEFORE we append the message.
-		 */
-		net = stcb->asoc.primary_destination;
-	} else {
-		if (create_lock_applied) {
-			SCTP_ASOC_CREATE_UNLOCK(inp);
-			create_lock_applied = 0;
-		}
-		asoc = &stcb->asoc;
-		if ((SCTP_GET_STATE(asoc) == SCTP_STATE_COOKIE_WAIT) ||
-		    (SCTP_GET_STATE(asoc) == SCTP_STATE_COOKIE_ECHOED)) {
-			queue_only = 1;
-		}
-		if ((SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_SENT) ||
-		    (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_RECEIVED) ||
-		    (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_ACK_SENT) ||
-		    (asoc->state & SCTP_STATE_SHUTDOWN_PENDING)) {
-			if (control) {
-				sctppcbinfo.mbuf_track--;
-				sctp_m_freem(control);
-				control = NULL;
-			}
-			if ((use_rcvinfo) &&
-			    (srcv.sinfo_flags & SCTP_ABORT)) {
-				SCTP_TCB_UNLOCK(stcb);
-				sctp_msg_append(stcb, net, m, &srcv, flags, 1, NULL);
-				error = 0;
-				splx(s);
-				return (error);
-			} else {
-				if (m)
-					sctp_m_freem(m);
-				error = ECONNRESET;
-			}
-			splx(s);
-			SCTP_TCB_UNLOCK(stcb);
-			return (error);
-		}
-	}
-	if (create_lock_applied) {
-		/*
-		 * we should never hit here with the create lock applied
-		 * 
-		 */
-		SCTP_ASOC_CREATE_UNLOCK(inp);
-		create_lock_applied = 0;
-	}
-	if (asoc->stream_reset_outstanding) {
-		/*
-		 * Can't queue any data while stream reset is underway.
-		 */
-		SCTP_TCB_UNLOCK(stcb);
-		return (EAGAIN);
-	}
-	if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
-		SCTP_TCB_UNLOCK(stcb);
-		return (ECONNRESET);
+	if(inp == NULL) {
+		return(EINVAL);
 	}
 
-	if (use_rcvinfo == 0) {
-		srcv = stcb->asoc.def_send;
+	if(inp->sctp_socket == NULL) {
+		return(EINVAL);
 	}
-#ifdef SCTP_DEBUG
-	else {
-		if (sctp_debug_on & SCTP_DEBUG_OUTPUT5) {
-			printf("stream:%d\n", srcv.sinfo_stream);
-			printf("flags:%x\n", (uint32_t) srcv.sinfo_flags);
-			printf("ppid:%d\n", srcv.sinfo_ppid);
-			printf("context:%d\n", srcv.sinfo_context);
-		}
-	}
-#endif
-	if (control) {
-		sctppcbinfo.mbuf_track--;
-		sctp_m_freem(control);
-		control = NULL;
-	}
-	if (net && ((srcv.sinfo_flags & SCTP_ADDR_OVER))) {
-		/* we take the override or the unconfirmed */
-		;
-	} else {
-		net = stcb->asoc.primary_destination;
-	}
-
-	atomic_add_16(&stcb->asoc.refcnt, 1);
-	SCTP_TCB_UNLOCK(stcb);
-
-	if ((error = sctp_msg_append(stcb, net, m, &srcv, flags, 1, NULL))) {
-		if ((srcv.sinfo_flags & SCTP_ABORT) == 0) {
-			/*
-			 * You can't unlock locks that are gone so only if
-			 * ABORT is not present do this.
-			 */
-			SCTP_TCB_UNLOCK(stcb);
-		}
-		splx(s);
-		return (error);
-	}
-
-	SCTP_TCB_LOCK(stcb);
-	atomic_add_16(&stcb->asoc.refcnt, -1);
-
-	if (net->flight_size > net->cwnd) {
-		queue_only = 1;
-	} else if (asoc->ifp_had_enobuf) {
-		SCTP_STAT_INCR(sctps_ifnomemqueued);
-		queue_only = 1;
-	} else {
-		un_sent = ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight) +
-		    ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) * sizeof(struct sctp_data_chunk)));
-
-
-		if ((sctp_is_feature_off(inp, SCTP_PCB_FLAGS_NODELAY)) &&
-		    (stcb->asoc.total_flight > 0) &&
-		    (un_sent < (int)(stcb->asoc.smallest_mtu - SCTP_MIN_OVERHEAD)) &&
-		    ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) < SCTP_MAX_DATA_BUNDLING)
-		    ) {
-			/*
-			 * Ok, Nagle is set on and we have data outstanding.
-			 * Don't send anything and let the SACK drive out
-			 * the data.
-			 */
-#ifdef SCTP_NAGLE_LOGGING
-			sctp_log_nagle_event(stcb, SCTP_NAGLE_APPLIED);
-#endif
-			SCTP_STAT_INCR(sctps_naglequeued);
-			queue_only = 1;
-		} else {
-#ifdef SCTP_NAGLE_LOGGING
-			if (sctp_is_feature_off(inp, SCTP_PCB_FLAGS_NODELAY))
-				sctp_log_nagle_event(stcb, SCTP_NAGLE_SKIPPED);
-#endif
-			SCTP_STAT_INCR(sctps_naglesent);
-		}
-	}
-	if ((queue_only == 0) && stcb->asoc.peers_rwnd) {
-		/* we can attempt to send too. */
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
-			printf("USR Send calls sctp_chunk_output\n");
-		}
-#endif
-#ifdef SCTP_AUDITING_ENABLED
-		sctp_audit_log(0xC0, 1);
-		sctp_auditing(6, inp, stcb, net);
-#endif
-		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_USR_SEND);
-#ifdef SCTP_AUDITING_ENABLED
-		sctp_audit_log(0xC0, 2);
-		sctp_auditing(7, inp, stcb, net);
-#endif
-
-	}
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
-		printf("USR Send complete qo:%d prw:%d\n", queue_only, stcb->asoc.peers_rwnd);
-	}
-#endif
-	/*
-	 * This is ugly but its the only way I can think of doing it. When
-	 * copying in data, we may be doing a sbwait() or an mbuf M_WAIT. So
-	 * we had to release the TCB lock in order for that to work. But if
-	 * we always re-lock we have another problem.. its possible to go to
-	 * lock it at the error return and get into a hung state waiting on
-	 * a lock that's been freed ... at least thats what the forced panic
-	 * showed... so I can't relock if the sbwait() or mutex returns an
-	 * error :-0
-	 */
-
-	SCTP_TCB_UNLOCK(stcb);
-	splx(s);
-	return (0);
+	return(sctp_sosend(inp->sctp_socket,
+		    addr,
+		    (struct uio *)NULL,
+		    m,
+		    control,
+		    flags,
+		    p));
 }
 
 void
 send_forward_tsn(struct sctp_tcb *stcb,
-    struct sctp_association *asoc)
+		 struct sctp_association *asoc)
 {
 	struct sctp_tmit_chunk *chk;
 	struct sctp_forward_tsn_chunk *fwdtsn;
@@ -11979,6 +11496,7 @@ sctp_lower_sosend(struct socket *so,
 	struct sctp_association *asoc;
 	struct sctp_inpcb *t_inp;
 	int create_lock_applied = 0;
+	int nagle_applies = 0;
 	int some_on_control = 0;
 	int got_all_of_the_send = 0;
 	int hold_tcblock = 0;
@@ -12320,35 +11838,6 @@ sctp_lower_sosend(struct socket *so,
 	} else {
 		un_sent = ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight) +
 			   ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) * sizeof(struct sctp_data_chunk)));
-
-		/*
-		 * @@@ JRI: This check for Nagle assumes only one small
-		 * packet can be outstanding. Does this need to be changed
-		 * for CMT?
-		 */
-		if ((sctp_is_feature_off(inp, SCTP_PCB_FLAGS_NODELAY)) &&
-		    (stcb->asoc.total_flight > 0) &&
-		    (un_sent < (int)(stcb->asoc.smallest_mtu - SCTP_MIN_OVERHEAD)) &&
-		    ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) < SCTP_MAX_DATA_BUNDLING)
-			) {
-
-			/*
-			 * Ok, Nagle is set on and we have data outstanding.
-			 * Don't send anything and let SACKs drive out the
-			 * data unless wen have a "full" segment to send.
-			 */
-#ifdef SCTP_NAGLE_LOGGING
-			sctp_log_nagle_event(stcb, SCTP_NAGLE_APPLIED);
-#endif
-			SCTP_STAT_INCR(sctps_naglequeued);
-			queue_only = 1;
-		} else {
-#ifdef SCTP_NAGLE_LOGGING
-			if (sctp_is_feature_off(inp, SCTP_PCB_FLAGS_NODELAY))
-				sctp_log_nagle_event(stcb, SCTP_NAGLE_SKIPPED);
-#endif
-			SCTP_STAT_INCR(sctps_naglesent);
-		}
 	}
 	/* Calculate the maximum we can send */
 	max_len = so->so_snd.sb_hiwat -  stcb->asoc.total_output_queue_size;
@@ -12569,35 +12058,76 @@ sctp_lower_sosend(struct socket *so,
 					continue;
 				}
 			}
-			if(hold_tcblock) {
-				SCTP_TCB_UNLOCK(stcb);
-				hold_tcblock = 0;
-			}
 			/* wait for space now */
 			if (non_blocking) {
 				/* Non-blocking io in place out */
 				goto skip_out_eof;
 			}
-			if((initial_out - uio->uio_resid) &&
-			   (stcb->asoc.total_flight == 0) &&
-			   (queue_only_for_init == 0) &&
-			   (queue_only == 0)
+			un_sent = ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight) +
+				   ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) * sizeof(struct sctp_data_chunk)));
+
+
+			/*
+			 * @@@ JRI: This check for Nagle assumes only one small
+			 * packet can be outstanding. Does this need to be changed
+			 * for CMT?
+			 */
+			if ((sctp_is_feature_off(inp, SCTP_PCB_FLAGS_NODELAY)) &&
+			    (stcb->asoc.total_flight > 0) &&
+			    (un_sent < (int)(stcb->asoc.smallest_mtu - SCTP_MIN_OVERHEAD)) &&
+			    ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) < SCTP_MAX_DATA_BUNDLING)
+				) {
+
+				/*
+				 * Ok, Nagle is set on and we have data outstanding.
+				 * Don't send anything and let SACKs drive out the
+				 * data unless wen have a "full" segment to send.
+				 */
+#ifdef SCTP_NAGLE_LOGGING
+				sctp_log_nagle_event(stcb, SCTP_NAGLE_APPLIED);
+#endif
+				SCTP_STAT_INCR(sctps_naglequeued);
+				nagle_applies = 1;
+			} else {
+#ifdef SCTP_NAGLE_LOGGING
+				if (sctp_is_feature_off(inp, SCTP_PCB_FLAGS_NODELAY))
+					sctp_log_nagle_event(stcb, SCTP_NAGLE_SKIPPED);
+#endif
+				SCTP_STAT_INCR(sctps_naglesent);
+				nagle_applies = 0;
+			}
+			/* What about the INIT, send it maybe */
+#ifdef SCTP_BLK_LOGGING
+			sctp_misc_ints(SCTP_CWNDLOG_PRESEND, queue_only_for_init, queue_only, nagle_applies, un_sent);
+			sctp_misc_ints(SCTP_CWNDLOG_PRESEND, stcb->asoc.total_output_queue_size, stcb->asoc.total_flight,
+				       stcb->asoc.chunks_on_out_queue, stcb->asoc.total_flight_count);
+#endif
+			if (queue_only_for_init) {
+				if (hold_tcblock == 0) {
+					SCTP_TCB_LOCK(stcb);
+					hold_tcblock = 1;
+				}
+				sctp_send_initiate(inp, stcb);
+				queue_only_for_init = 0;
+				queue_only = 1;
+			}
+			if((queue_only == 0) && (nagle_applies == 0)
 				) {
 				/* need to start chunk output
 				 * before blocking.
 				 */
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-				int mys;
-				mys = splsoftnet();
-#endif
-				SCTP_TCB_LOCK(stcb);
+				if(hold_tcblock == 0) {
+					SCTP_TCB_LOCK(stcb);
+					hold_tcblock = 1;
+				}
 				sctp_chunk_output(inp, 
 						  stcb, 
 						  SCTP_OUTPUT_FROM_USR_SEND);
+				sctp_misc_ints(SCTP_CWNDLOG_PRESEND, 0, 0, 0, stcb->asoc.total_flight);
+			}
+			if(hold_tcblock == 1) {
 				SCTP_TCB_UNLOCK(stcb);
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-				splx(mys);
-#endif
+				hold_tcblock = 0;
 			}
 			SOCKBUF_LOCK(&so->so_snd);
 			/* This is a bit strange, but I think it will
@@ -12633,12 +12163,12 @@ sctp_lower_sosend(struct socket *so,
 					SOCKBUF_UNLOCK(&so->so_snd);
 					goto out;
 				}
+#ifdef SCTP_BLK_LOGGING
+				sctp_log_block(SCTP_BLOCK_LOG_OUTOF_BLK,
+					       so, asoc, stcb->asoc.total_output_queue_size);
+#endif
 			}
 			SOCKBUF_UNLOCK(&so->so_snd);
-#ifdef SCTP_BLK_LOGGING
-			sctp_log_block(SCTP_BLOCK_LOG_OUTOF_BLK,
-				       so, asoc, stcb->asoc.total_output_queue_size);
-#endif
 		}
 		if (hold_tcblock == 0) {
 			SCTP_TCB_LOCK(stcb);
@@ -12767,6 +12297,31 @@ sctp_lower_sosend(struct socket *so,
 	un_sent = ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight) +
 		   ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) * sizeof(struct sctp_data_chunk)));
 
+	if ((sctp_is_feature_off(inp, SCTP_PCB_FLAGS_NODELAY)) &&
+	    (stcb->asoc.total_flight > 0) &&
+	    (un_sent < (int)(stcb->asoc.smallest_mtu - SCTP_MIN_OVERHEAD)) &&
+	    ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) < SCTP_MAX_DATA_BUNDLING)
+		) {
+
+		/*
+		 * Ok, Nagle is set on and we have data outstanding.
+		 * Don't send anything and let SACKs drive out the
+		 * data unless wen have a "full" segment to send.
+		 */
+#ifdef SCTP_NAGLE_LOGGING
+		sctp_log_nagle_event(stcb, SCTP_NAGLE_APPLIED);
+#endif
+		SCTP_STAT_INCR(sctps_naglequeued);
+		nagle_applies = 1;
+	} else {
+#ifdef SCTP_NAGLE_LOGGING
+		if (sctp_is_feature_off(inp, SCTP_PCB_FLAGS_NODELAY))
+			sctp_log_nagle_event(stcb, SCTP_NAGLE_SKIPPED);
+#endif
+		SCTP_STAT_INCR(sctps_naglesent);
+		nagle_applies = 0;
+	}
+
 	if (queue_only_for_init) {
 		if (hold_tcblock == 0) {
 			SCTP_TCB_LOCK(stcb);
@@ -12774,8 +12329,9 @@ sctp_lower_sosend(struct socket *so,
 		}
 		sctp_send_initiate(inp, stcb);
 		queue_only_for_init = 0;
+		queue_only = 1;
 	}
-	if ((queue_only == 0) && (stcb->asoc.peers_rwnd && un_sent)) {
+	if ((queue_only == 0) && nagle_applies && (stcb->asoc.peers_rwnd && un_sent)) {
 		/* we can attempt to send too. */
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {

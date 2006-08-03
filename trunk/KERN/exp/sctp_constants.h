@@ -818,6 +818,18 @@ do { \
 	} \
 } while (0)
 
+#define sctp_sowwakeup_locked(inp, so) \
+do { \
+	if (inp->sctp_flags & SCTP_PCB_FLAGS_DONT_WAKE) { \
+                SOCKBUF_UNLOCK(&((so)->so_snd)); \
+		inp->sctp_flags |= SCTP_PCB_FLAGS_WAKEOUTPUT; \
+	} else { \
+		sowwakeup_locked(so); \
+	} \
+} while (0)
+
+
+
 #define sctp_sorwakeup(inp, so) \
 do { \
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_DONT_WAKE) { \

@@ -377,6 +377,8 @@ struct sctp_queued_to_read {	/* sinfo structure Pluse more */
 	struct sctp_tcb *stcb;	/* assoc, used for window update */
 	TAILQ_ENTRY(sctp_queued_to_read) next;
 	uint16_t port_from;
+	uint8_t  do_not_ref_stcb;
+	uint8_t  reserved;
 };
 
 /* This data structure will be on the outbound
@@ -867,6 +869,7 @@ struct sctp_association {
 	/* CMT variables */
 	uint8_t cmt_dac_pkts_rcvd;
 	uint8_t sctp_cmt_on_off;
+	uint8_t iam_blocking;
 	/*
 	 * The mapping array is used to track out of order sequences above
 	 * last_acked_seq. 0 indicates packet missing 1 indicates packet
