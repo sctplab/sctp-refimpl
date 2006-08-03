@@ -6389,7 +6389,6 @@ sctp_lock(struct socket *so, int refcount, int lr)
 
 	if (refcount)
 		so->so_usecount++;
-
 	SAVE_CALLERS(((struct sctp_inpcb *)so->so_pcb)->lock_caller1,
 		     ((struct sctp_inpcb *)so->so_pcb)->lock_caller2,
 		     ((struct sctp_inpcb *)so->so_pcb)->lock_caller3);
@@ -6425,6 +6424,11 @@ sctp_unlock(struct socket *so, int refcount, int lr)
 lck_mtx_t *
 sctp_getlock(struct socket *so, int locktype)
 {
+	/* WARNING: we do not own the socket lock here... */
+	SAVE_CALLERS(((struct sctp_inpcb *)so->so_pcb)->getlock_caller1,
+		     ((struct sctp_inpcb *)so->so_pcb)->getlock_caller2,
+		     ((struct sctp_inpcb *)so->so_pcb)->getlock_caller3);
+	((struct sctp_inpcb *)so->so_pcb)->getlock_gen_count = ((struct sctp_inpcb *)so->so_pcb)->gen_count++;
 	if (so->so_pcb) {
 		if (so->so_usecount < 0)
 			panic("sctp_getlock: so=%x usecount=%x\n", so, so->so_usecount);

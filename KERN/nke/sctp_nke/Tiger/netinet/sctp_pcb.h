@@ -444,9 +444,13 @@ struct sctp_inpcb {
 	uint32_t unlock_caller1;
 	uint32_t unlock_caller2;
 	uint32_t unlock_caller3;
+	uint32_t getlock_caller1;
+	uint32_t getlock_caller2;
+	uint32_t getlock_caller3;
 	uint32_t gen_count;
 	uint32_t lock_gen_count;
 	uint32_t unlock_gen_count;
+	uint32_t getlock_gen_count;
 #endif
 };
 
