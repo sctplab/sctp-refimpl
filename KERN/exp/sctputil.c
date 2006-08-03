@@ -3104,38 +3104,26 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
 		if(no_lock == 0)
 			SOCKBUF_LOCK((&stcb->sctp_socket->so_rcv));
 		if (control->data == NULL) {
-			control->data = control->tail_mbuf = m_notify;
-			control->held_length = 0;
-			if(stcb->sctp_socket) {
-				sctp_sballoc(stcb, 
-					     &stcb->sctp_socket->so_rcv, 
-					     m_notify);
-			}
-			control->length = m_notify->m_len;
-
-		} else if ((control->tail_mbuf->m_flags & M_EOR) != M_EOR) {
-			/* no end of record so pdapi is not complete */
-			struct mbuf *m;
-
-			/* clear up by freeing mbufs */
-			printf("Transmute PD-API to PD-API aborted\n");
 			if(stcb->sctp_socket) {
 				stcb->sctp_socket->so_rcv.sb_cc += control->held_length;
-				m = control->data;
-				while (m) {
-					sctp_sbfree(stcb, (&stcb->sctp_socket->so_rcv), m);
-					m = m->m_next;
-				}
 			}
+			control->data = control->tail_mbuf = m_notify;
+			control->held_length = 0;
+			control->length = m_notify->m_len;
+			control->end_added = 1;
+		} else if ((control->tail_mbuf->m_flags & M_EOR) != M_EOR) {
+			/* no end of record so pdapi is not complete */
+			if(stcb->sctp_socket) {
+				stcb->sctp_socket->so_rcv.sb_cc += control->held_length;
+				stcb->asoc.sb_cc -= control->length;
+			}
+			/* clear up by freeing mbufs */
 			sctp_m_freem(control->data);
+			control->data = NULL;
 			control->length = m_notify->m_len;
 			control->data = control->tail_mbuf = m_notify;
 			control->held_length = 0;
-			if(stcb->sctp_socket) {
-				sctp_sballoc(stcb, 
-					     &stcb->sctp_socket->so_rcv, 
-					     m_notify);
-			}
+			control->end_added = 1;
 		}
 		if(no_lock == 0)
 			SOCKBUF_UNLOCK((&stcb->sctp_socket->so_rcv));
@@ -3951,6 +3939,9 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 		}
 		m = m->m_next;
 	}
+	if(end) {
+		control->end_added = 1;
+	}
 	TAILQ_INSERT_TAIL(&inp->read_queue, control, next);
 	if (inp && inp->sctp_socket) {
 		SOCKBUF_LOCK_ASSERT(sb);
@@ -4026,6 +4017,7 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 		if(control == stcb->asoc.control_pdapi) {
 			stcb->asoc.control_pdapi = NULL;
 		}
+		control->end_added = 1;
 	}
 	if (inp && inp->sctp_socket) {
 		sctp_sorwakeup_locked(inp, inp->sctp_socket);
@@ -4442,6 +4434,44 @@ restart:
 	if (control == NULL) {
 		/* nothing there? TSNH! */
 		so->so_rcv.sb_cc = 0;
+		goto restart;
+	}
+	if ((control->length == 0) && 
+	    (control->do_not_ref_stcb)) {
+		/* Bad stcb leaves behind 
+		 * control?
+		 */
+		printf("Someone left garbage behind.. yuck!\n");
+		if(control->data) {
+			/* Hmm there is data here .. fix */
+			struct mbuf *m;
+			int cnt=0;
+			printf("Cleanup plan a\n");
+			m = control->data;
+			while(m) {
+				cnt += m->m_len;
+				if(m->m_next == NULL) {
+					control->tail_mbuf = m;
+					m->m_flags |= M_EOR;
+					control->end_added = 1;
+				}
+				m = m->m_next;
+			}
+			control->length = cnt;
+		} else {
+			/* remove it */
+			printf("Cleanup plan b\n");
+			TAILQ_REMOVE(&inp->read_queue, control, next);
+			/* Add back any hiddend data */
+			if (control->held_length) {
+				printf("Adding in to sb_cc:%d?\n", control->held_length);
+				so->so_rcv.sb_cc += control->held_length;
+				wakeup_read_socket = 1;
+			}
+			sctp_free_remote_addr(control->whoFrom);
+			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, control);
+			SCTP_DECR_READQ_COUNT();
+		}
 		goto restart;
 	}
 	if ((control->length == 0) &&

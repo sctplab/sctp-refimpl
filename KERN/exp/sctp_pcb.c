@@ -4114,6 +4114,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				}
 				if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_PDAPIEVNT)) {
 					/* need to change to PD-API aborted */
+					printf("Doing PD-API thing\n");
 					cnt++;
 					stcb->asoc.control_pdapi = sq;
 					sctp_notify_partial_delivery_indication(stcb,
@@ -4122,6 +4123,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				} else {
 					/* need to remove */
 					cnt++;
+					printf("Removing thing\n");
 					TAILQ_REMOVE(&inp->read_queue, sq, next);
 					sctp_free_remote_addr(sq->whoFrom);
 					sq->whoFrom = NULL;
@@ -4136,7 +4138,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 					SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, sq);
 					SCTP_DECR_READQ_COUNT();
 				}
-			}
+			} 
 		}
 	}
 	if (stcb->block_entry) {
