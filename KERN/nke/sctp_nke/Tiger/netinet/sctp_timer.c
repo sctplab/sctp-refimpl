@@ -1804,16 +1804,13 @@ sctp_iterator_timer(struct sctp_iterator *it)
 done_with_iterator:
 		SCTP_ITERATOR_UNLOCK();
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, BEFORE_LOCK_EXCLUSIVE);
 		lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
-		TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, AFTER_LOCK_EXCLUSIVE);
 #endif
 		SCTP_INP_INFO_WLOCK();
 		LIST_REMOVE(it, sctp_nxt_itr);
 		/* stopping the callout is not needed, in theory */
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
-		TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, UNLOCK_EXCLUSIVE);
 #endif
 		SCTP_INP_INFO_WUNLOCK();
 		callout_stop(&it->tmr.timer);
@@ -1828,9 +1825,7 @@ done_with_iterator:
 	}
 select_a_new_ep:
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	TIGER_LOCK_LOG(it->inp->ip_inp.inp.inp_socket, BEFORE_LOCK_SOCKET);
 	socket_lock(it->inp->ip_inp.inp.inp_socket, 1);
-	TIGER_LOCK_LOG(it->inp->ip_inp.inp.inp_socket, AFTER_LOCK_SOCKET);
 #endif
 	SCTP_INP_WLOCK(it->inp);
 	while (((it->pcb_flags) &&
@@ -1841,14 +1836,12 @@ select_a_new_ep:
 		if (it->iterator_flags & SCTP_ITERATOR_DO_SINGLE_INP) {
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		socket_unlock(it->inp->ip_inp.inp.inp_socket, 1);
-		TIGER_LOCK_LOG(it->inp->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 #endif
 			SCTP_INP_WUNLOCK(it->inp);
 			goto done_with_iterator;
 		}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		socket_unlock(it->inp->ip_inp.inp.inp_socket, 1);
-		TIGER_LOCK_LOG(it->inp->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 #endif
 		SCTP_INP_WUNLOCK(it->inp);
 		it->inp = LIST_NEXT(it->inp, sctp_list);
@@ -1856,9 +1849,7 @@ select_a_new_ep:
 			goto done_with_iterator;
 		}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	TIGER_LOCK_LOG(it->inp->ip_inp.inp.inp_socket, BEFORE_LOCK_SOCKET);
 	socket_lock(it->inp->ip_inp.inp.inp_socket, 1);
-	TIGER_LOCK_LOG(it->inp->ip_inp.inp.inp_socket, AFTER_LOCK_SOCKET);
 #endif
 		SCTP_INP_WLOCK(it->inp);
 	}
@@ -1907,7 +1898,6 @@ select_a_new_ep:
 	start_timer_return:
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			socket_unlock(it->inp->ip_inp.inp.inp_socket, 1);
-			TIGER_LOCK_LOG(it->inp->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 #endif
 			/* set a timer to continue this later */
 			SCTP_TCB_UNLOCK(it->stcb);
@@ -1942,21 +1932,17 @@ select_a_new_ep:
 	SCTP_INP_WUNLOCK(it->inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	socket_unlock(it->inp->ip_inp.inp.inp_socket, 1);
-	TIGER_LOCK_LOG(it->inp->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 #endif
 	if (it->iterator_flags & SCTP_ITERATOR_DO_SINGLE_INP) {
 		it->inp = NULL;
 	} else {
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, BEFORE_LOCK_EXCLUSIVE);
 		lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
-		TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, AFTER_LOCK_EXCLUSIVE);
 #endif
 		SCTP_INP_INFO_RLOCK();
 		it->inp = LIST_NEXT(it->inp, sctp_list);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
-		TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, UNLOCK_EXCLUSIVE);
 #endif
 		SCTP_INP_INFO_RUNLOCK();
 	}
@@ -1977,9 +1963,7 @@ sctp_slowtimo()
 
 	n = n1 = n2 = n3 = n4 = 0;
 #endif
-	TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, BEFORE_LOCK_EXCLUSIVE);
 	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
-	TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, AFTER_LOCK_EXCLUSIVE);
 	LIST_FOREACH(inp, &sctppcbinfo.inplisthead, inp_list) {
 		n++;
 		if (inp->inp_wantcnt != WNT_STOPUSING) {
@@ -2011,7 +1995,6 @@ sctp_slowtimo()
 		}
 	}
 	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
-	TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, UNLOCK_EXCLUSIVE);
 #ifdef SCTP_DEBUG
 	if ((sctp_debug_on & SCTP_DEBUG_PCB2) && (n > 0)) {
 		printf("sctp_slowtimo: inps: %u, inp_wantcnt: %u, so_usecount : %u, inp_state: %u, inpcb_mtx: %u\n",
