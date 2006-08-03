@@ -6369,10 +6369,6 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
 
 #endif				/* __NetBSD__ */
 
-/*
- * additional protosw entries for Mac OS X 10.4 lr is temporarily being used
- * for socket lock/unlock LR debug
- */
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 
 int
@@ -6397,13 +6393,18 @@ sctp_lock(struct socket *so, int refcount, int lr)
 	SAVE_CALLERS(((struct sctp_inpcb *)so->so_pcb)->lock_caller1,
 		     ((struct sctp_inpcb *)so->so_pcb)->lock_caller2,
 		     ((struct sctp_inpcb *)so->so_pcb)->lock_caller3);
-
+	((struct sctp_inpcb *)so->so_pcb)->lock_gen_count = ((struct sctp_inpcb *)so->so_pcb)->gen_count++;
 	return (0);
 }
 
 int
 sctp_unlock(struct socket *so, int refcount, int lr)
 {
+	SAVE_CALLERS(((struct sctp_inpcb *)so->so_pcb)->unlock_caller1,
+		     ((struct sctp_inpcb *)so->so_pcb)->unlock_caller2,
+		     ((struct sctp_inpcb *)so->so_pcb)->unlock_caller3);
+	((struct sctp_inpcb *)so->so_pcb)->unlock_gen_count = ((struct sctp_inpcb *)so->so_pcb)->gen_count++;
+
 	if (refcount)
 		so->so_usecount--;
 
@@ -6418,29 +6419,15 @@ sctp_unlock(struct socket *so, int refcount, int lr)
 		lck_mtx_assert(((struct inpcb *)so->so_pcb)->inpcb_mtx, LCK_MTX_ASSERT_OWNED);
 		lck_mtx_unlock(((struct inpcb *)so->so_pcb)->inpcb_mtx);
 	}
-
-	SAVE_CALLERS(((struct sctp_inpcb *)so->so_pcb)->unlock_caller1,
-		     ((struct sctp_inpcb *)so->so_pcb)->unlock_caller2,
-		     ((struct sctp_inpcb *)so->so_pcb)->unlock_caller3);
 	return (0);
 }
 
 lck_mtx_t *
 sctp_getlock(struct socket *so, int locktype)
 {
-
-	/*
-	 * printf("sctp_getlock called for so=%p with so->so_pcb=%p,
-	 * so->type=%d, so->so_usecount=%d.\n", so, so->so_pcb, so->so_type,
-	 * so->so_usecount);
-	 */
 	if (so->so_pcb) {
 		if (so->so_usecount < 0)
 			panic("sctp_getlock: so=%x usecount=%x\n", so, so->so_usecount);
-		/*
-		 * printf("sctp_getlock returning %p.\n", ((struct inpcb
-		 * *)so->so_pcb)->inpcb_mtx);
-		 */
 		return (((struct inpcb *)so->so_pcb)->inpcb_mtx);
 	} else {
 		panic("sctp_getlock: so=%x NULL so_pcb\n", so);
