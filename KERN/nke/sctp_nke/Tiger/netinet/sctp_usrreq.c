@@ -6378,8 +6378,6 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
 int
 sctp_lock(struct socket *so, int refcount, int lr)
 {
-	SAVE_CALLERS(((struct sctp_inpcb *)so->so_pcb)->lock_caller,
-		     ((struct sctp_inpcb *)so->so_pcb)->lock_callers_caller);
 	if (so->so_pcb) {
 		lck_mtx_assert(((struct inpcb *)so->so_pcb)->inpcb_mtx, LCK_MTX_ASSERT_NOTOWNED);
 		lck_mtx_lock(((struct inpcb *)so->so_pcb)->inpcb_mtx);
@@ -6395,6 +6393,11 @@ sctp_lock(struct socket *so, int refcount, int lr)
 
 	if (refcount)
 		so->so_usecount++;
+
+	SAVE_CALLERS(((struct sctp_inpcb *)so->so_pcb)->lock_caller1,
+		     ((struct sctp_inpcb *)so->so_pcb)->lock_caller2,
+		     ((struct sctp_inpcb *)so->so_pcb)->lock_caller3);
+
 	return (0);
 }
 
@@ -6416,8 +6419,9 @@ sctp_unlock(struct socket *so, int refcount, int lr)
 		lck_mtx_unlock(((struct inpcb *)so->so_pcb)->inpcb_mtx);
 	}
 
-	SAVE_CALLERS(((struct sctp_inpcb *)so->so_pcb)->unlock_caller,
-		     ((struct sctp_inpcb *)so->so_pcb)->unlock_callers_caller);
+	SAVE_CALLERS(((struct sctp_inpcb *)so->so_pcb)->unlock_caller1,
+		     ((struct sctp_inpcb *)so->so_pcb)->unlock_caller2,
+		     ((struct sctp_inpcb *)so->so_pcb)->unlock_caller3);
 	return (0);
 }
 
