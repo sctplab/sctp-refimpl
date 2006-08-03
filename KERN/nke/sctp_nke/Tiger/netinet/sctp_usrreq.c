@@ -6378,46 +6378,29 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
 int
 sctp_lock(struct socket *so, int refcount, int lr)
 {
-	int lr_saved;
-
-	/*
-	 * printf("sctp_lock called for so=%p with so->so_pcb=%p,
-	 * so->type=%d, so->so_usecount=%d.\n", so, so->so_pcb, so->so_type,
-	 * so->so_usecount);
-	 */
+	SAVE_CALLERS(((struct sctp_inpcb *)so->so_pcb)->lock_caller,
+		     ((struct sctp_inpcb *)so->so_pcb)->lock_callers_caller);
 	if (so->so_pcb) {
 		lck_mtx_assert(((struct inpcb *)so->so_pcb)->inpcb_mtx, LCK_MTX_ASSERT_NOTOWNED);
-	
 		lck_mtx_lock(((struct inpcb *)so->so_pcb)->inpcb_mtx);
 	} else {
-		panic("sctp_lock: so=%x NO PCB! lr =%x\n", so, lr_saved);
+		panic("sctp_lock: so=%x NO PCB!\n", so);
 		lck_mtx_assert(so->so_proto->pr_domain->dom_mtx, LCK_MTX_ASSERT_NOTOWNED);
 		lck_mtx_lock(so->so_proto->pr_domain->dom_mtx);
 	}
 
 	if (so->so_usecount < 0)
-		panic("sctp_lock: so=%x so_pcb=%x lr=%x ref=%x\n",
-		    so, so->so_pcb, lr_saved, so->so_usecount);
+		panic("sctp_lock: so=%x so_pcb=%x ref=%x\n",
+		    so, so->so_pcb, so->so_usecount);
 
 	if (refcount)
 		so->so_usecount++;
-	so->reserved3 = (void *)lr_saved;
-	/*
-	 * printf("sctp_lock returning for %p.\n", so);
-	 */
 	return (0);
 }
 
 int
 sctp_unlock(struct socket *so, int refcount, int lr)
 {
-	int lr_saved;
-
-	/*
-	 * printf("sctp_unlock called for so=%p with so->so_pcb=%p,
-	 * so->type=%d, so->so_usecount=%d.\n", so, so->so_pcb, so->so_type,
-	 * so->so_usecount);
-	 */
 	if (refcount)
 		so->so_usecount--;
 
@@ -6425,17 +6408,16 @@ sctp_unlock(struct socket *so, int refcount, int lr)
 		panic("sctp_unlock: so=%x usecount=%x\n", so, so->so_usecount);
 
 	if (so->so_pcb == NULL) {
-		panic("sctp_unlock: so=%x NO PCB! lr =%x\n", so, lr_saved);
+		panic("sctp_unlock: so=%x NO PCB!\n", so);
 		lck_mtx_assert(so->so_proto->pr_domain->dom_mtx, LCK_MTX_ASSERT_OWNED);
 		lck_mtx_unlock(so->so_proto->pr_domain->dom_mtx);
 	} else {
 		lck_mtx_assert(((struct inpcb *)so->so_pcb)->inpcb_mtx, LCK_MTX_ASSERT_OWNED);
 		lck_mtx_unlock(((struct inpcb *)so->so_pcb)->inpcb_mtx);
 	}
-	so->reserved4 = (void *)lr_saved;
-	/*
-	 * printf("sctp_unlock returning for so=%p\n", so);
-	 */
+
+	SAVE_CALLERS(((struct sctp_inpcb *)so->so_pcb)->unlock_caller,
+		     ((struct sctp_inpcb *)so->so_pcb)->unlock_callers_caller);
 	return (0);
 }
 

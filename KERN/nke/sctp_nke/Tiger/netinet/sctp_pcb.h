@@ -375,6 +375,11 @@ struct sctp_inpcb {
 		        ~SCTP_ALIGNM1];
 	}     ip_inp;
 
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	/* leave some space in case i386 inpcb is bigger than ppc */
+	uint8_t		padding[128];
+#endif
+
 	/* Socket buffer lock protects read_queue and of course sb_cc */
 	struct sctp_readhead read_queue;
 
@@ -432,6 +437,11 @@ struct sctp_inpcb {
 #endif
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	uint32_t refcount;
+
+	uint32_t lock_caller;
+	uint32_t lock_callers_caller;
+	uint32_t unlock_caller;
+	uint32_t unlock_callers_caller;
 #endif
 };
 
@@ -980,6 +990,18 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
                 do { \
 			printf("%s:%d at %s\n", __FILE__, __LINE__ , __FUNCTION__); \
 		} while (0)
+
+/* save caller pc and caller's caller pc */
+#if defined (__i386__)
+#define SAVE_CALLERS(caller, callers_caller) { \
+        unsigned int ebp = 0; \
+        asm("movl %%ebp, %0;" : "=r"(ebp)); \
+        caller = *(unsigned int *)((char *)ebp + 4) - 4; \
+        callers_caller = *(unsigned int *)(*(unsigned int *)ebp + 4) - 4; \
+}
+#else
+#define SAVE_CALLERS(caller, callers_caller)
+#endif
 
 #define SCTP_INCRS_DEFINED 1
 #define SCTP_INCR_EP_COUNT() \
