@@ -12983,9 +12983,7 @@ sctp_sosend(struct socket *so,
 	s = splnet();
 #endif
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	TIGER_LOCK_LOG(so, BEFORE_LOCK_SOCKET);
 	socket_lock(so, 1);
-	TIGER_LOCK_LOG(so, AFTER_LOCK_SOCKET);
 #endif
 	if (control) {
 		/* process cmsg snd/rcv info (maybe a assoc-id) */
@@ -13000,7 +12998,6 @@ sctp_sosend(struct socket *so,
 	splx(s);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	socket_unlock(so, 1);
-	TIGER_LOCK_LOG(so, UNLOCK_SOCKET);
 #endif
 	return (error);
 }

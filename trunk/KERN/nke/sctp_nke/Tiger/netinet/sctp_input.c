@@ -2286,9 +2286,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 				return (NULL);
 			}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			TIGER_LOCK_LOG(so, BEFORE_LOCK_SOCKET);
 			socket_lock(so, 1);
-			TIGER_LOCK_LOG(so, AFTER_LOCK_SOCKET);
 #endif
 			inp = (struct sctp_inpcb *)so->so_pcb;
 			inp->sctp_flags = (SCTP_PCB_FLAGS_TCPTYPE |
@@ -2328,7 +2326,6 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			sctp_ulp_notify(notification, *stcb, 0, NULL);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		socket_unlock(so, 1);
-		TIGER_LOCK_LOG(so, UNLOCK_SOCKET);
 #endif
 			return (m);
 		}
@@ -5050,13 +5047,11 @@ sctp_input(m, va_alist)
 				sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_INPUT_ERROR);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 				socket_unlock(inp->ip_inp.inp.inp_socket, 1);
-				TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 #endif
 			} else if ((inp != NULL) && (stcb == NULL)) {
 				refcount_up = 1;
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 				socket_unlock(inp->ip_inp.inp.inp_socket, 1);
-				TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 #endif
 			}
 			SCTP_STAT_INCR(sctps_badsum);
@@ -5253,7 +5248,6 @@ sctp_skip_csum_4:
 #endif
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	socket_unlock(inp->ip_inp.inp.inp_socket, 1);
-	TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 #endif
 	return;
 bad:

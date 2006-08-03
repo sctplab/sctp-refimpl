@@ -2202,9 +2202,7 @@ sctp_delete_ip_address(struct ifaddr *ifa)
 	}
 	/* go through all our PCB's */
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, BEFORE_LOCK_SHARED);
 	lck_rw_lock_shared(sctppcbinfo.ipi_ep_mtx);
-	TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, AFTER_LOCK_SHARED);
 #endif
 	SCTP_INP_INFO_RLOCK();
 	LIST_FOREACH(inp, &sctppcbinfo.listhead, sctp_list) {
@@ -2213,9 +2211,7 @@ sctp_delete_ip_address(struct ifaddr *ifa)
 
 		/* process for all associations for this endpoint */
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, BEFORE_LOCK_SOCKET);
 		socket_lock(inp->ip_inp.inp.inp_socket, 1);
-		TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, AFTER_LOCK_SOCKET);
 #endif
 		SCTP_INP_RLOCK(inp);
 		LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
@@ -2255,13 +2251,11 @@ sctp_delete_ip_address(struct ifaddr *ifa)
 		}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		socket_unlock(inp->ip_inp.inp.inp_socket, 1);
-		TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 #endif
 		SCTP_INP_RUNLOCK(inp);
 	}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
-	TIGER_LOCK_LOG(sctppcbinfo.ipi_ep_mtx, UNLOCK_SHARED);
 #endif
 	SCTP_INP_INFO_RUNLOCK();
 }

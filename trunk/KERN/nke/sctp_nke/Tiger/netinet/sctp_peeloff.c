@@ -213,9 +213,7 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 	}
 #else
 	} else {
-		TIGER_LOCK_LOG(newso, BEFORE_LOCK_SOCKET);
 		socket_lock(newso, 1);
-		TIGER_LOCK_LOG(newso, AFTER_LOCK_SOCKET);
 	}
 #endif
 	n_inp = (struct sctp_inpcb *)newso->so_pcb;
@@ -401,7 +399,6 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 	}
 	lck_mtx_assert(mutex_held, LCK_MTX_ASSERT_OWNED);
 	socket_unlock(head, 0);
-	TIGER_LOCK_LOG(head, UNLOCK_SOCKET);
 
 	/* unlock head to avoid deadlock with select,
 	 * keep a ref on head */
@@ -420,9 +417,7 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 	}
 	*fdflags(p, newfd) &= ~UF_RESERVED;
 	uap->new_sd = newfd;	/* return the new descriptor to the caller */
-	TIGER_LOCK_LOG(head, BEFORE_LOCK_SOCKET);
 	socket_lock(head, 0);
-	TIGER_LOCK_LOG(head, AFTER_LOCK_SOCKET);
 	so = sctp_get_peeloff(head, uap->assoc_id, &error);
 	fp->f_type = DTYPE_SOCKET;
 	fp->f_flag = fflag;
@@ -434,7 +429,6 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 	so->so_state &= ~SS_NOFDREF;
 	so->so_head = NULL;
 	socket_unlock(so, 1);
-	TIGER_LOCK_LOG(so, UNLOCK_SOCKET);
 out:
 	file_drop(fd);
 	return (error);
