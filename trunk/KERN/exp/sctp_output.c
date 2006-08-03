@@ -6194,20 +6194,184 @@ sctp_get_frag_point(struct sctp_tcb *stcb,
 }
 extern unsigned int sctp_max_chunks_on_queue;
 
+static void 
+sctp_set_prsctp_policy(struct sctp_tcb *stcb,
+		       struct sctp_stream_queue_pending *sp)
+{
+	if (stcb->asoc.peer_supports_prsctp) {
+		/*
+		 * We assume that the user wants PR_SCTP_TTL if the user
+		 * provides a positive lifetime but does not specify any
+		 * PR_SCTP policy. This is a BAD assumption and causes
+		 * problems at least with the U-Vancovers MPI folks. I will
+		 * change this to be no policy means NO PR-SCTP.
+		 */
+		if ((sp->timetolive > 0) && (!PR_SCTP_ENABLED(sp->sinfo_flags))) {
+			sp->act_flags |= CHUNK_FLAGS_PR_SCTP_TTL;
+		} else {
+			sp->act_flags |= PR_SCTP_POLICY(sp->sinfo_flags);
+			goto sctp_no_policy;
+		}
+		switch (PR_SCTP_POLICY(sp->sinfo_flags)) {
+		case CHUNK_FLAGS_PR_SCTP_BUF:
+			/*
+			 * Time to live is a priority stored in tv_sec when
+			 * doing the buffer drop thing.
+			 */
+			sp->ts.tv_sec = sp->timetolive;
+			sp->ts.tv_usec = 0;
+			break;
+		case CHUNK_FLAGS_PR_SCTP_TTL:
+		{
+			struct timeval tv;
+			SCTP_GETTIME_TIMEVAL(&sp->ts);
+			tv.tv_sec = sp->timetolive / 1000;
+			tv.tv_usec = (sp->timetolive * 1000) % 1000000;
+#ifndef __FreeBSD__
+			timeradd(&sp->ts, &tv,
+				 &sp->ts);
+#else
+			timevaladd(&sp->ts, &tv);
+#endif
+		}
+			break;
+		case CHUNK_FLAGS_PR_SCTP_RTX:
+			/*
+			 * Time to live is a the number or retransmissions
+			 * stored in tv_sec.
+			 */
+			sp->ts.tv_sec = sp->timetolive;
+			sp->ts.tv_usec = 0;
+			break;
+		default:
+#ifdef SCTP_DEBUG
+			if (sctp_debug_on & SCTP_DEBUG_USRREQ1) {
+				printf("Unknown PR_SCTP policy %u.\n", PR_SCTP_POLICY(sp->sinfo_sflags));
+			}
+#endif
+			break;
+		}
+	}
+ sctp_no_policy:
+	if (sp->sinfo_flags & SCTP_UNORDERED)
+		sp->act_flags |= SCTP_DATA_UNORDERED;
 
-#define   SBLOCKWAIT(f)   (((f)&MSG_DONTWAIT) ? M_NOWAIT : M_WAITOK)
+}
+
 
 static int
 sctp_msg_append(struct sctp_tcb *stcb,
-    struct sctp_nets *net,
-    struct mbuf *m,
-    struct sctp_sndrcvinfo *srcv,
-    int flags,
-    int hold_sockbuflock, int *data_len)
+		struct sctp_nets *net,
+		struct mbuf *m,
+		struct sctp_sndrcvinfo *srcv, int hold_stcb_lock)
 {
-	int error;
-	error = EOPNOTSUPP;
-	sctp_m_freem(m);
+	int error=0, holds_lock;
+	struct mbuf *at;
+	struct sctp_stream_queue_pending *sp = NULL;
+	struct sctp_stream_out *strm;
+#if defined(__NetBSD__) || defined(__OpenBSD__)
+	int s;
+	s = splsoftnet();
+#endif
+
+	/* Given an mbuf chain, put it
+	 * into the association send queue and
+	 * place it on the wheel 
+	 */
+	holds_lock = hold_stcb_lock;
+	if (srcv->sinfo_stream >= stcb->asoc.streamoutcnt) {
+		/* Invalid stream number */
+		error = EINVAL;
+		goto out_now;
+	}
+	if ((stcb->asoc.stream_locked) &&  
+	    (stcb->asoc.stream_locked_on  != srcv->sinfo_stream)) {
+		error = EAGAIN;
+		goto out_now;
+	}
+	strm = &stcb->asoc.strmout[srcv->sinfo_stream];
+	/* Now can we send this? */
+	if ((SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_SHUTDOWN_SENT) ||
+	    (SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_SHUTDOWN_ACK_SENT) ||
+	    (SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_SHUTDOWN_RECEIVED) ||
+	    (stcb->asoc.state & SCTP_STATE_SHUTDOWN_PENDING)) {
+		/* got data while shutting down */
+		error = ECONNRESET;
+		goto out_now;
+	}
+	sp = (struct sctp_stream_queue_pending *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_strmoq);
+	if(sp == NULL) {
+		error = ENOMEM;
+		goto out_now;
+	}
+	SCTP_INCR_STRMOQ_COUNT();
+	sp->act_flags = 0;
+	sp->sinfo_flags = srcv->sinfo_flags;
+	sp->timetolive = srcv->sinfo_timetolive;
+	sp->ppid = srcv->sinfo_ppid;
+	sp->context = srcv->sinfo_context;
+	sp->strseq = 0;
+	if(sp->sinfo_flags & SCTP_ADDR_OVER) {
+		sp->net = net;
+		sp->addr_over = 1;
+	} else {
+		sp->net = stcb->asoc.primary_destination;
+		sp->addr_over = 0;
+	}
+	atomic_add_int(&sp->net->ref_count, 1);
+	SCTP_GETTIME_TIMEVAL(&sp->ts);
+	sp->stream = srcv->sinfo_stream;
+	sp->msg_is_complete = 1;
+	sp->some_taken = 0;
+	sp->data = m;
+	sp->tail_mbuf = NULL;
+	sp->length = 0;
+	at = m;
+	sctp_set_prsctp_policy(stcb, sp);
+	while(at) {
+		if(at->m_next == NULL)
+			sp->tail_mbuf = at;
+		sp->length += at->m_len;
+		at = at->m_next;
+	}
+	if(sp->data->m_flags & M_PKTHDR) {
+		sp->data->m_pkthdr.len = sp->length;
+	} else {
+		/* Get an HDR in front please */
+		at = NULL;
+		MGETHDR(at, M_DONTWAIT, MT_HEADER);
+		if(at) {
+			at->m_pkthdr.len = sp->length;
+			at->m_len = 0;
+			at->m_next = sp->data;
+			sp->data = at;
+		}
+	}
+	if(holds_lock == 0)
+		SCTP_TCB_LOCK(stcb);
+	sctp_snd_sb_alloc(stcb, sp->length);
+	stcb->asoc.stream_queue_cnt++;
+	TAILQ_INSERT_TAIL(&strm->outqueue, sp, next);
+	if ((srcv->sinfo_flags & SCTP_UNORDERED) == 0) {
+		sp->strseq = strm->next_sequence_sent;
+		strm->next_sequence_sent++;
+	}
+
+	if ((strm->next_spoke.tqe_next == NULL) &&
+	    (strm->next_spoke.tqe_prev == NULL)) {
+		/* Not on wheel, insert */
+		sctp_insert_on_wheel(&stcb->asoc, strm);
+	}
+	m = NULL;
+	if(hold_stcb_lock == 0)
+		SCTP_TCB_UNLOCK(stcb);
+out_now:
+	if(m) {
+		sctp_m_freem(m);
+	}
+#if defined(__NetBSD__) || defined(__OpenBSD__)
+	splx(s);
+#endif
 	return (error);
 }
 
@@ -6364,7 +6528,7 @@ sctp_sendall_iterator(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
 		stcb->sctp_socket->so_state |= SS_NBIO;
 	}
 	ret = sctp_msg_append(stcb, stcb->asoc.primary_destination, m,
-	    &ca->sndrcv, 0, 0, NULL);
+			      &ca->sndrcv, 1);
 	if (turned_on_nonblock) {
 		/* we turned on non-blocking so turn it off */
 		stcb->sctp_socket->so_state &= ~SS_NBIO;
@@ -6743,69 +6907,6 @@ sctp_can_we_split_this(struct sctp_stream_queue_pending *sp,
 
 }
 
-static void 
-sctp_set_prsctp_policy(struct sctp_tcb *stcb,
-		       struct sctp_stream_queue_pending *sp)
-{
-	if (stcb->asoc.peer_supports_prsctp) {
-		/*
-		 * We assume that the user wants PR_SCTP_TTL if the user
-		 * provides a positive lifetime but does not specify any
-		 * PR_SCTP policy. This is a BAD assumption and causes
-		 * problems at least with the U-Vancovers MPI folks. I will
-		 * change this to be no policy means NO PR-SCTP.
-		 */
-		if ((sp->timetolive > 0) && (!PR_SCTP_ENABLED(sp->sinfo_flags))) {
-			sp->act_flags |= CHUNK_FLAGS_PR_SCTP_TTL;
-		} else {
-			sp->act_flags |= PR_SCTP_POLICY(sp->sinfo_flags);
-			goto sctp_no_policy;
-		}
-		switch (PR_SCTP_POLICY(sp->sinfo_flags)) {
-		case CHUNK_FLAGS_PR_SCTP_BUF:
-			/*
-			 * Time to live is a priority stored in tv_sec when
-			 * doing the buffer drop thing.
-			 */
-			sp->ts.tv_sec = sp->timetolive;
-			sp->ts.tv_usec = 0;
-			break;
-		case CHUNK_FLAGS_PR_SCTP_TTL:
-		{
-			struct timeval tv;
-			SCTP_GETTIME_TIMEVAL(&sp->ts);
-			tv.tv_sec = sp->timetolive / 1000;
-			tv.tv_usec = (sp->timetolive * 1000) % 1000000;
-#ifndef __FreeBSD__
-			timeradd(&sp->ts, &tv,
-				 &sp->ts);
-#else
-			timevaladd(&sp->ts, &tv);
-#endif
-		}
-			break;
-		case CHUNK_FLAGS_PR_SCTP_RTX:
-			/*
-			 * Time to live is a the number or retransmissions
-			 * stored in tv_sec.
-			 */
-			sp->ts.tv_sec = sp->timetolive;
-			sp->ts.tv_usec = 0;
-			break;
-		default:
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_USRREQ1) {
-				printf("Unknown PR_SCTP policy %u.\n", PR_SCTP_POLICY(sp->sinfo_sflags));
-			}
-#endif
-			break;
-		}
-	}
- sctp_no_policy:
-	if (sp->sinfo_flags & SCTP_UNORDERED)
-		sp->act_flags |= SCTP_DATA_UNORDERED;
-
-}
 
 extern int sctp_mbuf_threshold_count;
 
@@ -11326,12 +11427,10 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 	 * should be enabled since this is a slower operation...
 	 */
 	struct sctp_stream_queue_pending *sp=NULL;
-	int s;
 	int resv_in_first;
 #if defined(__NetBSD__) || defined(__OpenBSD__)
+	int s;
 	s = splsoftnet();
-#else
-	s = splnet();
 #endif
 	*errno = 0;
         /* Unless E_EOR mode is on, we must make
@@ -11400,7 +11499,9 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 		sctp_set_prsctp_policy(stcb, sp);
 	}
 out_now:
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
+#endif
 	return (sp);
 }
 
@@ -12195,8 +12296,8 @@ sctp_lower_sosend(struct socket *so,
 		/*top = NULL;*/
 
 		/* FIX FIX, need to do the sctp_msg_append() fix */
-		error = EOPNOTSUPP;
-		goto out;
+		error = sctp_msg_append(stcb, net, top, srcv, 0);
+		top = NULL;
 	}
 	if (error) {
 		goto out;
