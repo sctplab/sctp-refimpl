@@ -12222,7 +12222,6 @@ sctp_lower_sosend(struct socket *so,
 				sctp_chunk_output(inp, 
 						  stcb, 
 						  SCTP_OUTPUT_FROM_USR_SEND);
-				sctp_misc_ints(SCTP_CWNDLOG_PRESEND, 0, 0, 0, stcb->asoc.total_flight);
 			}
 			if(hold_tcblock == 1) {
 				SCTP_TCB_UNLOCK(stcb);

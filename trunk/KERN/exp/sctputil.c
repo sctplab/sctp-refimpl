@@ -3103,7 +3103,15 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
 		control = stcb->asoc.control_pdapi;
 		if(no_lock == 0)
 			SOCKBUF_LOCK((&stcb->sctp_socket->so_rcv));
-		if ((control->tail_mbuf->m_flags & M_EOR) != M_EOR) {
+		if (control->data == NULL) {
+			control->data = control->tail_mbuf = m_notify;
+			control->held_length = 0;
+			if(stcb->sctp_socket) {
+				sctp_sballoc(stcb, 
+					     &stcb->sctp_socket->so_rcv, 
+					     m_notify);
+			}
+		} else if ((control->tail_mbuf->m_flags & M_EOR) != M_EOR) {
 			/* no end of record so pdapi is not complete */
 			struct mbuf *m;
 

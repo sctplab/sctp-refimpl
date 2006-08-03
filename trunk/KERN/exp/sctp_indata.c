@@ -1703,6 +1703,12 @@ failed_express_del:
 			control->sinfo_tsn = tsn;
 			asoc->tsn_last_delivered = tsn;
 			asoc->fragment_flags = ch->ch.chunk_flags;
+			asoc->tsn_of_pdapi_last_delivered = tsn;
+			asoc->last_flags_delivered = ch->ch.chunk_flags;
+			asoc->last_strm_seq_delivered = strmseq;
+			asoc->last_strm_no_delivered = strmno;
+			asoc->tsn_last_delivered = tsn;
+
 			if(end) {
 				/* clean up the flags and such */
 				asoc->fragmented_delivery_inprogress = 0;
