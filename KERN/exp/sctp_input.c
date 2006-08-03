@@ -3770,9 +3770,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 		 */
 		if (ch->chunk_type == SCTP_ASCONF && stcb == NULL) {
 			/* inp's refcount may be reduced */
-			SCTP_INP_WLOCK(inp);
 			SCTP_INP_INCR_REF(inp);
-			SCTP_INP_WUNLOCK(inp);
 
 			stcb = sctp_findassociation_ep_asconf(m, iphlen,
 			    *offset, sh, &inp, netp);
@@ -3781,9 +3779,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				 * reduce inp's refcount if not reduced in
 				 * sctp_findassociation_ep_asconf().
 				 */
-				SCTP_INP_WLOCK(inp);
 				SCTP_INP_DECR_REF(inp);
-				SCTP_INP_WUNLOCK(inp);
 			}
 			/* now go back and verify any auth chunk to be sure */
 			if (auth_skipped && (stcb != NULL)) {
@@ -4867,9 +4863,6 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		    TAILQ_EMPTY(&stcb->asoc.control_send_queue),
 		    stcb->asoc.total_flight);
 	}
-#endif
-#ifdef SCTP_WAKE_LOGGING
-	sctp_log_cwnd(stcb, stcb->asoc.primary_destination, 0, SCTP_CWNDLOG_PRESEND);
 #endif
 	if (stcb->asoc.peers_rwnd > 0 ||
 	    !TAILQ_EMPTY(&stcb->asoc.control_send_queue) ||

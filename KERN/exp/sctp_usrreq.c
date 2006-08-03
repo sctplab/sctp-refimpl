@@ -622,6 +622,34 @@ SYSCTL_PROC(_net_inet_sctp, OID_AUTO, getcred, CTLTYPE_OPAQUE | CTLFLAG_RW,
     0, 0, sctp_getcred, "S,ucred", "Get the ucred of a SCTP connection");
 #endif				/* #if defined(__FreeBSD__) */
 
+#if defined (__APPLE__)
+static int
+sctp_assoclist SYSCTL_HANDLER_ARGS
+{
+	unsigned int n;
+	struct sctp_inpcb *inp;
+	
+	lck_rw_lock_shared(sctppcbinfo.ipi_ep_mtx);
+	if (req->oldptr == USER_ADDR_NULL) {
+		LIST_FOREACH(inp, &sctppcbinfo.listhead, sctp_list) {
+			n++;
+		}
+		req->oldidx = n;
+		lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+		return 0;
+	}
+
+	if (req->newptr != USER_ADDR_NULL) {
+		lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+		return EPERM;
+	}
+	printf("OK, I have been here...");
+	lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+
+	return 0;
+}
+#endif
+
 /*
  * sysctl definitions
  */
@@ -808,8 +836,12 @@ SYSCTL_INT(_net_inet_sctp, OID_AUTO, strict_data_order, CTLFLAG_RW,
 
 SYSCTL_STRUCT(_net_inet_sctp, OID_AUTO, stats, CTLFLAG_RW,
     &sctpstat, sctpstat,
-    "SCTP statistics (struct sctps_datadropchklmt, netinet/sctp.h");
-
+    "SCTP statistics (struct sctps_stat, netinet/sctp.h");
+#if defined(__APPLE__)
+SYSCTL_PROC(_net_inet_sctp, OID_AUTO, assoclist, CTLFLAG_RD,
+    0, 0, sctp_assoclist,
+    "S,xassoc", "List of active SCTP associations");
+#endif
 #ifdef SCTP_DEBUG
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, debug, CTLFLAG_RW,
     &sctp_debug_on, 0, "Configure debug output");
@@ -1794,6 +1826,7 @@ sctp_do_connect_x(struct socket *so,
 
 #endif
 	int error = 0;
+	int creat_lock_on = 0;
 	struct sctp_tcb *stcb = NULL;
 	struct sockaddr *sa;
 	int num_v6 = 0, num_v4 = 0, *totaddrp, totaddr, i, incr, at;
@@ -1820,21 +1853,19 @@ sctp_do_connect_x(struct socket *so,
 		return (EALREADY);
 
 	}
+	SCTP_INP_INCR_REF(inp);
 	SCTP_ASOC_CREATE_LOCK(inp);
+	creat_lock_on = 1;
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
-		SCTP_ASOC_CREATE_UNLOCK(inp);
-		splx(s);
-		return (EFAULT);
+		error = EFAULT;
+		goto out_now;
 	}
 	totaddrp = mtod(m, int *);
 	totaddr = *totaddrp;
 	sa = (struct sockaddr *)(totaddrp + 1);
 	at = incr = 0;
 	/* account and validate addresses */
-	SCTP_INP_WLOCK(inp);
-	SCTP_INP_INCR_REF(inp);
-	SCTP_INP_WUNLOCK(inp);
 	for (i = 0; i < totaddr; i++) {
 		if (sa->sa_family == AF_INET) {
 			num_v4++;
@@ -1845,9 +1876,8 @@ sctp_do_connect_x(struct socket *so,
 			sin6 = (struct sockaddr_in6 *)sa;
 			if (IN6_IS_ADDR_V4MAPPED(&sin6->sin6_addr)) {
 				/* Must be non-mapped for connectx */
-				SCTP_ASOC_CREATE_UNLOCK(inp);
-				splx(s);
-				return EINVAL;
+				error = EINVAL;
+				goto out_now;
 			}
 			num_v6++;
 			incr = sizeof(struct sockaddr_in6);
@@ -1859,9 +1889,10 @@ sctp_do_connect_x(struct socket *so,
 		if (stcb != NULL) {
 			/* Already have or am bring up an association */
 			SCTP_ASOC_CREATE_UNLOCK(inp);
+			creat_lock_on = 0;
 			SCTP_TCB_UNLOCK(stcb);
-			splx(s);
-			return (EALREADY);
+			error = EALREADY;
+			goto out_now;
 		}
 		if ((at + incr) > m->m_len) {
 			totaddr = i;
@@ -1870,16 +1901,12 @@ sctp_do_connect_x(struct socket *so,
 		sa = (struct sockaddr *)((caddr_t)sa + incr);
 	}
 	sa = (struct sockaddr *)(totaddrp + 1);
-	SCTP_INP_WLOCK(inp);
-	SCTP_INP_DECR_REF(inp);
-	SCTP_INP_WUNLOCK(inp);
 #ifdef INET6
 	if (((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0) &&
 	    (num_v6 > 0)) {
 		splx(s);
-		SCTP_INP_WUNLOCK(inp);
-		SCTP_ASOC_CREATE_UNLOCK(inp);
-		return (EINVAL);
+		error = EINVAL;
+		goto out_now;
 	}
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) &&
 	    (num_v4 > 0)) {
@@ -1899,10 +1926,8 @@ sctp_do_connect_x(struct socket *so,
 			 * if IPV6_V6ONLY flag, ignore connections destined
 			 * to a v4 addr or v4-mapped addr
 			 */
-			SCTP_INP_WUNLOCK(inp);
-			SCTP_ASOC_CREATE_UNLOCK(inp);
-			splx(s);
-			return EINVAL;
+			error = EINVAL;
+			goto out_now;
 		}
 	}
 #endif				/* INET6 */
@@ -1912,20 +1937,18 @@ sctp_do_connect_x(struct socket *so,
 		SCTP_INP_WUNLOCK(inp);
 		error = sctp_inpcb_bind(so, NULL, p);
 		if (error) {
-			SCTP_ASOC_CREATE_UNLOCK(inp);
-			splx(s);
-			return (error);
+			goto out_now;
 		}
 	} else {
 		SCTP_INP_WUNLOCK(inp);
 	}
+
 	/* We are GOOD to go */
 	stcb = sctp_aloc_assoc(inp, sa, 1, &error, 0);
 	if (stcb == NULL) {
 		/* Gak! no memory */
-		SCTP_ASOC_CREATE_UNLOCK(inp);
-		splx(s);
-		return (error);
+		error = ENOMEM;
+		goto out_now;
 	}
 	/* move to second address */
 	if (sa->sa_family == AF_INET)
@@ -1939,18 +1962,16 @@ sctp_do_connect_x(struct socket *so,
 			if (sctp_add_remote_addr(stcb, sa, 0, 8)) {
 				/* assoc gone no un-lock */
 				sctp_free_assoc(inp, stcb, 0);
-				SCTP_ASOC_CREATE_UNLOCK(inp);
-				splx(s);
-				return (ENOBUFS);
+				error = ENOBUFS;
+				goto out_now;
 			}
 		} else if (sa->sa_family == AF_INET6) {
 			incr = sizeof(struct sockaddr_in6);
 			if (sctp_add_remote_addr(stcb, sa, 0, 8)) {
 				/* assoc gone no un-lock */
 				sctp_free_assoc(inp, stcb, 0);
-				SCTP_ASOC_CREATE_UNLOCK(inp);
-				splx(s);
-				return (ENOBUFS);
+				error = ENOBUFS;
+				goto out_now;
 			}
 		}
 		sa = (struct sockaddr *)((caddr_t)sa + incr);
@@ -1984,7 +2005,10 @@ sctp_do_connect_x(struct socket *so,
 		/* Set the connected flag so we can queue data */
 		soisconnecting(so);
 	}
-	SCTP_ASOC_CREATE_UNLOCK(inp);
+ out_now:
+	if(creat_lock_on)
+		SCTP_ASOC_CREATE_UNLOCK(inp);
+	SCTP_INP_DECR_REF(inp);
 	splx(s);
 	return error;
 }
@@ -2760,16 +2784,12 @@ sctp_optsget(struct socket *so,
 					}
 					SCTP_INP_RUNLOCK(inp);
 				} else {
-					SCTP_INP_WLOCK(inp);
 					SCTP_INP_INCR_REF(inp);
-					SCTP_INP_WUNLOCK(inp);
 					stcb = sctp_findassociation_ep_addr(&inp,
 					    (struct sockaddr *)&paddrp->spp_address,
 					    &net, NULL, NULL);
 					if (stcb == NULL) {
-						SCTP_INP_WLOCK(inp);
 						SCTP_INP_DECR_REF(inp);
-						SCTP_INP_WUNLOCK(inp);
 					}
 				}
 
@@ -2910,16 +2930,12 @@ sctp_optsget(struct socket *so,
 					}
 					SCTP_INP_RUNLOCK(inp);
 				} else {
-					SCTP_INP_WLOCK(inp);
 					SCTP_INP_INCR_REF(inp);
-					SCTP_INP_WUNLOCK(inp);
 					stcb = sctp_findassociation_ep_addr(&inp,
 					    (struct sockaddr *)&paddri->spinfo_address,
 					    &net, NULL, NULL);
 					if (stcb == NULL) {
-						SCTP_INP_WLOCK(inp);
 						SCTP_INP_DECR_REF(inp);
-						SCTP_INP_WUNLOCK(inp);
 					}
 				}
 
@@ -3215,16 +3231,12 @@ sctp_optsget(struct socket *so,
 					 */
 					struct sctp_nets *net;
 
-					SCTP_INP_WLOCK(inp);
 					SCTP_INP_INCR_REF(inp);
-					SCTP_INP_WUNLOCK(inp);
 					stcb = sctp_findassociation_ep_addr(&inp,
 					    (struct sockaddr *)&ssp->ssp_addr,
 					    &net, NULL, NULL);
 					if (stcb == NULL) {
-						SCTP_INP_WLOCK(inp);
 						SCTP_INP_DECR_REF(inp);
-						SCTP_INP_WUNLOCK(inp);
 					}
 				}
 				if (stcb == NULL) {
@@ -4073,14 +4085,10 @@ sctp_optsset(struct socket *so,
 				}
 				SCTP_INP_RUNLOCK(inp);
 			} else {
-				SCTP_INP_WLOCK(inp);
 				SCTP_INP_INCR_REF(inp);
-				SCTP_INP_WUNLOCK(inp);
 				stcb = sctp_findassociation_ep_addr(&inp, sa, &net, NULL, NULL);
 				if (stcb == NULL) {
-					SCTP_INP_WLOCK(inp);
 					SCTP_INP_DECR_REF(inp);
-					SCTP_INP_WUNLOCK(inp);
 				}
 			}
 
@@ -4349,16 +4357,12 @@ sctp_optsset(struct socket *so,
 					}
 					SCTP_INP_RUNLOCK(inp);
 				} else {
-					SCTP_INP_WLOCK(inp);
 					SCTP_INP_INCR_REF(inp);
-					SCTP_INP_WUNLOCK(inp);
 					stcb = sctp_findassociation_ep_addr(&inp,
 					    (struct sockaddr *)&paddrp->spp_address,
 					    &net, NULL, NULL);
 					if (stcb == NULL) {
-						SCTP_INP_WLOCK(inp);
 						SCTP_INP_DECR_REF(inp);
-						SCTP_INP_WUNLOCK(inp);
 					}
 				}
 			}
@@ -4651,16 +4655,12 @@ sctp_optsset(struct socket *so,
 				stcb = sctp_findassociation_ep_asocid(inp, spa->ssp_assoc_id);
 			if (stcb == NULL) {
 				/* One last shot */
-				SCTP_INP_WLOCK(inp);
 				SCTP_INP_INCR_REF(inp);
-				SCTP_INP_WUNLOCK(inp);
 				stcb = sctp_findassociation_ep_addr(&inp,
 				    (struct sockaddr *)&spa->ssp_addr,
 				    &net, NULL, NULL);
 				if (stcb == NULL) {
-					SCTP_INP_WLOCK(inp);
 					SCTP_INP_DECR_REF(inp);
-					SCTP_INP_WUNLOCK(inp);
 					error = EINVAL;
 					break;
 				}
@@ -4781,9 +4781,7 @@ sctp_optsset(struct socket *so,
 					 * are binding. No remove going on
 					 * here.
 					 */
-					SCTP_INP_WLOCK(inp);
 					SCTP_INP_DECR_REF(inp);
-					SCTP_INP_WUNLOCK(inp);
 				}
 				if (lep == inp) {
 					/* already bound to it.. ok */
@@ -5057,8 +5055,9 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 
 #endif
 	int error = 0;
+	int create_lock_on = 0;
 	struct sctp_inpcb *inp;
-	struct sctp_tcb *stcb;
+	struct sctp_tcb *stcb=NULL;
 
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_PCB1) {
@@ -5074,66 +5073,57 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		return (ECONNRESET);
 	}
 	SCTP_ASOC_CREATE_LOCK(inp);
-	SCTP_INP_WLOCK(inp);
+	create_lock_on = 1;
+
+	SCTP_INP_INCR_REF(inp);
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
 		/* Should I really unlock ? */
-		SCTP_INP_WUNLOCK(inp);
-		SCTP_ASOC_CREATE_UNLOCK(inp);
-		splx(s);
-		return (EFAULT);
+	        error = EFAULT;
+		goto out_now;
 	}
 #ifdef INET6
 	if (((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0) &&
 	    (addr->sa_family == AF_INET6)) {
-		SCTP_INP_WUNLOCK(inp);
-		SCTP_ASOC_CREATE_UNLOCK(inp);
-		splx(s);
-		return (EINVAL);
+		error = EINVAL;
+		goto out_now;
 	}
 #endif				/* INET6 */
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) ==
 	    SCTP_PCB_FLAGS_UNBOUND) {
 		/* Bind a ephemeral port */
-		SCTP_INP_WUNLOCK(inp);
 		error = sctp_inpcb_bind(so, NULL, p);
 		if (error) {
-			SCTP_ASOC_CREATE_UNLOCK(inp);
-			splx(s);
-			return (error);
+			goto out_now;
 		}
-		SCTP_INP_WLOCK(inp);
 	}
 	/* Now do we connect? */
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
 		/* We are already connected AND the TCP model */
-		splx(s);
-		SCTP_INP_WUNLOCK(inp);
-		SCTP_ASOC_CREATE_UNLOCK(inp);
-		return (EADDRINUSE);
+		error = EADDRINUSE;
+		goto out_now;
 	}
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
+		SCTP_INP_RLOCK(inp);
 		stcb = LIST_FIRST(&inp->sctp_asoc_list);
 		if (stcb)
 			SCTP_TCB_UNLOCK(stcb);
-		SCTP_INP_WUNLOCK(inp);
+		SCTP_INP_RUNLOCK(inp);
 	} else {
+		/* Raise the count a second time, since on 
+		 * sucess f-a-ep_addr will decrement it.
+		 */
 		SCTP_INP_INCR_REF(inp);
-		SCTP_INP_WUNLOCK(inp);
 		stcb = sctp_findassociation_ep_addr(&inp, addr, NULL, NULL, NULL);
 		if (stcb == NULL) {
-			SCTP_INP_WLOCK(inp);
 			SCTP_INP_DECR_REF(inp);
-			SCTP_INP_WUNLOCK(inp);
 		}
 	}
 	if (stcb != NULL) {
 		/* Already have or am bring up an association */
-		SCTP_ASOC_CREATE_UNLOCK(inp);
-		SCTP_TCB_UNLOCK(stcb);
-		splx(s);
-		return (EALREADY);
+		error = EALREADY;
+		goto out_now;
 	}
 	/* We are GOOD to go */
 	stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0);
@@ -5164,8 +5154,13 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	stcb->asoc.authinfo.assoc_keyid = inp->sctp_ep.default_keyid;
 
 	sctp_send_initiate(inp, stcb);
-	SCTP_ASOC_CREATE_UNLOCK(inp);
-	SCTP_TCB_UNLOCK(stcb);
+ out_now:
+	if(create_lock_on)
+		SCTP_ASOC_CREATE_UNLOCK(inp);
+
+	if(stcb)
+		SCTP_TCB_UNLOCK(stcb);
+	SCTP_INP_DECR_REF(inp);
 	splx(s);
 	return error;
 }
@@ -6130,8 +6125,6 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
 	    NULL, 0, &sctp_pcbtblsize, 0,
 	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_PCBHASHSIZE,
 	    CTL_EOL);
-
-
 
 	sysctl_createv(clog, 0, NULL, NULL,
 	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,

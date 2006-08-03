@@ -424,10 +424,10 @@ struct sctp_inpcb {
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
 	struct mtx inp_mtx;
 	struct mtx inp_create_mtx;
-	uint32_t refcount;
+	int32_t refcount;
 #endif
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	uint32_t refcount;
+	int32_t refcount;
 #endif
 };
 
@@ -596,14 +596,8 @@ struct sctp_tcb {
 
 #endif
 
-#define SCTP_INP_INCR_REF(_inp)        _inp->refcount++
-#define SCTP_INP_DECR_REF(_inp) \
-	do {								\
-		if (_inp->refcount > 0)					\
-			_inp->refcount--;				\
-		else							\
-			panic("bad inp refcount");			\
-	} while (0)
+#define SCTP_INP_INCR_REF(_inp) atomic_add_int(&((_inp)->refcount), 1)
+#define SCTP_INP_DECR_REF(_inp) atomic_add_int(&((_inp)->refcount), -1)
 
 #ifdef SCTP_LOCK_LOGGING
 #define SCTP_ASOC_CREATE_LOCK(_inp) \

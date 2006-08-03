@@ -243,6 +243,8 @@ sctp_build_readq_entry(struct sctp_tcb *stcb,
 	read_queue_e->tail_mbuf = NULL;
 	read_queue_e->stcb = stcb;
 	read_queue_e->port_from = stcb->rport;
+	read_queue_e->do_not_ref_stcb = 0;
+	read_queue_e->reserved = 0;
 	SCTP_INCR_READQ_COUNT();
 failed_build:
 	return (read_queue_e);
@@ -278,6 +280,8 @@ sctp_build_readq_entry_chk(struct sctp_tcb *stcb,
 	read_queue_e->tail_mbuf = NULL;
 	read_queue_e->stcb = stcb;
 	read_queue_e->port_from = stcb->rport;
+	read_queue_e->do_not_ref_stcb = 0;
+	read_queue_e->reserved = 0;
 	SCTP_INCR_READQ_COUNT();
 failed_build:
 	return (read_queue_e);
@@ -1647,13 +1651,6 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		if (control == NULL) {
 			goto failed_express_del;
 		}
-		if (compare_with_wrap(tsn, asoc->highest_tsn_inside_map, MAX_TSN)) {
-			/* we have a new high score */
-			asoc->highest_tsn_inside_map = tsn;
-#ifdef SCTP_MAP_LOGGING
-			sctp_log_map(0, 1, asoc->highest_tsn_inside_map, SCTP_MAP_SLIDE_RESULT);
-#endif
-		}
 		sctp_add_to_readq(stcb->sctp_ep, stcb, control, &stcb->sctp_socket->so_rcv, 1);
 		if ((ch->ch.chunk_flags & SCTP_DATA_UNORDERED) == 0) {
 			/* for ordered, bump what we delivered */
@@ -1675,6 +1672,44 @@ failed_express_del:
 	/* If we reach here this is a new chunk */
 	chk = NULL;
 	control = NULL;
+#ifdef TEST_CODE
+	/* Express for fragmented delivery? */
+	if ((asoc->fragmented_delivery_inprogress) &&
+	    (stcb->asoc.control_pdapi) &&
+	    (asoc->str_of_pdapi == strmno) &&
+	    (asoc->ssn_of_pdapi == strmseq)
+		) {
+		control = stcb->asoc.control_pdapi;
+		if(tsn == (control->sinfo_tsn + 1)) {
+			/* Yep, we can add it on */
+			int end = 0;
+			uint32_t cumack;
+			if(ch->ch.chunk_flags & SCTP_DATA_LAST_FRAG) {
+				end = 1;
+			}
+			cumack = asoc->cumulative_tsn;
+			if((cumack+1) == tsn) 
+				cumack = tsn;
+
+			if(sctp_append_to_readq(stcb->sctp_ep, stcb, control, dmbuf,end, 
+					     cumack,
+						&stcb->sctp_socket.so_rcv)) {
+				goto failed_pdapi_express_del;
+			}
+			SCTP_STAT_INCR(sctps_recvexpress);
+			control->sinfo_tsn = tsn;
+			asoc->tsn_last_delivered = tsn;
+			asoc->fragment_flags = ch->ch.chunk_flags;
+			if(end) {
+				/* clean up the flags and such */
+				asoc->fragmented_delivery_inprogress = 0;
+			}
+			goto finish_express_del;
+		}
+	}
+ failed_pdapi_express_del:
+#endif
+
 	if ((ch->ch.chunk_flags & SCTP_DATA_NOT_FRAG) != SCTP_DATA_NOT_FRAG) {
 		chk = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk);
 		if (chk == NULL) {
@@ -4214,7 +4249,8 @@ skip_segments:
 	} while (tp1 != NULL);
 
 	if ((wake_him) && (stcb->sctp_socket)) {
-		sctp_sowwakeup(stcb->sctp_ep, stcb->sctp_socket);
+		SOCKBUF_LOCK(&stcb->sctp_socket->so_snd);
+		sctp_sowwakeup_locked(stcb->sctp_ep, stcb->sctp_socket);
 #ifdef SCTP_WAKE_LOGGING
 		sctp_wakeup_log(stcb, cum_ack, wake_him, SCTP_WAKESND_FROM_SACK);
 #endif

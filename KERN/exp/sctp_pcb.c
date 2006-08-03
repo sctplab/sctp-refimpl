@@ -1103,9 +1103,7 @@ sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool, int have_lock)
 	}
 #endif
 	if (inp) {
-		SCTP_INP_WLOCK(inp);
 		SCTP_INP_INCR_REF(inp);
-		SCTP_INP_WUNLOCK(inp);
 	}
 	if (have_lock == 0) {
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
@@ -2357,13 +2355,8 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 			 * it is this inp (inp_tmp) that gets the reference
 			 * bump, so we must lower it.
 			 */
-			SCTP_INP_WLOCK(inp_tmp);
 			SCTP_INP_DECR_REF(inp_tmp);
-			SCTP_INP_WUNLOCK(inp_tmp);
-
-			SCTP_INP_WLOCK(inp);
 			SCTP_INP_DECR_REF(inp);
-			SCTP_INP_WUNLOCK(inp);
 			/* unlock info */
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
@@ -2898,52 +2891,21 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		LIST_REMOVE(inp, sctp_hash);
 		inp->sctp_flags |= SCTP_PCB_FLAGS_UNBOUND;
 	}
-#if defined(__FreeBSD__) && __FreeBSD_version >= 503000
-	if (inp->refcount) {
-		callout_stop(&inp->sctp_ep.signature_change.timer);
-		sctp_timer_start(SCTP_TIMER_TYPE_INPKILL, inp, NULL, NULL);
-		if (locked_so) {
-			SOCK_UNLOCK(so);
-		}
-		SCTP_INP_WUNLOCK(inp);
-		SCTP_ASOC_CREATE_UNLOCK(inp);
-		SCTP_INP_INFO_WUNLOCK();
-		SCTP_ITERATOR_UNLOCK();
-		return;
-	}
-#endif
-	inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_ALLGONE;
-#if !defined(__FreeBSD__) || __FreeBSD_version < 500000
-	rt = ip_pcb->inp_route.ro_rt;
-#endif
-	callout_stop(&inp->sctp_ep.signature_change.timer);
-	/* Clear the read queue */
-	while ((sq = TAILQ_FIRST(&inp->read_queue)) != NULL) {
-		TAILQ_REMOVE(&inp->read_queue, sq, next);
-		sctp_free_remote_addr(sq->whoFrom);
-		so->so_rcv.sb_cc -= sq->length;
-		if (sq->data) {
-			sctp_m_freem(sq->data);
-			sq->data = NULL;
-		}
-		/*
-		 * no need to free the net count, since at this point all
-		 * assoc's are gone.
-		 */
-		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, sq);
-		SCTP_DECR_READQ_COUNT();
-	}
 
-	/* Now the sctp_pcb things */
-	/*
-	 * free each asoc if it is not already closed/free. we can't use the
-	 * macro here since le_next will get freed as part of the
-	 * sctp_free_assoc() call.
+	/* If there is a timer running to kill us, 
+	 * forget it, since it may have a contest
+	 * on the INP lock.. which would cause us
+	 * to die ...
 	 */
 	cnt = 0;
 	for ((asoc = LIST_FIRST(&inp->sctp_asoc_list)); asoc != NULL;
 	    asoc = nasoc) {
 		nasoc = LIST_NEXT(asoc, sctp_tcblist);
+		if(asoc->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+			cnt++;
+			continue;
+		}
+		/* Free associations that are NOT killing us */
 		SCTP_TCB_LOCK(asoc);
 		if ((SCTP_GET_STATE(&asoc->asoc) != SCTP_STATE_COOKIE_WAIT) &&
 		    ((asoc->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) == 0)){
@@ -2968,7 +2930,63 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		}
 		sctp_free_assoc(inp, asoc, 2);
 	}
+	if(cnt) {
+		/* Ok we have someone out there that will kill us */
+		callout_stop(&inp->sctp_ep.signature_change.timer);
+		if (locked_so) {
+			SOCK_UNLOCK(so);
+		}
+		SCTP_INP_WUNLOCK(inp);
+		SCTP_ASOC_CREATE_UNLOCK(inp);
+		SCTP_INP_INFO_WUNLOCK();
+		SCTP_ITERATOR_UNLOCK();
+		return;
+	}
 
+#if defined(__FreeBSD__) && __FreeBSD_version >= 503000
+	if (inp->refcount) {
+		callout_stop(&inp->sctp_ep.signature_change.timer);
+		sctp_timer_start(SCTP_TIMER_TYPE_INPKILL, inp, NULL, NULL);
+		if (locked_so) {
+			SOCK_UNLOCK(so);
+		}
+		SCTP_INP_WUNLOCK(inp);
+		SCTP_ASOC_CREATE_UNLOCK(inp);
+		SCTP_INP_INFO_WUNLOCK();
+		SCTP_ITERATOR_UNLOCK();
+		return;
+	}
+#endif
+	inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_ALLGONE;
+#if !defined(__FreeBSD__) || __FreeBSD_version < 500000
+	rt = ip_pcb->inp_route.ro_rt;
+#endif
+	callout_stop(&inp->sctp_ep.signature_change.timer);
+	/* Clear the read queue */
+	while ((sq = TAILQ_FIRST(&inp->read_queue)) != NULL) {
+		TAILQ_REMOVE(&inp->read_queue, sq, next);
+		sctp_free_remote_addr(sq->whoFrom);
+		if(so)
+			so->so_rcv.sb_cc -= sq->length;
+		if (sq->data) {
+			sctp_m_freem(sq->data);
+			sq->data = NULL;
+		}
+		/*
+		 * no need to free the net count, since at this point all
+		 * assoc's are gone.
+		 */
+		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, sq);
+		SCTP_DECR_READQ_COUNT();
+	}
+
+	/* Now the sctp_pcb things */
+	/*
+	 * free each asoc if it is not already closed/free. we can't use the
+	 * macro here since le_next will get freed as part of the
+	 * sctp_free_assoc() call.
+	 */
+	cnt = 0;
 	if (locked_so) {
 #ifdef IPSEC
 #ifdef __OpenBSD__
@@ -3990,7 +4008,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	struct sctp_queued_to_read *sq;
 	sctp_sharedkey_t *shared_key;
 	struct socket *so;
-	int s;
+	int s,cnt=0;
 
 	/* first, lets purge the entry from the hash table. */
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -4060,12 +4078,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		callout_stop(&net->pmtu_timer.timer);
 	}
 
-	/*
-	 * Iterator asoc being freed we send an unlocked TCB. It returns
-	 * with INP_INFO and INP write locked and both TCB lock's the tcb
-	 * lock itself and the create lock too and, of course the iterator
-	 * lock in place as well..
-	 */
 	if ((from_inpcbfree == 0) && so) {
 		/*
 		 * We lock the socket buffer to be SURE that the receive
@@ -4074,14 +4086,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		SOCKBUF_LOCK(&so->so_rcv);
 	}
 	stcb->asoc.state |= SCTP_STATE_ABOUT_TO_BE_FREED;
-
-	/* Now the read queue needs to be cleaned up */
-	TAILQ_FOREACH(sq, &inp->read_queue, next) {
-		if (sq->stcb == stcb) {
-			sq->stcb = NULL;
-			sq->sinfo_cumtsn = stcb->asoc.cumulative_tsn;
-		}
-	}
 	if ((from_inpcbfree != 2) && (stcb->asoc.refcnt)) {
 		/* reader or writer in the way */
 		sctp_timer_start(SCTP_TIMER_TYPE_ASOCKILL, inp, stcb, NULL);
@@ -4093,13 +4097,120 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		/* no asoc destroyed */
 		return (0);
 	}
+	/* Now the read queue needs to be cleaned up */
+	TAILQ_FOREACH(sq, &inp->read_queue, next) {
+		if (sq->stcb == stcb) {
+			sq->do_not_ref_stcb = 1;
+			if((sq->tail_mbuf) && ((sq->tail_mbuf->m_flags & M_EOR) == 0)) {
+				sq->stcb = NULL;
+				sq->sinfo_cumtsn = stcb->asoc.cumulative_tsn;
+			} else if ((sq->held_length) ||
+			    ((sq->tail_mbuf) && ((sq->tail_mbuf->m_flags & M_EOR) == 0)) ||
+			    (sq->length == 0)) {
+				/* Held for PD-API */
+				if(so) {
+					so->so_rcv.sb_cc += sq->held_length;
+					so->so_rcv.sb_cc -= sq->length;
+				}
+				if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_PDAPIEVNT)) {
+					/* need to change to PD-API aborted */
+					cnt++;
+					stcb->asoc.control_pdapi = sq;
+					sctp_notify_partial_delivery_indication(stcb,
+										SCTP_PARTIAL_DELIVERY_ABORTED, 1);
+					stcb->asoc.control_pdapi = NULL;
+				} else {
+					/* need to remove */
+					cnt++;
+					TAILQ_REMOVE(&inp->read_queue, sq, next);
+					sctp_free_remote_addr(sq->whoFrom);
+					sq->whoFrom = NULL;
+					if (sq->data) {
+						sctp_m_freem(sq->data);
+						sq->data = NULL;
+					}
+					/*
+					 * no need to free the net count, since at this point all
+					 * assoc's are gone.
+					 */
+					SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, sq);
+					SCTP_DECR_READQ_COUNT();
+				}
+			}
+		}
+	}
 	if (stcb->block_entry) {
 		stcb->block_entry->error = ECONNRESET;
 		stcb->block_entry = NULL;
 	}
-	if ((from_inpcbfree == 0) && so) {
-		SOCKBUF_UNLOCK(&so->so_rcv);
+
+
+	if (so && (so->so_snd.sb_cc)) {
+		/* This will happen when a abort is done */
+		if(stcb->asoc.total_output_queue_size <= so->so_snd.sb_cc) {
+			so->so_snd.sb_cc = stcb->asoc.total_output_queue_size;
+		} else {
+			so->so_snd.sb_cc = 0;
+		}
 	}
+	if ((from_inpcbfree == 0) && so) {
+		if(cnt) {
+			sctp_sorwakeup_locked(inp, so);
+		} else {
+			SOCKBUF_UNLOCK(&so->so_rcv);
+		}
+	}
+	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
+		   (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
+		/*
+		 * For TCP type we need special handling when we are
+		 * connected. We also include the peel'ed off ones to.
+		 */
+		if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
+			if ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) {
+				/*
+				 * Not in the pool, i.e. the ones that are
+				 * active server. We want to allow this guy
+				 * to initiate a new connection. In order to
+				 * do that we need to free off the connected
+				 * flags on the socket. I see no easy way to
+				 * do that since if I call
+				 * soisdisconnected() it will set the cant
+				 * send/cant recv flags on the socket
+				 * buffers. And once that happens you are
+				 * stuck. So we do our own turn off here for
+				 * the active side so that it can start a
+				 * new assoc if it desires.
+				 */
+				if (so && (from_inpcbfree == 0)) {
+					SOCK_LOCK(so);
+				}
+				inp->sctp_flags &= ~SCTP_PCB_FLAGS_CONNECTED;
+				if(so)
+					so->so_state &= ~(SS_ISCONNECTING | 
+							  SS_ISDISCONNECTING | 
+							  SS_ISCONFIRMING | 
+							  SS_ISCONNECTED);
+				if (so && (from_inpcbfree == 0)) {
+					SOCK_UNLOCK(so);
+				}
+			} else {
+				/*
+				 * For TCP Pool types including peeled off
+				 * ones, we just disconnect leaving the
+				 * CONNECTED flag on SCTP so we won't allow
+				 * a connect() to be attempted. The socket
+				 * should also protect against this too
+				 * since the can't send more flags are also
+				 * set.
+				 */
+				if (so) {
+					soisdisconnected(so);
+				}
+			}
+		}
+	}
+
 	/* When I reach here, no others want
 	 * to kill the assoc yet.. and I own
 	 * the lock. Now its possible an abort
@@ -4188,9 +4299,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	}
 
 	prev = NULL;
-	if ((from_inpcbfree == 0) && so) {
-		SOCKBUF_LOCK(&so->so_rcv);
-	}
 	/*
 	 * The chunk lists and such SHOULD be empty but we check them just
 	 * in case.
@@ -4352,9 +4460,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		TAILQ_REMOVE(&asoc->nets, net, sctp_next);
 		sctp_free_remote_addr(net);
 	}
-	if ((from_inpcbfree == 0) && so) {
-		SOCKBUF_UNLOCK(&so->so_rcv);
-	}
+
 	/* local addresses, if any */
 	while (!LIST_EMPTY(&asoc->sctp_local_addr_list)) {
 		laddr = LIST_FIRST(&asoc->sctp_local_addr_list);
@@ -4400,79 +4506,18 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
 	SCTP_DECR_ASOC_COUNT();
 
-	if (so && (so->so_snd.sb_cc)) {
-		/* This will happen when a abort is done */
-		if(stcb->asoc.total_output_queue_size <= so->so_snd.sb_cc) {
-			so->so_snd.sb_cc = stcb->asoc.total_output_queue_size;
+	if (from_inpcbfree == 0) {
+		SCTP_INP_RLOCK(inp);
+		if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
+			/* If its NOT the inp_free calling us AND
+			 * sctp_close as been called, we 
+			 * call back (we might be the timer 
+			 */
+			SCTP_INP_RUNLOCK(inp);
+			sctp_inpcb_free(inp, 0);
 		} else {
-			so->so_snd.sb_cc = 0;
+			SCTP_INP_RUNLOCK(inp);
 		}
-	}
-	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
-	    (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
-		/*
-		 * For TCP type we need special handling when we are
-		 * connected. We also include the peel'ed off ones to.
-		 */
-		if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
-			if ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) {
-				/*
-				 * Not in the pool, i.e. the ones that are
-				 * active server. We want to allow this guy
-				 * to initiate a new connection. In order to
-				 * do that we need to free off the connected
-				 * flags on the socket. I see no easy way to
-				 * do that since if I call
-				 * soisdisconnected() it will set the cant
-				 * send/cant recv flags on the socket
-				 * buffers. And once that happens you are
-				 * stuck. So we do our own turn off here for
-				 * the active side so that it can start a
-				 * new assoc if it desires.
-				 */
-				inp->sctp_flags &= ~SCTP_PCB_FLAGS_CONNECTED;
-				if (so) {
-					if (from_inpcbfree == 0) {
-						SOCK_LOCK(so);
-					}
-					so->so_state &= ~(SS_ISCONNECTING | SS_ISDISCONNECTING | SS_ISCONFIRMING | SS_ISCONNECTED);
-					if (from_inpcbfree == 0) {
-						SOCK_UNLOCK(so);
-					}
-				}
-			} else {
-				/*
-				 * For TCP Pool types including peeled off
-				 * ones, we just disconnect leaving the
-				 * CONNECTED flag on SCTP so we won't allow
-				 * a connect() to be attempted. The socket
-				 * should also protect against this too
-				 * since the can't send more flags are also
-				 * set.
-				 */
-				if (so) {
-					if (from_inpcbfree) {
-						SOCK_UNLOCK(so);
-					}
-					soisdisconnected(so);
-					if (from_inpcbfree) {
-						SOCK_LOCK(so);
-					}
-				}
-			}
-		}
-	}
-	SCTP_INP_RLOCK(inp);
-	if ((from_inpcbfree == 0) && 
-	    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
-		/* If its NOT the inp_free calling us AND
-		 * sctp_close as been called, we 
-		 * call back (we might be the timer 
- 		 */
-		SCTP_INP_RUNLOCK(inp);
-		sctp_inpcb_free(inp, 0);
-	} else {
-		SCTP_INP_RUNLOCK(inp);
 	}
 	splx(s);
 	/* destroyed the asoc */
