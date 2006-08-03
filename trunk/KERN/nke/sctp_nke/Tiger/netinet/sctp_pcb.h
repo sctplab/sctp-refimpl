@@ -438,10 +438,12 @@ struct sctp_inpcb {
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	uint32_t refcount;
 
-	uint32_t lock_caller;
-	uint32_t lock_callers_caller;
-	uint32_t unlock_caller;
-	uint32_t unlock_callers_caller;
+	uint32_t lock_caller1;
+	uint32_t lock_caller2;
+	uint32_t lock_caller3;
+	uint32_t unlock_caller1;
+	uint32_t unlock_caller2;
+	uint32_t unlock_caller3;
 #endif
 };
 
@@ -993,14 +995,18 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 
 /* save caller pc and caller's caller pc */
 #if defined (__i386__)
-#define SAVE_CALLERS(caller, callers_caller) { \
+#define SAVE_CALLERS(a, b, c) { \
         unsigned int ebp = 0; \
+        unsigned int prev_ebp = 0; \
         asm("movl %%ebp, %0;" : "=r"(ebp)); \
-        caller = *(unsigned int *)((char *)ebp + 4) - 4; \
-        callers_caller = *(unsigned int *)(*(unsigned int *)ebp + 4) - 4; \
+        a = *(unsigned int *)(*(unsigned int *)ebp + 4) - 4; \
+        prev_ebp = *(unsigned int *)(*(unsigned int *)ebp); \
+        b = *(unsigned int *)((char *)prev_ebp + 4) - 4; \
+        prev_ebp = *(unsigned int *)prev_ebp; \
+        c = *(unsigned int *)((char *)prev_ebp + 4) - 4; \
 }
 #else
-#define SAVE_CALLERS(caller, callers_caller)
+#define SAVE_CALLERS(caller1, caller2, caller3)
 #endif
 
 #define SCTP_INCRS_DEFINED 1
