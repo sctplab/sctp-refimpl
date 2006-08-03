@@ -169,6 +169,14 @@ struct rsp_checksum {
 	uint16_t                  pad;
 };
 
+/* Base message structure */
+struct asap_message {
+	uint8_t		asap_type;
+	uint8_t		asap_flags;
+	uint16_t	asap_length;
+};
+
+
 /* ASAP Messages */
 #define ASAP_REGISTRATION   		0x01
 #define ASAP_DEREGISTRATION 		0x02
@@ -185,13 +193,6 @@ struct rsp_checksum {
 #define ASAP_BUSINESS_CARD		0x0d
 #define ASAP_ERROR			0x0e
 
-/* Base message structure */
-
-struct asap_message {
-	uint8_t		asap_type;
-	uint8_t		asap_flags;
-	uint16_t	asap_length;
-};
 
 #define RSERPOOL_ASAP_PPID 11
 #define RSERPOOL_ENRP_PPID 12

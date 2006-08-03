@@ -273,8 +273,8 @@ C++FLAGS=$(CFLAGS)
 # APPLICATION_LIBS is for the libraries specific to an applications.
 LDLIBS= $(APPLICATION_LIBS) \
         $(CFLAGS) \
-        $(BASE_DIR)/$(OBJDIR)/$(LIBBASE) \
 	$(RSP_DIR)/$(OBJDIR)/$(LIBRSERPOOL) \
+        $(BASE_DIR)/$(OBJDIR)/$(LIBBASE) \
         $(LOCAL_LIBS) \
         $(GPROF_LIBS)
 #        -L/opt/FSFlibg++/lib

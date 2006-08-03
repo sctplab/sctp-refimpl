@@ -100,6 +100,7 @@ struct rsp_enrp_req {
 	char *name;
 	int namelen;
 	int request_type;
+	int resolved;
 };
 
 /* types */
@@ -229,6 +230,7 @@ struct pe_address {
 };
 
 /* lsd read/write const */
+#define RSP_GROW_LIMIT 512 /* Max number of fd's allowed */
 
 #define RSP_LSD_INTERNAL_READ 0
 #define RSP_LSD_WAKE_WRITE 1
@@ -261,7 +263,7 @@ struct pe_address {
 
 #define DEF_MINIMUM_TIMER_QUANTUM   50	/* minimum poll fd ms */
 
-#define ENRP_DEFAULT_PORT_FOR_ASAP  5555
+#define ENRP_DEFAULT_PORT_FOR_ASAP  3863
 
 #define ENRP_MAX_SERVER_HUNTS       3
 #define RSP_DEF_POLLARRAY_SZ        16
