@@ -1672,7 +1672,6 @@ failed_express_del:
 	/* If we reach here this is a new chunk */
 	chk = NULL;
 	control = NULL;
-#ifdef TEST_CODE
 	/* Express for fragmented delivery? */
 	if ((asoc->fragmented_delivery_inprogress) &&
 	    (stcb->asoc.control_pdapi) &&
@@ -1680,7 +1679,7 @@ failed_express_del:
 	    (asoc->ssn_of_pdapi == strmseq)
 		) {
 		control = stcb->asoc.control_pdapi;
-		if((chk->ch.chunk_flags & SCTP_DATA_FIRST_FRAG) == SCTP_DATA_FIRST_FRAG) {
+		if((ch->ch.chunk_flags & SCTP_DATA_FIRST_FRAG) == SCTP_DATA_FIRST_FRAG) {
 			/* Can't be another first? */
 			goto failed_pdapi_express_del;
 		}
@@ -1697,7 +1696,7 @@ failed_express_del:
 
 			if(sctp_append_to_readq(stcb->sctp_ep, stcb, control, dmbuf,end, 
 					     cumack,
-						&stcb->sctp_socket.so_rcv)) {
+						&stcb->sctp_socket->so_rcv)) {
 				goto failed_pdapi_express_del;
 			}
 			SCTP_STAT_INCR(sctps_recvexpress);
@@ -1712,7 +1711,6 @@ failed_express_del:
 		}
 	}
  failed_pdapi_express_del:
-#endif
 
 	if ((ch->ch.chunk_flags & SCTP_DATA_NOT_FRAG) != SCTP_DATA_NOT_FRAG) {
 		chk = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk);
