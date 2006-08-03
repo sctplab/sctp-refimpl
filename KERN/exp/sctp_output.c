@@ -6516,7 +6516,7 @@ sctp_sendall_iterator(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
 		/* TSNH */
 		return;
 	}
-	m = sctp_copy_mbufchain(ca->m, NULL, NULL, 0, 0);
+	m = m_copym(ca->m, 0, M_COPYALL, M_DONTWAIT);
 	if (m == NULL) {
 		/* can't copy so we are done */
 		ca->cnt_failed++;
@@ -6527,8 +6527,14 @@ sctp_sendall_iterator(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
 		turned_on_nonblock = 1;
 		stcb->sctp_socket->so_state |= SS_NBIO;
 	}
+	if(m->m_flags & M_EXT)
+		printf("handing %x to sctp_msg_append (data:%x)\n",(u_int)m, (u_int)m->m_data);
+	else
+		printf("handing %x to sctp_msg_append - no ext\n",(u_int)m);
+
 	ret = sctp_msg_append(stcb, stcb->asoc.primary_destination, m,
 			      &ca->sndrcv, 1);
+
 	if (turned_on_nonblock) {
 		/* we turned on non-blocking so turn it off */
 		stcb->sctp_socket->so_state &= ~SS_NBIO;
@@ -6590,18 +6596,15 @@ sctp_copy_out_all(struct uio *uio, int len)
 		return (NULL);
 	}
 	/* save space for the data chunk header */
-	ret->m_data += sizeof(struct sctp_data_chunk);
-
 	cancpy = M_TRAILINGSPACE(ret);
 	willcpy = min(cancpy, left);
 	at = ret;
 	while (left > 0) {
 		/* Align data to the end */
-		MC_ALIGN(at, willcpy);
 		error = uiomove(mtod(at, caddr_t), willcpy, uio);
 		if (error) {
 	err_out_now:
-			m_freem(ret);
+			m_freem(at);
 			return (NULL);
 		}
 		at->m_len = willcpy;
@@ -11638,6 +11641,7 @@ sctp_lower_sosend(struct socket *so,
 			/* its a sendall */
 			sctppcbinfo.mbuf_track--;
 			error = sctp_sendall(inp, uio, top, srcv);
+			top = NULL;
 			splx(s);
 			goto out;
 		}
@@ -12167,12 +12171,6 @@ sctp_lower_sosend(struct socket *so,
 			un_sent = ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight) +
 				   ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) * sizeof(struct sctp_data_chunk)));
 
-
-			/*
-			 * @@@ JRI: This check for Nagle assumes only one small
-			 * packet can be outstanding. Does this need to be changed
-			 * for CMT?
-			 */
 			if ((sctp_is_feature_off(inp, SCTP_PCB_FLAGS_NODELAY)) &&
 			    (stcb->asoc.total_flight > 0) &&
 			    (un_sent < (int)(stcb->asoc.smallest_mtu - SCTP_MIN_OVERHEAD)) &&
@@ -12309,7 +12307,6 @@ sctp_lower_sosend(struct socket *so,
 	    (got_all_of_the_send == 1) &&
 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE)
 		) {
-		printf("EOF processing\n");
 		error = 0;
 		if(hold_tcblock == 0) {
 			SCTP_TCB_LOCK(stcb);
@@ -12359,11 +12356,7 @@ sctp_lower_sosend(struct socket *so,
 					/* Locked to send out the data */
 					struct sctp_stream_queue_pending *sp;
 					sp = TAILQ_LAST(&asoc->locked_on_sending->outqueue, sctp_streamhead);
-					if(sp == NULL) {
-						printf("Error, sp is NULL, locked on sending is %x strm:%d\n",
-						       (u_int)asoc->locked_on_sending,
-						       asoc->locked_on_sending->stream_no);
-					} else {
+					if(sp) {
 						if ((sp->length == 0) && (sp->msg_is_complete == 0))
 							asoc->state |= SCTP_STATE_PARTIAL_MSG_LEFT;
 					}
@@ -12432,7 +12425,7 @@ sctp_lower_sosend(struct socket *so,
 		queue_only_for_init = 0;
 		queue_only = 1;
 	}
-	if ((queue_only == 0) && nagle_applies && (stcb->asoc.peers_rwnd && un_sent)) {
+	if ((queue_only == 0) && (nagle_applies == 0) && (stcb->asoc.peers_rwnd && un_sent)) {
 		/* we can attempt to send too. */
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
@@ -12492,7 +12485,6 @@ sctp_lower_sosend(struct socket *so,
 #endif
  out:
 	if (create_lock_applied) {
-		printf("out: create lock was applied, releasing\n");
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		create_lock_applied = 0;
 	}
@@ -12503,10 +12495,14 @@ sctp_lower_sosend(struct socket *so,
 		atomic_add_16(&stcb->asoc.refcnt, -1);
 	}
 
-	if (top)
+	if (top){ 
+		printf("Free top:%x\n", (u_int)top);
 		sctp_m_freem(top);
-	if (control)
+	}
+	if (control) {
+		printf("Free control:%x\n", (u_int)control);
 		sctp_m_freem(control);
+	}
 
 	return (error);
 }

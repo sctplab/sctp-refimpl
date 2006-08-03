@@ -1680,6 +1680,10 @@ failed_express_del:
 	    (asoc->ssn_of_pdapi == strmseq)
 		) {
 		control = stcb->asoc.control_pdapi;
+		if((chk->ch.chunk_flags & SCTP_DATA_FIRST_FRAG) == SCTP_DATA_FIRST_FRAG) {
+			/* Can't be another first? */
+			goto failed_pdapi_express_del;
+		}
 		if(tsn == (control->sinfo_tsn + 1)) {
 			/* Yep, we can add it on */
 			int end = 0;
