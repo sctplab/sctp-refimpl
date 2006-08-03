@@ -244,7 +244,7 @@ sctp_build_readq_entry(struct sctp_tcb *stcb,
 	read_queue_e->stcb = stcb;
 	read_queue_e->port_from = stcb->rport;
 	read_queue_e->do_not_ref_stcb = 0;
-	read_queue_e->reserved = 0;
+	read_queue_e->end_added = 0;
 	SCTP_INCR_READQ_COUNT();
 failed_build:
 	return (read_queue_e);
@@ -281,7 +281,7 @@ sctp_build_readq_entry_chk(struct sctp_tcb *stcb,
 	read_queue_e->stcb = stcb;
 	read_queue_e->port_from = stcb->rport;
 	read_queue_e->do_not_ref_stcb = 0;
-	read_queue_e->reserved = 0;
+	read_queue_e->end_added = 0;
 	SCTP_INCR_READQ_COUNT();
 failed_build:
 	return (read_queue_e);
@@ -1940,6 +1940,9 @@ failed_express_del:
 				}
 			} else {
 				sctp_queue_data_to_stream(stcb, asoc, control, abort_flag);
+				if (*abort_flag) {
+					return (0);
+				}
 			}
 		}
 	} else {

@@ -378,7 +378,7 @@ struct sctp_queued_to_read {	/* sinfo structure Pluse more */
 	TAILQ_ENTRY(sctp_queued_to_read) next;
 	uint16_t port_from;
 	uint8_t  do_not_ref_stcb;
-	uint8_t  reserved;
+	uint8_t  end_added;
 };
 
 /* This data structure will be on the outbound
