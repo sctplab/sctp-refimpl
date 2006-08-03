@@ -1681,6 +1681,7 @@ failed_express_del:
 		control = stcb->asoc.control_pdapi;
 		if((ch->ch.chunk_flags & SCTP_DATA_FIRST_FRAG) == SCTP_DATA_FIRST_FRAG) {
 			/* Can't be another first? */
+
 			goto failed_pdapi_express_del;
 		}
 		if(tsn == (control->sinfo_tsn + 1)) {
@@ -1712,6 +1713,7 @@ failed_express_del:
 			if(end) {
 				/* clean up the flags and such */
 				asoc->fragmented_delivery_inprogress = 0;
+				asoc->strmin[strmno].last_sequence_delivered++;
 			}
 			goto finish_express_del;
 		}
