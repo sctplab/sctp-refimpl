@@ -311,12 +311,10 @@ sctp6_input(mp, offp, proto)
 				sctp_chunk_output((struct sctp_inpcb *)in6p, stcb, 2);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 				socket_unlock(in6p->ip_inp.inp.inp_socket, 1);
-				TIGER_LOCK_LOG(in6p->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 #endif
 			} else if ((in6p != NULL) && (stcb == NULL)) {
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 				socket_unlock(in6p->ip_inp.inp.inp_socket, 1);
-				TIGER_LOCK_LOG(in6p->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 #endif
 				refcount_up = 1;
 			}
@@ -496,7 +494,6 @@ sctp_skip_csum:
 	}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	socket_unlock(in6p->ip_inp.inp.inp_socket, 1);
-	TIGER_LOCK_LOG(in6p->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 #endif
 
 	return IPPROTO_DONE;
@@ -711,7 +708,6 @@ sctp6_ctlinput(cmd, pktdst, d)
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		if (inp != NULL) {
 			socket_unlock(inp->ip_inp.inp.inp_socket, 1);
-			TIGER_LOCK_LOG(inp->ip_inp.inp.inp_socket, UNLOCK_SOCKET);
 		}
 #endif
 		splx(s);
