@@ -31,6 +31,7 @@ rsp_aloc_req(const char *name, int namelen, void *msg, int msglen, int type)
 	r->request_type = type;
 	r->namelen = namelen;
 	r->name = malloc(namelen);
+	r->resolved = 0;
 	if(r->name == NULL) {
 		free(r);
 		return(NULL);
@@ -216,7 +217,7 @@ rsp_start_timer(struct rsp_enrp_scope *scp,
 		}
 	}
 	/* give back the running entry */
-	if(ote == NULL)
+	if(*ote == NULL)
 		*ote = te;
 	return (0);
 }

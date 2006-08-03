@@ -20,6 +20,7 @@ asap_find_req(struct rsp_enrp_scope *scp,
 	      int leave_locked)
 {
 	struct rsp_timer_entry *tme=NULL;
+
 	/*
 	 * For now we look through the running timers. In
 	 * theory if we have multiple scopes in a process this
@@ -60,11 +61,13 @@ get_next_parameter (uint8_t *buf,
 	*type = RSP_PARAM_RSVD;
 	if( ((caddr_t)limit - (caddr_t)buf)  < (sizeof(struct rsp_paramhdr))) {
 		/* not even enough space for a param. */
+		printf("limit is %x buf is %x left %d -- DONE\n",
+		       (u_int)limit, (u_int)buf, (int)((caddr_t)limit - (caddr_t)buf));
 		return(NULL);
 	}
 	ph = (struct rsp_paramhdr *)buf;
 	len = ntohs(ph->param_length);
-	if((buf + len) >= limit) {
+	if((buf + len) > limit) {
 		/* to long */
 		return(NULL);
 	}
@@ -75,7 +78,7 @@ get_next_parameter (uint8_t *buf,
 	/* save back the type in local byte order */
 	ph->param_type = *type;
 	if(nxt) {
-		*nxt = (uint8_t *)(((caddr_t)ph) + len);
+		*nxt = (uint8_t *)(((caddr_t)ph) + RSP_SIZE32(len));
 	}
 	return(ph);
 }
@@ -126,6 +129,7 @@ asap_pull_and_alloc_an_address(struct sockaddr **loc,
 			}
 			to = (struct sockaddr *)((caddr_t)new + old_siz);
 			memset(to, 0, sizeof(struct sockaddr_in));
+			*len += sizeof(struct sockaddr_in);
 		} else if (ttype == RSP_PARAM_IPV6_ADDR) {
 			new_siz = old_siz + sizeof(struct sockaddr_in6); 
 			new = realloc(old, new_siz);
@@ -134,9 +138,13 @@ asap_pull_and_alloc_an_address(struct sockaddr **loc,
 			}
 			to = (struct sockaddr *)((caddr_t)new + old_siz);
 			memset(to, 0, sizeof(struct sockaddr_in6));
+			*len += sizeof(struct sockaddr_in6);
 		} else {
 			/* *len is untouched */
 			return (*loc);
+		}
+		if(*loc) {
+			*loc = (struct sockaddr *)new;
 		}
 	}
 	if(ttype == RSP_PARAM_IPV4_ADDR) {
@@ -275,7 +283,7 @@ asap_build_pool_element(struct rsp_enrp_scope *scp,
 	siz = ntohs(pe->user_transport.param_length);
 	calc = (uint8_t *)pe;
 	calc += siz;
-	if(calc >= limit) {
+	if(calc > limit) {
 		/* The parameter does not fit */
 		fprintf(stderr, "Mis-sized transport parameter %d size:%d limit %x start:%x - skipped\n",
 			transport,
@@ -300,7 +308,6 @@ asap_build_pool_element(struct rsp_enrp_scope *scp,
 		sctp = (struct rsp_sctp_transport *)&pe->user_transport;
 		/* sanity check */
 		pes->transport_use = ntohs(sctp->transport_use);
-		pes->port = udp->port;
 		/* special handling needed for SCTP */
 		pes->addrList = NULL;
 		pes->port = sctp->port;
@@ -408,6 +415,8 @@ asap_build_pool_element(struct rsp_enrp_scope *scp,
 	if(pes->protocol_type == RSP_PARAM_SCTP_TRANSPORT) {
 		sa = pes->addrList;
 		for (i=0; i<pes->number_of_addr; i++) {
+			printf("Entry sa:%x sa->sa_len:%d family:%d\n",
+			       (u_int)sa, sa->sa_len, sa->sa_family);
 			if(HashedTbl_enter(scp->ipaddrPortHash, sa, pes, sa->sa_len)) {
 				fprintf(stderr, "Cross ref in hash ipadd/port to pe fails to enter\n");
 			}
@@ -572,10 +581,11 @@ asap_handle_name_resolution_response(struct rsp_enrp_scope *scp,
 	struct rsp_pool_ele *pes;
 	struct rsp_pool_element *pe;
 	int pool_nm_len;
-	uint8_t *limit, *at, new_ent=0;
+	uint8_t *limit, *at, *bu, new_ent=0;
 	struct rsp_enrp_req *req;
 	struct rsp_timer_entry *tme;
 	uint16_t this_param;
+	uint8_t regType;
 
 	/* at all times our pointer must be less than limit */
 	limit = (buf + sz);
@@ -590,17 +600,20 @@ asap_handle_name_resolution_response(struct rsp_enrp_scope *scp,
 	}
 
 	/* Now we get the selection policy */
+	bu = at;
 	sp = (struct rsp_select_policy *)get_next_parameter(at, limit, &at, &this_param);
-	if ((sp == NULL) || (this_param != RSP_PARAM_SELECT_POLICY)) {
-		if(this_param == RSP_PARAM_OPERATION_ERROR) {
+	if (sp && (this_param == RSP_PARAM_SELECT_POLICY)) {
+
+		regType = sp->policy_type;
+	}else if(sp && (this_param == RSP_PARAM_OPERATION_ERROR)) {
 			handle_response_op_error(scp, enrp, ph, (struct rsp_operational_error *)sp); 
 			return;
-		}
-		fprintf(stderr, "Did not find second req param, selection policy in msg found %d\n",
-			this_param);
-
-		return;
+	} else {
+		/* reselect */
+		regType = RSP_POLICY_ROUND_ROBIN;
+		at = bu;
 	}
+
 	/* Now we must:
 	 * 1: find the pool.	   
 	 * 2: if it does not exist build it.
@@ -615,14 +628,16 @@ asap_handle_name_resolution_response(struct rsp_enrp_scope *scp,
 	if(pool == NULL) {
 		/* new entry - point 2*/
 		new_ent = 1;
+		printf("Building the pool for %s\n", ph->pool_handle);
 		pool = build_a_pool (scp, ph->pool_handle, pool_nm_len, (uint32_t)sp->policy_type);
 		if(pool == NULL)
 			return;
 	}
-
+	printf("Pool is %x\n", (u_int)pool);
+	pool->regType = regType;
 	/* mark time of update */
 	gettimeofday(&pool->received, NULL);
-
+	pool->state = RSP_POOL_STATE_RESPONDED;
 	/* First lets mark any PE in the list currently to being deleted */
 	dlist_reset(pool->peList);
 	while((pes = (struct rsp_pool_ele *)dlist_get(pool->peList)) != NULL) {
@@ -636,10 +651,10 @@ asap_handle_name_resolution_response(struct rsp_enrp_scope *scp,
 				this_param);
 		}
 		/* note here that at becomes the new limit with in this message */
+		printf("adding pe:%x id:%x\n", (u_int)pe, ntohl(pe->id));
 		asap_decode_pe_entry_and_add(scp, pool, pe, at);
 		pe = (struct rsp_pool_element *)get_next_parameter(at, limit, &at, &this_param);
 	}
-
 	/* now we must stop any timers and wake any sleepers */
 	tme = asap_find_req(scp, pool->name, pool->name_len, ASAP_REQUEST_RESOLUTION, 0);
 	if(tme == NULL) {
@@ -649,9 +664,8 @@ asap_handle_name_resolution_response(struct rsp_enrp_scope *scp,
 	req = tme->req;
 	/* stop timer, which wakes everyone */
 	rsp_stop_timer(tme);
-
-	/* free the request */
-	rsp_free_req(req);
+	req->resolved = 1;
+	printf("Resolved now\n");
 }
 
 
@@ -659,13 +673,16 @@ struct rsp_enrp_entry *
 rsp_find_enrp_entry_by_asocid(struct rsp_enrp_scope *scp, sctp_assoc_t asoc_id)
 {
 	struct rsp_enrp_entry *re = NULL;
+
 	if(asoc_id == 0) {
 		return (re);
 	}
 	dlist_reset(scp->enrpList);
 	while((re = (struct rsp_enrp_entry *)dlist_get(scp->enrpList)) != NULL) {
-		if(re->asocid == asoc_id) 
+		if(re->asocid == asoc_id) {
+			printf("found him\n");
 			break;
+		}
 	}
 	return(re);
 }
@@ -764,30 +781,39 @@ handle_enrpserver_notification (struct rsp_enrp_scope *scp, char *buf,
 	struct rsp_enrp_entry *enrp;
 
 	notify = (union sctp_notification *)buf;
+	printf("Handle enrp_server notify %d\n",
+	       notify->sn_header.sn_type);
 	switch(notify->sn_header.sn_type) {
 	case SCTP_ASSOC_CHANGE:
+		printf("Assoc change\n");
 		ac = &notify->sn_assoc_change;
 		if(sz < sizeof(*ac)) {
 			fprintf(stderr, "Event ac size:%d got:%d -- to small\n",
 				sizeof(*ac), sz);
 			return;
 		}
+		printf("what type:%d\n", ac->sac_state);
 		switch(ac->sac_state) {
 		case SCTP_RESTART:
 		case SCTP_COMM_UP:
 			/* Find this guy and mark it up */
+			printf("commup/restart id:%x\n", ac->sac_assoc_id);
 			enrp = rsp_find_enrp_entry_by_asocid(scp, ac->sac_assoc_id);
 			if (enrp == NULL) {
+				printf("Try by addr\n");
 				enrp = rsp_find_enrp_entry_by_addr(scp, from, from_len);
 			}
 			if(enrp == NULL) {
 				/* huh? */
+				printf("Hmm no enrp id found\n");
 				return;
 			}
+			printf("Found enrp:%x setting up\n", (u_int)enrp);
 			enrp->state = RSP_ASSOCIATION_UP;
 			if(scp->homeServer == NULL) {
 				/* we have a home server */
 				struct rsp_timer_entry *te;
+				printf("Setting home server to this one for scp:%x\n", (u_int)scp);
 				scp->homeServer = enrp;
 				scp->state &= ~RSP_SERVER_HUNT_IP;
 				scp->state |= RSP_ENRP_HS_FOUND;
@@ -799,11 +825,13 @@ handle_enrpserver_notification (struct rsp_enrp_scope *scp, char *buf,
 					te = te->chained_next;
 				}
 			}
+			printf("Finshed with msg\n");
 			break;
 		case SCTP_COMM_LOST:
 		case SCTP_CANT_STR_ASSOC:
 		case SCTP_SHUTDOWN_COMP:
 			/* Find this guy and mark it down */
+			printf("comm lost\n");
 			enrp = rsp_find_enrp_entry_by_asocid(scp, ac->sac_assoc_id);
 			if (enrp == NULL) {
 				enrp = rsp_find_enrp_entry_by_addr(scp, from, from_len);
@@ -828,9 +856,11 @@ handle_enrpserver_notification (struct rsp_enrp_scope *scp, char *buf,
 			fprintf( stderr, "Unknown assoc state %d\n", ac->sac_state);
 			break;
 
-		break;
 		};
+		printf("At break\n");
+		break;
 	case SCTP_SHUTDOWN_EVENT:
+		printf("Shutdown?\n");
 		sh = &notify->sn_shutdown_event;
 		if(sz < sizeof(*sh)) {
 			fprintf(stderr, "Event sh size:%d got:%d -- to small\n",
@@ -892,6 +922,7 @@ handle_enrpserver_notification (struct rsp_enrp_scope *scp, char *buf,
 			notify->sn_header.sn_type);
 		break;
 	};
+	printf("Done with ENRP server notify process\n");
 }
 
 void
@@ -902,22 +933,37 @@ rsp_send_enrp_req(struct rsp_socket *sd,
 	struct rsp_enrp_entry *hs;
 	struct sctp_sndrcvinfo sinfo;
 	struct rsp_enrp_scope *scp;
-	
+
+	int ret, cnt=0;
+
 	scp = sd->scp;
+	printf("scp:%x need to send a request hs:%x\n", (u_int)scp,
+	       (u_int)scp->homeServer);
+	if(scp->homeServer == NULL) {
+		while(scp->homeServer == NULL) {
+			cnt++;
+			ret = rsp_internal_poll((nfds_t)(rsp_pcbinfo.num_fds), 1000, 1);
+		}
+		return;
+	}
 	hs = scp->homeServer;
-
-	if(hs == NULL)
+	printf("hs is %x\n",(u_int)hs);
+	if (hs->state != RSP_ASSOCIATION_UP) {
+		printf("No HS up?\n");
 		return;
+	}
 
-	if (hs->state != RSP_ASSOCIATION_UP) 
+	if (hs->asocid == 0) {
+		printf("HS has no asoc id?\n");
 		return;
-
-	if (hs->asocid == 0)
-		return;
+	}
 	memset(&sinfo, 0, sizeof(sinfo));
 	sinfo.sinfo_assoc_id = hs->asocid;
 	sinfo.sinfo_flags = SCTP_UNORDERED;
-	sctp_send(sd->sd, req->req, req->len, &sinfo, 0);
+	sinfo.sinfo_ppid = htonl(RSERPOOL_ASAP_PPID);
+	printf("Sending to scp->sd:%d id:%x\n", scp->sd, (u_int)sinfo.sinfo_assoc_id);
+	ret = sctp_send(scp->sd, req->req, req->len, &sinfo, 0);
+	printf("ret is %d errno:%d\n", ret, errno);
 }
 
 
@@ -1029,7 +1075,7 @@ rsp_enrp_make_name_request(struct rsp_socket *sd,
 	struct asap_message *msg;
 	struct rsp_enrp_scope *scp;
 	struct rsp_timer_entry *ote=NULL;
-	char *at;
+	struct rsp_pool_handle  *ph;
 
 	scp = sd->scp;
 	if(pool == NULL) {
@@ -1038,12 +1084,13 @@ rsp_enrp_make_name_request(struct rsp_socket *sd,
 		if(pool == NULL) {
 			return(-1);
 		}
+		printf("Build a pool here (%x)\n", (u_int)pool);
 	}
 	if(pool->state != RSP_POOL_STATE_TIMEDOUT)
 		pool->state = RSP_POOL_STATE_REQUESTED;
 
-	len = RSP_SIZE32((sizeof(struct asap_message) + namelen));
-	req = rsp_aloc_req(name, namelen, (void *)NULL, 0, ASAP_HANDLE_RESOLUTION);
+	len = RSP_SIZE32((sizeof(struct asap_message) + namelen + sizeof(struct rsp_pool_handle)));
+	req = rsp_aloc_req(name, namelen, (void *)NULL, 0, ASAP_REQUEST_RESOLUTION);
 	if(req == NULL) {
 		return(-1);
 	}
@@ -1052,12 +1099,15 @@ rsp_enrp_make_name_request(struct rsp_socket *sd,
 		rsp_free_req(req);
 		return(-1);
 	}
-	req->len = (sizeof(struct asap_message) + namelen);
+	req->len = len;
 	msg = (struct asap_message *)req->req;
 	msg->asap_type = ASAP_HANDLE_RESOLUTION;
 	msg->asap_length = htons(req->len);
-	at = (char *)((caddr_t)msg + sizeof(*msg));
-	memcpy(at, name, namelen);
+
+	ph = (struct rsp_pool_handle *)((caddr_t)msg + sizeof(*msg));
+	ph->ph.param_type = htons(RSP_PARAM_POOL_HANDLE);
+	ph->ph.param_length = htons(namelen+sizeof(struct rsp_pool_handle));
+	memcpy(ph->pool_handle, name, namelen);
 
 	/* Now we have a fully formed req, we do
 	 * one of two things.
@@ -1108,6 +1158,7 @@ rsp_enrp_make_name_request(struct rsp_socket *sd,
 		rsp_stop_timer(ote);
 		free(ote);
 	}
+	printf("returning to caller, we have the pool now\n");
 	return(0);
 }
 
@@ -1121,6 +1172,9 @@ rsp_server_select(struct rsp_pool *pool)
 
 	/* do the server selection policy */
 	switch (pool->regType) {
+	default:
+		fprintf(stderr, "Unknown pool policy %d, use rr\n",
+			pool->regType);
 	case RSP_POLICY_ROUND_ROBIN:
 		pe = (struct rsp_pool_ele *)dlist_get(pool->peList);
 		if(pe == NULL) {
@@ -1256,10 +1310,6 @@ rsp_server_select(struct rsp_pool *pool)
 			/* no possible pe */
 			pe = NULL;
 		}
-		break;
-	default:
-		fprintf(stderr, "Unknown pool policy %d\n",
-			pool->regType);
 		break;
 
 	}

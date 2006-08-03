@@ -62,4 +62,26 @@ handle_asapmsg_fromenrp (struct rsp_enrp_scope *scp,
 			 socklen_t from_len);
 int
 rsp_internal_poll(nfds_t nfds, int timeout, int ret_from_enrp);
+
+
+
+void
+handle_asap_message(struct rsp_socket *sdata,
+		    void *msg, 
+		    int len,
+		    struct sockaddr *from, 
+		    int fromlen, 
+		    struct sctp_sndrcvinfo *sinfo, 
+		    int flags);
+
+void
+handle_asap_sctp_notification(struct rsp_socket *sdata,
+			      void *msg, 
+			      int len,
+			      struct sockaddr *from, 
+			      int fromlen, 
+			      struct sctp_sndrcvinfo *sinfo, 
+			      int flags);
+
+
 #endif

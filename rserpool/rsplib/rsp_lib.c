@@ -353,13 +353,13 @@ rsp_load_file(FILE *io, char *file)
 			continue;
 		}
 		p3 = strtok(NULL, ":");
-		if(p2 == NULL) {
+		if(p3 == NULL) {
 			fprintf(stderr,"config file %s line %d can't find a ':' seperating val/port from address/nullcr\n",
 			       file, line);
 			continue;
 		}
-		p4 = strtok(NULL, ":");
-		if(p2 == NULL) {
+		p4 = strtok(NULL, "\n");
+		if(p4 == NULL) {
 			fprintf(stderr,"config file %s line %d can't find a terminating char after address?\n", file, line);
 			continue;
 		}
@@ -385,7 +385,7 @@ rsp_load_file(FILE *io, char *file)
 				continue;
 			}
 			memset(&sin, 0, sizeof(sin));
-			if(inet_pton(AF_INET, p3 , &sin.sin_addr ) == 1) {
+			if(inet_pton(AF_INET, p4 , &sin.sin_addr ) == 1) {
 				sin.sin_family = AF_INET;
 #ifdef HAVE_SA_LEN
 				sin.sin_len = sizeof(sin);
@@ -394,7 +394,7 @@ rsp_load_file(FILE *io, char *file)
 				rsp_add_enrp_server(es, enrpid, (struct sockaddr *)&sin);
 				continue;
 			}
-			fprintf(stderr,"config file %s line %d can't translate the address?\n", file, line);
+			fprintf(stderr,"config file %s line %d can't translate the address %s?\n", file, line, p4);
 		} else if ((strncmp(p1, "TIMER", 2) == 0) ||
 			   (strncmp(p1, "timer", 2) == 0)) {
 			if (strncmp(p2, "T1", 2) == 0) {
@@ -516,7 +516,13 @@ rsp_load_config_file(const char *confprefix)
 	} else {
 		prefix[0] = 0;
 	}
-	sprintf(file, "~/.%senrp.conf", prefix);
+	sprintf(file, "%s/.enrp.conf", prefix);
+	if ((io = fopen(file, "r")) != NULL) {
+		id = rsp_load_file(io, file);
+		fclose(io);
+		return(id);
+	}
+	sprintf(file, "~/.enrp.conf");
 	if ((io = fopen(file, "r")) != NULL) {
 		id = rsp_load_file(io, file);
 		fclose(io);
@@ -559,22 +565,30 @@ rsp_start_enrp_server_hunt(struct rsp_enrp_scope *scp)
 	 * don't continue, its already happening we just add to the sleeper
 	 * count.
 	 */
-	int cnt = 0;
+	int cnt = 0, ret;
 	struct rsp_enrp_entry *re;
 	struct rsp_timer_entry *tmr;
 
 	/* start server hunt */
 	tmr = scp->enrp_tmr;
 	scp->state |= RSP_SERVER_HUNT_IP;
+	if(dlist_getCnt(scp->enrpList) == 0) {
+		printf("Error, no valid servers to hunt to :-<\n");
+		return;
+	}
 	dlist_reset(scp->enrpList);
 	while((re = (struct rsp_enrp_entry *)dlist_get(scp->enrpList)) != NULL) {
 		if (re->state == RSP_NO_ASSOCIATION) { 
-			if((sctp_connectx(scp->sd, re->addrList, re->number_of_addresses)) < 0) {
+			if(((ret = sctp_connectx(scp->sd, re->addrList, re->number_of_addresses))) < 0) {
+				printf("connectx to this re:%x one fails %d\n",(u_int)re, ret);
 				re->state = RSP_ASSOCIATION_FAILED;
 			} else {
 				re->state = RSP_START_ASSOCIATION;
 				/* try to get assoc id */
 				re->asocid = get_asocid(scp->sd, re->addrList);
+				printf("Setting asoc id:%x for this guy%x\n",
+				       (u_int)re->asocid,
+				       (u_int)re);
 			}
 			cnt++;
 		} else if (re->state == RSP_ASSOCIATION_UP) {
@@ -615,7 +629,8 @@ rsp_start_enrp_server_hunt(struct rsp_enrp_scope *scp)
 			(struct rsp_enrp_req *)NULL, 
 			RSP_T5_SERVERHUNT, &scp->enrp_tmr);
 	/* empty we are just starting */
-	scp->enrp_tmr->chained_next = NULL;
+	if(scp->enrp_tmr)
+		scp->enrp_tmr->chained_next = NULL;
 }
 
 static struct rsp_enrp_scope *
@@ -687,12 +702,16 @@ rsp_process_fd_for_scope (struct rsp_enrp_scope *scp)
 		return;
 	}
 	if(msg_flags & MSG_NOTIFICATION) {
+		printf("Handle ENRP notification\n");
 		handle_enrpserver_notification(scp, readbuf, &info, sz, 
 					       (struct sockaddr *)&from, from_len);
+		printf("Done\n");
 	} else {
 		/* we call the handle_asapmsg_fromenrp routine here */
+		printf("Handle asap msg from ENRP\n");
 		handle_asapmsg_fromenrp(scp, readbuf, &info, sz, 
 					(struct sockaddr *)&from, from_len);
+		printf("Done\n");
 	}
 }
 
@@ -704,7 +723,7 @@ int rsp_process_fds(int ret)
 	int i=1;
 	int count_processed=0;
 	struct rsp_enrp_scope *scp;
-
+	int howmany=0;
 	/* 
 	 * For sd's we read what happened, interpret
 	 * any events to enrp.. and process.
@@ -714,7 +733,10 @@ int rsp_process_fds(int ret)
 	for(i=0; i< rsp_pcbinfo.num_fds; i++) {
 		if(rsp_pcbinfo.watchfds[i].revents) {
 			/* this one woke up, find the scope */
+			howmany++;
 			scp = rsp_find_scope_with_sd(rsp_pcbinfo.watchfds[i].fd);
+			printf("Find scope:%x for fd:%d events:%d\n", (u_int)scp,
+			       rsp_pcbinfo.watchfds[i].fd, rsp_pcbinfo.watchfds[i].revents);
 			if(scp == NULL) {
 				fprintf (stderr, "fd:%d does not belong to any scope? - nulling",
 					 rsp_pcbinfo.watchfds[i].fd);
@@ -723,17 +745,19 @@ int rsp_process_fds(int ret)
 				rsp_pcbinfo.watchfds[i].revents = 0;
 				ret--;
 			} else {
+				printf("Processing this sd:%d\n", scp->sd);
 				count_processed++;
 				rsp_process_fd_for_scope (scp);
 				rsp_pcbinfo.watchfds[i].revents = 0;
 				ret--;
 			}
 		}
-		if(ret <= 0) {
+		if(ret == howmany) {
 			break;
 		}
 	}
-	return(ret);
+	printf("Return %d\n", howmany);
+	return(howmany);
 }
 
 
@@ -753,7 +777,7 @@ rsp_socket(int domain, int type,  int protocol, uint32_t op_scope)
 		errno = ENOTSUP;
 		return (-1);
 	}
-	sdata = (struct rsp_socket *) sizeof(struct rsp_socket);
+	sdata = (struct rsp_socket *) malloc(sizeof(struct rsp_socket));
 	if(sdata == NULL) {
 		if(rsp_debug) {
 			fprintf(stderr, "Can't get memory for rsp_socket\n");
@@ -770,6 +794,7 @@ rsp_socket(int domain, int type,  int protocol, uint32_t op_scope)
 		free(sdata);
 		return (-1);
 	}
+	printf("Added sdata:%x scope:%x\n", (u_int)sdata, (u_int)sdata->scp);
 	/* FIX? If we refcount scp, we need a bump here? */
 
 	sd = socket(domain, type, protocol);
@@ -800,7 +825,6 @@ rsp_socket(int domain, int type,  int protocol, uint32_t op_scope)
 	}
  skip_it:
 	/* setup and bind the port */
-	memset(sdata, 0, sizeof(struct rsp_socket));
 	sdata->sd = sd;
 	sdata->port = 0; /* unbound */
 	sdata->type = type;
@@ -872,7 +896,7 @@ rsp_socket(int domain, int type,  int protocol, uint32_t op_scope)
 		fprintf(stderr, "Failed to enter into hash table error:%d\n", ret);
 		goto error_out;
 	}
-
+	printf("Returning sd:%d\n", sd);
 	return(sd);
  error_out:
 	close(sdata->sd);
@@ -1004,7 +1028,7 @@ rsp_sendmsg(int sockfd,         /* HA socket descriptor */
 	    struct sockaddr *to,
 	    socklen_t tolen,
 	    const char *name,
-	    size_t *namelen,
+	    size_t namelen,
 	    struct sctp_sndrcvinfo *sinfo,
 	    int flags)         /* Options flags */
 {
@@ -1025,17 +1049,21 @@ rsp_sendmsg(int sockfd,         /* HA socket descriptor */
 	 * 
 	 */
 	/* First find the socket stuff */
-	sdata  = (struct rsp_socket *)HashedTbl_lookup(rsp_pcbinfo.sd_pool ,
-							    (void *)&sockfd,
-							    sizeof(sockfd),
-							    NULL);
+
+	sdata  = (struct rsp_socket *)rsp_find_socket_with_sd(sockfd);
 	if(sdata == NULL) {
 		/* sockfd is not one of ours */
 		errno = EINVAL;
 		return (-1);
 	}
-	scp = sdata->scp;
+	printf("sdata ret:%x scp:%x\n",
+	       (u_int)sdata, (u_int)sdata->scp);
 
+	scp = sdata->scp;
+	if(scp == NULL) {
+		errno = EFAULT;
+		return (-1);
+	}
 	if(name == NULL) {
 		/* must be a existing PE, check ipaddr and assoc-id */
 		if ((sinfo) && sinfo->sinfo_assoc_id) {
@@ -1060,15 +1088,16 @@ rsp_sendmsg(int sockfd,         /* HA socket descriptor */
 		/* named based hunting, imply's using
 		 * load balancing policy after finding name.
 		 */
-		pool = (struct rsp_pool *)HashedTbl_lookup(scp->cache ,name, *namelen, NULL);
+		pool = (struct rsp_pool *)HashedTbl_lookup(scp->cache ,name, namelen, NULL);
 		if(pool == NULL) {
 			/* need to block and get info, first is
 			 * there already a request pending for this.
 			 * If so just join sleep, if not create and 
 			 * send, then sleep.
 			 */
-			rsp_connect(sockfd, name, *namelen);
-			pool = (struct rsp_pool *)HashedTbl_lookup(scp->cache ,name, *namelen, NULL);
+			rsp_connect(sockfd, name, namelen);
+			printf("Connect returns, lookup pool\n");
+			pool = (struct rsp_pool *)HashedTbl_lookup(scp->cache ,name, namelen, NULL);
 		}
 		/* If we fall to here we have a pool to send to */
 		if ((pool == NULL) || (pool->state == RSP_POOL_STATE_NOTFOUND)) {
@@ -1078,6 +1107,7 @@ rsp_sendmsg(int sockfd,         /* HA socket descriptor */
 		}
 		pe = rsp_server_select(pool);
 	}
+	printf("Pick a pe\n");
 	pool->lastUsed = pe;
 	/* Ok, we can send to our peer or new peer */
 	ret = 0;
@@ -1095,9 +1125,28 @@ rsp_sendmsg(int sockfd,         /* HA socket descriptor */
 			goto use_addrs_collect_associd;
 		}
 	} else {
+		struct sockaddr *sa;
+		int cnt;
+
+		cnt = pe->number_of_addr;
 	use_addrs_collect_associd:
+		sa = pe->addrList;
+		while(sa->sa_family == AF_INET6) {
+			sa = (struct sockaddr *)((caddr_t)sa + sa->sa_len);
+			cnt--;
+			printf("Skip v6,on to next:%d cnt:%d\n",
+			       sa->sa_family, cnt);
+			if(cnt <= 0) {
+				printf("Sorry no V4 addresses\n");
+				return(-1);
+			}
+		}
+		ret = sctp_sendx (sdata->sd, msg, len, sa, cnt,
+				  sinfo, flags);
+/*
 		ret = sctp_sendx (sdata->sd, msg, len, pe->addrList, pe->number_of_addr,
 				  sinfo, flags);
+*/
 	update_asocid:
 		pe->asocid = get_asocid(sdata->sd, pe->addrList);
 		/* now enter it into the db */
@@ -1141,6 +1190,12 @@ rsp_internal_poll(nfds_t nfds, int timeout, int ret_from_enrp)
 		fprintf(stderr, "Gak, system error can't get time of day?? -- failed:%d\n", errno);
 		return(-1);
 	}
+	if(nfds < rsp_pcbinfo.num_fds) {
+		printf("Warning, nfds:%d can't be smaller than %d\n",
+		       nfds,
+		       rsp_pcbinfo.num_fds);
+		nfds = rsp_pcbinfo.num_fds;
+	}
 	while (1) {
 		/* Deal with any timers */
 		dlist_reset(rsp_pcbinfo.timer_list);
@@ -1154,6 +1209,7 @@ rsp_internal_poll(nfds_t nfds, int timeout, int ret_from_enrp)
 		    ((entry->expireTime.tv_sec ==  now.tv_sec) &&
 		     (now.tv_sec >= entry->expireTime.tv_usec))) {
 			/* Yep, this one has expired */
+			printf("Expire entry %x\n", (u_int)entry);
 			rsp_expire_timer(entry);
 			/* Go get the next one, this works because
 			 * rsp_expire_timer removes the head of the list
@@ -1168,25 +1224,28 @@ rsp_internal_poll(nfds_t nfds, int timeout, int ret_from_enrp)
 		/* ok, at this point entry points to an un-expired timer and
 		 * the next one to expire at that... so adjust its time.
 		 */
-		if(now.tv_sec > entry->expireTime.tv_sec) {
-			min_timeout = (now.tv_sec - entry->expireTime.tv_sec) * 1000;
-			if(now.tv_usec >= entry->expireTime.tv_usec) {
-				min_timeout += (now.tv_usec - entry->expireTime.tv_usec)/1000;
+		min_timeout = rsp_pcbinfo.minimumTimerQuantum;
+		if(entry) {
+			if(now.tv_sec > entry->expireTime.tv_sec) {
+				min_timeout = (now.tv_sec - entry->expireTime.tv_sec) * 1000;
+				if(now.tv_usec >= entry->expireTime.tv_usec) {
+					min_timeout += (now.tv_usec - entry->expireTime.tv_usec)/1000;
+				} else {
+					/* borrow a second */
+					min_timeout -= 1000;
+					/* add it to now */
+					now.tv_usec += 1000000;
+					min_timeout += (now.tv_usec - entry->expireTime.tv_usec)/1000;
+				}
+			} else if (now.tv_sec == entry->expireTime.tv_sec) {
+				min_timeout = (now.tv_usec - entry->expireTime.tv_usec)/1000;
 			} else {
-				/* borrow a second */
-				min_timeout -= 1000;
-				/* add it to now */
-				now.tv_usec += 1000000;
-				min_timeout += (now.tv_usec - entry->expireTime.tv_usec)/1000;
+				/* wait a ms and reprocess */
+				min_timeout = 0;
 			}
-		} else if (now.tv_sec == entry->expireTime.tv_sec) {
-			min_timeout = (now.tv_usec - entry->expireTime.tv_usec)/1000;
-		} else {
-			/* wait a ms and reprocess */
-			min_timeout = 0;
 		}
 		if(min_timeout < 1) {
-			min_timeout = 1;
+			min_timeout = rsp_pcbinfo.minimumTimerQuantum;
 		}
 		if(min_timeout > rsp_pcbinfo.minimumTimerQuantum)
 			min_timeout = rsp_pcbinfo.minimumTimerQuantum;
@@ -1200,22 +1259,29 @@ rsp_internal_poll(nfds_t nfds, int timeout, int ret_from_enrp)
 		} else {
 			rem_to = 0;
 		}
-		poll_ret = poll(rsp_pcbinfo.watchfds, rsp_pcbinfo.num_fds , min_timeout);
+		poll_ret = poll(rsp_pcbinfo.watchfds, nfds , min_timeout);
+		if(poll_ret)
+			printf("Poll returns %d\n", poll_ret);
 		if(poll_ret > 0) {
 			/* we have some to deal with */
+			printf("call process_fds\n");
 			ret = rsp_process_fds(poll_ret);
+			printf("ret is %d\n", ret);
 			if ((poll_ret - ret) > 0) {
+				printf("ret %d\n", (poll_ret - ret));
 				return(poll_ret - ret);
 			} else if(ret_from_enrp) {
+				printf("ret_from_enrp:%d\n", ret_from_enrp);
 				return (0);
 			}
 		}
 		if(poll_ret < 0) {
 			/* we have an error to deal with? */
-			fprintf(stderr, "Error in poll?? errno:%d\n", errno);
+			/*fprintf(stderr, "Error in poll?? errno:%d\n", errno);*/
 		}
 
 		if ((poll_ret == 0) && rem_to) {
+			printf("poll ret 0\n");
 			return (0);
 		}
 
@@ -1229,7 +1295,7 @@ rsp_internal_poll(nfds_t nfds, int timeout, int ret_from_enrp)
 
 ssize_t 
 rsp_rcvmsg(int sockfd,		/* HA socket descriptor */
-	   const char *msg,
+	   char *msg,
 	   size_t len,
 	   char *name, 		/* in-out/limit */
 	   size_t *namelen,
@@ -1241,6 +1307,8 @@ rsp_rcvmsg(int sockfd,		/* HA socket descriptor */
 	int ret;
 	struct rsp_socket *sdata;
 	struct rsp_enrp_scope *scp;
+	struct rsp_pool_ele  *pe;
+	struct sctp_sndrcvinfo lsinfo;
 
 	if (rsp_inited == 0) {
 		errno = EINVAL;
@@ -1264,10 +1332,7 @@ rsp_rcvmsg(int sockfd,		/* HA socket descriptor */
 	 *    and associd.
 	 */
 	/* First find the socket stuff */
-	sdata  = (struct rsp_socket *)HashedTbl_lookup(rsp_pcbinfo.sd_pool ,
-							    (void *)&sockfd,
-							    sizeof(sockfd),
-							    NULL);
+	sdata  = (struct rsp_socket *)rsp_find_socket_with_sd(sockfd);
 	if(sdata == NULL) {
 		/* sockfd is not one of ours */
 		errno = EINVAL;
@@ -1292,6 +1357,9 @@ rsp_rcvmsg(int sockfd,		/* HA socket descriptor */
 	rsp_pcbinfo.watchfds[rsp_pcbinfo.num_fds].fd = sdata->sd;
 	rsp_pcbinfo.watchfds[rsp_pcbinfo.num_fds].events = POLLIN;
 	rsp_pcbinfo.watchfds[rsp_pcbinfo.num_fds].revents = 0;
+	printf("Looking for data on rsp_pcbinfo.num_fds:%d sd:%d\n",
+	       rsp_pcbinfo.num_fds, sdata->sd);
+
 	ret = rsp_internal_poll(rsp_pcbinfo.num_fds+1, INFTIM, 0);
 	if(ret < 1) {
 		if(ret < 0) {
@@ -1301,34 +1369,68 @@ rsp_rcvmsg(int sockfd,		/* HA socket descriptor */
 			fprintf(stderr, "Got error:%d on poll\n", errno);
 			return(-1);
 		}
+		printf("Try again\n");
 		goto try_again;
 	}
 	if (rsp_pcbinfo.watchfds[rsp_pcbinfo.num_fds].revents == 0) {
 		/* not me? */
+		printf("Not mine? %d\n", rsp_pcbinfo.watchfds[rsp_pcbinfo.num_fds].revents);
 		goto try_again;
 	}
 	/* at this point we have an event on the fd we want! 
 	 * and are at 2)
 	 */
+	printf("Got an event\n");
 	if(sdata->protocol == IPPROTO_SCTP) {
 		/* SCTP */
+		if(sinfo == NULL) {
+			sinfo = &lsinfo;
+		}
 		ret = sctp_recvmsg(sdata->sd, msg, len,
 				   from, fromlen, sinfo, &flags);
-		if (sinfo->sinfo_flags & MSG_NOTIFICATION) {
+		printf("ret:%d sinfo->sinfo_flags:%x flags:%x ppid:%x\n",
+		       ret,
+		       sinfo->sinfo_flags,
+		       flags,
+		       ntohl(sinfo->sinfo_ppid));
+		       
+		if (flags & MSG_NOTIFICATION) {
+			printf("Its a notification\n");
 			handle_asap_sctp_notification(sdata, msg, ret, from, *fromlen, sinfo, flags);
+			printf("Try again\n");
 			goto try_again;
-		} else if(sinfo->sinfo_ppid == RSERPOOL_ASAP_PPID) {
+		} else if(sinfo->sinfo_ppid == htonl(RSERPOOL_ASAP_PPID)) {
+			printf("Its a asap mag\n");
 			handle_asap_message(sdata, msg, ret, from, *fromlen, sinfo, flags);
+			printf("Try again\n");
 			goto try_again;
 		} 
-		return(ret);
 	} else {
 		/* UDP */
 		return(recvfrom(sdata->sd, msg, len, flags,
 				from, fromlen));
 				
 	}
-	return (0);
+	if(name) {
+		pe = (struct rsp_pool_ele  *)HashedTbl_lookupKeyed(scp->asocidHash, 
+								   sinfo->sinfo_assoc_id, 
+								   &sinfo->sinfo_assoc_id, 
+								   sizeof(sctp_assoc_t), 
+								   NULL);
+		if(pe) {
+			int copy_max;
+			if(*namelen < pe->pool->name_len)
+				copy_max = *namelen;
+			else {
+				copy_max = pe->pool->name_len;
+				*namelen = copy_max;
+			}
+			memcpy(name, pe->pool->name, copy_max);
+		} else if (name) {
+			*namelen = 0;
+		}
+	}
+	return (ret);
 }
 
 
@@ -1462,11 +1564,11 @@ rsp_poll ( struct pollfd fds[], nfds_t nfds, int timeout)
 }
 
 
-uint32_t
+int32_t
 rsp_initialize(struct rsp_info *info)
 {
 	/* First do we do major initialization? */
-	uint32_t id;
+	int32_t id;
 	if (rsp_inited == 0) {
 		/* yep */
 		if(rsp_init() != 0) {
