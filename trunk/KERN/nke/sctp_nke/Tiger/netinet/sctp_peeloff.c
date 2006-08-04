@@ -114,7 +114,6 @@ extern struct fileops socketops;
 
 #ifdef SCTP_DEBUG
 extern uint32_t sctp_debug_on;
-
 #endif				/* SCTP_DEBUG */
 
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)

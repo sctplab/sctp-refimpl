@@ -183,6 +183,7 @@ unsigned int sctp_assoc_rtx_max_default = SCTP_DEF_MAX_SEND;
 unsigned int sctp_path_rtx_max_default = SCTP_DEF_MAX_PATH_RTX;
 unsigned int sctp_nr_outgoing_streams_default = SCTP_OSTREAM_INITIAL;
 
+int sctp_min_split_point=SCTP_DEFAULT_SPLIT_POINT_MIN;
 int sctp_pcbtblsize = SCTP_PCBHASHSIZE;
 int sctp_hashtblsize = SCTP_TCBHASHSIZE;
 int sctp_chunkscale = SCTP_CHUNKQUEUE_SCALE;
@@ -727,6 +728,7 @@ sctp_assoclist SYSCTL_HANDLER_ARGS
 	}
 	printf("OK, I have been here...");
 	lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+
 	return 0;
 }
 #endif
@@ -777,6 +779,10 @@ SYSCTL_INT(_net_inet_sctp, OID_AUTO, maxchunks, CTLFLAG_RW,
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, tcbhashsize, CTLFLAG_RW,
     &sctp_hashtblsize, 0,
     "Tuneable for Hash table sizes");
+
+SYSCTL_INT(_net_inet_sctp, OID_AUTO, min_split_point, CTLFLAG_RW,
+    &sctp_min_split_point, 0,
+    "Minimum size when splitting a chunk");
 
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, pcbhashsize, CTLFLAG_RW,
     &sctp_pcbtblsize, 0,
@@ -5857,6 +5863,10 @@ sctp_sysctl(name, namelen, oldp, oldlenp, newp, newlen)
 		return (sysctl_int(oldp, oldlenp, newp, newlen,
 		    &sctp_pcbtblsize));
 
+	case SCTPCTL_MINSPLIT:
+		return (sysctl_int(oldp, oldlenp, newp, newlen,
+		    &sctp_min_split_point));
+
 	case SCTPCTL_CHUNKSCALE:
 		return (sysctl_int(oldp, oldlenp, newp, newlen,
 		    &sctp_chunkscale));
@@ -6096,6 +6106,14 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
 	    SYSCTL_DESCR("Tuneable for PCB Hash table sizes"),
 	    NULL, 0, &sctp_pcbtblsize, 0,
 	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_PCBHASHSIZE,
+	    CTL_EOL);
+
+	sysctl_createv(clog, 0, NULL, NULL,
+	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
+	    CTLTYPE_INT, "min_split_point",
+	    SYSCTL_DESCR("Minimum size when splitting a chunk"),
+	    NULL, 0, &sctp_min_split_point, 0,
+	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_MINSPLIT,
 	    CTL_EOL);
 
 	sysctl_createv(clog, 0, NULL, NULL,
@@ -6389,6 +6407,7 @@ sctp_lock(struct socket *so, int refcount, int lr)
 
 	if (refcount)
 		so->so_usecount++;
+
 	SAVE_CALLERS(((struct sctp_inpcb *)so->so_pcb)->lock_caller1,
 		     ((struct sctp_inpcb *)so->so_pcb)->lock_caller2,
 		     ((struct sctp_inpcb *)so->so_pcb)->lock_caller3);
@@ -6429,6 +6448,7 @@ sctp_getlock(struct socket *so, int locktype)
 		     ((struct sctp_inpcb *)so->so_pcb)->getlock_caller2,
 		     ((struct sctp_inpcb *)so->so_pcb)->getlock_caller3);
 	((struct sctp_inpcb *)so->so_pcb)->getlock_gen_count = ((struct sctp_inpcb *)so->so_pcb)->gen_count++;
+
 	if (so->so_pcb) {
 		if (so->so_usecount < 0)
 			panic("sctp_getlock: so=%x usecount=%x\n", so, so->so_usecount);

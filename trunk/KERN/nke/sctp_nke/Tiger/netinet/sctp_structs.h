@@ -399,12 +399,18 @@ struct sctp_queued_to_read {	/* sinfo structure Pluse more */
 struct sctp_stream_queue_pending {
 	struct mbuf *data;
 	struct mbuf *tail_mbuf;
+	struct timeval ts;
+	struct sctp_nets *net;
 	TAILQ_ENTRY (sctp_stream_queue_pending ) next;
 	uint32_t length;
+	uint32_t timetolive;
+	uint32_t ppid;
+	uint32_t context;
+	uint16_t sinfo_flags;
 	uint16_t stream;
 	uint16_t strseq;
 	uint8_t  msg_is_complete;
-	uint8_t  resv[3];
+	uint8_t  some_taken;
 };
 
 /*
@@ -427,6 +433,7 @@ struct sctp_stream_out {
 	TAILQ_ENTRY(sctp_stream_out) next_spoke;	/* next link in wheel */
 	uint16_t stream_no;
 	uint16_t next_sequence_sent;	/* next one I expect to send out */
+	uint8_t  last_msg_incomplete;
 };
 
 /* used to keep track of the addresses yet to try to add/delete */
@@ -786,6 +793,9 @@ struct sctp_association {
 					 * locked by send socket buffer */
 	uint16_t last_revoke_count;
 	int16_t num_send_timers_up;
+
+	uint16_t stream_locked_on;
+	uint8_t  stream_locked;
 	/*
 	 * This flag indicates that we need to send the first SACK. If in
 	 * place it says we have NOT yet sent a SACK and need to.

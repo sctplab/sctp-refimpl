@@ -109,6 +109,12 @@ struct sctp_paramhdr {
 #define SCTP_AUTH_ACTIVE_KEY 		0x00000015
 #define SCTP_AUTH_DELETE_KEY 		0x00000016
 #define SCTP_USE_EXT_RCVINFO		0x00000017
+#define SCTP_AUTO_ASCONF		0x00000018 /* rw */
+#define SCTP_MAXBURST			0x00000019 /* rw */
+/* assoc level context */
+#define SCTP_CONTEXT                    0x0000001a /* rw */
+/* explict EOR signalling */
+#define SCTP_EXPLICIT_EOR               0x0000001b
 
 /*
  * read-only options
@@ -142,10 +148,6 @@ struct sctp_paramhdr {
  */
 
 /* these should probably go into sockets API */
-#define SCTP_AUTO_ASCONF		0x00001001 /* rw */
-#define SCTP_MAXBURST			0x00001002 /* rw */
-/* assoc level context */
-#define SCTP_CONTEXT                    0x00001003 /* rw */
 #define SCTP_RESET_STREAMS		0x00001004 /* wo */
 
 
