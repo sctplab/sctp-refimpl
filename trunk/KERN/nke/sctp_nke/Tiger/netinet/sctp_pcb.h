@@ -451,6 +451,9 @@ struct sctp_inpcb {
 	uint32_t lock_gen_count;
 	uint32_t unlock_gen_count;
 	uint32_t getlock_gen_count;
+
+	uint32_t i_am_here_file;
+	uint32_t i_am_here_line;
 #endif
 };
 
@@ -998,6 +1001,12 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #define I_AM_HERE \
                 do { \
 			printf("%s:%d at %s\n", __FILE__, __LINE__ , __FUNCTION__); \
+		} while (0)
+
+#define SAVE_I_AM_HERE(_inp) \
+                do { \
+			(_inp)->i_am_here_file = APPLE_FILE_NO; \
+			(_inp)->i_am_here_line = __LINE__; \
 		} while (0)
 
 /* save caller pc and caller's caller pc */

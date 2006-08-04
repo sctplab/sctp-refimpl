@@ -4316,6 +4316,9 @@ restart:
 	    (filling_sinfo)) {
 		/* find a more suitable one then this */
 		ctl = TAILQ_NEXT(control, next);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		SAVE_I_AM_HERE(inp);
+#endif
 		while (ctl) {
 			if ((ctl->stcb != control->stcb) && (ctl->length)) {
 				/* found one */
@@ -4324,6 +4327,9 @@ restart:
 			}
 			ctl = TAILQ_NEXT(ctl, next);
 		}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		SAVE_I_AM_HERE(inp);
+#endif
 		/*
 		 * if we reach here, not suitable replacement is available
 		 * <or> fragment interleave is NOT on. So stuff the sb_cc
@@ -4456,6 +4462,9 @@ found_one:
 		/* copy out each mbuf in the chain up to length */
 get_more_data:
 		m = control->data;
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		SAVE_I_AM_HERE(inp);
+#endif
 		while (m) {
 			/* Move out all we can */
 			cp_len = (int)uio->uio_resid;
@@ -4574,6 +4583,9 @@ get_more_data:
 				break;
 			}
 		}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		SAVE_I_AM_HERE(inp);
+#endif
 		/*
 		 * At this point we have looked at it all and we either have
 		 * a MSG_EOR/or read all the user wants... <OR>
@@ -4716,6 +4728,9 @@ get_more_data2:
 			uio->uio_resid -= control->length;
 			*mp = control->data;
 			m = control->data;
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			SAVE_I_AM_HERE(inp);
+#endif
 			while (m) {
 #ifdef SCTP_SB_LOGGING
 				sctp_sblog(&so->so_rcv,
@@ -4729,6 +4744,9 @@ get_more_data2:
 #endif
 				m = m->m_next;
 			}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			SAVE_I_AM_HERE(inp);
+#endif
 			control->data = control->tail_mbuf = NULL;
 			control->length = 0;
 			if (out_flags & MSG_EOR) {
@@ -4797,6 +4815,9 @@ get_more_data2:
 			if (m->m_flags & M_NOTIFICATION) {
 				out_flags |= MSG_NOTIFICATION;
 			}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			SAVE_I_AM_HERE(inp);
+#endif
 			while ((m) && (cp_len > 0)) {
 				if (cp_len >= m->m_len) {
 					*mp = m;
@@ -4873,6 +4894,9 @@ get_more_data2:
 					goto release;
 				}
 			}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			SAVE_I_AM_HERE(inp);
+#endif
 		}
 	}
 release:
