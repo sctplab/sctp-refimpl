@@ -36,9 +36,6 @@ __FBSDID("$FreeBSD:$");
 #include <sctp.h>
 #elif !defined(__OpenBSD__)
 #include "opt_sctp.h"
-#ifdef __FreeBSD__
-#include "opt_global.h"
-#endif
 #endif
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -1866,7 +1863,6 @@ sctp_notify_authentication(struct sctp_tcb *stcb, uint32_t indication,
 	control->tail_mbuf = m_notify;
 	sctp_add_to_readq(stcb->sctp_ep, stcb, control,
 	    &stcb->sctp_socket->so_rcv, 1);
-	sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 }
 
 

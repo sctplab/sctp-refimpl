@@ -40,7 +40,6 @@ __FBSDID("$FreeBSD:$");
 #if defined(__FreeBSD__)
 #include "opt_inet6.h"
 #include "opt_inet.h"
-#include "opt_global.h"
 #endif
 #if defined(__NetBSD__)
 #include "opt_inet.h"
@@ -158,6 +157,11 @@ sctp_do_peeloff(struct socket *head, struct socket *so, sctp_assoc_t assoc_id)
 	    SCTP_PCB_FLAGS_IN_TCPPOOL |	/* Turn on Blocking IO */
 	    (SCTP_PCB_COPY_FLAGS & inp->sctp_flags));
 	n_inp->sctp_socket = so;
+	n_inp->sctp_features = inp->sctp_features;
+	n_inp->sctp_frag_point = inp->sctp_frag_point;
+	n_inp->partial_delivery_point = inp->partial_delivery_point;
+	n_inp->sctp_context = inp->sctp_context;
+	n_inp->inp_starting_point_for_iterator = NULL;
 
 	/*
 	 * Now we must move it from one hash table to another and get the
@@ -224,6 +228,11 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 	    SCTP_PCB_FLAGS_IN_TCPPOOL |	/* Turn on Blocking IO */
 	    (SCTP_PCB_COPY_FLAGS & inp->sctp_flags));
 	n_inp->sctp_features = inp->sctp_features;
+	n_inp->sctp_frag_point = inp->sctp_frag_point;
+	n_inp->partial_delivery_point = inp->partial_delivery_point;
+	n_inp->sctp_context = inp->sctp_context;
+	n_inp->inp_starting_point_for_iterator = NULL;
+
 	/* copy in the authentication parameters from the original endpoint */
 	if (n_inp->sctp_ep.local_hmacs)
 		sctp_free_hmaclist(n_inp->sctp_ep.local_hmacs);
