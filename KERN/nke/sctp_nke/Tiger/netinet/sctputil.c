@@ -4676,7 +4676,7 @@ get_more_data:
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 				SAVE_I_AM_HERE(inp);
 #endif
-		}
+			}
 			goto release;
 		}
 		/*
@@ -4952,14 +4952,23 @@ get_more_data2:
 	}
 release:
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	SAVE_I_AM_HERE(inp);
+#endif
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	sbunlock(&so->so_rcv, 1);
 #else
 	sbunlock(&so->so_rcv);
 #endif
 release_unlocked:
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	SAVE_I_AM_HERE(inp);
+#endif
 	if (msg_flags)
 		*msg_flags |= out_flags;
 out:
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	SAVE_I_AM_HERE(inp);
+#endif
 	if ((stcb) && freecnt_applied) {
 		/*
 		 * The lock on the socket buffer protects us so the free
@@ -4972,9 +4981,18 @@ out:
 	}
 	SOCKBUF_UNLOCK(&so->so_rcv);
 	splx(s);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	SAVE_I_AM_HERE(inp);
+#endif
 	if (wakeup_read_socket) {
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		SAVE_I_AM_HERE(inp);
+#endif
 		sctp_sorwakeup(inp, so);
 	}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	SAVE_I_AM_HERE(inp);
+#endif
 	return (error);
 }
 
@@ -5088,11 +5106,17 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 #endif
 	error = sctp_sorecvmsg(so, uio, mp0, from, fromlen, flagsp, 
 	    (struct sctp_sndrcvinfo *)&sinfo,filling_sinfo);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	SAVE_I_AM_HERE(inp);
+#endif
 	if (controlp) {
 		/* copy back the sinfo in a CMSG format */
 		*controlp = sctp_build_ctl_nchunk(inp, 
                          (struct sctp_sndrcvinfo *)&sinfo);
 	}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	SAVE_I_AM_HERE(inp);
+#endif
 	if (psa) {
 		/* copy back the address info */
 		if (from && from->sa_len) {
