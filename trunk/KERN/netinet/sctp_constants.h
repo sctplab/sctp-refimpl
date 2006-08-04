@@ -180,6 +180,12 @@ __FBSDID("$FreeBSD:$");
  * to read 8k. This seems about right.
  */
 #define SCTP_RWND_HIWAT_SHIFT 3
+
+/* Minimum number of bytes read by user before we
+ * condsider doing a rwnd update
+ */
+#define SCTP_MIN_READ_BEFORE_CONSIDERING  3000
+
 /*
  * If you wish to use MD5 instead of SLA uncomment the line below. Why you
  * would like to do this: a) There may be IPR on SHA-1, or so the FIP-180-1
@@ -375,6 +381,7 @@ __FBSDID("$FreeBSD:$");
 #define SCTP_STATE_SHUTDOWN_PENDING	0x0080
 #define SCTP_STATE_CLOSED_SOCKET	0x0100
 #define SCTP_STATE_ABOUT_TO_BE_FREED    0x0200
+#define SCTP_STATE_PARTIAL_MSG_LEFT     0x0400
 #define SCTP_STATE_MASK			0x007f
 
 #define SCTP_GET_STATE(asoc)	((asoc)->state & SCTP_STATE_MASK)
@@ -701,7 +708,8 @@ __FBSDID("$FreeBSD:$");
 #define SCTP_NOTIFY_STR_RESET_FAILED_IN 24
 #define SCTP_NOTIFY_AUTH_NEW_KEY	25
 #define SCTP_NOTIFY_AUTH_KEY_CONFLICT	26
-#define SCTP_NOTIFY_MAX			26
+#define SCTP_NOTIFY_SPECIAL_SP_FAIL     27
+#define SCTP_NOTIFY_MAX			27
 
 #define SCTP_DEFAULT_SPLIT_POINT_MIN 256
 
@@ -815,6 +823,18 @@ do { \
 		sowwakeup(so); \
 	} \
 } while (0)
+
+#define sctp_sowwakeup_locked(inp, so) \
+do { \
+	if (inp->sctp_flags & SCTP_PCB_FLAGS_DONT_WAKE) { \
+                SOCKBUF_UNLOCK(&((so)->so_snd)); \
+		inp->sctp_flags |= SCTP_PCB_FLAGS_WAKEOUTPUT; \
+	} else { \
+		sowwakeup_locked(so); \
+	} \
+} while (0)
+
+
 
 #define sctp_sorwakeup(inp, so) \
 do { \

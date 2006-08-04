@@ -255,6 +255,10 @@ int sctp_cmpaddr(struct sockaddr *, struct sockaddr *);
 void sctp_print_address(struct sockaddr *);
 void sctp_print_address_pkt(struct ip *, struct sctphdr *);
 
+void
+sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
+					uint32_t error, int no_lock);
+
 int
 sctp_release_pr_sctp_chunk(struct sctp_tcb *, struct sctp_tmit_chunk *,
     int, struct sctpchunk_listhead *);
@@ -269,19 +273,14 @@ sctp_free_bufspace(struct sctp_tcb *, struct sctp_association *,
 
 #else
 #define sctp_free_bufspace(stcb, asoc, tp1, chk_cnt)  \
+do { \
 	if (tp1->data != NULL) { \
-                if(stcb->sctp_socket) \
-	           SOCKBUF_LOCK(&stcb->sctp_socket->so_snd); \
+                STCB_TCB_LOCK_ASSERT(stcb); \
                 (asoc)->chunks_on_out_queue -= chk_cnt; \
 		if ((asoc)->total_output_queue_size >= tp1->book_size) { \
 			(asoc)->total_output_queue_size -= tp1->book_size; \
 		} else { \
 			(asoc)->total_output_queue_size = 0; \
-		} \
-		if ((asoc)->total_output_mbuf_queue_size >= tp1->mbcnt) { \
-			(asoc)->total_output_mbuf_queue_size -= tp1->mbcnt; \
-		} else { \
-			(asoc)->total_output_mbuf_queue_size = 0; \
 		} \
    	        if (stcb->sctp_socket && ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) || \
 	            (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL))) { \
@@ -290,17 +289,44 @@ sctp_free_bufspace(struct sctp_tcb *, struct sctp_association *,
 			} else { \
 				stcb->sctp_socket->so_snd.sb_cc = 0; \
 			} \
-			if (stcb->sctp_socket->so_snd.sb_mbcnt >= tp1->mbcnt) { \
-				stcb->sctp_socket->so_snd.sb_mbcnt -= tp1->mbcnt; \
-			} else { \
-				stcb->sctp_socket->so_snd.sb_mbcnt = 0; \
-			} \
 		} \
-                if(stcb->sctp_socket) \
-	           SOCKBUF_UNLOCK(&stcb->sctp_socket->so_snd); \
-	}
+        } \
+} while (0)
 
 #endif
+
+#define sctp_free_spbufspace(stcb, asoc, sp)  \
+do { \
+        STCB_TCB_LOCK_ASSERT(stcb); \
+ 	if (sp->data != NULL) { \
+                (asoc)->chunks_on_out_queue--; \
+		if ((asoc)->total_output_queue_size >= sp->length) { \
+			(asoc)->total_output_queue_size -= sp->length; \
+		} else { \
+			(asoc)->total_output_queue_size = 0; \
+		} \
+   	        if (stcb->sctp_socket && ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) || \
+	            (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL))) { \
+			if (stcb->sctp_socket->so_snd.sb_cc >= sp->length) { \
+				stcb->sctp_socket->so_snd.sb_cc -= sp->length; \
+			} else { \
+				stcb->sctp_socket->so_snd.sb_cc = 0; \
+			} \
+		} \
+        } \
+} while (0)
+
+#define sctp_snd_sb_alloc(stcb, sz)  \
+do { \
+        STCB_TCB_LOCK_ASSERT(stcb); \
+	stcb->asoc.total_output_queue_size += sz; \
+	if ((stcb->sctp_socket != NULL) && \
+	    ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) || \
+	     (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL))) { \
+		stcb->sctp_socket->so_snd.sb_cc += sz; \
+	} \
+} while (0)
+
 
 #if defined(__NetBSD__)
 int

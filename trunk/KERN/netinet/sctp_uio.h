@@ -167,7 +167,6 @@ struct sctp_pcbinfo {
 struct sctp_sockstat {
 	sctp_assoc_t ss_assoc_id;
 	uint32_t ss_total_sndbuf;
-	uint32_t ss_total_mbuf_sndbuf;
 	uint32_t ss_total_recv_buf;
 };
 
