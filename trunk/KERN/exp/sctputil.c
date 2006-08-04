@@ -4262,6 +4262,7 @@ sctp_m_copym(struct mbuf *m, int off, int len, int wait)
 
 #endif				/* __APPLE__ */
 
+
 static void
 sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far)
 {
@@ -4280,12 +4281,11 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far)
 	   (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
 		goto out;
 	}
-
 	so = stcb->sctp_socket;
 	if(so == NULL) {
 		goto out;
 	}
-	rwnd_req = (so->so_snd.sb_hiwat >> SCTP_RWND_HIWAT_SHIFT);
+	rwnd_req = (so->so_rcv.sb_hiwat >> SCTP_RWND_HIWAT_SHIFT);
 
 	stcb->freed_by_sorcv_sincelast += *freed_so_far;
 	*freed_so_far = 0;
@@ -4734,6 +4734,11 @@ get_more_data:
 				) {
 				break;
 			}
+			if (((stcb) && (in_flags & MSG_PEEK) == 0) &&
+			    (control->do_not_ref_stcb == 0) &&
+			    (freed_so_far > SCTP_MIN_READ_BEFORE_CONSIDERING)) {
+				sctp_user_rcvd(stcb, &freed_so_far);
+			}
 		} /* end while(m) */
 		/*
 		 * At this point we have looked at it all and we either have
@@ -4829,10 +4834,10 @@ get_more_data:
 		 */
 
 		/* Tell the transport a rwnd update might be needed */
-		if ((stcb) && (in_flags & MSG_PEEK) == 0) {
-			if((special_return == 0) &&
-			   (no_rcv_needed == 0))
-				sctp_user_rcvd(stcb, &freed_so_far);
+		if (((stcb) && (in_flags & MSG_PEEK) == 0) &&
+		    ((special_return == 0) &&
+		     (no_rcv_needed == 0))) {
+			sctp_user_rcvd(stcb, &freed_so_far);
 		}
 wait_some_more:
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000

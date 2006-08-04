@@ -180,6 +180,12 @@ __FBSDID("$FreeBSD:$");
  * to read 8k. This seems about right.
  */
 #define SCTP_RWND_HIWAT_SHIFT 3
+
+/* Minimum number of bytes read by user before we
+ * condsider doing a rwnd update
+ */
+#define SCTP_MIN_READ_BEFORE_CONSIDERING  3000
+
 /*
  * If you wish to use MD5 instead of SLA uncomment the line below. Why you
  * would like to do this: a) There may be IPR on SHA-1, or so the FIP-180-1
