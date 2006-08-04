@@ -45,7 +45,6 @@ __FBSDID("$FreeBSD:$");
 #include "opt_compat.h"
 #include "opt_inet6.h"
 #include "opt_inet.h"
-#include "opt_global.h"
 #endif				/* FreeBSD */
 #if defined(__NetBSD__)
 #include "opt_inet.h"
