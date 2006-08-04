@@ -510,6 +510,19 @@ struct sctp_association {
 	 */
 	struct sctp_stream_out *locked_on_sending;
 
+	/* This pointer will ONLY get set if the user
+	 * has enabled the flag to indicate that they 
+	 * explicitly set a MSG_EOR at the end of sending
+	 * a message. The normal mode we operate in is
+	 * that we imply a MSG_EOR on each send. If the
+	 * user sets the flag, and does NOT send down an
+	 * MSG_EOR (or we cannot move all the data out
+	 * for whatever reason) then we set this pointer
+	 * to point to that message in the stream
+	 * queue being added to with each successive
+	 * send to this association.
+	 */
+	struct sctp_stream_out *locked_on_from_sender;
 
 	/* If an iterator is looking at me, this is it */
 	struct sctp_iterator *stcb_starting_point_for_iterator;

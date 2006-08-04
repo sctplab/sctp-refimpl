@@ -124,8 +124,11 @@ __FBSDID("$FreeBSD:$");
 
 #ifdef SCTP_DEBUG
 extern uint32_t sctp_debug_on;
-
 #endif				/* SCTP_DEBUG */
+
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#define APPLE_FILE_NO 6
+#endif
 
 extern unsigned int sctp_early_fr_msec;
 

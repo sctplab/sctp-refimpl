@@ -167,6 +167,7 @@ struct sctp_pcbinfo {
 struct sctp_sockstat {
 	sctp_assoc_t ss_assoc_id;
 	uint32_t ss_total_sndbuf;
+	uint32_t ss_total_mbuf_sndbuf;
 	uint32_t ss_total_recv_buf;
 };
 
@@ -712,7 +713,7 @@ struct sctp_cwnd_log_req {
 };
 
 struct	sctpstat {
-	/* MIB accoring to RFC 3873 */
+	/* MIB according to RFC 3873 */
 	u_long  sctps_currestab;           /* sctpStats  1   (Gauge32) */
 	u_long  sctps_activeestab;         /* sctpStats  2 (Counter32) */
 	u_long  sctps_passiveestab;        /* sctpStats  3 (Counter32) */
