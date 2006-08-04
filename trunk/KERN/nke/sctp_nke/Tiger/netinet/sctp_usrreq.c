@@ -705,7 +705,11 @@ SYSCTL_PROC(_net_inet_sctp, OID_AUTO, getcred, CTLTYPE_OPAQUE | CTLFLAG_RW,
     0, 0, sctp_getcred, "S,ucred", "Get the ucred of a SCTP connection");
 #endif				/* #if defined(__FreeBSD__) */
 
-#if defined(__FreeBSD__) || defined (__APPLE__)
+#if defined (__APPLE__)
+/* Note: when we add this for FreeBSD, we need '()':
+  sctp_assoclist(SYSCTL_HANDLER_ARGS)
+*/
+/* WARNING: THIS FUNCTION IS INCOMPLETE! */
 static int
 sctp_assoclist SYSCTL_HANDLER_ARGS
 {

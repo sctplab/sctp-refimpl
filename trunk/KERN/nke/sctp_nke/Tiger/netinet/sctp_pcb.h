@@ -580,16 +580,9 @@ void sctp_verify_no_locks(void);
 #define SCTP_IPI_ADDR_DESTROY(_inp) \
 	mtx_destroy(&sctppcbinfo.ipi_addr_mtx)
 
-#define SCTP_IPI_ADDR_RLOCK()	do { 					\
-             mtx_lock(&sctppcbinfo.ipi_addr_mtx);                         \
-} while (0)
+#define SCTP_IPI_ADDR_UNLOCK()		mtx_unlock(&sctppcbinfo.ipi_addr_mtx)
 
-#define SCTP_IPI_ADDR_RUNLOCK()		mtx_unlock(&sctppcbinfo.ipi_addr_mtx)
-#define SCTP_IPI_ADDR_WUNLOCK()		mtx_unlock(&sctppcbinfo.ipi_addr_mtx)
-
-
-
-#define SCTP_IPI_ADDR_WLOCK()	do { 					\
+#define SCTP_IPI_ADDR_LOCK()	do { 					\
              mtx_lock(&sctppcbinfo.ipi_addr_mtx);                         \
 } while (0)
 
@@ -778,10 +771,8 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 
 #define SCTP_IPI_ADDR_INIT()
 #define SCTP_IPI_ADDR_DESTROY(_inp)
-#define SCTP_IPI_ADDR_RLOCK()
-#define SCTP_IPI_ADDR_WLOCK()
-#define SCTP_IPI_ADDR_RUNLOCK()
-#define SCTP_IPI_ADDR_WUNLOCK()
+#define SCTP_IPI_ADDR_LOCK()
+#define SCTP_IPI_ADDR_UNLOCK()
 
 
 #define SCTP_STATLOG_INIT_LOCK() \
@@ -851,10 +842,8 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 
 #define SCTP_IPI_ADDR_INIT()
 #define SCTP_IPI_ADDR_DESTROY(_inp)
-#define SCTP_IPI_ADDR_RLOCK()
-#define SCTP_IPI_ADDR_WLOCK()
-#define SCTP_IPI_ADDR_RUNLOCK()
-#define SCTP_IPI_ADDR_WUNLOCK()
+#define SCTP_IPI_ADDR_LOCK()
+#define SCTP_IPI_ADDR_UNLOCK()
 
 #define SCTP_INP_INFO_RUNLOCK()
 #define SCTP_INP_INFO_WUNLOCK()
