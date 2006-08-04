@@ -5123,7 +5123,13 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 			*psa = sodupsockaddr(from, M_NOWAIT);
 #else
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			SAVE_I_AM_HERE(inp);
+#endif
 			*psa = dup_sockaddr(from, mp0 == 0);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			SAVE_I_AM_HERE(inp);
+#endif
 #endif
 		} else {
 			*psa = NULL;
