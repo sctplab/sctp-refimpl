@@ -1685,7 +1685,7 @@ sctp_findassociation_ep_asconf(struct mbuf *m, int iphlen, int offset,
 	if (zero_address) {
 		stcb = sctp_findassoc_by_vtag(NULL, ntohl(sh->v_tag), inp_p,
 		    netp, sh->src_port, sh->dest_port, 1);
-printf("findassociation_ep_asconf: zero lookup address finds stcb 0x%x\n", (uint32_t)stcb);
+                /*printf("findassociation_ep_asconf: zero lookup address finds stcb 0x%x\n", (uint32_t)stcb);*/
 	} else {
 		stcb = sctp_findassociation_ep_addr(inp_p,
 		    (struct sockaddr *)&remote_store, netp,
@@ -4021,7 +4021,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 #endif
 	if (stcb->asoc.state == 0) {
 		printf("Freeing already free association:%p - huh??\n",
-		    stcb);
+		       stcb);
 		splx(s);
 		/* there is no asoc, really TSNH :-0 */
 		return (1);
@@ -4101,51 +4101,49 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	TAILQ_FOREACH(sq, &inp->read_queue, next) {
 		if (sq->stcb == stcb) {
 			sq->do_not_ref_stcb = 1;
-			if((sq->tail_mbuf) && ((sq->tail_mbuf->m_flags & M_EOR) == 0)) {
-				sq->stcb = NULL;
-				sq->sinfo_cumtsn = stcb->asoc.cumulative_tsn;
-			} else if ((sq->held_length) ||
-			    ((sq->tail_mbuf) && ((sq->tail_mbuf->m_flags & M_EOR) == 0)) ||
-			    (sq->length == 0)) {
-				/* Held for PD-API */
-				if(so) {
+			if ((from_inpcbfree == 0) && so) {
+				/* Only if we have a socket lock do we do this */
+				if((sq->tail_mbuf) && ((sq->tail_mbuf->m_flags & M_EOR) == 0)) {
+					sq->stcb = NULL;
+					sq->sinfo_cumtsn = stcb->asoc.cumulative_tsn;
+				} else if ((sq->held_length) ||
+					   ((sq->tail_mbuf) && ((sq->tail_mbuf->m_flags & M_EOR) == 0)) ||
+					   (sq->length == 0)) {
+					/* Held for PD-API */
 					so->so_rcv.sb_cc += sq->held_length;
 					so->so_rcv.sb_cc -= sq->length;
-				}
-				if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_PDAPIEVNT)) {
-					/* need to change to PD-API aborted */
-					printf("Doing PD-API thing\n");
-					cnt++;
-					stcb->asoc.control_pdapi = sq;
-					sctp_notify_partial_delivery_indication(stcb,
-										SCTP_PARTIAL_DELIVERY_ABORTED, 1);
-					stcb->asoc.control_pdapi = NULL;
-				} else {
-					/* need to remove */
-					cnt++;
-					printf("Removing thing\n");
-					TAILQ_REMOVE(&inp->read_queue, sq, next);
-					sctp_free_remote_addr(sq->whoFrom);
-					sq->whoFrom = NULL;
-					if (sq->data) {
-						sctp_m_freem(sq->data);
-						sq->data = NULL;
+					if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_PDAPIEVNT)) {
+						/* need to change to PD-API aborted */
+						cnt++;
+						stcb->asoc.control_pdapi = sq;
+						sctp_notify_partial_delivery_indication(stcb,
+											SCTP_PARTIAL_DELIVERY_ABORTED, 1);
+						stcb->asoc.control_pdapi = NULL;
+					} else {
+						/* need to remove */
+						cnt++;
+						TAILQ_REMOVE(&inp->read_queue, sq, next);
+						sctp_free_remote_addr(sq->whoFrom);
+						sq->whoFrom = NULL;
+						if (sq->data) {
+							sctp_m_freem(sq->data);
+							sq->data = NULL;
+						}
+						/*
+						 * no need to free the net count, since at this point all
+						 * assoc's are gone.
+						 */
+						SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, sq);
+						SCTP_DECR_READQ_COUNT();
 					}
-					/*
-					 * no need to free the net count, since at this point all
-					 * assoc's are gone.
-					 */
-					SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, sq);
-					SCTP_DECR_READQ_COUNT();
-				}
-			} 
+				} 
+			}
 		}
 	}
 	if (stcb->block_entry) {
 		stcb->block_entry->error = ECONNRESET;
 		stcb->block_entry = NULL;
 	}
-
 
 	if (so && (so->so_snd.sb_cc)) {
 		/* This will happen when a abort is done */
@@ -4163,7 +4161,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		}
 	}
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
-		   (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
+	    (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
 		/*
 		 * For TCP type we need special handling when we are
 		 * connected. We also include the peel'ed off ones to.
@@ -4428,7 +4426,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				ctl = TAILQ_FIRST(&asoc->strmin[i].inqueue);
 				while (ctl) {
 					TAILQ_REMOVE(&asoc->strmin[i].inqueue,
-					    ctl, next);
+						     ctl, next);
 					sctp_free_remote_addr(ctl->whoFrom);
 					if (ctl->data) {
 						sctp_m_freem(ctl->data);
@@ -6079,6 +6077,7 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 					chk->data = NULL;
 				}
 				sctp_free_remote_addr(ctl->whoFrom);
+				printf("Point e: free control:%x\n", (u_int)ctl);
 				SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, ctl);
 				SCTP_DECR_READQ_COUNT();
 			}

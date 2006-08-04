@@ -435,7 +435,6 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 				end = 1;
 			else
 				end = 0;
-
 			if (sctp_append_to_readq(stcb->sctp_ep, stcb,
 			    stcb->asoc.control_pdapi,
 			    chk->data, end, chk->rec.data.TSN_seq,
@@ -1666,6 +1665,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			printf("Express Delivery succeeds\n");
 		}
 #endif
+		control = NULL;
 		goto finish_express_del;
 	}
 failed_express_del:
@@ -1681,7 +1681,6 @@ failed_express_del:
 		control = stcb->asoc.control_pdapi;
 		if((ch->ch.chunk_flags & SCTP_DATA_FIRST_FRAG) == SCTP_DATA_FIRST_FRAG) {
 			/* Can't be another first? */
-
 			goto failed_pdapi_express_del;
 		}
 		if(tsn == (control->sinfo_tsn + 1)) {
@@ -1695,9 +1694,10 @@ failed_express_del:
 			if((cumack+1) == tsn) 
 				cumack = tsn;
 
-			if(sctp_append_to_readq(stcb->sctp_ep, stcb, control, dmbuf,end, 
+			if(sctp_append_to_readq(stcb->sctp_ep, stcb, control, dmbuf, end, 
 					     cumack,
 						&stcb->sctp_socket->so_rcv)) {
+				printf("Append fails end:%d\n", end);
 				goto failed_pdapi_express_del;
 			}
 			SCTP_STAT_INCR(sctps_recvexpress);
@@ -1714,12 +1714,14 @@ failed_express_del:
 				/* clean up the flags and such */
 				asoc->fragmented_delivery_inprogress = 0;
 				asoc->strmin[strmno].last_sequence_delivered++;
+				stcb->asoc.control_pdapi = NULL;
 			}
+			control = NULL;
 			goto finish_express_del;
 		}
 	}
  failed_pdapi_express_del:
-
+	control = NULL;
 	if ((ch->ch.chunk_flags & SCTP_DATA_NOT_FRAG) != SCTP_DATA_NOT_FRAG) {
 		chk = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk);
 		if (chk == NULL) {
@@ -4799,7 +4801,6 @@ skip_cwnd_update:
 						 * Misbehaving peer. We need
 						 * to react to this guy
 						 */
-						printf("Mis-behaving peer detected\n");
 						asoc->ecn_allowed = 0;
 						asoc->ecn_nonce_allowed = 0;
 					}
