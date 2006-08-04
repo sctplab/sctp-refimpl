@@ -4469,7 +4469,13 @@ get_more_data:
 			 * move out the data, unlocked (our sblock flag
 			 * protects us from a reader)
 			 */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			socket_unlock(so, 0);
+#endif
 			error = uiomove(mtod(m, char *), cp_len, uio);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			socket_lock(so, 0);
+#endif
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 			s = splsoftnet();
 #else
