@@ -1395,7 +1395,6 @@ sctp_does_tsn_belong_to_reasm(struct sctp_association *asoc,
 	return (0);
 }
 
-static int sctp_process_a_data_wakeups = 0;
 
 extern unsigned int sctp_max_chunks_on_queue;
 static int
@@ -1504,7 +1503,6 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		 */
 		if (stcb->sctp_socket->so_rcv.sb_cc) {
 			/* some to read, wake-up */
-			sctp_process_a_data_wakeups++;
 			sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 		}
 		/* now is it in the mapping array of what we have accepted? */

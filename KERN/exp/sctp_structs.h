@@ -667,7 +667,6 @@ struct sctp_association {
 	uint32_t nonce_resync_tsn;
 	uint32_t nonce_wait_tsn;
 	uint32_t default_flowlabel;
-
 	int ctrl_queue_cnt;	/* could be removed  REM */
 	/*
 	 * All outbound datagrams queue into this list from the individual
