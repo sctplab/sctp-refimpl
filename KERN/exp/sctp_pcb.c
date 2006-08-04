@@ -4182,16 +4182,16 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				 * the active side so that it can start a
 				 * new assoc if it desires.
 				 */
-				if (so && (from_inpcbfree == 0)) {
+				if (so) {
 					SOCK_LOCK(so);
-				}
-				inp->sctp_flags &= ~SCTP_PCB_FLAGS_CONNECTED;
-				if(so)
+					so->so_rcv.sb_cc = 0;
+					so->so_snd.sb_cc = 0;
+					/* zero */
+					inp->sctp_flags &= ~SCTP_PCB_FLAGS_CONNECTED;
 					so->so_state &= ~(SS_ISCONNECTING | 
 							  SS_ISDISCONNECTING | 
 							  SS_ISCONFIRMING | 
 							  SS_ISCONNECTED);
-				if (so && (from_inpcbfree == 0)) {
 					SOCK_UNLOCK(so);
 				}
 			} else {
@@ -4205,7 +4205,11 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				 * set.
 				 */
 				if (so) {
+					SOCK_LOCK(so);
+					so->so_rcv.sb_cc = 0;
+					so->so_snd.sb_cc = 0;
 					soisdisconnected(so);
+					SOCK_UNLOCK(so);
 				}
 			}
 		}
