@@ -135,6 +135,9 @@ __FBSDID("$FreeBSD:$");
 #endif
 #endif
 
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#define APPLE_FILE_NO 7
+#endif
 
 
 /*
@@ -580,9 +583,9 @@ sctp_ctlinput(cmd, sa, vip)
 #endif
 	}
 	if (ip) {
-		struct sctp_inpcb *inp;
-		struct sctp_tcb *stcb;
-		struct sctp_nets *net;
+		struct sctp_inpcb *inp = NULL;
+		struct sctp_tcb *stcb = NULL;
+		struct sctp_nets *net = NULL;
 		struct sockaddr_in to, from;
 
 		sh = (struct sctphdr *)((caddr_t)ip + (ip->ip_hl << 2));
@@ -642,6 +645,11 @@ sctp_ctlinput(cmd, sa, vip)
 				SCTP_INP_WUNLOCK(inp);
 			}
 		}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		if (inp != NULL) {
+			socket_unlock(inp->ip_inp.inp.inp_socket, 1);
+		}
+#endif
 		splx(s);
 	}
 #if defined(__FreeBSD__) || defined(__APPLE__)
@@ -697,7 +705,11 @@ SYSCTL_PROC(_net_inet_sctp, OID_AUTO, getcred, CTLTYPE_OPAQUE | CTLFLAG_RW,
     0, 0, sctp_getcred, "S,ucred", "Get the ucred of a SCTP connection");
 #endif				/* #if defined(__FreeBSD__) */
 
-#if defined(__FreeBSD__) || defined (__APPLE__)
+#if defined (__APPLE__)
+/* Note: when we add this for FreeBSD, we need '()':
+  sctp_assoclist(SYSCTL_HANDLER_ARGS)
+*/
+/* WARNING: THIS FUNCTION IS INCOMPLETE! */
 static int
 sctp_assoclist SYSCTL_HANDLER_ARGS
 {
@@ -6379,66 +6391,42 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
 
 #endif				/* __NetBSD__ */
 
-/*
- * additional protosw entries for Mac OS X 10.4 lr is temporarily being used
- * for socket lock/unlock LR debug
- */
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 
 int
 sctp_lock(struct socket *so, int refcount, int lr)
 {
-	int lr_saved;
-
-#ifdef __ppc__
-	if (lr == 0) {
-		__asm__ volatile ("mflr %0":"=r" (lr_saved));
-	} else
-		lr_saved = lr;
-#endif
-	/*
-	 * printf("sctp_lock called for so=%p with so->so_pcb=%p,
-	 * so->type=%d, so->so_usecount=%d.\n", so, so->so_pcb, so->so_type,
-	 * so->so_usecount);
-	 */
 	if (so->so_pcb) {
 		lck_mtx_assert(((struct inpcb *)so->so_pcb)->inpcb_mtx, LCK_MTX_ASSERT_NOTOWNED);
 		lck_mtx_lock(((struct inpcb *)so->so_pcb)->inpcb_mtx);
 	} else {
-		panic("sctp_lock: so=%x NO PCB! lr =%x\n", so, lr_saved);
+		panic("sctp_lock: so=%x NO PCB!\n", so);
 		lck_mtx_assert(so->so_proto->pr_domain->dom_mtx, LCK_MTX_ASSERT_NOTOWNED);
 		lck_mtx_lock(so->so_proto->pr_domain->dom_mtx);
 	}
 
 	if (so->so_usecount < 0)
-		panic("sctp_lock: so=%x so_pcb=%x lr=%x ref=%x\n",
-		    so, so->so_pcb, lr_saved, so->so_usecount);
+		panic("sctp_lock: so=%x so_pcb=%x ref=%x\n",
+		    so, so->so_pcb, so->so_usecount);
 
 	if (refcount)
 		so->so_usecount++;
-	so->reserved3 = (void *)lr_saved;
-	/*
-	 * printf("sctp_lock returning for %p.\n", so);
-	 */
+
+	SAVE_CALLERS(((struct sctp_inpcb *)so->so_pcb)->lock_caller1,
+		     ((struct sctp_inpcb *)so->so_pcb)->lock_caller2,
+		     ((struct sctp_inpcb *)so->so_pcb)->lock_caller3);
+	((struct sctp_inpcb *)so->so_pcb)->lock_gen_count = ((struct sctp_inpcb *)so->so_pcb)->gen_count++;
 	return (0);
 }
 
 int
 sctp_unlock(struct socket *so, int refcount, int lr)
 {
-	int lr_saved;
+	SAVE_CALLERS(((struct sctp_inpcb *)so->so_pcb)->unlock_caller1,
+		     ((struct sctp_inpcb *)so->so_pcb)->unlock_caller2,
+		     ((struct sctp_inpcb *)so->so_pcb)->unlock_caller3);
+	((struct sctp_inpcb *)so->so_pcb)->unlock_gen_count = ((struct sctp_inpcb *)so->so_pcb)->gen_count++;
 
-#ifdef __ppc__
-	if (lr == 0) {
-		__asm__ volatile ("mflr %0":"=r" (lr_saved));
-	} else
-		lr_saved = lr;
-#endif
-	/*
-	 * printf("sctp_unlock called for so=%p with so->so_pcb=%p,
-	 * so->type=%d, so->so_usecount=%d.\n", so, so->so_pcb, so->so_type,
-	 * so->so_usecount);
-	 */
 	if (refcount)
 		so->so_usecount--;
 
@@ -6446,36 +6434,28 @@ sctp_unlock(struct socket *so, int refcount, int lr)
 		panic("sctp_unlock: so=%x usecount=%x\n", so, so->so_usecount);
 
 	if (so->so_pcb == NULL) {
-		panic("sctp_unlock: so=%x NO PCB! lr =%x\n", so, lr_saved);
+		panic("sctp_unlock: so=%x NO PCB!\n", so);
 		lck_mtx_assert(so->so_proto->pr_domain->dom_mtx, LCK_MTX_ASSERT_OWNED);
 		lck_mtx_unlock(so->so_proto->pr_domain->dom_mtx);
 	} else {
 		lck_mtx_assert(((struct inpcb *)so->so_pcb)->inpcb_mtx, LCK_MTX_ASSERT_OWNED);
 		lck_mtx_unlock(((struct inpcb *)so->so_pcb)->inpcb_mtx);
 	}
-	so->reserved4 = (void *)lr_saved;
-	/*
-	 * printf("sctp_unlock returning for so=%p\n", so);
-	 */
 	return (0);
 }
 
 lck_mtx_t *
 sctp_getlock(struct socket *so, int locktype)
 {
+	/* WARNING: we do not own the socket lock here... */
+	SAVE_CALLERS(((struct sctp_inpcb *)so->so_pcb)->getlock_caller1,
+		     ((struct sctp_inpcb *)so->so_pcb)->getlock_caller2,
+		     ((struct sctp_inpcb *)so->so_pcb)->getlock_caller3);
+	((struct sctp_inpcb *)so->so_pcb)->getlock_gen_count = ((struct sctp_inpcb *)so->so_pcb)->gen_count++;
 
-	/*
-	 * printf("sctp_getlock called for so=%p with so->so_pcb=%p,
-	 * so->type=%d, so->so_usecount=%d.\n", so, so->so_pcb, so->so_type,
-	 * so->so_usecount);
-	 */
 	if (so->so_pcb) {
 		if (so->so_usecount < 0)
 			panic("sctp_getlock: so=%x usecount=%x\n", so, so->so_usecount);
-		/*
-		 * printf("sctp_getlock returning %p.\n", ((struct inpcb
-		 * *)so->so_pcb)->inpcb_mtx);
-		 */
 		return (((struct inpcb *)so->so_pcb)->inpcb_mtx);
 	} else {
 		panic("sctp_getlock: so=%x NULL so_pcb\n", so);

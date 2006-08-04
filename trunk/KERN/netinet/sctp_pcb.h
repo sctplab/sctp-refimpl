@@ -242,6 +242,7 @@ struct sctp_epinfo {
 	lck_rw_t *ipi_ep_mtx;
 	lck_mtx_t *it_mtx;
 	lck_mtx_t *ipi_count_mtx;
+	lck_mtx_t *logging_mtx;
 #else
 	void *mtx_grp_attr;
 	void *mtx_grp;
@@ -249,6 +250,7 @@ struct sctp_epinfo {
 	void *ipi_ep_mtx;
 	void *it_mtx;
 	void *ipi_count_mtx;
+	void *logging_mtx;
 #endif				/* _KERN_LOCKS_H_ */
 #endif
 	uint32_t ipi_count_ep;
@@ -373,6 +375,11 @@ struct sctp_inpcb {
 		        ~SCTP_ALIGNM1];
 	}     ip_inp;
 
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	/* leave some space in case i386 inpcb is bigger than ppc */
+	uint8_t		padding[128];
+#endif
+
 	/* Socket buffer lock protects read_queue and of course sb_cc */
 	struct sctp_readhead read_queue;
 
@@ -430,6 +437,23 @@ struct sctp_inpcb {
 #endif
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	uint32_t refcount;
+
+	uint32_t lock_caller1;
+	uint32_t lock_caller2;
+	uint32_t lock_caller3;
+	uint32_t unlock_caller1;
+	uint32_t unlock_caller2;
+	uint32_t unlock_caller3;
+	uint32_t getlock_caller1;
+	uint32_t getlock_caller2;
+	uint32_t getlock_caller3;
+	uint32_t gen_count;
+	uint32_t lock_gen_count;
+	uint32_t unlock_gen_count;
+	uint32_t getlock_gen_count;
+
+	uint32_t i_am_here_file;
+	uint32_t i_am_here_line;
 #endif
 };
 
@@ -556,16 +580,9 @@ void sctp_verify_no_locks(void);
 #define SCTP_IPI_ADDR_DESTROY(_inp) \
 	mtx_destroy(&sctppcbinfo.ipi_addr_mtx)
 
-#define SCTP_IPI_ADDR_RLOCK()	do { 					\
-             mtx_lock(&sctppcbinfo.ipi_addr_mtx);                         \
-} while (0)
+#define SCTP_IPI_ADDR_UNLOCK()		mtx_unlock(&sctppcbinfo.ipi_addr_mtx)
 
-#define SCTP_IPI_ADDR_RUNLOCK()		mtx_unlock(&sctppcbinfo.ipi_addr_mtx)
-#define SCTP_IPI_ADDR_WUNLOCK()		mtx_unlock(&sctppcbinfo.ipi_addr_mtx)
-
-
-
-#define SCTP_IPI_ADDR_WLOCK()	do { 					\
+#define SCTP_IPI_ADDR_LOCK()	do { 					\
              mtx_lock(&sctppcbinfo.ipi_addr_mtx);                         \
 } while (0)
 
@@ -754,16 +771,18 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 
 #define SCTP_IPI_ADDR_INIT()
 #define SCTP_IPI_ADDR_DESTROY(_inp)
-#define SCTP_IPI_ADDR_RLOCK()
-#define SCTP_IPI_ADDR_WLOCK()
-#define SCTP_IPI_ADDR_RUNLOCK()
-#define SCTP_IPI_ADDR_WUNLOCK()
+#define SCTP_IPI_ADDR_LOCK()
+#define SCTP_IPI_ADDR_UNLOCK()
 
 
-#define SCTP_STATLOG_INIT_LOCK()
-#define SCTP_STATLOG_LOCK() 
-#define SCTP_STATLOG_UNLOCK()
-#define SCTP_STATLOG_DESTROY()
+#define SCTP_STATLOG_INIT_LOCK() \
+	sctppcbinfo.logging_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
+#define SCTP_STATLOG_LOCK() \
+	lck_mtx_lock(sctppcbinfo.logging_mtx)
+#define SCTP_STATLOG_UNLOCK() \
+	lck_mtx_unlock(sctppcbinfo.logging_mtx)
+#define SCTP_STATLOG_DESTROY() \
+	lck_mtx_free(sctppcbinfo.logging_mtx, SCTP_MTX_GRP)
 
 
 /* Lock for INP */
@@ -823,10 +842,8 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 
 #define SCTP_IPI_ADDR_INIT()
 #define SCTP_IPI_ADDR_DESTROY(_inp)
-#define SCTP_IPI_ADDR_RLOCK()
-#define SCTP_IPI_ADDR_WLOCK()
-#define SCTP_IPI_ADDR_RUNLOCK()
-#define SCTP_IPI_ADDR_WUNLOCK()
+#define SCTP_IPI_ADDR_LOCK()
+#define SCTP_IPI_ADDR_UNLOCK()
 
 #define SCTP_INP_INFO_RUNLOCK()
 #define SCTP_INP_INFO_WUNLOCK()
@@ -974,6 +991,29 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
                 do { \
 			printf("%s:%d at %s\n", __FILE__, __LINE__ , __FUNCTION__); \
 		} while (0)
+
+#define SAVE_I_AM_HERE(_inp) \
+                do { \
+			(_inp)->i_am_here_file = APPLE_FILE_NO; \
+			(_inp)->i_am_here_line = __LINE__; \
+		} while (0)
+
+/* save caller pc and caller's caller pc */
+#if defined (__i386__)
+#define SAVE_CALLERS(a, b, c) { \
+        unsigned int ebp = 0; \
+        unsigned int prev_ebp = 0; \
+        asm("movl %%ebp, %0;" : "=r"(ebp)); \
+        a = *(unsigned int *)(*(unsigned int *)ebp + 4) - 4; \
+        prev_ebp = *(unsigned int *)(*(unsigned int *)ebp); \
+        b = *(unsigned int *)((char *)prev_ebp + 4) - 4; \
+        prev_ebp = *(unsigned int *)prev_ebp; \
+        c = *(unsigned int *)((char *)prev_ebp + 4) - 4; \
+}
+#else
+#define SAVE_CALLERS(caller1, caller2, caller3)
+#endif
+
 #define SCTP_INCRS_DEFINED 1
 #define SCTP_INCR_EP_COUNT() \
                 do { \

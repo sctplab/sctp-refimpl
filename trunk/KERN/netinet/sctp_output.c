@@ -156,7 +156,10 @@ __FBSDID("$FreeBSD:$");
 
 #ifdef SCTP_DEBUG
 extern uint32_t sctp_debug_on;
+#endif
 
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#define APPLE_FILE_NO 3
 #endif
 
 
@@ -6500,7 +6503,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			 * suspended at is not known deep down where we are.
 			 * I will drop to spl0() so that others can get in.
 			 */
-			
+
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			sbunlock(&so->so_snd, 1);
 #else
@@ -7196,7 +7199,13 @@ sctp_sendall(struct sctp_inpcb *inp, struct uio *uio, struct mbuf *m,
 	/* get length and mbuf chain */
 	if (uio) {
 		ca->sndlen = uio->uio_resid;
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		socket_unlock(inp->ip_inp.inp.inp_socket, 0);
+#endif
 		ca->m = sctp_copy_out_all(uio, ca->sndlen);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		socket_lock(inp->ip_inp.inp.inp_socket, 0);
+#endif
 		if (ca->m == NULL) {
 			FREE(ca, M_PCB);
 			return (ENOMEM);
@@ -12390,7 +12399,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 			    so, asoc, sndlen);
 #endif
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			sbunlock(&so->so_snd, 1);	/* MT: FIXME */
+			sbunlock(&so->so_snd, 1);
 #else
 			sbunlock(&so->so_snd);
 #endif
@@ -12501,7 +12510,13 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 				ph++;
 				mm->m_pkthdr.len = tot_out + sizeof(struct sctp_paramhdr);
 				mm->m_len = mm->m_pkthdr.len;
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+				socket_unlock(so, 0);
+#endif
 				error = uiomove((caddr_t)ph, (int)tot_out, uio);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+				socket_lock(so, 0);
+#endif
 				if (error) {
 					/*
 					 * Here if we can't get his data we
@@ -12609,7 +12624,13 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 		calc_oh = (tot_out % 4);
 		if (calc_oh)
 			pad_oh = (4 - calc_oh);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		socket_unlock(so, 0);
+#endif
 		error = sctp_copy_one(&mm, uio, tot_out, resv_in_first, &mbcnt_e, pad_oh, &chk->last_mbuf);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		socket_lock(so, 0);
+#endif
 
 		SOCKBUF_LOCK(&stcb->sctp_socket->so_snd);
 		if (error || be.error) {
@@ -12700,6 +12721,9 @@ clean_up:
 		TAILQ_INIT(&tmp);
 
 		/* Template is complete, now time for the work */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		socket_unlock(so, 0);
+#endif
 		while (tot_out > 0) {
 			/* Get a chunk */
 			chk = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk);
@@ -12730,6 +12754,9 @@ clean_up:
 			    &chk->last_mbuf);
 			if (error || be.error) {
 				SOCKBUF_LOCK(&stcb->sctp_socket->so_snd);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+				socket_lock(so, 0);
+#endif
 				goto temp_clean_up;
 			}
 			/* now fix the chk->send_size */
@@ -12744,6 +12771,9 @@ clean_up:
 			/* only the first mbuf needs the reservation */
 			tot_out -= tot_demand;
 		}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		socket_lock(so, 0);
+#endif
 		/*
 		 * Mark the first/last flags. This will result int a 3 for a
 		 * single item on the list

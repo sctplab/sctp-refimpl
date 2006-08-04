@@ -108,6 +108,10 @@ extern uint32_t sctp_debug_on;
 #endif
 #endif				/* SCTP_DEBUG */
 
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#define APPLE_FILE_NO 1
+#endif
+
 static int
 sctp_asconf_get_source_ip(struct mbuf *m, struct sockaddr *sa)
 {
