@@ -49,7 +49,6 @@ __FBSDID("$FreeBSD:$");
 
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 #if defined(_KERNEL)
-#include "opt_global.h"
 #include <net/pfil.h>
 #endif
 #endif
