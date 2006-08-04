@@ -447,8 +447,8 @@ sctp_log_lock(struct sctp_inpcb *inp, struct sctp_tcb *stcb, uint8_t from)
 	}
 	SCTP_STATLOG_UNLOCK();
 }
-
 #endif
+
 void
 sctp_log_maxburst(struct sctp_tcb *stcb, struct sctp_nets *net, int error, int burst, uint8_t from)
 {
@@ -1133,6 +1133,8 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 
 	asoc->locked_on_sending = NULL;
 	asoc->locked_on_from_sender = NULL;
+	asoc->stream_locked_on = 0;
+	asoc->stream_locked = 0;
 
 	LIST_INIT(&asoc->sctp_local_addr_list);
 	TAILQ_INIT(&asoc->nets);
@@ -1254,10 +1256,10 @@ sctp_handle_addr_wq(void)
 	/* deal with the ADDR wq from the rtsock calls */
 	struct sctp_laddr *wi;
 
-	SCTP_IPI_ADDR_WLOCK();
+	SCTP_IPI_ADDR_LOCK();
 	wi = LIST_FIRST(&sctppcbinfo.addr_wq);
 	if (wi == NULL) {
-		SCTP_IPI_ADDR_WUNLOCK();
+		SCTP_IPI_ADDR_UNLOCK();
 		return;
 	}
 	LIST_REMOVE(wi, sctp_nxt_addr);
@@ -1267,7 +1269,7 @@ sctp_handle_addr_wq(void)
 		    (struct sctp_tcb *)NULL,
 		    (struct sctp_nets *)NULL);
 	}
-	SCTP_IPI_ADDR_WUNLOCK();
+	SCTP_IPI_ADDR_UNLOCK();
 	if (wi->action == RTM_ADD) {
 		sctp_add_ip_address(wi->ifa);
 	} else if (wi->action == RTM_DELETE) {
@@ -2739,6 +2741,13 @@ sctp_notify_assoc_change(uint32_t event, struct sctp_tcb *stcb,
 	 * socket rcv queue.
 	 */
 
+	if((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
+	   (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) ||
+	    (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET)
+		) {
+		/* If the socket is gone we are out of here */
+		return;
+	}
 	/*
 	 * For TCP model AND UDP connected sockets we will send an error up
 	 * when an ABORT comes in.
@@ -3169,7 +3178,10 @@ void
 sctp_ulp_notify(uint32_t notification, struct sctp_tcb *stcb,
     uint32_t error, void *data)
 {
-	if (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
+	if((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
+	   (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) ||
+	   (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) 
+		) {
 		/* No notifications up when we are in a no socket state */
 		return;
 	}
@@ -3313,7 +3325,9 @@ sctp_report_all_outbound(struct sctp_tcb *stcb)
 
 	asoc = &stcb->asoc;
 
-	if (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
+	if((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
+	   (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) ||
+	   (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET)) {
 		return;
 	}
 	/* now through all the gunk freeing chunks */
@@ -3404,7 +3418,9 @@ void
 sctp_abort_notification(struct sctp_tcb *stcb, int error)
 {
 
-	if (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
+	if((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
+	   (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) ||
+	   (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET)) {
 		return;
 	}
 	/* Tell them we lost the asoc */
@@ -4281,6 +4297,13 @@ sctp_sorecvmsg(struct socket *so,
 	SOCKBUF_LOCK(&so->so_rcv);
 
 restart:
+	if((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
+	   (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
+		/* We should not really ever hit this
+		 * at least in theory.
+		 */
+		goto out;
+	}
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 	if (so->so_error || so->so_rcv.sb_state & SBS_CANTRCVMORE)
 #else
@@ -4643,7 +4666,7 @@ get_more_data:
 				}
 			}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		SAVE_I_AM_HERE(inp);
+			SAVE_I_AM_HERE(inp);
 #endif
 			goto release;
 		}
@@ -4655,7 +4678,7 @@ get_more_data:
 				}
 			}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		SAVE_I_AM_HERE(inp);
+			SAVE_I_AM_HERE(inp);
 #endif
 			goto release;
 		}

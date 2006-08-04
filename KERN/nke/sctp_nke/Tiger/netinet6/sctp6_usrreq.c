@@ -554,7 +554,6 @@ sctp6_notify_mbuf(struct sctp_inpcb *inp,
 	/* now what about the ep? */
 	if (stcb->asoc.smallest_mtu > nxtsz) {
 		struct sctp_tmit_chunk *chk;
-		struct sctp_stream_out *strm;
 
 		/* Adjust that too */
 		stcb->asoc.smallest_mtu = nxtsz;
@@ -583,13 +582,6 @@ sctp6_notify_mbuf(struct sctp_inpcb *inp,
 				chk->sent_rcv_time.tv_usec = 0;
 				stcb->asoc.total_flight -= chk->send_size;
 				net->flight_size -= chk->send_size;
-			}
-		}
-		TAILQ_FOREACH(strm, &stcb->asoc.out_wheel, next_spoke) {
-			TAILQ_FOREACH(chk, &strm->outqueue, sctp_next) {
-				if ((u_int32_t) (chk->send_size + IP_HDR_SIZE) > nxtsz) {
-					chk->flags |= CHUNK_FLAGS_FRAGMENT_OK;
-				}
 			}
 		}
 	}
@@ -634,9 +626,9 @@ sctp6_ctlinput(cmd, pktdst, d)
 		 * valid.
 		 */
 		/* check if we can safely examine src and dst ports */
-		struct sctp_inpcb *inp;
-		struct sctp_tcb *stcb;
-		struct sctp_nets *net;
+		struct sctp_inpcb *inp = NULL;
+		struct sctp_tcb *stcb = NULL;
+		struct sctp_nets *net = NULL;
 		struct sockaddr_in6 final;
 
 		if (ip6cp->ip6c_m == NULL ||
@@ -1005,42 +997,109 @@ sctp6_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 	return error;
 }
 
-/*This could be made common with sctp_detach() since they are identical */
 #if defined(__FreeBSD__) && __FreeBSD_version > 690000
-static void
+
+static void	
+sctp6_close(struct socket *so)
+{
+	struct sctp_inpcb *inp;
+	inp = (struct sctp_inpcb *)so->so_pcb;
+	if (inp == 0)
+		return;
+
+	/* Inform all the lower layer assoc that we
+	 * are done.
+	 */
+	if((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
+		SCTP_INP_WLOCK(inp);
+		inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_GONE;
+		SCTP_INP_WUNLOCK(inp);
+		if (((so->so_options & SO_LINGER) && (so->so_linger == 0)) ||
+		    (so->so_rcv.sb_cc > 0)) {
+			sctp_inpcb_free(inp, 1);
+		} else {
+			sctp_inpcb_free(inp, 0);
+		}
+		/* The socket is now detached, no matter what
+		 * the state of the SCTP association.
+		 */
+		SOCK_LOCK(so);
+		so->so_snd.sb_cc = 0;
+		so->so_snd.sb_mb = NULL;
+		so->so_snd.sb_mbcnt = 0;
+		
+		/* same for the rcv ones, they are only
+		 * here for the accounting/select.
+		 */
+		so->so_rcv.sb_cc = 0;
+		so->so_rcv.sb_mb = NULL;
+		so->so_rcv.sb_mbcnt = 0;
+		/* Now null out the reference, we are
+		 * completely detached.
+		 */
+		so->so_pcb = NULL;
+		SOCK_UNLOCK(so);
+	}
+	return;
+
+}
+
 #else
+/*This could be made common with sctp_detach() since they are identical */
 static int
-#endif
 sctp6_detach(struct socket *so)
 {
 	struct sctp_inpcb *inp;
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s;
-
+#endif
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (inp == 0)
-#if defined(__FreeBSD__) && __FreeBSD_version > 690000
-		return;
-#else
 		return EINVAL;
-#endif
 
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
-#else
-	s = splnet();
 #endif
-	if (((so->so_options & SO_LINGER) && (so->so_linger == 0)) ||
-	    (so->so_rcv.sb_cc > 0))
-		sctp_inpcb_free(inp, 1);
-	else
-		sctp_inpcb_free(inp, 0);
+	if((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
+		if (((so->so_options & SO_LINGER) && (so->so_linger == 0)) ||
+		    (so->so_rcv.sb_cc > 0)) {
+			sctp_inpcb_free(inp, 1);
+		} else {
+			sctp_inpcb_free(inp, 0);
+		}
+		/* The socket is now detached, no matter what
+		 * the state of the SCTP association.
+		 */
+		SOCK_LOCK(so);
+		so->so_snd.sb_cc = 0;
+		so->so_snd.sb_mb = NULL;
+		so->so_snd.sb_mbcnt = 0;
+		
+		/* same for the rcv ones, they are only
+		 * here for the accounting/select.
+		 */
+		so->so_rcv.sb_cc = 0;
+		so->so_rcv.sb_mb = NULL;
+		so->so_rcv.sb_mbcnt = 0;
+		/* Now null out the reference, we are
+		 * completely detached.
+		 */
+		/* Now disconnect */
+#if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		/* MT FIXME: Is there anything to do here for Tiger ? */
+		so->so_pcb = NULL;
+#endif
+		SOCK_UNLOCK(so);
+		SCTP_INP_WLOCK(inp);
+		inp->sctp_socket = NULL;
+		SCTP_INP_WUNLOCK(inp);
+	}
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
-#if defined(__FreeBSD__) && __FreeBSD_version > 690000
-	return;
-#else
-	return(0);
 #endif
+	return(0);
 }
+#endif
 
 static int
 sctp6_disconnect(struct socket *so)
@@ -1849,7 +1908,12 @@ struct pr_usrreqs sctp6_usrreqs = {
 	.pru_bind = sctp6_bind,
 	.pru_connect = sctp6_connect,
 	.pru_control = in6_control,
+#if __FreeBSD_version >= 690000
+	.pru_close = sctp6_close,
+	.pru_detach = sctp6_close,
+#else
 	.pru_detach = sctp6_detach,
+#endif
 	.pru_disconnect = sctp6_disconnect,
 	.pru_listen = sctp_listen,
 	.pru_peeraddr = sctp6_getpeeraddr,

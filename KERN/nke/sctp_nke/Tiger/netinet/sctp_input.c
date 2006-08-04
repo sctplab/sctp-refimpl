@@ -2325,7 +2325,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 
 			sctp_ulp_notify(notification, *stcb, 0, NULL);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		socket_unlock(so, 1);
+			socket_unlock(so, 1);
 #endif
 			return (m);
 		}

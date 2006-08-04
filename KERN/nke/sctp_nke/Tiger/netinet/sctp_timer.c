@@ -124,7 +124,6 @@ __FBSDID("$FreeBSD:$");
 
 #ifdef SCTP_DEBUG
 extern uint32_t sctp_debug_on;
-
 #endif				/* SCTP_DEBUG */
 
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
@@ -1835,7 +1834,7 @@ select_a_new_ep:
 		/* endpoint flags or features don't match, so keep looking */
 		if (it->iterator_flags & SCTP_ITERATOR_DO_SINGLE_INP) {
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		socket_unlock(it->inp->ip_inp.inp.inp_socket, 1);
+			socket_unlock(it->inp->ip_inp.inp.inp_socket, 1);
 #endif
 			SCTP_INP_WUNLOCK(it->inp);
 			goto done_with_iterator;
@@ -1849,7 +1848,7 @@ select_a_new_ep:
 			goto done_with_iterator;
 		}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	socket_lock(it->inp->ip_inp.inp.inp_socket, 1);
+		socket_lock(it->inp->ip_inp.inp.inp_socket, 1);
 #endif
 		SCTP_INP_WLOCK(it->inp);
 	}
