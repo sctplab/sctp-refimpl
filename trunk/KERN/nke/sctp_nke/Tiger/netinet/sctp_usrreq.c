@@ -582,9 +582,9 @@ sctp_ctlinput(cmd, sa, vip)
 #endif
 	}
 	if (ip) {
-		struct sctp_inpcb *inp;
-		struct sctp_tcb *stcb;
-		struct sctp_nets *net;
+		struct sctp_inpcb *inp = NULL;
+		struct sctp_tcb *stcb = NULL;
+		struct sctp_nets *net = NULL;
 		struct sockaddr_in to, from;
 
 		sh = (struct sctphdr *)((caddr_t)ip + (ip->ip_hl << 2));
