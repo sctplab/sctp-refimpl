@@ -4261,8 +4261,9 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 					SOCK_LOCK(so);
 					so->so_rcv.sb_cc = 0;
 					so->so_snd.sb_cc = 0;
-					soisdisconnected(so);
 					SOCK_UNLOCK(so);
+					/* sodisconnected locks the sb;s*/
+					soisdisconnected(so);
 				}
 			}
 		}
