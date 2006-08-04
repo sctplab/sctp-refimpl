@@ -5136,7 +5136,13 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		}
 	}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	SAVE_I_AM_HERE(inp);
+#endif
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	socket_unlock(so, 1);
+#endif
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	SAVE_I_AM_HERE(inp);
 #endif
 
 	return (error);
