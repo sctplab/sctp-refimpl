@@ -4188,12 +4188,18 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far)
 			SOCKBUF_LOCK(&so->so_rcv);
 			return (-1);
 		}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		SAVE_I_AM_HERE(stcb->sctp_ep);
+#endif
 		/* calculate the rwnd */
 		sctp_set_rwnd(stcb, &stcb->asoc);
 		if (stcb->asoc.my_last_reported_rwnd < stcb->asoc.my_rwnd) {
 			uint32_t dif;
 
 			dif = stcb->asoc.my_rwnd - stcb->asoc.my_last_reported_rwnd;
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			SAVE_I_AM_HERE(stcb->sctp_ep);
+#endif
 			if (dif > rwnd_req) {
 				sctp_send_sack(stcb);
 				sctp_chunk_output(stcb->sctp_ep, stcb,
@@ -4201,6 +4207,9 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far)
 				/* make sure no timer is running */
 				sctp_timer_stop(SCTP_TIMER_TYPE_RECV, stcb->sctp_ep, stcb, NULL);
 			}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			SAVE_I_AM_HERE(stcb->sctp_ep);
+#endif
 		}
 		SCTP_TCB_UNLOCK(stcb);
 		SOCKBUF_LOCK(&so->so_rcv);
@@ -4624,12 +4633,18 @@ get_more_data:
 				out_flags &= ~MSG_EOR;
 			}
 		}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		SAVE_I_AM_HERE(inp);
+#endif
 		if (out_flags & MSG_EOR) {
 			if ((stcb) && (in_flags & MSG_PEEK) == 0) {
 				if (sctp_user_rcvd(stcb, &freed_so_far)) {
 					stcb = NULL;
 				}
 			}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		SAVE_I_AM_HERE(inp);
+#endif
 			goto release;
 		}
 		if (uio->uio_resid == 0) {
@@ -4639,6 +4654,9 @@ get_more_data:
 					stcb = NULL;
 				}
 			}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		SAVE_I_AM_HERE(inp);
+#endif
 			goto release;
 		}
 		/*
@@ -4649,10 +4667,16 @@ get_more_data:
 		if ((block_allowed == 0) ||
 		    ((in_flags & MSG_WAITALL) == 0)) {
 			if ((stcb) && (in_flags & MSG_PEEK) == 0) {
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+				SAVE_I_AM_HERE(inp);
+#endif
 				if (sctp_user_rcvd(stcb, &freed_so_far)) {
 					stcb = NULL;
 				}
-			}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+				SAVE_I_AM_HERE(inp);
+#endif
+		}
 			goto release;
 		}
 		/*
@@ -4663,9 +4687,15 @@ get_more_data:
 
 		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE)) {
 			if ((stcb) && (in_flags & MSG_PEEK) == 0) {
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+				SAVE_I_AM_HERE(inp);
+#endif
 				if (sctp_user_rcvd(stcb, &freed_so_far)) {
 					stcb = NULL;
 				}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+				SAVE_I_AM_HERE(inp);
+#endif
 			}
 			goto release;
 		}
@@ -4678,11 +4708,20 @@ get_more_data:
 
 		/* Tell the transport a rwnd update might be needed */
 		if ((stcb) && (in_flags & MSG_PEEK) == 0) {
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			SAVE_I_AM_HERE(inp);
+#endif
 			if (sctp_user_rcvd(stcb, &freed_so_far)) {
 				stcb = NULL;
 			}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			SAVE_I_AM_HERE(inp);
+#endif
 		}
 wait_some_more:
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		SAVE_I_AM_HERE(inp);
+#endif
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 		if (so->so_error || so->so_rcv.sb_state & SBS_CANTRCVMORE)
 			goto release;
@@ -4695,10 +4734,19 @@ wait_some_more:
 #else
 		sbunlock(&so->so_snd);
 #endif
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		SAVE_I_AM_HERE(inp);
+#endif
 		error = sbwait(&so->so_rcv);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		SAVE_I_AM_HERE(inp);
+#endif
 		if (error)
 			goto release_unlocked;
 		error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		SAVE_I_AM_HERE(inp);
+#endif
 
 		if (control->length == 0) {
 			/* still nothing here */
@@ -4716,6 +4764,9 @@ wait_some_more:
 	} else {
 		/* copy out the mbuf chain */
 get_more_data2:
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		SAVE_I_AM_HERE(inp);
+#endif
 		cp_len = uio->uio_resid;
 		if ((uint32_t) cp_len >= control->length) {
 			/* easy way */
