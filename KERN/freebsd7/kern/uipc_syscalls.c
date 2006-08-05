@@ -2394,7 +2394,7 @@ int sctp_generic_sendmsg(td, uap)
 	struct file *fp;
 	int use_rcvinfo=1;
 	int error=0, len, i;
-	struct sockaddr *to;
+	struct sockaddr *to=NULL;
 #ifdef KTRACE
 	struct uio *ktruio = NULL;
 #endif
@@ -2405,10 +2405,12 @@ int sctp_generic_sendmsg(td, uap)
 	if (error)
 		return (error);
 
-	error = getsockaddr(&to, uap->to, uap->tolen);
-	if (error) {
-		to = NULL;
-		goto sctp_bad2;
+	if(uap->tolen) {
+		error = getsockaddr(&to, uap->to, uap->tolen);
+		if (error) {
+			to = NULL;
+			goto sctp_bad2;
+		}
 	}
 	error = getsock(td->td_proc->p_fd, uap->sd, &fp, NULL);
 	if (error)
