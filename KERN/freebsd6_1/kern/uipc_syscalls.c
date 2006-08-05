@@ -2288,10 +2288,12 @@ int sctp_generic_sendmsg(td, uap)
 	if (error)
 		return (error);
 
-	error = getsockaddr(&to, uap->to, uap->tolen);
-	if (error) {
-		to = NULL;
-		goto sctp_bad2;
+	if (uap->tolen) {
+		error = getsockaddr(&to, uap->to, uap->tolen);
+		if (error) {
+			to = NULL;
+			goto sctp_bad2;
+		}
 	}
 	error = getsock(td->td_proc->p_fd, uap->sd, &fp);
 	if (error)
