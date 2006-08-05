@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.57 2006-08-01 15:58:06 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.58 2006-08-05 02:16:14 randall Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -123,6 +123,7 @@ static int cmd_gethbdelay(char *argv[], int argc);
 static int cmd_getstat(char *argv[], int argc);
 static int cmd_clrstat(char *argv[], int argc);
 
+
 static int cmd_getprimary(char *argv[], int argc);
 static int cmd_getrtt(char *argv[], int argc);
 static int cmd_getsnd(char *argv[], int argc);
@@ -200,6 +201,15 @@ static int cmd_streamreset(char *argv[], int argc);
 static int cmd_deliverydump(char *argv[], int argc);
 static int cmd_sendsent(char *argv[], int argc);
 static int cmd_getroute(char *argv[], int argc);
+
+
+static int cmd_setpdapi(char *argv[], int argc);
+static int cmd_getpdapi(char *argv[], int argc);
+
+static int cmd_seteeor(char *argv[], int argc);
+static int cmd_geteeor(char *argv[], int argc);
+
+
 
 static int cmd_getmaxseg(char *argv[], int argc);
 static int cmd_setmaxseg(char *argv[], int argc);
@@ -309,8 +319,20 @@ static struct command commands[] = {
      cmd_getevents},
     {"getpaddrs", "getpaddrs [asocid] - display the peers addresses",
      cmd_getpaddrs},
+
+    {"getpdapi", "getpdapi - display the partual delivery point",
+     cmd_getpdapi},
+
+    {"geteeor", "geteeor - display the current Explicit EOR setting",
+     cmd_geteeor},
+
+
+
     {"getstatus", "getstatus - display the association status",
      cmd_getstatus},
+
+
+
     {"heartctl", "heartctl on/off/allon/alloff - Turn HB on or off to the destination or all dests",
      cmd_heart},
     {"getasocids", "getasocids - list all association id's",
@@ -437,6 +459,13 @@ static struct command commands[] = {
 
     {"setloopsleep", "setloopsleep val - Sets the sleep time between each loopreq before the send of loop-resp",
        cmd_setloopsleep},
+
+
+    {"setpdapi", "setpdapi value - set the partual delivery point",
+     cmd_setpdapi},
+
+    {"seteeor", "seteeor value - set the explict EOR mode on/off",
+     cmd_seteeor},
 
 
     {"setmaxburst", "setmaxburst val - set the maxburst setting to val",
@@ -2859,6 +2888,90 @@ cmd_getpaddrs(char *argv[], int argc)
 	return 0;
 }
 
+static int cmd_getpdapi(char *argv[], int argc)
+{
+	int val = 0;
+	int siz;
+	siz = sizeof(val);
+	if(getsockopt(adap->fd,IPPROTO_SCTP,
+		      SCTP_PARTIAL_DELIVERY_POINT,
+		      (void * )&val, &siz) != 0) {
+		printf("Failed to get value error:%d\n", errno);
+	} else {
+		printf("current pdapi point is %d\n", val);
+	}
+	return 0;
+}
+
+
+
+static int cmd_setpdapi(char *argv[], int argc)
+{
+	int val = 0;
+
+	if(argc < 1) {
+		printf("Use setpdapi Value\n");
+		return -1;
+	}
+	val = (sctp_assoc_t)strtoul(argv[0], NULL, 0);
+	printf("setting pd-api point to %d\n", val);
+	if(setsockopt(adap->fd,IPPROTO_SCTP,
+		      SCTP_PARTIAL_DELIVERY_POINT, 
+		      &val, sizeof(val)) != 0) {
+		printf("Failed to set option %d\n",errno);
+		return 0;
+	}else{
+		printf("Ka-pla\n");
+	}
+	return 0;
+}
+
+static int cmd_seteeor(char *argv[], int argc)
+{
+	int val = 0;
+
+	if(argc < 1) {
+		printf("Use setpdapi Value\n");
+		return -1;
+	}
+	val = (sctp_assoc_t)strtoul(argv[0], NULL, 0);
+	if(val)
+		printf("setting EOM mode to ON\n");
+	else
+		printf("setting EOM mode to OFF\n");
+
+	if(setsockopt(adap->fd,IPPROTO_SCTP,
+		      SCTP_EXPLICIT_EOR, 
+		      &val, sizeof(val)) != 0) {
+		printf("Failed to set option %d\n",errno);
+		return 0;
+	}else{
+		printf("Ka-pla\n");
+	}
+	return 0;
+}
+
+
+static int cmd_geteeor(char *argv[], int argc)
+{
+	int val = 0;
+	int siz;
+	siz = sizeof(val);
+	if(getsockopt(adap->fd,IPPROTO_SCTP,
+		      SCTP_EXPLICIT_EOR,
+		      (void * )&val, &siz) != 0) {
+		printf("Failed to get value error:%d\n", errno);
+	} else {
+		if(val) {
+			printf("Explicit EOM mode is ON!\n");
+		} else {
+			printf("Explicit EOM mode is OFF!\n");
+		}
+	}
+	return 0;
+}
+
+
 
 /* chgcookielife val - change the current assoc cookieLife */
 static int
@@ -4933,6 +5046,11 @@ parse_send_opt(char *p)
   printf("%s option: Not supported on this OS\n", p);
 #endif
     return(SCTP_ADDR_OVER);
+  }else if(strcmp(p,"eeom") == 0){
+#if !defined(__BSD_SCTP_STACK__)
+  printf("%s option: Not supported on this OS\n", p);
+#endif
+    return (SCTP_EOR);
   }else if(strcmp(p,"sendall") == 0){
 #if !defined(__BSD_SCTP_STACK__)
   printf("%s option: Not supported on this OS\n", p);
@@ -4941,7 +5059,7 @@ parse_send_opt(char *p)
   }else if(strcmp(p,"none") == 0){
     return(0);
   }else{
-    printf("Sorry option %s not known, value must be prsctp|bufbnd|unord|over|none|sendall\n",p);
+    printf("Sorry option %s not known, value must be eeom|prsctp|bufbnd|unord|over|none|sendall\n",p);
   }
   return(0);
 }
