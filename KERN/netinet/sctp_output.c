@@ -7058,6 +7058,7 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header, int how)
 {
 	struct mbuf *m = NULL;
 	int aloc_size;
+	int index=0;
 
 	if (want_header) {
 		MGETHDR(m, how, MT_DATA);
@@ -7070,18 +7071,22 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header, int how)
 	if (space_needed > (((sctp_mbuf_threshold_count - 1) * MLEN) + MHLEN)) {
 #if defined(__FreeBSD__) && __FreeBSD_version > 690000
 	try_again:
+		index = 4;
 		if(space_needed <= MCLBYTES){ 
 			aloc_size = MCLBYTES;
 			sctp_mbuf_stats[0]++;
 		} else if (space_needed <=  MJUMPAGESIZE) {
 			aloc_size = MJUMPAGESIZE;
 			sctp_mbuf_stats[1]++;
+			index = 5;
 		} else if (space_needed <= MJUM9BYTES) {
 			aloc_size = MJUM9BYTES;
 			sctp_mbuf_stats[2]++;
+			index = 6;
 		} else { 
 			aloc_size = MJUM16BYTES;
 			sctp_mbuf_stats[3]++;
+			index = 7;
 		}
 		m_cljget(m, how, aloc_size);
 		if (m == NULL) {
@@ -7090,7 +7095,7 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header, int how)
 		if ((m->m_flags & M_EXT) == 0) {
 			if(aloc_size != MCLBYTES) {
 				aloc_size -= 10;
-				sctp_mbuf_stats[5]++;
+				sctp_mbuf_stats[index]++;
 				goto try_again;
 			}
 			sctp_m_freem(m);
@@ -7108,6 +7113,7 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header, int how)
 		}
 #endif
 	}
+	sctp_mbuf_stats[8]++;
 	m->m_len = 0;
 	m->m_next = m->m_nextpkt = NULL;
 	if (want_header) {
@@ -11447,10 +11453,9 @@ sctp_copy_resume(struct sctp_stream_queue_pending *sp,
 	struct mbuf *m,*prev, *head;
 
         left = min(uio->uio_resid, max_send_len);
-	/* will this be the EOR? */
-	if (sp->data == NULL) {
-		need_hdr = 1;
-	}
+	/* Always get a header just in case */
+	need_hdr = 1;
+
 	head = sctp_get_mbuf_for_msg(left, need_hdr, M_WAIT);
 	cancpy = M_TRAILINGSPACE(head);
 	willcpy = min(cancpy, left);
@@ -11488,14 +11493,6 @@ sctp_copy_resume(struct sctp_stream_queue_pending *sp,
 			*new_tail = m;
 			m->m_next = NULL;
 		}
-	}
-	if ((uio->uio_resid == 0) &&
-	    ((user_marks_eor == 0) || 
-	     (user_marks_eor && (srcv->sinfo_flags & SCTP_EOR)))
-	   ){
-		sp->msg_is_complete = 1;
-	} else {
-		sp->msg_is_complete = 0;
 	}
 	return(head);
 }
@@ -12292,6 +12289,15 @@ sctp_lower_sosend(struct socket *so,
 				/* Update the mbuf and count */
 				SCTP_TCB_LOCK(stcb);
 				hold_tcblock = 1;
+				/* Did we reach EOR? */
+				if ((uio->uio_resid == 0) &&
+				    ((user_marks_eor == 0) || 
+				     (user_marks_eor && (srcv->sinfo_flags & SCTP_EOR)))
+					){
+					sp->msg_is_complete = 1;
+				} else {
+					sp->msg_is_complete = 0;
+				}
 				sctp_snd_sb_alloc(stcb, sndout);
 
 				if(sp->tail_mbuf) {
@@ -12302,6 +12308,7 @@ sctp_lower_sosend(struct socket *so,
 					/* A stolen mbuf */
 					sp->data = mm;
 					sp->tail_mbuf = new_tail;
+					mm->m_pkthdr.len = sndout;
 				}
 				sp->length += sndout;
 				len += sndout;
