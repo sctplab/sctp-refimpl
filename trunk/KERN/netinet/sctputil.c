@@ -3231,7 +3231,7 @@ sctp_notify_stream_reset(struct sctp_tcb *stcb,
 
 	if (len > M_TRAILINGSPACE(m_notify)) {
 		/* never enough room */
-		m_freem(m_notify);
+		sctp_m_freem(m_notify);
 		return;
 	}
 	strreset = mtod(m_notify, struct sctp_stream_reset_event *);
@@ -4801,7 +4801,7 @@ get_more_data:
 					panic("control->data not null at read eor?");
 #else
 					printf("Strange, data left in the control buffer .. invarients would panic?\n");
-					m_freem(control->data);
+					sctp_m_freem(control->data);
 					control->data = NULL;
 #endif
 				}
@@ -5386,6 +5386,56 @@ sctp_pool_put(struct pool *pp, void *ptr)
 	s = splsoftnet();
 	pool_put(pp, ptr);
 	splx(s);
+}
+
+#endif
+
+#ifdef SCTP_MBUF_DEBUG
+
+static uint32_t sctp_mbuf_free_cnt[10] = {
+	0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0
+};
+
+struct mbuf *
+sctp_m_free(struct mbuf *m)
+{
+	struct mbuf *n = m->m_next;
+
+	if (m->m_flags & M_EXT) {
+		switch(m->m_ext.ext_size) {
+		case MCLBYTES:
+			sctp_mbuf_free_cnt[0]++;
+			break;
+		case MJUMPAGESIZE:
+			sctp_mbuf_free_cnt[1]++;
+			break;
+		case MJUM9BYTES:
+			sctp_mbuf_free_cnt[2]++;
+			break;
+		case MJUM16BYTES:
+			sctp_mbuf_free_cnt[3]++;
+			break;
+		default:
+			sctp_mbuf_free_cnt[4]++;
+			break;
+		};
+		mb_free_ext(m);
+	} else {
+		sctp_mbuf_free_cnt[8]++;
+		uma_zfree(zone_mbuf, m);
+	}
+	sctp_mbuf_free_cnt[9]++;
+	return n;
+}
+
+
+void sctp_m_freem(struct mbuf *m)
+{
+	while (m != NULL) {
+		m = sctp_m_free(m);
+	}
+
 }
 
 #endif
