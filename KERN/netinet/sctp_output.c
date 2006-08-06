@@ -7112,8 +7112,10 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header, int how)
 			return (NULL);
 		}
 #endif
+	} else {
+		sctp_mbuf_stats[8]++;
 	}
-	sctp_mbuf_stats[8]++;
+	sctp_mbuf_stats[9]++;
 	m->m_len = 0;
 	m->m_next = m->m_nextpkt = NULL;
 	if (want_header) {
