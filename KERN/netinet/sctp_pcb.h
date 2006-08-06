@@ -675,12 +675,12 @@ struct sctp_tcb {
 
 
 #ifdef INVARIANTS
-#define STCB_TCB_LOCK_ASSERT(_tcb) do { \
+#define SCTP_TCB_LOCK_ASSERT(_tcb) do { \
                             if (mtx_owned(&(_tcb)->tcb_mtx) == 0) \
                                 panic("Don't own TCB lock"); \
                             } while (0)
 #else
-#define STCB_TCB_LOCK_ASSERT(_tcb)
+#define SCTP_TCB_LOCK_ASSERT(_tcb)
 #endif
 
 #define SCTP_ITERATOR_LOCK_INIT() \
@@ -767,7 +767,7 @@ struct sctp_tcb {
 #define SCTP_TCB_TRYLOCK(_tcb)
 #define SCTP_TCB_UNLOCK(_tcb)
 #define SCTP_TCB_UNLOCK_IFOWNED(_tcb)
-#define STCB_TCB_LOCK_ASSERT(_tcb)
+#define SCTP_TCB_LOCK_ASSERT(_tcb)
 
 /* iterator locks */
 #define SCTP_ITERATOR_LOCK_INIT() \
@@ -827,7 +827,7 @@ struct sctp_tcb {
 #define SCTP_TCB_TRYLOCK(_tcb)
 #define SCTP_TCB_UNLOCK(_tcb)
 #define SCTP_TCB_UNLOCK_IFOWNED(_tcb)
-#define STCB_TCB_LOCK_ASSERT(_tcb)
+#define SCTP_TCB_LOCK_ASSERT(_tcb)
 
 
 /* socket locks that are not here in other than 5.3 > FreeBSD */
@@ -1247,7 +1247,7 @@ int sctp_destination_is_reachable(struct sctp_tcb *, struct sockaddr *);
  */
 int
 sctp_initiate_iterator(inp_func inpf, asoc_func af, uint32_t, uint32_t,
-    uint32_t, void *, uint32_t, end_func ef, struct sctp_inpcb *);
+    uint32_t, void *, uint32_t, end_func ef, struct sctp_inpcb *, uint8_t co_off);
 
 #if defined(__APPLE__)
 void sctp_callout_alloc(struct sctp_timer *);

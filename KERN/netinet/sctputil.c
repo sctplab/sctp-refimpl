@@ -1744,7 +1744,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 
 	tmr = NULL;
 	if (stcb) {
-		STCB_TCB_LOCK_ASSERT(stcb);
+		SCTP_TCB_LOCK_ASSERT(stcb);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
 #endif
@@ -2117,7 +2117,7 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 
 	tmr = NULL;
 	if (stcb) {
-		STCB_TCB_LOCK_ASSERT(stcb);
+		SCTP_TCB_LOCK_ASSERT(stcb);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
 #endif
@@ -4416,7 +4416,21 @@ sctp_sorecvmsg(struct socket *so,
 	in_eeor_mode = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXPLICIT_EOR);
 	SOCKBUF_LOCK(&so->so_rcv);
 
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
+	SAVE_I_AM_HERE(inp);
+#endif
+#if defined(__NetBSD__)
+	error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
+#endif
+
 restart:
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sbunlock(&so->so_snd, 1);
+#endif
+#if defined (__NetBSD__)
+	sbunlock(&so->so_snd);
+#endif
 	if((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
 	   (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
 		goto out;
@@ -4429,6 +4443,7 @@ restart:
 	{
 		goto out;
 	}
+
 	if ((so->so_rcv.sb_cc == 0) && block_allowed) {
 		/* we need to wait for data */
 		error = sbwait(&so->so_rcv);
@@ -4440,6 +4455,13 @@ restart:
 		error = EWOULDBLOCK;
 		goto out;
 	}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
+	SAVE_I_AM_HERE(inp);
+#endif
+#if defined(__NetBSD__)
+	error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
+#endif
 	/* we possibly have data we can read */
 	control = TAILQ_FIRST(&inp->read_queue);
 	if (control == NULL) {
@@ -4643,10 +4665,6 @@ get_more_data:
 			}
 			SOCKBUF_UNLOCK(&so->so_rcv);
 			splx(s);
-			/*
-			 * move out the data, unlocked (our sblock flag
-			 * protects us from a reader)
-			 */
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			socket_unlock(so, 0);
 #endif

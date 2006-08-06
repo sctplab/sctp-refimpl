@@ -275,7 +275,7 @@ sctp_free_bufspace(struct sctp_tcb *, struct sctp_association *,
 #define sctp_free_bufspace(stcb, asoc, tp1, chk_cnt)  \
 do { \
 	if (tp1->data != NULL) { \
-                STCB_TCB_LOCK_ASSERT(stcb); \
+                SCTP_TCB_LOCK_ASSERT(stcb); \
                 (asoc)->chunks_on_out_queue -= chk_cnt; \
 		if ((asoc)->total_output_queue_size >= tp1->book_size) { \
 			(asoc)->total_output_queue_size -= tp1->book_size; \
@@ -297,7 +297,7 @@ do { \
 
 #define sctp_free_spbufspace(stcb, asoc, sp)  \
 do { \
-        STCB_TCB_LOCK_ASSERT(stcb); \
+        SCTP_TCB_LOCK_ASSERT(stcb); \
  	if (sp->data != NULL) { \
                 (asoc)->chunks_on_out_queue--; \
 		if ((asoc)->total_output_queue_size >= sp->length) { \
@@ -318,7 +318,7 @@ do { \
 
 #define sctp_snd_sb_alloc(stcb, sz)  \
 do { \
-        STCB_TCB_LOCK_ASSERT(stcb); \
+        SCTP_TCB_LOCK_ASSERT(stcb); \
 	stcb->asoc.total_output_queue_size += sz; \
 	if ((stcb->sctp_socket != NULL) && \
 	    ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) || \

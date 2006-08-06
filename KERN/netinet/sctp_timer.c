@@ -1929,7 +1929,9 @@ select_a_new_ep:
 		 * we lie here, it really needs to have its own type but
 		 * first I must verify that this won't effect things :-0
 		 */
-		sctp_chunk_output(it->inp, it->stcb, SCTP_OUTPUT_FROM_T3);
+		if(it->no_chunk_output == 0)
+			sctp_chunk_output(it->inp, it->stcb, SCTP_OUTPUT_FROM_T3);
+		
 		SCTP_TCB_UNLOCK(it->stcb);
 	next_assoc:
 		it->stcb = LIST_NEXT(it->stcb, sctp_tcblist);

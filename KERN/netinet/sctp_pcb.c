@@ -6267,7 +6267,7 @@ sctp_drain()
 int
 sctp_initiate_iterator(inp_func inpf, asoc_func af, uint32_t pcb_state,
     uint32_t pcb_features, uint32_t asoc_state, void *argp, uint32_t argi,
-    end_func ef, struct sctp_inpcb *s_inp)
+    end_func ef, struct sctp_inpcb *s_inp, uint8_t chunk_output_off)
 {
 	struct sctp_iterator *it = NULL;
 	int s;
@@ -6289,6 +6289,7 @@ sctp_initiate_iterator(inp_func inpf, asoc_func af, uint32_t pcb_state,
 	it->pcb_flags = pcb_state;
 	it->pcb_features = pcb_features;
 	it->asoc_state = asoc_state;
+	it->no_chunk_output = chunk_output_off;
 	if (s_inp) {
 		it->inp = s_inp;
 		it->iterator_flags = SCTP_ITERATOR_DO_SINGLE_INP;
