@@ -6690,7 +6690,7 @@ sctp_sendall_completes(void *ptr, uint32_t val)
 	 */
 
 	/* now free everything */
-	m_freem(ca->m);
+	sctp_m_freem(ca->m);
 	FREE(ca, M_PCB);
 }
 
@@ -6720,7 +6720,7 @@ sctp_copy_out_all(struct uio *uio, int len)
 		return (NULL);
 	}
 	if ((ret->m_flags & M_EXT) == 0) {
-		m_freem(ret);
+		sctp_m_freem(ret);
 		return (NULL);
 	}
 	/* save space for the data chunk header */
@@ -6732,7 +6732,7 @@ sctp_copy_out_all(struct uio *uio, int len)
 		error = uiomove(mtod(at, caddr_t), willcpy, uio);
 		if (error) {
 	err_out_now:
-			m_freem(at);
+			sctp_m_freem(at);
 			return (NULL);
 		}
 		at->m_len = willcpy;
@@ -6769,7 +6769,7 @@ sctp_sendall(struct sctp_inpcb *inp, struct uio *uio, struct mbuf *m,
 	MALLOC(ca, struct sctp_copy_all *,
 	    sizeof(struct sctp_copy_all), M_PCB, M_WAIT);
 	if (ca == NULL) {
-		m_freem(m);
+		sctp_m_freem(m);
 		return (ENOMEM);
 	}
 	memset(ca, 0, sizeof(struct sctp_copy_all));
@@ -7227,8 +7227,6 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		/* Pull off the data */
 		m_adj(sp->data, to_move);
 		/* Now lets work our way down and compact it 
-		 * we leave the first mbuf, since it will
-		 * be a m_pkthdr, we hope :-)
 		 */
 		m = sp->data;
 		while(m && (m->m_len == 0)) {
@@ -7238,7 +7236,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 				/* freeing tail */
 				sp->tail_mbuf = sp->data;
 			}
-			m_free(m);
+			sctp_m_free(m);
 			if(sp->data->m_next)
 				m = sp->data;
 			else
@@ -11314,7 +11312,7 @@ sctp_send_operr_to(struct mbuf *m, int iphlen,
 	if (!(scm->m_flags & M_PKTHDR)) {
 		/* must be a pkthdr */
 		printf("Huh, not a packet header in send_operr\n");
-		m_freem(scm);
+		sctp_m_freem(scm);
 		return;
 	}
 	M_PREPEND(scm, (sizeof(struct sctphdr) + sizeof(struct sctp_chunkhdr)), M_DONTWAIT);

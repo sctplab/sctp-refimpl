@@ -47,13 +47,11 @@ __FBSDID("$FreeBSD:$");
 #if defined(_KERNEL)
 
 #ifdef SCTP_MBUF_DEBUG
-#define sctp_m_freem(m) do { \
-    printf("m_freem(%p) m->nxtpkt:%p at %s[%d]\n", \
-	   (m), (m)->m_next, __FILE__, __LINE__); \
-    m_freem(m); \
-} while (0);
+void sctp_m_freem(struct mbuf *m);
+struct mbuf *sctp_m_free(struct mbuf *m);
 #else
 #define sctp_m_freem m_freem
+#define sctp_m_free m_free
 #endif
 
 #ifdef __APPLE__
