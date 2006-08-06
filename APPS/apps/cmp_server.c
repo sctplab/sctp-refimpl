@@ -117,7 +117,7 @@ int
 main(int argc, char **argv)
 {
 	struct txfr_request *req;
-	char buffer[200000];
+	char buffer[600000];
 	int i,fd,newfd,ret;
 	uint32_t sizetosend,blksize,numblk,sb;
 	u_int16_t port=0;

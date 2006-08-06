@@ -420,8 +420,8 @@ measure_one(struct control_info *req,
 	int optlen,optval;
 	int fd,ret;
 	uint32_t sz,cnt;
-	int blksize;
-	char buffer[200000];
+	int blksize, sinfo_flags=0;
+	char buffer[600000];
 #ifndef WIN32
 	char controlbuf[3000];
 	struct sockaddr_in from;
@@ -443,6 +443,7 @@ measure_one(struct control_info *req,
 			fd = socket(AF_INET, SOCK_SEQPACKET, protocol_touse);
 			if((fd > 0) && (imitation_mode)) {
 				int one = 1;
+				sinfo_flags = SCTP_EOR;
 				if(setsockopt(fd, protocol_touse, SCTP_EXPLICIT_EOR, &one, sizeof(one)) < 0) {
 					printf("m_cmp_client: setsockopt: SCTP_EXPLICIT_EOR failed! errno=%d\n", errno);
 				}
@@ -451,151 +452,153 @@ measure_one(struct control_info *req,
 				}
 			}
 		}
-	}
-#ifndef WIN32
-	memset(&events,0, sizeof(events));
-	events.sctp_association_event = 1;
-	if (setsockopt(fd, IPPROTO_SCTP, 
-		       SCTP_EVENTS, &events, 
-		       sizeof(events)) != 0) {
-		perror("Can't set SCTP assoc events, we may hang");
-	}
-#endif
-    if(laddr) {
-	if (bind(fd, (struct sockaddr *)laddr, sizeof(struct sockaddr_in))) {
-	    perror("Bind failed?");
-	}
-    }
-    if(fd == -1){
-	printf("can't open socket error:%d\n",errno);
-	return(-1);
-    }
-    if(req->req.snd_buf){
-	optlen = 4;
-	optval = htonl(req->req.snd_buf);
-#if defined(__APPLE__) || defined(linux)
-	printf("Set send buffer to %d\n", htonl(req->req.snd_buf));
-#else
-	printf("Set send buffer to %ld\n", (long)htonl(req->req.snd_buf));
-#endif
-	if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, (const char *)&optval,
-		       optlen) != 0) {
-	    printf("err:%d could not set sndbuf to %d\n", errno, optval);
-	} else {
-		printf("snd buf set\n");
-	}
-    }
-    if(req->req.tos_value) {
-	    if (protocol_touse == IPPROTO_TCP){
-		    optval = req->req.tos_value;
-	    } else {
-		    optval = req->req.tos_value + 4;
-	    }
-	    optlen = 4;
-	    if (setsockopt(fd, IPPROTO_IP, IP_TOS, (const char *)&optval, optlen) != 0) {
-		    printf("Can't set tos value to %x :-( err:%d\n", req->req.tos_value, errno);
-	    } else {
-		    printf("Set tos to %x\n", req->req.tos_value);
-	    }
-    }
-    if (req->req.rcv_buf) {
-	optlen = 4;
-	optval = ntohl(req->req.rcv_buf);
-#if defined(__APPLE__) || defined(linux)
-	printf("Set recv buffer to %d\n", htonl(req->req.rcv_buf));
-#else
-	printf("Set recv buffer to %ld\n", (long)htonl(req->req.rcv_buf));
-#endif
-	if (setsockopt(fd, SOL_SOCKET, SO_RCVBUF, (const char *)&optval,
-		       optlen) != 0) {
-	    printf("err:%d could not set rcvbuf to %d\n", errno, optval);
-	} else {
-		printf("rcv buf set\n");
-	}
-    }
 
 #ifndef WIN32
-    iov[0].iov_base = buffer;
-    iov[0].iov_len = sizeof(buffer);
-    iov[1].iov_base = NULL;
-    iov[1].iov_len = 0;
-    msg.msg_name = (caddr_t)&from;
-    msg.msg_namelen = sizeof(from);
-    msg.msg_iov = iov;
-    msg.msg_iovlen = 1;
-    msg.msg_control = (caddr_t)controlbuf;
-    msg.msg_controllen = sizeof(controlbuf);
-#endif /* !WIN32 */
-
-    gettimeofday(start, NULL);
-    gettimeofday(end, NULL);
-    if((protocol_touse == IPPROTO_TCP) || sctp_tcpmode){
-	if(connect(fd,(struct sockaddr *)to,sizeof(*to)) == -1){
-	    printf("Sorry connect fails %d\n",errno);
-	    close(fd);
-	    return(-1);
-	}
-    }
-    flen = sizeof(struct sockaddr_in);
-    if ((protocol_touse == IPPROTO_SCTP) && (sctp_tcpmode == 0)) {
-#ifndef WIN32
-	ret = sctp_sendmsg(fd, &req->req, sizeof(req->req),
-			   (struct sockaddr *)to, sizeof(*to),
-			   0, 0, 0, 0, 0);
-#endif /* !WIN32 */
-    } else {
-	ret = send(fd, (const char *)&req->req, sizeof(req->req), 0);
-    }
-    if(ret <= 0){
-	printf("Huh send of txfr fails\n");
-    exit_now:
-	close(fd);
-	return(-1);
-    }
-    cnt = 0;
-    sz = ntohl(req->req.sizetosend);
-    blksize = ntohl(req->req.blksize);
-    while(sz > cnt){
-#ifdef WIN32
-	/* win32 doesn't to recvmsg() unless under XP */
-	ret = recv(fd, buffer, blksize, 0);
-	if (ret <= 0)
-	    goto exit_now;
-#else
-	if(protocol_touse == IPPROTO_SCTP) {
- 		ret = sctp_recvmsg (fd, buffer, sizeof(buffer), 	
-				    (struct sockaddr *)&from,
-				    &flen, &sinfo, &msg.msg_flags);
-	}
-	else
-		ret = recvmsg(fd,&msg,0);
-	if(ret <= 0){
-	    goto exit_now;
-	}
-	if (msg.msg_flags & MSG_NOTIFICATION) {
-	    if((notification = handle_notification(buffer))){
-		if(notification == 1) {
-		    printf("exit type notification\n rcvd:%d needed %d",cnt, sz);
-		    goto exit_now;
-		} else {
-			if(notification == 6) {
-			        cmp_client_dump_notify(buffer, ret);
-			} else {
-				printf("shutdown:%d need:%d > rcvd:%d?\n", notification,
-				       sz, cnt);
-				printf("Force to end\n");
-				cnt = sz;
-			}
+		memset(&events,0, sizeof(events));
+		events.sctp_association_event = 1;
+		events.sctp_partial_delivery_event = 1;
+		if (setsockopt(fd, IPPROTO_SCTP, 
+			       SCTP_EVENTS, &events, 
+			       sizeof(events)) != 0) {
+			perror("Can't set SCTP assoc events, we may hang");
 		}
-	    }
-	    continue;
+#endif
 	}
+	if(laddr) {
+		if (bind(fd, (struct sockaddr *)laddr, sizeof(struct sockaddr_in))) {
+			perror("Bind failed?");
+		}
+	}
+	if(fd == -1){
+		printf("can't open socket error:%d\n",errno);
+		return(-1);
+	}
+	if(req->req.snd_buf){
+		optlen = 4;
+		optval = htonl(req->req.snd_buf);
+#if defined(__APPLE__) || defined(linux)
+		printf("Set send buffer to %d\n", htonl(req->req.snd_buf));
+#else
+		printf("Set send buffer to %ld\n", (long)htonl(req->req.snd_buf));
+#endif
+		if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, (const char *)&optval,
+			       optlen) != 0) {
+			printf("err:%d could not set sndbuf to %d\n", errno, optval);
+		} else {
+			printf("snd buf set\n");
+		}
+	}
+	if(req->req.tos_value) {
+		if (protocol_touse == IPPROTO_TCP){
+			optval = req->req.tos_value;
+		} else {
+			optval = req->req.tos_value + 4;
+		}
+		optlen = 4;
+		if (setsockopt(fd, IPPROTO_IP, IP_TOS, (const char *)&optval, optlen) != 0) {
+			printf("Can't set tos value to %x :-( err:%d\n", req->req.tos_value, errno);
+		} else {
+			printf("Set tos to %x\n", req->req.tos_value);
+		}
+	}
+	if (req->req.rcv_buf) {
+		optlen = 4;
+		optval = ntohl(req->req.rcv_buf);
+#if defined(__APPLE__) || defined(linux)
+		printf("Set recv buffer to %d\n", htonl(req->req.rcv_buf));
+#else
+		printf("Set recv buffer to %ld\n", (long)htonl(req->req.rcv_buf));
+#endif
+		if (setsockopt(fd, SOL_SOCKET, SO_RCVBUF, (const char *)&optval,
+			       optlen) != 0) {
+			printf("err:%d could not set rcvbuf to %d\n", errno, optval);
+		} else {
+			printf("rcv buf set\n");
+		}
+	}
+
+#ifndef WIN32
+	iov[0].iov_base = buffer;
+	iov[0].iov_len = sizeof(buffer);
+	iov[1].iov_base = NULL;
+	iov[1].iov_len = 0;
+	msg.msg_name = (caddr_t)&from;
+	msg.msg_namelen = sizeof(from);
+	msg.msg_iov = iov;
+	msg.msg_iovlen = 1;
+	msg.msg_control = (caddr_t)controlbuf;
+	msg.msg_controllen = sizeof(controlbuf);
+#endif /* !WIN32 */
+
+	gettimeofday(start, NULL);
+	gettimeofday(end, NULL);
+	if((protocol_touse == IPPROTO_TCP) || sctp_tcpmode){
+		if(connect(fd,(struct sockaddr *)to,sizeof(*to)) == -1){
+			printf("Sorry connect fails %d\n",errno);
+			close(fd);
+			return(-1);
+		}
+	}
+	flen = sizeof(struct sockaddr_in);
+	if ((protocol_touse == IPPROTO_SCTP) && (sctp_tcpmode == 0)) {
+#ifndef WIN32
+		ret = sctp_sendmsg(fd, &req->req, sizeof(req->req),
+				   (struct sockaddr *)to, sizeof(*to),
+				   0, sinfo_flags, 0, 0, 0);
+#endif /* !WIN32 */
+	} else {
+		ret = send(fd, (const char *)&req->req, sizeof(req->req), 0);
+	}
+	if(ret <= 0){
+		printf("Huh send of txfr fails\n");
+	exit_now:
+		close(fd);
+		return(-1);
+	}
+	cnt = 0;
+	sz = ntohl(req->req.sizetosend);
+	blksize = ntohl(req->req.blksize);
+	while(sz > cnt){
+#ifdef WIN32
+		/* win32 doesn't to recvmsg() unless under XP */
+		ret = recv(fd, buffer, blksize, 0);
+		if (ret <= 0)
+			goto exit_now;
+#else
+		if(protocol_touse == IPPROTO_SCTP) {
+			ret = sctp_recvmsg (fd, buffer, sizeof(buffer), 	
+					    (struct sockaddr *)&from,
+					    &flen, &sinfo, &msg.msg_flags);
+		}
+		else
+			ret = recvmsg(fd,&msg,0);
+		if(ret <= 0){
+			goto exit_now;
+		}
+		if (msg.msg_flags & MSG_NOTIFICATION) {
+			if((notification = handle_notification(buffer))){
+				if(notification == 1) {
+					printf("exit type notification\n rcvd:%d needed %d",cnt, sz);
+					goto exit_now;
+				} else {
+					if(notification == 6) {
+						cmp_client_dump_notify(buffer, ret);
+					} else {
+						printf("shutdown:%d need:%d > rcvd:%d?\n", notification,
+						       sz, cnt);
+						printf("Force to end\n");
+						cnt = sz;
+					}
+				}
+			}
+			continue;
+		}
 #endif /* WIN32 */
-	cnt += ret;
-    }
-    gettimeofday(end, NULL);
-    close(fd);
-    return(0);
+		cnt += ret;
+	}
+	gettimeofday(end, NULL);
+	close(fd);
+	return(0);
 }
 
 int notdone = 1;
@@ -638,18 +641,22 @@ log_measurement(int proto,struct control_info *ctl, struct timeval *start,
     }
     /* We output "Error_rate time */
     if(blocks_is_error) {
-	    fprintf(out_log,"%u %d.%6.6d # rb:%d size:%u:%s:",
+	    fprintf(out_log,"%u %d.%6.6d # rb:%d size:%u:%s:%d",
 		    (int)htonl(ctl->req.blksize),
 		    sec,usec,
 		    (int)ntohl(ctl->req.rcv_buf),
 		    (int)ntohl(ctl->req.sizetosend),
-		    ((proto == IPPROTO_SCTP) ? "sctp" : "tcp"));
+		    ((proto == IPPROTO_SCTP) ? "sctp" : "tcp"),
+		    (int)ntohl(ctl->req.blksize)
+	);
     } else {
-	    fprintf(out_log,"%s %d.%6.6d # rb:%d size:%u:%s:",
+	    fprintf(out_log,"%s %d.%6.6d # rb:%d size:%u:%s:%d",
 		    error_rate,sec,usec,
 		    (int)ntohl(ctl->req.rcv_buf),
 		    (int)ntohl(ctl->req.sizetosend),
-		    ((proto == IPPROTO_SCTP) ? "sctp" : "tcp"));
+		    ((proto == IPPROTO_SCTP) ? "sctp" : "tcp"),
+		    (int)ntohl(ctl->req.blksize)
+	);
     }
     {
 	    double time_of_tran,bw;
