@@ -366,7 +366,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 		}
 		return;
 	}
-	STCB_TCB_LOCK_ASSERT(stcb);
+	SCTP_TCB_LOCK_ASSERT(stcb);
 	do {
 		chk = TAILQ_FIRST(&asoc->reasmqueue);
 		if (chk == NULL) {
@@ -2374,7 +2374,7 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 	sctp_set_rwnd(stcb, &stcb->asoc);
 
 	m = *mm;
-	STCB_TCB_LOCK_ASSERT(stcb);
+	SCTP_TCB_LOCK_ASSERT(stcb);
 	asoc = &stcb->asoc;
 	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) ||
@@ -3815,7 +3815,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	 * get awoken when the socket is read from :<
 	 */
 	asoc->overall_error_count = 0;
-	STCB_TCB_LOCK_ASSERT(stcb);
+	SCTP_TCB_LOCK_ASSERT(stcb);
 
 	if (asoc->sent_queue_retran_cnt) {
 #ifdef SCTP_DEBUG
