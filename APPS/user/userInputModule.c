@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.58 2006-08-05 02:16:14 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.59 2006-08-06 11:49:34 randall Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -5046,6 +5046,16 @@ parse_send_opt(char *p)
   printf("%s option: Not supported on this OS\n", p);
 #endif
     return(SCTP_ADDR_OVER);
+  }else if(strcmp(p,"abort") == 0){
+#if !defined(__BSD_SCTP_STACK__)
+  printf("%s option: Not supported on this OS\n", p);
+#endif
+    return (SCTP_ABORT);
+  }else if(strcmp(p,"eof") == 0){
+#if !defined(__BSD_SCTP_STACK__)
+  printf("%s option: Not supported on this OS\n", p);
+#endif
+    return (SCTP_EOF);
   }else if(strcmp(p,"eeom") == 0){
 #if !defined(__BSD_SCTP_STACK__)
   printf("%s option: Not supported on this OS\n", p);
@@ -5059,7 +5069,7 @@ parse_send_opt(char *p)
   }else if(strcmp(p,"none") == 0){
     return(0);
   }else{
-    printf("Sorry option %s not known, value must be eeom|prsctp|bufbnd|unord|over|none|sendall\n",p);
+    printf("Sorry option %s not known, value must be:\n eof|abort|eeom|prsctp|bufbnd|unord|over|none|sendall\n",p);
   }
   return(0);
 }
