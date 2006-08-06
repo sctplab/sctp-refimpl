@@ -3080,7 +3080,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		/* Unlocks not needed since the socket is gone now */
 	}
 	if (ip_pcb->inp_options) {
-		(void)m_free(ip_pcb->inp_options);
+		(void)sctp_m_free(ip_pcb->inp_options);
 		ip_pcb->inp_options = 0;
 	}
 #if !defined(__FreeBSD__) || __FreeBSD_version < 500000

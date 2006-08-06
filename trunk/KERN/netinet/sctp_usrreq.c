@@ -4930,7 +4930,7 @@ sctp_ctloutput(struct socket *so, struct sockopt *sopt)
 		error = sooptcopyin(sopt, mtod(m, caddr_t), sopt->sopt_valsize,
 		    sopt->sopt_valsize);
 		if (error) {
-			(void)m_free(m);
+			(void)sctp_m_free(m);
 			goto out;
 		}
 		m->m_len = sopt->sopt_valsize;
@@ -5011,7 +5011,7 @@ sctp_ctloutput(op, so, level, optname, mp)
 	{
 		splx(s);
 		if (op == PRCO_SETOPT && *mp)
-			(void)m_free(*mp);
+			(void)sctp_m_free(*mp);
 		return (ECONNRESET);
 	}
 	if (level != IPPROTO_SCTP) {
@@ -5032,7 +5032,7 @@ sctp_ctloutput(op, so, level, optname, mp)
 	if (op == PRCO_SETOPT) {
 		error = sctp_optsset(so, optname, mp, (struct proc *)NULL);
 		if (*mp)
-			(void)m_free(*mp);
+			(void)sctp_m_free(*mp);
 	} else if (op == PRCO_GETOPT) {
 		error = sctp_optsget(so, optname, mp, (struct proc *)NULL);
 	} else {
