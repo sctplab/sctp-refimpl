@@ -4723,7 +4723,7 @@ get_more_data:
 					copied_so_far += cp_len;
 					freed_so_far += cp_len;
 					control->length -= cp_len;
-					control->data = m_free(m);
+					control->data = sctp_m_free(m);
 					m = control->data;
 					/* been through it all */
 					if (control->data == NULL) {
@@ -5265,7 +5265,7 @@ sctp_soreceive(so, paddr, uio, mp0, controlp, flagsp)
 		if (fromlen > MLEN) {
 			MEXTMALLOC(maddr, fromlen, M_NOWAIT);
 			if ((maddr->m_flags & M_EXT) == 0) {
-				m_free(maddr);
+				sctp_m_free(maddr);
 				return (ENOMEM);
 			}
 		}
