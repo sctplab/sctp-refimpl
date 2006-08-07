@@ -232,7 +232,6 @@ struct sctp_epinfo {
 	struct mtx logging_mtx;
 	struct mtx ipi_ep_mtx;
 	struct mtx it_mtx;
-	struct mtx ipi_count_mtx;
 	struct mtx ipi_addr_mtx;
 #elif defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 #ifdef _KERN_LOCKS_H_

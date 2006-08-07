@@ -4342,6 +4342,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	/* Now lets remove it from the list of ALL associations in the EP */
 	LIST_REMOVE(stcb, sctp_tcblist);
 	if(from_inpcbfree == 0) {
+		SCTP_INP_INCR_REF(inp);
 		SCTP_INP_WUNLOCK(inp);
 #if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		SCTP_ITERATOR_UNLOCK();
@@ -4575,8 +4576,18 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			 * call back (we might be the timer 
 			 */
 			SCTP_INP_RUNLOCK(inp);
+			/* This will start the kill timer 
+			 * since we hold an increment yet. But
+			 * this is the only safe way to do this
+			 * since otherwise if the socket closes
+			 * at the same time we are here we might
+			 * collide in the cleanup.
+			 */
 			sctp_inpcb_free(inp, 0);
+			SCTP_INP_DECR_REF(inp);
 		} else {
+			/* Kill Timer already up */
+			SCTP_INP_DECR_REF(inp);
 			SCTP_INP_RUNLOCK(inp);
 		}
 	}
