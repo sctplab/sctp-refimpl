@@ -1267,8 +1267,7 @@ sctp_disconnect(struct socket *so)
 					/* Left with Data unread */
 					struct mbuf *err;
 
-					err = NULL;
-					MGET(err, M_DONTWAIT, MT_DATA);
+					err = sctp_get_mbuf_for_msg(sizeof(struct sctp_paramhdr), 0, M_DONTWAIT, 1, MT_DATA);
 					if (err) {
 						/*
 						 * Fill in the user
@@ -1350,14 +1349,15 @@ sctp_disconnect(struct socket *so)
 				    (asoc->state & SCTP_STATE_PARTIAL_MSG_LEFT)){
 					struct mbuf *op_err;
 				abort_anyway:
-					MGET(op_err, M_DONTWAIT, MT_DATA);
+					op_err = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) + sizeof(uint32_t)),
+								       0, M_DONTWAIT, 1, MT_DATA);
 					if (op_err) {
 						/* Fill in the user initiated abort */
 						struct sctp_paramhdr *ph;
 						uint32_t *ippp;
 
 						op_err->m_len =
-							sizeof(struct sctp_paramhdr) + sizeof(*ippp);
+							(sizeof(struct sctp_paramhdr) + sizeof(uint32_t));
 						ph = mtod(op_err,
 							  struct sctp_paramhdr *);
 						ph->param_type = htons(
@@ -1492,14 +1492,15 @@ sctp_shutdown(struct socket *so)
 			    (asoc->state & SCTP_STATE_PARTIAL_MSG_LEFT)) {
 				struct mbuf *op_err;
 			abort_anyway:
-				MGET(op_err, M_DONTWAIT, MT_DATA);
+				op_err = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) + sizeof(uint32_t)),
+							       0, M_DONTWAIT, 1, MT_DATA);
 				if (op_err) {
 					/* Fill in the user initiated abort */
 					struct sctp_paramhdr *ph;
 					uint32_t *ippp;
 
 					op_err->m_len =
-						sizeof(struct sctp_paramhdr) + sizeof(*ippp);
+						sizeof(struct sctp_paramhdr) + sizeof(uint32_t);
 					ph = mtod(op_err,
 						  struct sctp_paramhdr *);
 					ph->param_type = htons(
@@ -4917,15 +4918,15 @@ sctp_ctloutput(struct socket *so, struct sockopt *sopt)
 		sopt->sopt_valsize = MCLBYTES;
 	}
 	if (sopt->sopt_valsize) {
-
-		m = m_get(M_WAIT, MT_DATA);
 		if (sopt->sopt_valsize > MLEN) {
-			MCLGET(m, M_DONTWAIT);
-			if ((m->m_flags & M_EXT) == 0) {
-				sctp_m_freem(m);
-				splx(s);
-				return (ENOBUFS);
-			}
+			m = sctp_get_mbuf_for_msg(1, 0, M_WAIT, 1, MT_DATA);
+		}else{
+			m = sctp_get_mbuf_for_msg(MCLBYTES, 0, M_WAIT, 1, MT_DATA);
+		}
+		if (m == NULL) {
+			sctp_m_freem(m);
+			splx(s);
+			return (ENOBUFS);
 		}
 		error = sooptcopyin(sopt, mtod(m, caddr_t), sopt->sopt_valsize,
 		    sopt->sopt_valsize);
