@@ -5372,10 +5372,60 @@ sctp_pool_put(struct pool *pp, void *ptr)
 
 #ifdef SCTP_MBUF_DEBUG
 
-static uint32_t sctp_mbuf_free_cnt[10] = {
+uint32_t sctp_mbuf_stats[10] = {
 	0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0
 };
+
+uint32_t sctp_mbuf_free_cnt[10] = {
+	0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0
+};
+/* index 0 is the 2k size clusters free/alloc
+ * index 1 is the 4k Size clusters free/alloc
+ * index 2 is the 9k size clusters free/alloc
+ * index 3 is the 16k size clusters free/alloc
+ * index 4 failed 2k allocs/ N/A free
+ * index 5 failed 4k allocs/ N/A free
+ * index 6 failed 9k allocs/ N/A free
+ * index 7 failed 16k allocs/ N/A free
+ * index 8 plain mbuf allocations/free
+ * index 9 General allocation free calls.
+ */
+
+
+void
+sctp_register_new_mbufs(struct mbuf *m)
+{
+	struct mbuf *at;
+	at = m;
+	while(at) {
+		sctp_mbuf_stats[9]++;
+		if(at->m_flags & M_EXT) {
+			switch(m->m_ext.ext_size) {
+			case MCLBYTES:
+				sctp_mbuf_stats[0]++;
+				break;
+			case MJUMPAGESIZE:
+				sctp_mbuf_stats[1]++;
+				break;
+			case MJUM9BYTES:
+				sctp_mbuf_stats[2]++;
+				break;
+			case MJUM16BYTES:
+				sctp_mbuf_stats[3]++;
+				break;
+			default:
+				sctp_mbuf_stats[4]++;
+				break;
+			};
+		} else {
+			sctp_mbuf_stats[8]++;
+		}
+		at = at->m_next;
+	}
+}
+
 
 struct mbuf *
 sctp_m_free(struct mbuf *m)

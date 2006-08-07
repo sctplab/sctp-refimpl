@@ -7030,7 +7030,9 @@ sctp_can_we_split_this(struct sctp_stream_queue_pending *sp,
 
 extern int sctp_mbuf_threshold_count;
 
-static int sctp_mbuf_stats[10];
+#ifdef SCTP_MBUF_DEBUG
+extern int sctp_mbuf_stats[10];
+#endif
 
 struct mbuf *
 sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header, 
@@ -7038,7 +7040,9 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 {
 	struct mbuf *m = NULL;
 	int aloc_size;
+#ifdef SCTP_MBUF_DEBUG
 	int index=0;
+#endif
 	int mbuf_threshold;
 	if (want_header) {
 		MGETHDR(m, how, type);
@@ -7057,22 +7061,32 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 	if (space_needed > (((mbuf_threshold - 1) * MLEN) + MHLEN)) {
 #if defined(__FreeBSD__) && __FreeBSD_version > 690000
 	try_again:
+#ifdef SCTP_MBUF_DEBUG
 		index = 4;
+#endif
 		if(space_needed <= MCLBYTES){ 
 			aloc_size = MCLBYTES;
+#ifdef SCTP_MBUF_DEBUG
 			sctp_mbuf_stats[0]++;
+#endif
 		} else if (space_needed <=  MJUMPAGESIZE) {
 			aloc_size = MJUMPAGESIZE;
+#ifdef SCTP_MBUF_DEBUG
 			sctp_mbuf_stats[1]++;
 			index = 5;
+#endif
 		} else if (space_needed <= MJUM9BYTES) {
 			aloc_size = MJUM9BYTES;
+#ifdef SCTP_MBUF_DEBUG
 			sctp_mbuf_stats[2]++;
 			index = 6;
+#endif
 		} else { 
 			aloc_size = MJUM16BYTES;
+#ifdef SCTP_MBUF_DEBUG
 			sctp_mbuf_stats[3]++;
 			index = 7;
+#endif
 		}
 		m_cljget(m, how, aloc_size);
 		if (m == NULL) {
@@ -7082,14 +7096,18 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 			if((aloc_size != MCLBYTES) &&
 			   (allonebuf == 0)){
 				aloc_size -= 10;
+#ifdef SCTP_MBUF_DEBUG
 				sctp_mbuf_stats[index]++;
+#endif
 				goto try_again;
 			}
 			sctp_m_freem(m);
 			return (NULL);
 		} 
 #else
+#ifdef SCTP_MBUF_DEBUG
 		sctp_mbuf_stats[0]++;
+#endif
 		MCLGET(m, how);
 		if (m == NULL) {
 			return (NULL);
@@ -7099,10 +7117,14 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 			return (NULL);
 		}
 #endif
+#ifdef SCTP_MBUF_DEBUG
 	} else {
 		sctp_mbuf_stats[8]++;
+#endif
 	}
+#ifdef SCTP_MBUF_DEBUG
 	sctp_mbuf_stats[9]++;
+#endif
 	m->m_len = 0;
 	m->m_next = m->m_nextpkt = NULL;
 	if (want_header) {

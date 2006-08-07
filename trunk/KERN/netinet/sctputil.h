@@ -49,6 +49,7 @@ __FBSDID("$FreeBSD:$");
 #ifdef SCTP_MBUF_DEBUG
 void sctp_m_freem(struct mbuf *m);
 struct mbuf *sctp_m_free(struct mbuf *m);
+void sctp_register_new_mbufs(struct mbuf *m);
 #else
 #define sctp_m_freem m_freem
 #define sctp_m_free m_free

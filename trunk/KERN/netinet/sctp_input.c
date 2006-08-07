@@ -4667,6 +4667,11 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		    (uint32_t) m, iphlen, offset);
 	}
 #endif				/* SCTP_DEBUG */
+
+#ifdef SCTP_MBUF_DEBUG
+	/* Log in the mbuf chain */
+	sctp_register_new_mbufs(m);
+#endif
 	if (stcb) {
 		/* always clear this before beginning a packet */
 		stcb->asoc.authenticated = 0;
