@@ -113,9 +113,11 @@ extern struct fileops socketops;
 
 #ifdef SCTP_DEBUG
 extern uint32_t sctp_debug_on;
-
 #endif				/* SCTP_DEBUG */
 
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#define APPLE_FILE_NO 5
+#endif
 
 int
 sctp_can_peel_off(struct socket *head, sctp_assoc_t assoc_id)
@@ -213,8 +215,9 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 #ifndef SCTP_APPLE_FINE_GRAINED_LOCKING
 	}
 #else
-	} else
+	} else {
 		socket_lock(newso, 1);
+	}
 #endif
 	n_inp = (struct sctp_inpcb *)newso->so_pcb;
 	SOCK_LOCK(head);
@@ -403,8 +406,10 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 		return (error);
 	}
 	lck_mtx_assert(mutex_held, LCK_MTX_ASSERT_OWNED);
-	socket_unlock(head, 0);	/* unlock head to avoid deadlock with select,
-				 * keep a ref on head */
+	socket_unlock(head, 0);
+
+	/* unlock head to avoid deadlock with select,
+	 * keep a ref on head */
 	fflag = fp->f_flag;
 	proc_fdlock(p);
 	error = falloc_locked(p, &fp, &newfd, 1);

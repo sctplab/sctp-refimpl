@@ -123,8 +123,11 @@ __FBSDID("$FreeBSD:$");
 
 #ifdef SCTP_DEBUG
 extern uint32_t sctp_debug_on;
-
 #endif				/* SCTP_DEBUG */
+
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#define APPLE_FILE_NO 6
+#endif
 
 extern unsigned int sctp_early_fr_msec;
 
@@ -340,13 +343,14 @@ sctp_threshold_management(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		/* Abort notification sends a ULP notify */
 		struct mbuf *oper;
 
-		MGET(oper, M_DONTWAIT, MT_DATA);
+		oper = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) + sizeof(uint32_t)),
+					       0, M_DONTWAIT, 1, MT_DATA);
 		if (oper) {
 			struct sctp_paramhdr *ph;
 			uint32_t *ippp;
 
 			oper->m_len = sizeof(struct sctp_paramhdr) +
-			    sizeof(*ippp);
+			    sizeof(uint32_t);
 			ph = mtod(oper, struct sctp_paramhdr *);
 			ph->param_type = htons(SCTP_CAUSE_PROTOCOL_VIOLATION);
 			ph->param_length = htons(oper->m_len);
@@ -857,8 +861,10 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 		could_be_sent->sent = SCTP_DATAGRAM_RESEND;
 	}
 	if (stcb->asoc.sent_queue_retran_cnt != cnt_mk) {
+#ifdef INVARIENTS
 		printf("Local Audit says there are %d for retran asoc cnt:%d\n",
 		    cnt_mk, stcb->asoc.sent_queue_retran_cnt);
+#endif
 #ifndef SCTP_AUDITING_ENABLED
 		stcb->asoc.sent_queue_retran_cnt = cnt_mk;
 #endif
@@ -1212,13 +1218,14 @@ sctp_cookie_timer(struct sctp_inpcb *inp,
 			/* FOOBAR! */
 			struct mbuf *oper;
 
-			MGET(oper, M_DONTWAIT, MT_DATA);
+			oper = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) + sizeof(uint32_t)),
+						       0, M_DONTWAIT, 1, MT_DATA);
 			if (oper) {
 				struct sctp_paramhdr *ph;
 				uint32_t *ippp;
 
 				oper->m_len = sizeof(struct sctp_paramhdr) +
-				    sizeof(*ippp);
+				    sizeof(uint32_t);
 				ph = mtod(oper, struct sctp_paramhdr *);
 				ph->param_type = htons(SCTP_CAUSE_PROTOCOL_VIOLATION);
 				ph->param_length = htons(oper->m_len);
@@ -1924,7 +1931,9 @@ select_a_new_ep:
 		 * we lie here, it really needs to have its own type but
 		 * first I must verify that this won't effect things :-0
 		 */
-		sctp_chunk_output(it->inp, it->stcb, SCTP_OUTPUT_FROM_T3);
+		if(it->no_chunk_output == 0)
+			sctp_chunk_output(it->inp, it->stcb, SCTP_OUTPUT_FROM_T3);
+		
 		SCTP_TCB_UNLOCK(it->stcb);
 	next_assoc:
 		it->stcb = LIST_NEXT(it->stcb, sctp_tcblist);
