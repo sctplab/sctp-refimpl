@@ -242,6 +242,7 @@ struct sctp_epinfo {
 	lck_rw_t *ipi_ep_mtx;
 	lck_mtx_t *it_mtx;
 	lck_mtx_t *ipi_count_mtx;
+	lck_mtx_t *logging_mtx;
 #else
 	void *mtx_grp_attr;
 	void *mtx_grp;
@@ -249,6 +250,7 @@ struct sctp_epinfo {
 	void *ipi_ep_mtx;
 	void *it_mtx;
 	void *ipi_count_mtx;
+	void *logging_mtx;
 #endif				/* _KERN_LOCKS_H_ */
 #endif
 	uint32_t ipi_count_ep;
@@ -371,6 +373,11 @@ struct sctp_inpcb {
 		        ~SCTP_ALIGNM1];
 	}     ip_inp;
 
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	/* leave some space in case i386 inpcb is bigger than ppc */
+	uint8_t		padding[128];
+#endif
+
 	/* Socket buffer lock protects read_queue and of course sb_cc */
 	struct sctp_readhead read_queue;
 
@@ -427,6 +434,23 @@ struct sctp_inpcb {
 #endif
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	int32_t refcount;
+
+	uint32_t lock_caller1;
+	uint32_t lock_caller2;
+	uint32_t lock_caller3;
+	uint32_t unlock_caller1;
+	uint32_t unlock_caller2;
+	uint32_t unlock_caller3;
+	uint32_t getlock_caller1;
+	uint32_t getlock_caller2;
+	uint32_t getlock_caller3;
+	uint32_t gen_count;
+	uint32_t lock_gen_count;
+	uint32_t unlock_gen_count;
+	uint32_t getlock_gen_count;
+
+	uint32_t i_am_here_file;
+	uint32_t i_am_here_line;
 #endif
 };
 
@@ -547,10 +571,6 @@ struct sctp_tcb {
 
 #define SCTP_IPI_ADDR_UNLOCK()		mtx_unlock(&sctppcbinfo.ipi_addr_mtx)
 
-
-
-
-
 #define SCTP_INP_INFO_RUNLOCK()		mtx_unlock(&sctppcbinfo.ipi_ep_mtx)
 #define SCTP_INP_INFO_WUNLOCK()		mtx_unlock(&sctppcbinfo.ipi_ep_mtx)
 
@@ -655,12 +675,12 @@ struct sctp_tcb {
 
 
 #ifdef INVARIANTS
-#define STCB_TCB_LOCK_ASSERT(_tcb) do { \
+#define SCTP_TCB_LOCK_ASSERT(_tcb) do { \
                             if (mtx_owned(&(_tcb)->tcb_mtx) == 0) \
                                 panic("Don't own TCB lock"); \
                             } while (0)
 #else
-#define STCB_TCB_LOCK_ASSERT(_tcb)
+#define SCTP_TCB_LOCK_ASSERT(_tcb)
 #endif
 
 #define SCTP_ITERATOR_LOCK_INIT() \
@@ -714,10 +734,14 @@ struct sctp_tcb {
 #define SCTP_IPI_ADDR_UNLOCK()
 
 
-#define SCTP_STATLOG_INIT_LOCK()
-#define SCTP_STATLOG_LOCK() 
-#define SCTP_STATLOG_UNLOCK()
-#define SCTP_STATLOG_DESTROY()
+#define SCTP_STATLOG_INIT_LOCK() \
+	sctppcbinfo.logging_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
+#define SCTP_STATLOG_LOCK() \
+	lck_mtx_lock(sctppcbinfo.logging_mtx)
+#define SCTP_STATLOG_UNLOCK() \
+	lck_mtx_unlock(sctppcbinfo.logging_mtx)
+#define SCTP_STATLOG_DESTROY() \
+	lck_mtx_free(sctppcbinfo.logging_mtx, SCTP_MTX_GRP)
 
 
 /* Lock for INP */
@@ -743,7 +767,7 @@ struct sctp_tcb {
 #define SCTP_TCB_TRYLOCK(_tcb)
 #define SCTP_TCB_UNLOCK(_tcb)
 #define SCTP_TCB_UNLOCK_IFOWNED(_tcb)
-#define STCB_TCB_LOCK_ASSERT(_tcb)
+#define SCTP_TCB_LOCK_ASSERT(_tcb)
 
 /* iterator locks */
 #define SCTP_ITERATOR_LOCK_INIT() \
@@ -803,7 +827,7 @@ struct sctp_tcb {
 #define SCTP_TCB_TRYLOCK(_tcb)
 #define SCTP_TCB_UNLOCK(_tcb)
 #define SCTP_TCB_UNLOCK_IFOWNED(_tcb)
-#define STCB_TCB_LOCK_ASSERT(_tcb)
+#define SCTP_TCB_LOCK_ASSERT(_tcb)
 
 
 /* socket locks that are not here in other than 5.3 > FreeBSD */
@@ -903,6 +927,29 @@ struct sctp_tcb {
                 do { \
 			printf("%s:%d at %s\n", __FILE__, __LINE__ , __FUNCTION__); \
 		} while (0)
+
+#define SAVE_I_AM_HERE(_inp) \
+                do { \
+			(_inp)->i_am_here_file = APPLE_FILE_NO; \
+			(_inp)->i_am_here_line = __LINE__; \
+		} while (0)
+
+/* save caller pc and caller's caller pc */
+#if defined (__i386__)
+#define SAVE_CALLERS(a, b, c) { \
+        unsigned int ebp = 0; \
+        unsigned int prev_ebp = 0; \
+        asm("movl %%ebp, %0;" : "=r"(ebp)); \
+        a = *(unsigned int *)(*(unsigned int *)ebp + 4) - 4; \
+        prev_ebp = *(unsigned int *)(*(unsigned int *)ebp); \
+        b = *(unsigned int *)((char *)prev_ebp + 4) - 4; \
+        prev_ebp = *(unsigned int *)prev_ebp; \
+        c = *(unsigned int *)((char *)prev_ebp + 4) - 4; \
+}
+#else
+#define SAVE_CALLERS(caller1, caller2, caller3)
+#endif
+
 #define SCTP_INCRS_DEFINED 1
 #define SCTP_INCR_EP_COUNT() \
                 do { \
@@ -1200,7 +1247,7 @@ int sctp_destination_is_reachable(struct sctp_tcb *, struct sockaddr *);
  */
 int
 sctp_initiate_iterator(inp_func inpf, asoc_func af, uint32_t, uint32_t,
-    uint32_t, void *, uint32_t, end_func ef, struct sctp_inpcb *);
+    uint32_t, void *, uint32_t, end_func ef, struct sctp_inpcb *, uint8_t co_off);
 
 #if defined(__APPLE__)
 void sctp_callout_alloc(struct sctp_timer *);

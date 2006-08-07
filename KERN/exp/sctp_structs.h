@@ -147,6 +147,7 @@ struct sctp_iterator {
 	uint32_t pcb_features;		/* endpoint features being checked */
 	uint32_t asoc_state;		/* assoc state being checked */
 	uint32_t iterator_flags;
+	uint8_t  no_chunk_output;
 };
 /* iterator_flags values */
 #define SCTP_ITERATOR_DO_ALL_INP	0x00000001
@@ -514,7 +515,6 @@ struct sctp_association {
 	 * to the stream to go get data from.
 	 */
 	struct sctp_stream_out *locked_on_sending;
-
 
 	/* If an iterator is looking at me, this is it */
 	struct sctp_iterator *stcb_starting_point_for_iterator;

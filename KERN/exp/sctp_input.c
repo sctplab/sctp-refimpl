@@ -126,7 +126,10 @@ __FBSDID("$FreeBSD:$");
 
 #ifdef SCTP_DEBUG
 extern uint32_t sctp_debug_on;
+#endif
 
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#define APPLE_FILE_NO 2
 #endif
 
 static void
@@ -134,7 +137,7 @@ sctp_stop_all_cookie_timers(struct sctp_tcb *stcb)
 {
 	struct sctp_nets *net;
 
-	STCB_TCB_LOCK_ASSERT(stcb);
+	SCTP_TCB_LOCK_ASSERT(stcb);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
 #endif
@@ -1160,7 +1163,8 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			printf("sctp_handle_cookie: got a cookie, while shutting down!\n");
 		}
 #endif
-		MGETHDR(op_err, M_DONTWAIT, MT_HEADER);
+		op_err = sctp_get_mbuf_for_msg(sizeof(struct sctp_paramhdr),
+					       1, M_DONTWAIT, 1, MT_DATA);
 		if (op_err == NULL) {
 			/* FOOBAR */
 			return (NULL);
@@ -2102,7 +2106,8 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			printf("sctp_handle_cookie: got a STALE cookie!\n");
 		}
 #endif
-		MGETHDR(op_err, M_DONTWAIT, MT_HEADER);
+		op_err = sctp_get_mbuf_for_msg(sizeof(struct sctp_stale_cookie_msg),
+					       1, M_DONTWAIT, 1, MT_DATA);
 		if (op_err == NULL) {
 			/* FOOBAR */
 			return (NULL);
@@ -3297,21 +3302,16 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_out_req
 	chk->asoc = &stcb->asoc;
 	chk->no_fr_allowed = 0;
 	chk->book_size = chk->send_size = sizeof(struct sctp_chunkhdr);
-	MGETHDR(chk->data, M_DONTWAIT, MT_DATA);
+	chk->data = sctp_get_mbuf_for_msg(MCLBYTES, 1, M_DONTWAIT, 1, MT_DATA);
 	if (chk->data == NULL) {
-strres_jump_out:
+	strres_nochunk:
+		if(chk->data) {
+			sctp_m_freem(chk->data);
+			chk->data = NULL;
+		}
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
 		SCTP_DECR_CHK_COUNT();
 		return (ret_code);
-	}
-	/* Get a cluster, always */
-	MCLGET(chk->data, M_DONTWAIT);
-	if ((chk->data->m_flags & M_EXT) == 0) {
-		/* Give up */
-strres_nochunk:
-		sctp_m_freem(chk->data);
-		chk->data = NULL;
-		goto strres_jump_out;
 	}
 	chk->data->m_data += SCTP_MIN_OVERHEAD;
 
@@ -3932,17 +3932,16 @@ process_control_chunks:
 				struct sctp_paramhdr *phdr;
 
 				oper = NULL;
-				MGETHDR(oper, M_DONTWAIT, MT_HEADER);
+				oper = sctp_get_mbuf_for_msg(sizeof(struct sctp_paramhdr),
+							     1, M_DONTWAIT, 1, MT_DATA);
 				if (oper) {
 					/* pre-reserve some space */
-					oper->m_data +=
-					    sizeof(struct sctp_chunkhdr);
-					phdr =
-					    mtod(oper, struct sctp_paramhdr *);
-					phdr->param_type =
-					    htons(SCTP_CAUSE_OUT_OF_RESC);
-					phdr->param_length =
-					    htons(sizeof(struct sctp_paramhdr));
+					oper->m_data += sizeof(struct sctp_chunkhdr);
+					oper->m_len = sizeof(struct sctp_paramhdr);
+					oper->m_pkthdr.len = oper->m_len;
+					phdr = mtod(oper, struct sctp_paramhdr *);
+					phdr->param_type = htons(SCTP_CAUSE_OUT_OF_RESC);
+					phdr->param_length = htons(sizeof(struct sctp_paramhdr));
 					sctp_queue_op_err(stcb, oper);
 				}
 				if (locked_tcb)
@@ -4225,7 +4224,8 @@ process_control_chunks:
 
 					if (sctp_abort_if_one_2_one_hits_limit) {
 						oper = NULL;
-						MGETHDR(oper, M_DONTWAIT, MT_HEADER);
+						oper = sctp_get_mbuf_for_msg(sizeof(struct sctp_paramhdr),
+									     1, M_DONTWAIT, 1, MT_DATA);
 						if (oper) {
 							oper->m_len =
 							    oper->m_pkthdr.len =
@@ -4504,7 +4504,8 @@ process_control_chunks:
 				struct mbuf *mm;
 				struct sctp_paramhdr *phd;
 
-				MGETHDR(mm, M_DONTWAIT, MT_HEADER);
+				mm = sctp_get_mbuf_for_msg(sizeof(struct sctp_paramhdr),
+							   1, M_DONTWAIT, 1, MT_DATA);
 				if (mm) {
 					phd = mtod(mm, struct sctp_paramhdr *);
 					/*
@@ -4514,18 +4515,13 @@ process_control_chunks:
 					 * same basic format with different
 					 * names.
 					 */
-					phd->param_type =
-					    htons(SCTP_CAUSE_UNRECOG_CHUNK);
-					phd->param_length =
-					    htons(chk_length + sizeof(*phd));
+					phd->param_type =  htons(SCTP_CAUSE_UNRECOG_CHUNK);
+					phd->param_length = htons(chk_length + sizeof(*phd));
 					mm->m_len = sizeof(*phd);
-					mm->m_next = sctp_m_copym(m, *offset,
-					    SCTP_SIZE32(chk_length),
+					mm->m_next = sctp_m_copym(m, *offset, SCTP_SIZE32(chk_length),
 					    M_DONTWAIT);
 					if (mm->m_next) {
-						mm->m_pkthdr.len =
-						    SCTP_SIZE32(chk_length) +
-						    sizeof(*phd);
+						mm->m_pkthdr.len = SCTP_SIZE32(chk_length) + sizeof(*phd);
 						sctp_queue_op_err(stcb, mm);
 					} else {
 						sctp_m_freem(mm);
@@ -5051,6 +5047,9 @@ sctp_input(m, va_alist)
 #endif
 			} else if ((inp != NULL) && (stcb == NULL)) {
 				refcount_up = 1;
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+				socket_unlock(inp->ip_inp.inp.inp_socket, 1);
+#endif
 			}
 			SCTP_STAT_INCR(sctps_badsum);
 			goto bad;
