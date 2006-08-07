@@ -2708,7 +2708,7 @@ sctp_add_pad_tombuf(struct mbuf *m, int padlen)
 		/* Hard way we must grow the mbuf */
 		struct mbuf *tmp;
 
-		MGET(tmp, M_DONTWAIT, MT_DATA);
+		tmp = sctp_get_mbuf_for_msg(padlen, 0, M_DONTWAIT, 1, MT_DATA);
 		if (tmp == NULL) {
 			/* Out of space GAK! we are in big trouble. */
 			return (ENOSPC);
@@ -2788,7 +2788,7 @@ sctp_notify_assoc_change(uint32_t event, struct sctp_tcb *stcb,
 		return;
 	}
 
-	MGETHDR(m_notify, M_DONTWAIT, MT_DATA);
+	m_notify = sctp_get_mbuf_for_msg(sizeof(struct sctp_assoc_change), 1, M_DONTWAIT, 1, MT_DATA);
 	if (m_notify == NULL)
 		/* no space left */
 		return;
@@ -2841,16 +2841,10 @@ sctp_notify_peer_addr_change(struct sctp_tcb *stcb, uint32_t state,
 		/* event not enabled */
 		return;
 
-	MGETHDR(m_notify, M_DONTWAIT, MT_DATA);
+	m_notify = sctp_get_mbuf_for_msg(sizeof(struct sctp_paddr_change), 1, M_DONTWAIT, 1, MT_DATA);
 	if (m_notify == NULL)
 		return;
 	m_notify->m_len = 0;
-
-	MCLGET(m_notify, M_DONTWAIT);
-	if ((m_notify->m_flags & M_EXT) != M_EXT) {
-		sctp_m_freem(m_notify);
-		return;
-	}
 	spc = mtod(m_notify, struct sctp_paddr_change *);
 	spc->spc_type = SCTP_PEER_ADDR_CHANGE;
 	spc->spc_flags = 0;
@@ -2902,7 +2896,7 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, uint32_t error,
 		return;
 
 	length = sizeof(struct sctp_send_failed) + chk->send_size;
-	MGETHDR(m_notify, M_DONTWAIT, MT_DATA);
+	m_notify = sctp_get_mbuf_for_msg(sizeof(struct sctp_send_failed), 1, M_DONTWAIT, 1, MT_DATA);
 	if (m_notify == NULL)
 		/* no space left */
 		return;
@@ -2969,7 +2963,7 @@ sctp_notify_send_failed2(struct sctp_tcb *stcb, uint32_t error,
 		return;
 
 	length = sizeof(struct sctp_send_failed) + sp->length;
-	MGETHDR(m_notify, M_DONTWAIT, MT_DATA);
+	m_notify = sctp_get_mbuf_for_msg(sizeof(struct sctp_adaption_event), 1, M_DONTWAIT, 1, MT_DATA);
 	if (m_notify == NULL)
 		/* no space left */
 		return;
@@ -3035,7 +3029,7 @@ sctp_notify_adaptation_layer(struct sctp_tcb *stcb,
 		/* event not enabled */
 		return;
 
-	MGETHDR(m_notify, M_DONTWAIT, MT_DATA);
+	m_notify = sctp_get_mbuf_for_msg(sizeof(struct sctp_adaption_event), 1, M_DONTWAIT, 1, MT_DATA);
 	if (m_notify == NULL)
 		/* no space left */
 		return;
@@ -3082,7 +3076,7 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
 		/* event not enabled */
 		return;
 
-	MGETHDR(m_notify, M_DONTWAIT, MT_DATA);
+	m_notify = sctp_get_mbuf_for_msg(sizeof(struct sctp_pdapi_event), 1, M_DONTWAIT, 1, MT_DATA);
 	if (m_notify == NULL)
 		/* no space left */
 		return;
@@ -3169,7 +3163,7 @@ sctp_notify_shutdown_event(struct sctp_tcb *stcb)
 		/* event not enabled */
 		return;
 
-	MGETHDR(m_notify, M_DONTWAIT, MT_DATA);
+	m_notify = sctp_get_mbuf_for_msg(sizeof(struct sctp_shutdown_event), 1, M_DONTWAIT, 1, MT_DATA);
 	if (m_notify == NULL)
 		/* no space left */
 		return;
@@ -3216,19 +3210,12 @@ sctp_notify_stream_reset(struct sctp_tcb *stcb,
 		/* event not enabled */
 		return;
 
-	MGETHDR(m_notify, M_DONTWAIT, MT_DATA);
+	m_notify = sctp_get_mbuf_for_msg(MCLBYTES, 1, M_DONTWAIT, 1, MT_DATA);
 	if (m_notify == NULL)
 		/* no space left */
 		return;
 	m_notify->m_len = 0;
 	len = sizeof(struct sctp_stream_reset_event) + (number_entries * sizeof(uint16_t));
-	if (len > M_TRAILINGSPACE(m_notify)) {
-		MCLGET(m_notify, M_DONTWAIT);
-	}
-	if (m_notify == NULL)
-		/* no clusters */
-		return;
-
 	if (len > M_TRAILINGSPACE(m_notify)) {
 		/* never enough room */
 		sctp_m_freem(m_notify);
@@ -4045,7 +4032,7 @@ sctp_generate_invmanparam(int err)
 	/* Return a MBUF with a invalid mandatory parameter */
 	struct mbuf *m;
 
-	MGET(m, M_DONTWAIT, MT_DATA);
+	m = sctp_get_mbuf_for_msg(sizeof(struct sctp_paramhdr), 0, M_DONTWAIT, 1, MT_DATA);
 	if (m) {
 		struct sctp_paramhdr *ph;
 
@@ -5258,16 +5245,9 @@ sctp_soreceive(so, paddr, uio, mp0, controlp, flagsp)
 		*controlp = sctp_build_ctl_nchunk(inp, (struct sctp_sndrcvinfo *)&sinfo);
 	}
 	if (paddr) {
-		MGET(maddr, M_DONTWAIT, MT_SONAME);
+		maddr = sctp_get_mbuf_for_msg(fromlen, 0, M_DONTWAIT, 1, MT_SONAME);
 		if (maddr == 0) {
 			return (ENOMEM);
-		}
-		if (fromlen > MLEN) {
-			MEXTMALLOC(maddr, fromlen, M_NOWAIT);
-			if ((maddr->m_flags & M_EXT) == 0) {
-				sctp_m_free(maddr);
-				return (ENOMEM);
-			}
 		}
 		maddr->m_len = fromlen;
 		memcpy(mtod(maddr, caddr_t), (caddr_t)from, fromlen);

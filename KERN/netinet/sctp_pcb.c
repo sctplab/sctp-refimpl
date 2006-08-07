@@ -2799,14 +2799,15 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 				/* Left with Data unread */
 				struct mbuf *op_err;
 
-				MGET(op_err, M_DONTWAIT, MT_DATA);
+				op_err = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) + sizeof(uint32_t)),
+							       0, M_DONTWAIT, 1, MT_DATA);
 				if (op_err) {
 					/* Fill in the user initiated abort */
 					struct sctp_paramhdr *ph;
 					uint32_t *ippp;
 
 					op_err->m_len =
-					    sizeof(struct sctp_paramhdr) + sizeof(*ippp);
+					    sizeof(struct sctp_paramhdr) + sizeof(uint32_t);
 					ph = mtod(op_err,
 					    struct sctp_paramhdr *);
 					ph->param_type = htons(
@@ -2873,14 +2874,15 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 				    (asoc->asoc.state & SCTP_STATE_PARTIAL_MSG_LEFT)) {
 					struct mbuf *op_err;
 				abort_anyway:
-					MGET(op_err, M_DONTWAIT, MT_DATA);
+					op_err = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) + sizeof(uint32_t)),
+								       0, M_DONTWAIT, 1, MT_DATA);
 					if (op_err) {
 						/* Fill in the user initiated abort */
 						struct sctp_paramhdr *ph;
 						uint32_t *ippp;
 						op_err->m_len =
 							(sizeof(struct sctp_paramhdr) +
-							 sizeof(*ippp));
+							 sizeof(uint32_t));
 						ph = mtod(op_err,
 							  struct sctp_paramhdr *);
 						ph->param_type = htons(
@@ -2964,13 +2966,14 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		    ((asoc->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) == 0)){
 			struct mbuf *op_err;
 			uint32_t *ippp;
-			MGET(op_err, M_DONTWAIT, MT_DATA);
+			op_err = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) + sizeof(uint32_t)),
+						       0, M_DONTWAIT, 1, MT_DATA);
 			if (op_err) {
 				/* Fill in the user initiated abort */
 				struct sctp_paramhdr *ph;
 
 				op_err->m_len = (sizeof(struct sctp_paramhdr) +
-						 sizeof(*ippp));
+						 sizeof(uint32_t));
 				ph = mtod(op_err, struct sctp_paramhdr *);
 				ph->param_type = htons(
 				    SCTP_CAUSE_USER_INITIATED_ABT);
