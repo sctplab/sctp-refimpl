@@ -2961,7 +2961,13 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 			continue;
 		}
 		/* Free associations that are NOT killing us */
+		if (locked_so) {
+			SOCK_UNLOCK(so);
+		}
 		SCTP_TCB_LOCK(asoc);
+		if (locked_so) {
+			SOCK_LOCK(so);
+		}
 		if ((SCTP_GET_STATE(&asoc->asoc) != SCTP_STATE_COOKIE_WAIT) &&
 		    ((asoc->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) == 0)){
 			struct mbuf *op_err;
@@ -2983,6 +2989,10 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 
 			}
 			sctp_send_abort_tcb(asoc, op_err);
+		} else if (asoc->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+			cnt++;
+			SCTP_TCB_UNLOCK(asoc);
+			continue;
 		}
 		sctp_free_assoc(inp, asoc, 2);
 	}
