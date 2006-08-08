@@ -11437,6 +11437,7 @@ sctp_copy_resume(struct sctp_stream_queue_pending *sp,
 		m->m_next = sctp_get_mbuf_for_msg(left, 0, M_WAIT, 0, MT_DATA);
 		if (m->m_next == NULL) {
 			sctp_m_freem(head);
+			*new_tail = NULL;
 			*error = ENOMEM;
 			return(NULL);
 		}
@@ -11447,6 +11448,8 @@ sctp_copy_resume(struct sctp_stream_queue_pending *sp,
 		*error = uiomove(mtod(m, caddr_t), willcpy, uio);
 		if (*error) {
 			sctp_m_freem(head);
+			*new_tail = NULL;
+			*error = EFAULT;
 			return (NULL);
 		}
 		m->m_len = willcpy;
@@ -12248,6 +12251,7 @@ sctp_lower_sosend(struct socket *so,
 					/* tack it to the end */
 					sp->tail_mbuf->m_next = mm;
 					sp->tail_mbuf = new_tail;
+					sp->data->m_pkthdr.len += sndout;
 				} else {
 					/* A stolen mbuf */
 					sp->data = mm;
