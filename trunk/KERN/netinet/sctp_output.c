@@ -11691,6 +11691,16 @@ sctp_sosend(struct socket *so,
 	return (error);
 }
 
+uint32_t sctp_output_track[32] = {
+	0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0,
+	0, 0
+};
+
 int
 sctp_lower_sosend(struct socket *so,
     struct sockaddr *addr,
@@ -12175,7 +12185,7 @@ sctp_lower_sosend(struct socket *so,
 		struct sctp_stream_out *strm;
 		uint32_t sndout, initial_out;
 		int user_marks_eor;
-
+		sctp_output_track[0]++;
 		if(uio->uio_resid == 0) {
 			if(srcv->sinfo_flags & SCTP_EOF) {
 				got_all_of_the_send = 1;
@@ -12195,16 +12205,20 @@ sctp_lower_sosend(struct socket *so,
 		strm = &stcb->asoc.strmout[srcv->sinfo_stream];
 		user_marks_eor = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXPLICIT_EOR);
 		if(strm->last_msg_incomplete == 0) {
+			sctp_output_track[1]++;
 			sp = sctp_copy_it_in(stcb, asoc, srcv, uio, net, max_len, user_marks_eor, &error, non_blocking);
 			if ((sp == NULL) || (error)) {
 				goto out;
 			}
 			SCTP_TCB_LOCK(stcb);
 			if(sp->msg_is_complete) {
+				sctp_output_track[2]++;
 				strm->last_msg_incomplete = 0;
 			} else {
+				sctp_output_track[3]++;
 				strm->last_msg_incomplete = 1;
 			}
+			sctp_output_track[4]++;
 			sctp_snd_sb_alloc(stcb, sp->length);
 
 			asoc->stream_queue_cnt++;
@@ -12241,11 +12255,13 @@ sctp_lower_sosend(struct socket *so,
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 				socket_unlock(stcb->sctp_socket, 0);
 #endif
+				sctp_output_track[5]++;
 				mm = sctp_copy_resume(sp, uio, srcv, max_len, user_marks_eor, &error, &sndout, &new_tail);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 				socket_lock(stcb->sctp_socket, 0);
 #endif
 				if ((mm == NULL) || error) {
+					sctp_output_track[6]++;
 					goto out;
 				}
 				/* Update the mbuf and count */
@@ -12253,17 +12269,17 @@ sctp_lower_sosend(struct socket *so,
 				hold_tcblock = 1;
 				if(sp->tail_mbuf) {
 					/* tack it to the end */
+					sctp_output_track[7]++;
 					sp->tail_mbuf->m_next = mm;
 					sp->tail_mbuf = new_tail;
-					sp->data->m_pkthdr.len += sndout;
 				} else {
 					/* A stolen mbuf */
+					sctp_output_track[8]++;
 					sp->data = mm;
 					sp->tail_mbuf = new_tail;
-					mm->m_pkthdr.len = sndout;
 				}
 				sctp_snd_sb_alloc(stcb, sndout);
-
+				sctp_output_track[9]++;
 				sp->length += sndout;
 				len += sndout;
 				/* Did we reach EOR? */
@@ -12271,17 +12287,21 @@ sctp_lower_sosend(struct socket *so,
 				    ((user_marks_eor == 0) || 
 				     (user_marks_eor && (srcv->sinfo_flags & SCTP_EOR)))
 					){
+					sctp_output_track[10]++;
 					sp->msg_is_complete = 1;
 				} else {
+					sctp_output_track[11]++;
 					sp->msg_is_complete = 0;
 				}
 				if(sp->data->m_flags & M_PKTHDR) {
 					/* update length */
+					sctp_output_track[12]++;
 					sp->data->m_pkthdr.len = sp->length;
 				}
 			}
 			if(uio->uio_resid == 0) {
 				/* got it all? */
+				sctp_output_track[13]++;
 				continue;
 			}
 			/* PR-SCTP? */
@@ -12303,6 +12323,7 @@ sctp_lower_sosend(struct socket *so,
 			/* wait for space now */
 			if (non_blocking) {
 				/* Non-blocking io in place out */
+				sctp_output_track[14]++;
 				goto skip_out_eof;
 			}
 			un_sent = ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight) +
@@ -12343,6 +12364,7 @@ sctp_lower_sosend(struct socket *so,
 					SCTP_TCB_LOCK(stcb);
 					hold_tcblock = 1;
 				}
+				sctp_output_track[15]++;
 				sctp_send_initiate(inp, stcb);
 				queue_only_for_init = 0;
 				queue_only = 1;
@@ -12356,6 +12378,7 @@ sctp_lower_sosend(struct socket *so,
 					SCTP_TCB_LOCK(stcb);
 					hold_tcblock = 1;
 				}
+				sctp_output_track[16]++;
 				sctp_chunk_output(inp, 
 						  stcb, 
 						  SCTP_OUTPUT_FROM_USR_SEND);
@@ -12391,6 +12414,7 @@ sctp_lower_sosend(struct socket *so,
 #if defined (__NetBSD__)
 				sbunlock(&so->so_snd);
 #endif
+				sctp_output_track[17]++;
 				error = sbwait(&so->so_snd);
 				stcb->block_entry = NULL;
 
@@ -12411,16 +12435,19 @@ sctp_lower_sosend(struct socket *so,
 #endif
 			}
 			SOCKBUF_UNLOCK(&so->so_snd);
+			sctp_output_track[18]++;
 		}
 		if (hold_tcblock == 0) {
 			SCTP_TCB_LOCK(stcb);
 			hold_tcblock = 1;
 		}
 		if(sp->msg_is_complete == 0) {
+			sctp_output_track[19]++;
 			strm->last_msg_incomplete = 1;
 			asoc->stream_locked = 1;
 			asoc->stream_locked_on  = srcv->sinfo_stream;
 		} else {
+			sctp_output_track[20]++;
 			strm->last_msg_incomplete = 0;
 		}
 		if(uio->uio_resid == 0) {
@@ -12432,10 +12459,12 @@ sctp_lower_sosend(struct socket *so,
 		top = NULL;
 	}
 	if (error) {
+		sctp_output_track[21]++;
 		goto out;
 	}
 
  dataless_eof:
+	sctp_output_track[22]++;
 	/* EOF thing ? */
 	if ((srcv->sinfo_flags & SCTP_EOF) &&
 	    (got_all_of_the_send == 1) &&
@@ -12518,6 +12547,7 @@ sctp_lower_sosend(struct socket *so,
 		}
 	}	
  skip_out_eof:
+	sctp_output_track[23]++;
 	if (!TAILQ_EMPTY(&stcb->asoc.control_send_queue)) {
 		some_on_control = 1;
 	}
@@ -12575,6 +12605,7 @@ sctp_lower_sosend(struct socket *so,
 			hold_tcblock = 1;
 			SCTP_TCB_LOCK(stcb);
 		}
+		sctp_output_track[24]++;
 		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_USR_SEND);
 		splx(s);
 	} else if ((queue_only == 0) &&
@@ -12588,6 +12619,7 @@ sctp_lower_sosend(struct socket *so,
 			hold_tcblock = 1;
 			SCTP_TCB_LOCK(stcb);
 		}
+		sctp_output_track[25]++;
 		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_USR_SEND);
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
@@ -12603,6 +12635,7 @@ sctp_lower_sosend(struct socket *so,
 			hold_tcblock = 1;
 			SCTP_TCB_LOCK(stcb);
 		}
+		sctp_output_track[26]++;
 		sctp_med_chunk_output(inp, stcb, &stcb->asoc, &num_out,
 				      &reason, 1, &cwnd_full, 1, &now, &now_filled);
 #if defined(__NetBSD__) || defined(__OpenBSD__)
