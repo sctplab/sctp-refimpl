@@ -7133,7 +7133,9 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 	return (m);
 }
 
-
+static uint32_t sctp_track_move[5] = {
+	0, 0, 0, 0, 0
+};
 
 static int
 sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
@@ -7221,24 +7223,29 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	sctp_snd_sb_alloc(stcb, sizeof(struct sctp_data_chunk));
 	if (to_move >= sp->length) {
 		/* we can steal the whole thing */
+		sctp_track_move[0]++;
 		chk->data = sp->data;
 		chk->last_mbuf = sp->tail_mbuf;
 		sp->data = sp->tail_mbuf = NULL;
 	} else {
 		struct mbuf *m;
+		sctp_track_move[1]++;
 		chk->data = m_copym(sp->data, 0, to_move, M_DONTWAIT);
 		chk->last_mbuf = NULL;
 		if(chk->data == NULL) {
+			sctp_track_move[2]++;
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
 			SCTP_DECR_CHK_COUNT();
 			goto out_gu;
 		}
 		/* Pull off the data */
+		sctp_track_move[3]++;
 		m_adj(sp->data, to_move);
 		/* Now lets work our way down and compact it 
 		 */
 		m = sp->data;
 		while(m && (m->m_len == 0)) {
+			sctp_track_move[4]++;
 			sp->data  = m->m_next;
 			m->m_next = NULL;
 			if(sp->tail_mbuf == m) {
@@ -7246,10 +7253,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 				sp->tail_mbuf = sp->data;
 			}
 			sctp_m_free(m);
-			if(sp->data->m_next)
-				m = sp->data;
-			else
-				m = NULL;
+			m = sp->data;
 		}
 	}
 	if(to_move > sp->length) {
