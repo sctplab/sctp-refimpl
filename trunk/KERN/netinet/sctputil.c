@@ -5401,13 +5401,8 @@ sctp_pool_put(struct pool *pp, void *ptr)
 
 #endif
 
+
 #ifdef SCTP_MBUF_DEBUG
-
-uint32_t sctp_mbuf_stats[10] = {
-	0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0
-};
-
 uint32_t sctp_mbuf_free_cnt[10] = {
 	0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0
