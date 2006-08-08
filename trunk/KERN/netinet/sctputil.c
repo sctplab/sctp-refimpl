@@ -5419,6 +5419,7 @@ uint32_t sctp_mbuf_free_cnt[10] = {
  * index 9 General allocation free calls.
  */
 
+extern uint32_t sctp_mbuf_stats[10];
 
 void
 sctp_register_new_mbufs(struct mbuf *m)
