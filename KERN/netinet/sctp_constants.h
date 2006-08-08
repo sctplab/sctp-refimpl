@@ -181,6 +181,16 @@ __FBSDID("$FreeBSD:$");
  */
 #define SCTP_RWND_HIWAT_SHIFT 3
 
+/* How much of the rwnd must the 
+ * message be taking up to start partial delivery.
+ * We calculate this by shifing the hi_water (recv_win)
+ * left the following .. set to 1, when a message holds
+ * 1/2 the rwnd. If we set it to 2 when a message holds
+ * 1/4 the rwnd...etc..
+ */
+
+#define SCTP_PARTIAL_DELIVERY_SHIFT 1
+
 /* Minimum number of bytes read by user before we
  * condsider doing a rwnd update
  */
