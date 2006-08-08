@@ -36,7 +36,7 @@ echo "I will use 6.1 then, if unsure hit ctl-c else return"
 read ans
 BSD_PREPARE=freebsd_prepare
 BSD_PATH=freebsd6_1
-BSD_VER=600000
+BSD_VER=601000
 else
 echo "Unknown release sorry"
 exit
