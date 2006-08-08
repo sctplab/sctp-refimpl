@@ -12244,17 +12244,6 @@ sctp_lower_sosend(struct socket *so,
 				/* Update the mbuf and count */
 				SCTP_TCB_LOCK(stcb);
 				hold_tcblock = 1;
-				/* Did we reach EOR? */
-				if ((uio->uio_resid == 0) &&
-				    ((user_marks_eor == 0) || 
-				     (user_marks_eor && (srcv->sinfo_flags & SCTP_EOR)))
-					){
-					sp->msg_is_complete = 1;
-				} else {
-					sp->msg_is_complete = 0;
-				}
-				sctp_snd_sb_alloc(stcb, sndout);
-
 				if(sp->tail_mbuf) {
 					/* tack it to the end */
 					sp->tail_mbuf->m_next = mm;
@@ -12265,8 +12254,19 @@ sctp_lower_sosend(struct socket *so,
 					sp->tail_mbuf = new_tail;
 					mm->m_pkthdr.len = sndout;
 				}
+				sctp_snd_sb_alloc(stcb, sndout);
+
 				sp->length += sndout;
 				len += sndout;
+				/* Did we reach EOR? */
+				if ((uio->uio_resid == 0) &&
+				    ((user_marks_eor == 0) || 
+				     (user_marks_eor && (srcv->sinfo_flags & SCTP_EOR)))
+					){
+					sp->msg_is_complete = 1;
+				} else {
+					sp->msg_is_complete = 0;
+				}
 				if(sp->data->m_flags & M_PKTHDR) {
 					/* update length */
 					sp->data->m_pkthdr.len = sp->length;
