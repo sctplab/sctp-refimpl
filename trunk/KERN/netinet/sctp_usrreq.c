@@ -1055,24 +1055,26 @@ sctp_detach(struct socket *so)
 #if defined(__FreeBSD__) && __FreeBSD_version > 690000
 		return;
 #else
-		return EINVAL;
+	return EINVAL;
 #endif
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
 #else
 	s = splnet();
 #endif
-	if (((so->so_options & SO_LINGER) && (so->so_linger == 0)) ||
-	    (so->so_rcv.sb_cc > 0)) {
-		sctp_inpcb_free(inp, 1);
-	} else {
-		sctp_inpcb_free(inp, 0);
-	}
-	/* The socket is now detached, no matter what
-	 * the state of the SCTP association.
-	 */
- 	if(inp->sctp_socket) {
-		/* we don't use these ever so clear them */
+	if((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
+		SCTP_INP_WLOCK(inp);
+		inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_GONE;
+		SCTP_INP_WUNLOCK(inp);
+		if (((so->so_options & SO_LINGER) && (so->so_linger == 0)) ||
+		    (so->so_rcv.sb_cc > 0)) {
+			sctp_inpcb_free(inp, 1);
+		} else {
+			sctp_inpcb_free(inp, 0);
+		}
+		/* The socket is now detached, no matter what
+		 * the state of the SCTP association.
+		 */
 		so->so_snd.sb_cc = 0;
 		so->so_snd.sb_mb = NULL;
 		so->so_snd.sb_mbcnt = 0;
@@ -1086,7 +1088,6 @@ sctp_detach(struct socket *so)
 #if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		so->so_pcb = NULL;
 #endif
-		inp->sctp_socket = NULL;
 	}
 	splx(s);
 #if defined(__FreeBSD__) && __FreeBSD_version > 690000
