@@ -7030,17 +7030,19 @@ sctp_can_we_split_this(struct sctp_stream_queue_pending *sp,
 
 extern int sctp_mbuf_threshold_count;
 
-#ifdef SCTP_MBUF_DEBUG
-extern int sctp_mbuf_stats[10];
-#endif
+
+uint32_t sctp_mbuf_stats[10] = {
+	0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0
+};
 
 struct mbuf *
 sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header, 
 		      int how, int allonebuf, int type)
 {
 	struct mbuf *m = NULL;
+#if defined(__FreeBSD__) && __FreeBSD_version >= 601000
 	int aloc_size;
-#ifdef SCTP_MBUF_DEBUG
 	int index=0;
 #endif
 	int mbuf_threshold;
@@ -7061,32 +7063,22 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 	if (space_needed > (((mbuf_threshold - 1) * MLEN) + MHLEN)) {
 #if defined(__FreeBSD__) && __FreeBSD_version >= 601000
 	try_again:
-#ifdef SCTP_MBUF_DEBUG
 		index = 4;
-#endif
 		if(space_needed <= MCLBYTES){ 
 			aloc_size = MCLBYTES;
-#ifdef SCTP_MBUF_DEBUG
 			sctp_mbuf_stats[0]++;
-#endif
 		} else if (space_needed <=  MJUMPAGESIZE) {
 			aloc_size = MJUMPAGESIZE;
-#ifdef SCTP_MBUF_DEBUG
 			sctp_mbuf_stats[1]++;
 			index = 5;
-#endif
 		} else if (space_needed <= MJUM9BYTES) {
 			aloc_size = MJUM9BYTES;
-#ifdef SCTP_MBUF_DEBUG
 			sctp_mbuf_stats[2]++;
 			index = 6;
-#endif
 		} else { 
 			aloc_size = MJUM16BYTES;
-#ifdef SCTP_MBUF_DEBUG
 			sctp_mbuf_stats[3]++;
 			index = 7;
-#endif
 		}
 		m_cljget(m, how, aloc_size);
 		if (m == NULL) {
@@ -7096,18 +7088,14 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 			if((aloc_size != MCLBYTES) &&
 			   (allonebuf == 0)){
 				aloc_size -= 10;
-#ifdef SCTP_MBUF_DEBUG
 				sctp_mbuf_stats[index]++;
-#endif
 				goto try_again;
 			}
 			sctp_m_freem(m);
 			return (NULL);
 		} 
 #else
-#ifdef SCTP_MBUF_DEBUG
 		sctp_mbuf_stats[0]++;
-#endif
 		MCLGET(m, how);
 		if (m == NULL) {
 			return (NULL);
@@ -7117,14 +7105,10 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 			return (NULL);
 		}
 #endif
-#ifdef SCTP_MBUF_DEBUG
 	} else {
 		sctp_mbuf_stats[8]++;
-#endif
 	}
-#ifdef SCTP_MBUF_DEBUG
 	sctp_mbuf_stats[9]++;
-#endif
 	m->m_len = 0;
 	m->m_next = m->m_nextpkt = NULL;
 	if (want_header) {
@@ -7133,9 +7117,44 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 	return (m);
 }
 
-static uint32_t sctp_track_move[5] = {
-	0, 0, 0, 0, 0
+static uint32_t sctp_track_move[17] = {
+	0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0
 };
+
+static void
+sctp_register_the_mbufs(struct mbuf *m, int off)
+{
+	struct mbuf *at;
+	at = m;
+	while(at) {
+		if(at->m_flags & M_EXT) {
+			switch(m->m_ext.ext_size) {
+			case MCLBYTES:
+				sctp_track_move[(5+off)]++;
+				break;
+			case MJUMPAGESIZE:
+				sctp_track_move[(6+off)]++;
+				break;
+			case MJUM9BYTES:
+				sctp_track_move[(7+off)]++;
+				break;
+			case MJUM16BYTES:
+				sctp_track_move[(8+off)]++;
+				break;
+			default:
+				sctp_track_move[(9+off)]++;
+				break;
+			};
+		} else {
+			sctp_track_move[(10+off)]++;
+		}
+		at = at->m_next;
+	}
+}
+
+
 
 static int
 sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
@@ -7226,7 +7245,10 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		sctp_track_move[0]++;
 		chk->data = sp->data;
 		chk->last_mbuf = sp->tail_mbuf;
+		/* register the stealing */
+		sctp_register_the_mbufs(chk->data, 0);
 		sp->data = sp->tail_mbuf = NULL;
+		
 	} else {
 		struct mbuf *m;
 		sctp_track_move[1]++;
@@ -7252,6 +7274,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 				/* freeing tail */
 				sp->tail_mbuf = sp->data;
 			}
+			sctp_register_the_mbufs(m, 6);
 			sctp_m_free(m);
 			m = sp->data;
 		}
@@ -11468,7 +11491,7 @@ sctp_copy_resume(struct sctp_stream_queue_pending *sp,
 }
 
 static int
-sctp_copy_one(struct sctp_stream_queue_pending *ret, 
+sctp_copy_one(struct sctp_stream_queue_pending *sp, 
 	      struct uio *uio, 
 	      int resv_upfront)
 {
@@ -11477,7 +11500,7 @@ sctp_copy_one(struct sctp_stream_queue_pending *ret,
 	int cpsz=0;
 
 	/* First one gets a header */
-	left = ret->length;
+	left = sp->length;
 	head = m = sctp_get_mbuf_for_msg((left + resv_upfront), 1, M_WAIT, 0, MT_DATA);
 	if (m == NULL) {
 		return (ENOMEM);
@@ -11489,7 +11512,6 @@ sctp_copy_one(struct sctp_stream_queue_pending *ret,
 	m->m_data += resv_upfront;
 	cancpy = M_TRAILINGSPACE(m);
 	willcpy = min(cancpy, left);
-
 	while (left > 0) {
 		/* move in user data */
 		error = uiomove(mtod(m, caddr_t), willcpy, uio);
@@ -11514,12 +11536,12 @@ sctp_copy_one(struct sctp_stream_queue_pending *ret,
 			cancpy = M_TRAILINGSPACE(m);
 			willcpy = min(cancpy, left);
 		} else {
-			ret->tail_mbuf = m;
+			sp->tail_mbuf = m;
 			m->m_next = NULL;
 		}
 	}
-	ret->data = head;
-	ret->length = cpsz;
+	sp->data = head;
+	sp->length = cpsz;
 	return (0);
 }
 
