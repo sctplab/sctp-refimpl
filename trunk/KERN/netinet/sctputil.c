@@ -3989,6 +3989,9 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 		control->tail_mbuf = tail;
 	} else {
 		/* nothing there */
+		if(control->data != NULL) {
+			panic("This should NOT happen");
+		}
 		control->data = m;
 		control->tail_mbuf = tail;
 	}
