@@ -7059,7 +7059,7 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 
 
 	if (space_needed > (((mbuf_threshold - 1) * MLEN) + MHLEN)) {
-#if defined(__FreeBSD__) && __FreeBSD_version > 690000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 601000
 	try_again:
 #ifdef SCTP_MBUF_DEBUG
 		index = 4;
