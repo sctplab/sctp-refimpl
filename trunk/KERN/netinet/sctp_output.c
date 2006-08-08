@@ -12098,8 +12098,11 @@ sctp_lower_sosend(struct socket *so,
 			   ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) * sizeof(struct sctp_data_chunk)));
 	}
 	/* Calculate the maximum we can send */
-	max_len = so->so_snd.sb_hiwat -  stcb->asoc.total_output_queue_size;
-
+	if(so->so_snd.sb_hiwat > stcb->asoc.total_output_queue_size) {
+		max_len = so->so_snd.sb_hiwat -  stcb->asoc.total_output_queue_size;
+	} else {
+		max_len = 0;
+	}
 	/* Are we aborting? */
 	if (srcv->sinfo_flags & SCTP_ABORT) {
 		struct mbuf *mm;
@@ -12195,6 +12198,38 @@ sctp_lower_sosend(struct socket *so,
 		goto out_unlocked;
 	}
 	len = 0;
+	if (max_len == 0) {
+		/* No room right no ! */
+		SOCKBUF_LOCK(&so->so_snd);
+		if(so->so_snd.sb_hiwat <= stcb->asoc.total_output_queue_size) {
+#ifdef SCTP_BLK_LOGGING
+			sctp_log_block(SCTP_BLOCK_LOG_INTO_BLK,
+				       so, asoc, uio->uio_resid);
+#endif
+			be.error = 0;
+			stcb->block_entry = &be;
+			sctp_output_track[27]++;
+			error = sbwait(&so->so_snd);
+			stcb->block_entry = NULL;
+			if (error || so->so_error || be.error) {
+				if (error == 0) {
+					if (so->so_error)
+						error = so->so_error;
+					if (be.error) {
+						error = be.error;
+					}
+				}
+				SOCKBUF_UNLOCK(&so->so_snd);
+				goto out_unlocked;
+			}
+#ifdef SCTP_BLK_LOGGING
+			sctp_log_block(SCTP_BLOCK_LOG_OUTOF_BLK,
+				       so, asoc, stcb->asoc.total_output_queue_size);
+#endif
+		}
+		SOCKBUF_UNLOCK(&so->so_snd);		
+	}
+
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
 	SAVE_I_AM_HERE(inp);
