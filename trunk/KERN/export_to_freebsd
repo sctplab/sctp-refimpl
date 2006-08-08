@@ -1,7 +1,7 @@
 #!/bin/sh
 if test $# -lt 1 
 then
-echo "$0 version [600000 or 700000]"
+echo "$0 version [600000, 601000 or 700000]"
 exit
 fi
 
