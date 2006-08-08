@@ -11459,8 +11459,8 @@ sctp_copy_resume(struct sctp_stream_queue_pending *sp,
 		m->m_len = willcpy;
 		left -= willcpy;
 		*sndout += willcpy;
+		*new_tail = m;
 		if (left == 0) {
-			*new_tail = m;
 			m->m_next = NULL;
 		}
 	}
