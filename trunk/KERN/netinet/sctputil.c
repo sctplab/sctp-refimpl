@@ -4251,6 +4251,17 @@ sctp_m_copym(struct mbuf *m, int off, int len, int wait)
 
 #endif				/* __APPLE__ */
 
+uint32_t stat_recv_track[64] = {
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0 
+};
+
 
 static void
 sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far)
@@ -4266,6 +4277,7 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far)
 		return;
 	}
 	SCTP_INP_INCR_REF(stcb->sctp_ep);
+	stat_recv_track[0]++;
 	if((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
 	   (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
 		goto out;
@@ -4278,9 +4290,11 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far)
 
 	stcb->freed_by_sorcv_sincelast += *freed_so_far;
 	*freed_so_far = 0;
+	stat_recv_track[1]++;
 	/* Have you have freed enough to look */
 	if (stcb->freed_by_sorcv_sincelast > rwnd_req) {
 		/* Yep, its worth a look and the lock overhead */
+		stat_recv_track[2]++;
 		stcb->freed_by_sorcv_sincelast = 0;
 		atomic_add_16(&stcb->asoc.refcnt, 1);
 		tcb_incr_up = 1;
@@ -4304,6 +4318,7 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far)
 		SAVE_I_AM_HERE(stcb->sctp_ep);
 #endif
 		/* calculate the rwnd */
+		stat_recv_track[3]++;
 		sctp_set_rwnd(stcb, &stcb->asoc);
 		if (stcb->asoc.my_last_reported_rwnd < stcb->asoc.my_rwnd) {
 			uint32_t dif;
@@ -4313,6 +4328,7 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far)
 			SAVE_I_AM_HERE(stcb->sctp_ep);
 #endif
 			if (dif > rwnd_req) {
+				stat_recv_track[4]++;
 				sctp_send_sack(stcb);
 				sctp_chunk_output(stcb->sctp_ep, stcb,
 				    SCTP_OUTPUT_FROM_USR_RCVD);
@@ -4330,6 +4346,7 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far)
 		SOCKBUF_LOCK(&so->so_rcv);
 
 	SCTP_INP_DECR_REF(stcb->sctp_ep);
+	stat_recv_track[5]++;
 	if(tcb_incr_up) {
 		atomic_add_16(&stcb->asoc.refcnt, -1);
 	}
@@ -4433,12 +4450,14 @@ restart:
 
 	if ((so->so_rcv.sb_cc == 0) && block_allowed) {
 		/* we need to wait for data */
+		stat_recv_track[6]++;
 		error = sbwait(&so->so_rcv);
 		if (error) {
 			goto out;
 		}
 		goto restart;
 	} else if (so->so_rcv.sb_cc == 0) {
+		stat_recv_track[7]++;
 		error = EWOULDBLOCK;
 		goto out;
 	}
@@ -4450,10 +4469,12 @@ restart:
 	error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
 #endif
 	/* we possibly have data we can read */
+	stat_recv_track[8]++;
 	control = TAILQ_FIRST(&inp->read_queue);
 	if (control == NULL) {
 		/* nothing there? TSNH! */
 		so->so_rcv.sb_cc = 0;
+		stat_recv_track[9]++;
 		goto restart;
 	}
 	if ((control->length == 0) && 
@@ -4492,6 +4513,7 @@ restart:
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, control);
 			SCTP_DECR_READQ_COUNT();
 		}
+		stat_recv_track[10]++;
 		goto restart;
 	}
 	if ((control->length == 0) &&
@@ -4520,13 +4542,16 @@ restart:
 		 */
 		control->held_length += so->so_rcv.sb_cc;
 		so->so_rcv.sb_cc = 0;
+		stat_recv_track[11]++;
 		goto restart;
 	} else if (control->length == 0) {
 		control->held_length += so->so_rcv.sb_cc;
 		so->so_rcv.sb_cc = 0;
+		stat_recv_track[12]++;
 		goto restart;
 	}
 found_one:
+	stat_recv_track[13]++;
 	/*
 	 * If we reach here, control has a some data for us to read off.
 	 * Note that stcb COULD be NULL.
@@ -4534,8 +4559,10 @@ found_one:
 	stcb = control->stcb;
 	if((stcb) && 
 	   (control->do_not_ref_stcb == 0) &&
-	   (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED))
+	   (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED)) {
+		stat_recv_track[14]++;
 		stcb = NULL;
+	}
 	/* you can't free it on me please */
 	if ((stcb) && 
 	    (control->do_not_ref_stcb == 0)) {
@@ -4545,6 +4572,7 @@ found_one:
 		 * the sender uses the tcb_lock to increment, we need to use
 		 * the atomic add to the refcnt
 		 */
+		stat_recv_track[15]++;
 		atomic_add_16(&stcb->asoc.refcnt, 1);
 		freecnt_applied = 1;
 	}
@@ -4655,6 +4683,7 @@ get_more_data:
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			socket_unlock(so, 0);
 #endif
+			stat_recv_track[16]++;
 			error = uiomove(mtod(m, char *), cp_len, uio);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			socket_lock(so, 0);
@@ -4710,6 +4739,7 @@ get_more_data:
 					copied_so_far += cp_len;
 					freed_so_far += cp_len;
 					control->length -= cp_len;
+					stat_recv_track[17]++;
 					control->data = sctp_m_free(m);
 					m = control->data;
 					/* been through it all */
@@ -4755,6 +4785,7 @@ get_more_data:
 						cp_len = control->length;
 #endif
 					}
+					stat_recv_track[18]++;
 					control->length -= cp_len;
 				} else {
 					copied_so_far += cp_len;
@@ -4909,7 +4940,7 @@ wait_some_more:
 		if (special_return) {
 			goto release;
 		}
-
+		stat_recv_track[19]++;
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		sbunlock(&so->so_snd, 1);
 #endif
