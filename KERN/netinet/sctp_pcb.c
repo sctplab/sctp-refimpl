@@ -4085,6 +4085,10 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	sctp_lock_assert(inp->ip_inp.inp.inp_socket);
 #endif
+/*
+	printf("sctp_free_asoc called inp:%x stcb:%x from:%d\n",
+	       (uint32_t)inp, (uint32_t)stcb, from_inpcbfree);
+*/
 	if (stcb->asoc.state == 0) {
 		printf("Freeing already free association:%p - huh??\n",
 		       stcb);
@@ -4121,6 +4125,10 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				SOCKBUF_UNLOCK(&so->so_rcv);
 			}
 			/* no asoc destroyed */
+/*
+			printf("sctp_free_asoc ref cnt up inp:%x stcb:%x start timer\n",
+			       (uint32_t)inp, (uint32_t)stcb);
+*/
 			SCTP_TCB_UNLOCK(stcb);
 			splx(s);
 			return (0);
@@ -4159,10 +4167,19 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			SOCKBUF_UNLOCK(&so->so_rcv);
 		}
 		SCTP_TCB_UNLOCK(stcb);
+/*
+		printf("sctp_free_asoc ref cnt2 up inp:%x stcb:%x - start tmr\n",
+		       (uint32_t)inp, (uint32_t)stcb);
+*/
 		splx(s);
 		/* no asoc destroyed */
 		return (0);
 	}
+/*
+	printf("sctp_free_asoc cleaning inp:%x stcb:%x\n",
+	       (uint32_t)inp, (uint32_t)stcb);
+*/
+
 	/* Now the read queue needs to be cleaned up */
 	TAILQ_FOREACH(sq, &inp->read_queue, next) {
 		if (sq->stcb == stcb) {
@@ -6160,7 +6177,7 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 					chk->data = NULL;
 				}
 				sctp_free_remote_addr(ctl->whoFrom);
-				printf("Point e: free control:%x\n", (u_int)ctl);
+				printf("Point e: free control:%x\n", (uint32_t)ctl);
 				SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, ctl);
 				SCTP_DECR_READQ_COUNT();
 			}
