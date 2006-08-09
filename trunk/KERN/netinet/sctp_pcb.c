@@ -2718,6 +2718,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	sctp_lock_assert(inp->ip_inp.inp.inp_socket);
 #endif
+#ifdef SCTP_LOG_CLOSING
+	sctp_log_closing(inp, NULL, 0);
+#endif
 	SCTP_ITERATOR_LOCK();
 	SCTP_ASOC_CREATE_LOCK(inp);
 	SCTP_INP_INFO_WLOCK();
@@ -2730,6 +2733,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		SCTP_INP_INFO_WUNLOCK();
 		SCTP_ITERATOR_UNLOCK();
+#ifdef SCTP_LOG_CLOSING
+		sctp_log_closing(inp, NULL, 1);
+#endif
 		return;
 	}
 	SCTP_INP_WLOCK(inp);
@@ -2932,6 +2938,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 			SCTP_ASOC_CREATE_UNLOCK(inp);
 			SCTP_INP_INFO_WUNLOCK();
 			SCTP_ITERATOR_UNLOCK();
+#ifdef SCTP_LOG_CLOSING
+			sctp_log_closing(inp, NULL, 2);
+#endif
 			return;
 		}
 	}
@@ -3006,6 +3015,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		SCTP_INP_INFO_WUNLOCK();
 		SCTP_ITERATOR_UNLOCK();
+#ifdef SCTP_LOG_CLOSING
+		sctp_log_closing(inp, NULL, 3);
+#endif
 		return;
 	}
 
@@ -3020,10 +3032,18 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		SCTP_INP_INFO_WUNLOCK();
 		SCTP_ITERATOR_UNLOCK();
+#ifdef SCTP_LOG_CLOSING
+		sctp_log_closing(inp, NULL, 4);
+#endif
 		return;
 	}
 #endif
 	inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_ALLGONE;
+
+#ifdef SCTP_LOG_CLOSING
+	sctp_log_closing(inp, NULL, 5);
+#endif
+
 #if !defined(__FreeBSD__) || __FreeBSD_version < 500000
 	rt = ip_pcb->inp_route.ro_rt;
 #endif
@@ -4088,13 +4108,13 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	sctp_lock_assert(inp->ip_inp.inp.inp_socket);
 #endif
 
-	printf("sctp_free_asoc called inp:%x stcb:%x from:%d chkcnt:%d\n",
-	       (uint32_t)inp, (uint32_t)stcb, from_inpcbfree,
-	       sctppcbinfo.ipi_count_chunk);
-
+#ifdef SCTP_LOG_CLOSING
+	sctp_log_closing(inp, stcb, 6);
+#endif
 	if (stcb->asoc.state == 0) {
-		printf("Freeing already free association:%p - huh??\n",
-		       stcb);
+#ifdef SCTP_LOG_CLOSING
+		sctp_log_closing(inp, stcb, 7);
+#endif
 		splx(s);
 		/* there is no asoc, really TSNH :-0 */
 		return (1);
@@ -4134,6 +4154,9 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 
 			SCTP_TCB_UNLOCK(stcb);
 			splx(s);
+#ifdef SCTP_LOG_CLOSING
+			sctp_log_closing(inp, stcb, 8);
+#endif
 			return (0);
 		}
 		if (so) {
@@ -4175,14 +4198,15 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		       (uint32_t)inp, (uint32_t)stcb);
 
 		splx(s);
+#ifdef SCTP_LOG_CLOSING
+		sctp_log_closing(inp, stcb, 9);
+#endif
 		/* no asoc destroyed */
 		return (0);
 	}
-
-	printf("sctp_free_asoc cleaning inp:%x stcb:%x\n",
-	       (uint32_t)inp, (uint32_t)stcb);
-
-
+#ifdef SCTP_LOG_CLOSING
+	sctp_log_closing(inp, stcb, 10);
+#endif
 	/* Now the read queue needs to be cleaned up */
 	TAILQ_FOREACH(sq, &inp->read_queue, next) {
 		if (sq->stcb == stcb) {
@@ -4649,6 +4673,9 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	}
 	splx(s);
 	/* destroyed the asoc */
+#ifdef SCTP_LOG_CLOSING
+	sctp_log_closing(inp, NULL, 11);
+#endif
 	return (1);
 }
 

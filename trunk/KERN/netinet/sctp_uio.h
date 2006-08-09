@@ -678,12 +678,21 @@ struct sctp_misc_info {
 	uint32_t log4;
 };
 
+struct sctp_log_closing {
+	uint32_t inp;
+	uint32_t stcb;
+	uint32_t sctp_flags;
+	uint16_t  state;
+	int16_t  loc;
+};
+
 struct sctp_cwnd_log {
 	uint32_t time_event;
 	uint8_t from;
 	uint8_t event_type;
 	uint8_t resv[2];
 	union {
+		struct sctp_log_closing close;
 		struct sctp_blk_args blk;
 		struct sctp_cwnd_args cwnd;
 		struct sctp_str_log strlog;

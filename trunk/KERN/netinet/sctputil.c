@@ -226,6 +226,26 @@ sctp_sblog(struct sockbuf *sb,
 	SCTP_STATLOG_UNLOCK();
 }
 
+void
+sctp_log_closing(struct sctp_inpcb *inp, struct sctp_stcb *stcb, int16_t loc)
+{
+	SCTP_STATLOG_LOCK();
+	sctp_clog[sctp_cwnd_log_at].time_event = sctp_get_time_of_event();
+	sctp_clog[sctp_cwnd_log_at].from = 0;
+	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t) SCTP_LOG_EVENT_CLOSE;
+	sctp_clog[sctp_cwnd_log_at].close.inp = (uint32_t)inp;
+	sctp_clog[sctp_cwnd_log_at].close.sctp_flags = inp->sctp_flags;
+	if(stcb) {
+		sctp_clog[sctp_cwnd_log_at].close.stcb = (uint32_t)stcb;
+		sctp_clog[sctp_cwnd_log_at].close.state = (uint16_t)stcb->sctp_ep->asoc.state;
+	} else {
+		sctp_clog[sctp_cwnd_log_at].close.stcb = 0;
+		sctp_clog[sctp_cwnd_log_at].close.state = 0;
+	}
+	sctp_clog[sctp_cwnd_log_at].close.loc = loc;
+	SCTP_STATLOG_UNLOCK();
+}
+
 
 void
 rto_logging(struct sctp_nets *net, int from)
