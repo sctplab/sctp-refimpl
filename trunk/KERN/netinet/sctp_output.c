@@ -6244,7 +6244,7 @@ sctp_set_prsctp_policy(struct sctp_tcb *stcb,
 		default:
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_USRREQ1) {
-				printf("Unknown PR_SCTP policy %u.\n", PR_SCTP_POLICY(sp->sinfo_sflags));
+				printf("Unknown PR_SCTP policy %u.\n", PR_SCTP_POLICY(sp->sinfo_flags));
 			}
 #endif
 			break;
@@ -7134,6 +7134,7 @@ sctp_register_the_mbufs(struct mbuf *m, int off)
 			case MCLBYTES:
 				sctp_track_move[(5+off)]++;
 				break;
+#if defined(__FreeBSD__)
 			case MJUMPAGESIZE:
 				sctp_track_move[(6+off)]++;
 				break;
@@ -7143,6 +7144,7 @@ sctp_register_the_mbufs(struct mbuf *m, int off)
 			case MJUM16BYTES:
 				sctp_track_move[(8+off)]++;
 				break;
+#endif
 			default:
 				sctp_track_move[(9+off)]++;
 				break;
@@ -7248,7 +7250,6 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		/* register the stealing */
 		sctp_register_the_mbufs(chk->data, 0);
 		sp->data = sp->tail_mbuf = NULL;
-		
 	} else {
 		struct mbuf *m;
 		sctp_track_move[1]++;
@@ -7444,7 +7445,7 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
 	goal_mtu -= sizeof(struct sctp_data_chunk);
 
 	/* must make even word boundary */
-	goal_mtu &= 0xffffffffc;
+	goal_mtu &= 0xfffffffc;
 	if(asoc->locked_on_sending ) {
 		/* We are stuck on one stream until the message completes. */
 		strqn = strq = asoc->locked_on_sending;
@@ -7510,7 +7511,7 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
 			}
 		}
 		goal_mtu -= moved_how_much;
-		goal_mtu &= 0xffffffffc;
+		goal_mtu &= 0xfffffffc;
 	}
 }
 
@@ -9695,8 +9696,12 @@ sctp_output(inp, m, addr, control, p, flags)
 		    (struct uio *)NULL,
 		    m,
 		    control,
+#if defined(__APPLE__) || defined(__NetBSD__)
+		    flags));
+#else
 		    flags,
 		    p));
+#endif
 }
 
 void
@@ -12238,11 +12243,11 @@ sctp_lower_sosend(struct socket *so,
 	}
 
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
+	error = sblock(&so->so_rcv, SBLOCKWAIT(flags));
 	SAVE_I_AM_HERE(inp);
 #endif
 #if defined(__NetBSD__)
-	error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
+	error = sblock(&so->so_rcv, SBLOCKWAIT(flags));
 #endif
 	if (top == NULL) {
 		struct sctp_stream_queue_pending *sp;
