@@ -613,6 +613,7 @@ sctp_log_block(uint8_t from, struct socket *so, struct sctp_association *asoc, i
 	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t) SCTP_LOG_EVENT_BLOCK;
 	sctp_clog[sctp_cwnd_log_at].x.blk.onsb = asoc->total_output_queue_size;
 	sctp_clog[sctp_cwnd_log_at].x.blk.send_sent_qcnt = (uint16_t) (asoc->send_queue_cnt + asoc->sent_queue_cnt);
+	sctp_clog[sctp_cwnd_log_at].x.blk.peer_rwnd = asoc->peers_rwnd;
 	sctp_clog[sctp_cwnd_log_at].x.blk.stream_qcnt = (uint16_t) asoc->stream_queue_cnt;
 	sctp_clog[sctp_cwnd_log_at].x.blk.chunks_on_oque = (uint16_t) asoc->chunks_on_out_queue;
 	sctp_clog[sctp_cwnd_log_at].x.blk.flight_size = (uint16_t) (asoc->total_flight/1024);

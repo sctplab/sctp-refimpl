@@ -12208,7 +12208,7 @@ sctp_lower_sosend(struct socket *so,
 		SOCKBUF_LOCK(&so->so_snd);
 		if(so->so_snd.sb_hiwat <= stcb->asoc.total_output_queue_size) {
 #ifdef SCTP_BLK_LOGGING
-			sctp_log_block(SCTP_BLOCK_LOG_INTO_BLK,
+			sctp_log_block(SCTP_BLOCK_LOG_INTO_BLKA,
 				       so, asoc, uio->uio_resid);
 #endif
 			be.error = 0;
