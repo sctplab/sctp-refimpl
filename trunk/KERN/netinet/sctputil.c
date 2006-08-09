@@ -237,12 +237,12 @@ sctp_log_closing(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int16_t loc)
 	sctp_clog[sctp_cwnd_log_at].x.close.sctp_flags = inp->sctp_flags;
 	if(stcb) {
 		sctp_clog[sctp_cwnd_log_at].x.close.stcb = (uint32_t)stcb;
-		sctp_clog[sctp_cwnd_log_at].x.close.state = (uint16_t)stcb->sctp_ep->asoc.state;
+		sctp_clog[sctp_cwnd_log_at].x.close.state = (uint16_t)stcb->asoc.state;
 	} else {
 		sctp_clog[sctp_cwnd_log_at].x.close.stcb = 0;
 		sctp_clog[sctp_cwnd_log_at].x.close.state = 0;
 	}
-	sctp_clog[sctp_cwnd_log_at].close.x.loc = loc;
+	sctp_clog[sctp_cwnd_log_at].x.close.loc = loc;
 	SCTP_STATLOG_UNLOCK();
 }
 
