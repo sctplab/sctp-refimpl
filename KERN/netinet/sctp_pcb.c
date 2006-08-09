@@ -4113,7 +4113,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 #endif
 	if (stcb->asoc.state == 0) {
 #ifdef SCTP_LOG_CLOSING
-		sctp_log_closing(inp, stcb, 7);
+		sctp_log_closing(inp, NULL, 7);
 #endif
 		splx(s);
 		/* there is no asoc, really TSNH :-0 */
