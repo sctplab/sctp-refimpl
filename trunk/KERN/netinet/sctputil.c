@@ -243,6 +243,11 @@ sctp_log_closing(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int16_t loc)
 		sctp_clog[sctp_cwnd_log_at].x.close.state = 0;
 	}
 	sctp_clog[sctp_cwnd_log_at].x.close.loc = loc;
+	sctp_cwnd_log_at++;
+	if (sctp_cwnd_log_at >= SCTP_STAT_LOG_SIZE) {
+		sctp_cwnd_log_at = 0;
+		sctp_cwnd_log_rolled = 1;
+	}
 	SCTP_STATLOG_UNLOCK();
 }
 
