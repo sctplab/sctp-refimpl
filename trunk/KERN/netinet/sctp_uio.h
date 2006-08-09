@@ -546,15 +546,12 @@ struct sctp_cwnd_args {
 };
 
 struct sctp_blk_args {
-	uint32_t onmb;		/* in 1k bytes */
 	uint32_t onsb;		/* in 1k bytes */
-	uint16_t maxmb;		/* in 1k bytes */
-	uint16_t maxsb;		/* in 1k bytes */
+	uint32_t sndlen;	/* len of send being attempted */
 	uint16_t send_sent_qcnt;/* chnk cnt */
 	uint16_t stream_qcnt;	/* chnk cnt */
 	uint16_t chunks_on_oque;/* chunks out */
-	uint16_t sndlen;	/* len of send being attempted */
-
+	uint16_t flight_size;   /* flight size in k */
 };
 
 /*
