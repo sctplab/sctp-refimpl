@@ -44,7 +44,8 @@ static char *event_names[] = {
 	"SCTP_LOG_EVENT_SB",
 	"SCTP_LOG_EVENT_NAGLE",
 	"SCTP_LOG_EVENT_WAKE",
-	"SCTP_LOG_MAX_EVENT"
+	"SCTP_LOG_MAX_EVENT",
+	"SCTP_LOG_EVENT_CLOSE"
 };
 
 static char *from_str[]= {
@@ -334,7 +335,33 @@ main(int argc, char **argv)
 				       from_str[log.from]
 					);
 			}
-		}else if(log.event_type == SCTP_LOG_LOCK_EVENT) {
+		}else if(log.event_type == SCTP_LOG_EVENT_CLOSE) {
+			char *close_events[] = {
+				"Top of Close",
+				"Stop its allgone",
+				"imm=0, some still closing",
+				"Still closing stage 3",
+				"Delay start inp-kill timer, ref",
+				"Clear to purge INP",
+				"Top of free_asoc",
+				"Its gone",
+				"Delay and start timer, its freeing",
+				"Set ATBF, start timer, wait",
+				"Clear to purge asoc",
+				"Association now purged",
+				"Unknown"
+			};
+			if(log.x.close.loc > 11) {
+				log.x.close.loc = 12;
+			}
+			printf("%s: inp:%x sctp_flags:%x stcb:%x asoc state:%x from:%s",
+			       ts,
+			       (u_int)log.x.close.inp,
+			       (u_int)log.x.close.sctp_flags,
+			       (u_int)log.x.close.stcb,
+			       (u_int)log.x.close.state,
+			       close_events[log.x.close.loc]);
+ 		}else if(log.event_type == SCTP_LOG_LOCK_EVENT) {
 			printf("%s sock:%x inp:%x inp:%d tcb:%d info:%d sock:%d sockrb:%d socksb:%d cre:%d\n",
 			       from_str[log.from],
 			       log.x.lock.sock,
