@@ -4294,13 +4294,13 @@ skip_segments:
 
 	if ((wake_him) && (stcb->sctp_socket)) {
 		SOCKBUF_LOCK(&stcb->sctp_socket->so_snd);
-		sctp_sowwakeup_locked(stcb->sctp_ep, stcb->sctp_socket);
 #ifdef SCTP_WAKE_LOGGING
 		sctp_wakeup_log(stcb, cum_ack, wake_him, SCTP_WAKESND_FROM_SACK);
 		if ((stcb->block_entry) && ((stcb->sctp_socket->so_snd.sb_flags & SB_WAIT) == 0)) {
 			panic("Block set but sbflags not SB_WAIT?");
 		}
 #endif
+		sctp_sowwakeup_locked(stcb->sctp_ep, stcb->sctp_socket);
 #ifdef SCTP_WAKE_LOGGING
 	} else {
 		sctp_wakeup_log(stcb, cum_ack, wake_him, SCTP_NOWAKE_FROM_SACK);
