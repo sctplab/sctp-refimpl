@@ -887,7 +887,12 @@ sctp_abort(struct socket *so)
 #else
 	s = splnet();
 #endif
-	sctp_inpcb_free(inp, 1);
+	if((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
+		SCTP_INP_WLOCK(inp);
+		inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_GONE;
+		SCTP_INP_WUNLOCK(inp);
+		sctp_inpcb_free(inp, 1);
+	}
 	splx(s);
 #if defined(__FreeBSD__) && __FreeBSD_version > 690000
 	return;
@@ -944,7 +949,12 @@ sctp_attach(struct socket *so, int proto, struct proc *p)
 #if !(defined(__OpenBSD__) || defined(__APPLE__))
 	error = ipsec_init_pcbpolicy(so, &ip_inp->inp_sp);
 	if (error != 0) {
-		sctp_inpcb_free(inp, 1);
+		if((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
+			SCTP_INP_WLOCK(inp);
+			inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_GONE;
+			SCTP_INP_WUNLOCK(inp);
+			sctp_inpcb_free(inp, 1);
+		}
 		return error;
 	}
 #endif
