@@ -129,10 +129,11 @@ static char *from_str[]= {
 	/* 78 */ "End-of-Send",
 	/* 79 */ "Sack proc done",
 	/* 80 */ "Reason CO Completes",
-	/* 81 */ "unknown"
+	/* 81 */ "Blocking-I",
+	/* 82 */ "unknown"
 
 };
-#define FROM_STRING_MAX 81
+#define FROM_STRING_MAX 82
 
 
 static uint32_t cnt_event[SCTP_LOG_MAX_EVENT];
@@ -626,7 +627,7 @@ main(int argc, char **argv)
 			       (u_int)log.x.wake.sbflags
 				);
 		}else if(log.event_type == SCTP_LOG_EVENT_BLOCK) {
-			printf("%s:BLK: onqueue:%d sending:%d flight:%d chk:%d sendcnt:%d strmcnt:%d %s",
+			printf("%s:BLK: onq:%d send:%d flight:%d chk:%d sendcnt:%d strmcnt:%d rwnd:%d %s\n",
 			       ts,
 			       (int)log.x.blk.onsb,
 			       (int)log.x.blk.sndlen,
@@ -634,6 +635,7 @@ main(int argc, char **argv)
 			       log.x.blk.chunks_on_oque,
 			       log.x.blk.send_sent_qcnt,
 			       log.x.blk.stream_qcnt,
+			       log.x.blk.peer_rwnd,
 			       from_str[log.from]
 				);
 		}else if(log.event_type == SCTP_LOG_EVENT_STRM) {
