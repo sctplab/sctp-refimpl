@@ -90,33 +90,16 @@ main (int argc, char **argv)
 		perror("Listen fails");
 		return (-1);
 	}
-	if(strtol(argv[2],NULL,0) == 0){
-		/* turn off all events */
-		struct sctp_event_subscribe evnts;
-		bzero(&evnts, sizeof(evnts));
-		setsockopt(fd,IPPROTO_SCTP, SCTP_EVENTS,
-			   &evnts, sizeof(evnts));
-	}
-
+	bzero(&info,sizeof(info));
 	while(1) {
-		bzero(&info,sizeof(info));
 		len = sizeof(buf);
 		fromlen = sizeof(from);
 		len = sctp_recvmsg (fd,buf,len,
 				    (struct sockaddr *)&from,&fromlen,
 				    &info,&flags);
 		cnt++;
-		if(info.sinfo_ssn) {
-			printf("%d:%d\r",info.sinfo_ssn,cnt);
-		} else {
-			printf("none:%d\r",
-			       cnt);
-		}
-		fflush(stdout);
-		if(sleep_opt) {
-			if((cnt % sleep_opt) == 0) {
-				sleep(1);
-			}
+		if(((cnt+1) % 1000) == 0) {
+			printf("msg cnt to %d\n", cnt);
 		}
 	}
 	return(0);

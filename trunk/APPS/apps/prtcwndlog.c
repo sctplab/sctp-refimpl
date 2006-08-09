@@ -354,7 +354,7 @@ main(int argc, char **argv)
 			if(log.x.close.loc > 11) {
 				log.x.close.loc = 12;
 			}
-			printf("%s: inp:%x sctp_flags:%x stcb:%x asoc state:%x from:%s",
+			printf("%s: inp:%x sctp_flags:%x stcb:%x asoc state:%x from:%s\n",
 			       ts,
 			       (u_int)log.x.close.inp,
 			       (u_int)log.x.close.sctp_flags,
