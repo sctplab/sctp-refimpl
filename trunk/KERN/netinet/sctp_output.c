@@ -6427,10 +6427,10 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 				 * anyway :o We reserve all the mbuf for
 				 * prepends.
 				 */
-				outchain->m_data += (MHLEN - 8);
 				outchain->m_pkthdr.len = 0;
 				outchain->m_len = 0;
 				outchain->m_next = NULL;
+				MH_ALIGN(outchain, 4);
 				if (endofchain) {
 					*endofchain = outchain;
 				}
@@ -7294,6 +7294,8 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 			m->m_next = chk->data;
 			chk->data = m;
 			chk->data->m_pkthdr.len = to_move;
+			/* reserve all the room at the top */
+			MH_ALIGN(chk->data, 4);
 		}
 	}
 	M_PREPEND(chk->data, sizeof(struct sctp_data_chunk), M_DONTWAIT);
@@ -7438,6 +7440,9 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
 	goal_mtu = net->mtu - SCTP_MIN_OVERHEAD;
 	mtu_fromwheel = 0;
 #endif
+	/* Need an allowance for the data chunk header too */
+	goal_mtu -= sizeof(struct sctp_data_chunk);
+
 	/* must make even word boundary */
 	goal_mtu &= 0xffffffffc;
 	if(asoc->locked_on_sending ) {
