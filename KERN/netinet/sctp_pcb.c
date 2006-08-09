@@ -4085,10 +4085,10 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	sctp_lock_assert(inp->ip_inp.inp.inp_socket);
 #endif
-/*
+
 	printf("sctp_free_asoc called inp:%x stcb:%x from:%d\n",
 	       (uint32_t)inp, (uint32_t)stcb, from_inpcbfree);
-*/
+
 	if (stcb->asoc.state == 0) {
 		printf("Freeing already free association:%p - huh??\n",
 		       stcb);
@@ -4125,10 +4125,10 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				SOCKBUF_UNLOCK(&so->so_rcv);
 			}
 			/* no asoc destroyed */
-/*
+
 			printf("sctp_free_asoc ref cnt up inp:%x stcb:%x start timer\n",
 			       (uint32_t)inp, (uint32_t)stcb);
-*/
+
 			SCTP_TCB_UNLOCK(stcb);
 			splx(s);
 			return (0);
@@ -4167,18 +4167,18 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			SOCKBUF_UNLOCK(&so->so_rcv);
 		}
 		SCTP_TCB_UNLOCK(stcb);
-/*
+
 		printf("sctp_free_asoc ref cnt2 up inp:%x stcb:%x - start tmr\n",
 		       (uint32_t)inp, (uint32_t)stcb);
-*/
+
 		splx(s);
 		/* no asoc destroyed */
 		return (0);
 	}
-/*
+
 	printf("sctp_free_asoc cleaning inp:%x stcb:%x\n",
 	       (uint32_t)inp, (uint32_t)stcb);
-*/
+
 
 	/* Now the read queue needs to be cleaned up */
 	TAILQ_FOREACH(sq, &inp->read_queue, next) {
@@ -4339,7 +4339,11 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		SCTP_TCB_LOCK(stcb);
 	}
 	/* Stop any timer someone may have started */
-	callout_stop(&asoc->strreset_timer.timer);	
+	callout_stop(&asoc->strreset_timer.timer); 
+	/* Make it invalid too, that way if its
+	 * about to run it will abort and return.
+	 */
+	asoc->strreset_timer.type = SCTP_TIMER_TYPE_NONE;
 	sctp_iterator_asoc_being_freed(inp, stcb);
 	/* re-increment the lock */
 	if(from_inpcbfree == 0) {
