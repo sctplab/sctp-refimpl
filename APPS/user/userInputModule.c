@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.59 2006-08-06 11:49:34 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.60 2006-08-09 11:35:16 randall Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -3101,15 +3101,15 @@ static int cmd_cwndlog(char *argv[], int argc)
 			       (int)req->log[i].x.cwnd.cwnd_new_value,
 			       cwnd_names[idx]);
 		} else if (SCTP_LOG_EVENT_BLOCK) {
-			printf("%s: maxmb:%d onmb:%d maxsb:%d onsb:%d send_cnt:%d strcnt:%d\n",
+			printf("%s: onqueue:%d sending:%d flight:%d chk:%d sendcnt:%d strmcnt:%d",
 			       cwnd_names[idx],
-			       (req->log[i].x.blk.maxmb*1024),
-			       (req->log[i].x.blk.onmb *1024),
-			       (req->log[i].x.blk.maxsb*1024),
-			       (req->log[i].x.blk.onsb*1024),
+			       (int)req->log[i].x.blk.onsb,
+			       (int)req->log[i].x.blk.sndlen,
+			       (int)(req->log[i].x.blk.flight_size * 1024),
+			       req->log[i].x.blk.chunks_on_oque,
 			       req->log[i].x.blk.send_sent_qcnt,
 			       req->log[i].x.blk.stream_qcnt
-			       );
+				);
 		} else if (SCTP_LOG_EVENT_STRM) {
 			   if((idx == SCTP_STR_LOG_FROM_INSERT_MD) ||
 			      (idx == SCTP_STR_LOG_FROM_INSERT_TL)) {
