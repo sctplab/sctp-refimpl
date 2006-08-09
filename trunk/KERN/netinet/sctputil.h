@@ -369,7 +369,7 @@ sctp_log_strm_del(struct sctp_queued_to_read *control,
 void sctp_log_cwnd(struct sctp_tcb *stcb, struct sctp_nets *, int, uint8_t);
 void rto_logging(struct sctp_nets *net, int from);
 
-void sctp_log_closing(struct sctp_inpcb *inp, struct sctp_stcb *stcb, int16_t loc);
+void sctp_log_closing(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int16_t loc);
 
 void sctp_log_lock(struct sctp_inpcb *inp, struct sctp_tcb *stcb, uint8_t from);
 void sctp_log_maxburst(struct sctp_tcb *stcb, struct sctp_nets *, int, int, uint8_t);
