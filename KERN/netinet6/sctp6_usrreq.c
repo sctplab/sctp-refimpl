@@ -792,7 +792,12 @@ sctp6_abort(struct socket *so)
 #else
 	s = splnet();
 #endif
-	sctp_inpcb_free(inp, 1);
+	if((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
+		SCTP_INP_WLOCK(inp);
+		inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_GONE;
+		SCTP_INP_WUNLOCK(inp);
+		sctp_inpcb_free(inp, 1);
+	}
 	splx(s);
 #if defined(__FreeBSD__) && __FreeBSD_version > 690000
 	return;
