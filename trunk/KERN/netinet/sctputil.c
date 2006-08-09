@@ -227,7 +227,7 @@ sctp_sblog(struct sockbuf *sb,
 }
 
 void
-sctp_log_closing(struct sctp_inpcb *inp, struct sctp_stcb *stcb, int16_t loc)
+sctp_log_closing(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int16_t loc)
 {
 	SCTP_STATLOG_LOCK();
 	sctp_clog[sctp_cwnd_log_at].time_event = sctp_get_time_of_event();
