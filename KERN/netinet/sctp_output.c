@@ -12607,15 +12607,15 @@ sctp_lower_sosend(struct socket *so,
 				    TAILQ_EMPTY(&asoc->sent_queue) &&
 				    (asoc->state & SCTP_STATE_PARTIAL_MSG_LEFT)) {
 				abort_anyway:
+					if (free_cnt_applied) {
+						atomic_add_16(&stcb->asoc.refcnt, -1);
+						free_cnt_applied = 0;
+					}
 					sctp_abort_an_association(stcb->sctp_ep, stcb,
 								  SCTP_RESPONSE_TO_USER_REQ,
 								  NULL);
 					/* now relock the stcb so everything is sane */
 					hold_tcblock = 0;
-					if (free_cnt_applied) {
-						atomic_add_16(&stcb->asoc.refcnt, -1);
-						free_cnt_applied = 0;
-					}
 					stcb = NULL;
 					goto out;
 				}
