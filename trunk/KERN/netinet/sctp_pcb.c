@@ -4075,6 +4075,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	struct sctp_queued_to_read *sq;
 	sctp_sharedkey_t *shared_key;
 	struct socket *so;
+	int ccnt=0;
 	int s,cnt=0;
 
 	/* first, lets purge the entry from the hash table. */
@@ -4087,8 +4088,9 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	sctp_lock_assert(inp->ip_inp.inp.inp_socket);
 #endif
 
-	printf("sctp_free_asoc called inp:%x stcb:%x from:%d\n",
-	       (uint32_t)inp, (uint32_t)stcb, from_inpcbfree);
+	printf("sctp_free_asoc called inp:%x stcb:%x from:%d chkcnt:%d\n",
+	       (uint32_t)inp, (uint32_t)stcb, from_inpcbfree,
+	       sctppcbinfo.ipi_count_chunk);
 
 	if (stcb->asoc.state == 0) {
 		printf("Freeing already free association:%p - huh??\n",
@@ -4450,11 +4452,16 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				sctp_m_freem(chk->data);
 				chk->data = NULL;
 			}
+			ccnt++;
 			sctp_free_remote_addr(chk->whoTo);
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
 			SCTP_DECR_CHK_COUNT();
 			chk = TAILQ_FIRST(&asoc->send_queue);
 		}
+	}
+	if(ccnt) {
+		printf("Freed %d from send_queue\n", ccnt);
+		ccnt = 0;
 	}
 	/* sent queue SHOULD be empty */
 	if (!TAILQ_EMPTY(&asoc->sent_queue)) {
@@ -4465,11 +4472,16 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				sctp_m_freem(chk->data);
 				chk->data = NULL;
 			}
+			ccnt++;
 			sctp_free_remote_addr(chk->whoTo);
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
 			SCTP_DECR_CHK_COUNT();
 			chk = TAILQ_FIRST(&asoc->sent_queue);
 		}
+	}
+	if(ccnt) {
+		printf("Freed %d from sent_queue\n", ccnt);
+		ccnt = 0;
 	}
 	/* control queue MAY not be empty */
 	if (!TAILQ_EMPTY(&asoc->control_send_queue)) {
@@ -4480,12 +4492,18 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				sctp_m_freem(chk->data);
 				chk->data = NULL;
 			}
+			ccnt++;
 			sctp_free_remote_addr(chk->whoTo);
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
 			SCTP_DECR_CHK_COUNT();
 			chk = TAILQ_FIRST(&asoc->control_send_queue);
 		}
 	}
+	if(ccnt) {
+		printf("Freed %d from ctrl_queue\n", ccnt);
+		ccnt = 0;
+	}
+
 	if (!TAILQ_EMPTY(&asoc->reasmqueue)) {
 		chk = TAILQ_FIRST(&asoc->reasmqueue);
 		while (chk) {
@@ -4495,11 +4513,17 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				chk->data = NULL;
 			}
 			sctp_free_remote_addr(chk->whoTo);
+			ccnt++;
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
 			SCTP_DECR_CHK_COUNT();
 			chk = TAILQ_FIRST(&asoc->reasmqueue);
 		}
 	}
+	if(ccnt) {
+		printf("Freed %d from reasm_queue\n", ccnt);
+		ccnt = 0;
+	}
+
 	if (asoc->mapping_array) {
 		FREE(asoc->mapping_array, M_PCB);
 		asoc->mapping_array = NULL;

@@ -12097,7 +12097,9 @@ sctp_lower_sosend(struct socket *so,
 
 	} else if (asoc->ifp_had_enobuf) {
 		SCTP_STAT_INCR(sctps_ifnomemqueued);
-		queue_only = 1;
+		if (net->flight_size > (net->mtu *2))
+			queue_only = 1;
+		asoc->ifp_had_enobuf = 0;
 	} else {
 		un_sent = ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight) +
 			   ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) * sizeof(struct sctp_data_chunk)));
@@ -12388,9 +12390,19 @@ sctp_lower_sosend(struct socket *so,
 				sctp_output_track[14]++;
 				goto skip_out_eof;
 			}
-			un_sent = ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight) +
-				   ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) * sizeof(struct sctp_data_chunk)));
-
+			if ((net->flight_size > net->cwnd) && 
+			    (sctp_cmt_on_off == 0)) {
+				queue_only = 1;
+				
+			} else if (asoc->ifp_had_enobuf) {
+				SCTP_STAT_INCR(sctps_ifnomemqueued);
+				if (net->flight_size > (net->mtu *2))
+					queue_only = 1;
+				asoc->ifp_had_enobuf = 0;
+			} else {
+				un_sent = ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight) +
+					   ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) * sizeof(struct sctp_data_chunk)));
+			}
 			if ((sctp_is_feature_off(inp, SCTP_PCB_FLAGS_NODELAY)) &&
 			    (stcb->asoc.total_flight > 0) &&
 			    (un_sent < (int)(stcb->asoc.smallest_mtu - SCTP_MIN_OVERHEAD)) &&

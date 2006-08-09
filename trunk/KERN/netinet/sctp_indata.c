@@ -4298,6 +4298,9 @@ skip_segments:
 		sctp_wakeup_log(stcb, cum_ack, wake_him, SCTP_WAKESND_FROM_SACK);
 		if ((stcb->block_entry) && ((stcb->sctp_socket->so_snd.sb_flags & SB_WAIT) == 0)) {
 			panic("Block set but sbflags not SB_WAIT?");
+		} else if(stcb->block_entry) {
+			/* Ok we will wake this guy */
+			stcb->block_entry = NULL;
 		}
 #endif
 		sctp_sowwakeup_locked(stcb->sctp_ep, stcb->sctp_socket);
