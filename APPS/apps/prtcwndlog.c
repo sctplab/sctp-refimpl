@@ -612,7 +612,7 @@ main(int argc, char **argv)
 			default:
 				str = "Unknown";
 			}
-			printf("WUP:%s %s tcb:%x cnt:%d fs:%d sd:%d st:%d str:%d co:%d) s:%s sb:%x\n",
+			printf("%s WUP:%s tcb:%x cnt:%d fs:%d sd:%d st:%d str:%d co:%d) s:%s sb:%x\n",
 			       ts,
 			       from_str[log.from],
 			       log.x.wake.stcb,
@@ -626,17 +626,15 @@ main(int argc, char **argv)
 			       (u_int)log.x.wake.sbflags
 				);
 		}else if(log.event_type == SCTP_LOG_EVENT_BLOCK) {
-			printf("BLK:%s:(mbmx:%d < mb-use:%d) || (mx:%d < cc:%d + snd:%d) || (%d > MC) %s(%d:%d)\n",
+			printf("%s:BLK: onqueue:%d sending:%d flight:%d chk:%d sendcnt:%d strmcnt:%d %s",
 			       ts,
-			       (log.x.blk.maxmb*1024),
-			       (int)log.x.blk.onmb,
-			       (log.x.blk.maxsb*1024),
 			       (int)log.x.blk.onsb,
 			       (int)log.x.blk.sndlen,
+			       (int)(log.x.blk.flight_size * 1024),
 			       log.x.blk.chunks_on_oque,
-			       from_str[log.from],
 			       log.x.blk.send_sent_qcnt,
-			       log.x.blk.stream_qcnt
+			       log.x.blk.stream_qcnt,
+			       from_str[log.from]
 				);
 		}else if(log.event_type == SCTP_LOG_EVENT_STRM) {
 			if((log.from == SCTP_STR_LOG_FROM_INSERT_MD) ||
