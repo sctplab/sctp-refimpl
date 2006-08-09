@@ -2721,27 +2721,27 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	SCTP_ITERATOR_LOCK();
 	SCTP_ASOC_CREATE_LOCK(inp);
 	SCTP_INP_INFO_WLOCK();
-	SCTP_INP_WLOCK(inp);
 	so = inp->sctp_socket;
 
+	if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
+		/* been here before.. eeks.. get out of here */
+		splx(s);
+		printf("This conflict in free SHOULD not be happening!\n");
+		SCTP_ASOC_CREATE_UNLOCK(inp);
+		SCTP_INP_INFO_WUNLOCK();
+		SCTP_ITERATOR_UNLOCK();
+		return;
+	}
+	SCTP_INP_WLOCK(inp);
 	/* First time through we have the socket lock, after that
 	 * no more.
 	 */
-	if (so && ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) == 0)) {
+	if (so) {
 		locked_so = 1;
 #ifdef SCTP_LOCK_LOGGING
 		sctp_log_lock(inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_SOCK);
 #endif
 		SOCK_LOCK(so);
-	}
-	if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
-		/* been here before */
-		splx(s);
-		SCTP_INP_WUNLOCK(inp);
-		SCTP_ASOC_CREATE_UNLOCK(inp);
-		SCTP_INP_INFO_WUNLOCK();
-		SCTP_ITERATOR_UNLOCK();
-		return;
 	}
 	sctp_timer_stop(SCTP_TIMER_TYPE_NEWCOOKIE, inp, NULL, NULL);
 
@@ -3028,6 +3028,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	rt = ip_pcb->inp_route.ro_rt;
 #endif
 	callout_stop(&inp->sctp_ep.signature_change.timer);
+	inp->sctp_ep.signature_change.type = SCTP_TIMER_TYPE_NONE;
 	/* Clear the read queue */
 	while ((sq = TAILQ_FIRST(&inp->read_queue)) != NULL) {
 		TAILQ_REMOVE(&inp->read_queue, sq, next);
