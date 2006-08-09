@@ -1226,7 +1226,6 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 		asoc->strmout[i].last_msg_incomplete = 0;
 		asoc->strmout[i].next_spoke.tqe_next = 0;
 		asoc->strmout[i].next_spoke.tqe_prev = 0;
-
 	}
 	/* Now the mapping array */
 	asoc->mapping_array_size = SCTP_INITIAL_MAPPING_ARRAY;
@@ -1341,7 +1340,6 @@ sctp_handle_addr_wq(void)
  * stcb->sctp_socket is locked.
  */
 #endif
-
 static void
 sctp_timeout_handler(void *t)
 {
@@ -1973,7 +1971,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		 * state.
 		 */
 		tmr = &inp->sctp_ep.signature_change;
- 		to_ticks = MSEC_TO_TICKS(SCTP_INP_KILL_TIMEOUT);
+		to_ticks = MSEC_TO_TICKS(SCTP_INP_KILL_TIMEOUT);
 		break;
 	case SCTP_TIMER_TYPE_PATHMTURAISE:
 		/*

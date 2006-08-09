@@ -836,6 +836,17 @@ do { \
 	} \
 } while (0)
 
+#if defined(__APPLE__)
+#define sctp_sowwakeup_locked(inp, so) \
+do { \
+	if (inp->sctp_flags & SCTP_PCB_FLAGS_DONT_WAKE) { \
+                SOCKBUF_UNLOCK(&((so)->so_snd)); \
+		inp->sctp_flags |= SCTP_PCB_FLAGS_WAKEOUTPUT; \
+	} else { \
+		sowwakeup(so); \
+	} \
+} while (0)
+#else
 #define sctp_sowwakeup_locked(inp, so) \
 do { \
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_DONT_WAKE) { \
@@ -845,8 +856,7 @@ do { \
 		sowwakeup_locked(so); \
 	} \
 } while (0)
-
-
+#endif
 
 #define sctp_sorwakeup(inp, so) \
 do { \

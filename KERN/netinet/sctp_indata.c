@@ -4265,7 +4265,7 @@ skip_segments:
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_OUTPUT2) {
 				printf("--total out:%lu\n",
-				       (u_long)asoc->total_output_queue_size)
+				       (u_long)asoc->total_output_queue_size);
 			}
 #endif
 

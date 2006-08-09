@@ -741,7 +741,7 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 		sctp_send_asconf_ack(stcb, 1);
 		return;
 	} else if (serial_num != (asoc->asconf_seq_in + 1)) {
-#ifdef SCTP_DEBUGx
+#ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
 			printf("handle_asconf: incorrect serial number = %xh (expected next = %xh)\n",
 			    serial_num, asoc->asconf_seq_in + 1);

@@ -546,6 +546,8 @@ do { \
 
 
 #if defined(__APPLE__)
+/* emulate the BSD 'ticks' clock */
+extern int ticks;
 
 /* XXX: Hopefully temporary until APPLE changes to newer defs like other BSDs */
 #define if_addrlist	if_addrhead
@@ -565,16 +567,14 @@ do { \
 
 #ifdef _KERN_LOCKS_H_
 	lck_mtx_t *sctp_getlock(struct socket *so, int locktype);
-
 #else
 	void *sctp_getlock(struct socket *so, int locktype);
-
-#endif				/* _KERN_LOCKS_H_ */
+#endif /* _KERN_LOCKS_H_ */
 	void sctp_lock_assert(struct socket *so);
 	void sctp_unlock_assert(struct socket *so);
 
-#endif				/* SCTP_APPLE_FINE_GRAINED_LOCKING */
-#endif				/* __APPLE__ */
+#endif /* SCTP_APPLE_FINE_GRAINED_LOCKING */
+#endif /* __APPLE__ */
 
 #if defined(__NetBSD__)
 /* emulate the atomic_xxx() functions... */
