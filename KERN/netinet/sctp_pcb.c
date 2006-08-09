@@ -4193,10 +4193,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			SOCKBUF_UNLOCK(&so->so_rcv);
 		}
 		SCTP_TCB_UNLOCK(stcb);
-
-		printf("sctp_free_asoc ref cnt2 up inp:%x stcb:%x - start tmr\n",
-		       (uint32_t)inp, (uint32_t)stcb);
-
 		splx(s);
 #ifdef SCTP_LOG_CLOSING
 		sctp_log_closing(inp, stcb, 9);
@@ -4483,10 +4479,12 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			chk = TAILQ_FIRST(&asoc->send_queue);
 		}
 	}
+/*
 	if(ccnt) {
 		printf("Freed %d from send_queue\n", ccnt);
 		ccnt = 0;
 	}
+*/
 	/* sent queue SHOULD be empty */
 	if (!TAILQ_EMPTY(&asoc->sent_queue)) {
 		chk = TAILQ_FIRST(&asoc->sent_queue);
@@ -4503,10 +4501,12 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			chk = TAILQ_FIRST(&asoc->sent_queue);
 		}
 	}
+/*
 	if(ccnt) {
 		printf("Freed %d from sent_queue\n", ccnt);
 		ccnt = 0;
 	}
+*/
 	/* control queue MAY not be empty */
 	if (!TAILQ_EMPTY(&asoc->control_send_queue)) {
 		chk = TAILQ_FIRST(&asoc->control_send_queue);
@@ -4523,11 +4523,12 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			chk = TAILQ_FIRST(&asoc->control_send_queue);
 		}
 	}
+/*
 	if(ccnt) {
 		printf("Freed %d from ctrl_queue\n", ccnt);
 		ccnt = 0;
 	}
-
+*/
 	if (!TAILQ_EMPTY(&asoc->reasmqueue)) {
 		chk = TAILQ_FIRST(&asoc->reasmqueue);
 		while (chk) {
@@ -4543,11 +4544,12 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			chk = TAILQ_FIRST(&asoc->reasmqueue);
 		}
 	}
+/*
 	if(ccnt) {
 		printf("Freed %d from reasm_queue\n", ccnt);
 		ccnt = 0;
 	}
-
+*/
 	if (asoc->mapping_array) {
 		FREE(asoc->mapping_array, M_PCB);
 		asoc->mapping_array = NULL;
