@@ -2023,6 +2023,9 @@ sctp_inpcb_alloc(struct socket *so)
 	socket_unlock(inp->ip_inp.inp.inp_socket, 1);
 #endif
 	SCTP_INP_WUNLOCK(inp);
+#ifdef SCTP_LOG_CLOSING
+	sctp_log_closing(inp, NULL, 12);
+#endif
 	return (error);
 }
 
