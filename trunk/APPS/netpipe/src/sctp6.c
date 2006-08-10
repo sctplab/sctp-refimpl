@@ -64,6 +64,16 @@ void Setup(ArgStruct *p)
 	printf("NetPIPE: setsockopt: SCTP_NODELAY failed! errno=%d\n", errno);
 	exit(556);
     }
+
+    if(setsockopt(sockfd, proto->p_proto, SCTP_EXPLICIT_EOR, &one, sizeof(one)) < 0) {
+	    printf("NetPIPE: setsockopt: SCTP_EXPLICIT_EOR failed! errno=%d\n", errno);
+	    exit(556);
+    }
+ 
+    if(setsockopt(sockfd, proto->p_proto, SCTP_PARTIAL_DELIVERY_POINT, &one, sizeof(one)) < 0) {
+	    printf("NetPIPE: setsockopt: SCTP_PARTIAL_DELIVERY_POINT failed! errno=%d\n", errno);
+	    exit(556);
+    }
     
     /* If requested, set the send and receive buffer sizes */
     
