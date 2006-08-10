@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.60 2006-08-09 11:35:16 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.61 2006-08-10 16:47:43 lei Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -2891,7 +2891,7 @@ cmd_getpaddrs(char *argv[], int argc)
 static int cmd_getpdapi(char *argv[], int argc)
 {
 	int val = 0;
-	int siz;
+	socklen_t siz;
 	siz = sizeof(val);
 	if(getsockopt(adap->fd,IPPROTO_SCTP,
 		      SCTP_PARTIAL_DELIVERY_POINT,
@@ -2955,7 +2955,7 @@ static int cmd_seteeor(char *argv[], int argc)
 static int cmd_geteeor(char *argv[], int argc)
 {
 	int val = 0;
-	int siz;
+	socklen_t siz;
 	siz = sizeof(val);
 	if(getsockopt(adap->fd,IPPROTO_SCTP,
 		      SCTP_EXPLICIT_EOR,
