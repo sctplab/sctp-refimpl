@@ -12323,9 +12323,13 @@ sctp_lower_sosend(struct socket *so,
 					queue_only = 0;
 				}
 				asoc->ifp_had_enobuf = 0;
+				un_sent = ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight) +
+					   ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) * 
+					    sizeof(struct sctp_data_chunk)));
 			} else {
 				un_sent = ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight) +
-					   ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) * sizeof(struct sctp_data_chunk)));
+					   ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) * 
+					    sizeof(struct sctp_data_chunk)));
 				queue_only = 0;
 			}
 			if ((sctp_is_feature_off(inp, SCTP_PCB_FLAGS_NODELAY)) &&
@@ -12541,16 +12545,32 @@ sctp_lower_sosend(struct socket *so,
 	if (!TAILQ_EMPTY(&stcb->asoc.control_send_queue)) {
 		some_on_control = 1;
 	}
-	/* re-calc unsent */
-	un_sent = ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight) +
-		   ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) * sizeof(struct sctp_data_chunk)));
-
+	if ((net->flight_size > net->cwnd) && 
+	    (sctp_cmt_on_off == 0)) {
+		queue_only = 1;
+	} else if (asoc->ifp_had_enobuf) {
+		SCTP_STAT_INCR(sctps_ifnomemqueued);
+		if (net->flight_size > (net->mtu *2)) {
+			queue_only = 1;
+		} else {
+			queue_only = 0;
+		}
+		asoc->ifp_had_enobuf = 0;
+		un_sent = ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight) +
+			   ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) * 
+			    sizeof(struct sctp_data_chunk)));
+	} else {
+		un_sent = ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight) +
+			   ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) * 
+			    sizeof(struct sctp_data_chunk)));
+		queue_only = 0;
+	}
 	if ((sctp_is_feature_off(inp, SCTP_PCB_FLAGS_NODELAY)) &&
 	    (stcb->asoc.total_flight > 0) &&
 	    (un_sent < (int)(stcb->asoc.smallest_mtu - SCTP_MIN_OVERHEAD)) &&
 	    ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) < SCTP_MAX_DATA_BUNDLING)
 		) {
-
+		
 		/*
 		 * Ok, Nagle is set on and we have data outstanding.
 		 * Don't send anything and let SACKs drive out the
@@ -12569,7 +12589,6 @@ sctp_lower_sosend(struct socket *so,
 		SCTP_STAT_INCR(sctps_naglesent);
 		nagle_applies = 0;
 	}
-
 	if (queue_only_for_init) {
 		if (hold_tcblock == 0) {
 			SCTP_TCB_LOCK(stcb);
