@@ -2794,6 +2794,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 			asoc->sctp_socket = NULL;
 			asoc->asoc.state |= SCTP_STATE_CLOSED_SOCKET;
 			if ((asoc->asoc.size_on_reasm_queue > 0) ||
+			    (asoc->asoc.control_pdapi) ||
 			    (asoc->asoc.size_on_all_streams > 0) ||
 			    (so && (so->so_rcv.sb_cc > 0))
 			    ) {
@@ -4143,10 +4144,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				SOCKBUF_UNLOCK(&so->so_rcv);
 			}
 			/* no asoc destroyed */
-
-			printf("sctp_free_asoc ref cnt up inp:%x stcb:%x start timer\n",
-			       (uint32_t)inp, (uint32_t)stcb);
-
 			SCTP_TCB_UNLOCK(stcb);
 			splx(s);
 #ifdef SCTP_LOG_CLOSING
