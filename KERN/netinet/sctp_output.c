@@ -12038,12 +12038,6 @@ sctp_lower_sosend(struct socket *so,
 		un_sent = ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight) +
 			   ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) * sizeof(struct sctp_data_chunk)));
 	}
-	/* Calculate the maximum we can send */
-	if(so->so_snd.sb_hiwat > stcb->asoc.total_output_queue_size) {
-		max_len = so->so_snd.sb_hiwat -  stcb->asoc.total_output_queue_size;
-	} else {
-		max_len = 0;
-	}
 	/* Are we aborting? */
 	if (srcv->sinfo_flags & SCTP_ABORT) {
 		struct mbuf *mm;
@@ -12123,6 +12117,12 @@ sctp_lower_sosend(struct socket *so,
 		hold_tcblock = 0;
 		stcb = NULL;
 		goto out_unlocked;
+	}
+	/* Calculate the maximum we can send */
+	if(so->so_snd.sb_hiwat > stcb->asoc.total_output_queue_size) {
+		max_len = so->so_snd.sb_hiwat -  stcb->asoc.total_output_queue_size;
+	} else {
+		max_len = 0;
 	}
 	SCTP_TCB_UNLOCK(stcb);
 	hold_tcblock = 0;
@@ -12256,8 +12256,10 @@ sctp_lower_sosend(struct socket *so,
 					goto out;
 				}
 				/* Update the mbuf and count */
-				SCTP_TCB_LOCK(stcb);
-				hold_tcblock = 1;
+				if (hold_tcblock == 0) {
+					SCTP_TCB_LOCK(stcb);
+					hold_tcblock = 1;
+				}
 				if(sp->tail_mbuf) {
 					/* tack it to the end */
 					sp->tail_mbuf->m_next = mm;
