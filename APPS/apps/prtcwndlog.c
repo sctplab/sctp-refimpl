@@ -354,12 +354,13 @@ main(int argc, char **argv)
 			if(log.x.close.loc > 11) {
 				log.x.close.loc = 12;
 			}
-			printf("%s: inp:%x sctp_flags:%x stcb:%x asoc state:%x from:%s\n",
+			printf("%s: inp:%x sctp_flags:%x stcb:%x asoc state:%x e:%d-%s\n",
 			       ts,
 			       (u_int)log.x.close.inp,
 			       (u_int)log.x.close.sctp_flags,
 			       (u_int)log.x.close.stcb,
 			       (u_int)log.x.close.state,
+			       log.x.close.loc,
 			       close_events[log.x.close.loc]);
  		}else if(log.event_type == SCTP_LOG_LOCK_EVENT) {
 			printf("%s sock:%x inp:%x inp:%d tcb:%d info:%d sock:%d sockrb:%d socksb:%d cre:%d\n",
