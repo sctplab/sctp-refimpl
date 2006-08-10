@@ -4915,6 +4915,9 @@ sctp_optsset(struct socket *so,
 
 
 #if defined(__FreeBSD__) || defined(__APPLE__)
+
+extern int sctp_chatty_mbuf;
+
 int
 sctp_ctloutput(struct socket *so, struct sockopt *sopt)
 {
@@ -4944,23 +4947,20 @@ sctp_ctloutput(struct socket *so, struct sockopt *sopt)
 		splx(s);
 		return (error);
 	}
-	if (sopt->sopt_valsize > MCLBYTES) {
-		/*
-		 * Restrict us down to a cluster size, that's all we can
-		 * pass either way...
-		 */
-		sopt->sopt_valsize = MCLBYTES;
-	}
 	if (sopt->sopt_valsize) {
-		if (sopt->sopt_valsize > MLEN) {
+		if (sopt->sopt_valsize < MLEN) {
 			m = sctp_get_mbuf_for_msg(1, 0, M_WAIT, 1, MT_DATA);
 		}else{
-			m = sctp_get_mbuf_for_msg(MCLBYTES, 0, M_WAIT, 1, MT_DATA);
+			m = sctp_get_mbuf_for_msg(sopt->sopt_valsize, 0, M_WAIT, 1, MT_DATA);
 		}
 		if (m == NULL) {
 			sctp_m_freem(m);
 			splx(s);
 			return (ENOBUFS);
+		}
+		if (sopt->sopt_valsize > M_TRAILINGSPACE(m)) {
+			/* Limit to actual size gotten */
+			sopt->sopt_valsize = M_TRAILINGSPACE(m);
 		}
 		error = sooptcopyin(sopt, mtod(m, caddr_t), sopt->sopt_valsize,
 		    sopt->sopt_valsize);
