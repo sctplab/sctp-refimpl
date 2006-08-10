@@ -5417,23 +5417,26 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_WAKEOUTPUT) {
 			inp->sctp_flags &= ~SCTP_PCB_FLAGS_WAKEOUTPUT;
 			SOCKBUF_LOCK(&inp->sctp_socket->so_snd);
-#if defined(__NetBSD__)
-			if (sowritable(inp->sctp_socket))
+			if (sowriteable(inp->sctp_socket)) {
+#if defined(__NetBSD__) || defined(__APPLE__)
 				sowwakeup(inp->sctp_socket);
 #else
-			if (sowriteable(inp->sctp_socket)) {
 				sowwakeup_locked(inp->sctp_socket);
+#endif
 			} else {
 				SOCKBUF_UNLOCK(&inp->sctp_socket->so_snd);
 			}
-#endif
 		}
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_WAKEINPUT) {
 			inp->sctp_flags &= ~SCTP_PCB_FLAGS_WAKEINPUT;
 			SOCKBUF_LOCK(&inp->sctp_socket->so_rcv);
 			if (soreadable(inp->sctp_socket)) {
 				sctp_defered_wakeup_cnt++;
+#if defined(__NetBSD__) || defined(__APPLE__)
+				sorwakeup(inp->sctp_socket);
+#else
 				sorwakeup_locked(inp->sctp_socket);
+#endif
 			} else {
 				SOCKBUF_UNLOCK(&inp->sctp_socket->so_rcv);
 			}
