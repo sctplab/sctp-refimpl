@@ -730,8 +730,6 @@ sctp_fill_stat_log(struct mbuf *m)
 		if (at >= SCTP_STAT_LOG_SIZE)
 			at = 0;
 	}
-	printf("Highest log looked at was %d highest index ret filled:%d num:%d\n",
-	       (at-1), (i-1), num);
 	m->m_len = (cnt_out * sizeof(struct sctp_cwnd_log)) + sizeof(struct sctp_cwnd_log_req);
 	SCTP_STATLOG_UNLOCK();
 	return (0);
