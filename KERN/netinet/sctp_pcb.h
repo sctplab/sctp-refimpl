@@ -231,7 +231,6 @@ struct sctp_epinfo {
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
 	struct mtx logging_mtx;
 	struct mtx ipi_ep_mtx;
-	struct mtx ipi_count_mtx;
 	struct mtx it_mtx;
 	struct mtx ipi_addr_mtx;
 #elif defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
@@ -528,8 +527,7 @@ struct sctp_tcb {
  * the sctppcbinfo list's we will do a SCTP_INP_INFO_WLOCK().
  */
 
-#define SCTP_IPI_COUNT_INIT() \
-        mtx_init(&sctppcbinfo.ipi_count_mtx, "sctp-cnt", "sctp_count_mtx", MTX_DEF)
+#define SCTP_IPI_COUNT_INIT()
 
 #define SCTP_STATLOG_INIT_LOCK()  \
         mtx_init(&sctppcbinfo.logging_mtx, "sctp-logging", "sctp-log_mtx", MTX_DEF)
@@ -894,11 +892,9 @@ z/* iterator locks */
 
 #define SCTP_DECR_CHK_COUNT() \
                 do { \
-                      mtx_lock(&sctppcbinfo.ipi_count_mtx);   \
                        if(sctppcbinfo.ipi_count_chunk == 0) \
                              panic("chunk count to 0?");    \
   	               atomic_add_int(&sctppcbinfo.ipi_count_chunk,-1); \
-                       mtx_unlock(&sctppcbinfo.ipi_count_mtx);   \
 	        } while (0)
 
 #define SCTP_INCR_READQ_COUNT() \
@@ -1000,12 +996,21 @@ z/* iterator locks */
   	               atomic_add_int(&sctppcbinfo.ipi_count_chunk, 1); \
 	        } while (0)
 
+#ifdef INVARIANTS
+
 #define SCTP_DECR_CHK_COUNT() \
                 do { \
                        if(sctppcbinfo.ipi_count_chunk == 0) \
                              panic("chunk count to 0?"); \
   	               atomic_add_int(&sctppcbinfo.ipi_count_chunk,-1); \
 	        } while (0)
+#else
+
+#define SCTP_DECR_CHK_COUNT() \
+                do { \
+  	               atomic_add_int(&sctppcbinfo.ipi_count_chunk,-1); \
+	        } while (0)
+#endif
 
 #define SCTP_INCR_READQ_COUNT() \
                 do { \
