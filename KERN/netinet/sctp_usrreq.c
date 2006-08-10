@@ -181,7 +181,7 @@ unsigned int sctp_init_rtx_max_default = SCTP_DEF_MAX_INIT;
 unsigned int sctp_assoc_rtx_max_default = SCTP_DEF_MAX_SEND;
 unsigned int sctp_path_rtx_max_default = SCTP_DEF_MAX_PATH_RTX;
 unsigned int sctp_nr_outgoing_streams_default = SCTP_OSTREAM_INITIAL;
-
+unsigned int sctp_add_more_threshold = 0;
 int sctp_min_split_point=SCTP_DEFAULT_SPLIT_POINT_MIN;
 int sctp_pcbtblsize = SCTP_PCBHASHSIZE;
 int sctp_hashtblsize = SCTP_TCBHASHSIZE;
@@ -773,6 +773,11 @@ SYSCTL_UINT(_net_inet_sctp, OID_AUTO, assoc_rtx_max, CTLFLAG_RW,
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, path_rtx_max, CTLFLAG_RW,
     &sctp_path_rtx_max_default, 0,
     "Default maximum of retransmissions per path");
+
+SYSCTL_UINT(_net_inet_sctp, OID_AUTO, add_more_on_output, CTLFLAG_RW,
+    &sctp_add_more_threshold, 0,
+    "When space wise is it worthwhile to try to add more to a socket send buffer");
+
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, nr_outgoing_streams, CTLFLAG_RW,
     &sctp_nr_outgoing_streams_default, 0,
@@ -5970,6 +5975,10 @@ sctp_sysctl(name, namelen, oldp, oldlenp, newp, newlen)
 	case SCTPCTL_PATH_RTX_MAX:
 		return (sysctl_int(oldp, oldlenp, newp, newlen,
 		    &sctp_path_rtx_max_default));
+	case SCTPCTL_ADD_MORE:
+		return (sysctl_int(oldp, oldlenp, newp, newlen,
+		    &sctp_add_more_threshold));
+
 	case SCTPCTL_NR_OUTGOING_STREAMS:
 		return (sysctl_int(oldp, oldlenp, newp, newlen,
 		    &sctp_nr_outgoing_streams_default));
@@ -6286,6 +6295,14 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
 	    SYSCTL_DESCR("Default maximum of retransmissions per path"),
 	    NULL, 0, &sctp_path_rtx_max_default, 0,
 	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_PATH_RTX_MAX,
+	    CTL_EOL);
+
+	sysctl_createv(clog, 0, NULL, NULL,
+	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
+	    CTLTYPE_INT, "add_more_on_output",
+	    SYSCTL_DESCR("When space wise is it worthwhile to try to add more to a socket send buffer"),
+	    NULL, 0, &sctp_add_more_threshold, 0,
+	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_ADD_MORE,
 	    CTL_EOL);
 
 	sysctl_createv(clog, 0, NULL, NULL,
