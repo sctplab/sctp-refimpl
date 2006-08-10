@@ -720,6 +720,9 @@ sctp_fill_stat_log(struct mbuf *m)
 		req->end_at = sctp_cwnd_log_at - 1;
 		req->num_ret = sctp_cwnd_log_at;
 	}
+	if(req->num_ret > num) {
+		panic("Bad statlog get?");
+	} 
 	for (i = 0, at = req->start_at; i < req->num_ret; i++) {
 		req->log[i] = sctp_clog[at];
 		cnt_out++;
@@ -727,6 +730,8 @@ sctp_fill_stat_log(struct mbuf *m)
 		if (at >= SCTP_STAT_LOG_SIZE)
 			at = 0;
 	}
+	printf("Highest log looked at was %d highest index ret filled:%d num:%d\n",
+	       (at-1), (i-1), num);
 	m->m_len = (cnt_out * sizeof(struct sctp_cwnd_log)) + sizeof(struct sctp_cwnd_log_req);
 	SCTP_STATLOG_UNLOCK();
 	return (0);
