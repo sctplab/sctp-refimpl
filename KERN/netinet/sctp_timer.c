@@ -1977,16 +1977,22 @@ sctp_slowtimo()
 #endif
 	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
 	LIST_FOREACH(inp, &sctppcbinfo.inplisthead, inp_list) {
+#ifdef SCTP_DEBUG
 		n++;
+#endif
 		if (inp->inp_wantcnt != WNT_STOPUSING) {
+#ifdef SCTP_DEBUG
 			n1++;
+#endif
 			continue;
 		}
 		if (lck_mtx_try_lock(inp->inpcb_mtx)) {
 			so = inp->inp_socket;
 			if (so->so_usecount != 0) {
 				lck_mtx_unlock(inp->inpcb_mtx);
+#ifdef SCTP_DEBUG
 				n2++;
+#endif
 				continue;
 			}
 			if (inp->inp_state == INPCB_STATE_DEAD) {
@@ -2000,10 +2006,14 @@ sctp_slowtimo()
 				SCTP_DECR_EP_COUNT();
 			} else {
 				lck_mtx_unlock(inp->inpcb_mtx);
+#ifdef SCTP_DEBUG
 				n3++;
+#endif
 			}
 		} else {
+#ifdef SCTP_DEBUG
 			n4++;
+#endif
 		}
 	}
 	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
