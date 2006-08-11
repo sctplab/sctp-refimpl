@@ -768,7 +768,7 @@ struct sctp_tcb {
 #define SCTP_TCB_UNLOCK_IFOWNED(_tcb)
 #define SCTP_TCB_LOCK_ASSERT(_tcb)
 
-z/* iterator locks */
+/* iterator locks */
 #define SCTP_ITERATOR_LOCK_INIT() \
 	sctppcbinfo.it_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
 #define SCTP_ITERATOR_LOCK() \
