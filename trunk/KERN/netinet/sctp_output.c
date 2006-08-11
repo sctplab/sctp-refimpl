@@ -12238,7 +12238,8 @@ sctp_lower_sosend(struct socket *so,
 			else
 				max_len = 0;
 
-			if(max_len > sctp_add_more_threshold) {
+			if ( (max_len > sctp_add_more_threshold) ||
+			     (uio->uio_resid && (uio->uio_resid < max_len))) {
 				sndout = 0;
 				new_tail = NULL;
 				if (hold_tcblock) {
