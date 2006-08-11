@@ -7362,7 +7362,7 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
 {
 	struct sctp_association *asoc;
 	struct sctp_stream_out *strq, *strqn;
-	int goal_mtu, moved_how_much;
+	int goal_mtu, moved_how_much, total_moved=0;
 	int locked, giveup;
 	struct sctp_stream_queue_pending *sp;
 
@@ -7448,8 +7448,19 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
 				break;
 			}
 		}
+		total_moved += moved_how_much;
 		goal_mtu -= moved_how_much;
 		goal_mtu &= 0xfffffffc;
+	}
+	if(total_moved == 0) {
+		if ((sctp_cmt_on_off == 0) &&
+		    (net == stcb->asoc.primary_destination)) {
+			/* ran dry for primary network net */
+			SCTP_STAT_INCR(sctps_primary_randry);
+		} else  if(sctp_cmt_on_off) {
+			/* ran dry with CMT on */
+			SCTP_STAT_INCR(sctps_cmt_randry);
+		}
 	}
 }
 
