@@ -3898,6 +3898,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	cum_ack = last_tsn = ntohl(sack->cum_tsn_ack);
 	num_seg = ntohs(sack->num_gap_ack_blks);
 	num_dup = ntohs(sack->num_dup_tsns);
+
 #ifdef SCTP_SACK_LOGGING
 	sctp_log_sack(asoc->last_acked_seq,
 	    cum_ack,
@@ -4256,6 +4257,12 @@ skip_segments:
 		 * Friendlier printf in lieu of panic now that I think its
 		 * fixed
 		 */
+
+		if(tp1->pr_sctp_on) {
+			if(asoc->pr_sctp_cnt != 0) 
+				asoc->pr_sctp_cnt--;
+		}
+
 		if ((TAILQ_FIRST(&asoc->sent_queue) == NULL) &&
 		    (asoc->total_flight > 0)) {
 			printf("Warning flight size incorrect should be 0 is %d\n",
@@ -4311,6 +4318,7 @@ skip_segments:
 		sctp_wakeup_log(stcb, cum_ack, wake_him, SCTP_NOWAKE_FROM_SACK);
 #endif
 	}
+
 	if ((sctp_cmt_on_off == 0) && asoc->fast_retran_loss_recovery && accum_moved) {
 		if (compare_with_wrap(asoc->last_acked_seq,
 		    asoc->fast_recovery_tsn, MAX_TSN) ||
@@ -4702,7 +4710,8 @@ skip_cwnd_update:
 		asoc->advanced_peer_ack_point = cum_ack;
 	}
 	/* C2. try to further move advancedPeerAckPoint ahead */
-	if (asoc->peer_supports_prsctp) {
+	
+	if ((asoc->peer_supports_prsctp) && (asoc->pr_sctp_cnt > 0)) {
 		struct sctp_tmit_chunk *lchk;
 
 		lchk = sctp_try_advance_peer_ack_point(stcb, asoc);
