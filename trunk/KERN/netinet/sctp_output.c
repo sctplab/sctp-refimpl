@@ -6196,6 +6196,7 @@ static void
 sctp_set_prsctp_policy(struct sctp_tcb *stcb,
 		       struct sctp_stream_queue_pending *sp)
 {
+	sp->pr_sctp_on = 0;
 	if (stcb->asoc.peer_supports_prsctp) {
 		/*
 		 * We assume that the user wants PR_SCTP_TTL if the user
@@ -6204,10 +6205,10 @@ sctp_set_prsctp_policy(struct sctp_tcb *stcb,
 		 * problems at least with the U-Vancovers MPI folks. I will
 		 * change this to be no policy means NO PR-SCTP.
 		 */
-		if ((sp->timetolive > 0) && (!PR_SCTP_ENABLED(sp->sinfo_flags))) {
-			sp->act_flags |= CHUNK_FLAGS_PR_SCTP_TTL;
-		} else {
+		if (PR_SCTP_ENABLED(sp->sinfo_flags)) {
 			sp->act_flags |= PR_SCTP_POLICY(sp->sinfo_flags);
+			sp->pr_sctp_on = 1;
+		} else{
 			goto sctp_no_policy;
 		}
 		switch (PR_SCTP_POLICY(sp->sinfo_flags)) {
@@ -7307,7 +7308,9 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		}
 		chk->send_size += pads;
 	}
-	sctp_set_prsctp_policy(stcb, sp);
+	/* We only re-set the policy if it is on */
+	if(sp->pr_sctp_on)
+		sctp_set_prsctp_policy(stcb, sp);
 
 	if(sp->msg_is_complete && (sp->length == 0)) {
 		/* All done pull and kill the message */
@@ -7327,6 +7330,12 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		*locked = 1;
 	}
 	asoc->chunks_on_out_queue++;
+	if(sp->pr_sctp_on) {
+		asoc->pr_sctp_cnt++;
+		chk->pr_sctp_on = 1;
+	} else {
+		chk->pr_sctp_on = 0;
+	}
 	TAILQ_INSERT_TAIL(&asoc->send_queue, chk, sctp_next);
 	asoc->send_queue_cnt++;
 	return (to_move);

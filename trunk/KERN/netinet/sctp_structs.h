@@ -349,7 +349,7 @@ struct sctp_tmit_chunk {
 				 * this chunk is overridden by user. Used for
 				 * CMT (iyengar@cis.udel.edu, 2005/06/21) */
 	uint8_t no_fr_allowed;
-	uint8_t reserved;
+	uint8_t pr_sctp_on;
 };
 
 /*
@@ -417,6 +417,8 @@ struct sctp_stream_queue_pending {
 	uint8_t  some_taken;
 	uint8_t  addr_over;
 	uint8_t  act_flags;
+	uint8_t  pr_sctp_on;
+	uint8_t  resv;
 };
 
 /*
@@ -667,6 +669,7 @@ struct sctp_association {
 	uint32_t nonce_resync_tsn;
 	uint32_t nonce_wait_tsn;
 	uint32_t default_flowlabel;
+	uint32_t pr_sctp_cnt;
 	int ctrl_queue_cnt;	/* could be removed  REM */
 	/*
 	 * All outbound datagrams queue into this list from the individual

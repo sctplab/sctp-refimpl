@@ -1147,6 +1147,8 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	asoc->nonce_wait_for_ecne = 0;
 	asoc->nonce_wait_tsn = 0;
 	asoc->delayed_ack = TICKS_TO_MSEC(m->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV]);
+	asoc->pr_sctp_cnt = 0;
+	asoc->total_output_queue_size = 0;
 
 	if (m->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) {
 		struct in6pcb *inp6;
