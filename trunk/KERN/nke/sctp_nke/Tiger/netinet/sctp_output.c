@@ -12529,7 +12529,7 @@ sctp_copy_it_in(struct sctp_inpcb *inp,
 			}
 			SOCKBUF_LOCK(&stcb->sctp_socket->so_snd);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			sbunlock(&so->so_snd, 1);	/* MT: FIXME */
+			sbunlock(&so->so_snd, 1);
 #else
 			sbunlock(&so->so_snd);
 #endif
@@ -12954,7 +12954,7 @@ zap_by_it_now:
 
 release:
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	sbunlock(&so->so_snd, 1);	/* MT: FIXME */
+	sbunlock(&so->so_snd, 1);
 #else
 	sbunlock(&so->so_snd);
 #endif
@@ -13028,6 +13028,9 @@ sctp_sosend(struct socket *so,
 	return (error);
 }
 
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+/* The socket needs to be locked. */
+#endif
 int
 sctp_lower_sosend(struct socket *so,
     struct sockaddr *addr,
@@ -13065,6 +13068,9 @@ sctp_lower_sosend(struct socket *so,
 	stcb = NULL;
 	asoc = NULL;
 	t_inp = inp = (struct sctp_inpcb *)so->so_pcb;
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sctp_lock_assert(t_inp->ip_inp.inp.inp_socket);
+#endif
 	if (uio)
 		sndlen = uio->uio_resid;
 	else

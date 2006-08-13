@@ -4753,9 +4753,9 @@ wait_some_more:
 			goto release;
 #endif
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		sbunlock(&so->so_snd, 1);
+		sbunlock(&so->so_rcv, 1);
 #else
-		sbunlock(&so->so_snd);
+		sbunlock(&so->so_rcv);
 #endif
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		SAVE_I_AM_HERE(inp);
@@ -4861,9 +4861,9 @@ get_more_data2:
 				goto release;
 #endif
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			sbunlock(&so->so_snd, 1);
+			sbunlock(&so->so_rcv, 1);
 #else
-			sbunlock(&so->so_snd);
+			sbunlock(&so->so_rcv);
 #endif
 			error = sbwait(&so->so_rcv);
 			if (error)
