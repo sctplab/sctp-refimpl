@@ -5262,6 +5262,15 @@ out:
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	SAVE_I_AM_HERE(inp);
 #endif
+#ifdef SCTP_RECV_RWND_LOGGING
+	sctp_misc_ints(SCTP_SORECV_DONE,
+		       freed_so_far,
+		       stcb->asoc.my_last_reported_rwnd, 
+		       stcb->asoc.my_rwnd,
+		       so->so_rcv.sb_cc);
+
+
+#endif
 	if (wakeup_read_socket) {
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		SAVE_I_AM_HERE(inp);
