@@ -834,6 +834,7 @@ struct	sctpstat {
 	u_long  sctps_vtagbogus;	/* Collision in express lookup. */
 	u_long  sctps_primary_randry;	/* Number of times the sender ran dry of user data on primary */
 	u_long  sctps_cmt_randry;       /* Same for above */
+	u_long  sctps_slowpath_sack;    /* Sacks the slow way */
 };
 
 #define SCTP_STAT_INCR(_x) SCTP_STAT_INCR_BY(_x,1)

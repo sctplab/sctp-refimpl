@@ -675,6 +675,9 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 			}
 		}
 	}
+
+
+
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
 		printf("some_on_streamwheel:%d send_q_empty:%d sent_q_empty:%d\n",
@@ -4094,11 +4097,35 @@ process_control_chunks:
 #endif				/* SCTP_DEBUG */
 			SCTP_STAT_INCR(sctps_recvsacks);
 			{
+				struct sctp_sack_chunk *sack;
 				int abort_now = 0;
+				uint32_t a_rwnd, cum_ack;
+				uint16_t num_seg;
+				int nonce_sum_flag;
 
+				sack = (struct sctp_sack_chunk *)ch;
+
+				nonce_sum_flag = ch->chunk_flags & SCTP_SACK_NONCE_SUM;
+				cum_ack = ntohl(sack->sack.cum_tsn_ack);
+				num_seg = ntohs(sack->sack.num_gap_ack_blks);
+				a_rwnd = (uint32_t) ntohl(sack->sack.a_rwnd);
 				stcb->asoc.seen_a_sack_this_pkt = 1;
-				sctp_handle_sack((struct sctp_sack_chunk *)ch,
-				    stcb, *netp, &abort_now);
+				if( (stcb->asoc.pr_sctp_cnt == 0) &&
+				    (num_seg == 0) &&
+				    ((compare_with_wrap(cum_ack, stcb->asoc.last_acked_seq, MAX_TSN)) ||
+				     (cum_ack == stcb->asoc.last_acked_seq)) &&
+				    (stcb->asoc.saw_sack_with_frags == 0) &&
+				    (!TAILQ_EMPTY(&stcb->asoc.sent_queue))
+					) {
+					/* We have a SIMPLE sack having no prior segments and
+					 * data on sent queue to be acked.. Use the faster
+					 * path sack processing. We also allow window update
+					 * sacks with no missing segments to go this way too.
+					 */
+					sctp_express_handle_sack(stcb, cum_ack, a_rwnd, nonce_sum_flag, &abort_now);
+				} else {
+					sctp_handle_sack(sack, stcb, *netp, &abort_now);
+				}
 				if (abort_now) {
 					/* ABORT signal from sack processing */
 					*offset = length;
