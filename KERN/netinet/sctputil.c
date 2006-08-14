@@ -4305,7 +4305,7 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far)
 	}
 	rwnd_req = (so->so_rcv.sb_hiwat >> SCTP_RWND_HIWAT_SHIFT);
 
-	stcb->freed_by_sorcv_sincelast += *freed_so_far;
+	atomic_add_int(&stcb->freed_by_sorcv_sincelast, *freed_so_far);
 	/* Have you have freed enough to look */
 #ifdef SCTP_RECV_RWND_LOGGING
 	sctp_misc_ints(SCTP_ENTER_USER_RECV,
