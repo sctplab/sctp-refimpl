@@ -4287,7 +4287,7 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far)
 	/* User pulled some data, do we need a rwnd update? */
 	int sb_unlocked = 0;
 	int tcb_incr_up = 0;
-	uint32_t rwnd_req;
+	uint32_t rwnd_req, dif;
 	struct socket *so=NULL;
 	
 	if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
@@ -4340,22 +4340,40 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far)
 #endif
 		/* calculate the rwnd */
 		sctp_set_rwnd(stcb, &stcb->asoc);
+		if(stcb->asoc.my_rwnd >= stcb->asoc.my_last_reported_rwnd) {
+			dif = stcb->asoc.my_rwnd - stcb->asoc.my_last_reported_rwnd;
+		} else {
+			dif = 0;
+		}
+		if(dif > rwnd_req) {
 #ifdef SCTP_RECV_RWND_LOGGING
-		sctp_misc_ints(SCTP_USER_RECV_SACKS,
-			       stcb->asoc.my_rwnd,
-			       stcb->asoc.my_last_reported_rwnd,
-			       stcb->freed_by_sorcv_sincelast,
-			       1);
+			sctp_misc_ints(SCTP_USER_RECV_SACKS,
+				       stcb->asoc.my_rwnd,
+				       stcb->asoc.my_last_reported_rwnd,
+				       stcb->freed_by_sorcv_sincelast,
+				       dif);
 #endif
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		SAVE_I_AM_HERE(stcb->sctp_ep);
+			SAVE_I_AM_HERE(stcb->sctp_ep);
 #endif
-		stcb->freed_by_sorcv_sincelast = 0;
-		sctp_send_sack(stcb);
-		sctp_chunk_output(stcb->sctp_ep, stcb,
-				  SCTP_OUTPUT_FROM_USR_RCVD);
-		/* make sure no timer is running */
-		sctp_timer_stop(SCTP_TIMER_TYPE_RECV, stcb->sctp_ep, stcb, NULL);
+			stcb->freed_by_sorcv_sincelast = 0;
+			sctp_send_sack(stcb);
+			sctp_chunk_output(stcb->sctp_ep, stcb,
+					  SCTP_OUTPUT_FROM_USR_RCVD);
+			/* make sure no timer is running */
+			sctp_timer_stop(SCTP_TIMER_TYPE_RECV, stcb->sctp_ep, stcb, NULL);
+		} else {
+			/* Update how much we have pending */
+			stcb->freed_by_sorcv_sincelast = dif;
+			freed_so_far = dif;
+#ifdef SCTP_RECV_RWND_LOGGING
+			sctp_misc_ints(SCTP_USER_RECV_SACKS,
+				       stcb->asoc.my_rwnd,
+				       stcb->asoc.my_last_reported_rwnd,
+				       stcb->freed_by_sorcv_sincelast,
+				       0);
+#endif
+		}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		SAVE_I_AM_HERE(stcb->sctp_ep);
 #endif
