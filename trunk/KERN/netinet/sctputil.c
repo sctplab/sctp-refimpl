@@ -4345,7 +4345,7 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far)
 			       stcb->asoc.my_rwnd,
 			       stcb->asoc.my_last_reported_rwnd,
 			       stcb->freed_by_sorcv_sincelast,
-			       dif);
+			       1);
 #endif
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		SAVE_I_AM_HERE(stcb->sctp_ep);
