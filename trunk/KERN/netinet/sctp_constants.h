@@ -131,7 +131,12 @@ __FBSDID("$FreeBSD:$");
 #define SCTP_AT_END_OF_SACK         79
 #define SCTP_REASON_FOR_SC          80
 #define SCTP_BLOCK_LOG_INTO_BLKA    81
-#define SCTP_UNKNOWN_MAX            82
+#define SCTP_ENTER_USER_RECV        82
+#define SCTP_USER_RECV_SACKS        83
+#define SCTP_SORECV_BLOCKSA         84
+#define SCTP_SORECV_BLOCKSB         85
+#define SCTP_UNKNOWN_MAX            86
+
 
 #define SCTP_LOG_MAX_TYPES 83
 /*
