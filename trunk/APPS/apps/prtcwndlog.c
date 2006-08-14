@@ -601,6 +601,36 @@ main(int argc, char **argv)
 				       log.x.misc.log3,
 				       log.x.misc.log4);
 				       
+			} else if (log.from == SCTP_ENTER_USER_RECV) {
+				printf("user_rcv: dif:%d freed:%d sincelast:%d rwnd_req:%d",
+				       log.x.misc.log1,
+				       log.x.misc.log2,
+				       log.x.misc.log3,
+				       log.x.misc.log4);
+			} else if (log.from == SCTP_USER_RECV_SACKS) {
+				if(log.x.misc.log4 == 0) {
+					printf("no sack rwnd:%d reported:%d sincelast:%d\n",
+					       log.x.misc.log1,
+					       log.x.misc.log2,
+					       log.x.misc.log3);
+				} else {
+					printf("send sack rwnd:%d reported:%d sincelast:%d dif:%d\n",
+					       log.x.misc.log1,
+					       log.x.misc.log2,
+					       log.x.misc.log3,
+					       log.x.misc.log4);
+				}
+
+			} else if (log.from == SCTP_SORECV_BLOCKSA) {
+				printf("Enter and block sb_cc:%d reading:%d\n",
+					       log.x.misc.log3,
+					       log.x.misc.log4);
+			} else if (log.from == SCTP_SORECV_BLOCKSB) {
+				printf("Blocking freed:%d rwnd:%d sb_cc:%d reading:%d\n",
+					       log.x.misc.log1,
+					       log.x.misc.log2,
+					       log.x.misc.log3,
+					       log.x.misc.log4);
 			} else {
 				printf("%s:%s log1:%u log2:%u log3:%u log4:%u\n",
 				       ts,
