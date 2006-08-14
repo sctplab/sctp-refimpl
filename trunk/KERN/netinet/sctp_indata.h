@@ -64,6 +64,10 @@ sctp_build_ctl_nchunk(struct sctp_inpcb *inp,
 void sctp_set_rwnd(struct sctp_tcb *, struct sctp_association *);
 
 void
+sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
+			 uint32_t rwnd, int nonce_sum_flag, int *abort_now);
+
+void
 sctp_handle_sack(struct sctp_sack_chunk *, struct sctp_tcb *,
     struct sctp_nets *, int *);
 

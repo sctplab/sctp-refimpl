@@ -239,10 +239,6 @@ struct sctp_nets {
 
 	/* CMT fast recovery variables */
 	uint32_t fast_recovery_tsn;
-	uint8_t fast_retran_loss_recovery;
-	uint8_t will_exit_fast_recovery;
-
-
 	uint32_t heartbeat_random1;
 	uint32_t heartbeat_random2;
 	uint32_t tos_flowlabel;
@@ -253,6 +249,9 @@ struct sctp_nets {
 	uint16_t failure_threshold;
 	/* error stats on destination */
 	uint16_t error_count;
+
+	uint8_t fast_retran_loss_recovery;
+	uint8_t will_exit_fast_recovery;
 	/* Flags that probably can be combined into dest_state */
 	uint8_t rto_variance_dir;	/* increase = 1, decreasing = 0 */
 	uint8_t rto_pending;	/* is segment marked for RTO update  ** if we
