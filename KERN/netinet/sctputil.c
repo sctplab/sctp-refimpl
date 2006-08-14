@@ -4318,9 +4318,16 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far)
 	rwnd_req = (so->so_rcv.sb_hiwat >> SCTP_RWND_HIWAT_SHIFT);
 
 	stcb->freed_by_sorcv_sincelast += *freed_so_far;
-	*freed_so_far = 0;
 	stat_recv_track[1]++;
 	/* Have you have freed enough to look */
+#ifdef SCTP_RECV_RWND_LOGGING
+	sctp_misc_ints(SCTP_ENTER_USER_RECV,
+		       (stcb->asoc.my_rwnd - stcb->asoc.my_last_reported_rwnd),
+		       *freed_so_far,
+		       stcb->freed_by_sorcv_sincelast,
+		       rwnd_req);
+#endif
+	*freed_so_far = 0;
 	if (stcb->freed_by_sorcv_sincelast > rwnd_req) {
 		/* Yep, its worth a look and the lock overhead */
 		stat_recv_track[2]++;
@@ -4350,8 +4357,22 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far)
 		sctp_set_rwnd(stcb, &stcb->asoc);
 		if (stcb->asoc.my_last_reported_rwnd < stcb->asoc.my_rwnd) {
 			uint32_t dif;
-
 			dif = stcb->asoc.my_rwnd - stcb->asoc.my_last_reported_rwnd;
+#ifdef SCTP_RECV_RWND_LOGGING
+			if(dif > rwnd_req) {
+ 				sctp_misc_ints(SCTP_USER_RECV_SACKS,
+					       stcb->asoc.my_rwnd,
+					       stcb->asoc.my_last_reported_rwnd,
+					       stcb->freed_by_sorcv_sincelast,
+					       dif);
+			} else {
+ 				sctp_misc_ints(SCTP_USER_RECV_SACKS,
+					       stcb->asoc.my_rwnd,
+					       stcb->asoc.my_last_reported_rwnd,
+					       stcb->freed_by_sorcv_sincelast,
+					       0);
+			}
+#endif
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			SAVE_I_AM_HERE(stcb->sctp_ep);
 #endif
@@ -4480,6 +4501,10 @@ restart:
 	if ((so->so_rcv.sb_cc == 0) && block_allowed) {
 		/* we need to wait for data */
 		stat_recv_track[6]++;
+#ifdef SCTP_RECV_RWND_LOGGING
+		sctp_misc_ints(SCTP_SORECV_BLOCKSA,
+			       0,0, so->so_rcv.sb_cc, uio->uio_resid);
+#endif
 		error = sbwait(&so->so_rcv);
 		if (error) {
 			goto out;
@@ -4984,6 +5009,20 @@ wait_some_more:
 
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		SAVE_I_AM_HERE(inp);
+#endif
+#ifdef SCTP_RECV_RWND_LOGGING
+		if (stcb)
+			sctp_misc_ints(SCTP_SORECV_BLOCKSB,
+				       freed_so_far,
+				       stcb->asoc.my_rwnd, 
+				       so->so_rcv.sb_cc, 
+				       uio->uio_resid);
+		else
+			sctp_misc_ints(SCTP_SORECV_BLOCKSB,
+				       freed_so_far,
+				       0, 
+				       so->so_rcv.sb_cc, 
+				       uio->uio_resid);
 #endif
 		error = sbwait(&so->so_rcv);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
