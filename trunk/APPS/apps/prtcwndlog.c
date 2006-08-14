@@ -602,7 +602,7 @@ main(int argc, char **argv)
 				       log.x.misc.log4);
 				       
 			} else if (log.from == SCTP_ENTER_USER_RECV) {
-				printf("user_rcv: dif:%d freed:%d sincelast:%d rwnd_req:%d",
+				printf("user_rcv: dif:%d freed:%d sincelast:%d rwnd_req:%d\n",
 				       log.x.misc.log1,
 				       log.x.misc.log2,
 				       log.x.misc.log3,
