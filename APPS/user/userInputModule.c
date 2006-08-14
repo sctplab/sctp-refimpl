@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.62 2006-08-11 15:01:23 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.63 2006-08-14 12:21:03 randall Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -3566,8 +3566,9 @@ cmd_getstat(char *argv[], int argc)
 	p(sctps_ecnereducedcwnd,     "ecnereducedcwnd");
 	p(sctps_vtagexpress,         "vtagexpress");
 	p(sctps_vtagbogus,           "vtagbogus");
-	p(sctps_primary_randry,      "primary.randry");
+	p(sctps_primary_randry,      "pri.randry");
 	p(sctps_cmt_randry,          "cmt.randry");
+	p(sctps_slowpath_sack,       "slow_sacks");
 	nl("");
 #undef p
 #undef nl
