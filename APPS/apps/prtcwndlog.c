@@ -131,10 +131,16 @@ static char *from_str[]= {
 	/* 79 */ "Sack proc done",
 	/* 80 */ "Reason CO Completes",
 	/* 81 */ "Blocking-I",
-	/* 82 */ "unknown"
+	/* 82 */ "Enter user rcvd",
+	/* 83 */ "User rcv does sack",
+	/* 84 */ "sorecv blocks on entry",
+	/* 85 */ "sorecv blocks for more",
+	/* 86 */ "sorecv done",
+	/* 87 */ "unknown"
+
 
 };
-#define FROM_STRING_MAX 82
+#define FROM_STRING_MAX 87
 
 
 static uint32_t cnt_event[SCTP_LOG_MAX_EVENT];
@@ -602,19 +608,22 @@ main(int argc, char **argv)
 				       log.x.misc.log4);
 				       
 			} else if (log.from == SCTP_ENTER_USER_RECV) {
-				printf("user_rcv: dif:%d freed:%d sincelast:%d rwnd_req:%d\n",
+				printf("%s user_rcv: dif:%d freed:%d sincelast:%d rwnd_req:%d\n",
+				       ts,
 				       log.x.misc.log1,
 				       log.x.misc.log2,
 				       log.x.misc.log3,
 				       log.x.misc.log4);
 			} else if (log.from == SCTP_USER_RECV_SACKS) {
 				if(log.x.misc.log4 == 0) {
-					printf("no sack rwnd:%d reported:%d sincelast:%d\n",
+					printf("%s no sack rwnd:%d reported:%d sincelast:%d\n",
+					       ts,
 					       log.x.misc.log1,
 					       log.x.misc.log2,
 					       log.x.misc.log3);
 				} else {
-					printf("send sack rwnd:%d reported:%d sincelast:%d dif:%d\n",
+					printf("%s send sack rwnd:%d reported:%d sincelast:%d dif:%d\n",
+					       ts,
 					       log.x.misc.log1,
 					       log.x.misc.log2,
 					       log.x.misc.log3,
@@ -622,15 +631,24 @@ main(int argc, char **argv)
 				}
 
 			} else if (log.from == SCTP_SORECV_BLOCKSA) {
-				printf("Enter and block sb_cc:%d reading:%d\n",
-					       log.x.misc.log3,
-					       log.x.misc.log4);
+				printf("%s Enter and block sb_cc:%d reading:%d\n",
+				       ts,
+				       log.x.misc.log3,
+				       log.x.misc.log4);
 			} else if (log.from == SCTP_SORECV_BLOCKSB) {
-				printf("Blocking freed:%d rwnd:%d sb_cc:%d reading:%d\n",
-					       log.x.misc.log1,
-					       log.x.misc.log2,
-					       log.x.misc.log3,
-					       log.x.misc.log4);
+				printf("%s Blocking freed:%d rwnd:%d sb_cc:%d reading:%d\n",
+				       ts,
+				       log.x.misc.log1,
+				       log.x.misc.log2,
+				       log.x.misc.log3,
+				       log.x.misc.log4);
+			} else if (log.from == SCTP_SORECV_DONE) {
+				printf("%s freed_so_far_at_exit:%d last_rep rwnd::%d rwnd:%d sb_cc:%d\n",
+				       ts,
+				       log.x.misc.log1,
+				       log.x.misc.log2,
+				       log.x.misc.log3,
+				       log.x.misc.log4);
 			} else {
 				printf("%s:%s log1:%u log2:%u log3:%u log4:%u\n",
 				       ts,
