@@ -4365,7 +4365,7 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far)
 		} else {
 			/* Update how much we have pending */
 			stcb->freed_by_sorcv_sincelast = dif;
-			freed_so_far = dif;
+			*freed_so_far = dif;
 #ifdef SCTP_RECV_RWND_LOGGING
 			sctp_misc_ints(SCTP_USER_RECV_SACKS,
 				       stcb->asoc.my_rwnd,
