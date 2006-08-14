@@ -4303,7 +4303,7 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far)
 	if(so == NULL) {
 		goto out;
 	}
-	rwnd_req = (min((so->so_rcv.sb_hiwat >> SCTP_RWND_HIWAT_SHIFT), MCLBYTES));
+	rwnd_req = (so->so_rcv.sb_hiwat >> SCTP_RWND_HIWAT_SHIFT);
 
 	stcb->freed_by_sorcv_sincelast += *freed_so_far;
 	/* Have you have freed enough to look */
