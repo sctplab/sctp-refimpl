@@ -4324,7 +4324,6 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far)
 	if (stcb->freed_by_sorcv_sincelast > rwnd_req) {
 		/* Yep, its worth a look and the lock overhead */
 		stat_recv_track[2]++;
-		stcb->freed_by_sorcv_sincelast = 0;
 		atomic_add_16(&stcb->asoc.refcnt, 1);
 		tcb_incr_up = 1;
 		SOCKBUF_UNLOCK(&so->so_rcv);
@@ -4358,6 +4357,7 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far)
 #endif
 			if (dif > rwnd_req) {
 				stat_recv_track[4]++;
+				stcb->freed_by_sorcv_sincelast = 0;
 				sctp_send_sack(stcb);
 				sctp_chunk_output(stcb->sctp_ep, stcb,
 				    SCTP_OUTPUT_FROM_USR_RCVD);
