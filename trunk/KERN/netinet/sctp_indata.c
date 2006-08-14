@@ -4148,12 +4148,12 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 	if (stcb->sctp_socket) {
 		SOCKBUF_LOCK(&stcb->sctp_socket->so_snd);
 #ifdef SCTP_WAKE_LOGGING
-		sctp_wakeup_log(stcb, cumack, wake_him, SCTP_WAKESND_FROM_SACK);
+		sctp_wakeup_log(stcb, cumack, 1, SCTP_WAKESND_FROM_SACK);
 #endif
 		sctp_sowwakeup_locked(stcb->sctp_ep, stcb->sctp_socket);
 #ifdef SCTP_WAKE_LOGGING
 	} else {
-		sctp_wakeup_log(stcb, cumack, wake_him, SCTP_NOWAKE_FROM_SACK);
+		sctp_wakeup_log(stcb, cumack, 1, SCTP_NOWAKE_FROM_SACK);
 #endif
 	}
 
