@@ -4604,6 +4604,11 @@ found_one:
 		stat_recv_track[15]++;
 		atomic_add_16(&stcb->asoc.refcnt, 1);
 		freecnt_applied = 1;
+		/* Setup to remember how much we have not yet told
+		 * the peer our rwnd has opened up.
+		 */
+		if(stcb->asoc.my_last_reported_rwnd > stcb->asoc.my_rwnd)
+			freed_so_far = stcb->asoc.my_last_reported_rwnd - stcb->asoc.my_rwnd;
 	}
 	/* First lets get off the sinfo and sockaddr info */
 	if (sinfo) {
