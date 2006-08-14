@@ -9960,6 +9960,10 @@ sctp_send_sack(struct sctp_tcb *stcb)
 	sack->sack.cum_tsn_ack = htonl(asoc->cumulative_tsn);
 	sack->sack.a_rwnd = htonl(asoc->my_rwnd);
 	asoc->my_last_reported_rwnd = asoc->my_rwnd;
+
+	/* reset the readers interpretation */
+	stcb->freed_by_sorcv_sincelast = 0;
+
 	gap_descriptor = (struct sctp_gap_ack_block *)((caddr_t)sack + sizeof(struct sctp_sack_chunk));
 
 
