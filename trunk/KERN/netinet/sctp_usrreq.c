@@ -1082,7 +1082,7 @@ sctp_detach(struct socket *so)
 #if defined(__FreeBSD__) && __FreeBSD_version > 690000
 		return;
 #else
-	return EINVAL;
+		return EINVAL;
 #endif
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
@@ -1903,7 +1903,7 @@ sctp_do_connect_x(struct socket *so,
 	SCTP_INP_INCR_REF(inp);
 	SCTP_ASOC_CREATE_LOCK(inp);
 	creat_lock_on = 1;
-	if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
+	if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) ||
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
 		error = EFAULT;
 		goto out_now;
@@ -5123,7 +5123,7 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	create_lock_on = 1;
 
 	SCTP_INP_INCR_REF(inp);
-	if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
+	if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) ||
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
 		/* Should I really unlock ? */
 	        error = EFAULT;
