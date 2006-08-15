@@ -49,7 +49,6 @@ __FBSDID("$FreeBSD:$");
 
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 #if defined(_KERNEL)
-#include "opt_global.h"
 #include <net/pfil.h>
 #endif
 #endif
@@ -138,6 +137,7 @@ TAILQ_HEAD(sctp_streamhead, sctp_stream_queue_pending);
 #define SCTP_PCB_FLAGS_AUTHEVNT		0x00040000
 #define SCTP_PCB_FLAGS_STREAM_RESETEVNT 0x00080000
 #define SCTP_PCB_FLAGS_NO_FRAGMENT	0x00100000
+#define SCTP_PCB_FLAGS_EXPLICIT_EOR     0x00200000
 
 
 #define SCTP_PCBHASH_ALLADDR(port, mask) (port & mask)
@@ -232,7 +232,6 @@ struct sctp_epinfo {
 	struct mtx logging_mtx;
 	struct mtx ipi_ep_mtx;
 	struct mtx it_mtx;
-	struct mtx ipi_count_mtx;
 	struct mtx ipi_addr_mtx;
 #elif defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 #ifdef _KERN_LOCKS_H_
@@ -254,27 +253,25 @@ struct sctp_epinfo {
 #endif				/* _KERN_LOCKS_H_ */
 #endif
 	uint32_t ipi_count_ep;
-	u_quad_t ipi_gencnt_ep;
 
 	/* assoc/tcb zone info */
 	uint32_t ipi_count_asoc;
-	u_quad_t ipi_gencnt_asoc;
 
 	/* local addrlist zone info */
 	uint32_t ipi_count_laddr;
-	u_quad_t ipi_gencnt_laddr;
 
 	/* remote addrlist zone info */
 	uint32_t ipi_count_raddr;
-	u_quad_t ipi_gencnt_raddr;
 
 	/* chunk structure list for output */
 	uint32_t ipi_count_chunk;
-	u_quad_t ipi_gencnt_chunk;
 
 	/* socket queue zone info */
 	uint32_t ipi_count_readq;
-	u_quad_t ipi_gencnt_readq;
+
+	/* socket queue zone info */
+	uint32_t ipi_count_strmoq;
+
 
 	struct sctpvtaghead vtag_timewait[SCTP_STACK_VTAG_HASH_SIZE];
 
@@ -405,7 +402,6 @@ struct sctp_inpcb {
 	struct sctpasochead sctp_asoc_list;
 	struct sctp_iterator *inp_starting_point_for_iterator;
 	uint32_t sctp_frag_point;
-
 	uint32_t partial_delivery_point;
 	uint32_t sctp_context;
 	struct sctp_sndrcvinfo def_send;
@@ -433,10 +429,10 @@ struct sctp_inpcb {
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
 	struct mtx inp_mtx;
 	struct mtx inp_create_mtx;
-	uint32_t refcount;
+	int32_t refcount;
 #endif
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	uint32_t refcount;
+	int32_t refcount;
 
 	uint32_t lock_caller1;
 	uint32_t lock_caller2;
@@ -531,12 +527,7 @@ struct sctp_tcb {
  * the sctppcbinfo list's we will do a SCTP_INP_INFO_WLOCK().
  */
 
-/*
- * FIX ME: all locks right now have a recursive check/panic to validate that
- * I don't have any lock recursion going on.
- */
-#define SCTP_IPI_COUNT_INIT() \
-        mtx_init(&sctppcbinfo.ipi_count_mtx, "sctp-count", "inp_info_count", MTX_DEF)
+#define SCTP_IPI_COUNT_INIT()
 
 #define SCTP_STATLOG_INIT_LOCK()  \
         mtx_init(&sctppcbinfo.logging_mtx, "sctp-logging", "sctp-log_mtx", MTX_DEF)
@@ -556,13 +547,6 @@ struct sctp_tcb {
         mtx_init(&sctppcbinfo.ipi_ep_mtx, "sctp-info", "inp_info", MTX_DEF)
 
 
-#ifdef INVARIANTS_SCTP
-void SCTP_INP_INFO_RLOCK(void);
-void SCTP_INP_INFO_WLOCK(void);
-void sctp_verify_no_locks(void);
-
-#else
-
 #define SCTP_INP_INFO_RLOCK()	do { 					\
              mtx_lock(&sctppcbinfo.ipi_ep_mtx);                         \
 } while (0)
@@ -572,7 +556,7 @@ void sctp_verify_no_locks(void);
              mtx_lock(&sctppcbinfo.ipi_ep_mtx);                         \
 } while (0)
 
-#endif
+
 
 #define SCTP_IPI_ADDR_INIT() \
         mtx_init(&sctppcbinfo.ipi_addr_mtx, "sctp-addr-wq", "sctp_addr_wq", MTX_DEF)
@@ -580,13 +564,11 @@ void sctp_verify_no_locks(void);
 #define SCTP_IPI_ADDR_DESTROY(_inp) \
 	mtx_destroy(&sctppcbinfo.ipi_addr_mtx)
 
-#define SCTP_IPI_ADDR_UNLOCK()		mtx_unlock(&sctppcbinfo.ipi_addr_mtx)
-
 #define SCTP_IPI_ADDR_LOCK()	do { 					\
              mtx_lock(&sctppcbinfo.ipi_addr_mtx);                         \
 } while (0)
 
-
+#define SCTP_IPI_ADDR_UNLOCK()		mtx_unlock(&sctppcbinfo.ipi_addr_mtx)
 
 #define SCTP_INP_INFO_RUNLOCK()		mtx_unlock(&sctppcbinfo.ipi_ep_mtx)
 #define SCTP_INP_INFO_WUNLOCK()		mtx_unlock(&sctppcbinfo.ipi_ep_mtx)
@@ -609,11 +591,6 @@ void sctp_verify_no_locks(void);
 	mtx_destroy(&(_inp)->inp_create_mtx)
 
 
-#ifdef INVARIANTS_SCTP
-void SCTP_INP_RLOCK(struct sctp_inpcb *);
-void SCTP_INP_WLOCK(struct sctp_inpcb *);
-
-#else
 #ifdef SCTP_LOCK_LOGGING
 #define SCTP_INP_RLOCK(_inp)	do { 					\
 	sctp_log_lock(_inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_INP);\
@@ -636,21 +613,10 @@ void SCTP_INP_WLOCK(struct sctp_inpcb *);
 } while (0)
 
 #endif
-#endif
 
-#define SCTP_INP_INCR_REF(_inp)        _inp->refcount++
-#define SCTP_INP_DECR_REF(_inp) \
-	do {								\
-		if (_inp->refcount > 0)					\
-			_inp->refcount--;				\
-		else							\
-			panic("bad inp refcount");			\
-	} while (0)
+#define SCTP_INP_INCR_REF(_inp) atomic_add_int(&((_inp)->refcount), 1)
+#define SCTP_INP_DECR_REF(_inp) atomic_add_int(&((_inp)->refcount), -1)
 
-#ifdef INVARIANTS_SCTP
-void SCTP_ASOC_CREATE_LOCK(struct sctp_inpcb *inp);
-
-#else
 #ifdef SCTP_LOCK_LOGGING
 #define SCTP_ASOC_CREATE_LOCK(_inp) \
 	do {								\
@@ -663,7 +629,6 @@ void SCTP_ASOC_CREATE_LOCK(struct sctp_inpcb *inp);
 	do {								\
 		mtx_lock(&(_inp)->inp_create_mtx);			\
 	} while (0)
-#endif
 #endif
 
 #define SCTP_INP_RUNLOCK(_inp)		mtx_unlock(&(_inp)->inp_mtx)
@@ -683,12 +648,6 @@ void SCTP_ASOC_CREATE_LOCK(struct sctp_inpcb *inp);
 
 #define SCTP_TCB_LOCK_DESTROY(_tcb)	mtx_destroy(&(_tcb)->tcb_mtx)
 
-#ifdef INVARIANTS_SCTP
-struct sctp_tcb;
-
-void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
-
-#else
 #ifdef SCTP_LOCK_LOGGING
 #define SCTP_TCB_LOCK(_tcb)  do {					\
         sctp_log_lock(_tcb->sctp_ep, _tcb, SCTP_LOG_LOCK_TCB);          \
@@ -700,7 +659,6 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 	mtx_lock(&(_tcb)->tcb_mtx);                                     \
 } while (0)
 
-#endif
 #endif
 
 
@@ -715,19 +673,19 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 
 
 
-#ifdef INVARIANTS_SCTP
-#define STCB_TCB_LOCK_ASSERT(_tcb) do { \
+#ifdef INVARIANTS
+#define SCTP_TCB_LOCK_ASSERT(_tcb) do { \
                             if (mtx_owned(&(_tcb)->tcb_mtx) == 0) \
                                 panic("Don't own TCB lock"); \
                             } while (0)
 #else
-#define STCB_TCB_LOCK_ASSERT(_tcb)
+#define SCTP_TCB_LOCK_ASSERT(_tcb)
 #endif
 
 #define SCTP_ITERATOR_LOCK_INIT() \
         mtx_init(&sctppcbinfo.it_mtx, "sctp-it", "iterator", MTX_DEF)
 
-#ifdef INVARIANTS_SCTP
+#ifdef INVARIANTS
 #define SCTP_ITERATOR_LOCK() \
 	do {								\
 		if (mtx_owned(&sctppcbinfo.it_mtx))			\
@@ -808,7 +766,7 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #define SCTP_TCB_TRYLOCK(_tcb)
 #define SCTP_TCB_UNLOCK(_tcb)
 #define SCTP_TCB_UNLOCK_IFOWNED(_tcb)
-#define STCB_TCB_LOCK_ASSERT(_tcb)
+#define SCTP_TCB_LOCK_ASSERT(_tcb)
 
 /* iterator locks */
 #define SCTP_ITERATOR_LOCK_INIT() \
@@ -868,7 +826,7 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #define SCTP_TCB_TRYLOCK(_tcb)
 #define SCTP_TCB_UNLOCK(_tcb)
 #define SCTP_TCB_UNLOCK_IFOWNED(_tcb)
-#define STCB_TCB_LOCK_ASSERT(_tcb)
+#define SCTP_TCB_LOCK_ASSERT(_tcb)
 
 
 /* socket locks that are not here in other than 5.3 > FreeBSD */
@@ -889,100 +847,76 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 
 #define SCTP_INCR_EP_COUNT() \
                 do { \
-                       mtx_lock(&sctppcbinfo.ipi_count_mtx); \
-		       sctppcbinfo.ipi_count_ep++; \
-		       sctppcbinfo.ipi_gencnt_ep++; \
-                       mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
+		       atomic_add_int(&sctppcbinfo.ipi_count_ep, 1); \
 	        } while (0)
 
 #define SCTP_DECR_EP_COUNT() \
                 do { \
-                       mtx_lock(&sctppcbinfo.ipi_count_mtx); \
-		       sctppcbinfo.ipi_count_ep--; \
-		       sctppcbinfo.ipi_gencnt_ep++; \
-                       mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
+		       atomic_add_int(&sctppcbinfo.ipi_count_ep,-1); \
 	        } while (0)
 
 #define SCTP_INCR_ASOC_COUNT() \
                 do { \
-                       mtx_lock(&sctppcbinfo.ipi_count_mtx); \
-	               sctppcbinfo.ipi_count_asoc++; \
-	               sctppcbinfo.ipi_gencnt_asoc++; \
-                       mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
+	               atomic_add_int(&sctppcbinfo.ipi_count_asoc, 1); \
 	        } while (0)
 
 #define SCTP_DECR_ASOC_COUNT() \
                 do { \
-                       mtx_lock(&sctppcbinfo.ipi_count_mtx); \
-	               sctppcbinfo.ipi_count_asoc--; \
-	               sctppcbinfo.ipi_gencnt_asoc++; \
-                       mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
+	               atomic_add_int(&sctppcbinfo.ipi_count_asoc, -1); \
 	        } while (0)
 
 #define SCTP_INCR_LADDR_COUNT() \
                 do { \
-                       mtx_lock(&sctppcbinfo.ipi_count_mtx); \
-	               sctppcbinfo.ipi_count_laddr++; \
-		       sctppcbinfo.ipi_gencnt_laddr++; \
-                       mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
+	               atomic_add_int(&sctppcbinfo.ipi_count_laddr, 1); \
 	        } while (0)
 
 #define SCTP_DECR_LADDR_COUNT() \
                 do { \
-                       mtx_lock(&sctppcbinfo.ipi_count_mtx); \
-	               sctppcbinfo.ipi_count_laddr--; \
-		       sctppcbinfo.ipi_gencnt_laddr++; \
-                       mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
+	               atomic_add_int(&sctppcbinfo.ipi_count_laddr, -1); \
 	        } while (0)
 
 #define SCTP_INCR_RADDR_COUNT() \
                 do { \
-                       mtx_lock(&sctppcbinfo.ipi_count_mtx); \
- 	               sctppcbinfo.ipi_count_raddr++; \
-		       sctppcbinfo.ipi_gencnt_raddr++; \
-                       mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
+ 	               atomic_add_int(&sctppcbinfo.ipi_count_raddr,1); \
 	        } while (0)
 
 #define SCTP_DECR_RADDR_COUNT() \
                 do { \
-                       mtx_lock(&sctppcbinfo.ipi_count_mtx); \
- 	               sctppcbinfo.ipi_count_raddr--; \
-		       sctppcbinfo.ipi_gencnt_raddr++; \
-                       mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
+ 	               atomic_add_int(&sctppcbinfo.ipi_count_raddr,-1); \
 	        } while (0)
 
 #define SCTP_INCR_CHK_COUNT() \
                 do { \
-                       mtx_lock(&sctppcbinfo.ipi_count_mtx); \
-  	               sctppcbinfo.ipi_count_chunk++; \
-                       sctppcbinfo.ipi_gencnt_chunk++; \
-                       mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
+  	               atomic_add_int(&sctppcbinfo.ipi_count_chunk, 1); \
 	        } while (0)
 
 #define SCTP_DECR_CHK_COUNT() \
                 do { \
-                       mtx_lock(&sctppcbinfo.ipi_count_mtx); \
                        if(sctppcbinfo.ipi_count_chunk == 0) \
-                            panic("chunk count reaches 0"); \
-  	               sctppcbinfo.ipi_count_chunk--; \
-                       sctppcbinfo.ipi_gencnt_chunk++; \
-                       mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
+                             panic("chunk count to 0?");    \
+  	               atomic_add_int(&sctppcbinfo.ipi_count_chunk,-1); \
 	        } while (0)
 
 #define SCTP_INCR_READQ_COUNT() \
                 do { \
-                       mtx_lock(&sctppcbinfo.ipi_count_mtx); \
-		       sctppcbinfo.ipi_count_readq++; \
-                       mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
+		       atomic_add_int(&sctppcbinfo.ipi_count_readq,1); \
 	        } while (0)
 
 #define SCTP_DECR_READQ_COUNT() \
                 do { \
-                       mtx_lock(&sctppcbinfo.ipi_count_mtx); \
-		       sctppcbinfo.ipi_count_readq--; \
-                       mtx_unlock(&sctppcbinfo.ipi_count_mtx); \
+		       atomic_add_int(&sctppcbinfo.ipi_count_readq, -1); \
 	        } while (0)
-#endif
+
+#define SCTP_INCR_STRMOQ_COUNT() \
+                do { \
+		       atomic_add_int(&sctppcbinfo.ipi_count_strmoq, 1); \
+	        } while (0)
+
+#define SCTP_DECR_STRMOQ_COUNT() \
+                do { \
+		       atomic_add_int(&sctppcbinfo.ipi_count_strmoq,-1); \
+	        } while (0)
+#endif /* __FreeBSD__ */
 
 
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
@@ -1014,102 +948,91 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #define SAVE_CALLERS(caller1, caller2, caller3)
 #endif
 
+#define SBLOCKWAIT(f)   (((f) & MSG_DONTWAIT) ? M_NOWAIT : M_WAITOK)
+
 #define SCTP_INCRS_DEFINED 1
 #define SCTP_INCR_EP_COUNT() \
                 do { \
-                       lck_mtx_lock(sctppcbinfo.ipi_count_mtx); \
-		       sctppcbinfo.ipi_count_ep++; \
-		       sctppcbinfo.ipi_gencnt_ep++; \
-                       lck_mtx_unlock(sctppcbinfo.ipi_count_mtx); \
+		       atomic_add_int(&sctppcbinfo.ipi_count_ep, 1); \
 	        } while (0)
 
 #define SCTP_DECR_EP_COUNT() \
                 do { \
-                       lck_mtx_lock(sctppcbinfo.ipi_count_mtx); \
-		       sctppcbinfo.ipi_count_ep--; \
-		       sctppcbinfo.ipi_gencnt_ep++; \
-                       lck_mtx_unlock(sctppcbinfo.ipi_count_mtx); \
+		       atomic_add_int(&sctppcbinfo.ipi_count_ep,-1); \
 	        } while (0)
 
 #define SCTP_INCR_ASOC_COUNT() \
                 do { \
-                       lck_mtx_lock(sctppcbinfo.ipi_count_mtx); \
-	               sctppcbinfo.ipi_count_asoc++; \
-	               sctppcbinfo.ipi_gencnt_asoc++; \
-                       lck_mtx_unlock(sctppcbinfo.ipi_count_mtx); \
+	               atomic_add_int(&sctppcbinfo.ipi_count_asoc, 1); \
 	        } while (0)
 
 #define SCTP_DECR_ASOC_COUNT() \
                 do { \
-                       lck_mtx_lock(sctppcbinfo.ipi_count_mtx); \
-	               sctppcbinfo.ipi_count_asoc--; \
-	               sctppcbinfo.ipi_gencnt_asoc++; \
-                       lck_mtx_unlock(sctppcbinfo.ipi_count_mtx); \
+	               atomic_add_int(&sctppcbinfo.ipi_count_asoc, -1); \
 	        } while (0)
 
 #define SCTP_INCR_LADDR_COUNT() \
                 do { \
-                       lck_mtx_lock(sctppcbinfo.ipi_count_mtx); \
-	               sctppcbinfo.ipi_count_laddr++; \
-		       sctppcbinfo.ipi_gencnt_laddr++; \
-                       lck_mtx_unlock(sctppcbinfo.ipi_count_mtx); \
+	               atomic_add_int(&sctppcbinfo.ipi_count_laddr, 1); \
 	        } while (0)
 
 #define SCTP_DECR_LADDR_COUNT() \
                 do { \
-                       lck_mtx_lock(sctppcbinfo.ipi_count_mtx); \
-	               sctppcbinfo.ipi_count_laddr--; \
-		       sctppcbinfo.ipi_gencnt_laddr++; \
-                       lck_mtx_unlock(sctppcbinfo.ipi_count_mtx); \
+	               atomic_add_int(&sctppcbinfo.ipi_count_laddr, -1); \
 	        } while (0)
 
 #define SCTP_INCR_RADDR_COUNT() \
                 do { \
-                       lck_mtx_lock(sctppcbinfo.ipi_count_mtx); \
- 	               sctppcbinfo.ipi_count_raddr++; \
-		       sctppcbinfo.ipi_gencnt_raddr++; \
-                       lck_mtx_unlock(sctppcbinfo.ipi_count_mtx); \
+ 	               atomic_add_int(&sctppcbinfo.ipi_count_raddr,1); \
 	        } while (0)
 
 #define SCTP_DECR_RADDR_COUNT() \
                 do { \
-                       lck_mtx_lock(sctppcbinfo.ipi_count_mtx); \
- 	               sctppcbinfo.ipi_count_raddr--; \
-		       sctppcbinfo.ipi_gencnt_raddr++; \
-                       lck_mtx_unlock(sctppcbinfo.ipi_count_mtx); \
+ 	               atomic_add_int(&sctppcbinfo.ipi_count_raddr,-1); \
 	        } while (0)
 
 #define SCTP_INCR_CHK_COUNT() \
                 do { \
-                       lck_mtx_lock(sctppcbinfo.ipi_count_mtx); \
-  	               sctppcbinfo.ipi_count_chunk++; \
-                       sctppcbinfo.ipi_gencnt_chunk++; \
-                       lck_mtx_unlock(sctppcbinfo.ipi_count_mtx); \
+  	               atomic_add_int(&sctppcbinfo.ipi_count_chunk, 1); \
 	        } while (0)
+
+#ifdef INVARIANTS
 
 #define SCTP_DECR_CHK_COUNT() \
                 do { \
-                       lck_mtx_lock(sctppcbinfo.ipi_count_mtx); \
-  	               sctppcbinfo.ipi_count_chunk--; \
-                       sctppcbinfo.ipi_gencnt_chunk++; \
-                       lck_mtx_unlock(sctppcbinfo.ipi_count_mtx); \
+                       if(sctppcbinfo.ipi_count_chunk == 0) \
+                             panic("chunk count to 0?"); \
+  	               atomic_add_int(&sctppcbinfo.ipi_count_chunk,-1); \
 	        } while (0)
+#else
+
+#define SCTP_DECR_CHK_COUNT() \
+                do { \
+  	               atomic_add_int(&sctppcbinfo.ipi_count_chunk,-1); \
+	        } while (0)
+#endif
 
 #define SCTP_INCR_READQ_COUNT() \
                 do { \
-                       lck_mtx_lock(sctppcbinfo.ipi_count_mtx); \
-		       sctppcbinfo.ipi_count_readq++; \
-                       lck_mtx_unlock(sctppcbinfo.ipi_count_mtx); \
+		       atomic_add_int(&sctppcbinfo.ipi_count_readq,1); \
 	        } while (0)
 
 #define SCTP_DECR_READQ_COUNT() \
                 do { \
-                       lck_mtx_lock(sctppcbinfo.ipi_count_mtx); \
-		       sctppcbinfo.ipi_count_readq--; \
-                       lck_mtx_unlock(sctppcbinfo.ipi_count_mtx); \
+		       atomic_add_int(&sctppcbinfo.ipi_count_readq, -1); \
 	        } while (0)
-/***************BEGIN APPLE PANTHER count stuff**********************/
-#endif
+
+#define SCTP_INCR_STRMOQ_COUNT() \
+                do { \
+		       atomic_add_int(&sctppcbinfo.ipi_count_strmoq, 1); \
+	        } while (0)
+
+#define SCTP_DECR_STRMOQ_COUNT() \
+                do { \
+		       atomic_add_int(&sctppcbinfo.ipi_count_strmoq,-1); \
+	        } while (0)
+
+#endif /* APPLE_FINE_GRAINED_LOCKING */
 
 
 
@@ -1118,61 +1041,51 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
 #define SCTP_INCR_EP_COUNT() \
                 do { \
 		       sctppcbinfo.ipi_count_ep++; \
-		       sctppcbinfo.ipi_gencnt_ep++; \
 	        } while (0)
 
 #define SCTP_DECR_EP_COUNT() \
                 do { \
 		       sctppcbinfo.ipi_count_ep--; \
-		       sctppcbinfo.ipi_gencnt_ep++; \
 	        } while (0)
 
 #define SCTP_INCR_ASOC_COUNT() \
                 do { \
 	               sctppcbinfo.ipi_count_asoc++; \
-	               sctppcbinfo.ipi_gencnt_asoc++; \
 	        } while (0)
 
 #define SCTP_DECR_ASOC_COUNT() \
                 do { \
 	               sctppcbinfo.ipi_count_asoc--; \
-	               sctppcbinfo.ipi_gencnt_asoc++; \
 	        } while (0)
 
 #define SCTP_INCR_LADDR_COUNT() \
                 do { \
 	               sctppcbinfo.ipi_count_laddr++; \
-		       sctppcbinfo.ipi_gencnt_laddr++; \
 	        } while (0)
 
 #define SCTP_DECR_LADDR_COUNT() \
                 do { \
 	               sctppcbinfo.ipi_count_laddr--; \
-		       sctppcbinfo.ipi_gencnt_laddr++; \
 	        } while (0)
 
 #define SCTP_INCR_RADDR_COUNT() \
                 do { \
  	               sctppcbinfo.ipi_count_raddr++; \
-		       sctppcbinfo.ipi_gencnt_raddr++; \
 	        } while (0)
 
 #define SCTP_DECR_RADDR_COUNT() \
                 do { \
  	               sctppcbinfo.ipi_count_raddr--; \
-		       sctppcbinfo.ipi_gencnt_raddr++; \
 	        } while (0)
 
 #define SCTP_INCR_CHK_COUNT() \
                 do { \
   	               sctppcbinfo.ipi_count_chunk++; \
-                       sctppcbinfo.ipi_gencnt_chunk++; \
 	        } while (0)
 
 #define SCTP_DECR_CHK_COUNT() \
                 do { \
   	               sctppcbinfo.ipi_count_chunk--; \
-                       sctppcbinfo.ipi_gencnt_chunk++; \
 	        } while (0)
 
 #define SCTP_INCR_READQ_COUNT() \
@@ -1184,6 +1097,17 @@ void SCTP_TCB_LOCK(struct sctp_tcb *stcb);
                 do { \
 		       sctppcbinfo.ipi_count_readq--; \
 	        } while (0)
+
+#define SCTP_INCR_STRMOQ_COUNT() \
+                do { \
+		       sctppcbinfo.ipi_count_strmoq++; \
+	        } while (0)
+
+#define SCTP_DECR_STRMOQ_COUNT() \
+                do { \
+		       sctppcbinfo.ipi_count_strmoq--; \
+	        } while (0)
+
 
 #endif
 
@@ -1304,9 +1228,12 @@ int sctp_destination_is_reachable(struct sctp_tcb *, struct sockaddr *);
  */
 int
 sctp_initiate_iterator(inp_func inpf, asoc_func af, uint32_t, uint32_t,
-    uint32_t, void *, uint32_t, end_func ef, struct sctp_inpcb *);
+    uint32_t, void *, uint32_t, end_func ef, struct sctp_inpcb *, uint8_t co_off);
 
 #if defined(__APPLE__)
+void sctp_callout_alloc(struct sctp_timer *);
+void sctp_callout_free(struct callout *);
+
 void sctp_start_main_timer(void);
 void sctp_stop_main_timer(void);
 #endif

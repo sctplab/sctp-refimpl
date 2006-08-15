@@ -44,7 +44,6 @@ __FBSDID("$FreeBSD:$");
 #include "opt_compat.h"
 #include "opt_inet6.h"
 #include "opt_inet.h"
-#include "opt_global.h"
 #endif
 #if defined(__NetBSD__)
 #include "opt_inet.h"
@@ -174,128 +173,6 @@ extern int ipport_hilastauto;
 
 #endif
 
-#if defined(__FreeBSD__) && __FreeBSD_version > 500000
-
-#ifdef INVARIANTS_SCTP
-
-void
-SCTP_ASOC_CREATE_LOCK(struct sctp_inpcb *inp)
-{
-#ifdef SCTP_LOCK_LOGGING
-	sctp_log_lock(inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_CREATE);
-#endif
-	if (mtx_owned(&inp->inp_mtx)) {
-		panic("Want Create lock, own INP");
-	}
-	if (mtx_owned(&inp->inp_create_mtx))
-		panic("INP Recursive CREATE");
-	mtx_lock(&inp->inp_create_mtx);
-}
-
-
-void
-SCTP_INP_RLOCK(struct sctp_inpcb *inp)
-{
-	/* struct sctp_tcb *stcb; */
-#ifdef SCTP_LOCK_LOGGING
-	sctp_log_lock(inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_INP);
-#endif
-	/*
-	 * LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) { if
-	 * (mtx_owned(&(stcb)->tcb_mtx)) panic("I own TCB lock?"); }
-	 */
-	if (inp->sctp_socket)
-		if (mtx_owned(&(inp->sctp_socket->so_rcv.sb_mtx))) {
-			panic("own rcv socket mtx at lock of inp");
-		}
-	if (inp->sctp_socket)
-		if (mtx_owned(&(inp->sctp_socket->so_snd.sb_mtx))) {
-			panic("own snd socket mtx at lock of inp");
-		}
-	if (mtx_owned(&(inp)->inp_mtx))
-		panic("INP Recursive Lock-R");
-	mtx_lock(&(inp)->inp_mtx);
-}
-
-void
-SCTP_INP_WLOCK(struct sctp_inpcb *inp)
-{
-	SCTP_INP_RLOCK(inp);
-}
-
-void
-SCTP_TCB_LOCK(struct sctp_tcb *stcb)
-{
-#ifdef SCTP_LOCK_LOGGING
-	sctp_log_lock(stcb->sctp_ep, stcb, SCTP_LOG_LOCK_TCB);
-#endif
-	/*
-	 * if (!mtx_owned(&(stcb->sctp_ep->inp_mtx))) panic("TCB locking and
-	 * no INP lock");
-	 */
-	if (mtx_owned(&(stcb)->tcb_mtx))
-		panic("TCB Lock-recursive");
-
-	if (stcb->sctp_socket)
-		if (mtx_owned(&(stcb->sctp_socket->so_rcv.sb_mtx))) {
-			panic("own rcv socket mtx at lock of tcb");
-		}
-	if (stcb->sctp_socket)
-		if (mtx_owned(&(stcb->sctp_socket->so_snd.sb_mtx))) {
-			panic("own snd socket mtx at lock of tcb");
-		}
-	mtx_lock(&(stcb)->tcb_mtx);
-}
-
-
-void
-SCTP_INP_INFO_RLOCK()
-{
-	struct sctp_inpcb *inp;
-	struct sctp_tcb *stcb;
-
-	LIST_FOREACH(inp, &sctppcbinfo.listhead, sctp_list) {
-		if (mtx_owned(&(inp)->inp_mtx))
-			panic("info-lock and own inp lock?");
-		LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
-			if (mtx_owned(&(stcb)->tcb_mtx))
-				panic("Info lock and own a tcb lock?");
-		}
-	}
-	if (mtx_owned(&sctppcbinfo.ipi_ep_mtx))
-		panic("INP INFO Recursive Lock-R");
-	mtx_lock(&sctppcbinfo.ipi_ep_mtx);
-}
-
-void
-SCTP_INP_INFO_WLOCK()
-{
-	SCTP_INP_INFO_RLOCK();
-}
-
-
-void
-sctp_verify_no_locks(void)
-{
-	struct sctp_inpcb *inp;
-	struct sctp_tcb *stcb;
-
-	if (mtx_owned(&sctppcbinfo.ipi_ep_mtx))
-		panic("INP INFO lock is owned?");
-
-	LIST_FOREACH(inp, &sctppcbinfo.listhead, sctp_list) {
-		if (mtx_owned(&(inp)->inp_mtx))
-			panic("You own an INP lock?");
-		LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
-			if (mtx_owned(&(stcb)->tcb_mtx))
-				panic("You own a TCB lock?");
-		}
-	}
-}
-
-#endif
-#endif
-
 void
 sctp_fill_pcbinfo(struct sctp_pcbinfo *spcb)
 {
@@ -315,7 +192,9 @@ sctp_fill_pcbinfo(struct sctp_pcbinfo *spcb)
 	spcb->raddr_count = sctppcbinfo.ipi_count_raddr;
 	spcb->chk_count = sctppcbinfo.ipi_count_chunk;
 	spcb->readq_count = sctppcbinfo.ipi_count_readq;
+	spcb->stream_oque = sctppcbinfo.ipi_count_strmoq;
 	spcb->mbuf_track = sctppcbinfo.mbuf_track;
+	
 	SCTP_INP_INFO_RUNLOCK();
 }
 
@@ -1247,9 +1126,7 @@ sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool, int have_lock)
 	}
 #endif
 	if (inp) {
-		SCTP_INP_WLOCK(inp);
 		SCTP_INP_INCR_REF(inp);
-		SCTP_INP_WUNLOCK(inp);
 	}
 	if (have_lock == 0) {
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
@@ -1543,7 +1420,6 @@ sctp_findassoc_by_vtag(struct sockaddr *from, uint32_t vtag,
 				 * not him, this should only happen in rare
 				 * cases so I peg it.
 				 */
-
 				SCTP_STAT_INCR(sctps_vtagbogus);
 			}
 		}
@@ -1714,7 +1590,8 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 				}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 				socket_unlock(inp->ip_inp.inp.inp_socket, 1);
-#endif				return (NULL);
+#endif
+				return (NULL);
 			}
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_PCB1) {
@@ -1853,7 +1730,7 @@ sctp_findassociation_ep_asconf(struct mbuf *m, int iphlen, int offset,
 	if (zero_address) {
 		stcb = sctp_findassoc_by_vtag(NULL, ntohl(sh->v_tag), inp_p,
 		    netp, sh->src_port, sh->dest_port, 1);
-printf("findassociation_ep_asconf: zero lookup address finds stcb 0x%x\n", (uint32_t)stcb);
+                /*printf("findassociation_ep_asconf: zero lookup address finds stcb 0x%x\n", (uint32_t)stcb);*/
 	} else {
 		stcb = sctp_findassociation_ep_addr(inp_p,
 		    (struct sockaddr *)&remote_store, netp,
@@ -1861,6 +1738,7 @@ printf("findassociation_ep_asconf: zero lookup address finds stcb 0x%x\n", (uint
 	}
 	return (stcb);
 }
+
 
 extern int sctp_max_burst_default;
 
@@ -1899,46 +1777,11 @@ sctp_inpcb_alloc(struct socket *so)
 	int i, error;
 	struct sctp_inpcb *inp;
 
-#ifdef INVARIANTS_SCTP
-	struct sctp_inpcb *n_inp;
-
-#endif
 	struct sctp_pcb *m;
 	struct timeval time;
 	sctp_sharedkey_t *null_key;
 
 	error = 0;
-
-	/*
-	 * Hack alert:
-	 * 
-	 * This code audits the entire INP list to see if any ep's that are in
-	 * the GONE state are now all free. This should not happen really
-	 * since when the last association if freed we should end up
-	 * deleting the inpcb. This code including the locks should be taken
-	 * out ... since the last set of fixes I have not seen the "Found a
-	 * GONE on list" has not came out. But I am paranoid and we will
-	 * leave this in at the cost of efficency on allocation of PCB's.
-	 * Probably we should move this to the invariant compile options
-	 */
-#ifdef INVARIANTS_SCTP
-	SCTP_INP_INFO_RLOCK();
-	inp = LIST_FIRST(&sctppcbinfo.listhead);
-	while (inp) {
-		n_inp = LIST_NEXT(inp, sctp_list);
-		if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
-			if (LIST_FIRST(&inp->sctp_asoc_list) == NULL) {
-				/* finish the job now */
-				printf("Found a GONE on list\n");
-				SCTP_INP_INFO_RUNLOCK();
-				sctp_inpcb_free(inp, 1);
-				SCTP_INP_INFO_RLOCK();
-			}
-		}
-		inp = n_inp;
-	}
-	SCTP_INP_INFO_RUNLOCK();
-#endif				/* INVARIANTS_SCTP */
 
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
@@ -1964,7 +1807,7 @@ sctp_inpcb_alloc(struct socket *so)
 	inp->sctp_socket = so;
 	inp->ip_inp.inp.inp_socket = so;
 
-	inp->partial_delivery_point = so->so_rcv.sb_hiwat - 6000;
+	inp->partial_delivery_point = so->so_rcv.sb_hiwat >> SCTP_PARTIAL_DELIVERY_SHIFT;
 	inp->sctp_frag_point = SCTP_DEFAULT_MAXSEGMENT;
 
 #ifdef IPSEC
@@ -1992,7 +1835,6 @@ sctp_inpcb_alloc(struct socket *so)
 #endif				/* IPSEC */
 	SCTP_INCR_EP_COUNT();
 #if defined(__FreeBSD__) || defined(__APPLE__)
-	inp->ip_inp.inp.inp_gencnt = sctppcbinfo.ipi_gencnt_ep;
 	inp->ip_inp.inp.inp_ip_ttl = ip_defttl;
 #else
 	inp->inp_ip_ttl = ip_defttl;
@@ -2173,6 +2015,9 @@ sctp_inpcb_alloc(struct socket *so)
 	socket_unlock(inp->ip_inp.inp.inp_socket, 1);
 #endif
 	SCTP_INP_WUNLOCK(inp);
+#ifdef SCTP_LOG_CLOSING
+	sctp_log_closing(inp, NULL, 12);
+#endif
 	return (error);
 }
 
@@ -2558,13 +2403,8 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 			 * it is this inp (inp_tmp) that gets the reference
 			 * bump, so we must lower it.
 			 */
-			SCTP_INP_WLOCK(inp_tmp);
 			SCTP_INP_DECR_REF(inp_tmp);
-			SCTP_INP_WUNLOCK(inp_tmp);
-
-			SCTP_INP_WLOCK(inp);
 			SCTP_INP_DECR_REF(inp);
-			SCTP_INP_WUNLOCK(inp);
 			/* unlock info */
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
@@ -2873,22 +2713,40 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	sctp_lock_assert(inp->ip_inp.inp.inp_socket);
 #endif
+#ifdef SCTP_LOG_CLOSING
+	sctp_log_closing(inp, NULL, 0);
+#endif
+#if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	SCTP_ITERATOR_LOCK();
+#endif
 	SCTP_ASOC_CREATE_LOCK(inp);
-	SCTP_INP_WLOCK(inp);
+	SCTP_INP_INFO_WLOCK();
 	so = inp->sctp_socket;
-	if (so && ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) == 0)) {
+
+	if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
+		/* been here before.. eeks.. get out of here */
+		splx(s);
+		printf("This conflict in free SHOULD not be happening!\n");
+		SCTP_ASOC_CREATE_UNLOCK(inp);
+		SCTP_INP_INFO_WUNLOCK();
+#if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		SCTP_ITERATOR_UNLOCK();
+#endif
+#ifdef SCTP_LOG_CLOSING
+		sctp_log_closing(inp, NULL, 1);
+#endif
+		return;
+	}
+	SCTP_INP_WLOCK(inp);
+	/* First time through we have the socket lock, after that
+	 * no more.
+	 */
+	if (so) {
 		locked_so = 1;
 #ifdef SCTP_LOCK_LOGGING
 		sctp_log_lock(inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_SOCK);
 #endif
 		SOCK_LOCK(so);
-	}
-	if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
-		/* been here before */
-		splx(s);
-		SCTP_INP_WUNLOCK(inp);
-		SCTP_ASOC_CREATE_UNLOCK(inp);
-		return;
 	}
 	sctp_timer_stop(SCTP_TIMER_TYPE_NEWCOOKIE, inp, NULL, NULL);
 
@@ -2911,16 +2769,19 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		for ((asoc = LIST_FIRST(&inp->sctp_asoc_list)); asoc != NULL;
 		    asoc = nasoc) {
 			nasoc = LIST_NEXT(asoc, sctp_tcblist);
+			if(asoc->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+				/* Skip guys being freed */
+				asoc->sctp_socket = NULL;
+				cnt_in_sd++;
+				continue;
+			}
 			if ((SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_COOKIE_WAIT) ||
 			    (SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_COOKIE_ECHOED)) {
 				/* Just abandon things in the front states */
 				if (locked_so) {
 					SOCK_UNLOCK(so);
 				}
-				SCTP_TCB_LOCK(asoc);
-				SCTP_INP_WUNLOCK(inp);
 				sctp_free_assoc(inp, asoc, 1);
-				SCTP_INP_WLOCK(inp);
 				if (locked_so) {
 					SOCK_LOCK(so);
 				}
@@ -2937,39 +2798,46 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 			asoc->sctp_socket = NULL;
 			asoc->asoc.state |= SCTP_STATE_CLOSED_SOCKET;
 			if ((asoc->asoc.size_on_reasm_queue > 0) ||
+			    (asoc->asoc.control_pdapi) ||
 			    (asoc->asoc.size_on_all_streams > 0) ||
 			    (so && (so->so_rcv.sb_cc > 0))
 			    ) {
 				/* Left with Data unread */
 				struct mbuf *op_err;
 
-				MGET(op_err, M_DONTWAIT, MT_DATA);
+				op_err = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) + sizeof(uint32_t)),
+							       0, M_DONTWAIT, 1, MT_DATA);
 				if (op_err) {
 					/* Fill in the user initiated abort */
 					struct sctp_paramhdr *ph;
+					uint32_t *ippp;
 
 					op_err->m_len =
-					    sizeof(struct sctp_paramhdr);
+					    sizeof(struct sctp_paramhdr) + sizeof(uint32_t);
 					ph = mtod(op_err,
 					    struct sctp_paramhdr *);
 					ph->param_type = htons(
 					    SCTP_CAUSE_USER_INITIATED_ABT);
 					ph->param_length = htons(op_err->m_len);
+					ippp = (uint32_t *) (ph + 1);
+					*ippp = htonl(0x30000004);
 				}
 				if (locked_so) {
 					SOCK_UNLOCK(so);
 				}
 				sctp_send_abort_tcb(asoc, op_err);
-
-				SCTP_INP_WUNLOCK(inp);
 				sctp_free_assoc(inp, asoc, 1);
-				SCTP_INP_WLOCK(inp);
 				if (locked_so) {
 					SOCK_LOCK(so);
 				}
 				continue;
 			} else if (TAILQ_EMPTY(&asoc->asoc.send_queue) &&
-			    TAILQ_EMPTY(&asoc->asoc.sent_queue)) {
+			           TAILQ_EMPTY(&asoc->asoc.sent_queue) &&
+				   (asoc->asoc.stream_queue_cnt == 0)
+				) {
+				if (asoc->asoc.locked_on_sending) {
+					goto abort_anyway;
+				}
 				if ((SCTP_GET_STATE(&asoc->asoc) != SCTP_STATE_SHUTDOWN_SENT) &&
 				    (SCTP_GET_STATE(&asoc->asoc) != SCTP_STATE_SHUTDOWN_ACK_SENT)) {
 					/*
@@ -2989,22 +2857,62 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 					if (locked_so) {
 						SOCK_LOCK(so);
 					}
-				}
+				} 
 			} else {
 				/* mark into shutdown pending */
+				struct sctp_stream_queue_pending *sp;
+
 				asoc->asoc.state |= SCTP_STATE_SHUTDOWN_PENDING;
+				if(asoc->asoc.locked_on_sending) {
+					sp = TAILQ_LAST(&((asoc->asoc.locked_on_sending)->outqueue), 
+						sctp_streamhead);
+					if(sp == NULL) {
+						printf("Error, sp is NULL, locked on sending is %x strm:%d\n",
+						       (u_int)asoc->asoc.locked_on_sending,
+						       asoc->asoc.locked_on_sending->stream_no);
+					} else {
+						if ((sp->length == 0) && (sp->msg_is_complete == 0))
+							asoc->asoc.state |= SCTP_STATE_PARTIAL_MSG_LEFT;
+					}
+				}
+				if (TAILQ_EMPTY(&asoc->asoc.send_queue) &&
+				    TAILQ_EMPTY(&asoc->asoc.sent_queue) &&
+				    (asoc->asoc.state & SCTP_STATE_PARTIAL_MSG_LEFT)) {
+					struct mbuf *op_err;
+				abort_anyway:
+					op_err = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) + sizeof(uint32_t)),
+								       0, M_DONTWAIT, 1, MT_DATA);
+					if (op_err) {
+						/* Fill in the user initiated abort */
+						struct sctp_paramhdr *ph;
+						uint32_t *ippp;
+						op_err->m_len =
+							(sizeof(struct sctp_paramhdr) +
+							 sizeof(uint32_t));
+						ph = mtod(op_err,
+							  struct sctp_paramhdr *);
+						ph->param_type = htons(
+							SCTP_CAUSE_USER_INITIATED_ABT);
+						ph->param_length = htons(op_err->m_len);
+						ippp = (uint32_t *) (ph + 1);
+						*ippp = htonl(0x30000005);
+					}
+					if (locked_so) {
+						SOCK_UNLOCK(so);
+					}
+					sctp_send_abort_tcb(asoc, op_err);
+					sctp_free_assoc(inp, asoc, 1);
+					if (locked_so) {
+						SOCK_LOCK(so);
+					}
+					continue;
+				}
 			}
-			SCTP_TCB_UNLOCK(asoc);
 			cnt_in_sd++;
+			SCTP_TCB_UNLOCK(asoc);
 		}
 		/* now is there some left in our SHUTDOWN state? */
 		if (cnt_in_sd) {
-			inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_GONE;
-			/*
-			 * Now the question comes as to if this EP was ever
-			 * bound at all. If it was, then we must pull it out
-			 * of the EP hash list.
-			 */
 			if ((inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) !=
 			    SCTP_PCB_FLAGS_UNBOUND) {
 				/*
@@ -3015,64 +2923,144 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 				 * Note we are depending on lookup by vtag to
 				 * find associations that are dieing. This
 				 * free's the port so we don't have to block
-				 * its useage. The SOCKET_GONE flags will
+				 * its useage. The SCTP_PCB_FLAGS_UNBOUND flags will
 				 * prevent us from doing this again.
 				 */
 				LIST_REMOVE(inp, sctp_hash);
+				inp->sctp_flags |= SCTP_PCB_FLAGS_UNBOUND;
 			}
 			splx(s);
-			SCTP_INP_WUNLOCK(inp);
-			SCTP_ASOC_CREATE_UNLOCK(inp);
+
 			if (locked_so) {
 				SOCK_UNLOCK(so);
 			}
+			SCTP_INP_WUNLOCK(inp);
+			SCTP_ASOC_CREATE_UNLOCK(inp);
+			SCTP_INP_INFO_WUNLOCK();
+#if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			SCTP_ITERATOR_UNLOCK();
+#endif
+#ifdef SCTP_LOG_CLOSING
+			sctp_log_closing(inp, NULL, 2);
+#endif
 			return;
 		}
 	}
-	if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
+	inp->sctp_socket = NULL;
+	if ((inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) !=
+	    SCTP_PCB_FLAGS_UNBOUND) {
 		/*
-		 * Now the question comes as to if this EP was ever bound at
-		 * all. If it was, then we must pull it out of the EP hash
-		 * list.
+		 * ok, this guy has been bound. It's port is
+		 * somewhere in the sctppcbinfo hash table. Remove
+		 * it!
 		 */
-		if ((inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) !=
-		    SCTP_PCB_FLAGS_UNBOUND) {
-			/*
-			 * ok, this guy has been bound. It's port is
-			 * somewhere in the sctppcbinfo hash table. Remove
-			 * it!
-			 */
-			LIST_REMOVE(inp, sctp_hash);
-		}
+		LIST_REMOVE(inp, sctp_hash);
+		inp->sctp_flags |= SCTP_PCB_FLAGS_UNBOUND;
 	}
+
+	/* If there is a timer running to kill us, 
+	 * forget it, since it may have a contest
+	 * on the INP lock.. which would cause us
+	 * to die ...
+	 */
+	cnt = 0;
+	for ((asoc = LIST_FIRST(&inp->sctp_asoc_list)); asoc != NULL;
+	    asoc = nasoc) {
+		nasoc = LIST_NEXT(asoc, sctp_tcblist);
+		if(asoc->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+			cnt++;
+			continue;
+		}
+		/* Free associations that are NOT killing us */
+		if (locked_so) {
+			SOCK_UNLOCK(so);
+		}
+		SCTP_TCB_LOCK(asoc);
+		if (locked_so) {
+			SOCK_LOCK(so);
+		}
+		if ((SCTP_GET_STATE(&asoc->asoc) != SCTP_STATE_COOKIE_WAIT) &&
+		    ((asoc->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) == 0)){
+			struct mbuf *op_err;
+			uint32_t *ippp;
+			op_err = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) + sizeof(uint32_t)),
+						       0, M_DONTWAIT, 1, MT_DATA);
+			if (op_err) {
+				/* Fill in the user initiated abort */
+				struct sctp_paramhdr *ph;
+
+				op_err->m_len = (sizeof(struct sctp_paramhdr) +
+						 sizeof(uint32_t));
+				ph = mtod(op_err, struct sctp_paramhdr *);
+				ph->param_type = htons(
+				    SCTP_CAUSE_USER_INITIATED_ABT);
+				ph->param_length = htons(op_err->m_len);
+				ippp = (uint32_t *) (ph + 1);
+				*ippp = htonl(0x30000006);
+
+			}
+			sctp_send_abort_tcb(asoc, op_err);
+		} else if (asoc->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+			cnt++;
+			SCTP_TCB_UNLOCK(asoc);
+			continue;
+		}
+		sctp_free_assoc(inp, asoc, 2);
+	}
+	if(cnt) {
+		/* Ok we have someone out there that will kill us */
+		callout_stop(&inp->sctp_ep.signature_change.timer);
+		if (locked_so) {
+			SOCK_UNLOCK(so);
+		}
+		SCTP_INP_WUNLOCK(inp);
+		SCTP_ASOC_CREATE_UNLOCK(inp);
+		SCTP_INP_INFO_WUNLOCK();
+#if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		SCTP_ITERATOR_UNLOCK();
+#endif
+#ifdef SCTP_LOG_CLOSING
+		sctp_log_closing(inp, NULL, 3);
+#endif
+		return;
+	}
+
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
 	if (inp->refcount) {
 		callout_stop(&inp->sctp_ep.signature_change.timer);
 		sctp_timer_start(SCTP_TIMER_TYPE_INPKILL, inp, NULL, NULL);
-		inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_GONE;
-		SCTP_INP_WUNLOCK(inp);
-		SCTP_ASOC_CREATE_UNLOCK(inp);
 		if (locked_so) {
 			SOCK_UNLOCK(so);
 		}
+		SCTP_INP_WUNLOCK(inp);
+		SCTP_ASOC_CREATE_UNLOCK(inp);
+		SCTP_INP_INFO_WUNLOCK();
+#if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		SCTP_ITERATOR_UNLOCK();
+#endif
+#ifdef SCTP_LOG_CLOSING
+		sctp_log_closing(inp, NULL, 4);
+#endif
 		return;
 	}
 #endif
-#if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	if (so) {
-		so->so_pcb = NULL;
-	}
-#endif
 	inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_ALLGONE;
+
+#ifdef SCTP_LOG_CLOSING
+	sctp_log_closing(inp, NULL, 5);
+#endif
+
 #if !defined(__FreeBSD__) || __FreeBSD_version < 500000
 	rt = ip_pcb->inp_route.ro_rt;
 #endif
 	callout_stop(&inp->sctp_ep.signature_change.timer);
+	inp->sctp_ep.signature_change.type = SCTP_TIMER_TYPE_NONE;
 	/* Clear the read queue */
 	while ((sq = TAILQ_FIRST(&inp->read_queue)) != NULL) {
 		TAILQ_REMOVE(&inp->read_queue, sq, next);
 		sctp_free_remote_addr(sq->whoFrom);
-		so->so_rcv.sb_cc -= sq->length;
+		if(so)
+			so->so_rcv.sb_cc -= sq->length;
 		if (sq->data) {
 			sctp_m_freem(sq->data);
 			sq->data = NULL;
@@ -3092,69 +3080,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	 * sctp_free_assoc() call.
 	 */
 	cnt = 0;
-	for ((asoc = LIST_FIRST(&inp->sctp_asoc_list)); asoc != NULL;
-	    asoc = nasoc) {
-		nasoc = LIST_NEXT(asoc, sctp_tcblist);
-		SCTP_TCB_LOCK(asoc);
-		if (SCTP_GET_STATE(&asoc->asoc) != SCTP_STATE_COOKIE_WAIT) {
-			struct mbuf *op_err;
-
-			MGET(op_err, M_DONTWAIT, MT_DATA);
-			if (op_err) {
-				/* Fill in the user initiated abort */
-				struct sctp_paramhdr *ph;
-
-				op_err->m_len = sizeof(struct sctp_paramhdr);
-				ph = mtod(op_err, struct sctp_paramhdr *);
-				ph->param_type = htons(
-				    SCTP_CAUSE_USER_INITIATED_ABT);
-				ph->param_length = htons(op_err->m_len);
-			}
-			sctp_send_abort_tcb(asoc, op_err);
-		}
-		cnt++;
-		SCTP_INP_WUNLOCK(inp);
-		sctp_free_assoc(inp, asoc, 1);
-		SCTP_INP_WLOCK(inp);
-	}
-
 	if (locked_so) {
-		/* First take care of socket level things */
-		so->so_rcv.sb_mbcnt = 0;
-		if (so->so_rcv.sb_cc) {
-			printf("Strange, so->so_rcv.sb_cc > 0 was %d?\n",
-			    (int)so->so_rcv.sb_cc);
-			so->so_rcv.sb_cc = 0;
-#ifdef INVARIENTS
-			panic("strange case 1");
-#endif
-		}
-		if (so->so_rcv.sb_mb) {
-			printf("Strange, so->so_rcv.sb_mb is not NULL (%x)?\n",
-			       (u_int)so->so_rcv.sb_mb);
-#ifdef INVARIENTS
-			panic("strange case 1a");
-#endif
-			so->so_rcv.sb_mb = NULL;
-		}
-		so->so_snd.sb_mbcnt = 0;
-		if (so->so_snd.sb_cc) {
-			printf("Strange, so->so_snd.sb_cc >0 was %d?\n",
-			    (int)so->so_snd.sb_cc);
-			so->so_snd.sb_cc = 0;
-#ifdef INVARIENTS
-			panic("strange case 2");
-#endif
-		}
-		if (so->so_snd.sb_mb) {
-			printf("Strange, so->so_snd.sb_mb is not NULL (%x)?\n",
-			       (u_int)so->so_snd.sb_mb);
-#ifdef INVARIENTS
-			panic("strange case 2a");
-#endif
-			so->so_snd.sb_mb = NULL;
-		}
-
 #ifdef IPSEC
 #ifdef __OpenBSD__
 		/* XXX IPsec cleanup here */
@@ -3185,35 +3111,16 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		ipsec4_delete_pcbpolicy(ip_pcb);
 #endif
 #endif				/* IPSEC */
-#if defined(__FreeBSD__) && __FreeBSD_version > 500000
-		/*
-		 * It appears that witness tells us that the other time we
-		 * get called (probably from the socket layer) the accept
-		 * lock is applied and then the INP lock gets applied. So,
-		 * to keep witness happy and maintain proper order we unlock
-		 * and then relock.
-		 */
-		SCTP_INP_WUNLOCK(inp);
-		SCTP_ASOC_CREATE_UNLOCK(inp);
-		if (locked_so) {
-			SOCK_UNLOCK(so);
-		}
-		SCTP_ASOC_CREATE_LOCK(inp);
-		SCTP_INP_WLOCK(inp);
-		ACCEPT_LOCK();
-		if (locked_so) {
-			SOCK_LOCK(so);
-		}
-#endif
-#if defined(__FreeBSD__) && __FreeBSD_version > 500000
-		sotryfree(so);
-#elif !(defined __APPLE__)
+
+#ifdef  __NetBSD__
 		sofree(so);
+#else
+		SOCK_UNLOCK(so);
 #endif
 		/* Unlocks not needed since the socket is gone now */
 	}
 	if (ip_pcb->inp_options) {
-		(void)m_free(ip_pcb->inp_options);
+		(void)sctp_m_free(ip_pcb->inp_options);
 		ip_pcb->inp_options = 0;
 	}
 #if !defined(__FreeBSD__) || __FreeBSD_version < 500000
@@ -3243,9 +3150,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 #else
 	ip_pcb->inp_vflag = 0;
 #endif
-
-	inp->sctp_socket = 0;
-
 	/* free up authentication fields */
 	if (inp->sctp_ep.local_auth_chunks != NULL)
 		sctp_free_chunklist(inp->sctp_ep.local_auth_chunks);
@@ -3259,17 +3163,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		shared_key = LIST_FIRST(&inp->sctp_ep.shared_keys);
 	}
 
-	/* Now first we remove ourselves from the overall list of all EP's */
-	/* Unlock inp first, need correct order */
-	SCTP_INP_WUNLOCK(inp);
-	/* now iterator lock */
-#if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	SCTP_ITERATOR_LOCK();
-#endif
-	/* now info lock */
-	SCTP_INP_INFO_WLOCK();
-	/* now reget the inp lock */
-	SCTP_INP_WLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	if (!lck_mtx_try_lock(sctppcbinfo.it_mtx)) {
 		socket_unlock(inp->ip_inp.inp.inp_socket, 0);
@@ -3293,9 +3186,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 
 	/* fix any iterators only after out of the list */
 	sctp_iterator_inp_being_freed(inp, inp_save);
-#if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	SCTP_ITERATOR_UNLOCK();
-#endif
 	/*
 	 * if we have an address list the following will free the list of
 	 * ifaddr's that are set into this ep. Again macro limitations here,
@@ -3313,22 +3203,26 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		FREE(inp->sctp_tcbhash, M_PCB);
 		inp->sctp_tcbhash = 0;
 	}
-	SCTP_INP_WUNLOCK(inp);
-	SCTP_ASOC_CREATE_UNLOCK(inp);
+	/* Now we must put the ep memory back into the zone pool */
 	SCTP_INP_LOCK_DESTROY(inp);
 	SCTP_ASOC_CREATE_LOCK_DESTROY(inp);
+	SCTP_INP_INFO_WUNLOCK();
 
-	/* Now we must put the ep memory back into the zone pool */
-	/* For Tiger, we will do this later... */
+#if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	SCTP_ITERATOR_UNLOCK();
+#endif
+
 #if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, inp);
 	SCTP_DECR_EP_COUNT();
+#else
+	/* For Tiger, we will do this later... */
 #endif
+
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 	SCTP_ITERATOR_UNLOCK();
 #endif
-	SCTP_INP_INFO_WUNLOCK();
 	splx(s);
 }
 
@@ -4207,7 +4101,8 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	struct sctp_queued_to_read *sq;
 	sctp_sharedkey_t *shared_key;
 	struct socket *so;
-	int s;
+	int ccnt=0;
+	int s,cnt=0;
 
 	/* first, lets purge the entry from the hash table. */
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -4218,15 +4113,21 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	sctp_lock_assert(inp->ip_inp.inp.inp_socket);
 #endif
+
+#ifdef SCTP_LOG_CLOSING
+	sctp_log_closing(inp, stcb, 6);
+#endif
 	if (stcb->asoc.state == 0) {
-		printf("Freeing already free association:%p - huh??\n",
-		    stcb);
+#ifdef SCTP_LOG_CLOSING
+		sctp_log_closing(inp, NULL, 7);
+#endif
 		splx(s);
 		/* there is no asoc, really TSNH :-0 */
 		return (1);
 	}
 	asoc = &stcb->asoc;
-	if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)
+	if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) ||
+	    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) 
 		/* nothing around */
 		so = NULL;
 	else
@@ -4255,6 +4156,9 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			/* no asoc destroyed */
 			SCTP_TCB_UNLOCK(stcb);
 			splx(s);
+#ifdef SCTP_LOG_CLOSING
+			sctp_log_closing(inp, stcb, 8);
+#endif
 			return (0);
 		}
 		if (so) {
@@ -4266,8 +4170,8 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	callout_stop(&asoc->dack_timer.timer);
 	callout_stop(&asoc->strreset_timer.timer);
 	callout_stop(&asoc->asconf_timer.timer);
-	callout_stop(&asoc->shut_guard_timer.timer);
 	callout_stop(&asoc->autoclose_timer.timer);
+	callout_stop(&asoc->shut_guard_timer.timer);
 	callout_stop(&asoc->delayed_event_timer.timer);
 
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
@@ -4276,12 +4180,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		callout_stop(&net->pmtu_timer.timer);
 	}
 
-	/*
-	 * Iterator asoc being freed we send an unlocked TCB. It returns
-	 * with INP_INFO and INP write locked and both TCB lock's the tcb
-	 * lock itself and the create lock too and, of course the iterator
-	 * lock in place as well..
-	 */
 	if ((from_inpcbfree == 0) && so) {
 		/*
 		 * We lock the socket buffer to be SURE that the receive
@@ -4290,15 +4188,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		SOCKBUF_LOCK(&so->so_rcv);
 	}
 	stcb->asoc.state |= SCTP_STATE_ABOUT_TO_BE_FREED;
-
-	/* Now the read queue needs to be cleaned up */
-	TAILQ_FOREACH(sq, &inp->read_queue, next) {
-		if (sq->stcb == stcb) {
-			sq->stcb = NULL;
-			sq->sinfo_cumtsn = stcb->asoc.cumulative_tsn;
-		}
-	}
-	if (stcb->asoc.refcnt) {
+	if ((from_inpcbfree != 2) && (stcb->asoc.refcnt)) {
 		/* reader or writer in the way */
 		sctp_timer_start(SCTP_TIMER_TYPE_ASOCKILL, inp, stcb, NULL);
 		if ((from_inpcbfree == 0) && so) {
@@ -4306,35 +4196,184 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		}
 		SCTP_TCB_UNLOCK(stcb);
 		splx(s);
+#ifdef SCTP_LOG_CLOSING
+		sctp_log_closing(inp, stcb, 9);
+#endif
 		/* no asoc destroyed */
 		return (0);
 	}
-	if ((from_inpcbfree == 0) && so) {
-		SOCKBUF_UNLOCK(&so->so_rcv);
+#ifdef SCTP_LOG_CLOSING
+	sctp_log_closing(inp, stcb, 10);
+#endif
+	/* Now the read queue needs to be cleaned up */
+	TAILQ_FOREACH(sq, &inp->read_queue, next) {
+		if (sq->stcb == stcb) {
+			sq->do_not_ref_stcb = 1;
+			if ((from_inpcbfree == 0) && so) {
+				/* Only if we have a socket lock do we do this */
+				if((sq->tail_mbuf) && ((sq->tail_mbuf->m_flags & M_EOR) == 0)) {
+					sq->stcb = NULL;
+					sq->sinfo_cumtsn = stcb->asoc.cumulative_tsn;
+				} else if ((sq->held_length) ||
+					   ((sq->tail_mbuf) && ((sq->tail_mbuf->m_flags & M_EOR) == 0)) ||
+					   (sq->length == 0)) {
+					/* Held for PD-API */
+					so->so_rcv.sb_cc += sq->held_length;
+					so->so_rcv.sb_cc -= sq->length;
+					if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_PDAPIEVNT)) {
+						/* need to change to PD-API aborted */
+						cnt++;
+						stcb->asoc.control_pdapi = sq;
+						sctp_notify_partial_delivery_indication(stcb,
+											SCTP_PARTIAL_DELIVERY_ABORTED, 1);
+						stcb->asoc.control_pdapi = NULL;
+					} else {
+						/* need to remove */
+						cnt++;
+						TAILQ_REMOVE(&inp->read_queue, sq, next);
+						sctp_free_remote_addr(sq->whoFrom);
+						sq->whoFrom = NULL;
+						if (sq->data) {
+							sctp_m_freem(sq->data);
+							sq->data = NULL;
+						}
+						/*
+						 * no need to free the net count, since at this point all
+						 * assoc's are gone.
+						 */
+						SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, sq);
+						SCTP_DECR_READQ_COUNT();
+					}
+				} 
+			}
+		}
 	}
-	SCTP_TCB_UNLOCK(stcb);
+	if (stcb->block_entry) {
+		stcb->block_entry->error = ECONNRESET;
+		stcb->block_entry = NULL;
+	}
+
+	if (so && (so->so_snd.sb_cc)) {
+		/* This will happen when a abort is done */
+		if(stcb->asoc.total_output_queue_size <= so->so_snd.sb_cc) {
+			so->so_snd.sb_cc = stcb->asoc.total_output_queue_size;
+		} else {
+			so->so_snd.sb_cc = 0;
+		}
+	}
+	if ((from_inpcbfree == 0) && so) {
+		if(cnt) {
+			sctp_sorwakeup_locked(inp, so);
+		} else {
+			SOCKBUF_UNLOCK(&so->so_rcv);
+		}
+	}
+	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
+	    (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
+		/*
+		 * For TCP type we need special handling when we are
+		 * connected. We also include the peel'ed off ones to.
+		 */
+		if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
+			if ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) {
+				/*
+				 * Not in the pool, i.e. the ones that are
+				 * active server. We want to allow this guy
+				 * to initiate a new connection. In order to
+				 * do that we need to free off the connected
+				 * flags on the socket. I see no easy way to
+				 * do that since if I call
+				 * soisdisconnected() it will set the cant
+				 * send/cant recv flags on the socket
+				 * buffers. And once that happens you are
+				 * stuck. So we do our own turn off here for
+				 * the active side so that it can start a
+				 * new assoc if it desires.
+				 */
+				if (so) {
+					SOCK_LOCK(so);
+					so->so_rcv.sb_cc = 0;
+					so->so_snd.sb_cc = 0;
+					/* zero */
+					inp->sctp_flags &= ~SCTP_PCB_FLAGS_CONNECTED;
+					so->so_state &= ~(SS_ISCONNECTING | 
+							  SS_ISDISCONNECTING | 
+							  SS_ISCONFIRMING | 
+							  SS_ISCONNECTED);
+					SOCK_UNLOCK(so);
+				}
+			} else {
+				/*
+				 * For TCP Pool types including peeled off
+				 * ones, we just disconnect leaving the
+				 * CONNECTED flag on SCTP so we won't allow
+				 * a connect() to be attempted. The socket
+				 * should also protect against this too
+				 * since the can't send more flags are also
+				 * set.
+				 */
+				if (so) {
+					SOCK_LOCK(so);
+					so->so_rcv.sb_cc = 0;
+					so->so_snd.sb_cc = 0;
+					SOCK_UNLOCK(so);
+					/* sodisconnected locks the sb;s*/
+					soisdisconnected(so);
+				}
+			}
+		}
+	}
+
+	/* When I reach here, no others want
+	 * to kill the assoc yet.. and I own
+	 * the lock. Now its possible an abort
+	 * comes in when I do the lock exchange
+	 * below to grab all the locks to do
+	 * the final take out. to prevent this
+	 * we increment the count, which will
+	 * start a timer and blow out above thus
+	 * assuring us that we hold exclusive
+	 * killing of the asoc. Note that
+	 * after getting back the TCB lock
+	 * we will go ahead and increment the
+	 * counter back up and stop any timer
+	 * a passing stranger may have started :-S
+	 */
+	if(from_inpcbfree == 0) {
+		atomic_add_16(&stcb->asoc.refcnt, 1);
+
+		SCTP_TCB_UNLOCK(stcb);
 
 #if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	SCTP_ITERATOR_LOCK();
+		SCTP_ITERATOR_LOCK();
 #endif
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	if (!lck_mtx_try_lock(sctppcbinfo.it_mtx)) {
-		socket_unlock(inp->ip_inp.inp.inp_socket, 0);
-		lck_mtx_lock(sctppcbinfo.it_mtx);
-		socket_lock(inp->ip_inp.inp.inp_socket, 0);
-	}
-	if (!lck_rw_try_lock_exclusive(sctppcbinfo.ipi_ep_mtx)) {
-		socket_unlock(inp->ip_inp.inp.inp_socket, 0);
-		lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
-		socket_lock(inp->ip_inp.inp.inp_socket, 0);
-	}
+		if (!lck_mtx_try_lock(sctppcbinfo.it_mtx)) {
+			socket_unlock(inp->ip_inp.inp.inp_socket, 0);
+			lck_mtx_lock(sctppcbinfo.it_mtx);
+			socket_lock(inp->ip_inp.inp.inp_socket, 0);
+		}
+		if (!lck_rw_try_lock_exclusive(sctppcbinfo.ipi_ep_mtx)) {
+			socket_unlock(inp->ip_inp.inp.inp_socket, 0);
+			lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+			socket_lock(inp->ip_inp.inp.inp_socket, 0);
+		}
 #endif
-	SCTP_INP_INFO_WLOCK();
-	SCTP_INP_WLOCK(inp);
-	SCTP_TCB_LOCK(stcb);
-	
+		SCTP_INP_INFO_WLOCK();
+		SCTP_INP_WLOCK(inp);
+		SCTP_TCB_LOCK(stcb);
+	}
+	/* Stop any timer someone may have started */
+	callout_stop(&asoc->strreset_timer.timer); 
+	/* Make it invalid too, that way if its
+	 * about to run it will abort and return.
+	 */
+	asoc->strreset_timer.type = SCTP_TIMER_TYPE_NONE;
 	sctp_iterator_asoc_being_freed(inp, stcb);
-
+	/* re-increment the lock */
+	if(from_inpcbfree == 0) {
+		atomic_add_16(&stcb->asoc.refcnt, -1);
+	}
 	/* now restop the timers to be sure - this is paranoia at is finest! */
 	callout_stop(&asoc->hb_timer.timer);
 	callout_stop(&asoc->dack_timer.timer);
@@ -4350,10 +4389,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		callout_stop(&net->pmtu_timer.timer);
 	}
 	asoc->state = 0;
-	if (stcb->block_entry) {
-		stcb->block_entry->error = ECONNRESET;
-		stcb->block_entry = NULL;
-	}
 	if (inp->sctp_tcbhash) {
 		LIST_REMOVE(stcb, sctp_tcbhash);
 	}
@@ -4362,27 +4397,26 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	}
 	/* Now lets remove it from the list of ALL associations in the EP */
 	LIST_REMOVE(stcb, sctp_tcblist);
-	SCTP_INP_WUNLOCK(inp);
+	if(from_inpcbfree == 0) {
+		SCTP_INP_INCR_REF(inp);
+		SCTP_INP_WUNLOCK(inp);
 #if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	SCTP_ITERATOR_UNLOCK();
+		SCTP_ITERATOR_UNLOCK();
 #endif
-
+	}
 	/* pull from vtag hash */
 	LIST_REMOVE(stcb, sctp_asocs);
-
-
 	sctp_add_vtag_to_timewait(inp, asoc->my_vtag);
+
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 	SCTP_ITERATOR_UNLOCK();
 #endif
-	SCTP_INP_INFO_WUNLOCK();
-	prev = NULL;
-
-	if ((from_inpcbfree == 0) && so) {
-		SOCKBUF_LOCK(&so->so_snd);
-		SOCKBUF_LOCK(&so->so_rcv);
+	if(from_inpcbfree == 0) {
+		SCTP_INP_INFO_WUNLOCK();
 	}
+
+	prev = NULL;
 	/*
 	 * The chunk lists and such SHOULD be empty but we check them just
 	 * in case.
@@ -4390,24 +4424,25 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	/* anything on the wheel needs to be removed */
 	for (i = 0; i < asoc->streamoutcnt; i++) {
 		struct sctp_stream_out *outs;
+		struct sctp_stream_queue_pending *sp;
 
 		outs = &asoc->strmout[i];
 		/* now clean up any chunks here */
-		chk = TAILQ_FIRST(&outs->outqueue);
-		while (chk) {
-			TAILQ_REMOVE(&outs->outqueue, chk, sctp_next);
-			if (chk->data) {
-				sctp_m_freem(chk->data);
-				chk->data = NULL;
+		sp = TAILQ_FIRST(&outs->outqueue);
+		while (sp) {
+			TAILQ_REMOVE(&outs->outqueue, sp, next);
+			if (sp->data) {
+				sctp_m_freem(sp->data);
+				sp->data = NULL;
+				sp->tail_mbuf = NULL;
 			}
-			sctp_free_remote_addr(chk->whoTo);
-			chk->asoc = NULL;
-			/* Free the chunk */
-			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-			SCTP_DECR_CHK_COUNT();
-			chk = TAILQ_FIRST(&outs->outqueue);
+			sctp_free_remote_addr(sp->net);
+			sctp_free_spbufspace(stcb, asoc, sp);
+			/* Free the zone stuff  */
+			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_strmoq, sp);
+			SCTP_DECR_STRMOQ_COUNT();
+			sp = TAILQ_FIRST(&outs->outqueue);
 		}
-		outs = TAILQ_FIRST(&asoc->out_wheel);
 	}
 
 	while ((liste = TAILQ_FIRST(&asoc->resetHead)) != NULL) {
@@ -4439,12 +4474,19 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				sctp_m_freem(chk->data);
 				chk->data = NULL;
 			}
+			ccnt++;
 			sctp_free_remote_addr(chk->whoTo);
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
 			SCTP_DECR_CHK_COUNT();
 			chk = TAILQ_FIRST(&asoc->send_queue);
 		}
 	}
+/*
+	if(ccnt) {
+		printf("Freed %d from send_queue\n", ccnt);
+		ccnt = 0;
+	}
+*/
 	/* sent queue SHOULD be empty */
 	if (!TAILQ_EMPTY(&asoc->sent_queue)) {
 		chk = TAILQ_FIRST(&asoc->sent_queue);
@@ -4454,12 +4496,19 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				sctp_m_freem(chk->data);
 				chk->data = NULL;
 			}
+			ccnt++;
 			sctp_free_remote_addr(chk->whoTo);
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
 			SCTP_DECR_CHK_COUNT();
 			chk = TAILQ_FIRST(&asoc->sent_queue);
 		}
 	}
+/*
+	if(ccnt) {
+		printf("Freed %d from sent_queue\n", ccnt);
+		ccnt = 0;
+	}
+*/
 	/* control queue MAY not be empty */
 	if (!TAILQ_EMPTY(&asoc->control_send_queue)) {
 		chk = TAILQ_FIRST(&asoc->control_send_queue);
@@ -4469,12 +4518,19 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				sctp_m_freem(chk->data);
 				chk->data = NULL;
 			}
+			ccnt++;
 			sctp_free_remote_addr(chk->whoTo);
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
 			SCTP_DECR_CHK_COUNT();
 			chk = TAILQ_FIRST(&asoc->control_send_queue);
 		}
 	}
+/*
+	if(ccnt) {
+		printf("Freed %d from ctrl_queue\n", ccnt);
+		ccnt = 0;
+	}
+*/
 	if (!TAILQ_EMPTY(&asoc->reasmqueue)) {
 		chk = TAILQ_FIRST(&asoc->reasmqueue);
 		while (chk) {
@@ -4484,11 +4540,18 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				chk->data = NULL;
 			}
 			sctp_free_remote_addr(chk->whoTo);
+			ccnt++;
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
 			SCTP_DECR_CHK_COUNT();
 			chk = TAILQ_FIRST(&asoc->reasmqueue);
 		}
 	}
+/*
+	if(ccnt) {
+		printf("Freed %d from reasm_queue\n", ccnt);
+		ccnt = 0;
+	}
+*/
 	if (asoc->mapping_array) {
 		FREE(asoc->mapping_array, M_PCB);
 		asoc->mapping_array = NULL;
@@ -4509,7 +4572,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				ctl = TAILQ_FIRST(&asoc->strmin[i].inqueue);
 				while (ctl) {
 					TAILQ_REMOVE(&asoc->strmin[i].inqueue,
-					    ctl, next);
+						     ctl, next);
 					sctp_free_remote_addr(ctl->whoFrom);
 					if (ctl->data) {
 						sctp_m_freem(ctl->data);
@@ -4543,10 +4606,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		TAILQ_REMOVE(&asoc->nets, net, sctp_next);
 		sctp_free_remote_addr(net);
 	}
-	if ((from_inpcbfree == 0) && so) {
-		SOCKBUF_UNLOCK(&so->so_rcv);
-		SOCKBUF_UNLOCK(&so->so_snd);
-	}
+
 	/* local addresses, if any */
 	while (!LIST_EMPTY(&asoc->sctp_local_addr_list)) {
 		laddr = LIST_FIRST(&asoc->sctp_local_addr_list);
@@ -4592,72 +4652,34 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
 	SCTP_DECR_ASOC_COUNT();
 
-	if (so && ((so->so_snd.sb_cc) ||
-	    (so->so_snd.sb_mbcnt))) {
-		/* This will happen when a abort is done */
-		so->so_snd.sb_cc = 0;
-		so->so_snd.sb_mbcnt = 0;
-	}
-	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
-	    (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
-		/*
-		 * For TCP type we need special handling when we are
-		 * connected. We also include the peel'ed off ones to.
-		 */
-		if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
-			if ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) {
-				/*
-				 * Not in the pool, i.e. the ones that are
-				 * active server. We want to allow this guy
-				 * to initiate a new connection. In order to
-				 * do that we need to free off the connected
-				 * flags on the socket. I see no easy way to
-				 * do that since if I call
-				 * soisdisconnected() it will set the cant
-				 * send/cant recv flags on the socket
-				 * buffers. And once that happens you are
-				 * stuck. So we do our own turn off here for
-				 * the active side so that it can start a
-				 * new assoc if it desires.
-				 */
-				inp->sctp_flags &= ~SCTP_PCB_FLAGS_CONNECTED;
-				if (so) {
-					if (from_inpcbfree == 0) {
-						SOCK_LOCK(so);
-					}
-					so->so_state &= ~(SS_ISCONNECTING | SS_ISDISCONNECTING | SS_ISCONFIRMING | SS_ISCONNECTED);
-					if (from_inpcbfree == 0) {
-						SOCK_UNLOCK(so);
-					}
-				}
-			} else {
-				/*
-				 * For TCP Pool types including peeled off
-				 * ones, we just disconnect leaving the
-				 * CONNECTED flag on SCTP so we won't allow
-				 * a connect() to be attempted. The socket
-				 * should also protect against this too
-				 * since the can't send more flags are also
-				 * set.
-				 */
-				if (so) {
-					if (from_inpcbfree) {
-						SOCK_UNLOCK(so);
-					}
-					soisdisconnected(so);
-					if (from_inpcbfree) {
-						SOCK_LOCK(so);
-					}
-				}
-			}
+	if (from_inpcbfree == 0) {
+		SCTP_INP_RLOCK(inp);
+		if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
+			/* If its NOT the inp_free calling us AND
+			 * sctp_close as been called, we 
+			 * call back (we might be the timer 
+			 */
+			SCTP_INP_RUNLOCK(inp);
+			/* This will start the kill timer 
+			 * since we hold an increment yet. But
+			 * this is the only safe way to do this
+			 * since otherwise if the socket closes
+			 * at the same time we are here we might
+			 * collide in the cleanup.
+			 */
+			sctp_inpcb_free(inp, 0);
+			SCTP_INP_DECR_REF(inp);
+		} else {
+			/* Kill Timer already up */
+			SCTP_INP_DECR_REF(inp);
+			SCTP_INP_RUNLOCK(inp);
 		}
-	}
-	if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) &&
-	    (from_inpcbfree == 0)) {
-		sctp_inpcb_free(inp, 0);
 	}
 	splx(s);
 	/* destroyed the asoc */
+#ifdef SCTP_LOG_CLOSING
+	sctp_log_closing(inp, NULL, 11);
+#endif
 	return (1);
 }
 
@@ -5272,23 +5294,20 @@ sctp_pcb_init()
 
 	/* not sure if we need all the counts */
 	sctppcbinfo.ipi_count_ep = 0;
-	sctppcbinfo.ipi_gencnt_ep = 0;
 	/* assoc/tcb zone info */
 	sctppcbinfo.ipi_count_asoc = 0;
-	sctppcbinfo.ipi_gencnt_asoc = 0;
 	/* local addrlist zone info */
 	sctppcbinfo.ipi_count_laddr = 0;
-	sctppcbinfo.ipi_gencnt_laddr = 0;
 	/* remote addrlist zone info */
 	sctppcbinfo.ipi_count_raddr = 0;
-	sctppcbinfo.ipi_gencnt_raddr = 0;
 	/* chunk info */
 	sctppcbinfo.ipi_count_chunk = 0;
-	sctppcbinfo.ipi_gencnt_chunk = 0;
 
 	/* socket queue zone info */
 	sctppcbinfo.ipi_count_readq = 0;
-	sctppcbinfo.ipi_gencnt_readq = 0;
+
+	/* stream out queue cont */
+	sctppcbinfo.ipi_count_strmoq = 0;
 
 	/* mbuf tracker */
 	sctppcbinfo.mbuf_track = 0;
@@ -6225,6 +6244,7 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 					chk->data = NULL;
 				}
 				sctp_free_remote_addr(ctl->whoFrom);
+				printf("Point e: free control:%x\n", (uint32_t)ctl);
 				SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, ctl);
 				SCTP_DECR_READQ_COUNT();
 			}
@@ -6355,7 +6375,7 @@ sctp_drain()
 int
 sctp_initiate_iterator(inp_func inpf, asoc_func af, uint32_t pcb_state,
     uint32_t pcb_features, uint32_t asoc_state, void *argp, uint32_t argi,
-    end_func ef, struct sctp_inpcb *s_inp)
+    end_func ef, struct sctp_inpcb *s_inp, uint8_t chunk_output_off)
 {
 	struct sctp_iterator *it = NULL;
 	int s;
@@ -6377,6 +6397,7 @@ sctp_initiate_iterator(inp_func inpf, asoc_func af, uint32_t pcb_state,
 	it->pcb_flags = pcb_state;
 	it->pcb_features = pcb_features;
 	it->asoc_state = asoc_state;
+	it->no_chunk_output = chunk_output_off;
 	if (s_inp) {
 		it->inp = s_inp;
 		it->iterator_flags = SCTP_ITERATOR_DO_SINGLE_INP;
@@ -6425,7 +6446,7 @@ sctp_initiate_iterator(inp_func inpf, asoc_func af, uint32_t pcb_state,
  * Callout/Timer routines for OS that doesn't have them
  */
 #ifdef _SCTP_NEEDS_CALLOUT_
-#if defined(__APPLE__)
+#ifdef __APPLE__
 int ticks = 0;
 #else
 extern int ticks;
@@ -6439,7 +6460,7 @@ callout_init(struct callout *c)
 
 void
 callout_reset(struct callout *c, int to_ticks, void (*ftn) (void *),
-    void *arg) {
+	      void *arg) {
 	int s;
 
 	s = splhigh();

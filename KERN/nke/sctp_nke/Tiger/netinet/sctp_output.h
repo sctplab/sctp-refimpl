@@ -139,6 +139,10 @@ sctp_send_packet_dropped(struct sctp_tcb *, struct sctp_nets *, struct mbuf *,
 void sctp_send_cwr(struct sctp_tcb *, struct sctp_nets *, uint32_t);
 
 
+struct mbuf *
+sctp_get_mbuf_for_msg(unsigned int space_needed, 
+		      int want_header, int how, int allonebuf, int type);
+
 void
 sctp_add_stream_reset_out(struct sctp_tmit_chunk *chk,
     int number_entries, uint16_t * list,

@@ -36,9 +36,6 @@ __FBSDID("$FreeBSD:$");
 #include <sctp.h>
 #elif !defined(__OpenBSD__)
 #include "opt_sctp.h"
-#ifdef __FreeBSD__
-#include "opt_global.h"
-#endif
 #endif
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -1728,7 +1725,7 @@ sctp_handle_auth(struct sctp_tcb *stcb, struct sctp_auth_chunk *auth,
 		 * report this in an Error Chunk: Unsupported HMAC
 		 * Identifier
 		 */
-		MGETHDR(m_err, M_DONTWAIT, MT_HEADER);
+		m_err = sctp_get_mbuf_for_msg(sizeof(*err), 1, M_DONTWAIT, 1, MT_HEADER);
 		if (m_err != NULL) {
 			/* pre-reserve some space */
 			m_err->m_data += sizeof(struct sctp_chunkhdr);
@@ -1833,7 +1830,8 @@ sctp_notify_authentication(struct sctp_tcb *stcb, uint32_t indication,
 		/* event not enabled */
 		return;
 
-	MGETHDR(m_notify, M_DONTWAIT, MT_DATA);
+	m_notify = sctp_get_mbuf_for_msg(sizeof(struct sctp_authkey_event), 
+					  1, M_DONTWAIT, 1, MT_HEADER);
 	if (m_notify == NULL)
 		/* no space left */
 		return;
@@ -1866,7 +1864,6 @@ sctp_notify_authentication(struct sctp_tcb *stcb, uint32_t indication,
 	control->tail_mbuf = m_notify;
 	sctp_add_to_readq(stcb->sctp_ep, stcb, control,
 	    &stcb->sctp_socket->so_rcv, 1);
-	sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 }
 
 

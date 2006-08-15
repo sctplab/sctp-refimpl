@@ -100,11 +100,12 @@ __FBSDID("$FreeBSD:$");
 #define SCTPCTL_PCBHASHSIZE         44
 #define SCTPCTL_CHUNKSCALE          45
 #define SCTPCTL_MINSPLIT            46
+#define SCTPCTL_ADD_MORE            47
 #ifdef SCTP_DEBUG
-#define SCTPCTL_DEBUG               47
-#define SCTPCTL_MAXID		    47
+#define SCTPCTL_DEBUG               48
+#define SCTPCTL_MAXID		    48
 #else
-#define SCTPCTL_MAXID		    46
+#define SCTPCTL_MAXID		    47
 #endif
 #endif
 
@@ -157,6 +158,7 @@ __FBSDID("$FreeBSD:$");
 	{ "pcbhashsize", CTLTYPE_INT }, \
 	{ "chunkscale", CTLTYPE_INT }, \
 	{ "min_split_point", CTLTYPE_INT }, \
+	{ "add_more_on_output", CTLTYPE_INT }, \
 	{ "debug", CTLTYPE_INT }, \
 }
 
@@ -209,7 +211,7 @@ __FBSDID("$FreeBSD:$");
 	{ "pcbhashsize", CTLTYPE_INT }, \
 	{ "chunkscale", CTLTYPE_INT }, \
 	{ "min_split_point", CTLTYPE_INT }, \
-}
+	{ "add_more_on_output", CTLTYPE_INT }, \}
 #endif
 
 
@@ -252,72 +254,24 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 #define sctp_sbspace_sub(a,b) ((a > b) ? (a - b) : 0)
 
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
-#ifdef INVARIENTS
 #define sctp_sbfree(stcb, sb, m) { \
         if((sb)->sb_cc >= (m)->m_len) { \
-  	   (sb)->sb_cc -= (m)->m_len; \
-        } else { \
-           panic("sb_cc would go negative"); \
-           (sb)->sb_cc = 0; \
-        } \
-        if(stcb) {\
-          if((stcb)->asoc.sb_cc >= (m)->m_len) {\
-             (stcb)->asoc.sb_cc -= (m)->m_len; \
-          } else  {\
-              panic("assoc sb_cc would go negative"); \
-             (stcb)->asoc.sb_cc = 0; \
-          } \
-          if((stcb)->asoc.sb_mbcnt >= MSIZE) { \
-             (stcb)->asoc.sb_mbcnt -= MSIZE; \
-          } \
-	  if ((m)->m_flags & M_EXT) { \
-		if((stcb)->asoc.sb_mbcnt >= (m)->m_ext.ext_size) { \
-		   (stcb)->asoc.sb_mbcnt -= (m)->m_ext.ext_size; \
-                } else  { \
-                   panic("assoc stcb->mbcnt would go negative"); \
-		   (stcb)->asoc.sb_mbcnt = 0; \
-                } \
-          } \
-        } \
-	if ((m)->m_type != MT_DATA && (m)->m_type != MT_HEADER && \
-	    (m)->m_type != MT_OOBDATA) \
-		(sb)->sb_ctl -= (m)->m_len; \
-        if((sb)->sb_mbcnt >= MSIZE) { \
-           (sb)->sb_mbcnt -= MSIZE; \
- 	   if ((m)->m_flags & M_EXT) { \
-		if((sb)->sb_mbcnt >= (m)->m_ext.ext_size) { \
-		   (sb)->sb_mbcnt -= (m)->m_ext.ext_size; \
-                } else  { \
-                   panic("assoc sb_mbcnt would go negative"); \
-		   (sb)->sb_mbcnt = 0; \
-                } \
-            } \
-        } else  { \
-            panic("sb_mbcnt would go negative"); \
-            (sb)->sb_mbcnt = 0; \
-        } \
-}
-
-#else				/* NOT INVARIENTS */
-
-#define sctp_sbfree(stcb, sb, m) { \
-        if((sb)->sb_cc >= (m)->m_len) { \
-  	   (sb)->sb_cc -= (m)->m_len; \
+  	   atomic_subtract_int(&(sb)->sb_cc,(m)->m_len); \
         } else { \
            (sb)->sb_cc = 0; \
         } \
         if(stcb) {\
           if((stcb)->asoc.sb_cc >= (m)->m_len) {\
-             (stcb)->asoc.sb_cc -= (m)->m_len; \
+             atomic_subtract_int(&(stcb)->asoc.sb_cc,(m)->m_len); \
           } else  {\
              (stcb)->asoc.sb_cc = 0; \
           } \
           if((stcb)->asoc.sb_mbcnt >= MSIZE) { \
-             (stcb)->asoc.sb_mbcnt -= MSIZE; \
+             atomic_subtract_int(&(stcb)->asoc.sb_mbcnt,MSIZE); \
           } \
 	  if ((m)->m_flags & M_EXT) { \
 		if((stcb)->asoc.sb_mbcnt >= (m)->m_ext.ext_size) { \
-		   (stcb)->asoc.sb_mbcnt -= (m)->m_ext.ext_size; \
+		   atomic_subtract_int(&(stcb)->asoc.sb_mbcnt,(m)->m_ext.ext_size); \
                 } else  { \
 		   (stcb)->asoc.sb_mbcnt = 0; \
                 } \
@@ -325,12 +279,12 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
         } \
 	if ((m)->m_type != MT_DATA && (m)->m_type != MT_HEADER && \
 	    (m)->m_type != MT_OOBDATA) \
-		(sb)->sb_ctl -= (m)->m_len; \
+		atomic_subtract_int(&(sb)->sb_ctl,(m)->m_len); \
         if((sb)->sb_mbcnt >= MSIZE) { \
-           (sb)->sb_mbcnt -= MSIZE; \
+           atomic_subtract_int(&(sb)->sb_mbcnt,MSIZE); \
  	   if ((m)->m_flags & M_EXT) { \
 		if((sb)->sb_mbcnt >= (m)->m_ext.ext_size) { \
-		   (sb)->sb_mbcnt -= (m)->m_ext.ext_size; \
+		   atomic_subtract_int(&(sb)->sb_mbcnt,(m)->m_ext.ext_size); \
                 } else  { \
 		   (sb)->sb_mbcnt = 0; \
                 } \
@@ -340,22 +294,21 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
         } \
 }
 
-#endif				/* INVARIENTS */
 
 #define sctp_sballoc(stcb, sb, m)  { \
-	(sb)->sb_cc += (m)->m_len; \
+	atomic_add_int(&(sb)->sb_cc,(m)->m_len); \
         if(stcb) { \
-  	  (stcb)->asoc.sb_cc += (m)->m_len; \
-          (stcb)->asoc.sb_mbcnt += MSIZE; \
+  	  atomic_add_int(&(stcb)->asoc.sb_cc,(m)->m_len); \
+          atomic_add_int(&(stcb)->asoc.sb_mbcnt, MSIZE); \
 	  if ((m)->m_flags & M_EXT) \
-		(stcb)->asoc.sb_mbcnt += (m)->m_ext.ext_size; \
+		atomic_add_int(&(stcb)->asoc.sb_mbcnt,(m)->m_ext.ext_size); \
         } \
 	if ((m)->m_type != MT_DATA && (m)->m_type != MT_HEADER && \
 	    (m)->m_type != MT_OOBDATA) \
-		(sb)->sb_ctl += (m)->m_len; \
-	(sb)->sb_mbcnt += MSIZE; \
+		atomic_add_int(&(sb)->sb_ctl,(m)->m_len); \
+	atomic_add_int(&(sb)->sb_mbcnt,MSIZE); \
 	if ((m)->m_flags & M_EXT) \
-		(sb)->sb_mbcnt += (m)->m_ext.ext_size; \
+		atomic_add_int(&(sb)->sb_mbcnt,(m)->m_ext.ext_size); \
 }
 
 #else				/* FreeBSD Version < 500000  */
@@ -416,15 +369,7 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 #define sctp_ucount_incr(val) { \
              val++; \
 }
-#ifdef INVARIANTS_SCTP
-#define sctp_ucount_decr(val) { \
-             if(val > 0) { \
-                val--; \
-             } else {  \
-                panic("decr would be negative"); \
-             } \
-}
-#else
+
 #define sctp_ucount_decr(val) { \
              if(val > 0) { \
                 val--; \
@@ -432,7 +377,7 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
                 val = 0; \
              } \
 }
-#endif
+
 
 	extern int sctp_sendspace;
 	extern int sctp_recvspace;
@@ -554,6 +499,8 @@ do { \
 
 
 #if defined(__APPLE__)
+/* emulate the BSD 'ticks' clock */
+extern int ticks;
 
 /* XXX: Hopefully temporary until APPLE changes to newer defs like other BSDs */
 #define if_addrlist	if_addrhead
@@ -573,16 +520,14 @@ do { \
 
 #ifdef _KERN_LOCKS_H_
 	lck_mtx_t *sctp_getlock(struct socket *so, int locktype);
-
 #else
 	void *sctp_getlock(struct socket *so, int locktype);
-
-#endif				/* _KERN_LOCKS_H_ */
+#endif /* _KERN_LOCKS_H_ */
 	void sctp_lock_assert(struct socket *so);
 	void sctp_unlock_assert(struct socket *so);
 
-#endif				/* SCTP_APPLE_FINE_GRAINED_LOCKING */
-#endif				/* __APPLE__ */
+#endif /* SCTP_APPLE_FINE_GRAINED_LOCKING */
+#endif /* __APPLE__ */
 
 #if defined(__NetBSD__)
 /* emulate the atomic_xxx() functions... */

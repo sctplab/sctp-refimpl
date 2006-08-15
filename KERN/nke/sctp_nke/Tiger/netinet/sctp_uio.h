@@ -167,7 +167,6 @@ struct sctp_pcbinfo {
 struct sctp_sockstat {
 	sctp_assoc_t ss_assoc_id;
 	uint32_t ss_total_sndbuf;
-	uint32_t ss_total_mbuf_sndbuf;
 	uint32_t ss_total_recv_buf;
 };
 
@@ -547,15 +546,13 @@ struct sctp_cwnd_args {
 };
 
 struct sctp_blk_args {
-	uint32_t onmb;		/* in 1k bytes */
 	uint32_t onsb;		/* in 1k bytes */
-	uint16_t maxmb;		/* in 1k bytes */
-	uint16_t maxsb;		/* in 1k bytes */
+	uint32_t sndlen;	/* len of send being attempted */
+	uint32_t peer_rwnd;	/* rwnd of peer */
 	uint16_t send_sent_qcnt;/* chnk cnt */
 	uint16_t stream_qcnt;	/* chnk cnt */
 	uint16_t chunks_on_oque;/* chunks out */
-	uint16_t sndlen;	/* len of send being attempted */
-
+	uint16_t flight_size;   /* flight size in k */
 };
 
 /*
@@ -681,12 +678,21 @@ struct sctp_misc_info {
 	uint32_t log4;
 };
 
+struct sctp_log_closing {
+	uint32_t inp;
+	uint32_t stcb;
+	uint32_t sctp_flags;
+	uint16_t  state;
+	int16_t  loc;
+};
+
 struct sctp_cwnd_log {
 	uint32_t time_event;
 	uint8_t from;
 	uint8_t event_type;
 	uint8_t resv[2];
 	union {
+		struct sctp_log_closing close;
 		struct sctp_blk_args blk;
 		struct sctp_cwnd_args cwnd;
 		struct sctp_str_log strlog;
@@ -824,8 +830,11 @@ struct	sctpstat {
 	u_long  sctps_datadropchklmt;
 	u_long  sctps_datadroprwnd;
 	u_long  sctps_ecnereducedcwnd;
-	u_long  sctps_vtagexpress;
-	u_long  sctps_vtagbogus;
+	u_long  sctps_vtagexpress;	/* Used express lookup via vtag */
+	u_long  sctps_vtagbogus;	/* Collision in express lookup. */
+	u_long  sctps_primary_randry;	/* Number of times the sender ran dry of user data on primary */
+	u_long  sctps_cmt_randry;       /* Same for above */
+	u_long  sctps_slowpath_sack;    /* Sacks the slow way */
 };
 
 #define SCTP_STAT_INCR(_x) SCTP_STAT_INCR_BY(_x,1)
