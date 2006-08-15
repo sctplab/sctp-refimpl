@@ -345,8 +345,9 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 		    ) {
 		/* socket above is long gone */
 		asoc->fragmented_delivery_inprogress = 0;
-
-		TAILQ_FOREACH(chk, &asoc->reasmqueue, sctp_next) {
+		chk = TAILQ_FIRST(&asoc->reasmqueue);
+		while(chk) {
+			TAILQ_REMOVE(&asoc->reasmqueue, chk, sctp_next);
 			asoc->size_on_reasm_queue -= chk->send_size;
 			sctp_ucount_decr(asoc->cnt_on_reasm_queue);
 			/*
@@ -360,6 +361,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 			sctp_free_remote_addr(chk->whoTo);
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
 			SCTP_DECR_CHK_COUNT();
+			chk = TAILQ_FIRST(&asoc->reasmqueue);
 		}
 		return;
 	}
