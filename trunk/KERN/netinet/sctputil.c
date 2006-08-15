@@ -4342,18 +4342,12 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far, int hold_sblock,
 			SCTP_TCB_UNLOCK(stcb);
 			goto out;
 		}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		SAVE_I_AM_HERE(stcb->sctp_ep);
-#endif
 #ifdef SCTP_RECV_RWND_LOGGING
 		sctp_misc_ints(SCTP_USER_RECV_SACKS,
 			       stcb->asoc.my_rwnd,
 			       stcb->asoc.my_last_reported_rwnd,
 			       stcb->freed_by_sorcv_sincelast,
 			       dif);
-#endif
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		SAVE_I_AM_HERE(stcb->sctp_ep);
 #endif
 		sctp_send_sack(stcb);
 		sctp_chunk_output(stcb->sctp_ep, stcb,
@@ -4372,9 +4366,6 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far, int hold_sblock,
 			       0);
 #endif
 	}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	SAVE_I_AM_HERE(stcb->sctp_ep);
-#endif
  out:
 	if(so && sb_unlocked && hold_sblock) 
 		SOCKBUF_LOCK(&so->so_rcv);
@@ -4458,7 +4449,6 @@ sctp_sorecvmsg(struct socket *so,
 	hold_sblock = 1;
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
-	SAVE_I_AM_HERE(inp);
 #endif
 #if defined(__NetBSD__)
 	error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
@@ -4506,7 +4496,6 @@ restart:
 	}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
-	SAVE_I_AM_HERE(inp);
 #endif
 #if defined(__NetBSD__)
 	error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
@@ -4561,9 +4550,6 @@ restart:
 	    (filling_sinfo)) {
 		/* find a more suitable one then this */
 		ctl = TAILQ_NEXT(control, next);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		SAVE_I_AM_HERE(inp);
-#endif
 		while (ctl) {
 			if ((ctl->stcb != control->stcb) && (ctl->length)) {
 				/* found one */
@@ -4572,9 +4558,6 @@ restart:
 			}
 			ctl = TAILQ_NEXT(ctl, next);
 		}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		SAVE_I_AM_HERE(inp);
-#endif
 		/*
 		 * if we reach here, not suitable replacement is available
 		 * <or> fragment interleave is NOT on. So stuff the sb_cc
@@ -4717,9 +4700,6 @@ found_one:
 		/* copy out each mbuf in the chain up to length */
 get_more_data:
 		m = control->data;
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		SAVE_I_AM_HERE(inp);
-#endif
 		while (m) {
 			/* Move out all we can */
 			cp_len = (int)uio->uio_resid;
@@ -4859,9 +4839,6 @@ get_more_data:
 				sctp_user_rcvd(stcb, &freed_so_far, hold_sblock, rwnd_req);
 			}
 		} /* end while(m) */
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		SAVE_I_AM_HERE(inp);
-#endif
 		/*
 		 * At this point we have looked at it all and we either have
 		 * a MSG_EOR/or read all the user wants... <OR>
@@ -4906,9 +4883,6 @@ get_more_data:
 				out_flags &= ~MSG_EOR;
 			}
 		}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		SAVE_I_AM_HERE(inp);
-#endif
 		if (out_flags & MSG_EOR) {
 			if ((stcb) && (in_flags & MSG_PEEK) == 0) {
 				if ((special_return == 0) &&
@@ -4916,9 +4890,6 @@ get_more_data:
 				    (no_rcv_needed == 0))
 					sctp_user_rcvd(stcb, &freed_so_far, hold_sblock, rwnd_req);
 			}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			SAVE_I_AM_HERE(inp);
-#endif
 			goto release;
 		}
 		if ((uio->uio_resid == 0) ||
@@ -4930,9 +4901,6 @@ get_more_data:
 				    (no_rcv_needed == 0))
 					sctp_user_rcvd(stcb, &freed_so_far, hold_sblock, rwnd_req);
 			}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			SAVE_I_AM_HERE(inp);
-#endif
 			goto release;
 		}
 		/*
@@ -4946,9 +4914,6 @@ get_more_data:
 				if((special_return == 0) &&
 				    (no_rcv_needed == 0))
 					sctp_user_rcvd(stcb, &freed_so_far, hold_sblock, rwnd_req);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-				SAVE_I_AM_HERE(inp);
-#endif
 			}
 			goto release;
 		}
@@ -4964,9 +4929,6 @@ get_more_data:
 				   (freed_so_far >= rwnd_req) &&
 				   (no_rcv_needed == 0))
 					sctp_user_rcvd(stcb, &freed_so_far, hold_sblock, rwnd_req);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-				SAVE_I_AM_HERE(inp);
-#endif
 			}
 			goto release;
 		}
@@ -4983,14 +4945,8 @@ get_more_data:
 		     (freed_so_far >= rwnd_req) &&
 		     (no_rcv_needed == 0))) {
 			sctp_user_rcvd(stcb, &freed_so_far, hold_sblock, rwnd_req);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			SAVE_I_AM_HERE(inp);
-#endif
 		}
 wait_some_more:
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		SAVE_I_AM_HERE(inp);
-#endif
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 		if (so->so_error || so->so_rcv.sb_state & SBS_CANTRCVMORE)
 			goto release;
@@ -5016,9 +4972,6 @@ wait_some_more:
 		sbunlock(&so->so_rcv);
 #endif
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		SAVE_I_AM_HERE(inp);
-#endif
 #ifdef SCTP_RECV_RWND_LOGGING
 		if (stcb)
 			sctp_misc_ints(SCTP_SORECV_BLOCKSB,
@@ -5034,15 +4987,11 @@ wait_some_more:
 				       uio->uio_resid);
 #endif
 		error = sbwait(&so->so_rcv);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		SAVE_I_AM_HERE(inp);
-#endif
 		if (error)
 			goto release_unlocked;
 
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
-		SAVE_I_AM_HERE(inp);
 #endif
 #if defined(__NetBSD__)
 		error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
@@ -5064,9 +5013,6 @@ wait_some_more:
 	} else {
 		/* copy out the mbuf chain */
 get_more_data2:
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		SAVE_I_AM_HERE(inp);
-#endif
 		cp_len = uio->uio_resid;
 		if ((uint32_t) cp_len >= control->length) {
 			/* easy way */
@@ -5079,9 +5025,6 @@ get_more_data2:
 			uio->uio_resid -= control->length;
 			*mp = control->data;
 			m = control->data;
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			SAVE_I_AM_HERE(inp);
-#endif
 			while (m) {
 #ifdef SCTP_SB_LOGGING
 				sctp_sblog(&so->so_rcv,
@@ -5095,9 +5038,6 @@ get_more_data2:
 #endif
 				m = m->m_next;
 			}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			SAVE_I_AM_HERE(inp);
-#endif
 			control->data = control->tail_mbuf = NULL;
 			control->length = 0;
 			if (out_flags & MSG_EOR) {
@@ -5183,9 +5123,6 @@ get_more_data2:
 			if (m->m_flags & M_NOTIFICATION) {
 				out_flags |= MSG_NOTIFICATION;
 			}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			SAVE_I_AM_HERE(inp);
-#endif
 			while ((m) && (cp_len > 0)) {
 				if (cp_len >= m->m_len) {
 					*mp = m;
@@ -5270,15 +5207,9 @@ get_more_data2:
 					goto release;
 				}
 			}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			SAVE_I_AM_HERE(inp);
-#endif
 		}
 	}
 release:
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	SAVE_I_AM_HERE(inp);
-#endif
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	sbunlock(&so->so_rcv, 1);
 #endif
@@ -5286,15 +5217,9 @@ release:
 	sbunlock(&so->so_rcv);
 #endif
 release_unlocked:
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	SAVE_I_AM_HERE(inp);
-#endif
 	if (msg_flags)
 		*msg_flags |= out_flags;
 out:
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	SAVE_I_AM_HERE(inp);
-#endif
 	if ((stcb) && freecnt_applied) {
 		/*
 		 * The lock on the socket buffer protects us so the free
@@ -5312,9 +5237,6 @@ out:
 		hold_sblock = 0;
 	}
 	splx(s);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	SAVE_I_AM_HERE(inp);
-#endif
 #ifdef SCTP_RECV_RWND_LOGGING
 	sctp_misc_ints(SCTP_SORECV_DONE,
 		       freed_so_far,
@@ -5325,14 +5247,8 @@ out:
 
 #endif
 	if (wakeup_read_socket) {
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		SAVE_I_AM_HERE(inp);
-#endif
 		sctp_sorwakeup(inp, so);
 	}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	SAVE_I_AM_HERE(inp);
-#endif
 	return (error);
 }
 
@@ -5439,43 +5355,25 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 #endif
 	error = sctp_sorecvmsg(so, uio, mp0, from, fromlen, flagsp, 
 	    (struct sctp_sndrcvinfo *)&sinfo,filling_sinfo);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	SAVE_I_AM_HERE(inp);
-#endif
 	if (controlp) {
 		/* copy back the sinfo in a CMSG format */
 		*controlp = sctp_build_ctl_nchunk(inp, 
                          (struct sctp_sndrcvinfo *)&sinfo);
 	}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	SAVE_I_AM_HERE(inp);
-#endif
 	if (psa) {
 		/* copy back the address info */
 		if (from && from->sa_len) {
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 			*psa = sodupsockaddr(from, M_NOWAIT);
 #else
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			SAVE_I_AM_HERE(inp);
-#endif
 			*psa = dup_sockaddr(from, mp0 == 0);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			SAVE_I_AM_HERE(inp);
-#endif
 #endif
 		} else {
 			*psa = NULL;
 		}
 	}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	SAVE_I_AM_HERE(inp);
-#endif
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	socket_unlock(so, 1);
-#endif
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	SAVE_I_AM_HERE(inp);
 #endif
 
 	return (error);
