@@ -3988,9 +3988,6 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 	 */
 	int len=0;
 	struct mbuf *mm, *tail = NULL;
-	if (inp && inp->sctp_socket) {
-		SOCKBUF_LOCK(sb);
-	}
 	if (control == NULL) {
 		return (-1);
 	}
@@ -3999,6 +3996,10 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 		/* huh this one is complete? */
 		return (-1);
 	}
+	if (inp && inp->sctp_socket) {
+		SOCKBUF_LOCK(sb);
+	}
+
 	mm = m;
 	while (mm) {
 		len += mm->m_len;
@@ -4009,6 +4010,7 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 			tail = mm;
 		mm = mm->m_next;
 	}
+
 	if (control->tail_mbuf) {
 		/* append */
 		control->tail_mbuf->m_next = m;
@@ -4282,7 +4284,7 @@ sctp_m_copym(struct mbuf *m, int off, int len, int wait)
 
 
 static void
-sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far)
+sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far, int hold_sblock)
 {
 	/* User pulled some data, do we need a rwnd update? */
 	int sb_unlocked = 0;
@@ -4319,8 +4321,10 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far)
 		/* Yep, its worth a look and the lock overhead */
 		atomic_add_16(&stcb->asoc.refcnt, 1);
 		tcb_incr_up = 1;
-		SOCKBUF_UNLOCK(&so->so_rcv);
-		sb_unlocked = 1;
+		if(hold_sblock) {
+			SOCKBUF_UNLOCK(&so->so_rcv);
+			sb_unlocked = 1;
+		}
 		if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 			/*
 			 * One last check before we allow the guy possibly
@@ -4345,7 +4349,7 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far)
 		} else {
 			dif = 0;
 		}
-		if(dif > rwnd_req) {
+		if(dif >= rwnd_req) {
 #ifdef SCTP_RECV_RWND_LOGGING
 			sctp_misc_ints(SCTP_USER_RECV_SACKS,
 				       stcb->asoc.my_rwnd,
@@ -4379,7 +4383,7 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far)
 		SCTP_TCB_UNLOCK(stcb);
 	}
  out:
-	if(so && sb_unlocked) 
+	if(so && sb_unlocked && hold_sblock) 
 		SOCKBUF_LOCK(&so->so_rcv);
 
 	SCTP_INP_DECR_REF(stcb->sctp_ep);
@@ -4421,6 +4425,9 @@ sctp_sorecvmsg(struct socket *so,
 	int s,in_eeor_mode=0;
 	int special_return = 0;
 	int no_rcv_needed = 0;
+	int rwnd_req;
+	int hold_sblock = 0;
+	int alen;
 
 	if (msg_flags) {
 		in_flags = *msg_flags;
@@ -4455,7 +4462,7 @@ sctp_sorecvmsg(struct socket *so,
 #endif
 	in_eeor_mode = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXPLICIT_EOR);
 	SOCKBUF_LOCK(&so->so_rcv);
-
+	hold_sblock = 1;
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
 	SAVE_I_AM_HERE(inp);
@@ -4588,6 +4595,7 @@ found_one:
 	 * If we reach here, control has a some data for us to read off.
 	 * Note that stcb COULD be NULL.
 	 */
+	rwnd_req = (so->so_rcv.sb_hiwat >> SCTP_RWND_HIWAT_SHIFT);
 	stcb = control->stcb;
 	if((stcb) && 
 	   (control->do_not_ref_stcb == 0) &&
@@ -4713,7 +4721,10 @@ get_more_data:
 				/* not enough in this buf */
 				cp_len = (int)m->m_len;
 			}
-			SOCKBUF_UNLOCK(&so->so_rcv);
+			if(hold_sblock) {
+				SOCKBUF_UNLOCK(&so->so_rcv);
+				hold_sblock = 0;
+			}
 			splx(s);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			socket_unlock(so, 0);
@@ -4727,7 +4738,10 @@ get_more_data:
 #else
 			s = splnet();
 #endif
-			SOCKBUF_LOCK(&so->so_rcv);
+			if(m->m_next == NULL) {
+				SOCKBUF_LOCK(&so->so_rcv);
+				hold_sblock = 1;
+			}
 			/* re-read */
 			if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)
 				goto release;
@@ -4763,20 +4777,24 @@ get_more_data:
 					sctp_sblog(&so->so_rcv,
 					    stcb, SCTP_LOG_SBRESULT, 0);
 #endif
-					if (control->length < (uint32_t) cp_len) {
+					alen = control->length;
+					if (alen < (uint32_t) cp_len) {
 #ifdef INVARIENTS
 						panic("Impossible length");
 #else
-						cp_len = control->length;
+						cp_len = alen;
 #endif
 					}
 					copied_so_far += cp_len;
 					freed_so_far += cp_len;
-					control->length -= cp_len;
+					atomic_subtract_int(&control->length, cp_len);
 					control->data = sctp_m_free(m);
 					m = control->data;
-					/* been through it all */
+					/* been through it all, must hold sb lock ok to null tail */
 					if (control->data == NULL) {
+						if(hold_sblock == 0) {
+							panic("If m_next was NULL I should not be here");
+						}
 						control->tail_mbuf = NULL;
 					}
 				}
@@ -4811,14 +4829,15 @@ get_more_data:
 					sctp_sblog(&so->so_rcv, stcb,
 					    SCTP_LOG_SBRESULT, 0);
 #endif
-					if (control->length < (uint32_t) cp_len) {
+					alen = control->length;
+					if (alen < (uint32_t) cp_len) {
 #ifdef INVARIENTS
 						panic("Impossible length");
 #else
-						cp_len = control->length;
+						cp_len = alen;
 #endif
 					}
-					control->length -= cp_len;
+					atomic_subtract_int(&control->length,cp_len);
 				} else {
 					copied_so_far += cp_len;
 				}
@@ -4830,10 +4849,14 @@ get_more_data:
 			}
 			if (((stcb) && (in_flags & MSG_PEEK) == 0) &&
 			    (control->do_not_ref_stcb == 0) &&
-			    (freed_so_far > SCTP_MIN_READ_BEFORE_CONSIDERING)) {
-				sctp_user_rcvd(stcb, &freed_so_far);
+			    (freed_so_far >= rwnd_req)) {
+				sctp_user_rcvd(stcb, &freed_so_far, hold_sblock);
 			}
 		} /* end while(m) */
+		if(hold_sblock == 0) {
+			SOCKBUF_LOCK(&so->so_rcv);
+			hold_sblock = 1;
+		}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		SAVE_I_AM_HERE(inp);
 #endif
@@ -4884,7 +4907,7 @@ get_more_data:
 			if ((stcb) && (in_flags & MSG_PEEK) == 0) {
 				if ((special_return == 0) &&
 				    (no_rcv_needed == 0))
-					sctp_user_rcvd(stcb, &freed_so_far);
+					sctp_user_rcvd(stcb, &freed_so_far, hold_sblock);
 			}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			SAVE_I_AM_HERE(inp);
@@ -4897,7 +4920,7 @@ get_more_data:
 			if ((stcb) && (in_flags & MSG_PEEK) == 0) {
 				if ((special_return == 0) &&
 				    (no_rcv_needed == 0))
-					sctp_user_rcvd(stcb, &freed_so_far);
+					sctp_user_rcvd(stcb, &freed_so_far, hold_sblock);
 			}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			SAVE_I_AM_HERE(inp);
@@ -4914,7 +4937,7 @@ get_more_data:
 			if ((stcb) && (in_flags & MSG_PEEK) == 0) {
 				if((special_return == 0) &&
 				    (no_rcv_needed == 0))
-					sctp_user_rcvd(stcb, &freed_so_far);
+					sctp_user_rcvd(stcb, &freed_so_far, hold_sblock);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 				SAVE_I_AM_HERE(inp);
 #endif
@@ -4931,7 +4954,7 @@ get_more_data:
 			if ((stcb) && (in_flags & MSG_PEEK) == 0) {
 				if((special_return == 0) &&
 				   (no_rcv_needed == 0))
-					sctp_user_rcvd(stcb, &freed_so_far);
+					sctp_user_rcvd(stcb, &freed_so_far, hold_sblock);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 				SAVE_I_AM_HERE(inp);
 #endif
@@ -4949,7 +4972,7 @@ get_more_data:
 		if (((stcb) && (in_flags & MSG_PEEK) == 0) &&
 		    ((special_return == 0) &&
 		     (no_rcv_needed == 0))) {
-			sctp_user_rcvd(stcb, &freed_so_far);
+			sctp_user_rcvd(stcb, &freed_so_far, hold_sblock);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			SAVE_I_AM_HERE(inp);
 #endif
@@ -5074,7 +5097,7 @@ get_more_data2:
 				if (stcb) {
 					if ((special_return == 0) &&
 					    (no_rcv_needed == 0))
-						sctp_user_rcvd(stcb, &freed_so_far);
+						sctp_user_rcvd(stcb, &freed_so_far, hold_sblock);
 				}
 				goto release;
 			}
@@ -5088,7 +5111,7 @@ get_more_data2:
 				if (stcb) {
 					if ((special_return == 0) &&
 						(no_rcv_needed == 0))
-						sctp_user_rcvd(stcb, &freed_so_far);
+						sctp_user_rcvd(stcb, &freed_so_far, hold_sblock);
 				}
 				goto release;
 			}
@@ -5169,6 +5192,7 @@ get_more_data2:
 					uio->uio_resid -= m->m_len;
 					cp_len -= m->m_len;
 					SOCKBUF_UNLOCK(&so->so_rcv);
+					hold_sblock = 0;
 					splx(s);
 					*mp = sctp_m_copym(m, 0, cp_len,
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
@@ -5186,7 +5210,7 @@ get_more_data2:
 					sctp_log_lock(inp, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
 #endif
 					SOCKBUF_LOCK(&so->so_rcv);
-
+					hold_sblock = 1;
 					if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)
 						goto release;
 
@@ -5205,7 +5229,7 @@ get_more_data2:
 						stcb->asoc.sb_cc = sctp_sbspace_sub(stcb->asoc.sb_cc, (uint32_t) cp_len);
 						if((special_return == 0) &&
 						   (no_rcv_needed == 0))
-							sctp_user_rcvd(stcb, &freed_so_far);
+							sctp_user_rcvd(stcb, &freed_so_far, hold_sblock);
 					}
 #ifdef SCTP_SB_LOGGING
 					sctp_sblog(&so->so_rcv, stcb,
@@ -5256,7 +5280,10 @@ out:
 		atomic_add_16(&stcb->asoc.refcnt, -1);
 		freecnt_applied = 0;
 	}
-	SOCKBUF_UNLOCK(&so->so_rcv);
+	if(hold_sblock) {
+		SOCKBUF_UNLOCK(&so->so_rcv);
+		hold_sblock = 0;
+	}
 	splx(s);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	SAVE_I_AM_HERE(inp);

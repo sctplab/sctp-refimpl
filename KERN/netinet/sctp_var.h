@@ -254,72 +254,24 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 #define sctp_sbspace_sub(a,b) ((a > b) ? (a - b) : 0)
 
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
-#ifdef INVARIENTS
 #define sctp_sbfree(stcb, sb, m) { \
         if((sb)->sb_cc >= (m)->m_len) { \
-  	   (sb)->sb_cc -= (m)->m_len; \
-        } else { \
-           panic("sb_cc would go negative"); \
-           (sb)->sb_cc = 0; \
-        } \
-        if(stcb) {\
-          if((stcb)->asoc.sb_cc >= (m)->m_len) {\
-             (stcb)->asoc.sb_cc -= (m)->m_len; \
-          } else  {\
-              panic("assoc sb_cc would go negative"); \
-             (stcb)->asoc.sb_cc = 0; \
-          } \
-          if((stcb)->asoc.sb_mbcnt >= MSIZE) { \
-             (stcb)->asoc.sb_mbcnt -= MSIZE; \
-          } \
-	  if ((m)->m_flags & M_EXT) { \
-		if((stcb)->asoc.sb_mbcnt >= (m)->m_ext.ext_size) { \
-		   (stcb)->asoc.sb_mbcnt -= (m)->m_ext.ext_size; \
-                } else  { \
-                   panic("assoc stcb->mbcnt would go negative"); \
-		   (stcb)->asoc.sb_mbcnt = 0; \
-                } \
-          } \
-        } \
-	if ((m)->m_type != MT_DATA && (m)->m_type != MT_HEADER && \
-	    (m)->m_type != MT_OOBDATA) \
-		(sb)->sb_ctl -= (m)->m_len; \
-        if((sb)->sb_mbcnt >= MSIZE) { \
-           (sb)->sb_mbcnt -= MSIZE; \
- 	   if ((m)->m_flags & M_EXT) { \
-		if((sb)->sb_mbcnt >= (m)->m_ext.ext_size) { \
-		   (sb)->sb_mbcnt -= (m)->m_ext.ext_size; \
-                } else  { \
-                   panic("assoc sb_mbcnt would go negative"); \
-		   (sb)->sb_mbcnt = 0; \
-                } \
-            } \
-        } else  { \
-            panic("sb_mbcnt would go negative"); \
-            (sb)->sb_mbcnt = 0; \
-        } \
-}
-
-#else				/* NOT INVARIENTS */
-
-#define sctp_sbfree(stcb, sb, m) { \
-        if((sb)->sb_cc >= (m)->m_len) { \
-  	   (sb)->sb_cc -= (m)->m_len; \
+  	   atomic_subtract_int(&(sb)->sb_cc,(m)->m_len); \
         } else { \
            (sb)->sb_cc = 0; \
         } \
         if(stcb) {\
           if((stcb)->asoc.sb_cc >= (m)->m_len) {\
-             (stcb)->asoc.sb_cc -= (m)->m_len; \
+             atomic_subtract_int(&(stcb)->asoc.sb_cc,(m)->m_len); \
           } else  {\
              (stcb)->asoc.sb_cc = 0; \
           } \
           if((stcb)->asoc.sb_mbcnt >= MSIZE) { \
-             (stcb)->asoc.sb_mbcnt -= MSIZE; \
+             atomic_subtract_int(&(stcb)->asoc.sb_mbcnt,MSIZE); \
           } \
 	  if ((m)->m_flags & M_EXT) { \
 		if((stcb)->asoc.sb_mbcnt >= (m)->m_ext.ext_size) { \
-		   (stcb)->asoc.sb_mbcnt -= (m)->m_ext.ext_size; \
+		   atomic_subtract_int(&(stcb)->asoc.sb_mbcnt,(m)->m_ext.ext_size); \
                 } else  { \
 		   (stcb)->asoc.sb_mbcnt = 0; \
                 } \
@@ -327,12 +279,12 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
         } \
 	if ((m)->m_type != MT_DATA && (m)->m_type != MT_HEADER && \
 	    (m)->m_type != MT_OOBDATA) \
-		(sb)->sb_ctl -= (m)->m_len; \
+		atomic_subtract_int(&(sb)->sb_ctl,(m)->m_len); \
         if((sb)->sb_mbcnt >= MSIZE) { \
-           (sb)->sb_mbcnt -= MSIZE; \
+           atomic_subtract_int(&(sb)->sb_mbcnt,MSIZE); \
  	   if ((m)->m_flags & M_EXT) { \
 		if((sb)->sb_mbcnt >= (m)->m_ext.ext_size) { \
-		   (sb)->sb_mbcnt -= (m)->m_ext.ext_size; \
+		   atomic_subtract_int(&(sb)->sb_mbcnt,(m)->m_ext.ext_size); \
                 } else  { \
 		   (sb)->sb_mbcnt = 0; \
                 } \
@@ -342,22 +294,21 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
         } \
 }
 
-#endif				/* INVARIENTS */
 
 #define sctp_sballoc(stcb, sb, m)  { \
 	(sb)->sb_cc += (m)->m_len; \
         if(stcb) { \
-  	  (stcb)->asoc.sb_cc += (m)->m_len; \
-          (stcb)->asoc.sb_mbcnt += MSIZE; \
+  	  atomic_add_int(&(stcb)->asoc.sb_cc,(m)->m_len); \
+          atomic_add_int(&(stcb)->asoc.sb_mbcnt, MSIZE); \
 	  if ((m)->m_flags & M_EXT) \
-		(stcb)->asoc.sb_mbcnt += (m)->m_ext.ext_size; \
+		atomic_add_int(&(stcb)->asoc.sb_mbcnt,(m)->m_ext.ext_size); \
         } \
 	if ((m)->m_type != MT_DATA && (m)->m_type != MT_HEADER && \
 	    (m)->m_type != MT_OOBDATA) \
-		(sb)->sb_ctl += (m)->m_len; \
-	(sb)->sb_mbcnt += MSIZE; \
+		atomic_add_int(&(sb)->sb_ctl,(m)->m_len); \
+	atomic_add_int(&(sb)->sb_mbcnt,MSIZE); \
 	if ((m)->m_flags & M_EXT) \
-		(sb)->sb_mbcnt += (m)->m_ext.ext_size; \
+		atomic_add_int(&(sb)->sb_mbcnt,(m)->m_ext.ext_size); \
 }
 
 #else				/* FreeBSD Version < 500000  */
