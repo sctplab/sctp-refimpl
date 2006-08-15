@@ -4402,6 +4402,9 @@ found_one:
 		freecnt_applied = 1;
 	}
 	error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
+	if (error) {
+		goto release_unlocked;
+	}
 	/* First lets get off the sinfo and sockaddr info */
 	if (sinfo) {
 		memcpy(sinfo, control, sizeof(struct sctp_nonpad_sndrcvinfo));
@@ -4767,6 +4770,10 @@ wait_some_more:
 		if (error)
 			goto release_unlocked;
 		error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
+		if (error) {
+			goto release_unlocked;
+		}
+
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		SAVE_I_AM_HERE(inp);
 #endif
@@ -4869,7 +4876,9 @@ get_more_data2:
 			if (error)
 				goto release_unlocked;
 			error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
-
+			if (error) {
+				goto release_unlocked;
+			}
 			if (control->length == 0) {
 				/* still nothing here */
 				if (so->so_rcv.sb_cc) {
