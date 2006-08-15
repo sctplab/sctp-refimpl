@@ -130,9 +130,16 @@ __FBSDID("$FreeBSD:$");
 #define SCTP_CWNDLOG_ENDSEND        78
 #define SCTP_AT_END_OF_SACK         79
 #define SCTP_REASON_FOR_SC          80
-#define SCTP_UNKNOWN_MAX            81
+#define SCTP_BLOCK_LOG_INTO_BLKA    81
+#define SCTP_ENTER_USER_RECV        82
+#define SCTP_USER_RECV_SACKS        83
+#define SCTP_SORECV_BLOCKSA         84
+#define SCTP_SORECV_BLOCKSB         85
+#define SCTP_SORECV_DONE            86
+#define SCTP_UNKNOWN_MAX            87
 
-#define SCTP_LOG_MAX_TYPES 82
+
+#define SCTP_LOG_MAX_TYPES 88
 /*
  * To turn on various logging, you must first define SCTP_STAT_LOGGING. Then
  * to get something to log you define one of the logging defines i.e.
@@ -157,8 +164,9 @@ __FBSDID("$FreeBSD:$");
 #define SCTP_LOG_EVENT_NAGLE 13
 #define SCTP_LOG_EVENT_WAKE 14
 #define SCTP_LOG_MISC_EVENT 15 
+#define SCTP_LOG_EVENT_CLOSE 16
 
-#define SCTP_LOG_MAX_EVENT 16
+#define SCTP_LOG_MAX_EVENT 17
 
 #define SCTP_LOCK_UNKNOWN 2
 
@@ -176,10 +184,28 @@ __FBSDID("$FreeBSD:$");
  * SCTP_RWND_HIWAT_SHIFT) before we will look to see if we need to send a
  * window update sack. When we look, we compare the last rwnd we sent vs the
  * current rwnd. It too must be greater than this value. Using 3 divdes the
- * hiwat by 8, so for 200k rwnd we need to read 25k. For a 64k rwnd we need
- * to read 8k. This seems about right.
+ * hiwat by 8, so for 200k rwnd we need to read 24k. For a 64k rwnd we need
+ * to read 8k. This seems about right.. I hope :-D.. we do set a
+ * min of a MTU on it so if the rwnd is real small we will insist
+ * on a full MTU of 1500 bytes.
  */
 #define SCTP_RWND_HIWAT_SHIFT 3
+
+/* How much of the rwnd must the 
+ * message be taking up to start partial delivery.
+ * We calculate this by shifing the hi_water (recv_win)
+ * left the following .. set to 1, when a message holds
+ * 1/2 the rwnd. If we set it to 2 when a message holds
+ * 1/4 the rwnd...etc..
+ */
+
+#define SCTP_PARTIAL_DELIVERY_SHIFT 1
+
+/* Minimum number of bytes read by user before we
+ * condsider doing a rwnd update
+ */
+#define SCTP_MIN_READ_BEFORE_CONSIDERING  3000
+
 /*
  * If you wish to use MD5 instead of SLA uncomment the line below. Why you
  * would like to do this: a) There may be IPR on SHA-1, or so the FIP-180-1
@@ -375,6 +401,7 @@ __FBSDID("$FreeBSD:$");
 #define SCTP_STATE_SHUTDOWN_PENDING	0x0080
 #define SCTP_STATE_CLOSED_SOCKET	0x0100
 #define SCTP_STATE_ABOUT_TO_BE_FREED    0x0200
+#define SCTP_STATE_PARTIAL_MSG_LEFT     0x0400
 #define SCTP_STATE_MASK			0x007f
 
 #define SCTP_GET_STATE(asoc)	((asoc)->state & SCTP_STATE_MASK)
@@ -561,7 +588,7 @@ __FBSDID("$FreeBSD:$");
 #define SCTP_RTO_INITIAL	(3000)	/* 3 sec in ms */
 
 
-#define SCTP_INP_KILL_TIMEOUT 1000	/* number of ms to retry kill of inpcb */
+#define SCTP_INP_KILL_TIMEOUT 20	/* number of ms to retry kill of inpcb */
 #define SCTP_ASOC_KILL_TIMEOUT 10	/* number of ms to retry kill of inpcb */
 
 #define SCTP_DEF_MAX_INIT	8
@@ -701,7 +728,8 @@ __FBSDID("$FreeBSD:$");
 #define SCTP_NOTIFY_STR_RESET_FAILED_IN 24
 #define SCTP_NOTIFY_AUTH_NEW_KEY	25
 #define SCTP_NOTIFY_AUTH_KEY_CONFLICT	26
-#define SCTP_NOTIFY_MAX			26
+#define SCTP_NOTIFY_SPECIAL_SP_FAIL     27
+#define SCTP_NOTIFY_MAX			27
 
 #define SCTP_DEFAULT_SPLIT_POINT_MIN 256
 
@@ -815,6 +843,28 @@ do { \
 		sowwakeup(so); \
 	} \
 } while (0)
+
+#if defined(__APPLE__)
+#define sctp_sowwakeup_locked(inp, so) \
+do { \
+	if (inp->sctp_flags & SCTP_PCB_FLAGS_DONT_WAKE) { \
+                SOCKBUF_UNLOCK(&((so)->so_snd)); \
+		inp->sctp_flags |= SCTP_PCB_FLAGS_WAKEOUTPUT; \
+	} else { \
+		sowwakeup(so); \
+	} \
+} while (0)
+#else
+#define sctp_sowwakeup_locked(inp, so) \
+do { \
+	if (inp->sctp_flags & SCTP_PCB_FLAGS_DONT_WAKE) { \
+                SOCKBUF_UNLOCK(&((so)->so_snd)); \
+		inp->sctp_flags |= SCTP_PCB_FLAGS_WAKEOUTPUT; \
+	} else { \
+		sowwakeup_locked(so); \
+	} \
+} while (0)
+#endif
 
 #define sctp_sorwakeup(inp, so) \
 do { \

@@ -41,7 +41,6 @@ __FBSDID("$FreeBSD:$");
 #include "opt_compat.h"
 #include "opt_inet6.h"
 #include "opt_inet.h"
-#include "opt_global.h"
 #endif
 #if defined(__NetBSD__)
 #include "opt_inet.h"
@@ -181,7 +180,8 @@ sctp_asconf_success_response(uint32_t id)
 	struct mbuf *m_reply = NULL;
 	struct sctp_asconf_paramhdr *aph;
 
-	MGET(m_reply, M_DONTWAIT, MT_DATA);
+	m_reply = sctp_get_mbuf_for_msg(sizeof(struct sctp_asconf_paramhdr),
+					0, M_DONTWAIT, 1, MT_DATA);
 	if (m_reply == NULL) {
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
@@ -209,7 +209,10 @@ sctp_asconf_error_response(uint32_t id, uint16_t cause, uint8_t * error_tlv,
 	struct sctp_error_cause *error;
 	uint8_t *tlv;
 
-	MGET(m_reply, M_DONTWAIT, MT_DATA);
+	m_reply = sctp_get_mbuf_for_msg((sizeof(struct sctp_asconf_paramhdr) +
+					 tlv_length + 
+					 sizeof(struct sctp_error_cause)),
+					0, M_DONTWAIT, 1, MT_DATA);
 	if (m_reply == NULL) {
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
@@ -761,7 +764,7 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 		sctp_m_freem(asoc->last_asconf_ack_sent);
 		asoc->last_asconf_ack_sent = NULL;
 	}
-	MGETHDR(m_ack, M_DONTWAIT, MT_DATA);
+	m_ack = sctp_get_mbuf_for_msg(sizeof(struct sctp_asconf_ack_chunk), 1, M_DONTWAIT, 1, MT_DATA);
 	if (m_ack == NULL) {
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
@@ -2475,8 +2478,7 @@ sctp_compose_asconf(struct sctp_tcb *stcb)
 	 * it's simpler to fill in the asconf chunk header lookup address on
 	 * the fly
 	 */
-	m_asconf_chk = NULL;
-	MGETHDR(m_asconf_chk, M_DONTWAIT, MT_DATA);
+	m_asconf_chk = sctp_get_mbuf_for_msg(sizeof(struct sctp_asconf_chunk),1, M_DONTWAIT, 1, MT_DATA);
 	if (m_asconf_chk == NULL) {
 		/* no mbuf's */
 #ifdef SCTP_DEBUG
@@ -2485,8 +2487,7 @@ sctp_compose_asconf(struct sctp_tcb *stcb)
 #endif				/* SCTP_DEBUG */
 		return (NULL);
 	}
-	m_asconf = NULL;
-	MGETHDR(m_asconf, M_DONTWAIT, MT_HEADER);
+	m_asconf = sctp_get_mbuf_for_msg(MCLBYTES, 1, M_DONTWAIT, 1, MT_DATA);
 	if (m_asconf == NULL) {
 		/* no mbuf's */
 #ifdef SCTP_DEBUG
@@ -2494,17 +2495,6 @@ sctp_compose_asconf(struct sctp_tcb *stcb)
 			printf("compose_asconf: couldn't get mbuf!\n");
 #endif				/* SCTP_DEBUG */
 		sctp_m_freem(m_asconf_chk);
-		return (NULL);
-	}
-	MCLGET(m_asconf, M_DONTWAIT);
-	if ((m_asconf->m_flags & M_EXT) != M_EXT) {
-		/* failed to get cluster buffer */
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_ASCONF1)
-			printf("compose_asconf: couldn't get cluster!\n");
-#endif				/* SCTP_DEBUG */
-		sctp_m_freem(m_asconf_chk);
-		sctp_m_freem(m_asconf);
 		return (NULL);
 	}
 	m_asconf_chk->m_len = sizeof(struct sctp_asconf_chunk);

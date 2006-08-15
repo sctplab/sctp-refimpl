@@ -41,7 +41,6 @@ __FBSDID("$FreeBSD:$");
 #include "opt_compat.h"
 #include "opt_inet6.h"
 #include "opt_inet.h"
-#include "opt_global.h"
 #endif
 #if defined(__NetBSD__)
 #include "opt_inet.h"
@@ -344,13 +343,14 @@ sctp_threshold_management(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		/* Abort notification sends a ULP notify */
 		struct mbuf *oper;
 
-		MGET(oper, M_DONTWAIT, MT_DATA);
+		oper = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) + sizeof(uint32_t)),
+					       0, M_DONTWAIT, 1, MT_DATA);
 		if (oper) {
 			struct sctp_paramhdr *ph;
 			uint32_t *ippp;
 
 			oper->m_len = sizeof(struct sctp_paramhdr) +
-			    sizeof(*ippp);
+			    sizeof(uint32_t);
 			ph = mtod(oper, struct sctp_paramhdr *);
 			ph->param_type = htons(SCTP_CAUSE_PROTOCOL_VIOLATION);
 			ph->param_length = htons(oper->m_len);
@@ -861,8 +861,10 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 		could_be_sent->sent = SCTP_DATAGRAM_RESEND;
 	}
 	if (stcb->asoc.sent_queue_retran_cnt != cnt_mk) {
+#ifdef INVARIENTS
 		printf("Local Audit says there are %d for retran asoc cnt:%d\n",
 		    cnt_mk, stcb->asoc.sent_queue_retran_cnt);
+#endif
 #ifndef SCTP_AUDITING_ENABLED
 		stcb->asoc.sent_queue_retran_cnt = cnt_mk;
 #endif
@@ -938,6 +940,7 @@ sctp_move_all_chunks_to_alt(struct sctp_tcb *stcb,
 	struct sctp_association *asoc;
 	struct sctp_stream_out *outs;
 	struct sctp_tmit_chunk *chk;
+	struct sctp_stream_queue_pending *sp;
 
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
@@ -954,6 +957,7 @@ sctp_move_all_chunks_to_alt(struct sctp_tcb *stcb,
 	 */
 	TAILQ_FOREACH(outs, &asoc->out_wheel, next_spoke) {
 		/* now clean up any chunks here */
+#ifdef PURGE_THIS_CODE
 		TAILQ_FOREACH(chk, &outs->outqueue, sctp_next) {
 			if (chk->whoTo == net) {
 				sctp_free_remote_addr(chk->whoTo);
@@ -961,6 +965,16 @@ sctp_move_all_chunks_to_alt(struct sctp_tcb *stcb,
 				atomic_add_int(&alt->ref_count, 1);
 			}
 		}
+#else
+		TAILQ_FOREACH(sp, &outs->outqueue, next) {
+			if (sp->net == net) {
+				sctp_free_remote_addr(sp->net);
+				sp->net = alt;
+				atomic_add_int(&alt->ref_count, 1);
+			}
+		}
+
+#endif
 	}
 	/* Now check the pending queue */
 	TAILQ_FOREACH(chk, &asoc->send_queue, sctp_next) {
@@ -1204,13 +1218,14 @@ sctp_cookie_timer(struct sctp_inpcb *inp,
 			/* FOOBAR! */
 			struct mbuf *oper;
 
-			MGET(oper, M_DONTWAIT, MT_DATA);
+			oper = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) + sizeof(uint32_t)),
+						       0, M_DONTWAIT, 1, MT_DATA);
 			if (oper) {
 				struct sctp_paramhdr *ph;
 				uint32_t *ippp;
 
 				oper->m_len = sizeof(struct sctp_paramhdr) +
-				    sizeof(*ippp);
+				    sizeof(uint32_t);
 				ph = mtod(oper, struct sctp_paramhdr *);
 				ph->param_type = htons(SCTP_CAUSE_PROTOCOL_VIOLATION);
 				ph->param_length = htons(oper->m_len);
@@ -1491,7 +1506,7 @@ sctp_audit_stream_queues_for_size(struct sctp_inpcb *inp,
     struct sctp_tcb *stcb)
 {
 	struct sctp_stream_out *outs;
-	struct sctp_tmit_chunk *chk;
+	struct sctp_stream_queue_pending *sp;
 	unsigned int chks_in_queue = 0;
 
 	/*
@@ -1508,9 +1523,6 @@ sctp_audit_stream_queues_for_size(struct sctp_inpcb *inp,
 	if (TAILQ_EMPTY(&stcb->asoc.out_wheel)) {
 		int i, cnt = 0;
 
-		printf("Strange, out_wheel empty nothing on sent/send and  tot=%lu, audit outwheel?\n",
-		    (u_long)stcb->asoc.total_output_queue_size);
-
 		/* Check to see if a spoke fell off the wheel */
 		for (i = 0; i < stcb->asoc.streamoutcnt; i++) {
 			if (!TAILQ_EMPTY(&stcb->asoc.strmout[i].outqueue)) {
@@ -1523,7 +1535,6 @@ sctp_audit_stream_queues_for_size(struct sctp_inpcb *inp,
 			printf("Found an additional %d streams NOT on outwheel, corrected\n", cnt);
 		} else {
 			/* no spokes lost, */
-			printf("No streams with data, clearing output_queue_size\n");
 			stcb->asoc.total_output_queue_size = 0;
 		}
 		return;
@@ -1531,7 +1542,7 @@ sctp_audit_stream_queues_for_size(struct sctp_inpcb *inp,
 	/* Check to see if some data queued, if so report it */
 	TAILQ_FOREACH(outs, &stcb->asoc.out_wheel, next_spoke) {
 		if (!TAILQ_EMPTY(&outs->outqueue)) {
-			TAILQ_FOREACH(chk, &outs->outqueue, sctp_next) {
+			TAILQ_FOREACH(sp, &outs->outqueue, next) {
 				chks_in_queue++;
 			}
 		}
@@ -1920,7 +1931,9 @@ select_a_new_ep:
 		 * we lie here, it really needs to have its own type but
 		 * first I must verify that this won't effect things :-0
 		 */
-		sctp_chunk_output(it->inp, it->stcb, SCTP_OUTPUT_FROM_T3);
+		if(it->no_chunk_output == 0)
+			sctp_chunk_output(it->inp, it->stcb, SCTP_OUTPUT_FROM_T3);
+		
 		SCTP_TCB_UNLOCK(it->stcb);
 	next_assoc:
 		it->stcb = LIST_NEXT(it->stcb, sctp_tcblist);
@@ -1964,16 +1977,22 @@ sctp_slowtimo()
 #endif
 	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
 	LIST_FOREACH(inp, &sctppcbinfo.inplisthead, inp_list) {
+#ifdef SCTP_DEBUG
 		n++;
+#endif
 		if (inp->inp_wantcnt != WNT_STOPUSING) {
+#ifdef SCTP_DEBUG
 			n1++;
+#endif
 			continue;
 		}
 		if (lck_mtx_try_lock(inp->inpcb_mtx)) {
 			so = inp->inp_socket;
 			if (so->so_usecount != 0) {
 				lck_mtx_unlock(inp->inpcb_mtx);
+#ifdef SCTP_DEBUG
 				n2++;
+#endif
 				continue;
 			}
 			if (inp->inp_state == INPCB_STATE_DEAD) {
@@ -1987,10 +2006,14 @@ sctp_slowtimo()
 				SCTP_DECR_EP_COUNT();
 			} else {
 				lck_mtx_unlock(inp->inpcb_mtx);
+#ifdef SCTP_DEBUG
 				n3++;
+#endif
 			}
 		} else {
+#ifdef SCTP_DEBUG
 			n4++;
+#endif
 		}
 	}
 	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);

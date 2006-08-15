@@ -79,6 +79,7 @@ struct sctp_timer {
 
 	/* for sanity checking */
 	void *self;
+	uint32_t ticks;
 };
 
 struct sctp_nonpad_sndrcvinfo {
@@ -146,6 +147,7 @@ struct sctp_iterator {
 	uint32_t pcb_features;		/* endpoint features being checked */
 	uint32_t asoc_state;		/* assoc state being checked */
 	uint32_t iterator_flags;
+	uint8_t  no_chunk_output;
 };
 /* iterator_flags values */
 #define SCTP_ITERATOR_DO_ALL_INP	0x00000001
@@ -237,10 +239,6 @@ struct sctp_nets {
 
 	/* CMT fast recovery variables */
 	uint32_t fast_recovery_tsn;
-	uint8_t fast_retran_loss_recovery;
-	uint8_t will_exit_fast_recovery;
-
-
 	uint32_t heartbeat_random1;
 	uint32_t heartbeat_random2;
 	uint32_t tos_flowlabel;
@@ -251,6 +249,9 @@ struct sctp_nets {
 	uint16_t failure_threshold;
 	/* error stats on destination */
 	uint16_t error_count;
+
+	uint8_t fast_retran_loss_recovery;
+	uint8_t will_exit_fast_recovery;
 	/* Flags that probably can be combined into dest_state */
 	uint8_t rto_variance_dir;	/* increase = 1, decreasing = 0 */
 	uint8_t rto_pending;	/* is segment marked for RTO update  ** if we
@@ -347,7 +348,7 @@ struct sctp_tmit_chunk {
 				 * this chunk is overridden by user. Used for
 				 * CMT (iyengar@cis.udel.edu, 2005/06/21) */
 	uint8_t no_fr_allowed;
-	uint8_t reserved;
+	uint8_t pr_sctp_on;
 };
 
 /*
@@ -376,6 +377,8 @@ struct sctp_queued_to_read {	/* sinfo structure Pluse more */
 	struct sctp_tcb *stcb;	/* assoc, used for window update */
 	TAILQ_ENTRY(sctp_queued_to_read) next;
 	uint16_t port_from;
+	uint8_t  do_not_ref_stcb;
+	uint8_t  end_added;
 };
 
 /* This data structure will be on the outbound
@@ -411,6 +414,10 @@ struct sctp_stream_queue_pending {
 	uint16_t strseq;
 	uint8_t  msg_is_complete;
 	uint8_t  some_taken;
+	uint8_t  addr_over;
+	uint8_t  act_flags;
+	uint8_t  pr_sctp_on;
+	uint8_t  resv;
 };
 
 /*
@@ -428,8 +435,8 @@ struct sctp_stream_in {
 /* This struct is used to track the traffic on outbound streams */
 TAILQ_HEAD(sctpwheel_listhead, sctp_stream_out);
 struct sctp_stream_out {
-	/* struct sctp_streamhead outqueue */
-        struct sctpchunk_listhead outqueue;
+	struct sctp_streamhead outqueue;
+        /*struct sctpchunk_listhead outqueue;*/
 	TAILQ_ENTRY(sctp_stream_out) next_spoke;	/* next link in wheel */
 	uint16_t stream_no;
 	uint16_t next_sequence_sent;	/* next one I expect to send out */
@@ -509,20 +516,6 @@ struct sctp_association {
 	 * to the stream to go get data from.
 	 */
 	struct sctp_stream_out *locked_on_sending;
-
-	/* This pointer will ONLY get set if the user
-	 * has enabled the flag to indicate that they 
-	 * explicitly set a MSG_EOR at the end of sending
-	 * a message. The normal mode we operate in is
-	 * that we imply a MSG_EOR on each send. If the
-	 * user sets the flag, and does NOT send down an
-	 * MSG_EOR (or we cannot move all the data out
-	 * for whatever reason) then we set this pointer
-	 * to point to that message in the stream
-	 * queue being added to with each successive
-	 * send to this association.
-	 */
-	struct sctp_stream_out *locked_on_from_sender;
 
 	/* If an iterator is looking at me, this is it */
 	struct sctp_iterator *stcb_starting_point_for_iterator;
@@ -668,7 +661,6 @@ struct sctp_association {
 	uint32_t my_rwnd_control_len;
 
 	uint32_t total_output_queue_size;
-	uint32_t total_output_mbuf_queue_size;	/* sb_mbcnt equiv */
 
 	uint32_t sb_cc;		/* shadow of sb_cc in one-2-one */
 	uint32_t sb_mbcnt;	/* shadow of sb_mbcnt in one-2-one */
@@ -676,7 +668,7 @@ struct sctp_association {
 	uint32_t nonce_resync_tsn;
 	uint32_t nonce_wait_tsn;
 	uint32_t default_flowlabel;
-
+	uint32_t pr_sctp_cnt;
 	int ctrl_queue_cnt;	/* could be removed  REM */
 	/*
 	 * All outbound datagrams queue into this list from the individual
@@ -878,6 +870,7 @@ struct sctp_association {
 	/* CMT variables */
 	uint8_t cmt_dac_pkts_rcvd;
 	uint8_t sctp_cmt_on_off;
+	uint8_t iam_blocking;
 	/*
 	 * The mapping array is used to track out of order sequences above
 	 * last_acked_seq. 0 indicates packet missing 1 indicates packet

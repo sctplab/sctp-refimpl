@@ -792,7 +792,15 @@ sctp6_abort(struct socket *so)
 #else
 	s = splnet();
 #endif
-	sctp_inpcb_free(inp, 1);
+	if((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
+		SCTP_INP_WLOCK(inp);
+		inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_GONE;
+		SCTP_INP_WUNLOCK(inp);
+#ifdef SCTP_LOG_CLOSING
+		sctp_log_closing(inp, NULL, 17);
+#endif
+		sctp_inpcb_free(inp, 1);
+	}
 	splx(s);
 #if defined(__FreeBSD__) && __FreeBSD_version > 690000
 	return;
@@ -1016,8 +1024,14 @@ sctp6_close(struct socket *so)
 		SCTP_INP_WUNLOCK(inp);
 		if (((so->so_options & SO_LINGER) && (so->so_linger == 0)) ||
 		    (so->so_rcv.sb_cc > 0)) {
+#ifdef SCTP_LOG_CLOSING
+			sctp_log_closing(inp, NULL, 13);
+#endif
 			sctp_inpcb_free(inp, 1);
 		} else {
+#ifdef SCTP_LOG_CLOSING
+			sctp_log_closing(inp, NULL, 14);
+#endif
 			sctp_inpcb_free(inp, 0);
 		}
 		/* The socket is now detached, no matter what
@@ -1061,10 +1075,19 @@ sctp6_detach(struct socket *so)
 	s = splsoftnet();
 #endif
 	if((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
+		SCTP_INP_WLOCK(inp);
+		inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_GONE;
+		SCTP_INP_WUNLOCK(inp);
 		if (((so->so_options & SO_LINGER) && (so->so_linger == 0)) ||
 		    (so->so_rcv.sb_cc > 0)) {
+#ifdef SCTP_LOG_CLOSING
+			sctp_log_closing(inp, NULL, 13);
+#endif
 			sctp_inpcb_free(inp, 1);
 		} else {
+#ifdef SCTP_LOG_CLOSING
+			sctp_log_closing(inp, NULL, 14);
+#endif
 			sctp_inpcb_free(inp, 0);
 		}
 		/* The socket is now detached, no matter what
@@ -1090,9 +1113,6 @@ sctp6_detach(struct socket *so)
 		so->so_pcb = NULL;
 #endif
 		SOCK_UNLOCK(so);
-		SCTP_INP_WLOCK(inp);
-		inp->sctp_socket = NULL;
-		SCTP_INP_WUNLOCK(inp);
 	}
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
