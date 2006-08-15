@@ -2716,7 +2716,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 #ifdef SCTP_LOG_CLOSING
 	sctp_log_closing(inp, NULL, 0);
 #endif
+#if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	SCTP_ITERATOR_LOCK();
+#endif
 	SCTP_ASOC_CREATE_LOCK(inp);
 	SCTP_INP_INFO_WLOCK();
 	so = inp->sctp_socket;
@@ -2727,7 +2729,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		printf("This conflict in free SHOULD not be happening!\n");
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		SCTP_INP_INFO_WUNLOCK();
+#if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		SCTP_ITERATOR_UNLOCK();
+#endif
 #ifdef SCTP_LOG_CLOSING
 		sctp_log_closing(inp, NULL, 1);
 #endif
@@ -2933,7 +2937,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 			SCTP_INP_WUNLOCK(inp);
 			SCTP_ASOC_CREATE_UNLOCK(inp);
 			SCTP_INP_INFO_WUNLOCK();
+#if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			SCTP_ITERATOR_UNLOCK();
+#endif
 #ifdef SCTP_LOG_CLOSING
 			sctp_log_closing(inp, NULL, 2);
 #endif
@@ -3010,7 +3016,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		SCTP_INP_WUNLOCK(inp);
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		SCTP_INP_INFO_WUNLOCK();
+#if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		SCTP_ITERATOR_UNLOCK();
+#endif
 #ifdef SCTP_LOG_CLOSING
 		sctp_log_closing(inp, NULL, 3);
 #endif
@@ -3027,7 +3035,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		SCTP_INP_WUNLOCK(inp);
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		SCTP_INP_INFO_WUNLOCK();
+#if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		SCTP_ITERATOR_UNLOCK();
+#endif
 #ifdef SCTP_LOG_CLOSING
 		sctp_log_closing(inp, NULL, 4);
 #endif

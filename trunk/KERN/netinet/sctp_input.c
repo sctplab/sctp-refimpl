@@ -675,9 +675,6 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 			}
 		}
 	}
-
-
-
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
 		printf("some_on_streamwheel:%d send_q_empty:%d sent_q_empty:%d\n",
