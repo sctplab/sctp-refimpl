@@ -12205,7 +12205,6 @@ sctp_lower_sosend(struct socket *so,
 
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	error = sblock(&so->so_rcv, SBLOCKWAIT(flags));
-	SAVE_I_AM_HERE(inp);
 #endif
 #if defined(__NetBSD__)
 	error = sblock(&so->so_rcv, SBLOCKWAIT(flags));
@@ -12691,9 +12690,6 @@ sctp_lower_sosend(struct socket *so,
 	}
 #endif
  out:
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	SAVE_I_AM_HERE(inp);
-#endif
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	sbunlock(&so->so_rcv, 1);
 #endif
