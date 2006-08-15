@@ -4469,10 +4469,10 @@ sctp_sorecvmsg(struct socket *so,
 
 restart:
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	sbunlock(&so->so_snd, 1);
+	sbunlock(&so->so_rcv, 1);
 #endif
 #if defined (__NetBSD__)
-	sbunlock(&so->so_snd);
+	sbunlock(&so->so_rcv);
 #endif
 	if((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
 	   (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
@@ -4992,10 +4992,10 @@ wait_some_more:
 			goto release;
 		}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		sbunlock(&so->so_snd, 1);
+		sbunlock(&so->so_rcv, 1);
 #endif
 #if defined (__NetBSD__)
-		sbunlock(&so->so_snd);
+		sbunlock(&so->so_rcv);
 #endif
 
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
@@ -5120,10 +5120,10 @@ get_more_data2:
 				goto release;
 #endif
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			sbunlock(&so->so_snd, 1);
+			sbunlock(&so->so_rcv, 1);
 #endif
 #if defined(__NetBSD__)
-			sbunlock(&so->so_snd);
+			sbunlock(&so->so_rcv);
 #endif
 			error = sbwait(&so->so_rcv);
 			if (error)

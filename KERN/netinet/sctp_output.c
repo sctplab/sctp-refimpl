@@ -11727,6 +11727,9 @@ sctp_lower_sosend(struct socket *so,
 	stcb = NULL;
 	asoc = NULL;
 	t_inp = inp = (struct sctp_inpcb *)so->so_pcb;
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sctp_lock_assert(t_inp->ip_inp.inp.inp_socket);
+#endif
 	if (uio)
 		sndlen = uio->uio_resid;
 	else
@@ -12115,7 +12118,13 @@ sctp_lower_sosend(struct socket *so,
 			mm->m_pkthdr.len = tot_out + sizeof(struct sctp_paramhdr);
 			mm->m_len = mm->m_pkthdr.len;
 			if(top == NULL) {
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+				socket_unlock(stcb->sctp_socket, 0);
+#endif
 				error = uiomove((caddr_t)ph, (int)tot_out, uio);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+				socket_lock(stcb->sctp_socket, 0);
+#endif
 				if (error) {
 					/*
 					 * Here if we can't get his data we
