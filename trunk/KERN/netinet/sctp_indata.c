@@ -209,6 +209,67 @@ sctp_set_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 	}
 }
 
+/* Calculate what the rwnd would be */
+
+uint32_t
+sctp_calc_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
+{
+	uint32_t calc=0, calc_w_oh;
+
+	/*
+	 * This is really set wrong with respect to a 1-2-m socket. Since
+	 * the sb_cc is the count that everyone as put up. When we re-write
+	 * sctp_soreceive then we will fix this so that ONLY this
+	 * associations data is taken into account.
+	 */
+	if(stcb->sctp_socket == NULL)
+		return (calc);
+
+	if (stcb->asoc.sb_cc == 0 &&
+	    asoc->size_on_reasm_queue == 0 &&
+	    asoc->size_on_all_streams == 0) {
+		/* Full rwnd granted */
+		calc = max(stcb->sctp_socket->so_rcv.sb_hiwat,
+		    SCTP_MINIMAL_RWND);
+		return (calc);
+	}
+	/* get actual space */
+	calc = (uint32_t) sctp_sbspace(&stcb->asoc, &stcb->sctp_socket->so_rcv);
+
+	/*
+	 * take out what has NOT been put on socket queue and we yet hold
+	 * for putting up.
+	 */
+	calc = sctp_sbspace_sub(calc, (uint32_t) asoc->size_on_reasm_queue);
+	calc = sctp_sbspace_sub(calc, (uint32_t) asoc->size_on_all_streams);
+
+	if (calc == 0) {
+		/* out of space */
+		return (calc);
+	}
+	/* what is the overhead of all these rwnd's */
+	calc_w_oh = sctp_sbspace_sub(calc, stcb->asoc.my_rwnd_control_len);
+	if (calc_w_oh == 0) {
+		/*
+		 * If our overhead is greater than the advertised rwnd, we
+		 * clamp the rwnd to 1. This lets us still accept inbound
+		 * segments, but hopefully will shut the sender down when he
+		 * finally gets the message.
+		 */
+		calc = 1;
+	} else {
+		/* SWS threshold */
+		if (calc &&
+		    (calc < stcb->sctp_ep->sctp_ep.sctp_sws_receiver)) {
+			/* SWS engaged, tell peer none left */
+			calc = 1;
+		}
+	}
+	return (calc);
+}
+
+
+
 /*
  * Build out our readq entry based on the incoming packet.
  */
@@ -4411,10 +4472,6 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 		}
 #endif
 	}
-#ifdef RANDY_DOES_NOT_THINK_ITS_NEEDED
-	/* Why do I do this here? */
-	sctp_service_queues(stcb, asoc);
-#endif
 #ifdef SCTP_SACK_LOGGING
 	sctp_log_sack(asoc->last_acked_seq,
 	    cum_ack,

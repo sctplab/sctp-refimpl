@@ -184,8 +184,10 @@ __FBSDID("$FreeBSD:$");
  * SCTP_RWND_HIWAT_SHIFT) before we will look to see if we need to send a
  * window update sack. When we look, we compare the last rwnd we sent vs the
  * current rwnd. It too must be greater than this value. Using 3 divdes the
- * hiwat by 8, so for 200k rwnd we need to read 25k. For a 64k rwnd we need
- * to read 8k. This seems about right.
+ * hiwat by 8, so for 200k rwnd we need to read 24k. For a 64k rwnd we need
+ * to read 8k. This seems about right.. I hope :-D.. we do set a
+ * min of a MTU on it so if the rwnd is real small we will insist
+ * on a full MTU of 1500 bytes.
  */
 #define SCTP_RWND_HIWAT_SHIFT 3
 
