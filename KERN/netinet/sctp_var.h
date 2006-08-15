@@ -296,7 +296,7 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 
 
 #define sctp_sballoc(stcb, sb, m)  { \
-	(sb)->sb_cc += (m)->m_len; \
+	atomic_add_int(&(sb)->sb_cc,(m)->m_len); \
         if(stcb) { \
   	  atomic_add_int(&(stcb)->asoc.sb_cc,(m)->m_len); \
           atomic_add_int(&(stcb)->asoc.sb_mbcnt, MSIZE); \
