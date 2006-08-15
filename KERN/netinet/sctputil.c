@@ -3923,7 +3923,6 @@ sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
 	SOCKBUF_UNLOCK((&new_so->so_rcv));
 }
 
-static int add_to_read_queue_wakeups=0;
 
 void
 sctp_add_to_readq(struct sctp_inpcb *inp,
@@ -3960,7 +3959,6 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 	TAILQ_INSERT_TAIL(&inp->read_queue, control, next);
 	if (inp && inp->sctp_socket) {
 		SOCKBUF_LOCK_ASSERT(sb);
-		add_to_read_queue_wakeups++;
 		sctp_sorwakeup_locked(inp, inp->sctp_socket);
 	} else {
 		SOCKBUF_UNLOCK(sb);
@@ -3996,10 +3994,6 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 		/* huh this one is complete? */
 		return (-1);
 	}
-	if (inp && inp->sctp_socket) {
-		SOCKBUF_LOCK(sb);
-	}
-
 	mm = m;
 	while (mm) {
 		len += mm->m_len;
@@ -4010,7 +4004,9 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 			tail = mm;
 		mm = mm->m_next;
 	}
-
+	if (inp && inp->sctp_socket) {
+		SOCKBUF_LOCK(sb);
+	}
 	if (control->tail_mbuf) {
 		/* append */
 		control->tail_mbuf->m_next = m;
