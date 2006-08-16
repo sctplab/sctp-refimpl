@@ -183,16 +183,6 @@ sctp_copy_chunklist(sctp_auth_chklist_t * list)
 	return (new_list);
 }
 
-/*
- * is the chunk required to be authenticated?
- */
-int
-sctp_auth_is_required_chunk(uint8_t chunk, sctp_auth_chklist_t * list)
-{
-	if (list == NULL)
-		return (0);
-	return (list->chunks[chunk] != 0);
-}
 
 /*
  * add a chunk to the required chunks list
