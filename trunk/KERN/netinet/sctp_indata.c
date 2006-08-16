@@ -4540,7 +4540,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	if (asoc->sent_queue_retran_cnt) {
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_INDATA1) {
-			printf("cum_ack:%lx num_seg:%u last_acked_seq:%x\n",
+			printf("cum_ack:%x num_seg:%u last_acked_seq:%x\n",
 			    cum_ack, (uint32_t) num_seg, asoc->last_acked_seq);
 		}
 #endif
