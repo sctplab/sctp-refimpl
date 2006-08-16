@@ -117,6 +117,12 @@ extern uint32_t sctp_auth_disable;	/* sysctl for temp feature interop */
 extern uint32_t sctp_auth_random_len;	/* sysctl */
 
 /*
+ * Macros
+ */
+
+#define sctp_auth_is_required_chunk(chunk, list) ((list == NULL) ? (0) : (list->chunks[chunk] != 0))
+
+/*
  * function prototypes
  */
 /* random number generation */
@@ -127,9 +133,6 @@ extern sctp_auth_chklist_t *sctp_alloc_chunklist(void);
 extern void sctp_free_chunklist(sctp_auth_chklist_t * chklist);
 extern void sctp_clear_chunklist(sctp_auth_chklist_t * chklist);
 extern sctp_auth_chklist_t *sctp_copy_chunklist(sctp_auth_chklist_t * chklist);
-extern int
-sctp_auth_is_required_chunk(uint8_t chunk,
-    sctp_auth_chklist_t * list);
 extern int sctp_auth_add_chunk(uint8_t chunk, sctp_auth_chklist_t * list);
 extern int sctp_auth_delete_chunk(uint8_t chunk, sctp_auth_chklist_t * list);
 extern int sctp_auth_get_chklist_size(const sctp_auth_chklist_t * list);
