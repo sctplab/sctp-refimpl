@@ -1,920 +1,292 @@
-/* Modified 12/5/98 for Solaris 5.6 - tcs */
 /*
- *	T T C P . C
+ * Copyright (C) 2005 Michael Tuexen, tuexen@fh-muenster.de,
  *
- * Test TCP connection.  Makes a connection on port 5001
- * and transfers fabricated buffers or data copied from stdin.
+ * All rights reserved.
  *
- * Usable on 4.2, 4.3, and 4.1a systems by defining one of
- * BSD42 BSD43 (BSD41a)
- * Machines using System V with BSD sockets should define SYSV.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the project nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
  *
- * Modified for operation under 4.2BSD, 18 Dec 84
- *      T.C. Slattery, USNA
- * Minor improvements, Mike Muuss and Terry Slattery, 16-Oct-85.
- * Modified in 1989 at Silicon Graphics, Inc.
- *	catch SIGPIPE to be able to print stats when receiver has died 
- *	for tcp, don't look for sentinel during reads to allow small transfers
- *	increased default buffer size to 8K, nbuf to 2K to transfer 16MB
- *	moved default port to 5001, beyond IPPORT_USERRESERVED
- *	make sinkmode default because it is more popular, 
- *		-s now means don't sink/source 
- *	count number of read/write system calls to see effects of 
- *		blocking from full socket buffers
- *	for tcp, -D option turns off buffered writes (sets TCP_NODELAY sockopt)
- *	buffer alignment options, -A and -O
- *	print stats in a format that's a bit easier to use with grep & awk
- *	for SYSV, mimic BSD routines to use most of the existing timing code
- * Modified by Steve Miller of the University of Maryland, College Park
- *	-b sets the socket buffer size (SO_SNDBUF/SO_RCVBUF)
- * Modified Sept. 1989 at Silicon Graphics, Inc.
- *	restored -s sense at request of tcs@brl
- * Modified Oct. 1991 at Silicon Graphics, Inc.
- *	use getopt(3) for option processing, add -f and -T options.
- *	SGI IRIX 3.3 and 4.0 releases don't need #define SYSV.
- *
- * Distribution Status -
- *      Public Domain.  Distribution Unlimited.
+ * THIS SOFTWARE IS PROVIDED BY THE PROJECT AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE PROJECT OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
  */
-/* #define BSD43 */
-/* #define BSD42 */
-/* #define BSD41a */
-/* #define SYSV  */	/* required on SGI IRIX releases before 3.3 */
-
-/* MT */
 
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <stdio.h>
-#include <signal.h>
-#include <ctype.h>
-#include <errno.h>
-#include <netinet/tcp.h>
 #include <arpa/inet.h>
-#include <netdb.h>
-#include <sys/time.h>		/* struct timeval */
-#ifdef __FreeBSD__
-#include <string.h>
-#endif
-#include <strings.h>
-#include <string.h>
-#include <stdlib.h>
-#include <sys/uio.h>
+#include <sys/time.h>
+#include <stdio.h>
 #include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
+#include <pthread.h>
+#ifdef LINUX
+#include <getopt.h>
+#endif
 #include <netinet/sctp.h>
-//#include <netinet/sctp_uio.h>
-#if defined(SYSV)
-#define bcopy(s1, s2, n) memcpy(s2, s1, n)
-#define bzero(s, n) memset(s, 0, n)
-#include <sys/times.h>
-#include <sys/param.h>
-struct rusage {
-    struct timeval ru_utime, ru_stime;
-};
-#define RUSAGE_SELF 0
-#else
-#include <sys/resource.h>
+
+#ifndef timersub
+#define timersub(tvp, uvp, vvp)                                         \
+        do {                                                            \
+                (vvp)->tv_sec = (tvp)->tv_sec - (uvp)->tv_sec;          \
+                (vvp)->tv_usec = (tvp)->tv_usec - (uvp)->tv_usec;       \
+                if ((vvp)->tv_usec < 0) {                               \
+                        (vvp)->tv_sec--;                                \
+                        (vvp)->tv_usec += 1000000;                      \
+                }                                                       \
+        } while (0)
 #endif
 
-#ifndef IPPROTO_SCTP
-#define IPPROTO_SCTP 132
-#endif
 
-struct sockaddr_in sinme;
-struct sockaddr_in sinhim;
-struct sockaddr_in frominet;
+char Usage[] ="\
+Usage: tsctp\n\
+Options:\n\
+        -v      verbose\n\
+        -V      very verbose\n\
+        -L      local address\n\
+        -l      size of send/receive buffer\n\
+        -n      number of messages sent (0 means infinite)/received\n\
+        -D      turns Nagle off\n\
+";
 
-int domain;
-socklen_t fromlen;
-int fd;				/* fd of network socket */
+#define DEFAULT_LENGTH             1024
+#define DEFAULT_NUMBER_OF_MESSAGES 1024
+#define DEFAULT_PORT               5001
+#define BUFFERSIZE                  (1<<16)
+#define LINGERTIME                 1000
 
-int buflen = 8 * 1024;		/* length of buffer */
-char *buf;			/* ptr to dynamic buffer */
-int nbuf = 2 * 1024;		/* number of buffers to send in sinkmode */
-
-int bufoffset = 0;		/* align buffer to this */
-int bufalign = 16*1024;		/* modulo this */
-
-int udp = 0;			/* udp == sctp == 0 => tcp */
-int sctp = 0;
-int options = 0;		/* socket options */
-int one = 1;                    /* for 4.3 BSD style setsockopt() */
-short port = 5001;		/* TCP port number */
-char *host;			/* ptr to name of host */
-int trans;			/* 0=receive, !0=transmit mode */
-int sinkmode = 0;		/* 0=normal I/O, !0=sink/source mode */
-int verbose = 0;		/* 0=print basic info, 1=print cpu rate, proc
-				 * resource usage. */
-int use_abort = 0;
-int nodelay = 0;		/* set TCP_NODELAY socket option */
-int b_flag = 0;			/* use mread() */
-int sockbufsize = 0;		/* socket buffer size to use */
-char fmt = 'K';			/* output format: k = kilobits, K = kilobytes,
-				 *  m = megabits, M = megabytes, 
-				 *  g = gigabits, G = gigabytes */
-int touchdata = 0;		/* access data after reading */
-
-struct hostent *addr;
-extern int errno;
-extern int optind;
-extern char *optarg;
-
-char Usage[] = "\
-Usage: ttcp -t [-options] host [ < in ]\n\
-       ttcp -r [-options > out]\n\
-Common options:\n\
-        -a      use abort instead of shutdown procedure\n\
-	-l ##	length of bufs read from or written to network (default 8192)\n\
-	-u	use UDP instead of TCP\n\
-	-s      use SCTP instead of TCP\n\
-	-p ##	port number to send to or listen at (default 5001)\n\
-	-q	-t: source a pattern to network\n\
-		-r: sink (discard) all data from network\n\
-	-A	align the start of buffers to this modulus (default 16384)\n\
-	-O	start buffers at this offset from the modulus (default 0)\n\
-	-v	verbose: print more statistics\n\
-	-d	set SO_DEBUG socket option\n\
-	-b ##	set socket buffer size (if supported)\n\
-	-f X	format for rate: k,K = kilo{bit,byte}; m,M = mega; g,G = giga\n\
-Options specific to -t:\n\
-	-n##	number of source bufs written to network (default 2048)\n\
-	-D	don't buffer TCP writes (sets TCP_NODELAY socket option)\n\
-Options specific to -r:\n\
-	-B	for -s, only output full blocks as specified by -l (for TAR)\n\
-	-T	\"touch\": access each byte as it's read\n\
-";	
-
-char stats[128];
-double nbytes;			/* bytes on net */
-unsigned long numCalls;		/* # of I/O system calls */
-double cput, realt;		/* user, real time (seconds) */
-
-void err();
-void mes();
-int pattern();
-void prep_timer();
-double read_timer();
-int Nread();
-int Nwrite();
-void delay();
-int mread();
-char *outfmt();
-
-void
-sigpipe()
+static void* handle_connection(void *arg)
 {
+	ssize_t n;
+	unsigned long long sum = 0;
+	char *buf;
+	pthread_t tid;
+	int fd, length;
+	struct timeval start_time, now, diff_time;
+	double seconds;
+	unsigned long messages = 0;
+	
+	buf = malloc(BUFFERSIZE);
+	fd = *(int *) arg;
+	free(arg);
+	tid = pthread_self();
+	pthread_detach(tid);
+	gettimeofday(&start_time, NULL);
+	
+	n = recv(fd, (void*)buf, BUFFERSIZE, 0);
+	/*
+	printf("Received %u bytes\n", n);
+	fflush(stdout);
+	*/
+	length = n;
+	while (n > 0) {
+		sum += n;
+		messages++;
+		n = recv(fd, (void*)buf, BUFFERSIZE, 0);
+		/*
+		printf("Received %u bytes\n", n);
+		fflush(stdout);
+		*/
+	}
+	gettimeofday(&now, NULL);
+	timersub(&now, &start_time, &diff_time);
+	seconds = diff_time.tv_sec + (double)diff_time.tv_usec/1000000.0;
+	fprintf(stdout, "%u, %lu, %f, %f, %f, %f\n", 
+	       length, (long)messages, start_time.tv_sec + (double)start_time.tv_usec/1000000, now.tv_sec+(double)now.tv_usec/1000000, seconds, sum / seconds / 1024.0);
+	fflush(stdout);
+	printf("\nwaiting for close");
+	close(fd);
+	printf("\nwaiting for close");
+
+	return NULL;
 }
 
-int
-main(argc,argv)
-int argc;
-char **argv;
+
+int main(int argc, char **argv)
 {
-	unsigned long addr_tmp;
-	int c;
+	int fd, *cfdptr;
+	char c, *buffer;
+	socklen_t addr_len;
+	struct sockaddr_in local_addr, remote_addr;
+	struct timeval start_time, now, diff_time;
+	int length, verbose, very_verbose, client;
+	short local_port, remote_port, port;
+	double seconds;
+	double throughput;
+	int one = 1;
+	int nodelay = 0;
+	unsigned long i, number_of_messages;
+	pthread_t tid;
+	const int on = 1;
+	int rcvbufsize=0, sndbufsize=0;
+	int do_sinfo = 0;
+	int setFP = 0;
+	int SMALL_MAXSEG = 1500;
+
 	struct linger linger;
 
-	if (argc < 2) goto usage;
+	length             = DEFAULT_LENGTH;
+	number_of_messages = DEFAULT_NUMBER_OF_MESSAGES;
+	port               = DEFAULT_PORT;
+	verbose            = 0;
+	very_verbose       = 0;
 
-	while ((c = getopt(argc, argv, "adrstuvBDTb:f:l:n:p:qA:O:")) != -1) {
-		switch (c) {
-
-		case 'a':
-			use_abort = 1;
-			break;
-		case 'B':
-			b_flag = 1;
-			break;
-		case 't':
-			trans = 1;
-			break;
-		case 'r':
-			trans = 0;
-			break;
-		case 'd':
-			options |= SO_DEBUG;
-			break;
-		case 'D':
-#ifdef TCP_NODELAY
-			nodelay = 1;
-#else
-			fprintf(stderr, 
-	"ttcp: -D option ignored: TCP_NODELAY socket option not supported\n");
-#endif
-			break;
-		case 'n':
-			nbuf = atoi(optarg);
-			break;
-		case 'l':
-			buflen = atoi(optarg);
-			break;
-		case 'p':
-			port = atoi(optarg);
-			break;
-		case 'q':
-			sinkmode = !sinkmode;
-			break;
-		case 's':
-			sctp = 1;
-			break;
-		case 'u':
-			udp = 1;
-			break;
-		case 'v':
-			verbose = 1;
-			break;
-		case 'A':
-			bufalign = atoi(optarg);
-			break;
-		case 'O':
-			bufoffset = atoi(optarg);
-			break;
-		case 'b':
-#if defined(SO_SNDBUF) || defined(SO_RCVBUF)
-			sockbufsize = atoi(optarg);
-#else
-			fprintf(stderr, 
-"ttcp: -b option ignored: SO_SNDBUF/SO_RCVBUF socket options not supported\n");
-#endif
-			break;
-		case 'f':
-			fmt = *optarg;
-			break;
-		case 'T':
-			touchdata = 1;
-			break;
-
-		default:
-			goto usage;
-		}
-	}
-	bzero((char *)&sinhim, sizeof(sinhim));
-	bzero((char *)&sinme, sizeof(sinme));    /* FIXME MT */
+	memset((void *) &local_addr,  0, sizeof(local_addr));
+	memset((void *) &remote_addr, 0, sizeof(remote_addr));
+	local_addr.sin_family      = AF_INET;
 #ifdef HAVE_SIN_LEN
-	sinhim.sin_len    = sizeof(struct sockaddr_in);
-	sinme.sin_len     = sizeof(struct sockaddr_in);
+	local_addr.sin_len         = sizeof(struct sockaddr_in);
 #endif
-	sinme.sin_family  = AF_INET;
-	sinhim.sin_family = AF_INET;
+	local_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+
+	while ((c = getopt(argc, argv, "p:l:f:L:n:R:S:vVD")) != -1)
+		switch(c) {
+			case 'l':
+				length = atoi(optarg);
+				break;
+			case 'L':
+				local_addr.sin_addr.s_addr = inet_addr(optarg);
+				break;
+		        case 'n':
+				number_of_messages = atoi(optarg);
+				break;
+			case 'f':
+				setFP = 1;
+				SMALL_MAXSEG = atoi(optarg);
+				break;
+			case 'p':
+				port = atoi(optarg);
+				break;
+			case 'R':
+				rcvbufsize = atoi(optarg);
+				break;
+			case 'S':
+				sndbufsize = atoi(optarg);
+				break;
+			case 'v':
+				verbose = 1;
+				break;
+			case 'V':
+				verbose = 1;
+				very_verbose = 1;
+				break;
+			case 'D':
+				nodelay = 1;
+				break;
+			default:
+				fprintf(stderr, Usage);
+				exit(1);
+		}
 	
-	if(trans)  {
-		/* xmitr */
-		if (optind == argc)
-			goto usage;
+	if (optind == argc) {
+		client      = 0;
+		local_port  = port;
+		remote_port = 0;
+	} else {
+		client	    = 1;
+		local_port  = 0;
+		remote_port = port;
+	}
+	local_addr.sin_port        = htons(local_port);
+
+	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
+		perror("socket");
+		
+	if (!client)
+		setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (const void*)&on, (socklen_t)sizeof(on));
+
+	if (bind(fd, (const struct sockaddr *) &local_addr, sizeof(local_addr)) != 0)
+		perror("bind");
+
+	if (!client) {
+		if (listen(fd, 1) < 0)
+			perror("listen");
+		while (1) {
+			memset(&remote_addr, 0, sizeof(remote_addr));
+			addr_len = sizeof(struct sockaddr_in);
+			cfdptr = malloc(sizeof(int));
+			if ((*cfdptr = accept(fd, (struct sockaddr *)&remote_addr, &addr_len)) < 0)
+				perror("accept");
+			if (verbose)
+				fprintf(stdout,"Connection accepted from %s:%d\n", inet_ntoa(remote_addr.sin_addr), ntohs(remote_addr.sin_port));
+			if (rcvbufsize)
+				if (setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &rcvbufsize, sizeof(int)) < 0)
+					perror("setsockopt: rcvbuf");
+
+			pthread_create(&tid, NULL, &handle_connection, (void *) cfdptr);
+		}
+		close(fd);
+	} else {
+		remote_addr.sin_family      = AF_INET;
 #ifdef HAVE_SIN_LEN
-		sinme.sin_len = sizeof(sinme);
+		remote_addr.sin_len         = sizeof(struct sockaddr_in);
 #endif
-		host = argv[optind];
-		if (atoi(host) > 0 )  {
-			/* Numeric */
-			sinhim.sin_family = AF_INET;
-#if defined(cray)
-			addr_tmp = inet_addr(host);
-			sinhim.sin_addr = addr_tmp;
-#else
-			sinhim.sin_addr.s_addr = inet_addr(host);
-#endif
-		} else {
-			if ((addr=gethostbyname(host)) == NULL)
-				err("bad hostname");
-			sinhim.sin_family = addr->h_addrtype;
-			bcopy(addr->h_addr,(char*)&addr_tmp, addr->h_length);
-#if defined(cray)
-			sinhim.sin_addr = addr_tmp;
-#else
-			sinhim.sin_addr.s_addr = addr_tmp;
-#endif /* cray */
-		}
-		sinhim.sin_port = htons(port);
-		sinme.sin_port = 0;		/* free choice */
-	} else {
-		/* rcvr */
-		sinme.sin_port =  htons(port);
-	}
-
-
-	if (udp && buflen < 5) {
-	    buflen = 5;		/* send more than the sentinel size */
-	}
-
-	if ( (buf = (char *)malloc(buflen+bufalign)) == (char *)NULL)
-		err("malloc");
-	if (bufalign != 0)
-		buf +=(bufalign - ((int)buf % bufalign) + bufoffset) % bufalign;
-
-	if (trans) {
-	    fprintf(stdout,
-	    "ttcp-t: buflen=%d, nbuf=%d, align=%d/%d, port=%d",
-		buflen, nbuf, bufalign, bufoffset, port);
- 	    if (sockbufsize)
- 		fprintf(stdout, ", sockbufsize=%d", sockbufsize);
- 	    fprintf(stdout, "  %s  -> %s\n", udp?"udp":"tcp", host);
-	} else {
-	    fprintf(stdout,
- 	    "ttcp-r: buflen=%d, nbuf=%d, align=%d/%d, port=%d",
- 		buflen, nbuf, bufalign, bufoffset, port);
- 	    if (sockbufsize)
- 		fprintf(stdout, ", sockbufsize=%d", sockbufsize);
- 	    fprintf(stdout, "  %s\n", udp?"udp":"tcp");
-	}
-
-	/* MT: add SCTP support */
-	if (udp == 1)
-		fd = socket(AF_INET, SOCK_DGRAM, 0);
-	else if (sctp == 1)
-		fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
-	else
-		fd = socket(AF_INET, SOCK_STREAM, 0);
+		
+		remote_addr.sin_addr.s_addr = inet_addr(argv[optind]);
+		remote_addr.sin_port        = htons(remote_port);
 	
-	if (fd < 0)
-		err("socket");
-	mes("socket");
-
-	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one)) < 0)
-		err("setsockopt: reuseaddr");
-
-#ifdef HAVE_SO_REUSEPORT
-	if (setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, (char *)&one, sizeof(one)) < 0)
-		err("setsockopt: reuseport");
-#endif
-	if (bind(fd, (struct sockaddr*)&sinme, sizeof(sinme)) < 0)
-		err("bind");
-
-#if defined(SO_SNDBUF) || defined(SO_RCVBUF)
-	if (sockbufsize) {
-	    if (trans) {
-		if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, (char *)&sockbufsize,
-		    sizeof sockbufsize) < 0)
-			err("setsockopt: sndbuf");
-		mes("sndbuf");
-	    } else {
-		if (setsockopt(fd, SOL_SOCKET, SO_RCVBUF, (char *)&sockbufsize,
-		    sizeof sockbufsize) < 0)
-			err("setsockopt: rcvbuf");
-		mes("rcvbuf");
-	    }
-	}
-#endif
-
-	if (!udp)  {
-	    signal(SIGPIPE, sigpipe);
-	    if (trans) {
-		/* We are the client if transmitting */
-		if (options)  {
-#if defined(BSD42)
-			if( setsockopt(fd, SOL_SOCKET, options, 0, 0) < 0)
-#else /* BSD43 */
-			if( setsockopt(fd, SOL_SOCKET, options,
-				       (char *)&one, sizeof(one)) < 0)
-#endif
-				err("setsockopt");
-		}
-#ifdef TCP_NODELAY
-		if (nodelay) {
-			struct protoent *p;
-			p = getprotobyname("tcp");
-			if( p && setsockopt(fd, p->p_proto, TCP_NODELAY, 
-			    (char *)&one, sizeof(one)) < 0)
-				err("setsockopt: nodelay");
-			mes("nodelay");
+		if (connect(fd, (struct sockaddr *)&remote_addr, sizeof(struct sockaddr_in)) < 0)
+			perror("connect");
+#ifdef SCTP_NODELAY	
+		if (nodelay == 1) {
+			if(setsockopt(fd, IPPROTO_SCTP, SCTP_NODELAY, (char *)&one, sizeof(one)) < 0)
+				perror("setsockopt: nodelay");
 		}
 #endif
-		if(connect(fd, (struct sockaddr *)&sinhim, sizeof(sinhim) ) < 0)
-			err("connect");
-		mes("connect");
-	    } else {
-		/* otherwise, we are the server and 
-	         * should listen for the connections
-	         */
-		listen(fd,1);   /* workaround for alleged u4.2 bug */
-		mes("listen with 1");
-		if(options)  {
-#if defined(BSD42)
-			if( setsockopt(fd, SOL_SOCKET, options, 0, 0) < 0)
-#else /* BSD43 */
-			if( setsockopt(fd, SOL_SOCKET, options, (char *)&one, sizeof(one)) < 0)
-#endif
-				err("setsockopt");
+		if(setFP == 1){
+			if(setsockopt(fd,IPPROTO_SCTP ,SCTP_MAXSEG, &SMALL_MAXSEG, sizeof(SMALL_MAXSEG))< 0)
+				perror("setsockopt: SCTP_MAXSEG");
+		}	
+		if (sndbufsize)
+			if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &sndbufsize, sizeof(int)) < 0)
+				perror("setsockopt: sndbuf");
+			
+		buffer = malloc(length);
+		gettimeofday(&start_time, NULL);
+		if (verbose) {
+			printf("Start sending %ld messages...", (long)number_of_messages);
+			fflush(stdout);
 		}
-		fromlen = sizeof(frominet);
-		domain = AF_INET;
-		if((fd=accept(fd, (struct sockaddr *)&frominet, &fromlen) ) < 0)
-			err("accept");
-		{ struct sockaddr_in peer;
-		  socklen_t peerlen = sizeof(peer);
-		  if (getpeername(fd, (struct sockaddr *) &peer, 
-				&peerlen) < 0) {
-			err("getpeername");
-		  }
-		  fprintf(stderr,"ttcp-r: accept from %s\n", 
-			inet_ntoa(peer.sin_addr));
+		
+		i = 0;
+		while ((number_of_messages == 0) || (i < number_of_messages)) {
+			i++;
+			if (very_verbose)
+				printf("Sending message number %lu.\n", i);
+			send(fd, buffer, length, 0);
 		}
-	    }
-	}
-	if (use_abort) {
+		if (verbose)
+			printf("done.\n");
 		linger.l_onoff = 1;
-		linger.l_linger = 0;
-		if (setsockopt(fd, SOL_SOCKET, SO_LINGER, &linger, sizeof(struct linger)) < 0)
-			err("setsockopt");
+		linger.l_linger = LINGERTIME;
+		if (setsockopt(fd, SOL_SOCKET, SO_LINGER,(char*)&linger, sizeof(struct linger))<0)
+			perror("setsockopt");
+		close(fd);
+		gettimeofday(&now, NULL);
+		timersub(&now, &start_time, &diff_time);
+		seconds = diff_time.tv_sec + (double)diff_time.tv_usec/1000000;
+		fprintf(stdout, "%s of %ld messages of length %u took %f seconds.\n", 
+		       "Sending", (long)number_of_messages, length, seconds);
+		throughput = (double)(number_of_messages * length) / seconds / 1024.0;
+		fprintf(stdout, "Throughput was %f KB/sec.\n", throughput);
 	}
-
-	prep_timer();
-	errno = 0;
-	if (sinkmode) {
-		register int cnt;
-		mes("sinkmode");
-		if (trans)  {
-			mes("trans");
-			pattern( buf, buflen );
-			if(udp)  (void)Nwrite( fd, buf, 4 ); /* rcvr start */
-			while (nbuf-- && Nwrite(fd,buf,buflen) == buflen)
-				nbytes += buflen;
-			if(udp)  (void)Nwrite( fd, buf, 4 ); /* rcvr end */
-		} else {
-			mes("not trans");
-			if (udp) {
-			    while ((cnt=Nread(fd,buf,buflen)) > 0)  {
-				    static int going = 0;
-				    if( cnt <= 4 )  {
-					    if( going )
-						    break;	/* "EOF" */
-					    going = 1;
-					    prep_timer();
-				    } else {
-					    nbytes += cnt;
-				    }
-			    }
-			} else {
-			    while ((cnt=Nread(fd,buf,buflen)) > 0)  {
-				    nbytes += cnt;
-			    }
-			}
-		}
-	} else {
-		register int cnt;
-		mes("not sinkmode");		
-		//trans = 1; /* FIXME MT */
-		if (trans)  {
-			while((cnt=read(0,buf,buflen)) > 0 &&
-			    Nwrite(fd,buf,cnt) == cnt)
-				nbytes += cnt;
-		}  else  {
-			while((cnt=Nread(fd,buf,buflen)) > 0 &&
-			    write(1,buf,cnt) == cnt)
-				nbytes += cnt;
-		}
-	}
-	if(errno) err("IO");
-	(void)read_timer(stats,sizeof(stats));
-	if(udp&&trans)  {
-		(void)Nwrite( fd, buf, 4 ); /* rcvr end */
-		(void)Nwrite( fd, buf, 4 ); /* rcvr end */
-		(void)Nwrite( fd, buf, 4 ); /* rcvr end */
-		(void)Nwrite( fd, buf, 4 ); /* rcvr end */
-	}
-	if( cput <= 0.0 )  cput = 0.001;
-	if( realt <= 0.0 )  realt = 0.001;
-	fprintf(stdout,
-		"ttcp%s: %.0f bytes in %.2f real seconds = %s/sec +++\n",
-		trans?"-t":"-r",
-		nbytes, realt, outfmt(nbytes/realt));
-	if (verbose) {
-	    fprintf(stdout,
-		"ttcp%s: %.0f bytes in %.2f CPU seconds = %s/cpu sec\n",
-		trans?"-t":"-r",
-		nbytes, cput, outfmt(nbytes/cput));
-	}
-	fprintf(stdout,
-		"ttcp%s: %d I/O calls, msec/call = %.2f, calls/sec = %.2f\n",
-		trans?"-t":"-r",
-		(int)numCalls,
-		1024.0 * realt/((double)numCalls),
-		((double)numCalls)/realt);
-	fprintf(stdout,"ttcp%s: %s\n", trans?"-t":"-r", stats);
-	if (verbose) {
-	    fprintf(stdout,
-		"ttcp%s: buffer address %#x\n",
-		trans?"-t":"-r",
-		(uint)buf);
-	}
-	exit(0);
-
-usage:
-	fprintf(stderr,Usage);
-	exit(1);
-}
-
-void
-err(s)
-char *s;
-{
-	fprintf(stderr,"ttcp%s: ", trans?"-t":"-r");
-	perror(s);
-	fprintf(stderr,"errno=%d\n",errno);
-	exit(1);
-}
-
-void
-mes(s)
-char *s;
-{
-	fprintf(stderr,"ttcp%s: %s\n", trans?"-t":"-r", s);
-}
-
-int
-pattern( cp, cnt )
-register char *cp;
-register int cnt;
-{
-	register char c;
-	c = 0;
-	while( cnt-- > 0 )  {
-		while( !isprint((c&0x7F)) )  c++;
-		*cp++ = (c++&0x7F);
-	}
-	return (0);
-}
-
-char *
-outfmt(b)
-double b;
-{
-    static char obuf[50];
-    switch (fmt) {
-	case 'G':
-	    sprintf(obuf, "%.2f GB", b / 1024.0 / 1024.0 / 1024.0);
-	    break;
-	default:
-	case 'K':
-	    sprintf(obuf, "%.2f KB", b / 1024.0);
-	    break;
-	case 'M':
-	    sprintf(obuf, "%.2f MB", b / 1024.0 / 1024.0);
-	    break;
-	case 'g':
-	    sprintf(obuf, "%.2f Gbit", b * 8.0 / 1024.0 / 1024.0 / 1024.0);
-	    break;
-	case 'k':
-	    sprintf(obuf, "%.2f Kbit", b * 8.0 / 1024.0);
-	    break;
-	case 'm':
-	    sprintf(obuf, "%.2f Mbit", b * 8.0 / 1024.0 / 1024.0);
-	    break;
-    }
-    return obuf;
-}
-
-static struct	timeval time0;	/* Time at which timing started */
-static struct	rusage ru0;	/* Resource utilization at the start */
-
-static void prusage();
-static void tvadd();
-static void tvsub();
-static void psecs();
-
-#if defined(SYSV)
-/*ARGSUSED*/
-static
-getrusage(ignored, ru)
-    int ignored;
-    register struct rusage *ru;
-{
-    struct tms buf;
-
-    times(&buf);
-
-    /* Assumption: HZ <= 2147 (LONG_MAX/1000000) */
-    ru->ru_stime.tv_sec  = buf.tms_stime / HZ;
-    ru->ru_stime.tv_usec = ((buf.tms_stime % HZ) * 1000000) / HZ;
-    ru->ru_utime.tv_sec  = buf.tms_utime / HZ;
-    ru->ru_utime.tv_usec = ((buf.tms_utime % HZ) * 1000000) / HZ;
-}
-
-/*ARGSUSED*/
-static 
-gettimeofday(tp, zp)
-    struct timeval *tp;
-    struct timezone *zp;
-{
-    tp->tv_sec = time(0);
-    tp->tv_usec = 0;
-}
-#endif /* SYSV */
-
-/*
- *			P R E P _ T I M E R
- */
-void
-prep_timer()
-{
-	gettimeofday(&time0, (struct timezone *)0);
-	getrusage(RUSAGE_SELF, &ru0);
-}
-
-/*
- *			R E A D _ T I M E R
- * 
- */
-double
-read_timer(str,len)
-char *str;
-{
-	struct timeval timedol;
-	struct rusage ru1;
-	struct timeval td;
-	struct timeval tend, tstart;
-	char line[132];
-
-	getrusage(RUSAGE_SELF, &ru1);
-	gettimeofday(&timedol, (struct timezone *)0);
-	prusage(&ru0, &ru1, &timedol, &time0, line);
-	(void)strncpy( str, line, len );
-
-	/* Get real time */
-	tvsub( &td, &timedol, &time0 );
-	realt = td.tv_sec + ((double)td.tv_usec) / 1000000;
-
-	/* Get CPU time (user+sys) */
-	tvadd( &tend, &ru1.ru_utime, &ru1.ru_stime );
-	tvadd( &tstart, &ru0.ru_utime, &ru0.ru_stime );
-	tvsub( &td, &tend, &tstart );
-	cput = td.tv_sec + ((double)td.tv_usec) / 1000000;
-	if( cput < 0.00001 )  cput = 0.00001;
-	return( cput );
-}
-
-static void
-prusage(r0, r1, e, b, outp)
-	register struct rusage *r0, *r1;
-	struct timeval *e, *b;
-	char *outp;
-{
-	struct timeval tdiff;
-	register time_t t;
-	register char *cp;
-	register int i;
-	int ms;
-
-	t = (r1->ru_utime.tv_sec-r0->ru_utime.tv_sec)*100+
-	    (r1->ru_utime.tv_usec-r0->ru_utime.tv_usec)/10000+
-	    (r1->ru_stime.tv_sec-r0->ru_stime.tv_sec)*100+
-	    (r1->ru_stime.tv_usec-r0->ru_stime.tv_usec)/10000;
-	ms =  (e->tv_sec-b->tv_sec)*100 + (e->tv_usec-b->tv_usec)/10000;
-
-#define END(x)	{while(*x) x++;}
-#if defined(SYSV)
-	cp = "%Uuser %Ssys %Ereal %P";
-#else
-#if defined(sgi)		/* IRIX 3.3 will show 0 for %M,%F,%R,%C */
-	cp = "%Uuser %Ssys %Ereal %P %Mmaxrss %F+%Rpf %Ccsw";
-#else
-	cp = "%Uuser %Ssys %Ereal %P %Xi+%Dd %Mmaxrss %F+%Rpf %Ccsw";
-#endif
-#endif
-	for (; *cp; cp++)  {
-		if (*cp != '%')
-			*outp++ = *cp;
-		else if (cp[1]) switch(*++cp) {
-
-		case 'U':
-			tvsub(&tdiff, &r1->ru_utime, &r0->ru_utime);
-			sprintf(outp,"%d.%01d", (int)tdiff.tv_sec, (int)tdiff.tv_usec/100000);
-			END(outp);
-			break;
-
-		case 'S':
-			tvsub(&tdiff, &r1->ru_stime, &r0->ru_stime);
-			sprintf(outp,"%d.%01d", (int)tdiff.tv_sec, (int)tdiff.tv_usec/100000);
-			END(outp);
-			break;
-
-		case 'E':
-			psecs(ms / 100, outp);
-			END(outp);
-			break;
-
-		case 'P':
-			sprintf(outp,"%d%%", (int) (t*100 / ((ms ? ms : 1))));
-			END(outp);
-			break;
-
-#if !defined(SYSV)
-		case 'W':
-			i = r1->ru_nswap - r0->ru_nswap;
-			sprintf(outp,"%d", i);
-			END(outp);
-			break;
-
-		case 'X':
-			sprintf(outp,"%d", (int)(t == 0 ? 0 : (r1->ru_ixrss-r0->ru_ixrss)/t));
-			END(outp);
-			break;
-
-		case 'D':
-			sprintf(outp,"%d", (int)(t == 0 ? 0 :
-			    (r1->ru_idrss+r1->ru_isrss-(r0->ru_idrss+r0->ru_isrss))/t));
-			END(outp);
-			break;
-
-		case 'K':
-			sprintf(outp,"%d", (int)(t == 0 ? 0 :
-			    ((r1->ru_ixrss+r1->ru_isrss+r1->ru_idrss) -
-			    (r0->ru_ixrss+r0->ru_idrss+r0->ru_isrss))/t));
-			END(outp);
-			break;
-
-		case 'M':
-			sprintf(outp,"%d", (int)(r1->ru_maxrss/2));
-			END(outp);
-			break;
-
-		case 'F':
-			sprintf(outp,"%d", (int)(r1->ru_majflt-r0->ru_majflt));
-			END(outp);
-			break;
-
-		case 'R':
-			sprintf(outp,"%d", (int)(r1->ru_minflt-r0->ru_minflt));
-			END(outp);
-			break;
-
-		case 'I':
-			sprintf(outp,"%d", (int)(r1->ru_inblock-r0->ru_inblock));
-			END(outp);
-			break;
-
-		case 'O':
-			sprintf(outp,"%d", (int)(r1->ru_oublock-r0->ru_oublock));
-			END(outp);
-			break;
-		case 'C':
-			sprintf(outp,"%d+%d", (int)(r1->ru_nvcsw-r0->ru_nvcsw),
-				(int)(r1->ru_nivcsw-r0->ru_nivcsw) );
-			END(outp);
-			break;
-#endif /* !SYSV */
-		}
-	}
-	*outp = '\0';
-}
-
-static void
-tvadd(tsum, t0, t1)
-	struct timeval *tsum, *t0, *t1;
-{
-
-	tsum->tv_sec = t0->tv_sec + t1->tv_sec;
-	tsum->tv_usec = t0->tv_usec + t1->tv_usec;
-	if (tsum->tv_usec > 1000000)
-		tsum->tv_sec++, tsum->tv_usec -= 1000000;
-}
-
-static void
-tvsub(tdiff, t1, t0)
-	struct timeval *tdiff, *t1, *t0;
-{
-
-	tdiff->tv_sec = t1->tv_sec - t0->tv_sec;
-	tdiff->tv_usec = t1->tv_usec - t0->tv_usec;
-	if (tdiff->tv_usec < 0)
-		tdiff->tv_sec--, tdiff->tv_usec += 1000000;
-}
-
-static void
-psecs(l,cp)
-long l;
-register char *cp;
-{
-	register int i;
-
-	i = l / 3600;
-	if (i) {
-		sprintf(cp,"%d:", i);
-		END(cp);
-		i = l % 3600;
-		sprintf(cp,"%d%d", (i/60) / 10, (i/60) % 10);
-		END(cp);
-	} else {
-		i = l;
-		sprintf(cp,"%d", i / 60);
-		END(cp);
-	}
-	i %= 60;
-	*cp++ = ':';
-	sprintf(cp,"%d%d", i / 10, i % 10);
-}
-
-/*
- *			N R E A D
- */
-int
-Nread( fd, buf, count )
-int fd;
-void *buf;
-int count;
-{
-	struct sockaddr_in from;
-	socklen_t len = sizeof(from);
-	register int cnt;
-#ifdef DEBUG
-	mes("Nread");
-#endif
-	if( udp)  {
-		cnt = recvfrom( fd, buf, count, 0, (struct sockaddr *)&from, &len );
-		numCalls++;
-#ifdef DEBUG
-	} else if (sctp) {
-		cnt = sctp_recvmsg(fd, buf, count, (struct sockaddr *)&from, &len, &sinfo, &msg_flags);
-		printf("len = %u; msg_flags = 0x%x\n", cnt, msg_flags);
-		for (i=0; i < cnt; i++)
-			printf("%2x ", ((unsigned char *)buf)[i]);
-		printf("\n");
-		numCalls++;
-#endif
-	}else {
-		if( b_flag )
-			cnt = mread( fd, buf, count );	/* fill buf */
-		else {
-			cnt = read( fd, buf, count );
-			numCalls++;
-		}
-		if (touchdata && cnt > 0) {
-			register int c = cnt, sum;
-			register char *b = buf;
-			while (c--)
-				sum += *b++;
-		}
-	}
-	return(cnt);
-}
-
-/*
- *			N W R I T E
- */
-int
-Nwrite( fd, buf, count )
-int fd;
-void *buf;
-int count;
-{
-	register int cnt;
-	if( udp )  {
-again:
-		cnt = sendto( fd, buf, count, 0, (struct sockaddr *)&sinhim, sizeof(sinhim) );
-		numCalls++;
-		if( cnt<0 && errno == ENOBUFS )  {
-			delay(18000);
-			errno = 0;
-			goto again;
-		}
-	} else {
-		cnt = send( fd, buf, count, 0);
-		numCalls++;
-	}
-	return(cnt);
-}
-
-void
-delay(us)
-{
-	struct timeval tv;
-
-	tv.tv_sec = 0;
-	tv.tv_usec = us;
-	(void)select( 1, (fd_set *)0, (fd_set *)0, (fd_set *)0, &tv );
-}
-
-/*
- *			M R E A D
- *
- * This function performs the function of a read(II) but will
- * call read(II) multiple times in order to get the requested
- * number of characters.  This can be necessary because
- * network connections don't deliver data with the same
- * grouping as it is written with.  Written by Robert S. Miles, BRL.
- */
-int
-mread(fd, bufp, n)
-int fd;
-register char	*bufp;
-unsigned	n;
-{
-	register unsigned	count = 0;
-	register int		nread;
-
-	do {
-		nread = read(fd, bufp, n-count);
-		numCalls++;
-		if(nread < 0)  {
-			perror("ttcp_mread");
-			return(-1);
-		}
-		if(nread == 0)
-			return((int)count);
-		count += (unsigned)nread;
-		bufp += nread;
-	 } while(count < n);
-
-	return((int)count);
+	return 0;
 }
