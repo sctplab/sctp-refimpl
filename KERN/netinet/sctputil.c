@@ -4349,6 +4349,7 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far, int hold_sblock,
 			       stcb->freed_by_sorcv_sincelast,
 			       dif);
 #endif
+		SCTP_STAT_INCR(sctps_wu_sacks_sent);
 		sctp_send_sack(stcb);
 		sctp_chunk_output(stcb->sctp_ep, stcb,
 				  SCTP_OUTPUT_FROM_USR_RCVD);
