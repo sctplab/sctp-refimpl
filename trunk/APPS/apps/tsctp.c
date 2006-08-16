@@ -137,7 +137,6 @@ int main(int argc, char **argv)
 	pthread_t tid;
 	const int on = 1;
 	int rcvbufsize=0, sndbufsize=0;
-	int do_sinfo = 0;
 	int setFP = 0;
 	int SMALL_MAXSEG = 1500;
 
