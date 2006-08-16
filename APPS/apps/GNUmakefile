@@ -12,7 +12,7 @@ LOCAL_CFLAGS=-g
 LDFLAGS=
 
 ifeq ($(GUESS_HOST),Darwin)
-LOCAL_LIBS+= -L/usr/local/lib -L/usr/lib  -L../../KERN/usr.lib -lsctp -lreadline -lm
+LOCAL_LIBS+= -L/usr/local/lib -L/usr/lib  -L../../KERN/usr.lib -lsctp -lreadline -lm -lpthread
 else
 ifeq ($(GUESS_HOST),LynxOS)
 LOCAL_LIBS+= -L/usr/local/v6/lib -mthreads -lnetinet -lnsl -lm -lsctp
@@ -21,11 +21,11 @@ ifeq ($(GUESS_HOST),Linux)
 LOCAL_LIBS+= -lnsl -lm -ltermcap -lreadline -lsctp
 else
 ifeq ($(GUESS_HOST),FreeBSD)
-LOCAL_LIBS+= -L/usr/local/v6/lib -lm -lreadline -lsctp
+LOCAL_LIBS+= -L/usr/local/v6/lib -lm -lreadline -lsctp  -lpthread
 #LOCAL_LIBS+= /usr/local/v6/lib/libsctp.a -lm -lreadline
 else
 ifeq ($(GUESS_HOST),NetBSD)
-LOCAL_LIBS+= -L/usr/local/v6/lib -lm -lreadline -ltermcap -lsctp
+LOCAL_LIBS+= -L/usr/local/v6/lib -lm -lreadline -ltermcap -lsctp  -lpthread
 else
 ifeq ($(GUESS_HOST),OpenBSD)
 LOCAL_LIBS+= -L/usr/local/v6/lib -lm -lreadline -ltermcap -lsctp
