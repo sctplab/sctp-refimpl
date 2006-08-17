@@ -4485,7 +4485,13 @@ restart:
 		sctp_misc_ints(SCTP_SORECV_BLOCKSA,
 			       0,0, so->so_rcv.sb_cc, uio->uio_resid);
 #endif
-
+		if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
+		    (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
+			if ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0) {
+				error = ENOTCONN;
+				goto out;
+			}
+		}
 		error = sbwait(&so->so_rcv);
 		if (error) {
 			goto out;
