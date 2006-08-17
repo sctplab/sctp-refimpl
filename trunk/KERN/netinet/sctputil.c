@@ -4451,6 +4451,16 @@ sctp_sorecvmsg(struct socket *so,
 	s = splnet();
 #endif
 	in_eeor_mode = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXPLICIT_EOR);
+
+#if defined(__FreeBSD__) && __FreeBSD_version > 500000
+	if (so->so_rcv.sb_cc) {
+		/* Can we get right to the reading with no locks? */
+		control = TAILQ_FIRST(&inp->read_queue);
+		if (control->length && control->data) {
+			goto found_one;
+		}
+	}
+#endif
 	SOCKBUF_LOCK(&so->so_rcv);
 	hold_sblock = 1;
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
