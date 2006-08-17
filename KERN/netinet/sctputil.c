@@ -4381,6 +4381,8 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far, int hold_sblock,
 	return;
 }
 
+extern unsigned int sctp_window_update_sack_value;
+
 int
 sctp_sorecvmsg(struct socket *so,
     struct uio *uio,
@@ -4586,7 +4588,11 @@ found_one:
 	 * If we reach here, control has a some data for us to read off.
 	 * Note that stcb COULD be NULL.
 	 */
+/*
 	rwnd_req = (so->so_rcv.sb_hiwat >> SCTP_RWND_HIWAT_SHIFT);
+*/
+	rwnd_req = sctp_window_update_sack_value;
+
 	/* Must be at least a MTU's worth */
 	if(rwnd_req < SCTP_MIN_RWND)
 		rwnd_req = SCTP_MIN_RWND;
