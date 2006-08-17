@@ -4740,7 +4740,7 @@ get_more_data:
 #else
 			s = splnet();
 #endif
-			if(m->m_next == NULL) {
+			if((m->m_next == NULL) && (!(m->m_flags & M_EOR))) {
 				SOCKBUF_LOCK(&so->so_rcv);
 				hold_sblock = 1;
 			}
@@ -4794,9 +4794,6 @@ get_more_data:
 					m = control->data;
 					/* been through it all, must hold sb lock ok to null tail */
 					if (control->data == NULL) {
-						if(hold_sblock == 0) {
-							panic("If m_next was NULL I should not be here");
-						}
 						control->tail_mbuf = NULL;
 					}
 				}
@@ -4874,9 +4871,16 @@ get_more_data:
 #endif
 				}
 		done_with_control:
-				if(hold_sblock == 0) {
-					SOCKBUF_LOCK(&so->so_rcv);
-					hold_sblock = 1;
+				if(TAILQ_NEXT(control, next) == NULL) {
+					/* If we don't have a next we need a lock,
+					 * if there is a next interupt is filling ahead
+					 * of us and we don't need a lock to remove this
+					 * guy (which is the head of the queue).
+					 */
+					if(hold_sblock == 0) {
+						SOCKBUF_LOCK(&so->so_rcv);
+						hold_sblock = 1;
+					}
 				}
 				TAILQ_REMOVE(&inp->read_queue, control, next);
 				/* Add back any hiddend data */
