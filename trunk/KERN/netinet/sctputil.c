@@ -4289,6 +4289,9 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far, int hold_sblock,
 	uint32_t dif, rwnd;
 	struct socket *so=NULL;
 	
+	if(stcb == NULL) 
+		return;
+
 	if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 		/* Pre-check If we are freeing no update */
 		return;
@@ -5245,13 +5248,19 @@ out:
 	}
 	splx(s);
 #ifdef SCTP_RECV_RWND_LOGGING
-	sctp_misc_ints(SCTP_SORECV_DONE,
-		       freed_so_far,
-		       stcb->asoc.my_last_reported_rwnd, 
-		       stcb->asoc.my_rwnd,
-		       so->so_rcv.sb_cc);
-
-
+	if(stcb) {
+		sctp_misc_ints(SCTP_SORECV_DONE,
+			       freed_so_far,
+			       stcb->asoc.my_last_reported_rwnd, 
+			       stcb->asoc.my_rwnd,
+			       so->so_rcv.sb_cc);
+	} else {
+		sctp_misc_ints(SCTP_SORECV_DONE,
+			       freed_so_far,
+			       0, 
+			       0,
+			       so->so_rcv.sb_cc);
+	}
 #endif
 	if (wakeup_read_socket) {
 		sctp_sorwakeup(inp, so);
