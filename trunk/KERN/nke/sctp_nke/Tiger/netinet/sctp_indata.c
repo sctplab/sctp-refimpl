@@ -4540,7 +4540,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	if (asoc->sent_queue_retran_cnt) {
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_INDATA1) {
-			printf("cum_ack:%lx num_seg:%u last_acked_seq:%x\n",
+			printf("cum_ack:%x num_seg:%u last_acked_seq:%x\n",
 			    cum_ack, (uint32_t) num_seg, asoc->last_acked_seq);
 		}
 #endif
@@ -4883,12 +4883,6 @@ skip_segments:
 		SOCKBUF_LOCK(&stcb->sctp_socket->so_snd);
 #ifdef SCTP_WAKE_LOGGING
 		sctp_wakeup_log(stcb, cum_ack, wake_him, SCTP_WAKESND_FROM_SACK);
-		if ((stcb->block_entry) && ((stcb->sctp_socket->so_snd.sb_flags & SB_WAIT) == 0)) {
-			panic("Block set but sbflags not SB_WAIT?");
-		} else if(stcb->block_entry) {
-			/* Ok we will wake this guy */
-			stcb->block_entry = NULL;
-		}
 #endif
 		sctp_sowwakeup_locked(stcb->sctp_ep, stcb->sctp_socket);
 #ifdef SCTP_WAKE_LOGGING

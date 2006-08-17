@@ -4209,27 +4209,24 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	TAILQ_FOREACH(sq, &inp->read_queue, next) {
 		if (sq->stcb == stcb) {
 			sq->do_not_ref_stcb = 1;
+			sq->sinfo_cumtsn = stcb->asoc.cumulative_tsn;
 			if ((from_inpcbfree == 0) && so) {
 				/* Only if we have a socket lock do we do this */
-				if((sq->tail_mbuf) && ((sq->tail_mbuf->m_flags & M_EOR) == 0)) {
-					sq->stcb = NULL;
-					sq->sinfo_cumtsn = stcb->asoc.cumulative_tsn;
-				} else if ((sq->held_length) ||
-					   ((sq->tail_mbuf) && ((sq->tail_mbuf->m_flags & M_EOR) == 0)) ||
-					   (sq->length == 0)) {
+				if ((sq->held_length) ||
+				    ((sq->tail_mbuf) && ((sq->tail_mbuf->m_flags & M_EOR) == 0)) ||
+				    ((sq->length == 0) && (sq->tail_mbuf == NULL))) {
 					/* Held for PD-API */
 					so->so_rcv.sb_cc += sq->held_length;
 					so->so_rcv.sb_cc -= sq->length;
+					cnt++;
 					if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_PDAPIEVNT)) {
 						/* need to change to PD-API aborted */
-						cnt++;
 						stcb->asoc.control_pdapi = sq;
 						sctp_notify_partial_delivery_indication(stcb,
 											SCTP_PARTIAL_DELIVERY_ABORTED, 1);
 						stcb->asoc.control_pdapi = NULL;
 					} else {
 						/* need to remove */
-						cnt++;
 						TAILQ_REMOVE(&inp->read_queue, sq, next);
 						sctp_free_remote_addr(sq->whoFrom);
 						sq->whoFrom = NULL;
@@ -4275,55 +4272,18 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		 * connected. We also include the peel'ed off ones to.
 		 */
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
-			if ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) {
-				/*
-				 * Not in the pool, i.e. the ones that are
-				 * active server. We want to allow this guy
-				 * to initiate a new connection. In order to
-				 * do that we need to free off the connected
-				 * flags on the socket. I see no easy way to
-				 * do that since if I call
-				 * soisdisconnected() it will set the cant
-				 * send/cant recv flags on the socket
-				 * buffers. And once that happens you are
-				 * stuck. So we do our own turn off here for
-				 * the active side so that it can start a
-				 * new assoc if it desires.
-				 */
-				if (so) {
-					SOCK_LOCK(so);
-					so->so_rcv.sb_cc = 0;
-					so->so_snd.sb_cc = 0;
-					/* zero */
-					inp->sctp_flags &= ~SCTP_PCB_FLAGS_CONNECTED;
-					so->so_state &= ~(SS_ISCONNECTING | 
-							  SS_ISDISCONNECTING | 
-							  SS_ISCONFIRMING | 
-							  SS_ISCONNECTED);
-					SOCK_UNLOCK(so);
-				}
-			} else {
-				/*
-				 * For TCP Pool types including peeled off
-				 * ones, we just disconnect leaving the
-				 * CONNECTED flag on SCTP so we won't allow
-				 * a connect() to be attempted. The socket
-				 * should also protect against this too
-				 * since the can't send more flags are also
-				 * set.
-				 */
-				if (so) {
-					SOCK_LOCK(so);
-					so->so_rcv.sb_cc = 0;
-					so->so_snd.sb_cc = 0;
-					SOCK_UNLOCK(so);
-					/* sodisconnected locks the sb;s*/
-					soisdisconnected(so);
-				}
+			if (so) {
+				SOCK_LOCK(so);
+				/* zero */
+				inp->sctp_flags &= ~SCTP_PCB_FLAGS_CONNECTED;
+				so->so_state &= ~(SS_ISCONNECTING | 
+						  SS_ISDISCONNECTING | 
+						  SS_ISCONFIRMING | 
+						  SS_ISCONNECTED);
+				SOCK_UNLOCK(so);
 			}
 		}
 	}
-
 	/* When I reach here, no others want
 	 * to kill the assoc yet.. and I own
 	 * the lock. Now its possible an abort
@@ -4482,10 +4442,10 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		}
 	}
 /*
-	if(ccnt) {
-		printf("Freed %d from send_queue\n", ccnt);
-		ccnt = 0;
-	}
+  if(ccnt) {
+  printf("Freed %d from send_queue\n", ccnt);
+  ccnt = 0;
+  }
 */
 	/* sent queue SHOULD be empty */
 	if (!TAILQ_EMPTY(&asoc->sent_queue)) {
@@ -4504,10 +4464,10 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		}
 	}
 /*
-	if(ccnt) {
-		printf("Freed %d from sent_queue\n", ccnt);
-		ccnt = 0;
-	}
+  if(ccnt) {
+  printf("Freed %d from sent_queue\n", ccnt);
+  ccnt = 0;
+  }
 */
 	/* control queue MAY not be empty */
 	if (!TAILQ_EMPTY(&asoc->control_send_queue)) {
@@ -4526,10 +4486,10 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		}
 	}
 /*
-	if(ccnt) {
-		printf("Freed %d from ctrl_queue\n", ccnt);
-		ccnt = 0;
-	}
+  if(ccnt) {
+  printf("Freed %d from ctrl_queue\n", ccnt);
+  ccnt = 0;
+  }
 */
 	if (!TAILQ_EMPTY(&asoc->reasmqueue)) {
 		chk = TAILQ_FIRST(&asoc->reasmqueue);
@@ -4547,10 +4507,10 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		}
 	}
 /*
-	if(ccnt) {
-		printf("Freed %d from reasm_queue\n", ccnt);
-		ccnt = 0;
-	}
+  if(ccnt) {
+  printf("Freed %d from reasm_queue\n", ccnt);
+  ccnt = 0;
+  }
 */
 	if (asoc->mapping_array) {
 		FREE(asoc->mapping_array, M_PCB);
@@ -6244,7 +6204,6 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 					chk->data = NULL;
 				}
 				sctp_free_remote_addr(ctl->whoFrom);
-				printf("Point e: free control:%x\n", (uint32_t)ctl);
 				SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, ctl);
 				SCTP_DECR_READQ_COUNT();
 			}
