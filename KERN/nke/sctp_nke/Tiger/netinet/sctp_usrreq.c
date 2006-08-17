@@ -1890,6 +1890,11 @@ sctp_do_connect_x(struct socket *so,
 		splx(s);
 		return (EADDRINUSE);
 	}
+	if (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) {
+		splx(s);
+		return(EINVAL);
+	}
+
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
 		SCTP_INP_RLOCK(inp);
 		stcb = LIST_FIRST(&inp->sctp_asoc_list);
@@ -5145,6 +5150,11 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		}
 	}
 	/* Now do we connect? */
+	if (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) {
+		error = EINVAL;
+		goto out_now;
+	}
+
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
 		/* We are already connected AND the TCP model */

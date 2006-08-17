@@ -4289,6 +4289,9 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far, int hold_sblock,
 	uint32_t dif, rwnd;
 	struct socket *so=NULL;
 	
+	if(stcb == NULL) 
+		return;
+
 	if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 		/* Pre-check If we are freeing no update */
 		return;
@@ -4349,6 +4352,7 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far, int hold_sblock,
 			       stcb->freed_by_sorcv_sincelast,
 			       dif);
 #endif
+		SCTP_STAT_INCR(sctps_wu_sacks_sent);
 		sctp_send_sack(stcb);
 		sctp_chunk_output(stcb->sctp_ep, stcb,
 				  SCTP_OUTPUT_FROM_USR_RCVD);
@@ -4484,7 +4488,13 @@ restart:
 		sctp_misc_ints(SCTP_SORECV_BLOCKSA,
 			       0,0, so->so_rcv.sb_cc, uio->uio_resid);
 #endif
-
+		if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
+		    (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
+			if ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0) {
+				error = ENOTCONN;
+				goto out;
+			}
+		}
 		error = sbwait(&so->so_rcv);
 		if (error) {
 			goto out;
@@ -5238,13 +5248,19 @@ out:
 	}
 	splx(s);
 #ifdef SCTP_RECV_RWND_LOGGING
-	sctp_misc_ints(SCTP_SORECV_DONE,
-		       freed_so_far,
-		       stcb->asoc.my_last_reported_rwnd, 
-		       stcb->asoc.my_rwnd,
-		       so->so_rcv.sb_cc);
-
-
+	if(stcb) {
+		sctp_misc_ints(SCTP_SORECV_DONE,
+			       freed_so_far,
+			       stcb->asoc.my_last_reported_rwnd, 
+			       stcb->asoc.my_rwnd,
+			       so->so_rcv.sb_cc);
+	} else {
+		sctp_misc_ints(SCTP_SORECV_DONE,
+			       freed_so_far,
+			       0, 
+			       0,
+			       so->so_rcv.sb_cc);
+	}
 #endif
 	if (wakeup_read_socket) {
 		sctp_sorwakeup(inp, so);
