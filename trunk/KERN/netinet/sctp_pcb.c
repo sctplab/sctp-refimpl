@@ -5411,6 +5411,8 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 	}
 	/* does the source address already exist? if so skip it */
 	l_inp = inp = stcb->sctp_ep;
+
+	atomic_add_16(&stcb->asoc.refcnt, 1);
 	stcb_tmp = sctp_findassociation_ep_addr(&inp, sa, &net_tmp, local_sa, stcb);
 
 	if ((stcb_tmp == NULL && inp == stcb->sctp_ep) || inp == NULL) {
@@ -5419,12 +5421,14 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 		if ((sa->sa_family == AF_INET) &&
 		    (stcb->asoc.ipv4_addr_legal)) {
 			if (sctp_add_remote_addr(stcb, sa, 0, 2)) {
+				atomic_add_16(&stcb->asoc.refcnt, -1);
 				return (-1);
 			}
 		} else if ((sa->sa_family == AF_INET6) &&
 		    (stcb->asoc.ipv6_addr_legal)) {
 			if (sctp_add_remote_addr(stcb, sa, 0, 3)) {
-				return (-1);
+				atomic_add_16(&stcb->asoc.refcnt, -1);
+				return (-2);
 			}
 		}
 	} else {
@@ -5433,13 +5437,15 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 		} else if (stcb_tmp != stcb) {
 			/* It belongs to another association? */
 			SCTP_TCB_UNLOCK(stcb_tmp);
-			return (-1);
+			atomic_add_16(&stcb->asoc.refcnt, -1);
+			return (-3);
 		}
 	}
 	if (stcb->asoc.state == 0) {
 		/* the assoc was freed? */
-		return (-1);
+		return (-4);
 	}
+	atomic_add_16(&stcb->asoc.refcnt, -1);
 	/* now we must go through each of the params. */
 	phdr = sctp_get_next_param(m, offset, &parm_buf, sizeof(parm_buf));
 	while (phdr) {
@@ -5464,7 +5470,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 				    (struct sctp_paramhdr *)&p4_buf, sizeof(p4_buf));
 				if (plen != sizeof(struct sctp_ipv4addr_param) ||
 				    phdr == NULL) {
-					return (-1);
+					return (-5);
 				}
 				p4 = (struct sctp_ipv4addr_param *)phdr;
 				sin.sin_addr.s_addr = p4->addr;
@@ -5487,23 +5493,23 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 					 */
 					if (l_inp->sctp_flags & (SCTP_PCB_FLAGS_SOCKET_GONE | SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
 						/* the user freed the ep */
-						return (-1);
+						return (-6);
 					}
 					if (stcb->asoc.state == 0) {
 						/* the assoc was freed? */
-						return (-1);
+						return (-7);
 					}
 					if (sctp_add_remote_addr(stcb, sa, 0, 4)) {
-						return (-1);
+						return (-8);
 					}
 				} else if (stcb_tmp == stcb) {
 					if (l_inp->sctp_flags & (SCTP_PCB_FLAGS_SOCKET_GONE | SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
 						/* the user freed the ep */
-						return (-1);
+						return (-9);
 					}
 					if (stcb->asoc.state == 0) {
 						/* the assoc was freed? */
-						return (-1);
+						return (-10);
 					}
 					if (net != NULL) {
 						/* clear flag */
@@ -5520,16 +5526,16 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 					if (l_inp->sctp_flags & (SCTP_PCB_FLAGS_SOCKET_GONE | SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
 						/* the user freed the ep */
 						SCTP_INP_RUNLOCK(l_inp);
-						return (-1);
+						return (-11);
 					}
 					if (stcb->asoc.state == 0) {
 						/* the assoc was freed? */
 						SCTP_INP_RUNLOCK(l_inp);
-						return (-1);
+						return (-12);
 					}
 					SCTP_TCB_LOCK(stcb);
 					SCTP_INP_RUNLOCK(stcb->sctp_ep);
-					return (-1);
+					return (-13);
 				}
 			}
 		} else if (ptype == SCTP_IPV6_ADDRESS) {
@@ -5541,7 +5547,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 				    (struct sctp_paramhdr *)&p6_buf, sizeof(p6_buf));
 				if (plen != sizeof(struct sctp_ipv6addr_param) ||
 				    phdr == NULL) {
-					return (-1);
+					return (-14);
 				}
 				p6 = (struct sctp_ipv6addr_param *)phdr;
 				memcpy((caddr_t)&sin6.sin6_addr, p6->addr,
@@ -5558,18 +5564,18 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 					 */
 					if (l_inp->sctp_flags & (SCTP_PCB_FLAGS_SOCKET_GONE | SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
 						/* the user freed the ep */
-						return (-1);
+						return (-15);
 					}
 					if (stcb->asoc.state == 0) {
 						/* the assoc was freed? */
-						return (-1);
+						return (-16);
 					}
 					/*
 					 * we must add the address, no scope
 					 * set
 					 */
 					if (sctp_add_remote_addr(stcb, sa, 0, 5)) {
-						return (-1);
+						return (-17);
 					}
 				} else if (stcb_tmp == stcb) {
 					/*
@@ -5578,11 +5584,11 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 					 */
 					if (l_inp->sctp_flags & (SCTP_PCB_FLAGS_SOCKET_GONE | SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
 						/* the user freed the ep */
-						return (-1);
+						return (-18);
 					}
 					if (stcb->asoc.state == 0) {
 						/* the assoc was freed? */
-						return (-1);
+						return (-19);
 					}
 					if (net != NULL) {
 						/* clear flag */
@@ -5603,16 +5609,16 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 					if (l_inp->sctp_flags & (SCTP_PCB_FLAGS_SOCKET_GONE | SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
 						/* the user freed the ep */
 						SCTP_INP_RUNLOCK(l_inp);
-						return (-1);
+						return (-20);
 					}
 					if (stcb->asoc.state == 0) {
 						/* the assoc was freed? */
 						SCTP_INP_RUNLOCK(l_inp);
-						return (-1);
+						return (-21);
 					}
 					SCTP_TCB_LOCK(stcb);
 					SCTP_INP_RUNLOCK(l_inp);
-					return (-1);
+					return (-22);
 				}
 			}
 		} else if (ptype == SCTP_ECN_CAPABLE) {
@@ -5635,12 +5641,12 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 
 			stcb->asoc.peer_supports_asconf = 1;
 			if (plen > sizeof(lstore)) {
-				return (-1);
+				return (-23);
 			}
 			phdr = sctp_get_next_param(m, offset,
 			    (struct sctp_paramhdr *)&lstore, plen);
 			if (phdr == NULL) {
-				return (-1);
+				return (-24);
 			}
 			fee = (struct sctp_asconf_addr_param *)phdr;
 			lptype = ntohs(fee->addrp.ph.param_type);
@@ -5683,7 +5689,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			phdr = sctp_get_next_param(m, offset,
 			    (struct sctp_paramhdr *)&local_store, plen);
 			if (phdr == NULL) {
-				return (-1);
+				return (-25);
 			}
 			stcb->asoc.peer_supports_asconf = 0;
 			stcb->asoc.peer_supports_prsctp = 0;
@@ -5739,7 +5745,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			    (struct sctp_paramhdr *)store,
 			    plen);
 			if (phdr == NULL)
-				return (-1);
+				return (-26);
 			random = (struct sctp_auth_random *)phdr;
 			keylen = plen - sizeof(*random);
 			if (stcb->asoc.authinfo.peer_random != NULL)
@@ -5769,7 +5775,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			    (struct sctp_paramhdr *)store,
 			    plen);
 			if (phdr == NULL)
-				return (-1);
+				return (-27);
 			hmacs = (struct sctp_auth_hmac_algo *)phdr;
 			num_hmacs = (plen - sizeof(*hmacs)) /
 			    sizeof(hmacs->hmac_ids[0]);
@@ -5779,7 +5785,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 				if (sctp_debug_on & SCTP_DEBUG_AUTH1)
 					printf("SCTP: invalid HMAC param\n");
 #endif
-				return (-2);
+				return (-28);
 			}
 			if (stcb->asoc.peer_hmacs != NULL)
 				sctp_free_hmaclist(stcb->asoc.peer_hmacs);
@@ -5810,7 +5816,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			    (struct sctp_paramhdr *)store,
 			    plen);
 			if (phdr == NULL)
-				return (-1);
+				return (-29);
 			chunks = (struct sctp_auth_chunk_list *)phdr;
 			size = plen - sizeof(*chunks);
 			if (stcb->asoc.peer_auth_chunks != NULL)
@@ -5880,7 +5886,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 		if (sctp_debug_on & SCTP_DEBUG_AUTH1)
 			printf("SCTP: peer supports ASCONF but not AUTH\n");
 #endif
-		return (-2);
+		return (-30);
 	}
 	return (0);
 }
