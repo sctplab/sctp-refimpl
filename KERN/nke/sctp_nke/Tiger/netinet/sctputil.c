@@ -3182,7 +3182,6 @@ sctp_notify_shutdown_event(struct sctp_tcb *stcb)
 	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
 		/* mark socket closed for read/write and wakeup! */
-		socantrcvmore(stcb->sctp_socket);
 		socantsendmore(stcb->sctp_socket);
 	}
 	if (sctp_is_feature_off(stcb->sctp_ep, SCTP_PCB_FLAGS_RECVSHUTDOWNEVNT))
@@ -4381,6 +4380,7 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far, int hold_sblock,
 	return;
 }
 
+
 int
 sctp_sorecvmsg(struct socket *so,
     struct uio *uio,
@@ -4449,6 +4449,16 @@ sctp_sorecvmsg(struct socket *so,
 	s = splnet();
 #endif
 	in_eeor_mode = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXPLICIT_EOR);
+
+#if defined(__FreeBSD__) && __FreeBSD_version > 500000
+	if (so->so_rcv.sb_cc) {
+		/* Can we get right to the reading with no locks? */
+		control = TAILQ_FIRST(&inp->read_queue);
+		if (control->length && control->data) {
+			goto found_one;
+		}
+	}
+#endif
 	SOCKBUF_LOCK(&so->so_rcv);
 	hold_sblock = 1;
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
@@ -4492,6 +4502,13 @@ restart:
 		    (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
 			if ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0) {
 				error = ENOTCONN;
+				/* For active open side clear flags for re-use 
+				 * passive open is blocked by connect.
+				 */
+				so->so_state &= ~(SS_ISCONNECTING | 
+						  SS_ISDISCONNECTING | 
+						  SS_ISCONFIRMING | 
+						  SS_ISCONNECTED);
 				goto out;
 			}
 		}
@@ -4527,7 +4544,6 @@ restart:
 			/* Hmm there is data here .. fix */
 			struct mbuf *m;
 			int cnt=0;
-			printf("Cleanup plan a\n");
 			m = control->data;
 			while(m) {
 				cnt += m->m_len;
@@ -4541,11 +4557,9 @@ restart:
 			control->length = cnt;
 		} else {
 			/* remove it */
-			printf("Cleanup plan b\n");
 			TAILQ_REMOVE(&inp->read_queue, control, next);
 			/* Add back any hiddend data */
 			if (control->held_length) {
-				printf("Adding in to sb_cc:%d?\n", control->held_length);
 				so->so_rcv.sb_cc += control->held_length;
 				wakeup_read_socket = 1;
 			}
@@ -4586,7 +4600,9 @@ found_one:
 	 * If we reach here, control has a some data for us to read off.
 	 * Note that stcb COULD be NULL.
 	 */
+
 	rwnd_req = (so->so_rcv.sb_hiwat >> SCTP_RWND_HIWAT_SHIFT);
+
 	/* Must be at least a MTU's worth */
 	if(rwnd_req < SCTP_MIN_RWND)
 		rwnd_req = SCTP_MIN_RWND;
@@ -4734,7 +4750,7 @@ get_more_data:
 #else
 			s = splnet();
 #endif
-			if(m->m_next == NULL) {
+			if((m->m_next == NULL) && (!(m->m_flags & M_EOR))) {
 				SOCKBUF_LOCK(&so->so_rcv);
 				hold_sblock = 1;
 			}
@@ -4788,9 +4804,6 @@ get_more_data:
 					m = control->data;
 					/* been through it all, must hold sb lock ok to null tail */
 					if (control->data == NULL) {
-						if(hold_sblock == 0) {
-							panic("If m_next was NULL I should not be here");
-						}
 						control->tail_mbuf = NULL;
 					}
 				}
@@ -4868,9 +4881,16 @@ get_more_data:
 #endif
 				}
 		done_with_control:
-				if(hold_sblock == 0) {
-					SOCKBUF_LOCK(&so->so_rcv);
-					hold_sblock = 1;
+				if(TAILQ_NEXT(control, next) == NULL) {
+					/* If we don't have a next we need a lock,
+					 * if there is a next interupt is filling ahead
+					 * of us and we don't need a lock to remove this
+					 * guy (which is the head of the queue).
+					 */
+					if(hold_sblock == 0) {
+						SOCKBUF_LOCK(&so->so_rcv);
+						hold_sblock = 1;
+					}
 				}
 				TAILQ_REMOVE(&inp->read_queue, control, next);
 				/* Add back any hiddend data */
@@ -4996,6 +5016,7 @@ wait_some_more:
 				       so->so_rcv.sb_cc, 
 				       uio->uio_resid);
 #endif
+		printf("R:INP:%x goin to sbwait\n", (u_int)inp);
 		error = sbwait(&so->so_rcv);
 		if (error)
 			goto release_unlocked;

@@ -191,6 +191,9 @@ unsigned int sctp_cmt_on_off = 0;
 unsigned int sctp_cmt_sockopt_on_off = 0;
 unsigned int sctp_cmt_use_dac = 0;
 unsigned int sctp_cmt_sockopt_use_dac = 0;
+
+unsigned int sctp_window_update_sack_value = 3000;
+
 int sctp_L2_abc_variable = 1;
 unsigned int sctp_early_fr = 0;
 unsigned int sctp_early_fr_msec = SCTP_MINFR_MSEC_TIMER;
@@ -716,6 +719,10 @@ SYSCTL_INT(_net_inet_sctp, OID_AUTO, min_split_point, CTLFLAG_RW,
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, pcbhashsize, CTLFLAG_RW,
     &sctp_pcbtblsize, 0,
     "Tuneable for PCB Hash table sizes");
+
+SYSCTL_INT(_net_inet_sctp, OID_AUTO, wupsack, CTLFLAG_RW,
+    &sctp_window_update_sack_value, 0,
+    "How many unreported bytes before a window update sack is sent");
 
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, chunkscale, CTLFLAG_RW,
     &sctp_chunkscale, 0,
@@ -5949,6 +5956,10 @@ sctp_sysctl(name, namelen, oldp, oldlenp, newp, newlen)
 		return (sysctl_int(oldp, oldlenp, newp, newlen,
 		    &sctp_chunkscale));
 
+	case SCTPCTL_WINDOWUPD:
+		return (sysctl_int(oldp, oldlenp, newp, newlen,
+		    &sctp_window_update_sack_value));
+
 	case SCTPCTL_DELAYED_SACK:
 		return (sysctl_int(oldp, oldlenp, newp, newlen,
 		    &sctp_delayed_sack_time_default));
@@ -6212,6 +6223,15 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
 	    SYSCTL_DESCR("Default delayed SACK timer in msec"),
 	    NULL, 0, &sctp_delayed_sack_time_default, 0,
 	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_DELAYED_SACK,
+	    CTL_EOL);
+
+
+	sysctl_createv(clog, 0, NULL, NULL,
+	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
+	    CTLTYPE_INT, "wupsack",
+	    SYSCTL_DESCR("How many unreported bytes before a window update sack is sent"),
+	    NULL, 0, &sctp_window_update_sack_value, 0,
+	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_WINDOWUPD,
 	    CTL_EOL);
 
 	sysctl_createv(clog, 0, NULL, NULL,
