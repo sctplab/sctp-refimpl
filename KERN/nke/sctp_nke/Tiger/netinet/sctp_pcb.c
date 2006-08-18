@@ -5436,14 +5436,6 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			return (-1);
 		}
 	}
-	/*
-	 * since a unlock occured we must check the TCB's state and the
-	 * pcb's gone flags.
-	 */
-	if (l_inp->sctp_flags & (SCTP_PCB_FLAGS_SOCKET_GONE | SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
-		/* the user freed the ep */
-		return (-1);
-	}
 	if (stcb->asoc.state == 0) {
 		/* the assoc was freed? */
 		return (-1);
