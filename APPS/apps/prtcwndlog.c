@@ -649,6 +649,13 @@ main(int argc, char **argv)
 				       log.x.misc.log2,
 				       log.x.misc.log3,
 				       log.x.misc.log4);
+			} else if (log.from == SCTP_SACK_RWND_UPDATE) {
+				printf("%s s-rwnd:%d calc_rwnd:%d  flight:%d cumacktsn:%x\n",
+				       ts,
+				       log.x.misc.log1,
+				       log.x.misc.log2,
+				       log.x.misc.log3,
+				       log.x.misc.log4);
 			} else {
 				printf("%s:%s log1:%u log2:%u log3:%u log4:%u\n",
 				       ts,
