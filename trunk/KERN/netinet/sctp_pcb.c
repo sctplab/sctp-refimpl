@@ -5414,6 +5414,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 
 	atomic_add_16(&stcb->asoc.refcnt, 1);
 	stcb_tmp = sctp_findassociation_ep_addr(&inp, sa, &net_tmp, local_sa, stcb);
+	atomic_add_16(&stcb->asoc.refcnt, -1);
 
 	if ((stcb_tmp == NULL && inp == stcb->sctp_ep) || inp == NULL) {
 		/* we must add the source address */
@@ -5421,13 +5422,11 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 		if ((sa->sa_family == AF_INET) &&
 		    (stcb->asoc.ipv4_addr_legal)) {
 			if (sctp_add_remote_addr(stcb, sa, 0, 2)) {
-				atomic_add_16(&stcb->asoc.refcnt, -1);
 				return (-1);
 			}
 		} else if ((sa->sa_family == AF_INET6) &&
 		    (stcb->asoc.ipv6_addr_legal)) {
 			if (sctp_add_remote_addr(stcb, sa, 0, 3)) {
-				atomic_add_16(&stcb->asoc.refcnt, -1);
 				return (-2);
 			}
 		}
@@ -5437,7 +5436,6 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 		} else if (stcb_tmp != stcb) {
 			/* It belongs to another association? */
 			SCTP_TCB_UNLOCK(stcb_tmp);
-			atomic_add_16(&stcb->asoc.refcnt, -1);
 			return (-3);
 		}
 	}
@@ -5445,7 +5443,6 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 		/* the assoc was freed? */
 		return (-4);
 	}
-	atomic_add_16(&stcb->asoc.refcnt, -1);
 	/* now we must go through each of the params. */
 	phdr = sctp_get_next_param(m, offset, &parm_buf, sizeof(parm_buf));
 	while (phdr) {
@@ -5476,8 +5473,10 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 				sin.sin_addr.s_addr = p4->addr;
 				sa = (struct sockaddr *)&sin;
 				inp = stcb->sctp_ep;
+				atomic_add_16(&stcb->asoc.refcnt, 1);
 				stcb_tmp = sctp_findassociation_ep_addr(&inp, sa, &net,
 				    local_sa, stcb);
+				atomic_add_16(&stcb->asoc.refcnt, -1);
 
 				if ((stcb_tmp == NULL && inp == stcb->sctp_ep) ||
 				    inp == NULL) {
@@ -5491,10 +5490,6 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 					 * we must validate the state again
 					 * here
 					 */
-					if (l_inp->sctp_flags & (SCTP_PCB_FLAGS_SOCKET_GONE | SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
-						/* the user freed the ep */
-						return (-6);
-					}
 					if (stcb->asoc.state == 0) {
 						/* the assoc was freed? */
 						return (-7);
@@ -5503,10 +5498,6 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 						return (-8);
 					}
 				} else if (stcb_tmp == stcb) {
-					if (l_inp->sctp_flags & (SCTP_PCB_FLAGS_SOCKET_GONE | SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
-						/* the user freed the ep */
-						return (-9);
-					}
 					if (stcb->asoc.state == 0) {
 						/* the assoc was freed? */
 						return (-10);
@@ -5521,20 +5512,10 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 					 * strange, address is in another
 					 * assoc? straighten out locks.
 					 */
-					SCTP_TCB_UNLOCK(stcb_tmp);
-					SCTP_INP_RLOCK(inp);
-					if (l_inp->sctp_flags & (SCTP_PCB_FLAGS_SOCKET_GONE | SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
-						/* the user freed the ep */
-						SCTP_INP_RUNLOCK(l_inp);
-						return (-11);
-					}
 					if (stcb->asoc.state == 0) {
 						/* the assoc was freed? */
-						SCTP_INP_RUNLOCK(l_inp);
 						return (-12);
 					}
-					SCTP_TCB_LOCK(stcb);
-					SCTP_INP_RUNLOCK(stcb->sctp_ep);
 					return (-13);
 				}
 			}
@@ -5554,18 +5535,16 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 				    sizeof(p6->addr));
 				sa = (struct sockaddr *)&sin6;
 				inp = stcb->sctp_ep;
+				atomic_add_16(&stcb->asoc.refcnt, 1);
 				stcb_tmp = sctp_findassociation_ep_addr(&inp, sa, &net,
 				    local_sa, stcb);
+				atomic_add_16(&stcb->asoc.refcnt, -1);
 				if (stcb_tmp == NULL && (inp == stcb->sctp_ep ||
 				    inp == NULL)) {
 					/*
 					 * we must validate the state again
 					 * here
 					 */
-					if (l_inp->sctp_flags & (SCTP_PCB_FLAGS_SOCKET_GONE | SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
-						/* the user freed the ep */
-						return (-15);
-					}
 					if (stcb->asoc.state == 0) {
 						/* the assoc was freed? */
 						return (-16);
@@ -5582,10 +5561,6 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 					 * we must validate the state again
 					 * here
 					 */
-					if (l_inp->sctp_flags & (SCTP_PCB_FLAGS_SOCKET_GONE | SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
-						/* the user freed the ep */
-						return (-18);
-					}
 					if (stcb->asoc.state == 0) {
 						/* the assoc was freed? */
 						return (-19);
@@ -5600,24 +5575,10 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 					 * strange, address is in another
 					 * assoc? straighten out locks.
 					 */
-					SCTP_TCB_UNLOCK(stcb_tmp);
-					SCTP_INP_RLOCK(l_inp);
-					/*
-					 * we must validate the state again
-					 * here
-					 */
-					if (l_inp->sctp_flags & (SCTP_PCB_FLAGS_SOCKET_GONE | SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
-						/* the user freed the ep */
-						SCTP_INP_RUNLOCK(l_inp);
-						return (-20);
-					}
 					if (stcb->asoc.state == 0) {
 						/* the assoc was freed? */
-						SCTP_INP_RUNLOCK(l_inp);
 						return (-21);
 					}
-					SCTP_TCB_LOCK(stcb);
-					SCTP_INP_RUNLOCK(l_inp);
 					return (-22);
 				}
 			}
