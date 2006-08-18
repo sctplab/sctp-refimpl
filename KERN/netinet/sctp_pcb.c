@@ -2866,6 +2866,8 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 				struct sctp_stream_queue_pending *sp;
 
 				asoc->asoc.state |= SCTP_STATE_SHUTDOWN_PENDING;
+				sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD, asoc->sctp_ep, asoc,
+						 asoc->asoc.primary_destination);
 				if(asoc->asoc.locked_on_sending) {
 					sp = TAILQ_LAST(&((asoc->asoc.locked_on_sending)->outqueue), 
 						sctp_streamhead);
