@@ -8737,17 +8737,6 @@ sctp_send_shutdown(struct sctp_tcb *stcb, struct sctp_nets *net)
 	m_shutdown->m_pkthdr.rcvif = 0;
 	TAILQ_INSERT_TAIL(&chk->asoc->control_send_queue, chk, sctp_next);
 	chk->asoc->ctrl_queue_cnt++;
-
-	
-	if ((stcb->sctp_socket) && 
-	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
-	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
-		stcb->sctp_ep->sctp_socket->so_snd.sb_cc = 0;
-		if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) == 0) &&
-		    ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0))
-			soisdisconnecting(stcb->sctp_ep->sctp_socket);
-	}
-
 	return (0);
 }
 
@@ -10170,18 +10159,6 @@ sctp_send_shutdown_complete(struct sctp_tcb *stcb,
 	sctp_lowlevel_chunk_output(stcb->sctp_ep, stcb, net,
 	    (struct sockaddr *)&net->ro._l_addr,
 	    m_shutdown_comp, 0, NULL, 1, 0, NULL, 0);
-	if ((stcb->sctp_socket) && 
-	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
-	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
-		stcb->sctp_ep->sctp_flags &= ~SCTP_PCB_FLAGS_CONNECTED;
-		stcb->sctp_ep->sctp_socket->so_snd.sb_cc = 0;
-		if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) == 0) &&
-		    ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0))
-			soisdisconnected(stcb->sctp_ep->sctp_socket);
-		/*
-		 * else printf("SCTP(c):disconnect of unref socket\n");
-		 */
-	}
 	return (0);
 }
 
@@ -12204,10 +12181,10 @@ sctp_lower_sosend(struct socket *so,
 	}
 
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	error = sblock(&so->so_rcv, SBLOCKWAIT(flags));
+	error = sblock(&so->so_snd, SBLOCKWAIT(flags));
 #endif
 #if defined(__NetBSD__)
-	error = sblock(&so->so_rcv, SBLOCKWAIT(flags));
+	error = sblock(&so->so_snd, SBLOCKWAIT(flags));
 #endif
 	if (top == NULL) {
 		struct sctp_stream_queue_pending *sp;
@@ -12462,6 +12439,12 @@ sctp_lower_sosend(struct socket *so,
 					SOCKBUF_UNLOCK(&so->so_snd);
 					goto out_unlocked;
 				}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+				error = sblock(&so->so_snd, SBLOCKWAIT(flags));
+#endif
+#if defined(__NetBSD__)
+				error = sblock(&so->so_snd, SBLOCKWAIT(flags));
+#endif
 #ifdef SCTP_BLK_LOGGING
 				sctp_log_block(SCTP_BLOCK_LOG_OUTOF_BLK,
 					       so, asoc, stcb->asoc.total_output_queue_size);
@@ -12691,10 +12674,10 @@ sctp_lower_sosend(struct socket *so,
 #endif
  out:
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	sbunlock(&so->so_rcv, 1);
+	sbunlock(&so->so_snd, 1);
 #endif
 #if defined(__NetBSD__)
-	sbunlock(&so->so_rcv);
+	sbunlock(&so->so_snd);
 #endif
  out_unlocked:
 
