@@ -4394,7 +4394,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 #ifdef SCTP_SACK_RWND_LOGGING
 	sctp_misc_ints(SCTP_SACK_RWND_UPDATE,
 		       rwnd,
-		       stcb->asoc.my_rwnd,
+		       stcb->asoc.peers_rwnd,
 		       stcb->asoc.total_flight,
 		       cumack);
 
@@ -5306,7 +5306,7 @@ skip_segments:
 #ifdef SCTP_SACK_RWND_LOGGING
 	sctp_misc_ints(SCTP_SACK_RWND_UPDATE,
 		       a_rwnd,
-		       stcb->asoc.my_rwnd,
+		       stcb->asoc.peers_rwnd,
 		       stcb->asoc.total_flight,
 		       asoc->last_acked_seq);
 
