@@ -10517,6 +10517,7 @@ sctp_send_hb(struct sctp_tcb *stcb, int user_req, struct sctp_nets *u_net)
 			 * to the Q's style as defined in the RFC and not my
 			 * alternate style defined in the RFC.
 			 */
+			atomic_subtract_int(&chk->whoTo->ref_count, 1);
 			if (chk->data != NULL) {
 				sctp_m_freem(chk->data);
 				chk->data = NULL;
