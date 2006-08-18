@@ -193,7 +193,7 @@ sctp_fill_pcbinfo(struct sctp_pcbinfo *spcb)
 	spcb->chk_count = sctppcbinfo.ipi_count_chunk;
 	spcb->readq_count = sctppcbinfo.ipi_count_readq;
 	spcb->stream_oque = sctppcbinfo.ipi_count_strmoq;
-	spcb->mbuf_track = sctppcbinfo.mbuf_track;
+	spcb->mbuf_track = 0; /* not used now */
 	
 	SCTP_INP_INFO_RUNLOCK();
 }
@@ -5266,8 +5266,6 @@ sctp_pcb_init()
 	/* stream out queue cont */
 	sctppcbinfo.ipi_count_strmoq = 0;
 
-	/* mbuf tracker */
-	sctppcbinfo.mbuf_track = 0;
 
 #if defined (__FreeBSD__) && __FreeBSD_version >= 500000
 	callout_init(&sctppcbinfo.addr_wq_timer.timer, 1);

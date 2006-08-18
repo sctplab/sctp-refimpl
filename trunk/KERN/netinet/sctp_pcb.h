@@ -280,7 +280,6 @@ struct sctp_epinfo {
 #endif				/* _SCTP_NEEDS_CALLOUT_ */
 
 	struct sctp_timer addr_wq_timer;
-	uint32_t mbuf_track;
 
 	/* for port allocations */
 	uint16_t lastport;
