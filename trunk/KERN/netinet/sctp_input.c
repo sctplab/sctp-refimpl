@@ -4449,7 +4449,7 @@ process_control_chunks:
 
 			if (stcb->asoc.peer_supports_strreset == 0) {
 				/*
-				 * hmm, peer should have annonced this, but
+				 * hmm, peer should have announced this, but
 				 * we will turn it on since he is sending us
 				 * a stream reset.
 				 */
@@ -4506,9 +4506,6 @@ process_control_chunks:
 			}
 			ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, *offset,
 			    chk_length, chunk_buf);
-			if (stcb->asoc.peer_supports_auth == 0) {
-				/* peer should have announced this */
-			}
 			got_auth = 1;
 			if (sctp_handle_auth(stcb, (struct sctp_auth_chunk *)ch,
 			    m, *offset)) {
