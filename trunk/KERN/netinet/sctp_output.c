@@ -12137,7 +12137,7 @@ sctp_lower_sosend(struct socket *so,
 	if (max_len == 0) {
 		/* No room right no ! */
 		SOCKBUF_LOCK(&so->so_snd);
-		if(so->so_snd.sb_hiwat <= stcb->asoc.total_output_queue_size) {
+		while(so->so_snd.sb_hiwat <= stcb->asoc.total_output_queue_size) {
 #ifdef SCTP_BLK_LOGGING
 			sctp_log_block(SCTP_BLOCK_LOG_INTO_BLKA,
 				       so, asoc, uio->uio_resid);
@@ -12161,6 +12161,11 @@ sctp_lower_sosend(struct socket *so,
 			sctp_log_block(SCTP_BLOCK_LOG_OUTOF_BLK,
 				       so, asoc, stcb->asoc.total_output_queue_size);
 #endif
+		}
+		if(so->so_snd.sb_hiwat > stcb->asoc.total_output_queue_size) {
+			max_len = so->so_snd.sb_hiwat -  stcb->asoc.total_output_queue_size;
+		} else {
+			max_len = 0;
 		}
 		SOCKBUF_UNLOCK(&so->so_snd);		
 	}
