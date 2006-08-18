@@ -11720,7 +11720,6 @@ sctp_lower_sosend(struct socket *so,
 	if (use_rcvinfo) {
 		if (srcv->sinfo_flags & SCTP_SENDALL) {
 			/* its a sendall */
-			sctppcbinfo.mbuf_track--;
 			error = sctp_sendall(inp, uio, top, srcv);
 			top = NULL;
 			splx(s);
