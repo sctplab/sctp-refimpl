@@ -1372,6 +1372,8 @@ sctp_disconnect(struct socket *so)
 				 * and move to SHUTDOWN-PENDING
 				 */
 				asoc->state |= SCTP_STATE_SHUTDOWN_PENDING;
+				sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD, stcb->sctp_ep, stcb,
+						 asoc->primary_destination);
 				if (asoc->locked_on_sending) {
 					/* Locked to send out the data */
 					struct sctp_stream_queue_pending *sp;
@@ -1514,6 +1516,9 @@ sctp_shutdown(struct socket *so)
 			 * SHUTDOWN_PENDING
 			 */
 			asoc->state |= SCTP_STATE_SHUTDOWN_PENDING;
+			sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD, stcb->sctp_ep, stcb,
+					 asoc->primary_destination);
+
 			if (asoc->locked_on_sending) {
 				/* Locked to send out the data */
 				struct sctp_stream_queue_pending *sp;
