@@ -416,13 +416,13 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 	}
 	initack_limit = offset + ntohs(cp->ch.chunk_length);
 	/* load all addresses */
-	if (sctp_load_addresses_from_init(stcb, m, iphlen,
+	if ((retval = sctp_load_addresses_from_init(stcb, m, iphlen,
 	    (offset + sizeof(struct sctp_init_chunk)), initack_limit, sh,
-	    NULL)) {
+	    NULL))) {
 		/* Huh, we should abort */
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-			printf("Load addresses from INIT causes an abort\n");
+			printf("Load addresses from INIT causes an abort %d\n", retval);
 		}
 #endif
 		sctp_abort_association(stcb->sctp_ep, stcb, m, iphlen, sh,
