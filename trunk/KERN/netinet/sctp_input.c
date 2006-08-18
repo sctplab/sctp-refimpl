@@ -406,6 +406,11 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 	asoc = &stcb->asoc;
 	/* process the peer's parameters in the INIT-ACK */
 	retval = sctp_process_init((struct sctp_init_chunk *)cp, stcb, net);
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
+		printf("Process_init returns %d\n", retval);
+	}
+#endif
 	if (retval < 0) {
 		return (retval);
 	}
@@ -415,12 +420,13 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 	    (offset + sizeof(struct sctp_init_chunk)), initack_limit, sh,
 	    NULL)) {
 		/* Huh, we should abort */
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
+			printf("Load addresses from INIT causes an abort\n");
+		}
+#endif
 		sctp_abort_association(stcb->sctp_ep, stcb, m, iphlen, sh,
 		    NULL);
-#if 0
-		sctp_abort_notification(stcb, 0);
-		sctp_free_assoc(stcb->sctp_ep, stcb, 0);
-#endif
 		return (-1);
 	}
 	stcb->asoc.peer_hmac_id = sctp_negotiate_hmacid(stcb->asoc.peer_hmacs,
@@ -3965,15 +3971,20 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			}
 #endif				/* SCTP_DEBUG */
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
-				/* We are not interested anymore */
-				if (locked_tcb)
-					SCTP_TCB_UNLOCK(locked_tcb);
-				if (LIST_FIRST(&inp->sctp_asoc_list) == NULL) {
-					/* finish the job now */
-					sctp_inpcb_free(inp, 1);
+				/* We are not interested anymore? */
+				if ((stcb) && (stcb->asoc.total_output_queue_size)) {
+					/* collision case where we are sending to them too */
+					;
+				} else {
+					if (locked_tcb)
+						SCTP_TCB_UNLOCK(locked_tcb);
+					if (LIST_FIRST(&inp->sctp_asoc_list) == NULL) {
+						/* finish the job now */
+						sctp_inpcb_free(inp, 1);
+					}
+					*offset = length;
+					return (NULL);
 				}
-				*offset = length;
-				return (NULL);
 			}
 			if ((num_chunks > 1) ||
 			    (sctp_strict_init && (length - *offset > SCTP_SIZE32(chk_length)))) {
@@ -4305,9 +4316,13 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 				/* We are not interested anymore */
-				sctp_free_assoc(inp, stcb, 0);
-				*offset = length;
-				return (NULL);
+				if ((stcb) && (stcb->asoc.total_output_queue_size)) {
+					;
+				}else {
+					sctp_free_assoc(inp, stcb, 0);
+					*offset = length;
+					return (NULL);
+				}
 			}
 			/* He's alive so give him credit */
 			stcb->asoc.overall_error_count = 0;
