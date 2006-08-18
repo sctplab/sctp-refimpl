@@ -8737,17 +8737,6 @@ sctp_send_shutdown(struct sctp_tcb *stcb, struct sctp_nets *net)
 	m_shutdown->m_pkthdr.rcvif = 0;
 	TAILQ_INSERT_TAIL(&chk->asoc->control_send_queue, chk, sctp_next);
 	chk->asoc->ctrl_queue_cnt++;
-
-	
-	if ((stcb->sctp_socket) && 
-	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
-	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
-		stcb->sctp_ep->sctp_socket->so_snd.sb_cc = 0;
-		if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) == 0) &&
-		    ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0))
-			soisdisconnecting(stcb->sctp_ep->sctp_socket);
-	}
-
 	return (0);
 }
 
@@ -10170,18 +10159,6 @@ sctp_send_shutdown_complete(struct sctp_tcb *stcb,
 	sctp_lowlevel_chunk_output(stcb->sctp_ep, stcb, net,
 	    (struct sockaddr *)&net->ro._l_addr,
 	    m_shutdown_comp, 0, NULL, 1, 0, NULL, 0);
-	if ((stcb->sctp_socket) && 
-	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
-	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
-		stcb->sctp_ep->sctp_flags &= ~SCTP_PCB_FLAGS_CONNECTED;
-		stcb->sctp_ep->sctp_socket->so_snd.sb_cc = 0;
-		if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) == 0) &&
-		    ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0))
-			soisdisconnected(stcb->sctp_ep->sctp_socket);
-		/*
-		 * else printf("SCTP(c):disconnect of unref socket\n");
-		 */
-	}
 	return (0);
 }
 

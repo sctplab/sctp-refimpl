@@ -2695,6 +2695,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	struct inpcb *ip_pcb;
 	struct socket *so;
 	uint8_t locked_so = 0;
+
 	struct sctp_queued_to_read *sq;
 
 #if !defined(__FreeBSD__) || __FreeBSD_version < 500000
@@ -2716,13 +2717,13 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 #ifdef SCTP_LOG_CLOSING
 	sctp_log_closing(inp, NULL, 0);
 #endif
+
 #if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	SCTP_ITERATOR_LOCK();
 #endif
 	SCTP_ASOC_CREATE_LOCK(inp);
 	SCTP_INP_INFO_WLOCK();
 	so = inp->sctp_socket;
-
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
 		/* been here before.. eeks.. get out of here */
 		splx(s);
@@ -2778,14 +2779,16 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 			if ((SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_COOKIE_WAIT) ||
 			    (SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_COOKIE_ECHOED)) {
 				/* Just abandon things in the front states */
-				if (locked_so) {
-					SOCK_UNLOCK(so);
+				if(asoc->asoc.total_output_queue_size == 0) {
+					if (locked_so) {
+						SOCK_UNLOCK(so);
+					}
+					sctp_free_assoc(inp, asoc, 1);
+					if (locked_so) {
+						SOCK_LOCK(so);
+					}
+					continue;
 				}
-				sctp_free_assoc(inp, asoc, 1);
-				if (locked_so) {
-					SOCK_LOCK(so);
-				}
-				continue;
 			}
 			if (locked_so) {
 				SOCK_UNLOCK(so);
@@ -4250,20 +4253,8 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		stcb->block_entry = NULL;
 	}
 
-	if (so && (so->so_snd.sb_cc)) {
-		/* This will happen when a abort is done */
-		if(stcb->asoc.total_output_queue_size <= so->so_snd.sb_cc) {
-			so->so_snd.sb_cc = stcb->asoc.total_output_queue_size;
-		} else {
-			so->so_snd.sb_cc = 0;
-		}
-	}
 	if ((from_inpcbfree == 0) && so) {
-		if(cnt) {
-			sctp_sorwakeup_locked(inp, so);
-		} else {
-			SOCKBUF_UNLOCK(&so->so_rcv);
-		}
+		sctp_sorwakeup_locked(inp, so);
 	}
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
@@ -4271,16 +4262,20 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		 * For TCP type we need special handling when we are
 		 * connected. We also include the peel'ed off ones to.
 		 */
-		if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
+		if(inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
+			inp->sctp_flags &= ~SCTP_PCB_FLAGS_CONNECTED;
 			if (so) {
 				SOCK_LOCK(so);
-				/* zero */
-				inp->sctp_flags &= ~SCTP_PCB_FLAGS_CONNECTED;
-				so->so_state &= ~(SS_ISCONNECTING | 
-						  SS_ISDISCONNECTING | 
-						  SS_ISCONFIRMING | 
-						  SS_ISCONNECTED);
+				if(so->so_rcv.sb_cc == 0) {
+					so->so_state &= ~(SS_ISCONNECTING | 
+							  SS_ISDISCONNECTING | 
+							  SS_ISCONFIRMING | 
+							  SS_ISCONNECTED);
+				}
 				SOCK_UNLOCK(so);
+				sctp_sowwakeup(inp, so);
+				sctp_sorwakeup(inp, so);
+				wakeup(&so->so_timeo);
 			}
 		}
 	}
