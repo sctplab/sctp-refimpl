@@ -2156,10 +2156,8 @@ sctp_add_cookie(struct sctp_inpcb *inp, struct mbuf *init, int init_offset,
 	}
 	sig = sctp_get_mbuf_for_msg(SCTP_SECRET_SIZE, 0, M_DONTWAIT, 1, MT_DATA);
 	if (sig == NULL) {
-		/* no space */
+		/* no space, so free the entire chain */
 		sctp_m_freem(mret);
-		sctp_m_freem(copy_init);
-		sctp_m_freem(copy_initack);
 		return (NULL);
 	}
 	sig->m_len = 0;
