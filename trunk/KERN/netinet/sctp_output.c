@@ -12204,10 +12204,10 @@ sctp_lower_sosend(struct socket *so,
 	}
 
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	error = sblock(&so->so_rcv, SBLOCKWAIT(flags));
+	error = sblock(&so->so_snd, SBLOCKWAIT(flags));
 #endif
 #if defined(__NetBSD__)
-	error = sblock(&so->so_rcv, SBLOCKWAIT(flags));
+	error = sblock(&so->so_snd, SBLOCKWAIT(flags));
 #endif
 	if (top == NULL) {
 		struct sctp_stream_queue_pending *sp;
@@ -12462,6 +12462,12 @@ sctp_lower_sosend(struct socket *so,
 					SOCKBUF_UNLOCK(&so->so_snd);
 					goto out_unlocked;
 				}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+				error = sblock(&so->so_snd, SBLOCKWAIT(flags));
+#endif
+#if defined(__NetBSD__)
+				error = sblock(&so->so_snd, SBLOCKWAIT(flags));
+#endif
 #ifdef SCTP_BLK_LOGGING
 				sctp_log_block(SCTP_BLOCK_LOG_OUTOF_BLK,
 					       so, asoc, stcb->asoc.total_output_queue_size);
@@ -12691,10 +12697,10 @@ sctp_lower_sosend(struct socket *so,
 #endif
  out:
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	sbunlock(&so->so_rcv, 1);
+	sbunlock(&so->so_snd, 1);
 #endif
 #if defined(__NetBSD__)
-	sbunlock(&so->so_rcv);
+	sbunlock(&so->so_snd);
 #endif
  out_unlocked:
 
