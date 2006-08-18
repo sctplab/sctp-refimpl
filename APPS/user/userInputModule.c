@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.65 2006-08-16 13:43:40 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.66 2006-08-18 22:00:44 randall Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -1364,6 +1364,7 @@ static char phase_list[] = {
 	'\\',
 };
 
+static int bulk_count_seen = 0;
 	
 void
 sctpInput(void *arg, messageEnvolope *msg)
@@ -1450,7 +1451,8 @@ sctpInput(void *arg, messageEnvolope *msg)
 		struct tm *timeptr;
 		time_started = time(0);
 		timeptr = localtime(&time_started);
-		printf("%s",asctime(timeptr));
+		printf("have seen %d packets at %s",bulk_count_seen, asctime(timeptr));
+		bulk_count_seen = 0;
 		msg->data = NULL;
 		bulkSeen = 0;
 	}else if(strncmp(msg->data,"pong",4) == 0){
@@ -1473,6 +1475,7 @@ sctpInput(void *arg, messageEnvolope *msg)
 		msg->data = NULL;
 	}else if(strncmp(msg->data,"bulk",4) == 0){
 		bulkSeen++;
+		bulk_count_seen++;
 	}else{
 		if(silent_mode == 0){
 			/* display a text message */
@@ -3570,6 +3573,13 @@ cmd_getstat(char *argv[], int argc)
 	p(sctps_cmt_randry,          "cmt.randry");
 	p(sctps_slowpath_sack,       "slow_sacks");
 	p(sctps_wu_sacks_sent,       "wup_sack_s");
+	p(sctps_locks_in_rcv,        "rcv_locks ");
+	p(sctps_locks_in_rcva,        "rcva_locks");
+	p(sctps_locks_in_rcvb,        "rcvb_locks");
+	p(sctps_locks_in_rcvc,        "rcvc_locks");
+	p(sctps_locks_in_rcvd,        "rcvd_locks");
+	p(sctps_locks_in_rcve,        "rcve_locks");
+	p(sctps_locks_in_rcvf,        "rcvf_locks");
 	nl("");
 #undef p
 #undef nl
