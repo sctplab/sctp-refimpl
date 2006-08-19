@@ -836,6 +836,13 @@ struct	sctpstat {
 	u_long  sctps_cmt_randry;       /* Same for above */
 	u_long  sctps_slowpath_sack;    /* Sacks the slow way */
 	u_long  sctps_wu_sacks_sent;	/* Window Update only sacks sent */
+	u_long  sctps_locks_in_rcv;	/* How man so_rcv buf locks we did */
+	u_long  sctps_locks_in_rcva;	/* How man so_rcv buf locks we did */
+	u_long  sctps_locks_in_rcvb;	/* How man so_rcv buf locks we did */
+	u_long  sctps_locks_in_rcvc;	/* How man so_rcv buf locks we did */
+	u_long  sctps_locks_in_rcvd;	/* How man so_rcv buf locks we did */
+	u_long  sctps_locks_in_rcve;	/* How man so_rcv buf locks we did */
+	u_long  sctps_locks_in_rcvf;	/* How man so_rcv buf locks we did */
 };
 
 #define SCTP_STAT_INCR(_x) SCTP_STAT_INCR_BY(_x,1)

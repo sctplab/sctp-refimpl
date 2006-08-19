@@ -4370,8 +4370,10 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far, int hold_sblock,
 #endif
 	}
  out:
-	if(so && sb_unlocked && hold_sblock) 
+	if(so && sb_unlocked && hold_sblock) {
+		SCTP_STAT_INCR(sctps_locks_in_rcv);
 		SOCKBUF_LOCK(&so->so_rcv);
+	}
 
 	SCTP_INP_DECR_REF(stcb->sctp_ep);
 	if(tcb_incr_up) {
@@ -4460,6 +4462,7 @@ sctp_sorecvmsg(struct socket *so,
 	}
 #endif
 	SOCKBUF_LOCK(&so->so_rcv);
+	SCTP_STAT_INCR(sctps_locks_in_rcv);
 	hold_sblock = 1;
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
@@ -4471,6 +4474,7 @@ sctp_sorecvmsg(struct socket *so,
 restart:
 	if(hold_sblock == 0) {
 		SOCKBUF_LOCK(&so->so_rcv);
+		SCTP_STAT_INCR(sctps_locks_in_rcva);
 		hold_sblock = 1;
 	}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
@@ -4752,6 +4756,7 @@ get_more_data:
 #endif
 			if((m->m_next == NULL) && (!(m->m_flags & M_EOR))) {
 				SOCKBUF_LOCK(&so->so_rcv);
+				SCTP_STAT_INCR(sctps_locks_in_rcvb);
 				hold_sblock = 1;
 			}
 			/* re-read */
@@ -4889,6 +4894,7 @@ get_more_data:
 					 */
 					if(hold_sblock == 0) {
 						SOCKBUF_LOCK(&so->so_rcv);
+						SCTP_STAT_INCR(sctps_locks_in_rcvc);
 						hold_sblock = 1;
 					}
 				}
@@ -4993,6 +4999,7 @@ wait_some_more:
 		}
 		if(hold_sblock == 0) {
 			SOCKBUF_LOCK(&so->so_rcv);
+			SCTP_STAT_INCR(sctps_locks_in_rcvd);
 			hold_sblock = 1;
 		}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
@@ -5113,6 +5120,7 @@ get_more_data2:
 
 			if(hold_sblock == 0) {
 				SOCKBUF_LOCK(&so->so_rcv);
+				SCTP_STAT_INCR(sctps_locks_in_rcve);
 				hold_sblock = 1;
 			}
 
@@ -5202,6 +5210,7 @@ get_more_data2:
 					sctp_log_lock(inp, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
 #endif
 					SOCKBUF_LOCK(&so->so_rcv);
+					SCTP_STAT_INCR(sctps_locks_in_rcvf);
 					hold_sblock = 1;
 					if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)
 						goto release;
