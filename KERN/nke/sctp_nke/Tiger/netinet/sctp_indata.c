@@ -4391,6 +4391,14 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 			    stcb->sctp_ep, stcb, asoc->primary_destination);
 		}
 	}
+#ifdef SCTP_SACK_RWND_LOGGING
+	sctp_misc_ints(SCTP_SACK_RWND_UPDATE,
+		       rwnd,
+		       stcb->asoc.peers_rwnd,
+		       stcb->asoc.total_flight,
+		       cumack);
+
+#endif	
 }
 
 
@@ -5295,6 +5303,15 @@ skip_segments:
 					 stcb->sctp_ep, stcb, net);
 		}
 	}
+#ifdef SCTP_SACK_RWND_LOGGING
+	sctp_misc_ints(SCTP_SACK_RWND_UPDATE,
+		       a_rwnd,
+		       stcb->asoc.peers_rwnd,
+		       stcb->asoc.total_flight,
+		       asoc->last_acked_seq);
+
+#endif	
+
 }
 
 void

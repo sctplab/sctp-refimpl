@@ -2156,10 +2156,8 @@ sctp_add_cookie(struct sctp_inpcb *inp, struct mbuf *init, int init_offset,
 	}
 	sig = sctp_get_mbuf_for_msg(SCTP_SECRET_SIZE, 0, M_DONTWAIT, 1, MT_DATA);
 	if (sig == NULL) {
-		/* no space */
+		/* no space, so free the entire chain */
 		sctp_m_freem(mret);
-		sctp_m_freem(copy_init);
-		sctp_m_freem(copy_initack);
 		return (NULL);
 	}
 	sig->m_len = 0;
@@ -10517,6 +10515,7 @@ sctp_send_hb(struct sctp_tcb *stcb, int user_req, struct sctp_nets *u_net)
 			 * to the Q's style as defined in the RFC and not my
 			 * alternate style defined in the RFC.
 			 */
+			atomic_subtract_int(&chk->whoTo->ref_count, 1);
 			if (chk->data != NULL) {
 				sctp_m_freem(chk->data);
 				chk->data = NULL;
@@ -11720,7 +11719,6 @@ sctp_lower_sosend(struct socket *so,
 	if (use_rcvinfo) {
 		if (srcv->sinfo_flags & SCTP_SENDALL) {
 			/* its a sendall */
-			sctppcbinfo.mbuf_track--;
 			error = sctp_sendall(inp, uio, top, srcv);
 			top = NULL;
 			splx(s);
@@ -12137,7 +12135,7 @@ sctp_lower_sosend(struct socket *so,
 	if (max_len == 0) {
 		/* No room right no ! */
 		SOCKBUF_LOCK(&so->so_snd);
-		if(so->so_snd.sb_hiwat <= stcb->asoc.total_output_queue_size) {
+		while(so->so_snd.sb_hiwat <= stcb->asoc.total_output_queue_size) {
 #ifdef SCTP_BLK_LOGGING
 			sctp_log_block(SCTP_BLOCK_LOG_INTO_BLKA,
 				       so, asoc, uio->uio_resid);
@@ -12161,6 +12159,11 @@ sctp_lower_sosend(struct socket *so,
 			sctp_log_block(SCTP_BLOCK_LOG_OUTOF_BLK,
 				       so, asoc, stcb->asoc.total_output_queue_size);
 #endif
+		}
+		if(so->so_snd.sb_hiwat > stcb->asoc.total_output_queue_size) {
+			max_len = so->so_snd.sb_hiwat -  stcb->asoc.total_output_queue_size;
+		} else {
+			max_len = 0;
 		}
 		SOCKBUF_UNLOCK(&so->so_snd);		
 	}
