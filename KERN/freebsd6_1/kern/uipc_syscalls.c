@@ -2272,7 +2272,7 @@ int sctp_generic_sendmsg(td, uap)
 					     } */ *uap;
 {
 #ifdef SCTP
-	struct sctp_sndrcvinfo sinfo, *u_sinfo;
+	struct sctp_sndrcvinfo sinfo, *u_sinfo=NULL;
 	struct socket *so;
 	struct file *fp;
 	int use_rcvinfo=1;
