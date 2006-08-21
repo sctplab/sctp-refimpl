@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.67 2006-08-21 16:35:19 tuexen Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.68 2006-08-21 20:18:18 randall Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -3515,7 +3515,8 @@ cmd_getstat(char *argv[], int argc)
 	p(sctps_recvivalhmacid,      "ivalhmacid");
 	p(sctps_recvivalkeyid,       "ivalkeyid");
 	p(sctps_recvauthfailed,      "authfailed");
-	p(sctps_recvexpress,         "expressb");
+	p(sctps_recvexpress,         "expressd");
+	p(sctps_recvexpressm,        "expressdm");
 	nl("SEND");
 	p(sctps_sendpackets,         "packets");
 	p(sctps_sendsacks,           "sacks");
