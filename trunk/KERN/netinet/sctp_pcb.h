@@ -428,6 +428,7 @@ struct sctp_inpcb {
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
 	struct mtx inp_mtx;
 	struct mtx inp_create_mtx;
+	struct mtx inp_rdata_mtx;
 	int32_t refcount;
 #endif
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
@@ -577,6 +578,20 @@ struct sctp_tcb {
  * we want to change something at the endpoint level for example random_store
  * or cookie secrets we lock the INP level.
  */
+
+#define SCTP_INP_READ_INIT(_inp) \
+	mtx_init(&(_inp)->inp_rdata_mtx, "sctp-read", "inpr", MTX_DEF | MTX_DUPOK)
+
+#define SCTP_INP_READ_DESTROY(_inp) \
+	mtx_destroy(&(_inp)->inp_rdata_mtx)
+
+#define SCTP_INP_READ_LOCK(_inp)	do { \
+        mtx_lock(&(_inp)->inp_rdata_mtx);    \
+} while (0)
+
+#define SCTP_INP_READ_UNLOCK(_inp)		mtx_unlock(&(_inp)->inp_rdata_mtx)
+
+
 #define SCTP_INP_LOCK_INIT(_inp) \
 	mtx_init(&(_inp)->inp_mtx, "sctp-inp", "inp", MTX_DEF | MTX_DUPOK)
 #define SCTP_ASOC_CREATE_LOCK_INIT(_inp) \
@@ -758,6 +773,12 @@ struct sctp_tcb {
 #define SCTP_ASOC_CREATE_LOCK(_inp)
 #define SCTP_ASOC_CREATE_UNLOCK(_inp)
 
+#define SCTP_INP_READ_INIT(_inp)
+#define SCTP_INP_READ_DESTROY(_inp)
+#define SCTP_INP_READ_LOCK(_inp)
+#define SCTP_INP_READ_UNLOCK(_inp)
+
+
 /* Lock for TCB */
 #define SCTP_TCB_LOCK_INIT(_tcb)
 #define SCTP_TCB_LOCK_DESTROY(_tcb)
@@ -813,10 +834,17 @@ struct sctp_tcb {
 #define SCTP_INP_INCR_REF(_inp)
 #define SCTP_INP_DECR_REF(_inp)
 #define SCTP_INP_WUNLOCK(_inp)
+
 #define SCTP_ASOC_CREATE_LOCK_INIT(_inp)
 #define SCTP_ASOC_CREATE_LOCK_DESTROY(_inp)
 #define SCTP_ASOC_CREATE_LOCK(_inp)
 #define SCTP_ASOC_CREATE_UNLOCK(_inp)
+
+#define SCTP_INP_READ_INIT(_inp)
+#define SCTP_INP_READ_DESTROY(_inp)
+#define SCTP_INP_READ_LOCK(_inp)
+#define SCTP_INP_READ_UNLOCK(_inp)
+
 /* Lock for TCB */
 
 #define SCTP_TCB_LOCK_INIT(_tcb)
