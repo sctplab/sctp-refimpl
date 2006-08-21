@@ -217,7 +217,7 @@ sctp_fill_pcbinfo(struct sctp_pcbinfo *spcb)
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 /*
  * sctppcbinfo.ipi_ep_mtx must be locked by the caller. *inp_p->sctp_socket
- * is must be locked and might be unloccked if *inp_p changes. However,
+ * must be locked and might be unloccked if *inp_p changes. However,
  * the returned *inp_p will be locked then.
  */ 
 #endif
@@ -1172,11 +1172,6 @@ sctp_findassociation_addr_sa(struct sockaddr *to, struct sockaddr *from,
 		}
 		if (retval != NULL) {
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			if (inp_p != NULL) {
-				socket_lock((*inp_p)->ip_inp.inp.inp_socket, 1);
-			} else {
-				socket_lock(inp->ip_inp.inp.inp_socket, 1);
-			}
 			lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
 #endif
 			SCTP_INP_INFO_RUNLOCK();
