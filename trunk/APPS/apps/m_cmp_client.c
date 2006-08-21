@@ -425,7 +425,6 @@ measure_one(struct control_info *req,
 #ifndef WIN32
 	char controlbuf[3000];
 	struct sockaddr_in from;
-	struct sctp_sndrcvinfo sinfo;
 	int notification;
 	socklen_t flen;
 	struct msghdr msg;
@@ -566,9 +565,10 @@ measure_one(struct control_info *req,
 			goto exit_now;
 #else
 		if(protocol_touse == IPPROTO_SCTP) {
+			flen = 0;
 			ret = sctp_recvmsg (fd, buffer, sizeof(buffer), 	
-					    (struct sockaddr *)&from,
-					    &flen, &sinfo, &msg.msg_flags);
+					    (struct sockaddr *)NULL,
+					    &flen, NULL, &msg.msg_flags);
 		}
 		else
 			ret = recvmsg(fd,&msg,0);
