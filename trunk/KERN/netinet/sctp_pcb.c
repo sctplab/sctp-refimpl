@@ -904,7 +904,7 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 	 */
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_PCB1) {
-		printf("Ok, there is NO bound-all available for port:%x\n", ntohs(lport));
+		printf("Ok, there is NO bound-all available for port:%d\n", ntohs(lport));
 	}
 #endif
 	LIST_FOREACH(inp, head, sctp_hash) {
