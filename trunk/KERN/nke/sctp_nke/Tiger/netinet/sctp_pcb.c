@@ -904,7 +904,7 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 	 */
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_PCB1) {
-		printf("Ok, there is NO bound-all available for port:%x\n", ntohs(lport));
+		printf("Ok, there is NO bound-all available for port:%d\n", ntohs(lport));
 	}
 #endif
 	LIST_FOREACH(inp, head, sctp_hash) {
@@ -1899,6 +1899,7 @@ sctp_inpcb_alloc(struct socket *so)
 #endif
 	SCTP_INP_INFO_WLOCK();
 	SCTP_INP_LOCK_INIT(inp);
+	SCTP_INP_READ_INIT(inp);
 	SCTP_ASOC_CREATE_LOCK_INIT(inp);
 	/* lock the new ep */
 	SCTP_INP_WLOCK(inp);
@@ -3210,6 +3211,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	}
 	/* Now we must put the ep memory back into the zone pool */
 	SCTP_INP_LOCK_DESTROY(inp);
+	SCTP_INP_READ_DESTROY(inp);
 	SCTP_ASOC_CREATE_LOCK_DESTROY(inp);
 	SCTP_INP_INFO_WUNLOCK();
 
