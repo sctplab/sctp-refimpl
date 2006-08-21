@@ -140,10 +140,10 @@ __FBSDID("$FreeBSD:$");
 	{ "nr_outgoing_streams", CTLTYPE_INT }, \
 	{ "cmt_on_off", CTLTYPE_INT }, \
 	{ "cwnd_maxburst", CTLTYPE_INT }, \
-        { "early_fast_retran", CTLTYPE_INT }, \
-        { "use_rttvar_congctrl", CTLTYPE_INT }, \
-        { "deadlock_detect", CTLTYPE_INT }, \
-        { "early_fast_retran_msec", CTLTYPE_INT }, \
+	{ "early_fast_retran", CTLTYPE_INT }, \
+	{ "use_rttvar_congctrl", CTLTYPE_INT }, \
+	{ "deadlock_detect", CTLTYPE_INT }, \
+	{ "early_fast_retran_msec", CTLTYPE_INT }, \
 	{ "asconf_auth_nochk", CTLTYPE_INT }, \
 	{ "auth_disable", CTLTYPE_INT }, \
 	{ "auth_random_len", CTLTYPE_INT }, \
@@ -193,10 +193,10 @@ __FBSDID("$FreeBSD:$");
 	{ "nr_outgoing_streams", CTLTYPE_INT }, \
 	{ "cmt_on_off", CTLTYPE_INT }, \
 	{ "cwnd_maxburst", CTLTYPE_INT }, \
-        { "early_fast_retran", CTLTYPE_INT }, \
-        { "use_rttvar_congctrl", CTLTYPE_INT }, \
-        { "deadlock_detect", CTLTYPE_INT }, \
-        { "early_fast_retran_msec", CTLTYPE_INT }, \
+	{ "early_fast_retran", CTLTYPE_INT }, \
+	{ "use_rttvar_congctrl", CTLTYPE_INT }, \
+	{ "deadlock_detect", CTLTYPE_INT }, \
+	{ "early_fast_retran_msec", CTLTYPE_INT }, \
 	{ "asconf_auth_nochk", CTLTYPE_INT }, \
 	{ "auth_disable", CTLTYPE_INT }, \
 	{ "auth_random_len", CTLTYPE_INT }, \
@@ -266,7 +266,7 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
         if(stcb) {\
           if((stcb)->asoc.sb_cc >= (m)->m_len) {\
              atomic_subtract_int(&(stcb)->asoc.sb_cc,(m)->m_len); \
-          } else  {\
+          } else {\
              (stcb)->asoc.sb_cc = 0; \
           } \
           if((stcb)->asoc.sb_mbcnt >= MSIZE) { \
@@ -275,7 +275,8 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 	  if ((m)->m_flags & M_EXT) { \
 		if((stcb)->asoc.sb_mbcnt >= (m)->m_ext.ext_size) { \
 		   atomic_subtract_int(&(stcb)->asoc.sb_mbcnt,(m)->m_ext.ext_size); \
-                } else  { \
+                } else { \
+		   panic("assoc stcb->mbcnt would go negative"); \
 		   (stcb)->asoc.sb_mbcnt = 0; \
                 } \
           } \
@@ -288,17 +289,17 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
  	   if ((m)->m_flags & M_EXT) { \
 		if((sb)->sb_mbcnt >= (m)->m_ext.ext_size) { \
 		   atomic_subtract_int(&(sb)->sb_mbcnt,(m)->m_ext.ext_size); \
-                } else  { \
+                } else { \
 		   (sb)->sb_mbcnt = 0; \
                 } \
             } \
-        } else  { \
+        } else { \
             (sb)->sb_mbcnt = 0; \
         } \
 }
 
 
-#define sctp_sballoc(stcb, sb, m)  { \
+#define sctp_sballoc(stcb, sb, m) { \
 	atomic_add_int(&(sb)->sb_cc,(m)->m_len); \
         if(stcb) { \
   	  atomic_add_int(&(stcb)->asoc.sb_cc,(m)->m_len); \
@@ -317,68 +318,68 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 #else				/* FreeBSD Version < 500000  */
 
 #define sctp_sbfree(stcb, sb, m) { \
-        if((sb)->sb_cc >= (uint32_t)(m)->m_len) { \
-  	   atomic_subtract_int(&(sb)->sb_cc,(m)->m_len); \
-        } else { \
-           (sb)->sb_cc = 0; \
-        } \
-        if(stcb) {\
-          if((stcb)->asoc.sb_cc >= (uint32_t)(m)->m_len) {\
-             atomic_subtract_int(&(stcb)->asoc.sb_cc,(m)->m_len); \
-          } else  {\
-             (stcb)->asoc.sb_cc = 0; \
-          } \
-          if((stcb)->asoc.sb_mbcnt >= MSIZE) { \
-             atomic_subtract_int(&(stcb)->asoc.sb_mbcnt, MSIZE); \
-          } \
-	  if ((m)->m_flags & M_EXT) { \
-		if((stcb)->asoc.sb_mbcnt >= (m)->m_ext.ext_size) { \
-		   atomic_subtract_int(&(stcb)->asoc.sb_mbcnt,(m)->m_ext.ext_size); \
-                } else  { \
-                   panic("assoc stcb->mbcnt would go negative"); \
-		   (stcb)->asoc.sb_mbcnt = 0; \
-                } \
-          } \
-        } \
-        if((sb)->sb_mbcnt >= MSIZE) { \
-           (sb)->sb_mbcnt -= MSIZE; \
-	    if ((m)->m_flags & M_EXT) { \
-		if((sb)->sb_mbcnt >= (uint32_t)(m)->m_ext.ext_size) { \
-		   atomic_subtract_int(&(sb)->sb_mbcnt,(m)->m_ext.ext_size); \
-                } else  { \
-		   (sb)->sb_mbcnt = 0; \
-                } \
-            } \
-        } else  { \
-            (sb)->sb_mbcnt = 0; \
-        } \
+	if ((sb)->sb_cc >= (uint32_t)(m)->m_len) { \
+		atomic_subtract_int(&(sb)->sb_cc, (m)->m_len); \
+	} else { \
+		(sb)->sb_cc = 0; \
+	} \
+	if (stcb) { \
+		if ((stcb)->asoc.sb_cc >= (uint32_t)(m)->m_len) { \
+			atomic_subtract_int(&(stcb)->asoc.sb_cc, (m)->m_len); \
+		} else { \
+			(stcb)->asoc.sb_cc = 0; \
+		} \
+		if ((stcb)->asoc.sb_mbcnt >= MSIZE) { \
+			atomic_subtract_int(&(stcb)->asoc.sb_mbcnt, MSIZE); \
+		} \
+		if ((m)->m_flags & M_EXT) { \
+			if ((stcb)->asoc.sb_mbcnt >= (m)->m_ext.ext_size) { \
+				atomic_subtract_int(&(stcb)->asoc.sb_mbcnt, (m)->m_ext.ext_size); \
+			} else { \
+				panic("assoc stcb->mbcnt would go negative"); \
+				(stcb)->asoc.sb_mbcnt = 0; \
+			} \
+		} \
+	} \
+	if ((sb)->sb_mbcnt >= MSIZE) { \
+		atomic_subtract_int(&(sb)->sb_mbcnt, MSIZE); \
+		if ((m)->m_flags & M_EXT) { \
+			if ((sb)->sb_mbcnt >= (uint32_t)(m)->m_ext.ext_size) { \
+				atomic_subtract_int(&(sb)->sb_mbcnt, (m)->m_ext.ext_size); \
+			} else { \
+				(sb)->sb_mbcnt = 0; \
+			} \
+		} \
+	} else { \
+		(sb)->sb_mbcnt = 0; \
+	} \
 }
 
-#define sctp_sballoc(stcb, sb, m)  { \
-	(sb)->sb_cc += (m)->m_len; \
-        if(stcb) { \
-  	  atomic_add_int(&(stcb)->asoc.sb_cc,(m)->m_len); \
-          atomic_add_int(&(stcb)->asoc.sb_mbcnt,MSIZE); \
-	  if ((m)->m_flags & M_EXT) \
-		atomic_add_int(&(stcb)->asoc.sb_mbcnt,(m)->m_ext.ext_size); \
-        } \
-	atomic_add_int(&(sb)->sb_mbcnt,MSIZE); \
-	 if ((m)->m_flags & M_EXT) \
-		atomic_add_int(&(sb)->sb_mbcnt,(m)->m_ext.ext_size); \
+#define sctp_sballoc(stcb, sb, m) { \
+	atomic_add_int(&(sb)->sb_cc, (m)->m_len); \
+	if (stcb) { \
+		atomic_add_int(&(stcb)->asoc.sb_cc, (m)->m_len); \
+		atomic_add_int(&(stcb)->asoc.sb_mbcnt, MSIZE); \
+		if ((m)->m_flags & M_EXT) \
+			atomic_add_int(&(stcb)->asoc.sb_mbcnt, (m)->m_ext.ext_size); \
+	} \
+	atomic_add_int(&(sb)->sb_mbcnt, MSIZE); \
+	if ((m)->m_flags & M_EXT) \
+		atomic_add_int(&(sb)->sb_mbcnt, (m)->m_ext.ext_size); \
 }
 
 #endif
 
 #define sctp_ucount_incr(val) { \
-             val++; \
+	val++; \
 }
 
 #define sctp_ucount_decr(val) { \
-             if(val > 0) { \
-                val--; \
-             } else {  \
-                val = 0; \
-             } \
+	if (val > 0) { \
+		val--; \
+	} else { \
+		val = 0; \
+	} \
 }
 
 
