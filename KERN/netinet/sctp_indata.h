@@ -57,6 +57,34 @@ sctp_build_readq_entry(struct sctp_tcb *stcb,
     uint16_t stream_seq, uint8_t flags,
     struct mbuf *dm);
 
+
+#define sctp_build_readq_entry_mac(_ctl, in_it, a, net, tsn, ppid, context, stream_no, stream_seq, flags, dm) do { \
+	_ctl = (struct sctp_queued_to_read *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_readq); \
+	if (_ctl) { \
+		(_ctl)->sinfo_context = a; \
+		(_ctl)->stcb = (in_it); \
+		(_ctl)->sinfo_assoc_id = sctp_get_associd((in_it)); \
+		(_ctl)->port_from = (in_it)->rport; \
+		(_ctl)->sinfo_stream = stream_no; \
+		(_ctl)->sinfo_ssn = stream_seq; \
+		(_ctl)->sinfo_flags = (flags << 8); \
+		(_ctl)->sinfo_ppid = ppid; \
+		(_ctl)->sinfo_timetolive = 0; \
+		(_ctl)->sinfo_tsn = tsn; \
+		(_ctl)->sinfo_cumtsn = tsn; \
+		(_ctl)->whoFrom = net; \
+		(_ctl)->length = 0; \
+		atomic_add_int(&((net)->ref_count), 1); \
+		(_ctl)->data = dm; \
+		(_ctl)->tail_mbuf = NULL; \
+		(_ctl)->do_not_ref_stcb = 0; \
+		(_ctl)->end_added = 0; \
+		SCTP_INCR_READQ_COUNT(); \
+	} \
+} while (0)
+
+
+
 struct mbuf *
 sctp_build_ctl_nchunk(struct sctp_inpcb *inp,
     struct sctp_sndrcvinfo *sinfo);

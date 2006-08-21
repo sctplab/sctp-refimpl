@@ -1727,12 +1727,12 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		 */
 
 		/* It would be nice to avoid this copy if we could :< */
-		control = sctp_build_readq_entry(stcb, net, tsn,
-		    ch->dp.protocol_id,
-		    stcb->asoc.context,
-		    strmno, strmseq,
-		    ch->ch.chunk_flags,
-		    dmbuf);
+		sctp_build_readq_entry_mac(control, stcb, asoc->context, net, tsn,
+					   ch->dp.protocol_id,
+					   stcb->asoc.context,
+					   strmno, strmseq,
+					   ch->ch.chunk_flags,
+					   dmbuf);
 		if (control == NULL) {
 			goto failed_express_del;
 		}
@@ -1834,7 +1834,7 @@ failed_express_del:
 		atomic_add_int(&net->ref_count, 1);
 		chk->data = dmbuf;
 	} else {
-		control = sctp_build_readq_entry(stcb, net, tsn,
+		sctp_build_readq_entry_mac(control, stcb, asoc->context, net, tsn,
 		    ch->dp.protocol_id,
 		    stcb->asoc.context,
 		    strmno, strmseq,
