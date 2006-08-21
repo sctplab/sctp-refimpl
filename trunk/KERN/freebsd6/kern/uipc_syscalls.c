@@ -2253,7 +2253,7 @@ int sctp_generic_sendmsg(td, uap)
 					     } */ *uap;
 {
 #ifdef SCTP
-	struct sctp_sndrcvinfo sinfo;
+	struct sctp_sndrcvinfo sinfo, *u_sinfo=NULL;
 	struct socket *so;
 	struct file *fp;
 	int use_rcvinfo=1;
@@ -2265,9 +2265,12 @@ int sctp_generic_sendmsg(td, uap)
 	struct uio auio;
 	struct iovec *iov, *tiov;
 
-	error = copyin(uap->sinfo, &sinfo, sizeof (sinfo));
-	if (error)
-		return (error);
+	if(uap->sinfo) {
+		error = copyin(uap->sinfo, &sinfo, sizeof (sinfo));
+		if (error)
+			return (error);
+		u_sinfo = &sinfo;
+	}
 
 	if(uap->tolen) {
 		error = getsockaddr(&to, uap->to, uap->tolen);
@@ -2317,7 +2320,7 @@ int sctp_generic_sendmsg(td, uap)
 				 (struct mbuf *)NULL,
 				 uap->flags,
 				 use_rcvinfo,
-				 &sinfo,
+				 u_sinfo,
 				 td );
 	
 	if (error) {
@@ -2437,7 +2440,9 @@ int sctp_generic_recvmsg(td, uap)
 		    error == EINTR || error == EWOULDBLOCK))
 			error = 0;
 	} else {
-		error = copyout(&sinfo, uap->sinfo, sizeof (sinfo));
+		if(uap->sinfo) {
+			error = copyout(&sinfo, uap->sinfo, sizeof (sinfo));
+		}
 	}
 #ifdef KTRACE
 	if (ktruio != NULL) {
