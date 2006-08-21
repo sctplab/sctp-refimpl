@@ -4370,7 +4370,7 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far, int hold_rlock,
 	}
  out:
 	if(so && r_unlocked && hold_rlock) {
-/*		SCTP_STAT_INCR(sctps_locks_in_rcv);*/
+		SCTP_STAT_INCR(sctps_locks_in_rcv);
 		SCTP_INP_READ_LOCK(stcb->sctp_ep);
 	}
 
@@ -4565,6 +4565,7 @@ restart:
 		 */
 		hold_rlock = 1;
 		printf("Someone left garbage behind.. yuck!\n");
+		SCTP_STAT_INCR(sctps_locks_in_rcva);
 		SCTP_INP_READ_LOCK(inp);
 		if(control->data) {
 			/* Hmm there is data here .. fix */
@@ -4795,6 +4796,7 @@ get_more_data:
 			   (control->end_added == 0) &&
 			   (cp_len >= m->m_len)
 				) {
+				SCTP_STAT_INCR(sctps_locks_in_rcvb);
 				SCTP_INP_READ_LOCK(inp);
 				hold_rlock = 1;
 			}
@@ -4920,6 +4922,7 @@ get_more_data:
 					 * guy (which is the head of the queue).
 					 */
 					if(hold_rlock == 0) {
+						SCTP_STAT_INCR(sctps_locks_in_rcvc);
 						SCTP_INP_READ_LOCK(inp);
 						hold_rlock = 1;
 					}
@@ -5050,6 +5053,7 @@ wait_some_more:
 			/* still nothing here */
 			if (so->so_rcv.sb_cc) {
 				SCTP_INP_READ_LOCK(inp);
+				SCTP_STAT_INCR(sctps_locks_in_rcvd);
 				control->held_length += so->so_rcv.sb_cc;
 				so->so_rcv.sb_cc = 0;
 				SCTP_INP_READ_UNLOCK(inp);
