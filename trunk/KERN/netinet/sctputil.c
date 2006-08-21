@@ -4457,15 +4457,6 @@ sctp_sorecvmsg(struct socket *so,
 		rwnd_req = SCTP_MIN_RWND;
 	in_eeor_mode = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXPLICIT_EOR);
 
-#if defined(__FreeBSD__) && __FreeBSD_version > 500000
-	if (so->so_rcv.sb_cc) {
-		/* Can we get right to the reading with no locks? */
-		control = TAILQ_FIRST(&inp->read_queue);
-		if (control->length && control->data) {
-			goto found_one;
-		}
-	}
-#endif
 	SOCKBUF_LOCK(&so->so_rcv);
 	SCTP_STAT_INCR(sctps_locks_in_rcv);
 	hold_sblock = 1;
@@ -4476,6 +4467,12 @@ sctp_sorecvmsg(struct socket *so,
 	error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
 #endif
 
+#if defined(__FreeBSD__)
+	error = sblock(&so->so_rcv, (block_allowed ? M_WAITOK : 0));
+#endif
+	if(error) {
+		goto release_unlocked;
+	}
 restart:
 	if(hold_sblock == 0) {
 		SOCKBUF_LOCK(&so->so_rcv);
@@ -4485,9 +4482,14 @@ restart:
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	sbunlock(&so->so_rcv, 1);
 #endif
-#if defined (__NetBSD__)
+#if defined (__NetBSD__) 
 	sbunlock(&so->so_rcv);
 #endif
+
+#if defined(__FreeBSD__)
+	sbunlock(&so->so_rcv);
+#endif
+
 	if((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
 	   (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
 		goto out;
@@ -4535,6 +4537,10 @@ restart:
 #endif
 #if defined(__NetBSD__)
 	error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
+#endif
+
+#if defined(__FreeBSD__)
+	error = sblock(&so->so_rcv, (block_allowed ? M_WAITOK : 0));
 #endif
 	/* we possibly have data we can read */
 	control = TAILQ_FIRST(&inp->read_queue);
@@ -5003,10 +5009,14 @@ wait_some_more:
 				       so->so_rcv.sb_cc, 
 				       uio->uio_resid);
 #endif
-		printf("R:INP:%x goin to sbwait\n", (u_int)inp);
 		error = sbwait(&so->so_rcv);
-		if (error)
+		if (error){
+#ifdef __FreeBSD__
+			goto release;
+#else
 			goto release_unlocked;
+#endif
+		}
 
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
@@ -5099,12 +5109,21 @@ get_more_data2:
 			sbunlock(&so->so_rcv);
 #endif
 			error = sbwait(&so->so_rcv);
-			if (error)
+			if (error) {
+#ifdef __FreeBSD__
+				goto release;
+#else
 				goto release_unlocked;
+#endif
+			}
 
-			if(special_return)
+			if(special_return) {
+#ifdef __FreeBSD__
+				goto release;
+#else
 				goto release_unlocked;
-
+#endif
+			}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
 #endif
@@ -5224,12 +5243,22 @@ release:
 		    (no_rcv_needed == 0))
 			sctp_user_rcvd(stcb, &freed_so_far, hold_sblock, rwnd_req);
 	}
+	if(hold_sblock == 0) {
+		SOCKBUF_LOCK(&so->so_rcv);
+		SCTP_STAT_INCR(sctps_locks_in_rcvf);
+		hold_sblock = 1;
+	}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	sbunlock(&so->so_rcv, 1);
 #endif
 #if defined(__NetBSD__)
 	sbunlock(&so->so_rcv);
 #endif
+
+#if defined(__FreeBSD__)
+	sbunlock(&so->so_rcv);
+#endif
+
 release_unlocked:
 	if (msg_flags)
 		*msg_flags |= out_flags;
