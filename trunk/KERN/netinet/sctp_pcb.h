@@ -589,7 +589,9 @@ struct sctp_tcb {
         mtx_lock(&(_inp)->inp_rdata_mtx);    \
 } while (0)
 
-#define SCTP_INP_READ_UNLOCK(_inp)		mtx_unlock(&(_inp)->inp_rdata_mtx)
+#define SCTP_INP_TRY_READ_LOCK(_inp) mtx_trylock(&(_inp)->inp_rdata_mtx) 
+
+#define SCTP_INP_READ_UNLOCK(_inp) mtx_unlock(&(_inp)->inp_rdata_mtx)
 
 
 #define SCTP_INP_LOCK_INIT(_inp) \
@@ -777,7 +779,7 @@ struct sctp_tcb {
 #define SCTP_INP_READ_DESTROY(_inp)
 #define SCTP_INP_READ_LOCK(_inp)
 #define SCTP_INP_READ_UNLOCK(_inp)
-
+#define SCTP_INP_TRY_READ_LOCK(_inp)
 
 /* Lock for TCB */
 #define SCTP_TCB_LOCK_INIT(_tcb)
@@ -844,6 +846,7 @@ struct sctp_tcb {
 #define SCTP_INP_READ_DESTROY(_inp)
 #define SCTP_INP_READ_LOCK(_inp)
 #define SCTP_INP_READ_UNLOCK(_inp)
+#define SCTP_INP_TRY_READ_LOCK(_inp)
 
 /* Lock for TCB */
 

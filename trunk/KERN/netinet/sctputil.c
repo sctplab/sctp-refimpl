@@ -4923,8 +4923,17 @@ get_more_data:
 					 */
 					if(hold_rlock == 0) {
 						SCTP_STAT_INCR(sctps_locks_in_rcvc);
-						SCTP_INP_READ_LOCK(inp);
-						hold_rlock = 1;
+						if (SCTP_INP_TRY_READ_LOCK(inp)) {
+							/* got the lock */
+							SCTP_STAT_INCR(sctps_locks_in_rcvd);
+							hold_rlock = 1;
+						} else {
+							if(TAILQ_NEXT(control, next) == NULL) {
+								SCTP_STAT_INCR(sctps_locks_in_rcve);
+								SCTP_INP_READ_LOCK(inp);
+								hold_rlock = 1;
+							}
+						}
 					}
 				}
 				TAILQ_REMOVE(&inp->read_queue, control, next);
@@ -5006,7 +5015,6 @@ wait_some_more:
 		}
 		if(hold_sblock == 0) {
 			SOCKBUF_LOCK(&so->so_rcv);
-			SCTP_STAT_INCR(sctps_locks_in_rcvd);
 			hold_sblock = 1;
 		}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
@@ -5053,7 +5061,7 @@ wait_some_more:
 			/* still nothing here */
 			if (so->so_rcv.sb_cc) {
 				SCTP_INP_READ_LOCK(inp);
-				SCTP_STAT_INCR(sctps_locks_in_rcvd);
+				SCTP_STAT_INCR(sctps_locks_in_rcvf);
 				control->held_length += so->so_rcv.sb_cc;
 				so->so_rcv.sb_cc = 0;
 				SCTP_INP_READ_UNLOCK(inp);
@@ -5133,7 +5141,6 @@ get_more_data2:
 
 			if(hold_sblock == 0) {
 				SOCKBUF_LOCK(&so->so_rcv);
-				SCTP_STAT_INCR(sctps_locks_in_rcve);
 				hold_sblock = 1;
 			}
 			if(hold_rlock == 1) {
@@ -5295,7 +5302,6 @@ release:
 	}
 	if(hold_sblock == 0) {
 		SOCKBUF_LOCK(&so->so_rcv);
-		SCTP_STAT_INCR(sctps_locks_in_rcvf);
 		hold_sblock = 1;
 	}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
