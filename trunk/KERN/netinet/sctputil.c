@@ -4456,10 +4456,18 @@ sctp_sorecvmsg(struct socket *so,
 	if(rwnd_req < SCTP_MIN_RWND)
 		rwnd_req = SCTP_MIN_RWND;
 	in_eeor_mode = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXPLICIT_EOR);
-
+#ifdef SCTP_RECV_RWND_LOGGING
+	sctp_misc_ints(SCTP_SORECV_ENTER,
+		       rwnd_req, in_eeor_mode, so->so_rcv.sb_cc, uio->uio_resid);
+#endif
 	SOCKBUF_LOCK(&so->so_rcv);
 	SCTP_STAT_INCR(sctps_locks_in_rcv);
 	hold_sblock = 1;
+#ifdef SCTP_RECV_RWND_LOGGING
+	sctp_misc_ints(SCTP_SORECV_ENTERPL,
+		       rwnd_req, block_allowed, so->so_rcv.sb_cc, uio->uio_resid);
+#endif
+	
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
 #endif
