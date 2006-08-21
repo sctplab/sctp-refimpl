@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.66 2006-08-18 22:00:44 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.67 2006-08-21 16:35:19 tuexen Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -100,6 +100,7 @@ int loop_sleep = 0;
 static int cmd_setloopsleep(char *argv[], int argc);
 static int cmd_getloopsleep(char *argv[], int argc);
 static int cmd_abort(char *argv[], int argc);
+static int cmd_abortassoc(char *argv[], int argc);
 static int cmd_addip(char *argv[], int argc);
 static int cmd_assoc(char *argv[], int argc);
 static int cmd_bindx(char *argv[], int argc);
@@ -260,6 +261,8 @@ static time_t time_started;
 static struct command commands[] = {
     {"abort", "abort - abort the existing association",
      cmd_abort},
+    {"abortasoc", "abortasoc id - abort the asoc with given id",
+     cmd_abortassoc},
     {"addip", "addip address how - add ip address where how is the mask/action to pass\n"
      "                    SCTP_ACTION_UPDATE_ALL_ASSOC=0x1\n"
      "                    SCTP_ACTION_UPDATE_ENDPOINT=0x02\n"
@@ -2608,6 +2611,28 @@ cmd_abort(char *argv[], int argc)
     memset(buf, 0, sizeof(buf));
     return (sctpSEND(adap->fd, 0, buf, 0, SCTP_getAddr(NULL), SCTP_ABORT,
 		     0, 0));
+}
+
+static int
+cmd_abortassoc(char *argv[], int argc)
+{
+    int fd = adap->fd;
+    int ret;
+    uint32_t aaa;
+    sctp_assoc_t asoc;
+    if (argc != 1) {
+	printf("abortasoc: expected 1 argument\n");
+	return -1;
+    }
+    aaa = strtoul(argv[0], NULL, 0);
+    if(aaa == 0) {
+	    printf("Sorry asocid 0 never valid\n");
+	    return -1;
+    }
+    asoc = (sctp_assoc_t)aaa;
+    ret = sctpsend_associd(fd, asoc, NULL, 0, SCTP_ABORT, 0);
+    printf("sctpsend_associd returned %d from the send\n",ret);
+    return 0;
 }
 
 /* assoc - associate with the set destination
