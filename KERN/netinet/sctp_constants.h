@@ -137,10 +137,12 @@ __FBSDID("$FreeBSD:$");
 #define SCTP_SORECV_BLOCKSB         85
 #define SCTP_SORECV_DONE            86
 #define SCTP_SACK_RWND_UPDATE       87
-#define SCTP_UNKNOWN_MAX            88
+#define SCTP_SORECV_ENTER           88
+#define SCTP_SORECV_ENTERPL         89
+#define SCTP_UNKNOWN_MAX            90
 
 
-#define SCTP_LOG_MAX_TYPES 89
+#define SCTP_LOG_MAX_TYPES 91
 /*
  * To turn on various logging, you must first define SCTP_STAT_LOGGING. Then
  * to get something to log you define one of the logging defines i.e.
