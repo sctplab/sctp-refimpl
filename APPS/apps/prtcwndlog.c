@@ -136,12 +136,16 @@ static char *from_str[]= {
 	/* 84 */ "sorecv blocks on entry",
 	/* 85 */ "sorecv blocks for more",
 	/* 86 */ "sorecv done",
-	/* 87 */ "unknown"
-
-
+	/* 87 */ "sack-rwnd update",
+	/* 88 */ "enter sorecv",
+	/* 89 */ "enter sorecv pl",
+	/* 90 */ "unknown"
 };
-#define FROM_STRING_MAX 87
+#define FROM_STRING_MAX 90
 
+int graph_mode = 0;
+int comma_sep = 0;
+int first_time = 1;
 
 static uint32_t cnt_event[SCTP_LOG_MAX_EVENT];
 static uint32_t cnt_type[SCTP_LOG_MAX_TYPES];
@@ -150,18 +154,47 @@ main(int argc, char **argv)
 {
 	int stat_only=0,i;
 	char ts[100];
-	FILE *out;
+	FILE *out, *io=NULL;
 	char *logfile=NULL;
+	uint32_t first_timeevent_sec;
+	uint32_t first_timeevent_usec;
+	int seen_time=0;
+	int time_relative = 0;
+	int relative_to_each = 0;
+	int32_t prev_time = 0;
 	int at;
 	struct sctp_cwnd_log log;
-	while((i= getopt(argc,argv,"l:s")) != EOF)
+	while((i= getopt(argc,argv,"l:sgc:rR")) != EOF)
 	{
 		switch(i) {
+		case 'r':
+			time_relative = 1;
+			break;
+		case 'R':
+			time_relative = 1;
+			relative_to_each = 1;
+			break;
 		case 'l':
 			logfile = optarg;
 			break;
 		case 's':
 			stat_only = 1;
+			break;
+		case 'g':
+			graph_mode = 1;
+			break;
+		case 'c': 
+		{
+			char fname[100];
+			sprintf(fname, "%s.csv", optarg);
+			io = fopen(fname, "w+");
+			if(io == NULL) {
+				fprintf(stderr,"Can't open %s for writing, sorry\n",
+					fname);
+				exit(-1);
+			}
+			comma_sep = 1;
+		}
 			break;
 		default:
 			break;
@@ -194,9 +227,38 @@ main(int argc, char **argv)
 				printf("Event type %d greater than max\n", log.event_type);
 			continue;
 		}
-		sprintf(ts, "%d.%6.6d",
-			((log.time_event >> 20) & 0x0fff),
-			((log.time_event & 0x000fffff)));
+		if(time_relative == 0){ 
+			sprintf(ts, "%d.%6.6d",
+				((log.time_event >> 20) & 0x0fff),
+				((log.time_event & 0x000fffff)));
+		} else {
+			uint32_t sec, usec;
+			if (seen_time == 0) {
+				first_timeevent_sec = (log.time_event >> 20) & 0x0fff;
+				first_timeevent_usec = (log.time_event & 0x000fffff);
+				seen_time = 1;
+			} else if (relative_to_each){
+				first_timeevent_sec = (prev_time >> 20) & 0x0fff;
+				first_timeevent_usec = (prev_time & 0x000fffff);
+			}
+			sec = (log.time_event >> 20) & 0x0fff;
+			usec = (log.time_event & 0x000fffff);
+			if(sec > first_timeevent_sec) {
+				/* do we need to borrow? */
+				if(first_timeevent_usec > usec) {
+					/* a borrow is in order */
+					sec--;
+					usec += 1000000;
+				}
+				sec -= first_timeevent_sec;
+				usec -= first_timeevent_usec;
+			} else {
+				sec -= first_timeevent_sec;
+				usec -= first_timeevent_usec;
+			}
+			prev_time = log.time_event;
+			sprintf(ts, "%d.%6.6d", sec, usec);
+		}
 		if(log.event_type == SCTP_LOG_EVENT_CWND) {
 			if((log.from == SCTP_CWND_LOG_NOADV_CA) ||
 			   (log.from == SCTP_CWND_LOG_NOADV_SS)) {
@@ -649,13 +711,43 @@ main(int argc, char **argv)
 				       log.x.misc.log2,
 				       log.x.misc.log3,
 				       log.x.misc.log4);
-			} else if (log.from == SCTP_SACK_RWND_UPDATE) {
-				printf("%s s-rwnd:%d calc_rwnd:%d  flight:%d cumacktsn:%x\n",
+			} else if (log.from == SCTP_SORECV_ENTER) {
+				printf("%s enter srcv rwndreq:%d ieeor:%d sb_cc:%d uioreq:%d \n",
 				       ts,
 				       log.x.misc.log1,
 				       log.x.misc.log2,
 				       log.x.misc.log3,
 				       log.x.misc.log4);
+			} else if (log.from == SCTP_SORECV_ENTERPL) {
+				printf("%s pass_lock rwndreq:%d canblk:%d sb_cc:%d uioreq:%d \n",
+				       ts,
+				       log.x.misc.log1,
+				       log.x.misc.log2,
+				       log.x.misc.log3,
+				       log.x.misc.log4);
+			} else if (log.from == SCTP_SACK_RWND_UPDATE) {
+				if(comma_sep) {
+					if(first_time) {
+						fprintf(io, "TS,RWND,A-RWND,FLIGHT\n");
+						first_time = 0;
+					}
+					fprintf(io,"%s,%d,%d,%d\n",
+						ts, 
+						log.x.misc.log2, 
+						log.x.misc.log1,
+						log.x.misc.log3);
+				} else if(graph_mode) {
+					printf("RWND:%s %d\n", ts, log.x.misc.log2);
+					printf("ARWND:%s %d\n",ts, log.x.misc.log1);
+					printf("FLIGHT:%s %d\n", ts, log.x.misc.log3);
+				} else {
+					printf("%s s-rwnd:%d calc_rwnd:%d  flight:%d cumacktsn:%x\n",
+					       ts,
+					       log.x.misc.log1,
+					       log.x.misc.log2,
+					       log.x.misc.log3,
+					       log.x.misc.log4);
+				}
 			} else {
 				printf("%s:%s log1:%u log2:%u log3:%u log4:%u\n",
 				       ts,
@@ -835,6 +927,10 @@ main(int argc, char **argv)
 		for(i=0;i<SCTP_LOG_MAX_TYPES;i++) {
 			printf("%s = %u\n", from_str[i], cnt_type[i]);
 		}
+	}
+	if(io) {
+		fclose(io);
+		io = NULL;
 	}
 	return(0);
 }
