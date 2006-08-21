@@ -1786,7 +1786,7 @@ failed_express_del:
 				printf("Append fails end:%d\n", end);
 				goto failed_pdapi_express_del;
 			}
-			SCTP_STAT_INCR(sctps_recvexpress);
+			SCTP_STAT_INCR(sctps_recvexpressm);
 			control->sinfo_tsn = tsn;
 			asoc->tsn_last_delivered = tsn;
 			asoc->fragment_flags = ch->ch.chunk_flags;
