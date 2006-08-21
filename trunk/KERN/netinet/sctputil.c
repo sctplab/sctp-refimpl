@@ -4923,17 +4923,8 @@ get_more_data:
 					 */
 					if(hold_rlock == 0) {
 						SCTP_STAT_INCR(sctps_locks_in_rcvc);
-						if (SCTP_INP_TRY_READ_LOCK(inp)) {
-							/* got the lock */
-							SCTP_STAT_INCR(sctps_locks_in_rcvd);
-							hold_rlock = 1;
-						} else {
-							if(TAILQ_NEXT(control, next) == NULL) {
-								SCTP_STAT_INCR(sctps_locks_in_rcve);
-								SCTP_INP_READ_LOCK(inp);
-								hold_rlock = 1;
-							}
-						}
+						SCTP_INP_READ_LOCK(inp);
+						hold_rlock = 1;
 					}
 				}
 				TAILQ_REMOVE(&inp->read_queue, control, next);
@@ -5020,9 +5011,6 @@ wait_some_more:
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		sbunlock(&so->so_rcv, 1);
 #endif
-#if defined (__NetBSD__)
-		sbunlock(&so->so_rcv);
-#endif
 		if(hold_rlock == 1) {
 			SCTP_INP_READ_UNLOCK(inp);
 			hold_rlock = 0;
@@ -5043,7 +5031,7 @@ wait_some_more:
 #endif
 		error = sbwait(&so->so_rcv);
 		if (error){
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__NetBSD__)
 			goto release;
 #else
 			goto release_unlocked;
@@ -5053,10 +5041,6 @@ wait_some_more:
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
 #endif
-#if defined(__NetBSD__)
-		error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
-#endif
-
 		if (control->length == 0) {
 			/* still nothing here */
 			if (so->so_rcv.sb_cc) {
@@ -5150,12 +5134,9 @@ get_more_data2:
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			sbunlock(&so->so_rcv, 1);
 #endif
-#if defined(__NetBSD__)
-			sbunlock(&so->so_rcv);
-#endif
 			error = sbwait(&so->so_rcv);
 			if (error) {
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__NetBSD__)
 				goto release;
 #else
 				goto release_unlocked;
@@ -5163,16 +5144,13 @@ get_more_data2:
 			}
 
 			if(special_return) {
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__NetBSD__)
 				goto release;
 #else
 				goto release_unlocked;
 #endif
 			}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
-#endif
-#if defined(__NetBSD__)
 			error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
 #endif
 			if (control->length == 0) {
