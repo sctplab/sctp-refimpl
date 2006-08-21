@@ -4402,6 +4402,7 @@ sctp_sorecvmsg(struct socket *so,
 	 * 
 	 */
 	struct sctp_inpcb *inp;
+	int my_len;
 	int cp_len, error = 0;
 	struct sctp_queued_to_read *control, *ctl, *nxt;
 	struct mbuf *m;
@@ -4450,6 +4451,10 @@ sctp_sorecvmsg(struct socket *so,
 #else
 	s = splnet();
 #endif
+	rwnd_req = (so->so_rcv.sb_hiwat >> SCTP_RWND_HIWAT_SHIFT);
+	/* Must be at least a MTU's worth */
+	if(rwnd_req < SCTP_MIN_RWND)
+		rwnd_req = SCTP_MIN_RWND;
 	in_eeor_mode = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXPLICIT_EOR);
 
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
@@ -4538,6 +4543,7 @@ restart:
 		so->so_rcv.sb_cc = 0;
 		goto restart;
 	}
+#ifdef INVARIENTS
 	if ((control->length == 0) && 
 	    (control->do_not_ref_stcb)) {
 		/* Bad stcb leaves behind 
@@ -4573,30 +4579,31 @@ restart:
 		}
 		goto restart;
 	}
-	if ((control->length == 0) &&
-	    (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE)) &&
-	    (filling_sinfo)) {
-		/* find a more suitable one then this */
-		ctl = TAILQ_NEXT(control, next);
-		while (ctl) {
-			if ((ctl->stcb != control->stcb) && (ctl->length)) {
-				/* found one */
-				control = ctl;
-				goto found_one;
+#endif
+	if (control->length == 0) {
+		if((sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE)) &&
+		   (filling_sinfo)) {
+			/* find a more suitable one then this */
+			ctl = TAILQ_NEXT(control, next);
+			while (ctl) {
+				if ((ctl->stcb != control->stcb) && (ctl->length)) {
+					/* found one */
+					control = ctl;
+					goto found_one;
+				}
+				ctl = TAILQ_NEXT(ctl, next);
 			}
-			ctl = TAILQ_NEXT(ctl, next);
+			/*
+			 * if we reach here, not suitable replacement is available
+			 * <or> fragment interleave is NOT on. So stuff the sb_cc
+			 * into the our held count, and its time to sleep again.
+			 */
+			control->held_length += so->so_rcv.sb_cc;
+			so->so_rcv.sb_cc = 0;
+		} else {
+			control->held_length += so->so_rcv.sb_cc;
+			so->so_rcv.sb_cc = 0;
 		}
-		/*
-		 * if we reach here, not suitable replacement is available
-		 * <or> fragment interleave is NOT on. So stuff the sb_cc
-		 * into the our held count, and its time to sleep again.
-		 */
-		control->held_length += so->so_rcv.sb_cc;
-		so->so_rcv.sb_cc = 0;
-		goto restart;
-	} else if (control->length == 0) {
-		control->held_length += so->so_rcv.sb_cc;
-		so->so_rcv.sb_cc = 0;
 		goto restart;
 	}
 found_one:
@@ -4604,40 +4611,34 @@ found_one:
 	 * If we reach here, control has a some data for us to read off.
 	 * Note that stcb COULD be NULL.
 	 */
-
-	rwnd_req = (so->so_rcv.sb_hiwat >> SCTP_RWND_HIWAT_SHIFT);
-
-	/* Must be at least a MTU's worth */
-	if(rwnd_req < SCTP_MIN_RWND)
-		rwnd_req = SCTP_MIN_RWND;
-
 	stcb = control->stcb;
-	if((stcb) && 
-	   (control->do_not_ref_stcb == 0) &&
-	   (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED)) {
-		stcb = NULL;
-	}
-	/* you can't free it on me please */
-	if ((stcb) && 
-	    (control->do_not_ref_stcb == 0)) {
-		/*
-		 * The lock on the socket buffer protects us so the free
-		 * code will stop. But since we used the socketbuf lock and
-		 * the sender uses the tcb_lock to increment, we need to use
-		 * the atomic add to the refcnt
-		 */
-		atomic_add_16(&stcb->asoc.refcnt, 1);
-		freecnt_applied = 1;
-		/* Setup to remember how much we have not yet told
-		 * the peer our rwnd has opened up. Note we clear
-		 * the value so that our first add in, if there is
-		 * one will not double the size. Note too that 
-		 * sack sending clears this when a sack is
-		 * sent.. which is fine.
-		 */
-		freed_so_far = stcb->freed_by_sorcv_sincelast;
-		stcb->freed_by_sorcv_sincelast = 0;
-	}
+	if (stcb) {
+		if((stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) &&
+		    (control->do_not_ref_stcb == 0)) {
+			stcb = NULL;
+		} else if (control->do_not_ref_stcb == 0) {
+			/* you can't free it on me please */
+			/*
+			 * The lock on the socket buffer protects us so the free
+			 * code will stop. But since we used the socketbuf lock and
+			 * the sender uses the tcb_lock to increment, we need to use
+			 * the atomic add to the refcnt
+			 */
+			atomic_add_16(&stcb->asoc.refcnt, 1);
+			freecnt_applied = 1;
+			/* Setup to remember how much we have not yet told
+			 * the peer our rwnd has opened up. Note we grab
+			 * the value from the tcb from last time.
+			 * Note too that sack sending clears this when a sack is
+			 * sent.. which is fine. Once we hit the rwnd_req, we
+			 * then will go to the sctp_user_rcvd() that will
+			 * not lock until it KNOWs it MUST send a WUP-SACK.
+			 *
+			 */
+			freed_so_far = stcb->freed_by_sorcv_sincelast;
+			stcb->freed_by_sorcv_sincelast = 0;
+		}
+        }
 	/* First lets get off the sinfo and sockaddr info */
 	if (sinfo) {
 		memcpy(sinfo, control, sizeof(struct sctp_nonpad_sndrcvinfo));
@@ -4718,10 +4719,10 @@ found_one:
 #endif
 #if defined(AF_INET6)
 		{
-			struct sockaddr_in6 lsa6;
+			struct sockaddr_in6 lsa6, *to6;
+			to6 = (struct sockaddr_in6 *)to;
+			sctp_recover_scope_mac(to6, (&lsa6));
 
-			to = (struct sockaddr *)sctp_recover_scope((struct sockaddr_in6 *)to,
-			    &lsa6);
 		}
 #endif
 	}
@@ -4733,9 +4734,10 @@ get_more_data:
 		while (m) {
 			/* Move out all we can */
 			cp_len = (int)uio->uio_resid;
-			if (cp_len > m->m_len) {
+			my_len = (int)m->m_len;
+			if (cp_len > my_len) {
 				/* not enough in this buf */
-				cp_len = (int)m->m_len;
+				cp_len = my_len;
 			}
 			if(hold_sblock) {
 				SOCKBUF_UNLOCK(&so->so_rcv);
@@ -4911,7 +4913,7 @@ get_more_data:
 			} else {
 				/*
 				 * The user did not read all of this
-				 * message, turn off the MSG_EOR since we
+				 * message, turn off the returned MSG_EOR since we
 				 * are leaving more behind on the control to
 				 * read.
 				 */
@@ -4920,23 +4922,11 @@ get_more_data:
 			}
 		}
 		if (out_flags & MSG_EOR) {
-			if ((stcb) && (in_flags & MSG_PEEK) == 0) {
-				if ((special_return == 0) &&
-				    (freed_so_far >= rwnd_req) &&
-				    (no_rcv_needed == 0))
-					sctp_user_rcvd(stcb, &freed_so_far, hold_sblock, rwnd_req);
-			}
 			goto release;
 		}
 		if ((uio->uio_resid == 0) ||
 		    ((in_eeor_mode) && (copied_so_far >= so->so_rcv.sb_lowat))
 			) {
-			if ((stcb) && (in_flags & MSG_PEEK) == 0) {
-				if ((special_return == 0) &&
-				    (freed_so_far >= rwnd_req) &&
-				    (no_rcv_needed == 0))
-					sctp_user_rcvd(stcb, &freed_so_far, hold_sblock, rwnd_req);
-			}
 			goto release;
 		}
 		/*
@@ -4946,11 +4936,6 @@ get_more_data:
 		 */
 		if ((block_allowed == 0) ||
 		    ((in_flags & MSG_WAITALL) == 0)) {
-			if ((stcb) && (in_flags & MSG_PEEK) == 0) {
-				if((special_return == 0) &&
-				    (no_rcv_needed == 0))
-					sctp_user_rcvd(stcb, &freed_so_far, hold_sblock, rwnd_req);
-			}
 			goto release;
 		}
 		/*
@@ -4958,14 +4943,7 @@ get_more_data:
 		 * Question? Did the user set FRAGMENT_INTERLEAVE? If they
 		 * did we CANNOT now wait-all.
 		 */
-
 		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE)) {
-			if ((stcb) && (in_flags & MSG_PEEK) == 0) {
-				if((special_return == 0) &&
-				   (freed_so_far >= rwnd_req) &&
-				   (no_rcv_needed == 0))
-					sctp_user_rcvd(stcb, &freed_so_far, hold_sblock, rwnd_req);
-			}
 			goto release;
 		}
 		/*
@@ -4975,7 +4953,9 @@ get_more_data:
 		 * is NOT to our control when we wakeup.
 		 */
 
-		/* Tell the transport a rwnd update might be needed */
+		/* Do we need to tell the transport a rwnd update might be needed 
+		 * before we go to sleep?
+		 */
 		if (((stcb) && (in_flags & MSG_PEEK) == 0) &&
 		    ((special_return == 0) &&
 		     (freed_so_far >= rwnd_req) &&
@@ -5086,12 +5066,6 @@ get_more_data2:
 			/* do we really support msg_waitall here? */
 			if ((block_allowed == 0) ||
 			    ((in_flags & MSG_WAITALL) == 0)) {
-				if (stcb) {
-					if ((special_return == 0) &&
-					    (freed_so_far >= rwnd_req) &&
-					    (no_rcv_needed == 0))
-						sctp_user_rcvd(stcb, &freed_so_far, hold_sblock, rwnd_req);
-				}
 				goto release;
 			}
 			/*
@@ -5101,12 +5075,6 @@ get_more_data2:
 			 * wait-all.
 			 */
 			if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE)) {
-				if (stcb) {
-					if ((special_return == 0) &&
-					    (freed_so_far >= rwnd_req) &&
-						(no_rcv_needed == 0))
-						sctp_user_rcvd(stcb, &freed_so_far, hold_sblock, rwnd_req);
-				}
 				goto release;
 			}
 	wait_some_more2:
@@ -5250,6 +5218,12 @@ get_more_data2:
 		}
 	}
 release:
+	if ((stcb) && (in_flags & MSG_PEEK) == 0) {
+		if ((special_return == 0) &&
+		    (freed_so_far >= rwnd_req) &&
+		    (no_rcv_needed == 0))
+			sctp_user_rcvd(stcb, &freed_so_far, hold_sblock, rwnd_req);
+	}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	sbunlock(&so->so_rcv, 1);
 #endif

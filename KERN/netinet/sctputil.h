@@ -249,6 +249,36 @@ struct sockaddr_in6 *
 sctp_recover_scope(struct sockaddr_in6 *,
     struct sockaddr_in6 *);
 
+
+
+
+#ifdef SCTP_KAME
+#define sctp_recover_scope_mac(addr, store) do { \
+			 if ((addr->sin6_family == AF_INET6) && \
+			     (IN6_IS_SCOPE_LINKLOCAL(&addr->sin6_addr)) && \
+			     (addr->sin6_scope_id == 0)) { \
+				*store = *addr; \
+				if (!sa6_recoverscope(store)) { \
+					addr = store; \
+				} \
+			 } \
+                      } while (0)
+
+#else
+#define sctp_recover_scope_mac(addr, store) do { \
+			 if ((addr->sin6_family == AF_INET6) && \
+			     (IN6_IS_SCOPE_LINKLOCAL(&addr->sin6_addr)) && \
+			     (addr->sin6_scope_id == 0)) { \
+				*store = *addr; \
+				if (!in6_recoverscope(store, &store->sin6_addr, \
+				    NULL)) { \
+					addr = store; \
+				} \
+			 } \
+                      } while (0)
+#endif
+
+
 int sctp_cmpaddr(struct sockaddr *, struct sockaddr *);
 
 void sctp_print_address(struct sockaddr *);
