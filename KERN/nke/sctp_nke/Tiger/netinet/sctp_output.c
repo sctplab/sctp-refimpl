@@ -6982,8 +6982,9 @@ sctp_clean_up_ctl(struct sctp_association *asoc)
 
 extern int sctp_min_split_point;
 
-static int
-sctp_can_we_split_this(struct sctp_stream_queue_pending *sp,
+static __inline int 
+sctp_can_we_split_this(struct sctp_tcb *stcb,
+		       struct sctp_stream_queue_pending *sp,
 		       int goal_mtu, int frag_point)
 {
 	/* Make a decision on if I should split a
@@ -6994,7 +6995,7 @@ sctp_can_we_split_this(struct sctp_stream_queue_pending *sp,
 		 * we may want to take it if 
 		 * it is big enough.
 		 */
-		if(sp->length > sctp_min_split_point) {
+		if(sp->length > min(sctp_min_split_point, stcb->asoc.smallest_mtu)) {
 			return (sp->length);
 		}
 	}
@@ -7002,7 +7003,7 @@ sctp_can_we_split_this(struct sctp_stream_queue_pending *sp,
 	 * than the goal_mtu. Do we wish to split
 	 * it for the sake of packet putting together?
 	 */
-	if (goal_mtu > sctp_min_split_point) {
+	if (goal_mtu > min(sctp_min_split_point, stcb->asoc.smallest_mtu)) {
 		/* Its ok to split it */
 		return(min(goal_mtu, frag_point));
 	}
@@ -7010,7 +7011,6 @@ sctp_can_we_split_this(struct sctp_stream_queue_pending *sp,
 	return(0);
 
 }
-
 
 extern int sctp_mbuf_threshold_count;
 
@@ -7145,7 +7145,8 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 			sp->some_taken = 1;
 		}
 	} else {
-		to_move = sctp_can_we_split_this(sp, goal_mtu, frag_point);
+		to_move = sctp_can_we_split_this(stcb, 
+						 sp, goal_mtu, frag_point);
 		if (to_move) {
 			if (to_move > sp->length) {
 				to_move = sp->length;

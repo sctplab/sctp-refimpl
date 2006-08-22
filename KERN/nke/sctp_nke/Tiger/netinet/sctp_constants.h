@@ -734,7 +734,27 @@ __FBSDID("$FreeBSD:$");
 #define SCTP_NOTIFY_SPECIAL_SP_FAIL     27
 #define SCTP_NOTIFY_MAX			27
 
-#define SCTP_DEFAULT_SPLIT_POINT_MIN 256
+/* This is the value for messages that are NOT completely
+ * copied down where we will start to split the message.
+ * So, with our default, we split only if the piece we
+ * want to take will fill up a full MTU (assuming
+ * a 1500 byte MTU).
+ */
+#define SCTP_DEFAULT_SPLIT_POINT_MIN 1452
+
+/* This value determines the default for when
+ * we try to add more on the send queue., if
+ * there is room. This prevents us from cycling
+ * into the copy_resume routine to often if
+ * we have not got enough space to add a decent
+ * enough size message. Note that if we have enough
+ * space to complete the message copy we will always
+ * add to the message, no matter what the size. Its
+ * only when we reach the point that we have some left
+ * to add, there is only room for part of it that we
+ * will use this threshold. Its also a sysctl.
+ */
+#define SCTP_DEFAULT_ADD_MORE 1452
 
 #ifndef SCTP_PCBHASHSIZE
 /* default number of association hash buckets in each endpoint */
