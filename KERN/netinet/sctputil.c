@@ -4976,7 +4976,7 @@ get_more_data:
 			goto release;
 		}
 		if ((uio->uio_resid == 0) ||
-		    ((in_eeor_mode) && (copied_so_far >= so->so_rcv.sb_lowat))
+		    ((in_eeor_mode) && (copied_so_far >= max(so->so_rcv.sb_lowat, 1)))
 			) {
 			goto release;
 		}
@@ -4985,8 +4985,7 @@ get_more_data:
 		 * NOT done (pd-api). So two questions. Can we block? if not
 		 * we are done. Did the user NOT set MSG_WAITALL?
 		 */
-		if ((block_allowed == 0) ||
-		    ((in_flags & MSG_WAITALL) == 0)) {
+		if (block_allowed == 0) {
 			goto release;
 		}
 		/*
