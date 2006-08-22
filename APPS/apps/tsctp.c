@@ -71,7 +71,7 @@ Options:\n\
 #define DEFAULT_LENGTH             1024
 #define DEFAULT_NUMBER_OF_MESSAGES 1024
 #define DEFAULT_PORT               5001
-#define BUFFERSIZE                  (1<<16)
+#define BUFFERSIZE                 200000
 #define LINGERTIME                 1000
 
 static void* handle_connection(void *arg)
@@ -84,6 +84,7 @@ static void* handle_connection(void *arg)
 	struct timeval start_time, now, diff_time;
 	double seconds;
 	unsigned long messages = 0;
+	unsigned long shortmsgs = 0;
 	
 	buf = malloc(BUFFERSIZE);
 	fd = *(int *) arg;
@@ -102,22 +103,29 @@ static void* handle_connection(void *arg)
 		sum += n;
 		messages++;
 		n = recv(fd, (void*)buf, BUFFERSIZE, 0);
+		if(n != length) {
+			shortmsgs++;
+		}
 		/*
 		printf("Received %u bytes\n", n);
 		fflush(stdout);
 		*/
 	}
-	printf("message number %d returned %d errno:%d\n", (int)messages, 
-	       (int)n, errno);
+	printf("message number %d returned %d errno:%d shorts:%d\n", (int)messages, 
+	       (int)n, errno,(int)shortmsgs);
 	gettimeofday(&now, NULL);
 	timersub(&now, &start_time, &diff_time);
 	seconds = diff_time.tv_sec + (double)diff_time.tv_usec/1000000.0;
 	fprintf(stdout, "%u, %lu, %f, %f, %f, %f\n", 
-	       length, (long)messages, start_time.tv_sec + (double)start_time.tv_usec/1000000, now.tv_sec+(double)now.tv_usec/1000000, seconds, sum / seconds / 1024.0);
+	       length, 
+		(long)messages, 
+		(start_time.tv_sec + (double)start_time.tv_usec/1000000), 
+		(now.tv_sec+(double)now.tv_usec/1000000), 
+		seconds, (sum / seconds / 1024.0));
 	fflush(stdout);
-	printf("\nwaiting for close");
+	printf("\nwaiting for close1");
 	close(fd);
-	printf("\nwaiting for close");
+	printf("\nwaiting for close2");
 
 	return NULL;
 }
