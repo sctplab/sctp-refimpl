@@ -6990,22 +6990,31 @@ sctp_can_we_split_this(struct sctp_tcb *stcb,
 	/* Make a decision on if I should split a
 	 * msg into multiple parts.
 	 */
-	if (goal_mtu >= sp->length) {
-		/* Its not complete but
-		 * we may want to take it if 
-		 * it is big enough.
-		 */
-		if(sp->length > min(sctp_min_split_point, stcb->asoc.smallest_mtu)) {
-			return (sp->length);
+	if(sp->msg_is_complete == 0) {
+		if (goal_mtu >= sp->length) {
+			/* Its not complete but
+			 * we may want to take it if 
+			 * it is big enough.
+			 */
+			if(sp->length > min(sctp_min_split_point, stcb->asoc.smallest_mtu)) {
+				return (sp->length);
+			}
 		}
-	}
-	/* If we reach here sp->length is larger
-	 * than the goal_mtu. Do we wish to split
-	 * it for the sake of packet putting together?
-	 */
-	if (goal_mtu > min(sctp_min_split_point, stcb->asoc.smallest_mtu)) {
-		/* Its ok to split it */
-		return(min(goal_mtu, frag_point));
+		/* If we reach here sp->length is larger
+		 * than the goal_mtu. Do we wish to split
+		 * it for the sake of packet putting together?
+		 */
+		if (goal_mtu >= min(sctp_min_split_point, stcb->asoc.smallest_mtu)) {
+			/* Its ok to split it */
+			return(min(goal_mtu, frag_point));
+		}
+	} else {
+		/* We can always split a complete message to make it fit */
+		if (goal_mtu >= sp->length)
+			/* Take it all */
+			return (sp->length);
+
+		return (min(goal_mtu, frag_point));
 	}
 	/* Nope, can't split */
 	return(0);
