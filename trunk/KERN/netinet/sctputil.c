@@ -3883,12 +3883,40 @@ sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
 	struct sctp_queued_to_read *control, *nctl;
 	struct sctp_readhead tmp_queue;
 	struct mbuf *m;
+	int error;
 
 	old_so = old_inp->sctp_socket;
 	new_so = new_inp->sctp_socket;
 	TAILQ_INIT(&tmp_queue);
+
+	SOCKBUF_LOCK(&(old_so->so_rcv));
+
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	error = sblock(&old_so->so_rcv, 0);
+#endif
+#if defined(__NetBSD__)
+	error = sblock(&old_so->so_rcv, 0);
+#endif
+#if defined(__FreeBSD__)
+	error = sblock(&old_so->so_rcv, 0);
+#endif
+
+	SOCKBUF_UNLOCK(&(old_so->so_rcv));
+	if (error) {
+		/* Gak, can't get sblock, we have a problem. 
+		 * data will be left stranded.. and we
+		 * don't dare look at it since the
+		 * other thread may be reading something.
+		 * Oh well, its a screwed up app that does
+		 * a peeloff OR a accept while reading
+		 * from the main socket... actually its
+		 * only the peeloff() case, since I think
+		 * read will fail on a listening socket..
+		 */
+		return;
+	}
 	/* lock the socket buffers */
-	SOCKBUF_LOCK((&old_so->so_rcv));
+	SCTP_INP_READ_LOCK(old_inp);
 	control = TAILQ_FIRST(&old_inp->read_queue);
 	/* Pull off all for out target stcb */
 	while (control) {
@@ -3911,10 +3939,25 @@ sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
 		}
 		control = nctl;
 	}
-	SOCKBUF_UNLOCK((&old_so->so_rcv));
+	SCTP_INP_READ_UNLOCK(old_inp);
+
+	/* Remove the sb-lock on the old socket */
+	SOCKBUF_LOCK(&(old_so->so_rcv));
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sbunlock(&old_so->so_rcv, 1);
+#endif
+#if defined (__NetBSD__) 
+	sbunlock(&old_so->so_rcv);
+#endif
+
+#if defined(__FreeBSD__)
+	sbunlock(&old_so->so_rcv);
+#endif
+	SOCKBUF_UNLOCK(&(old_so->so_rcv));
+
 	/* Now we move them over to the new socket buffer */
 	control = TAILQ_FIRST(&tmp_queue);
-	SOCKBUF_LOCK((&new_so->so_rcv));
+	SCTP_INP_READ_LOCK(new_inp);
 	while (control) {
 		nctl = TAILQ_NEXT(control, next);
 		TAILQ_INSERT_TAIL(&new_inp->read_queue, control, next);
@@ -3931,7 +3974,7 @@ sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
 		}
 		control = nctl;
 	}
-	SOCKBUF_UNLOCK((&new_so->so_rcv));
+	SCTP_INP_READ_UNLOCK(new_inp);
 }
 
 
@@ -4001,16 +4044,23 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 	 */
 	int len=0;
 	struct mbuf *mm, *tail = NULL;
+
+	if (inp) {
+		SCTP_INP_READ_LOCK(inp);
+	}
 	if (control == NULL) {
+		if (inp) {
+			SCTP_INP_READ_UNLOCK(inp);
+		}
 		return (-1);
 	}
 	if ((control->tail_mbuf) &&
 	    (control->tail_mbuf->m_flags & M_EOR)) {
 		/* huh this one is complete? */
+		if (inp) {
+			SCTP_INP_READ_UNLOCK(inp);
+		}
 		return (-1);
-	}
-	if (inp) {
-		SCTP_INP_READ_LOCK(inp);
 	}
 	mm = m;
 	while (mm) {
