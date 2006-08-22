@@ -4428,7 +4428,7 @@ sctp_sorecvmsg(struct socket *so,
 	int my_len;
 	int cp_len, error = 0;
 	struct sctp_queued_to_read *control, *ctl, *nxt;
-	struct mbuf *m;
+	struct mbuf *m, *embuf;
 	struct sctp_tcb *stcb = NULL;
 	int wakeup_read_socket = 0;
 	int freecnt_applied = 0;
@@ -4848,6 +4848,7 @@ get_more_data:
 					sctp_sblog(&so->so_rcv,
 					    stcb, SCTP_LOG_SBRESULT, 0);
 #endif
+					embuf = m;
 					alen = control->length;
 					if (alen < (uint32_t) cp_len) {
 #ifdef INVARIENTS
