@@ -4864,8 +4864,14 @@ get_more_data:
 					/* been through it all, must hold sb lock ok to null tail */
 					if (control->data == NULL) {
 
-						if(mtx_owned(&inp->inp_rdata_mtx) == 0) {
-							panic("Hmm we don't own the lock?");
+						if ((control->end_added == 0) ||
+						    (TAILQ_NEXT(control, next) == NULL)) {
+							/* If the end is not added, OR the
+							 * next is NOT null we MUST have the lock.
+							 */
+							if(mtx_owned(&inp->inp_rdata_mtx) == 0) {
+								panic("Hmm we don't own the lock?");
+							}
 						}
 						control->tail_mbuf = NULL;
 						if ((control->end_added) && ((out_flags & MSG_EOR) == 0)) {
