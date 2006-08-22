@@ -5083,6 +5083,10 @@ wait_some_more:
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
 #endif
+		if(hold_sblock == 1) {
+			SOCKBUF_UNLOCK(&so->so_rcv);
+			hold_sblock = 0;
+		}
 		if (control->length == 0) {
 			/* still nothing here */
 			if (so->so_rcv.sb_cc) {
@@ -5195,6 +5199,10 @@ get_more_data2:
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
 #endif
+			if(hold_sblock == 1) {
+				SOCKBUF_UNLOCK(&so->so_rcv);
+				hold_sblock = 0;
+			}
 			if (control->length == 0) {
 				/* still nothing here */
 				if (so->so_rcv.sb_cc) {
@@ -5314,12 +5322,6 @@ get_more_data2:
 		}
 	}
 release:
-	if ((stcb) && (in_flags & MSG_PEEK) == 0) {
-		if ((special_return == 0) &&
-		    (freed_so_far >= rwnd_req) &&
-		    (no_rcv_needed == 0))
-			sctp_user_rcvd(stcb, &freed_so_far, hold_rlock, rwnd_req);
-	}
 	if(hold_sblock == 0) {
 		SOCKBUF_LOCK(&so->so_rcv);
 		hold_sblock = 1;
@@ -5334,8 +5336,19 @@ release:
 #if defined(__FreeBSD__)
 	sbunlock(&so->so_rcv);
 #endif
+	if(hold_sblock) {
+		SOCKBUF_UNLOCK(&so->so_rcv);
+		hold_sblock = 0;
+	}
 
 release_unlocked:
+	if ((stcb) && (in_flags & MSG_PEEK) == 0) {
+		if ((special_return == 0) &&
+		    (freed_so_far >= rwnd_req) &&
+		    (no_rcv_needed == 0))
+			sctp_user_rcvd(stcb, &freed_so_far, hold_rlock, rwnd_req);
+	}
+
 	if (msg_flags)
 		*msg_flags |= out_flags;
 out:
@@ -5354,10 +5367,6 @@ out:
 		freecnt_applied = 0;
 		/* Save the value back for next time */
 		stcb->freed_by_sorcv_sincelast = freed_so_far;
-	}
-	if(hold_sblock) {
-		SOCKBUF_UNLOCK(&so->so_rcv);
-		hold_sblock = 0;
 	}
 	splx(s);
 #ifdef SCTP_RECV_RWND_LOGGING
