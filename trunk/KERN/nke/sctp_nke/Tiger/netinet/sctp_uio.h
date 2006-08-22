@@ -753,7 +753,8 @@ struct	sctpstat {
 	u_long  sctps_recvivalhmacid;      /* total number of invalid HMAC ids received */
 	u_long  sctps_recvivalkeyid;       /* total number of invalid secret ids received */
 	u_long  sctps_recvauthfailed;      /* total number of auth failed */
-	u_long  sctps_recvexpress;         /* */
+	u_long  sctps_recvexpress;         /* total fast path receives all one chunk */
+	u_long  sctps_recvexpressm;        /* total fast path multi-part data */
 	/* output statistics: */
 	u_long	sctps_sendpackets;	   /* total output packets       */
 	u_long  sctps_sendsacks;           /* total output SACKs         */
