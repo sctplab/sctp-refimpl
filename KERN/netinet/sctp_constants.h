@@ -734,7 +734,13 @@ __FBSDID("$FreeBSD:$");
 #define SCTP_NOTIFY_SPECIAL_SP_FAIL     27
 #define SCTP_NOTIFY_MAX			27
 
-#define SCTP_DEFAULT_SPLIT_POINT_MIN 256
+/* This is the value for messages that are NOT completely
+ * copied down where we will start to split the message.
+ * So, with our default, we split only if the piece we
+ * want to take will fill up a full MTU (assuming
+ * a 1500 byte MTU).
+ */
+#define SCTP_DEFAULT_SPLIT_POINT_MIN 1452
 
 #ifndef SCTP_PCBHASHSIZE
 /* default number of association hash buckets in each endpoint */
