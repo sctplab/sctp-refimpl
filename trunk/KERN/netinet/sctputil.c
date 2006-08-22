@@ -3961,7 +3961,7 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 #ifdef SCTP_SB_LOGGING
 		sctp_sblog(sb, stcb, SCTP_LOG_SBRESULT, 0);
 #endif
-		control->length += m->m_len;
+		atomic_add_int(control->length, m->m_len);
 		if (m->m_next == NULL) {
 			control->tail_mbuf = m;
 			if (end) {
@@ -4040,7 +4040,7 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 		control->data = m;
 		control->tail_mbuf = tail;
 	}
-	control->length += len;
+	atomic_add_int(control->length, len);
 	/*
 	 * When we are appending in partial delivery, the cum-ack is used
 	 * for the actual pd-api highest tsn on this mbuf. The true cum-ack
@@ -4983,6 +4983,10 @@ get_more_data:
 				 * are leaving more behind on the control to
 				 * read.
 				 */
+				if(control->end_added && (control->data == NULL) &&
+				   (control->tail_mbuf == NULL)) {
+					panic("Gak, control->length is corrupt?");
+				}
 				no_rcv_needed = control->do_not_ref_stcb;
 				out_flags &= ~MSG_EOR;
 			}
