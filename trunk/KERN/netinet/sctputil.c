@@ -3899,7 +3899,13 @@ sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
 			TAILQ_INSERT_TAIL(&tmp_queue, control, next);
 			m = control->data;
 			while (m) {
+#ifdef SCTP_SB_LOGGING
+				sctp_sblog(&old_so->so_rcv, stcb, SCTP_LOG_SBFREE, m->m_len);
+#endif
 				sctp_sbfree(stcb, &old_so->so_rcv, m);
+#ifdef SCTP_SB_LOGGING
+				sctp_sblog(&old_so->so_rcv, stcb, SCTP_LOG_SBRESULT, 0);
+#endif
 				m = m->m_next;
 			}
 		}
@@ -3914,7 +3920,13 @@ sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
 		TAILQ_INSERT_TAIL(&new_inp->read_queue, control, next);
 		m = control->data;
 		while (m) {
+#ifdef SCTP_SB_LOGGING
+			sctp_sblog(&new_so->so_rcv, stcb, SCTP_LOG_SBALLOC, m->m_len);
+#endif
 			sctp_sballoc(stcb, &new_so->so_rcv, m);
+#ifdef SCTP_SB_LOGGING
+			sctp_sblog(&new_so->so_rcv, stcb, SCTP_LOG_SBRESULT, 0);
+#endif
 			m = m->m_next;
 		}
 		control = nctl;
@@ -3942,7 +3954,13 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 	control->held_length = 0;
 	control->length = 0;
 	while (m) {
+#ifdef SCTP_SB_LOGGING
+		sctp_sblog(sb, stcb, SCTP_LOG_SBALLOC, m->m_len);
+#endif
 		sctp_sballoc(stcb, sb, m);
+#ifdef SCTP_SB_LOGGING
+		sctp_sblog(sb, stcb, SCTP_LOG_SBRESULT, 0);
+#endif
 		control->length += m->m_len;
 		if (m->m_next == NULL) {
 			control->tail_mbuf = m;
@@ -3998,7 +4016,13 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 	while (mm) {
 		len += mm->m_len;
 		if (sb) {
+#ifdef SCTP_SB_LOGGING
+			sctp_sblog(sb, stcb, SCTP_LOG_SBALLOC, mm->m_len);
+#endif
 			sctp_sballoc(stcb, sb, mm);
+#ifdef SCTP_SB_LOGGING
+			sctp_sblog(sb, stcb, SCTP_LOG_SBRESULT, 0);
+#endif
 		}
 		if (mm->m_next == NULL)
 			tail = mm;
