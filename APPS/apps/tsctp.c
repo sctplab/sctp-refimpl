@@ -38,6 +38,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
+#include <sys/errno.h>
 #ifdef LINUX
 #include <getopt.h>
 #endif
@@ -106,6 +107,8 @@ static void* handle_connection(void *arg)
 		fflush(stdout);
 		*/
 	}
+	printf("message number %d returned %d errno:%d\n", (int)messages, 
+	       (int)n, errno);
 	gettimeofday(&now, NULL);
 	timersub(&now, &start_time, &diff_time);
 	seconds = diff_time.tv_sec + (double)diff_time.tv_usec/1000000.0;
