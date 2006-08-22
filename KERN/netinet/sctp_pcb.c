@@ -2055,31 +2055,6 @@ sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
 	    old_inp->sctp_ep.last_secret_number;
 	new_inp->sctp_ep.size_of_a_cookie = old_inp->sctp_ep.size_of_a_cookie;
 
-	/* fix up the socket buffer counts */
-	/* lock sockets */
-	if ((stcb->asoc.sb_cc) && (old_inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE)) {
-		/*
-		 * stuff to read, move over the counts on the 1-2-1 type..
-		 * 1-2-M type do NOT need to do this since they do NOT
-		 * maintain the sb_cc and sb_mbcnt.
-		 */
-		SOCKBUF_LOCK(&(old_inp->sctp_socket)->so_rcv);
-		if ((old_inp->sctp_socket)->so_rcv.sb_cc >= stcb->asoc.sb_cc) {
-			(old_inp->sctp_socket)->so_rcv.sb_cc -= stcb->asoc.sb_cc;
-		} else {
-			(old_inp->sctp_socket)->so_rcv.sb_cc = 0;
-		}
-		if ((old_inp->sctp_socket)->so_rcv.sb_mbcnt >= stcb->asoc.sb_mbcnt) {
-			(old_inp->sctp_socket)->so_rcv.sb_mbcnt -= stcb->asoc.sb_mbcnt;
-		} else {
-			(old_inp->sctp_socket)->so_rcv.sb_mbcnt = 0;
-		}
-		SOCKBUF_UNLOCK(&(old_inp->sctp_socket)->so_rcv);
-		SOCKBUF_LOCK(&(new_inp->sctp_socket)->so_rcv);
-		(new_inp->sctp_socket)->so_rcv.sb_cc += stcb->asoc.sb_cc;
-		(new_inp->sctp_socket)->so_rcv.sb_mbcnt += stcb->asoc.sb_mbcnt;
-		SOCKBUF_UNLOCK(&(new_inp->sctp_socket)->so_rcv);
-	}
 	/* make it so new data pours into the new socket */
 	stcb->sctp_socket = new_inp->sctp_socket;
 	stcb->sctp_ep = new_inp;
