@@ -4817,8 +4817,9 @@ get_more_data:
 				goto release;
 			}
 			if((m->m_next == NULL) && 
-			   (control->end_added == 0) &&
-			   (cp_len >= m->m_len)
+			   (cp_len >= m->m_len) &&
+			   ((control->end_added == 0) ||
+			    (control->end_added && (TAILQ_NEXT(control, next) == NULL)))
 				) {
 				SCTP_STAT_INCR(sctps_locks_in_rcvb);
 				SCTP_INP_READ_LOCK(inp);
