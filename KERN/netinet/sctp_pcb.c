@@ -4157,13 +4157,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		callout_stop(&net->pmtu_timer.timer);
 	}
 
-	if ((from_inpcbfree == 0) && so) {
-		/*
-		 * We lock the socket buffer to be SURE that the receive
-		 * side sees our flag properly.
-		 */
-		SOCKBUF_LOCK(&so->so_rcv);
-	}
 	stcb->asoc.state |= SCTP_STATE_ABOUT_TO_BE_FREED;
 	if ((from_inpcbfree != 2) && (stcb->asoc.refcnt)) {
 		/* reader or writer in the way */
@@ -4183,6 +4176,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	sctp_log_closing(inp, stcb, 10);
 #endif
 	/* Now the read queue needs to be cleaned up */
+	SCTP_INP_READ_LOCK(inp);
 	TAILQ_FOREACH(sq, &inp->read_queue, next) {
 		if (sq->stcb == stcb) {
 			sq->do_not_ref_stcb = 1;
@@ -4222,13 +4216,14 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			}
 		}
 	}
+	SCTP_INP_READ_UNLOCK(inp);
 	if (stcb->block_entry) {
 		stcb->block_entry->error = ECONNRESET;
 		stcb->block_entry = NULL;
 	}
 
 	if ((from_inpcbfree == 0) && so) {
-		sctp_sorwakeup_locked(inp, so);
+		sctp_sorwakeup(inp, so);
 	}
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {

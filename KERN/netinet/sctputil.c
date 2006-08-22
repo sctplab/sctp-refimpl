@@ -3124,7 +3124,7 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
 		/* we will do some substitution */
 		control = stcb->asoc.control_pdapi;
 		if(no_lock == 0)
-			SOCKBUF_LOCK((&stcb->sctp_socket->so_rcv));
+			SCTP_INP_READ_LOCK(stcb->sctp_ep);
 		if (control->data == NULL) {
 			if(stcb->sctp_socket) {
 				stcb->sctp_socket->so_rcv.sb_cc += control->held_length;
@@ -3148,7 +3148,7 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
 			control->end_added = 1;
 		}
 		if(no_lock == 0)
-			SOCKBUF_UNLOCK((&stcb->sctp_socket->so_rcv));
+			SCTP_INP_READ_UNLOCK(stcb->sctp_ep);
 	} else {
 		/* append to socket */
 		control = sctp_build_readq_entry(stcb, stcb->asoc.primary_destination,
@@ -5133,7 +5133,7 @@ wait_some_more:
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
 #endif
-		if(hold_sblock == 1) {
+		if(hold_sblock) {
 			SOCKBUF_UNLOCK(&so->so_rcv);
 			hold_sblock = 0;
 		}
@@ -5249,7 +5249,7 @@ get_more_data2:
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
 #endif
-			if(hold_sblock == 1) {
+			if(hold_sblock) {
 				SOCKBUF_UNLOCK(&so->so_rcv);
 				hold_sblock = 0;
 			}
@@ -5332,8 +5332,10 @@ get_more_data2:
 #ifdef SCTP_LOCK_LOGGING
 					sctp_log_lock(inp, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
 #endif
-					SOCKBUF_LOCK(&so->so_rcv);
-					hold_sblock = 1;
+					if(hold_sblock == 0) {
+						SOCKBUF_LOCK(&so->so_rcv);
+						hold_sblock = 1;
+					}
 					if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)
 						goto release;
 
