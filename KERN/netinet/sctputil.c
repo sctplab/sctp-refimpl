@@ -4078,6 +4078,14 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 			tail = mm;
 		mm = mm->m_next;
 	}
+	if (end) {
+		/* message is complete */
+		control->tail_mbuf->m_flags |= M_EOR;
+		if(control == stcb->asoc.control_pdapi) {
+			stcb->asoc.control_pdapi = NULL;
+		}
+		control->end_added = 1;
+	}
 	if (control->tail_mbuf) {
 		/* append */
 		control->tail_mbuf->m_next = m;
@@ -4098,14 +4106,6 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 	 * if the association exists...
 	 */
 	control->sinfo_cumtsn = new_cumack;
-	if (end) {
-		/* message is complete */
-		control->tail_mbuf->m_flags |= M_EOR;
-		if(control == stcb->asoc.control_pdapi) {
-			stcb->asoc.control_pdapi = NULL;
-		}
-		control->end_added = 1;
-	}
 	if (inp) {
 		SCTP_INP_READ_UNLOCK(inp);
 	}
@@ -4674,6 +4674,9 @@ restart:
 		goto restart;
 	}
 #endif
+	if ((control->length == 0) && (control->end_added) && (control->data == NULL)) {
+		panic ("Length 0, end is on and data is gone!");
+	}
 	if (control->length == 0) {
 		if((sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE)) &&
 		   (filling_sinfo)) {
