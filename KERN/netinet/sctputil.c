@@ -3999,6 +3999,11 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 	control->held_length = 0;
 	control->length = 0;
 	while (m) {
+		if (m->m_len == 0) {
+			/* Skip mbufs with NO lenght */
+			m = sctp_m_free(m);
+			continue;
+		}
 #ifdef SCTP_SB_LOGGING
 		sctp_sblog(sb, stcb, SCTP_LOG_SBALLOC, m->m_len);
 #endif
@@ -4068,6 +4073,11 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 	}
 
 	while (mm) {
+		if (mm->m_len == 0) {
+			/* Skip mbufs with NO lenght */
+			mm = sctp_m_free(mm);
+			continue;
+		}
 		len += mm->m_len;
 		if (sb) {
 #ifdef SCTP_SB_LOGGING
@@ -4795,7 +4805,7 @@ found_one:
 		}
         }
 	/* First lets get off the sinfo and sockaddr info */
-	if (sinfo) {
+	if ((sinfo) && filling_sinfo) {
 		memcpy(sinfo, control, sizeof(struct sctp_nonpad_sndrcvinfo));
 		nxt = TAILQ_NEXT(control, next);
 		if(sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXT_RCVINFO)) {
@@ -5568,7 +5578,11 @@ sctp_soreceive(so, paddr, uio, mp0, controlp, flagsp)
 		struct sctp_inpcb *inp;
 
 		inp = (struct sctp_inpcb *)so->so_pcb;
-		*controlp = sctp_build_ctl_nchunk(inp, (struct sctp_sndrcvinfo *)&sinfo);
+		
+		if(filling_sinfo)
+			*controlp = sctp_build_ctl_nchunk(inp, (struct sctp_sndrcvinfo *)&sinfo);
+		else
+			*controlp = NULL;
 	}
 	if (paddr) {
 		maddr = sctp_get_mbuf_for_msg(fromlen, 0, M_DONTWAIT, 1, MT_SONAME);
@@ -5627,11 +5641,14 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 #endif
 	error = sctp_sorecvmsg(so, uio, mp0, from, fromlen, flagsp, 
 	    (struct sctp_sndrcvinfo *)&sinfo,filling_sinfo);
-	if (controlp) {
+	if ((controlp) && (filling_sinfo)) {
 		/* copy back the sinfo in a CMSG format */
-		*controlp = sctp_build_ctl_nchunk(inp, 
-                         (struct sctp_sndrcvinfo *)&sinfo);
-	}
+		if(filling_sinfo)
+			*controlp = sctp_build_ctl_nchunk(inp, 
+							  (struct sctp_sndrcvinfo *)&sinfo);
+		else
+			*controlp = NULL;
+	} 
 	if (psa) {
 		/* copy back the address info */
 		if (from && from->sa_len) {
