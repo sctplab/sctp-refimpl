@@ -2055,31 +2055,6 @@ sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
 	    old_inp->sctp_ep.last_secret_number;
 	new_inp->sctp_ep.size_of_a_cookie = old_inp->sctp_ep.size_of_a_cookie;
 
-	/* fix up the socket buffer counts */
-	/* lock sockets */
-	if ((stcb->asoc.sb_cc) && (old_inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE)) {
-		/*
-		 * stuff to read, move over the counts on the 1-2-1 type..
-		 * 1-2-M type do NOT need to do this since they do NOT
-		 * maintain the sb_cc and sb_mbcnt.
-		 */
-		SOCKBUF_LOCK(&(old_inp->sctp_socket)->so_rcv);
-		if ((old_inp->sctp_socket)->so_rcv.sb_cc >= stcb->asoc.sb_cc) {
-			(old_inp->sctp_socket)->so_rcv.sb_cc -= stcb->asoc.sb_cc;
-		} else {
-			(old_inp->sctp_socket)->so_rcv.sb_cc = 0;
-		}
-		if ((old_inp->sctp_socket)->so_rcv.sb_mbcnt >= stcb->asoc.sb_mbcnt) {
-			(old_inp->sctp_socket)->so_rcv.sb_mbcnt -= stcb->asoc.sb_mbcnt;
-		} else {
-			(old_inp->sctp_socket)->so_rcv.sb_mbcnt = 0;
-		}
-		SOCKBUF_UNLOCK(&(old_inp->sctp_socket)->so_rcv);
-		SOCKBUF_LOCK(&(new_inp->sctp_socket)->so_rcv);
-		(new_inp->sctp_socket)->so_rcv.sb_cc += stcb->asoc.sb_cc;
-		(new_inp->sctp_socket)->so_rcv.sb_mbcnt += stcb->asoc.sb_mbcnt;
-		SOCKBUF_UNLOCK(&(new_inp->sctp_socket)->so_rcv);
-	}
 	/* make it so new data pours into the new socket */
 	stcb->sctp_socket = new_inp->sctp_socket;
 	stcb->sctp_ep = new_inp;
@@ -4182,13 +4157,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		callout_stop(&net->pmtu_timer.timer);
 	}
 
-	if ((from_inpcbfree == 0) && so) {
-		/*
-		 * We lock the socket buffer to be SURE that the receive
-		 * side sees our flag properly.
-		 */
-		SOCKBUF_LOCK(&so->so_rcv);
-	}
 	stcb->asoc.state |= SCTP_STATE_ABOUT_TO_BE_FREED;
 	if ((from_inpcbfree != 2) && (stcb->asoc.refcnt)) {
 		/* reader or writer in the way */
@@ -4208,6 +4176,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	sctp_log_closing(inp, stcb, 10);
 #endif
 	/* Now the read queue needs to be cleaned up */
+	SCTP_INP_READ_LOCK(inp);
 	TAILQ_FOREACH(sq, &inp->read_queue, next) {
 		if (sq->stcb == stcb) {
 			sq->do_not_ref_stcb = 1;
@@ -4247,13 +4216,14 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			}
 		}
 	}
+	SCTP_INP_READ_UNLOCK(inp);
 	if (stcb->block_entry) {
 		stcb->block_entry->error = ECONNRESET;
 		stcb->block_entry = NULL;
 	}
 
 	if ((from_inpcbfree == 0) && so) {
-		sctp_sorwakeup_locked(inp, so);
+		sctp_sorwakeup(inp, so);
 	}
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {

@@ -3124,7 +3124,7 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
 		/* we will do some substitution */
 		control = stcb->asoc.control_pdapi;
 		if(no_lock == 0)
-			SOCKBUF_LOCK((&stcb->sctp_socket->so_rcv));
+			SCTP_INP_READ_LOCK(stcb->sctp_ep);
 		if (control->data == NULL) {
 			if(stcb->sctp_socket) {
 				stcb->sctp_socket->so_rcv.sb_cc += control->held_length;
@@ -3148,7 +3148,7 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
 			control->end_added = 1;
 		}
 		if(no_lock == 0)
-			SOCKBUF_UNLOCK((&stcb->sctp_socket->so_rcv));
+			SCTP_INP_READ_UNLOCK(stcb->sctp_ep);
 	} else {
 		/* append to socket */
 		control = sctp_build_readq_entry(stcb, stcb->asoc.primary_destination,
@@ -3883,12 +3883,40 @@ sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
 	struct sctp_queued_to_read *control, *nctl;
 	struct sctp_readhead tmp_queue;
 	struct mbuf *m;
+	int error;
 
 	old_so = old_inp->sctp_socket;
 	new_so = new_inp->sctp_socket;
 	TAILQ_INIT(&tmp_queue);
+
+	SOCKBUF_LOCK(&(old_so->so_rcv));
+
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	error = sblock(&old_so->so_rcv, 0);
+#endif
+#if defined(__NetBSD__)
+	error = sblock(&old_so->so_rcv, 0);
+#endif
+#if defined(__FreeBSD__)
+	error = sblock(&old_so->so_rcv, 0);
+#endif
+
+	SOCKBUF_UNLOCK(&(old_so->so_rcv));
+	if (error) {
+		/* Gak, can't get sblock, we have a problem. 
+		 * data will be left stranded.. and we
+		 * don't dare look at it since the
+		 * other thread may be reading something.
+		 * Oh well, its a screwed up app that does
+		 * a peeloff OR a accept while reading
+		 * from the main socket... actually its
+		 * only the peeloff() case, since I think
+		 * read will fail on a listening socket..
+		 */
+		return;
+	}
 	/* lock the socket buffers */
-	SOCKBUF_LOCK((&old_so->so_rcv));
+	SCTP_INP_READ_LOCK(old_inp);
 	control = TAILQ_FIRST(&old_inp->read_queue);
 	/* Pull off all for out target stcb */
 	while (control) {
@@ -3911,10 +3939,25 @@ sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
 		}
 		control = nctl;
 	}
-	SOCKBUF_UNLOCK((&old_so->so_rcv));
+	SCTP_INP_READ_UNLOCK(old_inp);
+
+	/* Remove the sb-lock on the old socket */
+	SOCKBUF_LOCK(&(old_so->so_rcv));
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sbunlock(&old_so->so_rcv, 1);
+#endif
+#if defined (__NetBSD__) 
+	sbunlock(&old_so->so_rcv);
+#endif
+
+#if defined(__FreeBSD__)
+	sbunlock(&old_so->so_rcv);
+#endif
+	SOCKBUF_UNLOCK(&(old_so->so_rcv));
+
 	/* Now we move them over to the new socket buffer */
 	control = TAILQ_FIRST(&tmp_queue);
-	SOCKBUF_LOCK((&new_so->so_rcv));
+	SCTP_INP_READ_LOCK(new_inp);
 	while (control) {
 		nctl = TAILQ_NEXT(control, next);
 		TAILQ_INSERT_TAIL(&new_inp->read_queue, control, next);
@@ -3931,7 +3974,7 @@ sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
 		}
 		control = nctl;
 	}
-	SOCKBUF_UNLOCK((&new_so->so_rcv));
+	SCTP_INP_READ_UNLOCK(new_inp);
 }
 
 
@@ -3961,7 +4004,7 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 #ifdef SCTP_SB_LOGGING
 		sctp_sblog(sb, stcb, SCTP_LOG_SBRESULT, 0);
 #endif
-		control->length += m->m_len;
+		atomic_add_int(&control->length, m->m_len);
 		if (m->m_next == NULL) {
 			control->tail_mbuf = m;
 			if (end) {
@@ -4001,16 +4044,23 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 	 */
 	int len=0;
 	struct mbuf *mm, *tail = NULL;
+
+	if (inp) {
+		SCTP_INP_READ_LOCK(inp);
+	}
 	if (control == NULL) {
+		if (inp) {
+			SCTP_INP_READ_UNLOCK(inp);
+		}
 		return (-1);
 	}
 	if ((control->tail_mbuf) &&
 	    (control->tail_mbuf->m_flags & M_EOR)) {
 		/* huh this one is complete? */
+		if (inp) {
+			SCTP_INP_READ_UNLOCK(inp);
+		}
 		return (-1);
-	}
-	if (inp) {
-		SCTP_INP_READ_LOCK(inp);
 	}
 	mm = m;
 	while (mm) {
@@ -4040,7 +4090,7 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 		control->data = m;
 		control->tail_mbuf = tail;
 	}
-	control->length += len;
+	atomic_add_int(&control->length, len);
 	/*
 	 * When we are appending in partial delivery, the cum-ack is used
 	 * for the actual pd-api highest tsn on this mbuf. The true cum-ack
@@ -4428,7 +4478,7 @@ sctp_sorecvmsg(struct socket *so,
 	int my_len;
 	int cp_len, error = 0;
 	struct sctp_queued_to_read *control, *ctl, *nxt;
-	struct mbuf *m;
+	struct mbuf *m, *embuf;
 	struct sctp_tcb *stcb = NULL;
 	int wakeup_read_socket = 0;
 	int freecnt_applied = 0;
@@ -4817,8 +4867,9 @@ get_more_data:
 				goto release;
 			}
 			if((m->m_next == NULL) && 
-			   (control->end_added == 0) &&
-			   (cp_len >= m->m_len)
+			   (cp_len >= m->m_len) &&
+			   ((control->end_added == 0) ||
+			    (control->end_added && (TAILQ_NEXT(control, next) == NULL)))
 				) {
 				SCTP_STAT_INCR(sctps_locks_in_rcvb);
 				SCTP_INP_READ_LOCK(inp);
@@ -4847,6 +4898,7 @@ get_more_data:
 					sctp_sblog(&so->so_rcv,
 					    stcb, SCTP_LOG_SBRESULT, 0);
 #endif
+					embuf = m;
 					alen = control->length;
 					if (alen < (uint32_t) cp_len) {
 #ifdef INVARIENTS
@@ -4862,7 +4914,20 @@ get_more_data:
 					m = control->data;
 					/* been through it all, must hold sb lock ok to null tail */
 					if (control->data == NULL) {
+
+						if ((control->end_added == 0) ||
+						    (TAILQ_NEXT(control, next) == NULL)) {
+							/* If the end is not added, OR the
+							 * next is NOT null we MUST have the lock.
+							 */
+							if(mtx_owned(&inp->inp_rdata_mtx) == 0) {
+								panic("Hmm we don't own the lock?");
+							}
+						}
 						control->tail_mbuf = NULL;
+						if ((control->end_added) && ((out_flags & MSG_EOR) == 0)) {
+							panic("end_added, nothing left and no MSG_EOR");
+						}
 					}
 				}
 			} else {
@@ -4968,6 +5033,10 @@ get_more_data:
 				 * are leaving more behind on the control to
 				 * read.
 				 */
+				if(control->end_added && (control->data == NULL) &&
+				   (control->tail_mbuf == NULL)) {
+					panic("Gak, control->length is corrupt?");
+				}
 				no_rcv_needed = control->do_not_ref_stcb;
 				out_flags &= ~MSG_EOR;
 			}
@@ -4976,7 +5045,7 @@ get_more_data:
 			goto release;
 		}
 		if ((uio->uio_resid == 0) ||
-		    ((in_eeor_mode) && (copied_so_far >= so->so_rcv.sb_lowat))
+		    ((in_eeor_mode) && (copied_so_far >= max(so->so_rcv.sb_lowat, 1)))
 			) {
 			goto release;
 		}
@@ -4985,8 +5054,7 @@ get_more_data:
 		 * NOT done (pd-api). So two questions. Can we block? if not
 		 * we are done. Did the user NOT set MSG_WAITALL?
 		 */
-		if ((block_allowed == 0) ||
-		    ((in_flags & MSG_WAITALL) == 0)) {
+		if (block_allowed == 0) {
 			goto release;
 		}
 		/*
@@ -5065,6 +5133,10 @@ wait_some_more:
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
 #endif
+		if(hold_sblock) {
+			SOCKBUF_UNLOCK(&so->so_rcv);
+			hold_sblock = 0;
+		}
 		if (control->length == 0) {
 			/* still nothing here */
 			if (so->so_rcv.sb_cc) {
@@ -5177,6 +5249,10 @@ get_more_data2:
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
 #endif
+			if(hold_sblock) {
+				SOCKBUF_UNLOCK(&so->so_rcv);
+				hold_sblock = 0;
+			}
 			if (control->length == 0) {
 				/* still nothing here */
 				if (so->so_rcv.sb_cc) {
@@ -5256,8 +5332,10 @@ get_more_data2:
 #ifdef SCTP_LOCK_LOGGING
 					sctp_log_lock(inp, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
 #endif
-					SOCKBUF_LOCK(&so->so_rcv);
-					hold_sblock = 1;
+					if(hold_sblock == 0) {
+						SOCKBUF_LOCK(&so->so_rcv);
+						hold_sblock = 1;
+					}
 					if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)
 						goto release;
 
@@ -5296,12 +5374,6 @@ get_more_data2:
 		}
 	}
 release:
-	if ((stcb) && (in_flags & MSG_PEEK) == 0) {
-		if ((special_return == 0) &&
-		    (freed_so_far >= rwnd_req) &&
-		    (no_rcv_needed == 0))
-			sctp_user_rcvd(stcb, &freed_so_far, hold_rlock, rwnd_req);
-	}
 	if(hold_sblock == 0) {
 		SOCKBUF_LOCK(&so->so_rcv);
 		hold_sblock = 1;
@@ -5316,8 +5388,19 @@ release:
 #if defined(__FreeBSD__)
 	sbunlock(&so->so_rcv);
 #endif
+	if(hold_sblock) {
+		SOCKBUF_UNLOCK(&so->so_rcv);
+		hold_sblock = 0;
+	}
 
 release_unlocked:
+	if ((stcb) && (in_flags & MSG_PEEK) == 0) {
+		if ((special_return == 0) &&
+		    (freed_so_far >= rwnd_req) &&
+		    (no_rcv_needed == 0))
+			sctp_user_rcvd(stcb, &freed_so_far, hold_rlock, rwnd_req);
+	}
+
 	if (msg_flags)
 		*msg_flags |= out_flags;
 out:
@@ -5336,10 +5419,6 @@ out:
 		freecnt_applied = 0;
 		/* Save the value back for next time */
 		stcb->freed_by_sorcv_sincelast = freed_so_far;
-	}
-	if(hold_sblock) {
-		SOCKBUF_UNLOCK(&so->so_rcv);
-		hold_sblock = 0;
 	}
 	splx(s);
 #ifdef SCTP_RECV_RWND_LOGGING
