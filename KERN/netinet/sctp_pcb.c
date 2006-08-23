@@ -3032,8 +3032,10 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	callout_stop(&inp->sctp_ep.signature_change.timer);
 	inp->sctp_ep.signature_change.type = SCTP_TIMER_TYPE_NONE;
 	/* Clear the read queue */
+	cnt = 0;
 	while ((sq = TAILQ_FIRST(&inp->read_queue)) != NULL) {
 		TAILQ_REMOVE(&inp->read_queue, sq, next);
+		cnt++;
 		sctp_free_remote_addr(sq->whoFrom);
 		if(so)
 			so->so_rcv.sb_cc -= sq->length;
@@ -3048,7 +3050,11 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, sq);
 		SCTP_DECR_READQ_COUNT();
 	}
-
+	if(cnt) {
+		printf("Left %d abandoned on the read queue\n", cnt);
+	} else {
+		printf("None on read queue\n");
+	}
 	/* Now the sctp_pcb things */
 	/*
 	 * free each asoc if it is not already closed/free. we can't use the
