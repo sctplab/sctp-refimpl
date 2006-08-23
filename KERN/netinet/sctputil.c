@@ -4086,6 +4086,7 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 		}
 		control->end_added = 1;
 	}
+	atomic_add_int(&control->length, len);
 	if (control->tail_mbuf) {
 		/* append */
 		control->tail_mbuf->m_next = m;
@@ -4098,7 +4099,6 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 		control->data = m;
 		control->tail_mbuf = tail;
 	}
-	atomic_add_int(&control->length, len);
 	/*
 	 * When we are appending in partial delivery, the cum-ack is used
 	 * for the actual pd-api highest tsn on this mbuf. The true cum-ack
