@@ -5123,13 +5123,15 @@ wait_some_more:
 				       so->so_rcv.sb_cc, 
 				       uio->uio_resid);
 #endif
-		error = sbwait(&so->so_rcv);
-		if (error){
+		if(so->so_rcv.sb_cc == 0) {
+			error = sbwait(&so->so_rcv);
+			if (error){
 #if defined(__FreeBSD__) || defined(__NetBSD__)
-			goto release;
+				goto release;
 #else
-			goto release_unlocked;
+				goto release_unlocked;
 #endif
+			}
 		}
 
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
@@ -5232,15 +5234,16 @@ get_more_data2:
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			sbunlock(&so->so_rcv, 1);
 #endif
-			error = sbwait(&so->so_rcv);
-			if (error) {
+			if(so->so_rcv.sb_cc == 0) {
+				error = sbwait(&so->so_rcv);
+				if (error) {
 #if defined(__FreeBSD__) || defined(__NetBSD__)
-				goto release;
+					goto release;
 #else
-				goto release_unlocked;
+					goto release_unlocked;
 #endif
+				}
 			}
-
 			if(special_return) {
 #if defined(__FreeBSD__) || defined(__NetBSD__)
 				goto release;
