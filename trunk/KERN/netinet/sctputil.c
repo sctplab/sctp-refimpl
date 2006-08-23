@@ -4684,6 +4684,15 @@ restart:
 	}
 #endif
 	if (control->length == 0) {
+		/* In this case, apply the lock so we sync with any add going
+		 * on right now.
+		 */
+		if(hold_rlock == 0) {
+			SCTP_INP_READ_LOCK(inp);
+			hold_rlock = 1;
+		}
+	}
+	if (control->length == 0) {
 		if((sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE)) &&
 		   (filling_sinfo)) {
 			/* find a more suitable one then this */
@@ -4701,10 +4710,6 @@ restart:
 			 * <or> fragment interleave is NOT on. So stuff the sb_cc
 			 * into the our held count, and its time to sleep again.
 			 */
-			if(hold_rlock == 0) {
-				SCTP_INP_READ_LOCK(inp);
-				hold_rlock = 1;
-			}
 			control->held_length += so->so_rcv.sb_cc;
 			so->so_rcv.sb_cc = 0;
 			if(hold_rlock) {
@@ -4724,6 +4729,11 @@ restart:
 			}
 		}
 		goto restart;
+	}
+
+	if(hold_rlock) {
+		SCTP_INP_READ_UNLOCK(inp);
+		hold_rlock = 0;
 	}
 found_one:
 	/*
