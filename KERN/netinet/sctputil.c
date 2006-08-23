@@ -720,9 +720,11 @@ sctp_fill_stat_log(struct mbuf *m)
 		req->end_at = sctp_cwnd_log_at - 1;
 		req->num_ret = sctp_cwnd_log_at;
 	}
+#ifdef INVARIENTS
 	if(req->num_ret > num) {
 		panic("Bad statlog get?");
 	} 
+#endif
 	for (i = 0, at = req->start_at; i < req->num_ret; i++) {
 		req->log[i] = sctp_clog[at];
 		cnt_out++;
@@ -4095,9 +4097,11 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 		control->tail_mbuf = tail;
 	} else {
 		/* nothing there */
+#ifdef INVARIENTS
 		if(control->data != NULL) {
 			panic("This should NOT happen");
 		}
+#endif
 		control->data = m;
 		control->tail_mbuf = tail;
 	}
@@ -4675,10 +4679,10 @@ restart:
 		SCTP_INP_READ_UNLOCK(inp);
 		goto restart;
 	}
-#endif
 	if ((control->length == 0) && (control->end_added) && (control->data == NULL)) {
 		panic ("Length 0, end is on and data is gone!");
 	}
+#endif
 	if (control->length == 0) {
 		if((sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE)) &&
 		   (filling_sinfo)) {
@@ -4936,22 +4940,23 @@ get_more_data:
 					m = control->data;
 					/* been through it all, must hold sb lock ok to null tail */
 					if (control->data == NULL) {
-
+#ifdef INVARIENTS
 						if ((control->end_added == 0) ||
 						    (TAILQ_NEXT(control, next) == NULL)) {
 							/* If the end is not added, OR the
 							 * next is NOT null we MUST have the lock.
 							 */
-#if defined(__FreeBSD__) && __FreeBSD_version >= 503000
 							if(mtx_owned(&inp->inp_rdata_mtx) == 0) {
 								panic("Hmm we don't own the lock?");
 							}
-#endif
 						}
+#endif
 						control->tail_mbuf = NULL;
+#ifdef INVARIENTS
 						if ((control->end_added) && ((out_flags & MSG_EOR) == 0)) {
 							panic("end_added, nothing left and no MSG_EOR");
 						}
+#endif
 					}
 				}
 			} else {
@@ -5058,10 +5063,12 @@ get_more_data:
 				 * are leaving more behind on the control to
 				 * read.
 				 */
+#ifdef INVARIENTS
 				if(control->end_added && (control->data == NULL) &&
 				   (control->tail_mbuf == NULL)) {
 					panic("Gak, control->length is corrupt?");
 				}
+#endif
 				no_rcv_needed = control->do_not_ref_stcb;
 				out_flags &= ~MSG_EOR;
 			}
