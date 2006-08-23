@@ -4635,6 +4635,17 @@ restart:
 		 * the appender did the increment but as not
 		 * yet did the tailq insert onto the read_queue
 		 */
+		if(hold_rlock == 0) {
+			SCTP_INP_READ_LOCK(inp);
+			hold_rlock = 1;
+		}
+		control = TAILQ_FIRST(&inp->read_queue);
+		if ((control == NULL) && (so->so_rcv.sb_cc != 0)) {
+			panic("Huh, its non zero and nothing on control?");
+			so->so_rcv.sb_cc = 0;
+		}
+		SCTP_INP_READ_LOCK(inp);
+		hold_rlock = 0;
 		goto restart;
 	}
 
@@ -4644,10 +4655,12 @@ restart:
 		/* Bad stcb leaves behind 
 		 * control?
 		 */
-		hold_rlock = 1;
 		printf("Someone left garbage behind.. yuck!\n");
 		SCTP_STAT_INCR(sctps_locks_in_rcva);
-		SCTP_INP_READ_LOCK(inp);
+		if(hold_rlock == 0) {
+			hold_rlock = 1;
+			SCTP_INP_READ_LOCK(inp);
+		}
 		if(control->data) {
 			/* Hmm there is data here .. fix */
 			struct mbuf *m;
