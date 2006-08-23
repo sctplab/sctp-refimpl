@@ -5390,12 +5390,13 @@ release:
 #if defined(__FreeBSD__)
 	sbunlock(&so->so_rcv);
 #endif
+
+release_unlocked:
 	if(hold_sblock) {
 		SOCKBUF_UNLOCK(&so->so_rcv);
 		hold_sblock = 0;
 	}
 
-release_unlocked:
 	if ((stcb) && (in_flags & MSG_PEEK) == 0) {
 		if ((special_return == 0) &&
 		    (freed_so_far >= rwnd_req) &&
