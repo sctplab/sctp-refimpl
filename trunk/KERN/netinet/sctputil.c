@@ -5376,6 +5376,10 @@ get_more_data2:
 		}
 	}
 release:
+	if(hold_rlock == 1) {
+		SCTP_INP_READ_UNLOCK(inp);
+		hold_rlock = 0;
+	}
 	if(hold_sblock == 0) {
 		SOCKBUF_LOCK(&so->so_rcv);
 		hold_sblock = 1;
@@ -5392,11 +5396,6 @@ release:
 #endif
 
 release_unlocked:
-	if(hold_sblock) {
-		SOCKBUF_UNLOCK(&so->so_rcv);
-		hold_sblock = 0;
-	}
-
 	if ((stcb) && (in_flags & MSG_PEEK) == 0) {
 		if ((special_return == 0) &&
 		    (freed_so_far >= rwnd_req) &&
@@ -5407,6 +5406,10 @@ release_unlocked:
 	if (msg_flags)
 		*msg_flags |= out_flags;
 out:
+	if(hold_sblock) {
+		SOCKBUF_UNLOCK(&so->so_rcv);
+		hold_sblock = 0;
+	}
 	if(hold_rlock == 1) {
 		SCTP_INP_READ_UNLOCK(inp);
 		hold_rlock = 0;
@@ -5502,6 +5505,7 @@ sctp_soreceive(so, paddr, uio, mp0, controlp, flagsp)
 		*paddr = maddr;
 
 	}
+
 	return (error);
 }
 
@@ -5565,6 +5569,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 			*psa = NULL;
 		}
 	}
+
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	socket_unlock(so, 1);
 #endif
