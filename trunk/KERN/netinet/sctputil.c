@@ -5396,6 +5396,10 @@ release:
 #endif
 
 release_unlocked:
+	if(hold_sblock) {
+		SOCKBUF_UNLOCK(&so->so_rcv);
+		hold_sblock = 0;
+	}
 	if ((stcb) && (in_flags & MSG_PEEK) == 0) {
 		if ((special_return == 0) &&
 		    (freed_so_far >= rwnd_req) &&
