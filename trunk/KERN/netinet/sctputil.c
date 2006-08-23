@@ -4049,6 +4049,7 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 		SCTP_INP_READ_LOCK(inp);
 	}
 	if (control == NULL) {
+	get_out:
 		if (inp) {
 			SCTP_INP_READ_UNLOCK(inp);
 		}
@@ -4057,12 +4058,13 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 	if ((control->tail_mbuf) &&
 	    (control->tail_mbuf->m_flags & M_EOR)) {
 		/* huh this one is complete? */
-		if (inp) {
-			SCTP_INP_READ_UNLOCK(inp);
-		}
-		return (-1);
+		goto get_out;
 	}
 	mm = m;
+	if (mm == NULL) {
+		goto get_out;
+	}
+
 	while (mm) {
 		len += mm->m_len;
 		if (sb) {
@@ -4080,7 +4082,7 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 	}
 	if (end) {
 		/* message is complete */
-		control->tail_mbuf->m_flags |= M_EOR;
+		tail->m_flags |= M_EOR;
 		if(control == stcb->asoc.control_pdapi) {
 			stcb->asoc.control_pdapi = NULL;
 		}
