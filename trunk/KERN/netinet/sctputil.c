@@ -4625,11 +4625,12 @@ restart:
 	/* we possibly have data we can read */
 	control = TAILQ_FIRST(&inp->read_queue);
 	if (control == NULL) {
-		/* nothing there? TSNH! */
-		so->so_rcv.sb_cc = 0;
+		/* This could be happening since
+		 * the appender did the increment but as not
+		 * yet did the tailq insert onto the read_queue
+		 */
 		goto restart;
 	}
-
 
 #ifdef INVARIENTS
 	if ((control->length == 0) && 
@@ -4691,11 +4692,27 @@ restart:
 			 * <or> fragment interleave is NOT on. So stuff the sb_cc
 			 * into the our held count, and its time to sleep again.
 			 */
+			if(hold_rlock == 0) {
+				SCTP_INP_READ_LOCK(inp);
+				hold_rlock = 1;
+			}
 			control->held_length += so->so_rcv.sb_cc;
 			so->so_rcv.sb_cc = 0;
+			if(hold_rlock) {
+				SCTP_INP_READ_UNLOCK(inp);
+				hold_rlock = 0;
+			}
 		} else {
+			if(hold_rlock == 0) {
+				SCTP_INP_READ_LOCK(inp);
+				hold_rlock = 1;
+			}
 			control->held_length += so->so_rcv.sb_cc;
 			so->so_rcv.sb_cc = 0;
+			if(hold_rlock) {
+				SCTP_INP_READ_UNLOCK(inp);
+				hold_rlock = 0;
+			}
 		}
 		goto restart;
 	}
@@ -5022,6 +5039,7 @@ get_more_data:
 				/* Add back any hiddend data */
 				if (control->held_length) {
 					atomic_add_int(&so->so_rcv.sb_cc, control->held_length);
+					control->held_length = 0;
 					wakeup_read_socket = 1;
 				}
 				no_rcv_needed = control->do_not_ref_stcb;
@@ -5144,11 +5162,17 @@ wait_some_more:
 		if (control->length == 0) {
 			/* still nothing here */
 			if (so->so_rcv.sb_cc) {
-				SCTP_INP_READ_LOCK(inp);
+				if (hold_rlock == 0) {
+					SCTP_INP_READ_LOCK(inp);
+					hold_rlock = 1;
+				}
 				SCTP_STAT_INCR(sctps_locks_in_rcvf);
-				control->held_length += so->so_rcv.sb_cc;
+				atomic_add_int(&control->held_length, so->so_rcv.sb_cc);
 				so->so_rcv.sb_cc = 0;
-				SCTP_INP_READ_UNLOCK(inp);
+				if (hold_rlock) {
+					SCTP_INP_READ_UNLOCK(inp);
+					hold_rlock = 0;
+				}
 			}
 			/* Did the user somehow toggle the flag? */
 			if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE)) {
@@ -5261,10 +5285,16 @@ get_more_data2:
 			if (control->length == 0) {
 				/* still nothing here */
 				if (so->so_rcv.sb_cc) {
-					SCTP_INP_READ_LOCK(inp);
+					if (hold_rlock == 0) {
+						SCTP_INP_READ_LOCK(inp);
+						hold_rlock = 1;
+					}
 					control->held_length += so->so_rcv.sb_cc;
 					so->so_rcv.sb_cc = 0;
-					SCTP_INP_READ_UNLOCK(inp);
+					if (hold_rlock) {
+						SCTP_INP_READ_UNLOCK(inp);
+						hold_rlock = 0;
+					}
 				}
 				/* Did the user somehow toggle the flag? */
 				if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE)) {

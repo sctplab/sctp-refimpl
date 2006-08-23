@@ -311,7 +311,6 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 	    (m)->m_type != MT_OOBDATA) \
 		atomic_add_int(&(sb)->sb_ctl,(m)->m_len); \
 	atomic_add_int(&(sb)->sb_mbcnt,MSIZE); \
-        atomic_add_int(&(sb)->sb_cc, (m)->m_len); \
 	if ((m)->m_flags & M_EXT) \
 		atomic_add_int(&(sb)->sb_mbcnt,(m)->m_ext.ext_size); \
 }
@@ -365,7 +364,6 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 			atomic_add_int(&(stcb)->asoc.sb_mbcnt, (m)->m_ext.ext_size); \
 	} \
 	atomic_add_int(&(sb)->sb_mbcnt, MSIZE); \
-        atomic_add_int(&(sb)->sb_cc, (m)->m_len); \
 	if ((m)->m_flags & M_EXT) \
 		atomic_add_int(&(sb)->sb_mbcnt, (m)->m_ext.ext_size); \
 }
