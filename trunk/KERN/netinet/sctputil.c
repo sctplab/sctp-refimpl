@@ -4490,24 +4490,24 @@ sctp_sorecvmsg(struct socket *so,
 	 * MSG_NOTIFICATION MSG_EOR
 	 * 
 	 */
-	struct sctp_inpcb *inp;
-	int my_len;
-	int cp_len, error = 0;
-	struct sctp_queued_to_read *control, *ctl, *nxt;
-	struct mbuf *m, *embuf;
+	struct sctp_inpcb *inp=NULL;
+	int my_len=0;
+	int cp_len=0, error = 0;
+	struct sctp_queued_to_read *control=NULL, *ctl=NULL, *nxt=NULL;
+	struct mbuf *m=NULL, *embuf=NULL;
 	struct sctp_tcb *stcb = NULL;
 	int wakeup_read_socket = 0;
 	int freecnt_applied = 0;
-	int out_flags = 0, in_flags;
+	int out_flags = 0, in_flags=0;
 	int block_allowed = 1;
 	int freed_so_far = 0;
 	int copied_so_far = 0;
 	int s,in_eeor_mode=0;
 	int no_rcv_needed = 0;
-	uint32_t rwnd_req;
+	uint32_t rwnd_req=0;
 	int hold_sblock = 0;
 	int hold_rlock = 0;
-	int alen, slen;
+	int alen=0, slen=0;
 
 	if (msg_flags) {
 		in_flags = *msg_flags;
@@ -4904,7 +4904,6 @@ get_more_data:
 				/* not enough in this buf */
 				cp_len = my_len;
 			}
-			printf("Copy m:%x bytes:%d\n", (u_int)m, cp_len);
 			if(hold_rlock) {
 				SCTP_INP_READ_UNLOCK(inp);
 				hold_rlock = 0;
@@ -5029,6 +5028,7 @@ get_more_data:
 						atomic_subtract_int(&stcb->asoc.sb_cc, cp_len);
 					}
 					copied_so_far += cp_len;
+					embuf = m;
 					freed_so_far += cp_len;
 #ifdef SCTP_SB_LOGGING
 					sctp_sblog(&so->so_rcv, stcb,
