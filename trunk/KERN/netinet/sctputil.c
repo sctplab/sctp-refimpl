@@ -4493,18 +4493,19 @@ sctp_sorecvmsg(struct socket *so,
 	int freed_so_far = 0;
 	int copied_so_far = 0;
 	int s,in_eeor_mode=0;
-	int special_return = 0;
 	int no_rcv_needed = 0;
 	uint32_t rwnd_req;
 	int hold_sblock = 0;
 	int hold_rlock = 0;
-	int alen;
+	int alen, slen;
 
 	if (msg_flags) {
 		in_flags = *msg_flags;
 	} else {
 		in_flags = 0;
 	}
+
+	slen = uio->uio_resid;
 	/* Pull in and set up our int flags */
 	if (in_flags & MSG_OOB) {
 		/* Out of band's NOT supported */
@@ -4917,8 +4918,7 @@ get_more_data:
 
 			if (stcb &&
 			    stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
-				printf("About to be freed s-ret\n");
-				special_return = 1;
+				no_rcv_needed = 1;
 			}
 			if (error) {
 				/* error we are out of here */
@@ -5141,8 +5141,7 @@ get_more_data:
 		 * before we go to sleep?
 		 */
 		if (((stcb) && (in_flags & MSG_PEEK) == 0) &&
-		    ((special_return == 0) &&
-		     (freed_so_far >= rwnd_req) &&
+		    ((freed_so_far >= rwnd_req) &&
 		     (no_rcv_needed == 0))) {
 			sctp_user_rcvd(stcb, &freed_so_far, hold_rlock, rwnd_req);
 		}
@@ -5160,10 +5159,6 @@ wait_some_more:
 			printf("gone out 2\n");
 			goto release;
 
-		if (special_return) {
-			printf("sret out2\n");
-			goto release;
-		}
 		if(hold_sblock == 0) {
 			SOCKBUF_LOCK(&so->so_rcv);
 			hold_sblock = 1;
@@ -5317,13 +5312,6 @@ get_more_data2:
 #endif
 				}
 			}
-			if(special_return) {
-#if defined(__FreeBSD__) || defined(__NetBSD__)
-				goto release;
-#else
-				goto release_unlocked;
-#endif
-			}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
 #endif
@@ -5425,7 +5413,7 @@ get_more_data2:
 
 					if (stcb &&
 					    stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
-						special_return = 1;
+						no_rcv_needed = 1;
 					}
 					m->m_data += cp_len;
 					m->m_len -= cp_len;
@@ -5436,8 +5424,7 @@ get_more_data2:
 					atomic_subtract_int(&so->so_rcv.sb_cc, cp_len);
 					if (stcb) {
 						atomic_subtract_int(&stcb->asoc.sb_cc,cp_len);
-						if((special_return == 0) &&
-						   (freed_so_far >= rwnd_req) &&
+						if((freed_so_far >= rwnd_req) &&
 						   (no_rcv_needed == 0))
 							sctp_user_rcvd(stcb, &freed_so_far, hold_rlock, rwnd_req);
 				        }
@@ -5483,8 +5470,7 @@ release_unlocked:
 		hold_sblock = 0;
 	}
 	if ((stcb) && (in_flags & MSG_PEEK) == 0) {
-		if ((special_return == 0) &&
-		    (freed_so_far >= rwnd_req) &&
+		if ((freed_so_far >= rwnd_req) &&
 		    (no_rcv_needed == 0))
 			sctp_user_rcvd(stcb, &freed_so_far, hold_rlock, rwnd_req);
 	}
@@ -5530,6 +5516,9 @@ out:
 #endif
 	if (wakeup_read_socket) {
 		sctp_sorwakeup(inp, so);
+	}
+	if ((slen == uio->uio_resid) && (error == 0)) {
+		panic("Huh why the 0 len return?");
 	}
 	return (error);
 }
