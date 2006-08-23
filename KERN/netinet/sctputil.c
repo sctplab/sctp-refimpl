@@ -4920,9 +4920,11 @@ get_more_data:
 							/* If the end is not added, OR the
 							 * next is NOT null we MUST have the lock.
 							 */
+#if defined(__FreeBSD__) && __FreeBSD_version >= 503000
 							if(mtx_owned(&inp->inp_rdata_mtx) == 0) {
 								panic("Hmm we don't own the lock?");
 							}
+#endif
 						}
 						control->tail_mbuf = NULL;
 						if ((control->end_added) && ((out_flags & MSG_EOR) == 0)) {
