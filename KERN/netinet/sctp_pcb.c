@@ -4121,15 +4121,9 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		 * is it the timer driving us? if so are the reader/writers
 		 * gone?
 		 */
-		if (so) {
-			SOCKBUF_LOCK(&so->so_rcv);
-		}
 		if (stcb->asoc.refcnt) {
 			/* nope, reader or writer in the way */
 			sctp_timer_start(SCTP_TIMER_TYPE_ASOCKILL, inp, stcb, NULL);
-			if (so) {
-				SOCKBUF_UNLOCK(&so->so_rcv);
-			}
 			/* no asoc destroyed */
 			SCTP_TCB_UNLOCK(stcb);
 			splx(s);
@@ -4137,9 +4131,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			sctp_log_closing(inp, stcb, 8);
 #endif
 			return (0);
-		}
-		if (so) {
-			SOCKBUF_UNLOCK(&so->so_rcv);
 		}
 	}
 	/* now clean up any other timers */
@@ -4161,9 +4152,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	if ((from_inpcbfree != 2) && (stcb->asoc.refcnt)) {
 		/* reader or writer in the way */
 		sctp_timer_start(SCTP_TIMER_TYPE_ASOCKILL, inp, stcb, NULL);
-		if ((from_inpcbfree == 0) && so) {
-			SOCKBUF_UNLOCK(&so->so_rcv);
-		}
 		SCTP_TCB_UNLOCK(stcb);
 		splx(s);
 #ifdef SCTP_LOG_CLOSING
