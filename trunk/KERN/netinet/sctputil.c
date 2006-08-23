@@ -4558,6 +4558,7 @@ sctp_sorecvmsg(struct socket *so,
 	error = sblock(&so->so_rcv, (block_allowed ? M_WAITOK : 0));
 #endif
 	if(error) {
+		printf("Error %d from sblock\n", error);
 		goto release_unlocked;
 	}
 restart:
@@ -4578,6 +4579,7 @@ restart:
 
 	if((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
 	   (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
+		printf("Gone, to out\n");
 		goto out;
 	}
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
@@ -4586,6 +4588,8 @@ restart:
 	if (so->so_error || so->so_state & SS_CANTRCVMORE)
 #endif
 	{
+		printf("so->so_error:%d so->so_rcv.sb_state:%d -- to out\n",
+		       so->so_error, so->so_rcv.sb_state);
 		goto out;
 	}
 
@@ -4598,6 +4602,7 @@ restart:
 		if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 		    (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
 			if ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0) {
+				printf("Doing not-connected thing for 1-1 model\n");
 				error = ENOTCONN;
 				/* For active open side clear flags for re-use 
 				 * passive open is blocked by connect.
@@ -4611,10 +4616,12 @@ restart:
 		}
 		error = sbwait(&so->so_rcv);
 		if (error) {
+			printf("Sbwait returns %d\n", error);
 			goto out;
 		}
 		goto restart;
 	} else if (so->so_rcv.sb_cc == 0) {
+		printf("Out non-blocking\n");
 		error = EWOULDBLOCK;
 		goto out;
 	}
@@ -4692,10 +4699,10 @@ restart:
 		SCTP_INP_READ_UNLOCK(inp);
 		goto restart;
 	}
+#endif
 	if ((control->length == 0) && (control->end_added) && (control->data == NULL)) {
 		panic ("Length 0, end is on and data is gone!");
 	}
-#endif
 	if (control->length == 0) {
 		/* In this case, apply the lock so we sync with any add going
 		 * on right now.
@@ -4905,14 +4912,17 @@ get_more_data:
 #endif
 			/* re-read */
 			if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)
+				printf("Gone - to release\n");
 				goto release;
 
 			if (stcb &&
 			    stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+				printf("About to be freed s-ret\n");
 				special_return = 1;
 			}
 			if (error) {
 				/* error we are out of here */
+				printf("error was at here %d\n", error);
 				goto release;
 			}
 			if((m->m_next == NULL) && 
@@ -5139,6 +5149,7 @@ get_more_data:
 wait_some_more:
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 		if (so->so_error || so->so_rcv.sb_state & SBS_CANTRCVMORE)
+			printf("cant rcv more 2\n");
 			goto release;
 #else
 		if (so->so_error || so->so_state & SS_CANTRCVMORE)
@@ -5146,9 +5157,11 @@ wait_some_more:
 #endif
 
 		if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)
+			printf("gone out 2\n");
 			goto release;
 
 		if (special_return) {
+			printf("sret out2\n");
 			goto release;
 		}
 		if(hold_sblock == 0) {
@@ -5180,6 +5193,7 @@ wait_some_more:
 			error = sbwait(&so->so_rcv);
 			if (error){
 #if defined(__FreeBSD__) || defined(__NetBSD__)
+				printf("error:%d from sbwait 2\n", error);
 				goto release;
 #else
 				goto release_unlocked;
