@@ -4904,6 +4904,7 @@ get_more_data:
 				/* not enough in this buf */
 				cp_len = my_len;
 			}
+			printf("Copy m:%x bytes:%d\n", (u_int)m, cp_len);
 			if(hold_rlock) {
 				SCTP_INP_READ_UNLOCK(inp);
 				hold_rlock = 0;
@@ -5049,6 +5050,7 @@ get_more_data:
 			if ((out_flags & MSG_EOR) ||
 			    (uio->uio_resid == 0)
 				) {
+				printf("Nothing else left\n");
 				break;
 			}
 			if (((stcb) && (in_flags & MSG_PEEK) == 0) &&
@@ -5117,11 +5119,14 @@ get_more_data:
 			}
 		}
 		if (out_flags & MSG_EOR) {
+			printf("Msg EOR seen?\n");
 			goto release;
 		}
 		if ((uio->uio_resid == 0) ||
 		    ((in_eeor_mode) && (copied_so_far >= max(so->so_rcv.sb_lowat, 1)))
 			) {
+			printf("uio_resid:%d in_eeor_mode:%d copied_so_far:%d lowwat:%d\n",
+			       uio->uio_resid, in_eeor_mode, copied_so_far, lowwat);
 			goto release;
 		}
 		/*
@@ -5130,6 +5135,7 @@ get_more_data:
 		 * we are done. Did the user NOT set MSG_WAITALL?
 		 */
 		if (block_allowed == 0) {
+			printf("Block allowed\n");
 			goto release;
 		}
 		/*
@@ -5138,6 +5144,7 @@ get_more_data:
 		 * did we CANNOT now wait-all.
 		 */
 		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE)) {
+			printf("Frag interleave\n");
 			goto release;
 		}
 		/*
@@ -5230,6 +5237,7 @@ wait_some_more:
 			}
 			/* Did the user somehow toggle the flag? */
 			if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE)) {
+				printf("Interleav down here\n");
 				goto release;
 			}
 			goto wait_some_more;
@@ -5237,6 +5245,7 @@ wait_some_more:
 		goto get_more_data;
 	} else {
 		/* copy out the mbuf chain */
+		printf("mp is %x??\n", (u_int)mp);
 get_more_data2:
 		cp_len = uio->uio_resid;
 		if ((uint32_t) cp_len >= control->length) {
