@@ -5126,7 +5126,7 @@ get_more_data:
 		    ((in_eeor_mode) && (copied_so_far >= max(so->so_rcv.sb_lowat, 1)))
 			) {
 			printf("uio_resid:%d in_eeor_mode:%d copied_so_far:%d lowwat:%d\n",
-			       uio->uio_resid, in_eeor_mode, copied_so_far, lowwat);
+			       uio->uio_resid, in_eeor_mode, copied_so_far, so->so_rcv.sb_lowwat);
 			goto release;
 		}
 		/*
