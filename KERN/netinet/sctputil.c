@@ -4645,6 +4645,7 @@ restart:
 		}
 		error = sbwait(&so->so_rcv);
 		if (error) {
+			printf("sbwait(so-rcv) error=%d\n", error);
 			goto out;
 		}
 		goto restart;
