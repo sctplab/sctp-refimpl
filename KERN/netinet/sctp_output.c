@@ -11656,6 +11656,7 @@ sctp_sosend(struct socket *so,
 	return (error);
 }
 
+
 extern unsigned int sctp_add_more_threshold;
 int
 sctp_lower_sosend(struct socket *so,
@@ -11692,7 +11693,7 @@ sctp_lower_sosend(struct socket *so,
 	int got_all_of_the_send = 0;
 	int hold_tcblock = 0;
 	int non_blocking = 0;
-
+	uint16_t sctp_spin_protect=0;
 	error = 0;
 	net = NULL;
 	stcb = NULL;
@@ -12169,11 +12170,21 @@ sctp_lower_sosend(struct socket *so,
 				SOCKBUF_UNLOCK(&so->so_snd);
 				goto out_unlocked;
 			}
-
 #ifdef SCTP_BLK_LOGGING
 			sctp_log_block(SCTP_BLOCK_LOG_OUTOF_BLK,
 				       so, asoc, stcb->asoc.total_output_queue_size);
 #endif
+			if(so->so_snd.sb_hiwat > stcb->asoc.total_output_queue_size)
+				sctp_spin_protect = 0;
+			else
+				sctp_spin_protect++;
+			if(sctp_spin_protect > 200) {
+				panic("200 awakenings and no progress what is with that?");
+			}
+			if(stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+				goto out_unlocked;
+			}
+
 		}
 		if(so->so_snd.sb_hiwat > stcb->asoc.total_output_queue_size) {
 			max_len = so->so_snd.sb_hiwat -  stcb->asoc.total_output_queue_size;
@@ -12455,6 +12466,13 @@ sctp_lower_sosend(struct socket *so,
 #if defined(__NetBSD__)
 				error = sblock(&so->so_snd, SBLOCKWAIT(flags));
 #endif
+				if(so->so_snd.sb_hiwat > stcb->asoc.total_output_queue_size)
+					sctp_spin_protect = 0;
+				else
+					sctp_spin_protect++;
+				if(sctp_spin_protect > 200) {
+					panic("200-2 awakenings and no progress what is with that?");
+				}
 #ifdef SCTP_BLK_LOGGING
 				sctp_log_block(SCTP_BLOCK_LOG_OUTOF_BLK,
 					       so, asoc, stcb->asoc.total_output_queue_size);
