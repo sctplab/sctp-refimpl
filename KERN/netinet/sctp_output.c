@@ -7312,11 +7312,12 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 
 	if(sp->msg_is_complete && (sp->length == 0)) {
 		/* All done pull and kill the message */
+		sctp_my_track[3]++;
 		asoc->stream_queue_cnt--;
 		TAILQ_REMOVE(&strq->outqueue, sp, next);
 		sctp_free_remote_addr(sp->net);
 		if(sp->data) {
-			sctp_my_track[3]++;
+			sctp_my_track[4]++;
 			sctp_m_freem(sp->data);
 		}
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_strmoq, sp);
@@ -7326,7 +7327,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		stcb->asoc.locked_on_sending = NULL;
 	} else {
 		/* more to go, we are locked */
-		sctp_my_track[4]++;
+		sctp_my_track[5]++;
 		*locked = 1;
 	}
 	asoc->chunks_on_out_queue++;
@@ -11404,6 +11405,7 @@ sctp_copy_resume(struct sctp_stream_queue_pending *sp,
 		sctp_m_freem(head);
 		return(NULL);
 	}
+	sctp_my_track[9]++;
 	*sndout += willcpy;
 	left -= willcpy;
 	head->m_len = willcpy;
@@ -11416,8 +11418,10 @@ sctp_copy_resume(struct sctp_stream_queue_pending *sp,
 			sctp_m_freem(head);
 			*new_tail = NULL;
 			*error = ENOMEM;
+			sctp_my_track[9]--;
 			return(NULL);
 		}
+		sctp_my_track[9]++;
 		prev = m;
 		m = m->m_next;
 		cancpy = M_TRAILINGSPACE(m);
@@ -11455,6 +11459,7 @@ sctp_copy_one(struct sctp_stream_queue_pending *sp,
 	if (m == NULL) {
 		return (ENOMEM);
 	}
+	sctp_my_track[7]++;
 	/*
 	 * Add this one for m in now, that way if the alloc fails we won't
 	 * have a bad cnt.
@@ -11479,9 +11484,11 @@ sctp_copy_one(struct sctp_stream_queue_pending *sp,
 				 * the head goes back to caller, he can free
 				 * the rest
 				 */
+				sctp_my_track[8]++;
 				sctp_m_freem(head);
 				return (ENOMEM);
 			}
+			sctp_my_track[7]++;
 			m = m->m_next;
 			cancpy = M_TRAILINGSPACE(m);
 			willcpy = min(cancpy, left);
@@ -11557,7 +11564,7 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 	SCTP_GETTIME_TIMEVAL(&sp->ts);
 
 	sp->stream = srcv->sinfo_stream;
-
+	sctp_my_track[6]++;
 	sp->length = min(uio->uio_resid, max_send_len);
 	if ((sp->length == uio->uio_resid) &&
 	    ((user_marks_eor == 0) || 
