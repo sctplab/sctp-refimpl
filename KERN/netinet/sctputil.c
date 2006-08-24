@@ -4634,6 +4634,11 @@ restart:
 #endif
 	{
 		sctp_add_to_cache(2);
+		if (so->so_error) {
+			error = so->so_error;
+		} else {
+			error = ENOTCONN;
+		}
 		goto out;
 	}
 
