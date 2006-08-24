@@ -7098,8 +7098,6 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 
 uint32_t sctp_my_track[16]  = {
 	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 0, 0, 0
 };
 
