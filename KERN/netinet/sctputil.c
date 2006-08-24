@@ -3491,8 +3491,10 @@ sctp_report_all_outbound(struct sctp_tcb *stcb)
 				 * trim off the sctp chunk header(it should
 				 * be there)
 				 */
-				if (chk->send_size >= sizeof(struct sctp_data_chunk))
+				if (chk->send_size >= sizeof(struct sctp_data_chunk)) {
 					m_adj(chk->data, sizeof(struct sctp_data_chunk));
+					sctp_mbuf_crush(chk->data);
+				}
 
 			}
 			sctp_free_bufspace(stcb, asoc, chk, 1);
@@ -3519,8 +3521,10 @@ sctp_report_all_outbound(struct sctp_tcb *stcb)
 				 * trim off the sctp chunk header(it should
 				 * be there)
 				 */
-				if (chk->send_size >= sizeof(struct sctp_data_chunk))
+				if (chk->send_size >= sizeof(struct sctp_data_chunk)) {
 					m_adj(chk->data, sizeof(struct sctp_data_chunk));
+					sctp_mbuf_crush(chk->data);
+				}
 
 			}
 			sctp_free_bufspace(stcb, asoc, chk, 1);

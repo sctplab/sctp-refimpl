@@ -1687,16 +1687,16 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			ippp = (uint32_t *) (ph + 1);
 			*ippp = htonl(0x20000001);
 		}
-		sctp_abort_an_association(stcb->sctp_ep, stcb, SCTP_PEER_FAULTY,
-		    oper);
+		sctp_abort_an_association(stcb->sctp_ep, stcb, 
+					  SCTP_PEER_FAULTY, oper);
 		*abort_flag = 1;
 		return (0);
 	}
 	the_len = (chk_length - sizeof(struct sctp_data_chunk));
 	if (last_chunk == 0) {
 		dmbuf = sctp_m_copym(*m,
-		    (offset + sizeof(struct sctp_data_chunk)),
-		    the_len, M_DONTWAIT);
+				     (offset + sizeof(struct sctp_data_chunk)),
+				     the_len, M_DONTWAIT);
 	} else {
 		/* We can steal the last chunk */
 		dmbuf = *m;
@@ -1706,6 +1706,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			/* Trim the end round bytes off  too */
 			m_adj(dmbuf, -(dmbuf->m_pkthdr.len - the_len));
 		}
+		sctp_mbuf_crush(dmbuf);
 	}
 	if (dmbuf == NULL) {
 		SCTP_STAT_INCR(sctps_nomem);
