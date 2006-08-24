@@ -2804,7 +2804,7 @@ sctp_notify_assoc_change(uint32_t event, struct sctp_tcb *stcb,
 	if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) &&
 	    (event == SCTP_COMM_LOST)) {
-		if(TAILQ_EMPTY(&sctp->sctp_ep->read_queue)) {
+		if(TAILQ_EMPTY(&stcbp->sctp_ep->read_queue)) {
 			stcb->sctp_socket->so_error = ECONNRESET;
 		}
 		/* Wake ANY sleepers */
