@@ -4594,6 +4594,12 @@ sctp_sorecvmsg(struct socket *so,
 		goto release_unlocked;
 	}
 restart:
+	/* Randy's lock code */
+	if(hold_rlock) {
+		SCTP_INP_READ_UNLOCK(inp);
+		hold_rlock = 0;
+	}
+
 	if(hold_sblock == 0) {
 		SOCKBUF_LOCK(&so->so_rcv);
 		hold_sblock = 1;
@@ -4666,6 +4672,11 @@ restart:
 #if defined(__FreeBSD__)
 	error = sblock(&so->so_rcv, (block_allowed ? M_WAITOK : 0));
 #endif
+	/* Randy's lock code */
+	if(hold_rlock == 0) {
+		SCTP_INP_READ_LOCK(inp);
+		hold_rlock = 1;
+	}
 	/* we possibly have data we can read */
 	control = TAILQ_FIRST(&inp->read_queue);
 	if (control == NULL) {
@@ -4763,10 +4774,6 @@ restart:
 			 */
 			control->held_length += so->so_rcv.sb_cc;
 			so->so_rcv.sb_cc = 0;
-			if(hold_rlock) {
-				SCTP_INP_READ_UNLOCK(inp);
-				hold_rlock = 0;
-			}
 		} else {
 			if(hold_rlock == 0) {
 				SCTP_INP_READ_LOCK(inp);
@@ -4774,10 +4781,6 @@ restart:
 			}
 			control->held_length += so->so_rcv.sb_cc;
 			so->so_rcv.sb_cc = 0;
-			if(hold_rlock) {
-				SCTP_INP_READ_UNLOCK(inp);
-				hold_rlock = 0;
-			}
 		}
 		goto restart;
 	}
@@ -4955,6 +4958,12 @@ get_more_data:
 				/* error we are out of here */
 				goto release;
 			}
+			/* Randy wants more locks */
+			if(hold_rlock == 0) {
+				SCTP_INP_READ_LOCK(inp);
+				hold_rlock = 1;
+			}
+
 			if((m->m_next == NULL) && 
 			   (cp_len >= m->m_len) &&
 			   ((control->end_added == 0) ||
@@ -5096,6 +5105,11 @@ get_more_data:
 #endif
 				}
 		done_with_control:
+				/* Randy wants more locks */
+				if(hold_rlock == 0) {
+					SCTP_INP_READ_LOCK(inp);
+					hold_rlock = 1;
+				}
 				if(TAILQ_NEXT(control, next) == NULL) {
 					/* If we don't have a next we need a lock,
 					 * if there is a next interupt is filling ahead
