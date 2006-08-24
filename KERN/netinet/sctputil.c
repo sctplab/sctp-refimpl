@@ -4963,7 +4963,8 @@ get_more_data:
 			socket_unlock(so, 0);
 #endif
 			sctp_add_to_cache(66);
-			error = uiomove(mtod(m, char *), cp_len, uio);
+			if(cp_len > 0) 
+				error = uiomove(mtod(m, char *), cp_len, uio);
 			sctp_add_to_cache(67);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			socket_lock(so, 0);
@@ -4974,9 +4975,10 @@ get_more_data:
 			s = splnet();
 #endif
 			/* re-read */
-			if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)
+			if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 				sctp_add_to_cache(22);
 				goto release;
+			}
 
 			if (stcb &&
 			    stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
