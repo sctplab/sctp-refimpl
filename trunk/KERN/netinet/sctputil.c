@@ -4951,6 +4951,7 @@ get_more_data:
 			my_len = (int)m->m_len;
 			if (cp_len > my_len) {
 				/* not enough in this buf */
+				sctp_add_to_cache(65);
 				cp_len = my_len;
 			}
 			if(hold_rlock) {
@@ -4961,7 +4962,9 @@ get_more_data:
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			socket_unlock(so, 0);
 #endif
+			sctp_add_to_cache(66);
 			error = uiomove(mtod(m, char *), cp_len, uio);
+			sctp_add_to_cache(67);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			socket_lock(so, 0);
 #endif
@@ -4984,6 +4987,7 @@ get_more_data:
 				sctp_add_to_cache(23);
 				goto release;
 			}
+			sctp_add_to_cache(68);
 			if((m->m_next == NULL) && 
 			   (cp_len >= m->m_len) &&
 			   ((control->end_added == 0) ||
@@ -4993,6 +4997,7 @@ get_more_data:
 				SCTP_INP_READ_LOCK(inp);
 				hold_rlock = 1;
 			}
+			sctp_add_to_cache(69);
 			if (cp_len == m->m_len) {
 				sctp_add_to_cache(24);
 				if (m->m_flags & M_EOR) {
