@@ -7133,9 +7133,6 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		/* This should not happen */
 		panic("sp length is 0?");
 	}
-        /* We may not have a m_pkthder due to the way the sbwait/awake
-	 * thing works... assure that we do!
-	 */
 	if ((goal_mtu >= sp->length) && (sp->msg_is_complete)) {
 		/* It all fits and its a complete msg, no brainer */
 		to_move = min(sp->length, frag_point);
@@ -11693,7 +11690,6 @@ sctp_lower_sosend(struct socket *so,
 	int got_all_of_the_send = 0;
 	int hold_tcblock = 0;
 	int non_blocking = 0;
-	uint16_t sctp_spin_protect=0;
 	error = 0;
 	net = NULL;
 	stcb = NULL;
@@ -12146,7 +12142,7 @@ sctp_lower_sosend(struct socket *so,
 	if (max_len == 0) {
 		/* No room right no ! */
 		SOCKBUF_LOCK(&so->so_snd);
-		while(so->so_snd.sb_hiwat <= stcb->asoc.total_output_queue_size) {
+		while(so->so_snd.sb_hiwat <= (stcb->asoc.total_output_queue_size+sctp_add_more_threshold)) {
 #ifdef SCTP_BLK_LOGGING
 			sctp_log_block(SCTP_BLOCK_LOG_INTO_BLKA,
 				       so, asoc, uio->uio_resid);
@@ -12174,13 +12170,6 @@ sctp_lower_sosend(struct socket *so,
 			sctp_log_block(SCTP_BLOCK_LOG_OUTOF_BLK,
 				       so, asoc, stcb->asoc.total_output_queue_size);
 #endif
-			if(so->so_snd.sb_hiwat > stcb->asoc.total_output_queue_size)
-				sctp_spin_protect = 0;
-			else
-				sctp_spin_protect++;
-			if(sctp_spin_protect > 200) {
-				panic("200 awakenings and no progress what is with that?");
-			}
 			if(stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 				goto out_unlocked;
 			}
@@ -12428,7 +12417,7 @@ sctp_lower_sosend(struct socket *so,
 			 * size we KNOW we will get to sleep safely with the
 			 * wakeup flag in place.
 			 */
-			if(so->so_snd.sb_hiwat <= stcb->asoc.total_output_queue_size) {
+			if(so->so_snd.sb_hiwat <= (stcb->asoc.total_output_queue_size+sctp_add_more_threshold)) {
 #ifdef SCTP_BLK_LOGGING
 				sctp_log_block(SCTP_BLOCK_LOG_INTO_BLK,
 					       so, asoc, uio->uio_resid);
@@ -12466,13 +12455,6 @@ sctp_lower_sosend(struct socket *so,
 #if defined(__NetBSD__)
 				error = sblock(&so->so_snd, SBLOCKWAIT(flags));
 #endif
-				if(so->so_snd.sb_hiwat > stcb->asoc.total_output_queue_size)
-					sctp_spin_protect = 0;
-				else
-					sctp_spin_protect++;
-				if(sctp_spin_protect > 200) {
-					panic("200-2 awakenings and no progress what is with that?");
-				}
 #ifdef SCTP_BLK_LOGGING
 				sctp_log_block(SCTP_BLOCK_LOG_OUTOF_BLK,
 					       so, asoc, stcb->asoc.total_output_queue_size);
