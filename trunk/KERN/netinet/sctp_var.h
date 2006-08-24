@@ -382,6 +382,17 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 	} \
 }
 
+#define sctp_mbuf_crush(data) do { \
+                struct mbuf *_m; \
+		_m = (data); \
+		while(_m && (_m->m_len == 0)) { \
+			(data)  = _m->m_next; \
+			_m->m_next = NULL; \
+			sctp_m_free(_m); \
+			_m = (data); \
+		} \
+} while (0)
+
 
 	extern int sctp_sendspace;
 	extern int sctp_recvspace;

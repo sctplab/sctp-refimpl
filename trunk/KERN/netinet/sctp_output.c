@@ -7206,7 +7206,6 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		 */
 		m = sp->data;
 		while(m && (m->m_len == 0)) {
-			sctp_my_track[2]++;
 			sp->data  = m->m_next;
 			m->m_next = NULL;
 			if(sp->tail_mbuf == m) {
