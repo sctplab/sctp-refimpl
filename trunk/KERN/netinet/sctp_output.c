@@ -12155,6 +12155,10 @@ sctp_lower_sosend(struct socket *so,
 			error = sbwait(&so->so_snd);
 			stcb->block_entry = NULL;
 			if (error || so->so_error || be.error) {
+				printf("sbwait(so-snd) error=%d (%d:%d)\n", 
+				       error,
+				       so->so_error,
+				       be.error);
 				if (error == 0) {
 					if (so->so_error)
 						error = so->so_error;
@@ -12430,6 +12434,11 @@ sctp_lower_sosend(struct socket *so,
 				stcb->block_entry = NULL;
 
 				if (error || so->so_error || be.error) {
+					printf("sbwait(so-snd)2 error=%d (%d:%d)\n", 
+					       error,
+					       so->so_error,
+					       be.error);
+
 					if (error == 0) {
 						if (so->so_error)
 							error = so->so_error;
