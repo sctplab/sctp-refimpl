@@ -4693,8 +4693,6 @@ restart:
 			panic("Huh, its non zero and nothing on control?");
 			so->so_rcv.sb_cc = 0;
 		}
-		SCTP_INP_READ_LOCK(inp);
-		hold_rlock = 0;
 		goto restart;
 	}
 
@@ -4737,8 +4735,6 @@ restart:
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, control);
 			SCTP_DECR_READQ_COUNT();
 		}
-		hold_rlock = 0;
-		SCTP_INP_READ_UNLOCK(inp);
 		goto restart;
 	}
 #endif
@@ -4969,9 +4965,11 @@ get_more_data:
 			   ((control->end_added == 0) ||
 			    (control->end_added && (TAILQ_NEXT(control, next) == NULL)))
 				) {
-				SCTP_STAT_INCR(sctps_locks_in_rcvb);
-				SCTP_INP_READ_LOCK(inp);
-				hold_rlock = 1;
+				if(hold_rlock == 0) {
+					SCTP_STAT_INCR(sctps_locks_in_rcvb);
+					SCTP_INP_READ_LOCK(inp);
+					hold_rlock = 1;
+				}
 			}
 			if (cp_len == m->m_len) {
 				if (m->m_flags & M_EOR) {
@@ -5210,7 +5208,7 @@ wait_some_more:
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		sbunlock(&so->so_rcv, 1);
 #endif
-		if(hold_rlock == 1) {
+		if(hold_rlock) {
 			SCTP_INP_READ_UNLOCK(inp);
 			hold_rlock = 0;
 		}
@@ -5337,7 +5335,7 @@ get_more_data2:
 				SOCKBUF_LOCK(&so->so_rcv);
 				hold_sblock = 1;
 			}
-			if(hold_rlock == 1) {
+			if(hold_rlock) {
 				SCTP_INP_READ_UNLOCK(inp);
 				hold_rlock = 0;
 			}
@@ -5487,7 +5485,7 @@ get_more_data2:
 		}
 	}
 release:
-	if(hold_rlock == 1) {
+	if(hold_rlock) {
 		SCTP_INP_READ_UNLOCK(inp);
 		hold_rlock = 0;
 	}
@@ -5524,7 +5522,7 @@ out:
 		SOCKBUF_UNLOCK(&so->so_rcv);
 		hold_sblock = 0;
 	}
-	if(hold_rlock == 1) {
+	if(hold_rlock) {
 		SCTP_INP_READ_UNLOCK(inp);
 		hold_rlock = 0;
 	}
