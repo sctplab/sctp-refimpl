@@ -12165,6 +12165,7 @@ sctp_lower_sosend(struct socket *so,
 				SOCKBUF_UNLOCK(&so->so_snd);
 				goto out_unlocked;
 			}
+
 #ifdef SCTP_BLK_LOGGING
 			sctp_log_block(SCTP_BLOCK_LOG_OUTOF_BLK,
 				       so, asoc, stcb->asoc.total_output_queue_size);
@@ -12175,9 +12176,11 @@ sctp_lower_sosend(struct socket *so,
 		} else {
 			max_len = 0;
 		}
-		SOCKBUF_UNLOCK(&so->so_snd);		
+		SOCKBUF_UNLOCK(&so->so_snd);
 	}
-
+	if(stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+		goto out_unlocked;
+	}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	error = sblock(&so->so_snd, SBLOCKWAIT(flags));
 #endif
@@ -12449,6 +12452,9 @@ sctp_lower_sosend(struct socket *so,
 #endif
 			}
 			SOCKBUF_UNLOCK(&so->so_snd);
+			if(stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+				goto out_unlocked;
+			}
 		}
 		if (hold_tcblock == 0) {
 			SCTP_TCB_LOCK(stcb);
