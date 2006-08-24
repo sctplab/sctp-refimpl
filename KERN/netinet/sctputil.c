@@ -2804,10 +2804,12 @@ sctp_notify_assoc_change(uint32_t event, struct sctp_tcb *stcb,
 	if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) &&
 	    (event == SCTP_COMM_LOST)) {
-		stcb->sctp_socket->so_error = ECONNRESET;
+		if(TAILQ_EMPTY(&sctp->sctp_ep->read_queue)) {
+			stcb->sctp_socket->so_error = ECONNRESET;
+		}
 		/* Wake ANY sleepers */
-		sowwakeup(stcb->sctp_socket);
 		sorwakeup(stcb->sctp_socket);
+		sowwakeup(stcb->sctp_socket);
 		sctp_asoc_change_wake++;
 	}
 
@@ -4652,7 +4654,7 @@ restart:
 		    (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
 			if ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0) {
 				sctp_add_to_cache(3);
-				error = ENOTCONN;
+				error = ECONNRESET;
 				/* For active open side clear flags for re-use 
 				 * passive open is blocked by connect.
 				 */
