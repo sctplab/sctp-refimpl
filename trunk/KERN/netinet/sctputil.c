@@ -4472,6 +4472,19 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far, int hold_rlock,
 }
 
 
+uint16_t sctp_points[100];
+uint16_t sctp_cache[2000];
+uint16_t sctp_point_at=0;
+uint16_t sctp_point_needs_init=1;
+
+#define sctp_add_to_cache(val) do { \
+	sctp_points[val]++; \
+	sctp_cache[sctp_point_at] = val; \
+        sctp_point_at++; \
+	if (sctp_point_at >= 2000) \
+		sctp_point_at = 0; \
+} while (0)
+
 int
 sctp_sorecvmsg(struct socket *so,
     struct uio *uio,
@@ -4569,9 +4582,14 @@ sctp_sorecvmsg(struct socket *so,
 	error = sblock(&so->so_rcv, (block_allowed ? M_WAITOK : 0));
 #endif
 	if(error) {
-		printf("Error %d from sblock\n", error);
 		goto release_unlocked;
 	}
+	memset(sctp_points, 0, sizeof(sctp_points));
+	if(sctp_point_needs_init) {
+		sctp_point_needs_init = 0;
+		memset(sctp_cache, 0, sizeof(sctp_cache));
+	}
+	sctp_add_to_cache(0);
 restart:
 	if(hold_sblock == 0) {
 		SOCKBUF_LOCK(&so->so_rcv);
@@ -4590,7 +4608,7 @@ restart:
 
 	if((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
 	   (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
-		printf("Gone, to out\n");
+		sctp_add_to_cache(1);
 		goto out;
 	}
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
@@ -4599,8 +4617,7 @@ restart:
 	if (so->so_error || so->so_state & SS_CANTRCVMORE)
 #endif
 	{
-		printf("so->so_error:%d so->so_rcv.sb_state:%d -- to out\n",
-		       so->so_error, so->so_rcv.sb_state);
+		sctp_add_to_cache(2);
 		goto out;
 	}
 
@@ -4613,7 +4630,7 @@ restart:
 		if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 		    (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
 			if ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0) {
-				printf("Doing not-connected thing for 1-1 model\n");
+				sctp_add_to_cache(3);
 				error = ENOTCONN;
 				/* For active open side clear flags for re-use 
 				 * passive open is blocked by connect.
@@ -4625,14 +4642,16 @@ restart:
 				goto out;
 			}
 		}
+		sctp_add_to_cache(4);
 		error = sbwait(&so->so_rcv);
 		if (error) {
-			printf("Sbwait returns %d\n", error);
+			sctp_add_to_cache(5);
 			goto out;
 		}
+		sctp_add_to_cache(6);
 		goto restart;
 	} else if (so->so_rcv.sb_cc == 0) {
-		printf("Out non-blocking\n");
+		sctp_add_to_cache(7);
 		error = EWOULDBLOCK;
 		goto out;
 	}
@@ -4646,6 +4665,7 @@ restart:
 #if defined(__FreeBSD__)
 	error = sblock(&so->so_rcv, (block_allowed ? M_WAITOK : 0));
 #endif
+	sctp_add_to_cache(8);
 	/* we possibly have data we can read */
 	control = TAILQ_FIRST(&inp->read_queue);
 	if (control == NULL) {
@@ -4653,6 +4673,7 @@ restart:
 		 * the appender did the increment but as not
 		 * yet did the tailq insert onto the read_queue
 		 */
+		sctp_add_to_cache(9);
 		if(hold_rlock == 0) {
 			SCTP_INP_READ_LOCK(inp);
 			hold_rlock = 1;
@@ -4718,12 +4739,14 @@ restart:
 		/* In this case, apply the lock so we sync with any add going
 		 * on right now.
 		 */
+		sctp_add_to_cache(10);
 		if(hold_rlock == 0) {
 			SCTP_INP_READ_LOCK(inp);
 			hold_rlock = 1;
 		}
 	}
 	if (control->length == 0) {
+		sctp_add_to_cache(11);
 		if((sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE)) &&
 		   (filling_sinfo)) {
 			/* find a more suitable one then this */
@@ -4731,6 +4754,7 @@ restart:
 			while (ctl) {
 				if ((ctl->stcb != control->stcb) && (ctl->length)) {
 					/* found one */
+					sctp_add_to_cache(12);
 					control = ctl;
 					goto found_one;
 				}
@@ -4748,6 +4772,7 @@ restart:
 				hold_rlock = 0;
 			}
 		} else {
+			sctp_add_to_cache(13);
 			if(hold_rlock == 0) {
 				SCTP_INP_READ_LOCK(inp);
 				hold_rlock = 1;
@@ -4759,6 +4784,7 @@ restart:
 				hold_rlock = 0;
 			}
 		}
+		sctp_add_to_cache(14);
 		goto restart;
 	}
 
@@ -4771,6 +4797,7 @@ found_one:
 	 * If we reach here, control has a some data for us to read off.
 	 * Note that stcb COULD be NULL.
 	 */
+	sctp_add_to_cache(15);
 	if(hold_sblock) {
 		SOCKBUF_UNLOCK(&so->so_rcv);
 		hold_sblock = 0;
@@ -4778,6 +4805,7 @@ found_one:
 
 	stcb = control->stcb;
 	if (stcb) {
+		sctp_add_to_cache(16);
 		if((stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) &&
 		    (control->do_not_ref_stcb == 0)) {
 			stcb = NULL;
@@ -4806,6 +4834,7 @@ found_one:
         }
 	/* First lets get off the sinfo and sockaddr info */
 	if ((sinfo) && filling_sinfo) {
+		sctp_add_to_cache(17);
 		memcpy(sinfo, control, sizeof(struct sctp_nonpad_sndrcvinfo));
 		nxt = TAILQ_NEXT(control, next);
 		if(sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXT_RCVINFO)) {
@@ -4851,6 +4880,7 @@ found_one:
 	if (fromlen && from) {
 		struct sockaddr *to;
 
+		sctp_add_to_cache(18);
 #ifdef AF_INET
 		cp_len = min(fromlen, control->whoFrom->ro._l_addr.sin.sin_len);
 		memcpy(from, &control->whoFrom->ro._l_addr, cp_len);
@@ -4894,10 +4924,13 @@ found_one:
 	/* now copy out what data we can */
 	if (mp == NULL) {
 		/* copy out each mbuf in the chain up to length */
+		sctp_add_to_cache(19);
 get_more_data:
+		sctp_add_to_cache(20);
 		m = control->data;
 		while (m) {
 			/* Move out all we can */
+			sctp_add_to_cache(21);
 			cp_len = (int)uio->uio_resid;
 			my_len = (int)m->m_len;
 			if (cp_len > my_len) {
@@ -4923,7 +4956,7 @@ get_more_data:
 #endif
 			/* re-read */
 			if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)
-				printf("Gone - to release\n");
+				sctp_add_to_cache(22);
 				goto release;
 
 			if (stcb &&
@@ -4932,7 +4965,7 @@ get_more_data:
 			}
 			if (error) {
 				/* error we are out of here */
-				printf("error was at here %d\n", error);
+				sctp_add_to_cache(23);
 				goto release;
 			}
 			if((m->m_next == NULL) && 
@@ -4945,15 +4978,19 @@ get_more_data:
 				hold_rlock = 1;
 			}
 			if (cp_len == m->m_len) {
+				sctp_add_to_cache(24);
 				if (m->m_flags & M_EOR) {
+					sctp_add_to_cache(25);
 					out_flags |= MSG_EOR;
 				}
 				if (m->m_flags & M_NOTIFICATION) {
+					sctp_add_to_cache(26);
 					out_flags |= MSG_NOTIFICATION;
 				}
 				/* we ate up the mbuf */
 				if (in_flags & MSG_PEEK) {
 					/* just looking */
+					sctp_add_to_cache(27);
 					m = m->m_next;
 					copied_so_far += cp_len;
 				} else {
@@ -4962,6 +4999,7 @@ get_more_data:
 					sctp_sblog(&so->so_rcv,
 					    stcb, SCTP_LOG_SBFREE, m->m_len);
 #endif
+					sctp_add_to_cache(28);
 					sctp_sbfree(stcb, &so->so_rcv, m);
 #ifdef SCTP_SB_LOGGING
 					sctp_sblog(&so->so_rcv,
@@ -4994,6 +5032,7 @@ get_more_data:
 							}
 						}
 #endif
+						sctp_add_to_cache(29);
 						control->tail_mbuf = NULL;
 #ifdef INVARIENTS
 						if ((control->end_added) && ((out_flags & MSG_EOR) == 0)) {
@@ -5004,11 +5043,13 @@ get_more_data:
 				}
 			} else {
 				/* Do we need to trim the mbuf? */
+				sctp_add_to_cache(30);
 				if (m->m_flags & M_NOTIFICATION) {
+					sctp_add_to_cache(31);
 					out_flags |= MSG_NOTIFICATION;
 				}
 				if ((in_flags & MSG_PEEK) == 0) {
-
+					sctp_add_to_cache(32);
 					if (out_flags & MSG_NOTIFICATION) {
 						/*
 						 * remark this one with the
@@ -5016,6 +5057,7 @@ get_more_data:
 						 * only part of the
 						 * notification.
 						 */
+						sctp_add_to_cache(33);
 						m->m_flags |= M_NOTIFICATION;
 					}
 					m->m_data += cp_len;
@@ -5023,6 +5065,7 @@ get_more_data:
 #ifdef SCTP_SB_LOGGING
 					sctp_sblog(&so->so_rcv, stcb, SCTP_LOG_SBFREE, cp_len);
 #endif
+					sctp_add_to_cache(34);
 					atomic_subtract_int(&so->so_rcv.sb_cc, cp_len);
 					if (stcb) {
 						atomic_subtract_int(&stcb->asoc.sb_cc, cp_len);
@@ -5050,7 +5093,7 @@ get_more_data:
 			if ((out_flags & MSG_EOR) ||
 			    (uio->uio_resid == 0)
 				) {
-				printf("Nothing else left\n");
+				sctp_add_to_cache(35);
 				break;
 			}
 			if (((stcb) && (in_flags & MSG_PEEK) == 0) &&
@@ -5058,7 +5101,9 @@ get_more_data:
 			    (freed_so_far >= rwnd_req)) {
 				sctp_user_rcvd(stcb, &freed_so_far, hold_rlock, rwnd_req);
 			}
+			sctp_add_to_cache(36);
 		} /* end while(m) */
+		sctp_add_to_cache(37);
 		/*
 		 * At this point we have looked at it all and we either have
 		 * a MSG_EOR/or read all the user wants... <OR>
@@ -5067,6 +5112,7 @@ get_more_data:
 		if ((out_flags & MSG_EOR) &&
 		    ((in_flags & MSG_PEEK) == 0)) {
 			/* we are done with this control */
+			sctp_add_to_cache(38);
 			if (control->length == 0) {
 				if (control->data) {
 #ifdef INVARIENTS
@@ -5078,12 +5124,14 @@ get_more_data:
 #endif
 				}
 		done_with_control:
+				sctp_add_to_cache(39);
 				if(TAILQ_NEXT(control, next) == NULL) {
 					/* If we don't have a next we need a lock,
 					 * if there is a next interupt is filling ahead
 					 * of us and we don't need a lock to remove this
 					 * guy (which is the head of the queue).
 					 */
+					sctp_add_to_cache(40);
 					if(hold_rlock == 0) {
 						SCTP_STAT_INCR(sctps_locks_in_rcvc);
 						SCTP_INP_READ_LOCK(inp);
@@ -5097,6 +5145,7 @@ get_more_data:
 					control->held_length = 0;
 					wakeup_read_socket = 1;
 				}
+				sctp_add_to_cache(41);
 				no_rcv_needed = control->do_not_ref_stcb;
 				sctp_free_remote_addr(control->whoFrom);
 				SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, control);
@@ -5108,6 +5157,7 @@ get_more_data:
 				 * are leaving more behind on the control to
 				 * read.
 				 */
+				sctp_add_to_cache(42);
 #ifdef INVARIENTS
 				if(control->end_added && (control->data == NULL) &&
 				   (control->tail_mbuf == NULL)) {
@@ -5119,14 +5169,13 @@ get_more_data:
 			}
 		}
 		if (out_flags & MSG_EOR) {
-			printf("Msg EOR seen?\n");
+			sctp_add_to_cache(43);
 			goto release;
 		}
 		if ((uio->uio_resid == 0) ||
 		    ((in_eeor_mode) && (copied_so_far >= max(so->so_rcv.sb_lowat, 1)))
 			) {
-			printf("uio_resid:%d in_eeor_mode:%d copied_so_far:%d lowat:%d\n",
-			       uio->uio_resid, in_eeor_mode, copied_so_far, so->so_rcv.sb_lowat);
+			sctp_add_to_cache(44);
 			goto release;
 		}
 		/*
@@ -5135,7 +5184,7 @@ get_more_data:
 		 * we are done. Did the user NOT set MSG_WAITALL?
 		 */
 		if (block_allowed == 0) {
-			printf("Block allowed\n");
+			sctp_add_to_cache(45);
 			goto release;
 		}
 		/*
@@ -5144,7 +5193,7 @@ get_more_data:
 		 * did we CANNOT now wait-all.
 		 */
 		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE)) {
-			printf("Frag interleave\n");
+			sctp_add_to_cache(46);
 			goto release;
 		}
 		/*
@@ -5162,24 +5211,30 @@ get_more_data:
 		     (no_rcv_needed == 0))) {
 			sctp_user_rcvd(stcb, &freed_so_far, hold_rlock, rwnd_req);
 		}
+		sctp_add_to_cache(47);
 wait_some_more:
+		sctp_add_to_cache(48);
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
-		if (so->so_error || so->so_rcv.sb_state & SBS_CANTRCVMORE)
-			printf("cant rcv more 2\n");
+		if (so->so_error || so->so_rcv.sb_state & SBS_CANTRCVMORE) {
+			sctp_add_to_cache(49);
 			goto release;
+		}
 #else
-		if (so->so_error || so->so_state & SS_CANTRCVMORE)
+		if (so->so_error || so->so_state & SS_CANTRCVMORE) {
+			sctp_add_to_cache(49);
 			goto release;
+		}
 #endif
 
 		if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)
-			printf("gone out 2\n");
+			sctp_add_to_cache(50);
 			goto release;
 
 		if(hold_sblock == 0) {
 			SOCKBUF_LOCK(&so->so_rcv);
 			hold_sblock = 1;
 		}
+		sctp_add_to_cache(51);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		sbunlock(&so->so_rcv, 1);
 #endif
@@ -5202,17 +5257,19 @@ wait_some_more:
 				       uio->uio_resid);
 #endif
 		if(so->so_rcv.sb_cc == 0) {
+			sctp_add_to_cache(52);
 			error = sbwait(&so->so_rcv);
 			if (error){
 #if defined(__FreeBSD__) || defined(__NetBSD__)
-				printf("error:%d from sbwait 2\n", error);
+				sctp_add_to_cache(53);
 				goto release;
 #else
+				sctp_add_to_cache(53);
 				goto release_unlocked;
 #endif
 			}
 		}
-
+		sctp_add_to_cache(54);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
 #endif
@@ -5222,11 +5279,13 @@ wait_some_more:
 		}
 		if (control->length == 0) {
 			/* still nothing here */
+			sctp_add_to_cache(55);
 			if (so->so_rcv.sb_cc) {
 				if (hold_rlock == 0) {
 					SCTP_INP_READ_LOCK(inp);
 					hold_rlock = 1;
 				}
+				sctp_add_to_cache(56);
 				SCTP_STAT_INCR(sctps_locks_in_rcvf);
 				atomic_add_int(&control->held_length, so->so_rcv.sb_cc);
 				so->so_rcv.sb_cc = 0;
@@ -5237,14 +5296,17 @@ wait_some_more:
 			}
 			/* Did the user somehow toggle the flag? */
 			if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE)) {
-				printf("Interleav down here\n");
+				sctp_add_to_cache(57);
 				goto release;
 			}
+			sctp_add_to_cache(58);
 			goto wait_some_more;
 		}
+		sctp_add_to_cache(59);
 		goto get_more_data;
 	} else {
 		/* copy out the mbuf chain */
+		sctp_add_to_cache(60);
 		printf("mp is %x??\n", (u_int)mp);
 get_more_data2:
 		cp_len = uio->uio_resid;
@@ -5463,7 +5525,9 @@ get_more_data2:
 			}
 		}
 	}
+	sctp_add_to_cache(61);
 release:
+	sctp_add_to_cache(62);
 	if(hold_rlock == 1) {
 		SCTP_INP_READ_UNLOCK(inp);
 		hold_rlock = 0;
@@ -5484,6 +5548,7 @@ release:
 #endif
 
 release_unlocked:
+	sctp_add_to_cache(63);
 	if(hold_sblock) {
 		SOCKBUF_UNLOCK(&so->so_rcv);
 		hold_sblock = 0;
@@ -5497,6 +5562,7 @@ release_unlocked:
 	if (msg_flags)
 		*msg_flags |= out_flags;
 out:
+	sctp_add_to_cache(64);
 	if(hold_sblock) {
 		SOCKBUF_UNLOCK(&so->so_rcv);
 		hold_sblock = 0;
