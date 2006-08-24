@@ -3992,7 +3992,7 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 	 * queue AND increment sb_cc so that select will work properly on
 	 * read.
 	 */
-	struct mbuf *m;
+	struct mbuf *m, *prev=NULL;
 
 	SCTP_INP_READ_LOCK(inp);
 	m = control->data;
@@ -4001,9 +4001,17 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 	while (m) {
 		if (m->m_len == 0) {
 			/* Skip mbufs with NO lenght */
-			m = sctp_m_free(m);
+			if(prev == NULL) {
+				/* First one */
+				control->data = sctp_m_free(m);
+				m = control->data;
+			} else {
+				prev->m_next = sctp_m_free(m);
+				m = prev->m_next;
+			}
 			continue;
 		}
+		prev = m;
 #ifdef SCTP_SB_LOGGING
 		sctp_sblog(sb, stcb, SCTP_LOG_SBALLOC, m->m_len);
 #endif
@@ -4050,7 +4058,7 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 	 * of the mbuf chain.
 	 */
 	int len=0;
-	struct mbuf *mm, *tail = NULL;
+	struct mbuf *mm, *tail = NULL, *prev = NULL;
 
 	if (inp) {
 		SCTP_INP_READ_LOCK(inp);
@@ -4075,9 +4083,17 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 	while (mm) {
 		if (mm->m_len == 0) {
 			/* Skip mbufs with NO lenght */
-			mm = sctp_m_free(mm);
+			if(prev == NULL) {
+				/* First one */
+				m = sctp_m_free(mm);
+				mm = m;
+			} else {
+				prev->m_next = sctp_m_free(mm);
+				mm = prev->m_next;
+			}
 			continue;
 		}
+		prev = mm;
 		len += mm->m_len;
 		if (sb) {
 #ifdef SCTP_SB_LOGGING
