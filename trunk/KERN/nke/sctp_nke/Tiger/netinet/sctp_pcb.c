@@ -3048,7 +3048,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, sq);
 		SCTP_DECR_READQ_COUNT();
 	}
-
 	/* Now the sctp_pcb things */
 	/*
 	 * free each asoc if it is not already closed/free. we can't use the
@@ -4062,6 +4061,8 @@ sctp_iterator_asoc_being_freed(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	}
 }
 
+extern uint32_t sctp_my_track[16];
+
 /*
  * Free the association after un-hashing the remote port.
  */
@@ -4121,15 +4122,9 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		 * is it the timer driving us? if so are the reader/writers
 		 * gone?
 		 */
-		if (so) {
-			SOCKBUF_LOCK(&so->so_rcv);
-		}
 		if (stcb->asoc.refcnt) {
 			/* nope, reader or writer in the way */
 			sctp_timer_start(SCTP_TIMER_TYPE_ASOCKILL, inp, stcb, NULL);
-			if (so) {
-				SOCKBUF_UNLOCK(&so->so_rcv);
-			}
 			/* no asoc destroyed */
 			SCTP_TCB_UNLOCK(stcb);
 			splx(s);
@@ -4137,9 +4132,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			sctp_log_closing(inp, stcb, 8);
 #endif
 			return (0);
-		}
-		if (so) {
-			SOCKBUF_UNLOCK(&so->so_rcv);
 		}
 	}
 	/* now clean up any other timers */
@@ -4161,9 +4153,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	if ((from_inpcbfree != 2) && (stcb->asoc.refcnt)) {
 		/* reader or writer in the way */
 		sctp_timer_start(SCTP_TIMER_TYPE_ASOCKILL, inp, stcb, NULL);
-		if ((from_inpcbfree == 0) && so) {
-			SOCKBUF_UNLOCK(&so->so_rcv);
-		}
 		SCTP_TCB_UNLOCK(stcb);
 		splx(s);
 #ifdef SCTP_LOG_CLOSING
@@ -4185,11 +4174,10 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				/* Only if we have a socket lock do we do this */
 				if ((sq->held_length) ||
 				    ((sq->tail_mbuf) && ((sq->tail_mbuf->m_flags & M_EOR) == 0)) ||
-				    ((sq->length == 0) && (sq->tail_mbuf == NULL))) {
+				    ((sq->length == 0) && (sq->end_added == 0))) {
 					/* Held for PD-API */
-					so->so_rcv.sb_cc += sq->held_length;
-					so->so_rcv.sb_cc -= sq->length;
-					cnt++;
+					sq->held_length = 0;
+					atomic_subtract_int(&so->so_rcv.sb_cc,sq->length);
 					if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_PDAPIEVNT)) {
 						/* need to change to PD-API aborted */
 						stcb->asoc.control_pdapi = sq;
@@ -4197,23 +4185,18 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 											SCTP_PARTIAL_DELIVERY_ABORTED, 1);
 						stcb->asoc.control_pdapi = NULL;
 					} else {
-						/* need to remove */
-						TAILQ_REMOVE(&inp->read_queue, sq, next);
-						sctp_free_remote_addr(sq->whoFrom);
-						sq->whoFrom = NULL;
+						/* need to get the reader to remove it */
+						sq->length = 0;
 						if (sq->data) {
 							sctp_m_freem(sq->data);
 							sq->data = NULL;
+							sq->tail_mbuf = NULL;
 						}
-						/*
-						 * no need to free the net count, since at this point all
-						 * assoc's are gone.
-						 */
-						SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, sq);
-						SCTP_DECR_READQ_COUNT();
 					}
-				} 
+				}
+				sq->end_added = 1;
 			}
+			cnt++;
 		}
 	}
 	SCTP_INP_READ_UNLOCK(inp);
@@ -4355,7 +4338,9 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		sp = TAILQ_FIRST(&outs->outqueue);
 		while (sp) {
 			TAILQ_REMOVE(&outs->outqueue, sp, next);
+			sctp_my_track[10]++;
 			if (sp->data) {
+				sctp_my_track[11]++;
 				sctp_m_freem(sp->data);
 				sp->data = NULL;
 				sp->tail_mbuf = NULL;

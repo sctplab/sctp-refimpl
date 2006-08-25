@@ -7096,6 +7096,11 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 	return (m);
 }
 
+uint32_t sctp_my_track[16]  = {
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0
+};
+
 static int
 sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	struct sctp_stream_out *strq,
@@ -7133,9 +7138,6 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		/* This should not happen */
 		panic("sp length is 0?");
 	}
-        /* We may not have a m_pkthder due to the way the sbwait/awake
-	 * thing works... assure that we do!
-	 */
 	if ((goal_mtu >= sp->length) && (sp->msg_is_complete)) {
 		/* It all fits and its a complete msg, no brainer */
 		to_move = min(sp->length, frag_point);
@@ -7187,6 +7189,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		chk->last_mbuf = sp->tail_mbuf;
 		/* register the stealing */
 		sp->data = sp->tail_mbuf = NULL;
+		sctp_my_track[0]++;
 	} else {
 		struct mbuf *m;
 		chk->data = m_copym(sp->data, 0, to_move, M_DONTWAIT);
@@ -7196,6 +7199,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 			SCTP_DECR_CHK_COUNT();
 			goto out_gu;
 		}
+		sctp_my_track[1]++;
 		/* Pull off the data */
 		m_adj(sp->data, to_move);
 		/* Now lets work our way down and compact it 
@@ -7307,10 +7311,12 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 
 	if(sp->msg_is_complete && (sp->length == 0)) {
 		/* All done pull and kill the message */
+		sctp_my_track[3]++;
 		asoc->stream_queue_cnt--;
 		TAILQ_REMOVE(&strq->outqueue, sp, next);
 		sctp_free_remote_addr(sp->net);
 		if(sp->data) {
+			sctp_my_track[4]++;
 			sctp_m_freem(sp->data);
 		}
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_strmoq, sp);
@@ -7320,6 +7326,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		stcb->asoc.locked_on_sending = NULL;
 	} else {
 		/* more to go, we are locked */
+		sctp_my_track[5]++;
 		*locked = 1;
 	}
 	asoc->chunks_on_out_queue++;
@@ -11397,6 +11404,7 @@ sctp_copy_resume(struct sctp_stream_queue_pending *sp,
 		sctp_m_freem(head);
 		return(NULL);
 	}
+	sctp_my_track[9]++;
 	*sndout += willcpy;
 	left -= willcpy;
 	head->m_len = willcpy;
@@ -11409,8 +11417,10 @@ sctp_copy_resume(struct sctp_stream_queue_pending *sp,
 			sctp_m_freem(head);
 			*new_tail = NULL;
 			*error = ENOMEM;
+			sctp_my_track[9]--;
 			return(NULL);
 		}
+		sctp_my_track[9]++;
 		prev = m;
 		m = m->m_next;
 		cancpy = M_TRAILINGSPACE(m);
@@ -11448,6 +11458,7 @@ sctp_copy_one(struct sctp_stream_queue_pending *sp,
 	if (m == NULL) {
 		return (ENOMEM);
 	}
+	sctp_my_track[7]++;
 	/*
 	 * Add this one for m in now, that way if the alloc fails we won't
 	 * have a bad cnt.
@@ -11472,9 +11483,11 @@ sctp_copy_one(struct sctp_stream_queue_pending *sp,
 				 * the head goes back to caller, he can free
 				 * the rest
 				 */
+				sctp_my_track[8]++;
 				sctp_m_freem(head);
 				return (ENOMEM);
 			}
+			sctp_my_track[7]++;
 			m = m->m_next;
 			cancpy = M_TRAILINGSPACE(m);
 			willcpy = min(cancpy, left);
@@ -11550,7 +11563,7 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 	SCTP_GETTIME_TIMEVAL(&sp->ts);
 
 	sp->stream = srcv->sinfo_stream;
-
+	sctp_my_track[6]++;
 	sp->length = min(uio->uio_resid, max_send_len);
 	if ((sp->length == uio->uio_resid) &&
 	    ((user_marks_eor == 0) || 
@@ -11656,6 +11669,7 @@ sctp_sosend(struct socket *so,
 	return (error);
 }
 
+
 extern unsigned int sctp_add_more_threshold;
 int
 sctp_lower_sosend(struct socket *so,
@@ -11692,7 +11706,6 @@ sctp_lower_sosend(struct socket *so,
 	int got_all_of_the_send = 0;
 	int hold_tcblock = 0;
 	int non_blocking = 0;
-
 	error = 0;
 	net = NULL;
 	stcb = NULL;
@@ -12145,7 +12158,7 @@ sctp_lower_sosend(struct socket *so,
 	if (max_len == 0) {
 		/* No room right no ! */
 		SOCKBUF_LOCK(&so->so_snd);
-		while(so->so_snd.sb_hiwat <= stcb->asoc.total_output_queue_size) {
+		while(so->so_snd.sb_hiwat <= (stcb->asoc.total_output_queue_size+sctp_add_more_threshold)) {
 #ifdef SCTP_BLK_LOGGING
 			sctp_log_block(SCTP_BLOCK_LOG_INTO_BLKA,
 				       so, asoc, uio->uio_resid);
@@ -12169,15 +12182,21 @@ sctp_lower_sosend(struct socket *so,
 			sctp_log_block(SCTP_BLOCK_LOG_OUTOF_BLK,
 				       so, asoc, stcb->asoc.total_output_queue_size);
 #endif
+			if(stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+				goto out_unlocked;
+			}
+
 		}
 		if(so->so_snd.sb_hiwat > stcb->asoc.total_output_queue_size) {
 			max_len = so->so_snd.sb_hiwat -  stcb->asoc.total_output_queue_size;
 		} else {
 			max_len = 0;
 		}
-		SOCKBUF_UNLOCK(&so->so_snd);		
+		SOCKBUF_UNLOCK(&so->so_snd);
 	}
-
+	if(stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+		goto out_unlocked;
+	}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	error = sblock(&so->so_snd, SBLOCKWAIT(flags));
 #endif
@@ -12410,7 +12429,7 @@ sctp_lower_sosend(struct socket *so,
 			 * size we KNOW we will get to sleep safely with the
 			 * wakeup flag in place.
 			 */
-			if(so->so_snd.sb_hiwat <= stcb->asoc.total_output_queue_size) {
+			if(so->so_snd.sb_hiwat <= (stcb->asoc.total_output_queue_size+sctp_add_more_threshold)) {
 #ifdef SCTP_BLK_LOGGING
 				sctp_log_block(SCTP_BLOCK_LOG_INTO_BLK,
 					       so, asoc, uio->uio_resid);
@@ -12449,6 +12468,9 @@ sctp_lower_sosend(struct socket *so,
 #endif
 			}
 			SOCKBUF_UNLOCK(&so->so_snd);
+			if(stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+				goto out_unlocked;
+			}
 		}
 		if (hold_tcblock == 0) {
 			SCTP_TCB_LOCK(stcb);
