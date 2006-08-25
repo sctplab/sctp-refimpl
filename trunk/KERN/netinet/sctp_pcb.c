@@ -4174,11 +4174,10 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				/* Only if we have a socket lock do we do this */
 				if ((sq->held_length) ||
 				    ((sq->tail_mbuf) && ((sq->tail_mbuf->m_flags & M_EOR) == 0)) ||
-				    ((sq->length == 0) && (sq->tail_mbuf == NULL))) {
+				    ((sq->length == 0) && (sq->end_added == 0))) {
 					/* Held for PD-API */
-					so->so_rcv.sb_cc += sq->held_length;
-					so->so_rcv.sb_cc -= sq->length;
-					cnt++;
+					sq->held_length = 0;
+					atomic_subtract_int(&so->so_rcv.sb_cc,sq->length);
 					if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_PDAPIEVNT)) {
 						/* need to change to PD-API aborted */
 						stcb->asoc.control_pdapi = sq;
@@ -4186,23 +4185,18 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 											SCTP_PARTIAL_DELIVERY_ABORTED, 1);
 						stcb->asoc.control_pdapi = NULL;
 					} else {
-						/* need to remove */
-						TAILQ_REMOVE(&inp->read_queue, sq, next);
-						sctp_free_remote_addr(sq->whoFrom);
-						sq->whoFrom = NULL;
+						/* need to get the reader to remove it */
+						sq->length = 0;
 						if (sq->data) {
 							sctp_m_freem(sq->data);
 							sq->data = NULL;
+							sq->tail_mbuf = NULL;
 						}
-						/*
-						 * no need to free the net count, since at this point all
-						 * assoc's are gone.
-						 */
-						SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, sq);
-						SCTP_DECR_READQ_COUNT();
 					}
-				} 
+				}
+				sq->end_added = 1;
 			}
+			cnt++;
 		}
 	}
 	SCTP_INP_READ_UNLOCK(inp);

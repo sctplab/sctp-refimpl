@@ -4120,6 +4120,7 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 		if(control == stcb->asoc.control_pdapi) {
 			stcb->asoc.control_pdapi = NULL;
 		}
+		control->held_length = 0;
 		control->end_added = 1;
 	}
 	atomic_add_int(&control->length, len);
@@ -4530,6 +4531,7 @@ sctp_sorecvmsg(struct socket *so,
 	int hold_sblock = 0;
 	int hold_rlock = 0;
 	int alen=0, slen=0;
+	int held_length = 0;
 
 	if (msg_flags) {
 		in_flags = *msg_flags;
@@ -4594,12 +4596,6 @@ sctp_sorecvmsg(struct socket *so,
 		goto release_unlocked;
 	}
 restart:
-	/* Randy's lock code */
-	if(hold_rlock) {
-		SCTP_INP_READ_UNLOCK(inp);
-		hold_rlock = 0;
-	}
-
 	if(hold_sblock == 0) {
 		SOCKBUF_LOCK(&so->so_rcv);
 		hold_sblock = 1;
@@ -4633,7 +4629,7 @@ restart:
 		goto out;
 	}
 
-	if ((so->so_rcv.sb_cc == 0) && block_allowed) {
+	if ((so->so_rcv.sb_cc <=  held_length) && block_allowed) {
 		/* we need to wait for data */
 #ifdef SCTP_RECV_RWND_LOGGING
 		sctp_misc_ints(SCTP_SORECV_BLOCKSA,
@@ -4672,11 +4668,6 @@ restart:
 #if defined(__FreeBSD__)
 	error = sblock(&so->so_rcv, (block_allowed ? M_WAITOK : 0));
 #endif
-	/* Randy's lock code */
-	if(hold_rlock == 0) {
-		SCTP_INP_READ_LOCK(inp);
-		hold_rlock = 1;
-	}
 	/* we possibly have data we can read */
 	control = TAILQ_FIRST(&inp->read_queue);
 	if (control == NULL) {
@@ -4693,16 +4684,17 @@ restart:
 			panic("Huh, its non zero and nothing on control?");
 			so->so_rcv.sb_cc = 0;
 		}
+		SCTP_INP_READ_LOCK(inp);
+		hold_rlock = 0;
 		goto restart;
 	}
 
-#ifdef INVARIENTS
 	if ((control->length == 0) && 
 	    (control->do_not_ref_stcb)) {
-		/* Bad stcb leaves behind 
-		 * control?
+		/* Clean up code for freeing assoc that left behind a pdapi..
+		 * maybe a peer in EEOR that just closed after sending and never indicated
+		 * a EOR.
 		 */
-		printf("Someone left garbage behind.. yuck!\n");
 		SCTP_STAT_INCR(sctps_locks_in_rcva);
 		if(hold_rlock == 0) {
 			hold_rlock = 1;
@@ -4727,28 +4719,14 @@ restart:
 			/* remove it */
 			TAILQ_REMOVE(&inp->read_queue, control, next);
 			/* Add back any hiddend data */
-			if (control->held_length) {
-				so->so_rcv.sb_cc += control->held_length;
-				wakeup_read_socket = 1;
-			}
+			held_length = 0;
 			sctp_free_remote_addr(control->whoFrom);
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, control);
 			SCTP_DECR_READQ_COUNT();
 		}
+		hold_rlock = 0;
+		SCTP_INP_READ_UNLOCK(inp);
 		goto restart;
-	}
-#endif
-	if ((control->length == 0) && (control->end_added) && (control->data == NULL)) {
-		panic ("Length 0, end is on and data is gone!");
-	}
-	if (control->length == 0) {
-		/* In this case, apply the lock so we sync with any add going
-		 * on right now.
-		 */
-		if(hold_rlock == 0) {
-			SCTP_INP_READ_LOCK(inp);
-			hold_rlock = 1;
-		}
 	}
 	if (control->length == 0) {
 		if((sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE)) &&
@@ -4763,21 +4741,14 @@ restart:
 				}
 				ctl = TAILQ_NEXT(ctl, next);
 			}
-			/*
-			 * if we reach here, not suitable replacement is available
-			 * <or> fragment interleave is NOT on. So stuff the sb_cc
-			 * into the our held count, and its time to sleep again.
-			 */
-			control->held_length += so->so_rcv.sb_cc;
-			so->so_rcv.sb_cc = 0;
-		} else {
-			if(hold_rlock == 0) {
-				SCTP_INP_READ_LOCK(inp);
-				hold_rlock = 1;
-			}
-			control->held_length += so->so_rcv.sb_cc;
-			so->so_rcv.sb_cc = 0;
 		}
+		/*
+		 * if we reach here, not suitable replacement is available
+		 * <or> fragment interleave is NOT on. So stuff the sb_cc
+		 * into the our held count, and its time to sleep again.
+		 */
+		held_length = so->so_rcv.sb_cc;
+		control->held_length = so->so_rcv.sb_cc;
 		goto restart;
 	}
 
@@ -4954,22 +4925,14 @@ get_more_data:
 				/* error we are out of here */
 				goto release;
 			}
-			/* Randy wants more locks */
-			if(hold_rlock == 0) {
-				SCTP_INP_READ_LOCK(inp);
-				hold_rlock = 1;
-			}
-
 			if((m->m_next == NULL) && 
 			   (cp_len >= m->m_len) &&
 			   ((control->end_added == 0) ||
 			    (control->end_added && (TAILQ_NEXT(control, next) == NULL)))
 				) {
-				if(hold_rlock == 0) {
-					SCTP_STAT_INCR(sctps_locks_in_rcvb);
-					SCTP_INP_READ_LOCK(inp);
-					hold_rlock = 1;
-				}
+				SCTP_STAT_INCR(sctps_locks_in_rcvb);
+				SCTP_INP_READ_LOCK(inp);
+				hold_rlock = 1;
 			}
 			if (cp_len == m->m_len) {
 				if (m->m_flags & M_EOR) {
@@ -5103,11 +5066,6 @@ get_more_data:
 #endif
 				}
 		done_with_control:
-				/* Randy wants more locks */
-				if(hold_rlock == 0) {
-					SCTP_INP_READ_LOCK(inp);
-					hold_rlock = 1;
-				}
 				if(TAILQ_NEXT(control, next) == NULL) {
 					/* If we don't have a next we need a lock,
 					 * if there is a next interupt is filling ahead
@@ -5123,7 +5081,7 @@ get_more_data:
 				TAILQ_REMOVE(&inp->read_queue, control, next);
 				/* Add back any hiddend data */
 				if (control->held_length) {
-					atomic_add_int(&so->so_rcv.sb_cc, control->held_length);
+					held_length = 0;
 					control->held_length = 0;
 					wakeup_read_socket = 1;
 				}
@@ -5208,7 +5166,7 @@ wait_some_more:
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		sbunlock(&so->so_rcv, 1);
 #endif
-		if(hold_rlock) {
+		if(hold_rlock == 1) {
 			SCTP_INP_READ_UNLOCK(inp);
 			hold_rlock = 0;
 		}
@@ -5226,7 +5184,7 @@ wait_some_more:
 				       so->so_rcv.sb_cc, 
 				       uio->uio_resid);
 #endif
-		if(so->so_rcv.sb_cc == 0) {
+		if(so->so_rcv.sb_cc <= control->held_length) {
 			error = sbwait(&so->so_rcv);
 			if (error){
 #if defined(__FreeBSD__) || defined(__NetBSD__)
@@ -5245,18 +5203,14 @@ wait_some_more:
 		}
 		if (control->length == 0) {
 			/* still nothing here */
-			if (so->so_rcv.sb_cc) {
-				if (hold_rlock == 0) {
-					SCTP_INP_READ_LOCK(inp);
-					hold_rlock = 1;
-				}
+			if(control->end_added) {
+				/* Huh, there is none left? */
+				panic("Now none left while waiting? I missed one?");
+			}
+			if (so->so_rcv.sb_cc > held_length) {
 				SCTP_STAT_INCR(sctps_locks_in_rcvf);
-				atomic_add_int(&control->held_length, so->so_rcv.sb_cc);
-				so->so_rcv.sb_cc = 0;
-				if (hold_rlock) {
-					SCTP_INP_READ_UNLOCK(inp);
-					hold_rlock = 0;
-				}
+				control->held_length = so->so_rcv.sb_cc;
+				held_length = 0;
 			}
 			/* Did the user somehow toggle the flag? */
 			if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE)) {
@@ -5335,14 +5289,14 @@ get_more_data2:
 				SOCKBUF_LOCK(&so->so_rcv);
 				hold_sblock = 1;
 			}
-			if(hold_rlock) {
+			if(hold_rlock == 1) {
 				SCTP_INP_READ_UNLOCK(inp);
 				hold_rlock = 0;
 			}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			sbunlock(&so->so_rcv, 1);
 #endif
-			if(so->so_rcv.sb_cc == 0) {
+			if(so->so_rcv.sb_cc <= control->held_length) {
 				error = sbwait(&so->so_rcv);
 				if (error) {
 #if defined(__FreeBSD__) || defined(__NetBSD__)
@@ -5361,17 +5315,10 @@ get_more_data2:
 			}
 			if (control->length == 0) {
 				/* still nothing here */
-				if (so->so_rcv.sb_cc) {
-					if (hold_rlock == 0) {
-						SCTP_INP_READ_LOCK(inp);
-						hold_rlock = 1;
-					}
-					control->held_length += so->so_rcv.sb_cc;
-					so->so_rcv.sb_cc = 0;
-					if (hold_rlock) {
-						SCTP_INP_READ_UNLOCK(inp);
-						hold_rlock = 0;
-					}
+				if (so->so_rcv.sb_cc > held_length) {
+					control->held_length = so->so_rcv.sb_cc;
+					/* We don't use held_length while getting a message */
+					held_length = 0;
 				}
 				/* Did the user somehow toggle the flag? */
 				if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE)) {
@@ -5485,7 +5432,7 @@ get_more_data2:
 		}
 	}
 release:
-	if(hold_rlock) {
+	if(hold_rlock == 1) {
 		SCTP_INP_READ_UNLOCK(inp);
 		hold_rlock = 0;
 	}
@@ -5522,7 +5469,7 @@ out:
 		SOCKBUF_UNLOCK(&so->so_rcv);
 		hold_sblock = 0;
 	}
-	if(hold_rlock) {
+	if(hold_rlock == 1) {
 		SCTP_INP_READ_UNLOCK(inp);
 		hold_rlock = 0;
 	}
