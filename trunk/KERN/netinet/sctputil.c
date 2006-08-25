@@ -3936,11 +3936,11 @@ sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
 			m = control->data;
 			while (m) {
 #ifdef SCTP_SB_LOGGING
-				sctp_sblog(&old_so->so_rcv, stcb, SCTP_LOG_SBFREE, m->m_len);
+				sctp_sblog(&old_so->so_rcv, control->do_not_ref_stcb?NULL:stcb, SCTP_LOG_SBFREE, m->m_len);
 #endif
 				sctp_sbfree(control, stcb, &old_so->so_rcv, m);
 #ifdef SCTP_SB_LOGGING
-				sctp_sblog(&old_so->so_rcv, stcb, SCTP_LOG_SBRESULT, 0);
+				sctp_sblog(&old_so->so_rcv, control->do_not_ref_stcb?NULL:stcb, SCTP_LOG_SBRESULT, 0);
 #endif
 				m = m->m_next;
 			}
@@ -3972,11 +3972,11 @@ sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
 		m = control->data;
 		while (m) {
 #ifdef SCTP_SB_LOGGING
-			sctp_sblog(&new_so->so_rcv, stcb, SCTP_LOG_SBALLOC, m->m_len);
+			sctp_sblog(&new_so->so_rcv, control->do_not_ref_stcb?NULL:stcb, SCTP_LOG_SBALLOC, m->m_len);
 #endif
 			sctp_sballoc(stcb, &new_so->so_rcv, m);
 #ifdef SCTP_SB_LOGGING
-			sctp_sblog(&new_so->so_rcv, stcb, SCTP_LOG_SBRESULT, 0);
+			sctp_sblog(&new_so->so_rcv, control->do_not_ref_stcb?NULL:stcb, SCTP_LOG_SBRESULT, 0);
 #endif
 			m = m->m_next;
 		}
@@ -4019,11 +4019,11 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 		}
 		prev = m;
 #ifdef SCTP_SB_LOGGING
-		sctp_sblog(sb, stcb, SCTP_LOG_SBALLOC, m->m_len);
+		sctp_sblog(sb, control->do_not_ref_stcb?NULL:stcb, SCTP_LOG_SBALLOC, m->m_len);
 #endif
 		sctp_sballoc(stcb, sb, m);
 #ifdef SCTP_SB_LOGGING
-		sctp_sblog(sb, stcb, SCTP_LOG_SBRESULT, 0);
+		sctp_sblog(sb, control->do_not_ref_stcb?NULL:stcb, SCTP_LOG_SBRESULT, 0);
 #endif
 		atomic_add_int(&control->length, m->m_len);
 		if (m->m_next == NULL) {
@@ -4103,11 +4103,11 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 		len += mm->m_len;
 		if (sb) {
 #ifdef SCTP_SB_LOGGING
-			sctp_sblog(sb, stcb, SCTP_LOG_SBALLOC, mm->m_len);
+			sctp_sblog(sb, control->do_not_ref_stcb?NULL:stcb, SCTP_LOG_SBALLOC, mm->m_len);
 #endif
 			sctp_sballoc(stcb, sb, mm);
 #ifdef SCTP_SB_LOGGING
-			sctp_sblog(sb, stcb, SCTP_LOG_SBRESULT, 0);
+			sctp_sblog(sb, control->do_not_ref_stcb?NULL:stcb, SCTP_LOG_SBRESULT, 0);
 #endif
 		}
 		if (mm->m_next == NULL)
@@ -4950,12 +4950,12 @@ get_more_data:
 					/* dispose of the mbuf */
 #ifdef SCTP_SB_LOGGING
 					sctp_sblog(&so->so_rcv,
-					    stcb, SCTP_LOG_SBFREE, m->m_len);
+					    control->do_not_ref_stcb?NULL:stcb, SCTP_LOG_SBFREE, m->m_len);
 #endif
 					sctp_sbfree(control, stcb, &so->so_rcv, m);
 #ifdef SCTP_SB_LOGGING
 					sctp_sblog(&so->so_rcv,
-					    stcb, SCTP_LOG_SBRESULT, 0);
+					    control->do_not_ref_stcb?NULL:stcb, SCTP_LOG_SBRESULT, 0);
 #endif
 					embuf = m;
 					alen = control->length;
@@ -5010,7 +5010,7 @@ get_more_data:
 					m->m_data += cp_len;
 					m->m_len -= cp_len;
 #ifdef SCTP_SB_LOGGING
-					sctp_sblog(&so->so_rcv, stcb, SCTP_LOG_SBFREE, cp_len);
+					sctp_sblog(&so->so_rcv, control->do_not_ref_stcb?NULL:stcb, SCTP_LOG_SBFREE, cp_len);
 #endif
 					atomic_subtract_int(&so->so_rcv.sb_cc, cp_len);
 					if (stcb) {
@@ -5020,7 +5020,7 @@ get_more_data:
 					embuf = m;
 					freed_so_far += cp_len;
 #ifdef SCTP_SB_LOGGING
-					sctp_sblog(&so->so_rcv, stcb,
+					sctp_sblog(&so->so_rcv, control->do_not_ref_stcb?NULL:stcb,
 					    SCTP_LOG_SBRESULT, 0);
 #endif
 					alen = control->length;
@@ -5245,13 +5245,13 @@ get_more_data2:
 			while (m) {
 #ifdef SCTP_SB_LOGGING
 				sctp_sblog(&so->so_rcv,
-				    stcb, SCTP_LOG_SBFREE, m->m_len);
+				    control->do_not_ref_stcb?NULL:stcb, SCTP_LOG_SBFREE, m->m_len);
 #endif
 				sctp_sbfree(control, stcb, &so->so_rcv, m);
 				freed_so_far += m->m_len;
 #ifdef SCTP_SB_LOGGING
 				sctp_sblog(&so->so_rcv,
-				    stcb, SCTP_LOG_SBRESULT, 0);
+				    control->do_not_ref_stcb?NULL:stcb, SCTP_LOG_SBRESULT, 0);
 #endif
 				m = m->m_next;
 			}
@@ -5350,13 +5350,13 @@ get_more_data2:
 					m->m_next = NULL;
 #ifdef SCTP_SB_LOGGING
 					sctp_sblog(&so->so_rcv,
-					    stcb, SCTP_LOG_SBFREE, m->m_len);
+					    control->do_not_ref_stcb?NULL:stcb, SCTP_LOG_SBFREE, m->m_len);
 #endif
 					sctp_sbfree(control, stcb, &so->so_rcv, m);
 					freed_so_far += m->m_len;
 #ifdef SCTP_SB_LOGGING
 					sctp_sblog(&so->so_rcv,
-					    stcb, SCTP_LOG_SBRESULT, 0);
+					    control->do_not_ref_stcb?NULL:stcb, SCTP_LOG_SBRESULT, 0);
 #endif
 					mp = &m->m_next;
 					m = control->data;
@@ -5405,7 +5405,7 @@ get_more_data2:
 					m->m_data += cp_len;
 					m->m_len -= cp_len;
 #ifdef SCTP_SB_LOGGING
-					sctp_sblog(&so->so_rcv, stcb, SCTP_LOG_SBFREE, cp_len);
+					sctp_sblog(&so->so_rcv, control->do_not_ref_stcb?NULL:stcb, SCTP_LOG_SBFREE, cp_len);
 #endif
 					freed_so_far += cp_len;
 					atomic_subtract_int(&so->so_rcv.sb_cc, cp_len);
@@ -5416,7 +5416,7 @@ get_more_data2:
 							sctp_user_rcvd(stcb, &freed_so_far, hold_rlock, rwnd_req);
 				        }
 #ifdef SCTP_SB_LOGGING
-					sctp_sblog(&so->so_rcv, stcb,
+					sctp_sblog(&so->so_rcv, control->do_not_ref_stcb?NULL:stcb,
 					    SCTP_LOG_SBRESULT, 0);
 #endif
 					if (out_flags & MSG_NOTIFICATION) {
