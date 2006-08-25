@@ -3938,7 +3938,7 @@ sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
 #ifdef SCTP_SB_LOGGING
 				sctp_sblog(&old_so->so_rcv, stcb, SCTP_LOG_SBFREE, m->m_len);
 #endif
-				sctp_sbfree(stcb, &old_so->so_rcv, m);
+				sctp_sbfree(control, stcb, &old_so->so_rcv, m);
 #ifdef SCTP_SB_LOGGING
 				sctp_sblog(&old_so->so_rcv, stcb, SCTP_LOG_SBRESULT, 0);
 #endif
@@ -4952,7 +4952,7 @@ get_more_data:
 					sctp_sblog(&so->so_rcv,
 					    stcb, SCTP_LOG_SBFREE, m->m_len);
 #endif
-					sctp_sbfree(stcb, &so->so_rcv, m);
+					sctp_sbfree(control, stcb, &so->so_rcv, m);
 #ifdef SCTP_SB_LOGGING
 					sctp_sblog(&so->so_rcv,
 					    stcb, SCTP_LOG_SBRESULT, 0);
@@ -5247,7 +5247,7 @@ get_more_data2:
 				sctp_sblog(&so->so_rcv,
 				    stcb, SCTP_LOG_SBFREE, m->m_len);
 #endif
-				sctp_sbfree(stcb, &so->so_rcv, m);
+				sctp_sbfree(control, stcb, &so->so_rcv, m);
 				freed_so_far += m->m_len;
 #ifdef SCTP_SB_LOGGING
 				sctp_sblog(&so->so_rcv,
@@ -5352,7 +5352,7 @@ get_more_data2:
 					sctp_sblog(&so->so_rcv,
 					    stcb, SCTP_LOG_SBFREE, m->m_len);
 #endif
-					sctp_sbfree(stcb, &so->so_rcv, m);
+					sctp_sbfree(control, stcb, &so->so_rcv, m);
 					freed_so_far += m->m_len;
 #ifdef SCTP_SB_LOGGING
 					sctp_sblog(&so->so_rcv,
