@@ -257,13 +257,13 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 #define sctp_sbspace_sub(a,b) ((a > b) ? (a - b) : 0)
 
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
-#define sctp_sbfree(stcb, sb, m) { \
+#define sctp_sbfree(ctl, stcb, sb, m) { \
         if((sb)->sb_cc >= (m)->m_len) { \
   	   atomic_subtract_int(&(sb)->sb_cc,(m)->m_len); \
         } else { \
            (sb)->sb_cc = 0; \
         } \
-        if(stcb) {\
+        if ((ctl)->do_not_ref_stcb == 0) {\
           if((stcb)->asoc.sb_cc >= (m)->m_len) {\
              atomic_subtract_int(&(stcb)->asoc.sb_cc,(m)->m_len); \
           } else {\
@@ -315,15 +315,15 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 		atomic_add_int(&(sb)->sb_mbcnt,(m)->m_ext.ext_size); \
 }
 
-#else				/* FreeBSD Version < 500000  */
+#else				/* FreeBSD Version <= 500000 or non-FreeBSD */
 
-#define sctp_sbfree(stcb, sb, m) { \
+#define sctp_sbfree(ctl, stcb, sb, m) { \
 	if ((sb)->sb_cc >= (uint32_t)(m)->m_len) { \
 		atomic_subtract_int(&(sb)->sb_cc, (m)->m_len); \
 	} else { \
 		(sb)->sb_cc = 0; \
 	} \
-	if (stcb) { \
+	if ((ctl)->do_not_ref_stcb == 0) { \
 		if ((stcb)->asoc.sb_cc >= (uint32_t)(m)->m_len) { \
 			atomic_subtract_int(&(stcb)->asoc.sb_cc, (m)->m_len); \
 		} else { \
@@ -381,6 +381,17 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 		val = 0; \
 	} \
 }
+
+#define sctp_mbuf_crush(data) do { \
+                struct mbuf *_m; \
+		_m = (data); \
+		while(_m && (_m->m_len == 0)) { \
+			(data)  = _m->m_next; \
+			_m->m_next = NULL; \
+			sctp_m_free(_m); \
+			_m = (data); \
+		} \
+} while (0)
 
 
 	extern int sctp_sendspace;

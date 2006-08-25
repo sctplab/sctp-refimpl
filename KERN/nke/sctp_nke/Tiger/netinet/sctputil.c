@@ -720,9 +720,11 @@ sctp_fill_stat_log(struct mbuf *m)
 		req->end_at = sctp_cwnd_log_at - 1;
 		req->num_ret = sctp_cwnd_log_at;
 	}
+#ifdef INVARIENTS
 	if(req->num_ret > num) {
 		panic("Bad statlog get?");
 	} 
+#endif
 	for (i = 0, at = req->start_at; i < req->num_ret; i++) {
 		req->log[i] = sctp_clog[at];
 		cnt_out++;
@@ -2802,10 +2804,12 @@ sctp_notify_assoc_change(uint32_t event, struct sctp_tcb *stcb,
 	if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) &&
 	    (event == SCTP_COMM_LOST)) {
-		stcb->sctp_socket->so_error = ECONNRESET;
+		if(TAILQ_EMPTY(&stcb->sctp_ep->read_queue)) {
+			stcb->sctp_socket->so_error = ECONNRESET;
+		}
 		/* Wake ANY sleepers */
-		sowwakeup(stcb->sctp_socket);
 		sorwakeup(stcb->sctp_socket);
+		sowwakeup(stcb->sctp_socket);
 		sctp_asoc_change_wake++;
 	}
 
@@ -3487,8 +3491,10 @@ sctp_report_all_outbound(struct sctp_tcb *stcb)
 				 * trim off the sctp chunk header(it should
 				 * be there)
 				 */
-				if (chk->send_size >= sizeof(struct sctp_data_chunk))
+				if (chk->send_size >= sizeof(struct sctp_data_chunk)) {
 					m_adj(chk->data, sizeof(struct sctp_data_chunk));
+					sctp_mbuf_crush(chk->data);
+				}
 
 			}
 			sctp_free_bufspace(stcb, asoc, chk, 1);
@@ -3515,8 +3521,10 @@ sctp_report_all_outbound(struct sctp_tcb *stcb)
 				 * trim off the sctp chunk header(it should
 				 * be there)
 				 */
-				if (chk->send_size >= sizeof(struct sctp_data_chunk))
+				if (chk->send_size >= sizeof(struct sctp_data_chunk)) {
 					m_adj(chk->data, sizeof(struct sctp_data_chunk));
+					sctp_mbuf_crush(chk->data);
+				}
 
 			}
 			sctp_free_bufspace(stcb, asoc, chk, 1);
@@ -3930,7 +3938,7 @@ sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
 #ifdef SCTP_SB_LOGGING
 				sctp_sblog(&old_so->so_rcv, stcb, SCTP_LOG_SBFREE, m->m_len);
 #endif
-				sctp_sbfree(stcb, &old_so->so_rcv, m);
+				sctp_sbfree(control, stcb, &old_so->so_rcv, m);
 #ifdef SCTP_SB_LOGGING
 				sctp_sblog(&old_so->so_rcv, stcb, SCTP_LOG_SBRESULT, 0);
 #endif
@@ -3990,13 +3998,26 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 	 * queue AND increment sb_cc so that select will work properly on
 	 * read.
 	 */
-	struct mbuf *m;
+	struct mbuf *m, *prev=NULL;
 
 	SCTP_INP_READ_LOCK(inp);
 	m = control->data;
 	control->held_length = 0;
 	control->length = 0;
 	while (m) {
+		if (m->m_len == 0) {
+			/* Skip mbufs with NO lenght */
+			if(prev == NULL) {
+				/* First one */
+				control->data = sctp_m_free(m);
+				m = control->data;
+			} else {
+				prev->m_next = sctp_m_free(m);
+				m = prev->m_next;
+			}
+			continue;
+		}
+		prev = m;
 #ifdef SCTP_SB_LOGGING
 		sctp_sblog(sb, stcb, SCTP_LOG_SBALLOC, m->m_len);
 #endif
@@ -4043,12 +4064,13 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 	 * of the mbuf chain.
 	 */
 	int len=0;
-	struct mbuf *mm, *tail = NULL;
+	struct mbuf *mm, *tail = NULL, *prev = NULL;
 
 	if (inp) {
 		SCTP_INP_READ_LOCK(inp);
 	}
 	if (control == NULL) {
+	get_out:
 		if (inp) {
 			SCTP_INP_READ_UNLOCK(inp);
 		}
@@ -4057,13 +4079,27 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 	if ((control->tail_mbuf) &&
 	    (control->tail_mbuf->m_flags & M_EOR)) {
 		/* huh this one is complete? */
-		if (inp) {
-			SCTP_INP_READ_UNLOCK(inp);
-		}
-		return (-1);
+		goto get_out;
 	}
 	mm = m;
+	if (mm == NULL) {
+		goto get_out;
+	}
+
 	while (mm) {
+		if (mm->m_len == 0) {
+			/* Skip mbufs with NO lenght */
+			if(prev == NULL) {
+				/* First one */
+				m = sctp_m_free(mm);
+				mm = m;
+			} else {
+				prev->m_next = sctp_m_free(mm);
+				mm = prev->m_next;
+			}
+			continue;
+		}
+		prev = mm;
 		len += mm->m_len;
 		if (sb) {
 #ifdef SCTP_SB_LOGGING
@@ -4078,19 +4114,30 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 			tail = mm;
 		mm = mm->m_next;
 	}
+	if (end) {
+		/* message is complete */
+		tail->m_flags |= M_EOR;
+		if(control == stcb->asoc.control_pdapi) {
+			stcb->asoc.control_pdapi = NULL;
+		}
+		control->held_length = 0;
+		control->end_added = 1;
+	}
+	atomic_add_int(&control->length, len);
 	if (control->tail_mbuf) {
 		/* append */
 		control->tail_mbuf->m_next = m;
 		control->tail_mbuf = tail;
 	} else {
 		/* nothing there */
+#ifdef INVARIENTS
 		if(control->data != NULL) {
 			panic("This should NOT happen");
 		}
+#endif
 		control->data = m;
 		control->tail_mbuf = tail;
 	}
-	atomic_add_int(&control->length, len);
 	/*
 	 * When we are appending in partial delivery, the cum-ack is used
 	 * for the actual pd-api highest tsn on this mbuf. The true cum-ack
@@ -4098,14 +4145,6 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 	 * if the association exists...
 	 */
 	control->sinfo_cumtsn = new_cumack;
-	if (end) {
-		/* message is complete */
-		control->tail_mbuf->m_flags |= M_EOR;
-		if(control == stcb->asoc.control_pdapi) {
-			stcb->asoc.control_pdapi = NULL;
-		}
-		control->end_added = 1;
-	}
 	if (inp) {
 		SCTP_INP_READ_UNLOCK(inp);
 	}
@@ -4474,31 +4513,33 @@ sctp_sorecvmsg(struct socket *so,
 	 * MSG_NOTIFICATION MSG_EOR
 	 * 
 	 */
-	struct sctp_inpcb *inp;
-	int my_len;
-	int cp_len, error = 0;
-	struct sctp_queued_to_read *control, *ctl, *nxt;
-	struct mbuf *m, *embuf;
+	struct sctp_inpcb *inp=NULL;
+	int my_len=0;
+	int cp_len=0, error = 0;
+	struct sctp_queued_to_read *control=NULL, *ctl=NULL, *nxt=NULL;
+	struct mbuf *m=NULL, *embuf=NULL;
 	struct sctp_tcb *stcb = NULL;
 	int wakeup_read_socket = 0;
 	int freecnt_applied = 0;
-	int out_flags = 0, in_flags;
+	int out_flags = 0, in_flags=0;
 	int block_allowed = 1;
 	int freed_so_far = 0;
 	int copied_so_far = 0;
 	int s,in_eeor_mode=0;
-	int special_return = 0;
 	int no_rcv_needed = 0;
-	uint32_t rwnd_req;
+	uint32_t rwnd_req=0;
 	int hold_sblock = 0;
 	int hold_rlock = 0;
-	int alen;
+	int alen=0, slen=0;
+	int held_length = 0;
 
 	if (msg_flags) {
 		in_flags = *msg_flags;
 	} else {
 		in_flags = 0;
 	}
+
+	slen = uio->uio_resid;
 	/* Pull in and set up our int flags */
 	if (in_flags & MSG_OOB) {
 		/* Out of band's NOT supported */
@@ -4580,10 +4621,15 @@ restart:
 	if (so->so_error || so->so_state & SS_CANTRCVMORE)
 #endif
 	{
+		if (so->so_error) {
+			error = so->so_error;
+		} else {
+			error = ENOTCONN;
+		}
 		goto out;
 	}
 
-	if ((so->so_rcv.sb_cc == 0) && block_allowed) {
+	if ((so->so_rcv.sb_cc <=  held_length) && block_allowed) {
 		/* we need to wait for data */
 #ifdef SCTP_RECV_RWND_LOGGING
 		sctp_misc_ints(SCTP_SORECV_BLOCKSA,
@@ -4592,7 +4638,7 @@ restart:
 		if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 		    (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
 			if ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0) {
-				error = ENOTCONN;
+				error = ECONNRESET;
 				/* For active open side clear flags for re-use 
 				 * passive open is blocked by connect.
 				 */
@@ -4625,22 +4671,35 @@ restart:
 	/* we possibly have data we can read */
 	control = TAILQ_FIRST(&inp->read_queue);
 	if (control == NULL) {
-		/* nothing there? TSNH! */
-		so->so_rcv.sb_cc = 0;
+		/* This could be happening since
+		 * the appender did the increment but as not
+		 * yet did the tailq insert onto the read_queue
+		 */
+		if(hold_rlock == 0) {
+			SCTP_INP_READ_LOCK(inp);
+			hold_rlock = 1;
+		}
+		control = TAILQ_FIRST(&inp->read_queue);
+		if ((control == NULL) && (so->so_rcv.sb_cc != 0)) {
+			panic("Huh, its non zero and nothing on control?");
+			so->so_rcv.sb_cc = 0;
+		}
+		SCTP_INP_READ_LOCK(inp);
+		hold_rlock = 0;
 		goto restart;
 	}
 
-
-#ifdef INVARIENTS
 	if ((control->length == 0) && 
 	    (control->do_not_ref_stcb)) {
-		/* Bad stcb leaves behind 
-		 * control?
+		/* Clean up code for freeing assoc that left behind a pdapi..
+		 * maybe a peer in EEOR that just closed after sending and never indicated
+		 * a EOR.
 		 */
-		hold_rlock = 1;
-		printf("Someone left garbage behind.. yuck!\n");
 		SCTP_STAT_INCR(sctps_locks_in_rcva);
-		SCTP_INP_READ_LOCK(inp);
+		if(hold_rlock == 0) {
+			hold_rlock = 1;
+			SCTP_INP_READ_LOCK(inp);
+		}
 		if(control->data) {
 			/* Hmm there is data here .. fix */
 			struct mbuf *m;
@@ -4660,10 +4719,7 @@ restart:
 			/* remove it */
 			TAILQ_REMOVE(&inp->read_queue, control, next);
 			/* Add back any hiddend data */
-			if (control->held_length) {
-				so->so_rcv.sb_cc += control->held_length;
-				wakeup_read_socket = 1;
-			}
+			held_length = 0;
 			sctp_free_remote_addr(control->whoFrom);
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, control);
 			SCTP_DECR_READQ_COUNT();
@@ -4672,7 +4728,6 @@ restart:
 		SCTP_INP_READ_UNLOCK(inp);
 		goto restart;
 	}
-#endif
 	if (control->length == 0) {
 		if((sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE)) &&
 		   (filling_sinfo)) {
@@ -4686,18 +4741,20 @@ restart:
 				}
 				ctl = TAILQ_NEXT(ctl, next);
 			}
-			/*
-			 * if we reach here, not suitable replacement is available
-			 * <or> fragment interleave is NOT on. So stuff the sb_cc
-			 * into the our held count, and its time to sleep again.
-			 */
-			control->held_length += so->so_rcv.sb_cc;
-			so->so_rcv.sb_cc = 0;
-		} else {
-			control->held_length += so->so_rcv.sb_cc;
-			so->so_rcv.sb_cc = 0;
 		}
+		/*
+		 * if we reach here, not suitable replacement is available
+		 * <or> fragment interleave is NOT on. So stuff the sb_cc
+		 * into the our held count, and its time to sleep again.
+		 */
+		held_length = so->so_rcv.sb_cc;
+		control->held_length = so->so_rcv.sb_cc;
 		goto restart;
+	}
+
+	if(hold_rlock) {
+		SCTP_INP_READ_UNLOCK(inp);
+		hold_rlock = 0;
 	}
 found_one:
 	/*
@@ -4738,7 +4795,7 @@ found_one:
 		}
         }
 	/* First lets get off the sinfo and sockaddr info */
-	if (sinfo) {
+	if ((sinfo) && filling_sinfo) {
 		memcpy(sinfo, control, sizeof(struct sctp_nonpad_sndrcvinfo));
 		nxt = TAILQ_NEXT(control, next);
 		if(sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXT_RCVINFO)) {
@@ -4845,7 +4902,8 @@ get_more_data:
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			socket_unlock(so, 0);
 #endif
-			error = uiomove(mtod(m, char *), cp_len, uio);
+			if(cp_len > 0) 
+				error = uiomove(mtod(m, char *), cp_len, uio);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			socket_lock(so, 0);
 #endif
@@ -4855,12 +4913,13 @@ get_more_data:
 			s = splnet();
 #endif
 			/* re-read */
-			if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)
+			if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 				goto release;
+			}
 
 			if (stcb &&
 			    stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
-				special_return = 1;
+				no_rcv_needed = 1;
 			}
 			if (error) {
 				/* error we are out of here */
@@ -4893,7 +4952,7 @@ get_more_data:
 					sctp_sblog(&so->so_rcv,
 					    stcb, SCTP_LOG_SBFREE, m->m_len);
 #endif
-					sctp_sbfree(stcb, &so->so_rcv, m);
+					sctp_sbfree(control, stcb, &so->so_rcv, m);
 #ifdef SCTP_SB_LOGGING
 					sctp_sblog(&so->so_rcv,
 					    stcb, SCTP_LOG_SBRESULT, 0);
@@ -4914,22 +4973,23 @@ get_more_data:
 					m = control->data;
 					/* been through it all, must hold sb lock ok to null tail */
 					if (control->data == NULL) {
-
+#ifdef INVARIENTS
 						if ((control->end_added == 0) ||
 						    (TAILQ_NEXT(control, next) == NULL)) {
 							/* If the end is not added, OR the
 							 * next is NOT null we MUST have the lock.
 							 */
-#if defined(__FreeBSD__) && __FreeBSD_version >= 503000
 							if(mtx_owned(&inp->inp_rdata_mtx) == 0) {
 								panic("Hmm we don't own the lock?");
 							}
-#endif
 						}
+#endif
 						control->tail_mbuf = NULL;
+#ifdef INVARIENTS
 						if ((control->end_added) && ((out_flags & MSG_EOR) == 0)) {
 							panic("end_added, nothing left and no MSG_EOR");
 						}
+#endif
 					}
 				}
 			} else {
@@ -4938,7 +4998,6 @@ get_more_data:
 					out_flags |= MSG_NOTIFICATION;
 				}
 				if ((in_flags & MSG_PEEK) == 0) {
-
 					if (out_flags & MSG_NOTIFICATION) {
 						/*
 						 * remark this one with the
@@ -4958,6 +5017,7 @@ get_more_data:
 						atomic_subtract_int(&stcb->asoc.sb_cc, cp_len);
 					}
 					copied_so_far += cp_len;
+					embuf = m;
 					freed_so_far += cp_len;
 #ifdef SCTP_SB_LOGGING
 					sctp_sblog(&so->so_rcv, stcb,
@@ -5021,7 +5081,8 @@ get_more_data:
 				TAILQ_REMOVE(&inp->read_queue, control, next);
 				/* Add back any hiddend data */
 				if (control->held_length) {
-					atomic_add_int(&so->so_rcv.sb_cc, control->held_length);
+					held_length = 0;
+					control->held_length = 0;
 					wakeup_read_socket = 1;
 				}
 				no_rcv_needed = control->do_not_ref_stcb;
@@ -5035,10 +5096,12 @@ get_more_data:
 				 * are leaving more behind on the control to
 				 * read.
 				 */
+#ifdef INVARIENTS
 				if(control->end_added && (control->data == NULL) &&
 				   (control->tail_mbuf == NULL)) {
 					panic("Gak, control->length is corrupt?");
 				}
+#endif
 				no_rcv_needed = control->do_not_ref_stcb;
 				out_flags &= ~MSG_EOR;
 			}
@@ -5078,26 +5141,24 @@ get_more_data:
 		 * before we go to sleep?
 		 */
 		if (((stcb) && (in_flags & MSG_PEEK) == 0) &&
-		    ((special_return == 0) &&
-		     (freed_so_far >= rwnd_req) &&
+		    ((freed_so_far >= rwnd_req) &&
 		     (no_rcv_needed == 0))) {
 			sctp_user_rcvd(stcb, &freed_so_far, hold_rlock, rwnd_req);
 		}
 wait_some_more:
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
-		if (so->so_error || so->so_rcv.sb_state & SBS_CANTRCVMORE)
+		if (so->so_error || so->so_rcv.sb_state & SBS_CANTRCVMORE) {
 			goto release;
+		}
 #else
-		if (so->so_error || so->so_state & SS_CANTRCVMORE)
+		if (so->so_error || so->so_state & SS_CANTRCVMORE) {
 			goto release;
+		}
 #endif
 
 		if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)
 			goto release;
 
-		if (special_return) {
-			goto release;
-		}
 		if(hold_sblock == 0) {
 			SOCKBUF_LOCK(&so->so_rcv);
 			hold_sblock = 1;
@@ -5123,15 +5184,16 @@ wait_some_more:
 				       so->so_rcv.sb_cc, 
 				       uio->uio_resid);
 #endif
-		error = sbwait(&so->so_rcv);
-		if (error){
+		if(so->so_rcv.sb_cc <= control->held_length) {
+			error = sbwait(&so->so_rcv);
+			if (error){
 #if defined(__FreeBSD__) || defined(__NetBSD__)
-			goto release;
+				goto release;
 #else
-			goto release_unlocked;
+				goto release_unlocked;
 #endif
+			}
 		}
-
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
 #endif
@@ -5141,12 +5203,14 @@ wait_some_more:
 		}
 		if (control->length == 0) {
 			/* still nothing here */
-			if (so->so_rcv.sb_cc) {
-				SCTP_INP_READ_LOCK(inp);
+			if(control->end_added) {
+				/* Huh, there is none left? */
+				panic("Now none left while waiting? I missed one?");
+			}
+			if (so->so_rcv.sb_cc > held_length) {
 				SCTP_STAT_INCR(sctps_locks_in_rcvf);
-				control->held_length += so->so_rcv.sb_cc;
-				so->so_rcv.sb_cc = 0;
-				SCTP_INP_READ_UNLOCK(inp);
+				control->held_length = so->so_rcv.sb_cc;
+				held_length = 0;
 			}
 			/* Did the user somehow toggle the flag? */
 			if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE)) {
@@ -5183,7 +5247,7 @@ get_more_data2:
 				sctp_sblog(&so->so_rcv,
 				    stcb, SCTP_LOG_SBFREE, m->m_len);
 #endif
-				sctp_sbfree(stcb, &so->so_rcv, m);
+				sctp_sbfree(control, stcb, &so->so_rcv, m);
 				freed_so_far += m->m_len;
 #ifdef SCTP_SB_LOGGING
 				sctp_sblog(&so->so_rcv,
@@ -5232,21 +5296,15 @@ get_more_data2:
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			sbunlock(&so->so_rcv, 1);
 #endif
-			error = sbwait(&so->so_rcv);
-			if (error) {
+			if(so->so_rcv.sb_cc <= control->held_length) {
+				error = sbwait(&so->so_rcv);
+				if (error) {
 #if defined(__FreeBSD__) || defined(__NetBSD__)
-				goto release;
+					goto release;
 #else
-				goto release_unlocked;
+					goto release_unlocked;
 #endif
-			}
-
-			if(special_return) {
-#if defined(__FreeBSD__) || defined(__NetBSD__)
-				goto release;
-#else
-				goto release_unlocked;
-#endif
+				}
 			}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
@@ -5257,11 +5315,10 @@ get_more_data2:
 			}
 			if (control->length == 0) {
 				/* still nothing here */
-				if (so->so_rcv.sb_cc) {
-					SCTP_INP_READ_LOCK(inp);
-					control->held_length += so->so_rcv.sb_cc;
-					so->so_rcv.sb_cc = 0;
-					SCTP_INP_READ_UNLOCK(inp);
+				if (so->so_rcv.sb_cc > held_length) {
+					control->held_length = so->so_rcv.sb_cc;
+					/* We don't use held_length while getting a message */
+					held_length = 0;
 				}
 				/* Did the user somehow toggle the flag? */
 				if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE)) {
@@ -5295,7 +5352,7 @@ get_more_data2:
 					sctp_sblog(&so->so_rcv,
 					    stcb, SCTP_LOG_SBFREE, m->m_len);
 #endif
-					sctp_sbfree(stcb, &so->so_rcv, m);
+					sctp_sbfree(control, stcb, &so->so_rcv, m);
 					freed_so_far += m->m_len;
 #ifdef SCTP_SB_LOGGING
 					sctp_sblog(&so->so_rcv,
@@ -5343,7 +5400,7 @@ get_more_data2:
 
 					if (stcb &&
 					    stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
-						special_return = 1;
+						no_rcv_needed = 1;
 					}
 					m->m_data += cp_len;
 					m->m_len -= cp_len;
@@ -5354,8 +5411,7 @@ get_more_data2:
 					atomic_subtract_int(&so->so_rcv.sb_cc, cp_len);
 					if (stcb) {
 						atomic_subtract_int(&stcb->asoc.sb_cc,cp_len);
-						if((special_return == 0) &&
-						   (freed_so_far >= rwnd_req) &&
+						if((freed_so_far >= rwnd_req) &&
 						   (no_rcv_needed == 0))
 							sctp_user_rcvd(stcb, &freed_so_far, hold_rlock, rwnd_req);
 				        }
@@ -5376,6 +5432,10 @@ get_more_data2:
 		}
 	}
 release:
+	if(hold_rlock == 1) {
+		SCTP_INP_READ_UNLOCK(inp);
+		hold_rlock = 0;
+	}
 	if(hold_sblock == 0) {
 		SOCKBUF_LOCK(&so->so_rcv);
 		hold_sblock = 1;
@@ -5390,15 +5450,14 @@ release:
 #if defined(__FreeBSD__)
 	sbunlock(&so->so_rcv);
 #endif
+
+release_unlocked:
 	if(hold_sblock) {
 		SOCKBUF_UNLOCK(&so->so_rcv);
 		hold_sblock = 0;
 	}
-
-release_unlocked:
 	if ((stcb) && (in_flags & MSG_PEEK) == 0) {
-		if ((special_return == 0) &&
-		    (freed_so_far >= rwnd_req) &&
+		if ((freed_so_far >= rwnd_req) &&
 		    (no_rcv_needed == 0))
 			sctp_user_rcvd(stcb, &freed_so_far, hold_rlock, rwnd_req);
 	}
@@ -5406,6 +5465,10 @@ release_unlocked:
 	if (msg_flags)
 		*msg_flags |= out_flags;
 out:
+	if(hold_sblock) {
+		SOCKBUF_UNLOCK(&so->so_rcv);
+		hold_sblock = 0;
+	}
 	if(hold_rlock == 1) {
 		SCTP_INP_READ_UNLOCK(inp);
 		hold_rlock = 0;
@@ -5489,7 +5552,11 @@ sctp_soreceive(so, paddr, uio, mp0, controlp, flagsp)
 		struct sctp_inpcb *inp;
 
 		inp = (struct sctp_inpcb *)so->so_pcb;
-		*controlp = sctp_build_ctl_nchunk(inp, (struct sctp_sndrcvinfo *)&sinfo);
+		
+		if(filling_sinfo)
+			*controlp = sctp_build_ctl_nchunk(inp, (struct sctp_sndrcvinfo *)&sinfo);
+		else
+			*controlp = NULL;
 	}
 	if (paddr) {
 		maddr = sctp_get_mbuf_for_msg(fromlen, 0, M_DONTWAIT, 1, MT_SONAME);
@@ -5501,6 +5568,7 @@ sctp_soreceive(so, paddr, uio, mp0, controlp, flagsp)
 		*paddr = maddr;
 
 	}
+
 	return (error);
 }
 
@@ -5547,11 +5615,14 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 #endif
 	error = sctp_sorecvmsg(so, uio, mp0, from, fromlen, flagsp, 
 	    (struct sctp_sndrcvinfo *)&sinfo,filling_sinfo);
-	if (controlp) {
+	if ((controlp) && (filling_sinfo)) {
 		/* copy back the sinfo in a CMSG format */
-		*controlp = sctp_build_ctl_nchunk(inp, 
-                         (struct sctp_sndrcvinfo *)&sinfo);
-	}
+		if(filling_sinfo)
+			*controlp = sctp_build_ctl_nchunk(inp, 
+							  (struct sctp_sndrcvinfo *)&sinfo);
+		else
+			*controlp = NULL;
+	} 
 	if (psa) {
 		/* copy back the address info */
 		if (from && from->sa_len) {
@@ -5564,6 +5635,7 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 			*psa = NULL;
 		}
 	}
+
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	socket_unlock(so, 1);
 #endif
