@@ -323,7 +323,7 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 	} else { \
 		(sb)->sb_cc = 0; \
 	} \
-	if ((ctl)->do_not_ref_stcb == 0) { \
+	if (((ctl)->do_not_ref_stcb == 0) && stcb) { \
 		if ((stcb)->asoc.sb_cc >= (uint32_t)(m)->m_len) { \
 			atomic_subtract_int(&(stcb)->asoc.sb_cc, (m)->m_len); \
 		} else { \
