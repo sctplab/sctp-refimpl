@@ -257,13 +257,13 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 #define sctp_sbspace_sub(a,b) ((a > b) ? (a - b) : 0)
 
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
-#define sctp_sbfree(stcb, sb, m) { \
+#define sctp_sbfree(ctl, stcb, sb, m) { \
         if((sb)->sb_cc >= (m)->m_len) { \
   	   atomic_subtract_int(&(sb)->sb_cc,(m)->m_len); \
         } else { \
            (sb)->sb_cc = 0; \
         } \
-        if(stcb) {\
+        if ((ctl)->do_not_ref_stcb == 0) {\
           if((stcb)->asoc.sb_cc >= (m)->m_len) {\
              atomic_subtract_int(&(stcb)->asoc.sb_cc,(m)->m_len); \
           } else {\
