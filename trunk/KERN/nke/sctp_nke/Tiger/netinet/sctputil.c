@@ -4660,7 +4660,13 @@ restart:
 						  SS_ISDISCONNECTING | 
 						  SS_ISCONFIRMING | 
 						  SS_ISCONNECTED);
-
+				if (error == 0) {
+					if ((inp->sctp_flags & SCTP_PCB_FLAGS_WAS_CONNECTED) == 0) {
+						error = ENOTCONN;
+					} else {
+						inp->sctp_flags &= ~SCTP_PCB_FLAGS_WAS_CONNECTED;
+					}
+				}
 				goto out;
 			}
 		}
