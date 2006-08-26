@@ -4216,6 +4216,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		 */
 		if(inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
 			inp->sctp_flags &= ~SCTP_PCB_FLAGS_CONNECTED;
+			inp->sctp_flags |= SCTP_PCB_FLAGS_WAS_CONNECTED;
 			if (so) {
 				SOCK_LOCK(so);
 				if(so->so_rcv.sb_cc == 0) {
