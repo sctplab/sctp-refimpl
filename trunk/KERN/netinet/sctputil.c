@@ -4655,13 +4655,7 @@ restart:
 						/* Remove flag if on the active open side */
 						inp->sctp_flags &= ~SCTP_PCB_FLAGS_WAS_ABORTED;
 					}
-				} else if ((so->so_state & SS_ISCONNECTED) == 0) {
-					/* Subsequent reads after the first 0 length read
-					 * returns ENOTCONN on the active open side, and
-					 * possibly the passive side IF it did the shutdown().
-					 */
- 					error = ENOTCONN;
-				}
+				} 
 				so->so_state &= ~(SS_ISCONNECTING | 
 						  SS_ISDISCONNECTING | 
 						  SS_ISCONFIRMING | 
