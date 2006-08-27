@@ -3129,21 +3129,13 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
 		control = stcb->asoc.control_pdapi;
 		if(no_lock == 0)
 			SCTP_INP_READ_LOCK(stcb->sctp_ep);
+
 		if (control->data == NULL) {
-			if(stcb->sctp_socket) {
-				stcb->sctp_socket->so_rcv.sb_cc += control->held_length;
-			}
 			control->data = control->tail_mbuf = m_notify;
 			control->held_length = 0;
 			control->length = m_notify->m_len;
 			control->end_added = 1;
 		} else if ((control->tail_mbuf->m_flags & M_EOR) != M_EOR) {
-			/* no end of record so pdapi is not complete */
-			if(stcb->sctp_socket) {
-				stcb->sctp_socket->so_rcv.sb_cc += control->held_length;
-				stcb->asoc.sb_cc -= control->length;
-			}
-			/* clear up by freeing mbufs */
 			sctp_m_freem(control->data);
 			control->data = NULL;
 			control->length = m_notify->m_len;
@@ -4674,6 +4666,7 @@ restart:
 		if (error) {
 			goto out;
 		}
+		held_length = 0;
 		goto restart;
 	} else if (so->so_rcv.sb_cc == 0) {
 		error = EWOULDBLOCK;
@@ -4721,6 +4714,7 @@ restart:
 			hold_rlock = 1;
 			SCTP_INP_READ_LOCK(inp);
 		}
+		control->held_length = 0;
 		if(control->data) {
 			/* Hmm there is data here .. fix */
 			struct mbuf *m;
@@ -4740,7 +4734,6 @@ restart:
 			/* remove it */
 			TAILQ_REMOVE(&inp->read_queue, control, next);
 			/* Add back any hiddend data */
-			held_length = 0;
 			sctp_free_remote_addr(control->whoFrom);
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, control);
 			SCTP_DECR_READQ_COUNT();
@@ -4772,7 +4765,8 @@ restart:
 		control->held_length = so->so_rcv.sb_cc;
 		goto restart;
 	}
-
+	/* Clear the held length since there is something to read */
+	control->held_length = 0;
 	if(hold_rlock) {
 		SCTP_INP_READ_UNLOCK(inp);
 		hold_rlock = 0;
@@ -5214,6 +5208,7 @@ wait_some_more:
 				goto release_unlocked;
 #endif
 			}
+			control->held_length = 0;
 		}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
