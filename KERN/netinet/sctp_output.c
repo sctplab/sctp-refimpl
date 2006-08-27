@@ -12287,6 +12287,15 @@ sctp_lower_sosend(struct socket *so,
 					SCTP_TCB_LOCK(stcb);
 					hold_tcblock = 1;
 				}
+				if(stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+					/* we need to get out.
+					 * Peer probably aborted.
+					 */
+					sctp_m_freem(mm);
+					if(stcb->asoc.state & SCTP_PCB_FLAGS_WAS_ABORTED)
+						error = ECONNRESET;
+					goto out;
+				}
 				if(sp->tail_mbuf) {
 					/* tack it to the end */
 					sp->tail_mbuf->m_next = mm;
@@ -12456,6 +12465,7 @@ sctp_lower_sosend(struct socket *so,
 					SOCKBUF_UNLOCK(&so->so_snd);
 					goto out_unlocked;
 				}
+
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 				error = sblock(&so->so_snd, SBLOCKWAIT(flags));
 #endif
@@ -12468,6 +12478,16 @@ sctp_lower_sosend(struct socket *so,
 #endif
 			}
 			SOCKBUF_UNLOCK(&so->so_snd);
+			if(so->so_snd.sb_hiwat <= stcb->asoc.total_output_queue_size) {
+				/* Need to get the TCB lock to check on state of
+				 * assoc... probably something has occured since
+				 * we are up and no new space showed up..
+				 */
+				if(hold_tcblock == 0) {
+					SCTP_TCB_LOCK(stcb);
+					hold_tcblock = 1;
+				}
+			}
 			if(stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 				goto out_unlocked;
 			}
