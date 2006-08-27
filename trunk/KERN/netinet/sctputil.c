@@ -4698,7 +4698,7 @@ restart:
 			panic("Huh, its non zero and nothing on control?");
 			so->so_rcv.sb_cc = 0;
 		}
-		SCTP_INP_READ_LOCK(inp);
+		SCTP_INP_READ_UNLOCK(inp);
 		hold_rlock = 0;
 		goto restart;
 	}
