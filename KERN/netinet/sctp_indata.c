@@ -2611,8 +2611,7 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 #ifdef SCTP_AUDITING_ENABLED
 			sctp_audit_log(0xB1, 0);
 #endif
-/* Bug FIX should be    if (SCTP_SIZE32(chk_length) == (length - *offset)) { */
-			if (SCTP_SIZE32(chk_length) == *offset - length) {
+			if (SCTP_SIZE32(chk_length) == (length - *offset)) { 
 				last_chunk = 1;
 			} else {
 				last_chunk = 0;
