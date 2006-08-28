@@ -4526,20 +4526,6 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far, int hold_rlock,
 	return;
 }
 
-int sctp_track_flow[50];
-int sctp_track_at=0;
-int sctp_cache[1000];
-int sctp_setup=1;
-
-#define SCTP_MARK_AT(val) do { \
-       sctp_track_flow[val]++; \
-       sctp_cache[sctp_track_at] = val; \
-       sctp_track_at++; \
-       if(sctp_track_at >= 1000)  \
-	       sctp_track_at = 0; \
-}while (0)
-
-
 int
 sctp_sorecvmsg(struct socket *so,
     struct uio *uio,
@@ -4588,7 +4574,6 @@ sctp_sorecvmsg(struct socket *so,
 		memset(sctp_track_flow, 0, sizeof(sctp_track_flow));
 		sctp_setup = 0;
 	}
-	SCTP_MARK_AT(0);
 	slen = uio->uio_resid;
 	/* Pull in and set up our int flags */
 	if (in_flags & MSG_OOB) {
@@ -4646,7 +4631,6 @@ sctp_sorecvmsg(struct socket *so,
 		goto release_unlocked;
 	}
 restart:
-	SCTP_MARK_AT(1);
 	if(hold_sblock == 0) {
 		SOCKBUF_LOCK(&so->so_rcv);
 		hold_sblock = 1;
@@ -4664,7 +4648,6 @@ restart:
 
 	if((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
 	   (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
-		SCTP_MARK_AT(2);
 		goto out;
 	}
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
@@ -4678,7 +4661,6 @@ restart:
 		} else {
 			error = ENOTCONN;
 		}
-		SCTP_MARK_AT(3);
 		goto out;
 	}
 
@@ -4716,24 +4698,17 @@ restart:
 						inp->sctp_flags &= ~SCTP_PCB_FLAGS_WAS_CONNECTED;
 					}
 				}
-				SCTP_MARK_AT(4);
 				goto out;
 			}
 		}
-		SCTP_MARK_AT(5);
 		error = sbwait(&so->so_rcv);
 		if (error) {
-			printf("SBWAIT1, breaks error:%d\n",
-			       error);
-			SCTP_MARK_AT(6);
 			goto out;
 		}
-		SCTP_MARK_AT(7);
 		held_length = 0;
 		goto restart;
 	} else if (so->so_rcv.sb_cc == 0) {
 		error = EWOULDBLOCK;
-		SCTP_MARK_AT(8);
 		goto out;
 	}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
@@ -4747,7 +4722,6 @@ restart:
 	error = sblock(&so->so_rcv, (block_allowed ? M_WAITOK : 0));
 #endif
 	/* we possibly have data we can read */
-	SCTP_MARK_AT(9);
 	control = TAILQ_FIRST(&inp->read_queue);
 	if (control == NULL) {
 		/* This could be happening since
@@ -4765,7 +4739,6 @@ restart:
 		}
 		SCTP_INP_READ_UNLOCK(inp);
 		hold_rlock = 0;
-		SCTP_MARK_AT(10);
 		goto restart;
 	}
 
@@ -4806,7 +4779,6 @@ restart:
 		}
 		hold_rlock = 0;
 		SCTP_INP_READ_UNLOCK(inp);
-		SCTP_MARK_AT(11);
 		goto restart;
 	}
 	if (control->length == 0) {
@@ -4830,7 +4802,6 @@ restart:
 		 */
 		held_length = so->so_rcv.sb_cc;
 		control->held_length = so->so_rcv.sb_cc;
-		SCTP_MARK_AT(12);
 		goto restart;
 	}
 	/* Clear the held length since there is something to read */
@@ -4839,9 +4810,7 @@ restart:
 		SCTP_INP_READ_UNLOCK(inp);
 		hold_rlock = 0;
 	}
-	SCTP_MARK_AT(13);
 found_one:
-	SCTP_MARK_AT(14);
 	/*
 	 * If we reach here, control has a some data for us to read off.
 	 * Note that stcb COULD be NULL.
@@ -4966,12 +4935,10 @@ found_one:
 		}
 #endif
 	}
-	SCTP_MARK_AT(14);
 	/* now copy out what data we can */
 	if (mp == NULL) {
 		/* copy out each mbuf in the chain up to length */
 get_more_data:
-		SCTP_MARK_AT(15);
 		m = control->data;
 		while (m) {
 			/* Move out all we can */
@@ -5001,7 +4968,6 @@ get_more_data:
 #endif
 			/* re-read */
 			if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
-				SCTP_MARK_AT(16);
 				goto release;
 			}
 
@@ -5011,7 +4977,6 @@ get_more_data:
 			}
 			if (error) {
 				/* error we are out of here */
-				SCTP_MARK_AT(17);
 				goto release;
 			}
 			if((m->m_next == NULL) && 
@@ -5023,9 +4988,7 @@ get_more_data:
 				SCTP_INP_READ_LOCK(inp);
 				hold_rlock = 1;
 			}
-			SCTP_MARK_AT(18);
 			if (cp_len == m->m_len) {
-				SCTP_MARK_AT(19);
 				if (m->m_flags & M_EOR) {
 					out_flags |= MSG_EOR;
 				}
@@ -5057,7 +5020,6 @@ get_more_data:
 						cp_len = alen;
 #endif
 					}
-					SCTP_MARK_AT(20);
 					copied_so_far += cp_len;
 					freed_so_far += cp_len;
 					atomic_subtract_int(&control->length, cp_len);
@@ -5086,7 +5048,6 @@ get_more_data:
 				}
 			} else {
 				/* Do we need to trim the mbuf? */
-				SCTP_MARK_AT(21);
 				if (m->m_flags & M_NOTIFICATION) {
 					out_flags |= MSG_NOTIFICATION;
 				}
@@ -5100,7 +5061,6 @@ get_more_data:
 						 */
 						m->m_flags |= M_NOTIFICATION;
 					}
-					SCTP_MARK_AT(22);
 					m->m_data += cp_len;
 					m->m_len -= cp_len;
 #ifdef SCTP_SB_LOGGING
@@ -5133,7 +5093,6 @@ get_more_data:
 			if ((out_flags & MSG_EOR) ||
 			    (uio->uio_resid == 0)
 				) {
-				SCTP_MARK_AT(23);
 				break;
 			}
 			if (((stcb) && (in_flags & MSG_PEEK) == 0) &&
@@ -5142,7 +5101,6 @@ get_more_data:
 				sctp_user_rcvd(stcb, &freed_so_far, hold_rlock, rwnd_req);
 			}
 		} /* end while(m) */
-		SCTP_MARK_AT(24);
 		/*
 		 * At this point we have looked at it all and we either have
 		 * a MSG_EOR/or read all the user wants... <OR>
@@ -5152,7 +5110,6 @@ get_more_data:
 		    ((in_flags & MSG_PEEK) == 0)) {
 			/* we are done with this control */
 			if (control->length == 0) {
-				SCTP_MARK_AT(25);
 				if (control->data) {
 #ifdef INVARIENTS
 					panic("control->data not null at read eor?");
@@ -5175,7 +5132,6 @@ get_more_data:
 						hold_rlock = 1;
 					}
 				}
-				SCTP_MARK_AT(26);
 				TAILQ_REMOVE(&inp->read_queue, control, next);
 				/* Add back any hiddend data */
 				if (control->held_length) {
@@ -5194,7 +5150,6 @@ get_more_data:
 				 * are leaving more behind on the control to
 				 * read.
 				 */
-				SCTP_MARK_AT(27);
 #ifdef INVARIENTS
 				if(control->end_added && (control->data == NULL) &&
 				   (control->tail_mbuf == NULL)) {
@@ -5205,15 +5160,12 @@ get_more_data:
 				out_flags &= ~MSG_EOR;
 			}
 		}
-		SCTP_MARK_AT(28);
 		if (out_flags & MSG_EOR) {
-			SCTP_MARK_AT(29);
 			goto release;
 		}
 		if ((uio->uio_resid == 0) ||
 		    ((in_eeor_mode) && (copied_so_far >= max(so->so_rcv.sb_lowat, 1)))
 			) {
-			SCTP_MARK_AT(30);
 			goto release;
 		}
 		/*
@@ -5222,16 +5174,6 @@ get_more_data:
 		 * we are done. Did the user NOT set MSG_WAITALL?
 		 */
 		if (block_allowed == 0) {
-			SCTP_MARK_AT(31);
-			goto release;
-		}
-		/*
-		 * Here MSG_WAITALL is set and we are waiting more data.
-		 * Question? Did the user set FRAGMENT_INTERLEAVE? If they
-		 * did we CANNOT now wait-all.
-		 */
-		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE)) {
-			SCTP_MARK_AT(32);
 			goto release;
 		}
 		/*
@@ -5249,29 +5191,24 @@ get_more_data:
 		     (no_rcv_needed == 0))) {
 			sctp_user_rcvd(stcb, &freed_so_far, hold_rlock, rwnd_req);
 		}
-		SCTP_MARK_AT(33);
 wait_some_more:
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 		if (so->so_error || so->so_rcv.sb_state & SBS_CANTRCVMORE) {
-			SCTP_MARK_AT(34);
 			goto release;
 		}
 #else
 		if (so->so_error || so->so_state & SS_CANTRCVMORE) {
-			SCTP_MARK_AT(35);
 			goto release;
 		}
 #endif
 
 		if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)
-			SCTP_MARK_AT(36);
 			goto release;
 
 		if(hold_sblock == 0) {
 			SOCKBUF_LOCK(&so->so_rcv);
 			hold_sblock = 1;
 		}
-		SCTP_MARK_AT(37);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		sbunlock(&so->so_rcv, 1);
 #endif
@@ -5294,26 +5231,19 @@ wait_some_more:
 				       uio->uio_resid);
 #endif
 		if(so->so_rcv.sb_cc <= control->held_length) {
-			SCTP_MARK_AT(38);
 			error = sbwait(&so->so_rcv);
 			if (error){
-				SCTP_MARK_AT(39);
-				printf("SBWAIT2, breaks error:%d\n",
-				       error);
-
 #if defined(__FreeBSD__) || defined(__NetBSD__)
 				goto release;
 #else
 				goto release_unlocked;
 #endif
 			}
-			SCTP_MARK_AT(40);
 			control->held_length = 0;
 		}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
 #endif
-		SCTP_MARK_AT(41);
 		if(hold_sblock) {
 			SOCKBUF_UNLOCK(&so->so_rcv);
 			hold_sblock = 0;
@@ -5329,19 +5259,11 @@ wait_some_more:
 				control->held_length = so->so_rcv.sb_cc;
 				held_length = 0;
 			}
-			/* Did the user somehow toggle the flag? */
-			if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE)) {
-				SCTP_MARK_AT(42);
-				goto release;
-			}
-			SCTP_MARK_AT(43);
 			goto wait_some_more;
 		}
-		SCTP_MARK_AT(44);
 		goto get_more_data;
 	} else {
 		/* copy out the mbuf chain */
-		SCTP_MARK_AT(45);
 get_more_data2:
 		cp_len = uio->uio_resid;
 		if ((uint32_t) cp_len >= control->length) {
@@ -5388,15 +5310,6 @@ get_more_data2:
 			    ((in_flags & MSG_WAITALL) == 0)) {
 				goto release;
 			}
-			/*
-			 * Here MSG_WAITALL is set and we are waiting more
-			 * data. Question? Did the user set
-			 * FRAGMENT_INTERLEAVE? If they did we CANNOT now
-			 * wait-all.
-			 */
-			if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE)) {
-				goto release;
-			}
 	wait_some_more2:
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 			if (so->so_error || so->so_rcv.sb_state & SBS_CANTRCVMORE)
@@ -5420,9 +5333,6 @@ get_more_data2:
 			if(so->so_rcv.sb_cc <= control->held_length) {
 				error = sbwait(&so->so_rcv);
 				if (error) {
-					printf("SBWAIT3, breaks error:%d\n",
-					       error);
-
 #if defined(__FreeBSD__) || defined(__NetBSD__)
 					goto release;
 #else
@@ -5443,10 +5353,6 @@ get_more_data2:
 					control->held_length = so->so_rcv.sb_cc;
 					/* We don't use held_length while getting a message */
 					held_length = 0;
-				}
-				/* Did the user somehow toggle the flag? */
-				if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE)) {
-					goto release;
 				}
 				goto wait_some_more2;
 			}
@@ -5556,7 +5462,6 @@ get_more_data2:
 		}
 	}
 release:
-	SCTP_MARK_AT(46);
 	if(hold_rlock == 1) {
 		SCTP_INP_READ_UNLOCK(inp);
 		hold_rlock = 0;
@@ -5577,7 +5482,6 @@ release:
 #endif
 
 release_unlocked:
-	SCTP_MARK_AT(47);
 	if(hold_sblock) {
 		SOCKBUF_UNLOCK(&so->so_rcv);
 		hold_sblock = 0;
@@ -5591,7 +5495,6 @@ release_unlocked:
 	if (msg_flags)
 		*msg_flags |= out_flags;
 out:
-	SCTP_MARK_AT(48);
 	if(hold_sblock) {
 		SOCKBUF_UNLOCK(&so->so_rcv);
 		hold_sblock = 0;
