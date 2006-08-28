@@ -49,12 +49,13 @@ __FBSDID("$FreeBSD:$");
 #ifdef SCTP_MBUF_LOGGING
 
 struct mbuf *sctp_m_free(struct mbuf *m);
-
+void sctp_m_freem(struct mbuf *m);
 #else
 #define sctp_m_free m_free
+#define sctp_m_freem m_freem
 #endif
 
-#define sctp_m_freem m_freem
+
 
 
 #ifdef __APPLE__

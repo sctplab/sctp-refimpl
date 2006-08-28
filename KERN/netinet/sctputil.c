@@ -5568,6 +5568,13 @@ sctp_m_free(struct mbuf *m)
 	}
 	return(m_free(m));
 }
+
+void sctp_m_freem(struct mbuf *mb)
+{
+	while (mb != NULL)
+		mb = sctp_m_free(mb);
+}
+
 #endif
 
 #if defined(__NetBSD__)

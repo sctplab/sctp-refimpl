@@ -7090,11 +7090,11 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 	}
 	m->m_len = 0;
 	m->m_next = m->m_nextpkt = NULL;
-/*#ifdef SCTP_MBUF_LOGGING*/
-/*	if(m->m_flags & M_EXT) {*/
-/*		sctp_log_mb(m, SCTP_MBUF_IALLOC);*/
-/*	}*/
-/*#endif*/
+#ifdef SCTP_MBUF_LOGGING
+	if(m->m_flags & M_EXT) {
+		sctp_log_mb(m, SCTP_MBUF_IALLOC);
+	}
+#endif
 
 	if (want_header) {
 		m->m_pkthdr.len = 0;
