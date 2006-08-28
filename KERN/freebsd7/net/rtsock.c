@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)rtsock.c	8.7 (Berkeley) 10/12/95
- * $FreeBSD: src/sys/net/rtsock.c,v 1.136 2006/07/06 00:24:36 oleg Exp $
+ * $FreeBSD: src/sys/net/rtsock.c,v 1.137 2006/07/21 17:11:12 rwatson Exp $
  */
 #include "opt_sctp.h"
 #include <sys/param.h>
@@ -146,6 +146,13 @@ rts_abort(struct socket *so)
 {
 
 	raw_usrreqs.pru_abort(so);
+}
+
+static void
+rts_close(struct socket *so)
+{
+
+	raw_usrreqs.pru_close(so);
 }
 
 /* pru_accept is EOPNOTSUPP */
@@ -296,6 +303,7 @@ static struct pr_usrreqs route_usrreqs = {
 	.pru_send =		rts_send,
 	.pru_shutdown =		rts_shutdown,
 	.pru_sockaddr =		rts_sockaddr,
+	.pru_close =		rts_close,
 };
 
 /*ARGSUSED*/
@@ -875,7 +883,6 @@ rt_newaddrmsg(int cmd, struct ifaddr *ifa, int error, struct rtentry *rt)
 
 	KASSERT(cmd == RTM_ADD || cmd == RTM_DELETE,
 		("unexpected cmd %u", cmd));
-
 #ifdef SCTP
 	/*
 	 * notify the SCTP stack
@@ -884,7 +891,6 @@ rt_newaddrmsg(int cmd, struct ifaddr *ifa, int error, struct rtentry *rt)
 	 */
 	sctp_addr_change(ifa, cmd);
 #endif /* SCTP */
-
 	if (route_cb.any_count == 0)
 		return;
 	for (pass = 1; pass < 3; pass++) {
