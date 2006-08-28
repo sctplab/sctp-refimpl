@@ -5563,10 +5563,16 @@ out:
 struct mbuf *
 sctp_m_free(struct mbuf *m)
 {
+	struct mbuf *ret;
+/*
 	if(m->m_flags & M_EXT) {
-		sctp_log_mb(m, SCTP_MBUF_IFREE);
+ 		sctp_log_mb(m, SCTP_MBUF_IFREE);
 	}
-	return(m_free(m));
+*/
+	SCTP_IPI_MBUF_LOCK();
+	ret = m_free(m);
+	SCTP_IPI_MBUF_UNLOCK();
+	return(ret);
 }
 
 void sctp_m_freem(struct mbuf *mb)
