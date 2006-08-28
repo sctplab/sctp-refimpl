@@ -5256,6 +5256,15 @@ sctp_skip_csum_4:
 	/* inp's ref-count reduced && stcb unlocked */
 	splx(s);
 	if (m) {
+#ifdef SCTP_MBUF_LOGGING
+		mat = m;
+		while(mat) {
+			if(mat->m_flags & M_EXT) {
+				sctp_log_mb(mat, SCTP_MBUF_IFREE);
+			}
+			mat = mat->m_next;
+		}
+#endif
 		sctp_m_freem(m);
 	}
 	if (opts)
