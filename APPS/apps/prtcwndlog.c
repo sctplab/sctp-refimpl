@@ -139,9 +139,14 @@ static char *from_str[]= {
 	/* 87 */ "sack-rwnd update",
 	/* 88 */ "enter sorecv",
 	/* 89 */ "enter sorecv pl",
-	/* 90 */ "unknown"
+	/* 90 */ "++via ip-input",
+	/* 91 */ "++via my allocation",
+	/* 92 */ "--I am freeing",
+	/* 93 */ "++via my copy of mbufs",
+	/* 94 */ "unknown"
 };
-#define FROM_STRING_MAX 90
+
+#define FROM_STRING_MAX 94
 
 int graph_mode = 0;
 int comma_sep = 0;
@@ -392,6 +397,17 @@ main(int argc, char **argv)
 			       log.x.sb.stcb_sbcc,
 			       ((log.from == SCTP_LOG_SBALLOC) ? "increment" : "decrement"),
 			       log.x.sb.incr);
+		}else if(log.event_type == SCTP_LOG_EVENT_MBUF) {
+			printf("%s mbuf:%x data:%x len:%d flags:%x refcnt:%d extbuf:%x %s\n",
+			       ts,
+			       (uint32_t)log.x.mb.mp,
+			       (uint32_t)log.x.mb.data,
+			       (int)log.x.mb.size,
+			       (uint32_t)log.x.mb.mbuf_flags,
+			       (int)log.x.mb.refcnt,
+			       (uint32_t)log.x.mb.ext,
+			       from_str[log.from]);
+			       
 		}else if(log.event_type == SCTP_LOG_EVENT_RTT) {
 			if(log.x.rto.rttvar) {
 				printf("%d: Net:%x  Old-Rtt:%d Change:%d Direction=%s from:%s\n",
