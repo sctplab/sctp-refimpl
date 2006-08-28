@@ -4728,7 +4728,9 @@ restart:
 		}
 		control = TAILQ_FIRST(&inp->read_queue);
 		if ((control == NULL) && (so->so_rcv.sb_cc != 0)) {
+#ifdef INVARIENTS
 			panic("Huh, its non zero and nothing on control?");
+#endif
 			so->so_rcv.sb_cc = 0;
 		}
 		SCTP_INP_READ_UNLOCK(inp);
@@ -5246,7 +5248,10 @@ wait_some_more:
 			/* still nothing here */
 			if(control->end_added) {
 				/* Huh, there is none left? */
+#ifdef INVARIENTS
 				panic("Now none left while waiting? I missed one?");
+#endif
+				goto release;
 			}
 			if (so->so_rcv.sb_cc > held_length) {
 				SCTP_STAT_INCR(sctps_locks_in_rcvf);
