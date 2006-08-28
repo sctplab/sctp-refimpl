@@ -4929,6 +4929,9 @@ sctp_input(m, va_alist)
 #endif
 #endif
 {
+#ifdef SCTP_MBUF_LOGGING
+	struct mbuf *mat;
+#endif
 	int iphlen;
 	int s;
 	uint8_t ecn_bits;
@@ -4985,6 +4988,16 @@ sctp_input(m, va_alist)
 	/*
 	 * Strip IP options, we don't allow any in or out.
 	 */
+#ifdef SCTP_MBUF_LOGGING
+	/* Log in any input mbufs */
+	mat = m;
+	while(mat) {
+		if(mat->m_flags & M_EXT) {
+			sctp_log_mb(mat, SCTP_MBUF_INPUT);
+		}
+		mat = mat->m_next;
+	}
+#endif
 	if ((size_t)iphlen > sizeof(struct ip)) {
 		ip_stripoptions(m, (struct mbuf *)0);
 		iphlen = sizeof(struct ip);
@@ -5237,6 +5250,7 @@ sctp_skip_csum_4:
 #else
 	s = splnet();
 #endif
+	
 	sctp_common_input_processing(&m, iphlen, offset, length, sh, ch,
 	    inp, stcb, net, ecn_bits);
 	/* inp's ref-count reduced && stcb unlocked */

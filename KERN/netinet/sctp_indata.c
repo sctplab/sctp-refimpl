@@ -1697,6 +1697,18 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		dmbuf = sctp_m_copym(*m,
 				     (offset + sizeof(struct sctp_data_chunk)),
 				     the_len, M_DONTWAIT);
+#ifdef SCTP_MBUF_LOGGING
+		{
+			struct mbuf *mat;
+			mat = dmbuf;
+			while(mat) {
+				if(mat->m_flags & M_EXT) {
+					sctp_log_mb(mat, SCTP_MBUF_ICOPY);
+				}
+				mat = mat->m_next;
+			}
+		}
+#endif		
 	} else {
 		/* We can steal the last chunk */
 		dmbuf = *m;

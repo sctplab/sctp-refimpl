@@ -46,14 +46,16 @@ __FBSDID("$FreeBSD:$");
 
 #if defined(_KERNEL)
 
-#ifdef SCTP_MBUF_DEBUG
-void sctp_m_freem(struct mbuf *m);
+#ifdef SCTP_MBUF_LOGGING
+
 struct mbuf *sctp_m_free(struct mbuf *m);
-void sctp_register_new_mbufs(struct mbuf *m);
+
 #else
-#define sctp_m_freem m_freem
 #define sctp_m_free m_free
 #endif
+
+#define sctp_m_freem m_freem
+
 
 #ifdef __APPLE__
 struct mbuf *sctp_m_copym(struct mbuf *m, int off, int len, int wait);
@@ -387,6 +389,9 @@ sctp_wakeup_log(struct sctp_tcb *stcb,
 void sctp_log_strm_del_alt(uint32_t, uint16_t, int);
 
 void sctp_log_nagle_event(struct sctp_tcb *stcb, int action);
+
+void
+sctp_log_mb(struct mbuf *m, int from);
 
 void
 sctp_sblog(struct sockbuf *sb,
