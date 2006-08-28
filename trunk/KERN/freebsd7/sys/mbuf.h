@@ -43,6 +43,9 @@
 #endif
 #endif
 
+#include <sys/lock.h>
+#include <sys/mutex.h>
+
 /*
  * Mbufs are of a single size, MSIZE (sys/param.h), which
  * includes overhead.  An mbuf may add a single "mbuf cluster" of size
@@ -447,7 +450,7 @@ m_getjcl(int how, short type, int flags, int size)
 
 static __inline
 struct mbuf *
-m_free(struct mbuf *m)
+m_free_locked(struct mbuf *m)
 {
 	struct mbuf *n = m->m_next;
 
@@ -457,6 +460,24 @@ m_free(struct mbuf *m)
 		uma_zfree(zone_mbuf, m);
 	return n;
 }
+
+extern struct mtx  mbuf_zone_mtx;
+
+static __inline
+struct mbuf *
+m_free(struct mbuf *m)
+{
+	struct mbuf *n = m->m_next;
+
+	mtx_lock(&mbuf_zone_mtx);
+	if (m->m_flags & M_EXT)
+		mb_free_ext(m);
+	else
+		uma_zfree(zone_mbuf, m);
+	mtx_unlock(&mbuf_zone_mtx);
+	return n;
+}
+
 
 static __inline
 void
