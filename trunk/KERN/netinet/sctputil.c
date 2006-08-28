@@ -4672,7 +4672,6 @@ restart:
 				/* For active open side clear flags for re-use 
 				 * passive open is blocked by connect.
 				 */
-				printf("At end of connection\n");
 				if (inp->sctp_flags &  SCTP_PCB_FLAGS_WAS_ABORTED) {
 					/* You were aborted, passive side always hits here */
 					error = ECONNRESET;
@@ -5528,12 +5527,6 @@ out:
 #endif
 	if (wakeup_read_socket) {
 		sctp_sorwakeup(inp, so);
-	}
-	if ((error == 0) &&
-	    (slen == uio->uio_resid)) {
-		if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
-			panic("Huh, connected and nothing back?");
-		}
 	}
 	return (error);
 }
