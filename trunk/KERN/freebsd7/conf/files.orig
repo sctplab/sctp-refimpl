@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/conf/files,v 1.1130 2006/07/15 20:22:40 netchild Exp $
+# $FreeBSD: src/sys/conf/files,v 1.1140 2006/08/14 21:09:37 imp Exp $
 #
 # The long compile-with and dependency lines are required because of
 # limitations in config: backslash-newline doesn't work in strings, and
@@ -724,8 +724,10 @@ dev/mii/ciphy.c			optional miibus | ciphy
 dev/mii/e1000phy.c		optional miibus | e1000phy
 # XXX only xl cards?
 dev/mii/exphy.c			optional miibus | exphy
+dev/mii/gentbi.c		optional miibus | gentbi
 # XXX only fxp cards?
 dev/mii/inphy.c			optional miibus | inphy
+dev/mii/ip1000phy.c		optional miibus | ip1000phy
 dev/mii/lxtphy.c		optional miibus | lxtphy
 dev/mii/mii.c			optional miibus | mii
 dev/mii/mii_physubr.c		optional miibus | mii
@@ -856,9 +858,6 @@ dev/si/si3_t225.c		optional si
 dev/si/si_eisa.c		optional si eisa
 dev/si/si_isa.c			optional si isa
 dev/si/si_pci.c			optional si pci
-dev/sio/sio_pccard.c		optional sio pccard
-dev/sio/sio_pci.c		optional sio pci
-dev/sio/sio_puc.c		optional sio puc
 dev/sk/if_sk.c			optional sk pci
 dev/smbus/smb.c			optional smb
 dev/smbus/smbconf.c		optional smbus
@@ -876,6 +875,7 @@ dev/sound/isa/sb16.c		optional snd_sb16 isa
 dev/sound/isa/sb8.c		optional snd_sb8 isa
 dev/sound/isa/sbc.c		optional snd_sbc isa
 dev/sound/isa/sndbuf_dma.c	optional sound isa
+dev/sound/pci/ak452x.c		optional snd_ak452x pci
 dev/sound/pci/als4000.c		optional snd_als4000 pci
 dev/sound/pci/atiixp.c		optional snd_atiixp pci
 #dev/sound/pci/au88x0.c		optional snd_au88x0 pci
@@ -901,6 +901,7 @@ dev/sound/pci/emu10kx-pcm.c	optional snd_emu10kx pci \
 dev/sound/pci/emu10kx-midi.c	optional snd_emu10kx pci \
 	dependency "emu10k1-alsa%diked.h" \
 	warning "kernel contains GPL contaminated emu10kx headers"
+dev/sound/pci/envy24.c		optional snd_envy24 pci
 dev/sound/pci/es137x.c		optional snd_es137x pci
 dev/sound/pci/fm801.c		optional snd_fm801 pci
 dev/sound/pci/ich.c		optional snd_ich pci
@@ -950,6 +951,7 @@ dev/stg/tmc18c30_isa.c		optional stg isa
 dev/stg/tmc18c30_pccard.c	optional stg pccard
 dev/stg/tmc18c30_pci.c		optional stg pci
 dev/stg/tmc18c30_subr.c		optional stg
+dev/stge/if_stge.c		optional stge
 dev/streams/streams.c		optional streams
 dev/sym/sym_hipd.c		optional sym				\
 	dependency	"$S/dev/sym/sym_{conf,defs}.h"
@@ -1023,14 +1025,14 @@ dev/usb/ohci.c			optional ohci
 dev/usb/ohci_pci.c		optional ohci pci
 dev/usb/sl811hs.c		optional slhci
 dev/usb/slhci_pccard.c		optional slhci pccard
-dev/usb/ubsa.c			optional ubsa ucom
+dev/usb/ubsa.c			optional ubsa
 dev/usb/ubser.c			optional ubser
 dev/usb/ucom.c			optional ucom
-dev/usb/ucycom.c		optional ucycom ucom
+dev/usb/ucycom.c		optional ucycom
 dev/usb/udbp.c			optional udbp
-dev/usb/ufoma.c			optional ufoma ucom
+dev/usb/ufoma.c			optional ufoma
 dev/usb/ufm.c			optional ufm
-dev/usb/uftdi.c			optional uftdi ucom
+dev/usb/uftdi.c			optional uftdi
 dev/usb/ugen.c			optional ugen
 dev/usb/uhci.c			optional uhci
 dev/usb/uhci_pci.c		optional uhci pci
@@ -1042,7 +1044,7 @@ dev/usb/umass.c			optional umass
 dev/usb/umct.c			optional umct
 dev/usb/umodem.c		optional umodem
 dev/usb/ums.c			optional ums
-dev/usb/uplcom.c		optional uplcom ucom
+dev/usb/uplcom.c		optional uplcom
 dev/usb/urio.c			optional urio
 dev/usb/usb.c			optional usb
 dev/usb/usb_ethersubr.c		optional usb
@@ -1053,8 +1055,8 @@ dev/usb/usb_subr.c		optional usb
 dev/usb/usbdi.c			optional usb
 dev/usb/usbdi_util.c		optional usb
 dev/usb/uscanner.c		optional uscanner
-dev/usb/uvisor.c		optional uvisor ucom
-dev/usb/uvscom.c		optional uvscom ucom
+dev/usb/uvisor.c		optional uvisor
+dev/usb/uvscom.c		optional uvscom
 dev/utopia/idtphy.c		optional utopia
 dev/utopia/suni.c		optional utopia
 dev/utopia/utopia.c		optional utopia
@@ -1399,7 +1401,7 @@ kern/sys_generic.c		standard
 kern/sys_pipe.c			standard
 kern/sys_process.c		standard
 kern/sys_socket.c		standard
-kern/syscalls.c			optional witness
+kern/syscalls.c			optional witness | invariants
 kern/sysv_ipc.c			standard
 kern/sysv_msg.c			optional sysvmsg
 kern/sysv_sem.c			optional sysvsem
@@ -1418,8 +1420,8 @@ kern/uipc_domain.c		standard
 kern/uipc_mbuf.c		standard
 kern/uipc_mbuf2.c		standard
 kern/uipc_mqueue.c		optional p1003_1b_mqueue
-kern/uipc_proto.c		standard
 kern/uipc_sem.c			optional p1003_1b_semaphores
+kern/uipc_sockbuf.c		standard
 kern/uipc_socket.c		standard
 kern/uipc_socket2.c		standard
 kern/uipc_syscalls.c		standard
@@ -1475,6 +1477,7 @@ libkern/strncmp.c		standard
 libkern/strncpy.c		standard
 libkern/strsep.c		standard
 libkern/strspn.c		standard
+libkern/strstr.c		standard
 libkern/strtol.c		standard
 libkern/strtoq.c		standard
 libkern/strtoul.c		standard

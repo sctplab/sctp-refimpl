@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/conf/options,v 1.554 2006/07/18 17:00:51 imp Exp $
+# $FreeBSD: src/sys/conf/options,v 1.557 2006/08/17 00:37:03 julian Exp $
 #
 #        On the handling of kernel options
 #
@@ -50,7 +50,6 @@ TWA_FLASH_FIRMWARE	opt_twa.h
 DDB
 DDB_NUMSYM	opt_ddb.h
 GDB
-GDBSPEED	opt_gdb.h
 KDB		opt_global.h
 KDB_TRACE	opt_kdb.h
 KDB_UNATTENDED	opt_kdb.h
@@ -69,7 +68,6 @@ COMPAT_43TTY	opt_compat.h
 COMPAT_FREEBSD4	opt_compat.h
 COMPAT_FREEBSD5	opt_compat.h
 COMPILING_LINT	opt_global.h
-CONSPEED	opt_comconsole.h
 CY_PCI_FASTINTR
 DIRECTIO
 FULL_PREEMPTION	opt_sched.h
@@ -95,6 +93,7 @@ GEOM_SUNLABEL	opt_geom.h
 GEOM_UZIP	opt_geom.h
 GEOM_VOL	opt_geom.h
 GEOM_ZERO	opt_geom.h
+KSE		opt_global.h
 KSTACK_MAX_PAGES
 KSTACK_PAGES
 KTRACE
@@ -370,7 +369,6 @@ IPFIREWALL_VERBOSE	opt_ipfw.h
 IPFIREWALL_VERBOSE_LIMIT	opt_ipfw.h
 IPFIREWALL_DEFAULT_TO_ACCEPT	opt_ipfw.h
 IPFIREWALL_FORWARD	opt_ipfw.h
-IPFIREWALL_FORWARD_EXTENDED	opt_ipfw.h
 IPSTEALTH
 IPX
 IPXIP			opt_ipx.h
@@ -392,6 +390,7 @@ TCP_DROP_SYNFIN		opt_tcp_input.h
 DEV_VLAN		opt_vlan.h
 VLAN_ARRAY		opt_vlan.h
 XBONEHACK
+
 #
 # SCTP
 #
@@ -417,7 +416,7 @@ SCTP_EARLYFR_LOGGING    opt_sctp.h
 SCTP_NAGLE_LOGGING      opt_sctp.h
 SCTP_WAKE_LOGGING       opt_sctp.h
 INVARIANTS_SCTP         opt_sctp.h
-#
+
 # Netgraph(4). Use option NETGRAPH to enable the base netgraph code.
 # Each netgraph node type can be either be compiled into the kernel
 # or loaded dynamically. To get the former, include the corresponding
@@ -599,9 +598,6 @@ BKTR_SIS_VIA_MODE		opt_bktr.h
 BKTR_USE_FREEBSD_SMBUS		opt_bktr.h
 BKTR_NEW_MSP34XX_DRIVER		opt_bktr.h
 
-# options for serial support
-COM_ESP			opt_sio.h
-COM_MULTIPORT		opt_sio.h
 BREAK_TO_DEBUGGER	opt_comconsole.h
 ALT_BREAK_TO_DEBUGGER	opt_comconsole.h
 
@@ -628,6 +624,7 @@ FDC_DEBUG		opt_fdc.h
 PCFCLOCK_VERBOSE	opt_pcfclock.h
 PCFCLOCK_MAX_RETRIES	opt_pcfclock.h
 
+KDTRACE			opt_kdtrace.h
 KTR			opt_global.h
 KTR_ALQ			opt_ktr.h
 KTR_MASK		opt_ktr.h
