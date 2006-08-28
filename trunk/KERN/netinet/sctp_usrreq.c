@@ -3641,6 +3641,7 @@ sctp_optsset(struct socket *so,
 			inp->partial_delivery_point = *mtod(m, unsigned int *);
 			m->m_len = sizeof(unsigned int);
 		}
+		break;
 	case SCTP_FRAGMENT_INTERLEAVE:
 		/* not yet until we re-write sctp_recvmsg() */
 		{
