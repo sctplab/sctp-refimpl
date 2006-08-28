@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)socket.h	8.4 (Berkeley) 2/21/94
- * $FreeBSD: src/sys/sys/socket.h,v 1.89 2005/09/18 21:08:03 rwatson Exp $
+ * $FreeBSD: src/sys/sys/socket.h,v 1.90 2006/07/26 03:15:15 sam Exp $
  */
 
 #ifndef _SYS_SOCKET_H_
@@ -208,7 +208,8 @@ struct accept_filter_arg {
 #define	AF_SCLUSTER	34		/* Sitara cluster protocol */
 #define	AF_ARP		35
 #define	AF_BLUETOOTH	36		/* Bluetooth sockets */
-#define	AF_MAX		37
+#define	AF_IEEE80211	37		/* IEEE 802.11 protocol */
+#define	AF_MAX		38
 #endif
 
 /*

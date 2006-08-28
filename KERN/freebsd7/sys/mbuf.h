@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)mbuf.h	8.5 (Berkeley) 2/19/95
- * $FreeBSD: src/sys/sys/mbuf.h,v 1.190 2006/07/17 09:05:21 phk Exp $
+ * $FreeBSD: src/sys/sys/mbuf.h,v 1.192 2006/07/24 01:49:57 rwatson Exp $
  */
 
 #ifndef _SYS_MBUF_H_
@@ -42,9 +42,6 @@
 #include <sys/lock.h>
 #endif
 #endif
-
-#include <sys/lock.h>
-#include <sys/mutex.h>
 
 /*
  * Mbufs are of a single size, MSIZE (sys/param.h), which
@@ -234,22 +231,7 @@ struct mbuf {
 #define	MT_NOTMBUF	0	/* USED INTERNALLY ONLY! Object is not mbuf */
 #define	MT_DATA		1	/* dynamic (data) allocation */
 #define	MT_HEADER	MT_DATA	/* packet header, use M_PKTHDR instead */
-#if 0
-#define	MT_SOCKET	3	/* socket structure */
-#define	MT_PCB		4	/* protocol control block */
-#define	MT_RTABLE	5	/* routing tables */
-#define	MT_HTABLE	6	/* IMP host tables */
-#define	MT_ATABLE	7	/* address resolution tables */
-#endif
 #define	MT_SONAME	8	/* socket name */
-#if 0
-#define	MT_SOOPTS	10	/* socket options */
-#endif
-#define	MT_FTABLE	11	/* fragment reassembly header */
-#if 0
-#define	MT_RIGHTS	12	/* access rights */
-#define	MT_IFADDR	13	/* interface address */
-#endif
 #define	MT_CONTROL	14	/* extra-data protocol message */
 #define	MT_OOBDATA	15	/* expedited data  */
 #define	MT_NTYPES	16	/* number of mbuf types for mbtypes[] */
@@ -259,6 +241,9 @@ struct mbuf {
 
 /*
  * General mbuf allocator statistics structure.
+ *
+ * Many of these statistics are no longer used; we instead track many
+ * allocator statistics through UMA's built in statistics mechanism.
  */
 struct mbstat {
 	u_long	m_mbufs;	/* XXX */
@@ -450,34 +435,16 @@ m_getjcl(int how, short type, int flags, int size)
 
 static __inline
 struct mbuf *
-m_free_locked(struct mbuf *m)
-{
-	struct mbuf *n = m->m_next;
-
-	if (m->m_flags & M_EXT)
-		mb_free_ext(m);
-	else
-		uma_zfree(zone_mbuf, m);
-	return n;
-}
-
-extern struct mtx  mbuf_zone_mtx;
-
-static __inline
-struct mbuf *
 m_free(struct mbuf *m)
 {
 	struct mbuf *n = m->m_next;
 
-	mtx_lock(&mbuf_zone_mtx);
 	if (m->m_flags & M_EXT)
 		mb_free_ext(m);
 	else
 		uma_zfree(zone_mbuf, m);
-	mtx_unlock(&mbuf_zone_mtx);
 	return n;
 }
-
 
 static __inline
 void
