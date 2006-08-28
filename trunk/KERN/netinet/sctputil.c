@@ -367,6 +367,34 @@ sctp_log_fr(uint32_t biggest_tsn, uint32_t biggest_new_tsn, uint32_t tsn,
 	SCTP_STATLOG_UNLOCK();
 }
 
+
+void
+sctp_log_mb(struct mbuf *m, int from)
+{
+	SCTP_STATLOG_LOCK();
+	sctp_clog[sctp_cwnd_log_at].time_event = sctp_get_time_of_event();
+	sctp_clog[sctp_cwnd_log_at].from = (uint8_t) from;
+	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t) SCTP_LOG_EVENT_MBUF;
+	sctp_clog[sctp_cwnd_log_at].x.mb.mp = m;
+	sctp_clog[sctp_cwnd_log_at].x.mb.mbuf_flags = (uint8_t)(m->m_flags);
+	sctp_clog[sctp_cwnd_log_at].x.mb.size = (uint16_t)(m->m_len);
+	sctp_clog[sctp_cwnd_log_at].x.mb.data = m->m_data;
+	if(m->m_flags & M_EXT) {
+		sctp_clog[sctp_cwnd_log_at].x.mb.ext = m->m_ext.ext_buf;
+		sctp_clog[sctp_cwnd_log_at].x.mb.refcnt = (uint8_t)(*m->m_ext.ref_cnt);
+	}else {
+		sctp_clog[sctp_cwnd_log_at].x.mb.ext = 0;
+		sctp_clog[sctp_cwnd_log_at].x.mb.refcnt = 0;
+	}
+	sctp_cwnd_log_at++;
+	if (sctp_cwnd_log_at >= SCTP_STAT_LOG_SIZE) {
+		sctp_cwnd_log_at = 0;
+		sctp_cwnd_log_rolled = 1;
+	}
+	SCTP_STATLOG_UNLOCK();
+}
+
+
 void
 sctp_log_strm_del(struct sctp_queued_to_read *control, struct sctp_queued_to_read *poschk,
     int from)
@@ -5529,6 +5557,18 @@ out:
 	}
 	return (error);
 }
+
+
+#ifdef SCTP_MBUF_LOGGING
+struct mbuf *
+sctp_m_free(struct mbuf *m)
+{
+	if(m->m_flags & M_EXT) {
+		sctp_log_mb(m, SCTP_MBUF_IFREE);
+	}
+	return(m_free(m));
+}
+#endif
 
 #if defined(__NetBSD__)
 int
