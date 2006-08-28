@@ -2431,13 +2431,12 @@ sctp_calculate_sum(struct mbuf *m, int32_t * pktlen, uint32_t offset)
 	 * returned (ie. no real error code)
 	 */
 	int32_t tlen = 0;
-
+	
 #ifdef SCTP_USE_ADLER32
 	uint32_t base = 1L;
 
 #else
 	uint32_t base = 0xffffffff;
-
 #endif				/* SCTP_USE_ADLER32 */
 	struct mbuf *at;
 
@@ -2447,24 +2446,32 @@ sctp_calculate_sum(struct mbuf *m, int32_t * pktlen, uint32_t offset)
 		offset -= at->m_len;	/* update remaining offset left */
 		at = at->m_next;
 	}
-#ifndef SCTP_USE_ADLER32
-	if (sctp_warm_the_crc32_table)
-		sctp_warm_tables();
-#endif
 	while (at != NULL) {
+		if ((at->m_len - offset) > 0) {
 #ifdef SCTP_USE_ADLER32
-		base = update_adler32(base,
-		    (unsigned char *)(at->m_data + offset),
-		    (unsigned int)(at->m_len - offset));
+			base = update_adler32(base,
+					      (unsigned char *)(at->m_data + offset),
+					      (unsigned int)(at->m_len - offset));
 #else
-		base = update_crc32(base,
-		    (unsigned char *)(at->m_data + offset),
-		    (unsigned int)(at->m_len - offset));
+			if ((at->m_len - offset) < 4) {
+				/* Use old method if less than 4 bytes */
+				base = old_update_crc32(base, 
+							(unsigned char *)(at->m_data + offset),
+							(unsigned int)(at->m_len - offset));
+			} else {
+				base = update_crc32(base,
+						    (unsigned char *)(at->m_data + offset),
+						    (unsigned int)(at->m_len - offset));
+			}
 #endif				/* SCTP_USE_ADLER32 */
-		tlen += at->m_len - offset;
-		/* we only offset once into the first mbuf */
+			tlen += at->m_len - offset;
+			/* we only offset once into the first mbuf */
+		}
 		if (offset) {
-			offset = 0;
+			if(offset < at->m_len)
+				offset = 0;
+			else
+				offset -= at->m_len;
 		}
 		at = at->m_next;
 	}

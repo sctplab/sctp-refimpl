@@ -7221,6 +7221,12 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	} else
 		sp->length -= to_move;
 
+	/* Update the new length in */
+	if(sp->data && (sp->data->m_flags & M_PKTHDR)) {
+		/* update length */
+		sp->data->m_pkthdr.len = sp->length;
+	}
+
 	if ((chk->data->m_flags & M_PKTHDR) == 0) {
 		struct mbuf *m;
 		m = sctp_get_mbuf_for_msg(1, 1, M_DONTWAIT, 0, MT_DATA);
