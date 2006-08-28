@@ -4569,11 +4569,6 @@ sctp_sorecvmsg(struct socket *so,
 	} else {
 		in_flags = 0;
 	}
-	if (sctp_setup) {
-		memset(sctp_cache, 0, sizeof(sctp_cache));
-		memset(sctp_track_flow, 0, sizeof(sctp_track_flow));
-		sctp_setup = 0;
-	}
 	slen = uio->uio_resid;
 	/* Pull in and set up our int flags */
 	if (in_flags & MSG_OOB) {
