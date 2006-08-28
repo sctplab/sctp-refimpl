@@ -4674,6 +4674,7 @@ restart:
 				/* For active open side clear flags for re-use 
 				 * passive open is blocked by connect.
 				 */
+				printf("At end of connection\n");
 				if (inp->sctp_flags &  SCTP_PCB_FLAGS_WAS_ABORTED) {
 					/* You were aborted, passive side always hits here */
 					error = ECONNRESET;
@@ -4699,6 +4700,8 @@ restart:
 		}
 		error = sbwait(&so->so_rcv);
 		if (error) {
+			printf("SBWAIT1, breaks error:%d\n",
+			       error);
 			goto out;
 		}
 		held_length = 0;
@@ -5237,6 +5240,9 @@ wait_some_more:
 		if(so->so_rcv.sb_cc <= control->held_length) {
 			error = sbwait(&so->so_rcv);
 			if (error){
+				printf("SBWAIT2, breaks error:%d\n",
+				       error);
+
 #if defined(__FreeBSD__) || defined(__NetBSD__)
 				goto release;
 #else
@@ -5350,6 +5356,9 @@ get_more_data2:
 			if(so->so_rcv.sb_cc <= control->held_length) {
 				error = sbwait(&so->so_rcv);
 				if (error) {
+					printf("SBWAIT3, breaks error:%d\n",
+					       error);
+
 #if defined(__FreeBSD__) || defined(__NetBSD__)
 					goto release;
 #else
@@ -5554,6 +5563,12 @@ out:
 #endif
 	if (wakeup_read_socket) {
 		sctp_sorwakeup(inp, so);
+	}
+	if ((error == 0) &&
+	    (slen == uio->uio_resid)) {
+		if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
+			panic("Huh, connected and nothing back?");
+		}
 	}
 	return (error);
 }
