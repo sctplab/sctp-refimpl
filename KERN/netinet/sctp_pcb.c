@@ -5200,6 +5200,7 @@ sctp_pcb_init()
 	SCTP_ITERATOR_LOCK_INIT();
 	SCTP_IPI_COUNT_INIT();
 	SCTP_IPI_ADDR_INIT();
+	SCTP_IPI_MBUF_INIT();
 	LIST_INIT(&sctppcbinfo.addr_wq);
 
 	/* not sure if we need all the counts */

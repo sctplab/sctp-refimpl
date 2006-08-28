@@ -236,6 +236,7 @@ struct sctp_epinfo {
 	struct mtx ipi_ep_mtx;
 	struct mtx it_mtx;
 	struct mtx ipi_addr_mtx;
+	struct mtx ipi_mbuf_mtx;
 #elif defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 #ifdef _KERN_LOCKS_H_
 	lck_grp_attr_t *mtx_grp_attr;
@@ -560,11 +561,21 @@ struct sctp_tcb {
 } while (0)
 
 
+#define SCTP_IPI_MBUF_INIT() \
+        mtx_init(&sctppcbinfo.ipi_mbuf_mtx, "sctp-mbufm", "sctp_mbufr_mtx", MTX_DEF)
+
+#define SCTP_IPI_MBUF_LOCK()	do { 					\
+             mtx_lock(&sctppcbinfo.ipi_mbuf_mtx);                         \
+} while (0)
+
+#define SCTP_IPI_MBUF_UNLOCK()		mtx_unlock(&sctppcbinfo.ipi_mbuf_mtx)
+
+
 
 #define SCTP_IPI_ADDR_INIT() \
         mtx_init(&sctppcbinfo.ipi_addr_mtx, "sctp-addr-wq", "sctp_addr_wq", MTX_DEF)
 
-#define SCTP_IPI_ADDR_DESTROY(_inp) \
+#define SCTP_IPI_ADDR_DESTROY() \
 	mtx_destroy(&sctppcbinfo.ipi_addr_mtx)
 
 #define SCTP_IPI_ADDR_LOCK()	do { 					\
