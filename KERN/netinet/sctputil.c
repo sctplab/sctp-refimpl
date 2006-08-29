@@ -2868,6 +2868,7 @@ sctp_notify_assoc_change(uint32_t event, struct sctp_tcb *stcb,
 					locked = 0;
 					/* wake him up */
 					control->do_not_ref_stcb = 1;
+					stcb->asoc.control_pdapi = NULL;
 					sorwakeup(stcb->sctp_socket);
 					break;
 				}
