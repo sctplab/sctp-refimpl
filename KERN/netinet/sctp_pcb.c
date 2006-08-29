@@ -2665,7 +2665,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	struct sctp_laddr *laddr, *nladdr;
 	struct inpcb *ip_pcb;
 	struct socket *so;
-	uint8_t locked_so = 0;
 
 	struct sctp_queued_to_read *sq;
 
@@ -2713,13 +2712,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	/* First time through we have the socket lock, after that
 	 * no more.
 	 */
-	if (so) {
-		locked_so = 1;
-#ifdef SCTP_LOCK_LOGGING
-		sctp_log_lock(inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_SOCK);
-#endif
-		SOCK_LOCK(so);
-	}
 	sctp_timer_stop(SCTP_TIMER_TYPE_NEWCOOKIE, inp, NULL, NULL);
 
 	if (inp->control) {
@@ -2751,23 +2743,11 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 			    (SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_COOKIE_ECHOED)) {
 				/* Just abandon things in the front states */
 				if(asoc->asoc.total_output_queue_size == 0) {
-					if (locked_so) {
-						SOCK_UNLOCK(so);
-					}
 					sctp_free_assoc(inp, asoc, 1);
-					if (locked_so) {
-						SOCK_LOCK(so);
-					}
 					continue;
 				}
 			}
-			if (locked_so) {
-				SOCK_UNLOCK(so);
-			}
 			SCTP_TCB_LOCK(asoc);
-			if (locked_so) {
-				SOCK_LOCK(so);
-			}
 			/* Disconnect the socket please */
 			asoc->sctp_socket = NULL;
 			asoc->asoc.state |= SCTP_STATE_CLOSED_SOCKET;
@@ -2796,14 +2776,8 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 					ippp = (uint32_t *) (ph + 1);
 					*ippp = htonl(0x30000004);
 				}
-				if (locked_so) {
-					SOCK_UNLOCK(so);
-				}
 				sctp_send_abort_tcb(asoc, op_err);
 				sctp_free_assoc(inp, asoc, 1);
-				if (locked_so) {
-					SOCK_LOCK(so);
-				}
 				continue;
 			} else if (TAILQ_EMPTY(&asoc->asoc.send_queue) &&
 			           TAILQ_EMPTY(&asoc->asoc.sent_queue) &&
@@ -2818,9 +2792,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 					 * there is nothing queued to send,
 					 * so I send shutdown
 					 */
-					if (locked_so) {
-						SOCK_UNLOCK(so);
-					}
 					sctp_send_shutdown(asoc, asoc->asoc.primary_destination);
 					asoc->asoc.state = SCTP_STATE_SHUTDOWN_SENT;
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN, asoc->sctp_ep, asoc,
@@ -2828,9 +2799,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD, asoc->sctp_ep, asoc,
 					    asoc->asoc.primary_destination);
 					sctp_chunk_output(inp, asoc, SCTP_OUTPUT_FROM_SHUT_TMR);
-					if (locked_so) {
-						SOCK_LOCK(so);
-					}
 				} 
 			} else {
 				/* mark into shutdown pending */
@@ -2873,14 +2841,8 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 						ippp = (uint32_t *) (ph + 1);
 						*ippp = htonl(0x30000005);
 					}
-					if (locked_so) {
-						SOCK_UNLOCK(so);
-					}
 					sctp_send_abort_tcb(asoc, op_err);
 					sctp_free_assoc(inp, asoc, 1);
-					if (locked_so) {
-						SOCK_LOCK(so);
-					}
 					continue;
 				}
 			}
@@ -2907,9 +2869,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 			}
 			splx(s);
 
-			if (locked_so) {
-				SOCK_UNLOCK(so);
-			}
 			SCTP_INP_WUNLOCK(inp);
 			SCTP_ASOC_CREATE_UNLOCK(inp);
 			SCTP_INP_INFO_WUNLOCK();
@@ -2948,13 +2907,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 			continue;
 		}
 		/* Free associations that are NOT killing us */
-		if (locked_so) {
-			SOCK_UNLOCK(so);
-		}
 		SCTP_TCB_LOCK(asoc);
-		if (locked_so) {
-			SOCK_LOCK(so);
-		}
 		if ((SCTP_GET_STATE(&asoc->asoc) != SCTP_STATE_COOKIE_WAIT) &&
 		    ((asoc->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) == 0)){
 			struct mbuf *op_err;
@@ -2986,9 +2939,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	if(cnt) {
 		/* Ok we have someone out there that will kill us */
 		callout_stop(&inp->sctp_ep.signature_change.timer);
-		if (locked_so) {
-			SOCK_UNLOCK(so);
-		}
 		SCTP_INP_WUNLOCK(inp);
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		SCTP_INP_INFO_WUNLOCK();
@@ -3005,9 +2955,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	if (inp->refcount) {
 		callout_stop(&inp->sctp_ep.signature_change.timer);
 		sctp_timer_start(SCTP_TIMER_TYPE_INPKILL, inp, NULL, NULL);
-		if (locked_so) {
-			SOCK_UNLOCK(so);
-		}
 		SCTP_INP_WUNLOCK(inp);
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		SCTP_INP_INFO_WUNLOCK();
@@ -3055,7 +3002,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	 * sctp_free_assoc() call.
 	 */
 	cnt = 0;
-	if (locked_so) {
+	if (so) {
 #ifdef IPSEC
 #ifdef __OpenBSD__
 		/* XXX IPsec cleanup here */
@@ -3089,8 +3036,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 
 #ifdef  __NetBSD__
 		sofree(so);
-#else
-		SOCK_UNLOCK(so);
 #endif
 		/* Unlocks not needed since the socket is gone now */
 	}
@@ -4567,11 +4512,11 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 			/* If its NOT the inp_free calling us AND
 			 * sctp_close as been called, we 
-			 * call back (we might be the timer 
+			 * call back... 
 			 */
 			SCTP_INP_RUNLOCK(inp);
-			/* This will start the kill timer 
-			 * since we hold an increment yet. But
+			/* This will start the kill timer (if we are 
+			 * the lastone) since we hold an increment yet. But
 			 * this is the only safe way to do this
 			 * since otherwise if the socket closes
 			 * at the same time we are here we might
@@ -4580,7 +4525,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			sctp_inpcb_free(inp, 0);
 			SCTP_INP_DECR_REF(inp);
 		} else {
-			/* Kill Timer already up */
+			/* The socket is still open. */
 			SCTP_INP_DECR_REF(inp);
 			SCTP_INP_RUNLOCK(inp);
 		}
