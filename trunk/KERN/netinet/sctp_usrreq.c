@@ -5681,8 +5681,10 @@ struct pr_usrreqs sctp_usrreqs = {
 #if __FreeBSD_version >= 690000
 	.pru_close = sctp_close,
 	.pru_detach = sctp_close,
+	.pru_sopoll = sopoll_generic,
 #else
 	.pru_detach = sctp_detach,
+	.pru_sopoll = sopoll,
 #endif
 	.pru_disconnect = sctp_disconnect,
 	.pru_listen = sctp_listen,
@@ -5690,7 +5692,6 @@ struct pr_usrreqs sctp_usrreqs = {
 	.pru_send = sctp_sendm,
 	.pru_shutdown = sctp_shutdown,
 	.pru_sockaddr = sctp_ingetaddr,
-	.pru_sopoll = sopoll,
 	.pru_sosend = sctp_sosend,
 	.pru_soreceive = sctp_soreceive
 #else
