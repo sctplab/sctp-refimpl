@@ -2819,6 +2819,7 @@ sctp_notify_assoc_change(uint32_t event, struct sctp_tcb *stcb,
 	struct mbuf *m_notify;
 	struct sctp_assoc_change *sac;
 	struct sctp_queued_to_read *control;
+	int locked=0;
 
 	/*
 	 * First if we are are going down dump everything we can to the
@@ -2827,17 +2828,61 @@ sctp_notify_assoc_change(uint32_t event, struct sctp_tcb *stcb,
 
 	if((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
 	   (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) ||
-	    (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET)
+	   (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET)
 		) {
 		/* If the socket is gone we are out of here */
 		return;
+	}
+	if ((event == SCTP_COMM_LOST) || (event == SCTP_SHUTDOWN_COMP)) {
+		if (stcb->asoc.control_pdapi) {
+			/* we were in the middle of a PD-API 
+			 * verify its there.
+			 */
+			SCTP_INP_READ_LOCK(stcb->sctp_ep);
+			locked = 1;
+			TAILQ_FOREACH(control, &stcb->sctp_ep->read_queue, next) {
+				if(control == stcb->asoc.control_pdapi) {
+					/* Yep its here, notify them */
+					if(event == SCTP_COMM_LOST ) {
+						/* Abort/broken we had a real PD-API aborted */
+						if (sctp_is_feature_off(stcb->sctp_ep, SCTP_PCB_FLAGS_PDAPIEVNT)) {
+							/* hmm.. don't want a notify 
+							 * if held_lenght is set,they may be stuck.
+							 * clear and wake.
+							 */
+							if(control->held_length) {
+								control->held_length = 0;
+								control->end_added = 1;
+							}
+						
+						} else {
+							sctp_notify_partial_delivery_indication(stcb, event, 1);
+
+						}
+					} else {
+						/* implicit EOR on EOF */
+						control->held_length = 0;
+						control->end_added = 1;
+					}
+					SCTP_INP_READ_UNLOCK(stcb->sctp_ep);
+					locked = 0;
+					/* wake him up */
+					control->do_not_ref_stcb = 1;
+					sorwakeup(stcb->sctp_socket);
+					break;
+				}
+			}
+			if(locked) 
+				SCTP_INP_READ_UNLOCK(stcb->sctp_ep);
+			
+		}
 	}
 	/*
 	 * For TCP model AND UDP connected sockets we will send an error up
 	 * when an ABORT comes in.
 	 */
 	if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
-	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) &&
+	     (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) &&
 	    (event == SCTP_COMM_LOST)) {
 		if(TAILQ_EMPTY(&stcb->sctp_ep->read_queue)) {
 			stcb->sctp_socket->so_error = ECONNRESET;
@@ -2847,6 +2892,7 @@ sctp_notify_assoc_change(uint32_t event, struct sctp_tcb *stcb,
 		sowwakeup(stcb->sctp_socket);
 		sctp_asoc_change_wake++;
 	}
+	
 
 	if (sctp_is_feature_off(stcb->sctp_ep, SCTP_PCB_FLAGS_RECVASSOCEVNT)) {
 		/* event not enabled */
@@ -2875,8 +2921,8 @@ sctp_notify_assoc_change(uint32_t event, struct sctp_tcb *stcb,
 	m_notify->m_len = sizeof(struct sctp_assoc_change);
 	m_notify->m_next = NULL;
 	control = sctp_build_readq_entry(stcb, stcb->asoc.primary_destination,
-	    0, 0, 0, 0, 0, 0,
-	    m_notify);
+					 0, 0, 0, 0, 0, 0,
+					 m_notify);
 	if (control == NULL) {
 		/* no memory */
 		sctp_m_freem(m_notify);
@@ -2886,8 +2932,8 @@ sctp_notify_assoc_change(uint32_t event, struct sctp_tcb *stcb,
 	/* not that we need this */
 	control->tail_mbuf = m_notify;
 	sctp_add_to_readq(stcb->sctp_ep, stcb,
-	    control,
-	    &stcb->sctp_socket->so_rcv, 1);
+			  control,
+			  &stcb->sctp_socket->so_rcv, 1);
 	if(event == SCTP_COMM_LOST) {
 		/* Wake up any sleeper */
 		sctp_sowwakeup(stcb->sctp_ep, stcb->sctp_socket);
@@ -5258,12 +5304,10 @@ wait_some_more:
 		}
 		if (control->length == 0) {
 			/* still nothing here */
-			if(control->end_added) {
-				/* Huh, there is none left? */
-#ifdef INVARIENTS
-				panic("Now none left while waiting? I missed one?");
-#endif
-				goto release;
+			if(control->end_added == 1) {
+				/* he aborted, or is done i.e.did a shutdown */
+				out_flags |= MSG_EOR;
+				goto done_with_control;
 			}
 			if (so->so_rcv.sb_cc > held_length) {
 				SCTP_STAT_INCR(sctps_locks_in_rcvf);
@@ -5360,6 +5404,11 @@ get_more_data2:
 			}
 			if (control->length == 0) {
 				/* still nothing here */
+				if(control->end_added == 1) {
+					/* he aborted, or is done i.e. shutdown */
+					out_flags |= MSG_EOR;
+					goto done_with_control;
+				}
 				if (so->so_rcv.sb_cc > held_length) {
 					control->held_length = so->so_rcv.sb_cc;
 					/* We don't use held_length while getting a message */
