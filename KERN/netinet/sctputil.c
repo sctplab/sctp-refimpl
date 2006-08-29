@@ -4142,9 +4142,21 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 			sctp_sblog(sb, control->do_not_ref_stcb?NULL:stcb, SCTP_LOG_SBRESULT, 0);
 #endif
 		}
-		if (mm->m_next == NULL)
-			tail = mm;
 		mm = mm->m_next;
+	}
+	if (prev) {
+		tail = prev;
+	} else {
+		/* Really there should always be a prev */
+		if(m == NULL) {
+			/* Huh nothing left? */
+#ifdef INVARIENTS
+			panic("Nothing left to add?");
+#else
+			goto get_out;
+#endif
+		}
+		tail = m;
 	}
 	if (end) {
 		/* message is complete */
