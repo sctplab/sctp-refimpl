@@ -381,7 +381,11 @@ sctp_log_mb(struct mbuf *m, int from)
 	sctp_clog[sctp_cwnd_log_at].x.mb.data = m->m_data;
 	if(m->m_flags & M_EXT) {
 		sctp_clog[sctp_cwnd_log_at].x.mb.ext = m->m_ext.ext_buf;
+#if defined(__APPLE__)
+		/* APPLE does not use a ref_cnt, but a forward/backward ref queue */
+#else
 		sctp_clog[sctp_cwnd_log_at].x.mb.refcnt = (uint8_t)(*m->m_ext.ref_cnt);
+#endif
 	}else {
 		sctp_clog[sctp_cwnd_log_at].x.mb.ext = 0;
 		sctp_clog[sctp_cwnd_log_at].x.mb.refcnt = 0;
