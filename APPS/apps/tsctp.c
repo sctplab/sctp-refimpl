@@ -123,10 +123,7 @@ static void* handle_connection(void *arg)
 		(now.tv_sec+(double)now.tv_usec/1000000), 
 		seconds, (sum / seconds / 1024.0));
 	fflush(stdout);
-	printf("\nwaiting for close1");
 	close(fd);
-	printf("\nwaiting for close2");
-
 	return NULL;
 }
 
