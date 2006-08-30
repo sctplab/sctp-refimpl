@@ -5635,13 +5635,13 @@ out:
 	if(stcb) {
 		sctp_misc_ints(SCTP_SORECV_DONE,
 			       freed_so_far,
-			       stcb->asoc.my_last_reported_rwnd, 
+			       (slen-uio->uio_resid), 
 			       stcb->asoc.my_rwnd,
 			       so->so_rcv.sb_cc);
 	} else {
 		sctp_misc_ints(SCTP_SORECV_DONE,
 			       freed_so_far,
-			       0, 
+			       (slen-uio->uio_resid), 
 			       0,
 			       so->so_rcv.sb_cc);
 	}
