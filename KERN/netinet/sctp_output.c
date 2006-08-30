@@ -7165,7 +7165,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		to_move = sctp_can_we_split_this(stcb, 
 						 sp, goal_mtu, frag_point);
 		if (to_move) {
-			if (to_move > sp->length) {
+			if (to_move >= sp->length) {
 				to_move = sp->length;
 			}
 			if(sp->some_taken == 0) {
