@@ -5187,7 +5187,7 @@ get_more_data:
 				}
 		done_with_control:
 #ifdef SCTP_RECV_RWND_LOGGING
-				sctp_misc_ints(SCTP_SORCV_FREECTL,,
+				sctp_misc_ints(SCTP_SORCV_FREECTL,
 					       so->so_rcv.sb_cc,
 					       0,
 					       0,
