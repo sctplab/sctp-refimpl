@@ -778,6 +778,39 @@ main(int argc, char **argv)
 					       log.x.misc.log3,
 					       log.x.misc.log4);
 				}
+			} else if (log.from == SCTP_SORCV_FREECTL) {
+				if(!graph_mode) {
+					printf("%s free control sb_cc:%d\n",
+					       ts,
+					       log.x.misc.log1);
+				}
+			} else if (log.from == SCTP_SORCV_DOESCPY) {				
+				if(!graph_mode) {
+					printf("%s copied data of %d  sb_cc:%d\n",
+					       ts,
+					       log.x.misc.log2,
+					       log.x.misc.log1);
+				}
+			} else if (log.from == SCTP_SORCV_DOESLCK) {
+				if(!graph_mode) {
+					printf("%s Does the lock cp:%d mlen:%d  sb_cc:%d\n",
+					       ts,
+					       log.x.misc.log2,
+					       log.x.misc.log3,
+					       log.x.misc.log1);
+				}
+			} else if (log.from == SCTP_SORCV_DOESADJ) {
+				if(!graph_mode) {
+					printf("%s Does adjust sb_cc:%d\n",
+					       ts,
+					       log.x.misc.log1);
+				}
+			} else if (log.from == SCTP_SORCV_BOTWHILE) {
+				if(!graph_mode) {
+					printf("%s Bottom while sb_cc:%d\n",
+					       ts,
+					       log.x.misc.log1);
+				}
 			} else if (log.from == SCTP_SACK_RWND_UPDATE) {
 				if(comma_sep) {
 					if(first_time) {
