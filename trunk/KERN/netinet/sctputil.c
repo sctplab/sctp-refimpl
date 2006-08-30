@@ -2698,7 +2698,7 @@ sctp_calculate_rto(struct sctp_tcb *stcb,
  * one mbuf, a copy is made at 'ptr'. caller must ensure that the buffer size
  * is >= 'len' returns NULL if there there isn't 'len' bytes in the chain.
  */
-caddr_t
+__inline caddr_t
 sctp_m_getptr(struct mbuf *m, int off, int len, uint8_t * in_ptr)
 {
 	uint32_t count;
