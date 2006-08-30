@@ -7888,7 +7888,9 @@ again_one_more_time:
 				 * Add an AUTH chunk, if chunk requires it
 				 * save the offset into the chain for AUTH
 				 */
-				if (auth == NULL) {
+				if ((auth == NULL) &&
+				    (sctp_auth_is_required_chunk(chk->rec.chunk_id, 
+								 stcb->asoc.peer_auth_chunks))) {
 					outchain = sctp_add_auth_chunk(outchain,
 					    &endoutchain,
 					    &auth,
@@ -8172,7 +8174,10 @@ again_one_more_time:
 					 * requires it, save the offset into
 					 * the chain for AUTH
 					 */
-					if (auth == NULL) {
+					if ((auth == NULL)  &&
+					    (sctp_auth_is_required_chunk(SCTP_DATA, 
+									 stcb->asoc.peer_auth_chunks))) {
+
 						outchain = sctp_add_auth_chunk(outchain,
 						    &endoutchain,
 						    &auth,
@@ -8958,11 +8963,13 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 			 * Add an AUTH chunk, if chunk requires it save the
 			 * offset into the chain for AUTH
 			 */
-			if (auth == NULL) {
+			if ((auth == NULL) &&
+			    (sctp_auth_is_required_chunk(chk->rec.chunk_id, 
+							 stcb->asoc.peer_auth_chunks))) {
 				m = sctp_add_auth_chunk(m, &endofchain,
-				    &auth, &auth_offset,
-				    stcb,
-				    chk->rec.chunk_id);
+							&auth, &auth_offset,
+							stcb,
+							chk->rec.chunk_id);
 			}
 			m = sctp_copy_mbufchain(chk->data, m, &endofchain, 1,
 			    0);
@@ -9116,10 +9123,12 @@ one_chunk_around:
 		if ((chk->send_size <= (mtu - dmtu)) ||
 		    (chk->flags & CHUNK_FLAGS_FRAGMENT_OK)) {
 			/* ok we will add this one */
-			if (auth == NULL) {
+			if ((auth == NULL) &&
+			    (sctp_auth_is_required_chunk(SCTP_DATA, 
+							 stcb->asoc.peer_auth_chunks))) {
 				m = sctp_add_auth_chunk(m, &endofchain,
-				    &auth, &auth_offset,
-				    stcb, SCTP_DATA);
+							&auth, &auth_offset,
+							stcb, SCTP_DATA);
 			}
 			m = sctp_copy_mbufchain(chk->data, m, &endofchain, 1,
 			    0);
@@ -9165,12 +9174,14 @@ one_chunk_around:
 				} else
 					dmtu = 0;
 				if (fwd->send_size <= (mtu - dmtu)) {
-					if (auth == NULL) {
+					if ((auth == NULL) &&
+					    (sctp_auth_is_required_chunk(SCTP_DATA, 
+									       stcb->asoc.peer_auth_chunks))) {
 						m = sctp_add_auth_chunk(m,
-						    &endofchain,
-						    &auth, &auth_offset,
-						    stcb,
-						    SCTP_DATA);
+									&endofchain,
+									&auth, &auth_offset,
+									stcb,
+									SCTP_DATA);
 					}
 					m = sctp_copy_mbufchain(fwd->data, m,
 					    &endofchain, 1,
@@ -10082,9 +10093,11 @@ sctp_send_abort_tcb(struct sctp_tcb *stcb, struct mbuf *operr)
 	 * Add an AUTH chunk, if chunk requires it and save the offset into
 	 * the chain for AUTH
 	 */
-	m_out = sctp_add_auth_chunk(m_out, &m_end, &auth, &auth_offset,
-	    stcb, SCTP_ABORT_ASSOCIATION);
-
+	if(sctp_auth_is_required_chunk(SCTP_ABORT_ASSOCIATION, 
+				       stcb->asoc.peer_auth_chunks)) {
+		m_out = sctp_add_auth_chunk(m_out, &m_end, &auth, &auth_offset,
+					    stcb, SCTP_ABORT_ASSOCIATION);
+	}
 	SCTP_TCB_LOCK_ASSERT(stcb);
 	m_abort = sctp_get_mbuf_for_msg(sizeof(struct sctp_abort_chunk), 1, M_DONTWAIT, 1, MT_HEADER);
 	if (m_abort == NULL) {
