@@ -127,7 +127,7 @@ extern uint32_t sctp_debug_on;
 
 extern int sctp_strict_sacks;
 
-void
+__inline void 
 sctp_set_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 {
 	uint32_t calc, calc_w_oh;
@@ -211,7 +211,7 @@ sctp_set_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 
 /* Calculate what the rwnd would be */
 
-uint32_t
+__inline uint32_t 
 sctp_calc_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 {
 	uint32_t calc=0, calc_w_oh;
@@ -2572,8 +2572,6 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 			break;
 		}
 		if (ch->ch.chunk_type == SCTP_DATA) {
-			ch = (struct sctp_data_chunk *)sctp_m_getptr(m, *offset,
-			    sizeof(chunk_buf), (uint8_t *) & chunk_buf);
 			if ((size_t)chk_length < sizeof(struct sctp_data_chunk) + 1) {
 				/*
 				 * Need to send an abort since we had a
@@ -2766,8 +2764,10 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 		stcb->asoc.overall_error_count = 0;
 		SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_last_rcvd);
 	}
-	/* now service all of the reassm queue and delivery queue */
-	sctp_service_queues(stcb, asoc);
+	/* now service all of the reassm queue if needed */
+	if(!(TAILQ_EMPTY(&asoc->reasmqueue)))
+	   sctp_service_queues(stcb, asoc);
+
 	if (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_SENT) {
 		/*
 		 * Assure that we ack right away by making sure that a d-ack

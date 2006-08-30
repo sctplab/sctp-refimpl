@@ -4662,6 +4662,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 	int fwd_tsn_seen = 0, data_processed = 0;
 	struct mbuf *m = *mm;
 	int abort_flag = 0;
+	int un_sent;
 
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	if (inp != NULL)
@@ -4872,9 +4873,12 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		    stcb->asoc.total_flight);
 	}
 #endif
-	if (stcb->asoc.peers_rwnd > 0 ||
-	    !TAILQ_EMPTY(&stcb->asoc.control_send_queue) ||
-	    (stcb->asoc.peers_rwnd <= 0 && stcb->asoc.total_flight == 0)) {
+	un_sent = (stcb->asoc.total_output_queue_size - stcb->asoc.total_flight);
+
+	if (!TAILQ_EMPTY(&stcb->asoc.control_send_queue) ||
+	    ((un_sent) &&
+	     (stcb->asoc.peers_rwnd > 0 ||
+	      (stcb->asoc.peers_rwnd <= 0 && stcb->asoc.total_flight == 0)))) {
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_INPUT3) {
 			printf("Calling chunk OUTPUT\n");
