@@ -535,12 +535,18 @@ struct sctp_tcb {
 #define SCTP_STATLOG_INIT_LOCK()  \
         mtx_init(&sctppcbinfo.logging_mtx, "sctp-logging", "sctp-log_mtx", MTX_DEF)
 
+#ifdef SCTP_NOLOCK_LOGGING
+#define SCTP_STATLOG_LOCK() 
+#define SCTP_STATLOG_UNLOCK()
+#else
 #define SCTP_STATLOG_LOCK() \
 	do {								\
 		mtx_lock(&sctppcbinfo.logging_mtx);				\
 	} while (0)
 
 #define SCTP_STATLOG_UNLOCK()		mtx_unlock(&sctppcbinfo.logging_mtx)
+
+#endif
 
 #define SCTP_STATLOG_DESTROY() \
 	mtx_destroy(&sctppcbinfo.loggingr_mtx)

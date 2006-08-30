@@ -5025,6 +5025,13 @@ get_more_data:
 #else
 			s = splnet();
 #endif
+#ifdef SCTP_RECV_RWND_LOGGING
+			sctp_misc_ints(SCTP_SORCV_DOESCPY,
+				       so->so_rcv.sb_cc,
+				       cp_len,
+				       0,
+				       0);
+#endif
 			/* re-read */
 			if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 				goto release;
@@ -5179,6 +5186,13 @@ get_more_data:
 #endif
 				}
 		done_with_control:
+#ifdef SCTP_RECV_RWND_LOGGING
+				sctp_misc_ints(SCTP_SORCV_FREECTL,,
+					       so->so_rcv.sb_cc,
+					       0,
+					       0,
+					       0);
+#endif
 				if(TAILQ_NEXT(control, next) == NULL) {
 					/* If we don't have a next we need a lock,
 					 * if there is a next interupt is filling ahead
