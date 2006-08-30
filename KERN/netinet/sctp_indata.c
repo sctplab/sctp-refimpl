@@ -1714,6 +1714,10 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		dmbuf = *m;
 		/* lop off the top part */
 		m_adj(dmbuf, (offset + sizeof(struct sctp_data_chunk)));
+		if (dmbuf->m_pkthdr.len > the_len) {
+			/* Trim the end round bytes off  too */
+			m_adj(dmbuf, -(dmbuf->m_pkthdr.len - the_len));
+		}
 	}
 	if (dmbuf == NULL) {
 		SCTP_STAT_INCR(sctps_nomem);
