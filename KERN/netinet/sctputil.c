@@ -5100,6 +5100,13 @@ get_more_data:
 						cp_len = alen;
 #endif
 					}
+#ifdef SCTP_RECV_RWND_LOGGING
+					sctp_misc_ints(SCTP_SORCV_PASSBF,
+						       so->so_rcv.sb_cc,
+						       0,
+						       0,
+						       0);
+#endif
 					copied_so_far += cp_len;
 					freed_so_far += cp_len;
 					atomic_subtract_int(&control->length, cp_len);
@@ -5125,6 +5132,13 @@ get_more_data:
 						}
 #endif
 					}
+#ifdef SCTP_RECV_RWND_LOGGING
+					sctp_misc_ints(SCTP_SORCV_ADJD,
+						       so->so_rcv.sb_cc,
+						       0,
+						       0,
+						       0);
+#endif
 				}
 			} else {
 				/* Do we need to trim the mbuf? */
