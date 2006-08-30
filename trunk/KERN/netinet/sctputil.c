@@ -5100,6 +5100,9 @@ get_more_data:
 						cp_len = alen;
 #endif
 					}
+					copied_so_far += cp_len;
+					freed_so_far += cp_len;
+					atomic_subtract_int(&control->length, cp_len);
 #ifdef SCTP_RECV_RWND_LOGGING
 					sctp_misc_ints(SCTP_SORCV_PASSBF,
 						       so->so_rcv.sb_cc,
@@ -5107,9 +5110,6 @@ get_more_data:
 						       0,
 						       0);
 #endif
-					copied_so_far += cp_len;
-					freed_so_far += cp_len;
-					atomic_subtract_int(&control->length, cp_len);
 					control->data = sctp_m_free(m);
 					m = control->data;
 					/* been through it all, must hold sb lock ok to null tail */
