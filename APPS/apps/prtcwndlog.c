@@ -166,10 +166,11 @@ main(int argc, char **argv)
 	int seen_time=0;
 	int time_relative = 0;
 	int relative_to_each = 0;
+	int add_to_relative=0;
 	int32_t prev_time = 0;
 	int at;
 	struct sctp_cwnd_log log;
-	while((i= getopt(argc,argv,"l:sgc:rR")) != EOF)
+	while((i= getopt(argc,argv,"l:sgc:rRa:")) != EOF)
 	{
 		switch(i) {
 		case 'r':
@@ -184,6 +185,9 @@ main(int argc, char **argv)
 			break;
 		case 's':
 			stat_only = 1;
+			break;
+		case 'a':
+			add_to_relative = strtol(optarg, NULL, 0);
 			break;
 		case 'g':
 			graph_mode = 1;
@@ -241,6 +245,11 @@ main(int argc, char **argv)
 			if (seen_time == 0) {
 				first_timeevent_sec = (log.time_event >> 20) & 0x0fff;
 				first_timeevent_usec = (log.time_event & 0x000fffff);
+				first_timeevent_usec += add_to_relative;
+				if(first_timeevent_usec > 1000000) {
+					first_timeevent_sec++;
+					first_timeevent_usec -= 1000000;
+				}
 				seen_time = 1;
 			} else if (relative_to_each){
 				first_timeevent_sec = (prev_time >> 20) & 0x0fff;
@@ -248,6 +257,15 @@ main(int argc, char **argv)
 			}
 			sec = (log.time_event >> 20) & 0x0fff;
 			usec = (log.time_event & 0x000fffff);
+			/* skip any time event before the sync point */
+			if(sec < first_timeevent_sec) {
+				continue;
+			}
+			if ((sec == first_timeevent_sec) && 
+			    (usec < first_timeevent_usec)) {
+				continue;
+			}
+			/* Now print and continue. */
 			if(sec > first_timeevent_sec) {
 				/* do we need to borrow? */
 				if(first_timeevent_usec > usec) {
