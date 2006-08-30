@@ -539,6 +539,9 @@ measure_one(struct control_info *req,
 		}
 	}
 	flen = sizeof(struct sockaddr_in);
+	cnt = 0;
+	sz = ntohl(req->req.sizetosend);
+	blksize = ntohl(req->req.blksize);
 	if ((protocol_touse == IPPROTO_SCTP) && (sctp_tcpmode == 0)) {
 #ifndef WIN32
 		ret = sctp_sendmsg(fd, &req->req, sizeof(req->req),
@@ -554,9 +557,6 @@ measure_one(struct control_info *req,
 		close(fd);
 		return(-1);
 	}
-	cnt = 0;
-	sz = ntohl(req->req.sizetosend);
-	blksize = ntohl(req->req.blksize);
 	while(sz > cnt){
 #ifdef WIN32
 		/* win32 doesn't to recvmsg() unless under XP */
