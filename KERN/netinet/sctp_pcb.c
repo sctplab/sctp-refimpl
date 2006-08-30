@@ -1456,49 +1456,31 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 	iph = mtod(m, struct ip *);
 	if (iph->ip_v == IPVERSION) {
 		/* its IPv4 */
-		struct sockaddr_in *to4, *from4;
-
-		to4 = (struct sockaddr_in *)&to_store;
+		struct sockaddr_in *from4;
 		from4 = (struct sockaddr_in *)&from_store;
-		bzero(to4, sizeof(*to4));
 		bzero(from4, sizeof(*from4));
-		from4->sin_family = to4->sin_family = AF_INET;
-		from4->sin_len = to4->sin_len = sizeof(struct sockaddr_in);
+		from4->sin_family = AF_INET;
+		from4->sin_len = sizeof(struct sockaddr_in);
 		from4->sin_addr.s_addr = iph->ip_src.s_addr;
-		to4->sin_addr.s_addr = iph->ip_dst.s_addr;
 		from4->sin_port = sh->src_port;
-		to4->sin_port = sh->dest_port;
 	} else if (iph->ip_v == (IPV6_VERSION >> 4)) {
 		/* its IPv6 */
 		struct ip6_hdr *ip6;
-		struct sockaddr_in6 *to6, *from6;
+		struct sockaddr_in6 *from6;
 
 		ip6 = mtod(m, struct ip6_hdr *);
-		to6 = (struct sockaddr_in6 *)&to_store;
 		from6 = (struct sockaddr_in6 *)&from_store;
-		bzero(to6, sizeof(*to6));
 		bzero(from6, sizeof(*from6));
-		from6->sin6_family = to6->sin6_family = AF_INET6;
-		from6->sin6_len = to6->sin6_len = sizeof(struct sockaddr_in6);
-		to6->sin6_addr = ip6->ip6_dst;
+		from6->sin6_family = AF_INET6;
+		from6->sin6_len = sizeof(struct sockaddr_in6);
 		from6->sin6_addr = ip6->ip6_src;
 		from6->sin6_port = sh->src_port;
-		to6->sin6_port = sh->dest_port;
 		/* Get the scopes in properly to the sin6 addr's */
 #ifdef SCTP_KAME
 		/* we probably don't need these operations */
-		(void)sa6_recoverscope(to6);
-		sa6_embedscope(to6, ip6_use_defzone);
 		(void)sa6_recoverscope(from6);
 		sa6_embedscope(from6, ip6_use_defzone);
 #else
-		(void)in6_recoverscope(to6, &to6->sin6_addr, NULL);
-#if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
-		(void)in6_embedscope(&to6->sin6_addr, to6, NULL, NULL);
-#else
-		(void)in6_embedscope(&to6->sin6_addr, to6);
-#endif
-
 		(void)in6_recoverscope(from6, &from6->sin6_addr, NULL);
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
 		(void)in6_embedscope(&from6->sin6_addr, from6, NULL, NULL);
@@ -1528,6 +1510,44 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 		if (retval) {
 			return (retval);
 		}
+	}
+
+
+	if (iph->ip_v == IPVERSION) {
+		/* its IPv4 */
+		struct sockaddr_in *to4;
+
+		to4 = (struct sockaddr_in *)&to_store;
+		bzero(to4, sizeof(*to4));
+		to4->sin_family = AF_INET;
+		to4->sin_len = sizeof(struct sockaddr_in);
+		to4->sin_addr.s_addr = iph->ip_dst.s_addr;
+		to4->sin_port = sh->dest_port;
+	} else if (iph->ip_v == (IPV6_VERSION >> 4)) {
+		/* its IPv6 */
+		struct ip6_hdr *ip6;
+		struct sockaddr_in6 *to6;
+
+		ip6 = mtod(m, struct ip6_hdr *);
+		to6 = (struct sockaddr_in6 *)&to_store;
+		bzero(to6, sizeof(*to6));
+		to6->sin6_family = AF_INET6;
+		to6->sin6_len = sizeof(struct sockaddr_in6);
+		to6->sin6_addr = ip6->ip6_dst;
+		to6->sin6_port = sh->dest_port;
+		/* Get the scopes in properly to the sin6 addr's */
+#ifdef SCTP_KAME
+		/* we probably don't need these operations */
+		(void)sa6_recoverscope(to6);
+		sa6_embedscope(to6, ip6_use_defzone);
+#else
+		(void)in6_recoverscope(to6, &to6->sin6_addr, NULL);
+#if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
+		(void)in6_embedscope(&to6->sin6_addr, to6, NULL, NULL);
+#else
+		(void)in6_embedscope(&to6->sin6_addr, to6);
+#endif
+#endif				/* SCTP_KAME */
 	}
 	find_tcp_pool = 0;
 	/*
