@@ -6996,7 +6996,7 @@ sctp_can_we_split_this(struct sctp_tcb *stcb,
 			 * we may want to take it if 
 			 * it is big enough.
 			 */
-			if(sp->length > min(sctp_min_split_point, stcb->asoc.smallest_mtu)) {
+			if(sp->length >= min(sctp_min_split_point, stcb->asoc.smallest_mtu)) {
 				return (sp->length);
 			}
 		}

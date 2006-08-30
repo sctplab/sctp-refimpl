@@ -1714,11 +1714,6 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		dmbuf = *m;
 		/* lop off the top part */
 		m_adj(dmbuf, (offset + sizeof(struct sctp_data_chunk)));
-		if (dmbuf->m_pkthdr.len > the_len) {
-			/* Trim the end round bytes off  too */
-			m_adj(dmbuf, -(dmbuf->m_pkthdr.len - the_len));
-		}
-		sctp_mbuf_crush(dmbuf);
 	}
 	if (dmbuf == NULL) {
 		SCTP_STAT_INCR(sctps_nomem);
@@ -2787,35 +2782,12 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 			/* need to do the slide */
 			sctp_sack_check(stcb, 1, was_a_gap, &abort_flag);
 		} else {
-			if ((sctp_cmt_on_off) && (sctp_cmt_use_dac) &&
-			    (stcb->asoc.first_ack_sent == 1) &&
-			    (stcb->asoc.numduptsns == 0) &&
-			    (stcb->asoc.delayed_ack) &&
-			    (!callout_pending(&stcb->asoc.dack_timer.timer))) {
-
-				/*
-				 * CMT DAC algorithm: With CMT,
-				 * delay acks even in the face of
-				 * reordering. Therefore, if acks
-				 * that do not have to be sent
-				 * because of the above reasons,
-				 * will be delayed. That is, acks
-				 * that would have been sent due to
-				 * gap reports will be delayed with
-				 * DAC. Start the delayed ack timer.
-				 */
+			if(callout_pending(&stcb->asoc.dack_timer.timer)) {
+				stcb->asoc.first_ack_sent = 1;
+				sctp_send_sack(stcb);
+			} else {
 				sctp_timer_start(SCTP_TIMER_TYPE_RECV,
 						 stcb->sctp_ep, stcb, NULL);
-			} else {
-				/*
-				 * Ok we must build a SACK since the
-				 * timer is pending, we got our
-				 * first packet OR there are gaps or
-				 * duplicates.
-				 */
-				stcb->asoc.first_ack_sent = 1;
-
-				sctp_send_sack(stcb);
 			}
 		}
 	} else {
