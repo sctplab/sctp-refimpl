@@ -200,7 +200,7 @@ main(int argc, char **argv)
 			}
 			comma_sep = 1;
 		}
-			break;
+		break;
 		default:
 			break;
 		};
@@ -671,10 +671,10 @@ main(int argc, char **argv)
 				break;
 			}
 			printf("%s Line %u: %s, addr 0x%x\n",
-				filename,
-				log.x.misc.log2,
-				operation,
-				log.x.misc.log3);
+			       filename,
+			       log.x.misc.log2,
+			       operation,
+			       log.x.misc.log3);
 #else
 			if(log.from == SCTP_REASON_FOR_SC) {
 				printf("%s:%s num_out:%u reason_code:%u cwnd_full:%u sendonly1:%u\n",
@@ -686,61 +686,80 @@ main(int argc, char **argv)
 				       log.x.misc.log4);
 				       
 			} else if (log.from == SCTP_ENTER_USER_RECV) {
-				printf("%s user_rcv: dif:%d freed:%d sincelast:%d rwnd_req:%d\n",
-				       ts,
-				       log.x.misc.log1,
-				       log.x.misc.log2,
-				       log.x.misc.log3,
-				       log.x.misc.log4);
-			} else if (log.from == SCTP_USER_RECV_SACKS) {
-				if(log.x.misc.log4 == 0) {
-					printf("%s no sack rwnd:%d reported:%d sincelast:%d\n",
-					       ts,
-					       log.x.misc.log1,
-					       log.x.misc.log2,
-					       log.x.misc.log3);
-				} else {
-					printf("%s send sack rwnd:%d reported:%d sincelast:%d dif:%d\n",
+				if(!graph_mode) {
+					printf("%s user_rcv: dif:%d freed:%d sincelast:%d rwnd_req:%d\n",
 					       ts,
 					       log.x.misc.log1,
 					       log.x.misc.log2,
 					       log.x.misc.log3,
 					       log.x.misc.log4);
 				}
-
+			} else if (log.from == SCTP_USER_RECV_SACKS) {
+				if(!graph_mode) {
+					if(log.x.misc.log4 == 0) {
+						printf("%s no sack rwnd:%d reported:%d sincelast:%d\n",
+						       ts,
+						       log.x.misc.log1,
+						       log.x.misc.log2,
+						       log.x.misc.log3);
+					} else {
+						printf("%s send sack rwnd:%d reported:%d sincelast:%d dif:%d\n",
+						       ts,
+						       log.x.misc.log1,
+						       log.x.misc.log2,
+						       log.x.misc.log3,
+						       log.x.misc.log4);
+					}
+				}
 			} else if (log.from == SCTP_SORECV_BLOCKSA) {
-				printf("%s Enter and block sb_cc:%d reading:%d\n",
-				       ts,
-				       log.x.misc.log3,
-				       log.x.misc.log4);
+				if(!graph_mode) {
+					printf("%s Enter and block sb_cc:%d reading:%d\n",
+					       ts,
+					       log.x.misc.log3,
+					       log.x.misc.log4);
+				}
 			} else if (log.from == SCTP_SORECV_BLOCKSB) {
-				printf("%s Blocking freed:%d rwnd:%d sb_cc:%d reading:%d\n",
-				       ts,
-				       log.x.misc.log1,
-				       log.x.misc.log2,
-				       log.x.misc.log3,
-				       log.x.misc.log4);
+				if(!graph_mode) {
+					printf("%s Blocking freed:%d rwnd:%d sb_cc:%d reading:%d\n",
+					       ts,
+					       log.x.misc.log1,
+					       log.x.misc.log2,
+					       log.x.misc.log3,
+					       log.x.misc.log4);
+				}
 			} else if (log.from == SCTP_SORECV_DONE) {
-				printf("%s freed_so_far_at_exit:%d last_rep rwnd::%d rwnd:%d sb_cc:%d\n",
-				       ts,
-				       log.x.misc.log1,
-				       log.x.misc.log2,
-				       log.x.misc.log3,
-				       log.x.misc.log4);
+				if(graph_mode) {
+					printf("%s %d:EXIT\n", ts, log.x.misc.log4);
+				} else {
+					printf("%s freed_so_far_at_exit:%d last_rep rwnd::%d rwnd:%d sb_cc:%d\n",
+					       ts,
+					       log.x.misc.log1,
+					       log.x.misc.log2,
+					       log.x.misc.log3,
+					       log.x.misc.log4);
+				}
 			} else if (log.from == SCTP_SORECV_ENTER) {
-				printf("%s enter srcv rwndreq:%d ieeor:%d sb_cc:%d uioreq:%d \n",
-				       ts,
-				       log.x.misc.log1,
-				       log.x.misc.log2,
-				       log.x.misc.log3,
-				       log.x.misc.log4);
+				if(graph_mode) {
+					printf("%s %d:ENTER\n", ts, log.x.misc.log3);
+				} else {
+					printf("%s enter srcv rwndreq:%d ieeor:%d sb_cc:%d uioreq:%d \n",
+					       ts,
+					       log.x.misc.log1,
+					       log.x.misc.log2,
+					       log.x.misc.log3,
+					       log.x.misc.log4);
+				}
 			} else if (log.from == SCTP_SORECV_ENTERPL) {
-				printf("%s pass_lock rwndreq:%d canblk:%d sb_cc:%d uioreq:%d \n",
-				       ts,
-				       log.x.misc.log1,
-				       log.x.misc.log2,
-				       log.x.misc.log3,
-				       log.x.misc.log4);
+				if(graph_mode) {
+					printf("%s %d:READ\n", ts, log.x.misc.log3);
+				} else {
+					printf("%s pass_lock rwndreq:%d canblk:%d sb_cc:%d uioreq:%d \n",
+					       ts,
+					       log.x.misc.log1,
+					       log.x.misc.log2,
+					       log.x.misc.log3,
+					       log.x.misc.log4);
+				}
 			} else if (log.from == SCTP_SACK_RWND_UPDATE) {
 				if(comma_sep) {
 					if(first_time) {
