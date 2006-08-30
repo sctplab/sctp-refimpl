@@ -805,6 +805,20 @@ main(int argc, char **argv)
 					       ts,
 					       log.x.misc.log1);
 				}
+			} else if (log.from == SCTP_SORCV_PASSBF) {
+				if(!graph_mode) {
+					printf("%s Past sb_subtract  sb_cc:%d\n",
+					       ts,
+					       log.x.misc.log1);
+				}
+
+			} else if (log.from == SCTP_SORCV_ADJD) {
+				if(!graph_mode) {
+					printf("%s Adjusts done  sb_cc:%d\n",
+					       ts,
+					       log.x.misc.log1);
+				}
+
 			} else if (log.from == SCTP_SORCV_BOTWHILE) {
 				if(!graph_mode) {
 					printf("%s Bottom while sb_cc:%d\n",
