@@ -4513,7 +4513,7 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far, int hold_rlock,
 	}
 	atomic_add_int(&stcb->freed_by_sorcv_sincelast, *freed_so_far);
 	/* Have you have freed enough to look */
-#ifdef SCTP_RECV_RWND_LOGGING
+#ifdef SCTP_RECV_DETAIL_RWND_LOGGING
 	sctp_misc_ints(SCTP_ENTER_USER_RECV,
 		       (stcb->asoc.my_rwnd - stcb->asoc.my_last_reported_rwnd),
 		       *freed_so_far,
@@ -4551,7 +4551,7 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far, int hold_rlock,
 			SCTP_TCB_UNLOCK(stcb);
 			goto out;
 		}
-#ifdef SCTP_RECV_RWND_LOGGING
+#ifdef SCTP_RECV_DETAIL_RWND_LOGGING
 		sctp_misc_ints(SCTP_USER_RECV_SACKS,
 			       stcb->asoc.my_rwnd,
 			       stcb->asoc.my_last_reported_rwnd,
@@ -4568,7 +4568,7 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far, int hold_rlock,
 	} else {
 		/* Update how much we have pending */
 		stcb->freed_by_sorcv_sincelast = dif;
-#ifdef SCTP_RECV_RWND_LOGGING
+#ifdef SCTP_RECV_DETAIL_RWND_LOGGING
 		sctp_misc_ints(SCTP_USER_RECV_SACKS,
 			       stcb->asoc.my_rwnd,
 			       stcb->asoc.my_last_reported_rwnd,
@@ -4724,7 +4724,7 @@ restart:
 
 	if ((so->so_rcv.sb_cc <=  held_length) && block_allowed) {
 		/* we need to wait for data */
-#ifdef SCTP_RECV_RWND_LOGGING
+#ifdef SCTP_RECV_DETAIL_RWND_LOGGING
 		sctp_misc_ints(SCTP_SORECV_BLOCKSA,
 			       0,0, so->so_rcv.sb_cc, uio->uio_resid);
 #endif
@@ -5025,7 +5025,7 @@ get_more_data:
 #else
 			s = splnet();
 #endif
-#ifdef SCTP_RECV_RWND_LOGGING
+#ifdef SCTP_RECV_DETAIL_RWND_LOGGING
 			sctp_misc_ints(SCTP_SORCV_DOESCPY,
 				       so->so_rcv.sb_cc,
 				       cp_len,
@@ -5050,7 +5050,7 @@ get_more_data:
 			   ((control->end_added == 0) ||
 			    (control->end_added && (TAILQ_NEXT(control, next) == NULL)))
 				) {
-#ifdef SCTP_RECV_RWND_LOGGING
+#ifdef SCTP_RECV_DETAIL_RWND_LOGGING
 				sctp_misc_ints(SCTP_SORCV_DOESLCK,
 					       so->so_rcv.sb_cc,
 					       cp_len,
@@ -5062,7 +5062,7 @@ get_more_data:
 				hold_rlock = 1;
 			}
 			if (cp_len == m->m_len) {
-#ifdef SCTP_RECV_RWND_LOGGING
+#ifdef SCTP_RECV_DETAIL_RWND_LOGGING
 				sctp_misc_ints(SCTP_SORCV_DOESADJ,
 					       so->so_rcv.sb_cc,
 					       0,
@@ -5103,7 +5103,7 @@ get_more_data:
 					copied_so_far += cp_len;
 					freed_so_far += cp_len;
 					atomic_subtract_int(&control->length, cp_len);
-#ifdef SCTP_RECV_RWND_LOGGING
+#ifdef SCTP_RECV_DETAIL_RWND_LOGGING
 					sctp_misc_ints(SCTP_SORCV_PASSBF,
 						       so->so_rcv.sb_cc,
 						       0,
@@ -5132,7 +5132,7 @@ get_more_data:
 						}
 #endif
 					}
-#ifdef SCTP_RECV_RWND_LOGGING
+#ifdef SCTP_RECV_DETAIL_RWND_LOGGING
 					sctp_misc_ints(SCTP_SORCV_ADJD,
 						       so->so_rcv.sb_cc,
 						       0,
@@ -5194,7 +5194,7 @@ get_more_data:
 			    (freed_so_far >= rwnd_req)) {
 				sctp_user_rcvd(stcb, &freed_so_far, hold_rlock, rwnd_req);
 			}
-#ifdef SCTP_RECV_RWND_LOGGING
+#ifdef SCTP_RECV_DETAIL_RWND_LOGGING
 			sctp_misc_ints(SCTP_SORCV_BOTWHILE,
 				       so->so_rcv.sb_cc,
 				       0,
@@ -5222,7 +5222,7 @@ get_more_data:
 #endif
 				}
 		done_with_control:
-#ifdef SCTP_RECV_RWND_LOGGING
+#ifdef SCTP_RECV_DETAIL_RWND_LOGGING
 				sctp_misc_ints(SCTP_SORCV_FREECTL,
 					       so->so_rcv.sb_cc,
 					       0,
@@ -5325,7 +5325,7 @@ wait_some_more:
 			SCTP_INP_READ_UNLOCK(inp);
 			hold_rlock = 0;
 		}
-#ifdef SCTP_RECV_RWND_LOGGING
+#ifdef SCTP_RECV_DETAIL_RWND_LOGGING
 		if (stcb)
 			sctp_misc_ints(SCTP_SORECV_BLOCKSB,
 				       freed_so_far,
