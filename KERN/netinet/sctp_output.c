@@ -12167,10 +12167,10 @@ sctp_lower_sosend(struct socket *so,
 		goto out_unlocked;
 	}
 	len = 0;
-	if (max_len == 0) {
+	if (max_len < sctp_add_more_threshold) {
 		/* No room right no ! */
 		SOCKBUF_LOCK(&so->so_snd);
-		while(so->so_snd.sb_hiwat <= (stcb->asoc.total_output_queue_size+sctp_add_more_threshold)) {
+		while(so->so_snd.sb_hiwat < (stcb->asoc.total_output_queue_size+sctp_add_more_threshold)) {
 #ifdef SCTP_BLK_LOGGING
 			sctp_log_block(SCTP_BLOCK_LOG_INTO_BLKA,
 				       so, asoc, uio->uio_resid);
@@ -12450,7 +12450,7 @@ sctp_lower_sosend(struct socket *so,
 			 * size we KNOW we will get to sleep safely with the
 			 * wakeup flag in place.
 			 */
-			if(so->so_snd.sb_hiwat <= (stcb->asoc.total_output_queue_size+sctp_add_more_threshold)) {
+			if(so->so_snd.sb_hiwat < (stcb->asoc.total_output_queue_size+sctp_add_more_threshold)) {
 #ifdef SCTP_BLK_LOGGING
 				sctp_log_block(SCTP_BLOCK_LOG_INTO_BLK,
 					       so, asoc, uio->uio_resid);
