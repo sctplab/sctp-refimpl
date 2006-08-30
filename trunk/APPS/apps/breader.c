@@ -15,6 +15,7 @@ main()
 	if(sd == -1) {
 		printf("socket failed %d\n", errno);
 	}
+	listen(sd, 2);
 	e = sctp_recvmsg(sd, buffer, sizeof(buffer),
 			 (NULL), 0, NULL, &f);
 	printf("Returned %d errno:%d\n", e, errno);
