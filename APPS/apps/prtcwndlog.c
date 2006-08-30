@@ -790,9 +790,9 @@ main(int argc, char **argv)
 						log.x.misc.log1,
 						log.x.misc.log3);
 				} else if(graph_mode) {
-					printf("RWND:%s %d\n", ts, log.x.misc.log2);
-					printf("ARWND:%s %d\n",ts, log.x.misc.log1);
-					printf("FLIGHT:%s %d\n", ts, log.x.misc.log3);
+					printf("%s %d:RWND\n", ts, log.x.misc.log2);
+					printf("%s %d:ARWND\n",ts, log.x.misc.log1);
+					printf("%s %d:FLIGHT\n", ts, log.x.misc.log3);
 				} else {
 					printf("%s s-rwnd:%d calc_rwnd:%d  flight:%d cumacktsn:%x\n",
 					       ts,
