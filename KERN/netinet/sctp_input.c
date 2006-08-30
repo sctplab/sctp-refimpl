@@ -556,10 +556,10 @@ sctp_handle_heartbeat_ack(struct sctp_heartbeat_chunk *cp,
 	tv.tv_sec = cp->heartbeat.hb_info.time_value_1;
 	tv.tv_usec = cp->heartbeat.hb_info.time_value_2;
 	if (r_net->dest_state & SCTP_ADDR_NOT_REACHABLE) {
-		r_net->dest_state = SCTP_ADDR_REACHABLE;
+		r_net->dest_state &= ~SCTP_ADDR_NOT_REACHABLE;
+		r_net->dest_state |= SCTP_ADDR_REACHABLE;
 		sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_UP, stcb,
 		    SCTP_HEARTBEAT_SUCCESS, (void *)r_net);
-
 		/* now was it the primary? if so restore */
 		if (r_net->dest_state & SCTP_ADDR_WAS_PRIMARY) {
 			sctp_set_primary_addr(stcb, (struct sockaddr *)NULL, r_net);
