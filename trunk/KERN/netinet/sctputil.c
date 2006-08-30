@@ -5050,11 +5050,25 @@ get_more_data:
 			   ((control->end_added == 0) ||
 			    (control->end_added && (TAILQ_NEXT(control, next) == NULL)))
 				) {
+#ifdef SCTP_RECV_RWND_LOGGING
+				sctp_misc_ints(SCTP_SORCV_DOESLCK,
+					       so->so_rcv.sb_cc,
+					       cp_len,
+					       m->m_len,
+					       0);
+#endif
 				SCTP_STAT_INCR(sctps_locks_in_rcvb);
 				SCTP_INP_READ_LOCK(inp);
 				hold_rlock = 1;
 			}
 			if (cp_len == m->m_len) {
+#ifdef SCTP_RECV_RWND_LOGGING
+				sctp_misc_ints(SCTP_SORCV_DOESADJ,
+					       so->so_rcv.sb_cc,
+					       0,
+					       0,
+					       0);
+#endif
 				if (m->m_flags & M_EOR) {
 					out_flags |= MSG_EOR;
 				}
@@ -5166,6 +5180,14 @@ get_more_data:
 			    (freed_so_far >= rwnd_req)) {
 				sctp_user_rcvd(stcb, &freed_so_far, hold_rlock, rwnd_req);
 			}
+#ifdef SCTP_RECV_RWND_LOGGING
+			sctp_misc_ints(SCTP_SORCV_BOTWHILE,
+				       so->so_rcv.sb_cc,
+				       0,
+				       0,
+				       0);
+#endif
+
 		} /* end while(m) */
 		/*
 		 * At this point we have looked at it all and we either have
