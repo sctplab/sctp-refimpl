@@ -3838,23 +3838,6 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	return (stcb);
 }
 
-void
-sctp_free_remote_addr(struct sctp_nets *net)
-{
-	if (net == NULL)
-		return;
-
-	atomic_subtract_int(&net->ref_count, 1);
-	if (net->ref_count == 0) {
-		/* stop timer if running */
-		callout_stop(&net->rxt_timer.timer);
-		callout_stop(&net->pmtu_timer.timer);
-		callout_stop(&net->fr_timer.timer);
-		net->dest_state = SCTP_ADDR_NOT_REACHABLE;
-		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_net, net);
-		SCTP_DECR_RADDR_COUNT();
-	}
-}
 
 void
 sctp_remove_net(struct sctp_tcb *stcb, struct sctp_nets *net)

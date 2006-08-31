@@ -256,7 +256,26 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 
 #define sctp_sbspace_sub(a,b) ((a > b) ? (a - b) : 0)
 
+
+
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
+
+
+
+#define sctp_free_remote_addr(__net) { \
+	if ((__net)) { \
+                if (atomic_fetchadd_int(&(__net)->ref_count, -1) == 1) { \
+			callout_stop(&(__net)->rxt_timer.timer); \
+			callout_stop(&(__net)->pmtu_timer.timer); \
+			callout_stop(&(__net)->fr_timer.timer); \
+			(__net)->dest_state = SCTP_ADDR_NOT_REACHABLE; \
+			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_net, (__net)); \
+			SCTP_DECR_RADDR_COUNT(); \
+		} \
+	} \
+}
+
+
 #define sctp_sbfree(ctl, stcb, sb, m) { \
         if((sb)->sb_cc >= (m)->m_len) { \
   	   atomic_subtract_int(&(sb)->sb_cc,(m)->m_len); \
@@ -316,6 +335,21 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 }
 
 #else				/* FreeBSD Version <= 500000 or non-FreeBSD */
+
+
+#define sctp_free_remote_addr(__net) { \
+	if ((__net)) { \
+		atomic_subtract_int(&(__net)->ref_count, 1); \
+		if ((__net)->ref_count == 0) { \
+			callout_stop(&(__net)->rxt_timer.timer); \
+			callout_stop(&(__net)->pmtu_timer.timer); \
+			callout_stop(&(__net)->fr_timer.timer); \
+			(__net)->dest_state = SCTP_ADDR_NOT_REACHABLE; \
+			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_net, (__net)); \
+			SCTP_DECR_RADDR_COUNT(); \
+		} \
+	} \
+}
 
 #define sctp_sbfree(ctl, stcb, sb, m) { \
 	if ((sb)->sb_cc >= (uint32_t)(m)->m_len) { \

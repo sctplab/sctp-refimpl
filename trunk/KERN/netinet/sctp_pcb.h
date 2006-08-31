@@ -1236,8 +1236,6 @@ int sctp_del_remote_addr(struct sctp_tcb *, struct sockaddr *);
 
 void sctp_pcb_init(void);
 
-void sctp_free_remote_addr(struct sctp_nets *);
-
 int sctp_add_local_addr_assoc(struct sctp_tcb *, struct ifaddr *);
 
 int sctp_del_local_addr_assoc(struct sctp_tcb *, struct ifaddr *);
