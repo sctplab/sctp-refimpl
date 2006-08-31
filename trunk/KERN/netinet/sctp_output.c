@@ -7727,42 +7727,6 @@ skip_the_fill_from_streams:
 		send_start_at = TAILQ_FIRST(&asoc->nets);
 	}
 	old_startat = NULL;
-	if ((no_data_chunks == 0) &&
-	    (sctp_is_sack_timer_running(stcb)) &&
-	    (TAILQ_EMPTY(&asoc->control_send_queue)) &&
-	    (!TAILQ_EMPTY(&asoc->send_queue))
-	    ) {
-		/*
-		 * We need to send a sack, and we know there is NOT one in
-		 * queue and we know there IS data to send. Look at the
-		 * first data chunk on the queue, if a sack could fit with
-		 * it, we will add one now.
-		 */
-		int oh = 0;
-
-		chk = TAILQ_FIRST(&asoc->send_queue);
-#ifdef AF_INET
-		if (chk->whoTo->ro._l_addr.sa.sa_family == AF_INET) {
-			oh = SCTP_MIN_V4_OVERHEAD;
-		}
-#endif
-#ifdef AF_INET6
-		if (chk->whoTo->ro._l_addr.sa.sa_family == AF_INET6) {
-			oh = SCTP_MIN_OVERHEAD;
-		}
-#endif
-		if (chk->whoTo->mtu >= (sizeof(struct sctp_sack_chunk) + chk->send_size + oh)) {
-			struct sctp_nets *t_net;
-
-			t_net = asoc->last_data_chunk_from;
-			asoc->last_data_chunk_from = chk->whoTo;
-			sctp_timer_stop(SCTP_TIMER_TYPE_RECV,
-			    stcb->sctp_ep,
-			    stcb, NULL);
-			sctp_send_sack(stcb);
-			asoc->last_data_chunk_from = t_net;
-		}
-	}
 again_one_more_time:
 	for (net = send_start_at; net != NULL; net = TAILQ_NEXT(net, sctp_next)) {
 		/* how much can we send? */
