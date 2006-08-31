@@ -2782,7 +2782,7 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 	/* Start a sack timer or QUEUE a SACK for sending */
 	if(stcb->asoc.cumulative_tsn == stcb->asoc.highest_tsn_inside_map) {
 		/* Everything is in order */
-		if((*(uint32_t *)stcb->asoc.mapping_array) == 0xffffffff) {
+		if(stcb->asoc.mapping_array[0] == 0xff) {
 			/* need to do the slide */
 			sctp_sack_check(stcb, 1, was_a_gap, &abort_flag);
 		} else {
