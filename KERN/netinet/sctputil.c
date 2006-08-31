@@ -1222,6 +1222,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 
 	asoc->locked_on_sending = NULL;
 	asoc->stream_locked_on = 0;
+	asoc->ecn_echo_cnt_onq = 0;
 	asoc->stream_locked = 0;
 
 	LIST_INIT(&asoc->sctp_local_addr_list);

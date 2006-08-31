@@ -2515,6 +2515,7 @@ sctp_handle_ecn_cwr(struct sctp_cwr_chunk *cp, struct sctp_tcb *stcb)
 		if (compare_with_wrap(ntohl(cp->tsn), ntohl(ecne->tsn),
 		    MAX_TSN) || (cp->tsn == ecne->tsn)) {
 			/* this covers this ECNE, we can remove it */
+			stcb->asoc.ecn_echo_cnt_onq--;
 			TAILQ_REMOVE(&stcb->asoc.control_send_queue, chk,
 			    sctp_next);
 			if (chk->data) {

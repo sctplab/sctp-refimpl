@@ -4009,8 +4009,6 @@ sctp_iterator_asoc_being_freed(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	}
 }
 
-extern uint32_t sctp_my_track[16];
-
 /*
  * Free the association after un-hashing the remote port.
  */
@@ -4287,9 +4285,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		sp = TAILQ_FIRST(&outs->outqueue);
 		while (sp) {
 			TAILQ_REMOVE(&outs->outqueue, sp, next);
-			sctp_my_track[10]++;
 			if (sp->data) {
-				sctp_my_track[11]++;
 				sctp_m_freem(sp->data);
 				sp->data = NULL;
 				sp->tail_mbuf = NULL;

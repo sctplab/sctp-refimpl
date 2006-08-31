@@ -787,6 +787,7 @@ struct sctp_association {
 	int16_t num_send_timers_up;
 
 	uint16_t stream_locked_on;
+	uint16_t ecn_echo_cnt_onq;
 	uint8_t  stream_locked;
 	/*
 	 * This flag indicates that we need to send the first SACK. If in
