@@ -2021,6 +2021,89 @@ sctp_find_cmsg(int c_type, void *data, struct mbuf *control, int cpsize)
 	return (0);
 }
 
+
+extern int sctp_mbuf_threshold_count;
+
+
+__inline struct mbuf *
+sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header, 
+		      int how, int allonebuf, int type)
+{
+	struct mbuf *m = NULL;
+#if defined(__FreeBSD__) && __FreeBSD_version >= 601000
+	int aloc_size;
+	int index=0;
+#endif
+	int mbuf_threshold;
+	if (want_header) {
+		MGETHDR(m, how, type);
+	} else {
+		MGET(m, how, type);
+	}
+	if (m == NULL) {
+		return (NULL);
+	}
+	if(allonebuf == 0)
+		mbuf_threshold = sctp_mbuf_threshold_count;
+	else
+		mbuf_threshold = 1;
+
+
+	if (space_needed > (((mbuf_threshold - 1) * MLEN) + MHLEN)) {
+#if defined(__FreeBSD__) && __FreeBSD_version >= 601000
+	try_again:
+		index = 4;
+		if(space_needed <= MCLBYTES){ 
+			aloc_size = MCLBYTES;
+		} else if (space_needed <=  MJUMPAGESIZE) {
+			aloc_size = MJUMPAGESIZE;
+			index = 5;
+		} else if (space_needed <= MJUM9BYTES) {
+			aloc_size = MJUM9BYTES;
+			index = 6;
+		} else { 
+			aloc_size = MJUM16BYTES;
+			index = 7;
+		}
+		m_cljget(m, how, aloc_size);
+		if (m == NULL) {
+			return (NULL);
+		}
+		if ((m->m_flags & M_EXT) == 0) {
+			if((aloc_size != MCLBYTES) &&
+			   (allonebuf == 0)){
+				aloc_size -= 10;
+				goto try_again;
+			}
+			sctp_m_freem(m);
+			return (NULL);
+		} 
+#else
+		MCLGET(m, how);
+		if (m == NULL) {
+			return (NULL);
+		}
+		if ((m->m_flags & M_EXT) == 0) {
+			sctp_m_freem(m);
+			return (NULL);
+		}
+#endif
+	}
+	m->m_len = 0;
+	m->m_next = m->m_nextpkt = NULL;
+#ifdef SCTP_MBUF_LOGGING
+	if(m->m_flags & M_EXT) {
+		sctp_log_mb(m, SCTP_MBUF_IALLOC);
+	}
+#endif
+
+	if (want_header) {
+		m->m_pkthdr.len = 0;
+	}
+	return (m);
+}
+
+
 static struct mbuf *
 sctp_add_addr_to_mbuf(struct mbuf *m, struct ifaddr *ifa)
 {
@@ -3901,7 +3984,7 @@ sctp_ipv6_source_address_selection(struct sctp_inpcb *inp,
 	return (rt_addr->sin6_addr);
 }
 
-static uint8_t
+static __inline uint8_t
 sctp_get_ect(struct sctp_tcb *stcb,
     struct sctp_tmit_chunk *chk)
 {
@@ -7021,92 +7104,6 @@ sctp_can_we_split_this(struct sctp_tcb *stcb,
 
 }
 
-extern int sctp_mbuf_threshold_count;
-
-
-struct mbuf *
-sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header, 
-		      int how, int allonebuf, int type)
-{
-	struct mbuf *m = NULL;
-#if defined(__FreeBSD__) && __FreeBSD_version >= 601000
-	int aloc_size;
-	int index=0;
-#endif
-	int mbuf_threshold;
-	if (want_header) {
-		MGETHDR(m, how, type);
-	} else {
-		MGET(m, how, type);
-	}
-	if (m == NULL) {
-		return (NULL);
-	}
-	if(allonebuf == 0)
-		mbuf_threshold = sctp_mbuf_threshold_count;
-	else
-		mbuf_threshold = 1;
-
-
-	if (space_needed > (((mbuf_threshold - 1) * MLEN) + MHLEN)) {
-#if defined(__FreeBSD__) && __FreeBSD_version >= 601000
-	try_again:
-		index = 4;
-		if(space_needed <= MCLBYTES){ 
-			aloc_size = MCLBYTES;
-		} else if (space_needed <=  MJUMPAGESIZE) {
-			aloc_size = MJUMPAGESIZE;
-			index = 5;
-		} else if (space_needed <= MJUM9BYTES) {
-			aloc_size = MJUM9BYTES;
-			index = 6;
-		} else { 
-			aloc_size = MJUM16BYTES;
-			index = 7;
-		}
-		m_cljget(m, how, aloc_size);
-		if (m == NULL) {
-			return (NULL);
-		}
-		if ((m->m_flags & M_EXT) == 0) {
-			if((aloc_size != MCLBYTES) &&
-			   (allonebuf == 0)){
-				aloc_size -= 10;
-				goto try_again;
-			}
-			sctp_m_freem(m);
-			return (NULL);
-		} 
-#else
-		MCLGET(m, how);
-		if (m == NULL) {
-			return (NULL);
-		}
-		if ((m->m_flags & M_EXT) == 0) {
-			sctp_m_freem(m);
-			return (NULL);
-		}
-#endif
-	}
-	m->m_len = 0;
-	m->m_next = m->m_nextpkt = NULL;
-#ifdef SCTP_MBUF_LOGGING
-	if(m->m_flags & M_EXT) {
-		sctp_log_mb(m, SCTP_MBUF_IALLOC);
-	}
-#endif
-
-	if (want_header) {
-		m->m_pkthdr.len = 0;
-	}
-	return (m);
-}
-
-uint32_t sctp_my_track[16]  = {
-	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0
-};
-
 static int
 sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	struct sctp_stream_out *strq,
@@ -7195,7 +7192,6 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		chk->last_mbuf = sp->tail_mbuf;
 		/* register the stealing */
 		sp->data = sp->tail_mbuf = NULL;
-		sctp_my_track[0]++;
 	} else {
 		struct mbuf *m;
 		chk->data = m_copym(sp->data, 0, to_move, M_DONTWAIT);
@@ -7205,7 +7201,6 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 			SCTP_DECR_CHK_COUNT();
 			goto out_gu;
 		}
-		sctp_my_track[1]++;
 		/* Pull off the data */
 		m_adj(sp->data, to_move);
 		/* Now lets work our way down and compact it 
@@ -7323,12 +7318,10 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 
 	if(sp->msg_is_complete && (sp->length == 0)) {
 		/* All done pull and kill the message */
-		sctp_my_track[3]++;
 		asoc->stream_queue_cnt--;
 		TAILQ_REMOVE(&strq->outqueue, sp, next);
 		sctp_free_remote_addr(sp->net);
 		if(sp->data) {
-			sctp_my_track[4]++;
 			sctp_m_freem(sp->data);
 		}
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_strmoq, sp);
@@ -7338,7 +7331,6 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		stcb->asoc.locked_on_sending = NULL;
 	} else {
 		/* more to go, we are locked */
-		sctp_my_track[5]++;
 		*locked = 1;
 	}
 	asoc->chunks_on_out_queue++;
@@ -7485,7 +7477,7 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
 	}
 }
 
-void
+__inline void
 sctp_fix_ecn_echo(struct sctp_association *asoc)
 {
 	struct sctp_tmit_chunk *chk;
@@ -9599,7 +9591,8 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 	 * it. It must be marked as UNSENT again so next call will continue
 	 * to send it until such time that we get a CWR, to remove it.
 	 */
-	sctp_fix_ecn_echo(asoc);
+	if(stcb->asoc.ecn_echo_cnt_onq)
+		sctp_fix_ecn_echo(asoc);
 	return (error);
 }
 
@@ -10588,6 +10581,7 @@ sctp_send_ecn_echo(struct sctp_tcb *stcb, struct sctp_nets *net,
 	chk->snd_count = 0;
 	chk->whoTo = net;
 	atomic_add_int(&chk->whoTo->ref_count, 1);
+	stcb->asoc.ecn_echo_cnt_onq++;
 	ecne = mtod(chk->data, struct sctp_ecne_chunk *);
 	ecne->ch.chunk_type = SCTP_ECN_ECHO;
 	ecne->ch.chunk_flags = 0;
@@ -11393,7 +11387,6 @@ sctp_copy_resume(struct sctp_stream_queue_pending *sp,
 		sctp_m_freem(head);
 		return(NULL);
 	}
-	sctp_my_track[9]++;
 	*sndout += willcpy;
 	left -= willcpy;
 	head->m_len = willcpy;
@@ -11406,10 +11399,8 @@ sctp_copy_resume(struct sctp_stream_queue_pending *sp,
 			sctp_m_freem(head);
 			*new_tail = NULL;
 			*error = ENOMEM;
-			sctp_my_track[9]--;
 			return(NULL);
 		}
-		sctp_my_track[9]++;
 		prev = m;
 		m = m->m_next;
 		cancpy = M_TRAILINGSPACE(m);
@@ -11447,7 +11438,6 @@ sctp_copy_one(struct sctp_stream_queue_pending *sp,
 	if (m == NULL) {
 		return (ENOMEM);
 	}
-	sctp_my_track[7]++;
 	/*
 	 * Add this one for m in now, that way if the alloc fails we won't
 	 * have a bad cnt.
@@ -11472,11 +11462,9 @@ sctp_copy_one(struct sctp_stream_queue_pending *sp,
 				 * the head goes back to caller, he can free
 				 * the rest
 				 */
-				sctp_my_track[8]++;
 				sctp_m_freem(head);
 				return (ENOMEM);
 			}
-			sctp_my_track[7]++;
 			m = m->m_next;
 			cancpy = M_TRAILINGSPACE(m);
 			willcpy = min(cancpy, left);
@@ -11552,7 +11540,6 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 	SCTP_GETTIME_TIMEVAL(&sp->ts);
 
 	sp->stream = srcv->sinfo_stream;
-	sctp_my_track[6]++;
 	sp->length = min(uio->uio_resid, max_send_len);
 	if ((sp->length == uio->uio_resid) &&
 	    ((user_marks_eor == 0) || 
