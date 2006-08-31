@@ -3908,7 +3908,7 @@ extern int sctp_early_fr;
 extern int sctp_L2_abc_variable;
 
 
-static void
+static __inline void
 sctp_cwnd_update(struct sctp_tcb *stcb,
 		 struct sctp_association *asoc, 
 		 int accum_moved ,int reneged_all, int will_exit )
