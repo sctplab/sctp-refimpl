@@ -9361,6 +9361,7 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 	asoc = &stcb->asoc;
 	tot_out = 0;
 	num_out = 0;
+	error = 0;
 	reason_code = 0;
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
@@ -9375,6 +9376,12 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 		}
 	}
 	SCTP_TCB_LOCK_ASSERT(stcb);
+	if (((asoc->total_output_queue_size - asoc->total_flight) <= 0) &&
+	    (TAILQ_EMPTY(&asoc->control_send_queue)) &&
+	    (asoc->sent_queue_retran_cnt == 0)){
+		/* Nothing to do unless there is something to be sent left */
+		return(error);
+	}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	sctp_lock_assert(inp->ip_inp.inp.inp_socket);
 #endif
@@ -9563,6 +9570,10 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 			   (stcb->asoc.total_flight > 0)){
 				break;
 			}
+		}
+		if ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight) <= 0) {
+			/* Nothing left to send */
+			break;
 		}
 	} while (num_out && (sctp_use_cwnd_based_maxburst ||
 	    (burst_cnt < burst_limit)));
