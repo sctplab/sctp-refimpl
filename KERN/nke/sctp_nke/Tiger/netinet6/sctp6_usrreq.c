@@ -786,7 +786,6 @@ sctp6_abort(struct socket *so)
 #else
 		return EINVAL;
 #endif
-	soisdisconnected(so);
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
 #else
@@ -1931,8 +1930,10 @@ struct pr_usrreqs sctp6_usrreqs = {
 #if __FreeBSD_version >= 690000
 	.pru_close = sctp6_close,
 	.pru_detach = sctp6_close,
+	.pru_sopoll = sopoll_generic,
 #else
 	.pru_detach = sctp6_detach,
+	.pru_sopoll = sopoll,
 #endif
 	.pru_disconnect = sctp6_disconnect,
 	.pru_listen = sctp_listen,
@@ -1940,7 +1941,6 @@ struct pr_usrreqs sctp6_usrreqs = {
 	.pru_send = sctp6_send,
 	.pru_shutdown = sctp_shutdown,
 	.pru_sockaddr = sctp6_in6getaddr,
-	.pru_sopoll = sopoll,
 	.pru_sosend = sctp_sosend,
 	.pru_soreceive = sctp_soreceive
 #else

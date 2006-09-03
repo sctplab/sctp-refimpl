@@ -127,7 +127,7 @@ extern uint32_t sctp_debug_on;
 
 extern int sctp_strict_sacks;
 
-void
+__inline void 
 sctp_set_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 {
 	uint32_t calc, calc_w_oh;
@@ -211,7 +211,7 @@ sctp_set_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 
 /* Calculate what the rwnd would be */
 
-uint32_t
+__inline uint32_t 
 sctp_calc_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 {
 	uint32_t calc=0, calc_w_oh;
@@ -1697,6 +1697,18 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		dmbuf = sctp_m_copym(*m,
 				     (offset + sizeof(struct sctp_data_chunk)),
 				     the_len, M_DONTWAIT);
+#ifdef SCTP_MBUF_LOGGING
+		{
+			struct mbuf *mat;
+			mat = dmbuf;
+			while(mat) {
+				if(mat->m_flags & M_EXT) {
+					sctp_log_mb(mat, SCTP_MBUF_ICOPY);
+				}
+				mat = mat->m_next;
+			}
+		}
+#endif		
 	} else {
 		/* We can steal the last chunk */
 		dmbuf = *m;
@@ -1706,7 +1718,6 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			/* Trim the end round bytes off  too */
 			m_adj(dmbuf, -(dmbuf->m_pkthdr.len - the_len));
 		}
-		sctp_mbuf_crush(dmbuf);
 	}
 	if (dmbuf == NULL) {
 		SCTP_STAT_INCR(sctps_nomem);
@@ -2051,6 +2062,10 @@ finish_express_del:
 #ifdef SCTP_MAP_LOGGING
 		sctp_log_map(0, 2, asoc->highest_tsn_inside_map, SCTP_MAP_SLIDE_RESULT);
 #endif
+	}
+	if(tsn == (asoc->cumulative_tsn+1)) {
+		/* Update cum-ack */
+		asoc->cumulative_tsn = tsn;
 	}
 	if (last_chunk) {
 		*m = NULL;
@@ -2485,7 +2500,7 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 	}
 
 	if (compare_with_wrap(stcb->asoc.highest_tsn_inside_map,
-	    stcb->asoc.cumulative_tsn, MAX_TSN)) {
+			      stcb->asoc.cumulative_tsn, MAX_TSN)) {
 		/* there was a gap before this data was processed */
 		was_a_gap = 1;
 	}
@@ -2534,7 +2549,7 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 	}
 	/* get pointer to the first chunk header */
 	ch = (struct sctp_data_chunk *)sctp_m_getptr(m, *offset,
-	    sizeof(struct sctp_chunkhdr), (uint8_t *) & chunk_buf);
+						     sizeof(struct sctp_chunkhdr), (uint8_t *) & chunk_buf);
 	if (ch == NULL) {
 		return (1);
 	}
@@ -2545,7 +2560,7 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
 		printf("In process data off:%d length:%d iphlen:%d ch->type:%d\n",
-		    *offset, length, iphlen, (int)ch->ch.chunk_type);
+		       *offset, length, iphlen, (int)ch->ch.chunk_type);
 	}
 #endif
 
@@ -2560,8 +2575,6 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 			break;
 		}
 		if (ch->ch.chunk_type == SCTP_DATA) {
-			ch = (struct sctp_data_chunk *)sctp_m_getptr(m, *offset,
-			    sizeof(chunk_buf), (uint8_t *) & chunk_buf);
 			if ((size_t)chk_length < sizeof(struct sctp_data_chunk) + 1) {
 				/*
 				 * Need to send an abort since we had a
@@ -2577,41 +2590,41 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 					uint32_t *ippp;
 
 					op_err->m_len = sizeof(struct sctp_paramhdr) +
-					    sizeof(uint32_t);
+						sizeof(uint32_t);
 					ph = mtod(op_err, struct sctp_paramhdr *);
 					ph->param_type =
-					    htons(SCTP_CAUSE_PROTOCOL_VIOLATION);
+						htons(SCTP_CAUSE_PROTOCOL_VIOLATION);
 					ph->param_length = htons(op_err->m_len);
 					ippp = (uint32_t *) (ph + 1);
 					*ippp = htonl(0x30000001);
 				}
 				sctp_abort_association(inp, stcb, m, iphlen, sh,
-				    op_err);
+						       op_err);
 				return (2);
 			}
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
 				printf("A chunk of len:%d to process (tot:%d)\n",
-				    chk_length, length - *offset);
+				       chk_length, length - *offset);
 			}
 #endif
 
 #ifdef SCTP_AUDITING_ENABLED
 			sctp_audit_log(0xB1, 0);
 #endif
-			if (SCTP_SIZE32(chk_length) == *offset - length) {
+			if (SCTP_SIZE32(chk_length) == (length - *offset)) { 
 				last_chunk = 1;
 			} else {
 				last_chunk = 0;
 			}
 			if (sctp_process_a_data_chunk(stcb, asoc, mm, *offset, ch,
-			    chk_length, net, high_tsn, &abort_flag, &break_flag,
-			    last_chunk)) {
+						      chk_length, net, high_tsn, &abort_flag, &break_flag,
+						      last_chunk)) {
 				num_chunks++;
 #ifdef SCTP_DEBUG
 				if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
 					printf("Now incr num_chunks to %d\n",
-					    num_chunks);
+					       num_chunks);
 				}
 #endif
 			}
@@ -2685,17 +2698,17 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 						 * with different names.
 						 */
 						phd->param_type =
-						    htons(SCTP_CAUSE_UNRECOG_CHUNK);
+							htons(SCTP_CAUSE_UNRECOG_CHUNK);
 						phd->param_length =
-						    htons(chk_length + sizeof(*phd));
+							htons(chk_length + sizeof(*phd));
 						mm->m_len = sizeof(*phd);
 						mm->m_next = sctp_m_copym(m, *offset,
-						    SCTP_SIZE32(chk_length),
-						    M_DONTWAIT);
+									  SCTP_SIZE32(chk_length),
+									  M_DONTWAIT);
 						if (mm->m_next) {
 							mm->m_pkthdr.len =
-							    SCTP_SIZE32(chk_length) +
-							    sizeof(*phd);
+								SCTP_SIZE32(chk_length) +
+								sizeof(*phd);
 							sctp_queue_op_err(stcb, mm);
 						} else {
 							sctp_m_freem(mm);
@@ -2703,7 +2716,7 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 							if (sctp_debug_on &
 							    SCTP_DEBUG_INPUT1) {
 								printf("Gak can't copy the chunk into operr %d bytes\n",
-								    chk_length);
+								       chk_length);
 							}
 #endif
 						}
@@ -2731,7 +2744,7 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 			continue;
 		}
 		ch = (struct sctp_data_chunk *)sctp_m_getptr(m, *offset,
-		    sizeof(struct sctp_chunkhdr), (uint8_t *) & chunk_buf);
+							     sizeof(struct sctp_chunkhdr), (uint8_t *) & chunk_buf);
 		if (ch == NULL) {
 			*offset = length;
 			stop_proc = 1;
@@ -2754,18 +2767,36 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 		stcb->asoc.overall_error_count = 0;
 		SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_last_rcvd);
 	}
-	/* now service all of the reassm queue and delivery queue */
-	sctp_service_queues(stcb, asoc);
+	/* now service all of the reassm queue if needed */
+	if(!(TAILQ_EMPTY(&asoc->reasmqueue)))
+		sctp_service_queues(stcb, asoc);
+
 	if (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_SENT) {
 		/*
 		 * Assure that we ack right away by making sure that a d-ack
 		 * timer is running. So the sack_check will send a sack.
 		 */
 		sctp_timer_start(SCTP_TIMER_TYPE_RECV, stcb->sctp_ep, stcb,
-		    net);
+				 net);
 	}
 	/* Start a sack timer or QUEUE a SACK for sending */
-	sctp_sack_check(stcb, 1, was_a_gap, &abort_flag);
+	if(stcb->asoc.cumulative_tsn == stcb->asoc.highest_tsn_inside_map) {
+		/* Everything is in order */
+		if(stcb->asoc.mapping_array[0] == 0xff) {
+			/* need to do the slide */
+			sctp_sack_check(stcb, 1, was_a_gap, &abort_flag);
+		} else {
+			if(callout_pending(&stcb->asoc.dack_timer.timer)) {
+				stcb->asoc.first_ack_sent = 1;
+				sctp_send_sack(stcb);
+			} else {
+				sctp_timer_start(SCTP_TIMER_TYPE_RECV,
+						 stcb->sctp_ep, stcb, NULL);
+			}
+		}
+	} else {
+		sctp_sack_check(stcb, 1, was_a_gap, &abort_flag);
+	}
 	if (abort_flag)
 		return (2);
 
@@ -3877,7 +3908,7 @@ extern int sctp_early_fr;
 extern int sctp_L2_abc_variable;
 
 
-static void
+static __inline void
 sctp_cwnd_update(struct sctp_tcb *stcb,
 		 struct sctp_association *asoc, 
 		 int accum_moved ,int reneged_all, int will_exit )

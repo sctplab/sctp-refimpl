@@ -556,10 +556,10 @@ sctp_handle_heartbeat_ack(struct sctp_heartbeat_chunk *cp,
 	tv.tv_sec = cp->heartbeat.hb_info.time_value_1;
 	tv.tv_usec = cp->heartbeat.hb_info.time_value_2;
 	if (r_net->dest_state & SCTP_ADDR_NOT_REACHABLE) {
-		r_net->dest_state = SCTP_ADDR_REACHABLE;
+		r_net->dest_state &= ~SCTP_ADDR_NOT_REACHABLE;
+		r_net->dest_state |= SCTP_ADDR_REACHABLE;
 		sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_UP, stcb,
 		    SCTP_HEARTBEAT_SUCCESS, (void *)r_net);
-
 		/* now was it the primary? if so restore */
 		if (r_net->dest_state & SCTP_ADDR_WAS_PRIMARY) {
 			sctp_set_primary_addr(stcb, (struct sockaddr *)NULL, r_net);
@@ -2515,6 +2515,7 @@ sctp_handle_ecn_cwr(struct sctp_cwr_chunk *cp, struct sctp_tcb *stcb)
 		if (compare_with_wrap(ntohl(cp->tsn), ntohl(ecne->tsn),
 		    MAX_TSN) || (cp->tsn == ecne->tsn)) {
 			/* this covers this ECNE, we can remove it */
+			stcb->asoc.ecn_echo_cnt_onq--;
 			TAILQ_REMOVE(&stcb->asoc.control_send_queue, chk,
 			    sctp_next);
 			if (chk->data) {
@@ -4662,6 +4663,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 	int fwd_tsn_seen = 0, data_processed = 0;
 	struct mbuf *m = *mm;
 	int abort_flag = 0;
+	int un_sent;
 
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	if (inp != NULL)
@@ -4872,9 +4874,12 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		    stcb->asoc.total_flight);
 	}
 #endif
-	if (stcb->asoc.peers_rwnd > 0 ||
-	    !TAILQ_EMPTY(&stcb->asoc.control_send_queue) ||
-	    (stcb->asoc.peers_rwnd <= 0 && stcb->asoc.total_flight == 0)) {
+	un_sent = (stcb->asoc.total_output_queue_size - stcb->asoc.total_flight);
+
+	if (!TAILQ_EMPTY(&stcb->asoc.control_send_queue) ||
+	    ((un_sent) &&
+	     (stcb->asoc.peers_rwnd > 0 ||
+	      (stcb->asoc.peers_rwnd <= 0 && stcb->asoc.total_flight == 0)))) {
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_INPUT3) {
 			printf("Calling chunk OUTPUT\n");
@@ -4929,6 +4934,9 @@ sctp_input(m, va_alist)
 #endif
 #endif
 {
+#ifdef SCTP_MBUF_LOGGING
+	struct mbuf *mat;
+#endif
 	int iphlen;
 	int s;
 	uint8_t ecn_bits;
@@ -4985,6 +4993,16 @@ sctp_input(m, va_alist)
 	/*
 	 * Strip IP options, we don't allow any in or out.
 	 */
+#ifdef SCTP_MBUF_LOGGING
+	/* Log in any input mbufs */
+	mat = m;
+	while(mat) {
+		if(mat->m_flags & M_EXT) {
+			sctp_log_mb(mat, SCTP_MBUF_INPUT);
+		}
+		mat = mat->m_next;
+	}
+#endif
 	if ((size_t)iphlen > sizeof(struct ip)) {
 		ip_stripoptions(m, (struct mbuf *)0);
 		iphlen = sizeof(struct ip);
@@ -5237,6 +5255,7 @@ sctp_skip_csum_4:
 #else
 	s = splnet();
 #endif
+	
 	sctp_common_input_processing(&m, iphlen, offset, length, sh, ch,
 	    inp, stcb, net, ecn_bits);
 	/* inp's ref-count reduced && stcb unlocked */
