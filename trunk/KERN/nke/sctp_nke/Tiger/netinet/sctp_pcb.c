@@ -1456,49 +1456,31 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 	iph = mtod(m, struct ip *);
 	if (iph->ip_v == IPVERSION) {
 		/* its IPv4 */
-		struct sockaddr_in *to4, *from4;
-
-		to4 = (struct sockaddr_in *)&to_store;
+		struct sockaddr_in *from4;
 		from4 = (struct sockaddr_in *)&from_store;
-		bzero(to4, sizeof(*to4));
 		bzero(from4, sizeof(*from4));
-		from4->sin_family = to4->sin_family = AF_INET;
-		from4->sin_len = to4->sin_len = sizeof(struct sockaddr_in);
+		from4->sin_family = AF_INET;
+		from4->sin_len = sizeof(struct sockaddr_in);
 		from4->sin_addr.s_addr = iph->ip_src.s_addr;
-		to4->sin_addr.s_addr = iph->ip_dst.s_addr;
 		from4->sin_port = sh->src_port;
-		to4->sin_port = sh->dest_port;
 	} else if (iph->ip_v == (IPV6_VERSION >> 4)) {
 		/* its IPv6 */
 		struct ip6_hdr *ip6;
-		struct sockaddr_in6 *to6, *from6;
+		struct sockaddr_in6 *from6;
 
 		ip6 = mtod(m, struct ip6_hdr *);
-		to6 = (struct sockaddr_in6 *)&to_store;
 		from6 = (struct sockaddr_in6 *)&from_store;
-		bzero(to6, sizeof(*to6));
 		bzero(from6, sizeof(*from6));
-		from6->sin6_family = to6->sin6_family = AF_INET6;
-		from6->sin6_len = to6->sin6_len = sizeof(struct sockaddr_in6);
-		to6->sin6_addr = ip6->ip6_dst;
+		from6->sin6_family = AF_INET6;
+		from6->sin6_len = sizeof(struct sockaddr_in6);
 		from6->sin6_addr = ip6->ip6_src;
 		from6->sin6_port = sh->src_port;
-		to6->sin6_port = sh->dest_port;
 		/* Get the scopes in properly to the sin6 addr's */
 #ifdef SCTP_KAME
 		/* we probably don't need these operations */
-		(void)sa6_recoverscope(to6);
-		sa6_embedscope(to6, ip6_use_defzone);
 		(void)sa6_recoverscope(from6);
 		sa6_embedscope(from6, ip6_use_defzone);
 #else
-		(void)in6_recoverscope(to6, &to6->sin6_addr, NULL);
-#if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
-		(void)in6_embedscope(&to6->sin6_addr, to6, NULL, NULL);
-#else
-		(void)in6_embedscope(&to6->sin6_addr, to6);
-#endif
-
 		(void)in6_recoverscope(from6, &from6->sin6_addr, NULL);
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
 		(void)in6_embedscope(&from6->sin6_addr, from6, NULL, NULL);
@@ -1528,6 +1510,44 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 		if (retval) {
 			return (retval);
 		}
+	}
+
+
+	if (iph->ip_v == IPVERSION) {
+		/* its IPv4 */
+		struct sockaddr_in *to4;
+
+		to4 = (struct sockaddr_in *)&to_store;
+		bzero(to4, sizeof(*to4));
+		to4->sin_family = AF_INET;
+		to4->sin_len = sizeof(struct sockaddr_in);
+		to4->sin_addr.s_addr = iph->ip_dst.s_addr;
+		to4->sin_port = sh->dest_port;
+	} else if (iph->ip_v == (IPV6_VERSION >> 4)) {
+		/* its IPv6 */
+		struct ip6_hdr *ip6;
+		struct sockaddr_in6 *to6;
+
+		ip6 = mtod(m, struct ip6_hdr *);
+		to6 = (struct sockaddr_in6 *)&to_store;
+		bzero(to6, sizeof(*to6));
+		to6->sin6_family = AF_INET6;
+		to6->sin6_len = sizeof(struct sockaddr_in6);
+		to6->sin6_addr = ip6->ip6_dst;
+		to6->sin6_port = sh->dest_port;
+		/* Get the scopes in properly to the sin6 addr's */
+#ifdef SCTP_KAME
+		/* we probably don't need these operations */
+		(void)sa6_recoverscope(to6);
+		sa6_embedscope(to6, ip6_use_defzone);
+#else
+		(void)in6_recoverscope(to6, &to6->sin6_addr, NULL);
+#if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
+		(void)in6_embedscope(&to6->sin6_addr, to6, NULL, NULL);
+#else
+		(void)in6_embedscope(&to6->sin6_addr, to6);
+#endif
+#endif				/* SCTP_KAME */
 	}
 	find_tcp_pool = 0;
 	/*
@@ -2665,7 +2685,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	struct sctp_laddr *laddr, *nladdr;
 	struct inpcb *ip_pcb;
 	struct socket *so;
-	uint8_t locked_so = 0;
 
 	struct sctp_queued_to_read *sq;
 
@@ -2713,13 +2732,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	/* First time through we have the socket lock, after that
 	 * no more.
 	 */
-	if (so) {
-		locked_so = 1;
-#ifdef SCTP_LOCK_LOGGING
-		sctp_log_lock(inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_SOCK);
-#endif
-		SOCK_LOCK(so);
-	}
 	sctp_timer_stop(SCTP_TIMER_TYPE_NEWCOOKIE, inp, NULL, NULL);
 
 	if (inp->control) {
@@ -2751,23 +2763,11 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 			    (SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_COOKIE_ECHOED)) {
 				/* Just abandon things in the front states */
 				if(asoc->asoc.total_output_queue_size == 0) {
-					if (locked_so) {
-						SOCK_UNLOCK(so);
-					}
 					sctp_free_assoc(inp, asoc, 1);
-					if (locked_so) {
-						SOCK_LOCK(so);
-					}
 					continue;
 				}
 			}
-			if (locked_so) {
-				SOCK_UNLOCK(so);
-			}
 			SCTP_TCB_LOCK(asoc);
-			if (locked_so) {
-				SOCK_LOCK(so);
-			}
 			/* Disconnect the socket please */
 			asoc->sctp_socket = NULL;
 			asoc->asoc.state |= SCTP_STATE_CLOSED_SOCKET;
@@ -2796,14 +2796,8 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 					ippp = (uint32_t *) (ph + 1);
 					*ippp = htonl(0x30000004);
 				}
-				if (locked_so) {
-					SOCK_UNLOCK(so);
-				}
 				sctp_send_abort_tcb(asoc, op_err);
 				sctp_free_assoc(inp, asoc, 1);
-				if (locked_so) {
-					SOCK_LOCK(so);
-				}
 				continue;
 			} else if (TAILQ_EMPTY(&asoc->asoc.send_queue) &&
 			           TAILQ_EMPTY(&asoc->asoc.sent_queue) &&
@@ -2818,9 +2812,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 					 * there is nothing queued to send,
 					 * so I send shutdown
 					 */
-					if (locked_so) {
-						SOCK_UNLOCK(so);
-					}
 					sctp_send_shutdown(asoc, asoc->asoc.primary_destination);
 					asoc->asoc.state = SCTP_STATE_SHUTDOWN_SENT;
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN, asoc->sctp_ep, asoc,
@@ -2828,9 +2819,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD, asoc->sctp_ep, asoc,
 					    asoc->asoc.primary_destination);
 					sctp_chunk_output(inp, asoc, SCTP_OUTPUT_FROM_SHUT_TMR);
-					if (locked_so) {
-						SOCK_LOCK(so);
-					}
 				} 
 			} else {
 				/* mark into shutdown pending */
@@ -2873,14 +2861,8 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 						ippp = (uint32_t *) (ph + 1);
 						*ippp = htonl(0x30000005);
 					}
-					if (locked_so) {
-						SOCK_UNLOCK(so);
-					}
 					sctp_send_abort_tcb(asoc, op_err);
 					sctp_free_assoc(inp, asoc, 1);
-					if (locked_so) {
-						SOCK_LOCK(so);
-					}
 					continue;
 				}
 			}
@@ -2907,9 +2889,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 			}
 			splx(s);
 
-			if (locked_so) {
-				SOCK_UNLOCK(so);
-			}
 			SCTP_INP_WUNLOCK(inp);
 			SCTP_ASOC_CREATE_UNLOCK(inp);
 			SCTP_INP_INFO_WUNLOCK();
@@ -2948,13 +2927,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 			continue;
 		}
 		/* Free associations that are NOT killing us */
-		if (locked_so) {
-			SOCK_UNLOCK(so);
-		}
 		SCTP_TCB_LOCK(asoc);
-		if (locked_so) {
-			SOCK_LOCK(so);
-		}
 		if ((SCTP_GET_STATE(&asoc->asoc) != SCTP_STATE_COOKIE_WAIT) &&
 		    ((asoc->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) == 0)){
 			struct mbuf *op_err;
@@ -2986,9 +2959,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	if(cnt) {
 		/* Ok we have someone out there that will kill us */
 		callout_stop(&inp->sctp_ep.signature_change.timer);
-		if (locked_so) {
-			SOCK_UNLOCK(so);
-		}
 		SCTP_INP_WUNLOCK(inp);
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		SCTP_INP_INFO_WUNLOCK();
@@ -3005,9 +2975,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	if (inp->refcount) {
 		callout_stop(&inp->sctp_ep.signature_change.timer);
 		sctp_timer_start(SCTP_TIMER_TYPE_INPKILL, inp, NULL, NULL);
-		if (locked_so) {
-			SOCK_UNLOCK(so);
-		}
 		SCTP_INP_WUNLOCK(inp);
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		SCTP_INP_INFO_WUNLOCK();
@@ -3055,7 +3022,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	 * sctp_free_assoc() call.
 	 */
 	cnt = 0;
-	if (locked_so) {
+	if (so) {
 #ifdef IPSEC
 #ifdef __OpenBSD__
 		/* XXX IPsec cleanup here */
@@ -3089,8 +3056,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 
 #ifdef  __NetBSD__
 		sofree(so);
-#else
-		SOCK_UNLOCK(so);
 #endif
 		/* Unlocks not needed since the socket is gone now */
 	}
@@ -3873,23 +3838,6 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	return (stcb);
 }
 
-void
-sctp_free_remote_addr(struct sctp_nets *net)
-{
-	if (net == NULL)
-		return;
-
-	atomic_subtract_int(&net->ref_count, 1);
-	if (net->ref_count == 0) {
-		/* stop timer if running */
-		callout_stop(&net->rxt_timer.timer);
-		callout_stop(&net->pmtu_timer.timer);
-		callout_stop(&net->fr_timer.timer);
-		net->dest_state = SCTP_ADDR_NOT_REACHABLE;
-		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_net, net);
-		SCTP_DECR_RADDR_COUNT();
-	}
-}
 
 void
 sctp_remove_net(struct sctp_tcb *stcb, struct sctp_nets *net)
@@ -4060,8 +4008,6 @@ sctp_iterator_asoc_being_freed(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		}
 	}
 }
-
-extern uint32_t sctp_my_track[16];
 
 /*
  * Free the association after un-hashing the remote port.
@@ -4339,9 +4285,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		sp = TAILQ_FIRST(&outs->outqueue);
 		while (sp) {
 			TAILQ_REMOVE(&outs->outqueue, sp, next);
-			sctp_my_track[10]++;
 			if (sp->data) {
-				sctp_my_track[11]++;
 				sctp_m_freem(sp->data);
 				sp->data = NULL;
 				sp->tail_mbuf = NULL;
@@ -4567,11 +4511,11 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 			/* If its NOT the inp_free calling us AND
 			 * sctp_close as been called, we 
-			 * call back (we might be the timer 
+			 * call back... 
 			 */
 			SCTP_INP_RUNLOCK(inp);
-			/* This will start the kill timer 
-			 * since we hold an increment yet. But
+			/* This will start the kill timer (if we are 
+			 * the lastone) since we hold an increment yet. But
 			 * this is the only safe way to do this
 			 * since otherwise if the socket closes
 			 * at the same time we are here we might
@@ -4580,7 +4524,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			sctp_inpcb_free(inp, 0);
 			SCTP_INP_DECR_REF(inp);
 		} else {
-			/* Kill Timer already up */
+			/* The socket is still open. */
 			SCTP_INP_DECR_REF(inp);
 			SCTP_INP_RUNLOCK(inp);
 		}

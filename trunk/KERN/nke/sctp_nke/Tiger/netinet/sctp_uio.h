@@ -686,6 +686,15 @@ struct sctp_log_closing {
 	int16_t  loc;
 };
 
+struct sctp_mbuf_log {
+	struct mbuf *mp;
+	caddr_t  ext;
+	caddr_t  data;
+	uint16_t size;
+	uint8_t  refcnt;
+	uint8_t  mbuf_flags;
+};
+
 struct sctp_cwnd_log {
 	uint32_t time_event;
 	uint8_t from;
@@ -706,6 +715,7 @@ struct sctp_cwnd_log {
 		struct sctp_sb_log sb;
 		struct sctp_nagle_log nagle;
 		struct sctp_sbwake_log wake;
+		struct sctp_mbuf_log mb;
 		struct sctp_misc_info misc;
 	}     x;
 };

@@ -535,12 +535,18 @@ struct sctp_tcb {
 #define SCTP_STATLOG_INIT_LOCK()  \
         mtx_init(&sctppcbinfo.logging_mtx, "sctp-logging", "sctp-log_mtx", MTX_DEF)
 
+#ifdef SCTP_NOLOCK_LOGGING
+#define SCTP_STATLOG_LOCK() 
+#define SCTP_STATLOG_UNLOCK()
+#else
 #define SCTP_STATLOG_LOCK() \
 	do {								\
 		mtx_lock(&sctppcbinfo.logging_mtx);				\
 	} while (0)
 
 #define SCTP_STATLOG_UNLOCK()		mtx_unlock(&sctppcbinfo.logging_mtx)
+
+#endif
 
 #define SCTP_STATLOG_DESTROY() \
 	mtx_destroy(&sctppcbinfo.loggingr_mtx)
@@ -564,7 +570,7 @@ struct sctp_tcb {
 #define SCTP_IPI_ADDR_INIT() \
         mtx_init(&sctppcbinfo.ipi_addr_mtx, "sctp-addr-wq", "sctp_addr_wq", MTX_DEF)
 
-#define SCTP_IPI_ADDR_DESTROY(_inp) \
+#define SCTP_IPI_ADDR_DESTROY() \
 	mtx_destroy(&sctppcbinfo.ipi_addr_mtx)
 
 #define SCTP_IPI_ADDR_LOCK()	do { 					\
@@ -1229,8 +1235,6 @@ void sctp_remove_net(struct sctp_tcb *, struct sctp_nets *);
 int sctp_del_remote_addr(struct sctp_tcb *, struct sockaddr *);
 
 void sctp_pcb_init(void);
-
-void sctp_free_remote_addr(struct sctp_nets *);
 
 int sctp_add_local_addr_assoc(struct sctp_tcb *, struct ifaddr *);
 

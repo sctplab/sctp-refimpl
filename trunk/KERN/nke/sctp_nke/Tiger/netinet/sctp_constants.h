@@ -139,10 +139,20 @@ __FBSDID("$FreeBSD:$");
 #define SCTP_SACK_RWND_UPDATE       87
 #define SCTP_SORECV_ENTER           88
 #define SCTP_SORECV_ENTERPL         89
-#define SCTP_UNKNOWN_MAX            90
+#define SCTP_MBUF_INPUT             90
+#define SCTP_MBUF_IALLOC            91
+#define SCTP_MBUF_IFREE             92
+#define SCTP_MBUF_ICOPY             93
+#define SCTP_SORCV_FREECTL          94
+#define SCTP_SORCV_DOESCPY          95
+#define SCTP_SORCV_DOESLCK          96
+#define SCTP_SORCV_DOESADJ          97
+#define SCTP_SORCV_BOTWHILE         98
+#define SCTP_SORCV_PASSBF           99
+#define SCTP_SORCV_ADJD            100
+#define SCTP_UNKNOWN_MAX           101
 
-
-#define SCTP_LOG_MAX_TYPES 91
+#define SCTP_LOG_MAX_TYPES 102
 /*
  * To turn on various logging, you must first define SCTP_STAT_LOGGING. Then
  * to get something to log you define one of the logging defines i.e.
@@ -168,8 +178,9 @@ __FBSDID("$FreeBSD:$");
 #define SCTP_LOG_EVENT_WAKE 14
 #define SCTP_LOG_MISC_EVENT 15 
 #define SCTP_LOG_EVENT_CLOSE 16
+#define SCTP_LOG_EVENT_MBUF 17
 
-#define SCTP_LOG_MAX_EVENT 17
+#define SCTP_LOG_MAX_EVENT 18
 
 #define SCTP_LOCK_UNKNOWN 2
 
