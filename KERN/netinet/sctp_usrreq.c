@@ -885,6 +885,7 @@ sctp_abort(struct socket *so)
 {
 	struct sctp_inpcb *inp;
 	int s;
+	uint32_t flags;
 
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (inp == 0)
@@ -899,10 +900,9 @@ sctp_abort(struct socket *so)
 #else
 	s = splnet();
 #endif
-	if((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
-		SCTP_INP_WLOCK(inp);
-		inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_GONE;
-		SCTP_INP_WUNLOCK(inp);
+	flags = inp->sctp_flags;
+	if (((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) &&
+	    (atomic_cmpset_int(inp->sctp_flags, flags, (flags | SCTP_PCB_FLAGS_GONE))) {
 #ifdef SCTP_LOG_CLOSING
 		sctp_log_closing(inp, NULL, 16);
 #endif
@@ -926,7 +926,7 @@ sctp_attach(struct socket *so, int proto, struct proc *p)
 	struct sctp_inpcb *inp;
 	struct inpcb *ip_inp;
 	int s, error;
-
+	uint32_t flags;
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
 #else
@@ -964,10 +964,9 @@ sctp_attach(struct socket *so, int proto, struct proc *p)
 #if !(defined(__OpenBSD__) || defined(__APPLE__))
 	error = ipsec_init_pcbpolicy(so, &ip_inp->inp_sp);
 	if (error != 0) {
-		if((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
-			SCTP_INP_WLOCK(inp);
-			inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_GONE;
-			SCTP_INP_WUNLOCK(inp);
+		flags = inp->sctp_flags;
+		if (((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) &&
+		    (atomic_cmpset_int(inp->sctp_flags, flags, (flags | SCTP_PCB_FLAGS_GONE))) {
 #ifdef SCTP_LOG_CLOSING
 			sctp_log_closing(inp, NULL, 15);
 #endif
@@ -1026,6 +1025,8 @@ static void
 sctp_close(struct socket *so)
 {
 	struct sctp_inpcb *inp;
+	uint32_t flags;
+
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (inp == 0)
 		return;
@@ -1033,10 +1034,9 @@ sctp_close(struct socket *so)
 	/* Inform all the lower layer assoc that we
 	 * are done.
 	 */
-	if((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
-		SCTP_INP_WLOCK(inp);
-		inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_GONE;
-		SCTP_INP_WUNLOCK(inp);
+	flags = inp->sctp_flags;
+	if (((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) &&
+	    (atomic_cmpset_int(inp->sctp_flags, flags, (flags | SCTP_PCB_FLAGS_GONE))) {
 		if (((so->so_options & SO_LINGER) && (so->so_linger == 0)) ||
 		    (so->so_rcv.sb_cc > 0)) {
 #ifdef SCTP_LOG_CLOSING
@@ -1083,6 +1083,7 @@ sctp_detach(struct socket *so)
 {
 	struct sctp_inpcb *inp;
 	int s;
+	uint32_t flags;
 
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (inp == 0)
@@ -1096,10 +1097,9 @@ sctp_detach(struct socket *so)
 #else
 	s = splnet();
 #endif
-	if((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
-		SCTP_INP_WLOCK(inp);
-		inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_GONE;
-		SCTP_INP_WUNLOCK(inp);
+	flags = inp->sctp_flags;
+	if (((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) &&
+	    (atomic_cmpset_int(inp->sctp_flags, flags, (flags | SCTP_PCB_FLAGS_GONE))) {
 		if (((so->so_options & SO_LINGER) && (so->so_linger == 0)) ||
 		    (so->so_rcv.sb_cc > 0)) {
 #ifdef SCTP_LOG_CLOSING
