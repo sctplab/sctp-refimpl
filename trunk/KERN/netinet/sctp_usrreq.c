@@ -926,7 +926,9 @@ sctp_attach(struct socket *so, int proto, struct proc *p)
 	struct sctp_inpcb *inp;
 	struct inpcb *ip_inp;
 	int s, error;
+#ifdef IPSEC	
 	uint32_t flags;
+#endif
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
 #else
