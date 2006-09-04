@@ -778,6 +778,7 @@ sctp6_abort(struct socket *so)
 {
 	struct sctp_inpcb *inp;
 	int s;
+	uint32_t flags;
 
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (inp == 0)
@@ -791,10 +792,9 @@ sctp6_abort(struct socket *so)
 #else
 	s = splnet();
 #endif
-	if((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
-		SCTP_INP_WLOCK(inp);
-		inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_GONE;
-		SCTP_INP_WUNLOCK(inp);
+	flags = inp->sctp_flags;
+	if (((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) &&
+	    (atomic_cmpset_int(inp->sctp_flags, flags, (flags | SCTP_PCB_FLAGS_GONE))) {
 #ifdef SCTP_LOG_CLOSING
 		sctp_log_closing(inp, NULL, 17);
 #endif
@@ -1010,6 +1010,7 @@ static void
 sctp6_close(struct socket *so)
 {
 	struct sctp_inpcb *inp;
+	uint32_t flags;
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (inp == 0)
 		return;
@@ -1017,10 +1018,9 @@ sctp6_close(struct socket *so)
 	/* Inform all the lower layer assoc that we
 	 * are done.
 	 */
-	if((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
-		SCTP_INP_WLOCK(inp);
-		inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_GONE;
-		SCTP_INP_WUNLOCK(inp);
+	flags = inp->sctp_flags;
+	if (((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) &&
+	    (atomic_cmpset_int(inp->sctp_flags, flags, (flags | SCTP_PCB_FLAGS_GONE))) {
 		if (((so->so_options & SO_LINGER) && (so->so_linger == 0)) ||
 		    (so->so_rcv.sb_cc > 0)) {
 #ifdef SCTP_LOG_CLOSING
@@ -1063,6 +1063,7 @@ static int
 sctp6_detach(struct socket *so)
 {
 	struct sctp_inpcb *inp;
+	uint32_t flags;
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s;
 #endif
@@ -1073,10 +1074,9 @@ sctp6_detach(struct socket *so)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
 #endif
-	if((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
-		SCTP_INP_WLOCK(inp);
-		inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_GONE;
-		SCTP_INP_WUNLOCK(inp);
+	flags = inp->sctp_flags;
+	if (((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) &&
+	    (atomic_cmpset_int(inp->sctp_flags, flags, (flags | SCTP_PCB_FLAGS_GONE))) {
 		if (((so->so_options & SO_LINGER) && (so->so_linger == 0)) ||
 		    (so->so_rcv.sb_cc > 0)) {
 #ifdef SCTP_LOG_CLOSING
