@@ -797,11 +797,15 @@ sctp6_abort(struct socket *so)
 	sctp_log_closing(inp, NULL, 17);
 #endif
 	if (((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) &&
-	    (atomic_cmpset_int(&inp->sctp_flags, flags, (flags | SCTP_PCB_FLAGS_SOCKET_GONE)))) {
+	    (atomic_cmpset_int(&inp->sctp_flags, flags, (flags | SCTP_PCB_FLAGS_SOCKET_GONE | SCTP_PCB_FLAGS_CLOSE_IP)))) {
 #ifdef SCTP_LOG_CLOSING
 		sctp_log_closing(inp, NULL, 17);
 #endif
-		sctp_inpcb_free(inp, 1);
+		sctp_inpcb_free(inp, 1, 0);
+		SCTP_INP_WLOCK(inp);
+		inp->sctp_flags &= ~SCTP_PCB_FLAGS_CLOSE_IP;
+		SCTP_INP_WUNLOCK(inp);
+
 	}
 	splx(s);
 #if defined(__FreeBSD__) && __FreeBSD_version > 690000
@@ -1026,22 +1030,26 @@ sctp6_close(struct socket *so)
 	sctp_log_closing(inp, NULL, 17);
 #endif
 	if (((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) &&
-	    (atomic_cmpset_int(&inp->sctp_flags, flags, (flags | SCTP_PCB_FLAGS_SOCKET_GONE)))) {
+	    (atomic_cmpset_int(&inp->sctp_flags, flags, (flags | SCTP_PCB_FLAGS_SOCKET_GONE | SCTP_PCB_FLAGS_CLOSE_IP)))) {
 		if (((so->so_options & SO_LINGER) && (so->so_linger == 0)) ||
 		    (so->so_rcv.sb_cc > 0)) {
 #ifdef SCTP_LOG_CLOSING
 			sctp_log_closing(inp, NULL, 13);
 #endif
-			sctp_inpcb_free(inp, 1);
+			sctp_inpcb_free(inp, 1, 1);
 		} else {
 #ifdef SCTP_LOG_CLOSING
 			sctp_log_closing(inp, NULL, 14);
 #endif
-			sctp_inpcb_free(inp, 0);
+			sctp_inpcb_free(inp, 0, 1);
 		}
 		/* The socket is now detached, no matter what
 		 * the state of the SCTP association.
 		 */
+		SCTP_INP_WLOCK(inp);
+		inp->sctp_flags &= ~SCTP_PCB_FLAGS_CLOSE_IP;
+		SCTP_INP_WUNLOCK(inp);
+
 		SOCK_LOCK(so);
 		so->so_snd.sb_cc = 0;
 		so->so_snd.sb_mb = NULL;
@@ -1085,22 +1093,27 @@ sctp6_detach(struct socket *so)
 	sctp_log_closing(inp, NULL, 17);
 #endif
 	if (((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) &&
-	    (atomic_cmpset_int(&inp->sctp_flags, flags, (flags | SCTP_PCB_FLAGS_SOCKET_GONE)))) {
+	    (atomic_cmpset_int(&inp->sctp_flags, flags, (flags | SCTP_PCB_FLAGS_SOCKET_GONE | SCTP_PCB_FLAGS_CLOSE_IP)))) {
 		if (((so->so_options & SO_LINGER) && (so->so_linger == 0)) ||
 		    (so->so_rcv.sb_cc > 0)) {
 #ifdef SCTP_LOG_CLOSING
 			sctp_log_closing(inp, NULL, 13);
 #endif
-			sctp_inpcb_free(inp, 1);
+			sctp_inpcb_free(inp, 1, 1);
 		} else {
 #ifdef SCTP_LOG_CLOSING
 			sctp_log_closing(inp, NULL, 14);
 #endif
-			sctp_inpcb_free(inp, 0);
+			sctp_inpcb_free(inp, 0, 1);
 		}
+		
 		/* The socket is now detached, no matter what
 		 * the state of the SCTP association.
 		 */
+		SCTP_INP_WLOCK(inp);
+		inp->sctp_flags &= ~SCTP_PCB_FLAGS_CLOSE_IP;
+		SCTP_INP_WUNLOCK(inp);
+
 		SOCK_LOCK(so);
 		so->so_snd.sb_cc = 0;
 		so->so_snd.sb_mb = NULL;
