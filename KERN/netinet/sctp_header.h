@@ -387,7 +387,7 @@ struct sctp_forward_tsn_msg {
 
 /* should be a multiple of 4 - 1 aka 3/7/11 etc. */
 
-#define SCTP_NUM_DB_TO_VERIFY 3
+#define SCTP_NUM_DB_TO_VERIFY 31
 
 struct sctp_chunk_desc {
 	uint8_t chunk_type;
