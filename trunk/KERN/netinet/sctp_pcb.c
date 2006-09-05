@@ -2711,15 +2711,11 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 #if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	SCTP_ITERATOR_LOCK();
 #endif
-	SCTP_ASOC_CREATE_LOCK(inp);
-	SCTP_INP_INFO_WLOCK();
 	so = inp->sctp_socket;
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
 		/* been here before.. eeks.. get out of here */
 		splx(s);
 		printf("This conflict in free SHOULD not be happening!\n");
-		SCTP_ASOC_CREATE_UNLOCK(inp);
-		SCTP_INP_INFO_WUNLOCK();
 #if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		SCTP_ITERATOR_UNLOCK();
 #endif
@@ -2728,6 +2724,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 #endif
 		return;
 	}
+	SCTP_ASOC_CREATE_LOCK(inp);
+	SCTP_INP_INFO_WLOCK();
+
 	SCTP_INP_WLOCK(inp);
 	/* First time through we have the socket lock, after that
 	 * no more.
@@ -2995,6 +2994,8 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 		return;
 	}
 #endif
+	callout_stop(&inp->sctp_ep.signature_change.timer);
+	inp->sctp_ep.signature_change.type = 0;
 	inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_ALLGONE;
 
 #ifdef SCTP_LOG_CLOSING
