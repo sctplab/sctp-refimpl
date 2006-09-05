@@ -900,6 +900,7 @@ sctp_abort(struct socket *so)
 #else
 	s = splnet();
 #endif
+ sctp_must_try_again:
 	flags = inp->sctp_flags;
 #ifdef SCTP_LOG_CLOSING
 	sctp_log_closing(inp, NULL, 17);
@@ -909,10 +910,16 @@ sctp_abort(struct socket *so)
 #ifdef SCTP_LOG_CLOSING
 		sctp_log_closing(inp, NULL, 16);
 #endif
+		flags = inp->sctp_flags;
 		sctp_inpcb_free(inp, 1, 0);
 		SCTP_INP_WLOCK(inp);
 		inp->sctp_flags &= ~SCTP_PCB_FLAGS_CLOSE_IP;
 		SCTP_INP_WUNLOCK(inp);
+	} else {
+		flags = inp->sctp_flags;
+	}
+	if((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
+		goto sctp_must_try_again;
 	}
 	splx(s);
 #if defined(__FreeBSD__) && __FreeBSD_version > 690000
@@ -1048,12 +1055,14 @@ sctp_close(struct socket *so)
 	/* Inform all the lower layer assoc that we
 	 * are done.
 	 */
+ sctp_must_try_again:
 	flags = inp->sctp_flags;
 #ifdef SCTP_LOG_CLOSING
 	sctp_log_closing(inp, NULL, 17);
 #endif
 	if (((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) &&
 	    (atomic_cmpset_int(&inp->sctp_flags, flags, (flags | SCTP_PCB_FLAGS_SOCKET_GONE | SCTP_PCB_FLAGS_CLOSE_IP)))) {
+		flags = inp->sctp_flags;
 		if (((so->so_options & SO_LINGER) && (so->so_linger == 0)) ||
 		    (so->so_rcv.sb_cc > 0)) {
 #ifdef SCTP_LOG_CLOSING
@@ -1089,6 +1098,12 @@ sctp_close(struct socket *so)
 		 */
 		so->so_pcb = NULL;
 		SOCK_UNLOCK(so);
+	} else {
+		flags = inp->sctp_flags;
+	}
+
+	if((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
+		goto sctp_must_try_again;
 	}
 	return;
 }
@@ -1118,12 +1133,14 @@ sctp_detach(struct socket *so)
 #else
 	s = splnet();
 #endif
+ sctp_must_try_again:
 	flags = inp->sctp_flags;
 #ifdef SCTP_LOG_CLOSING
 	sctp_log_closing(inp, NULL, 17);
 #endif
 	if (((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) &&
 	    (atomic_cmpset_int(&inp->sctp_flags, flags, (flags | SCTP_PCB_FLAGS_SOCKET_GONE | SCTP_PCB_FLAGS_CLOSE_IP)))) {
+		flags = inp->sctp_flags;
 		if (((so->so_options & SO_LINGER) && (so->so_linger == 0)) ||
 		    (so->so_rcv.sb_cc > 0)) {
 #ifdef SCTP_LOG_CLOSING
@@ -1155,7 +1172,13 @@ sctp_detach(struct socket *so)
 #if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		so->so_pcb = NULL;
 #endif
+	} else {
+		flags = inp->sctp_flags;
 	}
+	if((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
+		goto sctp_must_try_again;
+	}
+
 	splx(s);
 #if defined(__FreeBSD__) && __FreeBSD_version > 690000
 	return;
