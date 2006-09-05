@@ -2732,6 +2732,14 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	/* First time through we have the socket lock, after that
 	 * no more.
 	 */
+	if(from == 1) {
+		/* Once we are in we can remove the flag 
+		 * from = 1 is only passed from the actual
+		 * closing routines that are called via the
+		 * sockets layer.
+		 */
+		inp->sctp_flags &= ~SCTP_PCB_FLAGS_CLOSE_IP;
+	}
 	sctp_timer_stop(SCTP_TIMER_TYPE_NEWCOOKIE, inp, NULL, NULL);
 
 	if (inp->control) {
@@ -2972,8 +2980,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	}
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
-	if ( (inp->refcount) || ((inp->sctp_flags & SCTP_PCB_FLAGS_CLOSE_IP) &&
-				 (from == 0))) {
+	if ( (inp->refcount) || (inp->sctp_flags & SCTP_PCB_FLAGS_CLOSE_IP) ) {
 		callout_stop(&inp->sctp_ep.signature_change.timer);
 		sctp_timer_start(SCTP_TIMER_TYPE_INPKILL, inp, NULL, NULL);
 		SCTP_INP_WUNLOCK(inp);
