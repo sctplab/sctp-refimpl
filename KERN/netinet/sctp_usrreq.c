@@ -901,6 +901,9 @@ sctp_abort(struct socket *so)
 	s = splnet();
 #endif
 	flags = inp->sctp_flags;
+#ifdef SCTP_LOG_CLOSING
+	sctp_log_closing(inp, NULL, 17);
+#endif
 	if (((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) &&
 	    (atomic_cmpset_int(&inp->sctp_flags, flags, (flags | SCTP_PCB_FLAGS_SOCKET_GONE)))) {
 #ifdef SCTP_LOG_CLOSING
@@ -965,6 +968,9 @@ sctp_attach(struct socket *so, int proto, struct proc *p)
 #ifdef IPSEC
 #if !(defined(__OpenBSD__) || defined(__APPLE__))
 	error = ipsec_init_pcbpolicy(so, &ip_inp->inp_sp);
+#ifdef SCTP_LOG_CLOSING
+	sctp_log_closing(inp, NULL, 17);
+#endif
 	if (error != 0) {
 		flags = inp->sctp_flags;
 		if (((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) &&
@@ -1037,6 +1043,9 @@ sctp_close(struct socket *so)
 	 * are done.
 	 */
 	flags = inp->sctp_flags;
+#ifdef SCTP_LOG_CLOSING
+	sctp_log_closing(inp, NULL, 17);
+#endif
 	if (((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) &&
 	    (atomic_cmpset_int(&inp->sctp_flags, flags, (flags | SCTP_PCB_FLAGS_SOCKET_GONE)))) {
 		if (((so->so_options & SO_LINGER) && (so->so_linger == 0)) ||
@@ -1100,6 +1109,9 @@ sctp_detach(struct socket *so)
 	s = splnet();
 #endif
 	flags = inp->sctp_flags;
+#ifdef SCTP_LOG_CLOSING
+	sctp_log_closing(inp, NULL, 17);
+#endif
 	if (((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) &&
 	    (atomic_cmpset_int(&inp->sctp_flags, flags, (flags | SCTP_PCB_FLAGS_SOCKET_GONE)))) {
 		if (((so->so_options & SO_LINGER) && (so->so_linger == 0)) ||
