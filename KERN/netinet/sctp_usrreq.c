@@ -909,7 +909,7 @@ sctp_abort(struct socket *so)
 #ifdef SCTP_LOG_CLOSING
 		sctp_log_closing(inp, NULL, 16);
 #endif
-		sctp_inpcb_free(inp, 1);
+		sctp_inpcb_free(inp, 1, 0);
 		SCTP_INP_WLOCK(inp);
 		inp->sctp_flags &= ~SCTP_PCB_FLAGS_CLOSE_IP;
 		SCTP_INP_WUNLOCK(inp);
@@ -981,7 +981,7 @@ sctp_attach(struct socket *so, int proto, struct proc *p)
 #ifdef SCTP_LOG_CLOSING
 			sctp_log_closing(inp, NULL, 15);
 #endif
-			sctp_inpcb_free(inp, 1);
+			sctp_inpcb_free(inp, 1, 0);
 			SCTP_INP_WLOCK(inp);
 			inp->sctp_flags &= ~SCTP_PCB_FLAGS_CLOSE_IP;
 			SCTP_INP_WUNLOCK(inp);
@@ -1059,12 +1059,12 @@ sctp_close(struct socket *so)
 #ifdef SCTP_LOG_CLOSING
 			sctp_log_closing(inp, NULL, 13);
 #endif
-			sctp_inpcb_free(inp, 1);
+			sctp_inpcb_free(inp, 1, 1);
 		} else {
 #ifdef SCTP_LOG_CLOSING
 			sctp_log_closing(inp, NULL, 14);
 #endif
-			sctp_inpcb_free(inp, 0);
+			sctp_inpcb_free(inp, 0, 1);
 		}
 		/* The socket is now detached, no matter what
 		 * the state of the SCTP association.
@@ -1129,12 +1129,12 @@ sctp_detach(struct socket *so)
 #ifdef SCTP_LOG_CLOSING
 			sctp_log_closing(inp, NULL, 13);
 #endif
-			sctp_inpcb_free(inp, 1);
+			sctp_inpcb_free(inp, 1, 1);
 		} else {
 #ifdef SCTP_LOG_CLOSING
 			sctp_log_closing(inp, NULL, 13);
 #endif
-			sctp_inpcb_free(inp, 0);
+			sctp_inpcb_free(inp, 0, 1);
 		}
 		/* The socket is now detached, no matter what
 		 * the state of the SCTP association.

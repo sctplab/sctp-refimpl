@@ -1734,7 +1734,7 @@ sctp_timeout_handler(void *t)
 		 */
 		SCTP_INP_DECR_REF(inp);
 		sctp_timer_stop(SCTP_TIMER_TYPE_INPKILL, inp, NULL, NULL);
-		sctp_inpcb_free(inp, 1);
+		sctp_inpcb_free(inp, 1, 0);
 		goto out_no_decr;
 		break;
 	default:
@@ -3661,7 +3661,7 @@ sctp_abort_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	} else {
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 			if (LIST_FIRST(&inp->sctp_asoc_list) == NULL) {
-				sctp_inpcb_free(inp, 1);
+				sctp_inpcb_free(inp, 1, 0);
 			}
 		}
 	}
@@ -3677,7 +3677,7 @@ sctp_abort_an_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		/* Got to have a TCB */
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 			if (LIST_FIRST(&inp->sctp_asoc_list) == NULL) {
-				sctp_inpcb_free(inp, 1);
+				sctp_inpcb_free(inp, 1, 0);
 			}
 		}
 		return;
@@ -3702,7 +3702,7 @@ sctp_handle_ootb(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 	/* Generate a TO address for future reference */
 	if (inp && (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
 		if (LIST_FIRST(&inp->sctp_asoc_list) == NULL) {
-			sctp_inpcb_free(inp, 1);
+			sctp_inpcb_free(inp, 1, 0);
 		}
 	}
 	ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, offset,
