@@ -31,10 +31,10 @@ collect_four(FILE *out, char *str, int line)
 				continue;
 			}
 		} else {
-			if((str[i] == ' ') || (str[i] == 0x09)) {
+			if((str[i] == ' ') || (str[i] == 0x09) || (str[i] == '\n')) {
 				str[i] = 0;
 				collected = strtoul(begin, NULL, 0);
-				fwrite(&begin, sizeof(begin), 1, out);
+				fwrite(&collected, sizeof(collected), 1, out);
 				got++;
 				if(got == 4) {
 					/* done */
@@ -69,7 +69,7 @@ main(int argc, char **argv)
 			infile = optarg;
 			break;
 		case 'o':
-			infile = optarg;
+			outfile = optarg;
 			break;
 
 		default:
@@ -130,5 +130,6 @@ main(int argc, char **argv)
 	}
 	fclose(in);
 	fclose(out);
+	printf("Collection ends at line %d address %x\n", cnt, (initial_address+16));
 	return (0);
 }
