@@ -804,10 +804,6 @@ sctp6_abort(struct socket *so)
 		sctp_log_closing(inp, NULL, 17);
 #endif
 		sctp_inpcb_free(inp, 1, 0);
-		SCTP_INP_WLOCK(inp);
-		inp->sctp_flags &= ~SCTP_PCB_FLAGS_CLOSE_IP;
-		SCTP_INP_WUNLOCK(inp);
-
 	} else {
 		flags = inp->sctp_flags;
 	}
@@ -1055,10 +1051,6 @@ sctp6_close(struct socket *so)
 		/* The socket is now detached, no matter what
 		 * the state of the SCTP association.
 		 */
-		SCTP_INP_WLOCK(inp);
-		inp->sctp_flags &= ~SCTP_PCB_FLAGS_CLOSE_IP;
-		SCTP_INP_WUNLOCK(inp);
-
 		SOCK_LOCK(so);
 		so->so_snd.sb_cc = 0;
 		so->so_snd.sb_mb = NULL;
@@ -1127,10 +1119,6 @@ sctp6_detach(struct socket *so)
 		/* The socket is now detached, no matter what
 		 * the state of the SCTP association.
 		 */
-		SCTP_INP_WLOCK(inp);
-		inp->sctp_flags &= ~SCTP_PCB_FLAGS_CLOSE_IP;
-		SCTP_INP_WUNLOCK(inp);
-
 		SOCK_LOCK(so);
 		so->so_snd.sb_cc = 0;
 		so->so_snd.sb_mb = NULL;
