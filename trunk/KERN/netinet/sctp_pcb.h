@@ -1211,7 +1211,7 @@ int sctp_inpcb_alloc(struct socket *);
 
 int sctp_is_address_on_local_host(struct sockaddr *addr);
 
-void sctp_inpcb_free(struct sctp_inpcb *, int);
+void sctp_inpcb_free(struct sctp_inpcb *, int, int);
 
 struct sctp_tcb *
 sctp_aloc_assoc(struct sctp_inpcb *, struct sockaddr *,

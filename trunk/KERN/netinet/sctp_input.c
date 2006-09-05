@@ -3979,10 +3979,6 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				} else {
 					if (locked_tcb)
 						SCTP_TCB_UNLOCK(locked_tcb);
-					if (LIST_FIRST(&inp->sctp_asoc_list) == NULL) {
-						/* finish the job now */
-						sctp_inpcb_free(inp, 1);
-					}
 					*offset = length;
 					return (NULL);
 				}
@@ -4029,11 +4025,6 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					*offset = length;
 					if (stcb) {
 						sctp_free_assoc(inp, stcb, 0);
-					} else {
-						if (LIST_FIRST(&inp->sctp_asoc_list) == NULL) {
-							/* finish the job now */
-							sctp_inpcb_free(inp, 1);
-						}
 					}
 					return (NULL);
 				}

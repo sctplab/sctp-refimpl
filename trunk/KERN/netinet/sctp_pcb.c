@@ -2669,7 +2669,7 @@ sctp_iterator_inp_being_freed(struct sctp_inpcb *inp, struct sctp_inpcb *inp_nex
 
 /* release sctp_inpcb unbind the port */
 void
-sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
+sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 {
 	/*
 	 * Here we free a endpoint. We must find it (if it is in the Hash
@@ -2972,7 +2972,8 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	}
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
-	if ( (inp->refcount) || (inp->sctp_flags & SCTP_PCB_FLAGS_CLOSE_IP)) {
+	if ( (inp->refcount) || ((inp->sctp_flags & SCTP_PCB_FLAGS_CLOSE_IP) &&
+				 (from == 0))) {
 		callout_stop(&inp->sctp_ep.signature_change.timer);
 		sctp_timer_start(SCTP_TIMER_TYPE_INPKILL, inp, NULL, NULL);
 		SCTP_INP_WUNLOCK(inp);
@@ -4521,7 +4522,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			 * at the same time we are here we might
 			 * collide in the cleanup.
 			 */
-			sctp_inpcb_free(inp, 0);
+			sctp_inpcb_free(inp, 0, 0);
 			SCTP_INP_DECR_REF(inp);
 		} else {
 			/* The socket is still open. */
