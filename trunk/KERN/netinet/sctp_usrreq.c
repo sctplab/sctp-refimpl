@@ -910,13 +910,12 @@ sctp_abort(struct socket *so)
 #ifdef SCTP_LOG_CLOSING
 		sctp_log_closing(inp, NULL, 16);
 #endif
-		flags = inp->sctp_flags;
 		sctp_inpcb_free(inp, 1, 0);
 	} else {
 		flags = inp->sctp_flags;
-	}
-	if((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
-		goto sctp_must_try_again;
+		if((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
+			goto sctp_must_try_again;
+		}
 	}
 	splx(s);
 #if defined(__FreeBSD__) && __FreeBSD_version > 690000
@@ -1056,7 +1055,6 @@ sctp_close(struct socket *so)
 #endif
 	if (((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) &&
 	    (atomic_cmpset_int(&inp->sctp_flags, flags, (flags | SCTP_PCB_FLAGS_SOCKET_GONE | SCTP_PCB_FLAGS_CLOSE_IP)))) {
-		flags = inp->sctp_flags;
 		if (((so->so_options & SO_LINGER) && (so->so_linger == 0)) ||
 		    (so->so_rcv.sb_cc > 0)) {
 #ifdef SCTP_LOG_CLOSING
@@ -1090,10 +1088,9 @@ sctp_close(struct socket *so)
 		SOCK_UNLOCK(so);
 	} else {
 		flags = inp->sctp_flags;
-	}
-
-	if((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
-		goto sctp_must_try_again;
+		if((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
+			goto sctp_must_try_again;
+		}
 	}
 	return;
 }
@@ -1130,7 +1127,6 @@ sctp_detach(struct socket *so)
 #endif
 	if (((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) &&
 	    (atomic_cmpset_int(&inp->sctp_flags, flags, (flags | SCTP_PCB_FLAGS_SOCKET_GONE | SCTP_PCB_FLAGS_CLOSE_IP)))) {
-		flags = inp->sctp_flags;
 		if (((so->so_options & SO_LINGER) && (so->so_linger == 0)) ||
 		    (so->so_rcv.sb_cc > 0)) {
 #ifdef SCTP_LOG_CLOSING
@@ -1161,11 +1157,10 @@ sctp_detach(struct socket *so)
 #endif
 	} else {
 		flags = inp->sctp_flags;
+		if((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
+			goto sctp_must_try_again;
+		}
 	}
-	if((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
-		goto sctp_must_try_again;
-	}
-
 	splx(s);
 #if defined(__FreeBSD__) && __FreeBSD_version > 690000
 	return;
