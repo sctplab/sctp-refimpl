@@ -451,10 +451,15 @@ main(int argc, char **argv)
 				"Set ATBF, start timer, wait",
 				"Clear to purge asoc",
 				"Association now purged",
+				"INPCB allocate",
+				"sctp_close",
+				"sctp_close imm",
+				"close from attach",
+				"close from abort",
 				"Unknown"
 			};
-			if(log.x.close.loc > 11) {
-				log.x.close.loc = 12;
+			if(log.x.close.loc > 17) {
+				log.x.close.loc = 17;
 			}
 			printf("%s: inp:%x sctp_flags:%x stcb:%x asoc state:%x e:%d-%s\n",
 			       ts,
