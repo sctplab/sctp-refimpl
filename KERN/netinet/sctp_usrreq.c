@@ -911,6 +911,23 @@ sctp_abort(struct socket *so)
 		sctp_log_closing(inp, NULL, 16);
 #endif
 		sctp_inpcb_free(inp, 1, 0);
+		SOCK_LOCK(so);
+		so->so_snd.sb_cc = 0;
+		so->so_snd.sb_mb = NULL;
+		so->so_snd.sb_mbcnt = 0;
+		
+		/* same for the rcv ones, they are only
+		 * here for the accounting/select.
+		 */
+		so->so_rcv.sb_cc = 0;
+		so->so_rcv.sb_mb = NULL;
+		so->so_rcv.sb_mbcnt = 0;
+		/* Now null out the reference, we are
+		 * completely detached.
+		 */
+		so->so_pcb = NULL;
+		SOCK_UNLOCK(so);
+
 	} else {
 		flags = inp->sctp_flags;
 		if((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
