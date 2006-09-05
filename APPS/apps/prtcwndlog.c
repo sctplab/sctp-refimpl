@@ -439,7 +439,7 @@ main(int argc, char **argv)
 			}
 		}else if(log.event_type == SCTP_LOG_EVENT_CLOSE) {
 			char *close_events[] = {
-				"Top of Close",
+				"Top of sctp_inpcb_free",
 				"Stop its allgone",
 				"imm=0, some still closing",
 				"Still closing stage 3",
@@ -452,14 +452,15 @@ main(int argc, char **argv)
 				"Clear to purge asoc",
 				"Association now purged",
 				"INPCB allocate",
-				"sctp_close",
-				"sctp_close imm",
+				"sctp_close() can shutdown",
+				"sctp_close() must abort",
 				"close from attach",
 				"close from abort",
+				"sctp_close() called",
 				"Unknown"
 			};
-			if(log.x.close.loc > 17) {
-				log.x.close.loc = 17;
+			if(log.x.close.loc > 18) {
+				log.x.close.loc = 18;
 			}
 			printf("%s: inp:%x sctp_flags:%x stcb:%x asoc state:%x e:%d-%s\n",
 			       ts,
