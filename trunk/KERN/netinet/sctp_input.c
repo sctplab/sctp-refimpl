@@ -630,6 +630,18 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 		sctp_update_acked(stcb, cp, net, abort_flag);
 	}
 	asoc = &stcb->asoc;
+	if(stcb->asoc.control_pdapi) {
+		/* With a normal shutdown 
+		 * we assume the end of last record.
+		 */
+		SCTP_INP_READ_LOCK(stcb->sctp_ep);
+		stcb->asoc.control_pdapi->end_added = 1;
+		if (stcb->asoc.control_pdapi->tail_mbuf) {
+			stcb->asoc.control_pdapi->tail_mbuf->m_flags |= M_EOR;
+		}
+		stcb->asoc.control_pdapi = NULL;
+		SCTP_INP_READ_UNLOCK(stcb->sctp_ep);
+	}
 	/* goto SHUTDOWN_RECEIVED state to block new requests */
 	if(stcb->sctp_socket) {
 		if ((SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_RECEIVED) &&
@@ -665,16 +677,6 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 				some_on_streamwheel = 1;
 				break;
 			}
-		}
-	}
-	if(stcb->asoc.control_pdapi) {
-		/* With a normal shutdown 
-		 * we assume the end of last record.
-		 */
-		stcb->asoc.control_pdapi->end_added = 1;
-		stcb->asoc.control_pdapi = NULL;
-		if (stcb->asoc.control_pdapi->tail_mbuf) {
-			stcb->asoc.control_pdapi->tail_mbuf->m_flags |= M_EOR;
 		}
 	}
 #ifdef SCTP_DEBUG
@@ -733,11 +735,13 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
 		/* With a normal shutdown 
 		 * we assume the end of last record.
 		 */
+		SCTP_INP_READ_LOCK(stcb->sctp_ep);
 		stcb->asoc.control_pdapi->end_added = 1;
-		stcb->asoc.control_pdapi = NULL;
 		if (stcb->asoc.control_pdapi->tail_mbuf) {
 			stcb->asoc.control_pdapi->tail_mbuf->m_flags |= M_EOR;
 		}
+		stcb->asoc.control_pdapi = NULL;
+		SCTP_INP_READ_UNLOCK(stcb->sctp_ep);
 	}
 	/* are the queues empty? */
 	if (!TAILQ_EMPTY(&asoc->send_queue) ||
