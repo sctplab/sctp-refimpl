@@ -226,6 +226,8 @@ sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
     struct sctp_tcb *stcb);
 
 
+void sctp_stop_timers_for_shutdown(struct stcb *stcb);
+
 void sctp_report_all_outbound(struct sctp_tcb *);
 
 int sctp_expand_mapping_array(struct sctp_association *);

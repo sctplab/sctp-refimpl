@@ -1398,6 +1398,7 @@ sctp_disconnect(struct socket *so)
 						    );
 					}
 #endif
+					sctp_stop_timers_for_shutdown(stcb);
 					sctp_send_shutdown(stcb,
 					    stcb->asoc.primary_destination);
 					sctp_chunk_output(stcb->sctp_ep, stcb, SCTP_OUTPUT_FROM_T3);
@@ -1548,6 +1549,7 @@ sctp_shutdown(struct socket *so)
 					    );
 				}
 #endif
+				sctp_stop_timers_for_shutdown(stcb);
 				sctp_send_shutdown(stcb,
 				    stcb->asoc.primary_destination);
 				sctp_chunk_output(stcb->sctp_ep, stcb, SCTP_OUTPUT_FROM_T3);

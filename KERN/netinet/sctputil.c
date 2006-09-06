@@ -999,6 +999,26 @@ static int sctp_mtu_sizes[] = {
 	65535
 };
 
+void
+sctp_stop_timers_for_shutdown(struct stcb *stcb)
+{
+	struct sctp_association *asoc;
+	struct sctp_nets *net;
+
+	asoc = &stcb->asoc;
+
+	callout_stop(&asoc->hb_timer.timer);
+	callout_stop(&asoc->dack_timer.timer);
+	callout_stop(&asoc->strreset_timer.timer);
+	callout_stop(&asoc->asconf_timer.timer);
+	callout_stop(&asoc->autoclose_timer.timer);
+	callout_stop(&asoc->delayed_event_timer.timer);
+	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
+		callout_stop(&net->fr_timer.timer);
+		callout_stop(&net->pmtu_timer.timer);
+	}
+}
+
 int
 find_next_best_mtu(int totsz)
 {
@@ -1515,10 +1535,12 @@ sctp_timeout_handler(void *t)
 #endif
 
 	if (stcb) {
+		atomic_add_16(&stcb->asoc.refcnt, 1);
 		SCTP_TCB_LOCK(stcb);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
 #endif
+		atomic_add_16(&stcb->asoc.refcnt, -1);
 	}
 	/* mark as being serviced now */
 	callout_deactivate(&tmr->timer);
