@@ -673,6 +673,9 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 		 */
 		stcb->asoc.control_pdapi->end_added = 1;
 		stcb->asoc.control_pdapi = NULL;
+		if (stcb->asoc.control_pdapi->tail_mbuf) {
+			stcb->asoc.control_pdapi->tail_mbuf->m_flags |= M_EOR;
+		}
 	}
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
@@ -732,6 +735,9 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
 		 */
 		stcb->asoc.control_pdapi->end_added = 1;
 		stcb->asoc.control_pdapi = NULL;
+		if (stcb->asoc.control_pdapi->tail_mbuf) {
+			stcb->asoc.control_pdapi->tail_mbuf->m_flags |= M_EOR;
+		}
 	}
 	/* are the queues empty? */
 	if (!TAILQ_EMPTY(&asoc->send_queue) ||
