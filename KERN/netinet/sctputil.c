@@ -1000,7 +1000,7 @@ static int sctp_mtu_sizes[] = {
 };
 
 void
-sctp_stop_timers_for_shutdown(struct stcb *stcb)
+sctp_stop_timers_for_shutdown(struct sctp_tcb *stcb)
 {
 	struct sctp_association *asoc;
 	struct sctp_nets *net;
