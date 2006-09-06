@@ -320,6 +320,9 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 
 #define sctp_sballoc(stcb, sb, m) { \
 	atomic_add_int(&(sb)->sb_cc,(m)->m_len); \
+	atomic_add_int(&(sb)->sb_mbcnt, MSIZE); \
+	if ((m)->m_flags & M_EXT) \
+		atomic_add_int(&(sb)->sb_mbcnt,(m)->m_ext.ext_size); \
         if(stcb) { \
   	  atomic_add_int(&(stcb)->asoc.sb_cc,(m)->m_len); \
           atomic_add_int(&(stcb)->asoc.sb_mbcnt, MSIZE); \
@@ -329,9 +332,6 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 	if ((m)->m_type != MT_DATA && (m)->m_type != MT_HEADER && \
 	    (m)->m_type != MT_OOBDATA) \
 		atomic_add_int(&(sb)->sb_ctl,(m)->m_len); \
-	atomic_add_int(&(sb)->sb_mbcnt,MSIZE); \
-	if ((m)->m_flags & M_EXT) \
-		atomic_add_int(&(sb)->sb_mbcnt,(m)->m_ext.ext_size); \
 }
 
 #else				/* FreeBSD Version <= 500000 or non-FreeBSD */
@@ -391,13 +391,13 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 
 #define sctp_sballoc(stcb, sb, m) { \
 	atomic_add_int(&(sb)->sb_cc, (m)->m_len); \
+	atomic_add_int(&(sb)->sb_mbcnt, MSIZE); \
 	if (stcb) { \
 		atomic_add_int(&(stcb)->asoc.sb_cc, (m)->m_len); \
 		atomic_add_int(&(stcb)->asoc.sb_mbcnt, MSIZE); \
 		if ((m)->m_flags & M_EXT) \
 			atomic_add_int(&(stcb)->asoc.sb_mbcnt, (m)->m_ext.ext_size); \
 	} \
-	atomic_add_int(&(sb)->sb_mbcnt, MSIZE); \
 	if ((m)->m_flags & M_EXT) \
 		atomic_add_int(&(sb)->sb_mbcnt, (m)->m_ext.ext_size); \
 }
