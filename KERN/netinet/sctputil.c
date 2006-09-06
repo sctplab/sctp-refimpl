@@ -4527,9 +4527,12 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far, int hold_rlock,
 	if(stcb == NULL) 
 		return;
 
+	atomic_add_16(&stcb->asoc.refcnt, 1);
+	tcb_incr_up = 1;
+
 	if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 		/* Pre-check If we are freeing no update */
-		return;
+		goto no_lock;
 	}
 	SCTP_INP_INCR_REF(stcb->sctp_ep);
 	if((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
@@ -4551,8 +4554,6 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far, int hold_rlock,
 #endif
 	*freed_so_far = 0;
 	/* Yep, its worth a look and the lock overhead */
-	atomic_add_16(&stcb->asoc.refcnt, 1);
-	tcb_incr_up = 1;
 
 	/* Figure out what the rwnd would be */
 	rwnd = sctp_calc_rwnd(stcb, &stcb->asoc);
@@ -4612,6 +4613,7 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far, int hold_rlock,
 	}
 
 	SCTP_INP_DECR_REF(stcb->sctp_ep);
+ no_lock:
 	if(tcb_incr_up) {
 		atomic_add_16(&stcb->asoc.refcnt, -1);
 	}
