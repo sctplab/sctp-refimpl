@@ -3244,18 +3244,24 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
 			control->held_length = 0;
 			control->length = m_notify->m_len;
 			control->end_added = 1;
-		} else if ((control->tail_mbuf->m_flags & M_EOR) != M_EOR) {
+		} else if ((control->end_added == 0) {
 			sctp_m_freem(control->data);
 			control->data = NULL;
 			control->length = m_notify->m_len;
 			control->data = control->tail_mbuf = m_notify;
 			control->held_length = 0;
 			control->end_added = 1;
+		} else {
+			/* Hmm .. should not happen */
+			control->end_added = 1;
+			stcb->asoc.control_pdapi = NULL;
+			goto add_to_end;
 		}
 		if(no_lock == 0)
 			SCTP_INP_READ_UNLOCK(stcb->sctp_ep);
 	} else {
 		/* append to socket */
+	add_to_end:
 		control = sctp_build_readq_entry(stcb, stcb->asoc.primary_destination,
 		    0, 0, 0, 0, 0, 0,
 		    m_notify);

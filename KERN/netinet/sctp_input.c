@@ -667,6 +667,13 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 			}
 		}
 	}
+	if(stcb->asoc.control_pdapi) {
+		/* With a normal shutdown 
+		 * we assume the end of last record.
+		 */
+		stcb->asoc.control_pdapi.end_added = 1;
+		stcb->asoc.control_pdapi = NULL;
+	}
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
 		printf("some_on_streamwheel:%d send_q_empty:%d sent_q_empty:%d\n",
@@ -718,6 +725,13 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
 		/* unexpected SHUTDOWN-ACK... so ignore... */
 		SCTP_TCB_UNLOCK_IFOWNED(stcb);
 		return;
+	}
+	if(stcb->asoc.control_pdapi) {
+		/* With a normal shutdown 
+		 * we assume the end of last record.
+		 */
+		stcb->asoc.control_pdapi.end_added = 1;
+		stcb->asoc.control_pdapi = NULL;
 	}
 	/* are the queues empty? */
 	if (!TAILQ_EMPTY(&asoc->send_queue) ||
