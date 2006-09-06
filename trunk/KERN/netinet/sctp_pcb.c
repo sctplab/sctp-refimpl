@@ -4128,7 +4128,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			if ((from_inpcbfree == 0) && so) {
 				/* Only if we have a socket lock do we do this */
 				if ((sq->held_length) ||
-				    ((sq->tail_mbuf) && ((sq->tail_mbuf->m_flags & M_EOR) == 0)) ||
+				    (sq->end_added == 0) ||
 				    ((sq->length == 0) && (sq->end_added == 0))) {
 					/* Held for PD-API */
 					sq->held_length = 0;
