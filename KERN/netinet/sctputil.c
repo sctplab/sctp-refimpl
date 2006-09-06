@@ -3244,7 +3244,7 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
 			control->held_length = 0;
 			control->length = m_notify->m_len;
 			control->end_added = 1;
-		} else if ((control->end_added == 0) {
+		} else if (control->end_added == 0) {
 			sctp_m_freem(control->data);
 			control->data = NULL;
 			control->length = m_notify->m_len;
