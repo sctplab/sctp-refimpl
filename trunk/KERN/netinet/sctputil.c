@@ -5118,7 +5118,7 @@ get_more_data:
 					copied_so_far += cp_len;
 					freed_so_far += cp_len;
 #ifdef __FreeBSD__
-					alen = atomic_fetch_add_int(&control->length, -(cp_len));
+					alen = atomic_fetchadd_int(&control->length, -(cp_len));
 					if(alen < cp_len) {
 						panic("Control length goes negative?");
 					}
@@ -5195,7 +5195,7 @@ get_more_data:
 					    SCTP_LOG_SBRESULT, 0);
 #endif
 #ifdef __FreeBSD__
-					alen = atomic_fetch_add_int(&control->length, -(cp_len));
+					alen = atomic_fetchadd_int(&control->length, -(cp_len));
 					if(alen < cp_len) {
 						panic("Control length goes negative2?");
 					}
