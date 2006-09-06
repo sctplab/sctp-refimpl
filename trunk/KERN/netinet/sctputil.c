@@ -5078,7 +5078,7 @@ get_more_data:
 					       so->so_rcv.sb_cc,
 					       cp_len,
 					       m->m_len,
-					       0);
+					       control->length);
 #endif
 				SCTP_STAT_INCR(sctps_locks_in_rcvb);
 				SCTP_INP_READ_LOCK(inp);
@@ -5088,8 +5088,8 @@ get_more_data:
 #ifdef SCTP_RECV_DETAIL_RWND_LOGGING
 				sctp_misc_ints(SCTP_SORCV_DOESADJ,
 					       so->so_rcv.sb_cc,
-					       0,
-					       0,
+					       control->length,
+					       cp_len,
 					       0);
 #endif
 				if (m->m_flags & M_EOR) {
@@ -5129,7 +5129,7 @@ get_more_data:
 #ifdef SCTP_RECV_DETAIL_RWND_LOGGING
 					sctp_misc_ints(SCTP_SORCV_PASSBF,
 						       so->so_rcv.sb_cc,
-						       0,
+						       control->length,
 						       0,
 						       0);
 #endif
@@ -5158,7 +5158,7 @@ get_more_data:
 #ifdef SCTP_RECV_DETAIL_RWND_LOGGING
 					sctp_misc_ints(SCTP_SORCV_ADJD,
 						       so->so_rcv.sb_cc,
-						       0,
+						       control->length,
 						       0,
 						       0);
 #endif
@@ -5220,7 +5220,7 @@ get_more_data:
 #ifdef SCTP_RECV_DETAIL_RWND_LOGGING
 			sctp_misc_ints(SCTP_SORCV_BOTWHILE,
 				       so->so_rcv.sb_cc,
-				       0,
+				       control->length,
 				       0,
 				       0);
 #endif
