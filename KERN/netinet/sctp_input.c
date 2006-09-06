@@ -671,7 +671,7 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 		/* With a normal shutdown 
 		 * we assume the end of last record.
 		 */
-		stcb->asoc.control_pdapi.end_added = 1;
+		stcb->asoc.control_pdapi->end_added = 1;
 		stcb->asoc.control_pdapi = NULL;
 	}
 #ifdef SCTP_DEBUG
@@ -730,7 +730,7 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
 		/* With a normal shutdown 
 		 * we assume the end of last record.
 		 */
-		stcb->asoc.control_pdapi.end_added = 1;
+		stcb->asoc.control_pdapi->end_added = 1;
 		stcb->asoc.control_pdapi = NULL;
 	}
 	/* are the queues empty? */
