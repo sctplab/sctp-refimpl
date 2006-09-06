@@ -277,44 +277,40 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 
 
 #define sctp_sbfree(ctl, stcb, sb, m) { \
-        if((sb)->sb_cc >= (m)->m_len) { \
-  	   atomic_subtract_int(&(sb)->sb_cc,(m)->m_len); \
-        } else { \
-           (sb)->sb_cc = 0; \
+        uint32_t val; \
+        val = atomic_fetchadd_int(&(sb)->sb_cc,-((m)->m_len)); \
+        if(val < (m)->m_len) { \
+           panic("sb_cc goes negative"); \
+        } \
+        val = atomic_fetchadd_int(&(sb)->sb_mbcnt,-(MSIZE)); \
+        if(val < MSIZE) { \
+            panic("sb_mbcnt goes negative"); \
+        } \
+        if ((m)->m_flags & M_EXT) { \
+                val = atomic_fetchadd_int(&(sb)->sb_mbcnt,-((m)->m_ext.ext_size)); \
+		if(val < (m)->m_ext.ext_size) { \
+                    panic("sb_mbcnt goes negative2"); \
+                } \
         } \
         if (((ctl)->do_not_ref_stcb == 0) && stcb) {\
-          if((stcb)->asoc.sb_cc >= (m)->m_len) {\
-             atomic_subtract_int(&(stcb)->asoc.sb_cc,(m)->m_len); \
-          } else {\
-             (stcb)->asoc.sb_cc = 0; \
+          val = atomic_fetchadd_int(&(stcb)->asoc.sb_cc,-((m)->m_len)); \
+          if(val < (m)->m_len) {\
+             panic("stcb->sb_cc goes negative"); \
           } \
-          if((stcb)->asoc.sb_mbcnt >= MSIZE) { \
-             atomic_subtract_int(&(stcb)->asoc.sb_mbcnt,MSIZE); \
+          val = atomic_fetchadd_int(&(stcb)->asoc.sb_mbcnt,-(MSIZE)); \
+          if(val < MSIZE) { \
+             panic("asoc->mbcnt goes negative"); \
           } \
 	  if ((m)->m_flags & M_EXT) { \
-		if((stcb)->asoc.sb_mbcnt >= (m)->m_ext.ext_size) { \
-		   atomic_subtract_int(&(stcb)->asoc.sb_mbcnt,(m)->m_ext.ext_size); \
-                } else { \
+                val = atomic_fetchadd_int(&(stcb)->asoc.sb_mbcnt,-((m)->m_ext.ext_size)); \
+		if(val < (m)->m_ext.ext_size) { \
 		   panic("assoc stcb->mbcnt would go negative"); \
-		   (stcb)->asoc.sb_mbcnt = 0; \
                 } \
           } \
         } \
 	if ((m)->m_type != MT_DATA && (m)->m_type != MT_HEADER && \
 	    (m)->m_type != MT_OOBDATA) \
 		atomic_subtract_int(&(sb)->sb_ctl,(m)->m_len); \
-        if((sb)->sb_mbcnt >= MSIZE) { \
-           atomic_subtract_int(&(sb)->sb_mbcnt,MSIZE); \
- 	   if ((m)->m_flags & M_EXT) { \
-		if((sb)->sb_mbcnt >= (m)->m_ext.ext_size) { \
-		   atomic_subtract_int(&(sb)->sb_mbcnt,(m)->m_ext.ext_size); \
-                } else { \
-		   (sb)->sb_mbcnt = 0; \
-                } \
-            } \
-        } else { \
-            (sb)->sb_mbcnt = 0; \
-        } \
 }
 
 
