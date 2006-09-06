@@ -5327,6 +5327,7 @@ get_more_data:
 		 */
 		if (((stcb) && (in_flags & MSG_PEEK) == 0) &&
 		    ((freed_so_far >= rwnd_req) &&
+		     (control->do_not_ref_stcb == 0) &&
 		     (no_rcv_needed == 0))) {
 			sctp_user_rcvd(stcb, &freed_so_far, hold_rlock, rwnd_req);
 		}
@@ -5587,6 +5588,7 @@ get_more_data2:
 					if (stcb) {
 						atomic_subtract_int(&stcb->asoc.sb_cc,cp_len);
 						if((freed_so_far >= rwnd_req) &&
+						   (control->do_not_ref_stcb == 0) &&
 						   (no_rcv_needed == 0))
 							sctp_user_rcvd(stcb, &freed_so_far, hold_rlock, rwnd_req);
 				        }
@@ -5633,6 +5635,7 @@ release_unlocked:
 	}
 	if ((stcb) && (in_flags & MSG_PEEK) == 0) {
 		if ((freed_so_far >= rwnd_req) &&
+		    (control->do_not_ref_stcb == 0) &&
 		    (no_rcv_needed == 0))
 			sctp_user_rcvd(stcb, &freed_so_far, hold_rlock, rwnd_req);
 	}
