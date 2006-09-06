@@ -5115,17 +5115,17 @@ get_more_data:
 					    control->do_not_ref_stcb?NULL:stcb, SCTP_LOG_SBRESULT, 0);
 #endif
 					embuf = m;
-					alen = control->length;
-					if (alen < (uint32_t) cp_len) {
-#ifdef INVARIENTS
-						panic("Impossible length");
-#else
-						cp_len = alen;
-#endif
-					}
 					copied_so_far += cp_len;
 					freed_so_far += cp_len;
+#ifdef __FreeBSD__
+					alen = atomic_fetch_add_int(&control->length, -(cp_len));
+					if(alen < cp_len) {
+						panic("Control length goes negative?");
+					}
+#else
 					atomic_subtract_int(&control->length, cp_len);
+#endif
+
 #ifdef SCTP_RECV_DETAIL_RWND_LOGGING
 					sctp_misc_ints(SCTP_SORCV_PASSBF,
 						       so->so_rcv.sb_cc,
@@ -5194,15 +5194,14 @@ get_more_data:
 					sctp_sblog(&so->so_rcv, control->do_not_ref_stcb?NULL:stcb,
 					    SCTP_LOG_SBRESULT, 0);
 #endif
-					alen = control->length;
-					if (alen < (uint32_t) cp_len) {
-#ifdef INVARIENTS
-						panic("Impossible length");
-#else
-						cp_len = alen;
-#endif
+#ifdef __FreeBSD__
+					alen = atomic_fetch_add_int(&control->length, -(cp_len));
+					if(alen < cp_len) {
+						panic("Control length goes negative2?");
 					}
-					atomic_subtract_int(&control->length,cp_len);
+#else
+					atomic_subtract_int(&control->length, cp_len);
+#endif
 				} else {
 					copied_so_far += cp_len;
 				}
