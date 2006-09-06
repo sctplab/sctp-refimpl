@@ -452,8 +452,8 @@ main(int argc, char **argv)
 				"Clear to purge asoc",
 				"Association now purged",
 				"INPCB allocate",
-				"sctp_close() can shutdown",
 				"sctp_close() must abort",
+				"sctp_close() can shutdown",
 				"close from attach",
 				"close from abort",
 				"sctp_close() called",
@@ -737,14 +737,14 @@ main(int argc, char **argv)
 				}
 			} else if (log.from == SCTP_SORECV_BLOCKSA) {
 				if(!graph_mode) {
-					printf("%s Enter and block sb_cc:%d reading:%d\n",
+					printf("%s Enter and block sb_cc:%u reading:%d\n",
 					       ts,
 					       log.x.misc.log3,
 					       log.x.misc.log4);
 				}
 			} else if (log.from == SCTP_SORECV_BLOCKSB) {
 				if(!graph_mode) {
-					printf("%s Blocking freed:%d rwnd:%d sb_cc:%d reading:%d\n",
+					printf("%s Blocking freed:%d rwnd:%d sb_cc:%u reading:%d\n",
 					       ts,
 					       log.x.misc.log1,
 					       log.x.misc.log2,
@@ -755,7 +755,7 @@ main(int argc, char **argv)
 				if(graph_mode) {
 					printf("%s %d:EXIT\n", ts, log.x.misc.log4);
 				} else {
-					printf("%s freed_so_far_at_exit:%d last_rep rwnd::%d rwnd:%d sb_cc:%d\n",
+					printf("%s freed_so_far_at_exit:%d last_rep rwnd::%d rwnd:%d sb_cc:%u\n",
 					       ts,
 					       log.x.misc.log1,
 					       log.x.misc.log2,
@@ -766,7 +766,7 @@ main(int argc, char **argv)
 				if(graph_mode) {
 					printf("%s %d:ENTER\n", ts, log.x.misc.log3);
 				} else {
-					printf("%s enter srcv rwndreq:%d ieeor:%d sb_cc:%d uioreq:%d \n",
+					printf("%s enter srcv rwndreq:%d ieeor:%d sb_cc:%u uioreq:%d \n",
 					       ts,
 					       log.x.misc.log1,
 					       log.x.misc.log2,
@@ -777,7 +777,7 @@ main(int argc, char **argv)
 				if(graph_mode) {
 					printf("%s %d:READ\n", ts, log.x.misc.log3);
 				} else {
-					printf("%s pass_lock rwndreq:%d canblk:%d sb_cc:%d uioreq:%d \n",
+					printf("%s pass_lock rwndreq:%d canblk:%d sb_cc:%u uioreq:%d \n",
 					       ts,
 					       log.x.misc.log1,
 					       log.x.misc.log2,
@@ -786,20 +786,20 @@ main(int argc, char **argv)
 				}
 			} else if (log.from == SCTP_SORCV_FREECTL) {
 				if(!graph_mode) {
-					printf("%s free control sb_cc:%d\n",
+					printf("%s free control sb_cc:%u\n",
 					       ts,
 					       log.x.misc.log1);
 				}
 			} else if (log.from == SCTP_SORCV_DOESCPY) {				
 				if(!graph_mode) {
-					printf("%s copied data of %d  sb_cc:%d\n",
+					printf("%s copied data of %d  sb_cc:%u\n",
 					       ts,
 					       log.x.misc.log2,
 					       log.x.misc.log1);
 				}
 			} else if (log.from == SCTP_SORCV_DOESLCK) {
 				if(!graph_mode) {
-					printf("%s Does the lock cp:%d mlen:%d  sb_cc:%d\n",
+					printf("%s Does the lock cp:%d mlen:%d  sb_cc:%u\n",
 					       ts,
 					       log.x.misc.log2,
 					       log.x.misc.log3,
@@ -807,29 +807,36 @@ main(int argc, char **argv)
 				}
 			} else if (log.from == SCTP_SORCV_DOESADJ) {
 				if(!graph_mode) {
-					printf("%s Does adjust sb_cc:%d\n",
+					printf("%s Does adjust sb_cc:%u ctl->len:%d cp_len:%d\n",
 					       ts,
-					       log.x.misc.log1);
+					       log.x.misc.log1,
+					       log.x.misc.log2,
+					       log.x.misc.log3
+					       );
 				}
 			} else if (log.from == SCTP_SORCV_PASSBF) {
 				if(!graph_mode) {
-					printf("%s Past sb_subtract  sb_cc:%d\n",
+					printf("%s Past sb_subtract  sb_cc:%u ctl->len:%d\n",
 					       ts,
-					       log.x.misc.log1);
+					       log.x.misc.log1,
+					       log.x.misc.log2);
 				}
 
 			} else if (log.from == SCTP_SORCV_ADJD) {
 				if(!graph_mode) {
-					printf("%s Adjusts done  sb_cc:%d\n",
+					printf("%s Adjusts done  sb_cc:%u ctl->len:%d\n",
 					       ts,
-					       log.x.misc.log1);
+					       log.x.misc.log1,
+					       log.x.misc.log2
+					       );
 				}
 
 			} else if (log.from == SCTP_SORCV_BOTWHILE) {
 				if(!graph_mode) {
-					printf("%s Bottom while sb_cc:%d\n",
+					printf("%s Bottom while sb_cc:%u ctl->len:%d\n",
 					       ts,
-					       log.x.misc.log1);
+					       log.x.misc.log1,
+					       log.x.misc.log2);
 				}
 			} else if (log.from == SCTP_SACK_RWND_UPDATE) {
 				if(comma_sep) {
