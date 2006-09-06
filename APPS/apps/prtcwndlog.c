@@ -820,6 +820,10 @@ main(int argc, char **argv)
 					       ts,
 					       log.x.misc.log1,
 					       log.x.misc.log2);
+				} else {
+					printf("%s %d READ\n",
+					       ts,
+					       log.x.misc.log1);
 				}
 
 			} else if (log.from == SCTP_SORCV_ADJD) {
