@@ -4268,7 +4268,7 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 	 * is populated in the outbound sinfo structure from the true cumack
 	 * if the association exists...
 	 */
-	control->sinfo_cumtsn = new_cumack;
+	control->sinfo_tsn = control->sinfo_cumtsn = new_cumack;
 	if (inp) {
 		SCTP_INP_READ_UNLOCK(inp);
 	}
