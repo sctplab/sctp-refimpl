@@ -1816,6 +1816,9 @@ failed_express_del:
 			}
 			control = NULL;
 			goto finish_express_del;
+		} else {
+			printf("tsn did not match expected %x got %x\n",
+			       (uint)(control->sinfo_tsn + 1), (uint)tsn);
 		}
 	}
  failed_pdapi_express_del:
