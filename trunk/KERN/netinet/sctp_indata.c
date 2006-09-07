@@ -1818,7 +1818,8 @@ failed_express_del:
 			goto finish_express_del;
 		} else {
 			printf("tsn did not match expected %x got %x\n",
-			       (uint)(control->sinfo_tsn + 1), (uint)tsn);
+			       (unsigned int)(control->sinfo_tsn + 1), 
+			       (unsigned int)tsn);
 		}
 	}
  failed_pdapi_express_del:
