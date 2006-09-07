@@ -1793,7 +1793,7 @@ failed_express_del:
 				cumack = tsn;
 
 			if(sctp_append_to_readq(stcb->sctp_ep, stcb, control, dmbuf, end, 
-					     cumack,
+						tsn,
 						&stcb->sctp_socket->so_rcv)) {
 				printf("Append fails end:%d\n", end);
 				goto failed_pdapi_express_del;
@@ -1816,10 +1816,6 @@ failed_express_del:
 			}
 			control = NULL;
 			goto finish_express_del;
-		} else {
-			printf("tsn did not match expected %x got %x\n",
-			       (unsigned int)(control->sinfo_tsn + 1), 
-			       (unsigned int)tsn);
 		}
 	}
  failed_pdapi_express_del:
