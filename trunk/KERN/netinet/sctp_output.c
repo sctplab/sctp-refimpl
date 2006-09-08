@@ -9852,7 +9852,7 @@ sctp_send_sack(struct sctp_tcb *stcb)
 			return;
 		}
 		a_chk->rec.chunk_id.id = SCTP_SELECTIVE_ACK;
-		chk->rec.chunk_id.can_take_data = 1;
+		a_chk->rec.chunk_id.can_take_data = 1;
 	}
 	a_chk->asoc = asoc;
 	a_chk->snd_count = 0;
