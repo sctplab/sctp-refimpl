@@ -4134,7 +4134,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 					sq->held_length = 0;
 					if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_PDAPIEVNT)) {
 						/* need to change to PD-API aborted */
-						printf("Doing PDAPI thing\n");
 						stcb->asoc.control_pdapi = sq;
 						sctp_notify_partial_delivery_indication(stcb,
 											SCTP_PARTIAL_DELIVERY_ABORTED, 1);
@@ -4346,10 +4345,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		SCTP_DECR_CHK_COUNT();
 		atomic_subtract_int(&sctppcbinfo.ipi_free_chunks, 1);
 		asoc->free_chunk_cnt--;
-		printf("at freeasoc - chk:%x tot-chk free count:%d free_cc:%d\n",
-		       (u_int)chk,
-		       sctppcbinfo.ipi_free_chunks,
-		       asoc->free_chunk_cnt);
 		chk = TAILQ_FIRST(&asoc->free_chunks);
 	}
 	/* pending send queue SHOULD be empty */
@@ -4365,8 +4360,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			sctp_free_remote_addr(chk->whoTo);
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
 			SCTP_DECR_CHK_COUNT();
-			printf("Freeing send queue chk:%x cnt:%d\n",
-			       (u_int)chk, sctppcbinfo.ipi_count_chunk);
 			chk = TAILQ_FIRST(&asoc->send_queue);
 		}
 	}
@@ -4389,8 +4382,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			sctp_free_remote_addr(chk->whoTo);
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
 			SCTP_DECR_CHK_COUNT();
-			printf("Freeing sent queue chk:%x cnt:%d\n",
-			       (u_int)chk, sctppcbinfo.ipi_count_chunk);
 			chk = TAILQ_FIRST(&asoc->sent_queue);
 		}
 	}
@@ -4413,8 +4404,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			sctp_free_remote_addr(chk->whoTo);
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
 			SCTP_DECR_CHK_COUNT();
-			printf("Freeing sent queue chk:%x cnt:%d\n",
-			       (u_int)chk, sctppcbinfo.ipi_count_chunk);
 			chk = TAILQ_FIRST(&asoc->control_send_queue);
 		}
 	}
@@ -4436,8 +4425,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			ccnt++;
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
 			SCTP_DECR_CHK_COUNT();
-			printf("Freeing sent queue chk:%x cnt:%d\n",
-			       (u_int)chk, sctppcbinfo.ipi_count_chunk);
 			chk = TAILQ_FIRST(&asoc->reasmqueue);
 		}
 	}
@@ -4447,8 +4434,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
   ccnt = 0;
   }
 */
-	printf("Done with chunk frees, left up %d\n",
-	       sctppcbinfo.ipi_count_chunk);
 	if (asoc->mapping_array) {
 		FREE(asoc->mapping_array, M_PCB);
 		asoc->mapping_array = NULL;
