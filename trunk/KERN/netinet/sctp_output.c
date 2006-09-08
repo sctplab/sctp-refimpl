@@ -6883,7 +6883,7 @@ sctp_sendall(struct sctp_inpcb *inp, struct uio *uio, struct mbuf *m,
 
 
 void
-sctp_toss_old_cookies(struct sctp_association *asoc)
+sctp_toss_old_cookies(struct sctp_tcb *stcb, struct sctp_association *asoc)
 {
 	struct sctp_tmit_chunk *chk, *nchk;
 
@@ -6899,8 +6899,7 @@ sctp_toss_old_cookies(struct sctp_association *asoc)
 			asoc->ctrl_queue_cnt--;
 			if (chk->whoTo)
 				sctp_free_remote_addr(chk->whoTo);
-			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-			SCTP_DECR_CHK_COUNT();
+			sctp_free_a_chunk(stcb, chk);
 		}
 		chk = nchk;
 	}
@@ -6927,8 +6926,7 @@ sctp_toss_old_asconf(struct sctp_tcb *stcb)
 			asoc->ctrl_queue_cnt--;
 			if (chk->whoTo)
 				sctp_free_remote_addr(chk->whoTo);
-			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-			SCTP_DECR_CHK_COUNT();
+			sctp_free_a_chunk(stcb, chk);
 		}
 	}
 }
@@ -7026,7 +7024,7 @@ all_done:
 }
 
 static void
-sctp_clean_up_ctl(struct sctp_association *asoc)
+sctp_clean_up_ctl(struct sctp_tcb *stcb, struct sctp_association *asoc)
 {
 	struct sctp_tmit_chunk *chk, *nchk;
 
@@ -7052,8 +7050,7 @@ sctp_clean_up_ctl(struct sctp_association *asoc)
 			}
 			asoc->ctrl_queue_cnt--;
 			sctp_free_remote_addr(chk->whoTo);
-			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-			SCTP_DECR_CHK_COUNT();
+			sctp_free_a_chunk(stcb, chk);
 		} else if (chk->rec.chunk_id == SCTP_STREAM_RESET) {
 			/* special handling, we must look into the param */
 			if (chk != asoc->str_reset) {
@@ -7174,14 +7171,13 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		}
 	}
 	/* If we reach here, we can copy out a chunk */
-        chk = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk);
+        sctp_alloc_a_chunk(stcb, chk);
 	if (chk == NULL) {
 		/* No chunk memory */
 	out_gu:
 		*giveup = 1;
 		return(0);
 	}
-	SCTP_INCR_CHK_COUNT();
 	/* clear it */
 	memset(chk, sizeof(*chk), 0);
 	chk->rec.data.rcv_flags = rcv_flags;
@@ -7197,8 +7193,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		chk->data = m_copym(sp->data, 0, to_move, M_DONTWAIT);
 		chk->last_mbuf = NULL;
 		if(chk->data == NULL) {
-			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-			SCTP_DECR_CHK_COUNT();
+			sctp_free_a_chunk(stcb, chk);
 			goto out_gu;
 		}
 		/* Pull off the data */
@@ -7245,8 +7240,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	M_PREPEND(chk->data, sizeof(struct sctp_data_chunk), M_DONTWAIT);
 	if (chk->data == NULL) {
 		/* HELP */
-		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-		SCTP_DECR_CHK_COUNT();
+		sctp_free_a_chunk(stcb, chk);
 		goto out_gu;
 	}
 	chk->book_size = chk->send_size = (to_move + sizeof(struct sctp_data_chunk));
@@ -7989,7 +7983,7 @@ again_one_more_time:
 #endif
 							sctp_move_to_an_alt(stcb, asoc, net);
 						}
-						sctp_clean_up_ctl(asoc);
+						sctp_clean_up_ctl(stcb, asoc);
 						return (error);
 					} else
 						asoc->ifp_had_enobuf = 0;
@@ -8289,7 +8283,7 @@ again_one_more_time:
 #endif
 					sctp_move_to_an_alt(stcb, asoc, net);
 				}
-				sctp_clean_up_ctl(asoc);
+				sctp_clean_up_ctl(stcb, asoc);
 				return (error);
 			} else {
 				asoc->ifp_had_enobuf = 0;
@@ -8362,7 +8356,7 @@ again_one_more_time:
 	if ((*num_out == 0) && (*reason_code == 0)) {
 		*reason_code = 3;
 	}
-	sctp_clean_up_ctl(asoc);
+	sctp_clean_up_ctl(stcb, asoc);
 	return (0);
 }
 
@@ -8378,17 +8372,15 @@ sctp_queue_op_err(struct sctp_tcb *stcb, struct mbuf *op_err)
 	struct mbuf *mat;
 
 	SCTP_TCB_LOCK_ASSERT(stcb);
-	chk = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk);
+	sctp_alloc_a_chunk(stcb, chk);
 	if (chk == NULL) {
 		/* no memory */
 		sctp_m_freem(op_err);
 		return;
 	}
-	SCTP_INCR_CHK_COUNT();
 	M_PREPEND(op_err, sizeof(struct sctp_chunkhdr), M_DONTWAIT);
 	if (op_err == NULL) {
-		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-		SCTP_DECR_CHK_COUNT();
+		sctp_free_a_chunk(stcb, chk);
 		return;
 	}
 	chk->send_size = 0;
@@ -8485,13 +8477,12 @@ sctp_send_cookie_echo(struct mbuf *m,
 	}
 	cookie->m_pkthdr.len = plen;
 	/* get the chunk stuff now and place it in the FRONT of the queue */
-	chk = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk);
+	sctp_alloc_a_chunk(stcb, chk);
 	if (chk == NULL) {
 		/* no memory */
 		sctp_m_freem(cookie);
 		return (-5);
 	}
-	SCTP_INCR_CHK_COUNT();
 	chk->send_size = cookie->m_pkthdr.len;
 	chk->rec.chunk_id = SCTP_COOKIE_ECHO;
 	chk->sent = SCTP_DATAGRAM_UNSENT;
@@ -8556,13 +8547,12 @@ sctp_send_heartbeat_ack(struct sctp_tcb *stcb,
 		m_copyback(outchain, outchain->m_pkthdr.len, padlen,
 		    (caddr_t)&cpthis);
 	}
-	chk = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk);
+	sctp_alloc_a_chunk(stcb, chk);
 	if (chk == NULL) {
 		/* no memory */
 		sctp_m_freem(outchain);
 		return;
 	}
-	SCTP_INCR_CHK_COUNT();
 	chk->send_size = chk_length;
 	chk->rec.chunk_id = SCTP_HEARTBEAT_ACK;
 	chk->sent = SCTP_DATAGRAM_UNSENT;
@@ -8593,13 +8583,12 @@ sctp_send_cookie_ack(struct sctp_tcb *stcb)
 		return (-1);
 	}
 	cookie_ack->m_data += SCTP_MIN_OVERHEAD;
-	chk = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk);
+	sctp_alloc_a_chunk(stcb, chk);
 	if (chk == NULL) {
 		/* no memory */
 		sctp_m_freem(cookie_ack);
 		return (-1);
 	}
-	SCTP_INCR_CHK_COUNT();
 
 	chk->send_size = sizeof(struct sctp_chunkhdr);
 	chk->rec.chunk_id = SCTP_COOKIE_ACK;
@@ -8640,13 +8629,13 @@ sctp_send_shutdown_ack(struct sctp_tcb *stcb, struct sctp_nets *net)
 		return (-1);
 	}
 	m_shutdown_ack->m_data += SCTP_MIN_OVERHEAD;
-	chk = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk);
+	sctp_alloc_a_chunk(stcb, chk);
 	if (chk == NULL) {
 		/* no memory */
 		sctp_m_freem(m_shutdown_ack);
 		return (-1);
 	}
-	SCTP_INCR_CHK_COUNT();
+
 
 	chk->send_size = sizeof(struct sctp_chunkhdr);
 	chk->rec.chunk_id = SCTP_SHUTDOWN_ACK;
@@ -8683,13 +8672,12 @@ sctp_send_shutdown(struct sctp_tcb *stcb, struct sctp_nets *net)
 		return (-1);
 	}
 	m_shutdown->m_data += SCTP_MIN_OVERHEAD;
-	chk = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk);
+	sctp_alloc_a_chunk(stcb, chk);
 	if (chk == NULL) {
 		/* no memory */
 		sctp_m_freem(m_shutdown);
 		return (-1);
 	}
-	SCTP_INCR_CHK_COUNT();
 
 	chk->send_size = sizeof(struct sctp_shutdown_chunk);
 	chk->rec.chunk_id = SCTP_SHUTDOWN;
@@ -8732,13 +8720,12 @@ sctp_send_asconf(struct sctp_tcb *stcb, struct sctp_nets *net)
 		return (-1);
 	}
 	acp = mtod(m_asconf, struct sctp_asconf_chunk *);
-	chk = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk);
+	sctp_alloc_a_chunk(stcb, chk);
 	if (chk == NULL) {
 		/* no memory */
 		sctp_m_freem(m_asconf);
 		return (-1);
 	}
-	SCTP_INCR_CHK_COUNT();
 
 	chk->data = m_asconf;
 	chk->send_size = m_asconf->m_pkthdr.len;
@@ -8789,14 +8776,13 @@ sctp_send_asconf_ack(struct sctp_tcb *stcb, uint32_t retrans)
 
 		return (-1);
 	}
-	chk = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk);
+	sctp_alloc_a_chunk(stcb, chk);
 	if (chk == NULL) {
 		/* no memory */
 		if (m_ack)
 			sctp_m_freem(m_ack);
 		return (-1);
 	}
-	SCTP_INCR_CHK_COUNT();
 
 	/* figure out where it goes to */
 	if (retrans) {
@@ -8975,7 +8961,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 			return (0);
 		} else {
 			/* Clean up the fwd-tsn list */
-			sctp_clean_up_ctl(asoc);
+			sctp_clean_up_ctl(stcb, asoc);
 			return (0);
 		}
 	}
@@ -9665,18 +9651,16 @@ send_forward_tsn(struct sctp_tcb *stcb,
 		}
 	}
 	/* Ok if we reach here we must build one */
-	chk = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk);
+	sctp_alloc_a_chunk(stcb, chk);
 	if (chk == NULL) {
 		return;
 	}
-	SCTP_INCR_CHK_COUNT();
 	chk->rec.chunk_id = SCTP_FORWARD_CUM_TSN;
 	chk->asoc = asoc;
 	chk->data = sctp_get_mbuf_for_msg(MCLBYTES, 1, M_DONTWAIT, 1, MT_DATA);
 	if (chk->data == NULL) {
 		atomic_subtract_int(&chk->whoTo->ref_count, 1);
-		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-		SCTP_DECR_CHK_COUNT();
+		sctp_free_a_chunk(stcb, chk);
 		return;
 	}
 	chk->data->m_data += SCTP_MIN_OVERHEAD;
@@ -9841,7 +9825,7 @@ sctp_send_sack(struct sctp_tcb *stcb)
 		}
 	}
 	if (a_chk == NULL) {
-		a_chk = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk);
+		sctp_alloc_a_chunk(stcb, chk);
 		if (a_chk == NULL) {
 			/* No memory so we drop the idea, and set a timer */
 			sctp_timer_stop(SCTP_TIMER_TYPE_RECV,
@@ -9850,7 +9834,6 @@ sctp_send_sack(struct sctp_tcb *stcb)
 			    stcb->sctp_ep, stcb, NULL);
 			return;
 		}
-		SCTP_INCR_CHK_COUNT();
 		a_chk->rec.chunk_id = SCTP_SELECTIVE_ACK;
 	}
 	a_chk->asoc = asoc;
@@ -9907,8 +9890,7 @@ sctp_send_sack(struct sctp_tcb *stcb)
 			a_chk->data = NULL;
 		}
 		atomic_subtract_int(&a_chk->whoTo->ref_count, 1);
-		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, a_chk);
-		SCTP_DECR_CHK_COUNT();
+		sctp_free_a_chunk(stcb, chk);
 		sctp_timer_stop(SCTP_TIMER_TYPE_RECV,
 		    stcb->sctp_ep, stcb, NULL);
 		sctp_timer_start(SCTP_TIMER_TYPE_RECV,
@@ -10445,7 +10427,7 @@ sctp_send_hb(struct sctp_tcb *stcb, int user_req, struct sctp_nets *u_net)
 			return (0);
 		}
 	}
-	chk = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk);
+	sctp_alloc_a_chunk(stcb, chk);
 	if (chk == NULL) {
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
@@ -10454,15 +10436,13 @@ sctp_send_hb(struct sctp_tcb *stcb, int user_req, struct sctp_nets *u_net)
 #endif
 		return (0);
 	}
-	SCTP_INCR_CHK_COUNT();
 	chk->rec.chunk_id = SCTP_HEARTBEAT_REQUEST;
 	chk->asoc = &stcb->asoc;
 	chk->send_size = sizeof(struct sctp_heartbeat_chunk);
 
 	chk->data = sctp_get_mbuf_for_msg(chk->send_size, 1, M_DONTWAIT, 1, MT_HEADER);
 	if (chk->data == NULL) {
-		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-		SCTP_DECR_CHK_COUNT();
+		sctp_free_a_chunk(stcb, chk);
 		return (0);
 	}
 	chk->data->m_data += SCTP_MIN_OVERHEAD;
@@ -10530,8 +10510,7 @@ sctp_send_hb(struct sctp_tcb *stcb, int user_req, struct sctp_nets *u_net)
 				sctp_m_freem(chk->data);
 				chk->data = NULL;
 			}
-			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-			SCTP_DECR_CHK_COUNT();
+			sctp_free_a_chunk(stcb, chk);
 			return (-1);
 		}
 	}
@@ -10571,19 +10550,17 @@ sctp_send_ecn_echo(struct sctp_tcb *stcb, struct sctp_nets *net,
 		}
 	}
 	/* nope could not find one to update so we must build one */
-	chk = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk);
+	sctp_alloc_a_chunk(stcb, chk);
 	if (chk == NULL) {
 		return;
 	}
 	SCTP_STAT_INCR(sctps_sendecne);
-	SCTP_INCR_CHK_COUNT();
 	chk->rec.chunk_id = SCTP_ECN_ECHO;
 	chk->asoc = &stcb->asoc;
 	chk->send_size = sizeof(struct sctp_ecne_chunk);
 	chk->data = sctp_get_mbuf_for_msg(chk->send_size, 1, M_DONTWAIT, 1, MT_HEADER);
 	if (chk->data == NULL) {
-		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-		SCTP_DECR_CHK_COUNT();
+		sctp_free_a_chunk(stcb, chk);
 		return;
 	}
 	chk->data->m_data += SCTP_MIN_OVERHEAD;
@@ -10627,11 +10604,10 @@ sctp_send_packet_dropped(struct sctp_tcb *stcb, struct sctp_nets *net,
 	if(stcb->sctp_socket == NULL) {
 		return;
 	}
-	chk = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk);
+	sctp_alloc_a_chunk(stcb, chk);
 	if (chk == NULL) {
 		return;
 	}
-	SCTP_INCR_CHK_COUNT();
 	iph = mtod(m, struct ip *);
 	if (iph == NULL) {
 		return;
@@ -10658,8 +10634,7 @@ sctp_send_packet_dropped(struct sctp_tcb *stcb, struct sctp_nets *net,
 	chk->data = sctp_get_mbuf_for_msg(MCLBYTES, 1, M_DONTWAIT, 1, MT_DATA);
 	if (chk->data == NULL) {
 jump_out:
-		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-		SCTP_DECR_CHK_COUNT();
+		sctp_free_a_chunk(stcb, chk);
 		return;
 	}
 	chk->data->m_data += SCTP_MIN_OVERHEAD;
@@ -10750,18 +10725,16 @@ sctp_send_cwr(struct sctp_tcb *stcb, struct sctp_nets *net, uint32_t high_tsn)
 		}
 	}
 	/* nope could not find one to update so we must build one */
-	chk = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk);
+	sctp_alloc_a_chunk(stcb, chk);
 	if (chk == NULL) {
 		return;
 	}
-	SCTP_INCR_CHK_COUNT();
 	chk->rec.chunk_id = SCTP_ECN_CWR;
 	chk->asoc = &stcb->asoc;
 	chk->send_size = sizeof(struct sctp_cwr_chunk);
 	chk->data = sctp_get_mbuf_for_msg(chk->send_size, 1, M_DONTWAIT, 1, MT_HEADER);
 	if (chk->data == NULL) {
-		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-		SCTP_DECR_CHK_COUNT();
+		sctp_free_a_chunk(stcb, chk);
 		return;
 	}
 	chk->data->m_data += SCTP_MIN_OVERHEAD;
@@ -10990,19 +10963,18 @@ sctp_send_str_reset_req(struct sctp_tcb *stcb,
 		/* error, can't do that */
 		return (EINVAL);
 	}
-	chk = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk);
+	sctp_alloc_a_chunk(stcb, chk);
 	if (chk == NULL) {
 		return (ENOMEM);
 	}
-	SCTP_INCR_CHK_COUNT();
+
 	chk->rec.chunk_id = SCTP_STREAM_RESET;
 	chk->asoc = &stcb->asoc;
 	chk->book_size = SCTP_SIZE32(chk->send_size = sizeof(struct sctp_chunkhdr));
 
 	chk->data = sctp_get_mbuf_for_msg(MCLBYTES, 1, M_DONTWAIT, 1, MT_DATA);
 	if (chk->data == NULL) {
-		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-		SCTP_DECR_CHK_COUNT();
+		sctp_free_a_chunk(stcb, chk);
 		return (ENOMEM);
 	}
 	chk->data->m_data += SCTP_MIN_OVERHEAD;

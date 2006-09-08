@@ -837,6 +837,18 @@ __FBSDID("$FreeBSD:$");
  */
 #define SCTP_TIME_WAIT 480
 
+/* The system retains a cache of free chunks such to 
+ * cut down on calls the memory allocation system. There
+ * is a per association limit of free items and a overall
+ * system limit. If either one gets hit then the resource
+ * stops being cached.
+ */
+
+#define SCTP_DEF_ASOC_RESC_LIMIT 10
+#define SCTP_DEF_SYSTEM_RESC_LIMIT 1000
+
+
+
 #define IN4_ISPRIVATE_ADDRESS(a) \
    ((((u_char *)&(a)->s_addr)[0] == 10) || \
     ((((u_char *)&(a)->s_addr)[0] == 172) && \

@@ -2431,7 +2431,7 @@ sctp_handle_cookie_ack(struct sctp_cookie_ack_chunk *cp,
 		}
 	}
 	/* Toss the cookie if I can */
-	sctp_toss_old_cookies(asoc);
+	sctp_toss_old_cookies(stcb, asoc);
 	if (!TAILQ_EMPTY(&asoc->sent_queue)) {
 		/* Restart the timer if we have pending data */
 		struct sctp_tmit_chunk *chk;
@@ -2548,8 +2548,7 @@ sctp_handle_ecn_cwr(struct sctp_cwr_chunk *cp, struct sctp_tcb *stcb)
 			}
 			stcb->asoc.ctrl_queue_cnt--;
 			sctp_free_remote_addr(chk->whoTo);
-			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-			SCTP_DECR_CHK_COUNT();
+			sctp_free_a_chunk(stcb, chk);
 			break;
 		}
 	}
@@ -2963,8 +2962,8 @@ sctp_clean_up_stream_reset(struct sctp_tcb *stcb)
 	}
 	asoc->ctrl_queue_cnt--;
 	sctp_free_remote_addr(chk->whoTo);
-	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-	SCTP_DECR_CHK_COUNT();
+
+	sctp_free_a_chunk(stcb, chk);
 	stcb->asoc.str_reset = NULL;
 }
 
@@ -3292,11 +3291,10 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_out_req
 	int num_param = 0;
 
 	/* setup for adding the response */
-	chk = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk);
+	sctp_alloc_a_chunk(stcb, chk);
 	if (chk == NULL) {
 		return (ret_code);
 	}
-	SCTP_INCR_CHK_COUNT();
 	chk->rec.chunk_id = SCTP_STREAM_RESET;
 	chk->asoc = &stcb->asoc;
 	chk->no_fr_allowed = 0;
@@ -3308,8 +3306,7 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_out_req
 			sctp_m_freem(chk->data);
 			chk->data = NULL;
 		}
-		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-		SCTP_DECR_CHK_COUNT();
+		sctp_free_a_chunk(stcb, chk);
 		return (ret_code);
 	}
 	chk->data->m_data += SCTP_MIN_OVERHEAD;

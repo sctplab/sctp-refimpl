@@ -1188,6 +1188,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	asoc->max_init_times = m->sctp_ep.max_init_times;
 	asoc->max_send_times = m->sctp_ep.max_send_times;
 	asoc->def_net_failure = m->sctp_ep.def_net_failure;
+	asoc->free_chunk_cnt = 0;
 
 	asoc->iam_blocking = 0;
 	/* ECN Nonce initialization */
@@ -1307,6 +1308,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	}
 	memset(asoc->mapping_array, 0, asoc->mapping_array_size);
 	/* Now the init of the other outqueues */
+	TAILQ_INIT(&asoc->free_chunks);
 	TAILQ_INIT(&asoc->out_wheel);
 	TAILQ_INIT(&asoc->control_send_queue);
 	TAILQ_INIT(&asoc->send_queue);
@@ -3613,8 +3615,7 @@ sctp_report_all_outbound(struct sctp_tcb *stcb)
 			if (chk->whoTo)
 				sctp_free_remote_addr(chk->whoTo);
 			chk->whoTo = NULL;
-			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-			SCTP_DECR_CHK_COUNT();
+			sctp_free_a_chunk(stcb, chk);
 			chk = TAILQ_FIRST(&asoc->send_queue);
 		}
 	}
@@ -3644,8 +3645,7 @@ sctp_report_all_outbound(struct sctp_tcb *stcb)
 			if (chk->whoTo)
 				sctp_free_remote_addr(chk->whoTo);
 			chk->whoTo = NULL;
-			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-			SCTP_DECR_CHK_COUNT();
+			sctp_free_a_chunk(stcb, chk);
 			chk = TAILQ_FIRST(&asoc->sent_queue);
 		}
 	}

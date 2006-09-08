@@ -4328,6 +4328,22 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		SCTP_DECR_READQ_COUNT();
 		sq = TAILQ_FIRST(&asoc->pending_reply_queue);
 	}
+
+	chk = TAILQ_FIRST(&asoc->free_chunks);
+	while (chk) {
+		TAILQ_REMOVE(&asoc->free_chunks, chk, sctp_next);
+		if (chk->data) {
+			sctp_m_freem(chk->data);
+			chk->data = NULL;
+		}
+		ccnt++;
+		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
+		SCTP_DECR_CHK_COUNT();
+		atomic_subtract_int(&sctppcbinfo.ipi_free_chunks, 1);
+		asoc->free_chunk_cnt--;
+		chk = TAILQ_FIRST(&asoc->free_chunks);
+	}
+
 	/* pending send queue SHOULD be empty */
 	if (!TAILQ_EMPTY(&asoc->send_queue)) {
 		chk = TAILQ_FIRST(&asoc->send_queue);
@@ -6029,8 +6045,7 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 				chk->data = NULL;
 			}
 			sctp_free_remote_addr(chk->whoTo);
-			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-			SCTP_DECR_CHK_COUNT();
+			sctp_free_a_chunk(stcb, chk);
 		}
 		chk = nchk;
 	}

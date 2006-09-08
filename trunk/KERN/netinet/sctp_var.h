@@ -256,6 +256,34 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 
 #define sctp_sbspace_sub(a,b) ((a > b) ? (a - b) : 0)
 
+extern uint32_t sctp_asoc_free_resc_limit;
+extern uint32_t sctp_system_free_resc_limit;
+
+#define sctp_free_a_chunk(_stcb, _chk) { \
+       if (((_stcb)->asoc.free_chunk_cnt > sctp_asoc_free_resc_limit) || \
+	   (sctppcbinfo.ipi_free_chunks > sctp_system_free_resc_limit)) { \
+		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, (_chk)); \
+		SCTP_DECR_CHK_COUNT(); \
+	   } else { \
+		TAILQ_INSERT_TAIL(&(_stcb)->asoc.free_chunks, (_chk), sctp_next); \
+                (_stcb)->asoc.free_chunk_cnt++; \
+                atomic_add_int(&sctppcbinfo.ipi_free_chunks, 1); \
+	   } \
+}
+
+#define sctp_alloc_a_chunk(_stcb, _chk) { \
+      if(TAILQ_EMPTY(&(_stcb)->asoc.free_chunks))  { \
+	(_chk) = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk); \
+	if ((_chk)) { \
+ 	     SCTP_INCR_CHK_COUNT(); \
+	} \
+      } else { \
+        (_chk) = TAILQ_FIRST(&(_stcb)->asoc.free_chunks); \
+         TAILQ_REMOVE(&(_stcb)->asoc.free_chunks, (_chk), sctp_next); \
+         atomic_subtract_int(&sctppcbinfo.ipi_free_chunks, 1); \
+         (_stcb)->asoc.free_chunk_cnt--; \
+      } \
+}
 
 
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000

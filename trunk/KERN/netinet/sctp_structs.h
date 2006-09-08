@@ -483,6 +483,9 @@ struct sctp_association {
 	struct sctpladdr sctp_local_addr_list;
 	struct sctpnetlisthead nets;
 
+	/* Free chunk list */
+	struct sctpchunk_listhead free_chunks;
+
 	/* Control chunk queue */
 	struct sctpchunk_listhead control_send_queue;
 
@@ -742,7 +745,6 @@ struct sctp_association {
 	 * user data in.
 	 */
 	uint16_t refcnt;
-	uint8_t authenticated;	/* packet authenticated ok */
 
 	/*
 	 * Being that we have no bag to collect stale cookies, and that we
@@ -788,7 +790,11 @@ struct sctp_association {
 
 	uint16_t stream_locked_on;
 	uint16_t ecn_echo_cnt_onq;
+
+	uint16_t free_chunk_cnt;
+
 	uint8_t  stream_locked;
+	uint8_t authenticated;	/* packet authenticated ok */
 	/*
 	 * This flag indicates that we need to send the first SACK. If in
 	 * place it says we have NOT yet sent a SACK and need to.

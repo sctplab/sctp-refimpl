@@ -432,8 +432,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 			chk->data = NULL;
 			/* Now free the address and data */
 			sctp_free_remote_addr(chk->whoTo);
-			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-			SCTP_DECR_CHK_COUNT();
+			sctp_free_a_chunk(stcb, chk);
 			chk = TAILQ_FIRST(&asoc->reasmqueue);
 		}
 		return;
@@ -553,8 +552,8 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 		/* free up the chk */
 		sctp_free_remote_addr(chk->whoTo);
 		chk->data = NULL;
-		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-		SCTP_DECR_CHK_COUNT();
+		sctp_free_a_chunk(stcb, chk);
+
 		if (asoc->fragmented_delivery_inprogress == 0) {
 			/*
 			 * Now lets see if we can deliver the next one on
@@ -1076,8 +1075,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				sctp_m_freem(chk->data);
 			chk->data = NULL;
 			sctp_free_remote_addr(chk->whoTo);
-			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-			SCTP_DECR_CHK_COUNT();
+			sctp_free_a_chunk(stcb, chk);
 			return;
 		} else {
 			last_flags = at->rec.data.rcv_flags;
@@ -1821,7 +1819,7 @@ failed_express_del:
  failed_pdapi_express_del:
 	control = NULL;
 	if ((ch->ch.chunk_flags & SCTP_DATA_NOT_FRAG) != SCTP_DATA_NOT_FRAG) {
-		chk = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk);
+		sctp_alloc_a_chunk(stcb, chk);
 		if (chk == NULL) {
 			/* No memory so we drop the chunk */
 			SCTP_STAT_INCR(sctps_nomem);
@@ -1831,7 +1829,6 @@ failed_express_del:
 			}
 			return (0);
 		}
-		SCTP_INCR_CHK_COUNT();
 		chk->rec.data.TSN_seq = tsn;
 		chk->no_fr_allowed = 0;
 		chk->rec.data.stream_seq = strmseq;
@@ -4234,8 +4231,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 		tp1->data = NULL;
 		asoc->sent_queue_cnt--;
 		sctp_free_remote_addr(tp1->whoTo);
-		SCTP_DECR_CHK_COUNT();
-		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, tp1);
+		sctp_free_a_chunk(stcb, tp1);
 		tp1 = tp2;
 	}
 	if (stcb->sctp_socket) {
@@ -4913,8 +4909,7 @@ skip_segments:
 		asoc->sent_queue_cnt--;
 		sctp_free_remote_addr(tp1->whoTo);
 
-		SCTP_DECR_CHK_COUNT();
-		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, tp1);
+		sctp_free_a_chunk(stcb, tp1);
 		wake_him++;
 		tp1 = tp2;
 	} while (tp1 != NULL);
@@ -5625,8 +5620,7 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 					chk->data = NULL;
 				}
 				sctp_free_remote_addr(chk->whoTo);
-				SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-				SCTP_DECR_CHK_COUNT();
+				sctp_free_a_chunk(stcb, chk);
 			} else {
 				/*
 				 * Ok we have gone beyond the end of the

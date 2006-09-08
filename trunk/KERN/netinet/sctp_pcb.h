@@ -276,6 +276,8 @@ struct sctp_epinfo {
 	/* socket queue zone info */
 	uint32_t ipi_count_strmoq;
 
+	/* system wide number of free chunks hanging around */
+	uint32_t ipi_free_chunks;
 
 	struct sctpvtaghead vtag_timewait[SCTP_STACK_VTAG_HASH_SIZE];
 
