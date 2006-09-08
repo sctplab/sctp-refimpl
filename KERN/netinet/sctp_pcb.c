@@ -193,7 +193,7 @@ sctp_fill_pcbinfo(struct sctp_pcbinfo *spcb)
 	spcb->chk_count = sctppcbinfo.ipi_count_chunk;
 	spcb->readq_count = sctppcbinfo.ipi_count_readq;
 	spcb->stream_oque = sctppcbinfo.ipi_count_strmoq;
-	spcb->free_chunks = stcbppcbinof.ipi_free_chunks;
+	spcb->free_chunks = sctppcbinfo.ipi_free_chunks;
 	
 	SCTP_INP_INFO_RUNLOCK();
 }
