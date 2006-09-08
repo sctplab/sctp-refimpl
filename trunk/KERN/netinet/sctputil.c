@@ -3246,13 +3246,23 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
 			control->held_length = 0;
 			control->length = m_notify->m_len;
 			control->end_added = 1;
+			sctp_sballoc(stcb, 
+				     &stcb->sctp_socket->so_rcv, 
+				     m_notify);
 		} else if (control->end_added == 0) {
-			sctp_m_freem(control->data);
+			struct mbuf *m=NULL;
+			m = control->data;
+			while(m) {
+				sctp_sbfree(control, stcb, 
+					    &stcb->sctp_socket->so_rcv, m);
+				m = sctp_m_free(m);
+			}
 			control->data = NULL;
 			control->length = m_notify->m_len;
 			control->data = control->tail_mbuf = m_notify;
 			control->held_length = 0;
 			control->end_added = 1;
+			sctp_sballoc(stcb, &stcb->sctp_socket->so_rcv, m);
 		} else {
 			/* Hmm .. should not happen */
 			control->end_added = 1;

@@ -4132,9 +4132,9 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				    ((sq->length == 0) && (sq->end_added == 0))) {
 					/* Held for PD-API */
 					sq->held_length = 0;
-					atomic_subtract_int(&so->so_rcv.sb_cc,sq->length);
 					if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_PDAPIEVNT)) {
 						/* need to change to PD-API aborted */
+						printf("Doing PDAPI thing\n");
 						stcb->asoc.control_pdapi = sq;
 						sctp_notify_partial_delivery_indication(stcb,
 											SCTP_PARTIAL_DELIVERY_ABORTED, 1);
@@ -4143,7 +4143,12 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 						/* need to get the reader to remove it */
 						sq->length = 0;
 						if (sq->data) {
-							sctp_m_freem(sq->data);
+							struct mbuf *m;
+							m = sq->data;
+							while(m) {
+								sctp_sbfree(sq, stcb, &stcb->sctp_socket->so_rcv, m);
+								m = sctp_m_free(m);
+							}
 							sq->data = NULL;
 							sq->tail_mbuf = NULL;
 						}
