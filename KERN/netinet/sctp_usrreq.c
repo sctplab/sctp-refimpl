@@ -196,8 +196,6 @@ unsigned int sctp_cmt_sockopt_on_off = 0;
 unsigned int sctp_cmt_use_dac = 0;
 unsigned int sctp_cmt_sockopt_use_dac = 0;
 
-unsigned int sctp_window_update_sack_value = 3000;
-
 int sctp_L2_abc_variable = 1;
 unsigned int sctp_early_fr = 0;
 unsigned int sctp_early_fr_msec = SCTP_MINFR_MSEC_TIMER;
@@ -724,9 +722,14 @@ SYSCTL_INT(_net_inet_sctp, OID_AUTO, pcbhashsize, CTLFLAG_RW,
     &sctp_pcbtblsize, 0,
     "Tuneable for PCB Hash table sizes");
 
-SYSCTL_INT(_net_inet_sctp, OID_AUTO, wupsack, CTLFLAG_RW,
-    &sctp_window_update_sack_value, 0,
-    "How many unreported bytes before a window update sack is sent");
+SYSCTL_INT(_net_inet_sctp, OID_AUTO, sys_resource, CTLFLAG_RW,
+    &sctp_system_free_resc_limit, 0,
+    "Max number of cached resources in the system");
+
+SYSCTL_INT(_net_inet_sctp, OID_AUTO, asoc_resource, CTLFLAG_RW,
+    &sctp_asoc_free_resc_limit, 0,
+    "Max number of cached resources in an asoc");
+
 
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, chunkscale, CTLFLAG_RW,
     &sctp_chunkscale, 0,
@@ -6018,9 +6021,13 @@ sctp_sysctl(name, namelen, oldp, oldlenp, newp, newlen)
 		return (sysctl_int(oldp, oldlenp, newp, newlen,
 		    &sctp_chunkscale));
 
-	case SCTPCTL_WINDOWUPD:
+	case SCTPCTL_ASOC_RESC:
 		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_window_update_sack_value));
+		    &sctp_asoc_free_resc_limit));
+
+	case SCTPCTL_SYS_RESC:
+		return (sysctl_int(oldp, oldlenp, newp, newlen,
+		    &sctp_system_free_resc_limit));
 
 	case SCTPCTL_DELAYED_SACK:
 		return (sysctl_int(oldp, oldlenp, newp, newlen,
@@ -6290,10 +6297,18 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
 
 	sysctl_createv(clog, 0, NULL, NULL,
 	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "wupsack",
-	    SYSCTL_DESCR("How many unreported bytes before a window update sack is sent"),
-	    NULL, 0, &sctp_window_update_sack_value, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_WINDOWUPD,
+	    CTLTYPE_INT, "sys_resource",
+	    SYSCTL_DESCR("Max number of cached resources in the system"),
+	    NULL, 0, &sctp_system_free_resc_limit, 0,
+	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_SYS_RESC,
+	    CTL_EOL);
+
+	sysctl_createv(clog, 0, NULL, NULL,
+	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
+	    CTLTYPE_INT, "asoc_resource",
+	    SYSCTL_DESCR("Max number of cached resources in an asoc"),
+	    NULL, 0, &sctp_asoc_free_resc_limit, 0,
+	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_ASOC_RESC,
 	    CTL_EOL);
 
 	sysctl_createv(clog, 0, NULL, NULL,
