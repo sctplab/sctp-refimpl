@@ -4346,9 +4346,11 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		SCTP_DECR_CHK_COUNT();
 		atomic_subtract_int(&sctppcbinfo.ipi_free_chunks, 1);
 		asoc->free_chunk_cnt--;
+		printf("at freeasoc tot-chk free count:%d free_cc:%d\n",
+		       sctppcbinfo.ipi_free_chunks,
+		       asoc->free_chunk_cnt);
 		chk = TAILQ_FIRST(&asoc->free_chunks);
 	}
-
 	/* pending send queue SHOULD be empty */
 	if (!TAILQ_EMPTY(&asoc->send_queue)) {
 		chk = TAILQ_FIRST(&asoc->send_queue);
