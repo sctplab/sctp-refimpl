@@ -182,6 +182,10 @@ unsigned int sctp_assoc_rtx_max_default = SCTP_DEF_MAX_SEND;
 unsigned int sctp_path_rtx_max_default = SCTP_DEF_MAX_PATH_RTX;
 unsigned int sctp_nr_outgoing_streams_default = SCTP_OSTREAM_INITIAL;
 unsigned int sctp_add_more_threshold = SCTP_DEFAULT_ADD_MORE;
+
+uint32_t sctp_asoc_free_resc_limit = SCTP_DEF_ASOC_RESC_LIMIT;
+uint32_t sctp_system_free_resc_limit = SCTP_DEF_SYSTEM_RESC_LIMIT;
+
 int sctp_min_split_point=SCTP_DEFAULT_SPLIT_POINT_MIN;
 int sctp_pcbtblsize = SCTP_PCBHASHSIZE;
 int sctp_hashtblsize = SCTP_TCBHASHSIZE;
