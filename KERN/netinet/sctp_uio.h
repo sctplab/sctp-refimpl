@@ -160,7 +160,7 @@ struct sctp_pcbinfo {
 	uint32_t raddr_count;
 	uint32_t chk_count;
 	uint32_t readq_count;
-	uint32_t mbuf_track;
+	uint32_t free_chunks;
 	uint32_t stream_oque;
 };
 
