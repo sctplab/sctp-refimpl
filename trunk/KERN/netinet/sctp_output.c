@@ -7860,8 +7860,6 @@ again_one_more_time:
 				if (outchain == NULL) {
 					return (ENOMEM);
 				}
-				if(chk->rec.chunk_id.can_take_data) 
-					chk->data = NULL;
 				/* update our MTU size */
 				if (mtu > (chk->data->m_pkthdr.len + omtu))
 					mtu -= (chk->data->m_pkthdr.len + omtu);
@@ -7872,6 +7870,8 @@ again_one_more_time:
 				if (chk->flags & CHUNK_FLAGS_FRAGMENT_OK) {
 					no_fragmentflg = 0;
 				}
+				if(chk->rec.chunk_id.can_take_data) 
+					chk->data = NULL;
 				/* Mark things to be removed, if needed */
 				if ((chk->rec.chunk_id.id == SCTP_SELECTIVE_ACK) ||
 				    (chk->rec.chunk_id.id == SCTP_HEARTBEAT_REQUEST) ||
