@@ -101,12 +101,13 @@ __FBSDID("$FreeBSD:$");
 #define SCTPCTL_CHUNKSCALE          45
 #define SCTPCTL_MINSPLIT            46
 #define SCTPCTL_ADD_MORE            47
-#define SCTPCTL_WINDOWUPD           48
+#define SCTPCTL_SYS_RESC            48
+#define SCTPCTL_ASOC_RESC           49
 #ifdef SCTP_DEBUG
-#define SCTPCTL_DEBUG               49
-#define SCTPCTL_MAXID		    49
+#define SCTPCTL_DEBUG               50
+#define SCTPCTL_MAXID		    50
 #else
-#define SCTPCTL_MAXID		    48
+#define SCTPCTL_MAXID		    49
 #endif
 #endif
 
@@ -160,7 +161,8 @@ __FBSDID("$FreeBSD:$");
 	{ "chunkscale", CTLTYPE_INT }, \
 	{ "min_split_point", CTLTYPE_INT }, \
 	{ "add_more_on_output", CTLTYPE_INT }, \
-	{ "wupsack", CTLTYPE_INT }, \
+	{ "sys_resource", CTLTYPE_INT }, \
+	{ "asoc_resource", CTLTYPE_INT }, \
 	{ "debug", CTLTYPE_INT }, \
 }
 #else
@@ -213,7 +215,8 @@ __FBSDID("$FreeBSD:$");
 	{ "chunkscale", CTLTYPE_INT }, \
 	{ "min_split_point", CTLTYPE_INT }, \
 	{ "add_more_on_output", CTLTYPE_INT }, \
-	{ "wupsack", CTLTYPE_INT }, \
+	{ "sys_resource", CTLTYPE_INT }, \
+	{ "asoc_resource", CTLTYPE_INT }, \
 }
 #endif
 
