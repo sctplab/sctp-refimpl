@@ -265,15 +265,14 @@ extern uint32_t sctp_system_free_resc_limit;
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, (_chk)); \
 		SCTP_DECR_CHK_COUNT(); \
                 printf("Free chk:%x and dec count to %d %s:%d\n", \
-                       (u_int)(_chk), sctppcbinfo.ipi_count_chunk, \
-			__FILE__, __LINE__); \
+                       (u_int)(_chk), sctppcbinfo.ipi_count_chunk, __FILE__, __LINE__); \
 	   } else { \
 		TAILQ_INSERT_TAIL(&(_stcb)->asoc.free_chunks, (_chk), sctp_next); \
                 (_stcb)->asoc.free_chunk_cnt++; \
                 atomic_add_int(&sctppcbinfo.ipi_free_chunks, 1); \
                 printf("Save free chk:%x and increment count on free %d asoc:%d %s:%d\n", \
                        (u_int)(_chk), sctppcbinfo.ipi_free_chunks, (_stcb)->asoc.free_chunk_cnt, \
-		       __FILE__, __LINE__); \); \
+		       __FILE__, __LINE__); \
 	   } \
 }
 
