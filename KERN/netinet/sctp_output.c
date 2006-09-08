@@ -7050,6 +7050,7 @@ sctp_clean_up_ctl(struct sctp_tcb *stcb, struct sctp_association *asoc)
 			}
 			asoc->ctrl_queue_cnt--;
 			sctp_free_remote_addr(chk->whoTo);
+			printf("Call free_a_chunk in clean-up-ctl\n");
 			sctp_free_a_chunk(stcb, chk);
 		} else if (chk->rec.chunk_id == SCTP_STREAM_RESET) {
 			/* special handling, we must look into the param */
@@ -9825,7 +9826,7 @@ sctp_send_sack(struct sctp_tcb *stcb)
 		}
 	}
 	if (a_chk == NULL) {
-		sctp_alloc_a_chunk(stcb, chk);
+		sctp_alloc_a_chunk(stcb, a_chk);
 		if (a_chk == NULL) {
 			/* No memory so we drop the idea, and set a timer */
 			sctp_timer_stop(SCTP_TIMER_TYPE_RECV,
@@ -10023,6 +10024,7 @@ sctp_send_sack(struct sctp_tcb *stcb)
 	sack->ch.chunk_length = htons(a_chk->send_size);
 	TAILQ_INSERT_TAIL(&asoc->control_send_queue, a_chk, sctp_next);
 	asoc->ctrl_queue_cnt++;
+	printf("Ctl queue cnt:%d\n", asoc->ctrl_queue_cnt);
 	SCTP_STAT_INCR(sctps_sendsacks);
 	return;
 }
