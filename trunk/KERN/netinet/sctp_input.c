@@ -2528,7 +2528,7 @@ sctp_handle_ecn_cwr(struct sctp_cwr_chunk *cp, struct sctp_tcb *stcb)
 	struct sctp_ecne_chunk *ecne;
 
 	TAILQ_FOREACH(chk, &stcb->asoc.control_send_queue, sctp_next) {
-		if (chk->rec.chunk_id != SCTP_ECN_ECHO) {
+		if (chk->rec.chunk_id.id != SCTP_ECN_ECHO) {
 			continue;
 		}
 		/*
@@ -2748,7 +2748,7 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 
 			TAILQ_FOREACH(asconf, &stcb->asoc.control_send_queue,
 			    sctp_next) {
-				if (asconf->rec.chunk_id == SCTP_ASCONF) {
+				if (asconf->rec.chunk_id.id == SCTP_ASCONF) {
 					break;
 				}
 			}
@@ -2802,7 +2802,7 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 			cookie = NULL;
 			TAILQ_FOREACH(cookie, &stcb->asoc.control_send_queue,
 			    sctp_next) {
-				if (cookie->rec.chunk_id == SCTP_COOKIE_ECHO) {
+				if (cookie->rec.chunk_id.id == SCTP_COOKIE_ECHO) {
 					break;
 				}
 			}
@@ -3296,7 +3296,7 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_out_req
 	if (chk == NULL) {
 		return (ret_code);
 	}
-	chk->rec.chunk_id = SCTP_STREAM_RESET;
+	chk->rec.chunk_id.id = SCTP_STREAM_RESET;
 	chk->asoc = &stcb->asoc;
 	chk->no_fr_allowed = 0;
 	chk->book_size = chk->send_size = sizeof(struct sctp_chunkhdr);

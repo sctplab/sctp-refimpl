@@ -324,10 +324,16 @@ TAILQ_HEAD(sctpchunk_listhead, sctp_tmit_chunk);
 /* The upper byte is used a a bit mask */
 #define CHUNK_FLAGS_FRAGMENT_OK	        0x0100
 
+struct chk_id {
+	uint16_t id;
+	uint16_t can_take_data;
+};
+
+
 struct sctp_tmit_chunk {
 	union {
 		struct sctp_data_chunkrec data;
-		int chunk_id;
+		struct chk_id chunk_id;
 	}     rec;
 	struct sctp_association *asoc;	/* bp to asoc this belongs to */
 	struct timeval sent_rcv_time;	/* filled in if RTT being calculated */
