@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.68 2006-08-21 20:18:18 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.69 2006-09-08 10:50:58 randall Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -3429,7 +3429,7 @@ static int cmd_getpcbinfo(char *argv[], int argc)
     printf("Number of SCTP chunks in use is %d\n",optval.chk_count);
     printf("Number of SCTP readq in use is %d\n",optval.readq_count);
     printf("Number of SCTP str-outq in use is %d\n", optval.stream_oque);
-    printf("Mbuf track:%d\n",optval.mbuf_track);
+    printf("Number of SCTP free_chunks %d\n",optval.free_chunks);
   }
   return 0;
 #else
