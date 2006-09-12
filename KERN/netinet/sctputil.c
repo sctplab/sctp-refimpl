@@ -5292,6 +5292,7 @@ get_more_data:
 				sctp_free_remote_addr(control->whoFrom);
 				SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, control);
 				SCTP_DECR_READQ_COUNT();
+				control = NULL;
 			} else {
 				/*
 				 * The user did not read all of this
