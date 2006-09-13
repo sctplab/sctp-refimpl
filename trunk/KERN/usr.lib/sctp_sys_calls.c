@@ -410,11 +410,7 @@ sctp_sendmsg(int s,
 	     u_int32_t context)
 {
 #ifdef SYS_sctp_generic_sendmsg
-	struct iovec iov[2];
 	struct sctp_sndrcvinfo sinfo;
-
-	iov[0].iov_base = (void *)data;
-	iov[0].iov_len = len;
 
 	sinfo.sinfo_ppid = ppid;
 	sinfo.sinfo_flags = flags;
@@ -423,7 +419,7 @@ sctp_sendmsg(int s,
 	sinfo.sinfo_context = context;
 	sinfo.sinfo_assoc_id = 0;
 	return (syscall(SYS_sctp_generic_sendmsg, s, 
-			iov, 1, to, tolen, &sinfo, 0));
+			data, len, to, tolen, &sinfo, 0));
 #else
 
 	ssize_t sz;
@@ -532,14 +528,10 @@ sctp_send(int sd, const void *data, size_t len,
 {
 
 #ifdef SYS_sctp_generic_sendmsg
-	struct iovec iov[2];
 	struct sockaddr *to=NULL;
 
-	iov[0].iov_base = (void *)data;
-	iov[0].iov_len = len;
-
 	return (syscall(SYS_sctp_generic_sendmsg, sd, 
-			iov, 1, to, 0, sinfo, flags));
+			data, len, to, 0, sinfo, flags));
 #else
 	ssize_t sz;
 	struct msghdr msg;
