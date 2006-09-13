@@ -2381,9 +2381,117 @@ sctp_peeloff(td, uap)
 #endif
 }
 
-int sctp_generic_sendmsg(td, uap)
+
+int sctp_generic_sendmsg (td, uap)
 	struct thread *td;
 	register struct sctp_generic_sendmsg_args /* {
+					  int sd, 
+					  caddr_t msg, 
+					  int mlen, 
+					  caddr_t to, 
+					  __socklen_t tolen, 
+					  struct sctp_sndrcvinfo *sinfo, 
+					  int flags
+					     } */ *uap;
+{
+#ifdef SCTP
+	struct sctp_sndrcvinfo sinfo, *u_sinfo=NULL;
+	struct socket *so;
+	struct file *fp;
+	int use_rcvinfo=1;
+	int error=0, len;
+	struct sockaddr *to=NULL;
+#ifdef KTRACE
+	struct uio *ktruio = NULL;
+#endif
+	struct uio auio;
+	struct iovec iov[1];
+
+	if(uap->sinfo) {
+		error = copyin(uap->sinfo, &sinfo, sizeof (sinfo));
+		if (error)
+			return (error);
+		u_sinfo = &sinfo;
+	}
+
+	if(uap->tolen) {
+		error = getsockaddr(&to, uap->to, uap->tolen);
+		if (error) {
+			to = NULL;
+			goto sctp_bad2;
+		}
+	}
+	error = getsock(td->td_proc->p_fd, uap->sd, &fp, NULL);
+	if (error)
+		goto sctp_bad;
+
+	iov[0].iov_base = uap->msg;
+	iov[0].iov_len = uap->mlen;
+
+	so = (struct socket *)fp->f_data;
+#ifdef MAC
+	SOCK_LOCK(so);
+	error = mac_check_socket_send(td->td_ucred, so);
+	SOCK_UNLOCK(so);
+	if (error)
+		goto sctp_bad;
+#endif
+
+
+	auio.uio_iov =  iov;
+	auio.uio_iovcnt = 1;
+	auio.uio_segflg = UIO_USERSPACE;
+	auio.uio_rw = UIO_WRITE;
+	auio.uio_td = td;
+	auio.uio_offset = 0;			/* XXX */
+	auio.uio_resid = 0;
+	len = auio.uio_resid = uap->mlen;
+	error = sctp_lower_sosend(so,
+				 to,
+				 &auio,
+				 (struct mbuf *)NULL,
+				 (struct mbuf *)NULL,
+				 uap->flags,
+				 use_rcvinfo,
+				 u_sinfo,
+				 td );
+	
+	if (error) {
+		if (auio.uio_resid != len && (error == ERESTART ||
+		    error == EINTR || error == EWOULDBLOCK))
+			error = 0;
+		/* Generation of SIGPIPE can be controlled per socket */
+		if (error == EPIPE && !(so->so_options & SO_NOSIGPIPE) &&
+		    !(uap->flags & MSG_NOSIGNAL)) {
+			PROC_LOCK(td->td_proc);
+			psignal(td->td_proc, SIGPIPE);
+			PROC_UNLOCK(td->td_proc);
+		}
+	}
+	if (error == 0)
+		td->td_retval[0] = len - auio.uio_resid;
+#ifdef KTRACE
+	if (ktruio != NULL) {
+		ktruio->uio_resid = td->td_retval[0];
+		ktrgenio(uap->sd, UIO_WRITE, ktruio, error);
+	}
+#endif
+ sctp_bad:
+	fdrop(fp, td);
+ sctp_bad2:
+	if (to)
+		FREE(to, M_SONAME);
+
+	return (error);
+#else
+	return (EOPNOTSUPP);
+#endif
+}
+
+
+int sctp_generic_sendmsg_iov(td, uap)
+	struct thread *td;
+	register struct sctp_generic_sendmsg_iov_args /* {
 					  int sd, 
 					  struct iovec *iov, 
 					  int iovlen, 
