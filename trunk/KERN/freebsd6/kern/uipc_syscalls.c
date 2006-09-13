@@ -2280,7 +2280,7 @@ int sctp_generic_sendmsg (td, uap)
 			goto sctp_bad2;
 		}
 	}
-	error = getsock(td->td_proc->p_fd, uap->sd, &fp, NULL);
+	error = getsock(td->td_proc->p_fd, uap->sd, &fp);
 	if (error)
 		goto sctp_bad;
 
