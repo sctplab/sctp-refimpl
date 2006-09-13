@@ -6218,7 +6218,7 @@ sctp_prune_prsctp(struct sctp_tcb *stcb,
 	}			/* if enabled in asoc */
 }
 
-int
+__inline int
 sctp_get_frag_point(struct sctp_tcb *stcb,
     struct sctp_association *asoc)
 {
@@ -6577,7 +6577,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 		      int *num_out,
 		      int *reason_code,
 		      int control_only, int *cwnd_full, int from_where,
-		      struct timeval *now, int *now_filled);
+		      struct timeval *now, int *now_filled, int frag_point);
 
 static void
 sctp_sendall_iterator(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
@@ -6728,9 +6728,10 @@ sctp_sendall_iterator(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
 	else if(added_control) {
 		int num_out=0, reason=0, cwnd_full=0, now_filled=0;
 		struct timeval now;
-		
+		int frag_point;
+		frag_point = sctp_get_frag_point(stcb, &stcb->asoc);
 		sctp_med_chunk_output(inp, stcb, &stcb->asoc, &num_out,
-				      &reason, 1, &cwnd_full, 1, &now, &now_filled);
+				      &reason, 1, &cwnd_full, 1, &now, &now_filled, frag_point);
 	}
  no_chunk_output:
 	if (ret) {
@@ -6937,7 +6938,7 @@ sctp_toss_old_asconf(struct sctp_tcb *stcb)
 }
 
 
-static void
+static __inline void
 sctp_clean_up_datalist(struct sctp_tcb *stcb,
 
     struct sctp_association *asoc,
@@ -7028,7 +7029,7 @@ all_done:
 	}
 }
 
-static void
+static __inline void
 sctp_clean_up_ctl(struct sctp_tcb *stcb, struct sctp_association *asoc)
 {
 	struct sctp_tmit_chunk *chk, *nchk;
@@ -7526,7 +7527,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
     int *num_out,
     int *reason_code,
     int control_only, int *cwnd_full, int from_where,
-    struct timeval *now, int *now_filled)
+    struct timeval *now, int *now_filled, int frag_point)
 {
 	/*
 	 * Ok this is the generic chunk service queue. we must do the
@@ -7549,7 +7550,6 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	int asconf, cookie, no_out_cnt;
 	int bundle_at, ctl_cnt, no_data_chunks, cwnd_full_ind;
 	unsigned int mtu, r_mtu, omtu;
-	int frag_point;
 	*num_out = 0;
 	struct sctp_nets *start_at, *old_startat = NULL, *send_start_at;
 
@@ -7637,7 +7637,6 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 		}
 		start_at = net;
 one_more_time:
-		frag_point = sctp_get_frag_point(stcb, asoc);
 		for (; net != NULL; net = TAILQ_NEXT(net, sctp_next)) {
 			if (old_startat && (old_startat == net)) {
 				break;
@@ -9358,6 +9357,7 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 	int now_filled = 0;
 	int cwnd_full = 0;
 	int nagle_on = 0;
+	int frag_point = sctp_get_frag_point(stcb, &stcb->asoc);
 
 	asoc = &stcb->asoc;
 	tot_out = 0;
@@ -9415,7 +9415,7 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 			 */
 			(void)sctp_med_chunk_output(inp, stcb, asoc, &num_out, &reason_code, 1,
 			    &cwnd_full, from_where,
-			    &now, &now_filled);
+			    &now, &now_filled, frag_point);
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
 				printf("Control send outputs:%d@full\n", num_out);
@@ -9453,7 +9453,7 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 #endif
 			/* Push out any control */
 			(void)sctp_med_chunk_output(inp, stcb, asoc, &num_out, &reason_code, 1, &cwnd_full, from_where,
-			    &now, &now_filled);
+			    &now, &now_filled, frag_point);
 			return (ret);
 		}
 		if ((num_out == 0) && (ret == 0)) {
@@ -9528,7 +9528,7 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 #endif
 		error = sctp_med_chunk_output(inp, stcb, asoc, &num_out,
 		    &reason_code, 0, &cwnd_full, from_where,
-		    &now, &now_filled);
+		    &now, &now_filled, frag_point);
 		if (error) {
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
@@ -12677,7 +12677,7 @@ sctp_lower_sosend(struct socket *so,
 		splx(s);
 #endif
 	} else if (some_on_control) {
-		int num_out, reason, cwnd_full;
+		int num_out, reason, cwnd_full, frag_point;
 
 		/* Here we do control only */
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -12687,8 +12687,9 @@ sctp_lower_sosend(struct socket *so,
 			hold_tcblock = 1;
 			SCTP_TCB_LOCK(stcb);
 		}
+		frag_point = sctp_get_frag_point(stcb, &stcb->asoc);
 		sctp_med_chunk_output(inp, stcb, &stcb->asoc, &num_out,
-				      &reason, 1, &cwnd_full, 1, &now, &now_filled);
+				      &reason, 1, &cwnd_full, 1, &now, &now_filled, frag_point);
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
 #endif
