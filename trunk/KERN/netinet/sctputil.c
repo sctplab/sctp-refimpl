@@ -1402,7 +1402,7 @@ sctp_handle_addr_wq(void)
  * stcb->sctp_socket is locked.
  */
 #endif
-static void
+void
 sctp_timeout_handler(void *t)
 {
 	struct sctp_inpcb *inp;

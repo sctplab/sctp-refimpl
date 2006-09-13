@@ -4323,13 +4323,19 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 	/* Now assure a timer where data is queued at */
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 		if(net->flight_size) {
-			sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
-					stcb, net);			
-			sctp_timer_start(SCTP_TIMER_TYPE_SEND,
-					 stcb->sctp_ep, stcb, net);
+			int to_ticks;
+			if (net->RTO == 0) {
+				to_ticks  = MSEC_TO_TICKS(stcb->asoc.initial_rto);
+			} else {
+				to_ticks = MSEC_TO_TICKS(net->RTO);
+			}
+			callout_reset(&net->rxt_timer.timer, to_ticks, 
+				      sctp_timeout_handler, &net->rxt_timer);
 		} else {
-			sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
-					stcb, net);			
+			if(callout_pending(&net->rxt_timer.timer)) {
+				sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
+						stcb, net);
+			}
 			if (sctp_early_fr) {
 				if (callout_pending(&net->fr_timer.timer)) {
 					SCTP_STAT_INCR(sctps_earlyfrstpidsck4);

@@ -561,8 +561,9 @@ __FBSDID("$FreeBSD:$");
  */
 #define SCTP_ASOC_MAX_CHUNKS_ON_QUEUE 512
 
-#define MSEC_TO_TICKS(x) (((x) * hz) / 1000)
-#define TICKS_TO_MSEC(x) (((x) * 1000) / hz)
+#define MSEC_TO_TICKS(x) ((hz == 1000) ? x : (((x) * hz) / 1000))
+#define TICKS_TO_MSEC(x) ((hz == 1000) ? x : (((x) * 1000) / hz));
+
 #define SEC_TO_TICKS(x) ((x) * hz)
 #define TICKS_TO_SEC(x) ((x) / hz)
 
