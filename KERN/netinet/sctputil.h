@@ -202,6 +202,9 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 
 int find_next_best_mtu(int);
 
+void
+sctp_timeout_handler(void *);
+
 uint32_t
 sctp_calculate_rto(struct sctp_tcb *, struct sctp_association *,
     struct sctp_nets *, struct timeval *);
