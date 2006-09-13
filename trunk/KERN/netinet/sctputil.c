@@ -3888,7 +3888,7 @@ sctp_recover_scope(struct sockaddr_in6 *addr, struct sockaddr_in6 *store)
  * are the two addresses the same?  currently a "scopeless" check returns: 1
  * if same, 0 if not
  */
-int
+__inline int
 sctp_cmpaddr(struct sockaddr *sa1, struct sockaddr *sa2)
 {
 
