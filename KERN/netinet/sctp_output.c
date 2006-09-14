@@ -9572,6 +9572,12 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 				break;
 			}
 		}
+		if (TAILQ_EMPTY(&asoc->control_send_queue) &&
+		    TAILQ_EMPTY(&asoc->send_queue) &&
+		    TAILQ_EMPTY(&asoc->out_wheel)) {
+			/* Nothing left to send */
+			break;
+		}
 		if ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight) <= 0) {
 			/* Nothing left to send */
 			break;
