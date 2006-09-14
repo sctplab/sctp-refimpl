@@ -3598,7 +3598,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 		TAILQ_REMOVE(&stcb->asoc.nets, 
 			     stcb->asoc.primary_destination, sctp_next);
 		TAILQ_INSERT_HEAD(&stcb->asoc.nets, 
-				  stcb->aosc.primary_destination, sctp_next);
+				  stcb->asoc.primary_destination, sctp_next);
 	}
 
 	return (0);
@@ -5819,7 +5819,7 @@ sctp_set_primary_addr(struct sctp_tcb *stcb, struct sockaddr *sa,
 			 * so.
 			 */
 			TAILQ_REMOVE(&stcb->asoc.nets, stcb->asoc.primary_destination, sctp_next);
-			TAILQ_INSERT_HEAD(&stcb->asoc.nets, stcb->aosc.primary_destination, sctp_next);
+			TAILQ_INSERT_HEAD(&stcb->asoc.nets, stcb->asoc.primary_destination, sctp_next);
 		}
 		return (0);
 	}
