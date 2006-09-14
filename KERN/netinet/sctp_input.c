@@ -5044,8 +5044,15 @@ sctp_input(m, va_alist)
 	{
 		goto bad;
 	}
-	if (in_broadcast(ip->ip_dst, m->m_pkthdr.rcvif)) {
-		goto bad;
+	if (((ch->chunk_type == SCTP_INITIATION) ||
+	     (ch->chunk_type == SCTP_INITIATION_ACK) ||
+	     (ch->chunk_type == SCTP_COOKIE_ECHO)) &&
+	    (in_broadcast(ip->ip_dst, m->m_pkthdr.rcvif))) {
+		/* We only look at broadcast if its a
+		 * front state, All others we will 
+		 * not have a tcb for anyway.
+		 */
+ 		goto bad;
 	}
 	/* destination port of 0 is illegal, based on RFC2960. */
 	if (sh->dest_port == 0) {
