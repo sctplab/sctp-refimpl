@@ -3586,6 +3586,21 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	}
 	sctp_timer_start(SCTP_TIMER_TYPE_PATHMTURAISE, stcb->sctp_ep, stcb,
 	    net);
+	/* Validate primary is first */
+	net = TAILQ_FIRST(&stcb->asoc.nets);
+	if ((net != stcb->asoc.primary_destination) && 
+	    (stcb->asoc.primary_destination)) {
+		/* first one on the list is NOT the primary 
+		 * sctp_cmpaddr() is much more efficent if
+		 * the primary is the first on the list, make it
+		 * so.
+		 */
+		TAILQ_REMOVE(&stcb->asoc.nets, 
+			     stcb->asoc.primary_destination, sctp_next);
+		TAILQ_INSERT_HEAD(&stcb->asoc.nets, 
+				  stcb->aosc.primary_destination, sctp_next);
+	}
+
 	return (0);
 }
 
@@ -5796,6 +5811,16 @@ sctp_set_primary_addr(struct sctp_tcb *stcb, struct sockaddr *sa,
 		}
 		stcb->asoc.primary_destination = net;
 		net->dest_state &= ~SCTP_ADDR_WAS_PRIMARY;
+		net = TAILQ_FIRST(&stcb->asoc.nets);
+		if(net != stcb->asoc.primary_destination) {
+			/* first one on the list is NOT the primary 
+			 * sctp_cmpaddr() is much more efficent if
+			 * the primary is the first on the list, make it
+			 * so.
+			 */
+			TAILQ_REMOVE(&stcb->asoc.nets, stcb->asoc.primary_destination, sctp_next);
+			TAILQ_INSERT_HEAD(&stcb->asoc.nets, stcb->aosc.primary_destination, sctp_next);
+		}
 		return (0);
 	}
 }
