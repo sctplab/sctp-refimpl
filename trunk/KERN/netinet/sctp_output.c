@@ -11734,7 +11734,7 @@ sctp_lower_sosend(struct socket *so,
 		splx(s);
 		goto out_unlocked;
 	}
-	if (use_rcvinfo) {
+	if ((use_rcvinfo) && srcv) {
 		if (srcv->sinfo_flags & SCTP_SENDALL) {
 			/* its a sendall */
 			error = sctp_sendall(inp, uio, top, srcv);
@@ -11779,7 +11779,7 @@ sctp_lower_sosend(struct socket *so,
 	/* get control */
 	if (stcb == NULL) {
 		/* Need to do a lookup */
-		if (use_rcvinfo && srcv->sinfo_assoc_id) {
+		if (use_rcvinfo && srcv && srcv->sinfo_assoc_id) {
 			stcb = sctp_findassociation_ep_asocid(inp, srcv->sinfo_assoc_id);
 			/*
 			 * Question: Should I error here if the assoc_id is
@@ -11836,7 +11836,7 @@ sctp_lower_sosend(struct socket *so,
 		goto out_unlocked;
 	} else if (stcb == NULL) {
 		/* UDP style, we must go ahead and start the INIT process */
-		if ((use_rcvinfo) &&
+		if ((use_rcvinfo) && (srcv) &&
 		    (srcv->sinfo_flags & SCTP_ABORT)) {
 			/* User asks to abort a non-existant asoc */
 			error = ENOENT;
@@ -11984,7 +11984,7 @@ sctp_lower_sosend(struct socket *so,
 	    (SCTP_GET_STATE(asoc) == SCTP_STATE_COOKIE_ECHOED)) {
 		queue_only = 1;
 	}
-	if (use_rcvinfo == 0) {
+	if ((use_rcvinfo == 0) || (srcv == NULL)) {
 		/* Grab the default stuff from the asoc */
 		srcv = &stcb->asoc.def_send;
 	}
