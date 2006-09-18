@@ -278,6 +278,7 @@ struct sctp_epinfo {
 
 	/* system wide number of free chunks hanging around */
 	uint32_t ipi_free_chunks;
+	uint32_t ipi_free_strmoq;
 
 	struct sctpvtaghead vtag_timewait[SCTP_STACK_VTAG_HASH_SIZE];
 

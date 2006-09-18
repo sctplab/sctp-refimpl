@@ -262,6 +262,58 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 extern uint32_t sctp_asoc_free_resc_limit;
 extern uint32_t sctp_system_free_resc_limit;
 
+/* I tried to cache the readq entries at one
+ * point. But the reality is that it did not
+ * add any performance since this meant
+ * we had to lock the STCB on read. And at that point
+ * once you have to do an extra lock, it really does
+ * not matter if the lock is in the ZONE stuff or
+ * in our code. Note that this same problem would
+ * occur with an mbuf cache as well so it is
+ * not really worth doing, at least right now :-D
+ */
+
+#define sctp_free_a_readq(_stcb, _readq) { \
+		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, (_readq)); \
+		SCTP_DECR_READQ_COUNT(); \
+}
+
+#define sctp_alloc_a_readq(_stcb, _readq) { \
+	(_readq) = (struct sctp_queued_to_read  *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_readq); \
+	if ((_readq)) { \
+ 	     SCTP_INCR_READQ_COUNT(); \
+	} \
+}
+
+
+
+#define sctp_free_a_strmoq(_stcb, _strmoq) { \
+       if (((_stcb)->asoc.free_strmoq_cnt > sctp_asoc_free_resc_limit) || \
+	   (sctppcbinfo.ipi_free_strmoq > sctp_system_free_resc_limit)) { \
+		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_strmoq, (_strmoq)); \
+		SCTP_DECR_STRMOQ_COUNT(); \
+	   } else { \
+		TAILQ_INSERT_TAIL(&(_stcb)->asoc.free_strmoq, (_strmoq), next); \
+                (_stcb)->asoc.free_strmoq_cnt++; \
+                atomic_add_int(&sctppcbinfo.ipi_free_strmoq, 1); \
+	   } \
+}
+
+#define sctp_alloc_a_strmoq(_stcb, _strmoq) { \
+      if(TAILQ_EMPTY(&(_stcb)->asoc.free_strmoq))  { \
+	(_strmoq) = (struct sctp_stream_queue_pending  *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_strmoq); \
+	if ((_strmoq)) { \
+ 	     SCTP_INCR_STRMOQ_COUNT(); \
+	} \
+      } else { \
+        (_strmoq) = TAILQ_FIRST(&(_stcb)->asoc.free_strmoq); \
+         TAILQ_REMOVE(&(_stcb)->asoc.free_strmoq, (_strmoq), next); \
+         atomic_subtract_int(&sctppcbinfo.ipi_free_strmoq, 1); \
+         (_stcb)->asoc.free_strmoq_cnt--; \
+      } \
+}
+
+
 #define sctp_free_a_chunk(_stcb, _chk) { \
        if (((_stcb)->asoc.free_chunk_cnt > sctp_asoc_free_resc_limit) || \
 	   (sctppcbinfo.ipi_free_chunks > sctp_system_free_resc_limit)) { \

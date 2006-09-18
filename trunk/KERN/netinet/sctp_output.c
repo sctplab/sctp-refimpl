@@ -7324,9 +7324,10 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		sctp_free_remote_addr(sp->net);
 		if(sp->data) {
 			sctp_m_freem(sp->data);
+			sp->data = NULL;
 		}
-		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_strmoq, sp);
-		SCTP_DECR_STRMOQ_COUNT();
+		sctp_free_a_strmoq(stcb, sp);
+
 		/* we can't be locked to it */
 		*locked = 0;		
 		stcb->asoc.locked_on_sending = NULL;
@@ -9858,6 +9859,7 @@ sctp_send_sack(struct sctp_tcb *stcb)
 			    stcb->sctp_ep, stcb, NULL);
 			return;
 		}
+		/*a_chk->rec.chunk_id.id = SCTP_SELECTIVE_ACK;*/
 		a_chk->rec.chunk_id.id = SCTP_SELECTIVE_ACK;
 		a_chk->rec.chunk_id.can_take_data = 1;
 	}
@@ -11581,8 +11583,9 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 	socket_lock(stcb->sctp_socket, 0);
 #endif
 	if(*errno) {
-		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_strmoq, sp);
-		SCTP_DECR_STRMOQ_COUNT();
+		sctp_free_a_strmoq(stcb, sp);
+		sp->data = NULL;
+		sp->net = NULL;
 		sp = NULL;
 	} else {
 		if(sp->sinfo_flags & SCTP_ADDR_OVER) {

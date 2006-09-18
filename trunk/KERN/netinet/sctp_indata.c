@@ -283,7 +283,7 @@ sctp_build_readq_entry(struct sctp_tcb *stcb,
 {
 	struct sctp_queued_to_read *read_queue_e = NULL;
 
-	read_queue_e = (struct sctp_queued_to_read *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_readq);
+	sctp_alloc_a_readq(stcb, read_queue_e);
 	if (read_queue_e == NULL) {
 		goto failed_build;
 	}
@@ -305,7 +305,6 @@ sctp_build_readq_entry(struct sctp_tcb *stcb,
 	read_queue_e->port_from = stcb->rport;
 	read_queue_e->do_not_ref_stcb = 0;
 	read_queue_e->end_added = 0;
-	SCTP_INCR_READQ_COUNT();
 failed_build:
 	return (read_queue_e);
 }
@@ -320,7 +319,7 @@ sctp_build_readq_entry_chk(struct sctp_tcb *stcb,
 {
 	struct sctp_queued_to_read *read_queue_e = NULL;
 
-	read_queue_e = (struct sctp_queued_to_read *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_readq);
+	sctp_alloc_a_readq(stcb, read_queue_e);
 	if (read_queue_e == NULL) {
 		goto failed_build;
 	}
@@ -342,7 +341,6 @@ sctp_build_readq_entry_chk(struct sctp_tcb *stcb,
 	read_queue_e->port_from = stcb->rport;
 	read_queue_e->do_not_ref_stcb = 0;
 	read_queue_e->end_added = 0;
-	SCTP_INCR_READQ_COUNT();
 failed_build:
 	return (read_queue_e);
 }
@@ -773,8 +771,7 @@ sctp_queue_data_to_stream(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					asoc->size_on_all_streams -= control->length;
 					sctp_ucount_decr(asoc->cnt_on_all_streams);
 					sctp_free_remote_addr(control->whoFrom);
-					SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, control);
-					SCTP_DECR_READQ_COUNT();
+					sctp_free_a_readq(stcb, control);
 					return;
 				} else {
 					if (TAILQ_NEXT(at, next) == NULL) {
@@ -1737,6 +1734,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		 */
 
 		/* It would be nice to avoid this copy if we could :< */
+		sctp_alloc_a_readq(stcb, control);
 		sctp_build_readq_entry_mac(control, stcb, asoc->context, net, tsn,
 					   ch->dp.protocol_id,
 					   stcb->asoc.context,
@@ -1843,6 +1841,7 @@ failed_express_del:
 		atomic_add_int(&net->ref_count, 1);
 		chk->data = dmbuf;
 	} else {
+		sctp_alloc_a_readq(stcb, control);
 		sctp_build_readq_entry_mac(control, stcb, asoc->context, net, tsn,
 		    ch->dp.protocol_id,
 		    stcb->asoc.context,
@@ -1881,8 +1880,7 @@ failed_express_del:
 				sctp_m_freem(control->data);
 				control->data = NULL;
 				sctp_free_remote_addr(control->whoFrom);
-				SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, control);
-				SCTP_DECR_READQ_COUNT();
+				sctp_free_a_readq(stcb, control);
 				oper = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) + sizeof(uint32_t)),
 							     0, M_DONTWAIT, 1, MT_DATA);
 				if (oper) {
@@ -1909,8 +1907,7 @@ failed_express_del:
 					sctp_m_freem(control->data);
 					control->data = NULL;
 					sctp_free_remote_addr(control->whoFrom);
-					SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, control);
-					SCTP_DECR_READQ_COUNT();
+					sctp_free_a_readq(stcb, control);
 
 					oper = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) + sizeof(uint32_t)),
 								     0, M_DONTWAIT, 1, MT_DATA);
@@ -1950,8 +1947,7 @@ failed_express_del:
 					sctp_m_freem(control->data);
 					control->data = NULL;
 					sctp_free_remote_addr(control->whoFrom);
-					SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, control);
-					SCTP_DECR_READQ_COUNT();
+					sctp_free_a_readq(stcb, control);
 					oper = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) + sizeof(uint32_t)),
 								     0, M_DONTWAIT, 1, MT_DATA);
 					if (oper) {

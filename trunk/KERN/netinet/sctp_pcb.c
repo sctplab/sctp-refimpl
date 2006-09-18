@@ -4047,6 +4047,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	struct sctp_asconf_addr *aparam;
 	struct sctp_stream_reset_list *liste;
 	struct sctp_queued_to_read *sq;
+	struct sctp_stream_queue_pending *sp;
 	sctp_sharedkey_t *shared_key;
 	struct socket *so;
 	int ccnt=0;
@@ -4306,7 +4307,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	/* anything on the wheel needs to be removed */
 	for (i = 0; i < asoc->streamoutcnt; i++) {
 		struct sctp_stream_out *outs;
-		struct sctp_stream_queue_pending *sp;
 
 		outs = &asoc->strmout[i];
 		/* now clean up any chunks here */
@@ -4325,6 +4325,19 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			SCTP_DECR_STRMOQ_COUNT();
 			sp = TAILQ_FIRST(&outs->outqueue);
 		}
+	}
+
+	while ((sp = TAILQ_FIRST(&asoc->free_strmoq)) != NULL) {
+		TAILQ_REMOVE(&asoc->free_strmoq, sp, next);
+		if (sp->data) {
+			sctp_m_freem(sp->data);
+			sp->data = NULL;
+			sp->tail_mbuf = NULL;
+		}
+		/* Free the zone stuff  */
+		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_strmoq, sp);
+		SCTP_DECR_STRMOQ_COUNT();
+                atomic_add_int(&sctppcbinfo.ipi_free_strmoq, -1);
 	}
 
 	while ((liste = TAILQ_FIRST(&asoc->resetHead)) != NULL) {
@@ -5205,6 +5218,9 @@ sctp_pcb_init()
 
 	/* stream out queue cont */
 	sctppcbinfo.ipi_count_strmoq = 0;
+
+	sctppcbinfo.ipi_free_strmoq = 0;
+	sctppcbinfo.ipi_free_chunks = 0;
 
 
 #if defined (__FreeBSD__) && __FreeBSD_version >= 500000

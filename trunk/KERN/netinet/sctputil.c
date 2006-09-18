@@ -1309,6 +1309,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	memset(asoc->mapping_array, 0, asoc->mapping_array_size);
 	/* Now the init of the other outqueues */
 	TAILQ_INIT(&asoc->free_chunks);
+	TAILQ_INIT(&asoc->free_strmoq);
 	TAILQ_INIT(&asoc->out_wheel);
 	TAILQ_INIT(&asoc->control_send_queue);
 	TAILQ_INIT(&asoc->send_queue);
@@ -3594,8 +3595,7 @@ sctp_report_all_outbound(struct sctp_tcb *stcb)
 				sctp_free_remote_addr(sp->net);
 			sp->net = NULL;
 			/* Free the chunk */
-			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_strmoq, sp);
-			SCTP_DECR_STRMOQ_COUNT();
+			sctp_free_a_strmoq(stcb, sp);
 			sp = TAILQ_FIRST(&outs->outqueue);
 		}
 	}
@@ -4874,11 +4874,18 @@ restart:
 			TAILQ_REMOVE(&inp->read_queue, control, next);
 			/* Add back any hiddend data */
 			sctp_free_remote_addr(control->whoFrom);
-			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, control);
-			SCTP_DECR_READQ_COUNT();
+			control->data = NULL;
+			if(stcb && (control->do_not_ref_stcb == 0)) {
+				sctp_free_a_readq(stcb, control);
+			} else {
+				SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, control);
+				SCTP_DECR_READQ_COUNT();
+			}
 		}
-		hold_rlock = 0;
-		SCTP_INP_READ_UNLOCK(inp);
+		if(hold_rlock) {
+			hold_rlock = 0;
+			SCTP_INP_READ_UNLOCK(inp);
+		}
 		goto restart;
 	}
 	if (control->length == 0) {
@@ -5290,8 +5297,13 @@ get_more_data:
 				}
 				no_rcv_needed = control->do_not_ref_stcb;
 				sctp_free_remote_addr(control->whoFrom);
-				SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, control);
-				SCTP_DECR_READQ_COUNT();
+				control->data = NULL;
+				if(stcb && (control->do_not_ref_stcb == 0)) {
+					sctp_free_a_readq(stcb, control);
+				} else {
+					SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, control);
+					SCTP_DECR_READQ_COUNT();
+				}
 				control = NULL;
 			} else {
 				/*
