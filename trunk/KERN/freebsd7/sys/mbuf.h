@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)mbuf.h	8.5 (Berkeley) 2/19/95
- * $FreeBSD: src/sys/sys/mbuf.h,v 1.192 2006/07/24 01:49:57 rwatson Exp $
+ * $FreeBSD: src/sys/sys/mbuf.h,v 1.196 2006/09/17 13:33:30 andre Exp $
  */
 
 #ifndef _SYS_MBUF_H_
@@ -110,6 +110,8 @@ struct pkthdr {
 	/* variables for hardware checksum */
 	int	csum_flags;		/* flags regarding checksum */
 	int	csum_data;		/* data field used by csum routines */
+	u_int16_t tso_segsz;		/* TSO segment size */
+	u_int16_t ether_vtag;		/* Ethernet 802.1p+q vlan tag */
 	SLIST_HEAD(packet_tags, m_tag) tags; /* list of packet tags */
 };
 
@@ -210,12 +212,14 @@ struct mbuf {
 
 /*
  * Flags indicating hw checksum support and sw checksum requirements.
+ * This field can be directly tested against if_data.ifi_hwassist.
  */
 #define	CSUM_IP			0x0001		/* will csum IP */
 #define	CSUM_TCP		0x0002		/* will csum TCP */
 #define	CSUM_UDP		0x0004		/* will csum UDP */
 #define	CSUM_IP_FRAGS		0x0008		/* will csum IP fragments */
 #define	CSUM_FRAGMENT		0x0010		/* will do IP fragmentation */
+#define	CSUM_TSO		0x0020		/* will do TSO */
 
 #define	CSUM_IP_CHECKED		0x0100		/* did csum IP */
 #define	CSUM_IP_VALID		0x0200		/*   ... the csum is valid */
@@ -326,7 +330,6 @@ extern uma_zone_t	zone_jumbop;
 extern uma_zone_t	zone_jumbo9;
 extern uma_zone_t	zone_jumbo16;
 extern uma_zone_t	zone_ext_refcnt;
-extern uma_zone_t	zone_mtag_vlan;
 
 static __inline struct mbuf	*m_get(int how, short type);
 static __inline struct mbuf	*m_gethdr(int how, short type);
@@ -752,8 +755,6 @@ struct	mbuf	*m_unshare(struct mbuf *, int how);
 #define	PACKET_TAG_CARP                         28 /* CARP info */
 
 /* Specific cookies and tags. */
-#define	MTAG_VLAN				1035328035
-#define	MTAG_VLAN_TAG				0 /* tag of VLAN interface */
 
 /* Packet tag routines. */
 struct	m_tag	*m_tag_alloc(u_int32_t, int, int, int);
