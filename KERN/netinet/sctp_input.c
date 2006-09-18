@@ -289,8 +289,8 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 					/* Free the chunk */
 					printf("sp:%x tcb:%x weird free case\n",
 					       (u_int)sp, (u_int)stcb);
-					SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_strmoq, sp);
-					SCTP_DECR_STRMOQ_COUNT();
+
+					sctp_free_a_strmoq(stcb, sp);
 					sp = TAILQ_FIRST(&outs->outqueue);
 				}
 			}
