@@ -640,7 +640,7 @@ extern int ticks;
 #define atomic_add_int(addr, val)        OSAddAtomic(val, (SInt32 *)addr)
 #define atomic_subtract_int(addr, val)   OSAddAtomic((-val), (SInt32 *)addr)
 #define atomic_add_16(addr, val)         OSAddAtomic16(val, (SInt16 *)addr)
-#define atomic_cmpset_int(dst, exp, src) OSCompareAndSwap(exp, src, dst)
+#define atomic_cmpset_int(dst, exp, src) OSCompareAndSwap(exp, src, (UInt32 *)dst)
 /* additional protosw entries for Mac OS X 10.4 */
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	int sctp_lock(struct socket *so, int refcount, int lr);
