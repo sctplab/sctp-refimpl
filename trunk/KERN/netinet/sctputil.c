@@ -1151,7 +1151,13 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	asoc->default_flowlabel = 0;
 #endif
 	if (override_tag) {
-		asoc->my_vtag = override_tag;
+		struct timeval now;
+		if (sctp_is_vtag_good(m, override_tag, &now)) {
+			asoc->my_vtag = override_tag;
+		} else {
+			return (ENOMEM);
+		}
+
 	} else {
 		asoc->my_vtag = sctp_select_a_tag(m);
 	}
