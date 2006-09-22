@@ -389,7 +389,6 @@ TCP_DROP_SYNFIN		opt_tcp_input.h
 DEV_VLAN		opt_vlan.h
 VLAN_ARRAY		opt_vlan.h
 XBONEHACK
-
 #
 # SCTP
 #
