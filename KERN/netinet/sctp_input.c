@@ -4710,6 +4710,12 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 
 		stcb = sctp_process_control(m, iphlen, &offset, length, sh, ch,
 		    inp, stcb, &net, &fwd_tsn_seen);
+		if (stcb) {
+			/* This covers us if the cookie-echo was there
+			 * and it changes our INP.
+			 */
+ 			inp = stcb->sctp_ep;
+		}
 	} else {
 		/*
 		 * no control chunks, so pre-process DATA chunks (these
