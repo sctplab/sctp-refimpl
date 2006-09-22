@@ -2347,9 +2347,6 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			*inp_p = inp;
 
 			sctp_ulp_notify(notification, *stcb, 0, NULL);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			socket_unlock(so, 1);
-#endif
 			return (m);
 		}
 	}
@@ -4679,8 +4676,11 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 	int un_sent;
 
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	if (inp != NULL)
-		sctp_lock_assert(inp->ip_inp.inp.inp_socket);
+	/* inp is never NULL. stcb can be NULL */
+	sctp_lock_assert(inp->ip_inp.inp.inp_socket);
+	if ((stcb) && (stcb->sctp_ep != inp)) {
+		panic("sctp_common_input_processing: stcb->sctp_ep != inp\n");
+	}
 #endif
 	SCTP_STAT_INCR(sctps_recvdatagrams);
 #ifdef SCTP_AUDITING_ENABLED
@@ -4698,9 +4698,6 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 	if (stcb) {
 		/* always clear this before beginning a packet */
 		stcb->asoc.authenticated = 0;
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
-#endif
 		stcb->asoc.seen_a_sack_this_pkt = 0;
 	}
 	if (IS_SCTP_CONTROL(ch)) {
@@ -4752,6 +4749,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 			return (1);
 		}
 	}
+	
 	if (stcb == NULL) {
 		/*
 		 * no valid TCB for this packet, or we found it's a bad
@@ -4760,6 +4758,11 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		 */
 		return (1);
 	}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	/* It may happen that stcb->sctp_ep != inp */
+	sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
+#endif
+
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
 		printf("Ok, control finished time to look for data (%d) offset:%d\n",
@@ -4786,6 +4789,11 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 			printf("Data chunk requires AUTH, skipped\n");
 #endif
 		SCTP_TCB_UNLOCK(stcb);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		if (stcb->sctp_ep != inp) {
+			socket_unlock(stcb->sctp_ep->ip_inp.inp.inp_socket, 1);
+		}
+#endif
 		return (1);
 	}
 	if (length > offset) {
@@ -4812,6 +4820,11 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 			 */
 			sctp_handle_ootb(m, iphlen, offset, sh, inp, NULL);
 			SCTP_TCB_UNLOCK(stcb);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			if (stcb->sctp_ep != inp) {
+				socket_unlock(stcb->sctp_ep->ip_inp.inp.inp_socket, 1);
+			}
+#endif
 			return (1);
 			break;
 		case SCTP_STATE_EMPTY:	/* should not happen */
@@ -4825,6 +4838,11 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 			}
 #endif
 			SCTP_TCB_UNLOCK(stcb);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			if (stcb->sctp_ep != inp) {
+				socket_unlock(stcb->sctp_ep->ip_inp.inp.inp_socket, 1);
+			}
+#endif
 			return (1);
 			break;
 		case SCTP_STATE_OPEN:
@@ -4844,6 +4862,11 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 			 * The association aborted, NO UNLOCK needed since
 			 * the association is destroyed.
 			 */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			if (stcb->sctp_ep != inp) {
+				socket_unlock(stcb->sctp_ep->ip_inp.inp.inp_socket, 1);
+			}
+#endif
 			return (0);
 		}
 		data_processed = 1;
@@ -4871,6 +4894,11 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		sctp_sack_check(stcb, 1, was_a_gap, &abort_flag);
 		if (abort_flag) {
 			/* Again, we aborted so NO UNLOCK needed */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			if (stcb->sctp_ep != inp) {
+				socket_unlock(stcb->sctp_ep->ip_inp.inp.inp_socket, 1);
+			}
+#endif
 			return (0);
 		}
 	}
@@ -4910,6 +4938,11 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 	sctp_auditing(2, inp, stcb, net);
 #endif
 	SCTP_TCB_UNLOCK(stcb);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	if (stcb->sctp_ep != inp) {
+		socket_unlock(stcb->sctp_ep->ip_inp.inp.inp_socket, 1);
+	}
+#endif
 	return (0);
 }
 
