@@ -4674,6 +4674,9 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 	struct mbuf *m = *mm;
 	int abort_flag = 0;
 	int un_sent;
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	int additional_lock = 0;
+#endif
 
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	/* inp is never NULL. stcb can be NULL */
@@ -4710,6 +4713,11 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 
 		stcb = sctp_process_control(m, iphlen, &offset, length, sh, ch,
 		    inp, stcb, &net, &fwd_tsn_seen);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		if (stcb) {
+			additional_lock = (inp != stcb->sctp_ep);
+		}
+#endif
 		if (stcb) {
 			/* This covers us if the cookie-echo was there
 			 * and it changes our INP.
@@ -4765,7 +4773,6 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		return (1);
 	}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	/* It may happen that stcb->sctp_ep != inp */
 	sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
 #endif
 
@@ -4796,7 +4803,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 #endif
 		SCTP_TCB_UNLOCK(stcb);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		if (stcb->sctp_ep != inp) {
+		if (additional_lock) {
 			socket_unlock(stcb->sctp_ep->ip_inp.inp.inp_socket, 1);
 		}
 #endif
@@ -4827,7 +4834,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 			sctp_handle_ootb(m, iphlen, offset, sh, inp, NULL);
 			SCTP_TCB_UNLOCK(stcb);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			if (stcb->sctp_ep != inp) {
+			if (additional_lock) {
 				socket_unlock(stcb->sctp_ep->ip_inp.inp.inp_socket, 1);
 			}
 #endif
@@ -4845,7 +4852,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 #endif
 			SCTP_TCB_UNLOCK(stcb);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			if (stcb->sctp_ep != inp) {
+			if (additional_lock) {
 				socket_unlock(stcb->sctp_ep->ip_inp.inp.inp_socket, 1);
 			}
 #endif
@@ -4869,7 +4876,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 			 * the association is destroyed.
 			 */
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			if (stcb->sctp_ep != inp) {
+			if (additional_lock) {
 				socket_unlock(stcb->sctp_ep->ip_inp.inp.inp_socket, 1);
 			}
 #endif
@@ -4901,7 +4908,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		if (abort_flag) {
 			/* Again, we aborted so NO UNLOCK needed */
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			if (stcb->sctp_ep != inp) {
+			if (additional_lock) {
 				socket_unlock(stcb->sctp_ep->ip_inp.inp.inp_socket, 1);
 			}
 #endif
@@ -4945,7 +4952,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 #endif
 	SCTP_TCB_UNLOCK(stcb);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	if (stcb->sctp_ep != inp) {
+	if (additional_lock) {
 		socket_unlock(stcb->sctp_ep->ip_inp.inp.inp_socket, 1);
 	}
 #endif
