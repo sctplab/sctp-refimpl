@@ -6120,7 +6120,7 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 				    ctl, next);
 				if (ctl->data) {
 					sctp_m_freem(ctl->data);
-					chk->data = NULL;
+					ctl->data = NULL;
 				}
 				sctp_free_remote_addr(ctl->whoFrom);
 				SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, ctl);
