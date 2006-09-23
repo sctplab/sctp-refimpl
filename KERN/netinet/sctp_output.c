@@ -9827,6 +9827,12 @@ sctp_send_sack(struct sctp_tcb *stcb)
 	int num_dups = 0;
 	int space_req;
 
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	if (stcb ==NULL)
+		panic("sctp_send_sack");
+	sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
+#endif
+	
 	a_chk = NULL;
 	asoc = &stcb->asoc;
 	SCTP_TCB_LOCK_ASSERT(stcb);
@@ -9923,8 +9929,9 @@ sctp_send_sack(struct sctp_tcb *stcb)
 			sctp_m_freem(a_chk->data);
 			a_chk->data = NULL;
 		}
-		atomic_subtract_int(&a_chk->whoTo->ref_count, 1);
-		sctp_free_a_chunk(stcb, chk);
+		if (a_chk->whoTo)
+			atomic_subtract_int(&a_chk->whoTo->ref_count, 1);
+		sctp_free_a_chunk(stcb, a_chk);
 		sctp_timer_stop(SCTP_TIMER_TYPE_RECV,
 		    stcb->sctp_ep, stcb, NULL);
 		sctp_timer_start(SCTP_TIMER_TYPE_RECV,
