@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)mbuf.h	8.5 (Berkeley) 2/19/95
- * $FreeBSD: src/sys/sys/mbuf.h,v 1.196 2006/09/17 13:33:30 andre Exp $
+ * $FreeBSD: src/sys/sys/mbuf.h,v 1.197 2006/09/22 19:50:04 ru Exp $
  */
 
 #ifndef _SYS_MBUF_H_
@@ -181,7 +181,7 @@ struct mbuf {
 #define	M_FRAG		0x0800	/* packet is a fragment of a larger packet */
 #define	M_FIRSTFRAG	0x1000	/* packet is first fragment */
 #define	M_LASTFRAG	0x2000	/* packet is last fragment */
-#define	M_VLANTAG	0x10000	/* packet has VLAN tag attached */
+#define	M_VLANTAG	0x10000	/* ether_vtag is valid */
 
 /*
  * External buffer types: identify ext_buf type.
