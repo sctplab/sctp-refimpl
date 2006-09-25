@@ -6458,14 +6458,15 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 	if (dont_clone) {
 		appendchain = clonechain;
 	} else {
+		if(can_take_chain) {
+			appendchain = clonechain;
+		} else {
+
 #if defined(__FreeBSD__) || defined(__NetBSD__)
 		/*
 		 * Supposedly m_copypacket is an optimization, use it if we
 		 * can
 		 */
-		if(can_take_chain) {
-			appendchain = clonechain;
-		} else {
 			if (clonechain->m_flags & M_PKTHDR) {
 				appendchain = m_copypacket(clonechain, M_DONTWAIT);
 			} else {
@@ -6477,7 +6478,7 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 #else
 			appendchain = m_copy(clonechain, 0, M_COPYALL);
 #endif
-		}
+		}	
 		if (appendchain == NULL) {
 			/* error */
 			if (outchain)
