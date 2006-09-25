@@ -9394,9 +9394,9 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 	/* Do we have something to send, data or control AND
 	 * a sack timer running, if so piggy-back the sack.
 	 */
- 	if(callout_pending(&stcb->dack_timer.timer)) {
+ 	if(callout_pending(&stcb->asoc.dack_timer.timer)) {
 		sctp_send_sack(stcb);
-		callout_stop(&stcb->dack_timer.timer);
+		callout_stop(&stcb->asoc.dack_timer.timer);
 	}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	sctp_lock_assert(inp->ip_inp.inp.inp_socket);
