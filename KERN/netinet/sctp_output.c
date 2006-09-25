@@ -6471,13 +6471,13 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 			} else {
 				appendchain = m_copy(clonechain, 0, M_COPYALL);
 			}
-		}
-#elif defined(__APPLE__)
-		appendchain = sctp_m_copym(clonechain, 0, M_COPYALL, M_DONTWAIT);
-#else
-		appendchain = m_copy(clonechain, 0, M_COPYALL);
-#endif
 
+#elif defined(__APPLE__)
+			appendchain = sctp_m_copym(clonechain, 0, M_COPYALL, M_DONTWAIT);
+#else
+			appendchain = m_copy(clonechain, 0, M_COPYALL);
+#endif
+		}
 		if (appendchain == NULL) {
 			/* error */
 			if (outchain)
