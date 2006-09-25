@@ -106,7 +106,7 @@ __FBSDID("$FreeBSD:$");
 #endif
 #endif				/* IPSEC */
 
-#ifndef __APPLE__
+#ifdef __NetBSD__
 #include <net/net_osdep.h>
 #endif
 

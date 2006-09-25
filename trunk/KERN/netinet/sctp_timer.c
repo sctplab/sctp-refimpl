@@ -117,7 +117,7 @@ __FBSDID("$FreeBSD:$");
 #include <netinet/sctp.h>
 #include <netinet/sctp_uio.h>
 
-#ifndef __APPLE__
+#ifdef __NetBSD__
 #include <net/net_osdep.h>
 #endif
 
