@@ -425,9 +425,10 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 			 * Lose the data pointer, since its in the socket
 			 * buffer
 			 */
-			if (chk->data)
+			if (chk->data) {
 				sctp_m_freem(chk->data);
-			chk->data = NULL;
+				chk->data = NULL;
+			}
 			/* Now free the address and data */
 			sctp_free_remote_addr(chk->whoTo);
 			sctp_free_a_chunk(stcb, chk);
@@ -548,8 +549,11 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 		asoc->size_on_reasm_queue -= chk->send_size;
 		sctp_ucount_decr(asoc->cnt_on_reasm_queue);
 		/* free up the chk */
+		if (chk->data) {
+			sctp_m_freem(chk->data);
+			chk->data = NULL;
+		}
 		sctp_free_remote_addr(chk->whoTo);
-		chk->data = NULL;
 		sctp_free_a_chunk(stcb, chk);
 
 		if (asoc->fragmented_delivery_inprogress == 0) {
@@ -1068,9 +1072,10 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			 * compare to TSN somehow... sigh for now just blow
 			 * away the chunk!
 			 */
-			if (chk->data)
+			if (chk->data) {
 				sctp_m_freem(chk->data);
-			chk->data = NULL;
+				chk->data = NULL;
+			}
 			sctp_free_remote_addr(chk->whoTo);
 			sctp_free_a_chunk(stcb, chk);
 			return;
