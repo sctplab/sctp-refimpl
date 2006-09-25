@@ -2781,6 +2781,7 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 		} else {
 			if(callout_pending(&stcb->asoc.dack_timer.timer)) {
 				stcb->asoc.first_ack_sent = 1;
+				callout_stop(&stcb->asoc.dack_timer.timer);
 				sctp_send_sack(stcb);
 			} else {
 				sctp_timer_start(SCTP_TIMER_TYPE_RECV,
