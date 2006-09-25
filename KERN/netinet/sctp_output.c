@@ -114,7 +114,7 @@ __FBSDID("$FreeBSD:$");
 
 #endif				/* INET6 */
 
-#ifndef __APPLE__
+#ifdef __NetBSD__
 #include <net/net_osdep.h>
 #endif
 
