@@ -6463,10 +6463,10 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 		} else {
 
 #if defined(__FreeBSD__) || defined(__NetBSD__)
-		/*
-		 * Supposedly m_copypacket is an optimization, use it if we
-		 * can
-		 */
+			/*
+			 * Supposedly m_copypacket is an optimization, use it if we
+			 * can
+			 */
 			if (clonechain->m_flags & M_PKTHDR) {
 				appendchain = m_copypacket(clonechain, M_DONTWAIT);
 			} else {
@@ -9361,6 +9361,7 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 	int cwnd_full = 0;
 	int nagle_on = 0;
 	int frag_point = sctp_get_frag_point(stcb, &stcb->asoc);
+	int un_sent;
 
 	asoc = &stcb->asoc;
 	tot_out = 0;
@@ -9380,11 +9381,22 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 		}
 	}
 	SCTP_TCB_LOCK_ASSERT(stcb);
-	if (((asoc->total_output_queue_size - asoc->total_flight) <= 0) &&
+
+	un_sent = (stcb->asoc.total_output_queue_size - stcb->asoc.total_flight);
+
+
+	if ((un_sent <= 0) &&
 	    (TAILQ_EMPTY(&asoc->control_send_queue)) &&
 	    (asoc->sent_queue_retran_cnt == 0)){
 		/* Nothing to do unless there is something to be sent left */
 		return(error);
+	}
+	/* Do we have something to send, data or control AND
+	 * a sack timer running, if so piggy-back the sack.
+	 */
+ 	if(callout_pending(&stcb->dack_timer.timer)) {
+		sctp_send_sack(stcb);
+		callout_stop(&stcb->dack_timer.timer);
 	}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	sctp_lock_assert(inp->ip_inp.inp.inp_socket);
@@ -9562,7 +9574,6 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 		}
 #endif
 		if (nagle_on) {
-			int un_sent;
 			/* When nagle is on, we look at how much is un_sent, then
 			 * if its smaller than an MTU and we have data in
 			 * flight we stop.
