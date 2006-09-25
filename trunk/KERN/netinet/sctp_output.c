@@ -9859,9 +9859,10 @@ sctp_send_sack(struct sctp_tcb *stcb)
 			TAILQ_REMOVE(&asoc->control_send_queue, chk, sctp_next);
 			asoc->ctrl_queue_cnt++;
 			a_chk = chk;
-			if (a_chk->data)
+			if (a_chk->data) {
 				sctp_m_freem(a_chk->data);
-			a_chk->data = NULL;
+				a_chk->data = NULL;
+			}
 			sctp_free_remote_addr(a_chk->whoTo);
 			a_chk->whoTo = NULL;
 			break;
