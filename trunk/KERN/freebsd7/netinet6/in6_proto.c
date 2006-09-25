@@ -147,7 +147,6 @@
 
 #include <netinet6/ip6protosw.h>
 
-#include <net/net_osdep.h>
 
 /*
  * TCP/IP protocol family: IP6, ICMP6, UDP, TCP.
