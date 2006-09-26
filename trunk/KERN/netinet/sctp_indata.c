@@ -549,10 +549,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 		asoc->size_on_reasm_queue -= chk->send_size;
 		sctp_ucount_decr(asoc->cnt_on_reasm_queue);
 		/* free up the chk */
-		if (chk->data) {
-			sctp_m_freem(chk->data);
-			chk->data = NULL;
-		}
+		chk->data = NULL;
 		sctp_free_remote_addr(chk->whoTo);
 		sctp_free_a_chunk(stcb, chk);
 
