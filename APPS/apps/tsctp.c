@@ -73,7 +73,7 @@ Options:\n\
 #define DEFAULT_PORT               5001
 #define BUFFERSIZE                 200000
 #define LINGERTIME                 1000
-
+int sleep_it=0;
 static void* handle_connection(void *arg)
 {
 	ssize_t n;
@@ -91,6 +91,8 @@ static void* handle_connection(void *arg)
 	free(arg);
 	tid = pthread_self();
 	pthread_detach(tid);
+	if(sleep_it)
+		sleep(sleep_it);
 	gettimeofday(&start_time, NULL);
 	
 	n = recv(fd, (void*)buf, BUFFERSIZE, 0);
@@ -164,8 +166,11 @@ int main(int argc, char **argv)
 #endif
 	local_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
-	while ((c = getopt(argc, argv, "p:l:f:L:n:R:S:vVD")) != -1)
+	while ((c = getopt(argc, argv, "p:l:f:L:n:R:S:vVDs:")) != -1)
 		switch(c) {
+ 		        case 's':
+				sleep_it = strtol(optarg, NULL, 0);
+				break;
 			case 'l':
 				length = atoi(optarg);
 				break;
