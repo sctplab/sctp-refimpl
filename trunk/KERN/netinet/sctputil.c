@@ -5311,6 +5311,9 @@ get_more_data:
 					SCTP_DECR_READQ_COUNT();
 				}
 				control = NULL;
+				if ((freed_so_far >= rwnd_req) && (no_rcv_needed == 0))
+					sctp_user_rcvd(stcb, &freed_so_far, hold_rlock, rwnd_req);
+
 			} else {
 				/*
 				 * The user did not read all of this
