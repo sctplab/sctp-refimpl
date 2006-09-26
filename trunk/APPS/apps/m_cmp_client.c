@@ -455,7 +455,7 @@ measure_one(struct control_info *req,
 #ifndef WIN32
 		memset(&events,0, sizeof(events));
 		events.sctp_association_event = 1;
-		events.sctp_partial_delivery_event = 1;
+/*		events.sctp_partial_delivery_event = 1;*/
 		if (setsockopt(fd, IPPROTO_SCTP, 
 			       SCTP_EVENTS, &events, 
 			       sizeof(events)) != 0) {
