@@ -536,25 +536,19 @@ struct sctp_tcb {
 
 #define SCTP_IPI_COUNT_INIT()
 
-#define SCTP_STATLOG_INIT_LOCK()  \
-        mtx_init(&sctppcbinfo.logging_mtx, "sctp-logging", "sctp-log_mtx", MTX_DEF)
-
-#ifdef SCTP_NOLOCK_LOGGING
-#define SCTP_STATLOG_LOCK() 
+#define SCTP_STATLOG_INIT_LOCK() 
+#define SCTP_STATLOG_LOCK()
 #define SCTP_STATLOG_UNLOCK()
-#else
-#define SCTP_STATLOG_LOCK() \
-	do {								\
-		mtx_lock(&sctppcbinfo.logging_mtx);				\
-	} while (0)
+#define SCTP_STATLOG_DESTROY()
 
-#define SCTP_STATLOG_UNLOCK()		mtx_unlock(&sctppcbinfo.logging_mtx)
-
-#endif
-
-#define SCTP_STATLOG_DESTROY() \
-	mtx_destroy(&sctppcbinfo.loggingr_mtx)
-
+#define SCTP_STATLOG_GETREF(x) { \
+        x = atomic_fetchadd_int(&global_sctp_cwnd_log_at, 1); \
+        if(x == SCTP_STAT_LOG_SIZE) { \
+           global_sctp_cwnd_log_at = 1; \
+           x = 0; \
+           global_sctp_cwnd_log_rolled = 1; \
+        } \
+}
 
 #define SCTP_INP_INFO_LOCK_INIT() \
         mtx_init(&sctppcbinfo.ipi_ep_mtx, "sctp-info", "inp_info", MTX_DEF)
@@ -769,6 +763,19 @@ struct sctp_tcb {
 	lck_mtx_unlock(sctppcbinfo.logging_mtx)
 #define SCTP_STATLOG_DESTROY() \
 	lck_mtx_free(sctppcbinfo.logging_mtx, SCTP_MTX_GRP)
+
+
+#define SCTP_STATLOG_GETREF(x) { \
+        lck_mtx_lock(sctppcbinfo.logging_mtx); \
+        x = global_sctp_cwnd_log_at; \
+        global_sctp_cwnd_log_at++; \
+        if(global_sctp_cwnd_log_at == SCTP_STAT_LOG_SIZE) { \
+           global_sctp_cwnd_log_at = 0; \
+           global_sctp_cwnd_log_rolled = 1; \
+        } \
+        lck_mtx_unlock(sctppcbinfo.logging_mtx);
+}
+
 
 
 /* Lock for INP */
