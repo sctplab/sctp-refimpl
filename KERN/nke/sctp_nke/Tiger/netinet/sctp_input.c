@@ -120,7 +120,7 @@ __FBSDID("$FreeBSD:$");
 #endif
 #endif				/* IPSEC */
 
-#ifndef __APPLE__
+#ifdef __NetBSD__
 #include <net/net_osdep.h>
 #endif
 
@@ -289,8 +289,8 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 					/* Free the chunk */
 					printf("sp:%x tcb:%x weird free case\n",
 					       (u_int)sp, (u_int)stcb);
-					SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_strmoq, sp);
-					SCTP_DECR_STRMOQ_COUNT();
+
+					sctp_free_a_strmoq(stcb, sp);
 					sp = TAILQ_FIRST(&outs->outqueue);
 				}
 			}
@@ -630,6 +630,18 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 		sctp_update_acked(stcb, cp, net, abort_flag);
 	}
 	asoc = &stcb->asoc;
+	if(stcb->asoc.control_pdapi) {
+		/* With a normal shutdown 
+		 * we assume the end of last record.
+		 */
+		SCTP_INP_READ_LOCK(stcb->sctp_ep);
+		stcb->asoc.control_pdapi->end_added = 1;
+		if (stcb->asoc.control_pdapi->tail_mbuf) {
+			stcb->asoc.control_pdapi->tail_mbuf->m_flags |= M_EOR;
+		}
+		stcb->asoc.control_pdapi = NULL;
+		SCTP_INP_READ_UNLOCK(stcb->sctp_ep);
+	}
 	/* goto SHUTDOWN_RECEIVED state to block new requests */
 	if(stcb->sctp_socket) {
 		if ((SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_RECEIVED) &&
@@ -718,6 +730,18 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
 		/* unexpected SHUTDOWN-ACK... so ignore... */
 		SCTP_TCB_UNLOCK_IFOWNED(stcb);
 		return;
+	}
+	if(stcb->asoc.control_pdapi) {
+		/* With a normal shutdown 
+		 * we assume the end of last record.
+		 */
+		SCTP_INP_READ_LOCK(stcb->sctp_ep);
+		stcb->asoc.control_pdapi->end_added = 1;
+		if (stcb->asoc.control_pdapi->tail_mbuf) {
+			stcb->asoc.control_pdapi->tail_mbuf->m_flags |= M_EOR;
+		}
+		stcb->asoc.control_pdapi = NULL;
+		SCTP_INP_READ_UNLOCK(stcb->sctp_ep);
 	}
 	/* are the queues empty? */
 	if (!TAILQ_EMPTY(&asoc->send_queue) ||
@@ -1947,6 +1971,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 #endif
 		return (NULL);
 	}
+
 	/*
 	 * compute the signature/digest for the cookie
 	 */
@@ -2032,7 +2057,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			 */
 			if (m_sig->m_flags & M_PKTHDR) {
 				/* Add back to the pkt hdr of main m chain */
-				m->m_pkthdr.len += m_sig->m_len;
+				m->m_pkthdr.len += m_sig->m_pkthdr.len;
 			} else {
 				/*
 				 * Got a problem, no pkthdr in split chain.
@@ -2322,9 +2347,6 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			*inp_p = inp;
 
 			sctp_ulp_notify(notification, *stcb, 0, NULL);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			socket_unlock(so, 1);
-#endif
 			return (m);
 		}
 	}
@@ -2407,7 +2429,7 @@ sctp_handle_cookie_ack(struct sctp_cookie_ack_chunk *cp,
 		}
 	}
 	/* Toss the cookie if I can */
-	sctp_toss_old_cookies(asoc);
+	sctp_toss_old_cookies(stcb, asoc);
 	if (!TAILQ_EMPTY(&asoc->sent_queue)) {
 		/* Restart the timer if we have pending data */
 		struct sctp_tmit_chunk *chk;
@@ -2503,7 +2525,7 @@ sctp_handle_ecn_cwr(struct sctp_cwr_chunk *cp, struct sctp_tcb *stcb)
 	struct sctp_ecne_chunk *ecne;
 
 	TAILQ_FOREACH(chk, &stcb->asoc.control_send_queue, sctp_next) {
-		if (chk->rec.chunk_id != SCTP_ECN_ECHO) {
+		if (chk->rec.chunk_id.id != SCTP_ECN_ECHO) {
 			continue;
 		}
 		/*
@@ -2524,8 +2546,7 @@ sctp_handle_ecn_cwr(struct sctp_cwr_chunk *cp, struct sctp_tcb *stcb)
 			}
 			stcb->asoc.ctrl_queue_cnt--;
 			sctp_free_remote_addr(chk->whoTo);
-			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-			SCTP_DECR_CHK_COUNT();
+			sctp_free_a_chunk(stcb, chk);
 			break;
 		}
 	}
@@ -2724,7 +2745,7 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 
 			TAILQ_FOREACH(asconf, &stcb->asoc.control_send_queue,
 			    sctp_next) {
-				if (asconf->rec.chunk_id == SCTP_ASCONF) {
+				if (asconf->rec.chunk_id.id == SCTP_ASCONF) {
 					break;
 				}
 			}
@@ -2778,7 +2799,7 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 			cookie = NULL;
 			TAILQ_FOREACH(cookie, &stcb->asoc.control_send_queue,
 			    sctp_next) {
-				if (cookie->rec.chunk_id == SCTP_COOKIE_ECHO) {
+				if (cookie->rec.chunk_id.id == SCTP_COOKIE_ECHO) {
 					break;
 				}
 			}
@@ -2939,8 +2960,8 @@ sctp_clean_up_stream_reset(struct sctp_tcb *stcb)
 	}
 	asoc->ctrl_queue_cnt--;
 	sctp_free_remote_addr(chk->whoTo);
-	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-	SCTP_DECR_CHK_COUNT();
+
+	sctp_free_a_chunk(stcb, chk);
 	stcb->asoc.str_reset = NULL;
 }
 
@@ -3268,12 +3289,11 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_out_req
 	int num_param = 0;
 
 	/* setup for adding the response */
-	chk = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk);
+	sctp_alloc_a_chunk(stcb, chk);
 	if (chk == NULL) {
 		return (ret_code);
 	}
-	SCTP_INCR_CHK_COUNT();
-	chk->rec.chunk_id = SCTP_STREAM_RESET;
+	chk->rec.chunk_id.id = SCTP_STREAM_RESET;
 	chk->asoc = &stcb->asoc;
 	chk->no_fr_allowed = 0;
 	chk->book_size = chk->send_size = sizeof(struct sctp_chunkhdr);
@@ -3284,8 +3304,7 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_out_req
 			sctp_m_freem(chk->data);
 			chk->data = NULL;
 		}
-		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-		SCTP_DECR_CHK_COUNT();
+		sctp_free_a_chunk(stcb, chk);
 		return (ret_code);
 	}
 	chk->data->m_data += SCTP_MIN_OVERHEAD;
@@ -3979,10 +3998,6 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				} else {
 					if (locked_tcb)
 						SCTP_TCB_UNLOCK(locked_tcb);
-					if (LIST_FIRST(&inp->sctp_asoc_list) == NULL) {
-						/* finish the job now */
-						sctp_inpcb_free(inp, 1);
-					}
 					*offset = length;
 					return (NULL);
 				}
@@ -4029,11 +4044,6 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					*offset = length;
 					if (stcb) {
 						sctp_free_assoc(inp, stcb, 0);
-					} else {
-						if (LIST_FIRST(&inp->sctp_asoc_list) == NULL) {
-							/* finish the job now */
-							sctp_inpcb_free(inp, 1);
-						}
 					}
 					return (NULL);
 				}
@@ -4259,7 +4269,6 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 		process_cookie_anyway:
 			{
 				struct mbuf *ret_buf;
-
 				ret_buf =
 					sctp_handle_cookie_echo(m, iphlen,
 								*offset, sh,
@@ -4268,6 +4277,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 								auth_skipped,
 								auth_offset,
 								auth_len);
+
 #ifdef SCTP_DEBUG
 				if (sctp_debug_on & SCTP_DEBUG_INPUT3) {
 					printf("ret_buf:%p length:%d off:%d\n",
@@ -4664,10 +4674,16 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 	struct mbuf *m = *mm;
 	int abort_flag = 0;
 	int un_sent;
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	int additional_lock = 0;
+#endif
 
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	if (inp != NULL)
-		sctp_lock_assert(inp->ip_inp.inp.inp_socket);
+	/* inp is never NULL. stcb can be NULL */
+	sctp_lock_assert(inp->ip_inp.inp.inp_socket);
+	if ((stcb) && (stcb->sctp_ep != inp)) {
+		panic("sctp_common_input_processing: stcb->sctp_ep != inp\n");
+	}
 #endif
 	SCTP_STAT_INCR(sctps_recvdatagrams);
 #ifdef SCTP_AUDITING_ENABLED
@@ -4685,9 +4701,6 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 	if (stcb) {
 		/* always clear this before beginning a packet */
 		stcb->asoc.authenticated = 0;
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
-#endif
 		stcb->asoc.seen_a_sack_this_pkt = 0;
 	}
 	if (IS_SCTP_CONTROL(ch)) {
@@ -4700,6 +4713,17 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 
 		stcb = sctp_process_control(m, iphlen, &offset, length, sh, ch,
 		    inp, stcb, &net, &fwd_tsn_seen);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		if (stcb) {
+			additional_lock = (inp != stcb->sctp_ep);
+		}
+#endif
+		if (stcb) {
+			/* This covers us if the cookie-echo was there
+			 * and it changes our INP.
+			 */
+ 			inp = stcb->sctp_ep;
+		}
 	} else {
 		/*
 		 * no control chunks, so pre-process DATA chunks (these
@@ -4739,6 +4763,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 			return (1);
 		}
 	}
+	
 	if (stcb == NULL) {
 		/*
 		 * no valid TCB for this packet, or we found it's a bad
@@ -4747,6 +4772,10 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		 */
 		return (1);
 	}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
+#endif
+
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
 		printf("Ok, control finished time to look for data (%d) offset:%d\n",
@@ -4773,6 +4802,11 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 			printf("Data chunk requires AUTH, skipped\n");
 #endif
 		SCTP_TCB_UNLOCK(stcb);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		if (additional_lock) {
+			socket_unlock(stcb->sctp_ep->ip_inp.inp.inp_socket, 1);
+		}
+#endif
 		return (1);
 	}
 	if (length > offset) {
@@ -4799,6 +4833,11 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 			 */
 			sctp_handle_ootb(m, iphlen, offset, sh, inp, NULL);
 			SCTP_TCB_UNLOCK(stcb);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			if (additional_lock) {
+				socket_unlock(stcb->sctp_ep->ip_inp.inp.inp_socket, 1);
+			}
+#endif
 			return (1);
 			break;
 		case SCTP_STATE_EMPTY:	/* should not happen */
@@ -4812,6 +4851,11 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 			}
 #endif
 			SCTP_TCB_UNLOCK(stcb);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			if (additional_lock) {
+				socket_unlock(stcb->sctp_ep->ip_inp.inp.inp_socket, 1);
+			}
+#endif
 			return (1);
 			break;
 		case SCTP_STATE_OPEN:
@@ -4831,6 +4875,11 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 			 * The association aborted, NO UNLOCK needed since
 			 * the association is destroyed.
 			 */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			if (additional_lock) {
+				socket_unlock(stcb->sctp_ep->ip_inp.inp.inp_socket, 1);
+			}
+#endif
 			return (0);
 		}
 		data_processed = 1;
@@ -4858,6 +4907,11 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		sctp_sack_check(stcb, 1, was_a_gap, &abort_flag);
 		if (abort_flag) {
 			/* Again, we aborted so NO UNLOCK needed */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			if (additional_lock) {
+				socket_unlock(stcb->sctp_ep->ip_inp.inp.inp_socket, 1);
+			}
+#endif
 			return (0);
 		}
 	}
@@ -4897,6 +4951,11 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 	sctp_auditing(2, inp, stcb, net);
 #endif
 	SCTP_TCB_UNLOCK(stcb);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	if (additional_lock) {
+		socket_unlock(stcb->sctp_ep->ip_inp.inp.inp_socket, 1);
+	}
+#endif
 	return (0);
 }
 
@@ -5031,8 +5090,15 @@ sctp_input(m, va_alist)
 	{
 		goto bad;
 	}
-	if (in_broadcast(ip->ip_dst, m->m_pkthdr.rcvif)) {
-		goto bad;
+	if (((ch->chunk_type == SCTP_INITIATION) ||
+	     (ch->chunk_type == SCTP_INITIATION_ACK) ||
+	     (ch->chunk_type == SCTP_COOKIE_ECHO)) &&
+	    (in_broadcast(ip->ip_dst, m->m_pkthdr.rcvif))) {
+		/* We only look at broadcast if its a
+		 * front state, All others we will 
+		 * not have a tcb for anyway.
+		 */
+ 		goto bad;
 	}
 	/* destination port of 0 is illegal, based on RFC2960. */
 	if (sh->dest_port == 0) {

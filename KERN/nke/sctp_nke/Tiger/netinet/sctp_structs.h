@@ -324,10 +324,16 @@ TAILQ_HEAD(sctpchunk_listhead, sctp_tmit_chunk);
 /* The upper byte is used a a bit mask */
 #define CHUNK_FLAGS_FRAGMENT_OK	        0x0100
 
+struct chk_id {
+	uint16_t id;
+	uint16_t can_take_data;
+};
+
+
 struct sctp_tmit_chunk {
 	union {
 		struct sctp_data_chunkrec data;
-		int chunk_id;
+		struct chk_id chunk_id;
 	}     rec;
 	struct sctp_association *asoc;	/* bp to asoc this belongs to */
 	struct timeval sent_rcv_time;	/* filled in if RTT being calculated */
@@ -436,7 +442,6 @@ struct sctp_stream_in {
 TAILQ_HEAD(sctpwheel_listhead, sctp_stream_out);
 struct sctp_stream_out {
 	struct sctp_streamhead outqueue;
-        /*struct sctpchunk_listhead outqueue;*/
 	TAILQ_ENTRY(sctp_stream_out) next_spoke;	/* next link in wheel */
 	uint16_t stream_no;
 	uint16_t next_sequence_sent;	/* next one I expect to send out */
@@ -482,6 +487,12 @@ struct sctp_association {
 	/* list of local addresses when add/del in progress */
 	struct sctpladdr sctp_local_addr_list;
 	struct sctpnetlisthead nets;
+
+	/* Free chunk list */
+	struct sctpchunk_listhead free_chunks;
+
+	/* Free stream output control list */
+	struct sctp_streamhead free_strmoq;
 
 	/* Control chunk queue */
 	struct sctpchunk_listhead control_send_queue;
@@ -742,7 +753,6 @@ struct sctp_association {
 	 * user data in.
 	 */
 	uint16_t refcnt;
-	uint8_t authenticated;	/* packet authenticated ok */
 
 	/*
 	 * Being that we have no bag to collect stale cookies, and that we
@@ -788,7 +798,12 @@ struct sctp_association {
 
 	uint16_t stream_locked_on;
 	uint16_t ecn_echo_cnt_onq;
+
+	uint16_t free_chunk_cnt;
+	uint16_t free_strmoq_cnt;
+
 	uint8_t  stream_locked;
+	uint8_t authenticated;	/* packet authenticated ok */
 	/*
 	 * This flag indicates that we need to send the first SACK. If in
 	 * place it says we have NOT yet sent a SACK and need to.

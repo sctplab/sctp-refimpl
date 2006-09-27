@@ -202,6 +202,9 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 
 int find_next_best_mtu(int);
 
+void
+sctp_timeout_handler(void *);
+
 uint32_t
 sctp_calculate_rto(struct sctp_tcb *, struct sctp_association *,
     struct sctp_nets *, struct timeval *);
@@ -225,6 +228,8 @@ sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
     struct sctp_inpcb *new_inp,
     struct sctp_tcb *stcb);
 
+
+void sctp_stop_timers_for_shutdown(struct sctp_tcb *);
 
 void sctp_report_all_outbound(struct sctp_tcb *);
 

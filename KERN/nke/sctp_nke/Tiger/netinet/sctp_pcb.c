@@ -193,7 +193,7 @@ sctp_fill_pcbinfo(struct sctp_pcbinfo *spcb)
 	spcb->chk_count = sctppcbinfo.ipi_count_chunk;
 	spcb->readq_count = sctppcbinfo.ipi_count_readq;
 	spcb->stream_oque = sctppcbinfo.ipi_count_strmoq;
-	spcb->mbuf_track = 0; /* not used now */
+	spcb->free_chunks = sctppcbinfo.ipi_free_chunks;
 	
 	SCTP_INP_INFO_RUNLOCK();
 }
@@ -2669,7 +2669,7 @@ sctp_iterator_inp_being_freed(struct sctp_inpcb *inp, struct sctp_inpcb *inp_nex
 
 /* release sctp_inpcb unbind the port */
 void
-sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
+sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 {
 	/*
 	 * Here we free a endpoint. We must find it (if it is in the Hash
@@ -2711,15 +2711,11 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 #if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	SCTP_ITERATOR_LOCK();
 #endif
-	SCTP_ASOC_CREATE_LOCK(inp);
-	SCTP_INP_INFO_WLOCK();
 	so = inp->sctp_socket;
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
 		/* been here before.. eeks.. get out of here */
 		splx(s);
 		printf("This conflict in free SHOULD not be happening!\n");
-		SCTP_ASOC_CREATE_UNLOCK(inp);
-		SCTP_INP_INFO_WUNLOCK();
 #if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		SCTP_ITERATOR_UNLOCK();
 #endif
@@ -2728,10 +2724,21 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 #endif
 		return;
 	}
+	SCTP_ASOC_CREATE_LOCK(inp);
+	SCTP_INP_INFO_WLOCK();
+
 	SCTP_INP_WLOCK(inp);
 	/* First time through we have the socket lock, after that
 	 * no more.
 	 */
+	if(from == 1) {
+		/* Once we are in we can remove the flag 
+		 * from = 1 is only passed from the actual
+		 * closing routines that are called via the
+		 * sockets layer.
+		 */
+		inp->sctp_flags &= ~SCTP_PCB_FLAGS_CLOSE_IP;
+	}
 	sctp_timer_stop(SCTP_TIMER_TYPE_NEWCOOKIE, inp, NULL, NULL);
 
 	if (inp->control) {
@@ -2972,7 +2979,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 	}
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
-	if (inp->refcount) {
+	if ( (inp->refcount) || (inp->sctp_flags & SCTP_PCB_FLAGS_CLOSE_IP) ) {
 		callout_stop(&inp->sctp_ep.signature_change.timer);
 		sctp_timer_start(SCTP_TIMER_TYPE_INPKILL, inp, NULL, NULL);
 		SCTP_INP_WUNLOCK(inp);
@@ -2987,6 +2994,8 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate)
 		return;
 	}
 #endif
+	callout_stop(&inp->sctp_ep.signature_change.timer);
+	inp->sctp_ep.signature_change.type = 0;
 	inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_ALLGONE;
 
 #ifdef SCTP_LOG_CLOSING
@@ -3172,20 +3181,6 @@ struct sctp_nets *
 sctp_findnet(struct sctp_tcb *stcb, struct sockaddr *addr)
 {
 	struct sctp_nets *net;
-#if 0
-	/* why do we need to check the port for a nets list on an assoc? */
-	struct sockaddr_in *sin;
-	struct sockaddr_in6 *sin6;
-
-	/* use the peer's/remote port for lookup if unspecified */
-	sin = (struct sockaddr_in *)addr;
-	sin6 = (struct sockaddr_in6 *)addr;
-
-	if (stcb->rport != sin->sin_port) {
-		/* we cheat and just a sin for this test */
-		return (NULL);
-	}
-#endif
 	/* locate the address */
 	TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 		if (sctp_cmpaddr(addr, (struct sockaddr *)&net->ro._l_addr))
@@ -3577,6 +3572,21 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	}
 	sctp_timer_start(SCTP_TIMER_TYPE_PATHMTURAISE, stcb->sctp_ep, stcb,
 	    net);
+	/* Validate primary is first */
+	net = TAILQ_FIRST(&stcb->asoc.nets);
+	if ((net != stcb->asoc.primary_destination) && 
+	    (stcb->asoc.primary_destination)) {
+		/* first one on the list is NOT the primary 
+		 * sctp_cmpaddr() is much more efficent if
+		 * the primary is the first on the list, make it
+		 * so.
+		 */
+		TAILQ_REMOVE(&stcb->asoc.nets, 
+			     stcb->asoc.primary_destination, sctp_next);
+		TAILQ_INSERT_HEAD(&stcb->asoc.nets, 
+				  stcb->asoc.primary_destination, sctp_next);
+	}
+
 	return (0);
 }
 
@@ -4023,6 +4033,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	struct sctp_asconf_addr *aparam;
 	struct sctp_stream_reset_list *liste;
 	struct sctp_queued_to_read *sq;
+	struct sctp_stream_queue_pending *sp;
 	sctp_sharedkey_t *shared_key;
 	struct socket *so;
 	int ccnt=0;
@@ -4119,11 +4130,10 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			if ((from_inpcbfree == 0) && so) {
 				/* Only if we have a socket lock do we do this */
 				if ((sq->held_length) ||
-				    ((sq->tail_mbuf) && ((sq->tail_mbuf->m_flags & M_EOR) == 0)) ||
+				    (sq->end_added == 0) ||
 				    ((sq->length == 0) && (sq->end_added == 0))) {
 					/* Held for PD-API */
 					sq->held_length = 0;
-					atomic_subtract_int(&so->so_rcv.sb_cc,sq->length);
 					if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_PDAPIEVNT)) {
 						/* need to change to PD-API aborted */
 						stcb->asoc.control_pdapi = sq;
@@ -4134,7 +4144,12 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 						/* need to get the reader to remove it */
 						sq->length = 0;
 						if (sq->data) {
-							sctp_m_freem(sq->data);
+							struct mbuf *m;
+							m = sq->data;
+							while(m) {
+								sctp_sbfree(sq, stcb, &stcb->sctp_socket->so_rcv, m);
+								m = sctp_m_free(m);
+							}
 							sq->data = NULL;
 							sq->tail_mbuf = NULL;
 						}
@@ -4278,7 +4293,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	/* anything on the wheel needs to be removed */
 	for (i = 0; i < asoc->streamoutcnt; i++) {
 		struct sctp_stream_out *outs;
-		struct sctp_stream_queue_pending *sp;
 
 		outs = &asoc->strmout[i];
 		/* now clean up any chunks here */
@@ -4297,6 +4311,19 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			SCTP_DECR_STRMOQ_COUNT();
 			sp = TAILQ_FIRST(&outs->outqueue);
 		}
+	}
+
+	while ((sp = TAILQ_FIRST(&asoc->free_strmoq)) != NULL) {
+		TAILQ_REMOVE(&asoc->free_strmoq, sp, next);
+		if (sp->data) {
+			sctp_m_freem(sp->data);
+			sp->data = NULL;
+			sp->tail_mbuf = NULL;
+		}
+		/* Free the zone stuff  */
+		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_strmoq, sp);
+		SCTP_DECR_STRMOQ_COUNT();
+                atomic_add_int(&sctppcbinfo.ipi_free_strmoq, -1);
 	}
 
 	while ((liste = TAILQ_FIRST(&asoc->resetHead)) != NULL) {
@@ -4318,6 +4345,21 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, sq);
 		SCTP_DECR_READQ_COUNT();
 		sq = TAILQ_FIRST(&asoc->pending_reply_queue);
+	}
+
+	chk = TAILQ_FIRST(&asoc->free_chunks);
+	while (chk) {
+		TAILQ_REMOVE(&asoc->free_chunks, chk, sctp_next);
+		if (chk->data) {
+			sctp_m_freem(chk->data);
+			chk->data = NULL;
+		}
+		ccnt++;
+		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
+		SCTP_DECR_CHK_COUNT();
+		atomic_subtract_int(&sctppcbinfo.ipi_free_chunks, 1);
+		asoc->free_chunk_cnt--;
+		chk = TAILQ_FIRST(&asoc->free_chunks);
 	}
 	/* pending send queue SHOULD be empty */
 	if (!TAILQ_EMPTY(&asoc->send_queue)) {
@@ -4521,7 +4563,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			 * at the same time we are here we might
 			 * collide in the cleanup.
 			 */
-			sctp_inpcb_free(inp, 0);
+			sctp_inpcb_free(inp, 0, 0);
 			SCTP_INP_DECR_REF(inp);
 		} else {
 			/* The socket is still open. */
@@ -5163,6 +5205,9 @@ sctp_pcb_init()
 	/* stream out queue cont */
 	sctppcbinfo.ipi_count_strmoq = 0;
 
+	sctppcbinfo.ipi_free_strmoq = 0;
+	sctppcbinfo.ipi_free_chunks = 0;
+
 
 #if defined (__FreeBSD__) && __FreeBSD_version >= 500000
 	callout_init(&sctppcbinfo.addr_wq_timer.timer, 1);
@@ -5768,6 +5813,16 @@ sctp_set_primary_addr(struct sctp_tcb *stcb, struct sockaddr *sa,
 		}
 		stcb->asoc.primary_destination = net;
 		net->dest_state &= ~SCTP_ADDR_WAS_PRIMARY;
+		net = TAILQ_FIRST(&stcb->asoc.nets);
+		if(net != stcb->asoc.primary_destination) {
+			/* first one on the list is NOT the primary 
+			 * sctp_cmpaddr() is much more efficent if
+			 * the primary is the first on the list, make it
+			 * so.
+			 */
+			TAILQ_REMOVE(&stcb->asoc.nets, stcb->asoc.primary_destination, sctp_next);
+			TAILQ_INSERT_HEAD(&stcb->asoc.nets, stcb->asoc.primary_destination, sctp_next);
+		}
 		return (0);
 	}
 }
@@ -6020,8 +6075,7 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 				chk->data = NULL;
 			}
 			sctp_free_remote_addr(chk->whoTo);
-			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-			SCTP_DECR_CHK_COUNT();
+			sctp_free_a_chunk(stcb, chk);
 		}
 		chk = nchk;
 	}
@@ -6052,7 +6106,7 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 				    ctl, next);
 				if (ctl->data) {
 					sctp_m_freem(ctl->data);
-					chk->data = NULL;
+					ctl->data = NULL;
 				}
 				sctp_free_remote_addr(ctl->whoFrom);
 				SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, ctl);
@@ -6121,6 +6175,7 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 			asoc->highest_tsn_inside_map = asoc->cumulative_tsn;
 		}
 		asoc->last_revoke_count = cnt;
+		callout_stop(&stcb->asoc.dack_timer.timer);
 		sctp_send_sack(stcb);
 		reneged_asoc_ids[reneged_at] = sctp_get_associd(stcb);
 		reneged_at++;

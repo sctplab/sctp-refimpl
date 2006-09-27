@@ -101,12 +101,13 @@ __FBSDID("$FreeBSD:$");
 #define SCTPCTL_CHUNKSCALE          45
 #define SCTPCTL_MINSPLIT            46
 #define SCTPCTL_ADD_MORE            47
-#define SCTPCTL_WINDOWUPD           48
+#define SCTPCTL_SYS_RESC            48
+#define SCTPCTL_ASOC_RESC           49
 #ifdef SCTP_DEBUG
-#define SCTPCTL_DEBUG               49
-#define SCTPCTL_MAXID		    49
+#define SCTPCTL_DEBUG               50
+#define SCTPCTL_MAXID		    50
 #else
-#define SCTPCTL_MAXID		    48
+#define SCTPCTL_MAXID		    49
 #endif
 #endif
 
@@ -160,7 +161,8 @@ __FBSDID("$FreeBSD:$");
 	{ "chunkscale", CTLTYPE_INT }, \
 	{ "min_split_point", CTLTYPE_INT }, \
 	{ "add_more_on_output", CTLTYPE_INT }, \
-	{ "wupsack", CTLTYPE_INT }, \
+	{ "sys_resource", CTLTYPE_INT }, \
+	{ "asoc_resource", CTLTYPE_INT }, \
 	{ "debug", CTLTYPE_INT }, \
 }
 #else
@@ -213,7 +215,8 @@ __FBSDID("$FreeBSD:$");
 	{ "chunkscale", CTLTYPE_INT }, \
 	{ "min_split_point", CTLTYPE_INT }, \
 	{ "add_more_on_output", CTLTYPE_INT }, \
-	{ "wupsack", CTLTYPE_INT }, \
+	{ "sys_resource", CTLTYPE_INT }, \
+	{ "asoc_resource", CTLTYPE_INT }, \
 }
 #endif
 
@@ -256,6 +259,86 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 
 #define sctp_sbspace_sub(a,b) ((a > b) ? (a - b) : 0)
 
+extern uint32_t sctp_asoc_free_resc_limit;
+extern uint32_t sctp_system_free_resc_limit;
+
+/* I tried to cache the readq entries at one
+ * point. But the reality is that it did not
+ * add any performance since this meant
+ * we had to lock the STCB on read. And at that point
+ * once you have to do an extra lock, it really does
+ * not matter if the lock is in the ZONE stuff or
+ * in our code. Note that this same problem would
+ * occur with an mbuf cache as well so it is
+ * not really worth doing, at least right now :-D
+ */
+
+#define sctp_free_a_readq(_stcb, _readq) { \
+		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, (_readq)); \
+		SCTP_DECR_READQ_COUNT(); \
+}
+
+#define sctp_alloc_a_readq(_stcb, _readq) { \
+	(_readq) = (struct sctp_queued_to_read  *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_readq); \
+	if ((_readq)) { \
+ 	     SCTP_INCR_READQ_COUNT(); \
+	} \
+}
+
+
+
+#define sctp_free_a_strmoq(_stcb, _strmoq) { \
+       if (((_stcb)->asoc.free_strmoq_cnt > sctp_asoc_free_resc_limit) || \
+	   (sctppcbinfo.ipi_free_strmoq > sctp_system_free_resc_limit)) { \
+		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_strmoq, (_strmoq)); \
+		SCTP_DECR_STRMOQ_COUNT(); \
+	   } else { \
+		TAILQ_INSERT_TAIL(&(_stcb)->asoc.free_strmoq, (_strmoq), next); \
+                (_stcb)->asoc.free_strmoq_cnt++; \
+                atomic_add_int(&sctppcbinfo.ipi_free_strmoq, 1); \
+	   } \
+}
+
+#define sctp_alloc_a_strmoq(_stcb, _strmoq) { \
+      if(TAILQ_EMPTY(&(_stcb)->asoc.free_strmoq))  { \
+	(_strmoq) = (struct sctp_stream_queue_pending  *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_strmoq); \
+	if ((_strmoq)) { \
+ 	     SCTP_INCR_STRMOQ_COUNT(); \
+	} \
+      } else { \
+        (_strmoq) = TAILQ_FIRST(&(_stcb)->asoc.free_strmoq); \
+         TAILQ_REMOVE(&(_stcb)->asoc.free_strmoq, (_strmoq), next); \
+         atomic_subtract_int(&sctppcbinfo.ipi_free_strmoq, 1); \
+         (_stcb)->asoc.free_strmoq_cnt--; \
+      } \
+}
+
+
+#define sctp_free_a_chunk(_stcb, _chk) { \
+       if (((_stcb)->asoc.free_chunk_cnt > sctp_asoc_free_resc_limit) || \
+	   (sctppcbinfo.ipi_free_chunks > sctp_system_free_resc_limit)) { \
+		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, (_chk)); \
+		SCTP_DECR_CHK_COUNT(); \
+	   } else { \
+		TAILQ_INSERT_TAIL(&(_stcb)->asoc.free_chunks, (_chk), sctp_next); \
+                (_stcb)->asoc.free_chunk_cnt++; \
+                atomic_add_int(&sctppcbinfo.ipi_free_chunks, 1); \
+	   } \
+}
+
+#define sctp_alloc_a_chunk(_stcb, _chk) { \
+      if(TAILQ_EMPTY(&(_stcb)->asoc.free_chunks))  { \
+	(_chk) = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk); \
+	if ((_chk)) { \
+ 	     SCTP_INCR_CHK_COUNT(); \
+	} \
+      } else { \
+        (_chk) = TAILQ_FIRST(&(_stcb)->asoc.free_chunks); \
+         TAILQ_REMOVE(&(_stcb)->asoc.free_chunks, (_chk), sctp_next); \
+         atomic_subtract_int(&sctppcbinfo.ipi_free_chunks, 1); \
+         (_stcb)->asoc.free_chunk_cnt--; \
+      } \
+}
 
 
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
@@ -277,49 +360,48 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 
 
 #define sctp_sbfree(ctl, stcb, sb, m) { \
-        if((sb)->sb_cc >= (m)->m_len) { \
-  	   atomic_subtract_int(&(sb)->sb_cc,(m)->m_len); \
-        } else { \
-           (sb)->sb_cc = 0; \
+        uint32_t val; \
+        val = atomic_fetchadd_int(&(sb)->sb_cc,-((m)->m_len)); \
+        if(val < (m)->m_len) { \
+           panic("sb_cc goes negative"); \
+        } \
+        val = atomic_fetchadd_int(&(sb)->sb_mbcnt,-(MSIZE)); \
+        if(val < MSIZE) { \
+            panic("sb_mbcnt goes negative"); \
+        } \
+        if ((m)->m_flags & M_EXT) { \
+                val = atomic_fetchadd_int(&(sb)->sb_mbcnt,-((m)->m_ext.ext_size)); \
+		if(val < (m)->m_ext.ext_size) { \
+                    panic("sb_mbcnt goes negative2"); \
+                } \
         } \
         if (((ctl)->do_not_ref_stcb == 0) && stcb) {\
-          if((stcb)->asoc.sb_cc >= (m)->m_len) {\
-             atomic_subtract_int(&(stcb)->asoc.sb_cc,(m)->m_len); \
-          } else {\
-             (stcb)->asoc.sb_cc = 0; \
+          val = atomic_fetchadd_int(&(stcb)->asoc.sb_cc,-((m)->m_len)); \
+          if(val < (m)->m_len) {\
+             panic("stcb->sb_cc goes negative"); \
           } \
-          if((stcb)->asoc.sb_mbcnt >= MSIZE) { \
-             atomic_subtract_int(&(stcb)->asoc.sb_mbcnt,MSIZE); \
+          val = atomic_fetchadd_int(&(stcb)->asoc.sb_mbcnt,-(MSIZE)); \
+          if(val < MSIZE) { \
+             panic("asoc->mbcnt goes negative"); \
           } \
 	  if ((m)->m_flags & M_EXT) { \
-		if((stcb)->asoc.sb_mbcnt >= (m)->m_ext.ext_size) { \
-		   atomic_subtract_int(&(stcb)->asoc.sb_mbcnt,(m)->m_ext.ext_size); \
-                } else { \
+                val = atomic_fetchadd_int(&(stcb)->asoc.sb_mbcnt,-((m)->m_ext.ext_size)); \
+		if(val < (m)->m_ext.ext_size) { \
 		   panic("assoc stcb->mbcnt would go negative"); \
-		   (stcb)->asoc.sb_mbcnt = 0; \
                 } \
           } \
         } \
 	if ((m)->m_type != MT_DATA && (m)->m_type != MT_HEADER && \
 	    (m)->m_type != MT_OOBDATA) \
 		atomic_subtract_int(&(sb)->sb_ctl,(m)->m_len); \
-        if((sb)->sb_mbcnt >= MSIZE) { \
-           atomic_subtract_int(&(sb)->sb_mbcnt,MSIZE); \
- 	   if ((m)->m_flags & M_EXT) { \
-		if((sb)->sb_mbcnt >= (m)->m_ext.ext_size) { \
-		   atomic_subtract_int(&(sb)->sb_mbcnt,(m)->m_ext.ext_size); \
-                } else { \
-		   (sb)->sb_mbcnt = 0; \
-                } \
-            } \
-        } else { \
-            (sb)->sb_mbcnt = 0; \
-        } \
 }
 
 
 #define sctp_sballoc(stcb, sb, m) { \
 	atomic_add_int(&(sb)->sb_cc,(m)->m_len); \
+	atomic_add_int(&(sb)->sb_mbcnt, MSIZE); \
+	if ((m)->m_flags & M_EXT) \
+		atomic_add_int(&(sb)->sb_mbcnt,(m)->m_ext.ext_size); \
         if(stcb) { \
   	  atomic_add_int(&(stcb)->asoc.sb_cc,(m)->m_len); \
           atomic_add_int(&(stcb)->asoc.sb_mbcnt, MSIZE); \
@@ -329,9 +411,6 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 	if ((m)->m_type != MT_DATA && (m)->m_type != MT_HEADER && \
 	    (m)->m_type != MT_OOBDATA) \
 		atomic_add_int(&(sb)->sb_ctl,(m)->m_len); \
-	atomic_add_int(&(sb)->sb_mbcnt,MSIZE); \
-	if ((m)->m_flags & M_EXT) \
-		atomic_add_int(&(sb)->sb_mbcnt,(m)->m_ext.ext_size); \
 }
 
 #else				/* FreeBSD Version <= 500000 or non-FreeBSD */
@@ -391,13 +470,13 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 
 #define sctp_sballoc(stcb, sb, m) { \
 	atomic_add_int(&(sb)->sb_cc, (m)->m_len); \
+	atomic_add_int(&(sb)->sb_mbcnt, MSIZE); \
 	if (stcb) { \
 		atomic_add_int(&(stcb)->asoc.sb_cc, (m)->m_len); \
 		atomic_add_int(&(stcb)->asoc.sb_mbcnt, MSIZE); \
 		if ((m)->m_flags & M_EXT) \
 			atomic_add_int(&(stcb)->asoc.sb_mbcnt, (m)->m_ext.ext_size); \
 	} \
-	atomic_add_int(&(sb)->sb_mbcnt, MSIZE); \
 	if ((m)->m_flags & M_EXT) \
 		atomic_add_int(&(sb)->sb_mbcnt, (m)->m_ext.ext_size); \
 }
@@ -558,10 +637,10 @@ extern int ticks;
 
 /* Apple KPI defines for atomic operations */
 #include <libkern/OSAtomic.h>
-#define atomic_add_int(addr, val)	OSAddAtomic(val, (SInt32 *)addr)
-#define atomic_subtract_int(addr, val)	OSAddAtomic((-val), (SInt32 *)addr)
-#define atomic_add_16(addr, val)	OSAddAtomic16(val, (SInt16 *)addr)
-
+#define atomic_add_int(addr, val)        OSAddAtomic(val, (SInt32 *)addr)
+#define atomic_subtract_int(addr, val)   OSAddAtomic((-val), (SInt32 *)addr)
+#define atomic_add_16(addr, val)         OSAddAtomic16(val, (SInt16 *)addr)
+#define atomic_cmpset_int(dst, exp, src) OSCompareAndSwap(exp, src, (UInt32 *)dst)
 /* additional protosw entries for Mac OS X 10.4 */
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	int sctp_lock(struct socket *so, int refcount, int lr);

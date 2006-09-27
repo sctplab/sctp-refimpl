@@ -117,7 +117,7 @@ __FBSDID("$FreeBSD:$");
 #include <netinet/sctp.h>
 #include <netinet/sctp_uio.h>
 
-#ifndef __APPLE__
+#ifdef __NetBSD__
 #include <net/net_osdep.h>
 #endif
 
@@ -676,19 +676,6 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 			/* Strange case our list got out of order? */
 			printf("Our list is out of order?\n");
 			panic("Out of order list");
-			/*
-			 * TAILQ_REMOVE(&stcb->asoc.sent_queue, chk,
-			 * sctp_next); if (chk->data) {
-			 * sctp_release_pr_sctp_chunk(stcb, chk, 0xffff,
-			 * &stcb->asoc.sent_queue); if
-			 * (PR_SCTP_BUF_ENABLED(chk->flags)) {
-			 * stcb->asoc.sent_queue_cnt_removeable--; } }
-			 * stcb->asoc.sent_queue_cnt--;
-			 * sctp_free_remote_addr(chk->whoTo);
-			 * SCTP_DECR_CHK_COUNT();
-			 * SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-			 * continue;
-			 */
 		}
 		if ((chk->whoTo == net) && (chk->sent < SCTP_DATAGRAM_ACKED)) {
 			/*
@@ -878,7 +865,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	/* Now check for a ECN Echo that may be stranded */
 	TAILQ_FOREACH(chk, &stcb->asoc.control_send_queue, sctp_next) {
 		if ((chk->whoTo == net) &&
-		    (chk->rec.chunk_id == SCTP_ECN_ECHO)) {
+		    (chk->rec.chunk_id.id == SCTP_ECN_ECHO)) {
 			sctp_free_remote_addr(chk->whoTo);
 			chk->whoTo = alt;
 			if (chk->sent != SCTP_DATAGRAM_RESEND) {
@@ -1209,7 +1196,7 @@ sctp_cookie_timer(struct sctp_inpcb *inp,
 #endif
 	/* first before all else we must find the cookie */
 	TAILQ_FOREACH(cookie, &stcb->asoc.control_send_queue, sctp_next) {
-		if (cookie->rec.chunk_id == SCTP_COOKIE_ECHO) {
+		if (cookie->rec.chunk_id.id == SCTP_COOKIE_ECHO) {
 			break;
 		}
 	}
@@ -1318,7 +1305,7 @@ sctp_strreset_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	/* See if a ECN Echo is also stranded */
 	TAILQ_FOREACH(chk, &stcb->asoc.control_send_queue, sctp_next) {
 		if ((chk->whoTo == net) &&
-		    (chk->rec.chunk_id == SCTP_ECN_ECHO)) {
+		    (chk->rec.chunk_id.id == SCTP_ECN_ECHO)) {
 			sctp_free_remote_addr(chk->whoTo);
 			if (chk->sent != SCTP_DATAGRAM_RESEND) {
 				chk->sent = SCTP_DATAGRAM_RESEND;
@@ -1362,7 +1349,7 @@ sctp_asconf_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		/* find the existing ASCONF */
 		TAILQ_FOREACH(asconf, &stcb->asoc.control_send_queue,
 		    sctp_next) {
-			if (asconf->rec.chunk_id == SCTP_ASCONF) {
+			if (asconf->rec.chunk_id.id == SCTP_ASCONF) {
 				break;
 			}
 		}
@@ -1413,7 +1400,7 @@ sctp_asconf_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		/* See if a ECN Echo is also stranded */
 		TAILQ_FOREACH(chk, &stcb->asoc.control_send_queue, sctp_next) {
 			if ((chk->whoTo == net) &&
-			    (chk->rec.chunk_id == SCTP_ECN_ECHO)) {
+			    (chk->rec.chunk_id.id == SCTP_ECN_ECHO)) {
 				sctp_free_remote_addr(chk->whoTo);
 				chk->whoTo = alt;
 				if (chk->sent != SCTP_DATAGRAM_RESEND) {
