@@ -2775,7 +2775,8 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 				 net);
 	}
 	/* Start a sack timer or QUEUE a SACK for sending */
-	if(stcb->asoc.cumulative_tsn == stcb->asoc.highest_tsn_inside_map) {
+	if ((stcb->asoc.cumulative_tsn == stcb->asoc.highest_tsn_inside_map) &&
+	    (stcb->asoc.first_ack_sent)){
 		/* Everything is in order */
 		if(stcb->asoc.mapping_array[0] == 0xff) {
 			/* need to do the slide */
@@ -2791,6 +2792,7 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 			}
 		}
 	} else {
+		stcb->asoc.first_ack_sent = 1;
 		sctp_sack_check(stcb, 1, was_a_gap, &abort_flag);
 	}
 	if (abort_flag)
