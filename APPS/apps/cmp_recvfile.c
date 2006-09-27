@@ -85,7 +85,8 @@ main(int argc, char **argv)
 	int outfd,ret, ret1, i, fd;
 	int amount_in=0, amount_out=0;
 	socklen_t len;
-	uint32_t flags,sec, usec;
+	uint32_t sec, usec;
+	int flags;
 
 	while((i= getopt(argc,argv,"p:h:f:F:")) != EOF){
 		switch(i){
