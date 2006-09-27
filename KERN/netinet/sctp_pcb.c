@@ -3181,20 +3181,6 @@ struct sctp_nets *
 sctp_findnet(struct sctp_tcb *stcb, struct sockaddr *addr)
 {
 	struct sctp_nets *net;
-#if 0
-	/* why do we need to check the port for a nets list on an assoc? */
-	struct sockaddr_in *sin;
-	struct sockaddr_in6 *sin6;
-
-	/* use the peer's/remote port for lookup if unspecified */
-	sin = (struct sockaddr_in *)addr;
-	sin6 = (struct sockaddr_in6 *)addr;
-
-	if (stcb->rport != sin->sin_port) {
-		/* we cheat and just a sin for this test */
-		return (NULL);
-	}
-#endif
 	/* locate the address */
 	TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 		if (sctp_cmpaddr(addr, (struct sockaddr *)&net->ro._l_addr))
