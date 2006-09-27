@@ -773,7 +773,7 @@ struct sctp_tcb {
            global_sctp_cwnd_log_at = 0; \
            global_sctp_cwnd_log_rolled = 1; \
         } \
-        lck_mtx_unlock(sctppcbinfo.logging_mtx);
+        lck_mtx_unlock(sctppcbinfo.logging_mtx); \
 }
 
 
