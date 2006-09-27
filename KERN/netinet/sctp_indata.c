@@ -2376,6 +2376,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 					/*
 					 * CMT DAC algorithm: With CMT,
 					 * delay acks even in the face of
+
 					 * reordering. Therefore, if acks
 					 * that do not have to be sent
 					 * because of the above reasons,
@@ -2792,7 +2793,6 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 			}
 		}
 	} else {
-		stcb->asoc.first_ack_sent = 1;
 		sctp_sack_check(stcb, 1, was_a_gap, &abort_flag);
 	}
 	if (abort_flag)
