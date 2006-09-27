@@ -106,7 +106,7 @@ __FBSDID("$FreeBSD:$");
 #endif
 #endif				/* IPSEC */
 
-#ifndef __APPLE__
+#ifdef __NetBSD__
 #include <net/net_osdep.h>
 #endif
 
@@ -283,7 +283,7 @@ sctp_build_readq_entry(struct sctp_tcb *stcb,
 {
 	struct sctp_queued_to_read *read_queue_e = NULL;
 
-	read_queue_e = (struct sctp_queued_to_read *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_readq);
+	sctp_alloc_a_readq(stcb, read_queue_e);
 	if (read_queue_e == NULL) {
 		goto failed_build;
 	}
@@ -305,7 +305,6 @@ sctp_build_readq_entry(struct sctp_tcb *stcb,
 	read_queue_e->port_from = stcb->rport;
 	read_queue_e->do_not_ref_stcb = 0;
 	read_queue_e->end_added = 0;
-	SCTP_INCR_READQ_COUNT();
 failed_build:
 	return (read_queue_e);
 }
@@ -320,7 +319,7 @@ sctp_build_readq_entry_chk(struct sctp_tcb *stcb,
 {
 	struct sctp_queued_to_read *read_queue_e = NULL;
 
-	read_queue_e = (struct sctp_queued_to_read *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_readq);
+	sctp_alloc_a_readq(stcb, read_queue_e);
 	if (read_queue_e == NULL) {
 		goto failed_build;
 	}
@@ -342,7 +341,6 @@ sctp_build_readq_entry_chk(struct sctp_tcb *stcb,
 	read_queue_e->port_from = stcb->rport;
 	read_queue_e->do_not_ref_stcb = 0;
 	read_queue_e->end_added = 0;
-	SCTP_INCR_READQ_COUNT();
 failed_build:
 	return (read_queue_e);
 }
@@ -427,13 +425,13 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 			 * Lose the data pointer, since its in the socket
 			 * buffer
 			 */
-			if (chk->data)
+			if (chk->data) {
 				sctp_m_freem(chk->data);
-			chk->data = NULL;
+				chk->data = NULL;
+			}
 			/* Now free the address and data */
 			sctp_free_remote_addr(chk->whoTo);
-			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-			SCTP_DECR_CHK_COUNT();
+			sctp_free_a_chunk(stcb, chk);
 			chk = TAILQ_FIRST(&asoc->reasmqueue);
 		}
 		return;
@@ -551,10 +549,10 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 		asoc->size_on_reasm_queue -= chk->send_size;
 		sctp_ucount_decr(asoc->cnt_on_reasm_queue);
 		/* free up the chk */
-		sctp_free_remote_addr(chk->whoTo);
 		chk->data = NULL;
-		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-		SCTP_DECR_CHK_COUNT();
+		sctp_free_remote_addr(chk->whoTo);
+		sctp_free_a_chunk(stcb, chk);
+
 		if (asoc->fragmented_delivery_inprogress == 0) {
 			/*
 			 * Now lets see if we can deliver the next one on
@@ -774,8 +772,7 @@ sctp_queue_data_to_stream(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					asoc->size_on_all_streams -= control->length;
 					sctp_ucount_decr(asoc->cnt_on_all_streams);
 					sctp_free_remote_addr(control->whoFrom);
-					SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, control);
-					SCTP_DECR_READQ_COUNT();
+					sctp_free_a_readq(stcb, control);
 					return;
 				} else {
 					if (TAILQ_NEXT(at, next) == NULL) {
@@ -1072,12 +1069,12 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			 * compare to TSN somehow... sigh for now just blow
 			 * away the chunk!
 			 */
-			if (chk->data)
+			if (chk->data) {
 				sctp_m_freem(chk->data);
-			chk->data = NULL;
+				chk->data = NULL;
+			}
 			sctp_free_remote_addr(chk->whoTo);
-			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-			SCTP_DECR_CHK_COUNT();
+			sctp_free_a_chunk(stcb, chk);
 			return;
 		} else {
 			last_flags = at->rec.data.rcv_flags;
@@ -1739,6 +1736,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		 */
 
 		/* It would be nice to avoid this copy if we could :< */
+		sctp_alloc_a_readq(stcb, control);
 		sctp_build_readq_entry_mac(control, stcb, asoc->context, net, tsn,
 					   ch->dp.protocol_id,
 					   stcb->asoc.context,
@@ -1793,7 +1791,7 @@ failed_express_del:
 				cumack = tsn;
 
 			if(sctp_append_to_readq(stcb->sctp_ep, stcb, control, dmbuf, end, 
-					     cumack,
+						tsn,
 						&stcb->sctp_socket->so_rcv)) {
 				printf("Append fails end:%d\n", end);
 				goto failed_pdapi_express_del;
@@ -1821,7 +1819,7 @@ failed_express_del:
  failed_pdapi_express_del:
 	control = NULL;
 	if ((ch->ch.chunk_flags & SCTP_DATA_NOT_FRAG) != SCTP_DATA_NOT_FRAG) {
-		chk = (struct sctp_tmit_chunk *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk);
+		sctp_alloc_a_chunk(stcb, chk);
 		if (chk == NULL) {
 			/* No memory so we drop the chunk */
 			SCTP_STAT_INCR(sctps_nomem);
@@ -1831,7 +1829,6 @@ failed_express_del:
 			}
 			return (0);
 		}
-		SCTP_INCR_CHK_COUNT();
 		chk->rec.data.TSN_seq = tsn;
 		chk->no_fr_allowed = 0;
 		chk->rec.data.stream_seq = strmseq;
@@ -1846,6 +1843,7 @@ failed_express_del:
 		atomic_add_int(&net->ref_count, 1);
 		chk->data = dmbuf;
 	} else {
+		sctp_alloc_a_readq(stcb, control);
 		sctp_build_readq_entry_mac(control, stcb, asoc->context, net, tsn,
 		    ch->dp.protocol_id,
 		    stcb->asoc.context,
@@ -1884,8 +1882,7 @@ failed_express_del:
 				sctp_m_freem(control->data);
 				control->data = NULL;
 				sctp_free_remote_addr(control->whoFrom);
-				SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, control);
-				SCTP_DECR_READQ_COUNT();
+				sctp_free_a_readq(stcb, control);
 				oper = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) + sizeof(uint32_t)),
 							     0, M_DONTWAIT, 1, MT_DATA);
 				if (oper) {
@@ -1912,8 +1909,7 @@ failed_express_del:
 					sctp_m_freem(control->data);
 					control->data = NULL;
 					sctp_free_remote_addr(control->whoFrom);
-					SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, control);
-					SCTP_DECR_READQ_COUNT();
+					sctp_free_a_readq(stcb, control);
 
 					oper = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) + sizeof(uint32_t)),
 								     0, M_DONTWAIT, 1, MT_DATA);
@@ -1953,8 +1949,7 @@ failed_express_del:
 					sctp_m_freem(control->data);
 					control->data = NULL;
 					sctp_free_remote_addr(control->whoFrom);
-					SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, control);
-					SCTP_DECR_READQ_COUNT();
+					sctp_free_a_readq(stcb, control);
 					oper = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) + sizeof(uint32_t)),
 								     0, M_DONTWAIT, 1, MT_DATA);
 					if (oper) {
@@ -2381,6 +2376,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 					/*
 					 * CMT DAC algorithm: With CMT,
 					 * delay acks even in the face of
+
 					 * reordering. Therefore, if acks
 					 * that do not have to be sent
 					 * because of the above reasons,
@@ -2780,7 +2776,8 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 				 net);
 	}
 	/* Start a sack timer or QUEUE a SACK for sending */
-	if(stcb->asoc.cumulative_tsn == stcb->asoc.highest_tsn_inside_map) {
+	if ((stcb->asoc.cumulative_tsn == stcb->asoc.highest_tsn_inside_map) &&
+	    (stcb->asoc.first_ack_sent)){
 		/* Everything is in order */
 		if(stcb->asoc.mapping_array[0] == 0xff) {
 			/* need to do the slide */
@@ -2788,6 +2785,7 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 		} else {
 			if(callout_pending(&stcb->asoc.dack_timer.timer)) {
 				stcb->asoc.first_ack_sent = 1;
+				callout_stop(&stcb->asoc.dack_timer.timer);
 				sctp_send_sack(stcb);
 			} else {
 				sctp_timer_start(SCTP_TIMER_TYPE_RECV,
@@ -4215,10 +4213,6 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 			break;
 		}
 		TAILQ_REMOVE(&asoc->sent_queue, tp1, sctp_next);
-		/*
-		 * Friendlier printf in lieu of panic now that I think its
-		 * fixed
-		 */
 		if (tp1->data) {
 			sctp_free_bufspace(stcb, asoc, tp1, 1);
 			sctp_m_freem(tp1->data);
@@ -4234,8 +4228,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 		tp1->data = NULL;
 		asoc->sent_queue_cnt--;
 		sctp_free_remote_addr(tp1->whoTo);
-		SCTP_DECR_CHK_COUNT();
-		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, tp1);
+		sctp_free_a_chunk(stcb, tp1);
 		tp1 = tp2;
 	}
 	if (stcb->sctp_socket) {
@@ -4327,13 +4320,19 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 	/* Now assure a timer where data is queued at */
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 		if(net->flight_size) {
-			sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
-					stcb, net);			
-			sctp_timer_start(SCTP_TIMER_TYPE_SEND,
-					 stcb->sctp_ep, stcb, net);
+			int to_ticks;
+			if (net->RTO == 0) {
+				to_ticks  = MSEC_TO_TICKS(stcb->asoc.initial_rto);
+			} else {
+				to_ticks = MSEC_TO_TICKS(net->RTO);
+			}
+			callout_reset(&net->rxt_timer.timer, to_ticks, 
+				      sctp_timeout_handler, &net->rxt_timer);
 		} else {
-			sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
-					stcb, net);			
+			if(callout_pending(&net->rxt_timer.timer)) {
+				sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
+						stcb, net);
+			}
 			if (sctp_early_fr) {
 				if (callout_pending(&net->fr_timer.timer)) {
 					SCTP_STAT_INCR(sctps_earlyfrstpidsck4);
@@ -4402,6 +4401,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 				}
 				sctp_abort_an_association(stcb->sctp_ep, stcb, SCTP_RESPONSE_TO_USER_REQ, oper);
 			} else {
+				sctp_stop_timers_for_shutdown(stcb);
 				sctp_send_shutdown(stcb,
 						   stcb->asoc.primary_destination);
 				sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN,
@@ -4912,8 +4912,7 @@ skip_segments:
 		asoc->sent_queue_cnt--;
 		sctp_free_remote_addr(tp1->whoTo);
 
-		SCTP_DECR_CHK_COUNT();
-		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, tp1);
+		sctp_free_a_chunk(stcb, tp1);
 		wake_him++;
 		tp1 = tp2;
 	} while (tp1 != NULL);
@@ -5075,6 +5074,7 @@ skip_segments:
 				sctp_abort_an_association(stcb->sctp_ep, stcb, SCTP_RESPONSE_TO_USER_REQ, oper);
 				return;
 			} else {
+				sctp_stop_timers_for_shutdown(stcb);
 				sctp_send_shutdown(stcb,
 						   stcb->asoc.primary_destination);
 				sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN,
@@ -5623,8 +5623,7 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 					chk->data = NULL;
 				}
 				sctp_free_remote_addr(chk->whoTo);
-				SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
-				SCTP_DECR_CHK_COUNT();
+				sctp_free_a_chunk(stcb, chk);
 			} else {
 				/*
 				 * Ok we have gone beyond the end of the

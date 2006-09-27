@@ -108,7 +108,7 @@ __FBSDID("$FreeBSD:$");
 #endif
 #endif				/* IPSEC */
 
-#ifndef __APPLE__
+#ifdef __NetBSD__
 #include <net/net_osdep.h>
 #endif
 
@@ -182,6 +182,10 @@ unsigned int sctp_assoc_rtx_max_default = SCTP_DEF_MAX_SEND;
 unsigned int sctp_path_rtx_max_default = SCTP_DEF_MAX_PATH_RTX;
 unsigned int sctp_nr_outgoing_streams_default = SCTP_OSTREAM_INITIAL;
 unsigned int sctp_add_more_threshold = SCTP_DEFAULT_ADD_MORE;
+
+uint32_t sctp_asoc_free_resc_limit = SCTP_DEF_ASOC_RESC_LIMIT;
+uint32_t sctp_system_free_resc_limit = SCTP_DEF_SYSTEM_RESC_LIMIT;
+
 int sctp_min_split_point=SCTP_DEFAULT_SPLIT_POINT_MIN;
 int sctp_pcbtblsize = SCTP_PCBHASHSIZE;
 int sctp_hashtblsize = SCTP_TCBHASHSIZE;
@@ -191,8 +195,6 @@ unsigned int sctp_cmt_on_off = 0;
 unsigned int sctp_cmt_sockopt_on_off = 0;
 unsigned int sctp_cmt_use_dac = 0;
 unsigned int sctp_cmt_sockopt_use_dac = 0;
-
-unsigned int sctp_window_update_sack_value = 3000;
 
 int sctp_L2_abc_variable = 1;
 unsigned int sctp_early_fr = 0;
@@ -720,9 +722,14 @@ SYSCTL_INT(_net_inet_sctp, OID_AUTO, pcbhashsize, CTLFLAG_RW,
     &sctp_pcbtblsize, 0,
     "Tuneable for PCB Hash table sizes");
 
-SYSCTL_INT(_net_inet_sctp, OID_AUTO, wupsack, CTLFLAG_RW,
-    &sctp_window_update_sack_value, 0,
-    "How many unreported bytes before a window update sack is sent");
+SYSCTL_INT(_net_inet_sctp, OID_AUTO, sys_resource, CTLFLAG_RW,
+    &sctp_system_free_resc_limit, 0,
+    "Max number of cached resources in the system");
+
+SYSCTL_INT(_net_inet_sctp, OID_AUTO, asoc_resource, CTLFLAG_RW,
+    &sctp_asoc_free_resc_limit, 0,
+    "Max number of cached resources in an asoc");
+
 
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, chunkscale, CTLFLAG_RW,
     &sctp_chunkscale, 0,
@@ -885,6 +892,7 @@ sctp_abort(struct socket *so)
 {
 	struct sctp_inpcb *inp;
 	int s;
+	uint32_t flags;
 
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (inp == 0)
@@ -899,14 +907,39 @@ sctp_abort(struct socket *so)
 #else
 	s = splnet();
 #endif
-	if((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
-		SCTP_INP_WLOCK(inp);
-		inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_GONE;
-		SCTP_INP_WUNLOCK(inp);
+ sctp_must_try_again:
+	flags = inp->sctp_flags;
+#ifdef SCTP_LOG_CLOSING
+	sctp_log_closing(inp, NULL, 17);
+#endif
+	if (((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) &&
+	    (atomic_cmpset_int(&inp->sctp_flags, flags, (flags | SCTP_PCB_FLAGS_SOCKET_GONE | SCTP_PCB_FLAGS_CLOSE_IP)))) {
 #ifdef SCTP_LOG_CLOSING
 		sctp_log_closing(inp, NULL, 16);
 #endif
-		sctp_inpcb_free(inp, 1);
+		sctp_inpcb_free(inp, 1, 0);
+		SOCK_LOCK(so);
+		so->so_snd.sb_cc = 0;
+		so->so_snd.sb_mb = NULL;
+		so->so_snd.sb_mbcnt = 0;
+		
+		/* same for the rcv ones, they are only
+		 * here for the accounting/select.
+		 */
+		so->so_rcv.sb_cc = 0;
+		so->so_rcv.sb_mb = NULL;
+		so->so_rcv.sb_mbcnt = 0;
+		/* Now null out the reference, we are
+		 * completely detached.
+		 */
+		so->so_pcb = NULL;
+		SOCK_UNLOCK(so);
+
+	} else {
+		flags = inp->sctp_flags;
+		if((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
+			goto sctp_must_try_again;
+		}
 	}
 	splx(s);
 #if defined(__FreeBSD__) && __FreeBSD_version > 690000
@@ -926,7 +959,9 @@ sctp_attach(struct socket *so, int proto, struct proc *p)
 	struct sctp_inpcb *inp;
 	struct inpcb *ip_inp;
 	int s, error;
-
+#ifdef IPSEC	
+	uint32_t flags;
+#endif
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
 #else
@@ -963,15 +998,17 @@ sctp_attach(struct socket *so, int proto, struct proc *p)
 #ifdef IPSEC
 #if !(defined(__OpenBSD__) || defined(__APPLE__))
 	error = ipsec_init_pcbpolicy(so, &ip_inp->inp_sp);
+#ifdef SCTP_LOG_CLOSING
+	sctp_log_closing(inp, NULL, 17);
+#endif
 	if (error != 0) {
-		if((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
-			SCTP_INP_WLOCK(inp);
-			inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_GONE;
-			SCTP_INP_WUNLOCK(inp);
+		flags = inp->sctp_flags;
+		if (((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) &&
+		    (atomic_cmpset_int(&inp->sctp_flags, flags, (flags | SCTP_PCB_FLAGS_SOCKET_GONE | SCTP_PCB_FLAGS_CLOSE_IP)))) {
 #ifdef SCTP_LOG_CLOSING
 			sctp_log_closing(inp, NULL, 15);
 #endif
-			sctp_inpcb_free(inp, 1);
+			sctp_inpcb_free(inp, 1, 0);
 		}
 		return error;
 	}
@@ -1026,6 +1063,8 @@ static void
 sctp_close(struct socket *so)
 {
 	struct sctp_inpcb *inp;
+	uint32_t flags;
+
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (inp == 0)
 		return;
@@ -1033,21 +1072,24 @@ sctp_close(struct socket *so)
 	/* Inform all the lower layer assoc that we
 	 * are done.
 	 */
-	if((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
-		SCTP_INP_WLOCK(inp);
-		inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_GONE;
-		SCTP_INP_WUNLOCK(inp);
+ sctp_must_try_again:
+	flags = inp->sctp_flags;
+#ifdef SCTP_LOG_CLOSING
+	sctp_log_closing(inp, NULL, 17);
+#endif
+	if (((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) &&
+	    (atomic_cmpset_int(&inp->sctp_flags, flags, (flags | SCTP_PCB_FLAGS_SOCKET_GONE | SCTP_PCB_FLAGS_CLOSE_IP)))) {
 		if (((so->so_options & SO_LINGER) && (so->so_linger == 0)) ||
 		    (so->so_rcv.sb_cc > 0)) {
 #ifdef SCTP_LOG_CLOSING
 			sctp_log_closing(inp, NULL, 13);
 #endif
-			sctp_inpcb_free(inp, 1);
+			sctp_inpcb_free(inp, 1, 1);
 		} else {
 #ifdef SCTP_LOG_CLOSING
 			sctp_log_closing(inp, NULL, 14);
 #endif
-			sctp_inpcb_free(inp, 0);
+			sctp_inpcb_free(inp, 0, 1);
 		}
 		/* The socket is now detached, no matter what
 		 * the state of the SCTP association.
@@ -1068,6 +1110,11 @@ sctp_close(struct socket *so)
 		 */
 		so->so_pcb = NULL;
 		SOCK_UNLOCK(so);
+	} else {
+		flags = inp->sctp_flags;
+		if((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
+			goto sctp_must_try_again;
+		}
 	}
 	return;
 }
@@ -1083,6 +1130,7 @@ sctp_detach(struct socket *so)
 {
 	struct sctp_inpcb *inp;
 	int s;
+	uint32_t flags;
 
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (inp == 0)
@@ -1096,21 +1144,24 @@ sctp_detach(struct socket *so)
 #else
 	s = splnet();
 #endif
-	if((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
-		SCTP_INP_WLOCK(inp);
-		inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_GONE;
-		SCTP_INP_WUNLOCK(inp);
+ sctp_must_try_again:
+	flags = inp->sctp_flags;
+#ifdef SCTP_LOG_CLOSING
+	sctp_log_closing(inp, NULL, 17);
+#endif
+	if (((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) &&
+	    (atomic_cmpset_int(&inp->sctp_flags, flags, (flags | SCTP_PCB_FLAGS_SOCKET_GONE | SCTP_PCB_FLAGS_CLOSE_IP)))) {
 		if (((so->so_options & SO_LINGER) && (so->so_linger == 0)) ||
 		    (so->so_rcv.sb_cc > 0)) {
 #ifdef SCTP_LOG_CLOSING
 			sctp_log_closing(inp, NULL, 13);
 #endif
-			sctp_inpcb_free(inp, 1);
+			sctp_inpcb_free(inp, 1, 1);
 		} else {
 #ifdef SCTP_LOG_CLOSING
 			sctp_log_closing(inp, NULL, 13);
 #endif
-			sctp_inpcb_free(inp, 0);
+			sctp_inpcb_free(inp, 0, 1);
 		}
 		/* The socket is now detached, no matter what
 		 * the state of the SCTP association.
@@ -1128,6 +1179,11 @@ sctp_detach(struct socket *so)
 #if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		so->so_pcb = NULL;
 #endif
+	} else {
+		flags = inp->sctp_flags;
+		if((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
+			goto sctp_must_try_again;
+		}
 	}
 	splx(s);
 #if defined(__FreeBSD__) && __FreeBSD_version > 690000
@@ -1349,6 +1405,7 @@ sctp_disconnect(struct socket *so)
 						    );
 					}
 #endif
+					sctp_stop_timers_for_shutdown(stcb);
 					sctp_send_shutdown(stcb,
 					    stcb->asoc.primary_destination);
 					sctp_chunk_output(stcb->sctp_ep, stcb, SCTP_OUTPUT_FROM_T3);
@@ -1499,6 +1556,7 @@ sctp_shutdown(struct socket *so)
 					    );
 				}
 #endif
+				sctp_stop_timers_for_shutdown(stcb);
 				sctp_send_shutdown(stcb,
 				    stcb->asoc.primary_destination);
 				sctp_chunk_output(stcb->sctp_ep, stcb, SCTP_OUTPUT_FROM_T3);
@@ -5963,9 +6021,13 @@ sctp_sysctl(name, namelen, oldp, oldlenp, newp, newlen)
 		return (sysctl_int(oldp, oldlenp, newp, newlen,
 		    &sctp_chunkscale));
 
-	case SCTPCTL_WINDOWUPD:
+	case SCTPCTL_ASOC_RESC:
 		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_window_update_sack_value));
+		    &sctp_asoc_free_resc_limit));
+
+	case SCTPCTL_SYS_RESC:
+		return (sysctl_int(oldp, oldlenp, newp, newlen,
+		    &sctp_system_free_resc_limit));
 
 	case SCTPCTL_DELAYED_SACK:
 		return (sysctl_int(oldp, oldlenp, newp, newlen,
@@ -6235,10 +6297,18 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
 
 	sysctl_createv(clog, 0, NULL, NULL,
 	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "wupsack",
-	    SYSCTL_DESCR("How many unreported bytes before a window update sack is sent"),
-	    NULL, 0, &sctp_window_update_sack_value, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_WINDOWUPD,
+	    CTLTYPE_INT, "sys_resource",
+	    SYSCTL_DESCR("Max number of cached resources in the system"),
+	    NULL, 0, &sctp_system_free_resc_limit, 0,
+	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_SYS_RESC,
+	    CTL_EOL);
+
+	sysctl_createv(clog, 0, NULL, NULL,
+	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
+	    CTLTYPE_INT, "asoc_resource",
+	    SYSCTL_DESCR("Max number of cached resources in an asoc"),
+	    NULL, 0, &sctp_asoc_free_resc_limit, 0,
+	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_ASOC_RESC,
 	    CTL_EOL);
 
 	sysctl_createv(clog, 0, NULL, NULL,

@@ -96,7 +96,7 @@ int sctp_send_asconf_ack(struct sctp_tcb *, uint32_t);
 
 int sctp_get_frag_point(struct sctp_tcb *, struct sctp_association *);
 
-void sctp_toss_old_cookies(struct sctp_association *);
+void sctp_toss_old_cookies(struct sctp_tcb *, struct sctp_association *);
 
 void sctp_toss_old_asconf(struct sctp_tcb *);
 
