@@ -7230,8 +7230,8 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		/* update length */
 		sp->data->m_pkthdr.len = sp->length;
 	}
-
-	if ((chk->data->m_flags & M_PKTHDR) == 0) {
+	if (M_LEADINGSPACE(chk->data) < sizeof(struct sctp_data_chunk)) {
+		/* Not enough room for a chunk header, get some */
 		struct mbuf *m;
 		m = sctp_get_mbuf_for_msg(1, 1, M_DONTWAIT, 0, MT_DATA);
 		if(m == NULL) {
@@ -7241,7 +7241,6 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 			m->m_next = chk->data;
 			chk->data = m;
 			chk->data->m_pkthdr.len = to_move;
-			/* reserve all the room at the top */
 			MH_ALIGN(chk->data, 4);
 		}
 	}
@@ -7667,12 +7666,15 @@ one_more_time:
 				continue;
 			}
 			/*
-			 * @@@ JRI : this loops through all nets
+			 * @@@ JRI : this for loop we are in takes in
+			 * each net, if its's got space in cwnd and
+			 * has data sent to it (when CMT is off) then it
+			 * calls sctp_fill_outqueue for the net. This gets
+			 * data on the send queue for that network.
 			 * 
-			 * and calls sctp_fill_outqueue for all nets.
-			 * 
-			 * spin through the stream queues moving one message
-			 * and assign TSN's as appropriate.
+			 * In sctp_fill_outqueue TSN's are assigned and
+			 * data is copied out of the stream buffers. Note
+			 * mostly copy by reference (we hope).
 			 */
 #ifdef SCTP_CWND_LOGGING
 			sctp_log_cwnd(stcb, net, 0, SCTP_CWND_LOG_FILL_OUTQ_CALLED);
@@ -11743,14 +11745,6 @@ sctp_lower_sosend(struct socket *so,
 #else
 	s = splnet();
 #endif
-	if ((stcb) && ((so->so_state & SS_NBIO)
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-		       || (flags & MSG_NBIO)
-#endif
-		    )) {
-		non_blocking = 1;
-	}
-
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 	    (inp->sctp_socket->so_qlimit)) {
 		/* The listener can NOT send */
@@ -11763,24 +11757,6 @@ sctp_lower_sosend(struct socket *so,
 			/* its a sendall */
 			error = sctp_sendall(inp, uio, top, srcv);
 			top = NULL;
-			splx(s);
-			goto out_unlocked;
-		}
-	}
-	if (addr) {
-		SCTP_ASOC_CREATE_LOCK(inp);
-		create_lock_applied = 1;
-		if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
-		    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
-			/* Should I really unlock ? */
-			error = EFAULT;
-			splx(s);
-			goto out_unlocked;
-
-		}
-		if (((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0) &&
-		    (addr->sa_family == AF_INET6)) {
-			error = EINVAL;
 			splx(s);
 			goto out_unlocked;
 		}
@@ -11798,192 +11774,213 @@ sctp_lower_sosend(struct socket *so,
 		SCTP_TCB_LOCK(stcb);
 		hold_tcblock = 1;
 		SCTP_INP_RUNLOCK(inp);
-		net = stcb->asoc.primary_destination;
-	}
-	/* get control */
-	if (stcb == NULL) {
-		/* Need to do a lookup */
-		if (use_rcvinfo && srcv && srcv->sinfo_assoc_id) {
-			stcb = sctp_findassociation_ep_asocid(inp, srcv->sinfo_assoc_id);
-			/*
-			 * Question: Should I error here if the assoc_id is
-			 * no longer valid? i.e. I can't find it?
-			 */
-			if ((stcb) &&
-			    (addr != NULL)) {
-				/* Must locate the net structure */
+		if (addr) 
+			/* Must locate the net structure if addr given */
+			net = sctp_findnet(stcb, addr);
+		else 
+			net = stcb->asoc.primary_destination;
+
+	} else if (use_rcvinfo && srcv && srcv->sinfo_assoc_id) {
+		stcb = sctp_findassociation_ep_asocid(inp, srcv->sinfo_assoc_id);
+		if (stcb) {
+			if (addr) 
+				/* Must locate the net structure if addr given */
 				net = sctp_findnet(stcb, addr);
-			}
-			if (stcb) {
-				hold_tcblock = 1;
-			}
+			else 
+				net = stcb->asoc.primary_destination;
 		}
-		if (non_blocking) {
-			if ((so->so_snd.sb_hiwat <
-			     (sndlen + stcb->asoc.total_output_queue_size)) ||
-			    (stcb->asoc.chunks_on_out_queue >
-			     sctp_max_chunks_on_queue)) {
-				error = EWOULDBLOCK;
-				splx(s);
-				goto out_unlocked;
-			}
+		if (stcb) {
+			hold_tcblock = 1;
 		}
+	} else if (addr) {
+		/*
+		 * Since we did not use findep we must
+		 * increment it, and if we don't find a tcb
+		 * decrement it.
+		 */
+		SCTP_INP_WLOCK(inp);
+		SCTP_INP_INCR_REF(inp);
+		SCTP_INP_WUNLOCK(inp);
+		stcb = sctp_findassociation_ep_addr(&t_inp, addr, &net, NULL, NULL);
 		if (stcb == NULL) {
-			if (addr != NULL) {
-				/*
-				 * Since we did not use findep we must
-				 * increment it, and if we don't find a tcb
-				 * decrement it.
-				 */
-				SCTP_INP_WLOCK(inp);
-				SCTP_INP_INCR_REF(inp);
-				SCTP_INP_WUNLOCK(inp);
-				stcb = sctp_findassociation_ep_addr(&t_inp, addr, &net, NULL, NULL);
-				if (stcb == NULL) {
-					SCTP_INP_WLOCK(inp);
-					SCTP_INP_DECR_REF(inp);
-					SCTP_INP_WUNLOCK(inp);
-				} else {
-					hold_tcblock = 1;
-				}
-			}
+			SCTP_INP_WLOCK(inp);
+			SCTP_INP_DECR_REF(inp);
+			SCTP_INP_WUNLOCK(inp);
+		} else {
+			hold_tcblock = 1;
 		}
 	}
-	if ((stcb == NULL) &&
-	    (inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE)) {
-		error = ENOTCONN;
-		splx(s);
-		goto out_unlocked;
-	} else if ((stcb == NULL) && (addr == NULL)) {
-		error = ENOENT;
-		splx(s);
-		goto out_unlocked;
-	} else if (stcb == NULL) {
-		/* UDP style, we must go ahead and start the INIT process */
-		if ((use_rcvinfo) && (srcv) &&
-		    (srcv->sinfo_flags & SCTP_ABORT)) {
-			/* User asks to abort a non-existant asoc */
+	if ((stcb == NULL) && (addr)) {
+		/* Possible implicit send? */
+		SCTP_ASOC_CREATE_LOCK(inp);
+		create_lock_applied = 1;
+		if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
+		    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
+			/* Should I really unlock ? */
+			error = EFAULT;
+			splx(s);
+			goto out_unlocked;
+
+		}
+		if (((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0) &&
+		    (addr->sa_family == AF_INET6)) {
+			error = EINVAL;
+			splx(s);
+			goto out_unlocked;
+		}
+	}
+	if(stcb == NULL) {
+		if (inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) {
+			error = ENOTCONN;
+			splx(s);
+			goto out_unlocked;
+		} else if (addr == NULL) {
 			error = ENOENT;
 			splx(s);
 			goto out_unlocked;
-		}
-		/* get an asoc/stcb struct */
-		stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0);
-		if (stcb == NULL) {
-			/* Error is setup for us in the call */
-			splx(s);
-			goto out_unlocked;
-		}
-		if (create_lock_applied) {
-			SCTP_ASOC_CREATE_UNLOCK(inp);
-			create_lock_applied = 0;
 		} else {
-			printf("Huh-3? create lock should have been on??\n");
-		}
-		/* Turn on queue only flag to prevent data from being sent */
-		queue_only = 1;
-		asoc = &stcb->asoc;
-		asoc->state = SCTP_STATE_COOKIE_WAIT;
-		SCTP_GETTIME_TIMEVAL(&asoc->time_entered);
-
-		/*
-		 * initialize authentication parameters for the assoc
-		 */
-		/* generate a RANDOM for this assoc */
-		asoc->authinfo.random =
-			sctp_generate_random_key(sctp_auth_random_len);
-		/* initialize hmac list from endpoint */
-		asoc->local_hmacs =
-			sctp_copy_hmaclist(inp->sctp_ep.local_hmacs);
-		/* initialize auth chunks list from endpoint */
-		asoc->local_auth_chunks =
-			sctp_copy_chunklist(inp->sctp_ep.local_auth_chunks);
-		/* copy defaults from the endpoint */
-		asoc->authinfo.assoc_keyid = inp->sctp_ep.default_keyid;
-
-		if (control) {
-			/* see if a init structure exists in cmsg headers */
-			struct sctp_initmsg initm;
-			int i;
-
-			if (sctp_find_cmsg(SCTP_INIT, (void *)&initm, control,
-					   sizeof(initm))) {
-				/* we have an INIT override of the default */
-				if (initm.sinit_max_attempts)
-					asoc->max_init_times = initm.sinit_max_attempts;
-				if (initm.sinit_num_ostreams)
-					asoc->pre_open_streams = initm.sinit_num_ostreams;
-				if (initm.sinit_max_instreams)
-					asoc->max_inbound_streams = initm.sinit_max_instreams;
-				if (initm.sinit_max_init_timeo)
-					asoc->initial_init_rto_max = initm.sinit_max_init_timeo;
-				if (asoc->streamoutcnt < asoc->pre_open_streams) {
-					/* Default is NOT correct */
+			/* UDP style, we must go ahead and start the INIT process */
+			if ((use_rcvinfo) && (srcv) &&
+			    (srcv->sinfo_flags & SCTP_ABORT)) {
+				/* User asks to abort a non-existant asoc */
+				error = ENOENT;
+				splx(s);
+				goto out_unlocked;
+			}
+			/* get an asoc/stcb struct */
+			stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0);
+			if (stcb == NULL) {
+				/* Error is setup for us in the call */
+				splx(s);
+				goto out_unlocked;
+			}
+			if (create_lock_applied) {
+				SCTP_ASOC_CREATE_UNLOCK(inp);
+				create_lock_applied = 0;
+			} else {
+				printf("Huh-3? create lock should have been on??\n");
+			}
+			/* Turn on queue only flag to prevent data from being sent */
+			queue_only = 1;
+			asoc = &stcb->asoc;
+			asoc->state = SCTP_STATE_COOKIE_WAIT;
+			SCTP_GETTIME_TIMEVAL(&asoc->time_entered);
+			
+			/*
+			 * initialize authentication parameters for the assoc
+			 */
+			/* generate a RANDOM for this assoc */
+			asoc->authinfo.random =
+				sctp_generate_random_key(sctp_auth_random_len);
+			/* initialize hmac list from endpoint */
+			asoc->local_hmacs =
+				sctp_copy_hmaclist(inp->sctp_ep.local_hmacs);
+			/* initialize auth chunks list from endpoint */
+			asoc->local_auth_chunks =
+				sctp_copy_chunklist(inp->sctp_ep.local_auth_chunks);
+			/* copy defaults from the endpoint */
+			asoc->authinfo.assoc_keyid = inp->sctp_ep.default_keyid;
+			if (control) {
+				/* see if a init structure exists in cmsg headers */
+				struct sctp_initmsg initm;
+				int i;
+				
+				if (sctp_find_cmsg(SCTP_INIT, (void *)&initm, control,
+						   sizeof(initm))) {
+					/* we have an INIT override of the default */
+					if (initm.sinit_max_attempts)
+						asoc->max_init_times = initm.sinit_max_attempts;
+					if (initm.sinit_num_ostreams)
+						asoc->pre_open_streams = initm.sinit_num_ostreams;
+					if (initm.sinit_max_instreams)
+						asoc->max_inbound_streams = initm.sinit_max_instreams;
+					if (initm.sinit_max_init_timeo)
+						asoc->initial_init_rto_max = initm.sinit_max_init_timeo;
+					if (asoc->streamoutcnt < asoc->pre_open_streams) {
+						/* Default is NOT correct */
 #ifdef SCTP_DEBUG
-					if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
-						printf("Ok, defout:%d pre_open:%d\n",
-						       asoc->streamoutcnt, asoc->pre_open_streams);
-					}
+						if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
+							printf("Ok, defout:%d pre_open:%d\n",
+							       asoc->streamoutcnt, asoc->pre_open_streams);
+						}
 #endif
-					FREE(asoc->strmout, M_PCB);
-					asoc->strmout = NULL;
-					asoc->streamoutcnt = asoc->pre_open_streams;
-
-					/*
-					 * What happens if this fails? .. we
-					 * panic ...
-					 */
-					{
-						struct sctp_stream_out *tmp_str;
-
-						SCTP_TCB_UNLOCK(stcb);
-						MALLOC(tmp_str,
-						       struct sctp_stream_out *,
-						       asoc->streamoutcnt *
-						       sizeof(struct sctp_stream_out),
-						       M_PCB, M_WAIT);
-						SCTP_TCB_LOCK(stcb);
-						hold_tcblock = 1;
-						asoc->strmout = tmp_str;
-					}
-					for (i = 0; i < asoc->streamoutcnt; i++) {
+						FREE(asoc->strmout, M_PCB);
+						asoc->strmout = NULL;
+						asoc->streamoutcnt = asoc->pre_open_streams;
 						/*
-						 * inbound side must be set
-						 * to 0xffff, also NOTE when
-						 * we get the INIT-ACK back
-						 * (for INIT sender) we MUST
-						 * reduce the count
-						 * (streamoutcnt) but first
-						 * check if we sent to any
-						 * of the upper streams that
-						 * were dropped (if some
-						 * were). Those that were
-						 * dropped must be notified
-						 * to the upper layer as
-						 * failed to send.
+						 * What happens if this fails? .. we
+						 * panic ...
 						 */
-						asoc->strmout[i].next_sequence_sent = 0x0;
-						TAILQ_INIT(&asoc->strmout[i].outqueue);
-						asoc->strmout[i].stream_no = i;
-						asoc->strmout[i].last_msg_incomplete = 0;
-						asoc->strmout[i].next_spoke.tqe_next = 0;
-						asoc->strmout[i].next_spoke.tqe_prev = 0;
+						{
+							struct sctp_stream_out *tmp_str;
+							
+							SCTP_TCB_UNLOCK(stcb);
+							MALLOC(tmp_str,
+							       struct sctp_stream_out *,
+							       asoc->streamoutcnt *
+							       sizeof(struct sctp_stream_out),
+							       M_PCB, M_WAIT);
+							SCTP_TCB_LOCK(stcb);
+							hold_tcblock = 1;
+							asoc->strmout = tmp_str;
+						}
+						for (i = 0; i < asoc->streamoutcnt; i++) {
+							/*
+							 * inbound side must be set
+							 * to 0xffff, also NOTE when
+							 * we get the INIT-ACK back
+							 * (for INIT sender) we MUST
+							 * reduce the count
+							 * (streamoutcnt) but first
+							 * check if we sent to any
+							 * of the upper streams that
+							 * were dropped (if some
+							 * were). Those that were
+							 * dropped must be notified
+							 * to the upper layer as
+							 * failed to send.
+							 */
+							asoc->strmout[i].next_sequence_sent = 0x0;
+							TAILQ_INIT(&asoc->strmout[i].outqueue);
+							asoc->strmout[i].stream_no = i;
+							asoc->strmout[i].last_msg_incomplete = 0;
+							asoc->strmout[i].next_spoke.tqe_next = 0;
+							asoc->strmout[i].next_spoke.tqe_prev = 0;
+						}
 					}
 				}
 			}
+
+			/* out with the INIT */
+			queue_only_for_init = 1;
+			/*
+			 * we may want to dig in after this call and adjust the MTU
+			 * value. It defaulted to 1500 (constant) but the ro
+			 * structure may now have an update and thus we may need to
+			 * change it BEFORE we append the message.
+			 */
+			net = stcb->asoc.primary_destination;
+			asoc = &stcb->asoc;
 		}
-		/* out with the INIT */
-		queue_only_for_init = 1;
-		/*
-		 * we may want to dig in after this call and adjust the MTU
-		 * value. It defaulted to 1500 (constant) but the ro
-		 * structure may now have an update and thus we may need to
-		 * change it BEFORE we append the message.
-		 */
-		net = stcb->asoc.primary_destination;
-		asoc = &stcb->asoc;
-	} else {
-		asoc = &stcb->asoc;
+	}
+	if (((so->so_state & SS_NBIO)
+#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+	     || (flags & MSG_NBIO)
+#endif
+		    )) {
+		non_blocking = 1;
+	}
+	asoc = &stcb->asoc;
+	/* would we block? */
+	if (non_blocking) {
+		if ((so->so_snd.sb_hiwat <
+		     (sndlen + stcb->asoc.total_output_queue_size)) ||
+		    (stcb->asoc.chunks_on_out_queue >
+		     sctp_max_chunks_on_queue)) {
+			error = EWOULDBLOCK;
+			splx(s);
+			goto out_unlocked;
+		}
 	}
 	/* Keep the stcb from being freed under our feet */
 	atomic_add_16(&stcb->asoc.refcnt, 1);

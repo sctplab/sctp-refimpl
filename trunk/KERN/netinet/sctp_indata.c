@@ -4211,10 +4211,6 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 			break;
 		}
 		TAILQ_REMOVE(&asoc->sent_queue, tp1, sctp_next);
-		/*
-		 * Friendlier printf in lieu of panic now that I think its
-		 * fixed
-		 */
 		if (tp1->data) {
 			sctp_free_bufspace(stcb, asoc, tp1, 1);
 			sctp_m_freem(tp1->data);
