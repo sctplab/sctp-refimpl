@@ -30,7 +30,7 @@ main(int argc, char **argv)
 	struct sctp_sndrcvinfo sinfo;
 	socklen_t sa_len;
 	int fd, failed_cnt=0, newfd;
-	uint32_t flags;
+	int flags;
 
 	while((i= getopt(argc,argv,"B:p::")) != EOF){
 		switch(i){
