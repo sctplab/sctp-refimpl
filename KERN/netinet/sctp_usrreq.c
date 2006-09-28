@@ -6605,11 +6605,13 @@ sctp_lock(struct socket *so, int refcount, int lr)
 int
 sctp_unlock(struct socket *so, int refcount, int lr)
 {
-	SAVE_CALLERS(((struct sctp_inpcb *)so->so_pcb)->unlock_caller1,
-		     ((struct sctp_inpcb *)so->so_pcb)->unlock_caller2,
-		     ((struct sctp_inpcb *)so->so_pcb)->unlock_caller3);
-	((struct sctp_inpcb *)so->so_pcb)->unlock_gen_count = ((struct sctp_inpcb *)so->so_pcb)->gen_count++;
-
+	if (so->so_pcb) {	
+		SAVE_CALLERS(((struct sctp_inpcb *)so->so_pcb)->unlock_caller1,
+			     ((struct sctp_inpcb *)so->so_pcb)->unlock_caller2,
+			     ((struct sctp_inpcb *)so->so_pcb)->unlock_caller3);
+		((struct sctp_inpcb *)so->so_pcb)->unlock_gen_count = ((struct sctp_inpcb *)so->so_pcb)->gen_count++;
+	}
+	
 	if (refcount)
 		so->so_usecount--;
 
