@@ -857,8 +857,9 @@ main(int argc, char **argv)
 					printf("%s %d:RWND\n", ts, log.x.misc.log2);
 					printf("%s %d:ARWND\n",ts, log.x.misc.log1);
 					printf("%s %d:FLIGHT\n", ts, log.x.misc.log3);
+					printf("%s %d:OUT_QUEUE\n", ts, log.x.misc.log4);
 				} else {
-					printf("%s s-rwnd:%d calc_rwnd:%d  flight:%d cumacktsn:%x\n",
+					printf("%s s-rwnd:%d calc_rwnd:%d  flight:%d total_oqs:%x\n",
 					       ts,
 					       log.x.misc.log1,
 					       log.x.misc.log2,

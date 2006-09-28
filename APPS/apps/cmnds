@@ -110,6 +110,52 @@ plot '$1.rcv.txt' title 'read', \
 '$1.flight.txt' title 'snd-flt', \
 '$1.rwnd.txt' title 'snd-arw', \
 '$1.arwnd.txt' title 'snd-rwd'
+unset multiplot
+clear
+reset
+set output 'plot001-500.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'time'
+set ylabel 'size'
+set multiplot
+set key outside Right title 'Legend' box 1
+set xrange [.001:.500]
+plot '$1.rcv.txt' title 'read', \
+'$1.flight.txt' title 'snd-flt', \
+'$1.rwnd.txt' title 'snd-arw', \
+'$1.arwnd.txt' title 'snd-rwd'
+unset multiplot
+clear
+reset
+set output 'plot2-3.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'time'
+set ylabel 'size'
+set multiplot
+set key outside Right title 'Legend' box 1
+set xrange [.2:.3]
+plot '$1.rcv.txt' title 'read', \
+'$1.flight.txt' title 'snd-flt', \
+'$1.rwnd.txt' title 'snd-arw', \
+'$1.arwnd.txt' title 'snd-rwd'
+unset multiplot
+clear
+reset
+set output 'plot2s0-2s2.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'time'
+set ylabel 'size'
+set multiplot
+set key outside Right title 'Legend' box 1
+set xrange [2.0:2.2]
+plot '$1.rcv.txt' title 'read', \
+'$1.flight.txt' title 'snd-flt', \
+'$1.rwnd.txt' title 'snd-arw', \
+'$1.arwnd.txt' title 'snd-rwd'
+
 
 
 
