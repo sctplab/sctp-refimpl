@@ -312,17 +312,16 @@ sctp_free_bufspace(struct sctp_tcb *, struct sctp_association *,
 #define sctp_free_bufspace(stcb, asoc, tp1, chk_cnt)  \
 do { \
 	if (tp1->data != NULL) { \
-                SCTP_TCB_LOCK_ASSERT(stcb); \
-                (asoc)->chunks_on_out_queue -= chk_cnt; \
+                atomic_add_int(&(asoc)->chunks_on_out_queue, -chk_cnt); \
 		if ((asoc)->total_output_queue_size >= tp1->book_size) { \
-			(asoc)->total_output_queue_size -= tp1->book_size; \
+			atomic_add_int(&(asoc)->total_output_queue_size, -tp1->book_size); \
 		} else { \
 			(asoc)->total_output_queue_size = 0; \
 		} \
    	        if (stcb->sctp_socket && ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) || \
 	            (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL))) { \
 			if (stcb->sctp_socket->so_snd.sb_cc >= tp1->book_size) { \
-				stcb->sctp_socket->so_snd.sb_cc -= tp1->book_size; \
+				atomic_add_int(&stcb->sctp_socket->so_snd.sb_cc, -tp1->book_size); \
 			} else { \
 				stcb->sctp_socket->so_snd.sb_cc = 0; \
 			} \
@@ -334,18 +333,17 @@ do { \
 
 #define sctp_free_spbufspace(stcb, asoc, sp)  \
 do { \
-        SCTP_TCB_LOCK_ASSERT(stcb); \
  	if (sp->data != NULL) { \
-                (asoc)->chunks_on_out_queue--; \
+                atomic_add_int(&(asoc)->chunks_on_out_queue, -1); \
 		if ((asoc)->total_output_queue_size >= sp->length) { \
-			(asoc)->total_output_queue_size -= sp->length; \
+			atomic_add_int(&(asoc)->total_output_queue_size,sp->length); \
 		} else { \
 			(asoc)->total_output_queue_size = 0; \
 		} \
    	        if (stcb->sctp_socket && ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) || \
 	            (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL))) { \
 			if (stcb->sctp_socket->so_snd.sb_cc >= sp->length) { \
-				stcb->sctp_socket->so_snd.sb_cc -= sp->length; \
+				atomic_add_int(&stcb->sctp_socket->so_snd.sb_cc,sp->length); \
 			} else { \
 				stcb->sctp_socket->so_snd.sb_cc = 0; \
 			} \
@@ -355,12 +353,11 @@ do { \
 
 #define sctp_snd_sb_alloc(stcb, sz)  \
 do { \
-        SCTP_TCB_LOCK_ASSERT(stcb); \
-	stcb->asoc.total_output_queue_size += sz; \
+	atomic_add_int(&stcb->asoc.total_output_queue_size,sz); \
 	if ((stcb->sctp_socket != NULL) && \
 	    ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) || \
 	     (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL))) { \
-		stcb->sctp_socket->so_snd.sb_cc += sz; \
+		atomic_add_int(&stcb->sctp_socket->so_snd.sb_cc,sz); \
 	} \
 } while (0)
 
