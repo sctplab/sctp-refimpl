@@ -2006,7 +2006,7 @@ sctp_slowtimo()
 	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 #ifdef SCTP_DEBUG
 	if ((sctp_debug_on & SCTP_DEBUG_PCB2) && (n > 0)) {
-		printf("sctp_slowtimo: inps: %u, inp_wantcnt: %u, so_usecount : %u, inp_state: %u, inpcb_mtx: %u\n",
+		printf("sctp_slowtimo: inps: %u, inp_wantcnt: %u, so_usecount: %u, inp_state: %u, inpcb_mtx: %u\n",
 		       n, n1, n2, n3, n4);
 	}
 #endif
