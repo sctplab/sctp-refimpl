@@ -36,12 +36,15 @@ main(int argc, char **argv)
 	char *logfile=NULL;
 	int seen_time=0;
 	int interval = 1000;
+	int fixed_constant = 0;
 	int32_t cur_sec, cur_usec, cur_cnt=0;
 	int at;
 	struct sctp_cwnd_log log;
-	while((i= getopt(argc,argv,"l:i:")) != EOF)
+	while((i= getopt(argc,argv,"l:i:c:")) != EOF)
 	{
 		switch(i) {
+		case 'c':
+			fixed_constant = strtol(optarg, NULL, 0);
 		case 'i':
 			interval = strtol(optarg, NULL, 0);
 			break;
@@ -77,7 +80,7 @@ main(int argc, char **argv)
 			if(usec < (cur_usec + interval)) {
 				cur_cnt++;
 			} else {
-				printf("%d.%d  %d\n", cur_sec, cur_usec, cur_cnt);
+				printf("%d.%d  %d\n", cur_sec, cur_usec, (cur_cnt+fixed_constant));
 				cur_sec = (log.time_event >> 20) & 0x0fff;
 				cur_usec = (log.time_event & 0x000fffff);
 				cur_cnt = 0;
