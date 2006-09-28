@@ -3009,6 +3009,8 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	inp->sctp_ep.signature_change.type = SCTP_TIMER_TYPE_NONE;
 	/* Clear the read queue */
 	while ((sq = TAILQ_FIRST(&inp->read_queue)) != NULL) {
+		printf("Got sq:%x length:%d free of pcb:%x zaps it\n",
+		       (u_int)sq, sq->length, (u_int)inp);
 		TAILQ_REMOVE(&inp->read_queue, sq, next);
 		sctp_free_remote_addr(sq->whoFrom);
 		if(so)
@@ -4125,6 +4127,8 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	SCTP_INP_READ_LOCK(inp);
 	TAILQ_FOREACH(sq, &inp->read_queue, next) {
 		if (sq->stcb == stcb) {
+			printf("On close of stcb:%x in inp:%x set %x to no-refer\n", 
+			       (u_int)stcb, (u_int)inp, (u_int)sq);
 			sq->do_not_ref_stcb = 1;
 			sq->sinfo_cumtsn = stcb->asoc.cumulative_tsn;
 			if ((from_inpcbfree == 0) && so) {
@@ -4155,8 +4159,8 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 						}
 					}
 				}
-				sq->end_added = 1;
 			}
+			sq->end_added = 1;
 			cnt++;
 		}
 	}
