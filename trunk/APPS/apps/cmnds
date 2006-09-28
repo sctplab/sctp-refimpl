@@ -19,142 +19,157 @@ set multiplot
 set key outside Right title 'Legend' box 1
 plot '$1.rcv.txt' title 'read', \
 '$1.flight.txt' title 'snd-flt', \
-'$1.rwnd.txt' title 'snd-arw', \
+'$1.arwnd.txt' title 'snd-arw', \
 '$1.outq.txt' title 'snd-q'
 unset multiplot
 clear
 reset
-set output 'plot000-005.ps'
+set output 'plot000-100.ps'
 set terminal post landscape 'Times-Roman' 12
 set terminal post color
 set xlabel 'time'
 set ylabel 'size'
 set multiplot
 set key outside Right title 'Legend' box 1
-set xrange [.000:.005]
+set xrange [.000:.100]
 plot '$1.rcv.txt' title 'read', \
 '$1.flight.txt' title 'snd-flt', \
-'$1.rwnd.txt' title 'snd-arw', \
+'$1.arwnd.txt' title 'snd-arw', \
 '$1.outq.txt' title 'snd-q'
 unset multiplot
 clear
 reset
-set output 'plot005-010.ps'
+set output 'plot100-200.ps'
 set terminal post landscape 'Times-Roman' 12
 set terminal post color
 set xlabel 'time'
 set ylabel 'size'
 set multiplot
 set key outside Right title 'Legend' box 1
-set xrange [.005:.010]
+set xrange [.100:.200]
 plot '$1.rcv.txt' title 'read', \
 '$1.flight.txt' title 'snd-flt', \
-'$1.rwnd.txt' title 'snd-arw', \
+'$1.arwnd.txt' title 'snd-arw', \
 '$1.outq.txt' title 'snd-q'
 unset multiplot
 clear
 reset
-set output 'plot010-015.ps'
+set output 'plot200-300.ps'
 set terminal post landscape 'Times-Roman' 12
 set terminal post color
 set xlabel 'time'
 set ylabel 'size'
 set multiplot
 set key outside Right title 'Legend' box 1
-set xrange [.010:.015]
+set xrange [.200:.300]
 plot '$1.rcv.txt' title 'read', \
 '$1.flight.txt' title 'snd-flt', \
-'$1.rwnd.txt' title 'snd-arw', \
+'$1.arwnd.txt' title 'snd-arw', \
 '$1.outq.txt' title 'snd-q'
 unset multiplot
 clear
 reset
-set output 'plot015-020.ps'
+set output 'plot300-400.ps'
 set terminal post landscape 'Times-Roman' 12
 set terminal post color
 set xlabel 'time'
 set ylabel 'size'
 set multiplot
 set key outside Right title 'Legend' box 1
-set xrange [.015:.020]
+set xrange [.300:.400]
 plot '$1.rcv.txt' title 'read', \
 '$1.flight.txt' title 'snd-flt', \
-'$1.rwnd.txt' title 'snd-arw', \
+'$1.arwnd.txt' title 'snd-arw', \
 '$1.outq.txt' title 'snd-q'
 unset multiplot
 clear
 reset
-set output 'plot020-025.ps'
+set output 'plot400-500.ps'
 set terminal post landscape 'Times-Roman' 12
 set terminal post color
 set xlabel 'time'
 set ylabel 'size'
 set multiplot
 set key outside Right title 'Legend' box 1
-set xrange [.020:.025]
+set xrange [.400:.500]
 plot '$1.rcv.txt' title 'read', \
 '$1.flight.txt' title 'snd-flt', \
-'$1.rwnd.txt' title 'snd-arw', \
+'$1.arwnd.txt' title 'snd-arw', \
 '$1.outq.txt' title 'snd-q'
 unset multiplot
 clear
 reset
-set output 'plot025-030.ps'
+set output 'plot500-600.ps'
 set terminal post landscape 'Times-Roman' 12
 set terminal post color
 set xlabel 'time'
 set ylabel 'size'
 set multiplot
 set key outside Right title 'Legend' box 1
-set xrange [.025:.030]
+set xrange [.500:.600]
 plot '$1.rcv.txt' title 'read', \
 '$1.flight.txt' title 'snd-flt', \
-'$1.rwnd.txt' title 'snd-arw', \
+'$1.arwnd.txt' title 'snd-arw', \
 '$1.outq.txt' title 'snd-q'
 unset multiplot
 clear
 reset
-set output 'plot001-500.ps'
+set output 'plot600-700.ps'
 set terminal post landscape 'Times-Roman' 12
 set terminal post color
 set xlabel 'time'
 set ylabel 'size'
 set multiplot
 set key outside Right title 'Legend' box 1
-set xrange [.001:.500]
+set xrange [.600:.700]
 plot '$1.rcv.txt' title 'read', \
 '$1.flight.txt' title 'snd-flt', \
-'$1.rwnd.txt' title 'snd-arw', \
+'$1.arwnd.txt' title 'snd-arw', \
 '$1.outq.txt' title 'snd-q'
 unset multiplot
 clear
 reset
-set output 'plot2-3.ps'
+set output 'plot700-800.ps'
 set terminal post landscape 'Times-Roman' 12
 set terminal post color
 set xlabel 'time'
 set ylabel 'size'
 set multiplot
 set key outside Right title 'Legend' box 1
-set xrange [.2:.3]
+set xrange [.700:.800]
 plot '$1.rcv.txt' title 'read', \
 '$1.flight.txt' title 'snd-flt', \
-'$1.rwnd.txt' title 'snd-arw', \
+'$1.arwnd.txt' title 'snd-arw', \
 '$1.outq.txt' title 'snd-q'
 unset multiplot
 clear
 reset
-set output 'plot2s0-2s2.ps'
+set output 'plotp800-900.ps'
 set terminal post landscape 'Times-Roman' 12
 set terminal post color
 set xlabel 'time'
 set ylabel 'size'
 set multiplot
 set key outside Right title 'Legend' box 1
-set xrange [2.0:2.2]
+set xrange [.800:.900]
 plot '$1.rcv.txt' title 'read', \
 '$1.flight.txt' title 'snd-flt', \
-'$1.rwnd.txt' title 'snd-arw', \
+'$1.arwnd.txt' title 'snd-arw', \
+'$1.outq.txt' title 'snd-q'
+unset multiplot
+clear
+reset
+set output 'plotp900-1s.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'time'
+set ylabel 'size'
+set multiplot
+set key outside Right title 'Legend' box 1
+set xrange [.900:1.000]
+plot '$1.rcv.txt' title 'read', \
+'$1.flight.txt' title 'snd-flt', \
+'$1.arwnd.txt' title 'snd-arw', \
 '$1.outq.txt' title 'snd-q'
 
 
