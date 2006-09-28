@@ -45,6 +45,7 @@ main(int argc, char **argv)
 		switch(i) {
 		case 'c':
 			fixed_constant = strtol(optarg, NULL, 0);
+			break;
 		case 'i':
 			interval = strtol(optarg, NULL, 0);
 			break;
