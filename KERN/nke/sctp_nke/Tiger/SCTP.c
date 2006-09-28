@@ -401,6 +401,8 @@ kern_return_t SCTP_stop (kmod_info_t * ki, void * d) {
 #ifndef SCTP_APPLE_FINE_GRAINED_LOCKING
 	int s;
 	int funnel_state;
+#else
+	struct inpcb *inp;
 #endif
 	int err;
 	
@@ -426,6 +428,16 @@ kern_return_t SCTP_stop (kmod_info_t * ki, void * d) {
 		return KERN_FAILURE;
 	}
 
+#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
+	if (!LIST_EMPTY(&sctppcbinfo.inplisthead)) {
+		printf("SCTP NKE: There are still not deleted SCTP endpoints. NKE not unloaded\n");
+		LIST_FOREACH(inp, &sctppcbinfo.inplisthead, inp_list) {
+			printf("inp = %p: inp_wantcnt = %d, inp_state = %d, inp_socket->so_usecount = %d\n", inp->inp_wantcnt, inp->inp_state, inp->inp_socket->so_usecount);
+		}
+		lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
+		return KERN_FAILURE;
+	}
+#endif
 	sctp_stop_main_timer();
 
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_sendspace);

@@ -4428,7 +4428,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 		       rwnd,
 		       stcb->asoc.peers_rwnd,
 		       stcb->asoc.total_flight,
-		       cumack);
+		       stcb->asoc.total_output_queue_size);
 
 #endif	
 }
@@ -5340,7 +5340,7 @@ skip_segments:
 		       a_rwnd,
 		       stcb->asoc.peers_rwnd,
 		       stcb->asoc.total_flight,
-		       asoc->last_acked_seq);
+		       stcb->asoc.total_output_queue_size);
 
 #endif	
 

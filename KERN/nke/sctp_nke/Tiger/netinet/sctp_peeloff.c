@@ -130,7 +130,7 @@ sctp_can_peel_off(struct socket *head, sctp_assoc_t assoc_id)
 	if (inp == NULL) {
 		return (EFAULT);
 	}
-	stcb = sctp_findassociation_ep_asocid(inp, assoc_id);
+	stcb = sctp_findassociation_ep_asocid(inp, assoc_id, 1);
 	if (stcb == NULL) {
 		return (ENOTCONN);
 	}
@@ -148,7 +148,7 @@ sctp_do_peeloff(struct socket *head, struct socket *so, sctp_assoc_t assoc_id)
 	inp = (struct sctp_inpcb *)head->so_pcb;
 	if (inp == NULL)
 		return (EFAULT);
-	stcb = sctp_findassociation_ep_asocid(inp, assoc_id);
+	stcb = sctp_findassociation_ep_asocid(inp, assoc_id, 1);
 	if (stcb == NULL)
 		return (ENOTCONN);
 
@@ -194,7 +194,7 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 		*error = EFAULT;
 		return (NULL);
 	}
-	stcb = sctp_findassociation_ep_asocid(inp, assoc_id);
+	stcb = sctp_findassociation_ep_asocid(inp, assoc_id, 1);
 	if (stcb == NULL) {
 		*error = ENOTCONN;
 		return (NULL);

@@ -78,7 +78,6 @@ sctp_build_readq_entry(struct sctp_tcb *stcb,
 		(_ctl)->tail_mbuf = NULL; \
 		(_ctl)->do_not_ref_stcb = 0; \
 		(_ctl)->end_added = 0; \
-		SCTP_INCR_READQ_COUNT(); \
 	} \
 } while (0)
 

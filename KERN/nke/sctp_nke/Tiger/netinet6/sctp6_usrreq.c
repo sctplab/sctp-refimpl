@@ -817,7 +817,9 @@ sctp6_abort(struct socket *so)
 		/* Now null out the reference, we are
 		 * completely detached.
 		 */
+#if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		so->so_pcb = NULL;
+#endif
 		SOCK_UNLOCK(so);
 	} else {
 		flags = inp->sctp_flags;
@@ -1079,7 +1081,9 @@ sctp6_close(struct socket *so)
 		/* Now null out the reference, we are
 		 * completely detached.
 		 */
+#if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		so->so_pcb = NULL;
+#endif
 		SOCK_UNLOCK(so);
 	} else {
 		flags = inp->sctp_flags;
