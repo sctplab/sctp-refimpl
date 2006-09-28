@@ -9,7 +9,7 @@ fi
 ../FreeBSD/prtcwndlog -r -g -l $1.send | grep ARWND > $1.arwnd.txt
 ../FreeBSD/prtcwndlog -r -g -l $1.send | grep RWND | grep -v ARWND > $1.rwnd.txt
 ../FreeBSD/prtcwndlog -r -g -l $1.send | grep OUT_QUEUE > $1.outq.txt
-../FreeBSD/cntcwndlog -r -l $1.send -c 50000 > $1.cnt.txt
+../FreeBSD/cntcwndlog -r -l $1.send -c 1000 -i 400 > $1.cnt.txt
 gnuplot <<!
 set output 'plotall.ps'
 set terminal post landscape 'Times-Roman' 12

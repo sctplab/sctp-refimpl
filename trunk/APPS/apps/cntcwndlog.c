@@ -38,10 +38,9 @@ main(int argc, char **argv)
 	uint32_t first_timeevent_sec;
 	uint32_t first_timeevent_usec;
 	int interval = 1000;
-	int32_t prev_time = 0;
 	int time_relative = 0;
 	int add_to_relative = 0;
-	int fixed_constant = 0;
+	int fixed_constant = 1;
 	int32_t cur_sec, cur_usec, cur_cnt=0;
 	int at;
 	struct sctp_cwnd_log log;
@@ -56,6 +55,10 @@ main(int argc, char **argv)
 			break;
 		case 'c':
 			fixed_constant = strtol(optarg, NULL, 0);
+			if(fixed_constant == 0) {
+				printf("fixed multiplier cannot be 0\n");
+				fixed_constant = 1;
+			}
 			break;
 		case 'i':
 			interval = strtol(optarg, NULL, 0);
@@ -80,13 +83,8 @@ main(int argc, char **argv)
 	while(fread((void *)&log, sizeof(log), 1,out) > 0) {
 		uint32_t sec, usec;
 		if (seen_time == 0) {
-			if(time_relative == 0) {
-				cur_sec = (log.time_event >> 20) & 0x0fff;
-				cur_usec = (log.time_event & 0x000fffff);
-			} else {
-				cur_sec = 0;
-				cur_usec = 0;
-			}
+			cur_sec = (log.time_event >> 20) & 0x0fff;
+			cur_usec = (log.time_event & 0x000fffff);
 			first_timeevent_sec = (log.time_event >> 20) & 0x0fff;
 			first_timeevent_usec = (log.time_event & 0x000fffff);
 			first_timeevent_usec += add_to_relative;
@@ -103,35 +101,36 @@ main(int argc, char **argv)
 			    (usec < first_timeevent_usec)) {
 				continue;
 			}
-			if(sec > first_timeevent_sec) {
-				/* do we need to borrow? */
-				if(first_timeevent_usec > usec) {
-					/* a borrow is in order */
-					sec--;
-					usec += 1000000;
-				}
-				sec -= first_timeevent_sec;
-				usec -= first_timeevent_usec;
-			} else {
-				sec -= first_timeevent_sec;
-				usec -= first_timeevent_usec;
-			}
 		}
-		prev_time = log.time_event;
 		/* skip any time event before the sync point */
 		if(sec == cur_sec) {
 		compare_usec:
 			if(usec < (cur_usec + interval)) {
 				cur_cnt++;
 			} else {
-				printf("%d.%d  %d\n", cur_sec, cur_usec, (cur_cnt+fixed_constant));
 				if(time_relative) {
-				cur_sec = ((log.time_event >> 20) & 0x0fff) - first_timeevent_sec;
-				cur_usec = ((log.time_event & 0x000fffff) - first_timeevent_usec);
+					if(cur_usec >= first_timeevent_usec) {
+						printf("%d.%d  %d\n", 
+						       (cur_sec-first_timeevent_sec), 
+						       (cur_usec-first_timeevent_usec), 
+						       (cur_cnt*fixed_constant));
+					} else {
+						/* borrow case */
+						cur_sec--;
+						cur_usec += 1000000;
+						printf("%d.%d  %d\n", 
+						       (cur_sec-first_timeevent_sec), 
+						       (cur_usec-first_timeevent_usec), 
+						       (cur_cnt*fixed_constant));
+					}
 				} else {
-					cur_sec = (log.time_event >> 20) & 0x0fff;
-					cur_usec = (log.time_event & 0x000fffff);
+					printf("%d.%d  %d\n", 
+					       cur_sec,
+					       cur_usec,
+					       (cur_cnt*fixed_constant));
 				}
+				cur_sec = (log.time_event >> 20) & 0x0fff;
+				cur_usec = (log.time_event & 0x000fffff);
 				cur_cnt = 0;
 			}
 		} else if (sec > cur_sec) {
@@ -141,7 +140,29 @@ main(int argc, char **argv)
 		}
 		at++;
 	}
-	printf("%d.%d  %d\n", cur_sec, cur_usec, cur_cnt);
+	if(time_relative) {
+		if(cur_usec >= first_timeevent_usec) {
+			printf("%d.%d  %d\n", 
+			       (cur_sec-first_timeevent_sec), 
+			       (cur_usec-first_timeevent_usec), 
+			       (cur_cnt*fixed_constant));
+		} else {
+			/* borrow case */
+			cur_sec--;
+			cur_usec += 1000000;
+			printf("%d.%d  %d\n", 
+			       (cur_sec-first_timeevent_sec), 
+			       (cur_usec-first_timeevent_usec), 
+			       (cur_cnt*fixed_constant));
+		}
+	} else {
+		printf("%d.%d  %d\n", 
+		       cur_sec,
+		       cur_usec,
+		       (cur_cnt*fixed_constant));
+	}
+						
+
 	fclose(out);
 	if(io) {
 		fclose(io);
