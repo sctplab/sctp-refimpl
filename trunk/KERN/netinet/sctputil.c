@@ -4782,9 +4782,7 @@ restart:
 			TAILQ_REMOVE(&inp->read_queue, control, next);
 			/* Add back any hiddend data */
 			sctp_free_remote_addr(control->whoFrom);
-			printf("Freeing control queue entry sq:%x (in read loop)\n",(u_int)control);
-			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, control);
-			SCTP_DECR_READQ_COUNT();
+			sctp_free_a_readq(stcb, control);
 		}
 		if(hold_rlock) {
 			hold_rlock = 0;
@@ -5202,12 +5200,7 @@ get_more_data:
 				no_rcv_needed = control->do_not_ref_stcb;
 				sctp_free_remote_addr(control->whoFrom);
 				control->data = NULL;
-				if(stcb && (control->do_not_ref_stcb == 0)) {
-					sctp_free_a_readq(stcb, control);
-				} else {
-					SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, control);
-					SCTP_DECR_READQ_COUNT();
-				}
+				sctp_free_a_readq(stcb, control);
 				control = NULL;
 				if ((freed_so_far >= rwnd_req) && (no_rcv_needed == 0))
 					sctp_user_rcvd(stcb, &freed_so_far, hold_rlock, rwnd_req);
