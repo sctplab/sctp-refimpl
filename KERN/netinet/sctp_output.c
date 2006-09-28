@@ -12168,8 +12168,10 @@ sctp_lower_sosend(struct socket *so,
 	} else {
 		max_len = 0;
 	}
-	SCTP_TCB_UNLOCK(stcb);
-	hold_tcblock = 0;
+	if (hold_tcblock) {
+		SCTP_TCB_UNLOCK(stcb);
+		hold_tcblock = 0;
+	}
 	splx(s);
 	/* Is the stream no. valid? */
 	if (srcv->sinfo_stream >= asoc->streamoutcnt) {
