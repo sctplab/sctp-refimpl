@@ -3009,8 +3009,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	inp->sctp_ep.signature_change.type = SCTP_TIMER_TYPE_NONE;
 	/* Clear the read queue */
 	while ((sq = TAILQ_FIRST(&inp->read_queue)) != NULL) {
-		printf("Got sq:%x length:%d free of pcb:%x zaps it\n",
-		       (u_int)sq, sq->length, (u_int)inp);
 		TAILQ_REMOVE(&inp->read_queue, sq, next);
 		sctp_free_remote_addr(sq->whoFrom);
 		if(so)
@@ -4124,6 +4122,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	sctp_log_closing(inp, stcb, 10);
 #endif
 	/* Now the read queue needs to be cleaned up */
+	printf("free-asoc now looks at read queue\n");
 	SCTP_INP_READ_LOCK(inp);
 	TAILQ_FOREACH(sq, &inp->read_queue, next) {
 		if (sq->stcb == stcb) {
