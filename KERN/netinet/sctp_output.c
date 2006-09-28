@@ -7189,8 +7189,8 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	/* clear it */
 	memset(chk, sizeof(*chk), 0);
 	chk->rec.data.rcv_flags = rcv_flags;
-	sctp_snd_sb_alloc(stcb, sizeof(struct sctp_data_chunk));
 	SCTP_TCB_SEND_LOCK(stcb);
+	sctp_snd_sb_alloc(stcb, sizeof(struct sctp_data_chunk));
 	if (to_move >= sp->length) {
 		/* we can steal the whole thing */
 		chk->data = sp->data;
@@ -7281,7 +7281,11 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	chk->whoTo = net;
 	atomic_add_int(&chk->whoTo->ref_count, 1);
 
+#ifdef __FreeBSD__
+	chk->rec.data.TSN_seq =  atomic_fetchadd_int(&asoc->sending_seq, 1);
+#else
 	chk->rec.data.TSN_seq = asoc->sending_seq++;
+#endif
 	dchkh = mtod(chk->data, struct sctp_data_chunk *);
 	/*
 	 * Put the rest of the things in place now. Size was done
@@ -7336,7 +7340,6 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		/* more to go, we are locked */
 		*locked = 1;
 	}
-	SCTP_TCB_SEND_UNLOCK(stcb);
 	asoc->chunks_on_out_queue++;
 	if(sp->pr_sctp_on) {
 		asoc->pr_sctp_cnt++;
@@ -7346,6 +7349,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	}
 	TAILQ_INSERT_TAIL(&asoc->send_queue, chk, sctp_next);
 	asoc->send_queue_cnt++;
+	SCTP_TCB_SEND_UNLOCK(stcb);
 	return (to_move);
 }
 
