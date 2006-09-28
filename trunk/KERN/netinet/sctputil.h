@@ -312,7 +312,7 @@ sctp_free_bufspace(struct sctp_tcb *, struct sctp_association *,
 #define sctp_free_bufspace(stcb, asoc, tp1, chk_cnt)  \
 do { \
 	if (tp1->data != NULL) { \
-                atomic_add_int(&((asoc)->chunks_on_out_queue), -chk_cnt); \
+                atomic_add_short(&((asoc)->chunks_on_out_queue), -chk_cnt); \
 		if ((asoc)->total_output_queue_size >= tp1->book_size) { \
 			atomic_add_int(&((asoc)->total_output_queue_size), -tp1->book_size); \
 		} else { \
