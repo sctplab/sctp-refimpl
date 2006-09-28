@@ -80,8 +80,13 @@ main(int argc, char **argv)
 	while(fread((void *)&log, sizeof(log), 1,out) > 0) {
 		uint32_t sec, usec;
 		if (seen_time == 0) {
-			cur_sec = (log.time_event >> 20) & 0x0fff;
-			cur_usec = (log.time_event & 0x000fffff);
+			if(time_relative == 0) {
+				cur_sec = (log.time_event >> 20) & 0x0fff;
+				cur_usec = (log.time_event & 0x000fffff);
+			} else {
+				cur_sec = 0;
+				cur_usec = 0;
+			}
 			first_timeevent_sec = (log.time_event >> 20) & 0x0fff;
 			first_timeevent_usec = (log.time_event & 0x000fffff);
 			first_timeevent_usec += add_to_relative;
@@ -120,8 +125,13 @@ main(int argc, char **argv)
 				cur_cnt++;
 			} else {
 				printf("%d.%d  %d\n", cur_sec, cur_usec, (cur_cnt+fixed_constant));
-				cur_sec = (log.time_event >> 20) & 0x0fff;
-				cur_usec = (log.time_event & 0x000fffff);
+				if(time_relative) {
+				cur_sec = ((log.time_event >> 20) & 0x0fff) - first_timeevent_sec;
+				cur_usec = ((log.time_event & 0x000fffff) - first_timeevent_usec);
+				} else {
+					cur_sec = (log.time_event >> 20) & 0x0fff;
+					cur_usec = (log.time_event & 0x000fffff);
+				}
 				cur_cnt = 0;
 			}
 		} else if (sec > cur_sec) {
