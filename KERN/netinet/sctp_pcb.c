@@ -692,7 +692,7 @@ null_return:
 #endif
 
 struct sctp_tcb *
-sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, sctp_assoc_t asoc_id)
+sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, sctp_assoc_t asoc_id, int want_lock)
 {
 	/*
 	 * Use my the assoc_id to find a endpoint
@@ -734,8 +734,6 @@ sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, sctp_assoc_t asoc_id)
 			SCTP_INP_INFO_RUNLOCK();
 			return (NULL);
 		}
-		SCTP_TCB_LOCK(stcb);
-		SCTP_INP_RUNLOCK(stcb->sctp_ep);
 		if (stcb->asoc.assoc_id == id) {
 			/* candidate */
 			if (inp != stcb->sctp_ep) {
@@ -743,16 +741,20 @@ sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, sctp_assoc_t asoc_id)
 				 * some other guy has the same id active (id
 				 * collision ??).
 				 */
-				SCTP_TCB_UNLOCK(stcb);
+				SCTP_INP_RUNLOCK(stcb->sctp_ep);
 				continue;
 			}
+			if(want_lock) {
+				SCTP_TCB_LOCK(stcb);
+			}
+			SCTP_INP_RUNLOCK(stcb->sctp_ep);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
 #endif
 			SCTP_INP_INFO_RUNLOCK();
 			return (stcb);
 		}
-		SCTP_TCB_UNLOCK(stcb);
+		SCTP_INP_RUNLOCK(stcb->sctp_ep);
 	}
 	/* Ok if we missed here, lets try the restart hash */
 	head = &sctppcbinfo.sctp_asochash[SCTP_PCBHASH_ASOC(id, sctppcbinfo.hashrestartmark)];
@@ -3739,12 +3741,14 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	bzero(stcb, sizeof(*stcb));
 	asoc = &stcb->asoc;
 	SCTP_TCB_LOCK_INIT(stcb);
+	SCTP_TCB_SEND_LOCK_INIT(stcb);
 	/* setup back pointer's */
 	stcb->sctp_ep = inp;
 	stcb->sctp_socket = inp->sctp_socket;
 	if ((err = sctp_init_asoc(inp, asoc, for_a_init, override_tag))) {
 		/* failed */
 		SCTP_TCB_LOCK_DESTROY(stcb);
+		SCTP_TCB_SEND_LOCK_DESTROY(stcb);
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
 		SCTP_DECR_ASOC_COUNT();
 #ifdef SCTP_DEBUG
@@ -3769,6 +3773,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	if (inp->sctp_flags & (SCTP_PCB_FLAGS_SOCKET_GONE | SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
 		/* inpcb freed while alloc going on */
 		SCTP_TCB_LOCK_DESTROY(stcb);
+		SCTP_TCB_SEND_LOCK_DESTROY(stcb);
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
 		SCTP_INP_WUNLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
@@ -3811,6 +3816,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		}
 #endif
 		SCTP_TCB_LOCK_DESTROY(stcb);
+		SCTP_TCB_SEND_LOCK_DESTROY(stcb);
 		*error = ENOBUFS;
 		return (NULL);
 	}
@@ -4544,6 +4550,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 
 	/* Get rid of LOCK */
 	SCTP_TCB_LOCK_DESTROY(stcb);
+	SCTP_TCB_SEND_LOCK_DESTROY(stcb);
 	/* now clean up the tasoc itself */
 	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
 	SCTP_DECR_ASOC_COUNT();

@@ -483,6 +483,7 @@ struct sctp_tcb {
 	uint16_t resv;
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
 	struct mtx tcb_mtx;
+	struct mtx tcb_send_mtx;
 #endif
 };
 
@@ -636,6 +637,19 @@ struct sctp_tcb {
 
 #endif
 
+
+#define SCTP_TCB_SEND_LOCK_INIT(_tcb) \
+	mtx_init(&(_tcb)->tcb_send_mtx, "sctp-send-tcb", "tcbs", MTX_DEF | MTX_DUPOK)
+
+#define SCTP_TCB_SEND_LOCK_DESTROY(_tcb) mtx_destroy(&(_tcb)->tcb_send_mtx)
+
+#define SCTP_TCB_SEND_LOCK(_tcb)  do { \
+	mtx_lock(&(_tcb)->tcb_send_mtx); \
+} while (0)
+
+#define SCTP_TCB_SEND_UNLOCK(_tcb) mtx_unlock(&(_tcb)->tcb_send_mtx)
+
+
 #define SCTP_INP_INCR_REF(_inp) atomic_add_int(&((_inp)->refcount), 1)
 #define SCTP_INP_DECR_REF(_inp) atomic_add_int(&((_inp)->refcount), -1)
 
@@ -755,6 +769,13 @@ struct sctp_tcb {
 #define SCTP_IPI_ADDR_UNLOCK()
 
 
+#define SCTP_TCB_SEND_LOCK_INIT(_tcb)
+#define SCTP_TCB_SEND_LOCK_DESTROY(_tcb)
+#define SCTP_TCB_SEND_LOCK(_tcb)
+#define SCTP_TCB_SEND_UNLOCK(_tcb)
+
+
+
 #define SCTP_STATLOG_INIT_LOCK() \
 	sctppcbinfo.logging_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
 #define SCTP_STATLOG_LOCK() \
@@ -800,6 +821,7 @@ struct sctp_tcb {
 #define SCTP_INP_READ_UNLOCK(_inp)
 
 /* Lock for TCB */
+
 #define SCTP_TCB_LOCK_INIT(_tcb)
 #define SCTP_TCB_LOCK_DESTROY(_tcb)
 #define SCTP_TCB_LOCK(_tcb)
@@ -874,6 +896,12 @@ struct sctp_tcb {
 #define SCTP_TCB_UNLOCK(_tcb)
 #define SCTP_TCB_UNLOCK_IFOWNED(_tcb)
 #define SCTP_TCB_LOCK_ASSERT(_tcb)
+
+
+#define SCTP_TCB_SEND_LOCK_INIT(_tcb)
+#define SCTP_TCB_SEND_LOCK_DESTROY(_tcb)
+#define SCTP_TCB_SEND_LOCK(_tcb)
+#define SCTP_TCB_SEND_UNLOCK(_tcb)
 
 
 /* socket locks that are not here in other than 5.3 > FreeBSD */
@@ -1211,7 +1239,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **,
 
 struct sctp_tcb *
 sctp_findassociation_ep_asocid(struct sctp_inpcb *,
-    sctp_assoc_t);
+    sctp_assoc_t, int);
 
 struct sctp_tcb *
 sctp_findassociation_ep_asconf(struct mbuf *, int, int,

@@ -2292,7 +2292,7 @@ int sctp_generic_sendmsg (td, uap)
 		u_sinfo = &sinfo;
 	}
 
-	if(uap->tolen) {
+	if (uap->tolen) {
 		error = getsockaddr(&to, uap->to, uap->tolen);
 		if (error) {
 			to = NULL;
