@@ -4122,12 +4122,9 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	sctp_log_closing(inp, stcb, 10);
 #endif
 	/* Now the read queue needs to be cleaned up */
-	printf("free-asoc now looks at read queue\n");
 	SCTP_INP_READ_LOCK(inp);
 	TAILQ_FOREACH(sq, &inp->read_queue, next) {
 		if (sq->stcb == stcb) {
-			printf("On close of stcb:%x in inp:%x set %x to no-refer\n", 
-			       (u_int)stcb, (u_int)inp, (u_int)sq);
 			sq->do_not_ref_stcb = 1;
 			sq->sinfo_cumtsn = stcb->asoc.cumulative_tsn;
 			if ((from_inpcbfree == 0) && so) {
