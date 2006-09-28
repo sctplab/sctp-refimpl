@@ -35,12 +35,16 @@ main(int argc, char **argv)
 	FILE *out, *io=NULL;
 	char *logfile=NULL;
 	int seen_time=0;
+	int interval = 1000;
 	int32_t cur_sec, cur_usec, cur_cnt=0;
 	int at;
 	struct sctp_cwnd_log log;
-	while((i= getopt(argc,argv,"l:sgc:rRa:")) != EOF)
+	while((i= getopt(argc,argv,"l:i:")) != EOF)
 	{
 		switch(i) {
+		case 'i':
+			interval = strtol(optarg, NULL, 0);
+			break;
 		case 'l':
 			logfile = optarg;
 			break;
@@ -70,12 +74,12 @@ main(int argc, char **argv)
 		/* skip any time event before the sync point */
 		if(sec == cur_sec) {
 		compare_usec:
-			if(usec < (cur_usec + 1000)) {
+			if(usec < (cur_usec + interval)) {
 				cur_cnt++;
 			} else {
 				printf("%d.%d  %d\n", cur_sec, cur_usec, cur_cnt);
-				cur_sec = sec;
-				cur_usec = usec;
+				cur_sec = (log.time_event >> 20) & 0x0fff;
+				cur_usec = (log.time_event & 0x000fffff);
 				cur_cnt = 0;
 			}
 		} else if (sec > cur_sec) {
