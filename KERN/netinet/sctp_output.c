@@ -6123,13 +6123,16 @@ sctp_insert_on_wheel(struct sctp_association *asoc,
 }
 
 static void
-sctp_remove_from_wheel(struct sctp_association *asoc,
+sctp_remove_from_wheel(struct sctp_tcb *stcb,
+    struct sctp_association *asoc,
     struct sctp_stream_out *strq)
 {
 	/* take off and then setup so we know it is not on the wheel */
+	SCTP_TCB_SEND_LOCK(stcb);
 	TAILQ_REMOVE(&asoc->out_wheel, strq, next_spoke);
 	strq->next_spoke.tqe_next = NULL;
 	strq->next_spoke.tqe_prev = NULL;
+	SCTP_TCB_SEND_UNLOCK(stcb);
 }
 
 
@@ -7457,7 +7460,7 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
 		} else {
 			asoc->locked_on_sending = NULL;
 			if(TAILQ_FIRST(&strq->outqueue) == NULL) {
-				sctp_remove_from_wheel(asoc, strq);
+				sctp_remove_from_wheel(stcb, asoc, strq);
 			}
 			if(giveup)
 				break;
@@ -12336,7 +12339,6 @@ sctp_lower_sosend(struct socket *so,
 				sctp_snd_sb_alloc(stcb, sndout);
 				sp->length += sndout;
 				len += sndout;
-				SCTP_TCB_SEND_UNLOCK(stcb);
 				/* Did we reach EOR? */
 				if ((uio->uio_resid == 0) &&
 				    ((user_marks_eor == 0) || 
@@ -12350,6 +12352,7 @@ sctp_lower_sosend(struct socket *so,
 					/* update length */
 					sp->data->m_pkthdr.len = sp->length;
 				}
+				SCTP_TCB_SEND_UNLOCK(stcb);
 			}
 			if(uio->uio_resid == 0) {
 				/* got it all? */
