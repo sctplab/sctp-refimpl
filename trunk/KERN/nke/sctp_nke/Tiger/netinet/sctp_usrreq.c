@@ -932,7 +932,9 @@ sctp_abort(struct socket *so)
 		/* Now null out the reference, we are
 		 * completely detached.
 		 */
+#if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		so->so_pcb = NULL;
+#endif
 		SOCK_UNLOCK(so);
 
 	} else {
@@ -1108,7 +1110,9 @@ sctp_close(struct socket *so)
 		/* Now null out the reference, we are
 		 * completely detached.
 		 */
+#if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		so->so_pcb = NULL;
+#endif
 		SOCK_UNLOCK(so);
 	} else {
 		flags = inp->sctp_flags;
@@ -2360,7 +2364,7 @@ sctp_optsget(struct socket *so,
 			}
 			av = mtod(m, struct sctp_assoc_value *);
 			if(av->assoc_id) {
-				stcb = sctp_findassociation_ep_asocid(inp, av->assoc_id);
+				stcb = sctp_findassociation_ep_asocid(inp, av->assoc_id, 1);
 				if (stcb == NULL) {
 					error = ENOTCONN;
 				} else {
@@ -2381,7 +2385,7 @@ sctp_optsget(struct socket *so,
 				break;
 			}
 			gnv = mtod(m, struct sctp_get_nonce_values *);
-			stcb = sctp_findassociation_ep_asocid(inp, gnv->gn_assoc_id);
+			stcb = sctp_findassociation_ep_asocid(inp, gnv->gn_assoc_id, 1);
 			if (stcb == NULL) {
 				error = ENOTCONN;
 			} else {
@@ -2414,7 +2418,7 @@ sctp_optsget(struct socket *so,
 				}
 				SCTP_INP_RUNLOCK(inp);
 			} else {
-				stcb = sctp_findassociation_ep_asocid(inp, tm->assoc_id);
+				stcb = sctp_findassociation_ep_asocid(inp, tm->assoc_id, 1);
 				if (stcb == NULL) {
 					error = ENOTCONN;
 					tm->assoc_value = 0;
@@ -2435,7 +2439,7 @@ sctp_optsget(struct socket *so,
 			struct sctp_association *asoc;
 
 			ss = mtod(m, struct sctp_sockstat *);
-			stcb = sctp_findassociation_ep_asocid(inp, ss->ss_assoc_id);
+			stcb = sctp_findassociation_ep_asocid(inp, ss->ss_assoc_id, 1);
 			if (stcb == NULL) {
 				error = ENOTCONN;
 			} else {
@@ -2496,7 +2500,7 @@ sctp_optsget(struct socket *so,
 					goto skipit;
 				}
 			} else {
-				stcb = sctp_findassociation_ep_asocid(inp, *assoc_id);
+				stcb = sctp_findassociation_ep_asocid(inp, *assoc_id, 1);
 				if (stcb) {
 					*segsize = sctp_get_frag_point(stcb, &stcb->asoc);
 					SCTP_TCB_UNLOCK(stcb);
@@ -2677,7 +2681,7 @@ sctp_optsget(struct socket *so,
 			}
 			if (stcb == NULL) {
 				assoc_id = mtod(m, sctp_assoc_t *);
-				stcb = sctp_findassociation_ep_asocid(inp, *assoc_id);
+				stcb = sctp_findassociation_ep_asocid(inp, *assoc_id, 1);
 			}
 			if (stcb == NULL) {
 				error = EINVAL;
@@ -2738,7 +2742,7 @@ sctp_optsget(struct socket *so,
 				SCTP_INP_RUNLOCK(inp);
 			} else
 				stcb = sctp_findassociation_ep_asocid(inp,
-				    saddr->sget_assoc_id);
+				    saddr->sget_assoc_id, 1);
 			if (stcb == NULL) {
 				error = ENOENT;
 				break;
@@ -2818,7 +2822,7 @@ sctp_optsget(struct socket *so,
 						SCTP_TCB_LOCK(stcb);
 					SCTP_INP_RUNLOCK(inp);
 				} else
-					stcb = sctp_findassociation_ep_asocid(inp, saddr->sget_assoc_id);
+					stcb = sctp_findassociation_ep_asocid(inp, saddr->sget_assoc_id, 1);
 
 			} else {
 				stcb = NULL;
@@ -2881,7 +2885,7 @@ sctp_optsget(struct socket *so,
 					}
 					SCTP_INP_RLOCK(inp);
 				} else {
-					stcb = sctp_findassociation_ep_asocid(inp, paddrp->spp_assoc_id);
+					stcb = sctp_findassociation_ep_asocid(inp, paddrp->spp_assoc_id, 1);
 				}
 				if (stcb == NULL) {
 					error = ENOENT;
@@ -3132,7 +3136,7 @@ sctp_optsget(struct socket *so,
 					SCTP_TCB_LOCK(stcb);
 				SCTP_INP_RUNLOCK(inp);
 			} else
-				stcb = sctp_findassociation_ep_asocid(inp, sstat->sstat_assoc_id);
+				stcb = sctp_findassociation_ep_asocid(inp, sstat->sstat_assoc_id, 1);
 
 			if (stcb == NULL) {
 				error = EINVAL;
@@ -3206,7 +3210,7 @@ sctp_optsget(struct socket *so,
 					SCTP_TCB_LOCK(stcb);
 				SCTP_INP_RUNLOCK(inp);
 			} else
-				stcb = sctp_findassociation_ep_asocid(inp, srto->srto_assoc_id);
+				stcb = sctp_findassociation_ep_asocid(inp, srto->srto_assoc_id, 1);
 
 			if (stcb == NULL) {
 				error = EINVAL;
@@ -3245,7 +3249,7 @@ sctp_optsget(struct socket *so,
 				SCTP_INP_RUNLOCK(inp);
 			} else if (sasoc->sasoc_assoc_id) {
 				stcb = sctp_findassociation_ep_asocid(inp,
-				    sasoc->sasoc_assoc_id);
+				    sasoc->sasoc_assoc_id, 1);
 				if (stcb == NULL) {
 					error = ENOENT;
 					break;
@@ -3288,7 +3292,7 @@ sctp_optsget(struct socket *so,
 					SCTP_TCB_LOCK(stcb);
 				SCTP_INP_RUNLOCK(inp);
 			} else
-				stcb = sctp_findassociation_ep_asocid(inp, s_info->sinfo_assoc_id);
+				stcb = sctp_findassociation_ep_asocid(inp, s_info->sinfo_assoc_id, 1);
 
 			if (stcb == NULL) {
 				error = ENOENT;
@@ -3345,7 +3349,7 @@ sctp_optsget(struct socket *so,
 					SCTP_TCB_LOCK(stcb);
 				SCTP_INP_RUNLOCK(inp);
 			} else {
-				stcb = sctp_findassociation_ep_asocid(inp, ssp->ssp_assoc_id);
+				stcb = sctp_findassociation_ep_asocid(inp, ssp->ssp_assoc_id, 1);
 				if (stcb == NULL) {
 					/*
 					 * one last shot, try it by the
@@ -3429,7 +3433,7 @@ sctp_optsget(struct socket *so,
 					SCTP_TCB_LOCK(stcb);
 				SCTP_INP_RUNLOCK(inp);
 			} else if (scact->scact_assoc_id) {
-				stcb = sctp_findassociation_ep_asocid(inp, scact->scact_assoc_id);
+				stcb = sctp_findassociation_ep_asocid(inp, scact->scact_assoc_id, 1);
 				if (stcb == NULL) {
 					error = ENOENT;
 					break;
@@ -3470,7 +3474,7 @@ sctp_optsget(struct socket *so,
 					SCTP_TCB_LOCK(stcb);
 				SCTP_INP_RUNLOCK(inp);
 			} else if (sac->gauth_assoc_id) {
-				stcb = sctp_findassociation_ep_asocid(inp, sac->gauth_assoc_id);
+				stcb = sctp_findassociation_ep_asocid(inp, sac->gauth_assoc_id, 1);
 				if (stcb == NULL) {
 					error = ENOENT;
 					break;
@@ -3539,7 +3543,7 @@ sctp_optsget(struct socket *so,
 					SCTP_TCB_LOCK(stcb);
 				SCTP_INP_RUNLOCK(inp);
 			} else if (sac->gauth_assoc_id) {
-				stcb = sctp_findassociation_ep_asocid(inp, sac->gauth_assoc_id);
+				stcb = sctp_findassociation_ep_asocid(inp, sac->gauth_assoc_id, 1);
 			}
 			if (stcb == NULL) {
 				error = ENOENT;
@@ -3726,7 +3730,7 @@ sctp_optsset(struct socket *so,
 				break;
 			}
 			av = mtod(m, struct sctp_assoc_value *);
-			stcb = sctp_findassociation_ep_asocid(inp, av->assoc_id);
+			stcb = sctp_findassociation_ep_asocid(inp, av->assoc_id, 1);
 			if (stcb == NULL) {
 				error = ENOTCONN;
 			} else {
@@ -3772,7 +3776,7 @@ sctp_optsset(struct socket *so,
 			}
 			av = mtod(m, struct sctp_assoc_value *);
 			if(av->assoc_id) {
-				stcb = sctp_findassociation_ep_asocid(inp, av->assoc_id);
+				stcb = sctp_findassociation_ep_asocid(inp, av->assoc_id, 1);
 				if (stcb == NULL) {
 					error = ENOTCONN;
 				} else {
@@ -3807,7 +3811,7 @@ sctp_optsset(struct socket *so,
 				SCTP_INP_WUNLOCK(inp);
 			} else {
 				if (tm->assoc_id) {
-					stcb = sctp_findassociation_ep_asocid(inp, tm->assoc_id);
+					stcb = sctp_findassociation_ep_asocid(inp, tm->assoc_id, 1);
 					if (stcb == NULL) {
 						error = ENOTCONN;
 					} else {
@@ -3862,7 +3866,7 @@ sctp_optsset(struct socket *so,
 					SCTP_TCB_LOCK(stcb);
 				SCTP_INP_RUNLOCK(inp);
 			} else if (sca->sca_assoc_id) {
-				stcb = sctp_findassociation_ep_asocid(inp, sca->sca_assoc_id);
+				stcb = sctp_findassociation_ep_asocid(inp, sca->sca_assoc_id, 1);
 				if (stcb == NULL) {
 					error = ENOENT;
 					break;
@@ -3999,7 +4003,7 @@ sctp_optsset(struct socket *so,
 					SCTP_TCB_LOCK(stcb);
 				SCTP_INP_RUNLOCK(inp);
 			} else if (scact->scact_assoc_id) {
-				stcb = sctp_findassociation_ep_asocid(inp, scact->scact_assoc_id);
+				stcb = sctp_findassociation_ep_asocid(inp, scact->scact_assoc_id, 1);
 				if (stcb == NULL) {
 					error = ENOENT;
 					break;
@@ -4052,7 +4056,7 @@ sctp_optsset(struct socket *so,
 					SCTP_TCB_LOCK(stcb);
 				SCTP_INP_RUNLOCK(inp);
 			} else if (scdel->scact_assoc_id) {
-				stcb = sctp_findassociation_ep_asocid(inp, scdel->scact_assoc_id);
+				stcb = sctp_findassociation_ep_asocid(inp, scdel->scact_assoc_id, 1);
 				if (stcb == NULL) {
 					error = ENOENT;
 					break;
@@ -4103,7 +4107,7 @@ sctp_optsset(struct socket *so,
 					SCTP_TCB_LOCK(stcb);
 				SCTP_INP_RUNLOCK(inp);
 			} else
-				stcb = sctp_findassociation_ep_asocid(inp, strrst->strrst_assoc_id);
+				stcb = sctp_findassociation_ep_asocid(inp, strrst->strrst_assoc_id, 1);
 			if (stcb == NULL) {
 				error = ENOENT;
 				break;
@@ -4409,7 +4413,7 @@ sctp_optsset(struct socket *so,
 				SCTP_INP_RUNLOCK(inp);
 			} else {
 				if(s_info->sinfo_assoc_id) {
-					stcb = sctp_findassociation_ep_asocid(inp, s_info->sinfo_assoc_id);
+					stcb = sctp_findassociation_ep_asocid(inp, s_info->sinfo_assoc_id, 1);
 				} else {
 					stcb = NULL;
 				}
@@ -4459,7 +4463,7 @@ sctp_optsset(struct socket *so,
 					}
 					SCTP_INP_RUNLOCK(inp);
 				} else {
-					stcb = sctp_findassociation_ep_asocid(inp, paddrp->spp_assoc_id);
+					stcb = sctp_findassociation_ep_asocid(inp, paddrp->spp_assoc_id, 1);
 				}
 				if (stcb == NULL) {
 					error = ENOENT;
@@ -4662,7 +4666,7 @@ sctp_optsset(struct socket *so,
 					SCTP_TCB_LOCK(stcb);
 				SCTP_INP_RUNLOCK(inp);
 			} else
-				stcb = sctp_findassociation_ep_asocid(inp, srto->srto_assoc_id);
+				stcb = sctp_findassociation_ep_asocid(inp, srto->srto_assoc_id, 1);
 			if (stcb == NULL) {
 				error = EINVAL;
 				break;
@@ -4695,7 +4699,7 @@ sctp_optsset(struct socket *so,
 					SCTP_INP_RUNLOCK(inp);
 				} else
 					stcb = sctp_findassociation_ep_asocid(inp,
-					    sasoc->sasoc_assoc_id);
+					    sasoc->sasoc_assoc_id, 1);
 				if (stcb == NULL) {
 					error = ENOENT;
 					break;
@@ -4775,7 +4779,7 @@ sctp_optsset(struct socket *so,
 				}
 				SCTP_INP_RUNLOCK(inp);
 			} else
-				stcb = sctp_findassociation_ep_asocid(inp, spa->ssp_assoc_id);
+				stcb = sctp_findassociation_ep_asocid(inp, spa->ssp_assoc_id, 1);
 			if (stcb == NULL) {
 				/* One last shot */
 				SCTP_INP_INCR_REF(inp);
@@ -4834,7 +4838,7 @@ sctp_optsset(struct socket *so,
 					SCTP_TCB_UNLOCK(stcb);
 				SCTP_INP_RUNLOCK(inp);
 			} else
-				stcb = sctp_findassociation_ep_asocid(inp, sspp->sspp_assoc_id);
+				stcb = sctp_findassociation_ep_asocid(inp, sspp->sspp_assoc_id, 1);
 			if (stcb == NULL) {
 				error = EINVAL;
 				break;
@@ -6605,11 +6609,13 @@ sctp_lock(struct socket *so, int refcount, int lr)
 int
 sctp_unlock(struct socket *so, int refcount, int lr)
 {
-	SAVE_CALLERS(((struct sctp_inpcb *)so->so_pcb)->unlock_caller1,
-		     ((struct sctp_inpcb *)so->so_pcb)->unlock_caller2,
-		     ((struct sctp_inpcb *)so->so_pcb)->unlock_caller3);
-	((struct sctp_inpcb *)so->so_pcb)->unlock_gen_count = ((struct sctp_inpcb *)so->so_pcb)->gen_count++;
-
+	if (so->so_pcb) {	
+		SAVE_CALLERS(((struct sctp_inpcb *)so->so_pcb)->unlock_caller1,
+			     ((struct sctp_inpcb *)so->so_pcb)->unlock_caller2,
+			     ((struct sctp_inpcb *)so->so_pcb)->unlock_caller3);
+		((struct sctp_inpcb *)so->so_pcb)->unlock_gen_count = ((struct sctp_inpcb *)so->so_pcb)->gen_count++;
+	}
+	
 	if (refcount)
 		so->so_usecount--;
 

@@ -874,19 +874,18 @@ __FBSDID("$FreeBSD:$");
 
 #if defined(_KERNEL)
 
-/*
+
 #define SCTP_GETTIME_TIMEVAL(x)	(getmicrouptime(x))
-*/
-#if defined(__FreeBSD__) || defined(__APPLE__)
-#define SCTP_GETTIME_TIMEVAL(x) { \
-	(x)->tv_sec = ticks / 1000; \
-	(x)->tv_usec = (ticks % 1000) * 1000; \
-}
-#define SCTP_GETTIME_TIMESPEC(x) (nanouptime(x))
-#else
-#define SCTP_GETTIME_TIMEVAL(x)	(microtime(x))
-#define SCTP_GETTIME_TIMESPEC(x) (nanotime(x))
-#endif				/* __FreeBSD__ */
+#define SCTP_GETPTIME_TIMEVAL(x)	(microuptime(x))
+/*#if defined(__FreeBSD__) || defined(__APPLE__)*/
+/*#define SCTP_GETTIME_TIMEVAL(x) { \*/
+/*	(x)->tv_sec = ticks / 1000; \*/
+/*	(x)->tv_usec = (ticks % 1000) * 1000; \*/
+/*}*/
+
+/*#else*/
+/*#define SCTP_GETTIME_TIMEVAL(x)	(microtime(x))*/
+/*#endif				 __FreeBSD__ */
 
 #define sctp_sowwakeup(inp, so) \
 do { \
