@@ -45,7 +45,7 @@ main(int argc, char **argv)
 	int32_t cur_sec, cur_usec, cur_cnt=0;
 	int at;
 	struct sctp_cwnd_log log;
-	while((i= getopt(argc,argv,"l:i:c:r:a:")) != EOF)
+	while((i= getopt(argc,argv,"l:i:c:ra:")) != EOF)
 	{
 		switch(i) {
 		case 'a':
