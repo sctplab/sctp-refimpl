@@ -334,7 +334,7 @@ do { \
 #define sctp_free_spbufspace(stcb, asoc, sp)  \
 do { \
  	if (sp->data != NULL) { \
-                atomic_add_int(&(asoc)->chunks_on_out_queue, -1); \
+                atomic_add_short(&(asoc)->chunks_on_out_queue, -1); \
 		if ((asoc)->total_output_queue_size >= sp->length) { \
 			atomic_add_int(&(asoc)->total_output_queue_size,sp->length); \
 		} else { \
