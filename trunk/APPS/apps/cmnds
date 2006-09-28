@@ -8,6 +8,7 @@ fi
 ../FreeBSD/prtcwndlog -r -g -l $1.send | grep FLIGHT > $1.flight.txt
 ../FreeBSD/prtcwndlog -r -g -l $1.send | grep ARWND > $1.arwnd.txt
 ../FreeBSD/prtcwndlog -r -g -l $1.send | grep RWND | grep -v ARWND > $1.rwnd.txt
+../FreeBSD/prtcwndlog -r -g -l $1.send | grep OUT_QUEUE > $1.outq.txt
 gnuplot <<!
 set output 'plotall.ps'
 set terminal post landscape 'Times-Roman' 12
@@ -19,7 +20,7 @@ set key outside Right title 'Legend' box 1
 plot '$1.rcv.txt' title 'read', \
 '$1.flight.txt' title 'snd-flt', \
 '$1.rwnd.txt' title 'snd-arw', \
-'$1.arwnd.txt' title 'snd-rwd'
+'$1.outq.txt' title 'snd-q'
 unset multiplot
 clear
 reset
@@ -34,7 +35,7 @@ set xrange [.000:.005]
 plot '$1.rcv.txt' title 'read', \
 '$1.flight.txt' title 'snd-flt', \
 '$1.rwnd.txt' title 'snd-arw', \
-'$1.arwnd.txt' title 'snd-rwd'
+'$1.outq.txt' title 'snd-q'
 unset multiplot
 clear
 reset
@@ -49,7 +50,7 @@ set xrange [.005:.010]
 plot '$1.rcv.txt' title 'read', \
 '$1.flight.txt' title 'snd-flt', \
 '$1.rwnd.txt' title 'snd-arw', \
-'$1.arwnd.txt' title 'snd-rwd'
+'$1.outq.txt' title 'snd-q'
 unset multiplot
 clear
 reset
@@ -64,7 +65,7 @@ set xrange [.010:.015]
 plot '$1.rcv.txt' title 'read', \
 '$1.flight.txt' title 'snd-flt', \
 '$1.rwnd.txt' title 'snd-arw', \
-'$1.arwnd.txt' title 'snd-rwd'
+'$1.outq.txt' title 'snd-q'
 unset multiplot
 clear
 reset
@@ -79,7 +80,7 @@ set xrange [.015:.020]
 plot '$1.rcv.txt' title 'read', \
 '$1.flight.txt' title 'snd-flt', \
 '$1.rwnd.txt' title 'snd-arw', \
-'$1.arwnd.txt' title 'snd-rwd'
+'$1.outq.txt' title 'snd-q'
 unset multiplot
 clear
 reset
@@ -94,7 +95,7 @@ set xrange [.020:.025]
 plot '$1.rcv.txt' title 'read', \
 '$1.flight.txt' title 'snd-flt', \
 '$1.rwnd.txt' title 'snd-arw', \
-'$1.arwnd.txt' title 'snd-rwd'
+'$1.outq.txt' title 'snd-q'
 unset multiplot
 clear
 reset
@@ -109,7 +110,7 @@ set xrange [.025:.030]
 plot '$1.rcv.txt' title 'read', \
 '$1.flight.txt' title 'snd-flt', \
 '$1.rwnd.txt' title 'snd-arw', \
-'$1.arwnd.txt' title 'snd-rwd'
+'$1.outq.txt' title 'snd-q'
 unset multiplot
 clear
 reset
@@ -124,7 +125,7 @@ set xrange [.001:.500]
 plot '$1.rcv.txt' title 'read', \
 '$1.flight.txt' title 'snd-flt', \
 '$1.rwnd.txt' title 'snd-arw', \
-'$1.arwnd.txt' title 'snd-rwd'
+'$1.outq.txt' title 'snd-q'
 unset multiplot
 clear
 reset
@@ -139,7 +140,7 @@ set xrange [.2:.3]
 plot '$1.rcv.txt' title 'read', \
 '$1.flight.txt' title 'snd-flt', \
 '$1.rwnd.txt' title 'snd-arw', \
-'$1.arwnd.txt' title 'snd-rwd'
+'$1.outq.txt' title 'snd-q'
 unset multiplot
 clear
 reset
@@ -154,7 +155,7 @@ set xrange [2.0:2.2]
 plot '$1.rcv.txt' title 'read', \
 '$1.flight.txt' title 'snd-flt', \
 '$1.rwnd.txt' title 'snd-arw', \
-'$1.arwnd.txt' title 'snd-rwd'
+'$1.outq.txt' title 'snd-q'
 
 
 
