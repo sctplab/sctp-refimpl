@@ -11914,15 +11914,20 @@ sctp_lower_sosend(struct socket *so,
 						 */
 						{
 							struct sctp_stream_out *tmp_str;
-							
-							SCTP_TCB_UNLOCK(stcb);
+							int had_lock = 0;
+
+							if(hold_tcblock) {
+								had_lock = 1;
+								SCTP_TCB_UNLOCK(stcb);
+							}
 							MALLOC(tmp_str,
 							       struct sctp_stream_out *,
 							       asoc->streamoutcnt *
 							       sizeof(struct sctp_stream_out),
 							       M_PCB, M_WAIT);
-							SCTP_TCB_LOCK(stcb);
-							hold_tcblock = 1;
+							if(had_lock) {
+								SCTP_TCB_LOCK(stcb);
+							}
 							asoc->strmout = tmp_str;
 						}
 						for (i = 0; i < asoc->streamoutcnt; i++) {
@@ -12138,8 +12143,10 @@ sctp_lower_sosend(struct socket *so,
 				mm->m_next = top;
 			}
 		}
-		SCTP_TCB_LOCK(stcb);
-		hold_tcblock = 1;
+		if(hold_tcblock == 0) {
+			SCTP_TCB_LOCK(stcb);
+			hold_tcblock = 1;
+		}
 		atomic_add_16(&stcb->asoc.refcnt, -1);
 		free_cnt_applied = 0;
 		/* release this lock, otherwise we hang on ourselves */
@@ -12426,15 +12433,19 @@ sctp_lower_sosend(struct socket *so,
 			if((queue_only == 0) && (nagle_applies == 0)
 				) {
 				/* need to start chunk output
-				 * before blocking.
+				 * before blocking.. note that if
+				 * a lock is already applied, then
+				 * the input via the net is happening
+				 * and I don't need to start output :-D
 				 */
 				if(hold_tcblock == 0) {
-					SCTP_TCB_LOCK(stcb);
-					hold_tcblock = 1;
+					if(SCTP_TCB_TRYLOCK(stcb)) {
+						hold_tcblock = 1;
+						sctp_chunk_output(inp, 
+								  stcb, 
+								  SCTP_OUTPUT_FROM_USR_SEND);
+					}
 				}
-				sctp_chunk_output(inp, 
-						  stcb, 
-						  SCTP_OUTPUT_FROM_USR_SEND);
 			}
 			if(hold_tcblock == 1) {
 				SCTP_TCB_UNLOCK(stcb);
@@ -12683,10 +12694,14 @@ sctp_lower_sosend(struct socket *so,
 		s = splnet();
 #endif
 		if (hold_tcblock == 0) {
-			hold_tcblock = 1;
-			SCTP_TCB_LOCK(stcb);
+			/* If there is activity recv'ing sacks no need to send */
+			if(SCTP_TCB_TRYLOCK(stcb)) {
+				sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_USR_SEND);
+				hold_tcblock = 1;
+			}
+		} else {
+			sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_USR_SEND);
 		}
-		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_USR_SEND);
 		splx(s);
 	} else if ((queue_only == 0) &&
 		   (stcb->asoc.peers_rwnd == 0) &&
