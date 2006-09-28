@@ -7190,6 +7190,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	memset(chk, sizeof(*chk), 0);
 	chk->rec.data.rcv_flags = rcv_flags;
 	sctp_snd_sb_alloc(stcb, sizeof(struct sctp_data_chunk));
+	SCTP_TCB_SEND_LOCK(stcb);
 	if (to_move >= sp->length) {
 		/* we can steal the whole thing */
 		chk->data = sp->data;
@@ -7335,6 +7336,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		/* more to go, we are locked */
 		*locked = 1;
 	}
+	SCTP_TCB_SEND_UNLOCK(stcb);
 	asoc->chunks_on_out_queue++;
 	if(sp->pr_sctp_on) {
 		asoc->pr_sctp_cnt++;
@@ -11745,6 +11747,8 @@ sctp_lower_sosend(struct socket *so,
 #else
 	s = splnet();
 #endif
+	hold_tcblock = 0;
+
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 	    (inp->sctp_socket->so_qlimit)) {
 		/* The listener can NOT send */
@@ -11771,8 +11775,7 @@ sctp_lower_sosend(struct socket *so,
 			splx(s);
 			goto out_unlocked;
 		}
-		SCTP_TCB_LOCK(stcb);
-		hold_tcblock = 1;
+		hold_tcblock = 0;
 		SCTP_INP_RUNLOCK(inp);
 		if (addr) 
 			/* Must locate the net structure if addr given */
@@ -11781,7 +11784,7 @@ sctp_lower_sosend(struct socket *so,
 			net = stcb->asoc.primary_destination;
 
 	} else if (use_rcvinfo && srcv && srcv->sinfo_assoc_id) {
-		stcb = sctp_findassociation_ep_asocid(inp, srcv->sinfo_assoc_id);
+		stcb = sctp_findassociation_ep_asocid(inp, srcv->sinfo_assoc_id, 0);
 		if (stcb) {
 			if (addr) 
 				/* Must locate the net structure if addr given */
@@ -11789,9 +11792,7 @@ sctp_lower_sosend(struct socket *so,
 			else 
 				net = stcb->asoc.primary_destination;
 		}
-		if (stcb) {
-			hold_tcblock = 1;
-		}
+		hold_tcblock = 0;
 	} else if (addr) {
 		/*
 		 * Since we did not use findep we must
@@ -11985,7 +11986,7 @@ sctp_lower_sosend(struct socket *so,
 	/* Keep the stcb from being freed under our feet */
 	atomic_add_16(&stcb->asoc.refcnt, 1);
 	free_cnt_applied = 1;
-	hold_tcblock = 1;
+
 	if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 		error = ECONNRESET;
 		goto out_unlocked;
@@ -12247,7 +12248,8 @@ sctp_lower_sosend(struct socket *so,
 			if ((sp == NULL) || (error)) {
 				goto out;
 			}
-			SCTP_TCB_LOCK(stcb);
+
+			SCTP_TCB_SEND_LOCK(stcb);
 			if(sp->msg_is_complete) {
 				strm->last_msg_incomplete = 0;
 			} else {
@@ -12267,7 +12269,7 @@ sctp_lower_sosend(struct socket *so,
 				/* Not on wheel, insert */
 				sctp_insert_on_wheel(asoc, strm);
 			}
-			SCTP_TCB_UNLOCK(stcb);
+			SCTP_TCB_SEND_UNLOCK(stcb);
 		} else {
 			sp = TAILQ_LAST(&strm->outqueue, sctp_streamhead);
 		}
@@ -12299,10 +12301,7 @@ sctp_lower_sosend(struct socket *so,
 					goto out;
 				}
 				/* Update the mbuf and count */
-				if (hold_tcblock == 0) {
-					SCTP_TCB_LOCK(stcb);
-					hold_tcblock = 1;
-				}
+				SCTP_TCB_SEND_LOCK(stcb);
 				if(stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 					/* we need to get out.
 					 * Peer probably aborted.
@@ -12324,6 +12323,7 @@ sctp_lower_sosend(struct socket *so,
 				sctp_snd_sb_alloc(stcb, sndout);
 				sp->length += sndout;
 				len += sndout;
+				SCTP_TCB_SEND_UNLOCK(stcb);
 				/* Did we reach EOR? */
 				if ((uio->uio_resid == 0) &&
 				    ((user_marks_eor == 0) || 
