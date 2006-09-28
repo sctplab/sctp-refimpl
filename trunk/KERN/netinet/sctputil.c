@@ -187,7 +187,7 @@ sctp_get_time_of_event(void)
 	struct timeval now;
 	uint32_t timeval;
 
-	SCTP_GETTIME_TIMEVAL(&now);
+	SCTP_GETPTIME_TIMEVAL(&now);
 	timeval = (now.tv_sec % 0x00000fff);
 	timeval <<= 20;
 	timeval |= now.tv_usec & 0xfffff;
