@@ -35,14 +35,25 @@ main(int argc, char **argv)
 	FILE *out, *io=NULL;
 	char *logfile=NULL;
 	int seen_time=0;
+	uint32_t first_timeevent_sec;
+	uint32_t first_timeevent_usec;
 	int interval = 1000;
+	int32_t prev_time = 0;
+	int time_relative = 0;
+	int add_to_relative = 0;
 	int fixed_constant = 0;
 	int32_t cur_sec, cur_usec, cur_cnt=0;
 	int at;
 	struct sctp_cwnd_log log;
-	while((i= getopt(argc,argv,"l:i:c:")) != EOF)
+	while((i= getopt(argc,argv,"l:i:c:r:a:")) != EOF)
 	{
 		switch(i) {
+		case 'a':
+			add_to_relative = strtol(optarg, NULL, 0);
+			break;
+		case 'r':
+			time_relative = 1;
+			break;
 		case 'c':
 			fixed_constant = strtol(optarg, NULL, 0);
 			break;
@@ -71,10 +82,37 @@ main(int argc, char **argv)
 		if (seen_time == 0) {
 			cur_sec = (log.time_event >> 20) & 0x0fff;
 			cur_usec = (log.time_event & 0x000fffff);
+			first_timeevent_sec = (log.time_event >> 20) & 0x0fff;
+			first_timeevent_usec = (log.time_event & 0x000fffff);
+			first_timeevent_usec += add_to_relative;
 			seen_time = 1;
 		}
 		sec = (log.time_event >> 20) & 0x0fff;
 		usec = (log.time_event & 0x000fffff);
+		/* skip any time event before the sync point */
+		if(time_relative) {
+			if(sec < first_timeevent_sec) {
+				continue;
+			}
+			if ((sec == first_timeevent_sec) && 
+			    (usec < first_timeevent_usec)) {
+				continue;
+			}
+			if(sec > first_timeevent_sec) {
+				/* do we need to borrow? */
+				if(first_timeevent_usec > usec) {
+					/* a borrow is in order */
+					sec--;
+					usec += 1000000;
+				}
+				sec -= first_timeevent_sec;
+				usec -= first_timeevent_usec;
+			} else {
+				sec -= first_timeevent_sec;
+				usec -= first_timeevent_usec;
+			}
+		}
+		prev_time = log.time_event;
 		/* skip any time event before the sync point */
 		if(sec == cur_sec) {
 		compare_usec:
