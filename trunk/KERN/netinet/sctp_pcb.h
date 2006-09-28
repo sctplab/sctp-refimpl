@@ -825,7 +825,7 @@ struct sctp_tcb {
 #define SCTP_TCB_LOCK_INIT(_tcb)
 #define SCTP_TCB_LOCK_DESTROY(_tcb)
 #define SCTP_TCB_LOCK(_tcb)
-#define SCTP_TCB_TRYLOCK(_tcb)
+#define SCTP_TCB_TRYLOCK(_tcb) 1
 #define SCTP_TCB_UNLOCK(_tcb)
 #define SCTP_TCB_UNLOCK_IFOWNED(_tcb)
 #define SCTP_TCB_LOCK_ASSERT(_tcb)
@@ -892,7 +892,7 @@ struct sctp_tcb {
 #define SCTP_TCB_LOCK_INIT(_tcb)
 #define SCTP_TCB_LOCK_DESTROY(_tcb)
 #define SCTP_TCB_LOCK(_tcb)
-#define SCTP_TCB_TRYLOCK(_tcb)
+#define SCTP_TCB_TRYLOCK(_tcb) 1
 #define SCTP_TCB_UNLOCK(_tcb)
 #define SCTP_TCB_UNLOCK_IFOWNED(_tcb)
 #define SCTP_TCB_LOCK_ASSERT(_tcb)
