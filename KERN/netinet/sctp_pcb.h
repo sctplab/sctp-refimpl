@@ -644,6 +644,8 @@ struct sctp_tcb {
 #define SCTP_TCB_SEND_LOCK_DESTROY(_tcb) mtx_destroy(&(_tcb)->tcb_send_mtx)
 
 #define SCTP_TCB_SEND_LOCK(_tcb)  do { \
+        if(mtx_owned(&sctppcbinfo.ipi_ep_mtx) \
+		panic("Huh inp-info lock?"); \
 	mtx_lock(&(_tcb)->tcb_send_mtx); \
 } while (0)
 
