@@ -1370,6 +1370,9 @@ sctp_findassoc_by_vtag(struct sockaddr *from, uint32_t vtag,
 			return (NULL);
 		}
 		SCTP_TCB_LOCK(stcb);
+		if (mtx_owned(&stcb->tcb_send_mtx)) {
+			panic("How can I own the send mtx?");
+		}
 		SCTP_INP_RUNLOCK(stcb->sctp_ep);
 		if (stcb->asoc.my_vtag == vtag) {
 			/* candidate */
