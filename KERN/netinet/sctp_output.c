@@ -12089,8 +12089,10 @@ sctp_lower_sosend(struct socket *so,
 			error = EINVAL;
 			goto out;
 		}
-		SCTP_TCB_UNLOCK(stcb);
-		hold_tcblock = 0;
+		if(hold_tcblock) {
+			SCTP_TCB_UNLOCK(stcb);
+			hold_tcblock = 0;
+		}
 		if(top) {
 			mm = sctp_get_mbuf_for_msg(1, 1, M_WAIT, 1, MT_DATA);
 			if(top->m_flags & M_PKTHDR)
@@ -12373,6 +12375,8 @@ sctp_lower_sosend(struct socket *so,
 				if(max_len > 0) {
 					continue;
 				}
+				SCTP_TCB_UNLOCK(stcb);
+				hold_tcblock = 0;
 			}
 			/* wait for space now */
 			if (non_blocking) {
@@ -12438,6 +12442,8 @@ sctp_lower_sosend(struct socket *so,
 				sctp_send_initiate(inp, stcb);
 				queue_only_for_init = 0;
 				queue_only = 1;
+				SCTP_TCB_LOCK(stcb);
+				hold_tcblock = 0;
 			}
 			if((queue_only == 0) && (nagle_applies == 0)
 				) {
@@ -12453,12 +12459,17 @@ sctp_lower_sosend(struct socket *so,
 						sctp_chunk_output(inp, 
 								  stcb, 
 								  SCTP_OUTPUT_FROM_USR_SEND);
+						
 					}
+				} else {
+					sctp_chunk_output(inp, 
+							  stcb, 
+							  SCTP_OUTPUT_FROM_USR_SEND);
 				}
-			}
-			if(hold_tcblock == 1) {
-				SCTP_TCB_UNLOCK(stcb);
-				hold_tcblock = 0;
+				if(hold_tcblock == 1) {
+					SCTP_TCB_UNLOCK(stcb);
+					hold_tcblock = 0;
+				}
 			}
 			SOCKBUF_LOCK(&so->so_snd);
 			/* This is a bit strange, but I think it will
@@ -12514,31 +12525,19 @@ sctp_lower_sosend(struct socket *so,
 #endif
 			}
 			SOCKBUF_UNLOCK(&so->so_snd);
-			if(so->so_snd.sb_hiwat <= stcb->asoc.total_output_queue_size) {
-				/* Need to get the TCB lock to check on state of
-				 * assoc... probably something has occured since
-				 * we are up and no new space showed up..
-				 */
-				if(hold_tcblock == 0) {
-					SCTP_TCB_LOCK(stcb);
-					hold_tcblock = 1;
-				}
-			}
 			if(stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 				goto out_unlocked;
 			}
 		}
-		if (hold_tcblock == 0) {
-			SCTP_TCB_LOCK(stcb);
-			hold_tcblock = 1;
-		}
+		SCTP_TCB_SEND_LOCK(stcb);
 		if(sp->msg_is_complete == 0) {
 			strm->last_msg_incomplete = 1;
 			asoc->stream_locked = 1;
 			asoc->stream_locked_on  = srcv->sinfo_stream;
 		} else {
-			strm->last_msg_incomplete = 0;
+ 			strm->last_msg_incomplete = 0;
 		}
+		SCTP_TCB_SEND_UNLOCK(stcb);
 		if(uio->uio_resid == 0) {
 			got_all_of_the_send = 1;
 		}
@@ -12601,7 +12600,11 @@ sctp_lower_sosend(struct socket *so,
 			 */
 			if ((SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_SENT) &&
 			    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_RECEIVED) &&
-			    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_ACK_SENT)) {
+			    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_ACK_SENT)) {	
+				if (hold_tcblock == 0) {
+					SCTP_TCB_LOCK(stcb);
+					hold_tcblock = 1;
+				}
 				if (asoc->locked_on_sending) {
 					/* Locked to send out the data */
 					struct sctp_stream_queue_pending *sp;
