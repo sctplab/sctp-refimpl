@@ -7133,13 +7133,16 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 
 	if(sp == NULL) {
 		*locked = 0;
+		SCTP_TCB_SEND_LOCK(stcb);
 		if(strq->last_msg_incomplete) {
 			printf("Huh? Stream:%d lm_in_c=%d but queue is NULL\n",
 			       strq->stream_no, strq->last_msg_incomplete);
 			strq->last_msg_incomplete = 0;
 		}
+		SCTP_TCB_SEND_UNLOCK(stcb);
 		return(0);
 	}
+	SCTP_TCB_SEND_LOCK(stcb);
 	if ((sp->length == 0) && (sp->msg_is_complete == 0)) {
 		/* Must wait for more data, must be last msg */
 		*locked = 1;
@@ -7181,6 +7184,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 			return (0);
 		}
 	}
+	SCTP_TCB_SEND_UNLOCK(stcb);
 	/* If we reach here, we can copy out a chunk */
         sctp_alloc_a_chunk(stcb, chk);
 	if (chk == NULL) {
