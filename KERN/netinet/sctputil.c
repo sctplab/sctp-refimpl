@@ -5268,6 +5268,10 @@ wait_some_more:
 		if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)
 			goto release;
 
+		if(hold_rlock == 1) {
+			SCTP_INP_READ_UNLOCK(inp);
+			hold_rlock = 0;
+		}
 		if(hold_sblock == 0) {
 			SOCKBUF_LOCK(&so->so_rcv);
 			hold_sblock = 1;
@@ -5275,10 +5279,6 @@ wait_some_more:
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		sbunlock(&so->so_rcv, 1);
 #endif
-		if(hold_rlock == 1) {
-			SCTP_INP_READ_UNLOCK(inp);
-			hold_rlock = 0;
-		}
 #ifdef SCTP_RECV_DETAIL_RWND_LOGGING
 		if (stcb)
 			sctp_misc_ints(SCTP_SORECV_BLOCKSB,
@@ -5382,14 +5382,14 @@ get_more_data2:
 			if (so->so_error || so->so_state & SS_CANTRCVMORE)
 				goto release;
 #endif
+			if(hold_rlock == 1) {
+				SCTP_INP_READ_UNLOCK(inp);
+				hold_rlock = 0;
+			}
 
 			if(hold_sblock == 0) {
 				SOCKBUF_LOCK(&so->so_rcv);
 				hold_sblock = 1;
-			}
-			if(hold_rlock == 1) {
-				SCTP_INP_READ_UNLOCK(inp);
-				hold_rlock = 0;
 			}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			sbunlock(&so->so_rcv, 1);
@@ -5466,13 +5466,13 @@ get_more_data2:
 					 */
 					uio->uio_resid -= m->m_len;
 					cp_len -= m->m_len;
-					if (hold_sblock) {
-						SOCKBUF_UNLOCK(&so->so_rcv);
-						hold_sblock = 0;
-					}
 					if(hold_rlock) {
 						SCTP_INP_READ_UNLOCK(inp);
 						hold_rlock = 0;
+					}
+					if (hold_sblock) {
+						SOCKBUF_UNLOCK(&so->so_rcv);
+						hold_sblock = 0;
 					}
 					splx(s);
 					*mp = sctp_m_copym(m, 0, cp_len,
@@ -5566,13 +5566,13 @@ release_unlocked:
 	if (msg_flags)
 		*msg_flags |= out_flags;
 out:
-	if(hold_sblock) {
-		SOCKBUF_UNLOCK(&so->so_rcv);
-		hold_sblock = 0;
-	}
 	if(hold_rlock == 1) {
 		SCTP_INP_READ_UNLOCK(inp);
 		hold_rlock = 0;
+	}
+	if(hold_sblock) {
+		SOCKBUF_UNLOCK(&so->so_rcv);
+		hold_sblock = 0;
 	}
 	if ((stcb) && freecnt_applied) {
 		/*

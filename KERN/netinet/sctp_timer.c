@@ -944,15 +944,6 @@ sctp_move_all_chunks_to_alt(struct sctp_tcb *stcb,
 	 */
 	TAILQ_FOREACH(outs, &asoc->out_wheel, next_spoke) {
 		/* now clean up any chunks here */
-#ifdef PURGE_THIS_CODE
-		TAILQ_FOREACH(chk, &outs->outqueue, sctp_next) {
-			if (chk->whoTo == net) {
-				sctp_free_remote_addr(chk->whoTo);
-				chk->whoTo = alt;
-				atomic_add_int(&alt->ref_count, 1);
-			}
-		}
-#else
 		TAILQ_FOREACH(sp, &outs->outqueue, next) {
 			if (sp->net == net) {
 				sctp_free_remote_addr(sp->net);
@@ -960,8 +951,6 @@ sctp_move_all_chunks_to_alt(struct sctp_tcb *stcb,
 				atomic_add_int(&alt->ref_count, 1);
 			}
 		}
-
-#endif
 	}
 	/* Now check the pending queue */
 	TAILQ_FOREACH(chk, &asoc->send_queue, sctp_next) {
@@ -1507,13 +1496,14 @@ sctp_audit_stream_queues_for_size(struct sctp_inpcb *inp,
 		    stcb->asoc.sent_queue_retran_cnt);
 		stcb->asoc.sent_queue_retran_cnt = 0;
 	}
+	SCTP_TCB_SEND_LOCK(stcb);
 	if (TAILQ_EMPTY(&stcb->asoc.out_wheel)) {
 		int i, cnt = 0;
 
 		/* Check to see if a spoke fell off the wheel */
 		for (i = 0; i < stcb->asoc.streamoutcnt; i++) {
 			if (!TAILQ_EMPTY(&stcb->asoc.strmout[i].outqueue)) {
-				sctp_insert_on_wheel(&stcb->asoc, &stcb->asoc.strmout[i]);
+				sctp_insert_on_wheel(stcb, &stcb->asoc, &stcb->asoc.strmout[i],1);
 				cnt++;
 			}
 		}
@@ -1524,8 +1514,10 @@ sctp_audit_stream_queues_for_size(struct sctp_inpcb *inp,
 			/* no spokes lost, */
 			stcb->asoc.total_output_queue_size = 0;
 		}
+		SCTP_TCB_SEND_UNLOCK(stcb);
 		return;
 	}
+	SCTP_TCB_SEND_UNLOCK(stcb);
 	/* Check to see if some data queued, if so report it */
 	TAILQ_FOREACH(outs, &stcb->asoc.out_wheel, next_spoke) {
 		if (!TAILQ_EMPTY(&outs->outqueue)) {

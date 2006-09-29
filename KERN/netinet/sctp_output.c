@@ -6090,36 +6090,44 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 
 
 void
-sctp_insert_on_wheel(struct sctp_association *asoc,
-    struct sctp_stream_out *strq)
+sctp_insert_on_wheel(struct sctp_tcb *stcb,
+    struct sctp_association *asoc,
+    struct sctp_stream_out *strq, int holds_lock)
 {
 	struct sctp_stream_out *stre, *strn;
 
+	if(holds_lock == 0) 
+		SCTP_TCB_SEND_LOCK(stcb);
 	if ((strq->next_spoke.tqe_next) ||
 	    (strq->next_spoke.tqe_prev)) {
 		/* already on wheel */
-		return;
+		goto outof_here;
 	}
 	stre = TAILQ_FIRST(&asoc->out_wheel);
 	if (stre == NULL) {
 		/* only one on wheel */
 		TAILQ_INSERT_HEAD(&asoc->out_wheel, strq, next_spoke);
-		return;
+		goto outof_here;
 	}
 	for (; stre; stre = strn) {
 		strn = TAILQ_NEXT(stre, next_spoke);
 		if (stre->stream_no > strq->stream_no) {
 			TAILQ_INSERT_BEFORE(stre, strq, next_spoke);
-			return;
+			goto outof_here;
 		} else if (stre->stream_no == strq->stream_no) {
 			/* huh, should not happen */
-			return;
+			goto outof_here;
 		} else if (strn == NULL) {
 			/* next one is null */
 			TAILQ_INSERT_AFTER(&asoc->out_wheel, stre, strq,
 			    next_spoke);
 		}
 	}
+ outof_here:
+	if(holds_lock == 0) 
+		SCTP_TCB_SEND_UNLOCK(stcb);
+
+
 }
 
 static void
@@ -6429,7 +6437,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 	if ((strm->next_spoke.tqe_next == NULL) &&
 	    (strm->next_spoke.tqe_prev == NULL)) {
 		/* Not on wheel, insert */
-		sctp_insert_on_wheel(&stcb->asoc, strm);
+		sctp_insert_on_wheel(stcb, &stcb->asoc, strm, 0);
 	}
 	m = NULL;
 	if(hold_stcb_lock == 0) {
@@ -11971,7 +11979,7 @@ sctp_lower_sosend(struct socket *so,
 					}
 				}
 			}
-
+			hold_tcblock = 1;
 			/* out with the INIT */
 			queue_only_for_init = 1;
 			/*
@@ -12293,7 +12301,7 @@ sctp_lower_sosend(struct socket *so,
 			if ((strm->next_spoke.tqe_next == NULL) &&
 			    (strm->next_spoke.tqe_prev == NULL)) {
 				/* Not on wheel, insert */
-				sctp_insert_on_wheel(asoc, strm);
+				sctp_insert_on_wheel(stcb, asoc, strm, 1);
 			}
 			SCTP_TCB_SEND_UNLOCK(stcb);
 		} else {
@@ -12450,7 +12458,7 @@ sctp_lower_sosend(struct socket *so,
 				sctp_send_initiate(inp, stcb);
 				queue_only_for_init = 0;
 				queue_only = 1;
-				SCTP_TCB_LOCK(stcb);
+				SCTP_TCB_UNLOCK(stcb);
 				hold_tcblock = 0;
 			}
 			if((queue_only == 0) && (nagle_applies == 0)
@@ -12783,7 +12791,14 @@ sctp_lower_sosend(struct socket *so,
 	if ((stcb) && (free_cnt_applied)) {
 		atomic_add_16(&stcb->asoc.refcnt, -1);
 	}
-
+	if (stcb) {
+		if (mtx_owned(&stcb->tcb_mtx)) {
+			panic("Leaving with tcb mtx owned?");
+		} 
+		if (mtx_owned(&stcb->tcb_send_mtx)) {
+			panic("Leaving with tcb send mtx owned?");
+		}
+	}
 	if (top){ 
 		printf("Free top:%x\n", (u_int)top);
 		sctp_m_freem(top);
