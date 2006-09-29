@@ -7147,6 +7147,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		/* Must wait for more data, must be last msg */
 		*locked = 1;
 		*giveup = 1;
+		SCTP_TCB_SEND_UNLOCK(stcb);
 		return (0);
 	} else if(sp->length == 0) {
 		/* This should not happen */
@@ -7181,6 +7182,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 			}
 			sp->some_taken = 1;
 		} else {
+			SCTP_TCB_SEND_UNLOCK(stcb);
 			return (0);
 		}
 	}
@@ -7210,6 +7212,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		chk->last_mbuf = NULL;
 		if(chk->data == NULL) {
 			sctp_free_a_chunk(stcb, chk);
+			SCTP_TCB_SEND_UNLOCK(stcb);
 			goto out_gu;
 		}
 		/* Pull off the data */
@@ -7256,6 +7259,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	if (chk->data == NULL) {
 		/* HELP */
 		sctp_free_a_chunk(stcb, chk);
+		SCTP_TCB_SEND_UNLOCK(stcb);
 		goto out_gu;
 	}
 	chk->book_size = chk->send_size = (to_move + sizeof(struct sctp_data_chunk));
