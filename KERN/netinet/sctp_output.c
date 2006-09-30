@@ -12791,6 +12791,7 @@ sctp_lower_sosend(struct socket *so,
 	if ((stcb) && (free_cnt_applied)) {
 		atomic_add_16(&stcb->asoc.refcnt, -1);
 	}
+#if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	if (stcb) {
 		if (mtx_owned(&stcb->tcb_mtx)) {
 			panic("Leaving with tcb mtx owned?");
@@ -12799,6 +12800,7 @@ sctp_lower_sosend(struct socket *so,
 			panic("Leaving with tcb send mtx owned?");
 		}
 	}
+#endif
 	if (top){ 
 		printf("Free top:%x\n", (u_int)top);
 		sctp_m_freem(top);
