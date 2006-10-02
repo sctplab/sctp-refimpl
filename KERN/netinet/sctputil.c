@@ -287,18 +287,21 @@ sctp_log_nagle_event(struct sctp_tcb *stcb, int action)
 
 
 void
-sctp_log_filloq_event(struct sctp_stream_out *str, int locked, int giveup, 
-		      int moved_how_much, uint16_t strseq, uint16_t goal)
+sctp_log_filloq_event(struct sctp_stream_out *str, int goal, int moved_how_much, uint16_t strseq)
 {
 	int sctp_cwnd_log_at;
 	SCTP_STATLOG_GETREF(sctp_cwnd_log_at);
 	sctp_clog[sctp_cwnd_log_at].time_event = sctp_get_time_of_event();
 	sctp_clog[sctp_cwnd_log_at].from = (uint8_t) SCTP_LOG_EVENT_FILLOQ;
 	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t)SCTP_LOG_MISC_EVENT;
-	sctp_clog[sctp_cwnd_log_at].x.misc.log1 = (((str->next_sequence_sent - strseq) << 16) | goal);
+	if(str == NULL) {
+		sctp_clog[sctp_cwnd_log_at].x.misc.log1 = 0;
+	} else {
+		sctp_clog[sctp_cwnd_log_at].x.misc.log1 = str->next_sequence_sent - strseq;
+	}
 	sctp_clog[sctp_cwnd_log_at].x.misc.log2 = moved_how_much;
-	sctp_clog[sctp_cwnd_log_at].x.misc.log3 = giveup;
-	sctp_clog[sctp_cwnd_log_at].x.misc.log4 = locked;
+	sctp_clog[sctp_cwnd_log_at].x.misc.log3 = goal;
+	sctp_clog[sctp_cwnd_log_at].x.misc.log4 = 0;
 }
 
 void

@@ -7419,11 +7419,17 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
 	goal_mtu = net->mtu - SCTP_MIN_OVERHEAD;
 	mtu_fromwheel = 0;
 #endif
+#ifdef SCTP_NAGLE_LOGGING
+	sctp_log_filloq_event(NULL,  goal_mtu, 0, 0);
+#endif
 	/* Need an allowance for the data chunk header too */
 	goal_mtu -= sizeof(struct sctp_data_chunk);
 
 	/* must make even word boundary */
 	goal_mtu &= 0xfffffffc;
+#ifdef SCTP_NAGLE_LOGGING
+	sctp_log_filloq_event(NULL,  goal_mtu, 1, 0);
+#endif
 	if(asoc->locked_on_sending ) {
 		/* We are stuck on one stream until the message completes. */
 		strqn = strq = asoc->locked_on_sending;
@@ -7468,7 +7474,7 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
 		giveup = 0;
 		moved_how_much = sctp_move_to_outqueue(stcb, net, strq, goal_mtu, frag_point, &locked, &giveup);
 #ifdef SCTP_NAGLE_LOGGING
-		sctp_log_filloq_event(strq, locked, giveup, moved_how_much, sp->strseq, (uint16_t)goal_mtu);
+		sctp_log_filloq_event(strq,  goal_mtu, moved_how_much, sp->strseq);
 #endif
 		asoc->last_out_stream = strq;
 		if (locked) {
