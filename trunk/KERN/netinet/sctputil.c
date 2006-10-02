@@ -287,24 +287,6 @@ sctp_log_nagle_event(struct sctp_tcb *stcb, int action)
 
 
 void
-sctp_log_filloq_event(struct sctp_stream_out *str, int goal, int moved_how_much, uint16_t strseq)
-{
-	int sctp_cwnd_log_at;
-	SCTP_STATLOG_GETREF(sctp_cwnd_log_at);
-	sctp_clog[sctp_cwnd_log_at].time_event = sctp_get_time_of_event();
-	sctp_clog[sctp_cwnd_log_at].from = (uint8_t) SCTP_LOG_EVENT_FILLOQ;
-	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t)SCTP_LOG_MISC_EVENT;
-	if(str == NULL) {
-		sctp_clog[sctp_cwnd_log_at].x.misc.log1 = strseq;
-	} else {
-		sctp_clog[sctp_cwnd_log_at].x.misc.log1 = str->next_sequence_sent - strseq;
-	}
-	sctp_clog[sctp_cwnd_log_at].x.misc.log2 = moved_how_much;
-	sctp_clog[sctp_cwnd_log_at].x.misc.log3 = goal;
-	sctp_clog[sctp_cwnd_log_at].x.misc.log4 = 0;
-}
-
-void
 sctp_log_sack(uint32_t old_cumack, uint32_t cumack, uint32_t tsn, uint16_t gaps, uint16_t dups, int from)
 {
 	int sctp_cwnd_log_at;

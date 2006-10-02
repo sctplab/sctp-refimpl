@@ -7467,9 +7467,6 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
 		}
 		giveup = 0;
 		moved_how_much = sctp_move_to_outqueue(stcb, net, strq, goal_mtu, frag_point, &locked, &giveup);
-#ifdef SCTP_NAGLE_LOGGING
-		sctp_log_filloq_event(strq,  goal_mtu, moved_how_much, sp->strseq);
-#endif
 		asoc->last_out_stream = strq;
 		if (locked) {
 			asoc->locked_on_sending = strq;
