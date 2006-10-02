@@ -4228,6 +4228,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			ip->ip_src = sctp_ipv4_source_address_selection(inp,
 			    stcb, ro, net, out_of_asoc_ok);
 		}
+
 		/*
 		 * If source address selection fails and we find no route
 		 * then the ip_ouput should fail as well with a
@@ -4290,9 +4291,24 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			printf("RTP route is %p through\n", ro->ro_rt);
 		}
 #endif
-		if(m->m_pkthdr.len > have_mtu) {
-			panic("gargle gargle gak");
+#ifdef LOG_FUN_FOR_RANDY
+		{
+			struct mbuf *mm;
+			int cnt=0;
+			
+			mm = m;
+			while(mm) {
+				cnt++;
+				mm = mm->m_next;
+			}
+			sctp_misc_ints(SCTP_RANDY_STUFF, 
+				       m->m_pkthdr.len, 
+				       have_mtu,
+				       net->mtu, 
+				       cnt);
 		}
+#endif
+
 		if ((have_mtu) && (net) && (have_mtu > net->mtu)) {
 			ro->ro_rt->rt_ifp->if_mtu = net->mtu;
 		}
