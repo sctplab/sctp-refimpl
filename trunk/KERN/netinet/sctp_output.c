@@ -7465,6 +7465,9 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
 				continue;
 			}
 		}
+#ifdef SCTP_NAGLE_LOGGING
+		sctp_log_filloq_event(stcb, strq, sp->strseq);
+#endif
 		giveup = 0;
 		moved_how_much = sctp_move_to_outqueue(stcb, net, strq, goal_mtu, frag_point, &locked, &giveup);
 		asoc->last_out_stream = strq;
