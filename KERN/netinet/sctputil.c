@@ -285,6 +285,21 @@ sctp_log_nagle_event(struct sctp_tcb *stcb, int action)
 	sctp_clog[sctp_cwnd_log_at].x.nagle.count_in_flight = stcb->asoc.total_flight_count;
 }
 
+
+void
+sctp_log_filloq_event(struct sctp_tcb *stcb, struct sctp_stream_out *str, uint16_t strseq)
+{
+	int sctp_cwnd_log_at;
+	SCTP_STATLOG_GETREF(sctp_cwnd_log_at);
+	sctp_clog[sctp_cwnd_log_at].time_event = sctp_get_time_of_event();
+	sctp_clog[sctp_cwnd_log_at].from = (uint8_t) SCTP_LOG_EVENT_FILLOQ;
+	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t)SCTP_LOG_MISC_EVENT;
+	sctp_clog[sctp_cwnd_log_at].x.misc.log1 = (str->next_sequence_sent - strseq);
+	sctp_clog[sctp_cwnd_log_at].x.misc.log2 = stcb->asoc.total_output_queue_size;
+	sctp_clog[sctp_cwnd_log_at].x.misc.log3 = stcb->asoc.total_output_queue_size;
+	sctp_clog[sctp_cwnd_log_at].x.misc.log4 = stcb->asoc.total_flight;
+}
+
 void
 sctp_log_sack(uint32_t old_cumack, uint32_t cumack, uint32_t tsn, uint16_t gaps, uint16_t dups, int from)
 {
