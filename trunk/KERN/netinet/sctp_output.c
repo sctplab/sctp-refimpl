@@ -4277,7 +4277,6 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		} else {
 			have_mtu = ro->ro_rt->rt_ifp->if_mtu;
 		}
-
 		if(inp->sctp_socket) {
 			o_flgs = (IP_RAWOUTPUT | (inp->sctp_socket->so_options & (SO_DONTROUTE | SO_BROADCAST)));
 		} else {
@@ -4291,9 +4290,13 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			printf("RTP route is %p through\n", ro->ro_rt);
 		}
 #endif
+		if(m->m_pkthdr.len > have_mtu) {
+			panic("gargle gargle gak");
+		}
 		if ((have_mtu) && (net) && (have_mtu > net->mtu)) {
 			ro->ro_rt->rt_ifp->if_mtu = net->mtu;
 		}
+
 		if (ro != &iproute) {
 			memcpy(&iproute, ro, sizeof(*ro));
 		}
