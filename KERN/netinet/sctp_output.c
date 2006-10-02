@@ -8342,6 +8342,13 @@ again_one_more_time:
 				/* if (!net->rto_pending) { */
 				/* setup for a RTO measurement */
 				/* net->rto_pending = 1; */
+#ifdef LOG_FUN_FOR_RANDY
+				sctp_misc_ints(SCTP_RANDY_STUFF, 
+					       bundle_at, 
+					       data_list[0]->rec.data.TSN_seq, 
+					       data_list[(bundle_at-1)]->rec.data.TSN_seq, 
+					       mtu);
+#endif
 				tsns_sent = data_list[0]->rec.data.TSN_seq;
 
 				data_list[0]->do_rtt = 1;
