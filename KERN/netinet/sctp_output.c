@@ -8148,6 +8148,14 @@ again_one_more_time:
 				if (((chk->send_size <= mtu) && (chk->send_size <= r_mtu)) ||
 				    ((chk->flags & CHUNK_FLAGS_FRAGMENT_OK) && (chk->send_size <= asoc->peers_rwnd))) {
 					/* ok we will add this one */
+#ifdef LOG_FUN_FOR_RANDY
+					sctp_misc_ints(SCTP_RANDY_STUFF1, 
+						       bundle_at, 
+						       chk->send_size, 
+						       mtu, 
+						       r_mtu);
+#endif
+
 #ifdef SCTP_DEBUG
 					if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
 						printf("Picking up the chunk\n");
