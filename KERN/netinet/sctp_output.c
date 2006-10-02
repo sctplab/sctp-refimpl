@@ -7574,7 +7574,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	int one_chunk, hbflag;
 	int asconf, cookie, no_out_cnt;
 	int bundle_at, ctl_cnt, no_data_chunks, cwnd_full_ind;
-	unsigned int mtu, r_mtu, omtu;
+	unsigned int mtu, r_mtu, omtu, mx_mtu, to_out;
 	*num_out = 0;
 	struct sctp_nets *start_at, *old_startat = NULL, *send_start_at;
 
@@ -7787,6 +7787,8 @@ again_one_more_time:
 		} else {
 			mtu = net->mtu - (sizeof(struct ip6_hdr) + sizeof(struct sctphdr));
 		}
+		mx_mtu = mtu;
+		to_out = 0;
 		if (mtu > asoc->peers_rwnd) {
 			if (asoc->total_flight > 0) {
 				/* We have a packet in flight somewhere */
@@ -7892,7 +7894,7 @@ again_one_more_time:
 					mtu -= (chk->data->m_pkthdr.len + omtu);
 				else
 					mtu = 0;
-
+				to_out += (chk->data->m_pkthdr.len + omtu);
 				/* Do clear IP_DF ? */
 				if (chk->flags & CHUNK_FLAGS_FRAGMENT_OK) {
 					no_fragmentflg = 0;
@@ -8048,6 +8050,7 @@ again_one_more_time:
 					} else {
 						mtu = (net->mtu - SCTP_MIN_V4_OVERHEAD);
 					}
+					to_out = 0;
 					no_fragmentflg = 1;
 				}
 			}
@@ -8148,14 +8151,6 @@ again_one_more_time:
 				if (((chk->send_size <= mtu) && (chk->send_size <= r_mtu)) ||
 				    ((chk->flags & CHUNK_FLAGS_FRAGMENT_OK) && (chk->send_size <= asoc->peers_rwnd))) {
 					/* ok we will add this one */
-#ifdef LOG_FUN_FOR_RANDY
-					sctp_misc_ints(SCTP_RANDY_STUFF1, 
-						       bundle_at, 
-						       chk->send_size, 
-						       mtu, 
-						       r_mtu);
-#endif
-
 #ifdef SCTP_DEBUG
 					if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
 						printf("Picking up the chunk\n");
@@ -8205,6 +8200,10 @@ again_one_more_time:
 					else
 						r_mtu = 0;
 
+					to_out += chk->send_size;
+					if(to_out > mx_mtu) {
+						panic("gag");
+					}
 					data_list[bundle_at++] = chk;
 					if (bundle_at >= SCTP_MAX_DATA_BUNDLING) {
 						mtu = 0;
