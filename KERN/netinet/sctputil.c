@@ -295,7 +295,7 @@ sctp_log_filloq_event(struct sctp_stream_out *str, int goal, int moved_how_much,
 	sctp_clog[sctp_cwnd_log_at].from = (uint8_t) SCTP_LOG_EVENT_FILLOQ;
 	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t)SCTP_LOG_MISC_EVENT;
 	if(str == NULL) {
-		sctp_clog[sctp_cwnd_log_at].x.misc.log1 = 0;
+		sctp_clog[sctp_cwnd_log_at].x.misc.log1 = strseq;
 	} else {
 		sctp_clog[sctp_cwnd_log_at].x.misc.log1 = str->next_sequence_sent - strseq;
 	}
