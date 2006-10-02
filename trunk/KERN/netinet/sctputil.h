@@ -394,8 +394,8 @@ void sctp_log_strm_del_alt(uint32_t, uint16_t, int);
 void sctp_log_nagle_event(struct sctp_tcb *stcb, int action);
 
 void
-sctp_log_filloq_event(struct sctp_stream_out *str, int locked, int giveup, 
-		      int moved_how_much, uint16_t strseq, uint16_t goal);
+sctp_log_filloq_event(struct sctp_stream_out *str, int goal, 
+		      int moved_how_much, uint16_t strseq);
 
 void
 sctp_log_mb(struct mbuf *m, int from);
