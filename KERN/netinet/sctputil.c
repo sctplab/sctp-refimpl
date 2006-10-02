@@ -4653,6 +4653,11 @@ restart:
 	sbunlock(&so->so_rcv);
 #endif
 
+ restart_nosblocks:
+	if(hold_sblock == 0) {
+		SOCKBUF_LOCK(&so->so_rcv);
+		hold_sblock = 1;
+	}
 	if((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
 	   (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
 		goto out;
@@ -4712,7 +4717,7 @@ restart:
 			goto out;
 		}
 		held_length = 0;
-		goto restart;
+		goto restart_nosblocks;
 	} else if (so->so_rcv.sb_cc == 0) {
 		error = EWOULDBLOCK;
 		goto out;
