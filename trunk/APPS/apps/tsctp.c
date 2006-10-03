@@ -283,7 +283,11 @@ int main(int argc, char **argv)
 			i++;
 			if (very_verbose)
 				printf("Sending message number %lu.\n", i);
-			send(fd, buffer, length, 0);
+			if(send(fd, buffer, length, 0) < 0) {
+				printf("abort sending error:%d\n",
+				       errno);
+				break;
+			}
 		}
 		if (verbose)
 			printf("done.\n");
