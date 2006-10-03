@@ -6529,50 +6529,21 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 				if(outchain->m_flags & M_PKTHDR)
 					outchain->m_pkthdr.len += sizeofcpy;
 			} else {
-				/* fill up the end of the chain */
-#ifdef LOG_FUN_FOR_RANDY
-				sctp_misc_ints(SCTP_RANDY_STUFF, 
-					       sizeofcpy, 
-					       len, 
-					       0,
-					       0);
-#endif
-				if(len > 0) {
-					m_copydata(clonechain, 0, len, cp);
-					(*endofchain)->m_len += len;
-					if(outchain->m_flags & M_PKTHDR)
-						outchain->m_pkthdr.len += len;
-					/* now we need another one */
-					sizeofcpy -= len;
-				}
+				/* Get a new mbuf and use that now */
 				m = sctp_get_mbuf_for_msg(MCLBYTES, 1, M_DONTWAIT, 1, MT_HEADER);
 				if(m == NULL) {
 					/* We failed */
 					goto error_out;
 				}
+				m->m_len = 0;
 				(*endofchain)->m_next = m;
 				*endofchain = m;
 				cp = mtod((*endofchain), caddr_t);
-				m_copydata(clonechain, len, sizeofcpy,  cp);
+				m_copydata(clonechain, 0, sizeofcpy,  cp);
 				(*endofchain)->m_len += sizeofcpy;
-#ifdef LOG_FUN_FOR_RANDY
-				sctp_misc_ints(SCTP_RANDY_STUFF, 
-					       0,
-					       0,
-					       sizeofcpy, 
-					       len);
-#endif
 				if(outchain->m_flags & M_PKTHDR) {
 					outchain->m_pkthdr.len += sizeofcpy;
-#ifdef LOG_FUN_FOR_RANDY
-					sctp_misc_ints(SCTP_RANDY_STUFF, 
-						       0,
-						       0,
-						       0, 
-						       outchain->m_pkthdr.len);
-#endif
 				}
-
 			}
 			return(outchain);
 		} else {
