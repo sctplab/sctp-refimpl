@@ -6465,7 +6465,7 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 		    int sizeofcpy)
 {
 	struct mbuf *m;
-	struct mbuf *appendchain = NULL;
+	struct mbuf *appendchain;
 	caddr_t cp;
 	int len;
 
@@ -6497,7 +6497,6 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 				} else {
 					/* We really should not get a NULL in endofchain */
 					/* find end */
-					printf("Interesting, no end-of-chain and a outchain set?\n");
 					m = outchain;
 					while (m) {
 						if (m->m_next == NULL) {
@@ -6509,7 +6508,6 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 					/* sanity */
 					if(*endofchain == NULL) {
 						/* huh, TSNH XXX maybe we should panic */
-						printf("This should NOT happen!!\n");
 						sctp_m_freem(outchain);
 						goto new_mbuf;
 					}
@@ -6534,7 +6532,7 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 			} else {
 				/* Get a new mbuf and use that now */
 				m = sctp_get_mbuf_for_msg(MCLBYTES, 1, M_DONTWAIT, 1, MT_HEADER);
-				if(appendchain == NULL) {
+				if(m == NULL) {
 					/* We failed */
 					goto error_out;
 				}
@@ -6565,7 +6563,6 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 	}
 	if (appendchain == NULL) {
 		/* error */
-		panic("Huh");
 		if (outchain)
 			sctp_m_freem(outchain);
 		return (NULL);
