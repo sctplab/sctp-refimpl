@@ -934,6 +934,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					ph->param_length = htons(oper->m_len);
 					ippp = (uint32_t *) (ph + 1);
 					*ippp = htonl(0x10000001);
+					panic("100000001");
 				}
 				sctp_abort_an_association(stcb->sctp_ep, stcb,
 				    SCTP_PEER_FAULTY, oper);
@@ -965,6 +966,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					ph->param_length = htons(oper->m_len);
 					ippp = (uint32_t *) (ph + 1);
 					*ippp = htonl(0x10000002);
+					panic("100000002");
 				}
 				sctp_abort_an_association(stcb->sctp_ep, stcb,
 				    SCTP_PEER_FAULTY, oper);
@@ -1001,6 +1003,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 						    htons(oper->m_len);
 						ippp = (uint32_t *) (ph + 1);
 						*ippp = htonl(0x10000003);
+						panic("100000003");
 					}
 					sctp_abort_an_association(stcb->sctp_ep,
 					    stcb, SCTP_PEER_FAULTY, oper);
@@ -1034,6 +1037,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 						    htons(oper->m_len);
 						ippp = (uint32_t *) (ph + 1);
 						*ippp = htonl(0x10000004);
+						panic("100000004");
 					}
 					sctp_abort_an_association(stcb->sctp_ep,
 					    stcb, SCTP_PEER_FAULTY, oper);
@@ -1135,6 +1139,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 
 						ippp = (uint32_t *) (ph + 1);
 						*ippp = htonl(0x10000005);
+						panic("100000005");
 					}
 					sctp_abort_an_association(stcb->sctp_ep,
 					    stcb, SCTP_PEER_FAULTY, oper);
@@ -1171,6 +1176,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 						    htons(oper->m_len);
 						ippp = (uint32_t *) (ph + 1);
 						*ippp = htonl(0x10000006);
+						panic("100000006");
 					}
 					sctp_abort_an_association(stcb->sctp_ep,
 					    stcb, SCTP_PEER_FAULTY, oper);
@@ -1209,6 +1215,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 						    htons(oper->m_len);
 						ippp = (uint32_t *) (ph + 1);
 						*ippp = htonl(0x10000007);
+						panic("100000007");
 					}
 					sctp_abort_an_association(stcb->sctp_ep,
 					    stcb, SCTP_PEER_FAULTY, oper);
@@ -1243,6 +1250,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 						    htons(oper->m_len);
 						ippp = (uint32_t *) (ph + 1);
 						*ippp = htonl(0x10000008);
+						panic("100000008");
 					}
 					sctp_abort_an_association(stcb->sctp_ep,
 					    stcb, SCTP_PEER_FAULTY, oper);
@@ -1287,6 +1295,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 						    htons(oper->m_len);
 						ippp = (uint32_t *) (ph + 1);
 						*ippp = htonl(0x10000009);
+						panic("100000009");
 					}
 					sctp_abort_an_association(stcb->sctp_ep,
 					    stcb, SCTP_PEER_FAULTY, oper);
@@ -1327,6 +1336,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 						    htons(oper->m_len);
 						ippp = (uint32_t *) (ph + 1);
 						*ippp = htonl(0x1000000a);
+						panic("10000000a");
 					}
 					sctp_abort_an_association(stcb->sctp_ep,
 					    stcb, SCTP_PEER_FAULTY, oper);
@@ -1364,6 +1374,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 						    htons(oper->m_len);
 						ippp = (uint32_t *) (ph + 1);
 						*ippp = htonl(0x1000000b);
+						panic("10000000b");
 					}
 					sctp_abort_an_association(stcb->sctp_ep,
 					    stcb, SCTP_PEER_FAULTY, oper);
@@ -1402,6 +1413,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 						    htons(oper->m_len);
 						ippp = (uint32_t *) (ph + 1);
 						*ippp = htonl(0x1000000c);
+						panic("10000000c");
 					}
 					sctp_abort_an_association(stcb->sctp_ep,
 					    stcb, SCTP_PEER_FAULTY, oper);
@@ -2593,6 +2605,7 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 					ph->param_length = htons(op_err->m_len);
 					ippp = (uint32_t *) (ph + 1);
 					*ippp = htonl(0x30000001);
+					panic("300000001");
 				}
 				sctp_abort_association(inp, stcb, m, iphlen, sh,
 						       op_err);
@@ -4397,6 +4410,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 					ph->param_type = htons(SCTP_CAUSE_USER_INITIATED_ABT);
 					ph->param_length = htons(oper->m_len);
 					ippp = (uint32_t *) (ph + 1);
+					panic("300000003");
 					*ippp = htonl(0x30000003);
 				}
 				sctp_abort_an_association(stcb->sctp_ep, stcb, SCTP_RESPONSE_TO_USER_REQ, oper);
@@ -4571,6 +4585,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 				ph->param_type = htons(SCTP_CAUSE_PROTOCOL_VIOLATION);
 				ph->param_length = htons(oper->m_len);
 				ippp = (uint32_t *) (ph + 1);
+				panic("300000002");
 				*ippp = htonl(0x30000002);
 			}
 			sctp_abort_an_association(stcb->sctp_ep, stcb, SCTP_PEER_FAULTY, oper);
@@ -5069,6 +5084,7 @@ skip_segments:
 					ph->param_type = htons(SCTP_CAUSE_USER_INITIATED_ABT);
 					ph->param_length = htons(oper->m_len);
 					ippp = (uint32_t *) (ph + 1);
+					panic("300000003");
 					*ippp = htonl(0x30000003);
 				}
 				sctp_abort_an_association(stcb->sctp_ep, stcb, SCTP_RESPONSE_TO_USER_REQ, oper);
