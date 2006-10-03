@@ -7682,6 +7682,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 			printf("All wheels empty\n");
 		}
 #endif
+		*reason_code = 9;
 		return (0);
 	}
 	if (asoc->peers_rwnd == 0) {
@@ -7802,6 +7803,7 @@ skip_the_fill_from_streams:
 	/* Nothing to send? */
 	if ((TAILQ_FIRST(&asoc->control_send_queue) == NULL) &&
 	    (TAILQ_FIRST(&asoc->send_queue) == NULL)) {
+		*reason_code = 8;
 		return (0);
 	}
 	chk = TAILQ_FIRST(&asoc->send_queue);
@@ -7952,6 +7954,7 @@ again_one_more_time:
 							       (int)chk->rec.chunk_id.can_take_data,
 							       chk->data->m_pkthdr.len);
 				if (outchain == NULL) {
+					*reason_code = 8;
 					return (ENOMEM);
 				}
 				/* update our MTU size */
@@ -8085,6 +8088,7 @@ again_one_more_time:
 							sctp_move_to_an_alt(stcb, asoc, net);
 						}
 						sctp_clean_up_ctl(stcb, asoc);
+						*reason_code = 7;
 						return (error);
 					} else
 						asoc->ifp_had_enobuf = 0;
@@ -8163,6 +8167,7 @@ again_one_more_time:
 						printf("Either nothing to send or we are full\n");
 					}
 #endif
+					*reason_code = 1;
 					break;
 				}
 				if (net->flight_size >= net->cwnd) {
@@ -8173,7 +8178,6 @@ again_one_more_time:
 						    net->flight_size, net->cwnd);
 					}
 #endif
-
 					*reason_code = 2;
 					break;
 				}
@@ -8247,6 +8251,7 @@ again_one_more_time:
 						if (!callout_pending(&net->rxt_timer.timer)) {
 							sctp_timer_start(SCTP_TIMER_TYPE_SEND, inp, stcb, net);
 						}
+						*reason_code = 3;
 						return (ENOMEM);
 					}
 					/* upate our MTU size */
@@ -8390,6 +8395,7 @@ again_one_more_time:
 					sctp_move_to_an_alt(stcb, asoc, net);
 				}
 				sctp_clean_up_ctl(stcb, asoc);
+				*reason_code = 6;
 				return (error);
 			} else {
 				asoc->ifp_had_enobuf = 0;
@@ -8460,7 +8466,9 @@ again_one_more_time:
 	sctp_log_cwnd(stcb, net, *num_out, SCTP_CWND_LOG_FROM_SEND);
 #endif
 	if ((*num_out == 0) && (*reason_code == 0)) {
-		*reason_code = 3;
+		*reason_code = 4;
+	} else {
+		*reason_code = 5;
 	}
 	sctp_clean_up_ctl(stcb, asoc);
 	return (0);
@@ -9448,19 +9456,15 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 	 */
 	struct sctp_association *asoc;
 	struct sctp_nets *net;
-	int error, num_out, tot_out, ret, reason_code, burst_cnt, burst_limit;
+	int error=0, num_out=0, tot_out=0, ret=0, reason_code=0, burst_cnt=0, burst_limit=0;
 	struct timeval now;
 	int now_filled = 0;
 	int cwnd_full = 0;
 	int nagle_on = 0;
 	int frag_point = sctp_get_frag_point(stcb, &stcb->asoc);
-	int un_sent;
+	int un_sent=0;
 
 	asoc = &stcb->asoc;
-	tot_out = 0;
-	num_out = 0;
-	error = 0;
-	reason_code = 0;
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
 		printf("in co - retran count:%d\n", asoc->sent_queue_retran_cnt);
