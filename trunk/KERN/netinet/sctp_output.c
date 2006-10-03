@@ -4291,23 +4291,6 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			printf("RTP route is %p through\n", ro->ro_rt);
 		}
 #endif
-#ifdef LOG_FUN_FOR_RANDY
-		{
-			struct mbuf *mm;
-			int cnt=0;
-			
-			mm = m;
-			while(mm) {
-				cnt++;
-				mm = mm->m_next;
-			}
-			sctp_misc_ints(SCTP_RANDY_STUFF, 
-				       m->m_pkthdr.len, 
-				       have_mtu,
-				       (net ? net->mtu : 0), 
-				       cnt);
-		}
-#endif
 
 		if ((have_mtu) && (net) && (have_mtu > net->mtu)) {
 			ro->ro_rt->rt_ifp->if_mtu = net->mtu;
@@ -6493,7 +6476,6 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 			sctp_m_freem(outchain);
 		return (NULL);
 	}
-
 	if (can_take_mbuf) {
 		appendchain = clonechain;
 	} else {
@@ -6548,6 +6530,13 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 					outchain->m_pkthdr.len += sizeofcpy;
 			} else {
 				/* fill up the end of the chain */
+#ifdef LOG_FUN_FOR_RANDY
+				sctp_misc_ints(SCTP_RANDY_STUFF, 
+					       sizeofcpy, 
+					       len, 
+					       0,
+					       0);
+#endif
 				if(len > 0) {
 					m_copydata(clonechain, 0, len, cp);
 					(*endofchain)->m_len += len;
@@ -6566,8 +6555,23 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 				cp = mtod((*endofchain), caddr_t);
 				m_copydata(clonechain, len, sizeofcpy,  cp);
 				(*endofchain)->m_len += sizeofcpy;
-				if(outchain->m_flags & M_PKTHDR)
+#ifdef LOG_FUN_FOR_RANDY
+				sctp_misc_ints(SCTP_RANDY_STUFF, 
+					       0,
+					       0,
+					       sizeofcpy, 
+					       len);
+#endif
+				if(outchain->m_flags & M_PKTHDR) {
 					outchain->m_pkthdr.len += sizeofcpy;
+#ifdef LOG_FUN_FOR_RANDY
+					sctp_misc_ints(SCTP_RANDY_STUFF, 
+						       0,
+						       0,
+						       0, 
+						       outchain->m_pkthdr.len);
+#endif
+				}
 
 			}
 			return(outchain);
@@ -8441,13 +8445,6 @@ again_one_more_time:
 				/* if (!net->rto_pending) { */
 				/* setup for a RTO measurement */
 				/* net->rto_pending = 1; */
-#ifdef LOG_FUN_FOR_RANDY
-				sctp_misc_ints(SCTP_RANDY_STUFF, 
-					       bundle_at, 
-					       data_list[0]->rec.data.TSN_seq, 
-					       data_list[(bundle_at-1)]->rec.data.TSN_seq, 
-					       mtu);
-#endif
 				tsns_sent = data_list[0]->rec.data.TSN_seq;
 
 				data_list[0]->do_rtt = 1;
