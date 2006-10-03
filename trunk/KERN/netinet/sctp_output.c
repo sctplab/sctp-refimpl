@@ -6486,7 +6486,10 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 				if(outchain == NULL) {
 					/* This is the general case */
 				new_mbuf:
+/*
 					outchain = sctp_get_mbuf_for_msg(MCLBYTES, 1, M_DONTWAIT, 1, MT_HEADER);
+*/
+					outchain = sctp_get_mbuf_for_msg(MJUM9BYTES , 1, M_DONTWAIT, 1, MT_HEADER);
 					if(outchain == NULL) {
 						goto error_out;
 					}
@@ -6530,6 +6533,7 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 					outchain->m_pkthdr.len += sizeofcpy;
 			} else {
 				/* Get a new mbuf and use that now */
+				printf("Need to get more?\n");
 				m = sctp_get_mbuf_for_msg(MCLBYTES, 1, M_DONTWAIT, 1, MT_HEADER);
 				if(m == NULL) {
 					/* We failed */
