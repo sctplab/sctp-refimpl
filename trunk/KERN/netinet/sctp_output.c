@@ -6565,7 +6565,7 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 				*endofchain = m;
 				cp = mtod((*endofchain), caddr_t);
 				m_copydata(clonechain, len, sizeofcpy,  cp);
-				(*endofchain)->m_len += len;
+				(*endofchain)->m_len += sizeofcpy;
 				if(outchain->m_flags & M_PKTHDR)
 					outchain->m_pkthdr.len += sizeofcpy;
 
