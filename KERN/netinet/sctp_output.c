@@ -4304,7 +4304,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			sctp_misc_ints(SCTP_RANDY_STUFF, 
 				       m->m_pkthdr.len, 
 				       have_mtu,
-				       net->mtu, 
+				       (net ? net->mtu : 0), 
 				       cnt);
 		}
 #endif
