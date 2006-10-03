@@ -6476,22 +6476,103 @@ out_now:
 
 static struct mbuf *
 sctp_copy_mbufchain(struct mbuf *clonechain,
-    struct mbuf *outchain,
-    struct mbuf **endofchain,
-    int insert_leading_mbuf_for_headers,
-    int dont_clone,
-    uint16_t can_take_chain)
+		    struct mbuf *outchain,
+		    struct mbuf **endofchain,
+		    int can_take_mbuf,
+		    int sizeofcpy)
 {
 	struct mbuf *m;
 	struct mbuf *appendchain;
+	caddr_t cp;
+	int len;
 
-	if (dont_clone) {
+	if(endofchain == NULL) {
+		/* error */
+	error_out:
+		if (outchain)
+			sctp_m_freem(outchain);
+		return (NULL);
+	}
+
+	if (can_take_mbuf) {
 		appendchain = clonechain;
 	} else {
-		if(can_take_chain) {
-			appendchain = clonechain;
-		} else {
+		if(sizeofcpy <= ((((sctp_mbuf_threshold_count - 1) * MLEN) + MHLEN))) {
+			/* Its not in a cluster */
+			if(*endofchain == NULL) {
+				/* lets get a mbuf cluster */
+				if(outchain == NULL) {
+					/* This is the general case */
+				new_mbuf:
+					outchain = sctp_get_mbuf_for_msg(MCLBYTES, 1, M_DONTWAIT, 1, MT_HEADER);
+					if(outchain == NULL) {
+						goto error_out;
+					}
+					outchain->m_len = 0;
+					*endofchain = outchain;
+					/* get the prepend space */
+					outchain->m_data += (SCTP_FIRST_MBUF_RESV+4);
+				} else {
+					/* We really should not get a NULL in endofchain */
+					/* find end */
+					m = outchain;
+					while (m) {
+						if (m->m_next == NULL) {
+							*endofchain = m;
+							break;
+						}
+						m = m->m_next;
+					}
+					/* sanity */
+					if(*endofchain == NULL) {
+						/* huh, TSNH XXX maybe we should panic */
+						sctp_m_freem(outchain);
+						goto new_mbuf;
+					}
+				}
+				/* get the new end of length */
+				len = M_TRAILINGSPACE(*endofchain);
+			} else {
+				/* how much is left at the end? */
+				len = M_TRAILINGSPACE(*endofchain);
+			}
+			/* Find the end of the data, for appending */
+			cp = (mtod((*endofchain), caddr_t) + (*endofchain)->m_len);
 
+			/* Now lets copy it out */
+			if(len >= sizeofcpy) {
+				/* It all fits, copy it in */
+				m_copydata(clonechain, 0, sizeofcpy, cp);
+				(*endofchain)->m_len += sizeofcpy;
+				if(outchain->m_flags & M_PKTHDR)
+					outchain->m_pkthdr.len += sizeofcpy;
+			} else {
+				/* fill up the end of the chain */
+				if(len > 0) {
+					m_copydata(clonechain, 0, len, cp);
+					(*endofchain)->m_len += len;
+					if(outchain->m_flags & M_PKTHDR)
+						outchain->m_pkthdr.len += len;
+					/* now we need another one */
+					sizeofcpy -= len;
+				}
+				m = sctp_get_mbuf_for_msg(MCLBYTES, 1, M_DONTWAIT, 1, MT_HEADER);
+				if(m == NULL) {
+					/* We failed */
+					goto error_out;
+				}
+				(*endofchain)->m_next = m;
+				*endofchain = m;
+				cp = mtod((*endofchain), caddr_t);
+				m_copydata(clonechain, len, sizeofcpy,  cp);
+				(*endofchain)->m_len += len;
+				if(outchain->m_flags & M_PKTHDR)
+					outchain->m_pkthdr.len += sizeofcpy;
+
+			}
+			return(outchain);
+		} else {
+			/* copy the old fashion way */
 #if defined(__FreeBSD__) || defined(__NetBSD__)
 			/*
 			 * Supposedly m_copypacket is an optimization, use it if we
@@ -6508,16 +6589,16 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 #else
 			appendchain = m_copy(clonechain, 0, M_COPYALL);
 #endif
-		}	
-		if (appendchain == NULL) {
-			/* error */
-			if (outchain)
-				sctp_m_freem(outchain);
-			return (NULL);
 		}
+	}	
+	if (appendchain == NULL) {
+		/* error */
+		if (outchain)
+			sctp_m_freem(outchain);
+		return (NULL);
 	}
 	/* if outchain is null, check our special reservation flag */
-	if ((outchain == NULL) && (insert_leading_mbuf_for_headers)) {
+	if (outchain == NULL) {
 		/*
 		 * need a lead mbuf in this one if we don't have space for:
 		 * - E-net header (12+2+2) - IP header (20/40) - SCTP Common
@@ -6535,16 +6616,13 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 				outchain->m_len = 0;
 				outchain->m_next = NULL;
 				MH_ALIGN(outchain, 4);
-				if (endofchain) {
-					*endofchain = outchain;
-				}
+				*endofchain = outchain;
 			}
 		}
 	}
 	if (outchain) {
 		/* tack on to the end */
-		if ((endofchain != NULL) &&
-		    (*endofchain != NULL)) {
+		if (*endofchain != NULL) {
 			(*endofchain)->m_next = appendchain;
 		} else {
 			m = outchain;
@@ -6563,32 +6641,17 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 			append_tot = 0;
 			while (m) {
 				append_tot += m->m_len;
-				if (endofchain && (m->m_next == NULL)) {
+				if (m->m_next == NULL) {
 					*endofchain = m;
 				}
 				m = m->m_next;
 			}
 			outchain->m_pkthdr.len += append_tot;
 		} else {
-			if (endofchain) {
-				/*
-				 * save off the end and update the end-chain
-				 * postion
-				 */
-				m = appendchain;
-				while (m) {
-					if (m->m_next == NULL) {
-						*endofchain = m;
-						break;
-					}
-					m = m->m_next;
-				}
-			}
-		}
-		return (outchain);
-	} else {
-		if (endofchain) {
-			/* save off the end and update the end-chain postion */
+			/*
+			 * save off the end and update the end-chain
+			 * postion
+			 */
 			m = appendchain;
 			while (m) {
 				if (m->m_next == NULL) {
@@ -6597,6 +6660,17 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 				}
 				m = m->m_next;
 			}
+		}
+		return (outchain);
+	} else {
+		/* save off the end and update the end-chain postion */
+		m = appendchain;
+		while (m) {
+			if (m->m_next == NULL) {
+				*endofchain = m;
+				break;
+			}
+			m = m->m_next;
 		}
 		return (appendchain);
 	}
@@ -6751,8 +6825,8 @@ sctp_sendall_iterator(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
 
 	if ((sctp_is_feature_off(inp, SCTP_PCB_FLAGS_NODELAY)) &&
 	    (stcb->asoc.total_flight > 0) &&
-	    (un_sent < (int)(stcb->asoc.smallest_mtu - SCTP_MIN_OVERHEAD)) &&
-	    ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) < SCTP_MAX_DATA_BUNDLING)) {
+	    (un_sent < (int)(stcb->asoc.smallest_mtu - SCTP_MIN_OVERHEAD))
+	    ) {
 		do_chunk_output = 0;
 	}
 	if(do_chunk_output)
@@ -7901,10 +7975,9 @@ again_one_more_time:
 					    stcb,
 					    chk->rec.chunk_id.id);
 				}
-				outchain = sctp_copy_mbufchain(chk->data,
-				    outchain,
-				    &endoutchain,
-				    1, 0, chk->rec.chunk_id.can_take_data);
+				outchain = sctp_copy_mbufchain(chk->data, outchain, &endoutchain, 
+							       (int)chk->rec.chunk_id.can_take_data,
+							       chk->data->m_pkthdr.len);
 				if (outchain == NULL) {
 					return (ENOMEM);
 				}
@@ -8191,7 +8264,7 @@ again_one_more_time:
 						    stcb,
 						    SCTP_DATA);
 					}
-					outchain = sctp_copy_mbufchain(chk->data, outchain, &endoutchain, 1, 0, 0);
+					outchain = sctp_copy_mbufchain(chk->data, outchain, &endoutchain, 0, chk->send_size);
 					if (outchain == NULL) {
 #ifdef SCTP_DEBUG
 						if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
@@ -8988,8 +9061,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 							stcb,
 							chk->rec.chunk_id.id);
 			}
-			m = sctp_copy_mbufchain(chk->data, m, &endofchain, 1,
-			    0, 0);
+			m = sctp_copy_mbufchain(chk->data, m, &endofchain, 0, chk->send_size);
 			break;
 		}
 	}
@@ -9147,8 +9219,7 @@ one_chunk_around:
 							&auth, &auth_offset,
 							stcb, SCTP_DATA);
 			}
-			m = sctp_copy_mbufchain(chk->data, m, &endofchain, 1,
-			    0, 0);
+			m = sctp_copy_mbufchain(chk->data, m, &endofchain, 0, chk->send_size);
 			if (m == NULL) {
 				return (ENOMEM);
 			}
@@ -9200,9 +9271,7 @@ one_chunk_around:
 									stcb,
 									SCTP_DATA);
 					}
-					m = sctp_copy_mbufchain(fwd->data, m,
-					    &endofchain, 1,
-					    0, 0);
+					m = sctp_copy_mbufchain(fwd->data, m, &endofchain, 0, fwd->send_size);
 					if (m == NULL) {
 						return (ENOMEM);
 					}
@@ -12898,7 +12967,7 @@ sctp_add_auth_chunk(struct mbuf *m, struct mbuf **m_end,
 
 	/* update length and return pointer to the auth chunk */
 	m_auth->m_pkthdr.len = m_auth->m_len = chunk_len;
-	m = sctp_copy_mbufchain(m_auth, m, m_end, 1, 1, 0);
+	m = sctp_copy_mbufchain(m_auth, m, m_end, 1, chunk_len);
 	if (auth_ret != NULL)
 		*auth_ret = auth;
 
