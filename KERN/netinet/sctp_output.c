@@ -6465,7 +6465,7 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 		    int sizeofcpy)
 {
 	struct mbuf *m;
-	struct mbuf *appendchain;
+	struct mbuf *appendchain = NULL;
 	caddr_t cp;
 	int len;
 
@@ -6562,9 +6562,10 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 			appendchain = m_copy(clonechain, 0, M_COPYALL);
 #endif
 		}
-	}	
+	}
 	if (appendchain == NULL) {
 		/* error */
+		panic("Huh");
 		if (outchain)
 			sctp_m_freem(outchain);
 		return (NULL);
