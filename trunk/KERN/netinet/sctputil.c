@@ -4077,7 +4077,7 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 	}
 	sctp_misc_ints(SCTP_RANDY_STUFF,
 		       (uint32_t)control->data,
-		       control->tail_mbuf,
+		       (uint32_t)control->tail_mbuf,
 		       0,
 		       4);
 
@@ -4191,9 +4191,9 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 		/* append */
 		if(control->logthis) {
 			sctp_misc_ints(SCTP_RANDY_STUFF,
-				       control->tail_mbuf,
-				       m,
-				       tail,
+				       (uint32_t)control->tail_mbuf,
+				       (uint32_t)m,
+				       (uint32_t)tail,
 				       2);
 		}
 		control->tail_mbuf->m_next = m;
@@ -4207,9 +4207,9 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 /*#endif*/
 		if(control->logthis) {
 			sctp_misc_ints(SCTP_RANDY_STUFF,
-				       m,
-				       tail,
-				       control->data,
+				       (uint32_t)m,
+				       (uint32_t)tail,
+				       (uint32_t0control->data,
 				       3);
 		}
 		control->data = m;
