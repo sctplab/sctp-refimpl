@@ -4046,6 +4046,9 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 				prev->m_next = sctp_m_free(m);
 				m = prev->m_next;
 			}
+			if (m == NULL) {
+				control->tail_mbuf = prev;;
+			}
 			continue;
 		}
 		prev = m;
@@ -4066,13 +4069,6 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 		}
 		if (m->m_next == NULL) {
 			control->tail_mbuf = m;
-			if(control->logthis) {
-				sctp_misc_ints(SCTP_RANDY_STUFF,
-					       (uint32_t)control->data,
-					       (uint32_t)m,
-					       0,
-					       5);
-			}
 			if (end) {
 				m->m_flags |= M_EOR;
 			}
