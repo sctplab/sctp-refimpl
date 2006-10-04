@@ -5104,9 +5104,8 @@ get_more_data:
 						sctp_misc_ints(SCTP_RANDY_STUFF1,
 							       0,
 							       (uint32_t)m,
-							       m->m_next,
-							       m->m_len
-							);
+							       (uint32_t)m->m_next,
+							       m->m_len);
 					}
 					control->data = sctp_m_free(m);
 					m = control->data;
