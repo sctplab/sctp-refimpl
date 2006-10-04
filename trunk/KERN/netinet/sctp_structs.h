@@ -385,6 +385,7 @@ struct sctp_queued_to_read {	/* sinfo structure Pluse more */
 	uint16_t port_from;
 	uint8_t  do_not_ref_stcb;
 	uint8_t  end_added;
+	uint8_t  logthis;
 };
 
 /* This data structure will be on the outbound
