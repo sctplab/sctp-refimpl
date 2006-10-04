@@ -4209,7 +4209,7 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 			sctp_misc_ints(SCTP_RANDY_STUFF,
 				       (uint32_t)m,
 				       (uint32_t)tail,
-				       (uint32_t0control->data,
+				       (uint32_t)control->data,
 				       3);
 		}
 		control->data = m;
