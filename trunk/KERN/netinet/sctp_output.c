@@ -6522,25 +6522,37 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 			cp = (mtod((*endofchain), caddr_t) + (*endofchain)->m_len);
 
 			/* Now lets copy it out */
-			if(len > sizeofcpy) {
+			if(len >= sizeofcpy) {
 				/* It all fits, copy it in */
 				m_copydata(clonechain, 0, sizeofcpy, cp);
 				(*endofchain)->m_len += sizeofcpy;
 				if(outchain->m_flags & M_PKTHDR)
 					outchain->m_pkthdr.len += sizeofcpy;
-				return(outchain);
 			} else {
-				/* Get a new mbuf and use that now */
+				/* fill up the end of the chain */
+				if(len > 0) {
+					m_copydata(clonechain, 0, len, cp);
+					(*endofchain)->m_len += len;
+					if(outchain->m_flags & M_PKTHDR)
+						outchain->m_pkthdr.len += len;
+					/* now we need another one */
+					sizeofcpy -= len;
+				}
 				m = sctp_get_mbuf_for_msg(MCLBYTES, 1, M_DONTWAIT, 1, MT_HEADER);
 				if(m == NULL) {
 					/* We failed */
 					goto error_out;
 				}
-				cp = mtod(m, caddr_t);
-				m_copydata(clonechain, 0, sizeofcpy,  cp);
-				m->m_len = sizeofcpy;
-				appendchain = m;
+				(*endofchain)->m_next = m;
+				*endofchain = m;
+				cp = mtod((*endofchain), caddr_t);
+				m_copydata(clonechain, len, sizeofcpy,  cp);
+				(*endofchain)->m_len += sizeofcpy;
+				if(outchain->m_flags & M_PKTHDR) {
+					outchain->m_pkthdr.len += sizeofcpy;
+				}
 			}
+			return(outchain);
 		} else {
 			/* copy the old fashion way */
 #if defined(__FreeBSD__) || defined(__NetBSD__)
