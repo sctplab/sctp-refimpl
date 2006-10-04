@@ -9688,9 +9688,6 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 			   (stcb->asoc.total_flight > 0)){
 				break;
 			}
-			if(!TAILQ_EMPTY(&asoc->send_queue)) {
-				panic("We should not have un_sent");
-			}
 		}
 		if (TAILQ_EMPTY(&asoc->control_send_queue) &&
 		    TAILQ_EMPTY(&asoc->send_queue) &&
