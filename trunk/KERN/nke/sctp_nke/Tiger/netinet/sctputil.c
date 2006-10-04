@@ -1838,7 +1838,8 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			struct sctp_nets *lnet;
 
 			TAILQ_FOREACH(lnet, &stcb->asoc.nets, sctp_next) {
-				if (lnet->dest_state & SCTP_ADDR_UNCONFIRMED) {
+				if ((lnet->dest_state & SCTP_ADDR_UNCONFIRMED) &&
+				    (lnet->dest_state & SCTP_ADDR_REACHABLE)){
 					cnt_of_unconf++;
 				}
 			}
@@ -4045,6 +4046,9 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 			} else {
 				prev->m_next = sctp_m_free(m);
 				m = prev->m_next;
+			}
+			if (m == NULL) {
+				control->tail_mbuf = prev;;
 			}
 			continue;
 		}

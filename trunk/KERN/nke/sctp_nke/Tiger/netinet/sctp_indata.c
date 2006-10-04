@@ -1066,9 +1066,6 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		return;
 	}
 	/* Find its place */
-	at = TAILQ_FIRST(&asoc->reasmqueue);
-
-	/* Grab the top flags */
 	TAILQ_FOREACH(at, &asoc->reasmqueue, sctp_next) {
 		if (compare_with_wrap(at->rec.data.TSN_seq,
 		    chk->rec.data.TSN_seq, MAX_TSN)) {
