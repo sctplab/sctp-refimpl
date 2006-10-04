@@ -4200,11 +4200,11 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 		control->tail_mbuf = tail;
 	} else {
 		/* nothing there */
-#ifdef INVARIENTS
+/*#ifdef INVARIENTS*/
 		if(control->data != NULL) {
 			panic("This should NOT happen");
 		}
-#endif
+/*#endif*/
 		if(control->logthis) {
 			sctp_misc_ints(SCTP_RANDY_STUFF,
 				       m,
