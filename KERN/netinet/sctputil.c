@@ -4057,11 +4057,13 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 		sctp_sblog(sb, control->do_not_ref_stcb?NULL:stcb, SCTP_LOG_SBRESULT, 0);
 #endif
 		atomic_add_int(&control->length, m->m_len);
-		sctp_misc_ints(SCTP_RANDY_STUFF,
-			       (uint32_t)m,
-			       m->m_len,
-			       0,
-			       0);
+		if(control->logthis) {
+			sctp_misc_ints(SCTP_RANDY_STUFF,
+				       (uint32_t)m,
+				       m->m_len,
+				       0,
+				       0);
+		}
 		if (m->m_next == NULL) {
 			control->tail_mbuf = m;
 			if (end) {
@@ -4136,11 +4138,13 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 			continue;
 		}
 		prev = mm;
-		sctp_misc_ints(SCTP_RANDY_STUFF,
-			       (uint32_t)mm,
-			       mm->m_len,
-			       1,
-			       0);
+		if(control->logthis) {
+			sctp_misc_ints(SCTP_RANDY_STUFF,
+				       (uint32_t)mm,
+				       mm->m_len,
+				       1,
+				       0);
+		}
 		len += mm->m_len;
 		if (sb) {
 #ifdef SCTP_SB_LOGGING
@@ -5076,13 +5080,14 @@ get_more_data:
 						       0,
 						       0);
 #endif
-					sctp_misc_ints(SCTP_RANDY_STUFF1,
-						       0,
-						       0,
-						       (uint32_t)m,
-						       m->m_len
-						       );
-
+					if(control->logthis) {
+						sctp_misc_ints(SCTP_RANDY_STUFF1,
+							       0,
+							       0,
+							       (uint32_t)m,
+							       m->m_len
+							);
+					}
 					control->data = sctp_m_free(m);
 					m = control->data;
 					/* been through it all, must hold sb lock ok to null tail */
