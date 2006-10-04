@@ -305,7 +305,6 @@ sctp_build_readq_entry(struct sctp_tcb *stcb,
 	read_queue_e->port_from = stcb->rport;
 	read_queue_e->do_not_ref_stcb = 0;
 	read_queue_e->end_added = 0;
-	read_queue_e->logthis = 0;
 failed_build:
 	return (read_queue_e);
 }
@@ -342,7 +341,6 @@ sctp_build_readq_entry_chk(struct sctp_tcb *stcb,
 	read_queue_e->port_from = stcb->rport;
 	read_queue_e->do_not_ref_stcb = 0;
 	read_queue_e->end_added = 0;
-	read_queue_e->logthis = 0;
 failed_build:
 	return (read_queue_e);
 }
@@ -499,7 +497,6 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 				end = 1;
 			else
 				end = 0;
-			control->logthis = 1;
 			sctp_add_to_readq(stcb->sctp_ep,
 			    stcb, control, &stcb->sctp_socket->so_rcv, end);
 			cntDel++;

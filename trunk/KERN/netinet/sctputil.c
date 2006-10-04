@@ -4060,13 +4060,6 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 		sctp_sblog(sb, control->do_not_ref_stcb?NULL:stcb, SCTP_LOG_SBRESULT, 0);
 #endif
 		atomic_add_int(&control->length, m->m_len);
-		if(control->logthis) {
-			sctp_misc_ints(SCTP_RANDY_STUFF,
-				       (uint32_t)m,
-				       m->m_len,
-				       0,
-				       0);
-		}
 		if (m->m_next == NULL) {
 			control->tail_mbuf = m;
 			if (end) {
@@ -4077,16 +4070,6 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 	}
 	if(end) {
 		control->end_added = 1;
-	}
-	if(control->logthis) {
-		sctp_misc_ints(SCTP_RANDY_STUFF,
-			       (uint32_t)control->data,
-			       (uint32_t)control->tail_mbuf,
-			       0,
-			       4);
-	}
-	if(control->tail_mbuf == NULL) {
-		panic("It should NOT be NULL");
 	}
 	TAILQ_INSERT_TAIL(&inp->read_queue, control, next);
 	SCTP_INP_READ_UNLOCK(inp);
@@ -4151,13 +4134,6 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 			continue;
 		}
 		prev = mm;
-		if(control->logthis) {
-			sctp_misc_ints(SCTP_RANDY_STUFF,
-				       (uint32_t)mm,
-				       mm->m_len,
-				       1,
-				       0);
-		}
 		len += mm->m_len;
 		if (sb) {
 #ifdef SCTP_SB_LOGGING
@@ -4196,29 +4172,15 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 	atomic_add_int(&control->length, len);
 	if (control->tail_mbuf) {
 		/* append */
-		if(control->logthis) {
-			sctp_misc_ints(SCTP_RANDY_STUFF,
-				       (uint32_t)control->tail_mbuf,
-				       (uint32_t)m,
-				       (uint32_t)tail,
-				       2);
-		}
 		control->tail_mbuf->m_next = m;
 		control->tail_mbuf = tail;
 	} else {
 		/* nothing there */
-/*#ifdef INVARIENTS*/
+#ifdef INVARIENTS
 		if(control->data != NULL) {
 			panic("This should NOT happen");
 		}
-/*#endif*/
-		if(control->logthis) {
-			sctp_misc_ints(SCTP_RANDY_STUFF,
-				       (uint32_t)m,
-				       (uint32_t)tail,
-				       (uint32_t)control->data,
-				       3);
-		}
+#endif
 		control->data = m;
 		control->tail_mbuf = tail;
 	}
@@ -5107,13 +5069,6 @@ get_more_data:
 						       0,
 						       0);
 #endif
-					if(control->logthis) {
-						sctp_misc_ints(SCTP_RANDY_STUFF1,
-							       0,
-							       (uint32_t)m,
-							       (uint32_t)m->m_next,
-							       m->m_len);
-					}
 					control->data = sctp_m_free(m);
 					m = control->data;
 					/* been through it all, must hold sb lock ok to null tail */
