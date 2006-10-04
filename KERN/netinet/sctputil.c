@@ -4077,7 +4077,7 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 	}
 	sctp_misc_ints(SCTP_RANDY_STUFF,
 		       (uint32_t)control->data,
-		       control_>tail_mbuf,
+		       control->tail_mbuf,
 		       0,
 		       4);
 
