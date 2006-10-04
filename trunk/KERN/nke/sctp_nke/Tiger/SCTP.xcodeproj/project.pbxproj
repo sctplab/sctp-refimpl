@@ -10,6 +10,7 @@
 		32A4FEBC0562C75700D090E7 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 089C167DFE841241C02AAC07 /* InfoPlist.strings */; };
 		32A4FEBE0562C75700D090E7 /* SCTP.c in Sources */ = {isa = PBXBuildFile; fileRef = 1A224C3CFF42312311CA2CB7 /* SCTP.c */; settings = {ATTRIBUTES = (); }; };
 		500D736D0729B00A008D8EA9 /* sctp_sys_calls.c in Sources */ = {isa = PBXBuildFile; fileRef = 500D736C0729B00A008D8EA9 /* sctp_sys_calls.c */; };
+		501B27070AD3D298008EC7B2 /* sctp_macosx.c in Sources */ = {isa = PBXBuildFile; fileRef = 501B27060AD3D298008EC7B2 /* sctp_macosx.c */; };
 		503E5D4608A1778B00714243 /* proc_internal.h in Headers */ = {isa = PBXBuildFile; fileRef = 503E5D4508A1778B00714243 /* proc_internal.h */; };
 		5062336E0848C2CA002D5963 /* route.h in Headers */ = {isa = PBXBuildFile; fileRef = 5062336D0848C2CA002D5963 /* route.h */; };
 		506233720848C378002D5963 /* radix.h in Headers */ = {isa = PBXBuildFile; fileRef = 506233710848C378002D5963 /* radix.h */; };
@@ -89,6 +90,7 @@
 		32A4FEC30562C75700D090E7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = Info.plist; sourceTree = "<group>"; };
 		32A4FEC40562C75800D090E7 /* SCTP.kext */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SCTP.kext; sourceTree = BUILT_PRODUCTS_DIR; };
 		500D736C0729B00A008D8EA9 /* sctp_sys_calls.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sctp_sys_calls.c; sourceTree = "<group>"; };
+		501B27060AD3D298008EC7B2 /* sctp_macosx.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sctp_macosx.c; sourceTree = "<group>"; };
 		50394AB00729AF7200F8D390 /* libsctp.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libsctp.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 		503E5D4508A1778B00714243 /* proc_internal.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = proc_internal.h; sourceTree = "<group>"; };
 		5062336D0848C2CA002D5963 /* route.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = route.h; path = net/route.h; sourceTree = "<group>"; };
@@ -250,6 +252,7 @@
 		50D42EED06D8C0DF004DAC5C /* netinet */ = {
 			isa = PBXGroup;
 			children = (
+				501B27060AD3D298008EC7B2 /* sctp_macosx.c */,
 				5097D9B909D1D436001F0DDD /* sctp_auth.c */,
 				5097D9BA09D1D436001F0DDD /* sctp_auth.h */,
 				5077CEC508465AAB004818A2 /* in_pcb.h */,
@@ -498,6 +501,7 @@
 				50D42F2806D8C0DF004DAC5C /* sctputil.c in Sources */,
 				50D42F2F06D8C0F3004DAC5C /* sctp6_usrreq.c in Sources */,
 				5097D9BB09D1D436001F0DDD /* sctp_auth.c in Sources */,
+				501B27070AD3D298008EC7B2 /* sctp_macosx.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -541,8 +545,6 @@
 					HAVE_SCTP_SORECEIVE,
 					SCTP_APPLE_FINE_GRAINED_LOCKING,
 					HAVE_SCTP_AUTH,
-					SCTP_STAT_LOGGING,
-					SCTP_SB_LOGGING,
 				);
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = NO;
 				GCC_WARN_ALLOW_INCOMPLETE_PROTOCOL = NO;

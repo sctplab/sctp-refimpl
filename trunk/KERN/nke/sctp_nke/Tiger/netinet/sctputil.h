@@ -393,6 +393,7 @@ void sctp_log_strm_del_alt(uint32_t, uint16_t, int);
 
 void sctp_log_nagle_event(struct sctp_tcb *stcb, int action);
 
+
 void
 sctp_log_mb(struct mbuf *m, int from);
 
