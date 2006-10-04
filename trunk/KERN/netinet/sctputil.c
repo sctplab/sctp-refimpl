@@ -4066,6 +4066,13 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 		}
 		if (m->m_next == NULL) {
 			control->tail_mbuf = m;
+			if(control->logthis) {
+				sctp_misc_ints(SCTP_RANDY_STUFF,
+					       (uint32_t)control->data,
+					       (uint32_t)m,
+					       0,
+					       5);
+			}
 			if (end) {
 				m->m_flags |= M_EOR;
 			}
@@ -4075,11 +4082,13 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 	if(end) {
 		control->end_added = 1;
 	}
-	sctp_misc_ints(SCTP_RANDY_STUFF,
-		       (uint32_t)control->data,
-		       (uint32_t)control->tail_mbuf,
-		       0,
-		       4);
+	if(control->logthis) {
+		sctp_misc_ints(SCTP_RANDY_STUFF,
+			       (uint32_t)control->data,
+			       (uint32_t)control->tail_mbuf,
+			       0,
+			       4);
+	}
 	if(control->tail_mbuf == NULL) {
 		panic("It should NOT be NULL");
 	}
