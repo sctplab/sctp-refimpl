@@ -4075,6 +4075,12 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 	if(end) {
 		control->end_added = 1;
 	}
+	sctp_misc_ints(SCTP_RANDY_STUFF,
+		       (uint32_t)control->data,
+		       control_>tail_mbuf,
+		       0,
+		       4);
+
 	TAILQ_INSERT_TAIL(&inp->read_queue, control, next);
 	SCTP_INP_READ_UNLOCK(inp);
 	if (inp && inp->sctp_socket) {
@@ -4183,6 +4189,13 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 	atomic_add_int(&control->length, len);
 	if (control->tail_mbuf) {
 		/* append */
+		if(control->logthis) {
+			sctp_misc_ints(SCTP_RANDY_STUFF,
+				       control->tail_mbuf,
+				       m,
+				       tail,
+				       2);
+		}
 		control->tail_mbuf->m_next = m;
 		control->tail_mbuf = tail;
 	} else {
@@ -4192,6 +4205,13 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 			panic("This should NOT happen");
 		}
 #endif
+		if(control->logthis) {
+			sctp_misc_ints(SCTP_RANDY_STUFF,
+				       m,
+				       tail,
+				       control->data,
+				       3);
+		}
 		control->data = m;
 		control->tail_mbuf = tail;
 	}
@@ -5083,8 +5103,8 @@ get_more_data:
 					if(control->logthis) {
 						sctp_misc_ints(SCTP_RANDY_STUFF1,
 							       0,
-							       0,
 							       (uint32_t)m,
+							       m->m_next,
 							       m->m_len
 							);
 					}
