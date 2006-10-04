@@ -285,6 +285,7 @@ sctp_log_nagle_event(struct sctp_tcb *stcb, int action)
 	sctp_clog[sctp_cwnd_log_at].x.nagle.count_in_flight = stcb->asoc.total_flight_count;
 }
 
+
 void
 sctp_log_sack(uint32_t old_cumack, uint32_t cumack, uint32_t tsn, uint16_t gaps, uint16_t dups, int from)
 {
@@ -4653,6 +4654,11 @@ restart:
 	sbunlock(&so->so_rcv);
 #endif
 
+ restart_nosblocks:
+	if(hold_sblock == 0) {
+		SOCKBUF_LOCK(&so->so_rcv);
+		hold_sblock = 1;
+	}
 	if((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
 	   (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
 		goto out;
@@ -4712,7 +4718,7 @@ restart:
 			goto out;
 		}
 		held_length = 0;
-		goto restart;
+		goto restart_nosblocks;
 	} else if (so->so_rcv.sb_cc == 0) {
 		error = EWOULDBLOCK;
 		goto out;
@@ -5268,6 +5274,10 @@ wait_some_more:
 		if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)
 			goto release;
 
+		if(hold_rlock == 1) {
+			SCTP_INP_READ_UNLOCK(inp);
+			hold_rlock = 0;
+		}
 		if(hold_sblock == 0) {
 			SOCKBUF_LOCK(&so->so_rcv);
 			hold_sblock = 1;
@@ -5275,10 +5285,6 @@ wait_some_more:
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		sbunlock(&so->so_rcv, 1);
 #endif
-		if(hold_rlock == 1) {
-			SCTP_INP_READ_UNLOCK(inp);
-			hold_rlock = 0;
-		}
 #ifdef SCTP_RECV_DETAIL_RWND_LOGGING
 		if (stcb)
 			sctp_misc_ints(SCTP_SORECV_BLOCKSB,
@@ -5324,6 +5330,8 @@ wait_some_more:
 				held_length = 0;
 			}
 			goto wait_some_more;
+		} else if (control->data == NULL) {
+			panic ("Impossible data==NULL length !=0");
 		}
 		goto get_more_data;
 	} else {
@@ -5382,14 +5390,14 @@ get_more_data2:
 			if (so->so_error || so->so_state & SS_CANTRCVMORE)
 				goto release;
 #endif
+			if(hold_rlock == 1) {
+				SCTP_INP_READ_UNLOCK(inp);
+				hold_rlock = 0;
+			}
 
 			if(hold_sblock == 0) {
 				SOCKBUF_LOCK(&so->so_rcv);
 				hold_sblock = 1;
-			}
-			if(hold_rlock == 1) {
-				SCTP_INP_READ_UNLOCK(inp);
-				hold_rlock = 0;
 			}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			sbunlock(&so->so_rcv, 1);
@@ -5466,13 +5474,13 @@ get_more_data2:
 					 */
 					uio->uio_resid -= m->m_len;
 					cp_len -= m->m_len;
-					if (hold_sblock) {
-						SOCKBUF_UNLOCK(&so->so_rcv);
-						hold_sblock = 0;
-					}
 					if(hold_rlock) {
 						SCTP_INP_READ_UNLOCK(inp);
 						hold_rlock = 0;
+					}
+					if (hold_sblock) {
+						SOCKBUF_UNLOCK(&so->so_rcv);
+						hold_sblock = 0;
 					}
 					splx(s);
 					*mp = sctp_m_copym(m, 0, cp_len,
@@ -5566,13 +5574,13 @@ release_unlocked:
 	if (msg_flags)
 		*msg_flags |= out_flags;
 out:
-	if(hold_sblock) {
-		SOCKBUF_UNLOCK(&so->so_rcv);
-		hold_sblock = 0;
-	}
 	if(hold_rlock == 1) {
 		SCTP_INP_READ_UNLOCK(inp);
 		hold_rlock = 0;
+	}
+	if(hold_sblock) {
+		SOCKBUF_UNLOCK(&so->so_rcv);
+		hold_sblock = 0;
 	}
 	if ((stcb) && freecnt_applied) {
 		/*

@@ -27,6 +27,7 @@
  * SUCH DAMAGE.
  */
 
+
 /* $KAME: sctp_peeloff.c,v 1.13 2005/03/06 16:04:18 itojun Exp $	 */
 
 #ifdef __FreeBSD__
@@ -52,8 +53,17 @@ __FBSDID("$FreeBSD:$");
 #endif
 
 #include <sys/param.h>
+#include <sys/systm.h>
+#include <sys/kernel.h>
+#include <sys/malloc.h>
+#include <sys/mbuf.h>
+#include <sys/domain.h>
+#include <sys/proc.h>
+#include <sys/protosw.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>
+#include <sys/sysctl.h>
+#include <sys/syslog.h>
 #include <net/if.h>
 #include <net/route.h>
 #include <netinet/in.h>
@@ -63,10 +73,44 @@ __FBSDID("$FreeBSD:$");
 #include <netinet/ip6.h>
 #endif
 #include <netinet/in_pcb.h>
+#include <netinet/in_var.h>
+#include <netinet/ip_var.h>
+#ifdef INET6
+#include <netinet6/ip6_var.h>
+#endif
+#include <netinet/ip_icmp.h>
+#include <netinet/icmp_var.h>
 #include <netinet/sctp_pcb.h>
+#include <netinet/sctp.h>
+#include <netinet/sctp_uio.h>
 #include <netinet/sctp_var.h>
 #include <netinet/sctp_peeloff.h>
 #include <netinet/sctputil.h>
+#include <netinet/sctp_auth.h>
+
+#ifdef IPSEC
+#ifndef __OpenBSD__
+#include <netinet6/ipsec.h>
+#include <netkey/key.h>
+#else
+#undef IPSEC
+#endif
+#endif				/* IPSEC */
+
+#if defined(HAVE_SCTP_PEELOFF_SOCKOPT)
+#include <sys/file.h>
+#include <sys/filedesc.h>
+
+#ifdef __APPLE__
+extern struct fileops socketops;
+
+#ifndef SCTP_APPLE_PANTHER
+#include <sys/proc_internal.h>
+#include <sys/file_internal.h>
+#endif				/* !SCTP_APPLE_PANTHER */
+#endif				/* __APPLE__ */
+
+#endif				/* HAVE_SCTP_PEELOFF_SOCKOPT */
 
 #ifdef SCTP_DEBUG
 extern uint32_t sctp_debug_on;
