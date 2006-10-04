@@ -10565,9 +10565,9 @@ sctp_send_hb(struct sctp_tcb *stcb, int user_req, struct sctp_nets *u_net)
 				return (0);
 			}
 			sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT,
-			    stcb->sctp_ep,
-			    stcb,
-			    net);
+					 stcb->sctp_ep,
+					 stcb,
+					 net);
 			return (0);
 		}
 	} else {
@@ -10653,24 +10653,22 @@ sctp_send_hb(struct sctp_tcb *stcb, int user_req, struct sctp_nets *u_net)
 	}
 	/* ok we have a destination that needs a beat */
 	/* lets do the theshold management Qiaobing style */
-	if (user_req == 0) {
-		if (sctp_threshold_management(stcb->sctp_ep, stcb, net,
-		    stcb->asoc.max_send_times)) {
-			/*
-			 * we have lost the association, in a way this is
-			 * quite bad since we really are one less time since
-			 * we really did not send yet. This is the down side
-			 * to the Q's style as defined in the RFC and not my
-			 * alternate style defined in the RFC.
-			 */
-			atomic_subtract_int(&chk->whoTo->ref_count, 1);
-			if (chk->data != NULL) {
-				sctp_m_freem(chk->data);
-				chk->data = NULL;
-			}
-			sctp_free_a_chunk(stcb, chk);
-			return (-1);
+	if (sctp_threshold_management(stcb->sctp_ep, stcb, net,
+				      stcb->asoc.max_send_times)) {
+		/*
+		 * we have lost the association, in a way this is
+		 * quite bad since we really are one less time since
+		 * we really did not send yet. This is the down side
+		 * to the Q's style as defined in the RFC and not my
+		 * alternate style defined in the RFC.
+		 */
+		atomic_subtract_int(&chk->whoTo->ref_count, 1);
+		if (chk->data != NULL) {
+			sctp_m_freem(chk->data);
+			chk->data = NULL;
 		}
+		sctp_free_a_chunk(stcb, chk);
+		return (-1);
 	}
 	net->hb_responded = 0;
 #ifdef SCTP_DEBUG
