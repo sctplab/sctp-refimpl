@@ -2619,7 +2619,7 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 	}
 	/* get pointer to the first chunk header */
 	ch = (struct sctp_data_chunk *)sctp_m_getptr(m, *offset,
-						     sizeof(struct sctp_chunkhdr), (uint8_t *) & chunk_buf);
+						     sizeof(struct sctp_data_chunk), (uint8_t *) & chunk_buf);
 	if (ch == NULL) {
 		return (1);
 	}
@@ -2817,7 +2817,7 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 			continue;
 		}
 		ch = (struct sctp_data_chunk *)sctp_m_getptr(m, *offset,
-							     sizeof(struct sctp_chunkhdr), (uint8_t *) & chunk_buf);
+							     sizeof(struct sctp_data_chunk), (uint8_t *) & chunk_buf);
 		if (ch == NULL) {
 			*offset = length;
 			stop_proc = 1;
