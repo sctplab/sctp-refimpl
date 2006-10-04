@@ -5330,6 +5330,8 @@ wait_some_more:
 				held_length = 0;
 			}
 			goto wait_some_more;
+		} else if (control->data == NULL) {
+			panic ("Impossible data==NULL length !=0");
 		}
 		goto get_more_data;
 	} else {
