@@ -1838,7 +1838,8 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			struct sctp_nets *lnet;
 
 			TAILQ_FOREACH(lnet, &stcb->asoc.nets, sctp_next) {
-				if (lnet->dest_state & SCTP_ADDR_UNCONFIRMED) {
+				if ((lnet->dest_state & SCTP_ADDR_UNCONFIRMED) &&
+				    (lnet->dest_state & SCTP_ADDR_REACHABLE)){
 					cnt_of_unconf++;
 				}
 			}
