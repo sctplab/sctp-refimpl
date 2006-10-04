@@ -4080,7 +4080,9 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 		       (uint32_t)control->tail_mbuf,
 		       0,
 		       4);
-
+	if(control->tail_mbuf == NULL) {
+		panic("It should NOT be NULL");
+	}
 	TAILQ_INSERT_TAIL(&inp->read_queue, control, next);
 	SCTP_INP_READ_UNLOCK(inp);
 	if (inp && inp->sctp_socket) {
