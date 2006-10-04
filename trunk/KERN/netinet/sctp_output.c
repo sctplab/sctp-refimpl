@@ -9729,15 +9729,6 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 	 * it. It must be marked as UNSENT again so next call will continue
 	 * to send it until such time that we get a CWR, to remove it.
 	 */
-	if (!TAILQ_EMPTY(&asoc->send_queue)) {
-		/* we have some on send_queue */
-		struct sctp_tmit_chunk *chk;
-		chk = TAILQ_FIRST(&asoc->send_queue);
-		net = chk->whoTo;
-		if ((net->flight_size < net->cwnd) && (asoc->peers_rwnd > chk->book_size)) {
-			panic("send_queue has some and there is room to send");
-		}
-	}
 	if(stcb->asoc.ecn_echo_cnt_onq)
 		sctp_fix_ecn_echo(asoc);
 	return (error);
