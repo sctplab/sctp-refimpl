@@ -7166,13 +7166,10 @@ sctp_can_we_split_this(struct sctp_tcb *stcb,
 	 */
 	if(sp->msg_is_complete == 0) {
 		if (goal_mtu >= sp->length) {
-			/* Its not complete but
-			 * we may want to take it if 
-			 * it is big enough.
+			/* If we cannot fill the amount needed
+			 * there is no sense of splitting the chunk.
 			 */
-			if(sp->length >= min(sctp_min_split_point, stcb->asoc.smallest_mtu)) {
-				return (sp->length);
-			}
+			return (0);
 		}
 		/* If we reach here sp->length is larger
 		 * than the goal_mtu. Do we wish to split
