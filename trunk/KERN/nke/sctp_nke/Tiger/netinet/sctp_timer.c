@@ -1869,7 +1869,8 @@ select_a_new_ep:
 		it->stcb = LIST_FIRST(&it->inp->sctp_asoc_list);
 	}
 	SCTP_INP_RUNLOCK(it->inp);
-	if (it->stcb->asoc.stcb_starting_point_for_iterator == it) {
+	if ((it->stcb) &&
+	    (it->stcb->asoc.stcb_starting_point_for_iterator == it)) {
 		it->stcb->asoc.stcb_starting_point_for_iterator = NULL;
 	}
 	while (it->stcb) {
