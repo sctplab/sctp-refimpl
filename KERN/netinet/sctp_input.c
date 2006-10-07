@@ -4976,6 +4976,46 @@ sctp_saveopt(struct sctp_inpcb *inp, struct mbuf **mp, struct ip *ip,
 
 extern int sctp_no_csum_on_loopback;
 
+#ifdef __APPLE__
+#ifdef SCTP_DEBUG
+void sctp_print_mbuf_chain(struct mbuf *m)
+{
+	for(; m; m = m->m_next) {
+		if (m->m_flags & M_PKTHDR)
+			printf("%p: m_pkthdr.len = %d\n", m, m->m_pkthdr.len);
+		printf("%p: m_len = %d\n", m, m->m_len);
+		if (m->m_flags & M_EXT)
+			printf("%p: m->m_ext.ext_size = %d\n", m, m->m_ext.ext_size);
+	}  
+}
+#endif
+
+struct mbuf *
+sctp_trim_mbuf(struct mbuf *m)
+{
+	struct mbuf *n, *m0;
+	
+	while (m && m->m_len == 0) {
+		n = m->m_next;
+		m->m_next = NULL;
+		sctp_m_free(m);
+		m = n;
+	}
+	m0 = m;
+	
+	for(; m; m = m->m_next) {
+		n = m->m_next;
+		while (n && n->m_len == 0) {
+			m->m_next = n->m_next;
+			n->m_next = NULL;
+			sctp_m_free(n);
+			n = m->m_next;
+		}
+	}
+	return m0;
+}
+#endif
+
 #if defined(__FreeBSD__) || defined(__APPLE__)
 void
 sctp_input(m, off)
@@ -5039,6 +5079,14 @@ sctp_input(m, va_alist)
 #endif
 	net = NULL;
 	SCTP_STAT_INCR(sctps_recvpackets);
+#ifdef __APPLE__
+	sctp_trim_mbuf(m);
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
+		sctp_print_mbuf_chain(m);
+	}
+#endif
+#endif
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
 		printf("V4 input gets a packet iphlen:%d pktlen:%d\n", iphlen, m->m_pkthdr.len);
