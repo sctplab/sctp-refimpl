@@ -4017,6 +4017,20 @@ sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
 	SCTP_INP_READ_UNLOCK(new_inp);
 }
 
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+static void
+sctp_print_mbuf_chain(struct mbuf *m)
+{
+	for(; m; m = m->m_next) {
+		if (m->m_flags & M_PKTHDR)
+			printf("%p: m_pkthdr.len = %d\n", m, m->m_pkthdr.len);
+		printf("%p: m_len = %d\n", m, m->m_len);
+		if (m->m_flags & M_EXT)
+			printf("%p: m->m_ext.ext_size = %d\n", m, m->m_ext.ext_size);
+		printf("m_flags has M_EOR%s set.\n", m->m_flags & M_EOR ? "" : " not");
+		}  
+}
+#endif
 
 void
 sctp_add_to_readq(struct sctp_inpcb *inp,
@@ -4061,13 +4075,15 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 		sctp_sblog(sb, control->do_not_ref_stcb?NULL:stcb, SCTP_LOG_SBRESULT, 0);
 #endif
 		atomic_add_int(&control->length, m->m_len);
-		if (m->m_next == NULL) {
-			control->tail_mbuf = m;
-			if (end) {
-				m->m_flags |= M_EOR;
-			}
-		}
 		m = m->m_next;
+	}
+	if (prev != NULL) {
+		control->tail_mbuf = prev;
+		if (end) {
+			prev->m_flags |= M_EOR;
+		}
+	} else {
+		return;
 	}
 	if(end) {
 		control->end_added = 1;
