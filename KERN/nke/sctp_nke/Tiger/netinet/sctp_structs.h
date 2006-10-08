@@ -355,6 +355,7 @@ struct sctp_tmit_chunk {
 				 * CMT (iyengar@cis.udel.edu, 2005/06/21) */
 	uint8_t no_fr_allowed;
 	uint8_t pr_sctp_on;
+	uint8_t copy_by_ref;
 };
 
 /*
