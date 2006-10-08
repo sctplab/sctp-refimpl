@@ -4978,7 +4978,8 @@ extern int sctp_no_csum_on_loopback;
 
 #ifdef __APPLE__
 #ifdef SCTP_DEBUG
-void sctp_print_mbuf_chain(struct mbuf *m)
+static void
+sctp_print_mbuf_chain(struct mbuf *m)
 {
 	for(; m; m = m->m_next) {
 		if (m->m_flags & M_PKTHDR)
@@ -4990,7 +4991,7 @@ void sctp_print_mbuf_chain(struct mbuf *m)
 }
 #endif
 
-struct mbuf *
+static struct mbuf *
 sctp_trim_mbuf(struct mbuf *m)
 {
 	struct mbuf *n, *m0;
@@ -5079,14 +5080,6 @@ sctp_input(m, va_alist)
 #endif
 	net = NULL;
 	SCTP_STAT_INCR(sctps_recvpackets);
-#ifdef __APPLE__
-	sctp_trim_mbuf(m);
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-		sctp_print_mbuf_chain(m);
-	}
-#endif
-#endif
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
 		printf("V4 input gets a packet iphlen:%d pktlen:%d\n", iphlen, m->m_pkthdr.len);
