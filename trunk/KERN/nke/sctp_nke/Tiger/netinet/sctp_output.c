@@ -6462,7 +6462,8 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 		    struct mbuf *outchain,
 		    struct mbuf **endofchain,
 		    int can_take_mbuf,
-		    int sizeofcpy)
+		    int sizeofcpy,
+		    uint8_t copy_by_ref)
 {
 	struct mbuf *m;
 	struct mbuf *appendchain;
@@ -6479,7 +6480,7 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 	if (can_take_mbuf) {
 		appendchain = clonechain;
 	} else {
-		if(sizeofcpy <= ((((sctp_mbuf_threshold_count - 1) * MLEN) + MHLEN))) {
+		if(!copy_by_ref && (sizeofcpy <= ((((sctp_mbuf_threshold_count - 1) * MLEN) + MHLEN)))) {
 			/* Its not in a cluster */
 			if(*endofchain == NULL) {
 				/* lets get a mbuf cluster */
@@ -7164,6 +7165,11 @@ sctp_can_we_split_this(struct sctp_tcb *stcb,
 	/* Make a decision on if I should split a
 	 * msg into multiple parts.
 	 */
+	if(goal_mtu < sctp_min_split_point) {
+		/* you don't want enough */
+		return(0);
+	}
+
 	if(sp->msg_is_complete == 0) {
 		if (goal_mtu >= sp->length) {
 			/* If we cannot fill the amount needed
@@ -7262,6 +7268,10 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 			}
 			sp->some_taken = 1;
 		} else {
+			if (sp->some_taken) {
+				*locked = 1;
+			}
+			*giveup = 1;			
 			SCTP_TCB_SEND_UNLOCK(stcb);
 			return (0);
 		}
@@ -7280,6 +7290,11 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	chk->rec.data.rcv_flags = rcv_flags;
 	SCTP_TCB_SEND_LOCK(stcb);
 	sctp_snd_sb_alloc(stcb, sizeof(struct sctp_data_chunk));
+	if(sp->data->m_flags & M_EXT) {
+		chk->copy_by_ref = 1;
+	} else {
+		chk->copy_by_ref = 0;
+	}
 	if (to_move >= sp->length) {
 		/* we can steal the whole thing */
 		chk->data = sp->data;
@@ -7958,7 +7973,7 @@ again_one_more_time:
 				}
 				outchain = sctp_copy_mbufchain(chk->data, outchain, &endoutchain, 
 							       (int)chk->rec.chunk_id.can_take_data,
-							       chk->data->m_pkthdr.len);
+							       chk->data->m_pkthdr.len, chk->copy_by_ref);
 				if (outchain == NULL) {
 					*reason_code = 8;
 					return (ENOMEM);
@@ -8247,7 +8262,8 @@ again_one_more_time:
 						    stcb,
 						    SCTP_DATA);
 					}
-					outchain = sctp_copy_mbufchain(chk->data, outchain, &endoutchain, 0, chk->send_size);
+					outchain = sctp_copy_mbufchain(chk->data, outchain, &endoutchain, 0, 
+								       chk->send_size, chk->copy_by_ref);
 					if (outchain == NULL) {
 #ifdef SCTP_DEBUG
 						if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
@@ -8498,6 +8514,7 @@ sctp_queue_op_err(struct sctp_tcb *stcb, struct mbuf *op_err)
 		sctp_m_freem(op_err);
 		return;
 	}
+	chk->copy_by_ref = 0;
 	M_PREPEND(op_err, sizeof(struct sctp_chunkhdr), M_DONTWAIT);
 	if (op_err == NULL) {
 		sctp_free_a_chunk(stcb, chk);
@@ -8604,6 +8621,7 @@ sctp_send_cookie_echo(struct mbuf *m,
 		sctp_m_freem(cookie);
 		return (-5);
 	}
+	chk->copy_by_ref = 0;
 	chk->send_size = cookie->m_pkthdr.len;
 	chk->rec.chunk_id.id = SCTP_COOKIE_ECHO;
 	chk->rec.chunk_id.can_take_data = 0;
@@ -8675,6 +8693,7 @@ sctp_send_heartbeat_ack(struct sctp_tcb *stcb,
 		sctp_m_freem(outchain);
 		return;
 	}
+	chk->copy_by_ref = 0;
 	chk->send_size = chk_length;
 	chk->rec.chunk_id.id = SCTP_HEARTBEAT_ACK;
 	chk->rec.chunk_id.can_take_data = 1;
@@ -8712,7 +8731,7 @@ sctp_send_cookie_ack(struct sctp_tcb *stcb)
 		sctp_m_freem(cookie_ack);
 		return (-1);
 	}
-
+	chk->copy_by_ref = 0;
 	chk->send_size = sizeof(struct sctp_chunkhdr);
 	chk->rec.chunk_id.id = SCTP_COOKIE_ACK;
 	chk->rec.chunk_id.can_take_data = 1;
@@ -8759,7 +8778,7 @@ sctp_send_shutdown_ack(struct sctp_tcb *stcb, struct sctp_nets *net)
 		sctp_m_freem(m_shutdown_ack);
 		return (-1);
 	}
-
+	chk->copy_by_ref = 0;
 
 	chk->send_size = sizeof(struct sctp_chunkhdr);
 	chk->rec.chunk_id.id = SCTP_SHUTDOWN_ACK;
@@ -8803,7 +8822,7 @@ sctp_send_shutdown(struct sctp_tcb *stcb, struct sctp_nets *net)
 		sctp_m_freem(m_shutdown);
 		return (-1);
 	}
-
+	chk->copy_by_ref = 0;
 	chk->send_size = sizeof(struct sctp_shutdown_chunk);
 	chk->rec.chunk_id.id = SCTP_SHUTDOWN;
 	chk->rec.chunk_id.can_take_data = 1;
@@ -8852,7 +8871,7 @@ sctp_send_asconf(struct sctp_tcb *stcb, struct sctp_nets *net)
 		sctp_m_freem(m_asconf);
 		return (-1);
 	}
-
+	chk->copy_by_ref = 0;
 	chk->data = m_asconf;
 	chk->send_size = m_asconf->m_pkthdr.len;
 	chk->rec.chunk_id.id = SCTP_ASCONF;
@@ -8910,7 +8929,7 @@ sctp_send_asconf_ack(struct sctp_tcb *stcb, uint32_t retrans)
 			sctp_m_freem(m_ack);
 		return (-1);
 	}
-
+	chk->copy_by_ref = 0;
 	/* figure out where it goes to */
 	if (retrans) {
 		/* we're doing a retransmission */
@@ -9041,7 +9060,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 							stcb,
 							chk->rec.chunk_id.id);
 			}
-			m = sctp_copy_mbufchain(chk->data, m, &endofchain, 0, chk->send_size);
+			m = sctp_copy_mbufchain(chk->data, m, &endofchain, 0, chk->send_size, chk->copy_by_ref);
 			break;
 		}
 	}
@@ -9199,7 +9218,7 @@ one_chunk_around:
 							&auth, &auth_offset,
 							stcb, SCTP_DATA);
 			}
-			m = sctp_copy_mbufchain(chk->data, m, &endofchain, 0, chk->send_size);
+			m = sctp_copy_mbufchain(chk->data, m, &endofchain, 0, chk->send_size, chk->copy_by_ref);
 			if (m == NULL) {
 				return (ENOMEM);
 			}
@@ -9251,7 +9270,7 @@ one_chunk_around:
 									stcb,
 									SCTP_DATA);
 					}
-					m = sctp_copy_mbufchain(fwd->data, m, &endofchain, 0, fwd->send_size);
+					m = sctp_copy_mbufchain(fwd->data, m, &endofchain, 0, fwd->send_size, fwd->copy_by_ref);
 					if (m == NULL) {
 						return (ENOMEM);
 					}
@@ -9793,6 +9812,7 @@ send_forward_tsn(struct sctp_tcb *stcb,
 	if (chk == NULL) {
 		return;
 	}
+	chk->copy_by_ref = 0;
 	chk->rec.chunk_id.id = SCTP_FORWARD_CUM_TSN;
 	chk->rec.chunk_id.can_take_data = 0;
 	chk->asoc = asoc;
@@ -9981,6 +10001,7 @@ sctp_send_sack(struct sctp_tcb *stcb)
 			    stcb->sctp_ep, stcb, NULL);
 			return;
 		}
+		a_chk->copy_by_ref = 0;
 		/*a_chk->rec.chunk_id.id = SCTP_SELECTIVE_ACK;*/
 		a_chk->rec.chunk_id.id = SCTP_SELECTIVE_ACK;
 		a_chk->rec.chunk_id.can_take_data = 1;
@@ -10593,6 +10614,7 @@ sctp_send_hb(struct sctp_tcb *stcb, int user_req, struct sctp_nets *u_net)
 #endif
 		return (0);
 	}
+	chk->copy_by_ref = 0;
 	chk->rec.chunk_id.id = SCTP_HEARTBEAT_REQUEST;
 	chk->rec.chunk_id.can_take_data = 1;
 	chk->asoc = &stcb->asoc;
@@ -10710,6 +10732,7 @@ sctp_send_ecn_echo(struct sctp_tcb *stcb, struct sctp_nets *net,
 	if (chk == NULL) {
 		return;
 	}
+	chk->copy_by_ref = 0;
 	SCTP_STAT_INCR(sctps_sendecne);
 	chk->rec.chunk_id.id = SCTP_ECN_ECHO;
 	chk->rec.chunk_id.can_take_data = 0;
@@ -10765,6 +10788,7 @@ sctp_send_packet_dropped(struct sctp_tcb *stcb, struct sctp_nets *net,
 	if (chk == NULL) {
 		return;
 	}
+	chk->copy_by_ref = 0;
 	iph = mtod(m, struct ip *);
 	if (iph == NULL) {
 		return;
@@ -10887,6 +10911,7 @@ sctp_send_cwr(struct sctp_tcb *stcb, struct sctp_nets *net, uint32_t high_tsn)
 	if (chk == NULL) {
 		return;
 	}
+	chk->copy_by_ref = 0;
 	chk->rec.chunk_id.id = SCTP_ECN_CWR;
 	chk->rec.chunk_id.can_take_data = 1;
 	chk->asoc = &stcb->asoc;
@@ -11126,7 +11151,7 @@ sctp_send_str_reset_req(struct sctp_tcb *stcb,
 	if (chk == NULL) {
 		return (ENOMEM);
 	}
-
+	chk->copy_by_ref = 0;
 	chk->rec.chunk_id.id = SCTP_STREAM_RESET;
 	chk->rec.chunk_id.can_take_data = 0;
 	chk->asoc = &stcb->asoc;
@@ -12941,7 +12966,7 @@ sctp_add_auth_chunk(struct mbuf *m, struct mbuf **m_end,
 
 	/* update length and return pointer to the auth chunk */
 	m_auth->m_pkthdr.len = m_auth->m_len = chunk_len;
-	m = sctp_copy_mbufchain(m_auth, m, m_end, 1, chunk_len);
+	m = sctp_copy_mbufchain(m_auth, m, m_end, 1, chunk_len, 0);
 	if (auth_ret != NULL)
 		*auth_ret = auth;
 
