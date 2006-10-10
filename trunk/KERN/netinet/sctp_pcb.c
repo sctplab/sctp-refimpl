@@ -4285,8 +4285,10 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	sctp_add_vtag_to_timewait(inp, asoc->my_vtag);
 
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
-	SCTP_ITERATOR_UNLOCK();
+	if(from_inpcbfree == 0) {
+		lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
+		SCTP_ITERATOR_UNLOCK();
+	}
 #endif
 	if(from_inpcbfree == 0) {
 		SCTP_INP_INFO_WUNLOCK();
