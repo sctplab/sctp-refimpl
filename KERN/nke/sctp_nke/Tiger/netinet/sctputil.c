@@ -4052,7 +4052,7 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 	control->length = 0;
 	while (m) {
 		if (m->m_len == 0) {
-			/* Skip mbufs with NO lenght */
+			/* Skip mbufs with NO length */
 			if(prev == NULL) {
 				/* First one */
 				control->data = sctp_m_free(m);

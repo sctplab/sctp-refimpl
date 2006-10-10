@@ -7160,7 +7160,7 @@ extern int sctp_min_split_point;
 static __inline int 
 sctp_can_we_split_this(struct sctp_tcb *stcb,
 		       struct sctp_stream_queue_pending *sp,
-		       int goal_mtu, int frag_point)
+		       int goal_mtu, int frag_point, int eeor_on)
 {
 	/* Make a decision on if I should split a
 	 * msg into multiple parts.
@@ -7171,11 +7171,19 @@ sctp_can_we_split_this(struct sctp_tcb *stcb,
 	}
 
 	if(sp->msg_is_complete == 0) {
-		if (goal_mtu >= sp->length) {
-			/* If we cannot fill the amount needed
-			 * there is no sense of splitting the chunk.
+		if(eeor_on) {
+			/* If we are doing EEOR we need to always send
+			 * it if its the entire thing.
 			 */
-			return (0);
+			if (goal_mtu >= sp->length)
+				return (sp->length);
+		} else {
+			if (goal_mtu >= sp->length) {
+				/* If we cannot fill the amount needed
+				 * there is no sense of splitting the chunk.
+				 */
+				return (0);
+			}
 		}
 		/* If we reach here sp->length is larger
 		 * than the goal_mtu. Do we wish to split
@@ -7204,7 +7212,8 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	int goal_mtu,
 	int frag_point,
 	int *locked,
-        int *giveup)
+        int *giveup,
+	int eeor_mode)
 {
 	/* Move from the stream to the send_queue keeping track of the total */
 	struct sctp_association *asoc;
@@ -7258,7 +7267,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		}
 	} else {
 		to_move = sctp_can_we_split_this(stcb, 
-						 sp, goal_mtu, frag_point);
+						 sp, goal_mtu, frag_point, eeor_mode);
 		if (to_move) {
 			if (to_move >= sp->length) {
 				to_move = sp->length;
@@ -7485,7 +7494,7 @@ sctp_select_a_stream(struct sctp_tcb *stcb, struct sctp_association *asoc)
 
 static void
 sctp_fill_outqueue(struct sctp_tcb *stcb,
-    struct sctp_nets *net, int frag_point)
+    struct sctp_nets *net, int frag_point, int eeor_mode)
 {
 	struct sctp_association *asoc;
 	struct sctp_stream_out *strq, *strqn;
@@ -7553,7 +7562,8 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
 			}
 		}
 		giveup = 0;
-		moved_how_much = sctp_move_to_outqueue(stcb, net, strq, goal_mtu, frag_point, &locked, &giveup);
+		moved_how_much = sctp_move_to_outqueue(stcb, net, strq, goal_mtu, frag_point, &locked, 
+						       &giveup, eeor_mode);
 		asoc->last_out_stream = strq;
 		if (locked) {
 			asoc->locked_on_sending = strq;
@@ -7660,7 +7670,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	int no_fragmentflg, error;
 	int one_chunk, hbflag;
 	int asconf, cookie, no_out_cnt;
-	int bundle_at, ctl_cnt, no_data_chunks, cwnd_full_ind;
+	int bundle_at, ctl_cnt, no_data_chunks, cwnd_full_ind, eeor_mode;
 	unsigned int mtu, r_mtu, omtu, mx_mtu, to_out;
 	*num_out = 0;
 	struct sctp_nets *start_at, *old_startat = NULL, *send_start_at;
@@ -7670,6 +7680,11 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	uint32_t auth_offset = 0;
 	struct sctp_auth_chunk *auth = NULL;
 
+	if(sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXPLICIT_EOR)) {
+		eeor_mode = 1;
+	} else {
+		eeor_mode = 0;
+	}
 	ctl_cnt = no_out_cnt = asconf = cookie = 0;
 	/*
 	 * First lets prime the pump. For each destination, if there is room
@@ -7790,7 +7805,7 @@ one_more_time:
 #ifdef SCTP_CWND_LOGGING
 			sctp_log_cwnd(stcb, net, 0, SCTP_CWND_LOG_FILL_OUTQ_CALLED);
 #endif
-			sctp_fill_outqueue(stcb, net, frag_point);
+			sctp_fill_outqueue(stcb, net, frag_point, eeor_mode);
 		}
 		if (start_at != TAILQ_FIRST(&asoc->nets)) {
 			/* got to pick up the beginning stuff. */

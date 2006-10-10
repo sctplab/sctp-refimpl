@@ -3906,10 +3906,6 @@ sctp_del_remote_addr(struct sctp_tcb *stcb, struct sockaddr *remaddr)
 
 	asoc = &stcb->asoc;
 
-	if (asoc->numnets < 2) {
-		/* Must have at LEAST two remote addresses */
-		return (-1);
-	}
 	/* locate the address */
 	for (net = TAILQ_FIRST(&asoc->nets); net != NULL; net = net_tmp) {
 		net_tmp = TAILQ_NEXT(net, sctp_next);
@@ -3919,8 +3915,13 @@ sctp_del_remote_addr(struct sctp_tcb *stcb, struct sockaddr *remaddr)
 		if (sctp_cmpaddr((struct sockaddr *)&net->ro._l_addr,
 		    remaddr)) {
 			/* we found the guy */
-			sctp_remove_net(stcb, net);
-			return (0);
+			if (asoc->numnets < 2) {
+				/* Must have at LEAST two remote addresses */
+				return (-1);
+			} else {
+				sctp_remove_net(stcb, net);
+				return (0);
+			}
 		}
 	}
 	/* not found. */
@@ -4284,8 +4285,10 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	sctp_add_vtag_to_timewait(inp, asoc->my_vtag);
 
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
-	SCTP_ITERATOR_UNLOCK();
+	if(from_inpcbfree == 0) {
+		lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
+		SCTP_ITERATOR_UNLOCK();
+	}
 #endif
 	if(from_inpcbfree == 0) {
 		SCTP_INP_INFO_WUNLOCK();
