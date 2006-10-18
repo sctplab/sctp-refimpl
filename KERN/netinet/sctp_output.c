@@ -7169,7 +7169,6 @@ sctp_can_we_split_this(struct sctp_tcb *stcb,
 		/* you don't want enough */
 		return(0);
 	}
-
 	if(sp->msg_is_complete == 0) {
 		if(eeor_on) {
 			/* If we are doing EEOR we need to always send
@@ -7680,7 +7679,9 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	uint32_t auth_offset = 0;
 	struct sctp_auth_chunk *auth = NULL;
 
-	if(sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXPLICIT_EOR)) {
+	if((asoc->state & SCTP_STATE_SHUTDOWN_PENDING) ||
+	   (asoc->state & SCTP_STATE_SHUTDOWN_RECEIVED) ||
+	   (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXPLICIT_EOR))) {
 		eeor_mode = 1;
 	} else {
 		eeor_mode = 0;
