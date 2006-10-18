@@ -11,7 +11,7 @@ fi
 ../FreeBSD/prtcwndlog -r -g -l $1.send | grep OUT_QUEUE > $1.outq.txt
 ../FreeBSD/cntcwndlog -r -l $1.send -c 1000 -i 400 > $1.cnt.txt
 gnuplot <<!
-set output 'plotall.ps'
+set output 'cntplotall.ps'
 set terminal post landscape 'Times-Roman' 12
 set terminal post color
 set xlabel 'time'
@@ -26,7 +26,7 @@ plot '$1.rcv.txt' title 'read', \
 unset multiplot
 clear
 reset
-set output 'plot000-100.ps'
+set output 'cntplot000-100.ps'
 set terminal post landscape 'Times-Roman' 12
 set terminal post color
 set xlabel 'time'
@@ -42,7 +42,7 @@ plot '$1.rcv.txt' title 'read', \
 unset multiplot
 clear
 reset
-set output 'plot100-200.ps'
+set output 'cntplot100-200.ps'
 set terminal post landscape 'Times-Roman' 12
 set terminal post color
 set xlabel 'time'
@@ -58,7 +58,7 @@ plot '$1.rcv.txt' title 'read', \
 unset multiplot
 clear
 reset
-set output 'plot200-300.ps'
+set output 'cntplot200-300.ps'
 set terminal post landscape 'Times-Roman' 12
 set terminal post color
 set xlabel 'time'
@@ -74,7 +74,7 @@ plot '$1.rcv.txt' title 'read', \
 unset multiplot
 clear
 reset
-set output 'plot300-400.ps'
+set output 'cntplot300-400.ps'
 set terminal post landscape 'Times-Roman' 12
 set terminal post color
 set xlabel 'time'
@@ -90,7 +90,7 @@ plot '$1.rcv.txt' title 'read', \
 unset multiplot
 clear
 reset
-set output 'plot400-500.ps'
+set output 'cntplot400-500.ps'
 set terminal post landscape 'Times-Roman' 12
 set terminal post color
 set xlabel 'time'
@@ -106,7 +106,7 @@ plot '$1.rcv.txt' title 'read', \
 unset multiplot
 clear
 reset
-set output 'plot500-600.ps'
+set output 'cntplot500-600.ps'
 set terminal post landscape 'Times-Roman' 12
 set terminal post color
 set xlabel 'time'
@@ -122,7 +122,7 @@ plot '$1.rcv.txt' title 'read', \
 unset multiplot
 clear
 reset
-set output 'plot600-700.ps'
+set output 'cntplot600-700.ps'
 set terminal post landscape 'Times-Roman' 12
 set terminal post color
 set xlabel 'time'
@@ -138,7 +138,7 @@ plot '$1.rcv.txt' title 'read', \
 unset multiplot
 clear
 reset
-set output 'plot700-800.ps'
+set output 'cntplot700-800.ps'
 set terminal post landscape 'Times-Roman' 12
 set terminal post color
 set xlabel 'time'
@@ -154,7 +154,7 @@ plot '$1.rcv.txt' title 'read', \
 unset multiplot
 clear
 reset
-set output 'plotp800-900.ps'
+set output 'cntplotp800-900.ps'
 set terminal post landscape 'Times-Roman' 12
 set terminal post color
 set xlabel 'time'
@@ -170,7 +170,7 @@ plot '$1.rcv.txt' title 'read', \
 unset multiplot
 clear
 reset
-set output 'plotp900-1s.ps'
+set output 'cntplotp900-1s.ps'
 set terminal post landscape 'Times-Roman' 12
 set terminal post color
 set xlabel 'time'
@@ -178,6 +178,166 @@ set ylabel 'size'
 set multiplot
 set key outside Right title 'Legend' box 1
 set xrange [.900:1.000]
+plot '$1.rcv.txt' title 'read', \
+'$1.flight.txt' title 'snd-flt', \
+'$1.cnt.txt' title 'sack-cnt', \
+'$1.arwnd.txt' title 'snd-arw', \
+'$1.outq.txt' title 'snd-q'
+unset multiplot
+clear
+reset
+set output 'cntplot1000-1100.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'time'
+set ylabel 'size'
+set multiplot
+set key outside Right title 'Legend' box 1
+set xrange [1.000:1.100]
+plot '$1.rcv.txt' title 'read', \
+'$1.flight.txt' title 'snd-flt', \
+'$1.cnt.txt' title 'sack-cnt', \
+'$1.arwnd.txt' title 'snd-arw', \
+'$1.outq.txt' title 'snd-q'
+unset multiplot
+clear
+reset
+set output 'cntplot1100-1200.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'time'
+set ylabel 'size'
+set multiplot
+set key outside Right title 'Legend' box 1
+set xrange [1.100:1.200]
+plot '$1.rcv.txt' title 'read', \
+'$1.flight.txt' title 'snd-flt', \
+'$1.cnt.txt' title 'sack-cnt', \
+'$1.arwnd.txt' title 'snd-arw', \
+'$1.outq.txt' title 'snd-q'
+unset multiplot
+clear
+reset
+set output 'cntplot1200-1300.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'time'
+set ylabel 'size'
+set multiplot
+set key outside Right title 'Legend' box 1
+set xrange [1.200:1.300]
+plot '$1.rcv.txt' title 'read', \
+'$1.flight.txt' title 'snd-flt', \
+'$1.cnt.txt' title 'sack-cnt', \
+'$1.arwnd.txt' title 'snd-arw', \
+'$1.outq.txt' title 'snd-q'
+unset multiplot
+clear
+reset
+set output 'cntplot1300-1400.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'time'
+set ylabel 'size'
+set multiplot
+set key outside Right title 'Legend' box 1
+set xrange [1.300:1.400]
+plot '$1.rcv.txt' title 'read', \
+'$1.flight.txt' title 'snd-flt', \
+'$1.cnt.txt' title 'sack-cnt', \
+'$1.arwnd.txt' title 'snd-arw', \
+'$1.outq.txt' title 'snd-q'
+unset multiplot
+clear
+reset
+set output 'cntplot1400-1500.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'time'
+set ylabel 'size'
+set multiplot
+set key outside Right title 'Legend' box 1
+set xrange [1.400:1.500]
+plot '$1.rcv.txt' title 'read', \
+'$1.flight.txt' title 'snd-flt', \
+'$1.cnt.txt' title 'sack-cnt', \
+'$1.arwnd.txt' title 'snd-arw', \
+'$1.outq.txt' title 'snd-q'
+unset multiplot
+clear
+reset
+set output 'cntplot1500-1600.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'time'
+set ylabel 'size'
+set multiplot
+set key outside Right title 'Legend' box 1
+set xrange [1.500:1.600]
+plot '$1.rcv.txt' title 'read', \
+'$1.flight.txt' title 'snd-flt', \
+'$1.cnt.txt' title 'sack-cnt', \
+'$1.arwnd.txt' title 'snd-arw', \
+'$1.outq.txt' title 'snd-q'
+unset multiplot
+clear
+reset
+set output 'cntplot1600-1700.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'time'
+set ylabel 'size'
+set multiplot
+set key outside Right title 'Legend' box 1
+set xrange [1.600:1.700]
+plot '$1.rcv.txt' title 'read', \
+'$1.flight.txt' title 'snd-flt', \
+'$1.cnt.txt' title 'sack-cnt', \
+'$1.arwnd.txt' title 'snd-arw', \
+'$1.outq.txt' title 'snd-q'
+unset multiplot
+clear
+reset
+set output 'cntplot1700-1800.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'time'
+set ylabel 'size'
+set multiplot
+set key outside Right title 'Legend' box 1
+set xrange [1.700:1.800]
+plot '$1.rcv.txt' title 'read', \
+'$1.flight.txt' title 'snd-flt', \
+'$1.cnt.txt' title 'sack-cnt', \
+'$1.arwnd.txt' title 'snd-arw', \
+'$1.outq.txt' title 'snd-q'
+unset multiplot
+clear
+reset
+set output 'cntplotp1800-1900.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'time'
+set ylabel 'size'
+set multiplot
+set key outside Right title 'Legend' box 1
+set xrange [1.800:1.900]
+plot '$1.rcv.txt' title 'read', \
+'$1.flight.txt' title 'snd-flt', \
+'$1.cnt.txt' title 'sack-cnt', \
+'$1.arwnd.txt' title 'snd-arw', \
+'$1.outq.txt' title 'snd-q'
+unset multiplot
+clear
+reset
+set output 'cntplotp1900-2s.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'time'
+set ylabel 'size'
+set multiplot
+set key outside Right title 'Legend' box 1
+set xrange [1.900:2.000]
 plot '$1.rcv.txt' title 'read', \
 '$1.flight.txt' title 'snd-flt', \
 '$1.cnt.txt' title 'sack-cnt', \

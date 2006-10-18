@@ -38,7 +38,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
-#include <sys/errno.h>
+#include <signal.h>
 #ifdef LINUX
 #include <getopt.h>
 #endif
@@ -66,73 +66,87 @@ Options:\n\
         -l      size of send/receive buffer\n\
         -n      number of messages sent (0 means infinite)/received\n\
         -D      turns Nagle off\n\
+        -R      recv buffer\n\
+        -S      send buffer\n\
+        -N      number of clients\n\
+        -s      number of streams\n\
+        -T      time to send messages\n\
 ";
 
 #define DEFAULT_LENGTH             1024
 #define DEFAULT_NUMBER_OF_MESSAGES 1024
 #define DEFAULT_PORT               5001
-#define BUFFERSIZE                 200000
+#define BUFFERSIZE                  (1<<16)
 #define LINGERTIME                 1000
-int sleep_it=0;
+
+static unsigned int done;
+
+void stop_sender(int sig)
+{
+	done = 1; 
+}
+
 static void* handle_connection(void *arg)
 {
 	ssize_t n;
 	unsigned long long sum = 0;
 	char *buf;
 	pthread_t tid;
-	int fd, length;
+	int fd;
 	struct timeval start_time, now, diff_time;
 	double seconds;
 	unsigned long messages = 0;
-	unsigned long shortmsgs = 0;
+	unsigned long recv_calls = 0;
+	unsigned long notifications = 0;
+	struct sctp_sndrcvinfo sinfo;
+	unsigned int first_length;
+	int flags;
 	
-	buf = malloc(BUFFERSIZE);
 	fd = *(int *) arg;
 	free(arg);
 	tid = pthread_self();
 	pthread_detach(tid);
-	if(sleep_it)
-		sleep(sleep_it);
-	gettimeofday(&start_time, NULL);
 	
-	n = recv(fd, (void*)buf, BUFFERSIZE, 0);
-	/*
-	printf("Received %u bytes\n", n);
-	fflush(stdout);
-	*/
-	length = n;
+	buf = malloc(BUFFERSIZE);
+	n = sctp_recvmsg(fd, (void*)buf, BUFFERSIZE, NULL, NULL, &sinfo, &flags);
+	gettimeofday(&start_time, NULL);
+	first_length = n;
 	while (n > 0) {
-		sum += n;
-		messages++;
-		n = recv(fd, (void*)buf, BUFFERSIZE, 0);
-		if(n != length) {
-			shortmsgs++;
+		recv_calls++;
+		if (flags & MSG_NOTIFICATION) {
+			notifications++;
+		} else {
+			sum += n;
+			if (flags & MSG_EOR)
+				messages++;
 		}
-		/*
-		printf("Received %u bytes\n", n);
-		fflush(stdout);
-		*/
+		flags = 0;
+		n = sctp_recvmsg(fd, (void*)buf, BUFFERSIZE, NULL, NULL, &sinfo, &flags);
 	}
-	printf("message number %d returned %d errno:%d shorts:%d\n", (int)messages, 
-	       (int)n, errno,(int)shortmsgs);
+	if (n < 0)
+		perror("sctp_recvmsg");
 	gettimeofday(&now, NULL);
 	timersub(&now, &start_time, &diff_time);
 	seconds = diff_time.tv_sec + (double)diff_time.tv_usec/1000000.0;
-	fprintf(stdout, "%u, %lu, %f, %f, %f, %f\n", 
-	       length, 
-		(long)messages, 
-		(start_time.tv_sec + (double)start_time.tv_usec/1000000), 
-		(now.tv_sec+(double)now.tv_usec/1000000), 
-		seconds, (sum / seconds / 1024.0));
+	fprintf(stdout, "%u, %lu, %lu, %lu, %llu, %f, %f\n", 
+	       first_length, messages, recv_calls, notifications, sum, seconds, (double)first_length * (double)messages / seconds / 1024.0);
 	fflush(stdout);
 	close(fd);
+	free(buf);
 	return NULL;
 }
+
+void handle_signal(int sig)
+{
+	printf("Caught signal %d.\n", sig); 
+}
+
 
 
 int main(int argc, char **argv)
 {
 	int fd, *cfdptr;
+	size_t intlen;
 	char c, *buffer;
 	socklen_t addr_len;
 	struct sockaddr_in local_addr, remote_addr;
@@ -141,17 +155,22 @@ int main(int argc, char **argv)
 	short local_port, remote_port, port;
 	double seconds;
 	double throughput;
-	int one = 1;
+	const int on = 1;
+	const int off = 0;
 	int nodelay = 0;
 	unsigned long i, number_of_messages;
 	pthread_t tid;
-	const int on = 1;
-	int rcvbufsize=0, sndbufsize=0;
-	int setFP = 0;
-	int SMALL_MAXSEG = 1500;
-
+	int rcvbufsize=0, sndbufsize=0, myrcvbufsize, mysndbufsize;
+	struct msghdr msghdr;
+	struct iovec iov[1024];
 	struct linger linger;
+	int fragpoint = 0;
+	unsigned int runtime = 0;
+	int n;
+	
+	signal(SIGHUP, handle_signal);
 
+	memset(iov, 0, sizeof(iov));
 	length             = DEFAULT_LENGTH;
 	number_of_messages = DEFAULT_NUMBER_OF_MESSAGES;
 	port               = DEFAULT_PORT;
@@ -166,32 +185,32 @@ int main(int argc, char **argv)
 #endif
 	local_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
-	while ((c = getopt(argc, argv, "p:l:f:L:n:R:S:vVDs:")) != -1)
+	while ((c = getopt(argc, argv, "p:l:f:L:n:R:S:T:vVD")) != -1)
 		switch(c) {
- 		        case 's':
-				sleep_it = strtol(optarg, NULL, 0);
-				break;
 			case 'l':
 				length = atoi(optarg);
 				break;
 			case 'L':
 				local_addr.sin_addr.s_addr = inet_addr(optarg);
 				break;
-		        case 'n':
+			case 'n':
 				number_of_messages = atoi(optarg);
-				break;
-			case 'f':
-				setFP = 1;
-				SMALL_MAXSEG = atoi(optarg);
 				break;
 			case 'p':
 				port = atoi(optarg);
+				break;
+			case 'f':
+				fragpoint = atoi(optarg);
 				break;
 			case 'R':
 				rcvbufsize = atoi(optarg);
 				break;
 			case 'S':
 				sndbufsize = atoi(optarg);
+				break;
+			case 'T':
+				runtime = atoi(optarg);
+				number_of_messages = 0;
 				break;
 			case 'v':
 				verbose = 1;
@@ -213,7 +232,7 @@ int main(int argc, char **argv)
 		local_port  = port;
 		remote_port = 0;
 	} else {
-		client	    = 1;
+		client      = 1;
 		local_port  = 0;
 		remote_port = port;
 	}
@@ -242,7 +261,13 @@ int main(int argc, char **argv)
 			if (rcvbufsize)
 				if (setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &rcvbufsize, sizeof(int)) < 0)
 					perror("setsockopt: rcvbuf");
-
+			if (verbose) {
+				intlen = sizeof(int);
+				if (getsockopt(fd, SOL_SOCKET, SO_RCVBUF, &myrcvbufsize, (socklen_t *)&intlen) < 0)
+					perror("setsockopt: rcvbuf");
+				else
+					fprintf(stdout,"Receive buffer size: %d.\n", myrcvbufsize);
+			}
 			pthread_create(&tid, NULL, &handle_connection, (void *) cfdptr);
 		}
 		close(fd);
@@ -257,37 +282,70 @@ int main(int argc, char **argv)
 	
 		if (connect(fd, (struct sockaddr *)&remote_addr, sizeof(struct sockaddr_in)) < 0)
 			perror("connect");
-#ifdef SCTP_NODELAY	
+#ifdef SCTP_NODELAY
+		/* Explicit settings, because LKSCTP does not enable it by default */
 		if (nodelay == 1) {
-			if(setsockopt(fd, IPPROTO_SCTP, SCTP_NODELAY, (char *)&one, sizeof(one)) < 0)
+			if(setsockopt(fd, IPPROTO_SCTP, SCTP_NODELAY, (char *)&on, sizeof(on)) < 0)
+				perror("setsockopt: nodelay");
+		} else {
+			if(setsockopt(fd, IPPROTO_SCTP, SCTP_NODELAY, (char *)&off, sizeof(off)) < 0)
 				perror("setsockopt: nodelay");
 		}
 #endif
-		if(setFP == 1){
-			if(setsockopt(fd,IPPROTO_SCTP ,SCTP_MAXSEG, &SMALL_MAXSEG, sizeof(SMALL_MAXSEG))< 0)
+		if (fragpoint){
+			if(setsockopt(fd,IPPROTO_SCTP, SCTP_MAXSEG, &fragpoint, sizeof(fragpoint))< 0)
 				perror("setsockopt: SCTP_MAXSEG");
 		}	
 		if (sndbufsize)
 			if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &sndbufsize, sizeof(int)) < 0)
 				perror("setsockopt: sndbuf");
-			
+		
+		if (verbose) {
+			intlen = sizeof(int);
+			if (getsockopt(fd, SOL_SOCKET, SO_SNDBUF, &mysndbufsize, (socklen_t *)&intlen) < 0)
+				perror("setsockopt: sndbuf");
+			else
+				fprintf(stdout,"Send buffer size: %d.\n", mysndbufsize);
+		}
 		buffer = malloc(length);
+		iov[0].iov_base = buffer;
+		iov[0].iov_len  = length;
+
 		gettimeofday(&start_time, NULL);
 		if (verbose) {
 			printf("Start sending %ld messages...", (long)number_of_messages);
 			fflush(stdout);
 		}
 		
+		msghdr.msg_name       = NULL;
+		msghdr.msg_namelen    = 0;
+		msghdr.msg_iov        = iov;
+		msghdr.msg_iovlen     = 1;
+		msghdr.msg_control    = NULL;
+		msghdr.msg_controllen = 0;
+		msghdr.msg_flags      = 0;
+		
 		i = 0;
-		while ((number_of_messages == 0) || (i < number_of_messages)) {
+		done = 0;
+		
+		if (runtime > 0) {
+			signal(SIGALRM, stop_sender);
+			alarm(runtime);
+		}
+			
+		while (!done && ((number_of_messages == 0) || (i < number_of_messages))) {
 			i++;
 			if (very_verbose)
 				printf("Sending message number %lu.\n", i);
-			if(send(fd, buffer, length, 0) < 0) {
-				printf("abort sending error:%d\n",
-				       errno);
-				break;
-			}
+			/*
+			if (sendmsg(fd, &msghdr, 0) < 0)
+				perror("sendmsg");
+			*/
+			
+			if ((n = send(fd, buffer, length, 0)) < 0)
+				perror("send");
+			if (n != length)
+				printf("send returned %d instead of %d.\n", n, length);
 		}
 		if (verbose)
 			printf("done.\n");
@@ -300,8 +358,8 @@ int main(int argc, char **argv)
 		timersub(&now, &start_time, &diff_time);
 		seconds = diff_time.tv_sec + (double)diff_time.tv_usec/1000000;
 		fprintf(stdout, "%s of %ld messages of length %u took %f seconds.\n", 
-		       "Sending", (long)number_of_messages, length, seconds);
-		throughput = (double)(number_of_messages * length) / seconds / 1024.0;
+		       "Sending", i, length, seconds);
+		throughput = (double)i * (double)length / seconds / 1024.0;
 		fprintf(stdout, "Throughput was %f KB/sec.\n", throughput);
 	}
 	return 0;
