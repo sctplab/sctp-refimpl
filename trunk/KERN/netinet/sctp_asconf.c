@@ -1565,13 +1565,13 @@ sctp_handle_asconf_ack(struct mbuf *m, int offset,
 	 * abort the asoc, since someone probably just hijacked us...
 	 */
 	if (serial_num == (asoc->asconf_seq_out + 1)) {
-		sctp_abort_an_association(stcb->sctp_ep, stcb,
-		    SCTP_CAUSE_ILLEGAL_ASCONF_ACK, NULL);
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
 			printf("handle_asconf_ack: got unexpected next serial number! Aborting asoc!\n");
 		}
 #endif				/* SCTP_DEBUG */
+		sctp_abort_an_association(stcb->sctp_ep, stcb,
+		    SCTP_CAUSE_ILLEGAL_ASCONF_ACK, NULL);
 		return;
 	}
 	if (serial_num != asoc->asconf_seq_out) {
@@ -1580,9 +1580,20 @@ sctp_handle_asconf_ack(struct mbuf *m, int offset,
 		if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
 			printf("handle_asconf_ack: got duplicate/unexpected serial number = %xh (expected = %xh)\n", serial_num, asoc->asconf_seq_out);
 		}
-#endif				/* SCTP_DEBUG */
+#endif /* SCTP_DEBUG */
 		return;
 	}
+	if (stcb->asoc.asconf_sent == 0) {
+		/* got a unexpected ASCONF-ACK for serial not in flight */
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
+			printf("handle_asconf_ack: got serial number = %xh but not in flight\n", serial_num);
+		}
+#endif /* SCTP_DEBUG */
+		/* nothing to do... duplicate ACK received */
+		return;
+	}
+
 	/* stop our timer */
 	sctp_timer_stop(SCTP_TIMER_TYPE_ASCONF, stcb->sctp_ep, stcb, net);
 
@@ -1618,7 +1629,7 @@ sctp_handle_asconf_ack(struct mbuf *m, int offset,
 			if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
 				printf("param length (%u) larger than buffer size!\n", param_length);
 			}
-#endif				/* SCTP_DEBUG */
+#endif /* SCTP_DEBUG */
 			sctp_asconf_ack_clear(stcb);
 			return;
 		}
