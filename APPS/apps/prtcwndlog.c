@@ -742,6 +742,25 @@ main(int argc, char **argv)
 					       log.x.misc.log3,
 					       log.x.misc.log4);
 				}
+			} else if (log.from == SCTP_RANDY_STUFF) {
+				printf("%s a:%d b:%d c:%d d:%d\n",
+				       ts,
+				       log.x.misc.log1,
+				       log.x.misc.log2,
+				       log.x.misc.log3,
+				       log.x.misc.log4
+				       );
+
+			} else if (log.from == SCTP_RANDY_STUFF1) {
+				printf("%s bundled:%d mtu:%u rmtu:%u mtu-left:%d\n",
+				       ts,
+				       log.x.misc.log1,
+				       log.x.misc.log2,
+				       log.x.misc.log3,
+				       log.x.misc.log4
+				       );
+
+
 			} else if (log.from == SCTP_SORECV_BLOCKSB) {
 				if(!graph_mode) {
 					printf("%s Blocking freed:%d rwnd:%d sb_cc:%u reading:%d\n",

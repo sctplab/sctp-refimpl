@@ -11,7 +11,7 @@ fi
 ../FreeBSD/prtcwndlog -r -g -l $1.send | grep OUT_QUEUE > $1.outq.txt
 ../FreeBSD/cntcwndlog -r -l $1.send -i 500 -c1000 > $1.cnt.txt
 gnuplot <<!
-set output 'plotall.ps'
+set output 'lcntplotall.ps'
 set terminal post landscape 'Times-Roman' 12
 set terminal post color
 set xlabel 'time'
@@ -23,7 +23,7 @@ plot '$1.flight.txt' title 'snd-flt', \
 unset multiplot
 clear
 reset
-set output 'plot000-100.ps'
+set output 'lcntplot000-100.ps'
 set terminal post landscape 'Times-Roman' 12
 set terminal post color
 set xlabel 'time'
@@ -36,7 +36,7 @@ plot '$1.flight.txt' title 'snd-flt', \
 unset multiplot
 clear
 reset
-set output 'plot100-200.ps'
+set output 'lcntplot100-200.ps'
 set terminal post landscape 'Times-Roman' 12
 set terminal post color
 set xlabel 'time'
@@ -49,7 +49,7 @@ plot '$1.flight.txt' title 'snd-flt', \
 unset multiplot
 clear
 reset
-set output 'plot200-300.ps'
+set output 'lcntplot200-300.ps'
 set terminal post landscape 'Times-Roman' 12
 set terminal post color
 set xlabel 'time'
@@ -62,7 +62,7 @@ plot '$1.flight.txt' title 'snd-flt', \
 unset multiplot
 clear
 reset
-set output 'plot300-400.ps'
+set output 'lcntplot300-400.ps'
 set terminal post landscape 'Times-Roman' 12
 set terminal post color
 set xlabel 'time'
@@ -75,7 +75,7 @@ plot '$1.flight.txt' title 'snd-flt', \
 unset multiplot
 clear
 reset
-set output 'plot400-500.ps'
+set output 'lcntplot400-500.ps'
 set terminal post landscape 'Times-Roman' 12
 set terminal post color
 set xlabel 'time'
@@ -88,7 +88,7 @@ plot '$1.flight.txt' title 'snd-flt', \
 unset multiplot
 clear
 reset
-set output 'plot500-600.ps'
+set output 'lcntplot500-600.ps'
 set terminal post landscape 'Times-Roman' 12
 set terminal post color
 set xlabel 'time'
@@ -101,7 +101,7 @@ plot '$1.flight.txt' title 'snd-flt', \
 unset multiplot
 clear
 reset
-set output 'plot600-700.ps'
+set output 'lcntplot600-700.ps'
 set terminal post landscape 'Times-Roman' 12
 set terminal post color
 set xlabel 'time'
@@ -114,7 +114,7 @@ plot '$1.flight.txt' title 'snd-flt', \
 unset multiplot
 clear
 reset
-set output 'plot700-800.ps'
+set output 'lcntplot700-800.ps'
 set terminal post landscape 'Times-Roman' 12
 set terminal post color
 set xlabel 'time'
@@ -127,7 +127,7 @@ plot '$1.flight.txt' title 'snd-flt', \
 unset multiplot
 clear
 reset
-set output 'plot800-900.ps'
+set output 'lcntplot800-900.ps'
 set terminal post landscape 'Times-Roman' 12
 set terminal post color
 set xlabel 'time'
@@ -140,7 +140,7 @@ plot '$1.flight.txt' title 'snd-flt', \
 unset multiplot
 clear
 reset
-set output 'plot900-1000.ps'
+set output 'lcntplot900-1000.ps'
 set terminal post landscape 'Times-Roman' 12
 set terminal post color
 set xlabel 'time'
@@ -150,14 +150,10 @@ set key outside Right title 'Legend' box 1
 set xrange [.900:1.000]
 plot '$1.flight.txt' title 'snd-flt', \
 '$1.cnt.txt' title 'sack-cnt'
-
-
-
-
 unset multiplot
 clear
 reset
-set output 'plot1000-1100.ps'
+set output 'lcntplot1000-1100.ps'
 set terminal post landscape 'Times-Roman' 12
 set terminal post color
 set xlabel 'time'
@@ -170,7 +166,7 @@ plot '$1.flight.txt' title 'snd-flt', \
 unset multiplot
 clear
 reset
-set output 'plot1100-1200.ps'
+set output 'lcntplot1100-1200.ps'
 set terminal post landscape 'Times-Roman' 12
 set terminal post color
 set xlabel 'time'
@@ -183,7 +179,7 @@ plot '$1.flight.txt' title 'snd-flt', \
 unset multiplot
 clear
 reset
-set output 'plot1200-1300.ps'
+set output 'lcntplot1200-1300.ps'
 set terminal post landscape 'Times-Roman' 12
 set terminal post color
 set xlabel 'time'
@@ -196,7 +192,7 @@ plot '$1.flight.txt' title 'snd-flt', \
 unset multiplot
 clear
 reset
-set output 'plot1300-1400.ps'
+set output 'lcntplot1300-1400.ps'
 set terminal post landscape 'Times-Roman' 12
 set terminal post color
 set xlabel 'time'
@@ -209,7 +205,7 @@ plot '$1.flight.txt' title 'snd-flt', \
 unset multiplot
 clear
 reset
-set output 'plot1400-1500.ps'
+set output 'lcntplot1400-1500.ps'
 set terminal post landscape 'Times-Roman' 12
 set terminal post color
 set xlabel 'time'
@@ -222,7 +218,7 @@ plot '$1.flight.txt' title 'snd-flt', \
 unset multiplot
 clear
 reset
-set output 'plot1500-1600.ps'
+set output 'lcntplot1500-1600.ps'
 set terminal post landscape 'Times-Roman' 12
 set terminal post color
 set xlabel 'time'
@@ -235,7 +231,7 @@ plot '$1.flight.txt' title 'snd-flt', \
 unset multiplot
 clear
 reset
-set output 'plot1600-1700.ps'
+set output 'lcntplot1600-1700.ps'
 set terminal post landscape 'Times-Roman' 12
 set terminal post color
 set xlabel 'time'
@@ -248,7 +244,7 @@ plot '$1.flight.txt' title 'snd-flt', \
 unset multiplot
 clear
 reset
-set output 'plot1700-1800.ps'
+set output 'lcntplot1700-1800.ps'
 set terminal post landscape 'Times-Roman' 12
 set terminal post color
 set xlabel 'time'
@@ -261,7 +257,7 @@ plot '$1.flight.txt' title 'snd-flt', \
 unset multiplot
 clear
 reset
-set output 'plot1800-1900.ps'
+set output 'lcntplot1800-1900.ps'
 set terminal post landscape 'Times-Roman' 12
 set terminal post color
 set xlabel 'time'
@@ -274,7 +270,7 @@ plot '$1.flight.txt' title 'snd-flt', \
 unset multiplot
 clear
 reset
-set output 'plot1900-2000.ps'
+set output 'lcntplot1900-2000.ps'
 set terminal post landscape 'Times-Roman' 12
 set terminal post color
 set xlabel 'time'
