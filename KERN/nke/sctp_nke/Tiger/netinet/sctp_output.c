@@ -7169,7 +7169,6 @@ sctp_can_we_split_this(struct sctp_tcb *stcb,
 		/* you don't want enough */
 		return(0);
 	}
-
 	if(sp->msg_is_complete == 0) {
 		if(eeor_on) {
 			/* If we are doing EEOR we need to always send
@@ -7680,7 +7679,9 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	uint32_t auth_offset = 0;
 	struct sctp_auth_chunk *auth = NULL;
 
-	if(sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXPLICIT_EOR)) {
+	if((asoc->state & SCTP_STATE_SHUTDOWN_PENDING) ||
+	   (asoc->state & SCTP_STATE_SHUTDOWN_RECEIVED) ||
+	   (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXPLICIT_EOR))) {
 		eeor_mode = 1;
 	} else {
 		eeor_mode = 0;
@@ -12400,8 +12401,14 @@ sctp_lower_sosend(struct socket *so,
 			SCTP_TCB_SEND_LOCK(stcb);
 			if(sp->msg_is_complete) {
 				strm->last_msg_incomplete = 0;
+				asoc->stream_locked = 0;
 			} else {
+				/* Just got locked to this guy in
+				 * case of an interupt.
+				 */
 				strm->last_msg_incomplete = 1;
+				asoc->stream_locked = 1;
+				asoc->stream_locked_on  = srcv->sinfo_stream;
 			}
 			sctp_snd_sb_alloc(stcb, sp->length);
 
@@ -12665,6 +12672,7 @@ sctp_lower_sosend(struct socket *so,
 			asoc->stream_locked_on  = srcv->sinfo_stream;
 		} else {
  			strm->last_msg_incomplete = 0;
+			asoc->stream_locked = 0;
 		}
 		SCTP_TCB_SEND_UNLOCK(stcb);
 		if(uio->uio_resid == 0) {
@@ -12903,6 +12911,7 @@ sctp_lower_sosend(struct socket *so,
 	if ((stcb) && (free_cnt_applied)) {
 		atomic_add_16(&stcb->asoc.refcnt, -1);
 	}
+#ifdef INVARIENTS
 #if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	if (stcb) {
 		if (mtx_owned(&stcb->tcb_mtx)) {
@@ -12913,15 +12922,13 @@ sctp_lower_sosend(struct socket *so,
 		}
 	}
 #endif
+#endif
 	if (top){ 
-		printf("Free top:%x\n", (u_int)top);
 		sctp_m_freem(top);
 	}
 	if (control) {
-		printf("Free control:%x\n", (u_int)control);
 		sctp_m_freem(control);
 	}
-
 	return (error);
 }
 
