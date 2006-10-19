@@ -1484,7 +1484,7 @@ sctp_audit_stream_queues_for_size(struct sctp_inpcb *inp,
 	struct sctp_stream_out *outs;
 	struct sctp_stream_queue_pending *sp;
 	unsigned int chks_in_queue = 0;
-
+	int being_filled=0;
 	/*
 	 * This function is ONLY called when the send/sent queues are empty.
 	 */
@@ -1522,6 +1522,8 @@ sctp_audit_stream_queues_for_size(struct sctp_inpcb *inp,
 	TAILQ_FOREACH(outs, &stcb->asoc.out_wheel, next_spoke) {
 		if (!TAILQ_EMPTY(&outs->outqueue)) {
 			TAILQ_FOREACH(sp, &outs->outqueue, next) {
+				if(sp->msg_is_complete)
+					being_filled++;
 				chks_in_queue++;
 			}
 		}
@@ -1539,7 +1541,10 @@ sctp_audit_stream_queues_for_size(struct sctp_inpcb *inp,
 			 * Probably should go in and make it go back through
 			 * and add fragments allowed
 			 */
-			printf("Still nothing moved %d chunks are stuck\n", chks_in_queue);
+			if(being_filled == 0) {
+				printf("Still nothing moved %d chunks are stuck\n", 
+				       chks_in_queue);
+			}
 		}
 	} else {
 		printf("Found no chunks on any queue tot:%lu\n",
