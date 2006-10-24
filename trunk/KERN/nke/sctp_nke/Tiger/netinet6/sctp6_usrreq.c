@@ -82,6 +82,7 @@
 #include <netinet/sctp_asconf.h>
 #include <netinet6/ip6_var.h>
 #include <netinet6/scope6_var.h>
+#include <netinet/sctp_bsd_addr.h>
 #include <netinet/ip6.h>
 #if !defined(__OpenBSD__)
 #include <netinet6/in6_pcb.h>
