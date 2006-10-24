@@ -31,6 +31,12 @@
 		5079593F0893C59400D7E924 /* kernel.h in Headers */ = {isa = PBXBuildFile; fileRef = 5079593B0893C59400D7E924 /* kernel.h */; };
 		507959400893C59400D7E924 /* protosw.h in Headers */ = {isa = PBXBuildFile; fileRef = 5079593C0893C59400D7E924 /* protosw.h */; };
 		507959410893C59400D7E924 /* uio_internal.h in Headers */ = {isa = PBXBuildFile; fileRef = 5079593D0893C59400D7E924 /* uio_internal.h */; };
+		507ED5BB0AEE0CA8005037C4 /* icmp_var.h in Headers */ = {isa = PBXBuildFile; fileRef = 507ED5B50AEE0CA8005037C4 /* icmp_var.h */; };
+		507ED5BC0AEE0CA8005037C4 /* in_var.h in Headers */ = {isa = PBXBuildFile; fileRef = 507ED5B60AEE0CA8005037C4 /* in_var.h */; };
+		507ED5BD0AEE0CA8005037C4 /* ip_var.h in Headers */ = {isa = PBXBuildFile; fileRef = 507ED5B70AEE0CA8005037C4 /* ip_var.h */; };
+		507ED5BE0AEE0CA8005037C4 /* ip6.h in Headers */ = {isa = PBXBuildFile; fileRef = 507ED5B80AEE0CA8005037C4 /* ip6.h */; };
+		507ED5BF0AEE0CA8005037C4 /* sctp_bsd_addr.c in Sources */ = {isa = PBXBuildFile; fileRef = 507ED5B90AEE0CA8005037C4 /* sctp_bsd_addr.c */; };
+		507ED5C00AEE0CA8005037C4 /* sctp_bsd_addr.h in Headers */ = {isa = PBXBuildFile; fileRef = 507ED5BA0AEE0CA8005037C4 /* sctp_bsd_addr.h */; };
 		5088BC1809DD83FB00FA2E68 /* kern_types.h in Headers */ = {isa = PBXBuildFile; fileRef = 5088BC1409DD83FB00FA2E68 /* kern_types.h */; };
 		5088BC1909DD83FB00FA2E68 /* locks.h in Headers */ = {isa = PBXBuildFile; fileRef = 5088BC1509DD83FB00FA2E68 /* locks.h */; };
 		5088BC1A09DD83FB00FA2E68 /* simple_lock.h in Headers */ = {isa = PBXBuildFile; fileRef = 5088BC1609DD83FB00FA2E68 /* simple_lock.h */; };
@@ -110,6 +116,12 @@
 		5079593B0893C59400D7E924 /* kernel.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = kernel.h; sourceTree = "<group>"; };
 		5079593C0893C59400D7E924 /* protosw.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = protosw.h; sourceTree = "<group>"; };
 		5079593D0893C59400D7E924 /* uio_internal.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = uio_internal.h; sourceTree = "<group>"; };
+		507ED5B50AEE0CA8005037C4 /* icmp_var.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = icmp_var.h; sourceTree = "<group>"; };
+		507ED5B60AEE0CA8005037C4 /* in_var.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = in_var.h; sourceTree = "<group>"; };
+		507ED5B70AEE0CA8005037C4 /* ip_var.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = ip_var.h; sourceTree = "<group>"; };
+		507ED5B80AEE0CA8005037C4 /* ip6.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = ip6.h; sourceTree = "<group>"; };
+		507ED5B90AEE0CA8005037C4 /* sctp_bsd_addr.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sctp_bsd_addr.c; sourceTree = "<group>"; };
+		507ED5BA0AEE0CA8005037C4 /* sctp_bsd_addr.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sctp_bsd_addr.h; sourceTree = "<group>"; };
 		5088BC1409DD83FB00FA2E68 /* kern_types.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = kern_types.h; path = kern/kern_types.h; sourceTree = SOURCE_ROOT; };
 		5088BC1509DD83FB00FA2E68 /* locks.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = locks.h; path = kern/locks.h; sourceTree = SOURCE_ROOT; };
 		5088BC1609DD83FB00FA2E68 /* simple_lock.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = simple_lock.h; path = kern/simple_lock.h; sourceTree = SOURCE_ROOT; };
@@ -280,6 +292,12 @@
 				50D42F0206D8C0DF004DAC5C /* sctp_sha1.c */,
 				50D42F0306D8C0DF004DAC5C /* sctp_sha1.h */,
 				50D42F0406D8C0DF004DAC5C /* sctp_structs.h */,
+				507ED5B50AEE0CA8005037C4 /* icmp_var.h */,
+				507ED5B60AEE0CA8005037C4 /* in_var.h */,
+				507ED5B70AEE0CA8005037C4 /* ip_var.h */,
+				507ED5B80AEE0CA8005037C4 /* ip6.h */,
+				507ED5B90AEE0CA8005037C4 /* sctp_bsd_addr.c */,
+				507ED5BA0AEE0CA8005037C4 /* sctp_bsd_addr.h */,
 				50D42F0506D8C0DF004DAC5C /* sctp_timer.c */,
 				50D42F0606D8C0DF004DAC5C /* sctp_timer.h */,
 				50D42F0706D8C0DF004DAC5C /* sctp_uio.h */,
@@ -368,6 +386,11 @@
 				5088BC1909DD83FB00FA2E68 /* locks.h in Headers */,
 				5088BC1A09DD83FB00FA2E68 /* simple_lock.h in Headers */,
 				5088BC1B09DD83FB00FA2E68 /* wait_queue.h in Headers */,
+				507ED5BB0AEE0CA8005037C4 /* icmp_var.h in Headers */,
+				507ED5BC0AEE0CA8005037C4 /* in_var.h in Headers */,
+				507ED5BD0AEE0CA8005037C4 /* ip_var.h in Headers */,
+				507ED5BE0AEE0CA8005037C4 /* ip6.h in Headers */,
+				507ED5C00AEE0CA8005037C4 /* sctp_bsd_addr.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -502,6 +525,7 @@
 				50D42F2F06D8C0F3004DAC5C /* sctp6_usrreq.c in Sources */,
 				5097D9BB09D1D436001F0DDD /* sctp_auth.c in Sources */,
 				501B27070AD3D298008EC7B2 /* sctp_macosx.c in Sources */,
+				507ED5BF0AEE0CA8005037C4 /* sctp_bsd_addr.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
