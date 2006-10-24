@@ -162,8 +162,9 @@ __FBSDID("$FreeBSD:$");
  * as told me of.
  */
 
-
-
+#ifdef SCTP_DEBUG
+extern uint32_t sctp_debug_on;
+#endif
 
 static struct sockaddr_in *
 sctp_is_v4_ifa_addr_prefered(struct ifaddr *ifa, uint8_t loopscope, uint8_t ipv4_scope, uint8_t * sin_loop, uint8_t * sin_local)
