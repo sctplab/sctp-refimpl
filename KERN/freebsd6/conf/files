@@ -1597,6 +1597,7 @@ netinet/ip_output.c		optional inet
 netinet/raw_ip.c		optional inet
 netinet/sctp_usrreq.c		optional inet inet6 sctp
 netinet/sctp_pcb.c		optional inet inet6 sctp
+netinet/sctp_bsd_addr.c		optional inet inet6 sctp
 netinet/sctputil.c		optional inet inet6 sctp
 netinet/sctp_sha1.c		optional inet inet6 sctp
 netinet/sctp_timer.c		optional inet inet6 sctp
