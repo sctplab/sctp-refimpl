@@ -504,11 +504,7 @@ sctp_process_asconf_delete_ip(struct mbuf *m, struct sctp_asconf_paramhdr *aph,
 	}
 
 	/* make sure the source address is not being deleted */
-	if ((memcmp(sa, &sa_source, sizeof(struct sockaddr_in)) == 0)
-#ifdef INET6
-	    || (memcmp(sa, &sa_source, sizeof(struct sockaddr_in6)) == 0)
-#endif				/* INET6 */
-	    ) {
+	if (sctp_cmpaddr(sa, (struct sockaddr *)&sa_source)) {
 		/* trying to delete the source address! */
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
@@ -766,7 +762,8 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 		sctp_m_freem(asoc->last_asconf_ack_sent);
 		asoc->last_asconf_ack_sent = NULL;
 	}
-	m_ack = sctp_get_mbuf_for_msg(sizeof(struct sctp_asconf_ack_chunk), 1, M_DONTWAIT, 1, MT_DATA);
+	m_ack = sctp_get_mbuf_for_msg(sizeof(struct sctp_asconf_ack_chunk), 1,
+				      M_DONTWAIT, 1, MT_DATA);
 	if (m_ack == NULL) {
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
@@ -803,17 +800,17 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 	/* param_length is already validated in process_control... */
 	offset += ntohs(p_addr->ph.param_length);	/* skip lookup addr */
 
-	/* get pointer to first asconf param in ASCONF */
-	aph = (struct sctp_asconf_paramhdr *)sctp_m_getptr(m, offset, sizeof(struct sctp_asconf_paramhdr), (uint8_t *) & aparam_buf);
 	/* get pointer to first asconf param in ASCONF-ACK */
-	if (aph == NULL) {
-		printf("Gak in asconf\n");
-		return;
-	}
 	ack_aph = (struct sctp_asconf_paramhdr *)(mtod(m_ack, caddr_t)+sizeof(struct sctp_asconf_ack_chunk));
 	if (ack_aph == NULL) {
 		printf("Gak in asconf2\n");
 		return;
+	}
+	/* get pointer to first asconf param in ASCONF */
+	aph = (struct sctp_asconf_paramhdr *)sctp_m_getptr(m, offset, sizeof(struct sctp_asconf_paramhdr), (uint8_t *) & aparam_buf);
+	if (aph == NULL) {
+		printf("Empty ASCONF received?\n");
+		goto send_reply;
 	}
 	/* process through all parameters */
 	while (aph != NULL) {
@@ -931,6 +928,7 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 		}
 	}			/* while */
 
+ send_reply:
 	ack_cp->ch.chunk_length = htons(ack_cp->ch.chunk_length);
 	/* save the ASCONF-ACK reply */
 	asoc->last_asconf_ack_sent = m_ack;
