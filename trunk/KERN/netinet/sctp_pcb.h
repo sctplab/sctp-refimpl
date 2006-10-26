@@ -231,10 +231,13 @@ struct sctp_epinfo {
 #endif
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
-	struct mtx logging_mtx;
 	struct mtx ipi_ep_mtx;
 	struct mtx it_mtx;
 	struct mtx ipi_addr_mtx;
+#elif defined(SCTP_PROCESS_LEVEL_LOCKS)
+	struct pthread_mutex_t ipi_ep_mtx;
+	struct pthread_mutex_t it_mtx;
+	struct pthread_mutex_t ipi_addr_mtx;
 #elif defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 #ifdef _KERN_LOCKS_H_
 	lck_grp_attr_t *mtx_grp_attr;
@@ -435,6 +438,11 @@ struct sctp_inpcb {
 	struct mtx inp_create_mtx;
 	struct mtx inp_rdata_mtx;
 	int32_t refcount;
+#elif defined(SCTP_PROCESS_LEVEL_LOCKS)
+	struct pthread_mutex_t inp_mtx;
+	struct pthread_mutex_t inp_create_mtx;
+	struct pthread_mutex_t inp_rdata_mtx;
+	int32_t refcount;
 #endif
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	int32_t refcount;
@@ -482,6 +490,9 @@ struct sctp_tcb {
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
 	struct mtx tcb_mtx;
 	struct mtx tcb_send_mtx;
+#elif defined(SCTP_PROCESS_LEVEL_LOCKS)
+	struct pthread_mutex_t tcb_mtx;
+	struct pthread_mutex_t tcb_send_mtx;
 #endif
 };
 
