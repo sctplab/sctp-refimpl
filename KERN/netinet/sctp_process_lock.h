@@ -30,7 +30,23 @@
 #ifndef __sctp_process_lock_h__
 #define __sctp_process_lock_h__
 
-
+/*
+ * Need to yet define five atomic fuctions or
+ * their equivalant.
+ * - atomic_add_int(&foo, val) - add atomically the
+ *                                value
+ * - atomic_fetchadd_int(&foo, val) - does same as atomic_add_int
+ *                                    but value it was is returned.
+ * - atomic_subtract_int(&foo, val) - can be made from atomic_add_int()
+ *
+ * - atomic_add_16(&short, val) - Adds a 16 bit value atomically.
+ *
+ * - atomic_cmpset_int(&foo, value, newvalue) - Does a set of newvalue
+ *                                              in foo if and only if
+ *                                              foo is value. Returns 0
+ *                                              on success.
+ *                                             
+ */
 
 #define SCTP_IPI_COUNT_INIT()
 
