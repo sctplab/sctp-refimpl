@@ -9,6 +9,9 @@
 /* Begin PBXBuildFile section */
 		32A4FEBC0562C75700D090E7 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 089C167DFE841241C02AAC07 /* InfoPlist.strings */; };
 		32A4FEBE0562C75700D090E7 /* SCTP.c in Sources */ = {isa = PBXBuildFile; fileRef = 1A224C3CFF42312311CA2CB7 /* SCTP.c */; settings = {ATTRIBUTES = (); }; };
+		500CFAD40AF33FEC002D28C1 /* sctp_lock_apple_fg.h in Headers */ = {isa = PBXBuildFile; fileRef = 500CFAD10AF33FEC002D28C1 /* sctp_lock_apple_fg.h */; };
+		500CFAD50AF33FEC002D28C1 /* sctp_lock_bsd.h in Headers */ = {isa = PBXBuildFile; fileRef = 500CFAD20AF33FEC002D28C1 /* sctp_lock_bsd.h */; };
+		500CFAD60AF33FEC002D28C1 /* sctp_lock_empty.h in Headers */ = {isa = PBXBuildFile; fileRef = 500CFAD30AF33FEC002D28C1 /* sctp_lock_empty.h */; };
 		500D736D0729B00A008D8EA9 /* sctp_sys_calls.c in Sources */ = {isa = PBXBuildFile; fileRef = 500D736C0729B00A008D8EA9 /* sctp_sys_calls.c */; };
 		501B27070AD3D298008EC7B2 /* sctp_macosx.c in Sources */ = {isa = PBXBuildFile; fileRef = 501B27060AD3D298008EC7B2 /* sctp_macosx.c */; };
 		503E5D4608A1778B00714243 /* proc_internal.h in Headers */ = {isa = PBXBuildFile; fileRef = 503E5D4508A1778B00714243 /* proc_internal.h */; };
@@ -95,6 +98,9 @@
 		1A224C3CFF42312311CA2CB7 /* SCTP.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = SCTP.c; sourceTree = "<group>"; };
 		32A4FEC30562C75700D090E7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = Info.plist; sourceTree = "<group>"; };
 		32A4FEC40562C75800D090E7 /* SCTP.kext */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SCTP.kext; sourceTree = BUILT_PRODUCTS_DIR; };
+		500CFAD10AF33FEC002D28C1 /* sctp_lock_apple_fg.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sctp_lock_apple_fg.h; sourceTree = "<group>"; };
+		500CFAD20AF33FEC002D28C1 /* sctp_lock_bsd.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sctp_lock_bsd.h; sourceTree = "<group>"; };
+		500CFAD30AF33FEC002D28C1 /* sctp_lock_empty.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sctp_lock_empty.h; sourceTree = "<group>"; };
 		500D736C0729B00A008D8EA9 /* sctp_sys_calls.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sctp_sys_calls.c; sourceTree = "<group>"; };
 		501B27060AD3D298008EC7B2 /* sctp_macosx.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sctp_macosx.c; sourceTree = "<group>"; };
 		50394AB00729AF7200F8D390 /* libsctp.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libsctp.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -283,6 +289,9 @@
 				50D42EF906D8C0DF004DAC5C /* sctp_indata.h */,
 				50D42EFA06D8C0DF004DAC5C /* sctp_input.c */,
 				50D42EFC06D8C0DF004DAC5C /* sctp_output.c */,
+				500CFAD10AF33FEC002D28C1 /* sctp_lock_apple_fg.h */,
+				500CFAD20AF33FEC002D28C1 /* sctp_lock_bsd.h */,
+				500CFAD30AF33FEC002D28C1 /* sctp_lock_empty.h */,
 				50D42EFD06D8C0DF004DAC5C /* sctp_output.h */,
 				50D42EFB06D8C0DF004DAC5C /* sctp_input.h */,
 				50D42EFE06D8C0DF004DAC5C /* sctp_pcb.c */,
@@ -391,6 +400,9 @@
 				507ED5BD0AEE0CA8005037C4 /* ip_var.h in Headers */,
 				507ED5BE0AEE0CA8005037C4 /* ip6.h in Headers */,
 				507ED5C00AEE0CA8005037C4 /* sctp_bsd_addr.h in Headers */,
+				500CFAD40AF33FEC002D28C1 /* sctp_lock_apple_fg.h in Headers */,
+				500CFAD50AF33FEC002D28C1 /* sctp_lock_bsd.h in Headers */,
+				500CFAD60AF33FEC002D28C1 /* sctp_lock_empty.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

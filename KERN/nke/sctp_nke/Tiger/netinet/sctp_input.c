@@ -729,7 +729,7 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
 	if ((SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_SENT) &&
 	    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_ACK_SENT)) {
 		/* unexpected SHUTDOWN-ACK... so ignore... */
-		SCTP_TCB_UNLOCK_IFOWNED(stcb);
+		SCTP_TCB_UNLOCK(stcb);
 		return;
 	}
 	if(stcb->asoc.control_pdapi) {
@@ -2571,7 +2571,7 @@ sctp_handle_shutdown_complete(struct sctp_shutdown_complete_chunk *cp,
 	/* process according to association state */
 	if (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_ACK_SENT) {
 		/* unexpected SHUTDOWN-COMPLETE... so ignore... */
-		SCTP_TCB_UNLOCK_IFOWNED(stcb);
+		SCTP_TCB_UNLOCK(stcb);
 		return;
 	}
 	/* notify upper layer protocol */
