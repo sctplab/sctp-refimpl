@@ -263,6 +263,7 @@ sctp6_input(mp, offp, proto)
 
 #endif				/* NFAITH defined and > 0 */
 	SCTP_STAT_INCR(sctps_recvpackets);
+	SCTP_STAT_INCR_COUNTER64(sctps_inpackets);
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
 		printf("V6 input gets a packet iphlen:%d pktlen:%d\n", iphlen, m->m_pkthdr.len);
@@ -318,6 +319,7 @@ sctp6_input(mp, offp, proto)
 				refcount_up = 1;
 			}
 			SCTP_STAT_INCR(sctps_badsum);
+			SCTP_STAT_INCR_COUNTER32(sctps_checksumerrors);
 			goto bad;
 		}
 		sh->checksum = calc_check;
@@ -1226,8 +1228,13 @@ sctp6_disconnect(struct socket *so)
 						ph->param_length = htons(err->m_len);
 					}
 					sctp_send_abort_tcb(stcb, err);
+					SCTP_STAT_INCR_COUNTER32(sctps_aborted);
 				}
 				SCTP_INP_RUNLOCK(inp);
+				if ((SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_OPEN) ||
+				    (SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
+					SCTP_STAT_DECR_GAUGE32(sctps_currestab);
+				}
 				sctp_free_assoc(inp, stcb, 0);
 				/* No unlock tcb assoc is gone */
 				splx(s);
@@ -1265,6 +1272,7 @@ sctp6_disconnect(struct socket *so)
 					sctp_send_shutdown(stcb, stcb->asoc.primary_destination);
 					sctp_chunk_output(stcb->sctp_ep, stcb, 1);
 					asoc->state = SCTP_STATE_SHUTDOWN_SENT;
+					SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN,
 					    stcb->sctp_ep, stcb,
 					    asoc->primary_destination);
