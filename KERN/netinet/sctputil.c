@@ -5339,7 +5339,14 @@ wait_some_more:
 	} else {
 		/* copy out the mbuf chain */
 get_more_data2:
-		cp_len = uio->uio_resid;
+		/* Do we have a uio, I doubt it if so we grab
+		 * the size from it, if not you get it all
+		 */
+		if(uio)
+			cp_len = uio->uio_resid;
+		else
+			cp_len = control->length;
+
 		if ((uint32_t) cp_len >= control->length) {
 			/* easy way */
 			if ((control->end_added == 0) ||
@@ -5356,7 +5363,8 @@ get_more_data2:
 			if (control->data->m_flags & M_NOTIFICATION) {
 				out_flags |= MSG_NOTIFICATION;
 			}
-			uio->uio_resid -= control->length;
+			if(uio)
+				uio->uio_resid -= control->length;
 			*mp = control->data;
 			m = control->data;
 			while (m) {
@@ -5453,7 +5461,8 @@ get_more_data2:
 				if (cp_len >= m->m_len) {
 					*mp = m;
 					atomic_subtract_int(&control->length,  m->m_len);
-					uio->uio_resid -= m->m_len;
+					if(uio)
+						uio->uio_resid -= m->m_len;
 					cp_len -= m->m_len;
 					control->data = m->m_next;
 					m->m_next = NULL;
@@ -5474,7 +5483,8 @@ get_more_data2:
 					 * got all he wants and its part of
 					 * this mbuf only.
 					 */
-					uio->uio_resid -= m->m_len;
+					if (uio)
+						uio->uio_resid -= m->m_len;
 					cp_len -= m->m_len;
 					if(hold_rlock) {
 						SCTP_INP_READ_UNLOCK(inp);
