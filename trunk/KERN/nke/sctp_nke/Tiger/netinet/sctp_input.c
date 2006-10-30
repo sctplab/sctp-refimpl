@@ -700,8 +700,10 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 		/* send SHUTDOWN-ACK */
 		sctp_send_shutdown_ack(stcb, stcb->asoc.primary_destination);
 		/* move to SHUTDOWN-ACK-SENT state */
+		if (asoc->state == SCTP_STATE_SHUTDOWN_RECEIVED) {
+			SCTP_STAT_DECR_GAUGE32(sctps_currestab);
+		}
 		asoc->state = SCTP_STATE_SHUTDOWN_ACK_SENT;
-		SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
 			printf("moving to SHUTDOWN_ACK state\n");
