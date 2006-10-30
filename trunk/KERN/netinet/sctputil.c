@@ -5611,13 +5611,13 @@ out:
 	if(stcb) {
 		sctp_misc_ints(SCTP_SORECV_DONE,
 			       freed_so_far,
-			       (slen-uio->uio_resid), 
+			       ((uio) ? (slen-uio->uio_resid) : slen), 
 			       stcb->asoc.my_rwnd,
 			       so->so_rcv.sb_cc);
 	} else {
 		sctp_misc_ints(SCTP_SORECV_DONE,
 			       freed_so_far,
-			       (slen-uio->uio_resid), 
+			       ((uio) ? (slen-uio->uio_resid) : slen), 
 			       0,
 			       so->so_rcv.sb_cc);
 	}
