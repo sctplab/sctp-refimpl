@@ -4455,16 +4455,6 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 		}
 		if ((asoc->state & SCTP_STATE_SHUTDOWN_PENDING) &&
 		    (asoc->stream_queue_cnt == 0)){
-			asoc->state = SCTP_STATE_SHUTDOWN_SENT;
-			SCTP_STAT_DECR_GAUGE32(sctps_currestab);
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
-				printf("%s:%d sends a shutdown\n",
-				    __FILE__,
-				    __LINE__
-				    );
-			}
-#endif
 			if(asoc->state & SCTP_STATE_PARTIAL_MSG_LEFT) {
 				/* Need to abort here */
 				struct mbuf *oper;
@@ -4487,6 +4477,13 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 				}
 				sctp_abort_an_association(stcb->sctp_ep, stcb, SCTP_RESPONSE_TO_USER_REQ, oper);
 			} else {
+				asoc->state = SCTP_STATE_SHUTDOWN_SENT;
+				SCTP_STAT_DECR_GAUGE32(sctps_currestab);
+#ifdef SCTP_DEBUG
+				if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
+					printf("%s:%d sends a shutdown\n", __FILE__, __LINE__);
+				}
+#endif
 				sctp_stop_timers_for_shutdown(stcb);
 				sctp_send_shutdown(stcb,
 						   stcb->asoc.primary_destination);
@@ -5128,16 +5125,6 @@ skip_segments:
 		}
 		if ((asoc->state & SCTP_STATE_SHUTDOWN_PENDING) &&
 		    (asoc->stream_queue_cnt == 0)){
-			asoc->state = SCTP_STATE_SHUTDOWN_SENT;
-			SCTP_STAT_DECR_GAUGE32(sctps_currestab);
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
-				printf("%s:%d sends a shutdown\n",
-				    __FILE__,
-				    __LINE__
-				    );
-			}
-#endif
 			if(asoc->state & SCTP_STATE_PARTIAL_MSG_LEFT) {
 				/* Need to abort here */
 				struct mbuf *oper;
@@ -5161,6 +5148,13 @@ skip_segments:
 				sctp_abort_an_association(stcb->sctp_ep, stcb, SCTP_RESPONSE_TO_USER_REQ, oper);
 				return;
 			} else {
+				asoc->state = SCTP_STATE_SHUTDOWN_SENT;
+				SCTP_STAT_DECR_GAUGE32(sctps_currestab);
+#ifdef SCTP_DEBUG
+				if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
+					printf("%s:%d sends a shutdown\n", __FILE__, __LINE__);
+				}
+#endif
 				sctp_stop_timers_for_shutdown(stcb);
 				sctp_send_shutdown(stcb,
 						   stcb->asoc.primary_destination);
