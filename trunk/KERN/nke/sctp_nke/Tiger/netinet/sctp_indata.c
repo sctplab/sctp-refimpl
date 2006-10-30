@@ -88,6 +88,8 @@ __FBSDID("$FreeBSD:$");
 #endif				/* INET6 */
 #include <netinet/ip_icmp.h>
 #include <netinet/icmp_var.h>
+
+#include <netinet/sctp_os.h>
 #include <netinet/sctp_var.h>
 #include <netinet/sctp_pcb.h>
 #include <netinet/sctp_header.h>
@@ -2363,7 +2365,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 
 		sctp_reset_in_stream(stcb, liste->number_entries, liste->req.list_of_streams);
 		TAILQ_REMOVE(&asoc->resetHead, liste, next_resp);
-		FREE(liste, M_PCB);
+		SCTP_FREE(liste);
 		liste = TAILQ_FIRST(&asoc->resetHead);
 		ctl = TAILQ_FIRST(&asoc->pending_reply_queue);
 		if (ctl && (liste == NULL)) {

@@ -124,6 +124,7 @@ __FBSDID("$FreeBSD:$");
 #endif
 #endif				/* IPSEC */
 
+#include <netinet/sctp_os.h>
 #include <netinet/sctp_var.h>
 #include <netinet/sctp_pcb.h>
 #include <netinet/sctputil.h>
@@ -2111,7 +2112,7 @@ sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
 #endif
 	SCTP_INP_INFO_WUNLOCK();
 	if (new_inp->sctp_tcbhash != NULL) {
-		FREE(new_inp->sctp_tcbhash, M_PCB);
+		SCTP_FREE(new_inp->sctp_tcbhash);
 		new_inp->sctp_tcbhash = NULL;
 	}
 	if ((new_inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) == 0) {
@@ -3165,7 +3166,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	}
 	/* Now lets see about freeing the EP hash table. */
 	if (inp->sctp_tcbhash != NULL) {
-		FREE(inp->sctp_tcbhash, M_PCB);
+		SCTP_FREE(inp->sctp_tcbhash);
 		inp->sctp_tcbhash = 0;
 	}
 	/* Now we must put the ep memory back into the zone pool */
@@ -3818,9 +3819,9 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	if ((err = sctp_add_remote_addr(stcb, firstaddr, 1, 1))) {
 		/* failure.. memory error? */
 		if (asoc->strmout)
-			FREE(asoc->strmout, M_PCB);
+			SCTP_FREE(asoc->strmout);
 		if (asoc->mapping_array)
-			FREE(asoc->mapping_array, M_PCB);
+			SCTP_FREE(asoc->mapping_array);
 
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
 		SCTP_DECR_ASOC_COUNT();
@@ -3989,13 +3990,8 @@ sctp_add_vtag_to_timewait(struct sctp_inpcb *inp, uint32_t tag)
 	}
 	/* Need to add a new block to chain */
 	if (!set) {
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		MALLOC(twait_block, struct sctp_tagblock *,
-		    sizeof(struct sctp_tagblock), M_PCB, M_WAITOK);
-#else
-		MALLOC(twait_block, struct sctp_tagblock *,
-		    sizeof(struct sctp_tagblock), M_PCB, M_NOWAIT);
-#endif
+		SCTP_MALLOC(twait_block, struct sctp_tagblock *,
+		    sizeof(struct sctp_tagblock), "TimeWait");
 		if (twait_block == NULL) {
 			return;
 		}
@@ -4351,7 +4347,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 
 	while ((liste = TAILQ_FIRST(&asoc->resetHead)) != NULL) {
 		TAILQ_REMOVE(&asoc->resetHead, liste, next_resp);
-		FREE(liste, M_PCB);
+		SCTP_FREE(liste);
 	}
 
 	sq = TAILQ_FIRST(&asoc->pending_reply_queue);
@@ -4472,12 +4468,12 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
   }
 */
 	if (asoc->mapping_array) {
-		FREE(asoc->mapping_array, M_PCB);
+		SCTP_FREE(asoc->mapping_array);
 		asoc->mapping_array = NULL;
 	}
 	/* the stream outs */
 	if (asoc->strmout) {
-		FREE(asoc->strmout, M_PCB);
+		SCTP_FREE(asoc->strmout);
 		asoc->strmout = NULL;
 	}
 	asoc->streamoutcnt = 0;
@@ -4508,7 +4504,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				}
 			}
 		}
-		FREE(asoc->strmin, M_PCB);
+		SCTP_FREE(asoc->strmin);
 		asoc->strmin = NULL;
 	}
 	asoc->streamincnt = 0;
@@ -4537,7 +4533,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	while (!TAILQ_EMPTY(&asoc->asconf_queue)) {
 		aparam = TAILQ_FIRST(&asoc->asconf_queue);
 		TAILQ_REMOVE(&asoc->asconf_queue, aparam, next);
-		FREE(aparam, M_PCB);
+		SCTP_FREE(aparam);
 	}
 	if (asoc->last_asconf_ack_sent != NULL) {
 		sctp_m_freem(asoc->last_asconf_ack_sent);
@@ -6272,8 +6268,8 @@ sctp_initiate_iterator(inp_func inpf, asoc_func af, uint32_t pcb_state,
 	if (af == NULL) {
 		return (-1);
 	}
-	MALLOC(it, struct sctp_iterator *, sizeof(struct sctp_iterator), M_PCB,
-	    M_WAITOK);
+	SCTP_MALLOC(it, struct sctp_iterator *, sizeof(struct sctp_iterator),
+	    "Iterator");
 	if (it == NULL) {
 		return (ENOMEM);
 	}

@@ -80,6 +80,8 @@
 		50D42F2F06D8C0F3004DAC5C /* sctp6_usrreq.c in Sources */ = {isa = PBXBuildFile; fileRef = 50D42F2D06D8C0F3004DAC5C /* sctp6_usrreq.c */; };
 		50D42F3006D8C0F3004DAC5C /* sctp6_var.h in Headers */ = {isa = PBXBuildFile; fileRef = 50D42F2E06D8C0F3004DAC5C /* sctp6_var.h */; };
 		50D5A2670850E137008084B7 /* locks.h in Headers */ = {isa = PBXBuildFile; fileRef = 50D5A2660850E137008084B7 /* locks.h */; };
+		876D69460AF6812C003372FB /* sctp_os_macosx.h in Headers */ = {isa = PBXBuildFile; fileRef = 876D69440AF6812C003372FB /* sctp_os_macosx.h */; };
+		876D69470AF6812C003372FB /* sctp_os.h in Headers */ = {isa = PBXBuildFile; fileRef = 876D69450AF6812C003372FB /* sctp_os.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXBuildRule section */
@@ -168,6 +170,8 @@
 		50D42F2D06D8C0F3004DAC5C /* sctp6_usrreq.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sctp6_usrreq.c; sourceTree = "<group>"; };
 		50D42F2E06D8C0F3004DAC5C /* sctp6_var.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sctp6_var.h; sourceTree = "<group>"; };
 		50D5A2660850E137008084B7 /* locks.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = locks.h; path = ppc/locks.h; sourceTree = "<group>"; };
+		876D69440AF6812C003372FB /* sctp_os_macosx.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sctp_os_macosx.h; sourceTree = "<group>"; };
+		876D69450AF6812C003372FB /* sctp_os.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sctp_os.h; sourceTree = "<group>"; };
 		D27513B306A6225300ADB3A4 /* Kernel.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Kernel.framework; path = /System/Library/Frameworks/Kernel.framework; sourceTree = "<absolute>"; };
 /* End PBXFileReference section */
 
@@ -270,6 +274,8 @@
 		50D42EED06D8C0DF004DAC5C /* netinet */ = {
 			isa = PBXGroup;
 			children = (
+				876D69450AF6812C003372FB /* sctp_os.h */,
+				876D69440AF6812C003372FB /* sctp_os_macosx.h */,
 				501B27060AD3D298008EC7B2 /* sctp_macosx.c */,
 				5097D9B909D1D436001F0DDD /* sctp_auth.c */,
 				5097D9BA09D1D436001F0DDD /* sctp_auth.h */,
@@ -403,6 +409,8 @@
 				500CFAD40AF33FEC002D28C1 /* sctp_lock_apple_fg.h in Headers */,
 				500CFAD50AF33FEC002D28C1 /* sctp_lock_bsd.h in Headers */,
 				500CFAD60AF33FEC002D28C1 /* sctp_lock_empty.h in Headers */,
+				876D69460AF6812C003372FB /* sctp_os_macosx.h in Headers */,
+				876D69470AF6812C003372FB /* sctp_os.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

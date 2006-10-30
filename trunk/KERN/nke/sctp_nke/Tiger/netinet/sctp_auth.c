@@ -58,7 +58,6 @@ __FBSDID("$FreeBSD:$");
 #include <sys/rnd.h>
 #endif
 
-
 #include <net/if.h>
 #include <net/if_types.h>
 #include <net/route.h>
@@ -69,6 +68,7 @@ __FBSDID("$FreeBSD:$");
 #include <netinet/in_var.h>
 #include <netinet/ip_var.h>
 
+#include <netinet/sctp_os.h>
 #include <netinet/sctp.h>
 #include <netinet/sctp_header.h>
 #include <netinet/sctp_pcb.h>
@@ -84,19 +84,6 @@ extern uint32_t sctp_debug_on;
 #define SCTP_AUTH_DEBUG		(sctp_debug_on & SCTP_DEBUG_AUTH1)
 #define SCTP_AUTH_DEBUG2	(sctp_debug_on & SCTP_DEBUG_AUTH2)
 #endif				/* SCTP_DEBUG */
-
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-#define SCTP_MALLOC_NAMED(var, type, size, name) \
-    do{ \
-	MALLOC(var, type, size, M_PCB, M_WAITOK); \
-    } while (0)
-#else
-#define SCTP_MALLOC_NAMED(var, type, size, name) \
-    do{ \
-	MALLOC(var, type, size, M_PCB, M_NOWAIT); \
-    } while (0)
-#endif
-#define SCTP_FREE(var)	FREE(var, M_PCB)
 
 
 /*
@@ -146,7 +133,8 @@ sctp_alloc_chunklist(void)
 {
 	sctp_auth_chklist_t *chklist;
 
-	SCTP_MALLOC_NAMED(chklist, sctp_auth_chklist_t *, sizeof(*chklist), "AUTH chklist");
+	SCTP_MALLOC(chklist, sctp_auth_chklist_t *, sizeof(*chklist),
+		    "AUTH chklist");
 	if (chklist == NULL) {
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_AUTH_DEBUG) {
@@ -376,8 +364,8 @@ sctp_alloc_key(uint32_t keylen)
 {
 	sctp_key_t *new_key;
 
-	SCTP_MALLOC_NAMED(new_key, sctp_key_t *, sizeof(*new_key) + keylen,
-	    "AUTH key");
+	SCTP_MALLOC(new_key, sctp_key_t *, sizeof(*new_key) + keylen,
+		    "AUTH key");
 	if (new_key == NULL) {
 		/* out of memory */
 		return (NULL);
@@ -609,8 +597,8 @@ sctp_alloc_sharedkey(void)
 {
 	sctp_sharedkey_t *new_key;
 
-	SCTP_MALLOC_NAMED(new_key, sctp_sharedkey_t *, sizeof(*new_key),
-	    "AUTH skey");
+	SCTP_MALLOC(new_key, sctp_sharedkey_t *, sizeof(*new_key),
+		    "AUTH skey");
 	if (new_key == NULL) {
 		/* out of memory */
 		return (NULL);
@@ -725,8 +713,8 @@ sctp_alloc_hmaclist(uint8_t num_hmacs)
 	int alloc_size;
 
 	alloc_size = sizeof(*new_list) + num_hmacs * sizeof(new_list->hmac[0]);
-	SCTP_MALLOC_NAMED(new_list, sctp_hmaclist_t *, alloc_size,
-	    "AUTH HMAC list");
+	SCTP_MALLOC(new_list, sctp_hmaclist_t *, alloc_size,
+		    "AUTH HMAC list");
 	if (new_list == NULL) {
 		/* out of memory */
 		return (NULL);
@@ -879,8 +867,8 @@ sctp_alloc_authinfo(void)
 {
 	sctp_authinfo_t *new_authinfo;
 
-	SCTP_MALLOC_NAMED(new_authinfo, sctp_authinfo_t *, sizeof(*new_authinfo),
-	    "AUTH info");
+	SCTP_MALLOC(new_authinfo, sctp_authinfo_t *, sizeof(*new_authinfo),
+		    "AUTH info");
 	if (new_authinfo == NULL) {
 		/* out of memory */
 		return (NULL);
