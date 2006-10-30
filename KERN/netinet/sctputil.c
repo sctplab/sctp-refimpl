@@ -3634,6 +3634,11 @@ sctp_abort_an_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		sctp_abort_notification(stcb, error);
 	/* notify the peer */
 	sctp_send_abort_tcb(stcb, op_err);
+	SCTP_STAT_INCR_COUNTER32(sctps_aborted);
+	if ((SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_OPEN) ||
+	    (SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
+		SCTP_STAT_DECR_GAUGE32(sctps_currestab);
+	}
 	/* now free the asoc */
 	sctp_free_assoc(inp, stcb, 0);
 }
@@ -3645,6 +3650,7 @@ sctp_handle_ootb(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 	struct sctp_chunkhdr *ch, chunk_buf;
 	unsigned int chk_length;
 
+	SCTP_STAT_INCR_COUNTER32(sctps_outoftheblue);
 	/* Generate a TO address for future reference */
 	if (inp && (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
 		if (LIST_FIRST(&inp->sctp_asoc_list) == NULL) {

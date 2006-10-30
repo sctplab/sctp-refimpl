@@ -741,7 +741,7 @@ struct	sctpstat {
 	u_long  sctps_incontrolchunks;     /* sctpStats 11 (Counter64) */
 	u_long  sctps_inorderchunks;       /* sctpStats 12 (Counter64) */
 	u_long  sctps_inunorderchunks;     /* sctpStats 13 (Counter64) */
-	u_long  sctps_fragusrmegs;         /* sctpStats 14 (Counter64) */
+	u_long  sctps_fragusrmsgs;         /* sctpStats 14 (Counter64) */
 	u_long  sctps_reasmusrmsgs;        /* sctpStats 15 (Counter64) */
 	u_long  sctps_outpackets;          /* sctpStats 16 (Counter64) */
 	u_long  sctps_inpackets;           /* sctpStats 17 (Counter64) */
@@ -855,15 +855,21 @@ struct	sctpstat {
 };
 
 #define SCTP_STAT_INCR(_x) SCTP_STAT_INCR_BY(_x,1)
+#define SCTP_STAT_DECR(_x) SCTP_STAT_DECR_BY(_x,1)
 #if defined(__FreeBSD__)
 #define SCTP_STAT_INCR_BY(_x,_d) atomic_add_long(&sctpstat._x, _d)
+#define SCTP_STAT_DECR_BY(_x,_d) atomic_add_long(&sctpstat._x, -(_d))
 #else
 #define SCTP_STAT_INCR_BY(_x,_d) atomic_add_int(&sctpstat._x, _d)
+#define SCTP_STAT_DECR_BY(_x,_d) atomic_add_int(&sctpstat._x, -(_d))
 #endif
 /* The following macros are for handling MIB values, */
 #define SCTP_STAT_INCR_COUNTER32(_x) SCTP_STAT_INCR(_x)
 #define SCTP_STAT_INCR_COUNTER64(_x) SCTP_STAT_INCR(_x)
 #define SCTP_STAT_INCR_GAUGE32(_x) SCTP_STAT_INCR(_x)
+#define SCTP_STAT_DECR_COUNTER32(_x) SCTP_STAT_DECR(_x)
+#define SCTP_STAT_DECR_COUNTER64(_x) SCTP_STAT_DECR(_x)
+#define SCTP_STAT_DECR_GAUGE32(_x) SCTP_STAT_DECR(_x)
 
 /*
  * Kernel defined for sctp_send
