@@ -147,6 +147,7 @@ __FBSDID("$FreeBSD:$");
 #include <sys/proc_internal.h>
 #endif
 
+#include <netinet/sctp_os.h>
 #include <netinet/sctputil.h>
 #include <netinet/sctp_var.h>
 #ifdef INET6
@@ -1168,13 +1169,9 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	 */
 	asoc->streamoutcnt = asoc->pre_open_streams =
 	    m->sctp_ep.pre_open_stream_count;
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	MALLOC(asoc->strmout, struct sctp_stream_out *, asoc->streamoutcnt *
-	    sizeof(struct sctp_stream_out), M_PCB, M_WAITOK);
-#else
-	MALLOC(asoc->strmout, struct sctp_stream_out *, asoc->streamoutcnt *
-	    sizeof(struct sctp_stream_out), M_PCB, M_NOWAIT);
-#endif
+	SCTP_MALLOC(asoc->strmout, struct sctp_stream_out *,
+		    asoc->streamoutcnt * sizeof(struct sctp_stream_out),
+		    "StreamsOut");
 	if (asoc->strmout == NULL) {
 		/* big trouble no memory */
 		return (ENOMEM);
@@ -1197,20 +1194,10 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	}
 	/* Now the mapping array */
 	asoc->mapping_array_size = SCTP_INITIAL_MAPPING_ARRAY;
-#ifdef __NetBSD__
-	MALLOC(asoc->mapping_array, uint8_t *, SCTP_INITIAL_MAPPING_ARRAY,
-	    M_PCB, M_NOWAIT);
-#else
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	MALLOC(asoc->mapping_array, uint8_t *, asoc->mapping_array_size,
-	    M_PCB, M_WAITOK);
-#else
-	MALLOC(asoc->mapping_array, uint8_t *, asoc->mapping_array_size,
-	    M_PCB, M_NOWAIT);
-#endif
-#endif
+	SCTP_MALLOC(asoc->mapping_array, uint8_t *, asoc->mapping_array_size,
+		    "MappingArray");
 	if (asoc->mapping_array == NULL) {
-		FREE(asoc->strmout, M_PCB);
+		SCTP_FREE(asoc->strmout);
 		return (ENOMEM);
 	}
 	memset(asoc->mapping_array, 0, asoc->mapping_array_size);
@@ -1244,16 +1231,7 @@ sctp_expand_mapping_array(struct sctp_association *asoc)
 	uint16_t new_size;
 
 	new_size = asoc->mapping_array_size + SCTP_MAPPING_ARRAY_INCR;
-#ifdef __NetBSD__
-	MALLOC(new_array, uint8_t *, asoc->mapping_array_size
-	    + SCTP_MAPPING_ARRAY_INCR, M_PCB, M_NOWAIT);
-#else
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	MALLOC(new_array, uint8_t *, new_size, M_PCB, M_WAITOK);
-#else
-	MALLOC(new_array, uint8_t *, new_size, M_PCB, M_NOWAIT);
-#endif
-#endif
+	SCTP_MALLOC(new_array, uint8_t *, new_size, "MappingArray");
 	if (new_array == NULL) {
 		/* can't get more, forget it */
 		printf("No memory for expansion of SCTP mapping array %d\n",
@@ -1262,7 +1240,7 @@ sctp_expand_mapping_array(struct sctp_association *asoc)
 	}
 	memset(new_array, 0, new_size);
 	memcpy(new_array, asoc->mapping_array, asoc->mapping_array_size);
-	FREE(asoc->mapping_array, M_PCB);
+	SCTP_FREE(asoc->mapping_array);
 	asoc->mapping_array = new_array;
 	asoc->mapping_array_size = new_size;
 	return (0);

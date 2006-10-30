@@ -131,9 +131,6 @@ __FBSDID("$FreeBSD:$");
 #endif
 #endif
 
-
-#include <netinet/sctp_pcb.h>
-
 #ifdef IPSEC
 #ifndef __OpenBSD__
 #include <netinet6/ipsec.h>
@@ -143,10 +140,11 @@ __FBSDID("$FreeBSD:$");
 #endif
 #endif				/* IPSEC */
 
+#include <netinet/sctp_os.h>
 #include <netinet/sctp_var.h>
 #include <netinet/sctp_header.h>
-#include <netinet/sctputil.h>
 #include <netinet/sctp_pcb.h>
+#include <netinet/sctputil.h>
 #include <netinet/sctp_output.h>
 #include <netinet/sctp_uio.h>
 #include <netinet/sctputil.h>
@@ -4839,7 +4837,7 @@ sctp_sendall_completes(void *ptr, uint32_t val)
 
 	/* now free everything */
 	sctp_m_freem(ca->m);
-	FREE(ca, M_PCB);
+	SCTP_FREE(ca);
 }
 
 
@@ -4899,8 +4897,8 @@ sctp_sendall(struct sctp_inpcb *inp, struct uio *uio, struct mbuf *m,
 	int ret;
 	struct sctp_copy_all *ca;
 
-	MALLOC(ca, struct sctp_copy_all *,
-	    sizeof(struct sctp_copy_all), M_PCB, M_WAIT);
+	SCTP_MALLOC(ca, struct sctp_copy_all *, sizeof(struct sctp_copy_all),
+		    "CopyAll");
 	if (ca == NULL) {
 		sctp_m_freem(m);
 		return (ENOMEM);
@@ -4926,7 +4924,7 @@ sctp_sendall(struct sctp_inpcb *inp, struct uio *uio, struct mbuf *m,
 #endif
 		if (ca->m == NULL) {
 		out_no_mem:
-			FREE(ca, M_PCB);
+			SCTP_FREE(ca);
 			return (ENOMEM);
 		}
 	} else {
@@ -4962,7 +4960,7 @@ sctp_sendall(struct sctp_inpcb *inp, struct uio *uio, struct mbuf *m,
 #ifdef SCTP_DEBUG
 		printf("Failed to initiate iterator for sendall\n");
 #endif
-		FREE(ca, M_PCB);
+		SCTP_FREE(ca);
 		return (EFAULT);
 	}
 	return (0);
@@ -10055,7 +10053,7 @@ sctp_lower_sosend(struct socket *so,
 							       asoc->streamoutcnt, asoc->pre_open_streams);
 						}
 #endif
-						FREE(asoc->strmout, M_PCB);
+						SCTP_FREE(asoc->strmout);
 						asoc->strmout = NULL;
 						asoc->streamoutcnt = asoc->pre_open_streams;
 						/*
@@ -10070,11 +10068,11 @@ sctp_lower_sosend(struct socket *so,
 								had_lock = 1;
 								SCTP_TCB_UNLOCK(stcb);
 							}
-							MALLOC(tmp_str,
+							SCTP_MALLOC(tmp_str,
 							       struct sctp_stream_out *,
 							       asoc->streamoutcnt *
 							       sizeof(struct sctp_stream_out),
-							       M_PCB, M_WAIT);
+							       "StreamsOut");
 							if(had_lock) {
 								SCTP_TCB_LOCK(stcb);
 							}

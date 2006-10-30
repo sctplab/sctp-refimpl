@@ -88,6 +88,7 @@ __FBSDID("$FreeBSD:$");
 
 #include <netinet/in_pcb.h>
 
+#include <netinet/sctp_os.h>
 #include <netinet/sctp_var.h>
 #include <netinet/sctp_pcb.h>
 #include <netinet/sctp_header.h>
@@ -786,7 +787,7 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 
 	/* skip the lookup address parameter */
 	offset += sizeof(struct sctp_asconf_chunk);
-	p_addr = (struct sctp_ipv6addr_param *)sctp_m_getptr(m, offset, sizeof(struct sctp_paramhdr), (uint8_t *) & aparam_buf);
+	p_addr = (struct sctp_ipv6addr_param *)sctp_m_getptr(m, offset, sizeof(struct sctp_paramhdr), (uint8_t *)&aparam_buf);
 	if (p_addr == NULL) {
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
@@ -807,7 +808,7 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 		return;
 	}
 	/* get pointer to first asconf param in ASCONF */
-	aph = (struct sctp_asconf_paramhdr *)sctp_m_getptr(m, offset, sizeof(struct sctp_asconf_paramhdr), (uint8_t *) & aparam_buf);
+	aph = (struct sctp_asconf_paramhdr *)sctp_m_getptr(m, offset, sizeof(struct sctp_asconf_paramhdr), (uint8_t *)&aparam_buf);
 	if (aph == NULL) {
 		printf("Empty ASCONF received?\n");
 		goto send_reply;
@@ -916,7 +917,7 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 		/* get pointer to next asconf param */
 		aph = (struct sctp_asconf_paramhdr *)sctp_m_getptr(m, offset,
 		    sizeof(struct sctp_asconf_paramhdr),
-		    (uint8_t *) & aparam_buf);
+		    (uint8_t *)&aparam_buf);
 		if (aph == NULL) {
 			/* can't get an asconf paramhdr */
 #ifdef SCTP_DEBUG
@@ -1140,7 +1141,7 @@ sctp_asconf_queue_add(struct sctp_tcb *stcb, struct ifaddr *ifa, uint16_t type)
 			/* take the entry off the appropriate list */
 			sctp_asconf_addr_mgmt_ack(stcb, aa->ifa, type, 1);
 			/* free the entry */
-			FREE(aa, M_PCB);
+			SCTP_FREE(aa);
 
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
@@ -1152,11 +1153,7 @@ sctp_asconf_queue_add(struct sctp_tcb *stcb, struct ifaddr *ifa, uint16_t type)
 	}			/* for each aa */
 
 	/* adding new request to the queue */
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	MALLOC(aa, struct sctp_asconf_addr *, sizeof(*aa), M_PCB, M_WAITOK);
-#else
-	MALLOC(aa, struct sctp_asconf_addr *, sizeof(*aa), M_PCB, M_NOWAIT);
-#endif
+	SCTP_MALLOC(aa, struct sctp_asconf_addr *, sizeof(*aa), "AsconfAddr");
 	if (aa == NULL) {
 		/* didn't get memory */
 #ifdef SCTP_DEBUG
@@ -1283,7 +1280,7 @@ sctp_asconf_queue_add_sa(struct sctp_tcb *stcb, struct sockaddr *sa,
 			/* delete the existing entry in the queue */
 			TAILQ_REMOVE(&stcb->asoc.asconf_queue, aa, next);
 			/* free the entry */
-			FREE(aa, M_PCB);
+			SCTP_FREE(aa);
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
 				printf("asconf_queue_add_sa: removing queued delete request\n");
@@ -1299,7 +1296,7 @@ sctp_asconf_queue_add_sa(struct sctp_tcb *stcb, struct sockaddr *sa,
 			/* take the entry off the appropriate list */
 			sctp_asconf_addr_mgmt_ack(stcb, aa->ifa, type, 1);
 			/* free the entry */
-			FREE(aa, M_PCB);
+			SCTP_FREE(aa);
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
 				printf("asconf_queue_add_sa: removing queued add request\n");
@@ -1310,11 +1307,7 @@ sctp_asconf_queue_add_sa(struct sctp_tcb *stcb, struct sockaddr *sa,
 	}			/* for each aa */
 
 	/* adding new request to the queue */
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	MALLOC(aa, struct sctp_asconf_addr *, sizeof(*aa), M_PCB, M_WAITOK);
-#else
-	MALLOC(aa, struct sctp_asconf_addr *, sizeof(*aa), M_PCB, M_NOWAIT);
-#endif
+	SCTP_MALLOC(aa, struct sctp_asconf_addr *, sizeof(*aa), "AsconfAddr");
 	if (aa == NULL) {
 		/* didn't get memory */
 #ifdef SCTP_DEBUG
@@ -1508,7 +1501,7 @@ sctp_asconf_process_param_ack(struct sctp_tcb *stcb,
 
 	/* remove the param and free it */
 	TAILQ_REMOVE(&stcb->asoc.asconf_queue, aparam, next);
-	FREE(aparam, M_PCB);
+	SCTP_FREE(aparam);
 }
 
 /*
@@ -1881,7 +1874,7 @@ sctp_addr_mgmt_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
 				printf("addr_mgmt_assoc: unspecified IPv6 addr\n");
 			}
-#endif				/* SCTP_DEBUG */
+#endif /* SCTP_DEBUG */
 			return;
 		}
 		if (IN6_IS_ADDR_LINKLOCAL(&sin6->sin6_addr)) {
@@ -1891,7 +1884,7 @@ sctp_addr_mgmt_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 					printf("addr_mgmt_assoc: skipping link local IPv6 addr:");
 					sctp_print_address((struct sockaddr *)sin6);
 				}
-#endif				/* SCTP_DEBUG */
+#endif /* SCTP_DEBUG */
 				return;
 			}
 			/* is it the right link local scope? */
@@ -1901,7 +1894,7 @@ sctp_addr_mgmt_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 					printf("addr_mgmt_assoc: skipping link local IPv6 addr due to wrong scope_id:");
 					sctp_print_address((struct sockaddr *)sin6);
 				}
-#endif				/* SCTP_DEBUG */
+#endif /* SCTP_DEBUG */
 				return;
 			}
 		}
@@ -1912,7 +1905,7 @@ sctp_addr_mgmt_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				printf("addr_mgmt_assoc: skipping site local IPv6 addr:");
 				sctp_print_address((struct sockaddr *)sin6);
 			}
-#endif				/* SCTP_DEBUG */
+#endif /* SCTP_DEBUG */
 			return;
 		}
 	} else if (ifa->ifa_addr->sa_family == AF_INET) {
@@ -1939,7 +1932,7 @@ sctp_addr_mgmt_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
 				printf("addr_mgmt_assoc: unspecified IPv4 addr\n");
 			}
-#endif				/* SCTP_DEBUG */
+#endif /* SCTP_DEBUG */
 			return;
 		}
 		if (stcb->asoc.ipv4_local_scope == 0 &&
@@ -1949,7 +1942,7 @@ sctp_addr_mgmt_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				printf("addr_mgmt_assoc: skipping private IPv4 addr:");
 				sctp_print_address((struct sockaddr *)sin);
 			}
-#endif				/* SCTP_DEBUG */
+#endif /* SCTP_DEBUG */
 			return;
 		}
 	} else {

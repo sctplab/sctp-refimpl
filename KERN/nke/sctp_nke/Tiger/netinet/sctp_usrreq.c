@@ -86,6 +86,7 @@ __FBSDID("$FreeBSD:$");
 #endif
 #include <netinet/ip_icmp.h>
 #include <netinet/icmp_var.h>
+#include <netinet/sctp_os.h>
 #include <netinet/sctp_pcb.h>
 #include <netinet/sctp_header.h>
 #include <netinet/sctp_var.h>
@@ -5458,8 +5459,7 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 		struct sockaddr_in *sin;
 
 #if defined(__FreeBSD__) || defined(__APPLE__)
-		MALLOC(sin, struct sockaddr_in *, sizeof *sin, M_SONAME,
-		    M_WAITOK | M_ZERO);
+		SCTP_MALLOC_SONAME(sin, struct sockaddr_in *, sizeof *sin);
 #else
 		sin = (struct sockaddr_in *)addr;
 		bzero((caddr_t)sin, sizeof(*sin));
@@ -5477,8 +5477,7 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 		struct sockaddr_in6 *sin6;
 
 #if defined(__FreeBSD__) || defined(__APPLE__)
-		MALLOC(sin6, struct sockaddr_in6 *, sizeof *sin6, M_SONAME,
-		    M_WAITOK | M_ZERO);
+		SCTP_MALLOC_SONAME(sin6, struct sockaddr_in6 *, sizeof *sin6);
 #else
 		sin6 = (struct sockaddr_in6 *)addr;
 		bzero((caddr_t)sin6, sizeof(*sin6));
@@ -5563,8 +5562,7 @@ sctp_ingetaddr(struct socket *so, struct mbuf *nam)
 	 * Do the malloc first in case it blocks.
 	 */
 #if defined(__FreeBSD__) || defined(__APPLE__)
-	MALLOC(sin, struct sockaddr_in *, sizeof *sin, M_SONAME, M_WAITOK |
-	    M_ZERO);
+	SCTP_MALLOC_SONAME(sin, struct sockaddr_in *, sizeof *sin);
 #else
 	nam->m_len = sizeof(*sin);
 	memset(sin, 0, sizeof(*sin));
@@ -5580,7 +5578,7 @@ sctp_ingetaddr(struct socket *so, struct mbuf *nam)
 	if (!inp) {
 		splx(s);
 #if defined(__FreeBSD__) || defined(__APPLE__)
-		FREE(sin, M_SONAME);
+		SCTP_FREE_SONAME(sin);
 #endif
 		return ECONNRESET;
 	}
@@ -5639,7 +5637,7 @@ sctp_ingetaddr(struct socket *so, struct mbuf *nam)
 		if (!fnd) {
 			splx(s);
 #if defined(__FreeBSD__) || defined(__APPLE__)
-			FREE(sin, M_SONAME);
+			SCTP_FREE_SONAME(sin);
 #endif
 			SCTP_INP_RUNLOCK(inp);
 			return ENOENT;
@@ -5686,8 +5684,7 @@ sctp_peeraddr(struct socket *so, struct mbuf *nam)
 #endif
 
 #if defined(__FreeBSD__) || defined(__APPLE__)
-	MALLOC(sin, struct sockaddr_in *, sizeof *sin, M_SONAME, M_WAITOK |
-	    M_ZERO);
+	SCTP_MALLOC_SONAME(sin, struct sockaddr_in *, sizeof *sin);
 #else
 	nam->m_len = sizeof(*sin);
 	memset(sin, 0, sizeof(*sin));
@@ -5700,7 +5697,7 @@ sctp_peeraddr(struct socket *so, struct mbuf *nam)
 	if (!inp) {
 		splx(s);
 #if defined(__FreeBSD__) || defined(__APPLE__)
-		FREE(sin, M_SONAME);
+		SCTP_FREE_SONAME(sin);
 #endif
 		return ECONNRESET;
 	}
@@ -5712,7 +5709,7 @@ sctp_peeraddr(struct socket *so, struct mbuf *nam)
 	if (stcb == NULL) {
 		splx(s);
 #if defined(__FreeBSD__) || defined(__APPLE__)
-		FREE(sin, M_SONAME);
+		SCTP_FREE_SONAME(sin);
 #endif
 		return ECONNRESET;
 	}
@@ -5731,7 +5728,7 @@ sctp_peeraddr(struct socket *so, struct mbuf *nam)
 		/* No IPv4 address */
 		splx(s);
 #if defined(__FreeBSD__) || defined(__APPLE__)
-		FREE(sin, M_SONAME);
+		SCTP_FREE_SONAME(sin);
 #endif
 		return ENOENT;
 	}
