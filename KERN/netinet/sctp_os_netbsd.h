@@ -27,8 +27,8 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF 
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef __sctp_os_bsd_h__
-#define __sctp_os_bsd_h__
+#ifndef __sctp_os_netbsd_h__
+#define __sctp_os_netbsd_h__
 
 
 #define SCTP_MALLOC(var, type, size, name) \
@@ -38,51 +38,33 @@
 
 #define SCTP_FREE(var)	FREE(var, M_PCB)
 
-#define SCTP_MALLOC_SONAME(var, type, size) \
-    do { \
-	MALLOC(var, type, size, M_SONAME, M_WAITOK | M_ZERO); \
-    } while (0)
-
-#define SCTP_FREE_SONAME(var)	FREE(var, M_SONAME)
 
 /*
  * zone allocation functions
  */
-#if __FreeBSD_version >= 500000
-#include <vm/uma.h>
-#else
-#include <vm/vm_zone.h>
-#endif
+#include <sys/pool.h>
+void *sctp_pool_get(struct pool *, int);
+void sctp_pool_put(struct pool *, void *);
+
 /* SCTP_ZONE_INIT: initialize the zone */
-#if __FreeBSD_version >= 500000
-#define UMA_ZFLAG_FULL	0x0020
-#define SCTP_ZONE_INIT(zone, name, size, number) { \
-	zone = uma_zcreate(name, size, NULL, NULL, NULL, NULL, UMA_ALIGN_PTR,\
-		UMA_ZFLAG_FULL); \
-	uma_zone_set_max(zone, number); \
-}
-#else
 #define SCTP_ZONE_INIT(zone, name, size, number) \
-	zone = zinit(name, size, number, ZONE_INTERRUPT, 0);
-#endif
+	pool_init(&(zone), size, 0, 0, 0, name, NULL);
 
 /* SCTP_ZONE_GET: allocate element from the zone */
-#if __FreeBSD_version >= 500000
 #define SCTP_ZONE_GET(zone) \
-	uma_zalloc(zone, M_NOWAIT);
-#else
-#define SCTP_ZONE_GET(zone) \
-	zalloci(zone);
-#endif
+	sctp_pool_get(&zone, PR_NOWAIT);
 
 /* SCTP_ZONE_FREE: free element from the zone */
-#if __FreeBSD_version >= 500000
 #define SCTP_ZONE_FREE(zone, element) \
-	uma_zfree(zone, element);
-#else
-#define SCTP_ZONE_FREE(zone, element) \
-	zfreei(zone, element);
-#endif
+	sctp_pool_put(&zone, element);
 
+/*
+ * Other NetBSD Specific
+ */
+#if defined(__NetBSD__)
+/* emulate the atomic_xxx() functions... */
+#define atomic_add_int(addr, val)	(*(addr) += val)
+#define atomic_subtract_int(addr, val)	(*(addr) -= val)
+#endif
 
 #endif
