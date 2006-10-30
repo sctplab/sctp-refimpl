@@ -1381,8 +1381,13 @@ sctp_disconnect(struct socket *so)
 						ph->param_length = htons(err->m_len);
 					}
 					sctp_send_abort_tcb(stcb, err);
+					SCTP_STAT_INCR_COUNTER32(sctps_aborted);
 				}
 				SCTP_INP_RUNLOCK(inp);
+				if ((SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_OPEN) ||
+				    (SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
+					SCTP_STAT_DECR_GAUGE32(sctps_currestab);
+				}
 				sctp_free_assoc(inp, stcb, 0);
 				/* No unlock tcb assoc is gone */
 				splx(s);
@@ -1413,6 +1418,7 @@ sctp_disconnect(struct socket *so)
 					    stcb->asoc.primary_destination);
 					sctp_chunk_output(stcb->sctp_ep, stcb, SCTP_OUTPUT_FROM_T3);
 					asoc->state = SCTP_STATE_SHUTDOWN_SENT;
+					SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN,
 					    stcb->sctp_ep, stcb,
 					    asoc->primary_destination);
@@ -1470,6 +1476,11 @@ sctp_disconnect(struct socket *so)
 						*ippp = htonl(0x30000007);
 					}
 					sctp_send_abort_tcb(stcb, op_err);
+					SCTP_STAT_INCR_COUNTER32(sctps_aborted);
+					if ((SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_OPEN) ||
+					    (SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
+						SCTP_STAT_DECR_GAUGE32(sctps_currestab);
+					}
 					SCTP_INP_RUNLOCK(inp);
 					sctp_free_assoc(inp, stcb, 0);
 					splx(s);
@@ -1564,6 +1575,7 @@ sctp_shutdown(struct socket *so)
 				    stcb->asoc.primary_destination);
 				sctp_chunk_output(stcb->sctp_ep, stcb, SCTP_OUTPUT_FROM_T3);
 				asoc->state = SCTP_STATE_SHUTDOWN_SENT;
+				SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 				sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN,
 				    stcb->sctp_ep, stcb,
 				    asoc->primary_destination);

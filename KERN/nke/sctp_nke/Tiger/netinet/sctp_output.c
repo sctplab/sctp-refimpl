@@ -2522,6 +2522,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			ro->ro_rt->rt_ifp->if_mtu = have_mtu;
 		}
 		SCTP_STAT_INCR(sctps_sendpackets);
+		SCTP_STAT_INCR_COUNTER64(sctps_outpackets);
 		if(ret)
 			SCTP_STAT_INCR(sctps_senderrors);
 #ifdef SCTP_DEBUG
@@ -2776,6 +2777,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		}
 #endif				/* SCTP_DEBUG_OUTPUT */
 		SCTP_STAT_INCR(sctps_sendpackets);
+		SCTP_STAT_INCR_COUNTER64(sctps_outpackets);
 		if(ret)
 			SCTP_STAT_INCR(sctps_senderrors);
 		if (net == NULL) {
@@ -3095,6 +3097,7 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	ret = sctp_lowlevel_chunk_output(inp, stcb, net,
 	    (struct sockaddr *)&net->ro._l_addr,
 	    m, 0, NULL, 0, 0, NULL, 0);
+	SCTP_STAT_INCR_COUNTER64(sctps_outcontrolchunks);
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
 		printf("Low level output returns %d\n", ret);
@@ -4075,6 +4078,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	}
 	sctp_lowlevel_chunk_output(inp, NULL, NULL, to, m, 0, NULL, 0, 0,
 				   NULL, 0);
+	SCTP_STAT_INCR_COUNTER64(sctps_outcontrolchunks);
 }
 
 
@@ -4741,6 +4745,7 @@ sctp_sendall_iterator(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
 					/* only send SHUTDOWN the first time through */
 					sctp_send_shutdown(stcb, stcb->asoc.primary_destination);
 					asoc->state = SCTP_STATE_SHUTDOWN_SENT;
+					SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN, stcb->sctp_ep, stcb,
 							 asoc->primary_destination);
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD, stcb->sctp_ep, stcb,
@@ -5973,6 +5978,7 @@ again_one_more_time:
 					    &auth_offset,
 					    stcb,
 					    chk->rec.chunk_id.id);
+					SCTP_STAT_INCR_COUNTER64(sctps_outcontrolchunks);
 				}
 				outchain = sctp_copy_mbufchain(chk->data, outchain, &endoutchain, 
 							       (int)chk->rec.chunk_id.can_take_data,
@@ -5981,6 +5987,7 @@ again_one_more_time:
 					*reason_code = 8;
 					return (ENOMEM);
 				}
+				SCTP_STAT_INCR_COUNTER64(sctps_outcontrolchunks);
 				/* update our MTU size */
 				if (mtu > (chk->data->m_pkthdr.len + omtu))
 					mtu -= (chk->data->m_pkthdr.len + omtu);
@@ -6264,6 +6271,7 @@ again_one_more_time:
 						    &auth_offset,
 						    stcb,
 						    SCTP_DATA);
+						SCTP_STAT_INCR_COUNTER64(sctps_outcontrolchunks);
 					}
 					outchain = sctp_copy_mbufchain(chk->data, outchain, &endoutchain, 0, 
 								       chk->send_size, chk->copy_by_ref);
@@ -6303,6 +6311,16 @@ again_one_more_time:
 					if (bundle_at >= SCTP_MAX_DATA_BUNDLING) {
 						mtu = 0;
 						break;
+					}
+					if (chk->sent == SCTP_DATAGRAM_UNSENT) {
+						if ((chk->rec.data.rcv_flags & SCTP_DATA_UNORDERED) == 0) {
+							SCTP_STAT_INCR_COUNTER64(sctps_outorderchunks);
+						} else {
+							SCTP_STAT_INCR_COUNTER64(sctps_outunorderchunks);
+						}
+						if (((chk->rec.data.rcv_flags & SCTP_DATA_LAST_FRAG) == SCTP_DATA_LAST_FRAG) &&
+						    ((chk->rec.data.rcv_flags & SCTP_DATA_FIRST_FRAG) == 0))
+							SCTP_STAT_INCR_COUNTER64(sctps_fragusrmsgs);
 					}
 					if ((mtu == 0) || (r_mtu == 0) || (one_chunk)) {
 						break;
@@ -8285,6 +8303,7 @@ sctp_send_abort_tcb(struct sctp_tcb *stcb, struct mbuf *operr)
 	    stcb->asoc.primary_destination,
 	    (struct sockaddr *)&stcb->asoc.primary_destination->ro._l_addr,
 	    m_out, auth_offset, auth, 1, 0, NULL, 0);
+	SCTP_STAT_INCR_COUNTER64(sctps_outcontrolchunks);
 }
 
 int
@@ -8315,6 +8334,7 @@ sctp_send_shutdown_complete(struct sctp_tcb *stcb,
 	sctp_lowlevel_chunk_output(stcb->sctp_ep, stcb, net,
 	    (struct sockaddr *)&net->ro._l_addr,
 	    m_shutdown_comp, 0, NULL, 1, 0, NULL, 0);
+	SCTP_STAT_INCR_COUNTER64(sctps_outcontrolchunks);
 	return (0);
 }
 
@@ -8461,6 +8481,8 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh)
 			RTFREE(ro.ro_rt);
 	}
 	SCTP_STAT_INCR(sctps_sendpackets);
+	SCTP_STAT_INCR_COUNTER64(sctps_outpackets);
+	SCTP_STAT_INCR_COUNTER64(sctps_outcontrolchunks);
 	return (0);
 }
 
@@ -9381,6 +9403,7 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 			RTFREE(ro.ro_rt);
 	}
 	SCTP_STAT_INCR(sctps_sendpackets);
+	SCTP_STAT_INCR_COUNTER64(sctps_outpackets);
 }
 
 void
@@ -9470,6 +9493,7 @@ sctp_send_operr_to(struct mbuf *m, int iphlen,
 #endif
 		    );
 		SCTP_STAT_INCR(sctps_sendpackets);
+		SCTP_STAT_INCR_COUNTER64(sctps_outpackets);
 		/* Free the route if we got one back */
 		if (ro.ro_rt)
 			RTFREE(ro.ro_rt);
@@ -9525,6 +9549,7 @@ sctp_send_operr_to(struct mbuf *m, int iphlen,
 #endif
 		    );
 		SCTP_STAT_INCR(sctps_sendpackets);
+		SCTP_STAT_INCR_COUNTER64(sctps_outpackets);
 		/* Free the route if we got one back */
 		if (ro.ro_rt)
 			RTFREE(ro.ro_rt);
@@ -10706,6 +10731,7 @@ sctp_lower_sosend(struct socket *so,
 #endif
 				sctp_send_shutdown(stcb, stcb->asoc.primary_destination);
 				asoc->state = SCTP_STATE_SHUTDOWN_SENT;
+				SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 				sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN, stcb->sctp_ep, stcb,
 						 asoc->primary_destination);
 				sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD, stcb->sctp_ep, stcb,
