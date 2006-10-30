@@ -92,6 +92,8 @@ __FBSDID("$FreeBSD:$");
 
 #include <netinet/ip_icmp.h>
 #include <netinet/icmp_var.h>
+
+#include <netinet/sctp_os.h>
 #include <netinet/sctp_var.h>
 #include <netinet/sctp_pcb.h>
 #include <netinet/sctp_header.h>
@@ -319,15 +321,10 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 	/* open the requested streams */
 	if (asoc->strmin != NULL) {
 		/* Free the old ones */
-		FREE(asoc->strmin, M_PCB);
+		SCTP_FREE(asoc->strmin);
 	}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	MALLOC(asoc->strmin, struct sctp_stream_in *, asoc->streamincnt *
-	    sizeof(struct sctp_stream_in), M_PCB, M_WAITOK);
-#else
-	MALLOC(asoc->strmin, struct sctp_stream_in *, asoc->streamincnt *
-	    sizeof(struct sctp_stream_in), M_PCB, M_NOWAIT);
-#endif
+	SCTP_MALLOC(asoc->strmin, struct sctp_stream_in *, asoc->streamincnt *
+		    sizeof(struct sctp_stream_in), "StreamsIn");
 	if (asoc->strmin == NULL) {
 		/* we didn't get memory for the streams! */
 #ifdef SCTP_DEBUG
@@ -3241,11 +3238,8 @@ sctp_handle_str_reset_request_out(struct sctp_tcb *stcb,
 			int siz;
 
 			siz = sizeof(struct sctp_stream_reset_list) + (number_entries * sizeof(uint16_t));
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			MALLOC(liste, struct sctp_stream_reset_list *, siz, M_PCB, M_WAITOK);
-#else
-			MALLOC(liste, struct sctp_stream_reset_list *, siz, M_PCB, M_NOWAIT);
-#endif
+			SCTP_MALLOC(liste, struct sctp_stream_reset_list *,
+				    siz, "StrRstList");
 			if (liste == NULL) {
 				/* gak out of memory */
 				sctp_add_stream_reset_result(chk, seq, SCTP_STREAM_RESET_DENIED);

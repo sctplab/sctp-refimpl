@@ -105,6 +105,7 @@ __FBSDID("$FreeBSD:$");
 #ifdef INET6
 #include <netinet6/sctp6_var.h>
 #endif
+#include <netinet/sctp_os.h>
 #include <netinet/sctp_var.h>
 #include <netinet/sctp_timer.h>
 #include <netinet/sctputil.h>
@@ -1816,7 +1817,7 @@ done_with_iterator:
 		if (it->function_atend != NULL) {
 			(*it->function_atend) (it->pointer, it->val);
 		}
-		FREE(it, M_PCB);
+		SCTP_FREE(it);
 		return;
 	}
 select_a_new_ep:
@@ -1887,11 +1888,11 @@ select_a_new_ep:
 			SCTP_TCB_UNLOCK(it->stcb);
 			goto next_assoc;
 		}
+		/* mark the current iterator on the assoc */
+		it->stcb->asoc.stcb_starting_point_for_iterator = it;
 		/* see if we have limited out the iterator loop */
 		iteration_count++;
 		if (iteration_count > SCTP_ITERATOR_MAX_AT_ONCE) {
-			/* mark the current iterator on the assoc */
-			it->stcb->asoc.stcb_starting_point_for_iterator = it;
 	start_timer_return:
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			socket_unlock(it->inp->ip_inp.inp.inp_socket, 1);
@@ -1918,7 +1919,7 @@ select_a_new_ep:
 		 * we lie here, it really needs to have its own type but
 		 * first I must verify that this won't effect things :-0
 		 */
-		if(it->no_chunk_output == 0)
+		if (it->no_chunk_output == 0)
 			sctp_chunk_output(it->inp, it->stcb, SCTP_OUTPUT_FROM_T3);
 		
 		SCTP_TCB_UNLOCK(it->stcb);
