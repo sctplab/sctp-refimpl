@@ -51,4 +51,55 @@
     } while (0)
 #define SCTP_FREE_SONAME(var)	FREE(var, M_SONAME)
 
+/*
+ * zone allocation functions
+ */
+extern zone_t kalloc_zone(vm_size_t);	/* XXX */
+
+/* SCTP_ZONE_INIT: initialize the zone */
+#define SCTP_ZONE_INIT(zone, name, size, number) \
+	zone = (void *)kalloc_zone(size);
+
+/* SCTP_ZONE_GET: allocate element from the zone */
+#define SCTP_ZONE_GET(zone) \
+	zalloc(zone);
+
+/* SCTP_ZONE_FREE: free element from the zone */
+#define SCTP_ZONE_FREE(zone, element) \
+	zfree(zone, element);
+
+
+/*
+ * Other MacOS specific
+ */
+
+/* Apple KPI defines for atomic operations */
+#include <libkern/OSAtomic.h>
+#define atomic_add_int(addr, val)        OSAddAtomic(val, (SInt32 *)addr)
+#define atomic_subtract_int(addr, val)   OSAddAtomic((-val), (SInt32 *)addr)
+#define atomic_add_16(addr, val)         OSAddAtomic16(val, (SInt16 *)addr)
+#define atomic_cmpset_int(dst, exp, src) OSCompareAndSwap(exp, src, (UInt32 *)dst)
+
+/* additional protosw entries for Mac OS X 10.4 */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+int sctp_lock(struct socket *so, int refcount, int lr);
+int sctp_unlock(struct socket *so, int refcount, int lr);
+
+#ifdef _KERN_LOCKS_H_
+lck_mtx_t *sctp_getlock(struct socket *so, int locktype);
+#else
+void *sctp_getlock(struct socket *so, int locktype);
+#endif /* _KERN_LOCKS_H_ */
+void sctp_lock_assert(struct socket *so);
+void sctp_unlock_assert(struct socket *so);
+#endif /* SCTP_APPLE_FINE_GRAINED_LOCKING */
+
+/* emulate the BSD 'ticks' clock */
+extern int ticks;
+
+/* XXX: Hopefully temporary until APPLE changes to newer defs like other BSDs */
+#define if_addrlist	if_addrhead
+#define if_list		if_link
+#define ifa_list	ifa_link
+
 #endif

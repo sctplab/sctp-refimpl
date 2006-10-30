@@ -40,6 +40,7 @@
 #include <netinet/ip6.h>
 #endif
 #include <netinet/in_pcb.h>
+#include <netinet/sctp_os.h>
 #include <netinet/sctp_pcb.h>
 #include <netinet/sctp_peeloff.h>
 
