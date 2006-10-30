@@ -54,6 +54,7 @@
 #include <netinet/sctp_var.h>
 #include <netinet/sctp_timer.h>
 #include <netinet6/sctp6_var.h>
+#include <netinet/sctp_os_macosx.h>
 
 SYSCTL_DECL(_net_inet);
 SYSCTL_DECL(_net_inet6);
