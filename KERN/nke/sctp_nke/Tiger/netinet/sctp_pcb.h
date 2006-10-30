@@ -77,6 +77,7 @@ __FBSDID("$FreeBSD:$");
 #endif
 
 #include <netinet/sctp.h>
+#include <netinet/sctp_os.h>
 #include <netinet/sctp_constants.h>
 
 LIST_HEAD(sctppcbhead, sctp_inpcb);
@@ -201,34 +202,13 @@ struct sctp_epinfo {
 	struct sctpiterators iteratorhead;
 
 	/* ep zone info */
-#if defined(__FreeBSD__) || defined(__APPLE__)
-#if __FreeBSD_version >= 500000
-	struct uma_zone *ipi_zone_ep;
-	struct uma_zone *ipi_zone_asoc;
-	struct uma_zone *ipi_zone_laddr;
-	struct uma_zone *ipi_zone_net;
-	struct uma_zone *ipi_zone_chunk;
-	struct uma_zone *ipi_zone_readq;
-	struct uma_zone *ipi_zone_strmoq;
-#else
-	struct vm_zone *ipi_zone_ep;
-	struct vm_zone *ipi_zone_asoc;
-	struct vm_zone *ipi_zone_laddr;
-	struct vm_zone *ipi_zone_net;
-	struct vm_zone *ipi_zone_chunk;
-	struct vm_zone *ipi_zone_readq;
-	struct vm_zone *ipi_zone_strmoq;
-#endif
-#endif
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	struct pool ipi_zone_ep;
-	struct pool ipi_zone_asoc;
-	struct pool ipi_zone_laddr;
-	struct pool ipi_zone_net;
-	struct pool ipi_zone_chunk;
-	struct pool ipi_zone_readq;
-	struct pool ipi_zone_strmoq;
-#endif
+	sctp_zone_t ipi_zone_ep;
+	sctp_zone_t ipi_zone_asoc;
+	sctp_zone_t ipi_zone_laddr;
+	sctp_zone_t ipi_zone_net;
+	sctp_zone_t ipi_zone_chunk;
+	sctp_zone_t ipi_zone_readq;
+	sctp_zone_t ipi_zone_strmoq;
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
 	struct mtx ipi_ep_mtx;

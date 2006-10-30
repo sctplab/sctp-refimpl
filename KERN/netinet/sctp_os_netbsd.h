@@ -43,6 +43,7 @@
  * zone allocation functions
  */
 #include <sys/pool.h>
+typedef struct pool sctp_zone_t;
 void *sctp_pool_get(struct pool *, int);
 void sctp_pool_put(struct pool *, void *);
 

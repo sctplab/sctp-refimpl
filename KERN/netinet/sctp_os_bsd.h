@@ -55,6 +55,7 @@
 #endif
 /* SCTP_ZONE_INIT: initialize the zone */
 #if __FreeBSD_version >= 500000
+typedef struct uma_zone *sctp_zone_t;
 #define UMA_ZFLAG_FULL	0x0020
 #define SCTP_ZONE_INIT(zone, name, size, number) { \
 	zone = uma_zcreate(name, size, NULL, NULL, NULL, NULL, UMA_ALIGN_PTR,\
@@ -62,6 +63,7 @@
 	uma_zone_set_max(zone, number); \
 }
 #else
+typedef struct vm_zone *sctp_zone_t;
 #define SCTP_ZONE_INIT(zone, name, size, number) \
 	zone = zinit(name, size, number, ZONE_INTERRUPT, 0);
 #endif
