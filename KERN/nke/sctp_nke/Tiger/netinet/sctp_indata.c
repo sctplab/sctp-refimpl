@@ -1610,11 +1610,6 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		}
 		return (0);
 	}
-	if ((ch->ch.chunk_flags & SCTP_DATA_UNORDERED) == 0) {
-		SCTP_STAT_INCR_COUNTER64(sctps_inorderchunks);
-	} else {
-		SCTP_STAT_INCR_COUNTER64(sctps_inunorderchunks);
-	}
 	/*
 	 * Check to see about the GONE flag, duplicates would cause a sack
 	 * to be sent up above
@@ -2146,6 +2141,11 @@ finish_express_del:
 	}
 	if (last_chunk) {
 		*m = NULL;
+	}
+	if ((ch->ch.chunk_flags & SCTP_DATA_UNORDERED) == 0) {
+		SCTP_STAT_INCR_COUNTER64(sctps_inorderchunks);
+	} else {
+		SCTP_STAT_INCR_COUNTER64(sctps_inunorderchunks);
 	}
 	SCTP_STAT_INCR(sctps_recvdata);
 	/* Set it present please */
