@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.69 2006-09-08 10:50:58 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.70 2006-10-30 19:01:45 tuexen Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -3496,7 +3496,7 @@ cmd_getstat(char *argv[], int argc)
 	p(sctps_incontrolchunks,     "incontrolchunks");
 	p(sctps_inorderchunks,       "inorderchunks");
 	p(sctps_inunorderchunks,     "inunorderchunks");
-	p(sctps_fragusrmegs,         "fragusrmsg");
+	p(sctps_fragusrmsgs,         "fragusrmsg");
 	p(sctps_reasmusrmsgs,        "reasmusrmsg");
 	p(sctps_outpackets,          "outpackets");
 	p(sctps_inpackets,           "inpackets");
