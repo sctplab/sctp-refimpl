@@ -57,105 +57,14 @@ void sctp_m_freem(struct mbuf *m);
 #endif
 
 
-
-
 #ifdef __APPLE__
 struct mbuf *sctp_m_copym(struct mbuf *m, int off, int len, int wait);
-
 #else
 #define sctp_m_copym	m_copym
 #endif				/* __APPLE__ */
 
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-void *sctp_pool_get(struct pool *, int);
-void sctp_pool_put(struct pool *, void *);
-
-#endif
-
-
-
-/*
- * Zone(pool) allocation routines: MUST be defined for each OS zone =
- * zone/pool pointer name = string name of the zone/pool size = size of each
- * zone/pool element number = number of elements in zone/pool
- */
-#if defined(__FreeBSD__)
-#if __FreeBSD_version >= 500000
-#include <vm/uma.h>
-#else
-#include <vm/vm_zone.h>
-#endif
-#elif defined(__NetBSD__) || defined(__OpenBSD__)
-#include <sys/pool.h>
-#endif
-
-/* SCTP_ZONE_INIT: initialize the zone */
-#if defined(__FreeBSD__)
-#if __FreeBSD_version >= 500000
-#define UMA_ZFLAG_FULL	0x0020
-#define SCTP_ZONE_INIT(zone, name, size, number) { \
-	zone = uma_zcreate(name, size, NULL, NULL, NULL, NULL, UMA_ALIGN_PTR,\
-		UMA_ZFLAG_FULL); \
-	uma_zone_set_max(zone, number); \
-}
-#else
-#define SCTP_ZONE_INIT(zone, name, size, number) \
-	zone = zinit(name, size, number, ZONE_INTERRUPT, 0);
-#endif
-#elif defined(__APPLE__)
-extern zone_t kalloc_zone(vm_size_t);	/* XXX */
-
-#define SCTP_ZONE_INIT(zone, name, size, number) \
-	zone = (void *)kalloc_zone(size);
-#elif defined(__OpenBSD__) || defined(__NetBSD__)
-#define SCTP_ZONE_INIT(zone, name, size, number) \
-	pool_init(&(zone), size, 0, 0, 0, name, NULL);
-#else
-/* don't know this OS! */
-force_comile_error;
-#endif
-
-/* SCTP_ZONE_GET: allocate element from the zone */
-#if defined(__FreeBSD__)
-#if __FreeBSD_version >= 500000
-#define SCTP_ZONE_GET(zone) \
-	uma_zalloc(zone, M_NOWAIT);
-#else
-#define SCTP_ZONE_GET(zone) \
-	zalloci(zone);
-#endif
-#elif defined(__APPLE__)
-#define SCTP_ZONE_GET(zone) \
-	zalloc(zone);
-#elif defined(__NetBSD__) || defined(__OpenBSD__)
-#define SCTP_ZONE_GET(zone) \
-	sctp_pool_get(&zone, PR_NOWAIT);
-#else
-/* don't know this OS! */
-force_comile_error;
-#endif
-
-/* SCTP_ZONE_FREE: free element from the zone */
-#if defined(__FreeBSD__)
-#if __FreeBSD_version >= 500000
-#define SCTP_ZONE_FREE(zone, element) \
-	uma_zfree(zone, element);
-#else
-#define SCTP_ZONE_FREE(zone, element) \
-	zfreei(zone, element);
-#endif
-#elif defined(__APPLE__)
-#define SCTP_ZONE_FREE(zone, element) \
-	zfree(zone, element);
-#elif defined(__NetBSD__) || defined(__OpenBSD__)
-#define SCTP_ZONE_FREE(zone, element) \
-	sctp_pool_put(&zone, element);
-#else
-/* don't know this OS! */
-force_comile_error;
-#endif
-
 #define sctp_get_associd(stcb) ((sctp_assoc_t)stcb->asoc.assoc_id)
+
 
 /*
  * Function prototypes
