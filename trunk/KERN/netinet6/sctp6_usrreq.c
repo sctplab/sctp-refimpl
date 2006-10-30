@@ -70,6 +70,7 @@
 #include <netinet/in_pcb.h>
 #include <netinet/in_var.h>
 #include <netinet/ip_var.h>
+#include <netinet/sctp_os.h>
 #include <netinet/sctp_pcb.h>
 #include <netinet/sctp_header.h>
 #include <netinet/sctp_var.h>
@@ -1661,19 +1662,18 @@ sctp6_getaddr(struct socket *so, struct mbuf *nam)
 	 * Do the malloc first in case it blocks.
 	 */
 #if defined(__FreeBSD__) || defined(__APPLE__)
-	MALLOC(sin6, struct sockaddr_in6 *, sizeof *sin6, M_SONAME,
-	    M_WAITOK | M_ZERO);
+	SCTP_MALLOC_SONAME(sin6, struct sockaddr_in6 *, sizeof *sin6);
 #else
 	nam->m_len = sizeof(*sin6);
-#endif
 	bzero(sin6, sizeof(*sin6));
+#endif
 	sin6->sin6_family = AF_INET6;
 	sin6->sin6_len = sizeof(*sin6);
 
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (inp == NULL) {
 #if defined(__FreeBSD__) || defined(__APPLE__)
-		FREE(sin6, M_SONAME);
+		SCTP_FREE_SONAME(sin6);
 #endif
 		return ECONNRESET;
 	}
@@ -1729,7 +1729,7 @@ sctp6_getaddr(struct socket *so, struct mbuf *nam)
 		}
 		if (!fnd) {
 #if defined(__FreeBSD__) || defined(__APPLE__)
-			FREE(sin6, M_SONAME);
+			SCTP_FREE_SONAME(sin6);
 #endif
 			SCTP_INP_RUNLOCK(inp);
 			return ENOENT;
@@ -1785,12 +1785,11 @@ sctp6_peeraddr(struct socket *so, struct mbuf *nam)
 		return (ENOTCONN);
 	}
 #if defined(__FreeBSD__) || defined(__APPLE__)
-	MALLOC(sin6, struct sockaddr_in6 *, sizeof *sin6, M_SONAME,
-	    M_WAITOK | M_ZERO);
+	SCTP_MALLOC_SONAME(sin6, struct sockaddr_in6 *, sizeof *sin6);
 #else
 	nam->m_len = sizeof(*sin6);
-#endif
 	bzero(sin6, sizeof(*sin6));
+#endif
 	sin6->sin6_family = AF_INET6;
 	sin6->sin6_len = sizeof(*sin6);
 
@@ -1798,7 +1797,7 @@ sctp6_peeraddr(struct socket *so, struct mbuf *nam)
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (inp == NULL) {
 #if defined(__FreeBSD__) || defined(__APPLE__)
-		FREE(sin6, M_SONAME);
+		SCTP_FREE_SONAME(sin6);
 #endif
 		return ECONNRESET;
 	}
@@ -1809,7 +1808,7 @@ sctp6_peeraddr(struct socket *so, struct mbuf *nam)
 	SCTP_INP_RUNLOCK(inp);
 	if (stcb == NULL) {
 #if defined(__FreeBSD__) || defined(__APPLE__)
-		FREE(sin6, M_SONAME);
+		SCTP_FREE_SONAME(sin6);
 #endif
 		return ECONNRESET;
 	}
@@ -1827,7 +1826,7 @@ sctp6_peeraddr(struct socket *so, struct mbuf *nam)
 	if (!fnd) {
 		/* No IPv4 address */
 #if defined(__FreeBSD__) || defined(__APPLE__)
-		FREE(sin6, M_SONAME);
+		SCTP_FREE_SONAME(sin6);
 #endif
 		return ENOENT;
 	}
