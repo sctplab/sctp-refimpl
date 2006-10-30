@@ -30,15 +30,22 @@
 #include <sctp.h>
 
 #include <sys/param.h>
+#include <sys/domain.h>
 #include <sys/protosw.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>
+#include <net/route.h>
 #include <netinet/ip.h>
 #ifdef INET6
 #include <netinet/ip6.h>
 #endif
+#include <netinet/in_pcb.h>
+#include <netinet/sctp_pcb.h>
 #include <netinet/sctp_peeloff.h>
 
+#define APPLE_FILE_NO 5
+
+/* sctp_peeloff() support via socket option */
 #if defined(HAVE_SCTP_PEELOFF_SOCKOPT)
 #include <sys/file.h>
 #include <sys/filedesc.h>
@@ -48,17 +55,12 @@ extern struct fileops socketops;
 #ifndef SCTP_APPLE_PANTHER
 #include <sys/proc_internal.h>
 #include <sys/file_internal.h>
-#endif				/* !SCTP_APPLE_PANTHER */
-
-#endif				/* HAVE_SCTP_PEELOFF_SOCKOPT */
+#endif /* !SCTP_APPLE_PANTHER */
+#endif /* HAVE_SCTP_PEELOFF_SOCKOPT */
 
 #ifdef SCTP_DEBUG
 extern uint32_t sctp_debug_on;
-#endif				/* SCTP_DEBUG */
-
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-#define APPLE_FILE_NO 5
-#endif
+#endif /* SCTP_DEBUG */
 
 #if defined(HAVE_SCTP_PEELOFF_SOCKOPT)
 #ifdef SCTP_APPLE_PANTHER
@@ -202,3 +204,109 @@ out:
 }
 #endif				/* SCTP_APPLE_PANTHER */
 #endif				/* HAVE_SCTP_PEELOFF_SOCKOPT */
+
+
+/* socket lock pr_xxx functions */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+/* Tiger only */
+int
+sctp_lock(struct socket *so, int refcount, int lr)
+{
+	if (so->so_pcb) {
+		lck_mtx_assert(((struct inpcb *)so->so_pcb)->inpcb_mtx,
+			       LCK_MTX_ASSERT_NOTOWNED);
+		lck_mtx_lock(((struct inpcb *)so->so_pcb)->inpcb_mtx);
+	} else {
+		panic("sctp_lock: so=%x NO PCB!\n", so);
+		lck_mtx_assert(so->so_proto->pr_domain->dom_mtx,
+			       LCK_MTX_ASSERT_NOTOWNED);
+		lck_mtx_lock(so->so_proto->pr_domain->dom_mtx);
+	}
+
+	if (so->so_usecount < 0)
+		panic("sctp_lock: so=%x so_pcb=%x ref=%x\n",
+		    so, so->so_pcb, so->so_usecount);
+
+	if (refcount)
+		so->so_usecount++;
+
+	SAVE_CALLERS(((struct sctp_inpcb *)so->so_pcb)->lock_caller1,
+		     ((struct sctp_inpcb *)so->so_pcb)->lock_caller2,
+		     ((struct sctp_inpcb *)so->so_pcb)->lock_caller3);
+	((struct sctp_inpcb *)so->so_pcb)->lock_gen_count = ((struct sctp_inpcb *)so->so_pcb)->gen_count++;
+	return (0);
+}
+
+int
+sctp_unlock(struct socket *so, int refcount, int lr)
+{
+	if (so->so_pcb) {	
+		SAVE_CALLERS(((struct sctp_inpcb *)so->so_pcb)->unlock_caller1,
+			     ((struct sctp_inpcb *)so->so_pcb)->unlock_caller2,
+			     ((struct sctp_inpcb *)so->so_pcb)->unlock_caller3);
+		((struct sctp_inpcb *)so->so_pcb)->unlock_gen_count = ((struct sctp_inpcb *)so->so_pcb)->gen_count++;
+	}
+	
+	if (refcount)
+		so->so_usecount--;
+
+	if (so->so_usecount < 0)
+		panic("sctp_unlock: so=%x usecount=%x\n", so, so->so_usecount);
+
+	if (so->so_pcb == NULL) {
+		panic("sctp_unlock: so=%x NO PCB!\n", so);
+		lck_mtx_assert(so->so_proto->pr_domain->dom_mtx,
+			       LCK_MTX_ASSERT_OWNED);
+		lck_mtx_unlock(so->so_proto->pr_domain->dom_mtx);
+	} else {
+		lck_mtx_assert(((struct inpcb *)so->so_pcb)->inpcb_mtx,
+			       LCK_MTX_ASSERT_OWNED);
+		lck_mtx_unlock(((struct inpcb *)so->so_pcb)->inpcb_mtx);
+	}
+	return (0);
+}
+
+lck_mtx_t *
+sctp_getlock(struct socket *so, int locktype)
+{
+	/* WARNING: we do not own the socket lock here... */
+	/* We do not have always enough callers */
+	/*
+	SAVE_CALLERS(((struct sctp_inpcb *)so->so_pcb)->getlock_caller1,
+		     ((struct sctp_inpcb *)so->so_pcb)->getlock_caller2,
+		     ((struct sctp_inpcb *)so->so_pcb)->getlock_caller3);
+	((struct sctp_inpcb *)so->so_pcb)->getlock_gen_count = ((struct sctp_inpcb *)so->so_pcb)->gen_count++;
+	*/
+	if (so->so_pcb) {
+		if (so->so_usecount < 0)
+			panic("sctp_getlock: so=%x usecount=%x\n",
+			      so, so->so_usecount);
+		return (((struct inpcb *)so->so_pcb)->inpcb_mtx);
+	} else {
+		panic("sctp_getlock: so=%x NULL so_pcb\n", so);
+		return (so->so_proto->pr_domain->dom_mtx);
+	}
+}
+
+void
+sctp_lock_assert(struct socket *so)
+{
+	if (so->so_pcb) {
+		lck_mtx_assert(((struct inpcb *)so->so_pcb)->inpcb_mtx,
+			       LCK_MTX_ASSERT_OWNED);
+	} else {
+		panic("sctp_lock_assert: so=%p has sp->so_pcb==NULL.\n", so);
+	}
+}
+
+void
+sctp_unlock_assert(struct socket *so)
+{
+	if (so->so_pcb) {
+		lck_mtx_assert(((struct inpcb *)so->so_pcb)->inpcb_mtx,
+			       LCK_MTX_ASSERT_NOTOWNED);
+	} else {
+		panic("sctp_unlock_assert: so=%p has sp->so_pcb==NULL.\n", so);
+	}
+}
+#endif /* SCTP_APPLE_FINE_GRAINED_LOCKING */
