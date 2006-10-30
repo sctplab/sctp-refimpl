@@ -54,6 +54,7 @@
 /*
  * zone allocation functions
  */
+typedef struct vm_zone *sctp_zone_t;
 extern zone_t kalloc_zone(vm_size_t);	/* XXX */
 
 /* SCTP_ZONE_INIT: initialize the zone */
