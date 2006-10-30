@@ -30,12 +30,37 @@
 #ifndef __sctp_os_h__
 #define __sctp_os_h__
 
-#if defined(__FreeBSD__) || defined(__NetBSD__)
+/*
+ * General kernel memory allocation:
+ *  SCTP_MALLOC(element, type, size, name)
+ *  SCTP_FREE(element)
+ * Kernel memory allocation for "soname"- memory must be zeroed.
+ *  SCTP_MALLOC_SONAME(name, type, size)
+ *  SCTP_FREE_SONAME(name)
+ */
+
+/*
+ * Zone(pool) allocation routines: MUST be defined for each OS.
+ *  zone = zone/pool pointer.
+ *  name = string name of the zone/pool.
+ *  size = size of each zone/pool element.
+ *  number = number of elements in zone/pool.
+ *
+ * SCTP_ZONE_INIT(zone, name, size, number)
+ * SCTP_ZONE_GET(zone)
+ * SCTP_ZONE_FREE(zone, element)
+ */
+
+#if defined(__FreeBSD__)
 #include <netinet/sctp_os_bsd.h>
 #endif
 
 #if defined(__APPLE__)
 #include <netinet/sctp_os_macosx.h>
+#endif
+
+#if defined(__NetBSD__) || defined(__OpenBSD__)
+#include <netinet/sctp_os_netbsd.h>
 #endif
 
 #endif

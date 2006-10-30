@@ -605,11 +605,10 @@ extern uint32_t sctp_system_free_resc_limit;
 
 #ifdef __OpenBSD__
 /*
- * compatibility defines for OpenBSD, Apple
+ * compatibility defines for OpenBSD
  */
 
 /* map callout into timeout for OpenBSD */
-
 #ifndef callout_init
 #define callout_init(args)
 #define callout_reset(c, ticks, func, arg) \
@@ -622,44 +621,6 @@ do { \
 #define callout_active(c) timeout_initialized(c)
 #endif
 #endif
-
-
-#if defined(__APPLE__)
-/* emulate the BSD 'ticks' clock */
-extern int ticks;
-
-/* XXX: Hopefully temporary until APPLE changes to newer defs like other BSDs */
-#define if_addrlist	if_addrhead
-#define if_list		if_link
-#define ifa_list	ifa_link
-
-/* Apple KPI defines for atomic operations */
-#include <libkern/OSAtomic.h>
-#define atomic_add_int(addr, val)        OSAddAtomic(val, (SInt32 *)addr)
-#define atomic_subtract_int(addr, val)   OSAddAtomic((-val), (SInt32 *)addr)
-#define atomic_add_16(addr, val)         OSAddAtomic16(val, (SInt16 *)addr)
-#define atomic_cmpset_int(dst, exp, src) OSCompareAndSwap(exp, src, (UInt32 *)dst)
-/* additional protosw entries for Mac OS X 10.4 */
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	int sctp_lock(struct socket *so, int refcount, int lr);
-	int sctp_unlock(struct socket *so, int refcount, int lr);
-
-#ifdef _KERN_LOCKS_H_
-	lck_mtx_t *sctp_getlock(struct socket *so, int locktype);
-#else
-	void *sctp_getlock(struct socket *so, int locktype);
-#endif /* _KERN_LOCKS_H_ */
-	void sctp_lock_assert(struct socket *so);
-	void sctp_unlock_assert(struct socket *so);
-
-#endif /* SCTP_APPLE_FINE_GRAINED_LOCKING */
-#endif /* __APPLE__ */
-
-#if defined(__NetBSD__)
-/* emulate the atomic_xxx() functions... */
-#define atomic_add_int(addr, val)	(*(addr) += val)
-#define atomic_subtract_int(addr, val)	(*(addr) -= val)
-#endif				/* __NetBSD__ */
 
 #endif				/* _KERNEL */
 

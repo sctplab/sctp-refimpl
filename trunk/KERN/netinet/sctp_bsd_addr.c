@@ -132,8 +132,6 @@ __FBSDID("$FreeBSD:$");
 #endif
 
 
-#include <netinet/sctp_pcb.h>
-
 #ifdef IPSEC
 #ifndef __OpenBSD__
 #include <netinet6/ipsec.h>
@@ -143,10 +141,11 @@ __FBSDID("$FreeBSD:$");
 #endif
 #endif				/* IPSEC */
 
+#include <netinet/sctp_os.h>
 #include <netinet/sctp_var.h>
+#include <netinet/sctp_pcb.h>
 #include <netinet/sctp_header.h>
 #include <netinet/sctputil.h>
-#include <netinet/sctp_pcb.h>
 #include <netinet/sctp_output.h>
 #include <netinet/sctp_bsd_addr.h>
 #include <netinet/sctp_uio.h>
