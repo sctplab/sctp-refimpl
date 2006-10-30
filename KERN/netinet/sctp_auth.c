@@ -122,7 +122,7 @@ sctp_read_random(void *buffer, uint32_t bytes)
 
 
 inline void
-sctp_clear_chunklist(sctp_auth_chklist_t * chklist)
+sctp_clear_chunklist(sctp_auth_chklist_t *chklist)
 {
 	bzero(chklist, sizeof(*chklist));
 	/* chklist->num_chunks = 0; */
@@ -148,14 +148,14 @@ sctp_alloc_chunklist(void)
 }
 
 void
-sctp_free_chunklist(sctp_auth_chklist_t * list)
+sctp_free_chunklist(sctp_auth_chklist_t *list)
 {
 	if (list != NULL)
 		SCTP_FREE(list);
 }
 
 sctp_auth_chklist_t *
-sctp_copy_chunklist(sctp_auth_chklist_t * list)
+sctp_copy_chunklist(sctp_auth_chklist_t *list)
 {
 	sctp_auth_chklist_t *new_list;
 
@@ -177,7 +177,7 @@ sctp_copy_chunklist(sctp_auth_chklist_t * list)
  * add a chunk to the required chunks list
  */
 int
-sctp_auth_add_chunk(uint8_t chunk, sctp_auth_chklist_t * list)
+sctp_auth_add_chunk(uint8_t chunk, sctp_auth_chklist_t *list)
 {
 	if (list == NULL)
 		return (-1);
@@ -217,7 +217,7 @@ sctp_auth_add_chunk(uint8_t chunk, sctp_auth_chklist_t * list)
  * delete a chunk from the required chunks list
  */
 int
-sctp_auth_delete_chunk(uint8_t chunk, sctp_auth_chklist_t * list)
+sctp_auth_delete_chunk(uint8_t chunk, sctp_auth_chklist_t *list)
 {
 	if (list == NULL)
 		return (-1);
@@ -252,7 +252,7 @@ sctp_auth_delete_chunk(uint8_t chunk, sctp_auth_chklist_t * list)
 }
 
 inline int
-sctp_auth_get_chklist_size(const sctp_auth_chklist_t * list)
+sctp_auth_get_chklist_size(const sctp_auth_chklist_t *list)
 {
 	if (list == NULL)
 		return (0);
@@ -264,7 +264,7 @@ sctp_auth_get_chklist_size(const sctp_auth_chklist_t * list)
  * set the default list of chunks requiring AUTH
  */
 void
-sctp_auth_set_default_chunks(sctp_auth_chklist_t * list)
+sctp_auth_set_default_chunks(sctp_auth_chklist_t *list)
 {
 	sctp_auth_add_chunk(SCTP_ASCONF, list);
 	sctp_auth_add_chunk(SCTP_ASCONF_ACK, list);
@@ -275,7 +275,7 @@ sctp_auth_set_default_chunks(sctp_auth_chklist_t * list)
  * guarantee ptr has space for up to 256 bytes
  */
 int
-sctp_serialize_auth_chunks(const sctp_auth_chklist_t * list, uint8_t * ptr)
+sctp_serialize_auth_chunks(const sctp_auth_chklist_t *list, uint8_t *ptr)
 {
 	int i, count = 0;
 
@@ -292,7 +292,7 @@ sctp_serialize_auth_chunks(const sctp_auth_chklist_t * list, uint8_t * ptr)
 }
 
 int
-sctp_pack_auth_chunks(const sctp_auth_chklist_t * list, uint8_t * ptr)
+sctp_pack_auth_chunks(const sctp_auth_chklist_t *list, uint8_t *ptr)
 {
 	int i, size = 0;
 
@@ -324,8 +324,8 @@ sctp_pack_auth_chunks(const sctp_auth_chklist_t * list, uint8_t * ptr)
 }
 
 int
-sctp_unpack_auth_chunks(const uint8_t * ptr, uint8_t num_chunks,
-    sctp_auth_chklist_t * list)
+sctp_unpack_auth_chunks(const uint8_t *ptr, uint8_t num_chunks,
+    sctp_auth_chklist_t *list)
 {
 	int i;
 	int size;
@@ -375,14 +375,14 @@ sctp_alloc_key(uint32_t keylen)
 }
 
 void
-sctp_free_key(sctp_key_t * key)
+sctp_free_key(sctp_key_t *key)
 {
 	if (key != NULL)
 		SCTP_FREE(key);
 }
 
 void
-sctp_print_key(sctp_key_t * key, const char *str)
+sctp_print_key(sctp_key_t *key, const char *str)
 {
 	uint32_t i;
 
@@ -401,7 +401,7 @@ sctp_print_key(sctp_key_t * key, const char *str)
 }
 
 void
-sctp_show_key(sctp_key_t * key, const char *str)
+sctp_show_key(sctp_key_t *key, const char *str)
 {
 	uint32_t i;
 
@@ -420,7 +420,7 @@ sctp_show_key(sctp_key_t * key, const char *str)
 }
 
 static inline uint32_t
-sctp_get_keylen(sctp_key_t * key)
+sctp_get_keylen(sctp_key_t *key)
 {
 	if (key != NULL)
 		return (key->keylen);
@@ -451,7 +451,7 @@ sctp_generate_random_key(uint32_t keylen)
 }
 
 sctp_key_t *
-sctp_set_key(uint8_t * key, uint32_t keylen)
+sctp_set_key(uint8_t *key, uint32_t keylen)
 {
 	sctp_key_t *new_key;
 
@@ -470,7 +470,7 @@ sctp_set_key(uint8_t * key, uint32_t keylen)
  * returns: 1 if key1 > key2 -1 if key1 < key2 0 if key1 = key2
  */
 static int
-sctp_compare_key(sctp_key_t * key1, sctp_key_t * key2)
+sctp_compare_key(sctp_key_t *key1, sctp_key_t *key2)
 {
 	uint32_t maxlen;
 	uint32_t i;
@@ -535,7 +535,7 @@ sctp_compare_key(sctp_key_t * key1, sctp_key_t * key2)
  * order for concatenation
  */
 sctp_key_t *
-sctp_compute_hashkey(sctp_key_t * key1, sctp_key_t * key2, sctp_key_t * shared)
+sctp_compute_hashkey(sctp_key_t *key1, sctp_key_t *key2, sctp_key_t *shared)
 {
 	uint32_t keylen;
 	sctp_key_t *new_key;
@@ -632,7 +632,7 @@ sctp_find_sharedkey(struct sctp_keyhead *shared_keys, uint16_t key_id)
 
 void
 sctp_insert_sharedkey(struct sctp_keyhead *shared_keys,
-    sctp_sharedkey_t * new_skey)
+    sctp_sharedkey_t *new_skey)
 {
 	sctp_sharedkey_t *skey;
 
@@ -670,7 +670,7 @@ sctp_insert_sharedkey(struct sctp_keyhead *shared_keys,
 }
 
 static sctp_sharedkey_t *
-sctp_copy_sharedkey(const sctp_sharedkey_t * skey)
+sctp_copy_sharedkey(const sctp_sharedkey_t *skey)
 {
 	sctp_sharedkey_t *new_skey;
 
@@ -725,7 +725,7 @@ sctp_alloc_hmaclist(uint8_t num_hmacs)
 }
 
 void
-sctp_free_hmaclist(sctp_hmaclist_t * list)
+sctp_free_hmaclist(sctp_hmaclist_t *list)
 {
 	if (list != NULL) {
 		SCTP_FREE(list);
@@ -734,7 +734,7 @@ sctp_free_hmaclist(sctp_hmaclist_t * list)
 }
 
 int
-sctp_auth_add_hmacid(sctp_hmaclist_t * list, uint16_t hmac_id)
+sctp_auth_add_hmacid(sctp_hmaclist_t *list, uint16_t hmac_id)
 {
 	if (list == NULL)
 		return (-1);
@@ -762,7 +762,7 @@ sctp_auth_add_hmacid(sctp_hmaclist_t * list, uint16_t hmac_id)
 }
 
 sctp_hmaclist_t *
-sctp_copy_hmaclist(sctp_hmaclist_t * list)
+sctp_copy_hmaclist(sctp_hmaclist_t *list)
 {
 	sctp_hmaclist_t *new_list;
 	int i;
@@ -799,7 +799,7 @@ sctp_default_supported_hmaclist(void)
  * to use for the peer based on local support
  */
 uint16_t
-sctp_negotiate_hmacid(sctp_hmaclist_t * peer, sctp_hmaclist_t * local)
+sctp_negotiate_hmacid(sctp_hmaclist_t *peer, sctp_hmaclist_t *local)
 {
 	int i, j;
 
@@ -827,7 +827,7 @@ sctp_negotiate_hmacid(sctp_hmaclist_t * peer, sctp_hmaclist_t * local)
  * ptr has appropriate space
  */
 int
-sctp_serialize_hmaclist(sctp_hmaclist_t * list, uint8_t * ptr)
+sctp_serialize_hmaclist(sctp_hmaclist_t *list, uint8_t *ptr)
 {
 	int i;
 	uint16_t hmac_id;
@@ -878,7 +878,7 @@ sctp_alloc_authinfo(void)
 }
 
 void
-sctp_free_authinfo(sctp_authinfo_t * authinfo)
+sctp_free_authinfo(sctp_authinfo_t *authinfo)
 {
 	if (authinfo == NULL)
 		return;
@@ -914,16 +914,18 @@ sctp_get_hmac_digest_len(uint16_t hmac_algo)
 		return (SCTP_AUTH_DIGEST_LEN_SHA1);
 	case SCTP_AUTH_HMAC_ID_MD5:
 		return (SCTP_AUTH_DIGEST_LEN_MD5);
-#ifdef HAVE_SHA2
+#ifdef HAVE_SHA224
 	case SCTP_AUTH_HMAC_ID_SHA224:
 		return (SCTP_AUTH_DIGEST_LEN_SHA224);
+#endif
+#ifdef HAVE_SHA2
 	case SCTP_AUTH_HMAC_ID_SHA256:
 		return (SCTP_AUTH_DIGEST_LEN_SHA256);
 	case SCTP_AUTH_HMAC_ID_SHA384:
 		return (SCTP_AUTH_DIGEST_LEN_SHA384);
 	case SCTP_AUTH_HMAC_ID_SHA512:
 		return (SCTP_AUTH_DIGEST_LEN_SHA512);
-#endif				/* HAVE_SHA2 */
+#endif
 	default:
 		/* unknown HMAC algorithm: can't do anything */
 		return (0);
@@ -934,18 +936,19 @@ static inline int
 sctp_get_hmac_block_len(uint16_t hmac_algo)
 {
 	switch (hmac_algo) {
-		case SCTP_AUTH_HMAC_ID_SHA1:
-		case SCTP_AUTH_HMAC_ID_MD5:
-#ifdef HAVE_SHA2
-		case SCTP_AUTH_HMAC_ID_SHA224:
-		case SCTP_AUTH_HMAC_ID_SHA256:
-#endif				/* HAVE_SHA2 */
+	case SCTP_AUTH_HMAC_ID_SHA1:
+	case SCTP_AUTH_HMAC_ID_MD5:
+#ifdef HAVE_SHA224
+	case SCTP_AUTH_HMAC_ID_SHA224:
 		return (64);
+#endif
 #ifdef HAVE_SHA2
+	case SCTP_AUTH_HMAC_ID_SHA256:
+		return (64);
 	case SCTP_AUTH_HMAC_ID_SHA384:
 	case SCTP_AUTH_HMAC_ID_SHA512:
 		return (128);
-#endif				/* HAVE_SHA2 */
+#endif
 	case SCTP_AUTH_HMAC_ID_RSVD:
 	default:
 		/* unknown HMAC algorithm: can't do anything */
@@ -954,23 +957,30 @@ sctp_get_hmac_block_len(uint16_t hmac_algo)
 }
 
 static void
-sctp_hmac_init(uint16_t hmac_algo, sctp_hash_context_t * ctx)
+sctp_hmac_init(uint16_t hmac_algo, sctp_hash_context_t *ctx)
 {
 	switch (hmac_algo) {
-		case SCTP_AUTH_HMAC_ID_SHA1:
+	case SCTP_AUTH_HMAC_ID_SHA1:
 		SHA1_Init(&ctx->sha1);
 		break;
 	case SCTP_AUTH_HMAC_ID_MD5:
 		MD5_Init(&ctx->md5);
 		break;
+#ifdef HAVE_SHA224
 	case SCTP_AUTH_HMAC_ID_SHA224:
 		break;
+#endif
+#ifdef HAVE_SHA2
 	case SCTP_AUTH_HMAC_ID_SHA256:
+		SHA256_Init(&ctx->sha256);
 		break;
 	case SCTP_AUTH_HMAC_ID_SHA384:
+		SHA384_Init(&ctx->sha384);
 		break;
 	case SCTP_AUTH_HMAC_ID_SHA512:
+		SHA512_Init(&ctx->sha512);
 		break;
+#endif
 	case SCTP_AUTH_HMAC_ID_RSVD:
 	default:
 		/* unknown HMAC algorithm: can't do anything */
@@ -979,24 +989,31 @@ sctp_hmac_init(uint16_t hmac_algo, sctp_hash_context_t * ctx)
 }
 
 static void
-sctp_hmac_update(uint16_t hmac_algo, sctp_hash_context_t * ctx,
-    const uint8_t * text, uint32_t textlen)
+sctp_hmac_update(uint16_t hmac_algo, sctp_hash_context_t *ctx,
+    const uint8_t *text, uint32_t textlen)
 {
 	switch (hmac_algo) {
-		case SCTP_AUTH_HMAC_ID_SHA1:
+	case SCTP_AUTH_HMAC_ID_SHA1:
 		SHA1_Update(&ctx->sha1, text, textlen);
 		break;
 	case SCTP_AUTH_HMAC_ID_MD5:
 		MD5_Update(&ctx->md5, text, textlen);
 		break;
+#ifdef HAVE_SHA224
 	case SCTP_AUTH_HMAC_ID_SHA224:
 		break;
+#endif
+#ifdef HAVE_SHA2
 	case SCTP_AUTH_HMAC_ID_SHA256:
+		SHA256_Update(&ctx->sha256, text, textlen);
 		break;
 	case SCTP_AUTH_HMAC_ID_SHA384:
+		SHA384_Update(&ctx->sha384, text, textlen);
 		break;
 	case SCTP_AUTH_HMAC_ID_SHA512:
+		SHA512_Update(&ctx->sha512, text, textlen);
 		break;
+#endif
 	case SCTP_AUTH_HMAC_ID_RSVD:
 	default:
 		/* unknown HMAC algorithm: can't do anything */
@@ -1005,25 +1022,32 @@ sctp_hmac_update(uint16_t hmac_algo, sctp_hash_context_t * ctx,
 }
 
 static void
-sctp_hmac_final(uint16_t hmac_algo, sctp_hash_context_t * ctx,
-    uint8_t * digest)
+sctp_hmac_final(uint16_t hmac_algo, sctp_hash_context_t *ctx,
+    uint8_t *digest)
 {
 	switch (hmac_algo) {
-		case SCTP_AUTH_HMAC_ID_SHA1:
+	case SCTP_AUTH_HMAC_ID_SHA1:
 		SHA1_Final(digest, &ctx->sha1);
 		break;
 	case SCTP_AUTH_HMAC_ID_MD5:
 		MD5_Final(digest, &ctx->md5);
 		break;
+#ifdef HAVE_SHA224
 	case SCTP_AUTH_HMAC_ID_SHA224:
 		break;
+#endif
+#ifdef HAVE_SHA2
 	case SCTP_AUTH_HMAC_ID_SHA256:
+		SHA256_Final(digest, &ctx->sha256);
 		break;
 	case SCTP_AUTH_HMAC_ID_SHA384:
 		/* SHA384 is truncated SHA512 */
+		SHA384_Final(digest, &ctx->sha384);
 		break;
 	case SCTP_AUTH_HMAC_ID_SHA512:
+		SHA512_Final(digest, &ctx->sha512);
 		break;
+#endif
 	case SCTP_AUTH_HMAC_ID_RSVD:
 	default:
 		/* unknown HMAC algorithm: can't do anything */
@@ -1034,16 +1058,16 @@ sctp_hmac_final(uint16_t hmac_algo, sctp_hash_context_t * ctx,
 /*
  * Keyed-Hashing for Message Authentication: FIPS 198 (RFC 2104)
  *
- * Compute the HMAC digest using the desired hash key, text, and HMAC algorithm.
- * Resulting digest is placed in 'digest' and digest length is returned, if
- * the HMAC was performed.
+ * Compute the HMAC digest using the desired hash key, text, and HMAC
+ * algorithm.  Resulting digest is placed in 'digest' and digest length
+ * is returned, if the HMAC was performed.
  *
  * WARNING: it is up to the caller to supply sufficient space to hold the
  * resultant digest.
  */
 uint32_t
-sctp_hmac(uint16_t hmac_algo, uint8_t * key, uint32_t keylen,
-    const uint8_t * text, uint32_t textlen, uint8_t * digest)
+sctp_hmac(uint16_t hmac_algo, uint8_t *key, uint32_t keylen,
+    const uint8_t *text, uint32_t textlen, uint8_t *digest)
 {
 	uint32_t digestlen;
 	uint32_t blocklen;
@@ -1102,8 +1126,8 @@ sctp_hmac(uint16_t hmac_algo, uint8_t * key, uint32_t keylen,
 
 /* mbuf version */
 uint32_t
-sctp_hmac_m(uint16_t hmac_algo, uint8_t * key, uint32_t keylen,
-    struct mbuf *m, uint32_t m_offset, uint8_t * digest)
+sctp_hmac_m(uint16_t hmac_algo, uint8_t *key, uint32_t keylen,
+    struct mbuf *m, uint32_t m_offset, uint8_t *digest)
 {
 	uint32_t digestlen;
 	uint32_t blocklen;
@@ -1178,9 +1202,9 @@ sctp_hmac_m(uint16_t hmac_algo, uint8_t * key, uint32_t keylen,
  * algorithm. Returns -1 on error, 0 on success.
  */
 int
-sctp_verify_hmac(uint16_t hmac_algo, uint8_t * key, uint32_t keylen,
-    const uint8_t * text, uint32_t textlen,
-    uint8_t * digest, uint32_t digestlen)
+sctp_verify_hmac(uint16_t hmac_algo, uint8_t *key, uint32_t keylen,
+    const uint8_t *text, uint32_t textlen,
+    uint8_t *digest, uint32_t digestlen)
 {
 	uint32_t len;
 	uint8_t temp[SCTP_AUTH_DIGEST_LEN_MAX];
@@ -1211,8 +1235,8 @@ sctp_verify_hmac(uint16_t hmac_algo, uint8_t * key, uint32_t keylen,
  * the keylen exceeds the HMAC block len).
  */
 uint32_t
-sctp_compute_hmac(uint16_t hmac_algo, sctp_key_t * key, const uint8_t * text,
-    uint32_t textlen, uint8_t * digest)
+sctp_compute_hmac(uint16_t hmac_algo, sctp_key_t *key, const uint8_t *text,
+    uint32_t textlen, uint8_t *digest)
 {
 	uint32_t digestlen;
 	uint32_t blocklen;
@@ -1246,8 +1270,8 @@ sctp_compute_hmac(uint16_t hmac_algo, sctp_key_t * key, const uint8_t * text,
 
 /* mbuf version */
 uint32_t
-sctp_compute_hmac_m(uint16_t hmac_algo, sctp_key_t * key, struct mbuf *m,
-    uint32_t m_offset, uint8_t * digest)
+sctp_compute_hmac_m(uint16_t hmac_algo, sctp_key_t *key, struct mbuf *m,
+    uint32_t m_offset, uint8_t *digest)
 {
 	uint32_t digestlen;
 	uint32_t blocklen;
@@ -1278,7 +1302,7 @@ sctp_compute_hmac_m(uint16_t hmac_algo, sctp_key_t * key, struct mbuf *m,
 }
 
 int
-sctp_auth_is_supported_hmac(sctp_hmaclist_t * list, uint16_t id)
+sctp_auth_is_supported_hmac(sctp_hmaclist_t *list, uint16_t id)
 {
 	int i;
 
@@ -1955,7 +1979,7 @@ sctp_validate_init_auth_params(struct mbuf *m, int offset, int limit)
  * HMAC and key concatenation tests
  */
 static void
-sctp_print_digest(uint8_t * digest, uint32_t digestlen, const char *str)
+sctp_print_digest(uint8_t *digest, uint32_t digestlen, const char *str)
 {
 	uint32_t i;
 
@@ -1968,9 +1992,9 @@ sctp_print_digest(uint8_t * digest, uint32_t digestlen, const char *str)
 }
 
 static int
-sctp_test_hmac(const char *str, uint16_t hmac_id, uint8_t * key,
-    uint32_t keylen, uint8_t * text, uint32_t textlen,
-    uint8_t * digest, uint32_t digestlen)
+sctp_test_hmac(const char *str, uint16_t hmac_id, uint8_t *key,
+    uint32_t keylen, uint8_t *text, uint32_t textlen,
+    uint8_t *digest, uint32_t digestlen)
 {
 	uint8_t computed_digest[SCTP_AUTH_DIGEST_LEN_MAX];
 
@@ -2241,8 +2265,8 @@ sctp_test_hmac_md5(void)
  * test assoc key concatenation
  */
 static int
-sctp_test_key_concatenation(sctp_key_t * key1, sctp_key_t * key2,
-    sctp_key_t * expected_key)
+sctp_test_key_concatenation(sctp_key_t *key1, sctp_key_t *key2,
+    sctp_key_t *expected_key)
 {
 	sctp_key_t *key;
 	int ret_val;
