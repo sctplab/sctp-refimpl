@@ -534,6 +534,9 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 			if ((chk->rec.data.rcv_flags & SCTP_DATA_UNORDERED) == 0) {
 				asoc->strmin[stream_no].last_sequence_delivered++;
 			}
+			if ((chk->rec.data.rcv_flags & SCTP_DATA_FIRST_FRAG) == 0) {
+				SCTP_STAT_INCR_COUNTER64(sctps_reasmusrmsgs);
+			}
 		} else if (chk->rec.data.rcv_flags & SCTP_DATA_FIRST_FRAG) {
 			/*
 			 * turn the flag back on since we just  delivered
@@ -1604,6 +1607,11 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			    stcb, NULL);
 		}
 		return (0);
+	}
+	if ((ch->ch.chunk_flags & SCTP_DATA_UNORDERED) == 0) {
+		SCTP_STAT_INCR_COUNTER64(sctps_inorderchunks);
+	} else {
+		SCTP_STAT_INCR_COUNTER64(sctps_inunorderchunks);
 	}
 	/*
 	 * Check to see about the GONE flag, duplicates would cause a sack
@@ -4446,6 +4454,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 		if ((asoc->state & SCTP_STATE_SHUTDOWN_PENDING) &&
 		    (asoc->stream_queue_cnt == 0)){
 			asoc->state = SCTP_STATE_SHUTDOWN_SENT;
+			SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
 				printf("%s:%d sends a shutdown\n",
@@ -4490,7 +4499,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 				goto abort_out_now;
 			}
 			asoc->state = SCTP_STATE_SHUTDOWN_ACK_SENT;
-
+			SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 			sctp_send_shutdown_ack(stcb,
 			    stcb->asoc.primary_destination);
 
@@ -5118,6 +5127,7 @@ skip_segments:
 		if ((asoc->state & SCTP_STATE_SHUTDOWN_PENDING) &&
 		    (asoc->stream_queue_cnt == 0)){
 			asoc->state = SCTP_STATE_SHUTDOWN_SENT;
+			SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
 				printf("%s:%d sends a shutdown\n",
@@ -5164,7 +5174,7 @@ skip_segments:
 				goto abort_out_now;
 			}
 			asoc->state = SCTP_STATE_SHUTDOWN_ACK_SENT;
-
+			SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 			sctp_send_shutdown_ack(stcb,
 			    stcb->asoc.primary_destination);
 

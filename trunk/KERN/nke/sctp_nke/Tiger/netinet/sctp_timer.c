@@ -1750,6 +1750,7 @@ sctp_autoclose_timer(struct sctp_inpcb *inp,
 #endif
 					sctp_send_shutdown(stcb, stcb->asoc.primary_destination);
 					asoc->state = SCTP_STATE_SHUTDOWN_SENT;
+					SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN,
 					    stcb->sctp_ep, stcb,
 					    asoc->primary_destination);

@@ -2804,6 +2804,11 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 					*ippp = htonl(0x30000004);
 				}
 				sctp_send_abort_tcb(asoc, op_err);
+				SCTP_STAT_INCR_COUNTER32(sctps_aborted);
+				if ((SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_OPEN) ||
+				    (SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
+					SCTP_STAT_DECR_GAUGE32(sctps_currestab);
+				}
 				sctp_free_assoc(inp, asoc, 1);
 				continue;
 			} else if (TAILQ_EMPTY(&asoc->asoc.send_queue) &&
@@ -2821,6 +2826,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 					 */
 					sctp_send_shutdown(asoc, asoc->asoc.primary_destination);
 					asoc->asoc.state = SCTP_STATE_SHUTDOWN_SENT;
+					SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN, asoc->sctp_ep, asoc,
 					    asoc->asoc.primary_destination);
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD, asoc->sctp_ep, asoc,
@@ -2869,6 +2875,11 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 						*ippp = htonl(0x30000005);
 					}
 					sctp_send_abort_tcb(asoc, op_err);
+					SCTP_STAT_INCR_COUNTER32(sctps_aborted);
+					if ((SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_OPEN) ||
+					    (SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
+						SCTP_STAT_DECR_GAUGE32(sctps_currestab);
+					}
 					sctp_free_assoc(inp, asoc, 1);
 					continue;
 				}
@@ -2956,10 +2967,15 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 
 			}
 			sctp_send_abort_tcb(asoc, op_err);
+			SCTP_STAT_INCR_COUNTER32(sctps_aborted);
 		} else if (asoc->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 			cnt++;
 			SCTP_TCB_UNLOCK(asoc);
 			continue;
+		}
+		if ((SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_OPEN) ||
+		    (SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
+			SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 		}
 		sctp_free_assoc(inp, asoc, 2);
 	}

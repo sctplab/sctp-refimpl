@@ -590,6 +590,11 @@ sctp_handle_abort(struct sctp_abort_chunk *cp,
 	/* notify user of the abort and clean up... */
 	sctp_abort_notification(stcb, 0);
 	/* free the tcb */
+	SCTP_STAT_INCR_COUNTER32(sctps_aborted);
+	if ((SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_OPEN) ||
+	    (SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
+		SCTP_STAT_DECR_GAUGE32(sctps_currestab);
+	}
 	sctp_free_assoc(stcb->sctp_ep, stcb, 0);
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INPUT2) {
@@ -699,6 +704,7 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 		sctp_send_shutdown_ack(stcb, stcb->asoc.primary_destination);
 		/* move to SHUTDOWN-ACK-SENT state */
 		asoc->state = SCTP_STATE_SHUTDOWN_ACK_SENT;
+		SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
 			printf("moving to SHUTDOWN_ACK state\n");
@@ -763,6 +769,7 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
 			stcb->sctp_ep->sctp_socket->so_snd.sb_cc = 0;
 		}
 	}
+	SCTP_STAT_INCR_COUNTER32(sctps_shutdown);
 	/* free the TCB but first save off the ep */
 	sctp_free_assoc(stcb->sctp_ep, stcb, 0);
 }
@@ -1748,6 +1755,8 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	} else {
 		asoc->state = SCTP_STATE_OPEN;
 	}
+	SCTP_STAT_INCR_COUNTER32(sctps_passiveestab);
+	SCTP_STAT_INCR_GAUGE32(sctps_currestab);
 	sctp_stop_all_cookie_timers(stcb);
 	/* calculate the RTT */
 	(*netp)->RTO = sctp_calculate_rto(stcb, asoc, *netp,
@@ -1825,7 +1834,6 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	}
 	/* respond with a COOKIE-ACK */
 	sctp_send_cookie_ack(stcb);
-	SCTP_STAT_INCR_COUNTER32(sctps_passiveestab);
 	return (stcb);
 }
 
@@ -2393,6 +2401,7 @@ sctp_handle_cookie_ack(struct sctp_cookie_ack_chunk *cp,
 		}
 		/* update RTO */
 		SCTP_STAT_INCR_COUNTER32(sctps_activeestab);
+		SCTP_STAT_INCR_GAUGE32(sctps_currestab);
 		if (asoc->overall_error_count == 0) {
 			net->RTO = sctp_calculate_rto(stcb, asoc, net,
 			    &asoc->time_entered);
@@ -2586,6 +2595,7 @@ sctp_handle_shutdown_complete(struct sctp_shutdown_complete_chunk *cp,
 	}
 	/* stop the timer */
 	sctp_timer_stop(SCTP_TIMER_TYPE_SHUTDOWN, stcb->sctp_ep, stcb, net);
+	SCTP_STAT_INCR_COUNTER32(sctps_shutdown);
 	/* free the TCB */
 	sctp_free_assoc(stcb->sctp_ep, stcb, 0);
 	return;
@@ -3905,6 +3915,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				SCTP_TCB_UNLOCK(locked_tcb);
 			return (NULL);
 		}
+		SCTP_STAT_INCR_COUNTER64(sctps_incontrolchunks);
 		/*
 		 * INIT-ACK only gets the init ack "header" portion only
 		 * because we don't have to process the peer's COOKIE. All
@@ -5081,6 +5092,7 @@ sctp_input(m, va_alist)
 #endif
 	net = NULL;
 	SCTP_STAT_INCR(sctps_recvpackets);
+	SCTP_STAT_INCR_COUNTER64(sctps_inpackets);
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
 		printf("V4 input gets a packet iphlen:%d pktlen:%d\n", iphlen, m->m_pkthdr.len);
@@ -5191,6 +5203,7 @@ sctp_input(m, va_alist)
 #endif
 			}
 			SCTP_STAT_INCR(sctps_badsum);
+			SCTP_STAT_INCR_COUNTER32(sctps_checksumerrors);
 			goto bad;
 		}
 		sh->checksum = calc_check;
