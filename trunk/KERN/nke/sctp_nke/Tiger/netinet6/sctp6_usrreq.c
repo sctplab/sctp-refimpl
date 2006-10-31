@@ -333,11 +333,6 @@ sctp_skip_csum:
 	 * Locate pcb and tcb for datagram sctp_findassociation_addr() wants
 	 * IP/SCTP/first chunk header...
 	 */
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-		printf("V6 Find the association\n");
-	}
-#endif
 	stcb = sctp_findassociation_addr(m, iphlen, offset - sizeof(*ch),
 	    sh, ch, &in6p, &net);
 	/* in6p's ref-count increased */
@@ -1262,14 +1257,6 @@ sctp6_disconnect(struct socket *so)
 				    (SCTP_GET_STATE(asoc) !=
 				    SCTP_STATE_SHUTDOWN_ACK_SENT)) {
 					/* only send SHUTDOWN the first time */
-#ifdef SCTP_DEBUG
-					if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
-						printf("%s:%d sends a shutdown\n",
-						    __FILE__,
-						    __LINE__
-						    );
-					}
-#endif
 					sctp_send_shutdown(stcb, stcb->asoc.primary_destination);
 					sctp_chunk_output(stcb->sctp_ep, stcb, 1);
 					asoc->state = SCTP_STATE_SHUTDOWN_SENT;

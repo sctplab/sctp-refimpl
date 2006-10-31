@@ -152,11 +152,6 @@ sctp_auth_add_chunk(uint8_t chunk, sctp_auth_chklist_t *list)
 	    (chunk == SCTP_INITIATION_ACK) ||
 	    (chunk == SCTP_SHUTDOWN_COMPLETE) ||
 	    (chunk == SCTP_AUTHENTICATION)) {
-#ifdef SCTP_DEBUG
-		if (SCTP_AUTH_DEBUG)
-			printf("SCTP: cannot add chunk %u (0x%02x) to Auth list\n",
-			    chunk, chunk);
-#endif
 		return (-1);
 	}
 	if (list->chunks[chunk] == 0) {
@@ -165,13 +160,6 @@ sctp_auth_add_chunk(uint8_t chunk, sctp_auth_chklist_t *list)
 #ifdef SCTP_DEBUG
 		if (SCTP_AUTH_DEBUG)
 			printf("SCTP: added chunk %u (0x%02x) to Auth list\n",
-			    chunk, chunk);
-#endif
-	} else {
-		/* chunk already set... ignore */
-#ifdef SCTP_DEBUG
-		if (SCTP_AUTH_DEBUG)
-			printf("SCTP: chunk %u (0x%02x) already in Auth list\n",
 			    chunk, chunk);
 #endif
 	}
@@ -190,11 +178,6 @@ sctp_auth_delete_chunk(uint8_t chunk, sctp_auth_chklist_t *list)
 	/* is chunk restricted? */
 	if ((chunk == SCTP_ASCONF) ||
 	    (chunk == SCTP_ASCONF_ACK)) {
-#ifdef SCTP_DEBUG
-		if (SCTP_AUTH_DEBUG)
-			printf("SCTP: cannot delete chunk %u (0x%02x) from Auth list\n",
-			    chunk, chunk);
-#endif
 		return (-1);
 	}
 	if (list->chunks[chunk] == 1) {
@@ -203,13 +186,6 @@ sctp_auth_delete_chunk(uint8_t chunk, sctp_auth_chklist_t *list)
 #ifdef SCTP_DEBUG
 		if (SCTP_AUTH_DEBUG)
 			printf("SCTP: deleted chunk %u (0x%02x) from Auth list\n",
-			    chunk, chunk);
-#endif
-	} else {
-		/* chunk already set... ignore */
-#ifdef SCTP_DEBUG
-		if (SCTP_AUTH_DEBUG)
-			printf("SCTP: chunk %u (0x%02x) not in Auth list\n",
 			    chunk, chunk);
 #endif
 	}
@@ -711,13 +687,19 @@ sctp_auth_add_hmacid(sctp_hmaclist_t *list, uint16_t hmac_id)
 		return (-1);
 	}
 	if ((hmac_id != SCTP_AUTH_HMAC_ID_SHA1) &&
-	    (hmac_id != SCTP_AUTH_HMAC_ID_MD5)) {
-#ifdef SCTP_DEBUG
-		if (SCTP_AUTH_DEBUG)
-			printf("\nSCTP: cannot add unsupported HMAC id %u", hmac_id);
+#ifdef HAVE_SHA224
+	    (hmac_id != SCTP_AUTH_HMAC_ID_SHA224) &&
 #endif
+#ifdef HAVE_SHA2
+	    (hmac_id != SCTP_AUTH_HMAC_ID_SHA256) &&
+	    (hmac_id != SCTP_AUTH_HMAC_ID_SHA384) &&
+	    (hmac_id != SCTP_AUTH_HMAC_ID_SHA512) &&
+#endif
+
+
+	    (hmac_id != SCTP_AUTH_HMAC_ID_MD5)) {
 		return (-1);
-    }
+	}
 #ifdef SCTP_DEBUG
 	if (SCTP_AUTH_DEBUG)
 		printf("SCTP: add HMAC id %u to list\n", hmac_id);
@@ -1662,10 +1644,6 @@ sctp_handle_auth(struct sctp_tcb *stcb, struct sctp_auth_chunk *auth,
 	chunklen = ntohs(auth->ch.chunk_length);
 	if (chunklen < sizeof(*auth)) {
 		SCTP_STAT_INCR(sctps_recvauthfailed);
-#ifdef SCTP_DEBUG
-		if (SCTP_AUTH_DEBUG)
-			printf("SCTP AUTH Chunk: chunk too short\n");
-#endif
 		return (-1);
 	}
 	SCTP_STAT_INCR(sctps_recvauth);
@@ -1775,11 +1753,6 @@ sctp_handle_auth(struct sctp_tcb *stcb, struct sctp_auth_chunk *auth,
 #endif
 		return (-1);
 	}
-	/* everything looks good... */
-#ifdef SCTP_DEBUG
-	if (SCTP_AUTH_DEBUG)
-		printf("SCTP Auth: Digest verified ok\n");
-#endif
 	return (0);
 }
 
