@@ -404,11 +404,6 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 	asoc = &stcb->asoc;
 	/* process the peer's parameters in the INIT-ACK */
 	retval = sctp_process_init((struct sctp_init_chunk *)cp, stcb, net);
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-		printf("Process_init returns %d\n", retval);
-	}
-#endif
 	if (retval < 0) {
 		return (retval);
 	}
@@ -522,11 +517,6 @@ sctp_handle_heartbeat_ack(struct sctp_heartbeat_chunk *cp,
 		memcpy(&sin6->sin6_addr, cp->heartbeat.hb_info.address,
 		    sizeof(sin6->sin6_addr));
 	} else {
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-			printf("unsupported address family");
-		}
-#endif
 		return;
 	}
 	r_net = sctp_findnet(stcb, (struct sockaddr *)sin);
@@ -620,14 +610,7 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 		return;
 	}
 	if (ntohs(cp->ch.chunk_length) != sizeof(struct sctp_shutdown_chunk)) {
-		/* update current data status */
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-			printf("Warning Shutdown NOT the expected size.. skipping (%d:%d)\n",
-			       ntohs(cp->ch.chunk_length),
-			       (int)sizeof(struct sctp_shutdown_chunk));
-		}
-#endif
+		/* Shutdown NOT the expected size */
 		return;
 	} else {
 		sctp_update_acked(stcb, cp, net, abort_flag);
@@ -650,11 +633,6 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 		if ((SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_RECEIVED) &&
 		    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_SENT)) {
 			asoc->state = SCTP_STATE_SHUTDOWN_RECEIVED;
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-				printf("Moving to SHUTDOWN-RECEIVED state\n");
-			}
-#endif
 			/* notify upper layer that peer has initiated a shutdown */
 			sctp_ulp_notify(SCTP_NOTIFY_PEER_SHUTDOWN, stcb, 0, NULL);
 
@@ -682,14 +660,6 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 			}
 		}
 	}
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-		printf("some_on_streamwheel:%d send_q_empty:%d sent_q_empty:%d\n",
-		       some_on_streamwheel,
-		       !TAILQ_EMPTY(&asoc->send_queue),
-		       !TAILQ_EMPTY(&asoc->sent_queue));
-	}
-#endif
 	if (!TAILQ_EMPTY(&asoc->send_queue) ||
 	    !TAILQ_EMPTY(&asoc->sent_queue) ||
 	    some_on_streamwheel) {
@@ -704,11 +674,7 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 			SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 		}
 		asoc->state = SCTP_STATE_SHUTDOWN_ACK_SENT;
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-			printf("moving to SHUTDOWN_ACK state\n");
-		}
-#endif
+
 		/* start SHUTDOWN timer */
 		sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNACK, stcb->sctp_ep,
 				 stcb, net);
@@ -787,17 +753,7 @@ sctp_process_unrecog_chunk(struct sctp_tcb *stcb, struct sctp_paramhdr *phdr,
 	chk = (struct sctp_chunkhdr *)((caddr_t)phdr + sizeof(*phdr));
 	switch (chk->chunk_type) {
 	case SCTP_ASCONF_ACK:
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INPUT2) {
-			printf("Strange peer, snds ASCONF but does not recongnize asconf-ack?\n");
-		}
-#endif
 	case SCTP_ASCONF:
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INPUT2) {
-			printf("Peer does not support ASCONF/ASCONF-ACK chunks\n");
-		}
-#endif				/* SCTP_DEBUG */
 		sctp_asconf_cleanup(stcb, net);
 		break;
 	case SCTP_FORWARD_CUM_TSN:
@@ -856,7 +812,7 @@ sctp_process_unrecog_param(struct sctp_tcb *stcb, struct sctp_paramhdr *phdr)
 	default:
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_INPUT2) {
-			printf("Peer does not support base param type %d(%x)??\n",
+			printf("Peer does not support param type %d(%x)??\n",
 			    pbad->param_type, (uint32_t) pbad->param_type);
 		}
 #endif
@@ -967,7 +923,7 @@ sctp_handle_error(struct sctp_chunkhdr *ch,
 			/*
 			 * We should NOT get these here, but in a
 			 * ASCONF-ACK.
-			 */
+n			 */
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_INPUT2) {
 				printf("Peer sends ASCONF errors in a Operational Error?<%d>?\n",
@@ -980,7 +936,7 @@ sctp_handle_error(struct sctp_chunkhdr *ch,
 			 * And what, pray tell do we do with the fact that
 			 * the peer is out of resources? Not really sure we
 			 * could do anything but abort. I suspect this
-			 * should have came WITH an abort instead of in a
+	n		 * should have came WITH an abort instead of in a
 			 * OP-ERROR.
 			 */
 			break;
@@ -1082,11 +1038,6 @@ sctp_handle_init_ack(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 		if (sctp_process_init_ack(m, iphlen, offset, sh, cp, stcb, net
 		    ) < 0) {
 			/* error in parsing parameters */
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_INPUT2) {
-				printf("sctp_process_init_ack: error in msg, discarding\n");
-			}
-#endif
 			return (-1);
 		}
 		/* update our state */
@@ -1108,7 +1059,7 @@ sctp_handle_init_ack(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 		/*
 		 * collapse the init timer back in case of a exponential
 		 * backoff
-		 */
+n		 */
 		sctp_timer_start(SCTP_TIMER_TYPE_COOKIE, stcb->sctp_ep,
 		    stcb, net);
 		/*
@@ -1129,11 +1080,6 @@ sctp_handle_init_ack(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 	case SCTP_STATE_INUSE:
 	default:
 		/* incorrect state... discard */
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-			printf("Leaving handle-init-ack default\n");
-		}
-#endif
 		return (-1);
 		break;
 	}			/* end switch asoc state */
@@ -1174,11 +1120,6 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		struct sctp_paramhdr *ph;
 
 		sctp_send_shutdown_ack(stcb, stcb->asoc.primary_destination);
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INPUT2) {
-			printf("sctp_handle_cookie: got a cookie, while shutting down!\n");
-		}
-#endif
 		op_err = sctp_get_mbuf_for_msg(sizeof(struct sctp_paramhdr),
 					       1, M_DONTWAIT, 1, MT_DATA);
 		if (op_err == NULL) {
@@ -1209,20 +1150,10 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 	    (uint8_t *) & init_buf);
 	if (init_cp == NULL) {
 		/* could not pull a INIT chunk in cookie */
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INPUT2) {
-			printf("process_cookie_existing: could not pull INIT chunk hdr\n");
-		}
-#endif				/* SCTP_DEBUG */
 		return (NULL);
 	}
 	chk_length = ntohs(init_cp->ch.chunk_length);
 	if (init_cp->ch.chunk_type != SCTP_INITIATION) {
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INPUT2) {
-			printf("process_cookie_existing: could not find INIT chunk!\n");
-		}
-#endif				/* SCTP_DEBUG */
 		return (NULL);
 	}
 	/*
@@ -1235,20 +1166,10 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 	    (uint8_t *) & initack_buf);
 	if (initack_cp == NULL) {
 		/* could not pull INIT-ACK chunk in cookie */
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INPUT2) {
-			printf("process_cookie_existing: could not pull INIT-ACK chunk hdr\n");
-		}
-#endif				/* SCTP_DEBUG */
 		return (NULL);
 	}
 	chk_length = ntohs(initack_cp->ch.chunk_length);
 	if (initack_cp->ch.chunk_type != SCTP_INITIATION_ACK) {
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INPUT2) {
-			printf("process_cookie_existing: could not find INIT-ACK chunk!\n");
-		}
-#endif				/* SCTP_DEBUG */
 		return (NULL);
 	}
 	if ((ntohl(initack_cp->init.initiate_tag) == asoc->my_vtag) &&
@@ -1267,9 +1188,6 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			/* First we must process the INIT !! */
 			retval = sctp_process_init(init_cp, stcb, net);
 			if (retval < 0) {
-#ifdef SCTP_DEBUG
-				printf("process_cookie_existing: INIT processing failed\n");
-#endif
 				return (NULL);
 			}
 			/* intentional fall through to below... */
@@ -1336,11 +1254,6 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		if (sctp_load_addresses_from_init(stcb, m, iphlen,
 		    init_offset + sizeof(struct sctp_init_chunk),
 		    initack_offset, sh, init_src)) {
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-				printf("Weird cookie load_address failure on cookie existing - 1\n");
-			}
-#endif
 			return (NULL);
 		}
 		/* respond with a COOKIE-ACK */
@@ -1390,21 +1303,11 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		/* process the INIT info (peer's info) */
 		retval = sctp_process_init(init_cp, stcb, net);
 		if (retval < 0) {
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-				printf("process_cookie_existing: INIT processing failed\n");
-			}
-#endif
 			return (NULL);
 		}
 		if (sctp_load_addresses_from_init(stcb, m, iphlen,
 		    init_offset + sizeof(struct sctp_init_chunk),
 		    initack_offset, sh, init_src)) {
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-				printf("Weird cookie load_address failure on cookie existing - 2\n");
-			}
-#endif
 			return (NULL);
 		}
 		if ((asoc->state & SCTP_STATE_COOKIE_WAIT) ||
@@ -1492,11 +1395,6 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		/* process the INIT info (peer's info) */
 		retval = sctp_process_init(init_cp, stcb, net);
 		if (retval < 0) {
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-				printf("process_cookie_existing: INIT processing failed\n");
-			}
-#endif
 			return (NULL);
 		}
 		/*
@@ -1508,11 +1406,6 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		if (sctp_load_addresses_from_init(stcb, m, iphlen,
 		    init_offset + sizeof(struct sctp_init_chunk),
 		    initack_offset, sh, init_src)) {
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-				printf("Weird cookie load_address failure on cookie existing - 3\n");
-			}
-#endif
 			return (NULL);
 		}
 		if (asoc->state & SCTP_STATE_SHUTDOWN_PENDING) {
@@ -1613,17 +1506,6 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	}
 	chk_length = ntohs(initack_cp->ch.chunk_length);
 	if (initack_cp->ch.chunk_type != SCTP_INITIATION_ACK) {
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INPUT2) {
-			uint8_t *pp;
-
-			pp = (uint8_t *) initack_cp;
-			printf("process_cookie_new: could not find INIT-ACK chunk!\n");
-			printf("Found bytes %x %x %x %x at postion %d\n",
-			    (uint32_t) pp[0], (uint32_t) pp[1], (uint32_t) pp[2],
-			    (uint32_t) pp[3], initack_offset);
-		}
-#endif				/* SCTP_DEBUG */
 		return (NULL);
 	}
 	/*
@@ -1693,11 +1575,6 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	/* process the INIT info (peer's info) */
 	retval = sctp_process_init(init_cp, stcb, *netp);
 	if (retval < 0) {
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-			printf("process_cookie_new: INIT processing failed\n");
-		}
-#endif
 		sctp_free_assoc(inp, stcb, 0);
 		return (NULL);
 	}
@@ -1718,10 +1595,6 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	if (auth_skipped) {
 		struct sctp_auth_chunk *auth;
 
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_AUTH1)
-			printf("COOKIE-ECHO: verifying AUTH\n");
-#endif				/* SCTP_DEBUG */
 		auth = (struct sctp_auth_chunk *)
 		    sctp_m_getptr(m, auth_offset, auth_len, chunk_buf);
 		if (sctp_handle_auth(stcb, auth, m, auth_offset)) {
@@ -1736,10 +1609,6 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 			/* remaining chunks checked... good to go */
 			stcb->asoc.authenticated = 1;
 		}
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_AUTH1)
-			printf("COOKIE-ECHO: AUTH verified\n");
-#endif				/* SCTP_DEBUG */
 	}
 	/* update current state */
 #ifdef SCTP_DEBUG
@@ -1877,11 +1746,6 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 #endif
 
 	if (inp_p == NULL) {
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-			printf("sctp_handle_cookie: null inp_p!\n");
-		}
-#endif
 		return (NULL);
 	}
 	/* First get the destination address setup too. */
@@ -1947,11 +1811,6 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	    sizeof(struct sctp_init_chunk) +
 	    sizeof(struct sctp_init_ack_chunk) + SCTP_SIGNATURE_SIZE) {
 		/* cookie too long!  or too small */
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INPUT2) {
-			printf("sctp_handle_cookie: cookie_len=%u, pkt size=%u\n", cookie_len, size_of_pkt);
-		}
-#endif				/* SCTP_DEBUG */
 		return (NULL);
 	}
 	/*
@@ -1962,21 +1821,11 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	if (sig_offset > size_of_pkt) {
 		/* packet not correct size! */
 		/* XXX this may already be accounted for earlier... */
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INPUT2) {
-			printf("sctp_handle_cookie: sig offset=%u, pkt size=%u\n", sig_offset, size_of_pkt);
-		}
-#endif
 		return (NULL);
 	}
 	m_sig = m_split(m, sig_offset, M_DONTWAIT);
 	if (m_sig == NULL) {
 		/* out of memory or ?? */
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-			printf("sctp_handle_cookie: couldn't m_split the signature\n");
-		}
-#endif
 		return (NULL);
 	}
 
@@ -1996,20 +1845,10 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	if ((cookie->time_entered.tv_sec < (long)ep->time_of_secret_change) &&
 	    (ep->current_secret_number != ep->last_secret_number)) {
 		/* it's the old cookie */
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INPUT2) {
-			printf("sctp_handle_cookie: old cookie sig\n");
-		}
-#endif
 		sctp_hash_digest_m((char *)ep->secret_key[(int)ep->last_secret_number],
 		    SCTP_SECRET_SIZE, m, cookie_offset, calc_sig);
 	} else {
 		/* it's the current cookie */
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INPUT2) {
-			printf("sctp_handle_cookie: current cookie sig\n");
-		}
-#endif
 		sctp_hash_digest_m((char *)ep->secret_key[(int)ep->current_secret_number],
 		    SCTP_SECRET_SIZE, m, cookie_offset, calc_sig);
 	}
@@ -2018,11 +1857,6 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	sig = (uint8_t *) sctp_m_getptr(m_sig, 0, SCTP_SIGNATURE_SIZE, (uint8_t *) & tmp_sig);
 	if (sig == NULL) {
 		/* couldn't find signature */
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-			printf("sctp_handle_cookie: couldn't pull the signature\n");
-		}
-#endif
 		return (NULL);
 	}
 	/* compare the received digest with the computed digest */
@@ -2031,11 +1865,6 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		if ((cookie->time_entered.tv_sec == (long)ep->time_of_secret_change) &&
 		    (ep->current_secret_number != ep->last_secret_number)) {
 			/* compute digest with old */
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_INPUT2) {
-				printf("sctp_handle_cookie: old cookie sig\n");
-			}
-#endif
 			sctp_hash_digest_m((char *)ep->secret_key[(int)ep->last_secret_number],
 			    SCTP_SECRET_SIZE, m, cookie_offset, calc_sig);
 			/* compare */
@@ -2095,11 +1924,6 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 #endif
 		return (NULL);
 	}
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_INPUT2) {
-		printf("handle_cookie_echo: cookie signature validation passed\n");
-	}
-#endif
 
 	/*
 	 * check the cookie timestamps to be sure it's not stale
@@ -2118,12 +1942,6 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		struct mbuf *op_err;
 		struct sctp_stale_cookie_msg *scm;
 		uint32_t tim;
-
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INPUT3) {
-			printf("sctp_handle_cookie: got a STALE cookie!\n");
-		}
-#endif
 		op_err = sctp_get_mbuf_for_msg(sizeof(struct sctp_stale_cookie_msg),
 					       1, M_DONTWAIT, 1, MT_DATA);
 		if (op_err == NULL) {
@@ -2194,21 +2012,11 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	cookie_len -= SCTP_SIGNATURE_SIZE;
 	if (*stcb == NULL) {
 		/* this is the "normal" case... get a new TCB */
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INPUT2) {
-			printf("sctp_handle_cookie: processing NEW cookie\n");
-		}
-#endif
 		*stcb = sctp_process_cookie_new(m, iphlen, offset, sh, cookie,
 		    cookie_len, *inp_p, netp, to, &notification,
 		    auth_skipped, auth_offset, auth_len);
 	} else {
 		/* this is abnormal... cookie-echo on existing TCB */
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INPUT2) {
-			printf("sctp_handle_cookie: processing EXISTING cookie\n");
-		}
-#endif
 		had_a_existing_tcb = 1;
 		*stcb = sctp_process_cookie_existing(m, iphlen, offset, sh,
 		    cookie, cookie_len, *inp_p, *stcb, *netp, to, &notification,
@@ -2217,11 +2025,6 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 
 	if (*stcb == NULL) {
 		/* still no TCB... must be bad cookie-echo */
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INPUT2) {
-			printf("handle_cookie_echo: ACK! don't have a TCB!\n");
-		}
-#endif				/* SCTP_DEBUG */
 		return (NULL);
 	}
 	/*
@@ -2233,11 +2036,8 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	 * This code should in theory NOT run but
 	 */
 	if (netl == NULL) {
+		/* TSNH! Huh, why do I need to add this address here? */
 		int ret;
-
-#ifdef SCTP_DEBUG
-		printf("TSNH! Huh, why do I need to add this address here?\n");
-#endif
 		ret = sctp_add_remote_addr(*stcb, to, 0, 100);
 		netl = sctp_findnet(*stcb, to);
 	}
@@ -2250,11 +2050,6 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			    (*stcb), 0, (void *)netl);
 		}
 	}
-#ifdef SCTP_DEBUG
-	else {
-		printf("Could not add source address for some reason\n");
-	}
-#endif
 	if (*stcb) {
 		sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, *inp_p,
 		    *stcb, NULL);
@@ -2789,14 +2584,6 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 		sctp_send_hb(stcb, 1, net);
 		break;
 	case SCTP_SHUTDOWN:
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
-			printf("%s:%d sends a shutdown\n",
-			    __FILE__,
-			    __LINE__
-			    );
-		}
-#endif
 		sctp_send_shutdown(stcb, net);
 		break;
 	case SCTP_SHUTDOWN_ACK:
@@ -2861,7 +2648,6 @@ sctp_reset_in_stream(struct sctp_tcb *stcb, int number_entries, uint16_t * list)
 		for (i = 0; i < number_entries; i++) {
 			temp = ntohs(list[i]);
 			if (temp >= stcb->asoc.streamincnt) {
-				printf("Invalid stream in-stream reset %d\n", temp);
 				continue;
 			}
 			stcb->asoc.strmin[temp].last_sequence_delivered = 0xffff;
@@ -2891,8 +2677,6 @@ sctp_reset_out_streams(struct sctp_tcb *stcb, int number_entries, uint16_t * lis
 			temp = ntohs(list[i]);
 			if (temp >= stcb->asoc.streamoutcnt) {
 				/* no such stream */
-				printf("%d is an invalid stream for outbound seq number reset\n",
-				    temp);
 				continue;
 			}
 			stcb->asoc.strmout[temp].next_sequence_sent = 0;
@@ -2913,16 +2697,13 @@ sctp_find_stream_reset(struct sctp_tcb *stcb, uint32_t seq, struct sctp_tmit_chu
 
 	asoc = &stcb->asoc;
 	if (TAILQ_EMPTY(&stcb->asoc.control_send_queue)) {
-		printf("Huh, find-strm-reset and nothing on control queue\n");
 		return (NULL);
 	}
 	if (stcb->asoc.str_reset == NULL) {
-		printf("Huh, find-strm-reset and asoc.str_reset not set\n");
 		return (NULL);
 	}
 	chk = stcb->asoc.str_reset;
 	if (chk->data == NULL) {
-		printf("Huh, stream reset's data is free?\n");
 		return (NULL);
 	}
 	if (bchk) {
@@ -2957,7 +2738,6 @@ sctp_clean_up_stream_reset(struct sctp_tcb *stcb)
 	struct sctp_tmit_chunk *chk = stcb->asoc.str_reset;
 
 	if (stcb->asoc.str_reset == NULL) {
-		printf("Huh, I don't have one outstanding?\n");
 		return;
 	}
 	sctp_timer_stop(SCTP_TIMER_TYPE_STRRESET, stcb->sctp_ep, stcb, chk->whoTo);
@@ -3057,17 +2837,7 @@ sctp_handle_stream_reset_response(struct sctp_tcb *stcb,
 			if (asoc->stream_reset_outstanding == 0) {
 				sctp_clean_up_stream_reset(stcb);
 			}
-		} else {
-			printf("Error, I could not find a str-reset seq that I sent?\n");
 		}
-	} else {
-		/* duplicate */
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-			printf("Duplicate old stream reset resp next:%x this one:%x\n",
-			    stcb->asoc.str_reset_seq_out, seq);
-		}
-#endif
 	}
 	return (0);
 }
@@ -3119,12 +2889,6 @@ sctp_handle_str_reset_request_in(struct sctp_tcb *stcb,
 	} else if (asoc->str_reset_seq_in - 2 == seq) {
 		sctp_add_stream_reset_result(chk, seq, asoc->last_reset_action[1]);
 	} else {
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-			printf("SCTP:Peer sends a old str-reset seq %x, I expect %x\n",
-			    (uint32_t) seq, (uint32_t) asoc->str_reset_seq_in);
-		}
-#endif
 		sctp_add_stream_reset_result(chk, seq, SCTP_STREAM_RESET_BAD_SEQNO);
 	}
 }
@@ -3188,12 +2952,6 @@ sctp_handle_str_reset_request_tsn(struct sctp_tcb *stcb,
 		    stcb->asoc.last_base_tsnsent[1]
 		    );
 	} else {
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-			printf("SCTP:Peer sends a old str-reset seq %x, I expect %x\n",
-			    (uint32_t) seq, (uint32_t) asoc->str_reset_seq_in);
-		}
-#endif
 		sctp_add_stream_reset_result(chk, seq, SCTP_STREAM_RESET_BAD_SEQNO);
 	}
 	return (0);
@@ -3270,12 +3028,6 @@ sctp_handle_str_reset_request_out(struct sctp_tcb *stcb,
 		 */
 		sctp_add_stream_reset_result(chk, seq, asoc->last_reset_action[1]);
 	} else {
-#ifdef SCTP_DEBUG
-		/* if (sctp_debug_on & SCTP_DEBUG_INPUT1) { */
-		printf("SCTP:Peer sends a old str-reset seq %x, I expect %x\n",
-		    (uint32_t) seq, (uint32_t) asoc->str_reset_seq_in);
-		/* } */
-#endif
 		sctp_add_stream_reset_result(chk, seq, SCTP_STREAM_RESET_BAD_SEQNO);
 	}
 }
@@ -3351,7 +3103,6 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_out_req
 				seq = ntohl(req_out->response_seq);
 				if (seq == stcb->asoc.str_reset_seq_out) {
 					/* implicit ack */
-					printf("Handle implict str-reset-response seq:%x\n", seq);
 					sctp_handle_stream_reset_response(stcb, seq, SCTP_STREAM_RESET_PERFORMED, NULL);
 				}
 			}
@@ -3385,7 +3136,6 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_out_req
 				goto strres_nochunk;
 			}
 		} else {
-			printf("Error unknown param %d\n", ptype);
 			break;
 		}
 
@@ -3710,21 +3460,11 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 	/*
 	 * validate the verification tag
 	 */
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_INPUT3) {
-		printf("sctp_process_control: validating vtags\n");
-	}
-#endif				/* SCTP_DEBUG */
 	vtag_in = ntohl(sh->v_tag);
 
 	if (ch->chunk_type == SCTP_INITIATION) {
 		if (vtag_in != 0) {
 			/* protocol error- silently discard... */
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_INPUT3) {
-				printf("sctp_process_control: INIT with vtag != 0\n");
-			}
-#endif				/* SCTP_DEBUG */
 			SCTP_STAT_INCR(sctps_badvtag);
 			if (locked_tcb)
 				SCTP_TCB_UNLOCK(locked_tcb);
@@ -3742,11 +3482,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			auth_skipped = 1;
 			auth_offset = *offset;
 			auth_len = ntohs(ch->chunk_length);
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_AUTH1)
-				printf("Saved AUTH chunk for later check: offset %u, len %u\n",
-				       auth_offset, auth_len);
-#endif				/* SCTP_DEBUG */
+
 			/* (temporarily) move past this chunk */
 			*offset += SCTP_SIZE32(auth_len);
 			if (*offset >= length) {
@@ -3758,10 +3494,6 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 								   sizeof(struct sctp_chunkhdr), chunk_buf);
 		}
 		if (ch->chunk_type == SCTP_COOKIE_ECHO) {
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_AUTH1)
-				printf("Skipping to process_control_chunks\n");
-#endif				/* SCTP_DEBUG */
 			goto process_control_chunks;
 		}
 		/*
@@ -3785,10 +3517,6 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			if (auth_skipped && (stcb != NULL)) {
 				struct sctp_auth_chunk *auth;
 
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_AUTH1)
-					printf("ASCONF: verifying AUTH\n");
-#endif				/* SCTP_DEBUG */
 				auth = (struct sctp_auth_chunk *)
 					sctp_m_getptr(m, auth_offset,
 						      auth_len, chunk_buf);
@@ -3803,21 +3531,11 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					/* remaining chunks are HMAC checked */
 					stcb->asoc.authenticated = 1;
 				}
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_AUTH1)
-					printf("ASCONF: AUTH verified\n");
-#endif				/* SCTP_DEBUG */
 			}
 		}
 		if (stcb == NULL) {
 			/* no association, so it's out of the blue... */
 			sctp_handle_ootb(m, iphlen, *offset, sh, inp, NULL);
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_INPUT3) {
-				printf("sctp_process_control: handling OOTB packet, chunk type=%xh\n",
-				       ch->chunk_type);
-			}
-#endif				/* SCTP_DEBUG */
 			*offset = length;
 			if (locked_tcb)
 				SCTP_TCB_UNLOCK(locked_tcb);
@@ -3871,12 +3589,6 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			}
 		}
 	}			/* end if !SCTP_COOKIE_ECHO */
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_INPUT3) {
-		printf("sctp_process_control: vtags ok, processing ctrl chunks\n");
-	}
-#endif				/* SCTP_DEBUG */
-
 	/*
 	 * process all control chunks...
 	 */
@@ -3895,17 +3607,12 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 		chk_length = ntohs(ch->chunk_length);
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_INPUT2) {
-			printf("sctp_process_control: processing a chunk type=%u, len=%u\n", ch->chunk_type, chk_length);
+			printf("sctp_process_control: processing a chunk type=%u, len=%u\n", 
+			       ch->chunk_type, chk_length);
 		}
 #endif				/* SCTP_DEBUG */
 		if ((size_t)chk_length < sizeof(*ch) ||
 		    (*offset + chk_length) > length) {
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_INPUT3) {
-				printf("sctp_process_control: chunk length invalid! *offset:%u, chk_length:%u > length:%u\n",
-				       *offset, chk_length, length);
-			}
-#endif				/* SCTP_DEBUG */
 			*offset = length;
 			if (locked_tcb)
 				SCTP_TCB_UNLOCK(locked_tcb);
@@ -3983,11 +3690,6 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 		    !stcb->asoc.authenticated) {
 			/* "silently" ignore */
 			SCTP_STAT_INCR(sctps_recvauthmissing);
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_AUTH1)
-				printf("Chunk %u requires AUTH, skipped\n",
-				       ch->chunk_type);
-#endif
 			goto next_chunk;
 		}
 		switch (ch->chunk_type) {
@@ -4058,13 +3760,6 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			}
 			if ((num_chunks > 1) ||
 			    (sctp_strict_init && (length - *offset > SCTP_SIZE32(chk_length)))) {
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_INPUT3) {
-					printf("Length is %d rounded chk_length:%d .. dropping\n",
-					       length - *offset,
-					       SCTP_SIZE32(chk_length));
-				}
-#endif
 				*offset = length;
 				if (locked_tcb)
 					SCTP_TCB_UNLOCK(locked_tcb);
@@ -4079,11 +3774,6 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			if ((stcb) && ret == 0)
 				sctp_chunk_output(stcb->sctp_ep, stcb, SCTP_OUTPUT_FROM_CONTROL_PROC);
 			*offset = length;
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_INPUT3) {
-				printf("All done INIT-ACK processing\n");
-			}
-#endif
 			if (locked_tcb)
 				SCTP_TCB_UNLOCK(locked_tcb);
 			return (NULL);
@@ -4286,12 +3976,6 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 								auth_offset,
 								auth_len);
 
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_INPUT3) {
-					printf("ret_buf:%p length:%d off:%d\n",
-					       ret_buf, length, *offset);
-				}
-#endif				/* SCTP_DEBUG */
 				if (ret_buf == NULL) {
 					if (locked_tcb) {
 						SCTP_TCB_UNLOCK(locked_tcb);
@@ -4501,11 +4185,6 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					auth_offset = *offset;
 					auth_len = chk_length;
 					auth_skipped = 1;
-#ifdef SCTP_DEBUG
-					if (sctp_debug_on & SCTP_DEBUG_AUTH1)
-						printf("Saved AUTH chunk for later check: offset %u, len %u\n",
-						       auth_offset, auth_len);
-#endif				/* SCTP_DEBUG */
 				}
 				/* skip this chunk (temporarily) */
 				goto next_chunk;
@@ -4556,22 +4235,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 						sctp_queue_op_err(stcb, mm);
 					} else {
 						sctp_m_freem(mm);
-#ifdef SCTP_DEBUG
-						if (sctp_debug_on &
-						    SCTP_DEBUG_INPUT1) {
-							printf("Gak can't copy the chunk into operr %d bytes\n",
-							       chk_length);
-						}
-#endif
 					}
 				}
-#ifdef SCTP_DEBUG
-				else {
-					if (sctp_debug_on & SCTP_DEBUG_INPUT3) {
-						printf("Gak can't mgethdr for op-err of unrec chunk\n");
-					}
-				}
-#endif
 			}
 			if ((ch->chunk_type & 0x80) == 0) {
 				/* discard this packet */
@@ -4713,12 +4378,6 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 	}
 	if (IS_SCTP_CONTROL(ch)) {
 		/* process the control portion of the SCTP packet */
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-			printf("Processing control\n");
-		}
-#endif				/* SCTP_DEBUG */
-
 		stcb = sctp_process_control(m, iphlen, &offset, length, sh, ch,
 		    inp, stcb, &net, &fwd_tsn_seen);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
@@ -4737,11 +4396,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		 * no control chunks, so pre-process DATA chunks (these
 		 * checks are taken care of by control processing)
 		 */
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-			printf("No control present\n");
-		}
-#endif				/* SCTP_DEBUG */
+
 		/*
 		 * if DATA only packet, and auth is required, then punt...
 		 * can't have authenticated without any AUTH (control)
@@ -4752,10 +4407,6 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		    stcb->asoc.local_auth_chunks)) {
 			/* "silently" ignore */
 			SCTP_STAT_INCR(sctps_recvauthmissing);
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_AUTH1)
-				printf("Data only packet requires AUTH, skipped\n");
-#endif
 			SCTP_TCB_UNLOCK(stcb);
 			return (1);
 		}
@@ -4784,12 +4435,6 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 	sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
 #endif
 
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-		printf("Ok, control finished time to look for data (%d) offset:%d\n",
-		    length, offset);
-	}
-#endif				/* SCTP_DEBUG */
 	/*
 	 * DATA chunk processing
 	 */
@@ -4853,11 +4498,6 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		case SCTP_STATE_SHUTDOWN_RECEIVED:	/* This is a peer error */
 		case SCTP_STATE_SHUTDOWN_ACK_SENT:
 		default:
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-				printf("Got data in invalid state %d.. dropping\n", stcb->asoc.state);
-			}
-#endif
 			SCTP_TCB_UNLOCK(stcb);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			if (additional_lock) {
@@ -5089,11 +4729,6 @@ sctp_input(m, va_alist)
 	net = NULL;
 	SCTP_STAT_INCR(sctps_recvpackets);
 	SCTP_STAT_INCR_COUNTER64(sctps_inpackets);
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-		printf("V4 input gets a packet iphlen:%d pktlen:%d\n", iphlen, m->m_pkthdr.len);
-	}
-#endif
 	/* #ifdef INET6 */
 	/* Don't think this is needed */
 	/* bzero(&opts6, sizeof(opts6)); */
@@ -5220,12 +4855,6 @@ sctp_skip_csum_4:
 	 * Locate pcb and tcb for datagram sctp_findassociation_addr() wants
 	 * IP/SCTP/first chunk header...
 	 */
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-		printf("V4 find association\n");
-	}
-#endif
-
 	stcb = sctp_findassociation_addr(m, iphlen, offset - sizeof(*ch),
 	    sh, ch, &inp, &net);
 	/* inp's ref-count increased && stcb locked */
