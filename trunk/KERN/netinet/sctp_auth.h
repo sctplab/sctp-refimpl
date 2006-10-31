@@ -41,12 +41,15 @@ __FBSDID("$FreeBSD:$");
 #include <sys/mbuf.h>
 #if defined(__APPLE__)
 #include <sys/appleapiopts.h>
-#endif				/* __APPLE__ */
+#endif
 #include <netinet/sctp_sha1.h>
 #include <sys/md5.h>
-#ifdef HAVE_SHA2
+#if defined(HAVE_SHA2)
+#if defined(__FreeBSD__) || defined(__APPLE__)
 #include <crypto/sha2/sha2.h>
 #endif
+#endif
+
 /* map standard crypto API names */
 #define MD5_Init	MD5Init
 #define MD5_Update	MD5Update
