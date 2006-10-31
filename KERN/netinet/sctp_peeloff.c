@@ -81,6 +81,7 @@ __FBSDID("$FreeBSD:$");
 #endif
 #include <netinet/ip_icmp.h>
 #include <netinet/icmp_var.h>
+#include <netinet/sctp_os.h>
 #include <netinet/sctp_pcb.h>
 #include <netinet/sctp.h>
 #include <netinet/sctp_uio.h>
