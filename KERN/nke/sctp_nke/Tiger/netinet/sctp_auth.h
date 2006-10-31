@@ -31,6 +31,7 @@
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD:$");
+#define HAVE_SHA2
 #endif
 
 #ifndef __SCTP_AUTH_H__
@@ -40,9 +41,15 @@ __FBSDID("$FreeBSD:$");
 #include <sys/mbuf.h>
 #if defined(__APPLE__)
 #include <sys/appleapiopts.h>
-#endif				/* __APPLE__ */
+#endif
 #include <netinet/sctp_sha1.h>
 #include <sys/md5.h>
+#if defined(HAVE_SHA2)
+#if defined(__FreeBSD__) || defined(__APPLE__)
+#include <crypto/sha2/sha2.h>
+#endif
+#endif
+
 /* map standard crypto API names */
 #define MD5_Init	MD5Init
 #define MD5_Update	MD5Update
@@ -66,18 +73,23 @@ __FBSDID("$FreeBSD:$");
 typedef union sctp_hash_context {
 	SHA1_CTX sha1;
 	MD5_CTX md5;
-}                 sctp_hash_context_t;
+#ifdef HAVE_SHA2
+	SHA256_CTX sha256;
+	SHA384_CTX sha384;
+	SHA512_CTX sha512;
+#endif
+} sctp_hash_context_t;
 
 typedef struct sctp_key {
 	uint32_t keylen;
 	uint8_t key[0];
-}        sctp_key_t;
+} sctp_key_t;
 
 typedef struct sctp_shared_key {
 	LIST_ENTRY(sctp_shared_key) next;
 	sctp_key_t *key;	/* key text */
 	uint16_t keyid;		/* shared key ID */
-}               sctp_sharedkey_t;
+} sctp_sharedkey_t;
 
 LIST_HEAD(sctp_keyhead, sctp_shared_key);
 
@@ -85,14 +97,14 @@ LIST_HEAD(sctp_keyhead, sctp_shared_key);
 typedef struct sctp_auth_chklist {
 	uint8_t chunks[256];
 	uint8_t num_chunks;
-}                 sctp_auth_chklist_t;
+} sctp_auth_chklist_t;
 
 /* hmac algos supported list */
 typedef struct sctp_hmaclist {
 	uint16_t max_algo;	/* max algorithms allocated */
 	uint16_t num_algo;	/* num algorithms used */
 	uint16_t hmac[0];
-}             sctp_hmaclist_t;
+} sctp_hmaclist_t;
 
 /* authentication info */
 typedef struct sctp_authinfo {
@@ -107,7 +119,7 @@ typedef struct sctp_authinfo {
 	uint16_t recv_keyid;	/* last recv keyid (cached) */
 	sctp_key_t *assoc_key;	/* cached send key */
 	sctp_key_t *recv_key;	/* cached recv key */
-}             sctp_authinfo_t;
+} sctp_authinfo_t;
 
 
 /*
