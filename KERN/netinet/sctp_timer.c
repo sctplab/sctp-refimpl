@@ -514,27 +514,9 @@ sctp_backoff_on_timeout(struct sctp_tcb *stcb,
     int win_probe,
     int num_marked)
 {
-#ifdef SCTP_DEBUG
-	int oldRTO;
-
-	oldRTO = net->RTO;
-#endif				/* SCTP_DEBUG */
 	net->RTO <<= 1;
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_TIMER2) {
-		printf("Timer doubles from %d ms -to-> %d ms\n",
-		    oldRTO, net->RTO);
-	}
-#endif				/* SCTP_DEBUG */
-
 	if (net->RTO > stcb->asoc.maxrto) {
 		net->RTO = stcb->asoc.maxrto;
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_TIMER2) {
-			printf("Growth capped by maxrto %d\n",
-			    net->RTO);
-		}
-#endif				/* SCTP_DEBUG */
 	}
 	if ((win_probe == 0) && num_marked) {
 		/* We don't apply penalty to window probe scenarios */
@@ -555,13 +537,6 @@ sctp_backoff_on_timeout(struct sctp_tcb *stcb,
 #endif
 
 		net->partial_bytes_acked = 0;
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_TIMER1) {
-			printf("collapse cwnd to 1MTU ssthresh to %d\n",
-			    net->ssthresh);
-		}
-#endif
-
 	}
 }
 
@@ -660,11 +635,6 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	orig_flight = net->flight_size;
 	net->rto_pending = 0;
 	net->fast_retran_ip = 0;
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_TIMER2) {
-		printf("Marking ALL un-acked for retransmission at t3-timeout\n");
-	}
-#endif				/* SCTP_DEBUG */
 	/* Now on to each chunk */
 	num_mk = cnt_mk = 0;
 	tsnfirst = tsnlast = 0;
@@ -760,12 +730,6 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 				num_mk++;
 				if (fir == 0) {
 					fir = 1;
-#ifdef SCTP_DEBUG
-					if (sctp_debug_on & SCTP_DEBUG_TIMER1) {
-						printf("First TSN marked was %x\n",
-						    chk->rec.data.TSN_seq);
-					}
-#endif
 					tsnfirst = chk->rec.data.TSN_seq;
 				}
 				tsnlast = chk->rec.data.TSN_seq;
@@ -785,11 +749,6 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 
 			/* reset the TSN for striking and other FR stuff */
 			chk->rec.data.doing_fast_retransmit = 0;
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_TIMER3) {
-				printf("mark TSN:%x for retransmission\n", chk->rec.data.TSN_seq);
-			}
-#endif				/* SCTP_DEBUG */
 			/* Clear any time so NO RTT is being done */
 			chk->do_rtt = 0;
 			if (alt != net) {
@@ -858,12 +817,6 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 		stcb->asoc.sent_queue_retran_cnt = cnt_mk;
 #endif
 	}
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_TIMER3) {
-		printf("**************************\n");
-	}
-#endif				/* SCTP_DEBUG */
-
 	/* Now check for a ECN Echo that may be stranded */
 	TAILQ_FOREACH(chk, &stcb->asoc.control_send_queue, sctp_next) {
 		if ((chk->whoTo == net) &&
@@ -1085,11 +1038,6 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 		 * Here we just reset the timer and start again since we
 		 * have not established the asoc
 		 */
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_TIMER1) {
-			printf("Special cookie case return\n");
-		}
-#endif				/* SCTP_DEBUG */
 		sctp_timer_start(SCTP_TIMER_TYPE_SEND, inp, stcb, net);
 		return (0);
 	}
@@ -1105,11 +1053,6 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 			 * on issues that will occur when the ECN NONCE
 			 * stuff is put into SCTP for cross checking.
 			 */
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_TIMER1) {
-				printf("Forward TSN time\n");
-			}
-#endif				/* SCTP_DEBUG */
 			send_forward_tsn(stcb, &stcb->asoc);
 			if (lchk) {
 				/* Assure a timer is up */
@@ -1261,20 +1204,11 @@ sctp_strreset_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	struct sctp_tmit_chunk *strrst = NULL, *chk = NULL;
 
 	if (stcb->asoc.stream_reset_outstanding == 0) {
-		/* #ifdef SCTP_DEBUG */
-		printf("SCTP: Stray stream reset timer?\n");
-		/* #endif */
 		return (0);
 	}
 	/* find the existing STRRESET, we use the seq number we sent out on */
-	printf("Timer looks for seq:%x\n", stcb->asoc.str_reset_seq_out);
 	sctp_find_stream_reset(stcb, stcb->asoc.str_reset_seq_out, &strrst);
 	if (strrst == NULL) {
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_TIMER1) {
-			printf("Strange, strreset timer fires, but I can't find an str-reset?\n");
-		}
-#endif				/* SCTP_DEBUG */
 		return (0);
 	}
 	/* do threshold management */
@@ -1345,11 +1279,6 @@ sctp_asconf_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			}
 		}
 		if (asconf == NULL) {
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_TIMER1) {
-				printf("Strange, asconf timer fires, but I can't find an asconf?\n");
-			}
-#endif				/* SCTP_DEBUG */
 			return (0);
 		}
 		/* do threshold management */
@@ -1436,14 +1365,6 @@ sctp_shutdown_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	alt = sctp_find_alternate_net(stcb, net, 0);
 
 	/* third generate a shutdown into the queue for out net */
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
-		printf("%s:%d sends a shutdown\n",
-		    __FILE__,
-		    __LINE__
-		    );
-	}
-#endif
 	if (alt) {
 		sctp_send_shutdown(stcb, alt);
 	} else {
@@ -1741,14 +1662,6 @@ sctp_autoclose_timer(struct sctp_inpcb *inp,
 				if (SCTP_GET_STATE(asoc) !=
 				    SCTP_STATE_SHUTDOWN_SENT) {
 					/* only send SHUTDOWN 1st time thru */
-#ifdef SCTP_DEBUG
-					if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
-						printf("%s:%d sends a shutdown\n",
-						    __FILE__,
-						    __LINE__
-						    );
-					}
-#endif
 					sctp_send_shutdown(stcb, stcb->asoc.primary_destination);
 					asoc->state = SCTP_STATE_SHUTDOWN_SENT;
 					SCTP_STAT_DECR_GAUGE32(sctps_currestab);
@@ -1811,9 +1724,6 @@ done_with_iterator:
 #endif
 		SCTP_INP_INFO_WUNLOCK();
 		callout_stop(&it->tmr.timer);
-#ifdef SCTP_DEBUG_ITERATOR
-		printf("ITERATOR: atend()\n");
-#endif
 		if (it->function_atend != NULL) {
 			(*it->function_atend) (it->pointer, it->val);
 		}
@@ -1867,10 +1777,6 @@ select_a_new_ep:
 	/* now go through each assoc which is in the desired state */
 	if (it->stcb == NULL) {
 		/* run the per instance function */
-#ifdef SCTP_DEBUG_ITERATOR
-		printf("ITERATOR: inp() inp 0x%x, ptr 0x%x, val 0x%x\n",
-		       (uint32_t)it->inp, (uint32_t)it->pointer, it->val);
-#endif
 		if (it->function_inp != NULL)
 	    		(*it->function_inp)(it->inp, it->pointer, it->val);
 
@@ -1901,18 +1807,10 @@ select_a_new_ep:
 			SCTP_TCB_UNLOCK(it->stcb);
 			sctp_timer_start(SCTP_TIMER_TYPE_ITERATOR,
 			    (struct sctp_inpcb *)it, NULL, NULL);
-#ifdef SCTP_DEBUG_ITERATOR
-			printf("ITERATOR: starting timer\n");
-#endif
 			SCTP_ITERATOR_UNLOCK();
 			return;
 		}
 		/* run function on this one */
-#ifdef SCTP_DEBUG_ITERATOR
-		printf("ITERATOR: assoc() - inp 0x%x, stcb 0x%x, ptr 0x%x, val 0x%x\n",
-		       (uint32_t)it->inp, (uint32_t)it->stcb,
-		       (uint32_t)it->pointer, it->val);
-#endif
 		(*it->function_assoc)(it->inp, it->stcb, it->pointer, it->val);
 
 		/*
