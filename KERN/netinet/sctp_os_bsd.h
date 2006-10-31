@@ -86,5 +86,13 @@ typedef struct vm_zone *sctp_zone_t;
 	zfreei(zone, element);
 #endif
 
+/*
+ * Functions
+ */
+#if (__FreeBSD_version < 500000)
+#define sctp_read_random(buf, len)	read_random_unlimited(buf, len)
+#else
+#define sctp_read_random(buf, len)	read_random(buf, len)
+#endif
 
 #endif

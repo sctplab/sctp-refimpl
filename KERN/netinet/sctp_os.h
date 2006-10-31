@@ -46,9 +46,15 @@
  *  size = size of each zone/pool element.
  *  number = number of elements in zone/pool.
  *
+ * sctp_zone_t
  * SCTP_ZONE_INIT(zone, name, size, number)
  * SCTP_ZONE_GET(zone)
  * SCTP_ZONE_FREE(zone, element)
+ */
+
+/*
+ * Functions:
+ * sctp_read_random(void *buffer, uint32_t bytes)
  */
 
 #if defined(__FreeBSD__)

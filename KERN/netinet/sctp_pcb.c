@@ -1974,31 +1974,7 @@ sctp_inpcb_alloc(struct socket *so)
 	/* seed random number generator */
 	m->random_counter = 1;
 	m->store_at = SCTP_SIGNATURE_SIZE;
-#if defined(__FreeBSD__) && (__FreeBSD_version < 500000)
-	read_random_unlimited(m->random_numbers, sizeof(m->random_numbers));
-#elif defined(__APPLE__) || (__FreeBSD_version > 500000)
-	read_random(m->random_numbers, sizeof(m->random_numbers));
-#elif defined(__OpenBSD__)
-	get_random_bytes(m->random_numbers, sizeof(m->random_numbers));
-#elif defined(__NetBSD__) && NRND > 0
-	rnd_extract_data(m->random_numbers, sizeof(m->random_numbers),
-	    RND_EXTRACT_ANY);
-#else
-	{
-		uint32_t *ranm, *ranp;
-
-		ranp = (uint32_t *) & m->random_numbers;
-		ranm = ranp + (SCTP_SIGNATURE_ALOC_SIZE / sizeof(uint32_t));
-		if ((u_long)ranp % 4) {
-			/* not a even boundary? */
-			ranp = (uint32_t *) SCTP_SIZE32((u_long)ranp);
-		}
-		while (ranp < ranm) {
-			*ranp = random();
-			ranp++;
-		}
-	}
-#endif
+	sctp_read_random(m->random_numbers, sizeof(m->random_numbers));
 	sctp_fill_random_store(m);
 
 	/* Minimum cookie size */

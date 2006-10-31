@@ -138,8 +138,6 @@ extern uint32_t sctp_auth_random_len;	/* sysctl */
 /*
  * function prototypes
  */
-/* random number generation */
-extern void sctp_read_random(void *buffer, uint32_t bytes);
 
 /* socket option api functions */
 extern sctp_auth_chklist_t *sctp_alloc_chunklist(void);
