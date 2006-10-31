@@ -101,7 +101,6 @@ __FBSDID("$FreeBSD:$");
 #include <sys/limits.h>
 #include <sys/mac.h>
 #include <sys/mutex.h>
-#include <vm/uma.h>
 #else
 #include <machine/limits.h>
 #endif
@@ -132,8 +131,6 @@ __FBSDID("$FreeBSD:$");
 #endif				/* SCTP_KAME */
 #endif				/* INET6 */
 
-#include <netinet/sctp_pcb.h>
-
 #ifdef IPSEC
 #ifndef __OpenBSD__
 #include <netinet6/ipsec.h>
@@ -148,6 +145,7 @@ __FBSDID("$FreeBSD:$");
 #endif
 
 #include <netinet/sctp_os.h>
+#include <netinet/sctp_pcb.h>
 #include <netinet/sctputil.h>
 #include <netinet/sctp_var.h>
 #ifdef INET6

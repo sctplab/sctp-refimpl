@@ -82,6 +82,7 @@
 		50D5A2670850E137008084B7 /* locks.h in Headers */ = {isa = PBXBuildFile; fileRef = 50D5A2660850E137008084B7 /* locks.h */; };
 		876D69460AF6812C003372FB /* sctp_os_macosx.h in Headers */ = {isa = PBXBuildFile; fileRef = 876D69440AF6812C003372FB /* sctp_os_macosx.h */; };
 		876D69470AF6812C003372FB /* sctp_os.h in Headers */ = {isa = PBXBuildFile; fileRef = 876D69450AF6812C003372FB /* sctp_os.h */; };
+		876D6D430AF6C9D9003372FB /* sha2.h in Headers */ = {isa = PBXBuildFile; fileRef = 876D6D420AF6C9D9003372FB /* sha2.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXBuildRule section */
@@ -172,6 +173,7 @@
 		50D5A2660850E137008084B7 /* locks.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = locks.h; path = ppc/locks.h; sourceTree = "<group>"; };
 		876D69440AF6812C003372FB /* sctp_os_macosx.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sctp_os_macosx.h; sourceTree = "<group>"; };
 		876D69450AF6812C003372FB /* sctp_os.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sctp_os.h; sourceTree = "<group>"; };
+		876D6D420AF6C9D9003372FB /* sha2.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = sha2.h; path = crypto/sha2/sha2.h; sourceTree = "<group>"; };
 		D27513B306A6225300ADB3A4 /* Kernel.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Kernel.framework; path = /System/Library/Frameworks/Kernel.framework; sourceTree = "<absolute>"; };
 /* End PBXFileReference section */
 
@@ -226,6 +228,7 @@
 		247142CAFF3F8F9811CA285C /* Source */ = {
 			isa = PBXGroup;
 			children = (
+				876D6D400AF6C9B8003372FB /* crypto */,
 				50D5A2650850E125008084B7 /* ppc */,
 				502A84EB06F4EFF800D156E7 /* net */,
 				50D42EED06D8C0DF004DAC5C /* netinet */,
@@ -350,6 +353,22 @@
 			name = ppc;
 			sourceTree = "<group>";
 		};
+		876D6D400AF6C9B8003372FB /* crypto */ = {
+			isa = PBXGroup;
+			children = (
+				876D6D410AF6C9C1003372FB /* sha2 */,
+			);
+			name = crypto;
+			sourceTree = "<group>";
+		};
+		876D6D410AF6C9C1003372FB /* sha2 */ = {
+			isa = PBXGroup;
+			children = (
+				876D6D420AF6C9D9003372FB /* sha2.h */,
+			);
+			name = sha2;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
@@ -411,6 +430,7 @@
 				500CFAD60AF33FEC002D28C1 /* sctp_lock_empty.h in Headers */,
 				876D69460AF6812C003372FB /* sctp_os_macosx.h in Headers */,
 				876D69470AF6812C003372FB /* sctp_os.h in Headers */,
+				876D6D430AF6C9D9003372FB /* sha2.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -589,6 +609,7 @@
 					HAVE_SCTP_SORECEIVE,
 					SCTP_APPLE_FINE_GRAINED_LOCKING,
 					HAVE_SCTP_AUTH,
+					HAVE_SHA2,
 				);
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = NO;
 				GCC_WARN_ALLOW_INCOMPLETE_PROTOCOL = NO;
