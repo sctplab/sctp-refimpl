@@ -1024,12 +1024,6 @@ sctp_ipv4_source_address_selection(struct sctp_inpcb *inp,
 			loopscope = 0;
 		}
 	}
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
-		printf("Scope setup loop:%d ipv4_scope:%d\n",
-		    loopscope, ipv4_scope);
-	}
-#endif
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
 		/*
 		 * When bound to all if the address list is set it is a
@@ -1602,11 +1596,6 @@ bound_all_v6_plan_b:
 	 * look at all the other interfaces EXCEPT rt->rt_ifp and do the
 	 * same game.
 	 */
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
-		printf("bound-all Plan B\n");
-	}
-#endif
 	if (inp->next_ifn_touse == NULL) {
 		started_at_beginning = 1;
 		inp->next_ifn_touse = TAILQ_FIRST(&ifnet);
@@ -1804,11 +1793,6 @@ sctp_ipv6_source_address_selection(struct sctp_inpcb *inp,
 		 * If the route goes to the loopback address OR the address
 		 * is a loopback address, we are loopback scope.
 		 */
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
-			printf("Loopback scope is set\n");
-		}
-#endif
 		loc_scope = 0;
 		loopscope = 1;
 		if (net != NULL) {
@@ -1816,23 +1800,12 @@ sctp_ipv6_source_address_selection(struct sctp_inpcb *inp,
 			net->addr_is_local = 1;
 		}
 	} else if (IN6_IS_ADDR_LINKLOCAL(&to->sin6_addr)) {
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
-			printf("Link local scope is set, id:%d\n", to->sin6_scope_id);
-		}
-#endif
 		if (to->sin6_scope_id)
 			loc_scope = to->sin6_scope_id;
 		else {
 			loc_scope = 1;
 		}
 		loopscope = 0;
-	} else {
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
-			printf("Global scope is set\n");
-		}
-#endif
 	}
 
 	/*
@@ -1847,18 +1820,8 @@ sctp_ipv6_source_address_selection(struct sctp_inpcb *inp,
 #endif
 
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
-			printf("Calling bound-all src addr selection for v6\n");
-		}
-#endif
 		rt_addr = sctp_choose_v6_boundall(inp, stcb, net, ro, loc_scope, loopscope, non_asoc_addr_ok);
 	} else {
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
-			printf("Calling bound-specific src addr selection for v6\n");
-		}
-#endif
 		if (stcb)
 			rt_addr = sctp_choose_v6_boundspecific_stcb(inp, stcb, net, ro, loc_scope, loopscope, non_asoc_addr_ok);
 		else
@@ -1871,7 +1834,6 @@ sctp_ipv6_source_address_selection(struct sctp_inpcb *inp,
 	if (rt_addr == NULL) {
 		/* no suitable address? */
 		struct in6_addr in6;
-
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
 			printf("V6 packet will reach dead-end no suitable src address\n");

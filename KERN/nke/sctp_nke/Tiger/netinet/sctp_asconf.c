@@ -398,7 +398,6 @@ sctp_asconf_del_remote_addrs_except(struct sctp_tcb *stcb,
 		if (net != src_net) {
 			/* delete this address */
 			sctp_remove_net(stcb, net);
-
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
 				printf("asconf_del_remote_addrs_except: deleting ");
@@ -804,13 +803,17 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 	/* get pointer to first asconf param in ASCONF-ACK */
 	ack_aph = (struct sctp_asconf_paramhdr *)(mtod(m_ack, caddr_t)+sizeof(struct sctp_asconf_ack_chunk));
 	if (ack_aph == NULL) {
+#ifdef SCTP_DEBUG
 		printf("Gak in asconf2\n");
+#endif
 		return;
 	}
 	/* get pointer to first asconf param in ASCONF */
 	aph = (struct sctp_asconf_paramhdr *)sctp_m_getptr(m, offset, sizeof(struct sctp_asconf_paramhdr), (uint8_t *)&aparam_buf);
 	if (aph == NULL) {
+#ifdef SCTP_DEBUG
 		printf("Empty ASCONF received?\n");
+#endif
 		goto send_reply;
 	}
 	/* process through all parameters */
@@ -846,7 +849,9 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 		/* get the entire parameter */
 		aph = (struct sctp_asconf_paramhdr *)sctp_m_getptr(m, offset, param_length, aparam_buf);
 		if (aph == NULL) {
+#ifdef SCTP_DEBUG
 			printf("Gag\n");
+#endif
 			sctp_m_freem(m_ack);
 			return;
 		}
@@ -894,11 +899,6 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 
 		/* add any (error) result to the reply mbuf chain */
 		if (m_result != NULL) {
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
-				printf("handle_asconf: adding reply...\n");
-			}
-#endif				/* SCTP_DEBUG */
 			m_tail->m_next = m_result;
 			m_tail = m_result;
 			/* update lengths, make sure it's aligned too */
@@ -1047,11 +1047,6 @@ sctp_asconf_addr_match(struct sctp_asconf_addr *aa, struct sockaddr *sa)
 void
 sctp_asconf_cleanup(struct sctp_tcb *stcb, struct sctp_nets *net)
 {
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
-		printf("asconf_cleanup: marking peer ASCONF incapable and cleaning up\n");
-	}
-#endif				/* SCTP_DEBUG */
 	/* mark peer as ASCONF incapable */
 	stcb->asoc.peer_supports_asconf = 0;
 	/*
@@ -1105,11 +1100,6 @@ sctp_asconf_queue_add(struct sctp_tcb *stcb, struct ifaddr *ifa, uint16_t type)
 
 	/* see if peer supports ASCONF */
 	if (stcb->asoc.peer_supports_asconf == 0) {
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
-			printf("asconf_queue_add: peer doesn't support ASCONF\n");
-		}
-#endif				/* SCTP_DEBUG */
 		return (-1);
 	}
 	/* make sure the request isn't already in the queue */
@@ -1121,11 +1111,6 @@ sctp_asconf_queue_add(struct sctp_tcb *stcb, struct ifaddr *ifa, uint16_t type)
 			continue;
 		/* is the request already in queue (sent or not) */
 		if (aa->ap.aph.ph.param_type == type) {
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
-				printf("asconf_queue_add: request already exists\n");
-			}
-#endif				/* SCTP_DEBUG */
 			return (-1);
 		}
 		/* is the negative request already in queue, and not sent */
@@ -1142,12 +1127,6 @@ sctp_asconf_queue_add(struct sctp_tcb *stcb, struct ifaddr *ifa, uint16_t type)
 			sctp_asconf_addr_mgmt_ack(stcb, aa->ifa, type, 1);
 			/* free the entry */
 			SCTP_FREE(aa);
-
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
-				printf("asconf_queue_add: removing 'opposite' queued request\n");
-			}
-#endif				/* SCTP_DEBUG */
 			return (-1);
 		}
 	}			/* for each aa */
@@ -1207,7 +1186,7 @@ sctp_asconf_queue_add(struct sctp_tcb *stcb, struct ifaddr *ifa, uint16_t type)
 		/* add goes to the front of the queue */
 		TAILQ_INSERT_HEAD(&stcb->asoc.asconf_queue, aa, next);
 #ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
+		if (sctp_debug_on & SCTP_DEBUG_ASCONF2) {
 			printf("asconf_queue_add: appended asconf ADD_IP_ADDRESS: ");
 			sctp_print_address(sa);
 		}
@@ -1216,7 +1195,7 @@ sctp_asconf_queue_add(struct sctp_tcb *stcb, struct ifaddr *ifa, uint16_t type)
 		/* delete and set primary goes to the back of the queue */
 		TAILQ_INSERT_TAIL(&stcb->asoc.asconf_queue, aa, next);
 #ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
+		if (sctp_debug_on & SCTP_DEBUG_ASCONF2) {
 			if (type == SCTP_DEL_IP_ADDRESS) {
 				printf("asconf_queue_add: inserted asconf DEL_IP_ADDRESS: ");
 				sctp_print_address(sa);
@@ -1247,11 +1226,6 @@ sctp_asconf_queue_add_sa(struct sctp_tcb *stcb, struct sockaddr *sa,
 
 	/* see if peer supports ASCONF */
 	if (stcb->asoc.peer_supports_asconf == 0) {
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
-			printf("asconf_queue_add_sa: peer doesn't support ASCONF\n");
-		}
-#endif				/* SCTP_DEBUG */
 		return (-1);
 	}
 	/* make sure the request isn't already in the queue */
@@ -1263,11 +1237,6 @@ sctp_asconf_queue_add_sa(struct sctp_tcb *stcb, struct sockaddr *sa,
 			continue;
 		/* is the request already in queue (sent or not) */
 		if (aa->ap.aph.ph.param_type == type) {
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
-				printf("asconf_queue_add_sa: request already exists\n");
-			}
-#endif				/* SCTP_DEBUG */
 			return (-1);
 		}
 		/* is the negative request already in queue, and not sent */
@@ -1281,11 +1250,6 @@ sctp_asconf_queue_add_sa(struct sctp_tcb *stcb, struct sockaddr *sa,
 			TAILQ_REMOVE(&stcb->asoc.asconf_queue, aa, next);
 			/* free the entry */
 			SCTP_FREE(aa);
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
-				printf("asconf_queue_add_sa: removing queued delete request\n");
-			}
-#endif				/* SCTP_DEBUG */
 			return (-1);
 		} else if (type == SCTP_DEL_IP_ADDRESS &&
 		    aa->ap.aph.ph.param_type == SCTP_ADD_IP_ADDRESS) {
@@ -1297,11 +1261,6 @@ sctp_asconf_queue_add_sa(struct sctp_tcb *stcb, struct sockaddr *sa,
 			sctp_asconf_addr_mgmt_ack(stcb, aa->ifa, type, 1);
 			/* free the entry */
 			SCTP_FREE(aa);
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
-				printf("asconf_queue_add_sa: removing queued add request\n");
-			}
-#endif				/* SCTP_DEBUG */
 			return (-1);
 		}
 	}			/* for each aa */
@@ -1354,23 +1313,9 @@ sctp_asconf_queue_add_sa(struct sctp_tcb *stcb, struct sockaddr *sa,
 	if (type == SCTP_ADD_IP_ADDRESS) {
 		/* add goes to the front of the queue */
 		TAILQ_INSERT_HEAD(&stcb->asoc.asconf_queue, aa, next);
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
-			printf("asconf_queue_add_sa: appended asconf ADD_IP_ADDRESS\n");
-		}
-#endif				/* SCTP_DEBUG */
 	} else {
 		/* delete and set primary goes to the back of the queue */
 		TAILQ_INSERT_TAIL(&stcb->asoc.asconf_queue, aa, next);
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
-			if (type == SCTP_DEL_IP_ADDRESS) {
-				printf("asconf_queue_add_sa: inserted asconf DEL_IP_ADDRESS\n");
-			} else {
-				printf("asconf_queue_add_sa: inserted asconf SET_PRIM_ADDR\n");
-			}
-		}
-#endif				/* SCTP_DEBUG */
 	}
 
 	return (0);
@@ -1467,11 +1412,6 @@ sctp_asconf_process_param_ack(struct sctp_tcb *stcb,
 
 	/* process this param */
 	param_type = aparam->ap.aph.ph.param_type;
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
-		printf("process_param_ack: handling asconf parameter type=%xh\n", param_type);
-	}
-#endif				/* SCTP_DEBUG */
 	switch (param_type) {
 	case SCTP_ADD_IP_ADDRESS:
 #ifdef SCTP_DEBUG
@@ -1743,12 +1683,6 @@ sctp_is_desired_interface_type(struct ifaddr *ifa)
 		result = 1;
 		break;
 	default:
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
-			printf("ignoring interface type = %u\n",
-			    ifa->ifa_ifp->if_type);
-		}
-#endif				/* SCTP_DEBUG */
 		result = 0;
 	}
 
@@ -1851,12 +1785,6 @@ sctp_addr_mgmt_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	if (type == SCTP_ADD_IP_ADDRESS) {
 		if (sctp_is_scopeid_in_nets(stcb, ifa->ifa_addr) == 0) {
 			sctp_add_local_addr_assoc(stcb, ifa);
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
-				printf("addr_mgmt_assoc: added to pending list ");
-				sctp_print_address(ifa->ifa_addr);
-			}
-#endif				/* SCTP_DEBUG */
 		}
 	}
 	/*
@@ -1870,42 +1798,19 @@ sctp_addr_mgmt_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		sin6 = (struct sockaddr_in6 *)ifa->ifa_addr;
 		if (IN6_IS_ADDR_UNSPECIFIED(&sin6->sin6_addr)) {
 			/* we skip unspecifed addresses */
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
-				printf("addr_mgmt_assoc: unspecified IPv6 addr\n");
-			}
-#endif /* SCTP_DEBUG */
 			return;
 		}
 		if (IN6_IS_ADDR_LINKLOCAL(&sin6->sin6_addr)) {
 			if (stcb->asoc.local_scope == 0) {
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
-					printf("addr_mgmt_assoc: skipping link local IPv6 addr:");
-					sctp_print_address((struct sockaddr *)sin6);
-				}
-#endif /* SCTP_DEBUG */
 				return;
 			}
 			/* is it the right link local scope? */
 			if (sctp_is_scopeid_in_nets(stcb, ifa->ifa_addr) == 0) {
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
-					printf("addr_mgmt_assoc: skipping link local IPv6 addr due to wrong scope_id:");
-					sctp_print_address((struct sockaddr *)sin6);
-				}
-#endif /* SCTP_DEBUG */
 				return;
 			}
 		}
 		if (stcb->asoc.site_scope == 0 &&
 		    IN6_IS_ADDR_SITELOCAL(&sin6->sin6_addr)) {
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
-				printf("addr_mgmt_assoc: skipping site local IPv6 addr:");
-				sctp_print_address((struct sockaddr *)sin6);
-			}
-#endif /* SCTP_DEBUG */
 			return;
 		}
 	} else if (ifa->ifa_addr->sa_family == AF_INET) {
@@ -1928,21 +1833,10 @@ sctp_addr_mgmt_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		sin = (struct sockaddr_in *)ifa->ifa_addr;
 		if (sin->sin_addr.s_addr == 0) {
 			/* we skip unspecifed addresses */
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
-				printf("addr_mgmt_assoc: unspecified IPv4 addr\n");
-			}
-#endif /* SCTP_DEBUG */
 			return;
 		}
 		if (stcb->asoc.ipv4_local_scope == 0 &&
 		    IN4_ISPRIVATE_ADDRESS(&sin->sin_addr)) {
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
-				printf("addr_mgmt_assoc: skipping private IPv4 addr:");
-				sctp_print_address((struct sockaddr *)sin);
-			}
-#endif /* SCTP_DEBUG */
 			return;
 		}
 	} else {
@@ -1977,6 +1871,7 @@ sctp_addr_mgmt_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	} else {
 		/* this is the boundall, no ASCONF case */
 #if 0
+		/* Peter: Fixe me? why the if 0? */
 		/*
 		 * assume kernel will delete this very shortly; add done
 		 * above
@@ -2117,11 +2012,6 @@ sctp_addr_mgmt_restrict_ep(struct sctp_inpcb *inp, struct ifaddr *ifa)
 		SCTP_TCB_LOCK(stcb);
 		sctp_add_local_addr_assoc(stcb, ifa);
 		SCTP_TCB_UNLOCK(stcb);
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
-			printf("restrict_ep: added addr to unusable list\n");
-		}
-#endif				/* SCTP_DEBUG */
 	}
 	splx(s);
 	SCTP_INP_RUNLOCK(inp);
@@ -2139,11 +2029,6 @@ sctp_addr_mgmt(struct ifaddr *ifa, uint16_t type)
 
 	/* make sure we care about this interface... */
 	if (!sctp_is_desired_interface_type(ifa)) {
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
-			printf("sctp_addr_mgmt: ignoring this interface\n");
-		}
-#endif				/* SCTP_DEBUG */
 		return;
 	}
 	sa = ifa->ifa_addr;
@@ -2202,11 +2087,6 @@ sctp_delete_ip_address(struct ifaddr *ifa)
 	 */
 	/* make sure we care about this interface... */
 	if (!sctp_is_desired_interface_type(ifa)) {
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
-			printf("sctp_delete_ip_address: ignoring this interface\n");
-		}
-#endif				/* SCTP_DEBUG */
 		return;
 	}
 	/* go through all our PCB's */
@@ -2313,11 +2193,6 @@ sctp_set_primary_ip_address(struct ifaddr *ifa)
 
 	/* make sure we care about this interface... */
 	if (!sctp_is_desired_interface_type(ifa)) {
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
-			printf("set_primary_ip_address: ignoring this interface\n");
-		}
-#endif				/* SCTP_DEBUG */
 		return;
 	}
 	/* go through all our PCB's */
@@ -2343,14 +2218,7 @@ sctp_set_primary_ip_address(struct ifaddr *ifa)
 					sctp_print_address(ifa->ifa_addr);
 				}
 #endif				/* SCTP_DEBUG */
-			} else {
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
-					printf("set_primary_ip_address: failed to add to queue, ");
-					sctp_print_address(ifa->ifa_addr);
-				}
-#endif				/* SCTP_DEBUG */
-			}
+			} 
 		}		/* for each stcb */
 	}			/* for each inp */
 }
@@ -2430,19 +2298,9 @@ sctp_find_valid_localaddr_ep(struct sctp_tcb *stcb)
 
 	LIST_FOREACH(laddr, &stcb->sctp_ep->sctp_addr_list, sctp_nxt_addr) {
 		if (laddr->ifa == NULL) {
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
-				printf("find_valid_localaddr_ep: laddr error\n");
-			}
-#endif				/* SCTP_DEBUG */
 			continue;
 		}
 		if (laddr->ifa->ifa_addr == NULL) {
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
-				printf("find_valid_localaddr_ep: laddr->ifa error\n");
-			}
-#endif				/* SCTP_DEBUG */
 			continue;
 		}
 		/* is the address restricted ? */
@@ -2668,11 +2526,6 @@ sctp_process_initack_addresses(struct sctp_tcb *stcb, struct mbuf *m,
 	length += offset;
 
 	if ((offset + sizeof(struct sctp_paramhdr)) > length) {
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
-			printf("process_initack_addrs: invalid offset?\n");
-		}
-#endif				/* SCTP_DEBUG */
 		return;
 	}
 	/* init the addresses */
@@ -2696,22 +2549,12 @@ sctp_process_initack_addresses(struct sctp_tcb *stcb, struct mbuf *m,
 			struct sctp_ipv6addr_param *a6p;
 
 			/* get the entire IPv6 address param */
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_ASCONF2) {
-				printf("process_initack_addrs: checking IPv6 param\n");
-			}
-#endif				/* SCTP_DEBUG */
 			a6p = (struct sctp_ipv6addr_param *)
 			    sctp_m_getptr(m, offset,
 			    sizeof(struct sctp_ipv6addr_param),
 			    (uint8_t *) & addr_store);
 			if (plen != sizeof(struct sctp_ipv6addr_param) ||
 			    a6p == NULL) {
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
-					printf("process_initack_addrs: invalid IPv6 param length\n");
-				}
-#endif				/* SCTP_DEBUG */
 				return;
 			}
 			memcpy(&sin6.sin6_addr, a6p->addr,
@@ -2721,29 +2564,14 @@ sctp_process_initack_addresses(struct sctp_tcb *stcb, struct mbuf *m,
 			struct sctp_ipv4addr_param *a4p;
 
 			/* get the entire IPv4 address param */
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_ASCONF2) {
-				printf("process_initack_addrs: checking IPv4 param\n");
-			}
-#endif				/* SCTP_DEBUG */
 			a4p = (struct sctp_ipv4addr_param *)sctp_m_getptr(m, offset, sizeof(struct sctp_ipv4addr_param), (uint8_t *) & addr_store);
 			if (plen != sizeof(struct sctp_ipv4addr_param) ||
 			    a4p == NULL) {
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
-					printf("process_initack_addrs: invalid IPv4 param length\n");
-				}
-#endif				/* SCTP_DEBUG */
 				return;
 			}
 			sin.sin_addr.s_addr = a4p->addr;
 			sa = (struct sockaddr *)&sin;
 		} else {
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_ASCONF2) {
-				printf("process_initack_addrs: skipping param type=%xh, len=%d\n", ptype, plen);
-			}
-#endif				/* SCTP_DEBUG */
 			goto next_addr;
 		}
 
@@ -2797,8 +2625,10 @@ next_addr:
 		 * we'll be stuck in this loop for a long time...
 		 */
 		if (SCTP_SIZE32(plen) == 0) {
+#ifdef SCTP_DEBUG
 			printf("process_initack_addrs: bad len (%d) type=%xh\n",
 			    plen, ptype);
+#endif
 			return;
 		}
 		/* get next parameter */
@@ -2864,22 +2694,12 @@ sctp_addr_in_initack(struct sctp_tcb *stcb, struct mbuf *m, uint32_t offset,
 #ifdef INET6
 		if (ptype == SCTP_IPV6_ADDRESS && sa->sa_family == AF_INET6) {
 			/* get the entire IPv6 address param */
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_ASCONF2) {
-				printf("addr_in_initack: checking IPv6 param\n");
-			}
-#endif				/* SCTP_DEBUG */
 			a6p = (struct sctp_ipv6addr_param *)
 			    sctp_m_getptr(m, offset,
 			    sizeof(struct sctp_ipv6addr_param),
 			    (uint8_t *) & addr_store);
 			if (plen != sizeof(struct sctp_ipv6addr_param) ||
 			    ph == NULL) {
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_ASCONF2) {
-					printf("addr_in_initack: invalid IPv6 param length\n");
-				}
-#endif				/* SCTP_DEBUG */
 				return (0);
 			}
 			sin6 = (struct sockaddr_in6 *)sa;
@@ -2893,11 +2713,6 @@ sctp_addr_in_initack(struct sctp_tcb *stcb, struct mbuf *m, uint32_t offset,
 			if (memcmp(&sin6->sin6_addr, a6p->addr,
 			    sizeof(struct in6_addr)) == 0) {
 				/* found it */
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_ASCONF2) {
-					printf("addr_in_initack: found IPv6 addr\n");
-				}
-#endif				/* SCTP_DEBUG */
 				return (1);
 			}
 		} else
@@ -2906,39 +2721,18 @@ sctp_addr_in_initack(struct sctp_tcb *stcb, struct mbuf *m, uint32_t offset,
 			if (ptype == SCTP_IPV4_ADDRESS &&
 		    sa->sa_family == AF_INET) {
 			/* get the entire IPv4 address param */
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_ASCONF2) {
-				printf("addr_in_initack: checking IPv4 param\n");
-			}
-#endif				/* SCTP_DEBUG */
 			a4p = (struct sctp_ipv4addr_param *)sctp_m_getptr(m,
 			    offset, sizeof(struct sctp_ipv4addr_param),
 			    (uint8_t *) & addr_store);
 			if (plen != sizeof(struct sctp_ipv4addr_param) ||
 			    ph == NULL) {
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_ASCONF2) {
-					printf("addr_in_initack: invalid IPv4 param length\n");
-				}
-#endif				/* SCTP_DEBUG */
 				return (0);
 			}
 			sin = (struct sockaddr_in *)sa;
 			if (sin->sin_addr.s_addr == a4p->addr) {
 				/* found it */
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_ASCONF2) {
-					printf("addr_in_initack: found IPv4 addr\n");
-				}
-#endif				/* SCTP_DEBUG */
 				return (1);
 			}
-		} else {
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_ASCONF2) {
-				printf("addr_in_initack: skipping param type=%xh\n", ptype);
-			}
-#endif				/* SCTP_DEBUG */
 		}
 		/* get next parameter */
 		offset += SCTP_SIZE32(plen);
@@ -2949,11 +2743,6 @@ sctp_addr_in_initack(struct sctp_tcb *stcb, struct mbuf *m, uint32_t offset,
 		    (uint8_t *) & tmp_param);
 	}			/* while */
 	/* not found! */
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
-		printf("addr_in_initack: not found!\n");
-	}
-#endif				/* SCTP_DEBUG */
 	return (0);
 }
 
@@ -2989,12 +2778,6 @@ sctp_check_address_list_ep(struct sctp_tcb *stcb, struct mbuf *m, int offset,
 		}
 		/* do i have it implicitly? */
 		if (sctp_cmpaddr(laddr->ifa->ifa_addr, init_addr)) {
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_ASCONF2) {
-				printf("check_address_list_all: skipping ");
-				sctp_print_address(laddr->ifa->ifa_addr);
-			}
-#endif				/* SCTP_DEBUG */
 			continue;
 		}
 		/* check to see if in the init-ack */
@@ -3030,12 +2813,6 @@ sctp_check_address_list_all(struct sctp_tcb *stcb, struct mbuf *m, int offset,
 		TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
 			/* do i have it implicitly? */
 			if (sctp_cmpaddr(ifa->ifa_addr, init_addr)) {
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_ASCONF2) {
-					printf("check_address_list_all: skipping ");
-					sctp_print_address(ifa->ifa_addr);
-				}
-#endif				/* SCTP_DEBUG */
 				continue;
 			}
 			/* check to see if in the init-ack */
@@ -3118,11 +2895,6 @@ sctp_addr_mgmt_ep_sa(struct sctp_inpcb *inp, struct sockaddr *sa, uint16_t type)
 		sctp_addr_mgmt_ep(inp, ifa, type);
 	} else {
 		/* invalid address! */
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
-			printf("addr_mgmt_ep_sa: got invalid address!\n");
-		}
-#endif				/* SCTP_DEBUG */
 		return (EADDRNOTAVAIL);
 	}
 	return (0);

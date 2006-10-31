@@ -1821,12 +1821,6 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				lnet = NULL;
 				sctp_heartbeat_timer(inp, stcb, lnet, cnt_of_unconf);
 			}
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_TIMER1) {
-				printf("HB timer to start unconfirmed:%d hb_delay:%d\n",
-				    cnt_of_unconf, stcb->asoc.heart_beat_delay);
-			}
-#endif
 			if (stcb->asoc.hb_random_idx > 3) {
 				rndval = sctp_select_initial_TSN(&inp->sctp_ep);
 				memcpy(stcb->asoc.hb_random_values, &rndval,
@@ -1877,11 +1871,6 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			 * ms to ticks.
 			 */
 			to_ticks = MSEC_TO_TICKS(to_ticks);
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_TIMER1) {
-				printf("Timer to expire in %d ticks\n", to_ticks);
-			}
-#endif
 			tmr = &stcb->asoc.hb_timer;
 		}
 		break;

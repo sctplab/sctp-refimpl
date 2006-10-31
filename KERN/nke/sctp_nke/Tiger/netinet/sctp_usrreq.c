@@ -411,11 +411,6 @@ sctp_notify(struct sctp_inpcb *inp,
 	/* protection */
 	if ((inp == NULL) || (stcb == NULL) || (net == NULL) ||
 	    (sh == NULL) || (to == NULL)) {
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_USRREQ1) {
-			printf("sctp-notify, bad call\n");
-		}
-#endif				/* SCTP_DEBUG */
 		return;
 	}
 	/* First job is to verify the vtag matches what I would send */
@@ -1406,14 +1401,6 @@ sctp_disconnect(struct socket *so)
 				    (SCTP_GET_STATE(asoc) !=
 				    SCTP_STATE_SHUTDOWN_ACK_SENT)) {
 					/* only send SHUTDOWN 1st time thru */
-#ifdef SCTP_DEBUG
-					if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
-						printf("%s:%d sends a shutdown\n",
-						    __FILE__,
-						    __LINE__
-						    );
-					}
-#endif
 					sctp_stop_timers_for_shutdown(stcb);
 					sctp_send_shutdown(stcb,
 					    stcb->asoc.primary_destination);
@@ -1563,14 +1550,6 @@ sctp_shutdown(struct socket *so)
 			/* there is nothing queued to send, so I'm done... */
 			if (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_SENT) {
 				/* only send SHUTDOWN the first time through */
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
-					printf("%s:%d sends a shutdown\n",
-					    __FILE__,
-					    __LINE__
-					    );
-				}
-#endif
 				sctp_stop_timers_for_shutdown(stcb);
 				sctp_send_shutdown(stcb,
 				    stcb->asoc.primary_destination);
@@ -2175,30 +2154,13 @@ sctp_optsget(struct socket *so,
 	error = 0;
 
 	if (mp == NULL) {
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_USRREQ1) {
-			printf("optsget:MP is NULL EINVAL\n");
-		}
-#endif				/* SCTP_DEBUG */
 		return (EINVAL);
 	}
 	m = *mp;
 	if (m == NULL) {
 		/* Got to have a mbuf */
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_USRREQ1) {
-			printf("Huh no mbuf\n");
-		}
-#endif				/* SCTP_DEBUG */
 		return (EINVAL);
 	}
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_USRREQ2) {
-		printf("optsget opt:0x%lx sz:%u\n", (unsigned long)opt,
-		    m->m_len);
-	}
-#endif				/* SCTP_DEBUG */
-
 	switch (opt) {
 	case SCTP_NODELAY:
 	case SCTP_AUTOCLOSE:
@@ -2207,11 +2169,6 @@ sctp_optsget(struct socket *so,
 	case SCTP_DISABLE_FRAGMENTS:
 	case SCTP_I_WANT_MAPPED_V4_ADDR:
 	case SCTP_USE_EXT_RCVINFO:
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_USRREQ2) {
-			printf("other stuff\n");
-		}
-#endif				/* SCTP_DEBUG */
 		SCTP_INP_RLOCK(inp);
 		switch (opt) {
 		case SCTP_DISABLE_FRAGMENTS:
@@ -2563,20 +2520,7 @@ sctp_optsget(struct socket *so,
 	case SCTP_EVENTS:
 		{
 			struct sctp_event_subscribe *events;
-
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_USRREQ2) {
-				printf("get events\n");
-			}
-#endif				/* SCTP_DEBUG */
 			if ((size_t)m->m_len < sizeof(struct sctp_event_subscribe)) {
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_USRREQ2) {
-					printf("M->M_LEN is %d not %d\n",
-					    (int)m->m_len,
-					    (int)sizeof(struct sctp_event_subscribe));
-				}
-#endif				/* SCTP_DEBUG */
 				error = EINVAL;
 				break;
 			}
@@ -2623,11 +2567,6 @@ sctp_optsget(struct socket *so,
 			error = EINVAL;
 			break;
 		}
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_USRREQ1) {
-			printf("getadaptation ind\n");
-		}
-#endif				/* SCTP_DEBUG */
 		SCTP_INP_RLOCK(inp);
 		*mtod(m, int *)= inp->sctp_ep.adaptation_layer_indicator;
 		SCTP_INP_RUNLOCK(inp);
@@ -2638,11 +2577,6 @@ sctp_optsget(struct socket *so,
 			error = EINVAL;
 			break;
 		}
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_USRREQ1) {
-			printf("get initial dbg seq\n");
-		}
-#endif				/* SCTP_DEBUG */
 		SCTP_INP_RLOCK(inp);
 		*mtod(m, int *)= inp->sctp_ep.initial_sequence_debug;
 		SCTP_INP_RUNLOCK(inp);
@@ -2653,11 +2587,6 @@ sctp_optsget(struct socket *so,
 			error = EINVAL;
 			break;
 		}
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_USRREQ1) {
-			printf("get local sizes\n");
-		}
-#endif				/* SCTP_DEBUG */
 		SCTP_INP_RLOCK(inp);
 		*mtod(m, int *)= sctp_count_max_addresses(inp);
 		SCTP_INP_RUNLOCK(inp);
@@ -2669,16 +2598,7 @@ sctp_optsget(struct socket *so,
 			uint32_t *val, sz;
 			struct sctp_nets *net;
 
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_USRREQ1) {
-				printf("get remote size\n");
-			}
-#endif				/* SCTP_DEBUG */
 			if ((size_t)m->m_len < sizeof(sctp_assoc_t)) {
-#ifdef SCTP_DEBUG
-				printf("m->m_len:%d not %d\n",
-				    m->m_len, sizeof(sctp_assoc_t));
-#endif				/* SCTP_DEBUG */
 				error = EINVAL;
 				break;
 			}
@@ -2729,18 +2649,7 @@ sctp_optsget(struct socket *so,
 			struct sctp_nets *net;
 			struct sctp_getaddresses *saddr;
 
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_USRREQ1) {
-				printf("get peer addresses\n");
-			}
-#endif				/* SCTP_DEBUG */
 			if ((size_t)m->m_len < sizeof(struct sctp_getaddresses)) {
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_USRREQ1) {
-					printf("gave %d bytes need min:%d\n",
-					    m->m_len, sizeof(struct sctp_getaddresses));
-				}
-#endif				/* SCTP_DEBUG */
 				error = EINVAL;
 				break;
 			}
@@ -2774,11 +2683,6 @@ sctp_optsget(struct socket *so,
 				}
 				if (left < cpsz) {
 					/* not enough room. */
-#ifdef SCTP_DEBUG
-					if (sctp_debug_on & SCTP_DEBUG_USRREQ1) {
-						printf("Out of room\n");
-					}
-#endif				/* SCTP_DEBUG */
 					break;
 				}
 				if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_NEEDS_MAPPED_V4) &&
@@ -2794,20 +2698,9 @@ sctp_optsget(struct socket *so,
 				sas = (struct sockaddr_storage *)((caddr_t)sas + cpsz);
 				left -= cpsz;
 				m->m_len += cpsz;
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_USRREQ2) {
-					printf("left now:%d mlen:%d\n",
-					    left, m->m_len);
-				}
-#endif				/* SCTP_DEBUG */
 			}
 			SCTP_TCB_UNLOCK(stcb);
 		}
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_USRREQ1) {
-			printf("All done\n");
-		}
-#endif				/* SCTP_DEBUG */
 		break;
 	case SCTP_GET_LOCAL_ADDRESSES:
 		{
@@ -2815,11 +2708,6 @@ sctp_optsget(struct socket *so,
 			struct sockaddr_storage *sas;
 			struct sctp_getaddresses *saddr;
 
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_USRREQ1) {
-				printf("get local addresses\n");
-			}
-#endif				/* SCTP_DEBUG */
 			if ((size_t)m->m_len < sizeof(struct sctp_getaddresses)) {
 				error = EINVAL;
 				break;
@@ -2864,18 +2752,7 @@ sctp_optsget(struct socket *so,
 			struct sctp_paddrparams *paddrp;
 			struct sctp_nets *net;
 
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_USRREQ1) {
-				printf("Getting peer_addr_params\n");
-			}
-#endif				/* SCTP_DEBUG */
 			if ((size_t)m->m_len < sizeof(struct sctp_paddrparams)) {
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_USRREQ2) {
-					printf("Hmm m->m_len:%d is to small\n",
-					    m->m_len);
-				}
-#endif				/* SCTP_DEBUG */
 				error = EINVAL;
 				break;
 			}
@@ -2883,11 +2760,6 @@ sctp_optsget(struct socket *so,
 
 			net = NULL;
 			if (paddrp->spp_assoc_id) {
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_USRREQ1) {
-					printf("In spp_assoc_id find type\n");
-				}
-#endif				/* SCTP_DEBUG */
 				if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
 					SCTP_INP_RLOCK(inp);
 					stcb = LIST_FIRST(&inp->sctp_asoc_list);
@@ -2908,11 +2780,6 @@ sctp_optsget(struct socket *so,
 			    ((((struct sockaddr *)&paddrp->spp_address)->sa_family == AF_INET) ||
 			    (((struct sockaddr *)&paddrp->spp_address)->sa_family == AF_INET6))) {
 				/* Lookup via address */
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_USRREQ1) {
-					printf("Ok we need to lookup a param\n");
-				}
-#endif				/* SCTP_DEBUG */
 				if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
 					SCTP_INP_RLOCK(inp);
 					stcb = LIST_FIRST(&inp->sctp_asoc_list);
@@ -2938,11 +2805,6 @@ sctp_optsget(struct socket *so,
 			}
 			if (stcb) {
 				/* Applys to the specific association */
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_USRREQ1) {
-					printf("In TCB side\n");
-				}
-#endif				/* SCTP_DEBUG */
 				paddrp->spp_flags = 0;
 				if (net) {
 					paddrp->spp_pathmaxrxt = net->failure_threshold;
@@ -3002,11 +2864,6 @@ sctp_optsget(struct socket *so,
 			} else {
 				/* Use endpoint defaults */
 				SCTP_INP_RLOCK(inp);
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_USRREQ1) {
-					printf("In EP levle info\n");
-				}
-#endif				/* SCTP_DEBUG */
 				paddrp->spp_pathmaxrxt = inp->sctp_ep.def_net_failure;
 				paddrp->spp_hbinterval = TICKS_TO_MSEC(inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_HEARTBEAT]);
 				paddrp->spp_sackdelay = TICKS_TO_MSEC(inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV]);
@@ -3044,11 +2901,6 @@ sctp_optsget(struct socket *so,
 			struct sctp_paddrinfo *paddri;
 			struct sctp_nets *net;
 
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_USRREQ1) {
-				printf("GetPEER ADDR_INFO\n");
-			}
-#endif				/* SCTP_DEBUG */
 			if ((size_t)m->m_len < sizeof(struct sctp_paddrinfo)) {
 				error = EINVAL;
 				break;
@@ -3100,11 +2952,6 @@ sctp_optsget(struct socket *so,
 		{
 			struct sctp_pcbinfo *spcb;
 
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_USRREQ1) {
-				printf("PCB status\n");
-			}
-#endif				/* SCTP_DEBUG */
 			if ((size_t)m->m_len < sizeof(struct sctp_pcbinfo)) {
 				error = EINVAL;
 				break;
@@ -3128,12 +2975,6 @@ sctp_optsget(struct socket *so,
 		{
 			struct sctp_nets *net;
 			struct sctp_status *sstat;
-
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_USRREQ1) {
-				printf("SCTP status\n");
-			}
-#endif				/* SCTP_DEBUG */
 
 			if ((size_t)m->m_len < sizeof(struct sctp_status)) {
 				error = EINVAL;
@@ -3196,11 +3037,6 @@ sctp_optsget(struct socket *so,
 		{
 			struct sctp_rtoinfo *srto;
 
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_USRREQ1) {
-				printf("RTO Info\n");
-			}
-#endif				/* SCTP_DEBUG */
 			if ((size_t)m->m_len < sizeof(struct sctp_rtoinfo)) {
 				error = EINVAL;
 				break;
@@ -3239,11 +3075,6 @@ sctp_optsget(struct socket *so,
 		{
 			struct sctp_assocparams *sasoc;
 
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_USRREQ1) {
-				printf("Associnfo\n");
-			}
-#endif				/* SCTP_DEBUG */
 			if ((size_t)m->m_len < sizeof(struct sctp_assocparams)) {
 				error = EINVAL;
 				break;
@@ -3320,11 +3151,6 @@ sctp_optsget(struct socket *so,
 		{
 			struct sctp_initmsg *sinit;
 
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_USRREQ1) {
-				printf("initmsg\n");
-			}
-#endif				/* SCTP_DEBUG */
 			if ((size_t)m->m_len < sizeof(struct sctp_initmsg)) {
 				error = EINVAL;
 				break;
@@ -3344,11 +3170,6 @@ sctp_optsget(struct socket *so,
 		{
 			struct sctp_setprim *ssp;
 
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_USRREQ1) {
-				printf("setprimary\n");
-			}
-#endif				/* SCTP_DEBUG */
 			if ((size_t)m->m_len < sizeof(struct sctp_setprim)) {
 				error = EINVAL;
 				break;
@@ -3587,11 +3408,6 @@ sctp_optsget(struct socket *so,
 		{
 			struct sctp_peeloff_opt *peeloff;
 
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_USRREQ1) {
-				printf("peeloff\n");
-			}
-#endif				/* SCTP_DEBUG */
 			if ((size_t)m->m_len < sizeof(*peeloff)) {
 				error = EINVAL;
 				break;
@@ -3633,11 +3449,6 @@ sctp_optsset(struct socket *so,
 	sctp_lock_assert(so);
 #endif
 	if (mp == NULL) {
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_USRREQ1) {
-			printf("optsset:MP is NULL EINVAL\n");
-		}
-#endif				/* SCTP_DEBUG */
 		return (EINVAL);
 	}
 	m = *mp;
@@ -3912,12 +3723,6 @@ sctp_optsset(struct socket *so,
 				shared_key->keyid = sca->sca_keynumber;
 				sctp_insert_sharedkey(shared_keys, shared_key);
 				SCTP_TCB_UNLOCK(stcb);
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_AUTH1) {
-					printf("SCTP_AUTH_KEY: adding assoc key id %u, len %u, assoc %xh\n",
-					    shared_key->keyid, size, sctp_get_associd(stcb));
-				}
-#endif				/* SCTP_DEBUG */
 			} else {
 				/* ste it on the endpoint */
 				SCTP_INP_WLOCK(inp);
@@ -3950,12 +3755,6 @@ sctp_optsset(struct socket *so,
 				shared_key->keyid = sca->sca_keynumber;
 				sctp_insert_sharedkey(shared_keys, shared_key);
 				SCTP_INP_WUNLOCK(inp);
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_AUTH1) {
-					printf("SCTP_AUTH_KEY: adding endpoint key id %u, len %u\n",
-					    shared_key->keyid, size);
-				}
-#endif				/* SCTP_DEBUG */
 			}
 			break;
 		}
@@ -4027,24 +3826,12 @@ sctp_optsset(struct socket *so,
 				if (sctp_auth_setactivekey(stcb, scact->scact_keynumber))
 					error = EINVAL;
 				SCTP_TCB_UNLOCK(stcb);
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_AUTH1) {
-					printf("SCTP_AUTH_ACTIVE_KEY: setting key id %u active for assoc %xh\n",
-					    scact->scact_keynumber, sctp_get_associd(stcb));
-				}
-#endif				/* SCTP_DEBUG */
 			} else {
 				/* set the active key on the endpoint */
 				SCTP_INP_WLOCK(inp);
 				if (sctp_auth_setactivekey_ep(inp, scact->scact_keynumber))
 					error = EINVAL;
 				SCTP_INP_WUNLOCK(inp);
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_AUTH1) {
-					printf("SCTP_AUTH_ACTIVE_KEY: setting default endpoint key id %u\n",
-					    scact->scact_keynumber);
-				}
-#endif				/* SCTP_DEBUG */
 			}
 			break;
 		}
@@ -4079,23 +3866,11 @@ sctp_optsset(struct socket *so,
 				if (sctp_delete_sharedkey(stcb, scdel->scact_keynumber))
 					error = EINVAL;
 				SCTP_TCB_UNLOCK(stcb);
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_AUTH1) {
-					printf("SCTP_AUTH_DELETE_KEY: deleting key id %u from assoc %xh\n",
-					    scdel->scact_keynumber, sctp_get_associd(stcb));
-				}
-#endif				/* SCTP_DEBUG */
 			} else {
 				SCTP_INP_WLOCK(inp);
 				if (sctp_delete_sharedkey_ep(inp, scdel->scact_keynumber))
 					error = EINVAL;
 				SCTP_INP_WUNLOCK(inp);
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_AUTH1) {
-					printf("SCTP_AUTH_DELETE_KEY: deleting endpoint key id %u\n",
-					    scdel->scact_keynumber);
-				}
-#endif				/* SCTP_DEBUG */
 			}
 			break;
 		}
@@ -4450,11 +4225,6 @@ sctp_optsset(struct socket *so,
 		break;
 	case SCTP_PEER_ADDR_PARAMS:
 		/* Applys to the specific association */
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_USRREQ1) {
-			printf("In TCB side\n");
-		}
-#endif				/* SCTP_DEBUG */
 		{
 			struct sctp_paddrparams *paddrp;
 			struct sctp_nets *net;
@@ -5198,13 +4968,6 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	struct sctp_inpcb *inp;
 	struct sctp_tcb *stcb=NULL;
 
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_PCB1) {
-		printf("Connect called in SCTP to ");
-		sctp_print_address(addr);
-		printf("Port %d\n", ntohs(((struct sockaddr_in *)addr)->sin_port));
-	}
-#endif				/* SCTP_DEBUG */
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (inp == 0) {
 		splx(s);
@@ -5916,11 +5679,6 @@ sctp_usrreq(so, req, m, nam, control)
 
 	case PRU_SEND:
 		/* Flags are ignored */
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_USRREQ1) {
-			printf("Send called on V4 side\n");
-		}
-#endif				/* SCTP_DEBUG */
 		{
 			struct sockaddr *addr;
 
