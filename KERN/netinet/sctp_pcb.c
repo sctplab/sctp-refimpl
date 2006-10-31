@@ -3393,11 +3393,6 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	net->addr_is_local = sctp_is_address_on_local_host(newaddr);
 	net->failure_threshold = stcb->asoc.def_net_failure;
 	if (addr_inscope == 0) {
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_PCB1) {
-			printf("Adding an address which is OUT OF SCOPE\n");
-		}
-#endif				/* SCTP_DEBUG */
 		net->dest_state = (SCTP_ADDR_REACHABLE |
 		    SCTP_ADDR_OUT_OF_SCOPE);
 	} else {
