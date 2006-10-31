@@ -903,11 +903,6 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 	 * ok, not bound to all so see if we can find a EP bound to this
 	 * address.
 	 */
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_PCB1) {
-		printf("Ok, there is NO bound-all available for port:%d\n", ntohs(lport));
-	}
-#endif
 	LIST_FOREACH(inp, head, sctp_hash) {
 		SCTP_INP_RLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
@@ -938,11 +933,6 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 #endif
 			continue;
 		}
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_PCB1) {
-			printf("Ok, found maching local port\n");
-		}
-#endif
 		LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
 			if (laddr->ifa == NULL) {
 #ifdef SCTP_DEBUG
@@ -966,15 +956,6 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 #endif
 				continue;
 			}
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_PCB1) {
-				printf("Ok laddr->ifa:%p is possible, ",
-				    laddr->ifa->ifa_addr);
-				sctp_print_address(laddr->ifa->ifa_addr);
-				printf("looking for ");
-				sctp_print_address(nam);
-			}
-#endif
 			if (laddr->ifa->ifa_addr->sa_family == nam->sa_family) {
 				/* possible, see if it matches */
 				struct sockaddr_in *intf_addr;
@@ -984,11 +965,6 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 				if (nam->sa_family == AF_INET) {
 					if (sin->sin_addr.s_addr ==
 					    intf_addr->sin_addr.s_addr) {
-#ifdef SCTP_DEBUG
-						if (sctp_debug_on & SCTP_DEBUG_PCB1) {
-							printf("YES, return ep:%p\n", inp);
-						}
-#endif
 						SCTP_INP_RUNLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 						socket_unlock(inp->ip_inp.inp.inp_socket, 1);
@@ -1002,11 +978,6 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 					    laddr->ifa->ifa_addr;
 					if (SCTP6_ARE_ADDR_EQUAL(&sin6->sin6_addr,
 					    &intf_addr6->sin6_addr)) {
-#ifdef SCTP_DEBUG
-						if (sctp_debug_on & SCTP_DEBUG_PCB1) {
-							printf("YES, return ep:%p\n", inp);
-						}
-#endif
 						SCTP_INP_RUNLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 						socket_unlock(inp->ip_inp.inp.inp_socket, 1);
@@ -1021,11 +992,6 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 		socket_unlock(inp->ip_inp.inp.inp_socket, 1);
 #endif
 	}
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_PCB1) {
-		printf("NO, Falls out to NULL\n");
-	}
-#endif
 	return (NULL);
 }
 
@@ -1050,13 +1016,6 @@ sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool, int have_lock)
 	struct sockaddr_in6 *sin6;
 	int lport;
 
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_PCB1) {
-		printf("Looking for endpoint %d :",
-		    ntohs(((struct sockaddr_in *)nam)->sin_port));
-		sctp_print_address(nam);
-	}
-#endif
 	if (nam->sa_family == AF_INET) {
 		sin = (struct sockaddr_in *)nam;
 		lport = ((struct sockaddr_in *)nam)->sin_port;
@@ -1082,11 +1041,6 @@ sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool, int have_lock)
 	}
 	head = &sctppcbinfo.sctp_ephash[SCTP_PCBHASH_ALLADDR(lport,
 	    sctppcbinfo.hashmark)];
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_PCB1) {
-		printf("Main hash to lookup at head:%p\n", head);
-	}
-#endif
 	inp = sctp_endpoint_probe(nam, head, lport);
 
 	/*
@@ -1099,11 +1053,6 @@ sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool, int have_lock)
 	if (inp == NULL && find_tcp_pool) {
 		unsigned int i;
 
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_PCB1) {
-			printf("EP was NULL and TCP model is supported\n");
-		}
-#endif
 		for (i = 0; i < sctppcbinfo.hashtblsize; i++) {
 			/*
 			 * This is real gross, but we do NOT have a remote
@@ -1121,11 +1070,6 @@ sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool, int have_lock)
 			}
 		}
 	}
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_PCB1) {
-		printf("EP to return is %p\n", inp);
-	}
-#endif
 	if (inp) {
 		SCTP_INP_INCR_REF(inp);
 	}
@@ -1262,11 +1206,6 @@ sctp_findassociation_special_addr(struct mbuf *m, int iphlen, int offset,
 		ptype = ntohs(phdr->param_type);
 		plen = ntohs(phdr->param_length);
 		if (plen == 0) {
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_PCB1) {
-				printf("sctp_findassociation_special_addr: Impossible length in parameter\n");
-			}
-#endif				/* SCTP_DEBUG */
 			break;
 		}
 		if (ptype == SCTP_IPV4_ADDRESS &&
@@ -1493,17 +1432,6 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 		/* Currently not supported. */
 		return (NULL);
 	}
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_PCB1) {
-		printf("Looking for port %d address :",
-		    ntohs(((struct sockaddr_in *)to)->sin_port));
-		sctp_print_address(to);
-		printf("From for port %d address :",
-		    ntohs(((struct sockaddr_in *)from)->sin_port));
-		sctp_print_address(from);
-	}
-#endif
-
 	if (sh->v_tag) {
 		/* we only go down this path if vtag is non-zero */
 		retval = sctp_findassoc_by_vtag(from, ntohl(sh->v_tag),
@@ -1579,12 +1507,6 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 #endif
 	if (retval == NULL && inp) {
 		/* Found a EP but not this address */
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_PCB1) {
-			printf("Found endpoint %p but no asoc - ep state:%x\n",
-			    inp, inp->sctp_flags);
-		}
-#endif
 		if ((ch->chunk_type == SCTP_INITIATION) ||
 		    (ch->chunk_type == SCTP_INITIATION_ACK)) {
 			/*
@@ -1596,11 +1518,6 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 			 * TCP pool.
 			 */
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) {
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_PCB1) {
-					printf("Gak, its in the TCP pool... return NULL");
-				}
-#endif
 				if (inp_p) {
 					*inp_p = NULL;
 				}
@@ -1609,11 +1526,6 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 #endif
 				return (NULL);
 			}
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_PCB1) {
-				printf("Now doing SPECIAL find\n");
-			}
-#endif
 			retval = sctp_findassociation_special_addr(m, iphlen,
 			    offset, sh, &inp, netp, to);
 			if (inp_p != NULL) {
@@ -3642,11 +3554,6 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		sin = (struct sockaddr_in *)firstaddr;
 		if ((sin->sin_port == 0) || (sin->sin_addr.s_addr == 0)) {
 			/* Invalid address */
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_PCB3) {
-				printf("peer address invalid\n");
-			}
-#endif
 			SCTP_INP_RUNLOCK(inp);
 			*error = EINVAL;
 			return (NULL);
@@ -3659,11 +3566,6 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		if ((sin6->sin6_port == 0) ||
 		    (IN6_IS_ADDR_UNSPECIFIED(&sin6->sin6_addr))) {
 			/* Invalid address */
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_PCB3) {
-				printf("peer address invalid\n");
-			}
-#endif
 			SCTP_INP_RUNLOCK(inp);
 			*error = EINVAL;
 			return (NULL);
@@ -3671,11 +3573,6 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		rport = sin6->sin6_port;
 	} else {
 		/* not supported family type */
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_PCB3) {
-			printf("BAD family %d\n", firstaddr->sa_family);
-		}
-#endif
 		SCTP_INP_RUNLOCK(inp);
 		*error = EINVAL;
 		return (NULL);
@@ -3686,12 +3583,6 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		 * If you have not performed a bind, then we need to do the
 		 * ephemerial bind for you.
 		 */
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_PCB3) {
-			printf("Doing implicit BIND\n");
-		}
-#endif
-
 		if ((err = sctp_inpcb_bind(inp->sctp_socket,
 		    (struct sockaddr *)NULL,
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
@@ -3701,12 +3592,6 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 #endif
 		    ))) {
 			/* bind error, probably perm */
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_PCB3) {
-				printf("BIND FAILS ret:%d\n", err);
-			}
-#endif
-
 			*error = err;
 			return (NULL);
 		}
@@ -3714,11 +3599,6 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	stcb = (struct sctp_tcb *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_asoc);
 	if (stcb == NULL) {
 		/* out of memory? */
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_PCB3) {
-			printf("aloc_assoc: no assoc mem left, stcb=NULL\n");
-		}
-#endif
 		*error = ENOMEM;
 		return (NULL);
 	}
@@ -3737,11 +3617,6 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		SCTP_TCB_SEND_LOCK_DESTROY(stcb);
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
 		SCTP_DECR_ASOC_COUNT();
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_PCB3) {
-			printf("aloc_assoc: couldn't init asoc, out of mem?!\n");
-		}
-#endif
 		*error = err;
 		return (NULL);
 	}
@@ -3767,11 +3642,6 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 #endif
 		SCTP_INP_INFO_WUNLOCK();
 		SCTP_DECR_ASOC_COUNT();
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_PCB3) {
-			printf("aloc_assoc: couldn't init asoc, out of mem?!\n");
-		}
-#endif
 		*error = EINVAL;
 		return (NULL);
 	}
@@ -3796,11 +3666,6 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
 		SCTP_DECR_ASOC_COUNT();
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_PCB3) {
-			printf("aloc_assoc: couldn't add remote addr!\n");
-		}
-#endif
 		SCTP_TCB_LOCK_DESTROY(stcb);
 		SCTP_TCB_SEND_LOCK_DESTROY(stcb);
 		*error = ENOBUFS;
@@ -5629,10 +5494,6 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 				break;
 			if (got_random) {
 				/* already processed a RANDOM */
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_AUTH1)
-					printf("SCTP: ignoring duplicate peer RANDOM\n");
-#endif
 				goto next_param;
 			}
 			phdr = sctp_get_next_param(m, offset,
@@ -5659,10 +5520,6 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 				break;
 			if (got_hmacs) {
 				/* already processed a HMAC list */
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_AUTH1)
-					printf("SCTP: ignoring duplicate peer HMAC list\n");
-#endif
 				goto next_param;
 			}
 			phdr = sctp_get_next_param(m, offset,
@@ -5675,10 +5532,6 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			    sizeof(hmacs->hmac_ids[0]);
 			/* validate the hmac list */
 			if (sctp_verify_hmac_param(hmacs, num_hmacs)) {
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_AUTH1)
-					printf("SCTP: invalid HMAC param\n");
-#endif
 				return (-28);
 			}
 			if (stcb->asoc.peer_hmacs != NULL)
@@ -5700,10 +5553,6 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 				break;
 			if (got_chklist) {
 				/* already processed a Chunks list */
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_AUTH1)
-					printf("SCTP: ignoring duplicate peer Chunks list\n");
-#endif
 				goto next_param;
 			}
 			phdr = sctp_get_next_param(m, offset,
@@ -5776,10 +5625,6 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 	}
 	if (!sctp_asconf_auth_nochk && stcb->asoc.peer_supports_asconf &&
 	    !stcb->asoc.peer_supports_auth) {
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_AUTH1)
-			printf("SCTP: peer supports ASCONF but not AUTH\n");
-#endif
 		return (-30);
 	}
 	return (0);
