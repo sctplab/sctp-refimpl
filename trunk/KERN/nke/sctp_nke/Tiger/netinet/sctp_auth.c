@@ -86,41 +86,6 @@ extern uint32_t sctp_debug_on;
 #endif				/* SCTP_DEBUG */
 
 
-/*
- * fill a buffer with random data
- */
-void
-sctp_read_random(void *buffer, uint32_t bytes)
-{
-#if defined(__FreeBSD__) && (__FreeBSD_version < 500000)
-	read_random_unlimited(buffer, bytes);
-#elif defined(__APPLE__) || (__FreeBSD_version > 500000)
-	read_random(buffer, bytes);
-#elif defined(__OpenBSD__)
-	get_random_bytes(buffer, bytes);
-#elif defined(__NetBSD__) && NRND > 0
-	rnd_extract_data(buffer, bytes, RND_EXTRACT_ANY);
-#else
-	{
-		uint8_t *rand_p;
-		uint32_t rand;
-
-		rand_p = (uint8_t *) buffer;
-		while (bytes > 0) {
-			rand = SCTP_RANDOM();
-			if (bytes < sizeof(rand)) {
-				bcopy(&rand, rand_p, bytes);
-				return;
-			}
-			bcopy(&rand, rand_p, sizeof(rand));
-			bytes -= sizeof(rand);
-			rand_p += sizeof(rand);
-		}
-	}
-#endif
-}
-
-
 inline void
 sctp_clear_chunklist(sctp_auth_chklist_t *chklist)
 {

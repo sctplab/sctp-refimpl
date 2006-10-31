@@ -60,6 +60,17 @@ void sctp_pool_put(struct pool *, void *);
 	sctp_pool_put(&zone, element);
 
 /*
+ * Functions
+ */
+#if defined(__OpenBSD__)
+#define sctp_read_random(buf, len)	get_random_bytes(buf, len)
+#elif defined(__NetBSD__) && NRND > 0
+#define sctp_read_random(buf, len)	rnd_extract_data(buf, len, RND_EXTRACT_ANY);
+#else
+extern void sctp_read_random(void *buf, uint32_t len);
+#endif
+
+/*
  * Other NetBSD Specific
  */
 #if defined(__NetBSD__)

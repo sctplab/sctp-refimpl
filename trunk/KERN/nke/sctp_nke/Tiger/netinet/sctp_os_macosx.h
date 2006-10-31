@@ -69,6 +69,11 @@ extern zone_t kalloc_zone(vm_size_t);	/* XXX */
 #define SCTP_ZONE_FREE(zone, element) \
 	zfree(zone, element);
 
+/*
+ * Functions
+ */
+#define sctp_read_random(buf, len)	read_random(buf, len)
+
 
 /*
  * Other MacOS specific
