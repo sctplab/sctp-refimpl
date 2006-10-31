@@ -143,21 +143,6 @@ sctp_set_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 	 */
 	if(stcb->sctp_socket == NULL)
 		return;
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_INDATA4) {
-		printf("sb_cc:%lu assoc_cc: %lu hiwat:%lu lowat:%lu mbcnt:%lu mbmax:%lu\n",
-		    (u_long)stcb->sctp_socket->so_rcv.sb_cc,
-		    (u_long)asoc->sb_cc,
-		    (u_long)stcb->sctp_socket->so_rcv.sb_hiwat,
-		    (u_long)stcb->sctp_socket->so_rcv.sb_lowat,
-		    (u_long)stcb->sctp_socket->so_rcv.sb_mbcnt,
-		    (u_long)stcb->sctp_socket->so_rcv.sb_mbmax);
-		printf("Setting rwnd to: sb:%ld - (reasm:%d str:%d)\n",
-		    sctp_sbspace(&stcb->asoc, &stcb->sctp_socket->so_rcv),
-		    asoc->size_on_reasm_queue,
-		    asoc->size_on_all_streams);
-	}
-#endif
 
 	if (stcb->asoc.sb_cc == 0 &&
 	    asoc->size_on_reasm_queue == 0 &&
@@ -199,15 +184,6 @@ sctp_set_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 		    (asoc->my_rwnd < stcb->sctp_ep->sctp_ep.sctp_sws_receiver)) {
 			/* SWS engaged, tell peer none left */
 			asoc->my_rwnd = 1;
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_INDATA4) {
-				printf(" - SWS zeros\n");
-			}
-		} else {
-			if (sctp_debug_on & SCTP_DEBUG_INDATA4) {
-				printf("\n");
-			}
-#endif
 		}
 	}
 }
@@ -687,11 +663,6 @@ sctp_queue_data_to_stream(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	}
 	if (nxt_todel == control->sinfo_ssn) {
 		/* can be delivered right away? */
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INDATA1) {
-			printf("It's NEXT!\n");
-		}
-#endif
 #ifdef SCTP_STR_LOGGING
 		sctp_log_strm_del(control, NULL, SCTP_STR_LOG_FROM_IMMED_DEL);
 #endif
@@ -736,11 +707,6 @@ sctp_queue_data_to_stream(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		 * Ok, we did not deliver this guy, find the correct place
 		 * to put it on the queue.
 		 */
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INDATA1) {
-			printf("Queue Needed!\n");
-		}
-#endif
 		if (TAILQ_EMPTY(&strm->inqueue)) {
 			/* Empty queue */
 #ifdef SCTP_STR_LOGGING
@@ -1821,11 +1787,6 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		sctp_log_strm_del_alt(tsn, strmseq,
 		    SCTP_STR_LOG_FROM_EXPRS_DEL);
 #endif
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INDATA1) {
-			printf("Express Delivery succeeds\n");
-		}
-#endif
 		control = NULL;
 		goto finish_express_del;
 	}
@@ -2315,11 +2276,6 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 #endif
 		if (distance + slide_from > asoc->mapping_array_size ||
 		    distance < 0) {
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_INDATA1) {
-				printf("Ugh bad addition.. you can't hrumpp!\n");
-			}
-#endif
 			/*
 			 * Here we do NOT slide forward the array so that
 			 * hopefully when more data comes in to fill it up
@@ -2415,14 +2371,6 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 				sctp_timer_stop(SCTP_TIMER_TYPE_RECV,
 				    stcb->sctp_ep, stcb, NULL);
 			}
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
-				printf("%s:%d sends a shutdown\n",
-				    __FILE__,
-				    __LINE__
-				    );
-			}
-#endif
 			sctp_send_shutdown(stcb, stcb->asoc.primary_destination);
 			sctp_send_sack(stcb);
 		} else {
@@ -2634,14 +2582,6 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 	/*
 	 * process all DATA chunks...
 	 */
-
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-		printf("In process data off:%d length:%d iphlen:%d ch->type:%d\n",
-		       *offset, length, iphlen, (int)ch->ch.chunk_type);
-	}
-#endif
-
 	*high_tsn = asoc->cumulative_tsn;
 	break_flag = 0;
 	while (stop_proc == 0) {
@@ -2683,13 +2623,6 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 						       op_err);
 				return (2);
 			}
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-				printf("A chunk of len:%d to process (tot:%d)\n",
-				       chk_length, length - *offset);
-			}
-#endif
-
 #ifdef SCTP_AUDITING_ENABLED
 			sctp_audit_log(0xB1, 0);
 #endif
@@ -2702,12 +2635,6 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 						      chk_length, net, high_tsn, &abort_flag, &break_flag,
 						      last_chunk)) {
 				num_chunks++;
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-					printf("Now incr num_chunks to %d\n",
-					       num_chunks);
-				}
-#endif
 			}
 			if (abort_flag)
 				return (2);
@@ -2793,22 +2720,8 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 							sctp_queue_op_err(stcb, mm);
 						} else {
 							sctp_m_freem(mm);
-#ifdef SCTP_DEBUG
-							if (sctp_debug_on &
-							    SCTP_DEBUG_INPUT1) {
-								printf("Gak can't copy the chunk into operr %d bytes\n",
-								       chk_length);
-							}
-#endif
 						}
 					}
-#ifdef SCTP_DEBUG
-					else {
-						if (sctp_debug_on & SCTP_DEBUG_INPUT3) {
-							printf("Gak can't mgethdr for op-err of unrec chunk\n");
-						}
-					}
-#endif
 				}
 				if ((ch->ch.chunk_type & 0x80) == 0) {
 					/* discard the rest of this packet */
@@ -3186,12 +3099,6 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 							    tp1->rec.data.TSN_seq;
 						}
 						if (tp1->sent == SCTP_DATAGRAM_RESEND) {
-#ifdef SCTP_DEBUG
-							if (sctp_debug_on &
-							    SCTP_DEBUG_INDATA3) {
-								printf("Hmm. one that is in RESEND that is now ACKED\n");
-							}
-#endif
 							sctp_ucount_decr(asoc->sent_queue_retran_cnt);
 #ifdef SCTP_AUDITING_ENABLED
 							sctp_audit_log(0xB2,
@@ -3777,13 +3684,6 @@ sctp_try_advance_peer_ack_point(struct sctp_tcb *stcb,
 			 */
 			if (tp1->data) {
 				sctp_free_bufspace(stcb, asoc, tp1, 1);
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_OUTPUT2) {
-					printf("--total out:%lu\n",
-					       (u_long)asoc->total_output_queue_size);
-
-				}
-#endif
 				/*
 				 * Maybe there should be another
 				 * notification type
@@ -4479,11 +4379,6 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 			} else {
 				asoc->state = SCTP_STATE_SHUTDOWN_SENT;
 				SCTP_STAT_DECR_GAUGE32(sctps_currestab);
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
-					printf("%s:%d sends a shutdown\n", __FILE__, __LINE__);
-				}
-#endif
 				sctp_stop_timers_for_shutdown(stcb);
 				sctp_send_shutdown(stcb,
 						   stcb->asoc.primary_destination);
@@ -4587,14 +4482,6 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 
 	stcb->asoc.overall_error_count = 0;
 	asoc = &stcb->asoc;
-	if (asoc->sent_queue_retran_cnt) {
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INDATA1) {
-			printf("Handling SACK for asoc:%p retran:%d\n",
-			    asoc, asoc->sent_queue_retran_cnt);
-		}
-#endif
-	}
 #ifdef SCTP_SACK_LOGGING
 	sctp_log_sack(asoc->last_acked_seq,
 	    cum_ack,
@@ -4660,26 +4547,11 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 			return;
 		}
 	}
-	if (asoc->sent_queue_retran_cnt) {
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INDATA1) {
-			printf("cum_ack:%x num_seg:%u last_acked_seq:%x\n",
-			    cum_ack, (uint32_t) num_seg, asoc->last_acked_seq);
-		}
-#endif
-	}
 	/**********************/
 	/* 1) check the range */
 	/**********************/
 	if (compare_with_wrap(asoc->last_acked_seq, last_tsn, MAX_TSN)) {
 		/* acking something behind */
-		if (asoc->sent_queue_retran_cnt) {
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_INDATA1) {
-				printf("The cum-ack is behind us\n");
-			}
-#endif
-		}
 		return;
 	}
 	/* update the Rwnd of the peer */
@@ -4694,11 +4566,6 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 #endif
 		asoc->peers_rwnd = a_rwnd;
 		if (asoc->sent_queue_retran_cnt) {
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_INDATA1) {
-				printf("Huh? retran set but none on queue\n");
-			}
-#endif
 			asoc->sent_queue_retran_cnt = 0;
 		}
 		if (asoc->peers_rwnd < stcb->sctp_ep->sctp_ep.sctp_sws_sender) {
@@ -4851,11 +4718,6 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 #endif
 				}
 				if (tp1->sent == SCTP_DATAGRAM_RESEND) {
-#ifdef SCTP_DEBUG
-					if (sctp_debug_on & SCTP_DEBUG_INDATA3) {
-						printf("Hmm. one that is in RESEND that is now ACKED\n");
-					}
-#endif
 					sctp_ucount_decr(asoc->sent_queue_retran_cnt);
 #ifdef SCTP_AUDITING_ENABLED
 					sctp_audit_log(0xB3,
@@ -4971,13 +4833,6 @@ skip_segments:
 		}
 		if (tp1->data) {
 			sctp_free_bufspace(stcb, asoc, tp1, 1);
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_OUTPUT2) {
-				printf("--total out:%lu\n",
-				       (u_long)asoc->total_output_queue_size);
-			}
-#endif
-
 			sctp_m_freem(tp1->data);
 			if (PR_SCTP_BUF_ENABLED(tp1->flags)) {
 				asoc->sent_queue_cnt_removeable--;
@@ -5150,11 +5005,6 @@ skip_segments:
 			} else {
 				asoc->state = SCTP_STATE_SHUTDOWN_SENT;
 				SCTP_STAT_DECR_GAUGE32(sctps_currestab);
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
-					printf("%s:%d sends a shutdown\n", __FILE__, __LINE__);
-				}
-#endif
 				sctp_stop_timers_for_shutdown(stcb);
 				sctp_send_shutdown(stcb,
 						   stcb->asoc.primary_destination);
@@ -5747,12 +5597,6 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 		int num_str, i;
 
 		num_str = fwd_sz / sizeof(struct sctp_strseq);
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INDATA1) {
-			printf("Using NEW method, %d strseq's reported in FWD-TSN\n",
-			    num_str);
-		}
-#endif
 		for (i = 0; i < num_str; i++) {
 			uint16_t st;
 			unsigned char *xx;
@@ -5765,13 +5609,6 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 			stseq[i].sequence = st;
 			/* now process */
 			if (stseq[i].stream > asoc->streamincnt) {
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_INDATA1) {
-					printf("Bogus stream number %d "
-					    "streamincnt is %d\n",
-					    stseq[i].stream, asoc->streamincnt);
-				}
-#endif
 				/*
 				 * It is arguable if we should continue.
 				 * Since the peer sent bogus stream info we
