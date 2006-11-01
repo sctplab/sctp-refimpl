@@ -1024,8 +1024,8 @@ sctp_hmac(uint16_t hmac_algo, uint8_t *key, uint32_t keylen,
 	uint32_t i;
 
 	/* sanity check the material and length */
-	if ((key == NULL) || (keylen == 0) || (text == NULL) || (textlen == 0) ||
-	    (digest == NULL)) {
+	if ((key == NULL) || (keylen == 0) || (text == NULL) ||
+	    (textlen == 0) || (digest == NULL)) {
 		/* can't do HMAC with empty key or text or digest store */
 		return (0);
 	}

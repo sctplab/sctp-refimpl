@@ -54,8 +54,6 @@
 		50D42F1006D8C0DF004DAC5C /* sctp_constants.h in Headers */ = {isa = PBXBuildFile; fileRef = 50D42EF206D8C0DF004DAC5C /* sctp_constants.h */; };
 		50D42F1106D8C0DF004DAC5C /* sctp_crc32.c in Sources */ = {isa = PBXBuildFile; fileRef = 50D42EF306D8C0DF004DAC5C /* sctp_crc32.c */; };
 		50D42F1206D8C0DF004DAC5C /* sctp_crc32.h in Headers */ = {isa = PBXBuildFile; fileRef = 50D42EF406D8C0DF004DAC5C /* sctp_crc32.h */; };
-		50D42F1306D8C0DF004DAC5C /* sctp_hashdriver.c in Sources */ = {isa = PBXBuildFile; fileRef = 50D42EF506D8C0DF004DAC5C /* sctp_hashdriver.c */; };
-		50D42F1406D8C0DF004DAC5C /* sctp_hashdriver.h in Headers */ = {isa = PBXBuildFile; fileRef = 50D42EF606D8C0DF004DAC5C /* sctp_hashdriver.h */; };
 		50D42F1506D8C0DF004DAC5C /* sctp_header.h in Headers */ = {isa = PBXBuildFile; fileRef = 50D42EF706D8C0DF004DAC5C /* sctp_header.h */; };
 		50D42F1606D8C0DF004DAC5C /* sctp_indata.c in Sources */ = {isa = PBXBuildFile; fileRef = 50D42EF806D8C0DF004DAC5C /* sctp_indata.c */; };
 		50D42F1706D8C0DF004DAC5C /* sctp_indata.h in Headers */ = {isa = PBXBuildFile; fileRef = 50D42EF906D8C0DF004DAC5C /* sctp_indata.h */; };
@@ -67,8 +65,6 @@
 		50D42F1D06D8C0DF004DAC5C /* sctp_pcb.h in Headers */ = {isa = PBXBuildFile; fileRef = 50D42EFF06D8C0DF004DAC5C /* sctp_pcb.h */; };
 		50D42F1E06D8C0DF004DAC5C /* sctp_peeloff.c in Sources */ = {isa = PBXBuildFile; fileRef = 50D42F0006D8C0DF004DAC5C /* sctp_peeloff.c */; };
 		50D42F1F06D8C0DF004DAC5C /* sctp_peeloff.h in Headers */ = {isa = PBXBuildFile; fileRef = 50D42F0106D8C0DF004DAC5C /* sctp_peeloff.h */; };
-		50D42F2006D8C0DF004DAC5C /* sctp_sha1.c in Sources */ = {isa = PBXBuildFile; fileRef = 50D42F0206D8C0DF004DAC5C /* sctp_sha1.c */; };
-		50D42F2106D8C0DF004DAC5C /* sctp_sha1.h in Headers */ = {isa = PBXBuildFile; fileRef = 50D42F0306D8C0DF004DAC5C /* sctp_sha1.h */; };
 		50D42F2206D8C0DF004DAC5C /* sctp_structs.h in Headers */ = {isa = PBXBuildFile; fileRef = 50D42F0406D8C0DF004DAC5C /* sctp_structs.h */; };
 		50D42F2306D8C0DF004DAC5C /* sctp_timer.c in Sources */ = {isa = PBXBuildFile; fileRef = 50D42F0506D8C0DF004DAC5C /* sctp_timer.c */; };
 		50D42F2406D8C0DF004DAC5C /* sctp_timer.h in Headers */ = {isa = PBXBuildFile; fileRef = 50D42F0606D8C0DF004DAC5C /* sctp_timer.h */; };
@@ -80,6 +76,7 @@
 		50D42F2F06D8C0F3004DAC5C /* sctp6_usrreq.c in Sources */ = {isa = PBXBuildFile; fileRef = 50D42F2D06D8C0F3004DAC5C /* sctp6_usrreq.c */; };
 		50D42F3006D8C0F3004DAC5C /* sctp6_var.h in Headers */ = {isa = PBXBuildFile; fileRef = 50D42F2E06D8C0F3004DAC5C /* sctp6_var.h */; };
 		50D5A2670850E137008084B7 /* locks.h in Headers */ = {isa = PBXBuildFile; fileRef = 50D5A2660850E137008084B7 /* locks.h */; };
+		873563F70AF82CB6008231DC /* sha1.h in Headers */ = {isa = PBXBuildFile; fileRef = 873563F60AF82CB6008231DC /* sha1.h */; };
 		876D69460AF6812C003372FB /* sctp_os_macosx.h in Headers */ = {isa = PBXBuildFile; fileRef = 876D69440AF6812C003372FB /* sctp_os_macosx.h */; };
 		876D69470AF6812C003372FB /* sctp_os.h in Headers */ = {isa = PBXBuildFile; fileRef = 876D69450AF6812C003372FB /* sctp_os.h */; };
 		876D6D430AF6C9D9003372FB /* sha2.h in Headers */ = {isa = PBXBuildFile; fileRef = 876D6D420AF6C9D9003372FB /* sha2.h */; };
@@ -145,8 +142,6 @@
 		50D42EF206D8C0DF004DAC5C /* sctp_constants.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sctp_constants.h; sourceTree = "<group>"; };
 		50D42EF306D8C0DF004DAC5C /* sctp_crc32.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sctp_crc32.c; sourceTree = "<group>"; };
 		50D42EF406D8C0DF004DAC5C /* sctp_crc32.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sctp_crc32.h; sourceTree = "<group>"; };
-		50D42EF506D8C0DF004DAC5C /* sctp_hashdriver.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sctp_hashdriver.c; sourceTree = "<group>"; };
-		50D42EF606D8C0DF004DAC5C /* sctp_hashdriver.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sctp_hashdriver.h; sourceTree = "<group>"; };
 		50D42EF706D8C0DF004DAC5C /* sctp_header.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sctp_header.h; sourceTree = "<group>"; };
 		50D42EF806D8C0DF004DAC5C /* sctp_indata.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sctp_indata.c; sourceTree = "<group>"; };
 		50D42EF906D8C0DF004DAC5C /* sctp_indata.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sctp_indata.h; sourceTree = "<group>"; };
@@ -158,8 +153,6 @@
 		50D42EFF06D8C0DF004DAC5C /* sctp_pcb.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sctp_pcb.h; sourceTree = "<group>"; };
 		50D42F0006D8C0DF004DAC5C /* sctp_peeloff.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sctp_peeloff.c; sourceTree = "<group>"; };
 		50D42F0106D8C0DF004DAC5C /* sctp_peeloff.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sctp_peeloff.h; sourceTree = "<group>"; };
-		50D42F0206D8C0DF004DAC5C /* sctp_sha1.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sctp_sha1.c; sourceTree = "<group>"; };
-		50D42F0306D8C0DF004DAC5C /* sctp_sha1.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sctp_sha1.h; sourceTree = "<group>"; };
 		50D42F0406D8C0DF004DAC5C /* sctp_structs.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sctp_structs.h; sourceTree = "<group>"; };
 		50D42F0506D8C0DF004DAC5C /* sctp_timer.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sctp_timer.c; sourceTree = "<group>"; };
 		50D42F0606D8C0DF004DAC5C /* sctp_timer.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sctp_timer.h; sourceTree = "<group>"; };
@@ -171,6 +164,7 @@
 		50D42F2D06D8C0F3004DAC5C /* sctp6_usrreq.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sctp6_usrreq.c; sourceTree = "<group>"; };
 		50D42F2E06D8C0F3004DAC5C /* sctp6_var.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sctp6_var.h; sourceTree = "<group>"; };
 		50D5A2660850E137008084B7 /* locks.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = locks.h; path = ppc/locks.h; sourceTree = "<group>"; };
+		873563F60AF82CB6008231DC /* sha1.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = sha1.h; path = crypto/sha1.h; sourceTree = "<group>"; };
 		876D69440AF6812C003372FB /* sctp_os_macosx.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sctp_os_macosx.h; sourceTree = "<group>"; };
 		876D69450AF6812C003372FB /* sctp_os.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sctp_os.h; sourceTree = "<group>"; };
 		876D6D420AF6C9D9003372FB /* sha2.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = sha2.h; path = crypto/sha2/sha2.h; sourceTree = "<group>"; };
@@ -282,8 +276,6 @@
 				501B27060AD3D298008EC7B2 /* sctp_macosx.c */,
 				5097D9B909D1D436001F0DDD /* sctp_auth.c */,
 				5097D9BA09D1D436001F0DDD /* sctp_auth.h */,
-				5077CEC508465AAB004818A2 /* in_pcb.h */,
-				5077CBA408464F52004818A2 /* in.h */,
 				50D42EEE06D8C0DF004DAC5C /* sctp.h */,
 				50D42EEF06D8C0DF004DAC5C /* sctp_asconf.c */,
 				50D42EF006D8C0DF004DAC5C /* sctp_asconf.h */,
@@ -291,8 +283,6 @@
 				50D42EF206D8C0DF004DAC5C /* sctp_constants.h */,
 				50D42EF306D8C0DF004DAC5C /* sctp_crc32.c */,
 				50D42EF406D8C0DF004DAC5C /* sctp_crc32.h */,
-				50D42EF506D8C0DF004DAC5C /* sctp_hashdriver.c */,
-				50D42EF606D8C0DF004DAC5C /* sctp_hashdriver.h */,
 				50D42EF706D8C0DF004DAC5C /* sctp_header.h */,
 				50D42EF806D8C0DF004DAC5C /* sctp_indata.c */,
 				50D42EF906D8C0DF004DAC5C /* sctp_indata.h */,
@@ -307,13 +297,7 @@
 				50D42EFF06D8C0DF004DAC5C /* sctp_pcb.h */,
 				50D42F0006D8C0DF004DAC5C /* sctp_peeloff.c */,
 				50D42F0106D8C0DF004DAC5C /* sctp_peeloff.h */,
-				50D42F0206D8C0DF004DAC5C /* sctp_sha1.c */,
-				50D42F0306D8C0DF004DAC5C /* sctp_sha1.h */,
 				50D42F0406D8C0DF004DAC5C /* sctp_structs.h */,
-				507ED5B50AEE0CA8005037C4 /* icmp_var.h */,
-				507ED5B60AEE0CA8005037C4 /* in_var.h */,
-				507ED5B70AEE0CA8005037C4 /* ip_var.h */,
-				507ED5B80AEE0CA8005037C4 /* ip6.h */,
 				507ED5B90AEE0CA8005037C4 /* sctp_bsd_addr.c */,
 				507ED5BA0AEE0CA8005037C4 /* sctp_bsd_addr.h */,
 				50D42F0506D8C0DF004DAC5C /* sctp_timer.c */,
@@ -321,12 +305,18 @@
 				50D42F0706D8C0DF004DAC5C /* sctp_uio.h */,
 				50D42F0806D8C0DF004DAC5C /* sctp_usrreq.c */,
 				50D42F0906D8C0DF004DAC5C /* sctp_var.h */,
+				50D42F0A06D8C0DF004DAC5C /* sctputil.c */,
+				50D42F0B06D8C0DF004DAC5C /* sctputil.h */,
+				507ED5B50AEE0CA8005037C4 /* icmp_var.h */,
+				5077CBA408464F52004818A2 /* in.h */,
+				507ED5B60AEE0CA8005037C4 /* in_var.h */,
+				5077CEC508465AAB004818A2 /* in_pcb.h */,
+				507ED5B70AEE0CA8005037C4 /* ip_var.h */,
+				507ED5B80AEE0CA8005037C4 /* ip6.h */,
 				5088BC1409DD83FB00FA2E68 /* kern_types.h */,
 				5088BC1509DD83FB00FA2E68 /* locks.h */,
 				5088BC1609DD83FB00FA2E68 /* simple_lock.h */,
 				5088BC1709DD83FB00FA2E68 /* wait_queue.h */,
-				50D42F0A06D8C0DF004DAC5C /* sctputil.c */,
-				50D42F0B06D8C0DF004DAC5C /* sctputil.h */,
 			);
 			path = netinet;
 			sourceTree = "<group>";
@@ -356,6 +346,7 @@
 		876D6D400AF6C9B8003372FB /* crypto */ = {
 			isa = PBXGroup;
 			children = (
+				873563F60AF82CB6008231DC /* sha1.h */,
 				876D6D410AF6C9C1003372FB /* sha2 */,
 			);
 			name = crypto;
@@ -381,14 +372,12 @@
 				50D42F0F06D8C0DF004DAC5C /* sctp_callout.h in Headers */,
 				50D42F1006D8C0DF004DAC5C /* sctp_constants.h in Headers */,
 				50D42F1206D8C0DF004DAC5C /* sctp_crc32.h in Headers */,
-				50D42F1406D8C0DF004DAC5C /* sctp_hashdriver.h in Headers */,
 				50D42F1506D8C0DF004DAC5C /* sctp_header.h in Headers */,
 				50D42F1706D8C0DF004DAC5C /* sctp_indata.h in Headers */,
 				50D42F1906D8C0DF004DAC5C /* sctp_input.h in Headers */,
 				50D42F1B06D8C0DF004DAC5C /* sctp_output.h in Headers */,
 				50D42F1D06D8C0DF004DAC5C /* sctp_pcb.h in Headers */,
 				50D42F1F06D8C0DF004DAC5C /* sctp_peeloff.h in Headers */,
-				50D42F2106D8C0DF004DAC5C /* sctp_sha1.h in Headers */,
 				50D42F2206D8C0DF004DAC5C /* sctp_structs.h in Headers */,
 				50D42F2406D8C0DF004DAC5C /* sctp_timer.h in Headers */,
 				50D42F2506D8C0DF004DAC5C /* sctp_uio.h in Headers */,
@@ -431,6 +420,7 @@
 				876D69460AF6812C003372FB /* sctp_os_macosx.h in Headers */,
 				876D69470AF6812C003372FB /* sctp_os.h in Headers */,
 				876D6D430AF6C9D9003372FB /* sha2.h in Headers */,
+				873563F70AF82CB6008231DC /* sha1.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -552,13 +542,11 @@
 				32A4FEBE0562C75700D090E7 /* SCTP.c in Sources */,
 				50D42F0D06D8C0DF004DAC5C /* sctp_asconf.c in Sources */,
 				50D42F1106D8C0DF004DAC5C /* sctp_crc32.c in Sources */,
-				50D42F1306D8C0DF004DAC5C /* sctp_hashdriver.c in Sources */,
 				50D42F1606D8C0DF004DAC5C /* sctp_indata.c in Sources */,
 				50D42F1806D8C0DF004DAC5C /* sctp_input.c in Sources */,
 				50D42F1A06D8C0DF004DAC5C /* sctp_output.c in Sources */,
 				50D42F1C06D8C0DF004DAC5C /* sctp_pcb.c in Sources */,
 				50D42F1E06D8C0DF004DAC5C /* sctp_peeloff.c in Sources */,
-				50D42F2006D8C0DF004DAC5C /* sctp_sha1.c in Sources */,
 				50D42F2306D8C0DF004DAC5C /* sctp_timer.c in Sources */,
 				50D42F2606D8C0DF004DAC5C /* sctp_usrreq.c in Sources */,
 				50D42F2806D8C0DF004DAC5C /* sctputil.c in Sources */,
