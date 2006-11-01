@@ -153,7 +153,6 @@ __FBSDID("$FreeBSD:$");
 #endif
 #include <netinet/sctp_header.h>
 #include <netinet/sctp_output.h>
-#include <netinet/sctp_hashdriver.h>
 #include <netinet/sctp_uio.h>
 #include <netinet/sctp_timer.h>
 #include <netinet/sctp_crc32.h>
@@ -946,16 +945,16 @@ sctp_fill_random_store(struct sctp_pcb *m)
 	/*
 	 * Here we use the MD5/SHA-1 to hash with our good randomNumbers and
 	 * our counter. The result becomes our good random numbers and we
-	 * then setup to give these out. Note that we do no lockig to
+	 * then setup to give these out. Note that we do no locking to
 	 * protect this. This is ok, since if competing folks call this we
 	 * will get more gobbled gook in the random store whic is what we
 	 * want. There is a danger that two guys will use the same random
 	 * numbers, but thats ok too since that is random as well :->
 	 */
 	m->store_at = 0;
-	sctp_hash_digest((char *)m->random_numbers, (int)sizeof(m->random_numbers),
-	    (char *)&m->random_counter, (int)sizeof(m->random_counter),
-	    (unsigned char *)m->random_store);
+	sctp_hmac(SCTP_HMAC, (uint8_t *)m->random_numbers,
+	    sizeof(m->random_numbers), (uint8_t *)&m->random_counter,
+	    sizeof(m->random_counter), (uint8_t *)m->random_store);
 	m->random_counter++;
 }
 

@@ -221,17 +221,13 @@ __FBSDID("$FreeBSD:$");
 #define SCTP_MIN_READ_BEFORE_CONSIDERING  3000
 
 /*
- * If you wish to use MD5 instead of SLA uncomment the line below. Why you
- * would like to do this: a) There may be IPR on SHA-1, or so the FIP-180-1
- * page says, b) MD5 is 3 times faster (has coded here).
- *
- * The disadvantage is it is thought that MD5 has been cracked... see RFC2104.
+ * default HMAC for cookies, etc... use one of the AUTH HMAC id's
+ * SCTP_HMAC is the HMAC_ID to use
+ * SCTP_SIGNATURE_SIZE is the digest length
  */
-/* #define USE_MD5 1 */
-/*
- * Note: I can't seem to get this to compile now for some reason- the kernel
- * can't link in the md5 crypto
- */
+#define SCTP_HMAC		SCTP_AUTH_HMAC_ID_SHA1
+#define SCTP_SIGNATURE_SIZE	SCTP_AUTH_DIGEST_LEN_SHA1
+#define SCTP_SIGNATURE_ALOC_SIZE SCTP_SIGNATURE_SIZE
 
 /* DEFINE HERE WHAT CRC YOU WANT TO USE */
 #define SCTP_USECRC_RFC2960  1
@@ -704,13 +700,6 @@ __FBSDID("$FreeBSD:$");
 #define SCTP_NUMBER_OF_SECRETS	8	/* or 8 * 4 = 32 octets */
 #define SCTP_SECRET_SIZE	32	/* number of octets in a 256 bits */
 
-#ifdef USE_MD5
-#define SCTP_SIGNATURE_SIZE	16	/* size of a MD5 signature */
-#else
-#define SCTP_SIGNATURE_SIZE	20	/* size of a SLA-1 signature */
-#endif				/* USE_MD5 */
-
-#define SCTP_SIGNATURE_ALOC_SIZE 20
 
 /*
  * SCTP upper layer notifications
