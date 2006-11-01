@@ -215,7 +215,6 @@ sctp6_input(mp, offp, proto)
 	u_int32_t check, calc_check;
 	struct inpcb *in6p_ip;
 	struct sctp_chunkhdr *ch;
-	struct mbuf *opts = NULL;
 	int length, mlen, offset, iphlen;
 	u_int8_t ecn_bits;
 	struct sctp_tcb *stcb = NULL;
@@ -442,27 +441,6 @@ sctp_skip_csum:
 #endif
 
 	/*
-	 * Construct sockaddr format source address. Stuff source address
-	 * and datagram in user buffer.
-	 */
-	if ((in6p->ip_inp.inp.inp_flags & INP_CONTROLOPTS)
-#ifndef __OpenBSD__
-	    || (in6p->sctp_socket && in6p->sctp_socket->so_options & SO_TIMESTAMP)
-#endif
-	    ) {
-#if defined(__FreeBSD__) || defined(__APPLE__)
-#if (defined(SCTP_BASE_FREEBSD) && __FreeBSD_version < 501113) || defined(__APPLE__)
-		ip6_savecontrol(in6p_ip, &opts, ip6, m);
-#elif __FreeBSD_version >= 440000 || (defined(SCTP_BASE_FREEBSD) && __FreeBSD_version >= 501113)
-		ip6_savecontrol(in6p_ip, m, &opts);
-#else
-		ip6_savecontrol(in6p_ip, m, &opts, NULL);
-#endif
-#else
-		ip6_savecontrol((struct in6pcb *)in6p_ip, m, &opts);
-#endif
-	}
-	/*
 	 * CONTROL chunk processing
 	 */
 	length = ntohs(ip6->ip6_plen) + iphlen;
@@ -480,9 +458,6 @@ sctp_skip_csum:
 	/* XXX this stuff below gets moved to appropriate parts later... */
 	if (m)
 		m_freem(m);
-	if (opts)
-		m_freem(opts);
-
 	if ((in6p) && refcount_up) {
 		/* reduce ref-count */
 		SCTP_INP_WLOCK(in6p);
@@ -507,8 +482,6 @@ bad:
 	}
 	if (m)
 		m_freem(m);
-	if (opts)
-		m_freem(opts);
 	return IPPROTO_DONE;
 }
 
