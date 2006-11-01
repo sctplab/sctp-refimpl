@@ -30,7 +30,14 @@
 #ifndef __sctp_os_bsd_h__
 #define __sctp_os_bsd_h__
 
+/*
+ *
+ */
+typedef struct mbuf *sctp_mbuf_t;
 
+/*
+ * general memory allocation
+ */
 #define SCTP_MALLOC(var, type, size, name) \
     do { \
 	MALLOC(var, type, size, M_PCB, M_NOWAIT); \

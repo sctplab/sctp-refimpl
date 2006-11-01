@@ -148,7 +148,7 @@ __FBSDID("$FreeBSD:$");
 #include <netinet/sctp_output.h>
 #include <netinet/sctp_uio.h>
 #include <netinet/sctputil.h>
-#include <netinet/sctp_hashdriver.h>
+#include <netinet/sctp_auth.h>
 #include <netinet/sctp_timer.h>
 #include <netinet/sctp_asconf.h>
 #include <netinet/sctp_indata.h>
@@ -2183,8 +2183,8 @@ sctp_add_cookie(struct sctp_inpcb *inp, struct mbuf *init, int init_offset,
 	sig_offset = 0;
 	signature = (uint8_t *) (mtod(sig, caddr_t)+sig_offset);
 	/* Time to sign the cookie */
-	sctp_hash_digest_m((char *)inp->sctp_ep.secret_key[
-	    (int)(inp->sctp_ep.current_secret_number)],
+	sctp_hmac_m(SCTP_HMAC,
+	    (uint8_t *)inp->sctp_ep.secret_key[(int)(inp->sctp_ep.current_secret_number)],
 	    SCTP_SECRET_SIZE, mret, sizeof(struct sctp_paramhdr),
 	    (uint8_t *) signature);
 	sig->m_len += SCTP_SIGNATURE_SIZE;

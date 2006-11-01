@@ -100,7 +100,7 @@ __FBSDID("$FreeBSD:$");
 #include <netinet/sctputil.h>
 #include <netinet/sctp_output.h>
 #include <netinet/sctp_input.h>
-#include <netinet/sctp_hashdriver.h>
+#include <netinet/sctp_auth.h>
 #include <netinet/sctp_indata.h>
 #include <netinet/sctp_asconf.h>
 
@@ -1815,7 +1815,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	}
 	/*
 	 * split off the signature into its own mbuf (since it should not be
-	 * calculated in the sctp_hash_digest_m() call).
+	 * calculated in the sctp_hmac_m() call).
 	 */
 	sig_offset = offset + cookie_len - SCTP_SIGNATURE_SIZE;
 	if (sig_offset > size_of_pkt) {
@@ -1845,11 +1845,13 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	if ((cookie->time_entered.tv_sec < (long)ep->time_of_secret_change) &&
 	    (ep->current_secret_number != ep->last_secret_number)) {
 		/* it's the old cookie */
-		sctp_hash_digest_m((char *)ep->secret_key[(int)ep->last_secret_number],
+		sctp_hmac_m(SCTP_HMAC,
+		    (uint8_t *)ep->secret_key[(int)ep->last_secret_number],
 		    SCTP_SECRET_SIZE, m, cookie_offset, calc_sig);
 	} else {
 		/* it's the current cookie */
-		sctp_hash_digest_m((char *)ep->secret_key[(int)ep->current_secret_number],
+		sctp_hmac_m(SCTP_HMAC,
+		    (uint8_t *)ep->secret_key[(int)ep->current_secret_number],
 		    SCTP_SECRET_SIZE, m, cookie_offset, calc_sig);
 	}
 	/* get the signature */
@@ -1865,7 +1867,8 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		if ((cookie->time_entered.tv_sec == (long)ep->time_of_secret_change) &&
 		    (ep->current_secret_number != ep->last_secret_number)) {
 			/* compute digest with old */
-			sctp_hash_digest_m((char *)ep->secret_key[(int)ep->last_secret_number],
+			sctp_hmac_m(SCTP_HMAC,
+			    (uint8_t *)ep->secret_key[(int)ep->last_secret_number],
 			    SCTP_SECRET_SIZE, m, cookie_offset, calc_sig);
 			/* compare */
 			if (memcmp(calc_sig, sig, SCTP_SIGNATURE_SIZE) == 0)

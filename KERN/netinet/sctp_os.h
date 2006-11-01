@@ -50,6 +50,7 @@
  * SCTP_ZONE_INIT(zone, name, size, number)
  * SCTP_ZONE_GET(zone)
  * SCTP_ZONE_FREE(zone, element)
+ * SCTP_ZONE_DESTROY(zone)
  */
 
 /*
