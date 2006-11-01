@@ -96,7 +96,6 @@ __FBSDID("$FreeBSD:$");
 #include <netinet/sctputil.h>
 #include <netinet/sctp_output.h>
 #include <netinet/sctp_input.h>
-#include <netinet/sctp_hashdriver.h>
 #include <netinet/sctp_indata.h>
 #include <netinet/sctp_uio.h>
 #include <netinet/sctp_timer.h>

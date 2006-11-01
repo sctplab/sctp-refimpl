@@ -150,7 +150,6 @@ __FBSDID("$FreeBSD:$");
 #include <netinet/sctp_bsd_addr.h>
 #include <netinet/sctp_uio.h>
 #include <netinet/sctputil.h>
-#include <netinet/sctp_hashdriver.h>
 #include <netinet/sctp_timer.h>
 #include <netinet/sctp_asconf.h>
 #include <netinet/sctp_indata.h>
