@@ -4607,21 +4607,6 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 	return (0);
 }
 
-#if defined(__OpenBSD__)
-static void
-sctp_saveopt(struct sctp_inpcb *inp, struct mbuf **mp, struct ip *ip,
-    struct mbuf *m)
-{
-	if (inp->ip_inp.inp.inp_flags & INP_RECVDSTADDR) {
-		*mp = sbcreatecontrol((caddr_t)&ip->ip_dst,
-		    sizeof(struct in_addr), IP_RECVDSTADDR, IPPROTO_IP);
-		if (*mp)
-			mp = &(*mp)->m_next;
-	}
-}
-
-#endif
-
 extern int sctp_no_csum_on_loopback;
 
 #ifdef __APPLE__
@@ -4691,12 +4676,6 @@ sctp_input(m, va_alist)
 	struct ip *ip;
 	struct sctphdr *sh;
 	struct sctp_inpcb *inp = NULL;
-	struct mbuf *opts = 0;
-
-	/* #ifdef INET6 */
-	/* Don't think this is needed */
-	/* struct ip6_recvpktopts opts6; */
-	/* #endif INET6 */
 
 	uint32_t check, calc_check;
 	struct sctp_nets *net;
@@ -4729,10 +4708,6 @@ sctp_input(m, va_alist)
 	net = NULL;
 	SCTP_STAT_INCR(sctps_recvpackets);
 	SCTP_STAT_INCR_COUNTER64(sctps_inpackets);
-	/* #ifdef INET6 */
-	/* Don't think this is needed */
-	/* bzero(&opts6, sizeof(opts6)); */
-	/* #endif INET6 */
 
 	/*
 	 * Strip IP options, we don't allow any in or out.
@@ -4971,21 +4946,6 @@ sctp_skip_csum_4:
 #endif
 
 	/*
-	 * Construct sockaddr format source address. Stuff source address
-	 * and datagram in user buffer.
-	 */
-	if ((inp->ip_inp.inp.inp_flags & INP_CONTROLOPTS)
-#ifndef __OpenBSD__
-	    || (inp->sctp_socket && (inp->sctp_socket->so_options & SO_TIMESTAMP))
-#endif
-	    ) {
-#ifdef __OpenBSD__
-		sctp_saveopt(inp, &opts, ip, m);
-#else
-		ip_savecontrol((struct inpcb *)inp, &opts, ip, m);
-#endif
-	}
-	/*
 	 * common chunk processing
 	 */
 #if defined(__FreeBSD__)  || defined(__APPLE__)
@@ -5009,9 +4969,6 @@ sctp_skip_csum_4:
 	if (m) {
 		sctp_m_freem(m);
 	}
-	if (opts)
-		sctp_m_freem(opts);
-
 	if ((inp) && (refcount_up)) {
 		/* reduce ref-count */
 		SCTP_INP_WLOCK(inp);
@@ -5035,8 +4992,5 @@ bad:
 	if (m) {
 		sctp_m_freem(m);
 	}
-	if (opts)
-		sctp_m_freem(opts);
-
 	return;
 }
