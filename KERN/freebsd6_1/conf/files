@@ -310,10 +310,12 @@ crypto/sha1.c			optional carp
 crypto/sha1.c			optional netgraph_mppc_encryption
 crypto/sha1.c			optional crypto
 crypto/sha1.c			optional ipsec
+crypto/sha1.c			optional sctp
 crypto/sha2/sha2.c		optional crypto
 crypto/sha2/sha2.c		optional geom_bde
 crypto/sha2/sha2.c		optional ipsec
 crypto/sha2/sha2.c		optional random
+crypto/sha2/sha2.c		optional sctp
 ddb/db_access.c			optional	ddb
 ddb/db_break.c			optional	ddb
 ddb/db_command.c		optional	ddb
@@ -1622,9 +1624,7 @@ netinet/sctp_usrreq.c		optional inet inet6 sctp
 netinet/sctp_pcb.c		optional inet inet6 sctp
 netinet/sctp_bsd_addr.c		optional inet inet6 sctp
 netinet/sctputil.c		optional inet inet6 sctp
-netinet/sctp_sha1.c		optional inet inet6 sctp
 netinet/sctp_timer.c		optional inet inet6 sctp
-netinet/sctp_hashdriver.c	optional inet inet6 sctp
 netinet/sctp_input.c		optional inet inet6 sctp
 netinet/sctp_output.c		optional inet inet6 sctp
 netinet/sctp_indata.c		optional inet inet6 sctp
