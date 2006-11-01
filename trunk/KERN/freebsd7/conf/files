@@ -354,8 +354,9 @@ crypto/rijndael/rijndael-alg-fst.c optional crypto | geom_bde | \
 crypto/rijndael/rijndael-api-fst.c optional geom_bde | random
 crypto/rijndael/rijndael-api.c	optional crypto | ipsec | wlan_ccmp
 crypto/sha1.c			optional carp | crypto | ipsec | \
-					 netgraph_mppc_encryption
-crypto/sha2/sha2.c		optional crypto | geom_bde | ipsec | random
+					 netgraph_mppc_encryption | sctp
+crypto/sha2/sha2.c		optional crypto | geom_bde | ipsec | random \
+					 sctp
 ddb/db_access.c			optional	ddb
 ddb/db_break.c			optional	ddb
 ddb/db_command.c		optional	ddb
@@ -1737,9 +1738,7 @@ netinet/sctp_usrreq.c		optional inet inet6 sctp
 netinet/sctp_pcb.c		optional inet inet6 sctp
 netinet/sctputil.c		optional inet inet6 sctp
 netinet/sctp_bsd_addr.c		optional inet inet6 sctp
-netinet/sctp_sha1.c		optional inet inet6 sctp
 netinet/sctp_timer.c		optional inet inet6 sctp
-netinet/sctp_hashdriver.c	optional inet inet6 sctp
 netinet/sctp_input.c		optional inet inet6 sctp
 netinet/sctp_output.c		optional inet inet6 sctp
 netinet/sctp_indata.c		optional inet inet6 sctp

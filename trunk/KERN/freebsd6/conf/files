@@ -310,10 +310,12 @@ crypto/sha1.c			optional carp
 crypto/sha1.c			optional netgraph_mppc_encryption
 crypto/sha1.c			optional crypto
 crypto/sha1.c			optional ipsec
+crypto/sha1.c			optional sctp
 crypto/sha2/sha2.c		optional crypto
 crypto/sha2/sha2.c		optional geom_bde
 crypto/sha2/sha2.c		optional ipsec
 crypto/sha2/sha2.c		optional random
+crypto/sha2/sha2.c		optional sctp
 ddb/db_access.c			optional	ddb
 ddb/db_break.c			optional	ddb
 ddb/db_command.c		optional	ddb
