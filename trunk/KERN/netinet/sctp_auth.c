@@ -745,6 +745,12 @@ sctp_negotiate_hmacid(sctp_hmaclist_t *peer, sctp_hmaclist_t *local)
 	for (i = 0; i < peer->num_algo; i++) {
 		for (j = 0; j < local->num_algo; j++) {
 			if (peer->hmac[i] == local->hmac[j]) {
+#ifndef SCTP_AUTH_DRAFT_04
+				/* "skip" MD5 as it's been deprecated */
+				if (peer->hmac[i] == SCTP_AUTH_HMAC_ID_MD5)
+					continue;
+#endif
+
 				/* found the "best" one */
 #ifdef SCTP_DEBUG
 				if (SCTP_AUTH_DEBUG)
