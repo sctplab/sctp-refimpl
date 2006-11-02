@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.70 2006-10-30 19:01:45 tuexen Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.71 2006-11-02 02:58:27 lei Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -2018,6 +2018,18 @@ cmd_setdebug(char *argv[], int argc)
       }else if(strncmp(argv[0],"peel",4) == 0){
 	printf("Adding the sctp peeloff level\n");
 	num |= SCTP_DEBUG_PEEL1;
+      }else if(strncmp(argv[0],"auth",4) == 0){
+	if (argv[0][4] == '1'){
+	  printf("Adding auth level 1\n");
+	  num |= SCTP_DEBUG_AUTH1;
+	}else if (argv[0][4] == '2'){
+	  printf("Adding auth level 2\n");
+	  num |= SCTP_DEBUG_AUTH2;
+	}else{
+	  printf("Adding all auth levels\n");
+	  num |= SCTP_DEBUG_AUTH1;
+	  num |= SCTP_DEBUG_AUTH2;
+	}
       }else if(strncmp(argv[0],"all",3) == 0){
 	printf("adding ALL debug levels\n");
 	num = SCTP_DEBUG_ALL;
@@ -2025,7 +2037,7 @@ cmd_setdebug(char *argv[], int argc)
 	printf("Argument unrecognzied use either 0xnumber or\n");
 	printf(" [timer[x]] or [util[x]] or [input[x]] or [all] or\n");
 	printf(" [off] or [peel] or usrreq[x] or indata[x] or output[x] or\n");
-	printf(" [asconf[x]] or pcb[x]\n");
+	printf(" [asconf[x]] or pcb[x] or auth[x]\n");
 	printf("Where the [x] is a level number, leave it off and all\n");
 	printf("levels of that type are enabled\n");
 	return(0);
