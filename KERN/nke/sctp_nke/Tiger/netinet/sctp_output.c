@@ -2972,10 +2972,10 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		if (stcb->asoc.authinfo.random != NULL) {
 			random = (struct sctp_auth_random *)(mtod(m, caddr_t)+m->m_len);
 			random->ph.param_type = htons(SCTP_RANDOM);
-			p_len = sizeof(*random) + stcb->asoc.authinfo.random->keylen;
+			p_len = sizeof(*random) + stcb->asoc.authinfo.random_len;
 			random->ph.param_length = htons(p_len);
 			bcopy(stcb->asoc.authinfo.random->key, random->random_data,
-			    stcb->asoc.authinfo.random->keylen);
+			    stcb->asoc.authinfo.random_len);
 			/* zero out any padding required */
 			bzero((caddr_t)random + p_len, SCTP_SIZE32(p_len) - p_len);
 			m->m_len += SCTP_SIZE32(p_len);
@@ -3865,22 +3865,21 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	}
 	/* add authentication parameters */
 	if (!sctp_auth_disable) {
-		struct sctp_key *random_key;
 		struct sctp_auth_random *random;
 		struct sctp_auth_hmac_algo *hmacs;
 		struct sctp_auth_chunk_list *chunks;
+		uint16_t random_len;
 
 		/* generate and add RANDOM parameter */
-		random_key = sctp_generate_random_key(sctp_auth_random_len);
+		random_len = sctp_auth_random_len;
 		random = (struct sctp_auth_random *)(mtod(m, caddr_t)+m->m_len);
 		random->ph.param_type = htons(SCTP_RANDOM);
-		p_len = sizeof(*random) + random_key->keylen;
+		p_len = sizeof(*random) + random_len;
 		random->ph.param_length = htons(p_len);
-		bcopy(random_key->key, random->random_data, random_key->keylen);
+		sctp_read_random(random->random_data, random_len);
 		/* zero out any padding required */
 		bzero((caddr_t)random + p_len, SCTP_SIZE32(p_len) - p_len);
 		m->m_len += SCTP_SIZE32(p_len);
-		sctp_free_key(random_key);
 
 		/* add HMAC_ALGO parameter */
 		hmacs = (struct sctp_auth_hmac_algo *)(mtod(m, caddr_t)+m->m_len);
@@ -9720,20 +9719,9 @@ sctp_lower_sosend(struct socket *so,
 			asoc->state = SCTP_STATE_COOKIE_WAIT;
 			SCTP_GETTIME_TIMEVAL(&asoc->time_entered);
 			
-			/*
-			 * initialize authentication parameters for the assoc
-			 */
-			/* generate a RANDOM for this assoc */
-			asoc->authinfo.random =
-				sctp_generate_random_key(sctp_auth_random_len);
-			/* initialize hmac list from endpoint */
-			asoc->local_hmacs =
-				sctp_copy_hmaclist(inp->sctp_ep.local_hmacs);
-			/* initialize auth chunks list from endpoint */
-			asoc->local_auth_chunks =
-				sctp_copy_chunklist(inp->sctp_ep.local_auth_chunks);
-			/* copy defaults from the endpoint */
-			asoc->authinfo.assoc_keyid = inp->sctp_ep.default_keyid;
+			/* initialize authentication params for the assoc */
+			sctp_initialize_auth_params(inp, stcb);
+
 			if (control) {
 				/* see if a init structure exists in cmsg headers */
 				struct sctp_initmsg initm;

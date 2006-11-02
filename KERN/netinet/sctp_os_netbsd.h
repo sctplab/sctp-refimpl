@@ -30,7 +30,19 @@
 #ifndef __sctp_os_netbsd_h__
 #define __sctp_os_netbsd_h__
 
+/*
+ * includes
+ */
+#if defined(__NetBSD__)
+#include "rnd.h"
+#include <sys/rnd.h>
+#elif defined(__OpenBSD__)
+#include <dev/rndvar.h>
+#endif
 
+/*
+ * general memory allocation
+ */
 #define SCTP_MALLOC(var, type, size, name) \
     do { \
 	MALLOC(var, type, size, M_PCB, M_NOWAIT); \

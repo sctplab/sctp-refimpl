@@ -86,8 +86,8 @@ __FBSDID("$FreeBSD:$");
 
 /* random sizes */
 #define SCTP_AUTH_RANDOM_SIZE_DEFAULT	32
+#define SCTP_AUTH_RANDOM_SIZE_REQUIRED	32
 #define SCTP_AUTH_RANDOM_SIZE_MAX	256
-
 
 /* union of all supported HMAC algorithm contexts */
 typedef union sctp_hash_context {
@@ -128,8 +128,9 @@ typedef struct sctp_hmaclist {
 
 /* authentication info */
 typedef struct sctp_authinfo {
-	sctp_key_t *random;	/* local random number */
-	sctp_key_t *peer_random;/* peer's random number */
+	sctp_key_t *random;	/* local random key (concatenated) */
+	uint32_t random_len;	/* local random number length for param */
+	sctp_key_t *peer_random;/* peer's random key (concatenated) */
 	uint16_t assoc_keyid;	/* current send keyid (cached) */
 	uint16_t recv_keyid;	/* last recv keyid (cached) */
 	sctp_key_t *assoc_key;	/* cached send key */
@@ -265,6 +266,8 @@ sctp_notify_authentication(struct sctp_tcb *stcb,
     uint16_t alt_keyid);
 extern int
 sctp_validate_init_auth_params(struct mbuf *m, int offset, int limit);
+extern void
+sctp_initialize_auth_params(struct sctp_inpcb *inp, struct sctp_tcb *stcb);
 
 
 /* test functions */
