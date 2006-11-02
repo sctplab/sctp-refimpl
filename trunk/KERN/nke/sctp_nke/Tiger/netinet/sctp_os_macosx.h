@@ -30,7 +30,20 @@
 #ifndef __sctp_os_macosx_h__
 #define __sctp_os_macosx_h__
 
+/*
+ * includes
+ */
+#if defined(__FreeBSD__) || defined(__APPLE__)
+#include <sys/random.h>
+#endif
+#if defined(__NetBSD__)
+#include "rnd.h"
+#include <sys/rnd.h>
+#endif
 
+/*
+ * general memory allocation
+ */
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 #define SCTP_MALLOC(var, type, size, name) \
     do { \

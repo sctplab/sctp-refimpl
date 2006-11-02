@@ -31,6 +31,18 @@
 #define __sctp_os_bsd_h__
 
 /*
+ * includes
+ */
+#if defined(__FreeBSD__) || defined(__APPLE__)
+#include <sys/random.h>
+#endif
+#if defined(__NetBSD__)
+#include "rnd.h"
+#include <sys/rnd.h>
+#endif
+
+
+/*
  *
  */
 typedef struct mbuf *sctp_mbuf_t;

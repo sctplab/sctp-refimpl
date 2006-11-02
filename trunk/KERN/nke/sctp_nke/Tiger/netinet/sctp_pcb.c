@@ -66,16 +66,6 @@ __FBSDID("$FreeBSD:$");
 #endif
 #include <sys/kernel.h>
 #include <sys/sysctl.h>
-#if defined(__FreeBSD__) || defined(__APPLE__)
-#include <sys/random.h>
-#endif
-#if defined(__NetBSD__)
-#include "rnd.h"
-#include <sys/rnd.h>
-#endif
-#if defined(__OpenBSD__)
-#include <dev/rndvar.h>
-#endif
 
 #if defined(__APPLE__)
 #include <netinet/sctp_callout.h>
@@ -5151,6 +5141,15 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 	struct sockaddr *local_sa = (struct sockaddr *)&dest_store;
 	struct sockaddr_in sin;
 	struct sockaddr_in6 sin6;
+	uint8_t store[384];
+	struct sctp_auth_random *random = NULL;
+	uint16_t random_len = 0;
+	struct sctp_auth_hmac_algo *hmacs = NULL;
+	uint16_t hmacs_len = 0;
+	struct sctp_auth_chunk_list *chunks = NULL;
+	uint16_t num_chunks = 0;
+	sctp_key_t *new_key;
+	uint32_t keylen;
 	int got_random = 0, got_hmacs = 0, got_chklist = 0;
 
 	/* First get the destination address setup too. */
@@ -5486,10 +5485,6 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			stcb->asoc.peer_supports_ecn_nonce = 1;
 			stcb->asoc.ecn_nonce_allowed = 1;
 		} else if (ptype == SCTP_RANDOM) {
-			uint8_t store[256];
-			struct sctp_auth_random *random;
-			uint32_t keylen;
-
 			if (plen > sizeof(store))
 				break;
 			if (got_random) {
@@ -5502,19 +5497,19 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			if (phdr == NULL)
 				return (-26);
 			random = (struct sctp_auth_random *)phdr;
-			keylen = plen - sizeof(*random);
-			if (stcb->asoc.authinfo.peer_random != NULL)
-				sctp_free_key(stcb->asoc.authinfo.peer_random);
-			stcb->asoc.authinfo.peer_random =
-			    sctp_set_key(random->random_data, keylen);
-			sctp_clear_cachedkeys(stcb,
-			    stcb->asoc.authinfo.assoc_keyid);
-			sctp_clear_cachedkeys(stcb, stcb->asoc.authinfo.recv_keyid);
+			random_len = plen - sizeof(*random);
+			/* enforce the random length */
+			if (random_len != SCTP_AUTH_RANDOM_SIZE_REQUIRED) {
+#ifdef SCTP_DEBUG
+				if (sctp_debug_on & SCTP_DEBUG_AUTH1)
+					printf("SCTP: invalid RANDOM len\n");
+#endif
+				return (-27);
+			}
 			got_random = 1;
 		} else if (ptype == SCTP_HMAC_LIST) {
-			uint8_t store[256];
-			struct sctp_auth_hmac_algo *hmacs;
-			int num_hmacs, i;
+			int num_hmacs;
+			int i;
 
 			if (plen > sizeof(store))
 				break;
@@ -5526,13 +5521,13 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			    (struct sctp_paramhdr *)store,
 			    plen);
 			if (phdr == NULL)
-				return (-27);
+				return (-28);
 			hmacs = (struct sctp_auth_hmac_algo *)phdr;
-			num_hmacs = (plen - sizeof(*hmacs)) /
-			    sizeof(hmacs->hmac_ids[0]);
+			hmacs_len = plen - sizeof(*hmacs);
+			num_hmacs = hmacs_len / sizeof(hmacs->hmac_ids[0]);
 			/* validate the hmac list */
 			if (sctp_verify_hmac_param(hmacs, num_hmacs)) {
-				return (-28);
+				return (-29);
 			}
 			if (stcb->asoc.peer_hmacs != NULL)
 				sctp_free_hmaclist(stcb->asoc.peer_hmacs);
@@ -5545,9 +5540,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			}
 			got_hmacs = 1;
 		} else if (ptype == SCTP_CHUNK_LIST) {
-			uint8_t store[384];
-			struct sctp_auth_chunk_list *chunks;
-			int size, i;
+			int i;
 
 			if (plen > sizeof(store))
 				break;
@@ -5559,27 +5552,27 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			    (struct sctp_paramhdr *)store,
 			    plen);
 			if (phdr == NULL)
-				return (-29);
+				return (-30);
 			chunks = (struct sctp_auth_chunk_list *)phdr;
-			size = plen - sizeof(*chunks);
+			num_chunks = plen - sizeof(*chunks);
 			if (stcb->asoc.peer_auth_chunks != NULL)
 				sctp_clear_chunklist(stcb->asoc.peer_auth_chunks);
 			else
 				stcb->asoc.peer_auth_chunks = sctp_alloc_chunklist();
-			for (i = 0; i < size; i++) {
+			for (i = 0; i < num_chunks; i++) {
 				sctp_auth_add_chunk(chunks->chunk_types[i],
 				    stcb->asoc.peer_auth_chunks);
 			}
 			got_chklist = 1;
 		} else if ((ptype == SCTP_HEARTBEAT_INFO) ||
-			    (ptype == SCTP_STATE_COOKIE) ||
-			    (ptype == SCTP_UNRECOG_PARAM) ||
-			    (ptype == SCTP_COOKIE_PRESERVE) ||
-			    (ptype == SCTP_SUPPORTED_ADDRTYPE) ||
-			    (ptype == SCTP_ADD_IP_ADDRESS) ||
-			    (ptype == SCTP_DEL_IP_ADDRESS) ||
-			    (ptype == SCTP_ERROR_CAUSE_IND) ||
-		    (ptype == SCTP_SUCCESS_REPORT)) {
+			   (ptype == SCTP_STATE_COOKIE) ||
+			   (ptype == SCTP_UNRECOG_PARAM) ||
+			   (ptype == SCTP_COOKIE_PRESERVE) ||
+			   (ptype == SCTP_SUPPORTED_ADDRTYPE) ||
+			   (ptype == SCTP_ADD_IP_ADDRESS) ||
+			   (ptype == SCTP_DEL_IP_ADDRESS) ||
+			   (ptype == SCTP_ERROR_CAUSE_IND) ||
+			   (ptype == SCTP_SUCCESS_REPORT)) {
 			 /* don't care */ ;
 		} else {
 			if ((ptype & 0x8000) == 0x0000) {
@@ -5625,8 +5618,37 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 	}
 	if (!sctp_asconf_auth_nochk && stcb->asoc.peer_supports_asconf &&
 	    !stcb->asoc.peer_supports_auth) {
-		return (-30);
+		return (-31);
 	}
+
+	/* concatenate the full random key */
+	keylen = random_len + num_chunks + hmacs_len;
+	new_key = sctp_alloc_key(keylen);
+	if (new_key != NULL) {
+	    /* copy in the RANDOM */
+	    if (random != NULL)
+		bcopy(random->random_data, new_key->key, random_len);
+	    /* append in the AUTH chunks */
+	    if (chunks != NULL)
+		bcopy(chunks->chunk_types, new_key->key + random_len,
+		      num_chunks);
+	    /* append in the HMACs */
+	    if (hmacs != NULL)
+		bcopy(hmacs->hmac_ids, new_key->key + random_len + num_chunks,
+		      hmacs_len);
+	} else {
+	    return (-32);
+	}
+	if (stcb->asoc.authinfo.peer_random != NULL)
+	    sctp_free_key(stcb->asoc.authinfo.peer_random);
+	stcb->asoc.authinfo.peer_random = new_key;
+#ifdef SCTP_AUTH_DRAFT_04
+	/* don't include the chunks and hmacs for draft -04 */
+	stcb->asoc.authinfo.peer_random->keylen = random_len;
+#endif
+	sctp_clear_cachedkeys(stcb, stcb->asoc.authinfo.assoc_keyid);
+	sctp_clear_cachedkeys(stcb, stcb->asoc.authinfo.recv_keyid);
+
 	return (0);
 }
 

@@ -1579,19 +1579,9 @@ sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	}
 	stcb->asoc.state = SCTP_STATE_COOKIE_WAIT;
 	SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_entered);
-	/*
-	 * initialize authentication parameters for the assoc
-	 */
-	/* generate a RANDOM for this assoc */
-	stcb->asoc.authinfo.random =
-	    sctp_generate_random_key(sctp_auth_random_len);
-	/* initialize hmac list from endpoint */
-	stcb->asoc.local_hmacs = sctp_copy_hmaclist(inp->sctp_ep.local_hmacs);
-	/* initialize auth chunks list from endpoint */
-	stcb->asoc.local_auth_chunks =
-	    sctp_copy_chunklist(inp->sctp_ep.local_auth_chunks);
-	/* copy defaults from the endpoint */
-	stcb->asoc.authinfo.assoc_keyid = inp->sctp_ep.default_keyid;
+
+	/* initialize authentication parameters for the assoc */
+	sctp_initialize_auth_params(inp, stcb);
 
 	sctp_send_initiate(inp, stcb);
 	SCTP_TCB_UNLOCK(stcb);
