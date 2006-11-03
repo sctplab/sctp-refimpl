@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)socket.h	8.4 (Berkeley) 2/21/94
- * $FreeBSD: src/sys/sys/socket.h,v 1.90 2006/07/26 03:15:15 sam Exp $
+ * $FreeBSD: src/sys/sys/socket.h,v 1.91 2006/11/02 16:53:26 andre Exp $
  */
 
 #ifndef _SYS_SOCKET_H_
@@ -547,7 +547,8 @@ struct sf_hdtr {
 /*
  * Sendfile-specific flag(s)
  */
-#define        SF_NODISKIO     0x00000001
+#define	SF_NODISKIO     0x00000001
+#define	SF_MNOWAIT	0x00000002
 #endif
 
 #ifndef	_KERNEL
