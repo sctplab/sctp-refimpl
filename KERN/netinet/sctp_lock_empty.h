@@ -34,6 +34,10 @@
  * Empty Lock declarations for all other platforms. Pre-process away to
  * nothing.
  */
+#ifdef __FreeBSD__
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
+#endif
 
 /* Lock for INFO stuff */
 #define SCTP_INP_INFO_LOCK_INIT()

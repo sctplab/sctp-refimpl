@@ -8,8 +8,6 @@ netinet/sctp_bsd_addr.h
 netinet/sctp_constants.h
 netinet/sctp_crc32.c
 netinet/sctp_crc32.h
-netinet/sctp_hashdriver.c
-netinet/sctp_hashdriver.h
 netinet/sctp_header.h
 netinet/sctp_indata.c
 netinet/sctp_indata.h
@@ -24,8 +22,6 @@ netinet/sctp_peeloff.c
 netinet/sctp_peeloff.h
 netinet/sctp_os.h
 netinet/sctp_os_bsd.h
-netinet/sctp_sha1.c
-netinet/sctp_sha1.h
 netinet/sctp_structs.h
 netinet/sctp_timer.c
 netinet/sctp_timer.h
