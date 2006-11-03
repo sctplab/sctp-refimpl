@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/conf/files,v 1.1142 2006/09/18 17:23:35 sam Exp $
+# $FreeBSD: src/sys/conf/files,v 1.1157 2006/10/31 22:22:29 pjd Exp $
 #
 # The long compile-with and dependency lines are required because of
 # limitations in config: backslash-newline doesn't work in strings, and
@@ -50,12 +50,7 @@ aic79xx_reg_print.c	optional ahd pci				   \
 aic79xx_reg_print.o		optional ahd pci ahd_reg_pretty_print	   \
 	compile-with	"${NORMAL_C}"					   \
 	no-implicit-rule local
-emu10k1-alsa%diked.h		optional snd_emu10k1 pci			   \
-	dependency	"$S/tools/emu10k1-mkalsa.sh $S/gnu/dev/sound/pci/emu10k1-alsa.h" \
-	compile-with	"CC='${CC}' AWK=${AWK} sh $S/tools/emu10k1-mkalsa.sh $S/gnu/dev/sound/pci/emu10k1-alsa.h emu10k1-alsa%diked.h" \
-	no-obj no-implicit-rule before-depend				   \
-	clean		"emu10k1-alsa%diked.h"
-emu10k1-alsa%diked.h		optional snd_emu10kx pci			   \
+emu10k1-alsa%diked.h		optional snd_emu10k1 | snd_emu10kx	   \
 	dependency	"$S/tools/emu10k1-mkalsa.sh $S/gnu/dev/sound/pci/emu10k1-alsa.h" \
 	compile-with	"CC='${CC}' AWK=${AWK} sh $S/tools/emu10k1-mkalsa.sh $S/gnu/dev/sound/pci/emu10k1-alsa.h emu10k1-alsa%diked.h" \
 	no-obj no-implicit-rule before-depend				   \
@@ -380,6 +375,7 @@ dev/aac/aac_debug.c		optional aac
 dev/aac/aac_disk.c		optional aac
 dev/aac/aac_linux.c		optional aac compat_linux
 dev/aac/aac_pci.c		optional aac pci
+dev/acpi_support/acpi_aiboost.c	optional acpi_aiboost acpi
 dev/acpi_support/acpi_asus.c	optional acpi_asus acpi
 dev/acpi_support/acpi_fujitsu.c	optional acpi_fujitsu acpi
 dev/acpi_support/acpi_ibm.c	optional acpi_ibm acpi
@@ -609,6 +605,7 @@ dev/ex/if_ex_isa.c		optional ex isa
 dev/ex/if_ex_pccard.c		optional ex pccard
 dev/exca/exca.c			optional cbb
 dev/fatm/if_fatm.c		optional fatm pci
+dev/fb/splash.c			optional splash
 dev/fe/if_fe.c			optional fe
 dev/fe/if_fe_pccard.c		optional fe pccard
 dev/firewire/firewire.c		optional firewire
@@ -713,6 +710,7 @@ dev/mcd/mcd_isa.c		optional mcd isa nowerror
 dev/md/md.c			optional md
 dev/mem/memdev.c		optional mem
 dev/mfi/mfi.c			optional mfi
+dev/mfi/mfi_debug.c		optional mfi
 dev/mfi/mfi_pci.c		optional mfi pci
 dev/mfi/mfi_disk.c		optional mfi
 dev/mfi/mfi_linux.c		optional mfi compat_linux
@@ -752,6 +750,10 @@ dev/mlx/mlx.c			optional mlx
 dev/mlx/mlx_disk.c		optional mlx
 dev/mlx/mlx_pci.c		optional mlx pci
 dev/mly/mly.c			optional mly
+dev/mmc/mmc.c			optional mmc
+dev/mmc/mmcbr_if.m		optional mmc
+dev/mmc/mmcbus_if.m		optional mmc
+dev/mmc/mmcsd.c			optional mmcsd
 dev/mpt/mpt.c			optional mpt
 dev/mpt/mpt_cam.c		optional mpt
 dev/mpt/mpt_debug.c		optional mpt
@@ -875,7 +877,6 @@ dev/sound/isa/sb16.c		optional snd_sb16 isa
 dev/sound/isa/sb8.c		optional snd_sb8 isa
 dev/sound/isa/sbc.c		optional snd_sbc isa
 dev/sound/isa/sndbuf_dma.c	optional sound isa
-dev/sound/pci/ak452x.c		optional snd_ak452x pci
 dev/sound/pci/als4000.c		optional snd_als4000 pci
 dev/sound/pci/atiixp.c		optional snd_atiixp pci
 #dev/sound/pci/au88x0.c		optional snd_au88x0 pci
@@ -902,6 +903,7 @@ dev/sound/pci/emu10kx-midi.c	optional snd_emu10kx pci \
 	dependency "emu10k1-alsa%diked.h" \
 	warning "kernel contains GPL contaminated emu10kx headers"
 dev/sound/pci/envy24.c		optional snd_envy24 pci
+dev/sound/pci/envy24ht.c	optional snd_envy24ht pci
 dev/sound/pci/es137x.c		optional snd_es137x pci
 dev/sound/pci/fm801.c		optional snd_fm801 pci
 dev/sound/pci/ich.c		optional snd_ich pci
@@ -910,10 +912,12 @@ dev/sound/pci/maestro3.c	optional snd_maestro3 pci \
 	warning "kernel contains GPL contaminated maestro3 headers"
 dev/sound/pci/neomagic.c	optional snd_neomagic pci
 dev/sound/pci/solo.c		optional snd_solo pci
+dev/sound/pci/spicds.c		optional snd_spicds pci
 dev/sound/pci/t4dwave.c		optional snd_t4dwave pci
 dev/sound/pci/via8233.c		optional snd_via8233 pci
 dev/sound/pci/via82c686.c	optional snd_via82c686 pci
 dev/sound/pci/vibes.c		optional snd_vibes pci
+dev/sound/pci/hda/hdac.c	optional snd_hda pci
 dev/sound/pcm/ac97.c		optional sound
 dev/sound/pcm/ac97_if.m		optional sound
 dev/sound/pcm/ac97_patch.c	optional sound
@@ -964,8 +968,15 @@ dev/syscons/green/green_saver.c	optional green_saver
 dev/syscons/logo/logo.c		optional logo_saver
 dev/syscons/logo/logo_saver.c	optional logo_saver
 dev/syscons/rain/rain_saver.c	optional rain_saver
+dev/syscons/schistory.c		optional sc
+dev/syscons/scmouse.c		optional sc
+dev/syscons/scterm-dumb.c	optional sc
+dev/syscons/scterm.c		optional sc
+dev/syscons/scvidctl.c		optional sc
 dev/syscons/snake/snake_saver.c	optional snake_saver
 dev/syscons/star/star_saver.c	optional star_saver
+dev/syscons/syscons.c		optional sc
+dev/syscons/sysmouse.c		optional sc
 dev/syscons/warp/warp_saver.c	optional warp_saver
 dev/tdfx/tdfx_linux.c		optional tdfx_linux tdfx compat_linux
 dev/tdfx/tdfx_pci.c		optional tdfx pci
@@ -1150,6 +1161,7 @@ geom/bde/g_bde.c		optional geom_bde
 geom/bde/g_bde_crypt.c		optional geom_bde
 geom/bde/g_bde_lock.c		optional geom_bde
 geom/bde/g_bde_work.c		optional geom_bde
+geom/cache/g_cache.c		optional geom_cache
 geom/concat/g_concat.c		optional geom_concat
 geom/eli/g_eli.c		optional geom_eli
 geom/eli/g_eli_crypto.c		optional geom_eli
@@ -1183,6 +1195,8 @@ geom/geom_sunlabel.c		optional geom_sunlabel
 geom/geom_sunlabel_enc.c	optional geom_sunlabel
 geom/geom_vfs.c			standard
 geom/geom_vol_ffs.c		optional geom_vol
+geom/journal/g_journal.c	optional geom_journal
+geom/journal/g_journal_ufs.c	optional geom_journal
 geom/label/g_label.c		optional geom_label
 geom/label/g_label_ext2fs.c	optional geom_label
 geom/label/g_label_iso9660.c	optional geom_label
@@ -1367,10 +1381,11 @@ kern/subr_acl_posix1e.c		standard
 kern/subr_autoconf.c		standard
 kern/subr_blist.c		standard
 kern/subr_bus.c			standard
-kern/subr_clock.c		optional genclock
+kern/subr_clock.c		standard
 kern/subr_devstat.c		standard
 kern/subr_disk.c		standard
 kern/subr_eventhandler.c	standard
+kern/subr_fattime.c		standard
 kern/subr_firmware.c		optional firmware
 kern/subr_hints.c		standard
 kern/subr_kdb.c			standard
@@ -1387,6 +1402,7 @@ kern/subr_power.c		standard
 kern/subr_prf.c			standard
 kern/subr_prof.c		standard
 kern/subr_rman.c		standard
+kern/subr_rtc.c			optional genclock
 kern/subr_sbuf.c		standard
 kern/subr_scanf.c		standard
 kern/subr_sleepqueue.c		standard
@@ -1743,15 +1759,10 @@ netinet/tcp_timer.c		optional inet
 netinet/tcp_usrreq.c		optional inet
 netinet/udp_usrreq.c		optional inet
 netinet/libalias/alias.c	optional libalias
-netinet/libalias/alias_cuseeme.c optional libalias
 netinet/libalias/alias_db.c	optional libalias
-netinet/libalias/alias_ftp.c	optional libalias
-netinet/libalias/alias_irc.c	optional libalias
-netinet/libalias/alias_nbt.c	optional libalias
-netinet/libalias/alias_pptp.c	optional libalias
+netinet/libalias/alias_mod.c	optional libalias
+netinet/libalias/alias_old.c	optional libalias
 netinet/libalias/alias_proxy.c	optional libalias
-netinet/libalias/alias_skinny.c	optional libalias
-netinet/libalias/alias_smedia.c	optional libalias
 netinet/libalias/alias_util.c	optional libalias
 netinet6/ah_aesxcbcmac.c	optional ipsec
 netinet6/ah_core.c		optional ipsec
@@ -1943,6 +1954,7 @@ ufs/ufs/ufs_acl.c		optional ffs
 ufs/ufs/ufs_bmap.c		optional ffs
 ufs/ufs/ufs_dirhash.c		optional ffs
 ufs/ufs/ufs_extattr.c		optional ffs
+ufs/ufs/ufs_gjournal.c		optional ffs
 ufs/ufs/ufs_inode.c		optional ffs
 ufs/ufs/ufs_lookup.c		optional ffs
 ufs/ufs/ufs_quota.c		optional ffs
