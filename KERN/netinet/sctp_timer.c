@@ -929,7 +929,7 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 	sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
 #endif
 #ifdef SCTP_FR_LOGGING
-	sctp_log_fr(sctps_datadropchklmt.sctps_senddata, 0, 0, SCTP_FR_T3_TIMEOUT);
+	sctp_log_fr(0, 0, 0, SCTP_FR_T3_TIMEOUT);
 #ifdef SCTP_CWND_LOGGING
 	{
 		struct sctp_nets *lnet;
