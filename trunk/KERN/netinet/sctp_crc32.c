@@ -34,7 +34,6 @@
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/sys/netinet/sctp_crc32.c,v 1.1 2006/11/03 15:23:15 rrs Exp $");
-
 #endif
 
 #ifdef __APPLE__
