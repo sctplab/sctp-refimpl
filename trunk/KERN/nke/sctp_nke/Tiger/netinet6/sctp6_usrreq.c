@@ -28,6 +28,10 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 /*	$KAME: sctp6_usrreq.c,v 1.38 2005/08/24 08:08:56 suz Exp $	*/
+#ifdef __FreeBSD__
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.2 2006/11/03 17:21:53 rrs Exp $");
+#endif
 #if !(defined(__OpenBSD__) || defined(__APPLE__))
 #include "opt_inet.h"
 #endif

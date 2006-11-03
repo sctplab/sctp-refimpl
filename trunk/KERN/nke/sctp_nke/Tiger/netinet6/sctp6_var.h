@@ -30,8 +30,10 @@
 /*	$KAME: sctp6_var.h,v 1.7 2004/08/17 04:06:22 itojun Exp $	*/
 #ifndef _NETINET6_SCTP6_VAR_H_
 #define _NETINET6_SCTP6_VAR_H_
-
-
+#ifdef __FreeBSD__
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_var.h,v 1.2 2006/11/03 17:21:53 rrs Exp $");
+#endif
 #if (defined(__APPLE__) && defined(KERNEL))
 #ifndef _KERNEL
 #define _KERNEL

@@ -68,6 +68,10 @@
  * SCTP_INP_INFO_RLOCK() and then when we want to add a new association to
  * the sctppcbinfo list's we will do a SCTP_INP_INFO_WLOCK().
  */
+#ifdef __FreeBSD__
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_lock_bsd.h,v 1.2 2006/11/03 17:21:53 rrs Exp $");
+#endif
 
 #define SCTP_IPI_COUNT_INIT()
 
