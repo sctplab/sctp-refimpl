@@ -30,7 +30,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD:$");
+__FBSDID("$FreeBSD$");
 #endif
 
 #ifndef __sctp_bsd_addr_h__

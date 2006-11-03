@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD:$");
+__FBSDID("$FreeBSD$");
 #endif
 
 #if !(defined(__OpenBSD__) || defined(__APPLE__))

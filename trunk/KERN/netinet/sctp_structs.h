@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD:$");
+__FBSDID("$FreeBSD$");
 #endif
 
 #ifndef __sctp_structs_h__

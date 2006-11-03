@@ -35,7 +35,6 @@
  * 10.3.x systems (SCTP_APPLE_PANTHER defined) builds use the emtpy macros.
  */
 
-
 /* for now, all locks use this group and attributes */
 #define SCTP_MTX_GRP sctppcbinfo.mtx_grp
 #define SCTP_MTX_ATTR sctppcbinfo.mtx_attr
