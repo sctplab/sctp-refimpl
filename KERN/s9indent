@@ -1,0 +1,170 @@
+#!/bin/sh
+#
+# $Id: s9indent,v 1.1 2006-11-03 16:26:55 randall Exp $
+#
+# s9indent: originally given to me by Poul-Henning Kamp. Replicate
+# style(9) as much as possible using the imported 'indent' command
+# bundled with FreeBSD.
+#
+# Usage: s9indent <file> ...
+#
+
+TMP=`mktemp /tmp/_knfom.XXXXXX`
+TMPBAK=`mktemp /tmp/_knfom.XXXXXX`
+trap 'rm -f $TMP $TMPBAK; exit 1' 1 2 3 13 15
+#trap 'rm -f $TMP $TMPBAK' 0
+
+for i
+do
+        cp "$i" $TMP
+# XXX the typedef list hasn't been updated since 1993, except for the last
+# two entries.
+        indent -npro \
+-TBitSetTmp \
+-TDBM \
+-TDIR \
+-TFix16_peh \
+-TFix24_peh \
+-TFix32_peh \
+-TFix48_peh \
+-TFix_peh \
+-TGPT \
+-TIntTmp \
+-TLLattrib \
+-TLLtoken \
+-TPix \
+-TProtoHook \
+-TRatTmp \
+-TSGTTY \
+-TSeqNum \
+-TStrTmp \
+-TXCHAR \
+-T_Fix \
+-T__sFILE \
+-T__sighandler_4_3_t \
+-T__sighandler_t \
+-T_code \
+-T_dirdesc \
+-T_ftsent \
+-T_physadr \
+-T_quad \
+-T_uquad \
+-T_vsIoAddr \
+-T_vsStats \
+-T_vs_box \
+-T_vs_cursor \
+-T_vs_event \
+-Tbitstr_t \
+-Tboolean_t \
+-Tcaddr_t \
+-Tcbool \
+-Tcc_t \
+-Tclock_t \
+-Tclockframe \
+-Tcomp_t \
+-Tcomplex \
+-Tdaddr_t \
+-Tdb \
+-Tdb_addr_t \
+-Tdb_expr_t \
+-Tdb_regs_t \
+-Tdes_block \
+-Tdev_pager_t \
+-Tdev_t \
+-Tfd_mask \
+-Tfd_set \
+-Tfhandle_t \
+-Tfixpt_t \
+-Tfpos_t \
+-Tfsid_t \
+-Tgid_t \
+-Tino_t \
+-Tint16 \
+-Tint32 \
+-Tjmp_buf \
+-Tkey_t \
+-Tlabel_t \
+-Tllinsert \
+-Tlock_data_t \
+-Tlock_t \
+-Tmode_t \
+-Tn_long \
+-Tn_short \
+-Tn_time \
+-Tnetobj \
+-Tnew_handler_t \
+-Tnfstype \
+-Tnfsv2fh_t \
+-Tnlink_t \
+-Toff_t \
+-Tone_arg_error_handler_t \
+-Tpd_entry_t \
+-Tpid_t \
+-Tpmap_statistics_t \
+-Tpmap_t \
+-Tpt_entry_t \
+-Tptrdiff_t \
+-Tpv_entry \
+-Tqaddr_t \
+-Tqhdr \
+-Tqueue_chain_t \
+-Tqueue_entry_t \
+-Tqueue_head_t \
+-Tqueue_t \
+-Tregexp \
+-Tsegsz_t \
+-TRefNum \
+-Tsig_t \
+-Tsigjmp_buf \
+-Tsigset_t \
+-Tsimple_lock_data_t \
+-Tsimple_lock_t \
+-Tsize_t \
+-Tspeed_t \
+-Tssize_t \
+-Tsw_blk_t \
+-Tsw_bm_t \
+-Tsw_pager_t \
+-Tswblk_t \
+-Ttcflag_t \
+-Ttcp_seq \
+-Ttime_t \
+-Ttimeout_func_t \
+-Ttpr_t \
+-Ttwo_arg_error_handler_t \
+-Tu_char \
+-Tu_int \
+-Tu_int32 \
+-Tu_long \
+-Tu_short \
+-Tuid_t \
+-Tuint16 \
+-Tuint32 \
+-Tushort \
+-Tva_list \
+-Tvm_inherit_t \
+-Tvm_map_entry_t \
+-Tvm_map_object_t \
+-Tvm_map_t \
+-Tvm_object_hash_entry_t \
+-Tvm_object_t \
+-Tvm_offset_t \
+-Tvm_page_t \
+-Tvm_pager_t \
+-Tvm_prot_t \
+-Tvm_size_t \
+-Tvm_statistics_data_t \
+-Tvm_statistics_t \
+-Tvn_pager_t \
+-TvsIoAddrAddr \
+-Twchar_t \
+-Txdrproc_t \
+-Tsy_call_t \
+-Tvop_t \
+-bad -bap -nbbb -nbc -br -nbs -c33 -cd33 -cdb -ce -ci4 -cli0 -d0 -di0 -ndj \
+-ei -nfc1 -i8 -ip -l79 -lc77 -nlp -npcs -psl -sc -nsob -nv \
+            $TMP $TMPBAK
+        (wc -l "$i" | tr '\012' ' '; diff $TMPBAK $TMP | grep -cv '^[1-9]') |
+            awk '{printf("%7.3f%% %s\n", 100 - 100 * $3 / 2 / ($1 + .1), $2)}'
+        cp $TMPBAK ${i}.s9
+done
