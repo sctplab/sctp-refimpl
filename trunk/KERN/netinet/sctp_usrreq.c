@@ -1433,8 +1433,7 @@ sctp_disconnect(struct socket *so)
 					struct sctp_stream_queue_pending *sp;
 					sp = TAILQ_LAST(&asoc->locked_on_sending->outqueue, sctp_streamhead);
 					if(sp == NULL) {
-						printf("Error, sp is NULL, locked on sending is %x strm:%d\n",
-						       (u_int)asoc->locked_on_sending,
+						printf("Error, sp is NULL, locked on sending is non null strm:%d\n",
 						       asoc->locked_on_sending->stream_no);
 					} else {
 						if ((sp->length == 0) && (sp->msg_is_complete == 0))
@@ -1577,8 +1576,7 @@ sctp_shutdown(struct socket *so)
 				struct sctp_stream_queue_pending *sp;
 				sp = TAILQ_LAST(&asoc->locked_on_sending->outqueue, sctp_streamhead);
 				if(sp == NULL) {
-					printf("Error, sp is NULL, locked on sending is %x strm:%d\n",
-					       (u_int)asoc->locked_on_sending,
+					printf("Error, sp is NULL, locked on sending is non null strm:%d\n",
 					       asoc->locked_on_sending->stream_no);
 				} else {
 					if ((sp->length == 0)  && (sp-> msg_is_complete == 0)) {
