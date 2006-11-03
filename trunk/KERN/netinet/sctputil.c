@@ -5319,7 +5319,16 @@ wait_some_more:
 			}
 			goto wait_some_more;
 		} else if (control->data == NULL) {
-			panic ("Impossible data==NULL length !=0");
+			/* we must re-sync since data
+			 * is probably being added
+			 */
+			SCTP_INP_READ_LOCK(inp);
+			if ((control->length == 0) && (control->data == NULL)) {
+				/* big trouble.. we have the lock and its corrupt? */
+				panic ("Impossible data==NULL length !=0");
+			}
+			SCTP_INP_READ_UNLOCK(inp);
+			/* We will fall around to get more data */
 		}
 		goto get_more_data;
 	} else {
