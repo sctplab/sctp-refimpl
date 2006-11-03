@@ -31,7 +31,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD:$");
+__FBSDID("$FreeBSD$");
 #endif
 
 #ifndef __SCTP_CALLOUT__

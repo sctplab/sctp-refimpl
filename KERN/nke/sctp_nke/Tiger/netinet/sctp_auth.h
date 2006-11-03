@@ -30,7 +30,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD:$");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_auth.h,v 1.1 2006/11/03 15:23:15 rrs Exp $");
 #define HAVE_SHA2
 #endif
 
