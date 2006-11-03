@@ -1761,7 +1761,7 @@ select_a_new_ep:
 	}
 	if ((it->inp->inp_starting_point_for_iterator != NULL) &&
 	    (it->inp->inp_starting_point_for_iterator != it)) {
-		printf("Iterator collision, waiting for one at 0x%x\n",
+		printf("Iterator collision, waiting for one at %p\n",
 		    (uint32_t) it->inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		/* Unlock done at start_timer_return */
