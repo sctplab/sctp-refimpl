@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/conf/options,v 1.558 2006/09/20 13:33:40 rwatson Exp $
+# $FreeBSD: src/sys/conf/options,v 1.562 2006/11/02 00:54:33 mjacob Exp $
 #
 #        On the handling of kernel options
 #
@@ -67,6 +67,7 @@ COMPAT_43	opt_compat.h
 COMPAT_43TTY	opt_compat.h
 COMPAT_FREEBSD4	opt_compat.h
 COMPAT_FREEBSD5	opt_compat.h
+COMPAT_FREEBSD6	opt_compat.h
 COMPILING_LINT	opt_global.h
 CY_PCI_FASTINTR
 DIRECTIO
@@ -76,11 +77,13 @@ GEOM_AES	opt_geom.h
 GEOM_APPLE	opt_geom.h
 GEOM_BDE	opt_geom.h
 GEOM_BSD	opt_geom.h
+GEOM_CACHE	opt_geom.h
 GEOM_CONCAT	opt_geom.h
 GEOM_ELI	opt_geom.h
 GEOM_FOX	opt_geom.h
 GEOM_GATE	opt_geom.h
 GEOM_GPT	opt_geom.h
+GEOM_JOURNAL	opt_geom.h
 GEOM_LABEL	opt_geom.h
 GEOM_MBR	opt_geom.h
 GEOM_MIRROR	opt_geom.h
@@ -239,6 +242,9 @@ UFS_EXTATTR_AUTOSTART	opt_ufs.h
 # Enable fast hash lookups for large directories on UFS-based filesystems.
 UFS_DIRHASH	opt_ufs.h
 
+# Enable gjournal-based UFS journal.
+UFS_GJOURNAL	opt_ufs.h
+
 # The below sentence is not in English, and neither is this one.
 # We plan to remove the static dependences above, with a
 # <filesystem>_ROOT option to control if it usable as root.  This list
@@ -272,7 +278,6 @@ CAM_DEBUG_BUS		opt_cam.h
 CAM_DEBUG_TARGET	opt_cam.h
 CAM_DEBUG_LUN		opt_cam.h
 CAM_DEBUG_FLAGS		opt_cam.h
-CAM_NEW_TRAN_CODE	opt_cam.h
 SCSI_DELAY		opt_scsi.h
 SCSI_NO_SENSE_STRINGS	opt_scsi.h
 SCSI_NO_OP_STRINGS	opt_scsi.h
