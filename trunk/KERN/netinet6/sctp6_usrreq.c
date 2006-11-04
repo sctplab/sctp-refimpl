@@ -427,7 +427,7 @@ sctp_skip_csum:
 		splx(s);
 	}
 #else
-	if (in6p->sctp_socket && (ipsec6_in_reject_so(m, in6p->sctp_socket)) {
+	if (in6 && (ipsec6_in_reject(m, in6p)) {
 /* XXX */
 #ifdef __APPLE__
 		/* FIX ME: need to find right stat for __APPLE__ */
