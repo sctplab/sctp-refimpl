@@ -4427,7 +4427,6 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far, int hold_rlock,
 {
 	/* User pulled some data, do we need a rwnd update? */
 	int r_unlocked = 0;
-	int tcb_incr_up = 0;
 	uint32_t dif, rwnd;
 	struct socket *so=NULL;
 	
@@ -4435,7 +4434,6 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far, int hold_rlock,
 		return;
 
 	atomic_add_int(&stcb->asoc.refcnt, 1);
-	tcb_incr_up = 1;
 
 	if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 		/* Pre-check If we are freeing no update */
@@ -4521,9 +4519,7 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far, int hold_rlock,
 
 	SCTP_INP_DECR_REF(stcb->sctp_ep);
  no_lock:
-	if(tcb_incr_up) {
-		atomic_add_int(&stcb->asoc.refcnt, -1);
-	}
+	atomic_add_int(&stcb->asoc.refcnt, -1);
 	return;
 }
 
@@ -4700,6 +4696,9 @@ restart:
 				}
 				goto out;
 			}
+		}
+		if (freecnt_applied) {
+			panic("Huh, about to sleep with free-cnt applied?");
 		}
 		error = sbwait(&so->so_rcv);
 		if (error) {
