@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.1 2006/11/03 15:23:15 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.3 2006/11/04 05:39:39 jb Exp $");
 #endif
 
 #if !(defined(__OpenBSD__) || defined(__APPLE__))
@@ -2723,8 +2723,8 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 					sp = TAILQ_LAST(&((asoc->asoc.locked_on_sending)->outqueue), 
 						sctp_streamhead);
 					if(sp == NULL) {
-						printf("Error, sp is NULL, locked on sending is %ps strm:%d\n",
-						       (u_int)asoc->asoc.locked_on_sending,
+						printf("Error, sp is NULL, locked on sending is %p strm:%d\n",
+						       asoc->asoc.locked_on_sending,
 						       asoc->asoc.locked_on_sending->stream_no);
 					} else {
 						if ((sp->length == 0) && (sp->msg_is_complete == 0))
@@ -4052,7 +4052,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	 * a passing stranger may have started :-S
 	 */
 	if(from_inpcbfree == 0) {
-		atomic_add_16(&stcb->asoc.refcnt, 1);
+		atomic_add_int(&stcb->asoc.refcnt, 1);
 
 		SCTP_TCB_UNLOCK(stcb);
 
@@ -4084,7 +4084,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	sctp_iterator_asoc_being_freed(inp, stcb);
 	/* re-increment the lock */
 	if(from_inpcbfree == 0) {
-		atomic_add_16(&stcb->asoc.refcnt, -1);
+		atomic_add_int(&stcb->asoc.refcnt, -1);
 	}
 	/* now restop the timers to be sure - this is paranoia at is finest! */
 	callout_stop(&asoc->hb_timer.timer);
@@ -5209,9 +5209,9 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 	/* does the source address already exist? if so skip it */
 	l_inp = inp = stcb->sctp_ep;
 
-	atomic_add_16(&stcb->asoc.refcnt, 1);
+	atomic_add_int(&stcb->asoc.refcnt, 1);
 	stcb_tmp = sctp_findassociation_ep_addr(&inp, sa, &net_tmp, local_sa, stcb);
-	atomic_add_16(&stcb->asoc.refcnt, -1);
+	atomic_add_int(&stcb->asoc.refcnt, -1);
 
 	if ((stcb_tmp == NULL && inp == stcb->sctp_ep) || inp == NULL) {
 		/* we must add the source address */
@@ -5270,10 +5270,10 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 				sin.sin_addr.s_addr = p4->addr;
 				sa = (struct sockaddr *)&sin;
 				inp = stcb->sctp_ep;
-				atomic_add_16(&stcb->asoc.refcnt, 1);
+				atomic_add_int(&stcb->asoc.refcnt, 1);
 				stcb_tmp = sctp_findassociation_ep_addr(&inp, sa, &net,
 				    local_sa, stcb);
-				atomic_add_16(&stcb->asoc.refcnt, -1);
+				atomic_add_int(&stcb->asoc.refcnt, -1);
 
 				if ((stcb_tmp == NULL && inp == stcb->sctp_ep) ||
 				    inp == NULL) {
@@ -5332,10 +5332,10 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 				    sizeof(p6->addr));
 				sa = (struct sockaddr *)&sin6;
 				inp = stcb->sctp_ep;
-				atomic_add_16(&stcb->asoc.refcnt, 1);
+				atomic_add_int(&stcb->asoc.refcnt, 1);
 				stcb_tmp = sctp_findassociation_ep_addr(&inp, sa, &net,
 				    local_sa, stcb);
-				atomic_add_16(&stcb->asoc.refcnt, -1);
+				atomic_add_int(&stcb->asoc.refcnt, -1);
 				if (stcb_tmp == NULL && (inp == stcb->sctp_ep ||
 				    inp == NULL)) {
 					/*
