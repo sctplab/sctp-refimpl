@@ -643,7 +643,7 @@ struct sctp_lock_log {
 };
 
 struct sctp_rto_log {
-	uint32_t net;
+	void * net;
 	uint32_t rtt;
 	uint32_t rttvar;
 	uint8_t direction;

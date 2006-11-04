@@ -246,7 +246,7 @@ rto_logging(struct sctp_nets *net, int from)
 	sctp_clog[sctp_cwnd_log_at].time_event = sctp_get_time_of_event();
 	sctp_clog[sctp_cwnd_log_at].from = (uint8_t) from;
 	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t) SCTP_LOG_EVENT_RTT;
-	sctp_clog[sctp_cwnd_log_at].x.rto.net = (uint32_t) net;
+	sctp_clog[sctp_cwnd_log_at].x.rto.net = (void *) net;
 	sctp_clog[sctp_cwnd_log_at].x.rto.rtt = net->prev_rtt;
 	sctp_clog[sctp_cwnd_log_at].x.rto.rttvar = net->rtt_variance;
 	sctp_clog[sctp_cwnd_log_at].x.rto.direction = net->rto_variance_dir;
