@@ -302,8 +302,8 @@ sctp6_input(mp, offp, proto)
 		if (calc_check != check) {
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-				printf("Bad CSUM on SCTP packet calc_check:%x check:%x  m:%x mlen:%d iphlen:%d\n",
-				    calc_check, check, (u_int)m,
+				printf("Bad CSUM on SCTP packet calc_check:%x check:%x  m:%p mlen:%d iphlen:%d\n",
+				    calc_check, check, m,
 				    mlen, iphlen);
 			}
 #endif
@@ -427,7 +427,7 @@ sctp_skip_csum:
 		splx(s);
 	}
 #else
-	if (in6 && (ipsec6_in_reject(m, in6p_ip)) {
+	if (in6p_ip && (ipsec6_in_reject(m, in6p_ip)) {
 /* XXX */
 #ifdef __APPLE__
 		/* FIX ME: need to find right stat for __APPLE__ */
