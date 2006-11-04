@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.1 2006/11/03 15:23:15 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.3 2006/11/04 05:39:39 jb Exp $");
 #endif
 
 #if !(defined(__OpenBSD__) || defined(__APPLE__))
@@ -2723,8 +2723,8 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 					sp = TAILQ_LAST(&((asoc->asoc.locked_on_sending)->outqueue), 
 						sctp_streamhead);
 					if(sp == NULL) {
-						printf("Error, sp is NULL, locked on sending is %ps strm:%d\n",
-						       (u_int)asoc->asoc.locked_on_sending,
+						printf("Error, sp is NULL, locked on sending is %p strm:%d\n",
+						       asoc->asoc.locked_on_sending,
 						       asoc->asoc.locked_on_sending->stream_no);
 					} else {
 						if ((sp->length == 0) && (sp->msg_is_complete == 0))
