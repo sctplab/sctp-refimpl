@@ -1,0 +1,15 @@
+#!/bin/sh
+./export_to_freebsd 700000
+cd export_freebsd/netinet
+for j in `ls *.c *.h`
+do
+echo $j
+diff $j /usr/src/sys/netinet/$j
+done
+cd ../netinet6
+for j in `ls *.c *.h`
+do
+echo $j
+diff $j /usr/src/sys/netinet6/$j
+done
+echo "Thats all"
