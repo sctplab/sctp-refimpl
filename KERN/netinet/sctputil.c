@@ -225,7 +225,7 @@ sctp_log_closing(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int16_t loc)
 	sctp_clog[sctp_cwnd_log_at].time_event = sctp_get_time_of_event();
 	sctp_clog[sctp_cwnd_log_at].from = 0;
 	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t) SCTP_LOG_EVENT_CLOSE;
-	sctp_clog[sctp_cwnd_log_at].x.close.inp = (uint32_t)inp;
+	sctp_clog[sctp_cwnd_log_at].x.close.inp = (void *)inp;
 	sctp_clog[sctp_cwnd_log_at].x.close.sctp_flags = inp->sctp_flags;
 	if(stcb) {
 		sctp_clog[sctp_cwnd_log_at].x.close.stcb = (void *)stcb;
@@ -417,8 +417,8 @@ sctp_log_lock(struct sctp_inpcb *inp, struct sctp_tcb *stcb, uint8_t from)
 	sctp_clog[sctp_cwnd_log_at].time_event = sctp_get_time_of_event();
 	sctp_clog[sctp_cwnd_log_at].from = (uint8_t) from;
 	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t) SCTP_LOG_LOCK_EVENT;
-	sctp_clog[sctp_cwnd_log_at].x.lock.sock = (uint32_t) inp->sctp_socket;
-	sctp_clog[sctp_cwnd_log_at].x.lock.inp = (uint32_t) inp;
+	sctp_clog[sctp_cwnd_log_at].x.lock.sock = (void *) inp->sctp_socket;
+	sctp_clog[sctp_cwnd_log_at].x.lock.inp = (void *) inp;
 #if (defined(__FreeBSD__) && __FreeBSD_version >= 503000) || (defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER))
 	if (stcb) {
 		sctp_clog[sctp_cwnd_log_at].x.lock.tcb_lock = mtx_owned(&stcb->tcb_mtx);
