@@ -98,6 +98,7 @@ __FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.2 2006/11/03 17:21:53 rr
 #ifdef IPSEC
 #ifndef __OpenBSD__
 #include <netinet6/ipsec.h>
+#include <netinet6/ipsec6.h>
 #else
 #undef IPSEC
 #endif
