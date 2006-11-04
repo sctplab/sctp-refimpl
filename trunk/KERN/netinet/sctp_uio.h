@@ -630,8 +630,8 @@ struct sctp_sack_log {
 };
 
 struct sctp_lock_log {
-	uint32_t sock;
-	uint32_t inp;
+	void *sock;
+	void *inp;
 	uint8_t tcb_lock;
 	uint8_t inp_lock;
 	uint8_t info_lock;
@@ -677,7 +677,7 @@ struct sctp_misc_info {
 };
 
 struct sctp_log_closing {
-	uint32_t inp;
+	void *inp;
 	void *stcb;
 	uint32_t sctp_flags;
 	uint16_t  state;
