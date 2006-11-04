@@ -4827,7 +4827,8 @@ found_one:
 	if (stcb) {
 		if((stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) &&
 		    (control->do_not_ref_stcb == 0)) {
-			stcb = NULL;
+			if(freecnt_applied == 0)
+				stcb = NULL;
 		} else if (control->do_not_ref_stcb == 0) {
 			/* you can't free it on me please */
 			/*
@@ -5589,13 +5590,16 @@ out:
 		SOCKBUF_UNLOCK(&so->so_rcv);
 		hold_sblock = 0;
 	}
-	if ((stcb) && freecnt_applied) {
+	if (freecnt_applied) {
 		/*
 		 * The lock on the socket buffer protects us so the free
 		 * code will stop. But since we used the socketbuf lock and
 		 * the sender uses the tcb_lock to increment, we need to use
 		 * the atomic add to the refcnt.
 		 */
+		if (stcb == NULL) {
+			panic("stcb for refcnt has gone NULL?");
+		}
 		atomic_add_int(&stcb->asoc.refcnt, -1);
 		freecnt_applied = 0;
 		/* Save the value back for next time */
