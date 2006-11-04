@@ -3412,12 +3412,12 @@ sctp_ulp_notify(uint32_t notification, struct sctp_tcb *stcb,
 		break;
 	case SCTP_NOTIFY_AUTH_NEW_KEY:
 		sctp_notify_authentication(stcb, SCTP_AUTH_NEWKEY, error,
-		    (uint32_t) data);
+		    (uint16_t)(uintptr_t)data);
 		break;
 #if 0
 	case SCTP_NOTIFY_AUTH_KEY_CONFLICT:
 		sctp_notify_authentication(stcb, SCTP_AUTH_KEY_CONFLICT,
-		    error, (uint32_t) data);
+		    error, (uint16_t)(uintptr_t)data);
 		break;
 #endif				/* not yet? remove? */
 
@@ -5319,7 +5319,16 @@ wait_some_more:
 			}
 			goto wait_some_more;
 		} else if (control->data == NULL) {
-			panic ("Impossible data==NULL length !=0");
+			/* we must re-sync since data
+			 * is probably being added
+			 */
+			SCTP_INP_READ_LOCK(inp);
+			if ((control->length == 0) && (control->data == NULL)) {
+				/* big trouble.. we have the lock and its corrupt? */
+				panic ("Impossible data==NULL length !=0");
+			}
+			SCTP_INP_READ_UNLOCK(inp);
+			/* We will fall around to get more data */
 		}
 		goto get_more_data;
 	} else {

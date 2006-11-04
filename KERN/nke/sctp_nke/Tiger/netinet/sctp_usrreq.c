@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.1 2006/11/03 15:23:15 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.2 2006/11/03 21:19:54 rrs Exp $");
 #endif
 
 
@@ -1433,8 +1433,7 @@ sctp_disconnect(struct socket *so)
 					struct sctp_stream_queue_pending *sp;
 					sp = TAILQ_LAST(&asoc->locked_on_sending->outqueue, sctp_streamhead);
 					if(sp == NULL) {
-						printf("Error, sp is NULL, locked on sending is %x strm:%d\n",
-						       (u_int)asoc->locked_on_sending,
+						printf("Error, sp is NULL, locked on sending is non-null strm:%d\n",
 						       asoc->locked_on_sending->stream_no);
 					} else {
 						if ((sp->length == 0) && (sp->msg_is_complete == 0))
@@ -1577,8 +1576,7 @@ sctp_shutdown(struct socket *so)
 				struct sctp_stream_queue_pending *sp;
 				sp = TAILQ_LAST(&asoc->locked_on_sending->outqueue, sctp_streamhead);
 				if(sp == NULL) {
-					printf("Error, sp is NULL, locked on sending is %x strm:%d\n",
-					       (u_int)asoc->locked_on_sending,
+					printf("Error, sp is NULL, locked on sending is non-null strm:%d\n",
 					       asoc->locked_on_sending->stream_no);
 				} else {
 					if ((sp->length == 0)  && (sp-> msg_is_complete == 0)) {
@@ -3526,7 +3524,7 @@ sctp_optsset(struct socket *so,
 				error = EINVAL;
 				break;
 			}
-			on_off = (mtod(m, int));
+			on_off = *(mtod(m, int *));
 			if (on_off) {
 				sctp_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE);
 			} else {
