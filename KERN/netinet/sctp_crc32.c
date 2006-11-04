@@ -33,7 +33,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_crc32.c,v 1.1 2006/11/03 15:23:15 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_crc32.c,v 1.2 2006/11/04 08:45:50 ru Exp $");
 #endif
 
 #ifdef __APPLE__
@@ -595,7 +595,7 @@ update_crc32(uint32_t crc32,
 	if (length == 0) {
 		return (crc32);
 	}
-	offset = ((uint32_t) buffer - ((uint32_t) buffer & 0xfffffffc));
+	offset = (uint32_t) (buffer - (buffer & ~0x3));
 	return (sctp_crc32c_sb8_64_bit(crc32, buffer, length, offset));
 }
 

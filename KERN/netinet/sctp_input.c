@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.1 2006/11/03 15:23:15 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.3 2006/11/04 08:19:01 ru Exp $");
 #endif
 
 #if !(defined(__OpenBSD__) || defined(__APPLE__))
@@ -290,7 +290,7 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 					sctp_free_remote_addr(sp->net);
 					sp->net = NULL;
 					/* Free the chunk */
-					printf("sp:%p tcb:%p weird free case\n",
+					rintf("sp:%p tcb:%p weird free case\n",
 					       (u_int)sp, (u_int)stcb);
 
 					sctp_free_a_strmoq(stcb, sp);
