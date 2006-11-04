@@ -4935,7 +4935,7 @@ sctp_skip_csum_4:
 		splx(s);
 	}
 #else
-	if (inp && ipsec4_in_reject(m, &inp.ip_inp.inp)) {
+	if (inp && ipsec4_in_reject(m, &inp->ip_inp.inp)) {
 		ipsecstat.in_polvio++;
 		SCTP_STAT_INCR(sctps_hdrops);
 		goto bad;
