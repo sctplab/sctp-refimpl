@@ -290,8 +290,8 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 					sctp_free_remote_addr(sp->net);
 					sp->net = NULL;
 					/* Free the chunk */
-					rintf("sp:%p tcb:%p weird free case\n",
-					       (u_int)sp, (u_int)stcb);
+					printf("sp:%p tcb:%p weird free case\n",
+					       sp, stcb);
 
 					sctp_free_a_strmoq(stcb, sp);
 					sp = TAILQ_FIRST(&outs->outqueue);
