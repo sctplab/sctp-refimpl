@@ -759,6 +759,8 @@ struct sctp_association {
 	 * user data in.
 	 */
 	uint32_t refcnt;
+	uint32_t chunks_on_out_queue;	/* total chunks floating around,
+					 * locked by send socket buffer */
 
 	uint16_t peer_hmac_id;	/* peer HMAC id to send */
 
@@ -799,8 +801,6 @@ struct sctp_association {
 	uint16_t last_strm_seq_delivered;
 	uint16_t last_strm_no_delivered;
 
-	uint16_t chunks_on_out_queue;	/* total chunks floating around,
-					 * locked by send socket buffer */
 	uint16_t last_revoke_count;
 	int16_t num_send_timers_up;
 
