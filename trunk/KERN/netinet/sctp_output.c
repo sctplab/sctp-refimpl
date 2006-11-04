@@ -10600,7 +10600,7 @@ sctp_lower_sosend(struct socket *so,
 		SCTP_TCB_UNLOCK(stcb);
 	}
 	if (free_cnt_applied) {
-		if (stcb) {
+		if (stcb == NULL) {
 			panic("Free count is applied, but stcb is now NULL?");
 		}
 		atomic_add_int(&stcb->asoc.refcnt, -1);
