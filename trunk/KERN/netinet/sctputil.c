@@ -3144,6 +3144,7 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
 		}
 		if(no_lock == 0)
 			SCTP_INP_READ_UNLOCK(stcb->sctp_ep);
+		sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 	} else {
 		/* append to socket */
 	add_to_end:
@@ -4696,9 +4697,6 @@ restart:
 				}
 				goto out;
 			}
-		}
-		if (freecnt_applied) {
-			panic("Huh, about to sleep with free-cnt applied?");
 		}
 		error = sbwait(&so->so_rcv);
 		if (error) {
