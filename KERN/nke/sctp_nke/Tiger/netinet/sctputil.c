@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.1 2006/11/03 15:23:15 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.2 2006/11/03 23:04:34 rrs Exp $");
 #endif
 
 
@@ -208,7 +208,7 @@ sctp_sblog(struct sockbuf *sb,
 	sctp_clog[sctp_cwnd_log_at].time_event = sctp_get_time_of_event();
 	sctp_clog[sctp_cwnd_log_at].from = (uint8_t) from;
 	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t) SCTP_LOG_EVENT_SB;
-	sctp_clog[sctp_cwnd_log_at].x.sb.stcb = (uint32_t) stcb;
+	sctp_clog[sctp_cwnd_log_at].x.sb.stcb =  stcb;
 	sctp_clog[sctp_cwnd_log_at].x.sb.so_sbcc = sb->sb_cc;
 	if (stcb)
 		sctp_clog[sctp_cwnd_log_at].x.sb.stcb_sbcc = stcb->asoc.sb_cc;
@@ -225,10 +225,10 @@ sctp_log_closing(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int16_t loc)
 	sctp_clog[sctp_cwnd_log_at].time_event = sctp_get_time_of_event();
 	sctp_clog[sctp_cwnd_log_at].from = 0;
 	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t) SCTP_LOG_EVENT_CLOSE;
-	sctp_clog[sctp_cwnd_log_at].x.close.inp = (uint32_t)inp;
+	sctp_clog[sctp_cwnd_log_at].x.close.inp = (void *)inp;
 	sctp_clog[sctp_cwnd_log_at].x.close.sctp_flags = inp->sctp_flags;
 	if(stcb) {
-		sctp_clog[sctp_cwnd_log_at].x.close.stcb = (uint32_t)stcb;
+		sctp_clog[sctp_cwnd_log_at].x.close.stcb = (void *)stcb;
 		sctp_clog[sctp_cwnd_log_at].x.close.state = (uint16_t)stcb->asoc.state;
 	} else {
 		sctp_clog[sctp_cwnd_log_at].x.close.stcb = 0;
@@ -246,7 +246,7 @@ rto_logging(struct sctp_nets *net, int from)
 	sctp_clog[sctp_cwnd_log_at].time_event = sctp_get_time_of_event();
 	sctp_clog[sctp_cwnd_log_at].from = (uint8_t) from;
 	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t) SCTP_LOG_EVENT_RTT;
-	sctp_clog[sctp_cwnd_log_at].x.rto.net = (uint32_t) net;
+	sctp_clog[sctp_cwnd_log_at].x.rto.net = (void *) net;
 	sctp_clog[sctp_cwnd_log_at].x.rto.rtt = net->prev_rtt;
 	sctp_clog[sctp_cwnd_log_at].x.rto.rttvar = net->rtt_variance;
 	sctp_clog[sctp_cwnd_log_at].x.rto.direction = net->rto_variance_dir;
@@ -274,7 +274,7 @@ sctp_log_nagle_event(struct sctp_tcb *stcb, int action)
 	sctp_clog[sctp_cwnd_log_at].time_event = sctp_get_time_of_event();
 	sctp_clog[sctp_cwnd_log_at].from = (uint8_t) action;
 	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t) SCTP_LOG_EVENT_NAGLE;
-	sctp_clog[sctp_cwnd_log_at].x.nagle.stcb = (uint32_t) stcb;
+	sctp_clog[sctp_cwnd_log_at].x.nagle.stcb = (void *)stcb;
 	sctp_clog[sctp_cwnd_log_at].x.nagle.total_flight = stcb->asoc.total_flight;
 	sctp_clog[sctp_cwnd_log_at].x.nagle.total_in_queue = stcb->asoc.total_output_queue_size;
 	sctp_clog[sctp_cwnd_log_at].x.nagle.count_in_queue = stcb->asoc.chunks_on_out_queue;
@@ -417,8 +417,8 @@ sctp_log_lock(struct sctp_inpcb *inp, struct sctp_tcb *stcb, uint8_t from)
 	sctp_clog[sctp_cwnd_log_at].time_event = sctp_get_time_of_event();
 	sctp_clog[sctp_cwnd_log_at].from = (uint8_t) from;
 	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t) SCTP_LOG_LOCK_EVENT;
-	sctp_clog[sctp_cwnd_log_at].x.lock.sock = (uint32_t) inp->sctp_socket;
-	sctp_clog[sctp_cwnd_log_at].x.lock.inp = (uint32_t) inp;
+	sctp_clog[sctp_cwnd_log_at].x.lock.sock = (void *) inp->sctp_socket;
+	sctp_clog[sctp_cwnd_log_at].x.lock.inp = (void *) inp;
 #if (defined(__FreeBSD__) && __FreeBSD_version >= 503000) || (defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER))
 	if (stcb) {
 		sctp_clog[sctp_cwnd_log_at].x.lock.tcb_lock = mtx_owned(&stcb->tcb_mtx);
@@ -532,7 +532,7 @@ sctp_wakeup_log(struct sctp_tcb *stcb, uint32_t cumtsn, uint32_t wake_cnt, int f
 	sctp_clog[sctp_cwnd_log_at].time_event = sctp_get_time_of_event();
 	sctp_clog[sctp_cwnd_log_at].from = (uint8_t) from;
 	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t) SCTP_LOG_EVENT_WAKE;
-	sctp_clog[sctp_cwnd_log_at].x.wake.stcb = (uint32_t) stcb;
+	sctp_clog[sctp_cwnd_log_at].x.wake.stcb = (void *)stcb;
 	sctp_clog[sctp_cwnd_log_at].x.wake.wake_cnt = wake_cnt;
 	sctp_clog[sctp_cwnd_log_at].x.wake.flight = stcb->asoc.total_flight_count;
 	sctp_clog[sctp_cwnd_log_at].x.wake.send_q = stcb->asoc.send_queue_cnt;
@@ -1420,12 +1420,12 @@ sctp_timeout_handler(void *t)
 #endif
 
 	if (stcb) {
-		atomic_add_16(&stcb->asoc.refcnt, 1);
+		atomic_add_int(&stcb->asoc.refcnt, 1);
 		SCTP_TCB_LOCK(stcb);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
 #endif
-		atomic_add_16(&stcb->asoc.refcnt, -1);
+		atomic_add_int(&stcb->asoc.refcnt, -1);
 	}
 	/* mark as being serviced now */
 	callout_deactivate(&tmr->timer);
@@ -3144,6 +3144,7 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
 		}
 		if(no_lock == 0)
 			SCTP_INP_READ_UNLOCK(stcb->sctp_ep);
+		sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 	} else {
 		/* append to socket */
 	add_to_end:
@@ -4427,15 +4428,13 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far, int hold_rlock,
 {
 	/* User pulled some data, do we need a rwnd update? */
 	int r_unlocked = 0;
-	int tcb_incr_up = 0;
 	uint32_t dif, rwnd;
 	struct socket *so=NULL;
 	
 	if(stcb == NULL) 
 		return;
 
-	atomic_add_16(&stcb->asoc.refcnt, 1);
-	tcb_incr_up = 1;
+	atomic_add_int(&stcb->asoc.refcnt, 1);
 
 	if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 		/* Pre-check If we are freeing no update */
@@ -4521,9 +4520,7 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far, int hold_rlock,
 
 	SCTP_INP_DECR_REF(stcb->sctp_ep);
  no_lock:
-	if(tcb_incr_up) {
-		atomic_add_16(&stcb->asoc.refcnt, -1);
-	}
+	atomic_add_int(&stcb->asoc.refcnt, -1);
 	return;
 }
 
@@ -4827,7 +4824,8 @@ found_one:
 	if (stcb) {
 		if((stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) &&
 		    (control->do_not_ref_stcb == 0)) {
-			stcb = NULL;
+			if(freecnt_applied == 0)
+				stcb = NULL;
 		} else if (control->do_not_ref_stcb == 0) {
 			/* you can't free it on me please */
 			/*
@@ -4836,7 +4834,7 @@ found_one:
 			 * the sender uses the tcb_lock to increment, we need to use
 			 * the atomic add to the refcnt
 			 */
-			atomic_add_16(&stcb->asoc.refcnt, 1);
+			atomic_add_int(&stcb->asoc.refcnt, 1);
 			freecnt_applied = 1;
 			/* Setup to remember how much we have not yet told
 			 * the peer our rwnd has opened up. Note we grab
@@ -5323,7 +5321,7 @@ wait_some_more:
 			 * is probably being added
 			 */
 			SCTP_INP_READ_LOCK(inp);
-			if ((control->length == 0) && (control->data == NULL)) {
+			if ((control->length > 0) && (control->data == NULL)) {
 				/* big trouble.. we have the lock and its corrupt? */
 				panic ("Impossible data==NULL length !=0");
 			}
@@ -5589,14 +5587,17 @@ out:
 		SOCKBUF_UNLOCK(&so->so_rcv);
 		hold_sblock = 0;
 	}
-	if ((stcb) && freecnt_applied) {
+	if (freecnt_applied) {
 		/*
 		 * The lock on the socket buffer protects us so the free
 		 * code will stop. But since we used the socketbuf lock and
 		 * the sender uses the tcb_lock to increment, we need to use
 		 * the atomic add to the refcnt.
 		 */
-		atomic_add_16(&stcb->asoc.refcnt, -1);
+		if (stcb == NULL) {
+			panic("stcb for refcnt has gone NULL?");
+		}
+		atomic_add_int(&stcb->asoc.refcnt, -1);
 		freecnt_applied = 0;
 		/* Save the value back for next time */
 		stcb->freed_by_sorcv_sincelast = freed_so_far;
