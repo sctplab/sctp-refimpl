@@ -208,7 +208,7 @@ sctp_sblog(struct sockbuf *sb,
 	sctp_clog[sctp_cwnd_log_at].time_event = sctp_get_time_of_event();
 	sctp_clog[sctp_cwnd_log_at].from = (uint8_t) from;
 	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t) SCTP_LOG_EVENT_SB;
-	sctp_clog[sctp_cwnd_log_at].x.sb.stcb = (uint32_t) stcb;
+	sctp_clog[sctp_cwnd_log_at].x.sb.stcb =  stcb;
 	sctp_clog[sctp_cwnd_log_at].x.sb.so_sbcc = sb->sb_cc;
 	if (stcb)
 		sctp_clog[sctp_cwnd_log_at].x.sb.stcb_sbcc = stcb->asoc.sb_cc;
@@ -228,7 +228,7 @@ sctp_log_closing(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int16_t loc)
 	sctp_clog[sctp_cwnd_log_at].x.close.inp = (uint32_t)inp;
 	sctp_clog[sctp_cwnd_log_at].x.close.sctp_flags = inp->sctp_flags;
 	if(stcb) {
-		sctp_clog[sctp_cwnd_log_at].x.close.stcb = (uint32_t)stcb;
+		sctp_clog[sctp_cwnd_log_at].x.close.stcb = (void *)stcb;
 		sctp_clog[sctp_cwnd_log_at].x.close.state = (uint16_t)stcb->asoc.state;
 	} else {
 		sctp_clog[sctp_cwnd_log_at].x.close.stcb = 0;
@@ -274,7 +274,7 @@ sctp_log_nagle_event(struct sctp_tcb *stcb, int action)
 	sctp_clog[sctp_cwnd_log_at].time_event = sctp_get_time_of_event();
 	sctp_clog[sctp_cwnd_log_at].from = (uint8_t) action;
 	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t) SCTP_LOG_EVENT_NAGLE;
-	sctp_clog[sctp_cwnd_log_at].x.nagle.stcb = (uint32_t) stcb;
+	sctp_clog[sctp_cwnd_log_at].x.nagle.stcb = (void *)stcb;
 	sctp_clog[sctp_cwnd_log_at].x.nagle.total_flight = stcb->asoc.total_flight;
 	sctp_clog[sctp_cwnd_log_at].x.nagle.total_in_queue = stcb->asoc.total_output_queue_size;
 	sctp_clog[sctp_cwnd_log_at].x.nagle.count_in_queue = stcb->asoc.chunks_on_out_queue;
@@ -532,7 +532,7 @@ sctp_wakeup_log(struct sctp_tcb *stcb, uint32_t cumtsn, uint32_t wake_cnt, int f
 	sctp_clog[sctp_cwnd_log_at].time_event = sctp_get_time_of_event();
 	sctp_clog[sctp_cwnd_log_at].from = (uint8_t) from;
 	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t) SCTP_LOG_EVENT_WAKE;
-	sctp_clog[sctp_cwnd_log_at].x.wake.stcb = (uint32_t) stcb;
+	sctp_clog[sctp_cwnd_log_at].x.wake.stcb = (void *)stcb;
 	sctp_clog[sctp_cwnd_log_at].x.wake.wake_cnt = wake_cnt;
 	sctp_clog[sctp_cwnd_log_at].x.wake.flight = stcb->asoc.total_flight_count;
 	sctp_clog[sctp_cwnd_log_at].x.wake.send_q = stcb->asoc.send_queue_cnt;
