@@ -595,7 +595,7 @@ update_crc32(uint32_t crc32,
 	if (length == 0) {
 		return (crc32);
 	}
-	offset = (uint32_t) (buffer - (buffer & ~0x3));
+	offset = (uint32_t)(buffer - (buffer & ~0x3));
 	return (sctp_crc32c_sb8_64_bit(crc32, buffer, length, offset));
 }
 
