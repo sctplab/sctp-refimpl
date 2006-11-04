@@ -5323,7 +5323,7 @@ wait_some_more:
 			 * is probably being added
 			 */
 			SCTP_INP_READ_LOCK(inp);
-			if ((control->length == 0) && (control->data == NULL)) {
+			if ((control->length > 0) && (control->data == NULL)) {
 				/* big trouble.. we have the lock and its corrupt? */
 				panic ("Impossible data==NULL length !=0");
 			}
