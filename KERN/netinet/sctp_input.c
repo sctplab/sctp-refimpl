@@ -627,6 +627,7 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 		}
 		stcb->asoc.control_pdapi = NULL;
 		SCTP_INP_READ_UNLOCK(stcb->sctp_ep);
+		sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 	}
 	/* goto SHUTDOWN_RECEIVED state to block new requests */
 	if(stcb->sctp_socket) {
@@ -714,6 +715,7 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
 		}
 		stcb->asoc.control_pdapi = NULL;
 		SCTP_INP_READ_UNLOCK(stcb->sctp_ep);
+		sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 	}
 	/* are the queues empty? */
 	if (!TAILQ_EMPTY(&asoc->send_queue) ||

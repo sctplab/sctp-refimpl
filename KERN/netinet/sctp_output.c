@@ -10599,10 +10599,7 @@ sctp_lower_sosend(struct socket *so,
 	if ((stcb) && hold_tcblock) {
 		SCTP_TCB_UNLOCK(stcb);
 	}
-	if (free_cnt_applied) {
-		if (stcb == NULL) {
-			panic("Free count is applied, but stcb is now NULL?");
-		}
+	if (stcb && free_cnt_applied) {
 		atomic_add_int(&stcb->asoc.refcnt, -1);
 	}
 #ifdef INVARIENTS
