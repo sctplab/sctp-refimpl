@@ -754,12 +754,13 @@ struct sctp_association {
 	sctp_hmaclist_t *peer_hmacs;	/* peer HMACs supported */
 	struct sctp_keyhead shared_keys;	/* assoc's shared keys */
 	sctp_authinfo_t authinfo;	/* randoms, cached keys */
-	uint16_t peer_hmac_id;	/* peer HMAC id to send */
 	/*
 	 * refcnt to block freeing when a sender or receiver is off coping
 	 * user data in.
 	 */
-	uint16_t refcnt;
+	uint32_t refcnt;
+
+	uint16_t peer_hmac_id;	/* peer HMAC id to send */
 
 	/*
 	 * Being that we have no bag to collect stale cookies, and that we

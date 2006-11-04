@@ -1420,12 +1420,12 @@ sctp_timeout_handler(void *t)
 #endif
 
 	if (stcb) {
-		atomic_add_16(&stcb->asoc.refcnt, 1);
+		atomic_add_int(&stcb->asoc.refcnt, 1);
 		SCTP_TCB_LOCK(stcb);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
 #endif
-		atomic_add_16(&stcb->asoc.refcnt, -1);
+		atomic_add_int(&stcb->asoc.refcnt, -1);
 	}
 	/* mark as being serviced now */
 	callout_deactivate(&tmr->timer);
@@ -4434,7 +4434,7 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far, int hold_rlock,
 	if(stcb == NULL) 
 		return;
 
-	atomic_add_16(&stcb->asoc.refcnt, 1);
+	atomic_add_int(&stcb->asoc.refcnt, 1);
 	tcb_incr_up = 1;
 
 	if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
@@ -4522,7 +4522,7 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far, int hold_rlock,
 	SCTP_INP_DECR_REF(stcb->sctp_ep);
  no_lock:
 	if(tcb_incr_up) {
-		atomic_add_16(&stcb->asoc.refcnt, -1);
+		atomic_add_int(&stcb->asoc.refcnt, -1);
 	}
 	return;
 }
@@ -4836,7 +4836,7 @@ found_one:
 			 * the sender uses the tcb_lock to increment, we need to use
 			 * the atomic add to the refcnt
 			 */
-			atomic_add_16(&stcb->asoc.refcnt, 1);
+			atomic_add_int(&stcb->asoc.refcnt, 1);
 			freecnt_applied = 1;
 			/* Setup to remember how much we have not yet told
 			 * the peer our rwnd has opened up. Note we grab
@@ -5596,7 +5596,7 @@ out:
 		 * the sender uses the tcb_lock to increment, we need to use
 		 * the atomic add to the refcnt.
 		 */
-		atomic_add_16(&stcb->asoc.refcnt, -1);
+		atomic_add_int(&stcb->asoc.refcnt, -1);
 		freecnt_applied = 0;
 		/* Save the value back for next time */
 		stcb->freed_by_sorcv_sincelast = freed_so_far;
