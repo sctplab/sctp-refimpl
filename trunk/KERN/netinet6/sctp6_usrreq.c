@@ -30,7 +30,7 @@
 /*	$KAME: sctp6_usrreq.c,v 1.38 2005/08/24 08:08:56 suz Exp $	*/
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.2 2006/11/03 17:21:53 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.4 2006/11/06 14:54:06 rwatson Exp $");
 #endif
 #if !(defined(__OpenBSD__) || defined(__APPLE__))
 #include "opt_inet.h"
@@ -64,6 +64,9 @@ __FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.2 2006/11/03 17:21:53 rr
 #include <sys/stat.h>
 #include <sys/systm.h>
 #include <sys/syslog.h>
+#if defined(__FreeBSD__) && __FreeBSD_version >= 602000
+#include <sys/priv.h>
+#endif
 #include <sys/proc.h>
 #include <net/if.h>
 #include <net/route.h>
@@ -695,7 +698,15 @@ sctp6_getcred(SYSCTL_HANDLER_ARGS)
 	struct sctp_tcb *stcb;
 	int error, s;
 
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 602000
+	/*
+	 * XXXRW: Other instances of getcred use SUSER_ALLOWJAIL, as socket
+	 * visibility is scoped using cr_canseesocket(), which it is not
+	 * here.
+	 */
+	error = priv_check_cred(req->td->td_ucred, PRIV_NETINET_RESERVEDPORT,
+	    0);
+#elif defined(__FreeBSD__) && __FreeBSD_version >= 500000
 	error = suser(req->td);
 #else
 	error = suser(req->p);
