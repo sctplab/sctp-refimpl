@@ -696,7 +696,7 @@ sctp6_getcred(SYSCTL_HANDLER_ARGS)
 	struct sctp_inpcb *inp;
 	struct sctp_nets *net;
 	struct sctp_tcb *stcb;
-	int error, s;
+	int error;
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 602000
 	/*
@@ -721,11 +721,6 @@ sctp6_getcred(SYSCTL_HANDLER_ARGS)
 	error = SYSCTL_IN(req, addrs, sizeof(addrs));
 	if (error)
 		return (error);
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	s = splsoftnet();
-#else
-	s = splnet();
-#endif
 
 	stcb = sctp_findassociation_addr_sa(sin6tosa(&addrs[0]),
 	    sin6tosa(&addrs[1]),
@@ -739,12 +734,16 @@ sctp6_getcred(SYSCTL_HANDLER_ARGS)
 		}
 		goto out;
 	}
-	error = SYSCTL_OUT(req, inp->sctp_socket->so_cred,
-	    sizeof(struct ucred));
-
+	atomic_add_int(&stcb->asoc.refcnt, 1);
 	SCTP_TCB_UNLOCK(stcb);
+	error = cr_canseesocket(req->td->td_ucred, inp->inp_socket);
+	if (error)
+		goto out_nocr;
+	cru2x(inp->inp_socket->so_cred, &xuc);
+
+out_nocr:
+	atomic_add_int(&stcb->asoc.refcnt, -1);
 out:
-	splx(s);
 	return (error);
 }
 
