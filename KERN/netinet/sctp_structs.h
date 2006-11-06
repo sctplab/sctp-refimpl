@@ -162,16 +162,6 @@ struct sctp_copy_all {
 	int cnt_failed;
 };
 
-union sctp_sockstore {
-#ifdef AF_INET
-	struct sockaddr_in sin;
-#endif
-#ifdef AF_INET6
-	struct sockaddr_in6 sin6;
-#endif
-	struct sockaddr sa;
-};
-
 struct sctp_nets {
 	TAILQ_ENTRY(sctp_nets) sctp_next;	/* next link */
 

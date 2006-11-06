@@ -102,6 +102,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.4 2006/11/06 14:54:05 rwat
 #include <netinet/sctp_asconf.h>
 #include <netinet/sctp_timer.h>
 #include <netinet/sctp_auth.h>
+
 #ifdef IPSEC
 #ifndef __OpenBSD__
 #include <netinet6/ipsec.h>
@@ -650,32 +651,189 @@ SYSCTL_PROC(_net_inet_sctp, OID_AUTO, getcred, CTLTYPE_OPAQUE | CTLFLAG_RW,
 /* Note: when we add this for FreeBSD, we need '()':
   sctp_assoclist(SYSCTL_HANDLER_ARGS)
 */
-/* WARNING: THIS FUNCTION IS INCOMPLETE! */
 
 static int
 sctp_assoclist SYSCTL_HANDLER_ARGS
 {
+	unsigned int number_of_endpoints;
+	unsigned int number_of_local_addresses;
+	unsigned int number_of_associations;
+	unsigned int number_of_remote_addresses;
 	unsigned int n;
+	int error;
 	struct sctp_inpcb *inp;
+	struct sctp_tcb *stcb;
+	struct sctp_nets *net;
+	struct sctp_laddr *laddr;
+	struct xsctp_inpcb xinpcb;
+	struct xsctp_tcb xstcb;
+	struct xsctp_laddr xladdr;
+	struct xsctp_raddr xraddr;
 	
+	number_of_endpoints = 0;
+	number_of_local_addresses = 0;
+	number_of_associations = 0;
+	number_of_remote_addresses = 0;
+	
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	lck_rw_lock_shared(sctppcbinfo.ipi_ep_mtx);
+#endif
 	if (req->oldptr == USER_ADDR_NULL) {
 		LIST_FOREACH(inp, &sctppcbinfo.listhead, sctp_list) {
-			n++;
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			socket_lock(inp->ip_inp.inp.inp_socket, 1);
+#endif
+			number_of_endpoints++;
+			/* FIXME MT */
+			LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
+				number_of_local_addresses++;
+			}
+			LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
+				number_of_associations++;
+				/* FIXME MT */
+				LIST_FOREACH(laddr, &stcb->asoc.sctp_local_addr_list, sctp_nxt_addr) {
+					number_of_local_addresses++;
+				}
+				TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
+					number_of_remote_addresses++;
+				}
+			}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			socket_unlock(inp->ip_inp.inp.inp_socket, 1);
+#endif
 		}
-		req->oldidx = n;
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+#endif
+		n = (number_of_endpoints + 1) * sizeof(struct xsctp_inpcb) +
+		    number_of_local_addresses * sizeof(struct xsctp_laddr) +
+		    number_of_associations * sizeof(struct xsctp_tcb) +
+		    number_of_remote_addresses * sizeof(struct xsctp_raddr);
+#ifdef SCTP_DEBUG
+		printf("inps = %u, stcbs = %u, laddrs = %u, raddrs = %u\n", 
+		       number_of_endpoints, number_of_associations,
+		       number_of_local_addresses,  number_of_remote_addresses);
+#endif
+		/* request some more memory than needed */
+		req->oldidx = (n + n/8);
 		return 0;
 	}
 
 	if (req->newptr != USER_ADDR_NULL) {
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+#endif
 		return EPERM;
 	}
-	printf("OK, I have been here...");
-	lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
 
-	return 0;
+	LIST_FOREACH(inp, &sctppcbinfo.listhead, sctp_list) {
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		socket_lock(inp->ip_inp.inp.inp_socket, 1);
+#endif
+		number_of_local_addresses = 0;
+		number_of_associations = 0;
+		/*
+		LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
+			number_of_local_addresses++;
+		}
+		*/
+		LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
+			number_of_associations++;
+		}
+		xinpcb.last                   = 0;
+		xinpcb.local_port             = ntohs(inp->sctp_lport);
+		xinpcb.number_local_addresses = number_of_local_addresses;
+		xinpcb.number_associations    = number_of_associations;
+		xinpcb.flags                  = inp->sctp_flags;
+		xinpcb.features               = inp->sctp_features;
+		error = SYSCTL_OUT(req, &xinpcb, sizeof(struct xsctp_inpcb));
+		if (error) {
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			socket_unlock(inp->ip_inp.inp.inp_socket, 1);
+			lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+#endif
+			return error;
+		}
+		/* FIXME MT */
+		/*
+		LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
+			error = SYSCTL_OUT(req, &xladdr, sizeof(struct xsctp_laddr));
+			if (error) {
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+				socket_unlock(inp->ip_inp.inp.inp_socket, 1);
+				lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+#endif
+				return error;
+			}			
+		}
+		*/
+		LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
+			number_of_local_addresses = 0;
+			number_of_remote_addresses = 0;
+			/* FIXME MT */
+			/*
+			LIST_FOREACH(laddr, &stcb->asoc.sctp_local_addr_list, sctp_nxt_addr) {
+				number_of_local_addresses++;
+			}
+			*/
+			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
+				number_of_remote_addresses++;
+			}
+			xstcb.remote_port              = ntohs(stcb->rport);
+			xstcb.number_local_addresses   = number_of_local_addresses;
+			xstcb.number_remote_addresses  = number_of_remote_addresses;
+			xstcb.number_incomming_streams = 0;
+			xstcb.number_outgoing_streams  = 0;
+			xstcb.state                    = stcb->asoc.state;
+			error = SYSCTL_OUT(req, &xstcb, sizeof(struct xsctp_tcb));
+			if (error) {
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+				socket_unlock(inp->ip_inp.inp.inp_socket, 1);
+				lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+#endif
+				return error;
+			}
+			/* FIXME MT */
+			/*
+			LIST_FOREACH(laddr, &stcb->asoc.sctp_local_addr_list, sctp_nxt_addr) {
+				error = SYSCTL_OUT(req, &xladdr, sizeof(struct xsctp_laddr));
+				if (error) {
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+					socket_unlock(inp->ip_inp.inp.inp_socket, 1);
+					lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+#endif
+					return error;
+				}			
+			}
+			*/
+			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
+				xraddr.state   = net->dest_state;
+				xraddr.address = net->ro._l_addr;
+				error = SYSCTL_OUT(req, &xraddr, sizeof(struct xsctp_raddr));
+				if (error) {
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+					socket_unlock(inp->ip_inp.inp.inp_socket, 1);
+					lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+#endif
+					return error;
+				}			
+			}			
+		}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		socket_unlock(inp->ip_inp.inp.inp_socket, 1);
+#endif
+	}
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+#endif
+	xinpcb.last = 1;
+	xinpcb.local_port = 0;
+	xinpcb.number_local_addresses = 0;
+	xinpcb.number_associations = 0;
+	xinpcb.flags = 0;
+	xinpcb.features = 0;
+	error = SYSCTL_OUT(req, &xinpcb, sizeof(struct xsctp_inpcb));
+	return error;
 }
 #endif
 

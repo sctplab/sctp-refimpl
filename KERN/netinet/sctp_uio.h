@@ -45,6 +45,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_uio.h,v 1.2 2006/11/05 13:25:17 rrs Exp
 #endif
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
 
 typedef uint32_t sctp_assoc_t;
 
@@ -870,6 +871,49 @@ struct	sctpstat {
 #define SCTP_STAT_DECR_COUNTER32(_x) SCTP_STAT_DECR(_x)
 #define SCTP_STAT_DECR_COUNTER64(_x) SCTP_STAT_DECR(_x)
 #define SCTP_STAT_DECR_GAUGE32(_x) SCTP_STAT_DECR(_x)
+
+union sctp_sockstore {
+#ifdef AF_INET
+	struct sockaddr_in sin;
+#endif
+#ifdef AF_INET6
+	struct sockaddr_in6 sin6;
+#endif
+	struct sockaddr sa;
+};
+
+#ifdef __APPLE__
+struct xsctp_inpcb {
+	uint32_t last;
+	uint16_t local_port;
+	uint16_t number_local_addresses;
+	uint32_t number_associations;
+	uint32_t flags;
+	uint32_t features;
+	/* add more endpoint specific data here*/
+};
+
+struct xsctp_tcb {
+	uint16_t remote_port;
+	uint16_t number_local_addresses;
+	uint16_t number_remote_addresses;
+	uint16_t number_incomming_streams;
+	uint16_t number_outgoing_streams;
+	uint32_t state;
+	/* add more association specific data here*/
+};
+
+struct xsctp_laddr {
+	union sctp_sockstore address;
+	/* add more local address specific data */
+};
+
+struct xsctp_raddr {
+	union sctp_sockstore address;
+	uint16_t state;
+	/* add more remote address specific data */
+};
+#endif
 
 /*
  * Kernel defined for sctp_send
