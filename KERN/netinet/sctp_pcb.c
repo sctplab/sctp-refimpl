@@ -32,9 +32,9 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.5 2006/11/06 14:34:21 rrs Exp $");
-#endif
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.6 2006/11/06 14:54:05 rwatson Exp $");
 
+#endif
 #if !(defined(__OpenBSD__) || defined(__APPLE__))
 #include "opt_ipsec.h"
 #endif
@@ -60,6 +60,9 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.5 2006/11/06 14:34:21 rrs Exp
 #include <sys/protosw.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>
+#if defined(__FreeBSD__) && __FreeBSD_version >= 602000
+#include <sys/priv.h>
+#endif
 #include <sys/proc.h>
 #if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
 #include <sys/proc_internal.h>
@@ -2235,7 +2238,10 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 		if (ntohs(lport) < IPPORT_RESERVED) {
 			if (p && (error =
 #ifdef __FreeBSD__
-#if __FreeBSD_version >= 500000
+#if __FreeBSD_version >= 602000
+                            priv_check(p,
+			    PRIV_NETINET_RESERVEDPORT)
+#elif __FreeBSD_version >= 500000
 			    suser_cred(p->td_ucred, 0)
 #else
 			    suser(p)

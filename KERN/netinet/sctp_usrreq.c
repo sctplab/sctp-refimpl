@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.3 2006/11/03 23:04:34 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.4 2006/11/06 14:54:05 rwatson Exp $");
 #endif
 
 
@@ -59,6 +59,9 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.3 2006/11/03 23:04:34 rrs 
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
 #include <sys/domain.h>
+#if defined(__FreeBSD__) && __FreeBSD_version >= 602000
+#include <sys/priv.h>
+#endif
 #include <sys/proc.h>
 #include <sys/protosw.h>
 #include <sys/socket.h>
@@ -594,12 +597,20 @@ sctp_getcred(SYSCTL_HANDLER_ARGS)
 	int error, s;
 
 #if __FreeBSD_version >= 500000
+	/*
+	 * XXXRW: Other instances of getcred use SUSER_ALLOWJAIL, as socket
+	 * visibility is scoped using cr_canseesocket(), which it is not
+	 * here.
+	 */
+	error = priv_check_cred(req->td->td_ucred, PRIV_NETINET_GETCRED, 0);
+#elif __FreeBSD_version >= 500000
 	error = suser(req->td);
 #else
 	error = suser(req->p);
 #endif
 	if (error)
 		return (error);
+
 	error = SYSCTL_IN(req, addrs, sizeof(addrs));
 	if (error)
 		return (error);
