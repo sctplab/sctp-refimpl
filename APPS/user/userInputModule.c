@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.71 2006-11-02 02:58:27 lei Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.72 2006-11-06 18:54:09 tuexen Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -123,6 +123,7 @@ static int cmd_getdefcookielife(char *argv[], int argc);
 static int cmd_gethbdelay(char *argv[], int argc);
 static int cmd_getstat(char *argv[], int argc);
 static int cmd_clrstat(char *argv[], int argc);
+static int cmd_getassocstat(char *argv[], int argc);
 
 
 static int cmd_getprimary(char *argv[], int argc);
@@ -361,6 +362,8 @@ static struct command commands[] = {
      cmd_getnodelay},
     {"getstat", "getstat - retrieve the stat",
      cmd_getstat},
+    {"getassocstat", "getassocstat - retrieve the status of all associations",
+     cmd_getassocstat},
     {"clrstat", "clrstat - clear the stat",
      cmd_clrstat},
     {"getpcbinfo", "getpcbinfo- retrieve the pcb counts",
@@ -3628,6 +3631,76 @@ cmd_getstat(char *argv[], int argc)
 #endif
 }
 
+static int
+cmd_getassocstat(char *argv[], int argc)
+{
+#if defined(__APPLE__)
+	size_t len;
+	caddr_t buf;
+	unsigned int offset, i;
+	struct xsctp_inpcb *xinp;
+	struct xsctp_tcb *xstcb;
+	struct xsctp_laddr *xladdr;
+	struct xsctp_raddr *xraddr;
+	uint16_t number_of_local_addresses;
+	uint16_t number_of_remote_addresses;
+	uint16_t number_associations;
+
+	len = 0;
+	if (sysctlbyname("net.inet.sctp.assoclist", 0, &len, 0, 0) < 0) {
+		printf("Error %d (%s) could not get the assoclist\n", errno, strerror(errno));
+		return(0);
+	}
+	if ((buf = (caddr_t)malloc(len)) == 0) {
+		printf("malloc %lu bytes failed.\n", len);
+		return(0);
+	}
+	if (sysctlbyname("net.inet.sctp.assoclist", buf, &len, 0, 0) < 0) {
+		printf("Error %d (%s) could not get the assoclist\n", errno, strerror(errno));
+		free(buf);
+		return(0);
+	}
+	offset = 0;
+	xinp = (struct xsctp_inpcb *)(buf + offset);
+	while (xinp->last == 0) {
+		printf("Endpoint with port=%d, flags=%d, features=%d\n",
+		       xinp->local_port, xinp->flags, xinp->features);
+		number_of_local_addresses = xinp->number_local_addresses;
+		number_associations = xinp->number_associations;
+		offset += sizeof(struct xsctp_inpcb);
+		for (i = 0; i < number_of_local_addresses; i++) {
+			xladdr = (struct xsctp_laddr *)(buf + offset);
+			/* handle it */
+			offset += sizeof(struct xsctp_laddr);
+		}
+		for (i = 0; i < number_associations; i++) {
+			xstcb = (struct xsctp_tcb *)(buf + offset);
+			printf("Association towards port=%d, state=%d.\n",
+			       xstcb->remote_port, xstcb->state);
+			number_of_local_addresses = xstcb->number_local_addresses;
+			number_of_remote_addresses = xstcb->number_remote_addresses;
+			offset += sizeof(struct xsctp_tcb);
+			for (i = 0; i < number_of_local_addresses; i++) {
+				xladdr = (struct xsctp_laddr *)(buf + offset);
+				/* handle it */
+				offset += sizeof(struct xsctp_laddr);
+			}
+			for (i = 0; i < number_of_remote_addresses; i++) {
+				xraddr = (struct xsctp_raddr *)(buf + offset);
+				printf("Path towards %s, state=%d.\n",
+				       inet_ntoa(xraddr->address.sin.sin_addr), xraddr->state);
+				offset += sizeof(struct xsctp_raddr);
+			}
+		}
+		xinp = (struct xsctp_inpcb *)(buf + offset);
+	}
+	free((void *)buf);
+	return(0);
+#else
+	printf("Not supported on this OS\n");
+	return (0);
+#endif
+}
 /* getprimary - tells which net number is primary */
 static int
 cmd_getprimary(char *argv[], int argc)
