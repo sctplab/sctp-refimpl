@@ -5528,7 +5528,7 @@ sctp_ingetaddr(struct socket *so, struct mbuf *nam)
 			SCTP_TCB_LOCK(stcb);
 			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 				sin_a = (struct sockaddr_in *)&net->ro._l_addr;
-				if(sin_a6 == NULL)
+				if(sin_a == NULL)
 					/* this will make coverity happy */
 					continue;
 
