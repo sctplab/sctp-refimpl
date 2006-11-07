@@ -10156,6 +10156,9 @@ sctp_lower_sosend(struct socket *so,
 				socket_lock(stcb->sctp_socket, 0);
 #endif
 				if ((mm == NULL) || error) {
+					if (mm) {
+						sctp_m_freem(mm);
+					}
 					goto out;
 				}
 				/* Update the mbuf and count */
