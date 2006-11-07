@@ -3045,6 +3045,7 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
 	struct mbuf *m_notify;
 	struct sctp_pdapi_event *pdapi;
 	struct sctp_queued_to_read *control;
+	struct sockbuf *sb;	
 
 	if (sctp_is_feature_off(stcb->sctp_ep, SCTP_PCB_FLAGS_PDAPIEVNT))
 		/* event not enabled */
@@ -3083,10 +3084,11 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
 	if(nolock == 0) {
 		SCTP_INP_READ_LOCK(stcb->sctp_ep);
 	}
+	sb = &stcb->sctp_socket->so_rcv;
 #ifdef SCTP_SB_LOGGING
 	sctp_sblog(sb, control->do_not_ref_stcb?NULL:stcb, SCTP_LOG_SBALLOC, m_notify->m_len);
 #endif
-	sctp_sballoc(stcb, &stcb->sctp_socket->so_rcv, m_notify);
+	sctp_sballoc(stcb, sb, m_notify);
 #ifdef SCTP_SB_LOGGING
 	sctp_sblog(sb, control->do_not_ref_stcb?NULL:stcb, SCTP_LOG_SBRESULT, 0);
 #endif
