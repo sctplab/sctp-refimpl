@@ -692,6 +692,7 @@ sctp6_ctlinput(cmd, pktdst, d)
 static int
 sctp6_getcred(SYSCTL_HANDLER_ARGS)
 {
+	struct xucred xuc;
 	struct sockaddr_in6 addrs[2];
 	struct sctp_inpcb *inp;
 	struct sctp_nets *net;
@@ -726,23 +727,33 @@ sctp6_getcred(SYSCTL_HANDLER_ARGS)
 	    sin6tosa(&addrs[1]),
 	    &inp, &net, 1);
 	if (stcb == NULL || inp == NULL || inp->sctp_socket == NULL) {
-		error = ENOENT;
-		if (inp) {
+		if ((inp != NULL) && (stcb == NULL)) {
+			/* reduce ref-count */
 			SCTP_INP_WLOCK(inp);
 			SCTP_INP_DECR_REF(inp);
-			SCTP_INP_WUNLOCK(inp);
+			goto cred_can_cont;
 		}
+		error = ENOENT;
 		goto out;
 	}
-	atomic_add_int(&stcb->asoc.refcnt, 1);
 	SCTP_TCB_UNLOCK(stcb);
-	error = cr_canseesocket(req->td->td_ucred, inp->inp_socket);
-	if (error)
-		goto out_nocr;
-	cru2x(inp->inp_socket->so_cred, &xuc);
-
-out_nocr:
-	atomic_add_int(&stcb->asoc.refcnt, -1);
+	/* We use the write lock here, only
+	 * since in the error leg we need it.
+	 * If we used RLOCK, then we would have
+	 * to wlock/decr/unlock/rlock. Which
+	 * in theory could create a hole. Better
+	 * to use higher wlock.
+	 */
+	SCTP_INP_WLOCK(inp);	
+ cred_can_cont:
+	error = cr_canseesocket(req->td->td_ucred, inp->sctp_socket);
+	if(error) {
+		SCTP_INP_WUNLOCK(inp);
+		goto out;
+	}
+	cru2x(inp->sctp_socket->so_cred, &xuc);
+	SCTP_INP_WUNLOCK(inp);
+	error = SYSCTL_OUT(req, &xuc, sizeof(struct xucred));
 out:
 	return (error);
 }
@@ -1660,6 +1671,10 @@ sctp6_getaddr(struct socket *so, struct mbuf *nam)
 			sin_a6 = NULL;
 			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 				sin_a6 = (struct sockaddr_in6 *)&net->ro._l_addr;
+				if(sin_a6 == NULL)
+					/* this will make coverity happy */
+					continue;
+
 				if (sin_a6->sin6_family == AF_INET6) {
 					fnd = 1;
 					break;
@@ -1703,8 +1718,10 @@ sctp6_getaddr(struct socket *so, struct mbuf *nam)
 	SCTP_INP_RUNLOCK(inp);
 	/* Scoping things for v6 */
 #ifdef SCTP_KAME
-	if ((error = sa6_recoverscope(sin6)) != 0)
+	if ((error = sa6_recoverscope(sin6)) != 0) {
+		SCTP_FREE_SONAME(sin6);
 		return (error);
+	}
 #else
 	if (IN6_IS_SCOPE_LINKLOCAL(&sin6->sin6_addr))
 		/* skip ifp check below */
