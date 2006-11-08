@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.6 2006/11/06 14:54:05 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.7 2006/11/08 00:21:13 rrs Exp $");
 
 #endif
 #if !(defined(__OpenBSD__) || defined(__APPLE__))
@@ -407,7 +407,6 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 	}
 	return (NULL);
 }
-
 /*
  * rules for use
  *
@@ -3521,6 +3520,22 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		*error = ENOBUFS;
 		return (NULL);
 	}
+
+#if 0
+	/* Future code to deal with sending a new INIT
+	 * from an assoc that had the previous assoc
+	 * peeled off... Amita's accendental bug
+	 */
+	if(inp->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE) {
+		stcb = sctp_findassociation_in_tcppool();
+		SCTP_TCB_UNLOCK(stcb);
+		if(stcb) {
+			*error = EALREADY;
+			return(NULL);
+		}
+	}
+#endif
+
 	SCTP_INP_RLOCK(inp);
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) {
 		/*

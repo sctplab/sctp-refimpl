@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.4 2006/11/06 14:54:05 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.5 2006/11/08 00:21:13 rrs Exp $");
 #endif
 
 
@@ -2246,7 +2246,6 @@ sctp_do_connect_x(struct socket *so,
 	stcb = sctp_aloc_assoc(inp, sa, 1, &error, 0);
 	if (stcb == NULL) {
 		/* Gak! no memory */
-		error = ENOMEM;
 		goto out_now;
 	}
 	/* move to second address */
