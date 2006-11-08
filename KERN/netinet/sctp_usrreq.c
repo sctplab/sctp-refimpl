@@ -59,7 +59,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.5 2006/11/08 00:21:13 rrs 
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
 #include <sys/domain.h>
-#if defined(__FreeBSD__) && __FreeBSD_version >= 602000
+#if defined(__FreeBSD__) && __FreeBSD_version > 602000
 #include <sys/priv.h>
 #endif
 #include <sys/proc.h>
@@ -598,7 +598,7 @@ sctp_getcred(SYSCTL_HANDLER_ARGS)
 	struct sctp_tcb *stcb;
 	int error;
 
-#if __FreeBSD_version >= 500000
+#if __FreeBSD_version > 602000
 	/*
 	 * XXXRW: Other instances of getcred use SUSER_ALLOWJAIL, as socket
 	 * visibility is scoped using cr_canseesocket(), which it is not
