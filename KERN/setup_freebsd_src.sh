@@ -86,7 +86,7 @@ echo "cp $srcTree/sys/syscall.mk /usr/include/sys/"
 echo "cp $srcTree/sys/sysproto.h /usr/include/sys/"
 echo "Step 3--------------------------------------------"
 echo "Next build libsctp by doing:"
-echo "cd $cvsPath/KERN/usr.lib
+echo "cd $cvsPath/KERN/usr.lib"
 echo "make"
 echo "cp libsctp* /lib"
 echo "ranlib /lib/libsctp.a /lib/libsctp_p.a"
