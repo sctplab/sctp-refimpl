@@ -30,7 +30,7 @@
 /*	$KAME: sctp6_usrreq.c,v 1.38 2005/08/24 08:08:56 suz Exp $	*/
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.4 2006/11/06 14:54:06 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.5 2006/11/08 00:21:13 rrs Exp $");
 #endif
 #if !(defined(__OpenBSD__) || defined(__APPLE__))
 #include "opt_inet.h"
