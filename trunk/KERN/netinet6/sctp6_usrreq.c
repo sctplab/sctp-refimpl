@@ -699,7 +699,7 @@ sctp6_getcred(SYSCTL_HANDLER_ARGS)
 	struct sctp_tcb *stcb;
 	int error;
 
-#if defined(__FreeBSD__) && __FreeBSD_version >= 602000
+#if defined(__FreeBSD__) && __FreeBSD_version > 602000
 	/*
 	 * XXXRW: Other instances of getcred use SUSER_ALLOWJAIL, as socket
 	 * visibility is scoped using cr_canseesocket(), which it is not
