@@ -72,16 +72,31 @@ done
 cd $srcTree/kern
 touch syscalls.master
 make sysent
+echo "Step 1--------------------------------------------"
 echo "You may now go to your kernel source tree $srcTree"
 echo "Configure a new kernel with:"
 echo "options SCTP"
-echo "And build as normal"
-echo "This script as already did a "
-echo "make sysent"
-echo "In $srcTree/kern so the syscalls are present"
-echo "in the kernel. However you probably need to"
-echo "copy these to /usr/include/sys and also"
-echo "do a  make buildworld and make installworld"
-echo "which will get the sctp_xxx calls into libc"
+echo "And build and install the new kernel as normal."
+echo "Step 2--------------------------------------------"
+echo "Now you need to copy your new syscall references so"
+echo "that libsctp can find the sctp syscalls"
+echo "by performing:"
+echo "cp $srcTree/sys/syscall.h /usr/include/sys/"
+echo "cp $srcTree/sys/syscall.mk /usr/include/sys/"
+echo "cp $srcTree/sys/sysproto.h /usr/include/sys/"
+echo "Step 3--------------------------------------------"
+echo "Next build libsctp by doing:"
+echo "cd $cvsPath/KERN/usr.lib
+echo "make"
+echo "cp libsctp* /lib"
+echo "ranlib /lib/libsctp.a /lib/libsctp_p.a"
+echo "Step 4--------------------------------------------"
+echo "This step is optional. You may want to do it"
+echo "if you want libc.a to contain the true"
+echo "sctp_xxx systemcalls."
+echo "Follow the instructions in $srcTree/README"
+echo "to do the make buildworld and make installworld"
+
+
 
 
