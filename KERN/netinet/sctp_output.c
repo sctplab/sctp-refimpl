@@ -3766,9 +3766,25 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		initackm_out->msg.init.initiate_tag = htonl(asoc->my_vtag);
 		initackm_out->msg.init.initial_tsn = htonl(asoc->init_seq_number);
 	} else {
-		initackm_out->msg.init.initiate_tag = htonl(sctp_select_a_tag(inp));
-		/* get a TSN to use too */
-		initackm_out->msg.init.initial_tsn = htonl(sctp_select_initial_TSN(&inp->sctp_ep));
+		if (asoc) {
+			atomic_add_int(&asoc->refcnt, 1);
+			SCTP_TCB_UNLOCK(stcb);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			socket_unlock(stcb->sctp_ep->ip_inp.inp.inp_socket, 0);
+#endif
+			initackm_out->msg.init.initiate_tag = htonl(sctp_select_a_tag(inp));
+			/* get a TSN to use too */
+			initackm_out->msg.init.initial_tsn = htonl(sctp_select_initial_TSN(&inp->sctp_ep));
+			SCTP_TCB_LOCK(stcb);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			socket_lock(stcb->sctp_ep->ip_inp.inp.inp_socket, 0);
+#endif
+			atomic_add_int(&asoc->refcnt, -1);
+		} else {
+			initackm_out->msg.init.initiate_tag = htonl(sctp_select_a_tag(inp));
+			/* get a TSN to use too */
+			initackm_out->msg.init.initial_tsn = htonl(sctp_select_initial_TSN(&inp->sctp_ep));
+		}
 	}
 	/* save away my tag to */
 	stc.my_vtag = initackm_out->msg.init.initiate_tag;
