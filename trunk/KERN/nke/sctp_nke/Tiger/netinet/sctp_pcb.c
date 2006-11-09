@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.6 2006/11/06 14:54:05 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.7 2006/11/08 00:21:13 rrs Exp $");
 
 #endif
 #if !(defined(__OpenBSD__) || defined(__APPLE__))
@@ -407,7 +407,6 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 	}
 	return (NULL);
 }
-
 /*
  * rules for use
  *
@@ -3521,6 +3520,22 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		*error = ENOBUFS;
 		return (NULL);
 	}
+
+#if 0
+	/* Future code to deal with sending a new INIT
+	 * from an assoc that had the previous assoc
+	 * peeled off... Amita's accendental bug
+	 */
+	if(inp->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE) {
+		stcb = sctp_findassociation_in_tcppool();
+		SCTP_TCB_UNLOCK(stcb);
+		if(stcb) {
+			*error = EALREADY;
+			return(NULL);
+		}
+	}
+#endif
+
 	SCTP_INP_RLOCK(inp);
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) {
 		/*
@@ -3961,35 +3976,26 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			if (sq->stcb == stcb) {
 				sq->do_not_ref_stcb = 1;
 				sq->sinfo_cumtsn = stcb->asoc.cumulative_tsn;
-				if ((from_inpcbfree == 0) && so) {
-					/* Only if we have a socket lock do we do this */
-					if ((sq->held_length) ||
-					    (sq->end_added == 0) ||
-					    ((sq->length == 0) && (sq->end_added == 0))) {
-						/* Held for PD-API */
-						sq->held_length = 0;
-						if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_PDAPIEVNT)) {
-							/* need to change to PD-API aborted */
-							stcb->asoc.control_pdapi = sq;
-							sctp_notify_partial_delivery_indication(stcb,
-												SCTP_PARTIAL_DELIVERY_ABORTED, 1);
-							stcb->asoc.control_pdapi = NULL;
-						} else {
-							/* need to get the reader to remove it */
-							sq->length = 0;
-							if (sq->data) {
-								struct mbuf *m;
-								m = sq->data;
-								while(m) {
-									sctp_sbfree(sq, stcb, &stcb->sctp_socket->so_rcv, m);
-									m = sctp_m_free(m);
-								}
-								sq->data = NULL;
-								sq->tail_mbuf = NULL;
-							}
-						}
+				/* If there is no end, there never
+				 * will be now.
+				 */
+				if (sq->end_added == 0) {
+					/* Held for PD-API clear that. */
+					sq->pdapi_aborted = 1;
+					sq->held_length = 0;
+					if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_PDAPIEVNT)) {
+						/*
+						 * Need to add a PD-API aborted indication.
+						 * Setting the control_pdapi assures that it will
+						 * be added right after this msg.
+						 */
+						stcb->asoc.control_pdapi = sq;
+						sctp_notify_partial_delivery_indication(stcb,
+											SCTP_PARTIAL_DELIVERY_ABORTED, 1);
+						stcb->asoc.control_pdapi = NULL;
 					}
 				}
+				/* Add an end to wake them */
 				sq->end_added = 1;
 				cnt++;
 			}

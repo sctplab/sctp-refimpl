@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.4 2006/11/05 13:25:17 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.5 2006/11/08 00:21:13 rrs Exp $");
 #endif
 
 #if !(defined(__OpenBSD__) || defined(__APPLE__))
@@ -622,6 +622,7 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 		 */
 		SCTP_INP_READ_LOCK(stcb->sctp_ep);
 		stcb->asoc.control_pdapi->end_added = 1;
+		stcb->asoc.control_pdapi->pdapi_aborted = 1;
 		if (stcb->asoc.control_pdapi->tail_mbuf) {
 			stcb->asoc.control_pdapi->tail_mbuf->m_flags |= M_EOR;
 		}
@@ -710,6 +711,7 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
 		 */
 		SCTP_INP_READ_LOCK(stcb->sctp_ep);
 		stcb->asoc.control_pdapi->end_added = 1;
+		stcb->asoc.control_pdapi->pdapi_aborted = 1;
 		if (stcb->asoc.control_pdapi->tail_mbuf) {
 			stcb->asoc.control_pdapi->tail_mbuf->m_flags |= M_EOR;
 		}
@@ -1861,6 +1863,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	sig = (uint8_t *) sctp_m_getptr(m_sig, 0, SCTP_SIGNATURE_SIZE, (uint8_t *) & tmp_sig);
 	if (sig == NULL) {
 		/* couldn't find signature */
+		sctp_m_freem(m_sig);
 		return (NULL);
 	}
 	/* compare the received digest with the computed digest */
@@ -2764,8 +2767,7 @@ sctp_clean_up_stream_reset(struct sctp_tcb *stcb)
 static int
 sctp_handle_stream_reset_response(struct sctp_tcb *stcb,
     uint32_t seq, uint32_t action,
-    struct sctp_stream_reset_response *respin
-)
+    struct sctp_stream_reset_response *respin)
 {
 	uint16_t type;
 	int lparm_len;
@@ -2784,8 +2786,8 @@ sctp_handle_stream_reset_response(struct sctp_tcb *stcb,
 			stcb->asoc.str_reset_seq_out++;
 			type = ntohs(srparam->ph.param_type);
 			lparm_len = ntohs(srparam->ph.param_length);
-			number_entries = (lparm_len - sizeof(struct sctp_stream_reset_out_request)) / sizeof(uint16_t);
 			if (type == SCTP_STR_RESET_OUT_REQUEST) {
+				number_entries = (lparm_len - sizeof(struct sctp_stream_reset_out_request)) / sizeof(uint16_t);
 				asoc->stream_reset_out_is_outstanding = 0;
 				if (asoc->stream_reset_outstanding)
 					asoc->stream_reset_outstanding--;
@@ -2797,6 +2799,7 @@ sctp_handle_stream_reset_response(struct sctp_tcb *stcb,
 				}
 			} else if (type == SCTP_STR_RESET_IN_REQUEST) {
 				/* Answered my request */
+				number_entries = (lparm_len - sizeof(struct sctp_stream_reset_in_request)) / sizeof(uint16_t);
 				if (asoc->stream_reset_outstanding)
 					asoc->stream_reset_outstanding--;
 				if (action != SCTP_STREAM_RESET_PERFORMED) {

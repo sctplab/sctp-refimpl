@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.4 2006/11/06 14:54:05 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.5 2006/11/08 00:21:13 rrs Exp $");
 #endif
 
 
@@ -59,7 +59,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.4 2006/11/06 14:54:05 rwat
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
 #include <sys/domain.h>
-#if defined(__FreeBSD__) && __FreeBSD_version >= 602000
+#if defined(__FreeBSD__) && __FreeBSD_version > 602000
 #include <sys/priv.h>
 #endif
 #include <sys/proc.h>
@@ -591,13 +591,14 @@ sctp_ctlinput(cmd, sa, vip)
 static int
 sctp_getcred(SYSCTL_HANDLER_ARGS)
 {
+	struct xucred xuc;
 	struct sockaddr_in addrs[2];
 	struct sctp_inpcb *inp;
 	struct sctp_nets *net;
 	struct sctp_tcb *stcb;
 	int error;
 
-#if __FreeBSD_version >= 500000
+#if __FreeBSD_version > 602000
 	/*
 	 * XXXRW: Other instances of getcred use SUSER_ALLOWJAIL, as socket
 	 * visibility is scoped using cr_canseesocket(), which it is not
@@ -616,7 +617,6 @@ sctp_getcred(SYSCTL_HANDLER_ARGS)
 	if (error)
 		return (error);
 
-	s = splnet();
 	stcb = sctp_findassociation_addr_sa(sintosa(&addrs[0]),
 	    sintosa(&addrs[1]),
 	    &inp, &net, 1);
@@ -625,20 +625,29 @@ sctp_getcred(SYSCTL_HANDLER_ARGS)
 			/* reduce ref-count */
 			SCTP_INP_WLOCK(inp);
 			SCTP_INP_DECR_REF(inp);
-			SCTP_INP_WUNLOCK(inp);
+			goto cred_can_cont;
 		}
 		error = ENOENT;
 		goto out;
 	}
-	atomic_add_int(&stcb->asoc.refcnt, 1);
 	SCTP_TCB_UNLOCK(stcb);
-	error = cr_canseesocket(req->td->td_ucred, inp->inp_socket);
-	if (error)
-		goto out_nocr;
-	cru2x(inp->inp_socket->so_cred, &xuc);
-
-out_nocr:
-	atomic_add_int(&stcb->asoc.refcnt, -1);
+	/* We use the write lock here, only
+	 * since in the error leg we need it.
+	 * If we used RLOCK, then we would have
+	 * to wlock/decr/unlock/rlock. Which
+	 * in theory could create a hole. Better
+	 * to use higher wlock.
+	 */
+	SCTP_INP_WLOCK(inp);	
+ cred_can_cont:
+	error = cr_canseesocket(req->td->td_ucred, inp->sctp_socket);
+	if(error) {
+		SCTP_INP_WUNLOCK(inp);
+		goto out;
+	}
+	cru2x(inp->sctp_socket->so_cred, &xuc);
+	SCTP_INP_WUNLOCK(inp);
+	error = SYSCTL_OUT(req, &xuc, sizeof(struct xucred));
 out:
 	return (error);
 }
@@ -2237,7 +2246,6 @@ sctp_do_connect_x(struct socket *so,
 	stcb = sctp_aloc_assoc(inp, sa, 1, &error, 0);
 	if (stcb == NULL) {
 		/* Gak! no memory */
-		error = ENOMEM;
 		goto out_now;
 	}
 	/* move to second address */
@@ -3945,6 +3953,7 @@ sctp_optsset(struct socket *so,
 				if (sctp_auth_add_hmacid(hmaclist, (uint16_t) hmacid)) {
 					/* invalid HMACs were found */;
 					error = EINVAL;
+					sctp_free_hmaclist(hmaclist);
 					goto sctp_set_hmac_done;
 				}
 			}
@@ -5404,8 +5413,10 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 
 		sin6->sin6_addr = ((struct sockaddr_in6 *)&store)->sin6_addr;
 #ifdef SCTP_KAME
-		if ((error = sa6_recoverscope(sin6)) != 0)
+		if ((error = sa6_recoverscope(sin6)) != 0) {
+			SCTP_FREE_SONAME(sin6);
 			return (error);
+		}
 #else
 		if (IN6_IS_SCOPE_LINKLOCAL(&sin6->sin6_addr))
 			/*
@@ -5516,6 +5527,10 @@ sctp_ingetaddr(struct socket *so, struct mbuf *nam)
 			SCTP_TCB_LOCK(stcb);
 			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 				sin_a = (struct sockaddr_in *)&net->ro._l_addr;
+				if(sin_a == NULL)
+					/* this will make coverity happy */
+					continue;
+
 				if (sin_a->sin_family == AF_INET) {
 					fnd = 1;
 					break;
