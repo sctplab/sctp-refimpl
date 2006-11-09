@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_indata.c,v 1.2 2006/11/05 13:25:17 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_indata.c,v 1.3 2006/11/08 00:21:13 rrs Exp $");
 #endif
 
 
@@ -283,6 +283,7 @@ sctp_build_readq_entry(struct sctp_tcb *stcb,
 	read_queue_e->port_from = stcb->rport;
 	read_queue_e->do_not_ref_stcb = 0;
 	read_queue_e->end_added = 0;
+	read_queue_e->pdapi_aborted = 0;
 failed_build:
 	return (read_queue_e);
 }
@@ -319,6 +320,7 @@ sctp_build_readq_entry_chk(struct sctp_tcb *stcb,
 	read_queue_e->port_from = stcb->rport;
 	read_queue_e->do_not_ref_stcb = 0;
 	read_queue_e->end_added = 0;
+	read_queue_e->pdapi_aborted = 0;
 failed_build:
 	return (read_queue_e);
 }

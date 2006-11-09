@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_structs.h,v 1.2 2006/11/05 13:25:17 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_structs.h,v 1.3 2006/11/08 00:21:13 rrs Exp $");
 #endif
 
 #ifndef __sctp_structs_h__
@@ -374,6 +374,7 @@ struct sctp_queued_to_read {	/* sinfo structure Pluse more */
 	uint16_t port_from;
 	uint8_t  do_not_ref_stcb;
 	uint8_t  end_added;
+	uint8_t  pdapi_aborted;
 };
 
 /* This data structure will be on the outbound

@@ -609,7 +609,7 @@
 				MODULE_NAME = org.sctp.kext.SCTP;
 				MODULE_START = SCTP_start;
 				MODULE_STOP = SCTP_stop;
-				MODULE_VERSION = 4.0.0;
+				MODULE_VERSION = 4.1.0;
 				PRODUCT_NAME = SCTP;
 				WRAPPER_EXTENSION = kext;
 				ZERO_LINK = YES;
@@ -637,7 +637,7 @@
 				MODULE_NAME = org.sctp.kext.SCTP;
 				MODULE_START = SCTP_start;
 				MODULE_STOP = SCTP_stop;
-				MODULE_VERSION = 4.0.0;
+				MODULE_VERSION = 4.1.0;
 				PRODUCT_NAME = SCTP;
 				WRAPPER_EXTENSION = kext;
 				ZERO_LINK = NO;
@@ -653,7 +653,7 @@
 				MODULE_NAME = org.sctp.kext.SCTP;
 				MODULE_START = SCTP_start;
 				MODULE_STOP = SCTP_stop;
-				MODULE_VERSION = 4.0.0;
+				MODULE_VERSION = 4.1.0;
 				PRODUCT_NAME = SCTP;
 				WRAPPER_EXTENSION = kext;
 			};
