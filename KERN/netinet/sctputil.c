@@ -3391,12 +3391,13 @@ sctp_ulp_notify(uint32_t notification, struct sctp_tcb *stcb,
 }
 
 void
-sctp_report_all_outbound(struct sctp_tcb *stcb)
+sctp_report_all_outbound(struct sctp_tcb *stcb, int holds_lock)
 {
 	struct sctp_association *asoc;
 	struct sctp_stream_out *outs;
 	struct sctp_tmit_chunk *chk;
 	struct sctp_stream_queue_pending *sp;
+	int i;
 	asoc = &stcb->asoc;
 
 	if((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
@@ -3405,9 +3406,12 @@ sctp_report_all_outbound(struct sctp_tcb *stcb)
 		return;
 	}
 	/* now through all the gunk freeing chunks */
-
-	TAILQ_FOREACH(outs, &asoc->out_wheel, next_spoke) {
-		/* now clean up any chunks here */
+	if(holds_lock == 0)
+		SCTP_TCB_SEND_LOCK(stcb);
+	for(i=0; i<stcb->asoc.streamoutcnt; i++) {
+		/* For each stream */
+		outs = &stcb->asoc.strmout[i];
+		/* clean up any sends there */
 		stcb->asoc.locked_on_sending = NULL;
 		sp = TAILQ_FIRST(&outs->outqueue);
 		while (sp) {
@@ -3488,6 +3492,8 @@ sctp_report_all_outbound(struct sctp_tcb *stcb)
 			chk = TAILQ_FIRST(&asoc->sent_queue);
 		}
 	}
+	if(holds_lock == 0)
+		SCTP_TCB_SEND_UNLOCK(stcb);
 }
 
 void
@@ -3500,7 +3506,7 @@ sctp_abort_notification(struct sctp_tcb *stcb, int error)
 		return;
 	}
 	/* Tell them we lost the asoc */
-	sctp_report_all_outbound(stcb);
+	sctp_report_all_outbound(stcb, 1);
 	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) ||
 	    ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 	     (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_CONNECTED))) {
