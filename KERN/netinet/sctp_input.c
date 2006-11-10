@@ -1399,8 +1399,6 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		asoc->pre_open_streams =
 		    ntohs(initack_cp->init.num_outbound_streams);
 		asoc->init_seq_number = ntohl(initack_cp->init.initial_tsn);
-		printf("Peer restart set from %x  to:%x\n", asoc->sending_seq,
-		       asoc->init_seq_number);
 		asoc->sending_seq = asoc->asconf_seq_out = asoc->str_reset_seq_out = asoc->init_seq_number;
 
 		asoc->last_cwr_tsn = asoc->init_seq_number - 1;
