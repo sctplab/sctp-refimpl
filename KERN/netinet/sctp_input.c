@@ -1307,19 +1307,12 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			sctp_timer_start(SCTP_TIMER_TYPE_AUTOCLOSE, inp, stcb,
 			    NULL);
 		}
+		/* FIX? Should we go out, in this case (if the seq numbers
+		 * changed on the peer) and set any data to RETRANSMIT?
+		 */
 		asoc->my_rwnd = ntohl(initack_cp->init.a_rwnd);
 		asoc->pre_open_streams =
 		    ntohs(initack_cp->init.num_outbound_streams);
-		if(asoc->init_seq_number != ntohl(initack_cp->init.initial_tsn)) {
-			/* If this print comes out, we need to go in to
-			 * any queued data and re-assing TSN's different than
-			 * previously assigned for data that was with the cookie.
-			 */
-			panic("Test case, does this really happen?\n");
-			asoc->init_seq_number != ntohl(initack_cp->init.initial_tsn);
-			asoc->sending_seq = asoc->asconf_seq_out = asoc->str_reset_seq_out =
-				asoc->init_seq_number;
-		}
 		asoc->last_cwr_tsn = asoc->init_seq_number - 1;
 		asoc->asconf_seq_in = asoc->last_acked_seq = asoc->init_seq_number - 1;
 		asoc->str_reset_seq_in = asoc->init_seq_number;
@@ -1406,6 +1399,8 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		asoc->pre_open_streams =
 		    ntohs(initack_cp->init.num_outbound_streams);
 		asoc->init_seq_number = ntohl(initack_cp->init.initial_tsn);
+		printf("Peer restart set from %x  to:%x\n", asoc->sending_seq,
+		       asoc->init_seq_number);
 		asoc->sending_seq = asoc->asconf_seq_out = asoc->str_reset_seq_out = asoc->init_seq_number;
 
 		asoc->last_cwr_tsn = asoc->init_seq_number - 1;
