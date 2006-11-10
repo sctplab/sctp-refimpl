@@ -5322,6 +5322,13 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 #else
 	chk->rec.data.TSN_seq = asoc->sending_seq++;
 #endif
+#ifdef SCTP_LOG_SENDING_STR
+	sctp_misc_ints(SCTP_STRMOUT_LOG_SEND,
+		       (uintprt_t)stcb, (uintprt_t)sp, 
+		       (uint32_t)chk->rec.data.stream_number, 
+		       chk->rec.data.TSN_seq);
+#endif
+
 	dchkh = mtod(chk->data, struct sctp_data_chunk *);
 	/*
 	 * Put the rest of the things in place now. Size was done
@@ -10117,6 +10124,11 @@ sctp_lower_sosend(struct socket *so,
 			TAILQ_INSERT_TAIL(&strm->outqueue, sp, next);
 			if ((srcv->sinfo_flags & SCTP_UNORDERED) == 0) {
 				sp->strseq = strm->next_sequence_sent;
+#ifdef SCTP_LOG_SENDING_STR
+				sctp_misc_ints(SCTP_STRMOUT_LOG_ASSIGN,
+					       (uintprt_t)stcb, (uintprt_t)sp, 
+					       (uint32_t)strm->strseq, 0);
+#endif
 				strm->next_sequence_sent++;
 			}
 
