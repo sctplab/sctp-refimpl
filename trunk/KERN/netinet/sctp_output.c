@@ -5325,7 +5325,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 #ifdef SCTP_LOG_SENDING_STR
 	sctp_misc_ints(SCTP_STRMOUT_LOG_SEND,
 		       (uintptr_t)stcb, (uintptr_t)sp, 
-		       (uint32_t)chk->rec.data.stream_number, 
+		       (uint32_t)((chk->rec.data.stream_number << 16) | chk->rec.data.stream_seq), 
 		       chk->rec.data.TSN_seq);
 #endif
 
@@ -10127,7 +10127,7 @@ sctp_lower_sosend(struct socket *so,
 #ifdef SCTP_LOG_SENDING_STR
 				sctp_misc_ints(SCTP_STRMOUT_LOG_ASSIGN,
 					       (uintptr_t)stcb, (uintptr_t)sp, 
-					       (uint32_t)sp->strseq, 0);
+					       (uint32_t)((srcv->sinfo_stream << 16) | sp->strseq), 0);
 #endif
 				strm->next_sequence_sent++;
 			}
