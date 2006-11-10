@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.5 2006/11/08 00:21:13 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.6 2006/11/09 21:01:07 rrs Exp $");
 #endif
 
 #if !(defined(__OpenBSD__) || defined(__APPLE__))
@@ -263,6 +263,7 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 
 		}
 	}
+	SCTP_TCB_SEND_LOCK(stcb);
 	if (asoc->pre_open_streams > ntohs(init->num_inbound_streams)) {
 		unsigned int newcnt;
 		struct sctp_stream_out *outs;
@@ -301,10 +302,7 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 		/* cut back the count and abandon the upper streams */
 		asoc->pre_open_streams = newcnt;
 	}
-	asoc->streamincnt = ntohs(init->num_outbound_streams);
-	if (asoc->streamincnt > MAX_SCTP_STREAMS) {
-		asoc->streamincnt = MAX_SCTP_STREAMS;
-	}
+	SCTP_TCB_SEND_UNLOCK(stcb);
 	asoc->streamoutcnt = asoc->pre_open_streams;
 	/* init tsn's */
 	asoc->highest_tsn_inside_map = asoc->asconf_seq_in = ntohl(init->initial_tsn) - 1;
@@ -321,7 +319,23 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 	/* open the requested streams */
 	if (asoc->strmin != NULL) {
 		/* Free the old ones */
+		struct sctp_queued_to_read *ctl;
+		for(i=0; i<asoc->streamincnt; i++) {
+			ctl = TAILQ_FIRST(&asoc->strmin[i].inqueue);
+			while(ctl) {
+				TAILQ_REMOVE(&asoc->strmin[i].inqueue, ctl, next);
+				sctp_free_remote_addr(ctl->whoFrom);
+				sctp_m_freem(ctl->data);
+				ctl->data = NULL;
+				sctp_free_a_readq(stcb, ctl);
+				ctl = TAILQ_FIRST(&asoc->strmin[i].inqueue);
+			}
+		}
 		SCTP_FREE(asoc->strmin);
+	}
+	asoc->streamincnt = ntohs(init->num_outbound_streams);
+	if (asoc->streamincnt > MAX_SCTP_STREAMS) {
+		asoc->streamincnt = MAX_SCTP_STREAMS;
 	}
 	SCTP_MALLOC(asoc->strmin, struct sctp_stream_in *, asoc->streamincnt *
 		    sizeof(struct sctp_stream_in), "StreamsIn");

@@ -4356,10 +4356,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			sp->data = at;
 		}
 	}
-	if(holds_lock == 0) {
-		printf("Msg append gets a lock\n");
-		SCTP_TCB_LOCK(stcb);
-	}
+	SCTP_TCB_SEND_LOCK(stcb);
 	sctp_snd_sb_alloc(stcb, sp->length);
 	stcb->asoc.stream_queue_cnt++;
 	TAILQ_INSERT_TAIL(&strm->outqueue, sp, next);
@@ -4374,10 +4371,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 		sctp_insert_on_wheel(stcb, &stcb->asoc, strm, 0);
 	}
 	m = NULL;
-	if(hold_stcb_lock == 0) {
-		printf("msg append frees the lock\n");
-		SCTP_TCB_UNLOCK(stcb);
-	}
+	SCTP_TCB_SEND_UNLOCK(stcb);
 out_now:
 	if(m) {
 		sctp_m_freem(m);

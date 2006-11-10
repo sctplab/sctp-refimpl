@@ -583,6 +583,7 @@ struct sctp_get_nonce_values {
 
 /* Debugging logs */
 struct sctp_str_log {
+	void *stcb;
 	uint32_t n_tsn;
 	uint32_t e_tsn;
 	uint16_t n_sseq;
