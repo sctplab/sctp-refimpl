@@ -588,6 +588,7 @@ struct sctp_str_log {
 	uint32_t e_tsn;
 	uint16_t n_sseq;
 	uint16_t e_sseq;
+	uint16_t strm;
 };
 
 struct sctp_sb_log {

@@ -253,17 +253,19 @@ rto_logging(struct sctp_nets *net, int from)
 }
 
 void
-sctp_log_strm_del_alt(uint32_t tsn, uint16_t sseq, int from)
+sctp_log_strm_del_alt(struct sctp_tcb *stcb, uint32_t tsn, uint16_t sseq, uint16_t stream, int from)
 {
 	int sctp_cwnd_log_at;
 	SCTP_STATLOG_GETREF(sctp_cwnd_log_at);
 	sctp_clog[sctp_cwnd_log_at].time_event = sctp_get_time_of_event();
 	sctp_clog[sctp_cwnd_log_at].from = (uint8_t) from;
 	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t) SCTP_LOG_EVENT_STRM;
+	sctp_clog[sctp_cwnd_log_at].x.strlog.stcb = stcb;
 	sctp_clog[sctp_cwnd_log_at].x.strlog.n_tsn = tsn;
 	sctp_clog[sctp_cwnd_log_at].x.strlog.n_sseq = sseq;
 	sctp_clog[sctp_cwnd_log_at].x.strlog.e_tsn = 0;
 	sctp_clog[sctp_cwnd_log_at].x.strlog.e_sseq = 0;
+	sctp_clog[sctp_cwnd_log_at].x.strlog.strm = stream;
 }
 
 void
@@ -368,6 +370,7 @@ sctp_log_strm_del(struct sctp_queued_to_read *control, struct sctp_queued_to_rea
 	sctp_clog[sctp_cwnd_log_at].x.strlog.stcb = control->stcb;
 	sctp_clog[sctp_cwnd_log_at].x.strlog.n_tsn = control->sinfo_tsn;
 	sctp_clog[sctp_cwnd_log_at].x.strlog.n_sseq = control->sinfo_ssn;
+	sctp_clog[sctp_cwnd_log_at].x.strlog.strm = control->sinfo_stream;
 	if (poschk != NULL) {
 		sctp_clog[sctp_cwnd_log_at].x.strlog.e_tsn = poschk->sinfo_tsn;
 		sctp_clog[sctp_cwnd_log_at].x.strlog.e_sseq = poschk->sinfo_ssn;
