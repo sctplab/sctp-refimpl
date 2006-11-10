@@ -309,6 +309,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.1 2006/11/03 15:23:15 r
 #define SCTP_OUTPUT_FROM_EARLY_FR_TMR   11
 #define SCTP_OUTPUT_FROM_STRRST_REQ     12
 #define SCTP_OUTPUT_FROM_USR_RCVD       13
+#define SCTP_OUTPUT_FROM_COOKIE_ACK     14
 /* SCTP chunk types are moved sctp.h for application (NAT, FW) use */
 
 /* align to 32-bit sizes */
