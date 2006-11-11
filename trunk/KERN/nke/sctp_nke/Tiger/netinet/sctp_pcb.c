@@ -3520,22 +3520,6 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		*error = ENOBUFS;
 		return (NULL);
 	}
-
-#if 0
-	/* Future code to deal with sending a new INIT
-	 * from an assoc that had the previous assoc
-	 * peeled off... Amita's accendental bug
-	 */
-	if(inp->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE) {
-		stcb = sctp_findassociation_in_tcppool();
-		SCTP_TCB_UNLOCK(stcb);
-		if(stcb) {
-			*error = EALREADY;
-			return(NULL);
-		}
-	}
-#endif
-
 	SCTP_INP_RLOCK(inp);
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) {
 		/*

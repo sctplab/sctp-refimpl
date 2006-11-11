@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.4 2006/11/08 00:21:13 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.6 2006/11/11 15:59:01 rrs Exp $");
 #endif
 
 
@@ -253,17 +253,19 @@ rto_logging(struct sctp_nets *net, int from)
 }
 
 void
-sctp_log_strm_del_alt(uint32_t tsn, uint16_t sseq, int from)
+sctp_log_strm_del_alt(struct sctp_tcb *stcb, uint32_t tsn, uint16_t sseq, uint16_t stream, int from)
 {
 	int sctp_cwnd_log_at;
 	SCTP_STATLOG_GETREF(sctp_cwnd_log_at);
 	sctp_clog[sctp_cwnd_log_at].time_event = sctp_get_time_of_event();
 	sctp_clog[sctp_cwnd_log_at].from = (uint8_t) from;
 	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t) SCTP_LOG_EVENT_STRM;
+	sctp_clog[sctp_cwnd_log_at].x.strlog.stcb = stcb;
 	sctp_clog[sctp_cwnd_log_at].x.strlog.n_tsn = tsn;
 	sctp_clog[sctp_cwnd_log_at].x.strlog.n_sseq = sseq;
 	sctp_clog[sctp_cwnd_log_at].x.strlog.e_tsn = 0;
 	sctp_clog[sctp_cwnd_log_at].x.strlog.e_sseq = 0;
+	sctp_clog[sctp_cwnd_log_at].x.strlog.strm = stream;
 }
 
 void
@@ -365,8 +367,10 @@ sctp_log_strm_del(struct sctp_queued_to_read *control, struct sctp_queued_to_rea
 	sctp_clog[sctp_cwnd_log_at].time_event = sctp_get_time_of_event();
 	sctp_clog[sctp_cwnd_log_at].from = (uint8_t) from;
 	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t) SCTP_LOG_EVENT_STRM;
+	sctp_clog[sctp_cwnd_log_at].x.strlog.stcb = control->stcb;
 	sctp_clog[sctp_cwnd_log_at].x.strlog.n_tsn = control->sinfo_tsn;
 	sctp_clog[sctp_cwnd_log_at].x.strlog.n_sseq = control->sinfo_ssn;
+	sctp_clog[sctp_cwnd_log_at].x.strlog.strm = control->sinfo_stream;
 	if (poschk != NULL) {
 		sctp_clog[sctp_cwnd_log_at].x.strlog.e_tsn = poschk->sinfo_tsn;
 		sctp_clog[sctp_cwnd_log_at].x.strlog.e_sseq = poschk->sinfo_ssn;
@@ -3387,12 +3391,13 @@ sctp_ulp_notify(uint32_t notification, struct sctp_tcb *stcb,
 }
 
 void
-sctp_report_all_outbound(struct sctp_tcb *stcb)
+sctp_report_all_outbound(struct sctp_tcb *stcb, int holds_lock)
 {
 	struct sctp_association *asoc;
 	struct sctp_stream_out *outs;
 	struct sctp_tmit_chunk *chk;
 	struct sctp_stream_queue_pending *sp;
+	int i;
 	asoc = &stcb->asoc;
 
 	if((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
@@ -3401,9 +3406,12 @@ sctp_report_all_outbound(struct sctp_tcb *stcb)
 		return;
 	}
 	/* now through all the gunk freeing chunks */
-
-	TAILQ_FOREACH(outs, &asoc->out_wheel, next_spoke) {
-		/* now clean up any chunks here */
+	if(holds_lock == 0)
+		SCTP_TCB_SEND_LOCK(stcb);
+	for(i=0; i<stcb->asoc.streamoutcnt; i++) {
+		/* For each stream */
+		outs = &stcb->asoc.strmout[i];
+		/* clean up any sends there */
 		stcb->asoc.locked_on_sending = NULL;
 		sp = TAILQ_FIRST(&outs->outqueue);
 		while (sp) {
@@ -3484,6 +3492,8 @@ sctp_report_all_outbound(struct sctp_tcb *stcb)
 			chk = TAILQ_FIRST(&asoc->sent_queue);
 		}
 	}
+	if(holds_lock == 0)
+		SCTP_TCB_SEND_UNLOCK(stcb);
 }
 
 void
@@ -3496,7 +3506,7 @@ sctp_abort_notification(struct sctp_tcb *stcb, int error)
 		return;
 	}
 	/* Tell them we lost the asoc */
-	sctp_report_all_outbound(stcb);
+	sctp_report_all_outbound(stcb, 1);
 	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) ||
 	    ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 	     (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_CONNECTED))) {

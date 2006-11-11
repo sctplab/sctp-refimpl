@@ -31,7 +31,7 @@
 /* $KAME: sctp_uio.h,v 1.11 2005/03/06 16:04:18 itojun Exp $	 */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_uio.h,v 1.3 2006/11/08 00:21:13 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_uio.h,v 1.4 2006/11/11 15:59:01 rrs Exp $");
 #endif
 
 #ifndef __sctp_uio_h__
@@ -583,10 +583,12 @@ struct sctp_get_nonce_values {
 
 /* Debugging logs */
 struct sctp_str_log {
+	void *stcb;
 	uint32_t n_tsn;
 	uint32_t e_tsn;
 	uint16_t n_sseq;
 	uint16_t e_sseq;
+	uint16_t strm;
 };
 
 struct sctp_sb_log {
