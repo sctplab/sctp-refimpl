@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.5 2006/11/08 00:21:13 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.7 2006/11/11 15:59:01 rrs Exp $");
 #endif
 
 #if !(defined(__OpenBSD__) || defined(__APPLE__))
@@ -263,6 +263,7 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 
 		}
 	}
+	SCTP_TCB_SEND_LOCK(stcb);
 	if (asoc->pre_open_streams > ntohs(init->num_inbound_streams)) {
 		unsigned int newcnt;
 		struct sctp_stream_out *outs;
@@ -301,10 +302,7 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 		/* cut back the count and abandon the upper streams */
 		asoc->pre_open_streams = newcnt;
 	}
-	asoc->streamincnt = ntohs(init->num_outbound_streams);
-	if (asoc->streamincnt > MAX_SCTP_STREAMS) {
-		asoc->streamincnt = MAX_SCTP_STREAMS;
-	}
+	SCTP_TCB_SEND_UNLOCK(stcb);
 	asoc->streamoutcnt = asoc->pre_open_streams;
 	/* init tsn's */
 	asoc->highest_tsn_inside_map = asoc->asconf_seq_in = ntohl(init->initial_tsn) - 1;
@@ -321,7 +319,23 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 	/* open the requested streams */
 	if (asoc->strmin != NULL) {
 		/* Free the old ones */
+		struct sctp_queued_to_read *ctl;
+		for(i=0; i<asoc->streamincnt; i++) {
+			ctl = TAILQ_FIRST(&asoc->strmin[i].inqueue);
+			while(ctl) {
+				TAILQ_REMOVE(&asoc->strmin[i].inqueue, ctl, next);
+				sctp_free_remote_addr(ctl->whoFrom);
+				sctp_m_freem(ctl->data);
+				ctl->data = NULL;
+				sctp_free_a_readq(stcb, ctl);
+				ctl = TAILQ_FIRST(&asoc->strmin[i].inqueue);
+			}
+		}
 		SCTP_FREE(asoc->strmin);
+	}
+	asoc->streamincnt = ntohs(init->num_outbound_streams);
+	if (asoc->streamincnt > MAX_SCTP_STREAMS) {
+		asoc->streamincnt = MAX_SCTP_STREAMS;
 	}
 	SCTP_MALLOC(asoc->strmin, struct sctp_stream_in *, asoc->streamincnt *
 		    sizeof(struct sctp_stream_in), "StreamsIn");
@@ -723,7 +737,7 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
 	if (!TAILQ_EMPTY(&asoc->send_queue) ||
 	    !TAILQ_EMPTY(&asoc->sent_queue) ||
 	    !TAILQ_EMPTY(&asoc->out_wheel)) {
-		sctp_report_all_outbound(stcb);
+		sctp_report_all_outbound(stcb, 0);
 	}
 	/* stop the timer */
 	sctp_timer_stop(SCTP_TIMER_TYPE_SHUTDOWN, stcb->sctp_ep, stcb, net);
@@ -1114,6 +1128,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 	int chk_length;
 	int init_offset, initack_offset;
 	int retval;
+	int spec_flag=0;
 
 	/* I know that the TCB is non-NULL from the caller */
 	asoc = &stcb->asoc;
@@ -1294,16 +1309,28 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			    NULL);
 		}
 		asoc->my_rwnd = ntohl(initack_cp->init.a_rwnd);
-		asoc->pre_open_streams =
-		    ntohs(initack_cp->init.num_outbound_streams);
-		asoc->init_seq_number = ntohl(initack_cp->init.initial_tsn);
-		asoc->sending_seq = asoc->asconf_seq_out = asoc->str_reset_seq_out =
-		    asoc->init_seq_number;
-		asoc->last_cwr_tsn = asoc->init_seq_number - 1;
-		asoc->asconf_seq_in = asoc->last_acked_seq = asoc->init_seq_number - 1;
-		asoc->str_reset_seq_in = asoc->init_seq_number;
-		asoc->advanced_peer_ack_point = asoc->last_acked_seq;
+		asoc->pre_open_streams = ntohs(initack_cp->init.num_outbound_streams);
 
+		/* Note last_cwr_tsn? where is this used? */
+		asoc->last_cwr_tsn = asoc->init_seq_number - 1;
+		if(ntohl(init_cp->init.initiate_tag) != asoc->peer_vtag) {
+			/* Ok the peer probably discarded our
+			 * data (if we echoed a cookie+data). So anything
+			 * on the sent_queue should be marked for
+			 * retransmit, we may not get something to
+			 * kick us so it COULD still take a timeout
+			 * to move these.. but it can't hurt to mark them.
+			 */
+			struct sctp_tmit_chunk *chk;
+		        TAILQ_FOREACH(chk, &stcb->asoc.sent_queue, sctp_next) {
+				if(chk->sent < SCTP_DATAGRAM_RESEND) {
+					chk->sent = SCTP_DATAGRAM_RESEND;
+					stcb->asoc.sent_queue_retran_cnt++;
+					spec_flag++;
+				}
+			}
+
+		}
 		/* process the INIT info (peer's info) */
 		retval = sctp_process_init(init_cp, stcb, net);
 		if (retval < 0) {
@@ -1337,6 +1364,15 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		}
 		sctp_stop_all_cookie_timers(stcb);
 		sctp_send_cookie_ack(stcb);
+		if(spec_flag) {
+			/* only if we have retrans set do we do this. What
+			 * this call does is get only the COOKIE-ACK out
+			 * and then when we return the normal call to
+			 * sctp_chunk_output will get the retrans out
+			 * behind this.
+			 */
+			sctp_chunk_output(inp,stcb, SCTP_OUTPUT_FROM_COOKIE_ACK);
+		}
 		return (stcb);
 	}
 	if ((ntohl(initack_cp->init.initiate_tag) != asoc->my_vtag &&
@@ -1357,7 +1393,8 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 
 
 		/* send up all the data */
-		sctp_report_all_outbound(stcb);
+		SCTP_TCB_SEND_LOCK(stcb);
+		sctp_report_all_outbound(stcb, 1);
 
 		/* process the INIT-ACK info (my info) */
 		asoc->my_vtag = ntohl(initack_cp->init.initiate_tag);
@@ -1397,6 +1434,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			memset(asoc->mapping_array, 0,
 			    asoc->mapping_array_size);
 		/* process the INIT info (peer's info) */
+		SCTP_TCB_SEND_UNLOCK(stcb);
 		retval = sctp_process_init(init_cp, stcb, net);
 		if (retval < 0) {
 			return (NULL);
@@ -2392,7 +2430,7 @@ sctp_handle_shutdown_complete(struct sctp_shutdown_complete_chunk *cp,
 		if (!TAILQ_EMPTY(&asoc->send_queue) ||
 		    !TAILQ_EMPTY(&asoc->sent_queue) ||
 		    !TAILQ_EMPTY(&asoc->out_wheel)) {
-			sctp_report_all_outbound(stcb);
+			sctp_report_all_outbound(stcb, 0);
 		}
 	}
 	/* stop the timer */

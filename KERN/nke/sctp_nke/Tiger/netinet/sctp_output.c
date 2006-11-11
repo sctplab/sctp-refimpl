@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.3 2006/11/08 00:21:13 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.5 2006/11/11 15:59:01 rrs Exp $");
 #endif
 
 #if !(defined(__OpenBSD__) || defined (__APPLE__))
@@ -4356,10 +4356,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 			sp->data = at;
 		}
 	}
-	if(holds_lock == 0) {
-		printf("Msg append gets a lock\n");
-		SCTP_TCB_LOCK(stcb);
-	}
+	SCTP_TCB_SEND_LOCK(stcb);
 	sctp_snd_sb_alloc(stcb, sp->length);
 	stcb->asoc.stream_queue_cnt++;
 	TAILQ_INSERT_TAIL(&strm->outqueue, sp, next);
@@ -4374,10 +4371,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 		sctp_insert_on_wheel(stcb, &stcb->asoc, strm, 0);
 	}
 	m = NULL;
-	if(hold_stcb_lock == 0) {
-		printf("msg append frees the lock\n");
-		SCTP_TCB_UNLOCK(stcb);
-	}
+	SCTP_TCB_SEND_UNLOCK(stcb);
 out_now:
 	if(m) {
 		sctp_m_freem(m);
@@ -5328,6 +5322,13 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 #else
 	chk->rec.data.TSN_seq = asoc->sending_seq++;
 #endif
+#ifdef SCTP_LOG_SENDING_STR
+	sctp_misc_ints(SCTP_STRMOUT_LOG_SEND,
+		       (uintptr_t)stcb, (uintptr_t)sp, 
+		       (uint32_t)((chk->rec.data.stream_number << 16) | chk->rec.data.stream_seq), 
+		       chk->rec.data.TSN_seq);
+#endif
+
 	dchkh = mtod(chk->data, struct sctp_data_chunk *);
 	/*
 	 * Put the rest of the things in place now. Size was done
@@ -7316,7 +7317,6 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 
 	un_sent = (stcb->asoc.total_output_queue_size - stcb->asoc.total_flight);
 
-
 	if ((un_sent <= 0) &&
 	    (TAILQ_EMPTY(&asoc->control_send_queue)) &&
 	    (asoc->sent_queue_retran_cnt == 0)){
@@ -7338,7 +7338,16 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 		 * Ok, it is retransmission time only, we send out only ONE
 		 * packet with a single call off to the retran code.
 		 */
-		if (from_where != SCTP_OUTPUT_FROM_HB_TMR) {
+		if (from_where == SCTP_OUTPUT_FROM_COOKIE_ACK) {
+			/* Special hook for handling cookiess discarded
+			 * by peer that carried data. Send cookie-ack only
+			 * and then the next call with get the retran's.
+			 */
+ 			(void)sctp_med_chunk_output(inp, stcb, asoc, &num_out, &reason_code, 1,
+			    &cwnd_full, from_where,
+			    &now, &now_filled, frag_point);
+			return (0);
+		} else if (from_where != SCTP_OUTPUT_FROM_HB_TMR) {
 			/* if its not from a HB then do it */
 			ret = sctp_chunk_retransmission(inp, stcb, asoc, &num_out, &now, &now_filled);
 		} else {
@@ -10123,6 +10132,11 @@ sctp_lower_sosend(struct socket *so,
 			TAILQ_INSERT_TAIL(&strm->outqueue, sp, next);
 			if ((srcv->sinfo_flags & SCTP_UNORDERED) == 0) {
 				sp->strseq = strm->next_sequence_sent;
+#ifdef SCTP_LOG_SENDING_STR
+				sctp_misc_ints(SCTP_STRMOUT_LOG_ASSIGN,
+					       (uintptr_t)stcb, (uintptr_t)sp, 
+					       (uint32_t)((srcv->sinfo_stream << 16) | sp->strseq), 0);
+#endif
 				strm->next_sequence_sent++;
 			}
 

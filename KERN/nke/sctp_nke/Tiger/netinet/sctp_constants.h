@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.1 2006/11/03 15:23:15 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.2 2006/11/11 15:59:01 rrs Exp $");
 #endif
 
 #ifndef __sctp_constants_h__
@@ -151,8 +151,10 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.1 2006/11/03 15:23:15 r
 #define SCTP_UNKNOWN_MAX           101
 #define SCTP_RANDY_STUFF           102 
 #define SCTP_RANDY_STUFF1          103 
+#define SCTP_STRMOUT_LOG_ASSIGN	   104
+#define SCTP_STRMOUT_LOG_SEND	   105
 
-#define SCTP_LOG_MAX_TYPES 104
+#define SCTP_LOG_MAX_TYPES 106
 /*
  * To turn on various logging, you must first define SCTP_STAT_LOGGING. Then
  * to get something to log you define one of the logging defines i.e.
@@ -307,6 +309,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.1 2006/11/03 15:23:15 r
 #define SCTP_OUTPUT_FROM_EARLY_FR_TMR   11
 #define SCTP_OUTPUT_FROM_STRRST_REQ     12
 #define SCTP_OUTPUT_FROM_USR_RCVD       13
+#define SCTP_OUTPUT_FROM_COOKIE_ACK     14
 /* SCTP chunk types are moved sctp.h for application (NAT, FW) use */
 
 /* align to 32-bit sizes */

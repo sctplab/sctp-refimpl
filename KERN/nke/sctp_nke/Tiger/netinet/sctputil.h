@@ -33,7 +33,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctputil.h,v 1.2 2006/11/05 13:25:17 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctputil.h,v 1.3 2006/11/11 15:59:01 rrs Exp $");
 #endif
 #ifndef __sctputil_h__
 #define __sctputil_h__
@@ -141,7 +141,7 @@ sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
 
 void sctp_stop_timers_for_shutdown(struct sctp_tcb *);
 
-void sctp_report_all_outbound(struct sctp_tcb *);
+void sctp_report_all_outbound(struct sctp_tcb *, int);
 
 int sctp_expand_mapping_array(struct sctp_association *);
 
@@ -299,7 +299,7 @@ sctp_wakeup_log(struct sctp_tcb *stcb,
     uint32_t cumtsn,
     uint32_t wake_cnt, int from);
 
-void sctp_log_strm_del_alt(uint32_t, uint16_t, int);
+void sctp_log_strm_del_alt(struct sctp_tcb *stcb, uint32_t, uint16_t, uint16_t, int);
 
 void sctp_log_nagle_event(struct sctp_tcb *stcb, int action);
 
