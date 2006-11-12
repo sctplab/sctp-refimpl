@@ -9602,6 +9602,12 @@ sctp_lower_sosend(struct socket *so,
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	sctp_lock_assert(t_inp->ip_inp.inp.inp_socket);
 #endif
+	if (inp == NULL) {
+		error = EFAULT;
+		splx(s);
+		goto out_unlocked;
+	}
+	atomic_add_int(&inp->total_sends, 1);
 	if (uio)
 		sndlen = uio->uio_resid;
 	else
@@ -9622,6 +9628,9 @@ sctp_lower_sosend(struct socket *so,
 		goto out_unlocked;
 	}
 	if ((use_rcvinfo) && srcv) {
+		if(srcv->sinfo_flags)
+			SCTP_STAT_INCR(sctps_sends_with_flags);
+
 		if (srcv->sinfo_flags & SCTP_SENDALL) {
 			/* its a sendall */
 			error = sctp_sendall(inp, uio, top, srcv);
@@ -9929,6 +9938,7 @@ sctp_lower_sosend(struct socket *so,
 		struct mbuf *mm;
 		int tot_demand, tot_out, max;
 
+		SCTP_STAT_INCR(sctps_sends_with_abort);
 		if ((SCTP_GET_STATE(asoc) == SCTP_STATE_COOKIE_WAIT) ||
 		    (SCTP_GET_STATE(asoc) == SCTP_STATE_COOKIE_ECHOED)) {
 			/* It has to be up before we abort */
@@ -10085,6 +10095,7 @@ sctp_lower_sosend(struct socket *so,
 #if defined(__NetBSD__)
 	error = sblock(&so->so_snd, SBLOCKWAIT(flags));
 #endif
+	atomic_add_int(&stcb->total_sends, 1);
 	if (top == NULL) {
 		struct sctp_stream_queue_pending *sp;
 		struct sctp_stream_out *strm;
@@ -10138,6 +10149,8 @@ sctp_lower_sosend(struct socket *so,
 					       (uint32_t)((srcv->sinfo_stream << 16) | sp->strseq), 0);
 #endif
 				strm->next_sequence_sent++;
+			} else {
+				SCTP_STAT_INCR(sctps_sends_with_unord);
 			}
 
 			if ((strm->next_spoke.tqe_next == NULL) &&
@@ -10417,6 +10430,7 @@ sctp_lower_sosend(struct socket *so,
 	    (got_all_of_the_send == 1) &&
 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE)
 		) {
+		SCTP_STAT_INCR(sctps_sends_with_eof);
 		error = 0;
 		if(hold_tcblock == 0) {
 			SCTP_TCB_LOCK(stcb);
