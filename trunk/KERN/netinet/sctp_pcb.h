@@ -444,6 +444,8 @@ struct sctp_inpcb {
 	uint32_t i_am_here_file;
 	uint32_t i_am_here_line;
 #endif
+	uint32_t total_sends;
+	uint32_t total_recvs;
 };
 
 struct sctp_tcb {
@@ -465,6 +467,8 @@ struct sctp_tcb {
 	 * in the reading of data.
 	 */
 	uint32_t freed_by_sorcv_sincelast;
+	uint32_t total_sends;
+	uint32_t total_recvs;
 	uint16_t rport;		/* remote port in network format */
 	uint16_t resv;
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
