@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.72 2006-11-06 18:54:09 tuexen Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.73 2006-11-12 22:14:33 randall Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -3445,6 +3445,7 @@ static int cmd_getpcbinfo(char *argv[], int argc)
     printf("Number of SCTP readq in use is %d\n",optval.readq_count);
     printf("Number of SCTP str-outq in use is %d\n", optval.stream_oque);
     printf("Number of SCTP free_chunks %d\n",optval.free_chunks);
+    printf("Number of SCTP free_streamoq %d\n",optval.stream_oque);
   }
   return 0;
 #else
@@ -3614,13 +3615,10 @@ cmd_getstat(char *argv[], int argc)
 	p(sctps_cmt_randry,          "cmt.randry");
 	p(sctps_slowpath_sack,       "slow_sacks");
 	p(sctps_wu_sacks_sent,       "wup_sack_s");
-	p(sctps_locks_in_rcv,        "rcv_locks ");
-	p(sctps_locks_in_rcva,        "rcva_locks");
-	p(sctps_locks_in_rcvb,        "rcvb_locks");
-	p(sctps_locks_in_rcvc,        "rcvc_locks");
-	p(sctps_locks_in_rcvd,        "rcvd_locks");
-	p(sctps_locks_in_rcve,        "rcve_locks");
-	p(sctps_locks_in_rcvf,        "rcvf_locks");
+	p(sctps_sends_with_flags,     "w_sinfo_fl");
+	p(sctps_sends_with_unord,     "w_unorder");
+	p(sctps_sends_with_eof,       "w_eof");
+	p(sctps_sends_with_abort,     "w_abort");
 	nl("");
 #undef p
 #undef nl
