@@ -396,7 +396,7 @@ main(int argc, char **argv)
 			un_sent = log.x.nagle.total_in_queue - log.x.nagle.total_flight;
 			un_sent += ((log.x.nagle.count_in_queue - log.x.nagle.count_in_flight) * 16);
 
-			printf("%d: stcb:%x total_flight:%u total_in_queue:%u c_in_que:%d c_in_flt:%d  un_sent:%d %s\n",
+			printf("%d: stcb:%p total_flight:%u total_in_queue:%u c_in_que:%d c_in_flt:%d  un_sent:%d %s\n",
 			       at,
 			       log.x.nagle.stcb,
 			       log.x.nagle.total_flight,
@@ -407,7 +407,7 @@ main(int argc, char **argv)
 			       from_str[log.from]);
 			
 		}else if(log.event_type == SCTP_LOG_EVENT_SB) {
-			printf("%d: %s stcb:%x sb_cc:%x stcb_sbcc:%x %s:%d\n",
+			printf("%d: %s stcb:%p sb_cc:%x stcb_sbcc:%x %s:%d\n",
 			       at,
 			       from_str[log.from],
 			       log.x.sb.stcb,
@@ -428,7 +428,7 @@ main(int argc, char **argv)
 			       
 		}else if(log.event_type == SCTP_LOG_EVENT_RTT) {
 			if(log.x.rto.rttvar) {
-				printf("%d: Net:%x  Old-Rtt:%d Change:%d Direction=%s from:%s\n",
+				printf("%d: Net:%p  Old-Rtt:%d Change:%d Direction=%s from:%s\n",
 				       at, 
 				       log.x.rto.net,
 				       log.x.rto.rtt,
@@ -471,7 +471,7 @@ main(int argc, char **argv)
 			       log.x.close.loc,
 			       close_events[log.x.close.loc]);
  		}else if(log.event_type == SCTP_LOG_LOCK_EVENT) {
-			printf("%s sock:%x inp:%x inp:%d tcb:%d info:%d sock:%d sockrb:%d socksb:%d cre:%d\n",
+			printf("%s sock:%p inp:%p inp:%d tcb:%d info:%d sock:%d sockrb:%d socksb:%d cre:%d\n",
 			       from_str[log.from],
 			       log.x.lock.sock,
 			       log.x.lock.inp,
@@ -751,6 +751,23 @@ main(int argc, char **argv)
 				       log.x.misc.log4
 				       );
 
+			} else if (log.from == 104) {
+				printf("%s Stream seq Assigned stcb:%x sp:%x strm:%d seq:%d\n", ts, 
+				       log.x.misc.log1,
+				       log.x.misc.log2,
+				       (log.x.misc.log3 >> 16),
+				       (log.x.misc.log3 & 0x0000ffff)
+				       );
+			} else if (log.from == 105) {
+				printf("%s Stream seq Send stcb:%x sp:%x strm:%d seq:%d tsn:%x\n", ts, 
+				       log.x.misc.log1,
+				       log.x.misc.log2,
+				       (log.x.misc.log3 >> 16),
+				       (log.x.misc.log3 & 0x0000ffff),
+				       log.x.misc.log4);
+
+			} else if (log.from == 106) {
+				printf("%s flags=%x SB-WAKE?\n", ts, log.x.misc.log1);
 			} else if (log.from == SCTP_RANDY_STUFF1) {
 				printf("%s bundled:%d mtu:%u rmtu:%u mtu-left:%d\n",
 				       ts,
@@ -785,7 +802,7 @@ main(int argc, char **argv)
 				if(graph_mode) {
 					printf("%s %d:ENTER\n", ts, log.x.misc.log3);
 				} else {
-					printf("%s enter srcv rwndreq:%d ieeor:%d sb_cc:%u uioreq:%d \n",
+					printf("%s enter srcv rwndreq:%d ieeor:%d sb_cc:%u inp:%x \n",
 					       ts,
 					       log.x.misc.log1,
 					       log.x.misc.log2,
@@ -925,7 +942,7 @@ main(int argc, char **argv)
 			default:
 				str = "Unknown";
 			}
-			printf("%s WUP:%s tcb:%x cnt:%d fs:%d sd:%d st:%d str:%d co:%d) s:%s sb:%x\n",
+			printf("%s WUP:%s inp:%p cnt:%d fs:%d sd:%d st:%d str:%d co:%d) s:%s sb:%x\n",
 			       ts,
 			       from_str[log.from],
 			       log.x.wake.stcb,
@@ -956,18 +973,22 @@ main(int argc, char **argv)
 				/* have both the new entry and 
 				 * the previous entry to print.
 				 */
-				printf("%s: tsn=%x sseq=%u %s tsn=%x sseq=%u\n",
+				printf("%s: stcb:%p tsn=%x strm:%u sseq=%u %s tsn=%x sseq=%u\n",
 				       from_str[log.from],
+				       log.x.strlog.stcb,
 				       (u_int)log.x.strlog.n_tsn,
+				       log.x.strlog.strm,
 				       log.x.strlog.n_sseq,
 				       ((log.from == SCTP_STR_LOG_FROM_INSERT_MD) ? "Before" : "After"),
 				       (u_int)log.x.strlog.e_tsn,
 				       log.x.strlog.e_sseq
 					);
 			}else {
-				printf("%s: tsn=%x sseq=%x\n",
+				printf("%s:stcb:%p  tsn=%x strm %u sseq=%u\n",
 				       from_str[log.from],
+				       log.x.strlog.stcb,
 				       (u_int)log.x.strlog.n_tsn,
+				       log.x.strlog.strm,
 				       (u_int)log.x.strlog.n_sseq);
 			}
 
