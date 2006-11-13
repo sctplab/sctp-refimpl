@@ -4016,9 +4016,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 #ifdef SCTP_LOG_CLOSING
 	sctp_log_closing(inp, stcb, 10);
 #endif
-	if ((from_inpcbfree == 0) && so) {
-		sctp_sorwakeup(inp, so);
-	}
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
 		/*
