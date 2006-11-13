@@ -903,6 +903,12 @@ struct xsctp_tcb {
 	uint32_t state;
 	uint32_t total_sends;
 	uint32_t total_recvs;
+	uint32_t local_tag;
+	uint32_t remote_tag;
+	uint32_t initial_tsn;
+	uint32_t highest_tsn;
+	uint32_t cumulative_tsn;
+	uint32_t cumulative_tsn_ack;
 	/* add more association specific data here*/
 };
 
