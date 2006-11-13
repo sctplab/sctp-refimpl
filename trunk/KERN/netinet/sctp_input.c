@@ -145,7 +145,8 @@ sctp_stop_all_cookie_timers(struct sctp_tcb *stcb)
 	sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
 #endif
 	TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
-		if ((callout_pending(&net->rxt_timer.timer)) &&
+		if ((callout_pending(&net->rxt_timer.timer) ||
+		    callout_active(&net->rxt_timer.timer)) &&
 		    (net->rxt_timer.type == SCTP_TIMER_TYPE_COOKIE)) {
 			sctp_timer_stop(SCTP_TIMER_TYPE_COOKIE,
 			    stcb->sctp_ep,
@@ -1217,7 +1218,6 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb,
 			    net);
 			sctp_timer_stop(SCTP_TIMER_TYPE_INIT, inp, stcb, net);
-			sctp_stop_all_cookie_timers(stcb);
 			/* update current state */
 			if (asoc->state & SCTP_STATE_SHUTDOWN_PENDING) {
 				asoc->state = SCTP_STATE_OPEN |
@@ -1276,6 +1276,8 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			return (NULL);
 		}
 		/* respond with a COOKIE-ACK */
+		sctp_stop_all_cookie_timers(stcb);
+		sctp_toss_old_cookies(stcb, asoc);
 		sctp_send_cookie_ack(stcb);
 		return (stcb);
 	}			/* end if */
@@ -1363,6 +1365,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			asoc->state = SCTP_STATE_OPEN;
 		}
 		sctp_stop_all_cookie_timers(stcb);
+		sctp_toss_old_cookies(stcb, asoc);
 		sctp_send_cookie_ack(stcb);
 		if(spec_flag) {
 			/* only if we have retrans set do we do this. What
@@ -1462,6 +1465,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		}
 		/* respond with a COOKIE-ACK */
 		sctp_stop_all_cookie_timers(stcb);
+		sctp_toss_old_cookies(stcb, asoc);
 		sctp_send_cookie_ack(stcb);
 
 		return (stcb);

@@ -8420,6 +8420,7 @@ sctp_send_hb(struct sctp_tcb *stcb, int user_req, struct sctp_nets *u_net)
 	}
 	/* ok we have a destination that needs a beat */
 	/* lets do the theshold management Qiaobing style */
+
 	if (sctp_threshold_management(stcb->sctp_ep, stcb, net,
 				      stcb->asoc.max_send_times)) {
 		/*
