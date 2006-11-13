@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.74 2006-11-13 21:03:50 tuexen Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.75 2006-11-13 23:14:11 tuexen Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -3673,8 +3673,8 @@ cmd_getassocstat(char *argv[], int argc)
 		}
 		for (i = 0; i < number_associations; i++) {
 			xstcb = (struct xsctp_tcb *)(buf + offset);
-			printf("\tAssociation towards port=%d, state=%d, Msgs(R/S)=%u/%u.\n",
-			       xstcb->remote_port, xstcb->state, xstcb->total_recvs, xstcb->total_sends);
+			printf("\tAssociation towards port=%d, state=%d, Msgs(R/S)=(%u/%u), TSN(init/high/cum/cumack)=(%x/%x/%x/%x).\n",
+			       xstcb->remote_port, xstcb->state, xstcb->total_recvs, xstcb->total_sends, xstcb->initial_tsn, xstcb->highest_tsn, xstcb->cumulative_tsn, xstcb->cumulative_tsn_ack);
 			number_of_local_addresses = xstcb->number_local_addresses;
 			number_of_remote_addresses = xstcb->number_remote_addresses;
 			offset += sizeof(struct xsctp_tcb);
