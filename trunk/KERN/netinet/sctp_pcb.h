@@ -446,6 +446,7 @@ struct sctp_inpcb {
 #endif
 	uint32_t total_sends;
 	uint32_t total_recvs;
+	uint32_t last_abort_code;
 };
 
 struct sctp_tcb {

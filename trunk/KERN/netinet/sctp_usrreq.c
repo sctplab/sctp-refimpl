@@ -1644,8 +1644,9 @@ sctp_disconnect(struct socket *so)
 							SCTP_CAUSE_USER_INITIATED_ABT);
 						ph->param_length = htons(op_err->m_len);
 						ippp = (uint32_t *) (ph + 1);
-						*ippp = htonl(0x30000007);
+						*ippp = htonl(0x30000008);
 					}
+					stcb->sctp_ep->last_abort_code = 0x30000008;
 					sctp_send_abort_tcb(stcb, op_err);
 					SCTP_STAT_INCR_COUNTER32(sctps_aborted);
 					if ((SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_OPEN) ||
@@ -1788,8 +1789,9 @@ sctp_shutdown(struct socket *so)
 						SCTP_CAUSE_USER_INITIATED_ABT);
 					ph->param_length = htons(op_err->m_len);
 					ippp = (uint32_t *) (ph + 1);
-					*ippp = htonl(0x30000008);
+					*ippp = htonl(0x30000009);
 				}
+				stcb->sctp_ep->last_abort_code = 0x30000009;
 				sctp_abort_an_association(stcb->sctp_ep, stcb,
 							  SCTP_RESPONSE_TO_USER_REQ,
 							  op_err);
