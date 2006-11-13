@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.73 2006-11-12 22:14:33 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.74 2006-11-13 21:03:50 tuexen Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -3635,7 +3635,7 @@ cmd_getassocstat(char *argv[], int argc)
 #if defined(__APPLE__)
 	size_t len;
 	caddr_t buf;
-	unsigned int offset, i;
+	unsigned int offset, i, j;
 	struct xsctp_inpcb *xinp;
 	struct xsctp_tcb *xstcb;
 	struct xsctp_laddr *xladdr;
@@ -3661,8 +3661,8 @@ cmd_getassocstat(char *argv[], int argc)
 	offset = 0;
 	xinp = (struct xsctp_inpcb *)(buf + offset);
 	while (xinp->last == 0) {
-		printf("Endpoint with port=%d, flags=%d, features=%d\n",
-		       xinp->local_port, xinp->flags, xinp->features);
+		printf("Endpoint with port=%d, flags=%x, features=%x, Msgs(R/S)=%u/%u\n",
+		       xinp->local_port, xinp->flags, xinp->features, xinp->total_recvs, xinp->total_sends);
 		number_of_local_addresses = xinp->number_local_addresses;
 		number_associations = xinp->number_associations;
 		offset += sizeof(struct xsctp_inpcb);
@@ -3673,19 +3673,19 @@ cmd_getassocstat(char *argv[], int argc)
 		}
 		for (i = 0; i < number_associations; i++) {
 			xstcb = (struct xsctp_tcb *)(buf + offset);
-			printf("Association towards port=%d, state=%d.\n",
-			       xstcb->remote_port, xstcb->state);
+			printf("\tAssociation towards port=%d, state=%d, Msgs(R/S)=%u/%u.\n",
+			       xstcb->remote_port, xstcb->state, xstcb->total_recvs, xstcb->total_sends);
 			number_of_local_addresses = xstcb->number_local_addresses;
 			number_of_remote_addresses = xstcb->number_remote_addresses;
 			offset += sizeof(struct xsctp_tcb);
-			for (i = 0; i < number_of_local_addresses; i++) {
+			for (j = 0; j < number_of_local_addresses; j++) {
 				xladdr = (struct xsctp_laddr *)(buf + offset);
 				/* handle it */
 				offset += sizeof(struct xsctp_laddr);
 			}
-			for (i = 0; i < number_of_remote_addresses; i++) {
+			for (j = 0; j < number_of_remote_addresses; j++) {
 				xraddr = (struct xsctp_raddr *)(buf + offset);
-				printf("Path towards %s, state=%d.\n",
+				printf("\t\tPath towards %s, state=%d.\n",
 				       inet_ntoa(xraddr->address.sin.sin_addr), xraddr->state);
 				offset += sizeof(struct xsctp_raddr);
 			}
