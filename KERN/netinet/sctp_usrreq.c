@@ -755,6 +755,8 @@ sctp_assoclist SYSCTL_HANDLER_ARGS
 		xinpcb.number_associations    = number_of_associations;
 		xinpcb.flags                  = inp->sctp_flags;
 		xinpcb.features               = inp->sctp_features;
+		xinpcb.total_sends            = inp->total_sends;
+		xinpcb.total_recvs            = inp->total_recvs;
 		error = SYSCTL_OUT(req, &xinpcb, sizeof(struct xsctp_inpcb));
 		if (error) {
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
@@ -794,6 +796,14 @@ sctp_assoclist SYSCTL_HANDLER_ARGS
 			xstcb.number_incomming_streams = 0;
 			xstcb.number_outgoing_streams  = 0;
 			xstcb.state                    = stcb->asoc.state;
+			xstcb.total_sends              = stcb->total_sends;
+			xstcb.total_recvs              = stcb->total_recvs;
+			xstcb.local_tag                = stcb->asoc.my_vtag;
+			xstcb.remote_tag               = stcb->asoc.peer_vtag;
+			xstcb.initial_tsn              = stcb->asoc.init_seq_number;
+			xstcb.highest_tsn              = stcb->asoc.sending_seq - 1;
+			xstcb.cumulative_tsn           = stcb->asoc.last_acked_seq;
+			xstcb.cumulative_tsn_ack       = stcb->asoc.cumulative_tsn;
 			error = SYSCTL_OUT(req, &xstcb, sizeof(struct xsctp_tcb));
 			if (error) {
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
