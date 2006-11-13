@@ -655,6 +655,7 @@ sctp_queue_data_to_stream(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			ippp++;
 			*ippp = ((control->sinfo_stream << 16) | control->sinfo_ssn);
 		}
+		stcb->sctp_ep->last_abort_code = 0x00000001;
 		sctp_abort_an_association(stcb->sctp_ep, stcb,
 		    SCTP_PEER_FAULTY, oper);
 
@@ -917,6 +918,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					*ippp = ((chk->rec.data.stream_number << 16) | chk->rec.data.stream_seq);
 
 				}
+				stcb->sctp_ep->last_abort_code = 0x10000001;
 				sctp_abort_an_association(stcb->sctp_ep, stcb,
 				    SCTP_PEER_FAULTY, oper);
 				*abort_flag = 1;
@@ -952,6 +954,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					ippp++;
 					*ippp = ((chk->rec.data.stream_number << 16) | chk->rec.data.stream_seq);
 				}
+				stcb->sctp_ep->last_abort_code = 0x10000002;
 				sctp_abort_an_association(stcb->sctp_ep, stcb,
 				    SCTP_PEER_FAULTY, oper);
 				*abort_flag = 1;
@@ -992,6 +995,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 						ippp++;
 						*ippp = ((chk->rec.data.stream_number << 16) | chk->rec.data.stream_seq);
 					}
+					stcb->sctp_ep->last_abort_code = 0x10000003;
 					sctp_abort_an_association(stcb->sctp_ep,
 					    stcb, SCTP_PEER_FAULTY, oper);
 					*abort_flag = 1;
@@ -1030,6 +1034,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 						*ippp = ((chk->rec.data.stream_number << 16) | chk->rec.data.stream_seq);
 
 					}
+					stcb->sctp_ep->last_abort_code = 0x10000004;
 					sctp_abort_an_association(stcb->sctp_ep,
 					    stcb, SCTP_PEER_FAULTY, oper);
 					*abort_flag = 1;
@@ -1132,6 +1137,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 						*ippp = ((chk->rec.data.stream_number << 16) | chk->rec.data.stream_seq);
 
 					}
+					stcb->sctp_ep->last_abort_code = 0x10000005;
 					sctp_abort_an_association(stcb->sctp_ep,
 					    stcb, SCTP_PEER_FAULTY, oper);
 					*abort_flag = 1;
@@ -1172,6 +1178,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 						ippp++;
 						*ippp = ((chk->rec.data.stream_number << 16) | chk->rec.data.stream_seq);
 					}
+					stcb->sctp_ep->last_abort_code = 0x10000006;
 					sctp_abort_an_association(stcb->sctp_ep,
 					    stcb, SCTP_PEER_FAULTY, oper);
 
@@ -1214,6 +1221,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 						ippp++;
 						*ippp = ((chk->rec.data.stream_number << 16) | chk->rec.data.stream_seq);
 					}
+					stcb->sctp_ep->last_abort_code = 0x10000007;
 					sctp_abort_an_association(stcb->sctp_ep,
 					    stcb, SCTP_PEER_FAULTY, oper);
 
@@ -1253,6 +1261,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 						*ippp = ((chk->rec.data.stream_number << 16) | chk->rec.data.stream_seq);
 
 					}
+					stcb->sctp_ep->last_abort_code = 0x10000008;
 					sctp_abort_an_association(stcb->sctp_ep,
 					    stcb, SCTP_PEER_FAULTY, oper);
 
@@ -1301,6 +1310,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 						ippp++;
 						*ippp = ((chk->rec.data.stream_number << 16) | chk->rec.data.stream_seq);
 					}
+					stcb->sctp_ep->last_abort_code = 0x10000009;
 					sctp_abort_an_association(stcb->sctp_ep,
 					    stcb, SCTP_PEER_FAULTY, oper);
 
@@ -1346,6 +1356,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 						*ippp = ((chk->rec.data.stream_number << 16) | chk->rec.data.stream_seq);
 
 					}
+					stcb->sctp_ep->last_abort_code = 0x1000000a;
 					sctp_abort_an_association(stcb->sctp_ep,
 					    stcb, SCTP_PEER_FAULTY, oper);
 
@@ -1388,6 +1399,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 						*ippp = ((chk->rec.data.stream_number << 16) | chk->rec.data.stream_seq);
 
 					}
+					stcb->sctp_ep->last_abort_code = 0x1000000b;
 					sctp_abort_an_association(stcb->sctp_ep,
 					    stcb, SCTP_PEER_FAULTY, oper);
 
@@ -1430,6 +1442,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 						ippp++;
 						*ippp = ((chk->rec.data.stream_number << 16) | chk->rec.data.stream_seq);
 					}
+					stcb->sctp_ep->last_abort_code = 0x1000000c;
 					sctp_abort_an_association(stcb->sctp_ep,
 					    stcb, SCTP_PEER_FAULTY, oper);
 
@@ -1716,6 +1729,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			*ippp = ((strmno << 16) | strmseq);
 
 		}
+		stcb->sctp_ep->last_abort_code = 0x20000001;
 		sctp_abort_an_association(stcb->sctp_ep, stcb, 
 					  SCTP_PEER_FAULTY, oper);
 		*abort_flag = 1;
@@ -1930,6 +1944,7 @@ failed_express_del:
 					ippp++;
 					*ippp = ((strmno << 16) | strmseq);
 				}
+				stcb->sctp_ep->last_abort_code = 0x20000002;
 				sctp_abort_an_association(stcb->sctp_ep, stcb,
 				    SCTP_PEER_FAULTY, oper);
 
@@ -1964,6 +1979,7 @@ failed_express_del:
 						ippp++;
 						*ippp = ((strmno << 16) | strmseq);
 					}
+					stcb->sctp_ep->last_abort_code = 0x20000003;
 					sctp_abort_an_association(stcb->sctp_ep,
 					    stcb, SCTP_PEER_FAULTY, oper);
 
@@ -2007,6 +2023,7 @@ failed_express_del:
 						ippp++;
 						*ippp = ((strmno << 16) | strmseq);
 					}
+					stcb->sctp_ep->last_abort_code = 0x20000004;
 					sctp_abort_an_association(stcb->sctp_ep,
 					    stcb, SCTP_PEER_FAULTY, oper);
 
@@ -2620,6 +2637,7 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 					*ippp = asoc->cumulative_tsn;
 
 				}
+				stcb->sctp_ep->last_abort_code = 0x30000001;
 				sctp_abort_association(inp, stcb, m, iphlen, sh,
 						       op_err);
 				return (2);
@@ -4374,8 +4392,9 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 					ph->param_type = htons(SCTP_CAUSE_USER_INITIATED_ABT);
 					ph->param_length = htons(oper->m_len);
 					ippp = (uint32_t *) (ph + 1);
-					*ippp = htonl(0x30000003);
+					*ippp = htonl(0x30000002);
 				}
+				stcb->sctp_ep->last_abort_code = 0x30000002;
 				sctp_abort_an_association(stcb->sctp_ep, stcb, SCTP_RESPONSE_TO_USER_REQ, oper);
 			} else {
 				asoc->state = SCTP_STATE_SHUTDOWN_SENT;
@@ -4542,8 +4561,9 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 				ph->param_type = htons(SCTP_CAUSE_PROTOCOL_VIOLATION);
 				ph->param_length = htons(oper->m_len);
 				ippp = (uint32_t *) (ph + 1);
-				*ippp = htonl(0x30000002);
+				*ippp = htonl(0x30000003);
 			}
+			stcb->sctp_ep->last_abort_code = 0x30000003;
 			sctp_abort_an_association(stcb->sctp_ep, stcb, SCTP_PEER_FAULTY, oper);
 			return;
 		}
@@ -4999,8 +5019,9 @@ skip_segments:
 					ph->param_type = htons(SCTP_CAUSE_USER_INITIATED_ABT);
 					ph->param_length = htons(oper->m_len);
 					ippp = (uint32_t *) (ph + 1);
-					*ippp = htonl(0x30000003);
+					*ippp = htonl(0x30000004);
 				}
+				stcb->sctp_ep->last_abort_code = 0x30000004;
 				sctp_abort_an_association(stcb->sctp_ep, stcb, SCTP_RESPONSE_TO_USER_REQ, oper);
 				return;
 			} else {

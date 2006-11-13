@@ -2685,8 +2685,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 					    SCTP_CAUSE_USER_INITIATED_ABT);
 					ph->param_length = htons(op_err->m_len);
 					ippp = (uint32_t *) (ph + 1);
-					*ippp = htonl(0x30000004);
+					*ippp = htonl(0x30000005);
 				}
+				asoc->sctp_ep->last_abort_code = 0x30000005;
 				sctp_send_abort_tcb(asoc, op_err);
 				SCTP_STAT_INCR_COUNTER32(sctps_aborted);
 				if ((SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_OPEN) ||
@@ -2756,8 +2757,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 							SCTP_CAUSE_USER_INITIATED_ABT);
 						ph->param_length = htons(op_err->m_len);
 						ippp = (uint32_t *) (ph + 1);
-						*ippp = htonl(0x30000005);
+						*ippp = htonl(0x30000006);
 					}
+					asoc->sctp_ep->last_abort_code = 0x30000006;
 					sctp_send_abort_tcb(asoc, op_err);
 					SCTP_STAT_INCR_COUNTER32(sctps_aborted);
 					if ((SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_OPEN) ||
@@ -2847,9 +2849,10 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 				    SCTP_CAUSE_USER_INITIATED_ABT);
 				ph->param_length = htons(op_err->m_len);
 				ippp = (uint32_t *) (ph + 1);
-				*ippp = htonl(0x30000006);
+				*ippp = htonl(0x30000007);
 
 			}
+			asoc->sctp_ep->last_abort_code = 0x30000007;
 			sctp_send_abort_tcb(asoc, op_err);
 			SCTP_STAT_INCR_COUNTER32(sctps_aborted);
 		} else if (asoc->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
