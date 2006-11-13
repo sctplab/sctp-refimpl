@@ -889,6 +889,8 @@ struct xsctp_inpcb {
 	uint32_t number_associations;
 	uint32_t flags;
 	uint32_t features;
+	uint32_t total_sends;
+	uint32_t total_recvs;
 	/* add more endpoint specific data here*/
 };
 
@@ -899,6 +901,8 @@ struct xsctp_tcb {
 	uint16_t number_incomming_streams;
 	uint16_t number_outgoing_streams;
 	uint32_t state;
+	uint32_t total_sends;
+	uint32_t total_recvs;
 	/* add more association specific data here*/
 };
 
