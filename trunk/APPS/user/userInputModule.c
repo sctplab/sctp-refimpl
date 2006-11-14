@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.75 2006-11-13 23:14:11 tuexen Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.76 2006-11-14 09:34:17 tuexen Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -3632,7 +3632,7 @@ cmd_getstat(char *argv[], int argc)
 static int
 cmd_getassocstat(char *argv[], int argc)
 {
-#if defined(__APPLE__)
+#if defined(__APPLE__) || defined(__FreeBSD__)
 	size_t len;
 	caddr_t buf;
 	unsigned int offset, i, j;
@@ -3673,8 +3673,8 @@ cmd_getassocstat(char *argv[], int argc)
 		}
 		for (i = 0; i < number_associations; i++) {
 			xstcb = (struct xsctp_tcb *)(buf + offset);
-			printf("\tAssociation towards port=%d, state=%d, Msgs(R/S)=(%u/%u), TSN(init/high/cum/cumack)=(%x/%x/%x/%x).\n",
-			       xstcb->remote_port, xstcb->state, xstcb->total_recvs, xstcb->total_sends, xstcb->initial_tsn, xstcb->highest_tsn, xstcb->cumulative_tsn, xstcb->cumulative_tsn_ack);
+			printf("\tAssociation towards port=%d, state=%d, Msgs(R/S)=(%u/%u), TSN(init/high/cum/cumack)=(%x/%x/%x/%x), Tag(L/R)=(%x/%x).\n",
+			       xstcb->remote_port, xstcb->state, xstcb->total_recvs, xstcb->total_sends, xstcb->initial_tsn, xstcb->highest_tsn, xstcb->cumulative_tsn, xstcb->cumulative_tsn_ack, xstcb->local_tag, xstcb->remote_tag);
 			number_of_local_addresses = xstcb->number_local_addresses;
 			number_of_remote_addresses = xstcb->number_remote_addresses;
 			offset += sizeof(struct xsctp_tcb);
