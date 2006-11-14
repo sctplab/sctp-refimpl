@@ -358,6 +358,7 @@ sctp_threshold_management(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			ippp = (uint32_t *) (ph + 1);
 			*ippp = htonl(0x40000001);
 		}
+		inp->last_abort_code = 0x40000001;
 		sctp_abort_an_association(inp, stcb, SCTP_FAILED_THRESHOLD, oper);
 		return (1);
 	}
@@ -1152,6 +1153,7 @@ sctp_cookie_timer(struct sctp_inpcb *inp,
 				ippp = (uint32_t *) (ph + 1);
 				*ippp = htonl(0x40000002);
 			}
+			inp->last_abort_code = 0x40000002;
 			sctp_abort_an_association(inp, stcb, SCTP_INTERNAL_ERROR,
 			    oper);
 		} else {

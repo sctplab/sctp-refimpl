@@ -848,13 +848,10 @@ struct	sctpstat {
 	u_long  sctps_cmt_randry;       /* Same for above */
 	u_long  sctps_slowpath_sack;    /* Sacks the slow way */
 	u_long  sctps_wu_sacks_sent;	/* Window Update only sacks sent */
-	u_long  sctps_locks_in_rcv;	/* How man so_rcv buf locks we did */
-	u_long  sctps_locks_in_rcva;	/* How man so_rcv buf locks we did */
-	u_long  sctps_locks_in_rcvb;	/* How man so_rcv buf locks we did */
-	u_long  sctps_locks_in_rcvc;	/* How man so_rcv buf locks we did */
-	u_long  sctps_locks_in_rcvd;	/* How man so_rcv buf locks we did */
-	u_long  sctps_locks_in_rcve;	/* How man so_rcv buf locks we did */
-	u_long  sctps_locks_in_rcvf;	/* How man so_rcv buf locks we did */
+	u_long  sctps_sends_with_flags; /* number of sends with sinfo_flags !=0 */
+	u_long  sctps_sends_with_unord; 
+	u_long  sctps_sends_with_eof; 
+	u_long  sctps_sends_with_abort; 
 };
 
 #define SCTP_STAT_INCR(_x) SCTP_STAT_INCR_BY(_x,1)
@@ -892,6 +889,8 @@ struct xsctp_inpcb {
 	uint32_t number_associations;
 	uint32_t flags;
 	uint32_t features;
+	uint32_t total_sends;
+	uint32_t total_recvs;
 	/* add more endpoint specific data here*/
 };
 
@@ -902,6 +901,14 @@ struct xsctp_tcb {
 	uint16_t number_incomming_streams;
 	uint16_t number_outgoing_streams;
 	uint32_t state;
+	uint32_t total_sends;
+	uint32_t total_recvs;
+	uint32_t local_tag;
+	uint32_t remote_tag;
+	uint32_t initial_tsn;
+	uint32_t highest_tsn;
+	uint32_t cumulative_tsn;
+	uint32_t cumulative_tsn_ack;
 	/* add more association specific data here*/
 };
 

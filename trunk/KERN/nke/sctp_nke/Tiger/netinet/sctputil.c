@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.6 2006/11/11 15:59:01 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.7 2006/11/11 22:44:12 rrs Exp $");
 #endif
 
 
@@ -3986,6 +3986,8 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 	}
 
 	SCTP_INP_READ_LOCK(inp);
+	atomic_add_int(&inp->total_recvs, 1);
+	atomic_add_int(&stcb->total_recvs, 1);
 	m = control->data;
 	control->held_length = 0;
 	control->length = 0;
@@ -4484,7 +4486,6 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far, int hold_rlock,
 	}
  out:
 	if(so && r_unlocked && hold_rlock) {
-		SCTP_STAT_INCR(sctps_locks_in_rcv);
 		SCTP_INP_READ_LOCK(stcb->sctp_ep);
 	}
 
@@ -4717,7 +4718,6 @@ restart:
 		 * maybe a peer in EEOR that just closed after sending and never indicated
 		 * a EOR.
 		 */
-		SCTP_STAT_INCR(sctps_locks_in_rcva);
 		if(hold_rlock == 0) {
 			hold_rlock = 1;
 			SCTP_INP_READ_LOCK(inp);
@@ -4969,7 +4969,6 @@ get_more_data:
 					       m->m_len,
 					       control->length);
 #endif
-				SCTP_STAT_INCR(sctps_locks_in_rcvb);
 				SCTP_INP_READ_LOCK(inp);
 				hold_rlock = 1;
 			}
@@ -5147,7 +5146,6 @@ get_more_data:
 					 * guy (which is the head of the queue).
 					 */
 					if(hold_rlock == 0) {
-						SCTP_STAT_INCR(sctps_locks_in_rcvc);
 						SCTP_INP_READ_LOCK(inp);
 						hold_rlock = 1;
 					}
@@ -5283,7 +5281,6 @@ wait_some_more:
 				goto done_with_control;
 			}
 			if (so->so_rcv.sb_cc > held_length) {
-				SCTP_STAT_INCR(sctps_locks_in_rcvf);
 				control->held_length = so->so_rcv.sb_cc;
 				held_length = 0;
 			}
