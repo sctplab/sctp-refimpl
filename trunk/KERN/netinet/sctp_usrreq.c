@@ -656,13 +656,13 @@ SYSCTL_PROC(_net_inet_sctp, OID_AUTO, getcred, CTLTYPE_OPAQUE | CTLFLAG_RW,
     0, 0, sctp_getcred, "S,ucred", "Get the ucred of a SCTP connection");
 #endif				/* #if defined(__FreeBSD__) */
 
-#if defined (__APPLE__)
-/* Note: when we add this for FreeBSD, we need '()':
-  sctp_assoclist(SYSCTL_HANDLER_ARGS)
-*/
-
+#if defined (__APPLE__) || defined (__FreeBSD__)
 static int
+#if defined (__APPLE__)
 sctp_assoclist SYSCTL_HANDLER_ARGS
+#else
+sctp_assoclist(SYSCTL_HANDLER_ARGS)
+#endif
 {
 	unsigned int number_of_endpoints;
 	unsigned int number_of_local_addresses;
@@ -687,11 +687,13 @@ sctp_assoclist SYSCTL_HANDLER_ARGS
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	lck_rw_lock_shared(sctppcbinfo.ipi_ep_mtx);
 #endif
+	SCTP_INP_INFO_RLOCK();
 	if (req->oldptr == USER_ADDR_NULL) {
 		LIST_FOREACH(inp, &sctppcbinfo.listhead, sctp_list) {
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			socket_lock(inp->ip_inp.inp.inp_socket, 1);
 #endif
+			SCTP_INP_RLOCK(inp);
 			number_of_endpoints++;
 			/* FIXME MT */
 			LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
@@ -710,10 +712,12 @@ sctp_assoclist SYSCTL_HANDLER_ARGS
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			socket_unlock(inp->ip_inp.inp.inp_socket, 1);
 #endif
+			SCTP_INP_RUNLOCK(inp);
 		}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
 #endif
+		SCTP_INP_INFO_RUNLOCK();
 		n = (number_of_endpoints + 1) * sizeof(struct xsctp_inpcb) +
 		    number_of_local_addresses * sizeof(struct xsctp_laddr) +
 		    number_of_associations * sizeof(struct xsctp_tcb) +
@@ -732,6 +736,7 @@ sctp_assoclist SYSCTL_HANDLER_ARGS
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
 #endif
+		SCTP_INP_INFO_RUNLOCK();
 		return EPERM;
 	}
 
@@ -739,6 +744,7 @@ sctp_assoclist SYSCTL_HANDLER_ARGS
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		socket_lock(inp->ip_inp.inp.inp_socket, 1);
 #endif
+		SCTP_INP_RLOCK(inp);
 		number_of_local_addresses = 0;
 		number_of_associations = 0;
 		/*
@@ -763,6 +769,8 @@ sctp_assoclist SYSCTL_HANDLER_ARGS
 			socket_unlock(inp->ip_inp.inp.inp_socket, 1);
 			lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
 #endif
+			SCTP_INP_RUNLOCK(inp);
+			SCTP_INP_INFO_RUNLOCK();
 			return error;
 		}
 		/* FIXME MT */
@@ -774,6 +782,8 @@ sctp_assoclist SYSCTL_HANDLER_ARGS
 				socket_unlock(inp->ip_inp.inp.inp_socket, 1);
 				lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
 #endif
+				SCTP_INP_RUNLOCK(inp);
+				SCTP_INP_INFO_RUNLOCK();
 				return error;
 			}			
 		}
@@ -810,6 +820,8 @@ sctp_assoclist SYSCTL_HANDLER_ARGS
 				socket_unlock(inp->ip_inp.inp.inp_socket, 1);
 				lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
 #endif
+				SCTP_INP_RUNLOCK(inp);
+				SCTP_INP_INFO_RUNLOCK();
 				return error;
 			}
 			/* FIXME MT */
@@ -821,6 +833,8 @@ sctp_assoclist SYSCTL_HANDLER_ARGS
 					socket_unlock(inp->ip_inp.inp.inp_socket, 1);
 					lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
 #endif
+					SCTP_INP_RUNLOCK(inp);
+					SCTP_INP_INFO_RUNLOCK();
 					return error;
 				}			
 			}
@@ -834,6 +848,8 @@ sctp_assoclist SYSCTL_HANDLER_ARGS
 					socket_unlock(inp->ip_inp.inp.inp_socket, 1);
 					lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
 #endif
+					SCTP_INP_RUNLOCK(inp);
+					SCTP_INP_INFO_RUNLOCK();
 					return error;
 				}			
 			}			
@@ -841,10 +857,13 @@ sctp_assoclist SYSCTL_HANDLER_ARGS
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		socket_unlock(inp->ip_inp.inp.inp_socket, 1);
 #endif
+		SCTP_INP_RUNLOCK(inp);
 	}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
 #endif
+	SCTP_INP_INFO_RUNLOCK();
+	
 	xinpcb.last = 1;
 	xinpcb.local_port = 0;
 	xinpcb.number_local_addresses = 0;
@@ -919,11 +938,9 @@ SYSCTL_INT(_net_inet_sctp, OID_AUTO, asoc_resource, CTLFLAG_RW,
     &sctp_asoc_free_resc_limit, 0,
     "Max number of cached resources in an asoc");
 
-
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, chunkscale, CTLFLAG_RW,
     &sctp_chunkscale, 0,
     "Tuneable for Scaling of number of chunks and messages");
-
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, delayed_sack_time, CTLFLAG_RW,
     &sctp_delayed_sack_time_default, 0,
@@ -980,7 +997,6 @@ SYSCTL_UINT(_net_inet_sctp, OID_AUTO, path_rtx_max, CTLFLAG_RW,
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, add_more_on_output, CTLFLAG_RW,
     &sctp_add_more_threshold, 0,
     "When space wise is it worthwhile to try to add more to a socket send buffer");
-
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, nr_outgoing_streams, CTLFLAG_RW,
     &sctp_nr_outgoing_streams_default, 0,
@@ -1057,11 +1073,11 @@ SYSCTL_INT(_net_inet_sctp, OID_AUTO, strict_data_order, CTLFLAG_RW,
 SYSCTL_STRUCT(_net_inet_sctp, OID_AUTO, stats, CTLFLAG_RW,
     &sctpstat, sctpstat,
     "SCTP statistics (struct sctps_stat, netinet/sctp.h");
-#if defined(__APPLE__)
+
 SYSCTL_PROC(_net_inet_sctp, OID_AUTO, assoclist, CTLFLAG_RD,
     0, 0, sctp_assoclist,
     "S,xassoc", "List of active SCTP associations");
-#endif
+
 #ifdef SCTP_DEBUG
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, debug, CTLFLAG_RW,
     &sctp_debug_on, 0, "Configure debug output");
