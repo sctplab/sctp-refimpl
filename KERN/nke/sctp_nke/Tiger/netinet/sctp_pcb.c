@@ -2685,8 +2685,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 					    SCTP_CAUSE_USER_INITIATED_ABT);
 					ph->param_length = htons(op_err->m_len);
 					ippp = (uint32_t *) (ph + 1);
-					*ippp = htonl(0x30000004);
+					*ippp = htonl(0x30000005);
 				}
+				asoc->sctp_ep->last_abort_code = 0x30000005;
 				sctp_send_abort_tcb(asoc, op_err);
 				SCTP_STAT_INCR_COUNTER32(sctps_aborted);
 				if ((SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_OPEN) ||
@@ -2756,8 +2757,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 							SCTP_CAUSE_USER_INITIATED_ABT);
 						ph->param_length = htons(op_err->m_len);
 						ippp = (uint32_t *) (ph + 1);
-						*ippp = htonl(0x30000005);
+						*ippp = htonl(0x30000006);
 					}
+					asoc->sctp_ep->last_abort_code = 0x30000006;
 					sctp_send_abort_tcb(asoc, op_err);
 					SCTP_STAT_INCR_COUNTER32(sctps_aborted);
 					if ((SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_OPEN) ||
@@ -2847,9 +2849,10 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 				    SCTP_CAUSE_USER_INITIATED_ABT);
 				ph->param_length = htons(op_err->m_len);
 				ippp = (uint32_t *) (ph + 1);
-				*ippp = htonl(0x30000006);
+				*ippp = htonl(0x30000007);
 
 			}
+			asoc->sctp_ep->last_abort_code = 0x30000007;
 			sctp_send_abort_tcb(asoc, op_err);
 			SCTP_STAT_INCR_COUNTER32(sctps_aborted);
 		} else if (asoc->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
@@ -4013,33 +4016,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 #ifdef SCTP_LOG_CLOSING
 	sctp_log_closing(inp, stcb, 10);
 #endif
-	if ((from_inpcbfree == 0) && so) {
-		sctp_sorwakeup(inp, so);
-	}
-	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
-	    (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
-		/*
-		 * For TCP type we need special handling when we are
-		 * connected. We also include the peel'ed off ones to.
-		 */
-		if(inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
-			inp->sctp_flags &= ~SCTP_PCB_FLAGS_CONNECTED;
-			inp->sctp_flags |= SCTP_PCB_FLAGS_WAS_CONNECTED;
-			if (so) {
-				SOCK_LOCK(so);
-				if(so->so_rcv.sb_cc == 0) {
-					so->so_state &= ~(SS_ISCONNECTING | 
-							  SS_ISDISCONNECTING | 
-							  SS_ISCONFIRMING | 
-							  SS_ISCONNECTED);
-				}
-				SOCK_UNLOCK(so);
-				sctp_sowwakeup(inp, so);
-				sctp_sorwakeup(inp, so);
-				wakeup(&so->so_timeo);
-			}
-		}
-	}
 	/* When I reach here, no others want
 	 * to kill the assoc yet.. and I own
 	 * the lock. Now its possible an abort
@@ -4079,6 +4055,37 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		SCTP_INP_WLOCK(inp);
 		SCTP_TCB_LOCK(stcb);
 	}
+	/* Double check the GONE flag */
+	if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) ||
+	    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) 
+		/* nothing around */
+		so = NULL;
+
+	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
+	    (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
+		/*
+		 * For TCP type we need special handling when we are
+		 * connected. We also include the peel'ed off ones to.
+		 */
+		if(inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
+			inp->sctp_flags &= ~SCTP_PCB_FLAGS_CONNECTED;
+			inp->sctp_flags |= SCTP_PCB_FLAGS_WAS_CONNECTED;
+			if (so) {
+				SOCK_LOCK(so);
+				if(so->so_rcv.sb_cc == 0) {
+					so->so_state &= ~(SS_ISCONNECTING | 
+							  SS_ISDISCONNECTING | 
+							  SS_ISCONFIRMING | 
+							  SS_ISCONNECTED);
+				}
+				SOCK_UNLOCK(so);
+				sctp_sowwakeup(inp, so);
+				sctp_sorwakeup(inp, so);
+				wakeup(&so->so_timeo);
+			}
+		}
+	}
+
 	/* Stop any timer someone may have started */
 	callout_stop(&asoc->strreset_timer.timer); 
 	/* Make it invalid too, that way if its
