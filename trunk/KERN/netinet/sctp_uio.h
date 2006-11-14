@@ -881,7 +881,6 @@ union sctp_sockstore {
 	struct sockaddr sa;
 };
 
-#ifdef __APPLE__
 struct xsctp_inpcb {
 	uint32_t last;
 	uint16_t local_port;
@@ -922,7 +921,6 @@ struct xsctp_raddr {
 	uint16_t state;
 	/* add more remote address specific data */
 };
-#endif
 
 /*
  * Kernel defined for sctp_send
