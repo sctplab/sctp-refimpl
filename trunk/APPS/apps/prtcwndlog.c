@@ -596,7 +596,7 @@ main(int argc, char **argv)
 			}
 
 		} else if (log.event_type == SCTP_LOG_MISC_EVENT) {
-#ifdef __APPLE__
+#ifdef __APPLE_OLD__
 			/* APPLE lock logging */
 			char *filename;
 			char *operation;
@@ -699,6 +699,13 @@ main(int argc, char **argv)
 			       log.x.misc.log2,
 			       operation,
 			       log.x.misc.log3);
+#elif defined(__APPLE__)
+				printf("%s: Type %3u, Line %4u %u %u\n",
+				       ts,
+				       log.x.misc.log1,
+				       log.x.misc.log2,
+				       log.x.misc.log3,
+				       log.x.misc.log4);
 #else
 			if(log.from == SCTP_REASON_FOR_SC) {
 				printf("%s:%s num_out:%u reason_code:%u cwnd_full:%u sendonly1:%u\n",
