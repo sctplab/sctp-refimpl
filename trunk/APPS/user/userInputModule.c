@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.76 2006-11-14 09:34:17 tuexen Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.77 2006-11-15 00:33:30 lei Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -3650,7 +3650,7 @@ cmd_getassocstat(char *argv[], int argc)
 		return(0);
 	}
 	if ((buf = (caddr_t)malloc(len)) == 0) {
-		printf("malloc %lu bytes failed.\n", len);
+		printf("malloc %lu bytes failed.\n", (long unsigned)len);
 		return(0);
 	}
 	if (sysctlbyname("net.inet.sctp.assoclist", buf, &len, 0, 0) < 0) {
