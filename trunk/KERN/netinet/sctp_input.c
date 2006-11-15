@@ -1127,7 +1127,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 	struct sctp_init_chunk *init_cp, init_buf;
 	struct sctp_init_ack_chunk *initack_cp, initack_buf;
 	int chk_length;
-	int init_offset, initack_offset;
+	int init_offset, initack_offset, i;
 	int retval;
 	int spec_flag=0;
 
@@ -1398,7 +1398,11 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		/* send up all the data */
 		SCTP_TCB_SEND_LOCK(stcb);
 		sctp_report_all_outbound(stcb, 1);
-
+		for (i=0; i<stcb->asoc.streamoutcnt; i++) {
+			stcb->asoc.strmout[i].stream_no = i;
+			stcb->asoc.strmout[i].next_sequence_sent = 0xffff;
+			stcb->asoc.strmout[i].last_msg_incomplete = 1;
+		}
 		/* process the INIT-ACK info (my info) */
 		asoc->my_vtag = ntohl(initack_cp->init.initiate_tag);
 		asoc->my_rwnd = ntohl(initack_cp->init.a_rwnd);

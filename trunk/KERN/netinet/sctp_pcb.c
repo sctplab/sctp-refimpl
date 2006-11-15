@@ -748,7 +748,7 @@ sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, sctp_assoc_t asoc_id, int
 		SCTP_INP_RUNLOCK(stcb->sctp_ep);
 	}
 	/* Ok if we missed here, lets try the restart hash */
-	head = &sctppcbinfo.sctp_asochash[SCTP_PCBHASH_ASOC(id, sctppcbinfo.hashrestartmark)];
+	head = &sctppcbinfo.sctp_restarthash[SCTP_PCBHASH_ASOC(id, sctppcbinfo.hashrestartmark)];
 	if (head == NULL) {
 		/* invalid id TSNH */
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
