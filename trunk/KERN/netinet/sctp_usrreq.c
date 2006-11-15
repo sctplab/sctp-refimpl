@@ -676,7 +676,7 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 	struct sctp_laddr *laddr;
 	struct xsctp_inpcb xinpcb;
 	struct xsctp_tcb xstcb;
-	struct xsctp_laddr xladdr;
+/*	struct xsctp_laddr xladdr; */
 	struct xsctp_raddr xraddr;
 	
 	number_of_endpoints = 0;
