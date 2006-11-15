@@ -50,6 +50,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.2 2006/11/03 17:21:53 rrs 
  *
  */
 typedef struct mbuf *sctp_mbuf_t;
+#define USER_ADDR_NULL	(NULL)		/* FIX ME: temp */
 
 /*
  * general memory allocation
