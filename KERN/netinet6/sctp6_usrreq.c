@@ -1230,7 +1230,8 @@ sctp6_disconnect(struct socket *so)
 				    (SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
 					SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 				}
-				sctp_free_assoc(inp, stcb, 0);
+				sctp_free_assoc(inp, stcb, SCTP_DONOT_SETSCOPE,
+						SCTP_FROM_SCTP6_USRREQ+__LINE__);
 				/* No unlock tcb assoc is gone */
 				splx(s);
 				return (0);
