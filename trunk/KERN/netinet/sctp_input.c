@@ -4024,6 +4024,13 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 		process_cookie_anyway:
 			{
 				struct mbuf *ret_buf;
+				struct sctp_inpcb *linp;
+				if(stcb)
+					linp = inp;
+				else 
+					linp = NULL;
+				if(linp)
+					SCTP_ASOC_CREATE_LOCK(linp);
 				ret_buf =
 					sctp_handle_cookie_echo(m, iphlen,
 								*offset, sh,
@@ -4032,7 +4039,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 								auth_skipped,
 								auth_offset,
 								auth_len);
-
+				if(linp)
+					SCTP_ASOC_CREATE_UNLOCK(linp);
 				if (ret_buf == NULL) {
 					if (locked_tcb) {
 						SCTP_TCB_UNLOCK(locked_tcb);
