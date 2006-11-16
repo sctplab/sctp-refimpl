@@ -9704,6 +9704,8 @@ sctp_lower_sosend(struct socket *so,
 			splx(s);
 			goto out_unlocked;
 		}
+		/* With the lock applied look again */
+		stcb = sctp_findassociation_ep_addr(&t_inp, addr, &net, NULL, NULL);
 	}
 	if(stcb == NULL) {
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) {
