@@ -10121,6 +10121,7 @@ sctp_lower_sosend(struct socket *so,
 		strm = &stcb->asoc.strmout[srcv->sinfo_stream];
 		user_marks_eor = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXPLICIT_EOR);
 		if(strm->last_msg_incomplete == 0) {
+		do_a_copy_in:
 			sp = sctp_copy_it_in(stcb, asoc, srcv, uio, net, max_len, user_marks_eor, &error, non_blocking);
 			if ((sp == NULL) || (error)) {
 				goto out;
@@ -10162,6 +10163,17 @@ sctp_lower_sosend(struct socket *so,
 			SCTP_TCB_SEND_UNLOCK(stcb);
 		} else {
 			sp = TAILQ_LAST(&strm->outqueue, sctp_streamhead);
+			if(sp == NULL) {
+				/* ???? Huh ??? last msg is gone */
+#ifdef INVARIENTS 
+				panic("Warning: Last msg marked incomplete, yet nothing left?");
+#else
+				printf("Warning: Last msg marked incomplete, yet nothing left?\n");
+				strm->last_msg_incomplete = 0;
+#endif
+				goto do_a_copy_in;
+
+			}
 		}
 		while (uio->uio_resid > 0) {
 			/* How much room do we have? */

@@ -457,7 +457,7 @@ sctp_notify(struct sctp_inpcb *inp,
 			 * TCB
 			 */
 			sctp_abort_notification(stcb, SCTP_PEER_FAULTY);
-			sctp_free_assoc(inp, stcb, 0);
+			sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_USRREQ+__LINE__);
 			/* no need to unlock here, since the TCB is gone */
 		}
 	} else {
@@ -1594,7 +1594,7 @@ sctp_disconnect(struct socket *so)
 				    (SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
 					SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 				}
-				sctp_free_assoc(inp, stcb, 0);
+				sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_USRREQ+__LINE__);
 				/* No unlock tcb assoc is gone */
 				splx(s);
 				return (0);
@@ -1670,9 +1670,9 @@ sctp_disconnect(struct socket *so)
 							SCTP_CAUSE_USER_INITIATED_ABT);
 						ph->param_length = htons(op_err->m_len);
 						ippp = (uint32_t *) (ph + 1);
-						*ippp = htonl(0x30000008);
+						*ippp = htonl(SCTP_FROM_SCTP_USRREQ+__LINE__);
 					}
-					stcb->sctp_ep->last_abort_code = 0x30000008;
+					stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_USRREQ+__LINE__;
 					sctp_send_abort_tcb(stcb, op_err);
 					SCTP_STAT_INCR_COUNTER32(sctps_aborted);
 					if ((SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_OPEN) ||
@@ -1680,7 +1680,7 @@ sctp_disconnect(struct socket *so)
 						SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 					}
 					SCTP_INP_RUNLOCK(inp);
-					sctp_free_assoc(inp, stcb, 0);
+					sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_USRREQ+__LINE__);
 					splx(s);
 					return (0);
 				}
@@ -1815,9 +1815,9 @@ sctp_shutdown(struct socket *so)
 						SCTP_CAUSE_USER_INITIATED_ABT);
 					ph->param_length = htons(op_err->m_len);
 					ippp = (uint32_t *) (ph + 1);
-					*ippp = htonl(0x30000009);
+					*ippp = htonl(SCTP_FROM_SCTP_USRREQ+__LINE__);
 				}
-				stcb->sctp_ep->last_abort_code = 0x30000009;
+				stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_USRREQ+__LINE__;
 				sctp_abort_an_association(stcb->sctp_ep, stcb,
 							  SCTP_RESPONSE_TO_USER_REQ,
 							  op_err);
@@ -2285,17 +2285,17 @@ sctp_do_connect_x(struct socket *so,
 	for (i = 1; i < totaddr; i++) {
 		if (sa->sa_family == AF_INET) {
 			incr = sizeof(struct sockaddr_in);
-			if (sctp_add_remote_addr(stcb, sa, 0, 8)) {
+			if (sctp_add_remote_addr(stcb, sa, SCTP_DONOT_SETSCOPE, SCTP_ADDR_IS_CONFIRMED)) {
 				/* assoc gone no un-lock */
-				sctp_free_assoc(inp, stcb, 0);
+				sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_USRREQ+__LINE__);
 				error = ENOBUFS;
 				goto out_now;
 			}
 		} else if (sa->sa_family == AF_INET6) {
 			incr = sizeof(struct sockaddr_in6);
-			if (sctp_add_remote_addr(stcb, sa, 0, 8)) {
+			if (sctp_add_remote_addr(stcb, sa, SCTP_DONOT_SETSCOPE, SCTP_ADDR_IS_CONFIRMED)) {
 				/* assoc gone no un-lock */
-				sctp_free_assoc(inp, stcb, 0);
+				sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_USRREQ+__LINE__);
 				error = ENOBUFS;
 				goto out_now;
 			}

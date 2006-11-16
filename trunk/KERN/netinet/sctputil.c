@@ -1638,7 +1638,7 @@ sctp_timeout_handler(void *t)
 		/* Can we free it yet? */
 		SCTP_INP_DECR_REF(inp);
 		sctp_timer_stop(SCTP_TIMER_TYPE_ASOCKILL, inp, stcb, NULL);
-		sctp_free_assoc(inp, stcb, 0);
+		sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTPUTIL+__LINE__);
 		/*
 		 * free asoc, always unlocks (or destroy's) so prevent
 		 * duplicate unlock or unlock of a free mtx :-0
@@ -3530,7 +3530,7 @@ sctp_abort_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	sctp_send_abort(m, iphlen, sh, vtag, op_err);
 	if (stcb != NULL) {
 		/* Ok, now lets free it */
-		sctp_free_assoc(inp, stcb, 0);
+		sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTPUTIL+__LINE__);
 	} else {
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 			if (LIST_FIRST(&inp->sctp_asoc_list) == NULL) {
@@ -3567,7 +3567,7 @@ sctp_abort_an_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 	}
 	/* now free the asoc */
-	sctp_free_assoc(inp, stcb, 0);
+	sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTPUTIL+__LINE__);
 }
 
 void
