@@ -358,7 +358,8 @@ sctp_process_asconf_add_ip(struct mbuf *m, struct sctp_asconf_paramhdr *aph,
 #endif /* SCTP_DEBUG */
 	}
 	/* add the address */
-	if (sctp_add_remote_addr(stcb, sa, 0, 6) != 0) {
+	if (sctp_add_remote_addr(stcb, sa, SCTP_DONOT_SETSCOPE, 
+				 SCTP_ADDR_DYNAMIC_ADDED) != 0) {
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
 			printf("process_asconf_add_ip: error adding address\n");

@@ -412,7 +412,7 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 			 * No sense in further INIT's since we will get the
 			 * same param back
 			 */
-			sctp_free_assoc(stcb->sctp_ep, stcb, 0);
+			sctp_free_assoc(stcb->sctp_ep, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+__LINE__);
 		}
 		return (-1);
 	}
@@ -597,7 +597,7 @@ sctp_handle_abort(struct sctp_abort_chunk *cp,
 	    (SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
 		SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 	}
-	sctp_free_assoc(stcb->sctp_ep, stcb, 0);
+	sctp_free_assoc(stcb->sctp_ep, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+__LINE__);
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INPUT2) {
 		printf("sctp_handle_abort: finished\n");
@@ -755,7 +755,8 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
 	}
 	SCTP_STAT_INCR_COUNTER32(sctps_shutdown);
 	/* free the TCB but first save off the ep */
-	sctp_free_assoc(stcb->sctp_ep, stcb, 0);
+	sctp_free_assoc(stcb->sctp_ep, stcb, SCTP_NORMAL_PROC, 
+			SCTP_FROM_SCTP_INPUT+__LINE__);
 }
 
 /*
@@ -898,7 +899,7 @@ sctp_handle_error(struct sctp_chunkhdr *ch,
 				    asoc->max_init_times) {
 					sctp_abort_notification(stcb, 0);
 					/* now free the asoc */
-					sctp_free_assoc(stcb->sctp_ep, stcb, 0);
+					sctp_free_assoc(stcb->sctp_ep, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+__LINE__);
 					return (-1);
 				}
 				/* blast back to INIT state */
@@ -1388,6 +1389,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		/*
 		 * case A in Section 5.2.4 Table 2: XXMM (peer restarted)
 		 */
+		printf("Peer Restarts\n");
 		sctp_timer_stop(SCTP_TIMER_TYPE_INIT, inp, stcb, net);
 		sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net);
 		*sac_assoc_id = sctp_get_associd(stcb);
@@ -1400,8 +1402,8 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		sctp_report_all_outbound(stcb, 1);
 		for (i=0; i<stcb->asoc.streamoutcnt; i++) {
 			stcb->asoc.strmout[i].stream_no = i;
-			stcb->asoc.strmout[i].next_sequence_sent = 0xffff;
-			stcb->asoc.strmout[i].last_msg_incomplete = 1;
+			stcb->asoc.strmout[i].next_sequence_sent = 0;
+			stcb->asoc.strmout[i].last_msg_incomplete = 0;
 		}
 		/* process the INIT-ACK info (my info) */
 		asoc->my_vtag = ntohl(initack_cp->init.initiate_tag);
@@ -1625,14 +1627,14 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	/* process the INIT info (peer's info) */
 	retval = sctp_process_init(init_cp, stcb, *netp);
 	if (retval < 0) {
-		sctp_free_assoc(inp, stcb, 0);
+		sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+__LINE__);
 		return (NULL);
 	}
 	/* load all addresses */
 	if (sctp_load_addresses_from_init(stcb, m, iphlen,
 	    init_offset + sizeof(struct sctp_init_chunk), initack_offset, sh,
 	    init_src)) {
-		sctp_free_assoc(inp, stcb, 0);
+		sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+__LINE__);
 		return (NULL);
 	}
 	/*
@@ -1653,7 +1655,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 			if (sctp_debug_on & SCTP_DEBUG_AUTH1)
 				printf("COOKIE-ECHO: AUTH failed\n");
 #endif				/* SCTP_DEBUG */
-			sctp_free_assoc(inp, stcb, 0);
+			sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+__LINE__);
 			return (NULL);
 		} else {
 			/* remaining chunks checked... good to go */
@@ -1708,7 +1710,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		memcpy(&sin6->sin6_addr, cookie->laddress,
 		    sizeof(sin6->sin6_addr));
 	} else {
-		sctp_free_assoc(inp, stcb, 0);
+		sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+__LINE__);
 		return (NULL);
 	}
 
@@ -2092,7 +2094,8 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	if (netl == NULL) {
 		/* TSNH! Huh, why do I need to add this address here? */
 		int ret;
-		ret = sctp_add_remote_addr(*stcb, to, 0, 100);
+		ret = sctp_add_remote_addr(*stcb, to, SCTP_DONOT_SETSCOPE, 
+					   SCTP_IN_COOKIE_PROC);
 		netl = sctp_findnet(*stcb, to);
 	}
 	if (netl) {
@@ -2159,7 +2162,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 				op_err = sctp_generate_invmanparam(SCTP_CAUSE_OUT_OF_RESC);
 				sctp_abort_association(*inp_p, NULL, m, iphlen,
 				    sh, op_err);
-				sctp_free_assoc(*inp_p, *stcb, 0);
+				sctp_free_assoc(*inp_p, *stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+__LINE__);
 				return (NULL);
 			}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
@@ -2445,7 +2448,7 @@ sctp_handle_shutdown_complete(struct sctp_shutdown_complete_chunk *cp,
 	sctp_timer_stop(SCTP_TIMER_TYPE_SHUTDOWN, stcb->sctp_ep, stcb, net);
 	SCTP_STAT_INCR_COUNTER32(sctps_shutdown);
 	/* free the TCB */
-	sctp_free_assoc(stcb->sctp_ep, stcb, 0);
+	sctp_free_assoc(stcb->sctp_ep, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+__LINE__);
 	return;
 }
 
@@ -3807,7 +3810,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 						SCTP_TCB_UNLOCK(locked_tcb);
 					*offset = length;
 					if (stcb) {
-						sctp_free_assoc(inp, stcb, 0);
+						sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+__LINE__);
 					}
 					return (NULL);
 				}
@@ -4076,7 +4079,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				if ((stcb) && (stcb->asoc.total_output_queue_size)) {
 					;
 				}else {
-					sctp_free_assoc(inp, stcb, 0);
+					sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+__LINE__);
 					*offset = length;
 					return (NULL);
 				}
@@ -4165,7 +4168,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				*fwd_tsn_seen = 1;
 				if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 					/* We are not interested anymore */
-					sctp_free_assoc(inp, stcb, 0);
+					sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+__LINE__);
 					*offset = length;
 					return (NULL);
 				}
@@ -4190,7 +4193,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 								   chk_length, chunk_buf);
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 				/* We are not interested anymore */
-				sctp_free_assoc(inp, stcb, 0);
+				sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+__LINE__);
 				*offset = length;
 				return (NULL);
 			}
