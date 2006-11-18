@@ -4368,7 +4368,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 	if ((strm->next_spoke.tqe_next == NULL) &&
 	    (strm->next_spoke.tqe_prev == NULL)) {
 		/* Not on wheel, insert */
-		sctp_insert_on_wheel(stcb, &stcb->asoc, strm, 0);
+		sctp_insert_on_wheel(stcb, &stcb->asoc, strm, 1);
 	}
 	m = NULL;
 	SCTP_TCB_SEND_UNLOCK(stcb);
