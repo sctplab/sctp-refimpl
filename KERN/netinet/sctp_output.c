@@ -9706,6 +9706,9 @@ sctp_lower_sosend(struct socket *so,
 		}
 		/* With the lock applied look again */
 		stcb = sctp_findassociation_ep_addr(&t_inp, addr, &net, NULL, NULL);
+		if(stcb) {
+			hold_tcblock = 1;
+		}
 	}
 	if(stcb == NULL) {
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) {
