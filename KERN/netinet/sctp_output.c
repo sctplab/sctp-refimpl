@@ -4071,12 +4071,16 @@ sctp_remove_from_wheel(struct sctp_tcb *stcb,
 {
 	/* take off and then setup so we know it is not on the wheel */
 	SCTP_TCB_SEND_LOCK(stcb);
+	if (TAILQ_FIRST(&strq->outqueue)) {
+		/* more was added */
+		SCTP_TCB_SEND_UNLOCK(stcb);
+		return;
+	}
 	TAILQ_REMOVE(&asoc->out_wheel, strq, next_spoke);
 	strq->next_spoke.tqe_next = NULL;
 	strq->next_spoke.tqe_prev = NULL;
 	SCTP_TCB_SEND_UNLOCK(stcb);
 }
-
 
 static void
 sctp_prune_prsctp(struct sctp_tcb *stcb,

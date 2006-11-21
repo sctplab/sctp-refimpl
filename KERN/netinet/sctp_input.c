@@ -3519,6 +3519,9 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 	 */
 	vtag_in = ntohl(sh->v_tag);
 
+	if(locked_tcb) {
+		SCTP_TCB_LOCK_ASSERT(locked_tcb);
+	}
 	if (ch->chunk_type == SCTP_INITIATION) {
 		if (vtag_in != 0) {
 			/* protocol error- silently discard... */
