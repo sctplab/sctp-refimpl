@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.77 2006-11-15 00:33:30 lei Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.78 2006-11-21 17:48:53 lei Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -5582,7 +5582,7 @@ static int cmd_addkey(char *argv[], int argc) {
     }
     bzero(optval, sizeof(optval));
     key = (struct sctp_authkey *)optval;
-    key->sca_keynumber = (uint32_t)strtoul(argv[0], NULL, 0);
+    key->sca_keynumber = (uint16_t)strtoul(argv[0], NULL, 0);
     keylen = strlen(argv[1]);
     strncpy((char *)key->sca_key, argv[1], keylen);
     /* use the optional assoc id, if given */
@@ -5616,7 +5616,7 @@ static int cmd_addnullkey(char *argv[], int argc) {
     }
     bzero(optval, sizeof(optval));
     key = (struct sctp_authkey *)optval;
-    key->sca_keynumber = (uint32_t)strtoul(argv[0], NULL, 0);
+    key->sca_keynumber = (uint16_t)strtoul(argv[0], NULL, 0);
     keylen = 0;
     /* use the optional assoc id, if given */
     if (argc == 2)
@@ -5647,7 +5647,7 @@ static int cmd_deletekey(char *argv[], int argc) {
 	return (-1);
     }
     bzero(&key, sizeof(key));
-    key.scact_keynumber = (uint32_t)strtoul(argv[0], NULL, 0);
+    key.scact_keynumber = (uint16_t)strtoul(argv[0], NULL, 0);
     /* use the optional assoc id, if given */
     if (argc == 2)
 	key.scact_assoc_id = (uint32_t)strtoul(argv[1], NULL, 0);
@@ -5677,7 +5677,7 @@ static int cmd_setactivekey(char *argv[], int argc) {
 	return (-1);
     }
     bzero(&key, sizeof(key));
-    key.scact_keynumber = (uint32_t)strtoul(argv[0], NULL, 0);
+    key.scact_keynumber = (uint16_t)strtoul(argv[0], NULL, 0);
     /* use the optional assoc id, if given */
     if (argc == 2)
 	key.scact_assoc_id = (uint32_t)strtoul(argv[1], NULL, 0);
