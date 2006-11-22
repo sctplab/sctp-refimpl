@@ -28,7 +28,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $kejKAME: sctp_indata.c,v 1.36 2005/03/06 16:04:17 itojun Exp $	 */
+/* $KAME: sctp_indata.c,v 1.36 2005/03/06 16:04:17 itojun Exp $	 */
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
@@ -2103,6 +2103,9 @@ failed_express_del:
 		/* Into the re-assembly queue */
 		sctp_queue_data_for_reasm(stcb, asoc, chk, abort_flag);
 		if (*abort_flag) {
+			/* did we blow away the data? */
+			if (chk->data == NULL)
+				*m = NULL;
 			return (0);
 		}
 	}
