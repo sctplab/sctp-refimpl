@@ -4527,7 +4527,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 	if ((length > offset) && (stcb != NULL) && !sctp_auth_disable &&
 	    sctp_auth_is_required_chunk(SCTP_DATA,
 	    stcb->asoc.local_auth_chunks) &&
-	    !stcb->asoc.authenticated && (length > offset)) {
+	    !stcb->asoc.authenticated) {
 		/* "silently" ignore */
 		SCTP_STAT_INCR(sctps_recvauthmissing);
 #ifdef SCTP_DEBUG
