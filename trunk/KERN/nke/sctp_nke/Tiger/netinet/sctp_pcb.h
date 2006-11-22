@@ -387,6 +387,7 @@ struct sctp_inpcb {
 	u_long sctp_hashmark;
 	/* head of the list of all associations */
 	struct sctpasochead sctp_asoc_list;
+	struct sctpasochead sctp_asoc_free_list;
 	struct sctp_iterator *inp_starting_point_for_iterator;
 	uint32_t sctp_frag_point;
 	uint32_t partial_delivery_point;
@@ -470,6 +471,7 @@ struct sctp_tcb {
 	uint32_t freed_by_sorcv_sincelast;
 	uint32_t total_sends;
 	uint32_t total_recvs;
+	int freed_from_where;
 	uint16_t rport;		/* remote port in network format */
 	uint16_t resv;
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
@@ -574,7 +576,7 @@ struct sctp_tcb *
 sctp_aloc_assoc(struct sctp_inpcb *, struct sockaddr *,
     int, int *, uint32_t);
 
-int sctp_free_assoc(struct sctp_inpcb *, struct sctp_tcb *, int);
+int sctp_free_assoc(struct sctp_inpcb *, struct sctp_tcb *, int, int);
 
 int sctp_add_local_addr_ep(struct sctp_inpcb *, struct ifaddr *);
 
