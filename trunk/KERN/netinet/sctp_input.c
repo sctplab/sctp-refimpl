@@ -4029,9 +4029,10 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				struct mbuf *ret_buf;
 				struct sctp_inpcb *linp;
 				if(stcb)
-					linp = inp;
-				else 
 					linp = NULL;
+				else 
+					linp = inp;
+
 				if(linp)
 					SCTP_ASOC_CREATE_LOCK(linp);
 				ret_buf =
