@@ -2102,10 +2102,10 @@ failed_express_del:
 	} else {
 		/* Into the re-assembly queue */
 		sctp_queue_data_for_reasm(stcb, asoc, chk, abort_flag);
+		/* did we blow away the data? */
+		if (chk->data == NULL)
+			*m = NULL;
 		if (*abort_flag) {
-			/* did we blow away the data? */
-			if (chk->data == NULL)
-				*m = NULL;
 			return (0);
 		}
 	}
