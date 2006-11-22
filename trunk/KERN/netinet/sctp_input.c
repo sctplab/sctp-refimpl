@@ -4527,20 +4527,14 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 	if ((stcb != NULL) && !sctp_auth_disable &&
 	    sctp_auth_is_required_chunk(SCTP_DATA,
 	    stcb->asoc.local_auth_chunks) &&
-	    !stcb->asoc.authenticated) {
+	    !stcb->asoc.authenticated && (length > offset)) {
 		/* "silently" ignore */
 		SCTP_STAT_INCR(sctps_recvauthmissing);
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_AUTH1)
 			printf("Data chunk requires AUTH, skipped\n");
 #endif
-		SCTP_TCB_UNLOCK(stcb);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		if (additional_lock) {
-			socket_unlock(stcb->sctp_ep->ip_inp.inp.inp_socket, 1);
-		}
-#endif
-		return (1);
+		goto trigger_send;
 	}
 	if (length > offset) {
 		int retval;
@@ -4644,6 +4638,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		}
 	}
 	/* trigger send of any chunks in queue... */
+trigger_send:
 #ifdef SCTP_AUDITING_ENABLED
 	sctp_audit_log(0xE0, 2);
 	sctp_auditing(1, inp, stcb, net);
