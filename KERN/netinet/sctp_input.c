@@ -1766,7 +1766,7 @@ static struct mbuf *
 sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
     struct sctphdr *sh, struct sctp_cookie_echo_chunk *cp,
     struct sctp_inpcb **inp_p, struct sctp_tcb **stcb, struct sctp_nets **netp,
-    int auth_skipped, uint32_t auth_offset, uint32_t auth_len)
+    int auth_skipped, uint32_t auth_offset, uint32_t auth_len, struct sctp_tcb **locked_tcb)
 {
 	struct sctp_state_cookie *cookie;
 	struct sockaddr_in6 sin6;
@@ -2062,6 +2062,16 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			 */
 			if (l_inp != *inp_p) {
 				printf("Bad problem find_ep got a diff inp then special_locate?\n");
+			}
+		} else {
+			if (*locked_tcb == NULL) {
+				/* In this case we found the assoc only
+				 * after we locked the create lock. This means
+				 * we are in a colliding case and we must make
+				 * sure that we unlock the tcb if its one of the
+				 * cases where we throw away the incoming packets.
+				 */
+				*locked_tcb = *stcb;
 			}
 		}
 	}
@@ -4042,7 +4052,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 								&inp, &stcb, netp,
 								auth_skipped,
 								auth_offset,
-								auth_len);
+								auth_len,
+								&locked_tcb);
 				if(linp)
 					SCTP_ASOC_CREATE_UNLOCK(linp);
 				if (ret_buf == NULL) {
