@@ -356,9 +356,9 @@ sctp_threshold_management(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			ph->param_type = htons(SCTP_CAUSE_PROTOCOL_VIOLATION);
 			ph->param_length = htons(oper->m_len);
 			ippp = (uint32_t *) (ph + 1);
-			*ippp = htonl(0x40000001);
+			*ippp = htonl(SCTP_FROM_SCTP_TIMER+__LINE__);
 		}
-		inp->last_abort_code = 0x40000001;
+		inp->last_abort_code = SCTP_FROM_SCTP_TIMER+__LINE__;
 		sctp_abort_an_association(inp, stcb, SCTP_FAILED_THRESHOLD, oper);
 		return (1);
 	}
@@ -1151,9 +1151,9 @@ sctp_cookie_timer(struct sctp_inpcb *inp,
 				ph->param_type = htons(SCTP_CAUSE_PROTOCOL_VIOLATION);
 				ph->param_length = htons(oper->m_len);
 				ippp = (uint32_t *) (ph + 1);
-				*ippp = htonl(0x40000002);
+				*ippp = htonl(SCTP_FROM_SCTP_TIMER+__LINE__);
 			}
-			inp->last_abort_code = 0x40000002;
+			inp->last_abort_code = SCTP_FROM_SCTP_TIMER+__LINE__;
 			sctp_abort_an_association(inp, stcb, SCTP_INTERNAL_ERROR,
 			    oper);
 		} else {

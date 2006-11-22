@@ -4071,12 +4071,16 @@ sctp_remove_from_wheel(struct sctp_tcb *stcb,
 {
 	/* take off and then setup so we know it is not on the wheel */
 	SCTP_TCB_SEND_LOCK(stcb);
+	if (TAILQ_FIRST(&strq->outqueue)) {
+		/* more was added */
+		SCTP_TCB_SEND_UNLOCK(stcb);
+		return;
+	}
 	TAILQ_REMOVE(&asoc->out_wheel, strq, next_spoke);
 	strq->next_spoke.tqe_next = NULL;
 	strq->next_spoke.tqe_prev = NULL;
 	SCTP_TCB_SEND_UNLOCK(stcb);
 }
-
 
 static void
 sctp_prune_prsctp(struct sctp_tcb *stcb,
@@ -4368,7 +4372,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 	if ((strm->next_spoke.tqe_next == NULL) &&
 	    (strm->next_spoke.tqe_prev == NULL)) {
 		/* Not on wheel, insert */
-		sctp_insert_on_wheel(stcb, &stcb->asoc, strm, 0);
+		sctp_insert_on_wheel(stcb, &stcb->asoc, strm, 1);
 	}
 	m = NULL;
 	SCTP_TCB_SEND_UNLOCK(stcb);
@@ -9704,6 +9708,11 @@ sctp_lower_sosend(struct socket *so,
 			splx(s);
 			goto out_unlocked;
 		}
+		/* With the lock applied look again */
+		stcb = sctp_findassociation_ep_addr(&t_inp, addr, &net, NULL, NULL);
+		if(stcb) {
+			hold_tcblock = 1;
+		}
 	}
 	if(stcb == NULL) {
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) {
@@ -10121,6 +10130,7 @@ sctp_lower_sosend(struct socket *so,
 		strm = &stcb->asoc.strmout[srcv->sinfo_stream];
 		user_marks_eor = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXPLICIT_EOR);
 		if(strm->last_msg_incomplete == 0) {
+		do_a_copy_in:
 			sp = sctp_copy_it_in(stcb, asoc, srcv, uio, net, max_len, user_marks_eor, &error, non_blocking);
 			if ((sp == NULL) || (error)) {
 				goto out;
@@ -10162,6 +10172,17 @@ sctp_lower_sosend(struct socket *so,
 			SCTP_TCB_SEND_UNLOCK(stcb);
 		} else {
 			sp = TAILQ_LAST(&strm->outqueue, sctp_streamhead);
+			if(sp == NULL) {
+				/* ???? Huh ??? last msg is gone */
+#ifdef INVARIENTS 
+				panic("Warning: Last msg marked incomplete, yet nothing left?");
+#else
+				printf("Warning: Last msg marked incomplete, yet nothing left?\n");
+				strm->last_msg_incomplete = 0;
+#endif
+				goto do_a_copy_in;
+
+			}
 		}
 		while (uio->uio_resid > 0) {
 			/* How much room do we have? */
