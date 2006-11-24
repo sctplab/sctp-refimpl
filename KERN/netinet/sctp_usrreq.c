@@ -763,16 +763,19 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 		xinpcb.features               = inp->sctp_features;
 		xinpcb.total_sends            = inp->total_sends;
 		xinpcb.total_recvs            = inp->total_recvs;
+		SCTP_INP_INCR_REF(inp);
+		SCTP_INP_RUNLOCK(inp);
+		SCTP_INP_INFO_RUNLOCK();
 		error = SYSCTL_OUT(req, &xinpcb, sizeof(struct xsctp_inpcb));
 		if (error) {
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			socket_unlock(inp->ip_inp.inp.inp_socket, 1);
 			lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
 #endif
-			SCTP_INP_RUNLOCK(inp);
-			SCTP_INP_INFO_RUNLOCK();
 			return error;
 		}
+		SCTP_INP_INFO_RLOCK();
+		SCTP_INP_RLOCK(inp);
 		/* FIXME MT */
 		/*
 		LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
@@ -789,6 +792,9 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 		}
 		*/
 		LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
+			SCTP_TCB_LOCK(stcb);
+			atomic_add_int(&stcb->asoc.refcnt, 1);
+			SCTP_TCB_UNLOCK(stcb);
 			number_of_local_addresses = 0;
 			number_of_remote_addresses = 0;
 			/* FIXME MT */
@@ -814,14 +820,15 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 			xstcb.highest_tsn              = stcb->asoc.sending_seq - 1;
 			xstcb.cumulative_tsn           = stcb->asoc.last_acked_seq;
 			xstcb.cumulative_tsn_ack       = stcb->asoc.cumulative_tsn;
+			SCTP_INP_RUNLOCK(inp);
+			SCTP_INP_INFO_RUNLOCK();
 			error = SYSCTL_OUT(req, &xstcb, sizeof(struct xsctp_tcb));
 			if (error) {
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 				socket_unlock(inp->ip_inp.inp.inp_socket, 1);
 				lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
 #endif
-				SCTP_INP_RUNLOCK(inp);
-				SCTP_INP_INFO_RUNLOCK();
+				atomic_add_int(&stcb->asoc.refcnt, -1);
 				return error;
 			}
 			/* FIXME MT */
@@ -848,15 +855,18 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 					socket_unlock(inp->ip_inp.inp.inp_socket, 1);
 					lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
 #endif
-					SCTP_INP_RUNLOCK(inp);
-					SCTP_INP_INFO_RUNLOCK();
+					atomic_add_int(&stcb->asoc.refcnt, -1);
 					return error;
 				}			
 			}			
+			atomic_add_int(&stcb->asoc.refcnt, -1);
+			SCTP_INP_INFO_RLOCK();
+			SCTP_INP_RLOCK(inp);
 		}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		socket_unlock(inp->ip_inp.inp.inp_socket, 1);
 #endif
+		SCTP_INP_DECR_REF(inp);
 		SCTP_INP_RUNLOCK(inp);
 	}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
