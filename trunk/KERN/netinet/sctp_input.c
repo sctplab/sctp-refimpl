@@ -4949,14 +4949,15 @@ sctp_skip_csum_4:
 			if (init_chk != NULL)
 				sh->v_tag = init_chk->init.initiate_tag;
 		}
-/*
 		if (ch->chunk_type == SCTP_SHUTDOWN_ACK) {
 			sctp_send_shutdown_complete2(m, iphlen, sh);
+ 			goto bad;
+		}
+		if(ch->chunk_type == SCTP_SHUTDOWN_COMPLETE) {
 			goto bad;
 		}
-*/
-		if(ch->chunk_type != SCTP_ABORT_ASSOCIATION)
-			sctp_send_abort(m, iphlen, sh, 0, NULL);
+ 		if(ch->chunk_type != SCTP_ABORT_ASSOCIATION)
+ 			sctp_send_abort(m, iphlen, sh, 0, NULL);
 		goto bad;
 	} else if (stcb == NULL) {
 		refcount_up = 1;
