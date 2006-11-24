@@ -4725,6 +4725,10 @@ sctp_trim_mbuf(struct mbuf *m)
 }
 #endif
 
+int sctp_buf_index=0;
+uint8_t sctp_list_of_chunks[3000];
+
+
 #if defined(__FreeBSD__) || defined(__APPLE__)
 void
 sctp_input(m, off)
@@ -4909,9 +4913,16 @@ sctp_skip_csum_4:
 	    sh, ch, &inp, &net);
 	/* inp's ref-count increased && stcb locked */
 	if (inp == NULL) {
+		int x;
 		struct sctp_init_chunk *init_chk, chunk_buf;
 
 		SCTP_STAT_INCR(sctps_noport);
+		x =  atomic_fetchadd_int(&sctp_buf_index, 1);
+		if(x > 3000) {
+			sctp_buf_index = 1;
+			x = 0;;
+		}
+		sctp_list_of_chunks[x] = ch->chunk_type;
 #ifdef ICMP_BANDLIM
 		/*
 		 * we use the bandwidth limiting to protect against sending
@@ -4938,7 +4949,14 @@ sctp_skip_csum_4:
 			if (init_chk != NULL)
 				sh->v_tag = init_chk->init.initiate_tag;
 		}
-		sctp_send_abort(m, iphlen, sh, 0, NULL);
+/*
+		if (ch->chunk_type == SCTP_SHUTDOWN_ACK) {
+			sctp_send_shutdown_complete2(m, iphlen, sh);
+			goto bad;
+		}
+*/
+		if(ch->chunk_type != SCTP_ABORT_ASSOCIATION)
+			sctp_send_abort(m, iphlen, sh, 0, NULL);
 		goto bad;
 	} else if (stcb == NULL) {
 		refcount_up = 1;
