@@ -4736,7 +4736,7 @@ sctp_trim_mbuf(struct mbuf *m)
 #endif
 
 int sctp_buf_index=0;
-uint8_t sctp_list_of_chunks[30000];
+uint8_t sctp_list_of_chunks[3000];
 
 
 #if defined(__FreeBSD__) || defined(__APPLE__)
@@ -4830,16 +4830,6 @@ sctp_input(m, va_alist)
 	sh = (struct sctphdr *)((caddr_t)ip + iphlen);
 	ch = (struct sctp_chunkhdr *)((caddr_t)sh + sizeof(*sh));
 
-	{
-		/* TEMP log the first chunk */
-		int x;
-		x =  atomic_fetchadd_int(&sctp_buf_index, 1);
-		if(x > 30000) {
-			sctp_buf_index = 1;
-			x = 0;;
-		}
-		sctp_list_of_chunks[x] = ch->chunk_type;
-	}
 	/* SCTP does not allow broadcasts or multicasts */
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	if (IN_MULTICAST(ip->ip_dst.s_addr))
@@ -4934,6 +4924,27 @@ sctp_skip_csum_4:
 	/* inp's ref-count increased && stcb locked */
 	if (inp == NULL) {
 		struct sctp_init_chunk *init_chk, chunk_buf;
+	{
+		/* TEMP log the first chunk */
+		int x;
+		x =  atomic_fetchadd_int(&sctp_buf_index, 1);
+		if(x > 3000) {
+			sctp_buf_index = 1;
+			x = 0;;
+		}
+		sctp_list_of_chunks[x] = ch->chunk_type;
+		if(ch->chunk_type == 14) {
+			printf("Saw a s-c, cant find tcb\n");
+			printf("srcp:%d destp:%d\n",
+			       ntohs(sh->src_port),
+			       ntohs(sh->dest_port));
+		} else if (ch->chunk_type == 8) {
+			printf("saw a s-a, cant find tcb\n");
+			printf("srcp:%d destp:%d\n",
+			       ntohs(sh->src_port),
+			       ntohs(sh->dest_port));
+		}
+	}
 
 		SCTP_STAT_INCR(sctps_noport);
 #ifdef ICMP_BANDLIM
@@ -4963,10 +4974,12 @@ sctp_skip_csum_4:
 				sh->v_tag = init_chk->init.initiate_tag;
 		}
 		if (ch->chunk_type == SCTP_SHUTDOWN_ACK) {
+			printf("Jinning up a S-C\n");
 			sctp_send_shutdown_complete2(m, iphlen, sh);
  			goto bad;
 		}
 		if(ch->chunk_type == SCTP_SHUTDOWN_COMPLETE) {
+			printf("Skipping to bad with stray S-C\n");
 			goto bad;
 		}
  		if(ch->chunk_type != SCTP_ABORT_ASSOCIATION)
