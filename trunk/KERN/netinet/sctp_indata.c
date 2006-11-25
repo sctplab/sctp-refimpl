@@ -2387,7 +2387,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 			 */
 			if (callout_pending(&stcb->asoc.dack_timer.timer)) {
 				sctp_timer_stop(SCTP_TIMER_TYPE_RECV,
-				    stcb->sctp_ep, stcb, NULL);
+				    stcb->sctp_ep, stcb, NULL, SCTP_FROM_SCTP_INDATA+__LINE__ );
 			}
 			sctp_send_shutdown(stcb, stcb->asoc.primary_destination);
 			sctp_send_sack(stcb);
@@ -3954,7 +3954,8 @@ sctp_cwnd_update(struct sctp_tcb *stcb,
 				 */
 				if (callout_pending(&net->fr_timer.timer)) {
 					SCTP_STAT_INCR(sctps_earlyfrstpidsck2);
-					sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net);
+					sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net,
+							SCTP_FROM_SCTP_INDATA+__LINE__ );
 				}
 				SCTP_STAT_INCR(sctps_earlyfrstrid);
 				sctp_timer_start(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net);
@@ -3962,7 +3963,8 @@ sctp_cwnd_update(struct sctp_tcb *stcb,
 				/* No, stop it if its running */
 				if (callout_pending(&net->fr_timer.timer)) {
 					SCTP_STAT_INCR(sctps_earlyfrstpidsck3);
-					sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net);
+					sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net,
+							SCTP_FROM_SCTP_INDATA+__LINE__ );
 				}
 			}
 		}
@@ -4335,12 +4337,14 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 		} else {
 			if(callout_pending(&net->rxt_timer.timer)) {
 				sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
-						stcb, net);
+						stcb, net,
+						SCTP_FROM_SCTP_INDATA+__LINE__ );
 			}
 			if (sctp_early_fr) {
 				if (callout_pending(&net->fr_timer.timer)) {
 					SCTP_STAT_INCR(sctps_earlyfrstpidsck4);
-					sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net);
+					sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net,
+							SCTP_FROM_SCTP_INDATA+__LINE__ );
 				}
 			}
 		}
@@ -4596,11 +4600,12 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 		/* stop any timers */
 		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 			sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
-			    stcb, net);
+			    stcb, net, SCTP_FROM_SCTP_INDATA+__LINE__ );
 			if (sctp_early_fr) {
 				if (callout_pending(&net->fr_timer.timer)) {
 					SCTP_STAT_INCR(sctps_earlyfrstpidsck1);
-					sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net);
+					sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net,
+							SCTP_FROM_SCTP_INDATA+__LINE__ );
 				}
 			}
 			net->partial_bytes_acked = 0;
@@ -4806,14 +4811,15 @@ skip_segments:
 		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 			if (net->new_pseudo_cumack)
 				sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
-				    stcb, net);
+				    stcb, net,
+						SCTP_FROM_SCTP_INDATA+__LINE__ );
 
 		}
 	} else {
 		if (accum_moved) {
 			TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 				sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
-				    stcb, net);
+				    stcb, net, SCTP_FROM_SCTP_INDATA+__LINE__ );
 			}
 		}
 	}
@@ -4953,11 +4959,12 @@ skip_segments:
 			if (sctp_early_fr) {
 				if (callout_pending(&net->fr_timer.timer)) {
 					SCTP_STAT_INCR(sctps_earlyfrstpidsck4);
-					sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net);
+					sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net,
+							SCTP_FROM_SCTP_INDATA+__LINE__ );
 				}
 			}
 			sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
-			    stcb, net);
+			    stcb, net,SCTP_FROM_SCTP_INDATA+__LINE__ );
 			net->flight_size = 0;
 			net->partial_bytes_acked = 0;
 		}
@@ -5177,7 +5184,7 @@ skip_segments:
 				asoc->nonce_resync_tsn = asoc->fast_recovery_tsn + 1;
 
 				sctp_timer_stop(SCTP_TIMER_TYPE_SEND,
-				    stcb->sctp_ep, stcb, net);
+				    stcb->sctp_ep, stcb, net, SCTP_FROM_SCTP_INDATA+__LINE__ );
 				sctp_timer_start(SCTP_TIMER_TYPE_SEND,
 				    stcb->sctp_ep, stcb, net);
 			}

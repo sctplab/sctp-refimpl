@@ -2626,7 +2626,8 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 		 */
 		inp->sctp_flags &= ~SCTP_PCB_FLAGS_CLOSE_IP;
 	}
-	sctp_timer_stop(SCTP_TIMER_TYPE_NEWCOOKIE, inp, NULL, NULL);
+	sctp_timer_stop(SCTP_TIMER_TYPE_NEWCOOKIE, inp, NULL, NULL, 
+			SCTP_FROM_SCTP_PCB+__LINE__ );
 
 	if (inp->control) {
 		sctp_m_freem(inp->control);

@@ -387,7 +387,8 @@ sctp_notify_mbuf(struct sctp_inpcb *inp,
 	/* Stop any PMTU timer */
 	if (callout_pending(&net->pmtu_timer.timer)) {
 		tmr_stopped = 1;
-		sctp_timer_stop(SCTP_TIMER_TYPE_PATHMTURAISE, inp, stcb, net);
+		sctp_timer_stop(SCTP_TIMER_TYPE_PATHMTURAISE, inp, stcb, net, 
+				SCTP_FROM_SCTP_USRREQ+__LINE__);
 	}
 	/* Adjust destination size limit */
 	if (net->mtu > nxtsz) {
@@ -4223,7 +4224,9 @@ sctp_optsset(struct socket *so,
 			if (stcb->asoc.delayed_connection == 1) {
 				stcb->asoc.delayed_connection = 0;
 				SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_entered);
-				sctp_timer_stop(SCTP_TIMER_TYPE_INIT, inp, stcb, stcb->asoc.primary_destination);
+				sctp_timer_stop(SCTP_TIMER_TYPE_INIT, inp, stcb, 
+						stcb->asoc.primary_destination,
+						SCTP_FROM_SCTP_USRREQ+__LINE__);
 				sctp_send_initiate(inp, stcb);
 			} else {
 				/*
@@ -4525,7 +4528,8 @@ sctp_optsset(struct socket *so,
 					}
 					if (paddrp->spp_flags & SPP_PMTUD_DISABLE) {
 						if (callout_pending(&net->pmtu_timer.timer)) {
-							sctp_timer_stop(SCTP_TIMER_TYPE_PATHMTURAISE, inp, stcb, net);
+							sctp_timer_stop(SCTP_TIMER_TYPE_PATHMTURAISE, inp, stcb, net,
+SCTP_FROM_SCTP_USRREQ+__LINE__);
 						}
 						if (paddrp->spp_pathmtu > SCTP_DEFAULT_MINSEGMENT) {
 							net->mtu = paddrp->spp_pathmtu;
@@ -4580,7 +4584,7 @@ sctp_optsset(struct socket *so,
 						 * addresses
 						 */
 						if (cnt_of_unconf == 0) {
-							sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net);
+							sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net, SCTP_FROM_SCTP_USRREQ+__LINE__);
 						}
 					}
 					if (paddrp->spp_flags & SPP_HB_ENABLE) {
