@@ -139,19 +139,29 @@ static void
 sctp_stop_all_cookie_timers(struct sctp_tcb *stcb)
 {
 	struct sctp_nets *net;
-
+	/* This now not only stops all cookie timers
+	 * it also stops any INIT timers as well. This
+	 * will make sure that the timers are stopped in
+	 * all collision cases.
+	 */
 	SCTP_TCB_LOCK_ASSERT(stcb);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
 #endif
 	TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 		if ((callout_pending(&net->rxt_timer.timer) ||
-		    callout_active(&net->rxt_timer.timer)) &&
-		    (net->rxt_timer.type == SCTP_TIMER_TYPE_COOKIE)) {
-			sctp_timer_stop(SCTP_TIMER_TYPE_COOKIE,
-			    stcb->sctp_ep,
-			    stcb,
-			    net, SCTP_FROM_SCTP_INPUT+__LINE__ );
+		     callout_active(&net->rxt_timer.timer))) {
+			if (net->rxt_timer.type == SCTP_TIMER_TYPE_COOKIE) {
+				sctp_timer_stop(SCTP_TIMER_TYPE_COOKIE,
+						stcb->sctp_ep,
+						stcb,
+						net, SCTP_FROM_SCTP_INPUT+__LINE__ );
+			} else if (net->rxt_timer.type == SCTP_TIMER_TYPE_INIT) {
+				sctp_timer_stop(SCTP_TIMER_TYPE_INIT,
+						stcb->sctp_ep,
+						stcb,
+						net, SCTP_FROM_SCTP_INPUT+__LINE__ );
+			}
 		}
 	}
 }
@@ -1299,7 +1309,6 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		 * should be ok, re-accept peer info
 		 */
 		sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net, SCTP_FROM_SCTP_INPUT+__LINE__);
-		sctp_timer_stop(SCTP_TIMER_TYPE_INIT, inp, stcb, net, SCTP_FROM_SCTP_INPUT+__LINE__);
 		sctp_stop_all_cookie_timers(stcb);
 		/*
 		 * since we did not send a HB make sure we don't double
