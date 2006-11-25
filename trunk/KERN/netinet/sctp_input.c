@@ -1240,6 +1240,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 				/* if ok, move to OPEN state */
 				asoc->state = SCTP_STATE_OPEN;
 			}
+			sctp_stop_all_cookie_timers(stcb);
 			if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 			    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) &&
 			    (inp->sctp_socket->so_qlimit == 0)
@@ -1684,9 +1685,9 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	} else {
 		asoc->state = SCTP_STATE_OPEN;
 	}
+	sctp_stop_all_cookie_timers(stcb);
 	SCTP_STAT_INCR_COUNTER32(sctps_passiveestab);
 	SCTP_STAT_INCR_GAUGE32(sctps_currestab);
-	sctp_stop_all_cookie_timers(stcb);
 	/* calculate the RTT */
 	(*netp)->RTO = sctp_calculate_rto(stcb, asoc, *netp,
 	    &cookie->time_entered);
@@ -4479,18 +4480,6 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 			 * and it changes our INP.
 			 */
  			inp = stcb->sctp_ep;
-			if(stcb->asoc.state & SCTP_STATE_OPEN) {
-				/* validate no cookie or init timers up */
-				struct sctp_nets *net;
-				TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
-					if(callout_pending(&net->rxt_timer.timer)) {
-						if ((net->rxt_timer.type == SCTP_TIMER_TYPE_INIT) ||
-						    (net->rxt_timer.type == SCTP_TIMER_TYPE_COOKIE)) {
-							panic("Left open with init/cookie timer up?");
-						}
-					}
-				}
-			}
 		}
 	} else {
 		/*
@@ -4545,6 +4534,19 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 	 * Rest should be DATA only.  Check authentication state if AUTH for
 	 * DATA is required.
 	 */
+	if(stcb->asoc.state & SCTP_STATE_OPEN) {
+		/* validate no cookie or init timers up */
+		struct sctp_nets *net;
+		TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
+			if(callout_pending(&net->rxt_timer.timer)) {
+				if ((net->rxt_timer.type == SCTP_TIMER_TYPE_INIT) ||
+				    (net->rxt_timer.type == SCTP_TIMER_TYPE_COOKIE)) {
+					panic("Left open with init/cookie timer up?");
+				}
+			}
+		}
+	}
+
 	if ((length > offset) && (stcb != NULL) && !sctp_auth_disable &&
 	    sctp_auth_is_required_chunk(SCTP_DATA,
 	    stcb->asoc.local_auth_chunks) &&
