@@ -151,7 +151,7 @@ sctp_stop_all_cookie_timers(struct sctp_tcb *stcb)
 			sctp_timer_stop(SCTP_TIMER_TYPE_COOKIE,
 			    stcb->sctp_ep,
 			    stcb,
-			    net);
+			    net, SCTP_FROM_SCTP_INPUT+__LINE__ );
 		}
 	}
 }
@@ -455,7 +455,7 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 	 * primary.
 	 */
 	sctp_timer_stop(SCTP_TIMER_TYPE_INIT, stcb->sctp_ep, stcb,
-	    asoc->primary_destination);
+	    asoc->primary_destination, SCTP_FROM_SCTP_INPUT+__LINE__);
 
 	retval = sctp_send_cookie_echo(m, offset, stcb, net);
 	if (retval < 0) {
@@ -588,7 +588,7 @@ sctp_handle_abort(struct sctp_abort_chunk *cp,
 	/* ignore abort for addresses being deleted */
 
 	/* stop any receive timers */
-	sctp_timer_stop(SCTP_TIMER_TYPE_RECV, stcb->sctp_ep, stcb, net);
+	sctp_timer_stop(SCTP_TIMER_TYPE_RECV, stcb->sctp_ep, stcb, net, SCTP_FROM_SCTP_INPUT+__LINE__);
 	/* notify user of the abort and clean up... */
 	sctp_abort_notification(stcb, 0);
 	/* free the tcb */
@@ -662,7 +662,7 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 		 * stop the shutdown timer, since we WILL move to
 		 * SHUTDOWN-ACK-SENT.
 		 */
-		sctp_timer_stop(SCTP_TIMER_TYPE_SHUTDOWN, stcb->sctp_ep, stcb, net);
+		sctp_timer_stop(SCTP_TIMER_TYPE_SHUTDOWN, stcb->sctp_ep, stcb, net, SCTP_FROM_SCTP_INPUT+__LINE__);
 	}
 	/* Now are we there yet? */
 	some_on_streamwheel = 0;
@@ -741,7 +741,7 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
 		sctp_report_all_outbound(stcb, 0);
 	}
 	/* stop the timer */
-	sctp_timer_stop(SCTP_TIMER_TYPE_SHUTDOWN, stcb->sctp_ep, stcb, net);
+	sctp_timer_stop(SCTP_TIMER_TYPE_SHUTDOWN, stcb->sctp_ep, stcb, net, SCTP_FROM_SCTP_INPUT+__LINE__);
 	/* send SHUTDOWN-COMPLETE */
 	sctp_send_shutdown_complete(stcb, net);
 	/* notify upper layer protocol */
@@ -1217,8 +1217,8 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			/* Duplicate INIT case */
 			/* we have already processed the INIT so no problem */
 			sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb,
-			    net);
-			sctp_timer_stop(SCTP_TIMER_TYPE_INIT, inp, stcb, net);
+			    net, SCTP_FROM_SCTP_INPUT+__LINE__);
+			sctp_timer_stop(SCTP_TIMER_TYPE_INIT, inp, stcb, net, SCTP_FROM_SCTP_INPUT+__LINE__);
 			/* update current state */
 			if (asoc->state & SCTP_STATE_SHUTDOWN_PENDING) {
 				asoc->state = SCTP_STATE_OPEN |
@@ -1298,8 +1298,8 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		 * case B in Section 5.2.4 Table 2: MXAA or MOAA my info
 		 * should be ok, re-accept peer info
 		 */
-		sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net);
-		sctp_timer_stop(SCTP_TIMER_TYPE_INIT, inp, stcb, net);
+		sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net, SCTP_FROM_SCTP_INPUT+__LINE__);
+		sctp_timer_stop(SCTP_TIMER_TYPE_INIT, inp, stcb, net, SCTP_FROM_SCTP_INPUT+__LINE__);
 		sctp_stop_all_cookie_timers(stcb);
 		/*
 		 * since we did not send a HB make sure we don't double
@@ -1389,9 +1389,10 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		/*
 		 * case A in Section 5.2.4 Table 2: XXMM (peer restarted)
 		 */
-		printf("Peer Restarts\n");
-		sctp_timer_stop(SCTP_TIMER_TYPE_INIT, inp, stcb, net);
-		sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net);
+		/* temp code */
+		panic("Peer Restarts\n");
+		sctp_timer_stop(SCTP_TIMER_TYPE_INIT, inp, stcb, net, SCTP_FROM_SCTP_INPUT+__LINE__);
+		sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net, SCTP_FROM_SCTP_INPUT+__LINE__);
 		*sac_assoc_id = sctp_get_associd(stcb);
 		/* notify upper layer */
 		*notification = SCTP_NOTIFY_ASSOC_RESTART;
@@ -2455,7 +2456,7 @@ sctp_handle_shutdown_complete(struct sctp_shutdown_complete_chunk *cp,
 		}
 	}
 	/* stop the timer */
-	sctp_timer_stop(SCTP_TIMER_TYPE_SHUTDOWN, stcb->sctp_ep, stcb, net);
+	sctp_timer_stop(SCTP_TIMER_TYPE_SHUTDOWN, stcb->sctp_ep, stcb, net, SCTP_FROM_SCTP_INPUT+__LINE__);
 	SCTP_STAT_INCR_COUNTER32(sctps_shutdown);
 	/* free the TCB */
 	sctp_free_assoc(stcb->sctp_ep, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+__LINE__);
@@ -2568,7 +2569,7 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 
 				/* restart the timer */
 				sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
-				    stcb, tp1->whoTo);
+				    stcb, tp1->whoTo, SCTP_FROM_SCTP_INPUT+__LINE__);
 				sctp_timer_start(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
 				    stcb, tp1->whoTo);
 
@@ -2638,7 +2639,7 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 			 * this, otherwise we let the timer fire.
 			 */
 			sctp_timer_stop(SCTP_TIMER_TYPE_INIT, stcb->sctp_ep,
-			    stcb, net);
+			    stcb, net, SCTP_FROM_SCTP_INPUT+__LINE__);
 			sctp_send_initiate(stcb->sctp_ep, stcb);
 		}
 		break;
@@ -2807,7 +2808,7 @@ sctp_clean_up_stream_reset(struct sctp_tcb *stcb)
 	if (stcb->asoc.str_reset == NULL) {
 		return;
 	}
-	sctp_timer_stop(SCTP_TIMER_TYPE_STRRESET, stcb->sctp_ep, stcb, chk->whoTo);
+	sctp_timer_stop(SCTP_TIMER_TYPE_STRRESET, stcb->sctp_ep, stcb, chk->whoTo, SCTP_FROM_SCTP_INPUT+__LINE__);
 	TAILQ_REMOVE(&asoc->control_send_queue,
 	    chk,
 	    sctp_next);
