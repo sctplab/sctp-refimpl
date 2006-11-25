@@ -1089,7 +1089,7 @@ sctp_handle_init_ack(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 		/*
 		 * collapse the init timer back in case of a exponential
 		 * backoff
-n		 */
+		 */
 		sctp_timer_start(SCTP_TIMER_TYPE_COOKIE, stcb->sctp_ep,
 		    stcb, net);
 		/*
@@ -1274,8 +1274,8 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			 * have simply lost the COOKIE-ACK
 			 */
 			break;
-			}	/* end switch */
-
+		}	/* end switch */
+		sctp_stop_all_cookie_timers(stcb);
 		/*
 		 * We ignore the return code here.. not sure if we should
 		 * somehow abort.. but we do have an existing asoc. This
@@ -1287,7 +1287,6 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			return (NULL);
 		}
 		/* respond with a COOKIE-ACK */
-		sctp_stop_all_cookie_timers(stcb);
 		sctp_toss_old_cookies(stcb, asoc);
 		sctp_send_cookie_ack(stcb);
 		return (stcb);
@@ -4480,6 +4479,18 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 			 * and it changes our INP.
 			 */
  			inp = stcb->sctp_ep;
+			if(stcb->asoc.state & SCTP_STATE_OPEN) {
+				/* validate no cookie or init timers up */
+				struct sctp_nets *net;
+				TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
+					if(callout_pending(&net->rxt_timer.timer)) {
+						if ((net->rxt_timer.type == SCTP_TIMER_TYPE_INIT) ||
+						    (net->rxt_timer.type == SCTP_TIMER_TYPE_COOKIE)) {
+							panic("Left open with init/cookie timer up?");
+						}
+					}
+				}
+			}
 		}
 	} else {
 		/*
