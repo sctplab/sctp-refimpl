@@ -5071,18 +5071,6 @@ sctp_skip_csum_4:
 	
 	sctp_common_input_processing(&m, iphlen, offset, length, sh, ch,
 	    inp, stcb, net, ecn_bits);
-
-	/* Randy's audit TEMP code  */
-	if (stcb) {
-		struct sctp_nets *net;
-		TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
-			if(net->flight_size) {
-				if ((callout_pending(&net->rxt_timer.timer)) == 0) {
-					panic("Leaving without rxt_timer up?");
-				}
-			}
-		}
-	}
 	/* inp's ref-count reduced && stcb unlocked */
 	splx(s);
 	if (m) {
