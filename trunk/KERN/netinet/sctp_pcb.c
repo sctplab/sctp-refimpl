@@ -2779,22 +2779,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 		}
 		/* now is there some left in our SHUTDOWN state? */
 		if (cnt_in_sd) {
-			if ((inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) !=
-			    SCTP_PCB_FLAGS_UNBOUND) {
-				/*
-				 * ok, this guy has been bound. It's port is
-				 * somewhere in the sctppcbinfo hash table.
-				 * Remove it!
-				 * 
-				 * Note we are depending on lookup by vtag to
-				 * find associations that are dieing. This
-				 * free's the port so we don't have to block
-				 * its useage. The SCTP_PCB_FLAGS_UNBOUND flags will
-				 * prevent us from doing this again.
-				 */
-				LIST_REMOVE(inp, sctp_hash);
-				inp->sctp_flags |= SCTP_PCB_FLAGS_UNBOUND;
-			}
 			splx(s);
 
 			SCTP_INP_WUNLOCK(inp);
