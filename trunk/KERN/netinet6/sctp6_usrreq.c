@@ -532,7 +532,7 @@ sctp6_notify_mbuf(struct sctp_inpcb *inp,
 	 */
 	nxtsz = ntohl(icmp6->icmp6_mtu);
 	/* Stop any PMTU timer */
-	sctp_timer_stop(SCTP_TIMER_TYPE_PATHMTURAISE, inp, stcb, NULL);
+	sctp_timer_stop(SCTP_TIMER_TYPE_PATHMTURAISE, inp, stcb, NULL, SCTP_FROM_SCTP6_USRREQ+__LINE__);
 
 	/* Adjust destination size limit */
 	if (net->mtu > nxtsz) {
