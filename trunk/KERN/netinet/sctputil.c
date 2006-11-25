@@ -1431,6 +1431,8 @@ sctp_timeout_handler(void *t)
 	/* clear the callout pending status here */
 	callout_stop(&tmr->timer);
 #endif
+	/* record in stopped what t-o occured */
+	tmr->stopped_from = tmr->type;
 
 	if (stcb) {
 		atomic_add_int(&stcb->asoc.refcnt, 1);
