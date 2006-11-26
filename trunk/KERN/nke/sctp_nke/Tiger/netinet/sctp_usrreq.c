@@ -387,7 +387,8 @@ sctp_notify_mbuf(struct sctp_inpcb *inp,
 	/* Stop any PMTU timer */
 	if (callout_pending(&net->pmtu_timer.timer)) {
 		tmr_stopped = 1;
-		sctp_timer_stop(SCTP_TIMER_TYPE_PATHMTURAISE, inp, stcb, net);
+		sctp_timer_stop(SCTP_TIMER_TYPE_PATHMTURAISE, inp, stcb, net, 
+				SCTP_FROM_SCTP_USRREQ+__LINE__);
 	}
 	/* Adjust destination size limit */
 	if (net->mtu > nxtsz) {
@@ -763,16 +764,19 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 		xinpcb.features               = inp->sctp_features;
 		xinpcb.total_sends            = inp->total_sends;
 		xinpcb.total_recvs            = inp->total_recvs;
+		SCTP_INP_INCR_REF(inp);
+		SCTP_INP_RUNLOCK(inp);
+		SCTP_INP_INFO_RUNLOCK();
 		error = SYSCTL_OUT(req, &xinpcb, sizeof(struct xsctp_inpcb));
 		if (error) {
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			socket_unlock(inp->ip_inp.inp.inp_socket, 1);
 			lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
 #endif
-			SCTP_INP_RUNLOCK(inp);
-			SCTP_INP_INFO_RUNLOCK();
 			return error;
 		}
+		SCTP_INP_INFO_RLOCK();
+		SCTP_INP_RLOCK(inp);
 		/* FIXME MT */
 		/*
 		LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
@@ -789,6 +793,9 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 		}
 		*/
 		LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
+			SCTP_TCB_LOCK(stcb);
+			atomic_add_int(&stcb->asoc.refcnt, 1);
+			SCTP_TCB_UNLOCK(stcb);
 			number_of_local_addresses = 0;
 			number_of_remote_addresses = 0;
 			/* FIXME MT */
@@ -814,14 +821,15 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 			xstcb.highest_tsn              = stcb->asoc.sending_seq - 1;
 			xstcb.cumulative_tsn           = stcb->asoc.last_acked_seq;
 			xstcb.cumulative_tsn_ack       = stcb->asoc.cumulative_tsn;
+			SCTP_INP_RUNLOCK(inp);
+			SCTP_INP_INFO_RUNLOCK();
 			error = SYSCTL_OUT(req, &xstcb, sizeof(struct xsctp_tcb));
 			if (error) {
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 				socket_unlock(inp->ip_inp.inp.inp_socket, 1);
 				lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
 #endif
-				SCTP_INP_RUNLOCK(inp);
-				SCTP_INP_INFO_RUNLOCK();
+				atomic_add_int(&stcb->asoc.refcnt, -1);
 				return error;
 			}
 			/* FIXME MT */
@@ -848,15 +856,18 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 					socket_unlock(inp->ip_inp.inp.inp_socket, 1);
 					lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
 #endif
-					SCTP_INP_RUNLOCK(inp);
-					SCTP_INP_INFO_RUNLOCK();
+					atomic_add_int(&stcb->asoc.refcnt, -1);
 					return error;
 				}			
 			}			
+			atomic_add_int(&stcb->asoc.refcnt, -1);
+			SCTP_INP_INFO_RLOCK();
+			SCTP_INP_RLOCK(inp);
 		}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		socket_unlock(inp->ip_inp.inp.inp_socket, 1);
 #endif
+		SCTP_INP_DECR_REF(inp);
 		SCTP_INP_RUNLOCK(inp);
 	}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
@@ -4213,7 +4224,9 @@ sctp_optsset(struct socket *so,
 			if (stcb->asoc.delayed_connection == 1) {
 				stcb->asoc.delayed_connection = 0;
 				SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_entered);
-				sctp_timer_stop(SCTP_TIMER_TYPE_INIT, inp, stcb, stcb->asoc.primary_destination);
+				sctp_timer_stop(SCTP_TIMER_TYPE_INIT, inp, stcb, 
+						stcb->asoc.primary_destination,
+						SCTP_FROM_SCTP_USRREQ+__LINE__);
 				sctp_send_initiate(inp, stcb);
 			} else {
 				/*
@@ -4515,7 +4528,8 @@ sctp_optsset(struct socket *so,
 					}
 					if (paddrp->spp_flags & SPP_PMTUD_DISABLE) {
 						if (callout_pending(&net->pmtu_timer.timer)) {
-							sctp_timer_stop(SCTP_TIMER_TYPE_PATHMTURAISE, inp, stcb, net);
+							sctp_timer_stop(SCTP_TIMER_TYPE_PATHMTURAISE, inp, stcb, net,
+SCTP_FROM_SCTP_USRREQ+__LINE__);
 						}
 						if (paddrp->spp_pathmtu > SCTP_DEFAULT_MINSEGMENT) {
 							net->mtu = paddrp->spp_pathmtu;
@@ -4570,7 +4584,7 @@ sctp_optsset(struct socket *so,
 						 * addresses
 						 */
 						if (cnt_of_unconf == 0) {
-							sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net);
+							sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net, SCTP_FROM_SCTP_USRREQ+__LINE__);
 						}
 					}
 					if (paddrp->spp_flags & SPP_HB_ENABLE) {

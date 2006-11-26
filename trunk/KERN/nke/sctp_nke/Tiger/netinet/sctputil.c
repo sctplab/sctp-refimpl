@@ -1431,6 +1431,8 @@ sctp_timeout_handler(void *t)
 	/* clear the callout pending status here */
 	callout_stop(&tmr->timer);
 #endif
+	/* record in stopped what t-o occured */
+	tmr->stopped_from = tmr->type;
 
 	if (stcb) {
 		atomic_add_int(&stcb->asoc.refcnt, 1);
@@ -1637,7 +1639,7 @@ sctp_timeout_handler(void *t)
 		SCTP_STAT_INCR(sctps_timoassockill);
 		/* Can we free it yet? */
 		SCTP_INP_DECR_REF(inp);
-		sctp_timer_stop(SCTP_TIMER_TYPE_ASOCKILL, inp, stcb, NULL);
+		sctp_timer_stop(SCTP_TIMER_TYPE_ASOCKILL, inp, stcb, NULL, SCTP_FROM_SCTPUTIL+__LINE__ );
 		sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTPUTIL+__LINE__);
 		/*
 		 * free asoc, always unlocks (or destroy's) so prevent
@@ -1653,7 +1655,7 @@ sctp_timeout_handler(void *t)
 		 * killer
 		 */
 		SCTP_INP_DECR_REF(inp);
-		sctp_timer_stop(SCTP_TIMER_TYPE_INPKILL, inp, NULL, NULL);
+		sctp_timer_stop(SCTP_TIMER_TYPE_INPKILL, inp, NULL, NULL, SCTP_FROM_SCTPUTIL+__LINE__ );
 		sctp_inpcb_free(inp, 1, 0);
 		goto out_no_decr;
 		break;
@@ -2066,6 +2068,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	if (t_type == SCTP_TIMER_TYPE_SEND) {
 		stcb->asoc.num_send_timers_up++;
 	}
+	tmr->stopped_from = 0;
 	tmr->type = t_type;
 	tmr->ep = (void *)inp;
 	tmr->tcb = (void *)stcb;
@@ -2078,7 +2081,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 
 int
 sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
-    struct sctp_nets *net)
+    struct sctp_nets *net, uint32_t from)
 {
 	struct sctp_timer *tmr;
 
@@ -2247,6 +2250,7 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		}
 	}
 	tmr->self = NULL;
+	tmr->stopped_from = from;
 	callout_stop(&tmr->timer);
 	return (0);
 }
@@ -4471,7 +4475,7 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far, int hold_rlock,
 		sctp_chunk_output(stcb->sctp_ep, stcb,
 				  SCTP_OUTPUT_FROM_USR_RCVD);
 		/* make sure no timer is running */
-		sctp_timer_stop(SCTP_TIMER_TYPE_RECV, stcb->sctp_ep, stcb, NULL);
+		sctp_timer_stop(SCTP_TIMER_TYPE_RECV, stcb->sctp_ep, stcb, NULL, SCTP_FROM_SCTPUTIL+__LINE__ );
 		SCTP_TCB_UNLOCK(stcb);
 	} else {
 		/* Update how much we have pending */
