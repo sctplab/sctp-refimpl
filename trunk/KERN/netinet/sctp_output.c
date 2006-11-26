@@ -10339,7 +10339,6 @@ sctp_lower_sosend(struct socket *so,
 				}
 				if( (stcb->asoc.state & SCTP_STATE_INUSE) == SCTP_STATE_INUSE) {
 					sctp_send_initiate(inp, stcb);
-					stcb->asoc.state = SCTP_STATE_COOKIE_WAIT;
 					queue_only_for_init = 0;
 					queue_only = 1;
 				} else {
@@ -10588,7 +10587,6 @@ sctp_lower_sosend(struct socket *so,
 		}
 		if( (stcb->asoc.state & SCTP_STATE_INUSE) == SCTP_STATE_INUSE) {
 			sctp_send_initiate(inp, stcb);
-			stcb->asoc.state = SCTP_STATE_COOKIE_WAIT;
 			queue_only_for_init = 0;
 			queue_only = 1;
 		} else {
