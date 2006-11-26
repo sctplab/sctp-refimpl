@@ -78,6 +78,7 @@ struct sctp_timer {
 	/* for sanity checking */
 	void *self;
 	uint32_t ticks;
+	uint32_t stopped_from;
 };
 
 struct sctp_nonpad_sndrcvinfo {

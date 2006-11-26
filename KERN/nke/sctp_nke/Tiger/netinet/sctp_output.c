@@ -5905,7 +5905,7 @@ again_one_more_time:
 						/* turn off the timer */
 						if (callout_pending(&stcb->asoc.dack_timer.timer)) {
 							sctp_timer_stop(SCTP_TIMER_TYPE_RECV,
-							    inp, stcb, net);
+							    inp, stcb, net, SCTP_FROM_SCTP_OUTPUT+__LINE__ );
 						}
 					}
 					ctl_cnt++;
@@ -6287,7 +6287,8 @@ again_one_more_time:
 					if (net->flight_size < net->cwnd) {
 						/* start or restart it */
 						if (callout_pending(&net->fr_timer.timer)) {
-							sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, inp, stcb, net);
+							sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, inp, stcb, net,
+									SCTP_FROM_SCTP_OUTPUT+__LINE__ );
 						}
 						SCTP_STAT_INCR(sctps_earlyfrstrout);
 						sctp_timer_start(SCTP_TIMER_TYPE_EARLYFR, inp, stcb, net);
@@ -6295,7 +6296,8 @@ again_one_more_time:
 						/* stop it if its running */
 						if (callout_pending(&net->fr_timer.timer)) {
 							SCTP_STAT_INCR(sctps_earlyfrstpout);
-							sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, inp, stcb, net);
+							sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, inp, stcb, net,
+									SCTP_FROM_SCTP_OUTPUT+__LINE__ );
 						}
 					}
 				}
@@ -7227,7 +7229,8 @@ one_chunk_around:
 						 * SACK back without a
 						 * t3-expiring.
 						 */
-						sctp_timer_stop(SCTP_TIMER_TYPE_SEND, inp, stcb, net);
+						sctp_timer_stop(SCTP_TIMER_TYPE_SEND, inp, stcb, net,
+								SCTP_FROM_SCTP_OUTPUT+__LINE__ );
 						sctp_timer_start(SCTP_TIMER_TYPE_SEND, inp, stcb, net);
 					}
 				}
@@ -7788,7 +7791,7 @@ sctp_send_sack(struct sctp_tcb *stcb)
 		if (a_chk == NULL) {
 			/* No memory so we drop the idea, and set a timer */
 			sctp_timer_stop(SCTP_TIMER_TYPE_RECV,
-			    stcb->sctp_ep, stcb, NULL);
+			    stcb->sctp_ep, stcb, NULL, SCTP_FROM_SCTP_OUTPUT+__LINE__ );
 			sctp_timer_start(SCTP_TIMER_TYPE_RECV,
 			    stcb->sctp_ep, stcb, NULL);
 			return;
@@ -7857,7 +7860,7 @@ sctp_send_sack(struct sctp_tcb *stcb)
 			atomic_subtract_int(&a_chk->whoTo->ref_count, 1);
 		sctp_free_a_chunk(stcb, a_chk);
 		sctp_timer_stop(SCTP_TIMER_TYPE_RECV,
-		    stcb->sctp_ep, stcb, NULL);
+		    stcb->sctp_ep, stcb, NULL, SCTP_FROM_SCTP_OUTPUT+__LINE__ );
 		sctp_timer_start(SCTP_TIMER_TYPE_RECV,
 		    stcb->sctp_ep, stcb, NULL);
 		return;
@@ -9794,10 +9797,10 @@ sctp_lower_sosend(struct socket *so,
 								SCTP_TCB_UNLOCK(stcb);
 							}
 							SCTP_MALLOC(tmp_str,
-							       struct sctp_stream_out *,
-							       asoc->streamoutcnt *
-							       sizeof(struct sctp_stream_out),
-							       "StreamsOut");
+								    struct sctp_stream_out *,
+								    asoc->streamoutcnt *
+								    sizeof(struct sctp_stream_out),
+								    "StreamsOut");
 							if(had_lock) {
 								SCTP_TCB_LOCK(stcb);
 							}
@@ -10334,11 +10337,16 @@ sctp_lower_sosend(struct socket *so,
 					SCTP_TCB_LOCK(stcb);
 					hold_tcblock = 1;
 				}
-				sctp_send_initiate(inp, stcb);
-				queue_only_for_init = 0;
-				queue_only = 1;
-				SCTP_TCB_UNLOCK(stcb);
-				hold_tcblock = 0;
+				if(SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_OPEN) {
+					/* a collision took us forward? */
+					queue_only_for_init = 0;
+					queue_only = 0;
+				} else {
+					sctp_send_initiate(inp, stcb);
+					stcb->asoc.state = SCTP_STATE_COOKIE_WAIT;
+					queue_only_for_init = 0;
+					queue_only = 1;
+				}
 			}
 			if((queue_only == 0) && (nagle_applies == 0)
 				) {
@@ -10578,9 +10586,16 @@ sctp_lower_sosend(struct socket *so,
 			SCTP_TCB_LOCK(stcb);
 			hold_tcblock = 1;
 		}
-		sctp_send_initiate(inp, stcb);
-		queue_only_for_init = 0;
-		queue_only = 1;
+		if(SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_OPEN) {
+			/* a collision took us forward? */
+			queue_only_for_init = 0;
+			queue_only = 0;
+		} else {
+			sctp_send_initiate(inp, stcb);
+			stcb->asoc.state = SCTP_STATE_COOKIE_WAIT;
+			queue_only_for_init = 0;
+			queue_only = 1;
+		}
 	}
 	if ((queue_only == 0) && (nagle_applies == 0) && (stcb->asoc.peers_rwnd && un_sent)) {
 		/* we can attempt to send too. */

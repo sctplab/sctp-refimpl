@@ -2626,7 +2626,8 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 		 */
 		inp->sctp_flags &= ~SCTP_PCB_FLAGS_CLOSE_IP;
 	}
-	sctp_timer_stop(SCTP_TIMER_TYPE_NEWCOOKIE, inp, NULL, NULL);
+	sctp_timer_stop(SCTP_TIMER_TYPE_NEWCOOKIE, inp, NULL, NULL, 
+			SCTP_FROM_SCTP_PCB+__LINE__ );
 
 	if (inp->control) {
 		sctp_m_freem(inp->control);
@@ -2778,22 +2779,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 		}
 		/* now is there some left in our SHUTDOWN state? */
 		if (cnt_in_sd) {
-			if ((inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) !=
-			    SCTP_PCB_FLAGS_UNBOUND) {
-				/*
-				 * ok, this guy has been bound. It's port is
-				 * somewhere in the sctppcbinfo hash table.
-				 * Remove it!
-				 * 
-				 * Note we are depending on lookup by vtag to
-				 * find associations that are dieing. This
-				 * free's the port so we don't have to block
-				 * its useage. The SCTP_PCB_FLAGS_UNBOUND flags will
-				 * prevent us from doing this again.
-				 */
-				LIST_REMOVE(inp, sctp_hash);
-				inp->sctp_flags |= SCTP_PCB_FLAGS_UNBOUND;
-			}
 			splx(s);
 
 			SCTP_INP_WUNLOCK(inp);
@@ -4021,13 +4006,22 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		 * hopefully given him something to chew on
 		 * above.
 		 */
-		if (so) {
-			/* Wake any reader/writers */
-			sctp_sorwakeup(inp, so);
-			sctp_sowwakeup(inp, so);
-		}
 		sctp_timer_start(SCTP_TIMER_TYPE_ASOCKILL, inp, stcb, NULL);
 		SCTP_TCB_UNLOCK(stcb);
+		if(so) {
+			SCTP_INP_RLOCK(inp);
+			if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) ||
+			    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) 
+				/* nothing around */
+				so = NULL;
+			SCTP_INP_RUNLOCK(inp);
+			if (so) {
+				/* Wake any reader/writers */
+				sctp_sorwakeup(inp, so);
+				sctp_sowwakeup(inp, so);
+			}
+
+		}
 		splx(s);
 #ifdef SCTP_LOG_CLOSING
 		sctp_log_closing(inp, stcb, 9);
