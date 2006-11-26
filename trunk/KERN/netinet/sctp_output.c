@@ -10337,7 +10337,7 @@ sctp_lower_sosend(struct socket *so,
 					SCTP_TCB_LOCK(stcb);
 					hold_tcblock = 1;
 				}
-				if( (SCTP_GET_STATE(stcb->asoc.state) == SCTP_STATE_OPEN)) {
+				if( (SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_OPEN)) {
 					/* a collision took us forward? */
 					queue_only_for_init = 0;
 					queue_only = 0;
@@ -10586,7 +10586,7 @@ sctp_lower_sosend(struct socket *so,
 			SCTP_TCB_LOCK(stcb);
 			hold_tcblock = 1;
 		}
-		if((SCTP_GET_STATE(stcb->asoc.state) == SCTP_STATE_OPEN)) {
+		if((SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_OPEN)) 
 			/* a collision took us forward? */
 			queue_only_for_init = 0;
 			queue_only = 0;
