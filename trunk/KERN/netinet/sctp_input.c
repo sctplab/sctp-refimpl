@@ -149,19 +149,16 @@ sctp_stop_all_cookie_timers(struct sctp_tcb *stcb)
 	sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
 #endif
 	TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
-		if ((callout_pending(&net->rxt_timer.timer) ||
-		     callout_active(&net->rxt_timer.timer))) {
-			if (net->rxt_timer.type == SCTP_TIMER_TYPE_COOKIE) {
-				sctp_timer_stop(SCTP_TIMER_TYPE_COOKIE,
-						stcb->sctp_ep,
-						stcb,
-						net, SCTP_FROM_SCTP_INPUT+__LINE__ );
-			} else if (net->rxt_timer.type == SCTP_TIMER_TYPE_INIT) {
-				sctp_timer_stop(SCTP_TIMER_TYPE_INIT,
-						stcb->sctp_ep,
-						stcb,
-						net, SCTP_FROM_SCTP_INPUT+__LINE__ );
-			}
+		if (net->rxt_timer.type == SCTP_TIMER_TYPE_COOKIE) {
+			sctp_timer_stop(SCTP_TIMER_TYPE_COOKIE,
+					stcb->sctp_ep,
+					stcb,
+					net, SCTP_FROM_SCTP_INPUT+__LINE__ );
+		} else if (net->rxt_timer.type == SCTP_TIMER_TYPE_INIT) {
+			sctp_timer_stop(SCTP_TIMER_TYPE_INIT,
+					stcb->sctp_ep,
+					stcb,
+					net, SCTP_FROM_SCTP_INPUT+__LINE__ );
 		}
 	}
 }
