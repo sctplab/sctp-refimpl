@@ -4006,13 +4006,22 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		 * hopefully given him something to chew on
 		 * above.
 		 */
-		if (so) {
-			/* Wake any reader/writers */
-			sctp_sorwakeup(inp, so);
-			sctp_sowwakeup(inp, so);
-		}
 		sctp_timer_start(SCTP_TIMER_TYPE_ASOCKILL, inp, stcb, NULL);
 		SCTP_TCB_UNLOCK(stcb);
+		if(so) {
+			SCTP_INP_RLOCK(inp);
+			if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) ||
+			    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) 
+				/* nothing around */
+				so = NULL;
+			SCTP_INP_RUNLOCK(inp);
+			if (so) {
+				/* Wake any reader/writers */
+				sctp_sorwakeup(inp, so);
+				sctp_sowwakeup(inp, so);
+			}
+
+		}
 		splx(s);
 #ifdef SCTP_LOG_CLOSING
 		sctp_log_closing(inp, stcb, 9);
