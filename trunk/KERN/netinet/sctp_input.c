@@ -4937,7 +4937,11 @@ sctp_skip_csum_4:
 	{
 		/* TEMP log the first chunk */
 		int x;
+#ifdef __FreeBSD__
 		x =  atomic_fetchadd_int(&sctp_buf_index, 1);
+#else
+		x = sctp_buf_index++;
+#endif
 		if(x > 3000) {
 			sctp_buf_index = 1;
 			x = 0;;
