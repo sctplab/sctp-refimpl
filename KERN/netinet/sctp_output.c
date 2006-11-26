@@ -10337,14 +10337,15 @@ sctp_lower_sosend(struct socket *so,
 					SCTP_TCB_LOCK(stcb);
 					hold_tcblock = 1;
 				}
-				if( (stcb->asoc.state & SCTP_STATE_INUSE) == SCTP_STATE_INUSE) {
-					sctp_send_initiate(inp, stcb);
-					queue_only_for_init = 0;
-					queue_only = 1;
-				} else {
+				if( (SCTP_GET_STATE(stcb->asoc.state) == SCTP_STATE_OPEN)) {
 					/* a collision took us forward? */
 					queue_only_for_init = 0;
 					queue_only = 0;
+				} else {
+					sctp_send_initiate(inp, stcb);
+					stcb->asoc.state = SCTP_STATE_COOKIE_WAIT;
+					queue_only_for_init = 0;
+					queue_only = 1;
 				}
 			}
 			if((queue_only == 0) && (nagle_applies == 0)
@@ -10585,14 +10586,15 @@ sctp_lower_sosend(struct socket *so,
 			SCTP_TCB_LOCK(stcb);
 			hold_tcblock = 1;
 		}
-		if( (stcb->asoc.state & SCTP_STATE_INUSE) == SCTP_STATE_INUSE) {
-			sctp_send_initiate(inp, stcb);
-			queue_only_for_init = 0;
-			queue_only = 1;
-		} else {
+		if((SCTP_GET_STATE(stcb->asoc.state) == SCTP_STATE_OPEN)) {
 			/* a collision took us forward? */
 			queue_only_for_init = 0;
 			queue_only = 0;
+		} else {
+			sctp_send_initiate(inp, stcb);
+			stcb->asoc.state = SCTP_STATE_COOKIE_WAIT;
+			queue_only_for_init = 0;
+			queue_only = 1;
 		}
 	}
 	if ((queue_only == 0) && (nagle_applies == 0) && (stcb->asoc.peers_rwnd && un_sent)) {
