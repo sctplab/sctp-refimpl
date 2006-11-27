@@ -4133,6 +4133,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 	struct sctp_nets *net;
 	struct sctp_association *asoc;
 	struct sctp_tmit_chunk *tp1, *tp2;
+	int j;
 
 	SCTP_TCB_LOCK_ASSERT(stcb);
 	asoc = &stcb->asoc;
@@ -4324,6 +4325,8 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 	}
 
 	/* Now assure a timer where data is queued at */
+ again:
+	j = 0;
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 		if(net->flight_size) {
 			int to_ticks;
@@ -4332,6 +4335,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 			} else {
 				to_ticks = MSEC_TO_TICKS(net->RTO);
 			}
+			j++;
 			callout_reset(&net->rxt_timer.timer, to_ticks, 
 				      sctp_timeout_handler, &net->rxt_timer);
 		} else {
@@ -4348,6 +4352,30 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 				}
 			}
 		}
+	}
+	if ((j == 0) && (!TAILQ_EMPTY(&asoc->sent_queue))) {
+		/* huh, this should not happen */
+#ifdef INVARIENTS
+		panic("Flight size incorrect? fixing??");
+#else 
+		printf("Flight size incorrect?  fixing\n");
+		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {		
+			net->flight_size = 0;
+		}
+		asoc->total_flight = 0;
+		asoc->total_flight_count = 0;
+		asoc->sent_queue_retran_cnt = 0;
+		TAILQ_FOREACH(tp1,&asoc->sent_queue, sctp_next) {
+			if(tp1->sent < SCTP_DATAGRAM_RESEND) {
+				tp1->whoTo->flight_size += tp1->book_size;
+				asoc->total_flight += tp1->book_size;
+				asoc->total_flight_count++;
+			} else if (tp1->sent == SCTP_DATAGRAM_RESEND) {
+				asoc->sent_queue_retran_cnt++;
+			}
+		}
+#endif
+		goto again;
 	}
 
 	/**********************************/
@@ -5289,12 +5317,40 @@ skip_segments:
 	 * Now we must setup so we have a timer up for anyone with
 	 * outstanding data.
 	 */
+ again:
+	j = 0;
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 		if(net->flight_size) {
+			j++;
 			sctp_timer_start(SCTP_TIMER_TYPE_SEND,
 					 stcb->sctp_ep, stcb, net);
 		}
 	}
+	if ((j == 0) && (!TAILQ_EMPTY(&asoc->sent_queue))) {
+		/* huh, this should not happen */
+#ifdef INVARIENTS
+		panic("Flight size incorrect? fixing??");
+#else 
+		printf("Flight size incorrect? fixing??\n");
+		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {		
+			net->flight_size = 0;
+		}
+		asoc->total_flight = 0;
+		asoc->total_flight_count = 0;
+		asoc->sent_queue_retran_cnt = 0;
+		TAILQ_FOREACH(tp1,&asoc->sent_queue, sctp_next) {
+			if(tp1->sent < SCTP_DATAGRAM_RESEND) {
+				tp1->whoTo->flight_size += tp1->book_size;
+				asoc->total_flight += tp1->book_size;
+				asoc->total_flight_count++;
+			} else if (tp1->sent == SCTP_DATAGRAM_RESEND) {
+				asoc->sent_queue_retran_cnt++;
+			}
+		}
+#endif
+		goto again;
+	}
+
 #ifdef SCTP_SACK_RWND_LOGGING
 	sctp_misc_ints(SCTP_SACK_RWND_UPDATE,
 		       a_rwnd,
