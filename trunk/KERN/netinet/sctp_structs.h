@@ -93,6 +93,12 @@ struct sctp_nonpad_sndrcvinfo {
 	sctp_assoc_t sinfo_assoc_id;
 };
 
+struct sctp_foo_stuff {
+	struct sctp_inpcb *inp;
+	uint32_t        lineno;
+	int             updown;
+};
+
 
 /*
  * This is the information we track on each interface that we know about from
