@@ -747,7 +747,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 			sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN, 
 				       chk->whoTo->flight_size,
 				       chk->book_size, 
-				       chk->send_size, 
+				       (uintptr_t)stcb, 
 				       chk->rec.data.TSN_seq);
 #endif
 
@@ -867,7 +867,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 			sctp_misc_ints(SCTP_FLIGHT_LOG_UP, 
 				       chk->whoTo->flight_size,
 				       chk->book_size, 
-				       chk->send_size, 
+				       (uintptr_t)stcb, 
 				       chk->rec.data.TSN_seq);
 #endif
 				stcb->asoc.total_flight += chk->book_size;
