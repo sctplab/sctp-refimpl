@@ -743,7 +743,19 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 				stcb->asoc.total_flight_count--;
 			chk->sent = SCTP_DATAGRAM_RESEND;
 			SCTP_STAT_INCR(sctps_markedretrans);
-			net->flight_size -= chk->book_size;
+#ifdef SCTP_FLIGHT_LOGGING
+			sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN, 
+				       chk->whoTo->flight_size,
+				       chk->book_size, 
+				       chk->send_size, 
+				       chk->rec.data.TSN_seq);
+#endif
+
+			if(net->flight_size >= chk->book_size)
+				net->flight_size -= chk->book_size;
+			else
+				net->flight_size = 0;
+
 			stcb->asoc.peers_rwnd += chk->send_size;
 			stcb->asoc.peers_rwnd += sctp_peer_chunk_oh;
 
@@ -851,6 +863,13 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 		}
 		TAILQ_FOREACH(chk, &stcb->asoc.sent_queue, sctp_next) {
 			if (chk->sent < SCTP_DATAGRAM_RESEND) {
+#ifdef SCTP_FLIGHT_LOGGING
+			sctp_misc_ints(SCTP_FLIGHT_LOG_UP, 
+				       chk->whoTo->flight_size,
+				       chk->book_size, 
+				       chk->send_size, 
+				       chk->rec.data.TSN_seq);
+#endif
 				stcb->asoc.total_flight += chk->book_size;
 				chk->whoTo->flight_size += chk->book_size;
 				stcb->asoc.total_flight_count++;

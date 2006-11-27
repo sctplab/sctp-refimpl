@@ -2597,6 +2597,13 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 				    stcb, tp1->whoTo);
 
 				/* fix counts and things */
+#ifdef SCTP_FLIGHT_LOGGING
+				sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN, 
+					       tp1->whoTo->flight_size,
+					       tp1->book_size, 
+					       tp1->send_size, 
+					       tp1->rec.data.TSN_seq);
+#endif
 				if (tp1->whoTo->flight_size >= tp1->book_size)
 					tp1->whoTo->flight_size -= tp1->book_size;
 				else
