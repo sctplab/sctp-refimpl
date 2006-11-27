@@ -73,11 +73,6 @@
 __FBSDID("$FreeBSD: src/sys/netinet/sctp_lock_bsd.h,v 1.2 2006/11/03 17:21:53 rrs Exp $");
 #endif
 
-struct sctp_foo_stuff {
-	struct sctp_inpcb *inp;
-	uint32_t        lineno;
-	int             updown;
-};
 
 extern struct sctp_foo_stuff sctp_logoff[];
 extern int sctp_logoff_stuff;
@@ -199,13 +194,13 @@ extern int sctp_logoff_stuff;
 #ifdef INVARIANTS
 
 #define SCTP_INP_INCR_REF(_inp) { int x; \
-                                  atomic_add_int(&((_inp)->refcount), 1) \
+                                  atomic_add_int(&((_inp)->refcount), 1); \
                                   x = atomic_fetchadd_int(&sctp_logoff_stuff, 1); \
                                   if(x == 30000) \
                                       sctp_logoff_stuff = x = 0; \
-                                  sctp_foo_stuff[x].inp = _inp; \
-                                  sctp_foo_stuff[x].lineno = __LINE__; \
-                                  sctp_foo_stuff[x].updown = 1; \
+                                  sctp_logoff[x].inp = _inp; \
+                                  sctp_logoff[x].lineno = __LINE__; \
+                                  sctp_logoff[x].updown = 1; \
 }
 
 #define SCTP_INP_DECR_REF(_inp) { int x; \
@@ -213,9 +208,9 @@ extern int sctp_logoff_stuff;
                                   x = atomic_fetchadd_int(&sctp_logoff_stuff, 1); \
                                   if(x == 30000) \
                                       sctp_logoff_stuff = x = 0; \
-                                  sctp_foo_stuff[x].inp = _inp; \
-                                  sctp_foo_stuff[x].lineno = __LINE__; \
-                                  sctp_foo_stuff[x].updown = 0; \
+                                  sctp_logoff[x].inp = _inp; \
+                                  sctp_logoff[x].lineno = __LINE__; \
+                                  sctp_logoff[x].updown = 0; \
 }
 
 #else
