@@ -187,7 +187,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_lock_bsd.h,v 1.2 2006/11/03 17:21:53 rr
 
 #define SCTP_TCB_SEND_UNLOCK(_tcb) mtx_unlock(&(_tcb)->tcb_send_mtx)
 
-#ifdef INVARIENTS
+#ifdef INVARIANTS
 #define SCTP_INP_INCR_REF(_inp) atomic_add_int(&((_inp)->refcount), 1)
 #define SCTP_INP_DECR_REF(_inp) if (atomic_fetchadd_int(&((_inp)->refcount), -1) == 0 ) panic("refcount goes negative");
 

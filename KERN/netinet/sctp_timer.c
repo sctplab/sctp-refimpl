@@ -809,7 +809,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 		could_be_sent->sent = SCTP_DATAGRAM_RESEND;
 	}
 	if (stcb->asoc.sent_queue_retran_cnt != cnt_mk) {
-#ifdef INVARIENTS
+#ifdef INVARIANTS
 		printf("Local Audit says there are %d for retran asoc cnt:%d\n",
 		    cnt_mk, stcb->asoc.sent_queue_retran_cnt);
 #endif
@@ -1157,7 +1157,7 @@ sctp_cookie_timer(struct sctp_inpcb *inp,
 			sctp_abort_an_association(inp, stcb, SCTP_INTERNAL_ERROR,
 			    oper);
 		} else {
-#ifdef INVARIENTS
+#ifdef INVARIANTS
 			panic("Cookie timer expires in wrong state?");
 #else
 			printf("Strange in state %d not cookie-echoed yet c-e timer expires?\n", SCTP_GET_STATE(&stcb->asoc));

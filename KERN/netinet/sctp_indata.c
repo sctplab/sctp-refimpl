@@ -2231,7 +2231,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 	if (compare_with_wrap(asoc->cumulative_tsn,
 	    asoc->highest_tsn_inside_map,
 	    MAX_TSN)) {
-#ifdef INVARIENTS
+#ifdef INVARIANTS
 		panic("huh, cumack greater than high-tsn in map");
 #else
 		printf("huh, cumack greater than high-tsn in map - should panic?\n");
@@ -4355,7 +4355,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 	}
 	if ((j == 0) && (!TAILQ_EMPTY(&asoc->sent_queue))) {
 		/* huh, this should not happen */
-#ifdef INVARIENTS
+#ifdef INVARIANTS
 		panic("Flight size incorrect? fixing??");
 #else 
 		printf("Flight size incorrect?  fixing\n");
@@ -5328,7 +5328,7 @@ skip_segments:
 	}
 	if ((j == 0) && (!TAILQ_EMPTY(&asoc->sent_queue))) {
 		/* huh, this should not happen */
-#ifdef INVARIENTS
+#ifdef INVARIANTS
 		panic("Flight size incorrect? fixing??");
 #else 
 		printf("Flight size incorrect? fixing??\n");
