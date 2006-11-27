@@ -2092,9 +2092,10 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 				 * reduces the refcount.. we must raise it back
 				 * out to balance it all :-)
 				 */
-				if(l_inp == *inp_p) {
-					/* Only if the INP did not change */
-					SCTP_INP_INCR_REF(l_inp);
+				SCTP_INP_INCR_REF(stcb->sctp_ep);
+				if (stcb->sctp_ep != l_inp) {
+					printf("Huh? ep:%p diff then l_inp:%p?\n",
+					       stcb->sctp_ep, l_inp);
 				}
 			}
 		}
