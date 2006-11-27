@@ -661,7 +661,7 @@ sctp_fill_stat_log(struct mbuf *m)
 		req->end_at = sctp_cwnd_log_at - 1;
 		req->num_ret = sctp_cwnd_log_at;
 	}
-#ifdef INVARIENTS
+#ifdef INVARIANTS
 	if(req->num_ret > num) {
 		panic("Bad statlog get?");
 	} 
@@ -3983,7 +3983,7 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 
 	if(inp == NULL) {
 		/* Gak, TSNH!! */
-#ifdef INVARIENTS
+#ifdef INVARIANTS
 		panic("Gak, inp NULL on add_to_readq");
 #endif
 		return;
@@ -4114,7 +4114,7 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 		/* Really there should always be a prev */
 		if(m == NULL) {
 			/* Huh nothing left? */
-#ifdef INVARIENTS
+#ifdef INVARIANTS
 			panic("Nothing left to add?");
 #else
 			goto get_out;
@@ -4138,7 +4138,7 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 		control->tail_mbuf = tail;
 	} else {
 		/* nothing there */
-#ifdef INVARIENTS
+#ifdef INVARIANTS
 		if(control->data != NULL) {
 			panic("This should NOT happen");
 		}
@@ -4706,7 +4706,7 @@ restart:
 		}
 		control = TAILQ_FIRST(&inp->read_queue);
 		if ((control == NULL) && (so->so_rcv.sb_cc != 0)) {
-#ifdef INVARIENTS
+#ifdef INVARIANTS
 			panic("Huh, its non zero and nothing on control?");
 #endif
 			so->so_rcv.sb_cc = 0;
@@ -5029,7 +5029,7 @@ get_more_data:
 					m = control->data;
 					/* been through it all, must hold sb lock ok to null tail */
 					if (control->data == NULL) {
-#ifdef INVARIENTS
+#ifdef INVARIANTS
 						if ((control->end_added == 0) ||
 						    (TAILQ_NEXT(control, next) == NULL)) {
 							/* If the end is not added, OR the
@@ -5041,7 +5041,7 @@ get_more_data:
 						}
 #endif
 						control->tail_mbuf = NULL;
-#ifdef INVARIENTS
+#ifdef INVARIANTS
 						if ((control->end_added) && ((out_flags & MSG_EOR) == 0)) {
 							panic("end_added, nothing left and no MSG_EOR");
 						}
@@ -5127,7 +5127,7 @@ get_more_data:
 			/* we are done with this control */
 			if (control->length == 0) {
 				if (control->data) {
-#ifdef INVARIENTS
+#ifdef INVARIANTS
 					panic("control->data not null at read eor?");
 #else
 					printf("Strange, data left in the control buffer .. invarients would panic?\n");
@@ -5176,7 +5176,7 @@ get_more_data:
 				 * are leaving more behind on the control to
 				 * read.
 				 */
-#ifdef INVARIENTS
+#ifdef INVARIANTS
 				if(control->end_added && (control->data == NULL) &&
 				   (control->tail_mbuf == NULL)) {
 					panic("Gak, control->length is corrupt?");

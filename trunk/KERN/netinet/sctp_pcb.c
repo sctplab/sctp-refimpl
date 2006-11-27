@@ -514,7 +514,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 			}
 			/* now look at the list of remote addresses */
 			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
-#ifdef INVARIENTS
+#ifdef INVARIANTS
 				if (net == (TAILQ_NEXT(net, sctp_next))) {
 					panic("Corrupt net list");
 				}
@@ -593,7 +593,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 			/* now look at the list of remote addresses */
 			SCTP_TCB_LOCK(stcb);
 			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
-#ifdef INVARIENTS
+#ifdef INVARIANTS
 				if (net == (TAILQ_NEXT(net, sctp_next))) {
 					panic("Corrupt net list");
 				}
@@ -4365,7 +4365,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		net = TAILQ_FIRST(&asoc->nets);
 		/* pull from list */
 		if ((sctppcbinfo.ipi_count_raddr == 0) || (prev == net)) {
-#ifdef INVARIENTS
+#ifdef INVARIANTS
 			panic("no net's left alloc'ed, or list points to itself");
 #endif
 			break;

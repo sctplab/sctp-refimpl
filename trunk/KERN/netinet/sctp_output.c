@@ -6142,7 +6142,7 @@ again_one_more_time:
 
 					to_out += chk->send_size;
 					if(to_out > mx_mtu) {
-#ifdef INVARIENT
+#ifdef INVARIANT
 						panic("gag");
 #else
 						printf("Exceeding mtu of %d out size is %d\n",
@@ -10177,7 +10177,7 @@ sctp_lower_sosend(struct socket *so,
 			sp = TAILQ_LAST(&strm->outqueue, sctp_streamhead);
 			if(sp == NULL) {
 				/* ???? Huh ??? last msg is gone */
-#ifdef INVARIENTS 
+#ifdef INVARIANTS 
 				panic("Warning: Last msg marked incomplete, yet nothing left?");
 #else
 				printf("Warning: Last msg marked incomplete, yet nothing left?\n");
@@ -10674,7 +10674,7 @@ sctp_lower_sosend(struct socket *so,
 	if (stcb && free_cnt_applied) {
 		atomic_add_int(&stcb->asoc.refcnt, -1);
 	}
-#ifdef INVARIENTS
+#ifdef INVARIANTS
 #if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	if (stcb) {
 		if (mtx_owned(&stcb->tcb_mtx)) {
