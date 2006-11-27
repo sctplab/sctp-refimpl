@@ -135,6 +135,12 @@ extern uint32_t sctp_debug_on;
 #define APPLE_FILE_NO 2
 #endif
 
+
+
+struct sctp_foo_stuff sctp_logoff[30000];
+int sctp_logoff_stuff=0;
+
+
 static void
 sctp_stop_all_cookie_timers(struct sctp_tcb *stcb)
 {
