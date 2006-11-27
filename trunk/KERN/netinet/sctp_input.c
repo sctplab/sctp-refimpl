@@ -4763,7 +4763,7 @@ sctp_trim_mbuf(struct mbuf *m)
 #endif
 
 int sctp_buf_index=0;
-uint8_t sctp_list_of_chunks[3000];
+uint8_t sctp_list_of_chunks[30000];
 
 
 #if defined(__FreeBSD__) || defined(__APPLE__)
@@ -4942,6 +4942,20 @@ sctp_skip_csum_4:
 		SCTP_STAT_INCR(sctps_hdrops);
 		goto bad;
 	}
+	{
+		/* TEMP log the first chunk */
+		int x;
+#ifdef __FreeBSD__
+		x =  atomic_fetchadd_int(&sctp_buf_index, 1);
+#else
+		x = sctp_buf_index++;
+#endif
+		if(x > 30000) {
+			sctp_buf_index = 1;
+			x = 0;;
+		}
+		sctp_list_of_chunks[x] = ch->chunk_type;
+	}
 	/*
 	 * Locate pcb and tcb for datagram sctp_findassociation_addr() wants
 	 * IP/SCTP/first chunk header...
@@ -4951,32 +4965,6 @@ sctp_skip_csum_4:
 	/* inp's ref-count increased && stcb locked */
 	if (inp == NULL) {
 		struct sctp_init_chunk *init_chk, chunk_buf;
-	{
-		/* TEMP log the first chunk */
-		int x;
-#ifdef __FreeBSD__
-		x =  atomic_fetchadd_int(&sctp_buf_index, 1);
-#else
-		x = sctp_buf_index++;
-#endif
-		if(x > 3000) {
-			sctp_buf_index = 1;
-			x = 0;;
-		}
-		sctp_list_of_chunks[x] = ch->chunk_type;
-		if(ch->chunk_type == 14) {
-			printf("Saw a s-c, cant find tcb\n");
-			printf("srcp:%d destp:%d\n",
-			       ntohs(sh->src_port),
-			       ntohs(sh->dest_port));
-		} else if (ch->chunk_type == 8) {
-			printf("saw a s-a, cant find tcb\n");
-			printf("srcp:%d destp:%d\n",
-			       ntohs(sh->src_port),
-			       ntohs(sh->dest_port));
-		}
-	}
-
 		SCTP_STAT_INCR(sctps_noport);
 #ifdef ICMP_BANDLIM
 		/*

@@ -199,6 +199,7 @@ extern int sctp_logoff_stuff;
                                   if(x == 30000) \
                                       sctp_logoff_stuff = x = 0; \
                                   sctp_logoff[x].inp = _inp; \
+                                  sctp_logoff[x].ticks = ticks; \
                                   sctp_logoff[x].lineno = __LINE__; \
                                   sctp_logoff[x].updown = 1; \
 }
@@ -209,6 +210,7 @@ extern int sctp_logoff_stuff;
                                   if(x == 30000) \
                                       sctp_logoff_stuff = x = 0; \
                                   sctp_logoff[x].inp = _inp; \
+                                  sctp_logoff[x].ticks = ticks; \
                                   sctp_logoff[x].lineno = __LINE__; \
                                   sctp_logoff[x].updown = 0; \
 }

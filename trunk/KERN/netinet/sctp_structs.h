@@ -96,6 +96,7 @@ struct sctp_nonpad_sndrcvinfo {
 struct sctp_foo_stuff {
 	struct sctp_inpcb *inp;
 	uint32_t        lineno;
+	uint32_t        ticks;
 	int             updown;
 };
 
