@@ -9725,9 +9725,16 @@ sctp_lower_sosend(struct socket *so,
 			splx(s);
 			goto out_unlocked;
 		}
+		SCTP_INP_WLOCK(inp);
+		SCTP_INP_INCR_REF(inp);
+		SCTP_INP_WUNLOCK(inp);
 		/* With the lock applied look again */
 		stcb = sctp_findassociation_ep_addr(&t_inp, addr, &net, NULL, NULL);
-		if(stcb) {
+		if (stcb == NULL) {
+			SCTP_INP_WLOCK(inp);
+			SCTP_INP_DECR_REF(inp);
+			SCTP_INP_WUNLOCK(inp);
+		} else {
 			hold_tcblock = 1;
 		}
 	}
