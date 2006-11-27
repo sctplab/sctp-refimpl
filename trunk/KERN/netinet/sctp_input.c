@@ -2085,13 +2085,17 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 				 * cases where we throw away the incoming packets.
 				 */
 				*locked_tcb = *stcb;
+				
 				/* We must also increment the inp ref count
 				 * since the ref_count flags was set when we 
 				 * did not find the TCB, now we found it which
 				 * reduces the refcount.. we must raise it back
 				 * out to balance it all :-)
 				 */
-				SCTP_INP_INCR_REF(inp);
+				if(l_inp == *inp_p) {
+					/* Only if the INP did not change */
+					SCTP_INP_INCR_REF(l_inp);
+				}
 			}
 		}
 	}
