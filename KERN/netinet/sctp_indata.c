@@ -3049,6 +3049,13 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 								 * them from
 								 * the fs.
 								 */
+#ifdef SCTP_FLIGHT_LOGGING
+								sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN, 
+									       tp1->whoTo->flight_size,
+									       tp1->book_size, 
+									       tp1->send_size, 
+									       tp1->rec.data.TSN_seq);
+#endif
 								if (tp1->whoTo->flight_size >= tp1->book_size)
 									tp1->whoTo->flight_size -= tp1->book_size;
 								else
@@ -3577,7 +3584,13 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				tp1->do_rtt = 0;
 			}
 			/* fix counts and things */
-
+#ifdef SCTP_FLIGHT_LOGGING
+			sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN, 
+				       tp1->whoTo->flight_size,
+				       tp1->book_size, 
+				       tp1->send_size, 
+				       tp1->rec.data.TSN_seq);
+#endif
 			tp1->whoTo->net_ack++;
 			if (tp1->whoTo->flight_size >= tp1->book_size)
 				tp1->whoTo->flight_size -= tp1->book_size;
@@ -4174,6 +4187,14 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 						 */
 						goto skip_fs_update;
 					}
+#ifdef SCTP_FLIGHT_LOGGING
+					sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN, 
+						       tp1->whoTo->flight_size,
+						       tp1->book_size, 
+						       tp1->send_size, 
+						       tp1->rec.data.TSN_seq);
+#endif
+
 					if (tp1->whoTo->flight_size >= tp1->book_size) {
 						tp1->whoTo->flight_size -= tp1->book_size;
 					} else {
@@ -4704,6 +4725,13 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 						 */
 						goto skip_fs_update;
 					}
+#ifdef SCTP_FLIGHT_LOGGING
+					sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN, 
+						       tp1->whoTo->flight_size,
+						       tp1->book_size, 
+						       tp1->send_size, 
+						       tp1->rec.data.TSN_seq);
+#endif
 					if (tp1->whoTo->flight_size >= tp1->book_size) {
 						tp1->whoTo->flight_size -= tp1->book_size;
 					} else {

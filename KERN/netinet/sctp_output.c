@@ -5028,6 +5028,13 @@ all_done:
 		data_list[i]->sent = SCTP_DATAGRAM_SENT;
 		data_list[i]->snd_count = 1;
 		data_list[i]->rec.data.chunk_was_revoked = 0;
+#ifdef SCTP_FLIGHT_LOGGING
+		sctp_misc_ints(SCTP_FLIGHT_LOG_UP, 
+			       data_list[i]->whoTo->flight_size,
+			       data_list[i]->book_size, 
+			       data_list[i]->send_size, 
+			       data_list[i]->rec.data.TSN_seq);
+#endif
 		net->flight_size += data_list[i]->book_size;
 		asoc->total_flight += data_list[i]->book_size;
 		asoc->total_flight_count++;
@@ -7192,6 +7199,13 @@ one_chunk_around:
 				if (asoc->sent_queue_retran_cnt < 0) {
 					asoc->sent_queue_retran_cnt = 0;
 				}
+#ifdef SCTP_FLIGHT_LOGGING
+				sctp_misc_ints(SCTP_FLIGHT_LOG_UP, 
+					       data_list[i]->whoTo->flight_size,
+					       data_list[i]->book_size, 
+					       data_list[i]->send_size, 
+					       data_list[i]->rec.data.TSN_seq);
+#endif
 				net->flight_size += data_list[i]->book_size;
 				asoc->total_flight += data_list[i]->book_size;
 				if (data_list[i]->book_size_scale) {
