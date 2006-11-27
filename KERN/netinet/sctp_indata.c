@@ -4353,7 +4353,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 			}
 		}
 	}
-	if ((j == 0) && (!TAILQ_EMPTY(&asoc->sent_queue))) {
+	if ((j == 0) && (!TAILQ_EMPTY(&asoc->sent_queue)) && (asoc->sent_queue_retran_cnt == 0)) {
 		/* huh, this should not happen */
 #ifdef INVARIANTS
 		panic("Flight size incorrect? fixing??");
@@ -5326,7 +5326,7 @@ skip_segments:
 					 stcb->sctp_ep, stcb, net);
 		}
 	}
-	if ((j == 0) && (!TAILQ_EMPTY(&asoc->sent_queue))) {
+	if ((j == 0) && (!TAILQ_EMPTY(&asoc->sent_queue)) && (asoc->sent_queue_retran_cnt == 0)) {
 		/* huh, this should not happen */
 #ifdef INVARIANTS
 		panic("Flight size incorrect? fixing??");
