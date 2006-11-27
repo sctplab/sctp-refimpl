@@ -3053,7 +3053,7 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 								sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN, 
 									       tp1->whoTo->flight_size,
 									       tp1->book_size, 
-									       tp1->send_size, 
+									       (uintptr_t)stcb, 
 									       tp1->rec.data.TSN_seq);
 #endif
 								if (tp1->whoTo->flight_size >= tp1->book_size)
@@ -3588,7 +3588,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN, 
 				       tp1->whoTo->flight_size,
 				       tp1->book_size, 
-				       tp1->send_size, 
+				       (uintptr_t)stcb, 
 				       tp1->rec.data.TSN_seq);
 #endif
 			tp1->whoTo->net_ack++;
@@ -4191,7 +4191,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 					sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN, 
 						       tp1->whoTo->flight_size,
 						       tp1->book_size, 
-						       tp1->send_size, 
+						       (uintptr_t)stcb, 
 						       tp1->rec.data.TSN_seq);
 #endif
 
@@ -4729,7 +4729,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 					sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN, 
 						       tp1->whoTo->flight_size,
 						       tp1->book_size, 
-						       tp1->send_size, 
+						       (uintptr_t)stcb, 
 						       tp1->rec.data.TSN_seq);
 #endif
 					if (tp1->whoTo->flight_size >= tp1->book_size) {
