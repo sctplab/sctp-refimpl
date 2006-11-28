@@ -5001,12 +5001,10 @@ sctp_skip_csum_4:
 				sh->v_tag = init_chk->init.initiate_tag;
 		}
 		if (ch->chunk_type == SCTP_SHUTDOWN_ACK) {
-			printf("Jinning up a S-C\n");
 			sctp_send_shutdown_complete2(m, iphlen, sh);
  			goto bad;
 		}
 		if(ch->chunk_type == SCTP_SHUTDOWN_COMPLETE) {
-			printf("Skipping to bad with stray S-C\n");
 			goto bad;
 		}
  		if(ch->chunk_type != SCTP_ABORT_ASSOCIATION)
