@@ -3964,6 +3964,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		callout_stop(&net->pmtu_timer.timer);
 	}
 	/* Now the read queue needs to be cleaned up (only once) */
+	cnt = 0;
 	if ((stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) == 0) {
 		SCTP_INP_READ_LOCK(inp);
 		TAILQ_FOREACH(sq, &inp->read_queue, next) {
@@ -3996,6 +3997,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		}
 		SCTP_INP_READ_UNLOCK(inp);
 		if (stcb->block_entry) {
+			cnt++;
 			stcb->block_entry->error = ECONNRESET;
 			stcb->block_entry = NULL;
 		}
@@ -4014,12 +4016,12 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) 
 				/* nothing around */
 				so = NULL;
-			SCTP_INP_RUNLOCK(inp);
 			if (so) {
 				/* Wake any reader/writers */
 				sctp_sorwakeup(inp, so);
 				sctp_sowwakeup(inp, so);
 			}
+			SCTP_INP_RUNLOCK(inp);
 
 		}
 		splx(s);
