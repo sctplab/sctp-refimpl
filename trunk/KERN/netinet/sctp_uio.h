@@ -852,6 +852,8 @@ struct	sctpstat {
 	u_long  sctps_sends_with_unord; 
 	u_long  sctps_sends_with_eof; 
 	u_long  sctps_sends_with_abort; 
+	u_long  sctps_protocol_drain_calls;
+	u_long  sctps_protocol_drains_done;
 };
 
 #define SCTP_STAT_INCR(_x) SCTP_STAT_INCR_BY(_x,1)

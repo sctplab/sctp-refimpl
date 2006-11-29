@@ -5930,6 +5930,7 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 
 	/* We look for anything larger than the cum-ack + 1 */
 
+	SCTP_STAT_INCR(sctps_protocol_drain_calls);
 	if (sctp_do_drain == 0) {
 		return;
 	}
@@ -5938,6 +5939,7 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		/* none we can reneg on. */
 		return;
 	}
+	SCTP_STAT_INCR(sctps_protocol_drains_done);
 	cumulative_tsn_p1 = asoc->cumulative_tsn + 1;
 	cnt = 0;
 	/* First look in the re-assembly queue */
