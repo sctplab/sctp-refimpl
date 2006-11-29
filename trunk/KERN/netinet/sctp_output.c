@@ -5292,7 +5292,6 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 			 * all the data if there is no leading space, so we
 			 * must put the data back and restore.
 			 */
-			printf("We will Panic maybe, out of mbufs\n");
 			if (took_all) {
 				/* unsteal the data */
 				sp->data = chk->data;
