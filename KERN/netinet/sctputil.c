@@ -5030,6 +5030,7 @@ get_more_data:
 					/* been through it all, must hold sb lock ok to null tail */
 					if (control->data == NULL) {
 #ifdef INVARIANTS
+#if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 						if ((control->end_added == 0) ||
 						    (TAILQ_NEXT(control, next) == NULL)) {
 							/* If the end is not added, OR the
@@ -5039,6 +5040,7 @@ get_more_data:
 								panic("Hmm we don't own the lock?");
 							}
 						}
+#endif
 #endif
 						control->tail_mbuf = NULL;
 #ifdef INVARIANTS

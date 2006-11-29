@@ -6149,7 +6149,7 @@ again_one_more_time:
 
 					to_out += chk->send_size;
 					if(to_out > mx_mtu) {
-#ifdef INVARIANT
+#ifdef INVARIANTS
 						panic("gag");
 #else
 						printf("Exceeding mtu of %d out size is %d\n",
