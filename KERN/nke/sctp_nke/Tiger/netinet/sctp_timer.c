@@ -743,7 +743,19 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 				stcb->asoc.total_flight_count--;
 			chk->sent = SCTP_DATAGRAM_RESEND;
 			SCTP_STAT_INCR(sctps_markedretrans);
-			net->flight_size -= chk->book_size;
+#ifdef SCTP_FLIGHT_LOGGING
+			sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN, 
+				       chk->whoTo->flight_size,
+				       chk->book_size, 
+				       (uintptr_t)stcb, 
+				       chk->rec.data.TSN_seq);
+#endif
+
+			if(net->flight_size >= chk->book_size)
+				net->flight_size -= chk->book_size;
+			else
+				net->flight_size = 0;
+
 			stcb->asoc.peers_rwnd += chk->send_size;
 			stcb->asoc.peers_rwnd += sctp_peer_chunk_oh;
 
@@ -809,7 +821,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 		could_be_sent->sent = SCTP_DATAGRAM_RESEND;
 	}
 	if (stcb->asoc.sent_queue_retran_cnt != cnt_mk) {
-#ifdef INVARIENTS
+#ifdef INVARIANTS
 		printf("Local Audit says there are %d for retran asoc cnt:%d\n",
 		    cnt_mk, stcb->asoc.sent_queue_retran_cnt);
 #endif
@@ -851,6 +863,13 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 		}
 		TAILQ_FOREACH(chk, &stcb->asoc.sent_queue, sctp_next) {
 			if (chk->sent < SCTP_DATAGRAM_RESEND) {
+#ifdef SCTP_FLIGHT_LOGGING
+			sctp_misc_ints(SCTP_FLIGHT_LOG_UP, 
+				       chk->whoTo->flight_size,
+				       chk->book_size, 
+				       (uintptr_t)stcb, 
+				       chk->rec.data.TSN_seq);
+#endif
 				stcb->asoc.total_flight += chk->book_size;
 				chk->whoTo->flight_size += chk->book_size;
 				stcb->asoc.total_flight_count++;
@@ -1157,7 +1176,7 @@ sctp_cookie_timer(struct sctp_inpcb *inp,
 			sctp_abort_an_association(inp, stcb, SCTP_INTERNAL_ERROR,
 			    oper);
 		} else {
-#ifdef INVARIENTS
+#ifdef INVARIANTS
 			panic("Cookie timer expires in wrong state?");
 #else
 			printf("Strange in state %d not cookie-echoed yet c-e timer expires?\n", SCTP_GET_STATE(&stcb->asoc));
