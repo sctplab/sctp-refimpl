@@ -2103,6 +2103,11 @@ failed_express_del:
 		/* Into the re-assembly queue */
 		sctp_queue_data_for_reasm(stcb, asoc, chk, abort_flag);
 		if (*abort_flag) {
+			/*
+			 * the assoc is now gone and chk was put onto the
+			 * reasm queue, which has all been freed.
+			 */
+			*m = NULL;
 			return (0);
 		}
 	}
