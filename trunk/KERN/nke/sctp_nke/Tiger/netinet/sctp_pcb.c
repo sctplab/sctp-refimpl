@@ -514,7 +514,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 			}
 			/* now look at the list of remote addresses */
 			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
-#ifdef INVARIENTS
+#ifdef INVARIANTS
 				if (net == (TAILQ_NEXT(net, sctp_next))) {
 					panic("Corrupt net list");
 				}
@@ -593,7 +593,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 			/* now look at the list of remote addresses */
 			SCTP_TCB_LOCK(stcb);
 			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
-#ifdef INVARIENTS
+#ifdef INVARIANTS
 				if (net == (TAILQ_NEXT(net, sctp_next))) {
 					panic("Corrupt net list");
 				}
@@ -3964,6 +3964,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		callout_stop(&net->pmtu_timer.timer);
 	}
 	/* Now the read queue needs to be cleaned up (only once) */
+	cnt = 0;
 	if ((stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) == 0) {
 		SCTP_INP_READ_LOCK(inp);
 		TAILQ_FOREACH(sq, &inp->read_queue, next) {
@@ -3996,6 +3997,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		}
 		SCTP_INP_READ_UNLOCK(inp);
 		if (stcb->block_entry) {
+			cnt++;
 			stcb->block_entry->error = ECONNRESET;
 			stcb->block_entry = NULL;
 		}
@@ -4014,12 +4016,12 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) 
 				/* nothing around */
 				so = NULL;
-			SCTP_INP_RUNLOCK(inp);
 			if (so) {
 				/* Wake any reader/writers */
 				sctp_sorwakeup(inp, so);
 				sctp_sowwakeup(inp, so);
 			}
+			SCTP_INP_RUNLOCK(inp);
 
 		}
 		splx(s);
@@ -4365,7 +4367,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		net = TAILQ_FIRST(&asoc->nets);
 		/* pull from list */
 		if ((sctppcbinfo.ipi_count_raddr == 0) || (prev == net)) {
-#ifdef INVARIENTS
+#ifdef INVARIANTS
 			panic("no net's left alloc'ed, or list points to itself");
 #endif
 			break;
@@ -5928,6 +5930,7 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 
 	/* We look for anything larger than the cum-ack + 1 */
 
+	SCTP_STAT_INCR(sctps_protocol_drain_calls);
 	if (sctp_do_drain == 0) {
 		return;
 	}
@@ -5936,6 +5939,7 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		/* none we can reneg on. */
 		return;
 	}
+	SCTP_STAT_INCR(sctps_protocol_drains_done);
 	cumulative_tsn_p1 = asoc->cumulative_tsn + 1;
 	cnt = 0;
 	/* First look in the re-assembly queue */

@@ -274,7 +274,7 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 	newso = head->so_q;
 #endif
 	if (soqremque(newso, 1) == 0) {
-#ifdef INVARIENTS
+#ifdef INVARIANTS
 		panic("sctp_peeloff");
 #else
 		printf("soremque failed, peeloff-fails (invarients would panic)\n");

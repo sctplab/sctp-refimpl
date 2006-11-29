@@ -73,6 +73,10 @@
 __FBSDID("$FreeBSD: src/sys/netinet/sctp_lock_bsd.h,v 1.2 2006/11/03 17:21:53 rrs Exp $");
 #endif
 
+
+extern struct sctp_foo_stuff sctp_logoff[];
+extern int sctp_logoff_stuff;
+
 #define SCTP_IPI_COUNT_INIT()
 
 #define SCTP_STATLOG_INIT_LOCK() 
@@ -187,9 +191,36 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_lock_bsd.h,v 1.2 2006/11/03 17:21:53 rr
 
 #define SCTP_TCB_SEND_UNLOCK(_tcb) mtx_unlock(&(_tcb)->tcb_send_mtx)
 
+#ifdef INVARIANTS
+
+#define SCTP_INP_INCR_REF(_inp) { int x; \
+                                  atomic_add_int(&((_inp)->refcount), 1); \
+                                  x = atomic_fetchadd_int(&sctp_logoff_stuff, 1); \
+                                  if(x == 30000) \
+                                      sctp_logoff_stuff = x = 0; \
+                                  sctp_logoff[x].inp = _inp; \
+                                  sctp_logoff[x].ticks = ticks; \
+                                  sctp_logoff[x].lineno = __LINE__; \
+                                  sctp_logoff[x].updown = 1; \
+}
+
+#define SCTP_INP_DECR_REF(_inp) { int x; \
+                                  if (atomic_fetchadd_int(&((_inp)->refcount), -1) == 0 ) panic("refcount goes negative"); \
+                                  x = atomic_fetchadd_int(&sctp_logoff_stuff, 1); \
+                                  if(x == 30000) \
+                                      sctp_logoff_stuff = x = 0; \
+                                  sctp_logoff[x].inp = _inp; \
+                                  sctp_logoff[x].ticks = ticks; \
+                                  sctp_logoff[x].lineno = __LINE__; \
+                                  sctp_logoff[x].updown = 0; \
+}
+
+#else
 
 #define SCTP_INP_INCR_REF(_inp) atomic_add_int(&((_inp)->refcount), 1)
 #define SCTP_INP_DECR_REF(_inp) atomic_add_int(&((_inp)->refcount), -1)
+
+#endif
 
 #ifdef SCTP_LOCK_LOGGING
 #define SCTP_ASOC_CREATE_LOCK(_inp) \

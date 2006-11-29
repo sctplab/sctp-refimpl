@@ -135,6 +135,12 @@ extern uint32_t sctp_debug_on;
 #define APPLE_FILE_NO 2
 #endif
 
+
+
+struct sctp_foo_stuff sctp_logoff[30000];
+int sctp_logoff_stuff=0;
+
+
 static void
 sctp_stop_all_cookie_timers(struct sctp_tcb *stcb)
 {
@@ -2079,6 +2085,18 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 				 * cases where we throw away the incoming packets.
 				 */
 				*locked_tcb = *stcb;
+				
+				/* We must also increment the inp ref count
+				 * since the ref_count flags was set when we 
+				 * did not find the TCB, now we found it which
+				 * reduces the refcount.. we must raise it back
+				 * out to balance it all :-)
+				 */
+				SCTP_INP_INCR_REF((*stcb)->sctp_ep);
+				if ((*stcb)->sctp_ep != l_inp) {
+					printf("Huh? ep:%p diff then l_inp:%p?\n",
+					       (*stcb)->sctp_ep, l_inp);
+				}
 			}
 		}
 	}
@@ -2580,6 +2598,13 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 				    stcb, tp1->whoTo);
 
 				/* fix counts and things */
+#ifdef SCTP_FLIGHT_LOGGING
+				sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN, 
+					       tp1->whoTo->flight_size,
+					       tp1->book_size, 
+					       (uintptr_t)stcb, 
+					       tp1->rec.data.TSN_seq);
+#endif
 				if (tp1->whoTo->flight_size >= tp1->book_size)
 					tp1->whoTo->flight_size -= tp1->book_size;
 				else
@@ -4746,7 +4771,7 @@ sctp_trim_mbuf(struct mbuf *m)
 #endif
 
 int sctp_buf_index=0;
-uint8_t sctp_list_of_chunks[3000];
+uint8_t sctp_list_of_chunks[30000];
 
 
 #if defined(__FreeBSD__) || defined(__APPLE__)
@@ -4925,6 +4950,20 @@ sctp_skip_csum_4:
 		SCTP_STAT_INCR(sctps_hdrops);
 		goto bad;
 	}
+	{
+		/* TEMP log the first chunk */
+		int x;
+#ifdef __FreeBSD__
+		x =  atomic_fetchadd_int(&sctp_buf_index, 1);
+#else
+		x = sctp_buf_index++;
+#endif
+		if(x > 30000) {
+			sctp_buf_index = 1;
+			x = 0;;
+		}
+		sctp_list_of_chunks[x] = ch->chunk_type;
+	}
 	/*
 	 * Locate pcb and tcb for datagram sctp_findassociation_addr() wants
 	 * IP/SCTP/first chunk header...
@@ -4934,32 +4973,6 @@ sctp_skip_csum_4:
 	/* inp's ref-count increased && stcb locked */
 	if (inp == NULL) {
 		struct sctp_init_chunk *init_chk, chunk_buf;
-	{
-		/* TEMP log the first chunk */
-		int x;
-#ifdef __FreeBSD__
-		x =  atomic_fetchadd_int(&sctp_buf_index, 1);
-#else
-		x = sctp_buf_index++;
-#endif
-		if(x > 3000) {
-			sctp_buf_index = 1;
-			x = 0;;
-		}
-		sctp_list_of_chunks[x] = ch->chunk_type;
-		if(ch->chunk_type == 14) {
-			printf("Saw a s-c, cant find tcb\n");
-			printf("srcp:%d destp:%d\n",
-			       ntohs(sh->src_port),
-			       ntohs(sh->dest_port));
-		} else if (ch->chunk_type == 8) {
-			printf("saw a s-a, cant find tcb\n");
-			printf("srcp:%d destp:%d\n",
-			       ntohs(sh->src_port),
-			       ntohs(sh->dest_port));
-		}
-	}
-
 		SCTP_STAT_INCR(sctps_noport);
 #ifdef ICMP_BANDLIM
 		/*
@@ -4988,12 +5001,10 @@ sctp_skip_csum_4:
 				sh->v_tag = init_chk->init.initiate_tag;
 		}
 		if (ch->chunk_type == SCTP_SHUTDOWN_ACK) {
-			printf("Jinning up a S-C\n");
 			sctp_send_shutdown_complete2(m, iphlen, sh);
  			goto bad;
 		}
 		if(ch->chunk_type == SCTP_SHUTDOWN_COMPLETE) {
-			printf("Skipping to bad with stray S-C\n");
 			goto bad;
 		}
  		if(ch->chunk_type != SCTP_ABORT_ASSOCIATION)
