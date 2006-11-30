@@ -2516,46 +2516,31 @@ sctp_calculate_rto(struct sctp_tcb *stcb,
 			/* Add in the pre-second ms's */
 			calc_time += (((int)1000000 - (int)old->tv_usec) / 1000);
 		}
+		printf("diff seconds time:%d\n", calc_time);
 	} else if ((u_long)now.tv_sec == (u_long)old->tv_sec) {
 		if ((u_long)now.tv_usec > (u_long)old->tv_usec) {
 			calc_time = ((u_long)now.tv_usec -
 			    (u_long)old->tv_usec) / 1000;
 		} else if ((u_long)now.tv_usec < (u_long)old->tv_usec) {
 			/* impossible .. garbage in nothing out */
+			printf("Garbage collapse 1\n");
 			return (((net->lastsa >> 2) + net->lastsv) >> 1);
 		} else {
 			/* impossible .. garbage in nothing out */
+			printf("Garbage collapse 2\n");
 			return (((net->lastsa >> 2) + net->lastsv) >> 1);
 		}
+		printf("same seconds time:%d\n", calc_time);
 	} else {
 		/* Clock wrapped? */
+		printf("Garbage collapse 3\n");
 		return (((net->lastsa >> 2) + net->lastsv) >> 1);
 	}
 	/***************************/
 	/* 2. update RTTVAR & SRTT */
 	/***************************/
-#if 0
-	/* if (net->lastsv || net->lastsa) { */
-	/* per Section 5.3.1 C3 in SCTP */
-	/* net->lastsv = (int) 	 *//* RTTVAR */
-	/*
-	 * (((double)(1.0 - 0.25) * (double)net->lastsv) + (double)(0.25 *
-	 * (double)abs(net->lastsa - calc_time))); net->lastsa = (int)
-*//* SRTT */
-	/*
-	 * (((double)(1.0 - 0.125) * (double)net->lastsa) + (double)(0.125 *
-	 * (double)calc_time)); } else {
-*//* the first RTT calculation, per C2 Section 5.3.1 */
-	/* net->lastsa = calc_time;	 *//* SRTT */
-	/* net->lastsv = calc_time / 2;	 *//* RTTVAR */
-	/* } */
-	/* if RTTVAR goes to 0 you set to clock grainularity */
-	/*
-	 * if (net->lastsv == 0) { net->lastsv = SCTP_CLOCK_GRANULARITY; }
-	 * new_rto = net->lastsa + 4 * net->lastsv;
-	 */
-#endif
 	o_calctime = calc_time;
+	printf("Enter time calc with:%d\n", o_calctime);
 	/* this is Van Jacobson's integer version */
 	if (net->RTO) {
 		calc_time -= (net->lastsa >> 3);
@@ -2579,10 +2564,12 @@ sctp_calculate_rto(struct sctp_tcb *stcb,
 		calc_time -= (net->lastsv >> 2);
 		net->lastsv += calc_time;
 		if (net->lastsv == 0) {
+			printf("Use clock granulatity\n");
 			net->lastsv = SCTP_CLOCK_GRANULARITY;
 		}
 	} else {
 		/* First RTO measurment */
+		printf("First measurement\n");
 		net->lastsa = calc_time;
 		net->lastsv = calc_time >> 1;
 		first_measure = 1;
@@ -2601,15 +2588,16 @@ sctp_calculate_rto(struct sctp_tcb *stcb,
 		stcb->asoc.sat_network = 0;
 		stcb->asoc.sat_network_lockout = 1;
 	}
-	/* bound it, per C6/C7 in Section 5.3.1 */
-	if (new_rto < stcb->asoc.minrto) {
+ 	/* bound it, per C6/C7 in Section 5.3.1 */
+ 	if (new_rto < stcb->asoc.minrto) {
 		new_rto = stcb->asoc.minrto;
 	}
 	if (new_rto > stcb->asoc.maxrto) {
 		new_rto = stcb->asoc.maxrto;
 	}
 	/* we are now returning the RTT Smoothed */
-	return ((uint32_t) new_rto);
+	printf("Return RTO:%d\n", new_rto);
+ 	return ((uint32_t) new_rto);
 }
 
 
