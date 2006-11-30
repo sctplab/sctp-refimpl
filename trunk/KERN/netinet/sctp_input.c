@@ -470,6 +470,10 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 	sctp_timer_stop(SCTP_TIMER_TYPE_INIT, stcb->sctp_ep, stcb,
 	    asoc->primary_destination, SCTP_FROM_SCTP_INPUT+__LINE__);
 
+	/* calculate the RTO */
+	printf("Calculating RTO\n");
+	net->RTO = sctp_calculate_rto(stcb, asoc, net, &asoc->time_entered);
+
 	retval = sctp_send_cookie_echo(m, offset, stcb, net);
 	if (retval < 0) {
 		/*
@@ -506,8 +510,6 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 		}
 		return (retval);
 	}
-	/* calculate the RTO */
-	net->RTO = sctp_calculate_rto(stcb, asoc, net, &asoc->time_entered);
 
 	return (0);
 }
@@ -1692,6 +1694,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	SCTP_STAT_INCR_COUNTER32(sctps_passiveestab);
 	SCTP_STAT_INCR_GAUGE32(sctps_currestab);
 	/* calculate the RTT */
+	printf("Calculate RTO of COOKIE-NEW\n");
 	(*netp)->RTO = sctp_calculate_rto(stcb, asoc, *netp,
 	    &cookie->time_entered);
 
@@ -2289,6 +2292,7 @@ sctp_handle_cookie_ack(struct sctp_cookie_ack_chunk *cp,
 		SCTP_STAT_INCR_COUNTER32(sctps_activeestab);
 		SCTP_STAT_INCR_GAUGE32(sctps_currestab);
 		if (asoc->overall_error_count == 0) {
+			printf("Calculate RTO of COOKIE-ACK\n");
 			net->RTO = sctp_calculate_rto(stcb, asoc, net,
 			    &asoc->time_entered);
 		}
