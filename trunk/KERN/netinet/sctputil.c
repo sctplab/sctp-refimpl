@@ -1745,7 +1745,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	 */ 
 	if ((inp != NULL) && (t_type != SCTP_TIMER_TYPE_ITERATOR)) {
 		sctp_lock_assert(inp->ip_inp.inp.inp_socket);
-v	}
+	}
 #endif
 	switch (t_type) {
 	case SCTP_TIMER_TYPE_ADDR_WQ:

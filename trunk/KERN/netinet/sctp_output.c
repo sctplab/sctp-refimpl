@@ -9909,7 +9909,7 @@ sctp_lower_sosend(struct socket *so,
 		    (stcb->asoc.chunks_on_out_queue >
 		     sctp_max_chunks_on_queue)) {
 			error = EWOULDBLOCK;
-			atomic_add_int(&stcb->asoc.total_nospaces, 1);
+			atomic_add_int(&stcb->sctp_ep->total_nospaces, 1);
 			splx(s);
 			goto out_unlocked;
 		}
