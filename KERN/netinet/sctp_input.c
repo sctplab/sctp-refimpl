@@ -1767,8 +1767,6 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	/* calculate the RTT */
 	(*netp)->RTO = sctp_calculate_rto(stcb, asoc, *netp,
 	    &cookie->time_entered);
-	printf("Calculate new RTO for COOKIE-NEW RTO:%d\n",
-	       (*netp)->RTO);
 	sctp_send_cookie_ack(stcb);
 	return (stcb);
 }
