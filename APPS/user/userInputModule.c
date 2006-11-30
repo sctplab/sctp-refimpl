@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.79 2006-11-24 18:18:06 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.80 2006-11-30 20:25:11 randall Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -3661,8 +3661,8 @@ cmd_getassocstat(char *argv[], int argc)
 	offset = 0;
 	xinp = (struct xsctp_inpcb *)(buf + offset);
 	while (xinp->last == 0) {
-		printf("\nEndpoint with port=%d, flags=%x, features=%x, Msgs(R/S)=%u/%u\n",
-		       xinp->local_port, xinp->flags, xinp->features, xinp->total_recvs, xinp->total_sends);
+		printf("\nEndpoint with port=%d, flags=%x, features=%x, Msgs(R/S/SF)=%u/%u/%u\n",
+		       xinp->local_port, xinp->flags, xinp->features, xinp->total_recvs, xinp->total_sends, xinp->total_nospaces);
 		number_of_local_addresses = xinp->number_local_addresses;
 		number_associations = xinp->number_associations;
 		offset += sizeof(struct xsctp_inpcb);
