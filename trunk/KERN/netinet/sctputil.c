@@ -1344,6 +1344,7 @@ sctp_timeout_handler(void *t)
 #endif
 		return;
 	}
+	tmr->stopped_from = 0xa001;
 	if (!SCTP_IS_TIMER_TYPE_VALID(tmr->type)) {
 		/*
 		 * printf("SCTP timer fired with invalid type: 0x%x\n",
@@ -1356,6 +1357,7 @@ sctp_timeout_handler(void *t)
 #endif
 		return;
 	}
+	tmr->stopped_from = 0xa002;
 	if ((tmr->type != SCTP_TIMER_TYPE_ADDR_WQ) && (inp == NULL)) {
 		splx(s);
 #if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
@@ -1365,6 +1367,7 @@ sctp_timeout_handler(void *t)
 		return;
 	}
 	/* if this is an iterator timeout, get the struct and clear inp */
+	tmr->stopped_from = 0xa003;
 	if (tmr->type == SCTP_TIMER_TYPE_ITERATOR) {
 		it = (struct sctp_iterator *)inp;
 		inp = NULL;
@@ -1390,6 +1393,7 @@ sctp_timeout_handler(void *t)
 		socket_lock(inp->ip_inp.inp.inp_socket, 1);
 #endif
 	}
+	tmr->stopped_from = 0xa004;
 	if (stcb) {
 		if (stcb->asoc.state == 0) {
 			splx(s);
@@ -1406,6 +1410,7 @@ sctp_timeout_handler(void *t)
 			return;
 		}
 	}
+	tmr->stopped_from = 0xa005;
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_TIMER1) {
 		printf("Timer type %d goes off\n", tmr->type);
@@ -1427,6 +1432,7 @@ sctp_timeout_handler(void *t)
 		return;
 	}
 #endif
+	tmr->stopped_from = 0xa006;
 #if defined(__APPLE__)
 	/* clear the callout pending status here */
 	callout_stop(&tmr->timer);
@@ -1739,7 +1745,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	 */ 
 	if ((inp != NULL) && (t_type != SCTP_TIMER_TYPE_ITERATOR)) {
 		sctp_lock_assert(inp->ip_inp.inp.inp_socket);
-	}
+v	}
 #endif
 	switch (t_type) {
 	case SCTP_TIMER_TYPE_ADDR_WQ:
