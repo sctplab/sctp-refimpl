@@ -764,6 +764,7 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 		xinpcb.features               = inp->sctp_features;
 		xinpcb.total_sends            = inp->total_sends;
 		xinpcb.total_recvs            = inp->total_recvs;
+		xinpcb.total_nospaces         = inp->total_nospaces;
 		SCTP_INP_INCR_REF(inp);
 		SCTP_INP_RUNLOCK(inp);
 		SCTP_INP_INFO_RUNLOCK();
