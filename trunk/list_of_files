@@ -4,6 +4,7 @@ KERN/export_freebsd/netinet/ignore
 KERN/export_freebsd/netinet6/ignore
 KERN/export_freebsd_list
 KERN/export_to_freebsd
+KERN/s9indent
 KERN/freebsd6/conf/files
 KERN/freebsd6/conf/options
 KERN/freebsd6/kern/syscalls.master
@@ -56,6 +57,12 @@ KERN/netinet/sctp_output.h
 KERN/netinet/sctputil.c
 KERN/netinet/sctp_peeloff.c
 KERN/netinet/sctp_peeloff.h
+KERN/netinet/sctp_os_bsd.h
+KERN/netinet/sctp_os_netbsd.h
+KERN/netinet/sctp_lock_bsd.h
+KERN/netinet/sctp_lock_empty.h
+KERN/netinet/sctp_bsd_addr.h
+KERN/netinet/sctp_bsd_addr.c
 KERN/netinet/sctp_sha1.c
 KERN/netinet/sctp_sha1.h
 KERN/netinet/sctp_structs.h
