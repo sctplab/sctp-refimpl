@@ -4322,6 +4322,9 @@ sctp_msg_append(struct sctp_tcb *stcb,
 	SCTP_INCR_STRMOQ_COUNT();
 	sp->act_flags = 0;
 	sp->sinfo_flags = srcv->sinfo_flags;
+	if(sp->sinfo_flags & SCTP_UNORDERED) {
+		sp->act_flags |= SCTP_DATA_UNORDERED;
+	}
 	sp->timetolive = srcv->sinfo_timetolive;
 	sp->ppid = srcv->sinfo_ppid;
 	sp->context = srcv->sinfo_context;
