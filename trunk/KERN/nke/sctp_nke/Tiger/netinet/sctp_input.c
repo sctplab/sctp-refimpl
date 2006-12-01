@@ -470,6 +470,9 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 	sctp_timer_stop(SCTP_TIMER_TYPE_INIT, stcb->sctp_ep, stcb,
 	    asoc->primary_destination, SCTP_FROM_SCTP_INPUT+__LINE__);
 
+	/* calculate the RTO */
+	net->RTO = sctp_calculate_rto(stcb, asoc, net, &asoc->time_entered);
+
 	retval = sctp_send_cookie_echo(m, offset, stcb, net);
 	if (retval < 0) {
 		/*
@@ -506,8 +509,6 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 		}
 		return (retval);
 	}
-	/* calculate the RTO */
-	net->RTO = sctp_calculate_rto(stcb, asoc, net, &asoc->time_entered);
 
 	return (0);
 }
@@ -1691,9 +1692,6 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	sctp_stop_all_cookie_timers(stcb);
 	SCTP_STAT_INCR_COUNTER32(sctps_passiveestab);
 	SCTP_STAT_INCR_GAUGE32(sctps_currestab);
-	/* calculate the RTT */
-	(*netp)->RTO = sctp_calculate_rto(stcb, asoc, *netp,
-	    &cookie->time_entered);
 
 	/*
 	 * if we're doing ASCONFs, check to see if we have any new local
@@ -1766,6 +1764,9 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		sctp_timer_start(SCTP_TIMER_TYPE_AUTOCLOSE, inp, stcb, NULL);
 	}
 	/* respond with a COOKIE-ACK */
+	/* calculate the RTT */
+	(*netp)->RTO = sctp_calculate_rto(stcb, asoc, *netp,
+	    &cookie->time_entered);
 	sctp_send_cookie_ack(stcb);
 	return (stcb);
 }

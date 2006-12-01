@@ -1344,6 +1344,7 @@ sctp_timeout_handler(void *t)
 #endif
 		return;
 	}
+	tmr->stopped_from = 0xa001;
 	if (!SCTP_IS_TIMER_TYPE_VALID(tmr->type)) {
 		/*
 		 * printf("SCTP timer fired with invalid type: 0x%x\n",
@@ -1356,6 +1357,7 @@ sctp_timeout_handler(void *t)
 #endif
 		return;
 	}
+	tmr->stopped_from = 0xa002;
 	if ((tmr->type != SCTP_TIMER_TYPE_ADDR_WQ) && (inp == NULL)) {
 		splx(s);
 #if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
@@ -1365,6 +1367,7 @@ sctp_timeout_handler(void *t)
 		return;
 	}
 	/* if this is an iterator timeout, get the struct and clear inp */
+	tmr->stopped_from = 0xa003;
 	if (tmr->type == SCTP_TIMER_TYPE_ITERATOR) {
 		it = (struct sctp_iterator *)inp;
 		inp = NULL;
@@ -1390,6 +1393,7 @@ sctp_timeout_handler(void *t)
 		socket_lock(inp->ip_inp.inp.inp_socket, 1);
 #endif
 	}
+	tmr->stopped_from = 0xa004;
 	if (stcb) {
 		if (stcb->asoc.state == 0) {
 			splx(s);
@@ -1406,6 +1410,7 @@ sctp_timeout_handler(void *t)
 			return;
 		}
 	}
+	tmr->stopped_from = 0xa005;
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_TIMER1) {
 		printf("Timer type %d goes off\n", tmr->type);
@@ -1427,6 +1432,7 @@ sctp_timeout_handler(void *t)
 		return;
 	}
 #endif
+	tmr->stopped_from = 0xa006;
 #if defined(__APPLE__)
 	/* clear the callout pending status here */
 	callout_stop(&tmr->timer);
@@ -2075,7 +2081,9 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	tmr->net = (void *)net;
 	tmr->self = (void *)tmr;
 	tmr->ticks = ticks;
+	SCTP_TIMER_LOCK();
 	callout_reset(&tmr->timer, to_ticks, sctp_timeout_handler, tmr);
+	SCTP_TIMER_UNLOCK();
 	return (0);
 }
 
@@ -2251,7 +2259,9 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	}
 	tmr->self = NULL;
 	tmr->stopped_from = from;
+	SCTP_TIMER_LOCK();
 	callout_stop(&tmr->timer);
+	SCTP_TIMER_UNLOCK();
 	return (0);
 }
 
@@ -2517,6 +2527,11 @@ sctp_calculate_rto(struct sctp_tcb *stcb,
 		} else if ((u_long)now.tv_usec < (u_long)old->tv_usec) {
 			/* impossible .. garbage in nothing out */
 			return (((net->lastsa >> 2) + net->lastsv) >> 1);
+		} else if ((u_long)now.tv_usec == (u_long)old->tv_usec) {
+			/* We have to have 1 usec :-D 
+			 * this must be the loopback.
+			 */
+			calc_time = 1;
 		} else {
 			/* impossible .. garbage in nothing out */
 			return (((net->lastsa >> 2) + net->lastsv) >> 1);
@@ -2528,27 +2543,6 @@ sctp_calculate_rto(struct sctp_tcb *stcb,
 	/***************************/
 	/* 2. update RTTVAR & SRTT */
 	/***************************/
-#if 0
-	/* if (net->lastsv || net->lastsa) { */
-	/* per Section 5.3.1 C3 in SCTP */
-	/* net->lastsv = (int) 	 *//* RTTVAR */
-	/*
-	 * (((double)(1.0 - 0.25) * (double)net->lastsv) + (double)(0.25 *
-	 * (double)abs(net->lastsa - calc_time))); net->lastsa = (int)
-*//* SRTT */
-	/*
-	 * (((double)(1.0 - 0.125) * (double)net->lastsa) + (double)(0.125 *
-	 * (double)calc_time)); } else {
-*//* the first RTT calculation, per C2 Section 5.3.1 */
-	/* net->lastsa = calc_time;	 *//* SRTT */
-	/* net->lastsv = calc_time / 2;	 *//* RTTVAR */
-	/* } */
-	/* if RTTVAR goes to 0 you set to clock grainularity */
-	/*
-	 * if (net->lastsv == 0) { net->lastsv = SCTP_CLOCK_GRANULARITY; }
-	 * new_rto = net->lastsa + 4 * net->lastsv;
-	 */
-#endif
 	o_calctime = calc_time;
 	/* this is Van Jacobson's integer version */
 	if (net->RTO) {
@@ -2595,15 +2589,15 @@ sctp_calculate_rto(struct sctp_tcb *stcb,
 		stcb->asoc.sat_network = 0;
 		stcb->asoc.sat_network_lockout = 1;
 	}
-	/* bound it, per C6/C7 in Section 5.3.1 */
-	if (new_rto < stcb->asoc.minrto) {
+ 	/* bound it, per C6/C7 in Section 5.3.1 */
+ 	if (new_rto < stcb->asoc.minrto) {
 		new_rto = stcb->asoc.minrto;
 	}
 	if (new_rto > stcb->asoc.maxrto) {
 		new_rto = stcb->asoc.maxrto;
 	}
 	/* we are now returning the RTT Smoothed */
-	return ((uint32_t) new_rto);
+ 	return ((uint32_t) new_rto);
 }
 
 
