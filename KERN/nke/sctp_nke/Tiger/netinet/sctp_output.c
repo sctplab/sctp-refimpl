@@ -3761,6 +3761,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	/* place in my tag */
 	if ((asoc != NULL) &&
 	    ((SCTP_GET_STATE(asoc) == SCTP_STATE_COOKIE_WAIT) ||
+	     (SCTP_GET_STATE(asoc) == SCTP_STATE_INUSE) ||
 	     (SCTP_GET_STATE(asoc) == SCTP_STATE_COOKIE_ECHOED))) {
 		/* re-use the v-tags and init-seq here */
 		initackm_out->msg.init.initiate_tag = htonl(asoc->my_vtag);
@@ -5231,7 +5232,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	}
 	/* clear it */
 	memset(chk, sizeof(*chk), 0);
-	chk->rec.data.rcv_flags = rcv_flags;
+	chk->rec.data.rcv_flags = rcv_flags | sp->act_flags;
 	SCTP_TCB_SEND_LOCK(stcb);
 /*	sctp_snd_sb_alloc(stcb, sizeof(struct sctp_data_chunk));*/
 	if (sp->data->m_flags & M_EXT) {
@@ -5292,7 +5293,6 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 			 * all the data if there is no leading space, so we
 			 * must put the data back and restore.
 			 */
-			printf("We will Panic maybe, out of mbufs\n");
 			if (took_all) {
 				/* unsteal the data */
 				sp->data = chk->data;
@@ -5353,7 +5353,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	chk->rec.data.ect_nonce = 0;	/* ECN Nonce */
 
 	chk->rec.data.timetodrop = sp->ts;
-	chk->flags = sp->act_flags;
+	chk->flags = rcv_flags | sp->act_flags;
 	chk->addr_over = sp->addr_over;
 
 	chk->whoTo = net;
@@ -9910,6 +9910,7 @@ sctp_lower_sosend(struct socket *so,
 		    (stcb->asoc.chunks_on_out_queue >
 		     sctp_max_chunks_on_queue)) {
 			error = EWOULDBLOCK;
+			atomic_add_int(&stcb->sctp_ep->total_nospaces, 1);
 			splx(s);
 			goto out_unlocked;
 		}
