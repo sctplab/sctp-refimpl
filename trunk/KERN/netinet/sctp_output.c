@@ -3761,6 +3761,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	/* place in my tag */
 	if ((asoc != NULL) &&
 	    ((SCTP_GET_STATE(asoc) == SCTP_STATE_COOKIE_WAIT) ||
+	     (SCTP_GET_STATE(asoc) == SCTP_STATE_INUSE) ||
 	     (SCTP_GET_STATE(asoc) == SCTP_STATE_COOKIE_ECHOED))) {
 		/* re-use the v-tags and init-seq here */
 		initackm_out->msg.init.initiate_tag = htonl(asoc->my_vtag);
