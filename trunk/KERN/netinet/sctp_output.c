@@ -4212,7 +4212,6 @@ static void
 sctp_set_prsctp_policy(struct sctp_tcb *stcb,
 		       struct sctp_stream_queue_pending *sp)
 {
-	printf("policy check\n");
 	sp->pr_sctp_on = 0;
 	if (stcb->asoc.peer_supports_prsctp) {
 		/*
@@ -4270,8 +4269,10 @@ sctp_set_prsctp_policy(struct sctp_tcb *stcb,
 	}
  sctp_no_policy:
 	printf("Checking sp->sinfo_flags:%x in pr_setpolicy\n", sp->sinfo_flags);
-	if (sp->sinfo_flags & SCTP_UNORDERED)
+	if (sp->sinfo_flags & SCTP_UNORDERED) {
 		sp->act_flags |= SCTP_DATA_UNORDERED;
+		printf("Setting act_flags to %x\n", sp->act_flags);
+	}
 
 }
 
@@ -4324,9 +4325,6 @@ sctp_msg_append(struct sctp_tcb *stcb,
 	SCTP_INCR_STRMOQ_COUNT();
 	sp->act_flags = 0;
 	sp->sinfo_flags = srcv->sinfo_flags;
-	if(sp->sinfo_flags & SCTP_UNORDERED) {
-		sp->act_flags |= SCTP_DATA_UNORDERED;
-	}
 	sp->timetolive = srcv->sinfo_timetolive;
 	sp->ppid = srcv->sinfo_ppid;
 	sp->context = srcv->sinfo_context;
@@ -5237,7 +5235,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	}
 	/* clear it */
 	memset(chk, sizeof(*chk), 0);
-	chk->rec.data.rcv_flags = rcv_flags;
+	chk->rec.data.rcv_flags = rcv_flags | sp->act_flags;
 	SCTP_TCB_SEND_LOCK(stcb);
 /*	sctp_snd_sb_alloc(stcb, sizeof(struct sctp_data_chunk));*/
 	if (sp->data->m_flags & M_EXT) {
@@ -5358,7 +5356,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	chk->rec.data.ect_nonce = 0;	/* ECN Nonce */
 
 	chk->rec.data.timetodrop = sp->ts;
-	chk->flags = sp->act_flags;
+	chk->flags = rcv_flags | sp->act_flags;
 	chk->addr_over = sp->addr_over;
 
 	chk->whoTo = net;
@@ -9500,7 +9498,6 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 	SCTP_INCR_STRMOQ_COUNT();
 	sp->act_flags = 0;
 	sp->sinfo_flags = srcv->sinfo_flags;
-	printf("Flags are copied in %x\n", sp->sinfo_flags);
 	sp->timetolive = srcv->sinfo_timetolive;
 	sp->ppid = srcv->sinfo_ppid;
 	sp->context = srcv->sinfo_context;
@@ -9543,7 +9540,6 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 		}
 		atomic_add_int(&sp->net->ref_count, 1);
 		sp->data->m_pkthdr.len = sp->length;
-		printf("Calling set policy\n");
 		sctp_set_prsctp_policy(stcb, sp);
 	}
 out_now:
