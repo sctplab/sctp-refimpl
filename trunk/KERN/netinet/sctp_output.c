@@ -4268,11 +4268,8 @@ sctp_set_prsctp_policy(struct sctp_tcb *stcb,
 		}
 	}
  sctp_no_policy:
-	printf("Checking sp->sinfo_flags:%x in pr_setpolicy\n", sp->sinfo_flags);
-	if (sp->sinfo_flags & SCTP_UNORDERED) {
+	if (sp->sinfo_flags & SCTP_UNORDERED)
 		sp->act_flags |= SCTP_DATA_UNORDERED;
-		printf("Setting act_flags to %x\n", sp->act_flags);
-	}
 
 }
 
