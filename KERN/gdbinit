@@ -1,0 +1,55 @@
+define allep
+set $_inp=sctppcbinfo.listhead.lh_first
+while ( $_inp != 0 )
+print $_inp
+set $_inp=$_inp->sctp_list.le_next
+end
+end
+document allep
+Show all SCTP endpoints
+end
+
+define theasocs
+set $_inp=sctppcbinfo.listhead.lh_first
+while ( $_inp != 0 )
+ set $_asoc=$_inp->sctp_asoc_list.lh_first
+ while ( $_asoc != 0) 
+    print $_asoc
+    set $_asoc=$_asoc->sctp_tcblist.le_next
+  end
+ set $_inp=$_inp->sctp_list.le_next
+end
+end
+document theasocs
+Show all SCTP associations
+end
+
+define interesting
+printf "asociation %X\n", $arg0
+printf "output_q_size %d\n", $arg0->asoc.total_output_queue_size
+printf "size on streams %d\n",  $arg0->asoc.size_on_all_streams
+printf "size on reasm %d\n", $arg0->asoc.size_on_reasm_queue
+printf "send q cnt %d\n", $arg0->asoc.send_queue_cnt
+printf "sent q cnt %d\n", $arg0->asoc.sent_queue_cnt
+printf "ctrl q %x\n", $arg0->asoc.control_send_queue.tqh_first
+end
+document interesting
+The interesting stuff I want to show on an assoc
+end
+
+define allasoc
+set $_inp=sctppcbinfo.listhead.lh_first
+while ( $_inp != 0 )
+ set $_asoc=$_inp->sctp_asoc_list.lh_first
+ while ( $_asoc != 0) 
+    interesting $_asoc
+    set $_asoc=$_asoc->sctp_tcblist.le_next
+  end
+ set $_inp=$_inp->sctp_list.le_next
+end
+end
+document allasoc
+Show some things on all SCTP associations
+end
+
+
