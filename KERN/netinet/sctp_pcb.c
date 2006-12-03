@@ -4149,16 +4149,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	LIST_REMOVE(stcb, sctp_asocs);
 	sctp_add_vtag_to_timewait(inp, asoc->my_vtag);
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	if(from_inpcbfree == SCTP_NORMAL_PROC) {
-		lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
-		SCTP_ITERATOR_UNLOCK();
-	}
-#endif
-	if(from_inpcbfree == SCTP_NORMAL_PROC) {
-		SCTP_INP_INFO_WUNLOCK();
-	}
-
 	prev = NULL;
 	/*
 	 * The chunk lists and such SHOULD be empty but we check them just
@@ -4419,15 +4409,24 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	/* Get rid of LOCK */
 	SCTP_TCB_LOCK_DESTROY(stcb);
 	SCTP_TCB_SEND_LOCK_DESTROY(stcb);
-#if 0
-	/* now clean up the tasoc itself */
-	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
-	SCTP_DECR_ASOC_COUNT();
-#else
-	LIST_INSERT_HEAD(&inp->sctp_asoc_free_list, stcb, sctp_tcblist);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+	if(from_inpcbfree == SCTP_NORMAL_PROC) {
+		lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
+		SCTP_ITERATOR_UNLOCK();
+	}
 #endif
+	if(from_inpcbfree == SCTP_NORMAL_PROC) {
+		SCTP_INP_INFO_WUNLOCK();
+	}
+	SCTP_INP_RLOCK(inp);
+	if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
+		/* now clean up the tasoc itself */
+		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
+		SCTP_DECR_ASOC_COUNT();
+	} else {
+		LIST_INSERT_HEAD(&inp->sctp_asoc_free_list, stcb, sctp_tcblist);
+	}
 	if (from_inpcbfree == SCTP_NORMAL_PROC) {
-		SCTP_INP_RLOCK(inp);
 		if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 			/* If its NOT the inp_free calling us AND
 			 * sctp_close as been called, we 
@@ -4443,12 +4442,14 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			 */
 			sctp_inpcb_free(inp, 0, 0);
 			SCTP_INP_DECR_REF(inp);
+			goto out_of;
 		} else {
 			/* The socket is still open. */
 			SCTP_INP_DECR_REF(inp);
-			SCTP_INP_RUNLOCK(inp);
 		}
 	}
+	SCTP_INP_RUNLOCK(inp);
+ out_of:
 	splx(s);
 	/* destroyed the asoc */
 #ifdef SCTP_LOG_CLOSING
