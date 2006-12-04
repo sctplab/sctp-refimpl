@@ -1836,9 +1836,10 @@ sctp_inpcb_alloc(struct socket *so)
 	LIST_INIT(&inp->sctp_addr_list);
 	LIST_INIT(&inp->sctp_asoc_list);
 
+#ifdef SCTP_TRACK_FREED_ASOCS
 	/* TEMP CODE */
 	LIST_INIT(&inp->sctp_asoc_free_list);
-
+#endif
 	/* Init the timer structure for signature change */
 #if defined (__FreeBSD__) && __FreeBSD_version >= 500000
 	callout_init(&inp->sctp_ep.signature_change.timer, 1);
@@ -3039,6 +3040,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 		SCTP_DECR_LADDR_COUNT();
 	}
 
+#ifdef SCTP_TRACK_FREED_ASOCS
 	/* TEMP CODE */
 	for ((asoc = LIST_FIRST(&inp->sctp_asoc_free_list)); asoc != NULL;
 	     asoc = nasoc) {
@@ -3048,7 +3050,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 		SCTP_DECR_ASOC_COUNT();
 	}
         /* *** END TEMP CODE ****/
-
+#endif
 	/* Now lets see about freeing the EP hash table. */
 	if (inp->sctp_tcbhash != NULL) {
 		SCTP_FREE(inp->sctp_tcbhash);
@@ -4419,6 +4421,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		SCTP_INP_INFO_WUNLOCK();
 	}
 	SCTP_INP_RLOCK(inp);
+#ifdef SCTP_TRACK_FREED_ASOCS
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 		/* now clean up the tasoc itself */
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
@@ -4426,6 +4429,10 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	} else {
 		LIST_INSERT_HEAD(&inp->sctp_asoc_free_list, stcb, sctp_tcblist);
 	}
+#else
+	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
+	SCTP_DECR_ASOC_COUNT();
+#endif
 	if (from_inpcbfree == SCTP_NORMAL_PROC) {
 		if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 			/* If its NOT the inp_free calling us AND
