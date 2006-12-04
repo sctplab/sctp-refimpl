@@ -1845,12 +1845,13 @@ failed_express_del:
 			asoc->last_flags_delivered = ch->ch.chunk_flags;
 			asoc->last_strm_seq_delivered = strmseq;
 			asoc->last_strm_no_delivered = strmno;
-			asoc->tsn_last_delivered = tsn;
 
 			if(end) {
 				/* clean up the flags and such */
 				asoc->fragmented_delivery_inprogress = 0;
-				asoc->strmin[strmno].last_sequence_delivered++;
+				if ((ch->ch.chunk_flags & SCTP_DATA_UNORDERED) == 0) {
+					asoc->strmin[strmno].last_sequence_delivered++;
+				}
 				stcb->asoc.control_pdapi = NULL;
 			}
 			control = NULL;

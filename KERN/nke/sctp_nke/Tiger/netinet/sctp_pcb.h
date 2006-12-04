@@ -388,7 +388,9 @@ struct sctp_inpcb {
 	u_long sctp_hashmark;
 	/* head of the list of all associations */
 	struct sctpasochead sctp_asoc_list;
+#ifdef SCTP_TRACK_FREED_ASOCS
 	struct sctpasochead sctp_asoc_free_list;
+#endif
 	struct sctp_iterator *inp_starting_point_for_iterator;
 	uint32_t sctp_frag_point;
 	uint32_t partial_delivery_point;

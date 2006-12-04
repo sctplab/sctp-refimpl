@@ -4269,7 +4269,7 @@ sctp_set_prsctp_policy(struct sctp_tcb *stcb,
 	}
  sctp_no_policy:
 	if (sp->sinfo_flags & SCTP_UNORDERED)
-		sp->act_flags |= SCTP_DATA_UNORDERED;
+		sp->act_flags |= SCTP_UNORDERED;
 
 }
 
@@ -5231,8 +5231,12 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		return (0);
 	}
 	/* clear it */
+	if(sp->act_flags & SCTP_UNORDERED) {
+		rcv_flags |= SCTP_DATA_UNORDERED;
+	}
+
 	memset(chk, sizeof(*chk), 0);
-	chk->rec.data.rcv_flags = rcv_flags | sp->act_flags;
+	chk->rec.data.rcv_flags = rcv_flags;
 	SCTP_TCB_SEND_LOCK(stcb);
 /*	sctp_snd_sb_alloc(stcb, sizeof(struct sctp_data_chunk));*/
 	if (sp->data->m_flags & M_EXT) {
@@ -5353,7 +5357,8 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	chk->rec.data.ect_nonce = 0;	/* ECN Nonce */
 
 	chk->rec.data.timetodrop = sp->ts;
-	chk->flags = rcv_flags | sp->act_flags;
+
+	chk->flags = sp->act_flags;
 	chk->addr_over = sp->addr_over;
 
 	chk->whoTo = net;
