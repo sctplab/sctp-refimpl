@@ -8,8 +8,18 @@ end
 document allep
 Show all SCTP endpoints
 end
+define allreadq
+set $_inp=sctppcbinfo.listhead.lh_first
+while ( $_inp != 0 )
+print $_inp->read_queue.tqh_first
+set $_inp=$_inp->sctp_list.le_next
+end
+end
+document allreadq
+Show all SCTP endpoint read queues
+end
 
-define theasocs
+define allasoc
 set $_inp=sctppcbinfo.listhead.lh_first
 while ( $_inp != 0 )
  set $_asoc=$_inp->sctp_asoc_list.lh_first
@@ -20,7 +30,7 @@ while ( $_inp != 0 )
  set $_inp=$_inp->sctp_list.le_next
 end
 end
-document theasocs
+document allasoc
 Show all SCTP associations
 end
 
