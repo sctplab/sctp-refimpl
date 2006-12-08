@@ -4225,7 +4225,7 @@ sctp_set_prsctp_policy(struct sctp_tcb *stcb,
 			sp->act_flags |= PR_SCTP_POLICY(sp->sinfo_flags);
 			sp->pr_sctp_on = 1;
 		} else{
-			goto sctp_no_policy;
+			return;
 		}
 		switch (PR_SCTP_POLICY(sp->sinfo_flags)) {
 		case CHUNK_FLAGS_PR_SCTP_BUF:
@@ -4267,12 +4267,7 @@ sctp_set_prsctp_policy(struct sctp_tcb *stcb,
 			break;
 		}
 	}
- sctp_no_policy:
-	if (sp->sinfo_flags & SCTP_UNORDERED)
-		sp->act_flags |= SCTP_UNORDERED;
-
 }
-
 
 static int
 sctp_msg_append(struct sctp_tcb *stcb,
@@ -4320,7 +4315,6 @@ sctp_msg_append(struct sctp_tcb *stcb,
 		goto out_now;
 	}
 	SCTP_INCR_STRMOQ_COUNT();
-	sp->act_flags = 0;
 	sp->sinfo_flags = srcv->sinfo_flags;
 	sp->timetolive = srcv->sinfo_timetolive;
 	sp->ppid = srcv->sinfo_ppid;
@@ -5230,15 +5224,16 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		*giveup = 1;
 		return (0);
 	}
-	/* clear it */
-	if(sp->act_flags & SCTP_UNORDERED) {
+	/* Setup for unordered if needed by looking
+	 * at the user sent info flags.
+	 */
+	if(sp->sinfo_flags & SCTP_UNORDERED) {
 		rcv_flags |= SCTP_DATA_UNORDERED;
 	}
-
+	/* clear out the chunk before setting up */
 	memset(chk, sizeof(*chk), 0);
 	chk->rec.data.rcv_flags = rcv_flags;
 	SCTP_TCB_SEND_LOCK(stcb);
-/*	sctp_snd_sb_alloc(stcb, sizeof(struct sctp_data_chunk));*/
 	if (sp->data->m_flags & M_EXT) {
 		chk->copy_by_ref = 1;
 	} else {
@@ -5357,7 +5352,6 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	chk->rec.data.ect_nonce = 0;	/* ECN Nonce */
 
 	chk->rec.data.timetodrop = sp->ts;
-
 	chk->flags = sp->act_flags;
 	chk->addr_over = sp->addr_over;
 
@@ -5407,8 +5401,9 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		chk->send_size += pads;
 	}
 	/* We only re-set the policy if it is on */
-	if(sp->pr_sctp_on)
+	if(sp->pr_sctp_on) {
 		sctp_set_prsctp_policy(stcb, sp);
+	}
 
 	if(sp->msg_is_complete && (sp->length == 0)) {
 		/* All done pull and kill the message */
