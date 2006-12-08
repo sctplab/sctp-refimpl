@@ -633,9 +633,9 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 #endif
 	if (stcb == NULL)
 		return;
-
-	if ((SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_COOKIE_WAIT) ||
-	    (SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_COOKIE_ECHOED)) {
+	asoc = &stcb->asoc;
+	if ((SCTP_GET_STATE(asoc) == SCTP_STATE_COOKIE_WAIT) ||
+	    (SCTP_GET_STATE(asoc) == SCTP_STATE_COOKIE_ECHOED)) {
 		return;
 	}
 	if (ntohs(cp->ch.chunk_length) != sizeof(struct sctp_shutdown_chunk)) {
@@ -644,18 +644,17 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 	} else {
 		sctp_update_acked(stcb, cp, net, abort_flag);
 	}
-	asoc = &stcb->asoc;
-	if(stcb->asoc.control_pdapi) {
+	if(asoc->control_pdapi) {
 		/* With a normal shutdown 
 		 * we assume the end of last record.
 		 */
 		SCTP_INP_READ_LOCK(stcb->sctp_ep);
-		stcb->asoc.control_pdapi->end_added = 1;
-		stcb->asoc.control_pdapi->pdapi_aborted = 1;
-		if (stcb->asoc.control_pdapi->tail_mbuf) {
-			stcb->asoc.control_pdapi->tail_mbuf->m_flags |= M_EOR;
+		asoc->control_pdapi->end_added = 1;
+		asoc->control_pdapi->pdapi_aborted = 1;
+		if (asoc->control_pdapi->tail_mbuf) {
+			asoc->control_pdapi->tail_mbuf->m_flags |= M_EOR;
 		}
-		stcb->asoc.control_pdapi = NULL;
+		asoc->control_pdapi = NULL;
 		SCTP_INP_READ_UNLOCK(stcb->sctp_ep);
 		sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 	}
@@ -734,17 +733,17 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
 		SCTP_TCB_UNLOCK(stcb);
 		return;
 	}
-	if(stcb->asoc.control_pdapi) {
+	if(asoc->control_pdapi) {
 		/* With a normal shutdown 
 		 * we assume the end of last record.
 		 */
 		SCTP_INP_READ_LOCK(stcb->sctp_ep);
-		stcb->asoc.control_pdapi->end_added = 1;
-		stcb->asoc.control_pdapi->pdapi_aborted = 1;
-		if (stcb->asoc.control_pdapi->tail_mbuf) {
-			stcb->asoc.control_pdapi->tail_mbuf->m_flags |= M_EOR;
+		asoc->control_pdapi->end_added = 1;
+		asoc->control_pdapi->pdapi_aborted = 1;
+		if (asoc->control_pdapi->tail_mbuf) {
+			asoc->control_pdapi->tail_mbuf->m_flags |= M_EOR;
 		}
-		stcb->asoc.control_pdapi = NULL;
+		asoc->control_pdapi = NULL;
 		SCTP_INP_READ_UNLOCK(stcb->sctp_ep);
 		sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 	}
