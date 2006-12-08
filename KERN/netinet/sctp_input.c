@@ -1402,16 +1402,20 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		 * case A in Section 5.2.4 Table 2: XXMM (peer restarted)
 		 */
 		/* temp code */
-		panic("Peer Restarts\n");
 		sctp_timer_stop(SCTP_TIMER_TYPE_INIT, inp, stcb, net, SCTP_FROM_SCTP_INPUT+__LINE__);
 		sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net, SCTP_FROM_SCTP_INPUT+__LINE__);
 		*sac_assoc_id = sctp_get_associd(stcb);
 		/* notify upper layer */
 		*notification = SCTP_NOTIFY_ASSOC_RESTART;
-
-
+		atomic_add_int(&stcb->asoc.refcnt, 1); 
+		SCTP_TCB_UNLOCK(stcb);
+		SCTP_INP_INFO_WLOCK();
+		SCTP_INP_WLOCK(stcb->sctp_ep);
+		SCTP_TCB_LOCK(stcb);
+		atomic_add_int(&stcb->asoc.refcnt, -1);
 		/* send up all the data */
 		SCTP_TCB_SEND_LOCK(stcb);
+
 		sctp_report_all_outbound(stcb, 1);
 		for (i=0; i<stcb->asoc.streamoutcnt; i++) {
 			stcb->asoc.strmout[i].stream_no = i;
@@ -1457,6 +1461,9 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			    asoc->mapping_array_size);
 		/* process the INIT info (peer's info) */
 		SCTP_TCB_SEND_UNLOCK(stcb);
+		SCTP_INP_WUNLOCK(stcb->sctp_ep);
+		SCTP_INP_INFO_WUNLOCK();
+
 		retval = sctp_process_init(init_cp, stcb, net);
 		if (retval < 0) {
 			return (NULL);
