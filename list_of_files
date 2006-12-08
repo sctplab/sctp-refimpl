@@ -57,6 +57,7 @@ KERN/netinet/sctp_output.h
 KERN/netinet/sctputil.c
 KERN/netinet/sctp_peeloff.c
 KERN/netinet/sctp_peeloff.h
+KERN/netinet/sctp_os.h
 KERN/netinet/sctp_os_bsd.h
 KERN/netinet/sctp_os_netbsd.h
 KERN/netinet/sctp_lock_bsd.h
