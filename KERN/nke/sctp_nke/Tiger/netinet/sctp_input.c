@@ -633,9 +633,9 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 #endif
 	if (stcb == NULL)
 		return;
-
-	if ((SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_COOKIE_WAIT) ||
-	    (SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_COOKIE_ECHOED)) {
+	asoc = &stcb->asoc;
+	if ((SCTP_GET_STATE(asoc) == SCTP_STATE_COOKIE_WAIT) ||
+	    (SCTP_GET_STATE(asoc) == SCTP_STATE_COOKIE_ECHOED)) {
 		return;
 	}
 	if (ntohs(cp->ch.chunk_length) != sizeof(struct sctp_shutdown_chunk)) {
@@ -644,18 +644,17 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 	} else {
 		sctp_update_acked(stcb, cp, net, abort_flag);
 	}
-	asoc = &stcb->asoc;
-	if(stcb->asoc.control_pdapi) {
+	if(asoc->control_pdapi) {
 		/* With a normal shutdown 
 		 * we assume the end of last record.
 		 */
 		SCTP_INP_READ_LOCK(stcb->sctp_ep);
-		stcb->asoc.control_pdapi->end_added = 1;
-		stcb->asoc.control_pdapi->pdapi_aborted = 1;
-		if (stcb->asoc.control_pdapi->tail_mbuf) {
-			stcb->asoc.control_pdapi->tail_mbuf->m_flags |= M_EOR;
+		asoc->control_pdapi->end_added = 1;
+		asoc->control_pdapi->pdapi_aborted = 1;
+		if (asoc->control_pdapi->tail_mbuf) {
+			asoc->control_pdapi->tail_mbuf->m_flags |= M_EOR;
 		}
-		stcb->asoc.control_pdapi = NULL;
+		asoc->control_pdapi = NULL;
 		SCTP_INP_READ_UNLOCK(stcb->sctp_ep);
 		sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 	}
@@ -734,17 +733,17 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
 		SCTP_TCB_UNLOCK(stcb);
 		return;
 	}
-	if(stcb->asoc.control_pdapi) {
+	if(asoc->control_pdapi) {
 		/* With a normal shutdown 
 		 * we assume the end of last record.
 		 */
 		SCTP_INP_READ_LOCK(stcb->sctp_ep);
-		stcb->asoc.control_pdapi->end_added = 1;
-		stcb->asoc.control_pdapi->pdapi_aborted = 1;
-		if (stcb->asoc.control_pdapi->tail_mbuf) {
-			stcb->asoc.control_pdapi->tail_mbuf->m_flags |= M_EOR;
+		asoc->control_pdapi->end_added = 1;
+		asoc->control_pdapi->pdapi_aborted = 1;
+		if (asoc->control_pdapi->tail_mbuf) {
+			asoc->control_pdapi->tail_mbuf->m_flags |= M_EOR;
 		}
-		stcb->asoc.control_pdapi = NULL;
+		asoc->control_pdapi = NULL;
 		SCTP_INP_READ_UNLOCK(stcb->sctp_ep);
 		sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 	}
@@ -1403,16 +1402,20 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		 * case A in Section 5.2.4 Table 2: XXMM (peer restarted)
 		 */
 		/* temp code */
-		panic("Peer Restarts\n");
 		sctp_timer_stop(SCTP_TIMER_TYPE_INIT, inp, stcb, net, SCTP_FROM_SCTP_INPUT+__LINE__);
 		sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net, SCTP_FROM_SCTP_INPUT+__LINE__);
 		*sac_assoc_id = sctp_get_associd(stcb);
 		/* notify upper layer */
 		*notification = SCTP_NOTIFY_ASSOC_RESTART;
-
-
+		atomic_add_int(&stcb->asoc.refcnt, 1); 
+		SCTP_TCB_UNLOCK(stcb);
+		SCTP_INP_INFO_WLOCK();
+		SCTP_INP_WLOCK(stcb->sctp_ep);
+		SCTP_TCB_LOCK(stcb);
+		atomic_add_int(&stcb->asoc.refcnt, -1);
 		/* send up all the data */
 		SCTP_TCB_SEND_LOCK(stcb);
+
 		sctp_report_all_outbound(stcb, 1);
 		for (i=0; i<stcb->asoc.streamoutcnt; i++) {
 			stcb->asoc.strmout[i].stream_no = i;
@@ -1458,6 +1461,9 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			    asoc->mapping_array_size);
 		/* process the INIT info (peer's info) */
 		SCTP_TCB_SEND_UNLOCK(stcb);
+		SCTP_INP_WUNLOCK(stcb->sctp_ep);
+		SCTP_INP_INFO_WUNLOCK();
+
 		retval = sctp_process_init(init_cp, stcb, net);
 		if (retval < 0) {
 			return (NULL);
