@@ -4563,19 +4563,6 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 	 * Rest should be DATA only.  Check authentication state if AUTH for
 	 * DATA is required.
 	 */
-	if(stcb->asoc.state & SCTP_STATE_OPEN) {
-		/* validate no cookie or init timers up */
-		struct sctp_nets *net;
-		TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
-			if(callout_pending(&net->rxt_timer.timer)) {
-				if ((net->rxt_timer.type == SCTP_TIMER_TYPE_INIT) ||
-				    (net->rxt_timer.type == SCTP_TIMER_TYPE_COOKIE)) {
-					panic("Left open with init/cookie timer up?");
-				}
-			}
-		}
-	}
-
 	if ((length > offset) && (stcb != NULL) && !sctp_auth_disable &&
 	    sctp_auth_is_required_chunk(SCTP_DATA,
 	    stcb->asoc.local_auth_chunks) &&
