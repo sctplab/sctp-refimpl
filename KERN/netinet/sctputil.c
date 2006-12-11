@@ -2081,9 +2081,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	tmr->net = (void *)net;
 	tmr->self = (void *)tmr;
 	tmr->ticks = ticks;
-	SCTP_TIMER_LOCK();
 	callout_reset(&tmr->timer, to_ticks, sctp_timeout_handler, tmr);
-	SCTP_TIMER_UNLOCK();
 	return (0);
 }
 
@@ -2259,9 +2257,7 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	}
 	tmr->self = NULL;
 	tmr->stopped_from = from;
-	SCTP_TIMER_LOCK();
 	callout_stop(&tmr->timer);
-	SCTP_TIMER_UNLOCK();
 	return (0);
 }
 
