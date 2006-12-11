@@ -93,22 +93,6 @@ extern int sctp_logoff_stuff;
         } \
 }
 
-#define SCTP_TIMER_LOCK_INIT() \
-        mtx_init(&sctppcbinfo.timer_mtx, "sctp-timer", "timer-mutex", MTX_DEF)
-
-
-#define SCTP_TIMER_LOCK()	do { 					\
-             mtx_lock(&sctppcbinfo.timer_mtx);                          \
-} while (0)
-
-
-#define SCTP_TIMER_UNLOCK()	do { 					\
-             mtx_unlock(&sctppcbinfo.timer_mtx);                        \
-} while (0)
-
-
-
-
 
 #define SCTP_INP_INFO_LOCK_INIT() \
         mtx_init(&sctppcbinfo.ipi_ep_mtx, "sctp-info", "inp_info", MTX_DEF)

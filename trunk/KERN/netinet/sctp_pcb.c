@@ -5073,9 +5073,6 @@ sctp_pcb_init()
 	SCTP_STATLOG_INIT_LOCK();
 	SCTP_ITERATOR_LOCK_INIT();
 
-	/* temp timer lock */
-	SCTP_TIMER_LOCK_INIT();
-
 	SCTP_IPI_COUNT_INIT();
 	SCTP_IPI_ADDR_INIT();
 	LIST_INIT(&sctppcbinfo.addr_wq);
