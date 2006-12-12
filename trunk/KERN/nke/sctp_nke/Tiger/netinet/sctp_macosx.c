@@ -42,6 +42,7 @@
 #include <netinet/in_pcb.h>
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_pcb.h>
+#include <netinet/sctp_var.h>
 #include <netinet/sctp_peeloff.h>
 
 #define APPLE_FILE_NO 5
@@ -311,3 +312,36 @@ sctp_unlock_assert(struct socket *so)
 	}
 }
 #endif /* SCTP_APPLE_FINE_GRAINED_LOCKING */
+
+/*
+ * timer functions
+ */
+int sctp_main_timer_ticks = 0;
+
+void
+sctp_start_main_timer(void) {
+	/* bound the timer (in msec) */
+	if ((int)sctp_main_timer <= 1000/hz)
+		sctp_main_timer = 1000/hz;
+	sctp_main_timer_ticks = MSEC_TO_TICKS(sctp_main_timer);
+/*  printf("start main timer: interval %d\n", sctp_main_timer_ticks); */
+	timeout(sctp_fasttim, NULL, sctp_main_timer_ticks);
+}
+
+void
+sctp_stop_main_timer(void) {
+/* printf("stop main timer\n"); */
+	untimeout(sctp_fasttim, NULL);
+}
+
+
+/*
+ * locks
+ */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#ifdef _KERN_LOCKS_H_
+lck_rw_t *sctp_calloutq_mtx;
+#else
+void *sctp_calloutq_mtx;
+#endif
+#endif
