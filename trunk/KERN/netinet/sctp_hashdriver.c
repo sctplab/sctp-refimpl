@@ -222,9 +222,9 @@ sctp_hash_digest_m(char *key, int key_len, struct mbuf *m, int offset,
 
 	/* find the correct mbuf and offset into mbuf */
 	m_at = m;
-	while ((m_at != NULL) && (offset > m_at->m_len)) {
-		offset -= m_at->m_len;	/* update remaining offset left */
-		m_at = m_at->m_next;
+	while ((m_at != NULL) && (offset > sctp_buf_len(m_at))) {
+		offset -= sctp_buf_len(m_at);	/* update remaining offset left */
+		m_at = sctp_buf_next(m_at);
 	}
 	/*
 	 * perform inner MD5
@@ -236,10 +236,10 @@ sctp_hash_digest_m(char *key, int key_len, struct mbuf *m, int offset,
 	while (m_at != NULL) {
 		/* then text of datagram... */
 		MD5Update(&context, mtod(m_at, char *)+offset,
-		    m_at->m_len - offset);
+		    sctp_buf_len(m_at) - offset);
 		/* only offset on the first mbuf */
 		offset = 0;
-		m_at = m_at->m_next;
+		m_at = sctp_buf_next(m_at);
 	}
 	/******/
 	MD5Final(digest, &context);	/* finish up 1st pass */
@@ -250,10 +250,10 @@ sctp_hash_digest_m(char *key, int key_len, struct mbuf *m, int offset,
 	while (m_at != NULL) {
 		/* then text of datagram */
 		SHA1_Update(&context, mtod(m_at, unsigned char *)+offset,
-		    m_at->m_len - offset);
+		    sctp_buf_len(m_at) - offset);
 		/* only offset on the first mbuf */
 		offset = 0;
-		m_at = m_at->m_next;
+		m_at = sctp_buf_next(m_at);
 	}
 	/******/
 	SHA1_Final(digest, &context);	/* finish up 1st pass */
