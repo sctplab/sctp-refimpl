@@ -27,12 +27,8 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF 
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifdef __FreeBSD__
-#include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.2 2006/11/03 17:21:53 rrs Exp $");
-#endif
-#ifndef __sctp_os_bsd_h__
-#define __sctp_os_bsd_h__
+#ifndef __sctp_os_macosx_h__
+#define __sctp_os_macosx_h__
 
 /*
  * includes
@@ -45,20 +41,20 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.2 2006/11/03 17:21:53 rrs 
 #include <sys/rnd.h>
 #endif
 
-
-/*
- *
- */
-typedef struct mbuf *sctp_mbuf_t;
-#define USER_ADDR_NULL	(NULL)		/* FIX ME: temp */
-
 /*
  * general memory allocation
  */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#define SCTP_MALLOC(var, type, size, name) \
+    do { \
+	MALLOC(var, type, size, M_PCB, M_WAITOK); \
+    } while (0)
+#else
 #define SCTP_MALLOC(var, type, size, name) \
     do { \
 	MALLOC(var, type, size, M_PCB, M_NOWAIT); \
     } while (0)
+#endif
 
 #define SCTP_FREE(var)	FREE(var, M_PCB)
 
@@ -66,61 +62,69 @@ typedef struct mbuf *sctp_mbuf_t;
     do { \
 	MALLOC(var, type, size, M_SONAME, M_WAITOK | M_ZERO); \
     } while (0)
-
 #define SCTP_FREE_SONAME(var)	FREE(var, M_SONAME)
 
 /*
  * zone allocation functions
  */
-#if __FreeBSD_version >= 500000
-#include <vm/uma.h>
-#else
-#include <vm/vm_zone.h>
-#endif
-/* SCTP_ZONE_INIT: initialize the zone */
-#if __FreeBSD_version >= 500000
-typedef struct uma_zone *sctp_zone_t;
-#define UMA_ZFLAG_FULL	0x0020
-#define SCTP_ZONE_INIT(zone, name, size, number) { \
-	zone = uma_zcreate(name, size, NULL, NULL, NULL, NULL, UMA_ALIGN_PTR,\
-		UMA_ZFLAG_FULL); \
-	uma_zone_set_max(zone, number); \
-}
-#else
 typedef struct vm_zone *sctp_zone_t;
+extern zone_t kalloc_zone(vm_size_t);	/* XXX */
+
+/* SCTP_ZONE_INIT: initialize the zone */
 #define SCTP_ZONE_INIT(zone, name, size, number) \
-	zone = zinit(name, size, number, ZONE_INTERRUPT, 0);
-#endif
+	zone = (void *)kalloc_zone(size);
 
 /* SCTP_ZONE_GET: allocate element from the zone */
-#if __FreeBSD_version >= 500000
 #define SCTP_ZONE_GET(zone) \
-	uma_zalloc(zone, M_NOWAIT);
-#else
-#define SCTP_ZONE_GET(zone) \
-	zalloci(zone);
-#endif
+	zalloc(zone);
 
 /* SCTP_ZONE_FREE: free element from the zone */
-#if __FreeBSD_version >= 500000
 #define SCTP_ZONE_FREE(zone, element) \
-	uma_zfree(zone, element);
-#else
-#define SCTP_ZONE_FREE(zone, element) \
-	zfreei(zone, element);
-#endif
+	zfree(zone, element);
 
 /*
  * Functions
  */
-#if (__FreeBSD_version < 500000)
-#define sctp_read_random(buf, len)	read_random_unlimited(buf, len)
-#else
 #define sctp_read_random(buf, len)	read_random(buf, len)
-#endif
 
 /* Mbuf access functions  */
+
 #define sctp_buf_len(m) (m->m_len)
 #define sctp_buf_next(m) (m->m_next)
 #define sctp_buf_hdr_len(m) (m->m_pkthdr.len)
+
+
+/*
+ * Other MacOS specific
+ */
+
+/* Apple KPI defines for atomic operations */
+#include <libkern/OSAtomic.h>
+#define atomic_add_int(addr, val)        OSAddAtomic(val, (SInt32 *)addr)
+#define atomic_subtract_int(addr, val)   OSAddAtomic((-val), (SInt32 *)addr)
+#define atomic_add_16(addr, val)         OSAddAtomic16(val, (SInt16 *)addr)
+#define atomic_cmpset_int(dst, exp, src) OSCompareAndSwap(exp, src, (UInt32 *)dst)
+
+/* additional protosw entries for Mac OS X 10.4 */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+int sctp_lock(struct socket *so, int refcount, int lr);
+int sctp_unlock(struct socket *so, int refcount, int lr);
+
+#ifdef _KERN_LOCKS_H_
+lck_mtx_t *sctp_getlock(struct socket *so, int locktype);
+#else
+void *sctp_getlock(struct socket *so, int locktype);
+#endif /* _KERN_LOCKS_H_ */
+void sctp_lock_assert(struct socket *so);
+void sctp_unlock_assert(struct socket *so);
+#endif /* SCTP_APPLE_FINE_GRAINED_LOCKING */
+
+/* emulate the BSD 'ticks' clock */
+extern int ticks;
+
+/* XXX: Hopefully temporary until APPLE changes to newer defs like other BSDs */
+#define if_addrlist	if_addrhead
+#define if_list		if_link
+#define ifa_list	ifa_link
+
 #endif

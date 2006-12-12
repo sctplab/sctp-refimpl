@@ -902,12 +902,12 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 
 		/* add any (error) result to the reply mbuf chain */
 		if (m_result != NULL) {
-			m_tail->m_next = m_result;
+			sctp_buf_next(m_tail) = m_result;
 			m_tail = m_result;
 			/* update lengths, make sure it's aligned too */
-			m_result->m_len = SCTP_SIZE32(m_result->m_len);
-			m_ack->m_pkthdr.len += m_result->m_len;
-			ack_cp->ch.chunk_length += m_result->m_len;
+			sctp_buf_len(m_result) = SCTP_SIZE32(sctp_buf_len(m_result));
+			m_ack->m_pkthdr.len += sctp_buf_len(m_result);
+			ack_cp->ch.chunk_length += sctp_buf_len(m_result);
 			/* set flag to force success reports */
 			error = 1;
 		}
@@ -2490,9 +2490,9 @@ sctp_compose_asconf(struct sctp_tcb *stcb)
 		}
 	}
 	/* chain it all together */
-	m_asconf_chk->m_next = m_asconf;
-	m_asconf_chk->m_pkthdr.len = m_asconf_chk->m_len + m_asconf->m_len;
-	acp->ch.chunk_length = ntohs(m_asconf_chk->m_pkthdr.len);
+	sctp_buf_next(m_asconf_chk) = m_asconf;
+	sctp_buf_hdr_len(m_asconf_chk) = sctp_buf_len(m_asconf_chk) + sctp_buf_len(m_asconf);
+	acp->ch.chunk_length = ntohs(sctp_buf_hdr_len(m_asconf_chk));
 
 	/* update "sent" flag */
 	stcb->asoc.asconf_sent++;
