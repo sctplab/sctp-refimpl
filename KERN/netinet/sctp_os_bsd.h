@@ -123,4 +123,11 @@ typedef struct vm_zone *sctp_zone_t;
 #define sctp_buf_len(m) (m->m_len)
 #define sctp_buf_next(m) (m->m_next)
 #define sctp_buf_hdr_len(m) (m->m_pkthdr.len)
+/*
+	sctp_buf_len(m)
+	sctp_buf_next(m)
+	sctp_buf_hdr_len(m)
+*/
+
+
 #endif
