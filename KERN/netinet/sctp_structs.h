@@ -39,14 +39,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_structs.h,v 1.3 2006/11/08 00:21:13 rrs
 #define __sctp_structs_h__
 
 #include <sys/queue.h>
-
-#if defined(__APPLE__)
-#include <netinet/sctp_callout.h>
-#elif defined(__OpenBSD__)
-#include <sys/timeout.h>
-#else
-#include <sys/callout.h>
-#endif
 #include <sys/socket.h>
 
 #ifdef IPSEC
@@ -56,16 +48,14 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_structs.h,v 1.3 2006/11/08 00:21:13 rrs
 #endif
 #endif
 
+#include <netinet/sctp_os.h>
 #include <netinet/sctp_header.h>
 #include <netinet/sctp_uio.h>
 #include <netinet/sctp_auth.h>
 
 struct sctp_timer {
-#if defined(__OpenBSD__)
-	struct timeout timer;
-#else
-	struct callout timer;
-#endif
+	sctp_os_timer_t timer;
+
 	int type;
 	/*
 	 * Depending on the timer type these will be setup and cast with the

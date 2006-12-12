@@ -33,12 +33,8 @@
 /*
  * includes
  */
-#if defined(__NetBSD__)
 #include "rnd.h"
 #include <sys/rnd.h>
-#elif defined(__OpenBSD__)
-#include <dev/rndvar.h>
-#endif
 
 /*
  * general memory allocation
@@ -72,11 +68,15 @@ void sctp_pool_put(struct pool *, void *);
 	sctp_pool_put(&zone, element);
 
 /*
+ * timers
+ */
+#include <sys/callout.h>
+typedef struct callout sctp_os_timer_t;
+
+/*
  * Functions
  */
-#if defined(__OpenBSD__)
-#define sctp_read_random(buf, len)	get_random_bytes(buf, len)
-#elif defined(__NetBSD__) && NRND > 0
+#if NRND > 0
 #define sctp_read_random(buf, len)	rnd_extract_data(buf, len, RND_EXTRACT_ANY);
 #else
 extern void sctp_read_random(void *buf, uint32_t len);
@@ -85,10 +85,8 @@ extern void sctp_read_random(void *buf, uint32_t len);
 /*
  * Other NetBSD Specific
  */
-#if defined(__NetBSD__)
 /* emulate the atomic_xxx() functions... */
 #define atomic_add_int(addr, val)	(*(addr) += val)
 #define atomic_subtract_int(addr, val)	(*(addr) -= val)
-#endif
 
 #endif

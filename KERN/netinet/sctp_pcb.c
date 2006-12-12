@@ -70,14 +70,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.7 2006/11/08 00:21:13 rrs Exp
 #include <sys/kernel.h>
 #include <sys/sysctl.h>
 
-#if defined(__APPLE__)
-#include <netinet/sctp_callout.h>
-#elif defined(__OpenBSD__)
-#include <sys/timeout.h>
-#else
-#include <sys/callout.h>
-#endif
-
 #if (defined(__FreeBSD__) && __FreeBSD_version >= 500000)
 #include <sys/limits.h>
 #else

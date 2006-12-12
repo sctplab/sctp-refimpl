@@ -37,14 +37,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.2 2006/11/03 17:21:53 rrs 
 /*
  * includes
  */
-#if defined(__FreeBSD__) || defined(__APPLE__)
 #include <sys/random.h>
-#endif
-#if defined(__NetBSD__)
-#include "rnd.h"
-#include <sys/rnd.h>
-#endif
-
 
 /*
  *
@@ -109,6 +102,12 @@ typedef struct vm_zone *sctp_zone_t;
 #define SCTP_ZONE_FREE(zone, element) \
 	zfreei(zone, element);
 #endif
+
+/*
+ * timers
+ */
+#include <sys/callout.h>
+typedef struct callout sctp_os_timer_t;
 
 /*
  * Functions

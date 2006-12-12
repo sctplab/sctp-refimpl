@@ -82,12 +82,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.7 2006/11/11 22:44:12 rrs Exp
 #include <sys/jail.h>
 #endif
 
-#ifdef __FreeBSD__
-#include <sys/callout.h>
-#else
-#include <netinet/sctp_callout.h>	/* for callout_active() */
-#endif
-
 #include <net/radix.h>
 #include <net/route.h>
 
