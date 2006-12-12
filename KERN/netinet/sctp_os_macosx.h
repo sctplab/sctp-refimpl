@@ -86,6 +86,7 @@ extern zone_t kalloc_zone(vm_size_t);	/* XXX */
 
 #define sctp_buf_len(m) (m->m_len)
 #define sctp_buf_next(m) (m->m_next)
+#define sctp_buf_next_pkt(m) (m->m_nextpkt)
 #define sctp_buf_hdr_len(m) (m->m_pkthdr.len)
 
 
