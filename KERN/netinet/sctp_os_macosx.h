@@ -33,8 +33,9 @@
 /*
  * includes
  */
+#include <sys/param.h>
+#include <sys/systm.h>
 #include <sys/random.h>
-#include <netinet/sctp_callout.h>
 
 /*
  * general memory allocation
@@ -76,6 +77,12 @@ extern zone_t kalloc_zone(vm_size_t);	/* XXX */
 /* SCTP_ZONE_FREE: free element from the zone */
 #define SCTP_ZONE_FREE(zone, element) \
 	zfree(zone, element);
+
+/*
+ * timers
+ */
+#include <netinet/sctp_callout.h>
+typedef struct callout sctp_os_timer_t;
 
 /*
  * Functions
@@ -122,5 +129,21 @@ extern int ticks;
 #define if_addrlist	if_addrhead
 #define if_list		if_link
 #define ifa_list	ifa_link
+
+/* MacOS specific timer functions */
+extern unsigned int sctp_main_timer;
+extern int sctp_main_timer_ticks;
+
+void sctp_start_main_timer(void);
+void sctp_stop_main_timer(void);
+
+/* locks */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#ifdef _KERN_LOCKS_H_
+extern lck_rw_t *sctp_calloutq_mtx;
+#else
+extern void *sctp_calloutq_mtx;
+#endif
+#endif
 
 #endif

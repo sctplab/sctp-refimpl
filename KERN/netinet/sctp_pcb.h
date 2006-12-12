@@ -628,14 +628,6 @@ int
 sctp_initiate_iterator(inp_func inpf, asoc_func af, uint32_t, uint32_t,
     uint32_t, void *, uint32_t, end_func ef, struct sctp_inpcb *, uint8_t co_off);
 
-#if defined(__APPLE__)
-void sctp_callout_alloc(struct sctp_timer *);
-void sctp_callout_free(struct callout *);
-
-void sctp_start_main_timer(void);
-void sctp_stop_main_timer(void);
-#endif
-
 #ifdef __NetBSD__
 extern void in6_sin6_2_sin(struct sockaddr_in *, struct sockaddr_in6 *sin6);
 
