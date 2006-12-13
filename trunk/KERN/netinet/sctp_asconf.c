@@ -199,7 +199,7 @@ sctp_asconf_success_response(uint32_t id)
 	aph->correlation_id = id;
 	aph->ph.param_type = htons(SCTP_SUCCESS_REPORT);
 	aph->ph.param_length = sizeof(struct sctp_asconf_paramhdr);
-	m_reply->m_len = aph->ph.param_length;
+	sctp_buf_len(m_reply) = aph->ph.param_length;
 	aph->ph.param_length = htons(aph->ph.param_length);
 
 	return m_reply;
@@ -250,7 +250,7 @@ sctp_asconf_error_response(uint32_t id, uint16_t cause, uint8_t * error_tlv,
 		tlv = (uint8_t *) (error + 1);
 		memcpy(tlv, error_tlv, tlv_length);
 	}
-	m_reply->m_len = aph->ph.param_length;
+	sctp_buf_len(m_reply) = aph->ph.param_length;
 	error->length = htons(error->length);
 	aph->ph.param_length = htons(aph->ph.param_length);
 
@@ -783,9 +783,9 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 	ack_cp->ch.chunk_flags = 0;
 	ack_cp->serial_number = htonl(serial_num);
 	/* set initial lengths (eg. just an ASCONF-ACK), ntohx at the end! */
-	m_ack->m_len = sizeof(struct sctp_asconf_ack_chunk);
+	sctp_buf_len(m_ack) = sizeof(struct sctp_asconf_ack_chunk);
 	ack_cp->ch.chunk_length = sizeof(struct sctp_asconf_ack_chunk);
-	m_ack->m_pkthdr.len = sizeof(struct sctp_asconf_ack_chunk);
+	sctp_buf_hdr_len(m_ack) = sizeof(struct sctp_asconf_ack_chunk);
 
 	/* skip the lookup address parameter */
 	offset += sizeof(struct sctp_asconf_chunk);
@@ -906,7 +906,7 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 			m_tail = m_result;
 			/* update lengths, make sure it's aligned too */
 			sctp_buf_len(m_result) = SCTP_SIZE32(sctp_buf_len(m_result));
-			m_ack->m_pkthdr.len += sctp_buf_len(m_result);
+			sctp_buf_hdr_len(m_ack) += sctp_buf_len(m_result);
 			ack_cp->ch.chunk_length += sctp_buf_len(m_result);
 			/* set flag to force success reports */
 			error = 1;
@@ -2363,8 +2363,8 @@ sctp_compose_asconf(struct sctp_tcb *stcb)
 		sctp_m_freem(m_asconf_chk);
 		return (NULL);
 	}
-	m_asconf_chk->m_len = sizeof(struct sctp_asconf_chunk);
-	m_asconf->m_len = 0;
+	sctp_buf_len(m_asconf_chk) = sizeof(struct sctp_asconf_chunk);
+	sctp_buf_len(m_asconf) = 0;
 	acp = mtod(m_asconf_chk, struct sctp_asconf_chunk *);
 	bzero(acp, sizeof(struct sctp_asconf_chunk));
 	/* save pointers to lookup address and asconf params */
@@ -2381,7 +2381,7 @@ sctp_compose_asconf(struct sctp_tcb *stcb)
 		/* get the parameter length */
 		p_length = SCTP_SIZE32(aa->ap.aph.ph.param_length);
 		/* will it fit in current chunk? */
-		if (m_asconf->m_len + p_length > stcb->asoc.smallest_mtu) {
+		if (sctp_buf_len(m_asconf) + p_length > stcb->asoc.smallest_mtu) {
 			/* won't fit, so we're done with this chunk */
 			break;
 		}
@@ -2414,7 +2414,7 @@ sctp_compose_asconf(struct sctp_tcb *stcb)
 			}
 			lookup->ph.param_length = htons(SCTP_SIZE32(p_size));
 			memcpy(lookup->addr, &aa->ap.addrp.addr, addr_size);
-			m_asconf_chk->m_len += SCTP_SIZE32(p_size);
+			sctp_buf_len(m_asconf_chk) += SCTP_SIZE32(p_size);
 			lookup_used = 1;
 		}
 		/* copy into current space */
@@ -2429,7 +2429,7 @@ sctp_compose_asconf(struct sctp_tcb *stcb)
 		aap->addrp.ph.param_type = htons(aap->addrp.ph.param_type);
 		aap->addrp.ph.param_length = htons(aap->addrp.ph.param_length);
 
-		m_asconf->m_len += SCTP_SIZE32(p_length);
+		sctp_buf_len(m_asconf) += SCTP_SIZE32(p_length);
 		ptr += SCTP_SIZE32(p_length);
 
 		/*
@@ -2473,7 +2473,7 @@ sctp_compose_asconf(struct sctp_tcb *stcb)
 			}
 			lookup->ph.param_length = htons(SCTP_SIZE32(p_size));
 			memcpy(lookup->addr, addr_ptr, addr_size);
-			m_asconf_chk->m_len += SCTP_SIZE32(p_size);
+			sctp_buf_len(m_asconf_chk) += SCTP_SIZE32(p_size);
 			lookup_used = 1;
 		} else {
 			/* uh oh... don't have any address?? */
@@ -2485,7 +2485,7 @@ sctp_compose_asconf(struct sctp_tcb *stcb)
 			lookup->ph.param_type = htons(SCTP_IPV4_ADDRESS);
 			lookup->ph.param_length = htons(SCTP_SIZE32(sizeof(struct sctp_ipv4addr_param)));
 			bzero(lookup->addr, sizeof(struct in_addr));
-			m_asconf_chk->m_len += SCTP_SIZE32(sizeof(struct sctp_ipv4addr_param));
+			sctp_buf_len(m_asconf_chk) += SCTP_SIZE32(sizeof(struct sctp_ipv4addr_param));
 			lookup_used = 1;
 		}
 	}

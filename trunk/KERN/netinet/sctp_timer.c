@@ -350,11 +350,11 @@ sctp_threshold_management(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			struct sctp_paramhdr *ph;
 			uint32_t *ippp;
 
-			oper->m_len = sizeof(struct sctp_paramhdr) +
+			sctp_buf_len(oper) = sizeof(struct sctp_paramhdr) +
 			    sizeof(uint32_t);
 			ph = mtod(oper, struct sctp_paramhdr *);
 			ph->param_type = htons(SCTP_CAUSE_PROTOCOL_VIOLATION);
-			ph->param_length = htons(oper->m_len);
+			ph->param_length = htons(sctp_buf_len(oper));
 			ippp = (uint32_t *) (ph + 1);
 			*ippp = htonl(SCTP_FROM_SCTP_TIMER+__LINE__);
 		}
@@ -1164,11 +1164,11 @@ sctp_cookie_timer(struct sctp_inpcb *inp,
 				struct sctp_paramhdr *ph;
 				uint32_t *ippp;
 
-				oper->m_len = sizeof(struct sctp_paramhdr) +
+				sctp_buf_len(oper) = sizeof(struct sctp_paramhdr) +
 				    sizeof(uint32_t);
 				ph = mtod(oper, struct sctp_paramhdr *);
 				ph->param_type = htons(SCTP_CAUSE_PROTOCOL_VIOLATION);
-				ph->param_length = htons(oper->m_len);
+				ph->param_length = htons(sctp_buf_len(oper));
 				ippp = (uint32_t *) (ph + 1);
 				*ippp = htonl(SCTP_FROM_SCTP_TIMER+__LINE__);
 			}

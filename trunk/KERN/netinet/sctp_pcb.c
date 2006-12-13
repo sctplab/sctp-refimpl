@@ -2674,13 +2674,13 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 					struct sctp_paramhdr *ph;
 					uint32_t *ippp;
 
-					op_err->m_len =
+					sctp_buf_len(op_err) =
 					    sizeof(struct sctp_paramhdr) + sizeof(uint32_t);
 					ph = mtod(op_err,
 					    struct sctp_paramhdr *);
 					ph->param_type = htons(
 					    SCTP_CAUSE_USER_INITIATED_ABT);
-					ph->param_length = htons(op_err->m_len);
+					ph->param_length = htons(sctp_buf_len(op_err));
 					ippp = (uint32_t *) (ph + 1);
 					*ippp = htonl(SCTP_FROM_SCTP_PCB+__LINE__);
 				}
@@ -2745,14 +2745,14 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 						/* Fill in the user initiated abort */
 						struct sctp_paramhdr *ph;
 						uint32_t *ippp;
-						op_err->m_len =
+						sctp_buf_len(op_err) =
 							(sizeof(struct sctp_paramhdr) +
 							 sizeof(uint32_t));
 						ph = mtod(op_err,
 							  struct sctp_paramhdr *);
 						ph->param_type = htons(
 							SCTP_CAUSE_USER_INITIATED_ABT);
-						ph->param_length = htons(op_err->m_len);
+						ph->param_length = htons(sctp_buf_len(op_err));
 						ippp = (uint32_t *) (ph + 1);
 						*ippp = htonl(SCTP_FROM_SCTP_PCB+__LINE__);
 					}
@@ -2823,12 +2823,12 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 				/* Fill in the user initiated abort */
 				struct sctp_paramhdr *ph;
 
-				op_err->m_len = (sizeof(struct sctp_paramhdr) +
+				sctp_buf_len(op_err) = (sizeof(struct sctp_paramhdr) +
 						 sizeof(uint32_t));
 				ph = mtod(op_err, struct sctp_paramhdr *);
 				ph->param_type = htons(
 				    SCTP_CAUSE_USER_INITIATED_ABT);
-				ph->param_length = htons(op_err->m_len);
+				ph->param_length = htons(sctp_buf_len(op_err));
 				ippp = (uint32_t *) (ph + 1);
 				*ippp = htonl(SCTP_FROM_SCTP_PCB+__LINE__);
 

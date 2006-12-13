@@ -4730,7 +4730,7 @@ sctp_print_mbuf_chain(struct mbuf *m)
 {
 	for(; m; m = sctp_buf_next(m)) {
 		if (m->m_flags & M_PKTHDR)
-			printf("%p: m_pkthdr.len = %d\n", m, sctp_buf_hdr_len(m));
+			printf("%p: pktsize = %d\n", m, sctp_buf_hdr_len(m));
 		printf("%p: m_len = %d\n", m, sctp_buf_len(m));
 		if (m->m_flags & M_EXT)
 			printf("%p: m->m_ext.ext_size = %d\n", m, m->m_ext.ext_size);
