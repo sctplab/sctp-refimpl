@@ -5847,7 +5847,8 @@ again_one_more_time:
 				/*
 				 * NOTE: the chk queue MUST have the PKTHDR
 				 * flag set on it with a total in the
-				 * m_pkthdr.len field!! else the chunk will
+				 * sctp_buf_hdr_len() field!! 
+				 * else the chunk will
 				 * ALWAYS be skipped
 				 */
 				continue;

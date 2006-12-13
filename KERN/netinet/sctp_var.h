@@ -359,8 +359,8 @@ extern uint32_t sctp_system_free_resc_limit;
 
 #define sctp_sbfree(ctl, stcb, sb, m) { \
         uint32_t val; \
-        val = atomic_fetchadd_int(&(sb)->sb_cc,-((m)->m_len)); \
-        if(val < (m)->m_len) { \
+        val = atomic_fetchadd_int(&(sb)->sb_cc,-(sctp_buf_len((m)))); \
+        if(val < sctp_buf_len((m))) { \
            panic("sb_cc goes negative"); \
         } \
         val = atomic_fetchadd_int(&(sb)->sb_mbcnt,-(MSIZE)); \
@@ -374,8 +374,8 @@ extern uint32_t sctp_system_free_resc_limit;
                 } \
         } \
         if (((ctl)->do_not_ref_stcb == 0) && stcb) {\
-          val = atomic_fetchadd_int(&(stcb)->asoc.sb_cc,-((m)->m_len)); \
-          if(val < (m)->m_len) {\
+          val = atomic_fetchadd_int(&(stcb)->asoc.sb_cc,-(sctp_buf_len((m)))); \
+          if(val < sctp_buf_len((m))) {\
              panic("stcb->sb_cc goes negative"); \
           } \
           val = atomic_fetchadd_int(&(stcb)->asoc.sb_mbcnt,-(MSIZE)); \
@@ -391,24 +391,24 @@ extern uint32_t sctp_system_free_resc_limit;
         } \
 	if ((m)->m_type != MT_DATA && (m)->m_type != MT_HEADER && \
 	    (m)->m_type != MT_OOBDATA) \
-		atomic_subtract_int(&(sb)->sb_ctl,(m)->m_len); \
+		atomic_subtract_int(&(sb)->sb_ctl,sctp_buf_len((m))); \
 }
 
 
 #define sctp_sballoc(stcb, sb, m) { \
-	atomic_add_int(&(sb)->sb_cc,(m)->m_len); \
+	atomic_add_int(&(sb)->sb_cc,sctp_buf_len((m))); \
 	atomic_add_int(&(sb)->sb_mbcnt, MSIZE); \
 	if ((m)->m_flags & M_EXT) \
 		atomic_add_int(&(sb)->sb_mbcnt,(m)->m_ext.ext_size); \
         if(stcb) { \
-  	  atomic_add_int(&(stcb)->asoc.sb_cc,(m)->m_len); \
+  	  atomic_add_int(&(stcb)->asoc.sb_cc,sctp_buf_len((m))); \
           atomic_add_int(&(stcb)->asoc.sb_mbcnt, MSIZE); \
 	  if ((m)->m_flags & M_EXT) \
 		atomic_add_int(&(stcb)->asoc.sb_mbcnt,(m)->m_ext.ext_size); \
         } \
 	if ((m)->m_type != MT_DATA && (m)->m_type != MT_HEADER && \
 	    (m)->m_type != MT_OOBDATA) \
-		atomic_add_int(&(sb)->sb_ctl,(m)->m_len); \
+		atomic_add_int(&(sb)->sb_ctl,sctp_buf_len((m))); \
 }
 
 #else				/* FreeBSD Version <= 500000 or non-FreeBSD */
@@ -429,14 +429,14 @@ extern uint32_t sctp_system_free_resc_limit;
 }
 
 #define sctp_sbfree(ctl, stcb, sb, m) { \
-	if ((sb)->sb_cc >= (uint32_t)(m)->m_len) { \
-		atomic_subtract_int(&(sb)->sb_cc, (m)->m_len); \
+	if ((sb)->sb_cc >= (uint32_t)sctp_buf_len((m))) { \
+		atomic_subtract_int(&(sb)->sb_cc, sctp_buf_len((m))); \
 	} else { \
 		(sb)->sb_cc = 0; \
 	} \
 	if (((ctl)->do_not_ref_stcb == 0) && stcb) { \
-		if ((stcb)->asoc.sb_cc >= (uint32_t)(m)->m_len) { \
-			atomic_subtract_int(&(stcb)->asoc.sb_cc, (m)->m_len); \
+		if ((stcb)->asoc.sb_cc >= (uint32_t)sctp_buf_len((m))) { \
+			atomic_subtract_int(&(stcb)->asoc.sb_cc, sctp_buf_len((m))); \
 		} else { \
 			(stcb)->asoc.sb_cc = 0; \
 		} \
@@ -467,10 +467,10 @@ extern uint32_t sctp_system_free_resc_limit;
 }
 
 #define sctp_sballoc(stcb, sb, m) { \
-	atomic_add_int(&(sb)->sb_cc, (m)->m_len); \
+	atomic_add_int(&(sb)->sb_cc, sctp_buf_len((m))); \
 	atomic_add_int(&(sb)->sb_mbcnt, MSIZE); \
 	if (stcb) { \
-		atomic_add_int(&(stcb)->asoc.sb_cc, (m)->m_len); \
+		atomic_add_int(&(stcb)->asoc.sb_cc, sctp_buf_len((m))); \
 		atomic_add_int(&(stcb)->asoc.sb_mbcnt, MSIZE); \
 		if ((m)->m_flags & M_EXT) \
 			atomic_add_int(&(stcb)->asoc.sb_mbcnt, (m)->m_ext.ext_size); \
@@ -496,9 +496,9 @@ extern uint32_t sctp_system_free_resc_limit;
 #define sctp_mbuf_crush(data) do { \
                 struct mbuf *_m; \
 		_m = (data); \
-		while(_m && (_m->m_len == 0)) { \
-			(data)  = _m->m_next; \
-			_m->m_next = NULL; \
+		while(_m && (sctp_buf_len(_m) == 0)) { \
+			(data)  = sctp_buf_next(_m); \
+			sctp_buf_next(_m) = NULL; \
 			sctp_m_free(_m); \
 			_m = (data); \
 		} \
