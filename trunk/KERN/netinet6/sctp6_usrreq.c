@@ -532,7 +532,7 @@ sctp6_notify_mbuf(struct sctp_inpcb *inp,
 	 */
 	nxtsz = ntohl(icmp6->icmp6_mtu);
 	/* Stop any PMTU timer */
-	sctp_timer_stop(SCTP_TIMER_TYPE_PATHMTURAISE, inp, stcb, NULL, SCTP_FROM_SCTP6_USRREQ+__LINE__);
+	sctp_timer_stop(SCTP_TIMER_TYPE_PATHMTURAISE, inp, stcb, NULL, SCTP_FROM_SCTP6_USRREQ+SCTP_LOC_1);
 
 	/* Adjust destination size limit */
 	if (net->mtu > nxtsz) {
@@ -1240,7 +1240,7 @@ sctp6_disconnect(struct socket *so)
 					SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 				}
 				sctp_free_assoc(inp, stcb, SCTP_DONOT_SETSCOPE,
-						SCTP_FROM_SCTP6_USRREQ+__LINE__);
+						SCTP_FROM_SCTP6_USRREQ+SCTP_LOC_2);
 				/* No unlock tcb assoc is gone */
 				splx(s);
 				return (0);
