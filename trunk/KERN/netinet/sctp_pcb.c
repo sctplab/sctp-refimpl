@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.7 2006/11/08 00:21:13 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.8 2006/12/14 17:02:54 rrs Exp $");
 
 #endif
 #if !(defined(__OpenBSD__) || defined(__APPLE__))
