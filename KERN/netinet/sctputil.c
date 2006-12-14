@@ -1639,8 +1639,8 @@ sctp_timeout_handler(void *t)
 		SCTP_STAT_INCR(sctps_timoassockill);
 		/* Can we free it yet? */
 		SCTP_INP_DECR_REF(inp);
-		sctp_timer_stop(SCTP_TIMER_TYPE_ASOCKILL, inp, stcb, NULL, SCTP_FROM_SCTPUTIL+__LINE__ );
-		sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTPUTIL+__LINE__);
+		sctp_timer_stop(SCTP_TIMER_TYPE_ASOCKILL, inp, stcb, NULL, SCTP_FROM_SCTPUTIL+SCTP_LOC_1 );
+		sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTPUTIL+SCTP_LOC_2);
 		/*
 		 * free asoc, always unlocks (or destroy's) so prevent
 		 * duplicate unlock or unlock of a free mtx :-0
@@ -1655,7 +1655,7 @@ sctp_timeout_handler(void *t)
 		 * killer
 		 */
 		SCTP_INP_DECR_REF(inp);
-		sctp_timer_stop(SCTP_TIMER_TYPE_INPKILL, inp, NULL, NULL, SCTP_FROM_SCTPUTIL+__LINE__ );
+		sctp_timer_stop(SCTP_TIMER_TYPE_INPKILL, inp, NULL, NULL, SCTP_FROM_SCTPUTIL+SCTP_LOC_3);
 		sctp_inpcb_free(inp, 1, 0);
 		goto out_no_decr;
 		break;
@@ -3517,7 +3517,7 @@ sctp_abort_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	sctp_send_abort(m, iphlen, sh, vtag, op_err);
 	if (stcb != NULL) {
 		/* Ok, now lets free it */
-		sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTPUTIL+__LINE__);
+		sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTPUTIL+SCTP_LOC_4);
 	} else {
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 			if (LIST_FIRST(&inp->sctp_asoc_list) == NULL) {
@@ -3554,7 +3554,7 @@ sctp_abort_an_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 	}
 	/* now free the asoc */
-	sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTPUTIL+__LINE__);
+	sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTPUTIL+SCTP_LOC_5);
 }
 
 void
@@ -3755,10 +3755,12 @@ sctp_print_address(struct sockaddr *sa)
 
 	if (sa->sa_family == AF_INET6) {
 		struct sockaddr_in6 *sin6;
+		char ip6buf[INET6_ADDRSTRLEN];
 
 		sin6 = (struct sockaddr_in6 *)sa;
 		printf("IPv6 address: %s:%d scope:%u\n",
-		    ip6_sprintf(&sin6->sin6_addr), ntohs(sin6->sin6_port),
+		    ip6_sprintf(ip6buf, &sin6->sin6_addr),
+		    ntohs(sin6->sin6_port),
 		    sin6->sin6_scope_id);
 	} else if (sa->sa_family == AF_INET) {
 		struct sockaddr_in *sin;
@@ -4458,7 +4460,7 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far, int hold_rlock,
 		sctp_chunk_output(stcb->sctp_ep, stcb,
 				  SCTP_OUTPUT_FROM_USR_RCVD);
 		/* make sure no timer is running */
-		sctp_timer_stop(SCTP_TIMER_TYPE_RECV, stcb->sctp_ep, stcb, NULL, SCTP_FROM_SCTPUTIL+__LINE__ );
+		sctp_timer_stop(SCTP_TIMER_TYPE_RECV, stcb->sctp_ep, stcb, NULL, SCTP_FROM_SCTPUTIL+SCTP_LOC_6 );
 		SCTP_TCB_UNLOCK(stcb);
 	} else {
 		/* Update how much we have pending */

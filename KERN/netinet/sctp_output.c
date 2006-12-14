@@ -5942,7 +5942,7 @@ again_one_more_time:
 						/* turn off the timer */
 						if (callout_pending(&stcb->asoc.dack_timer.timer)) {
 							sctp_timer_stop(SCTP_TIMER_TYPE_RECV,
-							    inp, stcb, net, SCTP_FROM_SCTP_OUTPUT+__LINE__ );
+							    inp, stcb, net, SCTP_FROM_SCTP_OUTPUT+SCTP_LOC_1 );
 						}
 					}
 					ctl_cnt++;
@@ -6325,7 +6325,7 @@ again_one_more_time:
 						/* start or restart it */
 						if (callout_pending(&net->fr_timer.timer)) {
 							sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, inp, stcb, net,
-									SCTP_FROM_SCTP_OUTPUT+__LINE__ );
+									SCTP_FROM_SCTP_OUTPUT+SCTP_LOC_2 );
 						}
 						SCTP_STAT_INCR(sctps_earlyfrstrout);
 						sctp_timer_start(SCTP_TIMER_TYPE_EARLYFR, inp, stcb, net);
@@ -6334,7 +6334,7 @@ again_one_more_time:
 						if (callout_pending(&net->fr_timer.timer)) {
 							SCTP_STAT_INCR(sctps_earlyfrstpout);
 							sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, inp, stcb, net,
-									SCTP_FROM_SCTP_OUTPUT+__LINE__ );
+									SCTP_FROM_SCTP_OUTPUT+SCTP_LOC_3 );
 						}
 					}
 				}
@@ -7274,7 +7274,7 @@ one_chunk_around:
 						 * t3-expiring.
 						 */
 						sctp_timer_stop(SCTP_TIMER_TYPE_SEND, inp, stcb, net,
-								SCTP_FROM_SCTP_OUTPUT+__LINE__ );
+								SCTP_FROM_SCTP_OUTPUT+SCTP_LOC_4 );
 						sctp_timer_start(SCTP_TIMER_TYPE_SEND, inp, stcb, net);
 					}
 				}
@@ -7835,7 +7835,7 @@ sctp_send_sack(struct sctp_tcb *stcb)
 		if (a_chk == NULL) {
 			/* No memory so we drop the idea, and set a timer */
 			sctp_timer_stop(SCTP_TIMER_TYPE_RECV,
-			    stcb->sctp_ep, stcb, NULL, SCTP_FROM_SCTP_OUTPUT+__LINE__ );
+			    stcb->sctp_ep, stcb, NULL, SCTP_FROM_SCTP_OUTPUT+SCTP_LOC_5 );
 			sctp_timer_start(SCTP_TIMER_TYPE_RECV,
 			    stcb->sctp_ep, stcb, NULL);
 			return;
@@ -7904,7 +7904,7 @@ sctp_send_sack(struct sctp_tcb *stcb)
 			atomic_subtract_int(&a_chk->whoTo->ref_count, 1);
 		sctp_free_a_chunk(stcb, a_chk);
 		sctp_timer_stop(SCTP_TIMER_TYPE_RECV,
-		    stcb->sctp_ep, stcb, NULL, SCTP_FROM_SCTP_OUTPUT+__LINE__ );
+		    stcb->sctp_ep, stcb, NULL, SCTP_FROM_SCTP_OUTPUT+SCTP_LOC_6 );
 		sctp_timer_start(SCTP_TIMER_TYPE_RECV,
 		    stcb->sctp_ep, stcb, NULL);
 		return;
