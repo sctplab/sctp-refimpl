@@ -1663,7 +1663,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					   1, M_DONTWAIT, 1, MT_DATA);	
 		if (mb != NULL) {
 			/* add some space up front so prepend will work well */
-			mb->m_data += sizeof(struct sctp_chunkhdr);
+			sctp_buf_resv_uf(mb, sizeof(struct sctp_chunkhdr));
 			phdr = mtod(mb, struct sctp_paramhdr *);
 			/*
 			 * Error causes are just param's and this one has

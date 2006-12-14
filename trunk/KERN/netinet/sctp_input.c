@@ -1161,9 +1161,9 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			return (NULL);
 		}
 		/* pre-reserve some space */
-		op_err->m_data += sizeof(struct ip6_hdr);
-		op_err->m_data += sizeof(struct sctphdr);
-		op_err->m_data += sizeof(struct sctp_chunkhdr);
+		sctp_buf_resv_uf(op_err, sizeof(struct ip6_hdr));
+		sctp_buf_resv_uf(op_err, sizeof(struct sctphdr));
+		sctp_buf_resv_uf(op_err,  sizeof(struct sctp_chunkhdr));
 		/* Set the len */
 		sctp_buf_len(op_err) = sctp_buf_hdr_len(op_err) = sizeof(struct sctp_paramhdr);
 		ph = mtod(op_err, struct sctp_paramhdr *);
@@ -2025,9 +2025,9 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			return (NULL);
 		}
 		/* pre-reserve some space */
-		op_err->m_data += sizeof(struct ip6_hdr);
-		op_err->m_data += sizeof(struct sctphdr);
-		op_err->m_data += sizeof(struct sctp_chunkhdr);
+		sctp_buf_resv_uf(op_err, sizeof(struct ip6_hdr));
+		sctp_buf_resv_uf(op_err, sizeof(struct sctphdr));
+		sctp_buf_resv_uf(op_err, sizeof(struct sctp_chunkhdr));
 
 		/* Set the len */
 		sctp_buf_len(op_err) = sctp_buf_hdr_len(op_err) = sizeof(struct sctp_stale_cookie_msg);
@@ -3172,7 +3172,7 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_out_req
 		sctp_free_a_chunk(stcb, chk);
 		return (ret_code);
 	}
-	chk->data->m_data += SCTP_MIN_OVERHEAD;
+	sctp_buf_resv_uf(chk->data, SCTP_MIN_OVERHEAD);
 
 	/* setup chunk parameters */
 	chk->sent = SCTP_DATAGRAM_UNSENT;
@@ -3754,7 +3754,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 							     1, M_DONTWAIT, 1, MT_DATA);
 				if (oper) {
 					/* pre-reserve some space */
-					oper->m_data += sizeof(struct sctp_chunkhdr);
+					sctp_buf_resv_uf(oper, sizeof(struct sctp_chunkhdr));
 					sctp_buf_len(oper) = sizeof(struct sctp_paramhdr);
 					sctp_buf_hdr_len(oper) = sctp_buf_len(oper);
 					phdr = mtod(oper, struct sctp_paramhdr *);

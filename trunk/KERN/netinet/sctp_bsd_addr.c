@@ -1936,7 +1936,7 @@ sctp_add_addr_to_mbuf(struct mbuf *m, struct ifaddr *ifa)
 	}
 	if (M_TRAILINGSPACE(m) >= len) {
 		/* easy side we just drop it on the end */
-		parmh = (struct sctp_paramhdr *)(m->m_data + sctp_buf_len(m));
+		parmh = (struct sctp_paramhdr *)(sctp_buf_at(m, sctp_buf_len(m)));
 		mret = m;
 	} else {
 		/* Need more space */
