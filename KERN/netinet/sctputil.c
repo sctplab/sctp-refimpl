@@ -332,7 +332,7 @@ sctp_log_mb(struct mbuf *m, int from)
 	sctp_clog[sctp_cwnd_log_at].x.mb.mp = m;
 	sctp_clog[sctp_cwnd_log_at].x.mb.mbuf_flags = (uint8_t)(m->m_flags);
 	sctp_clog[sctp_cwnd_log_at].x.mb.size = (uint16_t)(sctp_buf_len(m));
-	sctp_clog[sctp_cwnd_log_at].x.mb.data = m->m_data;
+	sctp_clog[sctp_cwnd_log_at].x.mb.data = sctp_buf_at(m, 0);
 	if(m->m_flags & M_EXT) {
 		sctp_clog[sctp_cwnd_log_at].x.mb.ext = m->m_ext.ext_buf;
 #if defined(__APPLE__)
@@ -2397,17 +2397,17 @@ sctp_calculate_sum(struct mbuf *m, int32_t * pktlen, uint32_t offset)
 		if ((sctp_buf_len(at) - offset) > 0) {
 #ifdef SCTP_USE_ADLER32
 			base = update_adler32(base,
-					      (unsigned char *)(at->m_data + offset),
+					      (unsigned char *)(sctp_buf_at(at, offset)),
 					      (unsigned int)(sctp_buf_len(at) - offset));
 #else
 			if ((sctp_buf_len(at) - offset) < 4) {
 				/* Use old method if less than 4 bytes */
 				base = old_update_crc32(base, 
-							(unsigned char *)(at->m_data + offset),
+							(unsigned char *)(sctp_buf_at(at, offset)),
 							(unsigned int)(sctp_buf_len(at) - offset));
 			} else {
 				base = update_crc32(base,
-						    (unsigned char *)(at->m_data + offset),
+						    (unsigned char *)(sctp_buf_at(at, offset)),
 						    (unsigned int)(sctp_buf_len(at) - offset));
 			}
 #endif				/* SCTP_USE_ADLER32 */
@@ -4368,7 +4368,7 @@ sctp_pkthdr_fix(struct mbuf *m)
 		bcopy(mtod(m_nxt, caddr_t), mtod(m, caddr_t), sizeof(long));
 		/* update mbuf data pointers and lengths */
 		sctp_buf_len(m) += sizeof(long);
-		m_nxt->m_data += sizeof(long);
+		sctp_buf_resv_uf(m_nxt, sizeof(long));
 		sctp_buf_len(m_nxt) -= sizeof(long);
 	}
 }
@@ -5057,7 +5057,7 @@ get_more_data:
 						 */
 						m->m_flags |= M_NOTIFICATION;
 					}
-					m->m_data += cp_len;
+					sctp_buf_resv_uf(m, cp_len);
 					sctp_buf_len(m) -= cp_len;
 #ifdef SCTP_SB_LOGGING
 					sctp_sblog(&so->so_rcv, control->do_not_ref_stcb?NULL:stcb, SCTP_LOG_SBFREE, cp_len);
@@ -5476,7 +5476,7 @@ get_more_data2:
 					    stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 						no_rcv_needed = 1;
 					}
-					m->m_data += cp_len;
+					sctp_buf_resv_uf(m, cp_len);
 					sctp_buf_len(m) -= cp_len;
 #ifdef SCTP_SB_LOGGING
 					sctp_sblog(&so->so_rcv, control->do_not_ref_stcb?NULL:stcb, SCTP_LOG_SBFREE, cp_len);

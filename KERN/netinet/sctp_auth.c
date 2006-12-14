@@ -1695,7 +1695,7 @@ sctp_handle_auth(struct sctp_tcb *stcb, struct sctp_auth_chunk *auth,
 		m_err = sctp_get_mbuf_for_msg(sizeof(*err), 1, M_DONTWAIT, 1, MT_HEADER);
 		if (m_err != NULL) {
 			/* pre-reserve some space */
-			m_err->m_data += sizeof(struct sctp_chunkhdr);
+			sctp_buf_resv_uf(m_err, sizeof(struct sctp_chunkhdr));
 			/* fill in the error */
 			err = mtod(m_err, struct sctp_auth_invalid_hmac *);
 			bzero(err, sizeof(*err));
