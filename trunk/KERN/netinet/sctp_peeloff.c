@@ -253,7 +253,7 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 		sctp_feature_off(n_inp, SCTP_PCB_FLAGS_AUTOCLOSE);
 		n_inp->sctp_ep.auto_close_time = 0;
 		sctp_timer_stop(SCTP_TIMER_TYPE_AUTOCLOSE, n_inp, stcb, NULL,
-				SCTP_FROM_SCTP_PEELOFF+__LINE__	);
+				SCTP_FROM_SCTP_PEELOFF+SCTP_LOC_1);
 	}
 	/* Turn off any non-blocking semantic. */
 	newso->so_state &= ~SS_NBIO;
