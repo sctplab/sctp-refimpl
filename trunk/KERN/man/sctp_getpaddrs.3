@@ -36,8 +36,8 @@
 .Dt SCTP_GETPADDR 3
 .Os
 .Sh NAME
-.Nm sctp_getpaddr
-.Nm sctp_getladdr
+.Nm sctp_getpaddrs
+.Nm sctp_getladdrs
 .Nd return a list of addresses to the caller.
 .Sh LIBRARY
 .Lb libc
@@ -46,15 +46,15 @@
 .In sys/socket.h
 .In sys/sctp.h
 .Ft int
-.Fn sctp_getpaddr "int s" "sctp_assoc_t asocid" "struct sockaddr **addrs"
+.Fn sctp_getpaddrs "int s" "sctp_assoc_t asocid" "struct sockaddr **addrs"
 .Ft int
-.Fn sctp_getladdr "int s" "sctp_assoc_t asocid" "struct sockaddr **addrs"
+.Fn sctp_getladdrs "int s" "sctp_assoc_t asocid" "struct sockaddr **addrs"
 .Sh DESCRIPTION
 The
-.Fn sctp_getpaddr
+.Fn sctp_getpaddrs
 function is used to get the list of the peers addresses.
 The 
-.Fn sctp_getladdr
+.Fn sctp_getladdrs
 function is used to get the list of the local addresses.
 The association of interest is identified by the
 .Fa asocid
