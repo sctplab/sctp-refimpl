@@ -3754,12 +3754,18 @@ sctp_print_address(struct sockaddr *sa)
 {
 
 	if (sa->sa_family == AF_INET6) {
-		struct sockaddr_in6 *sin6;
+		struct sockaddr_in6 *sin6;	
+#if defined(__FreeBSD__) && __FreeBSD_version >= 700000
 		char ip6buf[INET6_ADDRSTRLEN];
+#endif
 
 		sin6 = (struct sockaddr_in6 *)sa;
 		printf("IPv6 address: %s:%d scope:%u\n",
+#if defined(__FreeBSD__) && __FreeBSD_version >= 700000
 		    ip6_sprintf(ip6buf, &sin6->sin6_addr),
+#else
+		    ip6_sprintf(&sin6->sin6_addr),
+#endif
 		    ntohs(sin6->sin6_port),
 		    sin6->sin6_scope_id);
 	} else if (sa->sa_family == AF_INET) {
