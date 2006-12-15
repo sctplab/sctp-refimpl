@@ -347,7 +347,7 @@ sctp_process_asconf_add_ip(struct mbuf *m, struct sctp_asconf_paramhdr *aph,
 	}			/* end switch */
 
 	/* if 0.0.0.0/::0, add the source address instead */
-	if (zero_address) {
+	if (zero_address && sctp_nat_friendly) {
 		sa = (struct sockaddr *)&sa_source;
 		sctp_asconf_get_source_ip(m, sa);
 #ifdef SCTP_DEBUG
@@ -521,7 +521,7 @@ sctp_process_asconf_delete_ip(struct mbuf *m, struct sctp_asconf_paramhdr *aph,
 	}
 
 	/* if deleting 0.0.0.0/::0, delete all addresses except src addr */
-	if (zero_address) {
+	if (zero_address && sctp_nat_friendly) {
 		result = sctp_asconf_del_remote_addrs_except(stcb,
 		    (struct sockaddr *)&sa_source);
 
@@ -658,7 +658,7 @@ sctp_process_asconf_set_primary(struct mbuf *m,
 	}
 
 	/* if 0.0.0.0/::0, use the source address instead */
-	if (zero_address) {
+	if (zero_address && sctp_nat_friendly) {
 		sa = (struct sockaddr *)&sa_source;
 		sctp_asconf_get_source_ip(m, sa);
 #ifdef SCTP_DEBUG
