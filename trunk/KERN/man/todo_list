@@ -1,6 +1,3 @@
-sctp_peeloff [2]
-  (sd, sctp_assoc_t id)
-
 sctp_generic_recvmsg [2]
 (sd, iov*, iovlen, from(, fromlen*, sinfo *, msgflag*)
 
@@ -28,5 +25,5 @@ sctp_freeladdrs [3]  --- DONE
 sctp_getpaddrs [3] --- ONE page
 sctp_getladdrs [3]  ---- ONE page
 sctp_getassocid [3] --- DONE
-
+sctp_peeloff [2] --- DONE
 

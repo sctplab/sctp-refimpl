@@ -30,67 +30,53 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     From: @(#)send.2	8.2 (Berkeley) 2/21/94
-.\" $FreeBSD: src/lib/libc/sys/send.2,v 1.32 2005/06/15 19:04:04 ru Exp $
+.\" $FreeBSD:$
 .\"
 .Dd December 15, 2006
-.Dt SCTP_RECVMSG 3
+.Dt SCTP_PEELOFF 2
 .Os
 .Sh NAME
-.Nm sctp_xxxxx
-.Nd describe short
+.Nm sctp_peeloff
+.Nd detach an association from an one-to-many socket to its on sd
 .Sh LIBRARY
 .Lb libc
 .Sh SYNOPSIS
 .In sys/types.h
 .In sys/socket.h
 .In sys/sctp.h
-.Ft ssize_t <return value
-.Fn sctp_recvmsg "int s" "void *msg" "size_t len" "struct sockaddr * restrict from" "socklen_t * restrict fromlen" "struct sctp_sndrcvinfo *sinfo" "int *flags"
+.Ft int
+.Fn sctp_peeloff "int s" "sctp_assoc_t id"
 .Sh DESCRIPTION
 The
-.Fn sctp_recvmsg
-system calls
-
+.Fn sctp_peeloff
+system call attempts detach the assoication specified by
+.Fa id
+into its own seperate socket.
+.Pp
 .Sh RETURN VALUES
-The call returns the number of characters sent, or -1
-if an error occurred.
+The call returns -1 on failure and the new socket descriptor
+upon success.
 .Sh ERRORS
 The
-.Fn sctp_recvmsg
-.It Bq Er ENOBUFS
-The system was unable to allocate an internal buffer.
-The operation may succeed when buffers become available.
-.It Bq Er ENOBUFS
-The output queue for a network interface was full.
-This generally indicates that the interface has stopped sending,
-but may be caused by transient congestion.
-.It Bq Er EHOSTUNREACH
-The remote host was unreachable.
-.It Bq Er ENOTCON
-On a one to one style socket no association exists.
-.It Bq Er ECONNRESET
-An abort was received by the stack while the user was
-attempting to send data to the peer.
-.It Bq Er ENOENT
-On a one to many style socket no address is specified
-so that the association cannot be located or the
-SCTP_ABORT flag was specified on a non-existing association.
-.It Bq Er EPIPE
-The socket is unable to send anymore data
-.Dv ( SBS_CANTSENDMORE
-has been set on the socket).
-This typically means that the socket
-is not connected and is a one-to-one style socket.
+.Fn sctp_connectx
+can return the following errors.
+.It Bq Er ENOTCONN
+The 
+.Fa id
+given to the call does not map to a valid
+association.
+.It Bq Er E2BIG
+The size of the address list exceeds the amount of
+data provided.
+.It Bq Er EBADF
+The argument
+.Fa s
+is not a valid descriptor.
+.It Bq Er ENOTSOCK
+The argument
+.Fa s
+is not a socket.
 .El
 .Sh SEE ALSO
 .Xr sctp 4 ,
-.Xr sendmsg 3 ,
-.Xr sctp_sendmsg 3 ,
-.Xr sctp_send 3 ,
-.Xr getsockopt 2 ,
-.Xr setsockopt 2 ,
-.Xr recv 2 ,
-.Xr select 2 ,
-.Xr socket 2 ,
-.Xr write 2
 
