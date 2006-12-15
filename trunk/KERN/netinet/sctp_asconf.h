@@ -50,6 +50,15 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_asconf.h,v 1.1 2006/11/03 15:23:15 rrs 
 
 #if defined(_KERNEL)
 
+/*
+ * global variables
+ */
+extern uint32_t sctp_asconf_auth_nochk;	/* sysctl to disable ASCONF auth chk */
+
+
+/*
+ * function prototypes
+ */
 extern void sctp_asconf_cleanup(struct sctp_tcb *, struct sctp_nets *);
 
 extern struct mbuf *sctp_compose_asconf(struct sctp_tcb *);

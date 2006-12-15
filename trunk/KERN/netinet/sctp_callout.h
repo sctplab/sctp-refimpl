@@ -62,4 +62,6 @@ void callout_init(struct callout *);
 void callout_reset(struct callout *, int, void (*)(void *), void *);
 int callout_stop(struct callout *);
 
+void sctp_fasttim(void);
+
 #endif
