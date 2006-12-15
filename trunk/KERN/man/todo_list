@@ -1,12 +1,4 @@
 
-sctp_opt_info [3]
- (sd, sctp_assoc_t, int, void *, socklen_t *)
-
-sctp_freeladdrs [3]  --- ONE page
- (sockaddr *)
-sctp_freepaddrs [3] ----
- (sockaddr *)
-
 sctp_getpaddrs [3] --- ONE page
  (sd, sctp_assoc_t, sockaddr **)
 sctp_getladdrs [3]  ----
@@ -40,4 +32,7 @@ sctp_recvmsg()[3] - DONE
 sctp_getaddrlen [3] -DONE
 sctp_connectx [3] - DONE
 sctp_bindx [3] - DONE
+sctp_opt_info [3] - DONE
+sctp_freeladdrs [3]  --- DONE
+  sctp_freepaddrs [3]
 
