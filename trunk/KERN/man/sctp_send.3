@@ -46,8 +46,8 @@
 .In sys/socket.h
 .In sys/sctp.h
 .Ft ssize_t
-.Ft ssize_t
 .Fn sctp_send "int sd" "const void *msg" "size_t len" "const struct sctp_sndrcvinfo *sinfo" "int flags"
+.Ft ssize_t
 .Fn sctp_sendx "int sd" "const void *msg" "size_t len" "struct sockaddr *addrs" "int addrcnt" "const struct sctp_sndrcvinfo *sinfo" "int flags"
 .Sh DESCRIPTION
 The
