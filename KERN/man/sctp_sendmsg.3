@@ -37,6 +37,7 @@
 .Os
 .Sh NAME
 .Nm sctp_sendmsg
+.Nm sctp_sendmsgx
 .Nd send a message from an SCTP socket
 .Sh LIBRARY
 .Lb libc
@@ -47,6 +48,9 @@
 .Ft ssize_t
 .Ft ssize_t
 .Fn sctp_sendmsg "int s" "const void *msg" "size_t len" "const struct sockaddr *to" "socklen_t tolen" "uint32_t ppid" "uint32_t flags" "uint16_t stream_no" "uint32_t timetolive" "uint32_t context"
+
+.Fn sctp_sendmsgx "int s" "const void *msg" "size_t len" "const struct sockaddr *to" "int addrcnt" "uint32_t ppid" "uint32_t flags" "uint16_t stream_no" "uint32_t timetolive" "uint32_t context"
+
 .Sh DESCRIPTION
 The
 .Fn sctp_sendmsg
@@ -63,6 +67,8 @@ be in existance (by use of the
 .Fn connect 2
 system call). Calling 
 .Fn sctp_sendmsg
+or
+.Fn sctp_sendmsgx
 on a non-connected one-to-one socket will result in the errno being set to
 .Er ENOTCONN
 a -1 being returned, and the message is not transmitted.
@@ -210,6 +216,19 @@ is given if that notification is enabled (see
 .Tn sctp
 ). Normally a user process can use this value to index some application
 specific data structure when a send cannot be fulfilled.
+.Fn sctp_sendmsgx
+is identical to 
+.Fn sctp_sendmsg
+with the exception that it takes a array of sockaddr structures in the
+argument
+.Fa to
+and adds the additional argument
+.Fa addrcnt
+which specifies how many addresses are in the array. This allows a
+caller to implictly setup an association passing multiple addresses
+as if an
+.Fn sctp_connectx 
+had been called to setup the association.
 .Sh RETURN VALUES
 The call returns the number of characters sent, or -1
 if an error occurred.
@@ -260,15 +279,19 @@ is not connected and is a one-to-one style socket.
 .El
 .Sh SEE ALSO
 .Xr sctp 4 ,
-.Xr sendmsg 2 ,
+.Xr sendmsg 3 ,
+.Xr connect 2 ,
+.Xr sctp_connectx 3 ,
 .Xr getsockopt 2 ,
 .Xr recv 2 ,
 .Xr select 2 ,
 .Xr socket 2 ,
 .Xr write 2
 .Sh BUGS
-Because
+Because in the one-to-many style socket the
 .Fn sctp_sendmsg 
+or
+.Fn sctp_sendmsgx
 may have multiple associations under one endpoint, a
 select on write will only work for a one-to-one style
 socket.
