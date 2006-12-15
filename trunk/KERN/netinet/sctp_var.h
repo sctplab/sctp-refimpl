@@ -222,7 +222,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_var.h,v 1.1 2006/11/03 15:23:15 rrs Exp
 #endif
 
 
-
 #if (defined(__APPLE__) && defined(KERNEL))
 #ifndef _KERNEL
 #define _KERNEL
@@ -344,8 +343,6 @@ extern uint32_t sctp_system_free_resc_limit;
 
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 
-
-
 #define sctp_free_remote_addr(__net) { \
 	if ((__net)) { \
                 if (atomic_fetchadd_int(&(__net)->ref_count, -1) == 1) { \
@@ -358,7 +355,6 @@ extern uint32_t sctp_system_free_resc_limit;
 		} \
 	} \
 }
-
 
 #define sctp_sbfree(ctl, stcb, sb, m) { \
         uint32_t val; \
@@ -595,25 +591,6 @@ int sctp_accept(struct socket *, struct mbuf *);
 
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 int sctp_sysctl(int *, uint32_t, void *, size_t *, void *, size_t);
-#endif
-
-#ifdef __OpenBSD__
-/*
- * compatibility defines for OpenBSD
- */
-
-/* map callout into timeout for OpenBSD */
-#ifndef callout_init
-#define callout_init(args)
-#define callout_reset(c, ticks, func, arg) \
-do { \
-	timeout_set((c), (func), (arg)); \
-	timeout_add((c), (ticks)); \
-} while (0)
-#define callout_stop(c) timeout_del(c)
-#define callout_pending(c) timeout_pending(c)
-#define callout_active(c) timeout_initialized(c)
-#endif
 #endif
 
 #endif				/* _KERNEL */
