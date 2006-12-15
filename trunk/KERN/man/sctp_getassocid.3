@@ -58,8 +58,9 @@ The call returns the association id upon success and a
 0 is returned upon failure.
 .Sh ERRORS
 The
-.Fn sctp_connectx
-can return the following errors.
+.Fn sctp_getassocid
+function can return the following errors.
+.Bl -tag -width Er
 .It Bq Er ENOENT
 The address does not have an association setup to it.
 .It Bq Er EBADF

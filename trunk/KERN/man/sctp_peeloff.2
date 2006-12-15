@@ -58,8 +58,9 @@ The call returns -1 on failure and the new socket descriptor
 upon success.
 .Sh ERRORS
 The
-.Fn sctp_connectx
+.Fn sctp_peeloff
 can return the following errors.
+.Bl -tag -width Er
 .It Bq Er ENOTCONN
 The 
 .Fa id
