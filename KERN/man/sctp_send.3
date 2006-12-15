@@ -37,6 +37,7 @@
 .Os
 .Sh NAME
 .Nm sctp_send
+.Nm sctp_sendx
 .Nd send a message from an SCTP socket
 .Sh LIBRARY
 .Lb libc
@@ -47,6 +48,7 @@
 .Ft ssize_t
 .Ft ssize_t
 .Fn sctp_send "int sd" "const void *msg" "size_t len" "const struct sctp_sndrcvinfo *sinfo" "int flags"
+.Fn sctp_sendx "int sd" "const void *msg" "size_t len" "struct sockaddr *addrs" "int addrcnt" "const struct sctp_sndrcvinfo *sinfo" "int flags"
 .Sh DESCRIPTION
 The
 .Fn sctp_send
@@ -231,7 +233,30 @@ The fields
 and
 .Fa sinfo->sinfo_cumtsn 
 are used only when receiving messages and are thus ignored by
+.Fn sctp_send.
+The function
+.Fn sctp_sendx 
+has the same properties as 
 .Fn sctp_send
+with the additional arguments of an array of sockaddr structures
+passed in. With the 
+.Fa addrs
+argument being given as an array of addresses to be sent to and
+the
+.Fa addrcnt
+argument indicating how many socket addresses are in the passed
+in array. Note that all of the addresses will only be used
+when an implicit association is being setup. This allows the
+user the equivilant behavior as doing a
+.Fn sctp_connectx
+followed by a 
+.Fn sctp_send
+to the association. Note that if the association id.
+.Fa sinfo->sinfo_assoc_id
+field is 0, then the first address will be used to look up
+the association in place of the association id. If both
+an address and and association id are specified, the association
+id has priority. 
 .Sh RETURN VALUES
 The call returns the number of characters sent, or -1
 if an error occurred.
@@ -283,8 +308,9 @@ is not connected and is a one-to-one style socket.
 .Sh SEE ALSO
 .Xr sctp 4 ,
 .Xr sendmsg 2 ,
-.Xr sctp_sendmsg 2 ,
-.Xr sctp_recvmsg 2 ,
+.Xr sctp_sendmsg 3 ,
+.Xr sctp_recvmsg 3 ,
+.Xr sctp_connectx 3 ,
 .Xr getsockopt 2 ,
 .Xr recv 2 ,
 .Xr select 2 ,
