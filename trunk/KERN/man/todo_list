@@ -1,4 +1,3 @@
-
 sctp_bindx [3]
  (sd, sockaddr *, int num, int flag) ?
 
