@@ -1,8 +1,3 @@
-sctp_getaddrlen [3]
-  (sa_family_t)
-
-sctp_connectx [3]
- (sd, const sockaddr *, int num) ?
 
 sctp_bindx [3]
  (sd, sockaddr *, int num, int flag) ?
@@ -45,3 +40,6 @@ sctp_send() [3]  - DONE
 sctp_sendx [3]
 
 sctp_recvmsg()[3] - DONE
+sctp_getaddrlen [3] -DONE
+sctp_connectx [3] - DONE
+

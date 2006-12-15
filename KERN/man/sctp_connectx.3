@@ -33,64 +33,62 @@
 .\" $FreeBSD: src/lib/libc/sys/send.2,v 1.32 2005/06/15 19:04:04 ru Exp $
 .\"
 .Dd December 15, 2006
-.Dt SCTP_RECVMSG 3
+.Dt SCTP_CONNECTX 3
 .Os
 .Sh NAME
-.Nm sctp_xxxxx
-.Nd describe short
+.Nm sctp_connectx
+.Nd connect an sctp socket with multiple destination addresses.
 .Sh LIBRARY
 .Lb libc
 .Sh SYNOPSIS
 .In sys/types.h
 .In sys/socket.h
 .In sys/sctp.h
-.Ft ssize_t <return value
-.Fn sctp_recvmsg "int s" "void *msg" "size_t len" "struct sockaddr * restrict from" "socklen_t * restrict fromlen" "struct sctp_sndrcvinfo *sinfo" "int *flags"
+.Ft int
+.Fn sctp_connectx "int s" "struct sockaddr *" "int addrcnt"
 .Sh DESCRIPTION
 The
-.Fn sctp_recvmsg
-system calls
-
+.Fn sctp_connectx
+call attempts to initiate an association to a peer SCTP
+endpoint. The call operates similarly to
+.Fn connect
+but it also provides the ability to specify multiple destination
+addresses for the peer. This allows a fault tolerant method
+of initiating an association. When one of the peers addresses
+is unreachable, the subsequent listed addresses will also be used
+to setup the association with the peer. 
+.Pp
+The user also needs to consider that any address listed in an 
+.Fn sctp_connectx
+call are also consider "confirmed".
+A confirmed address is one in
+which the SCTP transport will trust is a part of the association
+and it will not send a confirmation heartbeat to it with
+a random nonce. If the peer SCTP stack does not list one of
+the provided addresses in its response message then the address listed
+is silently discarded from the association.
 .Sh RETURN VALUES
-The call returns the number of characters sent, or -1
-if an error occurred.
+The call returns 0 on success and -1 upon failure.
 .Sh ERRORS
 The
-.Fn sctp_recvmsg
-.It Bq Er ENOBUFS
-The system was unable to allocate an internal buffer.
-The operation may succeed when buffers become available.
-.It Bq Er ENOBUFS
-The output queue for a network interface was full.
-This generally indicates that the interface has stopped sending,
-but may be caused by transient congestion.
-.It Bq Er EHOSTUNREACH
-The remote host was unreachable.
-.It Bq Er ENOTCON
-On a one to one style socket no association exists.
-.It Bq Er ECONNRESET
-An abort was received by the stack while the user was
-attempting to send data to the peer.
-.It Bq Er ENOENT
-On a one to many style socket no address is specified
-so that the association cannot be located or the
-SCTP_ABORT flag was specified on a non-existing association.
-.It Bq Er EPIPE
-The socket is unable to send anymore data
-.Dv ( SBS_CANTSENDMORE
-has been set on the socket).
-This typically means that the socket
-is not connected and is a one-to-one style socket.
+.Fn sctp_connectx
+can return the following errors.
+.It Bq Er EINVAL
+An address listed has an invalid family or no
+addresses were provided.
+.It Bq Er E2BIG
+The size of the address list exceeds the amount of
+data provided.
+.It Bq Er EBADF
+The argument
+.Fa s
+is not a valid descriptor.
+.It Bq Er ENOTSOCK
+The argument
+.Fa s
+is not a socket.
 .El
 .Sh SEE ALSO
 .Xr sctp 4 ,
-.Xr sendmsg 3 ,
-.Xr sctp_sendmsg 3 ,
-.Xr sctp_send 3 ,
-.Xr getsockopt 2 ,
-.Xr setsockopt 2 ,
-.Xr recv 2 ,
-.Xr select 2 ,
-.Xr socket 2 ,
-.Xr write 2
+.Xr connect 2 ,
 
