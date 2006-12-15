@@ -1,4 +1,3 @@
-
 sctp_getpaddrs [3] --- ONE page
  (sd, sctp_assoc_t, sockaddr **)
 sctp_getladdrs [3]  ----
