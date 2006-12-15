@@ -1,12 +1,3 @@
-sctp_getpaddrs [3] --- ONE page
- (sd, sctp_assoc_t, sockaddr **)
-sctp_getladdrs [3]  ----
- (sd, sctp_assoc_t, sockaddr **)
-
-
-sctp_getassocid [3]
- (sd, sockaddr *) -> Returns sctp_assoc_t
-
 sctp_peeloff [2]
   (sd, sctp_assoc_t id)
 
@@ -34,4 +25,8 @@ sctp_bindx [3] - DONE
 sctp_opt_info [3] - DONE
 sctp_freeladdrs [3]  --- DONE
   sctp_freepaddrs [3]
+sctp_getpaddrs [3] --- ONE page
+sctp_getladdrs [3]  ---- ONE page
+sctp_getassocid [3] --- DONE
+
 
