@@ -30,67 +30,59 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     From: @(#)send.2	8.2 (Berkeley) 2/21/94
-.\" $FreeBSD: src/lib/libc/sys/send.2,v 1.32 2005/06/15 19:04:04 ru Exp $
+.\" $FreeBSD:$
 .\"
 .Dd December 15, 2006
-.Dt SCTP_RECVMSG 3
+.Dt SCTP_GENERIC_SENDMSG 2
 .Os
 .Sh NAME
-.Nm sctp_xxxxx
-.Nd describe short
+.Nm sctp_generic_sendmsg
+.Nm sctp_generic_sendmsg_iov
+.Nd send data to a peer.
 .Sh LIBRARY
 .Lb libc
 .Sh SYNOPSIS
 .In sys/types.h
 .In sys/socket.h
 .In sys/sctp.h
-.Ft ssize_t <return value
-.Fn sctp_recvmsg "int s" "void *msg" "size_t len" "struct sockaddr * restrict from" "socklen_t * restrict fromlen" "struct sctp_sndrcvinfo *sinfo" "int *flags"
+.Ft int
+.Fn sctp_generic_sendmsg "int s" "void *msg" "int msglen" "struct sockaddr *to" "struct sctp_sndrcvinfo *sinfo" "int flags"
+.Ft int
+.Fn sctp_generic_sendmsg_iov "int s" "struct iovec *iov" "int iovlen" "struct sockaddr *to" "struct sctp_sndrcvinfo *sinfo" "int flags"
+
 .Sh DESCRIPTION
 The
-.Fn sctp_recvmsg
-system calls
-
+.Fn sctp_generic_sendmsg
+and
+.Fn sctp_generic_sendmsg_iov
+are the true system calls used by the
+.Fn sctp_sendmsg
+and 
+.Fn sctp_send
+function calls. These are more efficient since they are
+true system calls but they are specific to FreeBSD and
+can be expected NOT to be present on any other Operating
+System. For detailed useage please see either the
+.Fn sctp_send
+or
+.Fn sctp_sendmsg
+function calls. 
 .Sh RETURN VALUES
-The call returns the number of characters sent, or -1
-if an error occurred.
+The call returns the number of bytes written on success and -1 upon failure.
 .Sh ERRORS
-The
-.Fn sctp_recvmsg
-.It Bq Er ENOBUFS
-The system was unable to allocate an internal buffer.
-The operation may succeed when buffers become available.
-.It Bq Er ENOBUFS
-The output queue for a network interface was full.
-This generally indicates that the interface has stopped sending,
-but may be caused by transient congestion.
-.It Bq Er EHOSTUNREACH
-The remote host was unreachable.
-.It Bq Er ENOTCON
-On a one to one style socket no association exists.
-.It Bq Er ECONNRESET
-An abort was received by the stack while the user was
-attempting to send data to the peer.
-.It Bq Er ENOENT
-On a one to many style socket no address is specified
-so that the association cannot be located or the
-SCTP_ABORT flag was specified on a non-existing association.
-.It Bq Er EPIPE
-The socket is unable to send anymore data
-.Dv ( SBS_CANTSENDMORE
-has been set on the socket).
-This typically means that the socket
-is not connected and is a one-to-one style socket.
+.It Bq Er EBADF
+The argument
+.Fa s
+is not a valid descriptor.
+.It Bq Er ENOTSOCK
+The argument
+.Fa s
+is not a socket.
 .El
 .Sh SEE ALSO
 .Xr sctp 4 ,
-.Xr sendmsg 3 ,
-.Xr sctp_sendmsg 3 ,
 .Xr sctp_send 3 ,
-.Xr getsockopt 2 ,
-.Xr setsockopt 2 ,
-.Xr recv 2 ,
-.Xr select 2 ,
-.Xr socket 2 ,
-.Xr write 2
+.Xr sctp_sendx 3 ,
+.Xr sctp_sendmsg 3 ,
+.Xr sctp_sendmsgx 3 ,
 

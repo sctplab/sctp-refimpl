@@ -3,7 +3,6 @@ sctp_generic_recvmsg [2]
 
 sctp_generic_sendmsg_iov [2]
 (sd, iov*, iovlen, to*, tolen, sinfo*, flags)
-
 sctp_generic_sendmsg [2]
 (sd, msg, mlen, to*, tolen, sinfo*, flags)
 
