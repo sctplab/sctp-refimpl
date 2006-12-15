@@ -33,64 +33,47 @@
 .\" $FreeBSD: src/lib/libc/sys/send.2,v 1.32 2005/06/15 19:04:04 ru Exp $
 .\"
 .Dd December 15, 2006
-.Dt SCTP_RECVMSG 3
+.Dt SCTP_GETADDRLEN 3
 .Os
 .Sh NAME
-.Nm sctp_xxxxx
-.Nd describe short
+.Nm sctp_getaddrlen
+.Nd return the address length of an address family
 .Sh LIBRARY
 .Lb libc
 .Sh SYNOPSIS
 .In sys/types.h
 .In sys/socket.h
 .In sys/sctp.h
-.Ft ssize_t <return value
-.Fn sctp_recvmsg "int s" "void *msg" "size_t len" "struct sockaddr * restrict from" "socklen_t * restrict fromlen" "struct sctp_sndrcvinfo *sinfo" "int *flags"
+.Ft int
+.Fn sctp_getaddrlen "sa_family_t family""
 .Sh DESCRIPTION
 The
-.Fn sctp_recvmsg
-system calls
-
+.Fn sctp_getaddrlen
+returns the size of a specific address family. This function
+is provided for application binary compatability since it
+provides the application with the size the operating system
+thinks the specific address family is. Note that the function
+will actually create an SCTP socket and then gather the
+information via a
+.Fn getsockopt
+system calls. If for some reason a SCTP socket cannot
+be created or the getsockopt fails, an error will be returned 
+with errno set as specified in the
+.Fn socket
+or
+.Fn getsockopt
+system call.
 .Sh RETURN VALUES
-The call returns the number of characters sent, or -1
-if an error occurred.
+The call returns the number of bytes that the operating
+system expects for the specific address family or -1.
 .Sh ERRORS
 The
-.Fn sctp_recvmsg
-.It Bq Er ENOBUFS
-The system was unable to allocate an internal buffer.
-The operation may succeed when buffers become available.
-.It Bq Er ENOBUFS
-The output queue for a network interface was full.
-This generally indicates that the interface has stopped sending,
-but may be caused by transient congestion.
-.It Bq Er EHOSTUNREACH
-The remote host was unreachable.
-.It Bq Er ENOTCON
-On a one to one style socket no association exists.
-.It Bq Er ECONNRESET
-An abort was received by the stack while the user was
-attempting to send data to the peer.
-.It Bq Er ENOENT
-On a one to many style socket no address is specified
-so that the association cannot be located or the
-SCTP_ABORT flag was specified on a non-existing association.
-.It Bq Er EPIPE
-The socket is unable to send anymore data
-.Dv ( SBS_CANTSENDMORE
-has been set on the socket).
-This typically means that the socket
-is not connected and is a one-to-one style socket.
+.Fn sctp_getaddrlen
+.It Bq Er EINVAL
+The address family specified does NOT exist.
 .El
 .Sh SEE ALSO
 .Xr sctp 4 ,
-.Xr sendmsg 3 ,
-.Xr sctp_sendmsg 3 ,
-.Xr sctp_send 3 ,
-.Xr getsockopt 2 ,
-.Xr setsockopt 2 ,
-.Xr recv 2 ,
-.Xr select 2 ,
 .Xr socket 2 ,
-.Xr write 2
+.Xr getsockopt 2 ,
 
