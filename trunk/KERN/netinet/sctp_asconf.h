@@ -38,9 +38,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_asconf.h,v 1.1 2006/11/03 15:23:15 rrs 
 #ifndef _NETINET_SCTP_ASCONF_H_
 #define _NETINET_SCTP_ASCONF_H_
 
-
 #include <sys/malloc.h>
-
 
 #if (defined(__APPLE__) && defined(KERNEL))
 #ifndef _KERNEL
@@ -49,12 +47,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_asconf.h,v 1.1 2006/11/03 15:23:15 rrs 
 #endif
 
 #if defined(_KERNEL)
-
-/*
- * global variables
- */
-extern uint32_t sctp_asconf_auth_nochk;	/* sysctl to disable ASCONF auth chk */
-
 
 /*
  * function prototypes
