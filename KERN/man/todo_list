@@ -1,5 +1,3 @@
-sctp_bindx [3]
- (sd, sockaddr *, int num, int flag) ?
 
 sctp_opt_info [3]
  (sd, sctp_assoc_t, int, void *, socklen_t *)
@@ -41,4 +39,5 @@ sctp_sendx [3]
 sctp_recvmsg()[3] - DONE
 sctp_getaddrlen [3] -DONE
 sctp_connectx [3] - DONE
+sctp_bindx [3] - DONE
 
