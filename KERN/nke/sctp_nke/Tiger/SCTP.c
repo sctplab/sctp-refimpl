@@ -49,12 +49,13 @@
 #include <sys/socketvar.h>
 #endif
 #include <netinet/in_pcb.h>
-#include <netinet/sctp_pcb.h>
-#include <netinet/sctp.h>
 #include <netinet/sctp_os.h>
+#include <netinet/sctp_pcb.h>
 #include <netinet/sctp_var.h>
 #include <netinet/sctp_timer.h>
 #include <netinet6/sctp6_var.h>
+
+#include <netinet/sctp.h>
 
 SYSCTL_DECL(_net_inet);
 SYSCTL_DECL(_net_inet6);
@@ -107,6 +108,7 @@ extern struct sysctl_oid sysctl__net_inet_sctp_abort_at_limit;
 extern struct sysctl_oid sysctl__net_inet_sctp_strict_data_order;
 extern struct sysctl_oid sysctl__net_inet_sctp_stats;
 extern struct sysctl_oid sysctl__net_inet_sctp_assoclist;
+extern struct sysctl_oid sysctl__net_inet_sctp_nat_friendly;
 #ifdef SCTP_DEBUG
 extern struct sysctl_oid sysctl__net_inet_sctp_debug;
 #endif
@@ -382,6 +384,7 @@ kern_return_t SCTP_start (kmod_info_t * ki, void * d) {
 	sysctl_register_oid(&sysctl__net_inet_sctp_strict_data_order);
 	sysctl_register_oid(&sysctl__net_inet_sctp_stats);
 	sysctl_register_oid(&sysctl__net_inet_sctp_assoclist);
+	sysctl_register_oid(&sysctl__net_inet_sctp_nat_friendly);
 #ifdef SCTP_DEBUG
 	sysctl_register_oid(&sysctl__net_inet_sctp_debug);
 #endif
@@ -487,6 +490,7 @@ kern_return_t SCTP_stop (kmod_info_t * ki, void * d) {
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_strict_data_order);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_stats);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_assoclist);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_nat_friendly);
 #ifdef SCTP_DEBUG
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_debug);
 #endif
