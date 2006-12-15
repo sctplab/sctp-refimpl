@@ -1,0 +1,51 @@
+sctp_getaddrlen [3]
+  (sa_family_t)
+
+sctp_connectx [3]
+ (sd, const sockaddr *, int num) ?
+
+sctp_bindx [3]
+ (sd, sockaddr *, int num, int flag) ?
+
+sctp_opt_info [3]
+ (sd, sctp_assoc_t, int, void *, socklen_t *)
+
+sctp_getpaddrs [3]
+ (sd, sctp_assoc_t, sockaddr **)
+
+sctp_freepaddrs [3]
+ (sockaddr *)
+
+sctp_getladdrs [3] 
+ (sd, sctp_assoc_t, sockaddr **)
+
+sctp_freeladdrs [3]
+ (sockaddr *)
+
+
+sctp_getassocid [3]
+ (sd, sockaddr *) -> Returns sctp_assoc_t
+
+sctp_sendmsgx [3]
+ (sd, *msg, len, sockaddr *addrs,  int addrcnt,
+  sinfo*, int flags)
+
+sctp_sendx [3]
+
+sctp_peeloff [2]
+  (sd, sctp_assoc_t id)
+
+sctp_generic_recvmsg [2]
+(sd, iov*, iovlen, from(, fromlen*, sinfo *, msgflag*)
+
+sctp_generic_sendmsg_iov [2]
+(sd, iov*, iovlen, to*, tolen, sinfo*, flags)
+
+sctp_generic_sendmsg [2]
+(sd, msg, mlen, to*, tolen, sinfo*, flags)
+
+sctp [4]
+   
+sctp_sendmsg() [3] - DONE
+sctp_send() [3]  - DONE
+sctp_recvmsg()[3] - DONE
