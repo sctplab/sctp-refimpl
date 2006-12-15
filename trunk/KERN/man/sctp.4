@@ -89,7 +89,7 @@ system call must be used
 after binding the socket with the
 .Xr bind 2
 or
-.Xr sctp_bindx 2
+.Xr sctp_bindx 3
 system calls.
 Only passive sockets may use the
 .Xr accept 2
@@ -134,9 +134,9 @@ The
 transport protocol is also multi-streamed. Multi-streaming refers
 to the ability to send sub-ordered flows of messages. A user performs
 this by specifying a specific stream in one of the extended send
-calls such as
-.Fn sctp_send
-sending messages on different streams will allow parrallel delivery
+calls such as the
+.Xr sctp_send 3
+function call. Sending messages on different streams will allow parrallel delivery
 of data i.e. a message loss in stream 1 will not block the delivery
 of messages sent in stream 2.
 .Pp
@@ -150,38 +150,38 @@ The FreeBSD implementation of
 .Tn SCTP 
 also supports the following extensions.
 .Pp
-.Dv sctp partial reliabity
-This extension allows one to have message be skipped and
+.Fa sctp partial reliabity
+- This extension allows one to have message be skipped and
 not delivered based on some user specified parameters.
 .Pp
-.Dv sctp dynamic addressing
-This extension allows addresses to be added and deleted
+.Fa sctp dynamic addressing
+- This extension allows addresses to be added and deleted
 dynammically from an existing association.
 .Pp
-.Dv sctp authentication
-This extension allows the user to authenticate specific
+.Fa sctp authentication
+- This extension allows the user to authenticate specific
 peer chunks (including data) to validate that the peer
 who sent the message is in fact the peer who setup the
 association. A shared key option is also provided for
 so that two stacks can pre-share keys.
 .Pp
-.Dv packet drop
-Some routers support a special satellite protocol that
+.Fa packet drop
+- Some routers support a special satellite protocol that
 will report losses due to corruption. This allows
 retransmissions without subsequent loss in bandwidth utilization.
 .Pp
-.Dv stream reset
-This extension allows a user on either side to reset the
+.Fa stream reset
+- This extension allows a user on either side to reset the
 stream sequence numbers used by any or all streams.
 .Pp
 .Tn SCTP
 supports a number of socket options which can be set with
 .Xr setsockopt 2
 and tested with
-.Xr getsockopt 2 :
+.Xr getsockopt 2 
 or
 .Xr sctp_opt_info 2 :
-.Bl -tag -width ".Dv SCTP_NODELAY"
+.Bl -tag -width ".Dv SCTP_SET_PEER_PRIMARY_ADDR"
 .It Dv SCTP_NODELAY
 Under most circumstances,
 .Tn SCTP
@@ -189,13 +189,12 @@ sends data when it is presented;
 when outstanding data has not yet been acknowledged, it gathers
 small amounts of output to be sent in a single packet once
 an acknowledgement is received.
-For a small number of clients, such as window systems
+For some clients, such as window systems
 that send a stream of mouse events which receive no replies,
 this packetization may cause significant delays.
 The boolean option
 .Dv SCTP_NODELAY
 defeats this algorithm.
-
 .It Dv SCTP_RTOINFO
 This option returns specific information about an associations
 Retransmission Time Out. It can also be used to change the
@@ -247,7 +246,7 @@ peer address parameters.
 .It Dv SCTP_DEFAULT_SEND_PARAM
 When a user does not use one of the extended send
 calls (e.g.
-.Fn sctp_sendmsg
+.Xr sctp_sendmsg 3
 ) a set of default values apply to each send. These
 values include things like the stream number to send
 to as well as the per-protocol id. This option lets
@@ -264,21 +263,21 @@ since they arrive in the data path with a special
 flag set 
 .Dv MSG_NOTIFICATION
 upon the received message. This option lets a caller
-both get and set different events that they are interested
+both get what events are current being received
+as well as set different events that they may be interested
 in receiving.
 .It Dv SCTP_I_WANT_MAPPED_V4_ADDR
 .Tn SCTP 
-suports both IPV4 and IPV6. A association may
+supports both IPV4 and IPV6. An association may
 span both IPV4 and IPV6 addresses since 
 .Tn SCTP
 is multi-homed.
-By default, when opening an IPV6 socket with
-.Tn SCTP
-information arriving on the socket from a peers
-V4 address will be presented with an address family
+By default, when opening an IPV6 socket, when
+data arrives on the socket from a peers
+V4 address the V4 address  will be presented with an address family
 of AF_INET. If this is undesireable, then this option
 can be enabled which will then convert all V4 addresses
-int mapped V6 representations.
+into mapped V6 representations.
 .It Dv SCTP_MAXSEG
 By default 
 .Tn SCTP 
@@ -296,7 +295,7 @@ is using. The default is 200 milliseconds.
 .It Dv SCTP_PARTIAL_DELIVERY_POINT
 .Tn SCTP 
 at times may need to start delivery of a
-very large message before the entire message as
+very large message before the entire message has
 arrived. By default SCTP waits until the incoming
 message is larger than one fourth of the receive
 buffer. This option allows the stacks value
@@ -305,12 +304,12 @@ to be overridden with a smaller value.
 .Tn SCTP
 at times will start partial delivery (as mentioned above). In
 the normal case successive reads will continue to return
-the rest of the message, blocking inf needed, until all of
+the rest of the message, blocking if needed, until all of
 that message is read. However
 this means other messages may have arrived and be ready
 for delivery and be blocked behind the message being partially
 delivered. If this option is enabled, when a partial delivery
-message has no more data to be received then a subsequent
+message has no more data to be received, then a subsequent
 read may return a different message that is ready for delivery.
 By default this option is off since the user must be using the
 extended API's to be able to tell the difference between
