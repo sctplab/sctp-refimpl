@@ -26,11 +26,7 @@ sctp_freeladdrs [3]
 sctp_getassocid [3]
  (sd, sockaddr *) -> Returns sctp_assoc_t
 
-sctp_sendmsgx [3]
- (sd, *msg, len, sockaddr *addrs,  int addrcnt,
-  sinfo*, int flags)
 
-sctp_sendx [3]
 
 sctp_peeloff [2]
   (sd, sctp_assoc_t id)
@@ -47,5 +43,9 @@ sctp_generic_sendmsg [2]
 sctp [4]
    
 sctp_sendmsg() [3] - DONE
+sctp_sendmsgx [3]
+
 sctp_send() [3]  - DONE
+sctp_sendx [3]
+
 sctp_recvmsg()[3] - DONE
