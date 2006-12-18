@@ -493,7 +493,7 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 				 */
 				struct sctp_inv_mandatory_param *mp;
 
-				sctp_buf_len(op_err) =
+				SCTP_BUF_LEN(op_err) =
 				    sizeof(struct sctp_inv_mandatory_param);
 				mp = mtod(op_err,
 				    struct sctp_inv_mandatory_param *);
@@ -1161,11 +1161,11 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			return (NULL);
 		}
 		/* pre-reserve some space */
-		sctp_buf_resv_uf(op_err, sizeof(struct ip6_hdr));
-		sctp_buf_resv_uf(op_err, sizeof(struct sctphdr));
-		sctp_buf_resv_uf(op_err,  sizeof(struct sctp_chunkhdr));
+		SCTP_BUF_RESV_UF(op_err, sizeof(struct ip6_hdr));
+		SCTP_BUF_RESV_UF(op_err, sizeof(struct sctphdr));
+		SCTP_BUF_RESV_UF(op_err,  sizeof(struct sctp_chunkhdr));
 		/* Set the len */
-		sctp_buf_len(op_err) = sctp_buf_hdr_len(op_err) = sizeof(struct sctp_paramhdr);
+		SCTP_BUF_LEN(op_err) = SCTP_BUF_HDR_LEN(op_err) = sizeof(struct sctp_paramhdr);
 		ph = mtod(op_err, struct sctp_paramhdr *);
 		ph->param_type = htons(SCTP_CAUSE_COOKIE_IN_SHUTDOWN);
 		ph->param_length = htons(sizeof(struct sctp_paramhdr));
@@ -1866,7 +1866,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	}
 	/* compute size of packet */
 	if (m->m_flags & M_PKTHDR) {
-		size_of_pkt = sctp_buf_hdr_len(m);
+		size_of_pkt = SCTP_BUF_HDR_LEN(m);
 	} else {
 		/* Should have a pkt hdr really */
 		struct mbuf *mat;
@@ -1874,8 +1874,8 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		mat = m;
 		size_of_pkt = 0;
 		while (mat != NULL) {
-			size_of_pkt += sctp_buf_len(mat);
-			mat = sctp_buf_next(mat);
+			size_of_pkt += SCTP_BUF_LEN(mat);
+			mat = SCTP_BUF_NEXT(mat);
 		}
 	}
 	if (cookie_len > size_of_pkt ||
@@ -1959,18 +1959,18 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		struct mbuf *m_at;
 
 		m_at = m;
-		while (sctp_buf_next(m_at) != NULL) {
-			m_at = sctp_buf_next(m_at);
+		while (SCTP_BUF_NEXT(m_at) != NULL) {
+			m_at = SCTP_BUF_NEXT(m_at);
 		}
-		sctp_buf_next(m_at) = m_sig;
+		SCTP_BUF_NEXT(m_at) = m_sig;
 		if (m->m_flags & M_PKTHDR) {
 			/*
 			 * We should only do this if and only if the front
-			 * mbuf has a sctp_buf_hdr_len()... it should in theory.
+			 * mbuf has a SCTP_BUF_HDR_LEN()... it should in theory.
 			 */
 			if (m_sig->m_flags & M_PKTHDR) {
 				/* Add back to the pkt hdr of main m chain */
-				sctp_buf_hdr_len(m) += sctp_buf_hdr_len(m_sig);
+				SCTP_BUF_HDR_LEN(m) += SCTP_BUF_HDR_LEN(m_sig);
 			} else {
 				/*
 				 * Got a problem, no pkthdr in split chain.
@@ -1982,10 +1982,10 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 				printf("Warning: Hitting m_split join TSNH code - fixed\n");
 				lat = m_sig;
 				while (lat) {
-					mmlen += sctp_buf_len(lat);
-					lat = sctp_buf_next(lat);
+					mmlen += SCTP_BUF_LEN(lat);
+					lat = SCTP_BUF_NEXT(lat);
 				}
-				sctp_buf_hdr_len(m) += mmlen;
+				SCTP_BUF_HDR_LEN(m) += mmlen;
 			}
 		}
 	}
@@ -2025,12 +2025,12 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			return (NULL);
 		}
 		/* pre-reserve some space */
-		sctp_buf_resv_uf(op_err, sizeof(struct ip6_hdr));
-		sctp_buf_resv_uf(op_err, sizeof(struct sctphdr));
-		sctp_buf_resv_uf(op_err, sizeof(struct sctp_chunkhdr));
+		SCTP_BUF_RESV_UF(op_err, sizeof(struct ip6_hdr));
+		SCTP_BUF_RESV_UF(op_err, sizeof(struct sctphdr));
+		SCTP_BUF_RESV_UF(op_err, sizeof(struct sctp_chunkhdr));
 
 		/* Set the len */
-		sctp_buf_len(op_err) = sctp_buf_hdr_len(op_err) = sizeof(struct sctp_stale_cookie_msg);
+		SCTP_BUF_LEN(op_err) = SCTP_BUF_HDR_LEN(op_err) = sizeof(struct sctp_stale_cookie_msg);
 		scm = mtod(op_err, struct sctp_stale_cookie_msg *);
 		scm->ph.param_type = htons(SCTP_CAUSE_STALE_COOKIE);
 		scm->ph.param_length = htons((sizeof(struct sctp_paramhdr) +
@@ -3172,7 +3172,7 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_out_req
 		sctp_free_a_chunk(stcb, chk);
 		return (ret_code);
 	}
-	sctp_buf_resv_uf(chk->data, SCTP_MIN_OVERHEAD);
+	SCTP_BUF_RESV_UF(chk->data, SCTP_MIN_OVERHEAD);
 
 	/* setup chunk parameters */
 	chk->sent = SCTP_DATAGRAM_UNSENT;
@@ -3184,7 +3184,7 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_out_req
 	ch->chunk_type = SCTP_STREAM_RESET;
 	ch->chunk_flags = 0;
 	ch->chunk_length = htons(chk->send_size);
-	sctp_buf_hdr_len(chk->data) = sctp_buf_len(chk->data) = SCTP_SIZE32(chk->send_size);
+	SCTP_BUF_HDR_LEN(chk->data) = SCTP_BUF_LEN(chk->data) = SCTP_SIZE32(chk->send_size);
 
 
 	ph = (struct sctp_paramhdr *)&sr_req->sr_req;
@@ -3754,9 +3754,9 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 							     1, M_DONTWAIT, 1, MT_DATA);
 				if (oper) {
 					/* pre-reserve some space */
-					sctp_buf_resv_uf(oper, sizeof(struct sctp_chunkhdr));
-					sctp_buf_len(oper) = sizeof(struct sctp_paramhdr);
-					sctp_buf_hdr_len(oper) = sctp_buf_len(oper);
+					SCTP_BUF_RESV_UF(oper, sizeof(struct sctp_chunkhdr));
+					SCTP_BUF_LEN(oper) = sizeof(struct sctp_paramhdr);
+					SCTP_BUF_HDR_LEN(oper) = SCTP_BUF_LEN(oper);
 					phdr = mtod(oper, struct sctp_paramhdr *);
 					phdr->param_type = htons(SCTP_CAUSE_OUT_OF_RESC);
 					phdr->param_length = htons(sizeof(struct sctp_paramhdr));
@@ -4056,8 +4056,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 						oper = sctp_get_mbuf_for_msg(sizeof(struct sctp_paramhdr),
 									     1, M_DONTWAIT, 1, MT_DATA);
 						if (oper) {
-							sctp_buf_len(oper) =
-								sctp_buf_hdr_len(oper) =
+							SCTP_BUF_LEN(oper) =
+								SCTP_BUF_HDR_LEN(oper) =
 								sizeof(struct sctp_paramhdr);
 							phdr = mtod(oper,
 								    struct sctp_paramhdr *);
@@ -4346,11 +4346,11 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					 */
 					phd->param_type =  htons(SCTP_CAUSE_UNRECOG_CHUNK);
 					phd->param_length = htons(chk_length + sizeof(*phd));
-					sctp_buf_len(mm) = sizeof(*phd);
-					sctp_buf_next(mm) = sctp_m_copym(m, *offset, SCTP_SIZE32(chk_length),
+					SCTP_BUF_LEN(mm) = sizeof(*phd);
+					SCTP_BUF_NEXT(mm) = sctp_m_copym(m, *offset, SCTP_SIZE32(chk_length),
 								  M_DONTWAIT);
-					if (sctp_buf_next(mm)) {
-						sctp_buf_hdr_len(mm) = SCTP_SIZE32(chk_length) + sizeof(*phd);
+					if (SCTP_BUF_NEXT(mm)) {
+						SCTP_BUF_HDR_LEN(mm) = SCTP_SIZE32(chk_length) + sizeof(*phd);
 						sctp_queue_op_err(stcb, mm);
 					} else {
 						sctp_m_freem(mm);
@@ -4728,10 +4728,10 @@ extern int sctp_no_csum_on_loopback;
 static void
 sctp_print_mbuf_chain(struct mbuf *m)
 {
-	for(; m; m = sctp_buf_next(m)) {
+	for(; m; m = SCTP_BUF_NEXT(m)) {
 		if (m->m_flags & M_PKTHDR)
-			printf("%p: pktsize = %d\n", m, sctp_buf_hdr_len(m));
-		printf("%p: m_len = %d\n", m, sctp_buf_len(m));
+			printf("%p: pktsize = %d\n", m, SCTP_BUF_HDR_LEN(m));
+		printf("%p: m_len = %d\n", m, SCTP_BUF_LEN(m));
 		if (m->m_flags & M_EXT)
 			printf("%p: m->m_ext.ext_size = %d\n", m, m->m_ext.ext_size);
 	}  
@@ -4743,21 +4743,21 @@ sctp_trim_mbuf(struct mbuf *m)
 {
 	struct mbuf *n, *m0;
 	
-	while (m && sctp_buf_len(m) == 0) {
-		n = sctp_buf_next(m);
-		sctp_buf_next(m) = NULL;
+	while (m && SCTP_BUF_LEN(m) == 0) {
+		n = SCTP_BUF_NEXT(m);
+		SCTP_BUF_NEXT(m) = NULL;
 		sctp_m_free(m);
 		m = n;
 	}
 	m0 = m;
 	
-	for(; m; m = sctp_buf_next(m)) {
-		n = sctp_buf_next(m);
-		while (n && sctp_buf_len(n) == 0) {
-			sctp_buf_next(m) = sctp_buf_next(n);
-			sctp_buf_next(n) = NULL;
+	for(; m; m = SCTP_BUF_NEXT(m)) {
+		n = SCTP_BUF_NEXT(m);
+		while (n && SCTP_BUF_LEN(n) == 0) {
+			SCTP_BUF_NEXT(m) = SCTP_BUF_NEXT(n);
+			SCTP_BUF_NEXT(n) = NULL;
 			sctp_m_free(n);
-			n = sctp_buf_next(m);
+			n = SCTP_BUF_NEXT(m);
 		}
 	}
 	return m0;
@@ -4837,7 +4837,7 @@ sctp_input(m, va_alist)
 		if(mat->m_flags & M_EXT) {
 			sctp_log_mb(mat, SCTP_MBUF_INPUT);
 		}
-		mat = sctp_buf_next(mat);
+		mat = SCTP_BUF_NEXT(mat);
 	}
 #endif
 	if ((size_t)iphlen > sizeof(struct ip)) {
@@ -4849,7 +4849,7 @@ sctp_input(m, va_alist)
 	 */
 	ip = mtod(m, struct ip *);
 	offset = iphlen + sizeof(*sh) + sizeof(*ch);
-	if (sctp_buf_len(m) < offset) {
+	if (SCTP_BUF_LEN(m) < offset) {
 		if ((m = m_pullup(m, offset)) == 0) {
 			SCTP_STAT_INCR(sctps_hdrops);
 			return;
@@ -4933,7 +4933,7 @@ sctp_input(m, va_alist)
 		sh->checksum = calc_check;
 	} else {
 sctp_skip_csum_4:
-		mlen = sctp_buf_hdr_len(m);
+		mlen = SCTP_BUF_HDR_LEN(m);
 	}
 	/* validate mbuf chain length with IP payload length */
 #if defined(__NetBSD__) || defined(__OpenBSD__)

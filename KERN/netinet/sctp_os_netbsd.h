@@ -77,9 +77,9 @@ typedef struct callout sctp_os_timer_t;
  * Functions
  */
 #if NRND > 0
-#define sctp_read_random(buf, len)	rnd_extract_data(buf, len, RND_EXTRACT_ANY);
+#define SCP_READ_RANDOM(buf, len)	rnd_extract_data(buf, len, RND_EXTRACT_ANY);
 #else
-extern void sctp_read_random(void *buf, uint32_t len);
+extern void SCTP_READ_RANDOM(void *buf, uint32_t len);
 #endif
 
 /*

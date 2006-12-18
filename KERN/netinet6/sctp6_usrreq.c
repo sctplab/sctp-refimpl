@@ -274,7 +274,7 @@ sctp6_input(mp, offp, proto)
 	SCTP_STAT_INCR_COUNTER64(sctps_inpackets);
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-		printf("V6 input gets a packet iphlen:%d pktlen:%d\n", iphlen, sctp_buf_hdr_len(m));
+		printf("V6 input gets a packet iphlen:%d pktlen:%d\n", iphlen, SCTP_BUF_HDR_LEN(m));
 	}
 #endif
 	if (IN6_IS_ADDR_MULTICAST(&ip6->ip6_dst)) {
@@ -333,7 +333,7 @@ sctp6_input(mp, offp, proto)
 		sh->checksum = calc_check;
 	} else {
 sctp_skip_csum:
-		mlen = sctp_buf_hdr_len(m);
+		mlen = SCTP_BUF_HDR_LEN(m);
 	}
 	net = NULL;
 	/*
@@ -619,7 +619,7 @@ sctp6_ctlinput(cmd, pktdst, d)
 		struct sockaddr_in6 final;
 
 		if (ip6cp->ip6c_m == NULL ||
-		    (size_t)sctp_buf_hdr_len(ip6cp->ip6c_m) < (ip6cp->ip6c_off + sizeof(sh)))
+		    (size_t)SCTP_BUF_HDR_LEN(ip6cp->ip6c_m) < (ip6cp->ip6c_off + sizeof(sh)))
 			return;
 
 		bzero(&sh, sizeof(sh));
@@ -1227,9 +1227,9 @@ sctp6_disconnect(struct socket *so)
 						struct sctp_paramhdr *ph;
 
 						ph = mtod(err, struct sctp_paramhdr *);
-						sctp_buf_len(err) = sizeof(struct sctp_paramhdr);
+						SCTP_BUF_LEN(err) = sizeof(struct sctp_paramhdr);
 						ph->param_type = htons(SCTP_CAUSE_USER_INITIATED_ABT);
-						ph->param_length = htons(sctp_buf_len(err));
+						ph->param_length = htons(SCTP_BUF_LEN(err));
 					}
 					sctp_send_abort_tcb(stcb, err);
 					SCTP_STAT_INCR_COUNTER32(sctps_aborted);
@@ -1425,14 +1425,14 @@ connected_type:
 
 		c_len = 0;
 		/* How big is it */
-		for (x = m; x; x = sctp_buf_next(x)) {
-			c_len += sctp_buf_len(x);
+		for (x = m; x; x = SCTP_BUF_NEXT(x)) {
+			c_len += SCTP_BUF_LEN(x);
 		}
-		sctp_buf_hdr_len(inp->pkt) += c_len;
+		SCTP_BUF_HDR_LEN(inp->pkt) += c_len;
 	}
 	/* Place the data */
 	if (inp->pkt) {
-		sctp_buf_next(inp->pkt_last) = m;
+		SCTP_BUF_NEXT(inp->pkt_last) = m;
 		inp->pkt_last = m;
 	} else {
 		inp->pkt_last = inp->pkt = m;
@@ -1650,7 +1650,7 @@ sctp6_getaddr(struct socket *so, struct mbuf *nam)
 #if defined(__FreeBSD__) || defined(__APPLE__)
 	SCTP_MALLOC_SONAME(sin6, struct sockaddr_in6 *, sizeof *sin6);
 #else
-	sctp_buf_len(nam) = sizeof(*sin6);
+	SCTP_BUF_LEN(nam) = sizeof(*sin6);
 	bzero(sin6, sizeof(*sin6));
 #endif
 	sin6->sin6_family = AF_INET6;
@@ -1779,7 +1779,7 @@ sctp6_peeraddr(struct socket *so, struct mbuf *nam)
 #if defined(__FreeBSD__) || defined(__APPLE__)
 	SCTP_MALLOC_SONAME(sin6, struct sockaddr_in6 *, sizeof *sin6);
 #else
-	sctp_buf_len(nam) = sizeof(*sin6);
+	SCTP_BUF_LEN(nam) = sizeof(*sin6);
 	bzero(sin6, sizeof(*sin6));
 #endif
 	sin6->sin6_family = AF_INET6;
@@ -1884,16 +1884,16 @@ sctp6_in6getaddr(struct socket *so, struct mbuf *nam)
 			in6_sin_2_v4mapsin6((struct sockaddr_in *)addr, &sin6);
 			memcpy(addr, &sin6, sizeof(struct sockaddr_in6));
 #if !(defined(__FreeBSD__) || defined(__APPLE__))
-			sctp_buf_len(nam) = sizeof(sin6);
+			SCTP_BUF_LEN(nam) = sizeof(sin6);
 #endif
 #if !(defined(__FreeBSD__) || defined(__APPLE__))
 		} else {
-			sctp_buf_len(nam) = sizeof(struct sockaddr_in);
+			SCTP_BUF_LEN(nam) = sizeof(struct sockaddr_in);
 #endif
 		}
 #if !(defined(__FreeBSD__) || defined(__APPLE__))
 	} else {
-		sctp_buf_len(nam) = sizeof(struct sockaddr_in6);
+		SCTP_BUF_LEN(nam) = sizeof(struct sockaddr_in6);
 #endif
 	}
 	splx(s);
@@ -1948,16 +1948,16 @@ sctp6_getpeeraddr(struct socket *so, struct mbuf *nam)
 			in6_sin_2_v4mapsin6((struct sockaddr_in *)addr, &sin6);
 			memcpy(addr, &sin6, sizeof(struct sockaddr_in6));
 #if !(defined(__FreeBSD__) || defined(__APPLE__))
-			sctp_buf_len(nam) = sizeof(sin6);
+			SCTP_BUF_LEN(nam) = sizeof(sin6);
 #endif
 #if !(defined(__FreeBSD__) || defined(__APPLE__))
 		} else {
-			sctp_buf_len(nam) = sizeof(struct sockaddr_in);
+			SCTP_BUF_LEN(nam) = sizeof(struct sockaddr_in);
 #endif
 		}
 #if !(defined(__FreeBSD__) || defined(__APPLE__))
 	} else {
-		sctp_buf_len(nam) = sizeof(struct sockaddr_in6);
+		SCTP_BUF_LEN(nam) = sizeof(struct sockaddr_in6);
 #endif
 	}
 	splx(s);

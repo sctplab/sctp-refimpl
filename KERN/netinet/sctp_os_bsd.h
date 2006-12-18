@@ -113,17 +113,17 @@ typedef struct callout sctp_os_timer_t;
  * Functions
  */
 #if (__FreeBSD_version < 500000)
-#define sctp_read_random(buf, len)	read_random_unlimited(buf, len)
+#define SCTP_READ_RANDOM(buf, len)	read_random_unlimited(buf, len)
 #else
-#define sctp_read_random(buf, len)	read_random(buf, len)
+#define SCTP_READ_RANDOM(buf, len)	read_random(buf, len)
 #endif
 
 /* Mbuf access functions  */
-#define sctp_buf_len(m) (m->m_len)
-#define sctp_buf_next(m) (m->m_next)
-#define sctp_buf_next_pkt(m) (m->m_nextpkt)
-#define sctp_buf_hdr_len(m) (m->m_pkthdr.len)
-#define sctp_buf_resv_uf(m, size) m->m_data += size
-#define sctp_buf_at(m, size) m->m_data + size
+#define SCTP_BUF_LEN(m) (m->m_len)
+#define SCTP_BUF_NEXT(m) (m->m_next)
+#define SCTP_BUF_NEXT_PKT(m) (m->m_nextpkt)
+#define SCTP_BUF_HDR_LEN(m) (m->m_pkthdr.len)
+#define SCTP_BUF_RESV_UF(m, size) m->m_data += size
+#define SCTP_BUF_AT(m, size) m->m_data + size
 
 #endif
