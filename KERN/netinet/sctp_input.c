@@ -4732,7 +4732,7 @@ sctp_print_mbuf_chain(struct mbuf *m)
 		if (m->m_flags & M_PKTHDR)
 			printf("%p: pktsize = %d\n", m, SCTP_BUF_HDR_LEN(m));
 		printf("%p: m_len = %d\n", m, SCTP_BUF_LEN(m));
-		if (m->m_flags & M_EXT)
+		if (SCTP_BUF_IS_EXTENDED(m))
 			printf("%p: m->m_ext.ext_size = %d\n", m, m->m_ext.ext_size);
 	}  
 }
@@ -4834,7 +4834,7 @@ sctp_input(m, va_alist)
 	/* Log in any input mbufs */
 	mat = m;
 	while(mat) {
-		if(mat->m_flags & M_EXT) {
+		if(SCTP_BUF_IS_EXTENDED(mat)) {
 			sctp_log_mb(mat, SCTP_MBUF_INPUT);
 		}
 		mat = SCTP_BUF_NEXT(mat);

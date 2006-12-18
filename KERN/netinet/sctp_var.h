@@ -366,7 +366,7 @@ extern uint32_t sctp_system_free_resc_limit;
         if(val < MSIZE) { \
             panic("sb_mbcnt goes negative"); \
         } \
-        if ((m)->m_flags & M_EXT) { \
+        if (SCTP_BUF_IS_EXTENDED(m)) { \
                 val = atomic_fetchadd_int(&(sb)->sb_mbcnt,-((m)->m_ext.ext_size)); \
 		if(val < (m)->m_ext.ext_size) { \
                     panic("sb_mbcnt goes negative2"); \
@@ -381,7 +381,7 @@ extern uint32_t sctp_system_free_resc_limit;
           if(val < MSIZE) { \
              panic("asoc->mbcnt goes negative"); \
           } \
-	  if ((m)->m_flags & M_EXT) { \
+	  if (SCTP_BUF_IS_EXTENDED(m)) { \
                 val = atomic_fetchadd_int(&(stcb)->asoc.sb_mbcnt,-((m)->m_ext.ext_size)); \
 		if(val < (m)->m_ext.ext_size) { \
 		   panic("assoc stcb->mbcnt would go negative"); \
@@ -397,12 +397,12 @@ extern uint32_t sctp_system_free_resc_limit;
 #define sctp_sballoc(stcb, sb, m) { \
 	atomic_add_int(&(sb)->sb_cc,SCTP_BUF_LEN((m))); \
 	atomic_add_int(&(sb)->sb_mbcnt, MSIZE); \
-	if ((m)->m_flags & M_EXT) \
+	if (SCTP_BUF_IS_EXTENDED(m)) \
 		atomic_add_int(&(sb)->sb_mbcnt,(m)->m_ext.ext_size); \
         if(stcb) { \
   	  atomic_add_int(&(stcb)->asoc.sb_cc,SCTP_BUF_LEN((m))); \
           atomic_add_int(&(stcb)->asoc.sb_mbcnt, MSIZE); \
-	  if ((m)->m_flags & M_EXT) \
+	  if (SCTP_BUF_IS_EXTENDED(m)) \
 		atomic_add_int(&(stcb)->asoc.sb_mbcnt,(m)->m_ext.ext_size); \
         } \
 	if ((m)->m_type != MT_DATA && (m)->m_type != MT_HEADER && \
@@ -442,7 +442,7 @@ extern uint32_t sctp_system_free_resc_limit;
 		if ((stcb)->asoc.sb_mbcnt >= MSIZE) { \
 			atomic_subtract_int(&(stcb)->asoc.sb_mbcnt, MSIZE); \
 		} \
-		if ((m)->m_flags & M_EXT) { \
+		if (SCTP_BUF_IS_EXTENDED(m)) { \
 			if ((stcb)->asoc.sb_mbcnt >= (m)->m_ext.ext_size) { \
 				atomic_subtract_int(&(stcb)->asoc.sb_mbcnt, (m)->m_ext.ext_size); \
 			} else { \
@@ -453,7 +453,7 @@ extern uint32_t sctp_system_free_resc_limit;
 	} \
 	if ((sb)->sb_mbcnt >= MSIZE) { \
 		atomic_subtract_int(&(sb)->sb_mbcnt, MSIZE); \
-		if ((m)->m_flags & M_EXT) { \
+		if (SCTP_BUF_IS_EXTENDED(m)) { \
 			if ((sb)->sb_mbcnt >= (uint32_t)(m)->m_ext.ext_size) { \
 				atomic_subtract_int(&(sb)->sb_mbcnt, (m)->m_ext.ext_size); \
 			} else { \
@@ -471,10 +471,10 @@ extern uint32_t sctp_system_free_resc_limit;
 	if (stcb) { \
 		atomic_add_int(&(stcb)->asoc.sb_cc, SCTP_BUF_LEN((m))); \
 		atomic_add_int(&(stcb)->asoc.sb_mbcnt, MSIZE); \
-		if ((m)->m_flags & M_EXT) \
+		if (SCTP_BUF_IS_EXTENDED(m)) \
 			atomic_add_int(&(stcb)->asoc.sb_mbcnt, (m)->m_ext.ext_size); \
 	} \
-	if ((m)->m_flags & M_EXT) \
+	if (SCTP_BUF_IS_EXTENDED(m)) \
 		atomic_add_int(&(sb)->sb_mbcnt, (m)->m_ext.ext_size); \
 }
 

@@ -1745,7 +1745,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			struct mbuf *mat;
 			mat = dmbuf;
 			while(mat) {
-				if(mat->m_flags & M_EXT) {
+				if(SCTP_BUF_IS_EXTENDED(mat)) {
 					sctp_log_mb(mat, SCTP_MBUF_ICOPY);
 				}
 				mat = SCTP_BUF_NEXT(mat);

@@ -2069,7 +2069,7 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 		if (m == NULL) {
 			return (NULL);
 		}
-		if ((m->m_flags & M_EXT) == 0) {
+		if (SCTP_BUF_IS_EXTENDED(m) == 0) {
 			if((aloc_size != MCLBYTES) &&
 			   (allonebuf == 0)){
 				aloc_size -= 10;
@@ -2083,7 +2083,7 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 		if (m == NULL) {
 			return (NULL);
 		}
-		if ((m->m_flags & M_EXT) == 0) {
+		if (SCTP_BUF_IS_EXTENDED((m) == 0) {
 			sctp_m_freem(m);
 			return (NULL);
 		}
@@ -2092,7 +2092,7 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 	SCTP_BUF_LEN(m) = 0;
 	SCTP_BUF_NEXT(m) = SCTP_BUF_NEXT_PKT(m) = NULL;
 #ifdef SCTP_MBUF_LOGGING
-	if(m->m_flags & M_EXT) {
+	if(SCTP_BUF_IS_EXTENDED(m)) {
 		sctp_log_mb(m, SCTP_MBUF_IALLOC);
 	}
 #endif
@@ -5234,7 +5234,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	memset(chk, sizeof(*chk), 0);
 	chk->rec.data.rcv_flags = rcv_flags;
 	SCTP_TCB_SEND_LOCK(stcb);
-	if (sp->data->m_flags & M_EXT) {
+	if (SCTP_BUF_IS_EXTENDED(sp->data)) {
 		chk->copy_by_ref = 1;
 	} else {
 		chk->copy_by_ref = 0;

@@ -97,7 +97,7 @@ typedef struct callout sctp_os_timer_t;
 #define SCTP_BUF_HDR_LEN(m) (m->m_pkthdr.len)
 #define SCTP_BUF_RESV_UF(m, size) m->m_data += size
 #define SCTP_BUF_AT(m, size) m->m_data + size
-
+#define SCTP_BUF_IS_EXTENDED(m) (m->m_flags & M_EXT)
 
 /*
  * Other MacOS specific
