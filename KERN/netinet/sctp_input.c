@@ -651,9 +651,6 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 		SCTP_INP_READ_LOCK(stcb->sctp_ep);
 		asoc->control_pdapi->end_added = 1;
 		asoc->control_pdapi->pdapi_aborted = 1;
-		if (asoc->control_pdapi->tail_mbuf) {
-			asoc->control_pdapi->tail_mbuf->m_flags |= M_EOR;
-		}
 		asoc->control_pdapi = NULL;
 		SCTP_INP_READ_UNLOCK(stcb->sctp_ep);
 		sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
@@ -740,9 +737,6 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
 		SCTP_INP_READ_LOCK(stcb->sctp_ep);
 		asoc->control_pdapi->end_added = 1;
 		asoc->control_pdapi->pdapi_aborted = 1;
-		if (asoc->control_pdapi->tail_mbuf) {
-			asoc->control_pdapi->tail_mbuf->m_flags |= M_EOR;
-		}
 		asoc->control_pdapi = NULL;
 		SCTP_INP_READ_UNLOCK(stcb->sctp_ep);
 		sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);

@@ -2773,7 +2773,7 @@ sctp_notify_assoc_change(uint32_t event, struct sctp_tcb *stcb,
 	sac->sac_outbound_streams = stcb->asoc.streamoutcnt;
 	sac->sac_inbound_streams = stcb->asoc.streamincnt;
 	sac->sac_assoc_id = sctp_get_associd(stcb);
-	m_notify->m_flags |= M_EOR | M_NOTIFICATION;
+	m_notify->m_flags |= M_NOTIFICATION;
 	SCTP_BUF_HDR_LEN(m_notify) = sizeof(struct sctp_assoc_change);
 	m_notify->m_pkthdr.rcvif = 0;
 	SCTP_BUF_LEN(m_notify) = sizeof(struct sctp_assoc_change);
@@ -2827,7 +2827,7 @@ sctp_notify_peer_addr_change(struct sctp_tcb *stcb, uint32_t state,
 	spc->spc_error = error;
 	spc->spc_assoc_id = sctp_get_associd(stcb);
 
-	m_notify->m_flags |= M_EOR | M_NOTIFICATION;
+	m_notify->m_flags |= M_NOTIFICATION;
 	SCTP_BUF_HDR_LEN(m_notify) = sizeof(struct sctp_paddr_change);
 	m_notify->m_pkthdr.rcvif = 0;
 	SCTP_BUF_LEN(m_notify) = sizeof(struct sctp_paddr_change);
@@ -3010,7 +3010,7 @@ sctp_notify_adaptation_layer(struct sctp_tcb *stcb,
 	sai->sai_adaptation_ind = error;
 	sai->sai_assoc_id = sctp_get_associd(stcb);
 
-	m_notify->m_flags |= M_EOR | M_NOTIFICATION;
+	m_notify->m_flags |= M_NOTIFICATION;
 	SCTP_BUF_HDR_LEN(m_notify) = sizeof(struct sctp_adaptation_event);
 	m_notify->m_pkthdr.rcvif = 0;
 	SCTP_BUF_LEN(m_notify) = sizeof(struct sctp_adaptation_event);
@@ -3059,7 +3059,7 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
 	pdapi->pdapi_indication = error;
 	pdapi->pdapi_assoc_id = sctp_get_associd(stcb);
 
-	m_notify->m_flags |= M_EOR | M_NOTIFICATION;
+	m_notify->m_flags |= M_NOTIFICATION;
 	SCTP_BUF_HDR_LEN(m_notify) = sizeof(struct sctp_pdapi_event);
 	m_notify->m_pkthdr.rcvif = 0;
 	SCTP_BUF_LEN(m_notify) = sizeof(struct sctp_pdapi_event);
@@ -3135,7 +3135,7 @@ sctp_notify_shutdown_event(struct sctp_tcb *stcb)
 	sse->sse_length = sizeof(struct sctp_shutdown_event);
 	sse->sse_assoc_id = sctp_get_associd(stcb);
 
-	m_notify->m_flags |= M_EOR | M_NOTIFICATION;
+	m_notify->m_flags |= M_NOTIFICATION;
 	SCTP_BUF_HDR_LEN(m_notify) = sizeof(struct sctp_shutdown_event);
 	m_notify->m_pkthdr.rcvif = 0;
 	SCTP_BUF_LEN(m_notify) = sizeof(struct sctp_shutdown_event);
@@ -3198,7 +3198,7 @@ sctp_notify_stream_reset(struct sctp_tcb *stcb,
 			strreset->strreset_list[i] = ntohs(list[i]);
 		}
 	}
-	m_notify->m_flags |= M_EOR | M_NOTIFICATION;
+	m_notify->m_flags |= M_NOTIFICATION;
 	SCTP_BUF_HDR_LEN(m_notify) = len;
 	m_notify->m_pkthdr.rcvif = 0;
 	SCTP_BUF_LEN(m_notify) = len;
@@ -3953,7 +3953,6 @@ sctp_print_mbuf_chain(struct mbuf *m)
 		printf("%p: m_len = %d\n", m, SCTP_BUF_LEN(m));
 		if (SCTP_BUF_IS_EXTENDED(m))
 			printf("%p: m->m_ext.ext_size = %d\n", m, m->m_ext.ext_size);
-		printf("m_flags has M_EOR%s set.\n", m->m_flags & M_EOR ? "" : " not");
 		}  
 }
 #endif
@@ -4015,10 +4014,8 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 	}
 	if (prev != NULL) {
 		control->tail_mbuf = prev;
-		if (end) {
-			prev->m_flags |= M_EOR;
-		}
 	} else {
+		/* Everything got collapsed out?? */
 		return;
 	}
 	if(end) {
@@ -4063,8 +4060,7 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 		}
 		return (-1);
 	}
-	if ((control->tail_mbuf) &&
-	    (control->tail_mbuf->m_flags & M_EOR)) {
+	if (control->end_added) {
 		/* huh this one is complete? */
 		goto get_out;
 	}
@@ -4115,7 +4111,6 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 	}
 	if (end) {
 		/* message is complete */
-		tail->m_flags |= M_EOR;
 		if(control == stcb->asoc.control_pdapi) {
 			stcb->asoc.control_pdapi = NULL;
 		}
@@ -4727,7 +4722,6 @@ restart:
 				cnt += SCTP_BUF_LEN(m);
 				if(SCTP_BUF_NEXT(m) == NULL) {
 					control->tail_mbuf = m;
-					m->m_flags |= M_EOR;
 					control->end_added = 1;
 				}
 				m = SCTP_BUF_NEXT(m);
@@ -4831,7 +4825,7 @@ found_one:
 				s_extra->next_ppid = nxt->sinfo_ppid;
 				s_extra->next_stream = nxt->sinfo_stream;
 				if(nxt->tail_mbuf != NULL) {
-					if(nxt->tail_mbuf->m_flags & M_EOR) {
+					if(nxt->end_added) {
 						s_extra->next_flags |= SCTP_NEXT_MSG_ISCOMPLETE;
 					}
 				}
@@ -4975,7 +4969,8 @@ get_more_data:
 					       cp_len,
 					       0);
 #endif
-				if (m->m_flags & M_EOR) {
+				if ((SCTP_BUF_NEXT(m)== NULL) &&
+				    (control->end_added)) {
 					out_flags |= MSG_EOR;
 				}
 				if (m->m_flags & M_NOTIFICATION) {
@@ -5316,7 +5311,7 @@ get_more_data2:
 					hold_rlock = 1;
 				}
 			}
-			if (control->tail_mbuf->m_flags & M_EOR) {
+			if (control->end_added) {
 				out_flags |= MSG_EOR;
 			}
 			if (control->data->m_flags & M_NOTIFICATION) {

@@ -449,22 +449,6 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 			SCTP_BUF_NEXT(m) = chk->data;
 			chk->data = m;
 		}
-		if (chk->rec.data.rcv_flags & SCTP_DATA_LAST_FRAG) {
-			if (SCTP_BUF_NEXT(chk->data) == NULL) {
-				/* hopefully we hit here most of the time */
-				chk->data->m_flags |= M_EOR;
-			} else {
-				/*
-				 * Add the flag to the LAST mbuf in the
-				 * chain
-				 */
-				m = chk->data;
-				while (SCTP_BUF_NEXT(m) != NULL) {
-					m = SCTP_BUF_NEXT(m);
-				}
-				m->m_flags |= M_EOR;
-			}
-		}
 		if (chk->rec.data.rcv_flags & SCTP_DATA_FIRST_FRAG) {
 
 			control = sctp_build_readq_entry_chk(stcb, chk);
