@@ -1809,7 +1809,7 @@ sctp_notify_authentication(struct sctp_tcb *stcb, uint32_t indication,
 	auth->auth_indication = indication;
 	auth->auth_assoc_id = sctp_get_associd(stcb);
 
-	m_notify->m_flags |= M_EOR | M_NOTIFICATION;
+	m_notify->m_flags |= M_NOTIFICATION;
 	SCTP_BUF_HDR_LEN(m_notify) = sizeof(*auth);
 	m_notify->m_pkthdr.rcvif = 0;
 	SCTP_BUF_LEN(m_notify) = sizeof(*auth);
