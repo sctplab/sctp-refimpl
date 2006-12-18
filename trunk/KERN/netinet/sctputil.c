@@ -2773,7 +2773,6 @@ sctp_notify_assoc_change(uint32_t event, struct sctp_tcb *stcb,
 	sac->sac_outbound_streams = stcb->asoc.streamoutcnt;
 	sac->sac_inbound_streams = stcb->asoc.streamincnt;
 	sac->sac_assoc_id = sctp_get_associd(stcb);
-	m_notify->m_flags |= M_NOTIFICATION;
 	SCTP_BUF_HDR_LEN(m_notify) = sizeof(struct sctp_assoc_change);
 	m_notify->m_pkthdr.rcvif = 0;
 	SCTP_BUF_LEN(m_notify) = sizeof(struct sctp_assoc_change);
@@ -2789,6 +2788,7 @@ sctp_notify_assoc_change(uint32_t event, struct sctp_tcb *stcb,
 	control->length = SCTP_BUF_LEN(m_notify);
 	/* not that we need this */
 	control->tail_mbuf = m_notify;
+	control->spec_flags = M_NOTIFICATION;
 	sctp_add_to_readq(stcb->sctp_ep, stcb,
 			  control,
 			  &stcb->sctp_socket->so_rcv, 1);
@@ -2827,7 +2827,6 @@ sctp_notify_peer_addr_change(struct sctp_tcb *stcb, uint32_t state,
 	spc->spc_error = error;
 	spc->spc_assoc_id = sctp_get_associd(stcb);
 
-	m_notify->m_flags |= M_NOTIFICATION;
 	SCTP_BUF_HDR_LEN(m_notify) = sizeof(struct sctp_paddr_change);
 	m_notify->m_pkthdr.rcvif = 0;
 	SCTP_BUF_LEN(m_notify) = sizeof(struct sctp_paddr_change);
@@ -2843,6 +2842,7 @@ sctp_notify_peer_addr_change(struct sctp_tcb *stcb, uint32_t state,
 		return;
 	}
 	control->length = SCTP_BUF_LEN(m_notify);
+	control->spec_flags = M_NOTIFICATION;
 	/* not that we need this */
 	control->tail_mbuf = m_notify;
 	sctp_add_to_readq(stcb->sctp_ep, stcb,
@@ -2887,7 +2887,6 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, uint32_t error,
 	ssf->ssf_info.sinfo_assoc_id = sctp_get_associd(stcb);
 	ssf->ssf_assoc_id = sctp_get_associd(stcb);
 	SCTP_BUF_NEXT(m_notify) = chk->data;
-	m_notify->m_flags |= M_NOTIFICATION;
 	SCTP_BUF_HDR_LEN(m_notify) = length;
 	m_notify->m_pkthdr.rcvif = 0;
 	SCTP_BUF_LEN(m_notify) = sizeof(struct sctp_send_failed);
@@ -2912,6 +2911,7 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, uint32_t error,
 		sctp_m_freem(m_notify);
 		return;
 	}
+	control->spec_flags = M_NOTIFICATION;
 	sctp_add_to_readq(stcb->sctp_ep, stcb,
 	    control,
 	    &stcb->sctp_socket->so_rcv, 1);
@@ -2954,7 +2954,6 @@ sctp_notify_send_failed2(struct sctp_tcb *stcb, uint32_t error,
 	ssf->ssf_info.sinfo_assoc_id = sctp_get_associd(stcb);
 	ssf->ssf_assoc_id = sctp_get_associd(stcb);
 	SCTP_BUF_NEXT(m_notify) = sp->data;
-	m_notify->m_flags |= M_NOTIFICATION;
 	SCTP_BUF_HDR_LEN(m_notify) = length;
 	m_notify->m_pkthdr.rcvif = 0;
 	SCTP_BUF_LEN(m_notify) = sizeof(struct sctp_send_failed);
@@ -2979,6 +2978,7 @@ sctp_notify_send_failed2(struct sctp_tcb *stcb, uint32_t error,
 		sctp_m_freem(m_notify);
 		return;
 	}
+	control->spec_flags = M_NOTIFICATION;
 	sctp_add_to_readq(stcb->sctp_ep, stcb,
 	    control,
 	    &stcb->sctp_socket->so_rcv, 1);
@@ -3010,7 +3010,6 @@ sctp_notify_adaptation_layer(struct sctp_tcb *stcb,
 	sai->sai_adaptation_ind = error;
 	sai->sai_assoc_id = sctp_get_associd(stcb);
 
-	m_notify->m_flags |= M_NOTIFICATION;
 	SCTP_BUF_HDR_LEN(m_notify) = sizeof(struct sctp_adaptation_event);
 	m_notify->m_pkthdr.rcvif = 0;
 	SCTP_BUF_LEN(m_notify) = sizeof(struct sctp_adaptation_event);
@@ -3026,6 +3025,7 @@ sctp_notify_adaptation_layer(struct sctp_tcb *stcb,
 		return;
 	}
 	control->length = SCTP_BUF_LEN(m_notify);
+	control->spec_flags = M_NOTIFICATION;
 	/* not that we need this */
 	control->tail_mbuf = m_notify;
 	sctp_add_to_readq(stcb->sctp_ep, stcb,
@@ -3059,7 +3059,6 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
 	pdapi->pdapi_indication = error;
 	pdapi->pdapi_assoc_id = sctp_get_associd(stcb);
 
-	m_notify->m_flags |= M_NOTIFICATION;
 	SCTP_BUF_HDR_LEN(m_notify) = sizeof(struct sctp_pdapi_event);
 	m_notify->m_pkthdr.rcvif = 0;
 	SCTP_BUF_LEN(m_notify) = sizeof(struct sctp_pdapi_event);
@@ -3072,6 +3071,7 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
 		sctp_m_freem(m_notify);
 		return;
 	}
+	control->spec_flags = M_NOTIFICATION;
 	control->length = SCTP_BUF_LEN(m_notify);
 	/* not that we need this */
 	control->tail_mbuf = m_notify;
@@ -3135,7 +3135,6 @@ sctp_notify_shutdown_event(struct sctp_tcb *stcb)
 	sse->sse_length = sizeof(struct sctp_shutdown_event);
 	sse->sse_assoc_id = sctp_get_associd(stcb);
 
-	m_notify->m_flags |= M_NOTIFICATION;
 	SCTP_BUF_HDR_LEN(m_notify) = sizeof(struct sctp_shutdown_event);
 	m_notify->m_pkthdr.rcvif = 0;
 	SCTP_BUF_LEN(m_notify) = sizeof(struct sctp_shutdown_event);
@@ -3150,6 +3149,7 @@ sctp_notify_shutdown_event(struct sctp_tcb *stcb)
 		sctp_m_freem(m_notify);
 		return;
 	}
+	control->spec_flags = M_NOTIFICATION;
 	control->length = SCTP_BUF_LEN(m_notify);
 	/* not that we need this */
 	control->tail_mbuf = m_notify;
@@ -3198,7 +3198,6 @@ sctp_notify_stream_reset(struct sctp_tcb *stcb,
 			strreset->strreset_list[i] = ntohs(list[i]);
 		}
 	}
-	m_notify->m_flags |= M_NOTIFICATION;
 	SCTP_BUF_HDR_LEN(m_notify) = len;
 	m_notify->m_pkthdr.rcvif = 0;
 	SCTP_BUF_LEN(m_notify) = len;
@@ -3217,6 +3216,7 @@ sctp_notify_stream_reset(struct sctp_tcb *stcb,
 		sctp_m_freem(m_notify);
 		return;
 	}
+	control->spec_flags = M_NOTIFICATION;
 	control->length = SCTP_BUF_LEN(m_notify);
 	/* not that we need this */
 	control->tail_mbuf = m_notify;
@@ -4973,7 +4973,7 @@ get_more_data:
 				    (control->end_added)) {
 					out_flags |= MSG_EOR;
 				}
-				if (m->m_flags & M_NOTIFICATION) {
+				if (control->spec_flags & M_NOTIFICATION) {
 					out_flags |= MSG_NOTIFICATION;
 				}
 				/* we ate up the mbuf */
@@ -5045,19 +5045,10 @@ get_more_data:
 				}
 			} else {
 				/* Do we need to trim the mbuf? */
-				if (m->m_flags & M_NOTIFICATION) {
+				if (control->spec_flags & M_NOTIFICATION) {
 					out_flags |= MSG_NOTIFICATION;
 				}
 				if ((in_flags & MSG_PEEK) == 0) {
-					if (out_flags & MSG_NOTIFICATION) {
-						/*
-						 * remark this one with the
-						 * notify flag, they read
-						 * only part of the
-						 * notification.
-						 */
-						m->m_flags |= M_NOTIFICATION;
-					}
 					SCTP_BUF_RESV_UF(m, cp_len);
 					SCTP_BUF_LEN(m) -= cp_len;
 #ifdef SCTP_SB_LOGGING
@@ -5314,7 +5305,7 @@ get_more_data2:
 			if (control->end_added) {
 				out_flags |= MSG_EOR;
 			}
-			if (control->data->m_flags & M_NOTIFICATION) {
+			if (control->spec_flags & M_NOTIFICATION) {
 				out_flags |= MSG_NOTIFICATION;
 			}
 			if(uio)
@@ -5410,7 +5401,7 @@ get_more_data2:
 					hold_rlock = 1;
 				}
 			}
-			if (m->m_flags & M_NOTIFICATION) {
+			if (control->spec_flags & M_NOTIFICATION) {
 				out_flags |= MSG_NOTIFICATION;
 			}
 			while ((m) && (cp_len > 0)) {
@@ -5495,13 +5486,6 @@ get_more_data2:
 					sctp_sblog(&so->so_rcv, control->do_not_ref_stcb?NULL:stcb,
 					    SCTP_LOG_SBRESULT, 0);
 #endif
-					if (out_flags & MSG_NOTIFICATION) {
-						/*
-						 * remark the first mbuf if
-						 * they took a partial read.
-						 */
-						control->data->m_flags |= M_NOTIFICATION;
-					}
 					goto release;
 				}
 			}
