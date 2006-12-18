@@ -333,7 +333,7 @@ sctp_log_mb(struct mbuf *m, int from)
 	sctp_clog[sctp_cwnd_log_at].x.mb.mbuf_flags = (uint8_t)(m->m_flags);
 	sctp_clog[sctp_cwnd_log_at].x.mb.size = (uint16_t)(SCTP_BUF_LEN(m));
 	sctp_clog[sctp_cwnd_log_at].x.mb.data = SCTP_BUF_AT(m, 0);
-	if(m->m_flags & M_EXT) {
+	if(SCTP_BUF_IS_EXTENDED(m)) {
 		sctp_clog[sctp_cwnd_log_at].x.mb.ext = m->m_ext.ext_buf;
 #if defined(__APPLE__)
 		/* APPLE does not use a ref_cnt, but a forward/backward ref queue */
@@ -3951,7 +3951,7 @@ sctp_print_mbuf_chain(struct mbuf *m)
 		if (m->m_flags & M_PKTHDR)
 			printf("%p: len = %d\n", m, SCTP_BUF_HDR_LEN(m));
 		printf("%p: m_len = %d\n", m, SCTP_BUF_LEN(m));
-		if (m->m_flags & M_EXT)
+		if (SCTP_BUF_IS_EXTENDED(m))
 			printf("%p: m->m_ext.ext_size = %d\n", m, m->m_ext.ext_size);
 		printf("m_flags has M_EOR%s set.\n", m->m_flags & M_EOR ? "" : " not");
 		}  
@@ -5597,7 +5597,7 @@ out:
 struct mbuf *
 sctp_m_free(struct mbuf *m)
 {
-	if(m->m_flags & M_EXT) {
+	if(SCTP_BUF_IS_EXTENDED(m)) {
  		sctp_log_mb(m, SCTP_MBUF_IFREE);
  	}
 	return(m_free(m));

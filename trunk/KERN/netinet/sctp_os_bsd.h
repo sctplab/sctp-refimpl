@@ -118,12 +118,13 @@ typedef struct callout sctp_os_timer_t;
 #define SCTP_READ_RANDOM(buf, len)	read_random(buf, len)
 #endif
 
-/* Mbuf access functions  */
+/* Mbuf manipulation and access macros  */
 #define SCTP_BUF_LEN(m) (m->m_len)
 #define SCTP_BUF_NEXT(m) (m->m_next)
 #define SCTP_BUF_NEXT_PKT(m) (m->m_nextpkt)
 #define SCTP_BUF_HDR_LEN(m) (m->m_pkthdr.len)
 #define SCTP_BUF_RESV_UF(m, size) m->m_data += size
 #define SCTP_BUF_AT(m, size) m->m_data + size
+#define SCTP_BUF_IS_EXTENDED(m) (m->m_flags & M_EXT)
 
 #endif
