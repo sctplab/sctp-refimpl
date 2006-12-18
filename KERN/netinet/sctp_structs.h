@@ -371,9 +371,11 @@ struct sctp_queued_to_read {	/* sinfo structure Pluse more */
 	struct sctp_tcb *stcb;	/* assoc, used for window update */
 	TAILQ_ENTRY(sctp_queued_to_read) next;
 	uint16_t port_from;
+	uint16_t spec_flags;	/* Flags to hold the notification field */
 	uint8_t  do_not_ref_stcb;
 	uint8_t  end_added;
 	uint8_t  pdapi_aborted;
+	uint8_t  resv;
 };
 
 /* This data structure will be on the outbound
