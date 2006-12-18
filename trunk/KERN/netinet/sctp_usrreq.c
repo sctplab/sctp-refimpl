@@ -1498,14 +1498,14 @@ connected_type:
 
 		c_len = 0;
 		/* How big is it */
-		for (x = m; x; x = sctp_buf_next(x)) {
-			c_len += sctp_buf_len(x);
+		for (x = m; x; x = SCTP_BUF_NEXT(x)) {
+			c_len += SCTP_BUF_LEN(x);
 		}
-		sctp_buf_hdr_len(inp->pkt) += c_len;
+		SCTP_BUF_HDR_LEN(inp->pkt) += c_len;
 	}
 	/* Place the data */
 	if (inp->pkt) {
-		sctp_buf_next(inp->pkt_last) = m;
+		SCTP_BUF_NEXT(inp->pkt_last) = m;
 		inp->pkt_last = m;
 	} else {
 		inp->pkt_last = inp->pkt = m;
@@ -1599,9 +1599,9 @@ sctp_disconnect(struct socket *so)
 						struct sctp_paramhdr *ph;
 
 						ph = mtod(err, struct sctp_paramhdr *);
-						sctp_buf_len(err) = sizeof(struct sctp_paramhdr);
+						SCTP_BUF_LEN(err) = sizeof(struct sctp_paramhdr);
 						ph->param_type = htons(SCTP_CAUSE_USER_INITIATED_ABT);
-						ph->param_length = htons(sctp_buf_len(err));
+						ph->param_length = htons(SCTP_BUF_LEN(err));
 					}
 					sctp_send_abort_tcb(stcb, err);
 					SCTP_STAT_INCR_COUNTER32(sctps_aborted);
@@ -1679,13 +1679,13 @@ sctp_disconnect(struct socket *so)
 						struct sctp_paramhdr *ph;
 						uint32_t *ippp;
 
-						sctp_buf_len(op_err) =
+						SCTP_BUF_LEN(op_err) =
 							(sizeof(struct sctp_paramhdr) + sizeof(uint32_t));
 						ph = mtod(op_err,
 							  struct sctp_paramhdr *);
 						ph->param_type = htons(
 							SCTP_CAUSE_USER_INITIATED_ABT);
-						ph->param_length = htons(sctp_buf_len(op_err));
+						ph->param_length = htons(SCTP_BUF_LEN(op_err));
 						ippp = (uint32_t *) (ph + 1);
 						*ippp = htonl(SCTP_FROM_SCTP_USRREQ+SCTP_LOC_4);
 					}
@@ -1824,13 +1824,13 @@ sctp_shutdown(struct socket *so)
 					struct sctp_paramhdr *ph;
 					uint32_t *ippp;
 
-					sctp_buf_len(op_err) =
+					SCTP_BUF_LEN(op_err) =
 						sizeof(struct sctp_paramhdr) + sizeof(uint32_t);
 					ph = mtod(op_err,
 						  struct sctp_paramhdr *);
 					ph->param_type = htons(
 						SCTP_CAUSE_USER_INITIATED_ABT);
-					ph->param_length = htons(sctp_buf_len(op_err));
+					ph->param_length = htons(SCTP_BUF_LEN(op_err));
 					ippp = (uint32_t *) (ph + 1);
 					*ippp = htonl(SCTP_FROM_SCTP_USRREQ+SCTP_LOC_6);
 				}
@@ -2238,7 +2238,7 @@ sctp_do_connect_x(struct socket *so,
 			error = EALREADY;
 			goto out_now;
 		}
-		if ((at + incr) > sctp_buf_len(m)) {
+		if ((at + incr) > SCTP_BUF_LEN(m)) {
 			totaddr = i;
 			break;
 		}
@@ -2419,57 +2419,57 @@ sctp_optsget(struct socket *so,
 			/* make it an "on/off" value */
 			optval = (optval != 0);
 		}
-		if ((size_t)sctp_buf_len(m) < sizeof(int)) {
+		if ((size_t)SCTP_BUF_LEN(m) < sizeof(int)) {
 			error = EINVAL;
 		}
 		SCTP_INP_RUNLOCK(inp);
 		if (error == 0) {
 			/* return the option value */
 			*mtod(m, int *)= optval;
-			sctp_buf_len(m) = sizeof(optval);
+			SCTP_BUF_LEN(m) = sizeof(optval);
 		}
 		break;
 	case SCTP_PARTIAL_DELIVERY_POINT:
 		{
-			if ((size_t)sctp_buf_len(m) < sizeof(unsigned int)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(unsigned int)) {
 				error = EINVAL;
 				break;
 			}
 			*mtod(m, unsigned int *)= inp->partial_delivery_point;
-			sctp_buf_len(m) = sizeof(unsigned int);
+			SCTP_BUF_LEN(m) = sizeof(unsigned int);
 		}
 		break;
 	case SCTP_FRAGMENT_INTERLEAVE:
 		{
-			if ((size_t)sctp_buf_len(m) < sizeof(unsigned int)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(unsigned int)) {
 				error = EINVAL;
 				break;
 			}
 			*mtod(m, unsigned int *)= sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE);
-			sctp_buf_len(m) = sizeof(unsigned int);
+			SCTP_BUF_LEN(m) = sizeof(unsigned int);
 		}
 		break;
 	case SCTP_CMT_ON_OFF:
 		{
-			if ((size_t)sctp_buf_len(m) < sizeof(unsigned int)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(unsigned int)) {
 				error = EINVAL;
 				break;
 			}
 			*mtod(m, unsigned int *)= sctp_cmt_sockopt_on_off;
-			sctp_buf_len(m) = sizeof(unsigned int);
+			SCTP_BUF_LEN(m) = sizeof(unsigned int);
 		}
 		break;
 	case SCTP_CMT_USE_DAC:
 		{
 			*mtod(m, unsigned int *)= sctp_cmt_sockopt_use_dac;
-			sctp_buf_len(m) = sizeof(unsigned int);
+			SCTP_BUF_LEN(m) = sizeof(unsigned int);
 		}
 		break;
 	case SCTP_GET_ADDR_LEN:
 		{
 			struct sctp_assoc_value *av;
 
-			if ((size_t)sctp_buf_len(m) < sizeof(struct sctp_assoc_value)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(struct sctp_assoc_value)) {
 				error = EINVAL;
 				break;
 			}
@@ -2495,7 +2495,7 @@ sctp_optsget(struct socket *so,
 			int cnt, at;
 			uint16_t orig;
 
-			if ((size_t)sctp_buf_len(m) < sizeof(struct sctp_assoc_ids)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(struct sctp_assoc_ids)) {
 				error = EINVAL;
 				break;
 			}
@@ -2543,7 +2543,7 @@ sctp_optsget(struct socket *so,
 
 			struct sctp_assoc_value *av;
 
-			if ((size_t)sctp_buf_len(m) < sizeof(struct sctp_assoc_value)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(struct sctp_assoc_value)) {
 				error = EINVAL;
 				break;
 			}
@@ -2565,7 +2565,7 @@ sctp_optsget(struct socket *so,
 		{
 			struct sctp_get_nonce_values *gnv;
 
-			if ((size_t)sctp_buf_len(m) < sizeof(struct sctp_get_nonce_values)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(struct sctp_get_nonce_values)) {
 				error = EINVAL;
 				break;
 			}
@@ -2585,7 +2585,7 @@ sctp_optsget(struct socket *so,
 		{
 			struct sctp_assoc_value *tm;
 
-			if ((size_t)sctp_buf_len(m) < sizeof(struct sctp_assoc_value)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(struct sctp_assoc_value)) {
 				error = EINVAL;
 				break;
 			}
@@ -2616,7 +2616,7 @@ sctp_optsget(struct socket *so,
 		break;
 
 	case SCTP_GET_SNDBUF_USE:
-		if ((size_t)sctp_buf_len(m) < sizeof(struct sctp_sockstat)) {
+		if ((size_t)SCTP_BUF_LEN(m) < sizeof(struct sctp_sockstat)) {
 			error = EINVAL;
 		} else {
 			struct sctp_sockstat *ss;
@@ -2634,7 +2634,7 @@ sctp_optsget(struct socket *so,
 				    asoc->size_on_all_streams);
 				SCTP_TCB_UNLOCK(stcb);
 				error = 0;
-				sctp_buf_len(m) = sizeof(struct sctp_sockstat);
+				SCTP_BUF_LEN(m) = sizeof(struct sctp_sockstat);
 			}
 		}
 		break;
@@ -2646,7 +2646,7 @@ sctp_optsget(struct socket *so,
 			SCTP_INP_RLOCK(inp);
 			*burst = inp->sctp_ep.max_burst;
 			SCTP_INP_RUNLOCK(inp);
-			sctp_buf_len(m) = sizeof(uint8_t);
+			SCTP_BUF_LEN(m) = sizeof(uint8_t);
 		}
 		break;
 
@@ -2656,17 +2656,17 @@ sctp_optsget(struct socket *so,
 			sctp_assoc_t *assoc_id;
 			int ovh;
 
-			if ((size_t)sctp_buf_len(m) < sizeof(uint32_t)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(uint32_t)) {
 				error = EINVAL;
 				break;
 			}
-			if ((size_t)sctp_buf_len(m) < sizeof(sctp_assoc_t)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(sctp_assoc_t)) {
 				error = EINVAL;
 				break;
 			}
 			assoc_id = mtod(m, sctp_assoc_t *);
 			segsize = mtod(m, uint32_t *);
-			sctp_buf_len(m) = sizeof(uint32_t);
+			SCTP_BUF_LEN(m) = sizeof(uint32_t);
 
 			if (((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 			    (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) ||
@@ -2711,14 +2711,14 @@ sctp_optsget(struct socket *so,
 		{
 			uint32_t *level;
 
-			if ((size_t)sctp_buf_len(m) < sizeof(uint32_t)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(uint32_t)) {
 				error = EINVAL;
 				break;
 			}
 			level = mtod(m, uint32_t *);
 			error = 0;
 			*level = sctp_debug_on;
-			sctp_buf_len(m) = sizeof(uint32_t);
+			SCTP_BUF_LEN(m) = sizeof(uint32_t);
 			printf("Returning DEBUG LEVEL %x is set\n",
 			    (uint32_t) sctp_debug_on);
 		}
@@ -2736,7 +2736,7 @@ sctp_optsget(struct socket *so,
 	case SCTP_EVENTS:
 		{
 			struct sctp_event_subscribe *events;
-			if ((size_t)sctp_buf_len(m) < sizeof(struct sctp_event_subscribe)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(struct sctp_event_subscribe)) {
 				error = EINVAL;
 				break;
 			}
@@ -2773,40 +2773,40 @@ sctp_optsget(struct socket *so,
 			if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_STREAM_RESETEVNT))
 				events->sctp_stream_reset_events = 1;
 			SCTP_INP_RUNLOCK(inp);
-			sctp_buf_len(m) = sizeof(struct sctp_event_subscribe);
+			SCTP_BUF_LEN(m) = sizeof(struct sctp_event_subscribe);
 
 		}
 		break;
 
 	case SCTP_ADAPTATION_LAYER:
-		if ((size_t)sctp_buf_len(m) < sizeof(int)) {
+		if ((size_t)SCTP_BUF_LEN(m) < sizeof(int)) {
 			error = EINVAL;
 			break;
 		}
 		SCTP_INP_RLOCK(inp);
 		*mtod(m, int *)= inp->sctp_ep.adaptation_layer_indicator;
 		SCTP_INP_RUNLOCK(inp);
-		sctp_buf_len(m) = sizeof(int);
+		SCTP_BUF_LEN(m) = sizeof(int);
 		break;
 	case SCTP_SET_INITIAL_DBG_SEQ:
-		if ((size_t)sctp_buf_len(m) < sizeof(int)) {
+		if ((size_t)SCTP_BUF_LEN(m) < sizeof(int)) {
 			error = EINVAL;
 			break;
 		}
 		SCTP_INP_RLOCK(inp);
 		*mtod(m, int *)= inp->sctp_ep.initial_sequence_debug;
 		SCTP_INP_RUNLOCK(inp);
-		sctp_buf_len(m) = sizeof(int);
+		SCTP_BUF_LEN(m) = sizeof(int);
 		break;
 	case SCTP_GET_LOCAL_ADDR_SIZE:
-		if ((size_t)sctp_buf_len(m) < sizeof(int)) {
+		if ((size_t)SCTP_BUF_LEN(m) < sizeof(int)) {
 			error = EINVAL;
 			break;
 		}
 		SCTP_INP_RLOCK(inp);
 		*mtod(m, int *)= sctp_count_max_addresses(inp);
 		SCTP_INP_RUNLOCK(inp);
-		sctp_buf_len(m) = sizeof(int);
+		SCTP_BUF_LEN(m) = sizeof(int);
 		break;
 	case SCTP_GET_REMOTE_ADDR_SIZE:
 		{
@@ -2814,7 +2814,7 @@ sctp_optsget(struct socket *so,
 			uint32_t *val, sz;
 			struct sctp_nets *net;
 
-			if ((size_t)sctp_buf_len(m) < sizeof(sctp_assoc_t)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(sctp_assoc_t)) {
 				error = EINVAL;
 				break;
 			}
@@ -2851,7 +2851,7 @@ sctp_optsget(struct socket *so,
 			}
 			SCTP_TCB_UNLOCK(stcb);
 			*val = sz;
-			sctp_buf_len(m) = sizeof(uint32_t);
+			SCTP_BUF_LEN(m) = sizeof(uint32_t);
 		}
 		break;
 	case SCTP_GET_PEER_ADDRESSES:
@@ -2865,11 +2865,11 @@ sctp_optsget(struct socket *so,
 			struct sctp_nets *net;
 			struct sctp_getaddresses *saddr;
 
-			if ((size_t)sctp_buf_len(m) < sizeof(struct sctp_getaddresses)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(struct sctp_getaddresses)) {
 				error = EINVAL;
 				break;
 			}
-			left = sctp_buf_len(m) - sizeof(struct sctp_getaddresses);
+			left = SCTP_BUF_LEN(m) - sizeof(struct sctp_getaddresses);
 			saddr = mtod(m, struct sctp_getaddresses *);
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
 				SCTP_INP_RLOCK(inp);
@@ -2884,7 +2884,7 @@ sctp_optsget(struct socket *so,
 				error = ENOENT;
 				break;
 			}
-			sctp_buf_len(m) = sizeof(struct sctp_getaddresses);
+			SCTP_BUF_LEN(m) = sizeof(struct sctp_getaddresses);
 			sas = (struct sockaddr_storage *)&saddr->addr[0];
 
 			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
@@ -2913,7 +2913,7 @@ sctp_optsget(struct socket *so,
 
 				sas = (struct sockaddr_storage *)((caddr_t)sas + cpsz);
 				left -= cpsz;
-				sctp_buf_len(m) += cpsz;
+				SCTP_BUF_LEN(m) += cpsz;
 			}
 			SCTP_TCB_UNLOCK(stcb);
 		}
@@ -2924,7 +2924,7 @@ sctp_optsget(struct socket *so,
 			struct sockaddr_storage *sas;
 			struct sctp_getaddresses *saddr;
 
-			if ((size_t)sctp_buf_len(m) < sizeof(struct sctp_getaddresses)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(struct sctp_getaddresses)) {
 				error = EINVAL;
 				break;
 			}
@@ -2956,11 +2956,11 @@ sctp_optsget(struct socket *so,
 				SCTP_INP_RUNLOCK(inp);
 			}
 			sas = (struct sockaddr_storage *)&saddr->addr[0];
-			limit = sctp_buf_len(m) - sizeof(sctp_assoc_t);
+			limit = SCTP_BUF_LEN(m) - sizeof(sctp_assoc_t);
 			actual = sctp_fill_up_addresses(inp, stcb, limit, sas);
 			if (stcb)
 				SCTP_TCB_UNLOCK(stcb);
-			sctp_buf_len(m) = sizeof(struct sockaddr_storage) + actual;
+			SCTP_BUF_LEN(m) = sizeof(struct sockaddr_storage) + actual;
 		}
 		break;
 	case SCTP_PEER_ADDR_PARAMS:
@@ -2968,7 +2968,7 @@ sctp_optsget(struct socket *so,
 			struct sctp_paddrparams *paddrp;
 			struct sctp_nets *net;
 
-			if ((size_t)sctp_buf_len(m) < sizeof(struct sctp_paddrparams)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(struct sctp_paddrparams)) {
 				error = EINVAL;
 				break;
 			}
@@ -3109,7 +3109,7 @@ sctp_optsget(struct socket *so,
 
 				SCTP_INP_RUNLOCK(inp);
 			}
-			sctp_buf_len(m) = sizeof(struct sctp_paddrparams);
+			SCTP_BUF_LEN(m) = sizeof(struct sctp_paddrparams);
 		}
 		break;
 	case SCTP_GET_PEER_ADDR_INFO:
@@ -3117,7 +3117,7 @@ sctp_optsget(struct socket *so,
 			struct sctp_paddrinfo *paddri;
 			struct sctp_nets *net;
 
-			if ((size_t)sctp_buf_len(m) < sizeof(struct sctp_paddrinfo)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(struct sctp_paddrinfo)) {
 				error = EINVAL;
 				break;
 			}
@@ -3155,7 +3155,7 @@ sctp_optsget(struct socket *so,
 				error = ENOENT;
 				break;
 			}
-			sctp_buf_len(m) = sizeof(struct sctp_paddrinfo);
+			SCTP_BUF_LEN(m) = sizeof(struct sctp_paddrinfo);
 			paddri->spinfo_state = net->dest_state & (SCTP_REACHABLE_MASK | SCTP_ADDR_NOHB);
 			paddri->spinfo_cwnd = net->cwnd;
 			paddri->spinfo_srtt = ((net->lastsa >> 2) + net->lastsv) >> 1;
@@ -3168,7 +3168,7 @@ sctp_optsget(struct socket *so,
 		{
 			struct sctp_pcbinfo *spcb;
 
-			if ((size_t)sctp_buf_len(m) < sizeof(struct sctp_pcbinfo)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(struct sctp_pcbinfo)) {
 				error = EINVAL;
 				break;
 			}
@@ -3184,7 +3184,7 @@ sctp_optsget(struct socket *so,
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
 #endif
-			sctp_buf_len(m) = sizeof(struct sctp_pcbinfo);
+			SCTP_BUF_LEN(m) = sizeof(struct sctp_pcbinfo);
 		}
 		break;
 	case SCTP_STATUS:
@@ -3192,7 +3192,7 @@ sctp_optsget(struct socket *so,
 			struct sctp_nets *net;
 			struct sctp_status *sstat;
 
-			if ((size_t)sctp_buf_len(m) < sizeof(struct sctp_status)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(struct sctp_status)) {
 				error = EINVAL;
 				break;
 			}
@@ -3246,14 +3246,14 @@ sctp_optsget(struct socket *so,
 			sstat->sstat_primary.spinfo_mtu = net->mtu;
 			sstat->sstat_primary.spinfo_assoc_id = sctp_get_associd(stcb);
 			SCTP_TCB_UNLOCK(stcb);
-			sctp_buf_len(m) = sizeof(*sstat);
+			SCTP_BUF_LEN(m) = sizeof(*sstat);
 		}
 		break;
 	case SCTP_RTOINFO:
 		{
 			struct sctp_rtoinfo *srto;
 
-			if ((size_t)sctp_buf_len(m) < sizeof(struct sctp_rtoinfo)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(struct sctp_rtoinfo)) {
 				error = EINVAL;
 				break;
 			}
@@ -3284,14 +3284,14 @@ sctp_optsget(struct socket *so,
 			srto->srto_max = stcb->asoc.maxrto;
 			srto->srto_min = stcb->asoc.minrto;
 			SCTP_TCB_UNLOCK(stcb);
-			sctp_buf_len(m) = sizeof(*srto);
+			SCTP_BUF_LEN(m) = sizeof(*srto);
 		}
 		break;
 	case SCTP_ASSOCINFO:
 		{
 			struct sctp_assocparams *sasoc;
 
-			if ((size_t)sctp_buf_len(m) < sizeof(struct sctp_assocparams)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(struct sctp_assocparams)) {
 				error = EINVAL;
 				break;
 			}
@@ -3332,14 +3332,14 @@ sctp_optsget(struct socket *so,
 				sasoc->sasoc_cookie_life = inp->sctp_ep.def_cookie_life;
 				SCTP_INP_RUNLOCK(inp);
 			}
-			sctp_buf_len(m) = sizeof(*sasoc);
+			SCTP_BUF_LEN(m) = sizeof(*sasoc);
 		}
 		break;
 	case SCTP_DEFAULT_SEND_PARAM:
 		{
 			struct sctp_sndrcvinfo *s_info;
 
-			if (sctp_buf_len(m) != sizeof(struct sctp_sndrcvinfo)) {
+			if (SCTP_BUF_LEN(m) != sizeof(struct sctp_sndrcvinfo)) {
 				error = EINVAL;
 				break;
 			}
@@ -3360,14 +3360,14 @@ sctp_optsget(struct socket *so,
 			/* Copy it out */
 			*s_info = stcb->asoc.def_send;
 			SCTP_TCB_UNLOCK(stcb);
-			sctp_buf_len(m) = sizeof(*s_info);
+			SCTP_BUF_LEN(m) = sizeof(*s_info);
 		}
 		break;
 	case SCTP_INITMSG:
 		{
 			struct sctp_initmsg *sinit;
 
-			if ((size_t)sctp_buf_len(m) < sizeof(struct sctp_initmsg)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(struct sctp_initmsg)) {
 				error = EINVAL;
 				break;
 			}
@@ -3378,7 +3378,7 @@ sctp_optsget(struct socket *so,
 			sinit->sinit_max_attempts = inp->sctp_ep.max_init_times;
 			sinit->sinit_max_init_timeo = inp->sctp_ep.initial_init_rto_max;
 			SCTP_INP_RUNLOCK(inp);
-			sctp_buf_len(m) = sizeof(*sinit);
+			SCTP_BUF_LEN(m) = sizeof(*sinit);
 		}
 		break;
 	case SCTP_PRIMARY_ADDR:
@@ -3386,7 +3386,7 @@ sctp_optsget(struct socket *so,
 		{
 			struct sctp_setprim *ssp;
 
-			if ((size_t)sctp_buf_len(m) < sizeof(struct sctp_setprim)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(struct sctp_setprim)) {
 				error = EINVAL;
 				break;
 			}
@@ -3424,7 +3424,7 @@ sctp_optsget(struct socket *so,
 			    &stcb->asoc.primary_destination->ro._l_addr,
 			    ((struct sockaddr *)&stcb->asoc.primary_destination->ro._l_addr)->sa_len);
 			SCTP_TCB_UNLOCK(stcb);
-			sctp_buf_len(m) = sizeof(*ssp);
+			SCTP_BUF_LEN(m) = sizeof(*ssp);
 		}
 		break;
 
@@ -3435,7 +3435,7 @@ sctp_optsget(struct socket *so,
 			uint32_t size;
 			int i;
 
-			if ((size_t)(sctp_buf_len(m)) < sizeof(*shmac)) {
+			if ((size_t)(SCTP_BUF_LEN(m)) < sizeof(*shmac)) {
 				error = EINVAL;
 				break;
 			}
@@ -3444,13 +3444,13 @@ sctp_optsget(struct socket *so,
 			hmaclist = inp->sctp_ep.local_hmacs;
 			if (hmaclist == NULL) {
 				/* no HMACs to return */
-				sctp_buf_len(m) = sizeof(*shmac);
+				SCTP_BUF_LEN(m) = sizeof(*shmac);
 				break;
 			}
 			/* is there room for all of the hmac ids? */
 			size = sizeof(*shmac) + (hmaclist->num_algo *
 			    sizeof(shmac->shmac_idents[0]));
-			if ((size_t)(sctp_buf_len(m)) < size) {
+			if ((size_t)(SCTP_BUF_LEN(m)) < size) {
 				error = EINVAL;
 				SCTP_INP_RUNLOCK(inp);
 				break;
@@ -3459,14 +3459,14 @@ sctp_optsget(struct socket *so,
 			for (i = 0; i < hmaclist->num_algo; i++)
 				shmac->shmac_idents[i] = hmaclist->hmac[i];
 			SCTP_INP_RUNLOCK(inp);
-			sctp_buf_len(m) = size;
+			SCTP_BUF_LEN(m) = size;
 			break;
 		}
 	case SCTP_AUTH_ACTIVE_KEY:
 		{
 			struct sctp_authkeyid *scact;
 
-			if ((size_t)(sctp_buf_len(m)) < sizeof(*scact)) {
+			if ((size_t)(SCTP_BUF_LEN(m)) < sizeof(*scact)) {
 				error = EINVAL;
 				break;
 			}
@@ -3498,7 +3498,7 @@ sctp_optsget(struct socket *so,
 				scact->scact_keynumber = inp->sctp_ep.default_keyid;
 				SCTP_INP_RUNLOCK(inp);
 			}
-			sctp_buf_len(m) = sizeof(*scact);
+			SCTP_BUF_LEN(m) = sizeof(*scact);
 			break;
 		}
 	case SCTP_LOCAL_AUTH_CHUNKS:
@@ -3507,7 +3507,7 @@ sctp_optsget(struct socket *so,
 			sctp_auth_chklist_t *chklist = NULL;
 			int size = 0;
 
-			if ((size_t)(sctp_buf_len(m)) < sizeof(*sac)) {
+			if ((size_t)(SCTP_BUF_LEN(m)) < sizeof(*sac)) {
 				error = EINVAL;
 				break;
 			}
@@ -3539,7 +3539,7 @@ sctp_optsget(struct socket *so,
 				}
 				/* is there enough space? */
 				size = sctp_auth_get_chklist_size(chklist);
-				if ((size_t)sctp_buf_len(m) < (sizeof(struct sctp_authchunks) + size)) {
+				if ((size_t)SCTP_BUF_LEN(m) < (sizeof(struct sctp_authchunks) + size)) {
 					error = EINVAL;
 					SCTP_TCB_UNLOCK(stcb);
 					break;
@@ -3558,7 +3558,7 @@ sctp_optsget(struct socket *so,
 				}
 				/* is there enough space? */
 				size = sctp_auth_get_chklist_size(chklist);
-				if ((size_t)sctp_buf_len(m) < (sizeof(struct sctp_authchunks) + size)) {
+				if ((size_t)SCTP_BUF_LEN(m) < (sizeof(struct sctp_authchunks) + size)) {
 					error = EINVAL;
 					SCTP_INP_RUNLOCK(inp);
 					break;
@@ -3567,7 +3567,7 @@ sctp_optsget(struct socket *so,
 				sctp_serialize_auth_chunks(chklist, sac->gauth_chunks);
 				SCTP_INP_RUNLOCK(inp);
 			}
-			sctp_buf_len(m) = sizeof(struct sctp_authchunks) + size;
+			SCTP_BUF_LEN(m) = sizeof(struct sctp_authchunks) + size;
 			break;
 		}
 	case SCTP_PEER_AUTH_CHUNKS:
@@ -3576,7 +3576,7 @@ sctp_optsget(struct socket *so,
 			sctp_auth_chklist_t *chklist = NULL;
 			int size = 0;
 
-			if ((size_t)(sctp_buf_len(m)) < sizeof(*sac)) {
+			if ((size_t)(SCTP_BUF_LEN(m)) < sizeof(*sac)) {
 				error = EINVAL;
 				break;
 			}
@@ -3607,7 +3607,7 @@ sctp_optsget(struct socket *so,
 			}
 			/* is there enough space? */
 			size = sctp_auth_get_chklist_size(chklist);
-			if ((size_t)sctp_buf_len(m) < (sizeof(struct sctp_authchunks) + size)) {
+			if ((size_t)SCTP_BUF_LEN(m) < (sizeof(struct sctp_authchunks) + size)) {
 				error = EINVAL;
 				SCTP_TCB_UNLOCK(stcb);
 				break;
@@ -3615,7 +3615,7 @@ sctp_optsget(struct socket *so,
 			/* copy in the chunks */
 			sctp_serialize_auth_chunks(chklist, sac->gauth_chunks);
 			SCTP_TCB_UNLOCK(stcb);
-			sctp_buf_len(m) = sizeof(struct sctp_authchunks) + size;
+			SCTP_BUF_LEN(m) = sizeof(struct sctp_authchunks) + size;
 			break;
 		}
 
@@ -3624,21 +3624,21 @@ sctp_optsget(struct socket *so,
 		{
 			struct sctp_peeloff_opt *peeloff;
 
-			if ((size_t)sctp_buf_len(m) < sizeof(*peeloff)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(*peeloff)) {
 				error = EINVAL;
 				break;
 			}
 			peeloff = mtod(m, struct sctp_peeloff_opt *);
 			/* do the peeloff */
 			error = sctp_peeloff_option(p, peeloff);
-			sctp_buf_len(m) = sizeof(*peeloff);
+			SCTP_BUF_LEN(m) = sizeof(*peeloff);
 		}
 		break;
 #endif				/* HAVE_SCTP_PEELOFF_SOCKOPT */
 
 	default:
 		error = ENOPROTOOPT;
-		sctp_buf_len(m) = 0;
+		SCTP_BUF_LEN(m) = 0;
 		break;
 	}			/* end switch (sopt->sopt_name) */
 	return (error);
@@ -3685,7 +3685,7 @@ sctp_optsset(struct socket *so,
 	case SCTP_USE_EXT_RCVINFO:
 	case SCTP_I_WANT_MAPPED_V4_ADDR:
 		/* copy in the option value */
-		if ((size_t)sctp_buf_len(m) < sizeof(int)) {
+		if ((size_t)SCTP_BUF_LEN(m) < sizeof(int)) {
 			error = EINVAL;
 			break;
 		}
@@ -3735,12 +3735,12 @@ sctp_optsset(struct socket *so,
 		break;
 	case SCTP_PARTIAL_DELIVERY_POINT:
 		{
-			if ((size_t)sctp_buf_len(m) < sizeof(unsigned int)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(unsigned int)) {
 				error = EINVAL;
 				break;
 			}
 			inp->partial_delivery_point = *mtod(m, unsigned int *);
-			sctp_buf_len(m) = sizeof(unsigned int);
+			SCTP_BUF_LEN(m) = sizeof(unsigned int);
 		}
 		break;
 	case SCTP_FRAGMENT_INTERLEAVE:
@@ -3748,7 +3748,7 @@ sctp_optsset(struct socket *so,
 		{
 			int on_off;
 
-			if ((size_t)sctp_buf_len(m) < sizeof(int)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(int)) {
 				error = EINVAL;
 				break;
 			}
@@ -3764,7 +3764,7 @@ sctp_optsset(struct socket *so,
 		{
 			struct sctp_assoc_value *av;
 
-			if ((size_t)sctp_buf_len(m) < sizeof(struct sctp_assoc_value)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(struct sctp_assoc_value)) {
 				error = EINVAL;
 				break;
 			}
@@ -3788,7 +3788,7 @@ sctp_optsset(struct socket *so,
 		break;
 	case SCTP_CMT_USE_DAC:
 		{
-			if ((size_t)sctp_buf_len(m) < sizeof(unsigned int)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(unsigned int)) {
 				error = EINVAL;
 				break;
 			}
@@ -3809,7 +3809,7 @@ sctp_optsset(struct socket *so,
 
 			struct sctp_assoc_value *av;
 
-			if ((size_t)sctp_buf_len(m) < sizeof(struct sctp_assoc_value)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(struct sctp_assoc_value)) {
 				error = EINVAL;
 				break;
 			}
@@ -3831,7 +3831,7 @@ sctp_optsset(struct socket *so,
 		{
 			struct sctp_assoc_value *tm;
 
-			if ((size_t)sctp_buf_len(m) < sizeof(struct sctp_assoc_value)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(struct sctp_assoc_value)) {
 				error = EINVAL;
 				break;
 			}
@@ -3870,7 +3870,7 @@ sctp_optsset(struct socket *so,
 		{
 			struct sctp_authchunk *sauth;
 
-			if ((size_t)sctp_buf_len(m) < sizeof(*sauth)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(*sauth)) {
 				error = EINVAL;
 				break;
 			}
@@ -3888,7 +3888,7 @@ sctp_optsset(struct socket *so,
 			sctp_key_t *key = NULL;
 			int size;
 
-			size = sctp_buf_len(m) - sizeof(*sca);
+			size = SCTP_BUF_LEN(m) - sizeof(*sca);
 			if (size < 0) {
 				error = EINVAL;
 				break;
@@ -3981,7 +3981,7 @@ sctp_optsset(struct socket *so,
 			uint32_t hmacid;
 			int size, i;
 
-			size = sctp_buf_len(m) - sizeof(*shmac);
+			size = SCTP_BUF_LEN(m) - sizeof(*shmac);
 			if (size < 0) {
 				error = EINVAL;
 				break;
@@ -4015,7 +4015,7 @@ sctp_optsset(struct socket *so,
 		{
 			struct sctp_authkeyid *scact;
 
-			if ((size_t)sctp_buf_len(m) < sizeof(*scact)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(*scact)) {
 				error = EINVAL;
 				break;
 			}
@@ -4056,7 +4056,7 @@ sctp_optsset(struct socket *so,
 		{
 			struct sctp_authkeyid *scdel;
 
-			if ((size_t)sctp_buf_len(m) < sizeof(*scdel)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(*scdel)) {
 				error = EINVAL;
 				break;
 			}
@@ -4098,7 +4098,7 @@ sctp_optsset(struct socket *so,
 			uint8_t send_in = 0, send_tsn = 0, send_out = 0;
 			int i;
 
-			if ((size_t)sctp_buf_len(m) < sizeof(struct sctp_stream_reset)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(struct sctp_stream_reset)) {
 				error = EINVAL;
 				break;
 			}
@@ -4181,7 +4181,7 @@ sctp_optsset(struct socket *so,
 		}
 		break;
 	case SCTP_CONNECT_X:
-		if ((size_t)sctp_buf_len(m) < (sizeof(int) + sizeof(struct sockaddr_in))) {
+		if ((size_t)SCTP_BUF_LEN(m) < (sizeof(int) + sizeof(struct sockaddr_in))) {
 			error = EINVAL;
 			break;
 		}
@@ -4189,7 +4189,7 @@ sctp_optsset(struct socket *so,
 		break;
 
 	case SCTP_CONNECT_X_DELAYED:
-		if ((size_t)sctp_buf_len(m) < (sizeof(int) + sizeof(struct sockaddr_in))) {
+		if ((size_t)SCTP_BUF_LEN(m) < (sizeof(int) + sizeof(struct sockaddr_in))) {
 			error = EINVAL;
 			break;
 		}
@@ -4201,7 +4201,7 @@ sctp_optsset(struct socket *so,
 			struct sockaddr *sa;
 			struct sctp_nets *net;
 
-			if ((size_t)sctp_buf_len(m) < sizeof(struct sockaddr_in)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(struct sockaddr_in)) {
 				error = EINVAL;
 				break;
 			}
@@ -4284,7 +4284,7 @@ sctp_optsset(struct socket *so,
 		{
 			uint32_t *level;
 
-			if ((size_t)sctp_buf_len(m) < sizeof(uint32_t)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(uint32_t)) {
 				error = EINVAL;
 				break;
 			}
@@ -4304,7 +4304,7 @@ sctp_optsset(struct socket *so,
 		{
 			struct sctp_event_subscribe *events;
 
-			if ((size_t)sctp_buf_len(m) < sizeof(struct sctp_event_subscribe)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(struct sctp_event_subscribe)) {
 				error = EINVAL;
 				break;
 			}
@@ -4377,7 +4377,7 @@ sctp_optsset(struct socket *so,
 		{
 			struct sctp_setadaptation *adap_bits;
 
-			if ((size_t)sctp_buf_len(m) < sizeof(struct sctp_setadaptation)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(struct sctp_setadaptation)) {
 				error = EINVAL;
 				break;
 			}
@@ -4391,7 +4391,7 @@ sctp_optsset(struct socket *so,
 		{
 			uint32_t *vvv;
 
-			if ((size_t)sctp_buf_len(m) < sizeof(uint32_t)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(uint32_t)) {
 				error = EINVAL;
 				break;
 			}
@@ -4405,7 +4405,7 @@ sctp_optsset(struct socket *so,
 	{
 			struct sctp_sndrcvinfo *s_info;
 
-			if (sctp_buf_len(m) != sizeof(struct sctp_sndrcvinfo)) {
+			if (SCTP_BUF_LEN(m) != sizeof(struct sctp_sndrcvinfo)) {
 				error = EINVAL;
 				break;
 			}
@@ -4448,7 +4448,7 @@ sctp_optsset(struct socket *so,
 			struct sctp_paddrparams *paddrp;
 			struct sctp_nets *net;
 
-			if ((size_t)sctp_buf_len(m) < sizeof(struct sctp_paddrparams)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(struct sctp_paddrparams)) {
 				error = EINVAL;
 				break;
 			}
@@ -4641,7 +4641,7 @@ SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
 		{
 			struct sctp_rtoinfo *srto;
 
-			if ((size_t)sctp_buf_len(m) < sizeof(struct sctp_rtoinfo)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(struct sctp_rtoinfo)) {
 				error = EINVAL;
 				break;
 			}
@@ -4687,7 +4687,7 @@ SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
 		{
 			struct sctp_assocparams *sasoc;
 
-			if ((size_t)sctp_buf_len(m) < sizeof(struct sctp_assocparams)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(struct sctp_assocparams)) {
 				error = EINVAL;
 				break;
 			}
@@ -4735,7 +4735,7 @@ SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
 		{
 			struct sctp_initmsg *sinit;
 
-			if ((size_t)sctp_buf_len(m) < sizeof(struct sctp_initmsg)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(struct sctp_initmsg)) {
 				error = EINVAL;
 				break;
 			}
@@ -4764,7 +4764,7 @@ SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
 			struct sctp_setprim *spa;
 			struct sctp_nets *net, *lnet;
 
-			if ((size_t)sctp_buf_len(m) < sizeof(struct sctp_setprim)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(struct sctp_setprim)) {
 				error = EINVAL;
 				break;
 			}
@@ -4826,7 +4826,7 @@ SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
 		{
 			struct sctp_setpeerprim *sspp;
 
-			if ((size_t)sctp_buf_len(m) < sizeof(struct sctp_setpeerprim)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(struct sctp_setpeerprim)) {
 				error = EINVAL;
 				break;
 			}
@@ -4862,7 +4862,7 @@ SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
 				error = EINVAL;
 				break;
 			}
-			if ((size_t)sctp_buf_len(m) < sizeof(struct sctp_getaddresses)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(struct sctp_getaddresses)) {
 				error = EINVAL;
 				break;
 			}
@@ -4944,7 +4944,7 @@ SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
 				error = EINVAL;
 				break;
 			}
-			if ((size_t)sctp_buf_len(m) < sizeof(struct sctp_getaddresses)) {
+			if ((size_t)SCTP_BUF_LEN(m) < sizeof(struct sctp_getaddresses)) {
 				error = EINVAL;
 				break;
 			}
@@ -5050,7 +5050,7 @@ sctp_ctloutput(struct socket *so, struct sockopt *sopt)
 			(void)sctp_m_free(m);
 			goto out;
 		}
-		sctp_buf_len(m) = sopt->sopt_valsize;
+		SCTP_BUF_LEN(m) = sopt->sopt_valsize;
 	}
 	if (sopt->sopt_dir == SOPT_SET) {
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
@@ -5068,7 +5068,7 @@ sctp_ctloutput(struct socket *so, struct sockopt *sopt)
 		error = EINVAL;
 	}
 	if ((error == 0) && (m != NULL)) {
-		error = sooptcopyout(sopt, mtod(m, caddr_t), sctp_buf_len(m));
+		error = sooptcopyout(sopt, mtod(m, caddr_t), SCTP_BUF_LEN(m));
 		sctp_m_freem(m);
 	} else if (m != NULL) {
 		sctp_m_freem(m);
@@ -5444,7 +5444,7 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 #if defined(__FreeBSD__) || defined(__APPLE__)
 		*addr = (struct sockaddr *)sin;
 #else
-		sctp_buf_len(nam) = sizeof(*sin);
+		SCTP_BUF_LEN(nam) = sizeof(*sin);
 #endif
 	} else {
 		struct sockaddr_in6 *sin6;
@@ -5478,7 +5478,7 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 #if defined(__FreeBSD__) || defined (__APPLE__)
 		*addr = (struct sockaddr *)sin6;
 #else
-		sctp_buf_len(nam) = sizeof(*sin6);
+		SCTP_BUF_LEN(nam) = sizeof(*sin6);
 #endif
 	}
 	/* Wake any delayed sleep action */
@@ -5539,7 +5539,7 @@ sctp_ingetaddr(struct socket *so, struct mbuf *nam)
 #if defined(__FreeBSD__) || defined(__APPLE__)
 	SCTP_MALLOC_SONAME(sin, struct sockaddr_in *, sizeof *sin);
 #else
-	sctp_buf_len(nam)n = sizeof(*sin);
+	SCTP_BUF_LEN(nam)n = sizeof(*sin);
 	memset(sin, 0, sizeof(*sin));
 #endif
 	sin->sin_family = AF_INET;
@@ -5665,7 +5665,7 @@ sctp_peeraddr(struct socket *so, struct mbuf *nam)
 #if defined(__FreeBSD__) || defined(__APPLE__)
 	SCTP_MALLOC_SONAME(sin, struct sockaddr_in *, sizeof *sin);
 #else
-	sctp_buf_len(nam) = sizeof(*sin);
+	SCTP_BUF_LEN(nam) = sizeof(*sin);
 	memset(sin, 0, sizeof(*sin));
 #endif
 	sin->sin_family = AF_INET;

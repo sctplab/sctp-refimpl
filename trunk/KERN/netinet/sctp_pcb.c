@@ -1874,7 +1874,7 @@ sctp_inpcb_alloc(struct socket *so)
 	/* seed random number generator */
 	m->random_counter = 1;
 	m->store_at = SCTP_SIGNATURE_SIZE;
-	sctp_read_random(m->random_numbers, sizeof(m->random_numbers));
+	SCTP_READ_RANDOM(m->random_numbers, sizeof(m->random_numbers));
 	sctp_fill_random_store(m);
 
 	/* Minimum cookie size */
@@ -2674,13 +2674,13 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 					struct sctp_paramhdr *ph;
 					uint32_t *ippp;
 
-					sctp_buf_len(op_err) =
+					SCTP_BUF_LEN(op_err) =
 					    sizeof(struct sctp_paramhdr) + sizeof(uint32_t);
 					ph = mtod(op_err,
 					    struct sctp_paramhdr *);
 					ph->param_type = htons(
 					    SCTP_CAUSE_USER_INITIATED_ABT);
-					ph->param_length = htons(sctp_buf_len(op_err));
+					ph->param_length = htons(SCTP_BUF_LEN(op_err));
 					ippp = (uint32_t *) (ph + 1);
 					*ippp = htonl(SCTP_FROM_SCTP_PCB+SCTP_LOC_3);
 				}
@@ -2745,14 +2745,14 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 						/* Fill in the user initiated abort */
 						struct sctp_paramhdr *ph;
 						uint32_t *ippp;
-						sctp_buf_len(op_err) =
+						SCTP_BUF_LEN(op_err) =
 							(sizeof(struct sctp_paramhdr) +
 							 sizeof(uint32_t));
 						ph = mtod(op_err,
 							  struct sctp_paramhdr *);
 						ph->param_type = htons(
 							SCTP_CAUSE_USER_INITIATED_ABT);
-						ph->param_length = htons(sctp_buf_len(op_err));
+						ph->param_length = htons(SCTP_BUF_LEN(op_err));
 						ippp = (uint32_t *) (ph + 1);
 						*ippp = htonl(SCTP_FROM_SCTP_PCB+SCTP_LOC_5);
 					}
@@ -2823,12 +2823,12 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 				/* Fill in the user initiated abort */
 				struct sctp_paramhdr *ph;
 
-				sctp_buf_len(op_err) = (sizeof(struct sctp_paramhdr) +
+				SCTP_BUF_LEN(op_err) = (sizeof(struct sctp_paramhdr) +
 						 sizeof(uint32_t));
 				ph = mtod(op_err, struct sctp_paramhdr *);
 				ph->param_type = htons(
 				    SCTP_CAUSE_USER_INITIATED_ABT);
-				ph->param_length = htons(sctp_buf_len(op_err));
+				ph->param_length = htons(SCTP_BUF_LEN(op_err));
 				ippp = (uint32_t *) (ph + 1);
 				*ippp = htonl(SCTP_FROM_SCTP_PCB+SCTP_LOC_7);
 
