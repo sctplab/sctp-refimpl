@@ -2757,7 +2757,7 @@ sctp_notify_assoc_change(uint32_t event, struct sctp_tcb *stcb,
 		return;
 	}
 
-	m_notify = sctp_get_mbuf_for_msg(sizeof(struct sctp_assoc_change), 1, M_DONTWAIT, 1, MT_DATA);
+	m_notify = sctp_get_mbuf_for_msg(sizeof(struct sctp_assoc_change), 0, M_DONTWAIT, 1, MT_DATA);
 	if (m_notify == NULL)
 		/* no space left */
 		return;
@@ -2773,8 +2773,6 @@ sctp_notify_assoc_change(uint32_t event, struct sctp_tcb *stcb,
 	sac->sac_outbound_streams = stcb->asoc.streamoutcnt;
 	sac->sac_inbound_streams = stcb->asoc.streamincnt;
 	sac->sac_assoc_id = sctp_get_associd(stcb);
-	SCTP_BUF_HDR_LEN(m_notify) = sizeof(struct sctp_assoc_change);
-	m_notify->m_pkthdr.rcvif = 0;
 	SCTP_BUF_LEN(m_notify) = sizeof(struct sctp_assoc_change);
 	SCTP_BUF_NEXT(m_notify) = NULL;
 	control = sctp_build_readq_entry(stcb, stcb->asoc.primary_destination,
@@ -2810,7 +2808,7 @@ sctp_notify_peer_addr_change(struct sctp_tcb *stcb, uint32_t state,
 		/* event not enabled */
 		return;
 
-	m_notify = sctp_get_mbuf_for_msg(sizeof(struct sctp_paddr_change), 1, M_DONTWAIT, 1, MT_DATA);
+	m_notify = sctp_get_mbuf_for_msg(sizeof(struct sctp_paddr_change), 0, M_DONTWAIT, 1, MT_DATA);
 	if (m_notify == NULL)
 		return;
 	SCTP_BUF_LEN(m_notify) = 0;
@@ -2827,8 +2825,6 @@ sctp_notify_peer_addr_change(struct sctp_tcb *stcb, uint32_t state,
 	spc->spc_error = error;
 	spc->spc_assoc_id = sctp_get_associd(stcb);
 
-	SCTP_BUF_HDR_LEN(m_notify) = sizeof(struct sctp_paddr_change);
-	m_notify->m_pkthdr.rcvif = 0;
 	SCTP_BUF_LEN(m_notify) = sizeof(struct sctp_paddr_change);
 	SCTP_BUF_NEXT(m_notify) = NULL;
 
@@ -2865,7 +2861,7 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, uint32_t error,
 		return;
 
 	length = sizeof(struct sctp_send_failed) + chk->send_size;
-	m_notify = sctp_get_mbuf_for_msg(sizeof(struct sctp_send_failed), 1, M_DONTWAIT, 1, MT_DATA);
+	m_notify = sctp_get_mbuf_for_msg(sizeof(struct sctp_send_failed), 0, M_DONTWAIT, 1, MT_DATA);
 	if (m_notify == NULL)
 		/* no space left */
 		return;
@@ -2887,8 +2883,6 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, uint32_t error,
 	ssf->ssf_info.sinfo_assoc_id = sctp_get_associd(stcb);
 	ssf->ssf_assoc_id = sctp_get_associd(stcb);
 	SCTP_BUF_NEXT(m_notify) = chk->data;
-	SCTP_BUF_HDR_LEN(m_notify) = length;
-	m_notify->m_pkthdr.rcvif = 0;
 	SCTP_BUF_LEN(m_notify) = sizeof(struct sctp_send_failed);
 
 	/* Steal off the mbuf */
@@ -2932,7 +2926,7 @@ sctp_notify_send_failed2(struct sctp_tcb *stcb, uint32_t error,
 		return;
 
 	length = sizeof(struct sctp_send_failed) + sp->length;
-	m_notify = sctp_get_mbuf_for_msg(sizeof(struct sctp_adaption_event), 1, M_DONTWAIT, 1, MT_DATA);
+	m_notify = sctp_get_mbuf_for_msg(sizeof(struct sctp_adaption_event), 0, M_DONTWAIT, 1, MT_DATA);
 	if (m_notify == NULL)
 		/* no space left */
 		return;
@@ -2954,8 +2948,6 @@ sctp_notify_send_failed2(struct sctp_tcb *stcb, uint32_t error,
 	ssf->ssf_info.sinfo_assoc_id = sctp_get_associd(stcb);
 	ssf->ssf_assoc_id = sctp_get_associd(stcb);
 	SCTP_BUF_NEXT(m_notify) = sp->data;
-	SCTP_BUF_HDR_LEN(m_notify) = length;
-	m_notify->m_pkthdr.rcvif = 0;
 	SCTP_BUF_LEN(m_notify) = sizeof(struct sctp_send_failed);
 
 	/* Steal off the mbuf */
@@ -2998,7 +2990,7 @@ sctp_notify_adaptation_layer(struct sctp_tcb *stcb,
 		/* event not enabled */
 		return;
 
-	m_notify = sctp_get_mbuf_for_msg(sizeof(struct sctp_adaption_event), 1, M_DONTWAIT, 1, MT_DATA);
+	m_notify = sctp_get_mbuf_for_msg(sizeof(struct sctp_adaption_event), 0, M_DONTWAIT, 1, MT_DATA);
 	if (m_notify == NULL)
 		/* no space left */
 		return;
@@ -3010,8 +3002,6 @@ sctp_notify_adaptation_layer(struct sctp_tcb *stcb,
 	sai->sai_adaptation_ind = error;
 	sai->sai_assoc_id = sctp_get_associd(stcb);
 
-	SCTP_BUF_HDR_LEN(m_notify) = sizeof(struct sctp_adaptation_event);
-	m_notify->m_pkthdr.rcvif = 0;
 	SCTP_BUF_LEN(m_notify) = sizeof(struct sctp_adaptation_event);
 	SCTP_BUF_NEXT(m_notify) = NULL;
 
@@ -3047,7 +3037,7 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
 		/* event not enabled */
 		return;
 
-	m_notify = sctp_get_mbuf_for_msg(sizeof(struct sctp_pdapi_event), 1, M_DONTWAIT, 1, MT_DATA);
+	m_notify = sctp_get_mbuf_for_msg(sizeof(struct sctp_pdapi_event), 0, M_DONTWAIT, 1, MT_DATA);
 	if (m_notify == NULL)
 		/* no space left */
 		return;
@@ -3059,8 +3049,6 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
 	pdapi->pdapi_indication = error;
 	pdapi->pdapi_assoc_id = sctp_get_associd(stcb);
 
-	SCTP_BUF_HDR_LEN(m_notify) = sizeof(struct sctp_pdapi_event);
-	m_notify->m_pkthdr.rcvif = 0;
 	SCTP_BUF_LEN(m_notify) = sizeof(struct sctp_pdapi_event);
 	SCTP_BUF_NEXT(m_notify) = NULL;
 	control = sctp_build_readq_entry(stcb, stcb->asoc.primary_destination,
@@ -3125,7 +3113,7 @@ sctp_notify_shutdown_event(struct sctp_tcb *stcb)
 		/* event not enabled */
 		return;
 
-	m_notify = sctp_get_mbuf_for_msg(sizeof(struct sctp_shutdown_event), 1, M_DONTWAIT, 1, MT_DATA);
+	m_notify = sctp_get_mbuf_for_msg(sizeof(struct sctp_shutdown_event), 0, M_DONTWAIT, 1, MT_DATA);
 	if (m_notify == NULL)
 		/* no space left */
 		return;
@@ -3135,8 +3123,6 @@ sctp_notify_shutdown_event(struct sctp_tcb *stcb)
 	sse->sse_length = sizeof(struct sctp_shutdown_event);
 	sse->sse_assoc_id = sctp_get_associd(stcb);
 
-	SCTP_BUF_HDR_LEN(m_notify) = sizeof(struct sctp_shutdown_event);
-	m_notify->m_pkthdr.rcvif = 0;
 	SCTP_BUF_LEN(m_notify) = sizeof(struct sctp_shutdown_event);
 	SCTP_BUF_NEXT(m_notify) = NULL;
 
@@ -3171,7 +3157,7 @@ sctp_notify_stream_reset(struct sctp_tcb *stcb,
 		/* event not enabled */
 		return;
 
-	m_notify = sctp_get_mbuf_for_msg(MCLBYTES, 1, M_DONTWAIT, 1, MT_DATA);
+	m_notify = sctp_get_mbuf_for_msg(MCLBYTES, 0, M_DONTWAIT, 1, MT_DATA);
 	if (m_notify == NULL)
 		/* no space left */
 		return;
@@ -3198,8 +3184,6 @@ sctp_notify_stream_reset(struct sctp_tcb *stcb,
 			strreset->strreset_list[i] = ntohs(list[i]);
 		}
 	}
-	SCTP_BUF_HDR_LEN(m_notify) = len;
-	m_notify->m_pkthdr.rcvif = 0;
 	SCTP_BUF_LEN(m_notify) = len;
 	SCTP_BUF_NEXT(m_notify) = NULL;
 	if (sctp_sbspace(&stcb->asoc, &stcb->sctp_socket->so_rcv) < SCTP_BUF_LEN(m_notify)) {
@@ -3948,8 +3932,6 @@ static void
 sctp_print_mbuf_chain(struct mbuf *m)
 {
 	for(; m; m = SCTP_BUF_NEXT(m)) {
-		if (m->m_flags & M_PKTHDR)
-			printf("%p: len = %d\n", m, SCTP_BUF_HDR_LEN(m));
 		printf("%p: m_len = %d\n", m, SCTP_BUF_LEN(m));
 		if (SCTP_BUF_IS_EXTENDED(m))
 			printf("%p: m->m_ext.ext_size = %d\n", m, m->m_ext.ext_size);

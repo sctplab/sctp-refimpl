@@ -351,7 +351,7 @@ sctp_build_ctl_nchunk(struct sctp_inpcb *inp,
 
 
 	ret = sctp_get_mbuf_for_msg(len,
-				    1, M_DONTWAIT, 1, MT_DATA);
+				    0, M_DONTWAIT, 1, MT_DATA);
 
 	if (ret == NULL) {
 		/* No space */
@@ -371,7 +371,6 @@ sctp_build_ctl_nchunk(struct sctp_inpcb *inp,
 		*outinfo = *sinfo;
 	}
 	SCTP_BUF_LEN(ret) = cmh->cmsg_len;
-	SCTP_BUF_HDR_LEN(ret) = SCTP_BUF_LEN(ret);
 	return (ret);
 }
 
@@ -385,7 +384,6 @@ static void
 sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 {
 	struct sctp_tmit_chunk *chk;
-	struct mbuf *m;
 	uint16_t nxt_todel;
 	uint16_t stream_no;
 	int end = 0;
@@ -438,18 +436,6 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 			 * unordered
 			 */
 			return;
-		}
-		if ((chk->data->m_flags & M_PKTHDR) == 0) {
-			m = sctp_get_mbuf_for_msg(1,
-						  1, M_DONTWAIT, 1, MT_DATA);
-			if (m == NULL) {
-				/* no room! */
-				return;
-			}
-			SCTP_BUF_HDR_LEN(m) = chk->send_size;
-			SCTP_BUF_LEN(m) = 0;
-			SCTP_BUF_NEXT(m) = chk->data;
-			chk->data = m;
 		}
 		if (chk->rec.data.rcv_flags & SCTP_DATA_FIRST_FRAG) {
 
@@ -1646,7 +1632,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		struct mbuf *mb;
 
 		mb = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) * 2),
-					   1, M_DONTWAIT, 1, MT_DATA);	
+					   0, M_DONTWAIT, 1, MT_DATA);	
 		if (mb != NULL) {
 			/* add some space up front so prepend will work well */
 			SCTP_BUF_RESV_UF(mb, sizeof(struct sctp_chunkhdr));
@@ -1656,8 +1642,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			 * two back to back phdr, one with the error type
 			 * and size, the other with the streamid and a rsvd
 			 */
-			SCTP_BUF_HDR_LEN(mb) = SCTP_BUF_LEN(mb) +
-			    (sizeof(struct sctp_paramhdr) * 2);
+			SCTP_BUF_LEN(mb) = (sizeof(struct sctp_paramhdr) * 2);
 			phdr->param_type = htons(SCTP_CAUSE_INVALID_STREAM);
 			phdr->param_length =
 			    htons(sizeof(struct sctp_paramhdr) * 2);
@@ -1740,12 +1725,27 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 #endif		
 	} else {
 		/* We can steal the last chunk */
+		int l_len;
 		dmbuf = *m;
 		/* lop off the top part */
 		m_adj(dmbuf, (offset + sizeof(struct sctp_data_chunk)));
-		if (SCTP_BUF_HDR_LEN(dmbuf) > the_len) {
+		if(SCTP_BUF_NEXT(dmbuf) == NULL) {
+			l_len = SCTP_BUF_LEN(dmbuf);
+		} else {
+			/* need to count up the size hopefully
+			 * does not hit this to often :-0
+			 */
+			struct mbuf *lat;
+			l_len = 0;
+			lat = dmbuf;
+			while(lat) {
+				l_len += SCTP_BUF_LEN(lat);
+				lat = SCTP_BUF_NEXT(lat);
+			}
+		}
+		if (l_len > the_len) {
 			/* Trim the end round bytes off  too */
-			m_adj(dmbuf, -(SCTP_BUF_HDR_LEN(dmbuf) - the_len));
+			m_adj(dmbuf, -(l_len - the_len));
 		}
 	}
 	if (dmbuf == NULL) {
@@ -2556,19 +2556,10 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 	 */
 	if (SCTP_BUF_LEN(m) < (long)MHLEN && SCTP_BUF_NEXT(m) == NULL) {
 		/* we only handle mbufs that are singletons.. not chains */
-		m = sctp_get_mbuf_for_msg(SCTP_BUF_LEN(m), 1, M_DONTWAIT, 1, MT_DATA);
+		m = sctp_get_mbuf_for_msg(SCTP_BUF_LEN(m), 0, M_DONTWAIT, 1, MT_DATA);
 		if (m) {
 			/* ok lets see if we can copy the data up */
 			caddr_t *from, *to;
-
-			if ((*mm)->m_flags & M_PKTHDR) {
-				/* got to copy the header first */
-#ifdef __APPLE__
-				M_COPY_PKTHDR(m, (*mm));
-#else
-				M_MOVE_PKTHDR(m, (*mm));
-#endif
-			}
 			/* get the pointers and copy */
 			to = mtod(m, caddr_t *);
 			from = mtod((*mm), caddr_t *);
@@ -2705,7 +2696,7 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 					struct mbuf *mm;
 					struct sctp_paramhdr *phd;
 
-					mm = sctp_get_mbuf_for_msg(sizeof(*phd),1, M_DONTWAIT, 1, MT_DATA);
+					mm = sctp_get_mbuf_for_msg(sizeof(*phd), 0, M_DONTWAIT, 1, MT_DATA);
 					if (mm) {
 						phd = mtod(mm, struct sctp_paramhdr *);
 						/*
@@ -2725,9 +2716,6 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 									  SCTP_SIZE32(chk_length),
 									  M_DONTWAIT);
 						if (SCTP_BUF_NEXT(mm)) {
-							SCTP_BUF_HDR_LEN(mm) =
-								SCTP_SIZE32(chk_length) +
-								sizeof(*phd);
 							sctp_queue_op_err(stcb, mm);
 						} else {
 							sctp_m_freem(mm);
