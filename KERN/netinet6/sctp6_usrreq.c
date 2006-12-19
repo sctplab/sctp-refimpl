@@ -287,8 +287,7 @@ sctp6_input(mp, offp, proto)
 	if (sh->dest_port == 0)
 		goto bad;
 	if ((sctp_no_csum_on_loopback == 0) ||
-	    (m->m_pkthdr.rcvif == NULL) ||
-	    (m->m_pkthdr.rcvif->if_type != IFT_LOOP)) {
+	    (!SCTP_IS_IT_LOOPBACK(m))) {
 		/*
 		 * we do NOT validate things from the loopback if the sysctl
 		 * is set to 1.
