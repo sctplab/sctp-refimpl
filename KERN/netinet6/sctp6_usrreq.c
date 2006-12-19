@@ -214,7 +214,7 @@ sctp6_input(mp, offp, proto)
 
 #endif
 {
-	struct mbuf *m = *mp;
+	struct mbuf *m;
 	struct ip6_hdr *ip6;
 	struct sctphdr *sh;
 	struct sctp_inpcb *in6p = NULL;
@@ -228,6 +228,8 @@ sctp6_input(mp, offp, proto)
 	struct sctp_tcb *stcb = NULL;
 	int off = *offp;
 	int s;
+
+	m = SCTP_HEADER_TO_CHAIN(*mp);
 
 	ip6 = mtod(m, struct ip6_hdr *);
 #ifndef PULLDOWN_TEST
@@ -274,7 +276,7 @@ sctp6_input(mp, offp, proto)
 	SCTP_STAT_INCR_COUNTER64(sctps_inpackets);
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-		printf("V6 input gets a packet iphlen:%d pktlen:%d\n", iphlen, SCTP_BUF_HDR_LEN(m));
+		printf("V6 input gets a packet iphlen:%d pktlen:%d\n", iphlen, SCTP_HEADER_LEN((*mp)));
 	}
 #endif
 	if (IN6_IS_ADDR_MULTICAST(&ip6->ip6_dst)) {
@@ -331,10 +333,8 @@ sctp6_input(mp, offp, proto)
 			goto bad;
 		}
 		sh->checksum = calc_check;
-	} else {
+	} 
 sctp_skip_csum:
-		mlen = SCTP_BUF_HDR_LEN(m);
-	}
 	net = NULL;
 	/*
 	 * Locate pcb and tcb for datagram sctp_findassociation_addr() wants
@@ -460,9 +460,12 @@ sctp_skip_csum:
 	/*
 	 * CONTROL chunk processing
 	 */
-	length = ntohs(ip6->ip6_plen) + iphlen;
 	offset -= sizeof(*ch);
 	ecn_bits = ((ntohl(ip6->ip6_flow) >> 20) & 0x000000ff);
+
+	/* Length now holds the total packet length payload + iphlen */
+	length = ntohs(ip6->ip6_plen) + iphlen;
+
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
 #else
@@ -618,8 +621,7 @@ sctp6_ctlinput(cmd, pktdst, d)
 		struct sctp_nets *net = NULL;
 		struct sockaddr_in6 final;
 
-		if (ip6cp->ip6c_m == NULL ||
-		    (size_t)SCTP_BUF_HDR_LEN(ip6cp->ip6c_m) < (ip6cp->ip6c_off + sizeof(sh)))
+		if (ip6cp->ip6c_m == NULL)
 			return;
 
 		bzero(&sh, sizeof(sh));
@@ -1416,19 +1418,6 @@ connected_type:
 			inp->control = NULL;
 		}
 		inp->control = control;
-	}
-	/* add it in possibly */
-	if ((inp->pkt) &&
-	    (inp->pkt->m_flags & M_PKTHDR)) {
-		struct mbuf *x;
-		int c_len;
-
-		c_len = 0;
-		/* How big is it */
-		for (x = m; x; x = SCTP_BUF_NEXT(x)) {
-			c_len += SCTP_BUF_LEN(x);
-		}
-		SCTP_BUF_HDR_LEN(inp->pkt) += c_len;
 	}
 	/* Place the data */
 	if (inp->pkt) {
