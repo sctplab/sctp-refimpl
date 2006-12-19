@@ -2083,7 +2083,7 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 		if (m == NULL) {
 			return (NULL);
 		}
-		if (SCTP_BUF_IS_EXTENDED((m) == 0) {
+		if (SCTP_BUF_IS_EXTENDED(m) == 0) {
 			sctp_m_freem(m);
 			return (NULL);
 		}
