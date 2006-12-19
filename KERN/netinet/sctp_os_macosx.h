@@ -97,9 +97,9 @@ typedef struct callout sctp_os_timer_t;
 #define SCTP_BUF_AT(m, size) m->m_data + size
 #define SCTP_BUF_IS_EXTENDED(m) (m->m_flags & M_EXT)
 
-/* For APPLE this just accesses the M_PKTHDR length
- * so it operates on an mbuf with hdr flag. Other
- * O/S's may have seperate packet header and mbuf
+/*
+ * For APPLE this just accesses the M_PKTHDR length so it operates on an
+ * mbuf with hdr flag. Other O/S's may have seperate packet header and mbuf
  * chain pointers.. thus the macro.
  */
 #define SCTP_HEADER_TO_CHAIN(m) (m)
@@ -108,13 +108,18 @@ typedef struct callout sctp_os_timer_t;
 
 /* Attach the chain of data into the sendable packet. */
 #define SCTP_ATTACH_CHAIN(pak, m, packet_length) do { \
-                                                 pak->m_next = m; \
-                                                 pak->m_pkthdr.len = packet_length; \
-                         } while(0)
+	pak->m_next = m; \
+	pak->m_pkthdr.len = packet_length; \
+} while(0)
 
-/* This converts any input packet header
- * into the chain of data holders, for APPLE
- * its a NOP.
+/* Other m_pkthdr type things */
+#define SCTP_IS_IT_BROADCAST(dst, m) in_broadcast(dst, m->m_pkthdr.rcvif)
+#define SCTP_IS_IT_LOOPBACK(m) ((m->m_pkthdr.rcvif == NULL) || (m->m_pkthdr.rcvif->if_type != IFT_LOOP))
+
+
+/*
+ * This converts any input packet header into the chain of data holders,
+ * for APPLE its a NOP.
  */
 #define SCTP_PAK_TO_BUF(i_pak) (i_pak)
 
@@ -129,9 +134,9 @@ typedef struct callout sctp_os_timer_t;
 
 /* Apple KPI defines for atomic operations */
 #include <libkern/OSAtomic.h>
-#define atomic_add_int(addr, val)        OSAddAtomic(val, (SInt32 *)addr)
-#define atomic_subtract_int(addr, val)   OSAddAtomic((-val), (SInt32 *)addr)
-#define atomic_add_16(addr, val)         OSAddAtomic16(val, (SInt16 *)addr)
+#define atomic_add_int(addr, val)	OSAddAtomic(val, (SInt32 *)addr)
+#define atomic_subtract_int(addr, val)	OSAddAtomic((-val), (SInt32 *)addr)
+#define atomic_add_16(addr, val)	OSAddAtomic16(val, (SInt16 *)addr)
 #define atomic_cmpset_int(dst, exp, src) OSCompareAndSwap(exp, src, (UInt32 *)dst)
 
 /* additional protosw entries for Mac OS X 10.4 */
