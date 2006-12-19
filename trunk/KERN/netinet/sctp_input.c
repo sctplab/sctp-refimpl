@@ -1149,7 +1149,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 
 		sctp_send_shutdown_ack(stcb, stcb->asoc.primary_destination);
 		op_err = sctp_get_mbuf_for_msg(sizeof(struct sctp_paramhdr),
-					       1, M_DONTWAIT, 1, MT_DATA);
+					       0, M_DONTWAIT, 1, MT_DATA);
 		if (op_err == NULL) {
 			/* FOOBAR */
 			return (NULL);
@@ -1159,7 +1159,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		SCTP_BUF_RESV_UF(op_err, sizeof(struct sctphdr));
 		SCTP_BUF_RESV_UF(op_err,  sizeof(struct sctp_chunkhdr));
 		/* Set the len */
-		SCTP_BUF_LEN(op_err) = SCTP_BUF_HDR_LEN(op_err) = sizeof(struct sctp_paramhdr);
+		SCTP_BUF_LEN(op_err) = sizeof(struct sctp_paramhdr);
 		ph = mtod(op_err, struct sctp_paramhdr *);
 		ph->param_type = htons(SCTP_CAUSE_COOKIE_IN_SHUTDOWN);
 		ph->param_length = htons(sizeof(struct sctp_paramhdr));
@@ -1826,6 +1826,8 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		sin->sin_len = sizeof(*sin);
 		sin->sin_port = sh->dest_port;
 		sin->sin_addr.s_addr = iph->ip_dst.s_addr;
+		size_of_pkt = SCTP_GET_IPV4_LENGTH(iph);
+
 	} else if (iph->ip_v == (IPV6_VERSION >> 4)) {
 		/* its IPv6 */
 		struct ip6_hdr *ip6;
@@ -1838,6 +1840,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		ip6 = mtod(m, struct ip6_hdr *);
 		sin6->sin6_port = sh->dest_port;
 		sin6->sin6_addr = ip6->ip6_dst;
+		size_of_pkt = SCTP_GET_IPV6_LENGTH(ip6);
 	} else {
 		return (NULL);
 	}
@@ -1857,20 +1860,6 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		 * opposite byte order of the machine :->
 		 */
 		return (NULL);
-	}
-	/* compute size of packet */
-	if (m->m_flags & M_PKTHDR) {
-		size_of_pkt = SCTP_BUF_HDR_LEN(m);
-	} else {
-		/* Should have a pkt hdr really */
-		struct mbuf *mat;
-
-		mat = m;
-		size_of_pkt = 0;
-		while (mat != NULL) {
-			size_of_pkt += SCTP_BUF_LEN(mat);
-			mat = SCTP_BUF_NEXT(mat);
-		}
 	}
 	if (cookie_len > size_of_pkt ||
 	    cookie_len < sizeof(struct sctp_cookie_echo_chunk) +
@@ -1957,31 +1946,6 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			m_at = SCTP_BUF_NEXT(m_at);
 		}
 		SCTP_BUF_NEXT(m_at) = m_sig;
-		if (m->m_flags & M_PKTHDR) {
-			/*
-			 * We should only do this if and only if the front
-			 * mbuf has a SCTP_BUF_HDR_LEN()... it should in theory.
-			 */
-			if (m_sig->m_flags & M_PKTHDR) {
-				/* Add back to the pkt hdr of main m chain */
-				SCTP_BUF_HDR_LEN(m) += SCTP_BUF_HDR_LEN(m_sig);
-			} else {
-				/*
-				 * Got a problem, no pkthdr in split chain.
-				 * TSNH but we will handle it just in case
-				 */
-				int mmlen = 0;
-				struct mbuf *lat;
-
-				printf("Warning: Hitting m_split join TSNH code - fixed\n");
-				lat = m_sig;
-				while (lat) {
-					mmlen += SCTP_BUF_LEN(lat);
-					lat = SCTP_BUF_NEXT(lat);
-				}
-				SCTP_BUF_HDR_LEN(m) += mmlen;
-			}
-		}
 	}
 
 	if (cookie_ok == 0) {
@@ -2013,7 +1977,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		struct sctp_stale_cookie_msg *scm;
 		uint32_t tim;
 		op_err = sctp_get_mbuf_for_msg(sizeof(struct sctp_stale_cookie_msg),
-					       1, M_DONTWAIT, 1, MT_DATA);
+					       0, M_DONTWAIT, 1, MT_DATA);
 		if (op_err == NULL) {
 			/* FOOBAR */
 			return (NULL);
@@ -2024,7 +1988,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		SCTP_BUF_RESV_UF(op_err, sizeof(struct sctp_chunkhdr));
 
 		/* Set the len */
-		SCTP_BUF_LEN(op_err) = SCTP_BUF_HDR_LEN(op_err) = sizeof(struct sctp_stale_cookie_msg);
+		SCTP_BUF_LEN(op_err) = sizeof(struct sctp_stale_cookie_msg);
 		scm = mtod(op_err, struct sctp_stale_cookie_msg *);
 		scm->ph.param_type = htons(SCTP_CAUSE_STALE_COOKIE);
 		scm->ph.param_length = htons((sizeof(struct sctp_paramhdr) +
@@ -3156,7 +3120,7 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_out_req
 	chk->asoc = &stcb->asoc;
 	chk->no_fr_allowed = 0;
 	chk->book_size = chk->send_size = sizeof(struct sctp_chunkhdr);
-	chk->data = sctp_get_mbuf_for_msg(MCLBYTES, 1, M_DONTWAIT, 1, MT_DATA);
+	chk->data = sctp_get_mbuf_for_msg(MCLBYTES, 0, M_DONTWAIT, 1, MT_DATA);
 	if (chk->data == NULL) {
 	strres_nochunk:
 		if(chk->data) {
@@ -3178,7 +3142,7 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_out_req
 	ch->chunk_type = SCTP_STREAM_RESET;
 	ch->chunk_flags = 0;
 	ch->chunk_length = htons(chk->send_size);
-	SCTP_BUF_HDR_LEN(chk->data) = SCTP_BUF_LEN(chk->data) = SCTP_SIZE32(chk->send_size);
+	SCTP_BUF_LEN(chk->data) = SCTP_SIZE32(chk->send_size);
 
 
 	ph = (struct sctp_paramhdr *)&sr_req->sr_req;
@@ -3745,12 +3709,11 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 
 				oper = NULL;
 				oper = sctp_get_mbuf_for_msg(sizeof(struct sctp_paramhdr),
-							     1, M_DONTWAIT, 1, MT_DATA);
+							     0, M_DONTWAIT, 1, MT_DATA);
 				if (oper) {
 					/* pre-reserve some space */
 					SCTP_BUF_RESV_UF(oper, sizeof(struct sctp_chunkhdr));
 					SCTP_BUF_LEN(oper) = sizeof(struct sctp_paramhdr);
-					SCTP_BUF_HDR_LEN(oper) = SCTP_BUF_LEN(oper);
 					phdr = mtod(oper, struct sctp_paramhdr *);
 					phdr->param_type = htons(SCTP_CAUSE_OUT_OF_RESC);
 					phdr->param_length = htons(sizeof(struct sctp_paramhdr));
@@ -4048,10 +4011,9 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					if (sctp_abort_if_one_2_one_hits_limit) {
 						oper = NULL;
 						oper = sctp_get_mbuf_for_msg(sizeof(struct sctp_paramhdr),
-									     1, M_DONTWAIT, 1, MT_DATA);
+									     0, M_DONTWAIT, 1, MT_DATA);
 						if (oper) {
 							SCTP_BUF_LEN(oper) =
-								SCTP_BUF_HDR_LEN(oper) =
 								sizeof(struct sctp_paramhdr);
 							phdr = mtod(oper,
 								    struct sctp_paramhdr *);
@@ -4328,7 +4290,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				struct sctp_paramhdr *phd;
 
 				mm = sctp_get_mbuf_for_msg(sizeof(struct sctp_paramhdr),
-							   1, M_DONTWAIT, 1, MT_DATA);
+							   0, M_DONTWAIT, 1, MT_DATA);
 				if (mm) {
 					phd = mtod(mm, struct sctp_paramhdr *);
 					/*
@@ -4344,7 +4306,6 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					SCTP_BUF_NEXT(mm) = sctp_m_copym(m, *offset, SCTP_SIZE32(chk_length),
 								  M_DONTWAIT);
 					if (SCTP_BUF_NEXT(mm)) {
-						SCTP_BUF_HDR_LEN(mm) = SCTP_SIZE32(chk_length) + sizeof(*phd);
 						sctp_queue_op_err(stcb, mm);
 					} else {
 						sctp_m_freem(mm);
@@ -4723,8 +4684,6 @@ static void
 sctp_print_mbuf_chain(struct mbuf *m)
 {
 	for(; m; m = SCTP_BUF_NEXT(m)) {
-		if (m->m_flags & M_PKTHDR)
-			printf("%p: pktsize = %d\n", m, SCTP_BUF_HDR_LEN(m));
 		printf("%p: m_len = %d\n", m, SCTP_BUF_LEN(m));
 		if (SCTP_BUF_IS_EXTENDED(m))
 			printf("%p: m->m_ext.ext_size = %d\n", m, m->m_ext.ext_size);
@@ -4764,17 +4723,17 @@ uint8_t sctp_list_of_chunks[30000];
 
 #if defined(__FreeBSD__) || defined(__APPLE__)
 void
-sctp_input(m, off)
-	struct mbuf *m;
+sctp_input(i_pak, off)
+	struct mbuf *i_pak;
 	int off;
 
 #else
 void
 #if __STDC__
-sctp_input(struct mbuf *m,...)
+sctp_input(struct mbuf *i_pak,...)
 #else
-sctp_input(m, va_alist)
-	struct mbuf *m;
+sctp_input(i_pak, va_alist)
+	struct mbuf *i_pak;
 
 #endif
 #endif
@@ -4782,6 +4741,7 @@ sctp_input(m, va_alist)
 #ifdef SCTP_MBUF_LOGGING
 	struct mbuf *mat;
 #endif
+	struct mbuf *m;
 	int iphlen;
 	int s;
 	uint8_t ecn_bits;
@@ -4817,6 +4777,7 @@ sctp_input(m, va_alist)
 #else
 	iphlen = off;
 #endif
+	m = SCTP_HEADER_TO_CHAIN(i_pak);
 	net = NULL;
 	SCTP_STAT_INCR(sctps_recvpackets);
 	SCTP_STAT_INCR_COUNTER64(sctps_inpackets);
@@ -4927,7 +4888,7 @@ sctp_input(m, va_alist)
 		sh->checksum = calc_check;
 	} else {
 sctp_skip_csum_4:
-		mlen = SCTP_BUF_HDR_LEN(m);
+		mlen = SCTP_HEADER_LEN(i_pak);
 	}
 	/* validate mbuf chain length with IP payload length */
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -5083,8 +5044,11 @@ sctp_skip_csum_4:
 	 */
 #if defined(__FreeBSD__)  || defined(__APPLE__)
 	length = ip->ip_len + iphlen;
-#else
+#elif defined(__NetBSD__)
+	/* Does this really work? */
 	length = ip->ip_len - (ip->ip_hl << 2) + iphlen;
+#else
+	length = ip->ip_len;
 #endif
 	offset -= sizeof(struct sctp_chunkhdr);
 

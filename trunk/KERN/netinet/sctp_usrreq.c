@@ -1491,18 +1491,6 @@ connected_type:
 		}
 		inp->control = control;
 	}
-	/* add it in possibly */
-	if ((inp->pkt) && (inp->pkt->m_flags & M_PKTHDR)) {
-		struct mbuf *x;
-		int c_len;
-
-		c_len = 0;
-		/* How big is it */
-		for (x = m; x; x = SCTP_BUF_NEXT(x)) {
-			c_len += SCTP_BUF_LEN(x);
-		}
-		SCTP_BUF_HDR_LEN(inp->pkt) += c_len;
-	}
 	/* Place the data */
 	if (inp->pkt) {
 		SCTP_BUF_NEXT(inp->pkt_last) = m;

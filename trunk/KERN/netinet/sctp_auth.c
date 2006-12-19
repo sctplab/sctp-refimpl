@@ -1692,7 +1692,7 @@ sctp_handle_auth(struct sctp_tcb *stcb, struct sctp_auth_chunk *auth,
 		 * report this in an Error Chunk: Unsupported HMAC
 		 * Identifier
 		 */
-		m_err = sctp_get_mbuf_for_msg(sizeof(*err), 1, M_DONTWAIT, 1, MT_HEADER);
+		m_err = sctp_get_mbuf_for_msg(sizeof(*err), 0, M_DONTWAIT, 1, MT_HEADER);
 		if (m_err != NULL) {
 			/* pre-reserve some space */
 			SCTP_BUF_RESV_UF(m_err, sizeof(struct sctp_chunkhdr));
@@ -1702,7 +1702,7 @@ sctp_handle_auth(struct sctp_tcb *stcb, struct sctp_auth_chunk *auth,
 			err->ph.param_type = htons(SCTP_CAUSE_UNSUPPORTED_HMACID);
 			err->ph.param_length = htons(sizeof(*err));
 			err->hmac_id = ntohs(hmac_id);
-			SCTP_BUF_HDR_LEN(m_err) = SCTP_BUF_LEN(m_err) = sizeof(*err);
+			SCTP_BUF_LEN(m_err) = sizeof(*err);
 			/* queue it */
 			sctp_queue_op_err(stcb, m_err);
 		}
@@ -1794,7 +1794,7 @@ sctp_notify_authentication(struct sctp_tcb *stcb, uint32_t indication,
 		return;
 
 	m_notify = sctp_get_mbuf_for_msg(sizeof(struct sctp_authkey_event), 
-					  1, M_DONTWAIT, 1, MT_HEADER);
+					  0, M_DONTWAIT, 1, MT_HEADER);
 	if (m_notify == NULL)
 		/* no space left */
 		return;
@@ -1809,8 +1809,6 @@ sctp_notify_authentication(struct sctp_tcb *stcb, uint32_t indication,
 	auth->auth_indication = indication;
 	auth->auth_assoc_id = sctp_get_associd(stcb);
 
-	SCTP_BUF_HDR_LEN(m_notify) = sizeof(*auth);
-	m_notify->m_pkthdr.rcvif = 0;
 	SCTP_BUF_LEN(m_notify) = sizeof(*auth);
 	SCTP_BUF_NEXT(m_notify) = NULL;
 

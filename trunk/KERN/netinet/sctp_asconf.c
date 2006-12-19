@@ -765,7 +765,7 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 		sctp_m_freem(asoc->last_asconf_ack_sent);
 		asoc->last_asconf_ack_sent = NULL;
 	}
-	m_ack = sctp_get_mbuf_for_msg(sizeof(struct sctp_asconf_ack_chunk), 1,
+	m_ack = sctp_get_mbuf_for_msg(sizeof(struct sctp_asconf_ack_chunk), 0,
 				      M_DONTWAIT, 1, MT_DATA);
 	if (m_ack == NULL) {
 #ifdef SCTP_DEBUG
@@ -785,7 +785,6 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 	/* set initial lengths (eg. just an ASCONF-ACK), ntohx at the end! */
 	SCTP_BUF_LEN(m_ack) = sizeof(struct sctp_asconf_ack_chunk);
 	ack_cp->ch.chunk_length = sizeof(struct sctp_asconf_ack_chunk);
-	SCTP_BUF_HDR_LEN(m_ack) = sizeof(struct sctp_asconf_ack_chunk);
 
 	/* skip the lookup address parameter */
 	offset += sizeof(struct sctp_asconf_chunk);
@@ -906,7 +905,6 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 			m_tail = m_result;
 			/* update lengths, make sure it's aligned too */
 			SCTP_BUF_LEN(m_result) = SCTP_SIZE32(SCTP_BUF_LEN(m_result));
-			SCTP_BUF_HDR_LEN(m_ack) += SCTP_BUF_LEN(m_result);
 			ack_cp->ch.chunk_length += SCTP_BUF_LEN(m_result);
 			/* set flag to force success reports */
 			error = 1;
@@ -2323,7 +2321,7 @@ sctp_find_valid_localaddr_ep(struct sctp_tcb *stcb)
  * mbuf, no ASCONF params queued, etc)
  */
 struct mbuf *
-sctp_compose_asconf(struct sctp_tcb *stcb)
+sctp_compose_asconf(struct sctp_tcb *stcb, int *retlen)
 {
 	struct mbuf *m_asconf, *m_asconf_chk;
 	struct sctp_asconf_addr *aa;
@@ -2344,7 +2342,7 @@ sctp_compose_asconf(struct sctp_tcb *stcb)
 	 * it's simpler to fill in the asconf chunk header lookup address on
 	 * the fly
 	 */
-	m_asconf_chk = sctp_get_mbuf_for_msg(sizeof(struct sctp_asconf_chunk),1, M_DONTWAIT, 1, MT_DATA);
+	m_asconf_chk = sctp_get_mbuf_for_msg(sizeof(struct sctp_asconf_chunk), 0, M_DONTWAIT, 1, MT_DATA);
 	if (m_asconf_chk == NULL) {
 		/* no mbuf's */
 #ifdef SCTP_DEBUG
@@ -2353,7 +2351,7 @@ sctp_compose_asconf(struct sctp_tcb *stcb)
 #endif				/* SCTP_DEBUG */
 		return (NULL);
 	}
-	m_asconf = sctp_get_mbuf_for_msg(MCLBYTES, 1, M_DONTWAIT, 1, MT_DATA);
+	m_asconf = sctp_get_mbuf_for_msg(MCLBYTES, 0, M_DONTWAIT, 1, MT_DATA);
 	if (m_asconf == NULL) {
 		/* no mbuf's */
 #ifdef SCTP_DEBUG
@@ -2491,8 +2489,8 @@ sctp_compose_asconf(struct sctp_tcb *stcb)
 	}
 	/* chain it all together */
 	SCTP_BUF_NEXT(m_asconf_chk) = m_asconf;
-	SCTP_BUF_HDR_LEN(m_asconf_chk) = SCTP_BUF_LEN(m_asconf_chk) + SCTP_BUF_LEN(m_asconf);
-	acp->ch.chunk_length = ntohs(SCTP_BUF_HDR_LEN(m_asconf_chk));
+	SCTP_BUF_LEN(m_asconf_chk) += SCTP_BUF_LEN(m_asconf);
+	*retlen = acp->ch.chunk_length = ntohs(SCTP_BUF_LEN(m_asconf_chk) + SCTP_BUF_LEN(m_asconf));
 
 	/* update "sent" flag */
 	stcb->asoc.asconf_sent++;
