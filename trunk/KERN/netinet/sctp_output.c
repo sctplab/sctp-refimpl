@@ -3632,13 +3632,14 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				 */
 				cnt_inits_to = 1;
 				/* pull out the scope_id from incoming pkt */
-#ifdef SCTP_KAME
-				/* FIX ME: does this have scope from rcvif? */
-				(void)sa6_recoverscope(sin6);
-#else
+#ifndef SCTP_KAME
 				(void)in6_recoverscope(sin6, &ip6->ip6_src,
 						       init_pkt->m_pkthdr.rcvif);
-#endif				/* SCTP_KAME */
+#else
+				/* FIX ME: does this have scope from rcvif? */
+				(void)sa6_recoverscope(sin6);
+#endif				/* not SCTP_KAME */
+
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
 				in6_embedscope(&sin6->sin6_addr, sin6, NULL,
 					       NULL);
@@ -8095,9 +8096,7 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh)
 	comp_cp->shut_cmp.ch.chunk_length = htons(sizeof(struct sctp_shutdown_complete_chunk));
 
 	/* add checksum */
-	if ((sctp_no_csum_on_loopback) &&
-	    (m->m_pkthdr.rcvif) &&
-	    (m->m_pkthdr.rcvif->if_type == IFT_LOOP)) {
+	if ((sctp_no_csum_on_loopback) && SCTP_IS_IT_LOOPBACK(o_pak)){
 		comp_cp->sh.checksum = 0;
 	} else {
 		comp_cp->sh.checksum = sctp_calculate_sum(mout, NULL, offset_out);
@@ -8966,9 +8965,7 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 	}
 
 	/* add checksum */
-	if ((sctp_no_csum_on_loopback) &&
-	    (m->m_pkthdr.rcvif) &&
-	    (m->m_pkthdr.rcvif->if_type == IFT_LOOP)) {
+	if ((sctp_no_csum_on_loopback) && SCTP_IS_IT_LOOPBACK(o_pak)) {
 		abm->sh.checksum = 0;
 	} else {
 		abm->sh.checksum = sctp_calculate_sum(mout, NULL, iphlen_out);
@@ -9090,9 +9087,7 @@ sctp_send_operr_to(struct mbuf *m, int iphlen,
 		m_copyback(scm, len, padlen, (caddr_t)&cpthis);
 		len += padlen;
 	}
-	if ((sctp_no_csum_on_loopback) &&
-	    (m->m_pkthdr.rcvif) &&
-	    (m->m_pkthdr.rcvif->if_type == IFT_LOOP)) {
+	if ((sctp_no_csum_on_loopback) && SCTP_IS_IT_LOOPBACK(m)) {
 		val = 0;
 	} else {
 		val = sctp_calculate_sum(scm, NULL, 0);

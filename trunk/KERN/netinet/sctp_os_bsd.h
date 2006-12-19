@@ -141,6 +141,11 @@ typedef struct callout sctp_os_timer_t;
                                                  pak->m_pkthdr.len = packet_length; \
                          } while(0)
 
+/* Other m_pkthdr type things */
+#define SCTP_IS_IT_BROADCAST(dst, m) in_broadcast(dst, m->m_pkthdr.rcvif)
+#define SCTP_IS_IT_LOOPBACK(m) ((m->m_pkthdr.rcvif == NULL) ||(m->m_pkthdr.rcvif->if_type != IFT_LOOP))
+
+
 /* This converts any input packet header
  * into the chain of data holders, for BSD
  * its a NOP.

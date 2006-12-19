@@ -4826,7 +4826,7 @@ sctp_input(i_pak, va_alist)
 	if (((ch->chunk_type == SCTP_INITIATION) ||
 	     (ch->chunk_type == SCTP_INITIATION_ACK) ||
 	     (ch->chunk_type == SCTP_COOKIE_ECHO)) &&
-	    (in_broadcast(ip->ip_dst, m->m_pkthdr.rcvif))) {
+	    (SCTP_IS_IT_BROADCAST(ip->ip_dst, i_pak))) {
 		/* We only look at broadcast if its a
 		 * front state, All others we will 
 		 * not have a tcb for anyway.
@@ -4840,8 +4840,7 @@ sctp_input(i_pak, va_alist)
 	}
 	/* validate SCTP checksum */
 	if ((sctp_no_csum_on_loopback == 0) ||
-	    (m->m_pkthdr.rcvif == NULL) ||
-	    (m->m_pkthdr.rcvif->if_type != IFT_LOOP)) {
+	    SCTP_IS_IT_LOOPBACK(i_pak)) {
 		/*
 		 * we do NOT validate things from the loopback if the sysctl
 		 * is set to 1.
