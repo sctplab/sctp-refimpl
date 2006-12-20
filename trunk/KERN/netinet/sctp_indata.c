@@ -4106,6 +4106,41 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 		net->net_ack = 0;
 		net->net_ack2 = 0;
 	}
+	if (sctp_strict_sacks) {
+		uint32_t send_s;
+		struct mbuf *oper;
+		if (TAILQ_EMPTY(&asoc->send_queue)) {
+			send_s = asoc->sending_seq;
+		} else {
+			tp1 = TAILQ_FIRST(&asoc->send_queue);
+			send_s = tp1->rec.data.TSN_seq;
+		}
+		if ((cumack == send_s) ||
+		    compare_with_wrap(cumack, send_s, MAX_TSN)) {
+			*abort_now = 1;
+			/* XXX */
+			oper = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) + sizeof(uint32_t)),
+						     0, M_DONTWAIT, 1, MT_DATA);
+			if (oper) {
+				struct sctp_paramhdr *ph;
+				uint32_t *ippp;
+
+				SCTP_BUF_LEN(oper) = sizeof(struct sctp_paramhdr) +
+					sizeof(uint32_t);
+				ph = mtod(oper, struct sctp_paramhdr *);
+				ph->param_type = htons(SCTP_CAUSE_PROTOCOL_VIOLATION);
+				ph->param_length = htons(SCTP_BUF_LEN(oper));
+				ippp = (uint32_t *) (ph + 1);
+				*ippp = htonl(SCTP_FROM_SCTP_INDATA+SCTP_LOC_25);
+			}
+			stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA+SCTP_LOC_25;
+			sctp_abort_an_association(stcb->sctp_ep, stcb, SCTP_PEER_FAULTY, oper);
+			return;
+
+		}
+	}
+
+
 	asoc->this_sack_highest_gap = cumack;
 	stcb->asoc.overall_error_count = 0;
 	/* process the new consecutive TSN first */
