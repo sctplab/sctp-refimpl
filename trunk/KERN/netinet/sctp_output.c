@@ -5229,7 +5229,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 			SCTP_BUF_LEN(m) = 0;
 			SCTP_BUF_NEXT(m) = chk->data;
 			chk->data = m;
-			MH_ALIGN(chk->data, 4);
+			M_ALIGN(chk->data, 4);
 		}
 	}
 	M_PREPEND(chk->data, sizeof(struct sctp_data_chunk), M_DONTWAIT);
