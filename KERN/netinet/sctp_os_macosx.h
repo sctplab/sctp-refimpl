@@ -96,6 +96,20 @@ typedef struct callout sctp_os_timer_t;
 #define SCTP_BUF_RESV_UF(m, size) m->m_data += size
 #define SCTP_BUF_AT(m, size) m->m_data + size
 #define SCTP_BUF_IS_EXTENDED(m) (m->m_flags & M_EXT)
+#define SCTP_BUF_EXTEND_SIZE(m) (m->m_ext.ext_size)
+#define SCTP_BUF_TYPE(m) (m->m_type)
+#define SCTP_BUF_RECVIF(m) (m->m_pkthdr.rcvif)
+/*************************/
+/* These are for logging */
+/*************************/
+/* return the base ext data pointer */
+#define SCTP_BUF_EXTEND_BASE(m) (m->m_ext.ext_buf)
+ /* return the refcnt of the data pointer */
+#define SCTP_BUF_EXTEND_REFCNT(m) (*m->m_ext.ref_cnt)
+/* return any buffer related flags, this is
+ * used beyond logging for apple only.
+ */
+#define SCTP_BUF_GET_FLAGS(m) (m->m_flags);
 
 /*
  * For APPLE this just accesses the M_PKTHDR length so it operates on an

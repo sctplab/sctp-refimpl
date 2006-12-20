@@ -3634,7 +3634,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				/* pull out the scope_id from incoming pkt */
 #ifndef SCTP_KAME
 				(void)in6_recoverscope(sin6, &ip6->ip6_src,
-						       init_pkt->m_pkthdr.rcvif);
+						       SCTP_BUF_RECVIF(init_pkt));
 #else
 				/* FIX ME: does this have scope from rcvif? */
 				(void)sa6_recoverscope(sin6);
