@@ -330,15 +330,15 @@ sctp_log_mb(struct mbuf *m, int from)
 	sctp_clog[sctp_cwnd_log_at].from = (uint8_t) from;
 	sctp_clog[sctp_cwnd_log_at].event_type = (uint8_t) SCTP_LOG_EVENT_MBUF;
 	sctp_clog[sctp_cwnd_log_at].x.mb.mp = m;
-	sctp_clog[sctp_cwnd_log_at].x.mb.mbuf_flags = (uint8_t)(m->m_flags);
+	sctp_clog[sctp_cwnd_log_at].x.mb.mbuf_flags = (uint8_t)(SCTP_BUF_GET_FLAGS(m));
 	sctp_clog[sctp_cwnd_log_at].x.mb.size = (uint16_t)(SCTP_BUF_LEN(m));
 	sctp_clog[sctp_cwnd_log_at].x.mb.data = SCTP_BUF_AT(m, 0);
 	if(SCTP_BUF_IS_EXTENDED(m)) {
-		sctp_clog[sctp_cwnd_log_at].x.mb.ext = m->m_ext.ext_buf;
+		sctp_clog[sctp_cwnd_log_at].x.mb.ext = SCTP_BUF_EXTEND_BASE(m);
 #if defined(__APPLE__)
 		/* APPLE does not use a ref_cnt, but a forward/backward ref queue */
 #else
-		sctp_clog[sctp_cwnd_log_at].x.mb.refcnt = (uint8_t)(*m->m_ext.ref_cnt);
+		sctp_clog[sctp_cwnd_log_at].x.mb.refcnt = (uint8_t)(SCTP_BUF_EXTEND_REFCNT(m));
 #endif
 	}else {
 		sctp_clog[sctp_cwnd_log_at].x.mb.ext = 0;
@@ -3934,7 +3934,7 @@ sctp_print_mbuf_chain(struct mbuf *m)
 	for(; m; m = SCTP_BUF_NEXT(m)) {
 		printf("%p: m_len = %d\n", m, SCTP_BUF_LEN(m));
 		if (SCTP_BUF_IS_EXTENDED(m))
-			printf("%p: m->m_ext.ext_size = %d\n", m, m->m_ext.ext_size);
+			printf("%p: extend size = %d\n", m, SCTP_BUF_EXTEND_SIZE(m));
 		}  
 }
 #endif
@@ -4332,7 +4332,7 @@ sctp_pkthdr_fix(struct mbuf *m)
 {
 	struct mbuf *m_nxt;
 
-	if ((m->m_flags & M_PKTHDR) == 0) {
+	if ((SCTP_BUF_GET_FLAGS(m) & M_PKTHDR) == 0) {
 		/* not a PKTHDR */
 		return;
 	}
