@@ -4117,6 +4117,9 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 		}
 		if ((cumack == send_s) ||
 		    compare_with_wrap(cumack, send_s, MAX_TSN)) {
+#ifdef INVARIANTS	/* for testing only */
+			panic("Impossible sack 1");
+#else
 			*abort_now = 1;
 			/* XXX */
 			oper = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) + sizeof(uint32_t)),
@@ -4136,7 +4139,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 			stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA+SCTP_LOC_25;
 			sctp_abort_an_association(stcb->sctp_ep, stcb, SCTP_PEER_FAULTY, oper);
 			return;
-
+#endif
 		}
 	}
 
@@ -4567,6 +4570,10 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	if (sctp_strict_sacks) {
 		if (cum_ack == send_s ||
 		    compare_with_wrap(cum_ack, send_s, MAX_TSN)) {
+#ifdef INVARIANTS	/* for testing only */
+	hopeless_peer:
+			panic("Impossible sack 1");
+#else
 			struct mbuf *oper;
 
 			/*
@@ -4593,6 +4600,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 			stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA+SCTP_LOC_25;
 			sctp_abort_an_association(stcb->sctp_ep, stcb, SCTP_PEER_FAULTY, oper);
 			return;
+#endif
 		}
 	}
 	/**********************/
