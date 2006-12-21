@@ -2843,7 +2843,7 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		if (IN6_IS_ADDR_LINKLOCAL(&sin6l->sin6_addr))
 			cnt_inits_to = 1;
 	}
-	if (callout_pending(&net->rxt_timer.timer)) {
+	if (sctp_os_timer_pending(&net->rxt_timer.timer)) {
 		/* This case should not happen */
 		return;
 	}
@@ -5840,7 +5840,7 @@ again_one_more_time:
 					/* remove these chunks at the end */
 					if (chk->rec.chunk_id.id == SCTP_SELECTIVE_ACK) {
 						/* turn off the timer */
-						if (callout_pending(&stcb->asoc.dack_timer.timer)) {
+						if (sctp_os_timer_pending(&stcb->asoc.dack_timer.timer)) {
 							sctp_timer_stop(SCTP_TIMER_TYPE_RECV,
 							    inp, stcb, net, SCTP_FROM_SCTP_OUTPUT+SCTP_LOC_1 );
 						}
@@ -6055,7 +6055,7 @@ again_one_more_time:
 							printf("No memory?\n");
 						}
 #endif
-						if (!callout_pending(&net->rxt_timer.timer)) {
+						if (!sctp_os_timer_pending(&net->rxt_timer.timer)) {
 							sctp_timer_start(SCTP_TIMER_TYPE_SEND, inp, stcb, net);
 						}
 						*reason_code = 3;
@@ -6126,7 +6126,7 @@ again_one_more_time:
 				cookie = 0;
 			}
 			/* must start a send timer if data is being sent */
-			if (bundle_at && (!callout_pending(&net->rxt_timer.timer))) {
+			if (bundle_at && (!sctp_os_timer_pending(&net->rxt_timer.timer))) {
 				/*
 				 * no timer running on this destination
 				 * restart it.
@@ -6223,7 +6223,7 @@ again_one_more_time:
 				if (sctp_early_fr) {
 					if (net->flight_size < net->cwnd) {
 						/* start or restart it */
-						if (callout_pending(&net->fr_timer.timer)) {
+						if (sctp_os_timer_pending(&net->fr_timer.timer)) {
 							sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, inp, stcb, net,
 									SCTP_FROM_SCTP_OUTPUT+SCTP_LOC_2 );
 						}
@@ -6231,7 +6231,7 @@ again_one_more_time:
 						sctp_timer_start(SCTP_TIMER_TYPE_EARLYFR, inp, stcb, net);
 					} else {
 						/* stop it if its running */
-						if (callout_pending(&net->fr_timer.timer)) {
+						if (sctp_os_timer_pending(&net->fr_timer.timer)) {
 							SCTP_STAT_INCR(sctps_earlyfrstpout);
 							sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, inp, stcb, net,
 									SCTP_FROM_SCTP_OUTPUT+SCTP_LOC_3 );
@@ -7026,7 +7026,7 @@ one_chunk_around:
 			 * No matter if we fail/or suceed we should start a
 			 * timer. A failure is like a lost IP packet :-)
 			 */
-			if (!callout_pending(&net->rxt_timer.timer)) {
+			if (!sctp_os_timer_pending(&net->rxt_timer.timer)) {
 				/*
 				 * no timer running on this destination
 				 * restart it.
@@ -7182,7 +7182,7 @@ sctp_timer_validation(struct sctp_inpcb *inp,
 
 	/* Validate that a timer is running somewhere */
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
-		if (callout_pending(&net->rxt_timer.timer)) {
+		if (sctp_os_timer_pending(&net->rxt_timer.timer)) {
 			/* Here is a timer */
 			return (ret);
 		}
@@ -7244,9 +7244,9 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 	/* Do we have something to send, data or control AND
 	 * a sack timer running, if so piggy-back the sack.
 	 */
- 	if(callout_pending(&stcb->asoc.dack_timer.timer)) {
+ 	if (sctp_os_timer_pending(&stcb->asoc.dack_timer.timer)) {
 		sctp_send_sack(stcb);
-		callout_stop(&stcb->asoc.dack_timer.timer);
+		sctp_os_timer_stop(&stcb->asoc.dack_timer.timer);
 	}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	sctp_lock_assert(inp->ip_inp.inp.inp_socket);

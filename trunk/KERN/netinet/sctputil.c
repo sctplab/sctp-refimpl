@@ -909,15 +909,15 @@ sctp_stop_timers_for_shutdown(struct sctp_tcb *stcb)
 
 	asoc = &stcb->asoc;
 
-	callout_stop(&asoc->hb_timer.timer);
-	callout_stop(&asoc->dack_timer.timer);
-	callout_stop(&asoc->strreset_timer.timer);
-	callout_stop(&asoc->asconf_timer.timer);
-	callout_stop(&asoc->autoclose_timer.timer);
-	callout_stop(&asoc->delayed_event_timer.timer);
+	sctp_os_timer_stop(&asoc->hb_timer.timer);
+	sctp_os_timer_stop(&asoc->dack_timer.timer);
+	sctp_os_timer_stop(&asoc->strreset_timer.timer);
+	sctp_os_timer_stop(&asoc->asconf_timer.timer);
+	sctp_os_timer_stop(&asoc->autoclose_timer.timer);
+	sctp_os_timer_stop(&asoc->delayed_event_timer.timer);
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
-		callout_stop(&net->fr_timer.timer);
-		callout_stop(&net->pmtu_timer.timer);
+		sctp_os_timer_stop(&net->fr_timer.timer);
+		sctp_os_timer_stop(&net->pmtu_timer.timer);
 	}
 }
 
@@ -1411,7 +1411,7 @@ sctp_timeout_handler(void *t)
 	}
 #endif				/* SCTP_DEBUG */
 #ifndef __NetBSD__
-	if (!callout_active(&tmr->timer)) {
+	if (!sctp_os_timer_active(&tmr->timer)) {
 		splx(s);
 #if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
 		/* release BSD kernel funnel/mutex */
@@ -1429,7 +1429,7 @@ sctp_timeout_handler(void *t)
 	tmr->stopped_from = 0xa006;
 #if defined(__APPLE__)
 	/* clear the callout pending status here */
-	callout_stop(&tmr->timer);
+	sctp_os_timer_stop(&tmr->timer);
 #endif
 	/* record in stopped what t-o occured */
 	tmr->stopped_from = tmr->type;
@@ -1443,7 +1443,7 @@ sctp_timeout_handler(void *t)
 		atomic_add_int(&stcb->asoc.refcnt, -1);
 	}
 	/* mark as being serviced now */
-	callout_deactivate(&tmr->timer);
+	sctp_os_timer_deactivate(&tmr->timer);
 
 	/* call the handler for the appropriate timer type */
 	switch (tmr->type) {
@@ -1718,9 +1718,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	int to_ticks;
 	struct sctp_timer *tmr;
 
-
-	if ((t_type != SCTP_TIMER_TYPE_ADDR_WQ) &&
-	    (inp == NULL))
+	if ((t_type != SCTP_TIMER_TYPE_ADDR_WQ) && (inp == NULL))
 		return (EFAULT);
 
 	to_ticks = 0;
@@ -2057,7 +2055,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 #endif				/* SCTP_DEBUG */
 		return (EFAULT);
 	}
-	if (callout_pending(&tmr->timer)) {
+	if (sctp_os_timer_pending(&tmr->timer)) {
 		/*
 		 * we do NOT allow you to have it already running. if it is
 		 * we leave the current one up unchanged
@@ -2075,7 +2073,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	tmr->net = (void *)net;
 	tmr->self = (void *)tmr;
 	tmr->ticks = ticks;
-	callout_reset(&tmr->timer, to_ticks, sctp_timeout_handler, tmr);
+	sctp_os_timer_start(&tmr->timer, to_ticks, sctp_timeout_handler, tmr);
 	return (0);
 }
 
@@ -2251,7 +2249,7 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	}
 	tmr->self = NULL;
 	tmr->stopped_from = from;
-	callout_stop(&tmr->timer);
+	sctp_os_timer_stop(&tmr->timer);
 	return (0);
 }
 

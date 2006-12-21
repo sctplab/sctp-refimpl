@@ -42,19 +42,19 @@ extern int ticks;
 #endif
 
 void
-callout_init(struct callout *c)
+sctp_os_timer_init(sctp_os_timer_t *c)
 {
 	bzero(c, sizeof(*c));
 }
 
 void
-callout_reset(struct callout *c, int to_ticks, void (*ftn) (void *),
+sctp_os_timer_start(sctp_os_timer_t *c, int to_ticks, void (*ftn) (void *),
 	      void *arg) {
 	int s;
 
 	s = splhigh();
-	if (c->c_flags & CALLOUT_PENDING)
-		callout_stop(c);
+	if (c->c_flags & SCTP_CALLOUT_PENDING)
+		sctp_os_timer_stop(c);
 
 	/*
 	 * We could spl down here and back up at the TAILQ_INSERT_TAIL, but
@@ -64,7 +64,7 @@ callout_reset(struct callout *c, int to_ticks, void (*ftn) (void *),
 		to_ticks = 1;
 
 	c->c_arg = arg;
-	c->c_flags |= (CALLOUT_ACTIVE | CALLOUT_PENDING);
+	c->c_flags |= (SCTP_CALLOUT_ACTIVE | SCTP_CALLOUT_PENDING);
 	c->c_func = ftn;
 	c->c_time = ticks + to_ticks;
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
@@ -78,7 +78,7 @@ callout_reset(struct callout *c, int to_ticks, void (*ftn) (void *),
 }
 
 int
-callout_stop(struct callout *c)
+sctp_os_timer_stop(sctp_os_timer_t *c)
 {
 	int s;
 
@@ -86,12 +86,13 @@ callout_stop(struct callout *c)
 	/*
 	 * Don't attempt to delete a callout that's not on the queue.
 	 */
-	if (!(c->c_flags & CALLOUT_PENDING)) {
-		c->c_flags &= ~CALLOUT_ACTIVE;
+	if (!(c->c_flags & SCTP_CALLOUT_PENDING)) {
+		c->c_flags &= ~SCTP_CALLOUT_ACTIVE;
 		splx(s);
 		return (0);
 	}
-	c->c_flags &= ~(CALLOUT_ACTIVE | CALLOUT_PENDING | CALLOUT_FIRED);
+	c->c_flags &= ~(SCTP_CALLOUT_ACTIVE | SCTP_CALLOUT_PENDING |
+			SCTP_CALLOUT_FIRED);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	lck_rw_lock_exclusive(sctp_calloutq_mtx);
 #endif
@@ -113,7 +114,7 @@ callout_stop(struct callout *c)
 void
 sctp_fasttim(void)
 {
-	struct callout *c, *n;
+	sctp_os_timer_t *c, *n;
 	struct calloutlist locallist;
 	int inited = 0;
 	int s;
@@ -136,7 +137,7 @@ printf("sctp_fasttim: ticks = %u (added %u)\n", (uint32_t)ticks,
 	while (c) {
 		n = TAILQ_NEXT(c, tqe);
 		if (c->c_time <= ticks) {
-			c->c_flags |= CALLOUT_FIRED;
+			c->c_flags |= SCTP_CALLOUT_FIRED;
 			c->c_time = 0;
 			TAILQ_REMOVE(&sctppcbinfo.callqueue, c, tqe);
 			if (inited == 0) {
@@ -155,8 +156,8 @@ printf("sctp_fasttim: ticks = %u (added %u)\n", (uint32_t)ticks,
 			/* remove it */
 			TAILQ_REMOVE(&locallist, c, tqe);
 			/* now validate that it did not get canceled */
-			if (c->c_flags & CALLOUT_FIRED) {
-				c->c_flags &= ~CALLOUT_PENDING;
+			if (c->c_flags & SCTP_CALLOUT_FIRED) {
+				c->c_flags &= ~SCTP_CALLOUT_PENDING;
 				splx(s);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 				lck_rw_unlock_exclusive(sctp_calloutq_mtx);

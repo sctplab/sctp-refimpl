@@ -1833,11 +1833,7 @@ sctp_inpcb_alloc(struct socket *so)
 	LIST_INIT(&inp->sctp_asoc_free_list);
 #endif
 	/* Init the timer structure for signature change */
-#if defined (__FreeBSD__) && __FreeBSD_version >= 500000
-	callout_init(&inp->sctp_ep.signature_change.timer, 1);
-#else
-	callout_init(&inp->sctp_ep.signature_change.timer);
-#endif
+	sctp_os_timer_init(&inp->sctp_ep.signature_change.timer);
 	inp->sctp_ep.signature_change.type = SCTP_TIMER_TYPE_NEWCOOKIE;
 
 	/* now init the actual endpoint default data */
@@ -2849,7 +2845,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	}
 	if(cnt) {
 		/* Ok we have someone out there that will kill us */
-		callout_stop(&inp->sctp_ep.signature_change.timer);
+		sctp_os_timer_stop(&inp->sctp_ep.signature_change.timer);
 		SCTP_INP_WUNLOCK(inp);
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		SCTP_INP_INFO_WUNLOCK();
@@ -2864,7 +2860,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
 	if ( (inp->refcount) || (inp->sctp_flags & SCTP_PCB_FLAGS_CLOSE_IP) ) {
-		callout_stop(&inp->sctp_ep.signature_change.timer);
+		sctp_os_timer_stop(&inp->sctp_ep.signature_change.timer);
 		sctp_timer_start(SCTP_TIMER_TYPE_INPKILL, inp, NULL, NULL);
 		SCTP_INP_WUNLOCK(inp);
 		SCTP_ASOC_CREATE_UNLOCK(inp);
@@ -2878,7 +2874,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 		return;
 	}
 #endif
-	callout_stop(&inp->sctp_ep.signature_change.timer);
+	sctp_os_timer_stop(&inp->sctp_ep.signature_change.timer);
 	inp->sctp_ep.signature_change.type = 0;
 	inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_ALLGONE;
 
@@ -2889,7 +2885,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 #if !defined(__FreeBSD__) || __FreeBSD_version < 500000
 	rt = ip_pcb->inp_route.ro_rt;
 #endif
-	callout_stop(&inp->sctp_ep.signature_change.timer);
+	sctp_os_timer_stop(&inp->sctp_ep.signature_change.timer);
 	inp->sctp_ep.signature_change.type = SCTP_TIMER_TYPE_NONE;
 	/* Clear the read queue */
 	while ((sq = TAILQ_FIRST(&inp->read_queue)) != NULL) {
@@ -3319,15 +3315,9 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 		net->tos_flowlabel = stcb->asoc.default_flowlabel;
 #endif
 	/* Init the timer structure */
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-	callout_init(&net->rxt_timer.timer, 1);
-	callout_init(&net->fr_timer.timer, 1);
-	callout_init(&net->pmtu_timer.timer, 1);
-#else
-	callout_init(&net->rxt_timer.timer);
-	callout_init(&net->fr_timer.timer);
-	callout_init(&net->pmtu_timer.timer);
-#endif
+	sctp_os_timer_init(&net->rxt_timer.timer);
+	sctp_os_timer_init(&net->fr_timer.timer);
+	sctp_os_timer_init(&net->pmtu_timer.timer);
 
 	/* Now generate a route for this guy */
 	/* KAME hack: embed scopeid */
@@ -3663,23 +3653,14 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		return (NULL);
 	}
 	/* Init all the timers */
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-	callout_init(&asoc->hb_timer.timer, 1);
-	callout_init(&asoc->dack_timer.timer, 1);
-	callout_init(&asoc->asconf_timer.timer, 1);
-	callout_init(&asoc->strreset_timer.timer, 1);
-	callout_init(&asoc->shut_guard_timer.timer, 1);
-	callout_init(&asoc->autoclose_timer.timer, 1);
-	callout_init(&asoc->delayed_event_timer.timer, 1);
-#else
-	callout_init(&asoc->hb_timer.timer);
-	callout_init(&asoc->dack_timer.timer);
-	callout_init(&asoc->strreset_timer.timer);
-	callout_init(&asoc->asconf_timer.timer);
-	callout_init(&asoc->shut_guard_timer.timer);
-	callout_init(&asoc->autoclose_timer.timer);
-	callout_init(&asoc->delayed_event_timer.timer);
-#endif
+	sctp_os_timer_init(&asoc->hb_timer.timer);
+	sctp_os_timer_init(&asoc->dack_timer.timer);
+	sctp_os_timer_init(&asoc->strreset_timer.timer);
+	sctp_os_timer_init(&asoc->asconf_timer.timer);
+	sctp_os_timer_init(&asoc->shut_guard_timer.timer);
+	sctp_os_timer_init(&asoc->autoclose_timer.timer);
+	sctp_os_timer_init(&asoc->delayed_event_timer.timer);
+
 	LIST_INSERT_HEAD(&inp->sctp_asoc_list, stcb, sctp_tcblist);
 	/* now file the port under the hash as well */
 	if (inp->sctp_tcbhash != NULL) {
@@ -3944,18 +3925,18 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		}
 	}
 	/* now clean up any other timers */
-	callout_stop(&asoc->hb_timer.timer);
-	callout_stop(&asoc->dack_timer.timer);
-	callout_stop(&asoc->strreset_timer.timer);
-	callout_stop(&asoc->asconf_timer.timer);
-	callout_stop(&asoc->autoclose_timer.timer);
-	callout_stop(&asoc->shut_guard_timer.timer);
-	callout_stop(&asoc->delayed_event_timer.timer);
+	sctp_os_timer_stop(&asoc->hb_timer.timer);
+	sctp_os_timer_stop(&asoc->dack_timer.timer);
+	sctp_os_timer_stop(&asoc->strreset_timer.timer);
+	sctp_os_timer_stop(&asoc->asconf_timer.timer);
+	sctp_os_timer_stop(&asoc->autoclose_timer.timer);
+	sctp_os_timer_stop(&asoc->shut_guard_timer.timer);
+	sctp_os_timer_stop(&asoc->delayed_event_timer.timer);
 
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
-		callout_stop(&net->fr_timer.timer);
-		callout_stop(&net->rxt_timer.timer);
-		callout_stop(&net->pmtu_timer.timer);
+		sctp_os_timer_stop(&net->fr_timer.timer);
+		sctp_os_timer_stop(&net->rxt_timer.timer);
+		sctp_os_timer_stop(&net->pmtu_timer.timer);
 	}
 	/* Now the read queue needs to be cleaned up (only once) */
 	cnt = 0;
@@ -4099,7 +4080,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	}
 
 	/* Stop any timer someone may have started */
-	callout_stop(&asoc->strreset_timer.timer); 
+	sctp_os_timer_stop(&asoc->strreset_timer.timer); 
 	/* Make it invalid too, that way if its
 	 * about to run it will abort and return.
 	 */
@@ -4110,18 +4091,18 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		atomic_add_int(&stcb->asoc.refcnt, -1);
 	}
 	/* now restop the timers to be sure - this is paranoia at is finest! */
-	callout_stop(&asoc->hb_timer.timer);
-	callout_stop(&asoc->dack_timer.timer);
-	callout_stop(&asoc->strreset_timer.timer);
-	callout_stop(&asoc->asconf_timer.timer);
-	callout_stop(&asoc->shut_guard_timer.timer);
-	callout_stop(&asoc->autoclose_timer.timer);
-	callout_stop(&asoc->delayed_event_timer.timer);
+	sctp_os_timer_stop(&asoc->hb_timer.timer);
+	sctp_os_timer_stop(&asoc->dack_timer.timer);
+	sctp_os_timer_stop(&asoc->strreset_timer.timer);
+	sctp_os_timer_stop(&asoc->asconf_timer.timer);
+	sctp_os_timer_stop(&asoc->shut_guard_timer.timer);
+	sctp_os_timer_stop(&asoc->autoclose_timer.timer);
+	sctp_os_timer_stop(&asoc->delayed_event_timer.timer);
 
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
-		callout_stop(&net->fr_timer.timer);
-		callout_stop(&net->rxt_timer.timer);
-		callout_stop(&net->pmtu_timer.timer);
+		sctp_os_timer_stop(&net->fr_timer.timer);
+		sctp_os_timer_stop(&net->rxt_timer.timer);
+		sctp_os_timer_stop(&net->pmtu_timer.timer);
 	}
 	asoc->state = 0;
 	if (inp->sctp_tcbhash) {
@@ -5081,12 +5062,7 @@ sctp_pcb_init()
 	sctppcbinfo.ipi_free_strmoq = 0;
 	sctppcbinfo.ipi_free_chunks = 0;
 
-
-#if defined (__FreeBSD__) && __FreeBSD_version >= 500000
-	callout_init(&sctppcbinfo.addr_wq_timer.timer, 1);
-#else
-	callout_init(&sctppcbinfo.addr_wq_timer.timer);
-#endif
+	sctp_os_timer_init(&sctppcbinfo.addr_wq_timer.timer);
 
 	/* port stuff */
 #if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__APPLE__)
@@ -6062,7 +6038,7 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 			asoc->highest_tsn_inside_map = asoc->cumulative_tsn;
 		}
 		asoc->last_revoke_count = cnt;
-		callout_stop(&stcb->asoc.dack_timer.timer);
+		sctp_os_timer_stop(&stcb->asoc.dack_timer.timer);
 		sctp_send_sack(stcb);
 		reneged_asoc_ids[reneged_at] = sctp_get_associd(stcb);
 		reneged_at++;
@@ -6167,11 +6143,7 @@ sctp_initiate_iterator(inp_func inpf, asoc_func af, uint32_t pcb_state,
 
 	}
 	/* Init the timer */
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-	callout_init(&it->tmr.timer, 1);
-#else
-	callout_init(&it->tmr.timer);
-#endif
+	sctp_os_timer_init(&it->tmr.timer);
 	/* add to the list of all iterators */
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
