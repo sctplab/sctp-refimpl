@@ -539,7 +539,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 					nxt_todel = strm->last_sequence_delivered + 1;
 				}
 			}
-			return;
+			break;
 		}
 		chk = TAILQ_FIRST(&asoc->reasmqueue);
 	} while (chk);
@@ -787,6 +787,7 @@ sctp_deliver_reasm_check(struct sctp_tcb *stcb, struct sctp_association *asoc)
 	uint16_t nxt_todel;
 	uint32_t tsize;
 
+ doit_again:
 	chk = TAILQ_FIRST(&asoc->reasmqueue);
 	if (chk == NULL) {
 		/* Huh? */
@@ -824,7 +825,18 @@ sctp_deliver_reasm_check(struct sctp_tcb *stcb, struct sctp_association *asoc)
 			}
 		}
 	} else {
+		/* Service re-assembly will deliver stream data queued
+		 * at the end of fragmented delivery.. but it wont know
+		 * to go back and call itself again... we do that here
+		 * with the got doit_again
+		 */
 		sctp_service_reassembly(stcb, asoc);
+		if(asoc->fragmented_delivery_inprogress == 0) {
+			/* finished our Fragmented delivery, could be
+			 * more waiting?
+			 */
+			goto doit_again;
+		}
 	}
 }
 
@@ -1813,10 +1825,6 @@ failed_express_del:
 			uint32_t cumack;
 			if(ch->ch.chunk_flags & SCTP_DATA_LAST_FRAG) {
 				end = 1;
-				if(TAILQ_EMPTY(&asoc->reasmqueue) == 0) {
-					/* There could be another message ready */
-					need_reasm_check = 1;
-				}
 			}
 			cumack = asoc->cumulative_tsn;
 			if((cumack+1) == tsn) 
@@ -1836,7 +1844,6 @@ failed_express_del:
 			asoc->last_flags_delivered = ch->ch.chunk_flags;
 			asoc->last_strm_seq_delivered = strmseq;
 			asoc->last_strm_no_delivered = strmno;
-
 			if(end) {
 				/* clean up the flags and such */
 				asoc->fragmented_delivery_inprogress = 0;
@@ -1844,6 +1851,10 @@ failed_express_del:
 					asoc->strmin[strmno].last_sequence_delivered++;
 				}
 				stcb->asoc.control_pdapi = NULL;
+				if(TAILQ_EMPTY(&asoc->reasmqueue) == 0) {
+					/* There could be another message ready */
+					need_reasm_check = 1;
+				}
 			}
 			control = NULL;
 			goto finish_express_del;
@@ -2475,6 +2486,7 @@ sctp_service_queues(struct sctp_tcb *stcb, struct sctp_association *asoc)
 	 * Now is there some other chunk I can deliver from the reassembly
 	 * queue.
 	 */
+ doit_again:
 	chk = TAILQ_FIRST(&asoc->reasmqueue);
 	if (chk == NULL) {
 		asoc->size_on_reasm_queue = 0;
@@ -2504,6 +2516,9 @@ sctp_service_queues(struct sctp_tcb *stcb, struct sctp_association *asoc)
 			asoc->pdapi_ppid = chk->rec.data.payloadtype;
 			asoc->fragment_flags = chk->rec.data.rcv_flags;
 			sctp_service_reassembly(stcb, asoc);
+			if(asoc->fragmented_delivery_inprogress == 0) {
+				goto doit_again;
+			}
 		}
 	}
 }
@@ -5724,5 +5739,9 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 			/* now kick the stream the new way */
 			sctp_kick_prsctp_reorder_queue(stcb, strm);
 		}
+	}
+	if (TAILQ_FIRST(&asoc->reasmqueue)) {
+		/* now lets kick out and check for more fragmented delivery */
+		sctp_deliver_reasm_check(stcb, &stcb->asoc);
 	}
 }
