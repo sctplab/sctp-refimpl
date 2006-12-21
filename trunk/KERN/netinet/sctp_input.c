@@ -1398,10 +1398,35 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		/* temp code */
 		sctp_timer_stop(SCTP_TIMER_TYPE_INIT, inp, stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_14);
 		sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_15);
+
 		*sac_assoc_id = sctp_get_associd(stcb);
 		/* notify upper layer */
 		*notification = SCTP_NOTIFY_ASSOC_RESTART;
 		atomic_add_int(&stcb->asoc.refcnt, 1); 
+		if (asoc->state & SCTP_STATE_SHUTDOWN_PENDING) {
+			asoc->state = SCTP_STATE_OPEN |
+			    SCTP_STATE_SHUTDOWN_PENDING;
+			sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD,
+					 stcb->sctp_ep, stcb, asoc->primary_destination);
+
+		} else if (!(asoc->state & SCTP_STATE_SHUTDOWN_SENT)) {
+			/* move to OPEN state, if not in SHUTDOWN_SENT */
+			asoc->state = SCTP_STATE_OPEN;
+		}
+		asoc->pre_open_streams =
+		    ntohs(initack_cp->init.num_outbound_streams);
+		asoc->init_seq_number = ntohl(initack_cp->init.initial_tsn);
+		asoc->sending_seq = asoc->asconf_seq_out = asoc->str_reset_seq_out = asoc->init_seq_number;
+
+		asoc->last_cwr_tsn = asoc->init_seq_number - 1;
+		asoc->asconf_seq_in = asoc->last_acked_seq = asoc->init_seq_number - 1;
+
+		asoc->str_reset_seq_in = asoc->init_seq_number;
+
+		asoc->advanced_peer_ack_point = asoc->last_acked_seq;
+		if (asoc->mapping_array)
+			memset(asoc->mapping_array, 0,
+			    asoc->mapping_array_size);
 		SCTP_TCB_UNLOCK(stcb);
 		SCTP_INP_INFO_WLOCK();
 		SCTP_INP_WLOCK(stcb->sctp_ep);
@@ -1439,20 +1464,6 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			LIST_INSERT_HEAD(head, stcb, sctp_tcbrestarhash);
 			stcb->asoc.in_restart_hash = 1;
 		}
-		asoc->pre_open_streams =
-		    ntohs(initack_cp->init.num_outbound_streams);
-		asoc->init_seq_number = ntohl(initack_cp->init.initial_tsn);
-		asoc->sending_seq = asoc->asconf_seq_out = asoc->str_reset_seq_out = asoc->init_seq_number;
-
-		asoc->last_cwr_tsn = asoc->init_seq_number - 1;
-		asoc->asconf_seq_in = asoc->last_acked_seq = asoc->init_seq_number - 1;
-
-		asoc->str_reset_seq_in = asoc->init_seq_number;
-
-		asoc->advanced_peer_ack_point = asoc->last_acked_seq;
-		if (asoc->mapping_array)
-			memset(asoc->mapping_array, 0,
-			    asoc->mapping_array_size);
 		/* process the INIT info (peer's info) */
 		SCTP_TCB_SEND_UNLOCK(stcb);
 		SCTP_INP_WUNLOCK(stcb->sctp_ep);
@@ -1472,16 +1483,6 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		    init_offset + sizeof(struct sctp_init_chunk),
 		    initack_offset, sh, init_src)) {
 			return (NULL);
-		}
-		if (asoc->state & SCTP_STATE_SHUTDOWN_PENDING) {
-			asoc->state = SCTP_STATE_OPEN |
-			    SCTP_STATE_SHUTDOWN_PENDING;
-			sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD,
-					 stcb->sctp_ep, stcb, asoc->primary_destination);
-
-		} else if (!(asoc->state & SCTP_STATE_SHUTDOWN_SENT)) {
-			/* move to OPEN state, if not in SHUTDOWN_SENT */
-			asoc->state = SCTP_STATE_OPEN;
 		}
 		/* respond with a COOKIE-ACK */
 		sctp_stop_all_cookie_timers(stcb);
