@@ -601,8 +601,8 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	    window_probe,
 	    SCTP_FR_T3_MARK_TIME);
 	sctp_log_fr(net->flight_size,
-	    callout_pending(&net->fr_timer.timer),
-	    callout_active(&net->fr_timer.timer),
+	    sctp_os_timer_pending(&net->fr_timer.timer),
+	    sctp_os_timer_active(&net->fr_timer.timer),
 	    SCTP_FR_CWND_REPORT);
 	sctp_log_fr(net->flight_size, net->cwnd, stcb->asoc.total_flight, SCTP_FR_CWND_REPORT);
 #endif
@@ -1547,7 +1547,7 @@ sctp_heartbeat_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 int
 sctp_is_hb_timer_running(struct sctp_tcb *stcb)
 {
-	if (callout_pending(&stcb->asoc.hb_timer.timer)) {
+	if (sctp_os_timer_pending(&stcb->asoc.hb_timer.timer)) {
 		/* its running */
 		return (1);
 	} else {
@@ -1559,7 +1559,7 @@ sctp_is_hb_timer_running(struct sctp_tcb *stcb)
 int
 sctp_is_sack_timer_running(struct sctp_tcb *stcb)
 {
-	if (callout_pending(&stcb->asoc.dack_timer.timer)) {
+	if (sctp_os_timer_pending(&stcb->asoc.dack_timer.timer)) {
 		/* its running */
 		return (1);
 	} else {
@@ -1567,7 +1567,6 @@ sctp_is_sack_timer_running(struct sctp_tcb *stcb)
 		return (0);
 	}
 }
-
 
 #define SCTP_NUMBER_OF_MTU_SIZES 18
 static uint32_t mtu_sizes[] = {
@@ -1743,7 +1742,7 @@ done_with_iterator:
 		lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 #endif
 		SCTP_INP_INFO_WUNLOCK();
-		callout_stop(&it->tmr.timer);
+		sctp_os_timer_stop(&it->tmr.timer);
 		if (it->function_atend != NULL) {
 			(*it->function_atend) (it->pointer, it->val);
 		}

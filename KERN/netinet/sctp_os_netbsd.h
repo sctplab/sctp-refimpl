@@ -73,6 +73,14 @@ void sctp_pool_put(struct pool *, void *);
 #include <sys/callout.h>
 typedef struct callout sctp_os_timer_t;
 
+#define sctp_os_timer_init	callout_init
+#define sctp_os_timer_start	callout_reset
+#define sctp_os_timer_stop	callout_stop
+#define sctp_os_timer_pending	callout_pending
+#define sctp_os_timer_active	callout_active
+#define sctp_os_timer_deactivate callout_deactivate
+
+
 /*
  * Functions
  */

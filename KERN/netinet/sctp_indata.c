@@ -1564,7 +1564,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			asoc->dup_tsns[asoc->numduptsns] = tsn;
 			asoc->numduptsns++;
 		}
-		if (!callout_pending(&asoc->dack_timer.timer)) {
+		if (!sctp_os_timer_pending(&asoc->dack_timer.timer)) {
 			/*
 			 * By starting the timer we assure that we WILL sack
 			 * at the end of the packet when sctp_sack_check
@@ -2397,7 +2397,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 			 * maker sure SACK timer is off and instead send a
 			 * SHUTDOWN and a SACK
 			 */
-			if (callout_pending(&stcb->asoc.dack_timer.timer)) {
+			if (sctp_os_timer_pending(&stcb->asoc.dack_timer.timer)) {
 				sctp_timer_stop(SCTP_TIMER_TYPE_RECV,
 				    stcb->sctp_ep, stcb, NULL, SCTP_FROM_SCTP_INDATA+SCTP_LOC_18);
 			}
@@ -2423,7 +2423,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 			    (stcb->asoc.numduptsns) ||	/* we have dup's */
 			    (is_a_gap) ||	/* is still a gap */
 			    (stcb->asoc.delayed_ack == 0) ||
-			    (callout_pending(&stcb->asoc.dack_timer.timer))	/* timer was up . second
+			    (sctp_os_timer_pending(&stcb->asoc.dack_timer.timer))	/* timer was up . second
 										 * packet */
 			    ) {
 
@@ -2431,7 +2431,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 				    (stcb->asoc.first_ack_sent == 1) &&
 				    (stcb->asoc.numduptsns == 0) &&
 				    (stcb->asoc.delayed_ack) &&
-				    (!callout_pending(&stcb->asoc.dack_timer.timer))) {
+				    (!sctp_os_timer_pending(&stcb->asoc.dack_timer.timer))) {
 
 					/*
 					 * CMT DAC algorithm: With CMT,
@@ -2804,9 +2804,9 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 			/* need to do the slide */
 			sctp_sack_check(stcb, 1, was_a_gap, &abort_flag);
 		} else {
-			if(callout_pending(&stcb->asoc.dack_timer.timer)) {
+			if(sctp_os_timer_pending(&stcb->asoc.dack_timer.timer)) {
 				stcb->asoc.first_ack_sent = 1;
-				callout_stop(&stcb->asoc.dack_timer.timer);
+				sctp_os_timer_stop(&stcb->asoc.dack_timer.timer);
 				sctp_send_sack(stcb);
 			} else {
 				sctp_timer_start(SCTP_TIMER_TYPE_RECV,
@@ -3939,7 +3939,7 @@ sctp_cwnd_update(struct sctp_tcb *stcb,
 				 * to illicit a sack with gaps to force out
 				 * the others.
 				 */
-				if (callout_pending(&net->fr_timer.timer)) {
+				if (sctp_os_timer_pending(&net->fr_timer.timer)) {
 					SCTP_STAT_INCR(sctps_earlyfrstpidsck2);
 					sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net,
 							SCTP_FROM_SCTP_INDATA+SCTP_LOC_20 );
@@ -3948,7 +3948,7 @@ sctp_cwnd_update(struct sctp_tcb *stcb,
 				sctp_timer_start(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net);
 			} else {
 				/* No, stop it if its running */
-				if (callout_pending(&net->fr_timer.timer)) {
+				if (sctp_os_timer_pending(&net->fr_timer.timer)) {
 					SCTP_STAT_INCR(sctps_earlyfrstpidsck3);
 					sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net,
 							SCTP_FROM_SCTP_INDATA+SCTP_LOC_21 );
@@ -4358,16 +4358,16 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 				to_ticks = MSEC_TO_TICKS(net->RTO);
 			}
 			j++;
-			callout_reset(&net->rxt_timer.timer, to_ticks, 
-				      sctp_timeout_handler, &net->rxt_timer);
+			sctp_os_timer_start(&net->rxt_timer.timer, to_ticks, 
+					    sctp_timeout_handler, &net->rxt_timer);
 		} else {
-			if(callout_pending(&net->rxt_timer.timer)) {
+			if(sctp_os_timer_pending(&net->rxt_timer.timer)) {
 				sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
 						stcb, net,
 						SCTP_FROM_SCTP_INDATA+SCTP_LOC_22);
 			}
 			if (sctp_early_fr) {
-				if (callout_pending(&net->fr_timer.timer)) {
+				if (sctp_os_timer_pending(&net->fr_timer.timer)) {
 					SCTP_STAT_INCR(sctps_earlyfrstpidsck4);
 					sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net,
 							SCTP_FROM_SCTP_INDATA+SCTP_LOC_23);
@@ -4657,7 +4657,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 			sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
 			    stcb, net, SCTP_FROM_SCTP_INDATA+SCTP_LOC_26 );
 			if (sctp_early_fr) {
-				if (callout_pending(&net->fr_timer.timer)) {
+				if (sctp_os_timer_pending(&net->fr_timer.timer)) {
 					SCTP_STAT_INCR(sctps_earlyfrstpidsck1);
 					sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net,
 							SCTP_FROM_SCTP_INDATA+SCTP_LOC_26 );
@@ -5012,7 +5012,7 @@ skip_segments:
 		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 			/* stop all timers */
 			if (sctp_early_fr) {
-				if (callout_pending(&net->fr_timer.timer)) {
+				if (sctp_os_timer_pending(&net->fr_timer.timer)) {
 					SCTP_STAT_INCR(sctps_earlyfrstpidsck4);
 					sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net,
 							SCTP_FROM_SCTP_INDATA+SCTP_LOC_29 );

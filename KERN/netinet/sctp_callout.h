@@ -41,26 +41,28 @@ __FBSDID("$FreeBSD$");
 
 #define SCTP_TICKS_PER_FASTTIMO 20	/* called about every 20ms */
 
-TAILQ_HEAD(calloutlist, callout);
+TAILQ_HEAD(calloutlist, sctp_callout);
 
-struct callout {
-	TAILQ_ENTRY(callout) tqe;
+struct sctp_callout {
+	TAILQ_ENTRY(sctp_callout) tqe;
 	int c_time;		/* ticks to the event */
 	void *c_arg;		/* function argument */
 	void (*c_func)(void *);	/* function to call */
 	int c_flags;		/* state of this entry */
 };
+typedef struct sctp_callout sctp_os_timer_t;
 
-#define	CALLOUT_ACTIVE		0x0002	/* callout is currently active */
-#define	CALLOUT_PENDING		0x0004	/* callout is waiting for timeout */
-#define CALLOUT_FIRED		0x0008	/* it expired */
+#define	SCTP_CALLOUT_ACTIVE	0x0002	/* callout is currently active */
+#define	SCTP_CALLOUT_PENDING	0x0004	/* callout is waiting for timeout */
+#define SCTP_CALLOUT_FIRED	0x0008	/* it expired */
 
-#define	callout_active(c)	((c)->c_flags & CALLOUT_ACTIVE)
-#define	callout_deactivate(c)	((c)->c_flags &= ~CALLOUT_ACTIVE)
-void callout_init(struct callout *);
-#define	callout_pending(c)	((c)->c_flags & CALLOUT_PENDING)
-void callout_reset(struct callout *, int, void (*)(void *), void *);
-int callout_stop(struct callout *);
+void sctp_os_timer_init(sctp_os_timer_t *tmr);
+void sctp_os_timer_start(sctp_os_timer_t *, int, void (*)(void *), void *);
+int sctp_os_timer_stop(sctp_os_timer_t *);
+
+#define	sctp_os_timer_pending(tmr) ((tmr)->c_flags & SCTP_CALLOUT_PENDING)
+#define	sctp_os_timer_active(tmr) ((tmr)->c_flags & SCTP_CALLOUT_ACTIVE)
+#define	sctp_os_timer_deactivate(tmr) ((tmr)->c_flags &= ~SCTP_CALLOUT_ACTIVE)
 
 void sctp_fasttim(void);
 

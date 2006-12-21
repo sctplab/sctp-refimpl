@@ -82,7 +82,6 @@ extern zone_t kalloc_zone(vm_size_t);	/* XXX */
  * timers
  */
 #include <netinet/sctp_callout.h>
-typedef struct callout sctp_os_timer_t;
 
 /*
  * Functions
@@ -109,7 +108,7 @@ typedef struct callout sctp_os_timer_t;
 /* return any buffer related flags, this is
  * used beyond logging for apple only.
  */
-#define SCTP_BUF_GET_FLAGS(m) (m->m_flags);
+#define SCTP_BUF_GET_FLAGS(m) (m->m_flags)
 
 /*
  * For APPLE this just accesses the M_PKTHDR length so it operates on an

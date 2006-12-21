@@ -72,16 +72,16 @@ void sctp_pool_put(struct pool *, void *);
 #include <sys/timeout.h>
 typedef struct timeout sctp_os_timer_t;
 
-/* map callout into timeout for OpenBSD */
-#define callout_init(args)
-#define callout_reset(c, ticks, func, arg) \
+/* map sctp os timer into timeout for OpenBSD */
+#define sctp_os_timer_init(args)
+#define sctp_os_timer_start(c, ticks, func, arg) \
     do { \
 	timeout_set((c), (func), (arg)); \
 	timeout_add((c), (ticks)); \
     } while (0)
-#define callout_stop(c)	timeout_del(c)
-#define callout_pending(c) timeout_pending(c)
-#define callout_active(c) timeout_initialized(c)
+#define sctp_os_timer_stop	timeout_del
+#define sctp_os_timer_pending	timeout_pending
+#define sctp_os_timer_active	timeout_initialized
 
 
 /*
