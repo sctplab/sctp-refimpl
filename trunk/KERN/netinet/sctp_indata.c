@@ -1504,6 +1504,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	uint32_t tsn, gap;
 	struct mbuf *dmbuf;
 	int indx, the_len;
+	int need_reasm_check = 0;
 	uint16_t strmno, strmseq;
 	struct mbuf *oper;
 	struct sctp_queued_to_read *control;
@@ -1812,6 +1813,10 @@ failed_express_del:
 			uint32_t cumack;
 			if(ch->ch.chunk_flags & SCTP_DATA_LAST_FRAG) {
 				end = 1;
+				if(TAILQ_EMPTY(&asoc->reasmqueue) == 0) {
+					/* There could be another message ready */
+					need_reasm_check = 1;
+				}
 			}
 			cumack = asoc->cumulative_tsn;
 			if((cumack+1) == tsn) 
@@ -2128,6 +2133,10 @@ finish_express_del:
 	    asoc->highest_tsn_inside_map, SCTP_MAP_PREPARE_SLIDE);
 #endif
 	SCTP_SET_TSN_PRESENT(asoc->mapping_array, gap);
+	if (need_reasm_check) {
+		/* Another one waits ? */
+		sctp_deliver_reasm_check(stcb, asoc);
+	}
 	return (1);
 }
 
