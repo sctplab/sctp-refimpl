@@ -386,7 +386,7 @@ sctp_notify_mbuf(struct sctp_inpcb *inp,
 		nxtsz = find_next_best_mtu(totsz);
 	}
 	/* Stop any PMTU timer */
-	if (sctp_os_timer_pending(&net->pmtu_timer.timer)) {
+	if (SCTP_OS_TIMER_PENDING(&net->pmtu_timer.timer)) {
 		tmr_stopped = 1;
 		sctp_timer_stop(SCTP_TIMER_TYPE_PATHMTURAISE, inp, stcb, net, 
 				SCTP_FROM_SCTP_USRREQ+SCTP_LOC_1);
@@ -3019,7 +3019,7 @@ sctp_optsget(struct socket *so,
 					else
 						paddrp->spp_flags |= SPP_HB_ENABLE;
 					/* get flags for PMTU */
-					if (sctp_os_timer_pending(&net->pmtu_timer.timer)) {
+					if (SCTP_OS_TIMER_PENDING(&net->pmtu_timer.timer)) {
 						paddrp->spp_flags |= SPP_PMTUD_ENABLE;
 					} else {
 						paddrp->spp_flags |= SPP_PMTUD_DISABLE;
@@ -4521,7 +4521,7 @@ sctp_optsset(struct socket *so,
 						net->dest_state &= ~SCTP_ADDR_NOHB;
 					}
 					if (paddrp->spp_flags & SPP_PMTUD_DISABLE) {
-						if (sctp_os_timer_pending(&net->pmtu_timer.timer)) {
+						if (SCTP_OS_TIMER_PENDING(&net->pmtu_timer.timer)) {
 							sctp_timer_stop(SCTP_TIMER_TYPE_PATHMTURAISE, inp, stcb, net,
 SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
 						}
@@ -4532,7 +4532,7 @@ SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
 						}
 					}
 					if (paddrp->spp_flags & SPP_PMTUD_ENABLE) {
-						if (sctp_os_timer_pending(&net->pmtu_timer.timer)) {
+						if (SCTP_OS_TIMER_PENDING(&net->pmtu_timer.timer)) {
 							sctp_timer_start(SCTP_TIMER_TYPE_PATHMTURAISE, inp, stcb, net);
 						}
 					}

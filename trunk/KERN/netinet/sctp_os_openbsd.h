@@ -73,16 +73,16 @@ void sctp_pool_put(struct pool *, void *);
 typedef struct timeout sctp_os_timer_t;
 
 /* map sctp os timer into timeout for OpenBSD */
-#define sctp_os_timer_init(args)
-#define sctp_os_timer_start(c, ticks, func, arg) \
+#define SCTP_OS_TIMER_INIT(args)	/* TBD */
+#define SCTP_OS_TIMER_START(c, ticks, func, arg) \
     do { \
 	timeout_set((c), (func), (arg)); \
 	timeout_add((c), (ticks)); \
     } while (0)
-#define sctp_os_timer_stop	timeout_del
-#define sctp_os_timer_pending	timeout_pending
-#define sctp_os_timer_active	timeout_initialized
-
+#define SCTP_OS_TIMER_STOP	timeout_del
+#define SCTP_OS_TIMER_PENDING	timeout_pending
+#define SCTP_OS_TIMER_ACTIVE	timeout_initialized
+#define SCTP_OS_TIMER_DEACTIVATE(args)	/* TBD */
 
 /*
  * Functions
