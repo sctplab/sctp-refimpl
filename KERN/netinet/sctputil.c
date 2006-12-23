@@ -969,7 +969,7 @@ sctp_select_initial_TSN(struct sctp_pcb *m)
 	 * the initial stream sequence number, using RFC1750 as a good
 	 * guideline
 	 */
-	u_long x, *xp;
+	uint32_t x, *xp;
 	uint8_t *p;
 
 	if (m->initial_sequence_debug != 0) {
@@ -984,9 +984,9 @@ sctp_select_initial_TSN(struct sctp_pcb *m)
 		sctp_fill_random_store(m);
 	}
 	p = &m->random_store[(int)m->store_at];
-	xp = (u_long *)p;
+	xp = (uint32_t *)p;
 	x = *xp;
-	m->store_at += sizeof(u_long);
+	m->store_at += sizeof(uint32_t);
 	return (x);
 }
 
@@ -1054,6 +1054,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 #endif
 	if (override_tag) {
 		struct timeval now;
+		SCTP_GETTIME_TIMEVAL(&now);
 		if (sctp_is_vtag_good(m, override_tag, &now)) {
 			asoc->my_vtag = override_tag;
 		} else {
