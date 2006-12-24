@@ -57,11 +57,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_os.h,v 1.2 2006/11/03 17:21:53 rrs Exp 
  * SCTP_ZONE_DESTROY(zone)
  */
 
-/*
- * Functions:
- * sctp_read_random(void *buffer, uint32_t bytes)
- */
-
 #if defined(__FreeBSD__)
 #include <netinet/sctp_os_bsd.h>
 #endif
@@ -70,8 +65,12 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_os.h,v 1.2 2006/11/03 17:21:53 rrs Exp 
 #include <netinet/sctp_os_macosx.h>
 #endif
 
-#if defined(__NetBSD__) || defined(__OpenBSD__)
+#if defined(__NetBSD__)
 #include <netinet/sctp_os_netbsd.h>
+#endif
+
+#if defined(__OpenBSD__)
+#include <netinet/sctp_os_openbsd.h>
 #endif
 
 #endif

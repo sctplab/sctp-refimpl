@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.h,v 1.1 2006/11/03 15:23:15 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.h,v 1.2 2006/12/14 17:02:54 rrs Exp $");
 #endif
 
 #ifndef __sctp_pcb_h__
@@ -627,14 +627,6 @@ int sctp_destination_is_reachable(struct sctp_tcb *, struct sockaddr *);
 int
 sctp_initiate_iterator(inp_func inpf, asoc_func af, uint32_t, uint32_t,
     uint32_t, void *, uint32_t, end_func ef, struct sctp_inpcb *, uint8_t co_off);
-
-#if defined(__APPLE__)
-void sctp_callout_alloc(struct sctp_timer *);
-void sctp_callout_free(struct callout *);
-
-void sctp_start_main_timer(void);
-void sctp_stop_main_timer(void);
-#endif
 
 #ifdef __NetBSD__
 extern void in6_sin6_2_sin(struct sockaddr_in *, struct sockaddr_in6 *sin6);

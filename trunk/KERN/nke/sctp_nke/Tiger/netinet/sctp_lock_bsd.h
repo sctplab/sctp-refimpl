@@ -70,7 +70,7 @@
  */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_lock_bsd.h,v 1.2 2006/11/03 17:21:53 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_lock_bsd.h,v 1.3 2006/12/14 17:02:54 rrs Exp $");
 #endif
 
 
@@ -92,22 +92,6 @@ extern int sctp_logoff_stuff;
            global_sctp_cwnd_log_rolled = 1; \
         } \
 }
-
-#define SCTP_TIMER_LOCK_INIT() \
-        mtx_init(&sctppcbinfo.timer_mtx, "sctp-timer", "timer-mutex", MTX_DEF)
-
-
-#define SCTP_TIMER_LOCK()	do { 					\
-             mtx_lock(&sctppcbinfo.timer_mtx);                          \
-} while (0)
-
-
-#define SCTP_TIMER_UNLOCK()	do { 					\
-             mtx_unlock(&sctppcbinfo.timer_mtx);                        \
-} while (0)
-
-
-
 
 
 #define SCTP_INP_INFO_LOCK_INIT() \

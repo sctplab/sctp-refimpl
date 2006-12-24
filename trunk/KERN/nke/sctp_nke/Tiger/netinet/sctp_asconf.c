@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_asconf.c,v 1.3 2006/11/08 00:21:13 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_asconf.c,v 1.4 2006/12/14 17:02:54 rrs Exp $");
 #endif
 
 
@@ -199,7 +199,7 @@ sctp_asconf_success_response(uint32_t id)
 	aph->correlation_id = id;
 	aph->ph.param_type = htons(SCTP_SUCCESS_REPORT);
 	aph->ph.param_length = sizeof(struct sctp_asconf_paramhdr);
-	m_reply->m_len = aph->ph.param_length;
+	SCTP_BUF_LEN(m_reply) = aph->ph.param_length;
 	aph->ph.param_length = htons(aph->ph.param_length);
 
 	return m_reply;
@@ -250,7 +250,7 @@ sctp_asconf_error_response(uint32_t id, uint16_t cause, uint8_t * error_tlv,
 		tlv = (uint8_t *) (error + 1);
 		memcpy(tlv, error_tlv, tlv_length);
 	}
-	m_reply->m_len = aph->ph.param_length;
+	SCTP_BUF_LEN(m_reply) = aph->ph.param_length;
 	error->length = htons(error->length);
 	aph->ph.param_length = htons(aph->ph.param_length);
 
@@ -347,7 +347,7 @@ sctp_process_asconf_add_ip(struct mbuf *m, struct sctp_asconf_paramhdr *aph,
 	}			/* end switch */
 
 	/* if 0.0.0.0/::0, add the source address instead */
-	if (zero_address) {
+	if (zero_address && sctp_nat_friendly) {
 		sa = (struct sockaddr *)&sa_source;
 		sctp_asconf_get_source_ip(m, sa);
 #ifdef SCTP_DEBUG
@@ -375,7 +375,7 @@ sctp_process_asconf_add_ip(struct mbuf *m, struct sctp_asconf_paramhdr *aph,
 			m_reply =
 			    sctp_asconf_success_response(aph->correlation_id);
 		}
-		sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep, stcb, NULL,SCTP_FROM_SCTP_ASCONF+__LINE__ );
+		sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep, stcb, NULL,SCTP_FROM_SCTP_ASCONF+SCTP_LOC_1 );
 		sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep, stcb, NULL);
 
 	}
@@ -521,7 +521,7 @@ sctp_process_asconf_delete_ip(struct mbuf *m, struct sctp_asconf_paramhdr *aph,
 	}
 
 	/* if deleting 0.0.0.0/::0, delete all addresses except src addr */
-	if (zero_address) {
+	if (zero_address && sctp_nat_friendly) {
 		result = sctp_asconf_del_remote_addrs_except(stcb,
 		    (struct sockaddr *)&sa_source);
 
@@ -658,7 +658,7 @@ sctp_process_asconf_set_primary(struct mbuf *m,
 	}
 
 	/* if 0.0.0.0/::0, use the source address instead */
-	if (zero_address) {
+	if (zero_address && sctp_nat_friendly) {
 		sa = (struct sockaddr *)&sa_source;
 		sctp_asconf_get_source_ip(m, sa);
 #ifdef SCTP_DEBUG
@@ -765,7 +765,7 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 		sctp_m_freem(asoc->last_asconf_ack_sent);
 		asoc->last_asconf_ack_sent = NULL;
 	}
-	m_ack = sctp_get_mbuf_for_msg(sizeof(struct sctp_asconf_ack_chunk), 1,
+	m_ack = sctp_get_mbuf_for_msg(sizeof(struct sctp_asconf_ack_chunk), 0,
 				      M_DONTWAIT, 1, MT_DATA);
 	if (m_ack == NULL) {
 #ifdef SCTP_DEBUG
@@ -783,9 +783,8 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 	ack_cp->ch.chunk_flags = 0;
 	ack_cp->serial_number = htonl(serial_num);
 	/* set initial lengths (eg. just an ASCONF-ACK), ntohx at the end! */
-	m_ack->m_len = sizeof(struct sctp_asconf_ack_chunk);
+	SCTP_BUF_LEN(m_ack) = sizeof(struct sctp_asconf_ack_chunk);
 	ack_cp->ch.chunk_length = sizeof(struct sctp_asconf_ack_chunk);
-	m_ack->m_pkthdr.len = sizeof(struct sctp_asconf_ack_chunk);
 
 	/* skip the lookup address parameter */
 	offset += sizeof(struct sctp_asconf_chunk);
@@ -902,12 +901,11 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 
 		/* add any (error) result to the reply mbuf chain */
 		if (m_result != NULL) {
-			m_tail->m_next = m_result;
+			SCTP_BUF_NEXT(m_tail) = m_result;
 			m_tail = m_result;
 			/* update lengths, make sure it's aligned too */
-			m_result->m_len = SCTP_SIZE32(m_result->m_len);
-			m_ack->m_pkthdr.len += m_result->m_len;
-			ack_cp->ch.chunk_length += m_result->m_len;
+			SCTP_BUF_LEN(m_result) = SCTP_SIZE32(SCTP_BUF_LEN(m_result));
+			ack_cp->ch.chunk_length += SCTP_BUF_LEN(m_result);
 			/* set flag to force success reports */
 			error = 1;
 		}
@@ -1055,7 +1053,7 @@ sctp_asconf_cleanup(struct sctp_tcb *stcb, struct sctp_nets *net)
 	/*
 	 * clear out any existing asconfs going out
 	 */
-	sctp_timer_stop(SCTP_TIMER_TYPE_ASCONF, stcb->sctp_ep, stcb, net, SCTP_FROM_SCTP_ASCONF+__LINE__ );
+	sctp_timer_stop(SCTP_TIMER_TYPE_ASCONF, stcb->sctp_ep, stcb, net, SCTP_FROM_SCTP_ASCONF+SCTP_LOC_2 );
 	stcb->asoc.asconf_seq_out++;
 	/* remove the old ASCONF on our outbound queue */
 	sctp_toss_old_asconf(stcb);
@@ -1532,7 +1530,7 @@ sctp_handle_asconf_ack(struct mbuf *m, int offset,
 	}
 
 	/* stop our timer */
-	sctp_timer_stop(SCTP_TIMER_TYPE_ASCONF, stcb->sctp_ep, stcb, net, SCTP_FROM_SCTP_ASCONF+__LINE__ );
+	sctp_timer_stop(SCTP_TIMER_TYPE_ASCONF, stcb->sctp_ep, stcb, net, SCTP_FROM_SCTP_ASCONF+SCTP_LOC_3 );
 
 	/* process the ASCONF-ACK contents */
 	ack_length = ntohs(cp->ch.chunk_length) -
@@ -2323,7 +2321,7 @@ sctp_find_valid_localaddr_ep(struct sctp_tcb *stcb)
  * mbuf, no ASCONF params queued, etc)
  */
 struct mbuf *
-sctp_compose_asconf(struct sctp_tcb *stcb)
+sctp_compose_asconf(struct sctp_tcb *stcb, int *retlen)
 {
 	struct mbuf *m_asconf, *m_asconf_chk;
 	struct sctp_asconf_addr *aa;
@@ -2344,7 +2342,7 @@ sctp_compose_asconf(struct sctp_tcb *stcb)
 	 * it's simpler to fill in the asconf chunk header lookup address on
 	 * the fly
 	 */
-	m_asconf_chk = sctp_get_mbuf_for_msg(sizeof(struct sctp_asconf_chunk),1, M_DONTWAIT, 1, MT_DATA);
+	m_asconf_chk = sctp_get_mbuf_for_msg(sizeof(struct sctp_asconf_chunk), 0, M_DONTWAIT, 1, MT_DATA);
 	if (m_asconf_chk == NULL) {
 		/* no mbuf's */
 #ifdef SCTP_DEBUG
@@ -2353,7 +2351,7 @@ sctp_compose_asconf(struct sctp_tcb *stcb)
 #endif				/* SCTP_DEBUG */
 		return (NULL);
 	}
-	m_asconf = sctp_get_mbuf_for_msg(MCLBYTES, 1, M_DONTWAIT, 1, MT_DATA);
+	m_asconf = sctp_get_mbuf_for_msg(MCLBYTES, 0, M_DONTWAIT, 1, MT_DATA);
 	if (m_asconf == NULL) {
 		/* no mbuf's */
 #ifdef SCTP_DEBUG
@@ -2363,8 +2361,8 @@ sctp_compose_asconf(struct sctp_tcb *stcb)
 		sctp_m_freem(m_asconf_chk);
 		return (NULL);
 	}
-	m_asconf_chk->m_len = sizeof(struct sctp_asconf_chunk);
-	m_asconf->m_len = 0;
+	SCTP_BUF_LEN(m_asconf_chk) = sizeof(struct sctp_asconf_chunk);
+	SCTP_BUF_LEN(m_asconf) = 0;
 	acp = mtod(m_asconf_chk, struct sctp_asconf_chunk *);
 	bzero(acp, sizeof(struct sctp_asconf_chunk));
 	/* save pointers to lookup address and asconf params */
@@ -2381,7 +2379,7 @@ sctp_compose_asconf(struct sctp_tcb *stcb)
 		/* get the parameter length */
 		p_length = SCTP_SIZE32(aa->ap.aph.ph.param_length);
 		/* will it fit in current chunk? */
-		if (m_asconf->m_len + p_length > stcb->asoc.smallest_mtu) {
+		if (SCTP_BUF_LEN(m_asconf) + p_length > stcb->asoc.smallest_mtu) {
 			/* won't fit, so we're done with this chunk */
 			break;
 		}
@@ -2414,7 +2412,7 @@ sctp_compose_asconf(struct sctp_tcb *stcb)
 			}
 			lookup->ph.param_length = htons(SCTP_SIZE32(p_size));
 			memcpy(lookup->addr, &aa->ap.addrp.addr, addr_size);
-			m_asconf_chk->m_len += SCTP_SIZE32(p_size);
+			SCTP_BUF_LEN(m_asconf_chk) += SCTP_SIZE32(p_size);
 			lookup_used = 1;
 		}
 		/* copy into current space */
@@ -2429,7 +2427,7 @@ sctp_compose_asconf(struct sctp_tcb *stcb)
 		aap->addrp.ph.param_type = htons(aap->addrp.ph.param_type);
 		aap->addrp.ph.param_length = htons(aap->addrp.ph.param_length);
 
-		m_asconf->m_len += SCTP_SIZE32(p_length);
+		SCTP_BUF_LEN(m_asconf) += SCTP_SIZE32(p_length);
 		ptr += SCTP_SIZE32(p_length);
 
 		/*
@@ -2473,7 +2471,7 @@ sctp_compose_asconf(struct sctp_tcb *stcb)
 			}
 			lookup->ph.param_length = htons(SCTP_SIZE32(p_size));
 			memcpy(lookup->addr, addr_ptr, addr_size);
-			m_asconf_chk->m_len += SCTP_SIZE32(p_size);
+			SCTP_BUF_LEN(m_asconf_chk) += SCTP_SIZE32(p_size);
 			lookup_used = 1;
 		} else {
 			/* uh oh... don't have any address?? */
@@ -2485,14 +2483,14 @@ sctp_compose_asconf(struct sctp_tcb *stcb)
 			lookup->ph.param_type = htons(SCTP_IPV4_ADDRESS);
 			lookup->ph.param_length = htons(SCTP_SIZE32(sizeof(struct sctp_ipv4addr_param)));
 			bzero(lookup->addr, sizeof(struct in_addr));
-			m_asconf_chk->m_len += SCTP_SIZE32(sizeof(struct sctp_ipv4addr_param));
+			SCTP_BUF_LEN(m_asconf_chk) += SCTP_SIZE32(sizeof(struct sctp_ipv4addr_param));
 			lookup_used = 1;
 		}
 	}
 	/* chain it all together */
-	m_asconf_chk->m_next = m_asconf;
-	m_asconf_chk->m_pkthdr.len = m_asconf_chk->m_len + m_asconf->m_len;
-	acp->ch.chunk_length = ntohs(m_asconf_chk->m_pkthdr.len);
+	SCTP_BUF_NEXT(m_asconf_chk) = m_asconf;
+	SCTP_BUF_LEN(m_asconf_chk) += SCTP_BUF_LEN(m_asconf);
+	*retlen = acp->ch.chunk_length = ntohs(SCTP_BUF_LEN(m_asconf_chk) + SCTP_BUF_LEN(m_asconf));
 
 	/* update "sent" flag */
 	stcb->asoc.asconf_sent++;

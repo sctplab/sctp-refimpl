@@ -28,7 +28,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-
+#ifdef __FreeBSD__
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/lib/libc/net/sctp_sys_calls.c,v 1.2 2006/12/16 06:03:43 rodrigc Exp $");
+#endif
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -281,7 +284,7 @@ sctp_getpaddrs(int sd, sctp_assoc_t id, struct sockaddr **raddrs)
 	struct sockaddr *re;
 	sctp_assoc_t asoc;
 	caddr_t lim;
-	size_t siz;
+	socklen_t siz;
 	int cnt;
 
 	if (raddrs == NULL) {
@@ -291,7 +294,7 @@ sctp_getpaddrs(int sd, sctp_assoc_t id, struct sockaddr **raddrs)
 	asoc = id;
 	siz = sizeof(sctp_assoc_t);  
 	if (getsockopt(sd, IPPROTO_SCTP, SCTP_GET_REMOTE_ADDR_SIZE,
-	    &asoc, (socklen_t *)&siz) != 0) {
+	    &asoc, &siz) != 0) {
 		errno = ENOMEM;
 		return(-1);
 	}
@@ -307,7 +310,7 @@ sctp_getpaddrs(int sd, sctp_assoc_t id, struct sockaddr **raddrs)
 	addrs->sget_assoc_id = id;
 	/* Now lets get the array of addresses */
 	if (getsockopt(sd, IPPROTO_SCTP, SCTP_GET_PEER_ADDRESSES,
-	    addrs, (socklen_t *)&siz) != 0) {
+	    addrs, &siz) != 0) {
 		free(addrs);
 		errno = ENOMEM;
 		return(-1);
@@ -341,7 +344,7 @@ sctp_getladdrs (int sd, sctp_assoc_t id, struct sockaddr **raddrs)
 	caddr_t lim;
 	struct sockaddr *sa;
 	int size_of_addresses;
-	size_t siz;
+	socklen_t siz;
 	int cnt;
 
 	if (raddrs == NULL) {
@@ -351,7 +354,7 @@ sctp_getladdrs (int sd, sctp_assoc_t id, struct sockaddr **raddrs)
 	size_of_addresses = 0;
 	siz = sizeof(int);  
 	if (getsockopt(sd, IPPROTO_SCTP, SCTP_GET_LOCAL_ADDR_SIZE,
-	    &size_of_addresses, (socklen_t *)&siz) != 0) {
+	    &size_of_addresses, &siz) != 0) {
 		errno = ENOMEM;
 		return(-1);
 	}
@@ -370,7 +373,7 @@ sctp_getladdrs (int sd, sctp_assoc_t id, struct sockaddr **raddrs)
 	addrs->sget_assoc_id = id;
 	/* Now lets get the array of addresses */
 	if (getsockopt(sd, IPPROTO_SCTP, SCTP_GET_LOCAL_ADDRESSES, addrs,
-	    (socklen_t *)&siz) != 0) {
+	    &siz) != 0) {
 		free(addrs);
 		errno = ENOMEM;
 		return(-1);
@@ -506,7 +509,7 @@ sctp_assoc_t
 sctp_getassocid(int sd, struct sockaddr *sa)
 {
   struct sctp_paddrparams sp;
-  size_t siz;
+  socklen_t siz;
 
   /* First get the assoc id */
   siz = sizeof(struct sctp_paddrparams);
@@ -514,7 +517,7 @@ sctp_getassocid(int sd, struct sockaddr *sa)
   memcpy((caddr_t)&sp.spp_address,sa,sa->sa_len);
   errno = 0;
   if(getsockopt(sd,IPPROTO_SCTP,
-		SCTP_PEER_ADDR_PARAMS, &sp, (socklen_t *)&siz) != 0) {	
+		SCTP_PEER_ADDR_PARAMS, &sp, &siz) != 0) {	
 	  return((sctp_assoc_t)0);
   }
   /* We depend on the fact that 0 can never be returned */
