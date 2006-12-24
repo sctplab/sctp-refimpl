@@ -32,21 +32,13 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_structs.h,v 1.3 2006/11/08 00:21:13 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_structs.h,v 1.4 2006/12/14 17:02:55 rrs Exp $");
 #endif
 
 #ifndef __sctp_structs_h__
 #define __sctp_structs_h__
 
 #include <sys/queue.h>
-
-#if defined(__APPLE__)
-#include <netinet/sctp_callout.h>
-#elif defined(__OpenBSD__)
-#include <sys/timeout.h>
-#else
-#include <sys/callout.h>
-#endif
 #include <sys/socket.h>
 
 #ifdef IPSEC
@@ -56,16 +48,14 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_structs.h,v 1.3 2006/11/08 00:21:13 rrs
 #endif
 #endif
 
+#include <netinet/sctp_os.h>
 #include <netinet/sctp_header.h>
 #include <netinet/sctp_uio.h>
 #include <netinet/sctp_auth.h>
 
 struct sctp_timer {
-#if defined(__OpenBSD__)
-	struct timeout timer;
-#else
-	struct callout timer;
-#endif
+	sctp_os_timer_t timer;
+
 	int type;
 	/*
 	 * Depending on the timer type these will be setup and cast with the
@@ -381,9 +371,11 @@ struct sctp_queued_to_read {	/* sinfo structure Pluse more */
 	struct sctp_tcb *stcb;	/* assoc, used for window update */
 	TAILQ_ENTRY(sctp_queued_to_read) next;
 	uint16_t port_from;
+	uint16_t spec_flags;	/* Flags to hold the notification field */
 	uint8_t  do_not_ref_stcb;
 	uint8_t  end_added;
 	uint8_t  pdapi_aborted;
+	uint8_t  resv;
 };
 
 /* This data structure will be on the outbound

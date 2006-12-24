@@ -30,7 +30,7 @@
 /*	$KAME: sctp6_usrreq.c,v 1.38 2005/08/24 08:08:56 suz Exp $	*/
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.5 2006/11/08 00:21:13 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.6 2006/12/14 17:02:55 rrs Exp $");
 #endif
 #if !(defined(__OpenBSD__) || defined(__APPLE__))
 #include "opt_inet.h"
@@ -214,7 +214,7 @@ sctp6_input(mp, offp, proto)
 
 #endif
 {
-	struct mbuf *m = *mp;
+	struct mbuf *m;
 	struct ip6_hdr *ip6;
 	struct sctphdr *sh;
 	struct sctp_inpcb *in6p = NULL;
@@ -228,6 +228,8 @@ sctp6_input(mp, offp, proto)
 	struct sctp_tcb *stcb = NULL;
 	int off = *offp;
 	int s;
+
+	m = SCTP_HEADER_TO_CHAIN(*mp);
 
 	ip6 = mtod(m, struct ip6_hdr *);
 #ifndef PULLDOWN_TEST
@@ -274,7 +276,7 @@ sctp6_input(mp, offp, proto)
 	SCTP_STAT_INCR_COUNTER64(sctps_inpackets);
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-		printf("V6 input gets a packet iphlen:%d pktlen:%d\n", iphlen, m->m_pkthdr.len);
+		printf("V6 input gets a packet iphlen:%d pktlen:%d\n", iphlen, SCTP_HEADER_LEN((*mp)));
 	}
 #endif
 	if (IN6_IS_ADDR_MULTICAST(&ip6->ip6_dst)) {
@@ -285,8 +287,7 @@ sctp6_input(mp, offp, proto)
 	if (sh->dest_port == 0)
 		goto bad;
 	if ((sctp_no_csum_on_loopback == 0) ||
-	    (m->m_pkthdr.rcvif == NULL) ||
-	    (m->m_pkthdr.rcvif->if_type != IFT_LOOP)) {
+	    (!SCTP_IS_IT_LOOPBACK(m))) {
 		/*
 		 * we do NOT validate things from the loopback if the sysctl
 		 * is set to 1.
@@ -331,10 +332,8 @@ sctp6_input(mp, offp, proto)
 			goto bad;
 		}
 		sh->checksum = calc_check;
-	} else {
+	} 
 sctp_skip_csum:
-		mlen = m->m_pkthdr.len;
-	}
 	net = NULL;
 	/*
 	 * Locate pcb and tcb for datagram sctp_findassociation_addr() wants
@@ -460,9 +459,12 @@ sctp_skip_csum:
 	/*
 	 * CONTROL chunk processing
 	 */
-	length = ntohs(ip6->ip6_plen) + iphlen;
 	offset -= sizeof(*ch);
 	ecn_bits = ((ntohl(ip6->ip6_flow) >> 20) & 0x000000ff);
+
+	/* Length now holds the total packet length payload + iphlen */
+	length = ntohs(ip6->ip6_plen) + iphlen;
+
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
 #else
@@ -532,7 +534,7 @@ sctp6_notify_mbuf(struct sctp_inpcb *inp,
 	 */
 	nxtsz = ntohl(icmp6->icmp6_mtu);
 	/* Stop any PMTU timer */
-	sctp_timer_stop(SCTP_TIMER_TYPE_PATHMTURAISE, inp, stcb, NULL, SCTP_FROM_SCTP6_USRREQ+__LINE__);
+	sctp_timer_stop(SCTP_TIMER_TYPE_PATHMTURAISE, inp, stcb, NULL, SCTP_FROM_SCTP6_USRREQ+SCTP_LOC_1);
 
 	/* Adjust destination size limit */
 	if (net->mtu > nxtsz) {
@@ -618,8 +620,7 @@ sctp6_ctlinput(cmd, pktdst, d)
 		struct sctp_nets *net = NULL;
 		struct sockaddr_in6 final;
 
-		if (ip6cp->ip6c_m == NULL ||
-		    (size_t)ip6cp->ip6c_m->m_pkthdr.len < (ip6cp->ip6c_off + sizeof(sh)))
+		if (ip6cp->ip6c_m == NULL)
 			return;
 
 		bzero(&sh, sizeof(sh));
@@ -1227,9 +1228,9 @@ sctp6_disconnect(struct socket *so)
 						struct sctp_paramhdr *ph;
 
 						ph = mtod(err, struct sctp_paramhdr *);
-						err->m_len = sizeof(struct sctp_paramhdr);
+						SCTP_BUF_LEN(err) = sizeof(struct sctp_paramhdr);
 						ph->param_type = htons(SCTP_CAUSE_USER_INITIATED_ABT);
-						ph->param_length = htons(err->m_len);
+						ph->param_length = htons(SCTP_BUF_LEN(err));
 					}
 					sctp_send_abort_tcb(stcb, err);
 					SCTP_STAT_INCR_COUNTER32(sctps_aborted);
@@ -1240,7 +1241,7 @@ sctp6_disconnect(struct socket *so)
 					SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 				}
 				sctp_free_assoc(inp, stcb, SCTP_DONOT_SETSCOPE,
-						SCTP_FROM_SCTP6_USRREQ+__LINE__);
+						SCTP_FROM_SCTP6_USRREQ+SCTP_LOC_2);
 				/* No unlock tcb assoc is gone */
 				splx(s);
 				return (0);
@@ -1417,22 +1418,9 @@ connected_type:
 		}
 		inp->control = control;
 	}
-	/* add it in possibly */
-	if ((inp->pkt) &&
-	    (inp->pkt->m_flags & M_PKTHDR)) {
-		struct mbuf *x;
-		int c_len;
-
-		c_len = 0;
-		/* How big is it */
-		for (x = m; x; x = x->m_next) {
-			c_len += x->m_len;
-		}
-		inp->pkt->m_pkthdr.len += c_len;
-	}
 	/* Place the data */
 	if (inp->pkt) {
-		inp->pkt_last->m_next = m;
+		SCTP_BUF_NEXT(inp->pkt_last) = m;
 		inp->pkt_last = m;
 	} else {
 		inp->pkt_last = inp->pkt = m;
@@ -1650,7 +1638,7 @@ sctp6_getaddr(struct socket *so, struct mbuf *nam)
 #if defined(__FreeBSD__) || defined(__APPLE__)
 	SCTP_MALLOC_SONAME(sin6, struct sockaddr_in6 *, sizeof *sin6);
 #else
-	nam->m_len = sizeof(*sin6);
+	SCTP_BUF_LEN(nam) = sizeof(*sin6);
 	bzero(sin6, sizeof(*sin6));
 #endif
 	sin6->sin6_family = AF_INET6;
@@ -1779,7 +1767,7 @@ sctp6_peeraddr(struct socket *so, struct mbuf *nam)
 #if defined(__FreeBSD__) || defined(__APPLE__)
 	SCTP_MALLOC_SONAME(sin6, struct sockaddr_in6 *, sizeof *sin6);
 #else
-	nam->m_len = sizeof(*sin6);
+	SCTP_BUF_LEN(nam) = sizeof(*sin6);
 	bzero(sin6, sizeof(*sin6));
 #endif
 	sin6->sin6_family = AF_INET6;
@@ -1884,16 +1872,16 @@ sctp6_in6getaddr(struct socket *so, struct mbuf *nam)
 			in6_sin_2_v4mapsin6((struct sockaddr_in *)addr, &sin6);
 			memcpy(addr, &sin6, sizeof(struct sockaddr_in6));
 #if !(defined(__FreeBSD__) || defined(__APPLE__))
-			nam->m_len = sizeof(sin6);
+			SCTP_BUF_LEN(nam) = sizeof(sin6);
 #endif
 #if !(defined(__FreeBSD__) || defined(__APPLE__))
 		} else {
-			nam->m_len = sizeof(struct sockaddr_in);
+			SCTP_BUF_LEN(nam) = sizeof(struct sockaddr_in);
 #endif
 		}
 #if !(defined(__FreeBSD__) || defined(__APPLE__))
 	} else {
-		nam->m_len = sizeof(struct sockaddr_in6);
+		SCTP_BUF_LEN(nam) = sizeof(struct sockaddr_in6);
 #endif
 	}
 	splx(s);
@@ -1948,16 +1936,16 @@ sctp6_getpeeraddr(struct socket *so, struct mbuf *nam)
 			in6_sin_2_v4mapsin6((struct sockaddr_in *)addr, &sin6);
 			memcpy(addr, &sin6, sizeof(struct sockaddr_in6));
 #if !(defined(__FreeBSD__) || defined(__APPLE__))
-			nam->m_len = sizeof(sin6);
+			SCTP_BUF_LEN(nam) = sizeof(sin6);
 #endif
 #if !(defined(__FreeBSD__) || defined(__APPLE__))
 		} else {
-			nam->m_len = sizeof(struct sockaddr_in);
+			SCTP_BUF_LEN(nam) = sizeof(struct sockaddr_in);
 #endif
 		}
 #if !(defined(__FreeBSD__) || defined(__APPLE__))
 	} else {
-		nam->m_len = sizeof(struct sockaddr_in6);
+		SCTP_BUF_LEN(nam) = sizeof(struct sockaddr_in6);
 #endif
 	}
 	splx(s);
