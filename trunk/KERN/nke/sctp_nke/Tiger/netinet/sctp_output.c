@@ -4567,7 +4567,7 @@ sctp_sendall_iterator(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
 		if (m) {
 			struct sctp_paramhdr *ph;
 			
-			M_PREPEND(m, sizeof(struct sctp_paramhdr), M_DONTWAIT);
+			SCTP_BUF_PREPEND(m, sizeof(struct sctp_paramhdr), M_DONTWAIT);
 			if(m) {
 				ph = mtod(m, struct sctp_paramhdr *);
 				ph->param_type = htons(SCTP_CAUSE_USER_INITIATED_ABT);
@@ -5205,7 +5205,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		m = sctp_get_mbuf_for_msg(1, 0, M_DONTWAIT, 0, MT_DATA);
 		if (m == NULL) {
 			/*
-			 * we're in trouble here. M_PREPEND below will free
+			 * we're in trouble here. _PREPEND below will free
 			 * all the data if there is no leading space, so we
 			 * must put the data back and restore.
 			 */
@@ -5232,7 +5232,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 			M_ALIGN(chk->data, 4);
 		}
 	}
-	M_PREPEND(chk->data, sizeof(struct sctp_data_chunk), M_DONTWAIT);
+	SCTP_BUF_PREPEND(chk->data, sizeof(struct sctp_data_chunk), M_DONTWAIT);
 	if (chk->data == NULL) {
 		/* HELP */
 		sctp_free_a_chunk(stcb, chk);
@@ -5883,7 +5883,7 @@ again_one_more_time:
 						sctp_timer_start(SCTP_TIMER_TYPE_COOKIE, inp, stcb, net);
 						cookie = 0;
 					}
-					M_PREPEND(outchain, sizeof(struct sctphdr), M_DONTWAIT);
+					SCTP_BUF_PREPEND(outchain, sizeof(struct sctphdr), M_DONTWAIT);
 					if (outchain == NULL) {
 						/* no memory */
 						error = ENOBUFS;
@@ -6134,7 +6134,7 @@ again_one_more_time:
 				sctp_timer_start(SCTP_TIMER_TYPE_SEND, inp, stcb, net);
 			}
 			/* Now send it, if there is anything to send :> */
-			M_PREPEND(outchain, sizeof(struct sctphdr), M_DONTWAIT);
+			SCTP_BUF_PREPEND(outchain, sizeof(struct sctphdr), M_DONTWAIT);
 			if (outchain == NULL) {
 				/* out of mbufs */
 				error = ENOBUFS;
@@ -6287,7 +6287,7 @@ sctp_queue_op_err(struct sctp_tcb *stcb, struct mbuf *op_err)
 		return;
 	}
 	chk->copy_by_ref = 0;
-	M_PREPEND(op_err, sizeof(struct sctp_chunkhdr), M_DONTWAIT);
+	SCTP_BUF_PREPEND(op_err, sizeof(struct sctp_chunkhdr), M_DONTWAIT);
 	if (op_err == NULL) {
 		sctp_free_a_chunk(stcb, chk);
 		return;
@@ -6813,7 +6813,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 		} else if (chk->rec.chunk_id.id == SCTP_ASCONF)
 			sctp_timer_start(SCTP_TIMER_TYPE_ASCONF, inp, stcb, chk->whoTo);
 
-		M_PREPEND(m, sizeof(struct sctphdr), M_DONTWAIT);
+		SCTP_BUF_PREPEND(m, sizeof(struct sctphdr), M_DONTWAIT);
 		if (m == NULL) {
 			return (ENOBUFS);
 		}
@@ -7034,7 +7034,7 @@ one_chunk_around:
 				sctp_timer_start(SCTP_TIMER_TYPE_SEND, inp, stcb, net);
 				tmr_started = 1;
 			}
-			M_PREPEND(m, sizeof(struct sctphdr), M_DONTWAIT);
+			SCTP_BUF_PREPEND(m, sizeof(struct sctphdr), M_DONTWAIT);
 			if (m == NULL) {
 				return (ENOBUFS);
 			}
@@ -7965,7 +7965,7 @@ sctp_send_abort_tcb(struct sctp_tcb *stcb, struct mbuf *operr)
 	abort->ch.chunk_length = htons(sizeof(*abort) + sz);
 
 	/* prepend and fill in the SCTP header */
-	M_PREPEND(m_out, sizeof(struct sctphdr), M_DONTWAIT);
+	SCTP_BUF_PREPEND(m_out, sizeof(struct sctphdr), M_DONTWAIT);
 	if (m_out == NULL) {
 		/* TSNH: no memory */
 		return;
@@ -9057,7 +9057,7 @@ sctp_send_operr_to(struct mbuf *m, int iphlen,
 	iph = mtod(m, struct ip *);
 	ihdr = (struct sctphdr *)((caddr_t)iph + iphlen);
 
-	M_PREPEND(scm, (sizeof(struct sctphdr) + sizeof(struct sctp_chunkhdr)), M_DONTWAIT);
+	SCTP_BUF_PREPEND(scm, (sizeof(struct sctphdr) + sizeof(struct sctp_chunkhdr)), M_DONTWAIT);
 	if (scm == NULL) {
 		/* can't send because we can't add a mbuf */
 		return;

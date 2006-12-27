@@ -26,6 +26,35 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+/*
+ * Copyright (c) 2006 Apple Computer, Inc. All Rights Reserved.
+ * 
+ * @APPLE_LICENSE_OSREFERENCE_HEADER_START@
+ * 
+ * This file contains Original Code and/or Modifications of Original Code 
+ * as defined in and that are subject to the Apple Public Source License 
+ * Version 2.0 (the 'License'). You may not use this file except in 
+ * compliance with the License.  The rights granted to you under the 
+ * License may not be used to create, or enable the creation or 
+ * redistribution of, unlawful or unlicensed copies of an Apple operating 
+ * system, or to circumvent, violate, or enable the circumvention or 
+ * violation of, any terms of an Apple operating system software license 
+ * agreement.
+ *
+ * Please obtain a copy of the License at 
+ * http://www.opensource.apple.com/apsl/ and read it before using this 
+ * file.
+ *
+ * The Original Code and all software distributed under the License are 
+ * distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER 
+ * EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES, 
+ * INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY, 
+ * FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT. 
+ * Please see the License for the specific language governing rights and 
+ * limitations under the License.
+ *
+ * @APPLE_LICENSE_OSREFERENCE_HEADER_END@
+ */
 
 #include <sctp.h>
 
@@ -345,3 +374,92 @@ lck_rw_t *sctp_calloutq_mtx;
 void *sctp_calloutq_mtx;
 #endif
 #endif
+
+
+
+/*
+ * here we hack in a fix for Apple's m_copym for the case where the first
+ * mbuf in the chain is a M_PKTHDR and the length is zero.
+ * NOTE: this is possibly fixed in Leopard
+ */
+static void
+sctp_pkthdr_fix(struct mbuf *m)
+{
+	struct mbuf *m_nxt;
+
+	if ((SCTP_BUF_GET_FLAGS(m) & M_PKTHDR) == 0) {
+		/* not a PKTHDR */
+		return;
+	}
+	if (SCTP_BUF_LEN(m) != 0) {
+		/* not a zero length PKTHDR mbuf */
+		return;
+	}
+	/* let's move in a word into the first mbuf... yes, ugly! */
+	m_nxt = SCTP_BUF_NEXT(m);
+	if (m_nxt == NULL) {
+		/* umm... not a very useful mbuf chain... */
+		return;
+	}
+	if ((size_t)SCTP_BUF_LEN(m_nxt) > sizeof(long)) {
+		/* move over a long */
+		bcopy(mtod(m_nxt, caddr_t), mtod(m, caddr_t), sizeof(long));
+		/* update mbuf data pointers and lengths */
+		SCTP_BUF_LEN(m) += sizeof(long);
+		SCTP_BUF_RESV_UF(m_nxt, sizeof(long));
+		SCTP_BUF_LEN(m_nxt) -= sizeof(long);
+	}
+}
+
+inline struct mbuf *
+sctp_m_copym(struct mbuf *m, int off, int len, int wait)
+{
+	sctp_pkthdr_fix(m);
+	return (m_copym(m, off, len, wait));
+}
+
+
+/*
+ * here we fix up Apple's m_prepend() and m_prepend_2().
+ * See FreeBSD uipc_mbuf.c, version 1.170.
+ */
+struct mbuf *
+sctp_m_prepend(struct mbuf *m, int len, int how)
+{
+	struct mbuf *mn;
+
+	MGET(mn, how, m->m_type);
+	if (mn == (struct mbuf *)NULL) {
+		m_freem(m);
+		return ((struct mbuf *)NULL);
+	}
+	if (m->m_flags & M_PKTHDR) {
+		M_COPY_PKTHDR(mn, m);
+		m->m_flags &= ~M_PKTHDR;
+	}
+	mn->m_next = m;
+	m = mn;
+	if (m->m_flags & M_PKTHDR) {
+		if (len < MHLEN)
+			MH_ALIGN(m, len);
+	} else {
+		if (len < MLEN)
+			M_ALIGN(m, len);
+	}
+	m->m_len = len;
+	return (m);
+}
+
+struct mbuf *
+sctp_m_prepend_2(struct mbuf *m, int len, int how)
+{
+        if (M_LEADINGSPACE(m) >= len) {
+                m->m_data -= len;
+                m->m_len += len;
+        } else {
+		m = sctp_m_prepend(m, len, how);
+        }
+        if ((m) && (m->m_flags & M_PKTHDR))
+                m->m_pkthdr.len += len;
+        return (m);
+}

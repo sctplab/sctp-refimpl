@@ -36,6 +36,7 @@
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/random.h>
+#include <sys/mbuf.h>
 
 /*
  * general memory allocation
@@ -98,6 +99,10 @@ extern zone_t kalloc_zone(vm_size_t);	/* XXX */
 #define SCTP_BUF_EXTEND_SIZE(m) (m->m_ext.ext_size)
 #define SCTP_BUF_TYPE(m) (m->m_type)
 #define SCTP_BUF_RECVIF(m) (m->m_pkthdr.rcvif)
+#define SCTP_BUF_PREPEND(m, plen, how) ((m) = sctp_m_prepend_2((m), (plen), (how)))
+struct mbuf *sctp_m_prepend_2(struct mbuf *m, int len, int how);
+
+
 /*************************/
 /* These are for logging */
 /*************************/
