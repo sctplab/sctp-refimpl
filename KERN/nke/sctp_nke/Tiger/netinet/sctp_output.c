@@ -8964,7 +8964,7 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 	}
 
 	/* add checksum */
-	if ((sctp_no_csum_on_loopback) && SCTP_IS_IT_LOOPBACK(o_pak)) {
+	if ((sctp_no_csum_on_loopback) && SCTP_IS_IT_LOOPBACK(m)) {
 		abm->sh.checksum = 0;
 	} else {
 		abm->sh.checksum = sctp_calculate_sum(mout, NULL, iphlen_out);
