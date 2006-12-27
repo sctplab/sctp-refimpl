@@ -139,6 +139,7 @@ typedef struct callout sctp_os_timer_t;
 #define SCTP_BUF_EXTEND_SIZE(m) (m->m_ext.ext_size)
 #define SCTP_BUF_TYPE(m) (m->m_type)
 #define SCTP_BUF_RECVIF(m) (m->m_pkthdr.rcvif)
+#define SCTP_BUF_PREPEND	M_PREPEND
 /*************************/
 /* These are for logging */
 /*************************/
