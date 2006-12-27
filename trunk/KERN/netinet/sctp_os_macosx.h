@@ -132,7 +132,7 @@ struct mbuf *sctp_m_prepend_2(struct mbuf *m, int len, int how);
 
 /* Other m_pkthdr type things */
 #define SCTP_IS_IT_BROADCAST(dst, m) in_broadcast(dst, m->m_pkthdr.rcvif)
-#define SCTP_IS_IT_LOOPBACK(m) ((m->m_pkthdr.rcvif == NULL) || (m->m_pkthdr.rcvif->if_type != IFT_LOOP))
+#define SCTP_IS_IT_LOOPBACK(m) ((m->m_pkthdr.rcvif == NULL) || (m->m_pkthdr.rcvif->if_type == IFT_LOOP))
 
 
 /*

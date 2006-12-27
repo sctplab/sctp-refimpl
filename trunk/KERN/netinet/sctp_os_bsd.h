@@ -169,7 +169,7 @@ typedef struct callout sctp_os_timer_t;
 
 /* Other m_pkthdr type things */
 #define SCTP_IS_IT_BROADCAST(dst, m) in_broadcast(dst, m->m_pkthdr.rcvif)
-#define SCTP_IS_IT_LOOPBACK(m) ((m->m_pkthdr.rcvif == NULL) ||(m->m_pkthdr.rcvif->if_type != IFT_LOOP))
+#define SCTP_IS_IT_LOOPBACK(m) ((m->m_pkthdr.rcvif == NULL) ||(m->m_pkthdr.rcvif->if_type == IFT_LOOP))
 
 
 /* This converts any input packet header
