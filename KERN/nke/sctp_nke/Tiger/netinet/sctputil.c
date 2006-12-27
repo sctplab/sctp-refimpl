@@ -4316,55 +4316,6 @@ sctp_find_ifa_by_addr(struct sockaddr *sa)
 	return (NULL);
 }
 
-
-
-
-
-
-#ifdef __APPLE__
-/*
- * here we hack in a fix for Apple's m_copym for the case where the first
- * mbuf in the chain is a M_PKTHDR and the length is zero
- */
-static void
-sctp_pkthdr_fix(struct mbuf *m)
-{
-	struct mbuf *m_nxt;
-
-	if ((SCTP_BUF_GET_FLAGS(m) & M_PKTHDR) == 0) {
-		/* not a PKTHDR */
-		return;
-	}
-	if (SCTP_BUF_LEN(m) != 0) {
-		/* not a zero length PKTHDR mbuf */
-		return;
-	}
-	/* let's move in a word into the first mbuf... yes, ugly! */
-	m_nxt = SCTP_BUF_NEXT(m);
-	if (m_nxt == NULL) {
-		/* umm... not a very useful mbuf chain... */
-		return;
-	}
-	if ((size_t)SCTP_BUF_LEN(m_nxt) > sizeof(long)) {
-		/* move over a long */
-		bcopy(mtod(m_nxt, caddr_t), mtod(m, caddr_t), sizeof(long));
-		/* update mbuf data pointers and lengths */
-		SCTP_BUF_LEN(m) += sizeof(long);
-		SCTP_BUF_RESV_UF(m_nxt, sizeof(long));
-		SCTP_BUF_LEN(m_nxt) -= sizeof(long);
-	}
-}
-
-inline struct mbuf *
-sctp_m_copym(struct mbuf *m, int off, int len, int wait)
-{
-	sctp_pkthdr_fix(m);
-	return (m_copym(m, off, len, wait));
-}
-
-#endif				/* __APPLE__ */
-
-
 static void
 sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far, int hold_rlock, 
 	       uint32_t rwnd_req)
