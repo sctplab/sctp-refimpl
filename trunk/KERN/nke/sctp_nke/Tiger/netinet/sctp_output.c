@@ -7948,7 +7948,6 @@ sctp_send_abort_tcb(struct sctp_tcb *stcb, struct mbuf *operr)
 		}
 	}
 	SCTP_BUF_LEN(m_abort) = sizeof(*abort);
-	SCTP_BUF_LEN(m_abort) += sz;
 	if (m_out == NULL) {
 		/* NO Auth chunk prepended, so reserve space in front */
 		SCTP_BUF_RESV_UF(m_abort, SCTP_MIN_OVERHEAD);

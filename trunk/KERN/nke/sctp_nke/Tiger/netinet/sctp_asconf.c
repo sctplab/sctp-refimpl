@@ -2489,7 +2489,6 @@ sctp_compose_asconf(struct sctp_tcb *stcb, int *retlen)
 	}
 	/* chain it all together */
 	SCTP_BUF_NEXT(m_asconf_chk) = m_asconf;
-	SCTP_BUF_LEN(m_asconf_chk) += SCTP_BUF_LEN(m_asconf);
 	*retlen = acp->ch.chunk_length = ntohs(SCTP_BUF_LEN(m_asconf_chk) + SCTP_BUF_LEN(m_asconf));
 
 	/* update "sent" flag */
