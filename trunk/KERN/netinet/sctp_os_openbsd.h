@@ -80,6 +80,7 @@ typedef struct timeout sctp_os_timer_t;
 	timeout_add((c), (ticks)); \
     } while (0)
 #define SCTP_OS_TIMER_STOP	timeout_del
+#define SCTP_OS_TIMER_STOP_DRAIN timeout_del
 #define SCTP_OS_TIMER_PENDING	timeout_pending
 #define SCTP_OS_TIMER_ACTIVE	timeout_initialized
 #define SCTP_OS_TIMER_DEACTIVATE(args)	/* TBD */
