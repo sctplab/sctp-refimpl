@@ -4907,7 +4907,7 @@ sctp_skip_csum_4:
 #else
 		x = sctp_buf_index++;
 #endif
-		if(x > 30000) {
+		if(x >= 30000) {
 			sctp_buf_index = 1;
 			x = 0;;
 		}
