@@ -1444,6 +1444,18 @@ sctp_timeout_handler(void *t)
 		atomic_add_int(&stcb->asoc.refcnt, -1);
 	}
 	/* mark as being serviced now */
+	if (SCTP_OS_TIMER_PENDING(&tmr->timer)) {
+		/* 
+		 * Callout has been rescheduled.
+		 */
+		goto get_out;
+	}
+	if(! SCTP_OS_TIMER_ACTIVE((&tmr->timer)) {
+		/* 
+		 * Not active, so no action.
+		 */
+		goto get_out;
+	}
 	SCTP_OS_TIMER_DEACTIVATE(&tmr->timer);
 
 	/* call the handler for the appropriate timer type */
@@ -1684,6 +1696,7 @@ sctp_timeout_handler(void *t)
 		 */
 		sctp_fix_ecn_echo(&stcb->asoc);
 	}
+get_out:
 	if (stcb) {
 		SCTP_TCB_UNLOCK(stcb);
 	}

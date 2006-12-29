@@ -2845,7 +2845,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	}
 	if (cnt) {
 		/* Ok we have someone out there that will kill us */
-		SCTP_OS_TIMER_STOP(&inp->sctp_ep.signature_change.timer);
+		SCTP_OS_TIMER_STOP_DRAIN(&inp->sctp_ep.signature_change.timer);
 		SCTP_INP_WUNLOCK(inp);
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		SCTP_INP_INFO_WUNLOCK();
@@ -2860,7 +2860,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
 	if ( (inp->refcount) || (inp->sctp_flags & SCTP_PCB_FLAGS_CLOSE_IP) ) {
-		SCTP_OS_TIMER_STOP(&inp->sctp_ep.signature_change.timer);
+		SCTP_OS_TIMER_STOP_DRAIN(&inp->sctp_ep.signature_change.timer);
 		sctp_timer_start(SCTP_TIMER_TYPE_INPKILL, inp, NULL, NULL);
 		SCTP_INP_WUNLOCK(inp);
 		SCTP_ASOC_CREATE_UNLOCK(inp);
@@ -2874,7 +2874,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 		return;
 	}
 #endif
-	SCTP_OS_TIMER_STOP(&inp->sctp_ep.signature_change.timer);
+	SCTP_OS_TIMER_STOP_DRAIN(&inp->sctp_ep.signature_change.timer);
 	inp->sctp_ep.signature_change.type = 0;
 	inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_ALLGONE;
 
@@ -2885,7 +2885,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 #if !defined(__FreeBSD__) || __FreeBSD_version < 500000
 	rt = ip_pcb->inp_route.ro_rt;
 #endif
-	SCTP_OS_TIMER_STOP(&inp->sctp_ep.signature_change.timer);
+	SCTP_OS_TIMER_STOP_DRAIN(&inp->sctp_ep.signature_change.timer);
 	inp->sctp_ep.signature_change.type = SCTP_TIMER_TYPE_NONE;
 	/* Clear the read queue */
 	while ((sq = TAILQ_FIRST(&inp->read_queue)) != NULL) {
@@ -4079,30 +4079,13 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		}
 	}
 
-	/* Stop any timer someone may have started */
-	SCTP_OS_TIMER_STOP(&asoc->strreset_timer.timer); 
 	/* Make it invalid too, that way if its
 	 * about to run it will abort and return.
 	 */
-	asoc->strreset_timer.type = SCTP_TIMER_TYPE_NONE;
 	sctp_iterator_asoc_being_freed(inp, stcb);
 	/* re-increment the lock */
 	if(from_inpcbfree == SCTP_NORMAL_PROC) {
 		atomic_add_int(&stcb->asoc.refcnt, -1);
-	}
-	/* now restop the timers to be sure - this is paranoia at is finest! */
-	SCTP_OS_TIMER_STOP(&asoc->hb_timer.timer);
-	SCTP_OS_TIMER_STOP(&asoc->dack_timer.timer);
-	SCTP_OS_TIMER_STOP(&asoc->strreset_timer.timer);
-	SCTP_OS_TIMER_STOP(&asoc->asconf_timer.timer);
-	SCTP_OS_TIMER_STOP(&asoc->shut_guard_timer.timer);
-	SCTP_OS_TIMER_STOP(&asoc->autoclose_timer.timer);
-	SCTP_OS_TIMER_STOP(&asoc->delayed_event_timer.timer);
-
-	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
-		SCTP_OS_TIMER_STOP(&net->fr_timer.timer);
-		SCTP_OS_TIMER_STOP(&net->rxt_timer.timer);
-		SCTP_OS_TIMER_STOP(&net->pmtu_timer.timer);
 	}
 	asoc->state = 0;
 	if (inp->sctp_tcbhash) {
@@ -4124,6 +4107,29 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	LIST_REMOVE(stcb, sctp_asocs);
 	sctp_add_vtag_to_timewait(inp, asoc->my_vtag);
 
+
+	/* Now restop the timers to be sure - 
+	 * this is paranoia at is finest! 
+	 * We must unlock before we drain.
+	 */
+	SCTP_TCB_UNLOCK(stcb);
+	SCTP_OS_TIMER_STOP_DRAIN(&asoc->strreset_timer.timer); 
+	SCTP_OS_TIMER_STOP_DRAIN(&asoc->hb_timer.timer);
+	SCTP_OS_TIMER_STOP_DRAIN(&asoc->dack_timer.timer);
+	SCTP_OS_TIMER_STOP_DRAIN(&asoc->strreset_timer.timer);
+	SCTP_OS_TIMER_STOP_DRAIN(&asoc->asconf_timer.timer);
+	SCTP_OS_TIMER_STOP_DRAIN(&asoc->shut_guard_timer.timer);
+	SCTP_OS_TIMER_STOP_DRAIN(&asoc->autoclose_timer.timer);
+	SCTP_OS_TIMER_STOP_DRAIN(&asoc->delayed_event_timer.timer);
+
+	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
+		SCTP_OS_TIMER_STOP_DRAIN(&net->fr_timer.timer);
+		SCTP_OS_TIMER_STOP_DRAIN(&net->rxt_timer.timer);
+		SCTP_OS_TIMER_STOP_DRAIN(&net->pmtu_timer.timer);
+	}
+	SCTP_TCB_LOCK(stcb);
+
+	asoc->strreset_timer.type = SCTP_TIMER_TYPE_NONE;
 	prev = NULL;
 	/*
 	 * The chunk lists and such SHOULD be empty but we check them just
