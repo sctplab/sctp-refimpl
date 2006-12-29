@@ -2845,7 +2845,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	}
 	if (cnt) {
 		/* Ok we have someone out there that will kill us */
-		SCTP_OS_TIMER_STOP_DRAIN(&inp->sctp_ep.signature_change.timer);
+		SCTP_OS_TIMER_STOP(&inp->sctp_ep.signature_change.timer);
 		SCTP_INP_WUNLOCK(inp);
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		SCTP_INP_INFO_WUNLOCK();
@@ -2860,7 +2860,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
 	if ( (inp->refcount) || (inp->sctp_flags & SCTP_PCB_FLAGS_CLOSE_IP) ) {
-		SCTP_OS_TIMER_STOP_DRAIN(&inp->sctp_ep.signature_change.timer);
+		SCTP_OS_TIMER_STOP(&inp->sctp_ep.signature_change.timer);
 		sctp_timer_start(SCTP_TIMER_TYPE_INPKILL, inp, NULL, NULL);
 		SCTP_INP_WUNLOCK(inp);
 		SCTP_ASOC_CREATE_UNLOCK(inp);
@@ -2874,7 +2874,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 		return;
 	}
 #endif
-	SCTP_OS_TIMER_STOP_DRAIN(&inp->sctp_ep.signature_change.timer);
+	SCTP_OS_TIMER_STOP(&inp->sctp_ep.signature_change.timer);
 	inp->sctp_ep.signature_change.type = 0;
 	inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_ALLGONE;
 
@@ -2885,7 +2885,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 #if !defined(__FreeBSD__) || __FreeBSD_version < 500000
 	rt = ip_pcb->inp_route.ro_rt;
 #endif
-	SCTP_OS_TIMER_STOP_DRAIN(&inp->sctp_ep.signature_change.timer);
+	SCTP_OS_TIMER_STOP(&inp->sctp_ep.signature_change.timer);
 	inp->sctp_ep.signature_change.type = SCTP_TIMER_TYPE_NONE;
 	/* Clear the read queue */
 	while ((sq = TAILQ_FIRST(&inp->read_queue)) != NULL) {
@@ -4113,19 +4113,19 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	 * We must unlock before we drain.
 	 */
 	SCTP_TCB_UNLOCK(stcb);
-	SCTP_OS_TIMER_STOP_DRAIN(&asoc->strreset_timer.timer); 
-	SCTP_OS_TIMER_STOP_DRAIN(&asoc->hb_timer.timer);
-	SCTP_OS_TIMER_STOP_DRAIN(&asoc->dack_timer.timer);
-	SCTP_OS_TIMER_STOP_DRAIN(&asoc->strreset_timer.timer);
-	SCTP_OS_TIMER_STOP_DRAIN(&asoc->asconf_timer.timer);
-	SCTP_OS_TIMER_STOP_DRAIN(&asoc->shut_guard_timer.timer);
-	SCTP_OS_TIMER_STOP_DRAIN(&asoc->autoclose_timer.timer);
-	SCTP_OS_TIMER_STOP_DRAIN(&asoc->delayed_event_timer.timer);
+	SCTP_OS_TIMER_STOP(&asoc->strreset_timer.timer); 
+	SCTP_OS_TIMER_STOP(&asoc->hb_timer.timer);
+	SCTP_OS_TIMER_STOP(&asoc->dack_timer.timer);
+	SCTP_OS_TIMER_STOP(&asoc->strreset_timer.timer);
+	SCTP_OS_TIMER_STOP(&asoc->asconf_timer.timer);
+	SCTP_OS_TIMER_STOP(&asoc->shut_guard_timer.timer);
+	SCTP_OS_TIMER_STOP(&asoc->autoclose_timer.timer);
+	SCTP_OS_TIMER_STOP(&asoc->delayed_event_timer.timer);
 
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
-		SCTP_OS_TIMER_STOP_DRAIN(&net->fr_timer.timer);
-		SCTP_OS_TIMER_STOP_DRAIN(&net->rxt_timer.timer);
-		SCTP_OS_TIMER_STOP_DRAIN(&net->pmtu_timer.timer);
+		SCTP_OS_TIMER_STOP(&net->fr_timer.timer);
+		SCTP_OS_TIMER_STOP(&net->rxt_timer.timer);
+		SCTP_OS_TIMER_STOP(&net->pmtu_timer.timer);
 	}
 	SCTP_TCB_LOCK(stcb);
 
