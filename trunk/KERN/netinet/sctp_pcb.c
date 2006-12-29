@@ -4110,9 +4110,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 
 	/* Now restop the timers to be sure - 
 	 * this is paranoia at is finest! 
-	 * We must unlock before we drain.
 	 */
-	SCTP_TCB_UNLOCK(stcb);
 	SCTP_OS_TIMER_STOP(&asoc->strreset_timer.timer); 
 	SCTP_OS_TIMER_STOP(&asoc->hb_timer.timer);
 	SCTP_OS_TIMER_STOP(&asoc->dack_timer.timer);
@@ -4127,7 +4125,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		SCTP_OS_TIMER_STOP(&net->rxt_timer.timer);
 		SCTP_OS_TIMER_STOP(&net->pmtu_timer.timer);
 	}
-	SCTP_TCB_LOCK(stcb);
 
 	asoc->strreset_timer.type = SCTP_TIMER_TYPE_NONE;
 	prev = NULL;
