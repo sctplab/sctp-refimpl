@@ -1450,7 +1450,7 @@ sctp_timeout_handler(void *t)
 		 */
 		goto get_out;
 	}
-	if(! SCTP_OS_TIMER_ACTIVE((&tmr->timer)) {
+	if (!SCTP_OS_TIMER_ACTIVE(&tmr->timer)) {
 		/* 
 		 * Not active, so no action.
 		 */
