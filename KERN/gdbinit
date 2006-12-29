@@ -34,6 +34,46 @@ document allasoc
 Show all SCTP associations
 end
 
+define findep
+set $_inp=sctppcbinfo.listhead.lh_first
+while ( $_inp != 0 )
+  if ($_inp->ip_inp.inp.inp_inc.inc_ie.ie_lport == $arg0)
+    print $_inp
+    set $_inp=0
+  else
+    set $_inp=$_inp->sctp_list.le_next
+  end
+ end
+end
+document findep
+find an endpoint
+end
+
+define findasoc
+set $_inp=sctppcbinfo.listhead.lh_first
+ while ( $_inp != 0 )
+  if ($_inp->ip_inp.inp.inp_inc.inc_ie.ie_lport == $arg0)
+     print $_inp
+     set $_asoc=$_inp->sctp_asoc_list.lh_first
+     while ( $_asoc != 0) 
+        if ($_asoc->rport == $arg1)
+           print $_asoc
+           set $_asoc=0
+        else
+           set $_asoc=$_asoc->sctp_tcblist.le_next
+        end
+     end
+    set $_inp=0
+  else
+    set $_inp=$_inp->sctp_list.le_next
+  end
+ end
+end
+document findasoc
+Find an SCTP association srcport dstport
+end
+
+
 define interesting
 printf "asociation %X\n", $arg0
 printf "output_q_size %d\n", $arg0->asoc.total_output_queue_size
