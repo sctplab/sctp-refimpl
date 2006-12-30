@@ -4555,9 +4555,9 @@ restart:
 		goto out;
 	}
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
-	if (so->so_error || so->so_rcv.sb_state & SBS_CANTRCVMORE)
+	if (so->so_rcv.sb_state & SBS_CANTRCVMORE)
 #else
-	if (so->so_error || so->so_state & SS_CANTRCVMORE)
+	if (so->so_state & SS_CANTRCVMORE)
 #endif
 	{
 		if (so->so_error) {
@@ -4567,7 +4567,6 @@ restart:
 		}
 		goto out;
 	}
-
 	if ((so->so_rcv.sb_cc <=  held_length) && block_allowed) {
 		/* we need to wait for data */
 #ifdef SCTP_RECV_DETAIL_RWND_LOGGING
@@ -5144,11 +5143,11 @@ get_more_data:
 		}
 wait_some_more:
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
-		if (so->so_error || so->so_rcv.sb_state & SBS_CANTRCVMORE) {
+		if (so->so_rcv.sb_state & SBS_CANTRCVMORE) {
 			goto release;
 		}
 #else
-		if (so->so_error || so->so_state & SS_CANTRCVMORE) {
+		if (so->so_state & SS_CANTRCVMORE) {
 			goto release;
 		}
 #endif
@@ -5284,10 +5283,10 @@ get_more_data2:
 			}
 	wait_some_more2:
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
-			if (so->so_error || so->so_rcv.sb_state & SBS_CANTRCVMORE)
+			if (so->so_rcv.sb_state & SBS_CANTRCVMORE)
 				goto release;
 #else
-			if (so->so_error || so->so_state & SS_CANTRCVMORE)
+			if (so->so_state & SS_CANTRCVMORE)
 				goto release;
 #endif
 			if(hold_rlock == 1) {
