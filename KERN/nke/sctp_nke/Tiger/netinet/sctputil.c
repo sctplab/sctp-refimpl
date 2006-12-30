@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.9 2006/12/14 17:02:55 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.10 2006/12/29 20:21:42 rrs Exp $");
 #endif
 
 
@@ -2754,9 +2754,10 @@ sctp_notify_assoc_change(uint32_t event, struct sctp_tcb *stcb,
 	if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 	     (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) &&
 	    (event == SCTP_COMM_LOST)) {
-		if(TAILQ_EMPTY(&stcb->sctp_ep->read_queue)) {
+		if (SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_COOKIE_WAIT)
+			stcb->sctp_socket->so_error = ECONNREFUSED;
+		else
 			stcb->sctp_socket->so_error = ECONNRESET;
-		}
 		/* Wake ANY sleepers */
 		sorwakeup(stcb->sctp_socket);
 		sowwakeup(stcb->sctp_socket);
@@ -4562,12 +4563,15 @@ restart:
 	{
 		if (so->so_error) {
 			error = so->so_error;
+			if ((in_flags & MSG_PEEK) == 0)
+				so->so_error = 0;
 		} else {
 			error = ENOTCONN;
 		}
 		goto out;
 	}
-	if ((so->so_rcv.sb_cc <=  held_length) && block_allowed) {
+
+	if ((so->so_rcv.sb_cc <= held_length) && block_allowed) {
 		/* we need to wait for data */
 #ifdef SCTP_RECV_DETAIL_RWND_LOGGING
 		sctp_misc_ints(SCTP_SORECV_BLOCKSA,
@@ -4580,7 +4584,7 @@ restart:
 				/* For active open side clear flags for re-use 
 				 * passive open is blocked by connect.
 				 */
-				if (inp->sctp_flags &  SCTP_PCB_FLAGS_WAS_ABORTED) {
+				if (inp->sctp_flags & SCTP_PCB_FLAGS_WAS_ABORTED) {
 					/* You were aborted, passive side always hits here */
 					error = ECONNRESET;
 					/* You get this once if you are active open side */
@@ -4610,7 +4614,13 @@ restart:
 		held_length = 0;
 		goto restart_nosblocks;
 	} else if (so->so_rcv.sb_cc == 0) {
-		error = EWOULDBLOCK;
+		if (so->so_error) {
+			error = so->so_error;
+			if ((in_flags & MSG_PEEK) == 0)
+				so->so_error = 0;
+		} else {
+			error = EWOULDBLOCK;
+		}
 		goto out;
 	}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
@@ -4619,7 +4629,6 @@ restart:
 #if defined(__NetBSD__)
 	error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
 #endif
-
 #if defined(__FreeBSD__)
 	error = sblock(&so->so_rcv, (block_allowed ? M_WAITOK : 0));
 #endif
@@ -4649,8 +4658,8 @@ restart:
 	if ((control->length == 0) && 
 	    (control->do_not_ref_stcb)) {
 		/* Clean up code for freeing assoc that left behind a pdapi..
-		 * maybe a peer in EEOR that just closed after sending and never indicated
-		 * a EOR.
+		 * maybe a peer in EEOR that just closed after sending and
+		 * never indicated a EOR.
 		 */
 		if(hold_rlock == 0) {
 			hold_rlock = 1;
@@ -5095,9 +5104,9 @@ get_more_data:
 			} else {
 				/*
 				 * The user did not read all of this
-				 * message, turn off the returned MSG_EOR since we
-				 * are leaving more behind on the control to
-				 * read.
+				 * message, turn off the returned MSG_EOR
+				 * since we are leaving more behind on the
+				 * control to read.
 				 */
 #ifdef INVARIANTS
 				if(control->end_added && (control->data == NULL) &&
@@ -5132,8 +5141,8 @@ get_more_data:
 		 * is NOT to our control when we wakeup.
 		 */
 
-		/* Do we need to tell the transport a rwnd update might be needed 
-		 * before we go to sleep?
+		/* Do we need to tell the transport a rwnd update might be
+		 * needed before we go to sleep?
 		 */
 		if (((stcb) && (in_flags & MSG_PEEK) == 0) &&
 		    ((freed_so_far >= rwnd_req) &&
