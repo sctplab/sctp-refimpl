@@ -4848,8 +4848,7 @@ sctp_input(i_pak, va_alist)
 		goto bad;
 	}
 	/* validate SCTP checksum */
-	if ((sctp_no_csum_on_loopback == 0) ||
-	    SCTP_IS_IT_LOOPBACK(i_pak)) {
+	if ((sctp_no_csum_on_loopback == 0) || !SCTP_IS_IT_LOOPBACK(i_pak)) {
 		/*
 		 * we do NOT validate things from the loopback if the sysctl
 		 * is set to 1.
