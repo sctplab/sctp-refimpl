@@ -4079,30 +4079,13 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		}
 	}
 
-	/* Stop any timer someone may have started */
-	SCTP_OS_TIMER_STOP(&asoc->strreset_timer.timer); 
 	/* Make it invalid too, that way if its
 	 * about to run it will abort and return.
 	 */
-	asoc->strreset_timer.type = SCTP_TIMER_TYPE_NONE;
 	sctp_iterator_asoc_being_freed(inp, stcb);
 	/* re-increment the lock */
 	if(from_inpcbfree == SCTP_NORMAL_PROC) {
 		atomic_add_int(&stcb->asoc.refcnt, -1);
-	}
-	/* now restop the timers to be sure - this is paranoia at is finest! */
-	SCTP_OS_TIMER_STOP(&asoc->hb_timer.timer);
-	SCTP_OS_TIMER_STOP(&asoc->dack_timer.timer);
-	SCTP_OS_TIMER_STOP(&asoc->strreset_timer.timer);
-	SCTP_OS_TIMER_STOP(&asoc->asconf_timer.timer);
-	SCTP_OS_TIMER_STOP(&asoc->shut_guard_timer.timer);
-	SCTP_OS_TIMER_STOP(&asoc->autoclose_timer.timer);
-	SCTP_OS_TIMER_STOP(&asoc->delayed_event_timer.timer);
-
-	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
-		SCTP_OS_TIMER_STOP(&net->fr_timer.timer);
-		SCTP_OS_TIMER_STOP(&net->rxt_timer.timer);
-		SCTP_OS_TIMER_STOP(&net->pmtu_timer.timer);
 	}
 	asoc->state = 0;
 	if (inp->sctp_tcbhash) {
@@ -4124,6 +4107,26 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	LIST_REMOVE(stcb, sctp_asocs);
 	sctp_add_vtag_to_timewait(inp, asoc->my_vtag);
 
+
+	/* Now restop the timers to be sure - 
+	 * this is paranoia at is finest! 
+	 */
+	SCTP_OS_TIMER_STOP(&asoc->strreset_timer.timer); 
+	SCTP_OS_TIMER_STOP(&asoc->hb_timer.timer);
+	SCTP_OS_TIMER_STOP(&asoc->dack_timer.timer);
+	SCTP_OS_TIMER_STOP(&asoc->strreset_timer.timer);
+	SCTP_OS_TIMER_STOP(&asoc->asconf_timer.timer);
+	SCTP_OS_TIMER_STOP(&asoc->shut_guard_timer.timer);
+	SCTP_OS_TIMER_STOP(&asoc->autoclose_timer.timer);
+	SCTP_OS_TIMER_STOP(&asoc->delayed_event_timer.timer);
+
+	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
+		SCTP_OS_TIMER_STOP(&net->fr_timer.timer);
+		SCTP_OS_TIMER_STOP(&net->rxt_timer.timer);
+		SCTP_OS_TIMER_STOP(&net->pmtu_timer.timer);
+	}
+
+	asoc->strreset_timer.type = SCTP_TIMER_TYPE_NONE;
 	prev = NULL;
 	/*
 	 * The chunk lists and such SHOULD be empty but we check them just
