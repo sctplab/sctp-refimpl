@@ -1311,6 +1311,9 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		asoc->cookie_how = 5;
 		sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_13);
 		sctp_stop_all_cookie_timers(stcb);
+		if(ntohl(initack_cp->init.initial_tsn) != asoc->init_seq_number) {
+			panic("What, how can this be?");
+		}
 		/*
 		 * since we did not send a HB make sure we don't double
 		 * things
