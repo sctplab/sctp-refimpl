@@ -4615,6 +4615,35 @@ restart:
 			if ((in_flags & MSG_PEEK) == 0)
 				so->so_error = 0;
 		} else {
+			if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
+			    (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
+				if ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0) {
+					/* For active open side clear flags for re-use 
+					 * passive open is blocked by connect.
+					 */
+					if (inp->sctp_flags & SCTP_PCB_FLAGS_WAS_ABORTED) {
+						/* You were aborted, passive side always hits here */
+						error = ECONNRESET;
+						/* You get this once if you are active open side */
+						if(!(inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
+							/* Remove flag if on the active open side */
+							inp->sctp_flags &= ~SCTP_PCB_FLAGS_WAS_ABORTED;
+						}
+					} 
+					so->so_state &= ~(SS_ISCONNECTING | 
+							  SS_ISDISCONNECTING | 
+							  SS_ISCONFIRMING | 
+							  SS_ISCONNECTED);
+					if (error == 0) {
+						if ((inp->sctp_flags & SCTP_PCB_FLAGS_WAS_CONNECTED) == 0) {
+							error = ENOTCONN;
+						} else {
+							inp->sctp_flags &= ~SCTP_PCB_FLAGS_WAS_CONNECTED;
+						}
+					}
+					goto out;
+				}
+			}
 			error = EWOULDBLOCK;
 		}
 		goto out;
