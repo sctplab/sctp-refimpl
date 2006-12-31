@@ -1428,10 +1428,6 @@ sctp_timeout_handler(void *t)
 	}
 #endif
 	tmr->stopped_from = 0xa006;
-#if defined(__APPLE__)
-	/* clear the callout pending status here */
-	SCTP_OS_TIMER_STOP(&tmr->timer);
-#endif
 	/* record in stopped what t-o occured */
 	tmr->stopped_from = tmr->type;
 
