@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_structs.h,v 1.4 2006/12/14 17:02:55 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_structs.h,v 1.5 2006/12/29 20:21:42 rrs Exp $");
 #endif
 
 #ifndef __sctp_structs_h__
@@ -886,6 +886,7 @@ struct sctp_association {
 	uint8_t cmt_dac_pkts_rcvd;
 	uint8_t sctp_cmt_on_off;
 	uint8_t iam_blocking;
+	uint8_t cookie_how;
 	/*
 	 * The mapping array is used to track out of order sequences above
 	 * last_acked_seq. 0 indicates packet missing 1 indicates packet
