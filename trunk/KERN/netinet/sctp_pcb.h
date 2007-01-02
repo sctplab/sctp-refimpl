@@ -582,6 +582,9 @@ sctp_aloc_assoc(struct sctp_inpcb *, struct sockaddr *,
 
 int sctp_free_assoc(struct sctp_inpcb *, struct sctp_tcb *, int, int);
 
+void
+sctp_add_vtag_to_timewait(struct sctp_inpcb *, uint32_t, uint32_t);
+
 int sctp_add_local_addr_ep(struct sctp_inpcb *, struct ifaddr *);
 
 int sctp_insert_laddr(struct sctpladdr *, struct ifaddr *);
