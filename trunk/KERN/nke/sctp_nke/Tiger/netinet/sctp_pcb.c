@@ -3751,8 +3751,8 @@ sctp_del_remote_addr(struct sctp_tcb *stcb, struct sockaddr *remaddr)
 }
 
 
-static void
-sctp_add_vtag_to_timewait(struct sctp_inpcb *inp, uint32_t tag)
+void
+sctp_add_vtag_to_timewait(struct sctp_inpcb *inp, uint32_t tag, uint32_t time)
 {
 	struct sctpvtaghead *chain;
 	struct sctp_tagblock *twait_block;
@@ -3769,7 +3769,7 @@ sctp_add_vtag_to_timewait(struct sctp_inpcb *inp, uint32_t tag)
 				if ((twait_block->vtag_block[i].v_tag == 0) &&
 				    !set) {
 					twait_block->vtag_block[i].tv_sec_at_expire =
-					    now.tv_sec + SCTP_TIME_WAIT;
+						now.tv_sec + time;
 					twait_block->vtag_block[i].v_tag = tag;
 					set = 1;
 				} else if ((twait_block->vtag_block[i].v_tag) &&
@@ -3802,7 +3802,7 @@ sctp_add_vtag_to_timewait(struct sctp_inpcb *inp, uint32_t tag)
 		if (twait_block == NULL) {
 			return;
 		}
-		memset(twait_block, 0, sizeof(struct sctp_timewait));
+		memset(twait_block, 0, sizeof(struct sctp_tagblock));
 		LIST_INSERT_HEAD(chain, twait_block, sctp_nxt_tagblock);
 		twait_block->vtag_block[0].tv_sec_at_expire = now.tv_sec +
 		    SCTP_TIME_WAIT;
@@ -4104,7 +4104,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	}
 	/* pull from vtag hash */
 	LIST_REMOVE(stcb, sctp_asocs);
-	sctp_add_vtag_to_timewait(inp, asoc->my_vtag);
+	sctp_add_vtag_to_timewait(inp, asoc->my_vtag, SCTP_TIME_WAIT);
 
 
 	/* Now restop the timers to be sure - 
