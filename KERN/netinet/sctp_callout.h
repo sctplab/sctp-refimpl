@@ -37,6 +37,16 @@ __FBSDID("$FreeBSD$");
 #ifndef __SCTP_CALLOUT__
 #define __SCTP_CALLOUT__
 
+/*
+ * NOTE: the following MACROS are required for locking the callout
+ * queue along with a lock/mutex in the OS specific headers and
+ * implementation files::
+ * - SCTP_TIMERQ_LOCK()
+ * - SCTP_TIMERQ_UNLOCK()
+ * - SCTP_TIMERQ_LOCK_INIT()
+ * - SCTP_TIMERQ_LOCK_DESTROY()
+ */
+
 #define _SCTP_NEEDS_CALLOUT_ 1
 
 #define SCTP_TICKS_PER_FASTTIMO 20	/* called about every 20ms */

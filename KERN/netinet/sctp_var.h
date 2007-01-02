@@ -539,6 +539,9 @@ void sctp_init __P((void));
 #ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
 void sctp_finish(void);
 #endif
+
+void sctp_pcbinfo_cleanup(void);
+
 int sctp_shutdown __P((struct socket *));
 void sctp_notify __P((struct sctp_inpcb *, int, struct sctphdr *,
                 struct sockaddr *, struct sctp_tcb *,

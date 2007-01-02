@@ -264,17 +264,11 @@ struct sctp_epinfo {
 
 	struct sctpvtaghead vtag_timewait[SCTP_STACK_VTAG_HASH_SIZE];
 
+	struct sctp_timer addr_wq_timer;
+
 #ifdef _SCTP_NEEDS_CALLOUT_
 	struct calloutlist callqueue;
 #endif				/* _SCTP_NEEDS_CALLOUT_ */
-
-	struct sctp_timer addr_wq_timer;
-
-	/* for port allocations */
-	uint16_t lastport;
-	uint16_t lastlow;
-	uint16_t lasthi;
-
 };
 
 extern struct sctpstat sctpstat;

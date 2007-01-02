@@ -35,6 +35,14 @@
  */
 #include <dev/rndvar.h>
 
+
+/* port ranges */
+extern int ipport_firstauto;
+extern int ipport_lastauto;
+extern int ipport_hifirstauto;
+extern int ipport_hilastauto;
+
+
 /*
  * general memory allocation
  */
