@@ -79,6 +79,9 @@ extern zone_t kalloc_zone(vm_size_t);	/* XXX */
 #define SCTP_ZONE_FREE(zone, element) \
 	zfree(zone, element);
 
+#define SCTP_HASH_INIT(size, hashmark) hashinit(size, M_PCB, hashmark)
+#define SCTP_HASH_FREE SCTP_FREE
+
 /*
  * timers
  */
