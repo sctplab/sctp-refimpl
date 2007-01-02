@@ -3802,7 +3802,7 @@ sctp_add_vtag_to_timewait(struct sctp_inpcb *inp, uint32_t tag)
 		if (twait_block == NULL) {
 			return;
 		}
-		memset(twait_block, 0, sizeof(struct sctp_timewait));
+		memset(twait_block, 0, sizeof(struct sctp_tagblock));
 		LIST_INSERT_HEAD(chain, twait_block, sctp_nxt_tagblock);
 		twait_block->vtag_block[0].tv_sec_at_expire = now.tv_sec +
 		    SCTP_TIME_WAIT;
