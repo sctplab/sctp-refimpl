@@ -9663,8 +9663,13 @@ sctp_lower_sosend(struct socket *so,
 		} else {
 			/* UDP style, we must go ahead and start the INIT process */
 			if ((use_rcvinfo) && (srcv) &&
-			    (srcv->sinfo_flags & SCTP_ABORT)) {
-				/* User asks to abort a non-existant asoc */
+			    ((srcv->sinfo_flags & SCTP_ABORT) ||
+			     ((srcv->sinfo_flags & SCTP_EOF) &&
+			      (uio->uio_resid == 0)))) {
+				/*
+				 * User asks to abort a non-existant assoc,
+				 * or EOF a non-existant assoc with no data
+				 */
 				error = ENOENT;
 				splx(s);
 				goto out_unlocked;
@@ -10519,7 +10524,11 @@ sctp_lower_sosend(struct socket *so,
 			queue_only = 0;
 		} else {
 			sctp_send_initiate(inp, stcb);
-			stcb->asoc.state = SCTP_STATE_COOKIE_WAIT;
+			if (stcb->asoc.state & SCTP_STATE_SHUTDOWN_PENDING)
+			    stcb->asoc.state = SCTP_STATE_COOKIE_WAIT |
+				SCTP_STATE_SHUTDOWN_PENDING;
+			else
+			    stcb->asoc.state = SCTP_STATE_COOKIE_WAIT;
 			queue_only_for_init = 0;
 			queue_only = 1;
 		}
