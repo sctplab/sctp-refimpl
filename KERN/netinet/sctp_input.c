@@ -1308,12 +1308,28 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		 * case B in Section 5.2.4 Table 2: MXAA or MOAA my info
 		 * should be ok, re-accept peer info
 		 */
+		if(ntohl(initack_cp->init.initial_tsn) != asoc->init_seq_number) {
+			/* Extension of case C.
+			 * If we hit this, then the random number
+			 * generator returned the same vtag when we
+			 * first sent our INIT-ACK and when we later sent
+			 * our INIT. The side with the seq numbers that are
+			 * different will be the one that normnally would
+			 * have hit case C. This in effect "extends" our vtags
+			 * in this collision case to be 64 bits. The same collision
+			 * could occur aka you get both vtag and seq number the
+			 * same twice in a row.. but is much less likely. If it
+			 * did happen then we would proceed through and bring
+			 * up the assoc.. we may end up with the wrong stream
+			 * setup however.. which would be bad.. but there is
+			 * no way to tell.. until we send on a stream that does
+			 * not exist :-)
+			 */
+			return(NULL);
+		}
 		asoc->cookie_how = 5;
 		sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_13);
 		sctp_stop_all_cookie_timers(stcb);
-		if(ntohl(initack_cp->init.initial_tsn) != asoc->init_seq_number) {
-			panic("What, how can this be?");
-		}
 		/*
 		 * since we did not send a HB make sure we don't double
 		 * things
