@@ -148,13 +148,6 @@ SCTP6_ARE_ADDR_EQUAL(struct in6_addr *a, struct in6_addr *b)
 	return (IN6_ARE_ADDR_EQUAL(&tmp_a, &tmp_b));
 }
 
-#ifdef __OpenBSD__
-extern int ipport_firstauto;
-extern int ipport_lastauto;
-extern int ipport_hifirstauto;
-extern int ipport_hilastauto;
-
-#endif
 
 void
 sctp_fill_pcbinfo(struct sctp_pcbinfo *spcb)
@@ -5033,8 +5026,6 @@ sctp_pcb_init()
 	/* allocate the lock attribute for SCTP PCB mutexes */
 	sctppcbinfo.mtx_attr = lck_attr_alloc_init();
 	lck_attr_setdefault(sctppcbinfo.mtx_attr);
-	/* allocate the lock for the callout queue */
-	sctp_calloutq_mtx = lck_rw_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR);
 #endif				/* __APPLE__ */
 	SCTP_INP_INFO_LOCK_INIT();
 	SCTP_STATLOG_INIT_LOCK();
@@ -5066,28 +5057,27 @@ sctp_pcb_init()
 
 	SCTP_OS_TIMER_INIT(&sctppcbinfo.addr_wq_timer.timer);
 
-	/* port stuff */
-#if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__APPLE__)
-	sctppcbinfo.lastlow = ipport_firstauto;
-#else
-	sctppcbinfo.lastlow = anonportmin;
-#endif
 	/* Init the TIMEWAIT list */
 	for (i = 0; i < SCTP_STACK_VTAG_HASH_SIZE; i++) {
 		LIST_INIT(&sctppcbinfo.vtag_timewait[i]);
 	}
 
 #if defined(_SCTP_NEEDS_CALLOUT_)
+	/* allocate the lock for the callout/timer queue */
+	SCTP_TIMERQ_LOCK_INIT();
 	TAILQ_INIT(&sctppcbinfo.callqueue);
 #endif
 }
 
 #ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
+/*
+ * Assumes that the sctppcbinfo lock is NOT held.
+ */
 void
 sctp_pcb_finish(void)
 {
 	/* FIXME MT */
-	lck_rw_free(sctp_calloutq_mtx, SCTP_MTX_GRP);
+	SCTP_TIMERQ_LOCK_DESTROY();
 	SCTP_INP_INFO_LOCK_DESTROY();
 	SCTP_ITERATOR_LOCK_DESTROY();
 	SCTP_IPI_COUNT_DESTROY();
