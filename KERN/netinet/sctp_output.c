@@ -9559,6 +9559,12 @@ sctp_lower_sosend(struct socket *so,
 		goto out_unlocked;
 	}
 	if ((use_rcvinfo) && srcv) {
+		if (INVALID_SINFO_FLAG(srcv->sinfo_flags) || PR_SCTP_INVALID_POLICY(srcv->sinfo_flags)) {
+			error = EINVAL;
+			splx(s);
+			goto out_unlocked;
+		}
+
 		if(srcv->sinfo_flags)
 			SCTP_STAT_INCR(sctps_sends_with_flags);
 
