@@ -3760,16 +3760,21 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		initackm_out->msg.init.initiate_tag = htonl(asoc->my_vtag);
 		initackm_out->msg.init.initial_tsn = htonl(asoc->init_seq_number);
 	} else {
+		uint32_t vtag;
 		if (asoc) {
 			atomic_add_int(&asoc->refcnt, 1);
 			SCTP_TCB_UNLOCK(stcb);
-			initackm_out->msg.init.initiate_tag = htonl(sctp_select_a_tag(inp));
+			vtag = sctp_select_a_tag(inp);
+			sctp_add_vtag_to_timewait(inp, vtag, SCTP_TIME_WAIT_SHORT);
+			initackm_out->msg.init.initiate_tag = htonl(vtag);
 			/* get a TSN to use too */
 			initackm_out->msg.init.initial_tsn = htonl(sctp_select_initial_TSN(&inp->sctp_ep));
 			SCTP_TCB_LOCK(stcb);
 			atomic_add_int(&asoc->refcnt, -1);
 		} else {
-			initackm_out->msg.init.initiate_tag = htonl(sctp_select_a_tag(inp));
+			vtag = sctp_select_a_tag(inp);
+			sctp_add_vtag_to_timewait(inp, vtag, SCTP_TIME_WAIT_SHORT);
+			initackm_out->msg.init.initiate_tag = htonl(vtag);
 			/* get a TSN to use too */
 			initackm_out->msg.init.initial_tsn = htonl(sctp_select_initial_TSN(&inp->sctp_ep));
 		}
