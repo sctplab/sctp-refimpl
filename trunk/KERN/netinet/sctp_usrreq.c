@@ -272,8 +272,26 @@ sctp_finish(void)
 {
 	sctp_pcb_finish();
 }
-
 #endif
+
+
+/*
+ * cleanup of the sctppcbinfo structure.
+ * Assumes that the sctppcbinfo lock is held.
+ */
+void
+sctp_pcbinfo_cleanup(void)
+{
+	/* free the hash tables */
+	if (sctppcbinfo.sctp_asochash != NULL)
+		SCTP_FREE(sctppcbinfo.sctp_ephash);
+	if (sctppcbinfo.sctp_ephash != NULL)
+		SCTP_FREE(sctppcbinfo.sctp_ephash);
+	if (sctppcbinfo.sctp_tcpephash != NULL)
+		SCTP_FREE(sctppcbinfo.sctp_tcpephash);
+	if (sctppcbinfo.sctp_restarthash != NULL)
+		SCTP_FREE(sctppcbinfo.sctp_restarthash);
+}
 
 #ifdef INET6
 void

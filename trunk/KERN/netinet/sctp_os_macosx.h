@@ -83,6 +83,18 @@ extern zone_t kalloc_zone(vm_size_t);	/* XXX */
  * timers
  */
 #include <netinet/sctp_callout.h>
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#ifdef _KERN_LOCKS_H_
+extern lck_rw_t *sctp_calloutq_mtx;
+#else
+extern void *sctp_calloutq_mtx;
+#endif
+#define SCTP_TIMERQ_LOCK()	lck_rw_lock_exclusive(sctp_calloutq_mtx)
+#define SCTP_TIMERQ_UNLOCK()	lck_rw_unlock_exclusive(sctp_calloutq_mtx)
+#define SCTP_TIMERQ_LOCK_INIT()	sctp_calloutq_mtx = lck_rw_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
+#define SCTP_TIMERQ_LOCK_DESTROY() lck_rw_free(sctp_calloutq_mtx, SCTP_MTX_GRP)
+#endif
+
 
 /*
  * Functions
@@ -185,14 +197,5 @@ extern int sctp_main_timer_ticks;
 
 void sctp_start_main_timer(void);
 void sctp_stop_main_timer(void);
-
-/* locks */
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-#ifdef _KERN_LOCKS_H_
-extern lck_rw_t *sctp_calloutq_mtx;
-#else
-extern void *sctp_calloutq_mtx;
-#endif
-#endif
 
 #endif

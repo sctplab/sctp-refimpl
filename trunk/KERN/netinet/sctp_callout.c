@@ -67,13 +67,9 @@ sctp_os_timer_start(sctp_os_timer_t *c, int to_ticks, void (*ftn) (void *),
 	c->c_flags |= (SCTP_CALLOUT_ACTIVE | SCTP_CALLOUT_PENDING);
 	c->c_func = ftn;
 	c->c_time = ticks + to_ticks;
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	lck_rw_lock_exclusive(sctp_calloutq_mtx);
-#endif
+	SCTP_TIMERQ_LOCK();
 	TAILQ_INSERT_TAIL(&sctppcbinfo.callqueue, c, tqe);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	lck_rw_unlock_exclusive(sctp_calloutq_mtx);
-#endif
+	SCTP_TIMERQ_UNLOCK();
 	splx(s);
 }
 
@@ -93,13 +89,9 @@ sctp_os_timer_stop(sctp_os_timer_t *c)
 	}
 	c->c_flags &= ~(SCTP_CALLOUT_ACTIVE | SCTP_CALLOUT_PENDING |
 			SCTP_CALLOUT_FIRED);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	lck_rw_lock_exclusive(sctp_calloutq_mtx);
-#endif
+	SCTP_TIMERQ_LOCK();
 	TAILQ_REMOVE(&sctppcbinfo.callqueue, c, tqe);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	lck_rw_unlock_exclusive(sctp_calloutq_mtx);
-#endif
+	SCTP_TIMERQ_UNLOCK();
 	c->c_func = NULL;
 	splx(s);
 	return (1);
@@ -129,9 +121,7 @@ printf("sctp_fasttim: ticks = %u (added %u)\n", (uint32_t)ticks,
 */
 #endif
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	lck_rw_lock_exclusive(sctp_calloutq_mtx);
-#endif
+	SCTP_TIMERQ_LOCK();
 	/* run through and subtract and mark all callouts */
 	c = TAILQ_FIRST(&sctppcbinfo.callqueue);
 	while (c) {
@@ -159,21 +149,16 @@ printf("sctp_fasttim: ticks = %u (added %u)\n", (uint32_t)ticks,
 			if (c->c_flags & SCTP_CALLOUT_FIRED) {
 				c->c_flags &= ~SCTP_CALLOUT_PENDING;
 				splx(s);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-				lck_rw_unlock_exclusive(sctp_calloutq_mtx);
-#endif
+				SCTP_TIMERQ_UNLOCK();
 				(*c->c_func) (c->c_arg);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-				lck_rw_lock_exclusive(sctp_calloutq_mtx);
-#endif
+				SCTP_TIMERQ_LOCK();
 				s = splhigh();
 			}
 			c = TAILQ_FIRST(&locallist);
 		}
 	}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	lck_rw_unlock_exclusive(sctp_calloutq_mtx);
-#endif
+	SCTP_TIMERQ_UNLOCK();
+
 #if defined(__APPLE__)
 	/* restart the main timer */
 	sctp_start_main_timer();
