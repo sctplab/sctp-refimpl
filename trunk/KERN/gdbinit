@@ -33,6 +33,25 @@ document ps
 Display all processes and their index
 end
 
+
+define getps
+set $_p=allproc.lh_first
+set $index=0
+while ( $_p != 0 )
+if ($index == $arg0)
+ printf "process %d is %s\n", $index,$_p->p_comm
+ print $_p
+end
+set $index=$index + 1
+set $_p=$_p->p_list.le_next
+end
+end
+document ps
+Get process <index> as a variable to use
+end
+
+
+
 define allreadq
 set $_inp=sctppcbinfo.listhead.lh_first
 while ( $_inp != 0 )
