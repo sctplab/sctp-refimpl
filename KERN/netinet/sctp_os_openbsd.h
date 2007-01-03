@@ -96,6 +96,9 @@ typedef struct timeout sctp_os_timer_t;
 #define SCTP_OS_TIMER_ACTIVE	timeout_initialized
 #define SCTP_OS_TIMER_DEACTIVATE(args)	/* TBD */
 
+/* is the endpoint v6only?  Always dual bind. */
+#define SCTP_IPV6_V6ONLY(inp)	(0)
+
 /*
  * Functions
  */

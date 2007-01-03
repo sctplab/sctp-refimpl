@@ -160,6 +160,9 @@ struct mbuf *sctp_m_prepend_2(struct mbuf *m, int len, int how);
 #define SCTP_GET_IPV4_LENGTH(iph) (iph->ip_len)
 #define SCTP_GET_IPV6_LENGTH(ip6) (ntohs(ip6->ip6_plen))
 
+/* is the endpoint v6only? */
+#define SCTP_IPV6_V6ONLY(inp)	(((struct inpcb *)inp)->inp_flags & IN6P_IPV6_V6ONLY)
+
 
 /*
  * Other MacOS specific
