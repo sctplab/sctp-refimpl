@@ -4263,9 +4263,6 @@ sctp_optsset(struct socket *so,
 			}
 			SCTP_INP_WLOCK(inp);
 			inp->sctp_frag_point = (*segsize + ovh);
-			if (inp->sctp_frag_point < MHLEN) {
-				inp->sctp_frag_point = MHLEN;
-			}
 			SCTP_INP_WUNLOCK(inp);
 		}
 		break;
