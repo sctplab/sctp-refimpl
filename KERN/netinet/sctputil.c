@@ -4172,7 +4172,7 @@ sctp_free_bufspace(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	    0,
 	    tp1->mbcnt);
 	if (asoc->total_output_queue_size >= tp1->book_size) {
-		asoc->total_output_queue_size -= tp1->book_size;
+		atomic_add_int(&asoc->total_output_queue_size, -tp1->book_size);
 	} else {
 		asoc->total_output_queue_size = 0;
 	}
