@@ -828,16 +828,7 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 			/* got it */
 			if ((nam->sa_family == AF_INET) &&
 			    (inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) &&
-#if defined(__FreeBSD__) || defined(__APPLE__)
-			    (((struct inpcb *)inp)->inp_flags & IN6P_IPV6_V6ONLY)
-#else
-#if defined(__OpenBSD__)
-			    (0)	/* For open bsd we do dual bind only */
-#else
-			    (((struct in6pcb *)inp)->in6p_flags & IN6P_IPV6_V6ONLY)
-#endif
-#endif
-			    ) {
+			    SCTP_IPV6_V6ONLY(inp)) {
 				/* IPv4 on a IPv6 socket with ONLY IPv6 set */
 				SCTP_INP_RUNLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
@@ -1774,15 +1765,8 @@ sctp_inpcb_alloc(struct socket *so)
 #endif
 		return (EOPNOTSUPP);
 	}
-	inp->sctp_tcbhash = hashinit(sctp_pcbtblsize,
-#ifdef __NetBSD__
-	    HASH_LIST,
-#endif
-	    M_PCB,
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	    M_WAITOK,
-#endif
-	    &inp->sctp_hashmark);
+	inp->sctp_tcbhash = SCTP_HASH_INIT(sctp_pcbtblsize,
+					   &inp->sctp_hashmark);
 	if (inp->sctp_tcbhash == NULL) {
 		printf("Out of SCTP-INPCB->hashinit - no resources\n");
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, inp);
@@ -1976,7 +1960,7 @@ sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
 #endif
 	SCTP_INP_INFO_WUNLOCK();
 	if (new_inp->sctp_tcbhash != NULL) {
-		SCTP_FREE(new_inp->sctp_tcbhash);
+		SCTP_HASH_FREE(new_inp->sctp_tcbhash);
 		new_inp->sctp_tcbhash = NULL;
 	}
 	if ((new_inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) == 0) {
@@ -2044,16 +2028,7 @@ sctp_isport_inuse(struct sctp_inpcb *inp, uint16_t lport)
 		/* This one is in use. */
 		/* check the v6/v4 binding issue */
 		if ((t_inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) &&
-#if defined(__FreeBSD__)
-		    (((struct inpcb *)t_inp)->inp_flags & IN6P_IPV6_V6ONLY)
-#else
-#if defined(__OpenBSD__)
-		    (0)		/* For open bsd we do dual bind only */
-#else
-		    (((struct in6pcb *)t_inp)->in6p_flags & IN6P_IPV6_V6ONLY)
-#endif
-#endif
-		    ) {
+		    SCTP_IPV6_V6ONLY(t_inp)) {
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) {
 				/* collision in V6 space */
 				return (1);
@@ -2067,16 +2042,7 @@ sctp_isport_inuse(struct sctp_inpcb *inp, uint16_t lport)
 		} else {
 			/* t_inp is bound only V4 */
 			if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) &&
-#if defined(__FreeBSD__)
-			    (((struct inpcb *)inp)->inp_flags & IN6P_IPV6_V6ONLY)
-#else
-#if defined(__OpenBSD__)
-			    (0)	/* For open bsd we do dual bind only */
-#else
-			    (((struct in6pcb *)inp)->in6p_flags & IN6P_IPV6_V6ONLY)
-#endif
-#endif
-			    ) {
+			    SCTP_IPV6_V6ONLY(t_inp)) {
 				/* no conflict */
 				continue;
 			}
@@ -2139,17 +2105,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 			struct sockaddr_in *sin;
 
 			/* IPV6_V6ONLY socket? */
-			if (
-#if defined(__FreeBSD__) || defined(__APPLE__)
-			    (ip_inp->inp_flags & IN6P_IPV6_V6ONLY)
-#else
-#if defined(__OpenBSD__)
-			    (0)	/* For openbsd we do dual bind only */
-#else
-			    (((struct in6pcb *)inp)->in6p_flags & IN6P_IPV6_V6ONLY)
-#endif
-#endif
-			    ) {
+			if (SCTP_IPV6_V6ONLY(ip_inp)) {
 				return (EINVAL);
 			}
 			if (addr->sa_len != sizeof(*sin))
@@ -3033,7 +2989,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 #endif
 	/* Now lets see about freeing the EP hash table. */
 	if (inp->sctp_tcbhash != NULL) {
-		SCTP_FREE(inp->sctp_tcbhash);
+		SCTP_HASH_FREE(inp->sctp_tcbhash);
 		inp->sctp_tcbhash = 0;
 	}
 	/* Now we must put the ep memory back into the zone pool */
@@ -4938,51 +4894,17 @@ sctp_pcb_init()
 	    sctp_chunkscale);
 #endif
 #endif
-
-	sctppcbinfo.sctp_asochash = hashinit((sctp_hashtblsize * 31),
-#ifdef __NetBSD__
-	    HASH_LIST,
-#endif
-	    M_PCB,
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	    M_WAITOK,
-#endif
-	    &sctppcbinfo.hashasocmark);
-
-	sctppcbinfo.sctp_ephash = hashinit(sctp_hashtblsize,
-#ifdef __NetBSD__
-	    HASH_LIST,
-#endif
-	    M_PCB,
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	    M_WAITOK,
-#endif
-	    &sctppcbinfo.hashmark);
-
-	sctppcbinfo.sctp_tcpephash = hashinit(sctp_hashtblsize,
-#ifdef __NetBSD__
-	    HASH_LIST,
-#endif
-	    M_PCB,
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	    M_WAITOK,
-#endif
-	    &sctppcbinfo.hashtcpmark);
-
+	sctppcbinfo.sctp_asochash = SCTP_HASH_INIT((sctp_hashtblsize * 31),
+						   &sctppcbinfo.hashasocmark);
+	sctppcbinfo.sctp_ephash = SCTP_HASH_INIT(sctp_hashtblsize,
+						 &sctppcbinfo.hashmark);
+	sctppcbinfo.sctp_tcpephash = SCTP_HASH_INIT(sctp_hashtblsize,
+						    &sctppcbinfo.hashtcpmark);
 	sctppcbinfo.hashtblsize = sctp_hashtblsize;
 
-	/*
-	 * init the small hash table we use to track restarted asoc's
-	 */
-	sctppcbinfo.sctp_restarthash = hashinit(SCTP_STACK_VTAG_HASH_SIZE,
-#ifdef __NetBSD__
-	    HASH_LIST,
-#endif
-	    M_PCB,
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	    M_WAITOK,
-#endif
-	    &sctppcbinfo.hashrestartmark);
+	/* init the small hash table we use to track restarted asoc's */
+	sctppcbinfo.sctp_restarthash = SCTP_HASH_INIT(SCTP_STACK_VTAG_HASH_SIZE,
+						      &sctppcbinfo.hashrestartmark);
 
 	/* init the zones */
 	/*
