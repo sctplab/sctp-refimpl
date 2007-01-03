@@ -7101,7 +7101,7 @@ one_chunk_around:
 					 * also double the output queue size, since this
 					 * get shrunk when we free by this amount.
 					 */
-					atomic_add_int(&((asoc)->total_output_queue_size), tp1->book_size);
+					atomic_add_int(&((asoc)->total_output_queue_size),data_list[i]->book_size);
 					data_list[i]->book_size *= 2;
 
 
