@@ -19,6 +19,33 @@ document allreadq
 Show all SCTP endpoint read queues
 end
 
+
+define ps
+set $_p=allproc.lh_first
+set $index=0
+while ( $_p != 0 )
+printf "proces %d is %s", $index,$_p->p_comm
+set $index=$index + 1
+set $_p=$_p->p_list.le_next
+end
+end
+document ps
+Display all processes and their index
+end
+
+define allreadq
+set $_inp=sctppcbinfo.listhead.lh_first
+while ( $_inp != 0 )
+print $_inp->read_queue.tqh_first
+set $_inp=$_inp->sctp_list.le_next
+end
+end
+document allreadq
+Show all SCTP endpoint read queues
+end
+
+
+
 define allasoc
 set $_inp=sctppcbinfo.listhead.lh_first
 while ( $_inp != 0 )
