@@ -53,6 +53,22 @@ document showthreads
 Using process <index> show the threads of the process
 end
 
+define tracethread
+set $_thread=$arg0
+set $_ebp=$_trhead->td_pcb->pcb_ebp
+while ($ebp != 0)
+set $_pcaddr=$_ebp+4
+set $_pc=*$_pcaddr
+x/2 $ebp
+l *$_pc
+set $_ebp=*$_ebp
+end
+end
+document tracethread
+Using a printed index to trace a thread
+end
+
+
 
 define getps
 set $_p=allproc.lh_first
