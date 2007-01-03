@@ -24,7 +24,7 @@ define ps
 set $_p=allproc.lh_first
 set $index=0
 while ( $_p != 0 )
-printf "proces %d is %s", $index,$_p->p_comm
+printf "process %d is %s\n", $index,$_p->p_comm
 set $index=$index + 1
 set $_p=$_p->p_list.le_next
 end
