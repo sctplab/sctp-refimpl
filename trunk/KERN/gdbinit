@@ -46,7 +46,7 @@ set $index=$index + 1
 set $_p=$_p->p_list.le_next
 end
 end
-document ps
+document getps
 Get process <index> as a variable to use
 end
 
