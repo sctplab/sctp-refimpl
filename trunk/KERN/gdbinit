@@ -33,7 +33,7 @@ document ps
 Display all processes and their index
 end
 
-define showthreads
+define showthread
 set $_p=allproc.lh_first
 set $index=0
 while ( $_p != 0 )
@@ -43,32 +43,45 @@ if ($index == $arg0)
  while ($_thread != 0)
  print $_thread
  set $_thread=$_thread->td_plist.tqe_next
+ set $_p=0
  end
 end
 set $index=$index + 1
-set $_p=$_p->p_list.le_next
+if ($_p != 0)
+ set $_p=$_p->p_list.le_next
 end
 end
-document showthreads
+end
+document showthread
 Using process <index> show the threads of the process
 end
 
 define tracethread
-set $_thread=$arg0
-set $_ebp=$_trhead->td_pcb->pcb_ebp
-while ($ebp != 0)
-set $_pcaddr=$_ebp+4
-set $_pc=*$_pcaddr
-x/2 $ebp
-l *$_pc
-set $_ebp=*$_ebp
+set $_p=allproc.lh_first
+set $index=0
+while ( $_p != 0 )
+ if ($index == $arg0)
+  printf "process %d is %s\n", $index,$_p->p_comm
+  set $_thread=$_p->p_threads.tqh_first
+  set $_ebp=$_thread->td_pcb->pcb_ebp
+  while ($ebp != 0)
+   set $_pcaddr=$_ebp+4
+   set $_pc=*$_pcaddr
+   x/2 $ebp
+   l *$_pc
+   set $_ebp=*$_ebp
+  end
+ end
+ end
+ set $index=$index + 1
+ if ($_p != 0)
+  set $_p=$_p->p_list.le_next
+ end
 end
 end
 document tracethread
-Using a printed index to trace a thread
+Using a process index to trace a thread
 end
-
-
 
 define getps
 set $_p=allproc.lh_first
