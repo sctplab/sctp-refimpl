@@ -65,10 +65,7 @@ while ( $_p != 0 )
   set $_thread=$_p->p_threads.tqh_first
   set $_ebp=$_thread->td_pcb->pcb_ebp
   while ($ebp != 0)
-   set $_pcaddr=$_ebp+4
-   set $_pc=*$_pcaddr
    x/2 $ebp
-   l *$_pc
    set $_ebp=*$_ebp
   end
  end
