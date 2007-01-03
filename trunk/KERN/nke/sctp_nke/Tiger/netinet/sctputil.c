@@ -1121,20 +1121,11 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	if (m->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) {
 		struct in6pcb *inp6;
 
-
 		/* Its a V6 socket */
 		inp6 = (struct in6pcb *)m;
 		asoc->ipv6_addr_legal = 1;
 		/* Now look at the binding flag to see if V4 will be legal */
-		if (
-#if defined(__OpenBSD__)
-		    (0)		/* we always do dual bind */
-#elif defined (__NetBSD__)
-		    (inp6->in6p_flags & IN6P_IPV6_V6ONLY)
-#else
-		    (inp6->inp_flags & IN6P_IPV6_V6ONLY)
-#endif
-		    == 0) {
+		if (SCTP_IPV6_V6ONLY(inp6) == 0) {
 			asoc->ipv4_addr_legal = 1;
 		} else {
 			/* V4 addresses are NOT legal on the association */
@@ -1145,7 +1136,6 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 		asoc->ipv4_addr_legal = 1;
 		asoc->ipv6_addr_legal = 0;
 	}
-
 
 	asoc->my_rwnd = max(m->sctp_socket->so_rcv.sb_hiwat, SCTP_MINIMAL_RWND);
 	asoc->peers_rwnd = m->sctp_socket->so_rcv.sb_hiwat;

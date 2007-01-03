@@ -3509,15 +3509,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		in_inp = (struct inpcb *)inp;
 		stc.ipv6_addr_legal = 1;
 		/* Now look at the binding flag to see if V4 will be legal */
-		if (
-#if defined(__FreeBSD__) || defined(__APPLE__)
-			(in_inp->inp_flags & IN6P_IPV6_V6ONLY)
-#elif defined(__OpenBSD__)
-			(0)		/* For openbsd we do dual bind only */
-#else
-			(((struct in6pcb *)in_inp)->in6p_flags & IN6P_IPV6_V6ONLY)
-#endif
-			== 0) {
+		if (SCTP_IPV6_V6ONLY(in_inp) == 0) {
 			stc.ipv4_addr_legal = 1;
 		} else {
 			/* V4 addresses are NOT legal on the association */
@@ -7099,15 +7091,6 @@ one_chunk_around:
 				if (asoc->sent_queue_retran_cnt < 0) {
 					asoc->sent_queue_retran_cnt = 0;
 				}
-#ifdef SCTP_FLIGHT_LOGGING
-				sctp_misc_ints(SCTP_FLIGHT_LOG_UP, 
-					       data_list[i]->whoTo->flight_size,
-					       data_list[i]->book_size, 
-					       (uintptr_t)stcb, 
-					       data_list[i]->rec.data.TSN_seq);
-#endif
-				net->flight_size += data_list[i]->book_size;
-				asoc->total_flight += data_list[i]->book_size;
 				if (data_list[i]->book_size_scale) {
 					/*
 					 * need to double the book size on
@@ -7125,6 +7108,15 @@ one_chunk_around:
 					    (uint32_t) (data_list[i]->send_size +
 					    sctp_peer_chunk_oh));
 				}
+#ifdef SCTP_FLIGHT_LOGGING
+				sctp_misc_ints(SCTP_FLIGHT_LOG_UP, 
+					       data_list[i]->whoTo->flight_size,
+					       data_list[i]->book_size, 
+					       (uintptr_t)stcb, 
+					       data_list[i]->rec.data.TSN_seq);
+#endif
+				net->flight_size += data_list[i]->book_size;
+				asoc->total_flight += data_list[i]->book_size;
 				if (asoc->peers_rwnd < stcb->sctp_ep->sctp_ep.sctp_sws_sender) {
 					/* SWS sender side engages */
 					asoc->peers_rwnd = 0;
@@ -9663,8 +9655,13 @@ sctp_lower_sosend(struct socket *so,
 		} else {
 			/* UDP style, we must go ahead and start the INIT process */
 			if ((use_rcvinfo) && (srcv) &&
-			    (srcv->sinfo_flags & SCTP_ABORT)) {
-				/* User asks to abort a non-existant asoc */
+			    ((srcv->sinfo_flags & SCTP_ABORT) ||
+			     ((srcv->sinfo_flags & SCTP_EOF) &&
+			      (uio->uio_resid == 0)))) {
+				/*
+				 * User asks to abort a non-existant assoc,
+				 * or EOF a non-existant assoc with no data
+				 */
 				error = ENOENT;
 				splx(s);
 				goto out_unlocked;
@@ -10519,7 +10516,11 @@ sctp_lower_sosend(struct socket *so,
 			queue_only = 0;
 		} else {
 			sctp_send_initiate(inp, stcb);
-			stcb->asoc.state = SCTP_STATE_COOKIE_WAIT;
+			if (stcb->asoc.state & SCTP_STATE_SHUTDOWN_PENDING)
+			    stcb->asoc.state = SCTP_STATE_COOKIE_WAIT |
+				SCTP_STATE_SHUTDOWN_PENDING;
+			else
+			    stcb->asoc.state = SCTP_STATE_COOKIE_WAIT;
 			queue_only_for_init = 0;
 			queue_only = 1;
 		}

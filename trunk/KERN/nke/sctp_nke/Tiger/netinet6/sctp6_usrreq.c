@@ -946,15 +946,7 @@ sctp6_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 	inp->inp_vflag |= INP_IPV6;
 #endif
 #endif
-	if (addr != NULL &&
-#if defined(__OpenBSD__)
-	    (0)			/* we always do dual bind */
-#elif defined (__NetBSD__)
-	    (inp6->in6p_flags & IN6P_IPV6_V6ONLY)
-#else
-	    (inp6->inp_flags & IN6P_IPV6_V6ONLY)
-#endif
-	    == 0) {
+	if ((addr != NULL) && (SCTP_IPV6_V6ONLY(inp6) == 0)) {
 		if (addr->sa_family == AF_INET) {
 			/* binding v4 addr to v6 socket, so reset flags */
 #if defined(__FreeBSD__) || defined(__APPLE__)
@@ -1373,16 +1365,7 @@ sctp6_send(struct socket *so, int flags, struct mbuf *m, struct mbuf *nam,
 	}
 #ifdef INET
 	sin6 = (struct sockaddr_in6 *)addr;
-	if (
-
-#if defined(__OpenBSD__)
-	    (0)			/* we always do dual bind */
-#elif defined (__NetBSD__)
-	    (inp6->in6p_flags & IN6P_IPV6_V6ONLY)
-#else
-	    (inp6->inp_flags & IN6P_IPV6_V6ONLY)
-#endif
-	    ) {
+	if (SCTP_IPV6_V6ONLY(inp6)) {
 		/*
 		 * if IPV6_V6ONLY flag, we discard datagrams destined to a
 		 * v4 addr or v4-mapped addr
@@ -1520,15 +1503,7 @@ sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	}
 #ifdef INET
 	sin6 = (struct sockaddr_in6 *)addr;
-	if (
-#if defined(__OpenBSD__)
-	    (0)			/* we always do dual bind */
-#elif defined (__NetBSD__)
-	    (inp6->in6p_flags & IN6P_IPV6_V6ONLY)
-#else
-	    (inp6->inp_flags & IN6P_IPV6_V6ONLY)
-#endif
-	    ) {
+	if (SCTP_IPV6_V6ONLY(inp6)) {
 		/*
 		 * if IPV6_V6ONLY flag, ignore connections destined to a v4
 		 * addr or v4-mapped addr
@@ -1858,15 +1833,7 @@ sctp6_in6getaddr(struct socket *so, struct mbuf *nam)
 		addr = *nam;
 #endif
 		/* if I'm V6ONLY, convert it to v4-mapped */
-		if (
-#if defined(__OpenBSD__)
-		    (0)		/* we always do dual bind */
-#elif defined (__NetBSD__)
-		    (inp6->in6p_flags & IN6P_IPV6_V6ONLY)
-#else
-		    (inp6->inp_flags & IN6P_IPV6_V6ONLY)
-#endif
-		    ) {
+		if (SCTP_IPV6_V6ONLY(inp6)) {
 			struct sockaddr_in6 sin6;
 
 			in6_sin_2_v4mapsin6((struct sockaddr_in *)addr, &sin6);
@@ -1922,15 +1889,7 @@ sctp6_getpeeraddr(struct socket *so, struct mbuf *nam)
 			return (error);
 		}
 		/* if I'm V6ONLY, convert it to v4-mapped */
-		if (
-#if defined(__OpenBSD__)
-		    (0)		/* we always do dual bind */
-#elif defined (__NetBSD__)
-		    (inp6->in6p_flags & IN6P_IPV6_V6ONLY)
-#else
-		    (inp6->inp_flags & IN6P_IPV6_V6ONLY)
-#endif
-		    ) {
+		if (SCTP_IPV6_V6ONLY(inp6)) {
 			struct sockaddr_in6 sin6;
 
 			in6_sin_2_v4mapsin6((struct sockaddr_in *)addr, &sin6);
