@@ -33,6 +33,26 @@ document ps
 Display all processes and their index
 end
 
+define showthreads
+set $_p=allproc.lh_first
+set $index=0
+while ( $_p != 0 )
+if ($index == $arg0)
+ printf "process %d is %s\n", $index,$_p->p_comm
+ set $_thread=$_p->p_threads.tqh_first
+ while ($_thread != 0)
+ print $_thread
+ set $_thread=$_thread->td_plist.tqe_next
+ end
+end
+set $index=$index + 1
+set $_p=$_p->p_list.le_next
+end
+end
+document showthreads
+Using process <index> show the threads of the process
+end
+
 
 define getps
 set $_p=allproc.lh_first
