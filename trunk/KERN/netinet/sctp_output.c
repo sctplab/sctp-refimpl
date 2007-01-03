@@ -6710,7 +6710,7 @@ static int
 sctp_chunk_retransmission(struct sctp_inpcb *inp,
     struct sctp_tcb *stcb,
     struct sctp_association *asoc,
-    int *cnt_out, struct timeval *now, int *now_filled)
+    int *cnt_out, struct timeval *now, int *now_filled, int *fr_done)
 {
 	/*
 	 * send out one MTU of retransmission. If fast_retransmit is
@@ -6913,6 +6913,7 @@ one_chunk_around:
 			 * Mark the destination net to have FR recovery
 			 * limits put on it.
 			 */
+			*fr_done = 1;
 			net->fast_retran_ip = 1;
 		}
 
@@ -7224,6 +7225,7 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 	int nagle_on = 0;
 	int frag_point = sctp_get_frag_point(stcb, &stcb->asoc);
 	int un_sent=0;
+	int fr_done, tot_frs=0;
 
 	asoc = &stcb->asoc;
 	if(from_where == SCTP_OUTPUT_FROM_USR_SEND) {
@@ -7269,7 +7271,11 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 			return (0);
 		} else if (from_where != SCTP_OUTPUT_FROM_HB_TMR) {
 			/* if its not from a HB then do it */
-			ret = sctp_chunk_retransmission(inp, stcb, asoc, &num_out, &now, &now_filled);
+			fr_done = 0;
+			ret = sctp_chunk_retransmission(inp, stcb, asoc, &num_out, &now, &now_filled, &fr_done);
+			if(fr_done) {
+				tot_frs++;
+			}
 		} else {
 			/*
 			 * its from any other place, we don't allow retran
@@ -7312,7 +7318,13 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 			    &now, &now_filled, frag_point);
 			return (ret);
 		}
+		if (tot_frs > asoc->max_burst) {
+			/* Hit FR burst limit */
+			return(0);
+		}
+
 		if ((num_out == 0) && (ret == 0)) {
+
 			/* No more retrans to send */
 			break;
 		}
