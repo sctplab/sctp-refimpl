@@ -1222,9 +1222,12 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		switch SCTP_GET_STATE
 			(asoc) {
 		case SCTP_STATE_COOKIE_WAIT:
+		case SCTP_STATE_COOKIE_ECHOED:
 			/*
 			 * INIT was sent, but got got a COOKIE_ECHO with the
-			 * correct tags... just accept it...
+			 * correct tags... just accept it...but we must
+			 * process the init so that we can make sure we
+			 * have the right seq no's.
 			 */
 			/* First we must process the INIT !! */
 			retval = sctp_process_init(init_cp, stcb, net);
@@ -1233,10 +1236,6 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 					asoc->cookie_how[how_indx] = 3;
 				return (NULL);
 			}
-			/* intentional fall through to below... */
-
-		case SCTP_STATE_COOKIE_ECHOED:
-			/* Duplicate INIT case */
 			/* we have already processed the INIT so no problem */
 			sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb,
 			    net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_11);
