@@ -72,7 +72,6 @@ while ( $_p != 0 )
    set $_ebp=*$_ebp
   end
  end
- end
  set $index=$index + 1
  if ($_p != 0)
   set $_p=$_p->p_list.le_next
