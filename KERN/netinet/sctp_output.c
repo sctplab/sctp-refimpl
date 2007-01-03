@@ -7091,15 +7091,6 @@ one_chunk_around:
 				if (asoc->sent_queue_retran_cnt < 0) {
 					asoc->sent_queue_retran_cnt = 0;
 				}
-#ifdef SCTP_FLIGHT_LOGGING
-				sctp_misc_ints(SCTP_FLIGHT_LOG_UP, 
-					       data_list[i]->whoTo->flight_size,
-					       data_list[i]->book_size, 
-					       (uintptr_t)stcb, 
-					       data_list[i]->rec.data.TSN_seq);
-#endif
-				net->flight_size += data_list[i]->book_size;
-				asoc->total_flight += data_list[i]->book_size;
 				if (data_list[i]->book_size_scale) {
 					/*
 					 * need to double the book size on
@@ -7117,6 +7108,15 @@ one_chunk_around:
 					    (uint32_t) (data_list[i]->send_size +
 					    sctp_peer_chunk_oh));
 				}
+#ifdef SCTP_FLIGHT_LOGGING
+				sctp_misc_ints(SCTP_FLIGHT_LOG_UP, 
+					       data_list[i]->whoTo->flight_size,
+					       data_list[i]->book_size, 
+					       (uintptr_t)stcb, 
+					       data_list[i]->rec.data.TSN_seq);
+#endif
+				net->flight_size += data_list[i]->book_size;
+				asoc->total_flight += data_list[i]->book_size;
 				if (asoc->peers_rwnd < stcb->sctp_ep->sctp_ep.sctp_sws_sender) {
 					/* SWS sender side engages */
 					asoc->peers_rwnd = 0;
