@@ -94,6 +94,9 @@ typedef struct callout sctp_os_timer_t;
 extern void SCTP_READ_RANDOM(void *buf, uint32_t len);
 #endif
 
+/* is the endpoint v6only? */
+#define SCTP_IPV6_V6ONLY(inp) (((struct in6pcb *)inp)->in6p_flags & IN6P_IPV6_V6ONLY)
+
 /*
  * Other NetBSD Specific
  */

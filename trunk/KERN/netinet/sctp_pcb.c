@@ -828,16 +828,7 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 			/* got it */
 			if ((nam->sa_family == AF_INET) &&
 			    (inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) &&
-#if defined(__FreeBSD__) || defined(__APPLE__)
-			    (((struct inpcb *)inp)->inp_flags & IN6P_IPV6_V6ONLY)
-#else
-#if defined(__OpenBSD__)
-			    (0)	/* For open bsd we do dual bind only */
-#else
-			    (((struct in6pcb *)inp)->in6p_flags & IN6P_IPV6_V6ONLY)
-#endif
-#endif
-			    ) {
+			    SCTP_IPV6_V6ONLY(inp)) {
 				/* IPv4 on a IPv6 socket with ONLY IPv6 set */
 				SCTP_INP_RUNLOCK(inp);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
@@ -2037,16 +2028,7 @@ sctp_isport_inuse(struct sctp_inpcb *inp, uint16_t lport)
 		/* This one is in use. */
 		/* check the v6/v4 binding issue */
 		if ((t_inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) &&
-#if defined(__FreeBSD__)
-		    (((struct inpcb *)t_inp)->inp_flags & IN6P_IPV6_V6ONLY)
-#else
-#if defined(__OpenBSD__)
-		    (0)		/* For open bsd we do dual bind only */
-#else
-		    (((struct in6pcb *)t_inp)->in6p_flags & IN6P_IPV6_V6ONLY)
-#endif
-#endif
-		    ) {
+		    SCTP_IPV6_V6ONLY(t_inp)) {
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) {
 				/* collision in V6 space */
 				return (1);
@@ -2060,16 +2042,7 @@ sctp_isport_inuse(struct sctp_inpcb *inp, uint16_t lport)
 		} else {
 			/* t_inp is bound only V4 */
 			if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) &&
-#if defined(__FreeBSD__)
-			    (((struct inpcb *)inp)->inp_flags & IN6P_IPV6_V6ONLY)
-#else
-#if defined(__OpenBSD__)
-			    (0)	/* For open bsd we do dual bind only */
-#else
-			    (((struct in6pcb *)inp)->in6p_flags & IN6P_IPV6_V6ONLY)
-#endif
-#endif
-			    ) {
+			    SCTP_IPV6_V6ONLY(t_inp)) {
 				/* no conflict */
 				continue;
 			}
@@ -2132,17 +2105,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 			struct sockaddr_in *sin;
 
 			/* IPV6_V6ONLY socket? */
-			if (
-#if defined(__FreeBSD__) || defined(__APPLE__)
-			    (ip_inp->inp_flags & IN6P_IPV6_V6ONLY)
-#else
-#if defined(__OpenBSD__)
-			    (0)	/* For openbsd we do dual bind only */
-#else
-			    (((struct in6pcb *)inp)->in6p_flags & IN6P_IPV6_V6ONLY)
-#endif
-#endif
-			    ) {
+			if (SCTP_IPV6_V6ONLY(ip_inp)) {
 				return (EINVAL);
 			}
 			if (addr->sa_len != sizeof(*sin))

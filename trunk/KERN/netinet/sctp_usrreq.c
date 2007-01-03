@@ -1911,15 +1911,7 @@ __P((struct sockaddr_in *sin,
 	ipv4_addr_legal = ipv6_addr_legal = 0;
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) {
 		ipv6_addr_legal = 1;
-		if (
-#if defined(__OpenBSD__)
-		    (0)		/* we always do dual bind */
-#elif defined (__NetBSD__)
-		    (((struct in6pcb *)inp)->in6p_flags & IN6P_IPV6_V6ONLY)
-#else
-		    (((struct in6pcb *)inp)->inp_flags & IN6P_IPV6_V6ONLY)
-#endif
-		    == 0) {
+		if (SCTP_IPV6_V6ONLY(inp) == 0) {
 			ipv4_addr_legal = 1;
 		}
 	} else {
@@ -2263,15 +2255,7 @@ sctp_do_connect_x(struct socket *so,
 		struct in6pcb *inp6;
 
 		inp6 = (struct in6pcb *)inp;
-		if (
-#if defined(__OpenBSD__)
-		    (0)		/* we always do dual bind */
-#elif defined (__NetBSD__)
-		    (inp6->in6p_flags & IN6P_IPV6_V6ONLY)
-#else
-		    (inp6->inp_flags & IN6P_IPV6_V6ONLY)
-#endif
-		    ) {
+		if (SCTP_IPV6_V6ONLY(inp6)) {
 			/*
 			 * if IPV6_V6ONLY flag, ignore connections destined
 			 * to a v4 addr or v4-mapped addr
