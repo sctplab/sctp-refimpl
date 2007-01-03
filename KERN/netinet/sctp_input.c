@@ -1138,10 +1138,17 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 	int init_offset, initack_offset, i;
 	int retval;
 	int spec_flag=0;
+	int how_indx;
 
 	/* I know that the TCB is non-NULL from the caller */
 	asoc = &stcb->asoc;
-	asoc->cookie_how = 1;
+	for(how_indx=0; how_indx <sizeof(asoc->cookie_how);i++) {
+		if(asoc->cookie_how[how_indx] == 0)
+			break;
+	}
+	if(how_indx < sizeof(asoc->cookie_how)) {
+		asoc->cookie_how[how_indx] = 1;
+	}
 	if (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_ACK_SENT) {
 		/* SHUTDOWN came in after sending INIT-ACK */
 		struct mbuf *op_err;
@@ -1164,7 +1171,8 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		ph->param_type = htons(SCTP_CAUSE_COOKIE_IN_SHUTDOWN);
 		ph->param_length = htons(sizeof(struct sctp_paramhdr));
 		sctp_send_operr_to(m, iphlen, op_err, cookie->peers_vtag);
-		asoc->cookie_how = 2;
+		if(how_indx < sizeof(asoc->cookie_how))
+			asoc->cookie_how[how_indx] = 2;
 		return (NULL);
 	}
 	/*
@@ -1207,6 +1215,10 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		 * case D in Section 5.2.4 Table 2: MMAA process accordingly
 		 * to get into the OPEN state
 		 */
+		if(ntohl(initack_cp->init.initial_tsn) != asoc->init_seq_number) {
+			panic("Case D and non-match seq?");
+		}
+
 		switch SCTP_GET_STATE
 			(asoc) {
 		case SCTP_STATE_COOKIE_WAIT:
@@ -1217,7 +1229,8 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			/* First we must process the INIT !! */
 			retval = sctp_process_init(init_cp, stcb, net);
 			if (retval < 0) {
-				asoc->cookie_how = 3;
+				if(how_indx < sizeof(asoc->cookie_how))
+					asoc->cookie_how[how_indx] = 3;
 				return (NULL);
 			}
 			/* intentional fall through to below... */
@@ -1284,12 +1297,15 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		if (sctp_load_addresses_from_init(stcb, m, iphlen,
 		    init_offset + sizeof(struct sctp_init_chunk),
 		    initack_offset, sh, init_src)) {
+			if(how_indx < sizeof(asoc->cookie_how))
+				asoc->cookie_how[how_indx] = 4;
 			return (NULL);
 		}
 		/* respond with a COOKIE-ACK */
 		sctp_toss_old_cookies(stcb, asoc);
 		sctp_send_cookie_ack(stcb);
-		asoc->cookie_how = 4;
+		if(how_indx < sizeof(asoc->cookie_how))
+			asoc->cookie_how[how_indx] = 5;
 		return (stcb);
 	}			/* end if */
 	if (ntohl(initack_cp->init.initiate_tag) != asoc->my_vtag &&
@@ -1299,6 +1315,8 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		/*
 		 * case C in Section 5.2.4 Table 2: XMOO silently discard
 		 */
+		if(how_indx < sizeof(asoc->cookie_how))
+			asoc->cookie_how[how_indx] = 6;
 		return (NULL);
 	}
 	if (ntohl(initack_cp->init.initiate_tag) == asoc->my_vtag &&
@@ -1325,9 +1343,13 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			 * no way to tell.. until we send on a stream that does
 			 * not exist :-)
 			 */
+			if(how_indx < sizeof(asoc->cookie_how))
+				asoc->cookie_how[how_indx] = 7;
+
 			return(NULL);
 		}
-		asoc->cookie_how = 5;
+		if(how_indx < sizeof(asoc->cookie_how))
+			asoc->cookie_how[how_indx] = 8;
 		sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_13);
 		sctp_stop_all_cookie_timers(stcb);
 		/*
@@ -1366,13 +1388,15 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		/* process the INIT info (peer's info) */
 		retval = sctp_process_init(init_cp, stcb, net);
 		if (retval < 0) {
-			asoc->cookie_how = 6;
+			if(how_indx < sizeof(asoc->cookie_how))
+				asoc->cookie_how[how_indx] = 9;
 			return (NULL);
 		}
 		if (sctp_load_addresses_from_init(stcb, m, iphlen,
 		    init_offset + sizeof(struct sctp_init_chunk),
 		    initack_offset, sh, init_src)) {
-			asoc->cookie_how = 7;
+			if(how_indx < sizeof(asoc->cookie_how))
+				asoc->cookie_how[how_indx] = 10;
 			return (NULL);
 		}
 		if ((asoc->state & SCTP_STATE_COOKIE_WAIT) ||
@@ -1408,6 +1432,9 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			 */
 			sctp_chunk_output(inp,stcb, SCTP_OUTPUT_FROM_COOKIE_ACK);
 		}
+		if(how_indx < sizeof(asoc->cookie_how))
+			asoc->cookie_how[how_indx] = 11;
+
 		return (stcb);
 	}
 	if ((ntohl(initack_cp->init.initiate_tag) != asoc->my_vtag &&
@@ -1421,7 +1448,8 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		 * case A in Section 5.2.4 Table 2: XXMM (peer restarted)
 		 */
 		/* temp code */
-		asoc->cookie_how = 8;
+		if(how_indx < sizeof(asoc->cookie_how))
+			asoc->cookie_how[how_indx] = 12;
 		sctp_timer_stop(SCTP_TIMER_TYPE_INIT, inp, stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_14);
 		sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_15);
 
@@ -1497,6 +1525,9 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 
 		retval = sctp_process_init(init_cp, stcb, net);
 		if (retval < 0) {
+			if(how_indx < sizeof(asoc->cookie_how))
+				asoc->cookie_how[how_indx] = 13;
+
 			return (NULL);
 		}
 		/*
@@ -1508,19 +1539,24 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		if (sctp_load_addresses_from_init(stcb, m, iphlen,
 		    init_offset + sizeof(struct sctp_init_chunk),
 		    initack_offset, sh, init_src)) {
+			if(how_indx < sizeof(asoc->cookie_how))
+				asoc->cookie_how[how_indx] = 14;
+
 			return (NULL);
 		}
 		/* respond with a COOKIE-ACK */
 		sctp_stop_all_cookie_timers(stcb);
 		sctp_toss_old_cookies(stcb, asoc);
 		sctp_send_cookie_ack(stcb);
+		if(how_indx < sizeof(asoc->cookie_how))
+			asoc->cookie_how[how_indx] = 15;
 
 		return (stcb);
 	}
 	/* if we are not a restart we need the assoc_id field pop'd */
 	asoc->assoc_id = ntohl(initack_cp->init.initiate_tag);
-
-	asoc->cookie_how = 9;
+	if(how_indx < sizeof(asoc->cookie_how))
+		asoc->cookie_how[how_indx] = 16;
 	/* all other cases... */
 	return (NULL);
 }
