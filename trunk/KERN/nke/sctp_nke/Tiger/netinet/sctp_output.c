@@ -7097,7 +7097,14 @@ one_chunk_around:
 					 * this one
 					 */
 					data_list[i]->book_size_scale = 0;
+					/* Since we double the booksize, we must
+					 * also double the output queue size, since this
+					 * get shrunk when we free by this amount.
+					 */
+					atomic_add_int(&((asoc)->total_output_queue_size),data_list[i]->book_size);
 					data_list[i]->book_size *= 2;
+
+
 				} else {
 					sctp_ucount_incr(asoc->total_flight_count);
 #ifdef SCTP_LOG_RWND
