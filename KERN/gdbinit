@@ -64,7 +64,8 @@ while ( $_p != 0 )
   printf "process %d is %s\n", $index,$_p->p_comm
   set $_thread=$_p->p_threads.tqh_first
   set $_ebp=$_thread->td_pcb->pcb_ebp
-  while ($ebp != 0)
+  set $_max=$_thread->td_kstack + ($_thread->td_kstack_pages * 4096)
+  while ($ebp < $_max)
    x/2 $_ebp
    set $_ebp=*$_ebp
   end
