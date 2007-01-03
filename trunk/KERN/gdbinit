@@ -65,7 +65,8 @@ while ( $_p != 0 )
   set $_thread=$_p->p_threads.tqh_first
   set $_ebp=$_thread->td_pcb->pcb_ebp
   set $_max=$_thread->td_kstack + ($_thread->td_kstack_pages * 4096)
-  while ($ebp < $_max)
+  set $_min=$_thread->td_kstack
+  while (($_ebp > $_min) && ($_ebp < $_max))
    x/2 $_ebp
    set $_ebp=*$_ebp
   end
