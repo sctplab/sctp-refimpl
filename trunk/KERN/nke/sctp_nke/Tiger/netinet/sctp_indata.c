@@ -2578,7 +2578,7 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 	 * to a smaller mbuf and free up the cluster mbuf. This will help
 	 * with cluster starvation.
 	 */
-	if (SCTP_BUF_LEN(m) < (long)MHLEN && SCTP_BUF_NEXT(m) == NULL) {
+	if (SCTP_BUF_LEN(m) < (long)MLEN && SCTP_BUF_NEXT(m) == NULL) {
 		/* we only handle mbufs that are singletons.. not chains */
 		m = sctp_get_mbuf_for_msg(SCTP_BUF_LEN(m), 0, M_DONTWAIT, 1, MT_DATA);
 		if (m) {
