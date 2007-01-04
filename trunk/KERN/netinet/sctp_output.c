@@ -4463,11 +4463,7 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 			return(outchain);
 		} else {
 			/* copy the old fashion way */
-#if defined(__APPLE__)
 			appendchain = sctp_m_copym(clonechain, 0, M_COPYALL, M_DONTWAIT);
-#else
-			appendchain = m_copym(clonechain, 0, M_COPYALL, M_DONTWAIT);
-#endif
 		}
 	}
 	if (appendchain == NULL) {
@@ -4548,7 +4544,7 @@ sctp_sendall_iterator(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
 		return;
 	}
 	if ((ca->m) && ca->sndlen) {
-		m = m_copym(ca->m, 0, M_COPYALL, M_DONTWAIT);
+		m = sctp_m_copym(ca->m, 0, M_COPYALL, M_DONTWAIT);
 		if (m == NULL) {
 			/* can't copy so we are done */
 			ca->cnt_failed++;
@@ -5166,7 +5162,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		took_all = 1;
 	} else {
 		struct mbuf *m;
-		chk->data = m_copym(sp->data, 0, to_move, M_DONTWAIT);
+		chk->data = sctp_m_copym(sp->data, 0, to_move, M_DONTWAIT);
 		chk->last_mbuf = NULL;
 		if (chk->data == NULL) {
 			sp->some_taken = some_taken;
@@ -6640,12 +6636,7 @@ sctp_send_asconf_ack(struct sctp_tcb *stcb, uint32_t retrans)
 		return (-1);
 	}
 	/* copy the asconf_ack */
-#if defined(__APPLE__)
 	m_ack = sctp_m_copym(stcb->asoc.last_asconf_ack_sent, 0, M_COPYALL, M_DONTWAIT);
-#else
-	/* We no longer have pak headers here so m_copy is it */
-	m_ack = m_copym(stcb->asoc.last_asconf_ack_sent, 0, M_COPYALL, M_DONTWAIT);
-#endif
 	if (m_ack == NULL) {
 		/* couldn't copy it */
 
