@@ -2021,6 +2021,7 @@ sctp_find_cmsg(int c_type, void *data, struct mbuf *control, int cpsize)
 	return (0);
 }
 
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__NetBSD__)
 
 extern int sctp_mbuf_threshold_count;
 
@@ -2099,7 +2100,7 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 	return (m);
 }
 
-
+#endif
 
 static struct mbuf *
 sctp_add_cookie(struct sctp_inpcb *inp, struct mbuf *init, int init_offset,
@@ -4465,7 +4466,7 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 #if defined(__APPLE__)
 			appendchain = sctp_m_copym(clonechain, 0, M_COPYALL, M_DONTWAIT);
 #else
-			appendchain = m_copy(clonechain, 0, M_COPYALL);
+			appendchain = m_copym(clonechain, 0, M_COPYALL, M_DONTWAIT);
 #endif
 		}
 	}
@@ -6643,7 +6644,7 @@ sctp_send_asconf_ack(struct sctp_tcb *stcb, uint32_t retrans)
 	m_ack = sctp_m_copym(stcb->asoc.last_asconf_ack_sent, 0, M_COPYALL, M_DONTWAIT);
 #else
 	/* We no longer have pak headers here so m_copy is it */
-	m_ack = m_copy(stcb->asoc.last_asconf_ack_sent, 0, M_COPYALL);
+	m_ack = m_copym(stcb->asoc.last_asconf_ack_sent, 0, M_COPYALL, M_DONTWAIT);
 #endif
 	if (m_ack == NULL) {
 		/* couldn't copy it */
