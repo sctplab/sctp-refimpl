@@ -2588,7 +2588,6 @@ sctp_calculate_rto(struct sctp_tcb *stcb,
  	return ((uint32_t) new_rto);
 }
 
-
 /*
  * return a pointer to a contiguous piece of data from the given mbuf chain
  * starting at 'off' for 'len' bytes.  If the desired piece spans more than
@@ -2634,6 +2633,7 @@ sctp_m_getptr(struct mbuf *m, int off, int len, uint8_t * in_ptr)
 			return ((caddr_t)in_ptr);
 	}
 }
+
 
 
 struct sctp_paramhdr *
@@ -3805,19 +3805,6 @@ sctp_print_address_pkt(struct ip *iph, struct sctphdr *sh)
 		sctp_print_address((struct sockaddr *)&fsa6);
 	}
 }
-
-#if defined(HAVE_SCTP_SO_LASTRECORD)
-
-/* cloned from uipc_socket.c */
-
-#define SCTP_SBLINKRECORD(sb, m0) do {					\
-	if ((sb)->sb_lastrecord != NULL)				\
-		SCTP_BUF_NEXT_PKT((sb)->sb_lastrecord) = (m0);			\
-	else								\
-		(sb)->sb_mb = (m0);					\
-	(sb)->sb_lastrecord = (m0);					\
-} while (/*CONSTCOND*/0)
-#endif
 
 void
 sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
