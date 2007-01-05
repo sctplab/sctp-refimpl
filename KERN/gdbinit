@@ -1374,7 +1374,6 @@ while ( $_inp != 0 )
  while ( $_asoc != 0) 
 	if ($_asoc->tcb_mtx->mtx_lock != $MTX_UNOWNED) 
 	    print $_asoc
-	    mtx_owner $_asoc->tcb_mtx
         end
     set $_asoc=$_asoc->sctp_tcblist.le_next
   end
