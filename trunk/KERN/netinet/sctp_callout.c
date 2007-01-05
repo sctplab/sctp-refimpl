@@ -83,7 +83,7 @@ sctp_os_timer_stop(sctp_os_timer_t *c)
 	 * Don't attempt to delete a callout that's not on the queue.
 	 */
 	if (!(c->c_flags & SCTP_CALLOUT_PENDING)) {
-		c->c_flags &= ~SCTP_CALLOUT_ACTIVE;
+		c->c_flags &= ~(SCTP_CALLOUT_ACTIVE | SCTP_CALLOUT_FIRED);
 		splx(s);
 		return (0);
 	}
@@ -147,7 +147,8 @@ printf("sctp_fasttim: ticks = %u (added %u)\n", (uint32_t)ticks,
 			TAILQ_REMOVE(&locallist, c, tqe);
 			/* now validate that it did not get canceled */
 			if (c->c_flags & SCTP_CALLOUT_FIRED) {
-				c->c_flags &= ~SCTP_CALLOUT_PENDING;
+				c->c_flags &= ~(SCTP_CALLOUT_PENDING |
+						SCTP_CALLOUT_FIRED);
 				splx(s);
 				SCTP_TIMERQ_UNLOCK();
 				(*c->c_func) (c->c_arg);
