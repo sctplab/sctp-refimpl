@@ -2,46 +2,46 @@
 # General kernel macros
 
 # Macros
-set $TDI_SUSPENDED = 0x1
-set $TDI_SLEEPING = 0x2
-set $TDI_SWAPPED = 0x4
-set $TDI_LOCK = 0x8
-set $TDI_IWAIT = 0x10
+set $TDI_SUSPENDED=0x1
+set $TDI_SLEEPING=0x2
+set $TDI_SWAPPED=0x4
+set $TDI_LOCK=0x8
+set $TDI_IWAIT=0x10
 
-set $TDF_SINTR = 0x8
+set $TDF_SINTR=0x8
 
 # TID_MAX is a wild guess
-set $PID_MAX = 99999
-set $TID_MAX = 999999
+set $PID_MAX=99999
+set $TID_MAX=999999
 
-set $P_CONTROLT = 0x2
-set $P_PPWAIT = 0x10
-set $P_HADTHREADS = 0x80
-set $P_SYSTEM = 0x200
-set $P_TRACED = 0x800
-set $P_WEXIT = 0x02000
-set $P_STOPPED_SIG = 0x20000
-set $P_STOPPED_TRACE = 0x40000
-set $P_STOPPED_SINGLE = 0x80000
-set $P_STOPPED = ($P_STOPPED_SIG | $P_STOPPED_TRACE | $P_STOPPED_SINGLE)
+set $P_CONTROLT=0x2
+set $P_PPWAIT=0x10
+set $P_HADTHREADS=0x80
+set $P_SYSTEM=0x200
+set $P_TRACED=0x800
+set $P_WEXIT=0x02000
+set $P_STOPPED_SIG=0x20000
+set $P_STOPPED_TRACE=0x40000
+set $P_STOPPED_SINGLE=0x80000
+set $P_STOPPED=($P_STOPPED_SIG|$P_STOPPED_TRACE|$P_STOPPED_SINGLE)
 
-set $PS_INMEM = 0x1
+set $PS_INMEM=0x1
 
-set $MTX_UNOWNED = 4
+set $MTX_UNOWNED=4
 
-set $VV_ROOT = 0x0001
-set $VV_TEXT = 0x0020
-set $VV_SYSTEM = 0x0080
-set $VI_DOOMED = 0x0080
-set $VI_FREE = 0x0100
+set $VV_ROOT=0x0001
+set $VV_TEXT=0x0020
+set $VV_SYSTEM=0x0080
+set $VI_DOOMED=0x0080
+set $VI_FREE=0x0100
 
-set $CTLTYPE = 0xf
-set $CTLTYPE_NODE = 1
+set $CTLTYPE=0xf
+set $CTLTYPE_NODE=1
 
-set $LK_WAITDRAIN = 0x00080000
+set $LK_WAITDRAIN=0x00080000
 
 # Number of chars output by %p
-set $PTRWIDTH = (sizeof(void *) * 2 + 2)
+set $PTRWIDTH=(sizeof(void *)*2+2)
 
 # Print the command name of the current process
 define pname
