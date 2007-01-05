@@ -437,6 +437,47 @@ define lookup_proc
     end
 end
 
+# Lookup a thread specified via $arg0.  We walk all the processes and threads
+# looking to see if $arg0 specifies a valid TID.  In addition, if $arg2 is
+# non-zero, then we will check to see if it's a valid PID as well, and if so
+# we return the first thread in the process with that PID.  If it is not a
+# valid tid, then we assume $arg0 is a thread pointer and leave it alone.
+# The thread pointer is returned in $arg1.
+define lookup_thread
+    set $_id = (int)$arg0
+    set $arg1 = (struct thread *)$arg0
+    if ($_id <= $TID_MAX)
+	set $_zomb = 0
+	set $_p = allproc.lh_first
+	while ($_p)
+	    if ($arg2 && $_p->p_pid == $_id)
+		set $arg1 = $_p->p_threads.tqh_first
+		set $_p = 0
+	    else
+		set $_td = $_p->p_threads.tqh_first
+		while ($_td)
+		    if ($_td->td_tid == $_id)
+			set $arg1 = $_td
+			set $_td = 0
+			set $_p = 0
+		    else
+			set $_td = $_td->td_plist.tqe_next
+		    end
+		end
+		if ($_p)
+		    set $_p = $_p->p_list.le_next
+		    if ($_p == 0 && $_zomb == 0)
+			set $_p = zombproc.lh_first
+			set $_zomb = 1
+		    end
+		end
+	    end
+	end
+    end
+end
+
+
+
 # formatting helper
 # spaces <count>
 define spaces
