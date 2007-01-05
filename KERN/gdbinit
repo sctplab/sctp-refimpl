@@ -1372,8 +1372,10 @@ set $_inp=sctppcbinfo.listhead.lh_first
 while ( $_inp != 0 )
  set $_asoc=$_inp->sctp_asoc_list.lh_first
  while ( $_asoc != 0) 
-	if ($_asoc->tcb_mtx->mtx_lock != 4) 
+	if ($_asoc->tcb_mtx->mtx_lock != $MTX_UNOWNED4) 
 	    print $_asoc
+	    set $_sctp_mtx=&$_asoc->tcb_mtx
+	    mtx_owner $_sctp_mtx
         end
     set $_asoc=$_asoc->sctp_tcblist.le_next
   end
