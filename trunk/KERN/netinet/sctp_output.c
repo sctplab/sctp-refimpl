@@ -5234,6 +5234,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	sctp_snd_sb_alloc(stcb, sizeof(struct sctp_data_chunk));
 	chk->book_size = chk->send_size = (to_move +
 					   sizeof(struct sctp_data_chunk));
+	chk->book_size_scale = 0;
 	chk->sent = SCTP_DATAGRAM_UNSENT;
 
 	/* get last_mbuf and counts of mb useage
@@ -8490,6 +8491,7 @@ jump_out:
 	}
 	chk->book_size = SCTP_SIZE32((chk->send_size + sizeof(struct sctp_pktdrop_chunk) +
 	    sizeof(struct sctphdr) + SCTP_MED_OVERHEAD));
+	chk->book_size_scale = 0;
 	if (chk->book_size > small_one) {
 		drp->ch.chunk_flags = SCTP_PACKET_TRUNCATED;
 		drp->trunc_len = htons(chk->send_size);
@@ -8633,6 +8635,7 @@ sctp_add_stream_reset_out(struct sctp_tmit_chunk *chk,
 	/* now fix the chunk length */
 	ch->chunk_length = htons(len + old_len);
 	chk->book_size = len + old_len;
+	chk->book_size_scale = 0;
 	chk->send_size = SCTP_SIZE32(chk->book_size);
 	SCTP_BUF_LEN(chk->data) = chk->send_size;
 	return;
@@ -8676,6 +8679,7 @@ sctp_add_stream_reset_in(struct sctp_tmit_chunk *chk,
 	/* now fix the chunk length */
 	ch->chunk_length = htons(len + old_len);
 	chk->book_size = len + old_len;
+	chk->book_size_scale = 0;
 	chk->send_size = SCTP_SIZE32(chk->book_size);
 	SCTP_BUF_LEN(chk->data) = chk->send_size;
 	return;
@@ -8707,6 +8711,7 @@ sctp_add_stream_reset_tsn(struct sctp_tmit_chunk *chk,
 	ch->chunk_length = htons(len + old_len);
 	chk->send_size = len + old_len;
 	chk->book_size = SCTP_SIZE32(chk->send_size);
+	chk->book_size_scale = 0;
 	SCTP_BUF_LEN(chk->data) = SCTP_SIZE32(chk->send_size);
 	return;
 }
@@ -8736,6 +8741,7 @@ sctp_add_stream_reset_result(struct sctp_tmit_chunk *chk,
 	/* now fix the chunk length */
 	ch->chunk_length = htons(len + old_len);
 	chk->book_size = len + old_len;
+	chk->book_size_scale = 0;
 	chk->send_size = SCTP_SIZE32(chk->book_size);
 	SCTP_BUF_LEN(chk->data) = chk->send_size;
 	return;
@@ -8772,6 +8778,7 @@ sctp_add_stream_reset_result_tsn(struct sctp_tmit_chunk *chk,
 	ch->chunk_length = htons(len + old_len);
 	chk->book_size = len + old_len;
 	chk->send_size = SCTP_SIZE32(chk->book_size);
+	chk->book_size_scale = 0;
 	SCTP_BUF_LEN(chk->data) = chk->send_size;
 	return;
 }
@@ -8815,7 +8822,8 @@ sctp_send_str_reset_req(struct sctp_tcb *stcb,
 	chk->asoc = &stcb->asoc;
 	chk->book_size = sizeof(struct sctp_chunkhdr);
 	chk->send_size = SCTP_SIZE32(chk->book_size);
-
+	chk->book_size_scale = 0;
+	
 	chk->data = sctp_get_mbuf_for_msg(MCLBYTES, 0, M_DONTWAIT, 1, MT_DATA);
 	if (chk->data == NULL) {
 		sctp_free_a_chunk(stcb, chk);
