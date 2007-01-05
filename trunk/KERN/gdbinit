@@ -1367,6 +1367,25 @@ document sctp_allasocs
 Show all SCTP associations
 end
 
+define sctp_allasocs_wlock
+set $_inp=sctppcbinfo.listhead.lh_first
+while ( $_inp != 0 )
+ set $_asoc=$_inp->sctp_asoc_list.lh_first
+ while ( $_asoc != 0) 
+	if ($_asoc->tcb_mtx->mtx_lock != $MTX_UNOWNED) 
+	    print $_asoc
+	    mtx_owner $_asoc->tcb_mtx
+        end
+    set $_asoc=$_asoc->sctp_tcblist.le_next
+  end
+ set $_inp=$_inp->sctp_list.le_next
+end
+end
+document sctp_allasocs_wlock
+Show all SCTP associations that are locked and their owners
+end
+
+
 define sctp_findep
 set $_inp=sctppcbinfo.listhead.lh_first
 while ( $_inp != 0 )
