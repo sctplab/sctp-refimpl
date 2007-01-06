@@ -401,13 +401,13 @@ sctp_pkthdr_fix(struct mbuf *m)
 		/* umm... not a very useful mbuf chain... */
 		return;
 	}
-	if ((size_t)SCTP_BUF_LEN(m_nxt) > sizeof(long)) {
-		/* move over a long */
-		bcopy(mtod(m_nxt, caddr_t), mtod(m, caddr_t), sizeof(long));
+	if ((size_t)SCTP_BUF_LEN(m_nxt) > sizeof(int)) {
+		/* move over an int */
+		bcopy(mtod(m_nxt, caddr_t), mtod(m, caddr_t), sizeof(int));
 		/* update mbuf data pointers and lengths */
-		SCTP_BUF_LEN(m) += sizeof(long);
-		SCTP_BUF_RESV_UF(m_nxt, sizeof(long));
-		SCTP_BUF_LEN(m_nxt) -= sizeof(long);
+		SCTP_BUF_LEN(m) += sizeof(int);
+		SCTP_BUF_RESV_UF(m_nxt, sizeof(int));
+		SCTP_BUF_LEN(m_nxt) -= sizeof(int);
 	}
 }
 
