@@ -2438,7 +2438,7 @@ sctp_calculate_sum(struct mbuf *m, int32_t * pktlen, uint32_t offset)
 
 void
 sctp_mtu_size_reset(struct sctp_inpcb *inp,
-    struct sctp_association *asoc, u_long mtu)
+    struct sctp_association *asoc, uint32_t mtu)
 {
 	/*
 	 * Reset the P-MTU size on this association, this involves changing
