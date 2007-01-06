@@ -91,8 +91,7 @@ sctp_timer_stop(int, struct sctp_inpcb *, struct sctp_tcb *,
 uint32_t sctp_calculate_sum(struct mbuf *, int32_t *, uint32_t);
 
 void
-sctp_mtu_size_reset(struct sctp_inpcb *, struct sctp_association *,
-    u_long);
+sctp_mtu_size_reset(struct sctp_inpcb *, struct sctp_association *, uint32_t);
 
 void
 sctp_add_to_readq(struct sctp_inpcb *inp,
