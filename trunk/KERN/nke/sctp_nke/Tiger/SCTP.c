@@ -436,7 +436,7 @@ kern_return_t SCTP_stop (kmod_info_t * ki, void * d) {
 	if (!LIST_EMPTY(&sctppcbinfo.inplisthead)) {
 		printf("SCTP NKE: There are still not deleted SCTP endpoints. NKE not unloaded\n");
 		LIST_FOREACH(inp, &sctppcbinfo.inplisthead, inp_list) {
-			printf("inp = %p: inp_wantcnt = %d, inp_state = %d, inp_socket->so_usecount = %d\n", inp->inp_wantcnt, inp->inp_state, inp->inp_socket->so_usecount);
+			printf("inp = %p: inp_wantcnt = %d, inp_state = %d, inp_socket->so_usecount = %d\n", inp, inp->inp_wantcnt, inp->inp_state, inp->inp_socket->so_usecount);
 		}
 		lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 		return KERN_FAILURE;
