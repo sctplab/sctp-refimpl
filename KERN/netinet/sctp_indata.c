@@ -1721,7 +1721,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	}
 	the_len = (chk_length - sizeof(struct sctp_data_chunk));
 	if (last_chunk == 0) {
-		dmbuf = sctp_m_copym(*m,
+		dmbuf = SCTP_M_COPYM(*m,
 				     (offset + sizeof(struct sctp_data_chunk)),
 				     the_len, M_DONTWAIT);
 #ifdef SCTP_MBUF_LOGGING
@@ -2736,7 +2736,7 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 						phd->param_length =
 							htons(chk_length + sizeof(*phd));
 						SCTP_BUF_LEN(mm) = sizeof(*phd);
-						SCTP_BUF_NEXT(mm) = sctp_m_copym(m, *offset,
+						SCTP_BUF_NEXT(mm) = SCTP_M_COPYM(m, *offset,
 									  SCTP_SIZE32(chk_length),
 									  M_DONTWAIT);
 						if (SCTP_BUF_NEXT(mm)) {

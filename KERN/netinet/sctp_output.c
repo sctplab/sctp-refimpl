@@ -2121,12 +2121,12 @@ sctp_add_cookie(struct sctp_inpcb *inp, struct mbuf *init, int init_offset,
 	if (mret == NULL) {
 		return (NULL);
 	}
-	copy_init = sctp_m_copym(init, init_offset, M_COPYALL, M_DONTWAIT);
+	copy_init = SCTP_M_COPYM(init, init_offset, M_COPYALL, M_DONTWAIT);
 	if (copy_init == NULL) {
 		sctp_m_freem(mret);
 		return (NULL);
 	}
-	copy_initack = sctp_m_copym(initack, initack_offset, M_COPYALL,
+	copy_initack = SCTP_M_COPYM(initack, initack_offset, M_COPYALL,
 	    M_DONTWAIT);
 	if (copy_initack == NULL) {
 		sctp_m_freem(mret);
@@ -4463,7 +4463,7 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 			return(outchain);
 		} else {
 			/* copy the old fashion way */
-			appendchain = sctp_m_copym(clonechain, 0, M_COPYALL, M_DONTWAIT);
+			appendchain = SCTP_M_COPYM(clonechain, 0, M_COPYALL, M_DONTWAIT);
 		}
 	}
 	if (appendchain == NULL) {
@@ -4544,7 +4544,7 @@ sctp_sendall_iterator(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
 		return;
 	}
 	if ((ca->m) && ca->sndlen) {
-		m = sctp_m_copym(ca->m, 0, M_COPYALL, M_DONTWAIT);
+		m = SCTP_M_COPYM(ca->m, 0, M_COPYALL, M_DONTWAIT);
 		if (m == NULL) {
 			/* can't copy so we are done */
 			ca->cnt_failed++;
@@ -5162,7 +5162,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		took_all = 1;
 	} else {
 		struct mbuf *m;
-		chk->data = sctp_m_copym(sp->data, 0, to_move, M_DONTWAIT);
+		chk->data = SCTP_M_COPYM(sp->data, 0, to_move, M_DONTWAIT);
 		chk->last_mbuf = NULL;
 		if (chk->data == NULL) {
 			sp->some_taken = some_taken;
@@ -6346,7 +6346,7 @@ sctp_send_cookie_echo(struct mbuf *m,
 			if ((pad = (plen % 4))) {
 				plen += 4 - pad;
 			}
-			cookie = sctp_m_copym(m, at, plen, M_DONTWAIT);
+			cookie = SCTP_M_COPYM(m, at, plen, M_DONTWAIT);
 			if (cookie == NULL) {
 				/* No memory */
 				return (-2);
@@ -6407,7 +6407,7 @@ sctp_send_heartbeat_ack(struct sctp_tcb *stcb,
 		/* must have a net pointer */
 		return;
 
-	outchain = sctp_m_copym(m, offset, chk_length, M_DONTWAIT);
+	outchain = SCTP_M_COPYM(m, offset, chk_length, M_DONTWAIT);
 	if (outchain == NULL) {
 		/* gak out of memory */
 		return;
@@ -6637,7 +6637,7 @@ sctp_send_asconf_ack(struct sctp_tcb *stcb, uint32_t retrans)
 		return (-1);
 	}
 	/* copy the asconf_ack */
-	m_ack = sctp_m_copym(stcb->asoc.last_asconf_ack_sent, 0, M_COPYALL, M_DONTWAIT);
+	m_ack = SCTP_M_COPYM(stcb->asoc.last_asconf_ack_sent, 0, M_COPYALL, M_DONTWAIT);
 	if (m_ack == NULL) {
 		/* couldn't copy it */
 
