@@ -2989,7 +2989,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 #endif
 	/* Now lets see about freeing the EP hash table. */
 	if (inp->sctp_tcbhash != NULL) {
-		SCTP_HASH_FREE(inp->sctp_tcbhash, inp->inp->sctp_hashmark);
+		SCTP_HASH_FREE(inp->sctp_tcbhash, inp->sctp_hashmark);
 		inp->sctp_tcbhash = NULL;
 	}
 	/* Now we must put the ep memory back into the zone pool */
