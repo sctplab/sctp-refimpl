@@ -68,7 +68,7 @@ void sctp_pool_put(struct pool *, void *);
 	sctp_pool_put(&zone, element);
 
 #define SCTP_HASH_INIT(size, hashmark) hashinit(size, HASH_LIST, M_PCB, M_WAITOK, hashmark)
-#define SCTP_HASH_FREE SCTP_FREE
+#define SCTP_HASH_FREE(table, hashmark) hash_destroy(table, M_PCB, hashmark)
 
 /*
  * timers

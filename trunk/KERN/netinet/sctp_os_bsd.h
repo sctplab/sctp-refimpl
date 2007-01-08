@@ -110,7 +110,7 @@ void *sctp_hashinit_flags(int elements, struct malloc_type *type,
 
 #define SCTP_HASH_INIT(size, hashmark) sctp_hashinit_flags(size, M_PCB, hashmark, HASH_NOWAIT)
 #endif
-#define SCTP_HASH_FREE SCTP_FREE
+#define SCTP_HASH_FREE(table, hashmark) hashdestroy(table, M_PCB, hashmark)
 
 /*
  * timers
