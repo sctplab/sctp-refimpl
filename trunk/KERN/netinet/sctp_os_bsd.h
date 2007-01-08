@@ -103,7 +103,7 @@ typedef struct vm_zone *sctp_zone_t;
 	zfreei(zone, element);
 #endif
 
-#define SCTP_HASH_INIT(size, hashmark) hashinit(size, M_PCB, hashmark)
+#define SCTP_HASH_INIT(size, hashmark) hashinit_flags(size, M_PCB, hashmark, HASH_NOWAIT)
 #define SCTP_HASH_FREE SCTP_FREE
 
 /*
