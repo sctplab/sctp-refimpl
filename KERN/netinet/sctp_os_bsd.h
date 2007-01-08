@@ -102,8 +102,14 @@ typedef struct vm_zone *sctp_zone_t;
 #define SCTP_ZONE_FREE(zone, element) \
 	zfreei(zone, element);
 #endif
-
+#if __FreeBSD_version >= 603000
 #define SCTP_HASH_INIT(size, hashmark) hashinit_flags(size, M_PCB, hashmark, HASH_NOWAIT)
+#else
+void *sctp_hashinit_flags(int elements, struct malloc_type *type, 
+                    u_long *hashmask, int flags);
+
+#define SCTP_HASH_INIT(size, hashmark) sctp_hashinit_flags(size, M_PCB, hashmark, HASH_NOWAIT)
+#endif
 #define SCTP_HASH_FREE SCTP_FREE
 
 /*

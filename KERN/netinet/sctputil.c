@@ -5710,5 +5710,38 @@ sctp_pool_put(struct pool *pp, void *ptr)
 }
 
 #endif
+#if defined(__FreeBSD__) && __FreeBSD_version < 603000
+/*
+ * General routine to allocate a hash table with control of memory flags.
+ * is in 7.0 and beyond for sure :-)
+ */
+void *
+sctp_hashinit_flags(int elements, struct malloc_type *type, 
+                    u_long *hashmask, int flags)
+{
+	long hashsize;
+	LIST_HEAD(generic, generic) *hashtbl;
+	int i;
 
-
+	if (elements <= 0)
+		panic("hashinit: bad elements");
+	for (hashsize = 1; hashsize <= elements; hashsize <<= 1)
+		continue;
+	hashsize >>= 1;
+	if(flags & HASH_WAITOK)
+		hashtbl = malloc((u_long)hashsize * sizeof(*hashtbl), type, M_WAITOK);
+	else if(flags & HASH_NOWAIT)
+		hashtbl = malloc((u_long)hashsize * sizeof(*hashtbl), type, M_NOWAIT);
+	else {
+#ifdef INVARIANTS
+		panic("flag incorrect in hashinit_flags");
+#else
+		return(NULL);
+#endif
+	}
+	for (i = 0; i < hashsize; i++)
+		LIST_INIT(&hashtbl[i]);
+	*hashmask = hashsize - 1;
+	return (hashtbl);
+}
+#endif
