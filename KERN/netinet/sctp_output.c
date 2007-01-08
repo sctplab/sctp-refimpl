@@ -5214,6 +5214,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 			}
 			sp->some_taken = some_taken;
 			sp->length += to_move;
+			chk->data = NULL;
 			sctp_free_a_chunk(stcb, chk);
 			SCTP_TCB_SEND_UNLOCK(stcb);
 			goto out_gu;
