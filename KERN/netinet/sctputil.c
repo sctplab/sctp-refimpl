@@ -1418,8 +1418,6 @@ sctp_timeout_handler(void *t)
 	}
 #endif
 	tmr->stopped_from = 0xa006;
-	/* record in stopped what t-o occured */
-	tmr->stopped_from = tmr->type;
 
 	if (stcb) {
 		atomic_add_int(&stcb->asoc.refcnt, 1);
@@ -1429,6 +1427,10 @@ sctp_timeout_handler(void *t)
 #endif
 		atomic_add_int(&stcb->asoc.refcnt, -1);
 	}
+
+	/* record in stopped what t-o occured */
+	tmr->stopped_from = tmr->type;
+
 	/* mark as being serviced now */
 	if (SCTP_OS_TIMER_PENDING(&tmr->timer)) {
 		/* 
