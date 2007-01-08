@@ -4367,7 +4367,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					phd->param_type =  htons(SCTP_CAUSE_UNRECOG_CHUNK);
 					phd->param_length = htons(chk_length + sizeof(*phd));
 					SCTP_BUF_LEN(mm) = sizeof(*phd);
-					SCTP_BUF_NEXT(mm) = sctp_m_copym(m, *offset, SCTP_SIZE32(chk_length),
+					SCTP_BUF_NEXT(mm) = SCTP_M_COPYM(m, *offset, SCTP_SIZE32(chk_length),
 								  M_DONTWAIT);
 					if (SCTP_BUF_NEXT(mm)) {
 						sctp_queue_op_err(stcb, mm);

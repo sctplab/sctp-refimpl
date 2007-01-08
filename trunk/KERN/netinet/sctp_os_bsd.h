@@ -112,6 +112,8 @@ void *sctp_hashinit_flags(int elements, struct malloc_type *type,
 #endif
 #define SCTP_HASH_FREE(table, hashmark) hashdestroy(table, M_PCB, hashmark)
 
+#define SCTP_M_COPYM	m_copym
+
 /*
  * timers
  */

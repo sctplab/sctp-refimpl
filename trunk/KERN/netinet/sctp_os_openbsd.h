@@ -53,6 +53,7 @@ extern int ipport_hilastauto;
 
 #define SCTP_FREE(var)	FREE(var, M_PCB)
 
+#define SCTP_M_COPYM	m_copym
 
 /*
  * zone allocation functions

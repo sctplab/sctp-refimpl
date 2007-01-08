@@ -5399,7 +5399,7 @@ get_more_data2:
 						hold_sblock = 0;
 					}
 					splx(s);
-					*mp = sctp_m_copym(m, 0, cp_len,
+					*mp = SCTP_M_COPYM(m, 0, cp_len,
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 					    M_TRYWAIT
 #else
