@@ -57,13 +57,6 @@ void sctp_m_freem(struct mbuf *m);
 #endif
 
 
-#if defined(__FreeBSD__) || defined(__NetBSD__)
-#define sctp_m_copym	m_copym
-#else
-/* APPLE and others must define their own */
-struct mbuf *sctp_m_copym(struct mbuf *m, int off, int len, int wait);
-#endif	
-
 #define sctp_get_associd(stcb) ((sctp_assoc_t)stcb->asoc.assoc_id)
 
 

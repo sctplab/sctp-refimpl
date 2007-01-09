@@ -80,7 +80,11 @@ extern zone_t kalloc_zone(vm_size_t);	/* XXX */
 	zfree(zone, element);
 
 #define SCTP_HASH_INIT(size, hashmark) hashinit(size, M_PCB, hashmark)
-#define SCTP_HASH_FREE SCTP_FREE
+#define SCTP_HASH_FREE(table, hashmark) SCTP_FREE(table)
+
+struct mbuf *sctp_m_copym(struct mbuf *m, int off, int len, int wait);
+
+#define SCTP_M_COPYM sctp_m_copym
 
 /*
  * timers
