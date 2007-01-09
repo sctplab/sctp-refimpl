@@ -284,13 +284,13 @@ sctp_pcbinfo_cleanup(void)
 {
 	/* free the hash tables */
 	if (sctppcbinfo.sctp_asochash != NULL)
-		SCTP_HASH_FREE(sctppcbinfo.sctp_ephash);
+		SCTP_HASH_FREE(sctppcbinfo.sctp_asochash, sctppcbinfo.hashasocmark);
 	if (sctppcbinfo.sctp_ephash != NULL)
-		SCTP_HASH_FREE(sctppcbinfo.sctp_ephash);
+		SCTP_HASH_FREE(sctppcbinfo.sctp_ephash, sctppcbinfo.hashmark);
 	if (sctppcbinfo.sctp_tcpephash != NULL)
-		SCTP_HASH_FREE(sctppcbinfo.sctp_tcpephash);
+		SCTP_HASH_FREE(sctppcbinfo.sctp_tcpephash, sctppcbinfo.hashtcpmark);
 	if (sctppcbinfo.sctp_restarthash != NULL)
-		SCTP_HASH_FREE(sctppcbinfo.sctp_restarthash);
+		SCTP_HASH_FREE(sctppcbinfo.sctp_restarthash, sctppcbinfo.hashrestartmark);
 }
 
 #ifdef INET6
