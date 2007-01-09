@@ -950,7 +950,7 @@ sctp_handle_error(struct sctp_chunkhdr *ch,
 			/*
 			 * We should NOT get these here, but in a
 			 * ASCONF-ACK.
-n			 */
+			 */
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_INPUT2) {
 				printf("Peer sends ASCONF errors in a Operational Error?<%d>?\n",
@@ -963,7 +963,7 @@ n			 */
 			 * And what, pray tell do we do with the fact that
 			 * the peer is out of resources? Not really sure we
 			 * could do anything but abort. I suspect this
-	n		 * should have came WITH an abort instead of in a
+			 * should have came WITH an abort instead of in a
 			 * OP-ERROR.
 			 */
 			break;
@@ -2290,7 +2290,14 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			sctp_ulp_notify(notification, *stcb, 0, NULL);
 
 			/* Pull it from the incomplete queue and wake the guy */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			/* need to temp unlock the listening socket */
+			socket_unlock(oso, 0);
+#endif
 			soisconnected(so);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			socket_lock(oso, 0);
+#endif
 			return (m);
 		}
 	}
