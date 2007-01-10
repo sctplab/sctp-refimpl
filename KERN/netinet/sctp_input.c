@@ -1216,7 +1216,12 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		 * to get into the OPEN state
 		 */
 		if(ntohl(initack_cp->init.initial_tsn) != asoc->init_seq_number) {
+#ifdef INVARIANTS
 			panic("Case D and non-match seq?");
+#else
+			printf("Case D, seq non-match %x vs %x?\n",
+			       ntohl(initack_cp->init.initial_tsn,asoc->init_seq_number);
+#endif
 		}
 
 		switch SCTP_GET_STATE
@@ -1552,8 +1557,6 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 
 		return (stcb);
 	}
-	/* if we are not a restart we need the assoc_id field pop'd */
-	asoc->assoc_id = ntohl(initack_cp->init.initiate_tag);
 	if(how_indx < sizeof(asoc->cookie_how))
 		asoc->cookie_how[how_indx] = 16;
 	/* all other cases... */
