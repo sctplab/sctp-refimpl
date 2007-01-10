@@ -1220,7 +1220,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			panic("Case D and non-match seq?");
 #else
 			printf("Case D, seq non-match %x vs %x?\n",
-			       ntohl(initack_cp->init.initial_tsn,asoc->init_seq_number));
+			       ntohl(initack_cp->init.initial_tsn),asoc->init_seq_number);
 #endif
 		}
 
