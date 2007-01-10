@@ -950,7 +950,7 @@ sctp_handle_error(struct sctp_chunkhdr *ch,
 			/*
 			 * We should NOT get these here, but in a
 			 * ASCONF-ACK.
-n			 */
+			 */
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_INPUT2) {
 				printf("Peer sends ASCONF errors in a Operational Error?<%d>?\n",
@@ -963,7 +963,7 @@ n			 */
 			 * And what, pray tell do we do with the fact that
 			 * the peer is out of resources? Not really sure we
 			 * could do anything but abort. I suspect this
-	n		 * should have came WITH an abort instead of in a
+			 * should have came WITH an abort instead of in a
 			 * OP-ERROR.
 			 */
 			break;
@@ -2202,7 +2202,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			NET_LOCK_GIANT();
 #endif
 			SCTP_TCB_UNLOCK((*stcb));
-			so = sonewconn(oso, SS_ISCONNECTED
+			so = sonewconn(oso, 0
 #if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
 			    ,NULL
 #endif
@@ -2232,9 +2232,16 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			socket_lock(so, 1);
 #endif
 			inp = (struct sctp_inpcb *)so->so_pcb;
+			SCTP_INP_INCR_REF(inp);
+			/* 
+			 * We add the unbound flag here so that
+			 * if we get an soabort() before we get the
+			 * move_pcb done, we will properly cleanup.
+			 */
 			inp->sctp_flags = (SCTP_PCB_FLAGS_TCPTYPE |
 			    SCTP_PCB_FLAGS_CONNECTED |
 			    SCTP_PCB_FLAGS_IN_TCPPOOL |
+ 			    SCTP_PCB_FLAGS_UNBOUND |
 			    (SCTP_PCB_COPY_FLAGS & (*inp_p)->sctp_flags) |
 			    SCTP_PCB_FLAGS_DONT_WAKE);
 			inp->sctp_features = (*inp_p)->sctp_features;
@@ -2263,13 +2270,34 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			 * another and get the tcb in the right place.
 			 */
 			sctp_move_pcb_and_assoc(*inp_p, inp, *stcb);
-
 			sctp_pull_off_control_to_new_inp((*inp_p), inp, *stcb);
 
+			/* now we must check to see if we were aborted while
+			 * the move was going on and the lock/unlock happened.
+			 */
+			if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
+				/* yep it was, we leave the
+				 * assoc attached to the socket since
+				 * the sctp_inpcb_free() call will send
+				 * an abort for us.
+				 */
+				SCTP_INP_DECR_REF(inp);
+				return (NULL);
+			}
+			SCTP_INP_DECR_REF(inp);
 			/* Switch over to the new guy */
 			*inp_p = inp;
-
 			sctp_ulp_notify(notification, *stcb, 0, NULL);
+
+			/* Pull it from the incomplete queue and wake the guy */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			/* need to temp unlock the listening socket */
+			socket_unlock(oso, 0);
+#endif
+			soisconnected(so);
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			socket_lock(oso, 0);
+#endif
 			return (m);
 		}
 	}

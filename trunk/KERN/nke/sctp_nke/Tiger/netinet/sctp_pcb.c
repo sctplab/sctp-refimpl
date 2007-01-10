@@ -1914,6 +1914,7 @@ sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
 	SCTP_INP_WLOCK(new_inp);
 	SCTP_TCB_LOCK(stcb);
 
+
 	new_inp->sctp_ep.time_of_secret_change =
 	    old_inp->sctp_ep.time_of_secret_change;
 	memcpy(new_inp->sctp_ep.secret_key, old_inp->sctp_ep.secret_key,
@@ -1940,6 +1941,8 @@ sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
 	    sctppcbinfo.hashtcpmark)];
 
 	LIST_INSERT_HEAD(head, new_inp, sctp_hash);
+	/* Its safe to access */
+	new_inp->sctp_flags &= ~SCTP_PCB_FLAGS_UNBOUND;
 
 	/* Now move the tcb into the endpoint list */
 	LIST_INSERT_HEAD(&new_inp->sctp_asoc_list, stcb, sctp_tcblist);
