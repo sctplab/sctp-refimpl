@@ -1183,8 +1183,8 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 	init_offset = offset += sizeof(struct sctp_cookie_echo_chunk);
 
 	init_cp = (struct sctp_init_chunk *)
-	    sctp_m_getptr(m, init_offset, sizeof(struct sctp_init_chunk),
-	    (uint8_t *) & init_buf);
+		sctp_m_getptr(m, init_offset, sizeof(struct sctp_init_chunk),
+			      (uint8_t *) & init_buf);
 	if (init_cp == NULL) {
 		/* could not pull a INIT chunk in cookie */
 		return (NULL);
@@ -1199,8 +1199,8 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 	 */
 	initack_offset = init_offset + SCTP_SIZE32(chk_length);
 	initack_cp = (struct sctp_init_ack_chunk *)
-	    sctp_m_getptr(m, initack_offset, sizeof(struct sctp_init_ack_chunk),
-	    (uint8_t *) & initack_buf);
+		sctp_m_getptr(m, initack_offset, sizeof(struct sctp_init_ack_chunk),
+			      (uint8_t *) & initack_buf);
 	if (initack_cp == NULL) {
 		/* could not pull INIT-ACK chunk in cookie */
 		return (NULL);
@@ -1220,77 +1220,77 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			panic("Case D and non-match seq?");
 #else
 			printf("Case D, seq non-match %x vs %x?\n",
-			       ntohl(initack_cp->init.initial_tsn,asoc->init_seq_number);
+			       ntohl(initack_cp->init.initial_tsn,asoc->init_seq_number));
 #endif
 		}
 
 		switch SCTP_GET_STATE
 			(asoc) {
-		case SCTP_STATE_COOKIE_WAIT:
-		case SCTP_STATE_COOKIE_ECHOED:
-			/*
-			 * INIT was sent, but got got a COOKIE_ECHO with the
-			 * correct tags... just accept it...but we must
-			 * process the init so that we can make sure we
-			 * have the right seq no's.
-			 */
-			/* First we must process the INIT !! */
-			retval = sctp_process_init(init_cp, stcb, net);
-			if (retval < 0) {
-				if(how_indx < sizeof(asoc->cookie_how))
-					asoc->cookie_how[how_indx] = 3;
-				return (NULL);
-			}
-			/* we have already processed the INIT so no problem */
-			sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb,
-			    net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_11);
-			sctp_timer_stop(SCTP_TIMER_TYPE_INIT, inp, stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_12);
-			/* update current state */
-			if (asoc->state & SCTP_STATE_SHUTDOWN_PENDING) {
-				asoc->state = SCTP_STATE_OPEN |
-				    SCTP_STATE_SHUTDOWN_PENDING;
-				sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD,
-						 stcb->sctp_ep, stcb, asoc->primary_destination);
-
-			} else if ((asoc->state & SCTP_STATE_SHUTDOWN_SENT) == 0) {
-				/* if ok, move to OPEN state */
-				asoc->state = SCTP_STATE_OPEN;
-			}
-			sctp_stop_all_cookie_timers(stcb);
-			if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
-			    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) &&
-			    (inp->sctp_socket->so_qlimit == 0)
-			    ) {
+			case SCTP_STATE_COOKIE_WAIT:
+			case SCTP_STATE_COOKIE_ECHOED:
 				/*
-				 * Here is where collision would go if we
-				 * did a connect() and instead got a
-				 * init/init-ack/cookie done before the
-				 * init-ack came back..
+				 * INIT was sent, but got got a COOKIE_ECHO with the
+				 * correct tags... just accept it...but we must
+				 * process the init so that we can make sure we
+				 * have the right seq no's.
 				 */
-				stcb->sctp_ep->sctp_flags |=
-				    SCTP_PCB_FLAGS_CONNECTED;
-				soisconnected(stcb->sctp_ep->sctp_socket);
-			}
-			/* notify upper layer */
-			*notification = SCTP_NOTIFY_ASSOC_UP;
-			/*
-			 * since we did not send a HB make sure we don't
-			 * double things
-			 */
-			net->hb_responded = 1;
+				/* First we must process the INIT !! */
+				retval = sctp_process_init(init_cp, stcb, net);
+				if (retval < 0) {
+					if(how_indx < sizeof(asoc->cookie_how))
+						asoc->cookie_how[how_indx] = 3;
+					return (NULL);
+				}
+				/* we have already processed the INIT so no problem */
+				sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb,
+						net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_11);
+				sctp_timer_stop(SCTP_TIMER_TYPE_INIT, inp, stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_12);
+				/* update current state */
+				if (asoc->state & SCTP_STATE_SHUTDOWN_PENDING) {
+					asoc->state = SCTP_STATE_OPEN |
+						SCTP_STATE_SHUTDOWN_PENDING;
+					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD,
+							 stcb->sctp_ep, stcb, asoc->primary_destination);
 
-			if (stcb->asoc.sctp_autoclose_ticks &&
-			    (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_AUTOCLOSE))) {
-				sctp_timer_start(SCTP_TIMER_TYPE_AUTOCLOSE,
-				    inp, stcb, NULL);
-			}
-			break;
-		default:
-			/*
-			 * we're in the OPEN state (or beyond), so peer must
-			 * have simply lost the COOKIE-ACK
-			 */
-			break;
+				} else if ((asoc->state & SCTP_STATE_SHUTDOWN_SENT) == 0) {
+					/* if ok, move to OPEN state */
+					asoc->state = SCTP_STATE_OPEN;
+				}
+				sctp_stop_all_cookie_timers(stcb);
+				if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
+				     (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) &&
+				    (inp->sctp_socket->so_qlimit == 0)
+					) {
+					/*
+					 * Here is where collision would go if we
+					 * did a connect() and instead got a
+					 * init/init-ack/cookie done before the
+					 * init-ack came back..
+					 */
+					stcb->sctp_ep->sctp_flags |=
+						SCTP_PCB_FLAGS_CONNECTED;
+					soisconnected(stcb->sctp_ep->sctp_socket);
+				}
+				/* notify upper layer */
+				*notification = SCTP_NOTIFY_ASSOC_UP;
+				/*
+				 * since we did not send a HB make sure we don't
+				 * double things
+				 */
+				net->hb_responded = 1;
+
+				if (stcb->asoc.sctp_autoclose_ticks &&
+				    (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_AUTOCLOSE))) {
+					sctp_timer_start(SCTP_TIMER_TYPE_AUTOCLOSE,
+							 inp, stcb, NULL);
+				}
+				break;
+			default:
+				/*
+				 * we're in the OPEN state (or beyond), so peer must
+				 * have simply lost the COOKIE-ACK
+				 */
+				break;
 		}	/* end switch */
 		sctp_stop_all_cookie_timers(stcb);
 		/*
@@ -1299,8 +1299,8 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		 * really should not fail.
 		 */
 		if (sctp_load_addresses_from_init(stcb, m, iphlen,
-		    init_offset + sizeof(struct sctp_init_chunk),
-		    initack_offset, sh, init_src)) {
+						  init_offset + sizeof(struct sctp_init_chunk),
+						  initack_offset, sh, init_src)) {
 			if(how_indx < sizeof(asoc->cookie_how))
 				asoc->cookie_how[how_indx] = 4;
 			return (NULL);
@@ -1325,7 +1325,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 	}
 	if (ntohl(initack_cp->init.initiate_tag) == asoc->my_vtag &&
 	    (ntohl(init_cp->init.initiate_tag) != asoc->peer_vtag ||
-	    init_cp->init.initiate_tag == 0)) {
+	     init_cp->init.initiate_tag == 0)) {
 		/*
 		 * case B in Section 5.2.4 Table 2: MXAA or MOAA my info
 		 * should be ok, re-accept peer info
@@ -1364,7 +1364,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		if (stcb->asoc.sctp_autoclose_ticks &&
 		    sctp_is_feature_on(inp, SCTP_PCB_FLAGS_AUTOCLOSE)) {
 			sctp_timer_start(SCTP_TIMER_TYPE_AUTOCLOSE, inp, stcb,
-			    NULL);
+					 NULL);
 		}
 		asoc->my_rwnd = ntohl(initack_cp->init.a_rwnd);
 		asoc->pre_open_streams = ntohs(initack_cp->init.num_outbound_streams);
@@ -1397,8 +1397,8 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			return (NULL);
 		}
 		if (sctp_load_addresses_from_init(stcb, m, iphlen,
-		    init_offset + sizeof(struct sctp_init_chunk),
-		    initack_offset, sh, init_src)) {
+						  init_offset + sizeof(struct sctp_init_chunk),
+						  initack_offset, sh, init_src)) {
 			if(how_indx < sizeof(asoc->cookie_how))
 				asoc->cookie_how[how_indx] = 10;
 			return (NULL);
@@ -1408,16 +1408,16 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			*notification = SCTP_NOTIFY_ASSOC_UP;
 
 			if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
-			    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) &&
+			     (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) &&
 			    (inp->sctp_socket->so_qlimit == 0)) {
 				stcb->sctp_ep->sctp_flags |=
-				    SCTP_PCB_FLAGS_CONNECTED;
+					SCTP_PCB_FLAGS_CONNECTED;
 				soisconnected(stcb->sctp_ep->sctp_socket);
 			}
 		}
 		if (asoc->state & SCTP_STATE_SHUTDOWN_PENDING) {
 			asoc->state = SCTP_STATE_OPEN |
-			    SCTP_STATE_SHUTDOWN_PENDING;
+				SCTP_STATE_SHUTDOWN_PENDING;
 			sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD,
 					 stcb->sctp_ep, stcb, asoc->primary_destination);
 
@@ -1442,7 +1442,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		return (stcb);
 	}
 	if ((ntohl(initack_cp->init.initiate_tag) != asoc->my_vtag &&
-	    ntohl(init_cp->init.initiate_tag) != asoc->peer_vtag) &&
+	     ntohl(init_cp->init.initiate_tag) != asoc->peer_vtag) &&
 	    cookie->tie_tag_my_vtag == asoc->my_vtag_nonce &&
 	    cookie->tie_tag_peer_vtag == asoc->peer_vtag_nonce &&
 	    cookie->tie_tag_peer_vtag != 0) {
@@ -1463,7 +1463,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		atomic_add_int(&stcb->asoc.refcnt, 1); 
 		if (asoc->state & SCTP_STATE_SHUTDOWN_PENDING) {
 			asoc->state = SCTP_STATE_OPEN |
-			    SCTP_STATE_SHUTDOWN_PENDING;
+				SCTP_STATE_SHUTDOWN_PENDING;
 			sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD,
 					 stcb->sctp_ep, stcb, asoc->primary_destination);
 
@@ -1472,7 +1472,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			asoc->state = SCTP_STATE_OPEN;
 		}
 		asoc->pre_open_streams =
-		    ntohs(initack_cp->init.num_outbound_streams);
+			ntohs(initack_cp->init.num_outbound_streams);
 		asoc->init_seq_number = ntohl(initack_cp->init.initial_tsn);
 		asoc->sending_seq = asoc->asconf_seq_out = asoc->str_reset_seq_out = asoc->init_seq_number;
 
@@ -1484,7 +1484,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		asoc->advanced_peer_ack_point = asoc->last_acked_seq;
 		if (asoc->mapping_array)
 			memset(asoc->mapping_array, 0,
-			    asoc->mapping_array_size);
+			       asoc->mapping_array_size);
 		SCTP_TCB_UNLOCK(stcb);
 		SCTP_INP_INFO_WLOCK();
 		SCTP_INP_WLOCK(stcb->sctp_ep);
@@ -1507,7 +1507,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		LIST_REMOVE(stcb, sctp_asocs);
 		/* re-insert to new vtag position */
 		head = &sctppcbinfo.sctp_asochash[SCTP_PCBHASH_ASOC(stcb->asoc.my_vtag,
-		    sctppcbinfo.hashasocmark)];
+								    sctppcbinfo.hashasocmark)];
 		/*
 		 * put it in the bucket in the vtag hash of assoc's for the
 		 * system
@@ -1518,7 +1518,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		if (stcb->asoc.in_restart_hash == 0) {
 			/* Ok add it to assoc_id vtag hash */
 			head = &sctppcbinfo.sctp_restarthash[SCTP_PCBHASH_ASOC(stcb->asoc.assoc_id,
-			    sctppcbinfo.hashrestartmark)];
+									       sctppcbinfo.hashrestartmark)];
 			LIST_INSERT_HEAD(head, stcb, sctp_tcbrestarhash);
 			stcb->asoc.in_restart_hash = 1;
 		}
@@ -1541,8 +1541,8 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		net->hb_responded = 1;
 
 		if (sctp_load_addresses_from_init(stcb, m, iphlen,
-		    init_offset + sizeof(struct sctp_init_chunk),
-		    initack_offset, sh, init_src)) {
+						  init_offset + sizeof(struct sctp_init_chunk),
+						  initack_offset, sh, init_src)) {
 			if(how_indx < sizeof(asoc->cookie_how))
 				asoc->cookie_how[how_indx] = 14;
 
@@ -1557,11 +1557,12 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 
 		return (stcb);
 	}
-	if(how_indx < sizeof(asoc->cookie_how))
+	if (how_indx < sizeof(asoc->cookie_how))
 		asoc->cookie_how[how_indx] = 16;
 	/* all other cases... */
 	return (NULL);
 }
+
 
 /*
  * handle a state cookie for a new association m: input packet mbuf chain--
