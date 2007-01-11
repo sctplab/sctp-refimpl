@@ -5470,9 +5470,11 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 	}
 	/* Wake any delayed sleep action */
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_DONT_WAKE) {
+		SCTP_INP_WLOCK(inp);
 		inp->sctp_flags &= ~SCTP_PCB_FLAGS_DONT_WAKE;
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_WAKEOUTPUT) {
 			inp->sctp_flags &= ~SCTP_PCB_FLAGS_WAKEOUTPUT;
+			SCTP_INP_WUNLOCK(inp);
 			SOCKBUF_LOCK(&inp->sctp_socket->so_snd);
 			if (sowriteable(inp->sctp_socket)) {
 #if defined(__NetBSD__) || defined(__APPLE__)
@@ -5483,9 +5485,11 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 			} else {
 				SOCKBUF_UNLOCK(&inp->sctp_socket->so_snd);
 			}
+			SCTP_INP_WLOCK(inp);
 		}
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_WAKEINPUT) {
 			inp->sctp_flags &= ~SCTP_PCB_FLAGS_WAKEINPUT;
+			SCTP_INP_WUNLOCK(inp);
 			SOCKBUF_LOCK(&inp->sctp_socket->so_rcv);
 			if (soreadable(inp->sctp_socket)) {
 				sctp_defered_wakeup_cnt++;
@@ -5497,7 +5501,9 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 			} else {
 				SOCKBUF_UNLOCK(&inp->sctp_socket->so_rcv);
 			}
+			SCTP_INP_WLOCK(inp);
 		}
+		SCTP_INP_WUNLOCK(inp);
 	}
 	splx(s);
 	return (0);
