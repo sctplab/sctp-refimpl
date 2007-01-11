@@ -1883,7 +1883,9 @@ static void
 sctp_addr_mgmt_ep(struct sctp_inpcb *inp, struct ifaddr *ifa, uint16_t type)
 {
 	struct sctp_tcb *stcb;
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s;
+#endif
 
 #if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
 	struct timeval timenow;
@@ -1958,8 +1960,6 @@ sctp_addr_mgmt_ep(struct sctp_inpcb *inp, struct ifaddr *ifa, uint16_t type)
 	}
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
-#else
-	s = splnet();
 #endif
 	/* process for all associations for this endpoint */
 	LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
@@ -1967,7 +1967,9 @@ sctp_addr_mgmt_ep(struct sctp_inpcb *inp, struct ifaddr *ifa, uint16_t type)
 		sctp_addr_mgmt_assoc(inp, stcb, ifa, type);
 		SCTP_TCB_UNLOCK(stcb);
 	}
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
+#endif
 	SCTP_INP_WUNLOCK(inp);
 }
 
@@ -1978,7 +1980,9 @@ static void
 sctp_addr_mgmt_restrict_ep(struct sctp_inpcb *inp, struct ifaddr *ifa)
 {
 	struct sctp_tcb *stcb;
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s;
+#endif
 
 	/* is this endpoint bound to all? */
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) == 0) {
@@ -1990,8 +1994,6 @@ sctp_addr_mgmt_restrict_ep(struct sctp_inpcb *inp, struct ifaddr *ifa)
 	}
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
-#else
-	s = splnet();
 #endif
 	SCTP_INP_RLOCK(inp);
 	/* process for all associations for this endpoint */
@@ -2001,7 +2003,9 @@ sctp_addr_mgmt_restrict_ep(struct sctp_inpcb *inp, struct ifaddr *ifa)
 		sctp_add_local_addr_assoc(stcb, ifa);
 		SCTP_TCB_UNLOCK(stcb);
 	}
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
+#endif
 	SCTP_INP_RUNLOCK(inp);
 }
 

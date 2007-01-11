@@ -7875,6 +7875,10 @@ sctp_send_sack(struct sctp_tcb *stcb)
 					mergeable = 1;
 				}
 			}
+			if(limit_reached) {
+				/* Reached the limit stop */
+				break;
+			}
 			jstart = 0;
 			offset += 8;
 		}
@@ -9466,14 +9470,15 @@ sctp_sosend(struct socket *so,
 		addr = mtod(addr_mbuf, struct sockaddr *);
 #endif
 	struct sctp_inpcb *inp;
-	int s, error, use_rcvinfo = 0;
+#if defined(__NetBSD__) || defined(__OpenBSD__)
+	int s;
+#endif
+	int error, use_rcvinfo = 0;
 	struct sctp_sndrcvinfo srcv;
 
 	inp = (struct sctp_inpcb *)so->so_pcb;
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
-#else
-	s = splnet();
 #endif
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	socket_lock(so, 1);
@@ -9488,7 +9493,9 @@ sctp_sosend(struct socket *so,
 	}
 	error = sctp_lower_sosend(so, addr, uio, top, control, flags,
 				  use_rcvinfo, &srcv, p);
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
+#endif
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	socket_unlock(so, 1);
 #endif
@@ -9516,7 +9523,10 @@ sctp_lower_sosend(struct socket *so,
 	unsigned int sndlen, max_len;
 	int error, len;
 	struct mbuf *top=NULL;
-	int s, queue_only = 0, queue_only_for_init = 0;
+#if defined(__NetBSD__) || defined(__OpenBSD_)
+	int s;
+#endif
+	int queue_only = 0, queue_only_for_init = 0;
 	int free_cnt_applied = 0;
 	int un_sent = 0;
 	int now_filled = 0;
@@ -9543,7 +9553,9 @@ sctp_lower_sosend(struct socket *so,
 #endif
 	if (inp == NULL) {
 		error = EFAULT;
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
+#endif
 		goto out_unlocked;
 	}
 	atomic_add_int(&inp->total_sends, 1);
@@ -9556,8 +9568,6 @@ sctp_lower_sosend(struct socket *so,
 
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
-#else
-	s = splnet();
 #endif
 	hold_tcblock = 0;
 
@@ -9565,13 +9575,17 @@ sctp_lower_sosend(struct socket *so,
 	    (inp->sctp_socket->so_qlimit)) {
 		/* The listener can NOT send */
 		error = EFAULT;
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
+#endif
 		goto out_unlocked;
 	}
 	if ((use_rcvinfo) && srcv) {
 		if (INVALID_SINFO_FLAG(srcv->sinfo_flags) || PR_SCTP_INVALID_POLICY(srcv->sinfo_flags)) {
 			error = EINVAL;
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);
+#endif
 			goto out_unlocked;
 		}
 
@@ -9582,7 +9596,9 @@ sctp_lower_sosend(struct socket *so,
 			/* its a sendall */
 			error = sctp_sendall(inp, uio, top, srcv);
 			top = NULL;
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);
+#endif
 			goto out_unlocked;
 		}
 	}
@@ -9593,7 +9609,9 @@ sctp_lower_sosend(struct socket *so,
 		if (stcb == NULL) {
 			SCTP_INP_RUNLOCK(inp);
 			error = ENOTCONN;
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);
+#endif
 			goto out_unlocked;
 		}
 		hold_tcblock = 0;
@@ -9640,14 +9658,18 @@ sctp_lower_sosend(struct socket *so,
 		    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
 			/* Should I really unlock ? */
 			error = EFAULT;
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);
+#endif
 			goto out_unlocked;
 
 		}
 		if (((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0) &&
 		    (addr->sa_family == AF_INET6)) {
 			error = EINVAL;
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);
+#endif
 			goto out_unlocked;
 		}
 		SCTP_INP_WLOCK(inp);
@@ -9666,11 +9688,15 @@ sctp_lower_sosend(struct socket *so,
 	if(stcb == NULL) {
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) {
 			error = ENOTCONN;
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);
+#endif
 			goto out_unlocked;
 		} else if (addr == NULL) {
 			error = ENOENT;
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);
+#endif
 			goto out_unlocked;
 		} else {
 			/* UDP style, we must go ahead and start the INIT process */
@@ -9683,14 +9709,18 @@ sctp_lower_sosend(struct socket *so,
 				 * or EOF a non-existant assoc with no data
 				 */
 				error = ENOENT;
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 				splx(s);
+#endif
 				goto out_unlocked;
 			}
 			/* get an asoc/stcb struct */
 			stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0);
 			if (stcb == NULL) {
 				/* Error is setup for us in the call */
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 				splx(s);
+#endif
 				goto out_unlocked;
 			}
 			if (create_lock_applied) {
@@ -9812,7 +9842,9 @@ sctp_lower_sosend(struct socket *so,
 		     sctp_max_chunks_on_queue)) {
 			error = EWOULDBLOCK;
 			atomic_add_int(&stcb->sctp_ep->total_nospaces, 1);
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);
+#endif
 			goto out_unlocked;
 		}
 	}
@@ -9857,7 +9889,9 @@ sctp_lower_sosend(struct socket *so,
 			;
 		} else {
 			error = ECONNRESET;
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);
+#endif
 			goto out_unlocked;
 		}
 	}
@@ -9995,7 +10029,9 @@ sctp_lower_sosend(struct socket *so,
 		SCTP_TCB_UNLOCK(stcb);
 		hold_tcblock = 0;
 	}
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
+#endif
 	/* Is the stream no. valid? */
 	if (srcv->sinfo_stream >= asoc->streamoutcnt) {
 		/* Invalid stream number */
@@ -10549,8 +10585,6 @@ sctp_lower_sosend(struct socket *so,
 		/* we can attempt to send too. */
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 		s = splsoftnet();
-#else
-		s = splnet();
 #endif
 		if (hold_tcblock == 0) {
 			/* If there is activity recv'ing sacks no need to send */
@@ -10561,7 +10595,9 @@ sctp_lower_sosend(struct socket *so,
 		} else {
 			sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_USR_SEND);
 		}
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
+#endif
 	} else if ((queue_only == 0) &&
 		   (stcb->asoc.peers_rwnd == 0) &&
 		   (stcb->asoc.total_flight == 0)) {

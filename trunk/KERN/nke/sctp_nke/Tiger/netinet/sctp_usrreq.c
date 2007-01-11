@@ -510,8 +510,9 @@ sctp_ctlinput(cmd, sa, vip)
 {
 	struct ip *ip = vip;
 	struct sctphdr *sh;
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s;
-
+#endif
 
 	if (sa->sa_family != AF_INET ||
 	    ((struct sockaddr_in *)sa)->sin_addr.s_addr == INADDR_ANY) {
@@ -553,8 +554,6 @@ sctp_ctlinput(cmd, sa, vip)
 		 */
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 		s = splsoftnet();
-#else
-		s = splnet();
 #endif
 		stcb = sctp_findassociation_addr_sa((struct sockaddr *)&from,
 		    (struct sockaddr *)&to,
@@ -598,7 +597,9 @@ sctp_ctlinput(cmd, sa, vip)
 			socket_unlock(inp->ip_inp.inp.inp_socket, 1);
 		}
 #endif
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
+#endif
 	}
 #if defined(__FreeBSD__) || defined(__APPLE__)
 	return;
@@ -1131,7 +1132,9 @@ static int
 sctp_abort(struct socket *so)
 {
 	struct sctp_inpcb *inp;
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s;
+#endif
 	uint32_t flags;
 
 	inp = (struct sctp_inpcb *)so->so_pcb;
@@ -1144,8 +1147,6 @@ sctp_abort(struct socket *so)
 
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
-#else
-	s = splnet();
 #endif
  sctp_must_try_again:
 	flags = inp->sctp_flags;
@@ -1183,7 +1184,9 @@ sctp_abort(struct socket *so)
 			goto sctp_must_try_again;
 		}
 	}
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
+#endif
 #if defined(__FreeBSD__) && __FreeBSD_version > 690000
 	return;
 #else
@@ -1200,28 +1203,35 @@ sctp_attach(struct socket *so, int proto, struct proc *p)
 {
 	struct sctp_inpcb *inp;
 	struct inpcb *ip_inp;
-	int s, error;
+#if defined(__NetBSD__) || defined(__OpenBSD__)
+	int s;
+#endif
+	int error;
 #ifdef IPSEC	
 	uint32_t flags;
 #endif
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
-#else
-	s = splnet();
 #endif
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (inp != 0) {
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
+#endif
 		return EINVAL;
 	}
 	error = soreserve(so, sctp_sendspace, sctp_recvspace);
 	if (error) {
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
+#endif
 		return error;
 	}
 	error = sctp_inpcb_alloc(so);
 	if (error) {
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
+#endif
 		return error;
 	}
 	inp = (struct sctp_inpcb *)so->so_pcb;
@@ -1261,7 +1271,9 @@ sctp_attach(struct socket *so, int proto, struct proc *p)
 	so->so_send = sctp_sosend;
 	so->so_receive = sctp_soreceive;
 #endif
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
+#endif
 	return 0;
 }
 
@@ -1278,7 +1290,10 @@ sctp_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 
 #endif
 	struct sctp_inpcb *inp;
-	int s, error;
+#if defined(__NetBSD__) || defined(__OpenBSD__)
+	int s;
+#endif
+	int error;
 
 #ifdef INET6
 	if (addr && addr->sa_family != AF_INET)
@@ -1292,11 +1307,11 @@ sctp_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
-#else
-	s = splnet();
 #endif
 	error = sctp_inpcb_bind(so, addr, p);
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
+#endif
 	return error;
 }
 
@@ -1373,7 +1388,9 @@ static int
 sctp_detach(struct socket *so)
 {
 	struct sctp_inpcb *inp;
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s;
+#endif
 	uint32_t flags;
 
 	inp = (struct sctp_inpcb *)so->so_pcb;
@@ -1385,8 +1402,6 @@ sctp_detach(struct socket *so)
 #endif
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
-#else
-	s = splnet();
 #endif
  sctp_must_try_again:
 	flags = inp->sctp_flags;
@@ -1429,7 +1444,9 @@ sctp_detach(struct socket *so)
 			goto sctp_must_try_again;
 		}
 	}
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
+#endif
 #if defined(__FreeBSD__) && __FreeBSD_version > 690000
 	return;
 #else
@@ -1551,23 +1568,25 @@ static int
 sctp_disconnect(struct socket *so)
 {
 	struct sctp_inpcb *inp;
-	int s;
-
 #if defined(__NetBSD__) || defined(__OpenBSD__)
+	int s;
 	s = splsoftnet();
-#else
-	s = splnet();
 #endif
+
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (inp == NULL) {
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
+#endif
 		return (ENOTCONN);
 	}
 	SCTP_INP_RLOCK(inp);
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) {
 		if (LIST_EMPTY(&inp->sctp_asoc_list)) {
 			/* No connection */
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);
+#endif
 			SCTP_INP_RUNLOCK(inp);
 			return (0);
 		} else {
@@ -1576,7 +1595,9 @@ sctp_disconnect(struct socket *so)
 
 			stcb = LIST_FIRST(&inp->sctp_asoc_list);
 			if (stcb == NULL) {
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 				splx(s);
+#endif
 				SCTP_INP_RUNLOCK(inp);
 				return (EINVAL);
 			}
@@ -1619,7 +1640,9 @@ sctp_disconnect(struct socket *so)
 				}
 				sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_3);
 				/* No unlock tcb assoc is gone */
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 				splx(s);
+#endif
 				return (0);
 			}
 			if (TAILQ_EMPTY(&asoc->send_queue) &&
@@ -1704,20 +1727,26 @@ sctp_disconnect(struct socket *so)
 					}
 					SCTP_INP_RUNLOCK(inp);
 					sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_5);
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 					splx(s);
+#endif
 					return (0);
 				}
 			}
 			SCTP_TCB_UNLOCK(stcb);
 			SCTP_INP_RUNLOCK(inp);
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);
+#endif
 			return (0);
 		}
 		/* not reached */
 	} else {
 		/* UDP model does not support this */
 		SCTP_INP_RUNLOCK(inp);
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
+#endif
 		return EOPNOTSUPP;
 	}
 }
@@ -1726,16 +1755,16 @@ int
 sctp_shutdown(struct socket *so)
 {
 	struct sctp_inpcb *inp;
-	int s;
-
 #if defined(__NetBSD__) || defined(__OpenBSD__)
+	int s;
 	s = splsoftnet();
-#else
-	s = splnet();
 #endif
+
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (inp == 0) {
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
+#endif
 		return EINVAL;
 	}
 	SCTP_INP_RLOCK(inp);
@@ -1748,7 +1777,9 @@ sctp_shutdown(struct socket *so)
 		so->so_state &= ~SS_CANTRCVMORE;
 #endif
 		/* This proc will wakeup for read and do nothing (I hope) */
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
+#endif
 		SCTP_INP_RUNLOCK(inp);
 		return (EOPNOTSUPP);
 	}
@@ -1769,7 +1800,9 @@ sctp_shutdown(struct socket *so)
 			 * made after an abort or something. Nothing to do
 			 * now.
 			 */
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);
+#endif
 			return (0);
 		}
 		SCTP_TCB_LOCK(stcb);
@@ -1851,7 +1884,9 @@ sctp_shutdown(struct socket *so)
 	}
  skip_unlock:
 	SCTP_INP_RUNLOCK(inp);
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
+#endif
 	return 0;
 }
 
@@ -2157,10 +2192,6 @@ sctp_do_connect_x(struct socket *so,
 {
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s = splsoftnet();
-
-#else
-	int s = splnet();
-
 #endif
 	int error = 0;
 	int creat_lock_on = 0;
@@ -2177,11 +2208,15 @@ sctp_do_connect_x(struct socket *so,
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
 		/* We are already connected AND the TCP model */
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
+#endif
 		return (EADDRINUSE);
 	}
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) {
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
+#endif
 		return(EINVAL);
 	}
 
@@ -2191,7 +2226,9 @@ sctp_do_connect_x(struct socket *so,
 		SCTP_INP_RUNLOCK(inp);
 	}
 	if (stcb) {
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
+#endif
 		return (EALREADY);
 
 	}
@@ -2246,7 +2283,9 @@ sctp_do_connect_x(struct socket *so,
 #ifdef INET6
 	if (((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0) &&
 	    (num_v6 > 0)) {
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
+#endif
 		error = EINVAL;
 		goto out_now;
 	}
@@ -2332,7 +2371,9 @@ sctp_do_connect_x(struct socket *so,
 	if(creat_lock_on)
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 	SCTP_INP_DECR_REF(inp);
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
+#endif
 	return error;
 }
 
@@ -3646,8 +3687,12 @@ sctp_optsset(struct socket *so,
 #endif
 )
 {
-	int error, *mopt, set_opt, s;
+	int error, *mopt, set_opt;
+#if defined(__NetBSD__) || defined(__OpenBSD__)
+	int s;
+#endif
 	struct mbuf *m;
+
 	struct sctp_tcb *stcb = NULL;
 	struct sctp_inpcb *inp;
 
@@ -4161,12 +4206,12 @@ sctp_optsset(struct socket *so,
 
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 			s = splsoftnet();
-#else
-			s = splnet();
 #endif
 			sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_STRRST_REQ);
 			SCTP_TCB_UNLOCK(stcb);
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);
+#endif
 
 		}
 		break;
@@ -4992,16 +5037,19 @@ sctp_ctloutput(struct socket *so, struct sockopt *sopt)
 {
 	struct mbuf *m = NULL;
 	struct sctp_inpcb *inp;
-	int s, error;
+#if defined(__NetBSD__) || defined(__OpenBSD__)
+	int s;
+#endif
+	int error;
 
 	inp = (struct sctp_inpcb *)so->so_pcb;
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
-#else
-	s = splnet();
 #endif
 	if (inp == 0) {
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
+#endif
 		/* I made the same as TCP since we are not setup? */
 		return (ECONNRESET);
 	}
@@ -5013,7 +5061,9 @@ sctp_ctloutput(struct socket *so, struct sockopt *sopt)
 		else
 #endif				/* INET6 */
 			error = ip_ctloutput(so, sopt);
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
+#endif
 		return (error);
 	}
 	if (sopt->sopt_valsize) {
@@ -5024,7 +5074,9 @@ sctp_ctloutput(struct socket *so, struct sockopt *sopt)
 		}
 		if (m == NULL) {
 			sctp_m_freem(m);
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);
+#endif
 			return (ENOBUFS);
 		}
 		if (sopt->sopt_valsize > M_TRAILINGSPACE(m)) {
@@ -5061,7 +5113,9 @@ sctp_ctloutput(struct socket *so, struct sockopt *sopt)
 		sctp_m_freem(m);
 	}
 out:
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
+#endif
 	return (error);
 }
 
@@ -5074,7 +5128,10 @@ sctp_ctloutput(op, so, level, optname, mp)
 	int level, optname;
 	struct mbuf **mp;
 {
-	int s, error;
+#if defined(__NetBSD__) || defined(__OpenBSD__)
+	int s;
+#endif
+	int error;
 	struct inpcb *inp;
 
 #ifdef INET6
@@ -5087,8 +5144,6 @@ sctp_ctloutput(op, so, level, optname, mp)
 	error = 0;
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
-#else
-	s = splnet();
 #endif
 	switch (family) {
 	case PF_INET:
@@ -5104,7 +5159,9 @@ sctp_ctloutput(op, so, level, optname, mp)
 		break;
 #endif
 	default:
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
+#endif
 		return EAFNOSUPPORT;
 	}
 #ifndef INET6
@@ -5113,7 +5170,9 @@ sctp_ctloutput(op, so, level, optname, mp)
 	if (inp == NULL && in6p == NULL)
 #endif
 	{
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
+#endif
 		if (op == PRCO_SETOPT && *mp)
 			(void)sctp_m_free(*mp);
 		return (ECONNRESET);
@@ -5129,7 +5188,9 @@ sctp_ctloutput(op, so, level, optname, mp)
 			break;
 #endif
 		}
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
+#endif
 		return (error);
 	}
 	/* Ok if we reach here it is a SCTP option we hope */
@@ -5142,7 +5203,9 @@ sctp_ctloutput(op, so, level, optname, mp)
 	} else {
 		error = EINVAL;
 	}
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
+#endif
 	return (error);
 }
 
@@ -5165,10 +5228,6 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 #endif
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s = splsoftnet();
-
-#else
-	int s = splnet();
-
 #endif
 	int error = 0;
 	int create_lock_on = 0;
@@ -5177,7 +5236,9 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (inp == 0) {
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
+#endif
 		/* I made the same as TCP since we are not setup? */
 		return (ECONNRESET);
 	}
@@ -5243,7 +5304,9 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0);
 	if (stcb == NULL) {
 		/* Gak! no memory */
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
+#endif
 		return (error);
 	}
 	if (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) {
@@ -5265,7 +5328,9 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	if (stcb)
 		SCTP_TCB_UNLOCK(stcb);
 	SCTP_INP_DECR_REF(inp);
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
+#endif
 	return error;
 }
 
@@ -5290,17 +5355,16 @@ sctp_listen(struct socket *so, struct proc *p)
 	 */
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s = splsoftnet();
-
-#else
-	int s = splnet();
-
 #endif
+
 	int error = 0;
 	struct sctp_inpcb *inp;
 
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (inp == 0) {
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
+#endif
 		/* I made the same as TCP since we are not setup? */
 		return (ECONNRESET);
 	}
@@ -5319,7 +5383,9 @@ sctp_listen(struct socket *so, struct proc *p)
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
 		/* We are already connected AND the TCP model */
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
+#endif
 		SCTP_INP_RUNLOCK(inp);
 		SOCK_UNLOCK(so);
 		return (EADDRINUSE);
@@ -5330,7 +5396,9 @@ sctp_listen(struct socket *so, struct proc *p)
 		if ((error = sctp_inpcb_bind(so, NULL, p))) {
 			/* bind error, probably perm */
 			SOCK_UNLOCK(so);
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);
+#endif
 			return (error);
 		}
 	} else {
@@ -5358,7 +5426,9 @@ sctp_listen(struct socket *so, struct proc *p)
 	}
 #endif
 	SOCK_UNLOCK(so);
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
+#endif
 	return (error);
 }
 
@@ -5376,10 +5446,6 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 #endif
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s = splsoftnet();
-
-#else
-	int s = splnet();
-
 #endif
 	struct sctp_tcb *stcb;
 	struct sctp_inpcb *inp;
@@ -5393,7 +5459,9 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 	inp = (struct sctp_inpcb *)so->so_pcb;
 
 	if (inp == 0) {
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
+#endif
 		return (ECONNRESET);
 	}
 	SCTP_INP_RLOCK(inp);
@@ -5401,13 +5469,17 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 		return (ENOTSUP);
 	}
 	if (so->so_state & SS_ISDISCONNECTED) {
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
+#endif
 		SCTP_INP_RUNLOCK(inp);
 		return (ECONNABORTED);
 	}
 	stcb = LIST_FIRST(&inp->sctp_asoc_list);
 	if (stcb == NULL) {
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
+#endif
 		SCTP_INP_RUNLOCK(inp);
 		return (ECONNRESET);
 	}
@@ -5505,7 +5577,9 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 		}
 		SCTP_INP_WUNLOCK(inp);
 	}
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
+#endif
 	return (0);
 }
 
@@ -5523,7 +5597,9 @@ sctp_ingetaddr(struct socket *so, struct mbuf *nam)
 	struct sockaddr_in *sin = mtod(nam, struct sockaddr_in *);
 
 #endif
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s;
+#endif
 	struct sctp_inpcb *inp;
 
 	/*
@@ -5539,12 +5615,12 @@ sctp_ingetaddr(struct socket *so, struct mbuf *nam)
 	sin->sin_len = sizeof(*sin);
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
-#else
-	s = splnet();
 #endif
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (!inp) {
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
+#endif
 #if defined(__FreeBSD__) || defined(__APPLE__)
 		SCTP_FREE_SONAME(sin);
 #endif
@@ -5607,7 +5683,9 @@ sctp_ingetaddr(struct socket *so, struct mbuf *nam)
 			}
 		}
 		if (!fnd) {
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);
+#endif
 #if defined(__FreeBSD__) || defined(__APPLE__)
 			SCTP_FREE_SONAME(sin);
 #endif
@@ -5616,7 +5694,9 @@ sctp_ingetaddr(struct socket *so, struct mbuf *nam)
 		}
 	}
 	SCTP_INP_RUNLOCK(inp);
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
+#endif
 #if defined(__FreeBSD__) || defined(__APPLE__)
 	(*addr) = (struct sockaddr *)sin;
 #endif
@@ -5635,7 +5715,10 @@ sctp_peeraddr(struct socket *so, struct mbuf *nam)
 	struct sockaddr_in *sin = mtod(nam, struct sockaddr_in *);
 
 #endif
-	int s, fnd;
+#if defined(__NetBSD__) || defined(__OpenBSD__)
+	int s;
+#endif
+	int fnd;
 	struct sockaddr_in *sin_a;
 	struct sctp_inpcb *inp;
 	struct sctp_tcb *stcb;
@@ -5651,8 +5734,6 @@ sctp_peeraddr(struct socket *so, struct mbuf *nam)
 	}
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
-#else
-	s = splnet();
 #endif
 
 #if defined(__FreeBSD__) || defined(__APPLE__)
@@ -5667,7 +5748,9 @@ sctp_peeraddr(struct socket *so, struct mbuf *nam)
 	/* We must recapture incase we blocked */
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (!inp) {
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
+#endif
 #if defined(__FreeBSD__) || defined(__APPLE__)
 		SCTP_FREE_SONAME(sin);
 #endif
@@ -5679,7 +5762,9 @@ sctp_peeraddr(struct socket *so, struct mbuf *nam)
 		SCTP_TCB_LOCK(stcb);
 	SCTP_INP_RUNLOCK(inp);
 	if (stcb == NULL) {
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
+#endif
 #if defined(__FreeBSD__) || defined(__APPLE__)
 		SCTP_FREE_SONAME(sin);
 #endif
@@ -5698,13 +5783,17 @@ sctp_peeraddr(struct socket *so, struct mbuf *nam)
 	SCTP_TCB_UNLOCK(stcb);
 	if (!fnd) {
 		/* No IPv4 address */
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
+#endif
 #if defined(__FreeBSD__) || defined(__APPLE__)
 		SCTP_FREE_SONAME(sin);
 #endif
 		return ENOENT;
 	}
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
+#endif
 #if defined(__FreeBSD__) || defined(__APPLE__)
 	(*addr) = (struct sockaddr *)sin;
 #endif
@@ -5777,19 +5866,18 @@ sctp_usrreq(so, req, m, nam, control)
 	struct mbuf *m, *nam, *control;
 {
 	struct proc *p = curproc;
-
 #endif
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s;
-	int error = 0;
+#endif
+	int error;
 	int family;
-
-	family = so->so_proto->pr_domain->dom_family;
 
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
-#else
-	s = splnet();
 #endif
+	error = 0;
+	family = so->so_proto->pr_domain->dom_family;
 	if (req == PRU_CONTROL) {
 		switch (family) {
 		case PF_INET:
@@ -5809,7 +5897,9 @@ sctp_usrreq(so, req, m, nam, control)
 		default:
 			error = EAFNOSUPPORT;
 		}
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
+#endif
 		return (error);
 	}
 #ifdef __NetBSD__
@@ -5833,10 +5923,14 @@ sctp_usrreq(so, req, m, nam, control)
 			break;
 #endif				/* INET6 */
 		default:
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);
+#endif
 			return (EAFNOSUPPORT);
 		}
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
+#endif
 		return (0);
 	}
 #endif
@@ -5849,7 +5943,9 @@ sctp_usrreq(so, req, m, nam, control)
 		break;
 	case PRU_BIND:
 		if (nam == NULL) {
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);
+#endif
 			return (EINVAL);
 		}
 		error = sctp_bind(so, nam, p);
@@ -5859,7 +5955,9 @@ sctp_usrreq(so, req, m, nam, control)
 		break;
 	case PRU_CONNECT:
 		if (nam == NULL) {
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);
+#endif
 			return (EINVAL);
 		}
 		error = sctp_connect(so, nam, p);
@@ -5869,7 +5967,9 @@ sctp_usrreq(so, req, m, nam, control)
 		break;
 	case PRU_ACCEPT:
 		if (nam == NULL) {
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);
+#endif
 			return (EINVAL);
 		}
 		error = sctp_accept(so, nam);
@@ -5924,7 +6024,9 @@ sctp_usrreq(so, req, m, nam, control)
 	default:
 		break;
 	}
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
+#endif
 	return (error);
 }
 
