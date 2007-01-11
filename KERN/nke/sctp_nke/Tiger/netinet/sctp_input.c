@@ -3961,6 +3961,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				num_seg = ntohs(sack->sack.num_gap_ack_blks);
 				a_rwnd = (uint32_t) ntohl(sack->sack.a_rwnd);
 				stcb->asoc.seen_a_sack_this_pkt = 1;
+#ifdef SCTP_WANT_EXPRESS_SACK
 				if( (stcb->asoc.pr_sctp_cnt == 0) &&
 				    (num_seg == 0) &&
 				    ((compare_with_wrap(cum_ack, stcb->asoc.last_acked_seq, MAX_TSN)) ||
@@ -3975,8 +3976,11 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					 */
 					sctp_express_handle_sack(stcb, cum_ack, a_rwnd, nonce_sum_flag, &abort_now);
 				} else {
+#endif
 					sctp_handle_sack(sack, stcb, *netp, &abort_now);
+#ifdef SCTP_WANT_EXPRESS_SACK
 				}
+#endif
 				if (abort_now) {
 					/* ABORT signal from sack processing */
 					*offset = length;
@@ -4839,7 +4843,9 @@ sctp_input(i_pak, va_alist)
 #endif
 	struct mbuf *m;
 	int iphlen;
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s;
+#endif
 	uint8_t ecn_bits;
 	struct ip *ip;
 	struct sctphdr *sh;
@@ -5068,7 +5074,7 @@ sctp_skip_csum_4:
 		/* Find most recent IPsec tag */
 		i_inp = &inp->ip_inp.inp;
 		mtag = m_tag_find(m, PACKET_TAG_IPSEC_IN_DONE, NULL);
-		s = splnet();
+		s = splsoftnet();
 		if (mtag != NULL) {
 			tdbi = (struct tdb_ident *)(mtag + 1);
 			tdb = gettdb(tdbi->spi, &tdbi->dst, tdbi->proto);
@@ -5149,14 +5155,14 @@ sctp_skip_csum_4:
 	ecn_bits = ip->ip_tos;
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
-#else
-	s = splnet();
 #endif
 	
 	sctp_common_input_processing(&m, iphlen, offset, length, sh, ch,
 	    inp, stcb, net, ecn_bits);
 	/* inp's ref-count reduced && stcb unlocked */
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
+#endif
 	if (m) {
 		sctp_m_freem(m);
 	}

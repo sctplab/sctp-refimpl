@@ -858,20 +858,20 @@ sctp_auditing(int from, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 void
 sctp_audit_log(uint8_t ev, uint8_t fd)
 {
-	int s;
-
 #if defined(__NetBSD__) || defined(__OpenBSD__)
+	int s;
 	s = splsoftnet();
-#else
-	s = splnet();
 #endif
+
 	sctp_audit_data[sctp_audit_indx][0] = ev;
 	sctp_audit_data[sctp_audit_indx][1] = fd;
 	sctp_audit_indx++;
 	if (sctp_audit_indx >= SCTP_AUDIT_SIZE) {
 		sctp_audit_indx = 0;
 	}
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
+#endif
 }
 
 #endif
@@ -1290,7 +1290,10 @@ sctp_timeout_handler(void *t)
 	struct sctp_tcb *stcb;
 	struct sctp_nets *net;
 	struct sctp_timer *tmr;
-	int s, did_output;
+#if defined(__NetBSD__) || defined(__OpenBSD__)
+	int s;
+#endif
+	int did_output;
 	struct sctp_iterator *it = NULL;
 
 #if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
@@ -1302,8 +1305,6 @@ sctp_timeout_handler(void *t)
 
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
-#else
-	s = splnet();
 #endif
 	tmr = (struct sctp_timer *)t;
 	inp = (struct sctp_inpcb *)tmr->ep;
@@ -1322,7 +1323,9 @@ sctp_timeout_handler(void *t)
 		 * printf("Stale SCTP timer fired (%p), ignoring...\n",
 		 * tmr);
 		 */
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
+#endif
 #if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
 		/* release BSD kernel funnel/mutex */
 		(void)thread_funnel_set(network_flock, FALSE);
@@ -1335,7 +1338,9 @@ sctp_timeout_handler(void *t)
 		 * printf("SCTP timer fired with invalid type: 0x%x\n",
 		 * tmr->type);
 		 */
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
+#endif
 #if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
 		/* release BSD kernel funnel/mutex */
 		(void)thread_funnel_set(network_flock, FALSE);
@@ -1344,7 +1349,9 @@ sctp_timeout_handler(void *t)
 	}
 	tmr->stopped_from = 0xa002;
 	if ((tmr->type != SCTP_TIMER_TYPE_ADDR_WQ) && (inp == NULL)) {
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
+#endif
 #if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
 		/* release BSD kernel funnel/mutex */
 		(void)thread_funnel_set(network_flock, FALSE);
@@ -1366,7 +1373,9 @@ sctp_timeout_handler(void *t)
 		     (tmr->type !=  SCTP_TIMER_TYPE_SHUTDOWNGUARD) &&
 		     (tmr->type != SCTP_TIMER_TYPE_ASOCKILL))
 			) {
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);
+#endif
 #if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
 			/* release BSD kernel funnel/mutex */
 			(void)thread_funnel_set(network_flock, FALSE);
@@ -1381,7 +1390,9 @@ sctp_timeout_handler(void *t)
 	tmr->stopped_from = 0xa004;
 	if (stcb) {
 		if (stcb->asoc.state == 0) {
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);
+#endif
 #if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
 			/* release BSD kernel funnel/mutex */
 			(void)thread_funnel_set(network_flock, FALSE);
@@ -1403,7 +1414,9 @@ sctp_timeout_handler(void *t)
 #endif				/* SCTP_DEBUG */
 #ifndef __NetBSD__
 	if (!SCTP_OS_TIMER_ACTIVE(&tmr->timer)) {
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
+#endif
 #if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
 		/* release BSD kernel funnel/mutex */
 		(void)thread_funnel_set(network_flock, FALSE);
@@ -1699,7 +1712,9 @@ out_no_decr:
 		printf("Timer now complete (type %d)\n", tmr->type);
 	}
 #endif				/* SCTP_DEBUG */
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
+#endif
 #if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
 	/* release BSD kernel funnel/mutex */
 	(void)thread_funnel_set(network_flock, FALSE);
@@ -4436,7 +4451,10 @@ sctp_sorecvmsg(struct socket *so,
 	int block_allowed = 1;
 	int freed_so_far = 0;
 	int copied_so_far = 0;
-	int s,in_eeor_mode=0;
+#if defined(__NetBSD__) || defined(__OpenBSD__)
+	int s;
+#endif
+	int in_eeor_mode=0;
 	int no_rcv_needed = 0;
 	uint32_t rwnd_req=0;
 	int hold_sblock = 0;
@@ -4473,8 +4491,6 @@ sctp_sorecvmsg(struct socket *so,
 	}
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
-#else
-	s = splnet();
 #endif
 	rwnd_req = (so->so_rcv.sb_hiwat >> SCTP_RWND_HIWAT_SHIFT);
 	/* Must be at least a MTU's worth */
@@ -4869,7 +4885,9 @@ get_more_data:
 				SCTP_INP_READ_UNLOCK(inp);
 				hold_rlock = 0;
 			}
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);
+#endif
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 			socket_unlock(so, 0);
 #endif
@@ -4880,8 +4898,6 @@ get_more_data:
 #endif
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 			s = splsoftnet();
-#else
-			s = splnet();
 #endif
 #ifdef SCTP_RECV_DETAIL_RWND_LOGGING
 			sctp_misc_ints(SCTP_SORCV_DOESCPY,
@@ -5398,7 +5414,9 @@ get_more_data2:
 						SOCKBUF_UNLOCK(&so->so_rcv);
 						hold_sblock = 0;
 					}
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 					splx(s);
+#endif
 					*mp = SCTP_M_COPYM(m, 0, cp_len,
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 					    M_TRYWAIT
@@ -5408,8 +5426,6 @@ get_more_data2:
 					    );
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 					s = splsoftnet();
-#else
-					s = splnet();
 #endif
 #ifdef SCTP_LOCK_LOGGING
 					sctp_log_lock(inp, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
@@ -5506,7 +5522,9 @@ out:
 		/* Save the value back for next time */
 		stcb->freed_by_sorcv_sincelast = freed_so_far;
 	}
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
+#endif
 #ifdef SCTP_RECV_RWND_LOGGING
 	if(stcb) {
 		sctp_misc_ints(SCTP_SORECV_DONE,
