@@ -4839,7 +4839,9 @@ sctp_input(i_pak, va_alist)
 #endif
 	struct mbuf *m;
 	int iphlen;
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s;
+#endif
 	uint8_t ecn_bits;
 	struct ip *ip;
 	struct sctphdr *sh;
@@ -5068,7 +5070,7 @@ sctp_skip_csum_4:
 		/* Find most recent IPsec tag */
 		i_inp = &inp->ip_inp.inp;
 		mtag = m_tag_find(m, PACKET_TAG_IPSEC_IN_DONE, NULL);
-		s = splnet();
+		s = splsoftnet();
 		if (mtag != NULL) {
 			tdbi = (struct tdb_ident *)(mtag + 1);
 			tdb = gettdb(tdbi->spi, &tdbi->dst, tdbi->proto);
@@ -5149,14 +5151,14 @@ sctp_skip_csum_4:
 	ecn_bits = ip->ip_tos;
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
-#else
-	s = splnet();
 #endif
 	
 	sctp_common_input_processing(&m, iphlen, offset, length, sh, ch,
 	    inp, stcb, net, ecn_bits);
 	/* inp's ref-count reduced && stcb unlocked */
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
+#endif
 	if (m) {
 		sctp_m_freem(m);
 	}
