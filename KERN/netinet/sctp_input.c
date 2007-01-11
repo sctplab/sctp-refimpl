@@ -3961,6 +3961,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				num_seg = ntohs(sack->sack.num_gap_ack_blks);
 				a_rwnd = (uint32_t) ntohl(sack->sack.a_rwnd);
 				stcb->asoc.seen_a_sack_this_pkt = 1;
+#ifdef SCTP_WANT_EXPRESS_SACK
 				if( (stcb->asoc.pr_sctp_cnt == 0) &&
 				    (num_seg == 0) &&
 				    ((compare_with_wrap(cum_ack, stcb->asoc.last_acked_seq, MAX_TSN)) ||
@@ -3975,8 +3976,11 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					 */
 					sctp_express_handle_sack(stcb, cum_ack, a_rwnd, nonce_sum_flag, &abort_now);
 				} else {
+#endif
 					sctp_handle_sack(sack, stcb, *netp, &abort_now);
+#ifdef SCTP_WANT_EXPRESS_SACK
 				}
+#endif
 				if (abort_now) {
 					/* ABORT signal from sack processing */
 					*offset = length;
