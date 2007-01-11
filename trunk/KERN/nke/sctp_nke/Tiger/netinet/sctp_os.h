@@ -73,4 +73,8 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_os.h,v 1.3 2006/12/29 20:21:42 rrs Exp 
 #include <netinet/sctp_os_openbsd.h>
 #endif
 
+#if defined(__Panda__)
+#include <netinet/sctp_os_iox.h>
+#endif
+
 #endif
