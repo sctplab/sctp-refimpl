@@ -7875,6 +7875,10 @@ sctp_send_sack(struct sctp_tcb *stcb)
 					mergeable = 1;
 				}
 			}
+			if(limit_reached) {
+				/* Reached the limit stop */
+				break;
+			}
 			jstart = 0;
 			offset += 8;
 		}
