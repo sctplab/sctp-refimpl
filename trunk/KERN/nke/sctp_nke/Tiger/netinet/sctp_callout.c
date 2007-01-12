@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001-2006, Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2001-2007, Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -41,6 +41,15 @@ int ticks = 0;
 extern int ticks;
 #endif
 
+/*
+ * SCTP_TIMERQ_LOCK protects:
+ * - sctppcbinfo.callqueue
+ * - sctp_os_timer_current: current timer in process
+ * - sctp_os_timer_next: next timer to check
+ */
+static sctp_os_timer_t *sctp_os_timer_current = NULL;
+static sctp_os_timer_t *sctp_os_timer_next = NULL;
+
 void
 sctp_os_timer_init(sctp_os_timer_t *c)
 {
@@ -49,21 +58,26 @@ sctp_os_timer_init(sctp_os_timer_t *c)
 
 void
 sctp_os_timer_start(sctp_os_timer_t *c, int to_ticks, void (*ftn) (void *),
-	      void *arg) {
+		    void *arg) {
 	int s;
 
+	/* paranoia */
 	if ((c == NULL) || (ftn == NULL))
 	    return;
 
 	s = splhigh();
 	SCTP_TIMERQ_LOCK();
+	/* check to see if we're rescheduling a timer */
 	if (c->c_flags & SCTP_CALLOUT_PENDING) {
+		if (c == sctp_os_timer_next) {
+			sctp_os_timer_next = TAILQ_NEXT(c, tqe);
+		}
 		TAILQ_REMOVE(&sctppcbinfo.callqueue, c, tqe);
 		/*
 		 * part of the normal "stop a pending callout" process
-		 * is to clear the CALLOUT_ACTIVE, CALLOUT_PENDING,
-		 * and CALLOUT_FIRED flags.  We don't bother since we
-		 * are setting these below and we still hold the lock.
+		 * is to clear the CALLOUT_ACTIVE and CALLOUT_PENDING
+		 * flags.  We don't bother since we are setting these
+		 * below and we still hold the lock.
 		 */
 	}
 
@@ -93,16 +107,16 @@ sctp_os_timer_stop(sctp_os_timer_t *c)
 	/*
 	 * Don't attempt to delete a callout that's not on the queue.
 	 */
-	if ((!(c->c_flags & SCTP_CALLOUT_PENDING)) ||
-	    (c->c_flags & SCTP_CALLOUT_FIRED)) {
-		c->c_flags &= ~(SCTP_CALLOUT_ACTIVE | SCTP_CALLOUT_FIRED |
-				SCTP_CALLOUT_PENDING);
+	if (!(c->c_flags & SCTP_CALLOUT_PENDING)) {
+		c->c_flags &= ~SCTP_CALLOUT_ACTIVE;
 		SCTP_TIMERQ_UNLOCK();
 		splx(s);
 		return (0);
 	}
-	c->c_flags &= ~(SCTP_CALLOUT_ACTIVE | SCTP_CALLOUT_PENDING |
-			SCTP_CALLOUT_FIRED);
+	c->c_flags &= ~(SCTP_CALLOUT_ACTIVE | SCTP_CALLOUT_PENDING);
+	if (c == sctp_os_timer_next) {
+		sctp_os_timer_next = TAILQ_NEXT(c, tqe);
+	}
 	TAILQ_REMOVE(&sctppcbinfo.callqueue, c, tqe);
 	SCTP_TIMERQ_UNLOCK();
 	splx(s);
@@ -118,10 +132,8 @@ sctp_os_timer_stop(sctp_os_timer_t *c)
 void
 sctp_fasttim(void)
 {
-	sctp_os_timer_t *c, *n;
-	struct calloutlist locallist;
-	int inited = 0;
 	int s;
+	sctp_os_timer_t *c;
 	void (*c_func)(void *);
 	void *c_arg;
 
@@ -136,44 +148,27 @@ printf("sctp_fasttim: ticks = %u (added %u)\n", (uint32_t)ticks,
 #endif
 
 	SCTP_TIMERQ_LOCK();
-	/* run through and subtract and mark all callouts */
 	c = TAILQ_FIRST(&sctppcbinfo.callqueue);
 	while (c) {
-		n = TAILQ_NEXT(c, tqe);
 		if (c->c_time <= ticks) {
-			c->c_flags |= SCTP_CALLOUT_FIRED;
-			c->c_time = 0;
+			sctp_os_timer_next = TAILQ_NEXT(c, tqe);
 			TAILQ_REMOVE(&sctppcbinfo.callqueue, c, tqe);
-			if (inited == 0) {
-				TAILQ_INIT(&locallist);
-				inited = 1;
-			}
-			/* move off of main list */
-			TAILQ_INSERT_TAIL(&locallist, c, tqe);
-		}
-		c = n;
-	}
-	/* Now all the ones on the locallist must be called */
-	if (inited) {
-		c = TAILQ_FIRST(&locallist);
-		while (c) {
-			/* remove it */
-			TAILQ_REMOVE(&locallist, c, tqe);
-			/* now validate that it did not get canceled */
-			if (c->c_flags & SCTP_CALLOUT_PENDING) {
-				c->c_flags &= ~(SCTP_CALLOUT_PENDING |
-						SCTP_CALLOUT_FIRED);
-				c_func = c->c_func;
-				c_arg = c->c_arg;
-				splx(s);
-				SCTP_TIMERQ_UNLOCK();
-				c_func(c_arg);
-				SCTP_TIMERQ_LOCK();
-				s = splhigh();
-			}
-			c = TAILQ_FIRST(&locallist);
+			c_func = c->c_func;
+			c_arg = c->c_arg;
+			c->c_flags &= ~SCTP_CALLOUT_PENDING;
+			sctp_os_timer_current = c;
+			splx(s);
+			SCTP_TIMERQ_UNLOCK();
+			c_func(c_arg);
+			SCTP_TIMERQ_LOCK();
+			s = splhigh();
+			sctp_os_timer_current = NULL;
+			c = sctp_os_timer_next;
+		} else {
+			c = TAILQ_NEXT(c, tqe);
 		}
 	}
+	sctp_os_timer_next = NULL;
 	SCTP_TIMERQ_UNLOCK();
 
 #if defined(__APPLE__)
