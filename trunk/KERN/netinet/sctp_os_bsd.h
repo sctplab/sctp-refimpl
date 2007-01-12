@@ -33,11 +33,80 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.4 2006/12/29 20:21:42 rrs 
 #endif
 #ifndef __sctp_os_bsd_h__
 #define __sctp_os_bsd_h__
-
 /*
  * includes
  */
+#include "opt_ipsec.h"
+#include "opt_compat.h"
+#include "opt_inet6.h"
+#include "opt_inet.h"
+#include "opt_sctp.h"
+#include <sys/param.h>
+#include <sys/systm.h>
+#include <sys/malloc.h>
+#include <sys/mbuf.h>
+#include <sys/protosw.h>
+#include <sys/socket.h>
+#include <sys/socketvar.h>
+#include <sys/proc.h> 
+#include <sys/kernel.h>
+#include <sys/sysctl.h>
+#include <sys/resourcevar.h>
+#include <sys/uio.h>
+#if defined(__FreeBSD__) && __FreeBSD_version >= 602000
+#include <sys/priv.h>
+#endif
+
+#include <sys/limits.h>
+#include <machine/cpu.h>
+
+#include <net/if.h>
+#include <net/if_types.h>
+#include <net/if_var.h>
+#include <net/route.h>
+
+
+#include <netinet/in.h>
+#include <netinet/in_systm.h>
+#include <netinet/ip.h>
+#include <netinet/in_pcb.h>
+#include <netinet/in_var.h>
+#include <netinet/ip_var.h>
+#ifdef INET6
+#include <sys/domain.h>
+#include <netinet/ip6.h>
+#include <netinet6/ip6_var.h>
+#include <netinet6/in6_pcb.h>
+#include <netinet/icmp6.h>
+#include <netinet6/nd6.h>
+#include <netinet6/scope6_var.h>
+#endif				/* INET6 */
+#include <netinet/in_pcb.h>
 #include <sys/random.h>
+#ifdef IPSEC
+#include <netinet6/ipsec.h>
+#include <netkey/key.h>
+#endif				/* IPSEC */
+
+#if defined(HAVE_SCTP_PEELOFF_SOCKOPT)
+#include <sys/file.h>
+#include <sys/filedesc.h>
+#endif
+
+#if __FreeBSD_version >= 700000
+#include <netinet/ip_options.h>
+#endif
+#include <netinet/ip_icmp.h>
+#include <netinet/icmp_var.h>
+
+
+#if defined(__FreeBSD__)
+#ifndef in6pcb
+#define in6pcb		inpcb
+#endif
+#endif
+
+
 
 /*
  *
