@@ -1,5 +1,5 @@
 /*-
- * Copyright (C) 2001-2006 Cisco Systems Inc,
+ * Copyright (C) 2001-2007 Cisco Systems Inc,
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -64,7 +64,6 @@ typedef struct sctp_callout sctp_os_timer_t;
 
 #define	SCTP_CALLOUT_ACTIVE	0x0002	/* callout is currently active */
 #define	SCTP_CALLOUT_PENDING	0x0004	/* callout is waiting for timeout */
-#define SCTP_CALLOUT_FIRED	0x0008	/* it expired */
 
 void sctp_os_timer_init(sctp_os_timer_t *tmr);
 void sctp_os_timer_start(sctp_os_timer_t *, int, void (*)(void *), void *);
