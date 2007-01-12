@@ -36,9 +36,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_bsd_addr.h,v 1.1 2006/11/03 15:23:15 rr
 #ifndef __sctp_bsd_addr_h__
 #define __sctp_bsd_addr_h__
 
-
-
-
 #include <netinet/sctp_header.h>
 
 #if (defined(__APPLE__) && defined(KERNEL))
