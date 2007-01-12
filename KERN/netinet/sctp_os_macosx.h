@@ -50,11 +50,13 @@
 #include <sys/proc_internal.h>
 #include <sys/uio_internal.h>
 #endif
+#include <sys/random.h>
 
 #include <machine/limits.h>
 
 #include <net/if.h>
 #include <net/if_types.h>
+#include <net/if_var.h>
 #include <net/route.h>
 
 #include <netinet/in.h>
@@ -63,6 +65,8 @@
 #include <netinet/in_pcb.h>
 #include <netinet/in_var.h>
 #include <netinet/ip_var.h>
+#include <netinet/ip_icmp.h>
+#include <netinet/icmp_var.h>
 
 #ifdef INET6
 #include <sys/domain.h>
@@ -71,21 +75,12 @@
 #include <netinet/icmp6.h>
 #include <netinet6/nd6.h>
 #include <netinet6/scope6_var.h>
-#endif				/* INET6 */
-
-#include <netinet/in_pcb.h>
-#include <sys/param.h>
-#include <sys/systm.h>
-#include <sys/random.h>
-#include <sys/mbuf.h>
+#endif /* INET6 */
 
 #ifdef IPSEC
 #include <netinet6/ipsec.h>
 #include <netkey/key.h>
-#endif				/* IPSEC */
-
-#include <netinet/ip_icmp.h>
-#include <netinet/icmp_var.h>
+#endif /* IPSEC */
 
 
 #include <stdarg.h>
@@ -94,8 +89,7 @@
 #include <sys/file.h>
 #include <sys/filedesc.h>
 extern struct fileops socketops;
-#endif				/* HAVE_SCTP_PEELOFF_SOCKOPT */
-
+#endif /* HAVE_SCTP_PEELOFF_SOCKOPT */
 
 
 #if defined(HAVE_NRL_INPCB)
