@@ -32,118 +32,33 @@
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.7 2006/12/29 20:21:42 rrs Exp $");
 #endif
-#if !(defined(__OpenBSD__) || defined(__APPLE__))
-#include "opt_inet.h"
-#endif
-#ifdef __FreeBSD__
-#include "opt_inet6.h"
-#include "opt_inet.h"
-#endif
-#ifdef __NetBSD__
-#include "opt_inet.h"
-#endif
-#if !(defined(__OpenBSD__) || defined(__APPLE__))
-#include "opt_ipsec.h"
-#endif
-#ifdef __APPLE__
-#include <sctp.h>
-#elif !defined(__OpenBSD__)
-#include "opt_sctp.h"
-#endif
 
-#include <sys/param.h>
-#include <sys/kernel.h>
-#include <sys/mbuf.h>
-#include <sys/domain.h>
-#include <sys/protosw.h>
-#include <sys/socket.h>
-#include <sys/malloc.h>
-#include <sys/socketvar.h>
-#include <sys/sysctl.h>
-#include <sys/errno.h>
-#include <sys/stat.h>
-#include <sys/systm.h>
-#include <sys/syslog.h>
-#if defined(__FreeBSD__) && __FreeBSD_version >= 602000
-#include <sys/priv.h>
-#endif
-#include <sys/proc.h>
-#include <net/if.h>
-#include <net/route.h>
-#include <net/if_types.h>
-#include <netinet/in.h>
-#include <netinet/in_systm.h>
-#include <netinet/ip.h>
-#include <netinet/in_pcb.h>
-#include <netinet/in_var.h>
-#include <netinet/ip_var.h>
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_pcb.h>
 #include <netinet/sctp_header.h>
 #include <netinet/sctp_var.h>
-#include <netinet/sctputil.h>
 #include <netinet/sctp_output.h>
-#include <netinet/sctp_bsd_addr.h>
 #include <netinet/sctp_input.h>
-#include <netinet/sctp_asconf.h>
-#include <netinet6/ip6_var.h>
-#include <netinet6/scope6_var.h>
 #include <netinet/sctp_bsd_addr.h>
-#include <netinet/ip6.h>
-#if !defined(__OpenBSD__)
-#include <netinet6/in6_pcb.h>
-#endif
-#include <netinet/icmp6.h>
+#include <netinet/sctp_uio.h>
+#include <netinet/sctp_asconf.h>
+#include <netinet/sctputil.h>
+#include <netinet/sctp_indata.h>
+#include <netinet/sctp_asconf.h>
+#include <netinet/sctp_timer.h>
+#include <netinet/sctp_auth.h>
 #include <netinet6/sctp6_var.h>
-#include <netinet6/ip6protosw.h>
-#include <netinet6/nd6.h>
 
-#ifdef IPSEC
-#ifndef __OpenBSD__
-#include <netinet6/ipsec.h>
-#include <netinet6/ipsec6.h>
-#else
-#undef IPSEC
-#endif
-#endif				/* IPSEC */
-
-#if defined(NFAITH) && NFAITH > 0
-#include <net/if_faith.h>
-#endif
-
-#ifdef __NetBSD__
-#include <net/net_osdep.h>
-#endif
 
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 #define APPLE_FILE_NO 9
 #endif
 
-extern struct protosw inetsw[];
-
-#if defined(HAVE_NRL_INPCB)
-#ifndef in6pcb
-#define in6pcb		inpcb
-#endif
-#ifndef sotoin6pcb
-#define sotoin6pcb      sotoinpcb
-#endif
-#endif
-
-#if defined(__FreeBSD__)
-#ifndef in6pcb
-#define in6pcb		inpcb
-#endif
-#ifndef sotoin6pcb
-#define sotoin6pcb      sotoinpcb
-#endif
-#endif
-
-
 #ifdef SCTP_DEBUG
-extern u_int32_t sctp_debug_on;
+extern uint32_t sctp_debug_on;
+#endif /* SCTP_DEBUG */
 
-#endif
+extern struct protosw inetsw[];
 
 
 #if !(defined(__FreeBSD__) || defined(__APPLE__))

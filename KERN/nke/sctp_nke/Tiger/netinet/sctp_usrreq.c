@@ -34,61 +34,6 @@
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.8 2006/12/29 20:21:42 rrs Exp $");
 #endif
-
-
-#if !(defined(__OpenBSD__) || defined(__APPLE__))
-#include "opt_ipsec.h"
-#endif
-#if defined(__FreeBSD__)
-#include "opt_inet6.h"
-#include "opt_inet.h"
-#endif
-#if defined(__NetBSD__)
-#include "opt_inet.h"
-#endif
-
-#ifdef __APPLE__
-#include <sctp.h>
-#elif !defined(__OpenBSD__)
-#include "opt_sctp.h"
-#endif
-
-#include <sys/param.h>
-#include <sys/systm.h>
-#include <sys/kernel.h>
-#include <sys/malloc.h>
-#include <sys/mbuf.h>
-#include <sys/domain.h>
-#if defined(__FreeBSD__) && __FreeBSD_version > 602000
-#include <sys/priv.h>
-#endif
-#include <sys/proc.h>
-#include <sys/protosw.h>
-#include <sys/socket.h>
-#include <sys/socketvar.h>
-#include <sys/sysctl.h>
-#include <sys/syslog.h>
-#include <net/if.h>
-#include <net/if_types.h>
-#if defined(__FreeBSD__) || defined(__APPLE__)
-#include <net/if_var.h>
-#endif
-#include <net/route.h>
-#include <netinet/in.h>
-#include <netinet/in_systm.h>
-#include <netinet/ip.h>
-#include <netinet/ip6.h>
-#include <netinet/in_pcb.h>
-#include <netinet/in_var.h>
-#include <netinet/ip_var.h>
-#include <netinet6/ip6_var.h>
-#include <netinet6/in6_var.h>
-#include <netinet6/scope6_var.h>
-#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
-#include <sys/domain.h>
-#endif
-#include <netinet/ip_icmp.h>
-#include <netinet/icmp_var.h>
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_pcb.h>
 #include <netinet/sctp_header.h>
@@ -102,41 +47,9 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.8 2006/12/29 20:21:42 rrs 
 #include <netinet/sctp_asconf.h>
 #include <netinet/sctp_timer.h>
 #include <netinet/sctp_auth.h>
-
-#ifdef IPSEC
-#ifndef __OpenBSD__
-#include <netinet6/ipsec.h>
-#include <netkey/key.h>
-#else
-#undef IPSEC
-#endif
-#endif				/* IPSEC */
-
-#ifdef __NetBSD__
-#include <net/net_osdep.h>
-#endif
-
 #if defined(HAVE_SCTP_PEELOFF_SOCKOPT)
 #include <netinet/sctp_peeloff.h>
 #endif				/* HAVE_SCTP_PEELOFF_SOCKOPT */
-
-#if defined(HAVE_NRL_INPCB)
-#ifndef in6pcb
-#define in6pcb		inpcb
-#endif
-#ifndef sotoin6pcb
-#define sotoin6pcb      sotoinpcb
-#endif
-#endif
-
-#if defined(__FreeBSD__)
-#ifndef in6pcb
-#define in6pcb		inpcb
-#endif
-#ifndef sotoin6pcb
-#define sotoin6pcb      sotoinpcb
-#endif
-#endif
 
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 #define APPLE_FILE_NO 7

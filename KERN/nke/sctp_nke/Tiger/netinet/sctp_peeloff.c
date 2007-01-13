@@ -35,52 +35,6 @@
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/sys/netinet/sctp_peeloff.c,v 1.2 2006/12/14 17:02:54 rrs Exp $");
 #endif
-
-#if !(defined(__OpenBSD__) || defined(__APPLE__))
-#include "opt_ipsec.h"
-#endif
-#if defined(__FreeBSD__)
-#include "opt_inet6.h"
-#include "opt_inet.h"
-#endif
-#if defined(__NetBSD__)
-#include "opt_inet.h"
-#endif
-
-#ifdef __APPLE__
-#include <sctp.h>
-#elif !defined(__OpenBSD__)
-#include "opt_sctp.h"
-#endif
-
-#include <sys/param.h>
-#include <sys/systm.h>
-#include <sys/kernel.h>
-#include <sys/malloc.h>
-#include <sys/mbuf.h>
-#include <sys/domain.h>
-#include <sys/proc.h>
-#include <sys/protosw.h>
-#include <sys/socket.h>
-#include <sys/socketvar.h>
-#include <sys/sysctl.h>
-#include <sys/syslog.h>
-#include <net/if.h>
-#include <net/route.h>
-#include <netinet/in.h>
-#include <netinet/in_systm.h>
-#include <netinet/ip.h>
-#ifdef INET6
-#include <netinet/ip6.h>
-#endif
-#include <netinet/in_pcb.h>
-#include <netinet/in_var.h>
-#include <netinet/ip_var.h>
-#ifdef INET6
-#include <netinet6/ip6_var.h>
-#endif
-#include <netinet/ip_icmp.h>
-#include <netinet/icmp_var.h>
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_pcb.h>
 #include <netinet/sctp.h>
@@ -90,29 +44,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_peeloff.c,v 1.2 2006/12/14 17:02:54 rrs
 #include <netinet/sctputil.h>
 #include <netinet/sctp_auth.h>
 
-#ifdef IPSEC
-#ifndef __OpenBSD__
-#include <netinet6/ipsec.h>
-#include <netkey/key.h>
-#else
-#undef IPSEC
-#endif
-#endif				/* IPSEC */
-
-#if defined(HAVE_SCTP_PEELOFF_SOCKOPT)
-#include <sys/file.h>
-#include <sys/filedesc.h>
-
-#ifdef __APPLE__
-extern struct fileops socketops;
-
-#ifndef SCTP_APPLE_PANTHER
-#include <sys/proc_internal.h>
-#include <sys/file_internal.h>
-#endif				/* !SCTP_APPLE_PANTHER */
-#endif				/* __APPLE__ */
-
-#endif				/* HAVE_SCTP_PEELOFF_SOCKOPT */
 
 #ifdef SCTP_DEBUG
 extern uint32_t sctp_debug_on;

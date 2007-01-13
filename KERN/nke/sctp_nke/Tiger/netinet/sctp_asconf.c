@@ -34,62 +34,6 @@
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/sys/netinet/sctp_asconf.c,v 1.5 2006/12/29 20:21:41 rrs Exp $");
 #endif
-
-
-
-#if !(defined(__OpenBSD__) || defined(__APPLE__))
-#include "opt_ipsec.h"
-#endif
-#if defined(__FreeBSD__)
-#include "opt_compat.h"
-#include "opt_inet6.h"
-#include "opt_inet.h"
-#endif
-#if defined(__NetBSD__)
-#include "opt_inet.h"
-#endif
-
-#ifdef __APPLE__
-#include <sctp.h>
-#elif !defined(__OpenBSD__)
-#include "opt_sctp.h"
-#endif
-
-#include <sys/param.h>
-#include <sys/systm.h>
-#include <sys/malloc.h>
-#include <sys/mbuf.h>
-#include <sys/socket.h>
-#include <sys/socketvar.h>
-#include <sys/kernel.h>
-#include <sys/sysctl.h>
-
-#include <net/if.h>
-#include <net/if_types.h>
-#include <net/route.h>
-
-#include <netinet/in.h>
-#include <netinet/in_systm.h>
-#include <netinet/ip.h>
-#include <netinet/in_pcb.h>
-#include <netinet/in_var.h>
-#include <netinet/ip_var.h>
-
-#ifdef INET6
-#include <netinet/ip6.h>
-#include <netinet6/ip6_var.h>
-#if defined(__FreeBSD__) || (__NetBSD__)
-#include <netinet6/in6_pcb.h>
-#elif defined(__OpenBSD__)
-#include <netinet/in_pcb.h>
-#endif
-#include <netinet/icmp6.h>
-#include <netinet6/nd6.h>
-#include <netinet6/scope6_var.h>
-#endif				/* INET6 */
-
-#include <netinet/in_pcb.h>
-
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_var.h>
 #include <netinet/sctp_pcb.h>
