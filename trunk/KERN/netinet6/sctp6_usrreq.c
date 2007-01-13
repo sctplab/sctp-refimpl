@@ -54,6 +54,10 @@ __FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.7 2006/12/29 20:21:42 rr
 #define APPLE_FILE_NO 9
 #endif
 
+#ifdef SCTP_DEBUG
+extern uint32_t sctp_debug_on;
+#endif /* SCTP_DEBUG */
+
 extern struct protosw inetsw[];
 
 
