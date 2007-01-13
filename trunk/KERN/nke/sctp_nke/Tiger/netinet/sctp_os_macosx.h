@@ -33,10 +33,71 @@
 /*
  * includes
  */
+#include <sctp.h>
 #include <sys/param.h>
 #include <sys/systm.h>
-#include <sys/random.h>
+#include <sys/malloc.h>
 #include <sys/mbuf.h>
+#include <sys/protosw.h>
+#include <sys/socket.h>
+#include <sys/socketvar.h>
+#include <sys/proc.h> 
+#include <sys/kernel.h>
+#include <sys/sysctl.h>
+#include <sys/resourcevar.h>
+#include <sys/uio.h>
+#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+#include <sys/proc_internal.h>
+#include <sys/uio_internal.h>
+#endif
+#include <sys/random.h>
+
+#include <machine/limits.h>
+
+#include <net/if.h>
+#include <net/if_types.h>
+#include <net/if_var.h>
+#include <net/route.h>
+
+#include <netinet/in.h>
+#include <netinet/in_systm.h>
+#include <netinet/ip.h>
+#include <netinet/in_pcb.h>
+#include <netinet/in_var.h>
+#include <netinet/ip_var.h>
+#include <netinet/ip_icmp.h>
+#include <netinet/icmp_var.h>
+
+#ifdef INET6
+#include <sys/domain.h>
+#include <netinet/ip6.h>
+#include <netinet6/ip6_var.h>
+#include <netinet/icmp6.h>
+#include <netinet6/nd6.h>
+#include <netinet6/scope6_var.h>
+#endif /* INET6 */
+
+#ifdef IPSEC
+#include <netinet6/ipsec.h>
+#include <netkey/key.h>
+#endif /* IPSEC */
+
+
+#include <stdarg.h>
+
+#if defined(HAVE_SCTP_PEELOFF_SOCKOPT)
+#include <sys/file.h>
+#include <sys/filedesc.h>
+extern struct fileops socketops;
+#endif /* HAVE_SCTP_PEELOFF_SOCKOPT */
+
+
+#if defined(HAVE_NRL_INPCB)
+#ifndef in6pcb
+#define in6pcb		inpcb
+#endif
+#endif
+
 
 /*
  * general memory allocation

@@ -35,77 +35,12 @@
 __FBSDID("$FreeBSD: src/sys/netinet/sctp_timer.c,v 1.5 2006/12/29 20:21:42 rrs Exp $");
 #endif
 
-#if !(defined(__OpenBSD__) || defined(__APPLE__))
-#include "opt_ipsec.h"
-#endif
-#if defined(__FreeBSD__)
-#include "opt_compat.h"
-#include "opt_inet6.h"
-#include "opt_inet.h"
-#endif
-#if defined(__NetBSD__)
-#include "opt_inet.h"
-#endif
-#ifdef __APPLE__
-#include <sctp.h>
-#elif !defined(__OpenBSD__)
-#include "opt_sctp.h"
-#endif
-
-#include <sys/param.h>
-#include <sys/systm.h>
-#include <sys/malloc.h>
-#include <sys/mbuf.h>
-#ifndef __OpenBSD__
-#include <sys/domain.h>
-#endif
-#include <sys/protosw.h>
-#include <sys/socket.h>
-#include <sys/socketvar.h>
-#include <sys/proc.h>
-#include <sys/kernel.h>
-#include <sys/sysctl.h>
-#ifdef INET6
-#include <sys/domain.h>
-#endif
-
-#if (defined(__FreeBSD__) && __FreeBSD_version >= 500000)
-#include <sys/limits.h>
-#else
-#include <machine/limits.h>
-#endif
-
-#include <net/if.h>
-#include <net/if_types.h>
-#include <net/route.h>
-#include <netinet/in.h>
-#include <netinet/in_systm.h>
 #define _IP_VHL
-#include <netinet/ip.h>
-#include <netinet/in_pcb.h>
-#include <netinet/in_var.h>
-#include <netinet/ip_var.h>
-
-#ifdef INET6
-#include <netinet/ip6.h>
-#include <netinet6/ip6_var.h>
-#include <netinet6/scope6_var.h>
-#endif				/* INET6 */
-
+#include <netinet/sctp_os.h>
 #include <netinet/sctp_pcb.h>
-
-#ifdef IPSEC
-#ifndef __OpenBSD__
-#include <netinet6/ipsec.h>
-#include <netkey/key.h>
-#else
-#undef IPSEC
-#endif
-#endif				/* IPSEC */
 #ifdef INET6
 #include <netinet6/sctp6_var.h>
 #endif
-#include <netinet/sctp_os.h>
 #include <netinet/sctp_var.h>
 #include <netinet/sctp_timer.h>
 #include <netinet/sctputil.h>
@@ -114,13 +49,9 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_timer.c,v 1.5 2006/12/29 20:21:42 rrs E
 #include <netinet/sctp_indata.h>
 #include <netinet/sctp_asconf.h>
 #include <netinet/sctp_input.h>
-
 #include <netinet/sctp.h>
 #include <netinet/sctp_uio.h>
 
-#ifdef __NetBSD__
-#include <net/net_osdep.h>
-#endif
 
 #ifdef SCTP_DEBUG
 extern uint32_t sctp_debug_on;

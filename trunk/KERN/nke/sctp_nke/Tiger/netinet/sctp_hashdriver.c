@@ -35,18 +35,8 @@
 __FBSDID("$FreeBSD$");
 #endif
 
-#include <sys/param.h>
-#include <sys/systm.h>
-#include <sys/malloc.h>
-#include <sys/mbuf.h>
-#include <sys/domain.h>
-#include <sys/protosw.h>
-#include <sys/socket.h>
-#include <sys/socketvar.h>
-#include <sys/proc.h>
-#include <sys/kernel.h>
-#include <sys/sysctl.h>
-#include <sys/types.h>
+#include <netinet/sctp_os.h>
+
 #include <netinet/sctp_constants.h>
 #ifdef USE_MD5
 #include <crypto/md5.h>

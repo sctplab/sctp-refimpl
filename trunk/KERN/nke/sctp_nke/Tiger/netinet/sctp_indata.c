@@ -35,60 +35,6 @@
 __FBSDID("$FreeBSD: src/sys/netinet/sctp_indata.c,v 1.6 2006/12/29 20:21:41 rrs Exp $");
 #endif
 
-
-#if !(defined(__OpenBSD__) || defined(__APPLE__))
-#include "opt_ipsec.h"
-#endif
-#if defined(__FreeBSD__)
-#include "opt_inet6.h"
-#include "opt_inet.h"
-#endif
-#if defined(__NetBSD__)
-#include "opt_inet.h"
-#endif
-
-#ifdef __APPLE__
-#include <sctp.h>
-#elif !defined(__OpenBSD__)
-#include "opt_sctp.h"
-#endif
-
-#include <sys/param.h>
-#include <sys/systm.h>
-#include <sys/mbuf.h>
-#include <sys/malloc.h>
-#include <sys/socket.h>
-#include <sys/socketvar.h>
-#include <sys/sysctl.h>
-
-#include <net/if.h>
-#include <net/route.h>
-
-
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-#include <sys/limits.h>
-#else
-#include <machine/limits.h>
-#endif
-#ifndef __APPLE__
-#include <machine/cpu.h>
-#endif
-
-#include <netinet/in.h>
-#include <netinet/in_systm.h>
-#include <netinet/ip.h>
-#ifdef INET6
-#include <netinet/ip6.h>
-#endif				/* INET6 */
-#include <netinet/in_pcb.h>
-#include <netinet/in_var.h>
-#include <netinet/ip_var.h>
-#ifdef INET6
-#include <netinet6/ip6_var.h>
-#endif				/* INET6 */
-#include <netinet/ip_icmp.h>
-#include <netinet/icmp_var.h>
-
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_var.h>
 #include <netinet/sctp_pcb.h>
@@ -99,18 +45,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_indata.c,v 1.6 2006/12/29 20:21:41 rrs 
 #include <netinet/sctp_indata.h>
 #include <netinet/sctp_uio.h>
 #include <netinet/sctp_timer.h>
-#ifdef IPSEC
-#ifndef __OpenBSD__
-#include <netinet6/ipsec.h>
-#include <netkey/key.h>
-#else
-#undef IPSEC
-#endif
-#endif				/* IPSEC */
 
-#ifdef __NetBSD__
-#include <net/net_osdep.h>
-#endif
 
 #ifdef SCTP_DEBUG
 extern uint32_t sctp_debug_on;
