@@ -1533,8 +1533,8 @@ set $pag_used=0
     set $pag_used=$pag_used + $_kz->uk_pages
     set $_kz=$_kz->uk_link.le_next
  end
- printf "Total page bytes in use %d", $mem_used
- printf "Total pages in use %d", $pag_used
+ printf "Total page bytes in use %d\n", $mem_used
+ printf "Total pages in use %d\n", $pag_used
 end
 document vmstat_zone
 prints vm-zone information
