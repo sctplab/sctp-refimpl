@@ -1508,7 +1508,7 @@ define vmstat_print_zones
 set $kz=$arg0
 set $z=$kz->uk_zones->lh_first
  while ( $z != 0 )
-  set $memu=(($z->uz_allocs-$z->frees) * $kz->uk_size)
+  set $memu=(($z->uz_allocs-$z->uz_frees) * $kz->uk_size)
   printf "zone:%p pages:%6d keg_free:%5d size:%5d alloc:%10d frees:%10d fail:%6d biu:%d\n", \
     $z, \
     $kz->uk_pages, \
