@@ -1483,12 +1483,9 @@ end
 define vmstat
 set $meml=(struct malloc_type *)kmemstatistics
  while ( $meml != 0 ) 
-   print $meml
    set $handle=(struct malloc_type_internal *)$meml->ks_handle
-   print $handle
-   printf "location %s\n",  $meml->ks_shortdesc,
+   printf "location %p\n",  $meml
    printf "moving to next pointer %p\n", $meml->ks_next
-   set $meml=$meml->ks_next
  end
 end
 document vmstat
