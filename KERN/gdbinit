@@ -1508,14 +1508,14 @@ define vmstat_print_zones
 set $kz=$arg0
 set $z=$kz->uk_zones
  while ( $z != NULL )
-  printf "zone:%8s pages:%8d keg_free:%8d size:%8d alloc:%8d frees:%8d fail:%d\n",
-    $z->uz_name,
-    $kz->uk_pages,
-    $kz->uk_free,
-    $kz->uk_size,
-    $z->uz_allocs,
-    $z->uz_frees,
-    $z->uz_fails,
+  printf "zone:%8s pages:%8d keg_free:%8d size:%8d alloc:%8d frees:%8d fail:%d\n", \
+    $z->uz_name, \
+    $kz->uk_pages, \
+    $kz->uk_free, \
+    $kz->uk_size, \
+    $z->uz_allocs, \
+    $z->uz_frees, \
+    $z->uz_fails
   set $z=$z->uz_link->le_next
  end
 end
@@ -1526,6 +1526,7 @@ end
 define vmstat_zone
 set $kz=uma_kegs
  while ( $_kz != 0 ) 
+    printf "first keg %p", $_kz
     vmstat_print_zones $_kz
     set $_kz=$_kz->uk_link.le_next
  end
