@@ -1484,7 +1484,8 @@ define vmstat
 set $meml=(struct malloc_type *)kmemstatistics
  while ( $meml != 0 ) 
    set $mtip=(struct malloc_type_internal *)$meml->ks_handle
-   printf "location %p \talocs:%d\tfrees%d memaloc:%d memfree:%d\n",  $meml, \
+   printf "location %p \talocs:%8x frees%8x memaloc:%8x memfree:%8x\n",  \
+        $meml, \
 	$mtip->mti_stats[0].mts_numallocs, \
 	$mtip->mti_stats[0].mts_numfrees, \
 	$mtip->mti_stats[0].mts_memalloced, \
