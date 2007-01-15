@@ -9680,7 +9680,12 @@ sctp_lower_sosend(struct socket *so,
 							if(had_lock) {
 								SCTP_TCB_LOCK(stcb);
 							}
-							asoc->strmout = tmp_str;
+							if(asoc->strmout == NULL) {
+								asoc->strmout = tmp_str;
+							} else {
+								SCTP_FREE(asoc->strmout);
+								asoc->strmout = tmp_str;
+							}
 						}
 						for (i = 0; i < asoc->streamoutcnt; i++) {
 							/*
