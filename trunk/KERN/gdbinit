@@ -1482,6 +1482,7 @@ end
 
 define vmstat 
 set $meml=(struct malloc_type *)kmemstatistics
+ set $totalmem=0
  while ( $meml != 0 ) 
    set $mtip=(struct malloc_type_internal *)$meml->ks_handle
    set $cpunum=0
@@ -1492,10 +1493,13 @@ set $meml=(struct malloc_type *)kmemstatistics
      set $usedmem=($usedmem + $mtip->mti_stats[$cpunum].mts_memalloced-$mtip->mti_stats[$cpunum].mts_memfreed)
      set $cpunum=$cpunum+1
    end
-   printf "location %p count used %8d bytes used %8d\n",  \
+   printf "Name %s", (char *)$meml->ks_shortdesc
+   printf "location %p cnt:%8d inusemem:%8d\n",  \
         $meml, $used, $usedmem
+   set $totalmem=$totalmem + $usedmem
    set $meml=$meml->ks_next
  end
+ printf "Total memory used in malloc is  %d\n", $totalmem
 end
 document vmstat
 Show memory zone statistics argument is the number of cpu's on the machine.
