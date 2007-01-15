@@ -1480,7 +1480,7 @@ document sctp_allreadq
 Show all SCTP endpoint read queues
 end
 
-define vmstat 
+define vmstat_malloc
 set $meml=(struct malloc_type *)kmemstatistics
  set $totalmem=0
  while ( $meml != 0 ) 
@@ -1500,6 +1500,37 @@ set $meml=(struct malloc_type *)kmemstatistics
  end
  printf "Total memory used in malloc is  %d\n", $totalmem
 end
-document vmstat
+document vmstat_malloc
 Show memory zone statistics argument is the number of cpu's on the machine.
 end
+
+define vmstat_print_zones
+set $kz=$arg0
+set $z=$kz->uk_zones
+ while ( $z != NULL )
+  printf "zone:%8s pages:%8d keg_free:%8d size:%8d alloc:%8d frees:%8d fail:%d\n",
+    $z->uz_name,
+    $kz->uk_pages,
+    $kz->uk_free,
+    $kz->uk_size,
+    $z->uz_allocs,
+    $z->uz_frees,
+    $z->uz_fails,
+  set $z=$z->uz_link->le_next
+ end
+end
+document vmstat_print_zones
+vmstat_zones helper 
+end
+
+define vmstat_zone
+set $kz=uma_kegs
+ while ( $_kz != 0 ) {
+    vmstat_print_zones $_kz
+    set $_kz=$_kz->uk_link.le_next
+ end
+end
+document vmstat_zone
+prints vm-zone information
+end
+
