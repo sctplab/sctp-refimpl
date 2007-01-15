@@ -1486,6 +1486,7 @@ set $meml=(struct malloc_type *)kmemstatistics
    set $handle=(struct malloc_type_internal *)$meml->ks_handle
    printf "location %p\n",  $meml
    printf "moving to next pointer %p\n", $meml->ks_next
+   set $meml=$meml->ks_next
  end
 end
 document vmstat
