@@ -1507,7 +1507,7 @@ end
 define vmstat_print_zones
 set $kz=$arg0
 set $z=$kz->uk_zones->lh_first
- while ( $z != NULL )
+ while ( $z != 0 )
   printf "zone:%8s pages:%8d keg_free:%8d size:%8d alloc:%8d frees:%8d fail:%d\n", \
     $z->uz_name, \
     $kz->uk_pages, \
