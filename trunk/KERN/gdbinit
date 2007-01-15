@@ -1483,9 +1483,12 @@ end
 define vmstat
 set $meml=(struct malloc_type *)kmemstatistics
  while ( $meml != 0 ) 
-   set $handle=(struct malloc_type_internal *)$meml->ks_handle
-   printf "location %p\n",  $meml
-   printf "moving to next pointer %p\n", $meml->ks_next
+   set $mtip=(struct malloc_type_internal *)$meml->ks_handle
+   printf "location %p \talocs:%d\tfrees%d memaloc:%d memfree:%d\n",  $meml, \
+	$mtip->mti_stats[0].mts_numallocs, \
+	$mtip->mti_stats[0].mts_numfrees, \
+	$mtip->mti_stats[0].mts_memalloced, \
+	$mtip->mti_stats[0].mts_memfreed
    set $meml=$meml->ks_next
  end
 end
