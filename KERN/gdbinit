@@ -1525,7 +1525,7 @@ end
 
 define vmstat_zone
 set $kz=uma_kegs
- while ( $_kz != 0 ) {
+ while ( $_kz != 0 ) 
     vmstat_print_zones $_kz
     set $_kz=$_kz->uk_link.le_next
  end
