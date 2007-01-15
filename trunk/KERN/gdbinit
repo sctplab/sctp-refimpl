@@ -1485,11 +1485,12 @@ set $meml=(struct malloc_type *)kmemstatistics
  while ( $meml != 0 ) 
    print $meml
    set $handle=(struct malloc_type_internal *)$meml->ks_handle
+   print $handle
    printf "location %s \tnumalloc:%d\tnumfreed:%d\tinuse:%d\n", \
     $meml->ks_shortdesc, \
     $handle->mti_stats[0].mts_numallocs, \
     $handle->mti_stats[0].mts_numfrees,\
-    ($handle->mti_stats[0].mts_memalloced - $handle->mti_stats[0].mts_memfreed) 
+    ($handle->mti_stats[0].mts_memalloced - $handle->mti_stats[0].mts_memfreed)    printf "moving to next pointer %p", $meml->ks_next
    set $meml=$meml->ks_next
  end
 end
