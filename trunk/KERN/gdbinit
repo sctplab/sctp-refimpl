@@ -1480,19 +1480,22 @@ document sctp_allreadq
 Show all SCTP endpoint read queues
 end
 
-define vmstat
+define vmstat 
 set $meml=(struct malloc_type *)kmemstatistics
  while ( $meml != 0 ) 
    set $mtip=(struct malloc_type_internal *)$meml->ks_handle
-   printf "location %p \talocs:%8x frees%8x memaloc:%8x memfree:%8x\n",  \
-        $meml, \
-	$mtip->mti_stats[0].mts_numallocs, \
-	$mtip->mti_stats[0].mts_numfrees, \
-	$mtip->mti_stats[0].mts_memalloced, \
-	$mtip->mti_stats[0].mts_memfreed
+   set $cpunum=0
+   set $used=0
+   set $usedmem=0
+   while ( $cpunum < $arg0 ) 
+     set $used=($used + $mtip->mti_stats[$cpunum].mts_numallocs-$mtip->mti_stats[$cpunum].mts_numfrees)
+     set $usedmem=($usedmem + $mtip->mti_stats[$cpunum].mts_memalloced-$mtip->mti_stats[$cpunum].mts_memfreed)
+   end
+   printf "location %p count used %8d bytes used %8d\n",  \
+        $meml, $used, $usedmem
    set $meml=$meml->ks_next
  end
 end
-document vmstat
+document vmstat num-cpus
 Show memory zone statistics
 end
