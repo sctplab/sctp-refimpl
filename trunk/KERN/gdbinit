@@ -1493,7 +1493,6 @@ set $meml=(struct malloc_type *)kmemstatistics
      set $usedmem=($usedmem + $mtip->mti_stats[$cpunum].mts_memalloced-$mtip->mti_stats[$cpunum].mts_memfreed)
      set $cpunum=$cpunum+1
    end
-   printf "Name %s", (char *)$meml->ks_shortdesc
    printf "location %p cnt:%8d inusemem:%8d\n",  \
         $meml, $used, $usedmem
    set $totalmem=$totalmem + $usedmem
