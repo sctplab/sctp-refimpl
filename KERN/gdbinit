@@ -1508,14 +1508,15 @@ define vmstat_print_zones
 set $kz=$arg0
 set $z=$kz->uk_zones->lh_first
  while ( $z != 0 )
-  printf "zone:%p pages:%8d keg_free:%8d size:%8d alloc:%8d frees:%8d fail:%d\n", \
-    $z->uz_name, \
+  set $memu=(($z->uz_allocs-$z->frees) * $kz->uk_size)
+  printf "zone:%p pages:%6d keg_free:%5d size:%5d alloc:%10d frees:%10d fail:%6d biu:%d\n", \
+    $z, \
     $kz->uk_pages, \
     $kz->uk_free, \
     $kz->uk_size, \
     $z->uz_allocs, \
     $z->uz_frees, \
-    $z->uz_fails
+    $z->uz_fails, $memu
   set $z=$z->uz_link->le_next
  end
 end
