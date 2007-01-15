@@ -1490,7 +1490,8 @@ set $meml=(struct malloc_type *)kmemstatistics
     $meml->ks_shortdesc, \
     $handle->mti_stats[0].mts_numallocs, \
     $handle->mti_stats[0].mts_numfrees,\
-    ($handle->mti_stats[0].mts_memalloced - $handle->mti_stats[0].mts_memfreed)    printf "moving to next pointer %p", $meml->ks_next
+    ($handle->mti_stats[0].mts_memalloced - $handle->mti_stats[0].mts_memfreed)
+    printf "moving to next pointer %p", $meml->ks_next
    set $meml=$meml->ks_next
  end
 end
