@@ -1367,6 +1367,17 @@ document sctp_allasocs
 Show all SCTP associations
 end
 
+define sctp_allcallouts
+set $_c=sctppcbinfo.callqueue.tqh_first
+while ( $_c != 0 )
+ print $_c
+ set $_c=$_c->tqe.tqe_next
+end
+end
+document sctp_allcallouts
+Show all SCTP callouts
+end
+
 define sctp_allasocs_wlock
 set $_inp=sctppcbinfo.listhead.lh_first
 while ( $_inp != 0 )
