@@ -1479,3 +1479,20 @@ end
 document sctp_allreadq
 Show all SCTP endpoint read queues
 end
+
+define vmstat
+set meml=(struct malloc_type *)kmemstatistics
+ while ( $meml != 0 ) 
+   set handle=(struct malloc_type_internal *)$meml->ks_handle
+   printf "location %s numalloc:%d numfreed:%d  inuse:%d", 
+       $meml->ks_shortdesc,
+       $handle->mti_stats[0].mts_numallocs,
+       $handle->mti_stats[0].mts_numfrees,
+       ($handle->mti_stats[0].mts_memalloced -
+	$handle->mti_stats[0].mts_memfreed)
+   set meml=meml->ks_next
+ end
+end
+document vmstat
+Show memory zone statistics
+end
