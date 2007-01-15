@@ -1497,6 +1497,6 @@ set $meml=(struct malloc_type *)kmemstatistics
    set $meml=$meml->ks_next
  end
 end
-document vmstat num-cpus
-Show memory zone statistics
+document vmstat
+Show memory zone statistics argument is the number of cpu's on the machine.
 end
