@@ -3346,6 +3346,7 @@ sctp_report_all_outbound(struct sctp_tcb *stcb, int holds_lock)
 			sctp_free_a_chunk(stcb, chk);
 			chk = TAILQ_FIRST(&asoc->send_queue);
 		}
+		asoc->send_queue_cnt = 0;
 	}
 	/* sent queue SHOULD be empty */
 	if (!TAILQ_EMPTY(&asoc->sent_queue)) {
@@ -3377,6 +3378,7 @@ sctp_report_all_outbound(struct sctp_tcb *stcb, int holds_lock)
 			sctp_free_a_chunk(stcb, chk);
 			chk = TAILQ_FIRST(&asoc->sent_queue);
 		}
+		asoc->sent_queue_cnt = 0;
 	}
 	if(holds_lock == 0)
 		SCTP_TCB_SEND_UNLOCK(stcb);
