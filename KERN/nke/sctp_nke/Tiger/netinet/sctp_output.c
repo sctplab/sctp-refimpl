@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.8 2006/12/29 20:21:42 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.9 2007/01/15 15:12:09 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -5988,6 +5988,10 @@ again_one_more_time:
 						}
 						if (((chk->rec.data.rcv_flags & SCTP_DATA_LAST_FRAG) == SCTP_DATA_LAST_FRAG) &&
 						    ((chk->rec.data.rcv_flags & SCTP_DATA_FIRST_FRAG) == 0))
+							/* Count number of user msg's that were fragmented
+							 * we do this by counting when we see a LAST fragment
+							 * only.
+							 */
 							SCTP_STAT_INCR_COUNTER64(sctps_fragusrmsgs);
 					}
 					if ((mtu == 0) || (r_mtu == 0) || (one_chunk)) {
@@ -9680,7 +9684,12 @@ sctp_lower_sosend(struct socket *so,
 							if(had_lock) {
 								SCTP_TCB_LOCK(stcb);
 							}
-							asoc->strmout = tmp_str;
+							if(asoc->strmout == NULL) {
+								asoc->strmout = tmp_str;
+							} else {
+								SCTP_FREE(asoc->strmout);
+								asoc->strmout = tmp_str;
+							}
 						}
 						for (i = 0; i < asoc->streamoutcnt; i++) {
 							/*

@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.10 2006/12/29 20:21:42 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.11 2007/01/15 15:12:09 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -3322,6 +3322,7 @@ sctp_report_all_outbound(struct sctp_tcb *stcb, int holds_lock)
 		chk = TAILQ_FIRST(&asoc->send_queue);
 		while (chk) {
 			TAILQ_REMOVE(&asoc->send_queue, chk, sctp_next);
+			asoc->send_queue_cnt--;
 			if (chk->data) {
 				/*
 				 * trim off the sctp chunk header(it should
@@ -3351,6 +3352,7 @@ sctp_report_all_outbound(struct sctp_tcb *stcb, int holds_lock)
 		chk = TAILQ_FIRST(&asoc->sent_queue);
 		while (chk) {
 			TAILQ_REMOVE(&asoc->sent_queue, chk, sctp_next);
+			asoc->sent_queue_cnt--;
 			if (chk->data) {
 				/*
 				 * trim off the sctp chunk header(it should
