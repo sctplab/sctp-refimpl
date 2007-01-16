@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001-2006, Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2001-2007, Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -37,16 +37,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_structs.h,v 1.6 2007/01/15 15:12:09 rrs
 
 #ifndef __sctp_structs_h__
 #define __sctp_structs_h__
-
-#include <sys/queue.h>
-#include <sys/socket.h>
-
-#ifdef IPSEC
-#ifndef __OpenBSD__
-#include <netinet6/ipsec.h>
-#include <netkey/key.h>
-#endif
-#endif
 
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_header.h>
