@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2006, Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2006-2007, Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -99,6 +99,9 @@ extern struct fileops socketops;
 #endif
 #endif
 
+#if defined(KERNEL) && !defined(_KERNEL)
+#define _KERNEL
+#endif
 
 /*
  * general memory allocation

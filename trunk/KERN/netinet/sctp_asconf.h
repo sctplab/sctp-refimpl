@@ -38,12 +38,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_asconf.h,v 1.2 2006/12/29 20:21:41 rrs 
 #ifndef _NETINET_SCTP_ASCONF_H_
 #define _NETINET_SCTP_ASCONF_H_
 
-#if (defined(__APPLE__) && defined(KERNEL))
-#ifndef _KERNEL
-#define _KERNEL
-#endif
-#endif
-
 #if defined(_KERNEL)
 
 /*

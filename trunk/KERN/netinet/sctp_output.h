@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001-2006, Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2001-2007, Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -38,17 +38,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_output.h,v 1.1 2006/11/03 15:23:15 rrs 
 #ifndef __sctp_output_h__
 #define __sctp_output_h__
 
-
-
-
 #include <netinet/sctp_header.h>
-
-#if (defined(__APPLE__) && defined(KERNEL))
-#ifndef _KERNEL
-#define _KERNEL
-#endif
-#endif
-
 
 #if defined(_KERNEL)
 void sctp_send_initiate(struct sctp_inpcb *, struct sctp_tcb *);

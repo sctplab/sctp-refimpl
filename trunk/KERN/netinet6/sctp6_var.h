@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001-2006, Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2001-2007, Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -33,11 +33,6 @@
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/sys/netinet6/sctp6_var.h,v 1.2 2006/11/03 17:21:53 rrs Exp $");
-#endif
-#if (defined(__APPLE__) && defined(KERNEL))
-#ifndef _KERNEL
-#define _KERNEL
-#endif
 #endif
 
 #if defined(_KERNEL)
