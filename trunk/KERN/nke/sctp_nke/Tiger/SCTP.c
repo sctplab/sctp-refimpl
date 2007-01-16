@@ -59,8 +59,8 @@
 
 SYSCTL_DECL(_net_inet);
 SYSCTL_DECL(_net_inet6);
-SYSCTL_NODE(_net_inet, IPPROTO_SCTP,    sctp,   CTLFLAG_RW, 0,  "SCTP");
-SYSCTL_NODE(_net_inet6, IPPROTO_SCTP,   sctp6,  CTLFLAG_RW, 0,  "SCTP6");
+SYSCTL_NODE(_net_inet, IPPROTO_SCTP,    sctp,   CTLFLAG_RW, 0,  "SCTP")
+SYSCTL_NODE(_net_inet6, IPPROTO_SCTP,   sctp6,  CTLFLAG_RW, 0,  "SCTP6")
 
 extern struct sysctl_oid sysctl__net_inet_sctp_sendspace;
 extern struct sysctl_oid sysctl__net_inet_sctp_recvspace;
