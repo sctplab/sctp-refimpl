@@ -34,6 +34,9 @@ __FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.8 2007/01/15 15:12:10 rr
 #endif
 
 #include <netinet/sctp_os.h>
+#ifdef __FreeBSD__
+#include <sys/proc.h>
+#endif
 #include <netinet/sctp_pcb.h>
 #include <netinet/sctp_header.h>
 #include <netinet/sctp_var.h>

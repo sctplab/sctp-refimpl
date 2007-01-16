@@ -36,6 +36,9 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.9 2007/01/15 15:12:09 rrs 
 #endif
 
 #include <netinet/sctp_os.h>
+#ifdef __FreeBSD__
+#include <sys/proc.h>
+#endif
 #include <netinet/sctp_var.h>
 #include <netinet/sctp_header.h>
 #include <netinet/sctp_pcb.h>
