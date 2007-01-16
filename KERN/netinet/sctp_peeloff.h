@@ -47,14 +47,8 @@ struct sctp_peeloff_opt {
 	int new_sd;
 };
 
-#endif				/* HAVE_SCTP_PEELOFF_SOCKOPT */
+#endif /* HAVE_SCTP_PEELOFF_SOCKOPT */
 
-
-#if (defined(__APPLE__) && defined(KERNEL))
-#ifndef _KERNEL
-#define _KERNEL
-#endif
-#endif
 
 #if defined(_KERNEL)
 

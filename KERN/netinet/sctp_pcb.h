@@ -467,12 +467,6 @@ struct sctp_tcb {
 #include <netinet/sctp_lock_empty.h>
 #endif
 
-#if (defined(__APPLE__) && defined(KERNEL))
-#ifndef _KERNEL
-#define _KERNEL
-#endif
-#endif
-
 #if defined(_KERNEL)
 
 extern struct sctp_epinfo sctppcbinfo;
