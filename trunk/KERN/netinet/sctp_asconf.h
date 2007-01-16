@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001-2006, Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2001-2007, Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -37,8 +37,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_asconf.h,v 1.2 2006/12/29 20:21:41 rrs 
 
 #ifndef _NETINET_SCTP_ASCONF_H_
 #define _NETINET_SCTP_ASCONF_H_
-
-#include <sys/malloc.h>
 
 #if (defined(__APPLE__) && defined(KERNEL))
 #ifndef _KERNEL
