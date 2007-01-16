@@ -1,0 +1,118 @@
+define sctp_allasocs
+set $_inp=sctppcbinfo.listhead.lh_first
+while ( $_inp != 0 )
+ set $_asoc=$_inp->sctp_asoc_list.lh_first
+ while ( $_asoc != 0) 
+    print $_asoc
+    set $_asoc=$_asoc->sctp_tcblist.le_next
+  end
+ set $_inp=$_inp->sctp_list.le_next
+end
+end
+document sctp_allasocs
+Show all SCTP associations
+end
+
+define sctp_allcallouts
+set $_c=sctppcbinfo.callqueue.tqh_first
+while ( $_c != 0 )
+ print $_c
+ set $_c=$_c->tqe.tqe_next
+end
+end
+document sctp_allcallouts
+Show all SCTP callouts
+end
+
+define sctp_findep
+set $_inp=sctppcbinfo.listhead.lh_first
+while ( $_inp != 0 )
+  if ($_inp->ip_inp.inp.inp_inc.inc_ie.ie_lport == $arg0)
+    print $_inp
+    set $_inp=0
+  else
+    set $_inp=$_inp->sctp_list.le_next
+  end
+ end
+end
+document sctp_findep
+find an SCTP endpoint and print it out as a variable for use
+end
+
+define sctp_findasoc
+set $_inp=sctppcbinfo.listhead.lh_first
+ while ( $_inp != 0 )
+  if ($_inp->ip_inp.inp.inp_inc.inc_ie.ie_lport == $arg0)
+     print $_inp
+     set $_asoc=$_inp->sctp_asoc_list.lh_first
+     while ( $_asoc != 0) 
+        if ($_asoc->rport == $arg1)
+           print $_asoc
+           set $_asoc=0
+        else
+           set $_asoc=$_asoc->sctp_tcblist.le_next
+        end
+     end
+    set $_inp=0
+  else
+    set $_inp=$_inp->sctp_list.le_next
+  end
+ end
+end
+document sctp_findasoc
+Find an SCTP association srcport dstport
+end
+
+#
+# Helper macro for allasoc macro
+# change this to look at different things in the arg0 stcb.
+#
+define sctp_interesting
+printf "asociation %X\n", $arg0
+printf "output_q_size %d\n", $arg0->asoc.total_output_queue_size
+printf "size on streams %d\n",  $arg0->asoc.size_on_all_streams
+printf "size on reasm %d\n", $arg0->asoc.size_on_reasm_queue
+printf "send q cnt %d\n", $arg0->asoc.send_queue_cnt
+printf "sent q cnt %d\n", $arg0->asoc.sent_queue_cnt
+printf "ctrl q %x\n", $arg0->asoc.control_send_queue.tqh_first
+end
+document sctp_interesting
+The interesting stuff I want to show on an sctp_allasoc command
+end
+
+define sctp_allasoc
+set $_inp=sctppcbinfo.listhead.lh_first
+while ( $_inp != 0 )
+ set $_asoc=$_inp->sctp_asoc_list.lh_first
+ while ( $_asoc != 0) 
+    sctp_interesting $_asoc
+    set $_asoc=$_asoc->sctp_tcblist.le_next
+  end
+ set $_inp=$_inp->sctp_list.le_next
+end
+end
+document sctp_allasoc
+Show some things on all SCTP associations
+end
+
+define sctp_allep
+set $_inp=sctppcbinfo.listhead.lh_first
+while ( $_inp != 0 )
+print $_inp
+set $_inp=$_inp->sctp_list.le_next
+end
+end
+document sctp_allep
+Show all SCTP endpoints
+end
+
+define sctp_allreadq
+set $_inp=sctppcbinfo.listhead.lh_first
+while ( $_inp != 0 )
+print $_inp->read_queue.tqh_first
+set $_inp=$_inp->sctp_list.le_next
+end
+end
+document sctp_allreadq
+Show all SCTP endpoint read queues
+end

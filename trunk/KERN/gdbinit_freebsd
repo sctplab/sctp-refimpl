@@ -1288,7 +1288,6 @@ end
 document devinfo
 Show new-bus heirarchy similar to devinfo(8).
 end
-
 #
 # Show threads of a process
 # 
@@ -1313,71 +1312,10 @@ end
 document showthread
 Using process [pid] show the threads of the process
 end
-
-define tracethread
-set $_p=allproc.lh_first
-while ( $_p != 0 )
- if ($_p->p_pid == $arg0)
-  printf "process %d is %s\n", $_p->p_pid, $_p->p_comm
-  set $_thread=$_p->p_threads.tqh_first
-  set $_ebp=$_thread->td_pcb->pcb_ebp
-  set $_max=$_thread->td_kstack + ($_thread->td_kstack_pages * 4096)
-  set $_min=$_thread->td_kstack
-  while (($_ebp > $_min) && ($_ebp < $_max))
-   x/2 $_ebp
-   set $_ebp=*$_ebp
-  end
-  set $_p=0
- end
- if ($_p != 0)
-  set $_p=$_p->p_list.le_next
- end
-end
-end
-document tracethread
-Using a process index to trace a thread
-end
-
-define getps
-set $_p=allproc.lh_first
-while ( $_p != 0 )
- if ($_p->p_pid == $arg0)
- printf "process %d is %s\n", $_p->p_pid, $_p->p_comm
- print $_p
-end
-set $_p=$_p->p_list.le_next
-end
-end
-document getps
-Get process <index> as a variable to use
-end
-
-define sctp_allasocs
-set $_inp=sctppcbinfo.listhead.lh_first
-while ( $_inp != 0 )
- set $_asoc=$_inp->sctp_asoc_list.lh_first
- while ( $_asoc != 0) 
-    print $_asoc
-    set $_asoc=$_asoc->sctp_tcblist.le_next
-  end
- set $_inp=$_inp->sctp_list.le_next
-end
-end
-document sctp_allasocs
-Show all SCTP associations
-end
-
-define sctp_allcallouts
-set $_c=sctppcbinfo.callqueue.tqh_first
-while ( $_c != 0 )
- print $_c
- set $_c=$_c->tqe.tqe_next
-end
-end
-document sctp_allcallouts
-Show all SCTP callouts
-end
-
+#
+# Show all associations that have locks held
+# 
+#
 define sctp_allasocs_wlock
 set $_inp=sctppcbinfo.listhead.lh_first
 while ( $_inp != 0 )
@@ -1396,101 +1334,10 @@ end
 document sctp_allasocs_wlock
 Show all SCTP associations that are locked and their owners
 end
-
-
-define sctp_findep
-set $_inp=sctppcbinfo.listhead.lh_first
-while ( $_inp != 0 )
-  if ($_inp->ip_inp.inp.inp_inc.inc_ie.ie_lport == $arg0)
-    print $_inp
-    set $_inp=0
-  else
-    set $_inp=$_inp->sctp_list.le_next
-  end
- end
-end
-document sctp_findep
-find an SCTP endpoint and print it out as a variable for use
-end
-
-define sctp_findasoc
-set $_inp=sctppcbinfo.listhead.lh_first
- while ( $_inp != 0 )
-  if ($_inp->ip_inp.inp.inp_inc.inc_ie.ie_lport == $arg0)
-     print $_inp
-     set $_asoc=$_inp->sctp_asoc_list.lh_first
-     while ( $_asoc != 0) 
-        if ($_asoc->rport == $arg1)
-           print $_asoc
-           set $_asoc=0
-        else
-           set $_asoc=$_asoc->sctp_tcblist.le_next
-        end
-     end
-    set $_inp=0
-  else
-    set $_inp=$_inp->sctp_list.le_next
-  end
- end
-end
-document sctp_findasoc
-Find an SCTP association srcport dstport
-end
-
 #
-# Helper macro for allasoc macro
-# change this to look at different things in the arg0 stcb.
+# Show all vmstat info on malloc'd data you
+# must pass the number of CPU's as an argument
 #
-define sctp_interesting
-printf "asociation %X\n", $arg0
-printf "output_q_size %d\n", $arg0->asoc.total_output_queue_size
-printf "size on streams %d\n",  $arg0->asoc.size_on_all_streams
-printf "size on reasm %d\n", $arg0->asoc.size_on_reasm_queue
-printf "send q cnt %d\n", $arg0->asoc.send_queue_cnt
-printf "sent q cnt %d\n", $arg0->asoc.sent_queue_cnt
-printf "ctrl q %x\n", $arg0->asoc.control_send_queue.tqh_first
-end
-document sctp_interesting
-The interesting stuff I want to show on an sctp_allasoc command
-end
-
-define sctp_allasoc
-set $_inp=sctppcbinfo.listhead.lh_first
-while ( $_inp != 0 )
- set $_asoc=$_inp->sctp_asoc_list.lh_first
- while ( $_asoc != 0) 
-    sctp_interesting $_asoc
-    set $_asoc=$_asoc->sctp_tcblist.le_next
-  end
- set $_inp=$_inp->sctp_list.le_next
-end
-end
-document sctp_allasoc
-Show some things on all SCTP associations
-end
-
-define sctp_allep
-set $_inp=sctppcbinfo.listhead.lh_first
-while ( $_inp != 0 )
-print $_inp
-set $_inp=$_inp->sctp_list.le_next
-end
-end
-document sctp_allep
-Show all SCTP endpoints
-end
-
-define sctp_allreadq
-set $_inp=sctppcbinfo.listhead.lh_first
-while ( $_inp != 0 )
-print $_inp->read_queue.tqh_first
-set $_inp=$_inp->sctp_list.le_next
-end
-end
-document sctp_allreadq
-Show all SCTP endpoint read queues
-end
-
 define vmstat_malloc
 set $meml=(struct malloc_type *)kmemstatistics
  set $totalmem=0
@@ -1514,7 +1361,9 @@ end
 document vmstat_malloc
 Show memory zone statistics argument is the number of cpu's on the machine.
 end
-
+#
+# Show all vmstat zone printing helper
+#
 define vmstat_print_zones
 set $kz=$arg0
 set $z=$kz->uk_zones->lh_first
@@ -1553,7 +1402,11 @@ end
 document vmstat_print_zones
 vmstat_zones helper 
 end
-
+#
+# Show all vmstat zone information like
+# vmstat -z, you must pass the number
+# of CPU's as an argument
+#
 define vmstat_zone
 set $_kz=uma_kegs->lh_first
 set $mem_used=0
