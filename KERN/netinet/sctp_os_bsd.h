@@ -44,12 +44,12 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.5 2007/01/15 15:12:09 rrs 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/malloc.h>
+#include <sys/kernel.h>
+#include <sys/sysctl.h>
 #include <sys/mbuf.h>
 #include <sys/protosw.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>
-#include <sys/proc.h> 
-#include <sys/kernel.h>
 #include <sys/sysctl.h>
 #include <sys/resourcevar.h>
 #include <sys/uio.h>
