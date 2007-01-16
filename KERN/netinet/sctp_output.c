@@ -5986,7 +5986,7 @@ again_one_more_time:
 						} else {
 							SCTP_STAT_INCR_COUNTER64(sctps_outunorderchunks);
 						}
-						if (((chk->rec.data.rcv_flags & SCTP_DATA_LAST_FRAG) == SCTP_DATA_LAST_FRAG) &&
+						if (((chk->rec.data.rcv_flags & SCTP_DATA_LAST_FRAG) == SCTP_DATA_LAST_FRAG) ||
 						    ((chk->rec.data.rcv_flags & SCTP_DATA_FIRST_FRAG) == 0))
 							SCTP_STAT_INCR_COUNTER64(sctps_fragusrmsgs);
 					}
