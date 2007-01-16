@@ -3322,6 +3322,7 @@ sctp_report_all_outbound(struct sctp_tcb *stcb, int holds_lock)
 		chk = TAILQ_FIRST(&asoc->send_queue);
 		while (chk) {
 			TAILQ_REMOVE(&asoc->send_queue, chk, sctp_next);
+			asoc->send_queue_cnt--;
 			if (chk->data) {
 				/*
 				 * trim off the sctp chunk header(it should
@@ -3351,6 +3352,7 @@ sctp_report_all_outbound(struct sctp_tcb *stcb, int holds_lock)
 		chk = TAILQ_FIRST(&asoc->sent_queue);
 		while (chk) {
 			TAILQ_REMOVE(&asoc->sent_queue, chk, sctp_next);
+			asoc->sent_queue_cnt--;
 			if (chk->data) {
 				/*
 				 * trim off the sctp chunk header(it should
