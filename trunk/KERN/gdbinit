@@ -1519,14 +1519,30 @@ define vmstat_print_zones
 set $kz=$arg0
 set $z=$kz->uk_zones->lh_first
  while ( $z != 0 )
-  printf "zone:%p pages:%6d keg_free:%5d size:%5d alloc:%10d frees:%10d fail:%6d biu:%d\n", \
+  set $num_frees=$z->uz_allocs
+  set $num_allocs=$z->uz_frees
+  set $cache_free=0
+  set $cpu_index=0 
+  while ( $cpu_index < $_cpucnt ) 
+   set $num_frees=$num_frees+$z->uz_cpu[$cpu_index].uc_frees
+   set $num_allocs=$num_allocs+$z->uz_cpu[$cpu_index].uc_allocs
+   if($z->uz_cpu[$cpu_index].uc_freebucket != 0) 
+    set $cache_free=$cache_free + $z->uz_cpu[$cpu_index].uc_freebucket.ub_cnt
+   end
+   if($z->uz_cpu[$cpu_index].uc_allocbucket != 0) 
+    set $cache_free=$cache_free + $z->uz_cpu[$cpu_index].uc_allocbucket.ub_cnt
+   end
+   set $cpu_index=$cpu_index + 1
+  end
+  set $in_use=$num_allocs - $num_frees
+  printf "zone:%p pages:%6d keg_free:%5d size:%5d in-use:%10d cachefree:%10d fail:%6d\n", \
     $z, \
     $kz->uk_pages, \
     $kz->uk_free, \
     $kz->uk_rsize, \
-    $z->uz_allocs, \
-    $z->uz_frees, \
-    $z->uz_fails, ($kz->uk_pages * 4096)
+    $in_use, \
+    $cache_free, \
+    $z->uz_fails
   set $z=$z->uz_link->le_next
  end
 end
@@ -1538,6 +1554,7 @@ define vmstat_zone
 set $_kz=uma_kegs->lh_first
 set $mem_used=0
 set $pag_used=0
+set $_cpucnt=$arg0
  while ( $_kz != 0 ) 
     vmstat_print_zones $_kz
     set $mem_used=$mem_used + ($_kz->uk_pages * 4096)
@@ -1548,6 +1565,6 @@ set $pag_used=0
  printf "Total pages in use %d\n", $pag_used
 end
 document vmstat_zone
-prints vm-zone information
+prints vm-zone cpu - prints out vm_zone information
 end
 
