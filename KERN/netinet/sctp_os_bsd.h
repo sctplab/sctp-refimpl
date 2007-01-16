@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2006, Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2006-2007, Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -56,8 +56,9 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.5 2007/01/15 15:12:09 rrs 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 602000
 #include <sys/priv.h>
 #endif
-
+#include <sys/random.h>
 #include <sys/limits.h>
+#include <sys/queue.h>
 #include <machine/cpu.h>
 
 #include <net/if.h>
@@ -65,28 +66,30 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.5 2007/01/15 15:12:09 rrs 
 #include <net/if_var.h>
 #include <net/route.h>
 
-
 #include <netinet/in.h>
 #include <netinet/in_systm.h>
 #include <netinet/ip.h>
 #include <netinet/in_pcb.h>
 #include <netinet/in_var.h>
 #include <netinet/ip_var.h>
+#include <netinet/ip_icmp.h>
+#include <netinet/icmp_var.h>
+
 #ifdef INET6
 #include <sys/domain.h>
 #include <netinet/ip6.h>
 #include <netinet6/ip6_var.h>
 #include <netinet6/in6_pcb.h>
 #include <netinet/icmp6.h>
+#include <netinet6/ip6protosw.h>
 #include <netinet6/nd6.h>
 #include <netinet6/scope6_var.h>
-#endif				/* INET6 */
-#include <netinet/in_pcb.h>
-#include <sys/random.h>
+#endif /* INET6 */
+
 #ifdef IPSEC
 #include <netinet6/ipsec.h>
 #include <netkey/key.h>
-#endif				/* IPSEC */
+#endif /* IPSEC */
 
 #if defined(HAVE_SCTP_PEELOFF_SOCKOPT)
 #include <sys/file.h>
@@ -96,8 +99,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.5 2007/01/15 15:12:09 rrs 
 #if __FreeBSD_version >= 700000
 #include <netinet/ip_options.h>
 #endif
-#include <netinet/ip_icmp.h>
-#include <netinet/icmp_var.h>
 
 
 #if defined(__FreeBSD__)
@@ -111,7 +112,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.5 2007/01/15 15:12:09 rrs 
 /*
  *
  */
-typedef struct mbuf *sctp_mbuf_t;
 #define USER_ADDR_NULL	(NULL)		/* FIX ME: temp */
 
 /*
