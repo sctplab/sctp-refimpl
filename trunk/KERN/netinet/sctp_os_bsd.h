@@ -77,6 +77,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.5 2007/01/15 15:12:09 rrs 
 
 #ifdef INET6
 #include <sys/domain.h>
+#include <netinet6/ipsec6.h>
 #include <netinet/ip6.h>
 #include <netinet6/ip6_var.h>
 #include <netinet6/in6_pcb.h>
