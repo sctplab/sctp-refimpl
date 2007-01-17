@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001-2006, Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2001-2007, Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -38,11 +38,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_peeloff.h,v 1.1 2006/11/03 15:23:15 rrs
 #ifndef __sctp_peeloff_h__
 #define __sctp_peeloff_h__
 
-#include <sys/types.h>
-#if !defined(__OpenBSD__)
-#include <sys/socketvar.h>
-#endif
-#include <sys/socket.h>
 
 #if defined(HAVE_SCTP_PEELOFF_SOCKOPT)
 /* socket option peeloff */
@@ -52,14 +47,8 @@ struct sctp_peeloff_opt {
 	int new_sd;
 };
 
-#endif				/* HAVE_SCTP_PEELOFF_SOCKOPT */
+#endif /* HAVE_SCTP_PEELOFF_SOCKOPT */
 
-
-#if (defined(__APPLE__) && defined(KERNEL))
-#ifndef _KERNEL
-#define _KERNEL
-#endif
-#endif
 
 #if defined(_KERNEL)
 
@@ -68,7 +57,6 @@ int sctp_do_peeloff(struct socket *, struct socket *, sctp_assoc_t);
 struct socket *sctp_get_peeloff(struct socket *, sctp_assoc_t, int *);
 
 #if defined(HAVE_SCTP_PEELOFF_SOCKOPT)
-#include <sys/proc.h>
 int sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *peeloff);
 
 #endif				/* HAVE_SCTP_PEELOFF_SOCKOPT */

@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001-2006, Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2001-2007, Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -221,12 +221,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_var.h,v 1.3 2007/01/15 15:12:09 rrs Exp
 }
 #endif
 
-
-#if (defined(__APPLE__) && defined(KERNEL))
-#ifndef _KERNEL
-#define _KERNEL
-#endif
-#endif
 
 #if defined(_KERNEL)
 
