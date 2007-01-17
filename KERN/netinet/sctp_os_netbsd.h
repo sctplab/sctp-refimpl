@@ -49,6 +49,7 @@
 #include <sys/sysctl.h>
 #include <sys/resourcevar.h>
 #include <sys/uio.h>
+#include <sys/queue.h>
 
 #include <machine/limits.h>
 #include <machine/cpu.h>
@@ -153,17 +154,40 @@ typedef struct callout sctp_os_timer_t;
 #define SCTP_OS_TIMER_DEACTIVATE callout_deactivate
 
 
+/* is the endpoint v6only? */
+#define SCTP_IPV6_V6ONLY(inp) (((struct in6pcb *)inp)->in6p_flags & IN6P_IPV6_V6ONLY)
+
 /*
- * Functions
+ * SCTP AUTH
  */
+#define HAVE_SHA2
+
 #if NRND > 0
 #define SCP_READ_RANDOM(buf, len)	rnd_extract_data(buf, len, RND_EXTRACT_ANY);
 #else
 extern void SCTP_READ_RANDOM(void *buf, uint32_t len);
 #endif
 
-/* is the endpoint v6only? */
-#define SCTP_IPV6_V6ONLY(inp) (((struct in6pcb *)inp)->in6p_flags & IN6P_IPV6_V6ONLY)
+#ifdef USE_SCTP_SHA1
+#include <netinet/sctp_sha1.h>
+#else
+#include <sys/sha1.h>
+/* map standard crypto API names */
+#define SHA1_Init	SHA1Init
+#define SHA1_Update	SHA1Update
+#define SHA1_Final	SHA1Final
+#endif
+
+#if defined(HAVE_SHA2)
+#include <sys/sha2.h>
+#endif
+
+#include <sys/md5.h>
+/* map standard crypto API names */
+#define MD5_Init	MD5Init
+#define MD5_Update	MD5Update
+#define MD5_Final	MD5Final
+
 
 /*
  * Other NetBSD Specific
