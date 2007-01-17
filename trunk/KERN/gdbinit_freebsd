@@ -1388,6 +1388,7 @@ set $z=$kz->uk_zones->lh_first
   else
     set $in_use=-1
   end
+  set $cache_free=$cache_free+$kz->uk_free
   printf "zone:%p pages:%6d keg_free:%5d size:%5d in-use:%10d cachefree:%10d fail:%6d\n", \
     $z, \
     $kz->uk_pages, \
@@ -1396,7 +1397,15 @@ set $z=$kz->uk_zones->lh_first
     $in_use, \
     $cache_free, \
     $z->uz_fails
-  set $page_amount=((($cache_free + $in_use) * 4096) + 4095)/4096
+  set $total_items=$cache_free + $in_use
+  if ($kz->uk_rsize < 4096) 
+    set $itm_per_page=4096/$kz->uk_rsize
+    set $one_minus=$itm_per_page-1
+    set $total_items=$total_items+$one_minus
+    set $page_amount=$total_items/$itm_per_page
+  else
+    set $page_amount=$total_items*$kz->uk_ppera
+  end
   if ( $page_amount != $kz->uk_pages )
     printf "This zone has %d pages allocated, but only shows %d in use/cache - debug please\n", $kz->uk_pages, $page_amount
     print $kz
