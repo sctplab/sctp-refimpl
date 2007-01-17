@@ -1396,6 +1396,12 @@ set $z=$kz->uk_zones->lh_first
     $in_use, \
     $cache_free, \
     $z->uz_fails
+  set $page_amount=((($cache_free + $in_use) * 4096) + 4095)/4096
+  if ( $page_amount != $kz->uk_pages )
+    printf "This zone has %d pages allocated, but only shows %d in use/cache - debug please\n", $kz->uk_pages, $page_amount
+    print $kz
+    print $z
+  end
   set $z=$z->uz_link->le_next
  end
 end
