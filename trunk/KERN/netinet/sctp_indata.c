@@ -1455,11 +1455,11 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	uint16_t strmno, strmseq;
 	struct mbuf *oper;
 	struct sctp_queued_to_read *control;
-	int unordered;
+	int ordered;
 	
 	chk = NULL;
 	tsn = ntohl(ch->dp.tsn);
-	unordered = ((ch->ch.chunk_flags & SCTP_DATA_UNORDERED) == 0);
+	ordered = ((ch->ch.chunk_flags & SCTP_DATA_UNORDERED) == 0);
 #ifdef SCTP_MAP_LOGGING
 	sctp_log_map(0, tsn, asoc->cumulative_tsn, SCTP_MAP_PREPARE_SLIDE);
 #endif
@@ -2066,7 +2066,7 @@ finish_express_del:
 	if (last_chunk) {
 		*m = NULL;
 	}
-	if (unordered) {
+	if (ordered) {
 		SCTP_STAT_INCR_COUNTER64(sctps_inorderchunks);
 	} else {
 		SCTP_STAT_INCR_COUNTER64(sctps_inunorderchunks);
