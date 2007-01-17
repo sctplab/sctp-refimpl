@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2006, Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2006-2007, Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -51,6 +51,8 @@
 #include <sys/uio_internal.h>
 #endif
 #include <sys/random.h>
+/*#include <sys/queue.h>*/
+#include <sys/appleapiopts.h>
 
 #include <machine/limits.h>
 
@@ -99,6 +101,9 @@ extern struct fileops socketops;
 #endif
 #endif
 
+#if defined(KERNEL) && !defined(_KERNEL)
+#define _KERNEL
+#endif
 
 /*
  * general memory allocation
@@ -165,11 +170,6 @@ extern void *sctp_calloutq_mtx;
 #endif
 
 
-/*
- * Functions
- */
-#define SCTP_READ_RANDOM(buf, len)	read_random(buf, len)
-
 /* Mbuf manipulation and access macros  */
 #define SCTP_BUF_LEN(m) (m->m_len)
 #define SCTP_BUF_NEXT(m) (m->m_next)
@@ -228,6 +228,31 @@ struct mbuf *sctp_m_prepend_2(struct mbuf *m, int len, int how);
 
 /* is the endpoint v6only? */
 #define SCTP_IPV6_V6ONLY(inp)	(((struct inpcb *)inp)->inp_flags & IN6P_IPV6_V6ONLY)
+
+/*
+ * SCTP AUTH
+ */
+#define SCTP_READ_RANDOM(buf, len)	read_random(buf, len)
+
+#ifdef USE_SCTP_SHA1
+#include <netinet/sctp_sha1.h>
+#else
+#include <crypto/sha1.h>
+/* map standard crypto API names */
+#define SHA1_Init	SHA1Init
+#define SHA1_Update	SHA1Update
+#define SHA1_Final(x,y)	SHA1Final((caddr_t)x, y)
+#endif
+
+#if defined(HAVE_SHA2)
+#include <crypto/sha2/sha2.h>
+#endif
+
+#include <sys/md5.h>
+/* map standard crypto API names */
+#define MD5_Init	MD5Init
+#define MD5_Update	MD5Update
+#define MD5_Final	MD5Final
 
 
 /*

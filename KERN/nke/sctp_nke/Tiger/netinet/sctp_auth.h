@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001-2006, Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2001-2007, Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -31,49 +31,11 @@
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/sys/netinet/sctp_auth.h,v 1.1 2006/11/03 15:23:15 rrs Exp $");
-#define HAVE_SHA2
 #endif
 
 #ifndef __SCTP_AUTH_H__
 #define __SCTP_AUTH_H__
 
-#include <sys/queue.h>
-#include <sys/mbuf.h>
-#if defined(__APPLE__)
-#include <sys/appleapiopts.h>
-#endif
-
-#ifdef USE_SCTP_SHA1
-#include <netinet/sctp_sha1.h>
-#else
-#if defined(__FreeBSD__) || defined(__APPLE__)
-#include <crypto/sha1.h>
-/* map standard crypto API names */
-#define SHA1_Init	SHA1Init
-#define SHA1_Update	SHA1Update
-#define SHA1_Final(x,y)	SHA1Final((caddr_t)x, y)
-#elif defined (__NetBSD__)
-#include <sys/sha1.h>
-/* map standard crypto API names */
-#define SHA1_Init	SHA1Init
-#define SHA1_Update	SHA1Update
-#define SHA1_Final	SHA1Final
-#endif
-#endif
-
-#if defined(HAVE_SHA2)
-#if defined(__FreeBSD__) || defined(__APPLE__)
-#include <crypto/sha2/sha2.h>
-#elif defined(__NetBSD__)
-#include <sys/sha2.h>
-#endif
-#endif
-
-#include <sys/md5.h>
-/* map standard crypto API names */
-#define MD5_Init	MD5Init
-#define MD5_Update	MD5Update
-#define MD5_Final	MD5Final
 
 /* digest lengths */
 #define SCTP_AUTH_DIGEST_LEN_SHA1	20

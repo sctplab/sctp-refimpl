@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001-2006, Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2001-2007, Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -38,46 +38,8 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.h,v 1.4 2007/01/15 15:12:09 rrs Exp
 #ifndef __sctp_pcb_h__
 #define __sctp_pcb_h__
 
-
-
-/*
- * We must have V6 so the size of the proto can be calculated. Otherwise we
- * would not allocate enough for Net/Open BSD :-<
- */
-
-#if defined(__FreeBSD__) && __FreeBSD_version > 500000
-#if defined(_KERNEL)
-#include <net/pfil.h>
-#endif
-#endif
-
-#include <sys/socket.h>
-#include <sys/socketvar.h>
-#include <net/if.h>
-#include <net/if_types.h>
-#if defined( __FreeBSD__) || defined(__APPLE__)
-#include <net/if_var.h>
-#endif
-#include <net/route.h>
-#include <netinet/in.h>
-#include <netinet/ip6.h>
-#include <netinet6/ip6_var.h>
-#include <netinet6/ip6protosw.h>
-#include <netinet6/in6_var.h>
-#if defined(__OpenBSD__) || defined(__APPLE__)
-#include <netinet/in_pcb.h>
-#else
-#include <netinet6/in6_pcb.h>
-#endif
-
-#if defined(__OpenBSD__) || defined(__FreeBSD__)
-#ifndef in6pcb
-#define in6pcb		inpcb
-#endif
-#endif
-
-#include <netinet/sctp.h>
 #include <netinet/sctp_os.h>
+#include <netinet/sctp.h>
 #include <netinet/sctp_constants.h>
 
 LIST_HEAD(sctppcbhead, sctp_inpcb);
@@ -503,12 +465,6 @@ struct sctp_tcb {
  */
 
 #include <netinet/sctp_lock_empty.h>
-#endif
-
-#if (defined(__APPLE__) && defined(KERNEL))
-#ifndef _KERNEL
-#define _KERNEL
-#endif
 #endif
 
 #if defined(_KERNEL)
