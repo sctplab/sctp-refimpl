@@ -1367,12 +1367,13 @@ end
 define vmstat_print_zones
 set $kz=$arg0
 set $z=$kz->uk_zones->lh_first
+set $total_items=0
  while ( $z != 0 )
   set $num_frees=$z->uz_frees
   set $num_allocs=$z->uz_allocs
   set $cache_free=0
   set $cpu_index=0 
-  while ( $cpu_index < $arg1) 
+  while ( $cpu_index < mp_ncpus) 
    set $num_frees=$num_frees+$z->uz_cpu[$cpu_index].uc_frees
    set $num_allocs=$num_allocs+$z->uz_cpu[$cpu_index].uc_allocs
    if ( $z->uz_cpu[$cpu_index].uc_freebucket != 0 ) 
@@ -1388,7 +1389,11 @@ set $z=$kz->uk_zones->lh_first
   else
     set $in_use=-1
   end
-  set $cache_free=$cache_free+$kz->uk_free
+  set $freebucket=$z->uz_full_bucket->lh_first
+  while ($freebucket != 0 ) 
+   set $cache_free=$cache_free+$freebucket->ub_cnt
+   set $freebucket=$freebucket->ub_link.le_next
+  end
   printf "zone:%p pages:%6d keg_free:%5d size:%5d in-use:%10d cachefree:%10d fail:%6d\n", \
     $z, \
     $kz->uk_pages, \
@@ -1397,21 +1402,21 @@ set $z=$kz->uk_zones->lh_first
     $in_use, \
     $cache_free, \
     $z->uz_fails
-  set $total_items=$cache_free + $in_use
-  if ($kz->uk_rsize < 4096) 
-    set $itm_per_page=4096/$kz->uk_rsize
-    set $one_minus=$itm_per_page-1
-    set $total_items=$total_items+$one_minus
-    set $page_amount=$total_items/$itm_per_page
-  else
-    set $page_amount=$total_items*$kz->uk_ppera
-  end
-  if ( $page_amount != $kz->uk_pages )
-    printf "This zone has %d pages allocated, but only shows %d in use/cache - debug please\n", $kz->uk_pages, $page_amount
-    print $kz
-    print $z
-  end
+  set $total_items=$total_items + $cache_free + $in_use
   set $z=$z->uz_link->le_next
+ end
+ set $total_items=$total_items+$kz->uk_free
+ if ($kz->uk_rsize < 4096) 
+   set $itm_per_page=$kz->uk_ipers
+   set $one_minus=$itm_per_page-1
+   set $total_items=$total_items+$one_minus
+   set $page_amount=$total_items/$itm_per_page
+ else
+   set $page_amount=$total_items*$kz->uk_ppera
+ end
+ if ( $page_amount != $kz->uk_pages )
+   printf "This zone has %d pages allocated, but only shows %d in use/cache - debug please\n", $kz->uk_pages, $page_amount
+   print $kz
  end
 end
 document vmstat_print_zones
@@ -1419,16 +1424,15 @@ vmstat_zones helper
 end
 #
 # Show all vmstat zone information like
-# vmstat -z, you must pass the number
-# of CPU's as an argument
+# vmstat -z 
 #
 define vmstat_zone
 set $_kz=uma_kegs->lh_first
 set $mem_used=0
 set $pag_used=0
-set $_cpucnt=$arg0
+set $_cpucnt=mp_ncpus
  while ( $_kz != 0 ) 
-    vmstat_print_zones $_kz $_cpucnt
+    vmstat_print_zones $_kz
     set $mem_used=$mem_used + ($_kz->uk_pages * 4096)
     set $pag_used=$pag_used + $_kz->uk_pages
     set $_kz=$_kz->uk_link.le_next
@@ -1437,6 +1441,6 @@ set $_cpucnt=$arg0
  printf "Total pages in use %d\n", $pag_used
 end
 document vmstat_zone
-prints vm-zone cpu - prints out vm_zone information
+prints vm-zone prints out vm_zone information
 end
 
