@@ -75,6 +75,12 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.5 2007/01/15 15:12:09 rrs 
 #include <netinet/ip_icmp.h>
 #include <netinet/icmp_var.h>
 
+
+#ifdef IPSEC
+#include <netinet6/ipsec.h>
+#include <netkey/key.h>
+#endif /* IPSEC */
+
 #ifdef INET6
 #include <sys/domain.h>
 #ifdef IPSEC
@@ -89,10 +95,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.5 2007/01/15 15:12:09 rrs 
 #include <netinet6/scope6_var.h>
 #endif /* INET6 */
 
-#ifdef IPSEC
-#include <netinet6/ipsec.h>
-#include <netkey/key.h>
-#endif /* IPSEC */
 
 #if defined(HAVE_SCTP_PEELOFF_SOCKOPT)
 #include <sys/file.h>
