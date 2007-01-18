@@ -4505,8 +4505,10 @@ sctp_sendall_iterator(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
 				    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_ACK_SENT)) {
 					/* only send SHUTDOWN the first time through */
 					sctp_send_shutdown(stcb, stcb->asoc.primary_destination);
+					if (SCTP_GET_STATE(asoc) == SCTP_STATE_OPEN) {
+						SCTP_STAT_DECR_GAUGE32(sctps_currestab);
+					}
 					asoc->state = SCTP_STATE_SHUTDOWN_SENT;
-					SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN, stcb->sctp_ep, stcb,
 							 asoc->primary_destination);
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD, stcb->sctp_ep, stcb,
@@ -7698,7 +7700,13 @@ sctp_send_sack(struct sctp_tcb *stcb)
 	sack = mtod(a_chk->data, struct sctp_sack_chunk *);
 	sack->ch.chunk_type = SCTP_SELECTIVE_ACK;
 	/* 0x01 is used by nonce for ecn */
-	sack->ch.chunk_flags = (asoc->receiver_nonce_sum & SCTP_SACK_NONCE_SUM);
+	if ((sctp_ecn_enable) &&
+	    (sctp_ecn_nonce) &&
+	    (asoc->peer_supports_ecn_nonce))
+		sack->ch.chunk_flags = (asoc->receiver_nonce_sum & SCTP_SACK_NONCE_SUM);
+	else
+		sack->ch.chunk_flags = 0;
+       
 	if (sctp_cmt_on_off && sctp_cmt_use_dac) {
 		/*
 		 * CMT DAC algorithm: If 2 (i.e., 0x10) packets have been
@@ -10365,8 +10373,10 @@ sctp_lower_sosend(struct socket *so,
 			    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_ACK_SENT)) {
 				/* only send SHUTDOWN the first time through */
 				sctp_send_shutdown(stcb, stcb->asoc.primary_destination);
+				if (SCTP_GET_STATE(asoc) == SCTP_STATE_OPEN) {
+					SCTP_STAT_DECR_GAUGE32(sctps_currestab);
+				}
 				asoc->state = SCTP_STATE_SHUTDOWN_SENT;
-				SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 				sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN, stcb->sctp_ep, stcb,
 						 asoc->primary_destination);
 				sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD, stcb->sctp_ep, stcb,
