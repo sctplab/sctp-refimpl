@@ -463,3 +463,47 @@ sctp_m_prepend_2(struct mbuf *m, int len, int how)
                 m->m_pkthdr.len += len;
         return (m);
 }
+
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+void
+sctp_slowtimo()
+{
+	struct inpcb *inp, *inp_next;
+	struct socket *so;
+#ifdef SCTP_DEBUG
+	unsigned int n = 0;
+#endif
+	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+
+	inp = LIST_FIRST(&sctppcbinfo.inplisthead);
+	while (inp) {
+		inp_next = LIST_NEXT(inp, inp_list);
+#ifdef SCTP_DEBUG
+		n++;
+#endif
+		if ((inp->inp_wantcnt == WNT_STOPUSING) && (lck_mtx_try_lock(inp->inpcb_mtx))) {
+			so = inp->inp_socket;
+			if ((so->so_usecount != 0) || (inp->inp_state != INPCB_STATE_DEAD)) {
+				lck_mtx_unlock(inp->inpcb_mtx);
+			} else {
+				LIST_REMOVE(inp, inp_list);
+				inp->inp_socket = NULL;
+				so->so_pcb      = NULL;
+				lck_mtx_unlock(inp->inpcb_mtx);
+				lck_mtx_free(inp->inpcb_mtx, sctppcbinfo.mtx_grp);
+				SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, inp);
+				sodealloc(so);
+				SCTP_DECR_EP_COUNT();
+			}
+		}
+		inp = inp_next;
+	}
+	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
+#ifdef SCTP_DEBUG
+	if ((sctp_debug_on & SCTP_DEBUG_PCB2) && (n > 0)) {
+		printf("sctp_slowtimo: inps: %u\n", n);
+	}
+#endif
+}
+#endif
+
