@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_timer.c,v 1.5 2006/12/29 20:21:42 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_timer.c,v 1.6 2007/01/18 09:58:43 rrs Exp $");
 #endif
 
 #define _IP_VHL
@@ -1799,65 +1799,3 @@ select_a_new_ep:
 	}
 	goto select_a_new_ep;
 }
-
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-void
-sctp_slowtimo()
-{
-	struct inpcb *inp;
-	struct socket *so;
-#ifdef SCTP_DEBUG
-	unsigned int n, n1, n2, n3, n4;
-
-	n = n1 = n2 = n3 = n4 = 0;
-#endif
-	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
-	LIST_FOREACH(inp, &sctppcbinfo.inplisthead, inp_list) {
-#ifdef SCTP_DEBUG
-		n++;
-#endif
-		if (inp->inp_wantcnt != WNT_STOPUSING) {
-#ifdef SCTP_DEBUG
-			n1++;
-#endif
-			continue;
-		}
-		if (lck_mtx_try_lock(inp->inpcb_mtx)) {
-			so = inp->inp_socket;
-			if (so->so_usecount != 0) {
-				lck_mtx_unlock(inp->inpcb_mtx);
-#ifdef SCTP_DEBUG
-				n2++;
-#endif
-				continue;
-			}
-			if (inp->inp_state == INPCB_STATE_DEAD) {
-				LIST_REMOVE(inp, inp_list);
-				inp->inp_socket = NULL;
-				so->so_pcb      = NULL;
-				lck_mtx_unlock(inp->inpcb_mtx);
-				lck_mtx_free(inp->inpcb_mtx, sctppcbinfo.mtx_grp);
-				SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, inp);
-				sodealloc(so);
-				SCTP_DECR_EP_COUNT();
-			} else {
-				lck_mtx_unlock(inp->inpcb_mtx);
-#ifdef SCTP_DEBUG
-				n3++;
-#endif
-			}
-		} else {
-#ifdef SCTP_DEBUG
-			n4++;
-#endif
-		}
-	}
-	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
-#ifdef SCTP_DEBUG
-	if ((sctp_debug_on & SCTP_DEBUG_PCB2) && (n > 0)) {
-		printf("sctp_slowtimo: inps: %u, inp_wantcnt: %u, so_usecount: %u, inp_state: %u, inpcb_mtx: %u\n",
-		       n, n1, n2, n3, n4);
-	}
-#endif
-}
-#endif
