@@ -30,7 +30,7 @@
 /*	$KAME: sctp6_usrreq.c,v 1.38 2005/08/24 08:08:56 suz Exp $	*/
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.8 2007/01/15 15:12:10 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.9 2007/01/18 09:58:43 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -1201,8 +1201,11 @@ sctp6_disconnect(struct socket *so)
 					/* only send SHUTDOWN the first time */
 					sctp_send_shutdown(stcb, stcb->asoc.primary_destination);
 					sctp_chunk_output(stcb->sctp_ep, stcb, 1);
+					if ((SCTP_GET_STATE(asoc) == SCTP_STATE_OPEN) ||
+					    (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
+						SCTP_STAT_DECR_GAUGE32(sctps_currestab);
+					}
 					asoc->state = SCTP_STATE_SHUTDOWN_SENT;
-					SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN,
 					    stcb->sctp_ep, stcb,
 					    asoc->primary_destination);

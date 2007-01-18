@@ -617,7 +617,8 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 		/* send SHUTDOWN-ACK */
 		sctp_send_shutdown_ack(stcb, stcb->asoc.primary_destination);
 		/* move to SHUTDOWN-ACK-SENT state */
-		if (asoc->state == SCTP_STATE_SHUTDOWN_RECEIVED) {
+		if ((SCTP_GET_STATE(asoc) == SCTP_STATE_OPEN) ||
+		    (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
 			SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 		}
 		asoc->state = SCTP_STATE_SHUTDOWN_ACK_SENT;
@@ -1144,8 +1145,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 #endif
 		}
 
-		switch SCTP_GET_STATE
-			(asoc) {
+		switch SCTP_GET_STATE(asoc) {
 			case SCTP_STATE_COOKIE_WAIT:
 			case SCTP_STATE_COOKIE_ECHOED:
 				/*
@@ -1167,15 +1167,16 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 				sctp_timer_stop(SCTP_TIMER_TYPE_INIT, inp, stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_12);
 				/* update current state */
 				if (asoc->state & SCTP_STATE_SHUTDOWN_PENDING) {
-					asoc->state = SCTP_STATE_OPEN |
-						SCTP_STATE_SHUTDOWN_PENDING;
+					asoc->state = SCTP_STATE_OPEN | SCTP_STATE_SHUTDOWN_PENDING;
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD,
 							 stcb->sctp_ep, stcb, asoc->primary_destination);
 
-				} else if ((asoc->state & SCTP_STATE_SHUTDOWN_SENT) == 0) {
+				} else {
 					/* if ok, move to OPEN state */
 					asoc->state = SCTP_STATE_OPEN;
 				}
+				SCTP_STAT_INCR_COUNTER32(sctps_activeestab);
+				SCTP_STAT_INCR_GAUGE32(sctps_currestab);
 				sctp_stop_all_cookie_timers(stcb);
 				if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 				     (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) &&
@@ -1334,10 +1335,11 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 					SCTP_PCB_FLAGS_CONNECTED;
 				soisconnected(stcb->sctp_ep->sctp_socket);
 			}
+			SCTP_STAT_INCR_COUNTER32(sctps_activeestab);
+			SCTP_STAT_INCR_GAUGE32(sctps_currestab);
 		}
 		if (asoc->state & SCTP_STATE_SHUTDOWN_PENDING) {
-			asoc->state = SCTP_STATE_OPEN |
-				SCTP_STATE_SHUTDOWN_PENDING;
+			asoc->state = SCTP_STATE_OPEN | SCTP_STATE_SHUTDOWN_PENDING;
 			sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD,
 					 stcb->sctp_ep, stcb, asoc->primary_destination);
 
@@ -1380,7 +1382,14 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		*sac_assoc_id = sctp_get_associd(stcb);
 		/* notify upper layer */
 		*notification = SCTP_NOTIFY_ASSOC_RESTART;
-		atomic_add_int(&stcb->asoc.refcnt, 1); 
+		atomic_add_int(&stcb->asoc.refcnt, 1);
+		if ((SCTP_GET_STATE(asoc) != SCTP_STATE_OPEN) &&
+		    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_RECEIVED) &&
+		    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_SENT)) {
+			SCTP_STAT_INCR_GAUGE32(sctps_currestab);
+			/* MT FIXME: Is this right */
+			SCTP_STAT_INCR_GAUGE32(sctps_passiveestab);
+		}
 		if (asoc->state & SCTP_STATE_SHUTDOWN_PENDING) {
 			asoc->state = SCTP_STATE_OPEN |
 				SCTP_STATE_SHUTDOWN_PENDING;

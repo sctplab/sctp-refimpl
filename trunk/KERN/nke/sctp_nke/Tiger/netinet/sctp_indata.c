@@ -2895,14 +2895,10 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 								*biggest_newly_acked_tsn = tp1->rec.data.TSN_seq;
 							}
 							/*
-							 * CMT: SFR algo
-							 * (and HTNA) - set
-							 * saw_newack to 1
-							 * for dest being
-							 * newly acked.
-							 * update
-							 * this_sack_highest_
-							 * n ewack if
+							 * CMT: SFR algo (and HTNA) - set
+							 * saw_newack to 1 for dest being
+							 * newly acked. update
+							 * this_sack_highest_newack if
 							 * appropriate.
 							 */
 							if (tp1->rec.data.chunk_was_revoked == 0)
@@ -2915,10 +2911,8 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 									tp1->rec.data.TSN_seq;
 							}
 							/*
-							 * CMT DAC algo:
-							 * also update
-							 * this_sack_lowest_n
-							 * e wack
+							 * CMT DAC algo: also update
+							 * this_sack_lowest_newack
 							 */
 							if (*this_sack_lowest_newack == 0) {
 #ifdef SCTP_SACK_LOGGING
@@ -2932,29 +2926,11 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 								*this_sack_lowest_newack = tp1->rec.data.TSN_seq;
 							}
 							/*
-							 * CMT: CUCv2
-							 * algorithm. If
-							 * (rtx-)pseudo-cumac
-							 * k for corresp
-							 * dest is being
-							 * acked, then we
-							 * have a new
-							 * (rtx-)pseudo-cumac
-							 * k . Set
-							 * new_(rtx_)pseudo_c
-							 * u mack to TRUE so
-							 * that the cwnd for
-							 * this dest can be
-							 * updated. Also
-							 * trigger search
-							 * for the next
-							 * expected
-							 * (rtx-)pseudo-cumac
-							 * k . Separate
-							 * pseudo_cumack
-							 * trackers for
-							 * first
-							 * transmissions and
+							 * CMT: CUCv2 algorithm. If (rtx-)pseudo-cumack for corresp
+							 * dest is being acked, then we have a new (rtx-)pseudo-cumack. Set
+							 * new_(rtx_)pseudo_cumack to TRUE so that the cwnd for this dest can be
+							 * updated. Also trigger search for the next expected (rtx-)pseudo-cumack.
+							 * Separate pseudo_cumack trackers for first transmissions and
 							 * retransmissions.
 							 */
 							if (tp1->rec.data.TSN_seq == tp1->whoTo->pseudo_cumack) {
@@ -3089,23 +3065,36 @@ sctp_check_for_revoked(struct sctp_association *asoc, uint32_t cumack,
 			 */
 			if (tp1->sent == SCTP_DATAGRAM_ACKED) {
 				/* it has been revoked */
-				tp1->sent = SCTP_DATAGRAM_SENT;
-				tp1->rec.data.chunk_was_revoked = 1;
-				/* We must add this stuff back in to
-				 * assure timers and such get started.
-				 */
- 				tp1->whoTo->flight_size += tp1->book_size;
-				asoc->total_flight_count++;
-				asoc->total_flight += tp1->book_size;
-				tot_revoked++;
+
+			        if(sctp_cmt_on_off) {
+				        /*
+					 * If CMT is ON, leave "sent" at ACKED. CMT causes
+					 * reordering of data and acks (received on different
+					 * interfaces) can be persistently reordered. Acking
+					 * followed by apparent revoking and re-acking causes
+					 * unexpected weird behavior. So, at this time, CMT does not
+					 * respect renegs. Renegs cannot be recovered. I will fix this 
+					 * once I am sure that things are working right again with CMT.
+					 */
+				} else {
+				        tp1->sent = SCTP_DATAGRAM_SENT;
+					tp1->rec.data.chunk_was_revoked = 1;
+					/* We must add this stuff back in to
+					 * assure timers and such get started.
+					 */
+					tp1->whoTo->flight_size += tp1->book_size;
+					asoc->total_flight_count++;
+					asoc->total_flight += tp1->book_size;
+					tot_revoked++;
 #ifdef SCTP_SACK_LOGGING
-				sctp_log_sack(asoc->last_acked_seq,
-				    cumack,
-				    tp1->rec.data.TSN_seq,
-				    0,
-				    0,
-				    SCTP_LOG_TSN_REVOKED);
+					sctp_log_sack(asoc->last_acked_seq,
+						      cumack,
+						      tp1->rec.data.TSN_seq,
+						      0,
+						      0,
+						      SCTP_LOG_TSN_REVOKED);
 #endif
+				}
 			} else if (tp1->sent == SCTP_DATAGRAM_MARKED) {
 				/* it has been re-acked in this SACK */
 				tp1->sent = SCTP_DATAGRAM_ACKED;
@@ -4391,8 +4380,11 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 				stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA+SCTP_LOC_24;
 				sctp_abort_an_association(stcb->sctp_ep, stcb, SCTP_RESPONSE_TO_USER_REQ, oper);
 			} else {
+				if ((SCTP_GET_STATE(asoc) == SCTP_STATE_OPEN) ||
+				    (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
+					SCTP_STAT_DECR_GAUGE32(sctps_currestab);
+				}
 				asoc->state = SCTP_STATE_SHUTDOWN_SENT;
-				SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 				sctp_stop_timers_for_shutdown(stcb);
 				sctp_send_shutdown(stcb,
 						   stcb->asoc.primary_destination);
@@ -4406,8 +4398,8 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 			if(asoc->state & SCTP_STATE_PARTIAL_MSG_LEFT) {
 				goto abort_out_now;
 			}
-			asoc->state = SCTP_STATE_SHUTDOWN_ACK_SENT;
 			SCTP_STAT_DECR_GAUGE32(sctps_currestab);
+			asoc->state = SCTP_STATE_SHUTDOWN_ACK_SENT;
 			sctp_send_shutdown_ack(stcb,
 					       stcb->asoc.primary_destination);
 
@@ -4904,17 +4896,7 @@ skip_segments:
 	 * we had some before and now we have NONE.
 	 */
 
-	if (sctp_cmt_on_off) {
-		/*
-		 * Don't check for revoked if CMT is ON. CMT causes
-		 * reordering of data and acks (received on different
-		 * interfaces) can be persistently reordered. Acking
-		 * followed by apparent revoking and re-acking causes
-		 * unexpected weird behavior. So, at this time, CMT does not
-		 * respect renegs. Renegs will have to be recovered through
-		 * a timeout. Not a big deal for such a rare event.
-		 */
-	} else if (num_seg)
+	if (num_seg)
 		sctp_check_for_revoked(asoc, cum_ack, biggest_tsn_acked);
 	else if (asoc->saw_sack_with_frags) {
 		int cnt_revoked = 0;
@@ -5027,8 +5009,11 @@ skip_segments:
 				sctp_abort_an_association(stcb->sctp_ep, stcb, SCTP_RESPONSE_TO_USER_REQ, oper);
 				return;
 			} else {
+				if ((SCTP_GET_STATE(asoc) == SCTP_STATE_OPEN) ||
+				    (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
+					SCTP_STAT_DECR_GAUGE32(sctps_currestab);
+				}
 				asoc->state = SCTP_STATE_SHUTDOWN_SENT;
-				SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 				sctp_stop_timers_for_shutdown(stcb);
 				sctp_send_shutdown(stcb,
 						   stcb->asoc.primary_destination);
@@ -5043,8 +5028,8 @@ skip_segments:
 			if(asoc->state & SCTP_STATE_PARTIAL_MSG_LEFT) {
 				goto abort_out_now;
 			}
-			asoc->state = SCTP_STATE_SHUTDOWN_ACK_SENT;
 			SCTP_STAT_DECR_GAUGE32(sctps_currestab);
+			asoc->state = SCTP_STATE_SHUTDOWN_ACK_SENT;
 			sctp_send_shutdown_ack(stcb,
 			    stcb->asoc.primary_destination);
 
