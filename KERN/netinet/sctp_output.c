@@ -4505,8 +4505,10 @@ sctp_sendall_iterator(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
 				    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_ACK_SENT)) {
 					/* only send SHUTDOWN the first time through */
 					sctp_send_shutdown(stcb, stcb->asoc.primary_destination);
+					if (SCTP_GET_STATE(asoc) == SCTP_STATE_OPEN) {
+						SCTP_STAT_DECR_GAUGE32(sctps_currestab);
+					}
 					asoc->state = SCTP_STATE_SHUTDOWN_SENT;
-					SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN, stcb->sctp_ep, stcb,
 							 asoc->primary_destination);
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD, stcb->sctp_ep, stcb,
@@ -10371,8 +10373,10 @@ sctp_lower_sosend(struct socket *so,
 			    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_ACK_SENT)) {
 				/* only send SHUTDOWN the first time through */
 				sctp_send_shutdown(stcb, stcb->asoc.primary_destination);
+				if (SCTP_GET_STATE(asoc) == SCTP_STATE_OPEN) {
+					SCTP_STAT_DECR_GAUGE32(sctps_currestab);
+				}
 				asoc->state = SCTP_STATE_SHUTDOWN_SENT;
-				SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 				sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN, stcb->sctp_ep, stcb,
 						 asoc->primary_destination);
 				sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD, stcb->sctp_ep, stcb,
