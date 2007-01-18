@@ -4380,8 +4380,11 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 				stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA+SCTP_LOC_24;
 				sctp_abort_an_association(stcb->sctp_ep, stcb, SCTP_RESPONSE_TO_USER_REQ, oper);
 			} else {
+				if ((SCTP_GET_STATE(asoc) == SCTP_STATE_OPEN) ||
+				    (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
+					SCTP_STAT_DECR_GAUGE32(sctps_currestab);
+				}
 				asoc->state = SCTP_STATE_SHUTDOWN_SENT;
-				SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 				sctp_stop_timers_for_shutdown(stcb);
 				sctp_send_shutdown(stcb,
 						   stcb->asoc.primary_destination);
@@ -4395,8 +4398,8 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 			if(asoc->state & SCTP_STATE_PARTIAL_MSG_LEFT) {
 				goto abort_out_now;
 			}
-			asoc->state = SCTP_STATE_SHUTDOWN_ACK_SENT;
 			SCTP_STAT_DECR_GAUGE32(sctps_currestab);
+			asoc->state = SCTP_STATE_SHUTDOWN_ACK_SENT;
 			sctp_send_shutdown_ack(stcb,
 					       stcb->asoc.primary_destination);
 
@@ -5006,8 +5009,11 @@ skip_segments:
 				sctp_abort_an_association(stcb->sctp_ep, stcb, SCTP_RESPONSE_TO_USER_REQ, oper);
 				return;
 			} else {
+				if ((SCTP_GET_STATE(asoc) == SCTP_STATE_OPEN) ||
+				    (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
+					SCTP_STAT_DECR_GAUGE32(sctps_currestab);
+				}
 				asoc->state = SCTP_STATE_SHUTDOWN_SENT;
-				SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 				sctp_stop_timers_for_shutdown(stcb);
 				sctp_send_shutdown(stcb,
 						   stcb->asoc.primary_destination);
@@ -5022,8 +5028,8 @@ skip_segments:
 			if(asoc->state & SCTP_STATE_PARTIAL_MSG_LEFT) {
 				goto abort_out_now;
 			}
-			asoc->state = SCTP_STATE_SHUTDOWN_ACK_SENT;
 			SCTP_STAT_DECR_GAUGE32(sctps_currestab);
+			asoc->state = SCTP_STATE_SHUTDOWN_ACK_SENT;
 			sctp_send_shutdown_ack(stcb,
 			    stcb->asoc.primary_destination);
 

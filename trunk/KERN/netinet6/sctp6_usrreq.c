@@ -1201,8 +1201,11 @@ sctp6_disconnect(struct socket *so)
 					/* only send SHUTDOWN the first time */
 					sctp_send_shutdown(stcb, stcb->asoc.primary_destination);
 					sctp_chunk_output(stcb->sctp_ep, stcb, 1);
+					if ((SCTP_GET_STATE(asoc) == SCTP_STATE_OPEN) ||
+					    (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
+						SCTP_STAT_DECR_GAUGE32(sctps_currestab);
+					}
 					asoc->state = SCTP_STATE_SHUTDOWN_SENT;
-					SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN,
 					    stcb->sctp_ep, stcb,
 					    asoc->primary_destination);
