@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_peeloff.h,v 1.1 2006/11/03 15:23:15 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_peeloff.h,v 1.2 2007/01/18 09:58:43 rrs Exp $");
 #endif
 
 #ifndef __sctp_peeloff_h__
