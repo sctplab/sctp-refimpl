@@ -7698,7 +7698,13 @@ sctp_send_sack(struct sctp_tcb *stcb)
 	sack = mtod(a_chk->data, struct sctp_sack_chunk *);
 	sack->ch.chunk_type = SCTP_SELECTIVE_ACK;
 	/* 0x01 is used by nonce for ecn */
-	sack->ch.chunk_flags = (asoc->receiver_nonce_sum & SCTP_SACK_NONCE_SUM);
+	if ((sctp_ecn_enable) &&
+	    (sctp_ecn_nonce) &&
+	    (asoc->peer_supports_ecn_nonce))
+		sack->ch.chunk_flags = (asoc->receiver_nonce_sum & SCTP_SACK_NONCE_SUM);
+	else
+		sack->ch.chunk_flags = 0;
+       
 	if (sctp_cmt_on_off && sctp_cmt_use_dac) {
 		/*
 		 * CMT DAC algorithm: If 2 (i.e., 0x10) packets have been
