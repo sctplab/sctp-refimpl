@@ -264,6 +264,10 @@ struct sctp_nets {
 #ifdef SCTP_HIGH_SPEED
 	uint8_t last_hs_used;	/* index into the last HS table entry we used */
 #endif
+	struct timeval start_time;      /* time when this net was created */
+	uint32_t marked_retrans;        /* number or DATA chunks marked for
+	                                   timer based retransmissions */
+	uint32_t marked_fastretrans;   
 };
 
 
@@ -884,6 +888,16 @@ struct sctp_association {
 	 * trailing locactions out.  If I get a TSN above the array
 	 * mappingArraySz, I discard the datagram and let retransmit happen.
 	 */
+	 uint32_t marked_retrans;
+	 uint32_t timoinit;
+	 uint32_t timodata;
+	 uint32_t timosack;
+	 uint32_t timoshutdown;
+	 uint32_t timoheartbeat;
+	 uint32_t timocookie;
+	 uint32_t timoshutdownack;
+	 struct timeval start_time;
+	 struct timeval discontinuity_time;
 };
 
 #endif
