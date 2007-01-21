@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.80 2006-11-30 20:25:11 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.81 2007-01-21 14:53:27 tuexen Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -3501,6 +3501,8 @@ cmd_getstat(char *argv[], int argc)
 	nl("MIB");
 	p(sctps_currestab,           "currentestab");
 	p(sctps_activeestab,         "activeestab");
+	p(sctps_restartestab,        "restartestab");
+	p(sctps_collisionestab,      "collisionestab");
 	p(sctps_passiveestab,        "passiveestab");
 	p(sctps_aborted,             "aborted");
 	p(sctps_shutdown,            "shutdown");
@@ -3673,8 +3675,10 @@ cmd_getassocstat(char *argv[], int argc)
 		}
 		for (i = 0; i < number_associations; i++) {
 			xstcb = (struct xsctp_tcb *)(buf + offset);
-			printf("\tAssociation towards port=%d, state=%d, Msgs(R/S)=(%u/%u), \n\tTSN(init/high/cum/cumack)=(%x/%x/%x/%x),\n\t Tag(L/R)=(%x/%x).\n",
-			       xstcb->remote_port, xstcb->state, xstcb->total_recvs, xstcb->total_sends, xstcb->initial_tsn, xstcb->highest_tsn, xstcb->cumulative_tsn, xstcb->cumulative_tsn_ack, xstcb->local_tag, xstcb->remote_tag);
+			/*
+			printf("\tAssociation towards port=%d, state=%d, Streams(I/O)=(%u/%u), Msgs(R/S)=(%u/%u), \n\tTSN(init/high/cum/cumack)=(%x/%x/%x/%x),\n\t Tag(L/R)=(%x/%x).\n",
+			       xstcb->remote_port, xstcb->state, xstcb->InStreams, xstcb->OutStreams, xstcb->total_recvs, xstcb->total_sends, xstcb->initial_tsn, xstcb->highest_tsn, xstcb->cumulative_tsn, xstcb->cumulative_tsn_ack, xstcb->local_tag, xstcb->remote_tag);
+			*/
 			number_of_local_addresses = xstcb->number_local_addresses;
 			number_of_remote_addresses = xstcb->number_remote_addresses;
 			offset += sizeof(struct xsctp_tcb);
@@ -3685,8 +3689,8 @@ cmd_getassocstat(char *argv[], int argc)
 			}
 			for (j = 0; j < number_of_remote_addresses; j++) {
 				xraddr = (struct xsctp_raddr *)(buf + offset);
-				printf("\t\tPath towards %s, state=%d.\n",
-				       inet_ntoa(xraddr->address.sin.sin_addr), xraddr->state);
+				printf("\t\tPath towards %s, Active=%d, Confirmed=%d, HBEnabled=%u, RTO=%u, CWND=%u, Flightsize=%u.\n",
+				       inet_ntoa(xraddr->RemAddr.sin.sin_addr), xraddr->RemAddrActive, xraddr->RemAddrConfirmed, xraddr->RemAddrHBActive, xraddr->RemAddrRTO, xraddr->RemAddrCwnd, xraddr->RemAddrFlightSize);
 				offset += sizeof(struct xsctp_raddr);
 			}
 		}
