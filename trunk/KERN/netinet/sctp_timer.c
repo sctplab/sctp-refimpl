@@ -674,6 +674,8 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 				stcb->asoc.total_flight_count--;
 			chk->sent = SCTP_DATAGRAM_RESEND;
 			SCTP_STAT_INCR(sctps_markedretrans);
+			net->marked_retrans++;
+			stcb->asoc.marked_retrans++;
 #ifdef SCTP_FLIGHT_LOGGING
 			sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN, 
 				       chk->whoTo->flight_size,
