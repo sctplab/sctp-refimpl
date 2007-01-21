@@ -2394,9 +2394,8 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 					 * duplicates.
 					 */
 					stcb->asoc.first_ack_sent = 1;
-
+					SCTP_OS_TIMER_STOP(&stcb->asoc.dack_timer.timer);
 					sctp_send_sack(stcb);
-					/* The sending will stop the timer */
 				}
 			} else {
 				sctp_timer_start(SCTP_TIMER_TYPE_RECV,
