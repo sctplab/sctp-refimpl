@@ -1166,6 +1166,10 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 						net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_11);
 				sctp_timer_stop(SCTP_TIMER_TYPE_INIT, inp, stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_12);
 				/* update current state */
+				if (SCTP_GET_STATE(asoc) == SCTP_STATE_COOKIE_ECHOED)
+					SCTP_STAT_INCR_COUNTER32(sctps_activeestab);
+				else
+					SCTP_STAT_INCR_COUNTER32(sctps_collisionestab);
 				if (asoc->state & SCTP_STATE_SHUTDOWN_PENDING) {
 					asoc->state = SCTP_STATE_OPEN | SCTP_STATE_SHUTDOWN_PENDING;
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD,
@@ -1175,7 +1179,6 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 					/* if ok, move to OPEN state */
 					asoc->state = SCTP_STATE_OPEN;
 				}
-				SCTP_STAT_INCR_COUNTER32(sctps_activeestab);
 				SCTP_STAT_INCR_GAUGE32(sctps_currestab);
 				sctp_stop_all_cookie_timers(stcb);
 				if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
@@ -1211,6 +1214,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 				 * we're in the OPEN state (or beyond), so peer must
 				 * have simply lost the COOKIE-ACK
 				 */
+				
 				break;
 		}	/* end switch */
 		sctp_stop_all_cookie_timers(stcb);
@@ -1335,8 +1339,16 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 					SCTP_PCB_FLAGS_CONNECTED;
 				soisconnected(stcb->sctp_ep->sctp_socket);
 			}
+			if (SCTP_GET_STATE(asoc) == SCTP_STATE_COOKIE_ECHOED)
+				SCTP_STAT_INCR_COUNTER32(sctps_activeestab);
+			else
+				SCTP_STAT_INCR_COUNTER32(sctps_collisionestab);
 			SCTP_STAT_INCR_COUNTER32(sctps_activeestab);
 			SCTP_STAT_INCR_GAUGE32(sctps_currestab);
+		} else if (SCTP_GET_STATE(asoc) == SCTP_STATE_OPEN) {
+			SCTP_STAT_INCR_COUNTER32(sctps_restartestab);
+		} else {
+			SCTP_STAT_INCR_COUNTER32(sctps_collisionestab);
 		}
 		if (asoc->state & SCTP_STATE_SHUTDOWN_PENDING) {
 			asoc->state = SCTP_STATE_OPEN | SCTP_STATE_SHUTDOWN_PENDING;
@@ -1387,8 +1399,11 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_RECEIVED) &&
 		    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_SENT)) {
 			SCTP_STAT_INCR_GAUGE32(sctps_currestab);
-			/* MT FIXME: Is this right */
-			SCTP_STAT_INCR_GAUGE32(sctps_passiveestab);
+		}
+		if (SCTP_GET_STATE(asoc) == SCTP_STATE_OPEN) {
+			SCTP_STAT_INCR_GAUGE32(sctps_restartestab);
+		} else if (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_SENT) {
+			SCTP_STAT_INCR_GAUGE32(sctps_collisionestab);
 		}
 		if (asoc->state & SCTP_STATE_SHUTDOWN_PENDING) {
 			asoc->state = SCTP_STATE_OPEN |

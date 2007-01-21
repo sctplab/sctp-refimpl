@@ -1111,6 +1111,16 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	asoc->authinfo.recv_key = NULL;
 	asoc->authinfo.recv_keyid = 0;
 	LIST_INIT(&asoc->shared_keys);
+	asoc->marked_retrans = 0;
+	asoc->timoinit = 0;
+	asoc->timodata = 0;
+	asoc->timosack = 0;
+	asoc->timoshutdown = 0;
+	asoc->timoheartbeat = 0;
+	asoc->timocookie = 0;
+	asoc->timoshutdownack = 0;
+	SCTP_GETTIME_TIMEVAL(&asoc->start_time);
+	SCTP_GETTIME_TIMEVAL(&asoc->discontinuity_time);
 
 	return (0);
 }
@@ -1367,6 +1377,7 @@ sctp_timeout_handler(void *t)
 		break;
 	case SCTP_TIMER_TYPE_SEND:
 		SCTP_STAT_INCR(sctps_timodata);
+		stcb->asoc.timodata++;
 		stcb->asoc.num_send_timers_up--;
 		if (stcb->asoc.num_send_timers_up < 0) {
 			stcb->asoc.num_send_timers_up = 0;
@@ -1398,6 +1409,7 @@ sctp_timeout_handler(void *t)
 		break;
 	case SCTP_TIMER_TYPE_INIT:
 		SCTP_STAT_INCR(sctps_timoinit);
+		stcb->asoc.timoinit++;
 		if (sctp_t1init_timer(inp, stcb, net)) {
 			/* no need to unlock on tcb its gone */
 			goto out_decr;
@@ -1407,6 +1419,7 @@ sctp_timeout_handler(void *t)
 		break;
 	case SCTP_TIMER_TYPE_RECV:
 		SCTP_STAT_INCR(sctps_timosack);
+		stcb->asoc.timosack++;
 		sctp_send_sack(stcb);
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
@@ -1419,6 +1432,7 @@ sctp_timeout_handler(void *t)
 			goto out_decr;
 		}
 		SCTP_STAT_INCR(sctps_timoshutdown);
+		stcb->asoc.timoshutdown++;
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
 #endif
@@ -1430,6 +1444,7 @@ sctp_timeout_handler(void *t)
 			int cnt_of_unconf = 0;
 
 			SCTP_STAT_INCR(sctps_timoheartbeat);
+			stcb->asoc.timoheartbeat++;
 			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 				if ((net->dest_state & SCTP_ADDR_UNCONFIRMED) &&
 				    (net->dest_state & SCTP_ADDR_REACHABLE)) {
@@ -1456,6 +1471,7 @@ sctp_timeout_handler(void *t)
 			goto out_decr;
 		}
 		SCTP_STAT_INCR(sctps_timocookie);
+		stcb->asoc.timocookie;
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
 #endif
@@ -1502,6 +1518,7 @@ sctp_timeout_handler(void *t)
 			goto out_decr;
 		}
 		SCTP_STAT_INCR(sctps_timoshutdownack);
+		stcb->asoc.timoshutdownack;
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
 #endif
