@@ -744,20 +744,32 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 				number_of_remote_addresses++;
 			}
-			xstcb.remote_port              = ntohs(stcb->rport);
-			xstcb.number_local_addresses   = number_of_local_addresses;
-			xstcb.number_remote_addresses  = number_of_remote_addresses;
-			xstcb.number_incomming_streams = 0;
-			xstcb.number_outgoing_streams  = 0;
-			xstcb.state                    = stcb->asoc.state;
-			xstcb.total_sends              = stcb->total_sends;
-			xstcb.total_recvs              = stcb->total_recvs;
-			xstcb.local_tag                = stcb->asoc.my_vtag;
-			xstcb.remote_tag               = stcb->asoc.peer_vtag;
-			xstcb.initial_tsn              = stcb->asoc.init_seq_number;
-			xstcb.highest_tsn              = stcb->asoc.sending_seq - 1;
-			xstcb.cumulative_tsn           = stcb->asoc.last_acked_seq;
-			xstcb.cumulative_tsn_ack       = stcb->asoc.cumulative_tsn;
+			xstcb.LocalPort = ntohs(inp->sctp_lport);
+			xstcb.RemPort = ntohs(stcb->rport);
+			if (stcb->asoc.primary_destination != NULL)
+				xstcb.RemPrimAddr = stcb->asoc.primary_destination->ro._l_addr;
+			xstcb.HeartBeatInterval = stcb->asoc.heart_beat_delay;
+			xstcb.State = SCTP_GET_STATE(&stcb->asoc); /* FIXME */
+			xstcb.InStreams = stcb->asoc.streamincnt;
+			xstcb.OutStreams = stcb->asoc.streamoutcnt;
+			xstcb.MaxRetr = stcb->asoc.overall_error_count;
+			xstcb.PrimProcess = 0; /* not really supported yet */
+			xstcb.T1expireds = stcb->asoc.timoinit + stcb->asoc.timocookie;
+			xstcb.T2expireds = stcb->asoc.timoshutdown + stcb->asoc.timoshutdownack;
+			xstcb.RtxChunks = stcb->asoc.marked_retrans;
+			xstcb.StartTime = stcb->asoc.start_time;
+			xstcb.DiscontinuityTime = stcb->asoc.discontinuity_time;
+
+			xstcb.number_local_addresses = number_of_local_addresses;
+			xstcb.number_remote_addresses = number_of_remote_addresses;
+			xstcb.total_sends = stcb->total_sends;
+			xstcb.total_recvs = stcb->total_recvs;
+			xstcb.local_tag = stcb->asoc.my_vtag;
+			xstcb.remote_tag = stcb->asoc.peer_vtag;
+			xstcb.initial_tsn = stcb->asoc.init_seq_number;
+			xstcb.highest_tsn = stcb->asoc.sending_seq - 1;
+			xstcb.cumulative_tsn = stcb->asoc.last_acked_seq;
+			xstcb.cumulative_tsn_ack = stcb->asoc.cumulative_tsn;
 			SCTP_INP_RUNLOCK(inp);
 			SCTP_INP_INFO_RUNLOCK();
 			error = SYSCTL_OUT(req, &xstcb, sizeof(struct xsctp_tcb));
@@ -785,8 +797,17 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 			}
 			*/
 			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
-				xraddr.state   = net->dest_state;
-				xraddr.address = net->ro._l_addr;
+				xraddr.RemAddr = net->ro._l_addr;
+				xraddr.RemAddrActive = ((net->dest_state & SCTP_ADDR_REACHABLE) == SCTP_ADDR_REACHABLE);
+				xraddr.RemAddrConfirmed = ((net->dest_state & SCTP_ADDR_UNCONFIRMED) == 0);
+				xraddr.RemAddrHBActive = ((net->dest_state & SCTP_ADDR_NOHB) == 0);
+				xraddr.RemAddrRTO = net->RTO;
+				xraddr.RemAddrMaxPathRtx = net->failure_threshold;
+				xraddr.RemAddrRtx = net->marked_retrans;
+				xraddr.RemAddrErrorCounter = net->error_count;
+				xraddr.RemAddrCwnd = net->cwnd;
+				xraddr.RemAddrFlightSize = net->flight_size;
+				xraddr.RemAddrStartTime = net->start_time;
 				error = SYSCTL_OUT(req, &xraddr, sizeof(struct xsctp_raddr));
 				if (error) {
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
