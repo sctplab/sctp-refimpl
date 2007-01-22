@@ -1471,7 +1471,7 @@ sctp_timeout_handler(void *t)
 			goto out_decr;
 		}
 		SCTP_STAT_INCR(sctps_timocookie);
-		stcb->asoc.timocookie;
+		stcb->asoc.timocookie++;
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
 #endif
@@ -1518,7 +1518,7 @@ sctp_timeout_handler(void *t)
 			goto out_decr;
 		}
 		SCTP_STAT_INCR(sctps_timoshutdownack);
-		stcb->asoc.timoshutdownack;
+ 		stcb->asoc.timoshutdownack++;
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
 #endif
