@@ -262,6 +262,7 @@ struct mbuf *sctp_m_prepend_2(struct mbuf *m, int len, int how);
 /* Apple KPI defines for atomic operations */
 #include <libkern/OSAtomic.h>
 #define atomic_add_int(addr, val)	OSAddAtomic(val, (SInt32 *)addr)
+#define atomic_fetchadd_int(addr, val)	OSAddAtomic(val, (SInt32 *)addr)
 #define atomic_subtract_int(addr, val)	OSAddAtomic((-val), (SInt32 *)addr)
 #define atomic_add_16(addr, val)	OSAddAtomic16(val, (SInt16 *)addr)
 #define atomic_cmpset_int(dst, exp, src) OSCompareAndSwap(exp, src, (UInt32 *)dst)
