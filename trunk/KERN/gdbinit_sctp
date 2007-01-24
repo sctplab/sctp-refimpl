@@ -121,12 +121,14 @@ define sctp_showfreechks
 set $_stcb=$arg0
 set $chk=$_stcb->asoc.free_chunks.tqh_first
 while ( $chk != 0 )
- printf "chk:%X strm:%d seq:%d fastre:%x TSN:%x\n", \
-  $chk->rec.data.stream_number, \
-  $chk->rec.data.stream_seq, \
-  $chk->rec.data.fast_retran_tsn, \
-  $chk->rec.data.TSN_seq
- set $chk=$chk->sctp_next.tqe_next
+  printf "chk:%X strm:%d seq:%d fastre:%x TSN:%x\n", \
+   $chk, \
+   $chk->rec.data.stream_number, \
+   $chk->rec.data.stream_seq, \
+   $chk->rec.data.fast_retran_tsn, \
+   $chk->rec.data.TSN_seq
+  set $chk=$chk->sctp_next.tqe_next
+ end
 end
 document sctp_showfreechks
 Show free chunks in an association
