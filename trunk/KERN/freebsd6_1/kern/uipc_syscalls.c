@@ -2503,7 +2503,7 @@ int sctp_generic_recvmsg(td, uap)
 	struct file *fp;
 	struct sockaddr *fromsa;
 	int fromlen;
-	int len, i, msg_flags=0;
+	int len, i, msg_flags;
 	int error=0;
 #ifdef KTRACE
 	struct uio *ktruio = NULL;
@@ -2535,8 +2535,14 @@ int sctp_generic_recvmsg(td, uap)
 	} else {
 		fromlen = 0;
 	}
-
-
+	if(uap->msg_flags) {
+		error = copyin(uap->msg_flags, &msg_flags, sizeof (int));
+		if (error) {
+			goto out;
+		}
+	} else {
+		msg_flags = 0;
+	}
 	auio.uio_iov = iov;
 	auio.uio_iovcnt = uap->iovlen;
   	auio.uio_segflg = UIO_USERSPACE;
