@@ -2867,11 +2867,17 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		/* attach RANDOM parameter, if available */
 		if (stcb->asoc.authinfo.random != NULL) {
 			random = (struct sctp_auth_random *)(mtod(m, caddr_t)+ SCTP_BUF_LEN(m));
-			random->ph.param_type = htons(SCTP_RANDOM);
 			p_len = sizeof(*random) + stcb->asoc.authinfo.random_len;
+#ifdef SCTP_AUTH_DRAFT_04
+			random->ph.param_type = htons(SCTP_RANDOM);
 			random->ph.param_length = htons(p_len);
-			bcopy(stcb->asoc.authinfo.random->key, random->random_data,
-			    stcb->asoc.authinfo.random_len);
+			bcopy(stcb->asoc.authinfo.random->key,
+			      random->random_data,
+			      stcb->asoc.authinfo.random_len);
+#else
+			/* random key already contains the header */
+			bcopy(stcb->asoc.authinfo.random->key, random, p_len);
+#endif
 			/* zero out any padding required */
 			bzero((caddr_t)random + p_len, SCTP_SIZE32(p_len) - p_len);
 			SCTP_BUF_LEN(m) += SCTP_SIZE32(p_len);

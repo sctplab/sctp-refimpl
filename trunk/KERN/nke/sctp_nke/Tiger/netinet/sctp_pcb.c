@@ -5011,11 +5011,13 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 	struct sockaddr *local_sa = (struct sockaddr *)&dest_store;
 	struct sockaddr_in sin;
 	struct sockaddr_in6 sin6;
-	uint8_t store[384];
+	uint8_t random_store[128];
 	struct sctp_auth_random *random = NULL;
 	uint16_t random_len = 0;
+	uint8_t hmacs_store[128];
 	struct sctp_auth_hmac_algo *hmacs = NULL;
 	uint16_t hmacs_len = 0;
+	uint8_t chunks_store[256];
 	struct sctp_auth_chunk_list *chunks = NULL;
 	uint16_t num_chunks = 0;
 	sctp_key_t *new_key;
@@ -5355,14 +5357,14 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			stcb->asoc.peer_supports_ecn_nonce = 1;
 			stcb->asoc.ecn_nonce_allowed = 1;
 		} else if (ptype == SCTP_RANDOM) {
-			if (plen > sizeof(store))
+			if (plen > sizeof(random_store))
 				break;
 			if (got_random) {
 				/* already processed a RANDOM */
 				goto next_param;
 			}
 			phdr = sctp_get_next_param(m, offset,
-			    (struct sctp_paramhdr *)store,
+			    (struct sctp_paramhdr *)random_store,
 			    plen);
 			if (phdr == NULL)
 				return (-26);
@@ -5381,14 +5383,14 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			int num_hmacs;
 			int i;
 
-			if (plen > sizeof(store))
+			if (plen > sizeof(hmacs_store))
 				break;
 			if (got_hmacs) {
 				/* already processed a HMAC list */
 				goto next_param;
 			}
 			phdr = sctp_get_next_param(m, offset,
-			    (struct sctp_paramhdr *)store,
+			    (struct sctp_paramhdr *)hmacs_store,
 			    plen);
 			if (phdr == NULL)
 				return (-28);
@@ -5412,14 +5414,14 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 		} else if (ptype == SCTP_CHUNK_LIST) {
 			int i;
 
-			if (plen > sizeof(store))
+			if (plen > sizeof(chunks_store))
 				break;
 			if (got_chklist) {
 				/* already processed a Chunks list */
 				goto next_param;
 			}
 			phdr = sctp_get_next_param(m, offset,
-			    (struct sctp_paramhdr *)store,
+			    (struct sctp_paramhdr *)chunks_store,
 			    plen);
 			if (phdr == NULL)
 				return (-30);
@@ -5492,21 +5494,38 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 	}
 
 	/* concatenate the full random key */
-	keylen = random_len + num_chunks + hmacs_len;
+#ifdef SCTP_AUTH_DRAFT_04
+	keylen = random_len;
 	new_key = sctp_alloc_key(keylen);
 	if (new_key != NULL) {
 	    /* copy in the RANDOM */
 	    if (random != NULL)
 		bcopy(random->random_data, new_key->key, random_len);
+	}
+#else
+	keylen = sizeof(*random) + random_len + sizeof(*chunks) + num_chunks +
+	    sizeof(*hmacs) + hmacs_len;
+	new_key = sctp_alloc_key(keylen);
+	if (new_key != NULL) {
+	    /* copy in the RANDOM */
+	    if (random != NULL) {
+		keylen = sizeof(*random) + random_len;
+		bcopy(random, new_key->key, keylen);
+	    }
 	    /* append in the AUTH chunks */
-	    if (chunks != NULL)
-		bcopy(chunks->chunk_types, new_key->key + random_len,
-		      num_chunks);
+	    if (chunks != NULL) {
+		bcopy(chunks, new_key->key + keylen,
+		      sizeof(*chunks) + num_chunks);
+		keylen += sizeof(*chunks) + num_chunks;
+	    }
 	    /* append in the HMACs */
-	    if (hmacs != NULL)
-		bcopy(hmacs->hmac_ids, new_key->key + random_len + num_chunks,
-		      hmacs_len);
-	} else {
+	    if (hmacs != NULL) {
+		bcopy(hmacs, new_key->key + keylen,
+		      sizeof(*hmacs) + hmacs_len);
+	    }
+	}
+#endif
+	else {
 	    return (-32);
 	}
 	if (stcb->asoc.authinfo.peer_random != NULL)
