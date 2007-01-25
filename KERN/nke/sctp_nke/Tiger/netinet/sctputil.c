@@ -2402,7 +2402,7 @@ sctp_mtu_size_reset(struct sctp_inpcb *inp,
 
 /*
  * given an association and starting time of the current RTT period return
- * RTO in number of usecs net should point to the current network
+ * RTO in number of msecs net should point to the current network
  */
 uint32_t
 sctp_calculate_rto(struct sctp_tcb *stcb,
@@ -2412,7 +2412,7 @@ sctp_calculate_rto(struct sctp_tcb *stcb,
 {
 	/*
 	 * given an association and the starting time of the current RTT
-	 * period (in value1/value2) return RTO in number of usecs.
+	 * period (in value1/value2) return RTO in number of msecs.
 	 */
 	int calc_time = 0;
 	int o_calctime;
