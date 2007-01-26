@@ -5279,15 +5279,16 @@ sctp_listen(struct socket *so, struct proc *p)
 	}
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) {
 		/* We must do a bind. */
+		SOCK_UNLOCK(so);
 		SCTP_INP_RUNLOCK(inp);
 		if ((error = sctp_inpcb_bind(so, NULL, p))) {
 			/* bind error, probably perm */
-			SOCK_UNLOCK(so);
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);
 #endif
 			return (error);
 		}
+		SOCK_LOCK(so);
 	} else {
 		SCTP_INP_RUNLOCK(inp);
 	}
