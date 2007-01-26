@@ -5188,6 +5188,17 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	 * Put the rest of the things in place now. Size was done
 	 * earlier in previous loop prior to padding.
 	 */
+
+#ifdef SCTP_ASOCLOG_OF_TSNS
+	asoc->out_tsnlog[asoc->tsn_out_at].tsn = chk->rec.data.TSN_seq;
+	asoc->out_tsnlog[asoc->tsn_out_at].strm = chk->rec.data.stream_number;
+	asoc->out_tsnlog[asoc->tsn_out_at].seq = chk->rec.data.stream_seq;
+	asoc->tsn_out_at++;
+	if(asoc->tsn_out_at >= SCTP_TSN_LOG_SIZE) {
+		asoc->tsn_out_at = 0;
+	}
+#endif
+
 	dchkh->ch.chunk_type = SCTP_DATA;
 	dchkh->ch.chunk_flags = chk->rec.data.rcv_flags;
 	dchkh->dp.tsn = htonl(chk->rec.data.TSN_seq);
