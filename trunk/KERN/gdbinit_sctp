@@ -107,11 +107,11 @@ Show all SCTP endpoints
 end
 
 define sctp_allreadq
-set $_inp=sctppcbinfo.listhead.lh_first
-while ( $_inp != 0 )
-print $_inp->read_queue.tqh_first
-set $_inp=$_inp->sctp_list.le_next
-end
+ set $_inp=sctppcbinfo.listhead.lh_first
+ while ( $_inp != 0 )
+  print $_inp->read_queue.tqh_first
+  set $_inp=$_inp->sctp_list.le_next
+ end
 end
 document sctp_allreadq
 Show all SCTP endpoint read queues
@@ -133,3 +133,17 @@ end
 document sctp_showfreechks
 Show free chunks in an association
 end
+
+define sctp_showfreesnd
+set $_stcb=$arg0
+set $sndq=$_stcb->asoc.free_strmoq.tqh_first
+  while ( $sndq != 0 )
+  printf "stream:%d seq:%d complete:%d\n", $sndq->stream, $sndq->strseq, $sndq->msg_is_complete
+  set $sndq=$sndq->next.tqe_next
+  end
+end
+document sctp_showfreesnd
+Show free strm send entries
+end
+
+
