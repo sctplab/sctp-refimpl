@@ -1614,6 +1614,16 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	 * only validate the FIRST fragment so the bit must be set.
 	 */
 	strmseq = ntohs(ch->dp.stream_sequence);
+
+#ifdef SCTP_ASOCLOG_OF_TSNS
+	asoc->in_tsnlog[asoc->tsn_in_at].tsn = tsn;
+	asoc->in_tsnlog[asoc->tsn_in_at].strm = strmno;
+	asoc->in_tsnlog[asoc->tsn_in_at].seq = strmseq;
+	asoc->tsn_in_at++;
+	if(asoc->tsn_in_at >= SCTP_TSN_LOG_SIZE) {
+		asoc->tsn_in_at = 0;
+	}
+#endif
 	if ((ch->ch.chunk_flags & SCTP_DATA_FIRST_FRAG) &&
 	    (ch->ch.chunk_flags & SCTP_DATA_UNORDERED) == 0 &&
 	    (compare_with_wrap(asoc->strmin[strmno].last_sequence_delivered,

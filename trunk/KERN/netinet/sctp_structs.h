@@ -450,6 +450,14 @@ struct sctp_scoping {
 	uint8_t site_scope;
 };
 
+#define SCTP_TSN_LOG_SIZE 40
+
+struct sctp_tsn_log {
+	uint32_t tsn;
+	uint16_t strm;
+	uint16_t seq;
+};
+
 /*
  * Here we have information about each individual association that we track.
  * We probably in production would be more dynamic. But for ease of
@@ -654,6 +662,17 @@ struct sctp_association {
 	uint32_t last_reset_action[SCTP_MAX_RESET_PARAMS];
 	uint32_t last_sending_seq[SCTP_MAX_RESET_PARAMS];
 	uint32_t last_base_tsnsent[SCTP_MAX_RESET_PARAMS];
+#ifdef SCTP_ASOCLOG_OF_TSNS
+	/* 
+	 * special log  - This adds considerable size
+	 * to the asoc, but provides a log that you
+	 * can use to detect problems via kgdb.
+	 */
+        struct sctp_tsn_log  in_tsnlog[SCTP_TSN_LOG_SIZE];
+        struct sctp_tsn_log  out_tsnlog[SCTP_TSN_LOG_SIZE];
+	uint16_t tsn_in_at;
+ 	uint16_t tsn_out_at;
+#endif /* SCTP_ASOCLOG_OF_TSNS */
 	/*
 	 * window state information and smallest MTU that I use to bound
 	 * segmentation
