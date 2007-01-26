@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.25 2007-01-25 01:07:51 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.26 2007-01-26 21:46:01 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -736,6 +736,12 @@ create_SCTP_adaptor(distributor *o,uint16_t port, int model, int rwnd , int swnd
       bindsa_len = sizeof(struct sockaddr_in6);
       inAddr6.sin6_scope_id = scope_id;
     }
+    if(bind(r->fd,(struct sockaddr *)&inAddr6, bindsa_len) < 0){
+	    printf("bind failed err:%d\n",errno);
+	    close(r->fd);
+	    free(r);
+	    return(NULL);
+    }
   } else {
     if (v4only) {
       struct sockaddr_in *sin = (struct sockaddr_in *)&inAddr6;
@@ -752,19 +758,6 @@ create_SCTP_adaptor(distributor *o,uint16_t port, int model, int rwnd , int swnd
       inAddr6.sin6_scope_id = scope_id;
     }
   }
-  if(bind(r->fd,(struct sockaddr *)&inAddr6, bindsa_len) < 0){
-    printf("bind failed err:%d\n",errno);
-    close(r->fd);
-    free(r);
-    return(NULL);
-  }
-  length = sizeof(myAddr6);
-  if(getsockname(r->fd, (struct sockaddr *)&myAddr6, &length) < 0){
-    printf("get sockname failed err:%d\n",errno);
-    close(r->fd);
-    free(r);
-    return(NULL);
-  }	
   /* enable all event notifications */
   event.sctp_data_io_event = 1;
   event.sctp_association_event = 1;
@@ -830,6 +823,13 @@ create_SCTP_adaptor(distributor *o,uint16_t port, int model, int rwnd , int swnd
     }
 #endif
   }
+  length = sizeof(myAddr6);
+  if(getsockname(r->fd, (struct sockaddr *)&myAddr6, &length) < 0){
+    printf("get sockname failed err:%d\n",errno);
+    close(r->fd);
+    free(r);
+    return(NULL);
+  }	
   dist_addFd(o,r->fd,sctpFdInput,POLLIN,(void *)r);
   object_in = r;
   return(r);
