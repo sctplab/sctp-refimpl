@@ -1062,7 +1062,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 
 	/* I know that the TCB is non-NULL from the caller */
 	asoc = &stcb->asoc;
-	for(how_indx=0; how_indx <sizeof(asoc->cookie_how);i++) {
+	for(how_indx=0; how_indx <sizeof(asoc->cookie_how);how_indx++) {
 		if(asoc->cookie_how[how_indx] == 0)
 			break;
 	}
