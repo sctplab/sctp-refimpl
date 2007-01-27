@@ -105,6 +105,8 @@ extern struct fileops socketops;
 #define _KERNEL
 #endif
 
+#define SCTP_LIST_EMPTY(list)	LIST_EMPTY(list)
+
 
 /* 
  * for per socket level locking strategy:
@@ -212,7 +214,6 @@ extern void *sctp_calloutq_mtx;
 #define SCTP_BUF_RECVIF(m) (m->m_pkthdr.rcvif)
 #define SCTP_BUF_PREPEND(m, plen, how) ((m) = sctp_m_prepend_2((m), (plen), (how)))
 struct mbuf *sctp_m_prepend_2(struct mbuf *m, int len, int how);
-
 
 /*************************/
 /* These are for logging */

@@ -3660,7 +3660,7 @@ sctp_add_vtag_to_timewait(struct sctp_inpcb *inp, uint32_t tag, uint32_t time)
 	SCTP_GETTIME_TIMEVAL(&now);
 	chain = &sctppcbinfo.vtag_timewait[(tag % SCTP_STACK_VTAG_HASH_SIZE)];
 	set = 0;
-	if (!LIST_EMPTY(chain)) {
+	if (!SCTP_LIST_EMPTY(chain)) {
 		/* Block(s) present, lets find space, and expire on the fly */
 		LIST_FOREACH(twait_block, chain, sctp_nxt_tagblock) {
 			for (i = 0; i < SCTP_NUMBER_IN_VTAG_BLOCK; i++) {
@@ -4250,7 +4250,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	}
 
 	/* local addresses, if any */
-	while (!LIST_EMPTY(&asoc->sctp_local_addr_list)) {
+	while (!SCTP_LIST_EMPTY(&asoc->sctp_local_addr_list)) {
 		laddr = LIST_FIRST(&asoc->sctp_local_addr_list);
 		LIST_REMOVE(laddr, sctp_nxt_addr);
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_laddr, laddr);
@@ -5658,7 +5658,7 @@ check_restart:
 	}
 check_time_wait:
 	/* Now what about timed wait ? */
-	if (!LIST_EMPTY(chain)) {
+	if (!SCTP_LIST_EMPTY(chain)) {
 		/*
 		 * Block(s) are present, lets see if we have this tag in the
 		 * list

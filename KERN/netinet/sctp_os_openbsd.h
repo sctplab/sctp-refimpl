@@ -97,6 +97,7 @@ extern int ipport_lastauto;
 extern int ipport_hifirstauto;
 extern int ipport_hilastauto;
 
+#define SCTP_LIST_EMPTY(list)	LIST_EMPTY(list)
 
 /*
  * general memory allocation

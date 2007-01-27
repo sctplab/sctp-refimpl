@@ -545,7 +545,7 @@ sctp_insert_sharedkey(struct sctp_keyhead *shared_keys,
 		return;
 
 	/* insert into an empty list? */
-	if (LIST_EMPTY(shared_keys)) {
+	if (SCTP_LIST_EMPTY(shared_keys)) {
 		LIST_INSERT_HEAD(shared_keys, new_skey, next);
 		return;
 	}

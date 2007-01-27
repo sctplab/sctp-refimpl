@@ -664,8 +664,8 @@ uint32_t sctp_crc_c[256] = {
 
 #define SCTP_CRC32C(c,d) (c=(c>>8)^sctp_crc_c[(c^(d))&0xFF])
 
-u_int32_t
-old_update_crc32(u_int32_t crc32,
+uint32_t
+old_update_crc32(uint32_t crc32,
 		 unsigned char *buffer,
 		 unsigned int length)
 {
