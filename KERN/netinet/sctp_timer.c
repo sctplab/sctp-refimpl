@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001-2006, Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2001-2007, Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -57,7 +57,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_timer.c,v 1.6 2007/01/18 09:58:43 rrs E
 extern uint32_t sctp_debug_on;
 #endif				/* SCTP_DEBUG */
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 #define APPLE_FILE_NO 6
 #endif
 
@@ -496,8 +496,8 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	uint32_t orig_flight;
 	uint32_t tsnlast, tsnfirst;
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+	sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
 #endif
 	/*
 	 * CMT: Using RTX_SSTHRESH policy for CMT. If CMT is being used,
@@ -836,8 +836,8 @@ sctp_move_all_chunks_to_alt(struct sctp_tcb *stcb,
 	struct sctp_tmit_chunk *chk;
 	struct sctp_stream_queue_pending *sp;
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+	sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
 #endif
 	if (net == alt)
 		/* nothing to do */
@@ -878,8 +878,8 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 	struct sctp_nets *alt;
 	int win_probe, num_mk;
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+	sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
 #endif
 #ifdef SCTP_FR_LOGGING
 	sctp_log_fr(0, 0, 0, SCTP_FR_T3_TIMEOUT);
@@ -1023,8 +1023,8 @@ sctp_t1init_timer(struct sctp_inpcb *inp,
     struct sctp_tcb *stcb,
     struct sctp_nets *net)
 {
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+	sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
 #endif
 	/* bump the thresholds */
 	if (stcb->asoc.delayed_connection) {
@@ -1077,8 +1077,8 @@ sctp_cookie_timer(struct sctp_inpcb *inp,
 	struct sctp_nets *alt;
 	struct sctp_tmit_chunk *cookie;
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+	sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
 #endif
 	/* first before all else we must find the cookie */
 	TAILQ_FOREACH(cookie, &stcb->asoc.control_send_queue, sctp_next) {
@@ -1433,8 +1433,8 @@ int
 sctp_heartbeat_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
     struct sctp_nets *net, int cnt_of_unconf)
 {
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+	sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
 #endif
 	if (net) {
 		if (net->hb_responded == 0) {
@@ -1645,13 +1645,12 @@ sctp_autoclose_timer(struct sctp_inpcb *inp,
 	}
 }
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(SCTP_PER_SOCKET_LOCKING)
 /*
  * This function assumes that no socket lock is locked. The function
  * called per association gets the socket locked.
  */
 #endif
-
 void
 sctp_iterator_timer(struct sctp_iterator *it)
 {
@@ -1667,14 +1666,14 @@ sctp_iterator_timer(struct sctp_iterator *it)
 		/* iterator is complete */
 done_with_iterator:
 		SCTP_ITERATOR_UNLOCK();
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+		SCTP_LOCK_EXC(sctppcbinfo.ipi_ep_mtx);
 #endif
 		SCTP_INP_INFO_WLOCK();
 		LIST_REMOVE(it, sctp_nxt_itr);
 		/* stopping the callout is not needed, in theory */
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+		SCTP_UNLOCK_EXC(sctppcbinfo.ipi_ep_mtx);
 #endif
 		SCTP_INP_INFO_WUNLOCK();
 		SCTP_OS_TIMER_STOP(&it->tmr.timer);
@@ -1685,8 +1684,8 @@ done_with_iterator:
 		return;
 	}
 select_a_new_ep:
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	socket_lock(it->inp->ip_inp.inp.inp_socket, 1);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+	SCTP_SOCKET_LOCK(SCTP_INP_SO(it->inp), 1);
 #endif
 	SCTP_INP_WLOCK(it->inp);
 	while (((it->pcb_flags) &&
@@ -1695,22 +1694,22 @@ select_a_new_ep:
 		((it->inp->sctp_features & it->pcb_features) != it->pcb_features))) {
 		/* endpoint flags or features don't match, so keep looking */
 		if (it->iterator_flags & SCTP_ITERATOR_DO_SINGLE_INP) {
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			socket_unlock(it->inp->ip_inp.inp.inp_socket, 1);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(it->inp), 1);
 #endif
 			SCTP_INP_WUNLOCK(it->inp);
 			goto done_with_iterator;
 		}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		socket_unlock(it->inp->ip_inp.inp.inp_socket, 1);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+		SCTP_SOCKET_UNLOCK(SCTP_INP_SO(it->inp), 1);
 #endif
 		SCTP_INP_WUNLOCK(it->inp);
 		it->inp = LIST_NEXT(it->inp, sctp_list);
 		if (it->inp == NULL) {
 			goto done_with_iterator;
 		}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		socket_lock(it->inp->ip_inp.inp.inp_socket, 1);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+		SCTP_SOCKET_LOCK(SCTP_INP_SO(it->inp), 1);
 #endif
 		SCTP_INP_WLOCK(it->inp);
 	}
@@ -1718,7 +1717,7 @@ select_a_new_ep:
 	    (it->inp->inp_starting_point_for_iterator != it)) {
 		printf("Iterator collision, waiting for one at %p\n",
 		       it->inp);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(SCTP_PER_SOCKET_LOCKING)
 		/* Unlock done at start_timer_return */
 #endif
 		SCTP_INP_WUNLOCK(it->inp);
@@ -1754,8 +1753,8 @@ select_a_new_ep:
 		iteration_count++;
 		if (iteration_count > SCTP_ITERATOR_MAX_AT_ONCE) {
 	start_timer_return:
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			socket_unlock(it->inp->ip_inp.inp.inp_socket, 1);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(it->inp), 1);
 #endif
 			/* set a timer to continue this later */
 			SCTP_TCB_UNLOCK(it->stcb);
@@ -1782,19 +1781,19 @@ select_a_new_ep:
 	SCTP_INP_WLOCK(it->inp);
 	it->inp->inp_starting_point_for_iterator = NULL;
 	SCTP_INP_WUNLOCK(it->inp);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	socket_unlock(it->inp->ip_inp.inp.inp_socket, 1);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+	SCTP_SOCKET_UNLOCK(SCTP_INP_SO(it->inp), 1);
 #endif
 	if (it->iterator_flags & SCTP_ITERATOR_DO_SINGLE_INP) {
 		it->inp = NULL;
 	} else {
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+		SCTP_LOCK_EXC(sctppcbinfo.ipi_ep_mtx);
 #endif
 		SCTP_INP_INFO_RLOCK();
 		it->inp = LIST_NEXT(it->inp, sctp_list);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+		SCTP_UNLOCK_EXC(sctppcbinfo.ipi_ep_mtx);
 #endif
 		SCTP_INP_INFO_RUNLOCK();
 	}

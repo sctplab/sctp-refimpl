@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001-2006, Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2001-2007, Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -53,7 +53,7 @@ __FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.9 2007/01/18 09:58:43 rr
 #include <netinet6/sctp6_var.h>
 
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 #define APPLE_FILE_NO 9
 #endif
 
@@ -238,12 +238,12 @@ sctp6_input(mp, offp, proto)
 			if ((in6p) && (stcb)) {
 				sctp_send_packet_dropped(stcb, net, m, iphlen, 1);
 				sctp_chunk_output((struct sctp_inpcb *)in6p, stcb, 2);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-				socket_unlock(in6p->ip_inp.inp.inp_socket, 1);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+				SCTP_SOCKET_UNLOCK(SCTP_INP_SO(in6p), 1);
 #endif
 			} else if ((in6p != NULL) && (stcb == NULL)) {
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-				socket_unlock(in6p->ip_inp.inp.inp_socket, 1);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+				SCTP_SOCKET_UNLOCK(SCTP_INP_SO(in6p), 1);
 #endif
 				refcount_up = 1;
 			}
@@ -375,8 +375,8 @@ sctp_skip_csum:
 #endif
 #endif				/* IPSEC */
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	sctp_lock_assert(in6p->ip_inp.inp.inp_socket);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+	sctp_lock_assert(SCTP_INP_SO(in6p));
 #endif
 
 	/*
@@ -406,8 +406,8 @@ sctp_skip_csum:
 		SCTP_INP_DECR_REF(in6p);
 		SCTP_INP_WUNLOCK(in6p);
 	}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	socket_unlock(in6p->ip_inp.inp.inp_socket, 1);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+	SCTP_SOCKET_UNLOCK(SCTP_INP_SO(in6p), 1);
 #endif
 
 	return IPPROTO_DONE;
@@ -609,9 +609,9 @@ sctp6_ctlinput(cmd, pktdst, d)
 			if (stcb)
 				SCTP_TCB_UNLOCK(stcb);
 		}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(SCTP_PER_SOCKET_LOCKING)
 		if (inp != NULL) {
-			socket_unlock(inp->ip_inp.inp.inp_socket, 1);
+			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 		}
 #endif
 #if defined(__NetBSD__) || defined(__OpenBSD__)

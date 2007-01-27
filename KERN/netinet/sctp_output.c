@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001-2006, Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2001-2007, Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -56,7 +56,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.10 2007/01/18 09:58:43 rrs
 extern uint32_t sctp_debug_on;
 #endif
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 #define APPLE_FILE_NO 3
 #endif
 
@@ -4436,8 +4436,8 @@ sctp_sendall_iterator(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
 	int added_control=0;
 	int un_sent, do_chunk_output=1;
 	struct sctp_association *asoc;
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	sctp_lock_assert(inp->ip_inp.inp.inp_socket);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+	sctp_lock_assert(SCTP_INP_SO(inp));
 #endif
 	ca = (struct sctp_copy_all *)ptr;
 	if (ca->m == NULL) {
@@ -4685,12 +4685,12 @@ sctp_sendall(struct sctp_inpcb *inp, struct uio *uio, struct mbuf *m,
 	/* get length and mbuf chain */
 	if (uio) {
 		ca->sndlen = uio->uio_resid;
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		socket_unlock(inp->ip_inp.inp.inp_socket, 0);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+		SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 0);
 #endif
 		ca->m = sctp_copy_out_all(uio, ca->sndlen);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		socket_lock(inp->ip_inp.inp.inp_socket, 0);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+		SCTP_SOCKET_LOCK(SCTP_INP_SO(inp), 0);
 #endif
 		if (ca->m == NULL) {
 			SCTP_FREE(ca);
@@ -5486,8 +5486,8 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	sctp_audit_log(0xC2, 2);
 #endif
 	SCTP_TCB_LOCK_ASSERT(stcb);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	sctp_lock_assert(inp->ip_inp.inp.inp_socket);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+	sctp_lock_assert(SCTP_INP_SO(inp));
 #endif
 	hbflag = 0;
 	if ((control_only) || (asoc->stream_reset_outstanding))
@@ -7167,8 +7167,8 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 		sctp_send_sack(stcb);
 		SCTP_OS_TIMER_STOP(&stcb->asoc.dack_timer.timer);
 	}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	sctp_lock_assert(inp->ip_inp.inp.inp_socket);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+	sctp_lock_assert(SCTP_INP_SO(inp));
 #endif
 	while (asoc->sent_queue_retran_cnt) {
 		/*
@@ -7597,10 +7597,10 @@ sctp_send_sack(struct sctp_tcb *stcb)
 	int num_dups = 0;
 	int space_req;
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(SCTP_PER_SOCKET_LOCKING)
 	if (stcb ==NULL)
 		panic("sctp_send_sack");
-	sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
+	sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
 #endif
 	
 	a_chk = NULL;
@@ -9334,12 +9334,12 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 	sp->some_taken = 0;
 	resv_in_first = sizeof(struct sctp_data_chunk);
 	sp->data = sp->tail_mbuf = NULL;
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	socket_unlock(stcb->sctp_socket, 0);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+	SCTP_SOCKET_UNLOCK(stcb->sctp_socket, 0);
 #endif
 	*errno = sctp_copy_one(sp, uio, resv_in_first);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	socket_lock(stcb->sctp_socket, 0);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+	SCTP_SOCKET_LOCK(stcb->sctp_socket, 0);
 #endif
 	if(*errno) {
 		sctp_free_a_strmoq(stcb, sp);
@@ -9407,8 +9407,8 @@ sctp_sosend(struct socket *so,
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
 #endif
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	socket_lock(so, 1);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+	SCTP_SOCKET_LOCK(so, 1);
 #endif
 	if (control) {
 		/* process cmsg snd/rcv info (maybe a assoc-id) */
@@ -9423,8 +9423,8 @@ sctp_sosend(struct socket *so,
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
 #endif
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	socket_unlock(so, 1);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+	SCTP_SOCKET_UNLOCK(so, 1);
 #endif
 	return (error);
 }
@@ -9475,8 +9475,8 @@ sctp_lower_sosend(struct socket *so,
 	stcb = NULL;
 	asoc = NULL;
 	t_inp = inp = (struct sctp_inpcb *)so->so_pcb;
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	sctp_lock_assert(t_inp->ip_inp.inp.inp_socket);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+	sctp_lock_assert(SCTP_INP_SO(inp));
 #endif
 	if (inp == NULL) {
 		error = EFAULT;
@@ -9916,12 +9916,12 @@ sctp_lower_sosend(struct socket *so,
 			ph++;
 			SCTP_BUF_LEN(mm) = tot_out + sizeof(struct sctp_paramhdr);
 			if(top == NULL) {
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-				socket_unlock(stcb->sctp_socket, 0);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+				SCTP_SOCKET_UNLOCK(stcb->sctp_socket, 0);
 #endif
 				error = uiomove((caddr_t)ph, (int)tot_out, uio);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-				socket_lock(stcb->sctp_socket, 0);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+				SCTP_SOCKET_LOCK(stcb->sctp_socket, 0);
 #endif
 				if (error) {
 					/*
@@ -10120,12 +10120,12 @@ sctp_lower_sosend(struct socket *so,
 					SCTP_TCB_UNLOCK(stcb);
 					hold_tcblock = 0;
 				}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-				socket_unlock(stcb->sctp_socket, 0);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+				SCTP_SOCKET_UNLOCK(stcb->sctp_socket, 0);
 #endif
 				mm = sctp_copy_resume(sp, uio, srcv, max_len, user_marks_eor, &error, &sndout, &new_tail);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-				socket_lock(stcb->sctp_socket, 0);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+				SCTP_SOCKET_LOCK(stcb->sctp_socket, 0);
 #endif
 				if ((mm == NULL) || error) {
 					if (mm) {
@@ -10593,7 +10593,7 @@ sctp_lower_sosend(struct socket *so,
 		atomic_add_int(&stcb->asoc.refcnt, -1);
 	}
 #ifdef INVARIANTS
-#if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if !defined(SCTP_PER_SOCKET_LOCKING)
 	if (stcb) {
 		if (mtx_owned(&stcb->tcb_mtx)) {
 			panic("Leaving with tcb mtx owned?");

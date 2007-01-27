@@ -105,6 +105,36 @@ extern struct fileops socketops;
 #define _KERNEL
 #endif
 
+
+/* 
+ * for per socket level locking strategy:
+ * SCTP_INP_SO(sctpinp): returns socket on base inp structure from sctp_inpcb
+ * SCTP_SOCKET_LOCK(so, refcnt): locks socket so with refcnt
+ * SCTP_SOCKET_UNLOCK(so, refcnt): unlocks socket so with refcnt
+ * SCTP_MTX_LOCK(lck): lock mutex
+ * SCTP_MTX_UNLOCK(lck): unlock mutex
+ * SCTP_MTX_TRYLOCK(lck): try lock mutex
+ * SCTP_LOCK_EX(lck): lock exclusive
+ * SCTP_UNLOCK_EX(lck): unlock exclusive
+ * SCTP_TRYLOCK_EX(lck): trylock exclusive
+ * SCTP_LOCK_SHARED(lck): lock shared
+ * SCTP_UNLOCK_SHARED(lck): unlock shared
+ * SCTP_TRYLOCK_SHARED(lck): trylock shared
+ */
+#define SCTP_PER_SOCKET_LOCKING
+#define SCTP_INP_SO(sctpinp)	(sctpinp)->ip_inp.inp.inp_socket
+#define SCTP_SOCKET_LOCK(so, refcnt)	socket_lock(so, refcnt)
+#define SCTP_SOCKET_UNLOCK(so, refcnt)	socket_unlock(so, refcnt)
+#define SCTP_MTX_LOCK(mtx)	lck_mtx_lock(mtx)
+#define SCTP_MTX_UNLOCK(mtx)	lck_mtx_unlock(mtx)
+#define SCTP_MTX_TRYLOCK(mtx)	lck_mtx_try_lock(mtx)
+#define SCTP_LOCK_EXC(lck)	lck_rw_lock_exclusive(lck)
+#define SCTP_UNLOCK_EXC(lck)	lck_rw_unlock_exclusive(lck)
+#define SCTP_TRYLOCK_EXC(lck)	lck_rw_try_lock_exclusive(lck)
+#define SCTP_LOCK_SHARED(lck)	lck_rw_lock_shared(lck)
+#define SCTP_UNLOCK_SHARED(lck)	lck_rw_unlock_shared(lck)
+#define SCTP_TRYLOCK_SHARED(lck) lck_rw_try_lock_shared(lck)
+
 /*
  * general memory allocation
  */

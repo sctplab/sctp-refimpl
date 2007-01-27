@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001-2006, Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2001-2007, Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -56,7 +56,7 @@ extern uint32_t sctp_debug_on;
 #endif
 #endif				/* SCTP_DEBUG */
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 #define APPLE_FILE_NO 1
 #endif
 
@@ -2026,8 +2026,8 @@ sctp_delete_ip_address(struct ifaddr *ifa)
 		return;
 	}
 	/* go through all our PCB's */
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	lck_rw_lock_shared(sctppcbinfo.ipi_ep_mtx);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+	SCTP_LOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
 #endif
 	SCTP_INP_INFO_RLOCK();
 	LIST_FOREACH(inp, &sctppcbinfo.listhead, sctp_list) {
@@ -2035,8 +2035,8 @@ sctp_delete_ip_address(struct ifaddr *ifa)
 		struct sctp_laddr *laddr, *laddr_next;
 
 		/* process for all associations for this endpoint */
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		socket_lock(inp->ip_inp.inp.inp_socket, 1);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+		SCTP_SOCKET_LOCK(SCTP_INP_SO(inp), 1);
 #endif
 		SCTP_INP_RLOCK(inp);
 		LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
@@ -2074,13 +2074,13 @@ sctp_delete_ip_address(struct ifaddr *ifa)
 			}
 			laddr = laddr_next;
 		}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		socket_unlock(inp->ip_inp.inp.inp_socket, 1);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+		SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
 		SCTP_INP_RUNLOCK(inp);
 	}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+	SCTP_UNLOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
 #endif
 	SCTP_INP_INFO_RUNLOCK();
 }

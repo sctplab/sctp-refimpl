@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001-2006, Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2001-2007, Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -54,7 +54,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.10 2007/01/18 09:58:43 rrs
 #include <netinet/sctp_peeloff.h>
 #endif				/* HAVE_SCTP_PEELOFF_SOCKOPT */
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 #define APPLE_FILE_NO 7
 #endif
 
@@ -508,9 +508,9 @@ sctp_ctlinput(cmd, sa, vip)
 				SCTP_INP_WUNLOCK(inp);
 			}
 		}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(SCTP_PER_SOCKET_LOCKING)
 		if (inp != NULL) {
-			socket_unlock(inp->ip_inp.inp.inp_socket, 1);
+			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 		}
 #endif
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -621,14 +621,14 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 	number_of_associations = 0;
 	number_of_remote_addresses = 0;
 	
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	lck_rw_lock_shared(sctppcbinfo.ipi_ep_mtx);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+	SCTP_LOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
 #endif
 	SCTP_INP_INFO_RLOCK();
 	if (req->oldptr == USER_ADDR_NULL) {
 		LIST_FOREACH(inp, &sctppcbinfo.listhead, sctp_list) {
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			socket_lock(inp->ip_inp.inp.inp_socket, 1);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+			SCTP_SOCKET_LOCK(SCTP_INP_SO(inp), 1);
 #endif
 			SCTP_INP_RLOCK(inp);
 			number_of_endpoints++;
@@ -646,13 +646,13 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 					number_of_remote_addresses++;
 				}
 			}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			socket_unlock(inp->ip_inp.inp.inp_socket, 1);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
 			SCTP_INP_RUNLOCK(inp);
 		}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+		SCTP_UNLOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
 #endif
 		SCTP_INP_INFO_RUNLOCK();
 		n = (number_of_endpoints + 1) * sizeof(struct xsctp_inpcb) +
@@ -670,16 +670,16 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 	}
 
 	if (req->newptr != USER_ADDR_NULL) {
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+		SCTP_UNLOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
 #endif
 		SCTP_INP_INFO_RUNLOCK();
 		return EPERM;
 	}
 
 	LIST_FOREACH(inp, &sctppcbinfo.listhead, sctp_list) {
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		socket_lock(inp->ip_inp.inp.inp_socket, 1);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+		SCTP_SOCKET_LOCK(SCTP_INP_SO(inp), 1);
 #endif
 		SCTP_INP_RLOCK(inp);
 		number_of_local_addresses = 0;
@@ -706,9 +706,9 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 		SCTP_INP_INFO_RUNLOCK();
 		error = SYSCTL_OUT(req, &xinpcb, sizeof(struct xsctp_inpcb));
 		if (error) {
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			socket_unlock(inp->ip_inp.inp.inp_socket, 1);
-			lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
+			SCTP_UNLOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
 #endif
 			return error;
 		}
@@ -719,9 +719,9 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 		LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
 			error = SYSCTL_OUT(req, &xladdr, sizeof(struct xsctp_laddr));
 			if (error) {
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-				socket_unlock(inp->ip_inp.inp.inp_socket, 1);
-				lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+				SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
+				SCTP_UNLOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
 #endif
 				SCTP_INP_RUNLOCK(inp);
 				SCTP_INP_INFO_RUNLOCK();
@@ -774,9 +774,9 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 			SCTP_INP_INFO_RUNLOCK();
 			error = SYSCTL_OUT(req, &xstcb, sizeof(struct xsctp_tcb));
 			if (error) {
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-				socket_unlock(inp->ip_inp.inp.inp_socket, 1);
-				lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+				SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
+				SCTP_UNLOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
 #endif
 				atomic_add_int(&stcb->asoc.refcnt, -1);
 				return error;
@@ -786,9 +786,9 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 			LIST_FOREACH(laddr, &stcb->asoc.sctp_local_addr_list, sctp_nxt_addr) {
 				error = SYSCTL_OUT(req, &xladdr, sizeof(struct xsctp_laddr));
 				if (error) {
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-					socket_unlock(inp->ip_inp.inp.inp_socket, 1);
-					lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+					SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
+					SCTP_UNLOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
 #endif
 					SCTP_INP_RUNLOCK(inp);
 					SCTP_INP_INFO_RUNLOCK();
@@ -810,9 +810,9 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 				xraddr.RemAddrStartTime = net->start_time;
 				error = SYSCTL_OUT(req, &xraddr, sizeof(struct xsctp_raddr));
 				if (error) {
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-					socket_unlock(inp->ip_inp.inp.inp_socket, 1);
-					lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+					SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
+					SCTP_UNLOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
 #endif
 					atomic_add_int(&stcb->asoc.refcnt, -1);
 					return error;
@@ -822,14 +822,14 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 			SCTP_INP_INFO_RLOCK();
 			SCTP_INP_RLOCK(inp);
 		}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		socket_unlock(inp->ip_inp.inp.inp_socket, 1);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+		SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
 		SCTP_INP_DECR_REF(inp);
 		SCTP_INP_RUNLOCK(inp);
 	}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+	SCTP_UNLOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
 #endif
 	SCTP_INP_INFO_RUNLOCK();
 	
@@ -3126,16 +3126,16 @@ sctp_getopt(struct socket *so, int optname, void *optval, uint32_t *optsize,
 				break;
 			}
 			spcb = (struct sctp_pcbinfo *)optval;
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			if (!lck_rw_try_lock_shared(sctppcbinfo.ipi_ep_mtx)) {
-				socket_unlock(inp->ip_inp.inp.inp_socket, 0);
-				lck_rw_lock_shared(sctppcbinfo.ipi_ep_mtx);
-				socket_lock(inp->ip_inp.inp.inp_socket, 0);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+			if (!SCTP_TRYLOCK_SHARED(sctppcbinfo.ipi_ep_mtx)) {
+				SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 0);
+				SCTP_LOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
+				SCTP_SOCKET_LOCK(SCTP_INP_SO(inp), 0);
 			}
 #endif
 			sctp_fill_pcbinfo(spcb);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+			SCTP_UNLOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
 #endif
 			*optsize = sizeof(struct sctp_pcbinfo);
 		}
@@ -3606,7 +3606,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, uint32_t optsize,
 	struct sctp_tcb *stcb = NULL;
 	struct sctp_inpcb *inp;
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(SCTP_PER_SOCKET_LOCKING)
 	sctp_lock_assert(so);
 #endif
 	if (optval == NULL) {
@@ -4838,12 +4838,12 @@ SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
 				struct sctp_inpcb *lep;
 
 				((struct sockaddr_in *)addr_touse)->sin_port = inp->sctp_lport;
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-				socket_unlock(inp->ip_inp.inp.inp_socket, 0);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+				SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 0);
 #endif
 				lep = sctp_pcb_findep(addr_touse, 1, 0);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-				socket_lock(inp->ip_inp.inp.inp_socket, 0);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+				SCTP_SOCKET_LOCK(SCTP_INP_SO(inp), 0);
 #endif
 				if (lep != NULL) {
 					/*
