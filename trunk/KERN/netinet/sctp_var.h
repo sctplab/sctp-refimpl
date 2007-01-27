@@ -38,9 +38,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_var.h,v 1.4 2007/01/18 09:58:43 rrs Exp
 #ifndef _NETINET_SCTP_VAR_H_
 #define _NETINET_SCTP_VAR_H_
 
-#ifndef __OpenBSD__
-#include <sys/socketvar.h>
-#endif
+
 #include <netinet/sctp_uio.h>
 
 /* SCTP Kernel structures */
