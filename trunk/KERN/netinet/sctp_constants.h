@@ -38,10 +38,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.6 2007/01/18 09:58:42 r
 #ifndef __sctp_constants_h__
 #define __sctp_constants_h__
 
-#if defined(_KERNEL)
-#include <sys/kernel.h>
-#endif
-
 
 #define SCTP_VERSION_STRING "KAME-BSD 1.1"
 /* #define SCTP_AUDITING_ENABLED 1 used for debug/auditing */
@@ -919,20 +915,19 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.6 2007/01/18 09:58:42 r
 #define SCTP_DEF_SYSTEM_RESC_LIMIT 1000
 
 
-
 #define IN4_ISPRIVATE_ADDRESS(a) \
-   ((((u_char *)&(a)->s_addr)[0] == 10) || \
-    ((((u_char *)&(a)->s_addr)[0] == 172) && \
-     (((u_char *)&(a)->s_addr)[1] >= 16) && \
-     (((u_char *)&(a)->s_addr)[1] <= 32)) || \
-    ((((u_char *)&(a)->s_addr)[0] == 192) && \
-     (((u_char *)&(a)->s_addr)[1] == 168)))
+   ((((uint8_t *)&(a)->s_addr)[0] == 10) || \
+    ((((uint8_t *)&(a)->s_addr)[0] == 172) && \
+     (((uint8_t *)&(a)->s_addr)[1] >= 16) && \
+     (((uint8_t *)&(a)->s_addr)[1] <= 32)) || \
+    ((((uint8_t *)&(a)->s_addr)[0] == 192) && \
+     (((uint8_t *)&(a)->s_addr)[1] == 168)))
 
 #define IN4_ISLOOPBACK_ADDRESS(a) \
-    ((((u_char *)&(a)->s_addr)[0] == 127) && \
-     (((u_char *)&(a)->s_addr)[1] == 0) && \
-     (((u_char *)&(a)->s_addr)[2] == 0) && \
-     (((u_char *)&(a)->s_addr)[3] == 1))
+    ((((uint8_t *)&(a)->s_addr)[0] == 127) && \
+     (((uint8_t *)&(a)->s_addr)[1] == 0) && \
+     (((uint8_t *)&(a)->s_addr)[2] == 0) && \
+     (((uint8_t *)&(a)->s_addr)[3] == 1))
 
 
 #if defined(_KERNEL)

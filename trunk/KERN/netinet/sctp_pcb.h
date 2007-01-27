@@ -368,10 +368,10 @@ struct sctp_inpcb {
 #ifndef INP_IPV4
 #define INP_IPV4	0x2
 #endif
-	u_char inp_vflag;
-	u_char inp_ip_ttl;
-	u_char inp_ip_tos;
-	u_char inp_ip_resv;
+	uint8_t inp_vflag;
+	uint8_t inp_ip_ttl;
+	uint8_t inp_ip_tos;
+	uint8_t inp_ip_resv;
 #endif
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
 	struct mtx inp_mtx;

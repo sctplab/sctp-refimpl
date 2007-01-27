@@ -1118,7 +1118,7 @@ sctp6_disconnect(struct socket *so)
 	}
 	SCTP_INP_RLOCK(inp);
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) {
-		if (LIST_EMPTY(&inp->sctp_asoc_list)) {
+		if (SCTP_LIST_EMPTY(&inp->sctp_asoc_list)) {
 			/* No connection */
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);

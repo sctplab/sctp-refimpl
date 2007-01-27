@@ -118,6 +118,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.6 2007/01/18 09:58:43 rrs 
  *
  */
 #define USER_ADDR_NULL	(NULL)		/* FIX ME: temp */
+#define SCTP_LIST_EMPTY(list)	LIST_EMPTY(list)
 
 /*
  * general memory allocation

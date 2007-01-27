@@ -1163,7 +1163,7 @@ sctp_handle_addr_wq(void)
 		return;
 	}
 	LIST_REMOVE(wi, sctp_nxt_addr);
-	if (!LIST_EMPTY(&sctppcbinfo.addr_wq)) {
+	if (!SCTP_LIST_EMPTY(&sctppcbinfo.addr_wq)) {
 		sctp_timer_start(SCTP_TIMER_TYPE_ADDR_WQ,
 		    (struct sctp_inpcb *)NULL,
 		    (struct sctp_tcb *)NULL,
