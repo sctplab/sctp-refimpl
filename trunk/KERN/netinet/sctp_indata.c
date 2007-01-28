@@ -323,13 +323,12 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 	uint16_t stream_no;
 	int end = 0;
 	int cntDel;
-
-	cntDel = stream_no = 0;
 	struct sctp_queued_to_read *control, *ctl, *ctlat;
 
-	if (stcb && ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
-		     (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET))
-		    ) {
+	cntDel = stream_no = 0;
+	if (stcb &&
+	    ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
+	     (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET))) {
 		/* socket above is long gone */
 		asoc->fragmented_delivery_inprogress = 0;
 		chk = TAILQ_FIRST(&asoc->reasmqueue);
