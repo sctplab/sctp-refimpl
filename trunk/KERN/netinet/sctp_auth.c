@@ -905,7 +905,7 @@ sctp_hmac_init(uint16_t hmac_algo, sctp_hash_context_t *ctx)
 
 static void
 sctp_hmac_update(uint16_t hmac_algo, sctp_hash_context_t *ctx,
-    const uint8_t *text, uint32_t textlen)
+    uint8_t *text, uint32_t textlen)
 {
 	switch (hmac_algo) {
 	case SCTP_AUTH_HMAC_ID_SHA1:
@@ -982,7 +982,7 @@ sctp_hmac_final(uint16_t hmac_algo, sctp_hash_context_t *ctx,
  */
 uint32_t
 sctp_hmac(uint16_t hmac_algo, uint8_t *key, uint32_t keylen,
-    const uint8_t *text, uint32_t textlen, uint8_t *digest)
+    uint8_t *text, uint32_t textlen, uint8_t *digest)
 {
 	uint32_t digestlen;
 	uint32_t blocklen;
@@ -1119,7 +1119,7 @@ sctp_hmac_m(uint16_t hmac_algo, uint8_t *key, uint32_t keylen,
  */
 int
 sctp_verify_hmac(uint16_t hmac_algo, uint8_t *key, uint32_t keylen,
-    const uint8_t *text, uint32_t textlen,
+    uint8_t *text, uint32_t textlen,
     uint8_t *digest, uint32_t digestlen)
 {
 	uint32_t len;
@@ -1151,7 +1151,7 @@ sctp_verify_hmac(uint16_t hmac_algo, uint8_t *key, uint32_t keylen,
  * the keylen exceeds the HMAC block len).
  */
 uint32_t
-sctp_compute_hmac(uint16_t hmac_algo, sctp_key_t *key, const uint8_t *text,
+sctp_compute_hmac(uint16_t hmac_algo, sctp_key_t *key, uint8_t *text,
     uint32_t textlen, uint8_t *digest)
 {
 	uint32_t digestlen;
