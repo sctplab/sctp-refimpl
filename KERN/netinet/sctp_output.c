@@ -4210,7 +4210,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 		error = ECONNRESET;
 		goto out_now;
 	}
-	sp = (struct sctp_stream_queue_pending *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_strmoq);
+	sp = SCTP_ZONE_GET(sctppcbinfo.ipi_zone_strmoq, struct sctp_stream_queue_pending);
 	if(sp == NULL) {
 		error = ENOMEM;
 		goto out_now;
@@ -9306,7 +9306,7 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 		*errno = ECONNRESET;
 		goto out_now;
 	}
-	sp = (struct sctp_stream_queue_pending *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_strmoq);
+	sp = SCTP_ZONE_GET(sctppcbinfo.ipi_zone_strmoq, struct sctp_stream_queue_pending);
 	if(sp == NULL) {
 		*errno = ENOMEM;
 		goto out_now;
