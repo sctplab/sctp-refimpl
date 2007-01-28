@@ -1613,7 +1613,7 @@ sctp_inpcb_alloc(struct socket *so)
 	SCTP_LOCK_EXC(sctppcbinfo.ipi_ep_mtx);
 #endif
 	SCTP_INP_INFO_WLOCK();
-	inp = (struct sctp_inpcb *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_ep);
+	inp = SCTP_ZONE_GET(sctppcbinfo.ipi_zone_ep, struct sctp_inpcb);
 	if (inp == NULL) {
 		printf("Out of SCTP-INPCB structures - no resources\n");
 #if defined(SCTP_PER_SOCKET_LOCKING)
@@ -1903,8 +1903,7 @@ sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
 	if ((new_inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) == 0) {
 		/* Subset bound, so copy in the laddr list from the old_inp */
 		LIST_FOREACH(oladdr, &old_inp->sctp_addr_list, sctp_nxt_addr) {
-			laddr = (struct sctp_laddr *)SCTP_ZONE_GET(
-			    sctppcbinfo.ipi_zone_laddr);
+			laddr = SCTP_ZONE_GET(sctppcbinfo.ipi_zone_laddr, struct sctp_laddr);
 			if (laddr == NULL) {
 				/*
 				 * Gak, what can we do? This assoc is really
@@ -3173,7 +3172,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 		/* not supported family type */
 		return (-1);
 	}
-	net = (struct sctp_nets *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_net);
+	net = SCTP_ZONE_GET(sctppcbinfo.ipi_zone_net, struct sctp_nets);
 	if (net == NULL) {
 		return (-1);
 	}
@@ -3474,7 +3473,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 			return (NULL);
 		}
 	}
-	stcb = (struct sctp_tcb *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_asoc);
+	stcb = SCTP_ZONE_GET(sctppcbinfo.ipi_zone_asoc, struct sctp_tcb);
 	if (stcb == NULL) {
 		/* out of memory? */
 		*error = ENOMEM;
@@ -4654,7 +4653,7 @@ sctp_insert_laddr(struct sctpladdr *list, struct ifaddr *ifa)
 	s = splsoftnet();
 #endif
 
-	laddr = (struct sctp_laddr *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_laddr);
+	laddr = SCTP_ZONE_GET(sctppcbinfo.ipi_zone_laddr, struct sctp_laddr);
 	if (laddr == NULL) {
 		/* out of memory? */
 #if defined(__NetBSD__) || defined(__OpenBSD__)

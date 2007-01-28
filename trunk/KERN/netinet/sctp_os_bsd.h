@@ -162,11 +162,11 @@ typedef struct vm_zone *sctp_zone_t;
 
 /* SCTP_ZONE_GET: allocate element from the zone */
 #if __FreeBSD_version >= 500000
-#define SCTP_ZONE_GET(zone) \
-	uma_zalloc(zone, M_NOWAIT);
+#define SCTP_ZONE_GET(zone, type) \
+	(type *)uma_zalloc(zone, M_NOWAIT);
 #else
-#define SCTP_ZONE_GET(zone) \
-	zalloci(zone);
+#define SCTP_ZONE_GET(zone, type) \
+	(type *)zalloci(zone);
 #endif
 
 /* SCTP_ZONE_FREE: free element from the zone */

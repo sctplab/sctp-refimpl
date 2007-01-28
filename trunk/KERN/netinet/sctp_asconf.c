@@ -2840,7 +2840,7 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 {
 	struct sctp_laddr *wi;
 
-	wi = (struct sctp_laddr *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_laddr);
+	wi = SCTP_ZONE_GET(sctppcbinfo.ipi_zone_laddr, struct sctp_laddr);
 	if (wi == NULL) {
 		/*
 		 * Gak, what can we do? We have lost an address change can

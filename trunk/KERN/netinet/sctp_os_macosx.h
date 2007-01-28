@@ -171,8 +171,8 @@ extern zone_t kalloc_zone(vm_size_t);	/* XXX */
 	zone = (void *)kalloc_zone(size);
 
 /* SCTP_ZONE_GET: allocate element from the zone */
-#define SCTP_ZONE_GET(zone) \
-	zalloc(zone);
+#define SCTP_ZONE_GET(zone, type) \
+	(type *)zalloc(zone);
 
 /* SCTP_ZONE_FREE: free element from the zone */
 #define SCTP_ZONE_FREE(zone, element) \
