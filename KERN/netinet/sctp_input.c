@@ -2835,13 +2835,13 @@ static void
 sctp_clean_up_stream_reset(struct sctp_tcb *stcb)
 {
 	struct sctp_association *asoc;
-
-	asoc = &stcb->asoc;
 	struct sctp_tmit_chunk *chk = stcb->asoc.str_reset;
 
 	if (stcb->asoc.str_reset == NULL) {
 		return;
 	}
+	asoc = &stcb->asoc;
+
 	sctp_timer_stop(SCTP_TIMER_TYPE_STRRESET, stcb->sctp_ep, stcb, chk->whoTo, SCTP_FROM_SCTP_INPUT+SCTP_LOC_25);
 	TAILQ_REMOVE(&asoc->control_send_queue,
 	    chk,
@@ -3143,11 +3143,11 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_out_req
 	struct sctp_tmit_chunk *chk;
 	struct sctp_chunkhdr *ch;
 	struct sctp_paramhdr *ph;
+	int ret_code = 0;
+	int num_param = 0;
 
 	/* now it may be a reset or a reset-response */
 	chk_length = ntohs(sr_req->ch.chunk_length);
-	int ret_code = 0;
-	int num_param = 0;
 
 	/* setup for adding the response */
 	sctp_alloc_a_chunk(stcb, chk);
@@ -3182,7 +3182,6 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_out_req
 	ch->chunk_flags = 0;
 	ch->chunk_length = htons(chk->send_size);
 	SCTP_BUF_LEN(chk->data) = SCTP_SIZE32(chk->send_size);
-
 
 	ph = (struct sctp_paramhdr *)&sr_req->sr_req;
 	while ((size_t)chk_length >= sizeof(struct sctp_stream_reset_tsn_request)) {
@@ -4804,7 +4803,6 @@ sctp_input(i_pak, va_alist)
 	struct tdb_ident *tdbi;
 	struct tdb *tdb;
 	int error;
-
 #endif
 #endif
 
