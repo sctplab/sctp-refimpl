@@ -1415,13 +1415,13 @@ sctp_auth_get_cookie_params(struct sctp_tcb *stcb, struct mbuf *m,
 {
 	struct sctp_paramhdr *phdr, tmp_param;
 	uint16_t plen, ptype;
-	uint8_t random_store[128];
+	uint8_t random_store[SCTP_PARAM_BUFFER_SIZE];
 	struct sctp_auth_random *random = NULL;
 	uint16_t random_len = 0;
-	uint8_t hmacs_store[128];
+	uint8_t hmacs_store[SCTP_PARAM_BUFFER_SIZE];
 	struct sctp_auth_hmac_algo *hmacs = NULL;
 	uint16_t hmacs_len = 0;
-	uint8_t chunks_store[256];
+	uint8_t chunks_store[SCTP_PARAM_BUFFER_SIZE];
 	struct sctp_auth_chunk_list *chunks = NULL;
 	uint16_t num_chunks = 0;
 	sctp_key_t *new_key;
@@ -1849,7 +1849,7 @@ sctp_validate_init_auth_params(struct mbuf *m, int offset, int limit)
 		if (ptype == SCTP_SUPPORTED_CHUNK_EXT) {
 			/* A supported extension chunk */
 			struct sctp_supported_chunk_types_param *pr_supported;
-			uint8_t local_store[128];
+			uint8_t local_store[SCTP_PARAM_BUFFER_SIZE];
 			int num_ent, i;
 
 			phdr = sctp_get_next_param(m, offset,
@@ -1885,7 +1885,7 @@ sctp_validate_init_auth_params(struct mbuf *m, int offset, int limit)
 				return (-1);
 			}
 		} else if (ptype == SCTP_HMAC_LIST) {
-			uint8_t store[256];
+			uint8_t store[SCTP_PARAM_BUFFER_SIZE];
 			struct sctp_auth_hmac_algo *hmacs;
 			int num_hmacs;
 

@@ -2988,7 +2988,7 @@ sctp_arethere_unrecognized_parameters(struct mbuf *in_initpkt,
 	struct sctp_paramhdr *phdr, params;
 
 	struct mbuf *mat, *op_err;
-	char tempbuf[2048];
+	char tempbuf[SCTP_CHUNK_BUFFER_SIZE];
 	int at, limit, pad_needed;
 	uint16_t ptype, plen;
 	int err_at;

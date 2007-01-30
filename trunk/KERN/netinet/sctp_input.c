@@ -1534,7 +1534,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	int retval;
 	int error = 0;
 	uint32_t old_tag;
-	uint8_t chunk_buf[DEFAULT_CHUNK_BUFFER];
+	uint8_t chunk_buf[SCTP_CHUNK_BUFFER_SIZE];
 
 	/*
 	 * find and validate the INIT chunk in the cookie (peer's info) the
@@ -3543,7 +3543,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 	 * d-mtu-ceiling for now (2k) and that should hopefully work ...
 	 * until we get into jumbo grams and such..
 	 */
-	uint8_t chunk_buf[DEFAULT_CHUNK_BUFFER];
+	uint8_t chunk_buf[SCTP_CHUNK_BUFFER_SIZE];
 	struct sctp_tcb *locked_tcb = stcb;
 	int got_auth = 0;
 	uint32_t auth_offset = 0, auth_len = 0;

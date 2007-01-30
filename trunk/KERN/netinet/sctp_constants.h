@@ -691,8 +691,8 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.6 2007/01/18 09:58:42 r
 
 #define SCTP_DEFAULT_MAXSEGMENT 65535
 
-#define DEFAULT_CHUNK_BUFFER	2048
-#define DEFAULT_PARAM_BUFFER	512
+#define SCTP_CHUNK_BUFFER_SIZE	2048
+#define SCTP_PARAM_BUFFER_SIZE	512
 
 #define SCTP_DEFAULT_MINSEGMENT 512	/* MTU size ... if no mtu disc */
 #define SCTP_HOW_MANY_SECRETS	2	/* how many secrets I keep */

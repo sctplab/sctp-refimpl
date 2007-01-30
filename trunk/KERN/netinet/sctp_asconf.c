@@ -659,7 +659,7 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 	int error = 0;		/* did an error occur? */
 
 	/* asconf param buffer */
-	static uint8_t aparam_buf[DEFAULT_PARAM_BUFFER];
+	uint8_t aparam_buf[SCTP_PARAM_BUFFER_SIZE];
 
 	/* verify minimum length */
 	if (ntohs(cp->ch.chunk_length) < sizeof(struct sctp_asconf_chunk)) {
@@ -1416,7 +1416,7 @@ sctp_handle_asconf_ack(struct mbuf *m, int offset,
 	struct sctp_asconf_addr *ap;
 
 	/* asconf param buffer */
-	static uint8_t aparam_buf[DEFAULT_PARAM_BUFFER];
+	uint8_t aparam_buf[SCTP_PARAM_BUFFER_SIZE];
 
 	/* verify minimum length */
 	if (ntohs(cp->ch.chunk_length) < sizeof(struct sctp_asconf_ack_chunk)) {
