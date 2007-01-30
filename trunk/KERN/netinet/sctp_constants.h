@@ -953,14 +953,14 @@ do { \
 	} \
 } while (0)
 
-#if defined(__APPLE__)
+#if defined(__FreeBSD__)
 #define sctp_sowwakeup_locked(inp, so) \
 do { \
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_DONT_WAKE) { \
                 SOCKBUF_UNLOCK(&((so)->so_snd)); \
 		inp->sctp_flags |= SCTP_PCB_FLAGS_WAKEOUTPUT; \
 	} else { \
-		sowwakeup(so); \
+		sowwakeup_locked(so); \
 	} \
 } while (0)
 #else
@@ -970,7 +970,7 @@ do { \
                 SOCKBUF_UNLOCK(&((so)->so_snd)); \
 		inp->sctp_flags |= SCTP_PCB_FLAGS_WAKEOUTPUT; \
 	} else { \
-		sowwakeup_locked(so); \
+		sowwakeup(so); \
 	} \
 } while (0)
 #endif
@@ -984,18 +984,7 @@ do { \
 	} \
 } while (0)
 
-/* FIXME */
-#if defined(__APPLE__) || defined(__NetBSD__)
-#define sctp_sorwakeup_locked(inp, so) \
-do { \
-	if (inp->sctp_flags & SCTP_PCB_FLAGS_DONT_WAKE) { \
-		inp->sctp_flags |= SCTP_PCB_FLAGS_WAKEINPUT; \
-                SOCKBUF_UNLOCK(&((so)->so_rcv)); \
-	} else { \
-		sorwakeup(so); \
-	} \
-} while (0)
-#else
+#if defined(__FreeBSD__)
 #define sctp_sorwakeup_locked(inp, so) \
 do { \
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_DONT_WAKE) { \
@@ -1003,6 +992,17 @@ do { \
                 SOCKBUF_UNLOCK(&((so)->so_rcv)); \
 	} else { \
 		sorwakeup_locked(so); \
+	} \
+} while (0)
+#else
+/* FIXME */
+#define sctp_sorwakeup_locked(inp, so) \
+do { \
+	if (inp->sctp_flags & SCTP_PCB_FLAGS_DONT_WAKE) { \
+		inp->sctp_flags |= SCTP_PCB_FLAGS_WAKEINPUT; \
+                SOCKBUF_UNLOCK(&((so)->so_rcv)); \
+	} else { \
+		sorwakeup(so); \
 	} \
 } while (0)
 #endif
