@@ -558,7 +558,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.6 2007/01/18 09:58:42 r
 #define SCTP_ASOC_MAX_CHUNKS_ON_QUEUE 512
 
 #define MSEC_TO_TICKS(x) ((hz == 1000) ? x : (((x) * hz) / 1000))
-#define TICKS_TO_MSEC(x) ((hz == 1000) ? x : (((x) * 1000) / hz));
+#define TICKS_TO_MSEC(x) ((hz == 1000) ? x : (((x) * 1000) / hz))
 
 #define SEC_TO_TICKS(x) ((x) * hz)
 #define TICKS_TO_SEC(x) ((x) / hz)
