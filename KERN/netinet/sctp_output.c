@@ -2422,10 +2422,8 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 
 #ifdef NEW_STRUCT_ROUTE
 		struct route ip6route;
-
 #else
 		struct route_in6 ip6route;
-
 #endif
 		struct ifnet *ifp;
 		u_char flowTop;
@@ -3487,10 +3485,8 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 
 #ifdef NEW_STRUCT_ROUTE
 			struct route iproute6;
-
 #else
 			struct route_in6 iproute6;
-
 #endif
 			ip6 = mtod(init_pkt, struct ip6_hdr *);
 			sin6->sin6_family = AF_INET6;
@@ -5461,13 +5457,13 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	int asconf, cookie, no_out_cnt;
 	int bundle_at, ctl_cnt, no_data_chunks, cwnd_full_ind, eeor_mode;
 	unsigned int mtu, r_mtu, omtu, mx_mtu, to_out;
-	*num_out = 0;
 	struct sctp_nets *start_at, *old_startat = NULL, *send_start_at;
-
-	cwnd_full_ind = 0;
 	int tsns_sent = 0;
 	uint32_t auth_offset = 0;
 	struct sctp_auth_chunk *auth = NULL;
+
+	*num_out = 0;
+	cwnd_full_ind = 0;
 
 	if((asoc->state & SCTP_STATE_SHUTDOWN_PENDING) ||
 	   (asoc->state & SCTP_STATE_SHUTDOWN_RECEIVED) ||
@@ -8061,10 +8057,8 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh)
 	} else if (ip6_out != NULL) {
 #ifdef NEW_STRUCT_ROUTE
 		struct route ro;
-
 #else
 		struct route_in6 ro;
-
 #endif
 
 		bzero(&ro, sizeof(ro));
@@ -8944,10 +8938,8 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 	} else if (ip6_out != NULL) {
 #ifdef NEW_STRUCT_ROUTE
 		struct route ro;
-
 #else
 		struct route_in6 ro;
-
 #endif
 
 		/* zap the stack pointer to the route */
@@ -8993,7 +8985,6 @@ sctp_send_operr_to(struct mbuf *m, int iphlen,
 
 #ifdef SCTP_DEBUG
 	struct sockaddr_in6 lsa6, fsa6;
-
 #endif
 	uint32_t val;
 	struct mbuf *at;
@@ -9082,10 +9073,8 @@ sctp_send_operr_to(struct mbuf *m, int iphlen,
 		/* V6 */
 #ifdef NEW_STRUCT_ROUTE
 		struct route ro;
-
 #else
 		struct route_in6 ro;
-
 #endif
 		struct ip6_hdr *out6, *in6;
 
@@ -9470,6 +9459,7 @@ sctp_lower_sosend(struct socket *so,
 	int got_all_of_the_send = 0;
 	int hold_tcblock = 0;
 	int non_blocking = 0;
+
 	error = 0;
 	net = NULL;
 	stcb = NULL;
