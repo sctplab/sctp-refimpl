@@ -68,6 +68,7 @@ struct sctp_epinfo sctppcbinfo;
 int
 SCTP6_ARE_ADDR_EQUAL(struct in6_addr *a, struct in6_addr *b)
 {
+#ifdef SCTP_EMBEDDED_V6_SCOPE
 	struct in6_addr tmp_a, tmp_b;
 
 	/* use a copy of a and b */
@@ -76,6 +77,10 @@ SCTP6_ARE_ADDR_EQUAL(struct in6_addr *a, struct in6_addr *b)
 	in6_clearscope(&tmp_a);
 	in6_clearscope(&tmp_b);
 	return (IN6_ARE_ADDR_EQUAL(&tmp_a, &tmp_b));
+#else
+	/* FIX ME: we just #define this */
+	return (IN6_ARE_ADDR_EQUAL(a, b));
+#endif /* SCTP_EMBEDDED_V6_SCOPE */
 }
 
 
@@ -1313,6 +1318,7 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 		from6->sin6_len = sizeof(struct sockaddr_in6);
 		from6->sin6_addr = ip6->ip6_src;
 		from6->sin6_port = sh->src_port;
+#ifdef SCTP_EMBEDDED_V6_SCOPE
 		/* Get the scopes in properly to the sin6 addr's */
 #ifdef SCTP_KAME
 		/* we probably don't need these operations */
@@ -1325,7 +1331,8 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 #else
 		(void)in6_embedscope(&from6->sin6_addr, from6);
 #endif
-#endif				/* SCTP_KAME */
+#endif /* SCTP_KAME */
+#endif /* SCTP_EMBEDDED_V6_SCOPE */
 	} else {
 		/* Currently not supported. */
 		return (NULL);
@@ -1362,6 +1369,7 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 		to6->sin6_len = sizeof(struct sockaddr_in6);
 		to6->sin6_addr = ip6->ip6_dst;
 		to6->sin6_port = sh->dest_port;
+#ifdef SCTP_EMBEDDED_V6_SCOPE
 		/* Get the scopes in properly to the sin6 addr's */
 #ifdef SCTP_KAME
 		/* we probably don't need these operations */
@@ -1374,7 +1382,8 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 #else
 		(void)in6_embedscope(&to6->sin6_addr, to6);
 #endif
-#endif				/* SCTP_KAME */
+#endif /* SCTP_KAME */
+#endif /* SCTP_EMBEDDED_V6_SCOPE */
 	}
 	find_tcp_pool = 0;
 	/*
@@ -2065,12 +2074,12 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 			lport = sin6->sin6_port;
 			if (!IN6_IS_ADDR_UNSPECIFIED(&sin6->sin6_addr)) {
 				bindall = 0;
+#ifdef SCTP_EMBEDDED_V6_SCOPE
 				/* KAME hack: embed scopeid */
-#ifdef SCTP_KAME
+#if defined(SCTP_KAME)
 				if (sa6_embedscope(sin6, ip6_use_defzone) != 0)
 					return (EINVAL);
-#else
-#if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
+#elif defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
 				if (in6_embedscope(&sin6->sin6_addr, sin6,
 				    ip_inp, NULL) != 0)
 					return (EINVAL);
@@ -2083,12 +2092,12 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 					return (EINVAL);
 				}
 #endif
-#endif				/* SCTP_KAME */
+#endif /* SCTP_EMBEDDED_V6_SCOPE */
 			}
 #ifndef SCOPEDROUTING
 			/* this must be cleared for ifa_ifwithaddr() */
 			sin6->sin6_scope_id = 0;
-#endif				/* SCOPEDROUTING */
+#endif /* SCOPEDROUTING */
 		} else {
 			return (EAFNOSUPPORT);
 		}
@@ -3216,6 +3225,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	SCTP_OS_TIMER_INIT(&net->pmtu_timer.timer);
 
 	/* Now generate a route for this guy */
+#ifdef SCTP_EMBEDDED_V6_SCOPE
 	/* KAME hack: embed scopeid */
 	if (newaddr->sa_family == AF_INET6) {
 		struct sockaddr_in6 *sin6;
@@ -3224,22 +3234,22 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
 		(void)in6_embedscope(&sin6->sin6_addr, sin6,
 		    &stcb->sctp_ep->ip_inp.inp, NULL);
-#else
-#ifdef SCTP_KAME
+#elif defined(SCTP_KAME)
 		(void)sa6_embedscope(sin6, ip6_use_defzone);
 #else
 		(void)in6_embedscope(&sin6->sin6_addr, sin6);
-#endif				/* SCTP_KAME */
 #endif
 #ifndef SCOPEDROUTING
 		sin6->sin6_scope_id = 0;
 #endif
 	}
+#endif /* SCTP_EMBEDDED_V6_SCOPE */
 #if defined(__FreeBSD__) || defined(__APPLE__)
 	rtalloc_ign((struct route *)&net->ro, 0UL);
 #else
 	rtalloc((struct route *)&net->ro);
 #endif
+#ifdef SCTP_EMBEDDED_V6_SCOPE
 	if (newaddr->sa_family == AF_INET6) {
 		struct sockaddr_in6 *sin6;
 
@@ -3248,8 +3258,9 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 		(void)sa6_recoverscope(sin6);
 #else
 		(void)in6_recoverscope(sin6, &sin6->sin6_addr, NULL);
-#endif				/* SCTP_KAME */
+#endif /* SCTP_KAME */
 	}
+#endif /* SCTP_EMBEDDED_V6_SCOPE */
 	if ((net->ro.ro_rt) &&
 	    (net->ro.ro_rt->rt_ifp)) {
 		net->mtu = net->ro.ro_rt->rt_ifp->if_mtu;

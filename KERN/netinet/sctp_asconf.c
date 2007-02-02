@@ -917,6 +917,7 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 			from6->sin6_len = sizeof(struct sockaddr_in6);
 			from6->sin6_addr = ip6->ip6_src;
 			from6->sin6_port = sh->src_port;
+#ifdef SCTP_EMBEDDED_V6_SCOPE
 			/* Get the scopes in properly to the sin6 addr's */
 #ifdef SCTP_KAME
 			/* we probably don't need these operations */
@@ -928,8 +929,9 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 			(void)in6_embedscope(&from6->sin6_addr, from6, NULL, NULL);
 #else
 			(void)in6_embedscope(&from6->sin6_addr, from6);
-#endif				/* SCTP_BASE_FREEBSD || __APPLE__  */
-#endif				/* SCTP_KAME */
+#endif
+#endif /* SCTP_KAME */
+#endif /* SCTP_EMBEDDED_V6_SCOPE */
 		} else {
 			/* unknown address type */
 			from = NULL;
@@ -2638,6 +2640,7 @@ sctp_addr_in_initack(struct sctp_tcb *stcb, struct mbuf *m, uint32_t offset,
 				return (0);
 			}
 			sin6 = (struct sockaddr_in6 *)sa;
+#ifdef SCTP_EMBEDDED_V6_SCOPE
 			if (IN6_IS_SCOPE_LINKLOCAL(&sin6->sin6_addr)) {
 				/* create a copy and clear scope */
 				memcpy(&sin6_tmp, sin6,
@@ -2645,6 +2648,7 @@ sctp_addr_in_initack(struct sctp_tcb *stcb, struct mbuf *m, uint32_t offset,
 				sin6 = &sin6_tmp;
 				in6_clearscope(&sin6->sin6_addr);
 			}
+#endif /* SCTP_EMBEDDED_V6_SCOPE */
 			if (memcmp(&sin6->sin6_addr, a6p->addr,
 			    sizeof(struct in6_addr)) == 0) {
 				/* found it */
@@ -2654,7 +2658,7 @@ sctp_addr_in_initack(struct sctp_tcb *stcb, struct mbuf *m, uint32_t offset,
 #endif				/* INET6 */
 
 			if (ptype == SCTP_IPV4_ADDRESS &&
-		    sa->sa_family == AF_INET) {
+			    sa->sa_family == AF_INET) {
 			/* get the entire IPv4 address param */
 			a4p = (struct sctp_ipv4addr_param *)sctp_m_getptr(m,
 			    offset, sizeof(struct sctp_ipv4addr_param),

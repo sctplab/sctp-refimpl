@@ -367,6 +367,7 @@ sctp_find_alternate_net(struct sctp_tcb *stcb,
 		}
 		if (alt->ro.ro_rt == NULL) {
 #ifndef SCOPEDROUTING
+#ifdef SCTP_EMBEDDED_V6_SCOPE
 			struct sockaddr_in6 *sin6;
 
 			sin6 = (struct sockaddr_in6 *)&alt->ro._l_addr;
@@ -374,14 +375,13 @@ sctp_find_alternate_net(struct sctp_tcb *stcb,
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
 				(void)in6_embedscope(&sin6->sin6_addr, sin6,
 				    NULL, NULL);
-#else
-#ifdef SCTP_KAME
+#elif defined(SCTP_KAME)
 				(void)sa6_embedscope(sin6, ip6_use_defzone);
 #else
 				(void)in6_embedscope(&sin6->sin6_addr, sin6);
-#endif				/* SCTP_KAME */
 #endif
 			}
+#endif /* SCTP_EMBEDDED_V6_SCOPE */
 #endif
 #if defined(__FreeBSD__) || defined(__APPLE__)
 			rtalloc_ign((struct route *)&alt->ro, 0UL);
@@ -389,14 +389,16 @@ sctp_find_alternate_net(struct sctp_tcb *stcb,
 			rtalloc((struct route *)&alt->ro);
 #endif
 #ifndef SCOPEDROUTING
+#ifdef SCTP_EMBEDDED_V6_SCOPE
 			if (sin6->sin6_family == AF_INET6) {
 #ifdef SCTP_KAME
 				(void)sa6_recoverscope(sin6);
 #else
 				(void)in6_recoverscope(sin6, &sin6->sin6_addr,
 				    NULL);
-#endif				/* SCTP_KAME */
+#endif /* SCTP_KAME */
 			}
+#endif /* SCTP_EMBEDDED_V6_SCOPE */
 #endif
 			alt->src_addr_selected = 0;
 		}
