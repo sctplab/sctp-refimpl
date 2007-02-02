@@ -1837,7 +1837,6 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		sin->sin_port = sh->dest_port;
 		sin->sin_addr.s_addr = iph->ip_dst.s_addr;
 		size_of_pkt = SCTP_GET_IPV4_LENGTH(iph);
-
 	} else if (iph->ip_v == (IPV6_VERSION >> 4)) {
 		/* its IPv6 */
 		struct ip6_hdr *ip6;
@@ -1850,7 +1849,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		ip6 = mtod(m, struct ip6_hdr *);
 		sin6->sin6_port = sh->dest_port;
 		sin6->sin6_addr = ip6->ip6_dst;
-		size_of_pkt = SCTP_GET_IPV6_LENGTH(ip6);
+		size_of_pkt = SCTP_GET_IPV6_LENGTH(ip6) + iphlen;
 	} else {
 		return (NULL);
 	}
