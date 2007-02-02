@@ -1651,6 +1651,7 @@ sctp6_getaddr(struct socket *so, struct mbuf *nam)
 	}
 	SCTP_INP_RUNLOCK(inp);
 	/* Scoping things for v6 */
+#ifdef SCTP_EMBEDDED_V6_SCOPE
 #ifdef SCTP_KAME
 	if ((error = sa6_recoverscope(sin6)) != 0) {
 		SCTP_FREE_SONAME(sin6);
@@ -1662,7 +1663,8 @@ sctp6_getaddr(struct socket *so, struct mbuf *nam)
 		in6_recoverscope(sin6, &sin6->sin6_addr, NULL);
 	else
 		sin6->sin6_scope_id = 0;	/* XXX */
-#endif				/* SCTP_KAME */
+#endif /* SCTP_KAME */
+#endif /* SCTP_EMBEDDED_V6_SCOPE */
 #if defined(__FreeBSD__) || defined(__APPLE__)
 	(*addr) = (struct sockaddr *)sin6;
 #endif
@@ -1746,12 +1748,14 @@ sctp6_peeraddr(struct socket *so, struct mbuf *nam)
 #endif
 		return ENOENT;
 	}
+#ifdef SCTP_EMBEDDED_V6_SCOPE
 #ifdef SCTP_KAME
 	if ((error = sa6_recoverscope(sin6)) != 0)
 		return (error);
 #else
 	in6_recoverscope(sin6, &sin6->sin6_addr, NULL);
-#endif				/* SCTP_KAME */
+#endif /* SCTP_KAME */
+#endif /* SCTP_EMBEDDED_V6_SCOPE */
 #if defined(__FreeBSD__) || defined(__APPLE__)
 	*addr = (struct sockaddr *)sin6;
 #endif

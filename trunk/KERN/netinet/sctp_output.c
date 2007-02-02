@@ -2462,17 +2462,17 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		tmp = *sin6;
 		sin6 = &tmp;
 
+#ifdef SCTP_EMBEDDED_V6_SCOPE
 		/* KAME hack: embed scopeid */
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
 		if (in6_embedscope(&sin6->sin6_addr, sin6, NULL, NULL) != 0)
-#else
-#ifdef SCTP_KAME
+#elif defined(SCTP_KAME)
 		if (sa6_embedscope(sin6, ip6_use_defzone) != 0)
 #else
 		if (in6_embedscope(&sin6->sin6_addr, sin6) != 0)
-#endif				/* SCTP_KAME */
 #endif
 			return (EINVAL);
+#endif /* SCTP_EMBEDDED_V6_SCOPE */
 		if (net == NULL) {
 			memset(&ip6route, 0, sizeof(ip6route));
 			ro = (struct route *)&ip6route;
@@ -2562,6 +2562,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			return (EHOSTUNREACH);
 		}
 #ifndef SCOPEDROUTING
+#ifdef SCTP_EMBEDDED_V6_SCOPE
 		/*
 		 * XXX: sa6 may not have a valid sin6_scope_id in the
 		 * non-SCOPEDROUTING case.
@@ -2582,7 +2583,8 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		lsa6_storage.sin6_addr = lsa6->sin6_addr;
 		lsa6_storage.sin6_port = inp->sctp_lport;
 		lsa6 = &lsa6_storage;
-#endif				/* SCOPEDROUTING */
+#endif /* SCTP_EMBEDDED_V6_SCOPE */
+#endif /* SCOPEDROUTING */
 		ip6h->ip6_src = lsa6->sin6_addr;
 
 		/*
@@ -3525,24 +3527,26 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				 */
 				cnt_inits_to = 1;
 				/* pull out the scope_id from incoming pkt */
+#ifdef SCTP_EMBEDDED_V6_SCOPE
 #ifndef SCTP_KAME
 				(void)in6_recoverscope(sin6, &ip6->ip6_src,
 						       SCTP_BUF_RECVIF(init_pkt));
 #else
 				/* FIX ME: does this have scope from rcvif? */
 				(void)sa6_recoverscope(sin6);
-#endif				/* not SCTP_KAME */
+#endif /* not SCTP_KAME */
 
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
 				in6_embedscope(&sin6->sin6_addr, sin6, NULL,
 					       NULL);
-#else
-#ifdef SCTP_KAME
+#elif defined(SCTP_KAME)
 				sa6_embedscope(sin6, ip6_use_defzone);
 #else
 				in6_embedscope(&sin6->sin6_addr, sin6);
-#endif				/* SCTP_KAME */
 #endif
+#else
+
+#endif /* SCTP_EMBEDDED_V6_SCOPE */
 				stc.scope_id = sin6->sin6_scope_id;
 			} else if (IN6_IS_ADDR_SITELOCAL(&sin6->sin6_addr)) {
 				/*
