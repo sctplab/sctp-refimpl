@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.26 2007-01-26 21:46:01 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.27 2007-02-02 19:33:43 lei Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -736,12 +736,6 @@ create_SCTP_adaptor(distributor *o,uint16_t port, int model, int rwnd , int swnd
       bindsa_len = sizeof(struct sockaddr_in6);
       inAddr6.sin6_scope_id = scope_id;
     }
-    if(bind(r->fd,(struct sockaddr *)&inAddr6, bindsa_len) < 0){
-	    printf("bind failed err:%d\n",errno);
-	    close(r->fd);
-	    free(r);
-	    return(NULL);
-    }
   } else {
     if (v4only) {
       struct sockaddr_in *sin = (struct sockaddr_in *)&inAddr6;
@@ -804,14 +798,15 @@ create_SCTP_adaptor(distributor *o,uint16_t port, int model, int rwnd , int swnd
   else
     printf("rcv buffer is %d\n",optval);
 
-  if(port){
-    if(port != ntohs(myAddr6.sin6_port)){
-      printf("Can't get my port:%d got %d\n",port,ntohs(myAddr6.sin6_port));
-      close(r->fd);
-      free(r);
-      return(NULL);
+  if (port) {
+    if(bind(r->fd,(struct sockaddr *)&inAddr6, bindsa_len) < 0){
+	    printf("bind failed err:%d\n",errno);
+	    close(r->fd);
+	    free(r);
+	    return(NULL);
     }
   }
+
   if(model & SCTP_UDP_TYPE){
     printf("Calling listen for one-to-many model\n");
     listen(r->fd,1);
@@ -830,6 +825,14 @@ create_SCTP_adaptor(distributor *o,uint16_t port, int model, int rwnd , int swnd
     free(r);
     return(NULL);
   }	
+  if(port){
+    if(port != ntohs(myAddr6.sin6_port)){
+      printf("Can't get my port:%d got %d\n",port,ntohs(myAddr6.sin6_port));
+      close(r->fd);
+      free(r);
+      return(NULL);
+    }
+  }
   dist_addFd(o,r->fd,sctpFdInput,POLLIN,(void *)r);
   object_in = r;
   return(r);
