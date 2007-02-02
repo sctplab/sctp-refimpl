@@ -1534,7 +1534,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	int retval;
 	int error = 0;
 	uint32_t old_tag;
-	uint8_t chunk_buf[SCTP_CHUNK_BUFFER_SIZE];
+	uint8_t auth_chunk_buf[SCTP_PARAM_BUFFER_SIZE];
 
 	/*
 	 * find and validate the INIT chunk in the cookie (peer's info) the
@@ -1672,7 +1672,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		struct sctp_auth_chunk *auth;
 
 		auth = (struct sctp_auth_chunk *)
-		    sctp_m_getptr(m, auth_offset, auth_len, chunk_buf);
+		    sctp_m_getptr(m, auth_offset, auth_len, auth_chunk_buf);
 		if (sctp_handle_auth(stcb, auth, m, auth_offset)) {
 			/* auth HMAC failed, dump the assoc and packet */
 #ifdef SCTP_DEBUG
