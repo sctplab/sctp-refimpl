@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.81 2007-01-21 14:53:27 tuexen Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.82 2007-02-02 20:18:07 tuexen Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -1865,12 +1865,10 @@ cmd_setdebug(char *argv[], int argc)
 {
 #if defined(__BSD_SCTP_STACK__)
   uint32_t num,newlevel;
-  socklen_t sz;
+  size_t sz;
 
   sz = sizeof(uint32_t);
-  if(getsockopt(adap->fd,IPPROTO_SCTP,
-		SCTP_SET_DEBUG_LEVEL,
-		&num, &sz) != 0){
+  if(sysctlbyname("net.inet.sctp.debug", &num, &sz, NULL, 0) < 0) {
     printf("Sorry, Kernel debug levels not supported error:%d\n",errno);
     return(0);
   }
@@ -2049,10 +2047,8 @@ cmd_setdebug(char *argv[], int argc)
       num = newlevel;
       printf("Setting to level 0x%x\n",num);
     }
-    if(setsockopt(adap->fd,IPPROTO_SCTP,
-		  SCTP_SET_DEBUG_LEVEL,
-		  &num, sizeof(num)) != 0){
-      printf("Set fails error %d\n",errno);
+    if(sysctlbyname("net.inet.sctp.debug", NULL, NULL, &num, sizeof(num)) < 0) {
+       printf("Set fails error %d\n",errno);
     }else{
       printf("Set of new level suceeds\n");
     }
