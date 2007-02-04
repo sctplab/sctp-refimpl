@@ -86,6 +86,12 @@ struct sctp_initmsg {
  * when enabled which is 48 bytes.
  */
 
+/*
+ * The assoc up needs a verfid
+ * all sendrcvinfo's need a verfid for SENDING only.
+ */
+
+
 #define SCTP_ALIGN_RESV_PAD 96
 
 struct sctp_sndrcvinfo {

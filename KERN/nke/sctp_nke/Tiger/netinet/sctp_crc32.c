@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001-2006, Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2001-2007, Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -36,12 +36,7 @@
 __FBSDID("$FreeBSD: src/sys/netinet/sctp_crc32.c,v 1.5 2007/01/15 15:12:09 rrs Exp $");
 #endif
 
-#ifdef __APPLE__
-#include <sctp.h>
-#elif !defined(__OpenBSD__)
-#include "opt_sctp.h"
-#endif
-#include <sys/param.h>
+#include <netinet/sctp_os.h>
 #include <netinet/sctp_crc32.h>
 
 #ifndef SCTP_USE_ADLER32
@@ -669,8 +664,8 @@ uint32_t sctp_crc_c[256] = {
 
 #define SCTP_CRC32C(c,d) (c=(c>>8)^sctp_crc_c[(c^(d))&0xFF])
 
-u_int32_t
-old_update_crc32(u_int32_t crc32,
+uint32_t
+old_update_crc32(uint32_t crc32,
 		 unsigned char *buffer,
 		 unsigned int length)
 {

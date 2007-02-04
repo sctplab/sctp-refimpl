@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001-2006, Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2001-2007, Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -49,7 +49,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_peeloff.c,v 1.3 2007/01/18 09:58:43 rrs
 extern uint32_t sctp_debug_on;
 #endif				/* SCTP_DEBUG */
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 #define APPLE_FILE_NO 5
 #endif
 
@@ -146,11 +146,11 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 		*error = ENOMEM;
 		SCTP_TCB_UNLOCK(stcb);
 		return (NULL);
-#ifndef SCTP_APPLE_FINE_GRAINED_LOCKING
+#ifndef SCTP_PER_SOCKET_LOCKING
 	}
 #else
 	} else {
-		socket_lock(newso, 1);
+		SCTP_SOCKET_LOCK(newso, 1);
 	}
 #endif
 	n_inp = (struct sctp_inpcb *)newso->so_pcb;

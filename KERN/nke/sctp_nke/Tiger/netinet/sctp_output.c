@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001-2006, Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2001-2007, Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -56,7 +56,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.10 2007/01/18 09:58:43 rrs
 extern uint32_t sctp_debug_on;
 #endif
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 #define APPLE_FILE_NO 3
 #endif
 
@@ -2422,10 +2422,8 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 
 #ifdef NEW_STRUCT_ROUTE
 		struct route ip6route;
-
 #else
 		struct route_in6 ip6route;
-
 #endif
 		struct ifnet *ifp;
 		u_char flowTop;
@@ -2464,17 +2462,17 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		tmp = *sin6;
 		sin6 = &tmp;
 
+#ifdef SCTP_EMBEDDED_V6_SCOPE
 		/* KAME hack: embed scopeid */
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
 		if (in6_embedscope(&sin6->sin6_addr, sin6, NULL, NULL) != 0)
-#else
-#ifdef SCTP_KAME
+#elif defined(SCTP_KAME)
 		if (sa6_embedscope(sin6, ip6_use_defzone) != 0)
 #else
 		if (in6_embedscope(&sin6->sin6_addr, sin6) != 0)
-#endif				/* SCTP_KAME */
 #endif
 			return (EINVAL);
+#endif /* SCTP_EMBEDDED_V6_SCOPE */
 		if (net == NULL) {
 			memset(&ip6route, 0, sizeof(ip6route));
 			ro = (struct route *)&ip6route;
@@ -2564,6 +2562,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			return (EHOSTUNREACH);
 		}
 #ifndef SCOPEDROUTING
+#ifdef SCTP_EMBEDDED_V6_SCOPE
 		/*
 		 * XXX: sa6 may not have a valid sin6_scope_id in the
 		 * non-SCOPEDROUTING case.
@@ -2584,7 +2583,8 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		lsa6_storage.sin6_addr = lsa6->sin6_addr;
 		lsa6_storage.sin6_port = inp->sctp_lport;
 		lsa6 = &lsa6_storage;
-#endif				/* SCOPEDROUTING */
+#endif /* SCTP_EMBEDDED_V6_SCOPE */
+#endif /* SCOPEDROUTING */
 		ip6h->ip6_src = lsa6->sin6_addr;
 
 		/*
@@ -2988,7 +2988,7 @@ sctp_arethere_unrecognized_parameters(struct mbuf *in_initpkt,
 	struct sctp_paramhdr *phdr, params;
 
 	struct mbuf *mat, *op_err;
-	char tempbuf[2048];
+	char tempbuf[SCTP_CHUNK_BUFFER_SIZE];
 	int at, limit, pad_needed;
 	uint16_t ptype, plen;
 	int err_at;
@@ -3487,10 +3487,8 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 
 #ifdef NEW_STRUCT_ROUTE
 			struct route iproute6;
-
 #else
 			struct route_in6 iproute6;
-
 #endif
 			ip6 = mtod(init_pkt, struct ip6_hdr *);
 			sin6->sin6_family = AF_INET6;
@@ -3529,24 +3527,26 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				 */
 				cnt_inits_to = 1;
 				/* pull out the scope_id from incoming pkt */
+#ifdef SCTP_EMBEDDED_V6_SCOPE
 #ifndef SCTP_KAME
 				(void)in6_recoverscope(sin6, &ip6->ip6_src,
 						       SCTP_BUF_RECVIF(init_pkt));
 #else
 				/* FIX ME: does this have scope from rcvif? */
 				(void)sa6_recoverscope(sin6);
-#endif				/* not SCTP_KAME */
+#endif /* not SCTP_KAME */
 
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
 				in6_embedscope(&sin6->sin6_addr, sin6, NULL,
 					       NULL);
-#else
-#ifdef SCTP_KAME
+#elif defined(SCTP_KAME)
 				sa6_embedscope(sin6, ip6_use_defzone);
 #else
 				in6_embedscope(&sin6->sin6_addr, sin6);
-#endif				/* SCTP_KAME */
 #endif
+#else
+
+#endif /* SCTP_EMBEDDED_V6_SCOPE */
 				stc.scope_id = sin6->sin6_scope_id;
 			} else if (IN6_IS_ADDR_SITELOCAL(&sin6->sin6_addr)) {
 				/*
@@ -4210,7 +4210,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 		error = ECONNRESET;
 		goto out_now;
 	}
-	sp = (struct sctp_stream_queue_pending *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_strmoq);
+	sp = SCTP_ZONE_GET(sctppcbinfo.ipi_zone_strmoq, struct sctp_stream_queue_pending);
 	if(sp == NULL) {
 		error = ENOMEM;
 		goto out_now;
@@ -4436,8 +4436,8 @@ sctp_sendall_iterator(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
 	int added_control=0;
 	int un_sent, do_chunk_output=1;
 	struct sctp_association *asoc;
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	sctp_lock_assert(inp->ip_inp.inp.inp_socket);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+	sctp_lock_assert(SCTP_INP_SO(inp));
 #endif
 	ca = (struct sctp_copy_all *)ptr;
 	if (ca->m == NULL) {
@@ -4685,12 +4685,12 @@ sctp_sendall(struct sctp_inpcb *inp, struct uio *uio, struct mbuf *m,
 	/* get length and mbuf chain */
 	if (uio) {
 		ca->sndlen = uio->uio_resid;
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		socket_unlock(inp->ip_inp.inp.inp_socket, 0);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+		SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 0);
 #endif
 		ca->m = sctp_copy_out_all(uio, ca->sndlen);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		socket_lock(inp->ip_inp.inp.inp_socket, 0);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+		SCTP_SOCKET_LOCK(SCTP_INP_SO(inp), 0);
 #endif
 		if (ca->m == NULL) {
 			SCTP_FREE(ca);
@@ -5188,6 +5188,17 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	 * Put the rest of the things in place now. Size was done
 	 * earlier in previous loop prior to padding.
 	 */
+
+#ifdef SCTP_ASOCLOG_OF_TSNS
+	asoc->out_tsnlog[asoc->tsn_out_at].tsn = chk->rec.data.TSN_seq;
+	asoc->out_tsnlog[asoc->tsn_out_at].strm = chk->rec.data.stream_number;
+	asoc->out_tsnlog[asoc->tsn_out_at].seq = chk->rec.data.stream_seq;
+	asoc->tsn_out_at++;
+	if(asoc->tsn_out_at >= SCTP_TSN_LOG_SIZE) {
+		asoc->tsn_out_at = 0;
+	}
+#endif
+
 	dchkh->ch.chunk_type = SCTP_DATA;
 	dchkh->ch.chunk_flags = chk->rec.data.rcv_flags;
 	dchkh->dp.tsn = htonl(chk->rec.data.TSN_seq);
@@ -5450,13 +5461,13 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	int asconf, cookie, no_out_cnt;
 	int bundle_at, ctl_cnt, no_data_chunks, cwnd_full_ind, eeor_mode;
 	unsigned int mtu, r_mtu, omtu, mx_mtu, to_out;
-	*num_out = 0;
 	struct sctp_nets *start_at, *old_startat = NULL, *send_start_at;
-
-	cwnd_full_ind = 0;
 	int tsns_sent = 0;
 	uint32_t auth_offset = 0;
 	struct sctp_auth_chunk *auth = NULL;
+
+	*num_out = 0;
+	cwnd_full_ind = 0;
 
 	if((asoc->state & SCTP_STATE_SHUTDOWN_PENDING) ||
 	   (asoc->state & SCTP_STATE_SHUTDOWN_RECEIVED) ||
@@ -5475,8 +5486,8 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	sctp_audit_log(0xC2, 2);
 #endif
 	SCTP_TCB_LOCK_ASSERT(stcb);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	sctp_lock_assert(inp->ip_inp.inp.inp_socket);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+	sctp_lock_assert(SCTP_INP_SO(inp));
 #endif
 	hbflag = 0;
 	if ((control_only) || (asoc->stream_reset_outstanding))
@@ -7156,8 +7167,8 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 		sctp_send_sack(stcb);
 		SCTP_OS_TIMER_STOP(&stcb->asoc.dack_timer.timer);
 	}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	sctp_lock_assert(inp->ip_inp.inp.inp_socket);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+	sctp_lock_assert(SCTP_INP_SO(inp));
 #endif
 	while (asoc->sent_queue_retran_cnt) {
 		/*
@@ -7586,10 +7597,10 @@ sctp_send_sack(struct sctp_tcb *stcb)
 	int num_dups = 0;
 	int space_req;
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(SCTP_PER_SOCKET_LOCKING)
 	if (stcb ==NULL)
 		panic("sctp_send_sack");
-	sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
+	sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
 #endif
 	
 	a_chk = NULL;
@@ -8050,10 +8061,8 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh)
 	} else if (ip6_out != NULL) {
 #ifdef NEW_STRUCT_ROUTE
 		struct route ro;
-
 #else
 		struct route_in6 ro;
-
 #endif
 
 		bzero(&ro, sizeof(ro));
@@ -8933,10 +8942,8 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 	} else if (ip6_out != NULL) {
 #ifdef NEW_STRUCT_ROUTE
 		struct route ro;
-
 #else
 		struct route_in6 ro;
-
 #endif
 
 		/* zap the stack pointer to the route */
@@ -8982,7 +8989,6 @@ sctp_send_operr_to(struct mbuf *m, int iphlen,
 
 #ifdef SCTP_DEBUG
 	struct sockaddr_in6 lsa6, fsa6;
-
 #endif
 	uint32_t val;
 	struct mbuf *at;
@@ -9071,10 +9077,8 @@ sctp_send_operr_to(struct mbuf *m, int iphlen,
 		/* V6 */
 #ifdef NEW_STRUCT_ROUTE
 		struct route ro;
-
 #else
 		struct route_in6 ro;
-
 #endif
 		struct ip6_hdr *out6, *in6;
 
@@ -9295,7 +9299,7 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 		*errno = ECONNRESET;
 		goto out_now;
 	}
-	sp = (struct sctp_stream_queue_pending *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_strmoq);
+	sp = SCTP_ZONE_GET(sctppcbinfo.ipi_zone_strmoq, struct sctp_stream_queue_pending);
 	if(sp == NULL) {
 		*errno = ENOMEM;
 		goto out_now;
@@ -9323,12 +9327,12 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 	sp->some_taken = 0;
 	resv_in_first = sizeof(struct sctp_data_chunk);
 	sp->data = sp->tail_mbuf = NULL;
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	socket_unlock(stcb->sctp_socket, 0);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+	SCTP_SOCKET_UNLOCK(stcb->sctp_socket, 0);
 #endif
 	*errno = sctp_copy_one(sp, uio, resv_in_first);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	socket_lock(stcb->sctp_socket, 0);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+	SCTP_SOCKET_LOCK(stcb->sctp_socket, 0);
 #endif
 	if(*errno) {
 		sctp_free_a_strmoq(stcb, sp);
@@ -9396,8 +9400,8 @@ sctp_sosend(struct socket *so,
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
 #endif
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	socket_lock(so, 1);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+	SCTP_SOCKET_LOCK(so, 1);
 #endif
 	if (control) {
 		/* process cmsg snd/rcv info (maybe a assoc-id) */
@@ -9412,8 +9416,8 @@ sctp_sosend(struct socket *so,
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
 #endif
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	socket_unlock(so, 1);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+	SCTP_SOCKET_UNLOCK(so, 1);
 #endif
 	return (error);
 }
@@ -9459,13 +9463,14 @@ sctp_lower_sosend(struct socket *so,
 	int got_all_of_the_send = 0;
 	int hold_tcblock = 0;
 	int non_blocking = 0;
+
 	error = 0;
 	net = NULL;
 	stcb = NULL;
 	asoc = NULL;
 	t_inp = inp = (struct sctp_inpcb *)so->so_pcb;
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	sctp_lock_assert(t_inp->ip_inp.inp.inp_socket);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+	sctp_lock_assert(SCTP_INP_SO(inp));
 #endif
 	if (inp == NULL) {
 		error = EFAULT;
@@ -9905,12 +9910,12 @@ sctp_lower_sosend(struct socket *so,
 			ph++;
 			SCTP_BUF_LEN(mm) = tot_out + sizeof(struct sctp_paramhdr);
 			if(top == NULL) {
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-				socket_unlock(stcb->sctp_socket, 0);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+				SCTP_SOCKET_UNLOCK(stcb->sctp_socket, 0);
 #endif
 				error = uiomove((caddr_t)ph, (int)tot_out, uio);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-				socket_lock(stcb->sctp_socket, 0);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+				SCTP_SOCKET_LOCK(stcb->sctp_socket, 0);
 #endif
 				if (error) {
 					/*
@@ -10109,12 +10114,12 @@ sctp_lower_sosend(struct socket *so,
 					SCTP_TCB_UNLOCK(stcb);
 					hold_tcblock = 0;
 				}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-				socket_unlock(stcb->sctp_socket, 0);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+				SCTP_SOCKET_UNLOCK(stcb->sctp_socket, 0);
 #endif
 				mm = sctp_copy_resume(sp, uio, srcv, max_len, user_marks_eor, &error, &sndout, &new_tail);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-				socket_lock(stcb->sctp_socket, 0);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+				SCTP_SOCKET_LOCK(stcb->sctp_socket, 0);
 #endif
 				if ((mm == NULL) || error) {
 					if (mm) {
@@ -10582,7 +10587,7 @@ sctp_lower_sosend(struct socket *so,
 		atomic_add_int(&stcb->asoc.refcnt, -1);
 	}
 #ifdef INVARIANTS
-#if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if !defined(SCTP_PER_SOCKET_LOCKING)
 	if (stcb) {
 		if (mtx_owned(&stcb->tcb_mtx)) {
 			panic("Leaving with tcb mtx owned?");
