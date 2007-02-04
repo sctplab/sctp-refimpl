@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001-2006, Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2001-2007, Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -59,7 +59,7 @@ extern int sctp_warm_the_crc32_table;
 extern uint32_t sctp_debug_on;
 #endif
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 #define APPLE_FILE_NO 8
 #endif
 
@@ -1163,7 +1163,7 @@ sctp_handle_addr_wq(void)
 		return;
 	}
 	LIST_REMOVE(wi, sctp_nxt_addr);
-	if (!LIST_EMPTY(&sctppcbinfo.addr_wq)) {
+	if (!SCTP_LIST_EMPTY(&sctppcbinfo.addr_wq)) {
 		sctp_timer_start(SCTP_TIMER_TYPE_ADDR_WQ,
 		    (struct sctp_inpcb *)NULL,
 		    (struct sctp_tcb *)NULL,
@@ -1180,7 +1180,7 @@ sctp_handle_addr_wq(void)
 	SCTP_DECR_LADDR_COUNT();
 }
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(SCTP_PER_SOCKET_LOCKING)
 /*
  * The timeout handler doesn't lock any socket in case of
  * tmr->type == SCTP_TIMER_TYPE_ADDR_WQ or
@@ -1290,8 +1290,8 @@ sctp_timeout_handler(void *t)
 			SCTP_INP_DECR_REF(inp);
 			return;
 		}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		socket_lock(inp->ip_inp.inp.inp_socket, 1);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+		SCTP_SOCKET_LOCK(SCTP_INP_SO(inp), 1);
 #endif
 	}
 	tmr->stopped_from = 0xa004;
@@ -1305,8 +1305,8 @@ sctp_timeout_handler(void *t)
 			(void)thread_funnel_set(network_flock, FALSE);
 #endif
 			if (inp) {
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-				socket_unlock(inp->ip_inp.inp.inp_socket, 1);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+				SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
 				SCTP_INP_DECR_REF(inp);
 			}
@@ -1329,8 +1329,8 @@ sctp_timeout_handler(void *t)
 		(void)thread_funnel_set(network_flock, FALSE);
 #endif
 		if (inp) {
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			socket_unlock(inp->ip_inp.inp.inp_socket, 1);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
 			SCTP_INP_DECR_REF(inp);
 		}
@@ -1342,8 +1342,8 @@ sctp_timeout_handler(void *t)
 	if (stcb) {
 		atomic_add_int(&stcb->asoc.refcnt, 1);
 		SCTP_TCB_LOCK(stcb);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+		sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
 #endif
 		atomic_add_int(&stcb->asoc.refcnt, -1);
 	}
@@ -1634,9 +1634,9 @@ out_no_decr:
 	(void)thread_funnel_set(network_flock, FALSE);
 #endif
 	if (inp) {
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(SCTP_PER_SOCKET_LOCKING)
 		if (tmr->type != SCTP_TIMER_TYPE_ITERATOR) {
-			socket_unlock(inp->ip_inp.inp.inp_socket, 1);
+			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 		}
 #endif
 	}
@@ -1657,17 +1657,17 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	tmr = NULL;
 	if (stcb) {
 		SCTP_TCB_LOCK_ASSERT(stcb);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+		sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
 #endif
 	}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(SCTP_PER_SOCKET_LOCKING)
 	/*
 	 * In case of t_type == SCTP_TIMER_TYPE_ITERATOR inp points
 	 * to an interator.
 	 */ 
 	if ((inp != NULL) && (t_type != SCTP_TIMER_TYPE_ITERATOR)) {
-		sctp_lock_assert(inp->ip_inp.inp.inp_socket);
+		sctp_lock_assert(SCTP_INP_SO(inp));
 	}
 #endif
 	switch (t_type) {
@@ -2021,17 +2021,17 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	tmr = NULL;
 	if (stcb) {
 		SCTP_TCB_LOCK_ASSERT(stcb);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+		sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
 #endif
 	}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(SCTP_PER_SOCKET_LOCKING)
 	/*
 	 * In case of t_type == SCTP_TIMER_TYPE_ITERATOR inp points
 	 * to an interator.
 	 */ 
 	if ((inp != NULL) && (t_type != SCTP_TIMER_TYPE_ITERATOR)) {
-		sctp_lock_assert(inp->ip_inp.inp.inp_socket);
+		sctp_lock_assert(SCTP_INP_SO(inp));
 	}
 #endif
 	switch (t_type) {
@@ -4804,13 +4804,13 @@ get_more_data:
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);
 #endif
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			socket_unlock(so, 0);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+			SCTP_SOCKET_UNLOCK(so, 0);
 #endif
-			if(cp_len > 0) 
+			if (cp_len > 0) 
 				error = uiomove(mtod(m, char *), cp_len, uio);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			socket_lock(so, 0);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+			SCTP_SOCKET_LOCK(so, 0);
 #endif
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 			s = splsoftnet();
@@ -4905,7 +4905,7 @@ get_more_data:
 					/* been through it all, must hold sb lock ok to null tail */
 					if (control->data == NULL) {
 #ifdef INVARIANTS
-#if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if !defined(SCTP_PER_SOCKET_LOCKING)
 						if ((control->end_added == 0) ||
 						    (TAILQ_NEXT(control, next) == NULL)) {
 							/* If the end is not added, OR the
@@ -5584,8 +5584,8 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 		fromlen = 0;
 	}
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	socket_lock(so, 1);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+	SCTP_SOCKET_LOCK(so, 1);
 #endif
 	error = sctp_sorecvmsg(so, uio, mp0, from, fromlen, flagsp, 
 	    (struct sctp_sndrcvinfo *)&sinfo,filling_sinfo);
@@ -5609,11 +5609,9 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 			*psa = NULL;
 		}
 	}
-
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	socket_unlock(so, 1);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+	SCTP_SOCKET_UNLOCK(so, 1);
 #endif
-
 	return (error);
 }
 

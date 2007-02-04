@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001-2006, Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2001-2007, Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -56,7 +56,7 @@ extern uint32_t sctp_debug_on;
 #endif
 #endif				/* SCTP_DEBUG */
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 #define APPLE_FILE_NO 1
 #endif
 
@@ -659,7 +659,7 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 	int error = 0;		/* did an error occur? */
 
 	/* asconf param buffer */
-	static uint8_t aparam_buf[DEFAULT_PARAM_BUFFER];
+	uint8_t aparam_buf[SCTP_PARAM_BUFFER_SIZE];
 
 	/* verify minimum length */
 	if (ntohs(cp->ch.chunk_length) < sizeof(struct sctp_asconf_chunk)) {
@@ -917,6 +917,7 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 			from6->sin6_len = sizeof(struct sockaddr_in6);
 			from6->sin6_addr = ip6->ip6_src;
 			from6->sin6_port = sh->src_port;
+#ifdef SCTP_EMBEDDED_V6_SCOPE
 			/* Get the scopes in properly to the sin6 addr's */
 #ifdef SCTP_KAME
 			/* we probably don't need these operations */
@@ -928,8 +929,9 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 			(void)in6_embedscope(&from6->sin6_addr, from6, NULL, NULL);
 #else
 			(void)in6_embedscope(&from6->sin6_addr, from6);
-#endif				/* SCTP_BASE_FREEBSD || __APPLE__  */
-#endif				/* SCTP_KAME */
+#endif
+#endif /* SCTP_KAME */
+#endif /* SCTP_EMBEDDED_V6_SCOPE */
 		} else {
 			/* unknown address type */
 			from = NULL;
@@ -1416,7 +1418,7 @@ sctp_handle_asconf_ack(struct mbuf *m, int offset,
 	struct sctp_asconf_addr *ap;
 
 	/* asconf param buffer */
-	static uint8_t aparam_buf[DEFAULT_PARAM_BUFFER];
+	uint8_t aparam_buf[SCTP_PARAM_BUFFER_SIZE];
 
 	/* verify minimum length */
 	if (ntohs(cp->ch.chunk_length) < sizeof(struct sctp_asconf_ack_chunk)) {
@@ -2026,8 +2028,8 @@ sctp_delete_ip_address(struct ifaddr *ifa)
 		return;
 	}
 	/* go through all our PCB's */
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	lck_rw_lock_shared(sctppcbinfo.ipi_ep_mtx);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+	SCTP_LOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
 #endif
 	SCTP_INP_INFO_RLOCK();
 	LIST_FOREACH(inp, &sctppcbinfo.listhead, sctp_list) {
@@ -2035,8 +2037,8 @@ sctp_delete_ip_address(struct ifaddr *ifa)
 		struct sctp_laddr *laddr, *laddr_next;
 
 		/* process for all associations for this endpoint */
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		socket_lock(inp->ip_inp.inp.inp_socket, 1);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+		SCTP_SOCKET_LOCK(SCTP_INP_SO(inp), 1);
 #endif
 		SCTP_INP_RLOCK(inp);
 		LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
@@ -2074,13 +2076,13 @@ sctp_delete_ip_address(struct ifaddr *ifa)
 			}
 			laddr = laddr_next;
 		}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-		socket_unlock(inp->ip_inp.inp.inp_socket, 1);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+		SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
 		SCTP_INP_RUNLOCK(inp);
 	}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	lck_rw_unlock_shared(sctppcbinfo.ipi_ep_mtx);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+	SCTP_UNLOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
 #endif
 	SCTP_INP_INFO_RUNLOCK();
 }
@@ -2638,6 +2640,7 @@ sctp_addr_in_initack(struct sctp_tcb *stcb, struct mbuf *m, uint32_t offset,
 				return (0);
 			}
 			sin6 = (struct sockaddr_in6 *)sa;
+#ifdef SCTP_EMBEDDED_V6_SCOPE
 			if (IN6_IS_SCOPE_LINKLOCAL(&sin6->sin6_addr)) {
 				/* create a copy and clear scope */
 				memcpy(&sin6_tmp, sin6,
@@ -2645,6 +2648,7 @@ sctp_addr_in_initack(struct sctp_tcb *stcb, struct mbuf *m, uint32_t offset,
 				sin6 = &sin6_tmp;
 				in6_clearscope(&sin6->sin6_addr);
 			}
+#endif /* SCTP_EMBEDDED_V6_SCOPE */
 			if (memcmp(&sin6->sin6_addr, a6p->addr,
 			    sizeof(struct in6_addr)) == 0) {
 				/* found it */
@@ -2654,7 +2658,7 @@ sctp_addr_in_initack(struct sctp_tcb *stcb, struct mbuf *m, uint32_t offset,
 #endif				/* INET6 */
 
 			if (ptype == SCTP_IPV4_ADDRESS &&
-		    sa->sa_family == AF_INET) {
+			    sa->sa_family == AF_INET) {
 			/* get the entire IPv4 address param */
 			a4p = (struct sctp_ipv4addr_param *)sctp_m_getptr(m,
 			    offset, sizeof(struct sctp_ipv4addr_param),
@@ -2840,7 +2844,7 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 {
 	struct sctp_laddr *wi;
 
-	wi = (struct sctp_laddr *)SCTP_ZONE_GET(sctppcbinfo.ipi_zone_laddr);
+	wi = SCTP_ZONE_GET(sctppcbinfo.ipi_zone_laddr, struct sctp_laddr);
 	if (wi == NULL) {
 		/*
 		 * Gak, what can we do? We have lost an address change can

@@ -105,6 +105,38 @@ extern struct fileops socketops;
 #define _KERNEL
 #endif
 
+#define SCTP_LIST_EMPTY(list)	LIST_EMPTY(list)
+
+
+/* 
+ * for per socket level locking strategy:
+ * SCTP_INP_SO(sctpinp): returns socket on base inp structure from sctp_inpcb
+ * SCTP_SOCKET_LOCK(so, refcnt): locks socket so with refcnt
+ * SCTP_SOCKET_UNLOCK(so, refcnt): unlocks socket so with refcnt
+ * SCTP_MTX_LOCK(lck): lock mutex
+ * SCTP_MTX_UNLOCK(lck): unlock mutex
+ * SCTP_MTX_TRYLOCK(lck): try lock mutex
+ * SCTP_LOCK_EX(lck): lock exclusive
+ * SCTP_UNLOCK_EX(lck): unlock exclusive
+ * SCTP_TRYLOCK_EX(lck): trylock exclusive
+ * SCTP_LOCK_SHARED(lck): lock shared
+ * SCTP_UNLOCK_SHARED(lck): unlock shared
+ * SCTP_TRYLOCK_SHARED(lck): trylock shared
+ */
+#define SCTP_PER_SOCKET_LOCKING
+#define SCTP_INP_SO(sctpinp)	(sctpinp)->ip_inp.inp.inp_socket
+#define SCTP_SOCKET_LOCK(so, refcnt)	socket_lock(so, refcnt)
+#define SCTP_SOCKET_UNLOCK(so, refcnt)	socket_unlock(so, refcnt)
+#define SCTP_MTX_LOCK(mtx)	lck_mtx_lock(mtx)
+#define SCTP_MTX_UNLOCK(mtx)	lck_mtx_unlock(mtx)
+#define SCTP_MTX_TRYLOCK(mtx)	lck_mtx_try_lock(mtx)
+#define SCTP_LOCK_EXC(lck)	lck_rw_lock_exclusive(lck)
+#define SCTP_UNLOCK_EXC(lck)	lck_rw_unlock_exclusive(lck)
+#define SCTP_TRYLOCK_EXC(lck)	lck_rw_try_lock_exclusive(lck)
+#define SCTP_LOCK_SHARED(lck)	lck_rw_lock_shared(lck)
+#define SCTP_UNLOCK_SHARED(lck)	lck_rw_unlock_shared(lck)
+#define SCTP_TRYLOCK_SHARED(lck) lck_rw_try_lock_shared(lck)
+
 /*
  * general memory allocation
  */
@@ -139,8 +171,8 @@ extern zone_t kalloc_zone(vm_size_t);	/* XXX */
 	zone = (void *)kalloc_zone(size);
 
 /* SCTP_ZONE_GET: allocate element from the zone */
-#define SCTP_ZONE_GET(zone) \
-	zalloc(zone);
+#define SCTP_ZONE_GET(zone, type) \
+	(type *)zalloc(zone);
 
 /* SCTP_ZONE_FREE: free element from the zone */
 #define SCTP_ZONE_FREE(zone, element) \
@@ -183,7 +215,6 @@ extern void *sctp_calloutq_mtx;
 #define SCTP_BUF_PREPEND(m, plen, how) ((m) = sctp_m_prepend_2((m), (plen), (how)))
 struct mbuf *sctp_m_prepend_2(struct mbuf *m, int len, int how);
 
-
 /*************************/
 /* These are for logging */
 /*************************/
@@ -224,7 +255,7 @@ struct mbuf *sctp_m_prepend_2(struct mbuf *m, int len, int how);
 
 /* Macro's for getting length from V6/V4 header */
 #define SCTP_GET_IPV4_LENGTH(iph) (iph->ip_len)
-#define SCTP_GET_IPV6_LENGTH(ip6) (ntohs(ip6->ip6_plen))
+#define SCTP_GET_IPV6_LENGTH(ip6) (ip6->ip6_plen)
 
 /* is the endpoint v6only? */
 #define SCTP_IPV6_V6ONLY(inp)	(((struct inpcb *)inp)->inp_flags & IN6P_IPV6_V6ONLY)

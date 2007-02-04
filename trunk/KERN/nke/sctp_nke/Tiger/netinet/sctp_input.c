@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001-2006, Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2001-2007, Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -51,10 +51,9 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.12 2007/01/18 09:58:43 rrs 
 extern uint32_t sctp_debug_on;
 #endif
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 #define APPLE_FILE_NO 2
 #endif
-
 
 
 struct sctp_foo_stuff sctp_logoff[30000];
@@ -71,8 +70,8 @@ sctp_stop_all_cookie_timers(struct sctp_tcb *stcb)
 	 * all collision cases.
 	 */
 	SCTP_TCB_LOCK_ASSERT(stcb);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+	sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
 #endif
 	TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 		if (net->rxt_timer.type == SCTP_TIMER_TYPE_COOKIE) {
@@ -1063,7 +1062,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 
 	/* I know that the TCB is non-NULL from the caller */
 	asoc = &stcb->asoc;
-	for(how_indx=0; how_indx <sizeof(asoc->cookie_how);i++) {
+	for(how_indx=0; how_indx <sizeof(asoc->cookie_how);how_indx++) {
 		if(asoc->cookie_how[how_indx] == 0)
 			break;
 	}
@@ -1535,7 +1534,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	int retval;
 	int error = 0;
 	uint32_t old_tag;
-	uint8_t chunk_buf[DEFAULT_CHUNK_BUFFER];
+	uint8_t auth_chunk_buf[SCTP_PARAM_BUFFER_SIZE];
 
 	/*
 	 * find and validate the INIT chunk in the cookie (peer's info) the
@@ -1673,7 +1672,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		struct sctp_auth_chunk *auth;
 
 		auth = (struct sctp_auth_chunk *)
-		    sctp_m_getptr(m, auth_offset, auth_len, chunk_buf);
+		    sctp_m_getptr(m, auth_offset, auth_len, auth_chunk_buf);
 		if (sctp_handle_auth(stcb, auth, m, auth_offset)) {
 			/* auth HMAC failed, dump the assoc and packet */
 #ifdef SCTP_DEBUG
@@ -1838,7 +1837,6 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		sin->sin_port = sh->dest_port;
 		sin->sin_addr.s_addr = iph->ip_dst.s_addr;
 		size_of_pkt = SCTP_GET_IPV4_LENGTH(iph);
-
 	} else if (iph->ip_v == (IPV6_VERSION >> 4)) {
 		/* its IPv6 */
 		struct ip6_hdr *ip6;
@@ -1851,7 +1849,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		ip6 = mtod(m, struct ip6_hdr *);
 		sin6->sin6_port = sh->dest_port;
 		sin6->sin6_addr = ip6->ip6_dst;
-		size_of_pkt = SCTP_GET_IPV6_LENGTH(ip6);
+		size_of_pkt = SCTP_GET_IPV6_LENGTH(ip6) + iphlen;
 	} else {
 		return (NULL);
 	}
@@ -2176,8 +2174,8 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 				sctp_free_assoc(*inp_p, *stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_20);
 				return (NULL);
 			}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			socket_lock(so, 1);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+			SCTP_SOCKET_LOCK(so, 1);
 #endif
 			inp = (struct sctp_inpcb *)so->so_pcb;
 			SCTP_INP_INCR_REF(inp);
@@ -2239,12 +2237,12 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 
 			/* Pull it from the incomplete queue and wake the guy */
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			/* need to temp unlock the listening socket */
-			socket_unlock(oso, 0);
+			/* need to temp unlock the listening socket on Tiger */
+			SCTP_SOCKET_UNLOCK(oso, 0);
 #endif
 			soisconnected(so);
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			socket_lock(oso, 0);
+			SCTP_SOCKET_LOCK(oso, 0);
 #endif
 			return (m);
 		}
@@ -2836,13 +2834,13 @@ static void
 sctp_clean_up_stream_reset(struct sctp_tcb *stcb)
 {
 	struct sctp_association *asoc;
-
-	asoc = &stcb->asoc;
 	struct sctp_tmit_chunk *chk = stcb->asoc.str_reset;
 
 	if (stcb->asoc.str_reset == NULL) {
 		return;
 	}
+	asoc = &stcb->asoc;
+
 	sctp_timer_stop(SCTP_TIMER_TYPE_STRRESET, stcb->sctp_ep, stcb, chk->whoTo, SCTP_FROM_SCTP_INPUT+SCTP_LOC_25);
 	TAILQ_REMOVE(&asoc->control_send_queue,
 	    chk,
@@ -3144,11 +3142,11 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_out_req
 	struct sctp_tmit_chunk *chk;
 	struct sctp_chunkhdr *ch;
 	struct sctp_paramhdr *ph;
+	int ret_code = 0;
+	int num_param = 0;
 
 	/* now it may be a reset or a reset-response */
 	chk_length = ntohs(sr_req->ch.chunk_length);
-	int ret_code = 0;
-	int num_param = 0;
 
 	/* setup for adding the response */
 	sctp_alloc_a_chunk(stcb, chk);
@@ -3183,7 +3181,6 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_out_req
 	ch->chunk_flags = 0;
 	ch->chunk_length = htons(chk->send_size);
 	SCTP_BUF_LEN(chk->data) = SCTP_SIZE32(chk->send_size);
-
 
 	ph = (struct sctp_paramhdr *)&sr_req->sr_req;
 	while ((size_t)chk_length >= sizeof(struct sctp_stream_reset_tsn_request)) {
@@ -3544,7 +3541,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 	 * d-mtu-ceiling for now (2k) and that should hopefully work ...
 	 * until we get into jumbo grams and such..
 	 */
-	uint8_t chunk_buf[DEFAULT_CHUNK_BUFFER];
+	uint8_t chunk_buf[SCTP_CHUNK_BUFFER_SIZE];
 	struct sctp_tcb *locked_tcb = stcb;
 	int got_auth = 0;
 	uint32_t auth_offset = 0, auth_len = 0;
@@ -4461,13 +4458,13 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 	struct mbuf *m = *mm;
 	int abort_flag = 0;
 	int un_sent;
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(SCTP_PER_SOCKET_LOCKING)
 	int additional_lock = 0;
 #endif
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(SCTP_PER_SOCKET_LOCKING)
 	/* inp is never NULL. stcb can be NULL */
-	sctp_lock_assert(inp->ip_inp.inp.inp_socket);
+	sctp_lock_assert(SCTP_INP_SO(inp));
 	if ((stcb) && (stcb->sctp_ep != inp)) {
 		panic("sctp_common_input_processing: stcb->sctp_ep != inp\n");
 	}
@@ -4494,7 +4491,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		/* process the control portion of the SCTP packet */
 		stcb = sctp_process_control(m, iphlen, &offset, length, sh, ch,
 		    inp, stcb, &net, &fwd_tsn_seen);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(SCTP_PER_SOCKET_LOCKING)
 		if (stcb) {
 			additional_lock = (inp != stcb->sctp_ep);
 		}
@@ -4545,8 +4542,8 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		 */
 		return (1);
 	}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	sctp_lock_assert(stcb->sctp_ep->ip_inp.inp.inp_socket);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+	sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
 #endif
 
 	/*
@@ -4594,9 +4591,9 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 			 */
 			sctp_handle_ootb(m, iphlen, offset, sh, inp, NULL);
 			SCTP_TCB_UNLOCK(stcb);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(SCTP_PER_SOCKET_LOCKING)
 			if (additional_lock) {
-				socket_unlock(stcb->sctp_ep->ip_inp.inp.inp_socket, 1);
+				SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 			}
 #endif
 			return (1);
@@ -4607,9 +4604,9 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		case SCTP_STATE_SHUTDOWN_ACK_SENT:
 		default:
 			SCTP_TCB_UNLOCK(stcb);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(SCTP_PER_SOCKET_LOCKING)
 			if (additional_lock) {
-				socket_unlock(stcb->sctp_ep->ip_inp.inp.inp_socket, 1);
+				SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 			}
 #endif
 			return (1);
@@ -4631,9 +4628,9 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 			 * The association aborted, NO UNLOCK needed since
 			 * the association is destroyed.
 			 */
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(SCTP_PER_SOCKET_LOCKING)
 			if (additional_lock) {
-				socket_unlock(stcb->sctp_ep->ip_inp.inp.inp_socket, 1);
+				SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 			}
 #endif
 			return (0);
@@ -4663,9 +4660,9 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		sctp_sack_check(stcb, 1, was_a_gap, &abort_flag);
 		if (abort_flag) {
 			/* Again, we aborted so NO UNLOCK needed */
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(SCTP_PER_SOCKET_LOCKING)
 			if (additional_lock) {
-				socket_unlock(stcb->sctp_ep->ip_inp.inp.inp_socket, 1);
+				SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 			}
 #endif
 			return (0);
@@ -4708,9 +4705,9 @@ trigger_send:
 	sctp_auditing(2, inp, stcb, net);
 #endif
 	SCTP_TCB_UNLOCK(stcb);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(SCTP_PER_SOCKET_LOCKING)
 	if (additional_lock) {
-		socket_unlock(stcb->sctp_ep->ip_inp.inp.inp_socket, 1);
+		SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 	}
 #endif
 	return (0);
@@ -4805,7 +4802,6 @@ sctp_input(i_pak, va_alist)
 	struct tdb_ident *tdbi;
 	struct tdb *tdb;
 	int error;
-
 #endif
 #endif
 
@@ -4912,13 +4908,13 @@ sctp_input(i_pak, va_alist)
 			if ((inp) && (stcb)) {
 				sctp_send_packet_dropped(stcb, net, m, iphlen, 1);
 				sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_INPUT_ERROR);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-				socket_unlock(inp->ip_inp.inp.inp_socket, 1);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+				SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
 			} else if ((inp != NULL) && (stcb == NULL)) {
 				refcount_up = 1;
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-				socket_unlock(inp->ip_inp.inp.inp_socket, 1);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+				SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
 			}
 			SCTP_STAT_INCR(sctps_badsum);
@@ -5075,8 +5071,8 @@ sctp_skip_csum_4:
 #endif				/* IPSEC */
 
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	sctp_lock_assert(inp->ip_inp.inp.inp_socket);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+	sctp_lock_assert(SCTP_INP_SO(inp));
 #endif
 
 	/*
@@ -5112,8 +5108,8 @@ sctp_skip_csum_4:
 		SCTP_INP_DECR_REF(inp);
 		SCTP_INP_WUNLOCK(inp);
 	}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	socket_unlock(inp->ip_inp.inp.inp_socket, 1);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+	SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
 	return;
 bad:

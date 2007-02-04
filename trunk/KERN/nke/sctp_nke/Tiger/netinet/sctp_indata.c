@@ -323,13 +323,12 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 	uint16_t stream_no;
 	int end = 0;
 	int cntDel;
-
-	cntDel = stream_no = 0;
 	struct sctp_queued_to_read *control, *ctl, *ctlat;
 
-	if (stcb && ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
-		     (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET))
-		    ) {
+	cntDel = stream_no = 0;
+	if (stcb &&
+	    ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
+	     (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET))) {
 		/* socket above is long gone */
 		asoc->fragmented_delivery_inprogress = 0;
 		chk = TAILQ_FIRST(&asoc->reasmqueue);
@@ -1614,6 +1613,16 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	 * only validate the FIRST fragment so the bit must be set.
 	 */
 	strmseq = ntohs(ch->dp.stream_sequence);
+
+#ifdef SCTP_ASOCLOG_OF_TSNS
+	asoc->in_tsnlog[asoc->tsn_in_at].tsn = tsn;
+	asoc->in_tsnlog[asoc->tsn_in_at].strm = strmno;
+	asoc->in_tsnlog[asoc->tsn_in_at].seq = strmseq;
+	asoc->tsn_in_at++;
+	if(asoc->tsn_in_at >= SCTP_TSN_LOG_SIZE) {
+		asoc->tsn_in_at = 0;
+	}
+#endif
 	if ((ch->ch.chunk_flags & SCTP_DATA_FIRST_FRAG) &&
 	    (ch->ch.chunk_flags & SCTP_DATA_UNORDERED) == 0 &&
 	    (compare_with_wrap(asoc->strmin[strmno].last_sequence_delivered,
