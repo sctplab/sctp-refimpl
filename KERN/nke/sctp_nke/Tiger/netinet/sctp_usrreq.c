@@ -2699,7 +2699,6 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 		break;
 	case SCTP_GET_REMOTE_ADDR_SIZE:
 		{
-			sctp_assoc_t assoc_id;
 			uint32_t *value;
 			size_t size;
 			struct sctp_nets *net;
