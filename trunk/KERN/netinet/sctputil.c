@@ -2749,7 +2749,22 @@ sctp_notify_peer_addr_change(struct sctp_tcb *stcb, uint32_t state,
 	if (sa->sa_family == AF_INET) {
 		memcpy(&spc->spc_aaddr, sa, sizeof(struct sockaddr_in));
 	} else {
+#ifdef SCTP_EMBEDDED_V6_SCOPE
+		struct sockaddr_in6 *sin6;
+#endif /* SCTP_EMBEDDED_V6_SCOPE */
 		memcpy(&spc->spc_aaddr, sa, sizeof(struct sockaddr_in6));
+
+#ifdef SCTP_EMBEDDED_V6_SCOPE
+		/* recover scope_id for user */
+		sin6 = (struct sockaddr_in6 *)&spc->spc_aaddr;
+		if (IN6_IS_SCOPE_LINKLOCAL(&sin6->sin6_addr)) {
+#ifdef SCTP_KAME
+		 	(void)sa6_recoverscope(sin6);
+#else
+			(void)in6_recoverscope(sin6, &sin6->sin6_addr, NULL);
+#endif
+		}
+#endif /* SCTP_EMBEDDED_V6_SCOPE */
 	}
 	spc->spc_state = state;
 	spc->spc_error = error;
@@ -3572,6 +3587,7 @@ sctp_is_same_scope(struct sockaddr_in6 *addr1, struct sockaddr_in6 *addr2)
 {
 	struct sockaddr_in6 a, b;
 
+#if defined(SCTP_EMBEDDED_V6_SCOPE)
 	/* save copies */
 	a = *addr1;
 	b = *addr2;
@@ -3596,17 +3612,21 @@ sctp_is_same_scope(struct sockaddr_in6 *addr1, struct sockaddr_in6 *addr2)
 		}
 	if (a.sin6_scope_id != b.sin6_scope_id)
 		return (0);
+#else
+	if (addr1->sin6_scope_id != addr2->sin6_scope_id)
+		return (0);
+#endif /* SCTP_EMBEDDED_V6_SCOPE */
 
 	return (1);
 }
 
+#if defined(SCTP_EMBEDDED_V6_SCOPE)
 /*
  * returns a sockaddr_in6 with embedded scope recovered and removed
  */
 struct sockaddr_in6 *
 sctp_recover_scope(struct sockaddr_in6 *addr, struct sockaddr_in6 *store)
 {
-
 	/* check and strip embedded scope junk */
 	if (addr->sin6_family == AF_INET6) {
 		if (IN6_IS_SCOPE_LINKLOCAL(&addr->sin6_addr)) {
@@ -3617,16 +3637,19 @@ sctp_recover_scope(struct sockaddr_in6 *addr, struct sockaddr_in6 *store)
 #else
 				if (!in6_recoverscope(store, &store->sin6_addr,
 				    NULL)) {
-#endif				/* SCTP_KAME */
+#endif /* SCTP_KAME */
 					/* use the recovered scope */
 					addr = store;
 				}
+			} else {
 				/* else, return the original "to" addr */
+				in6_clearscope(&addr->sin6_addr);
 			}
 		}
 	}
 	return (addr);
 }
+#endif /* SCTP_EMBEDDED_V6_SCOPE */
 
 /*
  * are the two addresses the same?  currently a "scopeless" check returns: 1
@@ -4775,12 +4798,11 @@ found_one:
 			memcpy(from, (caddr_t)&sin6, sizeof(sin6));
 		}
 #endif
-#if defined(AF_INET6)
+#if defined(AF_INET6) && defined(SCTP_EMBEDDED_V6_SCOPE)
 		{
 			struct sockaddr_in6 lsa6, *to6;
 			to6 = (struct sockaddr_in6 *)to;
 			sctp_recover_scope_mac(to6, (&lsa6));
-
 		}
 #endif
 	}
