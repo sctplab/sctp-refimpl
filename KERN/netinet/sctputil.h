@@ -150,37 +150,43 @@ sctp_handle_ootb(struct mbuf *, int, int, struct sctphdr *,
 
 int sctp_is_there_an_abort_here(struct mbuf *, int, uint32_t *);
 uint32_t sctp_is_same_scope(struct sockaddr_in6 *, struct sockaddr_in6 *);
+
+#if defined(SCTP_EMBEDDED_V6_SCOPE)
 struct sockaddr_in6 *
-sctp_recover_scope(struct sockaddr_in6 *,
-    struct sockaddr_in6 *);
-
-
-
+sctp_recover_scope(struct sockaddr_in6 *, struct sockaddr_in6 *);
 
 #ifdef SCTP_KAME
 #define sctp_recover_scope_mac(addr, store) do { \
-			 if ((addr->sin6_family == AF_INET6) && \
-			     (IN6_IS_SCOPE_LINKLOCAL(&addr->sin6_addr)) && \
-			     (addr->sin6_scope_id == 0)) { \
-				*store = *addr; \
-				if (!sa6_recoverscope(store)) { \
-					addr = store; \
-				} \
-			 } \
-                      } while (0)
-
+	 if ((addr->sin6_family == AF_INET6) && \
+	     (IN6_IS_SCOPE_LINKLOCAL(&addr->sin6_addr))) { \
+		*store = *addr; \
+		if (addr->sin6_scope_id == 0) { \
+			if (!sa6_recoverscope(store)) { \
+				addr = store; \
+			} \
+		} else { \
+			in6_clearscope(&addr->sin6_addr); \
+			addr = store; \
+		} \
+	 } \
+} while (0)
 #else
 #define sctp_recover_scope_mac(addr, store) do { \
-			 if ((addr->sin6_family == AF_INET6) && \
-			     (IN6_IS_SCOPE_LINKLOCAL(&addr->sin6_addr)) && \
-			     (addr->sin6_scope_id == 0)) { \
-				*store = *addr; \
-				if (!in6_recoverscope(store, &store->sin6_addr, \
-				    NULL)) { \
-					addr = store; \
-				} \
-			 } \
-                      } while (0)
+	 if ((addr->sin6_family == AF_INET6) && \
+	     (IN6_IS_SCOPE_LINKLOCAL(&addr->sin6_addr))) { \
+		*store = *addr; \
+	 	if (addr->sin6_scope_id == 0) { \
+			if (!in6_recoverscope(store, &store->sin6_addr, \
+					      NULL)) { \
+				addr = store; \
+			} \
+		} else { \
+			in6_clearscope(&addr->sin6_addr); \
+			addr = store; \
+		} \
+	 } \
+} while (0)
+#endif
 #endif
 
 
