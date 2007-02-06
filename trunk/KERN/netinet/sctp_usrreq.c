@@ -2811,7 +2811,11 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 			if (stcb) {
 				net = sctp_findnet(stcb, (struct sockaddr *)&paddrp->spp_address);
 			} else {
-				SCTP_INP_INCR_REF(inp); /* FIXME RANDY: Where is the decrement? */
+				/* We increment here since sctp_findassociation_ep_addr() wil
+				 * do a decrement if it finds the stcb as long as the locked
+				 * tcb (last argument) is NOT a TCB.. aka NULL.
+				 */
+				SCTP_INP_INCR_REF(inp); 
 				stcb = sctp_findassociation_ep_addr(&inp, (struct sockaddr *)&paddrp->spp_address, &net, NULL, NULL);
 				if (stcb == NULL) {
 					SCTP_INP_DECR_REF(inp);
@@ -2923,7 +2927,11 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 			if (stcb) {
 				net = sctp_findnet(stcb, (struct sockaddr *)&paddri->spinfo_address);
 			} else {
-				SCTP_INP_INCR_REF(inp); /* FIXME RANDY: Where is the decrement? */
+				/* We increment here since sctp_findassociation_ep_addr() wil
+				 * do a decrement if it finds the stcb as long as the locked
+				 * tcb (last argument) is NOT a TCB.. aka NULL.
+				 */
+				SCTP_INP_INCR_REF(inp);
 				stcb = sctp_findassociation_ep_addr(&inp, (struct sockaddr *)&paddri->spinfo_address, &net, NULL, NULL);
 				if (stcb == NULL) {
 					SCTP_INP_DECR_REF(inp);
@@ -3681,6 +3689,10 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 				}
 				SCTP_INP_RUNLOCK(inp);
 			} else {
+				/* We increment here since sctp_findassociation_ep_addr() wil
+				 * do a decrement if it finds the stcb as long as the locked
+				 * tcb (last argument) is NOT a TCB.. aka NULL.
+				 */
 				SCTP_INP_INCR_REF(inp);
 				stcb = sctp_findassociation_ep_addr(&inp, sa, &net, NULL, NULL);
 				if (stcb == NULL) {
@@ -3869,7 +3881,11 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			if (stcb) {
 				net = sctp_findnet(stcb, (struct sockaddr *)&paddrp->spp_address);
 			} else {
-				SCTP_INP_INCR_REF(inp); /* FIXME RANDY: Where is the decrement? */
+				/* We increment here since sctp_findassociation_ep_addr() wil
+				 * do a decrement if it finds the stcb as long as the locked
+				 * tcb (last argument) is NOT a TCB.. aka NULL.
+				 */
+				SCTP_INP_INCR_REF(inp);
 				stcb = sctp_findassociation_ep_addr(&inp,
 				                                    (struct sockaddr *)&paddrp->spp_address,
 				                                    &net, NULL, NULL);
@@ -4120,7 +4136,11 @@ SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
 			if (stcb) {
 				net = sctp_findnet(stcb, (struct sockaddr *)&spa->ssp_addr);
 			} else {
-				SCTP_INP_INCR_REF(inp); /* FIXME RANDY: Where is the decrement? */
+				/* We increment here since sctp_findassociation_ep_addr() wil
+				 * do a decrement if it finds the stcb as long as the locked
+				 * tcb (last argument) is NOT a TCB.. aka NULL.
+				 */
+				SCTP_INP_INCR_REF(inp);
 				stcb = sctp_findassociation_ep_addr(&inp,
 				                                    (struct sockaddr *)&spa->ssp_addr,
 				                                    &net, NULL, NULL);
@@ -4540,8 +4560,9 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 			SCTP_TCB_UNLOCK(stcb);
 		SCTP_INP_RUNLOCK(inp);
 	} else {
-		/* Raise the count a second time, since on 
-		 * sucess f-a-ep_addr will decrement it.
+		/* We increment here since sctp_findassociation_ep_addr() wil
+		 * do a decrement if it finds the stcb as long as the locked
+		 * tcb (last argument) is NOT a TCB.. aka NULL.
 		 */
 		SCTP_INP_INCR_REF(inp);
 		stcb = sctp_findassociation_ep_addr(&inp, addr, NULL, NULL, NULL);
