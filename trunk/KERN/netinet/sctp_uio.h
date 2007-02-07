@@ -93,6 +93,7 @@ struct sctp_initmsg {
 
 
 #define SCTP_ALIGN_RESV_PAD 96
+#define SCTP_ALIGN_RESV_PAD_SHORT 80
 
 struct sctp_sndrcvinfo {
 	uint16_t sinfo_stream;
@@ -122,12 +123,14 @@ struct sctp_extrcvinfo {
 	uint32_t next_asocid;
 	uint32_t next_length;
 	uint32_t next_ppid;
+	uint8_t  __reserve_pad[SCTP_ALIGN_RESV_PAD_SHORT];
 };
 
 #define SCTP_NO_NEXT_MSG           0x0000
 #define SCTP_NEXT_MSG_AVAIL        0x0001
 #define SCTP_NEXT_MSG_ISCOMPLETE   0x0002
 #define SCTP_NEXT_MSG_IS_UNORDERED 0x0004
+#define SCTP_NEXT_MSG_IS_NOTIFICATION 0x0008
 
 struct sctp_snd_all_completes {
 	uint16_t sall_stream;
