@@ -1455,9 +1455,13 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	struct mbuf *oper;
 	struct sctp_queued_to_read *control;
 	int ordered;
-	
+	uint32_t protocol_id;
+	uint8_t chunk_flags;
+
 	chk = NULL;
 	tsn = ntohl(ch->dp.tsn);
+	chunk_flags = ch->ch.chunk_flags;
+	protocol_id = ch->dp.protocol_id;
 	ordered = ((ch->ch.chunk_flags & SCTP_DATA_UNORDERED) == 0);
 #ifdef SCTP_MAP_LOGGING
 	sctp_log_map(0, tsn, asoc->cumulative_tsn, SCTP_MAP_PREPARE_SLIDE);
@@ -1623,8 +1627,8 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		asoc->tsn_in_at = 0;
 	}
 #endif
-	if ((ch->ch.chunk_flags & SCTP_DATA_FIRST_FRAG) &&
-	    (ch->ch.chunk_flags & SCTP_DATA_UNORDERED) == 0 &&
+	if ((chunk_flags & SCTP_DATA_FIRST_FRAG) &&
+	    (chunk_flags & SCTP_DATA_UNORDERED) == 0 &&
 	    (compare_with_wrap(asoc->strmin[strmno].last_sequence_delivered,
 	    strmseq, MAX_SEQ) ||
 	    asoc->strmin[strmno].last_sequence_delivered == strmseq)) {
@@ -1665,6 +1669,11 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		*abort_flag = 1;
 		return (0);
 	}
+	/************************************
+	 * From here down we may find ch-> invalid
+	 * so its a good idea NOT to use it.
+	 *************************************/
+
 	the_len = (chk_length - sizeof(struct sctp_data_chunk));
 	if (last_chunk == 0) {
 		dmbuf = SCTP_M_COPYM(*m,
@@ -1711,10 +1720,10 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		SCTP_STAT_INCR(sctps_nomem);
 		return (0);
 	}
-	if ((ch->ch.chunk_flags & SCTP_DATA_NOT_FRAG) == SCTP_DATA_NOT_FRAG &&
+	if ((chunk_flags & SCTP_DATA_NOT_FRAG) == SCTP_DATA_NOT_FRAG &&
 	    asoc->fragmented_delivery_inprogress == 0 &&
 	    TAILQ_EMPTY(&asoc->resetHead) &&
-	    ((ch->ch.chunk_flags & SCTP_DATA_UNORDERED) ||
+	    ((ordered) ||
 	    ((asoc->strmin[strmno].last_sequence_delivered + 1) == strmseq &&
 	    TAILQ_EMPTY(&asoc->strmin[strmno].inqueue)))) {
 		/* Candidate for express delivery */
@@ -1729,16 +1738,16 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		/* It would be nice to avoid this copy if we could :< */
 		sctp_alloc_a_readq(stcb, control);
 		sctp_build_readq_entry_mac(control, stcb, asoc->context, net, tsn,
-					   ch->dp.protocol_id,
+					   protocol_id,
 					   stcb->asoc.context,
 					   strmno, strmseq,
-					   ch->ch.chunk_flags,
+					   chunk_flags,
 					   dmbuf);
 		if (control == NULL) {
 			goto failed_express_del;
 		}
 		sctp_add_to_readq(stcb->sctp_ep, stcb, control, &stcb->sctp_socket->so_rcv, 1);
-		if ((ch->ch.chunk_flags & SCTP_DATA_UNORDERED) == 0) {
+		if (ordered == 0) {
 			/* for ordered, bump what we delivered */
 			asoc->strmin[strmno].last_sequence_delivered++;
 		}
@@ -1761,7 +1770,7 @@ failed_express_del:
 	    (asoc->ssn_of_pdapi == strmseq)
 		) {
 		control = stcb->asoc.control_pdapi;
-		if((ch->ch.chunk_flags & SCTP_DATA_FIRST_FRAG) == SCTP_DATA_FIRST_FRAG) {
+		if((chunk_flags & SCTP_DATA_FIRST_FRAG) == SCTP_DATA_FIRST_FRAG) {
 			/* Can't be another first? */
 			goto failed_pdapi_express_del;
 		}
@@ -1769,7 +1778,7 @@ failed_express_del:
 			/* Yep, we can add it on */
 			int end = 0;
 			uint32_t cumack;
-			if(ch->ch.chunk_flags & SCTP_DATA_LAST_FRAG) {
+			if(chunk_flags & SCTP_DATA_LAST_FRAG) {
 				end = 1;
 			}
 			cumack = asoc->cumulative_tsn;
@@ -1785,15 +1794,15 @@ failed_express_del:
 			SCTP_STAT_INCR(sctps_recvexpressm);
 			control->sinfo_tsn = tsn;
 			asoc->tsn_last_delivered = tsn;
-			asoc->fragment_flags = ch->ch.chunk_flags;
+			asoc->fragment_flags = chunk_flags;
 			asoc->tsn_of_pdapi_last_delivered = tsn;
-			asoc->last_flags_delivered = ch->ch.chunk_flags;
+			asoc->last_flags_delivered = chunk_flags;
 			asoc->last_strm_seq_delivered = strmseq;
 			asoc->last_strm_no_delivered = strmno;
 			if(end) {
 				/* clean up the flags and such */
 				asoc->fragmented_delivery_inprogress = 0;
-				if ((ch->ch.chunk_flags & SCTP_DATA_UNORDERED) == 0) {
+				if ((chunk_flags & SCTP_DATA_UNORDERED) == 0) {
 					asoc->strmin[strmno].last_sequence_delivered++;
 				}
 				stcb->asoc.control_pdapi = NULL;
@@ -1808,7 +1817,7 @@ failed_express_del:
 	}
  failed_pdapi_express_del:
 	control = NULL;
-	if ((ch->ch.chunk_flags & SCTP_DATA_NOT_FRAG) != SCTP_DATA_NOT_FRAG) {
+	if ((chunk_flags & SCTP_DATA_NOT_FRAG) != SCTP_DATA_NOT_FRAG) {
 		sctp_alloc_a_chunk(stcb, chk);
 		if (chk == NULL) {
 			/* No memory so we drop the chunk */
@@ -1823,10 +1832,10 @@ failed_express_del:
 		chk->no_fr_allowed = 0;
 		chk->rec.data.stream_seq = strmseq;
 		chk->rec.data.stream_number = strmno;
-		chk->rec.data.payloadtype = ch->dp.protocol_id;
+		chk->rec.data.payloadtype = protocol_id;
 		chk->rec.data.context = stcb->asoc.context;
 		chk->rec.data.doing_fast_retransmit = 0;
-		chk->rec.data.rcv_flags = ch->ch.chunk_flags;
+		chk->rec.data.rcv_flags = chunk_flags;
 		chk->asoc = asoc;
 		chk->send_size = the_len;
 		chk->whoTo = net;
@@ -1835,10 +1844,10 @@ failed_express_del:
 	} else {
 		sctp_alloc_a_readq(stcb, control);
 		sctp_build_readq_entry_mac(control, stcb, asoc->context, net, tsn,
-		    ch->dp.protocol_id,
+		    protocol_id,
 		    stcb->asoc.context,
 		    strmno, strmseq,
-		    ch->ch.chunk_flags,
+		    chunk_flags,
 		    dmbuf);
 		if (control == NULL) {
 			/* No memory so we drop the chunk */
@@ -1982,7 +1991,7 @@ failed_express_del:
 			}
 		}
 		/* ok, if we reach here we have passed the sanity checks */
-		if (ch->ch.chunk_flags & SCTP_DATA_UNORDERED) {
+		if (chunk_flags & SCTP_DATA_UNORDERED) {
 			/* queue directly into socket buffer */
 			sctp_add_to_readq(stcb->sctp_ep, stcb,
 			    control,
