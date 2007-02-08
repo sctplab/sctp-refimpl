@@ -1839,8 +1839,10 @@ sctp_fill_user_address(struct sockaddr_storage *ss, struct sockaddr *sa)
 {
 	struct sockaddr_in6 lsa6;
 
+#if defined(SCTP_EMBEDDED_V6_SCOPE)
 	sa = (struct sockaddr *)sctp_recover_scope((struct sockaddr_in6 *)sa,
 	    &lsa6);
+#endif
 	memcpy(ss, sa, sa->sa_len);
 	return (0);
 }
