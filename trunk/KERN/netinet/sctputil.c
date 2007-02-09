@@ -4801,12 +4801,14 @@ found_one:
 			memcpy(from, (caddr_t)&sin6, sizeof(sin6));
 		}
 #endif
-#if defined(AF_INET6) && defined(SCTP_EMBEDDED_V6_SCOPE)
+#if defined(SCTP_EMBEDDED_V6_SCOPE)
+#if defined(AF_INET6) 
 		{
 			struct sockaddr_in6 lsa6, *to6;
 			to6 = (struct sockaddr_in6 *)to;
 			sctp_recover_scope_mac(to6, (&lsa6));
 		}
+#endif
 #endif
 	}
 	/* now copy out what data we can */
