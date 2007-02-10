@@ -2122,7 +2122,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 		if (ntohs(lport) < IPPORT_RESERVED) {
 			if (p && (error =
 #ifdef __FreeBSD__
-#if __FreeBSD_version >= 602000
+#if __FreeBSD_version > 602000
                             priv_check(p,
 			    PRIV_NETINET_RESERVEDPORT)
 #elif __FreeBSD_version >= 500000
