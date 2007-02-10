@@ -53,7 +53,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.6 2007/01/18 09:58:43 rrs 
 #include <sys/sysctl.h>
 #include <sys/resourcevar.h>
 #include <sys/uio.h>
-#if defined(__FreeBSD__) && __FreeBSD_version >= 602000
+#if defined(__FreeBSD__) && __FreeBSD_version > 602000
 #include <sys/priv.h>
 #endif
 #include <sys/random.h>
