@@ -107,6 +107,10 @@ extern struct fileops socketops;
 
 #define SCTP_LIST_EMPTY(list)	LIST_EMPTY(list)
 
+/* temp copy: these are from sctp_os_bsd.h */
+#define SCTP_MAX_VRF_ID 0
+#define SCTP_SIZE_OF_VRF_HASH 1
+
 
 /* 
  * for per socket level locking strategy:

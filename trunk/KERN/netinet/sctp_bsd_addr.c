@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001-2006, Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2001-2007, Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -1985,6 +1985,37 @@ sctp_add_addresses_to_i_ia(struct sctp_inpcb *inp, struct sctp_scoping *scope, s
 	return (m_at);
 }
 
+
+/* is this an interface that we care about at all? */
+uint32_t
+sctp_is_desired_interface_type(struct ifaddr *ifa)
+{
+	int result;
+
+	/* check the interface type to see if it's one we care about */
+	switch (ifa->ifa_ifp->if_type) {
+	case IFT_ETHER:
+	case IFT_ISO88023:
+	case IFT_ISO88025:
+	case IFT_STARLAN:
+	case IFT_P10:
+	case IFT_P80:
+	case IFT_HY:
+	case IFT_FDDI:
+	case IFT_PPP:
+	case IFT_XETHER:
+	case IFT_SLIP:
+	case IFT_GIF:
+		result = 1;
+		break;
+	default:
+		result = 0;
+	}
+
+	return (result);
+}
+
+
 static void
 sctp_init_ifns_for_vrf(struct sctp_vrf *vrf)
 {
@@ -2019,7 +2050,7 @@ sctp_init_vrf_list(int vrfid)
 	if(vrf == NULL) {
 		/* No memory */
 #ifdef INVARIANTS
-		panic("No memory for VRF:%d", vrfid)
+		panic("No memory for VRF:%d", vrfid);
 #endif
 		return;
 	}

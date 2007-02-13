@@ -61,6 +61,7 @@ sctp_add_addresses_to_i_ia(struct sctp_inpcb *inp,
 			   struct mbuf *m_at, 
 			   int cnt_inits_to);
 
+uint32_t sctp_is_desired_interface_type(struct ifaddr *ifa);
 
 #endif
 #endif

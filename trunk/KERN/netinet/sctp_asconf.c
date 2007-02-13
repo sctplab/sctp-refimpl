@@ -1608,35 +1608,6 @@ sctp_handle_asconf_ack(struct mbuf *m, int offset,
 	}
 }
 
-/* is this an interface that we care about at all? */
-static uint32_t
-sctp_is_desired_interface_type(struct ifaddr *ifa)
-{
-	int result;
-
-	/* check the interface type to see if it's one we care about */
-	switch (ifa->ifa_ifp->if_type) {
-	case IFT_ETHER:
-	case IFT_ISO88023:
-	case IFT_ISO88025:
-	case IFT_STARLAN:
-	case IFT_P10:
-	case IFT_P80:
-	case IFT_HY:
-	case IFT_FDDI:
-	case IFT_PPP:
-	case IFT_XETHER:
-	case IFT_SLIP:
-	case IFT_GIF:
-		result = 1;
-		break;
-	default:
-		result = 0;
-	}
-
-	return (result);
-}
-
 static uint32_t
 sctp_is_scopeid_in_nets(struct sctp_tcb *stcb, struct sockaddr *sa)
 {
