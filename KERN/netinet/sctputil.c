@@ -1768,14 +1768,11 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				rndval = sctp_select_initial_TSN(&inp->sctp_ep);
 				memcpy(stcb->asoc.hb_random_values, &rndval,
 				    sizeof(stcb->asoc.hb_random_values));
-				this_random = stcb->asoc.hb_random_values[0];
 				stcb->asoc.hb_random_idx = 0;
-				stcb->asoc.hb_ect_randombit = 0;
-			} else {
-				this_random = stcb->asoc.hb_random_values[stcb->asoc.hb_random_idx];
-				stcb->asoc.hb_random_idx++;
-				stcb->asoc.hb_ect_randombit = 0;
 			}
+			this_random = stcb->asoc.hb_random_values[stcb->asoc.hb_random_idx];
+			stcb->asoc.hb_random_idx++;
+			stcb->asoc.hb_ect_randombit = 0;
 			/*
 			 * this_random will be 0 - 256 ms RTO is in ms.
 			 */
