@@ -1984,3 +1984,54 @@ sctp_add_addresses_to_i_ia(struct sctp_inpcb *inp, struct sctp_scoping *scope, s
 	}
 	return (m_at);
 }
+
+static void
+sctp_init_ifns_for_vrf(struct sctp_vrf *vrf)
+{
+	/* Here we must apply ANY locks needed by the
+	 * IFN we access and also make sure we lock
+	 * any IFA that exists as we float through the
+	 * list of IFA's
+	 */
+/*	struct sctp_ifn *sctp_ifnp = NULL;*/
+/*	struct sctp_ifa *sctp_ifap = NULL;*/
+	struct ifnet *ifn;
+	struct ifaddr *ifa;
+	TAILQ_FOREACH(ifn, &ifnet, if_list) {
+		TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
+		}
+	}
+}
+
+
+void 
+sctp_init_vrf_list(int vrfid)
+{
+	struct sctp_vrf *vrf = NULL;
+	struct sctp_vrflist *bucket;
+
+	if(vrfid > SCTP_MAX_VRF_ID)
+		/* can't do that */
+		return;
+
+	/* First allocate the VRF structure */
+	SCTP_MALLOC(vrf, struct sctp_vrf *, sizeof(struct sctp_vrf), "VRF");
+	if(vrf == NULL) {
+		/* No memory */
+#ifdef INVARIANTS
+		panic("No memory for VRF:%d", vrfid)
+#endif
+		return;
+	}
+	/* setup the VRF */
+	memset(vrf, 0, sizeof(struct sctp_vrf));
+	vrf->vrf_id = vrfid;
+	LIST_INIT(&vrf->ifnlist);
+
+	/* Add it to the hash table */
+	bucket = &sctppcbinfo.sctp_vrfhash[vrfid & sctppcbinfo.hashvrfmark];
+	LIST_INSERT_HEAD(bucket, vrf, next_vrf);
+	
+	/* Now we need to build all the ifn's for this vrf and there addresses*/
+	sctp_init_ifns_for_vrf(vrf);
+}

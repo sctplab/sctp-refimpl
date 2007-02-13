@@ -46,6 +46,9 @@ LIST_HEAD(sctppcbhead, sctp_inpcb);
 LIST_HEAD(sctpasochead, sctp_tcb);
 LIST_HEAD(sctpladdr, sctp_laddr);
 LIST_HEAD(sctpvtaghead, sctp_tagblock);
+LIST_HEAD(sctp_vrflist, sctp_vrf);
+LIST_HEAD(sctp_ifnlist, sctp_ifn);
+LIST_HEAD(sctp_ifalist, sctp_ifa);
 TAILQ_HEAD(sctp_readhead, sctp_queued_to_read);
 TAILQ_HEAD(sctp_streamhead, sctp_stream_queue_pending);
 
@@ -108,6 +111,43 @@ TAILQ_HEAD(sctp_streamhead, sctp_stream_queue_pending);
 #define SCTP_PCBHASH_ALLADDR(port, mask) (port & mask)
 #define SCTP_PCBHASH_ASOC(tag, mask) (tag & mask)
 
+struct sctp_ifn {
+	struct sctp_ifalist ifalist;
+	LIST_ENTRY(sctp_ifn) next_ifn;
+	void     *ifn_p;	/* never access without appropriate lock */
+	uint32_t ifn_index;	/* shorthand way to look at ifn for reference */
+	uint32_t refcount;	/* number of reference held should be >= ifa_count */
+	uint32_t ifa_count;	/* IFA's we hold (in our list - ifalist)*/
+};
+
+/* SCTP local IFA flags */
+#define SCTP_IS_ACTIVE 0x00000001	/* its up and active */
+#define SCTP_TO_DELETE 0x00000002	/* being deleted,
+					 * when refcount = 0. Note
+					 * that it is pulled from the ifn list
+					 * and ifa_p is nulled right away but
+					 * it cannot be freed until the last *net 
+					 * pointing to it is deleted.
+					 */
+struct sctp_ifa {
+	LIST_ENTRY(sctp_ifa) next_ifa;
+	struct sctp_ifn *ifn_p;	/* back pointer to parent ifn */
+	void    *ifa_p;		/* pointer to ifa, needed for flag
+				 * update for that we MUST lock
+				 * appropriate locks. This is for V6.
+				 */
+	union sctp_sockstore address;
+	uint32_t refcount;	/* number of folks refering to this */
+ 	uint32_t flags;
+	uint32_t localifa_flags;
+};
+
+struct sctp_vrf {
+	LIST_ENTRY (sctp_vrf) next_vrf;
+	struct sctp_ifnlist ifnlist;
+	uint32_t vrf_id;
+};
+
 struct sctp_laddr {
 	LIST_ENTRY(sctp_laddr) sctp_nxt_addr;	/* next in list */
 	struct ifaddr *ifa;
@@ -127,7 +167,6 @@ struct sctp_tagblock {
 	LIST_ENTRY(sctp_tagblock) sctp_nxt_tagblock;
 	struct sctp_timewait vtag_block[SCTP_NUMBER_IN_VTAG_BLOCK];
 };
-
 
 struct sctp_epinfo {
 	struct sctpasochead *sctp_asochash;
@@ -154,6 +193,9 @@ struct sctp_epinfo {
 	struct sctppcbhead *sctp_tcpephash;
 	u_long hashtcpmark;
 	uint32_t hashtblsize;
+
+	struct sctp_vrflist *sctp_vrfhash;
+	u_long hashvrfmark;
 
 	struct sctppcbhead listhead;
 	struct sctpladdr addr_wq;

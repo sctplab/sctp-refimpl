@@ -29,7 +29,7 @@
  */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.6 2007/01/18 09:58:43 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.7 2007/02/12 23:24:31 rrs Exp $");
 #endif
 #ifndef __sctp_os_bsd_h__
 #define __sctp_os_bsd_h__
@@ -119,6 +119,10 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.6 2007/01/18 09:58:43 rrs 
  */
 #define USER_ADDR_NULL	(NULL)		/* FIX ME: temp */
 #define SCTP_LIST_EMPTY(list)	LIST_EMPTY(list)
+
+#define SCTP_MAX_VRF_ID 0
+#define SCTP_SIZE_OF_VRF_HASH 1
+
 
 /*
  * general memory allocation

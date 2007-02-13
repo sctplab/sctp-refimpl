@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.11 2007/01/18 09:58:43 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.12 2007/02/12 23:24:31 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -4875,6 +4875,10 @@ sctp_pcb_init()
 	sctppcbinfo.sctp_restarthash = SCTP_HASH_INIT(SCTP_STACK_VTAG_HASH_SIZE,
 						      &sctppcbinfo.hashrestartmark);
 
+
+	sctppcbinfo.sctp_vrfhash = SCTP_HASH_INIT(SCTP_SIZE_OF_VRF_HASH,
+						  &sctppcbinfo.hashvrfmark);
+
 	/* init the zones */
 	/*
 	 * FIX ME: Should check for NULL returns, but if it does fail we are
@@ -4952,7 +4956,14 @@ sctp_pcb_init()
 	for (i = 0; i < SCTP_STACK_VTAG_HASH_SIZE; i++) {
 		LIST_INIT(&sctppcbinfo.vtag_timewait[i]);
 	}
-
+	for (i = 0; i <= SCTP_MAX_VRF_ID; i++) {
+		/* INIT all of the VRF's address lists 
+		 * For BSD we only have one, other O/S's may
+		 * have more. If we add VRF's or Multi-VRFs BSD
+		 * will need to add to the list initialization code.
+		 */
+		sctp_init_vrf_list(i);
+	}
 #if defined(_SCTP_NEEDS_CALLOUT_)
 	/* allocate the lock for the callout/timer queue */
 	SCTP_TIMERQ_LOCK_INIT();
