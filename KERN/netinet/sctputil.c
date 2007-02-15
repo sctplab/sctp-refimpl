@@ -3901,8 +3901,12 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 	}
 
 	SCTP_INP_READ_LOCK(inp);
-	atomic_add_int(&inp->total_recvs, 1);
-	atomic_add_int(&stcb->total_recvs, 1);
+	if (!(control->spec_flags & M_NOTIFICATION)) {
+		atomic_add_int(&inp->total_recvs, 1);
+		if (!control->do_not_ref_stcb) {
+			atomic_add_int(&stcb->total_recvs, 1);
+		}
+	}
 	m = control->data;
 	control->held_length = 0;
 	control->length = 0;
