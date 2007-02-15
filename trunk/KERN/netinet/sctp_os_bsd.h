@@ -123,6 +123,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.7 2007/02/12 23:24:31 rrs 
 #define SCTP_MAX_VRF_ID 0
 #define SCTP_SIZE_OF_VRF_HASH 1
 
+#define SCTP_DEFAULT_VRFID 0
 
 /*
  * general memory allocation
@@ -215,9 +216,18 @@ typedef struct callout sctp_os_timer_t;
 #define SCTP_OS_TIMER_DEACTIVATE callout_deactivate
 
 /*
- * Functions
+ * Access to IFN's to help with src-addr-selection
  */
 
+/* This could return VOID if the index works 
+ * but for BSD we provide both.
+ */
+#define SCTP_GET_IFN_VOID_FROM_ROUTE(ro) (void *)ro->ro_rt->rt_ifp
+#define SCTP_GET_IF_INDEX_FROM_ROUTE(ro) ro->ro_rt->rt_ifp->if_index
+
+/*
+ * Functions
+ */
 /* Mbuf manipulation and access macros  */
 #define SCTP_BUF_LEN(m) (m->m_len)
 #define SCTP_BUF_NEXT(m) (m->m_next)

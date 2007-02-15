@@ -400,6 +400,10 @@ sctp_find_alternate_net(struct sctp_tcb *stcb,
 			}
 #endif /* SCTP_EMBEDDED_V6_SCOPE */
 #endif
+			if (alt->src_addr_selected) {
+				sctp_free_ifa(alt->ro._s_addr);
+				alt->ro._s_addr = NULL;
+			}
 			alt->src_addr_selected = 0;
 		}
 		if (
@@ -979,6 +983,10 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 			    (struct sockaddr *)NULL,
 			    alt) == 0) {
 				net->dest_state |= SCTP_ADDR_WAS_PRIMARY;
+				if (net->src_addr_selected) {
+					sctp_free_ifa(net->ro._s_addr);
+					net->ro._s_addr = NULL;
+				}
 				net->src_addr_selected = 0;
 			}
 		}

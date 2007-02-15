@@ -57,13 +57,13 @@ void sctp_m_freem(struct mbuf *m);
 /*
  * Function prototypes
  */
-struct ifaddr *sctp_find_ifa_by_addr(struct sockaddr *sa);
+struct sctp_ifa *sctp_find_ifa_by_addr(struct sockaddr *sa, uint32_t vrf_id);
 
 uint32_t sctp_select_initial_TSN(struct sctp_pcb *);
 
 uint32_t sctp_select_a_tag(struct sctp_inpcb *);
 
-int sctp_init_asoc(struct sctp_inpcb *, struct sctp_association *, int, uint32_t);
+int sctp_init_asoc(struct sctp_inpcb *, struct sctp_association *, int, uint32_t, uint32_t);
 
 void sctp_fill_random_store(struct sctp_pcb *);
 

@@ -334,11 +334,19 @@ extern uint32_t sctp_system_free_resc_limit;
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 
 #define sctp_free_remote_addr(__net) { \
-	if ((__net)) { \
+	if ((__net)) {  \
 		if (atomic_fetchadd_int(&(__net)->ref_count, -1) == 1) { \
 			SCTP_OS_TIMER_STOP(&(__net)->rxt_timer.timer); \
 			SCTP_OS_TIMER_STOP(&(__net)->pmtu_timer.timer); \
 			SCTP_OS_TIMER_STOP(&(__net)->fr_timer.timer); \
+                        if ((__net)->ro.ro_rt) { \
+				RTFREE((__net)->ro.ro_rt); \
+                        } \
+			if ((__net)->src_addr_selected) { \
+				sctp_free_ifa((__net)->ro._s_addr); \
+				(__net)->ro._s_addr = NULL; \
+			} \
+                        (__net)->src_addr_selected = 0; \
 			(__net)->dest_state = SCTP_ADDR_NOT_REACHABLE; \
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_net, (__net)); \
 			SCTP_DECR_RADDR_COUNT(); \

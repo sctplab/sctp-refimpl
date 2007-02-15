@@ -2176,12 +2176,25 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 	uint32_t csum;
 	int ret;
 	unsigned int have_mtu;
+	uint32_t vrf_id;
 	struct route *ro;
+
 
 	if ((net) && (net->dest_state & SCTP_ADDR_OUT_OF_SCOPE)) {
 		sctp_m_freem(m);
 		return (EFAULT);
 	}
+
+	if (stcb == NULL) {
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
+		vrf_id = SCTP_DEFAULT_VRFID;
+#else
+		vrf_id = panda_get_vrf_from_call(); /* from destination or route? */
+#endif
+	} else {
+		vrf_id = stcb->asoc.vrf_id;
+	}
+
 	/* fill in the HMAC digest for any AUTH chunk in the packet */
 	if ((auth != NULL) && (stcb != NULL)) {
 		sctp_fill_hmac_digest_m(m, auth_offset, auth, stcb);
@@ -2296,16 +2309,24 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		if (net) {
 			if (net->src_addr_selected == 0) {
 				/* Cache the source address */
-				((struct sockaddr_in *)&net->ro._s_addr)->sin_addr = sctp_ipv4_source_address_selection(inp,
-				    stcb,
-				    ro, net, out_of_asoc_ok);
-				if (ro->ro_rt)
-					net->src_addr_selected = 1;
+				net->ro._s_addr = sctp_source_address_selection(inp,stcb,
+										ro, net, out_of_asoc_ok, vrf_id);
+				if(net->ro._s_addr == NULL) {
+					/* No route to host */
+					goto no_route;
+				}
+				net->src_addr_selected = 1;
 			}
-			ip->ip_src = ((struct sockaddr_in *)&net->ro._s_addr)->sin_addr;
+			ip->ip_src = net->ro._s_addr->address.sin.sin_addr;
 		} else {
-			ip->ip_src = sctp_ipv4_source_address_selection(inp,
-			    stcb, ro, net, out_of_asoc_ok);
+			struct sctp_ifa *_lsrc;
+			_lsrc = sctp_source_address_selection(inp,
+							      stcb, ro, net, out_of_asoc_ok, vrf_id);
+			if (_lsrc == NULL) {
+				goto no_route;
+			}
+			ip->ip_src = _lsrc->address.sin.sin_addr;
+			sctp_free_ifa(_lsrc);
 		}
 
 		/*
@@ -2321,6 +2342,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			 * valid source addr), so we can't get there from
 			 * here!
 			 */
+		no_route:
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
 				printf("low_level_output: dropped v4 packet- no valid source addr\n");
@@ -2346,6 +2368,8 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 							    (struct sockaddr *)NULL,
 							    alt) == 0) {
 								net->dest_state |= SCTP_ADDR_WAS_PRIMARY;
+								sctp_free_ifa(net->ro._s_addr);
+								net->ro._s_addr = NULL;
 								net->src_addr_selected = 0;
 							}
 						}
@@ -2398,8 +2422,10 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 #endif
 		if (net == NULL) {
 			/* free tempy routes */
-			if (ro->ro_rt)
+			if (ro->ro_rt) {
 				RTFREE(ro->ro_rt);
+				ro->ro_rt = NULL;
+			}
 		} else {
 			/* PMTU check versus smallest asoc MTU goes here */
 			if (ro->ro_rt != NULL) {
@@ -2410,6 +2436,11 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 				}
 			} else {
 				/* route was freed */
+				if (net->ro._s_addr &&
+				    net->src_addr_selected){
+					sctp_free_ifa(net->ro._s_addr);
+					net->ro._s_addr = NULL;
+				}
 				net->src_addr_selected = 0;
 			}
 		}
@@ -2509,16 +2540,27 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		if (net) {
 			if (net->src_addr_selected == 0) {
 				/* Cache the source address */
-				((struct sockaddr_in6 *)&net->ro._s_addr)->sin6_addr = sctp_ipv6_source_address_selection(inp,
-				    stcb, ro, net, out_of_asoc_ok);
+				net->ro._s_addr = sctp_source_address_selection(inp,
+										stcb, 
+										ro, 
+										net, 
+										out_of_asoc_ok, 
+										vrf_id);
+				if (net->ro._s_addr == NULL) {
+					goto no_route;
+				}
 
-				if (ro->ro_rt)
-					net->src_addr_selected = 1;
+				net->src_addr_selected = 1;
 			}
-			lsa6->sin6_addr = ((struct sockaddr_in6 *)&net->ro._s_addr)->sin6_addr;
+			lsa6->sin6_addr = net->ro._s_addr->address.sin6.sin6_addr;
 		} else {
-			lsa6->sin6_addr = sctp_ipv6_source_address_selection(
-			    inp, stcb, ro, net, out_of_asoc_ok);
+			struct sctp_ifa *_lsrc;
+			_lsrc = sctp_source_address_selection(inp, stcb, ro, net, out_of_asoc_ok, vrf_id);
+			if (_lsrc == NULL) {
+				goto no_route;
+			}
+			lsa6->sin6_addr = _lsrc->address.sin6.sin6_addr;
+			sctp_free_ifa(_lsrc);
 		}
 		lsa6->sin6_port = inp->sctp_lport;
 
@@ -2528,38 +2570,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			 * valid source addr), so we can't get there from
 			 * here!
 			 */
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
-				printf("low_level_output: dropped v6 pkt- no valid source addr\n");
-			}
-#endif
-			sctp_m_freem(o_pak);
-			if (net) {
-				if ((net->dest_state & SCTP_ADDR_REACHABLE) && stcb)
-					sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_DOWN,
-					    stcb,
-					    SCTP_FAILED_THRESHOLD,
-					    (void *)net);
-				net->dest_state &= ~SCTP_ADDR_REACHABLE;
-				net->dest_state |= SCTP_ADDR_NOT_REACHABLE;
-				if (stcb) {
-					if (net == stcb->asoc.primary_destination) {
-						/* need a new primary */
-						struct sctp_nets *alt;
-
-						alt = sctp_find_alternate_net(stcb, net, 0);
-						if (alt != net) {
-							if (sctp_set_primary_addr(stcb,
-							    (struct sockaddr *)NULL,
-							    alt) == 0) {
-								net->dest_state |= SCTP_ADDR_WAS_PRIMARY;
-								net->src_addr_selected = 0;
-							}
-						}
-					}
-				}
-			}
-			return (EHOSTUNREACH);
+			goto no_route;
 		}
 #ifndef SCOPEDROUTING
 #ifdef SCTP_EMBEDDED_V6_SCOPE
@@ -2658,6 +2669,12 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			/* PMTU check versus smallest asoc MTU goes here */
 			if (ro->ro_rt == NULL) {
 				/* Route was freed */
+
+				if (net->ro._s_addr &&
+				    net->src_addr_selected){
+					sctp_free_ifa(net->ro._s_addr);
+					net->ro._s_addr = NULL;
+				}
 				net->src_addr_selected = 0;
 			}
 			if (ro->ro_rt != NULL) {
@@ -3345,7 +3362,13 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	int abort_flag, padval, sz_of;
 	int num_ext;
 	int p_len;
+	uint32_t vrf_id;
 
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
+	vrf_id = SCTP_DEFAULT_VRFID;
+#else
+	vrf_id = panda_get_vrf_from_call(); /* from socket option call? */
+#endif
 	if (stcb) {
 		asoc = &stcb->asoc;
 	} else {
@@ -3439,7 +3462,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		to = (struct sockaddr *)&store;
 		iph = mtod(init_pkt, struct ip *);
 		if (iph->ip_v == IPVERSION) {
-			struct in_addr addr;
+			struct sctp_ifa *addr;
 			struct route iproute;
 
 			sin->sin_family = AF_INET;
@@ -3456,12 +3479,16 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			memset(&iproute, 0, sizeof(iproute));
 			ro = &iproute;
 			memcpy(&ro->ro_dst, sin, sizeof(*sin));
-			addr = sctp_ipv4_source_address_selection(inp, NULL,
-								  ro, NULL, 0);
+			addr = sctp_source_address_selection(inp, NULL,
+							     ro, NULL, 0, vrf_id);
+			if(addr == NULL)
+				return;
+
 			if (ro->ro_rt) {
 				RTFREE(ro->ro_rt);
+				ro->ro_rt = NULL;
 			}
-			stc.laddress[0] = addr.s_addr;
+			stc.laddress[0] = addr->address.sin.sin_addr.s_addr;
 			stc.laddress[1] = 0;
 			stc.laddress[2] = 0;
 			stc.laddress[3] = 0;
@@ -3476,14 +3503,14 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			stc.ipv4_scope = 1;
 #endif				/* SCTP_DONT_DO_PRIVADDR_SCOPE */
 			/* Must use the address in this case */
-			if (sctp_is_address_on_local_host((struct sockaddr *)sin)) {
+			if (sctp_is_address_on_local_host((struct sockaddr *)sin, vrf_id)) {
 				stc.loopback_scope = 1;
 				stc.ipv4_scope = 1;
 				stc.site_scope = 1;
 				stc.local_scope = 1;
 			}
 		} else if (iph->ip_v == (IPV6_VERSION >> 4)) {
-			struct in6_addr addr;
+			struct sctp_ifa *addr;
 
 #ifdef NEW_STRUCT_ROUTE
 			struct route iproute6;
@@ -3501,7 +3528,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			sin6->sin6_scope_id = 0;
 			stc.addr_type = SCTP_IPV6_ADDRESS;
 			stc.scope_id = 0;
-			if (sctp_is_address_on_local_host((struct sockaddr *)sin6)) {
+			if (sctp_is_address_on_local_host((struct sockaddr *)sin6, vrf_id)) {
 				stc.loopback_scope = 1;
 				stc.local_scope = 1;
 				stc.site_scope = 1;
@@ -3559,12 +3586,16 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			memset(&iproute6, 0, sizeof(iproute6));
 			ro = (struct route *)&iproute6;
 			memcpy(&ro->ro_dst, sin6, sizeof(*sin6));
-			addr = sctp_ipv6_source_address_selection(inp, NULL,
-								  ro, NULL, 0);
+			addr = sctp_source_address_selection(inp, NULL,
+							     ro, NULL, 0, vrf_id);
+			if(addr == NULL)
+				return;
+
 			if (ro->ro_rt) {
 				RTFREE(ro->ro_rt);
+				ro->ro_rt = NULL;
 			}
-			memcpy(&stc.laddress, &addr, sizeof(struct in6_addr));
+			memcpy(&stc.laddress, &addr->address.sin6.sin6_addr, sizeof(struct in6_addr));
 			stc.laddr_type = SCTP_IPV6_ADDRESS;
 		}
 	} else {
@@ -3601,13 +3632,16 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				 * strange case here, the INIT should have
 				 * did the selection.
 				 */
-				net->ro._s_addr.sin.sin_addr =
-					sctp_ipv4_source_address_selection(inp,
-									   stcb, (struct route *)&net->ro, net, 0);
+				net->ro._s_addr = sctp_source_address_selection(inp,
+										stcb, (struct route *)&net->ro, 
+										net, 0, vrf_id);
+				if(net->ro._s_addr == NULL)
+					return;
+
 				net->src_addr_selected = 1;
 
 			}
-			stc.laddress[0] = net->ro._s_addr.sin.sin_addr.s_addr;
+			stc.laddress[0] = net->ro._s_addr->address.sin.sin_addr.s_addr;
 			stc.laddress[1] = 0;
 			stc.laddress[2] = 0;
 			stc.laddress[3] = 0;
@@ -3622,12 +3656,15 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				 * strange case here, the INIT should have
 				 * did the selection.
 				 */
-				net->ro._s_addr.sin6.sin6_addr =
-					sctp_ipv6_source_address_selection(inp,
-									   stcb, (struct route *)&net->ro, net, 0);
+				net->ro._s_addr = sctp_source_address_selection(inp,
+										stcb, (struct route *)&net->ro, 
+										net, 0, vrf_id);
+				if(net->ro._s_addr == NULL)
+					return;
+
 				net->src_addr_selected = 1;
 			}
-			memcpy(&stc.laddress, &net->ro._l_addr.sin6.sin6_addr,
+			memcpy(&stc.laddress, &net->ro._s_addr->address.sin6.sin6_addr,
 			       sizeof(struct in6_addr));
 			stc.laddr_type = SCTP_IPV6_ADDRESS;
 		}
@@ -9621,6 +9658,8 @@ sctp_lower_sosend(struct socket *so,
 			goto out_unlocked;
 		} else {
 			/* UDP style, we must go ahead and start the INIT process */
+			uint32_t vrf;
+
 			if ((use_rcvinfo) && (srcv) &&
 			    ((srcv->sinfo_flags & SCTP_ABORT) ||
 			     ((srcv->sinfo_flags & SCTP_EOF) &&
@@ -9636,7 +9675,12 @@ sctp_lower_sosend(struct socket *so,
 				goto out_unlocked;
 			}
 			/* get an asoc/stcb struct */
-			stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0);
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
+			vrf = SCTP_DEFAULT_VRFID;
+#else
+			vrf = panda_get_vrf_from_call(); /* from send call? */
+#endif
+			stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0, vrf);
 			if (stcb == NULL) {
 				/* Error is setup for us in the call */
 #if defined(__NetBSD__) || defined(__OpenBSD__)

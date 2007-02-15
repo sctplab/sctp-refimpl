@@ -111,18 +111,27 @@ TAILQ_HEAD(sctp_streamhead, sctp_stream_queue_pending);
 #define SCTP_PCBHASH_ALLADDR(port, mask) (port & mask)
 #define SCTP_PCBHASH_ASOC(tag, mask) (tag & mask)
 
+struct sctp_vrf {
+	LIST_ENTRY (sctp_vrf) next_vrf;
+	struct sctp_ifnlist ifnlist;
+	uint32_t vrf_id;
+};
+
+
 struct sctp_ifn {
 	struct sctp_ifalist ifalist;
+	struct sctp_vrf *vrf;
 	LIST_ENTRY(sctp_ifn) next_ifn;
 	void     *ifn_p;	/* never access without appropriate lock */
+	uint32_t ifn_type;
 	uint32_t ifn_index;	/* shorthand way to look at ifn for reference */
 	uint32_t refcount;	/* number of reference held should be >= ifa_count */
 	uint32_t ifa_count;	/* IFA's we hold (in our list - ifalist)*/
 };
 
 /* SCTP local IFA flags */
-#define SCTP_IS_ACTIVE 0x00000001	/* its up and active */
-#define SCTP_TO_DELETE 0x00000002	/* being deleted,
+#define SCTP_ADDR_VALID     0x00000001	/* its up and active */
+#define SCTP_BEING_DELETED  0x00000002	/* being deleted,
 					 * when refcount = 0. Note
 					 * that it is pulled from the ifn list
 					 * and ifa_p is nulled right away but
@@ -132,7 +141,7 @@ struct sctp_ifn {
 struct sctp_ifa {
 	LIST_ENTRY(sctp_ifa) next_ifa;
 	struct sctp_ifn *ifn_p;	/* back pointer to parent ifn */
-	void    *ifa_p;		/* pointer to ifa, needed for flag
+	void    *ifa;		/* pointer to ifa, needed for flag
 				 * update for that we MUST lock
 				 * appropriate locks. This is for V6.
 				 */
@@ -142,15 +151,9 @@ struct sctp_ifa {
 	uint32_t localifa_flags;
 };
 
-struct sctp_vrf {
-	LIST_ENTRY (sctp_vrf) next_vrf;
-	struct sctp_ifnlist ifnlist;
-	uint32_t vrf_id;
-};
-
 struct sctp_laddr {
 	LIST_ENTRY(sctp_laddr) sctp_nxt_addr;	/* next in list */
-	struct ifaddr *ifa;
+	struct sctp_ifa *ifa;
 	int action;		/* Only used in delayed asconf stuff */
 };
 
@@ -372,11 +375,14 @@ struct sctp_inpcb {
 	LIST_ENTRY(sctp_inpcb) sctp_hash;
 	/* count of local addresses bound, 0 if bound all */
 	int laddr_count;
-	/* list of addrs in use by the EP */
+
+	/* list of addrs in use by the EP, NULL if bound-all */
 	struct sctpladdr sctp_addr_list;
-	/* used for source address selection rotation */
+	/* list of addresses that we should not use until asconf completes */
+	struct sctpladdr donot_use_addr_list;
+	/* used for source address selection rotation when we are subset bound */
 	struct sctp_laddr *next_addr_touse;
-	struct ifnet *next_ifn_touse;
+
 	/* back pointer to our socket */
 	struct socket *sctp_socket;
 	uint32_t sctp_flags;	/* INP state flag set */
@@ -519,6 +525,24 @@ int SCTP6_ARE_ADDR_EQUAL(struct in6_addr *a, struct in6_addr *b);
 
 void sctp_fill_pcbinfo(struct sctp_pcbinfo *);
 
+struct sctp_ifn *
+sctp_find_ifn(struct sctp_vrf *vrf, void *ifn, uint32_t ifn_index);
+
+struct sctp_vrf *sctp_find_vrf(uint32_t vrfid);
+
+struct sctp_ifa *
+sctp_add_addr_to_vrf(struct sctp_vrf *vrf, 
+	     void *ifn, uint32_t ifn_index, uint32_t ifn_type,
+	     void *ifa, struct sockaddr *addr, uint32_t ifa_flags);
+
+void sctp_free_ifa(struct sctp_ifa *sctp_ifap);
+
+struct sctp_ifa *
+sctp_del_addr_from_vrf(struct sctp_vrf *vrf, struct sockaddr *addr);
+
+
+
+
 struct sctp_nets *sctp_findnet(struct sctp_tcb *, struct sockaddr *);
 
 struct sctp_inpcb *sctp_pcb_findep(struct sockaddr *, int, int);
@@ -565,28 +589,26 @@ sctp_findassociation_ep_asconf(struct mbuf *, int, int,
 
 int sctp_inpcb_alloc(struct socket *);
 
-int sctp_is_address_on_local_host(struct sockaddr *addr);
+int sctp_is_address_on_local_host(struct sockaddr *addr, uint32_t vrf_id);
 
 void sctp_inpcb_free(struct sctp_inpcb *, int, int);
 
 struct sctp_tcb *
 sctp_aloc_assoc(struct sctp_inpcb *, struct sockaddr *,
-    int, int *, uint32_t);
+    int, int *, uint32_t, uint32_t);
 
 int sctp_free_assoc(struct sctp_inpcb *, struct sctp_tcb *, int, int);
 
 void
 sctp_add_vtag_to_timewait(struct sctp_inpcb *, uint32_t, uint32_t);
 
-int sctp_add_local_addr_ep(struct sctp_inpcb *, struct ifaddr *);
+int sctp_add_local_addr_ep(struct sctp_inpcb *, struct sctp_ifa *);
 
-int sctp_insert_laddr(struct sctpladdr *, struct ifaddr *);
+int sctp_insert_laddr(struct sctpladdr *, struct sctp_ifa *);
 
 void sctp_remove_laddr(struct sctp_laddr *);
 
-int sctp_del_local_addr_ep(struct sctp_inpcb *, struct ifaddr *);
-
-int sctp_del_local_addr_ep_sa(struct sctp_inpcb *, struct sockaddr *);
+int sctp_del_local_addr_ep(struct sctp_inpcb *, struct sctp_ifa *);
 
 int sctp_add_remote_addr(struct sctp_tcb *, struct sockaddr *, int, int);
 
@@ -596,11 +618,9 @@ int sctp_del_remote_addr(struct sctp_tcb *, struct sockaddr *);
 
 void sctp_pcb_init(void);
 
-int sctp_add_local_addr_assoc(struct sctp_tcb *, struct ifaddr *);
+int sctp_add_local_addr_assoc(struct sctp_tcb *, struct sctp_ifa *, int);
 
-int sctp_del_local_addr_assoc(struct sctp_tcb *, struct ifaddr *);
-
-int sctp_del_local_addr_assoc_sa(struct sctp_tcb *, struct sockaddr *);
+int sctp_del_local_addr_assoc(struct sctp_tcb *, struct sctp_ifa *);
 
 int
 sctp_load_addresses_from_init(struct sctp_tcb *, struct mbuf *, int, int,
