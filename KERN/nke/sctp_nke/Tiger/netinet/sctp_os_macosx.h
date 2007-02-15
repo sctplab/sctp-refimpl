@@ -107,6 +107,23 @@ extern struct fileops socketops;
 
 #define SCTP_LIST_EMPTY(list)	LIST_EMPTY(list)
 
+#define SCTP_MAX_VRF_ID 0
+#define SCTP_SIZE_OF_VRF_HASH 1
+
+#define SCTP_DEFAULT_VRFID 0
+
+/*
+ * Access to IFN's to help with src-addr-selection
+ */
+
+/* This could return VOID if the index works 
+ * but for BSD we provide both.
+ */
+#define SCTP_GET_IFN_VOID_FROM_ROUTE(ro) (void *)ro->ro_rt->rt_ifp
+#define SCTP_GET_IF_INDEX_FROM_ROUTE(ro) ro->ro_rt->rt_ifp->if_index
+
+
+
 
 /* 
  * for per socket level locking strategy:
