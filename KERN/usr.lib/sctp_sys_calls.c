@@ -586,6 +586,19 @@ sctp_sendx(int sd, const void *msg, size_t msg_len,
 	int add_len, len, no_end_cx=0;
 	struct sockaddr *at;
 	
+
+#ifdef SYS_sctp_generic_sendmsg
+	if(addrcnt < 2) {
+		socklen_t l;
+		/* Quick way, we don't need
+		 * to do a connectx so lets use
+		 * the syscall directly.
+		 */
+		l = addrs->sa_len;
+		return (syscall(SYS_sctp_generic_sendmsg, sd, 
+				msg, msg_len, addrs, l, sinfo, flags));
+	}
+#endif
 	len = sizeof(int);
 	at = addrs;
 	cnt = 0;
