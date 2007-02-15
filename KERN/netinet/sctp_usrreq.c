@@ -1865,11 +1865,12 @@ sctp_fill_up_addresses(struct sctp_inpcb *inp,
                        size_t limit,
                        struct sockaddr_storage *sas)
 {
-	struct ifnet *ifn;
-	struct ifaddr *ifa;
+	struct sctp_ifn *sctp_ifn;
+	struct sctp_ifa *sctp_ifa;
 	int loopback_scope, ipv4_local_scope, local_scope, site_scope;
 	size_t actual;
 	int ipv4_addr_legal, ipv6_addr_legal;
+	struct sctp_vrf *vrf;
 
 	actual = 0;
 	if (limit <= 0)
@@ -1895,15 +1896,15 @@ sctp_fill_up_addresses(struct sctp_inpcb *inp,
 	} else {
 		ipv4_addr_legal = 1;
 	}
-
+	vrf = sctp_find_vrf(stcb->asoc.vrf_id);
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
-		TAILQ_FOREACH(ifn, &ifnet, if_list) {
+		LIST_FOREACH(sctp_ifn, &vrf->ifnlist, next_ifn) {
 			if ((loopback_scope == 0) &&
-			    (ifn->if_type == IFT_LOOP)) {
+			    (sctp_ifn->ifn_type == IFT_LOOP)) {
 				/* Skip loopback if loopback_scope not set */
 				continue;
 			}
-			TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
+			LIST_FOREACH(sctp_ifa, &sctp_ifn->ifalist, next_ifa) {
 				if (stcb) {
 					/*
 					 * For the BOUND-ALL case, the list
@@ -1914,15 +1915,15 @@ sctp_fill_up_addresses(struct sctp_inpcb *inp,
 					 * is one of those we must skip it.
 					 */
 					if (sctp_is_addr_restricted(stcb,
-					    ifa->ifa_addr)) {
+								    sctp_ifa)) {
 						continue;
 					}
 				}
-				if ((ifa->ifa_addr->sa_family == AF_INET) &&
+				if ((sctp_ifa->address.sa.sa_family == AF_INET) &&
 				    (ipv4_addr_legal)) {
 					struct sockaddr_in *sin;
 
-					sin = (struct sockaddr_in *)ifa->ifa_addr;
+					sin = (struct sockaddr_in *)&sctp_ifa->address.sa;
 					if (sin->sin_addr.s_addr == 0) {
 						/*
 						 * we skip unspecifed
@@ -1948,7 +1949,7 @@ sctp_fill_up_addresses(struct sctp_inpcb *inp,
 					if (actual >= limit) {
 						return (actual);
 					}
-				} else if ((ifa->ifa_addr->sa_family == AF_INET6) &&
+				} else if ((sctp_ifa->address.sa.sa_family == AF_INET6) &&
 				    (ipv6_addr_legal)) {
 					struct sockaddr_in6 *sin6;
 
@@ -1956,7 +1957,7 @@ sctp_fill_up_addresses(struct sctp_inpcb *inp,
 					struct sockaddr_in6 lsa6;
 
 #endif
-					sin6 = (struct sockaddr_in6 *)ifa->ifa_addr;
+					sin6 = (struct sockaddr_in6 *)&sctp_ifa->address.sa;
 					if (IN6_IS_ADDR_UNSPECIFIED(&sin6->sin6_addr)) {
 						/*
 						 * we skip unspecifed
@@ -2019,17 +2020,17 @@ sctp_fill_up_addresses(struct sctp_inpcb *inp,
 			/* The list is a NEGATIVE list */
 			LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
 				if (stcb) {
-					if (sctp_is_addr_restricted(stcb, laddr->ifa->ifa_addr)) {
+					if (sctp_is_addr_restricted(stcb, laddr->ifa)) {
 						continue;
 					}
 				}
-				if (sctp_fill_user_address(sas, laddr->ifa->ifa_addr))
+				if (sctp_fill_user_address(sas, &laddr->ifa->address.sa))
 					continue;
 
 				((struct sockaddr_in6 *)sas)->sin6_port = inp->sctp_lport;
 				sas = (struct sockaddr_storage *)((caddr_t)sas +
-				    laddr->ifa->ifa_addr->sa_len);
-				actual += laddr->ifa->ifa_addr->sa_len;
+				    laddr->ifa->address.sa.sa_len);
+				actual += laddr->ifa->address.sa.sa_len;
 				if (actual >= limit) {
 					return (actual);
 				}
@@ -2041,12 +2042,12 @@ sctp_fill_up_addresses(struct sctp_inpcb *inp,
 				LIST_FOREACH(laddr, &stcb->asoc.sctp_local_addr_list,
 				    sctp_nxt_addr) {
 					if (sctp_fill_user_address(sas,
-					    laddr->ifa->ifa_addr))
+					    &laddr->ifa->address.sa))
 						continue;
 					((struct sockaddr_in6 *)sas)->sin6_port = inp->sctp_lport;
 					sas = (struct sockaddr_storage *)((caddr_t)sas +
-					    laddr->ifa->ifa_addr->sa_len);
-					actual += laddr->ifa->ifa_addr->sa_len;
+					    laddr->ifa->address.sa.sa_len);
+					actual += laddr->ifa->address.sa.sa_len;
 					if (actual >= limit) {
 						return (actual);
 					}
@@ -2059,12 +2060,12 @@ sctp_fill_up_addresses(struct sctp_inpcb *inp,
 				LIST_FOREACH(laddr, &inp->sctp_addr_list,
 				    sctp_nxt_addr) {
 					if (sctp_fill_user_address(sas,
-					    laddr->ifa->ifa_addr))
+					    &laddr->ifa->address.sa))
 						continue;
 					((struct sockaddr_in6 *)sas)->sin6_port = inp->sctp_lport;
 					sas = (struct sockaddr_storage *)((caddr_t)sas +
-					    laddr->ifa->ifa_addr->sa_len);
-					actual += laddr->ifa->ifa_addr->sa_len;
+					    laddr->ifa->address.sa.sa_len);
+					actual += laddr->ifa->address.sa.sa_len;
 					if (actual >= limit) {
 						return (actual);
 					}
@@ -2079,7 +2080,8 @@ static int
 sctp_count_max_addresses(struct sctp_inpcb *inp)
 {
 	int cnt = 0;
-
+	uint32_t vrf_id;
+	struct sctp_vrf *vrf = NULL;
 	/*
 	 * In both sub-set bound an bound_all cases we return the MAXIMUM
 	 * number of addresses that you COULD get. In reality the sub-set
@@ -2087,20 +2089,26 @@ sctp_count_max_addresses(struct sctp_inpcb *inp)
 	 * bound-all case a TCB may NOT include the loopback or other
 	 * addresses as well.
 	 */
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
+	vrf_id = SCTP_DEFAULT_VRFID;
+#else
+	vrf_id = panda_get_vrf_from_call(); /* from socket option call? */
+#endif
+	vrf = sctp_find_vrf(vrf_id);
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
-		struct ifnet *ifn;
-		struct ifaddr *ifa;
+		struct sctp_ifn *sctp_ifn;
+		struct sctp_ifa *sctp_ifa;
 
-		TAILQ_FOREACH(ifn, &ifnet, if_list) {
-			TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
+		LIST_FOREACH(sctp_ifn, &vrf->ifnlist, next_ifn) {
+			LIST_FOREACH(sctp_ifa, &sctp_ifn->ifalist, next_ifa) {
 				/* Count them if they are the right type */
-				if (ifa->ifa_addr->sa_family == AF_INET) {
+				if (sctp_ifa->address.sa.sa_family == AF_INET) {
 					if (inp->sctp_flags & SCTP_PCB_FLAGS_NEEDS_MAPPED_V4)
 						cnt += sizeof(struct sockaddr_in6);
 					else
 						cnt += sizeof(struct sockaddr_in);
 
-				} else if (ifa->ifa_addr->sa_family == AF_INET6)
+				} else if (sctp_ifa->address.sa.sa_family == AF_INET6)
 					cnt += sizeof(struct sockaddr_in6);
 			}
 		}
@@ -2108,13 +2116,13 @@ sctp_count_max_addresses(struct sctp_inpcb *inp)
 		struct sctp_laddr *laddr;
 
 		LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
-			if (laddr->ifa->ifa_addr->sa_family == AF_INET) {
+			if (laddr->ifa->address.sa.sa_family == AF_INET) {
 				if (inp->sctp_flags & SCTP_PCB_FLAGS_NEEDS_MAPPED_V4)
 					cnt += sizeof(struct sockaddr_in6);
 				else
 					cnt += sizeof(struct sockaddr_in);
 
-			} else if (laddr->ifa->ifa_addr->sa_family == AF_INET6)
+			} else if (laddr->ifa->address.sa.sa_family == AF_INET6)
 				cnt += sizeof(struct sockaddr_in6);
 		}
 	}
@@ -2135,6 +2143,7 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 	struct sockaddr *sa;
 	int num_v6 = 0, num_v4 = 0, *totaddrp, totaddr, i;
 	size_t incr, at;
+	uint32_t vrf;
 
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_PCB1) {
@@ -2252,8 +2261,13 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 		SCTP_INP_WUNLOCK(inp);
 	}
 
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
+	vrf = SCTP_DEFAULT_VRFID;
+#else
+	vrf = panda_get_vrf_from_call(); /* from connectx call? */
+#endif
 	/* We are GOOD to go */
-	stcb = sctp_aloc_assoc(inp, sa, 1, &error, 0);
+	stcb = sctp_aloc_assoc(inp, sa, 1, &error, 0, vrf);
 	if (stcb == NULL) {
 		/* Gak! no memory */
 		goto out_now;
@@ -4194,6 +4208,7 @@ SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
 			struct sctp_getaddresses *addrs;
 			struct sockaddr *addr_touse;
 			struct sockaddr_in sin;
+			uint32_t vrf;
 
 			SCTP_CHECK_AND_CAST(addrs, optval, struct sctp_getaddresses, optsize);
 
@@ -4226,6 +4241,11 @@ SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
 			 * all do their own locking. If we do something for
 			 * the FIX: below we may need to lock in that case.
 			 */
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
+			vrf = SCTP_DEFAULT_VRFID;
+#else
+			vrf = panda_get_vrf_from_call();
+#endif
 			if (addrs->sget_assoc_id == 0) {
 				/* add the address */
 				struct sctp_inpcb *lep;
@@ -4253,7 +4273,7 @@ SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
 				} else if (lep == NULL) {
 					((struct sockaddr_in *)addr_touse)->sin_port = 0;
 					error = sctp_addr_mgmt_ep_sa(inp, addr_touse,
-					    SCTP_ADD_IP_ADDRESS);
+					    SCTP_ADD_IP_ADDRESS, vrf);
 				} else {
 					error = EADDRNOTAVAIL;
 				}
@@ -4273,6 +4293,7 @@ SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
 			struct sctp_getaddresses *addrs;
 			struct sockaddr *addr_touse;
 			struct sockaddr_in sin;
+			uint32_t vrf;
 
 			SCTP_CHECK_AND_CAST(addrs, optval, struct sctp_getaddresses, optsize);
 			/* see if we're bound all already! */
@@ -4280,6 +4301,11 @@ SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
 				error = EINVAL;
 				break;
 			}
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
+			vrf = SCTP_DEFAULT_VRFID;
+#else
+			vrf = panda_get_vrf_from_call();
+#endif
 			addr_touse = addrs->addr;
 			if (addrs->addr->sa_family == AF_INET6) {
 				struct sockaddr_in6 *sin6;
@@ -4298,7 +4324,7 @@ SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
 			if (addrs->sget_assoc_id == 0) {
 				/* delete the address */
 				sctp_addr_mgmt_ep_sa(inp, addr_touse,
-				    SCTP_DEL_IP_ADDRESS);
+				    SCTP_DEL_IP_ADDRESS, vrf);
 			} else {
 				/*
 				 * FIX: decide whether we allow assoc based
@@ -4507,6 +4533,7 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 #endif
 	int error = 0;
 	int create_lock_on = 0;
+	uint32_t vrf;
 	struct sctp_inpcb *inp;
 	struct sctp_tcb *stcb=NULL;
 
@@ -4577,8 +4604,13 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		error = EALREADY;
 		goto out_now;
 	}
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
+	vrf = SCTP_DEFAULT_VRFID;
+#else
+	vrf = panda_get_vrf_from_call(); /* from connect call? */
+#endif
 	/* We are GOOD to go */
-	stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0);
+	stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0, vrf);
 	if (stcb == NULL) {
 		/* Gak! no memory */
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -4877,6 +4909,7 @@ sctp_ingetaddr(struct socket *so, struct mbuf *nam)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s;
 #endif
+	uint32_t vrf_id;
 	struct sctp_inpcb *inp;
 
 	/*
@@ -4904,6 +4937,7 @@ sctp_ingetaddr(struct socket *so, struct mbuf *nam)
 		return ECONNRESET;
 	}
 	SCTP_INP_RLOCK(inp);
+	struct sctp_ifa *sctp_ifa;
 	sin->sin_port = inp->sctp_lport;
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
@@ -4935,8 +4969,20 @@ sctp_ingetaddr(struct socket *so, struct mbuf *nam)
 				SCTP_TCB_UNLOCK(stcb);
 				goto notConn;
 			}
-			sin->sin_addr = sctp_ipv4_source_address_selection(inp,
-			    stcb, (struct route *)&net->ro, net, 0);
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
+			vrf_id = SCTP_DEFAULT_VRFID;
+#else
+			vrf_id = panda_get_vrf_from_call(); /* from socket option call? */
+#endif
+
+			sctp_ifa = sctp_source_address_selection(inp,
+								 stcb, 
+								 (struct route *)&net->ro, 
+								 net, 0, vrf_id);
+			if(sctp_ifa) {
+				sin->sin_addr = sctp_ifa->address.sin.sin_addr;
+				sctp_free_ifa(sctp_ifa);
+			}
 			SCTP_TCB_UNLOCK(stcb);
 		} else {
 			/* For the bound all case you get back 0 */
@@ -4950,10 +4996,10 @@ sctp_ingetaddr(struct socket *so, struct mbuf *nam)
 		int fnd = 0;
 
 		LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
-			if (laddr->ifa->ifa_addr->sa_family == AF_INET) {
+			if (laddr->ifa->address.sa.sa_family == AF_INET) {
 				struct sockaddr_in *sin_a;
 
-				sin_a = (struct sockaddr_in *)laddr->ifa->ifa_addr;
+				sin_a = (struct sockaddr_in *)&laddr->ifa->address.sa;
 				sin->sin_addr = sin_a->sin_addr;
 				fnd = 1;
 				break;
@@ -5147,12 +5193,14 @@ sctp_usrreq(so, req, m, nam, control)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s;
 #endif
+	struct sctp_vrf *vrf = NULL;
 	int error;
 	int family;
 
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
 #endif
+
 	error = 0;
 	family = so->so_proto->pr_domain->dom_family;
 	if (req == PRU_CONTROL) {
@@ -5182,12 +5230,19 @@ sctp_usrreq(so, req, m, nam, control)
 #ifdef __NetBSD__
 	if (req == PRU_PURGEIF) {
 		struct ifnet *ifn;
-		struct ifaddr *ifa;
+		struct sctp_ifn *sctp_ifn;
+		struct sctp_ifa *sctp_ifa;
 
 		ifn = (struct ifnet *)control;
-		TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
-			if (ifa->ifa_addr->sa_family == family) {
-				sctp_delete_ip_address(ifa);
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
+		vrf = SCTP_DEFAULT_VRFID;
+#else
+		vrf = panda_get_vrf_from_call(); /* from socket option call? */
+#endif
+		sctp_ifn = sctp_find_ifn(vrf, ifn, ifn->if_index);
+		LIST_FOREACH(sctp_ifa, &sctp_ifn->ifalist, next_ifa) {		
+			if (sctp_ifa->address.sa.sa_family == family) {
+				sctp_delete_ip_address(sctp_ifa);
 			}
 		}
 		switch (family) {

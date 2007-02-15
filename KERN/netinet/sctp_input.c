@@ -1529,12 +1529,19 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	struct sockaddr_in *sin;
 	struct sockaddr_in6 *sin6;
 	struct sctp_association *asoc;
+	uint32_t vrf;
 	int chk_length;
 	int init_offset, initack_offset, initack_limit;
 	int retval;
 	int error = 0;
 	uint32_t old_tag;
 	uint8_t auth_chunk_buf[SCTP_PARAM_BUFFER_SIZE];
+
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
+	vrf = SCTP_DEFAULT_VRFID;
+#else
+	vrf = panda_get_vrf_from_call(); /* from packet? */
+#endif
 
 	/*
 	 * find and validate the INIT chunk in the cookie (peer's info) the
@@ -1597,7 +1604,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	 * and popluate
 	 */
 	stcb = sctp_aloc_assoc(inp, init_src, 0, &error,
-	    ntohl(initack_cp->init.initiate_tag));
+	    ntohl(initack_cp->init.initiate_tag), vrf);
 	if (stcb == NULL) {
 		struct mbuf *op_err;
 

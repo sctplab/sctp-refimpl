@@ -911,7 +911,7 @@ sctp_select_a_tag(struct sctp_inpcb *m)
 
 int
 sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
-    int for_a_init, uint32_t override_tag)
+    int for_a_init, uint32_t override_tag, uint32_t vrf)
 {
 	/*
 	 * Anything set to zero is taken care of by the allocation routine's
@@ -964,6 +964,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	/* Get the nonce tags */
 	asoc->my_vtag_nonce = sctp_select_a_tag(m);
 	asoc->peer_vtag_nonce = sctp_select_a_tag(m);
+	asoc->vrf_id = vrf;
 
 	if (sctp_is_feature_on(m, SCTP_PCB_FLAGS_DONOT_HEARTBEAT))
 		asoc->hb_is_disabled = 1;
@@ -1047,6 +1048,8 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	asoc->stream_locked = 0;
 
 	LIST_INIT(&asoc->sctp_local_addr_list);
+	LIST_INIT(&asoc->sctp_restricted_addrs);
+
 	TAILQ_INIT(&asoc->nets);
 	TAILQ_INIT(&asoc->pending_reply_queue);
 	asoc->last_asconf_ack_sent = NULL;
@@ -1175,7 +1178,7 @@ sctp_handle_addr_wq(void)
 	} else if (wi->action == RTM_DELETE) {
 		sctp_delete_ip_address(wi->ifa);
 	}
-	IFAFREE(wi->ifa);
+	sctp_free_ifa(wi->ifa);
 	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_laddr, wi);
 	SCTP_DECR_LADDR_COUNT();
 }
@@ -4206,57 +4209,44 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
  * and doesn't handle multiple addresses with different zone/scope id's note:
  * ifa_ifwithaddr() compares the entire sockaddr struct
  */
-struct ifaddr *
-sctp_find_ifa_by_addr(struct sockaddr *sa)
+struct sctp_ifa *
+sctp_find_ifa_by_addr(struct sockaddr *addr, uint32_t vrf_id)
 {
-	struct ifnet *ifn;
-	struct ifaddr *ifa;
+	struct sctp_ifa *sctp_ifap = NULL;
+	struct sctp_ifn *sctp_ifnp = NULL;
+	struct sctp_vrf *vrf;
 
-	/* go through all our known interfaces */
-	TAILQ_FOREACH(ifn, &ifnet, if_list) {
-		/* go through each interface addresses */
-		TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
-			/* correct family? */
-			if (ifa->ifa_addr->sa_family != sa->sa_family)
+	vrf = sctp_find_vrf(vrf_id);
+	if(vrf == NULL)
+		return(NULL);
+
+	SCTP_IPI_ADDR_LOCK();
+
+	LIST_FOREACH(sctp_ifnp, &vrf->ifnlist, next_ifn) {
+		LIST_FOREACH(sctp_ifap, &sctp_ifnp->ifalist, next_ifa) {
+			
+			if (addr->sa_family != sctp_ifap->address.sa.sa_family)
 				continue;
-
-#ifdef INET6
-			if (ifa->ifa_addr->sa_family == AF_INET6) {
-				/* IPv6 address */
-				struct sockaddr_in6 *sin1, *sin2, sin6_tmp;
-
-				sin1 = (struct sockaddr_in6 *)ifa->ifa_addr;
-				if (IN6_IS_SCOPE_LINKLOCAL(&sin1->sin6_addr)) {
-					/* create a copy and clear scope */
-					memcpy(&sin6_tmp, sin1,
-					    sizeof(struct sockaddr_in6));
-					sin1 = &sin6_tmp;
-					in6_clearscope(&sin1->sin6_addr);
+			if(addr->sa_family == AF_INET) {
+				if (((struct sockaddr_in *)addr)->sin_addr.s_addr ==
+				    sctp_ifap->address.sin.sin_addr.s_addr) {
+					/* found him. */
+					SCTP_IPI_ADDR_UNLOCK();
+					return(sctp_ifap);
+					break;
 				}
-				sin2 = (struct sockaddr_in6 *)sa;
-				if (memcmp(&sin1->sin6_addr, &sin2->sin6_addr,
-				    sizeof(struct in6_addr)) == 0) {
-					/* found it */
-					return (ifa);
-				}
-			} else
-#endif
-			if (ifa->ifa_addr->sa_family == AF_INET) {
-				/* IPv4 address */
-				struct sockaddr_in *sin1, *sin2;
-
-				sin1 = (struct sockaddr_in *)ifa->ifa_addr;
-				sin2 = (struct sockaddr_in *)sa;
-				if (sin1->sin_addr.s_addr ==
-				    sin2->sin_addr.s_addr) {
-					/* found it */
-					return (ifa);
+			} else if (addr->sa_family == AF_INET6) {
+				if (SCTP6_ARE_ADDR_EQUAL(&((struct sockaddr_in6 *)addr)->sin6_addr,
+							 &sctp_ifap->address.sin6.sin6_addr)){
+					/* found him. */
+					SCTP_IPI_ADDR_UNLOCK();
+					return(sctp_ifap);
+					break;
 				}
 			}
-			/* else, not AF_INET or AF_INET6, so skip */
-		}		/* end foreach ifa */
-	}			/* end foreach ifn */
-	/* not found! */
+		}
+	}
+	SCTP_IPI_ADDR_UNLOCK();
 	return (NULL);
 }
 
