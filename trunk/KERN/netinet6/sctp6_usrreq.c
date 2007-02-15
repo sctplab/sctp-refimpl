@@ -1403,6 +1403,7 @@ sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s = splsoftnet();
 #endif
+	uint32_t vrf_id;
 	int error = 0;
 	struct sctp_inpcb *inp;
 	struct in6pcb *inp6;
@@ -1423,6 +1424,11 @@ sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		return (ECONNRESET);	/* I made the same as TCP since we are
 					 * not setup? */
 	}
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
+	vrf_id = SCTP_DEFAULT_VRFID;
+#else
+	vrf_id = panda_get_vrf_from_call(); /* from socket option call? */
+#endif
 	SCTP_ASOC_CREATE_LOCK(inp);
 	SCTP_INP_RLOCK(inp);
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) ==
@@ -1521,7 +1527,7 @@ sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		return (EALREADY);
 	}
 	/* We are GOOD to go */
-	stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0);
+	stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0, vrf_id);
 	SCTP_ASOC_CREATE_UNLOCK(inp);
 	if (stcb == NULL) {
 		/* Gak! no memory */
@@ -1562,6 +1568,8 @@ sctp6_getaddr(struct socket *so, struct mbuf *nam)
 
 #endif
 	struct sctp_inpcb *inp;
+	uint32_t vrf_id;
+	struct sctp_ifa *sctp_ifa;
 
 #ifdef SCTP_KAME
 	int error;
@@ -1579,6 +1587,7 @@ sctp6_getaddr(struct socket *so, struct mbuf *nam)
 #endif
 	sin6->sin6_family = AF_INET6;
 	sin6->sin6_len = sizeof(*sin6);
+
 
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (inp == NULL) {
@@ -1618,9 +1627,16 @@ sctp6_getaddr(struct socket *so, struct mbuf *nam)
 				/* punt */
 				goto notConn6;
 			}
-			sin6->sin6_addr = sctp_ipv6_source_address_selection(
-			    inp, stcb, (struct route *)&net->ro, net, 0);
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
+			vrf_id = SCTP_DEFAULT_VRFID;
+#else
+			vrf_id = panda_get_vrf_from_call(); /* from socket option call? */
+#endif
 
+			sctp_ifa = sctp_source_address_selection(inp, stcb, (struct route *)&net->ro, net, 0, vrf_id);
+			if(sctp_ifa) {
+				sin6->sin6_addr = sctp_ifa->address.sin6.sin6_addr;
+			}
 		} else {
 			/* For the bound all case you get back 0 */
 	notConn6:
@@ -1632,10 +1648,10 @@ sctp6_getaddr(struct socket *so, struct mbuf *nam)
 		int fnd = 0;
 
 		LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
-			if (laddr->ifa->ifa_addr->sa_family == AF_INET6) {
+			if (laddr->ifa->address.sa.sa_family == AF_INET6) {
 				struct sockaddr_in6 *sin_a;
 
-				sin_a = (struct sockaddr_in6 *)laddr->ifa->ifa_addr;
+				sin_a = (struct sockaddr_in6 *)&laddr->ifa->address.sin6;
 				sin6->sin6_addr = sin_a->sin6_addr;
 				fnd = 1;
 				break;
@@ -1947,7 +1963,7 @@ sctp6_usrreq(so, req, m, nam, control, p)
 	int s;
 	int error = 0;
 	int family;
-
+	uint32_t vrf_id;
 #if defined(__OpenBSD__)
 	p = curproc;
 #endif
@@ -1981,12 +1997,19 @@ sctp6_usrreq(so, req, m, nam, control, p)
 #ifdef __NetBSD__
 	if (req == PRU_PURGEIF) {
 		struct ifnet *ifn;
-		struct ifaddr *ifa;
+		struct sctp_ifn *sctp_ifn;
+		struct sctp_ifa *sctp_ifa;
 
 		ifn = (struct ifnet *)control;
-		TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
-			if (ifa->ifa_addr->sa_family == family) {
-				sctp_delete_ip_address(ifa);
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
+		vrf = SCTP_DEFAULT_VRFID;
+#else
+		vrf = panda_get_vrf_from_call(); /* from socket option call? */
+#endif
+		sctp_ifn = sctp_find_ifn(vrf, (void *)ifn, ifn->if_index);
+		LIST_FOREACH(sctp_ifa, &sctp_ifn->ifalist, next_ifa) {		
+			if (sctp_ifa->address.sa.sa_family == family) {
+				sctp_delete_ip_address(sctp_ifa);
 			}
 		}
 		switch (family) {
