@@ -3351,7 +3351,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 		((struct sockaddr_in6 *)&net->ro._l_addr)->sin6_port = stcb->rport;
 	}
 	net->addr_is_local = sctp_is_address_on_local_host(newaddr, stcb->asoc.vrf_id);
-	if(net->addr_is_local && ((set_scope || (from == SCTP_ADDR_IS_CONFIRMED))) {
+	if(net->addr_is_local && ((set_scope || (from == SCTP_ADDR_IS_CONFIRMED)))) {
 		stcb->asoc.loopback_scope = 1;
 		stcb->asoc.ipv4_local_scope = 1;
 		stcb->asoc.local_scope = 1;
