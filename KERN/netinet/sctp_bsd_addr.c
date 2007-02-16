@@ -1168,11 +1168,19 @@ sctp_add_addr_to_mbuf(struct mbuf *m, struct sctp_ifa *ifa)
 
 
 struct mbuf *
-sctp_add_addresses_to_i_ia(struct sctp_inpcb *inp, struct sctp_scoping *scope, struct mbuf *m_at, int cnt_inits_to)
+sctp_add_addresses_to_i_ia(struct sctp_inpcb *inp, struct sctp_scoping *scope, 
+			   struct mbuf *m_at, int cnt_inits_to)
 {
 	struct sctp_vrf *vrf = NULL;
 	int cnt;
-	vrf = sctp_find_vrf(SCTP_DEFAULT_VRFID);
+	uint32_t vrf_id;
+
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
+	vrf_id = SCTP_DEFAULT_VRFID;
+#else
+	vrf_id = panda_get_vrf_from_call(); /* from socket option call? */
+#endif
+	vrf = sctp_find_vrf(vrf_id);
 	if(vrf == NULL) {
 		printf("Gak, can't find default VRF?\n");
 		return(m_at);
