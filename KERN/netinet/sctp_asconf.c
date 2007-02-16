@@ -1232,7 +1232,7 @@ sctp_asconf_queue_add_sa(struct sctp_tcb *stcb, struct sockaddr *sa,
 	vrf = panda_get_vrf_from_call();
 #endif
 	aa->ap.aph.ph.param_type = type;
-	aa->ifa = sctp_find_ifa_by_addr(sa,vrf);
+	aa->ifa = sctp_find_ifa_by_addr(sa, vrf, 0);
 	/* correlation_id filled in during send routine later... */
 	if (sa->sa_family == AF_INET6) {
 		/* IPv6 address */
@@ -2466,7 +2466,7 @@ sctp_process_initack_addresses(struct sctp_tcb *stcb, struct mbuf *m,
 #else
 		vrf = panda_get_vrf_from_call();
 #endif
-		sctp_ifa = sctp_find_ifa_by_addr(sa, vrf);
+		sctp_ifa = sctp_find_ifa_by_addr(sa, vrf, 0);
 		if (sctp_ifa == NULL) {
 			/* address doesn't exist anymore */
 			int status;
@@ -2777,7 +2777,7 @@ sctp_addr_mgmt_ep_sa(struct sctp_inpcb *inp, struct sockaddr *sa, uint16_t type,
 	if (sa->sa_len == 0)
 		return (EINVAL);
 
-	ifa = sctp_find_ifa_by_addr(sa,  vrf);
+	ifa = sctp_find_ifa_by_addr(sa,  vrf, 0);
 	if (ifa != NULL) {
 #ifdef INET6
 		if (ifa->address.sa.sa_family == AF_INET6) {

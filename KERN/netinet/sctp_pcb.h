@@ -538,7 +538,7 @@ sctp_add_addr_to_vrf(struct sctp_vrf *vrf,
 void sctp_free_ifa(struct sctp_ifa *sctp_ifap);
 
 struct sctp_ifa *
-sctp_del_addr_from_vrf(struct sctp_vrf *vrf, struct sockaddr *addr);
+sctp_del_addr_from_vrf(struct sctp_vrf *vrf, struct sockaddr *addr, uint32_t ifn_index);
 
 
 
