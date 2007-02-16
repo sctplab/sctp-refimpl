@@ -302,8 +302,6 @@ sctp_del_addr_from_vrf(struct sctp_vrf *vrf, struct sockaddr *addr, uint32_t ifn
 	if(sctp_ifap) {
 		sctp_ifap->localifa_flags &= SCTP_ADDR_VALID;
 		sctp_ifap->localifa_flags |= SCTP_BEING_DELETED;
-		sctp_ifap->ifa = NULL;
-		sctp_ifap->ifn_p = NULL;
 		sctp_ifnp->ifa_count--;
 		LIST_REMOVE(sctp_ifap, next_ifa);
 		atomic_add_int(&sctp_ifnp->refcount, -1);
