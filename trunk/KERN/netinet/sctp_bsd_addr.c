@@ -711,6 +711,7 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 							ip_scope, 
 							&sin_loop, 
 							&sin_local, fam);
+	printf("There are %d prefered addresses\n", num_prefered);
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
 		printf("Found %d prefered source addresses\n", num_prefered);
@@ -721,6 +722,7 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 		 * no eligible addresses, we must use some other interface
 		 * address if we can find one.
 		 */
+		printf("Plan b\n");
 		goto bound_all_plan_b;
 	}
 	/*
@@ -740,8 +742,9 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 		printf("cur_addr_num:%d\n", cur_addr_num);
 	}
 #endif
-	sctp_ifa = sctp_select_nth_prefered_addr_from_ifn_boundall(ifn, stcb, non_asoc_addr_ok, loopscope,
-								      ip_scope, cur_addr_num, fam);
+	sctp_ifa = sctp_select_nth_prefered_addr_from_ifn_boundall(sctp_ifn, stcb, non_asoc_addr_ok, loopscope,
+								   ip_scope, cur_addr_num, fam);
+	printf("select nth(%d) returns %p\n", cur_addr_num, sctp_ifa);
 
 	/* if sctp_ifa is NULL something changed??, fall to plan b. */
 	if (sctp_ifa) {
@@ -999,11 +1002,13 @@ sctp_source_address_selection(struct sctp_inpcb *inp,
 		 * When bound to all if the address list is set it is a
 		 * negative list. Addresses being added by asconf.
 		 */
+		printf("Doing bound all case\n");
 		answer = sctp_choose_boundall(inp, stcb, net, ro, vrf_id,
 					      loc_scope, 
 					      loopscope, 
 					      non_asoc_addr_ok,  
 					      fam);
+		printf("Answer is %p\n", answer);
 		return (answer);
 	}
 	/*
@@ -1195,12 +1200,14 @@ sctp_add_addresses_to_i_ia(struct sctp_inpcb *inp, struct sctp_scoping *scope,
 		printf("Gak, can't find default VRF?\n");
 		return(m_at);
 	}
-
+	printf("Adding addresses from VRF:%d to m_at:%p\n",
+	 	vrf_id, m_at);	
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
 		struct sctp_ifa *sctp_ifap;
 		struct sctp_ifn *sctp_ifnp;
 
 		cnt = cnt_inits_to;
+		printf("Bound all case cnt starts at:%d\n",cnt);
 		LIST_FOREACH(sctp_ifnp, &vrf->ifnlist, next_ifn) {
 			if ((scope->loopback_scope == 0) &&
 			    (sctp_ifnp->ifn_type == IFT_LOOP)) {
@@ -1220,9 +1227,11 @@ sctp_add_addresses_to_i_ia(struct sctp_inpcb *inp, struct sctp_scoping *scope,
 							     scope->site_scope, 1) == 0) {
 					continue;
 				}
+				printf("Found one\n");
 				cnt++;
 			}
 		}
+		printf("There are %d eligible addresses\n", cnt);
 		if (cnt > 1) {
 			LIST_FOREACH(sctp_ifnp, &vrf->ifnlist, next_ifn) {
 				if ((scope->loopback_scope == 0) &&
@@ -1243,6 +1252,7 @@ sctp_add_addresses_to_i_ia(struct sctp_inpcb *inp, struct sctp_scoping *scope,
 								     scope->site_scope, 0) == 0) {
 						continue;
 					}
+					printf("Adding one\n");
 					m_at = sctp_add_addr_to_mbuf(m_at, sctp_ifap);
 				}
 			}
@@ -1252,6 +1262,7 @@ sctp_add_addresses_to_i_ia(struct sctp_inpcb *inp, struct sctp_scoping *scope,
 		int cnt;
 
 		cnt = cnt_inits_to;
+		printf("bound specific cnt inits to %d\n", cnt);
 		/* First, how many ? */
 		LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
 			if (laddr->ifa == NULL) {
@@ -1269,6 +1280,7 @@ sctp_add_addresses_to_i_ia(struct sctp_inpcb *inp, struct sctp_scoping *scope,
 						     scope->site_scope, 1) == 0) {
 				continue;
 			}
+			printf("found one\n");
 			cnt++;
 		}
 		/*
@@ -1276,6 +1288,7 @@ sctp_add_addresses_to_i_ia(struct sctp_inpcb *inp, struct sctp_scoping *scope,
 		 * more than one. That way if you just bind a single address
 		 * we let the source of the init dictate our address.
 		 */
+		printf("There are %d addresses read to add\n", cnt);
 		if (cnt > 1) {
 			LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
 				if (laddr->ifa == NULL) {
@@ -1293,10 +1306,12 @@ sctp_add_addresses_to_i_ia(struct sctp_inpcb *inp, struct sctp_scoping *scope,
 							     scope->site_scope, 0) == 0) {
 					continue;
 				}
+				printf("Adding one\n");
 				m_at = sctp_add_addr_to_mbuf(m_at, laddr->ifa);
 			}
 		}
 	}
+	printf("All done return %p\n", m_at);
 	return (m_at);
 }
 
@@ -1386,7 +1401,6 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 	vrf = sctp_find_vrf(SCTP_DEFAULT_VRFID);
 	if(vrf == NULL)
 		return;
-
 	if(cmd == RTM_ADD) {
 		struct in6_ifaddr *ifa6;
 		if(ifa->ifa_addr->sa_family == AF_INET6) {
