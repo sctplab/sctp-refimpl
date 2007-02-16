@@ -322,7 +322,7 @@ void sctp_log_block(uint8_t, struct socket *, struct sctp_association *, int);
 void sctp_log_rwnd(uint8_t, uint32_t, uint32_t, uint32_t);
 void sctp_log_mbcnt(uint8_t, uint32_t, uint32_t, uint32_t, uint32_t);
 void sctp_log_rwnd_set(uint8_t, uint32_t, uint32_t, uint32_t, uint32_t);
-int sctp_fill_stat_log(struct mbuf *);
+int sctp_fill_stat_log(void *, size_t *);
 void sctp_log_fr(uint32_t, uint32_t, uint32_t, int);
 void sctp_log_sack(uint32_t, uint32_t, uint32_t, uint16_t, uint16_t, int);
 void sctp_log_map(uint32_t, uint32_t, uint32_t, int);

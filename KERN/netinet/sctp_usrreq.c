@@ -2628,16 +2628,13 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 			*optsize = sizeof(uint32_t);
 		}
 		break;
-#if 0
-	/* FIXME MT: How does this work? */
 	case SCTP_GET_STAT_LOG:
 #ifdef SCTP_STAT_LOGGING
-		error = sctp_fill_stat_log(m);
-#else				/* SCTP_DEBUG */
+		error = sctp_fill_stat_log(optval, optsize);
+#else
 		error = EOPNOTSUPP;
 #endif
 		break;
-#endif
 	case SCTP_EVENTS:
 		{
 			struct sctp_event_subscribe *events;
