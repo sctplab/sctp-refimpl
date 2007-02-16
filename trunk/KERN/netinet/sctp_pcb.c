@@ -217,7 +217,7 @@ sctp_add_addr_to_vrf(struct sctp_vrf *vrf,
 		SCTP_MALLOC(sctp_ifnp, struct sctp_ifn *, sizeof(struct sctp_ifn), "SCTP_IFN");
 		if(sctp_ifnp == NULL) {
 #ifdef INVARIANTS
-			panic("No memory for IFN:%u", ifn->ifn_index);
+			panic("No memory for IFN:%u", sctp_ifnp->ifn_index);
 #endif
 			return(NULL);
 		}
