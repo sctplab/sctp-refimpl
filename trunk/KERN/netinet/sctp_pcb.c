@@ -3279,23 +3279,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 				stcb->asoc.ipv4_local_scope = 1;
 			}
 #endif				/* SCTP_DONT_DO_PRIVADDR_SCOPE */
-
-			if (sctp_is_address_on_local_host(newaddr, stcb->asoc.vrf_id)) {
-				stcb->asoc.loopback_scope = 1;
-				stcb->asoc.ipv4_local_scope = 1;
-				stcb->asoc.local_scope = 1;
-				stcb->asoc.site_scope = 1;
-			}
 		} else {
-			if (from == SCTP_ADDR_IS_CONFIRMED) {
-				/* From connectx */
-				if (sctp_is_address_on_local_host(newaddr, stcb->asoc.vrf_id)) {
-					stcb->asoc.loopback_scope = 1;
-					stcb->asoc.ipv4_local_scope = 1;
-					stcb->asoc.local_scope = 1;
-					stcb->asoc.site_scope = 1;
-				}
-			}
 			/* Validate the address is in scope */
 			if ((IN4_ISPRIVATE_ADDRESS(&sin->sin_addr)) &&
 			    (stcb->asoc.ipv4_local_scope == 0)) {
@@ -3337,15 +3321,6 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 				stcb->asoc.site_scope = 1;
 			}
 		} else {
-			if (from == SCTP_ADDR_IS_CONFIRMED) {
-				/* From connectx so we check for localhost. */
-				if (sctp_is_address_on_local_host(newaddr, stcb->asoc.vrf_id)) {
-					stcb->asoc.loopback_scope = 1;
-					stcb->asoc.ipv4_local_scope = 1;
-					stcb->asoc.local_scope = 1;
-					stcb->asoc.site_scope = 1;
-				}
-			}
 			/* Validate the address is in scope */
 			if (IN6_IS_ADDR_LOOPBACK(&sin6->sin6_addr) &&
 			    (stcb->asoc.loopback_scope == 0)) {
@@ -3376,6 +3351,12 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 		((struct sockaddr_in6 *)&net->ro._l_addr)->sin6_port = stcb->rport;
 	}
 	net->addr_is_local = sctp_is_address_on_local_host(newaddr, stcb->asoc.vrf_id);
+	if(net->addr_is_local && ((set_scope || (from == SCTP_ADDR_IS_CONFIRMED))) {
+		stcb->asoc.loopback_scope = 1;
+		stcb->asoc.ipv4_local_scope = 1;
+		stcb->asoc.local_scope = 1;
+		stcb->asoc.site_scope = 1;
+	}
 	net->failure_threshold = stcb->asoc.def_net_failure;
 	if (addr_inscope == 0) {
 		net->dest_state = (SCTP_ADDR_REACHABLE |
