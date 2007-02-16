@@ -199,7 +199,7 @@ sctp_free_ifa(struct sctp_ifa *sctp_ifap)
 
 struct sctp_ifa *
 sctp_add_addr_to_vrf(struct sctp_vrf *vrf, 
-		     void *ifn, uint32_t ifn_index, uint32_t ifn_type,
+		     void *ifn, uint32_t ifn_index, uint32_t ifn_type, char *if_name,
 		     void *ifa, struct sockaddr *addr, uint32_t ifa_flags)
 {
 	struct sctp_ifn *sctp_ifnp = NULL;
@@ -227,6 +227,7 @@ sctp_add_addr_to_vrf(struct sctp_vrf *vrf,
 		sctp_ifnp->ifa_count = 0;
 		sctp_ifnp->refcount = 0;
 		sctp_ifnp->vrf = vrf;
+		memcpy(sctp_ifnp->ifn_name, if_name, SCTP_IFNAMSIZ);
 		LIST_INIT(&sctp_ifnp->ifalist);
 		SCTP_IPI_ADDR_LOCK();
 		LIST_INSERT_HEAD(&vrf->ifnlist, sctp_ifnp, next_ifn);

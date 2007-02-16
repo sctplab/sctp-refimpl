@@ -1326,6 +1326,7 @@ sctp_init_ifns_for_vrf(struct sctp_vrf *vrf)
 						     (void *)ifn,
 						     ifn->if_index, 
 						     ifn->if_type,
+						     ifn->if_xname,
 						     (void *)ifa,
 						     ifa->ifa_addr,
 						     ifa_flags
@@ -1392,6 +1393,7 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 		}
 		ifap = sctp_add_addr_to_vrf(vrf, (void *)ifa->ifa_ifp,
 					    ifa->ifa_ifp->if_index, ifa->ifa_ifp->if_type,
+					    ifa->ifa_ifp->if_xname,
 					    (void *)ifa, ifa->ifa_addr, ifa_flags);
 		/* Bump up the refcount so that when the timer
 		 * completes it will drop back down.
