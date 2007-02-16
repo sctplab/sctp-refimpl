@@ -127,6 +127,7 @@ struct sctp_ifn {
 	uint32_t ifn_index;	/* shorthand way to look at ifn for reference */
 	uint32_t refcount;	/* number of reference held should be >= ifa_count */
 	uint32_t ifa_count;	/* IFA's we hold (in our list - ifalist)*/
+	char     ifn_name[SCTP_IFNAMSIZ];
 };
 
 /* SCTP local IFA flags */
@@ -532,8 +533,8 @@ struct sctp_vrf *sctp_find_vrf(uint32_t vrfid);
 
 struct sctp_ifa *
 sctp_add_addr_to_vrf(struct sctp_vrf *vrf, 
-	     void *ifn, uint32_t ifn_index, uint32_t ifn_type,
-	     void *ifa, struct sockaddr *addr, uint32_t ifa_flags);
+		     void *ifn, uint32_t ifn_index, uint32_t ifn_type, char *if_name,
+		     void *ifa, struct sockaddr *addr, uint32_t ifa_flags);
 
 void sctp_free_ifa(struct sctp_ifa *sctp_ifap);
 
