@@ -2100,7 +2100,7 @@ sctp_set_primary_ip_address(struct sctp_ifa *ifa)
 				if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
 					printf("set_primary_ip_address: queued on stcb=%p, ",
 					    stcb);
-					sctp_print_address(&sctp_ifa->address.sa);
+					sctp_print_address(&ifa->address.sa);
 				}
 #endif				/* SCTP_DEBUG */
 			} 
