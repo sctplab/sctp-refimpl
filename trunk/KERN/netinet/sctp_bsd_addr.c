@@ -1377,7 +1377,7 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 		}
 		ifap = sctp_add_addr_to_vrf(vrf, (void *)ifa->ifa_ifp,
 					    ifa->ifa_ifp->if_index, ifa->ifa_ifp->if_type,
-					    (void *)ifa, ifa->ifa_addr, ifa->ifa_flags);
+					    (void *)ifa, ifa->ifa_addr, ifa_flags);
 		/* Bump up the refcount so that when the timer
 		 * completes it will drop back down.
 		 */
@@ -1385,7 +1385,7 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 			atomic_add_int(&ifap->refcount, 1);
 		
 	} else if (cmd == RTM_DELETE) {
-		ifap = sctp_del_addr_from_vrf(vrf, ifa->ifa_addr);
+		ifap = sctp_del_addr_from_vrf(vrf, ifa->ifa_addr, ifa->ifa_ifp->if_index);
 		/* We don't bump refcount here so when it completes
 		 * the final delete will happen.
 		 */

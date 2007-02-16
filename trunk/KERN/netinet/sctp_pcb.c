@@ -231,9 +231,35 @@ sctp_add_addr_to_vrf(struct sctp_vrf *vrf,
 		SCTP_IPI_ADDR_LOCK();
 		LIST_INSERT_HEAD(&vrf->ifnlist, sctp_ifnp, next_ifn);
 	}
-	/* Should we verify that you are not adding one that
-	 * is already on the ifn? For now we will not.
-	 */
+	sctp_ifap = sctp_find_ifa_by_addr(addr, vrf->vrf_id, 1);
+	if(sctp_ifap) {
+		/* Hmm, it already exists? */
+		if((sctp_ifap->ifn_p) && (sctp_ifap->ifn_p->ifn_index == ifn_index)) {
+			if(sctp_ifap->localifa_flags & SCTP_BEING_DELETED) {
+				/* easy to solve, just switch back to active */
+				sctp_ifap->localifa_flags = SCTP_ADDR_VALID;
+				sctp_ifap->ifn_p = sctp_ifnp;
+			exit_stage_left:
+				SCTP_IPI_ADDR_UNLOCK();
+				return(sctp_ifap);
+			} else {
+				printf("Warning:Adding address already present, same IFN\n");
+				goto exit_stage_left;
+			}
+		} else {
+			if(sctp_ifap->ifn_p) 
+				printf("Warning:Adding address already present, but on IFN:%d existing IFN:%d??\n",
+				       ifn_index,
+				       sctp_ifap->ifn_p->ifn_index);
+			else {
+				/* repair ifnp which was NULL ? */
+				sctp_ifap->localifa_flags = SCTP_ADDR_VALID;
+				sctp_ifap->ifn_p = sctp_ifnp;
+				atomic_add_int(&sctp_ifnp->refcount, 1);
+			}				       
+			goto exit_stage_left;
+		}
+	}
 	SCTP_IPI_ADDR_UNLOCK();
 	SCTP_MALLOC(sctp_ifap, struct sctp_ifa *, sizeof(struct sctp_ifa), "SCTP_IFA");
 	if(sctp_ifap == NULL) {
@@ -242,6 +268,7 @@ sctp_add_addr_to_vrf(struct sctp_vrf *vrf,
 #endif
 		return(NULL);
 	}
+	memset(sctp_ifap, 0, sizeof(sctp_ifap));
 	sctp_ifap->ifn_p = sctp_ifnp;
 	atomic_add_int(&sctp_ifnp->refcount, 1);
 
@@ -259,38 +286,19 @@ sctp_add_addr_to_vrf(struct sctp_vrf *vrf,
 }
 
 struct sctp_ifa *
-sctp_del_addr_from_vrf(struct sctp_vrf *vrf, struct sockaddr *addr)
+sctp_del_addr_from_vrf(struct sctp_vrf *vrf, struct sockaddr *addr, uint32_t ifn_index)
 {
 	struct sctp_ifa *sctp_ifap = NULL;
 	struct sctp_ifn *sctp_ifnp = NULL;
-	int match = 0;
 	SCTP_IPI_ADDR_LOCK();
 
-	LIST_FOREACH(sctp_ifnp, &vrf->ifnlist, next_ifn) {
-		LIST_FOREACH(sctp_ifap, &sctp_ifnp->ifalist, next_ifa) {
-			
-			if (addr->sa_family != sctp_ifap->address.sa.sa_family)
-				continue;
-			if(addr->sa_family == AF_INET) {
-				if (((struct sockaddr_in *)addr)->sin_addr.s_addr ==
-				    sctp_ifap->address.sin.sin_addr.s_addr) {
-					/* found him. */
-					match = 1;
-					break;
-				}
-			} else if (addr->sa_family == AF_INET6) {
-				if (SCTP6_ARE_ADDR_EQUAL(&((struct sockaddr_in6 *)addr)->sin6_addr,
-							 &sctp_ifap->address.sin6.sin6_addr)){
-					/* found him. */
-					match = 1;
-					break;
-				}
-			}
-		}
-		if(match) {
-			break;
-		}
+	sctp_ifnp = sctp_find_ifn(vrf, (void *)NULL, ifn_index);
+	if(sctp_ifnp == NULL) {
+		sctp_ifap = sctp_find_ifa_by_addr(addr, vrf->vrf_id, 1);
+	} else {
+		sctp_ifap = sctp_find_ifa_in_ifn(sctp_ifnp, addr, 1);
 	}
+
 	if(sctp_ifap) {
 		sctp_ifap->localifa_flags &= SCTP_ADDR_VALID;
 		sctp_ifap->localifa_flags |= SCTP_BEING_DELETED;
@@ -299,6 +307,8 @@ sctp_del_addr_from_vrf(struct sctp_vrf *vrf, struct sockaddr *addr)
 		sctp_ifnp->ifa_count--;
 		LIST_REMOVE(sctp_ifap, next_ifa);
 		atomic_add_int(&sctp_ifnp->refcount, -1);
+	} else {
+		printf("Could not find address to be deleted\n");
 	}
 	SCTP_IPI_ADDR_UNLOCK();	
 	return(sctp_ifap);
@@ -2505,7 +2515,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 		 * zero out the port to find the address! yuck! can't do
 		 * this earlier since need port for sctp_pcb_findep()
 		 */
-		ifa = sctp_find_ifa_by_addr((struct sockaddr *)&store_sa, vrf);
+		ifa = sctp_find_ifa_by_addr((struct sockaddr *)&store_sa, vrf, 0);
 		if (ifa == NULL) {
 			/* Can't find an interface with that address */
 			SCTP_INP_WUNLOCK(inp);
@@ -3199,7 +3209,7 @@ int
 sctp_is_address_on_local_host(struct sockaddr *addr, uint32_t vrf_id)
 {
 	struct sctp_ifa *sctp_ifa;
-	sctp_ifa = sctp_find_ifa_by_addr(addr, vrf_id);
+	sctp_ifa = sctp_find_ifa_by_addr(addr, vrf_id, 0);
 	if(sctp_ifa) {
 		return (1);
 	} else {

@@ -121,7 +121,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.7 2007/02/12 23:24:31 rrs 
 #define SCTP_LIST_EMPTY(list)	LIST_EMPTY(list)
 
 #define SCTP_MAX_VRF_ID 0
-#define SCTP_SIZE_OF_VRF_HASH 1
+#define SCTP_SIZE_OF_VRF_HASH 3
 
 #define SCTP_DEFAULT_VRFID 0
 
