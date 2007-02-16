@@ -484,22 +484,23 @@ sctp_log_block(uint8_t from, struct socket *so, struct sctp_association *asoc, i
 }
 
 int
-sctp_fill_stat_log(struct mbuf *m)
+sctp_fill_stat_log(void *optval, size_t *optsize)
 {
 	int sctp_cwnd_log_at;
 	struct sctp_cwnd_log_req *req;
 	size_t size_limit;
 	int num, i, at, cnt_out = 0;
 
-	if (m == NULL)
+	if (*optsize < sizeof(struct sctp_cwnd_log_req)) {
 		return (EINVAL);
+	}
 
-	size_limit = (SCTP_BUF_LEN(m) - sizeof(struct sctp_cwnd_log_req));
+	size_limit = (*optsize - sizeof(struct sctp_cwnd_log_req));
 	if (size_limit < sizeof(struct sctp_cwnd_log)) {
 		return (EINVAL);
 	}
 	sctp_cwnd_log_at = global_sctp_cwnd_log_at;
-	req = mtod(m, struct sctp_cwnd_log_req *);
+	req = (struct sctp_cwnd_log_req *)optval;
 	num = size_limit / sizeof(struct sctp_cwnd_log);
 	if (global_sctp_cwnd_log_rolled) {
 		req->num_in_log = SCTP_STAT_LOG_SIZE;
@@ -564,7 +565,7 @@ sctp_fill_stat_log(struct mbuf *m)
 		if (at >= SCTP_STAT_LOG_SIZE)
 			at = 0;
 	}
-	SCTP_BUF_LEN(m) = (cnt_out * sizeof(struct sctp_cwnd_log)) + sizeof(struct sctp_cwnd_log_req);
+	*optsize = (cnt_out * sizeof(struct sctp_cwnd_log)) + sizeof(struct sctp_cwnd_log_req);
 	return (0);
 }
 
