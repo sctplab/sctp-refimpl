@@ -110,8 +110,10 @@ extern struct fileops socketops;
 /* temp copy: these are from sctp_os_bsd.h */
 #define SCTP_MAX_VRF_ID 0
 #define SCTP_SIZE_OF_VRF_HASH 1
+#define SCTP_DEFAULT_VRFID 0
 
-
+#define SCTP_GET_IFN_VOID_FROM_ROUTE(ro) (void *)ro->ro_rt->rt_ifp
+#define SCTP_GET_IF_INDEX_FROM_ROUTE(ro) ro->ro_rt->rt_ifp->if_index
 /* 
  * for per socket level locking strategy:
  * SCTP_INP_SO(sctpinp): returns socket on base inp structure from sctp_inpcb

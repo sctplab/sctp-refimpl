@@ -69,6 +69,11 @@ sctp_is_ifa_addr_prefered(struct sctp_ifa *ifa,
 {
 	struct sockaddr_in *sin;
 	struct sockaddr_in6 *sin6;
+#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+	struct timeval timenow;
+
+	getmicrotime(&timenow);
+#endif
 
 	/*
 	 * Here we determine if its a prefered address. A prefered address
@@ -178,6 +183,11 @@ sctp_is_ifa_addr_acceptable(struct sctp_ifa *ifa,
 {
 	struct sockaddr_in *sin;
 	struct sockaddr_in6 *sin6;
+#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+	struct timeval timenow;
+
+	getmicrotime(&timenow);
+#endif
 
 	/*
 	 * Here we determine if its a acceptable address. A acceptable
