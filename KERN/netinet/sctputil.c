@@ -4261,6 +4261,8 @@ sctp_find_ifa_by_addr(struct sockaddr *addr, uint32_t vrf_id, int holds_lock)
 	LIST_FOREACH(sctp_ifnp, &vrf->ifnlist, next_ifn) {
 		sctp_ifap = sctp_find_ifa_in_ifn(sctp_ifnp, addr, 1);
 		if(sctp_ifap) {
+			if(holds_lock == 0)
+				SCTP_IPI_ADDR_UNLOCK();
 			return(sctp_ifap);
 		}
 	}
