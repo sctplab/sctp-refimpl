@@ -807,7 +807,7 @@ bound_all_plan_c:
 		if (cur_addr_num >= num_prefered) {
 			cur_addr_num = 0;
 		}
-		pass = sctp_select_nth_prefered_addr_from_ifn_boundall(ifn, stcb, non_asoc_addr_ok, loopscope,
+		pass = sctp_select_nth_prefered_addr_from_ifn_boundall(sctp_ifn, stcb, non_asoc_addr_ok, loopscope,
 		    ip_scope, cur_addr_num, fam);
 		if (pass == NULL)
 			continue;
