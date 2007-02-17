@@ -110,6 +110,7 @@ extern struct fileops socketops;
 /* temp copy: these are from sctp_os_bsd.h */
 #define SCTP_MAX_VRF_ID 0
 #define SCTP_SIZE_OF_VRF_HASH 1
+#define SCTP_IFNAMSIZ IFNAMSIZ
 #define SCTP_DEFAULT_VRFID 0
 
 #define SCTP_GET_IFN_VOID_FROM_ROUTE(ro) (void *)ro->ro_rt->rt_ifp
