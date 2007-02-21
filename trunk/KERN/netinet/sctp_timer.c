@@ -1439,6 +1439,8 @@ sctp_audit_stream_queues_for_size(struct sctp_inpcb *inp,
 	}
 }
 
+extern int sctp_hb_maxburst;
+
 int
 sctp_heartbeat_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
     struct sctp_nets *net, int cnt_of_unconf)
@@ -1479,7 +1481,7 @@ sctp_heartbeat_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				if (sctp_send_hb(stcb, 1, net) == 0) {
 					break;
 				}
-				if (cnt_sent >= stcb->asoc.max_burst)
+				if (cnt_sent >= sctp_hb_maxburst)
 					break;
 			}
 		}
