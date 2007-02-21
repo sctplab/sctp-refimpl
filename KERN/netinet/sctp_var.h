@@ -89,7 +89,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_var.h,v 1.5 2007/02/12 23:24:31 rrs Exp
 #define SCTPCTL_MAX_MBUF_CHAIN      37
 #define SCTPCTL_CMT_USE_DAC         38
 #define SCTPCTL_DO_DRAIN            39
-#define SCTPCTL_WARM_CRC32          40
+#define SCTPCTL_HB_MAXBURST         40
 #define SCTPCTL_QLIMIT_ABORT        41
 #define SCTPCTL_STRICT_ORDER        42
 #define SCTPCTL_TCBHASHSIZE         43
