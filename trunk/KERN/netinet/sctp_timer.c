@@ -1450,6 +1450,14 @@ sctp_heartbeat_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 #endif
 	if (net) {
 		if (net->hb_responded == 0) {
+			if(net->src_addr_selected) {
+				/* Invalidate the src address if we did not get
+				 * a response last time.
+				 */
+				sctp_free_ifa(net->ro._s_addr);
+				net->ro._s_addr = NULL;
+				net->src_addr_selected = 0;
+			}
 			sctp_backoff_on_timeout(stcb, net, 1, 0);
 		}
 		/* Zero PBA, if it needs it */
