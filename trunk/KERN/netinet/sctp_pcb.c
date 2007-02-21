@@ -205,6 +205,8 @@ sctp_add_addr_to_vrf(struct sctp_vrf *vrf,
 	struct sctp_ifn *sctp_ifnp = NULL;
 	struct sctp_ifa *sctp_ifap = NULL;
 
+       /* FIX ME - NEED TO DYNAMICALLY BUILD VRF's */
+
        /* How granular do we need the locks to be here? 
 	*/
 	SCTP_IPI_ADDR_LOCK();

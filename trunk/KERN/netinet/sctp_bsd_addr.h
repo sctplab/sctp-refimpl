@@ -40,15 +40,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_bsd_addr.h,v 1.2 2007/01/18 09:58:42 rr
 
 #if defined(_KERNEL)
 
-int sctp_is_addr_restricted(struct sctp_tcb *, struct sctp_ifa *);
-
-
-struct sctp_ifa *
-sctp_source_address_selection(struct sctp_inpcb *inp,
-			      struct sctp_tcb *stcb, 
-			      struct route *ro, struct sctp_nets *net,
-			      int non_asoc_addr_ok, uint32_t vrf_id);
-
 struct mbuf *
 sctp_add_addresses_to_i_ia(struct sctp_inpcb *inp, 
 			   struct sctp_scoping *scope, 
