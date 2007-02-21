@@ -2096,10 +2096,6 @@ sctp_is_addr_restricted(struct sctp_tcb *stcb, struct sctp_ifa *ifa)
 {
 	struct sctp_laddr *laddr;
 
-#ifdef SCTP_DEBUG
-	int cnt = 0;
-
-#endif
 	if (stcb == NULL) {
 		/* There are no restrictions, no TCB :-) */
 		return (0);
@@ -3198,7 +3194,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 	}
 	
 	if (to->sa_family == AF_INET) {
-		struct ip *ip;
+		struct ip *ip = NULL;
 		struct route iproute;
 		uint8_t tos_value;
 
