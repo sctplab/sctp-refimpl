@@ -29,8 +29,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\"     From: @(#)send.2	8.2 (Berkeley) 2/21/94
-.\" $FreeBSD:$
+.\" $FreeBSD: $
 .\"
 .Dd December 15, 2006
 .Dt SCTP_GENERIC_SENDMSG 2
@@ -46,7 +45,7 @@
 .In sys/socket.h
 .In sys/sctp.h
 .Ft int
-.Fn sctp_generic_sendmsg "int s" "void *msg" "int msglen" "struct sockaddr *to" "struct sctp_sndrcvinfo *sinfo" "int flags"
+.Fn sctp_generic_sendmsg "int s" "void *msg" "int msglen" "struct sockaddr *to" "socklen_t len" "struct sctp_sndrcvinfo *sinfo" "int flags"
 .Ft int
 .Fn sctp_generic_sendmsg_iov "int s" "struct iovec *iov" "int iovlen" "struct sockaddr *to" "struct sctp_sndrcvinfo *sinfo" "int flags"
 
