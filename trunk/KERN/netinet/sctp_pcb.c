@@ -199,7 +199,8 @@ sctp_free_ifa(struct sctp_ifa *sctp_ifap)
 
 struct sctp_ifa *
 sctp_add_addr_to_vrf(struct sctp_vrf *vrf, 
-		     void *ifn, uint32_t ifn_index, uint32_t ifn_type, char *if_name,
+		     void *ifn, uint32_t ifn_index, uint32_t ifn_type,
+		     const char *if_name,
 		     void *ifa, struct sockaddr *addr, uint32_t ifa_flags)
 {
 	struct sctp_ifn *sctp_ifnp = NULL;
