@@ -37,8 +37,11 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_uio.h,v 1.7 2007/02/12 23:24:31 rrs Exp
 #ifndef __sctp_uio_h__
 #define __sctp_uio_h__
 
-
-
+#if (defined(__APPLE__) && defined(KERNEL))
+#ifndef _KERNEL
+#define _KERNEL
+#endif
+#endif
 
 #if ! defined(_KERNEL)
 #include <stdint.h>
@@ -889,10 +892,10 @@ struct	sctpstat {
 #define SCTP_STAT_DECR_GAUGE32(_x) SCTP_STAT_DECR(_x)
 
 union sctp_sockstore {
-#ifdef AF_INET
+#if defined(INET) || !defined(_KERNEL)
 	struct sockaddr_in sin;
 #endif
-#ifdef AF_INET6
+#if defined(INET6) || !defined(_KERNEL)
 	struct sockaddr_in6 sin6;
 #endif
 	struct sockaddr sa;
@@ -996,12 +999,6 @@ sctp_sorecvmsg(struct socket *so,
 /*
  * API system calls
  */
-#if (defined(__APPLE__) && defined(KERNEL))
-#ifndef _KERNEL
-#define _KERNEL
-#endif
-#endif
-
 #if !(defined(_KERNEL))
 
 __BEGIN_DECLS
