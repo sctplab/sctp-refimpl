@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_asconf.c,v 1.7 2007/01/18 09:58:42 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_asconf.c,v 1.8 2007/02/12 23:24:30 rrs Exp $");
 #endif
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_var.h>
@@ -1007,12 +1007,12 @@ sctp_asconf_cleanup(struct sctp_tcb *stcb, struct sctp_nets *net)
 
 /*
  * process an ADD/DELETE IP ack from peer.
- * addr  corresponding ifaddr to the address being added/deleted.
+ * addr  corresponding sctp_ifa to the address being added/deleted.
  * type: SCTP_ADD_IP_ADDRESS or SCTP_DEL_IP_ADDRESS.
  * flag: 1=success, 0=failure.
  */
 static void
-sctp_asconf_addr_mgmt_ack(struct sctp_tcb *stcb, struct ifaddr *addr,
+sctp_asconf_addr_mgmt_ack(struct sctp_tcb *stcb, struct sctp_ifa *addr,
     uint16_t type, uint32_t flag)
 {
 	/*
@@ -1040,7 +1040,7 @@ sctp_asconf_addr_mgmt_ack(struct sctp_tcb *stcb, struct ifaddr *addr,
  * for add.  If a duplicate operation is found, ignore the new one.
  */
 static uint32_t
-sctp_asconf_queue_add(struct sctp_tcb *stcb, struct ifaddr *ifa, uint16_t type)
+sctp_asconf_queue_add(struct sctp_tcb *stcb, struct sctp_ifa *ifa, uint16_t type)
 {
 	struct sctp_asconf_addr *aa, *aa_next;
 	struct sockaddr *sa;
@@ -1054,7 +1054,7 @@ sctp_asconf_queue_add(struct sctp_tcb *stcb, struct ifaddr *ifa, uint16_t type)
 	    aa = aa_next) {
 		aa_next = TAILQ_NEXT(aa, next);
 		/* address match? */
-		if (sctp_asconf_addr_match(aa, ifa->ifa_addr) == 0)
+		if (sctp_asconf_addr_match(aa, &ifa->address.sa) == 0)
 			continue;
 		/* is the request already in queue (sent or not) */
 		if (aa->ap.aph.ph.param_type == type) {
@@ -1094,11 +1094,11 @@ sctp_asconf_queue_add(struct sctp_tcb *stcb, struct ifaddr *ifa, uint16_t type)
 	aa->ap.aph.ph.param_type = type;
 	aa->ifa = ifa;
 	/* correlation_id filled in during send routine later... */
-	if (ifa->ifa_addr->sa_family == AF_INET6) {
+	if (ifa->address.sa.sa_family == AF_INET6) {
 		/* IPv6 address */
 		struct sockaddr_in6 *sin6;
 
-		sin6 = (struct sockaddr_in6 *)ifa->ifa_addr;
+		sin6 = (struct sockaddr_in6 *)&ifa->address.sa;
 		sa = (struct sockaddr *)sin6;
 		aa->ap.addrp.ph.param_type = SCTP_IPV6_ADDRESS;
 		aa->ap.addrp.ph.param_length = (sizeof(struct sctp_ipv6addr_param));
@@ -1107,9 +1107,9 @@ sctp_asconf_queue_add(struct sctp_tcb *stcb, struct ifaddr *ifa, uint16_t type)
 		    sizeof(struct sctp_ipv6addr_param);
 		memcpy(&aa->ap.addrp.addr, &sin6->sin6_addr,
 		    sizeof(struct in6_addr));
-	} else if (ifa->ifa_addr->sa_family == AF_INET) {
+	} else if (ifa->address.sa.sa_family == AF_INET) {
 		/* IPv4 address */
-		struct sockaddr_in *sin = (struct sockaddr_in *)ifa->ifa_addr;
+		struct sockaddr_in *sin = (struct sockaddr_in *)&ifa->address.sa;
 
 		sa = (struct sockaddr *)sin;
 		aa->ap.addrp.ph.param_type = SCTP_IPV4_ADDRESS;
@@ -1170,6 +1170,7 @@ sctp_asconf_queue_add_sa(struct sctp_tcb *stcb, struct sockaddr *sa,
     uint16_t type)
 {
 	struct sctp_asconf_addr *aa, *aa_next;
+	uint32_t vrf;
 
 	/* see if peer supports ASCONF */
 	if (stcb->asoc.peer_supports_asconf == 0) {
@@ -1225,8 +1226,13 @@ sctp_asconf_queue_add_sa(struct sctp_tcb *stcb, struct sockaddr *sa,
 	}
 	/* fill in asconf address parameter fields */
 	/* top level elements are "networked" during send */
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
+	vrf = SCTP_DEFAULT_VRFID;
+#else
+	vrf = panda_get_vrf_from_call();
+#endif
 	aa->ap.aph.ph.param_type = type;
-	aa->ifa = sctp_find_ifa_by_addr(sa);
+	aa->ifa = sctp_find_ifa_by_addr(sa, vrf, 0);
 	/* correlation_id filled in during send routine later... */
 	if (sa->sa_family == AF_INET6) {
 		/* IPv6 address */
@@ -1608,35 +1614,6 @@ sctp_handle_asconf_ack(struct mbuf *m, int offset,
 	}
 }
 
-/* is this an interface that we care about at all? */
-static uint32_t
-sctp_is_desired_interface_type(struct ifaddr *ifa)
-{
-	int result;
-
-	/* check the interface type to see if it's one we care about */
-	switch (ifa->ifa_ifp->if_type) {
-	case IFT_ETHER:
-	case IFT_ISO88023:
-	case IFT_ISO88025:
-	case IFT_STARLAN:
-	case IFT_P10:
-	case IFT_P80:
-	case IFT_HY:
-	case IFT_FDDI:
-	case IFT_PPP:
-	case IFT_XETHER:
-	case IFT_SLIP:
-	case IFT_GIF:
-		result = 1;
-		break;
-	default:
-		result = 0;
-	}
-
-	return (result);
-}
-
 static uint32_t
 sctp_is_scopeid_in_nets(struct sctp_tcb *stcb, struct sockaddr *sa)
 {
@@ -1674,7 +1651,7 @@ sctp_is_scopeid_in_nets(struct sctp_tcb *stcb, struct sockaddr *sa)
  */
 static void
 sctp_addr_mgmt_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
-    struct ifaddr *ifa, uint16_t type)
+    struct sctp_ifa *ifa, uint16_t type)
 {
 	int status;
 
@@ -1695,23 +1672,17 @@ sctp_addr_mgmt_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	 */
 
 	/* first, make sure it's a good address family */
-	if (ifa->ifa_addr->sa_family != AF_INET6 &&
-	    ifa->ifa_addr->sa_family != AF_INET) {
+	if (ifa->address.sa.sa_family != AF_INET6 &&
+	    ifa->address.sa.sa_family != AF_INET) {
 		return;
 	}
 	/* make sure we're "allowed" to add this type of addr */
-	if (ifa->ifa_addr->sa_family == AF_INET6) {
-		struct in6_ifaddr *ifa6;
-
+	if (ifa->address.sa.sa_family == AF_INET6) {
 		/* invalid if we're not a v6 endpoint */
 		if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0)
 			return;
 		/* is the v6 addr really valid ? */
-		ifa6 = (struct in6_ifaddr *)ifa;
-		if (IFA6_IS_DEPRECATED(ifa6) ||
-		    (ifa6->ia6_flags &
-		    (IN6_IFF_DETACHED | IN6_IFF_ANYCAST | IN6_IFF_NOTREADY))) {
-			/* can't use an invalid address */
+		if (ifa->localifa_flags & SCTP_ADDR_IFA_UNUSEABLE) {
 			return;
 		}
 	}
@@ -1723,27 +1694,16 @@ sctp_addr_mgmt_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	 * Recall that this routine is only called for the subset bound
 	 * w/ASCONF allowed case.
 	 */
-
-	/*
-	 * do a scope_id check against any link local addresses in the
-	 * destination nets list to see if we should put this local address
-	 * on the pending list or not eg. don't put on the list if we have a
-	 * link local destination with the same scope_id
-	 */
-	if (type == SCTP_ADD_IP_ADDRESS) {
-		if (sctp_is_scopeid_in_nets(stcb, ifa->ifa_addr) == 0) {
-			sctp_add_local_addr_assoc(stcb, ifa);
-		}
-	}
+	sctp_add_local_addr_assoc(stcb, ifa, 1);
 	/*
 	 * check address scope if address is out of scope, don't queue
 	 * anything... note: this would leave the address on both inp and
 	 * asoc lists
 	 */
-	if (ifa->ifa_addr->sa_family == AF_INET6) {
+	if (ifa->address.sa.sa_family == AF_INET6) {
 		struct sockaddr_in6 *sin6;
 
-		sin6 = (struct sockaddr_in6 *)ifa->ifa_addr;
+		sin6 = (struct sockaddr_in6 *)&ifa->address.sin6;
 		if (IN6_IS_ADDR_UNSPECIFIED(&sin6->sin6_addr)) {
 			/* we skip unspecifed addresses */
 			return;
@@ -1753,7 +1713,7 @@ sctp_addr_mgmt_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				return;
 			}
 			/* is it the right link local scope? */
-			if (sctp_is_scopeid_in_nets(stcb, ifa->ifa_addr) == 0) {
+			if (sctp_is_scopeid_in_nets(stcb, &ifa->address.sa) == 0) {
 				return;
 			}
 		}
@@ -1761,7 +1721,7 @@ sctp_addr_mgmt_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		    IN6_IS_ADDR_SITELOCAL(&sin6->sin6_addr)) {
 			return;
 		}
-	} else if (ifa->ifa_addr->sa_family == AF_INET) {
+	} else if (ifa->address.sa.sa_family == AF_INET) {
 		struct sockaddr_in *sin;
 		struct in6pcb *inp6;
 
@@ -1771,7 +1731,7 @@ sctp_addr_mgmt_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		    SCTP_IPV6_V6ONLY(inp6))
 			return;
 
-		sin = (struct sockaddr_in *)ifa->ifa_addr;
+		sin = (struct sockaddr_in *)&ifa->address.sa;
 		if (sin->sin_addr.s_addr == 0) {
 			/* we skip unspecifed addresses */
 			return;
@@ -1782,16 +1742,10 @@ sctp_addr_mgmt_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		}
 	} else {
 		/* else, not AF_INET or AF_INET6, so skip */
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
-			printf("addr_mgmt_assoc: not AF_INET or AF_INET6\n");
-		}
-#endif				/* SCTP_DEBUG */
 		return;
 	}
 
 	/* queue an asconf for this address add/delete */
-
 	if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_DO_ASCONF)) {
 		/* does the peer do asconf? */
 		if (stcb->asoc.peer_supports_asconf) {
@@ -1809,282 +1763,220 @@ sctp_addr_mgmt_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				    stcb, stcb->asoc.primary_destination);
 			}
 		}
-	} else {
-		/* this is the boundall, no ASCONF case */
-#if 0
-		/* Peter: Fixe me? why the if 0? */
-		/*
-		 * assume kernel will delete this very shortly; add done
-		 * above
-		 */
-		if (type == SCTP_DEL_IP_ADDRESS) {
-			/* if deleting, add this addr to the do not use list */
-			sctp_add_local_addr_assoc(stcb, ifa);
-		}
-#endif
 	}
 }
 
-static void
-sctp_addr_mgmt_ep(struct sctp_inpcb *inp, struct ifaddr *ifa, uint16_t type)
+int
+sctp_iterator_ep(struct sctp_inpcb *inp, void *ptr, uint32_t val)
 {
-	struct sctp_tcb *stcb;
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	int s;
-#endif
+	struct sctp_asconf_iterator *asc;
+	struct sctp_ifa *ifa;
+	struct sctp_laddr *l;
+	int type;
+	int cnt_invalid=0;
 
-#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
-	struct timeval timenow;
-
-	getmicrotime(&timenow);
-#endif
-
-	SCTP_INP_WLOCK(inp);
-	/* make sure we're "allowed" to add this type of addr */
-	if (ifa->ifa_addr->sa_family == AF_INET6) {
-		struct in6_ifaddr *ifa6;
-
-		/* invalid if we're not a v6 endpoint */
-		if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0) {
-			SCTP_INP_WUNLOCK(inp);
-			return;
-		}
-		/* is the v6 addr really valid ? */
-		ifa6 = (struct in6_ifaddr *)ifa;
-		if (IFA6_IS_DEPRECATED(ifa6) ||
-		    (ifa6->ia6_flags &
-		    (IN6_IFF_DETACHED | IN6_IFF_ANYCAST | IN6_IFF_NOTREADY))) {
-			/* can't use an invalid address */
-			SCTP_INP_WUNLOCK(inp);
-			return;
-		}
-	} else if (ifa->ifa_addr->sa_family == AF_INET) {
-		/* invalid if we are a v6 only endpoint */
-		struct in6pcb *inp6;
-
-		inp6 = (struct in6pcb *)&inp->ip_inp.inp;
-
-		if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) &&
-		    SCTP_IPV6_V6ONLY(inp6)) {
-			SCTP_INP_WUNLOCK(inp);
-			return;
-		}
-	} else {
-		/* invalid address family */
-		SCTP_INP_WUNLOCK(inp);
-		return;
-	}
-	/* is this endpoint subset bound ? */
-	if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) == 0) {
-		/* subset bound endpoint */
-		if (sctp_is_feature_off(inp, SCTP_PCB_FLAGS_DO_ASCONF)) {
-			/*
-			 * subset bound, but ASCONFs not allowed... if
-			 * adding, nothing to do, since not allowed if
-			 * deleting, remove address from endpoint peer will
-			 * have to "timeout" this addr
-			 */
-			if (type == SCTP_DEL_IP_ADDRESS) {
-				sctp_del_local_addr_ep(inp, ifa);
+	asc = (struct sctp_asconf_iterator *)ptr;
+	LIST_FOREACH(l, &asc->list_of_work, sctp_nxt_addr) {
+		ifa = l->ifa;
+		type = l->action;
+		if (ifa->address.sa.sa_family == AF_INET6) {
+			/* invalid if we're not a v6 endpoint */
+			if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0) {
+				cnt_invalid++;
+				if(asc->cnt == cnt_invalid)
+					return(1);
+				else
+					continue;
 			}
-			/* no asconfs to queue for this inp... */
-			SCTP_INP_WUNLOCK(inp);
-			return;
+		} else if (ifa->address.sa.sa_family == AF_INET) {
+			/* invalid if we are a v6 only endpoint */
+			struct in6pcb *inp6;
+
+			inp6 = (struct in6pcb *)&inp->ip_inp.inp;
+			if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) &&
+			    SCTP_IPV6_V6ONLY(inp6)) {
+				cnt_invalid++;
+				if(asc->cnt == cnt_invalid)
+					return(1);
+				else
+					continue;
+			}
 		} else {
-			/*
-			 * subset bound, ASCONFs allowed... if adding, add
-			 * address to endpoint list if deleting, remove
-			 * address from endpoint
-			 */
-			if (type == SCTP_ADD_IP_ADDRESS) {
-				sctp_add_local_addr_ep(inp, ifa);
+			/* invalid address family */
+			cnt_invalid++;
+			if(asc->cnt == cnt_invalid)
+				return(1);
+			else
+				continue;
+		}
+		/* Check sub-set bound case */
+		if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) == 0) {
+			/* subset bound endpoint */
+			if (sctp_is_feature_off(inp, SCTP_PCB_FLAGS_DO_ASCONF)) {
+				/*
+				 * subset bound, but ASCONFs not allowed... if
+				 * adding, nothing to do, since not allowed if
+				 * deleting, remove address from endpoint peer will
+				 * have to "timeout" this addr
+				 */
+				if (type == SCTP_DEL_IP_ADDRESS) {
+					sctp_del_local_addr_ep(inp, ifa);
+				}
+				continue;
 			} else {
-				sctp_del_local_addr_ep(inp, ifa);
+				/*
+				 * subset bound, ASCONFs allowed... if adding, add
+				 * address to endpoint list if deleting, remove
+				 * address from endpoint
+				 */
+				if (type == SCTP_ADD_IP_ADDRESS) {
+					sctp_add_local_addr_ep(inp, ifa);
+				} else if (type == SCTP_DEL_IP_ADDRESS) {
+					sctp_del_local_addr_ep(inp, ifa);
+				}
+				/* drop through and notify all asocs */
 			}
-			/* drop through and notify all asocs */
 		}
 	}
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	s = splsoftnet();
-#endif
-	/* process for all associations for this endpoint */
-	LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
-		SCTP_TCB_LOCK(stcb);
-		sctp_addr_mgmt_assoc(inp, stcb, ifa, type);
-		SCTP_TCB_UNLOCK(stcb);
-	}
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	splx(s);
-#endif
-	SCTP_INP_WUNLOCK(inp);
+	return (0);
 }
 
-/*
- * restrict the use of this address
- */
-static void
-sctp_addr_mgmt_restrict_ep(struct sctp_inpcb *inp, struct ifaddr *ifa)
+void
+sctp_iterator_stcb(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr, uint32_t val)
 {
-	struct sctp_tcb *stcb;
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	int s;
-#endif
+	struct sctp_asconf_iterator *asc;
+	struct sctp_ifa *ifa;
+	struct sctp_laddr *l;
+	int cnt_invalid=0;
+	int type,status;
 
-	/* is this endpoint bound to all? */
-	if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) == 0) {
-		/*
-		 * Nothing to do for subset bound case. Allow sctp_bindx()
-		 * to manage the address lists
-		 */
-		return;
-	}
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	s = splsoftnet();
-#endif
-	SCTP_INP_RLOCK(inp);
-	/* process for all associations for this endpoint */
-	LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
-		/* put this address on the "pending/do not use yet" list */
-		SCTP_TCB_LOCK(stcb);
-		sctp_add_local_addr_assoc(stcb, ifa);
-		SCTP_TCB_UNLOCK(stcb);
-	}
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	splx(s);
-#endif
-	SCTP_INP_RUNLOCK(inp);
-}
+	asc = (struct sctp_asconf_iterator *)ptr;
+	LIST_FOREACH(l, &asc->list_of_work, sctp_nxt_addr) {
+		ifa = l->ifa;
+		type = l->action;
+		/* Same checks again for assoc */
+		if (ifa->address.sa.sa_family == AF_INET6) {
+			/* invalid if we're not a v6 endpoint */
+			struct sockaddr_in6 *sin6;
 
-/*
- * this is only called for kernel initiated address changes eg. it will check
- * the PCB_FLAGS_AUTO_ASCONF flag
- */
-static void
-sctp_addr_mgmt(struct ifaddr *ifa, uint16_t type)
-{
-	struct sockaddr *sa;
-	struct sctp_inpcb *inp;
+			if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0) {
+				cnt_invalid++;
+				if(asc->cnt == cnt_invalid)
+					return;
+				else
+					continue;
+			}
+			sin6 = (struct sockaddr_in6 *)&ifa->address.sin6;
+			if (IN6_IS_ADDR_UNSPECIFIED(&sin6->sin6_addr)) {
+				/* we skip unspecifed addresses */
+				continue;
+			}
+			if (IN6_IS_ADDR_LINKLOCAL(&sin6->sin6_addr)) {
+				if (stcb->asoc.local_scope == 0) {
+					continue;
+				}
+				/* is it the right link local scope? */
+				if (sctp_is_scopeid_in_nets(stcb, &ifa->address.sa) == 0) {
+					continue;
+				}
+			}
+		} else if (ifa->address.sa.sa_family == AF_INET) {
+			/* invalid if we are a v6 only endpoint */
+			struct in6pcb *inp6;
+			struct sockaddr_in *sin;
 
-	/* make sure we care about this interface... */
-	if (!sctp_is_desired_interface_type(ifa)) {
-		return;
-	}
-	sa = ifa->ifa_addr;
-	if (sa->sa_family != AF_INET && sa->sa_family != AF_INET6)
-		return;
+			inp6 = (struct in6pcb *)&inp->ip_inp.inp;
+			/* invalid if we are a v6 only endpoint */
+			if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) &&
+			    SCTP_IPV6_V6ONLY(inp6))
+				continue;
 
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
-		if (type == SCTP_ADD_IP_ADDRESS)
-			printf("sctp_addr_mgmt: kernel adds ");
-		else
-			printf("sctp_addr_mgmt: kernel deletes ");
-		sctp_print_address(sa);
-	}
-#endif				/* SCTP_DEBUG */
-
-	/* go through all our PCB's */
-	LIST_FOREACH(inp, &sctppcbinfo.listhead, sctp_list) {
-		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_AUTO_ASCONF)) {
-			sctp_addr_mgmt_ep(inp, ifa, type);
+			sin = (struct sockaddr_in *)&ifa->address.sa;
+			if (sin->sin_addr.s_addr == 0) {
+				/* we skip unspecifed addresses */
+				continue;
+			}
+			if (stcb->asoc.ipv4_local_scope == 0 &&
+			    IN4_ISPRIVATE_ADDRESS(&sin->sin_addr)) {
+				continue;;
+			}
+			if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) &&
+			    SCTP_IPV6_V6ONLY(inp6)) {
+				cnt_invalid++;
+				if(asc->cnt == cnt_invalid)
+					return;
+				else
+					continue;
+			}
 		} else {
-			/* this address is going away anyways... */
-			if (type == SCTP_DEL_IP_ADDRESS)
+			/* invalid address family */
+			cnt_invalid++;
+			if(asc->cnt == cnt_invalid)
 				return;
-			/* (temporarily) restrict this address */
-			sctp_addr_mgmt_restrict_ep(inp, ifa);
+			else
+				continue;
 		}
-		/* else, not allowing automatic asconf's, so ignore */
-	}
-}
-
-/*
- * add/delete IP address requests from kernel (via routing change) assumed
- * that the address is non-broadcast, non-multicast all addresses are passed
- * from any type of interface-- need to filter duplicate addresses may get
- * requested
- */
-
-void
-sctp_add_ip_address(struct ifaddr *ifa)
-{
-	sctp_addr_mgmt(ifa, SCTP_ADD_IP_ADDRESS);
-}
-
-void
-sctp_delete_ip_address(struct ifaddr *ifa)
-{
-	struct sctp_inpcb *inp;
-
-	/* process the delete */
-	sctp_addr_mgmt(ifa, SCTP_DEL_IP_ADDRESS);
-
-	/*
-	 * need to remove this ifaddr from any cached routes and also any
-	 * from any assoc "restricted/pending" lists
-	 */
-	/* make sure we care about this interface... */
-	if (!sctp_is_desired_interface_type(ifa)) {
-		return;
-	}
-	/* go through all our PCB's */
-#if defined(SCTP_PER_SOCKET_LOCKING)
-	SCTP_LOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
-#endif
-	SCTP_INP_INFO_RLOCK();
-	LIST_FOREACH(inp, &sctppcbinfo.listhead, sctp_list) {
-		struct sctp_tcb *stcb;
-		struct sctp_laddr *laddr, *laddr_next;
-
-		/* process for all associations for this endpoint */
-#if defined(SCTP_PER_SOCKET_LOCKING)
-		SCTP_SOCKET_LOCK(SCTP_INP_SO(inp), 1);
-#endif
-		SCTP_INP_RLOCK(inp);
-		LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
+		/* put this address on the "pending/do not use yet" list */
+		if (type == SCTP_ADD_IP_ADDRESS) {
+			sctp_add_local_addr_assoc(stcb, ifa, 1);
+		} else if (type == SCTP_DEL_IP_ADDRESS) {
 			struct sctp_nets *net;
 
-			/* process through the nets list */
 			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 				struct rtentry *rt;
 
 				/* delete this address if cached */
-				rt = net->ro.ro_rt;
-				if (rt != NULL && rt->rt_ifa == ifa) {
-					/* RTFREE(rt); */
-					net->ro.ro_rt = NULL;
+				if(net->ro._s_addr->ifa == ifa) {
+					sctp_free_ifa(net->ro._s_addr);
+					net->ro._s_addr = NULL;
+					net->src_addr_selected = 0;
+					rt = net->ro.ro_rt;
+					if(rt) {
+						RTFREE(rt);
+						net->ro.ro_rt = NULL;
+					}
 				}
-			}	/* for each net */
-			/* process through the asoc "pending" list */
-			laddr = LIST_FIRST(&stcb->asoc.sctp_local_addr_list);
-			while (laddr != NULL) {
-				laddr_next = LIST_NEXT(laddr, sctp_nxt_addr);
-				/* remove if in use */
-				if (laddr->ifa == ifa) {
-					sctp_remove_laddr(laddr);
-				}
-				laddr = laddr_next;
-			}	/* while */
-		}		/* for each stcb */
-		/* process through the inp bound addr list */
-		laddr = LIST_FIRST(&inp->sctp_addr_list);
-		while (laddr != NULL) {
-			laddr_next = LIST_NEXT(laddr, sctp_nxt_addr);
-			/* remove if in use */
-			if (laddr->ifa == ifa) {
-				sctp_remove_laddr(laddr);
 			}
-			laddr = laddr_next;
 		}
-#if defined(SCTP_PER_SOCKET_LOCKING)
-		SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
-#endif
-		SCTP_INP_RUNLOCK(inp);
+		/* queue an asconf for this address add/delete */
+		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_DO_ASCONF)) {
+			/* does the peer do asconf? */
+			if (stcb->asoc.peer_supports_asconf) {
+				/* queue an asconf for this addr */
+				status = sctp_asconf_queue_add(stcb, ifa, type);
+				/*
+				 * if queued ok, and in correct state, set the
+				 * ASCONF timer if in non-open state, we will set
+				 * this timer when the state does go open and do all
+				 * the asconf's
+				 */
+				if (status == 0 &&
+				    SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_OPEN) {
+					sctp_timer_start(SCTP_TIMER_TYPE_ASCONF, inp,
+							 stcb, stcb->asoc.primary_destination);
+				}
+			}
+		}
 	}
-#if defined(SCTP_PER_SOCKET_LOCKING)
-	SCTP_UNLOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
-#endif
-	SCTP_INP_INFO_RUNLOCK();
+}
+
+void sctp_iterator_end(void *ptr, uint32_t val)
+{
+	struct sctp_asconf_iterator *asc;
+	struct sctp_ifa *ifa;
+	struct sctp_laddr *l;
+	asc = (struct sctp_asconf_iterator *)ptr;
+	LIST_FOREACH(l, &asc->list_of_work, sctp_nxt_addr) {
+		ifa = l->ifa;
+		if(l->action == SCTP_ADD_IP_ADDRESS) {
+			/* Clear the defer use flag */
+			ifa->localifa_flags &= ~SCTP_ADDR_DEFER_USE;
+		}
+		sctp_free_ifa(ifa);
+		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_laddr, l);
+		SCTP_DECR_LADDR_COUNT();
+	}
+	SCTP_FREE(asc);
 }
 
 /*
@@ -2125,14 +2017,10 @@ sctp_set_primary_ip_address_sa(struct sctp_tcb *stcb, struct sockaddr *sa)
 }
 
 void
-sctp_set_primary_ip_address(struct ifaddr *ifa)
+sctp_set_primary_ip_address(struct sctp_ifa *ifa)
 {
 	struct sctp_inpcb *inp;
 
-	/* make sure we care about this interface... */
-	if (!sctp_is_desired_interface_type(ifa)) {
-		return;
-	}
 	/* go through all our PCB's */
 	LIST_FOREACH(inp, &sctppcbinfo.listhead, sctp_list) {
 		struct sctp_tcb *stcb;
@@ -2153,7 +2041,7 @@ sctp_set_primary_ip_address(struct ifaddr *ifa)
 				if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
 					printf("set_primary_ip_address: queued on stcb=%p, ",
 					    stcb);
-					sctp_print_address(ifa->ifa_addr);
+					sctp_print_address(&ifa->address.sa);
 				}
 #endif				/* SCTP_DEBUG */
 			} 
@@ -2164,26 +2052,27 @@ sctp_set_primary_ip_address(struct ifaddr *ifa)
 static struct sockaddr *
 sctp_find_valid_localaddr(struct sctp_tcb *stcb)
 {
-	struct ifnet *ifn;
-	struct ifaddr *ifa;
+	struct sctp_vrf *vrf = NULL;
+	struct sctp_ifn *sctp_ifn;
+	struct sctp_ifa *sctp_ifa;
 
 #if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
 	struct timeval timenow;
 
 	getmicrotime(&timenow);
 #endif
-
-	TAILQ_FOREACH(ifn, &ifnet, if_list) {
-		if (stcb->asoc.loopback_scope == 0 && ifn->if_type == IFT_LOOP) {
+	vrf = sctp_find_vrf(stcb->asoc.vrf_id);
+	LIST_FOREACH(sctp_ifn, &vrf->ifnlist, next_ifn) {
+		if (stcb->asoc.loopback_scope == 0 && sctp_ifn->ifn_type == IFT_LOOP) {
 			/* Skip if loopback_scope not set */
 			continue;
 		}
-		TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
-			if (ifa->ifa_addr->sa_family == AF_INET &&
+		LIST_FOREACH(sctp_ifa, &sctp_ifn->ifalist, next_ifa) {
+			if (sctp_ifa->address.sa.sa_family == AF_INET &&
 			    stcb->asoc.ipv4_addr_legal) {
 				struct sockaddr_in *sin;
 
-				sin = (struct sockaddr_in *)ifa->ifa_addr;
+				sin = (struct sockaddr_in *)&sctp_ifa->address.sa;
 				if (sin->sin_addr.s_addr == 0) {
 					/* skip unspecifed addresses */
 					continue;
@@ -2192,23 +2081,19 @@ sctp_find_valid_localaddr(struct sctp_tcb *stcb)
 				    IN4_ISPRIVATE_ADDRESS(&sin->sin_addr))
 					continue;
 
-				if (sctp_is_addr_restricted(stcb,
-				    ifa->ifa_addr))
+				if (sctp_is_addr_restricted(stcb,sctp_ifa))
 					continue;
 				/* found a valid local v4 address to use */
-				return (ifa->ifa_addr);
-			} else if (ifa->ifa_addr->sa_family == AF_INET6 &&
+				return (&sctp_ifa->address.sa);
+			} else if (sctp_ifa->address.sa.sa_family == AF_INET6 &&
 			    stcb->asoc.ipv6_addr_legal) {
 				struct sockaddr_in6 *sin6;
-				struct in6_ifaddr *ifa6;
 
-				ifa6 = (struct in6_ifaddr *)ifa;
-				if (IFA6_IS_DEPRECATED(ifa6) ||
-				    (ifa6->ia6_flags & (IN6_IFF_DETACHED |
-				    IN6_IFF_ANYCAST | IN6_IFF_NOTREADY)))
+				if (sctp_ifa->localifa_flags & SCTP_ADDR_IFA_UNUSEABLE) {
 					continue;
+				}
 
-				sin6 = (struct sockaddr_in6 *)ifa->ifa_addr;
+				sin6 = (struct sockaddr_in6 *)&sctp_ifa->address.sa;
 				if (IN6_IS_ADDR_UNSPECIFIED(&sin6->sin6_addr)) {
 					/* we skip unspecifed addresses */
 					continue;
@@ -2221,7 +2106,7 @@ sctp_find_valid_localaddr(struct sctp_tcb *stcb)
 					continue;
 
 				/* found a valid local v6 address to use */
-				return (ifa->ifa_addr);
+				return (&sctp_ifa->address.sa);
 			}
 		}
 	}
@@ -2238,15 +2123,15 @@ sctp_find_valid_localaddr_ep(struct sctp_tcb *stcb)
 		if (laddr->ifa == NULL) {
 			continue;
 		}
-		if (laddr->ifa->ifa_addr == NULL) {
+		if (laddr->ifa == NULL) {
 			continue;
 		}
 		/* is the address restricted ? */
-		if (sctp_is_addr_restricted(stcb, laddr->ifa->ifa_addr))
+		if (sctp_is_addr_restricted(stcb, laddr->ifa))
 			continue;
 
 		/* found a valid local address to use */
-		return (laddr->ifa->ifa_addr);
+		return (&laddr->ifa->address.sa);
 	}
 	/* no valid addresses found */
 	return (NULL);
@@ -2447,11 +2332,12 @@ sctp_process_initack_addresses(struct sctp_tcb *stcb, struct mbuf *m,
 {
 	struct sctp_paramhdr tmp_param, *ph;
 	uint16_t plen, ptype;
+	struct sctp_ifa *sctp_ifa;
 	struct sctp_ipv6addr_param addr_store;
 	struct sockaddr_in6 sin6;
 	struct sockaddr_in sin;
 	struct sockaddr *sa;
-	struct ifaddr *ifa;
+	uint32_t vrf;
 
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_ASCONF2) {
@@ -2501,7 +2387,9 @@ sctp_process_initack_addresses(struct sctp_tcb *stcb, struct mbuf *m,
 			struct sctp_ipv4addr_param *a4p;
 
 			/* get the entire IPv4 address param */
-			a4p = (struct sctp_ipv4addr_param *)sctp_m_getptr(m, offset, sizeof(struct sctp_ipv4addr_param), (uint8_t *) & addr_store);
+			a4p = (struct sctp_ipv4addr_param *)sctp_m_getptr(m, offset, 
+									  sizeof(struct sctp_ipv4addr_param), 
+									  (uint8_t *) & addr_store);
 			if (plen != sizeof(struct sctp_ipv4addr_param) ||
 			    a4p == NULL) {
 				return;
@@ -2513,8 +2401,13 @@ sctp_process_initack_addresses(struct sctp_tcb *stcb, struct mbuf *m,
 		}
 
 		/* see if this address really (still) exists */
-		ifa = sctp_find_ifa_by_addr(sa);
-		if (ifa == NULL) {
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
+		vrf = SCTP_DEFAULT_VRFID;
+#else
+		vrf = panda_get_vrf_from_call();
+#endif
+		sctp_ifa = sctp_find_ifa_by_addr(sa, vrf, 0);
+		if (sctp_ifa == NULL) {
 			/* address doesn't exist anymore */
 			int status;
 
@@ -2536,23 +2429,6 @@ sctp_process_initack_addresses(struct sctp_tcb *stcb, struct mbuf *m,
 					    stcb->sctp_ep, stcb,
 					    stcb->asoc.primary_destination);
 				}
-			}
-		} else {
-			/* address still exists */
-			/*
-			 * if subset bound, ep addr's managed by default if
-			 * not doing ASCONF, add the address to the assoc
-			 */
-			if ((stcb->sctp_ep->sctp_flags &
-			    SCTP_PCB_FLAGS_BOUNDALL) == 0 &&
-			    (sctp_is_feature_off(stcb->sctp_ep,
-			    SCTP_PCB_FLAGS_DO_ASCONF))) {
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_ASCONF2) {
-					printf("process_initack_addrs: adding local addr to asoc\n");
-				}
-#endif				/* SCTP_DEBUG */
-				sctp_add_local_addr_assoc(stcb, ifa);
 			}
 		}
 
@@ -2707,7 +2583,7 @@ sctp_check_address_list_ep(struct sctp_tcb *stcb, struct mbuf *m, int offset,
 #endif				/* SCTP_DEBUG */
 			continue;
 		}
-		if (laddr->ifa->ifa_addr == NULL) {
+		if (laddr->ifa == NULL) {
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_ASCONF1) {
 				printf("check_addr_list_ep: laddr->ifa->ifa_addr is NULL");
@@ -2716,12 +2592,12 @@ sctp_check_address_list_ep(struct sctp_tcb *stcb, struct mbuf *m, int offset,
 			continue;
 		}
 		/* do i have it implicitly? */
-		if (sctp_cmpaddr(laddr->ifa->ifa_addr, init_addr)) {
+		if (sctp_cmpaddr(&laddr->ifa->address.sa, init_addr)) {
 			continue;
 		}
 		/* check to see if in the init-ack */
 		if (!sctp_addr_in_initack(stcb, m, offset, length,
-		    laddr->ifa->ifa_addr)) {
+		    &laddr->ifa->address.sa)) {
 			/* try to add it */
 			sctp_addr_mgmt_assoc(stcb->sctp_ep, stcb, laddr->ifa,
 			    SCTP_ADD_IP_ADDRESS);
@@ -2739,27 +2615,38 @@ sctp_check_address_list_all(struct sctp_tcb *stcb, struct mbuf *m, int offset,
     uint16_t local_scope, uint16_t site_scope,
     uint16_t ipv4_scope, uint16_t loopback_scope)
 {
-	struct ifnet *ifn;
-	struct ifaddr *ifa;
+	struct sctp_vrf *vrf = NULL;
+	struct sctp_ifn *sctp_ifn;
+	struct sctp_ifa *sctp_ifa;
+	uint32_t vrf_id;
 
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
+	vrf_id = SCTP_DEFAULT_VRFID;
+#else
+	vrf_id = panda_get_vrf_from_call();
+#endif
+	vrf = sctp_find_vrf(vrf_id);
+	if(vrf == NULL) {
+		return;
+	}
 	/* go through all our known interfaces */
-	TAILQ_FOREACH(ifn, &ifnet, if_list) {
-		if (loopback_scope == 0 && ifn->if_type == IFT_LOOP) {
+	LIST_FOREACH(sctp_ifn, &vrf->ifnlist, next_ifn) {
+		if (loopback_scope == 0 && sctp_ifn->ifn_type == IFT_LOOP) {
 			/* skip loopback interface */
 			continue;
 		}
 		/* go through each interface address */
-		TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
+		LIST_FOREACH(sctp_ifa, &sctp_ifn->ifalist, next_ifa) {
 			/* do i have it implicitly? */
-			if (sctp_cmpaddr(ifa->ifa_addr, init_addr)) {
+			if (sctp_cmpaddr(&sctp_ifa->address.sa, init_addr)) {
 				continue;
 			}
 			/* check to see if in the init-ack */
 			if (!sctp_addr_in_initack(stcb, m, offset, length,
-			    ifa->ifa_addr)) {
+			    &sctp_ifa->address.sa)) {
 				/* try to add it */
 				sctp_addr_mgmt_assoc(stcb->sctp_ep, stcb,
-				    ifa, SCTP_ADD_IP_ADDRESS);
+				    sctp_ifa, SCTP_ADD_IP_ADDRESS);
 			}
 		}		/* end foreach ifa */
 	}			/* end foreach ifn */
@@ -2802,9 +2689,9 @@ sctp_check_address_list(struct sctp_tcb *stcb, struct mbuf *m, int offset,
  * sctp_bindx() support
  */
 uint32_t
-sctp_addr_mgmt_ep_sa(struct sctp_inpcb *inp, struct sockaddr *sa, uint16_t type)
+sctp_addr_mgmt_ep_sa(struct sctp_inpcb *inp, struct sockaddr *sa, uint16_t type, uint32_t vrf)
 {
-	struct ifaddr *ifa;
+	struct sctp_ifa *ifa;
 
 #if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
 	struct timeval timenow;
@@ -2815,23 +2702,31 @@ sctp_addr_mgmt_ep_sa(struct sctp_inpcb *inp, struct sockaddr *sa, uint16_t type)
 	if (sa->sa_len == 0)
 		return (EINVAL);
 
-	ifa = sctp_find_ifa_by_addr(sa);
+	ifa = sctp_find_ifa_by_addr(sa,  vrf, 0);
 	if (ifa != NULL) {
-#ifdef INET6
-		if (ifa->ifa_addr->sa_family == AF_INET6) {
-			struct in6_ifaddr *ifa6;
-
-			ifa6 = (struct in6_ifaddr *)ifa;
-			if (IFA6_IS_DEPRECATED(ifa6) ||
-			    (ifa6->ia6_flags & (IN6_IFF_DETACHED |
-			    IN6_IFF_ANYCAST | IN6_IFF_NOTREADY))) {
-				/* Can't bind a non-existent addr. */
-				return (EINVAL);
-			}
-		}
-#endif				/* INET6 */
 		/* add this address */
-		sctp_addr_mgmt_ep(inp, ifa, type);
+		struct sctp_asconf_iterator *asc;
+		struct sctp_laddr *wi;
+		SCTP_MALLOC(asc, struct sctp_asconf_iterator *, 
+			    sizeof(struct sctp_asconf_iterator), "SCTP_ASCONF_ITERATOR");
+		if(asc == NULL) {
+			return (ENOMEM);
+		}
+		wi = SCTP_ZONE_GET(sctppcbinfo.ipi_zone_laddr, struct sctp_laddr);
+		if (wi == NULL) {
+			SCTP_FREE(asc);
+			return (ENOMEM);
+		}
+		LIST_INIT(&asc->list_of_work);
+		asc->cnt = 1;
+		SCTP_INCR_LADDR_COUNT();
+		wi->ifa = ifa;
+		wi->action = SCTP_ADD_IP_ADDRESS;
+		atomic_add_int(&ifa->refcount, 1);
+		LIST_INSERT_HEAD(&asc->list_of_work, wi, sctp_nxt_addr);
+		sctp_initiate_iterator(sctp_iterator_ep, sctp_iterator_stcb, SCTP_PCB_ANY_FLAGS,
+				       SCTP_PCB_ANY_FEATURES, SCTP_ASOC_ANY_STATE, (void *)asc, 0,
+				       sctp_iterator_end, inp, 0);
 	} else {
 		/* invalid address! */
 		return (EADDRNOTAVAIL);
@@ -2839,39 +2734,3 @@ sctp_addr_mgmt_ep_sa(struct sctp_inpcb *inp, struct sockaddr *sa, uint16_t type)
 	return (0);
 }
 
-void
-sctp_addr_change(struct ifaddr *ifa, int cmd)
-{
-	struct sctp_laddr *wi;
-
-	wi = SCTP_ZONE_GET(sctppcbinfo.ipi_zone_laddr, struct sctp_laddr);
-	if (wi == NULL) {
-		/*
-		 * Gak, what can we do? We have lost an address change can
-		 * you say HOSED?
-		 */
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_PCB1) {
-			printf("Lost and address change ???\n");
-		}
-#endif				/* SCTP_DEBUG */
-		return;
-	}
-	SCTP_INCR_LADDR_COUNT();
-	bzero(wi, sizeof(*wi));
-	wi->ifa = ifa;
-	IFAREF(ifa);
-
-	wi->action = cmd;
-	SCTP_IPI_ADDR_LOCK();
-	/*
-	 * Should this really be a tailq? As it is we will process the
-	 * newest first :-0
-	 */
-	LIST_INSERT_HEAD(&sctppcbinfo.addr_wq, wi, sctp_nxt_addr);
-	sctp_timer_start(SCTP_TIMER_TYPE_ADDR_WQ,
-	    (struct sctp_inpcb *)NULL,
-	    (struct sctp_tcb *)NULL,
-	    (struct sctp_nets *)NULL);
-	SCTP_IPI_ADDR_UNLOCK();
-}

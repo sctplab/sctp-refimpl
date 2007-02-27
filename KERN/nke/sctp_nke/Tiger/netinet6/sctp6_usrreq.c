@@ -30,7 +30,7 @@
 /*	$KAME: sctp6_usrreq.c,v 1.38 2005/08/24 08:08:56 suz Exp $	*/
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.9 2007/01/18 09:58:43 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.10 2007/02/12 23:24:31 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -1403,6 +1403,7 @@ sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s = splsoftnet();
 #endif
+	uint32_t vrf_id;
 	int error = 0;
 	struct sctp_inpcb *inp;
 	struct in6pcb *inp6;
@@ -1423,6 +1424,11 @@ sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		return (ECONNRESET);	/* I made the same as TCP since we are
 					 * not setup? */
 	}
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
+	vrf_id = SCTP_DEFAULT_VRFID;
+#else
+	vrf_id = panda_get_vrf_from_call(); /* from socket option call? */
+#endif
 	SCTP_ASOC_CREATE_LOCK(inp);
 	SCTP_INP_RLOCK(inp);
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) ==
@@ -1521,7 +1527,7 @@ sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		return (EALREADY);
 	}
 	/* We are GOOD to go */
-	stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0);
+	stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0, vrf_id);
 	SCTP_ASOC_CREATE_UNLOCK(inp);
 	if (stcb == NULL) {
 		/* Gak! no memory */
@@ -1554,18 +1560,21 @@ static int
 sctp6_getaddr(struct socket *so, struct sockaddr **addr)
 {
 	struct sockaddr_in6 *sin6;
-
+#elif defined(__Panda__)
+sctp6_getaddr(struct socket *so, struct sockaddr *addr)
+{
+	struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)addr;
 #else
 sctp6_getaddr(struct socket *so, struct mbuf *nam)
 {
 	struct sockaddr_in6 *sin6 = mtod(nam, struct sockaddr_in6 *);
-
 #endif
 	struct sctp_inpcb *inp;
+	uint32_t vrf_id;
+	struct sctp_ifa *sctp_ifa;
 
 #ifdef SCTP_KAME
 	int error;
-
 #endif				/* SCTP_KAME */
 
 	/*
@@ -1573,6 +1582,8 @@ sctp6_getaddr(struct socket *so, struct mbuf *nam)
 	 */
 #if defined(__FreeBSD__) || defined(__APPLE__)
 	SCTP_MALLOC_SONAME(sin6, struct sockaddr_in6 *, sizeof *sin6);
+#elif defined(__Panda__)
+	bzero(sin6, sizeof(*sin6));
 #else
 	SCTP_BUF_LEN(nam) = sizeof(*sin6);
 	bzero(sin6, sizeof(*sin6));
@@ -1618,9 +1629,16 @@ sctp6_getaddr(struct socket *so, struct mbuf *nam)
 				/* punt */
 				goto notConn6;
 			}
-			sin6->sin6_addr = sctp_ipv6_source_address_selection(
-			    inp, stcb, (struct route *)&net->ro, net, 0);
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
+			vrf_id = SCTP_DEFAULT_VRFID;
+#else
+			vrf_id = panda_get_vrf_from_call(); /* from socket option call? */
+#endif
 
+			sctp_ifa = sctp_source_address_selection(inp, stcb, (struct route *)&net->ro, net, 0, vrf_id);
+			if(sctp_ifa) {
+				sin6->sin6_addr = sctp_ifa->address.sin6.sin6_addr;
+			}
 		} else {
 			/* For the bound all case you get back 0 */
 	notConn6:
@@ -1632,10 +1650,10 @@ sctp6_getaddr(struct socket *so, struct mbuf *nam)
 		int fnd = 0;
 
 		LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
-			if (laddr->ifa->ifa_addr->sa_family == AF_INET6) {
+			if (laddr->ifa->address.sa.sa_family == AF_INET6) {
 				struct sockaddr_in6 *sin_a;
 
-				sin_a = (struct sockaddr_in6 *)laddr->ifa->ifa_addr;
+				sin_a = (struct sockaddr_in6 *)&laddr->ifa->address.sin6;
 				sin6->sin6_addr = sin_a->sin6_addr;
 				fnd = 1;
 				break;
@@ -1676,12 +1694,14 @@ static int
 sctp6_peeraddr(struct socket *so, struct sockaddr **addr)
 {
 	struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)*addr;
-
+#elif defined(__Panda__)
+sctp6_peeraddr(struct socket *so, struct sockaddr *addr)
+{
+	struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)addr;
 #else
 sctp6_peeraddr(struct socket *so, struct mbuf *nam)
 {
 	struct sockaddr_in6 *sin6 = mtod(nam, struct sockaddr_in6 *);
-
 #endif
 	int fnd;
 	struct sockaddr_in6 *sin_a6;
@@ -1691,7 +1711,6 @@ sctp6_peeraddr(struct socket *so, struct mbuf *nam)
 
 #ifdef SCTP_KAME
 	int error;
-
 #endif				/* SCTP_KAME */
 
 	/*
@@ -1704,6 +1723,9 @@ sctp6_peeraddr(struct socket *so, struct mbuf *nam)
 	}
 #if defined(__FreeBSD__) || defined(__APPLE__)
 	SCTP_MALLOC_SONAME(sin6, struct sockaddr_in6 *, sizeof *sin6);
+#elif defined(__Panda__)
+	bzero(sin6, sizeof(*sin6));
+	*addrlen = sizeof(*sin6);
 #else
 	SCTP_BUF_LEN(nam) = sizeof(*sin6);
 	bzero(sin6, sizeof(*sin6));
@@ -1767,12 +1789,14 @@ static int
 sctp6_in6getaddr(struct socket *so, struct sockaddr **nam)
 {
 	struct sockaddr *addr;
-
+#elif defined(__Panda__)
+sctp6_in6getaddr(struct socket *so, struct sockaddr *nam, uint32_t *namelen)
+{
+	struct sockaddr *addr = nam;
 #else
 sctp6_in6getaddr(struct socket *so, struct mbuf *nam)
 {
 	struct sockaddr *addr = mtod(nam, struct sockaddr *);
-
 #endif
 	struct in6pcb *inp6 = sotoin6pcb(so);
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -1819,6 +1843,9 @@ sctp6_in6getaddr(struct socket *so, struct mbuf *nam)
 		SCTP_BUF_LEN(nam) = sizeof(struct sockaddr_in6);
 #endif
 	}
+#if defined(__Panda__)
+	*namelen = nam->sa_len;
+#endif
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
 #endif
@@ -1831,7 +1858,10 @@ static int
 sctp6_getpeeraddr(struct socket *so, struct sockaddr **nam)
 {
 	struct sockaddr *addr = *nam;
-
+#elif defined(__Panda__)
+sctp6_getpeeraddr(struct socket *so, struct sockaddr *nam, uint32_t *namelen)
+{
+	struct sockaddr *addr = (struct sockaddr *)nam;
 #else
 sctp6_getpeeraddr(struct socket *so, struct mbuf *nam)
 {
@@ -1880,6 +1910,9 @@ sctp6_getpeeraddr(struct socket *so, struct mbuf *nam)
 		SCTP_BUF_LEN(nam) = sizeof(struct sockaddr_in6);
 #endif
 	}
+#if defined(__Panda__)
+	*namelen = nam->sa_len;
+#endif
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
 #endif
@@ -1947,7 +1980,7 @@ sctp6_usrreq(so, req, m, nam, control, p)
 	int s;
 	int error = 0;
 	int family;
-
+	uint32_t vrf_id;
 #if defined(__OpenBSD__)
 	p = curproc;
 #endif
@@ -1981,12 +2014,19 @@ sctp6_usrreq(so, req, m, nam, control, p)
 #ifdef __NetBSD__
 	if (req == PRU_PURGEIF) {
 		struct ifnet *ifn;
-		struct ifaddr *ifa;
+		struct sctp_ifn *sctp_ifn;
+		struct sctp_ifa *sctp_ifa;
 
 		ifn = (struct ifnet *)control;
-		TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
-			if (ifa->ifa_addr->sa_family == family) {
-				sctp_delete_ip_address(ifa);
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
+		vrf = SCTP_DEFAULT_VRFID;
+#else
+		vrf = panda_get_vrf_from_call(); /* from socket option call? */
+#endif
+		sctp_ifn = sctp_find_ifn(vrf, (void *)ifn, ifn->if_index);
+		LIST_FOREACH(sctp_ifa, &sctp_ifn->ifalist, next_ifa) {		
+			if (sctp_ifa->address.sa.sa_family == family) {
+				sctp_delete_ip_address(sctp_ifa);
 			}
 		}
 		switch (family) {

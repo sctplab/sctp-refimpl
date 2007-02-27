@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_timer.c,v 1.6 2007/01/18 09:58:43 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_timer.c,v 1.7 2007/02/12 23:24:31 rrs Exp $");
 #endif
 
 #define _IP_VHL
@@ -400,6 +400,10 @@ sctp_find_alternate_net(struct sctp_tcb *stcb,
 			}
 #endif /* SCTP_EMBEDDED_V6_SCOPE */
 #endif
+			if (alt->src_addr_selected) {
+				sctp_free_ifa(alt->ro._s_addr);
+				alt->ro._s_addr = NULL;
+			}
 			alt->src_addr_selected = 0;
 		}
 		if (
@@ -979,6 +983,10 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 			    (struct sockaddr *)NULL,
 			    alt) == 0) {
 				net->dest_state |= SCTP_ADDR_WAS_PRIMARY;
+				if (net->src_addr_selected) {
+					sctp_free_ifa(net->ro._s_addr);
+					net->ro._s_addr = NULL;
+				}
 				net->src_addr_selected = 0;
 			}
 		}
@@ -1431,6 +1439,8 @@ sctp_audit_stream_queues_for_size(struct sctp_inpcb *inp,
 	}
 }
 
+extern int sctp_hb_maxburst;
+
 int
 sctp_heartbeat_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
     struct sctp_nets *net, int cnt_of_unconf)
@@ -1440,6 +1450,14 @@ sctp_heartbeat_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 #endif
 	if (net) {
 		if (net->hb_responded == 0) {
+			if(net->src_addr_selected) {
+				/* Invalidate the src address if we did not get
+				 * a response last time.
+				 */
+				sctp_free_ifa(net->ro._s_addr);
+				net->ro._s_addr = NULL;
+				net->src_addr_selected = 0;
+			}
 			sctp_backoff_on_timeout(stcb, net, 1, 0);
 		}
 		/* Zero PBA, if it needs it */
@@ -1471,7 +1489,7 @@ sctp_heartbeat_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				if (sctp_send_hb(stcb, 1, net) == 0) {
 					break;
 				}
-				if (cnt_sent >= stcb->asoc.max_burst)
+				if (cnt_sent >= sctp_hb_maxburst)
 					break;
 			}
 		}
@@ -1657,7 +1675,7 @@ void
 sctp_iterator_timer(struct sctp_iterator *it)
 {
 	int iteration_count = 0;
-
+	int inp_skip = 0;
 	/*
 	 * only one iterator can run at a time. This is the only way we can
 	 * cleanly pull ep's from underneath all the running interators when
@@ -1733,11 +1751,14 @@ select_a_new_ep:
 	if (it->stcb == NULL) {
 		/* run the per instance function */
 		if (it->function_inp != NULL)
-	    		(*it->function_inp)(it->inp, it->pointer, it->val);
+	    		inp_skip = (*it->function_inp)(it->inp, it->pointer, it->val);
 
 		it->stcb = LIST_FIRST(&it->inp->sctp_asoc_list);
 	}
 	SCTP_INP_RUNLOCK(it->inp);
+	if(inp_skip) {
+		goto no_stcb;
+	}
 	if ((it->stcb) &&
 	    (it->stcb->asoc.stcb_starting_point_for_iterator == it)) {
 		it->stcb->asoc.stcb_starting_point_for_iterator = NULL;
@@ -1779,6 +1800,7 @@ select_a_new_ep:
 	next_assoc:
 		it->stcb = LIST_NEXT(it->stcb, sctp_tcblist);
 	}
+ no_stcb:
 	/* done with all assocs on this endpoint, move on to next endpoint */
 	SCTP_INP_WLOCK(it->inp);
 	it->inp->inp_starting_point_for_iterator = NULL;

@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.6 2007/01/18 09:58:42 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.7 2007/02/12 23:24:31 rrs Exp $");
 #endif
 
 #ifndef __sctp_constants_h__
@@ -190,7 +190,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.6 2007/01/18 09:58:42 r
 #define SCTP_SCALE_FOR_ADDR	2
 
 /* default AUTO_ASCONF mode enable(1)/disable(0) value (sysctl) */
-#define SCTP_DEFAULT_AUTO_ASCONF	0
+#define SCTP_DEFAULT_AUTO_ASCONF	1
 
 /*
  * Theshold for rwnd updates, we have to read (sb_hiwat >>

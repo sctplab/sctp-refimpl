@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_structs.h,v 1.7 2007/01/18 09:58:43 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_structs.h,v 1.8 2007/02/12 23:24:31 rrs Exp $");
 #endif
 
 #ifndef __sctp_structs_h__
@@ -116,7 +116,7 @@ TAILQ_HEAD(sctp_resethead, sctp_stream_reset_list);
 
 typedef void (*asoc_func) (struct sctp_inpcb *, struct sctp_tcb *, void *ptr,
          uint32_t val);
-typedef void (*inp_func) (struct sctp_inpcb *, void *ptr, uint32_t val);
+typedef int (*inp_func) (struct sctp_inpcb *, void *ptr, uint32_t val);
 typedef void (*end_func) (void *ptr, uint32_t val);
 
 struct sctp_iterator {
@@ -150,6 +150,12 @@ struct sctp_copy_all {
 	int cnt_failed;
 };
 
+struct sctp_asconf_iterator {
+	struct sctpladdr list_of_work;
+	int cnt;
+};
+
+
 struct sctp_nets {
 	TAILQ_ENTRY(sctp_nets) sctp_next;	/* next link */
 
@@ -166,8 +172,8 @@ struct sctp_nets {
 	struct sctp_route {
 		struct rtentry *ro_rt;
 		union sctp_sockstore _l_addr;	/* remote peer addr */
-		union sctp_sockstore _s_addr;	/* our selected src addr */
-	}          ro;
+		struct sctp_ifa *_s_addr;	/* our selected src addr */
+	}ro;
 	/* mtu discovered so far */
 	uint32_t mtu;
 	uint32_t ssthresh;	/* not sure about this one for split */
@@ -437,7 +443,7 @@ TAILQ_HEAD(sctp_asconf_addrhead, sctp_asconf_addr);
 struct sctp_asconf_addr {
 	TAILQ_ENTRY(sctp_asconf_addr) next;
 	struct sctp_asconf_addr_param ap;
-	struct ifaddr *ifa;	/* save the ifa for add/del ip */
+	struct sctp_ifa *ifa;	/* save the ifa for add/del ip */
 	uint8_t sent;		/* has this been sent yet? */
 };
 
@@ -485,7 +491,8 @@ struct sctp_association {
 	struct sctp_timer delayed_event_timer;	/* timer for delayed events */
 
 	/* list of local addresses when add/del in progress */
-	struct sctpladdr sctp_local_addr_list;
+	struct sctpladdr sctp_restricted_addrs;
+
 	struct sctpnetlisthead nets;
 
 	/* Free chunk list */
@@ -575,6 +582,8 @@ struct sctp_association {
 
 	/* queue of chunks waiting to be sent into the local stack */
 	struct sctp_readhead pending_reply_queue;
+
+	uint32_t vrf_id;
 
 	uint32_t cookie_preserve_req;
 	/* ASCONF next seq I am sending out, inits at init-tsn */
