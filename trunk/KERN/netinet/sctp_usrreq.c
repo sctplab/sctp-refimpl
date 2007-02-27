@@ -637,10 +637,6 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 			}
 			LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
 				number_of_associations++;
-				/* FIXME MT */
-				LIST_FOREACH(laddr, &stcb->asoc.sctp_local_addr_list, sctp_nxt_addr) {
-					number_of_local_addresses++;
-				}
 				TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 					number_of_remote_addresses++;
 				}
@@ -734,12 +730,6 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 			SCTP_TCB_UNLOCK(stcb);
 			number_of_local_addresses = 0;
 			number_of_remote_addresses = 0;
-			/* FIXME MT */
-			/*
-			LIST_FOREACH(laddr, &stcb->asoc.sctp_local_addr_list, sctp_nxt_addr) {
-				number_of_local_addresses++;
-			}
-			*/
 			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 				number_of_remote_addresses++;
 			}
@@ -780,21 +770,6 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 				atomic_add_int(&stcb->asoc.refcnt, -1);
 				return error;
 			}
-			/* FIXME MT */
-			/*
-			LIST_FOREACH(laddr, &stcb->asoc.sctp_local_addr_list, sctp_nxt_addr) {
-				error = SYSCTL_OUT(req, &xladdr, sizeof(struct xsctp_laddr));
-				if (error) {
-#if defined(SCTP_PER_SOCKET_LOCKING)
-					SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
-					SCTP_UNLOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
-#endif
-					SCTP_INP_RUNLOCK(inp);
-					SCTP_INP_INFO_RUNLOCK();
-					return error;
-				}			
-			}
-			*/
 			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 				xraddr.RemAddr = net->ro._l_addr;
 				xraddr.RemAddrActive = ((net->dest_state & SCTP_ADDR_REACHABLE) == SCTP_ADDR_REACHABLE);
@@ -1885,7 +1860,7 @@ sctp_fill_up_addresses(struct sctp_inpcb *inp,
 	} else {
 		/* Turn on ALL scope, since we look at the EP */
 		loopback_scope = ipv4_local_scope = local_scope =
-		    site_scope = 1;
+			site_scope = 1;
 	}
 	ipv4_addr_legal = ipv6_addr_legal = 0;
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) {
@@ -1950,7 +1925,7 @@ sctp_fill_up_addresses(struct sctp_inpcb *inp,
 						return (actual);
 					}
 				} else if ((sctp_ifa->address.sa.sa_family == AF_INET6) &&
-				    (ipv6_addr_legal)) {
+					   (ipv6_addr_legal)) {
 					struct sockaddr_in6 *sin6;
 
 #ifndef SCTP_KAME
@@ -1980,8 +1955,8 @@ sctp_fill_up_addresses(struct sctp_inpcb *inp,
 #else
 							lsa6 = *sin6;
 							if (in6_recoverscope(&lsa6,
-							    &lsa6.sin6_addr,
-							    NULL))
+									     &lsa6.sin6_addr,
+									     NULL))
 								/*
 								 * bad link
 								 * local
@@ -2008,68 +1983,22 @@ sctp_fill_up_addresses(struct sctp_inpcb *inp,
 		}
 	} else {
 		struct sctp_laddr *laddr;
-
-		/*
-		 * If we have a TCB and we do NOT support ASCONF (it's
-		 * turned off or otherwise) then the list is always the true
-		 * list of addresses (the else case below).  Otherwise the
-		 * list on the association is a list of addresses that are
-		 * NOT part of the association.
-		 */
-		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_DO_ASCONF)) {
-			/* The list is a NEGATIVE list */
-			LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
-				if (stcb) {
-					if (sctp_is_addr_restricted(stcb, laddr->ifa)) {
-						continue;
-					}
-				}
-				if (sctp_fill_user_address(sas, &laddr->ifa->address.sa))
+		/* The list is a NEGATIVE list */
+		LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
+			if (stcb) {
+				if (sctp_is_addr_restricted(stcb, laddr->ifa)) {
 					continue;
-
-				((struct sockaddr_in6 *)sas)->sin6_port = inp->sctp_lport;
-				sas = (struct sockaddr_storage *)((caddr_t)sas +
-				    laddr->ifa->address.sa.sa_len);
-				actual += laddr->ifa->address.sa.sa_len;
-				if (actual >= limit) {
-					return (actual);
 				}
 			}
-		} else {
-			/* The list is a positive list if present */
-			if (stcb) {
-				/* Must use the specific association list */
-				LIST_FOREACH(laddr, &stcb->asoc.sctp_local_addr_list,
-				    sctp_nxt_addr) {
-					if (sctp_fill_user_address(sas,
-					    &laddr->ifa->address.sa))
-						continue;
-					((struct sockaddr_in6 *)sas)->sin6_port = inp->sctp_lport;
-					sas = (struct sockaddr_storage *)((caddr_t)sas +
-					    laddr->ifa->address.sa.sa_len);
-					actual += laddr->ifa->address.sa.sa_len;
-					if (actual >= limit) {
-						return (actual);
-					}
-				}
-			} else {
-				/*
-				 * No endpoint so use the endpoints
-				 * individual list
-				 */
-				LIST_FOREACH(laddr, &inp->sctp_addr_list,
-				    sctp_nxt_addr) {
-					if (sctp_fill_user_address(sas,
-					    &laddr->ifa->address.sa))
-						continue;
-					((struct sockaddr_in6 *)sas)->sin6_port = inp->sctp_lport;
-					sas = (struct sockaddr_storage *)((caddr_t)sas +
-					    laddr->ifa->address.sa.sa_len);
-					actual += laddr->ifa->address.sa.sa_len;
-					if (actual >= limit) {
-						return (actual);
-					}
-				}
+			if (sctp_fill_user_address(sas, &laddr->ifa->address.sa))
+				continue;
+
+			((struct sockaddr_in6 *)sas)->sin6_port = inp->sctp_lport;
+			sas = (struct sockaddr_storage *)((caddr_t)sas +
+							  laddr->ifa->address.sa.sa_len);
+			actual += laddr->ifa->address.sa.sa_len;
+			if (actual >= limit) {
+				return (actual);
 			}
 		}
 	}

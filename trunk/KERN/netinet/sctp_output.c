@@ -1936,21 +1936,9 @@ sctp_is_ifa_addr_prefered(struct sctp_ifa *ifa,
 			*sin_local = 1;
 		}
 	} else if (fam == AF_INET6) {
-		struct in6_ifaddr *ifa6;
 		/* ok to use deprecated addresses? */
 
-		/* FIX FIX? */
-		ifa6 = (struct in6_ifaddr *)ifa->ifa;
-		if (!ip6_use_deprecated) {
-			if (IFA6_IS_DEPRECATED(ifa6)) {
-				/* can't use this type */
-				return (NULL);
-			}
-		}
-		/* are we ok, with the current state of this address? */
-		if (ifa6->ia6_flags &
-		    (IN6_IFF_DETACHED | IN6_IFF_NOTREADY | IN6_IFF_ANYCAST)) {
-			/* Can't use these types */
+		if(ifa->localifa_flags & SCTP_ADDR_IFA_UNUSEABLE) {
 			return (NULL);
 		}
 		sin6 = (struct sockaddr_in6 *)&ifa->address.sin6;
@@ -2052,21 +2040,9 @@ sctp_is_ifa_addr_acceptable(struct sctp_ifa *ifa,
 			*sin_local = 1;
 		}
 	} else {
-		struct in6_ifaddr *ifa6;
 		/* ok to use deprecated addresses? */
 
-		/* FIX FIX? */
-		ifa6 = (struct in6_ifaddr *)ifa->ifa;
-		if (!ip6_use_deprecated) {
-			if (IFA6_IS_DEPRECATED(ifa6)) {
-				/* can't use this type */
-				return (NULL);
-			}
-		}
-		/* are we ok, with the current state of this address? */
-		if (ifa6->ia6_flags &
-		    (IN6_IFF_DETACHED | IN6_IFF_NOTREADY | IN6_IFF_ANYCAST)) {
-			/* Can't use these types */
+		if(ifa->localifa_flags & SCTP_ADDR_IFA_UNUSEABLE) {
 			return (NULL);
 		}
 		sin6 = (struct sockaddr_in6 *)&ifa->address.sin6;
@@ -2146,6 +2122,7 @@ static struct sctp_ifa *
 sctp_choose_boundspecific_inp(struct sctp_inpcb *inp,
 			      struct route *ro,
 			      uint32_t vrf_id,
+			      int non_asoc_addr_ok,
 			      uint8_t ip_scope,
 			      uint8_t loopscope,
 			      sa_family_t fam)
@@ -2175,6 +2152,8 @@ sctp_choose_boundspecific_inp(struct sctp_inpcb *inp,
 	if (sctp_ifn) {
 		/* is a prefered one on the interface we route out? */
 		LIST_FOREACH(sctp_ifa, &sctp_ifn->ifalist, next_ifa) {
+			if ((sctp_ifa->localifa_flags & SCTP_ADDR_DEFER_USE) && (non_asoc_addr_ok == 0)) 
+				continue;
 			pass = sctp_is_ifa_addr_prefered(sctp_ifa, loopscope, ip_scope, &sin_loop, &sin_local, fam);
 			if (pass == NULL)
 				continue;
@@ -2185,6 +2164,9 @@ sctp_choose_boundspecific_inp(struct sctp_inpcb *inp,
 		}
 		/* is an acceptable one on the interface we route out? */
 		LIST_FOREACH(sctp_ifa, &sctp_ifn->ifalist, next_ifa) {
+			if ((sctp_ifa->localifa_flags & SCTP_ADDR_DEFER_USE) && (non_asoc_addr_ok == 0)) 
+				continue;
+
 			pass = sctp_is_ifa_addr_acceptable(sctp_ifa, loopscope, ip_scope, &sin_loop, &sin_local, fam);
 			if (pass == NULL)
 				continue;
@@ -2286,20 +2268,16 @@ sctp_choose_boundspecific_stcb(struct sctp_inpcb *inp,
 	ifn_index = SCTP_GET_IF_INDEX_FROM_ROUTE(ro);
 	sctp_ifn = sctp_find_ifn(vrf, ifn, ifn_index);
 
-	if (sctp_is_feature_off(inp, SCTP_PCB_FLAGS_DO_ASCONF)) {
-		/* We turn this off and get the effect that
-		 * the restricted address list is NOT used.
-		 */
-		non_asoc_addr_ok = 1;
-	}
 	/*
-	 * first question, is the ifn we will emit on in our list,
+ 	 * first question, is the ifn we will emit on in our list,
 	 * if so, we want that one.. First we look for a prefered. Second
 	 * we go for an acceptable.
 	 */
 	if (sctp_ifn) {
 		/* first try for an prefered address on the ep */
 		LIST_FOREACH(sctp_ifa, &sctp_ifn->ifalist, next_ifa) {
+			if ((sctp_ifa->localifa_flags & SCTP_ADDR_DEFER_USE) && (non_asoc_addr_ok == 0)) 
+				continue;
 			if (sctp_is_addr_in_ep(inp, sctp_ifa)) {
 				pass = sctp_is_ifa_addr_prefered(sctp_ifa, loopscope, ip_scope, &sin_loop, &sin_local, fam);
 				if (pass == NULL)
@@ -2315,6 +2293,8 @@ sctp_choose_boundspecific_stcb(struct sctp_inpcb *inp,
 		}
 		/* next try for an acceptable address on the ep */
 		LIST_FOREACH(sctp_ifa, &sctp_ifn->ifalist, next_ifa) {
+			if ((sctp_ifa->localifa_flags & SCTP_ADDR_DEFER_USE) && (non_asoc_addr_ok == 0)) 
+				continue;
 			if (sctp_is_addr_in_ep(inp, sctp_ifa)) {
 				pass= sctp_is_ifa_addr_acceptable(sctp_ifa, loopscope, ip_scope, &sin_loop, &sin_local, fam);
 				if (pass == NULL)
@@ -2339,7 +2319,7 @@ sctp_choose_boundspecific_stcb(struct sctp_inpcb *inp,
  sctp_from_the_top:
 	if (stcb->asoc.last_used_address == NULL) {
 		start_at_beginning = 1;
-		stcb->asoc.last_used_address = LIST_FIRST(&stcb->asoc.sctp_local_addr_list);
+		stcb->asoc.last_used_address = LIST_FIRST(&inp->sctp_addr_list);
 	}
 	/* search beginning with the last used address */
 	for (laddr = stcb->asoc.last_used_address; laddr;
@@ -2371,7 +2351,7 @@ sctp_choose_boundspecific_stcb(struct sctp_inpcb *inp,
  sctp_from_the_top2:
 	if (stcb->asoc.last_used_address == NULL) {
 		start_at_beginning = 1;
-		stcb->asoc.last_used_address = LIST_FIRST(&stcb->asoc.sctp_local_addr_list);
+		stcb->asoc.last_used_address = LIST_FIRST(&inp->sctp_addr_list);
 	}
 	/* search beginning with the last used address */
 	for (laddr = stcb->asoc.last_used_address; laddr;
@@ -2413,6 +2393,8 @@ sctp_select_nth_prefered_addr_from_ifn_boundall(struct sctp_ifn *ifn,
 	int num_eligible_addr = 0;
 
 	LIST_FOREACH(ifa, &ifn->ifalist, next_ifa) {
+		if ((ifa->localifa_flags & SCTP_ADDR_DEFER_USE) && (non_asoc_addr_ok == 0)) 
+			continue;
 		pass = sctp_is_ifa_addr_prefered(ifa, loopscope, ip_scope, &sin_loop, &sin_local, fam);
 		if (pass == NULL)
 			continue;
@@ -2448,6 +2430,8 @@ sctp_count_num_prefered_boundall(struct sctp_ifn *ifn,
 	int num_eligible_addr = 0;
 
 	LIST_FOREACH(ifa, &ifn->ifalist, next_ifa) {
+		if ((ifa->localifa_flags & SCTP_ADDR_DEFER_USE) && (non_asoc_addr_ok == 0)) 
+			continue;
 		pass = sctp_is_ifa_addr_prefered(ifa, loopscope, ip_scope, sin_loop, sin_local, fam);
 		if (pass == NULL)
 			continue;
@@ -2567,6 +2551,8 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 	 */
 bound_all_plan_b:
 	LIST_FOREACH(sctp_ifa, &sctp_ifn->ifalist, next_ifa) {
+		if ((sctp_ifa->localifa_flags & SCTP_ADDR_DEFER_USE) && (non_asoc_addr_ok == 0)) 
+			continue;
 		pass = sctp_is_ifa_addr_acceptable(sctp_ifa, loopscope, ip_scope, &sin_loop, &sin_local, fam);
 		if (pass == NULL)
 			continue;
@@ -2647,6 +2633,8 @@ bound_all_plan_c:
 			continue;
 
 		LIST_FOREACH(sctp_ifa, &sctp_ifn->ifalist, next_ifa) {
+			if ((sctp_ifa->localifa_flags & SCTP_ADDR_DEFER_USE) && (non_asoc_addr_ok == 0)) 
+				continue;
 			pass = sctp_is_ifa_addr_acceptable(sctp_ifa, loopscope, ip_scope, &sin_loop, &sin_local, fam);
 			if (pass == NULL)
 				continue;
@@ -2839,7 +2827,7 @@ sctp_source_address_selection(struct sctp_inpcb *inp,
 							loc_scope, loopscope, non_asoc_addr_ok, fam);
 
 	} else {
-		answer = sctp_choose_boundspecific_inp(inp, ro, vrf_id, loc_scope, loopscope, fam);
+		answer = sctp_choose_boundspecific_inp(inp, ro, vrf_id, non_asoc_addr_ok, loc_scope, loopscope,  fam);
 		
 	}
 	return (answer);

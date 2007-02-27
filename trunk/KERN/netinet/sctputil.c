@@ -1048,7 +1048,6 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	asoc->ecn_echo_cnt_onq = 0;
 	asoc->stream_locked = 0;
 
-	LIST_INIT(&asoc->sctp_local_addr_list);
 	LIST_INIT(&asoc->sctp_restricted_addrs);
 
 	TAILQ_INIT(&asoc->nets);
@@ -1159,29 +1158,37 @@ sctp_handle_addr_wq(void)
 {
 	/* deal with the ADDR wq from the rtsock calls */
 	struct sctp_laddr *wi;
+	struct sctp_asconf_iterator *asc;
 
-	SCTP_IPI_ADDR_LOCK();
-	wi = LIST_FIRST(&sctppcbinfo.addr_wq);
-	if (wi == NULL) {
-		SCTP_IPI_ADDR_UNLOCK();
+	SCTP_MALLOC(asc, struct sctp_asconf_iterator *, 
+		    sizeof(struct sctp_asconf_iterator), "SCTP_ASCONF_ITERATOR");
+	if(asc == NULL) {
+		/* Try later, no memory */
+		sctp_timer_start(SCTP_TIMER_TYPE_ADDR_WQ,
+				 (struct sctp_inpcb *)NULL,
+				 (struct sctp_tcb *)NULL,
+				 (struct sctp_nets *)NULL);
 		return;
 	}
-	LIST_REMOVE(wi, sctp_nxt_addr);
-	if (!SCTP_LIST_EMPTY(&sctppcbinfo.addr_wq)) {
-		sctp_timer_start(SCTP_TIMER_TYPE_ADDR_WQ,
-		    (struct sctp_inpcb *)NULL,
-		    (struct sctp_tcb *)NULL,
-		    (struct sctp_nets *)NULL);
+	LIST_INIT(&asc->list_of_work);
+	asc->cnt = 0;
+	SCTP_IPI_ADDR_LOCK();
+	wi = LIST_FIRST(&sctppcbinfo.addr_wq);
+	while (wi != NULL) {
+		LIST_REMOVE(wi, sctp_nxt_addr);
+		LIST_INSERT_HEAD(&asc->list_of_work, wi, sctp_nxt_addr);
+		asc->cnt++;
+		wi = LIST_FIRST(&sctppcbinfo.addr_wq);
 	}
 	SCTP_IPI_ADDR_UNLOCK();
-	if (wi->action == RTM_ADD) {
-		sctp_add_ip_address(wi->ifa);
-	} else if (wi->action == RTM_DELETE) {
-		sctp_delete_ip_address(wi->ifa);
+	if(asc->cnt == 0) {
+		SCTP_FREE(asc);
+	} else {
+		sctp_initiate_iterator(sctp_iterator_ep, sctp_iterator_stcb, SCTP_PCB_ANY_FLAGS,
+				       SCTP_PCB_ANY_FEATURES, SCTP_ASOC_ANY_STATE, (void *)asc, 0,
+				       sctp_iterator_end, NULL, 0);
 	}
-	sctp_free_ifa(wi->ifa);
-	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_laddr, wi);
-	SCTP_DECR_LADDR_COUNT();
+
 }
 
 #if defined(SCTP_PER_SOCKET_LOCKING)
