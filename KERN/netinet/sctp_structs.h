@@ -116,7 +116,7 @@ TAILQ_HEAD(sctp_resethead, sctp_stream_reset_list);
 
 typedef void (*asoc_func) (struct sctp_inpcb *, struct sctp_tcb *, void *ptr,
          uint32_t val);
-typedef void (*inp_func) (struct sctp_inpcb *, void *ptr, uint32_t val);
+typedef int (*inp_func) (struct sctp_inpcb *, void *ptr, uint32_t val);
 typedef void (*end_func) (void *ptr, uint32_t val);
 
 struct sctp_iterator {
@@ -149,6 +149,12 @@ struct sctp_copy_all {
 	int cnt_sent;
 	int cnt_failed;
 };
+
+struct sctp_asconf_iterator {
+	struct sctpladdr list_of_work;
+	int cnt;
+};
+
 
 struct sctp_nets {
 	TAILQ_ENTRY(sctp_nets) sctp_next;	/* next link */
@@ -485,7 +491,6 @@ struct sctp_association {
 	struct sctp_timer delayed_event_timer;	/* timer for delayed events */
 
 	/* list of local addresses when add/del in progress */
-	struct sctpladdr sctp_local_addr_list;
 	struct sctpladdr sctp_restricted_addrs;
 
 	struct sctpnetlisthead nets;

@@ -1675,7 +1675,7 @@ void
 sctp_iterator_timer(struct sctp_iterator *it)
 {
 	int iteration_count = 0;
-
+	int inp_skip = 0;
 	/*
 	 * only one iterator can run at a time. This is the only way we can
 	 * cleanly pull ep's from underneath all the running interators when
@@ -1751,11 +1751,14 @@ select_a_new_ep:
 	if (it->stcb == NULL) {
 		/* run the per instance function */
 		if (it->function_inp != NULL)
-	    		(*it->function_inp)(it->inp, it->pointer, it->val);
+	    		inp_skip = (*it->function_inp)(it->inp, it->pointer, it->val);
 
 		it->stcb = LIST_FIRST(&it->inp->sctp_asoc_list);
 	}
 	SCTP_INP_RUNLOCK(it->inp);
+	if(inp_skip) {
+		goto no_stcb;
+	}
 	if ((it->stcb) &&
 	    (it->stcb->asoc.stcb_starting_point_for_iterator == it)) {
 		it->stcb->asoc.stcb_starting_point_for_iterator = NULL;
@@ -1797,6 +1800,7 @@ select_a_new_ep:
 	next_assoc:
 		it->stcb = LIST_NEXT(it->stcb, sctp_tcblist);
 	}
+ no_stcb:
 	/* done with all assocs on this endpoint, move on to next endpoint */
 	SCTP_INP_WLOCK(it->inp);
 	it->inp->inp_starting_point_for_iterator = NULL;

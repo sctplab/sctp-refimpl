@@ -131,14 +131,17 @@ struct sctp_ifn {
 };
 
 /* SCTP local IFA flags */
-#define SCTP_ADDR_VALID     0x00000001	/* its up and active */
-#define SCTP_BEING_DELETED  0x00000002	/* being deleted,
-					 * when refcount = 0. Note
-					 * that it is pulled from the ifn list
-					 * and ifa_p is nulled right away but
-					 * it cannot be freed until the last *net 
-					 * pointing to it is deleted.
-					 */
+#define SCTP_ADDR_VALID         0x00000001	/* its up and active */
+#define SCTP_BEING_DELETED      0x00000002	/* being deleted,
+						 * when refcount = 0. Note
+						 * that it is pulled from the ifn list
+						 * and ifa_p is nulled right away but
+						 * it cannot be freed until the last *net 
+						 * pointing to it is deleted.
+						 */
+#define SCTP_ADDR_DEFER_USE     0x00000004	/* Hold off using this one */
+#define SCTP_ADDR_IFA_UNUSEABLE 0x00000008
+
 struct sctp_ifa {
 	LIST_ENTRY(sctp_ifa) next_ifa;
 	struct sctp_ifn *ifn_p;	/* back pointer to parent ifn */
@@ -379,8 +382,6 @@ struct sctp_inpcb {
 
 	/* list of addrs in use by the EP, NULL if bound-all */
 	struct sctpladdr sctp_addr_list;
-	/* list of addresses that we should not use until asconf completes */
-	struct sctpladdr donot_use_addr_list;
 	/* used for source address selection rotation when we are subset bound */
 	struct sctp_laddr *next_addr_touse;
 

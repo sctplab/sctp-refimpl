@@ -99,24 +99,32 @@ sctp_is_address_in_scope(struct sctp_ifa *ifa,
 		 * means any IFA locks must now be applied HERE <->
 		 */
 		if(do_update) {
-			/* LOCK ?? */
 			ifa6 = (struct in6_ifaddr *)ifa->ifa;
 			ifa->flags = ifa6->ia6_flags;
-			/* UNLOCK ?? */
-		}
-		/* ok to use deprecated addresses? */
-		if (!ip6_use_deprecated) {
-			if (ifa->flags &
-			    IN6_IFF_DEPRECATED) {
-				return (0);
+			if (!ip6_use_deprecated) {
+				if (ifa->flags &
+				    IN6_IFF_DEPRECATED) {
+					ifa->localifa_flags |= SCTP_ADDR_IFA_UNUSEABLE;
+				} else {
+					ifa->localifa_flags &= ~SCTP_ADDR_IFA_UNUSEABLE;
+				}
+			} else {
+				ifa->localifa_flags &= ~SCTP_ADDR_IFA_UNUSEABLE;
 			}
+			if (ifa->flags &
+			    (IN6_IFF_DETACHED |
+			     IN6_IFF_ANYCAST |
+			     IN6_IFF_NOTREADY)) {
+				ifa->localifa_flags |= SCTP_ADDR_IFA_UNUSEABLE;
+			} else {
+				ifa->localifa_flags &= ~SCTP_ADDR_IFA_UNUSEABLE;
+			}
+
 		}
-		if (ifa->flags &
-		    (IN6_IFF_DETACHED |
-		    IN6_IFF_ANYCAST |
-		    IN6_IFF_NOTREADY)) {
+		if (ifa->localifa_flags & SCTP_ADDR_IFA_UNUSEABLE) {
 			return (0);
 		}
+ 		/* ok to use deprecated addresses? */
 		sin6 = (struct sockaddr_in6 *)&ifa->address.sin6;
 		if (IN6_IS_ADDR_UNSPECIFIED(&sin6->sin6_addr)) {
 			/* skip unspecifed addresses */
@@ -460,7 +468,11 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 	SCTP_INCR_LADDR_COUNT();
 	bzero(wi, sizeof(*wi));
 	wi->ifa = ifap;
-	wi->action = cmd;
+	if(cmd == RTM_ADD) {
+		wi->action = SCTP_ADD_IP_ADDRESS;
+	} else if (cmd == RTM_DELETE) {
+		wi->action = SCTP_DEL_IP_ADDRESS;
+	}
 	SCTP_IPI_ADDR_LOCK();
 	/*
 	 * Should this really be a tailq? As it is we will process the

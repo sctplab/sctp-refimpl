@@ -341,6 +341,7 @@ extern uint32_t sctp_system_free_resc_limit;
 			SCTP_OS_TIMER_STOP(&(__net)->fr_timer.timer); \
                         if ((__net)->ro.ro_rt) { \
 				RTFREE((__net)->ro.ro_rt); \
+				(__net)->ro.ro_rt = NULL; \
                         } \
 			if ((__net)->src_addr_selected) { \
 				sctp_free_ifa((__net)->ro._s_addr); \

@@ -190,7 +190,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.7 2007/02/12 23:24:31 r
 #define SCTP_SCALE_FOR_ADDR	2
 
 /* default AUTO_ASCONF mode enable(1)/disable(0) value (sysctl) */
-#define SCTP_DEFAULT_AUTO_ASCONF	0
+#define SCTP_DEFAULT_AUTO_ASCONF	1
 
 /*
  * Theshold for rwnd updates, we have to read (sb_hiwat >>

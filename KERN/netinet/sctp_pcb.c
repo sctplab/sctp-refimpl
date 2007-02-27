@@ -278,7 +278,7 @@ sctp_add_addr_to_vrf(struct sctp_vrf *vrf,
 
 	sctp_ifap->ifa = ifa;
 	memcpy(&sctp_ifap->address, addr, addr->sa_len);
-	sctp_ifap->localifa_flags = SCTP_ADDR_VALID;
+	sctp_ifap->localifa_flags = SCTP_ADDR_VALID | SCTP_ADDR_DEFER_USE;
 	sctp_ifap->flags = ifa_flags;
 
 	SCTP_IPI_ADDR_LOCK();
@@ -1948,7 +1948,6 @@ sctp_inpcb_alloc(struct socket *so)
 
 	TAILQ_INIT(&inp->read_queue);
 	LIST_INIT(&inp->sctp_addr_list);
-	LIST_INIT(&inp->donot_use_addr_list);
 
 	LIST_INIT(&inp->sctp_asoc_list);
 
@@ -2246,7 +2245,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 	if (sctp_debug_on & SCTP_DEBUG_PCB1) {
 		if (addr) {
 			printf("Bind called port:%d\n",
-			    ntohs(((struct sockaddr_in *)addr)->sin_port));
+			       ntohs(((struct sockaddr_in *)addr)->sin_port));
 			printf("Addr :");
 			sctp_print_address(addr);
 		}
@@ -2292,7 +2291,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 					return (EINVAL);
 #elif defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
 				if (in6_embedscope(&sin6->sin6_addr, sin6,
-				    ip_inp, NULL) != 0)
+						   ip_inp, NULL) != 0)
 					return (EINVAL);
 #elif defined(__FreeBSD__)
 				error = scope6_check_id(sin6, ip6_use_defzone);
@@ -2334,19 +2333,19 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 			if (p && (error =
 #ifdef __FreeBSD__
 #if __FreeBSD_version > 602000
-                            priv_check(p,
-			    PRIV_NETINET_RESERVEDPORT)
+				  priv_check(p,
+					     PRIV_NETINET_RESERVEDPORT)
 #elif __FreeBSD_version >= 500000
-			    suser_cred(p->td_ucred, 0)
+				  suser_cred(p->td_ucred, 0)
 #else
-			    suser(p)
+				  suser(p)
 #endif
 #elif defined(__NetBSD__) || defined(__APPLE__)
-			    suser(p->p_ucred, &p->p_acflag)
+				  suser(p->p_ucred, &p->p_acflag)
 #else
-			    suser(p, 0)
+				  suser(p, 0)
 #endif
-			    )) {
+				    )) {
 				SCTP_INP_DECR_REF(inp);
 				SCTP_INP_WUNLOCK(inp);
 #if defined(SCTP_PER_SOCKET_LOCKING)
@@ -2426,7 +2425,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 				continue;
 			}
 			/* try upper half */
-	next_half:
+		next_half:
 			port_attempt = ((port_guess >> 16) & 0x0000ffff);
 			if (port_attempt == 0) {
 				goto last_try;
@@ -2440,9 +2439,9 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 				continue;
 			}
 			/* try two half's added together */
-	last_try:
+		last_try:
 			port_attempt = (((port_guess >> 16) & 0x0000ffff) +
-			    (port_guess & 0x0000ffff));
+					(port_guess & 0x0000ffff));
 			if (port_attempt == 0) {
 				/* get a new random number */
 				continue;
@@ -2461,7 +2460,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 	}
 	SCTP_INP_DECR_REF(inp);
 	if (inp->sctp_flags & (SCTP_PCB_FLAGS_SOCKET_GONE |
-	    SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
+			       SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
 		/*
 		 * this really should not happen. The guy did a non-blocking
 		 * bind and then did a close at the same time.
@@ -2528,17 +2527,8 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 			return (EADDRNOTAVAIL);
 		}
 		if (addr->sa_family == AF_INET6) {
-			struct in6_ifaddr *ifa6;
-
 			/* GAK, more FIXME IFA lock? */
-			ifa6 = (struct in6_ifaddr *)ifa->ifa;
-			/*
-			 * allow binding of deprecated addresses as per RFC
-			 * 2462 and ipng discussion
-			 */
-			if (ifa6->ia6_flags & (IN6_IFF_DETACHED |
-			    IN6_IFF_ANYCAST |
-			    IN6_IFF_NOTREADY)) {
+			if(ifa->localifa_flags & SCTP_ADDR_IFA_UNUSEABLE) {
 				/* Can't bind a non-existent addr. */
 				SCTP_INP_WUNLOCK(inp);
 #if defined(SCTP_PER_SOCKET_LOCKING)
@@ -2572,7 +2562,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 	}
 	/* find the bucket */
 	head = &sctppcbinfo.sctp_ephash[SCTP_PCBHASH_ALLADDR(lport,
-	    sctppcbinfo.hashmark)];
+							     sctppcbinfo.hashmark)];
 	/* put it in the bucket */
 	LIST_INSERT_HEAD(head, inp, sctp_hash);
 #ifdef SCTP_DEBUG
@@ -3133,12 +3123,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	 * since the LIST_FOREACH could be a bad idea.
 	 */
 	for ((laddr = LIST_FIRST(&inp->sctp_addr_list)); laddr != NULL;
-	    laddr = nladdr) {
-		nladdr = LIST_NEXT(laddr, sctp_nxt_addr);
-		sctp_remove_laddr(laddr);
-	}
-
-	for ((laddr = LIST_FIRST(&inp->donot_use_addr_list)); laddr != NULL;
 	    laddr = nladdr) {
 		nladdr = LIST_NEXT(laddr, sctp_nxt_addr);
 		sctp_remove_laddr(laddr);
@@ -4423,12 +4407,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		sctp_free_remote_addr(net);
 	}
 
-	/* local addresses, if any */
-	while (!SCTP_LIST_EMPTY(&asoc->sctp_local_addr_list)) {
-		laddr = LIST_FIRST(&asoc->sctp_local_addr_list);
-		sctp_remove_laddr(laddr);
-	}
-
 	while (!SCTP_LIST_EMPTY(&asoc->sctp_restricted_addrs)) {
 		laddr = LIST_FIRST(&asoc->sctp_restricted_addrs);
 		sctp_remove_laddr(laddr);
@@ -4645,13 +4623,10 @@ sctp_add_local_addr_ep(struct sctp_inpcb *inp, struct sctp_ifa *ifa)
 		return (0);
 	}
 	if (ifa->address.sa.sa_family == AF_INET6) {
-		struct in6_ifaddr *ifa6;
-
-		ifa6 = (struct in6_ifaddr *)ifa->ifa;
-		if (ifa6->ia6_flags & (IN6_IFF_DETACHED |
-		    IN6_IFF_DEPRECATED | IN6_IFF_ANYCAST | IN6_IFF_NOTREADY))
-			/* Can't bind a non-existent addr. */
+		if (ifa->localifa_flags & SCTP_ADDR_IFA_UNUSEABLE) {
+			/* Can't bind a non-useable addr. */
 			return (-1);
+		}
 	}
 	/* first, is it already present? */
 	LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
@@ -4760,6 +4735,14 @@ sctp_del_local_addr_ep(struct sctp_inpcb *inp, struct sctp_ifa *ifa)
 			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 				if(net->ro._s_addr->ifa == laddr->ifa) {
 					/* Yep, purge src address selected */
+					struct rtentry *rt;
+
+					/* delete this address if cached */
+					rt = net->ro.ro_rt;
+					if (rt != NULL) {
+						RTFREE(rt);
+						net->ro.ro_rt = NULL;
+					}
 					sctp_free_ifa(net->ro._s_addr);
 					net->ro._s_addr = NULL;
 					net->src_addr_selected = 0;
@@ -4794,23 +4777,14 @@ sctp_add_local_addr_assoc(struct sctp_tcb *stcb, struct sctp_ifa *ifa, int restr
 	 * Assumes TCB is locked.. and possibly the INP. May need to
 	 * confirm/fix that if we need it and is not the case.
 	 */
-	if(restricted_list)
-		list = &stcb->asoc.sctp_restricted_addrs;
-	else
-		list = &stcb->asoc.sctp_local_addr_list;
+	list = &stcb->asoc.sctp_restricted_addrs;
 
 	inp = stcb->sctp_ep;
 	if (ifa->address.sa.sa_family == AF_INET6) {
-		struct in6_ifaddr *ifa6;
-
-		/* FIX ME Locks on IFA? help */
-		ifa6 = (struct in6_ifaddr *)ifa->ifa;
-		if (ifa6->ia6_flags & (IN6_IFF_DETACHED |
-		/* IN6_IFF_DEPRECATED | */
-		    IN6_IFF_ANYCAST |
-		    IN6_IFF_NOTREADY))
+		if (ifa->localifa_flags & SCTP_ADDR_IFA_UNUSEABLE) {
 			/* Can't bind a non-existent addr. */
 			return (-1);
+		}
 	}
 	/* does the address already exist? */
 	LIST_FOREACH(laddr, list, sctp_nxt_addr) {
