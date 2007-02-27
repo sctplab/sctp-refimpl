@@ -1560,12 +1560,14 @@ static int
 sctp6_getaddr(struct socket *so, struct sockaddr **addr)
 {
 	struct sockaddr_in6 *sin6;
-
+#elif defined(__Panda__)
+sctp6_getaddr(struct socket *so, struct sockaddr *addr)
+{
+	struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)addr;
 #else
 sctp6_getaddr(struct socket *so, struct mbuf *nam)
 {
 	struct sockaddr_in6 *sin6 = mtod(nam, struct sockaddr_in6 *);
-
 #endif
 	struct sctp_inpcb *inp;
 	uint32_t vrf_id;
@@ -1573,7 +1575,6 @@ sctp6_getaddr(struct socket *so, struct mbuf *nam)
 
 #ifdef SCTP_KAME
 	int error;
-
 #endif				/* SCTP_KAME */
 
 	/*
@@ -1581,13 +1582,14 @@ sctp6_getaddr(struct socket *so, struct mbuf *nam)
 	 */
 #if defined(__FreeBSD__) || defined(__APPLE__)
 	SCTP_MALLOC_SONAME(sin6, struct sockaddr_in6 *, sizeof *sin6);
+#elif defined(__Panda__)
+	bzero(sin6, sizeof(*sin6));
 #else
 	SCTP_BUF_LEN(nam) = sizeof(*sin6);
 	bzero(sin6, sizeof(*sin6));
 #endif
 	sin6->sin6_family = AF_INET6;
 	sin6->sin6_len = sizeof(*sin6);
-
 
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (inp == NULL) {
@@ -1692,12 +1694,14 @@ static int
 sctp6_peeraddr(struct socket *so, struct sockaddr **addr)
 {
 	struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)*addr;
-
+#elif defined(__Panda__)
+sctp6_peeraddr(struct socket *so, struct sockaddr *addr)
+{
+	struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)addr;
 #else
 sctp6_peeraddr(struct socket *so, struct mbuf *nam)
 {
 	struct sockaddr_in6 *sin6 = mtod(nam, struct sockaddr_in6 *);
-
 #endif
 	int fnd;
 	struct sockaddr_in6 *sin_a6;
@@ -1707,7 +1711,6 @@ sctp6_peeraddr(struct socket *so, struct mbuf *nam)
 
 #ifdef SCTP_KAME
 	int error;
-
 #endif				/* SCTP_KAME */
 
 	/*
@@ -1720,6 +1723,9 @@ sctp6_peeraddr(struct socket *so, struct mbuf *nam)
 	}
 #if defined(__FreeBSD__) || defined(__APPLE__)
 	SCTP_MALLOC_SONAME(sin6, struct sockaddr_in6 *, sizeof *sin6);
+#elif defined(__Panda__)
+	bzero(sin6, sizeof(*sin6));
+	*addrlen = sizeof(*sin6);
 #else
 	SCTP_BUF_LEN(nam) = sizeof(*sin6);
 	bzero(sin6, sizeof(*sin6));
@@ -1783,12 +1789,14 @@ static int
 sctp6_in6getaddr(struct socket *so, struct sockaddr **nam)
 {
 	struct sockaddr *addr;
-
+#elif defined(__Panda__)
+sctp6_in6getaddr(struct socket *so, struct sockaddr *nam, uint32_t *namelen)
+{
+	struct sockaddr *addr = nam;
 #else
 sctp6_in6getaddr(struct socket *so, struct mbuf *nam)
 {
 	struct sockaddr *addr = mtod(nam, struct sockaddr *);
-
 #endif
 	struct in6pcb *inp6 = sotoin6pcb(so);
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -1835,6 +1843,9 @@ sctp6_in6getaddr(struct socket *so, struct mbuf *nam)
 		SCTP_BUF_LEN(nam) = sizeof(struct sockaddr_in6);
 #endif
 	}
+#if defined(__Panda__)
+	*namelen = nam->sa_len;
+#endif
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
 #endif
@@ -1847,7 +1858,10 @@ static int
 sctp6_getpeeraddr(struct socket *so, struct sockaddr **nam)
 {
 	struct sockaddr *addr = *nam;
-
+#elif defined(__Panda__)
+sctp6_getpeeraddr(struct socket *so, struct sockaddr *nam, uint32_t *namelen)
+{
+	struct sockaddr *addr = (struct sockaddr *)nam;
 #else
 sctp6_getpeeraddr(struct socket *so, struct mbuf *nam)
 {
@@ -1896,6 +1910,9 @@ sctp6_getpeeraddr(struct socket *so, struct mbuf *nam)
 		SCTP_BUF_LEN(nam) = sizeof(struct sockaddr_in6);
 #endif
 	}
+#if defined(__Panda__)
+	*namelen = nam->sa_len;
+#endif
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
 #endif

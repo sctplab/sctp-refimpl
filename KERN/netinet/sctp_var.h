@@ -524,12 +524,10 @@ struct sctphdr;
 void sctp_ctlinput __P((int, struct sockaddr *, void *));
 int sctp_ctloutput __P((struct socket *, struct sockopt *));
 void sctp_input __P((struct mbuf *, int));
-
 #else
 void *sctp_ctlinput __P((int, struct sockaddr *, void *));
 int sctp_ctloutput __P((int, struct socket *, int, int, struct mbuf **));
 void sctp_input __P((struct mbuf *,...));
-
 #endif
 void sctp_drain __P((void));
 void sctp_init __P((void));
@@ -561,6 +559,8 @@ sctp_assoc_t sctp_getassocid(struct sockaddr *);
 int sctp_ingetaddr(struct socket *,
 #if defined(__FreeBSD__) || defined(__APPLE__)
 	struct sockaddr **
+#elif defined(__Panda__)
+	struct sockaddr *
 #else
 	struct mbuf *
 #endif
@@ -569,6 +569,8 @@ int sctp_ingetaddr(struct socket *,
 int sctp_peeraddr(struct socket *,
 #if defined(__FreeBSD__) || defined(__APPLE__)
 	struct sockaddr **
+#elif defined(__Panda__)
+	struct sockaddr *
 #else
 	struct mbuf *
 #endif
@@ -586,6 +588,8 @@ int sctp_listen(struct socket *, struct proc *);
 
 #if defined(__FreeBSD__) || defined(__APPLE__)
 int sctp_accept(struct socket *, struct sockaddr **);
+#elif defined(__Panda__)
+in sctp_accept(struct socket *, struct sockaddr *, int, void *, int *)
 #else
 int sctp_accept(struct socket *, struct mbuf *);
 #endif

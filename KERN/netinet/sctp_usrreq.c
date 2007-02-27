@@ -4745,11 +4745,14 @@ int
 #if defined(__FreeBSD__) || defined(__APPLE__)
 sctp_accept(struct socket *so, struct sockaddr **addr)
 {
+#elif defined(__Panda__)
+sctp_accept(struct socket *so, struct sockaddr *addr, int *namelen,
+	    void *accept_info, int *accept_info_len)
+{
 #else
 sctp_accept(struct socket *so, struct mbuf *nam)
 {
 	struct sockaddr *addr = mtod(nam, struct sockaddr *);
-
 #endif
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s = splsoftnet();
@@ -4825,6 +4828,7 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 		sin6->sin6_port = ((struct sockaddr_in6 *)&store)->sin6_port;
 
 		sin6->sin6_addr = ((struct sockaddr_in6 *)&store)->sin6_addr;
+#if defined(SCTP_EMBEDDED_V6_SCOPE)
 #ifdef SCTP_KAME
 		if ((error = sa6_recoverscope(sin6)) != 0) {
 			SCTP_FREE_SONAME(sin6);
@@ -4839,7 +4843,8 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 			in6_recoverscope(sin6, &sin6->sin6_addr, NULL);	/* skip ifp check */
 		else
 			sin6->sin6_scope_id = 0;	/* XXX */
-#endif				/* SCTP_KAME */
+#endif /* SCTP_KAME */
+#endif /* SCTP_EMBEDDED_V6_SCOPE */
 #if defined(__FreeBSD__) || defined (__APPLE__)
 		*addr = (struct sockaddr *)sin6;
 #else
@@ -4892,16 +4897,16 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 int
 #if defined(__FreeBSD__) || defined(__APPLE__)
 sctp_ingetaddr(struct socket *so, struct sockaddr **addr)
+{
+	struct sockaddr_in *sin;
+#elif defined(__Panda__)
+sctp_ingetaddr(struct socket *so, struct sockaddr *addr)
+{
+	struct sockaddr_in *sin = (struct sockaddr_in *)addr;
 #else
 sctp_ingetaddr(struct socket *so, struct mbuf *nam)
-#endif
 {
-#if defined(__FreeBSD__) || defined(__APPLE__)
-	struct sockaddr_in *sin;
-
-#else
 	struct sockaddr_in *sin = mtod(nam, struct sockaddr_in *);
-
 #endif
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s;
@@ -4914,6 +4919,8 @@ sctp_ingetaddr(struct socket *so, struct mbuf *nam)
 	 */
 #if defined(__FreeBSD__) || defined(__APPLE__)
 	SCTP_MALLOC_SONAME(sin, struct sockaddr_in *, sizeof *sin);
+#elif defined(__Panda__)
+	bzero(sin, sizeof(*sin));
 #else
 	SCTP_BUF_LEN(nam)n = sizeof(*sin);
 	memset(sin, 0, sizeof(*sin));
@@ -5028,7 +5035,10 @@ int
 sctp_peeraddr(struct socket *so, struct sockaddr **addr)
 {
 	struct sockaddr_in *sin = (struct sockaddr_in *)*addr;
-
+#elif defined(__Panda__)
+sctp_peeraddr(struct socket *so, struct sockaddr *addr)
+{
+	struct sockaddr_in *sin = (struct sockaddr_in *)addr;
 #else
 sctp_peeraddr(struct socket *so, struct mbuf *nam)
 {
@@ -5044,7 +5054,6 @@ sctp_peeraddr(struct socket *so, struct mbuf *nam)
 	struct sctp_tcb *stcb;
 	struct sctp_nets *net;
 
-
 	/* Do the malloc first in case it blocks. */
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if ((inp == NULL) ||
@@ -5058,6 +5067,8 @@ sctp_peeraddr(struct socket *so, struct mbuf *nam)
 
 #if defined(__FreeBSD__) || defined(__APPLE__)
 	SCTP_MALLOC_SONAME(sin, struct sockaddr_in *, sizeof *sin);
+#elif defined(__Panda__)
+	memset(sin, 0, sizeof(*sin));
 #else
 	SCTP_BUF_LEN(nam) = sizeof(*sin);
 	memset(sin, 0, sizeof(*sin));
