@@ -2394,13 +2394,13 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 
 			SCTP_CHECK_AND_CAST(av, optval, struct sctp_assoc_value, *optsize);
 			error = EINVAL;
-#ifdef AF_INET
+#ifdef INET
 			if (av->assoc_value == AF_INET) {
 				av->assoc_value = sizeof(struct sockaddr_in);
 				error = 0;
 			}
 #endif
-#ifdef AF_INET6
+#ifdef INET6
 			if (av->assoc_value == AF_INET6) {
 				av->assoc_value = sizeof(struct sockaddr_in6);
 				error = 0;
@@ -2781,13 +2781,13 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 					} else {
 						paddrp->spp_flags |= SPP_PMTUD_DISABLE;
 					}
-#ifdef AF_INET
+#ifdef INET
 					if (net->ro._l_addr.sin.sin_family == AF_INET) {
 						paddrp->spp_ipv4_tos = net->tos_flowlabel & 0x000000fc;
 						paddrp->spp_flags |= SPP_IPV4_TOS;
 					}
 #endif
-#ifdef AF_INET6
+#ifdef INET6
 					if (net->ro._l_addr.sin6.sin6_family == AF_INET6) {
 						paddrp->spp_ipv6_flowlabel = net->tos_flowlabel;
 						paddrp->spp_flags |= SPP_IPV6_FLOWLABEL;
@@ -2800,11 +2800,11 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 					 */
 					paddrp->spp_pathmaxrxt = stcb->asoc.def_net_failure;
 					paddrp->spp_pathmtu = sctp_get_frag_point(stcb, &stcb->asoc);
-#ifdef AF_INET
+#ifdef INET
 					paddrp->spp_ipv4_tos = stcb->asoc.default_tos & 0x000000fc;
 					paddrp->spp_flags |= SPP_IPV4_TOS;
 #endif
-#ifdef AF_INET6
+#ifdef INET6
 					paddrp->spp_ipv6_flowlabel = stcb->asoc.default_flowlabel;
 					paddrp->spp_flags |= SPP_IPV6_FLOWLABEL;
 #endif
@@ -2830,7 +2830,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 				paddrp->spp_sackdelay = TICKS_TO_MSEC(inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV]);
 				paddrp->spp_assoc_id = (sctp_assoc_t) 0;
 				/* get inp's default */
-#ifdef AF_INET
+#ifdef INET
 #if defined(__FreeBSD__) || defined(__APPLE__)
 				paddrp->spp_ipv4_tos = inp->ip_inp.inp.inp_ip_tos;
 #elif defined(__NetBSD__)
@@ -2840,7 +2840,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 #endif
 				paddrp->spp_flags |= SPP_IPV4_TOS;
 #endif
-#ifdef AF_INET6
+#ifdef INET6
 				if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) {
 					paddrp->spp_ipv6_flowlabel = ((struct in6pcb *)inp)->in6p_flowinfo;
 					paddrp->spp_flags |= SPP_IPV6_FLOWLABEL;
@@ -3893,14 +3893,14 @@ SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
 					}
 					if (paddrp->spp_pathmaxrxt)
 						net->failure_threshold = paddrp->spp_pathmaxrxt;
-#ifdef AF_INET
+#ifdef INET
 					if (paddrp->spp_flags & SPP_IPV4_TOS) {
 						if (net->ro._l_addr.sin.sin_family == AF_INET) {
 							net->tos_flowlabel = paddrp->spp_ipv4_tos & 0x000000fc;
 						}
 					}
 #endif
-#ifdef AF_INET6
+#ifdef INET6
 					if (paddrp->spp_flags & SPP_IPV6_FLOWLABEL) {
 						if (net->ro._l_addr.sin6.sin6_family == AF_INET6) {
 							net->tos_flowlabel = paddrp->spp_ipv6_flowlabel;
@@ -3940,11 +3940,11 @@ SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
 						/* start up the timer. */
 						sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net);
 					}
-#ifdef AF_INET
+#ifdef INET
 					if (paddrp->spp_flags & SPP_IPV4_TOS)
 						stcb->asoc.default_tos = paddrp->spp_ipv4_tos & 0x000000fc;
 #endif
-#ifdef AF_INET6
+#ifdef INET6
 					if (paddrp->spp_flags & SPP_IPV6_FLOWLABEL)
 						stcb->asoc.default_flowlabel = paddrp->spp_ipv6_flowlabel;
 #endif

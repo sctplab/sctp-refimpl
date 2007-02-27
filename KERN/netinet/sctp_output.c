@@ -6293,7 +6293,7 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
 
 	SCTP_TCB_LOCK_ASSERT(stcb);
 	asoc = &stcb->asoc;
-#ifdef AF_INET6
+#ifdef INET6
 	if (net->ro._l_addr.sin6.sin6_family == AF_INET6) {
 		goal_mtu = net->mtu - SCTP_MIN_OVERHEAD;
 	} else {

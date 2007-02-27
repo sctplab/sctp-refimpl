@@ -933,7 +933,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	asoc->heart_beat_delay = TICKS_TO_MSEC(m->sctp_ep.sctp_timeoutticks[SCTP_TIMER_HEARTBEAT]);
 	asoc->cookie_life = m->sctp_ep.def_cookie_life;
 	asoc->sctp_cmt_on_off = (uint8_t) sctp_cmt_on_off;
-#ifdef AF_INET
+#ifdef INET
 #if defined(__FreeBSD__) || defined(__APPLE__)
 	asoc->default_tos = m->ip_inp.inp.inp_ip_tos;
 #elif defined(__NetBSD__)
@@ -945,7 +945,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	asoc->default_tos = 0;
 #endif
 
-#ifdef AF_INET6
+#ifdef INET6
 	asoc->default_flowlabel = ((struct in6pcb *)m)->in6p_flowinfo;
 #else
 	asoc->default_flowlabel = 0;
@@ -4790,7 +4790,7 @@ found_one:
 	if (fromlen && from) {
 		struct sockaddr *to;
 
-#ifdef AF_INET
+#ifdef INET
 		cp_len = min(fromlen, control->whoFrom->ro._l_addr.sin.sin_len);
 		memcpy(from, &control->whoFrom->ro._l_addr, cp_len);
 		((struct sockaddr_in *)from)->sin_port = control->port_from;
@@ -4802,7 +4802,7 @@ found_one:
 #endif
 
 		to = from;
-#if defined(AF_INET) && defined(AF_INET6)
+#if defined(INET) && defined(INET6)
 		if ((inp->sctp_flags & SCTP_PCB_FLAGS_NEEDS_MAPPED_V4) &&
 		    (to->sa_family == AF_INET) &&
 		    ((size_t)fromlen >= sizeof(struct sockaddr_in6))) {
@@ -4822,7 +4822,7 @@ found_one:
 		}
 #endif
 #if defined(SCTP_EMBEDDED_V6_SCOPE)
-#if defined(AF_INET6) 
+#if defined(INET6) 
 		{
 			struct sockaddr_in6 lsa6, *to6;
 			to6 = (struct sockaddr_in6 *)to;
