@@ -33,7 +33,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctputil.h,v 1.7 2007/01/18 09:58:43 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctputil.h,v 1.8 2007/02/12 23:24:31 rrs Exp $");
 #endif
 #ifndef __sctputil_h__
 #define __sctputil_h__
@@ -57,13 +57,16 @@ void sctp_m_freem(struct mbuf *m);
 /*
  * Function prototypes
  */
-struct ifaddr *sctp_find_ifa_by_addr(struct sockaddr *sa);
+struct sctp_ifa *
+sctp_find_ifa_in_ifn(struct sctp_ifn *sctp_ifnp, struct sockaddr *addr, int holds_lock);
+
+struct sctp_ifa *sctp_find_ifa_by_addr(struct sockaddr *sa, uint32_t vrf_id, int holds_lock);
 
 uint32_t sctp_select_initial_TSN(struct sctp_pcb *);
 
 uint32_t sctp_select_a_tag(struct sctp_inpcb *);
 
-int sctp_init_asoc(struct sctp_inpcb *, struct sctp_association *, int, uint32_t);
+int sctp_init_asoc(struct sctp_inpcb *, struct sctp_association *, int, uint32_t, uint32_t);
 
 void sctp_fill_random_store(struct sctp_pcb *);
 
@@ -150,37 +153,43 @@ sctp_handle_ootb(struct mbuf *, int, int, struct sctphdr *,
 
 int sctp_is_there_an_abort_here(struct mbuf *, int, uint32_t *);
 uint32_t sctp_is_same_scope(struct sockaddr_in6 *, struct sockaddr_in6 *);
+
+#if defined(SCTP_EMBEDDED_V6_SCOPE)
 struct sockaddr_in6 *
-sctp_recover_scope(struct sockaddr_in6 *,
-    struct sockaddr_in6 *);
-
-
-
+sctp_recover_scope(struct sockaddr_in6 *, struct sockaddr_in6 *);
 
 #ifdef SCTP_KAME
 #define sctp_recover_scope_mac(addr, store) do { \
-			 if ((addr->sin6_family == AF_INET6) && \
-			     (IN6_IS_SCOPE_LINKLOCAL(&addr->sin6_addr)) && \
-			     (addr->sin6_scope_id == 0)) { \
-				*store = *addr; \
-				if (!sa6_recoverscope(store)) { \
-					addr = store; \
-				} \
-			 } \
-                      } while (0)
-
+	 if ((addr->sin6_family == AF_INET6) && \
+	     (IN6_IS_SCOPE_LINKLOCAL(&addr->sin6_addr))) { \
+		*store = *addr; \
+		if (addr->sin6_scope_id == 0) { \
+			if (!sa6_recoverscope(store)) { \
+				addr = store; \
+			} \
+		} else { \
+			in6_clearscope(&addr->sin6_addr); \
+			addr = store; \
+		} \
+	 } \
+} while (0)
 #else
 #define sctp_recover_scope_mac(addr, store) do { \
-			 if ((addr->sin6_family == AF_INET6) && \
-			     (IN6_IS_SCOPE_LINKLOCAL(&addr->sin6_addr)) && \
-			     (addr->sin6_scope_id == 0)) { \
-				*store = *addr; \
-				if (!in6_recoverscope(store, &store->sin6_addr, \
-				    NULL)) { \
-					addr = store; \
-				} \
-			 } \
-                      } while (0)
+	 if ((addr->sin6_family == AF_INET6) && \
+	     (IN6_IS_SCOPE_LINKLOCAL(&addr->sin6_addr))) { \
+		*store = *addr; \
+	 	if (addr->sin6_scope_id == 0) { \
+			if (!in6_recoverscope(store, &store->sin6_addr, \
+					      NULL)) { \
+				addr = store; \
+			} \
+		} else { \
+			in6_clearscope(&addr->sin6_addr); \
+			addr = store; \
+		} \
+	 } \
+} while (0)
+#endif
 #endif
 
 
@@ -313,7 +322,7 @@ void sctp_log_block(uint8_t, struct socket *, struct sctp_association *, int);
 void sctp_log_rwnd(uint8_t, uint32_t, uint32_t, uint32_t);
 void sctp_log_mbcnt(uint8_t, uint32_t, uint32_t, uint32_t, uint32_t);
 void sctp_log_rwnd_set(uint8_t, uint32_t, uint32_t, uint32_t, uint32_t);
-int sctp_fill_stat_log(struct mbuf *);
+int sctp_fill_stat_log(void *, size_t *);
 void sctp_log_fr(uint32_t, uint32_t, uint32_t, int);
 void sctp_log_sack(uint32_t, uint32_t, uint32_t, uint16_t, uint16_t, int);
 void sctp_log_map(uint32_t, uint32_t, uint32_t, int);

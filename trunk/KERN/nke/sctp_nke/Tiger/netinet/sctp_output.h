@@ -41,6 +41,18 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_output.h,v 1.2 2007/01/18 09:58:43 rrs 
 #include <netinet/sctp_header.h>
 
 #if defined(_KERNEL)
+
+int sctp_is_addr_restricted(struct sctp_tcb *, struct sctp_ifa *);
+
+
+struct sctp_ifa *
+sctp_source_address_selection(struct sctp_inpcb *inp,
+			      struct sctp_tcb *stcb, 
+			      struct route *ro, struct sctp_nets *net,
+			      int non_asoc_addr_ok, uint32_t vrf_id);
+
+
+
 void sctp_send_initiate(struct sctp_inpcb *, struct sctp_tcb *);
 
 void
