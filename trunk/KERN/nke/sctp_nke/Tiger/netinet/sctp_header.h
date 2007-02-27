@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001-2006, Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2001-2007, Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -521,7 +521,7 @@ struct sctp_auth_invalid_hmac {
  * feel is worth it for now.
  */
 #ifndef SCTP_MAX_OVERHEAD
-#ifdef AF_INET6
+#ifdef INET6
 #define SCTP_MAX_OVERHEAD (sizeof(struct sctp_data_chunk) + \
 			   sizeof(struct sctphdr) + \
 			   sizeof(struct sctp_ecne_chunk) + \
@@ -551,8 +551,8 @@ struct sctp_auth_invalid_hmac {
 #define SCTP_MIN_OVERHEAD (sizeof(struct ip) + \
 			   sizeof(struct sctphdr))
 
-#endif				/* AF_INET6 */
-#endif				/* !SCTP_MAX_OVERHEAD */
+#endif /* INET6 */
+#endif /* !SCTP_MAX_OVERHEAD */
 
 #define SCTP_MED_V4_OVERHEAD (sizeof(struct sctp_data_chunk) + \
 			      sizeof(struct sctphdr) + \
