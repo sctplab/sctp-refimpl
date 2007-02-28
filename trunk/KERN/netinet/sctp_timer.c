@@ -1748,11 +1748,14 @@ select_a_new_ep:
 	SCTP_INP_WUNLOCK(it->inp);
 	SCTP_INP_RLOCK(it->inp);
 	/* now go through each assoc which is in the desired state */
+	if(it->done_current_ep) {
+		if (it->function_inp != NULL)
+			inp_skip = (*it->function_inp)(it->inp, it->pointer, it->val);
+		it->done_current_ep = 1;
+	}
+
 	if (it->stcb == NULL) {
 		/* run the per instance function */
-		if (it->function_inp != NULL)
-	    		inp_skip = (*it->function_inp)(it->inp, it->pointer, it->val);
-
 		it->stcb = LIST_FIRST(&it->inp->sctp_asoc_list);
 	}
 	SCTP_INP_RUNLOCK(it->inp);
@@ -1802,6 +1805,7 @@ select_a_new_ep:
 	}
  no_stcb:
 	/* done with all assocs on this endpoint, move on to next endpoint */
+	it->done_current_ep = 0;
 	SCTP_INP_WLOCK(it->inp);
 	it->inp->inp_starting_point_for_iterator = NULL;
 	SCTP_INP_WUNLOCK(it->inp);

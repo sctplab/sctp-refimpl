@@ -1184,7 +1184,7 @@ sctp_handle_addr_wq(void)
 	if(asc->cnt == 0) {
 		SCTP_FREE(asc);
 	} else {
-		sctp_initiate_iterator(sctp_iterator_ep, sctp_iterator_stcb, SCTP_PCB_ANY_FLAGS,
+		sctp_initiate_iterator(sctp_iterator_ep, sctp_iterator_stcb, SCTP_PCB_FLAGS_BOUNDALL,
 				       SCTP_PCB_ANY_FEATURES, SCTP_ASOC_ANY_STATE, (void *)asc, 0,
 				       sctp_iterator_end, NULL, 0);
 	}
@@ -1460,7 +1460,9 @@ sctp_timeout_handler(void *t)
 				if ((net->dest_state & SCTP_ADDR_UNCONFIRMED) &&
 				    (net->dest_state & SCTP_ADDR_REACHABLE)) {
 					cnt_of_unconf++;
-				}
+				} else if ((net->dest_state & SCTP_ADDR_UNCONFIRMED)) {
+					printf("%p is unreachable and unconfirmed\n", net);
+				} 
 			}
 			if (cnt_of_unconf == 0) {
 				if (sctp_heartbeat_timer(inp, stcb, net, cnt_of_unconf)) {

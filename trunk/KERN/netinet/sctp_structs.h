@@ -134,6 +134,7 @@ struct sctp_iterator {
 	uint32_t asoc_state;		/* assoc state being checked */
 	uint32_t iterator_flags;
 	uint8_t  no_chunk_output;
+	uint8_t  done_current_ep;
 };
 /* iterator_flags values */
 #define SCTP_ITERATOR_DO_ALL_INP	0x00000001
