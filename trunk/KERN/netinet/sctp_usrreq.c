@@ -1105,7 +1105,11 @@ sctp_abort(struct socket *so)
 #endif
 }
 
+#if defined(__Panda__)
+int
+#else
 static int
+#endif
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 sctp_attach(struct socket *so, int proto, struct thread *p)
 #else
