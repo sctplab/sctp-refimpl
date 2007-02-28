@@ -331,7 +331,7 @@ sctp_add_addresses_to_i_ia(struct sctp_inpcb *inp, struct sctp_scoping *scope,
 
 
 static void
-sctp_init_ifns_for_vrf(struct sctp_vrf *vrf)
+sctp_init_ifns_for_vrf(int vrfid)
 {
 	/* Here we must apply ANY locks needed by the
 	 * IFN we access and also make sure we lock
@@ -353,7 +353,7 @@ sctp_init_ifns_for_vrf(struct sctp_vrf *vrf)
 				} else {
 					ifa_flags = 0;
 				}
-				sctp_add_addr_to_vrf(vrf, 
+				sctp_add_addr_to_vrf(vrfid, 
 						     (void *)ifn,
 						     ifn->if_index, 
 						     ifn->if_type,
@@ -375,33 +375,17 @@ sctp_init_ifns_for_vrf(struct sctp_vrf *vrf)
 void 
 sctp_init_vrf_list(int vrfid)
 {
-	struct sctp_vrf *vrf = NULL;
-	struct sctp_vrflist *bucket;
-
 	if(vrfid > SCTP_MAX_VRF_ID)
 		/* can't do that */
 		return;
 
-	/* First allocate the VRF structure */
-	SCTP_MALLOC(vrf, struct sctp_vrf *, sizeof(struct sctp_vrf), "SCTP_VRF");
-	if(vrf == NULL) {
-		/* No memory */
-#ifdef INVARIANTS
-		panic("No memory for VRF:%d", vrfid);
-#endif
-		return;
-	}
-	/* setup the VRF */
-	memset(vrf, 0, sizeof(struct sctp_vrf));
-	vrf->vrf_id = vrfid;
-	LIST_INIT(&vrf->ifnlist);
+	/* Don't care about return here */
+	(void)sctp_allocate_vrf(vrfid);
 
-	/* Add it to the hash table */
-	bucket = &sctppcbinfo.sctp_vrfhash[(vrfid & sctppcbinfo.hashvrfmark)];
-	LIST_INSERT_HEAD(bucket, vrf, next_vrf);
-	
-	/* Now we need to build all the ifn's for this vrf and there addresses*/
-	sctp_init_ifns_for_vrf(vrf);
+	/* Now we need to build all the ifn's 
+	 * for this vrf and there addresses
+	 */
+	sctp_init_ifns_for_vrf(vrfid); 
 }
 
 
@@ -409,7 +393,6 @@ void
 sctp_addr_change(struct ifaddr *ifa, int cmd)
 {
 	struct sctp_laddr *wi;
-	struct sctp_vrf *vrf;
 	struct sctp_ifa *ifap=NULL;
 	uint32_t ifa_flags=0;
 	/* BSD only has one VRF, if this changes
@@ -417,16 +400,14 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 	 * things here to get the id to pass to
 	 * the address managment routine.
 	 */
-	vrf = sctp_find_vrf(SCTP_DEFAULT_VRFID);
-	if(vrf == NULL)
-		return;
+	
 	if(cmd == RTM_ADD) {
 		struct in6_ifaddr *ifa6;
 		if(ifa->ifa_addr->sa_family == AF_INET6) {
 			ifa6 = (struct in6_ifaddr *)ifa;
 			ifa_flags = ifa6->ia6_flags;
 		}
-		ifap = sctp_add_addr_to_vrf(vrf, (void *)ifa->ifa_ifp,
+		ifap = sctp_add_addr_to_vrf(SCTP_DEFAULT_VRFID, (void *)ifa->ifa_ifp,
 					    ifa->ifa_ifp->if_index, ifa->ifa_ifp->if_type,
 #ifdef __APPLE__
 		                            ifa->ifa_ifp->if_name,
@@ -441,7 +422,7 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 			atomic_add_int(&ifap->refcount, 1);
 		
 	} else if (cmd == RTM_DELETE) {
-		ifap = sctp_del_addr_from_vrf(vrf, ifa->ifa_addr, ifa->ifa_ifp->if_index);
+		ifap = sctp_del_addr_from_vrf(SCTP_DEFAULT_VRFID, ifa->ifa_addr, ifa->ifa_ifp->if_index);
 		/* We don't bump refcount here so when it completes
 		 * the final delete will happen.
 		 */
