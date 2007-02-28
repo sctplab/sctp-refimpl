@@ -213,7 +213,7 @@ sctp_add_addresses_to_i_ia(struct sctp_inpcb *inp, struct sctp_scoping *scope,
 			   struct mbuf *m_at, int cnt_inits_to)
 {
 	struct sctp_vrf *vrf = NULL;
-	int cnt, limit_out=0, total_cnt;
+	int cnt, limit_out=0, total_count;
 	uint32_t vrf_id;
 
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
