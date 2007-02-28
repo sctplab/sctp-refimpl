@@ -149,7 +149,7 @@ struct sctp_ifa {
 				 * update for that we MUST lock
 				 * appropriate locks. This is for V6.
 				 */
-	union sctp_sockstore address;
+	sctp_os_addr_store_t address;
 	uint32_t refcount;	/* number of folks refering to this */
  	uint32_t flags;
 	uint32_t localifa_flags;
