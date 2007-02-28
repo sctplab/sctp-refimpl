@@ -590,7 +590,7 @@ int sctp_listen(struct socket *, struct proc *);
 #if defined(__FreeBSD__) || defined(__APPLE__)
 int sctp_accept(struct socket *, struct sockaddr **);
 #elif defined(__Panda__)
-in sctp_accept(struct socket *, struct sockaddr *, int, void *, int *)
+int sctp_accept(struct socket *, struct sockaddr *, int, void *, int *);
 #else
 int sctp_accept(struct socket *, struct mbuf *);
 #endif
