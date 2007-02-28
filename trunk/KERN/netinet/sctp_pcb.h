@@ -225,11 +225,12 @@ struct sctp_epinfo {
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
 	struct mtx ipi_ep_mtx;
 	struct mtx it_mtx;
+	struct mtx  ipi_iterator_wq_mtx;
 	struct mtx ipi_addr_mtx;
-	struct mtx timer_mtx;
 #elif defined(SCTP_PROCESS_LEVEL_LOCKS)
 	pthread_mutex_t ipi_ep_mtx;
 	pthread_mutex_t it_mtx;
+	pthread_mutex_t ipi_iterator_wq_mtx;
 	pthread_mutex_t ipi_addr_mtx;
 	pthread_mutex_t ipi_count_mtx;
 #elif defined(SCTP_APPLE_FINE_GRAINED_LOCKING)

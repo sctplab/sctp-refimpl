@@ -246,6 +246,7 @@ sctp_add_addr_to_vrf(uint32_t vrfid,
 	if(vrf == NULL) {
 		vrf = sctp_allocate_vrf(vrfid);
 		if (vrf == NULL) {
+			SCTP_IPI_ADDR_UNLOCK();
 			return (NULL);
 		}
 	}
@@ -5061,6 +5062,8 @@ sctp_pcb_init()
 
 	SCTP_IPI_COUNT_INIT();
 	SCTP_IPI_ADDR_INIT();
+	SCTP_IPI_ITERATOR_WQ_INIT();
+
 	LIST_INIT(&sctppcbinfo.addr_wq);
 
 	/* not sure if we need all the counts */

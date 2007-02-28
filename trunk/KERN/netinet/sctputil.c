@@ -1173,7 +1173,7 @@ sctp_handle_addr_wq(void)
 	}
 	LIST_INIT(&asc->list_of_work);
 	asc->cnt = 0;
-	SCTP_IPI_ADDR_LOCK();
+	SCTP_IPI_ITERATOR_WQ_LOCK();
 	wi = LIST_FIRST(&sctppcbinfo.addr_wq);
 	while (wi != NULL) {
 		LIST_REMOVE(wi, sctp_nxt_addr);
@@ -1181,7 +1181,7 @@ sctp_handle_addr_wq(void)
 		asc->cnt++;
 		wi = LIST_FIRST(&sctppcbinfo.addr_wq);
 	}
-	SCTP_IPI_ADDR_UNLOCK();
+	SCTP_IPI_ITERATOR_WQ_UNLOCK();
 	if(asc->cnt == 0) {
 		SCTP_FREE(asc);
 	} else {
