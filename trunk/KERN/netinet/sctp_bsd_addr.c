@@ -378,7 +378,8 @@ sctp_init_ifns_for_vrf(int vrfid)
 	struct ifaddr *ifa;
 	struct in6_ifaddr *ifa6;
 	uint32_t ifa_flags;
-	
+	int cnt=0;
+
 	TAILQ_FOREACH(ifn, &ifnet, if_list) {
 		TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
 			if((ifa->ifa_addr->sa_family == AF_INET6) ||
@@ -402,9 +403,13 @@ sctp_init_ifns_for_vrf(int vrfid)
 						     ifa->ifa_addr,
 						     ifa_flags
 						     );
+				cnt++;
+				printf("Added MASTER address:");
+				sctp_print_address(ifa->ifa_addr);
 			}
 		}
 	}
+	printf("All addresses seen added we now have %d addresses in the master list\n", cnt);
 }
 
 
