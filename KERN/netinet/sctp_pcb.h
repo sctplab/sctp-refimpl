@@ -118,7 +118,6 @@ struct sctp_vrf {
 	uint32_t total_ifa_count;
 };
 
-
 struct sctp_ifn {
 	struct sctp_ifalist ifalist;
 	struct sctp_vrf *vrf;
@@ -225,7 +224,7 @@ struct sctp_epinfo {
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
 	struct mtx ipi_ep_mtx;
 	struct mtx it_mtx;
-	struct mtx  ipi_iterator_wq_mtx;
+	struct mtx ipi_iterator_wq_mtx;
 	struct mtx ipi_addr_mtx;
 #elif defined(SCTP_PROCESS_LEVEL_LOCKS)
 	pthread_mutex_t ipi_ep_mtx;
@@ -240,6 +239,7 @@ struct sctp_epinfo {
 	lck_attr_t *mtx_attr;
 	lck_rw_t *ipi_ep_mtx;
 	lck_mtx_t *it_mtx;
+	lck_mtx_t *ipi_iterator_wq_mtx;
 	lck_mtx_t *ipi_count_mtx;
 	lck_mtx_t *logging_mtx;
 #else
@@ -248,6 +248,7 @@ struct sctp_epinfo {
 	void *mtx_attr;
 	void *ipi_ep_mtx;
 	void *it_mtx;
+	void *ipi_iterator_wq_mtx;
 	void *ipi_count_mtx;
 	void *logging_mtx;
 #endif				/* _KERN_LOCKS_H_ */
@@ -540,12 +541,13 @@ struct sctp_ifa *
 sctp_add_addr_to_vrf(uint32_t vrfid,
 		     void *ifn, uint32_t ifn_index, uint32_t ifn_type,
 		     const char *if_name,
-		     void *ifa, struct sockaddr *addr, uint32_t ifa_flags);
+		     void *ifa, sctp_os_addr_t *addr, uint32_t ifa_flags);
 
 void sctp_free_ifa(struct sctp_ifa *sctp_ifap);
 
 struct sctp_ifa *
-sctp_del_addr_from_vrf(uint32_t vrfid, struct sockaddr *addr, uint32_t ifn_index);
+sctp_del_addr_from_vrf(uint32_t vrfid, sctp_os_addr_t *addr,
+		       uint32_t ifn_index);
 
 
 

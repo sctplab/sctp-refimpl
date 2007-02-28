@@ -58,9 +58,11 @@ void sctp_m_freem(struct mbuf *m);
  * Function prototypes
  */
 struct sctp_ifa *
-sctp_find_ifa_in_ifn(struct sctp_ifn *sctp_ifnp, struct sockaddr *addr, int holds_lock);
+sctp_find_ifa_in_ifn(struct sctp_ifn *sctp_ifnp, sctp_os_addr_t *addr,
+		     int holds_lock);
 
-struct sctp_ifa *sctp_find_ifa_by_addr(struct sockaddr *sa, uint32_t vrf_id, int holds_lock);
+struct sctp_ifa *
+sctp_find_ifa_by_addr(sctp_os_addr_t *sa, uint32_t vrf_id, int holds_lock);
 
 uint32_t sctp_select_initial_TSN(struct sctp_pcb *);
 

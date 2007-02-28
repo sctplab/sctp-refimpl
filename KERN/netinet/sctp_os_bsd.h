@@ -120,10 +120,19 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.7 2007/02/12 23:24:31 rrs 
 #define USER_ADDR_NULL	(NULL)		/* FIX ME: temp */
 #define SCTP_LIST_EMPTY(list)	LIST_EMPTY(list)
 
+/*
+ * Local address list handling
+ */
 #define SCTP_MAX_VRF_ID 0
 #define SCTP_SIZE_OF_VRF_HASH 3
 #define SCTP_IFNAMSIZ IFNAMSIZ
 #define SCTP_DEFAULT_VRFID 0
+
+typedef struct sockaddr sctp_os_addr_t;
+#define SCTP_OS_ADDR_LEN(addr) ((addr)->sa_len)
+#define SCTP_OS_ADDR_FAMILY(addr) ((addr)->sa_family)
+#define SCTP_OS_ADDR_V4ADDR(addr) (((struct sockaddr_in *)(addr))->sin_addr.s_addr)
+#define SCTP_OS_ADDR_V6ADDR(addr) (((struct sockaddr_in6 *)(addr))->sin6_addr)
 
 /*
  * general memory allocation

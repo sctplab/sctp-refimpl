@@ -2207,7 +2207,7 @@ sctp_is_ifa_addr_prefered(struct sctp_ifa *ifa,
 	/* Ok the address may be ok */
 	sin = (struct sockaddr_in *)&ifa->address.sin;
 	*sin_local = *sin_loop = 0;
-	if(fam == AF_INET) {
+	if (fam == AF_INET) {
 		if (sin->sin_addr.s_addr == 0) {
 			/* TSNH */
 			return (NULL);
@@ -2222,8 +2222,7 @@ sctp_is_ifa_addr_prefered(struct sctp_ifa *ifa,
 		}
 	} else if (fam == AF_INET6) {
 		/* ok to use deprecated addresses? */
-
-		if(ifa->localifa_flags & SCTP_ADDR_IFA_UNUSEABLE) {
+		if (ifa->localifa_flags & SCTP_ADDR_IFA_UNUSEABLE) {
 			return (NULL);
 		}
 		sin6 = (struct sockaddr_in6 *)&ifa->address.sin6;

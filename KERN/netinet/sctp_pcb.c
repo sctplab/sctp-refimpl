@@ -232,7 +232,7 @@ struct sctp_ifa *
 sctp_add_addr_to_vrf(uint32_t vrfid,
 		     void *ifn, uint32_t ifn_index, uint32_t ifn_type,
 		     const char *if_name,
-		     void *ifa, struct sockaddr *addr, uint32_t ifa_flags)
+		     void *ifa, sctp_os_addr_t *addr, uint32_t ifa_flags)
 {
 	struct sctp_vrf *vrf;
 	struct sctp_ifn *sctp_ifnp = NULL;
@@ -251,7 +251,7 @@ sctp_add_addr_to_vrf(uint32_t vrfid,
 		}
 	}
 	sctp_ifnp = sctp_find_ifn(vrf, ifn, ifn_index);
-	if(sctp_ifnp == NULL) {
+	if (sctp_ifnp == NULL) {
 		/* build one and add it, can't hold lock
 		 * until after malloc done though.
 		 */
@@ -275,7 +275,7 @@ sctp_add_addr_to_vrf(uint32_t vrfid,
 		LIST_INSERT_HEAD(&vrf->ifnlist, sctp_ifnp, next_ifn);
 	}
 	sctp_ifap = sctp_find_ifa_by_addr(addr, vrf->vrf_id, 1);
-	if(sctp_ifap) {
+	if (sctp_ifap) {
 		/* Hmm, it already exists? */
 		if((sctp_ifap->ifn_p) && (sctp_ifap->ifn_p->ifn_index == ifn_index)) {
 			if(sctp_ifap->localifa_flags & SCTP_BEING_DELETED) {
@@ -316,7 +316,7 @@ sctp_add_addr_to_vrf(uint32_t vrfid,
 	atomic_add_int(&sctp_ifnp->refcount, 1);
 
 	sctp_ifap->ifa = ifa;
-	memcpy(&sctp_ifap->address, addr, addr->sa_len);
+	memcpy(&sctp_ifap->address, addr, SCTP_OS_ADDR_LEN(addr));
 	sctp_ifap->localifa_flags = SCTP_ADDR_VALID | SCTP_ADDR_DEFER_USE;
 	sctp_ifap->flags = ifa_flags;
 
@@ -326,11 +326,12 @@ sctp_add_addr_to_vrf(uint32_t vrfid,
 	sctp_ifnp->ifa_count++;
 	vrf->total_ifa_count++;
 	SCTP_IPI_ADDR_UNLOCK();
-	return(sctp_ifap);
+	return (sctp_ifap);
 }
 
 struct sctp_ifa *
-sctp_del_addr_from_vrf(uint32_t vrfid, struct sockaddr *addr, uint32_t ifn_index)
+sctp_del_addr_from_vrf(uint32_t vrfid, sctp_os_addr_t *addr,
+		       uint32_t ifn_index)
 {
 	struct sctp_vrf *vrf;
 	struct sctp_ifa *sctp_ifap = NULL;
@@ -361,7 +362,7 @@ sctp_del_addr_from_vrf(uint32_t vrfid, struct sockaddr *addr, uint32_t ifn_index
 	}
  out_now:
 	SCTP_IPI_ADDR_UNLOCK();	
-	return(sctp_ifap);
+	return (sctp_ifap);
 }
 
 /*
@@ -2565,7 +2566,11 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 		 * zero out the port to find the address! yuck! can't do
 		 * this earlier since need port for sctp_pcb_findep()
 		 */
-		ifa = sctp_find_ifa_by_addr((struct sockaddr *)&store_sa, vrf, 0);
+#if defined(__Panda__)
+		/* convert store_sa to sctp_os_addr_t first here */
+#else
+		ifa = sctp_find_ifa_by_addr((sctp_os_addr_t *)&store_sa, vrf, 0);
+#endif
 		if (ifa == NULL) {
 			/* Can't find an interface with that address */
 			SCTP_INP_WUNLOCK(inp);
@@ -3244,8 +3249,9 @@ int
 sctp_is_address_on_local_host(struct sockaddr *addr, uint32_t vrf_id)
 {
 	struct sctp_ifa *sctp_ifa;
+
 	sctp_ifa = sctp_find_ifa_by_addr(addr, vrf_id, 0);
-	if(sctp_ifa) {
+	if (sctp_ifa) {
 		return (1);
 	} else {
 		return (0);

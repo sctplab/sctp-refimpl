@@ -4221,63 +4221,66 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
  * ifa_ifwithaddr() compares the entire sockaddr struct
  */
 struct sctp_ifa *
-sctp_find_ifa_in_ifn(struct sctp_ifn *sctp_ifnp, struct sockaddr *addr, int holds_lock)
+sctp_find_ifa_in_ifn(struct sctp_ifn *sctp_ifnp, sctp_os_addr_t *addr,
+		     int holds_lock)
 {
 	struct sctp_ifa *sctp_ifap;
 
-	if(holds_lock == 0)
+	if (holds_lock == 0)
 		SCTP_IPI_ADDR_LOCK();
+
 	LIST_FOREACH(sctp_ifap, &sctp_ifnp->ifalist, next_ifa) {
-		if (addr->sa_family != sctp_ifap->address.sa.sa_family)
+		if (SCTP_OS_ADDR_FAMILY(addr) !=
+		    SCTP_OS_ADDR_FAMILY((sctp_os_addr_t *)&sctp_ifap->address))
 			continue;
-		if(addr->sa_family == AF_INET) {
-			if (((struct sockaddr_in *)addr)->sin_addr.s_addr ==
-			    sctp_ifap->address.sin.sin_addr.s_addr) {
+		if (SCTP_OS_ADDR_FAMILY(addr) == AF_INET) {
+			if (SCTP_OS_ADDR_V4ADDR(addr) ==
+			    SCTP_OS_ADDR_V4ADDR(&sctp_ifap->address)) {
 				/* found him. */
-				if(holds_lock == 0)
+				if (holds_lock == 0)
 					SCTP_IPI_ADDR_UNLOCK();
-				return(sctp_ifap);
+				return (sctp_ifap);
 				break;
 			}
-		} else if (addr->sa_family == AF_INET6) {
-			if (SCTP6_ARE_ADDR_EQUAL(&((struct sockaddr_in6 *)addr)->sin6_addr,
-						 &sctp_ifap->address.sin6.sin6_addr)){
+		} else if (SCTP_OS_ADDR_FAMILY(addr) == AF_INET6) {
+			if (SCTP6_ARE_ADDR_EQUAL(&SCTP_OS_ADDR_V6ADDR(addr),
+						 &SCTP_OS_ADDR_V6ADDR((sctp_os_addr_t *)&sctp_ifap->address))) {
 				/* found him. */
-				if(holds_lock == 0)
+				if (holds_lock == 0)
 					SCTP_IPI_ADDR_UNLOCK();
-				return(sctp_ifap);
+				return (sctp_ifap);
 				break;
 			}
 		}
 	}
-	if(holds_lock == 0)
+	if (holds_lock == 0)
 		SCTP_IPI_ADDR_UNLOCK();
 	return (NULL);
 }
 
 struct sctp_ifa *
-sctp_find_ifa_by_addr(struct sockaddr *addr, uint32_t vrf_id, int holds_lock)
+sctp_find_ifa_by_addr(sctp_os_addr_t *addr, uint32_t vrf_id, int holds_lock)
 {
 	struct sctp_ifa *sctp_ifap;
 	struct sctp_ifn *sctp_ifnp = NULL;
 	struct sctp_vrf *vrf;
 
 	vrf = sctp_find_vrf(vrf_id);
-	if(vrf == NULL)
+	if (vrf == NULL)
 		return(NULL);
 
-	if(holds_lock == 0)
+	if (holds_lock == 0)
 		SCTP_IPI_ADDR_LOCK();
 
 	LIST_FOREACH(sctp_ifnp, &vrf->ifnlist, next_ifn) {
 		sctp_ifap = sctp_find_ifa_in_ifn(sctp_ifnp, addr, 1);
-		if(sctp_ifap) {
-			if(holds_lock == 0)
+		if (sctp_ifap) {
+			if (holds_lock == 0)
 				SCTP_IPI_ADDR_UNLOCK();
-			return(sctp_ifap);
+			return (sctp_ifap);
 		}
 	}
-	if(holds_lock == 0)
+	if (holds_lock == 0)
 		SCTP_IPI_ADDR_UNLOCK();
 	return (NULL);
 }
