@@ -1271,6 +1271,7 @@ select_a_new_ep:
 	goto select_a_new_ep;
 }
 
+#if defined(SCTP_USE_THREAD_BASED_ITERATOR)
 void
 sctp_iterator_worker()
 {
@@ -1295,8 +1296,7 @@ sctp_iterator_worker()
 	sctppcbinfo.iterator_running = 0;
 	return;
 }
-
-
+#endif
 
 
 static void

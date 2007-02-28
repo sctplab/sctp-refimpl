@@ -53,6 +53,8 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_bsd_addr.c,v 1.4 2007/01/18 09:58:42 rr
 extern uint32_t sctp_debug_on;
 #endif
 
+
+#if defined(SCTP_USE_THREAD_BASED_ITERATOR)
 void
 sctp_wakeup_iterator(void)
 {
@@ -84,6 +86,8 @@ sctp_startup_iterator(void)
 			     SCTP_KTHREAD_PAGES, 
 			     SCTP_KTRHEAD_NAME); 
 }
+#endif
+
 
 void
 sctp_gather_internal_ifa_flags(struct sctp_ifa *ifa)
