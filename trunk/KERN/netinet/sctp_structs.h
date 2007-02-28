@@ -753,6 +753,9 @@ struct sctp_association {
 	unsigned int cookie_life;
 	/* time to delay acks for */
 	unsigned int delayed_ack;
+	unsigned int old_delayed_ack;
+	unsigned int sack_freq;
+	unsigned int data_pkts_seen;
 
 	unsigned int numduptsns;
 	int dup_tsns[SCTP_MAX_DUP_TSNS];

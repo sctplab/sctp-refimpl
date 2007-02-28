@@ -299,9 +299,9 @@ struct sctp_pcb {
 	unsigned int sctp_minrto;
 	unsigned int sctp_maxrto;
 	unsigned int initial_rto;
-
 	int initial_init_rto_max;
 
+	unsigned int sctp_sack_freq;
 	uint32_t sctp_sws_sender;
 	uint32_t sctp_sws_receiver;
 
@@ -530,10 +530,12 @@ void sctp_fill_pcbinfo(struct sctp_pcbinfo *);
 struct sctp_ifn *
 sctp_find_ifn(struct sctp_vrf *vrf, void *ifn, uint32_t ifn_index);
 
+struct sctp_vrf *sctp_allocate_vrf(int vrfid);
+
 struct sctp_vrf *sctp_find_vrf(uint32_t vrfid);
 
 struct sctp_ifa *
-sctp_add_addr_to_vrf(struct sctp_vrf *vrf, 
+sctp_add_addr_to_vrf(uint32_t vrfid,
 		     void *ifn, uint32_t ifn_index, uint32_t ifn_type,
 		     const char *if_name,
 		     void *ifa, struct sockaddr *addr, uint32_t ifa_flags);
@@ -541,7 +543,7 @@ sctp_add_addr_to_vrf(struct sctp_vrf *vrf,
 void sctp_free_ifa(struct sctp_ifa *sctp_ifap);
 
 struct sctp_ifa *
-sctp_del_addr_from_vrf(struct sctp_vrf *vrf, struct sockaddr *addr, uint32_t ifn_index);
+sctp_del_addr_from_vrf(uint32_t vrfid, struct sockaddr *addr, uint32_t ifn_index);
 
 
 

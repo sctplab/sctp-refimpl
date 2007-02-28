@@ -153,6 +153,37 @@ sctp_fill_pcbinfo(struct sctp_pcbinfo *spcb)
  *
  */
 
+struct sctp_vrf *
+sctp_allocate_vrf(int vrfid)
+{
+	struct sctp_vrf *vrf=NULL;
+	struct sctp_vrflist *bucket;
+	/* First allocate the VRF structure */
+	vrf = sctp_find_vrf(vrfid);
+	if(vrf) {
+		/* Already allocated */
+		return(vrf);
+	}
+	SCTP_MALLOC(vrf, struct sctp_vrf *, sizeof(struct sctp_vrf), "SCTP_VRF");
+ 	if(vrf == NULL) {
+ 		/* No memory */
+#ifdef INVARIANTS
+		panic("No memory for VRF:%d", vrfid);
+#endif
+		return(NULL);
+	}
+	/* setup the VRF */
+	memset(vrf, 0, sizeof(struct sctp_vrf));
+	vrf->vrf_id = vrfid;
+	LIST_INIT(&vrf->ifnlist);
+
+	/* Add it to the hash table */
+	bucket = &sctppcbinfo.sctp_vrfhash[(vrfid & sctppcbinfo.hashvrfmark)];
+	LIST_INSERT_HEAD(bucket, vrf, next_vrf);
+	return (vrf);
+}
+
+
 struct sctp_ifn *
 sctp_find_ifn(struct sctp_vrf *vrf, void *ifn, uint32_t ifn_index)
 {
@@ -198,19 +229,26 @@ sctp_free_ifa(struct sctp_ifa *sctp_ifap)
 }
 
 struct sctp_ifa *
-sctp_add_addr_to_vrf(struct sctp_vrf *vrf, 
+sctp_add_addr_to_vrf(uint32_t vrfid,
 		     void *ifn, uint32_t ifn_index, uint32_t ifn_type,
 		     const char *if_name,
 		     void *ifa, struct sockaddr *addr, uint32_t ifa_flags)
 {
+	struct sctp_vrf *vrf;
 	struct sctp_ifn *sctp_ifnp = NULL;
 	struct sctp_ifa *sctp_ifap = NULL;
 
-       /* FIX ME - NEED TO DYNAMICALLY BUILD VRF's */
 
        /* How granular do we need the locks to be here? 
 	*/
 	SCTP_IPI_ADDR_LOCK();
+	vrf = sctp_find_vrf(vrfid);
+	if(vrf == NULL) {
+		vrf = sctp_allocate_vrf(vrfid);
+		if (vrf == NULL) {
+			return (NULL);
+		}
+	}
 	sctp_ifnp = sctp_find_ifn(vrf, ifn, ifn_index);
 	if(sctp_ifnp == NULL) {
 		/* build one and add it, can't hold lock
@@ -290,12 +328,18 @@ sctp_add_addr_to_vrf(struct sctp_vrf *vrf,
 }
 
 struct sctp_ifa *
-sctp_del_addr_from_vrf(struct sctp_vrf *vrf, struct sockaddr *addr, uint32_t ifn_index)
+sctp_del_addr_from_vrf(uint32_t vrfid, struct sockaddr *addr, uint32_t ifn_index)
 {
+	struct sctp_vrf *vrf;
 	struct sctp_ifa *sctp_ifap = NULL;
 	struct sctp_ifn *sctp_ifnp = NULL;
 	SCTP_IPI_ADDR_LOCK();
 
+	vrf = sctp_find_vrf(vrfid);
+	if (vrf == NULL) {
+		printf("Can't find vrfid:%d\n", vrfid);
+		goto out_now;
+	}
 	sctp_ifnp = sctp_find_ifn(vrf, (void *)NULL, ifn_index);
 	if(sctp_ifnp == NULL) {
 		sctp_ifap = sctp_find_ifa_by_addr(addr, vrf->vrf_id, 1);
@@ -312,6 +356,7 @@ sctp_del_addr_from_vrf(struct sctp_vrf *vrf, struct sockaddr *addr, uint32_t ifn
 	} else {
 		printf("Could not find address to be deleted\n");
 	}
+ out_now:
 	SCTP_IPI_ADDR_UNLOCK();	
 	return(sctp_ifap);
 }
@@ -1975,6 +2020,7 @@ sctp_inpcb_alloc(struct socket *so)
 	m->sctp_minrto = sctp_rto_min_default;
 	m->initial_rto = sctp_rto_initial_default;
 	m->initial_init_rto_max = sctp_init_rto_max_default;
+	m->sctp_sack_freq = SCTP_DEFAULT_SACK_FREQ;
 
 	m->max_open_streams_intome = MAX_SCTP_STREAMS;
 
