@@ -870,7 +870,6 @@ sctp_select_initial_TSN(struct sctp_pcb *m)
 	uint32_t x, *xp;
 	uint8_t *p;
 
-	printf("sctp_select_initial_TSN: initial_sequence_debug = %u.\n", m->initial_sequence_debug);
 	if (m->initial_sequence_debug != 0) {
 		uint32_t ret;
 
