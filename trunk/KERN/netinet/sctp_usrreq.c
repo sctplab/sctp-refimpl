@@ -1475,7 +1475,11 @@ connected_type:
 	}
 }
 
+#if defined(__Panda__)
+int
+#else
 static int
+#endif
 sctp_disconnect(struct socket *so)
 {
 	struct sctp_inpcb *inp;
@@ -2281,8 +2285,11 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 		destp = (type *)srcp; \
 	}
 
-
+#if defined(__Panda__)
+int
+#else
 static int
+#endif
 sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 	    void *p) {
 	struct sctp_inpcb *inp;
@@ -3200,8 +3207,11 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 	return (error);
 }
 
-
+#if defined(__Panda__)
+int
+#else
 static int
+#endif
 sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 	    void *p)
 {
