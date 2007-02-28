@@ -221,8 +221,10 @@ sctp_add_addresses_to_i_ia(struct sctp_inpcb *inp, struct sctp_scoping *scope,
 #else
 	vrf_id = panda_get_vrf_from_call(); /* from socket option call? */
 #endif
+	SCTP_IPI_ADDR_LOCK();
 	vrf = sctp_find_vrf(vrf_id);
 	if(vrf == NULL) {
+		SCTP_IPI_ADDR_UNLOCK();
 		return(m_at);
 	}
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
@@ -359,6 +361,7 @@ sctp_add_addresses_to_i_ia(struct sctp_inpcb *inp, struct sctp_scoping *scope,
 			}
 		}
 	}
+	SCTP_IPI_ADDR_UNLOCK();
 	return (m_at);
 }
 
@@ -487,7 +490,7 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 	} else if (cmd == RTM_DELETE) {
 		wi->action = SCTP_DEL_IP_ADDRESS;
 	}
-	SCTP_IPI_ADDR_LOCK();
+	SCTP_IPI_ITERATOR_WQ_LOCK();
 	/*
 	 * Should this really be a tailq? As it is we will process the
 	 * newest first :-0
@@ -497,5 +500,5 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 			 (struct sctp_inpcb *)NULL,
 			 (struct sctp_tcb *)NULL,
 			 (struct sctp_nets *)NULL);
-	SCTP_IPI_ADDR_UNLOCK();
+	SCTP_IPI_ITERATOR_WQ_UNLOCK();
 }
