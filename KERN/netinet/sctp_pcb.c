@@ -47,7 +47,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.12 2007/02/12 23:24:31 rrs Ex
 #include <netinet/sctp_asconf.h>
 #include <netinet/sctp_output.h>
 #include <netinet/sctp_timer.h>
-
+#include <netinet/sctp_bsd_addr.h>
 
 #ifdef SCTP_DEBUG
 uint32_t sctp_debug_on = 0;
@@ -286,7 +286,6 @@ sctp_add_addr_to_vrf(uint32_t vrfid,
 				SCTP_IPI_ADDR_UNLOCK();
 				return(sctp_ifap);
 			} else {
-				printf("Warning:Adding address already present, same IFN\n");
 				goto exit_stage_left;
 			}
 		} else {
@@ -2656,7 +2655,7 @@ sctp_iterator_inp_being_freed(struct sctp_inpcb *inp, struct sctp_inpcb *inp_nex
 	 * those guys. The list of iterators should never be very big
 	 * though.
 	 */
-	LIST_FOREACH(it, &sctppcbinfo.iteratorhead, sctp_nxt_itr) {
+	TAILQ_FOREACH(it, &sctppcbinfo.iteratorhead, sctp_nxt_itr) {
 		if (it == inp->inp_starting_point_for_iterator)
 			/* skip this guy, he's special */
 			continue;
@@ -4986,7 +4985,7 @@ sctp_pcb_init()
 #endif
 
 	/* init the iterator head */
-	LIST_INIT(&sctppcbinfo.iteratorhead);
+	TAILQ_INIT(&sctppcbinfo.iteratorhead);
 
 	/* init the hash table of endpoints */
 #if defined(__FreeBSD__)
@@ -5110,6 +5109,7 @@ sctp_pcb_init()
 	SCTP_TIMERQ_LOCK_INIT();
 	TAILQ_INIT(&sctppcbinfo.callqueue);
 #endif
+	sctp_startup_iterator();
 }
 
 #ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
@@ -6117,6 +6117,7 @@ sctp_initiate_iterator(inp_func inpf, asoc_func af, uint32_t pcb_state,
 #endif
 		SCTP_INP_INFO_RLOCK();
 		it->inp = LIST_FIRST(&sctppcbinfo.listhead);
+		
 #if defined(SCTP_PER_SOCKET_LOCKING)
 		SCTP_UNLOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
 #endif
@@ -6124,18 +6125,29 @@ sctp_initiate_iterator(inp_func inpf, asoc_func af, uint32_t pcb_state,
 		it->iterator_flags = SCTP_ITERATOR_DO_ALL_INP;
 
 	}
-	/* Init the timer */
-	SCTP_OS_TIMER_INIT(&it->tmr.timer);
-	/* add to the list of all iterators */
 #if defined(SCTP_PER_SOCKET_LOCKING)
 	SCTP_LOCK_EXC(sctppcbinfo.ipi_ep_mtx);
 #endif
-	SCTP_INP_INFO_WLOCK();
-	LIST_INSERT_HEAD(&sctppcbinfo.iteratorhead, it, sctp_nxt_itr);
+	SCTP_IPI_ITERATOR_WQ_LOCK();
+	if(it->inp)
+		SCTP_INP_INCR_REF(it->inp);
+	TAILQ_INSERT_TAIL(&sctppcbinfo.iteratorhead, it, sctp_nxt_itr);
 #if defined(SCTP_PER_SOCKET_LOCKING)
 	SCTP_UNLOCK_EXC(sctppcbinfo.ipi_ep_mtx);
 #endif
-	SCTP_INP_INFO_WUNLOCK();
+#if defined(SCTP_USE_THREAD_BASED_ITERATOR)
+
+	if(sctppcbinfo.iterator_running == 0) {
+		sctp_wakeup_iterator();
+	}
+	SCTP_IPI_ITERATOR_WQ_UNLOCK();
+#else
+	if(it->inp)
+		SCTP_INP_DECR_REF(it->inp);
+	SCTP_IPI_ITERATOR_WQ_UNLOCK();
+	/* Init the timer */
+	SCTP_OS_TIMER_INIT(&it->tmr.timer);
+	/* add to the list of all iterators */
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
 #endif
@@ -6143,6 +6155,7 @@ sctp_initiate_iterator(inp_func inpf, asoc_func af, uint32_t pcb_state,
 			 NULL, NULL);
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
+#endif
 #endif
 	return (0);
 }

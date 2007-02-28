@@ -53,6 +53,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.7 2007/02/12 23:24:31 rrs 
 #include <sys/sysctl.h>
 #include <sys/resourcevar.h>
 #include <sys/uio.h>
+#include <sys/kthread.h>
 #if defined(__FreeBSD__) && __FreeBSD_version > 602000
 #include <sys/priv.h>
 #endif
@@ -151,6 +152,8 @@ typedef struct sockaddr sctp_os_addr_t;
     } while (0)
 
 #define SCTP_FREE_SONAME(var)	FREE(var, M_SONAME)
+
+#define SCTP_PROCESS_STRUCT struct proc *
 
 /*
  * zone allocation functions

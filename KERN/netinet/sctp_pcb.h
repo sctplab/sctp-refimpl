@@ -55,6 +55,7 @@ TAILQ_HEAD(sctp_streamhead, sctp_stream_queue_pending);
 #include <netinet/sctp_structs.h>
 #include <netinet/sctp_uio.h>
 #include <netinet/sctp_auth.h>
+#include <netinet/sctp_bsd_addr.h>
 
 /*
  * PCB flags (in sctp_flags bitmask)
@@ -276,7 +277,10 @@ struct sctp_epinfo {
 	/* system wide number of free chunks hanging around */
 	uint32_t ipi_free_chunks;
 	uint32_t ipi_free_strmoq;
-
+#if defined(SCTP_USE_THREAD_BASED_ITERATOR)
+	uint32_t iterator_running;
+	SCTP_PROCESS_STRUCT thread_proc;
+#endif
 	struct sctpvtaghead vtag_timewait[SCTP_STACK_VTAG_HASH_SIZE];
 
 	struct sctp_timer addr_wq_timer;
