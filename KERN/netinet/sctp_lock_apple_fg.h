@@ -1,7 +1,7 @@
 #ifndef __sctp_lock_apple_fg_h__
 #define __sctp_lock_apple_fg_h__
 /*-
- * Copyright (c) 2001-2006, Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2001-2007, Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -129,6 +129,16 @@
 	lck_mtx_unlock(sctppcbinfo.it_mtx)
 #define SCTP_ITERATOR_LOCK_DESTROY() \
 	lck_mtx_free(sctppcbinfo.it_mtx, SCTP_MTX_GRP)
+
+#define SCTP_IPI_ITERATOR_WQ_INIT() \
+	sctppcbinfo.ipi_iterator_wq_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
+#define SCTP_IPI_ITERATOR_WQ_DESTROY() \
+	lck_mtx_free(sctppcbinfo.ipi_iterator_wq_mtx)
+#define SCTP_IPI_ITERATOR_WQ_LOCK() \
+	lck_mtx_lock(sctppcbinfo.ipi_iterator_wq_mtx)
+#define SCTP_IPI_ITERATOR_WQ_UNLOCK() \
+	lck_mtx_unlock(sctppcbinfo.ipi_iterator_wq_mtx)
+
 
 /* socket locks */
 #define SOCK_LOCK(_so)
