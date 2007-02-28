@@ -40,11 +40,9 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_bsd_addr.h,v 1.2 2007/01/18 09:58:42 rr
 
 #if defined(_KERNEL)
 
-struct mbuf *
-sctp_add_addresses_to_i_ia(struct sctp_inpcb *inp, 
-			   struct sctp_scoping *scope, 
-			   struct mbuf *m_at, 
-			   int cnt_inits_to);
+void
+sctp_gather_internal_ifa_flags(struct sctp_ifa *ifa);
+
 
 extern void sctp_addr_change(struct ifaddr *ifa, int cmd);
 

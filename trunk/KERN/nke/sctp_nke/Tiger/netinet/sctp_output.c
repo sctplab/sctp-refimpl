@@ -1872,6 +1872,291 @@ extern int sctp_peer_chunk_oh;
 
 
 
+static
+int
+sctp_is_address_in_scope(struct sctp_ifa *ifa,
+    int ipv4_addr_legal,
+    int ipv6_addr_legal,
+    int loopback_scope,
+    int ipv4_local_scope,
+    int local_scope,
+    int site_scope,
+    int do_update)
+{
+	if ((loopback_scope == 0) &&
+	    (ifa->ifn_p) &&
+	    (ifa->ifn_p->ifn_type == IFT_LOOP)) {
+		/*
+		 * skip loopback if not in scope *
+		 */
+		return (0);
+	}
+	if ((ifa->address.sa.sa_family == AF_INET) && ipv4_addr_legal) {
+		struct sockaddr_in *sin;
+
+		sin = (struct sockaddr_in *)&ifa->address.sin;
+		if (sin->sin_addr.s_addr == 0) {
+			/* not in scope , unspecified */
+			return (0);
+		}
+		if ((ipv4_local_scope == 0) &&
+		    (IN4_ISPRIVATE_ADDRESS(&sin->sin_addr))) {
+			/* private address not in scope */
+			return (0);
+		}
+	} else if ((ifa->address.sa.sa_family == AF_INET6) && ipv6_addr_legal) {
+		struct sockaddr_in6 *sin6;
+
+		/* Must update the flags,  bummer, which
+		 * means any IFA locks must now be applied HERE <->
+		 */
+		if(do_update) {
+			sctp_gather_internal_ifa_flags(ifa);
+		}
+		if (ifa->localifa_flags & SCTP_ADDR_IFA_UNUSEABLE) {
+			return (0);
+		}
+ 		/* ok to use deprecated addresses? */
+		sin6 = (struct sockaddr_in6 *)&ifa->address.sin6;
+		if (IN6_IS_ADDR_UNSPECIFIED(&sin6->sin6_addr)) {
+			/* skip unspecifed addresses */
+			return (0);
+		}
+		if (		/* (local_scope == 0) && */
+		    (IN6_IS_ADDR_LINKLOCAL(&sin6->sin6_addr))) {
+			return (0);
+		}
+		if ((site_scope == 0) &&
+		    (IN6_IS_ADDR_SITELOCAL(&sin6->sin6_addr))) {
+			return (0);
+		}
+	} else {
+		return (0);
+	}
+	return (1);
+}
+
+static struct mbuf *
+sctp_add_addr_to_mbuf(struct mbuf *m, struct sctp_ifa *ifa)
+{
+	struct sctp_paramhdr *parmh;
+	struct mbuf *mret;
+	int len;
+
+	if (ifa->address.sa.sa_family == AF_INET) {
+		len = sizeof(struct sctp_ipv4addr_param);
+	} else if (ifa->address.sa.sa_family == AF_INET6) {
+		len = sizeof(struct sctp_ipv6addr_param);
+	} else {
+		/* unknown type */
+		return (m);
+	}
+	if (M_TRAILINGSPACE(m) >= len) {
+		/* easy side we just drop it on the end */
+		parmh = (struct sctp_paramhdr *)(SCTP_BUF_AT(m, SCTP_BUF_LEN(m)));
+		mret = m;
+	} else {
+		/* Need more space */
+		mret = m;
+		while (SCTP_BUF_NEXT(mret) != NULL) {
+			mret = SCTP_BUF_NEXT(mret);
+		}
+		SCTP_BUF_NEXT(mret) = sctp_get_mbuf_for_msg(len, 0, M_DONTWAIT, 1, MT_DATA);
+		if (SCTP_BUF_NEXT(mret) == NULL) {
+			/* We are hosed, can't add more addresses */
+			return (m);
+		}
+		mret = SCTP_BUF_NEXT(mret);
+		parmh = mtod(mret, struct sctp_paramhdr *);
+	}
+	/* now add the parameter */
+	if (ifa->address.sa.sa_family == AF_INET) {
+		struct sctp_ipv4addr_param *ipv4p;
+		struct sockaddr_in *sin;
+
+		sin = (struct sockaddr_in *)&ifa->address.sin;
+		ipv4p = (struct sctp_ipv4addr_param *)parmh;
+		parmh->param_type = htons(SCTP_IPV4_ADDRESS);
+		parmh->param_length = htons(len);
+		ipv4p->addr = sin->sin_addr.s_addr;
+		SCTP_BUF_LEN(mret) += len;
+	} else if (ifa->address.sa.sa_family == AF_INET6) {
+		struct sctp_ipv6addr_param *ipv6p;
+		struct sockaddr_in6 *sin6;
+
+		sin6 = (struct sockaddr_in6 *)&ifa->address.sin6;
+		ipv6p = (struct sctp_ipv6addr_param *)parmh;
+		parmh->param_type = htons(SCTP_IPV6_ADDRESS);
+		parmh->param_length = htons(len);
+		memcpy(ipv6p->addr, &sin6->sin6_addr,
+		    sizeof(ipv6p->addr));
+		/* clear embedded scope in the address */
+		in6_clearscope((struct in6_addr *)ipv6p->addr);
+		SCTP_BUF_LEN(mret) += len;
+	} else {
+		return (m);
+	}
+	return (mret);
+}
+
+
+struct mbuf *
+sctp_add_addresses_to_i_ia(struct sctp_inpcb *inp, struct sctp_scoping *scope, 
+			   struct mbuf *m_at, int cnt_inits_to)
+{
+	struct sctp_vrf *vrf = NULL;
+	int cnt, limit_out=0, total_count;
+	uint32_t vrf_id;
+
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
+	vrf_id = SCTP_DEFAULT_VRFID;
+#else
+	vrf_id = panda_get_vrf_from_call(); /* from socket option call? */
+#endif
+	SCTP_IPI_ADDR_LOCK();
+	vrf = sctp_find_vrf(vrf_id);
+	if(vrf == NULL) {
+		SCTP_IPI_ADDR_UNLOCK();
+		return(m_at);
+	}
+	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
+		struct sctp_ifa *sctp_ifap;
+		struct sctp_ifn *sctp_ifnp;
+
+		cnt = cnt_inits_to;
+		if (vrf->total_ifa_count > SCTP_COUNT_LIMIT) {
+			limit_out = 1;
+			cnt = SCTP_ADDRESS_LIMIT;
+			goto skip_count;
+		}
+		LIST_FOREACH(sctp_ifnp, &vrf->ifnlist, next_ifn) {
+			if ((scope->loopback_scope == 0) &&
+			    (sctp_ifnp->ifn_type == IFT_LOOP)) {
+				/*
+				 * Skip loopback devices if loopback_scope
+				 * not set
+				 */
+				continue;
+			}
+			LIST_FOREACH(sctp_ifap, &sctp_ifnp->ifalist, next_ifa) {
+				if (sctp_is_address_in_scope(sctp_ifap,
+							     scope->ipv4_addr_legal,
+							     scope->ipv6_addr_legal,
+							     scope->loopback_scope,
+							     scope->ipv4_local_scope,
+							     scope->local_scope,
+							     scope->site_scope, 1) == 0) {
+					continue;
+				}
+				cnt++;
+				if(cnt > SCTP_ADDRESS_LIMIT) {
+					break;
+				}
+			}
+			if(cnt > SCTP_ADDRESS_LIMIT) {
+				break;
+			}
+		}
+	skip_count:
+		if (cnt > 1) {
+			total_count = 0;
+			LIST_FOREACH(sctp_ifnp, &vrf->ifnlist, next_ifn) {
+				cnt = 0;
+				if ((scope->loopback_scope == 0) &&
+				    (sctp_ifnp->ifn_type == IFT_LOOP)) {
+					/*
+					 * Skip loopback devices if
+					 * loopback_scope not set
+					 */
+					continue;
+				}
+				LIST_FOREACH(sctp_ifap, &sctp_ifnp->ifalist, next_ifa) {
+					if (sctp_is_address_in_scope(sctp_ifap,
+								     scope->ipv4_addr_legal,
+								     scope->ipv6_addr_legal,
+								     scope->loopback_scope,
+								     scope->ipv4_local_scope,
+								     scope->local_scope,
+								     scope->site_scope, 0) == 0) {
+						continue;
+					}
+					m_at = sctp_add_addr_to_mbuf(m_at, sctp_ifap);
+					if(limit_out) {
+						cnt++;
+						total_count++;
+						if(cnt >= 2) {
+							/* two from each address */
+							break;
+						}
+						if (total_count > SCTP_ADDRESS_LIMIT) {
+							/* No more addresses */
+							break;
+						}
+					}
+				}
+			}
+		}
+	} else {
+		struct sctp_laddr *laddr;
+
+		cnt = cnt_inits_to;
+		/* First, how many ? */
+		LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
+			if (laddr->ifa == NULL) {
+				continue;
+			}
+			if (laddr->ifa->localifa_flags & SCTP_BEING_DELETED)
+				continue;
+
+			if (sctp_is_address_in_scope(laddr->ifa,
+						     scope->ipv4_addr_legal,
+						     scope->ipv6_addr_legal,
+						     scope->loopback_scope,
+						     scope->ipv4_local_scope,
+						     scope->local_scope,
+						     scope->site_scope, 1) == 0) {
+				continue;
+			}
+			cnt++;
+		}
+		if(cnt > SCTP_ADDRESS_LIMIT) {
+			limit_out = 1;
+		}
+		/*
+		 * To get through a NAT we only list addresses if we have
+		 * more than one. That way if you just bind a single address
+		 * we let the source of the init dictate our address.
+		 */
+		if (cnt > 1) {
+			LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
+				cnt = 0;
+				if (laddr->ifa == NULL) {
+					continue;
+				}
+				if (laddr->ifa->localifa_flags & SCTP_BEING_DELETED)
+					continue;
+
+				if (sctp_is_address_in_scope(laddr->ifa,
+							     scope->ipv4_addr_legal,
+							     scope->ipv6_addr_legal,
+							     scope->loopback_scope,
+							     scope->ipv4_local_scope,
+							     scope->local_scope,
+							     scope->site_scope, 0) == 0) {
+					continue;
+				}
+				m_at = sctp_add_addr_to_mbuf(m_at, laddr->ifa);
+				cnt++;
+				if (cnt >= SCTP_ADDRESS_LIMIT) {
+					break;
+				}
+			}
+		}
+	}
+	SCTP_IPI_ADDR_UNLOCK();
+	return (m_at);
+}
+
 static struct sctp_ifa *
 sctp_is_ifa_addr_prefered(struct sctp_ifa *ifa, 
 			  uint8_t loopscope, 
@@ -1922,7 +2207,7 @@ sctp_is_ifa_addr_prefered(struct sctp_ifa *ifa,
 	/* Ok the address may be ok */
 	sin = (struct sockaddr_in *)&ifa->address.sin;
 	*sin_local = *sin_loop = 0;
-	if(fam == AF_INET) {
+	if (fam == AF_INET) {
 		if (sin->sin_addr.s_addr == 0) {
 			/* TSNH */
 			return (NULL);
@@ -1937,8 +2222,7 @@ sctp_is_ifa_addr_prefered(struct sctp_ifa *ifa,
 		}
 	} else if (fam == AF_INET6) {
 		/* ok to use deprecated addresses? */
-
-		if(ifa->localifa_flags & SCTP_ADDR_IFA_UNUSEABLE) {
+		if (ifa->localifa_flags & SCTP_ADDR_IFA_UNUSEABLE) {
 			return (NULL);
 		}
 		sin6 = (struct sockaddr_in6 *)&ifa->address.sin6;
@@ -2887,7 +3171,7 @@ sctp_find_cmsg(int c_type, void *data, struct mbuf *control, int cpsize)
 extern int sctp_mbuf_threshold_count;
 
 
-__inline struct mbuf *
+struct mbuf *
 sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header, 
 		      int how, int allonebuf, int type)
 {
@@ -3303,23 +3587,28 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			/*
 			 * src addr selection failed to find a route (or
 			 * valid source addr), so we can't get there from
-			 * here!
+			 * here (yet)!
 			 */
 		no_route:
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
-				printf("low_level_output: dropped v4 packet- no valid source addr\n");
-				printf("Destination was %x\n", (uint32_t) (ntohl(ip->ip_dst.s_addr)));
+				printf("low_level_output: dropped packet - no valid source addr\n");
+				if (net) {
+					printf("Destination was ");
+					sctp_print_address(&net->ro._l_addr.sa);
+				}
 			}
 #endif				/* SCTP_DEBUG */
 			if (net) {
-				if ((net->dest_state & SCTP_ADDR_REACHABLE) && stcb)
-					sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_DOWN,
-					    stcb,
-					    SCTP_FAILED_THRESHOLD,
-					    (void *)net);
-				net->dest_state &= ~SCTP_ADDR_REACHABLE;
-				net->dest_state |= SCTP_ADDR_NOT_REACHABLE;
+				if (net->dest_state & SCTP_ADDR_CONFIRMED) { 
+					if ((net->dest_state & SCTP_ADDR_REACHABLE) && stcb)
+						sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_DOWN,
+								stcb,
+								SCTP_FAILED_THRESHOLD,
+								(void *)net);
+					net->dest_state &= ~SCTP_ADDR_REACHABLE;
+					net->dest_state |= SCTP_ADDR_NOT_REACHABLE;
+				}
 				if (stcb) {
 					if (net == stcb->asoc.primary_destination) {
 						/* need a new primary */
@@ -4470,7 +4759,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				stc.loopback_scope = 1;
 				stc.ipv4_scope = 1;
 				stc.site_scope = 1;
-				stc.local_scope = 1;
+				stc.local_scope = 0;
 			}
 		} else if (iph->ip_v == (IPV6_VERSION >> 4)) {
 			struct sctp_ifa *addr;
@@ -4493,7 +4782,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			stc.scope_id = 0;
 			if (sctp_is_address_on_local_host((struct sockaddr *)sin6, vrf_id)) {
 				stc.loopback_scope = 1;
-				stc.local_scope = 1;
+				stc.local_scope = 0;
 				stc.site_scope = 1;
 				stc.ipv4_scope = 1;
 			} else if (IN6_IS_ADDR_LINKLOCAL(&sin6->sin6_addr)) {
@@ -8641,6 +8930,9 @@ sctp_send_sack(struct sctp_tcb *stcb)
 		a_chk->rec.chunk_id.id = SCTP_SELECTIVE_ACK;
 		a_chk->rec.chunk_id.can_take_data = 1;
 	}
+	/* Clear our pkt counts */
+	asoc->data_pkts_seen = 0;
+
 	a_chk->asoc = asoc;
 	a_chk->snd_count = 0;
 	a_chk->send_size = 0;	/* fill in later */
@@ -9216,6 +9508,7 @@ sctp_send_hb(struct sctp_tcb *stcb, int user_req, struct sctp_nets *u_net)
 #endif
 		return (0);
 	}
+
 	chk->copy_by_ref = 0;
 	chk->rec.chunk_id.id = SCTP_HEARTBEAT_REQUEST;
 	chk->rec.chunk_id.can_take_data = 1;

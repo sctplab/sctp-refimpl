@@ -107,11 +107,20 @@ extern struct fileops socketops;
 
 #define SCTP_LIST_EMPTY(list)	LIST_EMPTY(list)
 
-/* temp copy: these are from sctp_os_bsd.h */
+/*
+ * Local address list handling
+ */
 #define SCTP_MAX_VRF_ID 0
 #define SCTP_SIZE_OF_VRF_HASH 1
 #define SCTP_IFNAMSIZ IFNAMSIZ
 #define SCTP_DEFAULT_VRFID 0
+
+typedef struct sockaddr sctp_os_addr_t;
+#define SCTP_OS_ADDR_LEN(addr) ((addr)->sa_len)
+#define SCTP_OS_ADDR_FAMILY(addr) ((addr)->sa_family)
+#define SCTP_OS_ADDR_V4ADDR(addr) (((struct sockaddr_in *)(addr))->sin_addr.s_addr)
+#define SCTP_OS_ADDR_V6ADDR(addr) (((struct sockaddr_in6 *)(addr))->sin6_addr)
+
 
 #define SCTP_GET_IFN_VOID_FROM_ROUTE(ro) (void *)ro->ro_rt->rt_ifp
 #define SCTP_GET_IF_INDEX_FROM_ROUTE(ro) ro->ro_rt->rt_ifp->if_index

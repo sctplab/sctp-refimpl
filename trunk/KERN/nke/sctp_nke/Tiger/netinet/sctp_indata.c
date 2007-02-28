@@ -2379,9 +2379,8 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 								 * longer is one */
 			    (stcb->asoc.numduptsns) ||	/* we have dup's */
 			    (is_a_gap) ||	/* is still a gap */
-			    (stcb->asoc.delayed_ack == 0) ||
-			    (SCTP_OS_TIMER_PENDING(&stcb->asoc.dack_timer.timer))	/* timer was up . second
-										 * packet */
+			    (stcb->asoc.delayed_ack == 0) ||	/* Delayed sack disabled */
+			    (stcb->asoc.data_pkts_seen >= stcb->asoc.sack_freq)	/* hit limit of pkts */
 			    ) {
 
 				if ((sctp_cmt_on_off) && (sctp_cmt_use_dac) &&
@@ -2565,6 +2564,7 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 	 */
 	*high_tsn = asoc->cumulative_tsn;
 	break_flag = 0;
+	asoc->data_pkts_seen++;
 	while (stop_proc == 0) {
 		/* validate chunk length */
 		chk_length = ntohs(ch->ch.chunk_length);

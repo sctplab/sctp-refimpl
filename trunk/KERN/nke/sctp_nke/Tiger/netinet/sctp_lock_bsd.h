@@ -108,9 +108,8 @@ extern int sctp_logoff_stuff;
 } while (0)
 
 
-
 #define SCTP_IPI_ADDR_INIT() \
-        mtx_init(&sctppcbinfo.ipi_addr_mtx, "sctp-addr-wq", "sctp_addr_wq", MTX_DEF)
+        mtx_init(&sctppcbinfo.ipi_addr_mtx, "sctp-addr", "sctp_addr", MTX_DEF)
 
 #define SCTP_IPI_ADDR_DESTROY() \
 	mtx_destroy(&sctppcbinfo.ipi_addr_mtx)
@@ -120,6 +119,24 @@ extern int sctp_logoff_stuff;
 } while (0)
 
 #define SCTP_IPI_ADDR_UNLOCK()		mtx_unlock(&sctppcbinfo.ipi_addr_mtx)
+
+
+
+#define SCTP_IPI_ITERATOR_WQ_INIT() \
+        mtx_init(&sctppcbinfo.ipi_iterator_wq_mtx, "sctp-it-wq", "sctp_it_wq", MTX_DEF)
+
+#define SCTP_IPI_ITERATOR_WQ_DESTROY() \
+	mtx_destroy(&sctppcbinfo.ipi_iterator_wq_mtx)
+
+#define SCTP_IPI_ITERATOR_WQ_LOCK()	do { 					\
+             mtx_lock(&sctppcbinfo.ipi_iterator_wq_mtx);                \
+} while (0)
+
+#define SCTP_IPI_ITERATOR_WQ_UNLOCK()		mtx_unlock(&sctppcbinfo.ipi_iterator_wq_mtx)
+
+
+
+
 
 #define SCTP_INP_INFO_RUNLOCK()		mtx_unlock(&sctppcbinfo.ipi_ep_mtx)
 #define SCTP_INP_INFO_WUNLOCK()		mtx_unlock(&sctppcbinfo.ipi_ep_mtx)

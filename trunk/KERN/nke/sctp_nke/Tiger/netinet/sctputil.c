@@ -870,6 +870,7 @@ sctp_select_initial_TSN(struct sctp_pcb *m)
 	uint32_t x, *xp;
 	uint8_t *p;
 
+	printf("sctp_select_initial_TSN: initial_sequence_debug = %u.\n", m->initial_sequence_debug);
 	if (m->initial_sequence_debug != 0) {
 		uint32_t ret;
 
@@ -933,7 +934,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	asoc->heart_beat_delay = TICKS_TO_MSEC(m->sctp_ep.sctp_timeoutticks[SCTP_TIMER_HEARTBEAT]);
 	asoc->cookie_life = m->sctp_ep.def_cookie_life;
 	asoc->sctp_cmt_on_off = (uint8_t) sctp_cmt_on_off;
-#ifdef AF_INET
+#ifdef INET
 #if defined(__FreeBSD__) || defined(__APPLE__)
 	asoc->default_tos = m->ip_inp.inp.inp_ip_tos;
 #elif defined(__NetBSD__)
@@ -945,7 +946,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	asoc->default_tos = 0;
 #endif
 
-#ifdef AF_INET6
+#ifdef INET6
 	asoc->default_flowlabel = ((struct in6pcb *)m)->in6p_flowinfo;
 #else
 	asoc->default_flowlabel = 0;
@@ -1014,6 +1015,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	asoc->nonce_wait_for_ecne = 0;
 	asoc->nonce_wait_tsn = 0;
 	asoc->delayed_ack = TICKS_TO_MSEC(m->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV]);
+	asoc->sack_freq = m->sctp_ep.sctp_sack_freq;
 	asoc->pr_sctp_cnt = 0;
 	asoc->total_output_queue_size = 0;
 
@@ -1172,7 +1174,7 @@ sctp_handle_addr_wq(void)
 	}
 	LIST_INIT(&asc->list_of_work);
 	asc->cnt = 0;
-	SCTP_IPI_ADDR_LOCK();
+	SCTP_IPI_ITERATOR_WQ_LOCK();
 	wi = LIST_FIRST(&sctppcbinfo.addr_wq);
 	while (wi != NULL) {
 		LIST_REMOVE(wi, sctp_nxt_addr);
@@ -1180,11 +1182,11 @@ sctp_handle_addr_wq(void)
 		asc->cnt++;
 		wi = LIST_FIRST(&sctppcbinfo.addr_wq);
 	}
-	SCTP_IPI_ADDR_UNLOCK();
+	SCTP_IPI_ITERATOR_WQ_UNLOCK();
 	if(asc->cnt == 0) {
 		SCTP_FREE(asc);
 	} else {
-		sctp_initiate_iterator(sctp_iterator_ep, sctp_iterator_stcb, SCTP_PCB_ANY_FLAGS,
+		sctp_initiate_iterator(sctp_iterator_ep, sctp_iterator_stcb, SCTP_PCB_FLAGS_BOUNDALL,
 				       SCTP_PCB_ANY_FEATURES, SCTP_ASOC_ANY_STATE, (void *)asc, 0,
 				       sctp_iterator_end, NULL, 0);
 	}
@@ -1460,7 +1462,9 @@ sctp_timeout_handler(void *t)
 				if ((net->dest_state & SCTP_ADDR_UNCONFIRMED) &&
 				    (net->dest_state & SCTP_ADDR_REACHABLE)) {
 					cnt_of_unconf++;
-				}
+				} else if ((net->dest_state & SCTP_ADDR_UNCONFIRMED)) {
+					printf("%p is unreachable and unconfirmed\n", net);
+				} 
 			}
 			if (cnt_of_unconf == 0) {
 				if (sctp_heartbeat_timer(inp, stcb, net, cnt_of_unconf)) {
@@ -4790,7 +4794,7 @@ found_one:
 	if (fromlen && from) {
 		struct sockaddr *to;
 
-#ifdef AF_INET
+#ifdef INET
 		cp_len = min(fromlen, control->whoFrom->ro._l_addr.sin.sin_len);
 		memcpy(from, &control->whoFrom->ro._l_addr, cp_len);
 		((struct sockaddr_in *)from)->sin_port = control->port_from;
@@ -4802,7 +4806,7 @@ found_one:
 #endif
 
 		to = from;
-#if defined(AF_INET) && defined(AF_INET6)
+#if defined(INET) && defined(INET6)
 		if ((inp->sctp_flags & SCTP_PCB_FLAGS_NEEDS_MAPPED_V4) &&
 		    (to->sa_family == AF_INET) &&
 		    ((size_t)fromlen >= sizeof(struct sockaddr_in6))) {
@@ -4822,7 +4826,7 @@ found_one:
 		}
 #endif
 #if defined(SCTP_EMBEDDED_V6_SCOPE)
-#if defined(AF_INET6) 
+#if defined(INET6) 
 		{
 			struct sockaddr_in6 lsa6, *to6;
 			to6 = (struct sockaddr_in6 *)to;

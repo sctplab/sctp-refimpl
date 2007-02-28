@@ -1475,7 +1475,11 @@ connected_type:
 	}
 }
 
+#if defined(__Panda__)
+int
+#else
 static int
+#endif
 sctp_disconnect(struct socket *so)
 {
 	struct sctp_inpcb *inp;
@@ -2281,8 +2285,11 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 		destp = (type *)srcp; \
 	}
 
-
+#if defined(__Panda__)
+int
+#else
 static int
+#endif
 sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 	    void *p) {
 	struct sctp_inpcb *inp;
@@ -2814,12 +2821,6 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 					}
 				}
 				paddrp->spp_hbinterval = stcb->asoc.heart_beat_delay;
-				paddrp->spp_sackdelay = stcb->asoc.delayed_ack;
-				/*
-				 * Currently we don't support no sack delay
-				 * aka SPP_SACKDELAY_DISABLE.
-				 */
-				paddrp->spp_flags |= SPP_SACKDELAY_ENABLE;
 				paddrp->spp_assoc_id = sctp_get_associd(stcb);
 				SCTP_TCB_UNLOCK(stcb);
 			} else {
@@ -2827,7 +2828,6 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 				SCTP_INP_RLOCK(inp);
 				paddrp->spp_pathmaxrxt = inp->sctp_ep.def_net_failure;
 				paddrp->spp_hbinterval = TICKS_TO_MSEC(inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_HEARTBEAT]);
-				paddrp->spp_sackdelay = TICKS_TO_MSEC(inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV]);
 				paddrp->spp_assoc_id = (sctp_assoc_t) 0;
 				/* get inp's default */
 #ifdef INET
@@ -2850,7 +2850,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 				paddrp->spp_pathmaxrxt = 0;
 				paddrp->spp_pathmtu = 0;
 				/* default behavior, no stcb */
-				paddrp->spp_flags = SPP_HB_ENABLE | SPP_SACKDELAY_ENABLE | SPP_PMTUD_ENABLE;
+				paddrp->spp_flags = SPP_HB_ENABLE | SPP_PMTUD_ENABLE;
 
 				SCTP_INP_RUNLOCK(inp);
 			}
@@ -3000,6 +3000,8 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 				sasoc->sasoc_peer_rwnd = stcb->asoc.peers_rwnd;
 				sasoc->sasoc_local_rwnd = stcb->asoc.my_rwnd;
 				sasoc->sasoc_cookie_life = stcb->asoc.cookie_life;
+				sasoc->sasoc_sack_delay = stcb->asoc.delayed_ack;
+				sasoc->sasoc_sack_freq = stcb->asoc.sack_freq;
 				SCTP_TCB_UNLOCK(stcb);
 			} else {
 				SCTP_INP_RLOCK(inp);
@@ -3008,6 +3010,8 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 				sasoc->sasoc_peer_rwnd = 0;
 				sasoc->sasoc_local_rwnd = sbspace(&inp->sctp_socket->so_rcv);
 				sasoc->sasoc_cookie_life = inp->sctp_ep.def_cookie_life;
+				sasoc->sasoc_sack_delay = TICKS_TO_MSEC(inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV]);
+				sasoc->sasoc_sack_freq = inp->sctp_ep.sctp_sack_freq;
 				SCTP_INP_RUNLOCK(inp);
 			}
 			*optsize = sizeof(*sasoc);
@@ -3203,8 +3207,11 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 	return (error);
 }
 
-
+#if defined(__Panda__)
+int
+#else
 static int
+#endif
 sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 	    void *p)
 {
@@ -3839,20 +3846,6 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 
 			if (stcb) {
 				/************************TCB SPECIFIC SET ******************/
-				/* sack delay first */
-				if (paddrp->spp_flags & SPP_SACKDELAY_ENABLE) {
-					/*
-					 * we do NOT support turning it off
-					 * (yet). only setting the delay.
-					 */
-					if (paddrp->spp_sackdelay >= SCTP_CLOCK_GRANULARITY)
-						stcb->asoc.delayed_ack = paddrp->spp_sackdelay;
-					else
-						stcb->asoc.delayed_ack = SCTP_CLOCK_GRANULARITY;
-
-				} else if (paddrp->spp_flags & SPP_SACKDELAY_DISABLE) {
-					stcb->asoc.delayed_ack = 0;
-				}
 				/*
 				 * do we change the timer for HB, we run
 				 * only one?
@@ -3967,15 +3960,6 @@ SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
 				} else if (paddrp->spp_flags & SPP_HB_DISABLE) {
 					sctp_feature_on(inp, SCTP_PCB_FLAGS_DONOT_HEARTBEAT);
 				}
-				if (paddrp->spp_flags & SPP_SACKDELAY_ENABLE) {
-					if (paddrp->spp_sackdelay > SCTP_CLOCK_GRANULARITY)
-						inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV] = MSEC_TO_TICKS(paddrp->spp_sackdelay);
-					else
-						inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV] = MSEC_TO_TICKS(SCTP_CLOCK_GRANULARITY);
-
-				} else if (paddrp->spp_flags & SPP_SACKDELAY_DISABLE) {
-					inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV] = 0;
-				}
 				SCTP_INP_WUNLOCK(inp);
 			}
 		}
@@ -4027,6 +4011,10 @@ SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
 				sasoc->sasoc_local_rwnd = 0;
 				if (stcb->asoc.cookie_life)
 					stcb->asoc.cookie_life = sasoc->sasoc_cookie_life;
+				stcb->asoc.delayed_ack = sasoc->sasoc_sack_delay;
+				if(sasoc->sasoc_sack_freq) {
+					stcb->asoc.sack_freq = sasoc->sasoc_sack_freq;
+				}
 				SCTP_TCB_UNLOCK(stcb);
 			} else {
 				SCTP_INP_WLOCK(inp);
@@ -4037,6 +4025,10 @@ SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
 				sasoc->sasoc_local_rwnd = 0;
 				if (sasoc->sasoc_cookie_life)
 					inp->sctp_ep.def_cookie_life = sasoc->sasoc_cookie_life;
+				inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV] = MSEC_TO_TICKS(sasoc->sasoc_sack_delay);
+				if(sasoc->sasoc_sack_freq) {
+					inp->sctp_ep.sctp_sack_freq = sasoc->sasoc_sack_freq;
+				}
 				SCTP_INP_WUNLOCK(inp);
 			}
 		}
