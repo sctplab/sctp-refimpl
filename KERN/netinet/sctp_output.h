@@ -42,6 +42,19 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_output.h,v 1.2 2007/01/18 09:58:43 rrs 
 
 #if defined(_KERNEL)
 
+struct mbuf *
+sctp_get_mbuf_for_msg(unsigned int space_needed, 
+		      int want_header, int how, int allonebuf, int type);
+
+
+
+struct mbuf *
+sctp_add_addresses_to_i_ia(struct sctp_inpcb *inp, 
+			   struct sctp_scoping *scope, 
+			   struct mbuf *m_at, 
+			   int cnt_inits_to);
+
+
 int sctp_is_addr_restricted(struct sctp_tcb *, struct sctp_ifa *);
 
 
@@ -131,10 +144,6 @@ sctp_send_packet_dropped(struct sctp_tcb *, struct sctp_nets *, struct mbuf *,
 
 void sctp_send_cwr(struct sctp_tcb *, struct sctp_nets *, uint32_t);
 
-
-struct mbuf *
-sctp_get_mbuf_for_msg(unsigned int space_needed, 
-		      int want_header, int how, int allonebuf, int type);
 
 void
 sctp_add_stream_reset_out(struct sctp_tmit_chunk *chk,
