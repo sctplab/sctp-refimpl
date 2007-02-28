@@ -3303,23 +3303,28 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			/*
 			 * src addr selection failed to find a route (or
 			 * valid source addr), so we can't get there from
-			 * here!
+			 * here (yet)!
 			 */
 		no_route:
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
-				printf("low_level_output: dropped v4 packet- no valid source addr\n");
-				printf("Destination was %x\n", (uint32_t) (ntohl(ip->ip_dst.s_addr)));
+				printf("low_level_output: dropped packet - no valid source addr\n");
+				if (net) {
+					printf("Destination was ");
+					sctp_print_address(&net->ro._l_addr.sa);
+				}
 			}
 #endif				/* SCTP_DEBUG */
 			if (net) {
-				if ((net->dest_state & SCTP_ADDR_REACHABLE) && stcb)
-					sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_DOWN,
-					    stcb,
-					    SCTP_FAILED_THRESHOLD,
-					    (void *)net);
-				net->dest_state &= ~SCTP_ADDR_REACHABLE;
-				net->dest_state |= SCTP_ADDR_NOT_REACHABLE;
+				if (net->dest_state & SCTP_ADDR_CONFIRMED) { 
+					if ((net->dest_state & SCTP_ADDR_REACHABLE) && stcb)
+						sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_DOWN,
+								stcb,
+								SCTP_FAILED_THRESHOLD,
+								(void *)net);
+					net->dest_state &= ~SCTP_ADDR_REACHABLE;
+					net->dest_state |= SCTP_ADDR_NOT_REACHABLE;
+				}
 				if (stcb) {
 					if (net == stcb->asoc.primary_destination) {
 						/* need a new primary */
@@ -4470,7 +4475,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				stc.loopback_scope = 1;
 				stc.ipv4_scope = 1;
 				stc.site_scope = 1;
-				stc.local_scope = 1;
+				stc.local_scope = 0;
 			}
 		} else if (iph->ip_v == (IPV6_VERSION >> 4)) {
 			struct sctp_ifa *addr;
@@ -4493,7 +4498,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			stc.scope_id = 0;
 			if (sctp_is_address_on_local_host((struct sockaddr *)sin6, vrf_id)) {
 				stc.loopback_scope = 1;
-				stc.local_scope = 1;
+				stc.local_scope = 0;
 				stc.site_scope = 1;
 				stc.ipv4_scope = 1;
 			} else if (IN6_IS_ADDR_LINKLOCAL(&sin6->sin6_addr)) {
@@ -9216,6 +9221,7 @@ sctp_send_hb(struct sctp_tcb *stcb, int user_req, struct sctp_nets *u_net)
 #endif
 		return (0);
 	}
+
 	chk->copy_by_ref = 0;
 	chk->rec.chunk_id.id = SCTP_HEARTBEAT_REQUEST;
 	chk->rec.chunk_id.can_take_data = 1;

@@ -3285,7 +3285,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 		if (set_scope) {
 			if (sctp_is_address_on_local_host(newaddr, stcb->asoc.vrf_id)) {
 				stcb->asoc.loopback_scope = 1;
-				stcb->asoc.local_scope = 1;
+				stcb->asoc.local_scope = 0;
 				stcb->asoc.ipv4_local_scope = 1;
 				stcb->asoc.site_scope = 1;
 			} else if (IN6_IS_ADDR_LINKLOCAL(&sin6->sin6_addr)) {
@@ -3340,8 +3340,9 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	if(net->addr_is_local && ((set_scope || (from == SCTP_ADDR_IS_CONFIRMED)))) {
 		stcb->asoc.loopback_scope = 1;
 		stcb->asoc.ipv4_local_scope = 1;
-		stcb->asoc.local_scope = 1;
+		stcb->asoc.local_scope = 0;
 		stcb->asoc.site_scope = 1;
+		addr_inscope = 1;
 	}
 	net->failure_threshold = stcb->asoc.def_net_failure;
 	if (addr_inscope == 0) {
@@ -3522,7 +3523,6 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 		TAILQ_INSERT_HEAD(&stcb->asoc.nets, 
 				  stcb->asoc.primary_destination, sctp_next);
 	}
-
 	return (0);
 }
 
@@ -6039,6 +6039,10 @@ sctp_initiate_iterator(inp_func inpf, asoc_func af, uint32_t pcb_state,
 	memset(it, 0, sizeof(*it));
 	it->function_assoc = af;
 	it->function_inp = inpf;
+	if(inpf)
+		it->done_current_ep = 0;
+	else
+		it->done_current_ep = 1;
 	it->function_atend = ef;
 	it->pointer = argp;
 	it->val = argi;
