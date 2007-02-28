@@ -120,7 +120,7 @@ typedef int (*inp_func) (struct sctp_inpcb *, void *ptr, uint32_t val);
 typedef void (*end_func) (void *ptr, uint32_t val);
 
 struct sctp_iterator {
-	LIST_ENTRY(sctp_iterator) sctp_nxt_itr;
+	TAILQ_ENTRY(sctp_iterator) sctp_nxt_itr;
 	struct sctp_timer tmr;
 	struct sctp_inpcb *inp;		/* current endpoint */
 	struct sctp_tcb *stcb;		/* current* assoc */
@@ -140,7 +140,7 @@ struct sctp_iterator {
 #define SCTP_ITERATOR_DO_ALL_INP	0x00000001
 #define SCTP_ITERATOR_DO_SINGLE_INP	0x00000002
 
-LIST_HEAD(sctpiterators, sctp_iterator);
+TAILQ_HEAD(sctpiterators, sctp_iterator);
 
 struct sctp_copy_all {
 	struct sctp_inpcb *inp;	/* ep */

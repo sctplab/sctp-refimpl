@@ -66,10 +66,23 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.7 2007/02/12 23:24:31 r
 /* Number of addresses where we just skip the counting */
 #define SCTP_COUNT_LIMIT 40
 
+/* Number of ticks to delay before running 
+ * iterator on an address change.
+ */
+#define SCTP_ADDRESS_TICK_DELAY 2
+
 #define SCTP_VERSION_STRING "KAME-BSD 1.1"
 /* #define SCTP_AUDITING_ENABLED 1 used for debug/auditing */
 #define SCTP_AUDIT_SIZE 256
 #define SCTP_STAT_LOG_SIZE 80000
+
+#ifdef __FreeBSD__
+#define SCTP_USE_THREAD_BASED_ITERATOR 1
+#endif
+
+#define SCTP_KTRHEAD_NAME "sctp_iterator"
+#define SCTP_KTHREAD_PAGES 2
+
 
 /* Places that CWND log can happen from */
 #define SCTP_CWND_LOG_FROM_FR	1

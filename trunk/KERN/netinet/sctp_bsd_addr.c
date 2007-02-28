@@ -47,11 +47,43 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_bsd_addr.c,v 1.4 2007/01/18 09:58:42 rr
 #include <netinet/sctp_timer.h>
 #include <netinet/sctp_asconf.h>
 #include <netinet/sctp_indata.h>
-
+#include <sys/unistd.h>
 
 #ifdef SCTP_DEBUG
 extern uint32_t sctp_debug_on;
 #endif
+
+void
+sctp_wakeup_iterator(void)
+{
+	wakeup(&sctppcbinfo.iterator_running);
+}
+
+static void
+sctp_iterator_thread(void *v)
+{
+	SCTP_IPI_ITERATOR_WQ_LOCK();
+	sctppcbinfo.iterator_running = 0;
+	while(1) {
+		
+		msleep(&sctppcbinfo.iterator_running,
+		       &sctppcbinfo.ipi_iterator_wq_mtx,
+		       0, "waiting_for_work", 0);
+		sctp_iterator_worker();
+	}
+}
+
+void
+sctp_startup_iterator(void)
+{
+	int ret;
+	ret = kthread_create(sctp_iterator_thread,
+			     (void *)NULL , 
+			     &sctppcbinfo.thread_proc,
+			     RFPROC, 
+			     SCTP_KTHREAD_PAGES, 
+			     SCTP_KTRHEAD_NAME); 
+}
 
 void
 sctp_gather_internal_ifa_flags(struct sctp_ifa *ifa)
@@ -119,7 +151,6 @@ sctp_init_ifns_for_vrf(int vrfid)
 					);
 				if(sctp_ifa) {
 					sctp_ifa->localifa_flags &= ~SCTP_ADDR_DEFER_USE;
-					sctp_print_address(ifa->ifa_addr);
 				} 
 			}
 		}
@@ -143,6 +174,7 @@ sctp_init_vrf_list(int vrfid)
 	sctp_init_ifns_for_vrf(vrfid); 
 }
 
+static uint8_t first_time=0;
 
 void
 sctp_addr_change(struct ifaddr *ifa, int cmd)
@@ -155,7 +187,11 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 	 * things here to get the id to pass to
 	 * the address managment routine.
 	 */
-	
+	if (first_time == 0) {
+		/* Special test to see if my ::1 will showup with this */
+		first_time = 1;
+		sctp_init_ifns_for_vrf(SCTP_DEFAULT_VRFID);
+	}
 	if(cmd == RTM_ADD) {
 		struct in6_ifaddr *ifa6;
 		if(ifa->ifa_addr->sa_family == AF_INET6) {
@@ -177,6 +213,7 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 			atomic_add_int(&ifap->refcount, 1);
 		
 	} else if (cmd == RTM_DELETE) {
+
 		ifap = sctp_del_addr_from_vrf(SCTP_DEFAULT_VRFID, ifa->ifa_addr, ifa->ifa_ifp->if_index);
 		/* We don't bump refcount here so when it completes
 		 * the final delete will happen.

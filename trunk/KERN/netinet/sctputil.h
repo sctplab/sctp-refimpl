@@ -102,6 +102,8 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
     struct sockbuf *sb);
 
 
+void sctp_iterator_worker(void);
+
 int find_next_best_mtu(int);
 
 void
