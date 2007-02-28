@@ -176,7 +176,7 @@ sctp_allocate_vrf(int vrfid)
 	memset(vrf, 0, sizeof(struct sctp_vrf));
 	vrf->vrf_id = vrfid;
 	LIST_INIT(&vrf->ifnlist);
-
+	vrf->total_ifa_count = 0;
 	/* Add it to the hash table */
 	bucket = &sctppcbinfo.sctp_vrfhash[(vrfid & sctppcbinfo.hashvrfmark)];
 	LIST_INSERT_HEAD(bucket, vrf, next_vrf);
@@ -323,6 +323,7 @@ sctp_add_addr_to_vrf(uint32_t vrfid,
 	sctp_ifap->refcount = 1;
 	LIST_INSERT_HEAD(&sctp_ifnp->ifalist, sctp_ifap, next_ifa);
 	sctp_ifnp->ifa_count++;
+	vrf->total_ifa_count++;
 	SCTP_IPI_ADDR_UNLOCK();
 	return(sctp_ifap);
 }
@@ -351,6 +352,7 @@ sctp_del_addr_from_vrf(uint32_t vrfid, struct sockaddr *addr, uint32_t ifn_index
 		sctp_ifap->localifa_flags &= SCTP_ADDR_VALID;
 		sctp_ifap->localifa_flags |= SCTP_BEING_DELETED;
 		sctp_ifnp->ifa_count--;
+		vrf->total_ifa_count--;
 		LIST_REMOVE(sctp_ifap, next_ifa);
 		atomic_add_int(&sctp_ifnp->refcount, -1);
 	} else {

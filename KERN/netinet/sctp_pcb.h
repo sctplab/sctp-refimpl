@@ -115,6 +115,7 @@ struct sctp_vrf {
 	LIST_ENTRY (sctp_vrf) next_vrf;
 	struct sctp_ifnlist ifnlist;
 	uint32_t vrf_id;
+	uint32_t total_ifa_count;
 };
 
 

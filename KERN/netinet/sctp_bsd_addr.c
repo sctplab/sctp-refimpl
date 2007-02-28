@@ -213,7 +213,7 @@ sctp_add_addresses_to_i_ia(struct sctp_inpcb *inp, struct sctp_scoping *scope,
 			   struct mbuf *m_at, int cnt_inits_to)
 {
 	struct sctp_vrf *vrf = NULL;
-	int cnt;
+	int cnt, limit_out=0, total_cnt;
 	uint32_t vrf_id;
 
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
@@ -230,6 +230,11 @@ sctp_add_addresses_to_i_ia(struct sctp_inpcb *inp, struct sctp_scoping *scope,
 		struct sctp_ifn *sctp_ifnp;
 
 		cnt = cnt_inits_to;
+		if (vrf->total_ifa_count > SCTP_COUNT_LIMIT) {
+			limit_out = 1;
+			cnt = SCTP_ADDRESS_LIMIT;
+			goto skip_count;
+		}
 		LIST_FOREACH(sctp_ifnp, &vrf->ifnlist, next_ifn) {
 			if ((scope->loopback_scope == 0) &&
 			    (sctp_ifnp->ifn_type == IFT_LOOP)) {
@@ -250,10 +255,19 @@ sctp_add_addresses_to_i_ia(struct sctp_inpcb *inp, struct sctp_scoping *scope,
 					continue;
 				}
 				cnt++;
+				if(cnt > SCTP_ADDRESS_LIMIT) {
+					break;
+				}
+			}
+			if(cnt > SCTP_ADDRESS_LIMIT) {
+				break;
 			}
 		}
+	skip_count:
 		if (cnt > 1) {
+			total_cnt = 0;
 			LIST_FOREACH(sctp_ifnp, &vrf->ifnlist, next_ifn) {
+				cnt = 0;
 				if ((scope->loopback_scope == 0) &&
 				    (sctp_ifnp->ifn_type == IFT_LOOP)) {
 					/*
@@ -273,12 +287,23 @@ sctp_add_addresses_to_i_ia(struct sctp_inpcb *inp, struct sctp_scoping *scope,
 						continue;
 					}
 					m_at = sctp_add_addr_to_mbuf(m_at, sctp_ifap);
+					if(limit_out) {
+						cnt++;
+						total_count++;
+						if(cnt >= 2) {
+							/* two from each address */
+							break;
+						}
+						if (total_count > SCTP_ADDRESS_LIMIT) {
+							/* No more addresses */
+							break;
+						}
+					}
 				}
 			}
 		}
 	} else {
 		struct sctp_laddr *laddr;
-		int cnt;
 
 		cnt = cnt_inits_to;
 		/* First, how many ? */
@@ -300,6 +325,9 @@ sctp_add_addresses_to_i_ia(struct sctp_inpcb *inp, struct sctp_scoping *scope,
 			}
 			cnt++;
 		}
+		if(cnt > SCTP_ADDRESS_LIMIT) {
+			limit_out = 1;
+		}
 		/*
 		 * To get through a NAT we only list addresses if we have
 		 * more than one. That way if you just bind a single address
@@ -307,6 +335,7 @@ sctp_add_addresses_to_i_ia(struct sctp_inpcb *inp, struct sctp_scoping *scope,
 		 */
 		if (cnt > 1) {
 			LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
+				cnt = 0;
 				if (laddr->ifa == NULL) {
 					continue;
 				}
@@ -323,6 +352,10 @@ sctp_add_addresses_to_i_ia(struct sctp_inpcb *inp, struct sctp_scoping *scope,
 					continue;
 				}
 				m_at = sctp_add_addr_to_mbuf(m_at, laddr->ifa);
+				cnt++;
+				if (cnt >= SCTP_ADDRESS_LIMIT) {
+					break;
+				}
 			}
 		}
 	}
