@@ -2724,7 +2724,6 @@ sctp_count_num_prefered_boundall(struct sctp_ifn *ifn,
 	int num_eligible_addr = 0;
 
 	LIST_FOREACH(ifa, &ifn->ifalist, next_ifa) {
-		sctp_print_address(&ifa->address.sa);
 		if ((ifa->localifa_flags & SCTP_ADDR_DEFER_USE) && (non_asoc_addr_ok == 0)) {
 			continue;
 		}
