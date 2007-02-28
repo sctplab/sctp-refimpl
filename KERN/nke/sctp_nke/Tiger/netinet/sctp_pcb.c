@@ -153,6 +153,37 @@ sctp_fill_pcbinfo(struct sctp_pcbinfo *spcb)
  *
  */
 
+struct sctp_vrf *
+sctp_allocate_vrf(int vrfid)
+{
+	struct sctp_vrf *vrf=NULL;
+	struct sctp_vrflist *bucket;
+	/* First allocate the VRF structure */
+	vrf = sctp_find_vrf(vrfid);
+	if(vrf) {
+		/* Already allocated */
+		return(vrf);
+	}
+	SCTP_MALLOC(vrf, struct sctp_vrf *, sizeof(struct sctp_vrf), "SCTP_VRF");
+ 	if(vrf == NULL) {
+ 		/* No memory */
+#ifdef INVARIANTS
+		panic("No memory for VRF:%d", vrfid);
+#endif
+		return(NULL);
+	}
+	/* setup the VRF */
+	memset(vrf, 0, sizeof(struct sctp_vrf));
+	vrf->vrf_id = vrfid;
+	LIST_INIT(&vrf->ifnlist);
+	vrf->total_ifa_count = 0;
+	/* Add it to the hash table */
+	bucket = &sctppcbinfo.sctp_vrfhash[(vrfid & sctppcbinfo.hashvrfmark)];
+	LIST_INSERT_HEAD(bucket, vrf, next_vrf);
+	return (vrf);
+}
+
+
 struct sctp_ifn *
 sctp_find_ifn(struct sctp_vrf *vrf, void *ifn, uint32_t ifn_index)
 {
@@ -198,21 +229,29 @@ sctp_free_ifa(struct sctp_ifa *sctp_ifap)
 }
 
 struct sctp_ifa *
-sctp_add_addr_to_vrf(struct sctp_vrf *vrf, 
+sctp_add_addr_to_vrf(uint32_t vrfid,
 		     void *ifn, uint32_t ifn_index, uint32_t ifn_type,
 		     const char *if_name,
-		     void *ifa, struct sockaddr *addr, uint32_t ifa_flags)
+		     void *ifa, sctp_os_addr_t *addr, uint32_t ifa_flags)
 {
+	struct sctp_vrf *vrf;
 	struct sctp_ifn *sctp_ifnp = NULL;
 	struct sctp_ifa *sctp_ifap = NULL;
 
-       /* FIX ME - NEED TO DYNAMICALLY BUILD VRF's */
 
        /* How granular do we need the locks to be here? 
 	*/
 	SCTP_IPI_ADDR_LOCK();
+	vrf = sctp_find_vrf(vrfid);
+	if(vrf == NULL) {
+		vrf = sctp_allocate_vrf(vrfid);
+		if (vrf == NULL) {
+			SCTP_IPI_ADDR_UNLOCK();
+			return (NULL);
+		}
+	}
 	sctp_ifnp = sctp_find_ifn(vrf, ifn, ifn_index);
-	if(sctp_ifnp == NULL) {
+	if (sctp_ifnp == NULL) {
 		/* build one and add it, can't hold lock
 		 * until after malloc done though.
 		 */
@@ -236,7 +275,7 @@ sctp_add_addr_to_vrf(struct sctp_vrf *vrf,
 		LIST_INSERT_HEAD(&vrf->ifnlist, sctp_ifnp, next_ifn);
 	}
 	sctp_ifap = sctp_find_ifa_by_addr(addr, vrf->vrf_id, 1);
-	if(sctp_ifap) {
+	if (sctp_ifap) {
 		/* Hmm, it already exists? */
 		if((sctp_ifap->ifn_p) && (sctp_ifap->ifn_p->ifn_index == ifn_index)) {
 			if(sctp_ifap->localifa_flags & SCTP_BEING_DELETED) {
@@ -277,7 +316,7 @@ sctp_add_addr_to_vrf(struct sctp_vrf *vrf,
 	atomic_add_int(&sctp_ifnp->refcount, 1);
 
 	sctp_ifap->ifa = ifa;
-	memcpy(&sctp_ifap->address, addr, addr->sa_len);
+	memcpy(&sctp_ifap->address, addr, SCTP_OS_ADDR_LEN(addr));
 	sctp_ifap->localifa_flags = SCTP_ADDR_VALID | SCTP_ADDR_DEFER_USE;
 	sctp_ifap->flags = ifa_flags;
 
@@ -285,17 +324,25 @@ sctp_add_addr_to_vrf(struct sctp_vrf *vrf,
 	sctp_ifap->refcount = 1;
 	LIST_INSERT_HEAD(&sctp_ifnp->ifalist, sctp_ifap, next_ifa);
 	sctp_ifnp->ifa_count++;
+	vrf->total_ifa_count++;
 	SCTP_IPI_ADDR_UNLOCK();
-	return(sctp_ifap);
+	return (sctp_ifap);
 }
 
 struct sctp_ifa *
-sctp_del_addr_from_vrf(struct sctp_vrf *vrf, struct sockaddr *addr, uint32_t ifn_index)
+sctp_del_addr_from_vrf(uint32_t vrfid, sctp_os_addr_t *addr,
+		       uint32_t ifn_index)
 {
+	struct sctp_vrf *vrf;
 	struct sctp_ifa *sctp_ifap = NULL;
 	struct sctp_ifn *sctp_ifnp = NULL;
 	SCTP_IPI_ADDR_LOCK();
 
+	vrf = sctp_find_vrf(vrfid);
+	if (vrf == NULL) {
+		printf("Can't find vrfid:%d\n", vrfid);
+		goto out_now;
+	}
 	sctp_ifnp = sctp_find_ifn(vrf, (void *)NULL, ifn_index);
 	if(sctp_ifnp == NULL) {
 		sctp_ifap = sctp_find_ifa_by_addr(addr, vrf->vrf_id, 1);
@@ -307,13 +354,15 @@ sctp_del_addr_from_vrf(struct sctp_vrf *vrf, struct sockaddr *addr, uint32_t ifn
 		sctp_ifap->localifa_flags &= SCTP_ADDR_VALID;
 		sctp_ifap->localifa_flags |= SCTP_BEING_DELETED;
 		sctp_ifnp->ifa_count--;
+		vrf->total_ifa_count--;
 		LIST_REMOVE(sctp_ifap, next_ifa);
 		atomic_add_int(&sctp_ifnp->refcount, -1);
 	} else {
 		printf("Could not find address to be deleted\n");
 	}
+ out_now:
 	SCTP_IPI_ADDR_UNLOCK();	
-	return(sctp_ifap);
+	return (sctp_ifap);
 }
 
 /*
@@ -1975,6 +2024,7 @@ sctp_inpcb_alloc(struct socket *so)
 	m->sctp_minrto = sctp_rto_min_default;
 	m->initial_rto = sctp_rto_initial_default;
 	m->initial_init_rto_max = sctp_init_rto_max_default;
+	m->sctp_sack_freq = SCTP_DEFAULT_SACK_FREQ;
 
 	m->max_open_streams_intome = MAX_SCTP_STREAMS;
 
@@ -2516,7 +2566,11 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 		 * zero out the port to find the address! yuck! can't do
 		 * this earlier since need port for sctp_pcb_findep()
 		 */
-		ifa = sctp_find_ifa_by_addr((struct sockaddr *)&store_sa, vrf, 0);
+#if defined(__Panda__)
+		/* convert store_sa to sctp_os_addr_t first here */
+#else
+		ifa = sctp_find_ifa_by_addr((sctp_os_addr_t *)&store_sa, vrf, 0);
+#endif
 		if (ifa == NULL) {
 			/* Can't find an interface with that address */
 			SCTP_INP_WUNLOCK(inp);
@@ -3195,8 +3249,9 @@ int
 sctp_is_address_on_local_host(struct sockaddr *addr, uint32_t vrf_id)
 {
 	struct sctp_ifa *sctp_ifa;
+
 	sctp_ifa = sctp_find_ifa_by_addr(addr, vrf_id, 0);
-	if(sctp_ifa) {
+	if (sctp_ifa) {
 		return (1);
 	} else {
 		return (0);
@@ -3285,7 +3340,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 		if (set_scope) {
 			if (sctp_is_address_on_local_host(newaddr, stcb->asoc.vrf_id)) {
 				stcb->asoc.loopback_scope = 1;
-				stcb->asoc.local_scope = 1;
+				stcb->asoc.local_scope = 0;
 				stcb->asoc.ipv4_local_scope = 1;
 				stcb->asoc.site_scope = 1;
 			} else if (IN6_IS_ADDR_LINKLOCAL(&sin6->sin6_addr)) {
@@ -3340,8 +3395,9 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	if(net->addr_is_local && ((set_scope || (from == SCTP_ADDR_IS_CONFIRMED)))) {
 		stcb->asoc.loopback_scope = 1;
 		stcb->asoc.ipv4_local_scope = 1;
-		stcb->asoc.local_scope = 1;
+		stcb->asoc.local_scope = 0;
 		stcb->asoc.site_scope = 1;
+		addr_inscope = 1;
 	}
 	net->failure_threshold = stcb->asoc.def_net_failure;
 	if (addr_inscope == 0) {
@@ -3522,7 +3578,6 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 		TAILQ_INSERT_HEAD(&stcb->asoc.nets, 
 				  stcb->asoc.primary_destination, sctp_next);
 	}
-
 	return (0);
 }
 
@@ -5013,6 +5068,8 @@ sctp_pcb_init()
 
 	SCTP_IPI_COUNT_INIT();
 	SCTP_IPI_ADDR_INIT();
+	SCTP_IPI_ITERATOR_WQ_INIT();
+
 	LIST_INIT(&sctppcbinfo.addr_wq);
 
 	/* not sure if we need all the counts */
@@ -6039,6 +6096,10 @@ sctp_initiate_iterator(inp_func inpf, asoc_func af, uint32_t pcb_state,
 	memset(it, 0, sizeof(*it));
 	it->function_assoc = af;
 	it->function_inp = inpf;
+	if(inpf)
+		it->done_current_ep = 0;
+	else
+		it->done_current_ep = 1;
 	it->function_atend = ef;
 	it->pointer = argp;
 	it->val = argi;

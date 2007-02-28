@@ -115,8 +115,8 @@ struct sctp_vrf {
 	LIST_ENTRY (sctp_vrf) next_vrf;
 	struct sctp_ifnlist ifnlist;
 	uint32_t vrf_id;
+	uint32_t total_ifa_count;
 };
-
 
 struct sctp_ifn {
 	struct sctp_ifalist ifalist;
@@ -224,11 +224,12 @@ struct sctp_epinfo {
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
 	struct mtx ipi_ep_mtx;
 	struct mtx it_mtx;
+	struct mtx ipi_iterator_wq_mtx;
 	struct mtx ipi_addr_mtx;
-	struct mtx timer_mtx;
 #elif defined(SCTP_PROCESS_LEVEL_LOCKS)
 	pthread_mutex_t ipi_ep_mtx;
 	pthread_mutex_t it_mtx;
+	pthread_mutex_t ipi_iterator_wq_mtx;
 	pthread_mutex_t ipi_addr_mtx;
 	pthread_mutex_t ipi_count_mtx;
 #elif defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
@@ -238,6 +239,7 @@ struct sctp_epinfo {
 	lck_attr_t *mtx_attr;
 	lck_rw_t *ipi_ep_mtx;
 	lck_mtx_t *it_mtx;
+	lck_mtx_t *ipi_iterator_wq_mtx;
 	lck_mtx_t *ipi_count_mtx;
 	lck_mtx_t *logging_mtx;
 #else
@@ -246,6 +248,7 @@ struct sctp_epinfo {
 	void *mtx_attr;
 	void *ipi_ep_mtx;
 	void *it_mtx;
+	void *ipi_iterator_wq_mtx;
 	void *ipi_count_mtx;
 	void *logging_mtx;
 #endif				/* _KERN_LOCKS_H_ */
@@ -299,9 +302,9 @@ struct sctp_pcb {
 	unsigned int sctp_minrto;
 	unsigned int sctp_maxrto;
 	unsigned int initial_rto;
-
 	int initial_init_rto_max;
 
+	unsigned int sctp_sack_freq;
 	uint32_t sctp_sws_sender;
 	uint32_t sctp_sws_receiver;
 
@@ -530,18 +533,21 @@ void sctp_fill_pcbinfo(struct sctp_pcbinfo *);
 struct sctp_ifn *
 sctp_find_ifn(struct sctp_vrf *vrf, void *ifn, uint32_t ifn_index);
 
+struct sctp_vrf *sctp_allocate_vrf(int vrfid);
+
 struct sctp_vrf *sctp_find_vrf(uint32_t vrfid);
 
 struct sctp_ifa *
-sctp_add_addr_to_vrf(struct sctp_vrf *vrf, 
+sctp_add_addr_to_vrf(uint32_t vrfid,
 		     void *ifn, uint32_t ifn_index, uint32_t ifn_type,
 		     const char *if_name,
-		     void *ifa, struct sockaddr *addr, uint32_t ifa_flags);
+		     void *ifa, sctp_os_addr_t *addr, uint32_t ifa_flags);
 
 void sctp_free_ifa(struct sctp_ifa *sctp_ifap);
 
 struct sctp_ifa *
-sctp_del_addr_from_vrf(struct sctp_vrf *vrf, struct sockaddr *addr, uint32_t ifn_index);
+sctp_del_addr_from_vrf(uint32_t vrfid, sctp_os_addr_t *addr,
+		       uint32_t ifn_index);
 
 
 

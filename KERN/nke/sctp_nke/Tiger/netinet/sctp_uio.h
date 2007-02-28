@@ -414,7 +414,6 @@ struct sctp_paddrparams {
 	uint32_t spp_hbinterval;
 	uint16_t spp_pathmaxrxt;
 	uint32_t spp_pathmtu;
-	uint32_t spp_sackdelay;
 	uint32_t spp_flags;
 	uint32_t spp_ipv6_flowlabel;
 	uint8_t spp_ipv4_tos;
@@ -456,6 +455,8 @@ struct sctp_assocparams {
 	uint32_t sasoc_peer_rwnd;
 	uint32_t sasoc_local_rwnd;
 	uint32_t sasoc_cookie_life;
+	uint32_t sasoc_sack_delay;
+	uint32_t sasoc_sack_freq;
 };
 
 struct sctp_setprim {
