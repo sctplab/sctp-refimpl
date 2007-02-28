@@ -377,8 +377,8 @@ sctp_init_ifns_for_vrf(int vrfid)
 	struct ifnet *ifn;
 	struct ifaddr *ifa;
 	struct in6_ifaddr *ifa6;
+	struct sctp_ifa *sctp_ifa;
 	uint32_t ifa_flags;
-	int cnt=0;
 
 	TAILQ_FOREACH(ifn, &ifnet, if_list) {
 		TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
@@ -390,26 +390,26 @@ sctp_init_ifns_for_vrf(int vrfid)
 				} else {
 					ifa_flags = 0;
 				}
-				sctp_add_addr_to_vrf(vrfid, 
-						     (void *)ifn,
-						     ifn->if_index, 
-						     ifn->if_type,
+				sctp_ifa = sctp_add_addr_to_vrf(vrfid, 
+								(void *)ifn,
+								ifn->if_index, 
+								ifn->if_type,
 #ifdef __APPLE__
-				                     ifn->if_name,
+								ifn->if_name,
 #else
-				                     ifn->if_xname,
+								ifn->if_xname,
 #endif
-						     (void *)ifa,
-						     ifa->ifa_addr,
-						     ifa_flags
-						     );
-				cnt++;
-				printf("Added MASTER address:");
-				sctp_print_address(ifa->ifa_addr);
+								(void *)ifa,
+								ifa->ifa_addr,
+								ifa_flags
+					);
+				if(sctp_ifa) {
+					sctp_ifa->localifa_flags &= ~SCTP_ADDR_DEFER_USE;
+					sctp_print_address(ifa->ifa_addr);
+				} 
 			}
 		}
 	}
-	printf("All addresses seen added we now have %d addresses in the master list\n", cnt);
 }
 
 
