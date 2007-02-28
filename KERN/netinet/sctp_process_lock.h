@@ -142,19 +142,6 @@
 #define SCTP_IPI_ADDR_UNLOCK()		pthead_mutex_unlock(&sctppcbinfo.ipi_addr_mtx)
 
 
-#define SCTP_IPI_ITERATOR_WQ_INIT() \
-       pthread_mutex_init(&sctppcbinfo.ipi_iterator_wq_mtx, NULL)
-
-#define SCTP_IPI_ITERATOR_WQ_DESTROY() \
-	pthread_mutex_destroy(&sctppcbinfo.ipi_iterator_wq_mtx)
-
-#define SCTP_IPI_ITERATOR_WQ_LOCK()	do { 					\
-             ptrhead_mutex_lock(&sctppcbinfo.ipi_iterator_wq_mtx);                \
-} while (0)s
-
-#define SCTP_IPI_ITERATOR_WQ_UNLOCK()		pthread_mutex_unlock(&sctppcbinfo.ipi_iterator_wq_mtx)
-
-
 
 
 #define SCTP_INP_INFO_RUNLOCK()		pthread_mutex_unlock(&sctppcbinfo.ipi_ep_mtx)
@@ -302,8 +289,26 @@
 		pthread_mutex_lock(&sctppcbinfo.it_mtx);		\
 	} while (0)
 
-#define SCTP_ITERATOR_UNLOCK()		pthread_mutex_unlock(&sctppcbinfo.it_mtx)
-#define SCTP_ITERATOR_LOCK_DESTROY()	pthrad_mutex_destroy(&sctppcbinfo.it_mtx)
+#define SCTP_ITERATOR_UNLOCK() \
+	pthread_mutex_unlock(&sctppcbinfo.it_mtx)
+
+#define SCTP_ITERATOR_LOCK_DESTROY() \
+	pthread_mutex_destroy(&sctppcbinfo.it_mtx)
+
+
+#define SCTP_IPI_ITERATOR_WQ_INIT() \
+	pthread_mutex_init(&sctppcbinfo.ipi_iterator_wq_mtx, NULL)
+
+#define SCTP_IPI_ITERATOR_WQ_DESTROY() \
+	pthread_mutex_destroy(&sctppcbinfo.ipi_iterator_wq_mtx)
+
+#define SCTP_IPI_ITERATOR_WQ_LOCK() \
+	do { \
+		pthread_mutex_lock(&sctppcbinfo.ipi_iterator_wq_mtx); \
+	} while (0)
+
+#define SCTP_IPI_ITERATOR_WQ_UNLOCK() \
+	pthread_mutex_unlock(&sctppcbinfo.ipi_iterator_wq_mtx)
 
 
 #define SCTP_INCR_EP_COUNT() \
