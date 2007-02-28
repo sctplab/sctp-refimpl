@@ -265,7 +265,7 @@ sctp_add_addresses_to_i_ia(struct sctp_inpcb *inp, struct sctp_scoping *scope,
 		}
 	skip_count:
 		if (cnt > 1) {
-			total_cnt = 0;
+			total_count = 0;
 			LIST_FOREACH(sctp_ifnp, &vrf->ifnlist, next_ifn) {
 				cnt = 0;
 				if ((scope->loopback_scope == 0) &&
