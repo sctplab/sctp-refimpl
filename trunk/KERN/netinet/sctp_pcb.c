@@ -5109,7 +5109,9 @@ sctp_pcb_init()
 	SCTP_TIMERQ_LOCK_INIT();
 	TAILQ_INIT(&sctppcbinfo.callqueue);
 #endif
+#if defined(SCTP_USE_THREAD_BASED_ITERATOR)
 	sctp_startup_iterator();
+#endif
 }
 
 #ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
