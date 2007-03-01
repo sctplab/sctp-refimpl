@@ -2062,7 +2062,8 @@ sctp_find_valid_localaddr(struct sctp_tcb *stcb)
 #endif
 	vrf = sctp_find_vrf(stcb->asoc.vrf_id);
 	LIST_FOREACH(sctp_ifn, &vrf->ifnlist, next_ifn) {
-		if (stcb->asoc.loopback_scope == 0 && sctp_ifn->ifn_type == IFT_LOOP) {
+		if (stcb->asoc.loopback_scope == 0 &&
+		    SCTP_IFN_IS_IFT_LOOP(sctp_ifn)) {
 			/* Skip if loopback_scope not set */
 			continue;
 		}
@@ -2630,7 +2631,7 @@ sctp_check_address_list_all(struct sctp_tcb *stcb, struct mbuf *m, int offset,
 	}
 	/* go through all our known interfaces */
 	LIST_FOREACH(sctp_ifn, &vrf->ifnlist, next_ifn) {
-		if (loopback_scope == 0 && sctp_ifn->ifn_type == IFT_LOOP) {
+		if (loopback_scope == 0 && SCTP_IFN_IS_IFT_LOOP(sctp_ifn)) {
 			/* skip loopback interface */
 			continue;
 		}
