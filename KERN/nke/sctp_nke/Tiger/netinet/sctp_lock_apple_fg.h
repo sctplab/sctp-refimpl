@@ -133,7 +133,7 @@
 #define SCTP_IPI_ITERATOR_WQ_INIT() \
 	sctppcbinfo.ipi_iterator_wq_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
 #define SCTP_IPI_ITERATOR_WQ_DESTROY() \
-	lck_mtx_free(sctppcbinfo.ipi_iterator_wq_mtx)
+	lck_mtx_free(sctppcbinfo.ipi_iterator_wq_mtx, SCTP_MTX_GRP)
 #define SCTP_IPI_ITERATOR_WQ_LOCK() \
 	lck_mtx_lock(sctppcbinfo.ipi_iterator_wq_mtx)
 #define SCTP_IPI_ITERATOR_WQ_UNLOCK() \
