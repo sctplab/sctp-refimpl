@@ -8306,7 +8306,11 @@ one_chunk_around:
 				 * flag since this flag dictates if we
 				 * subtracted from the fs
 				 */
-				data_list[i]->rec.data.chunk_was_revoked = 0;
+				if(data_list[i]->rec.data.chunk_was_revoked) {
+					/* Deflate the cwnd */
+					data_list[i]->whoTo->cwnd -= data_list[i]->book_size;
+					data_list[i]->rec.data.chunk_was_revoked = 0;
+				}
 				data_list[i]->snd_count++;
 				sctp_ucount_decr(asoc->sent_queue_retran_cnt);
 				/* record the time */
