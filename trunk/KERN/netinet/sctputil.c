@@ -4376,7 +4376,7 @@ sctp_find_ifa_in_ifn(struct sctp_ifn *sctp_ifnp, sctp_os_addr_t *addr,
 
 	LIST_FOREACH(sctp_ifap, &sctp_ifnp->ifalist, next_ifa) {
 		if (SCTP_OS_ADDR_FAMILY(addr) !=
-		    SCTP_OS_ADDR_FAMILY((sctp_os_addr_t *)&sctp_ifap->address))
+		    SCTP_OS_ADDR_FAMILY(&sctp_ifap->address))
 			continue;
 		if (SCTP_OS_ADDR_FAMILY(addr) == AF_INET) {
 			if (SCTP_OS_ADDR_V4ADDR(addr) ==
@@ -4389,7 +4389,7 @@ sctp_find_ifa_in_ifn(struct sctp_ifn *sctp_ifnp, sctp_os_addr_t *addr,
 			}
 		} else if (SCTP_OS_ADDR_FAMILY(addr) == AF_INET6) {
 			if (SCTP6_ARE_ADDR_EQUAL(&SCTP_OS_ADDR_V6ADDR(addr),
-						 &SCTP_OS_ADDR_V6ADDR((sctp_os_addr_t *)&sctp_ifap->address))) {
+						 &SCTP_OS_ADDR_V6ADDR(&sctp_ifap->address))) {
 				/* found him. */
 				if (holds_lock == 0)
 					SCTP_IPI_ADDR_UNLOCK();
