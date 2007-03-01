@@ -2158,21 +2158,24 @@ sctp_add_addresses_to_i_ia(struct sctp_inpcb *inp, struct sctp_scoping *scope,
 
 static struct sctp_ifa *
 sctp_is_ifa_addr_prefered(struct sctp_ifa *ifa, 
-			  uint8_t loopscope, 
-			  uint8_t ip_scope, 
-			  uint8_t * sin_loop, 
-			  uint8_t * sin_local,
+			  uint8_t dest_is_loop, 
+			  uint8_t dest_is_priv, 
 			  sa_family_t fam)
 {
 	struct sockaddr_in *sin;
 	struct sockaddr_in6 *sin6;
+	uint8_t src_is_global=0;
+	uint8_t dest_is_global=0;
+	uint8_t src_is_loop;
+	uint8_t src_is_priv;
+
 #if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
 	struct timeval timenow;
 
 	getmicrotime(&timenow);
 #endif
-	/* ip_scope is true if destination is a private address */
-        /* loopscope is true if destination is a loopback addresses */
+	/* is_scope -> dest_is_priv is true if destination is a private address */
+        /* dest_is_loop is true if destination is a loopback addresses */
 
 	/*
 	 * Here we determine if its a prefered address. A prefered address
@@ -2205,9 +2208,13 @@ sctp_is_ifa_addr_prefered(struct sctp_ifa *ifa,
 		/* forget mis-matched family */
 		return (NULL);
 	}
+	if ((dest_is_priv == 0) && (dest_is_loop == 0)) {
+		dest_is_global = 1;
+	}
+
 	/* Ok the address may be ok */
 	sin = (struct sockaddr_in *)&ifa->address.sin;
-	*sin_local = *sin_loop = 0;
+	src_is_priv = src_is_loop = 0;
 	if (fam == AF_INET) {
 		if (sin->sin_addr.s_addr == 0) {
 			/* TSNH */
@@ -2215,11 +2222,10 @@ sctp_is_ifa_addr_prefered(struct sctp_ifa *ifa,
 		}
 		if (SCTP_IFN_IS_IFT_LOOP(ifa->ifn_p) ||
 		    (IN4_ISLOOPBACK_ADDRESS(&sin->sin_addr))) {
-			*sin_loop = 1;
-			*sin_local = 1;
+			src_is_loop = 1;
 		}
 		if ((IN4_ISPRIVATE_ADDRESS(&sin->sin_addr))) {
-			*sin_local = 1;
+			src_is_priv = 1;
 		}
 	} else if (fam == AF_INET6) {
 		/* ok to use deprecated addresses? */
@@ -2233,30 +2239,35 @@ sctp_is_ifa_addr_prefered(struct sctp_ifa *ifa,
 		}
 		if (SCTP_IFN_IS_IFT_LOOP(ifa->ifn_p) ||
 		    (IN6_IS_ADDR_LOOPBACK(&sin6->sin6_addr))) {
-			*sin_loop = 1;
-			*sin_local = 0;
+			src_is_loop = 1;
 		}
 		if (IN6_IS_ADDR_LINKLOCAL(&sin6->sin6_addr)) {
-			*sin_local = 1;
+			src_is_priv = 1;
 			/* Special case linklocal src -> dest loopback */
-			if(loopscope) {
+			if(dest_is_loop) {
 				return (NULL);
 			}
 		}
 	}
-	if (!loopscope && *sin_loop) {
-		/* Its a loopback address (dest) and we don't have loop scope */
+	if ((src_is_loop == 0) && (src_is_priv == 0)) {
+		src_is_global = 1;
+	}
+
+	/* Now that we know what is what, implement or table 
+	 * this could in theory be done slicker (it used to be), but this
+	 * is straightforward and easier to validate :-)
+	 */
+
+	if ((src_is_loop) && (dest_is_priv)) {
 		return (NULL);
 	}
-	if (!ip_scope && *sin_local) {
-		/*
-		 * dest is  not private address/or/link_local, and we have private address/or/Linklocal src
-		 * scope
-		 */
+	if ((src_is_global) && (dest_is_priv )) {
 		return (NULL);
 	}
-	if (((ip_scope == 0) && (loopscope == 0)) && (*sin_local)) {
-		/* its a global src and a private dest */
+	if ((src_is_loop) && (dest_is_global)) {
+		return (NULL);
+	}
+	if ((src_is_priv) && (dest_is_global)) {
 		return (NULL);
 	}
 	/* its a prefered address */
@@ -2265,14 +2276,17 @@ sctp_is_ifa_addr_prefered(struct sctp_ifa *ifa,
 
 static struct sctp_ifa *
 sctp_is_ifa_addr_acceptable(struct sctp_ifa *ifa, 
-			    uint8_t loopscope, 
-			    uint8_t ip_scope, 
-			    uint8_t * sin_loop, 
-			    uint8_t * sin_local,
+			    uint8_t dest_is_loop, 
+			    uint8_t dest_is_priv, 
 			    sa_family_t fam)
 {
 	struct sockaddr_in *sin;
 	struct sockaddr_in6 *sin6;
+	uint8_t src_is_global=0;
+	uint8_t dest_is_global=0;
+	uint8_t src_is_loop;
+	uint8_t src_is_priv;
+
 #if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
 	struct timeval timenow;
 
@@ -2314,7 +2328,10 @@ sctp_is_ifa_addr_acceptable(struct sctp_ifa *ifa,
 		return (NULL);
 	}
 	/* Ok the address may be ok */
-	*sin_local = *sin_loop = 0;
+	if ((dest_is_loop == 0) && (dest_is_priv == 0)) {
+		dest_is_global = 1;
+	}
+	src_is_priv = src_is_loop = 0;
 	if(fam == AF_INET) {
 		sin = (struct sockaddr_in *)&ifa->address.sin;
 		if (sin->sin_addr.s_addr == 0) {
@@ -2322,11 +2339,10 @@ sctp_is_ifa_addr_acceptable(struct sctp_ifa *ifa,
 		}
 		if (SCTP_IFN_IS_IFT_LOOP(ifa->ifn_p) ||
 		    (IN4_ISLOOPBACK_ADDRESS(&sin->sin_addr))) {
-			*sin_loop = 1;
-			*sin_local = 1;
+			src_is_loop = 1;
 		}
 		if ((IN4_ISPRIVATE_ADDRESS(&sin->sin_addr))) {
-			*sin_local = 1;
+			src_is_priv = 1;
 		}
 	} else {
 		/* ok to use deprecated addresses? */
@@ -2341,19 +2357,28 @@ sctp_is_ifa_addr_acceptable(struct sctp_ifa *ifa,
 		}
 		if (SCTP_IFN_IS_IFT_LOOP(ifa->ifn_p) ||
 		    (IN6_IS_ADDR_LOOPBACK(&sin6->sin6_addr))) {
-			*sin_loop = 1;
-			*sin_local = 0;
+			src_is_loop = 1;
 		}
 		if (IN6_IS_ADDR_LINKLOCAL(&sin6->sin6_addr)) {
-			*sin_local = 1;
+			src_is_priv = 1;
 			/* Special case, linklocal to loop */
-			if(loopscope)
+			if(dest_is_loop)
 				return (NULL);
 		}
 
 	}
-	if (!loopscope && *sin_loop) {
-		/* Its a loopback address and we don't have loop scope */
+	if ((src_is_loop == 0) && (src_is_priv == 0)) {
+		src_is_global = 1;
+	}
+	/* Now that we know what is what, implement or table 
+	 * this could in theory be done slicker (it used to be), but this
+	 * is straightforward and easier to validate :-)
+	 */
+
+	if ((src_is_loop == 0) && (dest_is_priv)) {
+		return (NULL);
+	}
+	if ((src_is_loop == 0) && (dest_is_global)) {
 		return (NULL);
 	}
 	/* its an acceptable address */
@@ -2416,8 +2441,8 @@ sctp_choose_boundspecific_inp(struct sctp_inpcb *inp,
 			      struct route *ro,
 			      uint32_t vrf_id,
 			      int non_asoc_addr_ok,
-			      uint8_t ip_scope,
-			      uint8_t loopscope,
+			      uint8_t src_is_priv,
+			      uint8_t src_is_loop,
 			      sa_family_t fam)
 {
 	struct sctp_laddr *laddr, *starting_point;
@@ -2425,7 +2450,6 @@ sctp_choose_boundspecific_inp(struct sctp_inpcb *inp,
 	int resettotop=0;
 	struct sctp_ifn *sctp_ifn;
 	struct sctp_ifa *sctp_ifa, *pass;
-	uint8_t sin_loop, sin_local;
 	struct sctp_vrf *vrf;
 	uint32_t ifn_index;
 
@@ -2447,7 +2471,7 @@ sctp_choose_boundspecific_inp(struct sctp_inpcb *inp,
 		LIST_FOREACH(sctp_ifa, &sctp_ifn->ifalist, next_ifa) {
 			if ((sctp_ifa->localifa_flags & SCTP_ADDR_DEFER_USE) && (non_asoc_addr_ok == 0)) 
 				continue;
-			pass = sctp_is_ifa_addr_prefered(sctp_ifa, loopscope, ip_scope, &sin_loop, &sin_local, fam);
+			pass = sctp_is_ifa_addr_prefered(sctp_ifa, src_is_loop, src_is_priv, fam);
 			if (pass == NULL)
 				continue;
 			if (sctp_is_addr_in_ep(inp, pass)) {
@@ -2460,7 +2484,7 @@ sctp_choose_boundspecific_inp(struct sctp_inpcb *inp,
 			if ((sctp_ifa->localifa_flags & SCTP_ADDR_DEFER_USE) && (non_asoc_addr_ok == 0)) 
 				continue;
 
-			pass = sctp_is_ifa_addr_acceptable(sctp_ifa, loopscope, ip_scope, &sin_loop, &sin_local, fam);
+			pass = sctp_is_ifa_addr_acceptable(sctp_ifa, src_is_loop, src_is_priv, fam);
 			if (pass == NULL)
 				continue;
 			if (sctp_is_addr_in_ep(inp, sctp_ifa)) {
@@ -2486,7 +2510,7 @@ sctp_choose_boundspecific_inp(struct sctp_inpcb *inp,
 			/* address has been removed */
 			continue;
 		}
-		pass = sctp_is_ifa_addr_prefered(laddr->ifa, loopscope, ip_scope, &sin_loop, &sin_local, fam);
+		pass = sctp_is_ifa_addr_prefered(laddr->ifa, src_is_loop, src_is_priv, fam);
 		if (pass == NULL)
 			continue;
 		atomic_add_int(&pass->refcount, 1);
@@ -2511,7 +2535,7 @@ sctp_choose_boundspecific_inp(struct sctp_inpcb *inp,
 			/* address has been removed */
 			continue;
 		}
-		pass = sctp_is_ifa_addr_acceptable(laddr->ifa, loopscope, ip_scope, &sin_loop, &sin_local, fam);
+		pass = sctp_is_ifa_addr_acceptable(laddr->ifa, src_is_loop, src_is_priv, fam);
 		if (pass == NULL)
 			continue;
 		atomic_add_int(&pass->refcount, 1);
@@ -2537,8 +2561,8 @@ sctp_choose_boundspecific_stcb(struct sctp_inpcb *inp,
 			       struct sctp_nets *net,
 			       struct route *ro,
 			       uint32_t vrf_id,
-			       uint8_t ip_scope,
-			       uint8_t loopscope,
+			       uint8_t src_is_priv,
+			       uint8_t src_is_loop,
 			       int non_asoc_addr_ok,
 			       sa_family_t fam)				  
 {
@@ -2546,7 +2570,7 @@ sctp_choose_boundspecific_stcb(struct sctp_inpcb *inp,
 	void *ifn;
 	struct sctp_ifn *sctp_ifn;
 	struct sctp_ifa *sctp_ifa, *pass;
-	uint8_t sin_loop, sin_local, start_at_beginning = 0;
+	uint8_t start_at_beginning = 0;
 	struct sctp_vrf *vrf;
 	uint32_t ifn_index;
 	/*
@@ -2572,7 +2596,7 @@ sctp_choose_boundspecific_stcb(struct sctp_inpcb *inp,
 			if ((sctp_ifa->localifa_flags & SCTP_ADDR_DEFER_USE) && (non_asoc_addr_ok == 0)) 
 				continue;
 			if (sctp_is_addr_in_ep(inp, sctp_ifa)) {
-				pass = sctp_is_ifa_addr_prefered(sctp_ifa, loopscope, ip_scope, &sin_loop, &sin_local, fam);
+				pass = sctp_is_ifa_addr_prefered(sctp_ifa, src_is_loop, src_is_priv, fam);
 				if (pass == NULL)
 					continue;
 				if ((non_asoc_addr_ok == 0) &&
@@ -2589,7 +2613,7 @@ sctp_choose_boundspecific_stcb(struct sctp_inpcb *inp,
 			if ((sctp_ifa->localifa_flags & SCTP_ADDR_DEFER_USE) && (non_asoc_addr_ok == 0)) 
 				continue;
 			if (sctp_is_addr_in_ep(inp, sctp_ifa)) {
-				pass= sctp_is_ifa_addr_acceptable(sctp_ifa, loopscope, ip_scope, &sin_loop, &sin_local, fam);
+				pass= sctp_is_ifa_addr_acceptable(sctp_ifa, src_is_loop, src_is_priv,fam);
 				if (pass == NULL)
 					continue;
 				if ((non_asoc_addr_ok == 0) &&
@@ -2621,7 +2645,7 @@ sctp_choose_boundspecific_stcb(struct sctp_inpcb *inp,
 			/* address has been removed */
 			continue;
 		}
-		pass = sctp_is_ifa_addr_prefered(laddr->ifa, loopscope, ip_scope, &sin_loop, &sin_local, fam);
+		pass = sctp_is_ifa_addr_prefered(laddr->ifa, src_is_loop, src_is_priv, fam);
 		if (pass == NULL)
 			continue;
 		if ((non_asoc_addr_ok == 0) &&
@@ -2653,7 +2677,7 @@ sctp_choose_boundspecific_stcb(struct sctp_inpcb *inp,
 			/* address has been removed */
 			continue;
 		}
-		pass = sctp_is_ifa_addr_acceptable(laddr->ifa, loopscope, ip_scope, &sin_loop, &sin_local, fam);
+		pass = sctp_is_ifa_addr_acceptable(laddr->ifa, src_is_loop, src_is_priv, fam);
 		if (pass == NULL)
 			continue;
 		if ((non_asoc_addr_ok == 0) &&
@@ -2676,19 +2700,18 @@ static struct sctp_ifa *
 sctp_select_nth_prefered_addr_from_ifn_boundall(struct sctp_ifn *ifn, 
 						struct sctp_tcb *stcb, 
 						int non_asoc_addr_ok,
-						uint8_t loopscope, 
-						uint8_t ip_scope, 
+						uint8_t src_is_loop, 
+						uint8_t src_is_priv, 
 						int addr_wanted,
 						sa_family_t fam)
 {
 	struct sctp_ifa *ifa, *pass;
-	uint8_t sin_loop, sin_local;
 	int num_eligible_addr = 0;
 
 	LIST_FOREACH(ifa, &ifn->ifalist, next_ifa) {
 		if ((ifa->localifa_flags & SCTP_ADDR_DEFER_USE) && (non_asoc_addr_ok == 0)) 
 			continue;
-		pass = sctp_is_ifa_addr_prefered(ifa, loopscope, ip_scope, &sin_loop, &sin_local, fam);
+		pass = sctp_is_ifa_addr_prefered(ifa, src_is_loop, src_is_priv, fam);
 		if (pass == NULL)
 			continue;
 		if (stcb) {
@@ -2713,10 +2736,8 @@ static int
 sctp_count_num_prefered_boundall(struct sctp_ifn *ifn, 
 				 struct sctp_tcb *stcb, 
 				 int non_asoc_addr_ok,
-				 uint8_t loopscope, 
-				 uint8_t ip_scope,
-				 uint8_t *sin_loop, 
-				 uint8_t *sin_local,
+				 uint8_t src_is_loop, 
+				 uint8_t src_is_priv,
 				 sa_family_t fam)
 {
 	struct sctp_ifa *ifa, *pass;
@@ -2726,7 +2747,7 @@ sctp_count_num_prefered_boundall(struct sctp_ifn *ifn,
 		if ((ifa->localifa_flags & SCTP_ADDR_DEFER_USE) && (non_asoc_addr_ok == 0)) {
 			continue;
 		}
-		pass = sctp_is_ifa_addr_prefered(ifa, loopscope, ip_scope, sin_loop, sin_local, fam);
+		pass = sctp_is_ifa_addr_prefered(ifa, src_is_loop, src_is_priv, fam);
 		if (pass == NULL) {
 			continue;
 		}
@@ -2751,13 +2772,12 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 		     struct sctp_nets *net,
 		     struct route *ro,
 		     uint32_t vrf_id,
-		     uint8_t ip_scope,
-		     uint8_t loopscope,
+		     uint8_t src_is_priv,
+		     uint8_t src_is_loop,
 		     int non_asoc_addr_ok,
 		     sa_family_t fam)
 {
 	int cur_addr_num = 0, num_prefered = 0;
-	uint8_t sin_loop, sin_local;
 	void *ifn;
 	struct sctp_ifn *sctp_ifn, *looked_at=NULL;
 	struct sctp_ifa *sctp_ifa, *pass;
@@ -2795,10 +2815,8 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 	num_prefered = sctp_count_num_prefered_boundall(sctp_ifn, 
 							stcb, 
 							non_asoc_addr_ok, 
-							loopscope, 
-							ip_scope, 
-							&sin_loop, 
-							&sin_local, fam);
+							src_is_loop, 
+							src_is_priv, fam);
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
 		printf("Found %d prefered source addresses\n", num_prefered);
@@ -2828,8 +2846,8 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 		printf("cur_addr_num:%d\n", cur_addr_num);
 	}
 #endif
-	sctp_ifa = sctp_select_nth_prefered_addr_from_ifn_boundall(sctp_ifn, stcb, non_asoc_addr_ok, loopscope,
-								   ip_scope, cur_addr_num, fam);
+	sctp_ifa = sctp_select_nth_prefered_addr_from_ifn_boundall(sctp_ifn, stcb, non_asoc_addr_ok, src_is_loop,
+								   src_is_priv, cur_addr_num, fam);
 
 	/* if sctp_ifa is NULL something changed??, fall to plan b. */
 	if (sctp_ifa) {
@@ -2848,7 +2866,7 @@ bound_all_plan_b:
 	LIST_FOREACH(sctp_ifa, &sctp_ifn->ifalist, next_ifa) {
 		if ((sctp_ifa->localifa_flags & SCTP_ADDR_DEFER_USE) && (non_asoc_addr_ok == 0)) 
 			continue;
-		pass = sctp_is_ifa_addr_acceptable(sctp_ifa, loopscope, ip_scope, &sin_loop, &sin_local, fam);
+		pass = sctp_is_ifa_addr_acceptable(sctp_ifa, src_is_loop, src_is_priv, fam);
 		if (pass == NULL)
 			continue;
 		if (stcb) {
@@ -2869,7 +2887,7 @@ bound_all_plan_b:
 	 */
 bound_all_plan_c:
 	LIST_FOREACH(sctp_ifn, &vrf->ifnlist, next_ifn) {
-		if (loopscope == 0 && SCTP_IFN_IS_IFT_LOOP(sctp_ifn)) {
+		if (src_is_loop == 0 && SCTP_IFN_IS_IFT_LOOP(sctp_ifn)) {
 			/* wrong base scope */
 			continue;
 		}
@@ -2877,7 +2895,7 @@ bound_all_plan_c:
 			/* already looked at this guy */
 			continue;
 		num_prefered = sctp_count_num_prefered_boundall(sctp_ifn, stcb, non_asoc_addr_ok,
-								   loopscope, ip_scope, &sin_loop, &sin_local, fam);
+								   src_is_loop, src_is_priv, fam);
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
 			printf("Found ifn:%p %d prefered source addresses\n", ifn, num_prefered);
@@ -2897,8 +2915,8 @@ bound_all_plan_c:
 		if (cur_addr_num >= num_prefered) {
 			cur_addr_num = 0;
 		}
-		pass = sctp_select_nth_prefered_addr_from_ifn_boundall(sctp_ifn, stcb, non_asoc_addr_ok, loopscope,
-		    ip_scope, cur_addr_num, fam);
+		pass = sctp_select_nth_prefered_addr_from_ifn_boundall(sctp_ifn, stcb, non_asoc_addr_ok, src_is_loop,
+		    src_is_priv, cur_addr_num, fam);
 		if (pass == NULL)
 			continue;
 		if (net) {
@@ -2918,7 +2936,7 @@ bound_all_plan_c:
 	 */
 
 	LIST_FOREACH(sctp_ifn, &vrf->ifnlist, next_ifn) {
-		if (loopscope == 0 && SCTP_IFN_IS_IFT_LOOP(sctp_ifn)) {
+		if (src_is_loop == 0 && SCTP_IFN_IS_IFT_LOOP(sctp_ifn)) {
 			/* wrong base scope */
 			continue;
 		}
@@ -2930,7 +2948,7 @@ bound_all_plan_c:
 		LIST_FOREACH(sctp_ifa, &sctp_ifn->ifalist, next_ifa) {
 			if ((sctp_ifa->localifa_flags & SCTP_ADDR_DEFER_USE) && (non_asoc_addr_ok == 0)) 
 				continue;
-			pass = sctp_is_ifa_addr_acceptable(sctp_ifa, loopscope, ip_scope, &sin_loop, &sin_local, fam);
+			pass = sctp_is_ifa_addr_acceptable(sctp_ifa, src_is_loop, src_is_priv, fam);
 			if (pass == NULL)
 				continue;
 			if (stcb) {
@@ -2968,7 +2986,7 @@ sctp_source_address_selection(struct sctp_inpcb *inp,
 	struct sockaddr_in *to = (struct sockaddr_in *)&ro->ro_dst;
 	struct sockaddr_in6 *to6 = (struct sockaddr_in6 *)&ro->ro_dst;
 	struct sctp_ifa *answer;
-	uint8_t loc_scope, loopscope;
+	uint8_t src_is_priv, src_is_loop;
 	int did_rtalloc=0;
 	sa_family_t fam;
 	/*
@@ -3049,19 +3067,14 @@ sctp_source_address_selection(struct sctp_inpcb *inp,
 		return (NULL);
 	}
 	fam = to->sin_family;
-	loc_scope = loopscope = 0;
+	src_is_priv = src_is_loop = 0;
 	/* Setup our scopes for the destination */
 	if(fam == AF_INET) {
 		/* Scope based on outbound address */
 		if ((IN4_ISPRIVATE_ADDRESS(&to->sin_addr))) {
-			loc_scope = 1;
-			loopscope = 0;
+			src_is_priv = 1;
 		} else if (IN4_ISLOOPBACK_ADDRESS(&to->sin_addr)) {
-			loc_scope = 1;
-			loopscope = 1;
-		} else {
-			loc_scope = 0;
-			loopscope = 0;
+			src_is_priv = 1;
 		}
 	} else if (fam == AF_INET6) {
 		/* Scope based on outbound address */
@@ -3069,21 +3082,15 @@ sctp_source_address_selection(struct sctp_inpcb *inp,
 			/*
 			 * If the route goes to the loopback address OR the address
 			 * is a loopback address, we are loopback scope. But
-			 * we don't use loc_scope (link local addresses).
+			 * we don't use src_is_priv (link local addresses).
 			 */
-			loc_scope = 0;
-			loopscope = 1;
+			src_is_loop = 1;
 			if (net != NULL) {
 				/* mark it as local */
 				net->addr_is_local = 1;
 			}
 		} else if (IN6_IS_ADDR_LINKLOCAL(&to6->sin6_addr)) {
-			if (to6->sin6_scope_id)
-				loc_scope = to6->sin6_scope_id;
-			else {
-				loc_scope = 1;
-			}
-			loopscope = 0;
+			src_is_priv = 1;
 		}
 	}
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
@@ -3092,8 +3099,8 @@ sctp_source_address_selection(struct sctp_inpcb *inp,
 		 * negative list. Addresses being added by asconf.
 		 */
 		answer = sctp_choose_boundall(inp, stcb, net, ro, vrf_id,
-					      loc_scope, 
-					      loopscope, 
+					      src_is_priv, 
+					      src_is_loop, 
 					      non_asoc_addr_ok,  
 					      fam);
 		return (answer);
@@ -3119,10 +3126,10 @@ sctp_source_address_selection(struct sctp_inpcb *inp,
 	 */
 	if (stcb) {
 		answer = sctp_choose_boundspecific_stcb(inp, stcb, net, ro, vrf_id,
-							loc_scope, loopscope, non_asoc_addr_ok, fam);
+							src_is_priv, src_is_loop, non_asoc_addr_ok, fam);
 
 	} else {
-		answer = sctp_choose_boundspecific_inp(inp, ro, vrf_id, non_asoc_addr_ok, loc_scope, loopscope,  fam);
+		answer = sctp_choose_boundspecific_inp(inp, ro, vrf_id, non_asoc_addr_ok, src_is_priv, src_is_loop,  fam);
 		
 	}
 	return (answer);
