@@ -108,7 +108,7 @@ extern struct fileops socketops;
 #define SCTP_LIST_EMPTY(list)	LIST_EMPTY(list)
 
 /*
- * Local address list handling
+ * Local address and interface list handling
  */
 #define SCTP_MAX_VRF_ID 0
 #define SCTP_SIZE_OF_VRF_HASH 1
@@ -122,9 +122,15 @@ typedef struct sockaddr sctp_os_addr_t;
 #define SCTP_OS_ADDR_V4ADDR(addr) (((struct sockaddr_in *)(addr))->sin_addr.s_addr)
 #define SCTP_OS_ADDR_V6ADDR(addr) (((struct sockaddr_in6 *)(addr))->sin6_addr)
 
+#define SCTP_IFN_IS_IFT_LOOP(ifn) ((ifn)->ifn_type == IFT_LOOP)
 
+/*
+ * Access to IFN's to help with src-addr-selection
+ */
+/* This could return VOID if the index works but for BSD we provide both. */
 #define SCTP_GET_IFN_VOID_FROM_ROUTE(ro) (void *)ro->ro_rt->rt_ifp
 #define SCTP_GET_IF_INDEX_FROM_ROUTE(ro) ro->ro_rt->rt_ifp->if_index
+
 /* 
  * for per socket level locking strategy:
  * SCTP_INP_SO(sctpinp): returns socket on base inp structure from sctp_inpcb

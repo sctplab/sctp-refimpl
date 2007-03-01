@@ -281,11 +281,11 @@ sctp_skip_csum:
 			sctp_send_shutdown_complete2(m, iphlen, sh);
  			goto bad;
 		}
-		if(ch->chunk_type == SCTP_SHUTDOWN_COMPLETE) {
+		if (ch->chunk_type == SCTP_SHUTDOWN_COMPLETE) {
 			goto bad;
 		}
 
-		if(ch->chunk_type != SCTP_ABORT_ASSOCIATION)
+		if (ch->chunk_type != SCTP_ABORT_ASSOCIATION)
 			sctp_send_abort(m, iphlen, sh, 0, NULL);
 		goto bad;
 	} else if (stcb == NULL) {
@@ -683,7 +683,7 @@ sctp6_getcred(SYSCTL_HANDLER_ARGS)
 	SCTP_INP_WLOCK(inp);	
  cred_can_cont:
 	error = cr_canseesocket(req->td->td_ucred, inp->sctp_socket);
-	if(error) {
+	if (error) {
 		SCTP_INP_WUNLOCK(inp);
 		goto out;
 	}
@@ -703,6 +703,8 @@ SYSCTL_PROC(_net_inet6_sctp6, OID_AUTO, getcred, CTLTYPE_OPAQUE | CTLFLAG_RW,
 /* This is the same as the sctp_abort() could be made common */
 #if defined(__FreeBSD__) && __FreeBSD_version > 690000
 static void
+#elif defined(__Panda__)
+int
 #else
 static int
 #endif
@@ -755,7 +757,7 @@ sctp6_abort(struct socket *so)
 		SOCK_UNLOCK(so);
 	} else {
 		flags = inp->sctp_flags;
-		if((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
+		if ((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
 			goto sctp_must_try_again;
 		}
 	}
@@ -765,14 +767,18 @@ sctp6_abort(struct socket *so)
 #if defined(__FreeBSD__) && __FreeBSD_version > 690000
 	return;
 #else
-	return(0);
+	return (0);
 #endif
 }
 
-static int
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+static int
 sctp6_attach(struct socket *so, int proto, struct thread *p)
+#elif defined(__Panda__)
+int
+sctp6_attach(struct socket *so, int proto, uint32_t vrfid)
 #else
+static int
 sctp6_attach(struct socket *so, int proto, struct proc *p)
 #endif
 {
@@ -1019,7 +1025,7 @@ sctp6_close(struct socket *so)
 		SOCK_UNLOCK(so);
 	} else {
 		flags = inp->sctp_flags;
-		if((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
+		if ((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
 			goto sctp_must_try_again;
 		}
 	}
@@ -1027,8 +1033,11 @@ sctp6_close(struct socket *so)
 
 }
 
+/* This could be made common with sctp_detach() since they are identical */
+#elif defined(__Panda__)
+int
+sctp6_detach(struct socket *so)
 #else
-/*This could be made common with sctp_detach() since they are identical */
 static int
 sctp6_detach(struct socket *so)
 {
@@ -1089,14 +1098,14 @@ sctp6_detach(struct socket *so)
 		SOCK_UNLOCK(so);
 	} else {
 		flags = inp->sctp_flags;
-		if((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
+		if ((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
 			goto sctp_must_try_again;
 		}
 	}
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
 #endif
-	return(0);
+	return (0);
 }
 #endif
 
@@ -1616,7 +1625,7 @@ sctp6_getaddr(struct socket *so, struct mbuf *nam)
 			sin_a6 = NULL;
 			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 				sin_a6 = (struct sockaddr_in6 *)&net->ro._l_addr;
-				if(sin_a6 == NULL)
+				if (sin_a6 == NULL)
 					/* this will make coverity happy */
 					continue;
 
@@ -1636,7 +1645,7 @@ sctp6_getaddr(struct socket *so, struct mbuf *nam)
 #endif
 
 			sctp_ifa = sctp_source_address_selection(inp, stcb, (struct route *)&net->ro, net, 0, vrf_id);
-			if(sctp_ifa) {
+			if (sctp_ifa) {
 				sin6->sin6_addr = sctp_ifa->address.sin6.sin6_addr;
 			}
 		} else {
@@ -1784,16 +1793,18 @@ sctp6_peeraddr(struct socket *so, struct mbuf *nam)
 	return (0);
 }
 
-static int
 #if defined(__FreeBSD__) || defined(__APPLE__)
+static int
 sctp6_in6getaddr(struct socket *so, struct sockaddr **nam)
 {
 	struct sockaddr *addr;
 #elif defined(__Panda__)
+int
 sctp6_in6getaddr(struct socket *so, struct sockaddr *nam, uint32_t *namelen)
 {
 	struct sockaddr *addr = nam;
 #else
+static int
 sctp6_in6getaddr(struct socket *so, struct mbuf *nam)
 {
 	struct sockaddr *addr = mtod(nam, struct sockaddr *);
@@ -1853,16 +1864,18 @@ sctp6_in6getaddr(struct socket *so, struct mbuf *nam)
 }
 
 
-static int
 #if defined(__FreeBSD__) || defined(__APPLE__)
+static int
 sctp6_getpeeraddr(struct socket *so, struct sockaddr **nam)
 {
 	struct sockaddr *addr = *nam;
 #elif defined(__Panda__)
+int
 sctp6_getpeeraddr(struct socket *so, struct sockaddr *nam, uint32_t *namelen)
 {
 	struct sockaddr *addr = (struct sockaddr *)nam;
 #else
+static int
 sctp6_getpeeraddr(struct socket *so, struct mbuf *nam)
 {
 	struct sockaddr *addr = mtod(nam, struct sockaddr *);
