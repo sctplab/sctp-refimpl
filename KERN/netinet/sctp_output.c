@@ -1884,8 +1884,7 @@ sctp_is_address_in_scope(struct sctp_ifa *ifa,
     int do_update)
 {
 	if ((loopback_scope == 0) &&
-	    (ifa->ifn_p) &&
-	    (ifa->ifn_p->ifn_type == IFT_LOOP)) {
+	    (ifa->ifn_p) && SCTP_IFN_IS_IFT_LOOP(ifa->ifn_p)) {
 		/*
 		 * skip loopback if not in scope *
 		 */
@@ -2031,7 +2030,7 @@ sctp_add_addresses_to_i_ia(struct sctp_inpcb *inp, struct sctp_scoping *scope,
 		}
 		LIST_FOREACH(sctp_ifnp, &vrf->ifnlist, next_ifn) {
 			if ((scope->loopback_scope == 0) &&
-			    (sctp_ifnp->ifn_type == IFT_LOOP)) {
+			    SCTP_IFN_IS_IFT_LOOP(sctp_ifnp)) {
 				/*
 				 * Skip loopback devices if loopback_scope
 				 * not set
@@ -2063,7 +2062,7 @@ sctp_add_addresses_to_i_ia(struct sctp_inpcb *inp, struct sctp_scoping *scope,
 			LIST_FOREACH(sctp_ifnp, &vrf->ifnlist, next_ifn) {
 				cnt = 0;
 				if ((scope->loopback_scope == 0) &&
-				    (sctp_ifnp->ifn_type == IFT_LOOP)) {
+				    SCTP_IFN_IS_IFT_LOOP(sctp_ifnp)) {
 					/*
 					 * Skip loopback devices if
 					 * loopback_scope not set
@@ -2214,7 +2213,7 @@ sctp_is_ifa_addr_prefered(struct sctp_ifa *ifa,
 			/* TSNH */
 			return (NULL);
 		}
-		if ((ifa->ifn_p->ifn_type == IFT_LOOP) ||
+		if (SCTP_IFN_IS_IFT_LOOP(ifa->ifn_p) ||
 		    (IN4_ISLOOPBACK_ADDRESS(&sin->sin_addr))) {
 			*sin_loop = 1;
 			*sin_local = 1;
@@ -2232,7 +2231,7 @@ sctp_is_ifa_addr_prefered(struct sctp_ifa *ifa,
 			/* we skip unspecifed addresses */
 			return (NULL);
 		}
-		if ((ifa->ifn_p->ifn_type == IFT_LOOP) ||
+		if (SCTP_IFN_IS_IFT_LOOP(ifa->ifn_p) ||
 		    (IN6_IS_ADDR_LOOPBACK(&sin6->sin6_addr))) {
 			*sin_loop = 1;
 			*sin_local = 0;
@@ -2321,7 +2320,7 @@ sctp_is_ifa_addr_acceptable(struct sctp_ifa *ifa,
 		if (sin->sin_addr.s_addr == 0) {
 			return (NULL);
 		}
-		if ((ifa->ifn_p->ifn_type == IFT_LOOP) ||
+		if (SCTP_IFN_IS_IFT_LOOP(ifa->ifn_p) ||
 		    (IN4_ISLOOPBACK_ADDRESS(&sin->sin_addr))) {
 			*sin_loop = 1;
 			*sin_local = 1;
@@ -2340,7 +2339,7 @@ sctp_is_ifa_addr_acceptable(struct sctp_ifa *ifa,
 			/* we skip unspecifed addresses */
 			return (NULL);
 		}
-		if ((ifa->ifn_p->ifn_type == IFT_LOOP) ||
+		if (SCTP_IFN_IS_IFT_LOOP(ifa->ifn_p) ||
 		    (IN6_IS_ADDR_LOOPBACK(&sin6->sin6_addr))) {
 			*sin_loop = 1;
 			*sin_local = 0;
@@ -2870,7 +2869,7 @@ bound_all_plan_b:
 	 */
 bound_all_plan_c:
 	LIST_FOREACH(sctp_ifn, &vrf->ifnlist, next_ifn) {
-		if (loopscope == 0 && sctp_ifn->ifn_type == IFT_LOOP) {
+		if (loopscope == 0 && SCTP_IFN_IS_IFT_LOOP(sctp_ifn)) {
 			/* wrong base scope */
 			continue;
 		}
@@ -2919,7 +2918,7 @@ bound_all_plan_c:
 	 */
 
 	LIST_FOREACH(sctp_ifn, &vrf->ifnlist, next_ifn) {
-		if (loopscope == 0 && sctp_ifn->ifn_type == IFT_LOOP) {
+		if (loopscope == 0 && SCTP_IFN_IS_IFT_LOOP(sctp_ifn)) {
 			/* wrong base scope */
 			continue;
 		}
