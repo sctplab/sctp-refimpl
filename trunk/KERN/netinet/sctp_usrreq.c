@@ -1112,6 +1112,8 @@ static int
 #endif
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 sctp_attach(struct socket *so, int proto, struct thread *p)
+#elif defined(__Panda__)
+sctp_attach(struct socket *so, int proto, uint32_t vrfid)
 #else
 sctp_attach(struct socket *so, int proto, struct proc *p)
 #endif
