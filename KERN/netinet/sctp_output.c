@@ -6593,7 +6593,7 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
     struct sctp_nets *net, int frag_point, int eeor_mode)
 {
 	struct sctp_association *asoc;
-	struct sctp_stream_out *strq, *strqn;
+	struct sctp_stream_out *strq, *strqn, *strqt;
 	int goal_mtu, moved_how_much, total_moved=0;
 	int locked, giveup;
 	struct sctp_stream_queue_pending *sp;
@@ -6668,13 +6668,14 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
 				break;
 		} else {
 			asoc->locked_on_sending = NULL;
+			strqt = sctp_select_a_stream(stcb, asoc);
 			if(TAILQ_FIRST(&strq->outqueue) == NULL) {
 				sctp_remove_from_wheel(stcb, asoc, strq);
 			}
 			if(giveup) {
 				break;
 			}
-			strq = sctp_select_a_stream(stcb, asoc);
+			strq = strqt;
 			if(strq == NULL) {
 				break;
 			}
