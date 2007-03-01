@@ -2172,6 +2172,8 @@ sctp_is_ifa_addr_prefered(struct sctp_ifa *ifa,
 
 	getmicrotime(&timenow);
 #endif
+	/* ip_scope is true if destination is a private address */
+        /* loopscope is true if destination is a loopback addresses */
 
 	/*
 	 * Here we determine if its a prefered address. A prefered address
@@ -2182,7 +2184,7 @@ sctp_is_ifa_addr_prefered(struct sctp_ifa *ifa,
          *  ---------------------------------------- 
          *     L     |    L  |    yes
          *  -----------------------------------------
-         *     P     |    L  |    yes 
+         *     P     |    L  |    yes-v4 no-v6
          *  -----------------------------------------
          *     G     |    L  |    yes 
          *  -----------------------------------------
@@ -2233,19 +2235,23 @@ sctp_is_ifa_addr_prefered(struct sctp_ifa *ifa,
 		if ((ifa->ifn_p->ifn_type == IFT_LOOP) ||
 		    (IN6_IS_ADDR_LOOPBACK(&sin6->sin6_addr))) {
 			*sin_loop = 1;
-			*sin_local = 1;
+			*sin_local = 0;
 		}
 		if (IN6_IS_ADDR_LINKLOCAL(&sin6->sin6_addr)) {
 			*sin_local = 1;
+			/* Special case linklocal src -> dest loopback */
+			if(loopscope) {
+				return (NULL);
+			}
 		}
 	}
 	if (!loopscope && *sin_loop) {
-		/* Its a loopback address and we don't have loop scope */
+		/* Its a loopback address (dest) and we don't have loop scope */
 		return (NULL);
 	}
 	if (!ip_scope && *sin_local) {
 		/*
-		 * Its a private address, and we don't have private address
+		 * dest is  not private address/or/link_local, and we have private address/or/Linklocal src
 		 * scope
 		 */
 		return (NULL);
@@ -2286,7 +2292,7 @@ sctp_is_ifa_addr_acceptable(struct sctp_ifa *ifa,
 	 * -----------------------------------------
 	 *   L     |   L   |    yes
 	 *  -----------------------------------------
-	 *   P     |   L   |    yes
+	 *   P     |   L   |    yes-v4 no-v6
 	 *  -----------------------------------------
 	 *   G     |   L   |    yes 
          * -----------------------------------------
@@ -2296,11 +2302,11 @@ sctp_is_ifa_addr_acceptable(struct sctp_ifa *ifa,
 	 * -----------------------------------------
 	 *   G     |   P   |    yes - May not work
 	 * -----------------------------------------
-	 *   L     |   G   |     no 
+	 *   L     |   G   |    no 
          * -----------------------------------------
-	 *   P     |   G   |     yes - May not work
+	 *   P     |   G   |    yes - May not work
 	 * -----------------------------------------
-	 *   G     |   G   |     yes 
+	 *   G     |   G   |    yes 
 	 * -----------------------------------------
 	 */
 
@@ -2337,11 +2343,15 @@ sctp_is_ifa_addr_acceptable(struct sctp_ifa *ifa,
 		if ((ifa->ifn_p->ifn_type == IFT_LOOP) ||
 		    (IN6_IS_ADDR_LOOPBACK(&sin6->sin6_addr))) {
 			*sin_loop = 1;
-			*sin_local = 1;
+			*sin_local = 0;
 		}
 		if (IN6_IS_ADDR_LINKLOCAL(&sin6->sin6_addr)) {
 			*sin_local = 1;
+			/* Special case, linklocal to loop */
+			if(loopscope)
+				return (NULL);
 		}
+
 	}
 	if (!loopscope && *sin_loop) {
 		/* Its a loopback address and we don't have loop scope */
@@ -2714,11 +2724,13 @@ sctp_count_num_prefered_boundall(struct sctp_ifn *ifn,
 	int num_eligible_addr = 0;
 
 	LIST_FOREACH(ifa, &ifn->ifalist, next_ifa) {
-		if ((ifa->localifa_flags & SCTP_ADDR_DEFER_USE) && (non_asoc_addr_ok == 0)) 
+		if ((ifa->localifa_flags & SCTP_ADDR_DEFER_USE) && (non_asoc_addr_ok == 0)) {
 			continue;
+		}
 		pass = sctp_is_ifa_addr_prefered(ifa, loopscope, ip_scope, sin_loop, sin_local, fam);
-		if (pass == NULL)
+		if (pass == NULL) {
 			continue;
+		}
 		if (stcb) {
 			if ((non_asoc_addr_ok == 0) && sctp_is_addr_restricted(stcb, pass)) {
 				/*

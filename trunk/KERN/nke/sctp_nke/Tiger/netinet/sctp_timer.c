@@ -1690,7 +1690,7 @@ done_with_iterator:
 		SCTP_LOCK_EXC(sctppcbinfo.ipi_ep_mtx);
 #endif
 		SCTP_INP_INFO_WLOCK();
-		LIST_REMOVE(it, sctp_nxt_itr);
+		TAILQ_REMOVE(&sctppcbinfo.iteratorhead, it, sctp_nxt_itr);
 		/* stopping the callout is not needed, in theory */
 #if defined(SCTP_PER_SOCKET_LOCKING)
 		SCTP_UNLOCK_EXC(sctppcbinfo.ipi_ep_mtx);
