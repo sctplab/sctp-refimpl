@@ -1112,6 +1112,8 @@ static int
 #endif
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 sctp_attach(struct socket *so, int proto, struct thread *p)
+#elif defined(__Panda__)
+sctp_attach(struct socket *so, int proto, uint32_t vrfid)
 #else
 sctp_attach(struct socket *so, int proto, struct proc *p)
 #endif
@@ -1883,7 +1885,7 @@ sctp_fill_up_addresses(struct sctp_inpcb *inp,
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
 		LIST_FOREACH(sctp_ifn, &vrf->ifnlist, next_ifn) {
 			if ((loopback_scope == 0) &&
-			    (sctp_ifn->ifn_type == IFT_LOOP)) {
+			    SCTP_IFN_IS_IFT_LOOP(sctp_ifn)) {
 				/* Skip loopback if loopback_scope not set */
 				continue;
 			}
