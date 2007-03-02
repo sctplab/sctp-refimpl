@@ -11077,7 +11077,7 @@ sctp_lower_sosend(struct socket *so,
 			asoc = &stcb->asoc;
 		}
 	}
-	if (((so->so_state & SS_NBIO)
+	if ((SCTP_SO_IS_NBIO(so)
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 	     || (flags & MSG_NBIO)
 #endif

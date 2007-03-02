@@ -288,6 +288,10 @@ typedef struct callout sctp_os_timer_t;
 
 /* is the endpoint v6only? */
 #define SCTP_IPV6_V6ONLY(inp)	(((struct inpcb *)inp)->inp_flags & IN6P_IPV6_V6ONLY)
+/* is the socket non-blocking? */
+#define SCTP_SO_IS_NBIO(so)	((so)->so_state & SS_NBIO)
+#define SCTP_SET_SO_NBIO(so)	((so)->so_state |= SS_NBIO)
+#define SCTP_CLEAR_SO_NBIO(so)	((so)->so_state &= ~SS_NBIO)
 
 
 /*
