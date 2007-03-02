@@ -4593,7 +4593,7 @@ sctp_sorecvmsg(struct socket *so,
 	    | MSG_NBIO
 #endif
 	    )) ||
-	    (so->so_state & SS_NBIO)) {
+	    SCTP_SO_IS_NBIO(so)) {
 		block_allowed = 0;
 	}
 	/* setup the endpoint */

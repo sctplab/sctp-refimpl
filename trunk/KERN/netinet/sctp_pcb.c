@@ -1936,14 +1936,14 @@ sctp_inpcb_alloc(struct socket *so)
 		    SCTP_PCB_FLAGS_UNBOUND);
 		sctp_feature_on(inp, SCTP_PCB_FLAGS_RECVDATAIOEVNT);
 		/* Be sure it is NON-BLOCKING IO for UDP */
-		/* so->so_state |= SS_NBIO; */
+		/* SCTP_SET_SO_NBIO(so); */
 	} else if (so->so_type == SOCK_STREAM) {
 		/* TCP style socket */
 		inp->sctp_flags = (SCTP_PCB_FLAGS_TCPTYPE |
 		    SCTP_PCB_FLAGS_UNBOUND);
 		sctp_feature_on(inp, SCTP_PCB_FLAGS_RECVDATAIOEVNT);
 		/* Be sure we have blocking IO by default */
-		so->so_state &= ~SS_NBIO;
+		SCTP_CLEAR_SO_NBIO(so);
 	} else {
 		/*
 		 * unsupported socket type (RAW, etc)- in case we missed it
