@@ -1989,8 +1989,10 @@ sctp_add_addr_to_mbuf(struct mbuf *m, struct sctp_ifa *ifa)
 		parmh->param_length = htons(len);
 		memcpy(ipv6p->addr, &sin6->sin6_addr,
 		    sizeof(ipv6p->addr));
+#if defined(SCTP_EMBEDDED_V6_SCOPE)
 		/* clear embedded scope in the address */
 		in6_clearscope((struct in6_addr *)ipv6p->addr);
+#endif
 		SCTP_BUF_LEN(mret) += len;
 	} else {
 		return (m);
