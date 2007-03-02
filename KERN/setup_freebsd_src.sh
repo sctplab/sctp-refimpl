@@ -14,7 +14,7 @@ if test ! -d $srcTree/dev
     echo "I cant see the dev directory there sorry"
     exit
 fi
-echo "Will you be using 7.0 Current or FreeBSD 6.1 or 6.0 (7 or 61 or 60)?"
+echo "Will you be using 7.0 Current or FreeBSD 6.2 or 6.1 or 6.0 (7 or 62 or 61 or 60)?"
 read ans
 if test $ans = 7
 then
@@ -37,6 +37,13 @@ read ans
 BSD_PREPARE=freebsd_prepare
 BSD_PATH=freebsd6_1
 BSD_VER=601000
+elif test $ans = 62
+then
+echo "I will use 6.2 then, if unsure hit ctrl-c else return"
+read ans
+BSD_PREPARE=freebsd_prepare
+BSD_PATH=freebsd6_2
+BSD_VER=602000
 else
 echo "Unknown release sorry"
 exit
