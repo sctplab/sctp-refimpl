@@ -269,12 +269,13 @@
 #define SCTP_IPI_ADDR_DESTROY() \
 	pthread_mutex_destroy(&sctppcbinfo.ipi_addr_mtx)
 
-#define SCTP_IPI_ADDR_LOCK()	do { 					\
-	pthread_mutex_lock(&sctppcbinfo.ipi_addr_mtx);			\
-} while (0)
+#define SCTP_IPI_ADDR_LOCK() \
+	do { 					\
+		pthread_mutex_lock(&sctppcbinfo.ipi_addr_mtx);		\
+	} while (0)
 
 #define SCTP_IPI_ADDR_UNLOCK() \
-	pthead_mutex_unlock(&sctppcbinfo.ipi_addr_mtx)
+	pthread_mutex_unlock(&sctppcbinfo.ipi_addr_mtx)
 
 /* iterator locks */
 #define SCTP_ITERATOR_LOCK_INIT() \
