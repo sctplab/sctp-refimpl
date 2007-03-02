@@ -30,6 +30,7 @@
  * $FreeBSD: src/sys/net/rtsock.c,v 1.123.2.7 2006/04/04 20:07:23 andre Exp $
  */
 
+#include "opt_sctp.h"
 #include <sys/param.h>
 #include <sys/domain.h>
 #include <sys/kernel.h>
@@ -50,6 +51,10 @@
 #include <net/route.h>
 
 #include <netinet/in.h>
+
+#ifdef SCTP
+extern void sctp_addr_change(struct ifaddr *ifa, int cmd);
+#endif /* SCTP */
 
 MALLOC_DEFINE(M_RTABLE, "routetbl", "routing tables");
 
@@ -852,6 +857,14 @@ rt_newaddrmsg(int cmd, struct ifaddr *ifa, int error, struct rtentry *rt)
 	KASSERT(cmd == RTM_ADD || cmd == RTM_DELETE,
 		("unexpected cmd %u", cmd));
 
+#ifdef SCTP
+	/*
+	 * notify the SCTP stack
+	 * this will only get called when an address is added/deleted
+	 * XXX pass the ifaddr struct instead if ifa->ifa_addr...
+	 */
+	sctp_addr_change(ifa, cmd);
+#endif /* SCTP */
 	if (route_cb.any_count == 0)
 		return;
 	for (pass = 1; pass < 3; pass++) {
