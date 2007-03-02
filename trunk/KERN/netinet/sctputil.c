@@ -4568,7 +4568,10 @@ sctp_sorecvmsg(struct socket *so,
 	uint32_t rwnd_req=0;
 	int hold_sblock = 0;
 	int hold_rlock = 0;
-	int alen=0, slen=0;
+#if defined(__FreeBSD__)
+	int alen = 0;
+#endif
+	int slen = 0;
 	int held_length = 0;
 
 	if (msg_flags) {
