@@ -2984,6 +2984,7 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 								tp1->whoTo->flight_size -= tp1->book_size;
 							else
 								tp1->whoTo->flight_size = 0;
+
 							if (asoc->total_flight >= tp1->book_size) {
 								asoc->total_flight -= tp1->book_size;
 								if (asoc->total_flight_count > 0)
@@ -3087,7 +3088,6 @@ sctp_check_for_revoked(struct sctp_association *asoc, uint32_t cumack,
 			 */
 			if (tp1->sent == SCTP_DATAGRAM_ACKED) {
 				/* it has been revoked */
-
 				tp1->sent = SCTP_DATAGRAM_SENT;
 				tp1->rec.data.chunk_was_revoked = 1;
 				/* We must add this stuff back in to
@@ -3271,8 +3271,9 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		 */
 		/*
 		 * @@@ JRI: Check for CMT
+		 * if (accum_moved && asoc->fast_retran_loss_recovery && (sctp_cmt_on_off == 0)) {
 		 */
-		if (accum_moved && asoc->fast_retran_loss_recovery && (sctp_cmt_on_off == 0)) {
+		 if (accum_moved && asoc->fast_retran_loss_recovery) {
 			/*
 			 * Strike the TSN if in fast-recovery and cum-ack
 			 * moved.
@@ -3369,7 +3370,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				}
 			}
 			/*
-			 * @@@ JRI: TODO: remove code for HTNA algo. CMT's
+			 * JRI: TODO: remove code for HTNA algo. CMT's
 			 * SFR algo covers HTNA.
 			 */
 		} else if (compare_with_wrap(tp1->rec.data.TSN_seq,
@@ -3431,7 +3432,6 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				 * CMT: Using RTX_SSTHRESH policy for CMT.
 				 * If CMT is being used, then pick dest with
 				 * largest ssthresh for any retransmission.
-				 * (iyengar@cis.udel.edu, 2005/08/12)
 				 */
 				tp1->no_fr_allowed = 1;
 				alt = tp1->whoTo;
@@ -3851,7 +3851,8 @@ sctp_cwnd_update(struct sctp_tcb *stcb,
 	/* update cwnd and Early FR   */
 	/******************************/
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
-#ifdef JANA_CODE_WHY_THIS
+
+#ifdef JANA_CMT_FAST_RECOVERY
 		/*
 		 * CMT fast recovery code. Need to debug.
 		 */
@@ -3925,16 +3926,17 @@ sctp_cwnd_update(struct sctp_tcb *stcb,
 				}
 			}
 		}
-#ifdef JANA_CODE_WHY_THIS
-		/*
-		 * Cannot skip for CMT. Need to come back and check these
-		 * variables for CMT. CMT fast recovery code. Need to debug.
+
+#ifdef JANA_CMT_FAST_RECOVERY
+                /* CMT fast recovery code
 		 */
-		 if (sctp_cmt_on_off == 1 &&
-		     net->fast_retran_loss_recovery &&
-		     net->will_exit_fast_recovery == 0)
+		if (sctp_cmt_on_off == 1 && net->fast_retran_loss_recovery && net->will_exit_fast_recovery == 0) {
+		   // @@@ Do something
+		 }	   
+		 else if (sctp_cmt_on_off == 0 && asoc->fast_retran_loss_recovery && will_exit == 0) {
 #endif
-		if (sctp_cmt_on_off == 0 && asoc->fast_retran_loss_recovery && will_exit == 0) {
+
+		 if (asoc->fast_retran_loss_recovery && will_exit == 0) {
 			/*
 			 * If we are in loss recovery we skip any cwnd
 			 * update
@@ -4146,6 +4148,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 	 				} else {
 						tp1->whoTo->flight_size = 0;
 			 		}
+
 		 			if (asoc->total_flight >= tp1->book_size) {
  						asoc->total_flight -= tp1->book_size;
 	 					if (asoc->total_flight_count > 0)
@@ -4635,7 +4638,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 		net->net_ack2 = 0;
 
 		/*
-		 * CMT: Reset CUC algo variable before SACK processing
+		 * CMT: Reset CUC and Fast recovery algo variables before SACK processing
 		 */
 		net->new_pseudo_cumack = 0;
 		net->will_exit_fast_recovery = 0;
@@ -4903,7 +4906,7 @@ skip_segments:
 #endif
 	}
 
-	if ((sctp_cmt_on_off == 0) && asoc->fast_retran_loss_recovery && accum_moved) {
+	if (asoc->fast_retran_loss_recovery && accum_moved) {
 		if (compare_with_wrap(asoc->last_acked_seq,
 		    asoc->fast_recovery_tsn, MAX_TSN) ||
 		    asoc->last_acked_seq == asoc->fast_recovery_tsn) {
@@ -4935,7 +4938,16 @@ skip_segments:
 					tp1->sent = SCTP_DATAGRAM_SENT;
 					tp1->rec.data.chunk_was_revoked = 1;
 					tp1->whoTo->flight_size += tp1->book_size;
+<<<<<<< sctp_indata.c
+
+					/* To ensure that this increase in flightsize, which is artificial,
+					 * does not throttle the sender, we also increase the cwnd artificially.
+					 */
 					tp1->whoTo->cwnd += tp1->book_size;
+
+=======
+					tp1->whoTo->cwnd += tp1->book_size;
+>>>>>>> 1.283
 					asoc->total_flight_count++;
 					asoc->total_flight += tp1->book_size;
 					cnt_revoked++;
@@ -5124,9 +5136,10 @@ skip_segments:
 	/*
 	 * CMT fast recovery code. Need to debug. ((sctp_cmt_on_off == 1) &&
 	 * (net->fast_retran_loss_recovery == 0)))
+	 * if ((asoc->fast_retran_loss_recovery == 0) || (sctp_cmt_on_off == 1)) {
 	 */
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
-		if ((asoc->fast_retran_loss_recovery == 0) || (sctp_cmt_on_off == 1)) {
+		if (asoc->fast_retran_loss_recovery == 0) {
 			/* out of a RFC2582 Fast recovery window? */
 			if (net->net_ack > 0) {
 				/*
@@ -5271,6 +5284,8 @@ skip_segments:
 		/* end satellite t3 loss recovery */
 		asoc->sat_t3_loss_recovery = 0;
 	}
+	/* CMT Fast recovery
+	 */
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 		if (net->will_exit_fast_recovery) {
 			/* Ok, we must exit fast recovery */
