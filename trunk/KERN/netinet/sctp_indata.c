@@ -3095,7 +3095,7 @@ sctp_check_for_revoked(struct sctp_association *asoc, uint32_t cumack,
 				 */
 				tp1->whoTo->flight_size += tp1->book_size;
 				/* We inflate the cwnd to compensate for our
-				 * inflation of the flight_size.
+				 * artificial inflation of the flight_size.
 				 */
 				tp1->whoTo->cwnd += tp1->book_size;
 				asoc->total_flight_count++;
@@ -4938,16 +4938,10 @@ skip_segments:
 					tp1->sent = SCTP_DATAGRAM_SENT;
 					tp1->rec.data.chunk_was_revoked = 1;
 					tp1->whoTo->flight_size += tp1->book_size;
-<<<<<<< sctp_indata.c
-
 					/* To ensure that this increase in flightsize, which is artificial,
 					 * does not throttle the sender, we also increase the cwnd artificially.
 					 */
 					tp1->whoTo->cwnd += tp1->book_size;
-
-=======
-					tp1->whoTo->cwnd += tp1->book_size;
->>>>>>> 1.283
 					asoc->total_flight_count++;
 					asoc->total_flight += tp1->book_size;
 					cnt_revoked++;
