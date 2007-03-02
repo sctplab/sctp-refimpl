@@ -289,10 +289,12 @@ sctp_add_addr_to_vrf(uint32_t vrfid,
 				goto exit_stage_left;
 			}
 		} else {
-			if(sctp_ifap->ifn_p) 
-				printf("Warning:Adding address already present, but on IFN:%d existing IFN:%d??\n",
-				       ifn_index,
-				       sctp_ifap->ifn_p->ifn_index);
+			if(sctp_ifap->ifn_p) {
+				/* The first IFN gets the address, duplicates
+				 * are ignored.
+				 */
+ 				goto exit_stage_left;
+			}
 			else {
 				/* repair ifnp which was NULL ? */
 				sctp_ifap->localifa_flags = SCTP_ADDR_VALID;
