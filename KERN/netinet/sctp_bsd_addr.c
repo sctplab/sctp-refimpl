@@ -140,10 +140,12 @@ sctp_is_desired_interface_type(struct ifaddr *ifa)
 	case IFT_PTPSERIAL:
 	case IFT_PPP:
 	case IFT_SLIP:
+#if !defined(__APPLE__)
 	case IFT_IP:
 	case IFT_IPOVERCDLC:
 	case IFT_IPOVERCLAW:
 	case IFT_VIRTUALIPADDRESS:
+#endif
                 result = 1;
                 break;
         default:
