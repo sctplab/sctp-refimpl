@@ -1929,15 +1929,15 @@ sctp_inpcb_alloc(struct socket *so)
 
 	so->so_pcb = (caddr_t)inp;
 
-	if ((so->so_type == SOCK_DGRAM) ||
-	    (so->so_type == SOCK_SEQPACKET)) {
+	if ((SCTP_SO_TYPE(so) == SOCK_DGRAM) ||
+	    (SCTP_SO_TYPE(so) == SOCK_SEQPACKET)) {
 		/* UDP style socket */
 		inp->sctp_flags = (SCTP_PCB_FLAGS_UDPTYPE |
 		    SCTP_PCB_FLAGS_UNBOUND);
 		sctp_feature_on(inp, SCTP_PCB_FLAGS_RECVDATAIOEVNT);
 		/* Be sure it is NON-BLOCKING IO for UDP */
 		/* SCTP_SET_SO_NBIO(so); */
-	} else if (so->so_type == SOCK_STREAM) {
+	} else if (SCTP_SO_TYPE(so) == SOCK_STREAM) {
 		/* TCP style socket */
 		inp->sctp_flags = (SCTP_PCB_FLAGS_TCPTYPE |
 		    SCTP_PCB_FLAGS_UNBOUND);
