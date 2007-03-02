@@ -3930,10 +3930,12 @@ sctp_cwnd_update(struct sctp_tcb *stcb,
 #ifdef JANA_CMT_FAST_RECOVERY
                 /* CMT fast recovery code
 		 */
+		/*
 		if (sctp_cmt_on_off == 1 && net->fast_retran_loss_recovery && net->will_exit_fast_recovery == 0) {
 		   // @@@ Do something
 		 }	   
 		 else if (sctp_cmt_on_off == 0 && asoc->fast_retran_loss_recovery && will_exit == 0) {
+		*/
 #endif
 
 		 if (asoc->fast_retran_loss_recovery && will_exit == 0) {
