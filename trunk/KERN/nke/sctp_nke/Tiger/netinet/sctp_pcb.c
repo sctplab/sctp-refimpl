@@ -229,21 +229,18 @@ sctp_free_ifa(struct sctp_ifa *sctp_ifap)
 }
 
 struct sctp_ifa *
-sctp_add_addr_to_vrf(uint32_t vrfid,
-		     void *ifn, uint32_t ifn_index, uint32_t ifn_type,
-		     const char *if_name,
-		     void *ifa, sctp_os_addr_t *addr, uint32_t ifa_flags)
+sctp_add_addr_to_vrf(uint32_t vrfid, void *ifn, uint32_t ifn_index,
+		     uint32_t ifn_type, const char *if_name,
+		     void *ifa, struct sockaddr *addr, uint32_t ifa_flags)
 {
 	struct sctp_vrf *vrf;
 	struct sctp_ifn *sctp_ifnp = NULL;
 	struct sctp_ifa *sctp_ifap = NULL;
 
-
-       /* How granular do we need the locks to be here? 
-	*/
+	/* How granular do we need the locks to be here? */
 	SCTP_IPI_ADDR_LOCK();
 	vrf = sctp_find_vrf(vrfid);
-	if(vrf == NULL) {
+	if (vrf == NULL) {
 		vrf = sctp_allocate_vrf(vrfid);
 		if (vrf == NULL) {
 			SCTP_IPI_ADDR_UNLOCK();
@@ -257,11 +254,11 @@ sctp_add_addr_to_vrf(uint32_t vrfid,
 		 */
 		SCTP_IPI_ADDR_UNLOCK();
 		SCTP_MALLOC(sctp_ifnp, struct sctp_ifn *, sizeof(struct sctp_ifn), "SCTP_IFN");
-		if(sctp_ifnp == NULL) {
+		if (sctp_ifnp == NULL) {
 #ifdef INVARIANTS
 			panic("No memory for IFN:%u", sctp_ifnp->ifn_index);
 #endif
-			return(NULL);
+			return (NULL);
 		}
 		sctp_ifnp->ifn_index = ifn_index;
 		sctp_ifnp->ifn_p = ifn;
@@ -277,8 +274,9 @@ sctp_add_addr_to_vrf(uint32_t vrfid,
 	sctp_ifap = sctp_find_ifa_by_addr(addr, vrf->vrf_id, 1);
 	if (sctp_ifap) {
 		/* Hmm, it already exists? */
-		if((sctp_ifap->ifn_p) && (sctp_ifap->ifn_p->ifn_index == ifn_index)) {
-			if(sctp_ifap->localifa_flags & SCTP_BEING_DELETED) {
+		if ((sctp_ifap->ifn_p) &&
+		    (sctp_ifap->ifn_p->ifn_index == ifn_index)) {
+			if (sctp_ifap->localifa_flags & SCTP_BEING_DELETED) {
 				/* easy to solve, just switch back to active */
 				sctp_ifap->localifa_flags = SCTP_ADDR_VALID;
 				sctp_ifap->ifn_p = sctp_ifnp;
@@ -289,10 +287,12 @@ sctp_add_addr_to_vrf(uint32_t vrfid,
 				goto exit_stage_left;
 			}
 		} else {
-			if(sctp_ifap->ifn_p) 
-				printf("Warning:Adding address already present, but on IFN:%d existing IFN:%d??\n",
-				       ifn_index,
-				       sctp_ifap->ifn_p->ifn_index);
+			if (sctp_ifap->ifn_p) {
+				/* The first IFN gets the address, duplicates
+				 * are ignored.
+				 */
+ 				goto exit_stage_left;
+			}
 			else {
 				/* repair ifnp which was NULL ? */
 				sctp_ifap->localifa_flags = SCTP_ADDR_VALID;
@@ -304,18 +304,18 @@ sctp_add_addr_to_vrf(uint32_t vrfid,
 	}
 	SCTP_IPI_ADDR_UNLOCK();
 	SCTP_MALLOC(sctp_ifap, struct sctp_ifa *, sizeof(struct sctp_ifa), "SCTP_IFA");
-	if(sctp_ifap == NULL) {
+	if (sctp_ifap == NULL) {
 #ifdef INVARIANTS
 		panic("No memory for IFA");
 #endif
-		return(NULL);
+		return (NULL);
 	}
 	memset(sctp_ifap, 0, sizeof(sctp_ifap));
 	sctp_ifap->ifn_p = sctp_ifnp;
 	atomic_add_int(&sctp_ifnp->refcount, 1);
 
 	sctp_ifap->ifa = ifa;
-	memcpy(&sctp_ifap->address, addr, SCTP_OS_ADDR_LEN(addr));
+	memcpy(&sctp_ifap->address, addr, addr->sa_len);
 	sctp_ifap->localifa_flags = SCTP_ADDR_VALID | SCTP_ADDR_DEFER_USE;
 	sctp_ifap->flags = ifa_flags;
 
@@ -329,7 +329,7 @@ sctp_add_addr_to_vrf(uint32_t vrfid,
 }
 
 struct sctp_ifa *
-sctp_del_addr_from_vrf(uint32_t vrfid, sctp_os_addr_t *addr,
+sctp_del_addr_from_vrf(uint32_t vrfid, struct sockaddr *addr,
 		       uint32_t ifn_index)
 {
 	struct sctp_vrf *vrf;
@@ -343,13 +343,13 @@ sctp_del_addr_from_vrf(uint32_t vrfid, sctp_os_addr_t *addr,
 		goto out_now;
 	}
 	sctp_ifnp = sctp_find_ifn(vrf, (void *)NULL, ifn_index);
-	if(sctp_ifnp == NULL) {
+	if (sctp_ifnp == NULL) {
 		sctp_ifap = sctp_find_ifa_by_addr(addr, vrf->vrf_id, 1);
 	} else {
 		sctp_ifap = sctp_find_ifa_in_ifn(sctp_ifnp, addr, 1);
 	}
 
-	if(sctp_ifap) {
+	if (sctp_ifap) {
 		sctp_ifap->localifa_flags &= SCTP_ADDR_VALID;
 		sctp_ifap->localifa_flags |= SCTP_BEING_DELETED;
 		sctp_ifnp->ifa_count--;
@@ -1936,14 +1936,14 @@ sctp_inpcb_alloc(struct socket *so)
 		    SCTP_PCB_FLAGS_UNBOUND);
 		sctp_feature_on(inp, SCTP_PCB_FLAGS_RECVDATAIOEVNT);
 		/* Be sure it is NON-BLOCKING IO for UDP */
-		/* so->so_state |= SS_NBIO; */
+		/* SCTP_SET_SO_NBIO(so); */
 	} else if (so->so_type == SOCK_STREAM) {
 		/* TCP style socket */
 		inp->sctp_flags = (SCTP_PCB_FLAGS_TCPTYPE |
 		    SCTP_PCB_FLAGS_UNBOUND);
 		sctp_feature_on(inp, SCTP_PCB_FLAGS_RECVDATAIOEVNT);
 		/* Be sure we have blocking IO by default */
-		so->so_state &= ~SS_NBIO;
+		SCTP_CLEAR_SO_NBIO(so);
 	} else {
 		/*
 		 * unsupported socket type (RAW, etc)- in case we missed it
@@ -2565,11 +2565,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 		 * zero out the port to find the address! yuck! can't do
 		 * this earlier since need port for sctp_pcb_findep()
 		 */
-#if defined(__Panda__)
-		/* convert store_sa to sctp_os_addr_t first here */
-#else
-		ifa = sctp_find_ifa_by_addr((sctp_os_addr_t *)&store_sa, vrf, 0);
-#endif
+		ifa = sctp_find_ifa_by_addr((struct sockaddr *)&store_sa, vrf, 0);
 		if (ifa == NULL) {
 			/* Can't find an interface with that address */
 			SCTP_INP_WUNLOCK(inp);

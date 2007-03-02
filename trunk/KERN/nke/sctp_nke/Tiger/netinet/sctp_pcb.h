@@ -150,7 +150,10 @@ struct sctp_ifa {
 				 * update for that we MUST lock
 				 * appropriate locks. This is for V6.
 				 */
-	sctp_os_addr_store_t address;
+	union sctp_sockstore address;
+#if defined(__Panda__)
+	struct ip_addr ip_addr;	/* internal address format */
+#endif
 	uint32_t refcount;	/* number of folks refering to this */
  	uint32_t flags;
 	uint32_t localifa_flags;
@@ -252,7 +255,7 @@ struct sctp_epinfo {
 	void *ipi_iterator_wq_mtx;
 	void *ipi_count_mtx;
 	void *logging_mtx;
-#endif				/* _KERN_LOCKS_H_ */
+#endif /* _KERN_LOCKS_H_ */
 #endif
 	uint32_t ipi_count_ep;
 
@@ -545,12 +548,12 @@ struct sctp_ifa *
 sctp_add_addr_to_vrf(uint32_t vrfid,
 		     void *ifn, uint32_t ifn_index, uint32_t ifn_type,
 		     const char *if_name,
-		     void *ifa, sctp_os_addr_t *addr, uint32_t ifa_flags);
+		     void *ifa, struct sockaddr *addr, uint32_t ifa_flags);
 
 void sctp_free_ifa(struct sctp_ifa *sctp_ifap);
 
 struct sctp_ifa *
-sctp_del_addr_from_vrf(uint32_t vrfid, sctp_os_addr_t *addr,
+sctp_del_addr_from_vrf(uint32_t vrfid, struct sockaddr *addr,
 		       uint32_t ifn_index);
 
 

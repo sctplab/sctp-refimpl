@@ -1989,8 +1989,10 @@ sctp_add_addr_to_mbuf(struct mbuf *m, struct sctp_ifa *ifa)
 		parmh->param_length = htons(len);
 		memcpy(ipv6p->addr, &sin6->sin6_addr,
 		    sizeof(ipv6p->addr));
+#if defined(SCTP_EMBEDDED_V6_SCOPE)
 		/* clear embedded scope in the address */
 		in6_clearscope((struct in6_addr *)ipv6p->addr);
+#endif
 		SCTP_BUF_LEN(mret) += len;
 	} else {
 		return (m);
@@ -6593,7 +6595,7 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
     struct sctp_nets *net, int frag_point, int eeor_mode)
 {
 	struct sctp_association *asoc;
-	struct sctp_stream_out *strq, *strqn;
+	struct sctp_stream_out *strq, *strqn, *strqt;
 	int goal_mtu, moved_how_much, total_moved=0;
 	int locked, giveup;
 	struct sctp_stream_queue_pending *sp;
@@ -6668,13 +6670,14 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
 				break;
 		} else {
 			asoc->locked_on_sending = NULL;
+			strqt = sctp_select_a_stream(stcb, asoc);
 			if(TAILQ_FIRST(&strq->outqueue) == NULL) {
 				sctp_remove_from_wheel(stcb, asoc, strq);
 			}
 			if(giveup) {
 				break;
 			}
-			strq = sctp_select_a_stream(stcb, asoc);
+			strq = strqt;
 			if(strq == NULL) {
 				break;
 			}
@@ -8306,7 +8309,11 @@ one_chunk_around:
 				 * flag since this flag dictates if we
 				 * subtracted from the fs
 				 */
-				data_list[i]->rec.data.chunk_was_revoked = 0;
+				if(data_list[i]->rec.data.chunk_was_revoked) {
+					/* Deflate the cwnd */
+					data_list[i]->whoTo->cwnd -= data_list[i]->book_size;
+					data_list[i]->rec.data.chunk_was_revoked = 0;
+				}
 				data_list[i]->snd_count++;
 				sctp_ucount_decr(asoc->sent_queue_retran_cnt);
 				/* record the time */
@@ -11070,7 +11077,7 @@ sctp_lower_sosend(struct socket *so,
 			asoc = &stcb->asoc;
 		}
 	}
-	if (((so->so_state & SS_NBIO)
+	if ((SCTP_SO_IS_NBIO(so)
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 	     || (flags & MSG_NBIO)
 #endif

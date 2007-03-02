@@ -678,6 +678,11 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 			}
 			if (stcb->asoc.total_flight_count > 0)
 				stcb->asoc.total_flight_count--;
+			if(chk->rec.data.chunk_was_revoked) {
+				/* deflate the cwnd */
+				chk->whoTo->cwnd -= chk->book_size;
+				chk->rec.data.chunk_was_revoked = 0;
+			}
 			chk->sent = SCTP_DATAGRAM_RESEND;
 			SCTP_STAT_INCR(sctps_markedretrans);
 			net->marked_retrans++;

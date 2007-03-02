@@ -2469,10 +2469,12 @@ sctp_addr_in_initack(struct sctp_tcb *stcb, struct mbuf *m, uint32_t offset,
 	struct sctp_ipv4addr_param *a4p;
 
 #ifdef INET6
-	struct sockaddr_in6 *sin6, sin6_tmp;
+	struct sockaddr_in6 *sin6;
 	struct sctp_ipv6addr_param *a6p;
-
-#endif				/* INET6 */
+#ifdef SCTP_EMBEDDED_V6_SCOPE
+	struct sockaddr_in6 sin6_tmp;
+#endif
+#endif /* INET6 */
 
 	if (
 #ifdef INET6

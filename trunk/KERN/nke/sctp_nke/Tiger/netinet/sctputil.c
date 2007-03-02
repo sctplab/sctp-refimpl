@@ -3741,9 +3741,9 @@ sctp_is_there_an_abort_here(struct mbuf *m, int iphlen, uint32_t * vtagfill)
 uint32_t
 sctp_is_same_scope(struct sockaddr_in6 *addr1, struct sockaddr_in6 *addr2)
 {
+#if defined(SCTP_EMBEDDED_V6_SCOPE)
 	struct sockaddr_in6 a, b;
 
-#if defined(SCTP_EMBEDDED_V6_SCOPE)
 	/* save copies */
 	a = *addr1;
 	b = *addr2;
@@ -4366,7 +4366,7 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
  * ifa_ifwithaddr() compares the entire sockaddr struct
  */
 struct sctp_ifa *
-sctp_find_ifa_in_ifn(struct sctp_ifn *sctp_ifnp, sctp_os_addr_t *addr,
+sctp_find_ifa_in_ifn(struct sctp_ifn *sctp_ifnp, struct sockaddr *addr,
 		     int holds_lock)
 {
 	struct sctp_ifa *sctp_ifap;
@@ -4375,21 +4375,20 @@ sctp_find_ifa_in_ifn(struct sctp_ifn *sctp_ifnp, sctp_os_addr_t *addr,
 		SCTP_IPI_ADDR_LOCK();
 
 	LIST_FOREACH(sctp_ifap, &sctp_ifnp->ifalist, next_ifa) {
-		if (SCTP_OS_ADDR_FAMILY(addr) !=
-		    SCTP_OS_ADDR_FAMILY((sctp_os_addr_t *)&sctp_ifap->address))
+		if (addr->sa_family != sctp_ifap->address.sa.sa_family)
 			continue;
-		if (SCTP_OS_ADDR_FAMILY(addr) == AF_INET) {
-			if (SCTP_OS_ADDR_V4ADDR(addr) ==
-			    SCTP_OS_ADDR_V4ADDR(&sctp_ifap->address)) {
+		if (addr->sa_family == AF_INET) {
+			if (((struct sockaddr_in *)addr)->sin_addr.s_addr ==
+			    sctp_ifap->address.sin.sin_addr.s_addr) {
 				/* found him. */
 				if (holds_lock == 0)
 					SCTP_IPI_ADDR_UNLOCK();
 				return (sctp_ifap);
 				break;
 			}
-		} else if (SCTP_OS_ADDR_FAMILY(addr) == AF_INET6) {
-			if (SCTP6_ARE_ADDR_EQUAL(&SCTP_OS_ADDR_V6ADDR(addr),
-						 &SCTP_OS_ADDR_V6ADDR((sctp_os_addr_t *)&sctp_ifap->address))) {
+		} else if (addr->sa_family == AF_INET6) {
+			if (SCTP6_ARE_ADDR_EQUAL(&((struct sockaddr_in6 *)addr)->sin6_addr,
+						 &sctp_ifap->address.sin6.sin6_addr)) {
 				/* found him. */
 				if (holds_lock == 0)
 					SCTP_IPI_ADDR_UNLOCK();
@@ -4404,7 +4403,7 @@ sctp_find_ifa_in_ifn(struct sctp_ifn *sctp_ifnp, sctp_os_addr_t *addr,
 }
 
 struct sctp_ifa *
-sctp_find_ifa_by_addr(sctp_os_addr_t *addr, uint32_t vrf_id, int holds_lock)
+sctp_find_ifa_by_addr(struct sockaddr *addr, uint32_t vrf_id, int holds_lock)
 {
 	struct sctp_ifa *sctp_ifap;
 	struct sctp_ifn *sctp_ifnp = NULL;
@@ -4569,7 +4568,10 @@ sctp_sorecvmsg(struct socket *so,
 	uint32_t rwnd_req=0;
 	int hold_sblock = 0;
 	int hold_rlock = 0;
-	int alen=0, slen=0;
+#if defined(__FreeBSD__)
+	int alen = 0;
+#endif
+	int slen = 0;
 	int held_length = 0;
 
 	if (msg_flags) {
@@ -4591,7 +4593,7 @@ sctp_sorecvmsg(struct socket *so,
 	    | MSG_NBIO
 #endif
 	    )) ||
-	    (so->so_state & SS_NBIO)) {
+	    SCTP_SO_IS_NBIO(so)) {
 		block_allowed = 0;
 	}
 	/* setup the endpoint */

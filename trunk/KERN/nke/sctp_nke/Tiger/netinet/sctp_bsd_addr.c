@@ -116,6 +116,45 @@ sctp_gather_internal_ifa_flags(struct sctp_ifa *ifa)
 }
 
 
+
+static uint32_t
+sctp_is_desired_interface_type(struct ifaddr *ifa)
+{
+        int result;
+ 
+        /* check the interface type to see if it's one we care about */
+        switch (ifa->ifa_ifp->if_type) {
+        case IFT_ETHER:
+        case IFT_ISO88023:
+	case IFT_ISO88024:
+        case IFT_ISO88025:
+	case IFT_ISO88026:
+        case IFT_STARLAN:
+        case IFT_P10:
+        case IFT_P80:
+        case IFT_HY:
+        case IFT_FDDI:
+        case IFT_XETHER:
+	case IFT_ISDNBASIC:
+	case IFT_ISDNPRIMARY:
+	case IFT_PTPSERIAL:
+	case IFT_PPP:
+	case IFT_SLIP:
+#if !defined(__APPLE__)
+	case IFT_IP:
+	case IFT_IPOVERCDLC:
+	case IFT_IPOVERCLAW:
+	case IFT_VIRTUALIPADDRESS:
+#endif
+                result = 1;
+                break;
+        default:
+                result = 0;
+        }
+
+        return (result);
+}
+
 static void
 sctp_init_ifns_for_vrf(int vrfid)
 {
@@ -132,6 +171,34 @@ sctp_init_ifns_for_vrf(int vrfid)
 
 	TAILQ_FOREACH(ifn, &ifnet, if_list) {
 		TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
+			if(ifa->ifa_addr == NULL) {
+				continue;
+			}
+			if ((ifa->ifa_addr->sa_family != AF_INET) &&
+			    (ifa->ifa_addr->sa_family != AF_INET6)
+				) {
+				/* non inet/inet6 skip */
+				continue;
+			}
+			if(ifa->ifa_addr->sa_family == AF_INET6) {
+				ifa6 = (struct in6_ifaddr *)ifa;
+				ifa_flags = ifa6->ia6_flags;
+				if (IN6_IS_ADDR_UNSPECIFIED(&((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr)) {
+					/* skip unspecifed addresses */
+					continue;
+				}
+
+			} else if (ifa->ifa_addr->sa_family == AF_INET) {
+				if (((struct sockaddr_in *)ifa->ifa_addr)->sin_addr.s_addr == 0) {
+					continue;
+				}
+			}
+
+			if(sctp_is_desired_interface_type(ifa) == 0) {
+				/* non desired type */
+				continue;
+			}
+
 			if((ifa->ifa_addr->sa_family == AF_INET6) ||
 			   (ifa->ifa_addr->sa_family == AF_INET)) {
 				if (ifa->ifa_addr->sa_family == AF_INET6) {
@@ -180,6 +247,7 @@ sctp_init_vrf_list(int vrfid)
 
 static uint8_t first_time=0;
 
+
 void
 sctp_addr_change(struct ifaddr *ifa, int cmd)
 {
@@ -198,9 +266,32 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 	}
 	if(cmd == RTM_ADD) {
 		struct in6_ifaddr *ifa6;
+		if(ifa->ifa_addr == NULL) {
+			return;
+		}
+		if ((ifa->ifa_addr->sa_family != AF_INET) &&
+		    (ifa->ifa_addr->sa_family != AF_INET6)
+			) {
+			/* non inet/inet6 skip */
+			return;
+		}
 		if(ifa->ifa_addr->sa_family == AF_INET6) {
 			ifa6 = (struct in6_ifaddr *)ifa;
 			ifa_flags = ifa6->ia6_flags;
+			if (IN6_IS_ADDR_UNSPECIFIED(&((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr)) {
+				/* skip unspecifed addresses */
+				return;
+			}
+
+		} else if (ifa->ifa_addr->sa_family == AF_INET) {
+			if (((struct sockaddr_in *)ifa->ifa_addr)->sin_addr.s_addr == 0) {
+				return;
+			}
+		}
+
+		if(sctp_is_desired_interface_type(ifa) == 0) {
+			/* non desired type */
+			return;
 		}
 		ifap = sctp_add_addr_to_vrf(SCTP_DEFAULT_VRFID, (void *)ifa->ifa_ifp,
 					    ifa->ifa_ifp->if_index, ifa->ifa_ifp->if_type,
