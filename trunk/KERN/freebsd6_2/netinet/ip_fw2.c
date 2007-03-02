@@ -81,6 +81,7 @@
 #include <netinet/tcpip.h>
 #include <netinet/udp.h>
 #include <netinet/udp_var.h>
+#include <netinet/sctp.h>
 
 #include <netgraph/ng_ipfw.h>
 
@@ -340,6 +341,7 @@ static int fw_deny_unknown_exthdrs = 1;
  */
 #define	L3HDR(T, ip)	((T *)((u_int32_t *)(ip) + (ip)->ip_hl))
 #define	TCP(p)		((struct tcphdr *)(p))
+#define	SCTP(p)		((struct sctphdr *)(p))
 #define	UDP(p)		((struct udphdr *)(p))
 #define	ICMP(p)		((struct icmphdr *)(p))
 #define	ICMP6(p)	((struct icmp6_hdr *)(p))
@@ -2221,6 +2223,12 @@ do {									\
 				args->f_id.flags = TCP(ulp)->th_flags;
 				break;
 
+			case IPPROTO_SCTP:
+				PULLUP_TO(hlen, ulp, struct sctphdr);
+				dst_port = SCTP(ulp)->dest_port;
+				src_port = SCTP(ulp)->src_port;
+				break;
+
 			case IPPROTO_UDP:
 				PULLUP_TO(hlen, ulp, struct udphdr);
 				dst_port = UDP(ulp)->uh_dport;
@@ -2378,6 +2386,12 @@ do {									\
 				dst_port = TCP(ulp)->th_dport;
 				src_port = TCP(ulp)->th_sport;
 				args->f_id.flags = TCP(ulp)->th_flags;
+				break;
+
+			case IPPROTO_SCTP:
+				PULLUP_TO(hlen, ulp, struct sctphdr);
+				dst_port = SCTP(ulp)->dest_port;
+				src_port = SCTP(ulp)->src_port;
 				break;
 
 			case IPPROTO_UDP:
