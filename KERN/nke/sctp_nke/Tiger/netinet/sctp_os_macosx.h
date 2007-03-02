@@ -115,13 +115,6 @@ extern struct fileops socketops;
 #define SCTP_IFNAMSIZ IFNAMSIZ
 #define SCTP_DEFAULT_VRFID 0
 
-typedef union sctp_sockstore sctp_os_addr_store_t;
-typedef struct sockaddr sctp_os_addr_t;
-#define SCTP_OS_ADDR_LEN(addr) ((addr)->sa_len)
-#define SCTP_OS_ADDR_FAMILY(addr) ((addr)->sa_family)
-#define SCTP_OS_ADDR_V4ADDR(addr) (((struct sockaddr_in *)(addr))->sin_addr.s_addr)
-#define SCTP_OS_ADDR_V6ADDR(addr) (((struct sockaddr_in6 *)(addr))->sin6_addr)
-
 #define SCTP_IFN_IS_IFT_LOOP(ifn) ((ifn)->ifn_type == IFT_LOOP)
 
 /*
@@ -282,6 +275,10 @@ struct mbuf *sctp_m_prepend_2(struct mbuf *m, int len, int how);
 
 /* is the endpoint v6only? */
 #define SCTP_IPV6_V6ONLY(inp)	(((struct inpcb *)inp)->inp_flags & IN6P_IPV6_V6ONLY)
+/* is the socket non-blocking? */
+#define SCTP_SO_IS_NBIO(so)	((so)->so_state & SS_NBIO)
+#define SCTP_SET_SO_NBIO(so)	((so)->so_state |= SS_NBIO)
+#define SCTP_CLEAR_SO_NBIO(so)	((so)->so_state &= ~SS_NBIO)
 
 /*
  * SCTP AUTH

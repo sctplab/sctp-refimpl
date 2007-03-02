@@ -3043,6 +3043,11 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 						(*ecn_seg_sums) &= SCTP_SACK_NONCE_SUM;
 
 						tp1->sent = SCTP_DATAGRAM_MARKED;
+						if (tp1->rec.data.chunk_was_revoked) {
+							/* deflate the cwnd */
+							tp1->whoTo->cwnd -= tp1->book_size;
+							tp1->rec.data.chunk_was_revoked = 0;
+						}
 					}
 					break;
 				}	/* if (tp1->TSN_seq == j) */
@@ -3073,7 +3078,7 @@ sctp_check_for_revoked(struct sctp_association *asoc, uint32_t cumack,
 	tp1 = TAILQ_FIRST(&asoc->sent_queue);
 	while (tp1) {
 		if (compare_with_wrap(tp1->rec.data.TSN_seq, cumack,
-		    MAX_TSN)) {
+				      MAX_TSN)) {
 			/*
 			 * ok this guy is either ACK or MARKED. If it is
 			 * ACKED it has been previously acked but not this
@@ -3083,35 +3088,28 @@ sctp_check_for_revoked(struct sctp_association *asoc, uint32_t cumack,
 			if (tp1->sent == SCTP_DATAGRAM_ACKED) {
 				/* it has been revoked */
 
-			        if(sctp_cmt_on_off) {
-				        /*
-					 * If CMT is ON, leave "sent" at ACKED. CMT causes
-					 * reordering of data and acks (received on different
-					 * interfaces) can be persistently reordered. Acking
-					 * followed by apparent revoking and re-acking causes
-					 * unexpected weird behavior. So, at this time, CMT does not
-					 * respect renegs. Renegs cannot be recovered. I will fix this 
-					 * once I am sure that things are working right again with CMT.
-					 */
-				} else {
-				        tp1->sent = SCTP_DATAGRAM_SENT;
-					tp1->rec.data.chunk_was_revoked = 1;
-					/* We must add this stuff back in to
-					 * assure timers and such get started.
-					 */
-					tp1->whoTo->flight_size += tp1->book_size;
-					asoc->total_flight_count++;
-					asoc->total_flight += tp1->book_size;
-					tot_revoked++;
+				tp1->sent = SCTP_DATAGRAM_SENT;
+				tp1->rec.data.chunk_was_revoked = 1;
+				/* We must add this stuff back in to
+				 * assure timers and such get started.
+				 */
+				tp1->whoTo->flight_size += tp1->book_size;
+				/* We inflate the cwnd to compensate for our
+				 * inflation of the flight_size.
+				 */
+				tp1->whoTo->cwnd += tp1->book_size;
+				asoc->total_flight_count++;
+				asoc->total_flight += tp1->book_size;
+					
+				tot_revoked++;
 #ifdef SCTP_SACK_LOGGING
-					sctp_log_sack(asoc->last_acked_seq,
-						      cumack,
-						      tp1->rec.data.TSN_seq,
-						      0,
-						      0,
-						      SCTP_LOG_TSN_REVOKED);
+				sctp_log_sack(asoc->last_acked_seq,
+					      cumack,
+					      tp1->rec.data.TSN_seq,
+					      0,
+					      0,
+					      SCTP_LOG_TSN_REVOKED);
 #endif
-				}
 			} else if (tp1->sent == SCTP_DATAGRAM_MARKED) {
 				/* it has been re-acked in this SACK */
 				tp1->sent = SCTP_DATAGRAM_ACKED;
@@ -4182,6 +4180,11 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 				if (tp1->sent == SCTP_DATAGRAM_RESEND) {
 					sctp_ucount_decr(asoc->sent_queue_retran_cnt);
 				}
+				if (tp1->rec.data.chunk_was_revoked) {
+					/* deflate the cwnd */
+					tp1->whoTo->cwnd -= tp1->book_size;
+					tp1->rec.data.chunk_was_revoked = 0;
+				}
 				tp1->sent = SCTP_DATAGRAM_ACKED;
 			}
 		} else {
@@ -4750,6 +4753,11 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 					    (asoc->sent_queue_retran_cnt & 0x000000ff));
 #endif
 				}
+				if (tp1->rec.data.chunk_was_revoked) {
+					/* deflate the cwnd */
+					tp1->whoTo->cwnd -= tp1->book_size;
+					tp1->rec.data.chunk_was_revoked = 0;
+				}
 				tp1->sent = SCTP_DATAGRAM_ACKED;
 			}
 		} else {
@@ -4927,6 +4935,7 @@ skip_segments:
 					tp1->sent = SCTP_DATAGRAM_SENT;
 					tp1->rec.data.chunk_was_revoked = 1;
 					tp1->whoTo->flight_size += tp1->book_size;
+					tp1->whoTo->cwnd += tp1->book_size;
 					asoc->total_flight_count++;
 					asoc->total_flight += tp1->book_size;
 					cnt_revoked++;
