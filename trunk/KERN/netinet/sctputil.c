@@ -3741,9 +3741,9 @@ sctp_is_there_an_abort_here(struct mbuf *m, int iphlen, uint32_t * vtagfill)
 uint32_t
 sctp_is_same_scope(struct sockaddr_in6 *addr1, struct sockaddr_in6 *addr2)
 {
+#if defined(SCTP_EMBEDDED_V6_SCOPE)
 	struct sockaddr_in6 a, b;
 
-#if defined(SCTP_EMBEDDED_V6_SCOPE)
 	/* save copies */
 	a = *addr1;
 	b = *addr2;
