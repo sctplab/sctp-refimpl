@@ -63,11 +63,6 @@
 #define SCTP_IPI_COUNT_DESTROY() \
 	pthread_mutex_destory(&sctppcbinfo.ipi_count_mtx)
 
-#define SCTP_IPI_ADDR_INIT()
-#define SCTP_IPI_ADDR_DESTROY(_inp)
-#define SCTP_IPI_ADDR_LOCK()
-#define SCTP_IPI_ADDR_UNLOCK()
-
 #define SCTP_TCB_SEND_LOCK_INIT(_tcb)
 #define SCTP_TCB_SEND_LOCK_DESTROY(_tcb)
 #define SCTP_TCB_SEND_LOCK(_tcb)
@@ -127,19 +122,6 @@
 #define SCTP_INP_INFO_WLOCK()	do { 					\
 	ptrhead_mutex_lock(&sctppcbinfo.ipi_ep_mtx);			\
 } while (0)
-
-
-#define SCTP_IPI_ADDR_INIT() \
-	pthread_mutex_init(&sctppcbinfo.ipi_addr_mtx, NULL)
-
-#define SCTP_IPI_ADDR_DESTROY() \
-	pthread_mutex_destroy(&sctppcbinfo.ipi_addr_mtx)
-
-#define SCTP_IPI_ADDR_LOCK()	do { 					\
-	pthread_mutex_lock(&sctppcbinfo.ipi_addr_mtx);			\
-} while (0)
-
-#define SCTP_IPI_ADDR_UNLOCK()		pthead_mutex_unlock(&sctppcbinfo.ipi_addr_mtx)
 
 
 
@@ -279,6 +261,20 @@
 		global_sctp_cwnd_log_rolled = 1; \
 	} \
 }
+
+/* address list locks */
+#define SCTP_IPI_ADDR_INIT() \
+	pthread_mutex_init(&sctppcbinfo.ipi_addr_mtx, NULL)
+
+#define SCTP_IPI_ADDR_DESTROY() \
+	pthread_mutex_destroy(&sctppcbinfo.ipi_addr_mtx)
+
+#define SCTP_IPI_ADDR_LOCK()	do { 					\
+	pthread_mutex_lock(&sctppcbinfo.ipi_addr_mtx);			\
+} while (0)
+
+#define SCTP_IPI_ADDR_UNLOCK() \
+	pthead_mutex_unlock(&sctppcbinfo.ipi_addr_mtx)
 
 /* iterator locks */
 #define SCTP_ITERATOR_LOCK_INIT() \
