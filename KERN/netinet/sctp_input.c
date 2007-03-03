@@ -56,10 +56,6 @@ extern uint32_t sctp_debug_on;
 #endif
 
 
-struct sctp_foo_stuff sctp_logoff[30000];
-int sctp_logoff_stuff=0;
-
-
 static void
 sctp_stop_all_cookie_timers(struct sctp_tcb *stcb)
 {
@@ -4761,9 +4757,6 @@ sctp_trim_mbuf(struct mbuf *m)
 }
 #endif
 
-int sctp_buf_index=0;
-uint8_t sctp_list_of_chunks[30000];
-
 
 #if defined(__FreeBSD__) || defined(__APPLE__)
 void
@@ -4941,20 +4934,6 @@ sctp_skip_csum_4:
 	if (mlen < (ip->ip_len - iphlen)) {
 		SCTP_STAT_INCR(sctps_hdrops);
 		goto bad;
-	}
-	{
-		/* TEMP log the first chunk */
-		int x;
-#ifdef __FreeBSD__
-		x =  atomic_fetchadd_int(&sctp_buf_index, 1);
-#else
-		x = sctp_buf_index++;
-#endif
-		if(x >= 30000) {
-			sctp_buf_index = 1;
-			x = 0;;
-		}
-		sctp_list_of_chunks[x] = ch->chunk_type;
 	}
 	/*
 	 * Locate pcb and tcb for datagram sctp_findassociation_addr() wants

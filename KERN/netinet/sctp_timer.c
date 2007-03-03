@@ -1753,7 +1753,7 @@ select_a_new_ep:
 	SCTP_INP_WUNLOCK(it->inp);
 	SCTP_INP_RLOCK(it->inp);
 	/* now go through each assoc which is in the desired state */
-	if(it->done_current_ep) {
+	if(it->done_current_ep == 0) {
 		if (it->function_inp != NULL)
 			inp_skip = (*it->function_inp)(it->inp, it->pointer, it->val);
 		it->done_current_ep = 1;

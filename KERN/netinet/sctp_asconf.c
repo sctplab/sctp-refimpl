@@ -1765,6 +1765,7 @@ sctp_addr_mgmt_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	}
 }
 
+
 int
 sctp_iterator_ep(struct sctp_inpcb *inp, void *ptr, uint32_t val)
 {
@@ -1790,7 +1791,6 @@ sctp_iterator_ep(struct sctp_inpcb *inp, void *ptr, uint32_t val)
 		} else if (ifa->address.sa.sa_family == AF_INET) {
 			/* invalid if we are a v6 only endpoint */
 			struct in6pcb *inp6;
-
 			inp6 = (struct in6pcb *)&inp->ip_inp.inp;
 			if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) &&
 			    SCTP_IPV6_V6ONLY(inp6)) {
@@ -1810,30 +1810,13 @@ sctp_iterator_ep(struct sctp_inpcb *inp, void *ptr, uint32_t val)
 		}
 		/* Check sub-set bound case */
 		if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) == 0) {
-			/* subset bound endpoint */
-			if (sctp_is_feature_off(inp, SCTP_PCB_FLAGS_DO_ASCONF)) {
-				/*
-				 * subset bound, but ASCONFs not allowed... if
-				 * adding, nothing to do, since not allowed if
-				 * deleting, remove address from endpoint peer will
-				 * have to "timeout" this addr
-				 */
-				if (type == SCTP_DEL_IP_ADDRESS) {
-					sctp_del_local_addr_ep(inp, ifa);
-				}
-				continue;
-			} else {
-				/*
-				 * subset bound, ASCONFs allowed... if adding, add
-				 * address to endpoint list if deleting, remove
-				 * address from endpoint
-				 */
-				if (type == SCTP_ADD_IP_ADDRESS) {
-					sctp_add_local_addr_ep(inp, ifa);
-				} else if (type == SCTP_DEL_IP_ADDRESS) {
-					sctp_del_local_addr_ep(inp, ifa);
-				}
-				/* drop through and notify all asocs */
+			/* In all cases we must add or delete it
+			 * from the ep.
+			 */
+			if (type == SCTP_ADD_IP_ADDRESS) {
+				sctp_add_local_addr_ep(inp, ifa);
+			} else if (type == SCTP_DEL_IP_ADDRESS) {
+				sctp_del_local_addr_ep(inp, ifa);
 			}
 		}
 	}
@@ -2701,8 +2684,9 @@ sctp_addr_mgmt_ep_sa(struct sctp_inpcb *inp, struct sockaddr *sa, uint16_t type,
 	getmicrotime(&timenow);
 #endif
 
-	if (sa->sa_len == 0)
+	if (sa->sa_len == 0) {
 		return (EINVAL);
+	}
 
 	ifa = sctp_find_ifa_by_addr(sa,  vrf, 0);
 	if (ifa != NULL) {
