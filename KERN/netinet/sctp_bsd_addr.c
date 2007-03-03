@@ -139,6 +139,7 @@ sctp_is_desired_interface_type(struct ifaddr *ifa)
 	case IFT_ISDNPRIMARY:
 	case IFT_PTPSERIAL:
 	case IFT_PPP:
+	case IFT_LOOP:
 	case IFT_SLIP:
 #if !defined(__APPLE__)
 	case IFT_IP:
@@ -194,7 +195,7 @@ sctp_init_ifns_for_vrf(int vrfid)
 				}
 			}
 
-			if(sctp_is_desired_interface_type(ifa) == 0) {
+			if (sctp_is_desired_interface_type(ifa) == 0) {
 				/* non desired type */
 				continue;
 			}
@@ -289,7 +290,7 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 			}
 		}
 
-		if(sctp_is_desired_interface_type(ifa) == 0) {
+		if (sctp_is_desired_interface_type(ifa) == 0) {
 			/* non desired type */
 			return;
 		}
