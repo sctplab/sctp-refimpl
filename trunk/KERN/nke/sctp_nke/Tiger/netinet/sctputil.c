@@ -1050,6 +1050,8 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	asoc->ecn_echo_cnt_onq = 0;
 	asoc->stream_locked = 0;
 
+	asoc->send_sack = 1;
+	
 	LIST_INIT(&asoc->sctp_restricted_addrs);
 
 	TAILQ_INIT(&asoc->nets);
