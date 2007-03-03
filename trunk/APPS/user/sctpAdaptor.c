@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.27 2007-02-02 19:33:43 lei Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.28 2007-03-03 03:18:01 lei Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -166,7 +166,11 @@ handle_notification(int fd,char *notify_buf) {
 		} /* end switch */
 		sin6 = (struct sockaddr_in6 *)&spc->spc_aaddr;
 		if (sin6->sin6_family == AF_INET6) {
+			char scope_str[16];
+			snprintf(scope_str, sizeof(scope_str)-1, " scope %u",
+				 sin6->sin6_scope_id);
 			inet_ntop(AF_INET6, (char*)&sin6->sin6_addr, buf, sizeof(buf));
+			strcat(buf, scope_str);
 		} else {
 			sin = (struct sockaddr_in *)&spc->spc_aaddr;
 			inet_ntop(AF_INET, (char*)&sin->sin_addr, buf, sizeof(buf));
