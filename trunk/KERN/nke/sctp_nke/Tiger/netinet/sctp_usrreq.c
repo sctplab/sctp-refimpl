@@ -3230,13 +3230,14 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 	sctp_lock_assert(so);
 #endif
 	if (optval == NULL) {
+		printf("optval is NULL\n");
 		return (EINVAL);
 	}
-
 	inp = (struct sctp_inpcb *)so->so_pcb;
-	if (inp == 0)
+	if (inp == 0) {
+		printf("inp is NULL?\n");
 		return EINVAL;
-
+	}
 	error = 0;
 	switch (optname) {
 	case SCTP_NODELAY:
