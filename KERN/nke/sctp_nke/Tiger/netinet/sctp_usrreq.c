@@ -3980,11 +3980,11 @@ SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
 
 			if (stcb) {
 				/* Set in ms we hope :-) */
-				if (srto->srto_initial > 10)
+				if (srto->srto_initial)
 					stcb->asoc.initial_rto = srto->srto_initial;
-				if (srto->srto_max > 10)
+				if (srto->srto_max)
 					stcb->asoc.maxrto = srto->srto_max;
-				if (srto->srto_min > 10)
+				if (srto->srto_min)
 					stcb->asoc.minrto = srto->srto_min;
 				SCTP_TCB_UNLOCK(stcb);
 			} else {
@@ -3993,11 +3993,11 @@ SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
 				 * If we have a null asoc, its default for
 				 * the endpoint
 				 */
-				if (srto->srto_initial > 10)
+				if (srto->srto_initial)
 					inp->sctp_ep.initial_rto = srto->srto_initial;
-				if (srto->srto_max > 10)
+				if (srto->srto_max)
 					inp->sctp_ep.sctp_maxrto = srto->srto_max;
-				if (srto->srto_min > 10)
+				if (srto->srto_min)
 					inp->sctp_ep.sctp_minrto = srto->srto_min;
 				SCTP_INP_WUNLOCK(inp);
 			}
@@ -4055,12 +4055,7 @@ SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
 			if (sinit->sinit_max_attempts)
 				inp->sctp_ep.max_init_times = sinit->sinit_max_attempts;
 
-			if (sinit->sinit_max_init_timeo > 10)
-				/*
-				 * We must be at least a 100ms (we set in
-				 * ticks)
-				 */
-				 /* FIXME MT: What is this? */
+			if (sinit->sinit_max_init_timeo)
 				inp->sctp_ep.initial_init_rto_max = sinit->sinit_max_init_timeo;
 			SCTP_INP_WUNLOCK(inp);
 		}
