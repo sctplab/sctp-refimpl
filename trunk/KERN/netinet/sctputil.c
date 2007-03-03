@@ -2911,14 +2911,20 @@ sctp_notify_peer_addr_change(struct sctp_tcb *stcb, uint32_t state,
 		memcpy(&spc->spc_aaddr, sa, sizeof(struct sockaddr_in6));
 
 #ifdef SCTP_EMBEDDED_V6_SCOPE
-		/* recover scope_id for user */
 		sin6 = (struct sockaddr_in6 *)&spc->spc_aaddr;
 		if (IN6_IS_SCOPE_LINKLOCAL(&sin6->sin6_addr)) {
+			if (sin6->sin6_scope_id == 0) {
+				/* recover scope_id for user */
 #ifdef SCTP_KAME
-		 	(void)sa6_recoverscope(sin6);
+		 		(void)sa6_recoverscope(sin6);
 #else
-			(void)in6_recoverscope(sin6, &sin6->sin6_addr, NULL);
+				(void)in6_recoverscope(sin6, &sin6->sin6_addr,
+						       NULL);
 #endif
+			} else {
+				/* clear embedded scope_id for user */
+				in6_clearscope(&sin6->sin6_addr);
+			}
 		}
 #endif /* SCTP_EMBEDDED_V6_SCOPE */
 	}
