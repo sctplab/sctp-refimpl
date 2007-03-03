@@ -255,6 +255,7 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 	struct sctp_laddr *wi;
 	struct sctp_ifa *ifap=NULL;
 	uint32_t ifa_flags=0;
+	struct in6_ifaddr *ifa6;
 	/* BSD only has one VRF, if this changes
 	 * we will need to hook in the right 
 	 * things here to get the id to pass to
@@ -265,35 +266,34 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 		first_time = 1;
 		sctp_init_ifns_for_vrf(SCTP_DEFAULT_VRFID);
 	}
+	if(ifa->ifa_addr == NULL) {
+		return;
+	}
+	if ((ifa->ifa_addr->sa_family != AF_INET) &&
+	    (ifa->ifa_addr->sa_family != AF_INET6)
+		) {
+		/* non inet/inet6 skip */
+		return;
+	}
+	if(ifa->ifa_addr->sa_family == AF_INET6) {
+		ifa6 = (struct in6_ifaddr *)ifa;
+		ifa_flags = ifa6->ia6_flags;
+		if (IN6_IS_ADDR_UNSPECIFIED(&((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr)) {
+			/* skip unspecifed addresses */
+			return;
+		}
+
+	} else if (ifa->ifa_addr->sa_family == AF_INET) {
+		if (((struct sockaddr_in *)ifa->ifa_addr)->sin_addr.s_addr == 0) {
+			return;
+		}
+	}
+
+	if (sctp_is_desired_interface_type(ifa) == 0) {
+		/* non desired type */
+		return;
+	}
 	if(cmd == RTM_ADD) {
-		struct in6_ifaddr *ifa6;
-		if(ifa->ifa_addr == NULL) {
-			return;
-		}
-		if ((ifa->ifa_addr->sa_family != AF_INET) &&
-		    (ifa->ifa_addr->sa_family != AF_INET6)
-			) {
-			/* non inet/inet6 skip */
-			return;
-		}
-		if(ifa->ifa_addr->sa_family == AF_INET6) {
-			ifa6 = (struct in6_ifaddr *)ifa;
-			ifa_flags = ifa6->ia6_flags;
-			if (IN6_IS_ADDR_UNSPECIFIED(&((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr)) {
-				/* skip unspecifed addresses */
-				return;
-			}
-
-		} else if (ifa->ifa_addr->sa_family == AF_INET) {
-			if (((struct sockaddr_in *)ifa->ifa_addr)->sin_addr.s_addr == 0) {
-				return;
-			}
-		}
-
-		if (sctp_is_desired_interface_type(ifa) == 0) {
-			/* non desired type */
-			return;
-		}
 		ifap = sctp_add_addr_to_vrf(SCTP_DEFAULT_VRFID, (void *)ifa->ifa_ifp,
 					    ifa->ifa_ifp->if_index, ifa->ifa_ifp->if_type,
 #ifdef __APPLE__

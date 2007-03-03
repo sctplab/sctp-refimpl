@@ -357,7 +357,9 @@ sctp_del_addr_from_vrf(uint32_t vrfid, struct sockaddr *addr,
 		LIST_REMOVE(sctp_ifap, next_ifa);
 		atomic_add_int(&sctp_ifnp->refcount, -1);
 	} else {
-		printf("Could not find address to be deleted\n");
+		printf("Del Addr-ifn:%d Could not find address:", 
+		       ifn_index);
+		sctp_print_address(addr);
 	}
  out_now:
 	SCTP_IPI_ADDR_UNLOCK();	
