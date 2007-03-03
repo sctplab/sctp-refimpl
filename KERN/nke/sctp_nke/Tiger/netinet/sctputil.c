@@ -1155,7 +1155,6 @@ sctp_expand_mapping_array(struct sctp_association *asoc)
 
 extern unsigned int sctp_early_fr_msec;
 
-
 static void
 sctp_iterator_work(struct sctp_iterator *it)
 {
@@ -1173,6 +1172,7 @@ done_with_iterator:
 		if (it->function_atend != NULL) {
 			(*it->function_atend) (it->pointer, it->val);
 		}
+
 		SCTP_FREE(it);
 		return;
 	}
@@ -1188,6 +1188,7 @@ select_a_new_ep:
 			goto done_with_iterator;
 		}
 		SCTP_INP_WUNLOCK(it->inp);
+
 		it->inp = LIST_NEXT(it->inp, sctp_list);
 		if (it->inp == NULL) {
 			goto done_with_iterator;
@@ -1199,8 +1200,9 @@ select_a_new_ep:
 	it->inp->inp_starting_point_for_iterator = it;
 	SCTP_INP_WUNLOCK(it->inp);
 	SCTP_INP_RLOCK(it->inp);
+
 	/* now go through each assoc which is in the desired state */
-	if(it->done_current_ep) {
+	if(it->done_current_ep == 0) {
 		if (it->function_inp != NULL)
 			inp_skip = (*it->function_inp)(it->inp, it->pointer, it->val);
 		it->done_current_ep = 1;
@@ -1209,8 +1211,9 @@ select_a_new_ep:
 		/* run the per instance function */
 		it->stcb = LIST_FIRST(&it->inp->sctp_asoc_list);
 	}
-	SCTP_INP_RUNLOCK(it->inp);
+
 	if(inp_skip) {
+		SCTP_INP_RUNLOCK(it->inp);
 		goto no_stcb;
 	}
 	if ((it->stcb) &&
@@ -1232,8 +1235,10 @@ select_a_new_ep:
 			/* Pause to let others grab the lock */
 			atomic_add_int(&it->stcb->asoc.refcnt, 1);
 			SCTP_TCB_UNLOCK(it->stcb);
+			SCTP_INP_RUNLOCK(it->inp);
 			SCTP_ITERATOR_UNLOCK();
 			SCTP_ITERATOR_LOCK();
+			SCTP_INP_RLOCK(it->inp);
 			SCTP_TCB_LOCK(it->stcb);
 			atomic_add_int(&it->stcb->asoc.refcnt, -1);
 			iteration_count = 0;
@@ -1252,12 +1257,14 @@ select_a_new_ep:
 	next_assoc:
 		it->stcb = LIST_NEXT(it->stcb, sctp_tcblist);
 	}
+	SCTP_INP_RUNLOCK(it->inp);
  no_stcb:
 	/* done with all assocs on this endpoint, move on to next endpoint */
 	it->done_current_ep = 0;
 	SCTP_INP_WLOCK(it->inp);
 	it->inp->inp_starting_point_for_iterator = NULL;
 	SCTP_INP_WUNLOCK(it->inp);
+
 	if (it->iterator_flags & SCTP_ITERATOR_DO_SINGLE_INP) {
 		it->inp = NULL;
 	} else {
@@ -1606,9 +1613,7 @@ sctp_timeout_handler(void *t)
 				if ((net->dest_state & SCTP_ADDR_UNCONFIRMED) &&
 				    (net->dest_state & SCTP_ADDR_REACHABLE)) {
 					cnt_of_unconf++;
-				} else if ((net->dest_state & SCTP_ADDR_UNCONFIRMED)) {
-					printf("%p is unreachable and unconfirmed\n", net);
-				} 
+				}
 			}
 			if (cnt_of_unconf == 0) {
 				if (sctp_heartbeat_timer(inp, stcb, net, cnt_of_unconf)) {
@@ -2911,14 +2916,20 @@ sctp_notify_peer_addr_change(struct sctp_tcb *stcb, uint32_t state,
 		memcpy(&spc->spc_aaddr, sa, sizeof(struct sockaddr_in6));
 
 #ifdef SCTP_EMBEDDED_V6_SCOPE
-		/* recover scope_id for user */
 		sin6 = (struct sockaddr_in6 *)&spc->spc_aaddr;
 		if (IN6_IS_SCOPE_LINKLOCAL(&sin6->sin6_addr)) {
+			if (sin6->sin6_scope_id == 0) {
+				/* recover scope_id for user */
 #ifdef SCTP_KAME
-		 	(void)sa6_recoverscope(sin6);
+		 		(void)sa6_recoverscope(sin6);
 #else
-			(void)in6_recoverscope(sin6, &sin6->sin6_addr, NULL);
+				(void)in6_recoverscope(sin6, &sin6->sin6_addr,
+						       NULL);
 #endif
+			} else {
+				/* clear embedded scope_id for user */
+				in6_clearscope(&sin6->sin6_addr);
+			}
 		}
 #endif /* SCTP_EMBEDDED_V6_SCOPE */
 	}
