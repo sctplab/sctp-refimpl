@@ -1504,15 +1504,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			asoc->dup_tsns[asoc->numduptsns] = tsn;
 			asoc->numduptsns++;
 		}
-		if (!SCTP_OS_TIMER_PENDING(&asoc->dack_timer.timer)) {
-			/*
-			 * By starting the timer we assure that we WILL sack
-			 * at the end of the packet when sctp_sack_check
-			 * gets called.
-			 */
-			sctp_timer_start(SCTP_TIMER_TYPE_RECV, stcb->sctp_ep,
-			    stcb, NULL);
-		}
+		asoc->send_sack = 1;
 		return (0);
 	}
 	/*
@@ -2373,8 +2365,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 			 */
 			stcb->asoc.cmt_dac_pkts_rcvd++;
 
-			if ((stcb->asoc.first_ack_sent == 0) ||	/* First time we send a
-								 * sack */
+			if ((stcb->asoc.send_sack == 1) ||	/* We need to send a SACK */
 			    ((was_a_gap) && (is_a_gap == 0)) ||	/* was a gap, but no
 								 * longer is one */
 			    (stcb->asoc.numduptsns) ||	/* we have dup's */
@@ -2384,7 +2375,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 			    ) {
 
 				if ((sctp_cmt_on_off) && (sctp_cmt_use_dac) &&
-				    (stcb->asoc.first_ack_sent == 1) &&
+				    (stcb->asoc.send_sack == 0) &&
 				    (stcb->asoc.numduptsns == 0) &&
 				    (stcb->asoc.delayed_ack) &&
 				    (!SCTP_OS_TIMER_PENDING(&stcb->asoc.dack_timer.timer))) {
@@ -2410,7 +2401,6 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 					 * first packet OR there are gaps or
 					 * duplicates.
 					 */
-					stcb->asoc.first_ack_sent = 1;
 					SCTP_OS_TIMER_STOP(&stcb->asoc.dack_timer.timer);
 					sctp_send_sack(stcb);
 				}
@@ -2745,23 +2735,19 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 		sctp_service_queues(stcb, asoc);
 
 	if (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_SENT) {
-		/*
-		 * Assure that we ack right away by making sure that a d-ack
-		 * timer is running. So the sack_check will send a sack.
-		 */
-		sctp_timer_start(SCTP_TIMER_TYPE_RECV, stcb->sctp_ep, stcb,
-				 net);
+		/* Assure that we ack right away */
+		stcb->asoc.send_sack = 1;
 	}
 	/* Start a sack timer or QUEUE a SACK for sending */
 	if ((stcb->asoc.cumulative_tsn == stcb->asoc.highest_tsn_inside_map) &&
-	    (stcb->asoc.first_ack_sent)){
+	    (stcb->asoc.send_sack == 0) &&
+	    (stcb->asoc.delayed_ack > 0)){
 		/* Everything is in order */
 		if (stcb->asoc.mapping_array[0] == 0xff) {
 			/* need to do the slide */
 			sctp_sack_check(stcb, 1, was_a_gap, &abort_flag);
 		} else {
 			if (SCTP_OS_TIMER_PENDING(&stcb->asoc.dack_timer.timer)) {
-				stcb->asoc.first_ack_sent = 1;
 				SCTP_OS_TIMER_STOP(&stcb->asoc.dack_timer.timer);
 				sctp_send_sack(stcb);
 			} else {

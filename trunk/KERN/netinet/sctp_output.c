@@ -8944,10 +8944,14 @@ sctp_send_sack(struct sctp_tcb *stcb)
 		sctp_alloc_a_chunk(stcb, a_chk);
 		if (a_chk == NULL) {
 			/* No memory so we drop the idea, and set a timer */
-			sctp_timer_stop(SCTP_TIMER_TYPE_RECV,
-			    stcb->sctp_ep, stcb, NULL, SCTP_FROM_SCTP_OUTPUT+SCTP_LOC_5 );
-			sctp_timer_start(SCTP_TIMER_TYPE_RECV,
-			    stcb->sctp_ep, stcb, NULL);
+			if (stcb->asoc.delayed_ack) {
+				sctp_timer_stop(SCTP_TIMER_TYPE_RECV,
+				    stcb->sctp_ep, stcb, NULL, SCTP_FROM_SCTP_OUTPUT+SCTP_LOC_5 );
+				sctp_timer_start(SCTP_TIMER_TYPE_RECV,
+				    stcb->sctp_ep, stcb, NULL);
+			} else {
+				stcb->asoc.send_sack = 1;
+			}
 			return;
 		}
 		a_chk->copy_by_ref = 0;
@@ -9016,10 +9020,14 @@ sctp_send_sack(struct sctp_tcb *stcb)
 		if (a_chk->whoTo)
 			atomic_subtract_int(&a_chk->whoTo->ref_count, 1);
 		sctp_free_a_chunk(stcb, a_chk);
-		sctp_timer_stop(SCTP_TIMER_TYPE_RECV,
-		    stcb->sctp_ep, stcb, NULL, SCTP_FROM_SCTP_OUTPUT+SCTP_LOC_6 );
-		sctp_timer_start(SCTP_TIMER_TYPE_RECV,
-		    stcb->sctp_ep, stcb, NULL);
+		if (stcb->asoc.delayed_ack) {
+			sctp_timer_stop(SCTP_TIMER_TYPE_RECV,
+			    stcb->sctp_ep, stcb, NULL, SCTP_FROM_SCTP_OUTPUT+SCTP_LOC_6 );
+			sctp_timer_start(SCTP_TIMER_TYPE_RECV,
+			    stcb->sctp_ep, stcb, NULL);
+		} else {
+			stcb->asoc.send_sack = 1;
+		}
 		return;
 	}
 	/* ok, lets go through and fill it in */
@@ -9158,6 +9166,7 @@ sctp_send_sack(struct sctp_tcb *stcb)
 	sack->ch.chunk_length = htons(a_chk->send_size);
 	TAILQ_INSERT_TAIL(&asoc->control_send_queue, a_chk, sctp_next);
 	asoc->ctrl_queue_cnt++;
+	asoc->send_sack = 0;
 	SCTP_STAT_INCR(sctps_sendsacks);
 	return;
 }
