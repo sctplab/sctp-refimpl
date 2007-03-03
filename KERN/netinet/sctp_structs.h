@@ -830,10 +830,10 @@ struct sctp_association {
 	uint8_t  stream_locked;
 	uint8_t authenticated;	/* packet authenticated ok */
 	/*
-	 * This flag indicates that we need to send the first SACK. If in
-	 * place it says we have NOT yet sent a SACK and need to.
+	 * This flag indicates that a SACK need to be sent.
+	 * Initially this is 1 to send the first sACK immediately.
 	 */
-	uint8_t first_ack_sent;
+	uint8_t send_sack;
 
 	/* max burst after fast retransmit completes */
 	uint8_t max_burst;
