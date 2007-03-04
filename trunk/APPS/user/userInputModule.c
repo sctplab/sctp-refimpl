@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.82 2007-02-02 20:18:07 tuexen Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.83 2007-03-04 12:01:03 randall Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -347,7 +347,7 @@ static struct command commands[] = {
      cmd_getinitparam},
     {"getinittsn", "getinittsn - get the association initial TSN",
     cmd_getinittsn},
-    {"getlocaladdrs", "getlocaladdrs - get the local addresses for this assoc/ep",
+    {"getlocaladdrs", "getlocaladdrs [id] - get the local addresses for this assoc/ep",
        cmd_getlocaladdrs},
     {"getloopsleep", "getloopsleep - Displays the sleep time between each loopreq before the send of loop-resp",
        cmd_getloopsleep},
@@ -2745,73 +2745,59 @@ cmd_xconnect(char *argv[], int argc)
 static int
 cmd_bindx(char *argv[], int argc)
 {
-    int bindType = 0;
-    int bindOption = 0;
-#if defined(__BSD_SCTP_STACK__)
-    char bindx_ss[sizeof(struct sctp_getaddresses) + sizeof(struct sockaddr_storage)];
-    struct sctp_getaddresses *optval;
-#else
-    char bindx_ss[sizeof(struct sockaddr_storage)];
-#endif
-    struct sockaddr_in6 *sin6;
-    struct sockaddr_in *sin;
-    socklen_t sa_len;
+	int bindType = 0;
+	int bindOption = 0;
+	char bindx_ss[sizeof(struct sockaddr_storage)];
+	struct sockaddr_in6 *sin6;
+	struct sockaddr_in *sin;
+	socklen_t sa_len;
 
-    if (argc < 2) {
-	printf("bindx: invalid number of arguments\n");
-	return -1;
-    }
-    if (bindSpecific == 0) {
-	printf("Endpoint is BOUNDALL... ignoring\n");
-	return -1;
-    }
-    /* get the bindx type */
-    bindType = argv[0] != NULL ? strtol(argv[0], NULL, 0) : 0;
-    if (bindType == 0)
-	bindOption = SCTP_BINDX_ADD_ADDR;
-    else if (bindType == 1)
-	bindOption = SCTP_BINDX_REM_ADDR;
-    else {
-	printf("bindx: invalid 'type'=%u\n", bindType);
-	return -1;
-    }
-#if defined(__BSD_SCTP_STACK__)
-    /* get the address and figure out what kind it is */
-    optval = (struct sctp_getaddresses *)bindx_ss;
-    optval->sget_assoc_id = 0;	/* for the entire endpoint */
-    /* try IPv6 first... */
-    sin6 = (struct sockaddr_in6 *)&optval->addr;
-    sin = (struct sockaddr_in *)&optval->addr;
-#else
-    sin6 = (struct sockaddr_in6 *)bindx_ss;
-    sin = (struct sockaddr_in *)bindx_ss;
-#endif
-    if (inet_pton(AF_INET6, argv[1], &sin6->sin6_addr)) {
-	/* ipv6 address specified */
-	sin6->sin6_family = AF_INET6;
+	if (argc < 2) {
+		printf("bindx: invalid number of arguments\n");
+		return -1;
+	}
+	if (bindSpecific == 0) {
+		printf("Endpoint is BOUNDALL... ignoring\n");
+		return -1;
+	}
+	/* get the bindx type */
+	bindType = argv[0] != NULL ? strtol(argv[0], NULL, 0) : 0;
+	if (bindType == 0)
+		bindOption = SCTP_BINDX_ADD_ADDR;
+	else if (bindType == 1)
+		bindOption = SCTP_BINDX_REM_ADDR;
+	else {
+		printf("bindx: invalid 'type'=%u\n", bindType);
+		return -1;
+	}
+	sin6 = (struct sockaddr_in6 *)bindx_ss;
+	sin = (struct sockaddr_in *)bindx_ss;
+	if (inet_pton(AF_INET6, argv[1], &sin6->sin6_addr)) {
+		/* ipv6 address specified */
+		sin6->sin6_family = AF_INET6;
 #ifdef HAVE_SA_LEN
-	sin6->sin6_len = sizeof(struct sockaddr_in6);
+		sin6->sin6_len = sizeof(struct sockaddr_in6);
 #endif
-	sa_len = sizeof(struct sockaddr_in6);
-	sin6->sin6_scope_id = scope_id;
-    } else if (inet_pton(AF_INET, argv[1], &sin->sin_addr)) {
-	/* ipv4 address specified */
-	sin->sin_family = AF_INET;
+		sa_len = sizeof(struct sockaddr_in6);
+		sin6->sin6_scope_id = scope_id;
+	} else if (inet_pton(AF_INET, argv[1], &sin->sin_addr)) {
+		/* ipv4 address specified */
+		sin->sin_family = AF_INET;
 #ifdef HAVE_SA_LEN
-	sin->sin_len = sizeof(struct sockaddr_in);
+		sin->sin_len = sizeof(struct sockaddr_in);
 #endif
-	sa_len = sizeof(struct sockaddr_in);
-    } else {
-	printf("bindx: invalid address\n");
-	return -1;
-    }
-    /* do the bindx... */
-    if (sctp_bindx(adap->fd, (struct sockaddr *)bindx_ss, 1, bindOption) == -1) {
-	printf("Failed bindx() on socket err:%u!\n", errno);
-    } else {
-	printf("bindx() completed\n");
-    }
-    return 0;
+		sa_len = sizeof(struct sockaddr_in);
+	} else {
+		printf("bindx: invalid address\n");
+		return -1;
+	}
+	/* do the bindx... */
+	if (sctp_bindx(adap->fd, (struct sockaddr *)bindx_ss, 1, bindOption) == -1) {
+		printf("Failed bindx() on socket err:%u!\n", errno);
+	} else {
+		printf("bindx() completed\n");
+	}
+	return 0;
 }
 
 
@@ -4505,41 +4491,44 @@ cmd_peeloff(char *argv[], int argc)
 
 static int cmd_getlocaladdrs(char *argv[], int argc)
 {
-  struct sockaddr *raddr;
-  struct sockaddr *sa;
-  socklen_t sa_len;
-  int cnt,i;
-  sctp_assoc_t id;
-
-  id = get_assoc_id();
-  raddr = NULL;
-  printf("Got asoc id 0x%x\n",(uint32_t)id);
-  cnt = sctp_getladdrs(adap->fd, id, (void *)&raddr);
-  printf("Cnt returned is %d\n",cnt);
-  if(raddr != NULL){
-    if(id)
-      printf("Got %d addresses on my end of the association\n",cnt);
-    else
-      printf("Got %d addresses on my endpoint\n",cnt);
-    sa = raddr;
-    for(i=0;i<cnt;i++){
+	struct sockaddr *raddr;
+	struct sockaddr *sa;
+	socklen_t sa_len;
+	int cnt,i;
+	sctp_assoc_t id;
+	if(argc > 0) {
+		id = strtoul(argv[0], NULL, 0);
+	} else {
+		id = get_assoc_id();
+	}
+	raddr = NULL;
+	printf("Got asoc id 0x%x\n",(uint32_t)id);
+	cnt = sctp_getladdrs(adap->fd, id, (void *)&raddr);
+	printf("Cnt returned is %d\n",cnt);
+	if(raddr != NULL){
+		if(id)
+			printf("Got %d addresses on my end of the association\n",cnt);
+		else
+			printf("Got %d addresses on my endpoint\n",cnt);
+		sa = raddr;
+		for(i=0;i<cnt;i++){
 #ifdef HAVE_SA_LEN
-     sa_len = sa->sa_len;
+			sa_len = sa->sa_len;
 #else
-     if (sa->sa_family == AF_INET)
-	sa_len = sizeof(struct sockaddr_in);
-     else if (sa->sa_family == AF_INET)
-	sa_len = sizeof(struct sockaddr_in6);
+			if (sa->sa_family == AF_INET)
+				sa_len = sizeof(struct sockaddr_in);
+			else if (sa->sa_family == AF_INET)
+				sa_len = sizeof(struct sockaddr_in6);
 #endif
-      printf("Address[%d] ",i);
-      SCTPPrintAnAddress(sa);
-      sa = (struct sockaddr *)((caddr_t)sa + sa_len);
-      if (sa_len == 0)
-	break;
-    }
-    sctp_freeladdrs(raddr);
-  }
-  return(0);
+			printf("Address[%d] ",i);
+			SCTPPrintAnAddress(sa);
+			sa = (struct sockaddr *)((caddr_t)sa + sa_len);
+			if (sa_len == 0)
+				break;
+		}
+		sctp_freeladdrs(raddr);
+	}
+	return(0);
 }
 static int
 cmd_getstatus(char *argv[], int argc)
