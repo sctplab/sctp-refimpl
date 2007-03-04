@@ -62,49 +62,50 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_var.h,v 1.5 2007/02/12 23:24:31 rrs Exp
 #define SCTPCTL_MAXBURST            10
 #define SCTPCTL_MAXCHUNKONQ         11
 #define SCTPCTL_DELAYED_SACK        12
-#define SCTPCTL_HB_INTERVAL         13
-#define SCTPCTL_PMTU_RAISE          14
-#define SCTPCTL_SHUTDOWN_GUARD      15
-#define SCTPCTL_SECRET_LIFETIME     16
-#define SCTPCTL_RTO_MAX             17
-#define SCTPCTL_RTO_MIN             18
-#define SCTPCTL_RTO_INITIAL         19
-#define SCTPCTL_INIT_RTO_MAX        20
-#define SCTPCTL_COOKIE_LIFE         21
-#define SCTPCTL_INIT_RTX_MAX        22
-#define SCTPCTL_ASSOC_RTX_MAX       23
-#define SCTPCTL_PATH_RTX_MAX        24
-#define SCTPCTL_NR_OUTGOING_STREAMS 25
-#define SCTPCTL_CMT_ON_OFF          26
-#define SCTPCTL_CWND_MAXBURST       27
-#define SCTPCTL_EARLY_FR            28
-#define SCTPCTL_RTTVAR_CC           29
-#define SCTPCTL_DEADLOCK_DET        30
-#define SCTPCTL_EARLY_FR_MSEC       31
-#define SCTPCTL_ASCONF_AUTH_NOCHK   32
-#define SCTPCTL_AUTH_DISABLE        33
-#define SCTPCTL_AUTH_RANDOM_LEN     34
-#define SCTPCTL_AUTH_HMAC_ID        35
-#define SCTPCTL_ABC_L_VAR           36
-#define SCTPCTL_MAX_MBUF_CHAIN      37
-#define SCTPCTL_CMT_USE_DAC         38
-#define SCTPCTL_DO_DRAIN            39
-#define SCTPCTL_HB_MAXBURST         40
-#define SCTPCTL_QLIMIT_ABORT        41
-#define SCTPCTL_STRICT_ORDER        42
-#define SCTPCTL_TCBHASHSIZE         43
-#define SCTPCTL_PCBHASHSIZE         44
-#define SCTPCTL_CHUNKSCALE          45
-#define SCTPCTL_MINSPLIT            46
-#define SCTPCTL_ADD_MORE            47
-#define SCTPCTL_SYS_RESC            48
-#define SCTPCTL_ASOC_RESC           49
-#define SCTPCTL_NAT_FRIENDLY	    50
+#define SCTPCTL_SACK_FREQ           13
+#define SCTPCTL_HB_INTERVAL         14
+#define SCTPCTL_PMTU_RAISE          15
+#define SCTPCTL_SHUTDOWN_GUARD      16
+#define SCTPCTL_SECRET_LIFETIME     17
+#define SCTPCTL_RTO_MAX             18
+#define SCTPCTL_RTO_MIN             19
+#define SCTPCTL_RTO_INITIAL         20
+#define SCTPCTL_INIT_RTO_MAX        21
+#define SCTPCTL_COOKIE_LIFE         22
+#define SCTPCTL_INIT_RTX_MAX        23
+#define SCTPCTL_ASSOC_RTX_MAX       24
+#define SCTPCTL_PATH_RTX_MAX        25
+#define SCTPCTL_NR_OUTGOING_STREAMS 26
+#define SCTPCTL_CMT_ON_OFF          27
+#define SCTPCTL_CWND_MAXBURST       28
+#define SCTPCTL_EARLY_FR            29
+#define SCTPCTL_RTTVAR_CC           30
+#define SCTPCTL_DEADLOCK_DET        31
+#define SCTPCTL_EARLY_FR_MSEC       32
+#define SCTPCTL_ASCONF_AUTH_NOCHK   33
+#define SCTPCTL_AUTH_DISABLE        34
+#define SCTPCTL_AUTH_RANDOM_LEN     35
+#define SCTPCTL_AUTH_HMAC_ID        36
+#define SCTPCTL_ABC_L_VAR           37
+#define SCTPCTL_MAX_MBUF_CHAIN      38
+#define SCTPCTL_CMT_USE_DAC         39
+#define SCTPCTL_DO_DRAIN            40
+#define SCTPCTL_HB_MAXBURST         41
+#define SCTPCTL_QLIMIT_ABORT        42
+#define SCTPCTL_STRICT_ORDER        43
+#define SCTPCTL_TCBHASHSIZE         44
+#define SCTPCTL_PCBHASHSIZE         45
+#define SCTPCTL_CHUNKSCALE          46
+#define SCTPCTL_MINSPLIT            47
+#define SCTPCTL_ADD_MORE            48
+#define SCTPCTL_SYS_RESC            49
+#define SCTPCTL_ASOC_RESC           50
+#define SCTPCTL_NAT_FRIENDLY	    51
 #ifdef SCTP_DEBUG
-#define SCTPCTL_DEBUG               51
-#define SCTPCTL_MAXID		    51
+#define SCTPCTL_DEBUG               52
+#define SCTPCTL_MAXID		    52
 #else
-#define SCTPCTL_MAXID		    50
+#define SCTPCTL_MAXID		    51
 #endif
 #endif
 
@@ -123,6 +124,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_var.h,v 1.5 2007/02/12 23:24:31 rrs Exp
 	{ "maxburst", CTLTYPE_INT }, \
 	{ "maxchunks", CTLTYPE_INT }, \
 	{ "delayed_sack_time", CTLTYPE_INT }, \
+	{ "sack_freq", CTLTYPE_INT }, \
 	{ "heartbeat_interval", CTLTYPE_INT }, \
 	{ "pmtu_raise_time", CTLTYPE_INT }, \
 	{ "shutdown_guard_time", CTLTYPE_INT }, \
@@ -178,6 +180,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_var.h,v 1.5 2007/02/12 23:24:31 rrs Exp
 	{ "maxburst", CTLTYPE_INT }, \
 	{ "maxchunks", CTLTYPE_INT }, \
 	{ "delayed_sack_time", CTLTYPE_INT }, \
+	{ "sack_freq", CTLTYPE_INT }, \
 	{ "heartbeat_interval", CTLTYPE_INT }, \
 	{ "pmtu_raise_time", CTLTYPE_INT }, \
 	{ "shutdown_guard_time", CTLTYPE_INT }, \
