@@ -1157,6 +1157,7 @@ sctp_expand_mapping_array(struct sctp_association *asoc)
 
 extern unsigned int sctp_early_fr_msec;
 
+#if defined(SCTP_USE_THREAD_BASED_ITERATOR)
 static void
 sctp_iterator_work(struct sctp_iterator *it)
 {
@@ -1292,7 +1293,6 @@ select_a_new_ep:
 	goto select_a_new_ep;
 }
 
-#if defined(SCTP_USE_THREAD_BASED_ITERATOR)
 void
 sctp_iterator_worker()
 {
