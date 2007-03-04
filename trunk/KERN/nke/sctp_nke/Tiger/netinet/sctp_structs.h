@@ -98,7 +98,7 @@ TAILQ_HEAD(sctp_resethead, sctp_stream_reset_list);
 
 /*
  * Users of the iterator need to malloc a iterator with a call to
- * sctp_initiate_iterator(inp_func, assoc_func, pcb_flags, pcb_features,
+ * sctp_initiate_iterator(inp_func, assoc_func, inp_func,  pcb_flags, pcb_features,
  *     asoc_state, void-ptr-arg, uint32-arg, end_func, inp);
  *
  * Use the following two defines if you don't care what pcb flags are on the EP
@@ -126,6 +126,7 @@ struct sctp_iterator {
 	struct sctp_tcb *stcb;		/* current* assoc */
 	asoc_func function_assoc;	/* per assoc function */
 	inp_func function_inp;		/* per endpoint function */
+	inp_func function_inp_end;	/* end INP function */
 	end_func function_atend;	/* iterator completion function */
 	void *pointer;			/* pointer for apply func to use */
 	uint32_t val;			/* value for apply func to use */

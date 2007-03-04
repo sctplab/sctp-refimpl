@@ -1848,7 +1848,8 @@ static size_t
 sctp_fill_up_addresses(struct sctp_inpcb *inp,
                        struct sctp_tcb *stcb,
                        size_t limit,
-                       struct sockaddr_storage *sas)
+                       struct sockaddr_storage *sas, 
+		       uint32_t vrf_id)
 {
 	struct sctp_ifn *sctp_ifn;
 	struct sctp_ifa *sctp_ifa;
@@ -1881,7 +1882,10 @@ sctp_fill_up_addresses(struct sctp_inpcb *inp,
 	} else {
 		ipv4_addr_legal = 1;
 	}
-	vrf = sctp_find_vrf(stcb->asoc.vrf_id);
+	vrf = sctp_find_vrf(vrf_id);
+	if(vrf == NULL) {
+		return(0);
+	}
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
 		LIST_FOREACH(sctp_ifn, &vrf->ifnlist, next_ifn) {
 			if ((loopback_scope == 0) &&
@@ -2016,10 +2020,9 @@ sctp_fill_up_addresses(struct sctp_inpcb *inp,
 }
 
 static int
-sctp_count_max_addresses(struct sctp_inpcb *inp)
+sctp_count_max_addresses(struct sctp_inpcb *inp, uint32_t vrf_id)
 {
 	int cnt = 0;
-	uint32_t vrf_id;
 	struct sctp_vrf *vrf = NULL;
 	/*
 	 * In both sub-set bound an bound_all cases we return the MAXIMUM
@@ -2028,12 +2031,10 @@ sctp_count_max_addresses(struct sctp_inpcb *inp)
 	 * bound-all case a TCB may NOT include the loopback or other
 	 * addresses as well.
 	 */
-#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
-	vrf_id = SCTP_DEFAULT_VRFID;
-#else
-	vrf_id = panda_get_vrf_from_call(); /* from socket option call? */
-#endif
 	vrf = sctp_find_vrf(vrf_id);
+	if(vrf == NULL) {
+		return(0);
+	}
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
 		struct sctp_ifn *sctp_ifn;
 		struct sctp_ifa *sctp_ifa;
@@ -2082,7 +2083,7 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 	struct sockaddr *sa;
 	int num_v6 = 0, num_v4 = 0, *totaddrp, totaddr, i;
 	size_t incr, at;
-	uint32_t vrf;
+	uint32_t vrf_id;
 
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_PCB1) {
@@ -2201,12 +2202,12 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 	}
 
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
-	vrf = SCTP_DEFAULT_VRFID;
+	vrf_id = SCTP_DEFAULT_VRFID;
 #else
-	vrf = panda_get_vrf_from_call(); /* from connectx call? */
+	vrf_id = panda_get_vrf_from_call(); /* from connectx call? */
 #endif
 	/* We are GOOD to go */
-	stcb = sctp_aloc_assoc(inp, sa, 1, &error, 0, vrf);
+	stcb = sctp_aloc_assoc(inp, sa, 1, &error, 0, vrf_id);
 	if (stcb == NULL) {
 		/* Gak! no memory */
 		goto out_now;
@@ -2300,6 +2301,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 	    void *p) {
 	struct sctp_inpcb *inp;
 	int error, val = 0;
+	uint32_t vrf_id;
 	struct sctp_tcb *stcb = NULL;
 
 	if (optval == NULL) {
@@ -2309,6 +2311,12 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (inp == 0)
 		return EINVAL;
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
+	vrf_id = SCTP_DEFAULT_VRFID;
+#else
+	vrf_id = panda_get_vrf_from_call(); /* from socket option call? */
+#endif
+
 	error = 0;
 
 	switch (optname) {
@@ -2647,7 +2655,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 			
 			SCTP_CHECK_AND_CAST(value, optval, uint32_t, *optsize);
 			SCTP_INP_RLOCK(inp);
-			*value = sctp_count_max_addresses(inp);
+			*value = sctp_count_max_addresses(inp, vrf_id);
 			SCTP_INP_RUNLOCK(inp);
 			*optsize = sizeof(uint32_t);
 		}
@@ -2748,7 +2756,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 
 			sas = (struct sockaddr_storage *)&saddr->addr[0];
 			limit = *optsize - sizeof(sctp_assoc_t);
-			actual = sctp_fill_up_addresses(inp, stcb, limit, sas);
+			actual = sctp_fill_up_addresses(inp, stcb, limit, sas, vrf_id);
 			if (stcb)
 				SCTP_TCB_UNLOCK(stcb);
 			*optsize = sizeof(struct sockaddr_storage) + actual;
@@ -3225,6 +3233,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 	uint32_t *mopt;
 	struct sctp_tcb *stcb = NULL;
 	struct sctp_inpcb *inp;
+	uint32_t vrf_id;
 
 #if defined(SCTP_PER_SOCKET_LOCKING)
 	sctp_lock_assert(so);
@@ -3238,6 +3247,12 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		printf("inp is NULL?\n");
 		return EINVAL;
 	}
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
+	vrf_id = SCTP_DEFAULT_VRFID;
+#else
+	vrf_id = panda_get_vrf_from_call();
+#endif
+
 	error = 0;
 	switch (optname) {
 	case SCTP_NODELAY:
@@ -4128,7 +4143,6 @@ SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
 			struct sctp_getaddresses *addrs;
 			struct sockaddr *addr_touse;
 			struct sockaddr_in sin;
-			uint32_t vrf;
 
 			SCTP_CHECK_AND_CAST(addrs, optval, struct sctp_getaddresses, optsize);
 
@@ -4161,11 +4175,6 @@ SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
 			 * all do their own locking. If we do something for
 			 * the FIX: below we may need to lock in that case.
 			 */
-#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
-			vrf = SCTP_DEFAULT_VRFID;
-#else
-			vrf = panda_get_vrf_from_call();
-#endif
 			if (addrs->sget_assoc_id == 0) {
 				/* add the address */
 				struct sctp_inpcb *lep;
@@ -4193,7 +4202,7 @@ SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
 				} else if (lep == NULL) {
 					((struct sockaddr_in *)addr_touse)->sin_port = 0;
 					error = sctp_addr_mgmt_ep_sa(inp, addr_touse,
-					    SCTP_ADD_IP_ADDRESS, vrf);
+					    SCTP_ADD_IP_ADDRESS, vrf_id);
 				} else {
 					error = EADDRNOTAVAIL;
 				}
@@ -4213,7 +4222,6 @@ SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
 			struct sctp_getaddresses *addrs;
 			struct sockaddr *addr_touse;
 			struct sockaddr_in sin;
-			uint32_t vrf;
 
 			SCTP_CHECK_AND_CAST(addrs, optval, struct sctp_getaddresses, optsize);
 			/* see if we're bound all already! */
@@ -4221,11 +4229,6 @@ SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
 				error = EINVAL;
 				break;
 			}
-#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
-			vrf = SCTP_DEFAULT_VRFID;
-#else
-			vrf = panda_get_vrf_from_call();
-#endif
 			addr_touse = addrs->addr;
 			if (addrs->addr->sa_family == AF_INET6) {
 				struct sockaddr_in6 *sin6;
@@ -4244,7 +4247,7 @@ SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
 			if (addrs->sget_assoc_id == 0) {
 				/* delete the address */
 				sctp_addr_mgmt_ep_sa(inp, addr_touse,
-				    SCTP_DEL_IP_ADDRESS, vrf);
+				    SCTP_DEL_IP_ADDRESS, vrf_id);
 			} else {
 				/*
 				 * FIX: decide whether we allow assoc based
@@ -4453,7 +4456,7 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 #endif
 	int error = 0;
 	int create_lock_on = 0;
-	uint32_t vrf;
+	uint32_t vrf_id;
 	struct sctp_inpcb *inp;
 	struct sctp_tcb *stcb=NULL;
 
@@ -4525,12 +4528,12 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		goto out_now;
 	}
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
-	vrf = SCTP_DEFAULT_VRFID;
+	vrf_id = SCTP_DEFAULT_VRFID;
 #else
-	vrf = panda_get_vrf_from_call(); /* from connect call? */
+	vrf_id = panda_get_vrf_from_call(); /* from connect call? */
 #endif
 	/* We are GOOD to go */
-	stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0, vrf);
+	stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0, vrf_id);
 	if (stcb == NULL) {
 		/* Gak! no memory */
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -5124,7 +5127,8 @@ sctp_usrreq(so, req, m, nam, control)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s;
 #endif
-	struct sctp_vrf *vrf = NULL;
+	uint32_t vrf_id;
+	struct sctp_vrf *vrf;
 	int error;
 	int family;
 
@@ -5166,11 +5170,19 @@ sctp_usrreq(so, req, m, nam, control)
 
 		ifn = (struct ifnet *)control;
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
-		vrf = SCTP_DEFAULT_VRFID;
+		vrf_id = SCTP_DEFAULT_VRFID;
 #else
-		vrf = panda_get_vrf_from_call(); /* from socket option call? */
+		vrf_id = panda_get_vrf_from_call(); /* from socket option call? */
 #endif
-		sctp_ifn = sctp_find_ifn(vrf, ifn, ifn->if_index);
+		vrf = sctp_find_vrf(vrf_id);
+		if(vrf == NULL) {
+#if defined(__NetBSD__) || defined(__OpenBSD__)
+			splx(s);
+#endif
+			return (EINVAL);
+			
+		}
+		sctp_ifn = sctp_find_ifn(vrf_id, ifn, ifn->if_index);
 		LIST_FOREACH(sctp_ifa, &sctp_ifn->ifalist, next_ifa) {		
 			if (sctp_ifa->address.sa.sa_family == family) {
 				sctp_delete_ip_address(sctp_ifa);

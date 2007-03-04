@@ -1214,7 +1214,12 @@ select_a_new_ep:
 		it->stcb = LIST_FIRST(&it->inp->sctp_asoc_list);
 	}
 
-	if(inp_skip) {
+	if((inp_skip) || it->stcb == NULL) {
+		if(it->function_inp_end != NULL) {
+			inp_skip = (*it->function_inp_end)(it->inp, 
+							   it->pointer, 
+							   it->val);
+		}
 		SCTP_INP_RUNLOCK(it->inp);
 		goto no_stcb;
 	}
@@ -1258,6 +1263,14 @@ select_a_new_ep:
 		SCTP_TCB_UNLOCK(it->stcb);
 	next_assoc:
 		it->stcb = LIST_NEXT(it->stcb, sctp_tcblist);
+		if(it->stcb == NULL) {
+			/* Run last function */
+			if(it->function_inp_end != NULL) {
+				inp_skip = (*it->function_inp_end)(it->inp, 
+								   it->pointer, 
+								   it->val);
+			}
+		}
 	}
 	SCTP_INP_RUNLOCK(it->inp);
  no_stcb:
@@ -1266,7 +1279,6 @@ select_a_new_ep:
 	SCTP_INP_WLOCK(it->inp);
 	it->inp->inp_starting_point_for_iterator = NULL;
 	SCTP_INP_WUNLOCK(it->inp);
-
 	if (it->iterator_flags & SCTP_ITERATOR_DO_SINGLE_INP) {
 		it->inp = NULL;
 	} else {
@@ -1339,8 +1351,12 @@ sctp_handle_addr_wq(void)
 	if(asc->cnt == 0) {
 		SCTP_FREE(asc);
 	} else {
-		sctp_initiate_iterator(sctp_iterator_ep, sctp_iterator_stcb, SCTP_PCB_FLAGS_BOUNDALL,
-				       SCTP_PCB_ANY_FEATURES, SCTP_ASOC_ANY_STATE, (void *)asc, 0,
+		sctp_initiate_iterator(sctp_iterator_ep, 
+				       sctp_iterator_stcb, 
+				       NULL, 	/* No ep end for boundall */
+				       SCTP_PCB_FLAGS_BOUNDALL,
+				       SCTP_PCB_ANY_FEATURES, 
+				       SCTP_ASOC_ANY_STATE, (void *)asc, 0,
 				       sctp_iterator_end, NULL, 0);
 	}
 
@@ -4378,6 +4394,43 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
  * and doesn't handle multiple addresses with different zone/scope id's note:
  * ifa_ifwithaddr() compares the entire sockaddr struct
  */
+struct sctp_ifa *
+sctp_find_ifa_in_ep(struct sctp_inpcb *inp, struct sockaddr *addr, int holds_lock) 
+{
+	struct sctp_laddr *laddr;
+	if (holds_lock == 0)
+		SCTP_INP_RLOCK(inp);
+
+	LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
+		if(laddr->ifa == NULL)
+			continue;
+		if (addr->sa_family != laddr->ifa->address.sa.sa_family)
+			continue;
+		if (addr->sa_family == AF_INET) {
+			if (((struct sockaddr_in *)addr)->sin_addr.s_addr ==
+			    laddr->ifa->address.sin.sin_addr.s_addr) {
+				/* found him. */
+				if (holds_lock == 0)
+					SCTP_INP_RUNLOCK(inp);
+				return (laddr->ifa);
+				break;
+			}
+		} else if (addr->sa_family == AF_INET6) {
+			if (SCTP6_ARE_ADDR_EQUAL(&((struct sockaddr_in6 *)addr)->sin6_addr,
+						 &laddr->ifa->address.sin6.sin6_addr)) {
+				/* found him. */
+				if (holds_lock == 0)
+					SCTP_INP_RUNLOCK(inp);
+				return (laddr->ifa);
+				break;
+			}
+		}
+	}
+	if (holds_lock == 0)
+		SCTP_INP_RUNLOCK(inp);
+	return(NULL);
+}
+
 struct sctp_ifa *
 sctp_find_ifa_in_ifn(struct sctp_ifn *sctp_ifnp, struct sockaddr *addr,
 		     int holds_lock)

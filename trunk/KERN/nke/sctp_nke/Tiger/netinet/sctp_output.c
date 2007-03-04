@@ -2107,8 +2107,16 @@ sctp_add_addresses_to_i_ia(struct sctp_inpcb *inp, struct sctp_scoping *scope,
 				continue;
 			}
 			if (laddr->ifa->localifa_flags & SCTP_BEING_DELETED)
+                                /* Address being deleted by the system, dont
+				 * list.
+				 */
 				continue;
-
+			if (laddr->action == SCTP_DEL_IP_ADDRESS) {
+				/* Address being deleted on this ep 
+				 * don't list.
+				 */
+				continue;
+			}
 			if (sctp_is_address_in_scope(laddr->ifa,
 						     scope->ipv4_addr_legal,
 						     scope->ipv6_addr_legal,
@@ -2429,7 +2437,7 @@ sctp_is_addr_in_ep(struct sctp_inpcb *inp, struct sctp_ifa *ifa)
 #endif
 			continue;
 		}
-		if (laddr->ifa == ifa)
+		if ((laddr->ifa == ifa) && laddr->action == 0)
 			/* same pointer */
 			return (1);
 	}
@@ -3640,8 +3648,10 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 							    (struct sockaddr *)NULL,
 							    alt) == 0) {
 								net->dest_state |= SCTP_ADDR_WAS_PRIMARY;
-								sctp_free_ifa(net->ro._s_addr);
-								net->ro._s_addr = NULL;
+								if(net->ro._s_addr) {
+									sctp_free_ifa(net->ro._s_addr);
+									net->ro._s_addr = NULL;
+								}
 								net->src_addr_selected = 0;
 							}
 						}
@@ -6017,7 +6027,7 @@ sctp_sendall(struct sctp_inpcb *inp, struct uio *uio, struct mbuf *m,
 		}
 		ca->m = m;
 	}
-	ret = sctp_initiate_iterator(NULL, sctp_sendall_iterator,
+	ret = sctp_initiate_iterator(NULL, sctp_sendall_iterator, NULL, 
 				     SCTP_PCB_ANY_FLAGS, SCTP_PCB_ANY_FEATURES, SCTP_ASOC_ANY_STATE,
 				     (void *)ca, 0,
 				     sctp_sendall_completes, inp, 1);

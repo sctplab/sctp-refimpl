@@ -162,7 +162,10 @@ struct sctp_ifa {
 struct sctp_laddr {
 	LIST_ENTRY(sctp_laddr) sctp_nxt_addr;	/* next in list */
 	struct sctp_ifa *ifa;
-	int action;		/* Only used in delayed asconf stuff */
+	uint32_t action;		/* Used during asconf and adding 
+					 * if no-zero src-addr selection will
+					 * not consider this address.
+					 */
 };
 
 struct sctp_block_entry {
@@ -618,9 +621,9 @@ int sctp_free_assoc(struct sctp_inpcb *, struct sctp_tcb *, int, int);
 void
 sctp_add_vtag_to_timewait(struct sctp_inpcb *, uint32_t, uint32_t);
 
-int sctp_add_local_addr_ep(struct sctp_inpcb *, struct sctp_ifa *);
+int sctp_add_local_addr_ep(struct sctp_inpcb *, struct sctp_ifa *, uint32_t);
 
-int sctp_insert_laddr(struct sctpladdr *, struct sctp_ifa *);
+int sctp_insert_laddr(struct sctpladdr *, struct sctp_ifa *, uint32_t);
 
 void sctp_remove_laddr(struct sctp_laddr *);
 
@@ -657,8 +660,15 @@ int sctp_destination_is_reachable(struct sctp_tcb *, struct sockaddr *);
  * indicates run on ONLY assoc's of the specified endpoint.
  */
 int
-sctp_initiate_iterator(inp_func inpf, asoc_func af, uint32_t, uint32_t,
-    uint32_t, void *, uint32_t, end_func ef, struct sctp_inpcb *, uint8_t co_off);
+sctp_initiate_iterator(inp_func inpf, 
+		       asoc_func af, 
+		       inp_func inpe, 
+		       uint32_t, uint32_t,
+		       uint32_t, void *, 
+		       uint32_t, 
+		       end_func ef, 
+		       struct sctp_inpcb *, 
+		       uint8_t co_off);
 
 #ifdef __NetBSD__
 extern void in6_sin6_2_sin(struct sockaddr_in *, struct sockaddr_in6 *sin6);
