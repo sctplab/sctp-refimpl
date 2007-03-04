@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.83 2007-03-04 12:01:03 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.84 2007-03-04 15:55:22 tuexen Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -2326,40 +2326,44 @@ static int cmd_setv4mapped(char *argv[], int argc)
 
 static int cmd_getmaxseg(char *argv[], int argc)
 {
-  uint32_t seg;
+  struct sctp_assoc_value av;
   socklen_t sz;
 
-  sz = sizeof(seg);
+  av.assoc_id    = 0;
+  av.assoc_value = 0;
+  sz = sizeof(struct sctp_assoc_value);
   if(getsockopt(adap->fd,IPPROTO_SCTP,
 		SCTP_MAXSEG,
-		&seg, &sz) != 0) {
+		&av, &sz) != 0) {
 	  printf("Can't get maxseg setting socket err:%d!\n",errno);
   }else{
 	  printf("Maxseg is %d\n",
-		 seg);
+		 av.assoc_value);
   }
   return(0);
 }
 
 static int cmd_setmaxseg(char *argv[], int argc)
 {
-  uint32_t seg,sz;
+  struct sctp_assoc_value av;
+  socklen_t sz;
 
   if(argc < 1) {
 	  printf("Use setmaxseg val\n");
 	  return -1;
   }
-  seg = strtol(argv[0],NULL,0);
-  sz = sizeof(seg);
+  av.assoc_id = 0;
+  av.assoc_value = strtol(argv[0],NULL,0);
+  sz = sizeof(struct sctp_assoc_value);
 
-  printf("Setting max seg to %d\n",seg);
+  printf("Setting max seg to %d\n", av.assoc_value);
   if(setsockopt(adap->fd,IPPROTO_SCTP,
 		SCTP_MAXSEG,
-		&seg, sz) != 0) {
+		&av, sz) != 0) {
 	  printf("Can't set maxseg setting socket err:%d!\n",errno);
   }else{
 	  printf("Maxseg is %d\n",
-		 seg);
+		 av.assoc_value);
   }
   return(0);
 
@@ -3657,10 +3661,8 @@ cmd_getassocstat(char *argv[], int argc)
 		}
 		for (i = 0; i < number_associations; i++) {
 			xstcb = (struct xsctp_tcb *)(buf + offset);
-			/*
-			printf("\tAssociation towards port=%d, state=%d, Streams(I/O)=(%u/%u), Msgs(R/S)=(%u/%u), \n\tTSN(init/high/cum/cumack)=(%x/%x/%x/%x),\n\t Tag(L/R)=(%x/%x).\n",
-			       xstcb->remote_port, xstcb->state, xstcb->InStreams, xstcb->OutStreams, xstcb->total_recvs, xstcb->total_sends, xstcb->initial_tsn, xstcb->highest_tsn, xstcb->cumulative_tsn, xstcb->cumulative_tsn_ack, xstcb->local_tag, xstcb->remote_tag);
-			*/
+			printf("\tAssociation towards port=%d, state=%d, Streams(I/O)=(%u/%u), HBInterval=%u, Msgs(R/S)=(%u/%u), \n\tTSN(init/high/cum/cumack)=(%x/%x/%x/%x),\n\t Tag(L/R)=(%x/%x).\n",
+			       xstcb->RemPort, xstcb->State, xstcb->InStreams, xstcb->OutStreams, xstcb->HeartBeatInterval, xstcb->total_recvs, xstcb->total_sends, xstcb->initial_tsn, xstcb->highest_tsn, xstcb->cumulative_tsn, xstcb->cumulative_tsn_ack, xstcb->local_tag, xstcb->remote_tag);
 			number_of_local_addresses = xstcb->number_local_addresses;
 			number_of_remote_addresses = xstcb->number_remote_addresses;
 			offset += sizeof(struct xsctp_tcb);
@@ -3671,8 +3673,8 @@ cmd_getassocstat(char *argv[], int argc)
 			}
 			for (j = 0; j < number_of_remote_addresses; j++) {
 				xraddr = (struct xsctp_raddr *)(buf + offset);
-				printf("\t\tPath towards %s, Active=%d, Confirmed=%d, HBEnabled=%u, RTO=%u, CWND=%u, Flightsize=%u.\n",
-				       inet_ntoa(xraddr->RemAddr.sin.sin_addr), xraddr->RemAddrActive, xraddr->RemAddrConfirmed, xraddr->RemAddrHBActive, xraddr->RemAddrRTO, xraddr->RemAddrCwnd, xraddr->RemAddrFlightSize);
+				printf("\t\tPath towards %s, Active=%d, Confirmed=%d, HBEnabled=%u, RTO=%u, CWND=%u, Flightsize=%u, ErrorCounter=%u.\n",
+				       inet_ntoa(xraddr->RemAddr.sin.sin_addr), xraddr->RemAddrActive, xraddr->RemAddrConfirmed, xraddr->RemAddrHBActive, xraddr->RemAddrRTO, xraddr->RemAddrCwnd, xraddr->RemAddrFlightSize, xraddr->RemAddrErrorCounter);
 				offset += sizeof(struct xsctp_raddr);
 			}
 		}
