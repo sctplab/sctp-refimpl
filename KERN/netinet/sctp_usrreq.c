@@ -2559,23 +2559,28 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 			*optsize = sizeof(uint8_t);
 		}
 		break;
-	/* FIXME MT: Should this be done as the association level by using sctp_get_frag_point? */
 	case SCTP_MAXSEG:
 		{
-			uint32_t *segsize;
+			struct sctp_assoc_value *av;
 			int ovh;
 
-			SCTP_CHECK_AND_CAST(segsize, optval, uint32_t, *optsize);
-			
-			SCTP_INP_RLOCK(inp);
-			if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) {
-				ovh = SCTP_MED_OVERHEAD;
+			SCTP_CHECK_AND_CAST(av, optval, struct sctp_assoc_value, *optsize);
+			SCTP_FIND_STCB(inp, stcb, av->assoc_id);
+
+			if (stcb) {
+				av->assoc_value = sctp_get_frag_point(stcb, &stcb->asoc);
+				SCTP_TCB_UNLOCK(stcb);
 			} else {
-				ovh = SCTP_MED_V4_OVERHEAD;
+				SCTP_INP_RLOCK(inp);				
+				if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) {
+					ovh = SCTP_MED_OVERHEAD;
+				} else {
+					ovh = SCTP_MED_V4_OVERHEAD;
+				}
+				av->assoc_value = inp->sctp_frag_point - ovh;
+				SCTP_INP_RUNLOCK(inp);				
 			}
-			*segsize = inp->sctp_frag_point - ovh;
-			SCTP_INP_RUNLOCK(inp);
-			*optsize = sizeof(uint32_t);
+			*optsize = sizeof(struct sctp_assoc_value);
 		}
 		break;
 	case SCTP_GET_STAT_LOG:
@@ -3707,24 +3712,30 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		break;
 	case SCTP_MAXSEG:
 		{
-			uint32_t *segsize;
+			struct sctp_assoc_value *av;
 			int ovh;
 
-			SCTP_CHECK_AND_CAST(segsize, optval, uint32_t, optsize);
+			SCTP_CHECK_AND_CAST(av, optval, struct sctp_assoc_value, optsize);
+			SCTP_FIND_STCB(inp, stcb, av->assoc_id);
 
-			if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) {
-				ovh = SCTP_MED_OVERHEAD;
-			} else {
-				ovh = SCTP_MED_V4_OVERHEAD;
-			}
-			SCTP_INP_WLOCK(inp);
-			/* FIXME MT: Why is this not allowed? */
-			if (*segsize) {
-				inp->sctp_frag_point = (*segsize + ovh);
-			} else {
+			if (stcb) {
 				error = EINVAL;
+				SCTP_TCB_UNLOCK(stcb);
+			} else {
+				SCTP_INP_WLOCK(inp);
+				if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) {
+					ovh = SCTP_MED_OVERHEAD;
+				} else {
+					ovh = SCTP_MED_V4_OVERHEAD;
+				}
+				/* FIXME MT: I think this is not in tune with the API ID */
+				if (av->assoc_value) {
+					inp->sctp_frag_point = (av->assoc_value + ovh);
+				} else {
+					error = EINVAL;
+				}
+				SCTP_INP_WUNLOCK(inp);
 			}
-			SCTP_INP_WUNLOCK(inp);
 		}
 		break;
 	case SCTP_EVENTS:
