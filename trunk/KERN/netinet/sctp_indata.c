@@ -2405,8 +2405,10 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 					sctp_send_sack(stcb);
 				}
 			} else {
-				sctp_timer_start(SCTP_TIMER_TYPE_RECV,
-				    stcb->sctp_ep, stcb, NULL);
+				if (!SCTP_OS_TIMER_PENDING(&stcb->asoc.dack_timer.timer)) {
+					sctp_timer_start(SCTP_TIMER_TYPE_RECV,
+					    stcb->sctp_ep, stcb, NULL);
+				}
 			}
 		}
 	}
@@ -2740,17 +2742,16 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 	}
 	/* Start a sack timer or QUEUE a SACK for sending */
 	if ((stcb->asoc.cumulative_tsn == stcb->asoc.highest_tsn_inside_map) &&
-	    (stcb->asoc.send_sack == 0) &&
-	    (stcb->asoc.delayed_ack > 0)){
-		/* Everything is in order */
-		if (stcb->asoc.mapping_array[0] == 0xff) {
-			/* need to do the slide */
-			sctp_sack_check(stcb, 1, was_a_gap, &abort_flag);
-		} else {
+	    (stcb->asoc.mapping_array[0] != 0xff)){
+		if ((stcb->asoc.data_pkts_seen >= stcb->asoc.sack_freq) ||
+		    (stcb->asoc.delayed_ack == 0) ||
+		    (stcb->asoc.send_sack == 1)){
 			if (SCTP_OS_TIMER_PENDING(&stcb->asoc.dack_timer.timer)) {
 				SCTP_OS_TIMER_STOP(&stcb->asoc.dack_timer.timer);
-				sctp_send_sack(stcb);
-			} else {
+			}
+			sctp_send_sack(stcb);
+		} else {
+			if (!SCTP_OS_TIMER_PENDING(&stcb->asoc.dack_timer.timer)) {
 				sctp_timer_start(SCTP_TIMER_TYPE_RECV,
 						 stcb->sctp_ep, stcb, NULL);
 			}
