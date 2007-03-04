@@ -1830,6 +1830,7 @@ sctp_findassociation_ep_asconf(struct mbuf *m, int iphlen, int offset,
 extern int sctp_max_burst_default;
 
 extern unsigned int sctp_delayed_sack_time_default;
+extern unsigned int sctp_sack_freq_default;
 extern unsigned int sctp_heartbeat_interval_default;
 extern unsigned int sctp_pmtu_raise_time_default;
 extern unsigned int sctp_shutdown_guard_time_default;
@@ -2025,7 +2026,7 @@ sctp_inpcb_alloc(struct socket *so)
 	m->sctp_minrto = sctp_rto_min_default;
 	m->initial_rto = sctp_rto_initial_default;
 	m->initial_init_rto_max = sctp_init_rto_max_default;
-	m->sctp_sack_freq = SCTP_DEFAULT_SACK_FREQ;
+	m->sctp_sack_freq = sctp_sack_freq_default;
 
 	m->max_open_streams_intome = MAX_SCTP_STREAMS;
 

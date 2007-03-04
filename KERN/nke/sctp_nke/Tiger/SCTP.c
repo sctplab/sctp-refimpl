@@ -76,6 +76,7 @@ extern struct sysctl_oid sysctl__net_inet_sctp_peer_chkoh;
 extern struct sysctl_oid sysctl__net_inet_sctp_maxburst;
 extern struct sysctl_oid sysctl__net_inet_sctp_maxchunks;
 extern struct sysctl_oid sysctl__net_inet_sctp_delayed_sack_time;
+extern struct sysctl_oid sysctl__net_inet_sctp_sack_freq;
 extern struct sysctl_oid sysctl__net_inet_sctp_heartbeat_interval;
 extern struct sysctl_oid sysctl__net_inet_sctp_pmtu_raise_time;
 extern struct sysctl_oid sysctl__net_inet_sctp_shutdown_guard_time;
@@ -352,6 +353,7 @@ kern_return_t SCTP_start (kmod_info_t * ki, void * d) {
 	sysctl_register_oid(&sysctl__net_inet_sctp_maxburst);
 	sysctl_register_oid(&sysctl__net_inet_sctp_maxchunks);
 	sysctl_register_oid(&sysctl__net_inet_sctp_delayed_sack_time);
+	sysctl_register_oid(&sysctl__net_inet_sctp_sack_freq);
 	sysctl_register_oid(&sysctl__net_inet_sctp_heartbeat_interval);
 	sysctl_register_oid(&sysctl__net_inet_sctp_pmtu_raise_time);
 	sysctl_register_oid(&sysctl__net_inet_sctp_shutdown_guard_time);
@@ -458,6 +460,7 @@ kern_return_t SCTP_stop (kmod_info_t * ki, void * d) {
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_maxburst);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_maxchunks);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_delayed_sack_time);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_sack_freq);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_heartbeat_interval);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_pmtu_raise_time);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_shutdown_guard_time);
