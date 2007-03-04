@@ -1169,7 +1169,7 @@ sctp_asconf_queue_add_sa(struct sctp_tcb *stcb, struct sockaddr *sa,
     uint16_t type)
 {
 	struct sctp_asconf_addr *aa, *aa_next;
-	uint32_t vrf;
+	uint32_t vrf_id;
 
 	/* see if peer supports ASCONF */
 	if (stcb->asoc.peer_supports_asconf == 0) {
@@ -1226,12 +1226,12 @@ sctp_asconf_queue_add_sa(struct sctp_tcb *stcb, struct sockaddr *sa,
 	/* fill in asconf address parameter fields */
 	/* top level elements are "networked" during send */
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
-	vrf = SCTP_DEFAULT_VRFID;
+	vrf_id = SCTP_DEFAULT_VRFID;
 #else
-	vrf = panda_get_vrf_from_call();
+	vrf_id = panda_get_vrf_from_call();
 #endif
 	aa->ap.aph.ph.param_type = type;
-	aa->ifa = sctp_find_ifa_by_addr(sa, vrf, 0);
+	aa->ifa = sctp_find_ifa_by_addr(sa, vrf_id, 0);
 	/* correlation_id filled in during send routine later... */
 	if (sa->sa_family == AF_INET6) {
 		/* IPv6 address */
@@ -1808,20 +1808,44 @@ sctp_iterator_ep(struct sctp_inpcb *inp, void *ptr, uint32_t val)
 			else
 				continue;
 		}
-		/* Check sub-set bound case */
-		if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) == 0) {
-			/* In all cases we must add or delete it
-			 * from the ep.
-			 */
-			if (type == SCTP_ADD_IP_ADDRESS) {
-				sctp_add_local_addr_ep(inp, ifa);
-			} else if (type == SCTP_DEL_IP_ADDRESS) {
-				sctp_del_local_addr_ep(inp, ifa);
-			}
-		}
 	}
 	return (0);
 }
+
+int
+sctp_iterator_ep_end(struct sctp_inpcb *inp, void *ptr, uint32_t val)
+{
+	struct sctp_ifa *ifa;
+	struct sctp_asconf_iterator *asc;
+	struct sctp_laddr *laddr, *nladdr, *l;
+
+	/* Only for specific case not bound all */
+	asc = (struct sctp_asconf_iterator *)ptr;
+	LIST_FOREACH(l, &asc->list_of_work, sctp_nxt_addr) {
+		ifa = l->ifa;
+		if(l->action == SCTP_ADD_IP_ADDRESS) {
+			LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
+				if (laddr->ifa == ifa) {
+					laddr->action = 0;
+					break;
+				}
+
+			}
+		} else if (l->action == SCTP_DEL_IP_ADDRESS) {
+			laddr = LIST_FIRST(&inp->sctp_addr_list);
+			while(laddr) {
+				nladdr = LIST_NEXT(laddr, sctp_nxt_addr);
+				/* remove only after all guys are done */
+				if (laddr->ifa == ifa) {
+					sctp_del_local_addr_ep(inp, ifa);
+				}
+				laddr = nladdr;
+			}
+		}
+	}
+	return(0);
+}
+
 
 void
 sctp_iterator_stcb(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr, uint32_t val)
@@ -1898,17 +1922,18 @@ sctp_iterator_stcb(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr, uin
 			else
 				continue;
 		}
+
 		/* put this address on the "pending/do not use yet" list */
 		if (type == SCTP_ADD_IP_ADDRESS) {
 			sctp_add_local_addr_assoc(stcb, ifa, 1);
 		} else if (type == SCTP_DEL_IP_ADDRESS) {
 			struct sctp_nets *net;
-
 			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 				struct rtentry *rt;
 
 				/* delete this address if cached */
-				if(net->ro._s_addr->ifa == ifa) {
+				if(net->ro._s_addr && 
+				   (net->ro._s_addr->ifa == ifa)) {
 					sctp_free_ifa(net->ro._s_addr);
 					net->ro._s_addr = NULL;
 					net->src_addr_selected = 0;
@@ -1925,6 +1950,7 @@ sctp_iterator_stcb(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr, uin
 			/* does the peer do asconf? */
 			if (stcb->asoc.peer_supports_asconf) {
 				/* queue an asconf for this addr */
+
 				status = sctp_asconf_queue_add(stcb, ifa, type);
 				/*
 				 * if queued ok, and in correct state, set the
@@ -1939,6 +1965,7 @@ sctp_iterator_stcb(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr, uin
 				}
 			}
 		}
+
 	}
 }
 
@@ -2320,7 +2347,7 @@ sctp_process_initack_addresses(struct sctp_tcb *stcb, struct mbuf *m,
 	struct sockaddr_in6 sin6;
 	struct sockaddr_in sin;
 	struct sockaddr *sa;
-	uint32_t vrf;
+	uint32_t vrf_id;
 
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_ASCONF2) {
@@ -2385,11 +2412,11 @@ sctp_process_initack_addresses(struct sctp_tcb *stcb, struct mbuf *m,
 
 		/* see if this address really (still) exists */
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
-		vrf = SCTP_DEFAULT_VRFID;
+		vrf_id = SCTP_DEFAULT_VRFID;
 #else
-		vrf = panda_get_vrf_from_call();
+		vrf_id = panda_get_vrf_from_call();
 #endif
-		sctp_ifa = sctp_find_ifa_by_addr(sa, vrf, 0);
+		sctp_ifa = sctp_find_ifa_by_addr(sa, vrf_id, 0);
 		if (sctp_ifa == NULL) {
 			/* address doesn't exist anymore */
 			int status;
@@ -2674,10 +2701,9 @@ sctp_check_address_list(struct sctp_tcb *stcb, struct mbuf *m, int offset,
  * sctp_bindx() support
  */
 uint32_t
-sctp_addr_mgmt_ep_sa(struct sctp_inpcb *inp, struct sockaddr *sa, uint16_t type, uint32_t vrf)
+sctp_addr_mgmt_ep_sa(struct sctp_inpcb *inp, struct sockaddr *sa, uint32_t type, uint32_t vrf_id)
 {
 	struct sctp_ifa *ifa;
-
 #if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
 	struct timeval timenow;
 
@@ -2688,7 +2714,15 @@ sctp_addr_mgmt_ep_sa(struct sctp_inpcb *inp, struct sockaddr *sa, uint16_t type,
 		return (EINVAL);
 	}
 
-	ifa = sctp_find_ifa_by_addr(sa,  vrf, 0);
+	if(type == SCTP_ADD_IP_ADDRESS) {
+		/* For an add the address MUST be on the system */
+		ifa = sctp_find_ifa_by_addr(sa, vrf_id, 0);
+	} else if (type == SCTP_DEL_IP_ADDRESS) {
+		/* For a delete we need to find it in the inp */
+		ifa = sctp_find_ifa_in_ep(inp, sa, 0);
+	} else {
+		ifa = NULL;
+	}
 	if (ifa != NULL) {
 		/* add this address */
 		struct sctp_asconf_iterator *asc;
@@ -2702,15 +2736,29 @@ sctp_addr_mgmt_ep_sa(struct sctp_inpcb *inp, struct sockaddr *sa, uint16_t type,
 		if (wi == NULL) {
 			SCTP_FREE(asc);
 			return (ENOMEM);
+		} 
+		if(type == SCTP_ADD_IP_ADDRESS) {
+			sctp_add_local_addr_ep(inp, ifa, type);
+		} else if(type == SCTP_DEL_IP_ADDRESS) {
+			struct sctp_laddr *laddr;
+			LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
+				if(ifa == laddr->ifa) {
+					/* Mark in the delete */
+					laddr->action = type;
+				}
+			}
 		}
 		LIST_INIT(&asc->list_of_work);
 		asc->cnt = 1;
 		SCTP_INCR_LADDR_COUNT();
 		wi->ifa = ifa;
-		wi->action = SCTP_ADD_IP_ADDRESS;
+		wi->action = type;
 		atomic_add_int(&ifa->refcount, 1);
 		LIST_INSERT_HEAD(&asc->list_of_work, wi, sctp_nxt_addr);
-		sctp_initiate_iterator(sctp_iterator_ep, sctp_iterator_stcb, SCTP_PCB_ANY_FLAGS,
+		sctp_initiate_iterator(sctp_iterator_ep, 
+				       sctp_iterator_stcb, 
+				       sctp_iterator_ep_end,
+				       SCTP_PCB_ANY_FLAGS,
 				       SCTP_PCB_ANY_FEATURES, SCTP_ASOC_ANY_STATE, (void *)asc, 0,
 				       sctp_iterator_end, inp, 0);
 	} else {

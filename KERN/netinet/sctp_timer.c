@@ -400,7 +400,7 @@ sctp_find_alternate_net(struct sctp_tcb *stcb,
 			}
 #endif /* SCTP_EMBEDDED_V6_SCOPE */
 #endif
-			if (alt->src_addr_selected) {
+			if (alt->ro._s_addr) {
 				sctp_free_ifa(alt->ro._s_addr);
 				alt->ro._s_addr = NULL;
 			}
@@ -988,7 +988,7 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 			    (struct sockaddr *)NULL,
 			    alt) == 0) {
 				net->dest_state |= SCTP_ADDR_WAS_PRIMARY;
-				if (net->src_addr_selected) {
+				if (net->ro._s_addr) {
 					sctp_free_ifa(net->ro._s_addr);
 					net->ro._s_addr = NULL;
 				}
@@ -1455,7 +1455,7 @@ sctp_heartbeat_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 #endif
 	if (net) {
 		if (net->hb_responded == 0) {
-			if(net->src_addr_selected) {
+			if(net->ro._s_addr) {
 				/* Invalidate the src address if we did not get
 				 * a response last time.
 				 */
@@ -1764,7 +1764,12 @@ select_a_new_ep:
 		it->stcb = LIST_FIRST(&it->inp->sctp_asoc_list);
 	}
 	SCTP_INP_RUNLOCK(it->inp);
-	if(inp_skip) {
+	if((inp_skip) || it->stcb == NULL) {
+		if(it->function_inp_end != NULL) {
+			inp_skip = (*it->function_inp_end)(it->inp, 
+							   it->pointer, 
+							   it->val);
+		}
 		goto no_stcb;
 	}
 	if ((it->stcb) &&
@@ -1807,6 +1812,13 @@ select_a_new_ep:
 		SCTP_TCB_UNLOCK(it->stcb);
 	next_assoc:
 		it->stcb = LIST_NEXT(it->stcb, sctp_tcblist);
+		if(it->stcb == NULL) {
+			if(it->function_inp_end != NULL) {
+				inp_skip = (*it->function_inp_end)(it->inp, 
+								   it->pointer, 
+								   it->val);
+			}
+		}
 	}
  no_stcb:
 	/* done with all assocs on this endpoint, move on to next endpoint */

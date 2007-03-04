@@ -2592,15 +2592,16 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 		/* we're not bound all */
 		inp->sctp_flags &= ~SCTP_PCB_FLAGS_BOUNDALL;
 		/* set the automatic addr changes from kernel flag */
+		sctp_feature_on(inp, SCTP_PCB_FLAGS_DO_ASCONF);
 		if (sctp_auto_asconf == 0) {
 			sctp_feature_off(inp, SCTP_PCB_FLAGS_AUTO_ASCONF);
 		} else {
+			/* allow bindx() to send ASCONF's for binding changes */
 			sctp_feature_on(inp, SCTP_PCB_FLAGS_AUTO_ASCONF);
 		}
-		/* allow bindx() to send ASCONF's for binding changes */
-		sctp_feature_on(inp, SCTP_PCB_FLAGS_DO_ASCONF);
+
 		/* add this address to the endpoint list */
-		error = sctp_insert_laddr(&inp->sctp_addr_list, ifa);
+		error = sctp_insert_laddr(&inp->sctp_addr_list, ifa, 0);
 		if (error != 0) {
 			SCTP_INP_WUNLOCK(inp);
 #if defined(SCTP_PER_SOCKET_LOCKING)
@@ -4663,7 +4664,7 @@ sctp_update_ep_vflag(struct sctp_inpcb *inp)
  * done if we are bound to all addresses
  */
 int
-sctp_add_local_addr_ep(struct sctp_inpcb *inp, struct sctp_ifa *ifa)
+sctp_add_local_addr_ep(struct sctp_inpcb *inp, struct sctp_ifa *ifa, uint32_t action)
 {
 	struct sctp_laddr *laddr;
 	int fnd, error;
@@ -4690,7 +4691,7 @@ sctp_add_local_addr_ep(struct sctp_inpcb *inp, struct sctp_ifa *ifa)
 
 	if (fnd == 0) {
 		/* Not in the ep list */
-		error = sctp_insert_laddr(&inp->sctp_addr_list, ifa);
+		error = sctp_insert_laddr(&inp->sctp_addr_list, ifa, action);
 		if (error != 0)
 			return (error);
 		inp->laddr_count++;
@@ -4785,7 +4786,8 @@ sctp_del_local_addr_ep(struct sctp_inpcb *inp, struct sctp_ifa *ifa)
 				stcb->asoc.last_used_address = NULL;
 			/* Now spin through all the nets and purge any ref to laddr */
 			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
-				if(net->ro._s_addr->ifa == laddr->ifa) {
+				if(net->ro._s_addr && 
+				   (net->ro._s_addr->ifa == laddr->ifa)) {
 					/* Yep, purge src address selected */
 					struct rtentry *rt;
 
@@ -4846,7 +4848,7 @@ sctp_add_local_addr_assoc(struct sctp_tcb *stcb, struct sctp_ifa *ifa, int restr
 	}
 
 	/* add to the list */
-	error = sctp_insert_laddr(list, ifa);
+	error = sctp_insert_laddr(list, ifa, 0);
 	if (error != 0)
 		return (error);
 	return (0);
@@ -4856,7 +4858,7 @@ sctp_add_local_addr_assoc(struct sctp_tcb *stcb, struct sctp_ifa *ifa, int restr
  * insert an laddr entry with the given ifa for the desired list
  */
 int
-sctp_insert_laddr(struct sctpladdr *list, struct sctp_ifa *ifa)
+sctp_insert_laddr(struct sctpladdr *list, struct sctp_ifa *ifa, uint32_t act)
 {
 	struct sctp_laddr *laddr;
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -4875,6 +4877,7 @@ sctp_insert_laddr(struct sctpladdr *list, struct sctp_ifa *ifa)
 	SCTP_INCR_LADDR_COUNT();
 	bzero(laddr, sizeof(*laddr));
 	laddr->ifa = ifa;
+	laddr->action = act;
 	atomic_add_int(&ifa->refcount, 1);
 	/* insert it */
 	LIST_INSERT_HEAD(list, laddr, sctp_nxt_addr);
@@ -6078,9 +6081,17 @@ sctp_drain()
  * iterated through.
  */
 int
-sctp_initiate_iterator(inp_func inpf, asoc_func af, uint32_t pcb_state,
-    uint32_t pcb_features, uint32_t asoc_state, void *argp, uint32_t argi,
-    end_func ef, struct sctp_inpcb *s_inp, uint8_t chunk_output_off)
+sctp_initiate_iterator(inp_func inpf,  
+		       asoc_func af, 
+		       inp_func inpe,
+		       uint32_t pcb_state,
+		       uint32_t pcb_features, 
+		       uint32_t asoc_state, 
+		       void *argp, 
+		       uint32_t argi,
+		       end_func ef, 
+		       struct sctp_inpcb *s_inp, 
+		       uint8_t chunk_output_off)
 {
 	struct sctp_iterator *it = NULL;
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -6108,6 +6119,7 @@ sctp_initiate_iterator(inp_func inpf, asoc_func af, uint32_t pcb_state,
 	it->pcb_flags = pcb_state;
 	it->pcb_features = pcb_features;
 	it->asoc_state = asoc_state;
+	it->function_inp_end = inpe;
 	it->no_chunk_output = chunk_output_off;
 	if (s_inp) {
 		it->inp = s_inp;
