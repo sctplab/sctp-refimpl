@@ -88,6 +88,7 @@ int sctp_hb_maxburst = SCTP_DEF_MAX_BURST;
 
 unsigned int sctp_max_chunks_on_queue = SCTP_ASOC_MAX_CHUNKS_ON_QUEUE;
 unsigned int sctp_delayed_sack_time_default = SCTP_RECV_MSEC;
+unsigned int sctp_sack_freq_default = SCTP_DEFAULT_SACK_FREQ;
 unsigned int sctp_heartbeat_interval_default = SCTP_HB_DEFAULT_MSEC;
 unsigned int sctp_pmtu_raise_time_default = SCTP_DEF_PMTU_RAISE_SEC;
 unsigned int sctp_shutdown_guard_time_default = SCTP_DEF_MAX_SHUTDOWN_SEC;
@@ -102,7 +103,6 @@ unsigned int sctp_assoc_rtx_max_default = SCTP_DEF_MAX_SEND;
 unsigned int sctp_path_rtx_max_default = SCTP_DEF_MAX_PATH_RTX;
 unsigned int sctp_nr_outgoing_streams_default = SCTP_OSTREAM_INITIAL;
 unsigned int sctp_add_more_threshold = SCTP_DEFAULT_ADD_MORE;
-
 uint32_t sctp_asoc_free_resc_limit = SCTP_DEF_ASOC_RESC_LIMIT;
 uint32_t sctp_system_free_resc_limit = SCTP_DEF_SYSTEM_RESC_LIMIT;
 
@@ -888,6 +888,10 @@ SYSCTL_INT(_net_inet_sctp, OID_AUTO, chunkscale, CTLFLAG_RW,
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, delayed_sack_time, CTLFLAG_RW,
     &sctp_delayed_sack_time_default, 0,
     "Default delayed SACK timer in msec");
+
+SYSCTL_UINT(_net_inet_sctp, OID_AUTO, sack_freq, CTLFLAG_RW,
+    &sctp_sack_freq_default, 0,
+    "Default SACK frequency");
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, heartbeat_interval, CTLFLAG_RW,
     &sctp_heartbeat_interval_default, 0,
@@ -5393,6 +5397,9 @@ sctp_sysctl(name, namelen, oldp, oldlenp, newp, newlen)
 	case SCTPCTL_DELAYED_SACK:
 		return (sysctl_int(oldp, oldlenp, newp, newlen,
 		    &sctp_delayed_sack_time_default));
+	case SCTPCTL_SACK_FREQ:
+		return (sysctl_int(oldp, oldlenp, newp, newlen,
+		    &sctp_sack_freq_default));
 	case SCTPCTL_HB_INTERVAL:
 		return (sysctl_int(oldp, oldlenp, newp, newlen,
 		    &sctp_heartbeat_interval_default));
@@ -5656,6 +5663,13 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
 	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_DELAYED_SACK,
 	    CTL_EOL);
 
+	sysctl_createv(clog, 0, NULL, NULL,
+	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
+	    CTLTYPE_INT, "sack_freq",
+	    SYSCTL_DESCR("Default SACK frequency"),
+	    NULL, 0, &sctp_sack_freq_default, 0,
+	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_SACK_FREQ,
+	    CTL_EOL);
 
 	sysctl_createv(clog, 0, NULL, NULL,
 	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
