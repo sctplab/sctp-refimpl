@@ -1954,9 +1954,9 @@ sctp_iterator_stcb(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr, uin
 				status = sctp_asconf_queue_add(stcb, ifa, type);
 				/*
 				 * if queued ok, and in correct state, set the
-				 * ASCONF timer if in non-open state, we will set
-				 * this timer when the state does go open and do all
-				 * the asconf's
+				 * ASCONF timer if in non-open state, we will
+				 * set this timer when the state does go open
+				 * and do all the asconf's
 				 */
 				if (status == 0 &&
 				    SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_OPEN) {
@@ -1965,7 +1965,6 @@ sctp_iterator_stcb(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr, uin
 				}
 			}
 		}
-
 	}
 }
 
@@ -1973,9 +1972,11 @@ void sctp_iterator_end(void *ptr, uint32_t val)
 {
 	struct sctp_asconf_iterator *asc;
 	struct sctp_ifa *ifa;
-	struct sctp_laddr *l;
+	struct sctp_laddr *l, *l_next;
 	asc = (struct sctp_asconf_iterator *)ptr;
-	LIST_FOREACH(l, &asc->list_of_work, sctp_nxt_addr) {
+	l = LIST_FIRST(&asc->list_of_work);
+	while (l != NULL) {
+		l_next = LIST_NEXT(l, sctp_nxt_addr);
 		ifa = l->ifa;
 		if(l->action == SCTP_ADD_IP_ADDRESS) {
 			/* Clear the defer use flag */
@@ -1984,6 +1985,7 @@ void sctp_iterator_end(void *ptr, uint32_t val)
 		sctp_free_ifa(ifa);
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_laddr, l);
 		SCTP_DECR_LADDR_COUNT();
+		l = l_next;
 	}
 	SCTP_FREE(asc);
 }
