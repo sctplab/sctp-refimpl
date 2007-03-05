@@ -829,8 +829,10 @@ SYSCTL_INT(_net_inet_sctp, OID_AUTO, sendspace, CTLFLAG_RW,
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, recvspace, CTLFLAG_RW,
     &sctp_recvspace, 0, "Maximum incoming SCTP buffer size");
 
+#if defined(__FreeBSD__) || defined(SCTP_APPLE_AUTO_ASCONF)
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, auto_asconf, CTLFLAG_RW,
     &sctp_auto_asconf, 0, "Enable SCTP Auto-ASCONF");
+#endif
 
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, ecn_enable, CTLFLAG_RW,
     &sctp_ecn_enable, 0, "Enable SCTP ECN");
