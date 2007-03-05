@@ -1,5 +1,5 @@
 /*-
- * Copyright (C) 2002-2006 Cisco Systems Inc,
+ * Copyright (C) 2002-2007 Cisco Systems Inc,
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -60,6 +60,7 @@
 
 #include <sys/param.h>
 #include <sys/domain.h>
+#include <sys/proc.h>
 #include <sys/protosw.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>
@@ -264,6 +265,10 @@ sctp_lock(struct socket *so, int refcount, int lr)
 	SAVE_CALLERS(((struct sctp_inpcb *)so->so_pcb)->lock_caller1,
 		     ((struct sctp_inpcb *)so->so_pcb)->lock_caller2,
 		     ((struct sctp_inpcb *)so->so_pcb)->lock_caller3);
+#if defined(__ppc__)
+	((struct sctp_inpcb *)so->so_pcb)->lock_caller1 = lr;
+	((struct sctp_inpcb *)so->so_pcb)->lock_caller2 = refcount;
+#endif
 	((struct sctp_inpcb *)so->so_pcb)->lock_gen_count = ((struct sctp_inpcb *)so->so_pcb)->gen_count++;
 	return (0);
 }
@@ -275,6 +280,10 @@ sctp_unlock(struct socket *so, int refcount, int lr)
 		SAVE_CALLERS(((struct sctp_inpcb *)so->so_pcb)->unlock_caller1,
 			     ((struct sctp_inpcb *)so->so_pcb)->unlock_caller2,
 			     ((struct sctp_inpcb *)so->so_pcb)->unlock_caller3);
+#if defined(__ppc__)
+		((struct sctp_inpcb *)so->so_pcb)->unlock_caller1 = lr;
+		((struct sctp_inpcb *)so->so_pcb)->unlock_caller2 = refcount;
+#endif
 		((struct sctp_inpcb *)so->so_pcb)->unlock_gen_count = ((struct sctp_inpcb *)so->so_pcb)->gen_count++;
 	}
 	
@@ -507,3 +516,219 @@ sctp_slowtimo()
 }
 #endif
 
+#if defined(SCTP_APPLE_AUTO_ASCONF)
+socket_t sctp_address_monitor_so = 0;
+
+#define ROUNDUP(a, size) (((a) & ((size)-1)) ? (1 + ((a) | ((size)-1))) : (a))
+#define NEXT_SA(sa) sa = (struct sockaddr *) \
+	((caddr_t) sa + (sa->sa_len ? ROUNDUP(sa->sa_len, sizeof(unsigned long)) : sizeof(unsigned long)))
+
+static void
+sctp_get_rtaddrs(int addrs, struct sockaddr *sa, struct sockaddr **rti_info)
+{
+    int i;
+    for (i = 0; i < RTAX_MAX; i++) {
+	if (addrs & (1 << i)) {
+	    rti_info[i] = sa;
+	    NEXT_SA(sa);
+	} else {
+	    rti_info[i] = NULL;
+	}
+    }
+}
+
+static void print_address(struct sockaddr *sa)
+{
+    struct sockaddr_in *sin;
+    struct sockaddr_in6 *sin6;
+    ushort port = 0;
+    int len = 0;
+    void *src;
+    char str[128];
+    const char *ptr = NULL;
+
+    switch(sa->sa_family) {
+    case AF_INET:
+	sin = (struct sockaddr_in *)sa;
+	src = (void *)&sin->sin_addr.s_addr;
+	port = ntohs(sin->sin_port);
+#ifdef HAVE_SA_LEN
+	len = sa->sa_len;
+#else
+	len = sizeof(*sin);
+#endif
+	break;
+    case AF_INET6:
+	sin6 = (struct sockaddr_in6 *)sa;
+	src = (void *)&sin6->sin6_addr;
+	port = ntohs(sin6->sin6_port);
+#ifdef HAVE_SA_LEN
+	len = sa->sa_len;
+#else
+	len = sizeof(*sin6);
+#endif
+	break;
+    default:
+	/* TSNH: unknown family */
+	printf("[unknown address family]");
+	return;
+    }
+    ptr = inet_ntop(sa->sa_family, src, str, sizeof(str));
+    if (ptr != NULL) 
+	printf("%s:%u", ptr, port);
+    else
+	printf("[cannot display address]:%u", port);
+}
+
+static void sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
+    struct sockaddr *sa;
+    struct sockaddr *rti_info[RTAX_MAX];
+    struct ifnet *ifn, *found_ifn = NULL;
+    struct ifaddr *ifa, *found_ifa = NULL;
+
+    /* handle only the types we want */
+    if ((ifa_msg->ifam_type != RTM_NEWADDR) &&
+	(ifa_msg->ifam_type != RTM_DELADDR))
+	return;
+					  
+    /* parse the list of addreses reported */
+    sa = (struct sockaddr *)(ifa_msg + 1);
+    sctp_get_rtaddrs(ifa_msg->ifam_addrs, sa, rti_info);
+
+    /* we only want the interface address */
+    sa = rti_info[RTAX_IFA];
+
+/* tempy prints */
+    if (ifa_msg->ifam_type == RTM_NEWADDR)
+	printf("if_index %u: adding ", ifa_msg->ifam_index);
+    else
+	printf("if_index %u: deleting ", ifa_msg->ifam_index);
+    print_address(sa);
+    printf("\n");
+/* end tempy prints */
+
+    /*
+     * find the actual kernel ifa/ifn for this address.
+     * we need this primarily for the v6 case to get the ifa_flags.
+     */
+    TAILQ_FOREACH(ifn, &ifnet, if_list) {
+	/* find the interface by index */
+	if (ifa_msg->ifam_index == ifn->if_index) {
+	    found_ifn = ifn;
+	    break;
+	}
+    }
+    if (found_ifn == NULL) {
+	/* TSNH */
+	printf("if_index %u not found?!", ifa_msg->ifam_index);
+	return;
+    }
+
+    /* verify the address on the interface */
+    TAILQ_FOREACH(ifa, &found_ifn->if_addrlist, ifa_list) {
+	if (ifa->ifa_addr == NULL)
+	    continue;
+
+#if defined(INET6)
+	if (ifa->ifa_addr->sa_family == AF_INET6) {
+	    if (SCTP6_ARE_ADDR_EQUAL(&((struct sockaddr_in6 *)sa)->sin6_addr, 
+				     &((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr)) {
+		found_ifa = ifa;
+		break;
+	    }
+	} else
+#endif
+	if (ifa->ifa_addr->sa_family == AF_INET) {
+	    if (((struct sockaddr_in *)sa)->sin_addr.s_addr ==
+		((struct sockaddr_in *)ifa->ifa_addr)->sin_addr.s_addr) {
+		found_ifa = ifa;
+		break;
+	    }
+	}
+    }
+    if (found_ifa == NULL) {
+	/* TSNH */
+	printf("ifa not found?!");
+	return;
+    }
+
+    /* relay the appropriate address change to the base code */
+    if (ifa_msg->ifam_type == RTM_NEWADDR) {
+	sctp_addr_change(found_ifa, RTM_ADD);
+    } else {
+	sctp_addr_change(found_ifa, RTM_DELETE);
+    }
+}
+
+void sctp_address_monitor_cb(socket_t rt_sock, void *cookie, int watif)
+{
+    struct msghdr msg;
+    struct iovec iov;
+    int flags;
+    size_t length;
+    errno_t error;
+    struct rt_msghdr *rt_msg;
+    char rt_buffer[1024];
+
+    /* setup the receive iovec and msghdr */
+    iov.iov_base = rt_buffer;
+    iov.iov_len = sizeof(rt_buffer);
+    bzero(&msg, sizeof(msg));
+    msg.msg_iov = &iov;
+    msg.msg_iovlen = 1;
+    flags = 0;
+    /* read the routing socket */
+    error = sock_receive(rt_sock, &msg, flags, &length);
+    if (error != 0) {
+	printf("Routing socket read error: length %d, errno %d\n",
+	       length, error);
+	return;
+    }
+    if (length == 0) {
+	printf("Routing socket closed.\n");
+	return;
+    }
+
+    /* process the routing event */
+    rt_msg = (struct rt_msghdr *)rt_buffer;
+/*    printf("Got routing event 0x%x, %u bytes\n", rt_msg->rtm_type, length);*/
+    switch (rt_msg->rtm_type) {
+    case RTM_DELADDR:
+    case RTM_NEWADDR:
+	sctp_handle_ifamsg((struct ifa_msghdr *)rt_buffer);
+	break;
+    default:
+	/* ignore this routing event */
+	break;
+    }
+}
+
+void sctp_address_monitor_start(void)
+{
+    errno_t error;
+
+    /* open an in kernel routing socket client */
+    error = sock_socket(PF_ROUTE, SOCK_RAW, 0, sctp_address_monitor_cb,
+			NULL, &sctp_address_monitor_so);
+    if (error < 0) {
+	printf("Failed to create routing socket\n");
+	/* FIX ME: try again later?? */
+    }
+}
+
+void sctp_address_monitor_destroy(void)
+{
+    if (sctp_address_monitor_so != NULL) {
+	sock_close(sctp_address_monitor_so);
+	sctp_address_monitor_so = 0;
+    }
+}
+#else
+void sctp_address_monitor_start(void)
+{
+}
+
+void sctp_address_monitor_destroy(void)
+{
+}
+#endif
