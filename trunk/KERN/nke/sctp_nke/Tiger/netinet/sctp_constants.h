@@ -230,7 +230,11 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.7 2007/02/12 23:24:31 r
 #define SCTP_SCALE_FOR_ADDR	2
 
 /* default AUTO_ASCONF mode enable(1)/disable(0) value (sysctl) */
+#if defined (__APPLE__) && !defined(SCTP_APPLE_AUTO_ASCONF)
+#define SCTP_DEFAULT_AUTO_ASCONF        0
+#else
 #define SCTP_DEFAULT_AUTO_ASCONF	1
+#endif
 
 /*
  * Theshold for rwnd updates, we have to read (sb_hiwat >>
