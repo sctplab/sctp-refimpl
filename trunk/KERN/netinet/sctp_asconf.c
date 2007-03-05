@@ -1846,9 +1846,9 @@ sctp_iterator_ep_end(struct sctp_inpcb *inp, void *ptr, uint32_t val)
 	return(0);
 }
 
-
 void
-sctp_iterator_stcb(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr, uint32_t val)
+sctp_iterator_stcb(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
+		   uint32_t val)
 {
 	struct sctp_asconf_iterator *asc;
 	struct sctp_ifa *ifa;
@@ -1867,7 +1867,7 @@ sctp_iterator_stcb(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr, uin
 
 			if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0) {
 				cnt_invalid++;
-				if(asc->cnt == cnt_invalid)
+				if (asc->cnt == cnt_invalid)
 					return;
 				else
 					continue;
@@ -1909,7 +1909,7 @@ sctp_iterator_stcb(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr, uin
 			if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) &&
 			    SCTP_IPV6_V6ONLY(inp6)) {
 				cnt_invalid++;
-				if(asc->cnt == cnt_invalid)
+				if (asc->cnt == cnt_invalid)
 					return;
 				else
 					continue;
@@ -1917,7 +1917,7 @@ sctp_iterator_stcb(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr, uin
 		} else {
 			/* invalid address family */
 			cnt_invalid++;
-			if(asc->cnt == cnt_invalid)
+			if (asc->cnt == cnt_invalid)
 				return;
 			else
 				continue;
@@ -1932,13 +1932,13 @@ sctp_iterator_stcb(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr, uin
 				struct rtentry *rt;
 
 				/* delete this address if cached */
-				if(net->ro._s_addr && 
-				   (net->ro._s_addr->ifa == ifa)) {
+				if (net->ro._s_addr && 
+				    (net->ro._s_addr->ifa == ifa)) {
 					sctp_free_ifa(net->ro._s_addr);
 					net->ro._s_addr = NULL;
 					net->src_addr_selected = 0;
 					rt = net->ro.ro_rt;
-					if(rt) {
+					if (rt) {
 						RTFREE(rt);
 						net->ro.ro_rt = NULL;
 					}
@@ -1973,12 +1973,13 @@ void sctp_iterator_end(void *ptr, uint32_t val)
 	struct sctp_asconf_iterator *asc;
 	struct sctp_ifa *ifa;
 	struct sctp_laddr *l, *l_next;
+
 	asc = (struct sctp_asconf_iterator *)ptr;
 	l = LIST_FIRST(&asc->list_of_work);
 	while (l != NULL) {
 		l_next = LIST_NEXT(l, sctp_nxt_addr);
 		ifa = l->ifa;
-		if(l->action == SCTP_ADD_IP_ADDRESS) {
+		if (l->action == SCTP_ADD_IP_ADDRESS) {
 			/* Clear the defer use flag */
 			ifa->localifa_flags &= ~SCTP_ADDR_DEFER_USE;
 		}

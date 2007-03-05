@@ -66,11 +66,14 @@ sctp_iterator_thread(void *v)
 {
 	SCTP_IPI_ITERATOR_WQ_LOCK();
 	sctppcbinfo.iterator_running = 0;
-	while(1) {
-		
+	while (1) {
 		msleep(&sctppcbinfo.iterator_running,
+#if defined(__FreeBSD__)
 		       &sctppcbinfo.ipi_iterator_wq_mtx,
-		       0, "waiting_for_work", 0);
+#elif defined(__APPLE__)
+		       sctppcbinfo.ipi_iterator_wq_mtx,
+#endif
+	 	       0, "waiting_for_work", 0);
 		sctp_iterator_worker();
 	}
 }
@@ -79,12 +82,16 @@ void
 sctp_startup_iterator(void)
 {
 	int ret;
+#if defined(__FreeBSD__)
 	ret = kthread_create(sctp_iterator_thread,
 			     (void *)NULL , 
 			     &sctppcbinfo.thread_proc,
 			     RFPROC, 
 			     SCTP_KTHREAD_PAGES, 
-			     SCTP_KTRHEAD_NAME); 
+			     SCTP_KTRHEAD_NAME);
+#elif defined(__APPLE__)
+	sctppcbinfo.thread_proc = IOCreateThread(sctp_iterator_thread, (void *)NULL);
+#endif
 }
 #endif
 

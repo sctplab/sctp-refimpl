@@ -1165,7 +1165,7 @@ sctp_iterator_work(struct sctp_iterator *it)
 	int inp_skip = 0;
 
 	SCTP_ITERATOR_LOCK();
- 	if(it->inp)
+ 	if (it->inp)
 		SCTP_INP_DECR_REF(it->inp);
 
 	if (it->inp == NULL) {
@@ -1175,11 +1175,13 @@ done_with_iterator:
 		if (it->function_atend != NULL) {
 			(*it->function_atend) (it->pointer, it->val);
 		}
-
 		SCTP_FREE(it);
 		return;
 	}
 select_a_new_ep:
+#if defined(SCTP_PER_SOCKET_LOCKING)
+	SCTP_SOCKET_LOCK(SCTP_INP_SO(it->inp), 1);
+#endif
 	SCTP_INP_WLOCK(it->inp);
 	while (((it->pcb_flags) &&
 		((it->inp->sctp_flags & it->pcb_flags) != it->pcb_flags)) ||
@@ -1187,15 +1189,23 @@ select_a_new_ep:
 		((it->inp->sctp_features & it->pcb_features) != it->pcb_features))) {
 		/* endpoint flags or features don't match, so keep looking */
 		if (it->iterator_flags & SCTP_ITERATOR_DO_SINGLE_INP) {
+#if defined(SCTP_PER_SOCKET_LOCKING)
+			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(it->inp), 1);
+#endif
 			SCTP_INP_WUNLOCK(it->inp);
 			goto done_with_iterator;
 		}
+#if defined(SCTP_PER_SOCKET_LOCKING)
+		SCTP_SOCKET_UNLOCK(SCTP_INP_SO(it->inp), 1);
+#endif
 		SCTP_INP_WUNLOCK(it->inp);
-
 		it->inp = LIST_NEXT(it->inp, sctp_list);
 		if (it->inp == NULL) {
 			goto done_with_iterator;
 		}
+#if defined(SCTP_PER_SOCKET_LOCKING)
+		SCTP_SOCKET_LOCK(SCTP_INP_SO(it->inp), 1);
+#endif
 		SCTP_INP_WLOCK(it->inp);
 	}
 
@@ -1205,7 +1215,7 @@ select_a_new_ep:
 	SCTP_INP_RLOCK(it->inp);
 
 	/* now go through each assoc which is in the desired state */
-	if(it->done_current_ep == 0) {
+	if (it->done_current_ep == 0) {
 		if (it->function_inp != NULL)
 			inp_skip = (*it->function_inp)(it->inp, it->pointer, it->val);
 		it->done_current_ep = 1;
@@ -1215,8 +1225,8 @@ select_a_new_ep:
 		it->stcb = LIST_FIRST(&it->inp->sctp_asoc_list);
 	}
 
-	if((inp_skip) || it->stcb == NULL) {
-		if(it->function_inp_end != NULL) {
+	if ((inp_skip) || it->stcb == NULL) {
+		if (it->function_inp_end != NULL) {
 			inp_skip = (*it->function_inp_end)(it->inp, 
 							   it->pointer, 
 							   it->val);
@@ -1242,12 +1252,18 @@ select_a_new_ep:
 		if (iteration_count > SCTP_ITERATOR_MAX_AT_ONCE) {
 			/* Pause to let others grab the lock */
 			atomic_add_int(&it->stcb->asoc.refcnt, 1);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(it->inp), 0);
+#endif
 			SCTP_TCB_UNLOCK(it->stcb);
 			SCTP_INP_RUNLOCK(it->inp);
 			SCTP_ITERATOR_UNLOCK();
 			SCTP_ITERATOR_LOCK();
 			SCTP_INP_RLOCK(it->inp);
 			SCTP_TCB_LOCK(it->stcb);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+			SCTP_SOCKET_LOCK(SCTP_INP_SO(it->inp), 0);
+#endif
 			atomic_add_int(&it->stcb->asoc.refcnt, -1);
 			iteration_count = 0;
 		}
@@ -1264,9 +1280,9 @@ select_a_new_ep:
 		SCTP_TCB_UNLOCK(it->stcb);
 	next_assoc:
 		it->stcb = LIST_NEXT(it->stcb, sctp_tcblist);
-		if(it->stcb == NULL) {
+		if (it->stcb == NULL) {
 			/* Run last function */
-			if(it->function_inp_end != NULL) {
+			if (it->function_inp_end != NULL) {
 				inp_skip = (*it->function_inp_end)(it->inp, 
 								   it->pointer, 
 								   it->val);
@@ -1280,11 +1296,20 @@ select_a_new_ep:
 	SCTP_INP_WLOCK(it->inp);
 	it->inp->inp_starting_point_for_iterator = NULL;
 	SCTP_INP_WUNLOCK(it->inp);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+	SCTP_SOCKET_UNLOCK(SCTP_INP_SO(it->inp), 1);
+#endif
 	if (it->iterator_flags & SCTP_ITERATOR_DO_SINGLE_INP) {
 		it->inp = NULL;
 	} else {
+#if defined(SCTP_PER_SOCKET_LOCKING)
+		SCTP_LOCK_EXC(sctppcbinfo.ipi_ep_mtx);
+#endif
 		SCTP_INP_INFO_RLOCK();
 		it->inp = LIST_NEXT(it->inp, sctp_list);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+		SCTP_UNLOCK_EXC(sctppcbinfo.ipi_ep_mtx);
+#endif
 		SCTP_INP_INFO_RUNLOCK();
 	}
 	if (it->inp == NULL) {
@@ -1303,14 +1328,14 @@ sctp_iterator_worker()
 	sctppcbinfo.iterator_running = 1;
  again:
 	it = TAILQ_FIRST(&sctppcbinfo.iteratorhead);
-	while(it) {
+	while (it) {
 		/* now lets work on this one */
 		TAILQ_REMOVE(&sctppcbinfo.iteratorhead, it, sctp_nxt_itr);
 		SCTP_IPI_ITERATOR_WQ_UNLOCK();
 		sctp_iterator_work(it);
 		SCTP_IPI_ITERATOR_WQ_LOCK();
 		it = TAILQ_FIRST(&sctppcbinfo.iteratorhead);		
-	};
+	}
 	if (TAILQ_FIRST(&sctppcbinfo.iteratorhead)) {
 		goto again;
 	}
