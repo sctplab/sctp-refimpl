@@ -349,4 +349,8 @@ extern int sctp_main_timer_ticks;
 void sctp_start_main_timer(void);
 void sctp_stop_main_timer(void);
 
+/* address monitor thread */
+void sctp_address_monitor_start(void);
+void sctp_address_monitor_destroy(void);
+
 #endif
