@@ -4147,7 +4147,7 @@ SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
 #if __FreeBSD_version > 602000
 		error = priv_check(curthread, PRIV_NETINET_RESERVEDPORT);
 #elif __FreeBSD_version >= 500000
-		error = suser(curthread->td_ucred);
+		error = suser((struct thread *)p);
 #else
 		error = suser(p);
 #endif
