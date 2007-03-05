@@ -4138,15 +4138,26 @@ SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
 	case SCTP_SET_DYNAMIC_PRIMARY:
 	{
 		union sctp_sockstore *ss;
+#if defined(__NetBSD__) || defined(__APPLE__)
+		struct proc *proc;
+#endif
+#ifdef __FreeBSD__
 #if __FreeBSD_version > 602000
 		error = priv_check(curthread, PRIV_NETINET_RESERVEDPORT);
 #elif __FreeBSD_version >= 500000
 		error = suser(curthread->td_ucred);
 #else
-		/* MT - FIXME is this right for MAC-OS 
-		 * to validate root privledge?
-		 */
 		error = suser(p);
+#endif
+#elif defined(__NetBSD__) || defined(__APPLE__)
+		proc = (struct proc *)p;
+		if (p) {
+			error = suser(proc->p_ucred, &proc->p_acflag);
+		} else {
+			break;
+		}
+#else
+		error = suser(p, 0);
 #endif
 		if(error) 
 			break;
