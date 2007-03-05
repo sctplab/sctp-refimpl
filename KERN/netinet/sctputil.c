@@ -5772,6 +5772,50 @@ void sctp_m_freem(struct mbuf *mb)
 
 #endif
 
+int
+sctp_dynamic_set_primary(struct sockaddr *sa, uint32_t vrf_id)
+{
+	/* Given a local address. For all associations
+	 * that holds the address, request a peer-set-primary.
+	 */
+	struct sctp_ifa *ifa;
+	struct sctp_laddr *wi;
+
+	ifa = sctp_find_ifa_by_addr(sa, vrf_id, 0);
+	if(ifa == NULL) {
+		return(EADDRNOTAVAIL);
+	}
+	/* Now that we have the ifa we must awaken the
+	 * iterator with this message.
+	 */
+	wi = SCTP_ZONE_GET(sctppcbinfo.ipi_zone_laddr, struct sctp_laddr);
+	if (wi == NULL) {
+		return(ENOMEM);
+	}
+	/* Now incr the count and int wi structure */
+	SCTP_INCR_LADDR_COUNT();
+	bzero(wi, sizeof(*wi));
+	wi->ifa = ifa;
+	wi->action = SCTP_SET_PRIM_ADDR;
+	atomic_add_int(&ifa->refcount, 1);
+
+	/* Now add it to the work queue */
+	SCTP_IPI_ITERATOR_WQ_LOCK();
+	/*
+	 * Should this really be a tailq? As it is we will process the
+	 * newest first :-0
+	 */
+	LIST_INSERT_HEAD(&sctppcbinfo.addr_wq, wi, sctp_nxt_addr);
+	sctp_timer_start(SCTP_TIMER_TYPE_ADDR_WQ,
+			 (struct sctp_inpcb *)NULL,
+			 (struct sctp_tcb *)NULL,
+			 (struct sctp_nets *)NULL);
+	SCTP_IPI_ITERATOR_WQ_UNLOCK();
+	return (0);
+}
+
+
+
 #if defined(__NetBSD__)
 int
 sctp_soreceive(so, paddr, uio, mp0, controlp, flagsp)

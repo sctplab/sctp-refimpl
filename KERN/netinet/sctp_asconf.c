@@ -1944,6 +1944,26 @@ sctp_iterator_stcb(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
 					}
 				}
 			}
+		} else if (type == SCTP_SET_PRIM_ADDR) {
+			if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) == 0) {
+				/* must validate the ifa in question is in the ep */
+				if(sctp_is_addr_in_ep(stcb->sctp_ep,ifa) == 0) {
+					continue;
+				} 
+			} else {
+				/* Need to check scopes for this guy */
+				if(sctp_is_address_in_scope(ifa,
+							    stcb->asoc.ipv4_addr_legal,
+							    stcb->asoc.ipv6_addr_legal,
+							    stcb->asoc.loopback_scope,
+							    stcb->asoc.ipv4_local_scope,
+							    stcb->asoc.local_scope,
+							    stcb->asoc.site_scope,0) == 0) {
+					continue;
+				}
+
+			}
+
 		}
 		/* queue an asconf for this address add/delete */
 		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_DO_ASCONF)) {
