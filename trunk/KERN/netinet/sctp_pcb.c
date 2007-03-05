@@ -5114,6 +5114,10 @@ sctp_pcb_init()
 #if defined(SCTP_USE_THREAD_BASED_ITERATOR)
 	sctp_startup_iterator();
 #endif
+
+#if defined(__APPLE__)
+    sctp_address_monitor_start();
+#endif
 }
 
 #ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
@@ -5124,6 +5128,7 @@ void
 sctp_pcb_finish(void)
 {
 	/* FIXME MT */
+	sctp_address_monitor_destroy();
 	SCTP_TIMERQ_LOCK_DESTROY();
 	SCTP_INP_INFO_LOCK_DESTROY();
 	SCTP_ITERATOR_LOCK_DESTROY();
