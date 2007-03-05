@@ -4135,7 +4135,27 @@ SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
 			}
 		}
 		break;
+	case SCTP_SET_DYNAMIC_PRIMARY:
+	{
+		union sctp_sockstore *ss;
+#if __FreeBSD_version > 602000
+		error = priv_check(curthread, PRIV_NETINET_RESERVEDPORT);
+#elif __FreeBSD_version >= 500000
+		error = suser(curthread->td_ucred);
+#else
+		/* MT - FIXME is this right for MAC-OS 
+		 * to validate root privledge?
+		 */
+		error = suser(p);
+#endif
+		if(error) 
+			break;
 
+		SCTP_CHECK_AND_CAST(ss, optval, union sctp_sockstore, optsize);
+		/* SUPER USER CHECK? */
+		error = sctp_dynamic_set_primary(&ss->sa, vrf_id);
+	}
+	break;
 	case SCTP_SET_PEER_PRIMARY_ADDR:
 		{
 			struct sctp_setpeerprim *sspp;

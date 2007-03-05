@@ -1872,7 +1872,6 @@ extern int sctp_peer_chunk_oh;
 
 
 
-static
 int
 sctp_is_address_in_scope(struct sctp_ifa *ifa,
     int ipv4_addr_legal,
@@ -2421,7 +2420,8 @@ sctp_is_addr_restricted(struct sctp_tcb *stcb, struct sctp_ifa *ifa)
 	return (0);
 }
 
-static int
+
+int
 sctp_is_addr_in_ep(struct sctp_inpcb *inp, struct sctp_ifa *ifa)
 {
 	struct sctp_laddr *laddr;

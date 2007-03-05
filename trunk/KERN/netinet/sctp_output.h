@@ -58,6 +58,18 @@ sctp_add_addresses_to_i_ia(struct sctp_inpcb *inp,
 int sctp_is_addr_restricted(struct sctp_tcb *, struct sctp_ifa *);
 
 
+int
+sctp_is_address_in_scope(struct sctp_ifa *ifa,
+			 int ipv4_addr_legal,
+			 int ipv6_addr_legal,
+			 int loopback_scope,
+			 int ipv4_local_scope,
+			 int local_scope,
+			 int site_scope,
+			 int do_update);
+int
+sctp_is_addr_in_ep(struct sctp_inpcb *inp, struct sctp_ifa *ifa);
+
 struct sctp_ifa *
 sctp_source_address_selection(struct sctp_inpcb *inp,
 			      struct sctp_tcb *stcb, 
