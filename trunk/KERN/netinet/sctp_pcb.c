@@ -158,19 +158,21 @@ sctp_allocate_vrf(int vrfid)
 {
 	struct sctp_vrf *vrf=NULL;
 	struct sctp_vrflist *bucket;
+
 	/* First allocate the VRF structure */
 	vrf = sctp_find_vrf(vrfid);
-	if(vrf) {
+	if (vrf) {
 		/* Already allocated */
-		return(vrf);
+		return (vrf);
 	}
-	SCTP_MALLOC(vrf, struct sctp_vrf *, sizeof(struct sctp_vrf), "SCTP_VRF");
- 	if(vrf == NULL) {
+	SCTP_MALLOC(vrf, struct sctp_vrf *, sizeof(struct sctp_vrf),
+		    "SCTP_VRF");
+ 	if (vrf == NULL) {
  		/* No memory */
 #ifdef INVARIANTS
 		panic("No memory for VRF:%d", vrfid);
 #endif
-		return(NULL);
+		return (NULL);
 	}
 	/* setup the VRF */
 	memset(vrf, 0, sizeof(struct sctp_vrf));
@@ -5099,13 +5101,16 @@ sctp_pcb_init()
 	for (i = 0; i < SCTP_STACK_VTAG_HASH_SIZE; i++) {
 		LIST_INIT(&sctppcbinfo.vtag_timewait[i]);
 	}
-	/* INIT the default VRF which
-	 * for BSD is the only one, other O/S's may
-	 * have more. But initially they must start
-	 * with one and then add the VRF's as addresses
-	 * are added.
+
+#if !defined(__Panda__)
+	/*
+	 * INIT the default VRF which for BSD is the only one, other O/S's
+	 * may have more. But initially they must start with one and then
+	 * add the VRF's as addresses are added.
 	 */
 	sctp_init_vrf_list(SCTP_DEFAULT_VRF);
+#endif
+
 #if defined(_SCTP_NEEDS_CALLOUT_)
 	/* allocate the lock for the callout/timer queue */
 	SCTP_TIMERQ_LOCK_INIT();
