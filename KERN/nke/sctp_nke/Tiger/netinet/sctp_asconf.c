@@ -1846,9 +1846,9 @@ sctp_iterator_ep_end(struct sctp_inpcb *inp, void *ptr, uint32_t val)
 	return(0);
 }
 
-
 void
-sctp_iterator_stcb(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr, uint32_t val)
+sctp_iterator_stcb(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
+		   uint32_t val)
 {
 	struct sctp_asconf_iterator *asc;
 	struct sctp_ifa *ifa;
@@ -1867,7 +1867,7 @@ sctp_iterator_stcb(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr, uin
 
 			if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0) {
 				cnt_invalid++;
-				if(asc->cnt == cnt_invalid)
+				if (asc->cnt == cnt_invalid)
 					return;
 				else
 					continue;
@@ -1909,7 +1909,7 @@ sctp_iterator_stcb(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr, uin
 			if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) &&
 			    SCTP_IPV6_V6ONLY(inp6)) {
 				cnt_invalid++;
-				if(asc->cnt == cnt_invalid)
+				if (asc->cnt == cnt_invalid)
 					return;
 				else
 					continue;
@@ -1917,7 +1917,7 @@ sctp_iterator_stcb(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr, uin
 		} else {
 			/* invalid address family */
 			cnt_invalid++;
-			if(asc->cnt == cnt_invalid)
+			if (asc->cnt == cnt_invalid)
 				return;
 			else
 				continue;
@@ -1932,18 +1932,38 @@ sctp_iterator_stcb(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr, uin
 				struct rtentry *rt;
 
 				/* delete this address if cached */
-				if(net->ro._s_addr && 
-				   (net->ro._s_addr->ifa == ifa)) {
+				if (net->ro._s_addr && 
+				    (net->ro._s_addr->ifa == ifa)) {
 					sctp_free_ifa(net->ro._s_addr);
 					net->ro._s_addr = NULL;
 					net->src_addr_selected = 0;
 					rt = net->ro.ro_rt;
-					if(rt) {
+					if (rt) {
 						RTFREE(rt);
 						net->ro.ro_rt = NULL;
 					}
 				}
 			}
+		} else if (type == SCTP_SET_PRIM_ADDR) {
+			if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) == 0) {
+				/* must validate the ifa in question is in the ep */
+				if(sctp_is_addr_in_ep(stcb->sctp_ep,ifa) == 0) {
+					continue;
+				} 
+			} else {
+				/* Need to check scopes for this guy */
+				if(sctp_is_address_in_scope(ifa,
+							    stcb->asoc.ipv4_addr_legal,
+							    stcb->asoc.ipv6_addr_legal,
+							    stcb->asoc.loopback_scope,
+							    stcb->asoc.ipv4_local_scope,
+							    stcb->asoc.local_scope,
+							    stcb->asoc.site_scope,0) == 0) {
+					continue;
+				}
+
+			}
+
 		}
 		/* queue an asconf for this address add/delete */
 		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_DO_ASCONF)) {
@@ -1954,9 +1974,9 @@ sctp_iterator_stcb(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr, uin
 				status = sctp_asconf_queue_add(stcb, ifa, type);
 				/*
 				 * if queued ok, and in correct state, set the
-				 * ASCONF timer if in non-open state, we will set
-				 * this timer when the state does go open and do all
-				 * the asconf's
+				 * ASCONF timer if in non-open state, we will
+				 * set this timer when the state does go open
+				 * and do all the asconf's
 				 */
 				if (status == 0 &&
 				    SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_OPEN) {
@@ -1965,7 +1985,6 @@ sctp_iterator_stcb(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr, uin
 				}
 			}
 		}
-
 	}
 }
 
@@ -1973,17 +1992,21 @@ void sctp_iterator_end(void *ptr, uint32_t val)
 {
 	struct sctp_asconf_iterator *asc;
 	struct sctp_ifa *ifa;
-	struct sctp_laddr *l;
+	struct sctp_laddr *l, *l_next;
+
 	asc = (struct sctp_asconf_iterator *)ptr;
-	LIST_FOREACH(l, &asc->list_of_work, sctp_nxt_addr) {
+	l = LIST_FIRST(&asc->list_of_work);
+	while (l != NULL) {
+		l_next = LIST_NEXT(l, sctp_nxt_addr);
 		ifa = l->ifa;
-		if(l->action == SCTP_ADD_IP_ADDRESS) {
+		if (l->action == SCTP_ADD_IP_ADDRESS) {
 			/* Clear the defer use flag */
 			ifa->localifa_flags &= ~SCTP_ADDR_DEFER_USE;
 		}
 		sctp_free_ifa(ifa);
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_laddr, l);
 		SCTP_DECR_LADDR_COUNT();
+		l = l_next;
 	}
 	SCTP_FREE(asc);
 }

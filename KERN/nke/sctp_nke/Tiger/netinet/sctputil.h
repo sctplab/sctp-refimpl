@@ -82,6 +82,9 @@ int
 sctp_timer_stop(int, struct sctp_inpcb *, struct sctp_tcb *,
     struct sctp_nets *, uint32_t);
 
+int
+sctp_dynamic_set_primary(struct sockaddr *sa, uint32_t vrf_id);
+
 uint32_t sctp_calculate_sum(struct mbuf *, int32_t *, uint32_t);
 
 void
