@@ -56,6 +56,8 @@
 
 #include <machine/limits.h>
 
+#include <IOKit/IOLib.h>
+
 #include <net/if.h>
 #include <net/if_types.h>
 #include <net/if_var.h>
