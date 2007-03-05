@@ -5114,6 +5114,10 @@ sctp_pcb_init()
 #if defined(SCTP_USE_THREAD_BASED_ITERATOR)
 	sctp_startup_iterator();
 #endif
+
+#if defined(__APPLE__)
+	sctp_address_monitor_start();
+#endif
 }
 
 #ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
@@ -5124,6 +5128,13 @@ void
 sctp_pcb_finish(void)
 {
 	/* FIXME MT */
+	sctp_address_monitor_destroy();
+#if defined(SCTP_USE_THREAD_BASED_ITERATOR)
+	if (sctppcbinfo.thread_proc != THREAD_NULL) {
+		thread_terminate(sctppcbinfo.thread_proc);
+		sctppcbinfo.thread_proc = THREAD_NULL;
+	}
+#endif
 	SCTP_TIMERQ_LOCK_DESTROY();
 	SCTP_INP_INFO_LOCK_DESTROY();
 	SCTP_ITERATOR_LOCK_DESTROY();
@@ -6110,7 +6121,7 @@ sctp_initiate_iterator(inp_func inpf,
 	memset(it, 0, sizeof(*it));
 	it->function_assoc = af;
 	it->function_inp = inpf;
-	if(inpf)
+	if (inpf)
 		it->done_current_ep = 0;
 	else
 		it->done_current_ep = 1;
@@ -6143,20 +6154,19 @@ sctp_initiate_iterator(inp_func inpf,
 	SCTP_LOCK_EXC(sctppcbinfo.ipi_ep_mtx);
 #endif
 	SCTP_IPI_ITERATOR_WQ_LOCK();
-	if(it->inp)
+	if (it->inp)
 		SCTP_INP_INCR_REF(it->inp);
 	TAILQ_INSERT_TAIL(&sctppcbinfo.iteratorhead, it, sctp_nxt_itr);
 #if defined(SCTP_PER_SOCKET_LOCKING)
 	SCTP_UNLOCK_EXC(sctppcbinfo.ipi_ep_mtx);
 #endif
 #if defined(SCTP_USE_THREAD_BASED_ITERATOR)
-
-	if(sctppcbinfo.iterator_running == 0) {
+	if (sctppcbinfo.iterator_running == 0) {
 		sctp_wakeup_iterator();
 	}
 	SCTP_IPI_ITERATOR_WQ_UNLOCK();
 #else
-	if(it->inp)
+	if (it->inp)
 		SCTP_INP_DECR_REF(it->inp);
 	SCTP_IPI_ITERATOR_WQ_UNLOCK();
 	/* Init the timer */

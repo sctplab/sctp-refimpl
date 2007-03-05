@@ -162,6 +162,10 @@ struct sctp_paramhdr {
 #define SCTP_PCB_STATUS			0x00001105
 #define SCTP_GET_NONCE_VALUES           0x00001106
 
+/* Special hook for dynamically setting primary for all assoc's,
+ * this is a write only option that requires root privledge.
+ */
+#define SCTP_SET_DYNAMIC_PRIMARY        0x00002001
 
 /*
  * hidden implementation specific options these are NOT user visible (should

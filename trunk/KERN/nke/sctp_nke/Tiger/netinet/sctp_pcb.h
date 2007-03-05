@@ -285,7 +285,11 @@ struct sctp_epinfo {
 	uint32_t ipi_free_strmoq;
 #if defined(SCTP_USE_THREAD_BASED_ITERATOR)
 	uint32_t iterator_running;
+#if defined(__FreeBSD__)
 	SCTP_PROCESS_STRUCT thread_proc;
+#elif defined(__APPLE__)
+	thread_t thread_proc;
+#endif
 #endif
 	struct sctpvtaghead vtag_timewait[SCTP_STACK_VTAG_HASH_SIZE];
 
