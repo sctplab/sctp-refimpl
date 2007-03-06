@@ -5102,6 +5102,15 @@ sctp_pcb_init()
 		LIST_INIT(&sctppcbinfo.vtag_timewait[i]);
 	}
 
+#if defined(SCTP_USE_THREAD_BASED_ITERATOR)
+#if defined(SCTP_PROCESS_LEVEL_LOCKS)
+	sctppcbinfo.iterator_wakeup = PTHREAD_COND_INITIALIZER;
+	sctppcbinfo.thread_proc = PTHREAD_INITIALIZER;
+#endif
+	sctppcbinfo.iterator_running = 0;
+	sctp_startup_iterator();
+#endif
+
 #if !defined(__Panda__)
 	/*
 	 * INIT the default VRF which for BSD is the only one, other O/S's
@@ -5116,10 +5125,6 @@ sctp_pcb_init()
 	SCTP_TIMERQ_LOCK_INIT();
 	TAILQ_INIT(&sctppcbinfo.callqueue);
 #endif
-#if defined(SCTP_USE_THREAD_BASED_ITERATOR)
-	sctp_startup_iterator();
-#endif
-
 #if defined(__APPLE__)
 	sctp_address_monitor_start();
 #endif
