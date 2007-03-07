@@ -1942,13 +1942,14 @@ sctp_iterator_stcb(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
 						RTFREE(rt);
 						net->ro.ro_rt = NULL;
 					}
+					/* Now we deleted our src address, should
+					 * we not also now reset the cwnd/rto to
+					 * start as if its a new address?
+					 */
+					sctp_set_initial_cc_param(stcb, net);
+					net->RTO = stcb->asoc.initial_rto;
+
 				}
-				/* Now we deleted our src address, should
-				 * we not also now reset the cwnd/rto to
-				 * start as if its a new address?
-				 */
-				sctp_set_initial_cc_param(stcb, net);
-				net->RTO = stcb->asoc.initial_rto;
 			}
 		} else if (type == SCTP_SET_PRIM_ADDR) {
 			if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) == 0) {
