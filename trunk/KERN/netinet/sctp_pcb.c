@@ -3259,6 +3259,17 @@ sctp_is_address_on_local_host(struct sockaddr *addr, uint32_t vrf_id)
 	}
 }
 
+void 
+sctp_set_initial_cc_param(struct sctp_tcb *stcb, struct sctp_nets *net)
+{
+	net->cwnd = min((net->mtu * 4), max((2 * net->mtu), SCTP_INITIAL_CWND));
+	/* we always get at LEAST 2 MTU's */
+	if (net->cwnd < (2 * net->mtu)) {
+		net->cwnd = 2 * net->mtu;
+	}
+	net->ssthresh = stcb->asoc.peers_rwnd;
+}
+
 int
 sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
     int set_scope, int from)
@@ -3485,13 +3496,8 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	 * We take the max of the burst limit times a MTU or the
 	 * INITIAL_CWND. We then limit this to 4 MTU's of sending.
 	 */
-	net->cwnd = min((net->mtu * 4), max((2 * net->mtu), SCTP_INITIAL_CWND));
+	sctp_set_initial_cc_param(stcb, net);
 
-	/* we always get at LEAST 2 MTU's */
-	if (net->cwnd < (2 * net->mtu)) {
-		net->cwnd = 2 * net->mtu;
-	}
-	net->ssthresh = stcb->asoc.peers_rwnd;
 
 #if defined(SCTP_CWND_MONITOR) || defined(SCTP_CWND_LOGGING)
 	sctp_log_cwnd(stcb, net, 0, SCTP_CWND_INITIALIZATION);
