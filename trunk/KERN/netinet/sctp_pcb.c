@@ -320,7 +320,34 @@ sctp_add_addr_to_vrf(uint32_t vrfid, void *ifn, uint32_t ifn_index,
 	memcpy(&sctp_ifap->address, addr, addr->sa_len);
 	sctp_ifap->localifa_flags = SCTP_ADDR_VALID | SCTP_ADDR_DEFER_USE;
 	sctp_ifap->flags = ifa_flags;
+	/* Set scope */
+	if(sctp_ifap->address.sa.sa_family == AF_INET) {
+		struct sockaddr_in *sin;
+		sin = (struct sockaddr_in *)&sctp_ifap->address.sin;
+		if (SCTP_IFN_IS_IFT_LOOP(sctp_ifap->ifn_p) ||
+		    (IN4_ISLOOPBACK_ADDRESS(&sin->sin_addr))) {
+			sctp_ifap->src_is_loop = 1;
+		}
+		if ((IN4_ISPRIVATE_ADDRESS(&sin->sin_addr))) {
+			sctp_ifap->src_is_priv = 1;
+		}
+	} else if (sctp_ifap->address.sa.sa_family == AF_INET6) {
+		/* ok to use deprecated addresses? */
+		struct sockaddr_in6 *sin6;
+		sin6 = (struct sockaddr_in6 *)&sctp_ifap->address.sin6;
+		if (SCTP_IFN_IS_IFT_LOOP(sctp_ifap->ifn_p) ||
+		    (IN6_IS_ADDR_LOOPBACK(&sin6->sin6_addr))) {
+			sctp_ifap->src_is_loop = 1;
+		}
+		if (IN6_IS_ADDR_LINKLOCAL(&sin6->sin6_addr)) {
+			sctp_ifap->src_is_priv = 1;
+		}
 
+	}
+	if ((sctp_ifap->src_is_priv == 0) &&
+	    (sctp_ifap->src_is_loop == 0)) {
+		sctp_ifap->src_is_glob = 1;
+	}
 	SCTP_IPI_ADDR_LOCK();
 	sctp_ifap->refcount = 1;
 	LIST_INSERT_HEAD(&sctp_ifnp->ifalist, sctp_ifap, next_ifa);

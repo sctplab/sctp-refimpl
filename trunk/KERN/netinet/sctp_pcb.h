@@ -157,6 +157,10 @@ struct sctp_ifa {
 	uint32_t refcount;	/* number of folks refering to this */
  	uint32_t flags;
 	uint32_t localifa_flags;
+	uint8_t src_is_loop;
+	uint8_t src_is_priv;
+	uint8_t src_is_glob;
+	uint8_t resv;
 };
 
 struct sctp_laddr {

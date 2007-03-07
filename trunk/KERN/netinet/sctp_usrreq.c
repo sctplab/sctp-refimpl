@@ -373,6 +373,11 @@ sctp_notify(struct sctp_inpcb *inp,
 		if ((errno == EHOSTUNREACH) || (errno == EHOSTDOWN)) {
 			if (net->dest_state & SCTP_ADDR_REACHABLE) {
 				/* Ok that destination is NOT reachable */
+				printf("ICMP (thresh %d/%d) takes interface %p down\n",
+				       net->error_count,
+				       net->failure_threshold,
+				       net);
+
 				net->dest_state &= ~SCTP_ADDR_REACHABLE;
 				net->dest_state |= SCTP_ADDR_NOT_REACHABLE;
 				net->error_count = net->failure_threshold + 1;

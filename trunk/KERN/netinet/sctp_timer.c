@@ -230,6 +230,17 @@ sctp_threshold_management(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		if (net->error_count > net->failure_threshold) {
 			/* We had a threshold failure */
 			if (net->dest_state & SCTP_ADDR_REACHABLE) {
+				printf("threshold %d > %d takes interface %p down\n",
+				       net->error_count,
+				       net->failure_threshold,
+				       net);
+				sctp_print_address(&net->ro._l_addr.sa);
+				printf("src_addr_selected is %d route is %p\n",
+				       net->src_addr_selected, net->ro.ro_rt);
+				if(net->ro._s_addr) {
+					printf("src addr is:");
+					sctp_print_address(&net->ro._s_addr->address.sa);
+				}
 				net->dest_state &= ~SCTP_ADDR_REACHABLE;
 				net->dest_state |= SCTP_ADDR_NOT_REACHABLE;
 				net->dest_state &= ~SCTP_ADDR_REQ_PRIMARY;
