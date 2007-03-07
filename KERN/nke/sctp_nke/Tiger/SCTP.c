@@ -98,8 +98,7 @@ extern struct sysctl_oid sysctl__net_inet_sctp_deadlock_detect;
 extern struct sysctl_oid sysctl__net_inet_sctp_early_fast_retran_msec;
 extern struct sysctl_oid sysctl__net_inet_sctp_asconf_auth_nochk;
 extern struct sysctl_oid sysctl__net_inet_sctp_auth_disable;
-extern struct sysctl_oid sysctl__net_inet_sctp_auth_random_len;
-extern struct sysctl_oid sysctl__net_inet_sctp_auth_hmac_id;
+extern struct sysctl_oid sysctl__net_inet_sctp_nat_friendly;
 extern struct sysctl_oid sysctl__net_inet_sctp_abc_l_var;
 extern struct sysctl_oid sysctl__net_inet_sctp_max_chained_mbufs;
 extern struct sysctl_oid sysctl__net_inet_sctp_cmt_use_dac;
@@ -109,7 +108,6 @@ extern struct sysctl_oid sysctl__net_inet_sctp_abort_at_limit;
 extern struct sysctl_oid sysctl__net_inet_sctp_strict_data_order;
 extern struct sysctl_oid sysctl__net_inet_sctp_stats;
 extern struct sysctl_oid sysctl__net_inet_sctp_assoclist;
-extern struct sysctl_oid sysctl__net_inet_sctp_nat_friendly;
 #ifdef SCTP_DEBUG
 extern struct sysctl_oid sysctl__net_inet_sctp_debug;
 #endif
@@ -375,8 +373,7 @@ kern_return_t SCTP_start (kmod_info_t * ki, void * d) {
 	sysctl_register_oid(&sysctl__net_inet_sctp_early_fast_retran_msec);
 	sysctl_register_oid(&sysctl__net_inet_sctp_asconf_auth_nochk);
 	sysctl_register_oid(&sysctl__net_inet_sctp_auth_disable);
-	sysctl_register_oid(&sysctl__net_inet_sctp_auth_random_len);
-	sysctl_register_oid(&sysctl__net_inet_sctp_auth_hmac_id);
+	sysctl_register_oid(&sysctl__net_inet_sctp_nat_friendly);
 	sysctl_register_oid(&sysctl__net_inet_sctp_abc_l_var);
 	sysctl_register_oid(&sysctl__net_inet_sctp_max_chained_mbufs);
 	sysctl_register_oid(&sysctl__net_inet_sctp_cmt_use_dac);
@@ -386,7 +383,6 @@ kern_return_t SCTP_start (kmod_info_t * ki, void * d) {
 	sysctl_register_oid(&sysctl__net_inet_sctp_strict_data_order);
 	sysctl_register_oid(&sysctl__net_inet_sctp_stats);
 	sysctl_register_oid(&sysctl__net_inet_sctp_assoclist);
-	sysctl_register_oid(&sysctl__net_inet_sctp_nat_friendly);
 #ifdef SCTP_DEBUG
 	sysctl_register_oid(&sysctl__net_inet_sctp_debug);
 #endif
@@ -482,8 +478,7 @@ kern_return_t SCTP_stop (kmod_info_t * ki, void * d) {
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_early_fast_retran_msec);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_asconf_auth_nochk);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_auth_disable);
-	sysctl_unregister_oid(&sysctl__net_inet_sctp_auth_random_len);
-	sysctl_unregister_oid(&sysctl__net_inet_sctp_auth_hmac_id);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_nat_friendly);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_abc_l_var);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_max_chained_mbufs);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_cmt_use_dac);
@@ -493,7 +488,6 @@ kern_return_t SCTP_stop (kmod_info_t * ki, void * d) {
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_strict_data_order);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_stats);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_assoclist);
-	sysctl_unregister_oid(&sysctl__net_inet_sctp_nat_friendly);
 #ifdef SCTP_DEBUG
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_debug);
 #endif
