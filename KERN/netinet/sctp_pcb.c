@@ -3803,15 +3803,13 @@ sctp_remove_net(struct sctp_tcb *stcb, struct sctp_nets *net)
 	asoc = &stcb->asoc;
 	asoc->numnets--;
 	TAILQ_REMOVE(&asoc->nets, net, sctp_next);
-	sctp_free_remote_addr(net);
 	if (net == asoc->primary_destination) {
 		/* Reset primary */
 		struct sctp_nets *lnet;
 
 		lnet = TAILQ_FIRST(&asoc->nets);
 		/* Try to find a confirmed primary */
-		asoc->primary_destination = sctp_find_alternate_net(stcb, lnet,
-		    0);
+		asoc->primary_destination = sctp_find_alternate_net(stcb, lnet, 0);
 	}
 	if (net == asoc->last_data_chunk_from) {
 		/* Reset primary */
@@ -3821,10 +3819,7 @@ sctp_remove_net(struct sctp_tcb *stcb, struct sctp_nets *net)
 		/* Clear net */
 		asoc->last_control_chunk_from = NULL;
 	}
-/*	if (net == asoc->asconf_last_sent_to) {*/
-		/* Reset primary */
-/*		asoc->asconf_last_sent_to = TAILQ_FIRST(&asoc->nets);*/
-/*	}*/
+	sctp_free_remote_addr(net);
 }
 
 /*
@@ -5755,8 +5750,9 @@ sctp_set_primary_addr(struct sctp_tcb *stcb, struct sockaddr *sa,
 	} else {
 		/* set the primary address */
 		if (net->dest_state & SCTP_ADDR_UNCONFIRMED) {
-			/* Must be confirmed */
-			return (-1);
+			/* Must be confirmed, so queue to set */
+			net->dest_state |= SCTP_ADDR_REQ_PRIMARY;
+			return (0);
 		}
 		stcb->asoc.primary_destination = net;
 		net->dest_state &= ~SCTP_ADDR_WAS_PRIMARY;

@@ -480,6 +480,21 @@ sctp_handle_heartbeat_ack(struct sctp_heartbeat_chunk *cp,
 		 * confirm the destination.
 		 */
 		r_net->dest_state &= ~SCTP_ADDR_UNCONFIRMED;
+		if (r_net->dest_state & SCTP_ADDR_REQ_PRIMARY) {
+			stcb->asoc.primary_destination = r_net;
+			r_net->dest_state &= ~SCTP_ADDR_WAS_PRIMARY;
+			r_net->dest_state &= ~SCTP_ADDR_REQ_PRIMARY;
+			r_net = TAILQ_FIRST(&stcb->asoc.nets);
+			if(r_net != stcb->asoc.primary_destination) {
+				/* first one on the list is NOT the primary 
+				 * sctp_cmpaddr() is much more efficent if
+				 * the primary is the first on the list, make it
+				 * so.
+				 */
+				TAILQ_REMOVE(&stcb->asoc.nets, stcb->asoc.primary_destination, sctp_next);
+				TAILQ_INSERT_HEAD(&stcb->asoc.nets, stcb->asoc.primary_destination, sctp_next);
+			}
+		}
 		sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_CONFIRMED,
 		    stcb, 0, (void *)r_net);
 	}

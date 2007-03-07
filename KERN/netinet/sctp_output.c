@@ -6777,7 +6777,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	/* temp arrays for unlinking */
 	struct sctp_tmit_chunk *data_list[SCTP_MAX_DATA_BUNDLING];
 	int no_fragmentflg, error;
-	int one_chunk, hbflag;
+	int one_chunk, hbflag, skip_data_for_this_net;
 	int asconf, cookie, no_out_cnt;
 	int bundle_at, ctl_cnt, no_data_chunks, cwnd_full_ind, eeor_mode;
 	unsigned int mtu, r_mtu, omtu, mx_mtu, to_out;
@@ -6931,7 +6931,11 @@ again_one_more_time:
 		endoutchain = outchain = NULL;
 		no_fragmentflg = 1;
 		one_chunk = 0;
-
+		if(net->dest_state & SCTP_ADDR_UNCONFIRMED) {
+			skip_data_for_this_net = 1;
+		} else {
+			skip_data_for_this_net = 0;
+		}
 		if ((net->ro.ro_rt) && (net->ro.ro_rt->rt_ifp)) {
 			/*
 			 * if we have a route and an ifp check to see if we
@@ -7220,7 +7224,7 @@ again_one_more_time:
 			else
 				omtu = 0;
 		}
-		if (((asoc->state & SCTP_STATE_OPEN) == SCTP_STATE_OPEN) ||
+		if ((((asoc->state & SCTP_STATE_OPEN) == SCTP_STATE_OPEN) && (skip_data_for_this_net == 0)) ||
 		    (cookie)) {
 			for (chk = TAILQ_FIRST(&asoc->send_queue); chk; chk = nchk) {
 				if (no_data_chunks) {
