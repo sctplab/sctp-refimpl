@@ -472,7 +472,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.7 2007/02/12 23:24:31 r
 #define SCTP_ADDR_OUT_OF_SCOPE		0x080
 #define SCTP_ADDR_DOUBLE_SWITCH		0x100
 #define SCTP_ADDR_UNCONFIRMED		0x200
-
+#define SCTP_ADDR_REQ_PRIMARY           0x400
 #define SCTP_REACHABLE_MASK		0x203
 
 /* bound address types (e.g. valid address types to allow) */
