@@ -289,13 +289,9 @@ struct sctp_epinfo {
 	/* address work queue handling */
 #if defined(SCTP_USE_THREAD_BASED_ITERATOR)
 	uint32_t iterator_running;
-#if defined(__FreeBSD__)
 	SCTP_PROCESS_STRUCT thread_proc;
-#elif defined(__APPLE__)
-	thread_t thread_proc;
-#elif defined(SCTP_PROCESS_LEVEL_LOCKS)
+#if defined(SCTP_PROCESS_LEVEL_LOCKS)
 	pthread_cond_t iterator_wakeup;
-	pthread_t thread_proc;
 #endif
 #endif
 	struct sctp_timer addr_wq_timer;
