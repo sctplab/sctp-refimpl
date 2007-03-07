@@ -1319,7 +1319,7 @@ select_a_new_ep:
 }
 
 void
-sctp_iterator_worker()
+sctp_iterator_worker(void)
 {
 	struct sctp_iterator *it = NULL;
 

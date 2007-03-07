@@ -84,8 +84,8 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_var.h,v 1.5 2007/02/12 23:24:31 rrs Exp
 #define SCTPCTL_EARLY_FR_MSEC       32
 #define SCTPCTL_ASCONF_AUTH_NOCHK   33
 #define SCTPCTL_AUTH_DISABLE        34
-#define SCTPCTL_AUTH_RANDOM_LEN     35
-#define SCTPCTL_AUTH_HMAC_ID        36
+#define SCTPCTL_NAT_FRIENDLY	    35
+/* 36 is unused */
 #define SCTPCTL_ABC_L_VAR           37
 #define SCTPCTL_MAX_MBUF_CHAIN      38
 #define SCTPCTL_CMT_USE_DAC         39
@@ -100,12 +100,11 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_var.h,v 1.5 2007/02/12 23:24:31 rrs Exp
 #define SCTPCTL_ADD_MORE            48
 #define SCTPCTL_SYS_RESC            49
 #define SCTPCTL_ASOC_RESC           50
-#define SCTPCTL_NAT_FRIENDLY	    51
 #ifdef SCTP_DEBUG
-#define SCTPCTL_DEBUG               52
-#define SCTPCTL_MAXID		    52
-#else
+#define SCTPCTL_DEBUG               51
 #define SCTPCTL_MAXID		    51
+#else
+#define SCTPCTL_MAXID		    50
 #endif
 #endif
 
@@ -146,8 +145,8 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_var.h,v 1.5 2007/02/12 23:24:31 rrs Exp
 	{ "early_fast_retran_msec", CTLTYPE_INT }, \
 	{ "asconf_auth_nochk", CTLTYPE_INT }, \
 	{ "auth_disable", CTLTYPE_INT }, \
-	{ "auth_random_len", CTLTYPE_INT }, \
-	{ "auth_hmac_id", CTLTYPE_INT }, \
+	{ "nat_friendly", CTLTYPE_INT }, \
+	{ "unusued", CTLTYPE_INT }, \
 	{ "abc_l_var", CTLTYPE_INT }, \
 	{ "max_mbuf_chain", CTLTYPE_INT }, \
 	{ "cmt_use_dac", CTLTYPE_INT }, \
@@ -162,7 +161,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_var.h,v 1.5 2007/02/12 23:24:31 rrs Exp
 	{ "add_more_on_output", CTLTYPE_INT }, \
 	{ "sys_resource", CTLTYPE_INT }, \
 	{ "asoc_resource", CTLTYPE_INT }, \
-	{ "nat_friendly", CTLTYPE_INT }, \
 	{ "debug", CTLTYPE_INT }, \
 }
 #else
@@ -202,8 +200,8 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_var.h,v 1.5 2007/02/12 23:24:31 rrs Exp
 	{ "early_fast_retran_msec", CTLTYPE_INT }, \
 	{ "asconf_auth_nochk", CTLTYPE_INT }, \
 	{ "auth_disable", CTLTYPE_INT }, \
-	{ "auth_random_len", CTLTYPE_INT }, \
-	{ "auth_hmac_id", CTLTYPE_INT }, \
+	{ "nat_friendly", CTLTYPE_INT }, \
+	{ "unused", CTLTYPE_INT }, \
 	{ "abc_l_var", CTLTYPE_INT }, \
 	{ "max_mbuf_chain", CTLTYPE_INT }, \
 	{ "cmt_use_dac", CTLTYPE_INT }, \
@@ -218,7 +216,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_var.h,v 1.5 2007/02/12 23:24:31 rrs Exp
 	{ "add_more_on_output", CTLTYPE_INT }, \
 	{ "sys_resource", CTLTYPE_INT }, \
 	{ "asoc_resource", CTLTYPE_INT }, \
-	{ "nat_friendly", CTLTYPE_INT }, \
 }
 #endif
 
