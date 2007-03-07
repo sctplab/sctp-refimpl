@@ -2191,7 +2191,7 @@ sctp_is_ifa_addr_prefered(struct sctp_ifa *ifa,
          *  -----------------------------------------
          *     P     |    L  |    yes-v4 no-v6
          *  -----------------------------------------
-         *     G     |    L  |    yes 
+         *     G     |    L  |    yes-v4 no-v6 
          *  -----------------------------------------
          *     L     |    P  |    no 
          *  -----------------------------------------
@@ -2223,6 +2223,12 @@ sctp_is_ifa_addr_prefered(struct sctp_ifa *ifa,
 		}
 		if (ifa->src_is_priv) {
 			if(dest_is_loop) {
+				return (NULL);
+			}
+		}
+		if (ifa->src_is_glob) {
+
+			if (dest_is_loop) {
 				return (NULL);
 			}
 		}
