@@ -121,10 +121,9 @@ unsigned int sctp_early_fr_msec = SCTP_MINFR_MSEC_TIMER;
 unsigned int sctp_use_rttvar_cc = 0;
 int sctp_says_check_for_deadlock = 0;
 unsigned int sctp_asconf_auth_nochk = 0;
-unsigned int sctp_nat_friendly = 1;
 unsigned int sctp_auth_disable = 0;
 unsigned int sctp_auth_random_len = SCTP_AUTH_RANDOM_SIZE_DEFAULT;
-unsigned int sctp_auth_hmac_id_default = SCTP_AUTH_HMAC_ID_SHA1;
+unsigned int sctp_nat_friendly = 1;
 struct sctpstat sctpstat;
 
 #if defined(__APPLE__)
@@ -988,13 +987,9 @@ SYSCTL_UINT(_net_inet_sctp, OID_AUTO, auth_disable, CTLFLAG_RW,
     &sctp_auth_disable, 0,
     "Disable SCTP AUTH chunk requirement/function");
 
-SYSCTL_UINT(_net_inet_sctp, OID_AUTO, auth_random_len, CTLFLAG_RW,
-    &sctp_auth_random_len, 0,
-    "Length of AUTH RANDOMs");
-
-SYSCTL_UINT(_net_inet_sctp, OID_AUTO, auth_hmac_id, CTLFLAG_RW,
-    &sctp_auth_hmac_id_default, 0,
-    "Default HMAC Id for SCTP AUTHenthication");
+SYSCTL_UINT(_net_inet_sctp, OID_AUTO, nat_friendly, CTLFLAG_RW,
+    &sctp_nat_friendly, 0,
+    "SCTP NAT friendly operation");
 
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, abc_l_var, CTLFLAG_RW,
     &sctp_L2_abc_variable, 0,
@@ -1031,10 +1026,6 @@ SYSCTL_STRUCT(_net_inet_sctp, OID_AUTO, stats, CTLFLAG_RW,
 SYSCTL_PROC(_net_inet_sctp, OID_AUTO, assoclist, CTLFLAG_RD,
     0, 0, sctp_assoclist,
     "S,xassoc", "List of active SCTP associations");
-
-SYSCTL_UINT(_net_inet_sctp, OID_AUTO, nat_friendly, CTLFLAG_RW,
-    &sctp_nat_friendly, 0,
-    "SCTP NAT friendly operation");
 
 #ifdef SCTP_DEBUG
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, debug, CTLFLAG_RW,
@@ -5504,12 +5495,9 @@ sctp_sysctl(name, namelen, oldp, oldlenp, newp, newlen)
 	case SCTPCTL_AUTH_DISABLE:
 		return (sysctl_int(oldp, oldlenp, newp, newlen,
 		    &sctp_auth_disable));
-	case SCTPCTL_AUTH_RANDOM_LEN:
+	case SCTPCTL_NAT_FRIENDLY:
 		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_auth_random_len));
-	case SCTPCTL_AUTH_HMAC_ID:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_auth_hmac_id_default));
+		    &sctp_nat_friendly));
 	case SCTPCTL_ABC_L_VAR:
 		return (sysctl_int(oldp, oldlenp, newp, newlen,
 		    &sctp_L2_abc_variable));
@@ -5531,9 +5519,6 @@ sctp_sysctl(name, namelen, oldp, oldlenp, newp, newlen)
 	case SCTPCTL_STRICT_ORDER:
 		return (sysctl_int(oldp, oldlenp, newp, newlen,
 		    &sctp_strict_data_order));
-	case SCTPCTL_NAT_FRIENDLY:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_nat_friendly));
 
 #ifdef SCTP_DEBUG
 	case SCTPCTL_DEBUG:
@@ -5903,18 +5888,10 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
 
 	sysctl_createv(clog, 0, NULL, NULL,
 	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "auth_random_len",
-	    SYSCTL_DESCR("Length of AUTH RANDOMs"),
-	    NULL, 0, &sctp_auth_random_len, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_AUTH_RANDOM_LEN,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "auth_hmac_id",
-	    SYSCTL_DESCR("Default HMAC Id for SCTP AUTHentication"),
-	    NULL, 0, &sctp_auth_hmac_id_default, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_AUTH_HMAC_ID,
+	    CTLTYPE_INT, "nat_friendly",
+	    SYSCTL_DESCR("SCTP NAT friendly operation"),
+	    NULL, 0, &sctp_nat_friendly, 0,
+	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_NAT_FRIENDLY,
 	    CTL_EOL);
 
 	sysctl_createv(clog, 0, NULL, NULL,
@@ -5971,14 +5948,6 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
 	    SYSCTL_DESCR("Enforce strict data ordering, abort if control inside data"),
 	    NULL, 0, &sctp_strict_data_order, 0,
 	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_STRICT_ORDER,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "nat_friendly",
-	    SYSCTL_DESCR("SCTP NAT friendly operation"),
-	    NULL, 0, &sctp_auth_hmac_id_default, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_NAT_FRIENDLY,
 	    CTL_EOL);
 
 #ifdef SCTP_DEBUG
