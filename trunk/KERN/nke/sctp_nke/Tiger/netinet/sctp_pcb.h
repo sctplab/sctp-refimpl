@@ -157,6 +157,10 @@ struct sctp_ifa {
 	uint32_t refcount;	/* number of folks refering to this */
  	uint32_t flags;
 	uint32_t localifa_flags;
+	uint8_t src_is_loop;
+	uint8_t src_is_priv;
+	uint8_t src_is_glob;
+	uint8_t resv;
 };
 
 struct sctp_laddr {
@@ -283,21 +287,22 @@ struct sctp_epinfo {
 	/* system wide number of free chunks hanging around */
 	uint32_t ipi_free_chunks;
 	uint32_t ipi_free_strmoq;
-#if defined(SCTP_USE_THREAD_BASED_ITERATOR)
-	uint32_t iterator_running;
-#if defined(__FreeBSD__)
-	SCTP_PROCESS_STRUCT thread_proc;
-#elif defined(__APPLE__)
-	thread_t thread_proc;
-#endif
-#endif
+
 	struct sctpvtaghead vtag_timewait[SCTP_STACK_VTAG_HASH_SIZE];
 
+	/* address work queue handling */
+#if defined(SCTP_USE_THREAD_BASED_ITERATOR)
+	uint32_t iterator_running;
+	SCTP_PROCESS_STRUCT thread_proc;
+#if defined(SCTP_PROCESS_LEVEL_LOCKS)
+	pthread_cond_t iterator_wakeup;
+#endif
+#endif
 	struct sctp_timer addr_wq_timer;
 
 #ifdef _SCTP_NEEDS_CALLOUT_
 	struct calloutlist callqueue;
-#endif				/* _SCTP_NEEDS_CALLOUT_ */
+#endif
 };
 
 extern struct sctpstat sctpstat;
@@ -632,6 +637,9 @@ int sctp_insert_laddr(struct sctpladdr *, struct sctp_ifa *, uint32_t);
 void sctp_remove_laddr(struct sctp_laddr *);
 
 int sctp_del_local_addr_ep(struct sctp_inpcb *, struct sctp_ifa *);
+
+void sctp_set_initial_cc_param(struct sctp_tcb *,struct sctp_nets *net);
+
 
 int sctp_add_remote_addr(struct sctp_tcb *, struct sockaddr *, int, int);
 

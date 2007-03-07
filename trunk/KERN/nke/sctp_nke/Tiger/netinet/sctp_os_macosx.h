@@ -354,5 +354,6 @@ void sctp_stop_main_timer(void);
 /* address monitor thread */
 void sctp_address_monitor_start(void);
 void sctp_address_monitor_destroy(void);
+#define SCTP_PROCESS_STRUCT thread_t
 
 #endif

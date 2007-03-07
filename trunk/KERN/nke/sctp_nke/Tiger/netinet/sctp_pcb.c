@@ -158,19 +158,21 @@ sctp_allocate_vrf(int vrfid)
 {
 	struct sctp_vrf *vrf=NULL;
 	struct sctp_vrflist *bucket;
+
 	/* First allocate the VRF structure */
 	vrf = sctp_find_vrf(vrfid);
-	if(vrf) {
+	if (vrf) {
 		/* Already allocated */
-		return(vrf);
+		return (vrf);
 	}
-	SCTP_MALLOC(vrf, struct sctp_vrf *, sizeof(struct sctp_vrf), "SCTP_VRF");
- 	if(vrf == NULL) {
+	SCTP_MALLOC(vrf, struct sctp_vrf *, sizeof(struct sctp_vrf),
+		    "SCTP_VRF");
+ 	if (vrf == NULL) {
  		/* No memory */
 #ifdef INVARIANTS
 		panic("No memory for VRF:%d", vrfid);
 #endif
-		return(NULL);
+		return (NULL);
 	}
 	/* setup the VRF */
 	memset(vrf, 0, sizeof(struct sctp_vrf));
@@ -318,7 +320,34 @@ sctp_add_addr_to_vrf(uint32_t vrfid, void *ifn, uint32_t ifn_index,
 	memcpy(&sctp_ifap->address, addr, addr->sa_len);
 	sctp_ifap->localifa_flags = SCTP_ADDR_VALID | SCTP_ADDR_DEFER_USE;
 	sctp_ifap->flags = ifa_flags;
+	/* Set scope */
+	if(sctp_ifap->address.sa.sa_family == AF_INET) {
+		struct sockaddr_in *sin;
+		sin = (struct sockaddr_in *)&sctp_ifap->address.sin;
+		if (SCTP_IFN_IS_IFT_LOOP(sctp_ifap->ifn_p) ||
+		    (IN4_ISLOOPBACK_ADDRESS(&sin->sin_addr))) {
+			sctp_ifap->src_is_loop = 1;
+		}
+		if ((IN4_ISPRIVATE_ADDRESS(&sin->sin_addr))) {
+			sctp_ifap->src_is_priv = 1;
+		}
+	} else if (sctp_ifap->address.sa.sa_family == AF_INET6) {
+		/* ok to use deprecated addresses? */
+		struct sockaddr_in6 *sin6;
+		sin6 = (struct sockaddr_in6 *)&sctp_ifap->address.sin6;
+		if (SCTP_IFN_IS_IFT_LOOP(sctp_ifap->ifn_p) ||
+		    (IN6_IS_ADDR_LOOPBACK(&sin6->sin6_addr))) {
+			sctp_ifap->src_is_loop = 1;
+		}
+		if (IN6_IS_ADDR_LINKLOCAL(&sin6->sin6_addr)) {
+			sctp_ifap->src_is_priv = 1;
+		}
 
+	}
+	if ((sctp_ifap->src_is_priv == 0) &&
+	    (sctp_ifap->src_is_loop == 0)) {
+		sctp_ifap->src_is_glob = 1;
+	}
 	SCTP_IPI_ADDR_LOCK();
 	sctp_ifap->refcount = 1;
 	LIST_INSERT_HEAD(&sctp_ifnp->ifalist, sctp_ifap, next_ifa);
@@ -3257,6 +3286,17 @@ sctp_is_address_on_local_host(struct sockaddr *addr, uint32_t vrf_id)
 	}
 }
 
+void 
+sctp_set_initial_cc_param(struct sctp_tcb *stcb, struct sctp_nets *net)
+{
+	net->cwnd = min((net->mtu * 4), max((2 * net->mtu), SCTP_INITIAL_CWND));
+	/* we always get at LEAST 2 MTU's */
+	if (net->cwnd < (2 * net->mtu)) {
+		net->cwnd = 2 * net->mtu;
+	}
+	net->ssthresh = stcb->asoc.peers_rwnd;
+}
+
 int
 sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
     int set_scope, int from)
@@ -3483,13 +3523,8 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	 * We take the max of the burst limit times a MTU or the
 	 * INITIAL_CWND. We then limit this to 4 MTU's of sending.
 	 */
-	net->cwnd = min((net->mtu * 4), max((2 * net->mtu), SCTP_INITIAL_CWND));
+	sctp_set_initial_cc_param(stcb, net);
 
-	/* we always get at LEAST 2 MTU's */
-	if (net->cwnd < (2 * net->mtu)) {
-		net->cwnd = 2 * net->mtu;
-	}
-	net->ssthresh = stcb->asoc.peers_rwnd;
 
 #if defined(SCTP_CWND_MONITOR) || defined(SCTP_CWND_LOGGING)
 	sctp_log_cwnd(stcb, net, 0, SCTP_CWND_INITIALIZATION);
@@ -3795,15 +3830,13 @@ sctp_remove_net(struct sctp_tcb *stcb, struct sctp_nets *net)
 	asoc = &stcb->asoc;
 	asoc->numnets--;
 	TAILQ_REMOVE(&asoc->nets, net, sctp_next);
-	sctp_free_remote_addr(net);
 	if (net == asoc->primary_destination) {
 		/* Reset primary */
 		struct sctp_nets *lnet;
 
 		lnet = TAILQ_FIRST(&asoc->nets);
 		/* Try to find a confirmed primary */
-		asoc->primary_destination = sctp_find_alternate_net(stcb, lnet,
-		    0);
+		asoc->primary_destination = sctp_find_alternate_net(stcb, lnet, 0);
 	}
 	if (net == asoc->last_data_chunk_from) {
 		/* Reset primary */
@@ -3813,10 +3846,7 @@ sctp_remove_net(struct sctp_tcb *stcb, struct sctp_nets *net)
 		/* Clear net */
 		asoc->last_control_chunk_from = NULL;
 	}
-/*	if (net == asoc->asconf_last_sent_to) {*/
-		/* Reset primary */
-/*		asoc->asconf_last_sent_to = TAILQ_FIRST(&asoc->nets);*/
-/*	}*/
+	sctp_free_remote_addr(net);
 }
 
 /*
@@ -5099,22 +5129,30 @@ sctp_pcb_init()
 	for (i = 0; i < SCTP_STACK_VTAG_HASH_SIZE; i++) {
 		LIST_INIT(&sctppcbinfo.vtag_timewait[i]);
 	}
-	/* INIT the default VRF which
-	 * for BSD is the only one, other O/S's may
-	 * have more. But initially they must start
-	 * with one and then add the VRF's as addresses
-	 * are added.
+
+#if defined(SCTP_USE_THREAD_BASED_ITERATOR)
+#if defined(SCTP_PROCESS_LEVEL_LOCKS)
+	sctppcbinfo.iterator_wakeup = PTHREAD_COND_INITIALIZER;
+	sctppcbinfo.thread_proc = PTHREAD_INITIALIZER;
+#endif
+	sctppcbinfo.iterator_running = 0;
+	sctp_startup_iterator();
+#endif
+
+#if !defined(__Panda__)
+	/*
+	 * INIT the default VRF which for BSD is the only one, other O/S's
+	 * may have more. But initially they must start with one and then
+	 * add the VRF's as addresses are added.
 	 */
 	sctp_init_vrf_list(SCTP_DEFAULT_VRF);
+#endif
+
 #if defined(_SCTP_NEEDS_CALLOUT_)
 	/* allocate the lock for the callout/timer queue */
 	SCTP_TIMERQ_LOCK_INIT();
 	TAILQ_INIT(&sctppcbinfo.callqueue);
 #endif
-#if defined(SCTP_USE_THREAD_BASED_ITERATOR)
-	sctp_startup_iterator();
-#endif
-
 #if defined(__APPLE__)
 	sctp_address_monitor_start();
 #endif
@@ -5739,8 +5777,9 @@ sctp_set_primary_addr(struct sctp_tcb *stcb, struct sockaddr *sa,
 	} else {
 		/* set the primary address */
 		if (net->dest_state & SCTP_ADDR_UNCONFIRMED) {
-			/* Must be confirmed */
-			return (-1);
+			/* Must be confirmed, so queue to set */
+			net->dest_state |= SCTP_ADDR_REQ_PRIMARY;
+			return (0);
 		}
 		stcb->asoc.primary_destination = net;
 		net->dest_state &= ~SCTP_ADDR_WAS_PRIMARY;

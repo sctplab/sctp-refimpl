@@ -81,8 +81,8 @@ sctp_iterator_thread(void *v)
 void
 sctp_startup_iterator(void)
 {
-	int ret;
 #if defined(__FreeBSD__)
+	int ret;
 	ret = kthread_create(sctp_iterator_thread,
 			     (void *)NULL , 
 			     &sctppcbinfo.thread_proc,
@@ -90,7 +90,8 @@ sctp_startup_iterator(void)
 			     SCTP_KTHREAD_PAGES, 
 			     SCTP_KTRHEAD_NAME);
 #elif defined(__APPLE__)
-	sctppcbinfo.thread_proc = IOCreateThread(sctp_iterator_thread, (void *)NULL);
+	sctppcbinfo.thread_proc = IOCreateThread(sctp_iterator_thread,
+						 (void *)NULL);
 #endif
 }
 #endif
