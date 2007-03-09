@@ -39,6 +39,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.13 2007/02/12 23:24:31 rrs Ex
 #include <netinet/sctp_pcb.h>
 #include <netinet/sctputil.h>
 #include <netinet/sctp_var.h>
+#include <netinet/sctp_sysctl.h>
 #ifdef INET6
 #include <netinet6/sctp6_var.h>
 #endif
@@ -52,13 +53,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.13 2007/02/12 23:24:31 rrs Ex
 #include <netinet/sctp_asconf.h>
 #include <netinet/sctp_bsd_addr.h>
 
-extern int sctp_warm_the_crc32_table;
-
 #define NUMBER_OF_MTU_SIZES 18
-
-#ifdef SCTP_DEBUG
-extern uint32_t sctp_debug_on;
-#endif
 
 #if defined(__APPLE__)
 #define APPLE_FILE_NO 8
@@ -1154,8 +1149,6 @@ sctp_expand_mapping_array(struct sctp_association *asoc)
 	asoc->mapping_array_size = new_size;
 	return (0);
 }
-
-extern unsigned int sctp_early_fr_msec;
 
 #if defined(SCTP_USE_THREAD_BASED_ITERATOR)
 static void

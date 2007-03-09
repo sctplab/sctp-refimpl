@@ -36,6 +36,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_asconf.c,v 1.8 2007/02/12 23:24:30 rrs 
 #endif
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_var.h>
+#include <netinet/sctp_sysctl.h>
 #include <netinet/sctp_pcb.h>
 #include <netinet/sctp_header.h>
 #include <netinet/sctputil.h>
@@ -49,8 +50,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_asconf.c,v 1.8 2007/02/12 23:24:30 rrs 
  * SCTP_DEBUG_ASCONF2: detailed info
  */
 #ifdef SCTP_DEBUG
-extern uint32_t sctp_debug_on;
-
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
 #define strlcpy strncpy
 #endif

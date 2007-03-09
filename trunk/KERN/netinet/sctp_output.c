@@ -40,6 +40,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.11 2007/02/12 23:24:31 rrs
 #include <sys/proc.h>
 #endif
 #include <netinet/sctp_var.h>
+#include <netinet/sctp_sysctl.h>
 #include <netinet/sctp_header.h>
 #include <netinet/sctp_pcb.h>
 #include <netinet/sctputil.h>
@@ -51,10 +52,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.11 2007/02/12 23:24:31 rrs
 #include <netinet/sctp_asconf.h>
 #include <netinet/sctp_indata.h>
 #include <netinet/sctp_bsd_addr.h>
-
-#ifdef SCTP_DEBUG
-extern uint32_t sctp_debug_on;
-#endif
 
 #if defined(__APPLE__)
 #define APPLE_FILE_NO 3
@@ -1866,12 +1863,6 @@ struct sack_track sack_array[256] = {
 };
 
 
-
-
-extern int sctp_peer_chunk_oh;
-
-
-
 int
 sctp_is_address_in_scope(struct sctp_ifa *ifa,
     int ipv4_addr_legal,
@@ -3119,9 +3110,6 @@ sctp_find_cmsg(int c_type, void *data, struct mbuf *control, int cpsize)
 
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__NetBSD__)
 
-extern int sctp_mbuf_threshold_count;
-
-
 struct mbuf *
 sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header, 
 		      int how, int allonebuf, int type)
@@ -3338,8 +3326,6 @@ sctp_get_ect(struct sctp_tcb *stcb,
 		return (SCTP_ECT0_BIT);
 	}
 }
-
-extern int sctp_no_csum_on_loopback;
 
 static int
 sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
@@ -5013,7 +4999,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		uint16_t random_len;
 
 		/* generate and add RANDOM parameter */
-		random_len = sctp_auth_random_len;
+		random_len = SCTP_AUTH_RANDOM_SIZE_DEFAULT;
 		random = (struct sctp_auth_random *)(mtod(m, caddr_t)+ SCTP_BUF_LEN(m));
 		random->ph.param_type = htons(SCTP_RANDOM);
 		p_len = sizeof(*random) + random_len;
@@ -5351,7 +5337,6 @@ sctp_get_frag_point(struct sctp_tcb *stcb,
 	}
 	return (siz);
 }
-extern unsigned int sctp_max_chunks_on_queue;
 
 static void 
 sctp_set_prsctp_policy(struct sctp_tcb *stcb,
@@ -6147,7 +6132,6 @@ sctp_clean_up_ctl(struct sctp_tcb *stcb, struct sctp_association *asoc)
 	}
 }
 
-extern int sctp_min_split_point;
 
 static __inline int 
 sctp_can_we_split_this(struct sctp_tcb *stcb,
@@ -6673,8 +6657,6 @@ sctp_move_to_an_alt(struct sctp_tcb *stcb,
 		}
 	}
 }
-
-extern int sctp_early_fr;
 
 int
 sctp_med_chunk_output(struct sctp_inpcb *inp,
@@ -10687,7 +10669,6 @@ sctp_sosend(struct socket *so,
 }
 
 
-extern unsigned int sctp_add_more_threshold;
 int
 sctp_lower_sosend(struct socket *so,
     struct sockaddr *addr,

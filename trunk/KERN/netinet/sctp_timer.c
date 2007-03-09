@@ -42,6 +42,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_timer.c,v 1.7 2007/02/12 23:24:31 rrs E
 #include <netinet6/sctp6_var.h>
 #endif
 #include <netinet/sctp_var.h>
+#include <netinet/sctp_sysctl.h>
 #include <netinet/sctp_timer.h>
 #include <netinet/sctputil.h>
 #include <netinet/sctp_output.h>
@@ -53,15 +54,9 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_timer.c,v 1.7 2007/02/12 23:24:31 rrs E
 #include <netinet/sctp_uio.h>
 
 
-#ifdef SCTP_DEBUG
-extern uint32_t sctp_debug_on;
-#endif				/* SCTP_DEBUG */
-
 #if defined(__APPLE__)
 #define APPLE_FILE_NO 6
 #endif
-
-extern unsigned int sctp_early_fr_msec;
 
 void
 sctp_early_fr_timer(struct sctp_inpcb *inp,
@@ -477,8 +472,6 @@ sctp_backoff_on_timeout(struct sctp_tcb *stcb,
 		net->partial_bytes_acked = 0;
 	}
 }
-
-extern int sctp_peer_chunk_oh;
 
 static int
 sctp_mark_all_for_resend(struct sctp_tcb *stcb,
@@ -1444,8 +1437,6 @@ sctp_audit_stream_queues_for_size(struct sctp_inpcb *inp,
 		stcb->asoc.total_output_queue_size = 0;
 	}
 }
-
-extern int sctp_hb_maxburst;
 
 int
 sctp_heartbeat_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,

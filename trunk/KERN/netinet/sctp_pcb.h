@@ -305,7 +305,6 @@ struct sctp_epinfo {
 #endif
 };
 
-extern struct sctpstat sctpstat;
 /*
  * Here we have all the relevant information for each SCTP entity created. We
  * will need to modify this as approprate. We also need to figure out how to
@@ -536,14 +535,12 @@ struct sctp_tcb {
 /*
  * Pre-5.x FreeBSD, NetBSD and others.
  */
-
 #include <netinet/sctp_lock_empty.h>
 #endif
 
 #if defined(_KERNEL)
 
 extern struct sctp_epinfo sctppcbinfo;
-extern int sctp_auto_asconf;
 
 int SCTP6_ARE_ADDR_EQUAL(struct in6_addr *a, struct in6_addr *b);
 

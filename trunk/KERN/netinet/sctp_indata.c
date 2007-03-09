@@ -37,6 +37,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_indata.c,v 1.9 2007/02/12 23:24:31 rrs 
 
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_var.h>
+#include <netinet/sctp_sysctl.h>
 #include <netinet/sctp_pcb.h>
 #include <netinet/sctp_header.h>
 #include <netinet/sctputil.h>
@@ -47,11 +48,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_indata.c,v 1.9 2007/02/12 23:24:31 rrs 
 #include <netinet/sctp_timer.h>
 
 
-#ifdef SCTP_DEBUG
-extern uint32_t sctp_debug_on;
-
-#endif
-
 /*
  * NOTES: On the outbound side of things I need to check the sack timer to
  * see if I should generate a sack into the chunk queue (if I have data to
@@ -61,8 +57,6 @@ extern uint32_t sctp_debug_on;
  * This will cause sctp_service_queues() to get called on the top entry in
  * the list.
  */
-
-extern int sctp_strict_sacks;
 
 __inline void 
 sctp_set_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
@@ -1437,7 +1431,6 @@ sctp_does_tsn_belong_to_reasm(struct sctp_association *asoc,
 }
 
 
-extern unsigned int sctp_max_chunks_on_queue;
 static int
 sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
     struct mbuf **m, int offset, struct sctp_data_chunk *ch, int chk_length,
@@ -2470,8 +2463,6 @@ sctp_service_queues(struct sctp_tcb *stcb, struct sctp_association *asoc)
 	}
 }
 
-extern int sctp_strict_data_order;
-
 int
 sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
     struct sctphdr *sh, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
@@ -3124,8 +3115,6 @@ sctp_check_for_revoked(struct sctp_association *asoc, uint32_t cumack,
 		asoc->nonce_sum_check = 0;
 	}
 }
-
-extern int sctp_peer_chunk_oh;
 
 static void
 sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
@@ -3823,9 +3812,6 @@ sctp_hs_cwnd_decrease(struct sctp_tcb *stcb, struct sctp_nets *net)
 }
 
 #endif
-
-extern int sctp_early_fr;
-extern int sctp_L2_abc_variable;
 
 
 static __inline void
