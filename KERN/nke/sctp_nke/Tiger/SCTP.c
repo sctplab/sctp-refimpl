@@ -89,7 +89,7 @@ extern struct sysctl_oid sysctl__net_inet_sctp_valid_cookie_life;
 extern struct sysctl_oid sysctl__net_inet_sctp_init_rtx_max;
 extern struct sysctl_oid sysctl__net_inet_sctp_assoc_rtx_max;
 extern struct sysctl_oid sysctl__net_inet_sctp_path_rtx_max;
-extern struct sysctl_oid sysctl__net_inet_sctp_nr_outgoing_streams;
+extern struct sysctl_oid sysctl__net_inet_sctp_outgoing_streams;
 extern struct sysctl_oid sysctl__net_inet_sctp_cmt_on_off;
 extern struct sysctl_oid sysctl__net_inet_sctp_cwnd_maxburst;
 extern struct sysctl_oid sysctl__net_inet_sctp_early_fast_retran;
@@ -364,7 +364,7 @@ kern_return_t SCTP_start (kmod_info_t * ki, void * d) {
 	sysctl_register_oid(&sysctl__net_inet_sctp_init_rtx_max);
 	sysctl_register_oid(&sysctl__net_inet_sctp_assoc_rtx_max);
 	sysctl_register_oid(&sysctl__net_inet_sctp_path_rtx_max);
-	sysctl_register_oid(&sysctl__net_inet_sctp_nr_outgoing_streams);
+	sysctl_register_oid(&sysctl__net_inet_sctp_outgoing_streams);
 	sysctl_register_oid(&sysctl__net_inet_sctp_cmt_on_off);
 	sysctl_register_oid(&sysctl__net_inet_sctp_cwnd_maxburst);
 	sysctl_register_oid(&sysctl__net_inet_sctp_early_fast_retran);
@@ -469,7 +469,7 @@ kern_return_t SCTP_stop (kmod_info_t * ki, void * d) {
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_init_rtx_max);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_assoc_rtx_max);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_path_rtx_max);
-	sysctl_unregister_oid(&sysctl__net_inet_sctp_nr_outgoing_streams);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_outgoing_streams);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_cmt_on_off);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_cwnd_maxburst);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_early_fast_retran);
