@@ -136,7 +136,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_var.h,v 1.5 2007/02/12 23:24:31 rrs Exp
 	{ "init_rtx_max", CTLTYPE_INT }, \
 	{ "assoc_rtx_max", CTLTYPE_INT }, \
 	{ "path_rtx_max", CTLTYPE_INT }, \
-	{ "nr_outgoing_streams", CTLTYPE_INT }, \
+	{ "outgoing_streams", CTLTYPE_INT }, \
 	{ "cmt_on_off", CTLTYPE_INT }, \
 	{ "cwnd_maxburst", CTLTYPE_INT }, \
 	{ "early_fast_retran", CTLTYPE_INT }, \
@@ -191,7 +191,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_var.h,v 1.5 2007/02/12 23:24:31 rrs Exp
 	{ "init_rtx_max", CTLTYPE_INT }, \
 	{ "assoc_rtx_max", CTLTYPE_INT }, \
 	{ "path_rtx_max", CTLTYPE_INT }, \
-	{ "nr_outgoing_streams", CTLTYPE_INT }, \
+	{ "outgoing_streams", CTLTYPE_INT }, \
 	{ "cmt_on_off", CTLTYPE_INT }, \
 	{ "cwnd_maxburst", CTLTYPE_INT }, \
 	{ "early_fast_retran", CTLTYPE_INT }, \
