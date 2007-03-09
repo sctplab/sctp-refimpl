@@ -40,6 +40,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.12 2007/02/12 23:24:31 rrs Ex
 #include <sys/proc.h>
 #endif
 #include <netinet/sctp_var.h>
+#include <netinet/sctp_sysctl.h>
 #include <netinet/sctp_pcb.h>
 #include <netinet/sctputil.h>
 #include <netinet/sctp.h>
@@ -49,17 +50,9 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.12 2007/02/12 23:24:31 rrs Ex
 #include <netinet/sctp_timer.h>
 #include <netinet/sctp_bsd_addr.h>
 
-#ifdef SCTP_DEBUG
-uint32_t sctp_debug_on = 0;
-#endif				/* SCTP_DEBUG */
-
 #if defined(__APPLE__)
 #define APPLE_FILE_NO 4
 #endif
-
-extern int sctp_pcbtblsize;
-extern int sctp_hashtblsize;
-extern int sctp_chunkscale;
 
 struct sctp_epinfo sctppcbinfo;
 
@@ -1856,25 +1849,6 @@ sctp_findassociation_ep_asconf(struct mbuf *m, int iphlen, int offset,
 }
 
 
-extern int sctp_max_burst_default;
-
-extern unsigned int sctp_delayed_sack_time_default;
-extern unsigned int sctp_sack_freq_default;
-extern unsigned int sctp_heartbeat_interval_default;
-extern unsigned int sctp_pmtu_raise_time_default;
-extern unsigned int sctp_shutdown_guard_time_default;
-extern unsigned int sctp_secret_lifetime_default;
-
-extern unsigned int sctp_rto_max_default;
-extern unsigned int sctp_rto_min_default;
-extern unsigned int sctp_rto_initial_default;
-extern unsigned int sctp_init_rto_max_default;
-extern unsigned int sctp_valid_cookie_life_default;
-extern unsigned int sctp_init_rtx_max_default;
-extern unsigned int sctp_assoc_rtx_max_default;
-extern unsigned int sctp_path_rtx_max_default;
-extern unsigned int sctp_nr_outgoing_streams_default;
-
 /*
  * allocate a sctp_inpcb and setup a temporary binding to a port/all
  * addresses. This way if we don't get a bind we by default pick a ephemeral
@@ -2288,7 +2262,6 @@ sctp_isport_inuse(struct sctp_inpcb *inp, uint16_t lport)
  * compiling NetBSD... hmm
  */
 extern void in6_sin6_2_sin(struct sockaddr_in *, struct sockaddr_in6 *sin6);
-
 #endif
 
 
@@ -5913,7 +5886,6 @@ check_time_wait:
 static sctp_assoc_t reneged_asoc_ids[256];
 static uint8_t reneged_at = 0;
 
-extern int sctp_do_drain;
 
 static void
 sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)

@@ -40,6 +40,7 @@ __FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.10 2007/02/12 23:24:31 r
 #include <netinet/sctp_pcb.h>
 #include <netinet/sctp_header.h>
 #include <netinet/sctp_var.h>
+#include <netinet/sctp_sysctl.h>
 #include <netinet/sctp_output.h>
 #include <netinet/sctp_input.h>
 #include <netinet/sctp_bsd_addr.h>
@@ -56,10 +57,6 @@ __FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.10 2007/02/12 23:24:31 r
 #if defined(__APPLE__)
 #define APPLE_FILE_NO 9
 #endif
-
-#ifdef SCTP_DEBUG
-extern uint32_t sctp_debug_on;
-#endif /* SCTP_DEBUG */
 
 extern struct protosw inetsw[];
 
@@ -115,8 +112,6 @@ in6_sin6_2_sin_in_sock(struct sockaddr *nam)
 }
 
 #endif				/* !(__FreeBSD__ || __APPLE__) */
-
-extern int sctp_no_csum_on_loopback;
 
 int
 #if defined(__APPLE__)
