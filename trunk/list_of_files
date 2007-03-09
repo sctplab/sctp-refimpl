@@ -101,6 +101,8 @@ KERN/netinet/sctp_pcb.c
 KERN/netinet/sctp_usrreq.c
 KERN/netinet/sctp_asconf.c
 KERN/netinet/sctp_output.c
+KERN/netinet/sctp_sysctl.c
+KERN/netinet/sctp_sysctl.h
 KERN/netinet6/sctp6_usrreq.c
 KERN/netinet6/sctp6_var.h
 KERN/usr.lib/GNUmakefile
