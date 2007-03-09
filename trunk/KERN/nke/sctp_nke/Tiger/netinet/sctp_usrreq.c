@@ -951,7 +951,7 @@ SYSCTL_UINT(_net_inet_sctp, OID_AUTO, add_more_on_output, CTLFLAG_RW,
     &sctp_add_more_threshold, 0,
     "When space wise is it worthwhile to try to add more to a socket send buffer");
 
-SYSCTL_UINT(_net_inet_sctp, OID_AUTO, nr_outgoing_streams, CTLFLAG_RW,
+SYSCTL_UINT(_net_inet_sctp, OID_AUTO, outgoing_streams, CTLFLAG_RW,
     &sctp_nr_outgoing_streams_default, 0,
     "Default number of outgoing streams");
 
@@ -965,7 +965,7 @@ SYSCTL_UINT(_net_inet_sctp, OID_AUTO, cwnd_maxburst, CTLFLAG_RW,
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, early_fast_retran, CTLFLAG_RW,
     &sctp_early_fr, 0,
-    "Early Fast Retransmit with Timer");
+    "Early Fast Retransmit with timer");
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, use_rttvar_congctrl, CTLFLAG_RW,
     &sctp_use_rttvar_cc, 0,
@@ -985,7 +985,7 @@ SYSCTL_UINT(_net_inet_sctp, OID_AUTO, asconf_auth_nochk, CTLFLAG_RW,
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, auth_disable, CTLFLAG_RW,
     &sctp_auth_disable, 0,
-    "Disable SCTP AUTH chunk requirement/function");
+    "Disable SCTP AUTH function");
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, nat_friendly, CTLFLAG_RW,
     &sctp_nat_friendly, 0,
@@ -1009,7 +1009,7 @@ SYSCTL_INT(_net_inet_sctp, OID_AUTO, do_sctp_drain, CTLFLAG_RW,
 
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, hb_max_burst, CTLFLAG_RW,
     &sctp_hb_maxburst, 0,
-    "Confirmation Hearbeat max burst?");
+    "Confirmation Heartbeat max burst?");
 
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, abort_at_limit, CTLFLAG_RW,
     &sctp_abort_if_one_2_one_hits_limit, 0,
@@ -5600,7 +5600,7 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
 
 	sysctl_createv(clog, 0, NULL, NULL,
 	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "strict_sack",
+	    CTLTYPE_INT, "strict_sacks",
 	    SYSCTL_DESCR("Enable SCTP Strict SACK checking"),
 	    NULL, 0, &sctp_strict_sacks, 0,
 	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_STRICT_SACK,
@@ -5737,7 +5737,7 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
 	sysctl_createv(clog, 0, NULL, NULL,
 	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
 	    CTLTYPE_INT, "secret_lifetime",
-	    SYSCTL_DESCR("Default secret liftime in sec"),
+	    SYSCTL_DESCR("Default secret lifetime in sec"),
 	    NULL, 0, &sctp_secret_lifetime_default, 0,
 	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_SECRET_LIFETIME,
 	    CTL_EOL);
@@ -5816,8 +5816,8 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
 
 	sysctl_createv(clog, 0, NULL, NULL,
 	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "nr_outgoing_streams",
-	    SYSCTL_DESCR("Default outgoing streams"),
+	    CTLTYPE_INT, "outgoing_streams",
+	    SYSCTL_DESCR("Default number of outgoing streams"),
 	    NULL, 0, &sctp_nr_outgoing_streams_default, 0,
 	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_NR_OUTGOING_STREAMS,
 	    CTL_EOL);
@@ -5825,7 +5825,7 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
 	sysctl_createv(clog, 0, NULL, NULL,
 	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
 	    CTLTYPE_INT, "cmt_on_off",
-	    SYSCTL_DESCR("CMT on-off flag"),
+	    SYSCTL_DESCR("CMT on/off flag"),
 	    NULL, 0, &sctp_cmt_on_off, 0,
 	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_CMT_ON_OFF,
 	    CTL_EOL);
@@ -5841,7 +5841,7 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
 	sysctl_createv(clog, 0, NULL, NULL,
 	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
 	    CTLTYPE_INT, "early_fast_retran",
-	    SYSCTL_DESCR("Early Fast Retransmit with Timer"),
+	    SYSCTL_DESCR("Early Fast Retransmit with timer"),
 	    NULL, 0, &sctp_early_fr, 0,
 	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_EARLY_FR,
 	    CTL_EOL);
@@ -5865,7 +5865,7 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
 	sysctl_createv(clog, 0, NULL, NULL,
 	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
 	    CTLTYPE_INT, "early_fast_retran_msec",
-	    SYSCTL_DESCR("Early Fast Retransmit minimum Timer value"),
+	    SYSCTL_DESCR("Early Fast Retransmit minimum timer value"),
 	    NULL, 0, &sctp_early_fr_msec, 0,
 	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_EARLY_FR_MSEC,
 	    CTL_EOL);
@@ -5881,7 +5881,7 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
 	sysctl_createv(clog, 0, NULL, NULL,
 	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
 	    CTLTYPE_INT, "auth_disable",
-	    SYSCTL_DESCR("Disable SCTP AUTH requirement/function"),
+	    SYSCTL_DESCR("Disable SCTP AUTH function"),
 	    NULL, 0, &sctp_auth_disable, 0,
 	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_AUTH_DISABLE,
 	    CTL_EOL);
@@ -5913,7 +5913,7 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
 	sysctl_createv(clog, 0, NULL, NULL,
 	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
 	    CTLTYPE_INT, "cmt_use_dac",
-	    SYSCTL_DESCR("CMT DAC on-off flag"),
+	    SYSCTL_DESCR("CMT DAC on/off flag"),
 	    NULL, 0, &sctp_cmt_use_dac, 0,
 	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_CMT_USE_DAC,
 	    CTL_EOL);
