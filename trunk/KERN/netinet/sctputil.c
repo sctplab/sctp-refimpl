@@ -908,7 +908,7 @@ sctp_select_a_tag(struct sctp_inpcb *m)
 
 int
 sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
-    int for_a_init, uint32_t override_tag, uint32_t vrf)
+    int for_a_init, uint32_t override_tag, uint32_t vrf_id)
 {
 	/*
 	 * Anything set to zero is taken care of by the allocation routine's
@@ -961,7 +961,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	/* Get the nonce tags */
 	asoc->my_vtag_nonce = sctp_select_a_tag(m);
 	asoc->peer_vtag_nonce = sctp_select_a_tag(m);
-	asoc->vrf_id = vrf;
+	asoc->vrf_id = vrf_id;
 
 	if (sctp_is_feature_on(m, SCTP_PCB_FLAGS_DONOT_HEARTBEAT))
 		asoc->hb_is_disabled = 1;

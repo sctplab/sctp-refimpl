@@ -84,6 +84,11 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.7 2007/02/12 23:24:31 r
 #define SCTP_KTHREAD_PAGES 2
 
 
+/* If you support Multi-VRF how big to
+ * make the initial array of VRF's to.
+ */
+#define SCTP_DEFAULT_VRF_SIZE 4
+
 /* Places that CWND log can happen from */
 #define SCTP_CWND_LOG_FROM_FR	1
 #define SCTP_CWND_LOG_FROM_RTX	2

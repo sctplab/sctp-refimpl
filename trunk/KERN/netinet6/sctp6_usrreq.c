@@ -507,10 +507,16 @@ sctp6_ctlinput(cmd, pktdst, d)
 {
 	struct sctphdr sh;
 	struct ip6ctlparam *ip6cp = NULL;
+	uint32_t vrf_id;
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s;
 #endif
 	int cm;
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
+	vrf_id = SCTP_DEFAULT_VRFID;
+#else
+	vrf_id = panda_get_vrf_from_call(); /* from connectx call? */
+#endif
 
 	if (pktdst->sa_family != AF_INET6 ||
 	    pktdst->sa_len != sizeof(struct sockaddr_in6))
@@ -564,7 +570,7 @@ sctp6_ctlinput(cmd, pktdst, d)
 #endif
 		stcb = sctp_findassociation_addr_sa((struct sockaddr *)ip6cp->ip6c_src,
 		    (struct sockaddr *)&final,
-		    &inp, &net, 1);
+		    &inp, &net, 1, vrf_id);
 		/* inp's ref-count increased && stcb locked */
 		if (stcb != NULL && inp && (inp->sctp_socket != NULL)) {
 			if (cmd == PRC_MSGSIZE) {
@@ -629,6 +635,13 @@ sctp6_getcred(SYSCTL_HANDLER_ARGS)
 	struct sctp_nets *net;
 	struct sctp_tcb *stcb;
 	int error;
+	uint32_t vrf_id;
+
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
+	vrf_id = SCTP_DEFAULT_VRFID;
+#else
+	vrf_id = panda_get_vrf_from_call(); /* from connectx call? */
+#endif
 
 #if defined(__FreeBSD__) && __FreeBSD_version > 602000
 	/*
@@ -656,7 +669,7 @@ sctp6_getcred(SYSCTL_HANDLER_ARGS)
 
 	stcb = sctp_findassociation_addr_sa(sin6tosa(&addrs[0]),
 	    sin6tosa(&addrs[1]),
-	    &inp, &net, 1);
+	    &inp, &net, 1, vrf_id);
 	if (stcb == NULL || inp == NULL || inp->sctp_socket == NULL) {
 		if ((inp != NULL) && (stcb == NULL)) {
 			/* reduce ref-count */

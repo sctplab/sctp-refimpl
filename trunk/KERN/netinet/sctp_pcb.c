@@ -1000,13 +1000,13 @@ sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, sctp_assoc_t asoc_id, int
 
 static struct sctp_inpcb *
 sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
-    uint16_t lport)
+    uint16_t lport, uint32_t vrf_id)
 {
 	struct sctp_inpcb *inp;
 	struct sockaddr_in *sin;
 	struct sockaddr_in6 *sin6;
 	struct sctp_laddr *laddr;
-
+	int i, fnd;
 	/*
 	 * Endpoing probe expects that the INP_INFO is locked.
 	 */
@@ -1056,10 +1056,20 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 #endif
 				continue;
 			}
+			/* does a VRF id match? */
+			fnd = 0;
+			for(i=0; i<inp->num_vrfs; i++) {
+				if(inp->m_vrf_ids[i] == vrf_id) {
+					fnd = 1;
+					break;
+				}
+			}
 			SCTP_INP_RUNLOCK(inp);
 #if defined(SCTP_PER_SOCKET_LOCKING)
 			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
+			if(!fnd)
+				continue;
 			return (inp);
 		}
 		SCTP_INP_RUNLOCK(inp);
@@ -1105,6 +1115,21 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 		 * addresses
 		 */
 		if (inp->sctp_lport != lport) {
+			SCTP_INP_RUNLOCK(inp);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
+#endif
+			continue;
+		}
+		/* does a VRF id match? */
+		fnd = 0;
+		for(i=0; i<inp->num_vrfs; i++) {
+			if(inp->m_vrf_ids[i] == vrf_id) {
+				fnd = 1;
+				break;
+			}
+		}
+		if (!fnd) {
 			SCTP_INP_RUNLOCK(inp);
 #if defined(SCTP_PER_SOCKET_LOCKING)
 			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
@@ -1180,7 +1205,7 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 #endif
 
 struct sctp_inpcb *
-sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool, int have_lock)
+sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool, int have_lock, uint32_t vrf_id)
 {
 	/*
 	 * First we check the hash table to see if someone has this port
@@ -1217,7 +1242,7 @@ sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool, int have_lock)
 	}
 	head = &sctppcbinfo.sctp_ephash[SCTP_PCBHASH_ALLADDR(lport,
 	    sctppcbinfo.hashmark)];
-	inp = sctp_endpoint_probe(nam, head, lport);
+	inp = sctp_endpoint_probe(nam, head, lport, vrf_id);
 
 	/*
 	 * If the TCP model exists it could be that the main listening
@@ -1238,7 +1263,7 @@ sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool, int have_lock)
 			 */
 			head = &sctppcbinfo.sctp_tcpephash[i];
 			if (LIST_FIRST(head)) {
-				inp = sctp_endpoint_probe(nam, head, lport);
+				inp = sctp_endpoint_probe(nam, head, lport, vrf_id);
 				if (inp) {
 					/* Found one */
 					break;
@@ -1276,7 +1301,7 @@ sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool, int have_lock)
 #endif
 struct sctp_tcb *
 sctp_findassociation_addr_sa(struct sockaddr *to, struct sockaddr *from,
-    struct sctp_inpcb **inp_p, struct sctp_nets **netp, int find_tcp_pool)
+    struct sctp_inpcb **inp_p, struct sctp_nets **netp, int find_tcp_pool, uint32_t vrf_id)
 {
 	struct sctp_inpcb *inp;
 	struct sctp_tcb *retval;
@@ -1299,7 +1324,7 @@ sctp_findassociation_addr_sa(struct sockaddr *to, struct sockaddr *from,
 			return (retval);
 		}
 	}
-	inp = sctp_pcb_findep(to, 0, 1);
+	inp = sctp_pcb_findep(to, 0, 1, vrf_id);
 	if (inp_p != NULL) {
 		*inp_p = inp;
 	}
@@ -1568,8 +1593,13 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 	struct sockaddr *to = (struct sockaddr *)&to_store;
 	struct sockaddr *from = (struct sockaddr *)&from_store;
 	struct sctp_inpcb *inp;
+	uint32_t vrf_id;
 
-
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
+	vrf_id = SCTP_DEFAULT_VRFID;
+#else
+	vrf_id = panda_get_vrf_from_call(); /* from mbuf call? */
+#endif
 	iph = mtod(m, struct ip *);
 	if (iph->ip_v == IPVERSION) {
 		/* its IPv4 */
@@ -1675,11 +1705,11 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 	}
 	if (inp_p) {
 		retval = sctp_findassociation_addr_sa(to, from, inp_p, netp,
-		    find_tcp_pool);
+		    find_tcp_pool, vrf_id);
 		inp = *inp_p;
 	} else {
 		retval = sctp_findassociation_addr_sa(to, from, &inp, netp,
-		    find_tcp_pool);
+		    find_tcp_pool, vrf_id);
 	}
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_PCB1) {
@@ -1971,11 +2001,29 @@ sctp_inpcb_alloc(struct socket *so)
 #endif
 		return (ENOBUFS);
 	}
+	inp->vrf_size = SCTP_DEFAULT_VRF_SIZE;
+
+	SCTP_MALLOC(inp->m_vrf_ids, uint32_t *,
+		    (sizeof(uint32_t) * inp->vrf_size), "VRFid's");
+	if (inp->m_vrf_ids == NULL) {
+		SCTP_HASH_FREE(inp->sctp_tcbhash, inp->sctp_hashmark);
+		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, inp);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+		SCTP_UNLOCK_EXC(sctppcbinfo.ipi_ep_mtx);
+#endif
+		return (ENOBUFS);
+	}
+	inp->num_vrfs = 1;
+	inp->def_vrf_id = inp->m_vrf_ids[0] = SCTP_DEFAULT_VRFID;
+
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	/* LOCK init's */
 	inp->ip_inp.inp.inpcb_mtx = lck_mtx_alloc_init(sctppcbinfo.mtx_grp, sctppcbinfo.mtx_attr);
 	if (inp->ip_inp.inp.inpcb_mtx == NULL) {
 		printf("in_pcballoc: can't alloc mutex! so=%x\n", so);
+		SCTP_FREE(inp->m_vrf_ids);
+		SCTP_HASH_FREE(inp->sctp_tcbhash, inp->sctp_hashmark);
+		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, inp);
 		SCTP_UNLOCK_EXC(sctppcbinfo.ipi_ep_mtx);
 		return (ENOMEM);
 	}
@@ -2067,7 +2115,6 @@ sctp_inpcb_alloc(struct socket *so)
 
 	/* How long is a cookie good for ? */
 	m->def_cookie_life = sctp_valid_cookie_life_default;
-
 	/*
 	 * Initialize authentication parameters
 	 */
@@ -2216,11 +2263,11 @@ sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
 }
 
 static int
-sctp_isport_inuse(struct sctp_inpcb *inp, uint16_t lport)
+sctp_isport_inuse(struct sctp_inpcb *inp, uint16_t lport, uint32_t vrf_id)
 {
 	struct sctppcbhead *head;
 	struct sctp_inpcb *t_inp;
-
+	int i, fnd;
 	head = &sctppcbinfo.sctp_ephash[SCTP_PCBHASH_ALLADDR(lport,
 	    sctppcbinfo.hashmark)];
 
@@ -2228,6 +2275,17 @@ sctp_isport_inuse(struct sctp_inpcb *inp, uint16_t lport)
 		if (t_inp->sctp_lport != lport) {
 			continue;
 		}
+		/* is it in the VRF in question */
+		fnd = 0;
+		for(i=0; i<inp->num_vrfs; i++) {
+			if(t_inp->m_vrf_ids[i] == vrf_id) {
+				fnd = 1;
+				break;
+			}
+		}
+		if (!fnd) 
+			continue;
+
 		/* This one is in use. */
 		/* check the v6/v4 binding issue */
 		if ((t_inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) &&
@@ -2276,16 +2334,10 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 	struct sctppcbhead *head;
 	struct sctp_inpcb *inp, *inp_tmp;
 	struct inpcb *ip_inp;
-	int bindall;
+	int bindall, i;
 	uint16_t lport;
 	int error;
-	uint32_t vrf;
-
-#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
-	vrf = SCTP_DEFAULT_VRFID;
-#else
-	vrf = panda_get_vrf_from_call();
-#endif
+	uint32_t vrf_id;
 
 #if defined(SCTP_PER_SOCKET_LOCKING)
 	sctp_lock_assert(so);
@@ -2366,6 +2418,11 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 			return (EAFNOSUPPORT);
 		}
 	}
+	/* Setup a vrf_id to be the default for the
+	 * non-bind-all case.
+	 */
+ 	vrf_id = inp->def_vrf_id;
+
 #if defined(SCTP_PER_SOCKET_LOCKING)
 	if (!SCTP_TRYLOCK_EXC(sctppcbinfo.ipi_ep_mtx)) {
 		SCTP_SOCKET_UNLOCK(so, 0);
@@ -2419,27 +2476,51 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 			return (error);
 		}
 		SCTP_INP_WUNLOCK(inp);
-		inp_tmp = sctp_pcb_findep(addr, 0, 1);
-		if (inp_tmp != NULL) {
-			/*
-			 * lock guy returned and lower count note that we
-			 * are not bound so inp_tmp should NEVER be inp. And
-			 * it is this inp (inp_tmp) that gets the reference
-			 * bump, so we must lower it.
-			 */
-			SCTP_INP_DECR_REF(inp_tmp);
-			SCTP_INP_DECR_REF(inp);
-			/* unlock info */
+		if(bindall) {
+			for(i=0; i<inp->num_vrfs; i++) {
+				vrf_id = inp->m_vrf_ids[i];
+				inp_tmp = sctp_pcb_findep(addr, 0, 1, vrf_id);
+				if (inp_tmp != NULL) {
+					/*
+					 * lock guy returned and lower count note that we
+					 * are not bound so inp_tmp should NEVER be inp. And
+					 * it is this inp (inp_tmp) that gets the reference
+					 * bump, so we must lower it.
+					 */
+					SCTP_INP_DECR_REF(inp_tmp);
+					SCTP_INP_DECR_REF(inp);
+					/* unlock info */
 #if defined(SCTP_PER_SOCKET_LOCKING)
-			SCTP_UNLOCK_EXC(sctppcbinfo.ipi_ep_mtx);
+					SCTP_UNLOCK_EXC(sctppcbinfo.ipi_ep_mtx);
 #endif
-			SCTP_INP_INFO_WUNLOCK();
-			return (EADDRNOTAVAIL);
+					SCTP_INP_INFO_WUNLOCK();
+					return (EADDRNOTAVAIL);
+				}
+			}
+		} else {
+			inp_tmp = sctp_pcb_findep(addr, 0, 1, vrf_id);
+			if (inp_tmp != NULL) {
+				/*
+				 * lock guy returned and lower count note that we
+				 * are not bound so inp_tmp should NEVER be inp. And
+				 * it is this inp (inp_tmp) that gets the reference
+				 * bump, so we must lower it.
+				 */
+				SCTP_INP_DECR_REF(inp_tmp);
+				SCTP_INP_DECR_REF(inp);
+				/* unlock info */
+#if defined(SCTP_PER_SOCKET_LOCKING)
+				SCTP_UNLOCK_EXC(sctppcbinfo.ipi_ep_mtx);
+#endif
+				SCTP_INP_INFO_WUNLOCK();
+				return (EADDRNOTAVAIL);
+			}
+			
 		}
 		SCTP_INP_WLOCK(inp);
 		if (bindall) {
 			/* verify that no lport is not used by a singleton */
-			if (sctp_isport_inuse(inp, lport)) {
+			if (sctp_isport_inuse(inp, lport, vrf_id)) {
 				/* Sorry someone already has this one bound */
 				SCTP_INP_DECR_REF(inp);
 				SCTP_INP_WUNLOCK(inp);
@@ -2463,6 +2544,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 		uint32_t port_guess;
 		uint16_t port_attempt;
 		int not_done = 1;
+		int not_found=1;
 
 		while (not_done) {
 			port_guess = sctp_select_initial_TSN(&inp->sctp_ep);
@@ -2473,8 +2555,15 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 			if (port_attempt < IPPORT_RESERVED) {
 				port_attempt += IPPORT_RESERVED;
 			}
-			if (sctp_isport_inuse(inp, htons(port_attempt)) == 0) {
-				/* got a port we can use */
+			for(i=0; i<inp->num_vrfs; i++) {
+				if (sctp_isport_inuse(inp, htons(port_attempt), vrf_id) == 1) {
+					/* got a port we can use */
+					not_found = 0;
+					break;
+				}
+			}
+			if(not_found == 1) {
+				/* We can use this port */
 				not_done = 0;
 				continue;
 			}
@@ -2487,8 +2576,15 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 			if (port_attempt < IPPORT_RESERVED) {
 				port_attempt += IPPORT_RESERVED;
 			}
-			if (sctp_isport_inuse(inp, htons(port_attempt)) == 0) {
-				/* got a port we can use */
+			for(i=0; i<inp->num_vrfs; i++) {
+				if (sctp_isport_inuse(inp, htons(port_attempt), vrf_id) == 1) {
+					/* got a port we can use */
+					not_found = 0;
+					break;
+				}
+			}
+			if(not_found == 1) {
+				/* We can use this port */
 				not_done = 0;
 				continue;
 			}
@@ -2503,8 +2599,15 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 			if (port_attempt < IPPORT_RESERVED) {
 				port_attempt += IPPORT_RESERVED;
 			}
-			if (sctp_isport_inuse(inp, htons(port_attempt)) == 0) {
-				/* got a port we can use */
+			for(i=0; i<inp->num_vrfs; i++) {
+				if (sctp_isport_inuse(inp, htons(port_attempt), vrf_id) == 1) {
+					/* got a port we can use */
+					not_found = 0;
+					break;
+				}
+			}
+			if(not_found == 1) {
+				/* We can use this port */
 				not_done = 0;
 				continue;
 			}
@@ -2570,7 +2673,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 		 * zero out the port to find the address! yuck! can't do
 		 * this earlier since need port for sctp_pcb_findep()
 		 */
-		ifa = sctp_find_ifa_by_addr((struct sockaddr *)&store_sa, vrf, 0);
+		ifa = sctp_find_ifa_by_addr((struct sockaddr *)&store_sa, vrf_id, 0);
 		if (ifa == NULL) {
 			/* Can't find an interface with that address */
 			SCTP_INP_WUNLOCK(inp);
@@ -3194,6 +3297,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	}
         /* *** END TEMP CODE ****/
 #endif
+	SCTP_FREE(inp->m_vrf_ids);
 	/* Now lets see about freeing the EP hash table. */
 	if (inp->sctp_tcbhash != NULL) {
 		SCTP_HASH_FREE(inp->sctp_tcbhash, inp->sctp_hashmark);
