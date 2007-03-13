@@ -1005,7 +1005,7 @@ sctp_sorecvmsg(struct socket *so,
 __BEGIN_DECLS
 int sctp_peeloff __P((int, sctp_assoc_t));
 int sctp_bindx __P((int, struct sockaddr *, int, int));
-int sctp_connectx __P((int, const struct sockaddr *, int));
+int sctp_connectx __P((int, const struct sockaddr *, int, sctp_assoc_t *));
 int sctp_getaddrlen __P((sa_family_t));
 int sctp_getpaddrs __P((int, sctp_assoc_t, struct sockaddr **));
 void sctp_freepaddrs __P((struct sockaddr *));

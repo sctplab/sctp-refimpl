@@ -476,6 +476,10 @@ struct sctp_inpcb {
 	uint32_t i_am_here_file;
 	uint32_t i_am_here_line;
 #endif
+	uint32_t def_vrf_id;
+	uint32_t *m_vrf_ids;
+	uint32_t num_vrfs;
+	uint32_t vrf_size;
 	uint32_t total_sends;
 	uint32_t total_recvs;
 	uint32_t last_abort_code;
@@ -570,7 +574,7 @@ sctp_del_addr_from_vrf(uint32_t vrfid, struct sockaddr *addr,
 
 struct sctp_nets *sctp_findnet(struct sctp_tcb *, struct sockaddr *);
 
-struct sctp_inpcb *sctp_pcb_findep(struct sockaddr *, int, int);
+struct sctp_inpcb *sctp_pcb_findep(struct sockaddr *, int, int, uint32_t);
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 int sctp_inpcb_bind(struct socket *, struct sockaddr *, struct thread *);
@@ -587,7 +591,7 @@ sctp_findassociation_addr(struct mbuf *, int, int,
 
 struct sctp_tcb *
 sctp_findassociation_addr_sa(struct sockaddr *,
-    struct sockaddr *, struct sctp_inpcb **, struct sctp_nets **, int);
+    struct sockaddr *, struct sctp_inpcb **, struct sctp_nets **, int, uint32_t);
 
 void
 sctp_move_pcb_and_assoc(struct sctp_inpcb *, struct sctp_inpcb *,
