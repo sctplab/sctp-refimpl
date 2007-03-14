@@ -214,7 +214,7 @@ sctp_connectx(int sd, const struct sockaddr *addrs, int addrcnt, sctp_assoc_t *i
 	aa = (int *)buf;
 	*aa = cnt;
 	ret = setsockopt(sd, IPPROTO_SCTP, SCTP_CONNECT_X, (void *)buf,
-	    (socklen_t) &len);
+	    (socklen_t)len);
 	if ((ret == 0) && id) {
 		p_id = (sctp_assoc_t *)buf;
 		*id = *p_id;
