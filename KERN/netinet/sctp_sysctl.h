@@ -39,6 +39,7 @@ __FBSDID("$FreeBSD$");
 #define __sctp_sysctl_h__
 
 #include <netinet/sctp_os.h>
+#include <netinet/sctp_constants.h>
 
 /*
  * limits for the sysctl variables
@@ -48,14 +49,14 @@ __FBSDID("$FreeBSD$");
 #define SCTPCTL_MAXDGRAM_DESC		"Maximum outgoing SCTP buffer size"
 #define SCTPCTL_MAXDGRAM_MIN		0
 #define SCTPCTL_MAXDGRAM_MAX		0xFFFFFFFF
-#define SCTPCTL_MAXDGRAM_DEFAULT	
+#define SCTPCTL_MAXDGRAM_DEFAULT	262144	/* 256k */
 
 /* recvspace: Maximum incoming SCTP buffer size */
 #define SCTPCTL_RECVSPACE		2
 #define SCTPCTL_RECVSPACE_DESC		"Maximum incoming SCTP buffer size"
 #define SCTPCTL_RECVSPACE_MIN		0
 #define SCTPCTL_RECVSPACE_MAX		0xFFFFFFFF
-#define SCTPCTL_RECVSPACE_DEFAULT	
+#define SCTPCTL_RECVSPACE_DEFAULT	262144	/* 256k */
 
 /* autoasconf: Enable SCTP Auto-ASCONF */
 #define SCTPCTL_AUTOASCONF		3
@@ -104,7 +105,7 @@ __FBSDID("$FreeBSD$");
 #define SCTPCTL_PEER_CHKOH_DESC		"Amount to debit peers rwnd per chunk sent"
 #define SCTPCTL_PEER_CHKOH_MIN		0
 #define SCTPCTL_PEER_CHKOH_MAX		0xFFFFFFFF
-#define SCTPCTL_PEER_CHKOH_DEFAULT	/* sizeof struct mbuf */
+#define SCTPCTL_PEER_CHKOH_DEFAULT	0	/* sizeof struct mbuf */
 
 /* maxburst: Default max burst for sctp endpoints */
 #define SCTPCTL_MAXBURST		10
