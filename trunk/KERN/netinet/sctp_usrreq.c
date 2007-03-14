@@ -480,7 +480,8 @@ sctp_getcred(SYSCTL_HANDLER_ARGS)
 	 * visibility is scoped using cr_canseesocket(), which it is not
 	 * here.
 	 */
-	error = priv_check_cred(req->td->td_ucred, PRIV_NETINET_GETCRED, 0);
+	error = priv_check_cred(req->td->td_ucred, PRIV_NETINET_GETCRED, 
+				SUSER_ALLOWJAIL);
 #elif __FreeBSD_version >= 500000
 	error = suser(req->td);
 #else
@@ -3810,7 +3811,9 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 #endif
 #ifdef __FreeBSD__
 #if __FreeBSD_version > 602000
-		error = priv_check(curthread, PRIV_NETINET_RESERVEDPORT);
+		error = priv_check_cred(curthread->td_ucred, 
+				   PRIV_NETINET_RESERVEDPORT,
+				   SUSER_ALLOWJAIL);
 #elif __FreeBSD_version >= 500000
 		error = suser((struct thread *)p);
 #else
