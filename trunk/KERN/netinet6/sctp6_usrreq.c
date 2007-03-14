@@ -746,20 +746,13 @@ sctp6_abort(struct socket *so)
 #endif
 		sctp_inpcb_free(inp, 1, 0);
 		SOCK_LOCK(so);
-		so->so_snd.sb_cc = 0;
-		so->so_snd.sb_mb = NULL;
-		so->so_snd.sb_mbcnt = 0;
-		
+		SCTP_SB_CLEAR(so->so_snd);
 		/* same for the rcv ones, they are only
 		 * here for the accounting/select.
 		 */
-		so->so_rcv.sb_cc = 0;
-		so->so_rcv.sb_mb = NULL;
-		so->so_rcv.sb_mbcnt = 0;
-		/* Now null out the reference, we are
-		 * completely detached.
-		 */
+		SCTP_SB_CLEAR(so->so_rcv);
 #if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		/* Now null out the reference, we are completely detached. */
 		so->so_pcb = NULL;
 #endif
 		SOCK_UNLOCK(so);
@@ -1014,20 +1007,13 @@ sctp6_close(struct socket *so)
 		 * the state of the SCTP association.
 		 */
 		SOCK_LOCK(so);
-		so->so_snd.sb_cc = 0;
-		so->so_snd.sb_mb = NULL;
-		so->so_snd.sb_mbcnt = 0;
-		
+		SCTP_SB_CLEAR(so->so_snd);
 		/* same for the rcv ones, they are only
 		 * here for the accounting/select.
 		 */
-		so->so_rcv.sb_cc = 0;
-		so->so_rcv.sb_mb = NULL;
-		so->so_rcv.sb_mbcnt = 0;
-		/* Now null out the reference, we are
-		 * completely detached.
-		 */
+		SCTP_SB_CLEAR(so->so_rcv);
 #if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		/* Now null out the reference, we are completely detached. */
 		so->so_pcb = NULL;
 #endif
 		SOCK_UNLOCK(so);
@@ -1085,21 +1071,14 @@ sctp6_detach(struct socket *so)
 		 * the state of the SCTP association.
 		 */
 		SOCK_LOCK(so);
-		so->so_snd.sb_cc = 0;
-		so->so_snd.sb_mb = NULL;
-		so->so_snd.sb_mbcnt = 0;
-		
+		SCTP_SB_CLEAR(so->so_snd);
 		/* same for the rcv ones, they are only
 		 * here for the accounting/select.
 		 */
-		so->so_rcv.sb_cc = 0;
-		so->so_rcv.sb_mb = NULL;
-		so->so_rcv.sb_mbcnt = 0;
-		/* Now null out the reference, we are
-		 * completely detached.
-		 */
-		/* Now disconnect */
+		SCTP_SB_CLEAR(so->so_rcv);
+
 #if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		/* Now null out the reference, we are completely detached. */
 		/* MT FIXME: Is there anything to do here for Tiger ? */
 		so->so_pcb = NULL;
 #endif

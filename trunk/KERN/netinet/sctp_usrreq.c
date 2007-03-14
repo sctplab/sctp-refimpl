@@ -66,10 +66,16 @@ sctp_init(void)
 #define nmbclusters	nmbclust
 #endif
 	/* Init the SCTP pcb in sctp_pcb.c */
+#if !defined(__Panda__)
 	u_long sb_max_adj;
+#endif
 
 	sctp_pcb_init();
 
+#if defined(__Panda__)
+	sctp_sendspace = SCTPCTL_MAXDGRAM_DEFAULT;
+	sctp_recvspace = SCTPCTL_RECVSPACE_DEFAULT;
+#else
 #ifndef __OpenBSD__
 	if ((nmbclusters / 8) > SCTP_ASOC_MAX_CHUNKS_ON_QUEUE)
 		sctp_max_chunks_on_queue = (nmbclusters / 8);
@@ -94,6 +100,7 @@ sctp_init(void)
 	 * now I will just copy.
 	 */
 	sctp_recvspace = sctp_sendspace;
+#endif
 
 #ifdef __OpenBSD__
 #undef nmbclusters
@@ -134,7 +141,7 @@ sctp_pcbinfo_cleanup(void)
 
 
 static void
-sctp_pathmtu_adustment(struct sctp_inpcb *inp,
+sctp_pathmtu_adjustment(struct sctp_inpcb *inp,
     struct sctp_tcb *stcb,
     struct sctp_nets *net,
     uint16_t nxtsz)
@@ -236,7 +243,7 @@ sctp_notify_mbuf(struct sctp_inpcb *inp,
 	}
 	/* now what about the ep? */
 	if (stcb->asoc.smallest_mtu > nxtsz) {
-		sctp_pathmtu_adustment(inp, stcb, net, nxtsz);
+		sctp_pathmtu_adjustment(inp, stcb, net, nxtsz);
 	}
 	if (tmr_stopped)
 		sctp_timer_start(SCTP_TIMER_TYPE_PATHMTURAISE, inp, stcb, net);
@@ -324,6 +331,7 @@ sctp_notify(struct sctp_inpcb *inp,
 	}
 }
 
+#if !defined(__Panda__)
 #if defined(__FreeBSD__) || defined(__APPLE__)
 void
 #else
@@ -438,6 +446,7 @@ sctp_ctlinput(cmd, sa, vip)
 	return (NULL);
 #endif
 }
+#endif
 
 #if defined(__FreeBSD__)
 static int
@@ -516,7 +525,9 @@ SYSCTL_PROC(_net_inet_sctp, OID_AUTO, getcred, CTLTYPE_OPAQUE | CTLFLAG_RW,
 #endif				/* #if defined(__FreeBSD__) */
 
 
-#if defined(__FreeBSD__) && __FreeBSD_version > 690000
+#if defined(__Panda__)
+int
+#elif defined(__FreeBSD__) && __FreeBSD_version > 690000
 static void
 #else
 static int
@@ -552,24 +563,17 @@ sctp_abort(struct socket *so)
 #endif
 		sctp_inpcb_free(inp, 1, 0);
 		SOCK_LOCK(so);
-		so->so_snd.sb_cc = 0;
-		so->so_snd.sb_mb = NULL;
-		so->so_snd.sb_mbcnt = 0;
-		
+		SCTP_SB_CLEAR(so->so_snd);
 		/* same for the rcv ones, they are only
 		 * here for the accounting/select.
 		 */
-		so->so_rcv.sb_cc = 0;
-		so->so_rcv.sb_mb = NULL;
-		so->so_rcv.sb_mbcnt = 0;
-		/* Now null out the reference, we are
-		 * completely detached.
-		 */
+		SCTP_SB_CLEAR(so->so_rcv);
+
 #if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		/* Now null out the reference, we are completely detached. */
 		so->so_pcb = NULL;
 #endif
 		SOCK_UNLOCK(so);
-
 	} else {
 		flags = inp->sctp_flags;
 		if((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
@@ -750,26 +754,20 @@ sctp_close(struct socket *so)
 		 * the state of the SCTP association.
 		 */
 		SOCK_LOCK(so);
-		so->so_snd.sb_cc = 0;
-		so->so_snd.sb_mb = NULL;
-		so->so_snd.sb_mbcnt = 0;
-		
+		SCTP_SB_CLEAR(so->so_snd);
 		/* same for the rcv ones, they are only
 		 * here for the accounting/select.
 		 */
-		so->so_rcv.sb_cc = 0;
-		so->so_rcv.sb_mb = NULL;
-		so->so_rcv.sb_mbcnt = 0;
-		/* Now null out the reference, we are
-		 * completely detached.
-		 */
+		SCTP_SB_CLEAR(so->so_rcv);
+
 #if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		/* Now null out the reference, we are completely detached. */
 		so->so_pcb = NULL;
 #endif
 		SOCK_UNLOCK(so);
 	} else {
 		flags = inp->sctp_flags;
-		if((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
+		if ((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
 			goto sctp_must_try_again;
 		}
 	}
@@ -823,22 +821,18 @@ sctp_detach(struct socket *so)
 		/* The socket is now detached, no matter what
 		 * the state of the SCTP association.
 		 */
-		so->so_snd.sb_cc = 0;
-		so->so_snd.sb_mb = NULL;
-		so->so_snd.sb_mbcnt = 0;
+		SCTP_SB_CLEAR(so->so_snd);
 		/* same for the rcv ones, they are only
 		 * here for the accounting/select.
 		 */
-		so->so_rcv.sb_cc = 0;
-		so->so_rcv.sb_mb = NULL;
-		so->so_rcv.sb_mbcnt = 0;
-		/* Now disconnect */
+		SCTP_SB_CLEAR(so->so_rcv);
 #if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		/* Now disconnect */
 		so->so_pcb = NULL;
 #endif
 	} else {
 		flags = inp->sctp_flags;
-		if((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
+		if ((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
 			goto sctp_must_try_again;
 		}
 	}
@@ -1303,9 +1297,9 @@ sctp_shutdown(struct socket *so)
 static uint32_t
 sctp_fill_user_address(struct sockaddr_storage *ss, struct sockaddr *sa)
 {
+#if defined(SCTP_EMBEDDED_V6_SCOPE)
 	struct sockaddr_in6 lsa6;
 
-#if defined(SCTP_EMBEDDED_V6_SCOPE)
 	sa = (struct sockaddr *)sctp_recover_scope((struct sockaddr_in6 *)sa,
 	    &lsa6);
 #endif
@@ -1423,9 +1417,8 @@ sctp_fill_up_addresses(struct sctp_inpcb *inp,
 					   (ipv6_addr_legal)) {
 					struct sockaddr_in6 *sin6;
 
-#ifndef SCTP_KAME
+#if defined(SCTP_EMBEDDED_V6_SCOPE) && !defined(SCTP_KAME)
 					struct sockaddr_in6 lsa6;
-
 #endif
 					sin6 = (struct sockaddr_in6 *)&sctp_ifa->address.sa;
 					if (IN6_IS_ADDR_UNSPECIFIED(&sin6->sin6_addr)) {
@@ -1438,6 +1431,7 @@ sctp_fill_up_addresses(struct sctp_inpcb *inp,
 					if (IN6_IS_ADDR_LINKLOCAL(&sin6->sin6_addr)) {
 						if (local_scope == 0)
 							continue;
+#if defined(SCTP_EMBEDDED_V6_SCOPE)
 						if (sin6->sin6_scope_id == 0) {
 #ifdef SCTP_KAME
 							if (sa6_recoverscope(sin6) != 0)
@@ -1461,6 +1455,7 @@ sctp_fill_up_addresses(struct sctp_inpcb *inp,
 							sin6 = &lsa6;
 #endif				/* SCTP_KAME */
 						}
+#endif /* SCTP_EMBEDDED_V6_SCOPE */
 					}
 					if ((site_scope == 0) &&
 					    (IN6_IS_ADDR_SITELOCAL(&sin6->sin6_addr))) {
@@ -3560,7 +3555,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 					if (paddrp->spp_pathmtu > SCTP_DEFAULT_MINSEGMENT) {
 						net->mtu = paddrp->spp_pathmtu;
 						if (net->mtu < stcb->asoc.smallest_mtu)
-							sctp_pathmtu_adustment(inp, stcb, net, net->mtu);
+							sctp_pathmtu_adjustment(inp, stcb, net, net->mtu);
 					}
 				}
 				if (paddrp->spp_flags & SPP_PMTUD_ENABLE) {
@@ -3877,6 +3872,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		}
 #endif
 		addr_touse = addrs->addr;
+#if defined(INET6)
 		if (addrs->addr->sa_family == AF_INET6) {
 			struct sockaddr_in6 *sin6;
 
@@ -3886,6 +3882,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 				addr_touse = (struct sockaddr *)&sin;
 			}
 		}
+#endif
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) {
 			if (p == NULL) {
 				/* Can't get proc for Net/Open BSD */
@@ -3971,6 +3968,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		}
 #endif
 		addr_touse = addrs->addr;
+#if defined(INET6)
 		if (addrs->addr->sa_family == AF_INET6) {
 			struct sockaddr_in6 *sin6;
 
@@ -3980,6 +3978,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 				addr_touse = (struct sockaddr *)&sin;
 			}
 		}
+#endif
 		/*
 		 * No lock required mgmt_ep_sa does its own locking.
 		 * If the FIX: below is ever changed we may need to
@@ -4076,7 +4075,7 @@ out:
 	return (error);
 }
 
-#else
+#elif defined(__NetBSD__) || defined(__OpenBSD__)
 /* NetBSD and OpenBSD */
 int
 sctp_ctloutput(op, so, level, optname, mp)
@@ -4490,7 +4489,7 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 		sin->sin_addr = ((struct sockaddr_in *)&store)->sin_addr;
 #if defined(__FreeBSD__) || defined(__APPLE__)
 		*addr = (struct sockaddr *)sin;
-#else
+#elif !defined(__Panda__)
 		SCTP_BUF_LEN(nam) = sizeof(*sin);
 #endif
 	} else {
@@ -4526,7 +4525,7 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 #endif /* SCTP_EMBEDDED_V6_SCOPE */
 #if defined(__FreeBSD__) || defined (__APPLE__)
 		*addr = (struct sockaddr *)sin6;
-#else
+#elif !defined(__Panda__)
 		SCTP_BUF_LEN(nam) = sizeof(*sin6);
 #endif
 	}
@@ -4592,6 +4591,7 @@ sctp_ingetaddr(struct socket *so, struct mbuf *nam)
 #endif
 	uint32_t vrf_id;
 	struct sctp_inpcb *inp;
+	struct sctp_ifa *sctp_ifa;
 
 	/*
 	 * Do the malloc first in case it blocks.
@@ -4620,7 +4620,6 @@ sctp_ingetaddr(struct socket *so, struct mbuf *nam)
 		return ECONNRESET;
 	}
 	SCTP_INP_RLOCK(inp);
-	struct sctp_ifa *sctp_ifa;
 	sin->sin_port = inp->sctp_lport;
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
@@ -4858,7 +4857,7 @@ struct pr_usrreqs sctp_usrreqs = {
 	sopoll
 #endif
 };
-#else
+#elif !defined(__Panda__)
 #if defined(__NetBSD__)
 int
 sctp_usrreq(so, req, m, nam, control, p)
@@ -5057,4 +5056,4 @@ sctp_usrreq(so, req, m, nam, control)
 	return (error);
 }
 
-#endif				/* __NetBSD__ */
+#endif
