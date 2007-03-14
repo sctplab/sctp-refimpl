@@ -10539,7 +10539,7 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
     struct sctp_nets *net,
     int max_send_len,
     int user_marks_eor,
-    int *errno,
+    int *error,
     int non_blocking)
 
 {
@@ -10556,14 +10556,12 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 	int s;
 	s = splsoftnet();
 #endif
-	*errno = 0;
-        /* Unless E_EOR mode is on, we must make
-	 * a send FIT in one call.
-	 */
+	*error = 0;
+        /* Unless E_EOR mode is on, we must make a send FIT in one call. */
 	if (((user_marks_eor == 0) && non_blocking) && 
 	    (uio->uio_resid > stcb->sctp_socket->so_snd.sb_hiwat)) {
 		/* It will NEVER fit */
-		*errno = EMSGSIZE;
+		*error = EMSGSIZE;
 		goto out_now;
 	}
 
@@ -10573,12 +10571,12 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 	    (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_RECEIVED) ||
 	    (asoc->state & SCTP_STATE_SHUTDOWN_PENDING)) {
 		/* got data while shutting down */
-		*errno = ECONNRESET;
+		*error = ECONNRESET;
 		goto out_now;
 	}
 	sp = SCTP_ZONE_GET(sctppcbinfo.ipi_zone_strmoq, struct sctp_stream_queue_pending);
-	if(sp == NULL) {
-		*errno = ENOMEM;
+	if (sp == NULL) {
+		*error = ENOMEM;
 		goto out_now;
 	}
 	SCTP_INCR_STRMOQ_COUNT();
@@ -10607,11 +10605,11 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 #if defined(SCTP_PER_SOCKET_LOCKING)
 	SCTP_SOCKET_UNLOCK(stcb->sctp_socket, 0);
 #endif
-	*errno = sctp_copy_one(sp, uio, resv_in_first);
+	*error = sctp_copy_one(sp, uio, resv_in_first);
 #if defined(SCTP_PER_SOCKET_LOCKING)
 	SCTP_SOCKET_LOCK(stcb->sctp_socket, 0);
 #endif
-	if(*errno) {
+	if (*error) {
 		sctp_free_a_strmoq(stcb, sp);
 		sp->data = NULL;
 		sp->net = NULL;
