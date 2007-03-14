@@ -166,13 +166,14 @@ sctp_getaddrlen(sa_family_t family)
 }
 
 int
-sctp_connectx(int sd, const struct sockaddr *addrs, int addrcnt)
+sctp_connectx(int sd, const struct sockaddr *addrs, int addrcnt, sctp_assoc_t *id)
 {
 	char buf[SCTP_STACK_BUF_SIZE];
 	int i, ret, cnt, *aa;
 	char *cpto;
 	const struct sockaddr *at;
 	size_t len = sizeof(int);
+	sctp_assoc_t *p_id;
 
 	at = addrs;
 	cnt = 0;
@@ -213,7 +214,11 @@ sctp_connectx(int sd, const struct sockaddr *addrs, int addrcnt)
 	aa = (int *)buf;
 	*aa = cnt;
 	ret = setsockopt(sd, IPPROTO_SCTP, SCTP_CONNECT_X, (void *)buf,
-	    (socklen_t) len);
+	    (socklen_t) &len);
+	if ((ret == 0) && id) {
+		p_id = (sctp_assoc_t *)buf;
+		*id = *p_id;
+	}
 	return (ret);
 }
 
