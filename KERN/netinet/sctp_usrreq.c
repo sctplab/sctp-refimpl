@@ -2017,6 +2017,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 	}
 	case SCTP_GET_VRF_IDS:
 	{
+#ifdef SCTP_MVRF
 		int siz_needed;
 		uint32_t *vrf_ids;
 		SCTP_CHECK_AND_CAST(vrf_ids, optval, uint32_t, *optsize);
@@ -2027,6 +2028,9 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 		}
 		memcpy(vrf_ids, inp->m_vrf_ids, siz_needed);
 		*optsize = siz_needed;
+#else
+		error = EOPNOTSUPP;
+#endif
 		break;
 	}
 	case SCTP_GET_NONCE_VALUES:
@@ -2915,13 +2919,15 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 	case SCTP_VRF_ID:
 	{
 		uint32_t *vrf_id;
+#ifdef SCTP_MVRF
 		int i;
-
+#endif
 		SCTP_CHECK_AND_CAST(vrf_id, optval, uint32_t, optsize);
 		if (*vrf_id > SCTP_MAX_VRF_ID) {
 			error = EINVAL;
 			break;
 		}
+#ifdef SCTP_MVRF
 		for(i=0; i<inp->num_vrfs; i++) {
 			/* The VRF must be in the VRF list */
 			if(*vrf_id == inp->m_vrf_ids[i]) {
@@ -2932,11 +2938,17 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			}
 		}
 		error = EINVAL;
+#else
+		inp->def_vrf_id = *vrf_id;
+#endif
+#ifdef SCTP_MVRF
 	sctp_done:
+#endif
 		break;
 	}
 	case SCTP_DEL_VRF_ID:
 	{
+#ifdef SCTP_MVRF
 		uint32_t *vrf_id;
 		int i, fnd=0;
 
@@ -2976,10 +2988,14 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		}
 		/* Drop the number by one killing last one */
 		inp->num_vrfs--;
+#else
+		error = EOPNOTSUPP;
+#endif
 		break;
 	}
 	case SCTP_ADD_VRF_ID:
 	{
+#ifdef SCTP_MVRF
 		uint32_t *vrf_id;
 		int i;
 
@@ -3021,6 +3037,9 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		inp->m_vrf_ids[inp->num_vrfs] = *vrf_id;
 		inp->num_vrfs++;
 		SCTP_INP_WUNLOCK(inp);
+#else
+		error = EOPNOTSUPP;
+#endif
 	 	break;
 	}
 	
@@ -3783,7 +3802,9 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 	case SCTP_SET_DYNAMIC_PRIMARY:
 	{
 		union sctp_sockstore *ss;
+#ifdef SCTP_MVRF
 		int i, fnd=0;
+#endif
 #if defined(__NetBSD__) || defined(__APPLE__)
 		struct proc *proc;
 #endif
@@ -3810,6 +3831,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 
 		SCTP_CHECK_AND_CAST(ss, optval, union sctp_sockstore, optsize);
 		/* SUPER USER CHECK? */
+#ifdef SCTP_MVRF
 		for (i=0;i<inp->num_vrfs; i++) {
 			if(vrf_id == inp->m_vrf_ids[i]) {
 				fnd = 1;
@@ -3820,7 +3842,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			error = EINVAL;
 			break;
 		}
-
+#endif
 		error = sctp_dynamic_set_primary(&ss->sa, vrf_id);
 	}
 	break;
@@ -3846,8 +3868,9 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		struct sctp_getaddresses *addrs;
 		struct sockaddr *addr_touse;
 		struct sockaddr_in sin;
+#ifdef SCTP_MVRF
 		int i, fnd=0;
-
+#endif
 		SCTP_CHECK_AND_CAST(addrs, optval, struct sctp_getaddresses, optsize);
 
 		/* see if we're bound all already! */
@@ -3856,6 +3879,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			break;
 		}
 		/* Is the VRF one we have */
+#ifdef SCTP_MVRF
 		for (i=0;i<inp->num_vrfs; i++) {
 			if(vrf_id == inp->m_vrf_ids[i]) {
 				fnd = 1;
@@ -3866,6 +3890,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			error = EINVAL;
 			break;
 		}
+#endif
 		addr_touse = addrs->addr;
 		if (addrs->addr->sa_family == AF_INET6) {
 			struct sockaddr_in6 *sin6;
@@ -3937,7 +3962,9 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		struct sctp_getaddresses *addrs;
 		struct sockaddr *addr_touse;
 		struct sockaddr_in sin;
+#ifdef SCTP_MVRF
 		int i, fnd=0;
+#endif
 		
 		SCTP_CHECK_AND_CAST(addrs, optval, struct sctp_getaddresses, optsize);
 		/* see if we're bound all already! */
@@ -3945,6 +3972,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			error = EINVAL;
 			break;
 		}
+#ifdef SCTP_MVRF
 		/* Is the VRF one we have */
 		for (i=0;i<inp->num_vrfs; i++) {
 			if(vrf_id == inp->m_vrf_ids[i]) {
@@ -3956,6 +3984,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			error = EINVAL;
 			break;
 		}
+#endif
 		addr_touse = addrs->addr;
 		if (addrs->addr->sa_family == AF_INET6) {
 			struct sockaddr_in6 *sin6;
@@ -4178,7 +4207,9 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s = splsoftnet();
 #endif
+#ifdef SCTP_MVRF
 	int i, fnd=0;
+#endif
 	int error = 0;
 	int create_lock_on = 0;
 	uint32_t vrf_id;
@@ -4257,6 +4288,7 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 #else
 	vrf_id = panda_get_vrf_from_call(); /* from connect call? */
 #endif
+#ifdef SCTP_MVRF
 	for (i=0;i<inp->num_vrfs; i++) {
 		if(vrf_id == inp->m_vrf_ids[i]) {
 			fnd = 1;
@@ -4267,7 +4299,7 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		error = EINVAL;
 		goto out_now;
 	}
-
+#endif
 	/* We are GOOD to go */
 	stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0, vrf_id);
 	if (stcb == NULL) {

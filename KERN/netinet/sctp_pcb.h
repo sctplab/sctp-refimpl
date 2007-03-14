@@ -477,9 +477,11 @@ struct sctp_inpcb {
 	uint32_t i_am_here_line;
 #endif
 	uint32_t def_vrf_id;
+#ifdef SCTP_MVRF
 	uint32_t *m_vrf_ids;
 	uint32_t num_vrfs;
 	uint32_t vrf_size;
+#endif
 	uint32_t total_sends;
 	uint32_t total_recvs;
 	uint32_t last_abort_code;
