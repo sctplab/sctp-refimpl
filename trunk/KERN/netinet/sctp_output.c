@@ -2808,6 +2808,15 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 			 */
 			continue;
 		}
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_OUTPUT2) {
+			printf("num prefered:%d on interface:%p cur_addr_num:%d\n", 
+			       num_prefered, 
+			       sctp_ifn,
+			       cur_addr_num);
+		}
+#endif
+
 		/*
 		 * Ok we have num_eligible_addr set with how many we can
 		 * use, this may vary from call to call due to addresses
@@ -2822,6 +2831,15 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 			continue;
 		if (net) {
 			net->indx_of_eligible_next_to_use = cur_addr_num + 1;
+#ifdef SCTP_DEBUG
+			if (sctp_debug_on & SCTP_DEBUG_OUTPUT2) {
+				printf("we selected %d\n",cur_addr_num);
+				printf("Source:");
+				sctp_print_address(&pass->address.sa);
+				printf("Dest:");
+				sctp_print_address(&net->ro._l_addr.sa);
+			}
+#endif
 		}
 		atomic_add_int(&pass->refcount, 1);
 		return (pass);
@@ -2830,6 +2848,15 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 
 	/* plan_c: See if we have an acceptable address on the emit interface
 	 */
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_OUTPUT2) {
+		if (net) {
+			printf("Plan C no prefered for Dest:");
+			sctp_print_address(&net->ro._l_addr.sa);
+		}
+	}
+#endif
+
 	LIST_FOREACH(sctp_ifa, &emit_ifn->ifalist, next_ifa) {
 		if ((sctp_ifa->localifa_flags & SCTP_ADDR_DEFER_USE) && (non_asoc_addr_ok == 0)) 
 			continue;
@@ -3740,6 +3767,9 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 										out_of_asoc_ok, 
 										vrf_id);
 				if (net->ro._s_addr == NULL) {
+#ifdef SCTP_DEBUG
+					printf("V6:No route to host\n");
+#endif
 					goto no_route;
 				}
 
@@ -3851,8 +3881,9 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 #endif				/* SCTP_DEBUG_OUTPUT */
 		SCTP_STAT_INCR(sctps_sendpackets);
 		SCTP_STAT_INCR_COUNTER64(sctps_outpackets);
-		if(ret)
+		if(ret) {
 			SCTP_STAT_INCR(sctps_senderrors);
+		}
 		if (net == NULL) {
 			/* Now if we had a temp route free it */
 			if (ro->ro_rt) {
