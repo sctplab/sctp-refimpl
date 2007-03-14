@@ -37,6 +37,7 @@ __FBSDID("$FreeBSD$");
 #include <netinet/sctp_constants.h>
 #include <netinet/sctp_sysctl.h>
 #include <netinet/sctp_pcb.h>
+#include <netinet/sctputil.h>
 
 /*
  * sysctl tunable variables
