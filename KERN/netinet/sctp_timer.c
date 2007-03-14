@@ -1483,6 +1483,14 @@ sctp_heartbeat_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			if ((net->dest_state & SCTP_ADDR_UNCONFIRMED) &&
 			    (net->dest_state & SCTP_ADDR_REACHABLE)) {
 				cnt_sent++;
+				if (net->hb_responded == 0) {
+					/* Did we respond last time? */
+					if(net->ro._s_addr) {
+						sctp_free_ifa(net->ro._s_addr);
+						net->ro._s_addr = NULL;
+						net->src_addr_selected = 0;
+					}
+				}
 				if (sctp_send_hb(stcb, 1, net) == 0) {
 					break;
 				}
