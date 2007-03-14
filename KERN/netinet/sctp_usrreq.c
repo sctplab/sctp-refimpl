@@ -132,24 +132,6 @@ sctp_pcbinfo_cleanup(void)
 		SCTP_HASH_FREE(sctppcbinfo.sctp_restarthash, sctppcbinfo.hashrestartmark);
 }
 
-#ifdef INET6
-void
-ip_2_ip6_hdr(struct ip6_hdr *ip6, struct ip *ip)
-{
-	bzero(ip6, sizeof(*ip6));
-
-	ip6->ip6_vfc = IPV6_VERSION;
-	ip6->ip6_plen = ip->ip_len;
-	ip6->ip6_nxt = ip->ip_p;
-	ip6->ip6_hlim = ip->ip_ttl;
-	ip6->ip6_src.s6_addr32[2] = ip6->ip6_dst.s6_addr32[2] =
-	    IPV6_ADDR_INT32_SMP;
-	ip6->ip6_src.s6_addr32[3] = ip->ip_src.s_addr;
-	ip6->ip6_dst.s6_addr32[3] = ip->ip_dst.s_addr;
-}
-
-#endif				/* INET6 */
-
 
 static void
 sctp_pathmtu_adustment(struct sctp_inpcb *inp,
