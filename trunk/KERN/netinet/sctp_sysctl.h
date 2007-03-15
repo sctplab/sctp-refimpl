@@ -28,11 +28,9 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $KAME: sctp_usrreq.c,v 1.48 2005/03/07 23:26:08 itojun Exp $	 */
-
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_sysctl.h,v 1.1 2007/03/15 11:27:13 rrs Exp $");
 #endif
 
 #ifndef __sctp_sysctl_h__
