@@ -41,6 +41,9 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.12 2007/03/15 11:27:13 rrs
 #include <netinet/sctp_pcb.h>
 #include <netinet/sctp_header.h>
 #include <netinet/sctp_var.h>
+#if defined(INET6)
+#include <netinet6/sctp6_var.h>
+#endif
 #include <netinet/sctp_sysctl.h>
 #include <netinet/sctp_output.h>
 #include <netinet/sctp_bsd_addr.h>
@@ -622,7 +625,7 @@ sctp_attach(struct socket *so, int proto, struct proc *p)
 #endif
 		return EINVAL;
 	}
-	error = soreserve(so, sctp_sendspace, sctp_recvspace);
+	error = SCTP_SORESERVE(so, sctp_sendspace, sctp_recvspace);
 	if (error) {
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
@@ -684,7 +687,7 @@ static int
 sctp_bind(struct socket *so, struct sockaddr *addr, struct thread *p)
 {
 #elif defined(__FreeBSD__) || defined(__APPLE__)
-	sctp_bind(struct socket *so, struct sockaddr *addr, struct proc *p){
+sctp_bind(struct socket *so, struct sockaddr *addr, struct proc *p) {
 #else
 sctp_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 {
@@ -776,7 +779,9 @@ sctp_close(struct socket *so)
 
 #else
 
-#if defined(__FreeBSD__) && __FreeBSD_version > 690000
+#if defined(__Panda__)
+int
+#elif defined(__FreeBSD__) && __FreeBSD_version > 690000
 static void
 #else
 static int
@@ -1678,11 +1683,9 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 		SCTP_INP_WUNLOCK(inp);
 	}
 
-#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
-	vrf_id = SCTP_DEFAULT_VRFID;
-#else
-	vrf_id = panda_get_vrf_from_call(); /* from connectx call? */
-#endif
+	/* FIX ME: do we want to pass in a vrf on the connect call? */
+	vrf_id = inp->def_vrf_id;
+
 	/* We are GOOD to go */
 	stcb = sctp_aloc_assoc(inp, sa, 1, &error, 0, vrf_id);
 	if (stcb == NULL) {

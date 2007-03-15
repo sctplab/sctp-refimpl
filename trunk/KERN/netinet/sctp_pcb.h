@@ -685,9 +685,5 @@ sctp_initiate_iterator(inp_func inpf,
 		       struct sctp_inpcb *, 
 		       uint8_t co_off);
 
-#if !(defined(__FreeBSD__) || defined(__APPLE__))
-extern void in6_sin6_2_sin(struct sockaddr_in *, struct sockaddr_in6 *sin6);
-#endif
-
 #endif				/* _KERNEL */
 #endif				/* !__sctp_pcb_h__ */

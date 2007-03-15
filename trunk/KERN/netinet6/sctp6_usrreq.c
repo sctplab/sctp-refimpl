@@ -795,7 +795,7 @@ sctp6_attach(struct socket *so, int proto, struct proc *p)
 		return EINVAL;
 
 	if (so->so_snd.sb_hiwat == 0 || so->so_rcv.sb_hiwat == 0) {
-		error = soreserve(so, sctp_sendspace, sctp_recvspace);
+		error = SCTP_SORESERVE(so, sctp_sendspace, sctp_recvspace);
 		if (error)
 			return error;
 	}
