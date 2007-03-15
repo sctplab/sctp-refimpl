@@ -59,15 +59,20 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 #endif				/* __FreeBSD__ */
 
 #if defined(__APPLE__)
-	int sctp6_input __P((struct mbuf **, int *));
-
+int sctp6_input __P((struct mbuf **, int *));
 #else
-	int sctp6_input __P((struct mbuf **, int *, int));
-
+int sctp6_input __P((struct mbuf **, int *, int));
 #endif
-	int sctp6_output __P((struct sctp_inpcb *, struct mbuf *, struct sockaddr *,
-                 struct mbuf *, struct proc *));
-	void sctp6_ctlinput __P((int, struct sockaddr *, void *));
+int sctp6_output __P((struct sctp_inpcb *, struct mbuf *, struct sockaddr *,
+		      struct mbuf *, struct proc *));
+void sctp6_ctlinput __P((int, struct sockaddr *, void *));
+
+#if !(defined(__FreeBSD__) || defined(__APPLE__))
+extern void in6_sin_2_v4mapsin6(struct sockaddr_in *sin,
+				struct sockaddr_in6 *sin6);
+extern void in6_sin6_2_sin(struct sockaddr_in *, struct sockaddr_in6 *sin6);
+extern void in6_sin6_2_sin_in_sock(struct sockaddr *nam);
+#endif
 
 #endif				/* _KERNEL */
 #endif
