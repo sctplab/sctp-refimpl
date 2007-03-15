@@ -1,0 +1,5 @@
+- errno -> becomes error in sctp_output.c and sctputil.c
+- SB_CLEAR macro defined.
+- Fix for CMT express_sack_handling did not do proper
+  pseudo-cumack updates.
+- Get rid of extraneous function that was never used ip_2_ip6_hdr()
