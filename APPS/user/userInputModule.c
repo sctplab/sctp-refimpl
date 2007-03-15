@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.84 2007-03-04 15:55:22 tuexen Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.85 2007-03-15 14:12:25 randall Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -2680,6 +2680,7 @@ cmd_xconnect(char *argv[], int argc)
 #if defined(__BSD_SCTP_STACK__)
 	int len,i,addrcnt=0,ret,llen;
 	char *ccc;
+	sctp_assoc_t id;
 	struct sockaddr *at;
 	struct sockaddr_in *servaddr;
 	struct sockaddr_in6 *servaddr6;
@@ -2735,7 +2736,7 @@ cmd_xconnect(char *argv[], int argc)
 		servaddr6 = (struct sockaddr_in6 *)at;
 		SCTP_setIPaddr6((u_char *)&servaddr6->sin6_addr);
 	}
-	ret = sctp_connectx(adap->fd, at, addrcnt);
+	ret = sctp_connectx(adap->fd, at, addrcnt, &id);
 	if(ret)
 		printf("Connectx returns %d errno:%d\n",ret,errno);
 	free(ccc);
