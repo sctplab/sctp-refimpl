@@ -31,8 +31,8 @@
 /* $KAME: sctp_timer.c,v 1.29 2005/03/06 16:04:18 itojun Exp $	 */
 
 #ifdef __FreeBSD__
-#include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_timer.c,v 1.7 2007/02/12 23:24:31 rrs Exp $");
+#include <sys/cdefs.h
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_timer.c,v 1.8 2007/03/15 11:27:13 rrs Exp $");
 #endif
 
 #define _IP_VHL
