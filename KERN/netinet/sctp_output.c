@@ -2205,21 +2205,42 @@ sctp_is_ifa_addr_prefered(struct sctp_ifa *ifa,
 	if ((dest_is_priv == 0) && (dest_is_loop == 0)) {
 		dest_is_global = 1;
 	}
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_OUTPUT2) {	
+		printf("Is destination prefered:");
+		sctp_print_address(&ifa->address.sa);
+	}
+#endif	
 
 	/* Ok the address may be ok */
 	if (fam == AF_INET6) {
 		/* ok to use deprecated addresses? */
 		if (ifa->localifa_flags & SCTP_ADDR_IFA_UNUSEABLE) {
+#ifdef SCTP_DEBUG
+			if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {	
+				printf("NO:1\n");
+			}
+#endif
 			return (NULL);
 		}
 		if (ifa->src_is_priv) {
 			if(dest_is_loop) {
+#ifdef SCTP_DEBUG
+				if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
+					printf("NO:2\n");
+				}
+#endif
 				return (NULL);
 			}
 		}
 		if (ifa->src_is_glob) {
 
 			if (dest_is_loop) {
+#ifdef SCTP_DEBUG
+				if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
+					printf("NO:3\n");
+				}
+#endif
 				return (NULL);
 			}
 		}
@@ -2229,17 +2250,42 @@ sctp_is_ifa_addr_prefered(struct sctp_ifa *ifa,
 	 * is straightforward and easier to validate :-)
 	 */
 	if ((ifa->src_is_loop) && (dest_is_priv)) {
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
+			printf("NO:4\n");
+		}
+#endif
 		return (NULL);
 	}
 	if ((ifa->src_is_glob) && (dest_is_priv )) {
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {	
+			printf("NO:5\n");
+		}
+#endif
 		return (NULL);
 	}
 	if ((ifa->src_is_loop) && (dest_is_global)) {
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
+			printf("NO:6\n");
+		}
+#endif
 		return (NULL);
 	}
 	if ((ifa->src_is_priv) && (dest_is_global)) {
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
+			printf("NO:7\n");
+		}
+#endif
 		return (NULL);
 	}
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
+		printf("YES\n");
+	}
+#endif
 	/* its a prefered address */
 	return (ifa);
 }
@@ -2356,7 +2402,7 @@ sctp_is_addr_in_ep(struct sctp_inpcb *inp, struct sctp_ifa *ifa)
 	struct sctp_laddr *laddr;
 
 	if (ifa == NULL)
-		return (0);
+v		return (0);
 	LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
 		if (laddr->ifa == NULL) {
 #ifdef SCTP_DEBUG
@@ -2742,7 +2788,7 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 							dest_is_loop, 
 							dest_is_priv, fam);
 #ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
+	if (sctp_debug_on & SCTP_DEBUG_OUTPUT2) {
 		printf("Found %d prefered source addresses\n", num_prefered);
 	}
 #endif
@@ -2766,7 +2812,7 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 	 * nth) and 0 is the first one, 1 is the second one etc...
 	 */
 #ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
+	if (sctp_debug_on & SCTP_DEBUG_OUTPUT2) {
 		printf("cur_addr_num:%d\n", cur_addr_num);
 	}
 #endif
@@ -2787,6 +2833,11 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 	 * no prefered fall through to plan_c.
 	 */
  bound_all_plan_b:
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_OUTPUT2) {
+		printf("Plan B?\n");
+	}
+#endif
 	LIST_FOREACH(sctp_ifn, &vrf->ifnlist, next_ifn) {
 		if (dest_is_loop == 0 && SCTP_IFN_IS_IFT_LOOP(sctp_ifn)) {
 			/* wrong base scope */
@@ -2798,7 +2849,7 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 		num_prefered = sctp_count_num_prefered_boundall(sctp_ifn, stcb, non_asoc_addr_ok,
 								dest_is_loop, dest_is_priv, fam);
 #ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
+		if (sctp_debug_on & SCTP_DEBUG_OUTPUT2) {
 			printf("Found ifn:%p %d prefered source addresses\n", ifn, num_prefered);
 		}
 #endif
@@ -2850,10 +2901,7 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 	 */
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_OUTPUT2) {
-		if (net) {
-			printf("Plan C no prefered for Dest:");
-			sctp_print_address(&net->ro._l_addr.sa);
-		}
+		printf("Plan C no prefered for Dest, acceptable for?\n");
 	}
 #endif
 
@@ -2882,6 +2930,11 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 	 * Go out and see if we can find an acceptable address somewhere
 	 * amongst all interfaces.
 	 */
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_OUTPUT2) {
+		printf("Plan C fails plan D?\n");
+	}
+#endif
 	LIST_FOREACH(sctp_ifn, &vrf->ifnlist, next_ifn) {
 		if (dest_is_loop == 0 && SCTP_IFN_IS_IFT_LOOP(sctp_ifn)) {
 			/* wrong base scope */
@@ -3044,6 +3097,12 @@ sctp_source_address_selection(struct sctp_inpcb *inp,
 			dest_is_priv = 1;
 		}
 	}
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_OUTPUT2) {	
+		printf("Select source, dest_is_priv:%d dest_is_loop:%d:");
+		sctp_print_address(&(struct sockaddr *)to);
+	}
+#endif	
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
 		/*
 		 * When bound to all if the address list is set it is a
