@@ -32,11 +32,12 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.13 2007/02/12 23:24:31 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.14 2007/03/15 11:27:13 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_var.h>
+#include <netinet/sctp_sysctl.h>
 #include <netinet/sctp_pcb.h>
 #include <netinet/sctp_header.h>
 #include <netinet/sctputil.h>
@@ -46,10 +47,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.13 2007/02/12 23:24:31 rrs 
 #include <netinet/sctp_indata.h>
 #include <netinet/sctp_asconf.h>
 
-
-#ifdef SCTP_DEBUG
-extern uint32_t sctp_debug_on;
-#endif
 
 #if defined(__APPLE__)
 #define APPLE_FILE_NO 2
@@ -3531,9 +3528,6 @@ sctp_handle_packet_dropped(struct sctp_pktdrop_chunk *cp,
 	}
 }
 
-extern int sctp_strict_init;
-extern int sctp_abort_if_one_2_one_hits_limit;
-
 /*
  * handles all control chunks in a packet inputs: - m: mbuf chain, assumed to
  * still contain IP/SCTP header - stcb: is the tcb found for this packet -
@@ -4730,8 +4724,6 @@ trigger_send:
 #endif
 	return (0);
 }
-
-extern int sctp_no_csum_on_loopback;
 
 #ifdef __APPLE__
 #ifdef SCTP_DEBUG

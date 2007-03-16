@@ -32,11 +32,12 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_indata.c,v 1.9 2007/02/12 23:24:31 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_indata.c,v 1.10 2007/03/15 11:27:13 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_var.h>
+#include <netinet/sctp_sysctl.h>
 #include <netinet/sctp_pcb.h>
 #include <netinet/sctp_header.h>
 #include <netinet/sctputil.h>
@@ -47,11 +48,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_indata.c,v 1.9 2007/02/12 23:24:31 rrs 
 #include <netinet/sctp_timer.h>
 
 
-#ifdef SCTP_DEBUG
-extern uint32_t sctp_debug_on;
-
-#endif
-
 /*
  * NOTES: On the outbound side of things I need to check the sack timer to
  * see if I should generate a sack into the chunk queue (if I have data to
@@ -61,8 +57,6 @@ extern uint32_t sctp_debug_on;
  * This will cause sctp_service_queues() to get called on the top entry in
  * the list.
  */
-
-extern int sctp_strict_sacks;
 
 __inline void 
 sctp_set_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
@@ -1437,7 +1431,6 @@ sctp_does_tsn_belong_to_reasm(struct sctp_association *asoc,
 }
 
 
-extern unsigned int sctp_max_chunks_on_queue;
 static int
 sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
     struct mbuf **m, int offset, struct sctp_data_chunk *ch, int chk_length,
@@ -2470,8 +2463,6 @@ sctp_service_queues(struct sctp_tcb *stcb, struct sctp_association *asoc)
 	}
 }
 
-extern int sctp_strict_data_order;
-
 int
 sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
     struct sctphdr *sh, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
@@ -3124,8 +3115,6 @@ sctp_check_for_revoked(struct sctp_association *asoc, uint32_t cumack,
 		asoc->nonce_sum_check = 0;
 	}
 }
-
-extern int sctp_peer_chunk_oh;
 
 static void
 sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
@@ -3824,9 +3813,6 @@ sctp_hs_cwnd_decrease(struct sctp_tcb *stcb, struct sctp_nets *net)
 
 #endif
 
-extern int sctp_early_fr;
-extern int sctp_L2_abc_variable;
-
 
 static __inline void
 sctp_cwnd_update(struct sctp_tcb *stcb,
@@ -4064,6 +4050,10 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 		net->prev_cwnd = net->cwnd;
 		net->net_ack = 0;
 		net->net_ack2 = 0;
+
+		/* CMT: Reset CUC and Fast recovery algo variables before SACK processing */
+		net->new_pseudo_cumack = 0;
+		net->will_exit_fast_recovery = 0;
 	}
 	if (sctp_strict_sacks) {
 		uint32_t send_s;
@@ -4165,6 +4155,22 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 							tp1->do_rtt = 0;
 						}
 					}
+					/*
+					 * CMT: CUCv2 algorithm. From the
+					 * cumack'd TSNs, for each TSN being
+					 * acked for the first time, set the
+					 * following variables for the
+					 * corresp destination.
+					 * new_pseudo_cumack will trigger a
+					 * cwnd update.
+					 * find_(rtx_)pseudo_cumack will
+					 * trigger search for the next
+					 * expected (rtx-)pseudo-cumack.
+					 */
+					tp1->whoTo->new_pseudo_cumack = 1;
+					tp1->whoTo->find_pseudo_cumack = 1;
+					tp1->whoTo->find_rtx_pseudo_cumack = 1;
+
 #ifdef SCTP_CWND_LOGGING
 					sctp_log_cwnd(stcb, tp1->whoTo, tp1->rec.data.TSN_seq, SCTP_CWND_LOG_FROM_SACK);
 #endif
@@ -4626,9 +4632,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 		net->net_ack = 0;
 		net->net_ack2 = 0;
 
-		/*
-		 * CMT: Reset CUC and Fast recovery algo variables before SACK processing
-		 */
+		/* CMT: Reset CUC and Fast recovery algo variables before SACK processing */
 		net->new_pseudo_cumack = 0;
 		net->will_exit_fast_recovery = 0;
 	}

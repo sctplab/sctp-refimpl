@@ -31,7 +31,7 @@
 /* $KAME: sctp_uio.h,v 1.11 2005/03/06 16:04:18 itojun Exp $	 */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_uio.h,v 1.7 2007/02/12 23:24:31 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_uio.h,v 1.8 2007/03/15 11:27:13 rrs Exp $");
 #endif
 
 #ifndef __sctp_uio_h__
@@ -1005,7 +1005,7 @@ sctp_sorecvmsg(struct socket *so,
 __BEGIN_DECLS
 int sctp_peeloff __P((int, sctp_assoc_t));
 int sctp_bindx __P((int, struct sockaddr *, int, int));
-int sctp_connectx __P((int, const struct sockaddr *, int));
+int sctp_connectx __P((int, const struct sockaddr *, int, sctp_assoc_t *));
 int sctp_getaddrlen __P((sa_family_t));
 int sctp_getpaddrs __P((int, sctp_assoc_t, struct sockaddr **));
 void sctp_freepaddrs __P((struct sockaddr *));
