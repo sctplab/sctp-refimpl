@@ -3110,7 +3110,7 @@ sctp_source_address_selection(struct sctp_inpcb *inp,
 	}
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_OUTPUT2) {	
-		printf("Select source for:",
+		printf("Select source for:");
 		sctp_print_address((struct sockaddr *)to);
 	}
 #endif	
