@@ -2402,7 +2402,7 @@ sctp_is_addr_in_ep(struct sctp_inpcb *inp, struct sctp_ifa *ifa)
 	struct sctp_laddr *laddr;
 
 	if (ifa == NULL)
-v		return (0);
+		return (0);
 	LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
 		if (laddr->ifa == NULL) {
 #ifdef SCTP_DEBUG
