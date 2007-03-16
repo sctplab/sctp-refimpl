@@ -2256,7 +2256,7 @@ sctp_is_ifa_addr_prefered(struct sctp_ifa *ifa,
 		       ifa->src_is_glob);
 		printf("dest_loop:%d dest_priv:%d dest_glob:%d\n",
 		       dest_is_loop, dest_is_priv,
-		       dest_is_glob);
+		       dest_is_global);
 	}
 #endif
 
@@ -3110,9 +3110,8 @@ sctp_source_address_selection(struct sctp_inpcb *inp,
 	}
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_OUTPUT2) {	
-		printf("Select source, dest_is_priv:%d dest_is_loop:%d:",
-		       dest_is_priv, dest_is_loop);
-		sctp_print_address(&(struct sockaddr *)to);
+		printf("Select source for:",
+		sctp_print_address((struct sockaddr *)to);
 	}
 #endif	
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
