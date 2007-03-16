@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.7 2007/02/12 23:24:31 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.8 2007/03/15 11:27:13 rrs Exp $");
 #endif
 
 #ifndef __sctp_constants_h__
@@ -83,6 +83,11 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.7 2007/02/12 23:24:31 r
 #define SCTP_KTRHEAD_NAME "sctp_iterator"
 #define SCTP_KTHREAD_PAGES 2
 
+
+/* If you support Multi-VRF how big to
+ * make the initial array of VRF's to.
+ */
+#define SCTP_DEFAULT_VRF_SIZE 4
 
 /* Places that CWND log can happen from */
 #define SCTP_CWND_LOG_FROM_FR	1

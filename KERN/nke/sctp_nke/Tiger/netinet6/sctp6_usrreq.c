@@ -30,7 +30,7 @@
 /*	$KAME: sctp6_usrreq.c,v 1.38 2005/08/24 08:08:56 suz Exp $	*/
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.10 2007/02/12 23:24:31 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.11 2007/03/15 11:27:14 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -40,6 +40,7 @@ __FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.10 2007/02/12 23:24:31 r
 #include <netinet/sctp_pcb.h>
 #include <netinet/sctp_header.h>
 #include <netinet/sctp_var.h>
+#include <netinet/sctp_sysctl.h>
 #include <netinet/sctp_output.h>
 #include <netinet/sctp_input.h>
 #include <netinet/sctp_bsd_addr.h>
@@ -56,10 +57,6 @@ __FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.10 2007/02/12 23:24:31 r
 #if defined(__APPLE__)
 #define APPLE_FILE_NO 9
 #endif
-
-#ifdef SCTP_DEBUG
-extern uint32_t sctp_debug_on;
-#endif /* SCTP_DEBUG */
 
 extern struct protosw inetsw[];
 
@@ -115,8 +112,6 @@ in6_sin6_2_sin_in_sock(struct sockaddr *nam)
 }
 
 #endif				/* !(__FreeBSD__ || __APPLE__) */
-
-extern int sctp_no_csum_on_loopback;
 
 int
 #if defined(__APPLE__)
@@ -512,10 +507,16 @@ sctp6_ctlinput(cmd, pktdst, d)
 {
 	struct sctphdr sh;
 	struct ip6ctlparam *ip6cp = NULL;
+	uint32_t vrf_id;
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s;
 #endif
 	int cm;
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
+	vrf_id = SCTP_DEFAULT_VRFID;
+#else
+	vrf_id = panda_get_vrf_from_call(); /* from connectx call? */
+#endif
 
 	if (pktdst->sa_family != AF_INET6 ||
 	    pktdst->sa_len != sizeof(struct sockaddr_in6))
@@ -569,7 +570,7 @@ sctp6_ctlinput(cmd, pktdst, d)
 #endif
 		stcb = sctp_findassociation_addr_sa((struct sockaddr *)ip6cp->ip6c_src,
 		    (struct sockaddr *)&final,
-		    &inp, &net, 1);
+		    &inp, &net, 1, vrf_id);
 		/* inp's ref-count increased && stcb locked */
 		if (stcb != NULL && inp && (inp->sctp_socket != NULL)) {
 			if (cmd == PRC_MSGSIZE) {
@@ -634,6 +635,13 @@ sctp6_getcred(SYSCTL_HANDLER_ARGS)
 	struct sctp_nets *net;
 	struct sctp_tcb *stcb;
 	int error;
+	uint32_t vrf_id;
+
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
+	vrf_id = SCTP_DEFAULT_VRFID;
+#else
+	vrf_id = panda_get_vrf_from_call(); /* from connectx call? */
+#endif
 
 #if defined(__FreeBSD__) && __FreeBSD_version > 602000
 	/*
@@ -661,7 +669,7 @@ sctp6_getcred(SYSCTL_HANDLER_ARGS)
 
 	stcb = sctp_findassociation_addr_sa(sin6tosa(&addrs[0]),
 	    sin6tosa(&addrs[1]),
-	    &inp, &net, 1);
+	    &inp, &net, 1, vrf_id);
 	if (stcb == NULL || inp == NULL || inp->sctp_socket == NULL) {
 		if ((inp != NULL) && (stcb == NULL)) {
 			/* reduce ref-count */
@@ -738,20 +746,13 @@ sctp6_abort(struct socket *so)
 #endif
 		sctp_inpcb_free(inp, 1, 0);
 		SOCK_LOCK(so);
-		so->so_snd.sb_cc = 0;
-		so->so_snd.sb_mb = NULL;
-		so->so_snd.sb_mbcnt = 0;
-		
+		SCTP_SB_CLEAR(so->so_snd);
 		/* same for the rcv ones, they are only
 		 * here for the accounting/select.
 		 */
-		so->so_rcv.sb_cc = 0;
-		so->so_rcv.sb_mb = NULL;
-		so->so_rcv.sb_mbcnt = 0;
-		/* Now null out the reference, we are
-		 * completely detached.
-		 */
+		SCTP_SB_CLEAR(so->so_rcv);
 #if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		/* Now null out the reference, we are completely detached. */
 		so->so_pcb = NULL;
 #endif
 		SOCK_UNLOCK(so);
@@ -794,7 +795,7 @@ sctp6_attach(struct socket *so, int proto, struct proc *p)
 		return EINVAL;
 
 	if (so->so_snd.sb_hiwat == 0 || so->so_rcv.sb_hiwat == 0) {
-		error = soreserve(so, sctp_sendspace, sctp_recvspace);
+		error = SCTP_SORESERVE(so, sctp_sendspace, sctp_recvspace);
 		if (error)
 			return error;
 	}
@@ -1006,20 +1007,13 @@ sctp6_close(struct socket *so)
 		 * the state of the SCTP association.
 		 */
 		SOCK_LOCK(so);
-		so->so_snd.sb_cc = 0;
-		so->so_snd.sb_mb = NULL;
-		so->so_snd.sb_mbcnt = 0;
-		
+		SCTP_SB_CLEAR(so->so_snd);
 		/* same for the rcv ones, they are only
 		 * here for the accounting/select.
 		 */
-		so->so_rcv.sb_cc = 0;
-		so->so_rcv.sb_mb = NULL;
-		so->so_rcv.sb_mbcnt = 0;
-		/* Now null out the reference, we are
-		 * completely detached.
-		 */
+		SCTP_SB_CLEAR(so->so_rcv);
 #if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		/* Now null out the reference, we are completely detached. */
 		so->so_pcb = NULL;
 #endif
 		SOCK_UNLOCK(so);
@@ -1077,21 +1071,14 @@ sctp6_detach(struct socket *so)
 		 * the state of the SCTP association.
 		 */
 		SOCK_LOCK(so);
-		so->so_snd.sb_cc = 0;
-		so->so_snd.sb_mb = NULL;
-		so->so_snd.sb_mbcnt = 0;
-		
+		SCTP_SB_CLEAR(so->so_snd);
 		/* same for the rcv ones, they are only
 		 * here for the accounting/select.
 		 */
-		so->so_rcv.sb_cc = 0;
-		so->so_rcv.sb_mb = NULL;
-		so->so_rcv.sb_mbcnt = 0;
-		/* Now null out the reference, we are
-		 * completely detached.
-		 */
-		/* Now disconnect */
+		SCTP_SB_CLEAR(so->so_rcv);
+
 #if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		/* Now null out the reference, we are completely detached. */
 		/* MT FIXME: Is there anything to do here for Tiger ? */
 		so->so_pcb = NULL;
 #endif

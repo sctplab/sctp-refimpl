@@ -32,13 +32,14 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.13 2007/02/12 23:24:31 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.14 2007/03/15 11:27:13 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_pcb.h>
 #include <netinet/sctputil.h>
 #include <netinet/sctp_var.h>
+#include <netinet/sctp_sysctl.h>
 #ifdef INET6
 #include <netinet6/sctp6_var.h>
 #endif
@@ -52,13 +53,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.13 2007/02/12 23:24:31 rrs Ex
 #include <netinet/sctp_asconf.h>
 #include <netinet/sctp_bsd_addr.h>
 
-extern int sctp_warm_the_crc32_table;
-
 #define NUMBER_OF_MTU_SIZES 18
-
-#ifdef SCTP_DEBUG
-extern uint32_t sctp_debug_on;
-#endif
 
 #if defined(__APPLE__)
 #define APPLE_FILE_NO 8
@@ -913,7 +908,7 @@ sctp_select_a_tag(struct sctp_inpcb *m)
 
 int
 sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
-    int for_a_init, uint32_t override_tag, uint32_t vrf)
+    int for_a_init, uint32_t override_tag, uint32_t vrf_id)
 {
 	/*
 	 * Anything set to zero is taken care of by the allocation routine's
@@ -966,7 +961,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	/* Get the nonce tags */
 	asoc->my_vtag_nonce = sctp_select_a_tag(m);
 	asoc->peer_vtag_nonce = sctp_select_a_tag(m);
-	asoc->vrf_id = vrf;
+	asoc->vrf_id = vrf_id;
 
 	if (sctp_is_feature_on(m, SCTP_PCB_FLAGS_DONOT_HEARTBEAT))
 		asoc->hb_is_disabled = 1;
@@ -1154,8 +1149,6 @@ sctp_expand_mapping_array(struct sctp_association *asoc)
 	asoc->mapping_array_size = new_size;
 	return (0);
 }
-
-extern unsigned int sctp_early_fr_msec;
 
 #if defined(SCTP_USE_THREAD_BASED_ITERATOR)
 static void

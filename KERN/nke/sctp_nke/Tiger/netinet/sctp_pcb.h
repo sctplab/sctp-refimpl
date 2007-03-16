@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.h,v 1.5 2007/01/18 09:58:43 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.h,v 1.6 2007/03/15 11:27:13 rrs Exp $");
 #endif
 
 #ifndef __sctp_pcb_h__
@@ -305,7 +305,6 @@ struct sctp_epinfo {
 #endif
 };
 
-extern struct sctpstat sctpstat;
 /*
  * Here we have all the relevant information for each SCTP entity created. We
  * will need to modify this as approprate. We also need to figure out how to
@@ -477,6 +476,12 @@ struct sctp_inpcb {
 	uint32_t i_am_here_file;
 	uint32_t i_am_here_line;
 #endif
+	uint32_t def_vrf_id;
+#ifdef SCTP_MVRF
+	uint32_t *m_vrf_ids;
+	uint32_t num_vrfs;
+	uint32_t vrf_size;
+#endif
 	uint32_t total_sends;
 	uint32_t total_recvs;
 	uint32_t last_abort_code;
@@ -536,14 +541,12 @@ struct sctp_tcb {
 /*
  * Pre-5.x FreeBSD, NetBSD and others.
  */
-
 #include <netinet/sctp_lock_empty.h>
 #endif
 
 #if defined(_KERNEL)
 
 extern struct sctp_epinfo sctppcbinfo;
-extern int sctp_auto_asconf;
 
 int SCTP6_ARE_ADDR_EQUAL(struct in6_addr *a, struct in6_addr *b);
 
@@ -573,7 +576,7 @@ sctp_del_addr_from_vrf(uint32_t vrfid, struct sockaddr *addr,
 
 struct sctp_nets *sctp_findnet(struct sctp_tcb *, struct sockaddr *);
 
-struct sctp_inpcb *sctp_pcb_findep(struct sockaddr *, int, int);
+struct sctp_inpcb *sctp_pcb_findep(struct sockaddr *, int, int, uint32_t);
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 int sctp_inpcb_bind(struct socket *, struct sockaddr *, struct thread *);
@@ -590,7 +593,7 @@ sctp_findassociation_addr(struct mbuf *, int, int,
 
 struct sctp_tcb *
 sctp_findassociation_addr_sa(struct sockaddr *,
-    struct sockaddr *, struct sctp_inpcb **, struct sctp_nets **, int);
+    struct sockaddr *, struct sctp_inpcb **, struct sctp_nets **, int, uint32_t);
 
 void
 sctp_move_pcb_and_assoc(struct sctp_inpcb *, struct sctp_inpcb *,
@@ -681,11 +684,6 @@ sctp_initiate_iterator(inp_func inpf,
 		       end_func ef, 
 		       struct sctp_inpcb *, 
 		       uint8_t co_off);
-
-#ifdef __NetBSD__
-extern void in6_sin6_2_sin(struct sockaddr_in *, struct sockaddr_in6 *sin6);
-
-#endif
 
 #endif				/* _KERNEL */
 #endif				/* !__sctp_pcb_h__ */

@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.11 2007/02/12 23:24:31 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.12 2007/03/15 11:27:13 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -40,6 +40,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.11 2007/02/12 23:24:31 rrs
 #include <sys/proc.h>
 #endif
 #include <netinet/sctp_var.h>
+#include <netinet/sctp_sysctl.h>
 #include <netinet/sctp_header.h>
 #include <netinet/sctp_pcb.h>
 #include <netinet/sctputil.h>
@@ -51,10 +52,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.11 2007/02/12 23:24:31 rrs
 #include <netinet/sctp_asconf.h>
 #include <netinet/sctp_indata.h>
 #include <netinet/sctp_bsd_addr.h>
-
-#ifdef SCTP_DEBUG
-extern uint32_t sctp_debug_on;
-#endif
 
 #if defined(__APPLE__)
 #define APPLE_FILE_NO 3
@@ -1866,12 +1863,6 @@ struct sack_track sack_array[256] = {
 };
 
 
-
-
-extern int sctp_peer_chunk_oh;
-
-
-
 int
 sctp_is_address_in_scope(struct sctp_ifa *ifa,
     int ipv4_addr_legal,
@@ -2214,21 +2205,42 @@ sctp_is_ifa_addr_prefered(struct sctp_ifa *ifa,
 	if ((dest_is_priv == 0) && (dest_is_loop == 0)) {
 		dest_is_global = 1;
 	}
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_OUTPUT2) {	
+		printf("Is destination prefered:");
+		sctp_print_address(&ifa->address.sa);
+	}
+#endif	
 
 	/* Ok the address may be ok */
 	if (fam == AF_INET6) {
 		/* ok to use deprecated addresses? */
 		if (ifa->localifa_flags & SCTP_ADDR_IFA_UNUSEABLE) {
+#ifdef SCTP_DEBUG
+			if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {	
+				printf("NO:1\n");
+			}
+#endif
 			return (NULL);
 		}
 		if (ifa->src_is_priv) {
 			if(dest_is_loop) {
+#ifdef SCTP_DEBUG
+				if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
+					printf("NO:2\n");
+				}
+#endif
 				return (NULL);
 			}
 		}
 		if (ifa->src_is_glob) {
 
 			if (dest_is_loop) {
+#ifdef SCTP_DEBUG
+				if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
+					printf("NO:3\n");
+				}
+#endif
 				return (NULL);
 			}
 		}
@@ -2237,18 +2249,54 @@ sctp_is_ifa_addr_prefered(struct sctp_ifa *ifa,
 	 * this could in theory be done slicker (it used to be), but this
 	 * is straightforward and easier to validate :-)
 	 */
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
+		printf("src_loop:%d src_priv:%d src_glob:%d\n",
+		       ifa->src_is_loop, ifa->src_is_priv,
+		       ifa->src_is_glob);
+		printf("dest_loop:%d dest_priv:%d dest_glob:%d\n",
+		       dest_is_loop, dest_is_priv,
+		       dest_is_global);
+	}
+#endif
+
 	if ((ifa->src_is_loop) && (dest_is_priv)) {
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
+			printf("NO:4\n");
+		}
+#endif
 		return (NULL);
 	}
 	if ((ifa->src_is_glob) && (dest_is_priv )) {
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {	
+			printf("NO:5\n");
+		}
+#endif
 		return (NULL);
 	}
 	if ((ifa->src_is_loop) && (dest_is_global)) {
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
+			printf("NO:6\n");
+		}
+#endif
 		return (NULL);
 	}
 	if ((ifa->src_is_priv) && (dest_is_global)) {
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
+			printf("NO:7\n");
+		}
+#endif
 		return (NULL);
 	}
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
+		printf("YES\n");
+	}
+#endif
 	/* its a prefered address */
 	return (ifa);
 }
@@ -2751,7 +2799,7 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 							dest_is_loop, 
 							dest_is_priv, fam);
 #ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
+	if (sctp_debug_on & SCTP_DEBUG_OUTPUT2) {
 		printf("Found %d prefered source addresses\n", num_prefered);
 	}
 #endif
@@ -2775,7 +2823,7 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 	 * nth) and 0 is the first one, 1 is the second one etc...
 	 */
 #ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
+	if (sctp_debug_on & SCTP_DEBUG_OUTPUT2) {
 		printf("cur_addr_num:%d\n", cur_addr_num);
 	}
 #endif
@@ -2796,6 +2844,11 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 	 * no prefered fall through to plan_c.
 	 */
  bound_all_plan_b:
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_OUTPUT2) {
+		printf("Plan B?\n");
+	}
+#endif
 	LIST_FOREACH(sctp_ifn, &vrf->ifnlist, next_ifn) {
 		if (dest_is_loop == 0 && SCTP_IFN_IS_IFT_LOOP(sctp_ifn)) {
 			/* wrong base scope */
@@ -2807,7 +2860,7 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 		num_prefered = sctp_count_num_prefered_boundall(sctp_ifn, stcb, non_asoc_addr_ok,
 								dest_is_loop, dest_is_priv, fam);
 #ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
+		if (sctp_debug_on & SCTP_DEBUG_OUTPUT2) {
 			printf("Found ifn:%p %d prefered source addresses\n", ifn, num_prefered);
 		}
 #endif
@@ -2817,6 +2870,15 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 			 */
 			continue;
 		}
+#ifdef SCTP_DEBUG
+		if (sctp_debug_on & SCTP_DEBUG_OUTPUT2) {
+			printf("num prefered:%d on interface:%p cur_addr_num:%d\n", 
+			       num_prefered, 
+			       sctp_ifn,
+			       cur_addr_num);
+		}
+#endif
+
 		/*
 		 * Ok we have num_eligible_addr set with how many we can
 		 * use, this may vary from call to call due to addresses
@@ -2831,6 +2893,15 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 			continue;
 		if (net) {
 			net->indx_of_eligible_next_to_use = cur_addr_num + 1;
+#ifdef SCTP_DEBUG
+			if (sctp_debug_on & SCTP_DEBUG_OUTPUT2) {
+				printf("we selected %d\n",cur_addr_num);
+				printf("Source:");
+				sctp_print_address(&pass->address.sa);
+				printf("Dest:");
+				sctp_print_address(&net->ro._l_addr.sa);
+			}
+#endif
 		}
 		atomic_add_int(&pass->refcount, 1);
 		return (pass);
@@ -2839,6 +2910,12 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 
 	/* plan_c: See if we have an acceptable address on the emit interface
 	 */
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_OUTPUT2) {
+		printf("Plan C no prefered for Dest, acceptable for?\n");
+	}
+#endif
+
 	LIST_FOREACH(sctp_ifa, &emit_ifn->ifalist, next_ifa) {
 		if ((sctp_ifa->localifa_flags & SCTP_ADDR_DEFER_USE) && (non_asoc_addr_ok == 0)) 
 			continue;
@@ -2864,6 +2941,11 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 	 * Go out and see if we can find an acceptable address somewhere
 	 * amongst all interfaces.
 	 */
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_OUTPUT2) {
+		printf("Plan C fails plan D?\n");
+	}
+#endif
 	LIST_FOREACH(sctp_ifn, &vrf->ifnlist, next_ifn) {
 		if (dest_is_loop == 0 && SCTP_IFN_IS_IFT_LOOP(sctp_ifn)) {
 			/* wrong base scope */
@@ -3026,6 +3108,12 @@ sctp_source_address_selection(struct sctp_inpcb *inp,
 			dest_is_priv = 1;
 		}
 	}
+#ifdef SCTP_DEBUG
+	if (sctp_debug_on & SCTP_DEBUG_OUTPUT2) {	
+		printf("Select source for:");
+		sctp_print_address((struct sockaddr *)to);
+	}
+#endif	
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
 		/*
 		 * When bound to all if the address list is set it is a
@@ -3118,9 +3206,6 @@ sctp_find_cmsg(int c_type, void *data, struct mbuf *control, int cpsize)
 }
 
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__NetBSD__)
-
-extern int sctp_mbuf_threshold_count;
-
 
 struct mbuf *
 sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header, 
@@ -3338,8 +3423,6 @@ sctp_get_ect(struct sctp_tcb *stcb,
 		return (SCTP_ECT0_BIT);
 	}
 }
-
-extern int sctp_no_csum_on_loopback;
 
 static int
 sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
@@ -3754,6 +3837,9 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 										out_of_asoc_ok, 
 										vrf_id);
 				if (net->ro._s_addr == NULL) {
+#ifdef SCTP_DEBUG
+					printf("V6:No route to host\n");
+#endif
 					goto no_route;
 				}
 
@@ -3865,8 +3951,9 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 #endif				/* SCTP_DEBUG_OUTPUT */
 		SCTP_STAT_INCR(sctps_sendpackets);
 		SCTP_STAT_INCR_COUNTER64(sctps_outpackets);
-		if(ret)
+		if(ret) {
 			SCTP_STAT_INCR(sctps_senderrors);
+		}
 		if (net == NULL) {
 			/* Now if we had a temp route free it */
 			if (ro->ro_rt) {
@@ -5013,7 +5100,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		uint16_t random_len;
 
 		/* generate and add RANDOM parameter */
-		random_len = sctp_auth_random_len;
+		random_len = SCTP_AUTH_RANDOM_SIZE_DEFAULT;
 		random = (struct sctp_auth_random *)(mtod(m, caddr_t)+ SCTP_BUF_LEN(m));
 		random->ph.param_type = htons(SCTP_RANDOM);
 		p_len = sizeof(*random) + random_len;
@@ -5351,7 +5438,6 @@ sctp_get_frag_point(struct sctp_tcb *stcb,
 	}
 	return (siz);
 }
-extern unsigned int sctp_max_chunks_on_queue;
 
 static void 
 sctp_set_prsctp_policy(struct sctp_tcb *stcb,
@@ -6147,7 +6233,6 @@ sctp_clean_up_ctl(struct sctp_tcb *stcb, struct sctp_association *asoc)
 	}
 }
 
-extern int sctp_min_split_point;
 
 static __inline int 
 sctp_can_we_split_this(struct sctp_tcb *stcb,
@@ -6673,8 +6758,6 @@ sctp_move_to_an_alt(struct sctp_tcb *stcb,
 		}
 	}
 }
-
-extern int sctp_early_fr;
 
 int
 sctp_med_chunk_output(struct sctp_inpcb *inp,
@@ -10526,7 +10609,7 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
     struct sctp_nets *net,
     int max_send_len,
     int user_marks_eor,
-    int *errno,
+    int *error,
     int non_blocking)
 
 {
@@ -10543,14 +10626,12 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 	int s;
 	s = splsoftnet();
 #endif
-	*errno = 0;
-        /* Unless E_EOR mode is on, we must make
-	 * a send FIT in one call.
-	 */
+	*error = 0;
+        /* Unless E_EOR mode is on, we must make a send FIT in one call. */
 	if (((user_marks_eor == 0) && non_blocking) && 
 	    (uio->uio_resid > stcb->sctp_socket->so_snd.sb_hiwat)) {
 		/* It will NEVER fit */
-		*errno = EMSGSIZE;
+		*error = EMSGSIZE;
 		goto out_now;
 	}
 
@@ -10560,12 +10641,12 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 	    (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_RECEIVED) ||
 	    (asoc->state & SCTP_STATE_SHUTDOWN_PENDING)) {
 		/* got data while shutting down */
-		*errno = ECONNRESET;
+		*error = ECONNRESET;
 		goto out_now;
 	}
 	sp = SCTP_ZONE_GET(sctppcbinfo.ipi_zone_strmoq, struct sctp_stream_queue_pending);
-	if(sp == NULL) {
-		*errno = ENOMEM;
+	if (sp == NULL) {
+		*error = ENOMEM;
 		goto out_now;
 	}
 	SCTP_INCR_STRMOQ_COUNT();
@@ -10594,11 +10675,11 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 #if defined(SCTP_PER_SOCKET_LOCKING)
 	SCTP_SOCKET_UNLOCK(stcb->sctp_socket, 0);
 #endif
-	*errno = sctp_copy_one(sp, uio, resv_in_first);
+	*error = sctp_copy_one(sp, uio, resv_in_first);
 #if defined(SCTP_PER_SOCKET_LOCKING)
 	SCTP_SOCKET_LOCK(stcb->sctp_socket, 0);
 #endif
-	if(*errno) {
+	if (*error) {
 		sctp_free_a_strmoq(stcb, sp);
 		sp->data = NULL;
 		sp->net = NULL;
@@ -10687,7 +10768,6 @@ sctp_sosend(struct socket *so,
 }
 
 
-extern unsigned int sctp_add_more_threshold;
 int
 sctp_lower_sosend(struct socket *so,
     struct sockaddr *addr,
