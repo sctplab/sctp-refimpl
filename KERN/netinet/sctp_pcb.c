@@ -305,7 +305,7 @@ sctp_add_addr_to_vrf(uint32_t vrfid, void *ifn, uint32_t ifn_index,
 #endif
 		return (NULL);
 	}
-	memset(sctp_ifap, 0, sizeof(struct sctp_ifap));
+	memset(sctp_ifap, 0, sizeof(struct sctp_ifa));
 	sctp_ifap->ifn_p = sctp_ifnp;
 	atomic_add_int(&sctp_ifnp->refcount, 1);
 
