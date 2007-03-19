@@ -4567,7 +4567,10 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far, int hold_rlock,
 
 	atomic_add_int(&stcb->asoc.refcnt, 1);
 
-	if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+	if (stcb->asoc.state & (SCTP_STATE_ABOUT_TO_BE_FREED |
+				SCTP_STATE_SHUTDOWN_RECEIVED |
+				SCTP_STATE_SHUTDOWN_ACK_SENT)
+		) {
 		/* Pre-check If we are freeing no update */
 		goto no_lock;
 	}
