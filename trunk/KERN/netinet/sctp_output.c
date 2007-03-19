@@ -7454,15 +7454,10 @@ again_one_more_time:
 				*num_out += (ctl_cnt + bundle_at);
 			}
 			if (bundle_at) {
-				/* if (!net->rto_pending) { */
 				/* setup for a RTO measurement */
-				/* net->rto_pending = 1; */
 				tsns_sent = data_list[0]->rec.data.TSN_seq;
 
 				data_list[0]->do_rtt = 1;
-				/* } else { */
-				/* data_list[0]->do_rtt = 0; */
-				/* } */
 				SCTP_STAT_INCR_BY(sctps_senddata, bundle_at);
 				sctp_clean_up_datalist(stcb, asoc, data_list, bundle_at, net);
 				if (sctp_early_fr) {
