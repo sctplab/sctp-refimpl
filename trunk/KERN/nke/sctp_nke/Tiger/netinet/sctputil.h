@@ -33,7 +33,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctputil.h,v 1.9 2007/03/15 11:27:13 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctputil.h,v 1.10 2007/03/19 11:11:16 rrs Exp $");
 #endif
 #ifndef __sctputil_h__
 #define __sctputil_h__
@@ -57,6 +57,9 @@ void sctp_m_freem(struct mbuf *m);
 /*
  * Function prototypes
  */
+uint32_t
+sctp_get_ifa_hash_val(struct sockaddr *addr);
+
 struct sctp_ifa *
 sctp_find_ifa_in_ep(struct sctp_inpcb *inp, struct sockaddr *addr, int hold_lock);
 struct sctp_ifa *
