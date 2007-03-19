@@ -29,7 +29,7 @@
  */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.8 2007/03/15 11:27:13 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.9 2007/03/19 06:53:02 rrs Exp $");
 #endif
 #ifndef __sctp_os_bsd_h__
 #define __sctp_os_bsd_h__
@@ -128,6 +128,8 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.8 2007/03/15 11:27:13 rrs 
 #define SCTP_SIZE_OF_VRF_HASH 3
 #define SCTP_IFNAMSIZ IFNAMSIZ
 #define SCTP_DEFAULT_VRFID 0
+#define SCTP_VRF_HASH_SIZE 16
+
 
 #define SCTP_IFN_IS_IFT_LOOP(ifn) ((ifn)->ifn_type == IFT_LOOP)
 
