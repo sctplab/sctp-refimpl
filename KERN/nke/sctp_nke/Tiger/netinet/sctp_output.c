@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.12 2007/03/15 11:27:13 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.13 2007/03/19 06:53:02 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -7454,15 +7454,10 @@ again_one_more_time:
 				*num_out += (ctl_cnt + bundle_at);
 			}
 			if (bundle_at) {
-				/* if (!net->rto_pending) { */
 				/* setup for a RTO measurement */
-				/* net->rto_pending = 1; */
 				tsns_sent = data_list[0]->rec.data.TSN_seq;
 
 				data_list[0]->do_rtt = 1;
-				/* } else { */
-				/* data_list[0]->do_rtt = 0; */
-				/* } */
 				SCTP_STAT_INCR_BY(sctps_senddata, bundle_at);
 				sctp_clean_up_datalist(stcb, asoc, data_list, bundle_at, net);
 				if (sctp_early_fr) {

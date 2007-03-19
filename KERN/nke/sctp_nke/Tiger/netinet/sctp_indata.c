@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_indata.c,v 1.10 2007/03/15 11:27:13 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_indata.c,v 1.11 2007/03/19 06:53:01 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -2996,7 +2996,6 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 												   asoc,
 												   tp1->whoTo,
 												   &tp1->sent_rcv_time);
-									tp1->whoTo->rto_pending = 0;
 									tp1->do_rtt = 0;
 								}
 							}
@@ -3474,7 +3473,6 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				 * this guy had a RTO calculation pending on
 				 * it, cancel it
 				 */
-				tp1->whoTo->rto_pending = 0;
 				tp1->do_rtt = 0;
 			}
 			/* fix counts and things */
@@ -4146,12 +4144,11 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 							tp1->send_size;
 
 						/* update RTO too? */
-						if ((tp1->do_rtt) && (tp1->whoTo->rto_pending)) {
+						if (tp1->do_rtt) {
 							tp1->whoTo->RTO =
 								sctp_calculate_rto(stcb,
 										   asoc, tp1->whoTo,
 										   &tp1->sent_rcv_time);
-							tp1->whoTo->rto_pending = 0;
 							tp1->do_rtt = 0;
 						}
 					}
@@ -4709,7 +4706,6 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 							    sctp_calculate_rto(stcb,
 							    asoc, tp1->whoTo,
 							    &tp1->sent_rcv_time);
-							tp1->whoTo->rto_pending = 0;
 							tp1->do_rtt = 0;
 						}
 					}
