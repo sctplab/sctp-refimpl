@@ -3,5 +3,8 @@
 - Added min residual to better control split points for
   both how big a msg must be as well as how much needs
   to be left over.
+- With our new algo in place, we need to implicitly
+  set "end of msg" on the sp-> structure otherwise we
+  end up with "hung" associations.
 
 
