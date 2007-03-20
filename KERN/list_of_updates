@@ -1,3 +1,7 @@
-- add hash table to vrf for address lookup.
-- window update sacks sent incorrectly after
-  shutdown.
+- Found bug in min split point bundling which caused
+  incorrect, non-bundlable fragmentation.
+- Added min residual to better control split points for
+  both how big a msg must be as well as how much needs
+  to be left over.
+
+
