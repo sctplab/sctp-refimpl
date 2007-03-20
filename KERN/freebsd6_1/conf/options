@@ -393,6 +393,7 @@ SCTP_LOG_MAXBURST       opt_sctp.h
 SCTP_LOG_RWND           opt_sctp.h	
 SCTP_STAT_LOGGING	opt_sctp.h
 SCTP_CWND_LOGGING	opt_sctp.h
+SCTP_FLIGHT_LOGGING     opt_sctp.h
 SCTP_CWND_MONITOR	opt_sctp.h
 SCTP_BLK_LOGGING	opt_sctp.h
 SCTP_STR_LOGGING	opt_sctp.h
