@@ -292,6 +292,9 @@ struct mbuf *sctp_m_prepend_2(struct mbuf *m, int len, int how);
 	(sb).sb_mb = NULL;	\
 	(sb).sb_mbcnt = 0;
 
+#define SCTP_SB_LIMIT_RCV(so) so->so_rcv.sb_hiwat
+#define SCTP_SB_LIMIT_SND(so) so->so_snd.sb_hiwat
+
 /*
  * SCTP AUTH
  */

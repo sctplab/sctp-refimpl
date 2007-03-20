@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_indata.c,v 1.11 2007/03/19 06:53:01 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_indata.c,v 1.12 2007/03/20 10:23:11 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -76,7 +76,7 @@ sctp_set_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 	    asoc->size_on_reasm_queue == 0 &&
 	    asoc->size_on_all_streams == 0) {
 		/* Full rwnd granted */
-		asoc->my_rwnd = max(stcb->sctp_socket->so_rcv.sb_hiwat,
+		asoc->my_rwnd = max(SCTP_SB_LIMIT_RCV(stcb->sctp_socket),
 		    SCTP_MINIMAL_RWND);
 		return;
 	}
@@ -136,7 +136,7 @@ sctp_calc_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 	    asoc->size_on_reasm_queue == 0 &&
 	    asoc->size_on_all_streams == 0) {
 		/* Full rwnd granted */
-		calc = max(stcb->sctp_socket->so_rcv.sb_hiwat,
+		calc = max(SCTP_SB_LIMIT_RCV(stcb->sctp_socket),
 		    SCTP_MINIMAL_RWND);
 		return (calc);
 	}
