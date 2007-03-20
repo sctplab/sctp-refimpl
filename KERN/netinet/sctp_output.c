@@ -6246,7 +6246,7 @@ sctp_can_we_split_this(struct sctp_tcb *stcb,
 		/* you don't want enough */
 		return(0);
 	}
-	if ((goal_mtu - sctp_min_split_point) < sctp_min_residual) {
+	if ((sp->length <= goal_mtu) || ((sp->length-goal_mtu) < sctp_min_residual)) {
 		/* Sub-optimial residual don't split */
 		return(0);
 	}
