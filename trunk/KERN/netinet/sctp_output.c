@@ -6331,6 +6331,10 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		panic("sp length is 0?");
 	}
 	some_taken = sp->some_taken;
+	if(stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
+		sp->msg_is_complete = 1;
+	}
+
 	if ((goal_mtu >= sp->length) && (sp->msg_is_complete)) {
 		/* It all fits and its a complete msg, no brainer */
 		to_move = min(sp->length, frag_point);
