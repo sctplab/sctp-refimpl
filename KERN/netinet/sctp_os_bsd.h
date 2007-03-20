@@ -29,7 +29,7 @@
  */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.10 2007/03/19 11:11:16 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.11 2007/03/20 10:23:11 rrs Exp $");
 #endif
 #ifndef __sctp_os_bsd_h__
 #define __sctp_os_bsd_h__
@@ -303,6 +303,9 @@ typedef struct callout sctp_os_timer_t;
 	(sb).sb_cc = 0;		\
 	(sb).sb_mb = NULL;	\
 	(sb).sb_mbcnt = 0;
+
+#define SCTP_SB_LIMIT_RCV(so) so->so_rcv.sb_hiwat
+#define SCTP_SB_LIMIT_SND(so) so->so_snd.sb_hiwat
 
 /*
  * SCTP AUTH
