@@ -1315,7 +1315,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		        TAILQ_FOREACH(chk, &stcb->asoc.sent_queue, sctp_next) {
 				if(chk->sent < SCTP_DATAGRAM_RESEND) {
 					chk->sent = SCTP_DATAGRAM_RESEND;
-					stcb->asoc.sent_queue_retran_cnt++;
+					sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
 					spec_flag++;
 				}
 			}
