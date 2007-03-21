@@ -265,6 +265,12 @@ struct mbuf *sctp_m_prepend_2(struct mbuf *m, int len, int how);
 #define SCTP_IS_IT_BROADCAST(dst, m) in_broadcast(dst, m->m_pkthdr.rcvif)
 #define SCTP_IS_IT_LOOPBACK(m) ((m->m_pkthdr.rcvif == NULL) || (m->m_pkthdr.rcvif->if_type == IFT_LOOP))
 
+#define SCTP_ALIGN_TO_END(m, len) if(m->m_flags & M_PKTHDR) { \
+                                     MH_ALIGN(m, len); \
+                                  } else if ((m->m_flags & M_EXT) == 0) { \
+                                     M_ALIGN(m, len); \
+                                  }
+
 
 /*
  * This converts any input packet header into the chain of data holders,
@@ -291,6 +297,9 @@ struct mbuf *sctp_m_prepend_2(struct mbuf *m, int len, int how);
 	(sb).sb_cc = 0;		\
 	(sb).sb_mb = NULL;	\
 	(sb).sb_mbcnt = 0;
+
+#define SCTP_SB_LIMIT_RCV(so) so->so_rcv.sb_hiwat
+#define SCTP_SB_LIMIT_SND(so) so->so_snd.sb_hiwat
 
 /*
  * SCTP AUTH

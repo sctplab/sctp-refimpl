@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.14 2007/03/15 11:27:13 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.15 2007/03/20 10:23:11 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -1315,7 +1315,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		        TAILQ_FOREACH(chk, &stcb->asoc.sent_queue, sctp_next) {
 				if(chk->sent < SCTP_DATAGRAM_RESEND) {
 					chk->sent = SCTP_DATAGRAM_RESEND;
-					stcb->asoc.sent_queue_retran_cnt++;
+					sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
 					spec_flag++;
 				}
 			}

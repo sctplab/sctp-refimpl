@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.13 2007/03/19 06:53:02 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.14 2007/03/20 10:23:11 rrs Exp $");
 #endif
 #include <netinet/sctp_os.h>
 #ifdef __FreeBSD__
@@ -2839,6 +2839,10 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		uint32_t *value;
 
 		SCTP_CHECK_AND_CAST(value, optval, uint32_t, optsize);
+		if(*value > SCTP_SB_LIMIT_RCV(so)) {
+			error = EINVAL;
+			break;
+		}
 		inp->partial_delivery_point = *value;
 	}
 	break;

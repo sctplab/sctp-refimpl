@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_indata.c,v 1.11 2007/03/19 06:53:01 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_indata.c,v 1.12 2007/03/20 10:23:11 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -76,7 +76,7 @@ sctp_set_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 	    asoc->size_on_reasm_queue == 0 &&
 	    asoc->size_on_all_streams == 0) {
 		/* Full rwnd granted */
-		asoc->my_rwnd = max(stcb->sctp_socket->so_rcv.sb_hiwat,
+		asoc->my_rwnd = max(SCTP_SB_LIMIT_RCV(stcb->sctp_socket),
 		    SCTP_MINIMAL_RWND);
 		return;
 	}
@@ -136,7 +136,7 @@ sctp_calc_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 	    asoc->size_on_reasm_queue == 0 &&
 	    asoc->size_on_all_streams == 0) {
 		/* Full rwnd granted */
-		calc = max(stcb->sctp_socket->so_rcv.sb_hiwat,
+		calc = max(SCTP_SB_LIMIT_RCV(stcb->sctp_socket),
 		    SCTP_MINIMAL_RWND);
 		return (calc);
 	}
@@ -3259,7 +3259,11 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			    tp1->sent,
 			    SCTP_FR_LOG_STRIKE_CHUNK);
 #endif
-			tp1->sent++;
+			if(tp1->sent < SCTP_DATAGRAM_RESEND) {
+				tp1->sent++;
+				if(tp1->sent == SCTP_DATAGRAM_RESEND)
+					sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
+			}
 			if (sctp_cmt_on_off && sctp_cmt_use_dac) {
 				/*
 				 * CMT DAC algorithm: If SACK flag is set to
@@ -3270,7 +3274,10 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				 * not between two sacked TSNs, then mark by
 				 * one more.
 				 */
-				if ((tp1->sent != SCTP_DATAGRAM_RESEND) && (num_dests_sacked == 1) &&
+				/*
+				 * Jana FIX, does this mean you strike it twice (see code above?)
+				 */
+				if ((tp1->sent < SCTP_DATAGRAM_RESEND) && (num_dests_sacked == 1) &&
 				    compare_with_wrap(this_sack_lowest_newack, tp1->rec.data.TSN_seq, MAX_TSN)) {
 #ifdef SCTP_FR_LOGGING
 					sctp_log_fr(16 + num_dests_sacked,
@@ -3279,6 +3286,8 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					    SCTP_FR_LOG_STRIKE_CHUNK);
 #endif
 					tp1->sent++;
+					if(tp1->sent == SCTP_DATAGRAM_RESEND)
+						sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
 				}
 			}
 		} else if (tp1->rec.data.doing_fast_retransmit) {
@@ -3315,7 +3324,11 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					    tp1->sent,
 					    SCTP_FR_LOG_STRIKE_CHUNK);
 #endif
-					tp1->sent++;
+					if(tp1->sent < SCTP_DATAGRAM_RESEND) {
+						tp1->sent++;
+						if(tp1->sent == SCTP_DATAGRAM_RESEND)
+							sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
+					}
 					strike_flag = 1;
 					if (sctp_cmt_on_off && sctp_cmt_use_dac) {
 						/*
@@ -3331,7 +3344,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 						 * sacked TSNs, then mark by
 						 * one more.
 						 */
-						if ((tp1->sent != SCTP_DATAGRAM_RESEND) && (num_dests_sacked == 1) &&
+						if ((tp1->sent < SCTP_DATAGRAM_RESEND) && (num_dests_sacked == 1) &&
 						    compare_with_wrap(this_sack_lowest_newack, tp1->rec.data.TSN_seq, MAX_TSN)) {
 #ifdef SCTP_FR_LOGGING
 							sctp_log_fr(32 + num_dests_sacked,
@@ -3339,7 +3352,13 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 							    tp1->sent,
 							    SCTP_FR_LOG_STRIKE_CHUNK);
 #endif
-							tp1->sent++;
+							
+							if(tp1->sent < SCTP_DATAGRAM_RESEND) {
+								tp1->sent++;
+								if(tp1->sent == SCTP_DATAGRAM_RESEND)
+									sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
+							}
+
 						}
 					}
 				}
@@ -3364,7 +3383,11 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			    tp1->sent,
 			    SCTP_FR_LOG_STRIKE_CHUNK);
 #endif
-			tp1->sent++;
+			if(tp1->sent < SCTP_DATAGRAM_RESEND) {
+				tp1->sent++;
+				if(tp1->sent == SCTP_DATAGRAM_RESEND)
+					sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
+			}
 			if (sctp_cmt_on_off && sctp_cmt_use_dac) {
 				/*
 				 * CMT DAC algorithm: If SACK flag is set to
@@ -3375,7 +3398,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				 * not between two sacked TSNs, then mark by
 				 * one more.
 				 */
-				if ((tp1->sent != SCTP_DATAGRAM_RESEND) && (num_dests_sacked == 1) &&
+				if ((tp1->sent < SCTP_DATAGRAM_RESEND) && (num_dests_sacked == 1) &&
 				    compare_with_wrap(this_sack_lowest_newack, tp1->rec.data.TSN_seq, MAX_TSN)) {
 #ifdef SCTP_FR_LOGGING
 					sctp_log_fr(48 + num_dests_sacked,
@@ -3384,6 +3407,8 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					    SCTP_FR_LOG_STRIKE_CHUNK);
 #endif
 					tp1->sent++;
+					if(tp1->sent == SCTP_DATAGRAM_RESEND)
+						sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
 				}
 			}
 		}
