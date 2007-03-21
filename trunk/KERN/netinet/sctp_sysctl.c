@@ -93,6 +93,8 @@ uint32_t sctp_chunkscale = SCTP_CHUNKQUEUE_SCALE;
 
 uint32_t sctp_cmt_on_off = 0;
 uint32_t sctp_cmt_use_dac = 0;
+uint32_t sctp_max_retran_chunk = SCTPCTL_MAX_RETRAN_DEFAULT;
+
 
 uint32_t sctp_L2_abc_variable = 1;
 uint32_t sctp_early_fr = 0;
@@ -545,6 +547,12 @@ SYSCTL_INT(_net_inet_sctp, OID_AUTO, strict_data_order, CTLFLAG_RW,
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, min_residual, CTLFLAG_RW,
 	   &sctp_min_residual, 0,
 	   SCTPCTL_MIN_RESIDUAL_DESC);
+
+
+SYSCTL_INT(_net_inet_sctp, OID_AUTO, max_retran_chunk, CTLFLAG_RW,
+	   &sctp_max_retran_chunk, 0,
+	   SCTPCTL_MAX_RETRAN_DESC);
+
 
 
 
