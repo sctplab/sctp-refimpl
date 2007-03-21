@@ -3510,6 +3510,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			sctp_m_freem(m);
 			return (ENOMEM);
 		}
+		SCTP_ALIGN_TO_END(o_pak, sizeof(struct ip));
 		SCTP_BUF_LEN(SCTP_HEADER_TO_CHAIN(o_pak)) = sizeof(struct ip);
 		packet_length += sizeof(struct ip);
 		SCTP_ATTACH_CHAIN(o_pak, m, packet_length);
@@ -3767,6 +3768,8 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			sctp_m_freem(m);
 			return (ENOMEM);
 		}
+		SCTP_ALIGN_TO_END(o_pak, sizeof(struct ip6_hdr));
+
 		SCTP_BUF_LEN(SCTP_HEADER_TO_CHAIN(o_pak)) = sizeof(struct ip6_hdr);
 		packet_length += sizeof(struct ip6_hdr);
 		SCTP_ATTACH_CHAIN(o_pak, m, packet_length);
