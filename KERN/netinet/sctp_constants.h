@@ -924,6 +924,9 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.8 2007/03/15 11:27:13 r
 #define SCTP_UNSET_TSN_PRESENT(arry, gap) (arry[(gap >> 3)] &= ((~(0x01 << ((gap & 0x07)))) & 0xff))
 
 
+#define SCTP_RETRAN_DONE -1
+#define SCTP_RETRAN_EXIT -2
+
 /*
  * This value defines the number of vtag block time wait entry's per list
  * element.  Each entry will take 2 4 byte ints (and of course the overhead
