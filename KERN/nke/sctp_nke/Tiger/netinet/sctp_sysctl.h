@@ -385,17 +385,34 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_sysctl.h,v 1.1 2007/03/15 11:27:13 rrs 
 #define SCTPCTL_STRICT_DATA_ORDER_MAX	1
 #define SCTPCTL_STRICT_DATA_ORDER_DEFAULT	0
 
+/* min residual in in a data fragment leftover  */
+#define SCTPCTL_MIN_REDIDUAL		50
+#define SCTPCTL_MIN_RESIDUAL_DESC	"Minimum residual data chunk in second part of split"
+#define SCTPCTL_MIN_RESIDUAL_MIN	20
+#define SCTPCTL_MIN_RESIDUAL_MAX	65535
+#define SCTPCTL_MIN_RESIDUAL_DEFAULT	1452
+
+/* min residual in in a data fragment leftover  */
+#define SCTPCTL_MAX_RETRAN		51
+#define SCTPCTL_MAX_RETRAN_DESC		"Maximum times a unlucky chunk can be retran'd before assoc abort "
+#define SCTPCTL_MAX_RETRAN_MIN		0
+#define SCTPCTL_MAX_RETRAN_MAX		65535
+#define SCTPCTL_MAX_RETRAN_DEFAULT	30
+
+
+
+#ifdef SCTP_DEBUG
 /* debug: Configure debug output */
-#define SCTPCTL_DEBUG		50
+#define SCTPCTL_DEBUG		52
 #define SCTPCTL_DEBUG_DESC	"Configure debug output"
 #define SCTPCTL_DEBUG_MIN	0
 #define SCTPCTL_DEBUG_MAX	0xFFFFFFFF
 #define SCTPCTL_DEBUG_DEFAULT	0	
 
-#ifdef SCTP_DEBUG
-#define SCTPCTL_MAXID		    50
+
+#define SCTPCTL_MAXID		    52
 #else
-#define SCTPCTL_MAXID		    49
+#define SCTPCTL_MAXID		    51
 #endif
 
 /*
@@ -454,6 +471,8 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_sysctl.h,v 1.1 2007/03/15 11:27:13 rrs 
 	{ "add_more_on_output", CTLTYPE_INT }, \
 	{ "sys_resource", CTLTYPE_INT }, \
 	{ "asoc_resource", CTLTYPE_INT }, \
+	{ "min_residual", CTLTYPE_INT }, \
+	{ "max_retran_chunk", CTLTYPE_INT }, \
 	{ "debug", CTLTYPE_INT }, \
 }
 #else
@@ -508,6 +527,8 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_sysctl.h,v 1.1 2007/03/15 11:27:13 rrs 
 	{ "add_more_on_output", CTLTYPE_INT }, \
 	{ "sys_resource", CTLTYPE_INT }, \
 	{ "asoc_resource", CTLTYPE_INT }, \
+	{ "max_retran_chunk", CTLTYPE_INT }, \
+	{ "min_residual", CTLTYPE_INT }, \
 }
 #endif
 
@@ -566,6 +587,8 @@ extern uint32_t sctp_do_drain;
 extern uint32_t sctp_hb_maxburst;
 extern uint32_t sctp_abort_if_one_2_one_hits_limit;
 extern uint32_t sctp_strict_data_order;
+extern uint32_t sctp_min_residual;
+extern uint32_t sctp_max_retran_chunk;
 
 #if defined(SCTP_DEBUG)
 extern uint32_t sctp_debug_on;

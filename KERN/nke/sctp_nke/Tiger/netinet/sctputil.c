@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.15 2007/03/19 11:11:16 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.16 2007/03/20 10:23:11 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -1033,8 +1033,8 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 		asoc->ipv6_addr_legal = 0;
 	}
 
-	asoc->my_rwnd = max(m->sctp_socket->so_rcv.sb_hiwat, SCTP_MINIMAL_RWND);
-	asoc->peers_rwnd = m->sctp_socket->so_rcv.sb_hiwat;
+	asoc->my_rwnd = max(SCTP_SB_LIMIT_RCV(m->sctp_socket), SCTP_MINIMAL_RWND);
+	asoc->peers_rwnd = SCTP_SB_LIMIT_RCV(m->sctp_socket);
 
 	asoc->smallest_mtu = m->sctp_frag_point;
 	asoc->minrto = m->sctp_ep.sctp_minrto;
@@ -4731,7 +4731,7 @@ sctp_sorecvmsg(struct socket *so,
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
 #endif
-	rwnd_req = (so->so_rcv.sb_hiwat >> SCTP_RWND_HIWAT_SHIFT);
+	rwnd_req = (SCTP_SB_LIMIT_RCV(so) >> SCTP_RWND_HIWAT_SHIFT);
 	/* Must be at least a MTU's worth */
 	if(rwnd_req < SCTP_MIN_RWND)
 		rwnd_req = SCTP_MIN_RWND;

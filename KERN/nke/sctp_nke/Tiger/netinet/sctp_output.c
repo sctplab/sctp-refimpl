@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.13 2007/03/19 06:53:02 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.14 2007/03/20 10:23:11 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -3510,6 +3510,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			sctp_m_freem(m);
 			return (ENOMEM);
 		}
+		SCTP_ALIGN_TO_END(o_pak, sizeof(struct ip));
 		SCTP_BUF_LEN(SCTP_HEADER_TO_CHAIN(o_pak)) = sizeof(struct ip);
 		packet_length += sizeof(struct ip);
 		SCTP_ATTACH_CHAIN(o_pak, m, packet_length);
@@ -3767,6 +3768,8 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			sctp_m_freem(m);
 			return (ENOMEM);
 		}
+		SCTP_ALIGN_TO_END(o_pak, sizeof(struct ip6_hdr));
+
 		SCTP_BUF_LEN(SCTP_HEADER_TO_CHAIN(o_pak)) = sizeof(struct ip6_hdr);
 		packet_length += sizeof(struct ip6_hdr);
 		SCTP_ATTACH_CHAIN(o_pak, m, packet_length);
@@ -4082,7 +4085,7 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	/* place in my tag */
 	initm->msg.init.initiate_tag = htonl(stcb->asoc.my_vtag);
 	/* set up some of the credits. */
-	initm->msg.init.a_rwnd = htonl(max(inp->sctp_socket->so_rcv.sb_hiwat,
+	initm->msg.init.a_rwnd = htonl(max(SCTP_SB_LIMIT_RCV(inp->sctp_socket),
 	    SCTP_MINIMAL_RWND));
 
 	initm->msg.init.num_outbound_streams = htons(stcb->asoc.pre_open_streams);
@@ -5009,7 +5012,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	stc.my_vtag = initackm_out->msg.init.initiate_tag;
 
 	/* set up some of the credits. */
-	initackm_out->msg.init.a_rwnd = htonl(max(inp->sctp_socket->so_rcv.sb_hiwat, SCTP_MINIMAL_RWND));
+	initackm_out->msg.init.a_rwnd = htonl(max(SCTP_SB_LIMIT_RCV(inp->sctp_socket), SCTP_MINIMAL_RWND));
 	/* set what I want */
 	his_limit = ntohs(init_chk->init.num_inbound_streams);
 	/* choose what I want */
@@ -6246,6 +6249,10 @@ sctp_can_we_split_this(struct sctp_tcb *stcb,
 		/* you don't want enough */
 		return(0);
 	}
+	if ((sp->length <= goal_mtu) || ((sp->length-goal_mtu) < sctp_min_residual)) {
+		/* Sub-optimial residual don't split */
+		return(0);
+	}
 	if(sp->msg_is_complete == 0) {
 		if(eeor_on) {
 			/* If we are doing EEOR we need to always send
@@ -6327,6 +6334,10 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		panic("sp length is 0?");
 	}
 	some_taken = sp->some_taken;
+	if(stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
+		sp->msg_is_complete = 1;
+	}
+
 	if ((goal_mtu >= sp->length) && (sp->msg_is_complete)) {
 		/* It all fits and its a complete msg, no brainer */
 		to_move = min(sp->length, frag_point);
@@ -6703,7 +6714,7 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
 			}
 		}
 		total_moved += moved_how_much;
-		goal_mtu -= moved_how_much;
+		goal_mtu -= (moved_how_much + sizeof(struct sctp_data_chunk));
 		goal_mtu &= 0xfffffffc;
 	}
 	if(total_moved == 0) {
@@ -8090,7 +8101,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 	 * fwd-tsn with it all.
 	 */
 	if (TAILQ_EMPTY(&asoc->sent_queue)) {
-		return (-1);
+		return (SCTP_RETRAN_DONE);
 	}
 	if ((SCTP_GET_STATE(asoc) == SCTP_STATE_COOKIE_ECHOED) ||
 	    (SCTP_GET_STATE(asoc) == SCTP_STATE_COOKIE_WAIT)) {
@@ -8105,6 +8116,15 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 			/* No, not sent to this net or not ready for rtx */
 			continue;
 
+		}
+		if ((sctp_max_retran_chunk)  && (chk->snd_count >= sctp_max_retran_chunk)) {
+			/* Gak, we have exceeded max unlucky retran, abort! */
+			printf("Gak, chk->snd_count:%d >= max:%d - send abort\n",
+			       chk->snd_count,
+			       sctp_max_retran_chunk);
+			sctp_send_abort_tcb(stcb, NULL);
+			sctp_timer_start(SCTP_TIMER_TYPE_ASOCKILL, inp, stcb, NULL);
+			return (SCTP_RETRAN_EXIT);
 		}
 		/* pick up the net */
 		net = chk->whoTo;
@@ -8550,6 +8570,9 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 #ifdef SCTP_AUDITING_ENABLED
 			sctp_auditing(9, inp, stcb, NULL);
 #endif
+			if(ret == SCTP_RETRAN_EXIT) {
+				return (-1);
+			}
 			break;
 		}
 		if (from_where == SCTP_OUTPUT_FROM_T3) {
@@ -9794,7 +9817,7 @@ jump_out:
 	chk->rec.chunk_id.can_take_data = 1;
 	drp->ch.chunk_type = SCTP_PACKET_DROPPED;
 	drp->ch.chunk_length = htons(chk->send_size);
-	spc = stcb->sctp_socket->so_rcv.sb_hiwat;
+	spc = SCTP_SB_LIMIT_RCV(stcb->sctp_socket);
 	if (spc < 0) {
 		spc = 0;
 	}
@@ -10624,7 +10647,7 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 	*error = 0;
         /* Unless E_EOR mode is on, we must make a send FIT in one call. */
 	if (((user_marks_eor == 0) && non_blocking) && 
-	    (uio->uio_resid > stcb->sctp_socket->so_snd.sb_hiwat)) {
+	    (uio->uio_resid > SCTP_SB_LIMIT_SND(stcb->sctp_socket))) {
 		/* It will NEVER fit */
 		*error = EMSGSIZE;
 		goto out_now;
@@ -11108,7 +11131,7 @@ sctp_lower_sosend(struct socket *so,
 	asoc = &stcb->asoc;
 	/* would we block? */
 	if (non_blocking) {
-		if ((so->so_snd.sb_hiwat <
+		if ((SCTP_SB_LIMIT_SND(so) <
 		     (sndlen + stcb->asoc.total_output_queue_size)) ||
 		    (stcb->asoc.chunks_on_out_queue >
 		     sctp_max_chunks_on_queue)) {
@@ -11292,8 +11315,8 @@ sctp_lower_sosend(struct socket *so,
 		goto out_unlocked;
 	}
 	/* Calculate the maximum we can send */
-	if(so->so_snd.sb_hiwat > stcb->asoc.total_output_queue_size) {
-		max_len = so->so_snd.sb_hiwat -  stcb->asoc.total_output_queue_size;
+	if(SCTP_SB_LIMIT_SND(so) > stcb->asoc.total_output_queue_size) {
+		max_len = SCTP_SB_LIMIT_SND(so) -  stcb->asoc.total_output_queue_size;
 	} else {
 		max_len = 0;
 	}
@@ -11319,7 +11342,7 @@ sctp_lower_sosend(struct socket *so,
 	if (max_len < sctp_add_more_threshold) {
 		/* No room right no ! */
 		SOCKBUF_LOCK(&so->so_snd);
-		while(so->so_snd.sb_hiwat < (stcb->asoc.total_output_queue_size+sctp_add_more_threshold)) {
+		while(SCTP_SB_LIMIT_SND(so) < (stcb->asoc.total_output_queue_size+sctp_add_more_threshold)) {
 #ifdef SCTP_BLK_LOGGING
 			sctp_log_block(SCTP_BLOCK_LOG_INTO_BLKA,
 				       so, asoc, uio->uio_resid);
@@ -11348,8 +11371,8 @@ sctp_lower_sosend(struct socket *so,
 			}
 
 		}
-		if(so->so_snd.sb_hiwat > stcb->asoc.total_output_queue_size) {
-			max_len = so->so_snd.sb_hiwat -  stcb->asoc.total_output_queue_size;
+		if(SCTP_SB_LIMIT_SND(so) > stcb->asoc.total_output_queue_size) {
+			max_len = SCTP_SB_LIMIT_SND(so) -  stcb->asoc.total_output_queue_size;
 		} else {
 			max_len = 0;
 		}
@@ -11447,8 +11470,8 @@ sctp_lower_sosend(struct socket *so,
 			/* How much room do we have? */
 			struct mbuf *new_tail, *mm;
 
-			if(so->so_snd.sb_hiwat > stcb->asoc.total_output_queue_size)
-				max_len = so->so_snd.sb_hiwat - stcb->asoc.total_output_queue_size;
+			if(SCTP_SB_LIMIT_SND(so) > stcb->asoc.total_output_queue_size)
+				max_len = SCTP_SB_LIMIT_SND(so) - stcb->asoc.total_output_queue_size;
 			else
 				max_len = 0;
 
@@ -11519,8 +11542,8 @@ sctp_lower_sosend(struct socket *so,
 					hold_tcblock = 1;
 				}
 				sctp_prune_prsctp(stcb, asoc, srcv, sndlen);
-				if(so->so_snd.sb_hiwat > stcb->asoc.total_output_queue_size)
-					max_len = so->so_snd.sb_hiwat - stcb->asoc.total_output_queue_size;
+				if(SCTP_SB_LIMIT_SND(so) > stcb->asoc.total_output_queue_size)
+					max_len = SCTP_SB_LIMIT_SND(so) - stcb->asoc.total_output_queue_size;
 				else
 					max_len = 0;
 				if(max_len > 0) {
@@ -11640,7 +11663,7 @@ sctp_lower_sosend(struct socket *so,
 			 * size we KNOW we will get to sleep safely with the
 			 * wakeup flag in place.
 			 */
-			if(so->so_snd.sb_hiwat < (stcb->asoc.total_output_queue_size+sctp_add_more_threshold)) {
+			if(SCTP_SB_LIMIT_SND(so) < (stcb->asoc.total_output_queue_size+sctp_add_more_threshold)) {
 #ifdef SCTP_BLK_LOGGING
 				sctp_log_block(SCTP_BLOCK_LOG_INTO_BLK,
 					       so, asoc, uio->uio_resid);

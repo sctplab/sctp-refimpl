@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.15 2007/03/19 11:11:16 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.16 2007/03/20 10:23:11 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -1960,7 +1960,7 @@ sctp_inpcb_alloc(struct socket *so)
 	inp->sctp_socket = so;
 	inp->ip_inp.inp.inp_socket = so;
 
-	inp->partial_delivery_point = so->so_rcv.sb_hiwat >> SCTP_PARTIAL_DELIVERY_SHIFT;
+	inp->partial_delivery_point = SCTP_SB_LIMIT_RCV(so) >> SCTP_PARTIAL_DELIVERY_SHIFT;
 	inp->sctp_frag_point = SCTP_DEFAULT_MAXSEGMENT;
 
 #ifdef IPSEC
