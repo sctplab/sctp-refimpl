@@ -4870,7 +4870,7 @@ sctp_input(i_pak, va_alist)
 	if (((ch->chunk_type == SCTP_INITIATION) ||
 	     (ch->chunk_type == SCTP_INITIATION_ACK) ||
 	     (ch->chunk_type == SCTP_COOKIE_ECHO)) &&
-	    (SCTP_IS_IT_BROADCAST(ip->ip_dst, i_pak))) {
+	    (SCTP_IS_IT_BROADCAST(ip->ip_dst, m))) {
 		/* We only look at broadcast if its a
 		 * front state, All others we will 
 		 * not have a tcb for anyway.
@@ -4883,7 +4883,7 @@ sctp_input(i_pak, va_alist)
 		goto bad;
 	}
 	/* validate SCTP checksum */
-	if ((sctp_no_csum_on_loopback == 0) || !SCTP_IS_IT_LOOPBACK(i_pak)) {
+	if ((sctp_no_csum_on_loopback == 0) || !SCTP_IS_IT_LOOPBACK(m)) {
 		/*
 		 * we do NOT validate things from the loopback if the sysctl
 		 * is set to 1.
@@ -4930,7 +4930,7 @@ sctp_input(i_pak, va_alist)
 		sh->checksum = calc_check;
 	} else {
 sctp_skip_csum_4:
-		mlen = SCTP_HEADER_LEN(i_pak);
+		mlen = SCTP_HEADER_LEN(m);
 	}
 	/* validate mbuf chain length with IP payload length */
 #if defined(__NetBSD__) || defined(__OpenBSD__)
