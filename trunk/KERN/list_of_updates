@@ -6,7 +6,18 @@
 - With our new algo in place, we need to implicitly
   set "end of msg" on the sp-> structure otherwise we
   end up with "hung" associations.
+- Room reserved up front in IP header by pushing IP
+  header to back of mbuf.
+- Fix so FR's peg count of retransmissions needed.
+- Fix so an unlucky chunk that never gets across 
+  will kill the assoc via the kill timer and send an
+  abort too.
 - Fix bug in sctp_input which can result in a crash.
 - Do not strip off IP options anymore.
 - Clean up sctp_calculate_rto().
 - Get rid of unused sysctl.
+- Fixed so we discard all M-Cast
+- Fixed so port check done AFTER checksum
+- Fixed bug in fragmentation code that prevented
+  us from fragmenting a small complete message when
+  we needed to.
