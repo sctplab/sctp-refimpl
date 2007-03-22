@@ -6,5 +6,6 @@
 - With our new algo in place, we need to implicitly
   set "end of msg" on the sp-> structure otherwise we
   end up with "hung" associations.
-
+- Fix bug in sctp_input which can result in a crash.
+- Do not strip off IP options anymore.
 
