@@ -3172,16 +3172,18 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		if (stcb->asoc.peer_supports_prsctp) {
 			if ((PR_SCTP_TTL_ENABLED(tp1->flags)) && tp1->sent < SCTP_DATAGRAM_ACKED) {
 				/* Is it expired? */
+				if (
 #ifndef __FreeBSD__
-				if (timercmp(&now, &tp1->rec.data.timetodrop, >)) {
+					(timercmp(&now, &tp1->rec.data.timetodrop, >))
 #else
-				if (timevalcmp(&now, &tp1->rec.data.timetodrop, >)) {
+					(timevalcmp(&now, &tp1->rec.data.timetodrop, >))
 #endif
+					){
 					/* Yes so drop it */
 					if (tp1->data != NULL) {
 						sctp_release_pr_sctp_chunk(stcb, tp1,
-						    (SCTP_RESPONSE_TO_USER_REQ | SCTP_NOTIFY_DATAGRAM_SENT),
-						    &asoc->sent_queue);
+									   (SCTP_RESPONSE_TO_USER_REQ | SCTP_NOTIFY_DATAGRAM_SENT),
+									   &asoc->sent_queue);
 					}
 					tp1 = TAILQ_NEXT(tp1, sctp_next);
 					continue;
@@ -3193,8 +3195,8 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					/* Yes, so drop it */
 					if (tp1->data != NULL) {
 						sctp_release_pr_sctp_chunk(stcb, tp1,
-						    (SCTP_RESPONSE_TO_USER_REQ | SCTP_NOTIFY_DATAGRAM_SENT),
-						    &asoc->sent_queue);
+									   (SCTP_RESPONSE_TO_USER_REQ | SCTP_NOTIFY_DATAGRAM_SENT),
+									   &asoc->sent_queue);
 					}
 					tp1 = TAILQ_NEXT(tp1, sctp_next);
 					continue;
@@ -3248,7 +3250,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		 * @@@ JRI: Check for CMT
 		 * if (accum_moved && asoc->fast_retran_loss_recovery && (sctp_cmt_on_off == 0)) {
 		 */
-		 if (accum_moved && asoc->fast_retran_loss_recovery) {
+		if (accum_moved && asoc->fast_retran_loss_recovery) {
 			/*
 			 * Strike the TSN if in fast-recovery and cum-ack
 			 * moved.
@@ -3261,8 +3263,6 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 #endif
 			if(tp1->sent < SCTP_DATAGRAM_RESEND) {
 				tp1->sent++;
-				if(tp1->sent == SCTP_DATAGRAM_RESEND)
-					sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
 			}
 			if (sctp_cmt_on_off && sctp_cmt_use_dac) {
 				/*
@@ -3286,8 +3286,6 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					    SCTP_FR_LOG_STRIKE_CHUNK);
 #endif
 					tp1->sent++;
-					if(tp1->sent == SCTP_DATAGRAM_RESEND)
-						sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
 				}
 			}
 		} else if (tp1->rec.data.doing_fast_retransmit) {
@@ -3297,6 +3295,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			 * biggest_newly_acked must be higher than the
 			 * sending_seq at the time we did the FR.
 			 */
+			if (
 #ifdef SCTP_FR_TO_ALTERNATE
 			/*
 			 * If FR's go to new networks, then we must only do
@@ -3304,11 +3303,12 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			 * go to the same network (Armando's work) then its
 			 * ok to FR multiple times.
 			 */
-			if (asoc->numnets < 2)
+			(asoc->numnets < 2)
 #else
-			if (1)
+			(1)
 #endif
-			{
+				){
+
 				if ((compare_with_wrap(biggest_tsn_newly_acked,
 				    tp1->rec.data.fast_retran_tsn, MAX_TSN)) ||
 				    (biggest_tsn_newly_acked ==
@@ -3326,8 +3326,6 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 #endif
 					if(tp1->sent < SCTP_DATAGRAM_RESEND) {
 						tp1->sent++;
-						if(tp1->sent == SCTP_DATAGRAM_RESEND)
-							sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
 					}
 					strike_flag = 1;
 					if (sctp_cmt_on_off && sctp_cmt_use_dac) {
@@ -3344,21 +3342,20 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 						 * sacked TSNs, then mark by
 						 * one more.
 						 */
-						if ((tp1->sent < SCTP_DATAGRAM_RESEND) && (num_dests_sacked == 1) &&
-						    compare_with_wrap(this_sack_lowest_newack, tp1->rec.data.TSN_seq, MAX_TSN)) {
+						if ((tp1->sent < SCTP_DATAGRAM_RESEND) && 
+						    (num_dests_sacked == 1) &&
+						    compare_with_wrap(this_sack_lowest_newack, 
+								      tp1->rec.data.TSN_seq, MAX_TSN)) {
 #ifdef SCTP_FR_LOGGING
 							sctp_log_fr(32 + num_dests_sacked,
 							    tp1->rec.data.TSN_seq,
 							    tp1->sent,
 							    SCTP_FR_LOG_STRIKE_CHUNK);
 #endif
-							
 							if(tp1->sent < SCTP_DATAGRAM_RESEND) {
 								tp1->sent++;
-								if(tp1->sent == SCTP_DATAGRAM_RESEND)
-									sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
+								
 							}
-
 						}
 					}
 				}
@@ -3385,8 +3382,6 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 #endif
 			if(tp1->sent < SCTP_DATAGRAM_RESEND) {
 				tp1->sent++;
-				if(tp1->sent == SCTP_DATAGRAM_RESEND)
-					sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
 			}
 			if (sctp_cmt_on_off && sctp_cmt_use_dac) {
 				/*
@@ -3407,8 +3402,6 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					    SCTP_FR_LOG_STRIKE_CHUNK);
 #endif
 					tp1->sent++;
-					if(tp1->sent == SCTP_DATAGRAM_RESEND)
-						sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
 				}
 			}
 		}
@@ -3425,8 +3418,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				/* This is a subsequent FR */
 				SCTP_STAT_INCR(sctps_sendmultfastretrans);
 			}
-			sctp_ucount_incr(asoc->sent_queue_retran_cnt);
-
+			sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
 			if (sctp_cmt_on_off) {
 				/*
 				 * CMT: Using RTX_SSTHRESH policy for CMT.
