@@ -424,3 +424,116 @@ as well.
 .Xr sctp_opt_info 3 ,
 .Xr sctp_recvmsg 3 ,
 .Xr sctp_sendmsg 3
+
+sendspace - This variable defines the default send space used for a
+            socket buffer.
+recvspace - This variable defines the default receive space used for
+            each socket buffer.
+
+auto_asconf - This variable controls weather automatic dynamic address
+              addition and deletion will occur as addresses are added
+              and deleted from the system.
+
+ecn_enable - This variable controls if SCTP will perform ECN on all
+             associations when the peer also supports ECN.
+
+ecn_nonce  - This variable controls if SCTP will do ECN Nonce.
+
+trict_sacks - When strict sacks is enabled, Any sack that arrives
+              acknowledging data that as not been sent will cause
+              an immiedate abortive termination of the association.
+
+loopback_nocsum  - This variable will control if the checksum is
+                   NOT performed on the loopback device.
+
+strict_init: 1
+
+peer_chkoh: 256
+
+maxburst: 4
+
+maxchunks: 3200
+
+tcbhashsize: 1024
+
+sctp.min_split_point: 1452
+
+pcbhashsize: 256
+
+sys_resource: 1000
+
+asoc_resource: 10
+
+chunkscale: 10
+
+delayed_sack_time: 200
+
+sctp.sack_freq: 2
+
+heartbeat_interval: 30000
+
+pmtu_raise_time: 600
+
+shutdown_guard_time: 180
+
+secret_lifetime: 3600
+
+rto_max: 60000
+
+sctp.rto_min: 1000
+
+rto_initial: 3000
+
+init_rto_max: 60000
+
+sctp.valid_cookie_life: 60
+
+init_rtx_max: 8
+
+assoc_rtx_max: 10
+
+path_rtx_max: 4
+
+add_more_on_output: 1452
+
+nr_outgoing_streams: 10
+
+cmt_on_off: 0
+
+sctp.cmt_use_dac: 0
+
+cwnd_maxburst - This variable turns a version of max burst that uses
+                the cwnd to limit transmission. If this variable is
+                off, then the number of transmissions will be counted
+                in lieu of changing the cwnd.
+
+early_fast_retran - This option turns on the experimental early
+                    fast retransmission algorithm.
+
+early_fast_retran_msec - When early fast retransmit is enabled, this
+                         value represents the number of millisecond
+                         minimum that must have passed before a
+                         early retransmit is required.
+
+use_rttvar_congctrl: 0
+deadlock_detect: 0
+
+
+asconf_auth_nochk - The required behavior of the dynamic address extension
+                    is to abortively terminate any forming association that
+                    supports the dynamic address extension but does NOT
+                    support authentication. This variable when enabled 
+                    overrides that behavior and allows associations that
+                    have a peer that does not support authentication and
+                    does support the dynamic address extension.
+
+auth_disable
+auth_random_len: 32
+auth_hmac_id: 1
+abc_l_var: 1
+max_chained_mbufs: 5
+sctp.do_sctp_drain: 1
+hb_max_burst: 4
+abort_at_limit: 0
+strict_data_order: 0
+nat_friendly: 1
