@@ -2640,7 +2640,7 @@ sctp_calculate_rto(struct sctp_tcb *stcb,
 			    (u_long)old->tv_usec) / 1000;
 		} else if ((u_long)now.tv_usec < (u_long)old->tv_usec) {
 			/* impossible .. garbage in nothing out */
-			return (((net->lastsa >> 2) + net->lastsv) >> 1);
+			goto calc_rto;
 		} else if ((u_long)now.tv_usec == (u_long)old->tv_usec) {
 			/* We have to have 1 usec :-D 
 			 * this must be the loopback.
