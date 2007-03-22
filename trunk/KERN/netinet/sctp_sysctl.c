@@ -99,7 +99,6 @@ uint32_t sctp_max_retran_chunk = SCTPCTL_MAX_RETRAN_DEFAULT;
 uint32_t sctp_L2_abc_variable = 1;
 uint32_t sctp_early_fr = 0;
 uint32_t sctp_early_fr_msec = SCTP_MINFR_MSEC_TIMER;
-uint32_t sctp_use_rttvar_cc = 0;
 uint32_t sctp_says_check_for_deadlock = 0;
 uint32_t sctp_asconf_auth_nochk = 0;
 uint32_t sctp_auth_disable = 0;
@@ -492,10 +491,6 @@ SYSCTL_UINT(_net_inet_sctp, OID_AUTO, early_fast_retran, CTLFLAG_RW,
     &sctp_early_fr, 0,
     "Early Fast Retransmit with timer");
 
-SYSCTL_UINT(_net_inet_sctp, OID_AUTO, use_rttvar_congctrl, CTLFLAG_RW,
-    &sctp_use_rttvar_cc, 0,
-    "Use congestion control via rtt variation");
-
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, deadlock_detect, CTLFLAG_RW,
     &sctp_says_check_for_deadlock, 0,
     "SMP Deadlock detection on/off");
@@ -699,9 +694,6 @@ sctp_sysctl(name, namelen, oldp, oldlenp, newp, newlen)
 	case SCTPCTL_EARLY_FR:
 		return (sysctl_int(oldp, oldlenp, newp, newlen,
 		    &sctp_early_fr));
-	case SCTPCTL_RTTVAR_CC:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_use_rttvar_cc));
 	case SCTPCTL_DEADLOCK_DET:
 		return (sysctl_int(oldp, oldlenp, newp, newlen,
 		    &sctp_says_check_for_deadlock));
@@ -1059,14 +1051,6 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
 	    SYSCTL_DESCR("Early Fast Retransmit with timer"),
 	    NULL, 0, &sctp_early_fr, 0,
 	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_EARLY_FR,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "use_rttvar_congctrl",
-	    SYSCTL_DESCR("Use Congestion Control via rtt variation"),
-	    NULL, 0, &sctp_use_rttvar_cc, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_RTTVAR_CC,
 	    CTL_EOL);
 
 	sysctl_createv(clog, 0, NULL, NULL,
