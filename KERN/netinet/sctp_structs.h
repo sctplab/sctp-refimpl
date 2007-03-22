@@ -202,7 +202,6 @@ struct sctp_nets {
 	uint32_t cwnd;		/* actual cwnd */
 	uint32_t prev_cwnd;	/* cwnd before any processing */
 	uint32_t partial_bytes_acked;	/* in CA tracks when to incr a MTU */
-	uint32_t rtt_variance;
 	uint32_t prev_rtt;
 	/* tracking variables to avoid the aloc/free in sack processing */
 	unsigned int net_ack;
@@ -237,7 +236,6 @@ struct sctp_nets {
 	uint8_t fast_retran_loss_recovery;
 	uint8_t will_exit_fast_recovery;
 	/* Flags that probably can be combined into dest_state */
-	uint8_t rto_variance_dir;	/* increase = 1, decreasing = 0 */
 	uint8_t fast_retran_ip;	/* fast retransmit in progress */
 	uint8_t hb_responded;
 	uint8_t saw_newack;	/* CMT's SFR algorithm flag */
