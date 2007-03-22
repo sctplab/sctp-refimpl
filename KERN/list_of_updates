@@ -8,4 +8,5 @@
   end up with "hung" associations.
 - Fix bug in sctp_input which can result in a crash.
 - Do not strip off IP options anymore.
-
+- Clean up sctp_calculate_rto().
+- Get rid of unused sysctl.
