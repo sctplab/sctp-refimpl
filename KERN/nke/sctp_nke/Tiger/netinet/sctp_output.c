@@ -6338,18 +6338,18 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		sp->msg_is_complete = 1;
 	}
 
-	if ((goal_mtu >= sp->length) && (sp->msg_is_complete)) {
-		/* It all fits and its a complete msg, no brainer */
+	if (sp->msg_is_complete) {
+		/* The message is complete */
 		to_move = min(sp->length, frag_point);
 		if (to_move == sp->length) {
-			/* Getting it all */
+			/* All of it fits in the MTU */
 			if (sp->some_taken)  {
 				rcv_flags |= SCTP_DATA_LAST_FRAG;
 			} else {
 				rcv_flags |= SCTP_DATA_NOT_FRAG;
 			}
 		} else {
-			/* Not getting it all, frag point overrides */
+			/* Not all of it fits, we fragment */
 			if (sp->some_taken == 0) {
 				rcv_flags |= SCTP_DATA_FIRST_FRAG;
 			}
