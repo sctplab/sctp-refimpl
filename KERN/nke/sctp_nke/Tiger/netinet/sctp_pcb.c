@@ -2915,6 +2915,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	SCTP_ITERATOR_LOCK();
 #endif
 	so = inp->sctp_socket;
+			
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
 		/* been here before.. eeks.. get out of here */
 #if defined(__NetBSD__) || defined(__OpenBSD__)
