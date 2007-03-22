@@ -4826,9 +4826,6 @@ sctp_input(i_pak, va_alist)
 	SCTP_STAT_INCR(sctps_recvpackets);
 	SCTP_STAT_INCR_COUNTER64(sctps_inpackets);
 
-	/*
-	 * Strip IP options, we don't allow any in or out.
-	 */
 #ifdef SCTP_MBUF_LOGGING
 	/* Log in any input mbufs */
 	mat = m;
@@ -4839,10 +4836,7 @@ sctp_input(i_pak, va_alist)
 		mat = SCTP_BUF_NEXT(mat);
 	}
 #endif
-	if ((size_t)iphlen > sizeof(struct ip)) {
-		ip_stripoptions(m, (struct mbuf *)0);
-		iphlen = sizeof(struct ip);
-	}
+
 	/*
 	 * Get IP, SCTP, and first chunk header together in first mbuf.
 	 */
