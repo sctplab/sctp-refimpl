@@ -8353,9 +8353,6 @@ one_chunk_around:
 				sctp_ucount_decr(asoc->sent_queue_retran_cnt);
 				/* record the time */
 				data_list[i]->sent_rcv_time = asoc->time_last_sent;
-				if (asoc->sent_queue_retran_cnt < 0) {
-					asoc->sent_queue_retran_cnt = 0;
-				}
 				if (data_list[i]->book_size_scale) {
 					/*
 					 * need to double the book size on
