@@ -4335,6 +4335,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 					TAILQ_INSERT_HEAD(&asoc->send_queue, tp1, sctp_next);
 					asoc->sent_queue_cnt--;
 					asoc->send_queue_cnt++;
+					asoc->total_flight_count--;
 					break;
 				}
 			}
@@ -5354,6 +5355,7 @@ skip_segments:
 					TAILQ_INSERT_HEAD(&asoc->send_queue, tp1, sctp_next);
 					asoc->sent_queue_cnt--;
 					asoc->send_queue_cnt++;
+					asoc->total_flight_count--;
 					break;
 				}
 			}
