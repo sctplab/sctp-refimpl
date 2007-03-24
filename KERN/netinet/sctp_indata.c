@@ -4056,6 +4056,8 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 	struct sctp_nets *net;
 	struct sctp_association *asoc;
 	struct sctp_tmit_chunk *tp1, *tp2;
+	uint32_t old_rwnd;
+	int win_probe_recovery = 0;
 	int j;
 
 	SCTP_TCB_LOCK_ASSERT(stcb);
@@ -4112,7 +4114,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 		}
 	}
 
-
+	old_rwnd = asoc->peers_rwnd;
 	asoc->this_sack_highest_gap = cumack;
 	stcb->asoc.overall_error_count = 0;
 	if(compare_with_wrap(cumack, asoc->last_acked_seq,  MAX_TSN)) {
@@ -4316,12 +4318,14 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 		/* SWS sender side engages */
 		asoc->peers_rwnd = 0;
 	}
-
+	if(asoc->peers_rwnd > old_rwnd) {
+		win_probe_recovery = 1;
+	}
 	/* Now assure a timer where data is queued at */
  again:
 	j = 0;
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
-		if(net->window_probe) {
+		if (win_probe_recovery && (net->window_probe)) {
 			net->window_probe = 0;
 			/* Find first chunk that was used with window probe and clear the sent */
 			TAILQ_FOREACH(tp1, &asoc->sent_queue, sctp_next) {
@@ -4482,7 +4486,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 
 void
 sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
-    struct sctp_nets *net_from, int *abort_now)
+		 struct sctp_nets *net_from, int *abort_now)
 {
 	struct sctp_association *asoc;
 	struct sctp_sack *sack;
@@ -4495,7 +4499,8 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	long j;
 	int accum_moved = 0;
 	int will_exit_fast_recovery = 0;
-	uint32_t a_rwnd;
+	uint32_t a_rwnd, old_rwnd;
+	int win_probe_recovery = 0;
 	struct sctp_nets *net = NULL;
 	int nonce_sum_flag, ecn_seg_sums = 0;
 	uint8_t reneged_all = 0;
@@ -4546,7 +4551,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	cmt_dac_flag = ch->ch.chunk_flags & SCTP_SACK_CMT_DAC;
 	num_dup = ntohs(sack->num_dup_tsns);
 
-
+	old_rwnd = stcb->asoc.peers_rwnd;
 	stcb->asoc.overall_error_count = 0;
 	asoc = &stcb->asoc;
 #ifdef SCTP_SACK_LOGGING
@@ -5334,6 +5339,9 @@ skip_segments:
 		/* SWS sender side engages */
 		asoc->peers_rwnd = 0;
 	}
+	if(asoc->peers_rwnd > old_rwnd) {
+		win_probe_recovery = 1;
+	}
 
 	/*
 	 * Now we must setup so we have a timer up for anyone with
@@ -5342,9 +5350,14 @@ skip_segments:
  again:
 	j = 0;
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
-		if(net->window_probe) {
+		if (win_probe_recovery && (net->window_probe)) {
 			net->window_probe = 0;
-			/* Find first chunk that was used with window probe and clear the sent */
+			/*-
+			 * Find first chunk that was used with 
+			 * window probe and clear the event. Put
+			 * it back into the send queue as if has
+			 * not been sent.
+			 */
 			TAILQ_FOREACH(tp1, &asoc->sent_queue, sctp_next) {
 				if(tp1->window_probe) {
 					tp1->sent = SCTP_DATAGRAM_UNSENT;
