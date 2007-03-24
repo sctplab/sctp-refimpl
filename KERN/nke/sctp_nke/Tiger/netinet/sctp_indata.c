@@ -4060,6 +4060,11 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 
 	SCTP_TCB_LOCK_ASSERT(stcb);
 	asoc = &stcb->asoc;
+	if(compare_with_wrap(asoc->last_acked_seq, cumack, MAX_TSN)) {
+		/* old ack */
+		return;
+	}
+
 	/* First setup for CC stuff */
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 		net->prev_cwnd = net->cwnd;
@@ -4110,116 +4115,118 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 
 	asoc->this_sack_highest_gap = cumack;
 	stcb->asoc.overall_error_count = 0;
-	/* process the new consecutive TSN first */
-	tp1 = TAILQ_FIRST(&asoc->sent_queue);
-	while (tp1) {
-		tp2 = TAILQ_NEXT(tp1, sctp_next);
-		if (compare_with_wrap(cumack, tp1->rec.data.TSN_seq,
-				      MAX_TSN) ||
-		    cumack == tp1->rec.data.TSN_seq) {
-			if (tp1->sent != SCTP_DATAGRAM_UNSENT) {
-				/*
-				 * ECN Nonce: Add the nonce to the sender's
-				 * nonce sum
-				 */
-				asoc->nonce_sum_expect_base += tp1->rec.data.ect_nonce;
-				if (tp1->sent < SCTP_DATAGRAM_ACKED) {
+	if(compare_with_wrap(cumack, asoc->last_acked_seq,  MAX_TSN)) {
+		/* process the new consecutive TSN first */
+		tp1 = TAILQ_FIRST(&asoc->sent_queue);
+		while (tp1) {
+			tp2 = TAILQ_NEXT(tp1, sctp_next);
+			if (compare_with_wrap(cumack, tp1->rec.data.TSN_seq,
+					      MAX_TSN) ||
+			    cumack == tp1->rec.data.TSN_seq) {
+				if (tp1->sent != SCTP_DATAGRAM_UNSENT) {
 					/*
-					 * If it is less than ACKED, it is
-					 * now no-longer in flight. Higher
-					 * values may occur during marking
+					 * ECN Nonce: Add the nonce to the sender's
+					 * nonce sum
 					 */
+					asoc->nonce_sum_expect_base += tp1->rec.data.ect_nonce;
+					if (tp1->sent < SCTP_DATAGRAM_ACKED) {
+						/*
+						 * If it is less than ACKED, it is
+						 * now no-longer in flight. Higher
+						 * values may occur during marking
+						 */
 #ifdef SCTP_FLIGHT_LOGGING
-					sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN, 
-						       tp1->whoTo->flight_size,
-						       tp1->book_size, 
-						       (uintptr_t)stcb, 
-						       tp1->rec.data.TSN_seq);
+						sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN, 
+							       tp1->whoTo->flight_size,
+							       tp1->book_size, 
+							       (uintptr_t)stcb, 
+							       tp1->rec.data.TSN_seq);
 #endif
 
-					if (tp1->whoTo->flight_size >= tp1->book_size) {
-						tp1->whoTo->flight_size -= tp1->book_size;
-	 				} else {
-						tp1->whoTo->flight_size = 0;
-			 		}
-
-		 			if (asoc->total_flight >= tp1->book_size) {
- 						asoc->total_flight -= tp1->book_size;
-	 					if (asoc->total_flight_count > 0)
- 							asoc->total_flight_count--;
- 					} else {
-	 					asoc->total_flight = 0;
- 						asoc->total_flight_count = 0;
- 					}
-					tp1->whoTo->net_ack += tp1->send_size;
- 					if (tp1->snd_count < 2) {
-						/*
-	 					 * True non-retransmited
-		 				 * chunk
-			 			 */
- 						tp1->whoTo->net_ack2 +=
-							tp1->send_size;
-
-						/* update RTO too? */
-						if (tp1->do_rtt) {
-							tp1->whoTo->RTO =
-								sctp_calculate_rto(stcb,
-										   asoc, tp1->whoTo,
-										   &tp1->sent_rcv_time);
-							tp1->do_rtt = 0;
+						if (tp1->whoTo->flight_size >= tp1->book_size) {
+							tp1->whoTo->flight_size -= tp1->book_size;
+						} else {
+							tp1->whoTo->flight_size = 0;
 						}
-					}
-					/*
-					 * CMT: CUCv2 algorithm. From the
-					 * cumack'd TSNs, for each TSN being
-					 * acked for the first time, set the
-					 * following variables for the
-					 * corresp destination.
-					 * new_pseudo_cumack will trigger a
-					 * cwnd update.
-					 * find_(rtx_)pseudo_cumack will
-					 * trigger search for the next
-					 * expected (rtx-)pseudo-cumack.
-					 */
-					tp1->whoTo->new_pseudo_cumack = 1;
-					tp1->whoTo->find_pseudo_cumack = 1;
-					tp1->whoTo->find_rtx_pseudo_cumack = 1;
+
+						if (asoc->total_flight >= tp1->book_size) {
+							asoc->total_flight -= tp1->book_size;
+							if (asoc->total_flight_count > 0)
+								asoc->total_flight_count--;
+						} else {
+							asoc->total_flight = 0;
+							asoc->total_flight_count = 0;
+						}
+						tp1->whoTo->net_ack += tp1->send_size;
+						if (tp1->snd_count < 2) {
+							/*
+							 * True non-retransmited
+							 * chunk
+							 */
+							tp1->whoTo->net_ack2 +=
+								tp1->send_size;
+
+							/* update RTO too? */
+							if (tp1->do_rtt) {
+								tp1->whoTo->RTO =
+									sctp_calculate_rto(stcb,
+											   asoc, tp1->whoTo,
+											   &tp1->sent_rcv_time);
+								tp1->do_rtt = 0;
+							}
+						}
+						/*
+						 * CMT: CUCv2 algorithm. From the
+						 * cumack'd TSNs, for each TSN being
+						 * acked for the first time, set the
+						 * following variables for the
+						 * corresp destination.
+						 * new_pseudo_cumack will trigger a
+						 * cwnd update.
+						 * find_(rtx_)pseudo_cumack will
+						 * trigger search for the next
+						 * expected (rtx-)pseudo-cumack.
+						 */
+						tp1->whoTo->new_pseudo_cumack = 1;
+						tp1->whoTo->find_pseudo_cumack = 1;
+						tp1->whoTo->find_rtx_pseudo_cumack = 1;
 
 #ifdef SCTP_CWND_LOGGING
-					sctp_log_cwnd(stcb, tp1->whoTo, tp1->rec.data.TSN_seq, SCTP_CWND_LOG_FROM_SACK);
+						sctp_log_cwnd(stcb, tp1->whoTo, tp1->rec.data.TSN_seq, SCTP_CWND_LOG_FROM_SACK);
 #endif
+					}
+					if (tp1->sent == SCTP_DATAGRAM_RESEND) {
+						sctp_ucount_decr(asoc->sent_queue_retran_cnt);
+					}
+					if (tp1->rec.data.chunk_was_revoked) {
+						/* deflate the cwnd */
+						tp1->whoTo->cwnd -= tp1->book_size;
+						tp1->rec.data.chunk_was_revoked = 0;
+					}
+					tp1->sent = SCTP_DATAGRAM_ACKED;
 				}
-				if (tp1->sent == SCTP_DATAGRAM_RESEND) {
-					sctp_ucount_decr(asoc->sent_queue_retran_cnt);
-				}
-				if (tp1->rec.data.chunk_was_revoked) {
-					/* deflate the cwnd */
-					tp1->whoTo->cwnd -= tp1->book_size;
-					tp1->rec.data.chunk_was_revoked = 0;
-				}
-				tp1->sent = SCTP_DATAGRAM_ACKED;
+			} else {
+				break;
 			}
-		} else {
-			break;
-		}
-		TAILQ_REMOVE(&asoc->sent_queue, tp1, sctp_next);
-		if (tp1->data) {
-			sctp_free_bufspace(stcb, asoc, tp1, 1);
-			sctp_m_freem(tp1->data);
-		}
+			TAILQ_REMOVE(&asoc->sent_queue, tp1, sctp_next);
+			if (tp1->data) {
+				sctp_free_bufspace(stcb, asoc, tp1, 1);
+				sctp_m_freem(tp1->data);
+			}
 #ifdef SCTP_SACK_LOGGING
-		sctp_log_sack(asoc->last_acked_seq,
-			      cumack,
-			      tp1->rec.data.TSN_seq,
-			      0,
-			      0,
-			      SCTP_LOG_FREE_SENT);
+			sctp_log_sack(asoc->last_acked_seq,
+				      cumack,
+				      tp1->rec.data.TSN_seq,
+				      0,
+				      0,
+				      SCTP_LOG_FREE_SENT);
 #endif
-		tp1->data = NULL;
-		asoc->sent_queue_cnt--;
-		sctp_free_remote_addr(tp1->whoTo);
-		sctp_free_a_chunk(stcb, tp1);
-		tp1 = tp2;
+			tp1->data = NULL;
+			asoc->sent_queue_cnt--;
+			sctp_free_remote_addr(tp1->whoTo);
+			sctp_free_a_chunk(stcb, tp1);
+			tp1 = tp2;
+		}
 	}
 	if (stcb->sctp_socket) {
 		SOCKBUF_LOCK(&stcb->sctp_socket->so_snd);
@@ -4233,9 +4240,12 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 #endif
 	}
 
-	if(asoc->last_acked_seq != cumack)
+
+	if (asoc->last_acked_seq != cumack)
 		sctp_cwnd_update(stcb, asoc, 1, 0, 0);
+
 	asoc->last_acked_seq = cumack;
+
 	if (TAILQ_EMPTY(&asoc->sent_queue)) {
 		/* nothing left in-flight */
 		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
@@ -4311,6 +4321,25 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
  again:
 	j = 0;
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
+		if(net->window_probe) {
+			net->window_probe = 0;
+			/* Find first chunk that was used with window probe and clear the sent */
+			TAILQ_FOREACH(tp1, &asoc->sent_queue, sctp_next) {
+				if(tp1->window_probe) {
+					/* move back to data send queue */
+					tp1->sent = SCTP_DATAGRAM_UNSENT;
+					tp1->window_probe = 0;
+					net->flight_size -= tp1->book_size;
+					asoc->total_flight -= tp1->book_size;
+					TAILQ_REMOVE(&asoc->send_queue, tp1, sctp_next);
+					TAILQ_INSERT_HEAD(&asoc->send_queue, tp1, sctp_next);
+					asoc->sent_queue_cnt--;
+					asoc->send_queue_cnt++;
+					asoc->total_flight_count--;
+					break;
+				}
+			}
+		}
 		if(net->flight_size) {
 			int to_ticks;
 			if (net->RTO == 0) {
@@ -5313,6 +5342,24 @@ skip_segments:
  again:
 	j = 0;
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
+		if(net->window_probe) {
+			net->window_probe = 0;
+			/* Find first chunk that was used with window probe and clear the sent */
+			TAILQ_FOREACH(tp1, &asoc->sent_queue, sctp_next) {
+				if(tp1->window_probe) {
+					tp1->sent = SCTP_DATAGRAM_UNSENT;
+					tp1->window_probe = 0;
+					net->flight_size -= tp1->book_size;
+					asoc->total_flight -= tp1->book_size;
+					TAILQ_REMOVE(&asoc->send_queue, tp1, sctp_next);
+					TAILQ_INSERT_HEAD(&asoc->send_queue, tp1, sctp_next);
+					asoc->sent_queue_cnt--;
+					asoc->send_queue_cnt++;
+					asoc->total_flight_count--;
+					break;
+				}
+			}
+		}
 		if(net->flight_size) {
 			j++;
 			sctp_timer_start(SCTP_TIMER_TYPE_SEND,
