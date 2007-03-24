@@ -4326,10 +4326,15 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 			/* Find first chunk that was used with window probe and clear the sent */
 			TAILQ_FOREACH(tp1, &asoc->sent_queue, sctp_next) {
 				if(tp1->window_probe) {
+					/* move back to data send queue */
 					tp1->sent = SCTP_DATAGRAM_UNSENT;
 					tp1->window_probe = 0;
 					net->flight_size -= tp1->book_size;
 					asoc->total_flight -= tp1->book_size;
+					TAILQ_REMOVE(&asoc->send_queue, tp1, sctp_next);
+					TAILQ_INSERT_HEAD(&asoc->send_queue, tp1, sctp_next);
+					asoc->sent_queue_cnt--;
+					asoc->send_queue_cnt++;
 					break;
 				}
 			}
@@ -5345,6 +5350,10 @@ skip_segments:
 					tp1->window_probe = 0;
 					net->flight_size -= tp1->book_size;
 					asoc->total_flight -= tp1->book_size;
+					TAILQ_REMOVE(&asoc->send_queue, tp1, sctp_next);
+					TAILQ_INSERT_HEAD(&asoc->send_queue, tp1, sctp_next);
+					asoc->sent_queue_cnt--;
+					asoc->send_queue_cnt++;
 					break;
 				}
 			}
