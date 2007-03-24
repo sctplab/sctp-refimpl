@@ -444,9 +444,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.8 2007/03/15 11:27:13 r
 #define SCTP_STICKY_OPTIONS_MASK	0x0c
 
 
-/* Chunk flags */
-#define SCTP_WINDOW_PROBE	0x01
-
 /*
  * SCTP states for internal state machine XXX (should match "user" values)
  */
