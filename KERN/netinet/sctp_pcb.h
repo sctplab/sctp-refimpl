@@ -198,7 +198,7 @@ struct sctp_epinfo {
 
 	struct sctpasochead *sctp_restarthash;
 	u_long hashrestartmark;
-	/*
+	/*-
 	 * The TCP model represents a substantial overhead in that we get an
 	 * additional hash table to keep explicit connections in. The
 	 * listening TCP endpoint will exist in the usual ephash above and
@@ -308,7 +308,7 @@ struct sctp_epinfo {
 #endif
 };
 
-/*
+/*-
  * Here we have all the relevant information for each SCTP entity created. We
  * will need to modify this as approprate. We also need to figure out how to
  * access /dev/random.
@@ -380,7 +380,7 @@ struct sctp_pcb {
 #define sctp_lport ip_inp.inp.inp_lport
 
 struct sctp_inpcb {
-	/*
+	/*-
 	 * put an inpcb in front of it all, kind of a waste but we need to
 	 * for compatability with all the other stuff.
 	 */
@@ -427,7 +427,8 @@ struct sctp_inpcb {
 	uint32_t partial_delivery_point;
 	uint32_t sctp_context;
 	struct sctp_sndrcvinfo def_send;
-	/* These three are here for the sosend_dgram
+	/*-
+	 * These three are here for the sosend_dgram
 	 * (pkt, pkt_last and control).
 	 * routine. However, I don't think anyone in
 	 * the current FreeBSD kernel calls this. So
@@ -504,7 +505,7 @@ struct sctp_tcb {
 	struct sctp_block_entry *block_entry;	/* pointer locked by  socket
 						 * send buffer */
 	struct sctp_association asoc;
-	/*
+	/*-
 	 * freed_by_sorcv_sincelast is protected by the sockbuf_lock NOT the
 	 * tcb_lock. Its special in this way to help avoid extra mutex calls
 	 * in the reading of data.
@@ -602,7 +603,7 @@ void
 sctp_move_pcb_and_assoc(struct sctp_inpcb *, struct sctp_inpcb *,
     struct sctp_tcb *);
 
-/*
+/*-
  * For this call ep_addr, the to is the destination endpoint address of the
  * peer (relative to outbound). The from field is only used if the TCP model
  * is enabled and helps distingush amongst the subset bound (non-boundall).
@@ -673,7 +674,7 @@ int sctp_is_vtag_good(struct sctp_inpcb *, uint32_t, struct timeval *);
 
 int sctp_destination_is_reachable(struct sctp_tcb *, struct sockaddr *);
 
-/*
+/*-
  * Null in last arg inpcb indicate run on ALL ep's. Specific inp in last arg
  * indicates run on ONLY assoc's of the specified endpoint.
  */
