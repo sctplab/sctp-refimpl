@@ -743,7 +743,9 @@ sctp6_abort(struct socket *so)
 		 * here for the accounting/select.
 		 */
 		SCTP_SB_CLEAR(so->so_rcv);
-#if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+		so->so_usecount--;
+#else
 		/* Now null out the reference, we are completely detached. */
 		so->so_pcb = NULL;
 #endif
