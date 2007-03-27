@@ -22,3 +22,5 @@
   us from fragmenting a small complete message when
   we needed to.
 - Tighten AUTH protocol error checks during INIT/INIT-ACK exchange
+- Improve the handling of window probes, which were
+  dropped by the receiver.
