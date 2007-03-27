@@ -4335,7 +4335,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 					tp1->window_probe = 0;
 					net->flight_size -= tp1->book_size;
 					asoc->total_flight -= tp1->book_size;
-					TAILQ_REMOVE(&asoc->send_queue, tp1, sctp_next);
+					TAILQ_REMOVE(&asoc->sent_queue, tp1, sctp_next);
 					TAILQ_INSERT_HEAD(&asoc->send_queue, tp1, sctp_next);
 					asoc->sent_queue_cnt--;
 					asoc->send_queue_cnt++;
@@ -5364,7 +5364,7 @@ skip_segments:
 					tp1->window_probe = 0;
 					net->flight_size -= tp1->book_size;
 					asoc->total_flight -= tp1->book_size;
-					TAILQ_REMOVE(&asoc->send_queue, tp1, sctp_next);
+					TAILQ_REMOVE(&asoc->sent_queue, tp1, sctp_next);
 					TAILQ_INSERT_HEAD(&asoc->send_queue, tp1, sctp_next);
 					asoc->sent_queue_cnt--;
 					asoc->send_queue_cnt++;
