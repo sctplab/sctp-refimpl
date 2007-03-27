@@ -4600,7 +4600,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	asoc->streamoutcnt = 0;
 	if (asoc->strmin) {
 		struct sctp_queued_to_read *ctl;
-		int i;
 
 		for (i = 0; i < asoc->streamincnt; i++) {
 			if (!TAILQ_EMPTY(&asoc->strmin[i].inqueue)) {
@@ -5385,7 +5384,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 	struct sockaddr_in sin;
 	struct sockaddr_in6 sin6;
 	uint8_t random_store[SCTP_PARAM_BUFFER_SIZE];
-	struct sctp_auth_random *random = NULL;
+	struct sctp_auth_random *p_random = NULL;
 	uint16_t random_len = 0;
 	uint8_t hmacs_store[SCTP_PARAM_BUFFER_SIZE];
 	struct sctp_auth_hmac_algo *hmacs = NULL;
@@ -5741,8 +5740,8 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			    plen);
 			if (phdr == NULL)
 				return (-26);
-			random = (struct sctp_auth_random *)phdr;
-			random_len = plen - sizeof(*random);
+			p_random = (struct sctp_auth_random *)phdr;
+			random_len = plen - sizeof(*p_random);
 			/* enforce the random length */
 			if (random_len != SCTP_AUTH_RANDOM_SIZE_REQUIRED) {
 #ifdef SCTP_DEBUG
@@ -5861,9 +5860,14 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 	} else {
 		stcb->asoc.peer_supports_auth = 0;
 	}
+	if (!stcb->asoc.peer_supports_auth && got_chklist) {
+		/* peer does not support auth but sent a chunks list? */
+		return (-31);
+	}
 	if (!sctp_asconf_auth_nochk && stcb->asoc.peer_supports_asconf &&
 	    !stcb->asoc.peer_supports_auth) {
-		return (-31);
+		/* peer supports asconf but not auth? */
+		return (-32);
 	}
 
 	/* concatenate the full random key */
@@ -5872,18 +5876,18 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 	new_key = sctp_alloc_key(keylen);
 	if (new_key != NULL) {
 	    /* copy in the RANDOM */
-	    if (random != NULL)
-		bcopy(random->random_data, new_key->key, random_len);
+	    if (p_random != NULL)
+		bcopy(p_random->random_data, new_key->key, random_len);
 	}
 #else
-	keylen = sizeof(*random) + random_len + sizeof(*chunks) + num_chunks +
+	keylen = sizeof(*p_random) + random_len + sizeof(*chunks) + num_chunks +
 	    sizeof(*hmacs) + hmacs_len;
 	new_key = sctp_alloc_key(keylen);
 	if (new_key != NULL) {
 	    /* copy in the RANDOM */
-	    if (random != NULL) {
-		keylen = sizeof(*random) + random_len;
-		bcopy(random, new_key->key, keylen);
+	    if (p_random != NULL) {
+		keylen = sizeof(*p_random) + random_len;
+		bcopy(p_random, new_key->key, keylen);
 	    }
 	    /* append in the AUTH chunks */
 	    if (chunks != NULL) {
@@ -5899,7 +5903,8 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 	}
 #endif
 	else {
-	    return (-32);
+	    /* failed to get memory for the key */
+	    return (-33);
 	}
 	if (stcb->asoc.authinfo.peer_random != NULL)
 	    sctp_free_key(stcb->asoc.authinfo.peer_random);
