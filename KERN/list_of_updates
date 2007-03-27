@@ -21,3 +21,4 @@
 - Fixed bug in fragmentation code that prevented
   us from fragmenting a small complete message when
   we needed to.
+- Tighten AUTH protocol error checks during INIT/INIT-ACK exchange
