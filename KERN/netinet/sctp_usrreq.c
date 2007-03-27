@@ -1327,11 +1327,11 @@ __P((struct sockaddr_in *sin,
 #endif
 
 static size_t
-sctp_fill_up_addresses(struct sctp_inpcb *inp,
-                       struct sctp_tcb *stcb,
-                       size_t limit,
-                       struct sockaddr_storage *sas, 
-		       uint32_t vrf_id)
+sctp_fill_up_addresses_vrf(struct sctp_inpcb *inp,
+			   struct sctp_tcb *stcb,
+			   size_t limit,
+			   struct sockaddr_storage *sas,
+			   uint32_t vrf_id)
 {
 	struct sctp_ifn *sctp_ifn;
 	struct sctp_ifa *sctp_ifa;
@@ -1365,8 +1365,8 @@ sctp_fill_up_addresses(struct sctp_inpcb *inp,
 		ipv4_addr_legal = 1;
 	}
 	vrf = sctp_find_vrf(vrf_id);
-	if(vrf == NULL) {
-		return(0);
+	if (vrf == NULL) {
+		return (0);
 	}
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
 		LIST_FOREACH(sctp_ifn, &vrf->ifnlist, next_ifn) {
@@ -1502,11 +1502,40 @@ sctp_fill_up_addresses(struct sctp_inpcb *inp,
 	return (actual);
 }
 
+static size_t
+sctp_fill_up_addresses(struct sctp_inpcb *inp,
+                       struct sctp_tcb *stcb,
+                       size_t limit,
+                       struct sockaddr_storage *sas)
+{
+	size_t size = 0;
+#ifdef SCTP_MVRF
+	uint32_t id;
+
+/*
+ * FIX ME: ?? this WILL report duplicate addresses if they appear
+ * in more than one VRF.
+ */
+	/* fill up addresses for all VRFs on the endpoint */
+	for (id = 0; (id < inp->num_vrfs) && (size < limit); id++) {
+		size += sctp_fill_up_addresses_vrf(inp, stcb, limit, sas,
+						   inp->m_vrf_ids[id]);
+		sas = (struct sockaddr_storage *)((caddr_t)sas + size);
+	}
+#else
+	/* fill up addresses for the endpoint's default vrf */
+	size = sctp_fill_up_addresses_vrf(inp, stcb, limit, sas,
+					  inp->def_vrf_id);    
+#endif
+	return (size);
+}
+
 static int
-sctp_count_max_addresses(struct sctp_inpcb *inp, uint32_t vrf_id)
+sctp_count_max_addresses_vrf(struct sctp_inpcb *inp, uint32_t vrf_id)
 {
 	int cnt = 0;
 	struct sctp_vrf *vrf = NULL;
+
 	/*
 	 * In both sub-set bound an bound_all cases we return the MAXIMUM
 	 * number of addresses that you COULD get. In reality the sub-set
@@ -1515,7 +1544,7 @@ sctp_count_max_addresses(struct sctp_inpcb *inp, uint32_t vrf_id)
 	 * addresses as well.
 	 */
 	vrf = sctp_find_vrf(vrf_id);
-	if(vrf == NULL) {
+	if (vrf == NULL) {
 		return(0);
 	}
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
@@ -1549,6 +1578,28 @@ sctp_count_max_addresses(struct sctp_inpcb *inp, uint32_t vrf_id)
 				cnt += sizeof(struct sockaddr_in6);
 		}
 	}
+	return (cnt);
+}
+
+static int
+sctp_count_max_addresses(struct sctp_inpcb *inp)
+{
+	int cnt = 0;
+#ifdef SCTP_MVRF
+	int id;
+
+/*
+ * FIX ME: ?? this WILL count duplicate addresses if they appear
+ * in more than one VRF.
+ */
+	/* count addresses for all VRFs on the endpoint */
+	for (id = 0; id < inp->num_vrfs; id++) {
+		cnt += sctp_count_max_addresses_vrf(inp, inp->m_vrf_ids[id]);
+	}
+#else
+	/* count addresses for the endpoint's default VRF */
+	cnt = sctp_count_max_addresses_vrf(inp, inp->def_vrf_id);
+#endif
 	return (cnt);
 }
 
@@ -1786,7 +1837,6 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 	    void *p) {
 	struct sctp_inpcb *inp;
 	int error, val = 0;
-	uint32_t vrf_id;
 	struct sctp_tcb *stcb = NULL;
 
 	if (optval == NULL) {
@@ -1796,12 +1846,6 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (inp == 0)
 		return EINVAL;
-#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
-	vrf_id = SCTP_DEFAULT_VRFID;
-#else
-	vrf_id = panda_get_vrf_from_call(); /* from socket option call? */
-#endif
-
 	error = 0;
 
 	switch (optname) {
@@ -2180,10 +2224,10 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 	case SCTP_GET_LOCAL_ADDR_SIZE:
 		{
 			uint32_t *value;
-			
+
 			SCTP_CHECK_AND_CAST(value, optval, uint32_t, *optsize);
 			SCTP_INP_RLOCK(inp);
-			*value = sctp_count_max_addresses(inp, vrf_id);
+			*value = sctp_count_max_addresses(inp);
 			SCTP_INP_RUNLOCK(inp);
 			*optsize = sizeof(uint32_t);
 		}
@@ -2284,7 +2328,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 
 			sas = (struct sockaddr_storage *)&saddr->addr[0];
 			limit = *optsize - sizeof(sctp_assoc_t);
-			actual = sctp_fill_up_addresses(inp, stcb, limit, sas, vrf_id);
+			actual = sctp_fill_up_addresses(inp, stcb, limit, sas);
 			if (stcb)
 				SCTP_TCB_UNLOCK(stcb);
 			*optsize = sizeof(struct sockaddr_storage) + actual;
