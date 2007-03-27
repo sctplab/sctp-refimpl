@@ -6173,7 +6173,6 @@ all_done:
 		data_list[i]->sent = SCTP_DATAGRAM_SENT;
 		data_list[i]->snd_count = 1;
 		data_list[i]->rec.data.chunk_was_revoked = 0;
-		data_list[i]->window_probe = 0;
 #ifdef SCTP_FLIGHT_LOGGING
 		sctp_misc_ints(SCTP_FLIGHT_LOG_UP, 
 			       data_list[i]->whoTo->flight_size,
@@ -7338,6 +7337,7 @@ again_one_more_time:
 						       mx_mtu, to_out);
 #endif
 					}
+					chk->window_probe = 0;
 					data_list[bundle_at++] = chk;
 					if (bundle_at >= SCTP_MAX_DATA_BUNDLING) {
 						mtu = 0;
