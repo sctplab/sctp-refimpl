@@ -8131,9 +8131,12 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 		}
 		if ((sctp_max_retran_chunk)  && (chk->snd_count >= sctp_max_retran_chunk)) {
 			/* Gak, we have exceeded max unlucky retran, abort! */
+
+#ifdef SCTP_DEBUG
 			printf("Gak, chk->snd_count:%d >= max:%d - send abort\n",
 			       chk->snd_count,
 			       sctp_max_retran_chunk);
+#endif
 			sctp_send_abort_tcb(stcb, NULL);
 			sctp_timer_start(SCTP_TIMER_TYPE_ASOCKILL, inp, stcb, NULL);
 			return (SCTP_RETRAN_EXIT);
