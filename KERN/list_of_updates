@@ -21,6 +21,12 @@
 - Fixed bug in fragmentation code that prevented
   us from fragmenting a small complete message when
   we needed to.
-- Tighten AUTH protocol error checks during INIT/INIT-ACK exchange
-- Improve the handling of window probes, which were
+- Window probes were not marked back to unsent and
+  flight adjusted when a sack came in with no
+  window change or accepting of the probe data.
+  We now fix this with having a mark on the net and
+  the chunk so we can clear it out when the sack arrives
+  forcing it to retran just like it was "new" this
+  improves the handling of window probes, which were
   dropped by the receiver.
+- Tighten AUTH protocol error checks during INIT/INIT-ACK exchange
