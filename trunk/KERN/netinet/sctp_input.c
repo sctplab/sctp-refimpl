@@ -2180,6 +2180,9 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 #if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
 			    ,NULL
 #endif
+#ifdef __Panda__
+			     ,NULL , *inp_p->def_vrf_id
+#endif
 			    );
 #if (defined(__FreeBSD__) && __FreeBSD_version >= 500000)
 			NET_UNLOCK_GIANT();
