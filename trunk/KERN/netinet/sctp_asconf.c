@@ -1071,6 +1071,7 @@ sctp_asconf_queue_add(struct sctp_tcb *stcb, struct sctp_ifa *ifa, uint16_t type
 			/* take the entry off the appropriate list */
 			sctp_asconf_addr_mgmt_ack(stcb, aa->ifa, type, 1);
 			/* free the entry */
+			sctp_free_ifa(aa->ifa);
 			SCTP_FREE(aa);
 			return (-1);
 		}
@@ -1091,6 +1092,7 @@ sctp_asconf_queue_add(struct sctp_tcb *stcb, struct sctp_ifa *ifa, uint16_t type
 	/* top level elements are "networked" during send */
 	aa->ap.aph.ph.param_type = type;
 	aa->ifa = ifa;
+	atomic_add_int(&ifa->refcount, 1);
 	/* correlation_id filled in during send routine later... */
 	if (ifa->address.sa.sa_family == AF_INET6) {
 		/* IPv6 address */
@@ -1167,6 +1169,7 @@ static uint32_t
 sctp_asconf_queue_add_sa(struct sctp_tcb *stcb, struct sockaddr *sa,
     uint16_t type)
 {
+	struct sctp_ifa *ifa;
 	struct sctp_asconf_addr *aa, *aa_next;
 	uint32_t vrf_id;
 
@@ -1195,6 +1198,7 @@ sctp_asconf_queue_add_sa(struct sctp_tcb *stcb, struct sockaddr *sa,
 			/* delete the existing entry in the queue */
 			TAILQ_REMOVE(&stcb->asoc.asconf_queue, aa, next);
 			/* free the entry */
+			sctp_free_ifa(aa->ifa);
 			SCTP_FREE(aa);
 			return (-1);
 		} else if (type == SCTP_DEL_IP_ADDRESS &&
@@ -1206,11 +1210,16 @@ sctp_asconf_queue_add_sa(struct sctp_tcb *stcb, struct sockaddr *sa,
 			/* take the entry off the appropriate list */
 			sctp_asconf_addr_mgmt_ack(stcb, aa->ifa, type, 1);
 			/* free the entry */
+			sctp_free_ifa(aa->ifa);
 			SCTP_FREE(aa);
 			return (-1);
 		}
 	}			/* for each aa */
-
+	ifa = sctp_find_ifa_by_addr(sa, vrf_id, 0);
+	if(ifa == NULL) {
+		/* Invalid address */
+		return (-1);
+	}
 	/* adding new request to the queue */
 	SCTP_MALLOC(aa, struct sctp_asconf_addr *, sizeof(*aa), "AsconfAddr");
 	if (aa == NULL) {
@@ -1230,7 +1239,8 @@ sctp_asconf_queue_add_sa(struct sctp_tcb *stcb, struct sockaddr *sa,
 	vrf_id = panda_get_vrf_from_call();
 #endif
 	aa->ap.aph.ph.param_type = type;
-	aa->ifa = sctp_find_ifa_by_addr(sa, vrf_id, 0);
+	aa->ifa = ifa;
+	atomic_add_int(&ifa->refcount, 1);
 	/* correlation_id filled in during send routine later... */
 	if (sa->sa_family == AF_INET6) {
 		/* IPv6 address */
@@ -1393,6 +1403,7 @@ sctp_asconf_process_param_ack(struct sctp_tcb *stcb,
 
 	/* remove the param and free it */
 	TAILQ_REMOVE(&stcb->asoc.asconf_queue, aparam, next);
+	sctp_free_ifa(aparam->ifa);
 	SCTP_FREE(aparam);
 }
 
