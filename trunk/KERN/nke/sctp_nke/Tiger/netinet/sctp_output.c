@@ -1999,11 +1999,7 @@ sctp_add_addresses_to_i_ia(struct sctp_inpcb *inp, struct sctp_scoping *scope,
 	int cnt, limit_out=0, total_count;
 	uint32_t vrf_id;
 
-#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
-	vrf_id = SCTP_DEFAULT_VRFID;
-#else
-	vrf_id = panda_get_vrf_from_call(); /* from socket option call? */
-#endif
+	vrf_id = inp->def_vrf_id;
 	SCTP_IPI_ADDR_LOCK();
 	vrf = sctp_find_vrf(vrf_id);
 	if(vrf == NULL) {
@@ -3467,11 +3463,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 	}
 
 	if (stcb == NULL) {
-#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
-		vrf_id = SCTP_DEFAULT_VRFID;
-#else
-		vrf_id = panda_get_vrf_from_call(); /* from destination or route? */
-#endif
+		vrf_id = inp->def_vrf_id;
 	} else {
 		vrf_id = stcb->asoc.vrf_id;
 	}
@@ -4661,14 +4653,11 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	int p_len;
 	uint32_t vrf_id;
 
-#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
-	vrf_id = SCTP_DEFAULT_VRFID;
-#else
-	vrf_id = panda_get_vrf_from_call(); /* from socket option call? */
-#endif
 	if (stcb) {
 		asoc = &stcb->asoc;
+		vrf_id = asoc->vrf_id;
 	} else {
+		vrf_id = inp->def_vrf_id;
 		asoc = NULL;
 	}
 	m_last = NULL;
@@ -11001,7 +10990,7 @@ sctp_lower_sosend(struct socket *so,
 			goto out_unlocked;
 		} else {
 			/* UDP style, we must go ahead and start the INIT process */
-			uint32_t vrf;
+			uint32_t vrf_id;
 
 			if ((use_rcvinfo) && (srcv) &&
 			    ((srcv->sinfo_flags & SCTP_ABORT) ||
@@ -11018,12 +11007,9 @@ sctp_lower_sosend(struct socket *so,
 				goto out_unlocked;
 			}
 			/* get an asoc/stcb struct */
-#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
-			vrf = SCTP_DEFAULT_VRFID;
-#else
-			vrf = panda_get_vrf_from_call(); /* from send call? */
-#endif
-			stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0, vrf);
+
+			vrf_id = inp->def_vrf_id;
+			stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0, vrf_id);
 			if (stcb == NULL) {
 				/* Error is setup for us in the call */
 #if defined(__NetBSD__) || defined(__OpenBSD__)
