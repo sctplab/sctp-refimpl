@@ -315,6 +315,12 @@ typedef struct callout sctp_os_timer_t;
 #define SCTP_SB_LIMIT_SND(so) so->so_snd.sb_hiwat
 
 /*
+ * routes, output, etc.
+ */
+typedef struct route	sctp_route_t;
+
+
+/*
  * SCTP AUTH
  */
 #define HAVE_SHA2
