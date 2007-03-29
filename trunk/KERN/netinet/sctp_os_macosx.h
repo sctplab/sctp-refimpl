@@ -87,7 +87,6 @@
 #include <netkey/key.h>
 #endif /* IPSEC */
 
-
 #include <stdarg.h>
 
 #if defined(HAVE_SCTP_PEELOFF_SOCKOPT)

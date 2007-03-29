@@ -96,7 +96,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.11 2007/03/20 10:23:11 rrs
 #include <netinet6/scope6_var.h>
 #endif /* INET6 */
 
-
 #if defined(HAVE_SCTP_PEELOFF_SOCKOPT)
 #include <sys/file.h>
 #include <sys/filedesc.h>
@@ -105,7 +104,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.11 2007/03/20 10:23:11 rrs
 #if __FreeBSD_version >= 700000
 #include <netinet/ip_options.h>
 #endif
-
 
 #if defined(__FreeBSD__)
 #ifndef in6pcb
