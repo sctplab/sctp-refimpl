@@ -4515,8 +4515,8 @@ sctp_find_ifa_by_addr(struct sockaddr *addr, uint32_t vrf_id, int holds_lock)
 	hash_head = &vrf->vrf_addr_hash[(hash_of_addr & vrf->vrf_hashmark)];
 	if (hash_head == NULL) {
 		printf("hash_of_addr:%x mask:%x table:%x - ",
-		       hash_of_addr, vrf->vrf_hashmark,
-		       (hash_of_addr & vrf->vrf_hashmark));
+		       (u_int)hash_of_addr, (u_int)vrf->vrf_hashmark,
+		       (u_int)(hash_of_addr & vrf->vrf_hashmark));
 		sctp_print_address(addr);
 		printf("No such bucket for address\n");
 		if (holds_lock == 0)
