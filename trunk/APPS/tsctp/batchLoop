@@ -1,0 +1,24 @@
+#!/bin/sh
+
+START=$1
+END=$2
+NUMBER=$3
+while [  $START -lt $END ]; do
+	./tsctp -l $START -n $NUMBER $4 
+	if [ $START -le 50 ]; then
+		START=`expr $START + 1`
+	fi
+	if [ $START -gt 50 -a $START -le 100 ]; then
+		START=`expr $START + 2`
+	fi
+	if [ $START -gt 100 -a $START -le 500 ]; then
+		START=`expr $START + 5`
+	fi
+	if [ $START -gt 500 -a $START -le 1000 ]; then
+		START=`expr $START + 10`
+	fi
+	if [ $START -gt 1000 ]; then
+		START=`expr $START + 50`
+	fi
+	sleep 5
+done
