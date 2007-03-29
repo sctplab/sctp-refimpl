@@ -3909,7 +3909,6 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		/* see if we're bound all already! */
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
 			error = EINVAL;
-			printf("You are bound all\n");
 			break;
 		}
 		/* Is the VRF one we have */
@@ -3940,12 +3939,10 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) {
 			if (p == NULL) {
 				/* Can't get proc for Net/Open BSD */
-				printf("Unbound and p == NULL\n");
 				error = EINVAL;
 				break;
 			}
 			error = sctp_inpcb_bind(so, addr_touse, p);
-			printf("bind returns %d\n", error);
 			break;
 		}
 		/*
@@ -3979,10 +3976,8 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 				break;
 			} else if (lep == NULL) {
 				((struct sockaddr_in *)addr_touse)->sin_port = 0;
-				printf("Calling addr mg on bind\n");
 				error = sctp_addr_mgmt_ep_sa(inp, addr_touse,
 							     SCTP_ADD_IP_ADDRESS, vrf_id);
-				printf("error ret is %d\n", error);
 			} else {
 				error = EADDRNOTAVAIL;
 			}
