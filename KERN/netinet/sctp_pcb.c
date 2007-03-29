@@ -229,19 +229,17 @@ sctp_free_ifa(struct sctp_ifa *sctp_ifap)
 	ret = atomic_fetchadd_int(&sctp_ifap->refcount, -1);
 	if(ret == 1) {
 		/* We zero'd the count */
-/*#ifdef INVARIANTS*/
+#ifdef INVARIANTS
 		if(sctp_ifap->in_ifa_list) {
 			panic("Attempt to free item in a list");
 		}
-/*
 #else
-if(sctp_ifap->in_ifa_list) {
-printf("In list, fixing\n");
-atomic_add_int(&sctp_ifap->refcount, 1);
-return;
-}
+		if(sctp_ifap->in_ifa_list) {
+			printf("in_ifa_list was not clear, fixing cnt\n");
+			atomic_add_int(&sctp_ifap->refcount, 1);
+			return;
+		}
 #endif
-*/
 		SCTP_FREE(sctp_ifap);
 	}
 }
