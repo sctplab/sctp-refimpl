@@ -4513,7 +4513,21 @@ sctp_find_ifa_by_addr(struct sockaddr *addr, uint32_t vrf_id, int holds_lock)
 		SCTP_IPI_ADDR_LOCK();
 
 	hash_head = &vrf->vrf_addr_hash[(hash_of_addr & vrf->vrf_hashmark)];
+	if (hash_head == NULL) {
+		printf("hash_of_addr:%x mask:%x table:%x - ",
+		       hash_of_addr, vrf->vrf_hashmark,
+		       (hash_of_addr & vrf->vrf_hashmark));
+		sctp_print_address(addr);
+		printf("No such bucket for address\n");
+		if (holds_lock == 0)
+			SCTP_IPI_ADDR_UNLOCK();
+
+		return (NULL);
+	}
 	LIST_FOREACH(sctp_ifap, hash_head, next_bucket) {
+		if (sctp_ifap == NULL) {
+			panic("Huh LIST_FOREACH corrupt");
+		}
 		if (addr->sa_family != sctp_ifap->address.sa.sa_family)
 			continue;
 		if (addr->sa_family == AF_INET) {
