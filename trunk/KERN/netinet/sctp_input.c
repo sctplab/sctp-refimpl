@@ -1554,7 +1554,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	struct sockaddr_in *sin;
 	struct sockaddr_in6 *sin6;
 	struct sctp_association *asoc;
-	uint32_t vrf;
+	uint32_t vrf_id;
 	int chk_length;
 	int init_offset, initack_offset, initack_limit;
 	int retval;
@@ -1562,7 +1562,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	uint32_t old_tag;
 	uint8_t auth_chunk_buf[SCTP_PARAM_BUFFER_SIZE];
 
-	vrf = inp->def_vrf_id;
+	vrf_id = inp->def_vrf_id;
 
 	/*
 	 * find and validate the INIT chunk in the cookie (peer's info) the
@@ -1625,7 +1625,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	 * and popluate
 	 */
 	stcb = sctp_aloc_assoc(inp, init_src, 0, &error,
-	    ntohl(initack_cp->init.initiate_tag), vrf);
+	    ntohl(initack_cp->init.initiate_tag), vrf_id);
 	if (stcb == NULL) {
 		struct mbuf *op_err;
 
@@ -2181,7 +2181,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			    ,NULL
 #endif
 #ifdef __Panda__
-			     ,NULL , *inp_p->def_vrf_id
+			     ,NULL , (*inp_p)->def_vrf_id
 #endif
 			    );
 #if (defined(__FreeBSD__) && __FreeBSD_version >= 500000)
@@ -4793,6 +4793,11 @@ sctp_input(i_pak, off)
 	int off;
 
 #else
+#if defined(__Panda__)
+void
+sctp_input(pakhandle_type i_pak)
+
+#else
 void
 #if __STDC__
 sctp_input(struct mbuf *i_pak,...)
@@ -4802,15 +4807,21 @@ sctp_input(i_pak, va_alist)
 
 #endif
 #endif
+#endif
 {
 #ifdef SCTP_MBUF_LOGGING
 	struct mbuf *mat;
 #endif
 	struct mbuf *m;
 	int iphlen;
+#ifdef __Panda__
+	pakoffset_type off_p;
+	int off,res;
+#endif
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s;
 #endif
+	uint32_t vrf_id;
 	uint8_t ecn_bits;
 	struct ip *ip;
 	struct sctphdr *sh;
@@ -4833,7 +4844,23 @@ sctp_input(i_pak, va_alist)
 #endif
 #endif
 
-#if !(defined(__FreeBSD__) || defined(__APPLE__))
+#ifdef __Panda__
+	res = pak_client_get_offset(i_pak, PAK_OFF_NETWORK_ST, &off_p);
+	if (CERR_IS_NOTOK(res)) {
+		(void) pak_client_return_buffer(i_pak);
+		return;
+	}
+	off = (int)off_p;
+	error = pak_client_get_vrf_id(i_pak, &vrf_id);
+	if (error != EOK) {
+		(void) pak_client_return_buffer(i_pak);
+		return;
+	}
+#else
+	vrf_id = SCTP_DEFAULT_VRFID;
+#endif
+
+#if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Panda__))
 	int off;
 	va_list ap;
 
@@ -4919,7 +4946,7 @@ sctp_input(i_pak, va_alist)
 
 			stcb = sctp_findassociation_addr(m, iphlen,
 			    offset - sizeof(*ch),
-			    sh, ch, &inp, &net);
+			    sh, ch, &inp, &net, vrf_id);
 			if ((inp) && (stcb)) {
 				sctp_send_packet_dropped(stcb, net, m, iphlen, 1);
 				sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_INPUT_ERROR);
@@ -4962,7 +4989,7 @@ sctp_skip_csum_4:
 	 * IP/SCTP/first chunk header...
 	 */
 	stcb = sctp_findassociation_addr(m, iphlen, offset - sizeof(*ch),
-	    sh, ch, &inp, &net);
+	    sh, ch, &inp, &net, vrf_id);
 	/* inp's ref-count increased && stcb locked */
 	if (inp == NULL) {
 		struct sctp_init_chunk *init_chk, chunk_buf;

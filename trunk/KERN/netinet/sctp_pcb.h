@@ -593,7 +593,7 @@ int sctp_inpcb_bind(struct socket *, struct sockaddr *, struct proc *);
 struct sctp_tcb *
 sctp_findassociation_addr(struct mbuf *, int, int,
     struct sctphdr *, struct sctp_chunkhdr *, struct sctp_inpcb **,
-    struct sctp_nets **);
+    struct sctp_nets **, uint32_t vrf_id);
 
 struct sctp_tcb *
 sctp_findassociation_addr_sa(struct sockaddr *,

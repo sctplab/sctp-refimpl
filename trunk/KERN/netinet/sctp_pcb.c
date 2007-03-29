@@ -1629,7 +1629,7 @@ sctp_findassoc_by_vtag(struct sockaddr *from, uint32_t vtag,
 struct sctp_tcb *
 sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
     struct sctphdr *sh, struct sctp_chunkhdr *ch,
-    struct sctp_inpcb **inp_p, struct sctp_nets **netp)
+    struct sctp_inpcb **inp_p, struct sctp_nets **netp, uint32_t vrf_id)
 {
 	int find_tcp_pool;
 	struct ip *iph;
@@ -1638,13 +1638,6 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 	struct sockaddr *to = (struct sockaddr *)&to_store;
 	struct sockaddr *from = (struct sockaddr *)&from_store;
 	struct sctp_inpcb *inp;
-	uint32_t vrf_id;
-
-	if((*inp_p) != NULL) {
-		vrf_id = (*inp_p)->def_vrf_id;
-	} else {
-		vrf_id = SCTP_DEFAULT_VRFID;
-	}
 
 	iph = mtod(m, struct ip *);
 	if (iph->ip_v == IPVERSION) {
