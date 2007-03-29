@@ -55,7 +55,6 @@ TAILQ_HEAD(sctp_streamhead, sctp_stream_queue_pending);
 #include <netinet/sctp_structs.h>
 #include <netinet/sctp_uio.h>
 #include <netinet/sctp_auth.h>
-#include <netinet/sctp_bsd_addr.h>
 
 /*
  * PCB flags (in sctp_flags bitmask)

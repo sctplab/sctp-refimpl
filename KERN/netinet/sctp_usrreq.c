@@ -46,7 +46,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.14 2007/03/20 10:23:11 rrs
 #endif
 #include <netinet/sctp_sysctl.h>
 #include <netinet/sctp_output.h>
-#include <netinet/sctp_bsd_addr.h>
 #include <netinet/sctp_uio.h>
 #include <netinet/sctp_asconf.h>
 #include <netinet/sctputil.h>
@@ -4714,7 +4713,7 @@ sctp_ingetaddr(struct socket *so, struct mbuf *nam)
 			vrf_id = inp->def_vrf_id;
 			sctp_ifa = sctp_source_address_selection(inp,
 								 stcb, 
-								 (struct route *)&net->ro, 
+								 (sctp_route_t *)&net->ro, 
 								 net, 0, vrf_id);
 			if(sctp_ifa) {
 				sin->sin_addr = sctp_ifa->address.sin.sin_addr;
