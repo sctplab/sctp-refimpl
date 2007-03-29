@@ -1215,6 +1215,11 @@ sctp_asconf_queue_add_sa(struct sctp_tcb *stcb, struct sockaddr *sa,
 			return (-1);
 		}
 	}			/* for each aa */
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
+	vrf_id = SCTP_DEFAULT_VRFID;
+#else
+	vrf_id = panda_get_vrf_from_call();
+#endif
 	ifa = sctp_find_ifa_by_addr(sa, vrf_id, 0);
 	if(ifa == NULL) {
 		/* Invalid address */
@@ -1233,11 +1238,6 @@ sctp_asconf_queue_add_sa(struct sctp_tcb *stcb, struct sockaddr *sa,
 	}
 	/* fill in asconf address parameter fields */
 	/* top level elements are "networked" during send */
-#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
-	vrf_id = SCTP_DEFAULT_VRFID;
-#else
-	vrf_id = panda_get_vrf_from_call();
-#endif
 	aa->ap.aph.ph.param_type = type;
 	aa->ifa = ifa;
 	atomic_add_int(&ifa->refcount, 1);
