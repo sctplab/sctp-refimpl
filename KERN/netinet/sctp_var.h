@@ -325,9 +325,14 @@ void sctp_ctlinput __P((int, struct sockaddr *, void *));
 int sctp_ctloutput __P((struct socket *, struct sockopt *));
 void sctp_input __P((struct mbuf *, int));
 #else
+#if defined(__Panda__)
+void sctp_input __P((pakhandle_type i_pak));
+#else
+void sctp_input __P((struct mbuf *,...));
+#endif
 void *sctp_ctlinput __P((int, struct sockaddr *, void *));
 int sctp_ctloutput __P((int, struct socket *, int, int, struct mbuf **));
-void sctp_input __P((struct mbuf *,...));
+
 #endif
 void sctp_drain __P((void));
 void sctp_init __P((void));
