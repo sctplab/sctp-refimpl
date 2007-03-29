@@ -4843,8 +4843,9 @@ sctp_input(i_pak, va_alist)
 	int error;
 #endif
 #endif
-
 #ifdef __Panda__
+	int error;
+
 	res = pak_client_get_offset(i_pak, PAK_OFF_NETWORK_ST, &off_p);
 	if (CERR_IS_NOTOK(res)) {
 		(void) pak_client_return_buffer(i_pak);
