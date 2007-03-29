@@ -2573,7 +2573,7 @@ sctp_choose_boundspecific_stcb(struct sctp_inpcb *inp,
 	 * we go for an acceptable.
 	 */
 	if (sctp_ifn) {
-		/* first try for an prefered address on the ep */
+		/* first try for a prefered address on the ep */
 		LIST_FOREACH(sctp_ifa, &sctp_ifn->ifalist, next_ifa) {
 			if ((sctp_ifa->localifa_flags & SCTP_ADDR_DEFER_USE) && (non_asoc_addr_ok == 0)) 
 				continue;

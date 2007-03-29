@@ -6289,7 +6289,8 @@ sctp_drain()
  * flags and asoc_state.  "af" (mandatory) is executed for all matching
  * assocs and "ef" (optional) is executed when the iterator completes.
  * "inpf" (optional) is executed for each new endpoint as it is being
- * iterated through.
+ * iterated through. inpe (optional) is called when the inp completes
+ * its way through all the stcbs.
  */
 int
 sctp_initiate_iterator(inp_func inpf,  

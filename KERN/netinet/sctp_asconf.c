@@ -2009,6 +2009,8 @@ void sctp_iterator_end(void *ptr, uint32_t val)
 			/* Clear the defer use flag */
 			ifa->localifa_flags &= ~SCTP_ADDR_DEFER_USE;
 		}
+		printf("Calling free on %p refcount:%d\n",
+		       ifa, ifa->refcount);
 		sctp_free_ifa(ifa);
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_laddr, l);
 		SCTP_DECR_LADDR_COUNT();
@@ -2784,6 +2786,8 @@ sctp_addr_mgmt_ep_sa(struct sctp_inpcb *inp, struct sockaddr *sa, uint32_t type,
 		wi->action = type;
 		atomic_add_int(&ifa->refcount, 1);
 		LIST_INSERT_HEAD(&asc->list_of_work, wi, sctp_nxt_addr);
+		printf("EP only add of address starts iterator on ifa:%p refcount:%d\n",
+		       ifa, ifa->refcount);
 		sctp_initiate_iterator(sctp_iterator_ep, 
 				       sctp_iterator_stcb, 
 				       sctp_iterator_ep_end,
