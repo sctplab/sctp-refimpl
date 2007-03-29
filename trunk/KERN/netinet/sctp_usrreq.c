@@ -188,7 +188,11 @@ sctp_pathmtu_adjustment(struct sctp_inpcb *inp,
 	}
 }
 
+#if defined(__Panda__)
+void
+#else
 static void
+#endif
 sctp_notify_mbuf(struct sctp_inpcb *inp,
     struct sctp_tcb *stcb,
     struct sctp_nets *net,
@@ -680,13 +684,19 @@ sctp_attach(struct socket *so, int proto, struct proc *p)
 	return 0;
 }
 
-static int
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+static int
 sctp_bind(struct socket *so, struct sockaddr *addr, struct thread *p)
 {
 #elif defined(__FreeBSD__) || defined(__APPLE__)
+static int
 sctp_bind(struct socket *so, struct sockaddr *addr, struct proc *p) {
+#elif defined(__Panda__)
+int
+sctp_bind(struct socket *so, struct sockaddr *addr) {
+	void *p = NULL;
 #else
+static int
 sctp_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 {
 	struct sockaddr *addr = nam ? mtod(nam, struct sockaddr *): NULL;
@@ -4218,15 +4228,22 @@ sctp_ctloutput(op, so, level, optname, mp)
 
 #endif
 
-static int
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+static int
 sctp_connect(struct socket *so, struct sockaddr *addr, struct thread *p)
 {
 #else
 #if defined(__FreeBSD__) || defined(__APPLE__)
+static int
 sctp_connect(struct socket *so, struct sockaddr *addr, struct proc *p)
 {
+#elif defined(__Panda__)
+int
+sctp_connect(struct socket *so, struct sockaddr *addr)
+{
+	void *p = NULL;
 #else
+static int
 sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 {
 	struct sockaddr *addr = mtod(nam, struct sockaddr *);
@@ -4315,8 +4332,8 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 
 	vrf_id = inp->def_vrf_id;
 #ifdef SCTP_MVRF
-	for (i=0;i<inp->num_vrfs; i++) {
-		if(vrf_id == inp->m_vrf_ids[i]) {
+	for (i = 0; i < inp->num_vrfs; i++) {
+		if (vrf_id == inp->m_vrf_ids[i]) {
 			fnd = 1;
 			break;
 		}
