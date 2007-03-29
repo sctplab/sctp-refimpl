@@ -4504,13 +4504,17 @@ sctp_find_ifa_by_addr(struct sockaddr *addr, uint32_t vrf_id, int holds_lock)
 	struct sctp_ifalist *hash_head;
 	uint32_t hash_of_addr;
 
-	vrf = sctp_find_vrf(vrf_id);
-	if (vrf == NULL)
-		return(NULL);
-
-	hash_of_addr = sctp_get_ifa_hash_val(addr);
 	if (holds_lock == 0)
 		SCTP_IPI_ADDR_LOCK();
+
+	vrf = sctp_find_vrf(vrf_id);
+	if (vrf == NULL) {
+		if (holds_lock == 0)
+			SCTP_IPI_ADDR_UNLOCK();
+		return(NULL);
+	}
+
+	hash_of_addr = sctp_get_ifa_hash_val(addr);
 
 	hash_head = &vrf->vrf_addr_hash[(hash_of_addr & vrf->vrf_hashmark)];
 	if (hash_head == NULL) {
