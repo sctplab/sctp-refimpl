@@ -1640,8 +1640,8 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 	struct sctp_inpcb *inp;
 	uint32_t vrf_id;
 
-	if(*inp) {
-		vrf_id = (*inp)->def_vrf_id;
+	if((*inp_p) != NULL) {
+		vrf_id = (*inp_p)->def_vrf_id;
 	} else {
 		vrf_id = SCTP_DEFAULT_VRFID;
 	}
