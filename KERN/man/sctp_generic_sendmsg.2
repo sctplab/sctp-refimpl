@@ -47,7 +47,7 @@
 .Ft int
 .Fn sctp_generic_sendmsg "int s" "void *msg" "int msglen" "struct sockaddr *to" "socklen_t len" "struct sctp_sndrcvinfo *sinfo" "int flags"
 .Ft int
-.Fn sctp_generic_sendmsg_iov "int s" "struct iovec *iov" "int iovlen" "struct sockaddr *to" "struct sctp_sndrcvinfo *sinfo" "int flags"
+.Fn sctp_generic_sendmsg_iov "int s" "struct iovec *iov" "int iovlen" "struct sockaddr *to" "socklen_t tolen" "struct sctp_sndrcvinfo *sinfo" "int flags"
 
 .Sh DESCRIPTION
 The
