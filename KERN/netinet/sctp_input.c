@@ -1562,11 +1562,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	uint32_t old_tag;
 	uint8_t auth_chunk_buf[SCTP_PARAM_BUFFER_SIZE];
 
-#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
-	vrf = SCTP_DEFAULT_VRFID;
-#else
-	vrf = panda_get_vrf_from_call(); /* from packet? */
-#endif
+	vrf = inp->def_vrf_id;
 
 	/*
 	 * find and validate the INIT chunk in the cookie (peer's info) the
