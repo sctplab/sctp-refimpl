@@ -229,6 +229,9 @@ sctp_free_ifa(struct sctp_ifa *sctp_ifap)
 	ret = atomic_fetchadd_int(&sctp_ifap->refcount, -1);
 	if(ret == 1) {
 		/* We zero'd the count */
+		if(sctp_ifap->in_ifa_list) {
+			panic("Attempt to free item in a list");
+		}
 		SCTP_FREE(sctp_ifap);
 	}
 }
@@ -361,6 +364,7 @@ sctp_add_addr_to_vrf(uint32_t vrfid, void *ifn, uint32_t ifn_index,
 	sctp_ifap->refcount = 1;
 	LIST_INSERT_HEAD(&sctp_ifnp->ifalist, sctp_ifap, next_ifa);
 	sctp_ifnp->ifa_count++;
+	sctp_ifap->in_ifa_list = 1;
 	vrf->total_ifa_count++;
 	SCTP_IPI_ADDR_UNLOCK();
 	return (sctp_ifap);
@@ -394,6 +398,7 @@ sctp_del_addr_from_vrf(uint32_t vrfid, struct sockaddr *addr,
 		vrf->total_ifa_count--;
 		LIST_REMOVE(sctp_ifap, next_bucket);
 		LIST_REMOVE(sctp_ifap, next_ifa);
+		sctp_ifap->in_ifa_list = 0;
 		atomic_add_int(&sctp_ifnp->refcount, -1);
 	} else {
 		printf("Del Addr-ifn:%d Could not find address:", 
