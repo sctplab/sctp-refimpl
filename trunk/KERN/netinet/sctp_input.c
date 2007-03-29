@@ -4860,7 +4860,7 @@ sctp_input(i_pak, va_alist)
 #else
 	vrf_id = SCTP_DEFAULT_VRFID;
 #endif
-
+	mlen = SCTP_HEADER_LEN(i_pak);
 #if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Panda__))
 	int off;
 	va_list ap;
@@ -4965,11 +4965,8 @@ sctp_input(i_pak, va_alist)
 			goto bad;
 		}
 		sh->checksum = calc_check;
-	} else {
-sctp_skip_csum_4:
-		mlen = SCTP_HEADER_LEN(m);
 	}
-
+sctp_skip_csum_4:
 	/* destination port of 0 is illegal, based on RFC2960. */
 	if (sh->dest_port == 0) {
 		SCTP_STAT_INCR(sctps_hdrops);
