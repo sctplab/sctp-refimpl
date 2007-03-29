@@ -163,7 +163,7 @@ struct sctp_ifa {
 	uint8_t src_is_loop;
 	uint8_t src_is_priv;
 	uint8_t src_is_glob;
-	uint8_t resv;
+	uint8_t in_ifa_list;
 };
 
 struct sctp_laddr {

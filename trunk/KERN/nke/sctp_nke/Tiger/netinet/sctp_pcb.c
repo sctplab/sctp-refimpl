@@ -229,6 +229,17 @@ sctp_free_ifa(struct sctp_ifa *sctp_ifap)
 	ret = atomic_fetchadd_int(&sctp_ifap->refcount, -1);
 	if(ret == 1) {
 		/* We zero'd the count */
+#ifdef INVARIANTS
+		if(sctp_ifap->in_ifa_list) {
+			panic("Attempt to free item in a list");
+		}
+#else
+		if(sctp_ifap->in_ifa_list) {
+			printf("in_ifa_list was not clear, fixing cnt\n");
+			atomic_add_int(&sctp_ifap->refcount, 1);
+			return;
+		}
+#endif
 		SCTP_FREE(sctp_ifap);
 	}
 }
@@ -361,6 +372,7 @@ sctp_add_addr_to_vrf(uint32_t vrfid, void *ifn, uint32_t ifn_index,
 	sctp_ifap->refcount = 1;
 	LIST_INSERT_HEAD(&sctp_ifnp->ifalist, sctp_ifap, next_ifa);
 	sctp_ifnp->ifa_count++;
+	sctp_ifap->in_ifa_list = 1;
 	vrf->total_ifa_count++;
 	SCTP_IPI_ADDR_UNLOCK();
 	return (sctp_ifap);
@@ -394,6 +406,7 @@ sctp_del_addr_from_vrf(uint32_t vrfid, struct sockaddr *addr,
 		vrf->total_ifa_count--;
 		LIST_REMOVE(sctp_ifap, next_bucket);
 		LIST_REMOVE(sctp_ifap, next_ifa);
+		sctp_ifap->in_ifa_list = 0;
 		atomic_add_int(&sctp_ifnp->refcount, -1);
 	} else {
 		printf("Del Addr-ifn:%d Could not find address:", 
@@ -2270,6 +2283,7 @@ sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
 			SCTP_INCR_LADDR_COUNT();
 			bzero(laddr, sizeof(*laddr));
 			laddr->ifa = oladdr->ifa;
+			atomic_add_int(&laddr->ifa->refcount, 1);
 			LIST_INSERT_HEAD(&new_inp->sctp_addr_list, laddr,
 			    sctp_nxt_addr);
 			new_inp->laddr_count++;
@@ -6284,7 +6298,8 @@ sctp_drain()
  * flags and asoc_state.  "af" (mandatory) is executed for all matching
  * assocs and "ef" (optional) is executed when the iterator completes.
  * "inpf" (optional) is executed for each new endpoint as it is being
- * iterated through.
+ * iterated through. inpe (optional) is called when the inp completes
+ * its way through all the stcbs.
  */
 int
 sctp_initiate_iterator(inp_func inpf,  
