@@ -1215,11 +1215,12 @@ sctp_asconf_queue_add_sa(struct sctp_tcb *stcb, struct sockaddr *sa,
 			return (-1);
 		}
 	}			/* for each aa */
-#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
-	vrf_id = SCTP_DEFAULT_VRFID;
-#else
-	vrf_id = panda_get_vrf_from_call();
-#endif
+	if(stcb) {
+		vrf_id = stcb->asoc.vrf_id;
+	} else {
+		vrf_id = SCTP_DEFAULT_VRFID;
+	}
+
 	ifa = sctp_find_ifa_by_addr(sa, vrf_id, 0);
 	if(ifa == NULL) {
 		/* Invalid address */
@@ -2451,11 +2452,12 @@ sctp_process_initack_addresses(struct sctp_tcb *stcb, struct mbuf *m,
 		}
 
 		/* see if this address really (still) exists */
-#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
-		vrf_id = SCTP_DEFAULT_VRFID;
-#else
-		vrf_id = panda_get_vrf_from_call();
-#endif
+		if(stcb) {
+			vrf_id = stcb->asoc.vrf_id;
+		} else {
+			vrf_id = SCTP_DEFAULT_VRFID;
+		}
+
 		sctp_ifa = sctp_find_ifa_by_addr(sa, vrf_id, 0);
 		if (sctp_ifa == NULL) {
 			/* address doesn't exist anymore */
@@ -2672,11 +2674,11 @@ sctp_check_address_list_all(struct sctp_tcb *stcb, struct mbuf *m, int offset,
 	struct sctp_ifa *sctp_ifa;
 	uint32_t vrf_id;
 
-#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
-	vrf_id = SCTP_DEFAULT_VRFID;
-#else
-	vrf_id = panda_get_vrf_from_call();
-#endif
+	if(stcb) {
+		vrf_id = stcb->asoc.vrf_id;
+	} else {
+		vrf_id = SCTP_DEFAULT_VRFID;
+	}
 	vrf = sctp_find_vrf(vrf_id);
 	if(vrf == NULL) {
 		return;

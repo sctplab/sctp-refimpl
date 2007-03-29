@@ -351,11 +351,8 @@ sctp_ctlinput(cmd, sa, vip)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s;
 #endif
-#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
+	/* FIX, for non-bsd is this right? */
 	vrf_id = SCTP_DEFAULT_VRFID;
-#else
-	vrf_id = panda_get_vrf_from_call(); /* from connectx call? */
-#endif
 	if (sa->sa_family != AF_INET ||
 	    ((struct sockaddr_in *)sa)->sin_addr.s_addr == INADDR_ANY) {
 #if defined(__FreeBSD__) || defined(__APPLE__)
@@ -463,11 +460,10 @@ sctp_getcred(SYSCTL_HANDLER_ARGS)
 	int error;
 	uint32_t vrf_id;
 
-#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
+
+	/* FIX, for non-bsd is this right? */
 	vrf_id = SCTP_DEFAULT_VRFID;
-#else
-	vrf_id = panda_get_vrf_from_call(); /* from connectx call? */
-#endif
+
 #if __FreeBSD_version > 602000
 	/*
 	 * XXXRW: Other instances of getcred use SUSER_ALLOWJAIL, as socket
@@ -2820,11 +2816,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		printf("inp is NULL?\n");
 		return EINVAL;
 	}
-#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
-	vrf_id = SCTP_DEFAULT_VRFID;
-#else
-	vrf_id = panda_get_vrf_from_call();
-#endif
+	vrf_id = inp->def_vrf_id;
 
 	error = 0;
 	switch (optname) {
@@ -4320,11 +4312,8 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		error = EALREADY;
 		goto out_now;
 	}
-#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
-	vrf_id = SCTP_DEFAULT_VRFID;
-#else
-	vrf_id = panda_get_vrf_from_call(); /* from connect call? */
-#endif
+
+	vrf_id = inp->def_vrf_id;
 #ifdef SCTP_MVRF
 	for (i=0;i<inp->num_vrfs; i++) {
 		if(vrf_id == inp->m_vrf_ids[i]) {
@@ -4704,12 +4693,8 @@ sctp_ingetaddr(struct socket *so, struct mbuf *nam)
 				SCTP_TCB_UNLOCK(stcb);
 				goto notConn;
 			}
-#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
-			vrf_id = SCTP_DEFAULT_VRFID;
-#else
-			vrf_id = panda_get_vrf_from_call(); /* from socket option call? */
-#endif
 
+			vrf_id = inp->def_vrf_id;
 			sctp_ifa = sctp_source_address_selection(inp,
 								 stcb, 
 								 (struct route *)&net->ro, 
@@ -4935,6 +4920,7 @@ sctp_usrreq(so, req, m, nam, control)
 	struct sctp_vrf *vrf;
 	int error;
 	int family;
+	struct sctp_inpcb *inp = (struct sctp_inpcb *)so->so_pcb;
 
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
@@ -4973,11 +4959,7 @@ sctp_usrreq(so, req, m, nam, control)
 		struct sctp_ifa *sctp_ifa;
 
 		ifn = (struct ifnet *)control;
-#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
-		vrf_id = SCTP_DEFAULT_VRFID;
-#else
-		vrf_id = panda_get_vrf_from_call(); /* from socket option call? */
-#endif
+		vrf_id = inp->def_vrf_id;
 		vrf = sctp_find_vrf(vrf_id);
 		if(vrf == NULL) {
 #if defined(__NetBSD__) || defined(__OpenBSD__)

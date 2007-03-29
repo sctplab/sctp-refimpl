@@ -1640,11 +1640,12 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 	struct sctp_inpcb *inp;
 	uint32_t vrf_id;
 
-#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
-	vrf_id = SCTP_DEFAULT_VRFID;
-#else
-	vrf_id = panda_get_vrf_from_call(); /* from mbuf call? */
-#endif
+	if(*inp) {
+		vrf_id = (*inp)->def_vrf_id;
+	} else {
+		vrf_id = SCTP_DEFAULT_VRFID;
+	}
+
 	iph = mtod(m, struct ip *);
 	if (iph->ip_v == IPVERSION) {
 		/* its IPv4 */
