@@ -10736,8 +10736,13 @@ sctp_sosend(struct socket *so,
     struct sockaddr *addr,
 #endif
     struct uio *uio,
+#ifdef __Panda__
+    pakhandle_type top,
+    pakhandle_type control,
+#else
     struct mbuf *top,
     struct mbuf *control,
+#endif
     int flags
 #ifdef __FreeBSD__
     ,
@@ -10782,7 +10787,11 @@ sctp_sosend(struct socket *so,
 		}
 	}
 	error = sctp_lower_sosend(so, addr, uio, top, control, flags,
-				  use_rcvinfo, &srcv, p);
+				  use_rcvinfo, &srcv
+#ifndef __Panda__
+				  , p
+#endif
+		);
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
 #endif
@@ -10797,15 +10806,22 @@ int
 sctp_lower_sosend(struct socket *so,
     struct sockaddr *addr,
     struct uio *uio,
+#ifdef __Panda__
+    pakhandle_type i_pak,
+    pakhandle_type i_control,
+#else
     struct mbuf *i_pak,
     struct mbuf *control,
+#endif
     int flags,
     int use_rcvinfo,
     struct sctp_sndrcvinfo *srcv,
+#ifndef _Panda__
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
     struct thread *p
 #else
     struct proc *p
+#endif
 #endif
 )
 {
@@ -10814,6 +10830,9 @@ sctp_lower_sosend(struct socket *so,
 	struct mbuf *top=NULL;
 #if defined(__NetBSD__) || defined(__OpenBSD_)
 	int s;
+#endif
+#ifdef __Panda__
+	struct mbuf *control=NULL;
 #endif
 	int queue_only = 0, queue_only_for_init = 0;
 	int free_cnt_applied = 0;
@@ -10855,6 +10874,9 @@ sctp_lower_sosend(struct socket *so,
 		sndlen = SCTP_HEADER_LEN(i_pak);
 		top = SCTP_HEADER_TO_CHAIN(i_pak);
 	}
+#ifdef __Panda__
+	control = SCTP_HEADER_TO_CHAIN(i_control);
+#endif	
 
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
@@ -11195,6 +11217,7 @@ sctp_lower_sosend(struct socket *so,
 		}
 	}
 	/* Ok, we will attempt a msgsnd :> */
+#ifndef __Panda__
 	if (p) {
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 		p->td_proc->p_stats->p_ru.ru_msgsnd++;
@@ -11202,6 +11225,7 @@ sctp_lower_sosend(struct socket *so,
 		p->p_stats->p_ru.ru_msgsnd++;
 #endif
 	}
+#endif
 
 	if (stcb) {
 		if (net && ((srcv->sinfo_flags & SCTP_ADDR_OVER))) {

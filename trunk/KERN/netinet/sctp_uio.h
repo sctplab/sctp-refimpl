@@ -970,15 +970,18 @@ int
 sctp_lower_sosend(struct socket *so,
     struct sockaddr *addr,
     struct uio *uio,
+
     struct mbuf *top,
     struct mbuf *control,
     int flags,
     int use_rcvinfo,
     struct sctp_sndrcvinfo *srcv,
+#ifndef __Panda__
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
     struct thread *p
 #else
     struct proc *p
+#endif
 #endif
 );
 
