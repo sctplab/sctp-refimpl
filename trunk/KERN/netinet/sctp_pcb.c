@@ -3277,8 +3277,10 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	sctp_log_closing(inp, NULL, 5);
 #endif
 
+#if !defined(__Panda__)
 #if !defined(__FreeBSD__) || __FreeBSD_version < 500000
 	rt = ip_pcb->inp_route.ro_rt;
+#endif
 #endif
 	SCTP_OS_TIMER_STOP(&inp->sctp_ep.signature_change.timer);
 	inp->sctp_ep.signature_change.type = SCTP_TIMER_TYPE_NONE;
@@ -3343,10 +3345,14 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 #endif
 		/* Unlocks not needed since the socket is gone now */
 	}
+#ifndef __Panda__
 	if (ip_pcb->inp_options) {
 		(void)sctp_m_free(ip_pcb->inp_options);
 		ip_pcb->inp_options = 0;
 	}
+#endif
+
+#ifndef __Panda__
 #if !defined(__FreeBSD__) || __FreeBSD_version < 500000
 	if (rt) {
 		RTFREE(rt);
@@ -3357,6 +3363,8 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 		ip_freemoptions(ip_pcb->inp_moptions);
 		ip_pcb->inp_moptions = 0;
 	}
+#endif
+
 #ifdef INET6
 #if !(defined(__FreeBSD__) || defined(__APPLE__))
 	if (inp->inp_vflag & INP_IPV6) {
@@ -3510,6 +3518,10 @@ sctp_set_initial_cc_param(struct sctp_tcb *stcb, struct sctp_nets *net)
 	}
 	net->ssthresh = stcb->asoc.peers_rwnd;
 }
+
+#ifdef __Panda__
+void rtalloc_it(void);
+#endif
 
 int
 sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
@@ -3701,11 +3713,17 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 #endif
 	}
 #endif /* SCTP_EMBEDDED_V6_SCOPE */
+#ifndef __Panda__
 #if defined(__FreeBSD__) || defined(__APPLE__)
 	rtalloc_ign((struct route *)&net->ro, 0UL);
 #else
 	rtalloc((struct route *)&net->ro);
 #endif
+#else
+	/* What is the ROUTE alloc for Panda? */
+	rtalloc_it();
+#endif
+
 #ifdef SCTP_EMBEDDED_V6_SCOPE
 	if (newaddr->sa_family == AF_INET6) {
 		struct sockaddr_in6 *sin6;
