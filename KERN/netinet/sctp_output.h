@@ -202,9 +202,14 @@ sctp_sosend(struct socket *so,
     struct sockaddr *addr,
 #endif
     struct uio *uio,
+#ifdef __Panda__
+    pakhandle_type top,
+    pakhandle_type control,
+#else
     struct mbuf *top,
     struct mbuf *control,
-#if defined(__NetBSD__) || defined(__APPLE__)
+#endif
+#if defined(__NetBSD__) || defined(__APPLE__) || defined(__Panda__)
     int flags
 #else
     int flags,
