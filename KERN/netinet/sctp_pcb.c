@@ -4001,6 +4001,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		SCTP_DECR_ASOC_COUNT();
 		SCTP_TCB_LOCK_DESTROY(stcb);
 		SCTP_TCB_SEND_LOCK_DESTROY(stcb);
+		SCTP_INP_WUNLOCK(inp);
 		*error = ENOBUFS;
 		return (NULL);
 	}

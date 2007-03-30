@@ -1633,7 +1633,7 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 	}
 #endif				/* SCTP_DEBUG */
 
-n	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
+	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
 		/* We are already connected AND the TCP model */
 #if defined(__NetBSD__) || defined(__OpenBSD__)
