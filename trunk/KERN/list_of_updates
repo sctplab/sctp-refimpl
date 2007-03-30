@@ -1,2 +1,3 @@
--
+- fixed several places where we did not release INP locks.
+- 
 
