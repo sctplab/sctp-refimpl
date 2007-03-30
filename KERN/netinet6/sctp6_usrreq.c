@@ -1270,23 +1270,28 @@ sctp_sendm(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
 #endif
 
 
-int
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+static int
 sctp6_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
     struct mbuf *control, struct thread *p)
 {
-#else
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#elif defined(__FreeBSD__) || defined(__APPLE__)
+static int
 sctp6_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
     struct mbuf *control, struct proc *p)
 {
+#elif defined(__Panda__)
+int
+sctp6_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
+    struct mbuf *control)
+{
+	void *p = NULL;
 #else
+static int
 sctp6_send(struct socket *so, int flags, struct mbuf *m, struct mbuf *nam,
     struct mbuf *control, struct proc *p)
 {
 	struct sockaddr *addr = nam ? mtod(nam, struct sockaddr *): NULL;
-
-#endif
 #endif
 	struct sctp_inpcb *inp;
 	struct inpcb *in_inp;
@@ -1294,8 +1299,7 @@ sctp6_send(struct socket *so, int flags, struct mbuf *m, struct mbuf *nam,
 
 #ifdef INET
 	struct sockaddr_in6 *sin6;
-
-#endif				/* INET */
+#endif /* INET */
 	/* No SPL needed since sctp_output does this */
 
 	inp = (struct sctp_inpcb *)so->so_pcb;
