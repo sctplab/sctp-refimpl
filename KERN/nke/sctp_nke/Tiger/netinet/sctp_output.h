@@ -73,7 +73,7 @@ sctp_is_addr_in_ep(struct sctp_inpcb *inp, struct sctp_ifa *ifa);
 struct sctp_ifa *
 sctp_source_address_selection(struct sctp_inpcb *inp,
 			      struct sctp_tcb *stcb, 
-			      struct route *ro, struct sctp_nets *net,
+			      sctp_route_t *ro, struct sctp_nets *net,
 			      int non_asoc_addr_ok, uint32_t vrf_id);
 
 

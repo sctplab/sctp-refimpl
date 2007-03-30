@@ -2430,7 +2430,7 @@ sctp_is_addr_in_ep(struct sctp_inpcb *inp, struct sctp_ifa *ifa)
 
 static struct sctp_ifa *
 sctp_choose_boundspecific_inp(struct sctp_inpcb *inp,
-			      struct route *ro,
+			      sctp_route_t *ro,
 			      uint32_t vrf_id,
 			      int non_asoc_addr_ok,
 			      uint8_t dest_is_priv,
@@ -2537,7 +2537,7 @@ static struct sctp_ifa *
 sctp_choose_boundspecific_stcb(struct sctp_inpcb *inp,
 			       struct sctp_tcb *stcb,
 			       struct sctp_nets *net,
-			       struct route *ro,
+			       sctp_route_t *ro,
 			       uint32_t vrf_id,
 			       uint8_t dest_is_priv,
 			       uint8_t dest_is_loop,
@@ -2747,7 +2747,7 @@ static struct sctp_ifa *
 sctp_choose_boundall(struct sctp_inpcb *inp,
 		     struct sctp_tcb *stcb,
 		     struct sctp_nets *net,
-		     struct route *ro,
+		     sctp_route_t *ro,
 		     uint32_t vrf_id,
 		     uint8_t dest_is_priv,
 		     uint8_t dest_is_loop,
@@ -2985,7 +2985,7 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 struct sctp_ifa *
 sctp_source_address_selection(struct sctp_inpcb *inp,
 			      struct sctp_tcb *stcb, 
-			      struct route *ro, 
+			      sctp_route_t *ro, 
 			      struct sctp_nets *net,
 			      int non_asoc_addr_ok, uint32_t vrf_id)
 {
@@ -3454,7 +3454,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 	int ret;
 	unsigned int have_mtu;
 	uint32_t vrf_id;
-	struct route *ro;
+	sctp_route_t *ro;
 
 
 	if ((net) && (net->dest_state & SCTP_ADDR_OUT_OF_SCOPE)) {
@@ -3493,7 +3493,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 	
 	if (to->sa_family == AF_INET) {
 		struct ip *ip = NULL;
-		struct route iproute;
+		sctp_route_t iproute;
 		uint8_t tos_value;
 
 		o_pak = SCTP_GET_HEADER_FOR_OUTPUT(sizeof(struct ip));
@@ -3574,7 +3574,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			memset(&iproute, 0, sizeof(iproute));
 			memcpy(&ro->ro_dst, to, to->sa_len);
 		} else {
-			ro = (struct route *)&net->ro;
+			ro = (sctp_route_t *)&net->ro;
 		}
 		/* Now the address selection part */
 		ip->ip_dst.s_addr = ((struct sockaddr_in *)to)->sin_addr.s_addr;
@@ -3735,7 +3735,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		struct ip6_hdr *ip6h;
 
 #ifdef NEW_STRUCT_ROUTE
-		struct route ip6route;
+		sctp_route_t ip6route;
 #else
 		struct route_in6 ip6route;
 #endif
@@ -3791,10 +3791,10 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 #endif /* SCTP_EMBEDDED_V6_SCOPE */
 		if (net == NULL) {
 			memset(&ip6route, 0, sizeof(ip6route));
-			ro = (struct route *)&ip6route;
+			ro = (sctp_route_t *)&ip6route;
 			memcpy(&ro->ro_dst, sin6, sin6->sin6_len);
 		} else {
-			ro = (struct route *)&net->ro;
+			ro = (sctp_route_t *)&net->ro;
 		}
 		if (stcb != NULL) {
 			if ((stcb->asoc.ecn_allowed) && ecn_ok) {
@@ -4640,7 +4640,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	struct sockaddr_storage store;
 	struct sockaddr_in *sin;
 	struct sockaddr_in6 *sin6;
-	struct route *ro;
+	sctp_route_t *ro;
 	struct ip *iph;
 	struct ip6_hdr *ip6;
 	struct sockaddr *to;
@@ -4749,7 +4749,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		iph = mtod(init_pkt, struct ip *);
 		if (iph->ip_v == IPVERSION) {
 			struct sctp_ifa *addr;
-			struct route iproute;
+			sctp_route_t iproute;
 
 			sin->sin_family = AF_INET;
 			sin->sin_len = sizeof(struct sockaddr_in);
@@ -4799,7 +4799,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			struct sctp_ifa *addr;
 
 #ifdef NEW_STRUCT_ROUTE
-			struct route iproute6;
+			sctp_route_t iproute6;
 #else
 			struct route_in6 iproute6;
 #endif
@@ -4870,7 +4870,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			}
 			/* local from address */
 			memset(&iproute6, 0, sizeof(iproute6));
-			ro = (struct route *)&iproute6;
+			ro = (sctp_route_t *)&iproute6;
 			memcpy(&ro->ro_dst, sin6, sizeof(*sin6));
 			addr = sctp_source_address_selection(inp, NULL,
 							     ro, NULL, 0, vrf_id);
@@ -4919,7 +4919,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				 * did the selection.
 				 */
 				net->ro._s_addr = sctp_source_address_selection(inp,
-										stcb, (struct route *)&net->ro, 
+										stcb, (sctp_route_t *)&net->ro, 
 										net, 0, vrf_id);
 				if(net->ro._s_addr == NULL)
 					return;
@@ -4943,7 +4943,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				 * did the selection.
 				 */
 				net->ro._s_addr = sctp_source_address_selection(inp,
-										stcb, (struct route *)&net->ro, 
+										stcb, (sctp_route_t *)&net->ro, 
 										net, 0, vrf_id);
 				if(net->ro._s_addr == NULL)
 					return;
@@ -9411,7 +9411,7 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh)
 		comp_cp->sh.checksum = sctp_calculate_sum(mout, NULL, offset_out);
 	}
 	if (iph_out != NULL) {
-		struct route ro;
+		sctp_route_t ro;
 
 		bzero(&ro, sizeof ro);
 		/* set IPv4 length */
@@ -9431,7 +9431,7 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh)
 			RTFREE(ro.ro_rt);
 	} else if (ip6_out != NULL) {
 #ifdef NEW_STRUCT_ROUTE
-		struct route ro;
+		sctp_route_t ro;
 #else
 		struct route_in6 ro;
 #endif
@@ -10286,7 +10286,7 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 		abm->sh.checksum = sctp_calculate_sum(mout, NULL, iphlen_out);
 	}
 	if (iph_out != NULL) {
-		struct route ro;
+		sctp_route_t ro;
 
 		/* zap the stack pointer to the route */
 		bzero(&ro, sizeof ro);
@@ -10313,7 +10313,7 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 			RTFREE(ro.ro_rt);
 	} else if (ip6_out != NULL) {
 #ifdef NEW_STRUCT_ROUTE
-		struct route ro;
+		sctp_route_t ro;
 #else
 		struct route_in6 ro;
 #endif
@@ -10408,7 +10408,7 @@ sctp_send_operr_to(struct mbuf *m, int iphlen,
 	if (iph->ip_v == IPVERSION) {
 		/* V4 */
 		struct ip *out;
-		struct route ro;
+		sctp_route_t ro;
 
 		o_pak = SCTP_GET_HEADER_FOR_OUTPUT(sizeof(struct ip));
 		if (o_pak == NULL) {
@@ -10448,7 +10448,7 @@ sctp_send_operr_to(struct mbuf *m, int iphlen,
 	} else {
 		/* V6 */
 #ifdef NEW_STRUCT_ROUTE
-		struct route ro;
+		sctp_route_t ro;
 #else
 		struct route_in6 ro;
 #endif

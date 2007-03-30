@@ -41,7 +41,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_asconf.c,v 1.9 2007/03/15 11:27:13 rrs 
 #include <netinet/sctp_header.h>
 #include <netinet/sctputil.h>
 #include <netinet/sctp_output.h>
-#include <netinet/sctp_bsd_addr.h>
 #include <netinet/sctp_asconf.h>
 
 /*
@@ -1953,9 +1952,11 @@ sctp_iterator_stcb(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
 						RTFREE(rt);
 						net->ro.ro_rt = NULL;
 					}
-					/* Now we deleted our src address, should
-					 * we not also now reset the cwnd/rto to
-					 * start as if its a new address?
+					/*
+					 * Now we deleted our src address,
+					 * should we not also now reset the
+					 * cwnd/rto to start as if its a new
+					 * address?
 					 */
 					sctp_set_initial_cc_param(stcb, net);
 					net->RTO = stcb->asoc.initial_rto;

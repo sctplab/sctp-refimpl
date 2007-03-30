@@ -116,15 +116,15 @@ in6_sin6_2_sin_in_sock(struct sockaddr *nam)
 int
 #if defined(__APPLE__)
 sctp6_input(mp, offp)
-#else
-sctp6_input(mp, offp, proto)
-#endif
 	struct mbuf **mp;
 	int *offp;
-
-#ifndef __APPLE__
+#elif defined( __Panda__)
+	sctp6_input(pakhandle_type i_pak)
+#else
+sctp6_input(mp, offp, proto)
+	struct mbuf **mp;
+	int *offp;
 	int proto;
-
 #endif
 {
 	struct mbuf *m;
@@ -133,17 +133,36 @@ sctp6_input(mp, offp, proto)
 	struct sctp_inpcb *in6p = NULL;
 	struct sctp_nets *net;
 	int refcount_up = 0;
-	u_int32_t check, calc_check;
+	u_int32_t check, calc_check, vrf_id;
 	struct inpcb *in6p_ip;
 	struct sctp_chunkhdr *ch;
 	int length, mlen, offset, iphlen;
 	u_int8_t ecn_bits;
 	struct sctp_tcb *stcb = NULL;
+#ifndef __Panda__
 	int off = *offp;
+#else
+	pakoffset_type off_p;
+	int off,res;
+#endif
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s;
 #endif
-
+#ifdef __Panda__
+	res = pak_client_get_offset(i_pak, PAK_OFF_NETWORK_ST, &off_p);
+	if (CERR_IS_NOTOK(res)) {
+		(void) pak_client_return_buffer(i_pak);
+		return(-1);
+	}
+	off = (int)off_p;
+	error = pak_client_get_vrf_id(i_pak, &vrf_id);
+	if (error != EOK) {
+		(void) pak_client_return_buffer(i_pak);
+		return(-1);
+	}
+#else
+	vrf_id = SCTP_DEFAULT_VRFID;
+#endif
 	m = SCTP_HEADER_TO_CHAIN(*mp);
 
 	ip6 = mtod(m, struct ip6_hdr *);
@@ -220,7 +239,7 @@ sctp6_input(mp, offp, proto)
 			}
 #endif
 			stcb = sctp_findassociation_addr(m, iphlen, offset - sizeof(*ch),
-			    sh, ch, &in6p, &net);
+			    sh, ch, &in6p, &net, vrf_id);
 			/* in6p's ref-count increased && stcb locked */
 			if ((in6p) && (stcb)) {
 				sctp_send_packet_dropped(stcb, net, m, iphlen, 1);
@@ -247,7 +266,7 @@ sctp_skip_csum:
 	 * IP/SCTP/first chunk header...
 	 */
 	stcb = sctp_findassociation_addr(m, iphlen, offset - sizeof(*ch),
-	    sh, ch, &in6p, &net);
+	    sh, ch, &in6p, &net, vrf_id);
 	/* in6p's ref-count increased */
 	if (in6p == NULL) {
 		struct sctp_init_chunk *init_chk, chunk_buf;
