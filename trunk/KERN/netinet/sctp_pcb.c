@@ -443,7 +443,7 @@ sctp_del_addr_from_vrf(uint32_t vrfid, struct sockaddr *addr,
 
 static struct sctp_tcb *
 sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
-    struct sockaddr *to, struct sctp_nets **netp)
+    struct sockaddr *to, struct sctp_nets **netp, uint32_t vrf_id)
 {
 	/**** ASSUMSES THE CALLER holds the INP_INFO_RLOCK */
 
@@ -463,7 +463,9 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 	struct sctp_laddr *laddr;
 	struct sctp_tcb *stcb;
 	struct sctp_nets *net;
-
+#ifdef SCTP_MVRF
+	int fnd, i;
+#endif
 	if ((to == NULL) || (from == NULL)) {
 		return (NULL);
 	}
@@ -499,6 +501,24 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 			SCTP_INP_RUNLOCK(inp);
 			continue;
 		}
+#ifdef SCTP_MVRF
+		fnd = 0;
+		for(i=0; i<inp->num_vrfs; i++) {
+			if(inp->m_vrf_ids[i] == vrf_id) {
+				fnd = 1;
+				break;
+			}
+		}
+		if (fnd == 0) {
+			SCTP_INP_RUNLOCK(inp);
+			continue;
+		}
+#else
+		if(inp->def_vrf_id == vrf_id) {
+			SCTP_INP_RUNLOCK(inp);
+			continue;
+		}
+#endif
 		/* check to see if the ep has one of the addresses */
 		if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) == 0) {
 			/* We are NOT bound all, so look further */
@@ -695,7 +715,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 #endif
 	SCTP_INP_INFO_RLOCK();
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) {
-		/*
+		/*-
 		 * Now either this guy is our listener or it's the
 		 * connector. If it is the one that issued the connect, then
 		 * it's only chance is to be the first TCB in the list. If
@@ -704,8 +724,9 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 		 */
 		if ((inp->sctp_socket) && (inp->sctp_socket->so_qlimit)) {
 			/* to is peer addr, from is my addr */
+#ifndef SCTP_MVRF
 			stcb = sctp_tcb_special_locate(inp_p, remote, local,
-			    netp);
+			    netp, inp->def_vrf_id);
 			if ((stcb != NULL) && (locked_tcb == NULL)) {
 				/* we have a locked tcb, lower refcount */
 				SCTP_INP_WLOCK(inp);
@@ -717,6 +738,33 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 				SCTP_TCB_LOCK(locked_tcb);
 				SCTP_INP_RUNLOCK(locked_tcb->sctp_ep);
 			}
+#else
+			/*- 
+			 *MVRF is tricky, we must look in every VRF 
+			 * the endpoint has.
+			 */
+			{
+				int fnd, i;
+
+				for(i=0; i<inp->num_vrfs; i++) {
+					stcb = sctp_tcb_special_locate(inp_p, remote, local,
+								       netp, inp->m_vrf_ids[i]);
+					if ((stcb != NULL) && (locked_tcb == NULL)) {
+						/* we have a locked tcb, lower refcount */
+						SCTP_INP_WLOCK(inp);
+						SCTP_INP_DECR_REF(inp);
+						SCTP_INP_WUNLOCK(inp);
+						break;
+					}
+					if ((locked_tcb != NULL) && (locked_tcb != stcb)) {
+						SCTP_INP_RLOCK(locked_tcb->sctp_ep);
+						SCTP_TCB_LOCK(locked_tcb);
+						SCTP_INP_RUNLOCK(locked_tcb->sctp_ep);
+						break;
+					}
+				}
+			}
+#endif
 #if defined(SCTP_PER_SOCKET_LOCKING)
 			SCTP_UNLOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
 #endif
@@ -1357,9 +1405,9 @@ sctp_findassociation_addr_sa(struct sockaddr *to, struct sockaddr *from,
 	SCTP_INP_INFO_RLOCK();
 	if (find_tcp_pool) {
 		if (inp_p != NULL) {
-			retval = sctp_tcb_special_locate(inp_p, from, to, netp);
+			retval = sctp_tcb_special_locate(inp_p, from, to, netp, vrf_id);
 		} else {
-			retval = sctp_tcb_special_locate(&inp, from, to, netp);
+			retval = sctp_tcb_special_locate(&inp, from, to, netp, vrf_id);
 		}
 		if (retval != NULL) {
 #if defined(SCTP_PER_SOCKET_LOCKING)
