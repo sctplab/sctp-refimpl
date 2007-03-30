@@ -2952,10 +2952,13 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 
 	struct sctp_queued_to_read *sq;
 
+#ifndef __Panda__
 #if !defined(__FreeBSD__) || __FreeBSD_version < 500000
 	struct rtentry *rt;
 
 #endif
+#endif
+
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s;
 #endif
@@ -3374,7 +3377,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 		struct in6pcb *in6p;
 
 		in6p = (struct in6pcb *)inp;
+#ifndef __Panda__
 		ip6_freepcbopts(in6p->in6p_outputopts);
+#endif
 	}
 #endif				/* INET6 */
 #if !(defined(__FreeBSD__) || defined(__APPLE__))
@@ -3521,6 +3526,7 @@ sctp_set_initial_cc_param(struct sctp_tcb *stcb, struct sctp_nets *net)
 
 #ifdef __Panda__
 void rtalloc_it(void);
+int panda_find_mtu(struct sctp_nets *net);
 #endif
 
 int
@@ -3736,6 +3742,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 #endif /* SCTP_KAME */
 	}
 #endif /* SCTP_EMBEDDED_V6_SCOPE */
+#ifndef __Panda__
 	if ((net->ro.ro_rt) &&
 	    (net->ro.ro_rt->rt_ifp)) {
 		net->mtu = net->ro.ro_rt->rt_ifp->if_mtu;
@@ -3747,6 +3754,9 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	} else {
 		net->mtu = stcb->asoc.smallest_mtu;
 	}
+#else
+	net->mtu = panda_find_mtu(net);
+#endif
 
 	if (stcb->asoc.smallest_mtu > net->mtu) {
 		stcb->asoc.smallest_mtu = net->mtu;
@@ -5370,7 +5380,7 @@ sctp_pcb_init()
 	sctp_startup_iterator();
 #endif
 
-#if !defined(__Panda__)
+#ifndef _Panda__
 	/*
 	 * INIT the default VRF which for BSD is the only one, other O/S's
 	 * may have more. But initially they must start with one and then

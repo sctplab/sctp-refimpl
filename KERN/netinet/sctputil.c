@@ -3893,14 +3893,14 @@ sctp_print_address(struct sockaddr *sa)
 		sin6 = (struct sockaddr_in6 *)sa;
 #if defined(__Panda__)
 		printf("IPv6 address: %x:%x:%x:%x:%x:%x:%x:%x:port:%d scope:%u \n"
-		       (uint)sin6->sin6_addr.s6_addr16[0],
-		       (uint)sin6->sin6_addr.s6_addr16[1],
-		       (uint)sin6->sin6_addr.s6_addr16[2],
-		       (uint)sin6->sin6_addr.s6_addr16[3],
-		       (uint)sin6->sin6_addr.s6_addr16[4],
-		       (uint)sin6->sin6_addr.s6_addr16[5],
-		       (uint)sin6->sin6_addr.s6_addr16[6],
-		       (uint)sin6->sin6_addr.s6_addr16[7],
+		       (uint32_t)sin6->sin6_addr.s6_addr16[0],
+		       (uint32_t)sin6->sin6_addr.s6_addr16[1],
+		       (uint32_t)sin6->sin6_addr.s6_addr16[2],
+		       (uint32_t)sin6->sin6_addr.s6_addr16[3],
+		       (uint32_t)sin6->sin6_addr.s6_addr16[4],
+		       (uint32_t)sin6->sin6_addr.s6_addr16[5],
+		       (uint32_t)sin6->sin6_addr.s6_addr16[6],
+		       (uint32_t)sin6->sin6_addr.s6_addr16[7],
 		       ntohs(sin6->sin6_port),
 		       sin6->sin6_scope_id);
 #else
