@@ -682,7 +682,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 {
 	struct sctpasochead *head;
 	struct sctp_inpcb *inp;
-	struct sctp_tcb *stcb;
+	struct sctp_tcb *stcb=NULL;
 	struct sctp_nets *net;
 	uint16_t rport;
 
