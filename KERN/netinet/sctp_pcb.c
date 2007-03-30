@@ -3792,12 +3792,14 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 		 * one.
 		 */
 		TAILQ_INSERT_HEAD(&stcb->asoc.nets, net, sctp_next);
+#ifndef __Panda__
 	} else if (net->ro.ro_rt->rt_ifp != netfirst->ro.ro_rt->rt_ifp) {
 		/*
 		 * This one has a different interface than the one at the
 		 * top of the list. Place it ahead.
 		 */
 		TAILQ_INSERT_HEAD(&stcb->asoc.nets, net, sctp_next);
+#endif
 	} else {
 		/*
 		 * Ok we have the same interface as the first one. Move
@@ -3811,17 +3813,21 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 			netlook = TAILQ_NEXT(netfirst, sctp_next);
 			if (netlook == NULL) {
 				/* End of the list */
-				TAILQ_INSERT_TAIL(&stcb->asoc.nets, net,
-				    sctp_next);
+				TAILQ_INSERT_TAIL(&stcb->asoc.nets, net, sctp_next);
 				break;
 			} else if (netlook->ro.ro_rt == NULL) {
 				/* next one has NO route */
 				TAILQ_INSERT_BEFORE(netfirst, net, sctp_next);
 				break;
-			} else if (netlook->ro.ro_rt->rt_ifp !=
-			    net->ro.ro_rt->rt_ifp) {
+			}
+#ifndef __Panda__
+			else if (netlook->ro.ro_rt->rt_ifp != net->ro.ro_rt->rt_ifp)
+#else
+			else	
+#endif
+			{
 				TAILQ_INSERT_AFTER(&stcb->asoc.nets, netlook,
-				    net, sctp_next);
+						   net, sctp_next);
 				break;
 			}
 			/* Shift forward */
@@ -4226,6 +4232,10 @@ sctp_iterator_asoc_being_freed(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	}
 }
 
+#ifdef __Panda__
+void panda_wakeup_socket(struct socket *so);
+#endif
+
 /*
  * Free the association after un-hashing the remote port.
  */
@@ -4463,7 +4473,11 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				SOCK_UNLOCK(so);
 				sctp_sowwakeup(inp, so);
 				sctp_sorwakeup(inp, so);
+#ifndef __Panda__
 				wakeup(&so->so_timeo);
+#else
+				panda_wakeup_socket(so);
+#endif
 			}
 		}
 	}
@@ -5374,7 +5388,8 @@ sctp_pcb_init()
 
 #if defined(SCTP_USE_THREAD_BASED_ITERATOR)
 #if defined(SCTP_PROCESS_LEVEL_LOCKS)
-	sctppcbinfo.iterator_wakeup = PTHREAD_COND_INITIALIZER;
+	pthread_cond_init(&sctppcbinfo.iterator_wakeup,
+			  NULL);
 #endif
 	sctppcbinfo.iterator_running = 0;
 	sctp_startup_iterator();
