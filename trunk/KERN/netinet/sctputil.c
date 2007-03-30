@@ -2197,7 +2197,9 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	tmr->tcb = (void *)stcb;
 	tmr->net = (void *)net;
 	tmr->self = (void *)tmr;
+#ifndef __Panda__
 	tmr->ticks = ticks;
+#endif
 	SCTP_OS_TIMER_START(&tmr->timer, to_ticks, sctp_timeout_handler, tmr);
 	return (0);
 }
@@ -3889,7 +3891,20 @@ sctp_print_address(struct sockaddr *sa)
 #endif
 
 		sin6 = (struct sockaddr_in6 *)sa;
-		printf("IPv6 address: %s:%d scope:%u\n",
+#if defined(__Panda__)
+		printf("IPv6 address: %x:%x:%x:%x:%x:%x:%x:%x:port:%d scope:%u \n"
+		       (uint)sin6->sin6_addr.s6_addr16[0],
+		       (uint)sin6->sin6_addr.s6_addr16[1],
+		       (uint)sin6->sin6_addr.s6_addr16[2],
+		       (uint)sin6->sin6_addr.s6_addr16[3],
+		       (uint)sin6->sin6_addr.s6_addr16[4],
+		       (uint)sin6->sin6_addr.s6_addr16[5],
+		       (uint)sin6->sin6_addr.s6_addr16[6],
+		       (uint)sin6->sin6_addr.s6_addr16[7],
+		       ntohs(sin6->sin6_port),
+		       sin6->sin6_scope_id);
+#else
+		printf("IPv6 address: %s:port:%d scope:%u\n",
 #if defined(__FreeBSD__) && __FreeBSD_version >= 700000
 		    ip6_sprintf(ip6buf, &sin6->sin6_addr),
 #else
@@ -3897,6 +3912,7 @@ sctp_print_address(struct sockaddr *sa)
 #endif
 		    ntohs(sin6->sin6_port),
 		    sin6->sin6_scope_id);
+#endif
 	} else if (sa->sa_family == AF_INET) {
 		struct sockaddr_in *sin;
 		unsigned char *p;
@@ -3965,7 +3981,7 @@ sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
 	struct sctp_queued_to_read *control, *nctl;
 	struct sctp_readhead tmp_queue;
 	struct mbuf *m;
-	int error;
+	int error = 0;
 
 	old_so = old_inp->sctp_socket;
 	new_so = new_inp->sctp_socket;
