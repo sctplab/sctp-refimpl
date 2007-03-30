@@ -55,7 +55,6 @@ TAILQ_HEAD(sctp_streamhead, sctp_stream_queue_pending);
 #include <netinet/sctp_structs.h>
 #include <netinet/sctp_uio.h>
 #include <netinet/sctp_auth.h>
-#include <netinet/sctp_bsd_addr.h>
 
 /*
  * PCB flags (in sctp_flags bitmask)
@@ -593,7 +592,7 @@ int sctp_inpcb_bind(struct socket *, struct sockaddr *, struct proc *);
 struct sctp_tcb *
 sctp_findassociation_addr(struct mbuf *, int, int,
     struct sctphdr *, struct sctp_chunkhdr *, struct sctp_inpcb **,
-    struct sctp_nets **);
+    struct sctp_nets **, uint32_t vrf_id);
 
 struct sctp_tcb *
 sctp_findassociation_addr_sa(struct sockaddr *,

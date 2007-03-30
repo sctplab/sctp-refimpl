@@ -35,8 +35,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_bsd_addr.h,v 1.3 2007/03/15 11:27:13 rr
 
 #ifndef __sctp_bsd_addr_h__
 #define __sctp_bsd_addr_h__
-
-#include <netinet/sctp_header.h>
+#include <netinet/sctp_pcb.h>
 
 #if defined(_KERNEL)
 
@@ -46,11 +45,11 @@ void sctp_wakeup_iterator(void);
 void sctp_startup_iterator(void);
 #endif
 
-void
-sctp_gather_internal_ifa_flags(struct sctp_ifa *ifa);
+void sctp_gather_internal_ifa_flags(struct sctp_ifa *ifa);
 
-
-extern void sctp_addr_change(struct ifaddr *ifa, int cmd);
+#if !defined(__Panda__)
+void sctp_addr_change(struct ifaddr *ifa, int cmd);
+#endif
 
 #endif
 #endif

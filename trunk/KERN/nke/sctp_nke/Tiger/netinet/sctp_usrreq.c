@@ -46,7 +46,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.14 2007/03/20 10:23:11 rrs
 #endif
 #include <netinet/sctp_sysctl.h>
 #include <netinet/sctp_output.h>
-#include <netinet/sctp_bsd_addr.h>
 #include <netinet/sctp_uio.h>
 #include <netinet/sctp_asconf.h>
 #include <netinet/sctputil.h>
@@ -188,7 +187,11 @@ sctp_pathmtu_adjustment(struct sctp_inpcb *inp,
 	}
 }
 
+#if defined(__Panda__)
+void
+#else
 static void
+#endif
 sctp_notify_mbuf(struct sctp_inpcb *inp,
     struct sctp_tcb *stcb,
     struct sctp_nets *net,
@@ -680,13 +683,19 @@ sctp_attach(struct socket *so, int proto, struct proc *p)
 	return 0;
 }
 
-static int
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+static int
 sctp_bind(struct socket *so, struct sockaddr *addr, struct thread *p)
 {
 #elif defined(__FreeBSD__) || defined(__APPLE__)
+static int
 sctp_bind(struct socket *so, struct sockaddr *addr, struct proc *p) {
+#elif defined(__Panda__)
+int
+sctp_bind(struct socket *so, struct sockaddr *addr) {
+	void *p = NULL;
 #else
+static int
 sctp_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 {
 	struct sockaddr *addr = nam ? mtod(nam, struct sockaddr *): NULL;
@@ -1141,6 +1150,7 @@ sctp_disconnect(struct socket *so)
 			return (0);
 		}
 		/* not reached */
+		printf("Not reached reached?\n");
 	} else {
 		/* UDP model does not support this */
 		SCTP_INP_RUNLOCK(inp);
@@ -1203,6 +1213,7 @@ sctp_shutdown(struct socket *so)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);
 #endif
+			SCTP_INP_RUNLOCK(inp);
 			return (0);
 		}
 		SCTP_TCB_LOCK(stcb);
@@ -1723,13 +1734,10 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) ==
 	    SCTP_PCB_FLAGS_UNBOUND) {
 		/* Bind a ephemeral port */
-		SCTP_INP_WUNLOCK(inp);
 		error = sctp_inpcb_bind(so, NULL, p);
 		if (error) {
 			goto out_now;
 		}
-	} else {
-		SCTP_INP_WUNLOCK(inp);
 	}
 
 	/* FIX ME: do we want to pass in a vrf on the connect call? */
@@ -2666,6 +2674,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 			if (hmaclist == NULL) {
 				/* no HMACs to return */
 				*optsize = sizeof(*shmac);
+				SCTP_INP_RUNLOCK(inp);
 				break;
 			}
 			/* is there room for all of the hmac ids? */
@@ -4218,15 +4227,22 @@ sctp_ctloutput(op, so, level, optname, mp)
 
 #endif
 
-static int
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+static int
 sctp_connect(struct socket *so, struct sockaddr *addr, struct thread *p)
 {
 #else
 #if defined(__FreeBSD__) || defined(__APPLE__)
+static int
 sctp_connect(struct socket *so, struct sockaddr *addr, struct proc *p)
 {
+#elif defined(__Panda__)
+int
+sctp_connect(struct socket *so, struct sockaddr *addr)
+{
+	void *p = NULL;
 #else
+static int
 sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 {
 	struct sockaddr *addr = mtod(nam, struct sockaddr *);
@@ -4293,8 +4309,6 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
 		SCTP_INP_RLOCK(inp);
 		stcb = LIST_FIRST(&inp->sctp_asoc_list);
-		if (stcb)
-			SCTP_TCB_UNLOCK(stcb);
 		SCTP_INP_RUNLOCK(inp);
 	} else {
 		/* We increment here since sctp_findassociation_ep_addr() wil
@@ -4305,6 +4319,8 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		stcb = sctp_findassociation_ep_addr(&inp, addr, NULL, NULL, NULL);
 		if (stcb == NULL) {
 			SCTP_INP_DECR_REF(inp);
+		} else {
+			SCTP_TCB_LOCK(stcb);
 		}
 	}
 	if (stcb != NULL) {
@@ -4315,8 +4331,8 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 
 	vrf_id = inp->def_vrf_id;
 #ifdef SCTP_MVRF
-	for (i=0;i<inp->num_vrfs; i++) {
-		if(vrf_id == inp->m_vrf_ids[i]) {
+	for (i = 0; i < inp->num_vrfs; i++) {
+		if (vrf_id == inp->m_vrf_ids[i]) {
 			fnd = 1;
 			break;
 		}
@@ -4351,8 +4367,6 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	if (create_lock_on)
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 
-	if (stcb)
-		SCTP_TCB_UNLOCK(stcb);
 	SCTP_INP_DECR_REF(inp);
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
@@ -4495,6 +4509,7 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 	}
 	SCTP_INP_RLOCK(inp);
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE) {
+		SCTP_INP_RUNLOCK(inp);
 		return (ENOTSUP);
 	}
 	if (so->so_state & SS_ISDISCONNECTED) {
@@ -4697,7 +4712,7 @@ sctp_ingetaddr(struct socket *so, struct mbuf *nam)
 			vrf_id = inp->def_vrf_id;
 			sctp_ifa = sctp_source_address_selection(inp,
 								 stcb, 
-								 (struct route *)&net->ro, 
+								 (sctp_route_t *)&net->ro, 
 								 net, 0, vrf_id);
 			if(sctp_ifa) {
 				sin->sin_addr = sctp_ifa->address.sin.sin_addr;

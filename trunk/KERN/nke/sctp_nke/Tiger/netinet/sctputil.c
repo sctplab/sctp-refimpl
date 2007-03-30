@@ -51,7 +51,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.16 2007/03/20 10:23:11 rrs Ex
 #include <netinet/sctp_indata.h>/* for sctp_deliver_data() */
 #include <netinet/sctp_auth.h>
 #include <netinet/sctp_asconf.h>
-#include <netinet/sctp_bsd_addr.h>
 
 #define NUMBER_OF_MTU_SIZES 18
 
