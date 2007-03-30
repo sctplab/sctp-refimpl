@@ -209,6 +209,11 @@ sctp_audit_retranmission_queue(struct sctp_association *asoc)
 #endif				/* SCTP_DEBUG */
 }
 
+#ifdef __Panda__
+void rtalloc_it(void);
+int panda_find_mtu(struct sctp_nets *net);
+#endif
+
 int
 sctp_threshold_management(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
     struct sctp_nets *net, uint16_t threshold)
@@ -379,11 +384,16 @@ sctp_find_alternate_net(struct sctp_tcb *stcb,
 			}
 #endif /* SCTP_EMBEDDED_V6_SCOPE */
 #endif
+#ifndef __Panda__
 #if defined(__FreeBSD__) || defined(__APPLE__)
 			rtalloc_ign((struct route *)&alt->ro, 0UL);
 #else
 			rtalloc((struct route *)&alt->ro);
 #endif
+#else
+			rtalloc_it();
+#endif
+
 #ifndef SCOPEDROUTING
 #ifdef SCTP_EMBEDDED_V6_SCOPE
 			if (sin6->sin6_family == AF_INET6) {
@@ -1578,6 +1588,7 @@ sctp_pathmtu_timer(struct sctp_inpcb *inp,
 		/* nothing to do */
 		return;
 	}
+#ifndef __Panda__
 	if (net->ro.ro_rt != NULL) {
 		/*
 		 * only if we have a route and interface do we set anything.
@@ -1591,6 +1602,9 @@ sctp_pathmtu_timer(struct sctp_inpcb *inp,
 			}
 		}
 	}
+#else
+	net->mtu = panda_find_mtu(net);
+#endif
 	/* restart the timer */
 	sctp_timer_start(SCTP_TIMER_TYPE_PATHMTURAISE, inp, stcb, net);
 }
