@@ -4064,6 +4064,7 @@ sctp_print_fs_audit(struct sctp_association *asoc)
 	       (int)asoc->cnt_on_reasm_queue,
 	       (int)asoc->total_flight,
 	       (int)asoc->total_flight_count);
+	printf("my_rwnd:%d peers_rwnd:%d\n", (int)asoc->my_rwnd, (int)asoc->peers_rwnd);
 	for(i=0;i<asoc->streamoutcnt;i++) {
 		struct sctp_stream_queue_pending *sp;
 		cnt = 0;
