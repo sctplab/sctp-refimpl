@@ -10738,7 +10738,7 @@ sctp_sosend(struct socket *so,
     struct uio *uio,
 #ifdef __Panda__
     pakhandle_type top,
-    pakhandle_type control,
+    pakhandle_type icontrol,
 #else
     struct mbuf *top,
     struct mbuf *control,
@@ -10754,6 +10754,9 @@ sctp_sosend(struct socket *so,
 #endif
 )
 {
+#ifdef __Panda__
+	struct mbuf *control=NULL;
+#endif
 #if defined(__APPLE__)
 	struct proc *p = current_proc();
 
@@ -10778,6 +10781,9 @@ sctp_sosend(struct socket *so,
 #if defined(SCTP_PER_SOCKET_LOCKING)
 	SCTP_SOCKET_LOCK(so, 1);
 #endif
+#ifdef __Panda__
+	control = SCTP_HEADER_TO_CHAIN(icontrol);	
+#endif
 	if (control) {
 		/* process cmsg snd/rcv info (maybe a assoc-id) */
 		if (sctp_find_cmsg(SCTP_SNDRCV, (void *)&srcv, control,
@@ -10786,7 +10792,13 @@ sctp_sosend(struct socket *so,
 			use_rcvinfo = 1;
 		}
 	}
-	error = sctp_lower_sosend(so, addr, uio, top, control, flags,
+	error = sctp_lower_sosend(so, addr, uio, top, 
+#ifdef __Panda__
+				  icontrol, 
+#else
+				  control,
+#endif
+				  flags,
 				  use_rcvinfo, &srcv
 #ifndef __Panda__
 				  , p
