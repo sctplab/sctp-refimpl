@@ -1150,6 +1150,7 @@ sctp_disconnect(struct socket *so)
 			return (0);
 		}
 		/* not reached */
+		printf("Not reached reached?\n");
 	} else {
 		/* UDP model does not support this */
 		SCTP_INP_RUNLOCK(inp);
@@ -1212,6 +1213,7 @@ sctp_shutdown(struct socket *so)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);
 #endif
+			SCTP_INP_RUNLOCK(inp);
 			return (0);
 		}
 		SCTP_TCB_LOCK(stcb);
@@ -1631,7 +1633,7 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 	}
 #endif				/* SCTP_DEBUG */
 
-	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
+n	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
 		/* We are already connected AND the TCP model */
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -1732,13 +1734,10 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) ==
 	    SCTP_PCB_FLAGS_UNBOUND) {
 		/* Bind a ephemeral port */
-		SCTP_INP_WUNLOCK(inp);
 		error = sctp_inpcb_bind(so, NULL, p);
 		if (error) {
 			goto out_now;
 		}
-	} else {
-		SCTP_INP_WUNLOCK(inp);
 	}
 
 	/* FIX ME: do we want to pass in a vrf on the connect call? */
@@ -2675,6 +2674,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 			if (hmaclist == NULL) {
 				/* no HMACs to return */
 				*optsize = sizeof(*shmac);
+				SCTP_INP_RUNLOCK(inp);
 				break;
 			}
 			/* is there room for all of the hmac ids? */
@@ -4309,8 +4309,6 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
 		SCTP_INP_RLOCK(inp);
 		stcb = LIST_FIRST(&inp->sctp_asoc_list);
-		if (stcb)
-			SCTP_TCB_UNLOCK(stcb);
 		SCTP_INP_RUNLOCK(inp);
 	} else {
 		/* We increment here since sctp_findassociation_ep_addr() wil
@@ -4321,6 +4319,8 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		stcb = sctp_findassociation_ep_addr(&inp, addr, NULL, NULL, NULL);
 		if (stcb == NULL) {
 			SCTP_INP_DECR_REF(inp);
+		} else {
+			SCTP_TCB_LOCK(stcb);
 		}
 	}
 	if (stcb != NULL) {
@@ -4367,8 +4367,6 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	if (create_lock_on)
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 
-	if (stcb)
-		SCTP_TCB_UNLOCK(stcb);
 	SCTP_INP_DECR_REF(inp);
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
@@ -4511,6 +4509,7 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 	}
 	SCTP_INP_RLOCK(inp);
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE) {
+		SCTP_INP_RUNLOCK(inp);
 		return (ENOTSUP);
 	}
 	if (so->so_state & SS_ISDISCONNECTED) {
