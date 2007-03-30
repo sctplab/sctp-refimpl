@@ -4363,6 +4363,7 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	sctp_initialize_auth_params(inp, stcb);
 
 	sctp_send_initiate(inp, stcb);
+	SCTP_TCB_UNLOCK(stcb);
  out_now:
 	if (create_lock_on)
 		SCTP_ASOC_CREATE_UNLOCK(inp);
