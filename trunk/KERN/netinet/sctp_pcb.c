@@ -222,6 +222,12 @@ sctp_find_vrf(uint32_t vrfid)
 	return (NULL);
 }
 
+#ifdef __Panda__
+
+
+
+#endif
+
 void
 sctp_free_ifa(struct sctp_ifa *sctp_ifap)
 {
@@ -744,7 +750,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 			 * the endpoint has.
 			 */
 			{
-				int fnd, i;
+				int i;
 
 				for(i=0; i<inp->num_vrfs; i++) {
 					stcb = sctp_tcb_special_locate(inp_p, remote, local,
