@@ -238,6 +238,31 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 	} \
 }
 
+#if defined(__Panda__)
+#define sctp_sbfree(ctl, stcb, sb, m) { \
+	if ((sb)->sb_cc >= (uint32_t)SCTP_BUF_LEN((m))) { \
+		atomic_subtract_int(&(sb)->sb_cc, SCTP_BUF_LEN((m))); \
+	} else { \
+		(sb)->sb_cc = 0; \
+	} \
+	if (((ctl)->do_not_ref_stcb == 0) && stcb) { \
+		if ((stcb)->asoc.sb_cc >= (uint32_t)SCTP_BUF_LEN((m))) { \
+			atomic_subtract_int(&(stcb)->asoc.sb_cc, SCTP_BUF_LEN((m))); \
+		} else { \
+			(stcb)->asoc.sb_cc = 0; \
+		} \
+	} \
+}
+
+#define sctp_sballoc(stcb, sb, m) { \
+	atomic_add_int(&(sb)->sb_cc, SCTP_BUF_LEN((m))); \
+	if (stcb) { \
+		atomic_add_int(&(stcb)->asoc.sb_cc, SCTP_BUF_LEN((m))); \
+	} \
+}
+
+#else
+
 #define sctp_sbfree(ctl, stcb, sb, m) { \
 	if ((sb)->sb_cc >= (uint32_t)SCTP_BUF_LEN((m))) { \
 		atomic_subtract_int(&(sb)->sb_cc, SCTP_BUF_LEN((m))); \
@@ -288,7 +313,7 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 	if (SCTP_BUF_IS_EXTENDED(m)) \
 		atomic_add_int(&(sb)->sb_mbcnt, SCTP_BUF_EXTEND_SIZE(m)); \
 }
-
+#endif
 #endif
 
 #define sctp_ucount_incr(val) { \
