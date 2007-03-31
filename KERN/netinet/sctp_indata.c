@@ -4095,6 +4095,8 @@ sctp_print_fs_audit(struct sctp_association *asoc)
 			above++;
 		} else {
 			acked++;
+			printf("chk->sent:%x chk->tsn:%x\n",
+			       chk->sent, chk->rec.data.TSN_seq);
 		}
 	}
 	printf("The sent_queue stats inflight:%d resend:%d acked:%d above:%d inbetween:%d\n",
@@ -4169,7 +4171,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 	old_rwnd = asoc->peers_rwnd;
 	asoc->this_sack_highest_gap = cumack;
 	stcb->asoc.overall_error_count = 0;
-	if(compare_with_wrap(cumack, asoc->last_acked_seq,  MAX_TSN)) {
+	if (compare_with_wrap(cumack, asoc->last_acked_seq,  MAX_TSN)) {
 		/* process the new consecutive TSN first */
 		tp1 = TAILQ_FIRST(&asoc->sent_queue);
 		while (tp1) {
@@ -4431,7 +4433,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 		panic("Flight size incorrect? fixing??");
 #else 
 		if (sctp_anal_print == 0) {
-			printf("Flight size incorrect?\n");
+			printf("Flight size-express incorrect? cumack:%x\n", cumack);
 			sctp_print_fs_audit(asoc);
 		}
 		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {		
@@ -5452,7 +5454,7 @@ skip_segments:
 	    (done_once == 0) ){
 		/* huh, this should not happen */
 #ifdef INVARIANTS
-		panic("Flight size incorrect? fixing??");
+		panic("Flight size incorrect cumack:%x? fixing??", cum_ack);
 #else 
 		if (sctp_anal_print == 0) {
 			printf("Flight size incorrect?\n");

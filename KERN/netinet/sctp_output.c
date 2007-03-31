@@ -3445,7 +3445,11 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 	 * smallest_mtu size as well.
 	 */
 	/* Will need ifdefs around this */
+#ifdef __Panda__
+	pakhandle_type o_pak;
+#else
 	struct mbuf *o_pak;
+#endif
 
 	struct sctphdr *sctphdr;
 	int packet_length;
@@ -9327,7 +9331,11 @@ int
 sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh)
 {
 	/* formulate and SEND a SHUTDOWN-COMPLETE */
+#ifdef __Panda__
+	pakhandle_type o_pak;
+#else
 	struct mbuf *o_pak;
+#endif
 	struct mbuf *mout;
 	struct ip *iph, *iph_out;
 	struct ip6_hdr *ip6, *ip6_out;
@@ -10179,7 +10187,11 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 	/*-
 	 * Formulate the abort message, and send it back down.
 	 */
+#ifdef __Panda__
+	pakhandle_type o_pak;
+#else
 	struct mbuf *o_pak;
+#endif
 	struct mbuf *mout;
 	struct sctp_abort_msg *abm;
 	struct ip *iph, *iph_out;
@@ -10351,7 +10363,11 @@ sctp_send_operr_to(struct mbuf *m, int iphlen,
     struct mbuf *scm,
     uint32_t vtag)
 {
+#ifdef __Panda__
+	pakhandle_type o_pak;
+#else
 	struct mbuf *o_pak;
+#endif
 	struct sctphdr *ihdr;
 	int retcode;
 	struct sctphdr *ohdr;
