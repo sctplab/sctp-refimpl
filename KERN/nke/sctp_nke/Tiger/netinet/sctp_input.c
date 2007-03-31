@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.15 2007/03/20 10:23:11 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.16 2007/03/31 11:47:29 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -321,7 +321,7 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 static int
 sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
     struct sctphdr *sh, struct sctp_init_ack_chunk *cp, struct sctp_tcb *stcb,
-    struct sctp_nets *net)
+    struct sctp_nets *net, int *abort_no_unlock)
 {
 	struct sctp_association *asoc;
 	struct mbuf *op_err;
@@ -350,6 +350,7 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 			 * same param back
 			 */
 			sctp_free_assoc(stcb->sctp_ep, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_3);
+			*abort_no_unlock = 1;
 		}
 		return (-1);
 	}
@@ -372,6 +373,7 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 #endif
 		sctp_abort_association(stcb->sctp_ep, stcb, m, iphlen, sh,
 		    NULL);
+		*abort_no_unlock = 1;
 		return (-1);
 	}
 	stcb->asoc.peer_hmac_id = sctp_negotiate_hmacid(stcb->asoc.peer_hmacs,
@@ -430,6 +432,7 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 			}
 			sctp_abort_association(stcb->sctp_ep, stcb, m, iphlen,
 			    sh, op_err);
+			*abort_no_unlock = 1;
 		}
 		return (retval);
 	}
@@ -1007,8 +1010,8 @@ sctp_handle_init_ack(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 			sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_CONFIRMED,
 			    stcb, 0, (void *)stcb->asoc.primary_destination);
 		}
-		if (sctp_process_init_ack(m, iphlen, offset, sh, cp, stcb, net
-		    ) < 0) {
+		if (sctp_process_init_ack(m, iphlen, offset, sh, cp, stcb, net,
+					  abort_no_unlock) < 0) {
 			/* error in parsing parameters */
 			return (-1);
 		}

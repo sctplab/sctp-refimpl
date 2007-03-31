@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.14 2007/03/20 10:23:11 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.15 2007/03/31 11:47:29 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -3445,7 +3445,11 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 	 * smallest_mtu size as well.
 	 */
 	/* Will need ifdefs around this */
+#ifdef __Panda__
+	pakhandle_type o_pak;
+#else
 	struct mbuf *o_pak;
+#endif
 
 	struct sctphdr *sctphdr;
 	int packet_length;
@@ -9327,7 +9331,11 @@ int
 sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh)
 {
 	/* formulate and SEND a SHUTDOWN-COMPLETE */
+#ifdef __Panda__
+	pakhandle_type o_pak;
+#else
 	struct mbuf *o_pak;
+#endif
 	struct mbuf *mout;
 	struct ip *iph, *iph_out;
 	struct ip6_hdr *ip6, *ip6_out;
@@ -10179,7 +10187,11 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 	/*-
 	 * Formulate the abort message, and send it back down.
 	 */
+#ifdef __Panda__
+	pakhandle_type o_pak;
+#else
 	struct mbuf *o_pak;
+#endif
 	struct mbuf *mout;
 	struct sctp_abort_msg *abm;
 	struct ip *iph, *iph_out;
@@ -10351,7 +10363,11 @@ sctp_send_operr_to(struct mbuf *m, int iphlen,
     struct mbuf *scm,
     uint32_t vtag)
 {
+#ifdef __Panda__
+	pakhandle_type o_pak;
+#else
 	struct mbuf *o_pak;
+#endif
 	struct sctphdr *ihdr;
 	int retcode;
 	struct sctphdr *ohdr;
@@ -10736,8 +10752,13 @@ sctp_sosend(struct socket *so,
     struct sockaddr *addr,
 #endif
     struct uio *uio,
+#ifdef __Panda__
+    pakhandle_type top,
+    pakhandle_type icontrol,
+#else
     struct mbuf *top,
     struct mbuf *control,
+#endif
     int flags
 #ifdef __FreeBSD__
     ,
@@ -10749,6 +10770,9 @@ sctp_sosend(struct socket *so,
 #endif
 )
 {
+#ifdef __Panda__
+	struct mbuf *control=NULL;
+#endif
 #if defined(__APPLE__)
 	struct proc *p = current_proc();
 
@@ -10773,6 +10797,9 @@ sctp_sosend(struct socket *so,
 #if defined(SCTP_PER_SOCKET_LOCKING)
 	SCTP_SOCKET_LOCK(so, 1);
 #endif
+#ifdef __Panda__
+	control = SCTP_HEADER_TO_CHAIN(icontrol);	
+#endif
 	if (control) {
 		/* process cmsg snd/rcv info (maybe a assoc-id) */
 		if (sctp_find_cmsg(SCTP_SNDRCV, (void *)&srcv, control,
@@ -10781,8 +10808,18 @@ sctp_sosend(struct socket *so,
 			use_rcvinfo = 1;
 		}
 	}
-	error = sctp_lower_sosend(so, addr, uio, top, control, flags,
-				  use_rcvinfo, &srcv, p);
+	error = sctp_lower_sosend(so, addr, uio, top, 
+#ifdef __Panda__
+				  icontrol, 
+#else
+				  control,
+#endif
+				  flags,
+				  use_rcvinfo, &srcv
+#ifndef __Panda__
+				  , p
+#endif
+		);
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
 #endif
@@ -10797,15 +10834,22 @@ int
 sctp_lower_sosend(struct socket *so,
     struct sockaddr *addr,
     struct uio *uio,
+#ifdef __Panda__
+    pakhandle_type i_pak,
+    pakhandle_type i_control,
+#else
     struct mbuf *i_pak,
     struct mbuf *control,
+#endif
     int flags,
     int use_rcvinfo,
     struct sctp_sndrcvinfo *srcv,
+#ifndef __Panda__
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
     struct thread *p
 #else
     struct proc *p
+#endif
 #endif
 )
 {
@@ -10814,6 +10858,9 @@ sctp_lower_sosend(struct socket *so,
 	struct mbuf *top=NULL;
 #if defined(__NetBSD__) || defined(__OpenBSD_)
 	int s;
+#endif
+#ifdef __Panda__
+	struct mbuf *control=NULL;
 #endif
 	int queue_only = 0, queue_only_for_init = 0;
 	int free_cnt_applied = 0;
@@ -10855,6 +10902,9 @@ sctp_lower_sosend(struct socket *so,
 		sndlen = SCTP_HEADER_LEN(i_pak);
 		top = SCTP_HEADER_TO_CHAIN(i_pak);
 	}
+#ifdef __Panda__
+	control = SCTP_HEADER_TO_CHAIN(i_control);
+#endif	
 
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
@@ -11195,6 +11245,7 @@ sctp_lower_sosend(struct socket *so,
 		}
 	}
 	/* Ok, we will attempt a msgsnd :> */
+#ifndef __Panda__
 	if (p) {
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 		p->td_proc->p_stats->p_ru.ru_msgsnd++;
@@ -11202,6 +11253,7 @@ sctp_lower_sosend(struct socket *so,
 		p->p_stats->p_ru.ru_msgsnd++;
 #endif
 	}
+#endif
 
 	if (stcb) {
 		if (net && ((srcv->sinfo_flags & SCTP_ADDR_OVER))) {

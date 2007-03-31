@@ -31,7 +31,7 @@
 /* $KAME: sctp_uio.h,v 1.11 2005/03/06 16:04:18 itojun Exp $	 */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_uio.h,v 1.8 2007/03/15 11:27:13 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_uio.h,v 1.9 2007/03/31 11:47:29 rrs Exp $");
 #endif
 
 #ifndef __sctp_uio_h__
@@ -970,15 +970,18 @@ int
 sctp_lower_sosend(struct socket *so,
     struct sockaddr *addr,
     struct uio *uio,
+
     struct mbuf *top,
     struct mbuf *control,
     int flags,
     int use_rcvinfo,
     struct sctp_sndrcvinfo *srcv,
+#ifndef __Panda__
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
     struct thread *p
 #else
     struct proc *p
+#endif
 #endif
 );
 
