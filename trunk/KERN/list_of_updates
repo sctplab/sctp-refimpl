@@ -1,3 +1,18 @@
 - fixed several places where we did not release INP locks.
-- 
+- fixed a refcount bug in the new ifa structures.
+- use vrf's from default stcb or inp whenever possible.
+- Address limits raised to account for a full IP fragmented
+  packet (1000 addresses).
+- flight size correcting updated to include one message only
+  and to handle case where the peer does not cumack the
+  next segment aka lists 1/1 in sack blocks.
+- Various bad init/init-ack handling could cause a panic
+  since we tried to unlock the destroyed mutex. Fixes
+  so we properly exit when we need to destroy an assoc.
+  (Found by Cisco DevTest team :D)
+- name rename in src-addr-selection from pass to sifa.
+- route structure typedef'd to allow different platforms
+  and updated into sctp_os_bsd file.
+- Max retransmissions a chunk can be made added. 
+
 
