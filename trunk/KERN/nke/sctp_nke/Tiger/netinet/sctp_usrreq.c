@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.14 2007/03/20 10:23:11 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.15 2007/03/31 11:47:29 rrs Exp $");
 #endif
 #include <netinet/sctp_os.h>
 #ifdef __FreeBSD__
@@ -4363,6 +4363,7 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	sctp_initialize_auth_params(inp, stcb);
 
 	sctp_send_initiate(inp, stcb);
+	SCTP_TCB_UNLOCK(stcb);
  out_now:
 	if (create_lock_on)
 		SCTP_ASOC_CREATE_UNLOCK(inp);

@@ -60,6 +60,8 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 
 #if defined(__APPLE__)
 int sctp6_input __P((struct mbuf **, int *));
+#elif defined(__Panda__)
+int sctp6_input (pakhandle_type);
 #else
 int sctp6_input __P((struct mbuf **, int *, int));
 #endif

@@ -30,7 +30,7 @@
 /*	$KAME: sctp6_usrreq.c,v 1.38 2005/08/24 08:08:56 suz Exp $	*/
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.12 2007/03/19 06:53:02 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.13 2007/03/31 11:47:30 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -119,7 +119,7 @@ sctp6_input(mp, offp)
 	struct mbuf **mp;
 	int *offp;
 #elif defined( __Panda__)
-	sctp6_input(pakhandle_type i_pak)
+sctp6_input(pakhandle_type i_pak)
 #else
 sctp6_input(mp, offp, proto)
 	struct mbuf **mp;
@@ -133,17 +133,17 @@ sctp6_input(mp, offp, proto)
 	struct sctp_inpcb *in6p = NULL;
 	struct sctp_nets *net;
 	int refcount_up = 0;
-	u_int32_t check, calc_check, vrf_id;
+	uint32_t check, calc_check, vrf_id;
 	struct inpcb *in6p_ip;
 	struct sctp_chunkhdr *ch;
 	int length, mlen, offset, iphlen;
-	u_int8_t ecn_bits;
+	uint8_t ecn_bits;
 	struct sctp_tcb *stcb = NULL;
 #ifndef __Panda__
 	int off = *offp;
 #else
 	pakoffset_type off_p;
-	int off,res;
+	int off, res, error;
 #endif
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s;
@@ -280,7 +280,7 @@ sctp_skip_csum:
 			 */
 			init_chk = (struct sctp_init_chunk *)sctp_m_getptr(m,
 			    iphlen + sizeof(*sh), sizeof(*init_chk),
-			    (u_int8_t *) & chunk_buf);
+			    (uint8_t *) & chunk_buf);
 			sh->v_tag = init_chk->init.initiate_tag;
 		}
 		if (ch->chunk_type == SCTP_SHUTDOWN_ACK) {
@@ -434,14 +434,18 @@ bad:
 }
 
 
+#if defined(__Panda__)
+void
+#else
 static void
+#endif
 sctp6_notify_mbuf(struct sctp_inpcb *inp,
     struct icmp6_hdr *icmp6,
     struct sctphdr *sh,
     struct sctp_tcb *stcb,
     struct sctp_nets *net)
 {
-	u_int32_t nxtsz;
+	uint32_t nxtsz;
 
 	if ((inp == NULL) || (stcb == NULL) || (net == NULL) ||
 	    (icmp6 == NULL) || (sh == NULL)) {
@@ -478,12 +482,12 @@ sctp6_notify_mbuf(struct sctp_inpcb *inp,
 		/* now off to subtract IP_DF flag if needed */
 
 		TAILQ_FOREACH(chk, &stcb->asoc.send_queue, sctp_next) {
-			if ((u_int32_t) (chk->send_size + IP_HDR_SIZE) > nxtsz) {
+			if ((uint32_t) (chk->send_size + IP_HDR_SIZE) > nxtsz) {
 				chk->flags |= CHUNK_FLAGS_FRAGMENT_OK;
 			}
 		}
 		TAILQ_FOREACH(chk, &stcb->asoc.sent_queue, sctp_next) {
-			if ((u_int32_t) (chk->send_size + IP_HDR_SIZE) > nxtsz) {
+			if ((uint32_t) (chk->send_size + IP_HDR_SIZE) > nxtsz) {
 				/*
 				 * For this guy we also mark for immediate
 				 * resend since we sent to big of chunk
@@ -510,6 +514,7 @@ out:
 }
 
 
+#if !defined(__Panda__)
 void
 sctp6_ctlinput(cmd, pktdst, d)
 	int cmd;
@@ -631,6 +636,7 @@ sctp6_ctlinput(cmd, pktdst, d)
 #endif
 	}
 }
+#endif
 
 /*
  * this routine can probably be collasped into the one in sctp_userreq.c
@@ -1264,23 +1270,28 @@ sctp_sendm(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
 #endif
 
 
-static int
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+static int
 sctp6_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
     struct mbuf *control, struct thread *p)
 {
-#else
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#elif defined(__FreeBSD__) || defined(__APPLE__)
+static int
 sctp6_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
     struct mbuf *control, struct proc *p)
 {
+#elif defined(__Panda__)
+int
+sctp6_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
+    struct mbuf *control)
+{
+	void *p = NULL;
 #else
+static int
 sctp6_send(struct socket *so, int flags, struct mbuf *m, struct mbuf *nam,
     struct mbuf *control, struct proc *p)
 {
 	struct sockaddr *addr = nam ? mtod(nam, struct sockaddr *): NULL;
-
-#endif
 #endif
 	struct sctp_inpcb *inp;
 	struct inpcb *in_inp;
@@ -1288,8 +1299,7 @@ sctp6_send(struct socket *so, int flags, struct mbuf *m, struct mbuf *nam,
 
 #ifdef INET
 	struct sockaddr_in6 *sin6;
-
-#endif				/* INET */
+#endif /* INET */
 	/* No SPL needed since sctp_output does this */
 
 	inp = (struct sctp_inpcb *)so->so_pcb;
@@ -1394,20 +1404,24 @@ connected_type:
 	}
 }
 
-static int
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+static int
 sctp6_connect(struct socket *so, struct sockaddr *addr, struct thread *p)
 {
-#else
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#elif defined(__FreeBSD__) || defined(__APPLE__)
+static int
 sctp6_connect(struct socket *so, struct sockaddr *addr, struct proc *p)
 {
+#elif defined(__Panda__)
+int
+sctp6_connect(struct socket *so, struct sockaddr *addr)
+{ 
+	void *p = NULL;
 #else
+static int
 sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 {
 	struct sockaddr *addr = mtod(nam, struct sockaddr *);
-
-#endif
 #endif
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s = splsoftnet();
@@ -1433,11 +1447,8 @@ sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		return (ECONNRESET);	/* I made the same as TCP since we are
 					 * not setup? */
 	}
-#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
-	vrf_id = SCTP_DEFAULT_VRFID;
-#else
-	vrf_id = panda_get_vrf_from_call(); /* from socket option call? */
-#endif
+
+	vrf_id = inp->def_vrf_id;
 	SCTP_ASOC_CREATE_LOCK(inp);
 	SCTP_INP_RLOCK(inp);
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) ==
@@ -1584,7 +1595,7 @@ sctp6_getaddr(struct socket *so, struct mbuf *nam)
 
 #ifdef SCTP_KAME
 	int error;
-#endif				/* SCTP_KAME */
+#endif /* SCTP_KAME */
 
 	/*
 	 * Do the malloc first in case it blocks.
@@ -1638,13 +1649,8 @@ sctp6_getaddr(struct socket *so, struct mbuf *nam)
 				/* punt */
 				goto notConn6;
 			}
-#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
-			vrf_id = SCTP_DEFAULT_VRFID;
-#else
-			vrf_id = panda_get_vrf_from_call(); /* from socket option call? */
-#endif
-
-			sctp_ifa = sctp_source_address_selection(inp, stcb, (struct route *)&net->ro, net, 0, vrf_id);
+			vrf_id = inp->def_vrf_id;
+			sctp_ifa = sctp_source_address_selection(inp, stcb, (sctp_route_t *)&net->ro, net, 0, vrf_id);
 			if (sctp_ifa) {
 				sin6->sin6_addr = sctp_ifa->address.sin6.sin6_addr;
 			}
@@ -1734,7 +1740,6 @@ sctp6_peeraddr(struct socket *so, struct mbuf *nam)
 	SCTP_MALLOC_SONAME(sin6, struct sockaddr_in6 *, sizeof *sin6);
 #elif defined(__Panda__)
 	bzero(sin6, sizeof(*sin6));
-	*addrlen = sizeof(*sin6);
 #else
 	SCTP_BUF_LEN(nam) = sizeof(*sin6);
 	bzero(sin6, sizeof(*sin6));
@@ -1981,8 +1986,7 @@ struct pr_usrreqs sctp6_usrreqs = {
 #endif
 };
 
-#else
-
+#elif !defined(__Panda__)
 int
 sctp6_usrreq(so, req, m, nam, control, p)
 	struct socket *so;
@@ -2138,5 +2142,4 @@ sctp6_usrreq(so, req, m, nam, control, p)
 #endif
 	return (error);
 }
-
 #endif

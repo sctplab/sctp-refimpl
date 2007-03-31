@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.16 2007/03/20 10:23:11 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.17 2007/03/31 11:47:29 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -221,6 +221,12 @@ sctp_find_vrf(uint32_t vrfid)
 	}
 	return (NULL);
 }
+
+#ifdef __Panda__
+
+
+
+#endif
 
 void
 sctp_free_ifa(struct sctp_ifa *sctp_ifap)
@@ -676,7 +682,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 {
 	struct sctpasochead *head;
 	struct sctp_inpcb *inp;
-	struct sctp_tcb *stcb;
+	struct sctp_tcb *stcb=NULL;
 	struct sctp_nets *net;
 	uint16_t rport;
 
@@ -744,7 +750,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 			 * the endpoint has.
 			 */
 			{
-				int fnd, i;
+				int i;
 
 				for(i=0; i<inp->num_vrfs; i++) {
 					stcb = sctp_tcb_special_locate(inp_p, remote, local,
@@ -2946,10 +2952,13 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 
 	struct sctp_queued_to_read *sq;
 
+#ifndef __Panda__
 #if !defined(__FreeBSD__) || __FreeBSD_version < 500000
 	struct rtentry *rt;
 
 #endif
+#endif
+
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s;
 #endif
@@ -3271,8 +3280,10 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	sctp_log_closing(inp, NULL, 5);
 #endif
 
+#if !defined(__Panda__)
 #if !defined(__FreeBSD__) || __FreeBSD_version < 500000
 	rt = ip_pcb->inp_route.ro_rt;
+#endif
 #endif
 	SCTP_OS_TIMER_STOP(&inp->sctp_ep.signature_change.timer);
 	inp->sctp_ep.signature_change.type = SCTP_TIMER_TYPE_NONE;
@@ -3337,10 +3348,14 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 #endif
 		/* Unlocks not needed since the socket is gone now */
 	}
+#ifndef __Panda__
 	if (ip_pcb->inp_options) {
 		(void)sctp_m_free(ip_pcb->inp_options);
 		ip_pcb->inp_options = 0;
 	}
+#endif
+
+#ifndef __Panda__
 #if !defined(__FreeBSD__) || __FreeBSD_version < 500000
 	if (rt) {
 		RTFREE(rt);
@@ -3351,6 +3366,8 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 		ip_freemoptions(ip_pcb->inp_moptions);
 		ip_pcb->inp_moptions = 0;
 	}
+#endif
+
 #ifdef INET6
 #if !(defined(__FreeBSD__) || defined(__APPLE__))
 	if (inp->inp_vflag & INP_IPV6) {
@@ -3360,7 +3377,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 		struct in6pcb *in6p;
 
 		in6p = (struct in6pcb *)inp;
+#ifndef __Panda__
 		ip6_freepcbopts(in6p->in6p_outputopts);
+#endif
 	}
 #endif				/* INET6 */
 #if !(defined(__FreeBSD__) || defined(__APPLE__))
@@ -3504,6 +3523,11 @@ sctp_set_initial_cc_param(struct sctp_tcb *stcb, struct sctp_nets *net)
 	}
 	net->ssthresh = stcb->asoc.peers_rwnd;
 }
+
+#ifdef __Panda__
+void rtalloc_it(void);
+int panda_find_mtu(struct sctp_nets *net);
+#endif
 
 int
 sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
@@ -3695,11 +3719,17 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 #endif
 	}
 #endif /* SCTP_EMBEDDED_V6_SCOPE */
+#ifndef __Panda__
 #if defined(__FreeBSD__) || defined(__APPLE__)
 	rtalloc_ign((struct route *)&net->ro, 0UL);
 #else
 	rtalloc((struct route *)&net->ro);
 #endif
+#else
+	/* What is the ROUTE alloc for Panda? */
+	rtalloc_it();
+#endif
+
 #ifdef SCTP_EMBEDDED_V6_SCOPE
 	if (newaddr->sa_family == AF_INET6) {
 		struct sockaddr_in6 *sin6;
@@ -3712,6 +3742,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 #endif /* SCTP_KAME */
 	}
 #endif /* SCTP_EMBEDDED_V6_SCOPE */
+#ifndef __Panda__
 	if ((net->ro.ro_rt) &&
 	    (net->ro.ro_rt->rt_ifp)) {
 		net->mtu = net->ro.ro_rt->rt_ifp->if_mtu;
@@ -3723,6 +3754,9 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	} else {
 		net->mtu = stcb->asoc.smallest_mtu;
 	}
+#else
+	net->mtu = panda_find_mtu(net);
+#endif
 
 	if (stcb->asoc.smallest_mtu > net->mtu) {
 		stcb->asoc.smallest_mtu = net->mtu;
@@ -3758,12 +3792,14 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 		 * one.
 		 */
 		TAILQ_INSERT_HEAD(&stcb->asoc.nets, net, sctp_next);
+#ifndef __Panda__
 	} else if (net->ro.ro_rt->rt_ifp != netfirst->ro.ro_rt->rt_ifp) {
 		/*
 		 * This one has a different interface than the one at the
 		 * top of the list. Place it ahead.
 		 */
 		TAILQ_INSERT_HEAD(&stcb->asoc.nets, net, sctp_next);
+#endif
 	} else {
 		/*
 		 * Ok we have the same interface as the first one. Move
@@ -3777,17 +3813,21 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 			netlook = TAILQ_NEXT(netfirst, sctp_next);
 			if (netlook == NULL) {
 				/* End of the list */
-				TAILQ_INSERT_TAIL(&stcb->asoc.nets, net,
-				    sctp_next);
+				TAILQ_INSERT_TAIL(&stcb->asoc.nets, net, sctp_next);
 				break;
 			} else if (netlook->ro.ro_rt == NULL) {
 				/* next one has NO route */
 				TAILQ_INSERT_BEFORE(netfirst, net, sctp_next);
 				break;
-			} else if (netlook->ro.ro_rt->rt_ifp !=
-			    net->ro.ro_rt->rt_ifp) {
+			}
+#ifndef __Panda__
+			else if (netlook->ro.ro_rt->rt_ifp != net->ro.ro_rt->rt_ifp)
+#else
+			else	
+#endif
+			{
 				TAILQ_INSERT_AFTER(&stcb->asoc.nets, netlook,
-				    net, sctp_next);
+						   net, sctp_next);
 				break;
 			}
 			/* Shift forward */
@@ -4192,6 +4232,10 @@ sctp_iterator_asoc_being_freed(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	}
 }
 
+#ifdef __Panda__
+void panda_wakeup_socket(struct socket *so);
+#endif
+
 /*
  * Free the association after un-hashing the remote port.
  */
@@ -4429,7 +4473,11 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				SOCK_UNLOCK(so);
 				sctp_sowwakeup(inp, so);
 				sctp_sorwakeup(inp, so);
+#ifndef __Panda__
 				wakeup(&so->so_timeo);
+#else
+				panda_wakeup_socket(so);
+#endif
 			}
 		}
 	}
@@ -5340,13 +5388,14 @@ sctp_pcb_init()
 
 #if defined(SCTP_USE_THREAD_BASED_ITERATOR)
 #if defined(SCTP_PROCESS_LEVEL_LOCKS)
-	sctppcbinfo.iterator_wakeup = PTHREAD_COND_INITIALIZER;
+	pthread_cond_init(&sctppcbinfo.iterator_wakeup,
+			  NULL);
 #endif
 	sctppcbinfo.iterator_running = 0;
 	sctp_startup_iterator();
 #endif
 
-#if !defined(__Panda__)
+#ifndef __Panda__
 	/*
 	 * INIT the default VRF which for BSD is the only one, other O/S's
 	 * may have more. But initially they must start with one and then
