@@ -4064,7 +4064,8 @@ sctp_print_fs_audit(struct sctp_association *asoc)
 	       (int)asoc->cnt_on_reasm_queue,
 	       (int)asoc->total_flight,
 	       (int)asoc->total_flight_count);
-	printf("my_rwnd:%d peers_rwnd:%d\n", (int)asoc->my_rwnd, (int)asoc->peers_rwnd);
+	printf("my_rwnd:%d peers_rwnd:%d asoc-cumack:%x\n", 
+	       (int)asoc->my_rwnd, (int)asoc->peers_rwnd, asoc->cumulative_tsn);
 	for(i=0;i<asoc->streamoutcnt;i++) {
 		struct sctp_stream_queue_pending *sp;
 		cnt = 0;
@@ -5457,7 +5458,7 @@ skip_segments:
 		panic("Flight size incorrect cumack:%x? fixing??", cum_ack);
 #else 
 		if (sctp_anal_print == 0) {
-			printf("Flight size incorrect? %x fixing?\n", cum_ack);
+			printf("Flight size incorrect? cum-ack in SACK:%x n", cum_ack);
 			sctp_print_fs_audit(asoc);
 		}
 		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {		
