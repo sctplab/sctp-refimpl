@@ -5395,7 +5395,7 @@ sctp_pcb_init()
 	sctp_startup_iterator();
 #endif
 
-#ifndef _Panda__
+#ifndef __Panda__
 	/*
 	 * INIT the default VRF which for BSD is the only one, other O/S's
 	 * may have more. But initially they must start with one and then
