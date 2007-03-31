@@ -5457,7 +5457,7 @@ skip_segments:
 		panic("Flight size incorrect cumack:%x? fixing??", cum_ack);
 #else 
 		if (sctp_anal_print == 0) {
-			printf("Flight size incorrect?\n");
+			printf("Flight size incorrect? %x fixing?\n", cum_ack);
 			sctp_print_fs_audit(asoc);
 		}
 		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {		
