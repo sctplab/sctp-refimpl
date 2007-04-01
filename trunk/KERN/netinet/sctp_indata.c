@@ -4064,8 +4064,8 @@ sctp_print_fs_audit(struct sctp_association *asoc)
 	       (int)asoc->cnt_on_reasm_queue,
 	       (int)asoc->total_flight,
 	       (int)asoc->total_flight_count);
-	printf("my_rwnd:%d peers_rwnd:%d asoc-cumack:%x\n", 
-	       (int)asoc->my_rwnd, (int)asoc->peers_rwnd, asoc->cumulative_tsn);
+	printf("my_rwnd:%d peers_rwnd:%d asoc calc cumack:%x\n", 
+	       (int)asoc->my_rwnd, (int)asoc->peers_rwnd, asoc->last_acked_seq);
 	for(i=0;i<asoc->streamoutcnt;i++) {
 		struct sctp_stream_queue_pending *sp;
 		cnt = 0;
@@ -4430,9 +4430,6 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 	    (asoc->sent_queue_retran_cnt == 0) &&
 	    (done_once == 0)) {
 		/* huh, this should not happen */
-#ifdef INVARIANTS
-		panic("Flight size incorrect? fixing??");
-#else 
 		if (sctp_anal_print == 0) {
 			printf("Flight size-express incorrect? cumack:%x\n", cumack);
 			sctp_print_fs_audit(asoc);
@@ -4457,7 +4454,6 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 			       asoc->total_flight, asoc->sent_queue_retran_cnt);
 			sctp_anal_print = 1;
 		}
-#endif
 		done_once = 1;
 		goto again;
 	}
@@ -4560,6 +4556,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	struct sctp_sack *sack;
 	struct sctp_tmit_chunk *tp1, *tp2;
 	uint32_t cum_ack, last_tsn, biggest_tsn_acked, biggest_tsn_newly_acked, this_sack_lowest_newack;
+	uint32_t sav_cum_ack;
 	uint16_t num_seg, num_dup;
 	uint16_t wake_him = 0;
 	unsigned int sack_length;
@@ -4701,6 +4698,8 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 		/* acking something behind */
 		return;
 	}
+	sav_cum_ack = asoc->last_acked_seq;
+
 	/* update the Rwnd of the peer */
 	if (TAILQ_EMPTY(&asoc->sent_queue) && 
 	    TAILQ_EMPTY(&asoc->send_queue) &&
@@ -5454,11 +5453,9 @@ skip_segments:
 	    (asoc->sent_queue_retran_cnt == 0) &&
 	    (done_once == 0) ){
 		/* huh, this should not happen */
-#ifdef INVARIANTS
-		panic("Flight size incorrect cumack:%x? fixing??", cum_ack);
-#else 
 		if (sctp_anal_print == 0) {
-			printf("Flight size incorrect? cum-ack in SACK:%x n", cum_ack);
+			printf("Flight size incorrect sack-cumack:%x prev_last_ack:%x? fixing??", 
+			      cum_ack, sav_cum_ack);
 			sctp_print_fs_audit(asoc);
 		}
 		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {		
@@ -5476,7 +5473,6 @@ skip_segments:
 				asoc->sent_queue_retran_cnt++;
 			}
 		}
-#endif
 		if (sctp_anal_print == 0) {
 			printf("After audit, totalflight:%d retran count:%d\n",
 			       asoc->total_flight, asoc->sent_queue_retran_cnt);
