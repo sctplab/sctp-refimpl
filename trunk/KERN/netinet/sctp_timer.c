@@ -919,7 +919,30 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 	} else {
 		win_probe = 0;
 	}
-	alt = sctp_find_alternate_net(stcb, net, 0);
+
+	if (sctp_cmt_on_off) {
+	        /*
+		 * CMT: Using RTX_SSTHRESH policy for CMT.
+		 * If CMT is being used, then pick dest with
+		 * largest ssthresh for any retransmission.
+		 */
+		alt = net;
+		alt = sctp_find_alternate_net(stcb, alt, 1);
+		/*
+		 * CUCv2: If a different dest is picked for
+		 * the retransmission, then new
+		 * (rtx-)pseudo_cumack needs to be tracked
+		 * for orig dest. Let CUCv2 track new (rtx-)
+		 * pseudo-cumack always.
+		 */
+		net->find_pseudo_cumack = 1;
+		net->find_rtx_pseudo_cumack = 1;
+		
+	} else {/* CMT is OFF */
+
+	        alt = sctp_find_alternate_net(stcb, net, 0);
+	}
+
 	sctp_mark_all_for_resend(stcb, net, alt, win_probe, &num_mk);
 	/* FR Loss recovery just ended with the T3. */
 	stcb->asoc.fast_retran_loss_recovery = 0;

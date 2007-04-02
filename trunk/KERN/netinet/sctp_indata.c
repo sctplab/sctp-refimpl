@@ -3222,8 +3222,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			 * No new acks were receieved for data sent to this
 			 * dest. Therefore, according to the SFR algo for
 			 * CMT, no data sent to this dest can be marked for
-			 * FR using this SACK. (iyengar@cis.udel.edu,
-			 * 2005/05/12)
+			 * FR using this SACK.
 			 */
 			tp1 = TAILQ_NEXT(tp1, sctp_next);
 			continue;
@@ -3273,9 +3272,8 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				 * rtx'd, If not a mixed sack and if tp1 is
 				 * not between two sacked TSNs, then mark by
 				 * one more.
-				 */
-				/*
-				 * Jana FIX, does this mean you strike it twice (see code above?)
+				 * NOTE that we are marking by one additional time since the SACK DAC flag indicates that 
+				 * two packets have been received after this missing TSN.
 				 */
 				if ((tp1->sent < SCTP_DATAGRAM_RESEND) && (num_dests_sacked == 1) &&
 				    compare_with_wrap(this_sack_lowest_newack, tp1->rec.data.TSN_seq, MAX_TSN)) {
@@ -3341,6 +3339,8 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 						 * if tp1 is not between two
 						 * sacked TSNs, then mark by
 						 * one more.
+						 * NOTE that we are marking by one additional time since the SACK DAC flag indicates that 
+						 * two packets have been received after this missing TSN.
 						 */
 						if ((tp1->sent < SCTP_DATAGRAM_RESEND) && 
 						    (num_dests_sacked == 1) &&
@@ -3392,6 +3392,8 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				 * rtx'd, If not a mixed sack and if tp1 is
 				 * not between two sacked TSNs, then mark by
 				 * one more.
+				 * NOTE that we are marking by one additional time since the SACK DAC flag indicates that 
+				 * two packets have been received after this missing TSN.
 				 */
 				if ((tp1->sent < SCTP_DATAGRAM_RESEND) && (num_dests_sacked == 1) &&
 				    compare_with_wrap(this_sack_lowest_newack, tp1->rec.data.TSN_seq, MAX_TSN)) {
@@ -3926,7 +3928,7 @@ sctp_cwnd_update(struct sctp_tcb *stcb,
 		*/
 #endif
 
-		 if (asoc->fast_retran_loss_recovery && will_exit == 0) {
+		 if (asoc->fast_retran_loss_recovery && will_exit == 0 && sctp_cmt_on_off == 0) {
 			/*
 			 * If we are in loss recovery we skip any cwnd
 			 * update
@@ -4431,7 +4433,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 	    (done_once == 0)) {
 		/* huh, this should not happen */
 		if (sctp_anal_print == 0) {
-			printf("Flight size-express incorrect? cumack:%x\n", cumack);
+			panic("Flight size-express incorrect? cumack:%x\n", cumack);
 			sctp_print_fs_audit(asoc);
 		}
 		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {		
@@ -5238,10 +5240,9 @@ skip_segments:
 	/*
 	 * CMT fast recovery code. Need to debug. ((sctp_cmt_on_off == 1) &&
 	 * (net->fast_retran_loss_recovery == 0)))
-	 * if ((asoc->fast_retran_loss_recovery == 0) || (sctp_cmt_on_off == 1)) {
 	 */
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
-		if (asoc->fast_retran_loss_recovery == 0) {
+		if ((asoc->fast_retran_loss_recovery == 0) || (sctp_cmt_on_off == 1)) {
 			/* out of a RFC2582 Fast recovery window? */
 			if (net->net_ack > 0) {
 				/*
@@ -5454,7 +5455,7 @@ skip_segments:
 	    (done_once == 0) ){
 		/* huh, this should not happen */
 		if (sctp_anal_print == 0) {
-			printf("Flight size incorrect sack-cumack:%x prev_last_ack:%x? fixing??", 
+			panic("Flight size incorrect sack-cumack:%x prev_last_ack:%x? fixing??", 
 			      cum_ack, sav_cum_ack);
 			sctp_print_fs_audit(asoc);
 		}
