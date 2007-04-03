@@ -121,8 +121,8 @@ sctp6_input(mp, offp)
 #elif defined( __Panda__)
 sctp6_input(pakhandle_type i_pak)
 #else
-sctp6_input(mp, offp, proto)
-	struct mbuf **mp;
+sctp6_input(i_pak, offp, proto)
+	struct mbuf **i_pak;
 	int *offp;
 	int proto;
 #endif
@@ -160,10 +160,12 @@ sctp6_input(mp, offp, proto)
 		(void) pak_client_return_buffer(i_pak);
 		return(-1);
 	}
+	m = SCTP_HEADER_TO_CHAIN(i_pak);
 #else
 	vrf_id = SCTP_DEFAULT_VRFID;
+	m = SCTP_HEADER_TO_CHAIN(*i_pak);
 #endif
-	m = SCTP_HEADER_TO_CHAIN(*mp);
+
 
 	ip6 = mtod(m, struct ip6_hdr *);
 	/* Ensure that (sctphdr + sctp_chunkhdr) in a row. */
@@ -202,7 +204,13 @@ sctp6_input(mp, offp, proto)
 	SCTP_STAT_INCR_COUNTER64(sctps_inpackets);
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-		printf("V6 input gets a packet iphlen:%d pktlen:%d\n", iphlen, SCTP_HEADER_LEN((*mp)));
+		printf("V6 input gets a packet iphlen:%d pktlen:%d\n", iphlen, 
+#ifdef __Panda__
+		       SCTP_HEADER_LEN((i_pak))
+#else
+		       SCTP_HEADER_LEN((*_ipak))
+#endif
+			);
 	}
 #endif
 	if (IN6_IS_ADDR_MULTICAST(&ip6->ip6_dst)) {
@@ -846,8 +854,10 @@ sctp6_attach(struct socket *so, int proto, struct proc *p)
 	}
 	so->so_send = sctp_sosend;
 #endif
+#ifndef __Panda__
 	inp6->in6p_hops = -1;	/* use kernel default */
 	inp6->in6p_cksum = -1;	/* just to be sure */
+#endif
 #ifdef INET
 	/*
 	 * XXX: ugly!! IPv4 TTL initialization is necessary for an IPv6
