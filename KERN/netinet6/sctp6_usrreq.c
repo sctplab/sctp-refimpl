@@ -61,6 +61,10 @@ __FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.14 2007/04/03 11:15:32 r
 
 extern struct protosw inetsw[];
 
+#ifdef __Panda__
+int ip6_v6only=0;
+#endif
+
 
 #if !(defined(__FreeBSD__) || defined(__APPLE__))
 extern void 
@@ -1256,6 +1260,7 @@ sctp6_disconnect(struct socket *so)
 	}
 }
 
+
 int
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 sctp_sendm(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
@@ -1844,17 +1849,25 @@ sctp6_in6getaddr(struct socket *so, struct mbuf *nam)
 
 			in6_sin_2_v4mapsin6((struct sockaddr_in *)addr, &sin6);
 			memcpy(addr, &sin6, sizeof(struct sockaddr_in6));
-#if !(defined(__FreeBSD__) || defined(__APPLE__))
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 			SCTP_BUF_LEN(nam) = sizeof(sin6);
 #endif
-#if !(defined(__FreeBSD__) || defined(__APPLE__))
+#if defined(__Panda__) 
+			*namelen = sizeof(sin6);
+#endif
+
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 		} else {
 			SCTP_BUF_LEN(nam) = sizeof(struct sockaddr_in);
+#elif defined(__Panda__)
+			*namelen = sizeof(struct sockaddr_in);
 #endif
 		}
-#if !(defined(__FreeBSD__) || defined(__APPLE__))
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 	} else {
 		SCTP_BUF_LEN(nam) = sizeof(struct sockaddr_in6);
+#elif defined(__Panda__)
+		*namelen = sizeof(struct sockaddr_in6);
 #endif
 	}
 #if defined(__Panda__)
@@ -1913,17 +1926,23 @@ sctp6_getpeeraddr(struct socket *so, struct mbuf *nam)
 
 			in6_sin_2_v4mapsin6((struct sockaddr_in *)addr, &sin6);
 			memcpy(addr, &sin6, sizeof(struct sockaddr_in6));
-#if !(defined(__FreeBSD__) || defined(__APPLE__))
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 			SCTP_BUF_LEN(nam) = sizeof(sin6);
+#elif defined(__Panda__)
+			*namelen = sizeof(sin6);
 #endif
-#if !(defined(__FreeBSD__) || defined(__APPLE__))
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 		} else {
 			SCTP_BUF_LEN(nam) = sizeof(struct sockaddr_in);
+#elif defined(__Panda__)
+			*namelen = sizeof(struct sockaddr_in);
 #endif
 		}
-#if !(defined(__FreeBSD__) || defined(__APPLE__))
+#if defined(__NetBSD__) || defined(__APPLE__)
 	} else {
 		SCTP_BUF_LEN(nam) = sizeof(struct sockaddr_in6);
+#elif defined(__Panda__)
+		*namelen = sizeof(struct sockaddr_in6);
 #endif
 	}
 #if defined(__Panda__)
