@@ -134,7 +134,10 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 	}
 	newso = sonewconn(head, SS_ISCONNECTED
 #if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
-	    ,NULL
+	    , NULL
+#elif defined(__Panda__)
+	    /* place this socket in the assoc's vrf id */
+	    , NULL, stcb->asoc.vrf_id
 #endif
 	    );
 	if (newso == NULL) {
