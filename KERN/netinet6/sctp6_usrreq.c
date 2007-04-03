@@ -1130,7 +1130,10 @@ sctp6_detach(struct socket *so)
 }
 #endif
 
-static int
+#ifndef __Panda__
+static 
+#endif
+int
 sctp6_disconnect(struct socket *so)
 {
 	struct sctp_inpcb *inp;
