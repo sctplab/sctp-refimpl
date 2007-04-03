@@ -213,7 +213,7 @@ sctp6_input(i_pak, offp, proto)
 #ifdef __Panda__
 		       SCTP_HEADER_LEN((i_pak))
 #else
-		       SCTP_HEADER_LEN((*_ipak))
+		       SCTP_HEADER_LEN((*i_pak))
 #endif
 			);
 	}
