@@ -6,5 +6,6 @@
   if we failed to get init/or/cookie to bring up an assoc. Change
   so we don't just give a generic "comm lost" but look at actual
   states of dying assoc.
-
+- change "crc32" arguments to "crc32c" to silence strict/noisy
+  compiler warnings when crc32() is also declared
 
