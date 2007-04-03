@@ -8,4 +8,6 @@
   states of dying assoc.
 - change "crc32" arguments to "crc32c" to silence strict/noisy
   compiler warnings when crc32() is also declared
+- A few minor tweaks to get the portable stuff truely portable
+  for sctp6_usrreq.c :-D
 
