@@ -3431,7 +3431,12 @@ sctp_ulp_notify(uint32_t notification, struct sctp_tcb *stcb,
 	case SCTP_NOTIFY_STRDATA_ERR:
 		break;
 	case SCTP_NOTIFY_ASSOC_ABORTED:
-		sctp_notify_assoc_change(SCTP_COMM_LOST, stcb, error, NULL);
+		if ((stcb) && (((stcb->asoc.state & SCTP_STATE_MASK) == SCTP_STATE_COOKIE_WAIT) ||
+			       ((stcb->asoc.state & SCTP_STATE_MASK) == SCTP_STATE_COOKIE_ECHOED))){
+			sctp_notify_assoc_change(SCTP_CANT_STR_ASSOC, stcb, error, NULL);
+		} else {
+			sctp_notify_assoc_change(SCTP_COMM_LOST, stcb, error, NULL);
+		}
 		break;
 	case SCTP_NOTIFY_PEER_OPENED_STREAM:
 		break;
@@ -3652,7 +3657,7 @@ sctp_abort_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 
 void
 sctp_abort_an_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
-    int error, struct mbuf *op_err)
+			  int error, struct mbuf *op_err)
 {
 	uint32_t vtag;
 

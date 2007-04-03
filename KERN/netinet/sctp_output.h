@@ -31,7 +31,7 @@
 /* $KAME: sctp_output.h,v 1.14 2005/03/06 16:04:18 itojun Exp $	 */
 
 #ifdef __FreeBSD__
-#include <sys/cdefs.h
+#include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/sys/netinet/sctp_output.h,v 1.4 2007/04/03 11:15:32 rrs Exp $");
 #endif
 
