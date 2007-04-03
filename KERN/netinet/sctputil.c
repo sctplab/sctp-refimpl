@@ -3897,7 +3897,7 @@ sctp_print_address(struct sockaddr *sa)
 
 		sin6 = (struct sockaddr_in6 *)sa;
 #if defined(__Panda__)
-		printf("IPv6 address: %x:%x:%x:%x:%x:%x:%x:%x:port:%d scope:%u \n"
+		printf("IPv6 address: %x:%x:%x:%x:%x:%x:%x:%x:port:%d scope:%u \n",
 		       (uint32_t)sin6->sin6_addr.s6_addr16[0],
 		       (uint32_t)sin6->sin6_addr.s6_addr16[1],
 		       (uint32_t)sin6->sin6_addr.s6_addr16[2],
