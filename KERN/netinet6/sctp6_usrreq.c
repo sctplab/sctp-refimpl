@@ -33,6 +33,7 @@
 __FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.14 2007/04/03 11:15:32 rrs Exp $");
 #endif
 
+
 #include <netinet/sctp_os.h>
 #ifdef __FreeBSD__
 #include <sys/proc.h>
@@ -40,19 +41,19 @@ __FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.14 2007/04/03 11:15:32 r
 #include <netinet/sctp_pcb.h>
 #include <netinet/sctp_header.h>
 #include <netinet/sctp_var.h>
+#if defined(INET6)
+#include <netinet6/sctp6_var.h>
+#endif
 #include <netinet/sctp_sysctl.h>
 #include <netinet/sctp_output.h>
-#include <netinet/sctp_input.h>
-#include <netinet/sctp_bsd_addr.h>
 #include <netinet/sctp_uio.h>
 #include <netinet/sctp_asconf.h>
 #include <netinet/sctputil.h>
 #include <netinet/sctp_indata.h>
-#include <netinet/sctp_asconf.h>
 #include <netinet/sctp_timer.h>
 #include <netinet/sctp_auth.h>
-#include <netinet6/sctp6_var.h>
-
+#include <netinet/sctp_input.h>
+#include <netinet/sctp_output.h>
 
 #if defined(__APPLE__)
 #define APPLE_FILE_NO 9
@@ -1057,11 +1058,11 @@ sctp6_close(struct socket *so)
 }
 
 /* This could be made common with sctp_detach() since they are identical */
-#elif defined(__Panda__)
-int
-sctp6_detach(struct socket *so)
 #else
-static int
+#ifndef __Panda__
+static
+#endif
+int
 sctp6_detach(struct socket *so)
 {
 	struct sctp_inpcb *inp;
