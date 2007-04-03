@@ -4433,7 +4433,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 	    (done_once == 0)) {
 		/* huh, this should not happen */
 		if (sctp_anal_print == 0) {
-			panic("Flight size-express incorrect? cumack:%x\n", cumack);
+			panic("Flight size-express incorrect? \n");
 			sctp_print_fs_audit(asoc);
 		}
 		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {		
@@ -5455,8 +5455,7 @@ skip_segments:
 	    (done_once == 0) ){
 		/* huh, this should not happen */
 		if (sctp_anal_print == 0) {
-			panic("Flight size incorrect sack-cumack:%x prev_last_ack:%x? fixing??", 
-			      cum_ack, sav_cum_ack);
+			panic("Flight size incorrect"); 
 			sctp_print_fs_audit(asoc);
 		}
 		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {		
