@@ -1,2 +1,4 @@
 - fix source address selection when picking an acceptable address
-
+- _prefered -> preferred
+- CMT fast recover code added.
+- Comment fixes in CMT.
