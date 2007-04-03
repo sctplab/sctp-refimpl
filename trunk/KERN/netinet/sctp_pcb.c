@@ -520,7 +520,7 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 			continue;
 		}
 #else
-		if(inp->def_vrf_id == vrf_id) {
+		if(inp->def_vrf_id != vrf_id) {
 			SCTP_INP_RUNLOCK(inp);
 			continue;
 		}
