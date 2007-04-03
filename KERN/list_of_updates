@@ -2,3 +2,9 @@
 - _prefered -> preferred
 - CMT fast recover code added.
 - Comment fixes in CMT.
+- We were not giving a reason of cant_start_asoc per socket api
+  if we failed to get init/or/cookie to bring up an assoc. Change
+  so we don't just give a generic "comm lost" but look at actual
+  states of dying assoc.
+
+
