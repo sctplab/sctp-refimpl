@@ -30,8 +30,9 @@
 /*	$KAME: sctp6_usrreq.c,v 1.38 2005/08/24 08:08:56 suz Exp $	*/
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.13 2007/03/31 11:47:30 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.14 2007/04/03 11:15:32 rrs Exp $");
 #endif
+
 
 #include <netinet/sctp_os.h>
 #ifdef __FreeBSD__
@@ -40,25 +41,29 @@ __FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.13 2007/03/31 11:47:30 r
 #include <netinet/sctp_pcb.h>
 #include <netinet/sctp_header.h>
 #include <netinet/sctp_var.h>
+#if defined(INET6)
+#include <netinet6/sctp6_var.h>
+#endif
 #include <netinet/sctp_sysctl.h>
 #include <netinet/sctp_output.h>
-#include <netinet/sctp_input.h>
-#include <netinet/sctp_bsd_addr.h>
 #include <netinet/sctp_uio.h>
 #include <netinet/sctp_asconf.h>
 #include <netinet/sctputil.h>
 #include <netinet/sctp_indata.h>
-#include <netinet/sctp_asconf.h>
 #include <netinet/sctp_timer.h>
 #include <netinet/sctp_auth.h>
-#include <netinet6/sctp6_var.h>
-
+#include <netinet/sctp_input.h>
+#include <netinet/sctp_output.h>
 
 #if defined(__APPLE__)
 #define APPLE_FILE_NO 9
 #endif
 
 extern struct protosw inetsw[];
+
+#ifdef __Panda__
+int ip6_v6only=0;
+#endif
 
 
 #if !(defined(__FreeBSD__) || defined(__APPLE__))
@@ -121,8 +126,8 @@ sctp6_input(mp, offp)
 #elif defined( __Panda__)
 sctp6_input(pakhandle_type i_pak)
 #else
-sctp6_input(mp, offp, proto)
-	struct mbuf **mp;
+sctp6_input(i_pak, offp, proto)
+	struct mbuf **i_pak;
 	int *offp;
 	int proto;
 #endif
@@ -160,10 +165,16 @@ sctp6_input(mp, offp, proto)
 		(void) pak_client_return_buffer(i_pak);
 		return(-1);
 	}
+	m = SCTP_HEADER_TO_CHAIN(i_pak);
 #else
 	vrf_id = SCTP_DEFAULT_VRFID;
-#endif
+#if defined(__APPLE__)
 	m = SCTP_HEADER_TO_CHAIN(*mp);
+#else
+	m = SCTP_HEADER_TO_CHAIN(*i_pak);
+#endif
+#endif
+
 
 	ip6 = mtod(m, struct ip6_hdr *);
 	/* Ensure that (sctphdr + sctp_chunkhdr) in a row. */
@@ -202,7 +213,17 @@ sctp6_input(mp, offp, proto)
 	SCTP_STAT_INCR_COUNTER64(sctps_inpackets);
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-		printf("V6 input gets a packet iphlen:%d pktlen:%d\n", iphlen, SCTP_HEADER_LEN((*mp)));
+		printf("V6 input gets a packet iphlen:%d pktlen:%d\n", iphlen, 
+#ifdef __Panda__
+		       SCTP_HEADER_LEN((i_pak))
+#else
+#if defined(__APPLE__)
+		       SCTP_HEADER_LEN((*mp))
+#else
+		       SCTP_HEADER_LEN((*i_pak))
+#endif
+#endif
+			);
 	}
 #endif
 	if (IN6_IS_ADDR_MULTICAST(&ip6->ip6_dst)) {
@@ -846,8 +867,10 @@ sctp6_attach(struct socket *so, int proto, struct proc *p)
 	}
 	so->so_send = sctp_sosend;
 #endif
+#ifndef __Panda__
 	inp6->in6p_hops = -1;	/* use kernel default */
 	inp6->in6p_cksum = -1;	/* just to be sure */
+#endif
 #ifdef INET
 	/*
 	 * XXX: ugly!! IPv4 TTL initialization is necessary for an IPv6
@@ -1047,11 +1070,11 @@ sctp6_close(struct socket *so)
 }
 
 /* This could be made common with sctp_detach() since they are identical */
-#elif defined(__Panda__)
-int
-sctp6_detach(struct socket *so)
 #else
-static int
+#ifndef __Panda__
+static
+#endif
+int
 sctp6_detach(struct socket *so)
 {
 	struct sctp_inpcb *inp;
@@ -1115,7 +1138,10 @@ sctp6_detach(struct socket *so)
 }
 #endif
 
-static int
+#ifndef __Panda__
+static 
+#endif
+int
 sctp6_disconnect(struct socket *so)
 {
 	struct sctp_inpcb *inp;
@@ -1161,23 +1187,10 @@ sctp6_disconnect(struct socket *so)
 				if (SCTP_GET_STATE(asoc) !=
 				    SCTP_STATE_COOKIE_WAIT) {
 					/* Left with Data unread */
-					struct mbuf *err;
+					struct mbuf *op_err;
 
-					err = NULL;
-					MGET(err, M_DONTWAIT, MT_DATA);
-					if (err) {
-						/*
-						 * Fill in the user
-						 * initiated abort
-						 */
-						struct sctp_paramhdr *ph;
-
-						ph = mtod(err, struct sctp_paramhdr *);
-						SCTP_BUF_LEN(err) = sizeof(struct sctp_paramhdr);
-						ph->param_type = htons(SCTP_CAUSE_USER_INITIATED_ABT);
-						ph->param_length = htons(SCTP_BUF_LEN(err));
-					}
-					sctp_send_abort_tcb(stcb, err);
+					op_err = sctp_generate_invmanparam(SCTP_CAUSE_USER_INITIATED_ABT);
+					sctp_send_abort_tcb(stcb, op_err);
 					SCTP_STAT_INCR_COUNTER32(sctps_aborted);
 				}
 				SCTP_INP_RUNLOCK(inp);
@@ -1257,6 +1270,7 @@ sctp6_disconnect(struct socket *so)
 		return EOPNOTSUPP;
 	}
 }
+
 
 int
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
@@ -1846,17 +1860,25 @@ sctp6_in6getaddr(struct socket *so, struct mbuf *nam)
 
 			in6_sin_2_v4mapsin6((struct sockaddr_in *)addr, &sin6);
 			memcpy(addr, &sin6, sizeof(struct sockaddr_in6));
-#if !(defined(__FreeBSD__) || defined(__APPLE__))
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 			SCTP_BUF_LEN(nam) = sizeof(sin6);
 #endif
-#if !(defined(__FreeBSD__) || defined(__APPLE__))
+#if defined(__Panda__) 
+			*namelen = sizeof(sin6);
+#endif
+
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 		} else {
 			SCTP_BUF_LEN(nam) = sizeof(struct sockaddr_in);
+#elif defined(__Panda__)
+			*namelen = sizeof(struct sockaddr_in);
 #endif
 		}
-#if !(defined(__FreeBSD__) || defined(__APPLE__))
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 	} else {
 		SCTP_BUF_LEN(nam) = sizeof(struct sockaddr_in6);
+#elif defined(__Panda__)
+		*namelen = sizeof(struct sockaddr_in6);
 #endif
 	}
 #if defined(__Panda__)
@@ -1915,17 +1937,23 @@ sctp6_getpeeraddr(struct socket *so, struct mbuf *nam)
 
 			in6_sin_2_v4mapsin6((struct sockaddr_in *)addr, &sin6);
 			memcpy(addr, &sin6, sizeof(struct sockaddr_in6));
-#if !(defined(__FreeBSD__) || defined(__APPLE__))
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 			SCTP_BUF_LEN(nam) = sizeof(sin6);
+#elif defined(__Panda__)
+			*namelen = sizeof(sin6);
 #endif
-#if !(defined(__FreeBSD__) || defined(__APPLE__))
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 		} else {
 			SCTP_BUF_LEN(nam) = sizeof(struct sockaddr_in);
+#elif defined(__Panda__)
+			*namelen = sizeof(struct sockaddr_in);
 #endif
 		}
-#if !(defined(__FreeBSD__) || defined(__APPLE__))
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 	} else {
 		SCTP_BUF_LEN(nam) = sizeof(struct sockaddr_in6);
+#elif defined(__Panda__)
+		*namelen = sizeof(struct sockaddr_in6);
 #endif
 	}
 #if defined(__Panda__)

@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.17 2007/03/31 11:47:29 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.18 2007/04/03 11:15:32 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -1493,7 +1493,9 @@ sctp_timeout_handler(void *t)
 	}
 	tmr->stopped_from = 0xa004;
 	if (stcb) {
+		atomic_add_int(&stcb->asoc.refcnt, 1);
 		if (stcb->asoc.state == 0) {
+			atomic_add_int(&stcb->asoc.refcnt, -1);
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);
 #endif
@@ -1537,7 +1539,6 @@ sctp_timeout_handler(void *t)
 	tmr->stopped_from = 0xa006;
 
 	if (stcb) {
-		atomic_add_int(&stcb->asoc.refcnt, 1);
 		SCTP_TCB_LOCK(stcb);
 #if defined(SCTP_PER_SOCKET_LOCKING)
 		sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
@@ -3431,7 +3432,12 @@ sctp_ulp_notify(uint32_t notification, struct sctp_tcb *stcb,
 	case SCTP_NOTIFY_STRDATA_ERR:
 		break;
 	case SCTP_NOTIFY_ASSOC_ABORTED:
-		sctp_notify_assoc_change(SCTP_COMM_LOST, stcb, error, NULL);
+		if ((stcb) && (((stcb->asoc.state & SCTP_STATE_MASK) == SCTP_STATE_COOKIE_WAIT) ||
+			       ((stcb->asoc.state & SCTP_STATE_MASK) == SCTP_STATE_COOKIE_ECHOED))){
+			sctp_notify_assoc_change(SCTP_CANT_STR_ASSOC, stcb, error, NULL);
+		} else {
+			sctp_notify_assoc_change(SCTP_COMM_LOST, stcb, error, NULL);
+		}
 		break;
 	case SCTP_NOTIFY_PEER_OPENED_STREAM:
 		break;
@@ -3652,7 +3658,7 @@ sctp_abort_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 
 void
 sctp_abort_an_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
-    int error, struct mbuf *op_err)
+			  int error, struct mbuf *op_err)
 {
 	uint32_t vtag;
 
@@ -3892,7 +3898,7 @@ sctp_print_address(struct sockaddr *sa)
 
 		sin6 = (struct sockaddr_in6 *)sa;
 #if defined(__Panda__)
-		printf("IPv6 address: %x:%x:%x:%x:%x:%x:%x:%x:port:%d scope:%u \n"
+		printf("IPv6 address: %x:%x:%x:%x:%x:%x:%x:%x:port:%d scope:%u \n",
 		       (uint32_t)sin6->sin6_addr.s6_addr16[0],
 		       (uint32_t)sin6->sin6_addr.s6_addr16[1],
 		       (uint32_t)sin6->sin6_addr.s6_addr16[2],
