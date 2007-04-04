@@ -4327,7 +4327,14 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	SCTP_OS_TIMER_STOP(&asoc->dack_timer.timer);
 	asoc->dack_timer.self = NULL;
 	SCTP_OS_TIMER_STOP(&asoc->strreset_timer.timer);
-	asoc->strreset_timer.self = NULL;
+	/*-
+	 * For stream reset we don't blast this unless
+	 * it is a str-reset timer, it might be the
+	 * free-asoc timer which we DON'T want to
+	 * disturb.
+	 */
+	if(asoc->strreset_timer.type == SCTP_TIMER_TYPE_STRRESET)
+		asoc->strreset_timer.self = NULL;
 	SCTP_OS_TIMER_STOP(&asoc->asconf_timer.timer);
 	asoc->asconf_timer.self = NULL;
 	SCTP_OS_TIMER_STOP(&asoc->autoclose_timer.timer);
