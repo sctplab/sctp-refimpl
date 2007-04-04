@@ -1493,7 +1493,9 @@ sctp_timeout_handler(void *t)
 	}
 	tmr->stopped_from = 0xa004;
 	if (stcb) {
+		atomic_add_int(&stcb->asoc.refcnt, 1);
 		if (stcb->asoc.state == 0) {
+			atomic_add_int(&stcb->asoc.refcnt, -1);
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);
 #endif
@@ -1537,7 +1539,6 @@ sctp_timeout_handler(void *t)
 	tmr->stopped_from = 0xa006;
 
 	if (stcb) {
-		atomic_add_int(&stcb->asoc.refcnt, 1);
 		SCTP_TCB_LOCK(stcb);
 #if defined(SCTP_PER_SOCKET_LOCKING)
 		sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
