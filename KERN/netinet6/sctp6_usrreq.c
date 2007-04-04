@@ -168,7 +168,11 @@ sctp6_input(i_pak, offp, proto)
 	m = SCTP_HEADER_TO_CHAIN(i_pak);
 #else
 	vrf_id = SCTP_DEFAULT_VRFID;
+#if defined(__APPLE__)
+	m = SCTP_HEADER_TO_CHAIN(*mp);
+#else
 	m = SCTP_HEADER_TO_CHAIN(*i_pak);
+#endif
 #endif
 
 
@@ -213,7 +217,11 @@ sctp6_input(i_pak, offp, proto)
 #ifdef __Panda__
 		       SCTP_HEADER_LEN((i_pak))
 #else
+#if defined(__APPLE__)
+		       SCTP_HEADER_LEN((*mp))
+#else
 		       SCTP_HEADER_LEN((*i_pak))
+#endif
 #endif
 			);
 	}
@@ -1941,7 +1949,7 @@ sctp6_getpeeraddr(struct socket *so, struct mbuf *nam)
 			*namelen = sizeof(struct sockaddr_in);
 #endif
 		}
-#if defined(__NetBSD__) || defined(__APPLE__)
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 	} else {
 		SCTP_BUF_LEN(nam) = sizeof(struct sockaddr_in6);
 #elif defined(__Panda__)
