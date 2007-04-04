@@ -4053,40 +4053,42 @@ skip_cwnd_update:
 static int sctp_anal_print=0;
 
 static void
-sctp_print_fs_audit(struct sctp_association *asoc)
+sctp_fs_audit(struct sctp_association *asoc)
 {
 	int cnt,i;
 	struct sctp_tmit_chunk *chk;
 	int inflight=0, resend=0, inbetween=0, acked=0, above=0;
-	printf("sdqc:%d stqc:%d retran:%d reasm:%d cnt:%d tot_flight:%d tfc:%d\n",
-	       (int)asoc->send_queue_cnt,
-	       (int)asoc->sent_queue_cnt,
-	       (int)asoc->sent_queue_retran_cnt,
-	       (int)asoc->size_on_reasm_queue,
-	       (int)asoc->cnt_on_reasm_queue,
-	       (int)asoc->total_flight,
-	       (int)asoc->total_flight_count);
-	printf("my_rwnd:%d peers_rwnd:%d asoc calc cumack:%x\n", 
-	       (int)asoc->my_rwnd, (int)asoc->peers_rwnd, asoc->last_acked_seq);
-	for(i=0;i<asoc->streamoutcnt;i++) {
-		struct sctp_stream_queue_pending *sp;
-		cnt = 0;
-		TAILQ_FOREACH(sp, &asoc->strmout[i].outqueue, next)
-			cnt++;
-		if(cnt) {
-			printf("Stream %d has %d msgs yet to be sent in strm queue\n", i, cnt);
+	if(sctp_anal_print) {
+		printf("sdqc:%d stqc:%d retran:%d reasm:%d cnt:%d tot_flight:%d tfc:%d\n",
+		       (int)asoc->send_queue_cnt,
+		       (int)asoc->sent_queue_cnt,
+		       (int)asoc->sent_queue_retran_cnt,
+		       (int)asoc->size_on_reasm_queue,
+		       (int)asoc->cnt_on_reasm_queue,
+		       (int)asoc->total_flight,
+		       (int)asoc->total_flight_count);
+		printf("my_rwnd:%d peers_rwnd:%d asoc calc cumack:%x\n", 
+		       (int)asoc->my_rwnd, (int)asoc->peers_rwnd, asoc->last_acked_seq);
+		for(i=0;i<asoc->streamoutcnt;i++) {
+			struct sctp_stream_queue_pending *sp;
+			cnt = 0;
+			TAILQ_FOREACH(sp, &asoc->strmout[i].outqueue, next)
+				cnt++;
+			if(cnt) {
+				printf("Stream %d has %d msgs yet to be sent in strm queue\n", i, cnt);
+			}
 		}
+		cnt = 0;
+		TAILQ_FOREACH(chk, &asoc->control_send_queue, sctp_next) {
+			cnt++;
+		}
+		printf("The control_send_queue has %d pending\n", cnt);
+		cnt = 0;
+		TAILQ_FOREACH(chk, &asoc->send_queue, sctp_next) {
+			cnt++;
+		}
+		printf("The send_queue (waiting to get in flight) has %d chunks pending\n", cnt);
 	}
-	cnt = 0;
-	TAILQ_FOREACH(chk, &asoc->control_send_queue, sctp_next) {
-		cnt++;
-	}
-	printf("The control_send_queue has %d pending\n", cnt);
-	cnt = 0;
-	TAILQ_FOREACH(chk, &asoc->send_queue, sctp_next) {
-		cnt++;
-	}
-	printf("The send_queue (waiting to get in flight) has %d chunks pending\n", cnt);
 	TAILQ_FOREACH(chk, &asoc->sent_queue, sctp_next) {
 		if(chk->sent < SCTP_DATAGRAM_RESEND) {
 			inflight++;
@@ -4098,12 +4100,16 @@ sctp_print_fs_audit(struct sctp_association *asoc)
 			above++;
 		} else {
 			acked++;
-			printf("chk->sent:%x chk->tsn:%x\n",
-			       chk->sent, chk->rec.data.TSN_seq);
 		}
 	}
-	printf("The sent_queue stats inflight:%d resend:%d acked:%d above:%d inbetween:%d\n",
-	       inflight, resend, acked, above, inbetween);
+	if(sctp_anal_print) {
+		printf("The sent_queue stats inflight:%d resend:%d acked:%d above:%d inbetween:%d\n",
+		       inflight, resend, acked, above, inbetween);
+	}
+	if ((inflight > 0) || (inbetween > 0)) {
+		panic("Flight size-express incorrect? \n");
+	}
+
 }
 
 
@@ -4461,10 +4467,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 	    (asoc->sent_queue_retran_cnt == 0) &&
 	    (done_once == 0)) {
 		/* huh, this should not happen */
-		if (sctp_anal_print == 0) {
-			panic("Flight size-express incorrect? \n");
-			sctp_print_fs_audit(asoc);
-		}
+		sctp_fs_audit(asoc);
 		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {		
 			net->flight_size = 0;
 		}
@@ -5475,10 +5478,7 @@ skip_segments:
 	    (asoc->sent_queue_retran_cnt == 0) &&
 	    (done_once == 0) ){
 		/* huh, this should not happen */
-		if (sctp_anal_print == 0) {
-			panic("Flight size incorrect"); 
-			sctp_print_fs_audit(asoc);
-		}
+		sctp_fs_audit(asoc);
 		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {		
 			net->flight_size = 0;
 		}
