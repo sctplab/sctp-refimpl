@@ -4106,6 +4106,43 @@ sctp_print_fs_audit(struct sctp_association *asoc)
 	       inflight, resend, acked, above, inbetween);
 }
 
+
+static void
+sctp_window_probe_recovery(struct sctp_association *asoc, 
+			   struct sctp_nets *net,
+			   struct sctp_tmit_chunk *tp1)
+{
+	struct sctp_tmit_chunk *chk;
+
+	/* First setup this one and get it moved back */
+	tp1->sent = SCTP_DATAGRAM_UNSENT;
+	tp1->window_probe = 0;
+	net->flight_size -= tp1->book_size;
+	asoc->total_flight -= tp1->book_size;
+	TAILQ_REMOVE(&asoc->sent_queue, tp1, sctp_next);
+	TAILQ_INSERT_HEAD(&asoc->send_queue, tp1, sctp_next);
+	asoc->sent_queue_cnt--;
+	asoc->send_queue_cnt++;
+	asoc->total_flight_count--;
+	/* Now all guys marked for RESEND on the sent_queue
+	 * must be moved back too.
+	 */
+	TAILQ_FOREACH(chk, &asoc->sent_queue, sctp_next) {	
+		if (chk->sent == SCTP_DATAGRAM_RESEND) {
+			/* Another chunk to move */
+			chk->sent = SCTP_DATAGRAM_UNSENT;
+			chk->window_probe = 0;
+			/* It should not be in flight */
+			TAILQ_REMOVE(&asoc->sent_queue, chk, sctp_next);
+			TAILQ_INSERT_AFTER(&asoc->send_queue, tp1, chk, sctp_next);
+			asoc->sent_queue_cnt--;
+			asoc->send_queue_cnt++;
+			sctp_ucount_decr(asoc->sent_queue_retran_cnt);
+		}
+	}
+}
+
+
 void
 sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 			 uint32_t rwnd, int nonce_sum_flag, int *abort_now)
@@ -4389,15 +4426,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 			TAILQ_FOREACH(tp1, &asoc->sent_queue, sctp_next) {
 				if(tp1->window_probe) {
 					/* move back to data send queue */
-					tp1->sent = SCTP_DATAGRAM_UNSENT;
-					tp1->window_probe = 0;
-					net->flight_size -= tp1->book_size;
-					asoc->total_flight -= tp1->book_size;
-					TAILQ_REMOVE(&asoc->sent_queue, tp1, sctp_next);
-					TAILQ_INSERT_HEAD(&asoc->send_queue, tp1, sctp_next);
-					asoc->sent_queue_cnt--;
-					asoc->send_queue_cnt++;
-					asoc->total_flight_count--;
+					sctp_window_probe_recovery(asoc, net, tp1);
 					break;
 				}
 			}
@@ -5430,15 +5459,7 @@ skip_segments:
 			 */
 			TAILQ_FOREACH(tp1, &asoc->sent_queue, sctp_next) {
 				if(tp1->window_probe) {
-					tp1->sent = SCTP_DATAGRAM_UNSENT;
-					tp1->window_probe = 0;
-					net->flight_size -= tp1->book_size;
-					asoc->total_flight -= tp1->book_size;
-					TAILQ_REMOVE(&asoc->sent_queue, tp1, sctp_next);
-					TAILQ_INSERT_HEAD(&asoc->send_queue, tp1, sctp_next);
-					asoc->sent_queue_cnt--;
-					asoc->send_queue_cnt++;
-					asoc->total_flight_count--;
+					sctp_window_probe_recovery(asoc, net, tp1);
 					break;
 				}
 			}
