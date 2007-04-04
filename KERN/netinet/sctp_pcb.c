@@ -1402,7 +1402,7 @@ struct sctp_tcb *
 sctp_findassociation_addr_sa(struct sockaddr *to, struct sockaddr *from,
     struct sctp_inpcb **inp_p, struct sctp_nets **netp, int find_tcp_pool, uint32_t vrf_id)
 {
-	struct sctp_inpcb *inp;
+	struct sctp_inpcb *inp = NULL;
 	struct sctp_tcb *retval;
 
 #if defined(SCTP_PER_SOCKET_LOCKING)
