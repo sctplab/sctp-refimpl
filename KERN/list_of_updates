@@ -10,4 +10,9 @@
   compiler warnings when crc32() is also declared
 - A few minor tweaks to get the portable stuff truely portable
   for sctp6_usrreq.c :-D
+- one-2-one style vrf match problem.
+- window recovery had would leave chks marked for retran
+  during window probes on the sent queue. This would then
+  cause an out-of-order problem and assure that the flight
+  size "problem" would occur.
 
