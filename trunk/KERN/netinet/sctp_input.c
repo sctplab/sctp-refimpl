@@ -2634,7 +2634,7 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 
 				/* fix counts and things */
 #ifdef SCTP_FLIGHT_LOGGING
-				sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN, 
+				sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN_RSND, 
 					       tp1->whoTo->flight_size,
 					       tp1->book_size, 
 					       (uintptr_t)stcb, 

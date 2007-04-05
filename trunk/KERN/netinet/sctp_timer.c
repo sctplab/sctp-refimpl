@@ -691,7 +691,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 			net->marked_retrans++;
 			stcb->asoc.marked_retrans++;
 #ifdef SCTP_FLIGHT_LOGGING
-			sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN, 
+			sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN_RSND_TO, 
 				       chk->whoTo->flight_size,
 				       chk->book_size, 
 				       (uintptr_t)stcb, 
