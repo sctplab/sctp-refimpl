@@ -161,10 +161,11 @@ static char *from_str[]= {
 	/* 107 */ "flight log up",
 	/* 108 */ "flight log down-gap",
         /* 109 */ "flight log donw-rsnd",
-	/* 110 */ "max"
+	/* 110 */ "flight log up-rsnd",
+	/* 111 */ "max"
 };
 
-#define FROM_STRING_MAX 110
+#define FROM_STRING_MAX 111
 
 int graph_mode = 0;
 int comma_sep = 0;
