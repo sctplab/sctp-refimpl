@@ -4049,45 +4049,11 @@ skip_cwnd_update:
 	}
 }
 
-static int sctp_anal_print=0;
-
 static void
 sctp_fs_audit(struct sctp_association *asoc)
 {
-	int cnt,i;
 	struct sctp_tmit_chunk *chk;
 	int inflight=0, resend=0, inbetween=0, acked=0, above=0;
-	if(sctp_anal_print) {
-		printf("sdqc:%d stqc:%d retran:%d reasm:%d cnt:%d tot_flight:%d tfc:%d\n",
-		       (int)asoc->send_queue_cnt,
-		       (int)asoc->sent_queue_cnt,
-		       (int)asoc->sent_queue_retran_cnt,
-		       (int)asoc->size_on_reasm_queue,
-		       (int)asoc->cnt_on_reasm_queue,
-		       (int)asoc->total_flight,
-		       (int)asoc->total_flight_count);
-		printf("my_rwnd:%d peers_rwnd:%d asoc calc cumack:%x\n", 
-		       (int)asoc->my_rwnd, (int)asoc->peers_rwnd, asoc->last_acked_seq);
-		for(i=0;i<asoc->streamoutcnt;i++) {
-			struct sctp_stream_queue_pending *sp;
-			cnt = 0;
-			TAILQ_FOREACH(sp, &asoc->strmout[i].outqueue, next)
-				cnt++;
-			if(cnt) {
-				printf("Stream %d has %d msgs yet to be sent in strm queue\n", i, cnt);
-			}
-		}
-		cnt = 0;
-		TAILQ_FOREACH(chk, &asoc->control_send_queue, sctp_next) {
-			cnt++;
-		}
-		printf("The control_send_queue has %d pending\n", cnt);
-		cnt = 0;
-		TAILQ_FOREACH(chk, &asoc->send_queue, sctp_next) {
-			cnt++;
-		}
-		printf("The send_queue (waiting to get in flight) has %d chunks pending\n", cnt);
-	}
 	TAILQ_FOREACH(chk, &asoc->sent_queue, sctp_next) {
 		if(chk->sent < SCTP_DATAGRAM_RESEND) {
 			inflight++;
@@ -4100,10 +4066,6 @@ sctp_fs_audit(struct sctp_association *asoc)
 		} else {
 			acked++;
 		}
-	}
-	if(sctp_anal_print) {
-		printf("The sent_queue stats inflight:%d resend:%d acked:%d above:%d inbetween:%d\n",
-		       inflight, resend, acked, above, inbetween);
 	}
 	if ((inflight > 0) || (inbetween > 0)) {
 		panic("Flight size-express incorrect? \n");
@@ -4157,6 +4119,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 	struct sctp_tmit_chunk *tp1, *tp2;
 	uint32_t old_rwnd;
 	int win_probe_recovery = 0;
+	int win_probe_recovered = 0;
 	int j, done_once;;
 
 	SCTP_TCB_LOCK_ASSERT(stcb);
@@ -4427,6 +4390,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 		if (win_probe_recovery && (net->window_probe)) {
 			net->window_probe = 0;
+			win_probe_recovered=1;
 			/* Find first chunk that was used with window probe and clear the sent */
 			TAILQ_FOREACH(tp1, &asoc->sent_queue, sctp_next) {
 				if(tp1->window_probe) {
@@ -4464,6 +4428,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 	if ((j == 0) && 
 	    (!TAILQ_EMPTY(&asoc->sent_queue)) && 
 	    (asoc->sent_queue_retran_cnt == 0) &&
+	    (win_probe_recovered == 0) &&
 	    (done_once == 0)) {
 		/* huh, this should not happen */
 		sctp_fs_audit(asoc);
@@ -4481,11 +4446,6 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 			} else if (tp1->sent == SCTP_DATAGRAM_RESEND) {
 				asoc->sent_queue_retran_cnt++;
 			}
-		}
-		if (sctp_anal_print == 0) {
-			printf("After audit, totalflight:%d, retran_cnt:%d\n",
-			       asoc->total_flight, asoc->sent_queue_retran_cnt);
-			sctp_anal_print = 1;
 		}
 		done_once = 1;
 		goto again;
@@ -4599,6 +4559,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	int will_exit_fast_recovery = 0;
 	uint32_t a_rwnd, old_rwnd;
 	int win_probe_recovery = 0;
+	int win_probe_recovered = 0;
 	struct sctp_nets *net = NULL;
 	int nonce_sum_flag, ecn_seg_sums = 0;
 	int done_once;
@@ -5453,6 +5414,7 @@ skip_segments:
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 		if (win_probe_recovery && (net->window_probe)) {
 			net->window_probe = 0;
+			win_probe_recovered = 1;
 			/*-
 			 * Find first chunk that was used with 
 			 * window probe and clear the event. Put
@@ -5488,6 +5450,7 @@ skip_segments:
 	if ((j == 0) && 
 	    (!TAILQ_EMPTY(&asoc->sent_queue)) && 
 	    (asoc->sent_queue_retran_cnt == 0) &&
+	    (win_probe_recovered == 0) &&
 	    (done_once == 0) ){
 		/* huh, this should not happen */
 		sctp_fs_audit(asoc);
@@ -5505,11 +5468,6 @@ skip_segments:
 			} else if (tp1->sent == SCTP_DATAGRAM_RESEND) {
 				asoc->sent_queue_retran_cnt++;
 			}
-		}
-		if (sctp_anal_print == 0) {
-			printf("After audit, totalflight:%d retran count:%d\n",
-			       asoc->total_flight, asoc->sent_queue_retran_cnt);
-			sctp_anal_print = 1;
 		}
 		done_once = 1;
 		goto again;
