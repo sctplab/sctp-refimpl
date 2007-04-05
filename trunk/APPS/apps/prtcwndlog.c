@@ -162,10 +162,11 @@ static char *from_str[]= {
 	/* 108 */ "flight log down-gap",
         /* 109 */ "flight log donw-rsnd",
 	/* 110 */ "flight log up-rsnd",
-	/* 111 */ "max"
+	/* 111 */ "flight log down t3",
+	/* 112 */ "max"
 };
 
-#define FROM_STRING_MAX 111
+#define FROM_STRING_MAX 112
 
 int graph_mode = 0;
 int comma_sep = 0;
@@ -792,6 +793,7 @@ main(int argc, char **argv)
 
 			} else if ((log.from == SCTP_FLIGHT_LOG_DOWN_CA) ||
 				   (log.from == SCTP_FLIGHT_LOG_DOWN_GAP) ||
+				   (log.from == SCTP_FLIGHT_LOG_DOWN_RSND_TO) ||
 				   (log.from == SCTP_FLIGHT_LOG_DOWN_RSND)) {
 				printf("%s %s (stcb:%x) net-flight:%d decr:%d TSN:%x newflt:%d\n", 
 				       ts,
