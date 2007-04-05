@@ -2872,7 +2872,7 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 						 * value to the sender's
 						 * nonce sum
 						 */
-						if (tp1->sent < SCTP_DATAGRAM_ACKED) {
+						if (tp1->sent < SCTP_DATAGRAM_RESEND) {
 							/*
 							 * If it is less
 							 * than ACKED, it is
@@ -3002,7 +3002,6 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 
 						}
 						if (tp1->sent <= SCTP_DATAGRAM_RESEND &&
-						    tp1->sent != SCTP_DATAGRAM_UNSENT &&
 						    compare_with_wrap(tp1->rec.data.TSN_seq,
 								      asoc->this_sack_highest_gap,
 								      MAX_TSN)) {
@@ -5471,6 +5470,19 @@ skip_segments:
 			j++;
 			sctp_timer_start(SCTP_TIMER_TYPE_SEND,
 					 stcb->sctp_ep, stcb, net);
+		} else {
+			if(SCTP_OS_TIMER_PENDING(&net->rxt_timer.timer)) {
+				sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
+						stcb, net,
+						SCTP_FROM_SCTP_INDATA+SCTP_LOC_22);
+			}
+			if (sctp_early_fr) {
+				if (SCTP_OS_TIMER_PENDING(&net->fr_timer.timer)) {
+					SCTP_STAT_INCR(sctps_earlyfrstpidsck4);
+					sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net,
+							SCTP_FROM_SCTP_INDATA+SCTP_LOC_23);
+				}
+			}
 		}
 	}
 	if ((j == 0) && 
