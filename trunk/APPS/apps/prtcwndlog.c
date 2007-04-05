@@ -426,17 +426,6 @@ main(int argc, char **argv)
 			       (uint32_t)log.x.mb.ext,
 			       from_str[log.from]);
 			       
-		}else if(log.event_type == SCTP_LOG_EVENT_RTT) {
-			if(log.x.rto.rttvar) {
-				printf("%d: Net:%p  Old-Rtt:%d Change:%d Direction=%s from:%s\n",
-				       at, 
-				       log.x.rto.net,
-				       log.x.rto.rtt,
-				       log.x.rto.rttvar,
-				       ((log.x.rto.direction == 0) ? "-" : "+"),
-				       from_str[log.from]
-					);
-			}
 		}else if(log.event_type == SCTP_LOG_EVENT_CLOSE) {
 			char *close_events[] = {
 				"Top of sctp_inpcb_free",
