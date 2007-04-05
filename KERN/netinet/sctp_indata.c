@@ -4967,8 +4967,11 @@ skip_segments:
 
 		if ((TAILQ_FIRST(&asoc->sent_queue) == NULL) &&
 		    (asoc->total_flight > 0)) {
+			panic("Warning flight size is postive and should be 0");
+/*
 			printf("Warning flight size incorrect should be 0 is %d\n",
 			    asoc->total_flight);
+*/
 			asoc->total_flight = 0;
 		}
 		if (tp1->data) {
