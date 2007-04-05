@@ -157,12 +157,14 @@ static char *from_str[]= {
 	/* 103 */ "randy stuff 2",
 	/* 104 */ "strmout log assign",
 	/* 105 */ "strmout log send",
-	/* 106 */ "flight log down",
+	/* 106 */ "flight log down-ca",
 	/* 107 */ "flight log up",
-	/* 108 */ "max"
+	/* 108 */ "flight log down-gap",
+        /* 109 */ "flight log donw-rsnd",
+	/* 110 */ "max"
 };
 
-#define FROM_STRING_MAX 108
+#define FROM_STRING_MAX 110
 
 int graph_mode = 0;
 int comma_sep = 0;
@@ -779,17 +781,26 @@ main(int argc, char **argv)
 				       log.x.misc.log4);
 
 			} else if (log.from == SCTP_FLIGHT_LOG_UP) {
-				printf("%s Flight Up (stcb:%x) total-flight:%d incr:%d TSN:%x\n", 
+				printf("%s Flight Up (stcb:%x) net-flight:%d incr:%d TSN:%x newflt:%d\n", 
 				       ts, log.x.misc.log3, 
 				       log.x.misc.log1,
 				       log.x.misc.log2,
-				       log.x.misc.log4);
-			} else if (log.from == SCTP_FLIGHT_LOG_DOWN) {
-				printf("%s Flight Down (stcb:%x) total-flight:%d decr:%d TSN:%x\n", 
-				       ts, log.x.misc.log3, 
+				       log.x.misc.log4,
+				       (log.x.misc.log1 + log.x.misc.log2)
+					);
+
+			} else if ((log.from == SCTP_FLIGHT_LOG_DOWN_CA) ||
+				   (log.from == SCTP_FLIGHT_LOG_DOWN_GAP) ||
+				   (log.from == SCTP_FLIGHT_LOG_DOWN_RSND)) {
+				printf("%s %s (stcb:%x) net-flight:%d decr:%d TSN:%x newflt:%d\n", 
+				       ts,
+				       event_names[log.from],
+				       log.x.misc.log3, 
 				       log.x.misc.log1,
 				       log.x.misc.log2,
-				       log.x.misc.log4);
+				       log.x.misc.log4,
+				       (log.x.misc.log1 - log.x.misc.log2)
+				       );
 
 			} else if (log.from == SCTP_RANDY_STUFF1) {
 				printf("%s bundled:%d mtu:%u rmtu:%u mtu-left:%d\n",
