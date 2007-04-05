@@ -44,8 +44,10 @@ static char *event_names[] = {
 	"SCTP_LOG_EVENT_SB",
 	"SCTP_LOG_EVENT_NAGLE",
 	"SCTP_LOG_EVENT_WAKE",
+	"SCTP_LOG_MISC_EVENTS",
+	"SCTP_LOG_EVENT_CLOSE",
+	"SCTP_LOG_EVENT_MBUF",
 	"SCTP_LOG_MAX_EVENT",
-	"SCTP_LOG_EVENT_CLOSE"
 };
 
 static char *from_str[]= {
@@ -143,10 +145,24 @@ static char *from_str[]= {
 	/* 91 */ "++via my allocation",
 	/* 92 */ "--I am freeing",
 	/* 93 */ "++via my copy of mbufs",
-	/* 94 */ "unknown"
+	/* 94 */ "sorecv free ctrl",
+	/* 95 */ "sorecv does copy",
+	/* 96 */ "sorecv does slock",
+	/* 97 */ "sorecv does adj",
+	/* 98 */ "sorecv bottom while",
+	/* 99 */ "sorecv pass bf",
+	/* 100 */ "sorecv adj d",
+	/* 101 */ "unknown max",
+	/* 102 */ "randy stuff 1",
+	/* 103 */ "randy stuff 2",
+	/* 104 */ "strmout log assign",
+	/* 105 */ "strmout log send",
+	/* 106 */ "flight log down",
+	/* 107 */ "flight log up",
+	/* 108 */ "max"
 };
 
-#define FROM_STRING_MAX 94
+#define FROM_STRING_MAX 108
 
 int graph_mode = 0;
 int comma_sep = 0;
@@ -747,14 +763,14 @@ main(int argc, char **argv)
 				       log.x.misc.log4
 				       );
 
-			} else if (log.from == 104) {
+			} else if (log.from == SCTP_STRMOUT_LOG_ASSIGN) {
 				printf("%s Stream seq Assigned stcb:%x sp:%x strm:%d seq:%d\n", ts, 
 				       log.x.misc.log1,
 				       log.x.misc.log2,
 				       (log.x.misc.log3 >> 16),
 				       (log.x.misc.log3 & 0x0000ffff)
 				       );
-			} else if (log.from == 105) {
+			} else if (log.from == SCTP_STRMOUT_LOG_SEND) {
 				printf("%s Stream seq Send stcb:%x sp:%x strm:%d seq:%d tsn:%x\n", ts, 
 				       log.x.misc.log1,
 				       log.x.misc.log2,
@@ -762,8 +778,19 @@ main(int argc, char **argv)
 				       (log.x.misc.log3 & 0x0000ffff),
 				       log.x.misc.log4);
 
-			} else if (log.from == 106) {
-				printf("%s flags=%x SB-WAKE?\n", ts, log.x.misc.log1);
+			} else if (log.from == SCTP_FLIGHT_LOG_UP) {
+				printf("%s Flight Up (stcb:%x) total-flight:%d incr:%d TSN:%x\n", 
+				       ts, log.x.misc.log3, 
+				       log.x.misc.log1,
+				       log.x.misc.log2,
+				       log.x.misc.log4);
+			} else if (log.from == SCTP_FLIGHT_LOG_DOWN) {
+				printf("%s Flight Down (stcb:%x) total-flight:%d decr:%d TSN:%x\n", 
+				       ts, log.x.misc.log3, 
+				       log.x.misc.log1,
+				       log.x.misc.log2,
+				       log.x.misc.log4);
+
 			} else if (log.from == SCTP_RANDY_STUFF1) {
 				printf("%s bundled:%d mtu:%u rmtu:%u mtu-left:%d\n",
 				       ts,
