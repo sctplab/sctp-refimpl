@@ -15,4 +15,5 @@
   during window probes on the sent queue. This would then
   cause an out-of-order problem and assure that the flight
   size "problem" would occur.
-
+- Solves a flight size logging issue that caused rwnd
+  overruns, flight size off as well as false retransmissions.g
