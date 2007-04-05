@@ -2952,7 +2952,7 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 								      SCTP_LOG_TSN_ACKED);
 #endif
 #ifdef SCTP_FLIGHT_LOGGING
-							sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN, 
+							sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN_GAP, 
 								       tp1->whoTo->flight_size,
 								       tp1->book_size, 
 								       (uintptr_t)stcb, 
@@ -3496,7 +3496,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			}
 			/* fix counts and things */
 #ifdef SCTP_FLIGHT_LOGGING
-			sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN, 
+			sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN_RSND, 
 				       tp1->whoTo->flight_size,
 				       tp1->book_size, 
 				       (uintptr_t)stcb, 
@@ -4238,7 +4238,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 						 * values may occur during marking
 						 */
 #ifdef SCTP_FLIGHT_LOGGING
-						sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN, 
+						sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN_CA, 
 							       tp1->whoTo->flight_size,
 							       tp1->book_size, 
 							       (uintptr_t)stcb, 
@@ -4820,7 +4820,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 						    ~SCTP_ADDR_UNCONFIRMED;
 					}
 #ifdef SCTP_FLIGHT_LOGGING
-					sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN, 
+					sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN_CA, 
 						       tp1->whoTo->flight_size,
 						       tp1->book_size, 
 						       (uintptr_t)stcb, 
