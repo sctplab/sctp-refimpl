@@ -190,9 +190,13 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.10 2007/04/03 11:15:32 
 #define SCTP_RANDY_STUFF1          103 
 #define SCTP_STRMOUT_LOG_ASSIGN	   104
 #define SCTP_STRMOUT_LOG_SEND	   105
-#define SCTP_FLIGHT_LOG_DOWN       106
+#define SCTP_FLIGHT_LOG_DOWN_CA    106
 #define SCTP_FLIGHT_LOG_UP         107
-#define SCTP_LOG_MAX_TYPES 108
+#define SCTP_FLIGHT_LOG_DOWN_GAP   108
+#define SCTP_FLIGHT_LOG_DOWN_RSND  109
+#define SCTP_FLIGHT_LOG_UP_RSND    110
+#define SCTP_FLIGHT_LOG_DOWN_RSND_TO    111
+#define SCTP_LOG_MAX_TYPES 112
 /*
  * To turn on various logging, you must first define SCTP_STAT_LOGGING. Then
  * to get something to log you define one of the logging defines i.e.

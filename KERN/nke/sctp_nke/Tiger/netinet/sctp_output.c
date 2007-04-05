@@ -8398,7 +8398,7 @@ one_chunk_around:
 					    sctp_peer_chunk_oh));
 				}
 #ifdef SCTP_FLIGHT_LOGGING
-				sctp_misc_ints(SCTP_FLIGHT_LOG_UP, 
+				sctp_misc_ints(SCTP_FLIGHT_LOG_UP_RSND, 
 					       data_list[i]->whoTo->flight_size,
 					       data_list[i]->book_size, 
 					       (uintptr_t)stcb, 
