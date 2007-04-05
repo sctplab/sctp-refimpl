@@ -538,13 +538,13 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	cur_rtt *= 1000;
 #if defined(SCTP_FR_LOGGING) || defined(SCTP_EARLYFR_LOGGING)
 	sctp_log_fr(cur_rtt,
-	    stcb->asoc.peers_rwnd,
-	    window_probe,
-	    SCTP_FR_T3_MARK_TIME);
+		    stcb->asoc.peers_rwnd,
+		    window_probe,
+		    SCTP_FR_T3_MARK_TIME);
 	sctp_log_fr(net->flight_size,
-	    SCTP_OS_TIMER_PENDING(&net->fr_timer.timer),
-	    SCTP_OS_TIMER_ACTIVE(&net->fr_timer.timer),
-	    SCTP_FR_CWND_REPORT);
+		    SCTP_OS_TIMER_PENDING(&net->fr_timer.timer),
+		    SCTP_OS_TIMER_ACTIVE(&net->fr_timer.timer),
+		    SCTP_FR_CWND_REPORT);
 	sctp_log_fr(net->flight_size, net->cwnd, stcb->asoc.total_flight, SCTP_FR_CWND_REPORT);
 #endif
 	tv.tv_sec = cur_rtt / 1000000;
@@ -582,8 +582,8 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	for (; chk != NULL; chk = tp2) {
 		tp2 = TAILQ_NEXT(chk, sctp_next);
 		if ((compare_with_wrap(stcb->asoc.last_acked_seq,
-		    chk->rec.data.TSN_seq,
-		    MAX_TSN)) ||
+				       chk->rec.data.TSN_seq,
+				       MAX_TSN)) ||
 		    (stcb->asoc.last_acked_seq == chk->rec.data.TSN_seq)) {
 			/* Strange case our list got out of order? */
 			printf("Our list is out of order?\n");
@@ -601,9 +601,9 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 			/* validate its been outstanding long enough */
 #if defined(SCTP_FR_LOGGING) || defined(SCTP_EARLYFR_LOGGING)
 			sctp_log_fr(chk->rec.data.TSN_seq,
-			    chk->sent_rcv_time.tv_sec,
-			    chk->sent_rcv_time.tv_usec,
-			    SCTP_FR_T3_MARK_TIME);
+				    chk->sent_rcv_time.tv_sec,
+				    chk->sent_rcv_time.tv_usec,
+				    SCTP_FR_T3_MARK_TIME);
 #endif
 			if ((chk->sent_rcv_time.tv_sec > min_wait.tv_sec) && (window_probe == 0)) {
 				/*
@@ -613,13 +613,13 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 				 */
 #if defined(SCTP_FR_LOGGING) || defined(SCTP_EARLYFR_LOGGING)
 				sctp_log_fr(0,
-				    chk->sent_rcv_time.tv_sec,
-				    chk->sent_rcv_time.tv_usec,
-				    SCTP_FR_T3_STOPPED);
+					    chk->sent_rcv_time.tv_sec,
+					    chk->sent_rcv_time.tv_usec,
+					    SCTP_FR_T3_STOPPED);
 #endif
 				continue;
 			} else if ((chk->sent_rcv_time.tv_sec == min_wait.tv_sec) &&
-			    (window_probe == 0)) {
+				   (window_probe == 0)) {
 				/*
 				 * we must look at the micro seconds to
 				 * know.
@@ -631,9 +631,9 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 					 */
 #if defined(SCTP_FR_LOGGING) || defined(SCTP_EARLYFR_LOGGING)
 					sctp_log_fr(0,
-					    chk->sent_rcv_time.tv_sec,
-					    chk->sent_rcv_time.tv_usec,
-					    SCTP_FR_T3_STOPPED);
+						    chk->sent_rcv_time.tv_sec,
+						    chk->sent_rcv_time.tv_usec,
+						    SCTP_FR_T3_STOPPED);
 #endif
 					continue;
 				}
@@ -642,13 +642,13 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 				/* Is it expired? */
 				if ((now.tv_sec > chk->rec.data.timetodrop.tv_sec) ||
 				    ((chk->rec.data.timetodrop.tv_sec == now.tv_sec) &&
-				    (now.tv_usec > chk->rec.data.timetodrop.tv_usec))) {
+				     (now.tv_usec > chk->rec.data.timetodrop.tv_usec))) {
 					/* Yes so drop it */
 					if (chk->data) {
 						sctp_release_pr_sctp_chunk(stcb,
-						    chk,
-						    (SCTP_RESPONSE_TO_USER_REQ | SCTP_NOTIFY_DATAGRAM_SENT),
-						    &stcb->asoc.sent_queue);
+									   chk,
+									   (SCTP_RESPONSE_TO_USER_REQ | SCTP_NOTIFY_DATAGRAM_SENT),
+									   &stcb->asoc.sent_queue);
 					}
 				}
 				continue;
@@ -658,14 +658,14 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 				if (chk->snd_count > chk->rec.data.timetodrop.tv_sec) {
 					if (chk->data) {
 						sctp_release_pr_sctp_chunk(stcb,
-						    chk,
-						    (SCTP_RESPONSE_TO_USER_REQ | SCTP_NOTIFY_DATAGRAM_SENT),
-						    &stcb->asoc.sent_queue);
+									   chk,
+									   (SCTP_RESPONSE_TO_USER_REQ | SCTP_NOTIFY_DATAGRAM_SENT),
+									   &stcb->asoc.sent_queue);
 					}
 				}
 				continue;
 			}
-			if (chk->sent != SCTP_DATAGRAM_RESEND) {
+			if (chk->sent < SCTP_DATAGRAM_RESEND) {
 				sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
 				num_mk++;
 				if (fir == 0) {
@@ -675,36 +675,34 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 				tsnlast = chk->rec.data.TSN_seq;
 #if defined(SCTP_FR_LOGGING) || defined(SCTP_EARLYFR_LOGGING)
 				sctp_log_fr(chk->rec.data.TSN_seq, chk->snd_count,
-				    0, SCTP_FR_T3_MARKED);
+					    0, SCTP_FR_T3_MARKED);
 
 #endif
-			}
-			if (stcb->asoc.total_flight_count > 0)
-				stcb->asoc.total_flight_count--;
-			if(chk->rec.data.chunk_was_revoked) {
-				/* deflate the cwnd */
-				chk->whoTo->cwnd -= chk->book_size;
-				chk->rec.data.chunk_was_revoked = 0;
+				if (stcb->asoc.total_flight_count > 0)
+					stcb->asoc.total_flight_count--;
+				if(chk->rec.data.chunk_was_revoked) {
+					/* deflate the cwnd */
+					chk->whoTo->cwnd -= chk->book_size;
+					chk->rec.data.chunk_was_revoked = 0;
+				}
+				net->marked_retrans++;
+				stcb->asoc.marked_retrans++;
+#ifdef SCTP_FLIGHT_LOGGING
+				sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN_RSND_TO, 
+					       chk->whoTo->flight_size,
+					       chk->book_size, 
+					       (uintptr_t)stcb, 
+					       chk->rec.data.TSN_seq);
+#endif
+				if(net->flight_size >= chk->book_size)
+					net->flight_size -= chk->book_size;
+				else
+					net->flight_size = 0;
+				stcb->asoc.peers_rwnd += chk->send_size;
+				stcb->asoc.peers_rwnd += sctp_peer_chunk_oh;
 			}
 			chk->sent = SCTP_DATAGRAM_RESEND;
 			SCTP_STAT_INCR(sctps_markedretrans);
-			net->marked_retrans++;
-			stcb->asoc.marked_retrans++;
-#ifdef SCTP_FLIGHT_LOGGING
-			sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN_RSND_TO, 
-				       chk->whoTo->flight_size,
-				       chk->book_size, 
-				       (uintptr_t)stcb, 
-				       chk->rec.data.TSN_seq);
-#endif
-
-			if(net->flight_size >= chk->book_size)
-				net->flight_size -= chk->book_size;
-			else
-				net->flight_size = 0;
-
-			stcb->asoc.peers_rwnd += chk->send_size;
-			stcb->asoc.peers_rwnd += sctp_peer_chunk_oh;
 
 			/* reset the TSN for striking and other FR stuff */
 			chk->rec.data.doing_fast_retransmit = 0;
@@ -751,12 +749,12 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 		if (num_mk) {
 			printf("LAST TSN marked was %x\n", tsnlast);
 			printf("Num marked for retransmission was %d peer-rwd:%ld\n",
-			    num_mk, (u_long)stcb->asoc.peers_rwnd);
+			       num_mk, (u_long)stcb->asoc.peers_rwnd);
 			printf("LAST TSN marked was %x\n", tsnlast);
 			printf("Num marked for retransmission was %d peer-rwd:%d\n",
-			    num_mk,
-			    (int)stcb->asoc.peers_rwnd
-			    );
+			       num_mk,
+			       (int)stcb->asoc.peers_rwnd
+				);
 		}
 	}
 #endif
@@ -770,7 +768,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	if (stcb->asoc.sent_queue_retran_cnt != cnt_mk) {
 #ifdef INVARIANTS
 		printf("Local Audit says there are %d for retran asoc cnt:%d\n",
-		    cnt_mk, stcb->asoc.sent_queue_retran_cnt);
+		       cnt_mk, stcb->asoc.sent_queue_retran_cnt);
 #endif
 #ifndef SCTP_AUDITING_ENABLED
 		stcb->asoc.sent_queue_retran_cnt = cnt_mk;
@@ -793,7 +791,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_TIMER4) {
 			printf("Audit total flight due to negative value net:%p\n",
-			    net);
+			       net);
 		}
 #endif				/* SCTP_DEBUG */
 		stcb->asoc.total_flight = 0;
@@ -804,18 +802,18 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_TIMER4) {
 				printf("Net:%p c-f cwnd:%d ssthresh:%d\n",
-				    lnets, lnets->cwnd, lnets->ssthresh);
+				       lnets, lnets->cwnd, lnets->ssthresh);
 			}
 #endif				/* SCTP_DEBUG */
 		}
 		TAILQ_FOREACH(chk, &stcb->asoc.sent_queue, sctp_next) {
 			if (chk->sent < SCTP_DATAGRAM_RESEND) {
 #ifdef SCTP_FLIGHT_LOGGING
-			sctp_misc_ints(SCTP_FLIGHT_LOG_UP, 
-				       chk->whoTo->flight_size,
-				       chk->book_size, 
-				       (uintptr_t)stcb, 
-				       chk->rec.data.TSN_seq);
+				sctp_misc_ints(SCTP_FLIGHT_LOG_UP, 
+					       chk->whoTo->flight_size,
+					       chk->book_size, 
+					       (uintptr_t)stcb, 
+					       chk->rec.data.TSN_seq);
 #endif
 				stcb->asoc.total_flight += chk->book_size;
 				chk->whoTo->flight_size += chk->book_size;
