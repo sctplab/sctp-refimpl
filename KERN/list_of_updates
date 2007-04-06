@@ -19,7 +19,9 @@
   overruns, flight size off as well as false retransmissions.g
 - Macroize the up and down of flight size.
 - Fix a ECNE bug in its counting.
-
+- The strict_sacks options was causing aborts when window probing
+  was active, fix to make strict sacks a bit smarter about what
+  the next unsent TSN is.
 
 
 
