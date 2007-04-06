@@ -170,7 +170,13 @@ sctp_pathmtu_adjustment(struct sctp_inpcb *inp,
 			}
 			chk->sent = SCTP_DATAGRAM_RESEND;
 			chk->rec.data.doing_fast_retransmit = 0;
-
+#ifdef SCTP_FLIGHT_LOGGING
+			sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN_PMTU,
+				       tp1->whoTo->flight_size,
+				       tp1->book_size, 
+				       (uintptr_t)tp1->whoTo, 
+				       tp1->rec.data.TSN_seq);
+#endif
 			/* Clear any time so NO RTT is being done */
 			chk->do_rtt = 0;
 			sctp_flight_size_decrease(chk);
