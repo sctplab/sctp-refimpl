@@ -163,7 +163,8 @@ static char *from_str[]= {
         /* 109 */ "flight log donw-rsnd",
 	/* 110 */ "flight log up-rsnd",
 	/* 111 */ "flight log down t3",
-	/* 112 */ "max"
+	/* 112 */ "flight log down wp",
+	/* 113 */ "max"
 };
 
 #define FROM_STRING_MAX 112
@@ -790,14 +791,37 @@ main(int argc, char **argv)
 				       log.x.misc.log4,
 				       (log.x.misc.log1 + log.x.misc.log2)
 					);
-
+			} else if (log.from == SCTP_FLIGHT_LOG_UP_RSND) {
+				printf("%s Flight Up-rsnd (stcb:%x) net-flight:%d incr:%d TSN:%x newflt:%d\n", 
+				       ts, log.x.misc.log3, 
+				       log.x.misc.log1,
+				       log.x.misc.log2,
+				       log.x.misc.log4,
+				       (log.x.misc.log1 + log.x.misc.log2)
+					);
 			} else if ((log.from == SCTP_FLIGHT_LOG_DOWN_CA) ||
 				   (log.from == SCTP_FLIGHT_LOG_DOWN_GAP) ||
 				   (log.from == SCTP_FLIGHT_LOG_DOWN_RSND_TO) ||
+				   (log.from == SCTP_FLIGHT_LOG_DOWN_WP) ||
 				   (log.from == SCTP_FLIGHT_LOG_DOWN_RSND)) {
+				char *xx;
+				if (log.from == SCTP_FLIGHT_LOG_DOWN_CA) {
+					xx = "decrease-CUMACK";
+				} else if (log.from == SCTP_FLIGHT_LOG_DOWN_GAP) {
+					xx = "decrease-GAPACK";
+				} else if (log.from == SCTP_FLIGHT_LOG_DOWN_RSND_TO) {
+					xx = "decrease-TO";
+				} else if (log.from == SCTP_FLIGHT_LOG_DOWN_RSND) {
+					xx = "decrease-FR";
+				} else if (log.from == SCTP_FLIGHT_LOG_DOWN_WP) {
+					xx = "WP-recovery";
+				} else {
+					xx = "huh";
+				}
+
 				printf("%s %s (stcb:%x) net-flight:%d decr:%d TSN:%x newflt:%d\n", 
 				       ts,
-				       event_names[log.from],
+				       xx,
 				       log.x.misc.log3, 
 				       log.x.misc.log1,
 				       log.x.misc.log2,
