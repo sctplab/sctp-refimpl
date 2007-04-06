@@ -4666,7 +4666,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 			 * no way, we have not even sent this TSN out yet.
 			 * Peer is hopelessly messed up with us.
 			 */
-		hopeless_peer:
+/*		hopeless_peer:*/
 			*abort_now = 1;
 			/* XXX */
 			oper = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) + sizeof(uint32_t)),
