@@ -4130,13 +4130,13 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 		} else {
 			tp1 = TAILQ_FIRST(&asoc->send_queue);
 			send_s = tp1->rec.data.TSN_seq;
-			if(tp1->send_cnt > 0) {
+			if(tp1->snd_count > 0) {
 				/* Case where a WP is back on send_queue */
 			more_please:
 				tp1 = TAILQ_NEXT(tp1, sctp_next);
 				if(tp1 == NULL) {
 					send_s = asoc->sending_seq;
-				} else if(tp1->send_cnt > 0) {
+				} else if(tp1->snd_count > 0) {
 					/* another one */
 					goto more_please;
 				} else {
@@ -4633,13 +4633,13 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 		} else {
 			tp1 = TAILQ_FIRST(&asoc->send_queue);
 			send_s = tp1->rec.data.TSN_seq;
-			if(tp1->send_cnt > 0) {
+			if(tp1->snd_count > 0) {
 				/* Case where a WP is back on send_queue */
 			more_please:
 				tp1 = TAILQ_NEXT(tp1, sctp_next);
 				if(tp1 == NULL) {
 					send_s = asoc->sending_seq;
-				} else if(tp1->send_cnt > 0) {
+				} else if(tp1->snd_count > 0) {
 					/* another one */
 					goto more_please;
 				} else {
