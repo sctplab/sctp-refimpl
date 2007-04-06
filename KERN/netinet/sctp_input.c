@@ -2642,7 +2642,6 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 #endif
 				sctp_flight_size_decrease(tp1);
 				sctp_total_flight_decrease(stcb, tp1);
-				tp1->snd_count--;
 			} {
 				/* audit code */
 				unsigned int audit;
