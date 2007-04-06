@@ -4186,16 +4186,18 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 						 * now no-longer in flight. Higher
 						 * values may occur during marking
 						 */
+						if(tp1->sent < SCTP_DATAGRAM_RESEND) {
 #ifdef SCTP_FLIGHT_LOGGING
-						sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN_CA, 
-							       tp1->whoTo->flight_size,
-							       tp1->book_size, 
-							       (uintptr_t)tp1->whoTo, 
-							       tp1->rec.data.TSN_seq);
+							sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN_CA, 
+								       tp1->whoTo->flight_size,
+								       tp1->book_size, 
+								       (uintptr_t)tp1->whoTo, 
+								       tp1->rec.data.TSN_seq);
 #endif
 
-						sctp_flight_size_decrease(tp1);
-						sctp_total_flight_decrease(stcb, tp1);
+							sctp_flight_size_decrease(tp1);
+							sctp_total_flight_decrease(stcb, tp1);
+						}
 
 						tp1->whoTo->net_ack += tp1->send_size;
 						if (tp1->snd_count < 2) {
@@ -4757,15 +4759,17 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 						tp1->whoTo->dest_state &=
 							~SCTP_ADDR_UNCONFIRMED;
 					}
+					if(tp1->sent < SCTP_DATAGRAM_RESEND) {
 #ifdef SCTP_FLIGHT_LOGGING
-					sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN_CA, 
-						       tp1->whoTo->flight_size,
-						       tp1->book_size, 
-						       (uintptr_t)tp1->whoTo, 
-						       tp1->rec.data.TSN_seq);
+						sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN_CA, 
+							       tp1->whoTo->flight_size,
+							       tp1->book_size, 
+							       (uintptr_t)tp1->whoTo, 
+							       tp1->rec.data.TSN_seq);
 #endif
-					sctp_flight_size_decrease(tp1);
-					sctp_total_flight_decrease(stcb, tp1);
+						sctp_flight_size_decrease(tp1);
+						sctp_total_flight_decrease(stcb, tp1);
+					}
 					tp1->whoTo->net_ack += tp1->send_size;
 
 					/* CMT SFR and DAC algos */
