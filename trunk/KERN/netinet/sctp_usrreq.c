@@ -173,16 +173,8 @@ sctp_pathmtu_adjustment(struct sctp_inpcb *inp,
 
 			/* Clear any time so NO RTT is being done */
 			chk->do_rtt = 0;
-			if (stcb->asoc.total_flight >= chk->book_size)
-				stcb->asoc.total_flight -= chk->book_size;
-			else
-				stcb->asoc.total_flight = 0;
-			if (stcb->asoc.total_flight_count > 0)
-				stcb->asoc.total_flight_count--;
-			if (net->flight_size >= chk->book_size)
-				net->flight_size -= chk->book_size;
-			else
-				net->flight_size = 0;
+			sctp_flight_size_decrease(chk);
+			sctp_total_flight_decrease(stcb, chk);
 		}
 	}
 }

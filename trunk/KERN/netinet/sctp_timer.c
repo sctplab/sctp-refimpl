@@ -501,9 +501,9 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	struct sctp_nets *lnets;
 	struct timeval now, min_wait, tv;
 	int cur_rtt;
-	int orig_rwnd, audit_tf, num_mk, fir;
+	int audit_tf, num_mk, fir;
 	unsigned int cnt_mk;
-	uint32_t orig_flight;
+	uint32_t orig_flight, orig_tf;
 	uint32_t tsnlast, tsnfirst;
 
 #if defined(SCTP_PER_SOCKET_LOCKING)
@@ -572,8 +572,9 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	 * Our rwnd will be incorrect here since we are not adding back the
 	 * cnt * mbuf but we will fix that down below.
 	 */
-	orig_rwnd = stcb->asoc.peers_rwnd;
 	orig_flight = net->flight_size;
+	orig_tf = stcb->asoc.total_flight;
+
 	net->fast_retran_ip = 0;
 	/* Now on to each chunk */
 	num_mk = cnt_mk = 0;
@@ -678,8 +679,6 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 					    0, SCTP_FR_T3_MARKED);
 
 #endif
-				if (stcb->asoc.total_flight_count > 0)
-					stcb->asoc.total_flight_count--;
 				if(chk->rec.data.chunk_was_revoked) {
 					/* deflate the cwnd */
 					chk->whoTo->cwnd -= chk->book_size;
@@ -694,10 +693,8 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 					       (uintptr_t)chk->whoTo, 
 					       chk->rec.data.TSN_seq);
 #endif
-				if(net->flight_size >= chk->book_size)
-					net->flight_size -= chk->book_size;
-				else
-					net->flight_size = 0;
+				sctp_flight_size_decrease(chk);
+				sctp_total_flight_decrease(stcb, chk);
 				stcb->asoc.peers_rwnd += chk->send_size;
 				stcb->asoc.peers_rwnd += sctp_peer_chunk_oh;
 			}
@@ -732,18 +729,14 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 			cnt_mk++;
 		}
 	}
-#if defined(SCTP_FR_LOGGING) || defined(SCTP_EARLYFR_LOGGING)
-	sctp_log_fr(tsnfirst, tsnlast, num_mk, SCTP_FR_T3_TIMEOUT);
-#endif
-
-	if (stcb->asoc.total_flight >= (orig_flight - net->flight_size)) {
-		stcb->asoc.total_flight -= (orig_flight - net->flight_size);
-	} else {
-		stcb->asoc.total_flight = 0;
-		stcb->asoc.total_flight_count = 0;
+	if ((orig_flight - net->flight_size) != (orig_tf - stcb->asoc.total_flight)) {
+		/* we did not subtract the same things? */
 		audit_tf = 1;
 	}
 
+#if defined(SCTP_FR_LOGGING) || defined(SCTP_EARLYFR_LOGGING)
+	sctp_log_fr(tsnfirst, tsnlast, num_mk, SCTP_FR_T3_TIMEOUT);
+#endif
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_TIMER1) {
 		if (num_mk) {
