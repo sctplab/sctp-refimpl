@@ -3059,13 +3059,12 @@ sctp_check_for_revoked(struct sctp_association *asoc, uint32_t cumack,
 					       (uintptr_t)tp1->whoTo, 
 					       tp1->rec.data.TSN_seq);
 #endif
-				tp1->whoTo->flight_size += tp1->book_size;
+				sctp_flight_size_increase(tp1);
+				sctp_total_flight_increase(stcb, tp1);
 				/* We inflate the cwnd to compensate for our
 				 * artificial inflation of the flight_size.
 				 */
 				tp1->whoTo->cwnd += tp1->book_size;
-				asoc->total_flight_count++;
-				asoc->total_flight += tp1->book_size;
 				tot_revoked++;
 #ifdef SCTP_SACK_LOGGING
 				sctp_log_sack(asoc->last_acked_seq,
@@ -4413,9 +4412,8 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 		asoc->sent_queue_retran_cnt = 0;
 		TAILQ_FOREACH(tp1,&asoc->sent_queue, sctp_next) {
 			if(tp1->sent < SCTP_DATAGRAM_RESEND) {
-				tp1->whoTo->flight_size += tp1->book_size;
-				asoc->total_flight += tp1->book_size;
-				asoc->total_flight_count++;
+				sctp_flight_size_increase(tp1);
+				sctp_total_flight_increase(stcb, tp1);
 			} else if (tp1->sent == SCTP_DATAGRAM_RESEND) {
 				asoc->sent_queue_retran_cnt++;
 			}
@@ -5003,14 +5001,13 @@ skip_segments:
 				if ((tp1->sent > SCTP_DATAGRAM_RESEND) &&
 				    (tp1->sent < SCTP_FORWARD_TSN_SKIP)) {
 					tp1->sent = SCTP_DATAGRAM_SENT;
+					sctp_flight_size_increase(tp1);
+					sctp_total_flight_increase(stcb, tp1);
 					tp1->rec.data.chunk_was_revoked = 1;
-					tp1->whoTo->flight_size += tp1->book_size;
 					/* To ensure that this increase in flightsize, which is artificial,
 					 * does not throttle the sender, we also increase the cwnd artificially.
 					 */
 					tp1->whoTo->cwnd += tp1->book_size;
-					asoc->total_flight_count++;
-					asoc->total_flight += tp1->book_size;
 					cnt_revoked++;
 				}
 			}
@@ -5427,9 +5424,8 @@ skip_segments:
 		asoc->sent_queue_retran_cnt = 0;
 		TAILQ_FOREACH(tp1,&asoc->sent_queue, sctp_next) {
 			if(tp1->sent < SCTP_DATAGRAM_RESEND) {
-				tp1->whoTo->flight_size += tp1->book_size;
-				asoc->total_flight += tp1->book_size;
-				asoc->total_flight_count++;
+				sctp_flight_size_increase(tp1);
+				sctp_total_flight_increase(stcb, tp1);
 			} else if (tp1->sent == SCTP_DATAGRAM_RESEND) {
 				asoc->sent_queue_retran_cnt++;
 			}

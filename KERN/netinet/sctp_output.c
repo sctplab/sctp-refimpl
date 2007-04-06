@@ -6181,9 +6181,8 @@ all_done:
 			       (uintptr_t)data_list[i]->whoTo, 
 			       data_list[i]->rec.data.TSN_seq);
 #endif
-		net->flight_size += data_list[i]->book_size;
-		asoc->total_flight += data_list[i]->book_size;
-		asoc->total_flight_count++;
+		sctp_flight_size_increase(data_list[i]);
+		sctp_total_flight_increase(stcb, data_list[i]);
 #ifdef SCTP_LOG_RWND
 		sctp_log_rwnd(SCTP_DECREASE_PEER_RWND,
 		    asoc->peers_rwnd, data_list[i]->send_size, sctp_peer_chunk_oh);
@@ -8388,7 +8387,6 @@ one_chunk_around:
 
 
 				} else {
-					sctp_ucount_incr(asoc->total_flight_count);
 #ifdef SCTP_LOG_RWND
 					sctp_log_rwnd(SCTP_DECREASE_PEER_RWND,
 					    asoc->peers_rwnd, data_list[i]->send_size, sctp_peer_chunk_oh);
@@ -8404,8 +8402,8 @@ one_chunk_around:
 					       (uintptr_t)data_list[i]->whoTo, 
 					       data_list[i]->rec.data.TSN_seq);
 #endif
-				net->flight_size += data_list[i]->book_size;
-				asoc->total_flight += data_list[i]->book_size;
+				sctp_flight_size_increase(data_list[i]);
+				sctp_total_flight_increase(stcb, data_list[i]);
 				if (asoc->peers_rwnd < stcb->sctp_ep->sctp_ep.sctp_sws_sender) {
 					/* SWS sender side engages */
 					asoc->peers_rwnd = 0;
