@@ -808,9 +808,9 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 					       (uintptr_t)chk->whoTo, 
 					       chk->rec.data.TSN_seq);
 #endif
-				stcb->asoc.total_flight += chk->book_size;
-				chk->whoTo->flight_size += chk->book_size;
-				stcb->asoc.total_flight_count++;
+
+				sctp_flight_size_increase(chk);
+				sctp_total_flight_increase(stcb, chk);
 			}
 		}
 	}

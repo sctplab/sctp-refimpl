@@ -381,6 +381,15 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 
 #endif
 
+#define sctp_flight_size_increase(tp1) do { \
+       (tp1)->whoTo->flight_size += (tp1)->book_size; \
+} while (0)
+
+	
+#define sctp_total_flight_increase(stcb, tp1) do { \
+       (stcb)->asoc.total_flight_count++; \
+       (stcb)->asoc.total_flight += (tp1)->book_size; \
+} while (0)
 
 struct sctp_nets;
 struct sctp_inpcb;
