@@ -5002,6 +5002,13 @@ skip_segments:
 				if ((tp1->sent > SCTP_DATAGRAM_RESEND) &&
 				    (tp1->sent < SCTP_FORWARD_TSN_SKIP)) {
 					tp1->sent = SCTP_DATAGRAM_SENT;
+#ifdef SCTP_FLIGHT_LOGGING
+					sctp_misc_ints(SCTP_FLIGHT_LOG_UP_REVOKE, 
+						       tp1->whoTo->flight_size,
+						       tp1->book_size, 
+						       (uintptr_t)tp1->whoTo, 
+						       tp1->rec.data.TSN_seq);
+#endif
 					sctp_flight_size_increase(tp1);
 					sctp_total_flight_increase(stcb, tp1);
 					tp1->rec.data.chunk_was_revoked = 1;
