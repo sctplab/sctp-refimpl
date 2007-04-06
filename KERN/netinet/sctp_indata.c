@@ -2758,9 +2758,9 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 
 static void
 sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
-    struct sctp_sack_chunk *ch, uint32_t last_tsn, uint32_t *biggest_tsn_acked,
-    uint32_t *biggest_newly_acked_tsn, uint32_t *this_sack_lowest_newack,
-    int num_seg, int *ecn_seg_sums)
+		     struct sctp_sack_chunk *ch, uint32_t last_tsn, uint32_t *biggest_tsn_acked,
+		     uint32_t *biggest_newly_acked_tsn, uint32_t *this_sack_lowest_newack,
+		     int num_seg, int *ecn_seg_sums)
 {
 	/************************************************/
 	/* process fragments and update sendqueue        */
@@ -3029,8 +3029,9 @@ v									      last_tsn,
 }
 
 static void
-sctp_check_for_revoked(struct sctp_association *asoc, uint32_t cumack,
-    u_long biggest_tsn_acked)
+sctp_check_for_revoked(struct sctp_tcb *stcb,
+		       struct sctp_association *asoc, uint32_t cumack,
+		       u_long biggest_tsn_acked)
 {
 	struct sctp_tmit_chunk *tp1;
 	int tot_revoked = 0;
@@ -4990,7 +4991,7 @@ skip_segments:
 	 */
 
 	if (num_seg)
-		sctp_check_for_revoked(asoc, cum_ack, biggest_tsn_acked);
+		sctp_check_for_revoked(stcb, asoc, cum_ack, biggest_tsn_acked);
 	else if (asoc->saw_sack_with_frags) {
 		int cnt_revoked = 0;
 
