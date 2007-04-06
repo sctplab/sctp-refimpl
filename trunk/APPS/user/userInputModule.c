@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.86 2007-04-06 12:07:46 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.87 2007-04-06 12:09:30 randall Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -2682,7 +2682,6 @@ cmd_xconnect(char *argv[], int argc)
 	char *ccc;
 	sctp_assoc_t id;
 	struct sockaddr *at;
-	sctp_assoc_t id;
 	struct sockaddr_in *servaddr;
 	struct sockaddr_in6 *servaddr6;
 
