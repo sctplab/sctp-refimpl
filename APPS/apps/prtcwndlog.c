@@ -164,10 +164,11 @@ static char *from_str[]= {
 	/* 110 */ "flight log up-rsnd",
 	/* 111 */ "flight log down t3",
 	/* 112 */ "flight log down wp",
-	/* 113 */ "max"
+	/* 113 */ "flight up revoke",
+	/* 114 */ "max"
 };
 
-#define FROM_STRING_MAX 112
+#define FROM_STRING_MAX 114
 
 int graph_mode = 0;
 int comma_sep = 0;
@@ -783,8 +784,16 @@ main(int argc, char **argv)
 				       (log.x.misc.log3 & 0x0000ffff),
 				       log.x.misc.log4);
 
+			} else if (log.from == SCTP_FLIGHT_LOG_UP_REVOKE) {
+				printf("%s Flight Up revoked (net:%x) net-flight:%d incr:%d TSN:%x newflt:%d\n", 
+				       ts, log.x.misc.log3, 
+				       log.x.misc.log1,
+				       log.x.misc.log2,
+				       log.x.misc.log4,
+				       (log.x.misc.log1 + log.x.misc.log2)
+					);
 			} else if (log.from == SCTP_FLIGHT_LOG_UP) {
-				printf("%s Flight Up (stcb:%x) net-flight:%d incr:%d TSN:%x newflt:%d\n", 
+				printf("%s Flight Up (net:%x) net-flight:%d incr:%d TSN:%x newflt:%d\n", 
 				       ts, log.x.misc.log3, 
 				       log.x.misc.log1,
 				       log.x.misc.log2,
@@ -792,7 +801,7 @@ main(int argc, char **argv)
 				       (log.x.misc.log1 + log.x.misc.log2)
 					);
 			} else if (log.from == SCTP_FLIGHT_LOG_UP_RSND) {
-				printf("%s Flight Up-rsnd (stcb:%x) net-flight:%d incr:%d TSN:%x newflt:%d\n", 
+				printf("%s Flight Up-rsnd (net:%x) net-flight:%d incr:%d TSN:%x newflt:%d\n", 
 				       ts, log.x.misc.log3, 
 				       log.x.misc.log1,
 				       log.x.misc.log2,
@@ -819,7 +828,7 @@ main(int argc, char **argv)
 					xx = "huh";
 				}
 
-				printf("%s %s (stcb:%x) net-flight:%d decr:%d TSN:%x newflt:%d\n", 
+				printf("%s %s (net:%x) net-flight:%d decr:%d TSN:%x newflt:%d\n", 
 				       ts,
 				       xx,
 				       log.x.misc.log3, 
