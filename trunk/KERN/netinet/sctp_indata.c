@@ -4126,7 +4126,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 	if (sctp_strict_sacks) {
 		uint32_t send_s;
 		if (!TAILQ_EMPTY(&asoc->sent_queue)) {
-			tp1 = TAILQ_LAST(&asoc->send_queue, 
+			tp1 = TAILQ_LAST(&asoc->sent_queue, 
 					 sctpchunk_listhead);
 			send_s = tp1->rec.data.TSN_seq + 1;
 		} else {
@@ -4619,7 +4619,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	if (sctp_strict_sacks) {
 		/* reality check */
 		if (!TAILQ_EMPTY(&asoc->sent_queue)) {
-			tp1 = TAILQ_LAST(&asoc->send_queue, 
+			tp1 = TAILQ_LAST(&asoc->sent_queue, 
 					 sctpchunk_listhead);
 			send_s = tp1->rec.data.TSN_seq + 1;
 		} else {
