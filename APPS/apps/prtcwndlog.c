@@ -812,6 +812,7 @@ main(int argc, char **argv)
 				   (log.from == SCTP_FLIGHT_LOG_DOWN_GAP) ||
 				   (log.from == SCTP_FLIGHT_LOG_DOWN_RSND_TO) ||
 				   (log.from == SCTP_FLIGHT_LOG_DOWN_WP) ||
+				   (log.from == SCTP_FLIGHT_LOG_DOWN_PDRP) ||
 				   (log.from == SCTP_FLIGHT_LOG_DOWN_RSND)) {
 				char *xx;
 				if (log.from == SCTP_FLIGHT_LOG_DOWN_CA) {
@@ -822,6 +823,8 @@ main(int argc, char **argv)
 					xx = "decrease-TO";
 				} else if (log.from == SCTP_FLIGHT_LOG_DOWN_RSND) {
 					xx = "decrease-FR";
+				} else if (log.from == SCTP_FLIGHT_LOG_DOWN_WP) {
+					xx = "decrease-PDRP";
 				} else if (log.from == SCTP_FLIGHT_LOG_DOWN_WP) {
 					xx = "WP-recovery";
 				} else {
