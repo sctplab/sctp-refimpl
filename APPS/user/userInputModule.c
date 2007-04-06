@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.85 2007-03-15 14:12:25 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.86 2007-04-06 12:07:46 randall Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -2682,6 +2682,7 @@ cmd_xconnect(char *argv[], int argc)
 	char *ccc;
 	sctp_assoc_t id;
 	struct sockaddr *at;
+	sctp_assoc_t id;
 	struct sockaddr_in *servaddr;
 	struct sockaddr_in6 *servaddr6;
 
@@ -3608,6 +3609,7 @@ cmd_getstat(char *argv[], int argc)
 	p(sctps_sends_with_unord,     "w_unorder");
 	p(sctps_sends_with_eof,       "w_eof");
 	p(sctps_sends_with_abort,     "w_abort");
+	p(sctps_read_peeks,           "peek_reads");
 	nl("");
 #undef p
 #undef nl
