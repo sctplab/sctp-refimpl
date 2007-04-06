@@ -6178,7 +6178,7 @@ all_done:
 		sctp_misc_ints(SCTP_FLIGHT_LOG_UP, 
 			       data_list[i]->whoTo->flight_size,
 			       data_list[i]->book_size, 
-			       (uintptr_t)stcb, 
+			       (uintptr_t)data_list[i]->whoTo, 
 			       data_list[i]->rec.data.TSN_seq);
 #endif
 		net->flight_size += data_list[i]->book_size;
@@ -8401,7 +8401,7 @@ one_chunk_around:
 				sctp_misc_ints(SCTP_FLIGHT_LOG_UP_RSND, 
 					       data_list[i]->whoTo->flight_size,
 					       data_list[i]->book_size, 
-					       (uintptr_t)stcb, 
+					       (uintptr_t)data_list[i]->whoTo, 
 					       data_list[i]->rec.data.TSN_seq);
 #endif
 				net->flight_size += data_list[i]->book_size;

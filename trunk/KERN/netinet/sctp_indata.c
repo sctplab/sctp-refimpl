@@ -2912,7 +2912,7 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 							if (*this_sack_lowest_newack == 0) {
 #ifdef SCTP_SACK_LOGGING
 								sctp_log_sack(*this_sack_lowest_newack,
-									      last_tsn,
+v									      last_tsn,
 									      tp1->rec.data.TSN_seq,
 									      0,
 									      0,
@@ -2955,7 +2955,7 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 							sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN_GAP, 
 								       tp1->whoTo->flight_size,
 								       tp1->book_size, 
-								       (uintptr_t)stcb, 
+								       (uintptr_t)tp1->whoTo, 
 								       tp1->rec.data.TSN_seq);
 #endif
 							if (tp1->whoTo->flight_size >= tp1->book_size)
@@ -3498,7 +3498,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN_RSND, 
 				       tp1->whoTo->flight_size,
 				       tp1->book_size, 
-				       (uintptr_t)stcb, 
+				       (uintptr_t)tp1->whoTo, 
 				       tp1->rec.data.TSN_seq);
 #endif
 			tp1->whoTo->net_ack++;
@@ -4086,6 +4086,13 @@ sctp_window_probe_recovery(struct sctp_association *asoc,
 	tp1->window_probe = 0;
 	net->flight_size -= tp1->book_size;
 	asoc->total_flight -= tp1->book_size;
+#ifdef SCTP_FLIGHT_LOGGING
+	sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN_WP, 
+		       tp1->whoTo->flight_size,
+		       tp1->book_size, 
+		       (uintptr_t)tp1->whoTo, 
+		       tp1->rec.data.TSN_seq);
+#endif
 	TAILQ_REMOVE(&asoc->sent_queue, tp1, sctp_next);
 	TAILQ_INSERT_HEAD(&asoc->send_queue, tp1, sctp_next);
 	asoc->sent_queue_cnt--;
@@ -4203,7 +4210,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 						sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN_CA, 
 							       tp1->whoTo->flight_size,
 							       tp1->book_size, 
-							       (uintptr_t)stcb, 
+							       (uintptr_t)tp1->whoTo, 
 							       tp1->rec.data.TSN_seq);
 #endif
 
@@ -4783,7 +4790,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 					sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN_CA, 
 						       tp1->whoTo->flight_size,
 						       tp1->book_size, 
-						       (uintptr_t)stcb, 
+						       (uintptr_t)tp1->whoTo, 
 						       tp1->rec.data.TSN_seq);
 #endif
 					if (tp1->whoTo->flight_size >= tp1->book_size) {
