@@ -4125,24 +4125,12 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 	}
 	if (sctp_strict_sacks) {
 		uint32_t send_s;
-		if (TAILQ_EMPTY(&asoc->send_queue)) {
-			send_s = asoc->sending_seq;
+		if (!TAILQ_EMPTY(&asoc->sent_queue)) {
+			tp1 = TAILQ_LAST(&asoc->send_queue, 
+					 sctpchunk_listhead);
+			send_s = tp1->rec.data.TSN_seq + 1;
 		} else {
-			tp1 = TAILQ_FIRST(&asoc->send_queue);
-			send_s = tp1->rec.data.TSN_seq;
-			if(tp1->snd_count > 0) {
-				/* Case where a WP is back on send_queue */
-			more_please:
-				tp1 = TAILQ_NEXT(tp1, sctp_next);
-				if(tp1 == NULL) {
-					send_s = asoc->sending_seq;
-				} else if(tp1->snd_count > 0) {
-					/* another one */
-					goto more_please;
-				} else {
-					send_s = tp1->rec.data.TSN_seq;
-				}
-			}
+			send_s = asoc->sending_seq;
 		}
 		if ((cumack == send_s) ||
 		    compare_with_wrap(cumack, send_s, MAX_TSN)) {
@@ -4630,27 +4618,13 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 #endif
 	if (sctp_strict_sacks) {
 		/* reality check */
-		if (TAILQ_EMPTY(&asoc->send_queue)) {
-			send_s = asoc->sending_seq;
+		if (!TAILQ_EMPTY(&asoc->sent_queue)) {
+			tp1 = TAILQ_LAST(&asoc->send_queue, 
+					 sctpchunk_listhead);
+			send_s = tp1->rec.data.TSN_seq + 1;
 		} else {
-			tp1 = TAILQ_FIRST(&asoc->send_queue);
-			send_s = tp1->rec.data.TSN_seq;
-			if(tp1->snd_count > 0) {
-				/* Case where a WP is back on send_queue */
-			more_please:
-				tp1 = TAILQ_NEXT(tp1, sctp_next);
-				if(tp1 == NULL) {
-					send_s = asoc->sending_seq;
-				} else if(tp1->snd_count > 0) {
-					/* another one */
-					goto more_please;
-				} else {
-					send_s = tp1->rec.data.TSN_seq;
-				}
-			}
-
+			send_s = asoc->sending_seq;
 		}
-
 		if (cum_ack == send_s ||
 		    compare_with_wrap(cum_ack, send_s, MAX_TSN)) {
 #ifndef INVARIANTS
