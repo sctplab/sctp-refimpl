@@ -9122,9 +9122,6 @@ sctp_send_sack(struct sctp_tcb *stcb)
 
 	gap_descriptor = (struct sctp_gap_ack_block *)((caddr_t)sack + sizeof(struct sctp_sack_chunk));
 
-	if (asoc->mapping_array[0] == 0xff) {
-		panic("Map needs slide");
-	}
 	siz = (((asoc->highest_tsn_inside_map - asoc->mapping_array_base_tsn) + 1) + 7) / 8;
 	if (asoc->cumulative_tsn < asoc->mapping_array_base_tsn) {
 		offset = 1;
