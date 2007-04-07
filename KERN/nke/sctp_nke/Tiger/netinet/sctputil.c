@@ -4730,6 +4730,8 @@ sctp_sorecvmsg(struct socket *so,
 
 	if (msg_flags) {
 		in_flags = *msg_flags;
+		if(in_flags & MSG_PEEK) 
+			SCTP_STAT_INCR(sctps_read_peeks);
 	} else {
 		in_flags = 0;
 	}
