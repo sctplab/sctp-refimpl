@@ -2267,17 +2267,13 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			SCTP_INP_DECR_REF(inp);
 			/* Switch over to the new guy */
 			*inp_p = inp;
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+			SCTP_SOCKET_UNLOCK(oso, 1);
+#endif
 			sctp_ulp_notify(notification, *stcb, 0, NULL);
 
 			/* Pull it from the incomplete queue and wake the guy */
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			/* need to temp unlock the listening socket on Tiger */
-			SCTP_SOCKET_UNLOCK(oso, 0);
-#endif
 			soisconnected(so);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			SCTP_SOCKET_LOCK(oso, 0);
-#endif
 			return (m);
 		}
 	}
@@ -4482,9 +4478,6 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 	struct mbuf *m = *mm;
 	int abort_flag = 0;
 	int un_sent;
-#if defined(SCTP_PER_SOCKET_LOCKING)
-	int additional_lock = 0;
-#endif
 
 #if defined(SCTP_PER_SOCKET_LOCKING)
 	/* inp is never NULL. stcb can be NULL */
@@ -4515,11 +4508,6 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		/* process the control portion of the SCTP packet */
 		stcb = sctp_process_control(m, iphlen, &offset, length, sh, ch,
 		    inp, stcb, &net, &fwd_tsn_seen);
-#if defined(SCTP_PER_SOCKET_LOCKING)
-		if (stcb) {
-			additional_lock = (inp != stcb->sctp_ep);
-		}
-#endif
 		if (stcb) {
 			/* This covers us if the cookie-echo was there
 			 * and it changes our INP.
@@ -4543,17 +4531,26 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 			/* "silently" ignore */
 			SCTP_STAT_INCR(sctps_recvauthmissing);
 			SCTP_TCB_UNLOCK(stcb);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
+#endif
 			return (1);
 		}
 		if (stcb == NULL) {
 			/* out of the blue DATA chunk */
 			sctp_handle_ootb(m, iphlen, offset, sh, inp, NULL);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
+#endif
 			return (1);
 		}
 		if (stcb->asoc.my_vtag != ntohl(sh->v_tag)) {
 			/* v_tag mismatch! */
 			SCTP_STAT_INCR(sctps_badvtag);
 			SCTP_TCB_UNLOCK(stcb);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
+#endif
 			return (1);
 		}
 	}
@@ -4564,6 +4561,9 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		 * packet while processing control, or we're done with this
 		 * packet (done or skip rest of data), so we drop it...
 		 */
+#if defined(SCTP_PER_SOCKET_LOCKING)
+		SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
+#endif
 		return (1);
 	}
 #if defined(SCTP_PER_SOCKET_LOCKING)
@@ -4616,9 +4616,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 			sctp_handle_ootb(m, iphlen, offset, sh, inp, NULL);
 			SCTP_TCB_UNLOCK(stcb);
 #if defined(SCTP_PER_SOCKET_LOCKING)
-			if (additional_lock) {
-				SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
-			}
+			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
 			return (1);
 			break;
@@ -4629,9 +4627,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		default:
 			SCTP_TCB_UNLOCK(stcb);
 #if defined(SCTP_PER_SOCKET_LOCKING)
-			if (additional_lock) {
-				SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
-			}
+			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
 			return (1);
 			break;
@@ -4653,9 +4649,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 			 * the association is destroyed.
 			 */
 #if defined(SCTP_PER_SOCKET_LOCKING)
-			if (additional_lock) {
-				SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
-			}
+			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
 			return (0);
 		}
@@ -4685,9 +4679,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		if (abort_flag) {
 			/* Again, we aborted so NO UNLOCK needed */
 #if defined(SCTP_PER_SOCKET_LOCKING)
-			if (additional_lock) {
-				SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
-			}
+			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
 			return (0);
 		}
@@ -4730,9 +4722,7 @@ trigger_send:
 #endif
 	SCTP_TCB_UNLOCK(stcb);
 #if defined(SCTP_PER_SOCKET_LOCKING)
-	if (additional_lock) {
-		SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
-	}
+			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
 	return (0);
 }
@@ -5094,11 +5084,6 @@ sctp_skip_csum_4:
 #endif
 #endif				/* IPSEC */
 
-
-#if defined(SCTP_PER_SOCKET_LOCKING)
-	sctp_lock_assert(SCTP_INP_SO(inp));
-#endif
-
 	/*
 	 * common chunk processing
 	 */
@@ -5132,9 +5117,6 @@ sctp_skip_csum_4:
 		SCTP_INP_DECR_REF(inp);
 		SCTP_INP_WUNLOCK(inp);
 	}
-#if defined(SCTP_PER_SOCKET_LOCKING)
-	SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
-#endif
 	return;
 bad:
 	if (stcb)
