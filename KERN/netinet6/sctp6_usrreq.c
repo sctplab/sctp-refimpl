@@ -402,10 +402,6 @@ sctp_skip_csum:
 #endif
 #endif				/* IPSEC */
 
-#if defined(SCTP_PER_SOCKET_LOCKING)
-	sctp_lock_assert(SCTP_INP_SO(in6p));
-#endif
-
 	/*
 	 * CONTROL chunk processing
 	 */
@@ -433,10 +429,6 @@ sctp_skip_csum:
 		SCTP_INP_DECR_REF(in6p);
 		SCTP_INP_WUNLOCK(in6p);
 	}
-#if defined(SCTP_PER_SOCKET_LOCKING)
-	SCTP_SOCKET_UNLOCK(SCTP_INP_SO(in6p), 1);
-#endif
-
 	return IPPROTO_DONE;
 
 bad:
