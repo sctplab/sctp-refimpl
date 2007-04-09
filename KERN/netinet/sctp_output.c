@@ -6953,7 +6953,6 @@ again_one_more_time:
 		} else {
 			skip_data_for_this_net = 0;
 		}
-#ifdef DO_WE_NEED_THIS
 		if ((net->ro.ro_rt) && (net->ro.ro_rt->rt_ifp)) {
 			/*
 			 * if we have a route and an ifp check to see if we
@@ -6970,7 +6969,6 @@ again_one_more_time:
 				continue;
 			}
 		}
-#endif
 		if (((struct sockaddr *)&net->ro._l_addr)->sa_family == AF_INET) {
 			mtu = net->mtu - (sizeof(struct ip) + sizeof(struct sctphdr));
 		} else {
