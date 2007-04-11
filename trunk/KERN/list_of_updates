@@ -22,6 +22,6 @@
 - The strict_sacks options was causing aborts when window probing
   was active, fix to make strict sacks a bit smarter about what
   the next unsent TSN is.
-
+- Fixes a one-2-one wakeup bug found by Martin Kulas.
 
 
