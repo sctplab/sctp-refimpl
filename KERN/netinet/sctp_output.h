@@ -194,15 +194,6 @@ sctp_send_abort(struct mbuf *, int, struct sctphdr *, uint32_t,
 
 void sctp_send_operr_to(struct mbuf *, int, struct mbuf *, uint32_t);
 
-static __inline struct mbuf *
-m_last(struct mbuf *m)
-{
-
-	while (m->m_next)
-		m = m->m_next;
-	return (m);
-}
-
 int
 sctp_sosend(struct socket *so,
 #ifdef __NetBSD__
