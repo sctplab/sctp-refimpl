@@ -6249,7 +6249,19 @@ sctp_can_we_split_this(struct sctp_tcb *stcb,
 		 * be all the guy is putting in the hopper.
 		 */
 		if (goal_mtu >= sp->length) {
-			return (sp->length);
+			/*-
+			 * If we have data outstanding,
+			 * we get another chance when the sack
+			 * arrives to transmit - wait for more data
+			 *
+			 * Could this be optimized to be aware of
+			 * two packets?
+			 *
+			 */
+			if(stcb->asoc.total_flight > 0) 
+				return (0);
+			else 	
+				return (sp->length);
 		} else {
 			/* You can fill the rest */
 			return (goal_mtu);
