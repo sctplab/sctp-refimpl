@@ -566,6 +566,7 @@ measure_one(struct control_info *req,
 #else
 		if(protocol_touse == IPPROTO_SCTP) {
 			flen = 0;
+			msg.msg_flags = 0;
 			ret = sctp_recvmsg (fd, buffer, sizeof(buffer), 	
 					    (struct sockaddr *)NULL,
 					    &flen, NULL, &msg.msg_flags);
@@ -582,7 +583,7 @@ measure_one(struct control_info *req,
 					goto exit_now;
 				} else {
 					if(notification == 6) {
-						cmp_client_dump_notify(buffer, ret);
+						/*cmp_client_dump_notify(buffer, ret);*/
 					} else {
 						printf("shutdown:%d need:%d > rcvd:%d?\n", notification,
 						       sz, cnt);
