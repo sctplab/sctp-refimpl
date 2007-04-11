@@ -6242,24 +6242,31 @@ sctp_can_we_split_this(struct sctp_tcb *stcb,
 	/* Make a decision on if I should split a
 	 * msg into multiple parts.
 	 */
+	printf("Can we split? tcb:%p sp:%p goal:%d frag:%d eeor:%d (len:%d)\n",
+	       stcb, sp, goal_mtu, frag_point, eeor_on, (int)sp->length);
 	if(goal_mtu < sctp_min_split_point) {
 		/* you don't want enough */
+		printf("No -1\n");
 		return(0);
 	}
 	if ((sp->length <= goal_mtu) || ((sp->length-goal_mtu) < sctp_min_residual)) {
 		/* Sub-optimial residual don't split */
+		printf("No -2\n");
 		return(0);
 	}
 	if(sp->msg_is_complete == 0) {
+		printf("incomplete msg\n");
 		if(eeor_on) {
 			/* If we are doing EEOR we need to always send
 			 * it if its the entire thing.
 			 */
+			printf("eeor on\n");
 			if (goal_mtu >= sp->length) {
-				
+				printf("yes - 1 %d\n", sp->length);
 				return (sp->length);
 			} else {
 				/* You can take a whole MTU */
+				printf("yes - 2 %d\n", goal_mtu);
 				return (goal_mtu);
 			}
 		} else {
@@ -6267,6 +6274,7 @@ sctp_can_we_split_this(struct sctp_tcb *stcb,
 				/* If we cannot fill the amount needed
 				 * there is no sense of splitting the chunk.
 				 */
+				printf("No -3\n");
 				return (0);
 			}
 		}
@@ -6274,19 +6282,26 @@ sctp_can_we_split_this(struct sctp_tcb *stcb,
 		 * than the goal_mtu. Do we wish to split
 		 * it for the sake of packet putting together?
 		 */
+		printf("Fall out goal > min(min:%d frag:%d)\n",
+		       sctp_min_split_point, frag_point);
 		if (goal_mtu >= min(sctp_min_split_point, frag_point)) {
 			/* Its ok to split it */
+			printf("yes - 3 %d\n", min(goal_mtu, frag_point));
 			return(min(goal_mtu, frag_point));
 		}
 	} else {
 		/* We can always split a complete message to make it fit */
-		if (goal_mtu >= sp->length)
+		printf("We can always split a complete\n");
+		if (goal_mtu >= sp->length) {
 			/* Take it all */
+			printf("yes - 4 %d\n", sp->length);
 			return (sp->length);
-
+		}
+		printf("yes - 5 %d\n", min(goal_mtu, frag_point));
 		return (min(goal_mtu, frag_point));
 	}
 	/* Nope, can't split */
+	print ("no - fallout\n");
 	return(0);
 
 }
