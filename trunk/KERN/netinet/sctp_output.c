@@ -10608,7 +10608,7 @@ sctp_copy_one(struct sctp_stream_queue_pending *sp,
 	int left;
 #if defined(__FreeBSD__) && __FreeBSD_version > 602000
 	left = sp->length;
-	sp->data = m_uiotombuf(uio, M_WAITOK, 0, (left + resv_upfront), M_PKTHDR);
+	sp->data = m_uiotombuf(uio, M_WAITOK, 0, resv_upfront, M_PKTHDR);
 	if (sp->data == NULL)
 		return (ENOMEM);
 	sp->length = m_length(sp->data, NULL);
