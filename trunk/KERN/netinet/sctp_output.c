@@ -10541,7 +10541,8 @@ sctp_copy_resume(struct sctp_stream_queue_pending *sp,
 {
 #if defined(__FreeBSD__) && __FreeBSD_version > 602000
 	struct mbuf *m;
-	m = m_uiotombuf(uio, M_WAITOK, max_send_len, max_hdr,
+/* take out max_hdr */
+	m = m_uiotombuf(uio, M_WAITOK, max_send_len, 0,
 		(M_PKTHDR | (user_marks_eor ? M_EOR : 0)));
 	if (m == NULL)
 		*error = ENOMEM;
