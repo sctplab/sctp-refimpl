@@ -2409,7 +2409,7 @@ sctp_isport_inuse(struct sctp_inpcb *inp, uint16_t lport, uint32_t vrf_id)
 		} else {
 			/* t_inp is bound only V4 */
 			if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) &&
-			    SCTP_IPV6_V6ONLY(t_inp)) {
+			    SCTP_IPV6_V6ONLY(inp)) {
 				/* no conflict */
 				continue;
 			}
