@@ -6274,7 +6274,7 @@ sctp_can_we_split_this(struct sctp_tcb *stcb,
 		 * than the goal_mtu. Do we wish to split
 		 * it for the sake of packet putting together?
 		 */
-		if (goal_mtu >= min(sctp_min_split_point, frag_point))) {
+		if (goal_mtu >= min(sctp_min_split_point, frag_point)) {
 			/* Its ok to split it */
 			return(min(goal_mtu, frag_point));
 		}
