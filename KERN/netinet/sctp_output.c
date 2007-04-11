@@ -10539,7 +10539,7 @@ sctp_copy_resume(struct sctp_stream_queue_pending *sp,
 		 uint32_t *sndout,
 		 struct mbuf **new_tail)
 {
-#if defined(__FreeBSD__) && __FreeBSD_version >= 602000
+#if defined(__FreeBSD__) && __FreeBSD_version > 602000
 	struct mbuf *m;
 	m = m_uiotombuf(uio, M_WAITOK, max_send_len, max_hdr,
 		(M_PKTHDR | (user_marks_eor ? M_EOR : 0)));
@@ -10606,7 +10606,7 @@ sctp_copy_one(struct sctp_stream_queue_pending *sp,
 	      int resv_upfront)
 {
 	int left;
-#if defined(__FreeBSD__) && __FreeBSD_version >= 602000
+#if defined(__FreeBSD__) && __FreeBSD_version > 602000
 	left = sp->length;
 	sp->data = m_uiotombuf(uio, M_WAITOK, 0, (left + resv_upfront), M_PKTHDR);
 	if (sp->data == NULL)
