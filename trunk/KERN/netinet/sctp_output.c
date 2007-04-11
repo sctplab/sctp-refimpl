@@ -6301,7 +6301,7 @@ sctp_can_we_split_this(struct sctp_tcb *stcb,
 		return (min(goal_mtu, frag_point));
 	}
 	/* Nope, can't split */
-	print ("no - fallout\n");
+	printf("no - fallout\n");
 	return(0);
 
 }
