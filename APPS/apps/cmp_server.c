@@ -138,9 +138,7 @@ main(int argc, char **argv)
 	int cnt_written=0;
 	int maxseg=0;
 	int print_before_write=0;
-	FILE *outlog;
 	char name[64];
-	char cmd[256];	
 
 	optlen = sizeof(optval);
 	sb = 0;
@@ -325,17 +323,9 @@ main(int argc, char **argv)
 	if((sizetosend % blksize) > 0){
 		numblk++;
 	}
-	outlog = fopen(name,"w+");
 
 	printf("Client would like %u bytes in %u byte blocks %u total sends sndbuf:%d\n",
 	       sizetosend,blksize,numblk,optval);
-
-	fprintf(outlog,"Client would like %u bytes in %u byte blocks %u total sends sndbuf:%d\n",
-		sizetosend,blksize,numblk,optval);
-	fclose(outlog);
-	system(cmd);
-	sprintf(cmd, "/bin/echo *************** >> %s", name);
-	system(cmd);
 
 	if(blksize > sizeof(buffer))
 		blksize = sizeof(buffer);
