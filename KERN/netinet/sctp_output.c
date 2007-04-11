@@ -6255,8 +6255,13 @@ sctp_can_we_split_this(struct sctp_tcb *stcb,
 			/* If we are doing EEOR we need to always send
 			 * it if its the entire thing.
 			 */
-			if (goal_mtu >= sp->length)
+			if (goal_mtu >= sp->length) {
+				
 				return (sp->length);
+			} else {
+				/* You can take a whole MTU */
+				return (goal_mtu);
+			}
 		} else {
 			if (goal_mtu >= sp->length) {
 				/* If we cannot fill the amount needed
@@ -6269,7 +6274,7 @@ sctp_can_we_split_this(struct sctp_tcb *stcb,
 		 * than the goal_mtu. Do we wish to split
 		 * it for the sake of packet putting together?
 		 */
-		if (goal_mtu >= min(sctp_min_split_point, stcb->asoc.smallest_mtu)) {
+		if (goal_mtu >= min(sctp_min_split_point, frag_point))) {
 			/* Its ok to split it */
 			return(min(goal_mtu, frag_point));
 		}
