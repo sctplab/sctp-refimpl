@@ -6240,68 +6240,34 @@ sctp_can_we_split_this(struct sctp_tcb *stcb,
 		       int goal_mtu, int frag_point, int eeor_on)
 {
 	/* Make a decision on if I should split a
-	 * msg into multiple parts.
+	 * msg into multiple parts. This is only asked of
+	 * incomplete messages.
 	 */
-	printf("Can we split? tcb:%p sp:%p goal:%d frag:%d eeor:%d (len:%d)\n",
-	       stcb, sp, goal_mtu, frag_point, eeor_on, (int)sp->length);
-	if(goal_mtu < sctp_min_split_point) {
-		/* you don't want enough */
-		printf("No -1\n");
-		return(0);
-	}
-	if ((sp->length <= goal_mtu) || ((sp->length-goal_mtu) < sctp_min_residual)) {
-		/* Sub-optimial residual don't split */
-		printf("No -2\n");
-		return(0);
-	}
-	if(sp->msg_is_complete == 0) {
-		printf("incomplete msg\n");
-		if(eeor_on) {
-			/* If we are doing EEOR we need to always send
-			 * it if its the entire thing.
-			 */
-			printf("eeor on\n");
-			if (goal_mtu >= sp->length) {
-				printf("yes - 1 %d\n", sp->length);
-				return (sp->length);
-			} else {
-				/* You can take a whole MTU */
-				printf("yes - 2 %d\n", goal_mtu);
-				return (goal_mtu);
-			}
-		} else {
-			if (goal_mtu >= sp->length) {
-				/* If we cannot fill the amount needed
-				 * there is no sense of splitting the chunk.
-				 */
-				printf("No -3\n");
-				return (0);
-			}
-		}
-		/* If we reach here sp->length is larger
-		 * than the goal_mtu. Do we wish to split
-		 * it for the sake of packet putting together?
+	if(eeor_on) {
+		/* If we are doing EEOR we need to always send
+		 * it if its the entire thing, since it might
+		 * be all the guy is putting in the hopper.
 		 */
-		printf("Fall out goal > min(min:%d frag:%d)\n",
-		       sctp_min_split_point, frag_point);
-		if (goal_mtu >= min(sctp_min_split_point, frag_point)) {
-			/* Its ok to split it */
-			printf("yes - 3 %d\n", min(goal_mtu, frag_point));
-			return(min(goal_mtu, frag_point));
-		}
-	} else {
-		/* We can always split a complete message to make it fit */
-		printf("We can always split a complete\n");
 		if (goal_mtu >= sp->length) {
-			/* Take it all */
-			printf("yes - 4 %d\n", sp->length);
 			return (sp->length);
+		} else {
+			/* You can fill the rest */
+			return (goal_mtu);
 		}
-		printf("yes - 5 %d\n", min(goal_mtu, frag_point));
-		return (min(goal_mtu, frag_point));
+	} 
+	if ((sp->length <= goal_mtu) || ((sp->length-goal_mtu) < sctp_min_residual)) {
+		/* Sub-optimial residual don't split in non-eeor mode. */
+		return(0);
+	}
+	/* If we reach here sp->length is larger
+	 * than the goal_mtu. Do we wish to split
+	 * it for the sake of packet putting together?
+	 */
+	if (goal_mtu >= min(sctp_min_split_point, frag_point)) {
+		/* Its ok to split it */
+		return(min(goal_mtu, frag_point));
 	}
 	/* Nope, can't split */
-	printf("no - fallout\n");
 	return(0);
 
 }
@@ -6327,7 +6293,6 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 
 	SCTP_TCB_LOCK_ASSERT(stcb);
 	asoc = &stcb->asoc;
-	printf("Move to outqueue eeor_mode:%d locked:%d\n", eeor_mode, *locked);
 	sp = TAILQ_FIRST(&strq->outqueue);
 	if (sp == NULL) {
 		*locked = 0;
@@ -6343,7 +6308,6 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	SCTP_TCB_SEND_LOCK(stcb);
 	if ((sp->length == 0) && (sp->msg_is_complete == 0)) {
 		/* Must wait for more data, must be last msg */
-		printf("Wait for more len:0 and complete:0\n");
 		*locked = 1;
 		*giveup = 1;
 		SCTP_TCB_SEND_UNLOCK(stcb);
@@ -6353,14 +6317,12 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		panic("sp length is 0?");
 	}
 	some_taken = sp->some_taken;
-	printf("some_taken:%d\n", some_taken);
 	if(stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
 		sp->msg_is_complete = 1;
 	}
 
 	if (sp->msg_is_complete) {
 		/* The message is complete */
-		printf("complete, doing out\n");
 		to_move = min(sp->length, frag_point);
 		if (to_move == sp->length) {
 			/* All of it fits in the MTU */
@@ -6377,10 +6339,8 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 			sp->some_taken = 1;
 		}
 	} else {
-		printf("Can we split?\n");
 		to_move = sctp_can_we_split_this(stcb, sp, goal_mtu,
 						 frag_point, eeor_mode);
-		printf("returns %d\n", to_move);
 		if (to_move) {
 			if (to_move >= sp->length) {
 				to_move = sp->length;
