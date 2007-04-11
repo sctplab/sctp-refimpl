@@ -23,5 +23,7 @@
   was active, fix to make strict sacks a bit smarter about what
   the next unsent TSN is.
 - Fixes a one-2-one wakeup bug found by Martin Kulas.
-
+- If-defed out form, Andre's copy routines pending his
+  commit of at least m_last().. need to adjust for 6.2 as
+  well.. since m_last won't exist.
 
