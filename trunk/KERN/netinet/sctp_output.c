@@ -6327,6 +6327,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 
 	SCTP_TCB_LOCK_ASSERT(stcb);
 	asoc = &stcb->asoc;
+	printf("Move to outqueue eeor_mode:%d locked:%d\n", eeor_mode, *locked);
 	sp = TAILQ_FIRST(&strq->outqueue);
 	if (sp == NULL) {
 		*locked = 0;
@@ -6342,6 +6343,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	SCTP_TCB_SEND_LOCK(stcb);
 	if ((sp->length == 0) && (sp->msg_is_complete == 0)) {
 		/* Must wait for more data, must be last msg */
+		printf("Wait for more len:0 and complete:0\n");
 		*locked = 1;
 		*giveup = 1;
 		SCTP_TCB_SEND_UNLOCK(stcb);
@@ -6351,12 +6353,14 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		panic("sp length is 0?");
 	}
 	some_taken = sp->some_taken;
+	printf("some_taken:%d\n", some_taken);
 	if(stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
 		sp->msg_is_complete = 1;
 	}
 
 	if (sp->msg_is_complete) {
 		/* The message is complete */
+		printf("complete, doing out\n");
 		to_move = min(sp->length, frag_point);
 		if (to_move == sp->length) {
 			/* All of it fits in the MTU */
@@ -6373,8 +6377,10 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 			sp->some_taken = 1;
 		}
 	} else {
+		printf("Can we split?\n");
 		to_move = sctp_can_we_split_this(stcb, sp, goal_mtu,
 						 frag_point, eeor_mode);
+		printf("returns %d\n", to_move);
 		if (to_move) {
 			if (to_move >= sp->length) {
 				to_move = sp->length;
