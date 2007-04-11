@@ -4015,7 +4015,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 void
 sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 {
-	struct mbuf *m, *m_at, *m_last;
+	struct mbuf *m, *m_at, *mp_last;
 	struct sctp_nets *net;
 	struct sctp_init_msg *initm;
 	struct sctp_supported_addr_param *sup_addr;
@@ -4029,7 +4029,7 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	int p_len;
 
 	/* INIT's always go to the primary (and usually ONLY address) */
-	m_last = NULL;
+	mp_last = NULL;
 	net = stcb->asoc.primary_destination;
 	if (net == NULL) {
 		net = TAILQ_FIRST(&stcb->asoc.nets);
@@ -4250,7 +4250,7 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	p_len = 0;
 	for (m_at = m; m_at; m_at = SCTP_BUF_NEXT(m_at)) {
 		if (SCTP_BUF_NEXT(m_at) == NULL)
-			m_last = m_at;
+			mp_last = m_at;
 		p_len += SCTP_BUF_LEN(m_at);
 	}
 	initm->msg.ch.chunk_length = htons((p_len - sizeof(struct sctphdr)));
@@ -4261,15 +4261,15 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 
 	/* I don't expect this to execute but we will be safe here */
 	padval = p_len % 4;
-	if ((padval) && (m_last)) {
+	if ((padval) && (mp_last)) {
 		/*
-		 * The compiler worries that m_last may not be set even
-		 * though I think it is impossible :-> however we add m_last
+		 * The compiler worries that mp_last may not be set even
+		 * though I think it is impossible :-> however we add mp_last
 		 * here just in case.
 		 */
 		int ret;
 
-		ret = sctp_add_pad_tombuf(m_last, (4 - padval));
+		ret = sctp_add_pad_tombuf(mp_last, (4 - padval));
 		if (ret) {
 			/* Houston we have a problem, no space */
 			sctp_m_freem(m);
@@ -4643,7 +4643,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
     struct sctp_init_chunk *init_chk)
 {
 	struct sctp_association *asoc;
-	struct mbuf *m, *m_at, *m_tmp, *m_cookie, *op_err, *m_last;
+	struct mbuf *m, *m_at, *m_tmp, *m_cookie, *op_err, *mp_last;
 	struct sctp_init_msg *initackm_out;
 	struct sctp_ecn_supported_param *ecn;
 	struct sctp_prsctp_supported_param *prsctp;
@@ -4672,7 +4672,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		vrf_id = inp->def_vrf_id;
 		asoc = NULL;
 	}
-	m_last = NULL;
+	mp_last = NULL;
 	if ((asoc != NULL) &&
 	    (SCTP_GET_STATE(asoc) != SCTP_STATE_COOKIE_WAIT) &&
 	    (sctp_are_there_new_addresses(asoc, init_pkt, iphlen, offset))) {
@@ -5232,7 +5232,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		p_len += SCTP_BUF_LEN(m_tmp);
 		if (SCTP_BUF_NEXT(m_tmp) == NULL) {
 			/* m_tmp should now point to last one */
-			m_last = m_tmp;
+			mp_last = m_tmp;
 			break;
 		}
 	}
@@ -5242,11 +5242,11 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	 * here since the timer will drive a retranmission.
 	 */
 	padval = p_len % 4;
-	if ((padval) && (m_last)) {
-		/* see my previous comments on m_last */
+	if ((padval) && (mp_last)) {
+		/* see my previous comments on mp_last */
 		int ret;
 
-		ret = sctp_add_pad_tombuf(m_last, (4 - padval));
+		ret = sctp_add_pad_tombuf(mp_last, (4 - padval));
 		if (ret) {
 			/* Houston we have a problem, no space */
 			sctp_m_freem(m);
@@ -10529,8 +10529,6 @@ sctp_send_operr_to(struct mbuf *m, int iphlen,
 	}
 }
 
-
-
 static struct mbuf *
 sctp_copy_resume(struct sctp_stream_queue_pending *sp, 
 		 struct uio *uio,
@@ -10541,6 +10539,17 @@ sctp_copy_resume(struct sctp_stream_queue_pending *sp,
 		 uint32_t *sndout,
 		 struct mbuf **new_tail)
 {
+#if defined(__FreeBSD__) && __FreeBSD_version >= 602000
+	struct mbuf *m;
+	m = m_uiotombuf(uio, M_WAITOK, max_send_len, max_hdr,
+		(M_PKTHDR | (user_marks_eor ? M_EOR : 0)));
+	if (m == NULL)
+		*error = ENOMEM;
+	else
+		*sndout = m_length(m, NULL);
+	*new_tail = m_last(m);
+	return (m);
+#else
 	int left, cancpy, willcpy;
 	struct mbuf *m,*prev, *head;
 
@@ -10588,6 +10597,7 @@ sctp_copy_resume(struct sctp_stream_queue_pending *sp,
 		}
 	}
 	return(head);
+#endif
 }
 
 static int
@@ -10595,7 +10605,17 @@ sctp_copy_one(struct sctp_stream_queue_pending *sp,
 	      struct uio *uio, 
 	      int resv_upfront)
 {
-	int left, cancpy, willcpy, error;
+	int left;
+#if defined(__FreeBSD__) && __FreeBSD_version >= 602000
+	left = sp->length;
+	sp->data = m_uiotombuf(uio, M_WAITOK, 0, (left + resv_upfront), M_PKTHDR);
+	if (sp->data == NULL)
+		return (ENOMEM);
+	sp->length = m_length(sp->data, NULL);
+	sp->tail_mbuf = m_last(sp->data);
+	return (0);
+#else
+	int cancpy, willcpy, error;
 	struct mbuf *m, *head;
 	int cpsz=0;
 
@@ -10643,6 +10663,7 @@ sctp_copy_one(struct sctp_stream_queue_pending *sp,
 	sp->data = head;
 	sp->length = cpsz;
 	return (0);
+#endif
 }
 
 
