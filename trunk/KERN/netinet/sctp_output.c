@@ -3214,6 +3214,20 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 		      int how, int allonebuf, int type)
 {
 	struct mbuf *m = NULL;
+#if defined(__FreeBSD__) && __FreeBSD_version > 602000
+	m =  m_getm2(NULL, space_needed, how, type, want_header ? M_PKTHDR : 0);
+	if (allonebuf && (SCTP_BUF_LEN(m) < space_needed)) {
+		m_freem(m);
+		return (NULL);
+	}
+	if(SCTP_BUF_NEXT(m)) {
+		sctp_m_freem( SCTP_BUF_NEXT(m));
+		SCTP_BUF_NEXT(m) = NULL;
+		if(want_header) {
+			SCTP_HEADER_LEN(m) = SCTP_BUF_LEN(m);
+		}
+	}
+#else
 #if defined(__FreeBSD__) && __FreeBSD_version >= 601000
 	int aloc_size;
 	int index=0;
@@ -3279,6 +3293,7 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 	if(SCTP_BUF_IS_EXTENDED(m)) {
 		sctp_log_mb(m, SCTP_MBUF_IALLOC);
 	}
+#endif
 #endif
 	return (m);
 }
@@ -10537,12 +10552,8 @@ sctp_copy_resume(struct sctp_stream_queue_pending *sp,
 		 uint32_t *sndout,
 		 struct mbuf **new_tail)
 {
-
-/*#if defined(__FreeBSD__) && __FreeBSD_version >= 602000*/
-#if defined(_NOT_YET_)
-
+#if defined(__FreeBSD__) && __FreeBSD_version > 602000
 	struct mbuf *m;
-/* take out max_hdr */
 	m = m_uiotombuf(uio, M_WAITOK, max_send_len, 0,
 		(M_PKTHDR | (user_marks_eor ? M_EOR : 0)));
 	if (m == NULL)
@@ -10608,8 +10619,7 @@ sctp_copy_one(struct sctp_stream_queue_pending *sp,
 	      int resv_upfront)
 {
 	int left;
-/*#if defined(__FreeBSD__) && __FreeBSD_version >= 602000*/
-#if defined(_NOT_YET_)
+#if defined(__FreeBSD__) && __FreeBSD_version > 602000
 	left = sp->length;
 	sp->data = m_uiotombuf(uio, M_WAITOK, 0, resv_upfront, M_PKTHDR);
 	if (sp->data == NULL)
