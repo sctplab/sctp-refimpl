@@ -5606,7 +5606,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 	}
 	SCTP_TCB_SEND_LOCK(stcb);
 	sctp_snd_sb_alloc(stcb, sp->length);
-	stcb->asoc.stream_queue_cnt++;
+	atomic_add_int(&stcb->asoc.stream_queue_cnt, 1);
 	TAILQ_INSERT_TAIL(&strm->outqueue, sp, next);
 	if ((srcv->sinfo_flags & SCTP_UNORDERED) == 0) {
 		sp->strseq = strm->next_sequence_sent;
@@ -6324,13 +6324,16 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	uint8_t rcv_flags = 0;
 	uint8_t some_taken;
 	uint8_t took_all = 0;
+	uint8_t send_lock_up = 0;
 
 	SCTP_TCB_LOCK_ASSERT(stcb);
 	asoc = &stcb->asoc;
+ one_more_time:
 	sp = TAILQ_FIRST(&strq->outqueue);
 	if (sp == NULL) {
 		*locked = 0;
 		SCTP_TCB_SEND_LOCK(stcb);
+
 		if(strq->last_msg_incomplete) {
 			printf("Huh? Stream:%d lm_in_c=%d but queue is NULL\n",
 			       strq->stream_no, strq->last_msg_incomplete);
@@ -6339,22 +6342,57 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		SCTP_TCB_SEND_UNLOCK(stcb);
 		return(0);
 	}
-	SCTP_TCB_SEND_LOCK(stcb);
-	if ((sp->length == 0) && (sp->msg_is_complete == 0)) {
-		/* Must wait for more data, must be last msg */
-		*locked = 1;
-		*giveup = 1;
-		SCTP_TCB_SEND_UNLOCK(stcb);
-		return (0);
-	} else if (sp->length == 0) {
-		/* This should not happen */
-		panic("sp length is 0?");
+	if(sp->msg_is_complete) {
+		if(sp->length == 0) {
+			if(sp->sender_all_done) {
+				/* We are doing deffered cleanup. Last
+				 * time through when we took all the data
+				 * the sender_all_done was not set.
+				 */
+ 				if (TAILQ_NEXT(sp, next) == NULL) {
+					SCTP_TCB_SEND_LOCK(stcb);
+					send_lock_up = 1;
+				}
+				atomic_subtract_int(&asoc->stream_queue_cnt, 1);
+				TAILQ_REMOVE(&strq->outqueue, sp, next);
+				sctp_free_remote_addr(sp->net);
+				if(sp->data) {
+					sctp_m_freem(sp->data);
+					sp->data = NULL;
+				}
+				sctp_free_a_strmoq(stcb, sp);
+
+				/* we can't be locked to it */
+				*locked = 0;		
+				stcb->asoc.locked_on_sending = NULL;
+				if(send_lock_up) {
+					SCTP_TCB_SEND_UNLOCK(stcb);
+					send_lock_up = 0;
+				}
+				/* back to get the next msg */
+				goto one_more_time;
+			} else {
+				/* sender just finished this but
+				 * still holds a reference
+				 */
+ 				*locked = 1;
+				*giveup = 1;
+				return (0);
+			}
+		}
+	} else {
+		/* is there some to get */
+		if(sp->length == 0) {
+			/* no */
+			*locked = 1;
+			*giveup = 1;
+			return (0);
+		}
 	}
 	some_taken = sp->some_taken;
 	if(stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
 		sp->msg_is_complete = 1;
 	}
-
 	if (sp->msg_is_complete) {
 		/* The message is complete */
 		to_move = min(sp->length, frag_point);
@@ -6388,16 +6426,19 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 				*locked = 1;
 			}
 			*giveup = 1;			
-			SCTP_TCB_SEND_UNLOCK(stcb);
 			return (0);
 		}
 	}
-	SCTP_TCB_SEND_UNLOCK(stcb);
+
 	/* If we reach here, we can copy out a chunk */
         sctp_alloc_a_chunk(stcb, chk);
 	if (chk == NULL) {
 		/* No chunk memory */
 	out_gu:
+		if(send_lock_up) {
+			SCTP_TCB_SEND_UNLOCK(stcb);
+			send_lock_up = 0;
+		}
 		*giveup = 1;
 		return (0);
 	}
@@ -6410,12 +6451,19 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	/* clear out the chunk before setting up */
 	memset(chk, sizeof(*chk), 0);
 	chk->rec.data.rcv_flags = rcv_flags;
-	SCTP_TCB_SEND_LOCK(stcb);
 	if (SCTP_BUF_IS_EXTENDED(sp->data)) {
 		chk->copy_by_ref = 1;
 	} else {
 		chk->copy_by_ref = 0;
 	}
+	if ((sp->msg_is_complete == 0) &&
+	    (to_move >= sp->length)){
+		SCTP_TCB_SEND_LOCK(stcb);
+		send_lock_up = 1;
+	} else {
+		send_lock_up = 0;
+	}
+
 	if (to_move >= sp->length) {
 		/* we can steal the whole thing */
 		chk->data = sp->data;
@@ -6430,7 +6478,6 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		if (chk->data == NULL) {
 			sp->some_taken = some_taken;
 			sctp_free_a_chunk(stcb, chk);
-			SCTP_TCB_SEND_UNLOCK(stcb);
 			goto out_gu;
 		}
 		/* Pull off the data */
@@ -6442,6 +6489,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 			SCTP_BUF_NEXT(m) = NULL;
 			if (sp->tail_mbuf == m) {
 				/* freeing tail */
+				printf("Huh, freeing tail? - TSNH\n");
 				sp->tail_mbuf = sp->data;
 			}
 			sctp_m_free(m);
@@ -6451,9 +6499,8 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	if (to_move > sp->length) {
 		panic("Huh, how can to_move be larger?");
 	} else {
-		sp->length -= to_move;
+		atomic_subtract_int(&sp->length, to_move);
 	}
-
 	if (M_LEADINGSPACE(chk->data) < sizeof(struct sctp_data_chunk)) {
 		/* Not enough room for a chunk header, get some */
 		struct mbuf *m;
@@ -6464,6 +6511,10 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 			 * all the data if there is no leading space, so we
 			 * must put the data back and restore.
 			 */
+			if(send_lock_up == 0) {
+				SCTP_TCB_SEND_LOCK(stcb);
+				send_lock_up =1;
+			}
 			if (took_all) {
 				/* unsteal the data */
 				sp->data = chk->data;
@@ -6479,7 +6530,6 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 			sp->length += to_move;
 			chk->data = NULL;
 			sctp_free_a_chunk(stcb, chk);
-			SCTP_TCB_SEND_UNLOCK(stcb);
 			goto out_gu;
 		} else {
 			SCTP_BUF_LEN(m) = 0;
@@ -6491,8 +6541,8 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	SCTP_BUF_PREPEND(chk->data, sizeof(struct sctp_data_chunk), M_DONTWAIT);
 	if (chk->data == NULL) {
 		/* HELP */
+		printf("prepend fails HELP?\n");
 		sctp_free_a_chunk(stcb, chk);
-		SCTP_TCB_SEND_UNLOCK(stcb);
 		goto out_gu;
 	}
 	sctp_snd_sb_alloc(stcb, sizeof(struct sctp_data_chunk));
@@ -6528,7 +6578,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	chk->whoTo = net;
 	atomic_add_int(&chk->whoTo->ref_count, 1);
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__Panda__)
 	chk->rec.data.TSN_seq = atomic_fetchadd_int(&asoc->sending_seq, 1);
 #else
 	chk->rec.data.TSN_seq = asoc->sending_seq++;
@@ -6583,9 +6633,15 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		sctp_set_prsctp_policy(stcb, sp);
 	}
 
-	if(sp->msg_is_complete && (sp->length == 0)) {
+	if(sp->msg_is_complete && (sp->length == 0) && (sp->sender_all_done)) {
 		/* All done pull and kill the message */
-		asoc->stream_queue_cnt--;
+		atomic_subtract_int(&asoc->stream_queue_cnt, 1);
+		if(send_lock_up == 0) {
+			if (TAILQ_NEXT(sp, next) == NULL) {
+				SCTP_TCB_SEND_LOCK(stcb);
+				send_lock_up = 1;
+			}
+		}
 		TAILQ_REMOVE(&strq->outqueue, sp, next);
 		sctp_free_remote_addr(sp->net);
 		if(sp->data) {
@@ -6610,7 +6666,10 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	}
 	TAILQ_INSERT_TAIL(&asoc->send_queue, chk, sctp_next);
 	asoc->send_queue_cnt++;
-	SCTP_TCB_SEND_UNLOCK(stcb);
+	if(send_lock_up) {
+		SCTP_TCB_SEND_UNLOCK(stcb);
+		send_lock_up = 0;
+	}
 	return (to_move);
 }
 
@@ -10738,6 +10797,7 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 	}
 	SCTP_INCR_STRMOQ_COUNT();
 	sp->act_flags = 0;
+	sp->sender_all_done = 0;
 	sp->sinfo_flags = srcv->sinfo_flags;
 	sp->timetolive = srcv->sinfo_timetolive;
 	sp->ppid = srcv->sinfo_ppid;
@@ -11524,6 +11584,7 @@ sctp_lower_sosend(struct socket *so,
 			if(sp->msg_is_complete) {
 				strm->last_msg_incomplete = 0;
 				asoc->stream_locked = 0;
+				sp->sender_all_done = 1;
 			} else {
 				/* Just got locked to this guy in
 				 * case of an interupt.
@@ -11531,10 +11592,11 @@ sctp_lower_sosend(struct socket *so,
 				strm->last_msg_incomplete = 1;
 				asoc->stream_locked = 1;
 				asoc->stream_locked_on  = srcv->sinfo_stream;
+				sp->sender_all_done = 0;
 			}
 			sctp_snd_sb_alloc(stcb, sp->length);
 
-			asoc->stream_queue_cnt++;
+			atomic_add_int(&asoc->stream_queue_cnt, 1);
 			TAILQ_INSERT_TAIL(&strm->outqueue, sp, next);
 			if ((srcv->sinfo_flags & SCTP_UNORDERED) == 0) {
 				sp->strseq = strm->next_sequence_sent;
@@ -11555,7 +11617,9 @@ sctp_lower_sosend(struct socket *so,
 			}
 			SCTP_TCB_SEND_UNLOCK(stcb);
 		} else {
+			SCTP_TCB_SEND_LOCK(stcb);
 			sp = TAILQ_LAST(&strm->outqueue, sctp_streamhead);
+			SCTP_TCB_SEND_UNLOCK(stcb);
 			if(sp == NULL) {
 				/* ???? Huh ??? last msg is gone */
 #ifdef INVARIANTS 
@@ -11607,6 +11671,7 @@ sctp_lower_sosend(struct socket *so,
 					sctp_m_freem(mm);
 					if(stcb->asoc.state & SCTP_PCB_FLAGS_WAS_ABORTED)
 						error = ECONNRESET;
+					SCTP_TCB_SEND_UNLOCK(stcb);
 					goto out;
 				}
 				if(sp->tail_mbuf) {
@@ -11619,7 +11684,7 @@ sctp_lower_sosend(struct socket *so,
 					sp->tail_mbuf = new_tail;
 				}
 				sctp_snd_sb_alloc(stcb, sndout);
-				sp->length += sndout;
+				atomic_add_int(&sp->length,sndout);
 				len += sndout;
 				/* Did we reach EOR? */
 				if ((uio->uio_resid == 0) &&
@@ -11816,9 +11881,11 @@ sctp_lower_sosend(struct socket *so,
 			strm->last_msg_incomplete = 1;
 			asoc->stream_locked = 1;
 			asoc->stream_locked_on  = srcv->sinfo_stream;
+			sp->sender_all_done = 0;
 		} else {
  			strm->last_msg_incomplete = 0;
 			asoc->stream_locked = 0;
+			sp->sender_all_done = 1;
 		}
 		SCTP_TCB_SEND_UNLOCK(stcb);
 		if(uio->uio_resid == 0) {
