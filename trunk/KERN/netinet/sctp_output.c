@@ -3216,17 +3216,30 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 	struct mbuf *m = NULL;
 #if defined(__FreeBSD__) && __FreeBSD_version > 602000
 	m =  m_getm2(NULL, space_needed, how, type, want_header ? M_PKTHDR : 0);
-	if (allonebuf && (SCTP_BUF_LEN(m) < space_needed)) {
-		m_freem(m);
-		return (NULL);
+	if (allonebuf) {
+		int siz;
+		if(SCTP_BUF_IS_EXTENDED(m)) {
+			siz = SCTP_BUF_EXTEND_SIZE(m);
+		} else {
+			if(want_header)
+				siz = MHLEN;
+			else
+				siz = MLEN;
+		}
+		if (siz < space_needed) {
+			m_freem(m);
+			return (NULL);
+		}
 	}
 	if(SCTP_BUF_NEXT(m)) {
 		sctp_m_freem( SCTP_BUF_NEXT(m));
 		SCTP_BUF_NEXT(m) = NULL;
-		if(want_header) {
-			SCTP_HEADER_LEN(m) = SCTP_BUF_LEN(m);
-		}
 	}
+#ifdef SCTP_MBUF_LOGGING
+	if(SCTP_BUF_IS_EXTENDED(m)) {
+		sctp_log_mb(m, SCTP_MBUF_IALLOC);
+	}
+#endif
 #else
 #if defined(__FreeBSD__) && __FreeBSD_version >= 601000
 	int aloc_size;
