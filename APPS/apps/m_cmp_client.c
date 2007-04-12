@@ -642,21 +642,23 @@ log_measurement(int proto,struct control_info *ctl, struct timeval *start,
     }
     /* We output "Error_rate time */
     if(blocks_is_error) {
-	    fprintf(out_log,"%u %d.%6.6d # rb:%d size:%u:%s:%d",
+	    fprintf(out_log,"%u %d.%6.6d # rb:%d size:%u:%s:%d:%s",
 		    (int)htonl(ctl->req.blksize),
 		    sec,usec,
 		    (int)ntohl(ctl->req.rcv_buf),
 		    (int)ntohl(ctl->req.sizetosend),
 		    ((proto == IPPROTO_SCTP) ? "sctp" : "tcp"),
-		    (int)ntohl(ctl->req.blksize)
+		    (int)ntohl(ctl->req.blksize),
+		    (imitation_mode) ?  "im" : "ni"
 	);
     } else {
-	    fprintf(out_log,"%s %d.%6.6d # rb:%d size:%u:%s:%d",
+	    fprintf(out_log,"%s %d.%6.6d # rb:%d size:%u:%s:%d:%s",
 		    error_rate,sec,usec,
 		    (int)ntohl(ctl->req.rcv_buf),
 		    (int)ntohl(ctl->req.sizetosend),
 		    ((proto == IPPROTO_SCTP) ? "sctp" : "tcp"),
-		    (int)ntohl(ctl->req.blksize)
+		    (int)ntohl(ctl->req.blksize),
+		    (imitation_mode) ?  "im" : "ni"
 	);
     }
     {
