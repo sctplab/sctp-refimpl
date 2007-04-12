@@ -3253,15 +3253,9 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 		index = 4;
 		if(space_needed <= MCLBYTES){ 
 			aloc_size = MCLBYTES;
-		} else if (space_needed <=  MJUMPAGESIZE) {
+		} else {
 			aloc_size = MJUMPAGESIZE;
 			index = 5;
-		} else if (space_needed <= MJUM9BYTES) {
-			aloc_size = MJUM9BYTES;
-			index = 6;
-		} else { 
-			aloc_size = MJUM16BYTES;
-			index = 7;
 		}
 		m_cljget(m, how, aloc_size);
 		if (m == NULL) {
