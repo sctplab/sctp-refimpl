@@ -3214,7 +3214,8 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 		      int how, int allonebuf, int type)
 {
 	struct mbuf *m = NULL;
-#if defined(__FreeBSD__) && __FreeBSD_version > 602000
+/*#if defined(__FreeBSD__) && __FreeBSD_version > 602000*/
+#ifdef NOT_YET
 	m =  m_getm2(NULL, space_needed, how, type, want_header ? M_PKTHDR : 0);
 	if (allonebuf) {
 		int siz;
@@ -10618,7 +10619,8 @@ sctp_copy_resume(struct sctp_stream_queue_pending *sp,
 		 uint32_t *sndout,
 		 struct mbuf **new_tail)
 {
-#if defined(__FreeBSD__) && __FreeBSD_version > 602000
+/*#if defined(__FreeBSD__) && __FreeBSD_version > 602000*/
+#ifdef NOT_YET
 	struct mbuf *m;
 	m = m_uiotombuf(uio, M_WAITOK, max_send_len, 0,
 		(M_PKTHDR | (user_marks_eor ? M_EOR : 0)));
