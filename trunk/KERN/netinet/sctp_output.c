@@ -7151,8 +7151,8 @@ again_one_more_time:
 					    no_fragmentflg, 0, NULL, asconf))) {
 						if (error == ENOBUFS) {
 							asoc->ifp_had_enobuf = 1;
+							SCTP_STAT_INCR(sctps_lowlevelerr);
 						}
-						SCTP_STAT_INCR(sctps_lowlevelerr);
 						if (from_where == 0) {
 							SCTP_STAT_INCR(sctps_lowlevelerrusr);
 						}
@@ -7417,9 +7417,9 @@ again_one_more_time:
 								asconf))) {
 				/* error, we could not output */
 				if (error == ENOBUFS) {
+					SCTP_STAT_INCR(sctps_lowlevelerr);
 					asoc->ifp_had_enobuf = 1;
 				}
-				SCTP_STAT_INCR(sctps_lowlevelerr);
 				if (from_where == 0) {
 					SCTP_STAT_INCR(sctps_lowlevelerrusr);
 				}
