@@ -10852,7 +10852,7 @@ out_now:
 
 
 static uint8_t trac_array[256];
-static uint8_t trac_at = 0;
+static uint16_t trac_at = 0;
 
 
 int
@@ -11587,7 +11587,7 @@ sctp_lower_sosend(struct socket *so,
 			SCTP_TCB_SEND_LOCK(stcb);
 			msp = TAILQ_LAST(&strm->outqueue, sctp_streamhead);
 
-			if(msp->msg_is_complete == 0) 
+			if(msp && (msp->msg_is_complete == 0)) 
 				panic("Huh, new mesg and old not done?");
 
 			if(sp->msg_is_complete) {
