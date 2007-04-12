@@ -10851,6 +10851,10 @@ out_now:
 }
 
 
+static uint8_t trac_array[256];
+static uint8_t trac_at = 0;
+
+
 int
 sctp_sosend(struct socket *so,
 #ifdef __NetBSD__
@@ -11552,7 +11556,7 @@ sctp_lower_sosend(struct socket *so,
 #endif
 	atomic_add_int(&stcb->total_sends, 1);
 	if (top == NULL) {
-		struct sctp_stream_queue_pending *sp;
+		struct sctp_stream_queue_pending *sp, *msp;
 		struct sctp_stream_out *strm;
 		uint32_t sndout, initial_out;
 		int user_marks_eor;
@@ -11581,7 +11585,17 @@ sctp_lower_sosend(struct socket *so,
 				goto out;
 			}
 			SCTP_TCB_SEND_LOCK(stcb);
+			msp = TAILQ_LAST(&strm->outqueue, sctp_streamhead);
+
+			if(msp->msg_is_complete == 0) 
+				panic("Huh, new mesg and old not done?");
+
 			if(sp->msg_is_complete) {
+				trac_array[trac_at] = 1;
+				trac_at++;
+				if(trac_at >= 256)
+					trac_at = 0;
+
 				strm->last_msg_incomplete = 0;
 				asoc->stream_locked = 0;
 				sp->sender_all_done = 1;
@@ -11589,6 +11603,11 @@ sctp_lower_sosend(struct socket *so,
 				/* Just got locked to this guy in
 				 * case of an interupt.
 				 */
+				trac_array[trac_at] = 2;
+				trac_at++;
+				if(trac_at >= 256)
+					trac_at = 0;
+
 				strm->last_msg_incomplete = 1;
 				asoc->stream_locked = 1;
 				asoc->stream_locked_on  = srcv->sinfo_stream;
@@ -11615,9 +11634,18 @@ sctp_lower_sosend(struct socket *so,
 				/* Not on wheel, insert */
 				sctp_insert_on_wheel(stcb, asoc, strm, 1);
 			}
+			trac_array[trac_at] = 3;
+			trac_at++;
+			if(trac_at >= 256)
+				trac_at = 0;
+
 			SCTP_TCB_SEND_UNLOCK(stcb);
 		} else {
 			SCTP_TCB_SEND_LOCK(stcb);
+			trac_array[trac_at] = 4;
+			trac_at++;
+			if(trac_at >= 256)
+				trac_at = 0;
 			sp = TAILQ_LAST(&strm->outqueue, sctp_streamhead);
 			SCTP_TCB_SEND_UNLOCK(stcb);
 			if(sp == NULL) {
@@ -11628,6 +11656,11 @@ sctp_lower_sosend(struct socket *so,
 				printf("Warning: Last msg marked incomplete, yet nothing left?\n");
 				strm->last_msg_incomplete = 0;
 #endif
+				trac_array[trac_at] = 5;
+				trac_at++;
+				if(trac_at >= 256)
+					trac_at = 0;
+
 				goto do_a_copy_in;
 
 			}
@@ -11635,6 +11668,11 @@ sctp_lower_sosend(struct socket *so,
 		while (uio->uio_resid > 0) {
 			/* How much room do we have? */
 			struct mbuf *new_tail, *mm;
+
+			trac_array[trac_at] = 6;
+			trac_at++;
+			if(trac_at >= 256)
+				trac_at = 0;
 
 			if(SCTP_SB_LIMIT_SND(so) > stcb->asoc.total_output_queue_size)
 				max_len = SCTP_SB_LIMIT_SND(so) - stcb->asoc.total_output_queue_size;
@@ -11672,6 +11710,11 @@ sctp_lower_sosend(struct socket *so,
 					if(stcb->asoc.state & SCTP_PCB_FLAGS_WAS_ABORTED)
 						error = ECONNRESET;
 					SCTP_TCB_SEND_UNLOCK(stcb);
+					trac_array[trac_at] = 7;
+					trac_at++;
+					if(trac_at >= 256)
+						trac_at = 0;
+
 					goto out;
 				}
 				if(sp->tail_mbuf) {
@@ -11686,25 +11729,48 @@ sctp_lower_sosend(struct socket *so,
 				sctp_snd_sb_alloc(stcb, sndout);
 				atomic_add_int(&sp->length,sndout);
 				len += sndout;
+				trac_array[trac_at] = 8;
+				trac_at++;
+				if(trac_at >= 256)
+					trac_at = 0;
+
 				/* Did we reach EOR? */
 				if ((uio->uio_resid == 0) &&
 				    ((user_marks_eor == 0) || 
 				     (user_marks_eor && (srcv->sinfo_flags & SCTP_EOR)))
 					){
+					trac_array[trac_at] = 9;
+					trac_at++;
+					if(trac_at >= 256)
+						trac_at = 0;
 					sp->msg_is_complete = 1;
 					sp->sender_all_done = 1;
 				} else {
+					trac_array[trac_at] = 10;
+					trac_at++;
+					if(trac_at >= 256)
+						trac_at = 0;
 					sp->msg_is_complete = 0;
 				}
 				SCTP_TCB_SEND_UNLOCK(stcb);
 			}
 			if(uio->uio_resid == 0) {
 				/* got it all? */
+				trac_array[trac_at] = 11;
+				trac_at++;
+				if(trac_at >= 256)
+					trac_at = 0;
+
 				continue;
 			}
 			/* PR-SCTP? */
 			if ((asoc->peer_supports_prsctp) && (asoc->sent_queue_cnt_removeable > 0)) {
 				/* This is ugly but we must assure locking order */
+				trac_array[trac_at] = 12;
+				trac_at++;
+				if(trac_at >= 256)
+					trac_at = 0;
+
 				if (hold_tcblock == 0) {
 					SCTP_TCB_LOCK(stcb);
 					hold_tcblock = 1;
@@ -11715,6 +11781,11 @@ sctp_lower_sosend(struct socket *so,
 				else
 					max_len = 0;
 				if(max_len > 0) {
+					trac_array[trac_at] = 13;
+					trac_at++;
+					if(trac_at >= 256)
+						trac_at = 0;
+
 					continue;
 				}
 				SCTP_TCB_UNLOCK(stcb);
@@ -11723,6 +11794,11 @@ sctp_lower_sosend(struct socket *so,
 			/* wait for space now */
 			if (non_blocking) {
 				/* Non-blocking io in place out */
+				trac_array[trac_at] = 14;
+				trac_at++;
+				if(trac_at >= 256)
+					trac_at = 0;
+
 				goto skip_out_eof;
 			}
 			if ((net->flight_size > net->cwnd) && 
@@ -11791,6 +11867,11 @@ sctp_lower_sosend(struct socket *so,
 					queue_only = 1;
 				}
 			}
+			trac_array[trac_at] = 15;
+			trac_at++;
+			if(trac_at >= 256)
+				trac_at = 0;
+
 			if((queue_only == 0) && (nagle_applies == 0)
 				) {
 				/*-
@@ -11833,6 +11914,11 @@ sctp_lower_sosend(struct socket *so,
 			 * size we KNOW we will get to sleep safely with the
 			 * wakeup flag in place.
 			 */
+			trac_array[trac_at] = 16;
+			trac_at++;
+			if(trac_at >= 256)
+				trac_at = 0;
+
 			if(SCTP_SB_LIMIT_SND(so) < (stcb->asoc.total_output_queue_size+sctp_add_more_threshold)) {
 #ifdef SCTP_BLK_LOGGING
 				sctp_log_block(SCTP_BLOCK_LOG_INTO_BLK,
@@ -11858,6 +11944,10 @@ sctp_lower_sosend(struct socket *so,
 						}
 					}
 					SOCKBUF_UNLOCK(&so->so_snd);
+					trac_array[trac_at] = 17;
+					trac_at++;
+					if(trac_at >= 256)
+						trac_at = 0;
 					goto out_unlocked;
 				}
 
@@ -11871,26 +11961,61 @@ sctp_lower_sosend(struct socket *so,
 				sctp_log_block(SCTP_BLOCK_LOG_OUTOF_BLK,
 					       so, asoc, stcb->asoc.total_output_queue_size);
 #endif
+				trac_array[trac_at] = 18;
+				trac_at++;
+				if(trac_at >= 256)
+					trac_at = 0;
+
 			}
 			SOCKBUF_UNLOCK(&so->so_snd);
 			if(stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+				trac_array[trac_at] = 19;
+				trac_at++;
+				if(trac_at >= 256)
+					trac_at = 0;
+
 				goto out_unlocked;
 			}
+			trac_array[trac_at] = 20;
+			trac_at++;
+			if(trac_at >= 256)
+				trac_at = 0;
+
 		}
 		SCTP_TCB_SEND_LOCK(stcb);
+		trac_array[trac_at] = 21;
+		trac_at++;
+		if(trac_at >= 256)
+			trac_at = 0;
+
 		sp = TAILQ_LAST(&strm->outqueue, sctp_streamhead);
 		if(sp) {
 			if(sp->msg_is_complete == 0) {
+				trac_array[trac_at] = 22;
+				trac_at++;
+				if(trac_at >= 256)
+					trac_at = 0;
+
 				strm->last_msg_incomplete = 1;
 				asoc->stream_locked = 1;
 				asoc->stream_locked_on  = srcv->sinfo_stream;
 			} else {
+				trac_array[trac_at] = 23;
+				trac_at++;	
+				if(trac_at >= 256)
+					trac_at = 0;
+
 				strm->last_msg_incomplete = 0;
 				asoc->stream_locked = 0;
 			}
 		} else {
+			trac_array[trac_at] = 24;
+			trac_at++;
+			if(trac_at >= 256)
+				trac_at = 0;
 			strm->last_msg_incomplete = 0;
 			asoc->stream_locked = 0;
+
 		}
 		SCTP_TCB_SEND_UNLOCK(stcb);
 		if(uio->uio_resid == 0) {
@@ -11902,8 +12027,17 @@ sctp_lower_sosend(struct socket *so,
 		top = NULL;
 	}
 	if (error) {
+		trac_array[trac_at] = 25;
+		trac_at++;
+		if(trac_at >= 256)
+			trac_at = 0;
+
 		goto out;
 	}
+	trac_array[trac_at] = 26;
+	trac_at++;
+	if(trac_at >= 256)
+		trac_at = 0;
 
  dataless_eof:
 	/* EOF thing ? */
