@@ -1,2 +1,4 @@
-- 
+- Add comments to sctps_stats struture
+- Fix bug that prevented EEOR mode from working
+  and simplified the can_we_split code in the process.
 
