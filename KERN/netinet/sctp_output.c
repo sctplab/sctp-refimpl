@@ -10816,6 +10816,7 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 	} else {
 		sp->msg_is_complete = 0;
 	}
+	sp->sender_all_done = 0;
 	sp->some_taken = 0;
 	resv_in_first = sizeof(struct sctp_data_chunk);
 	sp->data = sp->tail_mbuf = NULL;
@@ -11579,7 +11580,6 @@ sctp_lower_sosend(struct socket *so,
 			if ((sp == NULL) || (error)) {
 				goto out;
 			}
-
 			SCTP_TCB_SEND_LOCK(stcb);
 			if(sp->msg_is_complete) {
 				strm->last_msg_incomplete = 0;
@@ -11692,6 +11692,7 @@ sctp_lower_sosend(struct socket *so,
 				     (user_marks_eor && (srcv->sinfo_flags & SCTP_EOR)))
 					){
 					sp->msg_is_complete = 1;
+					sp->sender_all_done = 1;
 				} else {
 					sp->msg_is_complete = 0;
 				}
@@ -11877,15 +11878,19 @@ sctp_lower_sosend(struct socket *so,
 			}
 		}
 		SCTP_TCB_SEND_LOCK(stcb);
-		if(sp->msg_is_complete == 0) {
-			strm->last_msg_incomplete = 1;
-			asoc->stream_locked = 1;
-			asoc->stream_locked_on  = srcv->sinfo_stream;
-			sp->sender_all_done = 0;
+		sp = TAILQ_LAST(&strm->outqueue, sctp_streamhead);
+		if(sp) {
+			if(sp->msg_is_complete == 0) {
+				strm->last_msg_incomplete = 1;
+				asoc->stream_locked = 1;
+				asoc->stream_locked_on  = srcv->sinfo_stream;
+			} else {
+				strm->last_msg_incomplete = 0;
+				asoc->stream_locked = 0;
+			}
 		} else {
- 			strm->last_msg_incomplete = 0;
+			strm->last_msg_incomplete = 0;
 			asoc->stream_locked = 0;
-			sp->sender_all_done = 1;
 		}
 		SCTP_TCB_SEND_UNLOCK(stcb);
 		if(uio->uio_resid == 0) {
@@ -12041,10 +12046,10 @@ sctp_lower_sosend(struct socket *so,
 		} else {
 			sctp_send_initiate(inp, stcb);
 			if (stcb->asoc.state & SCTP_STATE_SHUTDOWN_PENDING)
-			    stcb->asoc.state = SCTP_STATE_COOKIE_WAIT |
-				SCTP_STATE_SHUTDOWN_PENDING;
+				stcb->asoc.state = SCTP_STATE_COOKIE_WAIT |
+					SCTP_STATE_SHUTDOWN_PENDING;
 			else
-			    stcb->asoc.state = SCTP_STATE_COOKIE_WAIT;
+				stcb->asoc.state = SCTP_STATE_COOKIE_WAIT;
 			queue_only_for_init = 0;
 			queue_only = 1;
 		}
