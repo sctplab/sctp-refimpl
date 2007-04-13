@@ -5566,7 +5566,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 		error = ECONNRESET;
 		goto out_now;
 	}
-	sp = SCTP_ZONE_GET(sctppcbinfo.ipi_zone_strmoq, struct sctp_stream_queue_pending);
+	sctp_alloc_a_strmoq(stcb, sp);
 	if(sp == NULL) {
 		error = ENOMEM;
 		goto out_now;
@@ -10791,7 +10791,7 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 		*error = ECONNRESET;
 		goto out_now;
 	}
-	sp = SCTP_ZONE_GET(sctppcbinfo.ipi_zone_strmoq, struct sctp_stream_queue_pending);
+	sctp_alloc_a_strmoq(stcb, sp);
 	if (sp == NULL) {
 		*error = ENOMEM;
 		goto out_now;
