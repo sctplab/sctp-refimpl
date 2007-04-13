@@ -6333,7 +6333,11 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	if (sp == NULL) {
 		*locked = 0;
 		SCTP_TCB_SEND_LOCK(stcb);
-
+		sp = TAILQ_FIRST(&strq->outqueue);
+		if (sp) {
+			SCTP_TCB_SEND_UNLOCK(stcb);
+			goto one_more_time;
+		}
 		if(strq->last_msg_incomplete) {
 			printf("Huh? Stream:%d lm_in_c=%d but queue is NULL\n",
 			       strq->stream_no, strq->last_msg_incomplete);
@@ -6349,10 +6353,8 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 				 * time through when we took all the data
 				 * the sender_all_done was not set.
 				 */
- 				if (TAILQ_NEXT(sp, next) == NULL) {
-					SCTP_TCB_SEND_LOCK(stcb);
-					send_lock_up = 1;
-				}
+				SCTP_TCB_SEND_LOCK(stcb);
+				send_lock_up = 1;
 				atomic_subtract_int(&asoc->stream_queue_cnt, 1);
 				TAILQ_REMOVE(&strq->outqueue, sp, next);
 				sctp_free_remote_addr(sp->net);
@@ -6637,10 +6639,8 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		/* All done pull and kill the message */
 		atomic_subtract_int(&asoc->stream_queue_cnt, 1);
 		if(send_lock_up == 0) {
-			if (TAILQ_NEXT(sp, next) == NULL) {
-				SCTP_TCB_SEND_LOCK(stcb);
-				send_lock_up = 1;
-			}
+			SCTP_TCB_SEND_LOCK(stcb);
+			send_lock_up = 1;
 		}
 		TAILQ_REMOVE(&strq->outqueue, sp, next);
 		sctp_free_remote_addr(sp->net);
