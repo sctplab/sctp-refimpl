@@ -882,6 +882,8 @@ struct	sctpstat {
 	u_long  sctps_protocol_drain_calls;	/* number of times protocol drain called */
 	u_long  sctps_protocol_drains_done; 	/* number of times we did a protocol drain */
 	u_long  sctps_read_peeks;	/* Number of times recv was called with peek */
+	u_long  sctps_cached_chk;       /* Number of cached chunks used */
+	u_long  sctps_cached_strmoq;    /* Number of cached stream oq's used */
 };
 
 #define SCTP_STAT_INCR(_x) SCTP_STAT_INCR_BY(_x,1)

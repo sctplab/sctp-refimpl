@@ -111,6 +111,7 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 		(_strmoq) = TAILQ_FIRST(&(_stcb)->asoc.free_strmoq); \
 		TAILQ_REMOVE(&(_stcb)->asoc.free_strmoq, (_strmoq), next); \
 		atomic_subtract_int(&sctppcbinfo.ipi_free_strmoq, 1); \
+                SCTP_STAT_INCR(sctps_cached_strmoq); \
 		(_stcb)->asoc.free_strmoq_cnt--; \
 	} \
 }
@@ -138,6 +139,7 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 		(_chk) = TAILQ_FIRST(&(_stcb)->asoc.free_chunks); \
 		TAILQ_REMOVE(&(_stcb)->asoc.free_chunks, (_chk), sctp_next); \
 		atomic_subtract_int(&sctppcbinfo.ipi_free_chunks, 1); \
+                SCTP_STAT_INCR(sctps_cached_chk); \
 		(_stcb)->asoc.free_chunk_cnt--; \
 	} \
 }
