@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.87 2007-04-06 12:09:30 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.88 2007-04-13 10:57:01 randall Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -3609,6 +3609,8 @@ cmd_getstat(char *argv[], int argc)
 	p(sctps_sends_with_eof,       "w_eof");
 	p(sctps_sends_with_abort,     "w_abort");
 	p(sctps_read_peeks,           "peek_reads");
+	p(sctps_cached_chk,           "free_chk_u");
+	p(sctps_cached_strmoq,        "free_rqs_u");
 	nl("");
 #undef p
 #undef nl
