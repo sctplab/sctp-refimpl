@@ -3214,8 +3214,7 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 		      int how, int allonebuf, int type)
 {
 	struct mbuf *m = NULL;
-/*#if defined(__FreeBSD__) && __FreeBSD_version > 602000*/
-#ifdef NOT_YET
+#if defined(__FreeBSD__) && __FreeBSD_version > 602000
 	m =  m_getm2(NULL, space_needed, how, type, want_header ? M_PKTHDR : 0);
 	if (allonebuf) {
 		int siz;
@@ -10619,8 +10618,7 @@ sctp_copy_resume(struct sctp_stream_queue_pending *sp,
 		 uint32_t *sndout,
 		 struct mbuf **new_tail)
 {
-/*#if defined(__FreeBSD__) && __FreeBSD_version > 602000*/
-#ifdef NOT_YET
+#if defined(__FreeBSD__) && __FreeBSD_version > 602000
 	struct mbuf *m;
 	m = m_uiotombuf(uio, M_WAITOK, max_send_len, 0,
 		(M_PKTHDR | (user_marks_eor ? M_EOR : 0)));
@@ -11597,7 +11595,6 @@ sctp_lower_sosend(struct socket *so,
 			if(sp->msg_is_complete) {
 				strm->last_msg_incomplete = 0;
 				asoc->stream_locked = 0;
-				sp->sender_all_done = 1;
 			} else {
 				/* Just got locked to this guy in
 				 * case of an interupt.
@@ -11706,7 +11703,6 @@ sctp_lower_sosend(struct socket *so,
 				     (user_marks_eor && (srcv->sinfo_flags & SCTP_EOR)))
 					){
 					sp->msg_is_complete = 1;
-					sp->sender_all_done = 1;
 				} else {
 					sp->msg_is_complete = 0;
 				}
@@ -11892,13 +11888,13 @@ sctp_lower_sosend(struct socket *so,
 			}
 		}
 		SCTP_TCB_SEND_LOCK(stcb);
-		sp = TAILQ_LAST(&strm->outqueue, sctp_streamhead);
 		if(sp) {
 			if(sp->msg_is_complete == 0) {
 				strm->last_msg_incomplete = 1;
 				asoc->stream_locked = 1;
 				asoc->stream_locked_on  = srcv->sinfo_stream;
 			} else {
+				sp->sender_all_done = 1;
 				strm->last_msg_incomplete = 0;
 				asoc->stream_locked = 0;
 			}
