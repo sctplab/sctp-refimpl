@@ -1,4 +1,12 @@
-- Add comments to sctps_stats struture
+- Add more comments to sctps_stats struture in sctp_uio.h
 - Fix bug that prevented EEOR mode from working
   and simplified the can_we_split code in the process.
-
+- Reduce lock contention for the tcb_send_lock. I did
+  this especially for EEOR mode, still need to look at
+  why I need a lock when removing from the tailq and the
+  ->next is NOT null. A lock fixes it but it implies a
+  bug yet exists.
+- Activated Andre's proposed changes to better use the mbuf
+  infrastructure.
+- Fixed places that were not using the aloc macro's to take
+  advantage of the per assoc cache.
