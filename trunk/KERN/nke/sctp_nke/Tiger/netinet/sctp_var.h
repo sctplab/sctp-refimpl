@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_var.h,v 1.7 2007/03/19 06:53:02 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_var.h,v 1.8 2007/04/14 09:44:09 rrs Exp $");
 #endif
 
 #ifndef _NETINET_SCTP_VAR_H_
@@ -111,6 +111,7 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 		(_strmoq) = TAILQ_FIRST(&(_stcb)->asoc.free_strmoq); \
 		TAILQ_REMOVE(&(_stcb)->asoc.free_strmoq, (_strmoq), next); \
 		atomic_subtract_int(&sctppcbinfo.ipi_free_strmoq, 1); \
+                SCTP_STAT_INCR(sctps_cached_strmoq); \
 		(_stcb)->asoc.free_strmoq_cnt--; \
 	} \
 }
@@ -138,6 +139,7 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 		(_chk) = TAILQ_FIRST(&(_stcb)->asoc.free_chunks); \
 		TAILQ_REMOVE(&(_stcb)->asoc.free_chunks, (_chk), sctp_next); \
 		atomic_subtract_int(&sctppcbinfo.ipi_free_chunks, 1); \
+                SCTP_STAT_INCR(sctps_cached_chk); \
 		(_stcb)->asoc.free_chunk_cnt--; \
 	} \
 }
