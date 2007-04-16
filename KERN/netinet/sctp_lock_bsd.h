@@ -307,7 +307,7 @@ extern int sctp_logoff_stuff;
 
 #define SCTP_DECR_EP_COUNT() \
                 do { \
-		       atomic_add_int(&sctppcbinfo.ipi_count_ep,-1); \
+		       atomic_subtract_int(&sctppcbinfo.ipi_count_ep, 1); \
 	        } while (0)
 
 #define SCTP_INCR_ASOC_COUNT() \
@@ -317,7 +317,7 @@ extern int sctp_logoff_stuff;
 
 #define SCTP_DECR_ASOC_COUNT() \
                 do { \
-	               atomic_add_int(&sctppcbinfo.ipi_count_asoc, -1); \
+	               atomic_subtract_int(&sctppcbinfo.ipi_count_asoc, 1); \
 	        } while (0)
 
 #define SCTP_INCR_LADDR_COUNT() \
@@ -327,17 +327,17 @@ extern int sctp_logoff_stuff;
 
 #define SCTP_DECR_LADDR_COUNT() \
                 do { \
-	               atomic_add_int(&sctppcbinfo.ipi_count_laddr, -1); \
+	               atomic_subtract_int(&sctppcbinfo.ipi_count_laddr, 1); \
 	        } while (0)
 
 #define SCTP_INCR_RADDR_COUNT() \
                 do { \
- 	               atomic_add_int(&sctppcbinfo.ipi_count_raddr,1); \
+ 	               atomic_add_int(&sctppcbinfo.ipi_count_raddr, 1); \
 	        } while (0)
 
 #define SCTP_DECR_RADDR_COUNT() \
                 do { \
- 	               atomic_add_int(&sctppcbinfo.ipi_count_raddr,-1); \
+ 	               atomic_subtract_int(&sctppcbinfo.ipi_count_raddr,1); \
 	        } while (0)
 
 #define SCTP_INCR_CHK_COUNT() \
@@ -349,7 +349,7 @@ extern int sctp_logoff_stuff;
                 do { \
                        if(sctppcbinfo.ipi_count_chunk == 0) \
                              panic("chunk count to 0?");    \
-  	               atomic_add_int(&sctppcbinfo.ipi_count_chunk,-1); \
+  	               atomic_subtract_int(&sctppcbinfo.ipi_count_chunk, 1); \
 	        } while (0)
 
 #define SCTP_INCR_READQ_COUNT() \
@@ -359,7 +359,7 @@ extern int sctp_logoff_stuff;
 
 #define SCTP_DECR_READQ_COUNT() \
                 do { \
-		       atomic_add_int(&sctppcbinfo.ipi_count_readq, -1); \
+		       atomic_subtract_int(&sctppcbinfo.ipi_count_readq, 1); \
 	        } while (0)
 
 #define SCTP_INCR_STRMOQ_COUNT() \
@@ -369,11 +369,8 @@ extern int sctp_logoff_stuff;
 
 #define SCTP_DECR_STRMOQ_COUNT() \
                 do { \
-		       atomic_add_int(&sctppcbinfo.ipi_count_strmoq,-1); \
+		       atomic_subtract_int(&sctppcbinfo.ipi_count_strmoq, 1); \
 	        } while (0)
-
-
-
 
 
 #endif

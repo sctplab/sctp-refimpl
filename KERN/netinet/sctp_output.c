@@ -5572,7 +5572,6 @@ sctp_msg_append(struct sctp_tcb *stcb,
 		error = ENOMEM;
 		goto out_now;
 	}
-	SCTP_INCR_STRMOQ_COUNT();
 	sp->sinfo_flags = srcv->sinfo_flags;
 	sp->timetolive = srcv->sinfo_timetolive;
 	sp->ppid = srcv->sinfo_ppid;
