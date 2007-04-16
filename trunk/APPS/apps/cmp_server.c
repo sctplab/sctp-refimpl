@@ -135,17 +135,20 @@ main(int argc, char **argv)
 	int protocol_touse = IPPROTO_SCTP;
 #endif /* WIN32 */
 	struct sockaddr_in bindto,got,from;
+	struct sctp_sndrcvinfo s_info,*sinfo=NULL;;
 	int cnt_written=0;
 	int maxseg=0;
 	int print_before_write=0;
 	char name[64];
 
+	memset(&s_info, 0, 0);
 	optlen = sizeof(optval);
 	sb = 0;
 	while((i= getopt(argc,argv,"itsp:b:Pz:S:m:B:")) != EOF){
 		switch(i){
 		case 'i':
 			immitation_mode = 1;
+			s_info.sinfo_flags = SCTP_EOR;
 			break;
 		case 'B':
 			addr_to_bind = optarg;
@@ -340,10 +343,13 @@ main(int argc, char **argv)
 		cnt_written++;
 		sprintf(buffer,"%6.6d",numblk);
 		if (protocol_touse == IPPROTO_SCTP){
+			if(immitation_mode && (numblk == 1)) {
+				sinfo = &s_info;
+			}
 			ret = sctp_send(newfd, 
 					buffer, 
 					blksize,
-					(struct sctp_sndrcvinfo *)NULL,
+					sinfo,
 					0);
 		} else {
 			ret = sendto(newfd,buffer,blksize,0,
