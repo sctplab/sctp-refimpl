@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.88 2007-04-13 10:57:01 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.89 2007-04-16 23:54:19 randall Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -3432,7 +3432,6 @@ static int cmd_getpcbinfo(char *argv[], int argc)
     printf("Number of SCTP readq in use is %d\n",optval.readq_count);
     printf("Number of SCTP str-outq in use is %d\n", optval.stream_oque);
     printf("Number of SCTP free_chunks %d\n",optval.free_chunks);
-    printf("Number of SCTP free_streamoq %d\n",optval.stream_oque);
   }
   return 0;
 #else
@@ -3611,6 +3610,8 @@ cmd_getstat(char *argv[], int argc)
 	p(sctps_read_peeks,           "peek_reads");
 	p(sctps_cached_chk,           "free_chk_u");
 	p(sctps_cached_strmoq,        "free_rqs_u");
+	p(sctps_left_abandon,         "abandoned");
+
 	nl("");
 #undef p
 #undef nl
