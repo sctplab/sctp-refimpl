@@ -3732,6 +3732,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		SCTP_STAT_INCR_COUNTER64(sctps_outpackets);
 		if(ret)
 			SCTP_STAT_INCR(sctps_senderrors);
+			
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
 			printf("Ip output returns %d\n", ret);
@@ -6275,15 +6276,15 @@ sctp_can_we_split_this(struct sctp_tcb *stcb,
 			 * If we have data outstanding,
 			 * we get another chance when the sack
 			 * arrives to transmit - wait for more data
-			 *
-			 * Could this be optimized to be aware of
-			 * two packets?
-			 *
 			 */
-			if(stcb->asoc.total_flight > 0) 
-				return (0);
-			else 	
+			if (stcb->asoc.total_flight == 0) {
+				/* If nothing is in flight, we zero
+				 * the packet counter.
+				 */
 				return (sp->length);
+			}
+			return (0);
+
 		} else {
 			/* You can fill the rest */
 			return (goal_mtu);
@@ -6323,7 +6324,6 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	int to_move;
 	uint8_t rcv_flags = 0;
 	uint8_t some_taken;
-	uint8_t took_all = 0;
 	uint8_t send_lock_up = 0;
 
 	SCTP_TCB_LOCK_ASSERT(stcb);
@@ -6349,12 +6349,14 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	if(sp->msg_is_complete) {
 		if(sp->length == 0) {
 			if(sp->sender_all_done) {
-				/* We are doing deffered cleanup. Last
+				/* We are doing differed cleanup. Last
 				 * time through when we took all the data
 				 * the sender_all_done was not set.
 				 */
-				SCTP_TCB_SEND_LOCK(stcb);
-				send_lock_up = 1;
+				if(TAILQ_NEXT(sp, next) == NULL) {
+					SCTP_TCB_SEND_LOCK(stcb);
+					send_lock_up = 1;
+				}
 				atomic_subtract_int(&asoc->stream_queue_cnt, 1);
 				TAILQ_REMOVE(&strq->outqueue, sp, next);
 				sctp_free_remote_addr(sp->net);
@@ -6416,14 +6418,30 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		to_move = sctp_can_we_split_this(stcb, sp, goal_mtu,
 						 frag_point, eeor_mode);
 		if (to_move) {
-			if (to_move >= sp->length) {
-				to_move = sp->length;
+			/*-
+			 * We use a snapshot of length in case it
+			 * is expanding during the compare.
+			 */
+			uint32_t llen;
+			llen = sp->length;
+			if (to_move >= llen) {
+				to_move = llen;
+				if(send_lock_up == 0) {
+					/*- 
+					 * We are taking all of an incomplete msg
+					 * thus we need a send lock.
+					 */
+ 					SCTP_TCB_SEND_LOCK(stcb);
+					send_lock_up = 1;
+				}
+
 			}
 			if (sp->some_taken == 0) {
 				rcv_flags |= SCTP_DATA_FIRST_FRAG;
 			}
 			sp->some_taken = 1;
 		} else {
+			/* Nothing to take. */
 			if (sp->some_taken) {
 				*locked = 1;
 			}
@@ -6458,21 +6476,12 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	} else {
 		chk->copy_by_ref = 0;
 	}
-	if ((sp->msg_is_complete == 0) &&
-	    (to_move >= sp->length)){
-		SCTP_TCB_SEND_LOCK(stcb);
-		send_lock_up = 1;
-	} else {
-		send_lock_up = 0;
-	}
-
 	if (to_move >= sp->length) {
 		/* we can steal the whole thing */
 		chk->data = sp->data;
 		chk->last_mbuf = sp->tail_mbuf;
 		/* register the stealing */
 		sp->data = sp->tail_mbuf = NULL;
-		took_all = 1;
 	} else {
 		struct mbuf *m;
 		chk->data = SCTP_M_COPYM(sp->data, 0, to_move, M_DONTWAIT);
@@ -6490,16 +6499,35 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 			sp->data  = SCTP_BUF_NEXT(m);
 			SCTP_BUF_NEXT(m) = NULL;
 			if (sp->tail_mbuf == m) {
-				/* freeing tail */
+				/*-
+				 * Freeing tail? TSNH since
+				 * we supposedly were taking less
+				 * than the sp->length.
+				 */
+#ifdef INVARIANTS
+				panic("Huh, freing tail? - TSNH");
+#else
 				printf("Huh, freeing tail? - TSNH\n");
-				sp->tail_mbuf = sp->data;
+				sp->tail_mbuf = sp->data = NULL;
+				sp->length = 0;
+#endif
+
 			}
 			sctp_m_free(m);
 			m = sp->data;
 		}
 	}
 	if (to_move > sp->length) {
+		/*- This should not happen either 
+		 * since we always lower to_move to the size
+		 * of sp->length if its larger.
+		 */
+#ifdef INVARIANTS
 		panic("Huh, how can to_move be larger?");
+#else
+		printf("Huh, how can to_move be larger?\n");
+		sp->length = 0;
+#endif
 	} else {
 		atomic_subtract_int(&sp->length, to_move);
 	}
@@ -6517,7 +6545,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 				SCTP_TCB_SEND_LOCK(stcb);
 				send_lock_up =1;
 			}
-			if (took_all) {
+			if (chk->data == NULL) {
 				/* unsteal the data */
 				sp->data = chk->data;
 				sp->tail_mbuf = chk->last_mbuf;
@@ -6529,7 +6557,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 				SCTP_BUF_NEXT(sp->data) = m;
 			}
 			sp->some_taken = some_taken;
-			sp->length += to_move;
+			atomic_add_int(&sp->length, to_move);
 			chk->data = NULL;
 			sctp_free_a_chunk(stcb, chk);
 			goto out_gu;
@@ -6542,9 +6570,13 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	}
 	SCTP_BUF_PREPEND(chk->data, sizeof(struct sctp_data_chunk), M_DONTWAIT);
 	if (chk->data == NULL) {
-		/* HELP */
+		/* HELP, TSNH since we assured it would not above? */
+#ifdef INVARIANTS
+		panic("prepend failes HELP?");
+#else
 		printf("prepend fails HELP?\n");
 		sctp_free_a_chunk(stcb, chk);
+#endif
 		goto out_gu;
 	}
 	sctp_snd_sb_alloc(stcb, sizeof(struct sctp_data_chunk));
@@ -6638,7 +6670,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	if(sp->msg_is_complete && (sp->length == 0) && (sp->sender_all_done)) {
 		/* All done pull and kill the message */
 		atomic_subtract_int(&asoc->stream_queue_cnt, 1);
-		if(send_lock_up == 0) {
+		if ((send_lock_up == 0) && (TAILQ_NEXT(sp, next) == NULL)) {
 			SCTP_TCB_SEND_LOCK(stcb);
 			send_lock_up = 1;
 		}
