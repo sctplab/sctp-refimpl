@@ -1,2 +1,5 @@
 - More work on making send lock contention less.
 - Removed free-oqueue cache.
+- Fix counter for sq entries
+
+
