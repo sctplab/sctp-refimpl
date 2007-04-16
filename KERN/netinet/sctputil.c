@@ -1094,7 +1094,6 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	memset(asoc->mapping_array, 0, asoc->mapping_array_size);
 	/* Now the init of the other outqueues */
 	TAILQ_INIT(&asoc->free_chunks);
-	TAILQ_INIT(&asoc->free_strmoq);
 	TAILQ_INIT(&asoc->out_wheel);
 	TAILQ_INIT(&asoc->control_send_queue);
 	TAILQ_INIT(&asoc->send_queue);
