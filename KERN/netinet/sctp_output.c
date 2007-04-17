@@ -10827,7 +10827,6 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 		*error = ENOMEM;
 		goto out_now;
 	}
-	SCTP_INCR_STRMOQ_COUNT();
 	sp->act_flags = 0;
 	sp->sender_all_done = 0;
 	sp->sinfo_flags = srcv->sinfo_flags;
