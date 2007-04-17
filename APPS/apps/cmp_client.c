@@ -514,8 +514,10 @@ main(int argc, char **argv)
 		if(ret <= 0){
 			printf("Gak, error %d on send\n",
 			       errno);
-			printf("cnt:%d numblk:%d\n",
+			printf("cnt:%d numblk:%d... sleeping\n",
 			       cnt,numblk);
+			sleep(3600);
+			
 			goto exit_now;
 		}
 		cnt+= ret;
