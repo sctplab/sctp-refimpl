@@ -556,7 +556,18 @@ sctp_handle_abort(struct sctp_abort_chunk *cp,
 #ifdef SCTP_ASOCLOG_OF_TSNS
 	{
 		int i;
-		printf("IN bound TSN log\n");
+		if(ntohs(cp->ch.chunk_length) > sizeof(struct sctp_abort_chunk)) {
+			int len, at;
+			uint8_t *ca;
+			printf("Code with abort as follows\n");
+			len = ntohs(cp->ch.chunk_length);
+			ca = (uint8_t *)cp;
+			for(at=sizeof(struct sctp_abort_chunk);at < len; at++) {
+				printf("%2.2x", ca[at]);
+			}
+			printf("\n");
+		}
+		printf("IN bound TSN log-ha\n");
 		for(i=stcb->asoc.tsn_in_at;i <SCTP_TSN_LOG_SIZE; i++) {
 			printf("TSN:%x strm:%d seq:%d flags:%x sz:%d\n",
 			       stcb->asoc.in_tsnlog[i].tsn,
@@ -575,7 +586,7 @@ sctp_handle_abort(struct sctp_abort_chunk *cp,
 				       stcb->asoc.in_tsnlog[i].sz);
 			}
 		}
-		printf("OUT bound TSN log\n");
+		printf("OUT bound TSN log-ha\n");
 		for(i=stcb->asoc.tsn_out_at;i <SCTP_TSN_LOG_SIZE; i++) {
 			printf("TSN:%x strm:%d seq:%d flags:%x sz:%d\n",
 			       stcb->asoc.out_tsnlog[i].tsn,

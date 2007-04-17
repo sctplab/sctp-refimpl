@@ -3685,7 +3685,8 @@ sctp_abort_an_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 #ifdef SCTP_ASOCLOG_OF_TSNS
 	{
 		int i;
-		printf("IN bound TSN log\n");
+		printf("Last ep reason:%x\n", stcb->sctp_ep->last_abort_code);
+		printf("IN bound TSN log-aaa\n");
 		for(i=stcb->asoc.tsn_in_at;i <SCTP_TSN_LOG_SIZE; i++) {
 			printf("TSN:%x strm:%d seq:%d flags:%x sz:%d\n",
 			       stcb->asoc.in_tsnlog[i].tsn,
@@ -3704,7 +3705,7 @@ sctp_abort_an_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				       stcb->asoc.in_tsnlog[i].sz);
 			}
 		}
-		printf("OUT bound TSN log\n");
+		printf("OUT bound TSN log-aaa\n");
 		for(i=stcb->asoc.tsn_out_at;i <SCTP_TSN_LOG_SIZE; i++) {
 			printf("TSN:%x strm:%d seq:%d flags:%x sz:%d\n",
 			       stcb->asoc.out_tsnlog[i].tsn,
