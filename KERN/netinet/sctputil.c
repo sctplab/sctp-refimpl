@@ -3686,40 +3686,40 @@ sctp_abort_an_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	{
 		int i;
 		printf("IN bound TSN log\n");
-		for(i=asoc->tsn_in_at;i <SCTP_TSN_LOG_SIZE; i++) {
+		for(i=stcb->asoc.tsn_in_at;i <SCTP_TSN_LOG_SIZE; i++) {
 			printf("TSN:%x strm:%d seq:%d flags:%x sz:%d\n",
 			       stcb->asoc.in_tsnlog[i].tsn,
 			       stcb->asoc.in_tsnlog[i].strm,
 			       stcb->asoc.in_tsnlog[i].seq,
-			       stcb->asoc.in_tsnlog[i].flg,
+			       stcb->asoc.in_tsnlog[i].flgs,
 			       stcb->asoc.in_tsnlog[i].sz);
 		}
-		if (asoc->tsn_in_at) {
-			for(i=0;i <asoc->tsn_in_at; i++) {
+		if (stcb->asoc.tsn_in_at) {
+			for(i=0;i <stcb->asoc.tsn_in_at; i++) {
 				printf("TSN:%x strm:%d seq:%d flags:%x sz:%d\n",
 				       stcb->asoc.in_tsnlog[i].tsn,
 				       stcb->asoc.in_tsnlog[i].strm,
 				       stcb->asoc.in_tsnlog[i].seq,
-				       stcb->asoc.in_tsnlog[i].flg,
+				       stcb->asoc.in_tsnlog[i].flgs,
 				       stcb->asoc.in_tsnlog[i].sz);
 			}
 		}
 		printf("OUT bound TSN log\n");
-		for(i=asoc->tsn_out_at;i <SCTP_TSN_LOG_SIZE; i++) {
+		for(i=stcb->asoc.tsn_out_at;i <SCTP_TSN_LOG_SIZE; i++) {
 			printf("TSN:%x strm:%d seq:%d flags:%x sz:%d\n",
 			       stcb->asoc.out_tsnlog[i].tsn,
 			       stcb->asoc.out_tsnlog[i].strm,
 			       stcb->asoc.out_tsnlog[i].seq,
-			       stcb->asoc.out_tsnlog[i].flg,
+			       stcb->asoc.out_tsnlog[i].flgs,
 			       stcb->asoc.out_tsnlog[i].sz);
 		}
-		if (asoc->tsn_out_at) {
-			for(i=0;i <asoc->tsn_out_at; i++) {
+		if (stcb->asoc.tsn_out_at) {
+			for(i=0;i <stcb->asoc.tsn_out_at; i++) {
 				printf("TSN:%x strm:%d seq:%d flags:%x sz:%d\n",
 				       stcb->asoc.out_tsnlog[i].tsn,
 				       stcb->asoc.out_tsnlog[i].strm,
 				       stcb->asoc.out_tsnlog[i].seq,
-				       stcb->asoc.out_tsnlog[i].flg,
+				       stcb->asoc.out_tsnlog[i].flgs,
 				       stcb->asoc.out_tsnlog[i].sz);
 			}
 		}
