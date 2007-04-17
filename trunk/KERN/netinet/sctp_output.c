@@ -6396,6 +6396,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	if(stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
 		sp->msg_is_complete = 1;
 	}
+ re_look:
 	if (sp->msg_is_complete) {
 		/* The message is complete */
 		to_move = min(sp->length, frag_point);
@@ -6432,8 +6433,11 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 					 */
  					SCTP_TCB_SEND_LOCK(stcb);
 					send_lock_up = 1;
+					if (sp->msg_is_complete) {
+						/* the sender finished the msg */
+						goto re_look;
+					}
 				}
-
 			}
 			if (sp->some_taken == 0) {
 				rcv_flags |= SCTP_DATA_FIRST_FRAG;
