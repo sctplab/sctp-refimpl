@@ -353,6 +353,8 @@ handle_notification(char *notify_buf)
             break;
         case SCTP_COMM_LOST:
             printf("Communication LOST\n");
+	    printf("Sleeping\n");
+	    sleep(3600);
             retval = 1;
             break;
         case SCTP_RESTART:
