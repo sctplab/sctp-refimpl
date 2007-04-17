@@ -685,6 +685,8 @@ struct sctp_association {
         struct sctp_tsn_log  out_tsnlog[SCTP_TSN_LOG_SIZE];
 	uint16_t tsn_in_at;
  	uint16_t tsn_out_at;
+	uint16_t tsn_in_wrapped;
+	uint16_t tsn_out_wrapped;
 #endif /* SCTP_ASOCLOG_OF_TSNS */
 	/*
 	 * window state information and smallest MTU that I use to bound

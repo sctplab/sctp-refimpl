@@ -6653,6 +6653,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	asoc->tsn_out_at++;
 	if(asoc->tsn_out_at >= SCTP_TSN_LOG_SIZE) {
 		asoc->tsn_out_at = 0;
+		asoc->tsn_out_wrapped = 1;
 	}
 #endif
 
