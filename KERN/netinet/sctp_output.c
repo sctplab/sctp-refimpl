@@ -6352,6 +6352,15 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 				 * time through when we took all the data
 				 * the sender_all_done was not set.
 				 */
+				if(sp->put_last_out == 0) {
+					printf("Gak, put out entire msg with NO end!-1\n");
+					printf("sender_done:%d len:%d msg_comp:%d put_last_out:%d send_lock:%d\n",
+					       sp->sender_all_done,
+					       sp->length,
+					       sp->msg_is_complete,
+					       sp->put_last_out,
+					       send_lock_up);
+				}
 				if(TAILQ_NEXT(sp, next) == NULL) {
 					SCTP_TCB_SEND_LOCK(stcb);
 					send_lock_up = 1;
@@ -6404,8 +6413,10 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 			/* All of it fits in the MTU */
 			if (sp->some_taken)  {
 				rcv_flags |= SCTP_DATA_LAST_FRAG;
+				sp->put_last_out = 1;
 			} else {
 				rcv_flags |= SCTP_DATA_NOT_FRAG;
+				sp->put_last_out = 1;
 			}
 		} else {
 			/* Not all of it fits, we fragment */
@@ -6441,8 +6452,8 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 			}
 			if (sp->some_taken == 0) {
 				rcv_flags |= SCTP_DATA_FIRST_FRAG;
+				sp->some_taken = 1;
 			}
-			sp->some_taken = 1;
 		} else {
 			/* Nothing to take. */
 			if (sp->some_taken) {
@@ -6673,6 +6684,15 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	if(sp->msg_is_complete && (sp->length == 0) && (sp->sender_all_done)) {
 		/* All done pull and kill the message */
 		atomic_subtract_int(&asoc->stream_queue_cnt, 1);
+		if(sp->put_last_out == 0) {
+			printf("Gak, put out entire msg with NO end!-2\n");
+			printf("sender_done:%d len:%d msg_comp:%d put_last_out:%d send_lock:%d\n",
+			       sp->sender_all_done,
+			       sp->length,
+			       sp->msg_is_complete,
+			       sp->put_last_out,
+			       send_lock_up);
+		}
 		if ((send_lock_up == 0) && (TAILQ_NEXT(sp, next) == NULL)) {
 			SCTP_TCB_SEND_LOCK(stcb);
 			send_lock_up = 1;
@@ -10853,6 +10873,7 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 	}
 	sp->sender_all_done = 0;
 	sp->some_taken = 0;
+	sp->put_last_out = 0;
 	resv_in_first = sizeof(struct sctp_data_chunk);
 	sp->data = sp->tail_mbuf = NULL;
 #if defined(SCTP_PER_SOCKET_LOCKING)
@@ -11933,6 +11954,7 @@ sctp_lower_sosend(struct socket *so,
 				asoc->stream_locked = 0;
 			}
 		} else {
+			printf("Huh no sp TSNH?\n");
 			strm->last_msg_incomplete = 0;
 			asoc->stream_locked = 0;
 

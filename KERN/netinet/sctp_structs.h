@@ -417,6 +417,7 @@ struct sctp_stream_queue_pending {
 	uint8_t  addr_over;
 	uint8_t  pr_sctp_on;
 	uint8_t  sender_all_done;
+	uint8_t  put_last_out;
 };
 
 /*
