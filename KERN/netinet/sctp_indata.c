@@ -1607,6 +1607,8 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	asoc->in_tsnlog[asoc->tsn_in_at].tsn = tsn;
 	asoc->in_tsnlog[asoc->tsn_in_at].strm = strmno;
 	asoc->in_tsnlog[asoc->tsn_in_at].seq = strmseq;
+	asoc->in_tsnlog[asoc->tsn_in_at].sz = chk_length;
+	asoc->in_tsnlog[asoc->tsn_in_at].flgs =  chunk_flags;
 	asoc->tsn_in_at++;
 	if(asoc->tsn_in_at >= SCTP_TSN_LOG_SIZE) {
 		asoc->tsn_in_at = 0;

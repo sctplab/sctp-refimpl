@@ -466,6 +466,8 @@ struct sctp_tsn_log {
 	uint32_t tsn;
 	uint16_t strm;
 	uint16_t seq;
+	uint16_t sz;
+	uint16_t flgs;
 };
 
 /*
