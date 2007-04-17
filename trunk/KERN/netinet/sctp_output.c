@@ -6648,6 +6648,8 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	asoc->out_tsnlog[asoc->tsn_out_at].tsn = chk->rec.data.TSN_seq;
 	asoc->out_tsnlog[asoc->tsn_out_at].strm = chk->rec.data.stream_number;
 	asoc->out_tsnlog[asoc->tsn_out_at].seq = chk->rec.data.stream_seq;
+	asoc->out_tsnlog[asoc->tsn_in_at].sz = chk->send_size;
+	asoc->out_tsnlog[asoc->tsn_in_at].flgs =  chk->rec.data.rcv_flags;
 	asoc->tsn_out_at++;
 	if(asoc->tsn_out_at >= SCTP_TSN_LOG_SIZE) {
 		asoc->tsn_out_at = 0;
