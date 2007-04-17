@@ -3687,13 +3687,19 @@ sctp_abort_an_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		int i;
 		printf("Last ep reason:%x\n", stcb->sctp_ep->last_abort_code);
 		printf("IN bound TSN log-aaa\n");
-		for(i=stcb->asoc.tsn_in_at;i <SCTP_TSN_LOG_SIZE; i++) {
-			printf("TSN:%x strm:%d seq:%d flags:%x sz:%d\n",
-			       stcb->asoc.in_tsnlog[i].tsn,
-			       stcb->asoc.in_tsnlog[i].strm,
-			       stcb->asoc.in_tsnlog[i].seq,
-			       stcb->asoc.in_tsnlog[i].flgs,
-			       stcb->asoc.in_tsnlog[i].sz);
+		if ((stcb->asoc.tsn_in_at == 0) && (stcb->asoc.tsn_in_wrapped == 0)) {
+			printf("None rcvd\n");
+			goto none_in;
+		}
+		if(stcb->asoc.tsn_in_wrapped) {
+			for(i=stcb->asoc.tsn_in_at;i <SCTP_TSN_LOG_SIZE; i++) {
+				printf("TSN:%x strm:%d seq:%d flags:%x sz:%d\n",
+				       stcb->asoc.in_tsnlog[i].tsn,
+				       stcb->asoc.in_tsnlog[i].strm,
+				       stcb->asoc.in_tsnlog[i].seq,
+				       stcb->asoc.in_tsnlog[i].flgs,
+				       stcb->asoc.in_tsnlog[i].sz);
+			}
 		}
 		if (stcb->asoc.tsn_in_at) {
 			for(i=0;i <stcb->asoc.tsn_in_at; i++) {
@@ -3705,14 +3711,20 @@ sctp_abort_an_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				       stcb->asoc.in_tsnlog[i].sz);
 			}
 		}
+	none_in:
 		printf("OUT bound TSN log-aaa\n");
-		for(i=stcb->asoc.tsn_out_at;i <SCTP_TSN_LOG_SIZE; i++) {
-			printf("TSN:%x strm:%d seq:%d flags:%x sz:%d\n",
-			       stcb->asoc.out_tsnlog[i].tsn,
-			       stcb->asoc.out_tsnlog[i].strm,
-			       stcb->asoc.out_tsnlog[i].seq,
-			       stcb->asoc.out_tsnlog[i].flgs,
-			       stcb->asoc.out_tsnlog[i].sz);
+		if ((stcb->asoc.tsn_out_at == 0) && (stcb->asoc.tsn_out_wrapped == 0)) {
+			printf("None sent\n");
+		}
+		if(stcb->asoc.tsn_out_wrapped) {
+			for(i=stcb->asoc.tsn_out_at;i <SCTP_TSN_LOG_SIZE; i++) {
+				printf("TSN:%x strm:%d seq:%d flags:%x sz:%d\n",
+				       stcb->asoc.out_tsnlog[i].tsn,
+				       stcb->asoc.out_tsnlog[i].strm,
+				       stcb->asoc.out_tsnlog[i].seq,
+				       stcb->asoc.out_tsnlog[i].flgs,
+				       stcb->asoc.out_tsnlog[i].sz);
+			}
 		}
 		if (stcb->asoc.tsn_out_at) {
 			for(i=0;i <stcb->asoc.tsn_out_at; i++) {

@@ -1612,6 +1612,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	asoc->tsn_in_at++;
 	if(asoc->tsn_in_at >= SCTP_TSN_LOG_SIZE) {
 		asoc->tsn_in_at = 0;
+		asoc->tsn_in_wrapped = 1;
 	}
 #endif
 	if ((chunk_flags & SCTP_DATA_FIRST_FRAG) &&
