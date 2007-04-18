@@ -11663,9 +11663,7 @@ sctp_lower_sosend(struct socket *so,
 				sp->sender_all_done = 0;
 			}
 			sctp_snd_sb_alloc(stcb, sp->length);
-
 			atomic_add_int(&asoc->stream_queue_cnt, 1);
-			TAILQ_INSERT_TAIL(&strm->outqueue, sp, next);
 			if ((srcv->sinfo_flags & SCTP_UNORDERED) == 0) {
 				sp->strseq = strm->next_sequence_sent;
 #ifdef SCTP_LOG_SENDING_STR
@@ -11677,7 +11675,7 @@ sctp_lower_sosend(struct socket *so,
 			} else {
 				SCTP_STAT_INCR(sctps_sends_with_unord);
 			}
-
+			TAILQ_INSERT_TAIL(&strm->outqueue, sp, next);
 			if ((strm->next_spoke.tqe_next == NULL) &&
 			    (strm->next_spoke.tqe_prev == NULL)) {
 				/* Not on wheel, insert */
