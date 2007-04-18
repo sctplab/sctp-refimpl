@@ -88,6 +88,10 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctputil.h,v 1.12 2007/04/15 13:03:14 rrs Ex
 #endif
 #endif
 
+#ifdef SCTP_ASOCLOG_OF_TSNS
+void sctp_print_out_track_log(struct sctp_tcb *stcb);
+#endif
+
 #ifdef SCTP_MBUF_LOGGING
 struct mbuf *sctp_m_free(struct mbuf *m);
 void sctp_m_freem(struct mbuf *m);

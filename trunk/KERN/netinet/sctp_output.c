@@ -11756,6 +11756,7 @@ sctp_lower_sosend(struct socket *so,
 				/* Did we reach EOR? */
 				if ((uio->uio_resid == 0) &&
 				    ((user_marks_eor == 0) || 
+				     (srcv->sinfo_flags & SCTP_EOF) ||
 				     (user_marks_eor && (srcv->sinfo_flags & SCTP_EOR)))
 					){
 					sp->msg_is_complete = 1;
