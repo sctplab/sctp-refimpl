@@ -269,14 +269,14 @@ extern int sctp_logoff_stuff;
 
 
 
-/*#ifdef INVARIANTS*/
+#ifdef INVARIANTS
 #define SCTP_TCB_LOCK_ASSERT(_tcb) do { \
                             if (mtx_owned(&(_tcb)->tcb_mtx) == 0) \
                                 panic("Don't own TCB lock"); \
                             } while (0)
-/*#else*/
-/*#define SCTP_TCB_LOCK_ASSERT(_tcb)*/
-/*#endif*/
+#else
+#define SCTP_TCB_LOCK_ASSERT(_tcb)
+#endif
 
 #define SCTP_ITERATOR_LOCK_INIT() \
         mtx_init(&sctppcbinfo.it_mtx, "sctp-it", "iterator", MTX_DEF)
