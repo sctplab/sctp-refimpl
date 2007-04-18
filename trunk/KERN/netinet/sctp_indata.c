@@ -4047,9 +4047,16 @@ sctp_fs_audit(struct sctp_association *asoc)
 			acked++;
 		}
 	}
+
 	if ((inflight > 0) || (inbetween > 0)) {
+#ifdef INVARIANTS
 		panic("Flight size-express incorrect? \n");
+#else
+		printf("Flight size-express incorrect inflight:%d inbetween:%d\n",
+		       inflight, inbetween);
+#endif
 	}
+
 
 }
 
@@ -4941,11 +4948,13 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 
 		if ((TAILQ_FIRST(&asoc->sent_queue) == NULL) &&
 		    (asoc->total_flight > 0)) {
+#ifdef INVARIANTS
 			panic("Warning flight size is postive and should be 0");
-/*
-  printf("Warning flight size incorrect should be 0 is %d\n",
-  asoc->total_flight);
-*/
+#else
+			
+			printf("Warning flight size incorrect should be 0 is %d\n",
+			       asoc->total_flight);
+#endif
 			asoc->total_flight = 0;
 		}
 		if (tp1->data) {
