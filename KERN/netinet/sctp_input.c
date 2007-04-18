@@ -554,70 +554,7 @@ sctp_handle_abort(struct sctp_abort_chunk *cp,
 		SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 	}
 #ifdef SCTP_ASOCLOG_OF_TSNS
-	{
-		int i;
-		if(ntohs(cp->ch.chunk_length) > sizeof(struct sctp_abort_chunk)) {
-			int len, at;
-			uint8_t *ca;
-			printf("Code with abort as follows\n");
-			len = ntohs(cp->ch.chunk_length);
-			ca = (uint8_t *)cp;
-			for(at=sizeof(struct sctp_abort_chunk);at < len; at++) {
-				printf("%2.2x", ca[at]);
-			}
-			printf("\n");
-		}
-		printf("IN bound TSN log-ha\n");
-		if ((stcb->asoc.tsn_in_at == 0) && (stcb->asoc.tsn_in_wrapped == 0)) {
-			printf("None rcvd\n");
-			goto none_in;
-		}
-		if(stcb->asoc.tsn_in_wrapped) {
-			for(i=stcb->asoc.tsn_in_at;i <SCTP_TSN_LOG_SIZE; i++) {
-				printf("TSN:%x strm:%d seq:%d flags:%x sz:%d\n",
-				       stcb->asoc.in_tsnlog[i].tsn,
-				       stcb->asoc.in_tsnlog[i].strm,
-				       stcb->asoc.in_tsnlog[i].seq,
-				       stcb->asoc.in_tsnlog[i].flgs,
-				       stcb->asoc.in_tsnlog[i].sz);
-			}
-		}
-		if (stcb->asoc.tsn_in_at) {
-			for(i=0;i <stcb->asoc.tsn_in_at; i++) {
-				printf("TSN:%x strm:%d seq:%d flags:%x sz:%d\n",
-				       stcb->asoc.in_tsnlog[i].tsn,
-				       stcb->asoc.in_tsnlog[i].strm,
-				       stcb->asoc.in_tsnlog[i].seq,
-				       stcb->asoc.in_tsnlog[i].flgs,
-				       stcb->asoc.in_tsnlog[i].sz);
-			}
-		}
-	none_in:
-		printf("OUT bound TSN log-ha\n");
-		if ((stcb->asoc.tsn_out_at == 0) && (stcb->asoc.tsn_out_wrapped == 0)) {
-			printf("None sent\n");
-		}
-		if(stcb->asoc.tsn_out_wrapped) {
-			for(i=stcb->asoc.tsn_out_at;i <SCTP_TSN_LOG_SIZE; i++) {
-				printf("TSN:%x strm:%d seq:%d flags:%x sz:%d\n",
-				       stcb->asoc.out_tsnlog[i].tsn,
-				       stcb->asoc.out_tsnlog[i].strm,
-				       stcb->asoc.out_tsnlog[i].seq,
-				       stcb->asoc.out_tsnlog[i].flgs,
-				       stcb->asoc.out_tsnlog[i].sz);
-			}
-		}
-		if (stcb->asoc.tsn_out_at) {
-			for(i=0;i <stcb->asoc.tsn_out_at; i++) {
-				printf("TSN:%x strm:%d seq:%d flags:%x sz:%d\n",
-				       stcb->asoc.out_tsnlog[i].tsn,
-				       stcb->asoc.out_tsnlog[i].strm,
-				       stcb->asoc.out_tsnlog[i].seq,
-				       stcb->asoc.out_tsnlog[i].flgs,
-				       stcb->asoc.out_tsnlog[i].sz);
-			}
-		}
-	}		
+	sctp_print_out_track_log(stcb);
 #endif
 	sctp_free_assoc(stcb->sctp_ep, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_6);
 #ifdef SCTP_DEBUG
