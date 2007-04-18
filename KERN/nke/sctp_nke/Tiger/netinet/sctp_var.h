@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_var.h,v 1.8 2007/04/14 09:44:09 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_var.h,v 1.9 2007/04/15 11:58:26 rrs Exp $");
 #endif
 
 #ifndef _NETINET_SCTP_VAR_H_
@@ -90,30 +90,15 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 }
 
 #define sctp_free_a_strmoq(_stcb, _strmoq) { \
-	if (((_stcb)->asoc.free_strmoq_cnt > sctp_asoc_free_resc_limit) || \
-	    (sctppcbinfo.ipi_free_strmoq > sctp_system_free_resc_limit)) { \
-		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_strmoq, (_strmoq)); \
-		SCTP_DECR_STRMOQ_COUNT(); \
-	} else { \
-		TAILQ_INSERT_TAIL(&(_stcb)->asoc.free_strmoq, (_strmoq), next); \
-		(_stcb)->asoc.free_strmoq_cnt++; \
-		atomic_add_int(&sctppcbinfo.ipi_free_strmoq, 1); \
-	} \
+	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_strmoq, (_strmoq)); \
+	SCTP_DECR_STRMOQ_COUNT(); \
 }
 
 #define sctp_alloc_a_strmoq(_stcb, _strmoq) { \
-	if (TAILQ_EMPTY(&(_stcb)->asoc.free_strmoq))  { \
-		(_strmoq) = SCTP_ZONE_GET(sctppcbinfo.ipi_zone_strmoq, struct sctp_stream_queue_pending); \
-		if ((_strmoq)) { \
-			SCTP_INCR_STRMOQ_COUNT(); \
-		} \
-	} else { \
-		(_strmoq) = TAILQ_FIRST(&(_stcb)->asoc.free_strmoq); \
-		TAILQ_REMOVE(&(_stcb)->asoc.free_strmoq, (_strmoq), next); \
-		atomic_subtract_int(&sctppcbinfo.ipi_free_strmoq, 1); \
-                SCTP_STAT_INCR(sctps_cached_strmoq); \
-		(_stcb)->asoc.free_strmoq_cnt--; \
-	} \
+	(_strmoq) = SCTP_ZONE_GET(sctppcbinfo.ipi_zone_strmoq, struct sctp_stream_queue_pending); \
+	if ((_strmoq)) { \
+		SCTP_INCR_STRMOQ_COUNT(); \
+ 	} \
 }
 
 
