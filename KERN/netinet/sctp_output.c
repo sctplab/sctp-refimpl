@@ -9104,7 +9104,7 @@ sctp_send_sack(struct sctp_tcb *stcb)
 	int space_req;
 
 #if defined(SCTP_PER_SOCKET_LOCKING)
-	if (stcb ==NULL)
+	if (stcb == NULL)
 		panic("sctp_send_sack");
 	sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
 #endif
