@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_indata.c,v 1.15 2007/04/14 09:44:09 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_indata.c,v 1.16 2007/04/14 18:27:34 mlaier Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -1607,9 +1607,12 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	asoc->in_tsnlog[asoc->tsn_in_at].tsn = tsn;
 	asoc->in_tsnlog[asoc->tsn_in_at].strm = strmno;
 	asoc->in_tsnlog[asoc->tsn_in_at].seq = strmseq;
+	asoc->in_tsnlog[asoc->tsn_in_at].sz = chk_length;
+	asoc->in_tsnlog[asoc->tsn_in_at].flgs =  chunk_flags;
 	asoc->tsn_in_at++;
 	if(asoc->tsn_in_at >= SCTP_TSN_LOG_SIZE) {
 		asoc->tsn_in_at = 0;
+		asoc->tsn_in_wrapped = 1;
 	}
 #endif
 	if ((chunk_flags & SCTP_DATA_FIRST_FRAG) &&
@@ -2907,7 +2910,7 @@ sctp_handle_segments(struct sctp_tcb *stcb, struct sctp_association *asoc,
 							if (*this_sack_lowest_newack == 0) {
 #ifdef SCTP_SACK_LOGGING
 								sctp_log_sack(*this_sack_lowest_newack,
-v									      last_tsn,
+									      last_tsn,
 									      tp1->rec.data.TSN_seq,
 									      0,
 									      0,
@@ -4044,9 +4047,16 @@ sctp_fs_audit(struct sctp_association *asoc)
 			acked++;
 		}
 	}
+
 	if ((inflight > 0) || (inbetween > 0)) {
+#ifdef INVARIANTS
 		panic("Flight size-express incorrect? \n");
+#else
+		printf("Flight size-express incorrect inflight:%d inbetween:%d\n",
+		       inflight, inbetween);
+#endif
 	}
+
 
 }
 
@@ -4938,11 +4948,13 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 
 		if ((TAILQ_FIRST(&asoc->sent_queue) == NULL) &&
 		    (asoc->total_flight > 0)) {
+#ifdef INVARIANTS
 			panic("Warning flight size is postive and should be 0");
-/*
-  printf("Warning flight size incorrect should be 0 is %d\n",
-  asoc->total_flight);
-*/
+#else
+			
+			printf("Warning flight size incorrect should be 0 is %d\n",
+			       asoc->total_flight);
+#endif
 			asoc->total_flight = 0;
 		}
 		if (tp1->data) {
