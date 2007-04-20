@@ -31,7 +31,7 @@
 /* $KAME: sctp_uio.h,v 1.11 2005/03/06 16:04:18 itojun Exp $	 */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_uio.h,v 1.12 2007/04/15 11:58:26 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_uio.h,v 1.13 2007/04/19 11:28:43 rrs Exp $");
 #endif
 
 #ifndef __sctp_uio_h__
@@ -112,20 +112,12 @@ struct sctp_sndrcvinfo {
 };
 
 struct sctp_extrcvinfo {
-	uint16_t sinfo_stream;
-	uint16_t sinfo_ssn;
-	uint16_t sinfo_flags;
-	uint32_t sinfo_ppid;
-	uint32_t sinfo_context;
-	uint32_t sinfo_timetolive;
-	uint32_t sinfo_tsn;
-	uint32_t sinfo_cumtsn;
-	sctp_assoc_t sinfo_assoc_id; 
-	uint16_t next_flags;
-	uint16_t next_stream; 
-	uint32_t next_asocid;
-	uint32_t next_length;
-	uint32_t next_ppid;
+	struct sctp_sndrcvinfo sreinfo_sinfo;
+	uint16_t sreinfo_next_flags;
+	uint16_t sreinfo_next_stream; 
+	uint32_t sreinfo_next_aid;
+	uint32_t sreinfo_next_length;
+	uint32_t sreinfo_next_ppid;
 	uint8_t  __reserve_pad[SCTP_ALIGN_RESV_PAD_SHORT];
 };
 

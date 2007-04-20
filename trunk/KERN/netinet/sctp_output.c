@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.18 2007/04/15 11:58:26 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.19 2007/04/19 11:28:43 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -11351,6 +11351,17 @@ sctp_lower_sosend(struct socket *so,
 		non_blocking = 1;
 	}
 	asoc = &stcb->asoc;
+
+	if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_NO_FRAGMENT)) {
+		if(sndlen > asoc->smallest_mtu) {
+			error = EMSGSIZE;
+#if defined(__NetBSD__) || defined(__OpenBSD__)
+			splx(s);
+#endif
+			goto out_unlocked;
+		}
+	}
+
 	/* would we block? */
 	if (non_blocking) {
 		if ((SCTP_SB_LIMIT_SND(so) <
