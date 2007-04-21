@@ -317,6 +317,8 @@ struct sctp_pdapi_event {
 	uint16_t pdapi_flags;
 	uint32_t pdapi_length;
 	uint32_t pdapi_indication;
+	uint16_t pdapi_stream;
+	uint16_t pdapi_seq;
 	sctp_assoc_t pdapi_assoc_id;
 };
 

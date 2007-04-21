@@ -3163,7 +3163,7 @@ sctp_notify_adaptation_layer(struct sctp_tcb *stcb,
 /* This always must be called with the read-queue LOCKED in the INP */
 void
 sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
-					uint32_t error, int nolock)
+					uint32_t error, int nolock, uint32_t val)
 {
 	struct mbuf *m_notify;
 	struct sctp_pdapi_event *pdapi;
@@ -3184,6 +3184,8 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
 	pdapi->pdapi_flags = 0;
 	pdapi->pdapi_length = sizeof(struct sctp_pdapi_event);
 	pdapi->pdapi_indication = error;
+	pdapi->pdapi_stream = (val >> 16);
+	pdapi->pdapi_seq = (val & 0x0000ffff);
 	pdapi->pdapi_assoc_id = sctp_get_associd(stcb);
 
 	SCTP_BUF_LEN(m_notify) = sizeof(struct sctp_pdapi_event);
@@ -3426,7 +3428,12 @@ sctp_ulp_notify(uint32_t notification, struct sctp_tcb *stcb,
 		sctp_notify_adaptation_layer(stcb, error);
 		break;
 	case SCTP_NOTIFY_PARTIAL_DELVIERY_INDICATION:
-		sctp_notify_partial_delivery_indication(stcb, error, 0);
+	{
+		uint32_t val;
+		val = *((uint32_t *)data);
+		
+		sctp_notify_partial_delivery_indication(stcb, error, 0, val);
+	}
 		break;
 	case SCTP_NOTIFY_STRDATA_ERR:
 		break;

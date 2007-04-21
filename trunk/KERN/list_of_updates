@@ -1,18 +1,5 @@
-- More work on making send lock contention.
-- Removed free-oqueue cache.
-- Fix counter for sq entries
-- Increased the amount of information retained
-  on ASOC_TSN logging on the association.
-- Made it so with the ASOC_TSN logging on 
-  sending or recieving an abort we dump the log.
-- Went through and added invariant's around some
-  panic's that needed them.
-- decrements went to atomic_subtact_int instead of add -1
-- Removed residual count increment that threw off a
-  strm oq count.
-- Tracks and complaints if we don't have a LAST fragment and
-  clean up the sp structure.
-- Track a new stat that counts number of abandoned msgs that
-  happen if you close without reading.
-- Fix lookup of frag point to be aware of a 0 assoc-id.
+-  Somehow the disable fragment option got lost. We could
+   set/clear it but would not do it. Now we will.
+-  Moved to latest socket api for extended sndrcv info struct.
+-  Moved to support all new levels of fragment interleave.
 
