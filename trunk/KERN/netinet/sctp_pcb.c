@@ -424,25 +424,11 @@ sctp_del_addr_from_vrf(uint32_t vrfid, struct sockaddr *addr,
 	return (sctp_ifap);
 }
 
-/*
- * Notes on locks for FreeBSD 5 and up. All association lookups that have a
- * definte ep, the INP structure is assumed to be locked for reading. If we
- * need to go find the INP (ususally when a **inp is passed) then we must
- * lock the INFO structure first and if needed lock the INP too. Note that if
- * we lock it we must
- *
- */
 
-
-/*
- * Given a endpoint, look and find in its association list any association
- * with the "to" address given. This can be a "from" address, too, for
- * inbound packets. For outbound packets it is a true "to" address.
- */
 #if defined(SCTP_PER_SOCKET_LOCKING)
 /*
  * sctppcbinfo.ipi_ep_mtx must be locked by the caller. *inp_p->sctp_socket
- * must be locked and might be unloccked if *inp_p changes. However,
+ * must be locked and might be unlocked if *inp_p changes. However,
  * the returned *inp_p will be locked then.
  */ 
 #endif
@@ -452,13 +438,6 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
     struct sockaddr *to, struct sctp_nets **netp, uint32_t vrf_id)
 {
 	/**** ASSUMSES THE CALLER holds the INP_INFO_RLOCK */
-
-	/*
-	 * Note for this module care must be taken when observing what to is
-	 * for. In most of the rest of the code the TO field represents my
-	 * peer and the FROM field represents my address. For this module it
-	 * is reversed of that.
-	 */
 	/*
 	 * If we support the TCP model, then we must now dig through to see
 	 * if we can find our endpoint in the list of tcp ep's.
@@ -499,12 +478,12 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 	 * to this ep and return the tcb from it.
 	 */
 	LIST_FOREACH(inp, ephead, sctp_hash) {
-		if (lport != inp->sctp_lport) {
-			continue;
-		}
 		SCTP_INP_RLOCK(inp);
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
 			SCTP_INP_RUNLOCK(inp);
+			continue;
+		}
+		if (lport != inp->sctp_lport) {
 			continue;
 		}
 #ifdef SCTP_MVRF
@@ -1602,11 +1581,7 @@ sctp_findassoc_by_vtag(struct sockaddr *from, uint32_t vtag,
 		SCTP_INP_RLOCK(stcb->sctp_ep);
 		if (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
 			SCTP_INP_RUNLOCK(stcb->sctp_ep);
-#if defined(SCTP_PER_SOCKET_LOCKING)
-			SCTP_UNLOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
-#endif
-			SCTP_INP_INFO_RUNLOCK();
-			return (NULL);
+			continue;
 		}
 		SCTP_TCB_LOCK(stcb);
 		SCTP_INP_RUNLOCK(stcb->sctp_ep);
@@ -1783,12 +1758,6 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 #endif /* SCTP_EMBEDDED_V6_SCOPE */
 	}
 	find_tcp_pool = 0;
-	/*
-	 * FIX FIX?, I think we only need to look in the TCP pool if its an
-	 * INIT or COOKIE-ECHO, We really don't need to find it that way if
-	 * its a INIT-ACK or COOKIE_ACK since these in bot one-2-one and
-	 * one-2-N would be in the main pool anyway.
-	 */
 	if ((ch->chunk_type != SCTP_INITIATION) &&
 	    (ch->chunk_type != SCTP_INITIATION_ACK) &&
 	    (ch->chunk_type != SCTP_COOKIE_ACK) &&
@@ -1813,7 +1782,7 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 		/* Found a EP but not this address */
 		if ((ch->chunk_type == SCTP_INITIATION) ||
 		    (ch->chunk_type == SCTP_INITIATION_ACK)) {
-			/*
+			/*-
 			 * special hook, we do NOT return linp or an
 			 * association that is linked to an existing
 			 * association that is under the TCP pool (i.e. no
