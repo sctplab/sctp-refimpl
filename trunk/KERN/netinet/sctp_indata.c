@@ -1594,6 +1594,18 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			sctp_queue_op_err(stcb, mb);
 		}
 		SCTP_STAT_INCR(sctps_badsid);
+		SCTP_SET_TSN_PRESENT(asoc->mapping_array, gap);
+		if (compare_with_wrap(tsn, asoc->highest_tsn_inside_map, MAX_TSN)) {
+			/* we have a new high score */
+			asoc->highest_tsn_inside_map = tsn;
+#ifdef SCTP_MAP_LOGGING
+			sctp_log_map(0, 2, asoc->highest_tsn_inside_map, SCTP_MAP_SLIDE_RESULT);
+#endif
+		}
+		if(tsn == (asoc->cumulative_tsn+1)) {
+			/* Update cum-ack */
+			asoc->cumulative_tsn = tsn;
+		}
 		return (0);
 	}
 	/*
@@ -1630,10 +1642,6 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			    asoc->strmin[strmno].last_sequence_delivered);
 		}
 #endif
-		/*
-		 * throw it in the stream so it gets cleaned up in
-		 * association destruction
-		 */
 		oper = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) + 3 * sizeof(uint32_t)),
 					     0, M_DONTWAIT, 1, MT_DATA);
 		if (oper) {
@@ -2172,6 +2180,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 	all_ones = 1;
 	at = 0;
 	for (i = 0; i < stcb->asoc.mapping_array_size; i++) {
+
 		if (asoc->mapping_array[i] == 0xff) {
 			at += 8;
 			last_all_ones = 1;
@@ -2514,12 +2523,14 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 	 */
 	asoc->last_data_chunk_from = net;
 
-	/*
+#ifndef __Panda__
+	/*-
 	 * Now before we proceed we must figure out if this is a wasted
 	 * cluster... i.e. it is a small packet sent in and yet the driver
 	 * underneath allocated a full cluster for it. If so we must copy it
 	 * to a smaller mbuf and free up the cluster mbuf. This will help
-	 * with cluster starvation.
+	 * with cluster starvation. Note for __Panda__ we don't do this
+	 * since it has clusters all the way down to 64 bytes.
 	 */
 	if (SCTP_BUF_LEN(m) < (long)MLEN && SCTP_BUF_NEXT(m) == NULL) {
 		/* we only handle mbufs that are singletons.. not chains */
@@ -2541,6 +2552,7 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 			m = *mm;
 		}
 	}
+#endif
 	/* get pointer to the first chunk header */
 	ch = (struct sctp_data_chunk *)sctp_m_getptr(m, *offset,
 						     sizeof(struct sctp_data_chunk), (uint8_t *) & chunk_buf);
