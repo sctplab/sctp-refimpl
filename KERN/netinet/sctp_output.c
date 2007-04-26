@@ -8157,7 +8157,10 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 		}
 #endif
 		asoc->sent_queue_cnt = 0;
-		asoc->sent_queue_cnt_removeable = 0;
+		asoc->sent_queue_cnt_removeable = 0;	
+		/* send back 0/0 so we enter normal transmission */
+		*cnt_out = 0;
+		return(0);
 	}
 	TAILQ_FOREACH(chk, &asoc->control_send_queue, sctp_next) {
 		if ((chk->rec.chunk_id.id == SCTP_COOKIE_ECHO) ||
@@ -8624,13 +8627,16 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 {
 	/*-
 	 * Ok this is the generic chunk service queue. we must do the
-	 * following: - See if there are retransmits pending, if so we must
-	 * do these first and return. - Service the stream queue that is
-	 * next, moving any message (note I must get a complete message i.e.
-	 * FIRST/MIDDLE and LAST to the out queue in one pass) and assigning
-	 * TSN's - Check to see if the cwnd/rwnd allows any output, if so we
-	 * go ahead and fomulate and send the low level chunks. Making sure
-	 * to combine any control in the control chunk queue also.
+	 * following: 
+	 * - See if there are retransmits pending, if so we must
+	 *   do these first.
+	 * - Service the stream queue that is next, moving any 
+	 *   message (note I must get a complete message i.e.
+	 *   FIRST/MIDDLE and LAST to the out queue in one pass) and assigning
+	 *   TSN's 
+	 * - Check to see if the cwnd/rwnd allows any output, if so we
+	 *   go ahead and fomulate and send the low level chunks. Making sure
+	 *   to combine any control in the control chunk queue also.
 	 */
 	struct sctp_association *asoc;
 	struct sctp_nets *net;
@@ -8678,7 +8684,7 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 		 */
 		if (from_where == SCTP_OUTPUT_FROM_COOKIE_ACK) {
 			/*- 
-			 *Special hook for handling cookiess discarded
+			 * Special hook for handling cookiess discarded
 			 * by peer that carried data. Send cookie-ack only
 			 * and then the next call with get the retran's.
 			 */
@@ -9260,7 +9266,7 @@ sctp_send_sack(struct sctp_tcb *stcb)
 	gap_descriptor = (struct sctp_gap_ack_block *)((caddr_t)sack + sizeof(struct sctp_sack_chunk));
 
 	siz = (((asoc->highest_tsn_inside_map - asoc->mapping_array_base_tsn) + 1) + 7) / 8;
-	if (asoc->cumulative_tsn < asoc->mapping_array_base_tsn) {
+	if (compare_with_wrap(asoc->mapping_array_base_tsn, asoc->cumulative_tsn, MAX_TSN ) {
 		offset = 1;
 		/*-
 		 * cum-ack behind the mapping array, so we start and use all
@@ -9271,7 +9277,7 @@ sctp_send_sack(struct sctp_tcb *stcb)
 		offset = asoc->mapping_array_base_tsn - asoc->cumulative_tsn;
 		/*-
 		 * we skip the first one when the cum-ack is at or above the
-		 * mapping array base.
+		 * mapping array base. Note this only works if 
 		 */
 		jstart = 1;
 	}
