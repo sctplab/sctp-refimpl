@@ -9266,7 +9266,7 @@ sctp_send_sack(struct sctp_tcb *stcb)
 	gap_descriptor = (struct sctp_gap_ack_block *)((caddr_t)sack + sizeof(struct sctp_sack_chunk));
 
 	siz = (((asoc->highest_tsn_inside_map - asoc->mapping_array_base_tsn) + 1) + 7) / 8;
-	if (compare_with_wrap(asoc->mapping_array_base_tsn, asoc->cumulative_tsn, MAX_TSN ) {
+	if (compare_with_wrap(asoc->mapping_array_base_tsn, asoc->cumulative_tsn, MAX_TSN )) {
 		offset = 1;
 		/*-
 		 * cum-ack behind the mapping array, so we start and use all
