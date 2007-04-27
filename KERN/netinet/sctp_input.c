@@ -2869,6 +2869,9 @@ sctp_clean_up_stream_reset(struct sctp_tcb *stcb)
 	struct sctp_association *asoc;
 	struct sctp_tmit_chunk *chk = stcb->asoc.str_reset;
 
+#ifdef SCTP_DEBUG
+	printf("cleanup called\n");
+#endif
 	if (stcb->asoc.str_reset == NULL) {
 		return;
 	}
@@ -2886,6 +2889,9 @@ sctp_clean_up_stream_reset(struct sctp_tcb *stcb)
 	sctp_free_remote_addr(chk->whoTo);
 
 	sctp_free_a_chunk(stcb, chk);
+#ifdef SCTP_DEBUG
+	printf("cleanup resets str_reset:%p to NULL\n", stcb->asoc.str_reset);
+#endif
 	stcb->asoc.str_reset = NULL;
 }
 
@@ -3043,7 +3049,7 @@ sctp_handle_str_reset_request_in(struct sctp_tcb *stcb,
 			asoc->stream_reset_out_is_outstanding = 1;
 			asoc->str_reset = chk;
 #ifdef SCTP_DEBUG
-			printf("Start timer\n");
+			printf("Start timer str_reset set to %p\n", asoc->str_reset);
 #endif
 			sctp_timer_start(SCTP_TIMER_TYPE_STRRESET, stcb->sctp_ep, stcb, chk->whoTo);
 			stcb->asoc.stream_reset_outstanding++;
