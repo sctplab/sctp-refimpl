@@ -46,6 +46,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_bsd_addr.c,v 1.5 2007/03/15 11:27:13 rr
 #include <netinet/sctputil.h>
 #include <netinet/sctp_timer.h>
 #include <netinet/sctp_asconf.h>
+#include <netinet/sctp_sysctl.h>
 #include <netinet/sctp_indata.h>
 #include <sys/unistd.h>
 
