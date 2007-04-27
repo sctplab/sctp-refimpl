@@ -2885,27 +2885,47 @@ sctp_handle_stream_reset_response(struct sctp_tcb *stcb,
 
 	if (asoc->stream_reset_outstanding == 0) {
 		/* duplicate */
+#ifdef SCTP_DEBUG
+		printf("no-strm-reset outstanding - return\n");
+#endif
+
 		return (0);
 	}
+#ifdef SCTP_DEBUG
+	printf("Stream reset response seq:%x current stcb out:%x\n",
+	       seq, stcb->asoc.str_reset_seq_out);
+#endif
 	if (seq == stcb->asoc.str_reset_seq_out) {
 		srparam = sctp_find_stream_reset(stcb, seq, &chk);
+#ifdef SCTP_DEBUG
+		printf("sctp_find_stream_reset returns %p\n", srparam);
+#endif
 		if (srparam) {
 			stcb->asoc.str_reset_seq_out++;
 			type = ntohs(srparam->ph.param_type);
 			lparm_len = ntohs(srparam->ph.param_length);
 			if (type == SCTP_STR_RESET_OUT_REQUEST) {
+#ifdef SCTP_DEBUG
+				printf("Its a reset-out outstanding result was:%d\n", srparam, action);
+#endif
 				number_entries = (lparm_len - sizeof(struct sctp_stream_reset_out_request)) / sizeof(uint16_t);
 				asoc->stream_reset_out_is_outstanding = 0;
 				if (asoc->stream_reset_outstanding)
 					asoc->stream_reset_outstanding--;
 				if (action == SCTP_STREAM_RESET_PERFORMED) {
 					/* do it */
+#ifdef SCTP_DEBUG
+					printf("reset out streams\n");
+#endif
 					sctp_reset_out_streams(stcb, number_entries, srparam->list_of_streams);
 				} else {
 					sctp_ulp_notify(SCTP_NOTIFY_STR_RESET_FAILED_OUT, stcb, number_entries, srparam->list_of_streams);
 				}
 			} else if (type == SCTP_STR_RESET_IN_REQUEST) {
 				/* Answered my request */
+#ifdef SCTP_DEBUG
+				printf("reset in request, action=%d\n", action);
+#endif
 				number_entries = (lparm_len - sizeof(struct sctp_stream_reset_in_request)) / sizeof(uint16_t);
 				if (asoc->stream_reset_outstanding)
 					asoc->stream_reset_outstanding--;
@@ -2921,7 +2941,9 @@ sctp_handle_stream_reset_response(struct sctp_tcb *stcb,
 				struct sctp_stream_reset_response_tsn *resp;
 				struct sctp_forward_tsn_chunk fwdtsn;
 				int abort_flag = 0;
-
+#ifdef SCTP_DEBUG
+				printf("TSN reset result:%d\n", action);
+#endif
 				if (respin == NULL) {
 					/* huh ? */
 					return (0);
@@ -2974,7 +2996,15 @@ sctp_handle_str_reset_request_in(struct sctp_tcb *stcb,
 	struct sctp_association *asoc = &stcb->asoc;
 
 	seq = ntohl(req->request_seq);
+#ifdef SCTP_DEBUG
+	printf("Got a stream reset request in seq:%x internal seq:%x\n",
+	       seq, stcb-> asoc.str_reset_seq_in);
+#endif
+
 	if (asoc->str_reset_seq_in == seq) {
+#ifdef SCTP_DEBUG
+		printf("Matches, out_is_outstanding=%d\n", stcb->asoc.stream_reset_out_is_outstanding);
+#endif
 		if (stcb->asoc.stream_reset_out_is_outstanding == 0) {
 			len = ntohs(req->ph.param_length);
 			number_entries = ((len - sizeof(struct sctp_stream_reset_in_request)) / sizeof(uint16_t));
@@ -2982,6 +3012,9 @@ sctp_handle_str_reset_request_in(struct sctp_tcb *stcb,
 				temp = ntohs(req->list_of_streams[i]);
 				req->list_of_streams[i] = temp;
 			}
+#ifdef SCTP_DEBUG
+			printf("Genereating a request:%x\n",asoc->str_reset_seq_out);
+#endif
 			/* move the reset action back one */
 			asoc->last_reset_action[1] = asoc->last_reset_action[0];
 			asoc->last_reset_action[0] = SCTP_STREAM_RESET_PERFORMED;
@@ -2990,6 +3023,9 @@ sctp_handle_str_reset_request_in(struct sctp_tcb *stcb,
 			    seq, (asoc->sending_seq - 1));
 			asoc->stream_reset_out_is_outstanding = 1;
 			asoc->str_reset = chk;
+#ifdef SCTP_DEBUG
+			printf("Start timer\n");
+#endif
 			sctp_timer_start(SCTP_TIMER_TYPE_STRRESET, stcb->sctp_ep, stcb, chk->whoTo);
 			stcb->asoc.stream_reset_outstanding++;
 		} else {
@@ -3195,6 +3231,9 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_out_req
 	ch->chunk_flags = 0;
 	ch->chunk_length = htons(chk->send_size);
 	SCTP_BUF_LEN(chk->data) = SCTP_SIZE32(chk->send_size);
+#ifdef SCTP_DEBUG
+	printf("Got a stream reset request - handling\n");
+#endif
 
 	ph = (struct sctp_paramhdr *)&sr_req->sr_req;
 	while ((size_t)chk_length >= sizeof(struct sctp_stream_reset_tsn_request)) {
@@ -3205,12 +3244,19 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_out_req
 		}
 		ptype = ntohs(ph->param_type);
 		num_param++;
+#ifdef SCTP_DEBUG
+		printf("First type is %x len:%d\n", (u_int)ptype, len);;
+#endif
 		if (num_param > SCTP_MAX_RESET_PARAMS) {
 			/* hit the max of parameters already sorry.. */
 			break;
 		}
 		if (ptype == SCTP_STR_RESET_OUT_REQUEST) {
 			struct sctp_stream_reset_out_request *req_out;
+
+#ifdef SCTP_DEBUG
+			printf("Process SCTP_STR_RESET_OUT_REQUEST\n");
+#endif
 
 			req_out = (struct sctp_stream_reset_out_request *)ph;
 			num_req++;
@@ -3224,13 +3270,19 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_out_req
 			sctp_handle_str_reset_request_out(stcb, chk, req_out);
 		} else if (ptype == SCTP_STR_RESET_IN_REQUEST) {
 			struct sctp_stream_reset_in_request *req_in;
+#ifdef SCTP_DEBUG
+			printf("Process SCTP_STR_RESET_IN_REQUEST\n");
+#endif
+
 
 			num_req++;
 			req_in = (struct sctp_stream_reset_in_request *)ph;
 			sctp_handle_str_reset_request_in(stcb, chk, req_in);
 		} else if (ptype == SCTP_STR_RESET_TSN_REQUEST) {
 			struct sctp_stream_reset_tsn_request *req_tsn;
-
+#ifdef SCTP_DEBUG
+			printf("Process SCTP_STR_RESET_TSN_REQUEST\n");
+#endif
 			num_req++;
 			req_tsn = (struct sctp_stream_reset_tsn_request *)ph;
 			if (sctp_handle_str_reset_request_tsn(stcb, chk, req_tsn)) {
@@ -3242,7 +3294,9 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_out_req
 		} else if (ptype == SCTP_STR_RESET_RESPONSE) {
 			struct sctp_stream_reset_response *resp;
 			uint32_t result;
-
+#ifdef SCTP_DEBUG
+			printf("Process SCTP_STR_RESET_RESPONSE\n");
+#endif
 			resp = (struct sctp_stream_reset_response *)ph;
 			seq = ntohl(resp->response_seq);
 			result = ntohl(resp->result);
@@ -3257,10 +3311,16 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_out_req
 		ph = (struct sctp_paramhdr *)((caddr_t)ph + SCTP_SIZE32(param_len));
 		chk_length -= SCTP_SIZE32(param_len);
 	}
+#ifdef SCTP_DEBUG
+	printf("Number out is %d\n", num_req);
+#endif
 	if (num_req == 0) {
 		/* we have no response free the stuff */
 		goto strres_nochunk;
 	}
+#ifdef SCTP_DEBUG
+	printf("Queuing\n");
+#endif
 	/* ok we have a chunk to link in */
 	TAILQ_INSERT_TAIL(&stcb->asoc.control_send_queue,
 	    chk,

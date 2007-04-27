@@ -1188,15 +1188,28 @@ sctp_strreset_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	struct sctp_nets *alt;
 	struct sctp_tmit_chunk *strrst = NULL, *chk = NULL;
 
+#ifdef SCTP_DEBUG
+	printf("Stream reset timer\n");
+#endif
 	if (stcb->asoc.stream_reset_outstanding == 0) {
+#ifdef SCTP_DEBUG
+		printf("Nothing outstanding?\n");
+#endif
 		return (0);
 	}
 	/* find the existing STRRESET, we use the seq number we sent out on */
-	sctp_find_stream_reset(stcb, stcb->asoc.str_reset_seq_out, &strrst);
+	strrst = sctp_find_stream_reset(stcb, stcb->asoc.str_reset_seq_out, &strrst);
 	if (strrst == NULL) {
+#ifdef SCTP_DEBUG
+		printf("Find the stream-reset - nothing found\n");
+#endif
 		return (0);
 	}
 	/* do threshold management */
+#ifdef SCTP_DEBUG
+	printf("Doing threshold mngt and retransmission stuff\n");
+#endif
+
 	if (sctp_threshold_management(inp, stcb, strrst->whoTo,
 	    stcb->asoc.max_send_times)) {
 		/* Assoc is over */
