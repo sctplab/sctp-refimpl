@@ -5068,9 +5068,6 @@ found_one:
 	 * If we reach here, control has a some data for us to read off.
 	 * Note that stcb COULD be NULL.
 	 */
-	if (control->do_not_ref_stcb == 0) {
-		control->stcb->asoc.strmin[control->sinfo_stream].delivery_started = 1;
-	}
 	control->some_taken = 1;
 	if(hold_sblock) {
 		SOCKBUF_UNLOCK(&so->so_rcv);
@@ -5105,6 +5102,10 @@ found_one:
 			stcb->freed_by_sorcv_sincelast = 0;
 		}
         }
+	if (stcb && control->do_not_ref_stcb == 0) {
+		stcb->asoc.strmin[control->sinfo_stream].delivery_started = 1;
+	}
+
 	/* First lets get off the sinfo and sockaddr info */
 	if ((sinfo) && filling_sinfo) {
 		memcpy(sinfo, control, sizeof(struct sctp_nonpad_sndrcvinfo));
