@@ -227,7 +227,7 @@ sctp_init_ifns_for_vrf(int vrfid)
 #endif
 								(void *)ifa,
 								ifa->ifa_addr,
-								ifa_flags
+								ifa_flags, 0
 					);
 				if(sctp_ifa) {
 					sctp_ifa->localifa_flags &= ~SCTP_ADDR_DEFER_USE;
@@ -260,7 +260,6 @@ static uint8_t first_time=0;
 void
 sctp_addr_change(struct ifaddr *ifa, int cmd)
 {
-	struct sctp_laddr *wi;
 	struct sctp_ifa *ifap=NULL;
 	uint32_t ifa_flags=0;
 	struct in6_ifaddr *ifa6;
@@ -314,56 +313,109 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 #else
 		                            ifa->ifa_ifp->if_xname,
 #endif
-					    (void *)ifa, ifa->ifa_addr, ifa_flags);
-		/* Bump up the refcount so that when the timer
-		 * completes it will drop back down.
-		 */
- 		if(ifap)
-			atomic_add_int(&ifap->refcount, 1);
+					    (void *)ifa, ifa->ifa_addr, ifa_flags, 1);
 		
 	} else if (cmd == RTM_DELETE) {
 
-		ifap = sctp_del_addr_from_vrf(SCTP_DEFAULT_VRFID, ifa->ifa_addr, ifa->ifa_ifp->if_index);
+		sctp_del_addr_from_vrf(SCTP_DEFAULT_VRFID, ifa->ifa_addr, ifa->ifa_ifp->if_index);
 		/* We don't bump refcount here so when it completes
 		 * the final delete will happen.
 		 */
  	}
-	if (ifap == NULL) 
-		return;
+}
 
-	wi = SCTP_ZONE_GET(sctppcbinfo.ipi_zone_laddr, struct sctp_laddr);
-	if (wi == NULL) {
-		/*
-		 * Gak, what can we do? We have lost an address change can
-		 * you say HOSED?
-		 */
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_PCB1) {
-			printf("Lost and address change ???\n");
+struct mbuf *
+sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header, 
+		      int how, int allonebuf, int type)
+{
+	struct mbuf *m = NULL;
+#if defined(__FreeBSD__) && __FreeBSD_version > 602000
+	m =  m_getm2(NULL, space_needed, how, type, want_header ? M_PKTHDR : 0);
+	if (allonebuf) {
+		int siz;
+		if(SCTP_BUF_IS_EXTENDED(m)) {
+			siz = SCTP_BUF_EXTEND_SIZE(m);
+		} else {
+			if(want_header)
+				siz = MHLEN;
+			else
+				siz = MLEN;
 		}
-#endif				/* SCTP_DEBUG */
+		if (siz < space_needed) {
+			m_freem(m);
+			return (NULL);
+		}
+	}
+	if(SCTP_BUF_NEXT(m)) {
+		sctp_m_freem( SCTP_BUF_NEXT(m));
+		SCTP_BUF_NEXT(m) = NULL;
+	}
+#ifdef SCTP_MBUF_LOGGING
+	if(SCTP_BUF_IS_EXTENDED(m)) {
+		sctp_log_mb(m, SCTP_MBUF_IALLOC);
+	}
+#endif
+#else
+#if defined(__FreeBSD__) && __FreeBSD_version >= 601000
+	int aloc_size;
+	int index=0;
+#endif
+	int mbuf_threshold;
+	if (want_header) {
+		MGETHDR(m, how, type);
+	} else {
+		MGET(m, how, type);
+	}
+	if (m == NULL) {
+		return (NULL);
+	}
+	if(allonebuf == 0)
+		mbuf_threshold = sctp_mbuf_threshold_count;
+	else
+		mbuf_threshold = 1;
 
-		/* Opps, must decrement the count */
-		sctp_free_ifa(ifap);
-		return;
+
+	if (space_needed > (((mbuf_threshold - 1) * MLEN) + MHLEN)) {
+#if defined(__FreeBSD__) && __FreeBSD_version >= 601000
+	try_again:
+		index = 4;
+		if(space_needed <= MCLBYTES){ 
+			aloc_size = MCLBYTES;
+		} else {
+			aloc_size = MJUMPAGESIZE;
+			index = 5;
+		}
+		m_cljget(m, how, aloc_size);
+		if (m == NULL) {
+			return (NULL);
+		}
+		if (SCTP_BUF_IS_EXTENDED(m) == 0) {
+			if((aloc_size != MCLBYTES) &&
+			   (allonebuf == 0)){
+				aloc_size -= 10;
+				goto try_again;
+			}
+			sctp_m_freem(m);
+			return (NULL);
+		} 
+#else
+		MCLGET(m, how);
+		if (m == NULL) {
+			return (NULL);
+		}
+		if (SCTP_BUF_IS_EXTENDED(m) == 0) {
+			sctp_m_freem(m);
+			return (NULL);
+		}
+#endif
 	}
-	SCTP_INCR_LADDR_COUNT();
-	bzero(wi, sizeof(*wi));
-	wi->ifa = ifap;
-	if(cmd == RTM_ADD) {
-		wi->action = SCTP_ADD_IP_ADDRESS;
-	} else if (cmd == RTM_DELETE) {
-		wi->action = SCTP_DEL_IP_ADDRESS;
+	SCTP_BUF_LEN(m) = 0;
+	SCTP_BUF_NEXT(m) = SCTP_BUF_NEXT_PKT(m) = NULL;
+#ifdef SCTP_MBUF_LOGGING
+	if(SCTP_BUF_IS_EXTENDED(m)) {
+		sctp_log_mb(m, SCTP_MBUF_IALLOC);
 	}
-	SCTP_IPI_ITERATOR_WQ_LOCK();
-	/*
-	 * Should this really be a tailq? As it is we will process the
-	 * newest first :-0
-	 */
-	LIST_INSERT_HEAD(&sctppcbinfo.addr_wq, wi, sctp_nxt_addr);
-	sctp_timer_start(SCTP_TIMER_TYPE_ADDR_WQ,
-			 (struct sctp_inpcb *)NULL,
-			 (struct sctp_tcb *)NULL,
-			 (struct sctp_nets *)NULL);
-	SCTP_IPI_ITERATOR_WQ_UNLOCK();
+#endif
+#endif
+	return (m);
 }

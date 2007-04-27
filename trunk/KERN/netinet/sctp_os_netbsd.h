@@ -186,6 +186,11 @@ typedef struct callout sctp_os_timer_t;
 extern void SCTP_READ_RANDOM(void *buf, uint32_t len);
 #endif
 
+struct mbuf *
+sctp_get_mbuf_for_msg(unsigned int space_needed, 
+		      int want_header, int how, int allonebuf, int type);
+
+
 #ifdef USE_SCTP_SHA1
 #include <netinet/sctp_sha1.h>
 #else

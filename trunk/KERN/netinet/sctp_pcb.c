@@ -253,7 +253,7 @@ sctp_free_ifa(struct sctp_ifa *sctp_ifap)
 struct sctp_ifa *
 sctp_add_addr_to_vrf(uint32_t vrfid, void *ifn, uint32_t ifn_index,
 		     uint32_t ifn_type, const char *if_name,
-		     void *ifa, struct sockaddr *addr, uint32_t ifa_flags)
+		     void *ifa, struct sockaddr *addr, uint32_t ifa_flags, int dynamic_add)
 {
 	struct sctp_vrf *vrf;
 	struct sctp_ifn *sctp_ifnp = NULL;
@@ -381,10 +381,49 @@ sctp_add_addr_to_vrf(uint32_t vrfid, void *ifn, uint32_t ifn_index,
 	sctp_ifap->in_ifa_list = 1;
 	vrf->total_ifa_count++;
 	SCTP_IPI_ADDR_UNLOCK();
+	if (dynamic_add) {
+		/* Bump up the refcount so that when the timer
+		 * completes it will drop back down.
+		 */
+		struct sctp_laddr *wi;
+
+		atomic_add_int(&sctp_ifap->refcount, 1);
+		wi = SCTP_ZONE_GET(sctppcbinfo.ipi_zone_laddr, struct sctp_laddr);
+		if (wi == NULL) {
+			/*
+			 * Gak, what can we do? We have lost an address change can
+			 * you say HOSED?
+			 */
+#ifdef SCTP_DEBUG
+			if (sctp_debug_on & SCTP_DEBUG_PCB1) {
+				printf("Lost and address change ???\n");
+			}
+#endif				/* SCTP_DEBUG */
+
+			/* Opps, must decrement the count */
+			sctp_free_ifa(sctp_ifap);
+			return(NULL);
+		}
+		SCTP_INCR_LADDR_COUNT();
+		bzero(wi, sizeof(*wi));
+		wi->ifa = sctp_ifap;
+		wi->action = SCTP_ADD_IP_ADDRESS;
+		SCTP_IPI_ITERATOR_WQ_LOCK();
+		/*
+		 * Should this really be a tailq? As it is we will process the
+		 * newest first :-0
+		 */
+		LIST_INSERT_HEAD(&sctppcbinfo.addr_wq, wi, sctp_nxt_addr);
+		sctp_timer_start(SCTP_TIMER_TYPE_ADDR_WQ,
+				 (struct sctp_inpcb *)NULL,
+				 (struct sctp_tcb *)NULL,
+				 (struct sctp_nets *)NULL);
+		SCTP_IPI_ITERATOR_WQ_UNLOCK();
+	}
 	return (sctp_ifap);
 }
 
-struct sctp_ifa *
+void
 sctp_del_addr_from_vrf(uint32_t vrfid, struct sockaddr *addr,
 		       uint32_t ifn_index)
 {
@@ -415,7 +454,42 @@ sctp_del_addr_from_vrf(uint32_t vrfid, struct sockaddr *addr,
 	}
  out_now:
 	SCTP_IPI_ADDR_UNLOCK();	
-	return (sctp_ifap);
+	if (sctp_ifap) {
+		struct sctp_laddr *wi;
+
+		wi = SCTP_ZONE_GET(sctppcbinfo.ipi_zone_laddr, struct sctp_laddr);
+		if (wi == NULL) {
+			/*
+			 * Gak, what can we do? We have lost an address change can
+			 * you say HOSED?
+			 */
+#ifdef SCTP_DEBUG
+			if (sctp_debug_on & SCTP_DEBUG_PCB1) {
+				printf("Lost and address change ???\n");
+			}
+#endif				/* SCTP_DEBUG */
+
+			/* Opps, must decrement the count */
+			sctp_free_ifa(sctp_ifap);
+			return;
+		}
+		SCTP_INCR_LADDR_COUNT();
+		bzero(wi, sizeof(*wi));
+		wi->ifa = sctp_ifap;
+		wi->action = SCTP_DEL_IP_ADDRESS;
+		SCTP_IPI_ITERATOR_WQ_LOCK();
+		/*
+		 * Should this really be a tailq? As it is we will process the
+		 * newest first :-0
+		 */
+		LIST_INSERT_HEAD(&sctppcbinfo.addr_wq, wi, sctp_nxt_addr);
+		sctp_timer_start(SCTP_TIMER_TYPE_ADDR_WQ,
+				 (struct sctp_inpcb *)NULL,
+				 (struct sctp_tcb *)NULL,
+				 (struct sctp_nets *)NULL);
+		SCTP_IPI_ITERATOR_WQ_UNLOCK();
+	}
+	return;
 }
 
 
