@@ -390,7 +390,6 @@ sctp_del_addr_from_vrf(uint32_t vrfid, struct sockaddr *addr,
 {
 	struct sctp_vrf *vrf;
 	struct sctp_ifa *sctp_ifap = NULL;
-	struct sctp_ifn *sctp_ifnp = NULL;
 	SCTP_IPI_ADDR_LOCK();
 
 	vrf = sctp_find_vrf(vrfid);
@@ -398,13 +397,8 @@ sctp_del_addr_from_vrf(uint32_t vrfid, struct sockaddr *addr,
 		printf("Can't find vrfid:%d\n", vrfid);
 		goto out_now;
 	}
-	sctp_ifnp = sctp_find_ifn(vrf, (void *)NULL, ifn_index);
-	if (sctp_ifnp == NULL) {
-		sctp_ifap = sctp_find_ifa_by_addr(addr, vrf->vrf_id, 1);
-	} else {
-		sctp_ifap = sctp_find_ifa_in_ifn(sctp_ifnp, addr, 1);
-	}
 
+	sctp_ifap = sctp_find_ifa_by_addr(addr, vrf->vrf_id, 1);
 	if (sctp_ifap) {
 		sctp_ifap->localifa_flags &= SCTP_ADDR_VALID;
 		sctp_ifap->localifa_flags |= SCTP_BEING_DELETED;
