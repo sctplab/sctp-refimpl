@@ -2831,8 +2831,9 @@ sctp_find_stream_reset(struct sctp_tcb *stcb, uint32_t seq, struct sctp_tmit_chu
 	chk = stcb->asoc.str_reset;
 	if (chk->data == NULL) {
 #ifdef SCTP_DEBUG
-		printf("Chunk data mis-match? %p vs %p\n", chk->data, stcb->asoc.str_reset);
+		panic("Chunk data mis-match? %p vs %p\n", chk->data, stcb->asoc.str_reset);
 #endif
+		
 		return (NULL);
 	}
 	if (bchk) {
@@ -3229,6 +3230,7 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_out_req
 		return (ret_code);
 	}
 	chk->rec.chunk_id.id = SCTP_STREAM_RESET;
+	chk->rec.chunk_id.can_take_data = 0;
 	chk->asoc = &stcb->asoc;
 	chk->no_fr_allowed = 0;
 	chk->book_size = chk->send_size = sizeof(struct sctp_chunkhdr);
