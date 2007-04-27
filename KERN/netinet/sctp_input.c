@@ -2906,7 +2906,7 @@ sctp_handle_stream_reset_response(struct sctp_tcb *stcb,
 			lparm_len = ntohs(srparam->ph.param_length);
 			if (type == SCTP_STR_RESET_OUT_REQUEST) {
 #ifdef SCTP_DEBUG
-				printf("Its a reset-out outstanding result was:%d\n", srparam, action);
+				printf("Its a reset-out outstanding: result was:%d\n", action);
 #endif
 				number_entries = (lparm_len - sizeof(struct sctp_stream_reset_out_request)) / sizeof(uint16_t);
 				asoc->stream_reset_out_is_outstanding = 0;
@@ -3245,7 +3245,7 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_out_req
 		ptype = ntohs(ph->param_type);
 		num_param++;
 #ifdef SCTP_DEBUG
-		printf("First type is %x len:%d\n", (u_int)ptype, len);;
+		printf("First type is %x len:%d\n", (u_int)ptype, param_len);
 #endif
 		if (num_param > SCTP_MAX_RESET_PARAMS) {
 			/* hit the max of parameters already sorry.. */
