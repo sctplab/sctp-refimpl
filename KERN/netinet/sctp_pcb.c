@@ -4395,6 +4395,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	/* Now the read queue needs to be cleaned up (only once) */
 	cnt = 0;
 	if ((stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) == 0) {
+		stcb->asoc.state |= SCTP_STATE_ABOUT_TO_BE_FREED;
 		SCTP_INP_READ_LOCK(inp);
 		TAILQ_FOREACH(sq, &inp->read_queue, next) {
 			if (sq->stcb == stcb) {
@@ -4433,7 +4434,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			stcb->block_entry = NULL;
 		}
 	}
-	stcb->asoc.state |= SCTP_STATE_ABOUT_TO_BE_FREED;
 	if ((from_inpcbfree != SCTP_PCBFREE_FORCE) && (stcb->asoc.refcnt)) {
 		/* reader or writer in the way, we have
 		 * hopefully given him something to chew on
