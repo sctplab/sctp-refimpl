@@ -50,10 +50,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_bsd_addr.c,v 1.5 2007/03/15 11:27:13 rr
 #include <netinet/sctp_indata.h>
 #include <sys/unistd.h>
 
-#ifdef SCTP_DEBUG
-extern uint32_t sctp_debug_on;
-#endif
-
 
 #if defined(SCTP_USE_THREAD_BASED_ITERATOR)
 void
