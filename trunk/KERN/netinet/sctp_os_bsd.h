@@ -288,7 +288,6 @@ typedef struct callout sctp_os_timer_t;
  * into the chain of data holders, for BSD
  * its a NOP.
  */
-#define SCTP_PAK_TO_BUF(i_pak) (i_pak)
 
 /* Macro's for getting length from V6/V4 header */
 #define SCTP_GET_IPV4_LENGTH(iph) (iph->ip_len)
