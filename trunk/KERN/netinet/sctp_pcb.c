@@ -402,12 +402,12 @@ sctp_del_addr_from_vrf(uint32_t vrfid, struct sockaddr *addr,
 	if (sctp_ifap) {
 		sctp_ifap->localifa_flags &= SCTP_ADDR_VALID;
 		sctp_ifap->localifa_flags |= SCTP_BEING_DELETED;
-		sctp_ifnp->ifa_count--;
+		sctp_ifap->ifn_p->ifa_count--;
 		vrf->total_ifa_count--;
 		LIST_REMOVE(sctp_ifap, next_bucket);
 		LIST_REMOVE(sctp_ifap, next_ifa);
 		sctp_ifap->in_ifa_list = 0;
-		atomic_add_int(&sctp_ifnp->refcount, -1);
+		atomic_add_int(&sctp_ifap->ifn_p->refcount, -1);
 	} else {
 		printf("Del Addr-ifn:%d Could not find address:", 
 		       ifn_index);
