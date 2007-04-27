@@ -2811,14 +2811,28 @@ sctp_find_stream_reset(struct sctp_tcb *stcb, uint32_t seq, struct sctp_tmit_chu
 	int len, clen;
 
 	asoc = &stcb->asoc;
+#ifdef SCTP_DEBUG
+	printf("Look for str seq:%x in send queue\n", seq);
+#endif
 	if (TAILQ_EMPTY(&stcb->asoc.control_send_queue)) {
+#ifdef SCTP_DEBUG
+		printf("Its empty?\n");
+#endif
+		asoc->stream_reset_outstanding = 0;
 		return (NULL);
 	}
 	if (stcb->asoc.str_reset == NULL) {
+#ifdef SCTP_DEBUG
+		printf("Pointer is NULL?\n");
+#endif
+		asoc->stream_reset_outstanding = 0;
 		return (NULL);
 	}
 	chk = stcb->asoc.str_reset;
 	if (chk->data == NULL) {
+#ifdef SCTP_DEBUG
+		printf("Chunk data mis-match? %p vs %p\n", chk->data, stcb->asoc.str_reset);
+#endif
 		return (NULL);
 	}
 	if (bchk) {
@@ -2828,6 +2842,7 @@ sctp_find_stream_reset(struct sctp_tcb *stcb, uint32_t seq, struct sctp_tmit_chu
 	clen = chk->send_size;
 	req = mtod(chk->data, struct sctp_stream_reset_out_req *);
 	r = &req->sr_req;
+	printf("check seq:%x\n", ntohl(r->request_seq));
 	if (ntohl(r->request_seq) == seq) {
 		/* found it */
 		return (r);
@@ -2836,10 +2851,14 @@ sctp_find_stream_reset(struct sctp_tcb *stcb, uint32_t seq, struct sctp_tmit_chu
 	if (clen > (len + (int)sizeof(struct sctp_chunkhdr))) {
 		/* move to the next one, there can only be a max of two */
 		r = (struct sctp_stream_reset_out_request *)((caddr_t)r + len);
+		printf("check seq:%x\n", ntohl(r->request_seq));
 		if (ntohl(r->request_seq) == seq) {
 			return (r);
 		}
 	}
+#ifdef SCTP_DEBUG
+	printf("Can't find the seq\n");
+#endif
 	/* that seq is not here */
 	return (NULL);
 }
