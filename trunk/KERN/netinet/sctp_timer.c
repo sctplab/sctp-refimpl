@@ -1198,7 +1198,7 @@ sctp_strreset_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		return (0);
 	}
 	/* find the existing STRRESET, we use the seq number we sent out on */
-	strrst = sctp_find_stream_reset(stcb, stcb->asoc.str_reset_seq_out, &strrst);
+	sctp_find_stream_reset(stcb, stcb->asoc.str_reset_seq_out, &strrst);
 	if (strrst == NULL) {
 #ifdef SCTP_DEBUG
 		printf("Find the stream-reset - nothing found\n");
