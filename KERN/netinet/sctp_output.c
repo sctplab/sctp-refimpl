@@ -10217,9 +10217,6 @@ sctp_send_str_reset_req(struct sctp_tcb *stcb,
 		sctp_add_stream_reset_tsn(chk, seq);
 		asoc->stream_reset_outstanding++;
 	}
-#ifdef SCTP_DEBUG
-	printf("str_reset request set to %p\n", chk);
-#endif
 	asoc->str_reset = chk;
 
 	/* insert the chunk for sending */
