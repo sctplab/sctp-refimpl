@@ -307,6 +307,10 @@ struct mbuf *sctp_m_prepend_2(struct mbuf *m, int len, int how);
  */
 typedef struct route	sctp_route_t;
 
+struct mbuf *
+sctp_get_mbuf_for_msg(unsigned int space_needed, 
+		      int want_header, int how, int allonebuf, int type);
+
 
 /*
  * SCTP AUTH

@@ -42,11 +42,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_output.h,v 1.4 2007/04/03 11:15:32 rrs 
 
 #if defined(_KERNEL)
 
-struct mbuf *
-sctp_get_mbuf_for_msg(unsigned int space_needed, 
-		      int want_header, int how, int allonebuf, int type);
-
-
 
 struct mbuf *
 sctp_add_addresses_to_i_ia(struct sctp_inpcb *inp, 
