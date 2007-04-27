@@ -3063,6 +3063,11 @@ sctp_check_for_revoked(struct sctp_tcb *stcb,
 			 * time i.e. revoked.  If it is MARKED it was ACK'ed
 			 * again.
 			 */
+			if (compare_with_wrap(tp1->rec.data.TSN_seq, biggest_tsn_acked,
+					      MAX_TSN)) 
+				break;
+
+
 			if (tp1->sent == SCTP_DATAGRAM_ACKED) {
 				/* it has been revoked */
 				tp1->sent = SCTP_DATAGRAM_SENT;

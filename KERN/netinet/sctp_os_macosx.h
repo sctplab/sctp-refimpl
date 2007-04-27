@@ -277,7 +277,6 @@ struct mbuf *sctp_m_prepend_2(struct mbuf *m, int len, int how);
  * This converts any input packet header into the chain of data holders,
  * for APPLE its a NOP.
  */
-#define SCTP_PAK_TO_BUF(i_pak) (i_pak)
 
 /* Macro's for getting length from V6/V4 header */
 #define SCTP_GET_IPV4_LENGTH(iph) (iph->ip_len)
