@@ -4525,43 +4525,6 @@ sctp_find_ifa_in_ep(struct sctp_inpcb *inp, struct sockaddr *addr, int holds_loc
 	return(NULL);
 }
 
-struct sctp_ifa *
-sctp_find_ifa_in_ifn(struct sctp_ifn *sctp_ifnp, struct sockaddr *addr,
-		     int holds_lock)
-{
-	struct sctp_ifa *sctp_ifap;
-
-	if (holds_lock == 0)
-		SCTP_IPI_ADDR_LOCK();
-
-	LIST_FOREACH(sctp_ifap, &sctp_ifnp->ifalist, next_ifa) {
-		if (addr->sa_family != sctp_ifap->address.sa.sa_family)
-			continue;
-		if (addr->sa_family == AF_INET) {
-			if (((struct sockaddr_in *)addr)->sin_addr.s_addr ==
-			    sctp_ifap->address.sin.sin_addr.s_addr) {
-				/* found him. */
-				if (holds_lock == 0)
-					SCTP_IPI_ADDR_UNLOCK();
-				return (sctp_ifap);
-				break;
-			}
-		} else if (addr->sa_family == AF_INET6) {
-			if (SCTP6_ARE_ADDR_EQUAL(&((struct sockaddr_in6 *)addr)->sin6_addr,
-						 &sctp_ifap->address.sin6.sin6_addr)) {
-				/* found him. */
-				if (holds_lock == 0)
-					SCTP_IPI_ADDR_UNLOCK();
-				return (sctp_ifap);
-				break;
-			}
-		}
-	}
-	if (holds_lock == 0)
-		SCTP_IPI_ADDR_UNLOCK();
-	return (NULL);
-}
-
 uint32_t
 sctp_get_ifa_hash_val(struct sockaddr *addr)
 {

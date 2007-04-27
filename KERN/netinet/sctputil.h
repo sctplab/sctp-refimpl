@@ -112,9 +112,6 @@ sctp_get_ifa_hash_val(struct sockaddr *addr);
 
 struct sctp_ifa *
 sctp_find_ifa_in_ep(struct sctp_inpcb *inp, struct sockaddr *addr, int hold_lock);
-struct sctp_ifa *
-sctp_find_ifa_in_ifn(struct sctp_ifn *sctp_ifnp, struct sockaddr *addr,
-		     int holds_lock);
 
 struct sctp_ifa *
 sctp_find_ifa_by_addr(struct sockaddr *addr, uint32_t vrf_id, int holds_lock);
