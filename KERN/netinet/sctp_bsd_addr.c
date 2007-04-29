@@ -328,6 +328,10 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 	struct mbuf *m = NULL;
 #if defined(__FreeBSD__) && __FreeBSD_version > 602000
 	m =  m_getm2(NULL, space_needed, how, type, want_header ? M_PKTHDR : 0);
+	if(m == NULL) {
+		/* bad, no memory */
+		return(m);
+	}
 	if (allonebuf) {
 		int siz;
 		if(SCTP_BUF_IS_EXTENDED(m)) {
