@@ -3736,7 +3736,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 		 * because we don't have to process the peer's COOKIE. All
 		 * others get a complete chunk.
 		 */
-		if (ch->chunk_type == SCTP_INITIATION_ACK) {
+		if ((ch->chunk_type == SCTP_INITIATION_ACK) ||
+		    (ch->chunk_type == SCTP_INITIATION)){
 			/* get an init-ack chunk */
 			ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, *offset,
 								   sizeof(struct sctp_init_ack_chunk), chunk_buf);
@@ -3746,6 +3747,28 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					SCTP_TCB_UNLOCK(locked_tcb);
 				return (NULL);
 			}
+		} else if (ch->chunk_type == SCTP_COOKIE_ECHO) {
+			if(chk_length > sizeof(chunk_buf)) {
+				/* use just the size of the chunk buffer
+				 * so the front part of our cookie is intact.
+				 * The rest of cookie processing should use
+				 * the sctp_m_getptr() function to access the
+				 * other parts.
+				 */
+				ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, *offset,
+									   (sizeof(chunk_buf) - 4), 
+									   chunk_buf);
+				if (ch == NULL) {
+					*offset = length;
+					if (locked_tcb)
+						SCTP_TCB_UNLOCK(locked_tcb);
+					return (NULL);
+				}
+			} else {
+				/* We can fit it all */
+				goto all_fits;
+			}
+
 		} else {
 			/* get a complete chunk... */
 			if ((size_t)chk_length > sizeof(chunk_buf)) {
@@ -3753,21 +3776,25 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				struct sctp_paramhdr *phdr;
 
 				oper = NULL;
-				oper = sctp_get_mbuf_for_msg(sizeof(struct sctp_paramhdr),
-							     0, M_DONTWAIT, 1, MT_DATA);
-				if (oper) {
-					/* pre-reserve some space */
-					SCTP_BUF_RESV_UF(oper, sizeof(struct sctp_chunkhdr));
-					SCTP_BUF_LEN(oper) = sizeof(struct sctp_paramhdr);
-					phdr = mtod(oper, struct sctp_paramhdr *);
-					phdr->param_type = htons(SCTP_CAUSE_OUT_OF_RESC);
-					phdr->param_length = htons(sizeof(struct sctp_paramhdr));
-					sctp_queue_op_err(stcb, oper);
+				if (stcb) {
+					oper = sctp_get_mbuf_for_msg(sizeof(struct sctp_paramhdr),
+								     0, M_DONTWAIT, 1, MT_DATA);
+
+					if (oper) {
+						/* pre-reserve some space */
+						SCTP_BUF_RESV_UF(oper, sizeof(struct sctp_chunkhdr));
+						SCTP_BUF_LEN(oper) = sizeof(struct sctp_paramhdr);
+						phdr = mtod(oper, struct sctp_paramhdr *);
+						phdr->param_type = htons(SCTP_CAUSE_OUT_OF_RESC);
+						phdr->param_length = htons(sizeof(struct sctp_paramhdr));
+						sctp_queue_op_err(stcb, oper);
+					}
 				}
 				if (locked_tcb)
 					SCTP_TCB_UNLOCK(locked_tcb);
 				return (NULL);
 			}
+		all_fits:
 			ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, *offset,
 								   chk_length, chunk_buf);
 			if (ch == NULL) {
@@ -4355,7 +4382,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					phd->param_length = htons(chk_length + sizeof(*phd));
 					SCTP_BUF_LEN(mm) = sizeof(*phd);
 					SCTP_BUF_NEXT(mm) = SCTP_M_COPYM(m, *offset, SCTP_SIZE32(chk_length),
-								  M_DONTWAIT);
+									 M_DONTWAIT);
 					if (SCTP_BUF_NEXT(mm)) {
 						sctp_queue_op_err(stcb, mm);
 					} else {
