@@ -5664,6 +5664,10 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 				}
 				p4 = (struct sctp_ipv4addr_param *)phdr;
 				sin.sin_addr.s_addr = p4->addr;
+				if(IN_MULTICAST(sin.sin_addr.s_addr)) {
+					/* Skip multi-cast addresses */
+					goto next_param;
+				}
 				sa = (struct sockaddr *)&sin;
 				inp = stcb->sctp_ep;
 				atomic_add_int(&stcb->asoc.refcnt, 1);
@@ -5726,6 +5730,14 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 				p6 = (struct sctp_ipv6addr_param *)phdr;
 				memcpy((caddr_t)&sin6.sin6_addr, p6->addr,
 				       sizeof(p6->addr));
+				if(IN6_IS_ADDR_MULTICAST(&sin6.sin6_addr)) {
+					/* Skip multi-cast addresses */
+					goto next_param;
+				}
+				if(IN6_IS_ADDR_LINKLOCAL(&sin6.sin6_addr)) {
+					/* Link local make no sense without scope */
+					goto next_param;
+				}
 				sa = (struct sockaddr *)&sin6;
 				inp = stcb->sctp_ep;
 				atomic_add_int(&stcb->asoc.refcnt, 1);
