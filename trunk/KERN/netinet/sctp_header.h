@@ -125,6 +125,8 @@ struct sctp_asconf_addrv4_param {	/* an ASCONF address (v4) parameter */
 	struct sctp_ipv4addr_param addrp;	/* max storage size */
 };
 
+#define SCTP_MAX_SUPPORTED_EXT 256
+
 struct sctp_supported_chunk_types_param {
 	struct sctp_paramhdr ph;/* type = 0x8008  len = x */
 	uint8_t chunk_types[0];
