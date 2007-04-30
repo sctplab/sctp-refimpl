@@ -3611,11 +3611,11 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			printf("RTP route is %p through\n", ro->ro_rt);
 		}
 #endif
-
+#ifdef _WHY_THIS_CODE
 		if ((have_mtu) && (net) && (have_mtu > net->mtu)) {
 			ro->ro_rt->rt_ifp->if_mtu = net->mtu;
 		}
-
+#endif
 		if (ro != &iproute) {
 			memcpy(&iproute, ro, sizeof(*ro));
 		}
@@ -3625,9 +3625,11 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		    ,(struct inpcb *)NULL
 #endif
 		    );
+#ifdef _WHY_THIS_CODE
 		if ((ro->ro_rt) && (have_mtu) && (net) && (have_mtu > net->mtu)) {
 			ro->ro_rt->rt_ifp->if_mtu = have_mtu;
 		}
+#endif
 		SCTP_STAT_INCR(sctps_sendpackets);
 		SCTP_STAT_INCR_COUNTER64(sctps_outpackets);
 		if(ret)
