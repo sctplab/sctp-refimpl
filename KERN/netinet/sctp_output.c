@@ -4478,8 +4478,7 @@ sctp_arethere_unrecognized_parameters(struct mbuf *in_initpkt,
 	if ((op_err == NULL) && phdr) {
 		int l_len;
 		l_len = sizeof(struct ip6_hdr) + sizeof(struct sctphdr) + sizeof(struct sctp_chunkhdr);
-		l_len += plen;
-		l_len += sizeof(struct sctp_paramhdr);
+		l_len += (2 * sizeof(struct sctp_paramhdr));
 		op_err = sctp_get_mbuf_for_msg(l_len, 0, M_DONTWAIT, 1, MT_DATA);
 		SCTP_BUF_LEN(op_err) = 0;
 		SCTP_BUF_RESV_UF(op_err, sizeof(struct ip6_hdr));
