@@ -4387,7 +4387,7 @@ sctp_arethere_unrecognized_parameters(struct mbuf *in_initpkt,
 				s.param_length = htons(sizeof(s) + plen);
 				m_copyback(op_err, err_at, sizeof(s), (caddr_t)&s);
 				err_at += sizeof(s);
-				phdr = sctp_get_next_param(mat, at, (struct sctp_paramhdr *)tempbuf, plen);
+				phdr = sctp_get_next_param(mat, at, (struct sctp_paramhdr *)tempbuf, min(sizeof(tempbuf),plen));
 				if (phdr == NULL) {
 					sctp_m_freem(op_err);
 					/*
@@ -4443,7 +4443,7 @@ sctp_arethere_unrecognized_parameters(struct mbuf *in_initpkt,
 					if (plen > sizeof(tempbuf)) {
 						plen = sizeof(tempbuf);
 					}
-					phdr = sctp_get_next_param(mat, at, (struct sctp_paramhdr *)tempbuf, plen);
+					phdr = sctp_get_next_param(mat, at, (struct sctp_paramhdr *)tempbuf, min(sizeof(tempbuf),plen));
 					if (phdr == NULL) {
 						sctp_m_freem(op_err);
 						/*
