@@ -4270,7 +4270,7 @@ sctp_arethere_unrecognized_parameters(struct mbuf *in_initpkt,
 			/* Param's with variable size within a range */
 		case SCTP_CHUNK_LIST:
 		case SCTP_SUPPORTED_CHUNK_EXT:
-			if (padded_size > (sizeof(struct sctp_supported_chunk_types_param) + sizeof(uint8_t))) {
+			if (padded_size > (sizeof(struct sctp_supported_chunk_types_param) + (sizeof(uint8_t) * SCTP_MAX_SUPPORTED_EXT)))  {
 				goto invalid_size;
 			}
 			at += padded_size;
