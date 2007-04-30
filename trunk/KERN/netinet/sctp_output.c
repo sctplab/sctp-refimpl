@@ -4245,16 +4245,11 @@ sctp_arethere_unrecognized_parameters(struct mbuf *in_initpkt,
 	while ((phdr != NULL) && ((size_t)limit >= sizeof(struct sctp_paramhdr))) {
 		ptype = ntohs(phdr->param_type);
 		plen = ntohs(phdr->param_length);
-		limit -= SCTP_SIZE32(plen);
-		if (plen < sizeof(struct sctp_paramhdr)) {
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_OUTPUT4) {
-				printf("sctp_output.c:Impossible length in parameter < %d\n", plen);
-			}
-#endif
-			*abort_processing = 1;
-			break;
+		if ((plen > limit) || (plen < sizeof(struct sctp_paramhdr)))  {
+			/* wacked parameter */
+			goto invalid_size;
 		}
+		limit -= SCTP_SIZE32(plen);
 		/*-
 		 * All parameters for all chunks that we know/understand are
 		 * listed here. We process them other places and make
