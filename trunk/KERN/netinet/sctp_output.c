@@ -4229,9 +4229,9 @@ sctp_arethere_unrecognized_parameters(struct mbuf *in_initpkt,
 	struct sctp_paramhdr *phdr, params;
 
 	struct mbuf *mat, *op_err;
-	char tempbuf[SCTP_CHUNK_BUFFER_SIZE];
+	char tempbuf[SCTP_PARAM_BUFFER_SIZE];
 	int at, limit, pad_needed;
-	uint16_t ptype, plen;
+	uint16_t ptype, plen, padded_size;
 	int err_at;
 
 	*abort_processing = 0;
@@ -4255,38 +4255,98 @@ sctp_arethere_unrecognized_parameters(struct mbuf *in_initpkt,
 			*abort_processing = 1;
 			break;
 		}
-		/*
+		/*-
 		 * All parameters for all chunks that we know/understand are
 		 * listed here. We process them other places and make
 		 * appropriate stop actions per the upper bits. However this
 		 * is the generic routine processor's can call to get back
 		 * an operr.. to either incorporate (init-ack) or send.
 		 */
-		if ((ptype == SCTP_HEARTBEAT_INFO) ||
-		    (ptype == SCTP_IPV4_ADDRESS) ||
-		    (ptype == SCTP_IPV6_ADDRESS) ||
-		    (ptype == SCTP_STATE_COOKIE) ||
-		    (ptype == SCTP_UNRECOG_PARAM) ||
-		    (ptype == SCTP_COOKIE_PRESERVE) ||
-		    (ptype == SCTP_SUPPORTED_ADDRTYPE) ||
-		    (ptype == SCTP_PRSCTP_SUPPORTED) ||
-		    (ptype == SCTP_ADD_IP_ADDRESS) ||
-		    (ptype == SCTP_DEL_IP_ADDRESS) ||
-		    (ptype == SCTP_ECN_CAPABLE) ||
-		    (ptype == SCTP_ULP_ADAPTATION) ||
-		    (ptype == SCTP_ERROR_CAUSE_IND) ||
-		    (ptype == SCTP_RANDOM) ||
-		    (ptype == SCTP_CHUNK_LIST) ||	
-		    (ptype == SCTP_CHUNK_LIST) ||
-		    (ptype == SCTP_SET_PRIM_ADDR) ||
-		    (ptype == SCTP_SUCCESS_REPORT) ||
-		    (ptype == SCTP_ULP_ADAPTATION) ||
-		    (ptype == SCTP_SUPPORTED_CHUNK_EXT) ||
-		    (ptype == SCTP_ECN_NONCE_SUPPORTED)
-		    ) {
-			/* no skip it */
-			at += SCTP_SIZE32(plen);
-		} else if (ptype == SCTP_HOSTNAME_ADDRESS) {
+		padded_size = SCTP_SIZE32(plen);
+		switch (ptype) {
+			/* Param's with variable size */
+		case SCTP_HEARTBEAT_INFO:
+		case SCTP_STATE_COOKIE:
+		case SCTP_UNRECOG_PARAM:
+		case SCTP_ERROR_CAUSE_IND:
+			/* ok skip fwd */
+			at += padded_size;
+			break;
+			/* Param's with variable size within a range */
+		case SCTP_CHUNK_LIST:
+		case SCTP_SUPPORTED_CHUNK_EXT:
+			if (padded_size > (sizeof(struct sctp_supported_chunk_types_param) + sizeof(uint8_t))) {
+				goto invalid_size;
+			}
+			at += padded_size;
+			break;
+		case SCTP_SUPPORTED_ADDRTYPE:
+			if (padded_size > SCTP_MAX_ADDR_PARAMS_SIZE) {
+				goto invalid_size;
+			}
+			at += padded_size;
+			break;
+		case SCTP_RANDOM:
+			if (padded_size > (sizeof(struct sctp_auth_random) + SCTP_RANDOM_MAX_SIZE)) {
+				goto invalid_size;
+			}
+			at += padded_size;
+			break;
+		case SCTP_SET_PRIM_ADDR:
+		case SCTP_DEL_IP_ADDRESS:
+		case SCTP_ADD_IP_ADDRESS:
+			if ((padded_size != sizeof(struct sctp_asconf_addrv4_param)) &&
+			    (padded_size != sizeof(struct sctp_asconf_addr_param))){
+				goto invalid_size;
+			}
+			at += padded_size;
+			break;
+			/* Param's with a fixed size */
+		case SCTP_IPV4_ADDRESS:
+			if (padded_size != sizeof(struct sctp_ipv4addr_param)) {
+				goto invalid_size;
+			}
+			at += padded_size;
+			break;
+		case SCTP_IPV6_ADDRESS:
+			if (padded_size != sizeof(struct sctp_ipv6addr_param)) {
+				goto invalid_size;
+			}
+			at += padded_size;
+			break;
+		case SCTP_COOKIE_PRESERVE:
+			if (padded_size != sizeof(struct sctp_cookie_perserve_param)) {
+				goto invalid_size;
+			}
+			at += padded_size;
+			break;
+		case SCTP_ECN_NONCE_SUPPORTED:
+		case SCTP_PRSCTP_SUPPORTED:
+			if (padded_size != sizeof(struct sctp_paramhdr)) {
+				goto invalid_size;
+			}
+			at += padded_size;
+			break;
+		case SCTP_ECN_CAPABLE:
+			if (padded_size != sizeof(struct sctp_ecn_supported_param)) {
+				goto invalid_size;
+			}
+			at += padded_size;
+			break;
+		case SCTP_ULP_ADAPTATION:
+			if (padded_size != sizeof(struct sctp_adaptation_layer_indication)) {
+				goto invalid_size;
+			}
+			at += padded_size;
+			break;
+		case SCTP_SUCCESS_REPORT:
+			if (padded_size != sizeof(struct sctp_asconf_paramhdr)) {
+				goto invalid_size;
+			}
+			at += padded_size;
+			break;
+		case SCTP_HOSTNAME_ADDRESS:
+		{
 			/* We can NOT handle HOST NAME addresses!! */
 			int l_len;
 #ifdef SCTP_DEBUG
@@ -4342,7 +4402,9 @@ sctp_arethere_unrecognized_parameters(struct mbuf *in_initpkt,
 				err_at += plen;
 			}
 			return (op_err);
-		} else {
+			break;
+		}
+		default:
 			/*
 			 * we do not recognize the parameter figure out what
 			 * we do.
@@ -4391,22 +4453,55 @@ sctp_arethere_unrecognized_parameters(struct mbuf *in_initpkt,
 						 * system is in trouble
 						 * though).
 						 */
+						op_err = NULL;
 						goto more_processing;
 					}
 					m_copyback(op_err, err_at, plen, (caddr_t)phdr);
 					err_at += plen;
 				}
 			}
-	more_processing:
+		more_processing:
 			if ((ptype & 0x8000) == 0x0000) {
 				return (op_err);
 			} else {
 				/* skip this chunk and continue processing */
 				at += SCTP_SIZE32(plen);
 			}
+			break;
 
 		}
 		phdr = sctp_get_next_param(mat, at, &params, sizeof(params));
+	}
+	return (op_err);
+ invalid_size:
+	*abort_processing = 1;
+	if ((op_err == NULL) && phdr) {
+		int l_len;
+		l_len = sizeof(struct ip6_hdr) + sizeof(struct sctphdr) + sizeof(struct sctp_chunkhdr);
+		l_len += plen;
+		l_len += sizeof(struct sctp_paramhdr);
+		op_err = sctp_get_mbuf_for_msg(l_len, 0, M_DONTWAIT, 1, MT_DATA);
+		SCTP_BUF_LEN(op_err) = 0;
+		SCTP_BUF_RESV_UF(op_err, sizeof(struct ip6_hdr));
+		SCTP_BUF_RESV_UF(op_err, sizeof(struct sctphdr));
+		SCTP_BUF_RESV_UF(op_err, sizeof(struct sctp_chunkhdr));
+	}
+	if ((op_err) && phdr) {
+		struct sctp_paramhdr s;
+
+		if (err_at % 4) {
+			uint32_t cpthis = 0;
+
+			pad_needed = 4 - (err_at % 4);
+			m_copyback(op_err, err_at, pad_needed, (caddr_t)&cpthis);
+			err_at += pad_needed;
+		}
+		s.param_type = htons(SCTP_CAUSE_PROTOCOL_VIOLATION);
+		s.param_length = htons(sizeof(s) + sizeof(struct sctp_paramhdr));
+		m_copyback(op_err, err_at, sizeof(s), (caddr_t)&s);
+		err_at += sizeof(s);
+		/* Only copy back the p-hdr that caused the issue */
+		m_copyback(op_err, err_at, sizeof(struct sctp_paramhdr), (caddr_t)phdr);
 	}
 	return (op_err);
 }
