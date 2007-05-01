@@ -2,4 +2,7 @@
    set/clear it but would not do it. Now we will.
 -  Moved to latest socket api for extended sndrcv info struct.
 -  Moved to support all new levels of fragment interleave.
-
+-  Codenomicon security test updates.
+-  Robert Watson changes (with ifdefs)
+-  Bug in stream reset (2 actually).
+-  setpeerprimary could unlock a null pointer, fixed.
