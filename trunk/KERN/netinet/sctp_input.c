@@ -3942,7 +3942,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 						printf("Bad size on sack chunk .. to small\n");
 					}
 #endif
-					break;
+					*offset = length;
+					return (NULL);
 				}
 				sack = (struct sctp_sack_chunk *)ch;
 				nonce_sum_flag = ch->chunk_flags & SCTP_SACK_NONCE_SUM;
@@ -3993,7 +3994,11 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				printf("SCTP_HEARTBEAT-ACK\n");
 			}
 #endif				/* SCTP_DEBUG */
-
+			if (chk_length != sizeof(struct sctp_heartbeat_chunk)) {			
+				/* Its not ours */
+				*offset = length;
+				return (NULL);
+			}
 			/* He's alive so give him credit */
 			stcb->asoc.overall_error_count = 0;
 			SCTP_STAT_INCR(sctps_recvheartbeatack);
@@ -4017,6 +4022,11 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				printf("SCTP_SHUTDOWN\n");
 			}
 #endif				/* SCTP_DEBUG */
+			if (chk_length != sizeof(struct sctp_shutdown_chunk)) {			
+				*offset = length;
+				return (NULL);
+				
+			}
 			{
 				int abort_flag = 0;
 
@@ -4199,6 +4209,12 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			}
 #endif				/* SCTP_DEBUG */
 			/* He's alive so give him credit */
+			if (chk_length != sizeof(struct sctp_ecne_chunk)) {			
+				/* Its not ours */
+				*offset = length;
+				return (NULL);
+			}
+
 			stcb->asoc.overall_error_count = 0;
 			sctp_handle_ecn_echo((struct sctp_ecne_chunk *)ch,
 					     stcb);
@@ -4210,6 +4226,11 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			}
 #endif				/* SCTP_DEBUG */
 			/* He's alive so give him credit */
+			if (chk_length != sizeof(struct sctp_cwr_chunk)) {			
+				/* Its not ours */
+				*offset = length;
+				return (NULL);
+			}
 			stcb->asoc.overall_error_count = 0;
 
 			sctp_handle_ecn_cwr((struct sctp_cwr_chunk *)ch, stcb);
@@ -4252,6 +4273,12 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				printf("SCTP_ASCONF-ACK\n");
 			}
 #endif				/* SCTP_DEBUG */
+			if (chk_length < sizeof(struct sctp_asconf_ack_chunk)) {
+				/* Its not ours */
+				*offset = length;
+				return (NULL);
+			}
+
 			/* He's alive so give him credit */
 			stcb->asoc.overall_error_count = 0;
 
@@ -4264,6 +4291,12 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				printf("SCTP_FWD-TSN\n");
 			}
 #endif				/* SCTP_DEBUG */
+			if (chk_length < sizeof(struct sctp_forward_tsn_chunk)) {
+				/* Its not ours */
+				*offset = length;
+				return (NULL);
+			}
+
 			/* He's alive so give him credit */
 			{
 				int abort_flag = 0;
@@ -4295,6 +4328,12 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 #endif				/* SCTP_DEBUG */
 			ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, *offset,
 								   chk_length, chunk_buf);
+			if (chk_length < sizeof(struct sctp_stream_reset_tsn_req)) {
+				/* Its not ours */
+				*offset = length;
+				return (NULL);
+			}
+
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 				/* We are not interested anymore */
 				sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_29);
@@ -4323,6 +4362,12 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			}
 #endif				/* SCTP_DEBUG */
 			/* re-get it all please */
+			if (chk_length < sizeof(struct sctp_pktdrop_chunk)) {
+				/* Its not ours */
+				*offset = length;
+				return (NULL);
+			}
+
 			ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, *offset,
 								   chk_length, chunk_buf);
 
@@ -4349,6 +4394,12 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				}
 				/* skip this chunk (temporarily) */
 				goto next_chunk;
+			}
+			if ((chk_length < (sizeof(struct sctp_auth_chunk))) || 
+			    (chk_length > (sizeof(struct sctp_auth_chunk) + SCTP_AUTH_DIGEST_LEN_MAX)))  {
+				/* Its not ours */
+				*offset = length;
+				return (NULL);
 			}
 			if (got_auth == 1) {
 				/* skip this chunk... it's already auth'd */
