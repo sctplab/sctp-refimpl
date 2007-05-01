@@ -46,6 +46,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctputil.h,v 1.14 2007/04/22 11:06:27 rrs Ex
  * Any new logging added must also define SCTP_STAT_LOGGING if
  * its not already defined.
  */
+
 #if defined(SCTP_LOG_MAXBURST) || defined(SCTP_LOG_RWND) || defined(SCTP_LOG_RWND)
 #ifndef SCTP_STAT_LOGGING
 #define SCTP_STAT_LOGGING 1
@@ -88,7 +89,14 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctputil.h,v 1.14 2007/04/22 11:06:27 rrs Ex
 #endif
 #endif
 
-#ifdef SCTP_ASOCLOG_OF_TSNS
+#if defined(SCTP_LOG_SACK_ARRIVALS)
+#ifndef SCTP_STAT_LOGGING
+#define SCTP_STAT_LOGGING 1
+#endif
+#endif
+
+
+#ifdef SCTP_ASOCLOG_OF_TSNS 
 void sctp_print_out_track_log(struct sctp_tcb *stcb);
 #endif
 
@@ -185,7 +193,7 @@ void sctp_ulp_notify(uint32_t, struct sctp_tcb *, uint32_t, void *);
 void
 sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
     struct sctp_inpcb *new_inp,
-    struct sctp_tcb *stcb);
+    struct sctp_tcb *stcb, int waitflags);
 
 
 void sctp_stop_timers_for_shutdown(struct sctp_tcb *);

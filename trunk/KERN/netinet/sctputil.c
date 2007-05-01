@@ -4044,7 +4044,8 @@ sctp_print_address_pkt(struct ip *iph, struct sctphdr *sh)
 void
 sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
     struct sctp_inpcb *new_inp,
-    struct sctp_tcb *stcb)
+    struct sctp_tcb *stcb,
+    int waitflags)
 {
 	/*
 	 * go through our old INP and pull off any control structures that
@@ -4059,20 +4060,21 @@ sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
 	old_so = old_inp->sctp_socket;
 	new_so = new_inp->sctp_socket;
 	TAILQ_INIT(&tmp_queue);
-
+#ifndef _ROBERTS_CHANGE_
 	SOCKBUF_LOCK(&(old_so->so_rcv));
-
+#endif
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	error = sblock(&old_so->so_rcv, 0);
 #endif
 #if defined(__NetBSD__)
-	error = sblock(&old_so->so_rcv, 0);
+	error = sblock(&old_so->so_rcv, waitflags);
 #endif
 #if defined(__FreeBSD__)
-	error = sblock(&old_so->so_rcv, 0);
+	error = sblock(&old_so->so_rcv, waitflags);
 #endif
-
+#ifndef _ROBERTS_CHANGE_
 	SOCKBUF_UNLOCK(&(old_so->so_rcv));
+#endif
 	if (error) {
 		/* Gak, can't get sblock, we have a problem. 
 		 * data will be left stranded.. and we
@@ -4111,9 +4113,10 @@ sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
 		control = nctl;
 	}
 	SCTP_INP_READ_UNLOCK(old_inp);
-
 	/* Remove the sb-lock on the old socket */
+#ifndef _ROBERTS_CHANGE_
 	SOCKBUF_LOCK(&(old_so->so_rcv));
+#endif
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	sbunlock(&old_so->so_rcv, 1);
 #endif
@@ -4124,8 +4127,9 @@ sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
 #if defined(__FreeBSD__)
 	sbunlock(&old_so->so_rcv);
 #endif
+#ifndef _ROBERTS_CHANGE_
 	SOCKBUF_UNLOCK(&(old_so->so_rcv));
-
+#endif
 	/* Now we move them over to the new socket buffer */
 	control = TAILQ_FIRST(&tmp_queue);
 	SCTP_INP_READ_LOCK(new_inp);
@@ -4757,6 +4761,9 @@ sctp_sorecvmsg(struct socket *so,
 #endif
 	int slen = 0;
 	int held_length = 0;
+#ifdef _ROBERTS_CHANGE_
+	int sockbuf_lock=0;
+#endif
 
 	if (msg_flags) {
 		in_flags = *msg_flags;
@@ -4799,8 +4806,10 @@ sctp_sorecvmsg(struct socket *so,
 	sctp_misc_ints(SCTP_SORECV_ENTER,
 		       rwnd_req, in_eeor_mode, so->so_rcv.sb_cc, uio->uio_resid);
 #endif
+#ifndef _ROBERTS_CHANGE_
 	SOCKBUF_LOCK(&so->so_rcv);
 	hold_sblock = 1;
+#endif
 #ifdef SCTP_RECV_RWND_LOGGING
 	sctp_misc_ints(SCTP_SORECV_ENTERPL,
 		       rwnd_req, block_allowed, so->so_rcv.sb_cc, uio->uio_resid);
@@ -4815,15 +4824,20 @@ sctp_sorecvmsg(struct socket *so,
 
 #if defined(__FreeBSD__)
 	error = sblock(&so->so_rcv, (block_allowed ? M_WAITOK : 0));
+#ifdef _ROBERTS_CHANGE_
+	sockbuf_lock=1;
+#endif
 #endif
 	if(error) {
 		goto release_unlocked;
 	}
 restart:
+#ifndef _ROBERTS_CHANGE_
 	if(hold_sblock == 0) {
 		SOCKBUF_LOCK(&so->so_rcv);
 		hold_sblock = 1;
 	}
+#endif
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	sbunlock(&so->so_rcv, 1);
 #endif
@@ -4831,8 +4845,10 @@ restart:
 	sbunlock(&so->so_rcv);
 #endif
 
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) 
+#ifndef _ROBERTS_CHANGE_
 	sbunlock(&so->so_rcv);
+#endif
 #endif
 
  restart_nosblocks:
@@ -4941,6 +4957,10 @@ restart:
 		}
 		goto out;
 	}
+	if(hold_sblock == 1) {
+		SOCKBUF_UNLOCK(&so->so_rcv);
+		hold_sblock = 0;
+	}
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
 #endif
@@ -4948,7 +4968,9 @@ restart:
 	error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
 #endif
 #if defined(__FreeBSD__)
+#ifndef _ROBERTS_CHANGE_
 	error = sblock(&so->so_rcv, (block_allowed ? M_WAITOK : 0));
+#endif
 #endif
 	/* we possibly have data we can read */
 	control = TAILQ_FIRST(&inp->read_queue);
@@ -5664,7 +5686,6 @@ get_more_data2:
 				SCTP_INP_READ_UNLOCK(inp);
 				hold_rlock = 0;
 			}
-
 			if(hold_sblock == 0) {
 				SOCKBUF_LOCK(&so->so_rcv);
 				hold_sblock = 1;
@@ -5814,10 +5835,17 @@ release:
 		SCTP_INP_READ_UNLOCK(inp);
 		hold_rlock = 0;
 	}
+#ifndef _ROBERTS_CHANGE_
 	if(hold_sblock == 0) {
 		SOCKBUF_LOCK(&so->so_rcv);
 		hold_sblock = 1;
 	}
+#else
+	if(hold_sblock == 1) {
+		SOCKBUF_UNLOCK(&so->so_rcv);
+		hold_sblock = 0;
+	}
+#endif
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	sbunlock(&so->so_rcv, 1);
 #endif
@@ -5827,6 +5855,9 @@ release:
 
 #if defined(__FreeBSD__)
 	sbunlock(&so->so_rcv);
+#ifdef _ROBERTS_CHANGE_
+	sockbuf_lock = 0;
+#endif
 #endif
 
 release_unlocked:
@@ -5861,6 +5892,12 @@ out:
 		SOCKBUF_UNLOCK(&so->so_rcv);
 		hold_sblock = 0;
 	}
+#ifdef _ROBERTS_CHANGE_
+	if(sockbuf_lock) {
+		sbunlock(&so->so_rcv);
+	}
+#endif
+
 	if (freecnt_applied) {
 		/*
 		 * The lock on the socket buffer protects us so the free

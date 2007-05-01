@@ -11639,11 +11639,15 @@ sctp_lower_sosend(struct socket *so,
 		}
 		initial_out = uio->uio_resid;
 
+		SCTP_TCB_SEND_LOCK(stcb);
 		if ((asoc->stream_locked) &&  
 		    (asoc->stream_locked_on  != srcv->sinfo_stream)) {
+			SCTP_TCB_SEND_UNLOCK(stcb);
 			error = EAGAIN;
 			goto out;
 		}
+		SCTP_TCB_SEND_UNLOCK(stcb);
+
 		strm = &stcb->asoc.strmout[srcv->sinfo_stream];
 		user_marks_eor = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXPLICIT_EOR);
 		if(strm->last_msg_incomplete == 0) {

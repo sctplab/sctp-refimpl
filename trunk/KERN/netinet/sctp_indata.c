@@ -2013,7 +2013,7 @@ failed_express_del:
 			struct sctp_stream_reset_list *liste;
 
 			if (((liste = TAILQ_FIRST(&asoc->resetHead)) != NULL) &&
-			    ((compare_with_wrap(tsn, liste->tsn, MAX_TSN)) ||
+			    ((compare_with_wrap(tsn, ntohl(liste->tsn), MAX_TSN)) ||
 			    (tsn == ntohl(liste->tsn)))
 			    ) {
 				/*
@@ -2294,8 +2294,8 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 	}
 	/* check the special flag for stream resets */
 	if (((liste = TAILQ_FIRST(&asoc->resetHead)) != NULL) &&
-	    ((compare_with_wrap(asoc->cumulative_tsn, liste->tsn, MAX_TSN)) ||
-	    (asoc->cumulative_tsn == liste->tsn))
+	    ((compare_with_wrap(asoc->cumulative_tsn, ntohl(liste->tsn), MAX_TSN)) ||
+	    (asoc->cumulative_tsn == ntohl(liste->tsn)))
 	    ) {
 		/*
 		 * we have finished working through the backlogged TSN's now
@@ -2322,7 +2322,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 			}
 		} else if (ctl) {
 			/* more than one in queue */
-			while (!compare_with_wrap(ctl->sinfo_tsn, liste->tsn, MAX_TSN)) {
+			while (!compare_with_wrap(ctl->sinfo_tsn, ntohl(liste->tsn), MAX_TSN)) {
 				/*
 				 * if ctl->sinfo_tsn is <= liste->tsn we can
 				 * process it which is the NOT of
@@ -4133,13 +4133,32 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 	uint32_t old_rwnd;
 	int win_probe_recovery = 0;
 	int win_probe_recovered = 0;
-	int j, done_once;;
+	int j, done_once=0;
 
+	
+#ifdef SCTP_LOG_SACK_ARRIVALS
+	sctp_misc_ints(SCTP_SACK_LOG_EXPRESS, cumack,
+		       rwnd, stcb->asoc.last_acked_seq, stcb->asoc.peers_rwnd);
+#endif
 	SCTP_TCB_LOCK_ASSERT(stcb);
 	asoc = &stcb->asoc;
+	old_rwnd = asoc->peers_rwnd;
 	if(compare_with_wrap(asoc->last_acked_seq, cumack, MAX_TSN)) {
 		/* old ack */
 		return;
+	} else if (asoc->last_acked_seq == cumack) {
+		/* Window update sack */
+		asoc->peers_rwnd = sctp_sbspace_sub(rwnd,
+						    (uint32_t) (asoc->total_flight + (asoc->sent_queue_cnt * sctp_peer_chunk_oh)));
+		if (asoc->peers_rwnd < stcb->sctp_ep->sctp_ep.sctp_sws_sender) {
+			/* SWS sender side engages */
+			asoc->peers_rwnd = 0;
+		}
+		if(asoc->peers_rwnd > old_rwnd) {
+			goto again;
+		}
+		return;
+		
 	}
 
 	/* First setup for CC stuff */
@@ -4192,7 +4211,6 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 		}
 	}
 
-	old_rwnd = asoc->peers_rwnd;
 	asoc->this_sack_highest_gap = cumack;
 	stcb->asoc.overall_error_count = 0;
 	if (compare_with_wrap(cumack, asoc->last_acked_seq,  MAX_TSN)) {
@@ -4391,7 +4409,6 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 		win_probe_recovery = 1;
 	}
 	/* Now assure a timer where data is queued at */
-	done_once = 0;
  again:
 	j = 0;
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
@@ -4549,7 +4566,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 
 void
 sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
-		 struct sctp_nets *net_from, int *abort_now)
+		 struct sctp_nets *net_from, int *abort_now, int sack_len, uint32_t rwnd)
 {
 	struct sctp_association *asoc;
 	struct sctp_sack *sack;
@@ -4597,22 +4614,18 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 	/* CMT DAC algo */
 	this_sack_lowest_newack = 0;
 	j = 0;
-	sack_length = ntohs(ch->ch.chunk_length);
-	if (sack_length < sizeof(struct sctp_sack_chunk)) {
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INDATA1) {
-			printf("Bad size on sack chunk .. to small\n");
-		}
-#endif
-		return;
-	}
+	sack_length = (unsigned int)sack_len;
 	/* ECN Nonce */
 	SCTP_STAT_INCR(sctps_slowpath_sack);
 	nonce_sum_flag = ch->ch.chunk_flags & SCTP_SACK_NONCE_SUM;
 	cum_ack = last_tsn = ntohl(sack->cum_tsn_ack);
 	num_seg = ntohs(sack->num_gap_ack_blks);
-	a_rwnd = (uint32_t) ntohl(sack->a_rwnd);
+	a_rwnd = rwnd;
 
+#ifdef SCTP_LOG_SACK_ARRIVALS
+	sctp_misc_ints(SCTP_SACK_LOG_NORMAL, cum_ack,
+		       rwnd, stcb->asoc.last_acked_seq, stcb->asoc.peers_rwnd);
+#endif
 	/* CMT DAC algo */
 	cmt_dac_flag = ch->ch.chunk_flags & SCTP_SACK_CMT_DAC;
 	num_dup = ntohs(sack->num_dup_tsns);
