@@ -3903,15 +3903,15 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 
 		SCTP_CHECK_AND_CAST(sspp, optval, struct sctp_setpeerprim, optsize);
 		SCTP_FIND_STCB(inp, stcb, sspp->sspp_assoc_id);
-
-		if (stcb) {
+		if (stcb != NULL) {
 			if (sctp_set_primary_ip_address_sa(stcb, (struct sockaddr *)&sspp->sspp_addr) != 0) {
 				error = EINVAL;
 			}
+			SCTP_TCB_UNLOCK(stcb);
 		} else {
 			error = EINVAL;
 		}
-		SCTP_TCB_UNLOCK(stcb);
+
 	}
 	break;
 	case SCTP_BINDX_ADD_ADDR:
