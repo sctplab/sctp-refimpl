@@ -2247,7 +2247,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			 * another and get the tcb in the right place.
 			 */
 			sctp_move_pcb_and_assoc(*inp_p, inp, *stcb);
-			sctp_pull_off_control_to_new_inp((*inp_p), inp, *stcb);
+			sctp_pull_off_control_to_new_inp((*inp_p), inp, *stcb, M_NOWAIT);
 
 			/* now we must check to see if we were aborted while
 			 * the move was going on and the lock/unlock happened.
@@ -3936,8 +3936,15 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				uint16_t num_seg;
 				int nonce_sum_flag;
 
+				if (chk_length < sizeof(struct sctp_sack_chunk)) {
+#ifdef SCTP_DEBUG
+					if (sctp_debug_on & SCTP_DEBUG_INDATA1) {
+						printf("Bad size on sack chunk .. to small\n");
+					}
+#endif
+					break;
+				}
 				sack = (struct sctp_sack_chunk *)ch;
-
 				nonce_sum_flag = ch->chunk_flags & SCTP_SACK_NONCE_SUM;
 				cum_ack = ntohl(sack->sack.cum_tsn_ack);
 				num_seg = ntohs(sack->sack.num_gap_ack_blks);
@@ -3955,9 +3962,10 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					 * path sack processing. We also allow window update
 					 * sacks with no missing segments to go this way too.
 					 */
-					sctp_express_handle_sack(stcb, cum_ack, a_rwnd, nonce_sum_flag, &abort_now);
+					sctp_express_handle_sack(stcb, cum_ack, a_rwnd, nonce_sum_flag, 
+								 &abort_now);
 				} else {
-					sctp_handle_sack(sack, stcb, *netp, &abort_now);
+					sctp_handle_sack(sack, stcb, *netp, &abort_now, chk_length, a_rwnd);
 				}
 				if (abort_now) {
 					/* ABORT signal from sack processing */
