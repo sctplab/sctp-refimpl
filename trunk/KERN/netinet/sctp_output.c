@@ -3636,7 +3636,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			/* PMTU check versus smallest asoc MTU goes here */
 			if (ro->ro_rt != NULL) {
 				uint32_t mtu;
-				mtu = SCTP_GATHER_MTU_FROM_ROUTE(&net->ro._l_addr.sa, ro->ro_rt);
+				mtu = SCTP_GATHER_MTU_FROM_ROUTE(net->ro._s_addr, &net->ro._l_addr.sa, ro->ro_rt);
 				if (mtu &&
 				    (stcb->asoc.smallest_mtu > mtu)) {
 					sctp_mtu_size_reset(inp, &stcb->asoc, mtu);
@@ -3892,7 +3892,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			}
 			if (ro->ro_rt != NULL) {
 				uint32_t mtu;
-				mtu = SCTP_GATHER_MTU_FROM_ROUTE(&net->ro._l_addr.sa, ro->ro_rt);
+				mtu = SCTP_GATHER_MTU_FROM_ROUTE(net->ro._s_addr, &net->ro._l_addr.sa, ro->ro_rt);
 				if (mtu &&
 				    (stcb->asoc.smallest_mtu > mtu)) {
 					sctp_mtu_size_reset(inp, &stcb->asoc, mtu);

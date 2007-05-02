@@ -147,13 +147,13 @@ sctp_fill_pcbinfo(struct sctp_pcbinfo *spcb)
  */
 
 struct sctp_vrf *
-sctp_allocate_vrf(int vrfid)
+sctp_allocate_vrf(int vrf_id)
 {
 	struct sctp_vrf *vrf=NULL;
 	struct sctp_vrflist *bucket;
 
 	/* First allocate the VRF structure */
-	vrf = sctp_find_vrf(vrfid);
+	vrf = sctp_find_vrf(vrf_id);
 	if (vrf) {
 		/* Already allocated */
 		return (vrf);
@@ -163,13 +163,13 @@ sctp_allocate_vrf(int vrfid)
  	if (vrf == NULL) {
  		/* No memory */
 #ifdef INVARIANTS
-		panic("No memory for VRF:%d", vrfid);
+		panic("No memory for VRF:%d", vrf_id);
 #endif
 		return (NULL);
 	}
 	/* setup the VRF */
 	memset(vrf, 0, sizeof(struct sctp_vrf));
-	vrf->vrf_id = vrfid;
+	vrf->vrf_id = vrf_id;
 	LIST_INIT(&vrf->ifnlist);
 	vrf->total_ifa_count = 0;
 	/* Init the HASH of addresses */
@@ -178,7 +178,7 @@ sctp_allocate_vrf(int vrfid)
 	if(vrf->vrf_addr_hash == NULL) {
  		/* No memory */
 #ifdef INVARIANTS
-		panic("No memory for VRF:%d", vrfid);
+		panic("No memory for VRF:%d", vrf_id);
 #endif
 		return (NULL);
 	}
@@ -187,14 +187,14 @@ sctp_allocate_vrf(int vrfid)
 	if(vrf->vrf_ifn_hash == NULL) {
  		/* No memory */
 #ifdef INVARIANTS
-		panic("No memory for VRF:%d", vrfid);
+		panic("No memory for VRF:%d", vrf_id);
 #endif
 		return (NULL);
 	}
 
 
 	/* Add it to the hash table */
-	bucket = &sctppcbinfo.sctp_vrfhash[(vrfid & sctppcbinfo.hashvrfmark)];
+	bucket = &sctppcbinfo.sctp_vrfhash[(vrf_id & sctppcbinfo.hashvrfmark)];
 	LIST_INSERT_HEAD(bucket, vrf, next_vrf);
 	return (vrf);
 }
@@ -224,13 +224,13 @@ sctp_find_ifn(struct sctp_vrf *vrf, void *ifn, uint32_t ifn_index)
 
 
 struct sctp_vrf *
-sctp_find_vrf(uint32_t vrfid)
+sctp_find_vrf(uint32_t vrf_id)
 {
 	struct sctp_vrflist *bucket;
 	struct sctp_vrf *liste;
-	bucket = &sctppcbinfo.sctp_vrfhash[(vrfid & sctppcbinfo.hashvrfmark)];
+	bucket = &sctppcbinfo.sctp_vrfhash[(vrf_id & sctppcbinfo.hashvrfmark)];
 	LIST_FOREACH(liste, bucket, next_vrf) {
-		if(vrfid == liste->vrf_id) {
+		if(vrf_id == liste->vrf_id) {
 			return(liste);
 		}
 	}
@@ -253,6 +253,22 @@ sctp_free_ifn(struct sctp_ifn *sctp_ifnp)
 		SCTP_FREE(sctp_ifnp);
 	}
 }
+
+void
+sctp_update_ifn_mtu(uint32_t vrf_id, uint32_t ifn_index, uint32_t mtu)
+{
+	struct sctp_ifn *sctp_ifnp;
+	struct sctp_vrf *vrf;
+
+	vrf = sctp_find_vrf(vrf_id);
+	if(vrf == NULL)
+		return;
+	sctp_ifnp = sctp_find_ifn(vrf, (void *)NULL, ifn_index);
+	if(sctp_ifnp != NULL) {
+		sctp_ifnp->ifn_mtu = mtu;
+	}
+}
+
 
 void
 sctp_free_ifa(struct sctp_ifa *sctp_ifap)
@@ -284,7 +300,7 @@ sctp_delete_ifn(struct sctp_ifn *sctp_ifnp)
 
 
 struct sctp_ifa *
-sctp_add_addr_to_vrf(uint32_t vrfid, void *ifn, uint32_t ifn_index,
+sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 		     uint32_t ifn_type, const char *if_name,
 		     void *ifa, struct sockaddr *addr, uint32_t ifa_flags, int dynamic_add)
 {
@@ -297,9 +313,9 @@ sctp_add_addr_to_vrf(uint32_t vrfid, void *ifn, uint32_t ifn_index,
 
 	/* How granular do we need the locks to be here? */
 	SCTP_IPI_ADDR_LOCK();
-	vrf = sctp_find_vrf(vrfid);
+	vrf = sctp_find_vrf(vrf_id);
 	if (vrf == NULL) {
-		vrf = sctp_allocate_vrf(vrfid);
+		vrf = sctp_allocate_vrf(vrf_id);
 		if (vrf == NULL) {
 			SCTP_IPI_ADDR_UNLOCK();
 			return (NULL);
@@ -324,6 +340,7 @@ sctp_add_addr_to_vrf(uint32_t vrfid, void *ifn, uint32_t ifn_index,
 		sctp_ifnp->ifa_count = 0;
 		sctp_ifnp->refcount = 1;
 		sctp_ifnp->vrf = vrf;
+		sctp_ifnp->ifn_mtu = SCTP_GATHER_MTU_FROM_IFN_INFO(ifn, ifn_index);
 		memcpy(sctp_ifnp->ifn_name, if_name, SCTP_IFNAMSIZ);
 		hash_ifn_head = &vrf->vrf_ifn_hash[(ifn_index & vrf->vrf_ifn_hashmark)];
 		LIST_INIT(&sctp_ifnp->ifalist);
@@ -459,16 +476,16 @@ sctp_add_addr_to_vrf(uint32_t vrfid, void *ifn, uint32_t ifn_index,
 }
 
 void
-sctp_del_addr_from_vrf(uint32_t vrfid, struct sockaddr *addr,
+sctp_del_addr_from_vrf(uint32_t vrf_id, struct sockaddr *addr,
 		       uint32_t ifn_index)
 {
 	struct sctp_vrf *vrf;
 	struct sctp_ifa *sctp_ifap = NULL;
 	SCTP_IPI_ADDR_LOCK();
 
-	vrf = sctp_find_vrf(vrfid);
+	vrf = sctp_find_vrf(vrf_id);
 	if (vrf == NULL) {
-		printf("Can't find vrfid:%d\n", vrfid);
+		printf("Can't find vrf_id:%d\n", vrf_id);
 		goto out_now;
 	}
 
@@ -2171,7 +2188,7 @@ sctp_inpcb_alloc(struct socket *so)
 #ifdef SCTP_MVRF
 	inp->vrf_size = SCTP_DEFAULT_VRF_SIZE;
 	SCTP_MALLOC(inp->m_vrf_ids, uint32_t *,
-		    (sizeof(uint32_t) * inp->vrf_size), "VRFid's");
+		    (sizeof(uint32_t) * inp->vrf_size), "VRF_id's");
 	if (inp->m_vrf_ids == NULL) {
 		SCTP_HASH_FREE(inp->sctp_tcbhash, inp->sctp_hashmark);
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, inp);
@@ -3822,22 +3839,33 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 #endif /* SCTP_EMBEDDED_V6_SCOPE */
 	if ((net->ro.ro_rt) &&
 	    (net->ro.ro_rt->rt_ifp)) {
-		net->mtu = SCTP_GATHER_MTU_FROM_INTFC(net->ro.ro_rt); 
+		/* Get source address */
+		net->ro._s_addr = sctp_source_address_selection(stcb->sctp_ep,
+								stcb, 
+								(sctp_route_t *)&net->ro, 
+								net, 
+								0, 
+								stcb->asoc.vrf_id);
+		/* Now get the interface MTU */
+		if(net->ro._s_addr && net->ro._s_addr->ifn_p) {
+			net->mtu = SCTP_GATHER_MTU_FROM_INTFC(net->ro._s_addr->ifn_p); 
+		} else 
+			net->mtu = 0;
+
 		if(net->mtu == 0) {
-			/* huh */
+			/* Huh ?? */
 			net->mtu = SCTP_DEFAULT_MTU;
 		} else {
-			uint32_t imtu, rmtu;
-			imtu = SCTP_GATHER_MTU_FROM_INTFC(net->ro.ro_rt);
-			rmtu = SCTP_GATHER_MTU_FROM_ROUTE(&net->ro._l_addr.sa, net->ro.ro_rt);
-			if (imtu && (rmtu == 0)) {
+			uint32_t rmtu;
+			rmtu = SCTP_GATHER_MTU_FROM_ROUTE(net->ro._s_addr, &net->ro._l_addr.sa, net->ro.ro_rt);
+			if (rmtu == 0) {
 				/* Start things off to match mtu of interface please. */
 				SCTP_SET_MTU_OF_ROUTE(&net->ro._l_addr.sa, 
-						      net->ro.ro_rt, rmtu);
-			} else if (imtu && (rmtu > imtu)) {
+						      net->ro.ro_rt, net->mtu);
+			} else if (net->mtu < rmtu) {
 				/* Start things off to match mtu of interface please. */
 				SCTP_SET_MTU_OF_ROUTE(&net->ro._l_addr.sa, 
-						      net->ro.ro_rt, rmtu);
+						      net->ro.ro_rt, net->mtu);
 			}
 	        }
 		if (from == SCTP_ALLOC_ASOC) {
@@ -3965,7 +3993,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 #endif
 struct sctp_tcb *
 sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
-    int for_a_init, int *error, uint32_t override_tag, uint32_t vrf)
+    int for_a_init, int *error, uint32_t override_tag, uint32_t vrf_id)
 {
 	struct sctp_tcb *stcb;
 	struct sctp_association *asoc;
@@ -4072,7 +4100,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	/* setup back pointer's */
 	stcb->sctp_ep = inp;
 	stcb->sctp_socket = inp->sctp_socket;
-	if ((err = sctp_init_asoc(inp, asoc, for_a_init, override_tag, vrf))) {
+	if ((err = sctp_init_asoc(inp, asoc, for_a_init, override_tag, vrf_id))) {
 		/* failed */
 		SCTP_TCB_LOCK_DESTROY(stcb);
 		SCTP_TCB_SEND_LOCK_DESTROY(stcb);

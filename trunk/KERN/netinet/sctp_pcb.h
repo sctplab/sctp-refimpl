@@ -76,6 +76,7 @@ struct sctp_ifn {
 	LIST_ENTRY(sctp_ifn) next_ifn;
 	LIST_ENTRY(sctp_ifn) next_bucket;
 	void     *ifn_p;	/* never access without appropriate lock */
+	uint32_t ifn_mtu;
 	uint32_t ifn_type;
 	uint32_t ifn_index;	/* shorthand way to look at ifn for reference */
 	uint32_t refcount;	/* number of reference held should be >= ifa_count */
@@ -519,6 +520,8 @@ sctp_add_addr_to_vrf(uint32_t vrfid,
 		     void *ifn, uint32_t ifn_index, uint32_t ifn_type,
 		     const char *if_name,
 		     void *ifa, struct sockaddr *addr, uint32_t ifa_flags, int dynamic_add);
+
+void sctp_update_ifn_mtu(uint32_t vrf_id, uint32_t ifn_index, uint32_t mtu);
 
 void sctp_free_ifn(struct sctp_ifn *sctp_ifnp);
 void sctp_free_ifa(struct sctp_ifa *sctp_ifap);
