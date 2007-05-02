@@ -1,8 +1,6 @@
--  Somehow the disable fragment option got lost. We could
-   set/clear it but would not do it. Now we will.
--  Moved to latest socket api for extended sndrcv info struct.
--  Moved to support all new levels of fragment interleave.
--  Codenomicon security test updates.
--  Robert Watson changes (with ifdefs)
--  Bug in stream reset (2 actually).
--  setpeerprimary could unlock a null pointer, fixed.
+-  More macros for OS compatabilty
+-  PR-SCTP would ignore FWD-TSN's above a rwnd's worth
+   of TSN's (1 byte msgs).. this left the peer hopelessly
+   out of sync.. or an attacker. So now we abort the assoc.
+
+
