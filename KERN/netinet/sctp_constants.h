@@ -735,6 +735,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.12 2007/05/02 12:50:12 
 
 #define SCTP_INITIAL_CWND 4380
 
+#define SCTP_DEFAULT_MTU 1500 /* emegency default MTU */
 /* amount peer is obligated to have in rwnd or I will abort */
 #define SCTP_MIN_RWND	1500
 

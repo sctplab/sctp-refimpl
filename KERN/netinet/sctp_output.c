@@ -3386,7 +3386,6 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 	int o_flgs;
 	uint32_t csum;
 	int ret;
-	unsigned int have_mtu;
 	uint32_t vrf_id;
 	sctp_route_t *ro;
 
@@ -3408,7 +3407,6 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 	}
 	/* Calculate the csum and fill in the length of the packet */
 	sctphdr = mtod(m, struct sctphdr *);
-	have_mtu = 0;
 	if (sctp_no_csum_on_loopback &&
 	    (stcb) &&
 	    (stcb->asoc.loopback_scope)) {
@@ -3595,8 +3593,6 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			}
 			sctp_m_freem(o_pak);
 			return (EHOSTUNREACH);
-		} else {
-			have_mtu = ro->ro_rt->rt_ifp->if_mtu;
 		}
 		if(inp->sctp_socket) {
 			o_flgs = (IP_RAWOUTPUT | (inp->sctp_socket->so_options & (SO_DONTROUTE | SO_BROADCAST)));
@@ -3611,11 +3607,6 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			printf("RTP route is %p through\n", ro->ro_rt);
 		}
 #endif
-#ifdef _WHY_THIS_CODE
-		if ((have_mtu) && (net) && (have_mtu > net->mtu)) {
-			ro->ro_rt->rt_ifp->if_mtu = net->mtu;
-		}
-#endif
 		if (ro != &iproute) {
 			memcpy(&iproute, ro, sizeof(*ro));
 		}
@@ -3625,11 +3616,6 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		    ,(struct inpcb *)NULL
 #endif
 		    );
-#ifdef _WHY_THIS_CODE
-		if ((ro->ro_rt) && (have_mtu) && (net) && (have_mtu > net->mtu)) {
-			ro->ro_rt->rt_ifp->if_mtu = have_mtu;
-		}
-#endif
 		SCTP_STAT_INCR(sctps_sendpackets);
 		SCTP_STAT_INCR_COUNTER64(sctps_outpackets);
 		if(ret)
@@ -3649,10 +3635,11 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		} else {
 			/* PMTU check versus smallest asoc MTU goes here */
 			if (ro->ro_rt != NULL) {
-				if (ro->ro_rt->rt_rmx.rmx_mtu &&
-				    (stcb->asoc.smallest_mtu > ro->ro_rt->rt_rmx.rmx_mtu)) {
-					sctp_mtu_size_reset(inp, &stcb->asoc,
-					    ro->ro_rt->rt_rmx.rmx_mtu);
+				uint32_t mtu;
+				mtu = SCTP_GATHER_MTU_FROM_ROUTE(&net->ro._l_addr.sa, ro->ro_rt);
+				if (mtu &&
+				    (stcb->asoc.smallest_mtu > mtu)) {
+					sctp_mtu_size_reset(inp, &stcb->asoc, mtu);
 				}
 			} else {
 				/* route was freed */
@@ -3904,11 +3891,11 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 				net->src_addr_selected = 0;
 			}
 			if (ro->ro_rt != NULL) {
-				if (ro->ro_rt->rt_rmx.rmx_mtu &&
-				    (stcb->asoc.smallest_mtu > ro->ro_rt->rt_rmx.rmx_mtu)) {
-					sctp_mtu_size_reset(inp,
-					    &stcb->asoc,
-					    ro->ro_rt->rt_rmx.rmx_mtu);
+				uint32_t mtu;
+				mtu = SCTP_GATHER_MTU_FROM_ROUTE(&net->ro._l_addr.sa, ro->ro_rt);
+				if (mtu &&
+				    (stcb->asoc.smallest_mtu > mtu)) {
+					sctp_mtu_size_reset(inp, &stcb->asoc, mtu);
 				}
 			} else if (ifp) {
 #if (defined(SCTP_BASE_FREEBSD) &&  __FreeBSD_version < 500000) || defined(__APPLE__)
