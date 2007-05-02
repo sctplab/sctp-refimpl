@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.89 2007-04-16 23:54:19 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.90 2007-05-02 19:16:21 randall Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -43,6 +43,7 @@
 /* unsupported send flags */
 #define SCTP_PR_SCTP_TTL	0
 #define SCTP_PR_SCTP_BUF	0
+#define SCTP_PR_SCTP_RXT        0
 #define SCTP_ADDR_OVER		0
 #define SCTP_SENDALL		0
 #endif
@@ -5147,50 +5148,52 @@ cmd_setneterr(char *argv[], int argc)
 static int
 parse_send_opt(char *p)
 {
-  printf("Parsing option '%s'\n",p);
-  if(strcmp(p,"prsctp") == 0){
+	printf("Parsing option '%s'\n",p);
+	if(strcmp(p,"prsctp") == 0){
 #if !defined(__BSD_SCTP_STACK__)
-  printf("%s option: Not supported on this OS\n", p);
+		printf("%s option: Not supported on this OS\n", p);
 #endif
-    return(SCTP_PR_SCTP_TTL);
-  }else if(strcmp(p,"bufbnd") == 0){
+		return(SCTP_PR_SCTP_TTL);
+	}else if(strcmp(p,"rxt") == 0) {
+		return (SCTP_PR_SCTP_RTX);
+	}else if(strcmp(p,"bufbnd") == 0){
 #if !defined(__BSD_SCTP_STACK__)
-  printf("%s option: Not supported on this OS\n", p);
+		printf("%s option: Not supported on this OS\n", p);
 #endif
-    return(SCTP_PR_SCTP_BUF);
-  }else if(strcmp(p,"unord") == 0){
-    return(SCTP_UNORDERED);
-  }else if(strcmp(p,"over") == 0){
+		return(SCTP_PR_SCTP_BUF);
+	}else if(strcmp(p,"unord") == 0){
+		return(SCTP_UNORDERED);
+	}else if(strcmp(p,"over") == 0){
 #if !defined(__BSD_SCTP_STACK__)
-  printf("%s option: Not supported on this OS\n", p);
+		printf("%s option: Not supported on this OS\n", p);
 #endif
-    return(SCTP_ADDR_OVER);
-  }else if(strcmp(p,"abort") == 0){
+		return(SCTP_ADDR_OVER);
+	}else if(strcmp(p,"abort") == 0){
 #if !defined(__BSD_SCTP_STACK__)
-  printf("%s option: Not supported on this OS\n", p);
+		printf("%s option: Not supported on this OS\n", p);
 #endif
-    return (SCTP_ABORT);
-  }else if(strcmp(p,"eof") == 0){
+		return (SCTP_ABORT);
+	}else if(strcmp(p,"eof") == 0){
 #if !defined(__BSD_SCTP_STACK__)
-  printf("%s option: Not supported on this OS\n", p);
+		printf("%s option: Not supported on this OS\n", p);
 #endif
-    return (SCTP_EOF);
-  }else if(strcmp(p,"eeom") == 0){
+		return (SCTP_EOF);
+	}else if(strcmp(p,"eeom") == 0){
 #if !defined(__BSD_SCTP_STACK__)
-  printf("%s option: Not supported on this OS\n", p);
+		printf("%s option: Not supported on this OS\n", p);
 #endif
-    return (SCTP_EOR);
-  }else if(strcmp(p,"sendall") == 0){
+		return (SCTP_EOR);
+	}else if(strcmp(p,"sendall") == 0){
 #if !defined(__BSD_SCTP_STACK__)
-  printf("%s option: Not supported on this OS\n", p);
+		printf("%s option: Not supported on this OS\n", p);
 #endif
-    return (SCTP_SENDALL);
-  }else if(strcmp(p,"none") == 0){
-    return(0);
-  }else{
-    printf("Sorry option %s not known, value must be:\n eof|abort|eeom|prsctp|bufbnd|unord|over|none|sendall\n",p);
-  }
-  return(0);
+		return (SCTP_SENDALL);
+	}else if(strcmp(p,"none") == 0){
+		return(0);
+	}else{
+		printf("Sorry option %s not known, value must be:\n eof|abort|eeom|prsctp|bufbnd|unord|over|none|rxt|sendall\n",p);
+	}
+	return(0);
 }
 /* setopts val - set options to specified value
  */
@@ -5366,52 +5369,56 @@ cmd_setprimary(char *argv[], int argc)
 static int
 cmd_setremprimary(char *argv[], int argc)
 {
-  char *address;
-  struct addrinfo hints, *res;
-  socklen_t sa_len = 0;
-  struct sctp_setpeerprim sspp;
-  int ret;
+	char *address;
+	struct addrinfo hints, *res;
+	socklen_t sa_len = 0;
+	struct sctp_setpeerprim sspp;
+	int ret;
 
-  if (argc != 1) {
-    printf("setremprimary: expected 1 argument\n");
-    return -1;
-  }
-  address = argv[0];
+	if (argc < 1) {
+		printf("setremprimary: expected 1 argument\n");
+		return -1;
+	}
+	address = argv[0];
 
-  bzero(&hints, sizeof(hints));
-  hints.ai_flags = AI_NUMERICHOST; /* disable name resolution */
-  ret = getaddrinfo(address, NULL, &hints, &res);
-  if(ret != 0){
-    printf("setremprimary: getaddrinfo: %s\n", gai_strerror(ret));
-    return -1;
-  }
-  printf("setremprimary: setting remote primary %s\n", address);
-  memset(&sspp,0,sizeof(sspp));
-  sspp.sspp_assoc_id = get_assoc_id();
-  if(sspp.sspp_assoc_id == 0){
-    printf("Can't find association\n");
-    return(-1);
-  }
-
+	bzero(&hints, sizeof(hints));
+	hints.ai_flags = AI_NUMERICHOST; /* disable name resolution */
+	ret = getaddrinfo(address, NULL, &hints, &res);
+	if(ret != 0){
+		printf("setremprimary: getaddrinfo: %s\n", gai_strerror(ret));
+		return -1;
+	}
+	printf("setremprimary: setting remote primary %s\n", address);
+	memset(&sspp,0,sizeof(sspp));
+	if(argc > 1) {
+		sspp.sspp_assoc_id = 0;
+		printf("Giving 0 lenght to set peer primary\n");
+	} else {
+		sspp.sspp_assoc_id = get_assoc_id();
+		if(sspp.sspp_assoc_id == 0){
+			printf("Can't find association\n");
+			return(-1);
+		}
+	}
 #ifdef HAVE_SA_LEN
-  sa_len = res->ai_addr->sa_len;
+	sa_len = res->ai_addr->sa_len;
 #else
-  if (res->ai_addr->sa_family == AF_INET)
-	sa_len = sizeof(struct sockaddr_in);
-  else if (res->ai_addr->sa_family == AF_INET6)
-	sa_len = sizeof(struct sockaddr_in6);
+	if (res->ai_addr->sa_family == AF_INET)
+		sa_len = sizeof(struct sockaddr_in);
+	else if (res->ai_addr->sa_family == AF_INET6)
+		sa_len = sizeof(struct sockaddr_in6);
 #endif
-  memcpy(&sspp.sspp_addr,res->ai_addr,sa_len);
-  if(setsockopt(adap->fd,IPPROTO_SCTP,
-		SCTP_SET_PEER_PRIMARY_ADDR,&sspp,sizeof(sspp)) != 0) {
-    printf("Can't set peer primary address error:%d\n",errno);
-    return -1;
-  }else{
-    printf("Requested Peer Primary address is ");
-    SCTPPrintAnAddress((struct sockaddr *)&sspp.sspp_addr);
-  }
-  freeaddrinfo(res);
-  return(0);
+	memcpy(&sspp.sspp_addr,res->ai_addr,sa_len);
+	if(setsockopt(adap->fd,IPPROTO_SCTP,
+		      SCTP_SET_PEER_PRIMARY_ADDR,&sspp,sizeof(sspp)) != 0) {
+		printf("Can't set peer primary address error:%d\n",errno);
+		return -1;
+	}else{
+		printf("Requested Peer Primary address is ");
+		SCTPPrintAnAddress((struct sockaddr *)&sspp.sspp_addr);
+	}
+	freeaddrinfo(res);
+	return(0);
 }
 
 
