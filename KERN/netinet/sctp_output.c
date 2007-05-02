@@ -3824,10 +3824,8 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		 * We set the hop limit now since there is a good chance
 		 * that our ro pointer is now filled
 		 */
-		ip6h->ip6_hlim = in6_selecthlim((struct in6pcb *)&inp->ip_inp.inp,
-		    (ro ?
-		    (ro->ro_rt ? (ro->ro_rt->rt_ifp) : (NULL)) :
-		    (NULL)));
+		ip6h->ip6_hlim = SCTP_GET_HLIM(inp, ro);
+
 		o_flgs = 0;
 		ifp = ro->ro_rt->rt_ifp;
 #ifdef SCTP_DEBUG
