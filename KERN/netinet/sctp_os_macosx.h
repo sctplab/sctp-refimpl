@@ -318,6 +318,7 @@ struct mbuf *sctp_m_prepend_2(struct mbuf *m, int len, int how);
  * routes, output, etc.
  */
 typedef struct route	sctp_route_t;
+typedef struct rtentry	sctp_rtentry_t;
 
 struct mbuf *
 sctp_get_mbuf_for_msg(unsigned int space_needed, 

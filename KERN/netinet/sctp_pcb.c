@@ -3045,8 +3045,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 
 #ifndef __Panda__
 #if !defined(__FreeBSD__) || __FreeBSD_version < 500000
-	struct rtentry *rt;
-
+	sctp_rtentry_t *rt;
 #endif
 #endif
 
@@ -5192,7 +5191,7 @@ sctp_del_local_addr_ep(struct sctp_inpcb *inp, struct sctp_ifa *ifa)
 				if(net->ro._s_addr && 
 				   (net->ro._s_addr->ifa == laddr->ifa)) {
 					/* Yep, purge src address selected */
-					struct rtentry *rt;
+					sctp_rtentry_t *rt;
 
 					/* delete this address if cached */
 					rt = net->ro.ro_rt;

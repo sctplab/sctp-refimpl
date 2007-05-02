@@ -841,7 +841,7 @@ sctp_fill_random_store(struct sctp_pcb *m)
 	 * our counter. The result becomes our good random numbers and we
 	 * then setup to give these out. Note that we do no locking to
 	 * protect this. This is ok, since if competing folks call this we
-	 * will get more gobbled gook in the random store whic is what we
+	 * will get more gobbled gook in the random store which is what we
 	 * want. There is a danger that two guys will use the same random
 	 * numbers, but thats ok too since that is random as well :->
 	 */
