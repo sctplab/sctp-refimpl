@@ -126,7 +126,8 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.14 2007/05/02 12:50:13 rrs
 #define SCTP_SIZE_OF_VRF_HASH 3
 #define SCTP_IFNAMSIZ IFNAMSIZ
 #define SCTP_DEFAULT_VRFID 0
-#define SCTP_VRF_HASH_SIZE 16
+#define SCTP_VRF_ADDR_HASH_SIZE 16
+#define SCTP_VRF_IFN_HASH_SIZE 3
 
 
 #define SCTP_IFN_IS_IFT_LOOP(ifn) ((ifn)->ifn_type == IFT_LOOP)

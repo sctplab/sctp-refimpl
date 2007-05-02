@@ -115,7 +115,8 @@ extern struct fileops socketops;
 #define SCTP_SIZE_OF_VRF_HASH 1
 #define SCTP_IFNAMSIZ IFNAMSIZ
 #define SCTP_DEFAULT_VRFID 0
-#define SCTP_VRF_HASH_SIZE 16
+#define SCTP_VRF_ADDR_HASH_SIZE 16
+#define SCTP_VRF_IFN_HASH_SIZE 3
 
 #define SCTP_IFN_IS_IFT_LOOP(ifn) ((ifn)->ifn_type == IFT_LOOP)
 

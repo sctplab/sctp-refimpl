@@ -62,16 +62,19 @@ TAILQ_HEAD(sctp_streamhead, sctp_stream_queue_pending);
 struct sctp_vrf {
 	LIST_ENTRY (sctp_vrf) next_vrf;
 	struct sctp_ifalist *vrf_addr_hash;
+	struct sctp_ifnlist *vrf_ifn_hash;
 	struct sctp_ifnlist ifnlist;
 	uint32_t vrf_id;
 	uint32_t total_ifa_count;
-	u_long   vrf_hashmark;
+	u_long   vrf_addr_hashmark;
+	u_long   vrf_ifn_hashmark;
 };
 
 struct sctp_ifn {
 	struct sctp_ifalist ifalist;
 	struct sctp_vrf *vrf;
 	LIST_ENTRY(sctp_ifn) next_ifn;
+	LIST_ENTRY(sctp_ifn) next_bucket;
 	void     *ifn_p;	/* never access without appropriate lock */
 	uint32_t ifn_type;
 	uint32_t ifn_index;	/* shorthand way to look at ifn for reference */
@@ -110,7 +113,8 @@ struct sctp_ifa {
 	uint8_t src_is_loop;
 	uint8_t src_is_priv;
 	uint8_t src_is_glob;
-	uint8_t in_ifa_list;
+	uint8_t resv;
+
 };
 
 struct sctp_laddr {
@@ -516,12 +520,13 @@ sctp_add_addr_to_vrf(uint32_t vrfid,
 		     const char *if_name,
 		     void *ifa, struct sockaddr *addr, uint32_t ifa_flags, int dynamic_add);
 
+void sctp_free_ifn(struct sctp_ifn *sctp_ifnp);
 void sctp_free_ifa(struct sctp_ifa *sctp_ifap);
 
-void
-sctp_del_addr_from_vrf(uint32_t vrfid, struct sockaddr *addr,
-		       uint32_t ifn_index);
+void sctp_delete_ifn(struct sctp_ifn *sctp_ifnp);
 
+void sctp_del_addr_from_vrf(uint32_t vrfid, struct sockaddr *addr,
+			    uint32_t ifn_index);
 
 
 
