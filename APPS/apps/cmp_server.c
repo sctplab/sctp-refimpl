@@ -322,14 +322,10 @@ main(int argc, char **argv)
 			printf("Set tos to %x\n", req->tos_value);
 		}
 	}
-	numblk = sizetosend/blksize;
-	if((sizetosend % blksize) > 0){
-		numblk++;
-	}
-
-	printf("Client would like %u bytes in %u byte blocks %u total sends sndbuf:%d\n",
+	numblk = sizetosend;
+	numblk++;
+	printf("Client would like %u msgs of %u byte, I will send:%d (sndbuf:%d)\n",
 	       sizetosend,blksize,numblk,optval);
-
 	if(blksize > sizeof(buffer))
 		blksize = sizeof(buffer);
 	memset(buffer,0,blksize);
