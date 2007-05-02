@@ -3619,11 +3619,6 @@ sctp_set_initial_cc_param(struct sctp_tcb *stcb, struct sctp_nets *net)
 	net->ssthresh = stcb->asoc.peers_rwnd;
 }
 
-#ifdef __Panda__
-void rtalloc_it(void);
-int panda_find_mtu(struct sctp_nets *net);
-#endif
-
 int
 sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
     int set_scope, int from)

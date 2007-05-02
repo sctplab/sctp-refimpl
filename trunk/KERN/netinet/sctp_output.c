@@ -3513,6 +3513,11 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 
 		/* call the routine to select the src address */
 		if (net) {
+			if(net->ro._s_addr && (net->ro._s_addr->localifa_flags & SCTP_BEING_DELETED)) {
+				sctp_free_ifa(net->ro._s_addr);
+				net->ro._s_addr = NULL;
+				net->src_addr_selected = 0;
+			}
 			if (net->src_addr_selected == 0) {
 				/* Cache the source address */
 				net->ro._s_addr = sctp_source_address_selection(inp,stcb,
@@ -3747,6 +3752,11 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		lsa6_tmp.sin6_len = sizeof(lsa6_tmp);
 		lsa6 = &lsa6_tmp;
 		if (net) {
+			if(net->ro._s_addr && net->ro._s_addr->localifa_flags & SCTP_BEING_DELETED) {
+				sctp_free_ifa(net->ro._s_addr);
+				net->ro._s_addr = NULL;
+				net->src_addr_selected = 0;
+			}
 			if (net->src_addr_selected == 0) {
 				/* Cache the source address */
 				net->ro._s_addr = sctp_source_address_selection(inp,
@@ -4808,6 +4818,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				stc.site_scope = 1;
 				stc.local_scope = 0;
 			}
+			sctp_free_ifa(addr);
 		} else if (iph->ip_v == (IPV6_VERSION >> 4)) {
 			struct sctp_ifa *addr;
 
@@ -4896,6 +4907,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			}
 			memcpy(&stc.laddress, &addr->address.sin6.sin6_addr, sizeof(struct in6_addr));
 			stc.laddr_type = SCTP_IPV6_ADDRESS;
+			sctp_free_ifa(addr);
 		}
 	} else {
 		/* set the scope per the existing tcb */
