@@ -3820,22 +3820,32 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 #endif /* SCTP_KAME */
 	}
 #endif /* SCTP_EMBEDDED_V6_SCOPE */
-#ifndef __Panda__
 	if ((net->ro.ro_rt) &&
 	    (net->ro.ro_rt->rt_ifp)) {
-		net->mtu = net->ro.ro_rt->rt_ifp->if_mtu;
+		net->mtu = SCTP_GATHER_MTU_FROM_INTFC(net->ro.ro_rt); 
+		if(net->mtu == 0) {
+			/* huh */
+			net->mtu = SCTP_DEFAULT_MTU;
+		} else {
+			uint32_t imtu, rmtu;
+			imtu = SCTP_GATHER_MTU_FROM_INTFC(net->ro.ro_rt);
+			rmtu = SCTP_GATHER_MTU_FROM_ROUTE(&net->ro._l_addr.sa, net->ro.ro_rt);
+			if (imtu && (rmtu == 0)) {
+				/* Start things off to match mtu of interface please. */
+				SCTP_SET_MTU_OF_ROUTE(&net->ro._l_addr.sa, 
+						      net->ro.ro_rt, rmtu);
+			} else if (imtu && (rmtu > imtu)) {
+				/* Start things off to match mtu of interface please. */
+				SCTP_SET_MTU_OF_ROUTE(&net->ro._l_addr.sa, 
+						      net->ro.ro_rt, rmtu);
+			}
+	        }
 		if (from == SCTP_ALLOC_ASOC) {
 			stcb->asoc.smallest_mtu = net->mtu;
 		}
-		/* start things off to match mtu of interface please. */
-		net->ro.ro_rt->rt_rmx.rmx_mtu = net->ro.ro_rt->rt_ifp->if_mtu;
 	} else {
 		net->mtu = stcb->asoc.smallest_mtu;
 	}
-#else
-	net->mtu = panda_find_mtu(net);
-#endif
-
 	if (stcb->asoc.smallest_mtu > net->mtu) {
 		stcb->asoc.smallest_mtu = net->mtu;
 	}
