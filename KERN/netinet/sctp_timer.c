@@ -209,11 +209,6 @@ sctp_audit_retranmission_queue(struct sctp_association *asoc)
 #endif				/* SCTP_DEBUG */
 }
 
-#ifdef __Panda__
-void rtalloc_it(void);
-int panda_find_mtu(struct sctp_nets *net);
-#endif
-
 int
 sctp_threshold_management(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
     struct sctp_nets *net, uint16_t threshold)
@@ -1602,23 +1597,30 @@ sctp_pathmtu_timer(struct sctp_inpcb *inp,
 		/* nothing to do */
 		return;
 	}
-#ifndef __Panda__
-	if (net->ro.ro_rt != NULL) {
-		/*
-		 * only if we have a route and interface do we set anything.
-		 * Note we always restart the timer though just in case it
-		 * is updated (i.e. the ifp) or route/ifp is populated.
-		 */
-		if (net->ro.ro_rt->rt_ifp != NULL) {
-			if (net->ro.ro_rt->rt_ifp->if_mtu > next_mtu) {
-				/* ok it will fit out the door */
+	{	
+		uint32_t mtu;
+		if ((net->src_addr_selected == 0) ||
+		    (net->ro._s_addr == NULL) ||
+		    (net->ro._s_addr->localifa_flags & SCTP_BEING_DELETED)) {
+			if((net->ro._s_addr == NULL) && (net->ro._s_addr->localifa_flags & SCTP_BEING_DELETED)) {
+				sctp_free_ifa(net->ro._s_addr);
+				net->ro._s_addr = NULL;
+				net->src_addr_selected = 0;
+			}
+			net->ro._s_addr = sctp_source_address_selection(inp, 
+									stcb,
+									(sctp_route_t *)&net->ro, 
+									net, 0, stcb->asoc.vrf_id);
+			if(net->ro._s_addr)
+				net->src_addr_selected = 1;
+		}
+		if(net->ro._s_addr) {
+			mtu = SCTP_GATHER_MTU_FROM_ROUTE(net->ro._s_addr, &net->ro._s_addr.sa, net->ro.ro_rt);
+			if (mtu > next_mtu) {
 				net->mtu = next_mtu;
 			}
 		}
 	}
-#else
-	net->mtu = panda_find_mtu(net);
-#endif
 	/* restart the timer */
 	sctp_timer_start(SCTP_TIMER_TYPE_PATHMTURAISE, inp, stcb, net);
 }
