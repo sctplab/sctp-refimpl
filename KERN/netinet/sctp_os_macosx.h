@@ -238,9 +238,14 @@ struct mbuf *sctp_m_prepend_2(struct mbuf *m, int len, int how);
 /*************************/
 /*      MTU              */
 /*************************/
-#define SCTP_GATHER_MTU_FROM_ROUTE(sa, rt) ((rt != NULL) ? rt->rt_rmx.rmx_mtu : 0)
-#define SCTP_GATHER_MTU_FROM_INTFC(rt) (((rt != NULL) && (rt->rt_ifp != NULL)) ? rt->rt_ifp->if_mtu : 0)
-#define SCTP_SET_MTU_OF_ROUTE(sa, rt, mtu) ((rt != NULL) ? rt->rt_rmx.rmx_mtu  = mtu : mtu)
+#define SCTP_GATHER_MTU_FROM_IFN_INFO(ifn, ifn_index) ((struct ifnet *)ifn)->if_mtu
+#define SCTP_GATHER_MTU_FROM_ROUTE(sctp_ifa, sa, rt) ((rt != NULL) ? rt->rt_rmx.rmx_mtu : 0)
+#define SCTP_GATHER_MTU_FROM_INTFC(sctp_ifn) ((sctp_ifn->ifn_p != NULL) ? ((struct ifnet *)(sctp_ifn->ifn_p))->if_mtu : 0)
+#define SCTP_SET_MTU_OF_ROUTE(sa, rt, mtu) do { \
+                                              if (rt != NULL) \
+                                                 rt->rt_rmx.rmx_mtu = mtu; \
+                                           } while(0) 
+
 /*************************/
 /* These are for logging */
 /*************************/
