@@ -5646,7 +5646,7 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 	}
 	back_out_htsn = asoc->highest_tsn_inside_map;
 	if (compare_with_wrap(new_cum_tsn, asoc->highest_tsn_inside_map,
-	    MAX_TSN)) {
+			      MAX_TSN)) {
 		asoc->highest_tsn_inside_map = new_cum_tsn;
 #ifdef SCTP_MAP_LOGGING
 		sctp_log_map(0, 0, asoc->highest_tsn_inside_map, SCTP_MAP_SLIDE_RESULT);
@@ -5657,7 +5657,7 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 	 * gap
 	 */
 	if ((compare_with_wrap(new_cum_tsn, asoc->mapping_array_base_tsn,
-	    MAX_TSN)) ||
+			       MAX_TSN)) ||
 	    (new_cum_tsn == asoc->mapping_array_base_tsn)) {
 		gap = new_cum_tsn - asoc->mapping_array_base_tsn;
 	} else {
@@ -5665,23 +5665,44 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 		gap = new_cum_tsn + (MAX_TSN - asoc->mapping_array_base_tsn) + 1;
 	}
 
-	if (gap > m_size || gap < 0) {
+	if (gap > m_size) {
 		asoc->highest_tsn_inside_map = back_out_htsn;
 		if ((long)gap > sctp_sbspace(&stcb->asoc, &stcb->sctp_socket->so_rcv)) {
+			struct mbuf *oper;
 			/*
 			 * out of range (of single byte chunks in the rwnd I
-			 * give out) too questionable. better to drop it
-			 * silently
+			 * give out). This must be an attacker.
 			 */
+			*abort_flag = 1;
+			oper = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) + 3 * sizeof(uint32_t)),
+					     0, M_DONTWAIT, 1, MT_DATA);
+			if (oper) {
+				struct sctp_paramhdr *ph;
+				uint32_t *ippp;
+				SCTP_BUF_LEN(oper) = sizeof(struct sctp_paramhdr) +
+					(sizeof(uint32_t) * 3);
+				ph = mtod(oper, struct sctp_paramhdr *);
+				ph->param_type = htons(SCTP_CAUSE_PROTOCOL_VIOLATION);
+				ph->param_length = htons(SCTP_BUF_LEN(oper));
+				ippp = (uint32_t *) (ph + 1);
+				*ippp = htonl(SCTP_FROM_SCTP_INDATA+SCTP_LOC_33);
+				ippp++;
+				*ippp = asoc->highest_tsn_inside_map;
+				ippp++;
+				*ippp = new_cum_tsn;
+			}
+			stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA+SCTP_LOC_33;
+			sctp_abort_an_association(stcb->sctp_ep, stcb,
+						  SCTP_PEER_FAULTY, oper);
 			return;
 		}
 		if (asoc->highest_tsn_inside_map >
 		    asoc->mapping_array_base_tsn) {
 			gap = asoc->highest_tsn_inside_map -
-			    asoc->mapping_array_base_tsn;
+				asoc->mapping_array_base_tsn;
 		} else {
 			gap = asoc->highest_tsn_inside_map +
-			    (MAX_TSN - asoc->mapping_array_base_tsn) + 1;
+				(MAX_TSN - asoc->mapping_array_base_tsn) + 1;
 		}
 		cumack_set_flag = 1;
 	}
@@ -5734,20 +5755,20 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 		while (chk) {
 			at = TAILQ_NEXT(chk, sctp_next);
 			if (compare_with_wrap(asoc->cumulative_tsn,
-			    chk->rec.data.TSN_seq, MAX_TSN) ||
+					      chk->rec.data.TSN_seq, MAX_TSN) ||
 			    asoc->cumulative_tsn == chk->rec.data.TSN_seq) {
 				/* It needs to be tossed */
 				TAILQ_REMOVE(&asoc->reasmqueue, chk, sctp_next);
 				if (compare_with_wrap(chk->rec.data.TSN_seq,
-				    asoc->tsn_last_delivered, MAX_TSN)) {
+						      asoc->tsn_last_delivered, MAX_TSN)) {
 					asoc->tsn_last_delivered =
-					    chk->rec.data.TSN_seq;
+						chk->rec.data.TSN_seq;
 					asoc->str_of_pdapi =
-					    chk->rec.data.stream_number;
+						chk->rec.data.stream_number;
 					asoc->ssn_of_pdapi =
-					    chk->rec.data.stream_seq;
+						chk->rec.data.stream_seq;
 					asoc->fragment_flags =
-					    chk->rec.data.rcv_flags;
+						chk->rec.data.rcv_flags;
 				}
 				asoc->size_on_reasm_queue -= chk->send_size;
 				sctp_ucount_decr(asoc->cnt_on_reasm_queue);
@@ -5757,8 +5778,8 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 				if ((chk->rec.data.rcv_flags & SCTP_DATA_UNORDERED) !=
 				    SCTP_DATA_UNORDERED &&
 				    (compare_with_wrap(chk->rec.data.stream_seq,
-				    asoc->strmin[chk->rec.data.stream_number].last_sequence_delivered,
-				    MAX_SEQ))) {
+						       asoc->strmin[chk->rec.data.stream_number].last_sequence_delivered,
+						       MAX_SEQ))) {
 					/*
 					 * We must dump forward this streams
 					 * sequence number if the chunk is
@@ -5777,7 +5798,7 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 					 * around it! Maybe a notify??
 					 */
 					asoc->strmin[chk->rec.data.stream_number].last_sequence_delivered =
-					    chk->rec.data.stream_seq;
+						chk->rec.data.stream_seq;
 				}
 				if (chk->data) {
 					sctp_m_freem(chk->data);
@@ -5803,7 +5824,7 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 
 					str_seq = (asoc->str_of_pdapi << 16) | asoc->ssn_of_pdapi;
 					sctp_ulp_notify(SCTP_NOTIFY_PARTIAL_DELVIERY_INDICATION,
-					    stcb, SCTP_PARTIAL_DELIVERY_ABORTED, (void *)&str_seq);
+							stcb, SCTP_PARTIAL_DELIVERY_ABORTED, (void *)&str_seq);
 
 				}
 				break;
@@ -5816,10 +5837,10 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 		 * Ok we removed cnt_gone chunks in the PD-API queue that
 		 * were being delivered. So now we must turn off the flag.
 		 */
-					uint32_t str_seq;
+		uint32_t str_seq;
 		str_seq = (asoc->str_of_pdapi << 16) | asoc->ssn_of_pdapi;
 		sctp_ulp_notify(SCTP_NOTIFY_PARTIAL_DELVIERY_INDICATION,
-		    stcb, SCTP_PARTIAL_DELIVERY_ABORTED, (void *)&str_seq);
+				stcb, SCTP_PARTIAL_DELIVERY_ABORTED, (void *)&str_seq);
 		asoc->fragmented_delivery_inprogress = 0;
 	}
 	/*************************************************************/
@@ -5854,10 +5875,10 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 			}
 			strm = &asoc->strmin[stseq[i].stream];
 			if (compare_with_wrap(stseq[i].sequence,
-			    strm->last_sequence_delivered, MAX_SEQ)) {
+					      strm->last_sequence_delivered, MAX_SEQ)) {
 				/* Update the sequence number */
 				strm->last_sequence_delivered =
-				    stseq[i].sequence;
+					stseq[i].sequence;
 			}
 			/* now kick the stream the new way */
 			sctp_kick_prsctp_reorder_queue(stcb, strm);
