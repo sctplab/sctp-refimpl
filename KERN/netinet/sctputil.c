@@ -4060,7 +4060,7 @@ sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
 	old_so = old_inp->sctp_socket;
 	new_so = new_inp->sctp_socket;
 	TAILQ_INIT(&tmp_queue);
-#ifndef _ROBERTS_CHANGE_
+#if defined(__FreeBSD__) && __FreeBSD_version < 700000
 	SOCKBUF_LOCK(&(old_so->so_rcv));
 #endif
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
@@ -4072,7 +4072,7 @@ sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
 #if defined(__FreeBSD__)
 	error = sblock(&old_so->so_rcv, waitflags);
 #endif
-#ifndef _ROBERTS_CHANGE_
+#if defined(__FreeBSD__) && __FreeBSD_version < 700000
 	SOCKBUF_UNLOCK(&(old_so->so_rcv));
 #endif
 	if (error) {
@@ -4114,7 +4114,7 @@ sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
 	}
 	SCTP_INP_READ_UNLOCK(old_inp);
 	/* Remove the sb-lock on the old socket */
-#ifndef _ROBERTS_CHANGE_
+#if defined(__FreeBSD__) && __FreeBSD_version < 700000
 	SOCKBUF_LOCK(&(old_so->so_rcv));
 #endif
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
@@ -4127,7 +4127,7 @@ sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
 #if defined(__FreeBSD__)
 	sbunlock(&old_so->so_rcv);
 #endif
-#ifndef _ROBERTS_CHANGE_
+#if defined(__FreeBSD__) && __FreeBSD_version < 700000
 	SOCKBUF_UNLOCK(&(old_so->so_rcv));
 #endif
 	/* Now we move them over to the new socket buffer */
@@ -4571,11 +4571,11 @@ sctp_find_ifa_by_addr(struct sockaddr *addr, uint32_t vrf_id, int holds_lock)
 
 	hash_of_addr = sctp_get_ifa_hash_val(addr);
 
-	hash_head = &vrf->vrf_addr_hash[(hash_of_addr & vrf->vrf_hashmark)];
+	hash_head = &vrf->vrf_addr_hash[(hash_of_addr & vrf->vrf_addr_hashmark)];
 	if (hash_head == NULL) {
 		printf("hash_of_addr:%x mask:%x table:%x - ",
-		       (u_int)hash_of_addr, (u_int)vrf->vrf_hashmark,
-		       (u_int)(hash_of_addr & vrf->vrf_hashmark));
+		       (u_int)hash_of_addr, (u_int)vrf->vrf_addr_hashmark,
+		       (u_int)(hash_of_addr & vrf->vrf_addr_hashmark));
 		sctp_print_address(addr);
 		printf("No such bucket for address\n");
 		if (holds_lock == 0)
@@ -4761,7 +4761,7 @@ sctp_sorecvmsg(struct socket *so,
 #endif
 	int slen = 0;
 	int held_length = 0;
-#ifdef _ROBERTS_CHANGE_
+#if defined(__FreeBSD__) && __FreeBSD_version >= 700000
 	int sockbuf_lock=0;
 #endif
 
@@ -4806,7 +4806,7 @@ sctp_sorecvmsg(struct socket *so,
 	sctp_misc_ints(SCTP_SORECV_ENTER,
 		       rwnd_req, in_eeor_mode, so->so_rcv.sb_cc, uio->uio_resid);
 #endif
-#ifndef _ROBERTS_CHANGE_
+#if defined(__FreeBSD__) && __FreeBSD_version < 700000
 	SOCKBUF_LOCK(&so->so_rcv);
 	hold_sblock = 1;
 #endif
@@ -4824,7 +4824,7 @@ sctp_sorecvmsg(struct socket *so,
 
 #if defined(__FreeBSD__)
 	error = sblock(&so->so_rcv, (block_allowed ? M_WAITOK : 0));
-#ifdef _ROBERTS_CHANGE_
+#if defined(__FreeBSD__) && __FreeBSD_version >= 700000
 	sockbuf_lock=1;
 #endif
 #endif
@@ -4832,7 +4832,7 @@ sctp_sorecvmsg(struct socket *so,
 		goto release_unlocked;
 	}
 restart:
-#ifndef _ROBERTS_CHANGE_
+#if defined(__FreeBSD__) && __FreeBSD_version < 700000
 	if(hold_sblock == 0) {
 		SOCKBUF_LOCK(&so->so_rcv);
 		hold_sblock = 1;
@@ -4845,10 +4845,8 @@ restart:
 	sbunlock(&so->so_rcv);
 #endif
 
-#if defined(__FreeBSD__) 
-#ifndef _ROBERTS_CHANGE_
+#if defined(__FreeBSD__) && __FreeBSD_version < 700000
 	sbunlock(&so->so_rcv);
-#endif
 #endif
 
  restart_nosblocks:
@@ -4967,10 +4965,8 @@ restart:
 #if defined(__NetBSD__)
 	error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
 #endif
-#if defined(__FreeBSD__)
-#ifndef _ROBERTS_CHANGE_
+#if defined(__FreeBSD__) && __FreeBSD_version < 700000
 	error = sblock(&so->so_rcv, (block_allowed ? M_WAITOK : 0));
-#endif
 #endif
 	/* we possibly have data we can read */
 	control = TAILQ_FIRST(&inp->read_queue);
@@ -5835,7 +5831,7 @@ release:
 		SCTP_INP_READ_UNLOCK(inp);
 		hold_rlock = 0;
 	}
-#ifndef _ROBERTS_CHANGE_
+#if defined(__FreeBSD__) && __FreeBSD_version < 700000
 	if(hold_sblock == 0) {
 		SOCKBUF_LOCK(&so->so_rcv);
 		hold_sblock = 1;
@@ -5855,7 +5851,7 @@ release:
 
 #if defined(__FreeBSD__)
 	sbunlock(&so->so_rcv);
-#ifdef _ROBERTS_CHANGE_
+#if defined(__FreeBSD__) && __FreeBSD_version >= 700000
 	sockbuf_lock = 0;
 #endif
 #endif
@@ -5892,7 +5888,7 @@ out:
 		SOCKBUF_UNLOCK(&so->so_rcv);
 		hold_sblock = 0;
 	}
-#ifdef _ROBERTS_CHANGE_
+#if defined(__FreeBSD__) && __FreeBSD_version >= 700000
 	if(sockbuf_lock) {
 		sbunlock(&so->so_rcv);
 	}
