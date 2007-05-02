@@ -158,6 +158,12 @@ struct sctp_asconf_iterator {
 };
 
 
+struct sctp_net_route {
+    sctp_rtentry_t *ro_rt;
+    union sctp_sockstore _l_addr;	/* remote peer addr */
+    struct sctp_ifa *_s_addr;		/* our selected src addr */
+};
+
 struct sctp_nets {
 	TAILQ_ENTRY(sctp_nets) sctp_next;	/* next link */
 
@@ -171,11 +177,8 @@ struct sctp_nets {
 	 * The following two in combination equate to a route entry for v6
 	 * or v4.
 	 */
-	struct sctp_route {
-		struct rtentry *ro_rt;
-		union sctp_sockstore _l_addr;	/* remote peer addr */
-		struct sctp_ifa *_s_addr;	/* our selected src addr */
-	}ro;
+	struct sctp_net_route ro;
+
 	/* mtu discovered so far */
 	uint32_t mtu;
 	uint32_t ssthresh;	/* not sure about this one for split */

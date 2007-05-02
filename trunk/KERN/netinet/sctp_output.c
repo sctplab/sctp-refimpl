@@ -3380,15 +3380,13 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 #else
 	struct mbuf *o_pak;
 #endif
-
 	struct sctphdr *sctphdr;
 	int packet_length;
-	int o_flgs;
+	int o_flgs = 0;
 	uint32_t csum;
 	int ret;
 	uint32_t vrf_id;
-	sctp_route_t *ro;
-
+	sctp_route_t *ro = NULL;
 
 	if ((net) && (net->dest_state & SCTP_ADDR_OUT_OF_SCOPE)) {
 		sctp_m_freem(m);
@@ -3673,9 +3671,11 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		uint16_t flowBottom;
 		u_char tosBottom, tosTop;
 		struct sockaddr_in6 *sin6, tmp, *lsa6, lsa6_tmp;
-		struct sockaddr_in6 lsa6_storage;
 		int prev_scope = 0;
+#ifdef SCTP_EMBEDDED_V6_SCOPE
+		struct sockaddr_in6 lsa6_storage;
 		int error;
+#endif
 		u_short prev_port = 0;
 
 		if (net != NULL) {
@@ -4821,12 +4821,12 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			sctp_free_ifa(addr);
 		} else if (iph->ip_v == (IPV6_VERSION >> 4)) {
 			struct sctp_ifa *addr;
-
 #ifdef NEW_STRUCT_ROUTE
 			sctp_route_t iproute6;
 #else
 			struct route_in6 iproute6;
 #endif
+
 			ip6 = mtod(init_pkt, struct ip6_hdr *);
 			sin6->sin6_family = AF_INET6;
 			sin6->sin6_len = sizeof(struct sockaddr_in6);
@@ -7080,6 +7080,7 @@ again_one_more_time:
 		} else {
 			skip_data_for_this_net = 0;
 		}
+#if !defined(__Panda__)
 		if ((net->ro.ro_rt) && (net->ro.ro_rt->rt_ifp)) {
 			/*
 			 * if we have a route and an ifp check to see if we
@@ -7096,6 +7097,7 @@ again_one_more_time:
 				continue;
 			}
 		}
+#endif
 		if (((struct sockaddr *)&net->ro._l_addr)->sa_family == AF_INET) {
 			mtu = net->mtu - (sizeof(struct ip) + sizeof(struct sctphdr));
 		} else {
@@ -11007,8 +11009,9 @@ sctp_lower_sosend(struct socket *so,
 #endif
     int flags,
     int use_rcvinfo,
-    struct sctp_sndrcvinfo *srcv,
+    struct sctp_sndrcvinfo *srcv
 #ifndef __Panda__
+    ,
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
     struct thread *p
 #else
