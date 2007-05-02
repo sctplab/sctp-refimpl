@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.19 2007/04/22 11:06:27 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.20 2007/05/02 12:50:13 rrs Exp $");
 #endif
 #include <netinet/sctp_os.h>
 #ifdef __FreeBSD__
@@ -4435,6 +4435,7 @@ sctp_listen(struct socket *so, struct proc *p)
 	error = solisten_proto_check(so);
 	if (error) {
 		SOCK_UNLOCK(so);
+		SCTP_INP_RUNLOCK(inp);
 		return (error);
 	}
 #endif
@@ -4461,6 +4462,13 @@ sctp_listen(struct socket *so, struct proc *p)
 		}
 		SOCK_LOCK(so);
 	} else {
+#if defined(__FreeBSD__) && __FreeBSD_version > 700000
+		if(backlog != 0) {
+			inp->sctp_flags |= SCTP_PCB_FLAGS_LISTENING;
+		} else {
+			inp->sctp_flags &= ~SCTP_PCB_FLAGS_LISTENING;
+		}
+#endif
 		SCTP_INP_RUNLOCK(inp);
 	}
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
@@ -4473,7 +4481,6 @@ sctp_listen(struct socket *so, struct proc *p)
 	}
 #endif
 #endif
-
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE) {
 		/* remove the ACCEPTCONN flag for one-to-many sockets */
 		so->so_options &= ~SO_ACCEPTCONN;
