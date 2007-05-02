@@ -852,6 +852,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.12 2007/05/02 12:50:12 
 #define SCTP_LOC_30 0x0000001e
 #define SCTP_LOC_31 0x0000001f
 #define SCTP_LOC_32 0x00000020
+#define SCTP_LOC_33 0x00000021
 
 
 /* Free assoc codes */
