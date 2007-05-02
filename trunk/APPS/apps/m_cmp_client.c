@@ -562,19 +562,19 @@ measure_one(struct control_info *req,
 	while(sz > cnt){
 #ifdef WIN32
 		/* win32 doesn't to recvmsg() unless under XP */
-		ret = recv(fd, buffer, blksize, 0);
+		ret += recv(fd, buffer, blksize, 0);
 		if (ret <= 0)
 			goto exit_now;
 #else
 		if(protocol_touse == IPPROTO_SCTP) {
 			flen = 0;
 			msg.msg_flags = 0;
-			ret = sctp_recvmsg (fd, buffer, sizeof(buffer), 	
+			ret += sctp_recvmsg (fd, buffer, sizeof(buffer), 	
 					    (struct sockaddr *)NULL,
 					    &flen, NULL, &msg.msg_flags);
 		}
 		else
-			ret = recvmsg(fd,&msg,0);
+			ret += recvmsg(fd,&msg,0);
 		if(ret <= 0){
 			goto exit_now;
 		}
@@ -597,7 +597,12 @@ measure_one(struct control_info *req,
 			continue;
 		}
 #endif /* WIN32 */
-		cnt += ret;
+		if(ret >= blksize) {
+			while(ret > blksize) {
+				cnt++;
+				ret -= blksize;
+			}
+		}
 	}
 	gettimeofday(end, NULL);
 	close(fd);

@@ -165,10 +165,14 @@ static char *from_str[]= {
 	/* 111 */ "flight log down t3",
 	/* 112 */ "flight log down wp",
 	/* 113 */ "flight up revoke",
-	/* 114 */ "max"
+	/* 114 */ "flight down pdrp",
+	/* 115 */ "flight down pmtu",
+	/* 116 */ "log sack normal",
+	/* 117 */ "log sack express",
+	/* 118 */ "max"
 };
 
-#define FROM_STRING_MAX 114
+#define FROM_STRING_MAX 118
 
 int graph_mode = 0;
 int comma_sep = 0;
@@ -808,6 +812,21 @@ main(int argc, char **argv)
 				       log.x.misc.log4,
 				       (log.x.misc.log1 + log.x.misc.log2)
 					);
+			} else if ((log.from == SCTP_SACK_LOG_NORMAL) ||
+				   (log.from == SCTP_SACK_LOG_EXPRESS)) {
+				char c;
+				if (log.from == SCTP_SACK_LOG_EXPRESS)
+					c = 'E';
+				else
+					c = 'N';
+				printf("%s new-cum:%u new-rwnd:%d last-cum:%u last-arwnd:%d(%c)\n",
+				       ts,
+				       log.x.misc.log1,
+				       log.x.misc.log2,
+				       log.x.misc.log3,
+				       log.x.misc.log4,
+				       c
+				       );
 			} else if ((log.from == SCTP_FLIGHT_LOG_DOWN_CA) ||
 				   (log.from == SCTP_FLIGHT_LOG_DOWN_GAP) ||
 				   (log.from == SCTP_FLIGHT_LOG_DOWN_RSND_TO) ||
