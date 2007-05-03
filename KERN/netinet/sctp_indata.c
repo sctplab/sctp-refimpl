@@ -1452,6 +1452,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	int ordered;
 	uint32_t protocol_id;
 	uint8_t chunk_flags;
+	struct sctp_stream_reset_list *liste;
 
 	chk = NULL;
 	tsn = ntohl(ch->dp.tsn);
@@ -2097,6 +2098,58 @@ finish_express_del:
 	    asoc->highest_tsn_inside_map, SCTP_MAP_PREPARE_SLIDE);
 #endif
 	SCTP_SET_TSN_PRESENT(asoc->mapping_array, gap);
+	/* check the special flag for stream resets */
+	if (((liste = TAILQ_FIRST(&asoc->resetHead)) != NULL) &&
+	    ((compare_with_wrap(asoc->cumulative_tsn, ntohl(liste->tsn), MAX_TSN)) ||
+	    (asoc->cumulative_tsn == ntohl(liste->tsn)))
+	    ) {
+		/*
+		 * we have finished working through the backlogged TSN's now
+		 * time to reset streams. 1: call reset function. 2: free
+		 * pending_reply space 3: distribute any chunks in
+		 * pending_reply_queue.
+		 */
+		struct sctp_queued_to_read *ctl;
+
+		sctp_reset_in_stream(stcb, liste->number_entries, liste->req.list_of_streams);
+		TAILQ_REMOVE(&asoc->resetHead, liste, next_resp);
+		SCTP_FREE(liste);
+		liste = TAILQ_FIRST(&asoc->resetHead);
+		ctl = TAILQ_FIRST(&asoc->pending_reply_queue);
+		if (ctl && (liste == NULL)) {
+			/* All can be removed */
+			while (ctl) {
+				TAILQ_REMOVE(&asoc->pending_reply_queue, ctl, next);
+				sctp_queue_data_to_stream(stcb, asoc, ctl, abort_flag);
+				if (*abort_flag) {
+					return(0);
+				}
+				ctl = TAILQ_FIRST(&asoc->pending_reply_queue);
+			}
+		} else if (ctl) {
+			/* more than one in queue */
+			while (!compare_with_wrap(ctl->sinfo_tsn, ntohl(liste->tsn), MAX_TSN)) {
+				/*
+				 * if ctl->sinfo_tsn is <= liste->tsn we can
+				 * process it which is the NOT of
+				 * ctl->sinfo_tsn > liste->tsn
+				 */
+				TAILQ_REMOVE(&asoc->pending_reply_queue, ctl, next);
+				sctp_queue_data_to_stream(stcb, asoc, ctl, abort_flag);
+				if (*abort_flag) {
+					return(0);
+				}
+				ctl = TAILQ_FIRST(&asoc->pending_reply_queue);
+			}
+		}
+		/*
+		 * Now service re-assembly to pick up anything that has been
+		 * held on reassembly queue?
+		 */
+		sctp_deliver_reasm_check(stcb, asoc);
+		need_reasm_check = 0;
+	}
+
 	if (need_reasm_check) {
 		/* Another one waits ? */
 		sctp_deliver_reasm_check(stcb, asoc);
@@ -2157,7 +2210,6 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 	unsigned char aux_array[64];
 
 #endif
-	struct sctp_stream_reset_list *liste;
 
 	asoc = &stcb->asoc;
 	at = 0;
@@ -2291,56 +2343,6 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 			    SCTP_MAP_SLIDE_RESULT);
 #endif
 		}
-	}
-	/* check the special flag for stream resets */
-	if (((liste = TAILQ_FIRST(&asoc->resetHead)) != NULL) &&
-	    ((compare_with_wrap(asoc->cumulative_tsn, ntohl(liste->tsn), MAX_TSN)) ||
-	    (asoc->cumulative_tsn == ntohl(liste->tsn)))
-	    ) {
-		/*
-		 * we have finished working through the backlogged TSN's now
-		 * time to reset streams. 1: call reset function. 2: free
-		 * pending_reply space 3: distribute any chunks in
-		 * pending_reply_queue.
-		 */
-		struct sctp_queued_to_read *ctl;
-
-		sctp_reset_in_stream(stcb, liste->number_entries, liste->req.list_of_streams);
-		TAILQ_REMOVE(&asoc->resetHead, liste, next_resp);
-		SCTP_FREE(liste);
-		liste = TAILQ_FIRST(&asoc->resetHead);
-		ctl = TAILQ_FIRST(&asoc->pending_reply_queue);
-		if (ctl && (liste == NULL)) {
-			/* All can be removed */
-			while (ctl) {
-				TAILQ_REMOVE(&asoc->pending_reply_queue, ctl, next);
-				sctp_queue_data_to_stream(stcb, asoc, ctl, abort_flag);
-				if (*abort_flag) {
-					return;
-				}
-				ctl = TAILQ_FIRST(&asoc->pending_reply_queue);
-			}
-		} else if (ctl) {
-			/* more than one in queue */
-			while (!compare_with_wrap(ctl->sinfo_tsn, ntohl(liste->tsn), MAX_TSN)) {
-				/*
-				 * if ctl->sinfo_tsn is <= liste->tsn we can
-				 * process it which is the NOT of
-				 * ctl->sinfo_tsn > liste->tsn
-				 */
-				TAILQ_REMOVE(&asoc->pending_reply_queue, ctl, next);
-				sctp_queue_data_to_stream(stcb, asoc, ctl, abort_flag);
-				if (*abort_flag) {
-					return;
-				}
-				ctl = TAILQ_FIRST(&asoc->pending_reply_queue);
-			}
-		}
-		/*
-		 * Now service re-assembly to pick up anything that has been
-		 * held on reassembly queue?
-		 */
-		sctp_deliver_reasm_check(stcb, asoc);
 	}
 	/*
 	 * Now we need to see if we need to queue a sack or just start the
