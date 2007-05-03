@@ -3590,7 +3590,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 					}
 				}
 			}
-			sctp_m_freem(o_pak);
+			SCTP_RELEASE_PAK(o_pak);
 			return (EHOSTUNREACH);
 		}
 		if(inp->sctp_socket) {
@@ -3900,7 +3900,9 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 				    (stcb->asoc.smallest_mtu > mtu)) {
 					sctp_mtu_size_reset(inp, &stcb->asoc, mtu);
 				}
-			} else if (ifp) {
+			}
+#if !defined(__Panda__)
+			else if (ifp) {
 #if (defined(SCTP_BASE_FREEBSD) &&  __FreeBSD_version < 500000) || defined(__APPLE__)
 #define ND_IFINFO(ifp) (&nd_ifinfo[ifp->if_index])
 #endif				/* SCTP_BASE_FREEBSD */
@@ -3911,6 +3913,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 					    ND_IFINFO(ifp)->linkmtu);
 				}
 			}
+#endif
 		}
 		return (ret);
 	}
@@ -8886,10 +8889,17 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 int
 sctp_output(inp, m, addr, control, p, flags)
 	struct sctp_inpcb *inp;
+#if defined(__Panda__)
+	pakhandle_type m;
+#else
 	struct mbuf *m;
+#endif
 	struct sockaddr *addr;
+#if defined(__Panda__)
+	pakhandle_type control;
+#else
 	struct mbuf *control;
-
+#endif
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 	struct thread *p;
 #else
@@ -8897,19 +8907,19 @@ sctp_output(inp, m, addr, control, p, flags)
 #endif
 	int flags;
 {
-	if(inp == NULL) {
-		return(EINVAL);
+	if (inp == NULL) {
+		return (EINVAL);
 	}
 
-	if(inp->sctp_socket == NULL) {
-		return(EINVAL);
+	if (inp->sctp_socket == NULL) {
+		return (EINVAL);
 	}
-	return(sctp_sosend(inp->sctp_socket,
+	return (sctp_sosend(inp->sctp_socket,
 		    addr,
 		    (struct uio *)NULL,
 		    m,
 		    control,
-#if defined(__APPLE__) || defined(__NetBSD__)
+#if defined(__APPLE__) || defined(__NetBSD__) || defined(__Panda__)
 		    flags));
 #else
 		    flags,
@@ -10420,7 +10430,7 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 		}
 		abm->msg.ch.chunk_length = htons(sizeof(abm->msg.ch) + err_len);
 	} else {
-		SCTP_HEADER_LEN(mout) = SCTP_BUF_LEN(mout);
+		SCTP_HEADER_LEN(o_pak) = SCTP_BUF_LEN(mout);
 		abm->msg.ch.chunk_length = htons(sizeof(abm->msg.ch));
 	}
 
@@ -10899,8 +10909,6 @@ out_now:
 #endif
 	return (sp);
 }
-
-
 
 
 int

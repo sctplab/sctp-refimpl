@@ -118,12 +118,21 @@ void sctp_fix_ecn_echo(struct sctp_association *);
 int
 sctp_output(struct sctp_inpcb *, struct mbuf *, struct sockaddr *,
     struct mbuf *, struct thread *, int);
-
 #else
 int
-sctp_output(struct sctp_inpcb *, struct mbuf *, struct sockaddr *,
-    struct mbuf *, struct proc *, int);
-
+sctp_output(struct sctp_inpcb *,
+#if defined(__Panda__)
+    pakhandle_type,
+#else
+    struct mbuf *,
+#endif
+    struct sockaddr *,
+#if defined(__Panda__)
+    pakhandle_type,
+#else
+    struct mbuf *,
+#endif
+    struct proc *, int);
 #endif
 
 void

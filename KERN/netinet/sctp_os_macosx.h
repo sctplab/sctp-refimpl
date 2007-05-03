@@ -221,7 +221,6 @@ extern void *sctp_calloutq_mtx;
 #define SCTP_TIMERQ_LOCK_DESTROY() lck_rw_free(sctp_calloutq_mtx, SCTP_MTX_GRP)
 #endif
 
-
 /* Mbuf manipulation and access macros  */
 #define SCTP_BUF_LEN(m) (m->m_len)
 #define SCTP_BUF_NEXT(m) (m->m_next)
@@ -265,9 +264,11 @@ struct mbuf *sctp_m_prepend_2(struct mbuf *m, int len, int how);
  * chain pointers.. thus the macro.
  */
 #define SCTP_HEADER_TO_CHAIN(m) (m)
+#define SCTP_DETACH_HEADER_FROM_CHAIN(m)
 #define SCTP_HEADER_LEN(m) (m->m_pkthdr.len)
 #define SCTP_GET_HEADER_FOR_OUTPUT(len) sctp_get_mbuf_for_msg(len, 1, M_DONTWAIT, 1, MT_DATA)
-#define SCTP_RELEASE_PAK(i_pak)
+#define SCTP_RELEASE_HEADER(m)
+#define SCTP_RELEASE_PAK(m)	sctp_m_freem(m)
 
 
 /* Attach the chain of data into the sendable packet. */

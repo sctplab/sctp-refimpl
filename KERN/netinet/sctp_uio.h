@@ -978,9 +978,13 @@ int
 sctp_lower_sosend(struct socket *so,
     struct sockaddr *addr,
     struct uio *uio,
-
-    struct mbuf *top,
+#ifdef __Panda__
+    pakhandle_type i_pak,
+    pakhandle_type i_control,
+#else
+    struct mbuf *i_pak,
     struct mbuf *control,
+#endif
     int flags,
     int use_rcvinfo,
     struct sctp_sndrcvinfo *srcv
