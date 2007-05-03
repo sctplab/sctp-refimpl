@@ -606,6 +606,7 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 			continue;
 		}
 		if (lport != inp->sctp_lport) {
+			SCTP_INP_RUNLOCK(inp);
 			continue;
 		}
 #ifdef SCTP_MVRF
