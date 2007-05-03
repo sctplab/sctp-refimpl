@@ -5730,6 +5730,10 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 					/* Skip multi-cast addresses */
 					goto next_param;
 				}
+				if ((sin.sin_addr.s_addr == INADDR_BROADCAST) ||
+				    (sin.sin_addr.s_addr == INADDR_ANY)) {
+					goto next_param;
+				}
 				sa = (struct sockaddr *)&sin;
 				inp = stcb->sctp_ep;
 				atomic_add_int(&stcb->asoc.refcnt, 1);

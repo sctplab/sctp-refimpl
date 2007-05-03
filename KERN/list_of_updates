@@ -2,5 +2,6 @@
 -  PR-SCTP would ignore FWD-TSN's above a rwnd's worth
    of TSN's (1 byte msgs).. this left the peer hopelessly
    out of sync.. or an attacker. So now we abort the assoc.
-
+-  New IFN hash, also rename hashes to match addr/ifn now
+   that the vrf has multiple.
 
