@@ -281,9 +281,11 @@ typedef struct callout sctp_os_timer_t;
  * chain pointers.. thus the macro.
  */
 #define SCTP_HEADER_TO_CHAIN(m) (m)
+#define SCTP_DETACH_HEADER_FROM_CHAIN(m)
 #define SCTP_HEADER_LEN(m) (m->m_pkthdr.len)
 #define SCTP_GET_HEADER_FOR_OUTPUT(len) sctp_get_mbuf_for_msg(len, 1, M_DONTWAIT, 1, MT_DATA)
-#define SCTP_RELEASE_PAK(i_pak)
+#define SCTP_RELEASE_HEADER(m)
+#define SCTP_RELEASE_PAK(m)	sctp_m_freem(m)
 
 /* Attach the chain of data into the sendable packet. */
 #define SCTP_ATTACH_CHAIN(pak, m, packet_length) do { \

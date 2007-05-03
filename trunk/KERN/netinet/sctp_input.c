@@ -5212,6 +5212,7 @@ bad:
 		sctp_m_freem(m);
 	}
 	/* For BSD/MAC this does nothing */
-	SCTP_RELEASE_PAK(i_pak);
+	SCTP_DETACH_HEADER_FROM_CHAIN(i_pak);
+	SCTP_RELEASE_HEADER(i_pak);
 	return;
 }

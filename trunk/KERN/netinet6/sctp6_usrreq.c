@@ -120,11 +120,9 @@ in6_sin6_2_sin_in_sock(struct sockaddr *nam)
 
 int
 #if defined(__APPLE__)
-sctp6_input(mp, offp)
-	struct mbuf **mp;
-	int *offp;
+sctp6_input(struct mbuf **i_pak, int *offp)
 #elif defined( __Panda__)
-sctp6_input(pakhandle_type i_pak)
+sctp6_input(pakhandle_type *i_pak)
 #else
 sctp6_input(i_pak, offp, proto)
 	struct mbuf **i_pak;
@@ -154,27 +152,21 @@ sctp6_input(i_pak, offp, proto)
 	int s;
 #endif
 #ifdef __Panda__
-	res = pak_client_get_offset(i_pak, PAK_OFF_NETWORK_ST, &off_p);
+	res = pak_client_get_offset(*i_pak, PAK_OFF_NETWORK_ST, &off_p);
 	if (CERR_IS_NOTOK(res)) {
-		(void) pak_client_return_buffer(i_pak);
+		SCTP_RELEASE_PAK(*i_pak);
 		return(-1);
 	}
 	off = (int)off_p;
-	error = pak_client_get_vrf_id(i_pak, &vrf_id);
+	error = pak_client_get_vrf_id(*i_pak, &vrf_id);
 	if (error != EOK) {
-		(void) pak_client_return_buffer(i_pak);
+		SCTP_RELEASE_PAK(*i_pak);
 		return(-1);
 	}
-	m = SCTP_HEADER_TO_CHAIN(i_pak);
 #else
 	vrf_id = SCTP_DEFAULT_VRFID;
-#if defined(__APPLE__)
-	m = SCTP_HEADER_TO_CHAIN(*mp);
-#else
+#endif
 	m = SCTP_HEADER_TO_CHAIN(*i_pak);
-#endif
-#endif
-
 
 	ip6 = mtod(m, struct ip6_hdr *);
 	/* Ensure that (sctphdr + sctp_chunkhdr) in a row. */
@@ -214,16 +206,7 @@ sctp6_input(i_pak, offp, proto)
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
 		printf("V6 input gets a packet iphlen:%d pktlen:%d\n", iphlen, 
-#ifdef __Panda__
-		       SCTP_HEADER_LEN((i_pak))
-#else
-#if defined(__APPLE__)
-		       SCTP_HEADER_LEN((*mp))
-#else
-		       SCTP_HEADER_LEN((*i_pak))
-#endif
-#endif
-			);
+		       SCTP_HEADER_LEN((*i_pak)));
 	}
 #endif
 	if (IN6_IS_ADDR_MULTICAST(&ip6->ip6_dst)) {
@@ -444,7 +427,8 @@ bad:
 	if (m)
 		m_freem(m);
 	/* For BSD/MAC this does nothing */
-	SCTP_RELEASE_PAK(*i_pak);
+	SCTP_DETACH_HEADER_FROM_CHAIN(*i_pak);
+	SCTP_RELEASE_HEADER(*i_pak);
 	return IPPROTO_DONE;
 }
 
