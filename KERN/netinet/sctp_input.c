@@ -2247,20 +2247,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			 * another and get the tcb in the right place.
 			 */
 			sctp_move_pcb_and_assoc(*inp_p, inp, *stcb);
-			if (mtx_owned(&inp->inp_mtx)) {
-				panic("Leaving with hanging lock (inp)-sonew?");
-			}
-			if (mtx_owned(&((*inp_p)->inp_mtx))) {
-				panic("Leaving with hanging lock (inp_p)-sonew?");
-			}
-
 			sctp_pull_off_control_to_new_inp((*inp_p), inp, *stcb, M_NOWAIT);
-			if (mtx_owned(&inp->inp_mtx)) {
-				panic("Leaving with hanging lock (inp)-sonew?2");
-			}
-			if (mtx_owned(&((*inp_p)->inp_mtx))) {
-				panic("Leaving with hanging lock (inp_p)-sonew?2");
-			}
 
 			/* now we must check to see if we were aborted while
 			 * the move was going on and the lock/unlock happened.
@@ -2271,12 +2258,6 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 				 * the sctp_inpcb_free() call will send
 				 * an abort for us.
 				 */
-				if (mtx_owned(&inp->inp_mtx)) {
-					panic("Leaving with hanging lock (inp)-sonew?3");
-				}
-				if (mtx_owned(&((*inp_p)->inp_mtx))) {
-					panic("Leaving with hanging lock (inp_p)-sonew?3");
-				}
 				SCTP_INP_DECR_REF(inp);
 				return (NULL);
 			}
