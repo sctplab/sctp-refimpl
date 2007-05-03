@@ -2247,7 +2247,20 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			 * another and get the tcb in the right place.
 			 */
 			sctp_move_pcb_and_assoc(*inp_p, inp, *stcb);
+			if (mtx_owned(&inp->inp_mtx)) {
+				panic("Leaving with hanging lock (inp)-sonew?");
+			}
+			if (mtx_owned(&((*inp_p)->inp_mtx))) {
+				panic("Leaving with hanging lock (inp_p)-sonew?");
+			}
+
 			sctp_pull_off_control_to_new_inp((*inp_p), inp, *stcb, M_NOWAIT);
+			if (mtx_owned(&inp->inp_mtx)) {
+				panic("Leaving with hanging lock (inp)-sonew?2");
+			}
+			if (mtx_owned(&((*inp_p)->inp_mtx))) {
+				panic("Leaving with hanging lock (inp_p)-sonew?2");
+			}
 
 			/* now we must check to see if we were aborted while
 			 * the move was going on and the lock/unlock happened.
@@ -2258,6 +2271,12 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 				 * the sctp_inpcb_free() call will send
 				 * an abort for us.
 				 */
+				if (mtx_owned(&inp->inp_mtx)) {
+					panic("Leaving with hanging lock (inp)-sonew?3");
+				}
+				if (mtx_owned(&((*inp_p)->inp_mtx))) {
+					panic("Leaving with hanging lock (inp_p)-sonew?3");
+				}
 				SCTP_INP_DECR_REF(inp);
 				return (NULL);
 			}
@@ -4967,11 +4986,11 @@ sctp_input(i_pak, va_alist)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	if (IN_MULTICAST(ip->ip_dst.s_addr))
 #else
-	if (IN_MULTICAST(ntohl(ip->ip_dst.s_addr)))
+		if (IN_MULTICAST(ntohl(ip->ip_dst.s_addr)))
 #endif
-	{
-		goto bad;
-	}
+		{
+			goto bad;
+		}
 	if (SCTP_IS_IT_BROADCAST(ip->ip_dst, m)) {
 		/* We only look at broadcast if its a
 		 * front state, All others we will 
@@ -5002,13 +5021,13 @@ sctp_input(i_pak, va_alist)
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
 				printf("Bad CSUM on SCTP packet calc_check:%x check:%x  m:%p mlen:%d iphlen:%d\n",
-				    calc_check, check, m, mlen, iphlen);
+				       calc_check, check, m, mlen, iphlen);
 			}
 #endif
 
 			stcb = sctp_findassociation_addr(m, iphlen,
-			    offset - sizeof(*ch),
-			    sh, ch, &inp, &net, vrf_id);
+							 offset - sizeof(*ch),
+							 sh, ch, &inp, &net, vrf_id);
 			if ((inp) && (stcb)) {
 				sctp_send_packet_dropped(stcb, net, m, iphlen, 1);
 				sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_INPUT_ERROR);
@@ -5027,7 +5046,7 @@ sctp_input(i_pak, va_alist)
 		}
 		sh->checksum = calc_check;
 	}
-sctp_skip_csum_4:
+ sctp_skip_csum_4:
 	/* destination port of 0 is illegal, based on RFC2960. */
 	if (sh->dest_port == 0) {
 		SCTP_STAT_INCR(sctps_hdrops);
@@ -5048,7 +5067,7 @@ sctp_skip_csum_4:
 	 * IP/SCTP/first chunk header...
 	 */
 	stcb = sctp_findassociation_addr(m, iphlen, offset - sizeof(*ch),
-	    sh, ch, &inp, &net, vrf_id);
+					 sh, ch, &inp, &net, vrf_id);
 	/* inp's ref-count increased && stcb locked */
 	if (inp == NULL) {
 		struct sctp_init_chunk *init_chk, chunk_buf;
@@ -5074,8 +5093,8 @@ sctp_skip_csum_4:
 			 * common header.
 			 */
 			init_chk = (struct sctp_init_chunk *)sctp_m_getptr(m,
-			    iphlen + sizeof(*sh), sizeof(*init_chk),
-			    (uint8_t *) & chunk_buf);
+									   iphlen + sizeof(*sh), sizeof(*init_chk),
+									   (uint8_t *) & chunk_buf);
 			if (init_chk != NULL)
 				sh->v_tag = init_chk->init.initiate_tag;
 		}
@@ -5111,7 +5130,7 @@ sctp_skip_csum_4:
 		} else
 			tdb = NULL;
 		ipsp_spd_lookup(m, af, iphlen, &error, IPSP_DIRECTION_IN,
-		    tdb, i_inp);
+				tdb, i_inp);
 		if (error) {
 			splx(s);
 			SCTP_STAT_INCR(sctps_hdrops);
@@ -5123,7 +5142,7 @@ sctp_skip_csum_4:
 				tdb_add_inp(tdb, i_inp, 1);
 				if (i_inp->inp_ipo == NULL) {
 					i_inp->inp_ipo = ipsec_add_policy(i_inp, af,
-					    IPSP_DIRECTION_OUT);
+									  IPSP_DIRECTION_OUT);
 					if (i_inp->inp_ipo == NULL) {
 						splx(s);
 						SCTP_STAT_INCR(sctps_hdrops);
@@ -5138,18 +5157,18 @@ sctp_skip_csum_4:
 				if (i_inp->inp_ipsec_remotecred == NULL &&
 				    tdb->tdb_remote_cred != NULL) {
 					i_inp->inp_ipsec_remotecred =
-					    tdb->tdb_remote_cred;
+						tdb->tdb_remote_cred;
 					tdb->tdb_remote_cred->ref_count++;
 				}
 				if (i_inp->inp_ipsec_remoteauth == NULL &&
 				    tdb->tdb_remote_auth != NULL) {
 					i_inp->inp_ipsec_remoteauth =
-					    tdb->tdb_remote_auth;
+						tdb->tdb_remote_auth;
 					tdb->tdb_remote_auth->ref_count++;
 				}
 			} else {/* Just reset */
 				TAILQ_REMOVE(&i_inp->inp_tdb_in->tdb_inp_in, i_inp,
-				    inp_tdb_in_next);
+					     inp_tdb_in_next);
 				i_inp->inp_tdb_in = NULL;
 			}
 		}
@@ -5183,7 +5202,7 @@ sctp_skip_csum_4:
 #endif
 	
 	sctp_common_input_processing(&m, iphlen, offset, length, sh, ch,
-	    inp, stcb, net, ecn_bits);
+				     inp, stcb, net, ecn_bits);
 	/* inp's ref-count reduced && stcb unlocked */
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
@@ -5198,7 +5217,7 @@ sctp_skip_csum_4:
 		SCTP_INP_WUNLOCK(inp);
 	}
 	return;
-bad:
+ bad:
 	if (stcb)
 		SCTP_TCB_UNLOCK(stcb);
 
