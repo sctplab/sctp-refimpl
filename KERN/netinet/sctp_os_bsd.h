@@ -137,7 +137,8 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.14 2007/05/02 12:50:13 rrs
  */
 /* This could return VOID if the index works but for BSD we provide both. */
 #define SCTP_GET_IFN_VOID_FROM_ROUTE(ro) (void *)ro->ro_rt->rt_ifp
-#define SCTP_GET_IF_INDEX_FROM_ROUTE(ro) ro->ro_rt->rt_ifp->if_index
+#define SCTP_GET_IF_INDEX_FROM_ROUTE(ro) (ro)->ro_rt->rt_ifp->if_index
+#define SCTP_ROUTE_HAS_VALID_IFN(ro) ((ro)->ro_rt && (ro)->ro_rt->rt_ifp)
 
 /*
  * general memory allocation

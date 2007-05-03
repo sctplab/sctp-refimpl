@@ -3831,8 +3831,8 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 #endif /* SCTP_KAME */
 	}
 #endif /* SCTP_EMBEDDED_V6_SCOPE */
-	if ((net->ro.ro_rt) &&
-	    (net->ro.ro_rt->rt_ifp)) {
+
+	if (SCTP_ROUTE_HAS_VALID_IFN(&net->ro)) {
 		/* Get source address */
 		net->ro._s_addr = sctp_source_address_selection(stcb->sctp_ep,
 								stcb, 
