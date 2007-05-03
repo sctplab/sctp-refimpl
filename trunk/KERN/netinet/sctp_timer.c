@@ -379,15 +379,8 @@ sctp_find_alternate_net(struct sctp_tcb *stcb,
 			}
 #endif /* SCTP_EMBEDDED_V6_SCOPE */
 #endif
-#ifndef __Panda__
-#if defined(__FreeBSD__) || defined(__APPLE__)
-			rtalloc_ign((struct route *)&alt->ro, 0UL);
-#else
-			rtalloc((struct route *)&alt->ro);
-#endif
-#else
-			rtalloc_it();
-#endif
+
+			SCTP_RTALLOC((sctp_route_t *)&alt->ro);
 
 #ifndef SCOPEDROUTING
 #ifdef SCTP_EMBEDDED_V6_SCOPE
