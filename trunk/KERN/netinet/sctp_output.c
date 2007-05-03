@@ -3660,7 +3660,6 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 	else if (to->sa_family == AF_INET6) {
 		uint32_t flowlabel;
 		struct ip6_hdr *ip6h;
-
 #ifdef NEW_STRUCT_ROUTE
 		sctp_route_t ip6route;
 #else
