@@ -176,6 +176,13 @@ typedef struct callout sctp_os_timer_t;
 #define SCTP_IPV6_V6ONLY(inp) (((struct in6pcb *)inp)->in6p_flags & IN6P_IPV6_V6ONLY)
 
 /*
+ * routes, output, etc.
+ */
+typedef struct route	sctp_route_t;
+typedef struct rtentry	sctp_rtentry_t;
+#define SCTP_RTALLOC(ro)	rtalloc((struct route *)ro)
+
+/*
  * SCTP AUTH
  */
 #define HAVE_SHA2

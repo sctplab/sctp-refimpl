@@ -3808,16 +3808,8 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 #endif
 	}
 #endif /* SCTP_EMBEDDED_V6_SCOPE */
-#ifndef __Panda__
-#if defined(__FreeBSD__) || defined(__APPLE__)
-	rtalloc_ign((struct route *)&net->ro, 0UL);
-#else
-	rtalloc((struct route *)&net->ro);
-#endif
-#else
-	/* What is the ROUTE alloc for Panda? */
-	rtalloc_it();
-#endif
+
+	SCTP_RTALLOC((sctp_route_t *)&net->ro);
 
 #ifdef SCTP_EMBEDDED_V6_SCOPE
 	if (newaddr->sa_family == AF_INET6) {

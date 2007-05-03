@@ -3068,12 +3068,8 @@ sctp_source_address_selection(struct sctp_inpcb *inp,
 		/*
 		 * Need a route to cache.
 		 */
-#if defined(__FreeBSD__) || defined(__APPLE__)
-		rtalloc_ign(ro, 0UL);
-#else
-		rtalloc(ro);
-#endif
-		did_rtalloc=1;
+		SCTP_RTALLOC(ro);
+		did_rtalloc = 1;
 	}
 	if (ro->ro_rt == NULL) {
 		return (NULL);

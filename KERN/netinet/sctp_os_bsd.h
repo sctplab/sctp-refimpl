@@ -332,6 +332,8 @@ typedef struct callout sctp_os_timer_t;
  */
 typedef struct route	sctp_route_t;
 typedef struct rtentry	sctp_rtentry_t;
+#define SCTP_RTALLOC(ro)	rtalloc_ign((struct route *)ro, 0UL)
+
 
 struct mbuf *
 sctp_get_mbuf_for_msg(unsigned int space_needed, 
