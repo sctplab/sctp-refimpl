@@ -47,7 +47,9 @@ void sctp_startup_iterator(void);
 
 void sctp_gather_internal_ifa_flags(struct sctp_ifa *ifa);
 
+#if !defined(__Panda__)
 void sctp_addr_change(struct ifaddr *ifa, int cmd);
+#endif
 
 #endif
 #endif
