@@ -2155,14 +2155,12 @@ sctp_inpcb_alloc(struct socket *so)
 		/* UDP style socket */
 		inp->sctp_flags = (SCTP_PCB_FLAGS_UDPTYPE |
 		    SCTP_PCB_FLAGS_UNBOUND);
-		sctp_feature_on(inp, SCTP_PCB_FLAGS_RECVDATAIOEVNT);
 		/* Be sure it is NON-BLOCKING IO for UDP */
 		/* SCTP_SET_SO_NBIO(so); */
 	} else if (SCTP_SO_TYPE(so) == SOCK_STREAM) {
 		/* TCP style socket */
 		inp->sctp_flags = (SCTP_PCB_FLAGS_TCPTYPE |
 		    SCTP_PCB_FLAGS_UNBOUND);
-		sctp_feature_on(inp, SCTP_PCB_FLAGS_RECVDATAIOEVNT);
 		/* Be sure we have blocking IO by default */
 		SCTP_CLEAR_SO_NBIO(so);
 	} else {
