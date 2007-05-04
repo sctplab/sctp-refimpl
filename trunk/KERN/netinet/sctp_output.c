@@ -1896,12 +1896,14 @@ sctp_is_address_in_scope(struct sctp_ifa *ifa,
 	} else if ((ifa->address.sa.sa_family == AF_INET6) && ipv6_addr_legal) {
 		struct sockaddr_in6 *sin6;
 
+#if !defined(__Panda__)
 		/* Must update the flags,  bummer, which
 		 * means any IFA locks must now be applied HERE <->
 		 */
 		if(do_update) {
 			sctp_gather_internal_ifa_flags(ifa);
 		}
+#endif
 		if (ifa->localifa_flags & SCTP_ADDR_IFA_UNUSEABLE) {
 			return (0);
 		}

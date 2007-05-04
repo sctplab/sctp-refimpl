@@ -237,11 +237,6 @@ sctp_find_vrf(uint32_t vrf_id)
 	return (NULL);
 }
 
-#ifdef __Panda__
-
-
-
-#endif
 
 void
 sctp_free_ifn(struct sctp_ifn *sctp_ifnp)
@@ -4592,11 +4587,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				SOCK_UNLOCK(so);
 				sctp_sowwakeup(inp, so);
 				sctp_sorwakeup(inp, so);
-#ifndef __Panda__
-				wakeup(&so->so_timeo);
-#else
-				panda_wakeup_socket(so);
-#endif
+				SCTP_SOWAKEUP(so);
 			}
 		}
 	}
