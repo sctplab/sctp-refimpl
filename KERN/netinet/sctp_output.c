@@ -3606,7 +3606,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		}
 #endif
 
-		SCTP_IP_OUTPUT(ret, o_pak, ro, inp);
+		SCTP_IP_OUTPUT(ret, o_pak, ro, stcb);
 
 		SCTP_STAT_INCR(sctps_sendpackets);
 		SCTP_STAT_INCR_COUNTER64(sctps_outpackets);
@@ -3840,7 +3840,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		}
 
 		SCTP_IP6_OUTPUT(ret, o_pak, (struct route_in6 *)ro, &ifp,
-				(struct in6pcb *)inp);
+				stcb);
 
 		if (net) {
 			/* for link local this must be done */
@@ -4627,7 +4627,7 @@ sctp_are_there_new_addresses(struct sctp_association *asoc,
 void
 sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
     struct mbuf *init_pkt, int iphlen, int offset, struct sctphdr *sh,
-    struct sctp_init_chunk *init_chk)
+    struct sctp_init_chunk *init_chk, uint32_t vrf_id, uint32_t table_id)
 {
 	struct sctp_association *asoc;
 	struct mbuf *m, *m_at, *m_tmp, *m_cookie, *op_err, *mp_last;
@@ -4650,15 +4650,11 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	int abort_flag, padval, sz_of;
 	int num_ext;
 	int p_len;
-	uint32_t vrf_id;
 
-	if (stcb) {
-		asoc = &stcb->asoc;
-		vrf_id = asoc->vrf_id;
-	} else {
-		vrf_id = inp->def_vrf_id;
-		asoc = NULL;
-	}
+	if (stcb)
+	    asoc = &stcb->asoc;
+	else
+	    asoc = NULL;
 	mp_last = NULL;
 	if ((asoc != NULL) &&
 	    (SCTP_GET_STATE(asoc) != SCTP_STATE_COOKIE_WAIT) &&
@@ -4669,7 +4665,8 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		 * though we even set the T bit and copy in the 0 tag.. this
 		 * looks no different than if no listener was present.
 		 */
-		sctp_send_abort(init_pkt, iphlen, sh, 0, NULL);
+		sctp_send_abort(init_pkt, iphlen, sh, 0, NULL, vrf_id,
+				table_id);
 		return;
 	}
 	abort_flag = 0;
@@ -4677,7 +4674,9 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 						       (offset + sizeof(struct sctp_init_chunk)),
 						       &abort_flag, (struct sctp_chunkhdr *)init_chk);
 	if (abort_flag) {
-		sctp_send_abort(init_pkt, iphlen, sh, init_chk->init.initiate_tag, op_err);
+		sctp_send_abort(init_pkt, iphlen, sh,
+				init_chk->init.initiate_tag, op_err, vrf_id,
+				table_id);
 		return;
 	}
 	m = sctp_get_mbuf_for_msg(MCLBYTES, 0, M_DONTWAIT, 1, MT_DATA);
@@ -4765,8 +4764,9 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			ro = &iproute;
 			memcpy(&ro->ro_dst, sin, sizeof(*sin));
 			addr = sctp_source_address_selection(inp, NULL,
-							     ro, NULL, 0, vrf_id);
-			if(addr == NULL)
+							     ro, NULL, 0,
+							     vrf_id);
+			if (addr == NULL)
 				return;
 
 			if (ro->ro_rt) {
@@ -9457,7 +9457,8 @@ sctp_send_shutdown_complete(struct sctp_tcb *stcb,
 }
 
 int
-sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh)
+sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
+			     uint32_t vrf_id, uint32_t table_id)
 {
 	/* formulate and SEND a SHUTDOWN-COMPLETE */
 #ifdef __Panda__
@@ -9550,7 +9551,7 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh)
 	if (iph_out != NULL) {
 		sctp_route_t ro;
 		int ret;
-		struct sctp_inpcb *inp = NULL;
+		struct sctp_tcb *stcb = NULL;
 
 		bzero(&ro, sizeof ro);
 		/* set IPv4 length */
@@ -9560,7 +9561,7 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh)
 		iph_out->ip_len = htons(SCTP_HEADER_LEN(o_pak));
 #endif
 		/* out it goes */
-		SCTP_IP_OUTPUT(ret, o_pak, &ro, inp);
+		SCTP_IP_OUTPUT(ret, o_pak, &ro, stcb);
 
 		/* Free the route if we got one back */
 		if (ro.ro_rt)
@@ -9572,13 +9573,13 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh)
 		struct route_in6 ro;
 #endif
 		int ret;
-		struct in6pcb *inp = NULL;
+		struct sctp_tcb *stcb = NULL;
 #if !defined(__Panda__)
 		struct ifnet *ifp = NULL;
 #endif
 
 		bzero(&ro, sizeof(ro));
-		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, inp);
+		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, stcb);
 
 		/* Free the route if we got one back */
 		if (ro.ro_rt)
@@ -10306,7 +10307,7 @@ sctp_send_str_reset_req(struct sctp_tcb *stcb,
 
 void
 sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
-    struct mbuf *err_cause)
+    struct mbuf *err_cause, uint32_t vrf_id, uint32_t table_id)
 {
 	/*-
 	 * Formulate the abort message, and send it back down.
@@ -10423,7 +10424,7 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 	}
 	if (iph_out != NULL) {
 		sctp_route_t ro;
-		struct sctp_inpcb *inp = NULL;
+		struct sctp_tcb *stcb = NULL;
 		int ret;
 
 		/* zap the stack pointer to the route */
@@ -10441,7 +10442,7 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 		iph_out->ip_len = htons(SCTP_HEADER_LEN(o_pak));
 #endif
 		/* out it goes */
-		SCTP_IP_OUTPUT(ret, o_pak, &ro, inp);
+		SCTP_IP_OUTPUT(ret, o_pak, &ro, stcb);
 
 		/* Free the route if we got one back */
 		if (ro.ro_rt)
@@ -10453,7 +10454,7 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 		struct route_in6 ro;
 #endif
 		int ret;
-		struct in6pcb *inp = NULL;
+		struct sctp_tcb *stcb = NULL;
 #if !defined(__Panda__)
 		struct ifnet *ifp = NULL;
 #endif
@@ -10467,7 +10468,7 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 #endif
 		ip6_out->ip6_plen = SCTP_HEADER_LEN(o_pak) - sizeof(*ip6_out);
 
-		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, inp);
+		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, stcb);
 
 		/* Free the route if we got one back */
 		if (ro.ro_rt)
@@ -10542,7 +10543,7 @@ sctp_send_operr_to(struct mbuf *m, int iphlen,
 		/* V4 */
 		struct ip *out;
 		sctp_route_t ro;
-		struct sctp_inpcb *inp = NULL;
+		struct sctp_tcb *stcb = NULL;
 
 		o_pak = SCTP_GET_HEADER_FOR_OUTPUT(sizeof(struct ip));
 		if (o_pak == NULL) {
@@ -10569,7 +10570,7 @@ sctp_send_operr_to(struct mbuf *m, int iphlen,
 #else
 		out->ip_len = htons(SCTP_HEADER_LEN(o_pak));
 #endif
-		SCTP_IP_OUTPUT(retcode, o_pak, &ro, inp);
+		SCTP_IP_OUTPUT(retcode, o_pak, &ro, stcb);
 
 		SCTP_STAT_INCR(sctps_sendpackets);
 		SCTP_STAT_INCR_COUNTER64(sctps_outpackets);
@@ -10584,7 +10585,7 @@ sctp_send_operr_to(struct mbuf *m, int iphlen,
 		struct route_in6 ro;
 #endif
 		int ret;
-		struct in6pcb *inp = NULL;
+		struct sctp_tcb *stcb = NULL;
 #if !defined(__Panda__)
 		struct ifnet *ifp = NULL;
 #endif
@@ -10626,7 +10627,7 @@ sctp_send_operr_to(struct mbuf *m, int iphlen,
 		}
 #endif				/* SCTP_DEBUG */
 
-		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, inp);
+		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, stcb);
 
 		SCTP_STAT_INCR(sctps_sendpackets);
 		SCTP_STAT_INCR_COUNTER64(sctps_outpackets);

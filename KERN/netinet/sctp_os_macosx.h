@@ -111,12 +111,13 @@ extern struct fileops socketops;
 /*
  * Local address and interface list handling
  */
-#define SCTP_MAX_VRF_ID 0
-#define SCTP_SIZE_OF_VRF_HASH 1
-#define SCTP_IFNAMSIZ IFNAMSIZ
-#define SCTP_DEFAULT_VRFID 0
-#define SCTP_VRF_ADDR_HASH_SIZE 16
-#define SCTP_VRF_IFN_HASH_SIZE 3
+#define SCTP_MAX_VRF_ID		0
+#define SCTP_SIZE_OF_VRF_HASH	1
+#define SCTP_IFNAMSIZ		IFNAMSIZ
+#define SCTP_DEFAULT_VRFID	0
+#define SCTP_DEFAULT_TABLEID	0
+#define SCTP_VRF_ADDR_HASH_SIZE	16
+#define SCTP_VRF_IFN_HASH_SIZE	3
 
 #define SCTP_IFN_IS_IFT_LOOP(ifn) ((ifn)->ifn_type == IFT_LOOP)
 
@@ -270,6 +271,15 @@ struct mbuf *sctp_m_prepend_2(struct mbuf *m, int len, int how);
 #define SCTP_RELEASE_HEADER(m)
 #define SCTP_RELEASE_PKT(m)	sctp_m_freem(m)
 
+static inline int SCTP_GET_PKT_VRFID(void *m, uint32_t vrf_id) {
+	vrf_id = SCTP_DEFAULT_VRFID;
+	return (0);
+}
+static inline int SCTP_GET_PKT_TABLEID(void *m, uint32_t table_id) {
+	table_id = SCTP_DEFAULT_TABLEID;
+	return (0);
+}
+
 
 /* Attach the chain of data into the sendable packet. */
 #define SCTP_ATTACH_CHAIN(pak, m, packet_length) do { \
@@ -333,22 +343,23 @@ typedef struct rtentry	sctp_rtentry_t;
  */
 #define SCTP_IP_ID(inp) (ip_id)
 
-#define SCTP_IP_OUTPUT(result, o_pak, ro, inp) \
+#define SCTP_IP_OUTPUT(result, o_pak, ro, stcb) \
 { \
 	int o_flgs = 0; \
-	if (inp && inp->sctp_socket) { \
-		o_flgs = IP_RAWOUTPUT | (inp->sctp_socket->so_options & SO_DONTROUTE); \
+	if (stcb && stcb->sctp_ep && stcb->sctp_ep->sctp_socket) { \
+		o_flgs = IP_RAWOUTPUT | (stcb->sctp_ep->sctp_socket->so_options & SO_DONTROUTE); \
 	} else { \
 		o_flgs = IP_RAWOUTPUT; \
 	} \
 	result = ip_output(o_pak, NULL, ro, o_flgs, NULL); \
 }
 
-#define SCTP_IP6_OUTPUT(result, o_pak, ro, ifp, inp) \
+#define SCTP_IP6_OUTPUT(result, o_pak, ro, ifp, stcb) \
 { \
- 	if (inp) \
-		result = ip6_output(o_pak, (inp)->in6p_outputopts, (ro), 0, \
-				    0, ifp, NULL); \
+ 	if (stcb && stcb->sctp_ep) \
+		result = ip6_output(o_pak, \
+				    ((struct in6pcb *)(stcb->sctp_ep))->in6p_outputopts, \
+				    (ro), 0, 0, ifp, NULL); \
 	else \
 		result = ip6_output(o_pak, NULL, (ro), 0, 0, ifp, NULL); \
 }

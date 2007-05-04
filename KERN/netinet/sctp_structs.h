@@ -592,6 +592,7 @@ struct sctp_association {
 	struct sctp_readhead pending_reply_queue;
 
 	uint32_t vrf_id;
+	uint32_t table_id;
 
 	uint32_t cookie_preserve_req;
 	/* ASCONF next seq I am sending out, inits at init-tsn */
@@ -601,10 +602,8 @@ struct sctp_association {
 
 	/* next seq I am sending in str reset messages */
 	uint32_t str_reset_seq_out;
-
 	/* next seq I am expecting in str reset messages */
 	uint32_t str_reset_seq_in;
-
 
 	/* various verification tag information */
 	uint32_t my_vtag;	/* The tag to be used. if assoc is re-initited
