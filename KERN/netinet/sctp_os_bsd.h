@@ -285,7 +285,7 @@ typedef struct callout sctp_os_timer_t;
 #define SCTP_HEADER_LEN(m) (m->m_pkthdr.len)
 #define SCTP_GET_HEADER_FOR_OUTPUT(len) sctp_get_mbuf_for_msg(len, 1, M_DONTWAIT, 1, MT_DATA)
 #define SCTP_RELEASE_HEADER(m)
-#define SCTP_RELEASE_PAK(m)	sctp_m_freem(m)
+#define SCTP_RELEASE_PKT(m)	sctp_m_freem(m)
 
 /* Attach the chain of data into the sendable packet. */
 #define SCTP_ATTACH_CHAIN(pak, m, packet_length) do { \
@@ -336,6 +336,29 @@ typedef struct route	sctp_route_t;
 typedef struct rtentry	sctp_rtentry_t;
 #define SCTP_RTALLOC(ro)	rtalloc_ign((struct route *)ro, 0UL)
 
+
+/*
+ * IP output routines
+ */
+#define SCTP_IP_OUTPUT(result, o_pak, ro, inp) \
+{ \
+	int o_flgs = 0; \
+	if (inp && inp->sctp_socket) { \
+		o_flgs = IP_RAWOUTPUT | (inp->sctp_socket->so_options & SO_DONTROUTE); \
+	} else { \
+		o_flgs = IP_RAWOUTPUT; \
+	} \
+	result = ip_output(o_pak, NULL, ro, o_flgs, NULL, NULL); \
+}
+
+#define SCTP_IP6_OUTPUT(result, o_pak, ro, ifp, inp) \
+{ \
+ 	if (inp) \
+		result = ip6_output(o_pak, (inp)->in6p_outputopts, (ro), 0, \
+				    0, ifp, NULL); \
+	else \
+		result = ip6_output(o_pak, NULL, (ro), 0, 0, ifp, NULL); \
+}
 
 struct mbuf *
 sctp_get_mbuf_for_msg(unsigned int space_needed, 

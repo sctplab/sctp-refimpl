@@ -738,7 +738,7 @@ struct sctp_cwnd_log_req {
 	struct sctp_cwnd_log log[0];
 };
 
-struct	sctpstat {
+struct sctpstat {
 	/* MIB according to RFC 3873 */
 	u_long  sctps_currestab;           /* sctpStats  1   (Gauge32) */
 	u_long  sctps_activeestab;         /* sctpStats  2 (Counter32) */
@@ -978,7 +978,7 @@ int
 sctp_lower_sosend(struct socket *so,
     struct sockaddr *addr,
     struct uio *uio,
-#ifdef __Panda__
+#if defined(__Panda__)
     pakhandle_type i_pak,
     pakhandle_type i_control,
 #else
@@ -988,7 +988,7 @@ sctp_lower_sosend(struct socket *so,
     int flags,
     int use_rcvinfo,
     struct sctp_sndrcvinfo *srcv
-#ifndef __Panda__
+#if !defined(__Panda__)
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
     ,struct thread *p
 #else
@@ -1000,7 +1000,11 @@ sctp_lower_sosend(struct socket *so,
 int
 sctp_sorecvmsg(struct socket *so,
     struct uio *uio,
+#if defined(__Panda__)
+    particletype **mp,
+#else
     struct mbuf **mp,
+#endif
     struct sockaddr *from,
     int fromlen,
     int *msg_flags,

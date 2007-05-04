@@ -3378,7 +3378,6 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 #endif
 	struct sctphdr *sctphdr;
 	int packet_length;
-	int o_flgs = 0;
 	uint32_t csum;
 	int ret;
 	uint32_t vrf_id;
@@ -3468,7 +3467,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		/* Apple has RANDOM_IP_ID switch */
 		ip->ip_id = htons(ip_randomid());
 #else
-		ip->ip_id = htons(ip_id++);
+		ip->ip_id = SCTP_IP_ID(inp)++;
 #endif
 
 #if defined(__FreeBSD__) || defined(__APPLE__)
@@ -3590,13 +3589,11 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 					}
 				}
 			}
-			SCTP_RELEASE_PAK(o_pak);
+			SCTP_RELEASE_PKT(o_pak);
 			return (EHOSTUNREACH);
 		}
-		if(inp->sctp_socket) {
-			o_flgs = (IP_RAWOUTPUT | (inp->sctp_socket->so_options & (SO_DONTROUTE | SO_BROADCAST)));
-		} else {
-			o_flgs = IP_RAWOUTPUT;
+		if (ro != &iproute) {
+			memcpy(&iproute, ro, sizeof(*ro));
 		}
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
@@ -3606,18 +3603,12 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			printf("RTP route is %p through\n", ro->ro_rt);
 		}
 #endif
-		if (ro != &iproute) {
-			memcpy(&iproute, ro, sizeof(*ro));
-		}
-		ret = ip_output(o_pak, inp->ip_inp.inp.inp_options,
-		    ro, o_flgs, inp->ip_inp.inp.inp_moptions
-#if defined(__OpenBSD__) || (defined(__FreeBSD__) && __FreeBSD_version >= 480000)
-		    ,(struct inpcb *)NULL
-#endif
-		    );
+
+		SCTP_IP_OUTPUT(ret, o_pak, ro, inp);
+
 		SCTP_STAT_INCR(sctps_sendpackets);
 		SCTP_STAT_INCR_COUNTER64(sctps_outpackets);
-		if(ret)
+		if (ret)
 			SCTP_STAT_INCR(sctps_senderrors);
 			
 #ifdef SCTP_DEBUG
@@ -3661,7 +3652,11 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 #else
 		struct route_in6 ip6route;
 #endif
+#if defined(__Panda__)
+		void *ifp;
+#else
 		struct ifnet *ifp;
+#endif
 		u_char flowTop;
 		uint16_t flowBottom;
 		u_char tosBottom, tosTop;
@@ -3820,9 +3815,8 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		 * that our ro pointer is now filled
 		 */
 		ip6h->ip6_hlim = SCTP_GET_HLIM(inp, ro);
+		ifp = SCTP_GET_IFN_VOID_FROM_ROUTE(ro);
 
-		o_flgs = 0;
-		ifp = ro->ro_rt->rt_ifp;
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
 			/* Copy to be sure something bad is not happening */
@@ -3842,25 +3836,10 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			prev_scope = sin6->sin6_scope_id;
 			prev_port = sin6->sin6_port;
 		}
-		ret = ip6_output(o_pak, ((struct in6pcb *)inp)->in6p_outputopts,
-#ifdef NEW_STRUCT_ROUTE
-		    ro,
-#else
-		    (struct route_in6 *)ro,
-#endif
-		    o_flgs,
-		    ((struct in6pcb *)inp)->in6p_moptions,
-#if defined(__NetBSD__)
-		    (struct socket *)inp->sctp_socket,
-#endif
-		    &ifp
-#if (defined(__FreeBSD__) && __FreeBSD_version >= 480000)
-		    ,NULL
-#endif
-#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
-		    ,0
-#endif
-		    );
+
+		SCTP_IP6_OUTPUT(ret, o_pak, (struct route_in6 *)ro, &ifp,
+				(struct in6pcb *)inp);
+
 		if (net) {
 			/* for link local this must be done */
 			sin6->sin6_scope_id = prev_scope;
@@ -3885,7 +3864,6 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			/* PMTU check versus smallest asoc MTU goes here */
 			if (ro->ro_rt == NULL) {
 				/* Route was freed */
-
 				if (net->ro._s_addr &&
 				    net->src_addr_selected){
 					sctp_free_ifa(net->ro._s_addr);
@@ -5640,7 +5618,13 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 	if (can_take_mbuf) {
 		appendchain = clonechain;
 	} else {
-		if(!copy_by_ref && (sizeofcpy <= ((((sctp_mbuf_threshold_count - 1) * MLEN) + MHLEN)))) {
+		if (!copy_by_ref &&
+#if defined(__Panda__)
+		    0
+#else
+		    (sizeofcpy <= ((((sctp_mbuf_threshold_count - 1) * MLEN) + MHLEN)))
+#endif
+		    ) {
 			/* Its not in a cluster */
 			if(*endofchain == NULL) {
 				/* lets get a mbuf cluster */
@@ -5703,7 +5687,7 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 				SCTP_BUF_NEXT((*endofchain)) = m;
 				*endofchain = m;
 				cp = mtod((*endofchain), caddr_t);
-				m_copydata(clonechain, len, sizeofcpy,  cp);
+				m_copydata(clonechain, len, sizeofcpy, cp);
 				SCTP_BUF_LEN((*endofchain)) += sizeofcpy;
 			}
 			return(outchain);
@@ -9563,6 +9547,8 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh)
 	}
 	if (iph_out != NULL) {
 		sctp_route_t ro;
+		int ret;
+		struct sctp_inpcb *inp = NULL;
 
 		bzero(&ro, sizeof ro);
 		/* set IPv4 length */
@@ -9572,11 +9558,8 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh)
 		iph_out->ip_len = htons(SCTP_HEADER_LEN(o_pak));
 #endif
 		/* out it goes */
-		ip_output(o_pak, 0, &ro, IP_RAWOUTPUT, NULL
-#if defined(__OpenBSD__) || (defined(__FreeBSD__) && __FreeBSD_version >= 480000)
-		    ,NULL
-#endif
-		    );
+		SCTP_IP_OUTPUT(ret, o_pak, &ro, inp);
+
 		/* Free the route if we got one back */
 		if (ro.ro_rt)
 			RTFREE(ro.ro_rt);
@@ -9586,19 +9569,15 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh)
 #else
 		struct route_in6 ro;
 #endif
+		int ret;
+		struct in6pcb *inp = NULL;
+#if !defined(__Panda__)
+		struct ifnet *ifp = NULL;
+#endif
 
 		bzero(&ro, sizeof(ro));
-		ip6_output(o_pak, NULL, &ro, 0, NULL, NULL
-#if defined(__NetBSD__)
-		    ,NULL
-#endif
-#if (defined(__FreeBSD__) && __FreeBSD_version >= 480000)
-		    ,NULL
-#endif
-#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
-		    ,0
-#endif
-		    );
+		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, inp);
+
 		/* Free the route if we got one back */
 		if (ro.ro_rt)
 			RTFREE(ro.ro_rt);
@@ -10442,6 +10421,8 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 	}
 	if (iph_out != NULL) {
 		sctp_route_t ro;
+		struct sctp_inpcb *inp = NULL;
+		int ret;
 
 		/* zap the stack pointer to the route */
 		bzero(&ro, sizeof ro);
@@ -10458,11 +10439,8 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 		iph_out->ip_len = htons(SCTP_HEADER_LEN(o_pak));
 #endif
 		/* out it goes */
-		(void)ip_output(o_pak, 0, &ro, IP_RAWOUTPUT, NULL
-#if defined(__OpenBSD__) || (defined(__FreeBSD__) && __FreeBSD_version >= 480000)
-		    ,NULL
-#endif
-		    );
+		SCTP_IP_OUTPUT(ret, o_pak, &ro, inp);
+
 		/* Free the route if we got one back */
 		if (ro.ro_rt)
 			RTFREE(ro.ro_rt);
@@ -10472,7 +10450,11 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 #else
 		struct route_in6 ro;
 #endif
-
+		int ret;
+		struct in6pcb *inp = NULL;
+#if !defined(__Panda__)
+		struct ifnet *ifp = NULL;
+#endif
 		/* zap the stack pointer to the route */
 		bzero(&ro, sizeof(ro));
 #ifdef SCTP_DEBUG
@@ -10482,17 +10464,9 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 		}
 #endif
 		ip6_out->ip6_plen = SCTP_HEADER_LEN(o_pak) - sizeof(*ip6_out);
-		ip6_output(o_pak, NULL, &ro, 0, NULL, NULL
-#if defined(__NetBSD__)
-		    ,NULL
-#endif
-#if (defined(__FreeBSD__) && __FreeBSD_version >= 480000)
-		    ,NULL
-#endif
-#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
-		    ,0
-#endif
-		    );
+
+		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, inp);
+
 		/* Free the route if we got one back */
 		if (ro.ro_rt)
 			RTFREE(ro.ro_rt);
@@ -10515,9 +10489,7 @@ sctp_send_operr_to(struct mbuf *m, int iphlen,
 	int retcode;
 	struct sctphdr *ohdr;
 	struct sctp_chunkhdr *ophdr;
-
 	struct ip *iph;
-
 #ifdef SCTP_DEBUG
 	struct sockaddr_in6 lsa6, fsa6;
 #endif
@@ -10568,6 +10540,7 @@ sctp_send_operr_to(struct mbuf *m, int iphlen,
 		/* V4 */
 		struct ip *out;
 		sctp_route_t ro;
+		struct sctp_inpcb *inp = NULL;
 
 		o_pak = SCTP_GET_HEADER_FOR_OUTPUT(sizeof(struct ip));
 		if (o_pak == NULL) {
@@ -10594,11 +10567,8 @@ sctp_send_operr_to(struct mbuf *m, int iphlen,
 #else
 		out->ip_len = htons(SCTP_HEADER_LEN(o_pak));
 #endif
-		retcode = ip_output(o_pak, 0, &ro, IP_RAWOUTPUT, NULL
-#if defined(__OpenBSD__) || (defined(__FreeBSD__) && __FreeBSD_version >= 480000)
-		    ,NULL
-#endif
-		    );
+		SCTP_IP_OUTPUT(retcode, o_pak, &ro, inp);
+
 		SCTP_STAT_INCR(sctps_sendpackets);
 		SCTP_STAT_INCR_COUNTER64(sctps_outpackets);
 		/* Free the route if we got one back */
@@ -10610,6 +10580,11 @@ sctp_send_operr_to(struct mbuf *m, int iphlen,
 		sctp_route_t ro;
 #else
 		struct route_in6 ro;
+#endif
+		int ret;
+		struct in6pcb *inp = NULL;
+#if !defined(__Panda__)
+		struct ifnet *ifp = NULL;
 #endif
 		struct ip6_hdr *out6, *in6;
 
@@ -10648,17 +10623,9 @@ sctp_send_operr_to(struct mbuf *m, int iphlen,
 			sctp_print_address((struct sockaddr *)&fsa6);
 		}
 #endif				/* SCTP_DEBUG */
-		ip6_output(o_pak, NULL, &ro, 0, NULL, NULL
-#if defined(__NetBSD__)
-		    ,NULL
-#endif
-#if (defined(__FreeBSD__) && __FreeBSD_version >= 480000)
-		    ,NULL
-#endif
-#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
-		    ,0
-#endif
-		    );
+
+		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, inp);
+
 		SCTP_STAT_INCR(sctps_sendpackets);
 		SCTP_STAT_INCR_COUNTER64(sctps_outpackets);
 		/* Free the route if we got one back */
