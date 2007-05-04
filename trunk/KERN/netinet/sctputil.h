@@ -214,9 +214,8 @@ void
 sctp_abort_an_association(struct sctp_inpcb *, struct sctp_tcb *, int,
     struct mbuf *);
 
-void
-sctp_handle_ootb(struct mbuf *, int, int, struct sctphdr *,
-    struct sctp_inpcb *, struct mbuf *);
+void sctp_handle_ootb(struct mbuf *, int, int, struct sctphdr *,
+    struct sctp_inpcb *, struct mbuf *, uint32_t, uint32_t);
 
 int sctp_is_there_an_abort_here(struct mbuf *, int, uint32_t *);
 uint32_t sctp_is_same_scope(struct sockaddr_in6 *, struct sockaddr_in6 *);

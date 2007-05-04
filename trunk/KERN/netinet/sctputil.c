@@ -3642,6 +3642,7 @@ sctp_abort_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
     struct mbuf *m, int iphlen, struct sctphdr *sh, struct mbuf *op_err)
 {
 	uint32_t vtag;
+	uint32_t vrf_id, table_id;
 
 	vtag = 0;
 	if (stcb != NULL) {
@@ -3649,7 +3650,14 @@ sctp_abort_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		vtag = stcb->asoc.peer_vtag;
 		sctp_abort_notification(stcb, 0);
 	}
-	sctp_send_abort(m, iphlen, sh, vtag, op_err);
+	if (stcb) {
+	    vrf_id = stcb->asoc.vrf_id;
+	    table_id = stcb->asoc.table_id;
+	} else {
+	    vrf_id = inp->def_vrf_id;
+	    table_id = inp->def_table_id;
+	}
+	sctp_send_abort(m, iphlen, sh, vtag, op_err, vrf_id, table_id);
 	if (stcb != NULL) {
 		/* Ok, now lets free it */
 		sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTPUTIL+SCTP_LOC_4);
@@ -3755,7 +3763,8 @@ sctp_abort_an_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 
 void
 sctp_handle_ootb(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
-    struct sctp_inpcb *inp, struct mbuf *op_err)
+    struct sctp_inpcb *inp, struct mbuf *op_err, uint32_t vrf_id,
+    uint32_t table_id)
 {
 	struct sctp_chunkhdr *ch, chunk_buf;
 	unsigned int chk_length;
@@ -3789,7 +3798,8 @@ sctp_handle_ootb(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 			 */
 			return;
 		case SCTP_SHUTDOWN_ACK:
-			sctp_send_shutdown_complete2(m, iphlen, sh);
+			sctp_send_shutdown_complete2(m, iphlen, sh, vrf_id,
+						     table_id);
 			return;
 		default:
 			break;
@@ -3798,7 +3808,7 @@ sctp_handle_ootb(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 		ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, offset,
 		    sizeof(*ch), (uint8_t *) & chunk_buf);
 	}
-	sctp_send_abort(m, iphlen, sh, 0, op_err);
+	sctp_send_abort(m, iphlen, sh, 0, op_err, vrf_id, table_id);
 }
 
 /*

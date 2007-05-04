@@ -85,7 +85,8 @@ sctp_stop_all_cookie_timers(struct sctp_tcb *stcb)
 static void
 sctp_handle_init(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
     struct sctp_init_chunk *cp, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
-    struct sctp_nets *net, int *abort_no_unlock)
+    struct sctp_nets *net, int *abort_no_unlock, uint32_t vrf_id,
+    uint32_t table_id)
 {
 	struct sctp_init *init;
 	struct mbuf *op_err;
@@ -170,7 +171,8 @@ sctp_handle_init(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 		printf("sctp_handle_init: sending INIT-ACK\n");
 	}
 #endif
-	sctp_send_initiate_ack(inp, stcb, m, iphlen, offset, sh, cp);
+	sctp_send_initiate_ack(inp, stcb, m, iphlen, offset, sh, cp, vrf_id,
+			       table_id);
 }
 
 /*
@@ -925,7 +927,7 @@ sctp_handle_error(struct sctp_chunkhdr *ch,
 }
 
 static int
-sctp_handle_init_ack(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
+sctp_handle_init_ack(struct mbuf *m, int iphlen, int offset,struct sctphdr *sh,
     struct sctp_init_ack_chunk *cp, struct sctp_tcb *stcb,
     struct sctp_nets *net, int *abort_no_unlock)
 {
@@ -1893,7 +1895,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		 * invalid ports or bad tag.  Note that we always leave the
 		 * v_tag in the header in network order and when we stored
 		 * it in the my_vtag slot we also left it in network order.
-		 * This maintians the match even though it may be in the
+		 * This maintains the match even though it may be in the
 		 * opposite byte order of the machine :->
 		 */
 		return (NULL);
@@ -3536,7 +3538,8 @@ sctp_handle_packet_dropped(struct sctp_pktdrop_chunk *cp,
 static struct sctp_tcb *
 sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
     struct sctphdr *sh, struct sctp_chunkhdr *ch, struct sctp_inpcb *inp,
-    struct sctp_tcb *stcb, struct sctp_nets **netp, int *fwd_tsn_seen)
+    struct sctp_tcb *stcb, struct sctp_nets **netp, int *fwd_tsn_seen,
+    uint32_t vrf_id, uint32_t table_id)
 {
 	struct sctp_association *asoc;
 	uint32_t vtag_in;
@@ -3647,7 +3650,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 		}
 		if (stcb == NULL) {
 			/* no association, so it's out of the blue... */
-			sctp_handle_ootb(m, iphlen, *offset, sh, inp, NULL);
+			sctp_handle_ootb(m, iphlen, *offset, sh, inp, NULL,
+					 vrf_id, table_id);
 			*offset = length;
 			if (locked_tcb)
 				SCTP_TCB_UNLOCK(locked_tcb);
@@ -3681,7 +3685,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				if (locked_tcb)
 					SCTP_TCB_UNLOCK(locked_tcb);
 				sctp_handle_ootb(m, iphlen, *offset, sh, inp,
-						 NULL);
+						 NULL, vrf_id, table_id);
 				return (NULL);
 			}
 		} else {
@@ -3869,7 +3873,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				return (NULL);
 			}
 			sctp_handle_init(m, iphlen, *offset, sh,
-					 (struct sctp_init_chunk *)ch, inp, stcb, *netp, &abort_no_unlock);
+					 (struct sctp_init_chunk *)ch, inp, stcb, *netp, &abort_no_unlock, vrf_id, table_id);
 			if (abort_no_unlock)
 				return (NULL);
 
@@ -4548,7 +4552,7 @@ int
 sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
     int length, struct sctphdr *sh, struct sctp_chunkhdr *ch,
     struct sctp_inpcb *inp, struct sctp_tcb *stcb, struct sctp_nets *net,
-    uint8_t ecn_bits)
+    uint8_t ecn_bits, uint32_t vrf_id, uint32_t table_id)
 {
 	/*
 	 * Control chunk processing
@@ -4587,7 +4591,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 	if (IS_SCTP_CONTROL(ch)) {
 		/* process the control portion of the SCTP packet */
 		stcb = sctp_process_control(m, iphlen, &offset, length, sh, ch,
-		    inp, stcb, &net, &fwd_tsn_seen);
+		    inp, stcb, &net, &fwd_tsn_seen, vrf_id, table_id);
 		if (stcb) {
 			/* This covers us if the cookie-echo was there
 			 * and it changes our INP.
@@ -4618,7 +4622,8 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		}
 		if (stcb == NULL) {
 			/* out of the blue DATA chunk */
-			sctp_handle_ootb(m, iphlen, offset, sh, inp, NULL);
+			sctp_handle_ootb(m, iphlen, offset, sh, inp, NULL,
+					 vrf_id, table_id);
 #if defined(SCTP_PER_SOCKET_LOCKING)
 			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
@@ -4693,7 +4698,8 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 			/*
 			 * We consider OOTB any data sent during asoc setup.
 			 */
-			sctp_handle_ootb(m, iphlen, offset, sh, inp, NULL);
+			sctp_handle_ootb(m, iphlen, offset, sh, inp, NULL,
+					 vrf_id, table_id);
 			SCTP_TCB_UNLOCK(stcb);
 #if defined(SCTP_PER_SOCKET_LOCKING)
 			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
@@ -4882,7 +4888,7 @@ sctp_input(i_pak, va_alist)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s;
 #endif
-	uint32_t vrf_id;
+	uint32_t vrf_id = 0, table_id = 0;
 	uint8_t ecn_bits;
 	struct ip *ip;
 	struct sctphdr *sh;
@@ -4909,18 +4915,21 @@ sctp_input(i_pak, va_alist)
 
 	res = pak_client_get_offset(i_pak, PAK_OFF_NETWORK_ST, &off_p);
 	if (CERR_IS_NOTOK(res)) {
-		(void) pak_client_return_buffer(i_pak);
+		SCTP_RELEASE_PKT(i_pak);
 		return;
 	}
 	off = (int)off_p;
-	error = pak_client_get_vrf_id(i_pak, &vrf_id);
-	if (error != EOK) {
-		(void) pak_client_return_buffer(i_pak);
+#endif
+
+ 	if (SCTP_GET_PKT_VRFID(i_pak, vrf_id)) {
+		SCTP_RELEASE_PKT(i_pak);
 		return;
 	}
-#else
-	vrf_id = SCTP_DEFAULT_VRFID;
-#endif
+ 	if (SCTP_GET_PKT_TABLEID(i_pak, table_id)) {
+		SCTP_RELEASE_PKT(i_pak);
+		return;
+	}
+
 	mlen = SCTP_HEADER_LEN(i_pak);
 #if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Panda__))
 	int off;
@@ -5080,14 +5089,16 @@ sctp_input(i_pak, va_alist)
 				sh->v_tag = init_chk->init.initiate_tag;
 		}
 		if (ch->chunk_type == SCTP_SHUTDOWN_ACK) {
-			sctp_send_shutdown_complete2(m, iphlen, sh);
+			sctp_send_shutdown_complete2(m, iphlen, sh, vrf_id,
+						     table_id);
  			goto bad;
 		}
 		if(ch->chunk_type == SCTP_SHUTDOWN_COMPLETE) {
 			goto bad;
 		}
  		if(ch->chunk_type != SCTP_ABORT_ASSOCIATION)
- 			sctp_send_abort(m, iphlen, sh, 0, NULL);
+ 			sctp_send_abort(m, iphlen, sh, 0, NULL, vrf_id,
+					table_id);
 		goto bad;
 	} else if (stcb == NULL) {
 		refcount_up = 1;
@@ -5181,9 +5192,10 @@ sctp_input(i_pak, va_alist)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
 #endif
-	
+
 	sctp_common_input_processing(&m, iphlen, offset, length, sh, ch,
-				     inp, stcb, net, ecn_bits);
+				     inp, stcb, net, ecn_bits, vrf_id,
+				     table_id);
 	/* inp's ref-count reduced && stcb unlocked */
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
