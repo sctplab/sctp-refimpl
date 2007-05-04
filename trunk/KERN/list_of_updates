@@ -4,4 +4,6 @@
    out of sync.. or an attacker. So now we abort the assoc.
 -  New IFN hash, also rename hashes to match addr/ifn now
    that the vrf has multiple.
+-  Do not enable SCTP_PCB_FLAGS_RECVDATAIOEVNT per default
+   as defined in the Socket API ID.
 
