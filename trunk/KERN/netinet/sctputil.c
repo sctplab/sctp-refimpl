@@ -4772,7 +4772,9 @@ sctp_sorecvmsg(struct socket *so,
 	} else {
 		in_flags = 0;
 	}
-	slen = uio->uio_resid;
+	if (uio)
+		slen = uio->uio_resid;
+
 	/* Pull in and set up our int flags */
 	if (in_flags & MSG_OOB) {
 		/* Out of band's NOT supported */
@@ -5878,6 +5880,11 @@ out:
 		struct sctp_extrcvinfo *s_extra;
 		s_extra = (struct sctp_extrcvinfo *)sinfo;
 		s_extra->sreinfo_next_flags = SCTP_NO_NEXT_MSG;
+	}
+	if (((out_flags & MSG_EOR) == 0) &&
+	    (control) && 
+	    (uio)){
+		control->last_read_length = slen - uio->uio_resid;
 	}
 
 	if(hold_rlock == 1) {
