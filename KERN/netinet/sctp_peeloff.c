@@ -109,14 +109,14 @@ sctp_do_peeloff(struct socket *head, struct socket *so, sctp_assoc_t assoc_id)
 	return (0);
 }
 
-#if defined( __Panda__)
-/* Need a function to remove the asoc found from socket */
-void panda_remove_from_sockbuf(struct socket *head);
-#endif
 
 struct socket *
 sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 {
+#if defined(__Panda__)
+	*error = EINVAL;
+	return (NULL);
+#else
 	struct socket *newso;
 	struct sctp_inpcb *inp, *n_inp;
 	struct sctp_tcb *stcb;
@@ -206,8 +206,6 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 	TAILQ_REMOVE(&head->so_comp, newso, so_list);
 	head->so_qlen--;
 	SOCK_UNLOCK(head);
-#elif defined ( __Panda__)
-        panda_remove_from_sockbuf(head);
 #else  /* Netbsd/OpenBSD */
         newso = TAILQ_FIRST(&head->so_q);
 	if (soqremque(newso, 1) == 0) {
@@ -232,4 +230,5 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 
 	SCTP_TCB_UNLOCK(stcb);
 	return (newso);
+#endif
 }

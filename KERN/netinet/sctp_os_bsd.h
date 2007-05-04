@@ -320,6 +320,8 @@ typedef struct callout sctp_os_timer_t;
 #define SCTP_SO_TYPE(so)	((so)->so_type)
 /* reserve sb space for a socket */
 #define SCTP_SORESERVE(so, send, recv)	soreserve(so, send, recv)
+/* wakeup a socket */
+#define SCTP_SOWAKEUP(so)	wakeup(&(so)->so_timeo)
 /* clear the socket buffer state */
 #define SCTP_SB_CLEAR(sb)	\
 	(sb).sb_cc = 0;		\
