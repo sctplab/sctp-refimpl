@@ -5466,6 +5466,10 @@ get_more_data:
 					control->held_length = 0;
 					wakeup_read_socket = 1;
 				}
+				if(control->aux_data) {
+					sctp_m_free (control->aux_data);
+					control->aux_data = NULL;
+				}
 				no_rcv_needed = control->do_not_ref_stcb;
 				sctp_free_remote_addr(control->whoFrom);
 				control->data = NULL;

@@ -66,6 +66,7 @@ sctp_build_readq_entry(struct sctp_tcb *stcb,
 		(_ctl)->whoFrom = net; \
 		(_ctl)->data = dm; \
 		(_ctl)->tail_mbuf = NULL; \
+	        (_ctl)->aux_data = NULL; \
 		(_ctl)->stcb = (in_it); \
 		(_ctl)->port_from = (in_it)->rport; \
 		(_ctl)->spec_flags = 0; \

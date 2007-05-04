@@ -373,6 +373,7 @@ struct sctp_queued_to_read {	/* sinfo structure Pluse more */
 	struct mbuf *data;	/* front of the mbuf chain of data with
 				 * PKT_HDR */
 	struct mbuf *tail_mbuf;	/* used for multi-part data */
+	struct mbuf *aux_data;  /* used to hold/cache  control if o/s does not take it from us */
 	struct sctp_tcb *stcb;	/* assoc, used for window update */
 	TAILQ_ENTRY(sctp_queued_to_read) next;
 	uint16_t port_from;
