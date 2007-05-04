@@ -209,6 +209,7 @@ sctp_build_readq_entry(struct sctp_tcb *stcb,
 	read_queue_e->data = dm;
 	read_queue_e->spec_flags = 0;
 	read_queue_e->tail_mbuf = NULL;
+	read_queue_e->aux_data = NULL;	
 	read_queue_e->stcb = stcb;
 	read_queue_e->port_from = stcb->rport;
 	read_queue_e->do_not_ref_stcb = 0;
@@ -244,6 +245,7 @@ sctp_build_readq_entry_chk(struct sctp_tcb *stcb,
 	read_queue_e->sinfo_cumtsn = chk->rec.data.TSN_seq;
 	read_queue_e->sinfo_assoc_id = sctp_get_associd(stcb);
 	read_queue_e->whoFrom = chk->whoTo;
+	read_queue_e->aux_data = NULL;	
 	read_queue_e->length = 0;
 	atomic_add_int(&chk->whoTo->ref_count, 1);
 	read_queue_e->data = chk->data;
