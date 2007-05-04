@@ -69,6 +69,7 @@ sctp_build_readq_entry(struct sctp_tcb *stcb,
 		(_ctl)->stcb = (in_it); \
 		(_ctl)->port_from = (in_it)->rport; \
 		(_ctl)->spec_flags = 0; \
+		(_ctl)->last_read_length = 0; \
 		(_ctl)->do_not_ref_stcb = 0; \
 		(_ctl)->end_added = 0; \
 		(_ctl)->pdapi_aborted = 0; \
