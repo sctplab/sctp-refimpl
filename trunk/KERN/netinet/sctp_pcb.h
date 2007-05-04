@@ -53,7 +53,6 @@ TAILQ_HEAD(sctp_readhead, sctp_queued_to_read);
 TAILQ_HEAD(sctp_streamhead, sctp_stream_queue_pending);
 
 #include <netinet/sctp_structs.h>
-#include <netinet/sctp_uio.h>
 #include <netinet/sctp_auth.h>
 
 #define SCTP_PCBHASH_ALLADDR(port, mask) (port & mask)

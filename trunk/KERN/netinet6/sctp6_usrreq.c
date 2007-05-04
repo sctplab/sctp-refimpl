@@ -154,13 +154,13 @@ sctp6_input(i_pak, offp, proto)
 #ifdef __Panda__
 	res = pak_client_get_offset(*i_pak, PAK_OFF_NETWORK_ST, &off_p);
 	if (CERR_IS_NOTOK(res)) {
-		SCTP_RELEASE_PAK(*i_pak);
+		SCTP_RELEASE_PKT(*i_pak);
 		return(-1);
 	}
 	off = (int)off_p;
 	error = pak_client_get_vrf_id(*i_pak, &vrf_id);
 	if (error != EOK) {
-		SCTP_RELEASE_PAK(*i_pak);
+		SCTP_RELEASE_PKT(*i_pak);
 		return(-1);
 	}
 #else
@@ -405,7 +405,7 @@ sctp_skip_csum:
 #endif
 	/* XXX this stuff below gets moved to appropriate parts later... */
 	if (m)
-		m_freem(m);
+		sctp_m_freem(m);
 	if ((in6p) && refcount_up) {
 		/* reduce ref-count */
 		SCTP_INP_WLOCK(in6p);
@@ -425,7 +425,7 @@ bad:
 		SCTP_INP_WUNLOCK(in6p);
 	}
 	if (m)
-		m_freem(m);
+		sctp_m_freem(m);
 	/* For BSD/MAC this does nothing */
 	SCTP_DETACH_HEADER_FROM_CHAIN(*i_pak);
 	SCTP_RELEASE_HEADER(*i_pak);
@@ -1261,7 +1261,7 @@ sctp_sendm(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
 
 #endif
 
-
+#if !defined(__Panda__)
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 static int
 sctp6_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
@@ -1272,12 +1272,6 @@ static int
 sctp6_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
     struct mbuf *control, struct proc *p)
 {
-#elif defined(__Panda__)
-int
-sctp6_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
-    struct mbuf *control)
-{
-	void *p = NULL;
 #else
 static int
 sctp6_send(struct socket *so, int flags, struct mbuf *m, struct mbuf *nam,
@@ -1297,10 +1291,10 @@ sctp6_send(struct socket *so, int flags, struct mbuf *m, struct mbuf *nam,
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (inp == NULL) {
 		if (control) {
-			m_freem(control);
+			SCTP_RELEASE_PKT(control);
 			control = NULL;
 		}
-		m_freem(m);
+		SCTP_RELEASE_PKT(m);
 		return EINVAL;
 	}
 	in_inp = (struct inpcb *)inp;
@@ -1314,9 +1308,9 @@ sctp6_send(struct socket *so, int flags, struct mbuf *m, struct mbuf *nam,
 		goto connected_type;
 	}
 	if (addr == NULL) {
-		m_freem(m);
+		SCTP_RELEASE_PKT(m);
 		if (control) {
-			m_freem(control);
+			SCTP_RELEASE_PKT(control);
 			control = NULL;
 		}
 		return (EDESTADDRREQ);
@@ -1354,7 +1348,7 @@ connected_type:
 	if (control) {
 		if (inp->control) {
 			printf("huh? control set?\n");
-			m_freem(inp->control);
+			SCTP_RELEASE_PKT(inp->control);
 			inp->control = NULL;
 		}
 		inp->control = control;
@@ -1395,6 +1389,7 @@ connected_type:
 		return (0);
 	}
 }
+#endif
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 static int

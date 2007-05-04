@@ -861,12 +861,13 @@ sctp_detach(struct socket *so)
 
 #endif
 
+#if !defined(__Panda__)
 int
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 sctp_sendm(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
     struct mbuf *control, struct thread *p);
 
-#else
+#else 
 sctp_sendm(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
     struct mbuf *control, struct proc *p);
 
@@ -968,6 +969,7 @@ connected_type:
 		return (0);
 	}
 }
+#endif
 
 #if defined(__Panda__)
 int
