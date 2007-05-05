@@ -1175,7 +1175,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			case SCTP_STATE_COOKIE_WAIT:
 			case SCTP_STATE_COOKIE_ECHOED:
 				/*
-				 * INIT was sent, but got got a COOKIE_ECHO with the
+				 * INIT was sent but got a COOKIE_ECHO with the
 				 * correct tags... just accept it...but we must
 				 * process the init so that we can make sure we
 				 * have the right seq no's.
@@ -1224,8 +1224,8 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 				/* notify upper layer */
 				*notification = SCTP_NOTIFY_ASSOC_UP;
 				/*
-				 * since we did not send a HB make sure we don't
-				 * double things
+				 * since we did not send a HB make sure we
+				 * don't double things
 				 */
 				net->hb_responded = 1;
 
@@ -1237,10 +1237,9 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 				break;
 			default:
 				/*
-				 * we're in the OPEN state (or beyond), so peer must
-				 * have simply lost the COOKIE-ACK
+				 * we're in the OPEN state (or beyond), so
+				 * peer must have simply lost the COOKIE-ACK
 				 */
-				
 				break;
 		}	/* end switch */
 		sctp_stop_all_cookie_timers(stcb);
@@ -1262,7 +1261,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		if(how_indx < sizeof(asoc->cookie_how))
 			asoc->cookie_how[how_indx] = 5;
 		return (stcb);
-	}			/* end if */
+	}
 	if (ntohl(initack_cp->init.initiate_tag) != asoc->my_vtag &&
 	    ntohl(init_cp->init.initiate_tag) == asoc->peer_vtag &&
 	    cookie->tie_tag_my_vtag == 0 &&
@@ -1546,7 +1545,8 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
     struct sctphdr *sh, struct sctp_state_cookie *cookie, int cookie_len,
     struct sctp_inpcb *inp, struct sctp_nets **netp,
     struct sockaddr *init_src, int *notification,
-    int auth_skipped, uint32_t auth_offset, uint32_t auth_len)
+    int auth_skipped, uint32_t auth_offset, uint32_t auth_len,
+    uint32_t vrf_id, uint32_t table_id)
 {
 	struct sctp_tcb *stcb;
 	struct sctp_init_chunk *init_cp, init_buf;
@@ -1556,15 +1556,12 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	struct sockaddr_in *sin;
 	struct sockaddr_in6 *sin6;
 	struct sctp_association *asoc;
-	uint32_t vrf_id;
 	int chk_length;
 	int init_offset, initack_offset, initack_limit;
 	int retval;
 	int error = 0;
 	uint32_t old_tag;
 	uint8_t auth_chunk_buf[SCTP_PARAM_BUFFER_SIZE];
-
-	vrf_id = inp->def_vrf_id;
 
 	/*
 	 * find and validate the INIT chunk in the cookie (peer's info) the
@@ -1645,6 +1642,8 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	/* get the correct sctp_nets */
 	*netp = sctp_findnet(stcb, init_src);
 	asoc = &stcb->asoc;
+	/* save the table id (vrf_id is done in aloc_assoc) */
+	asoc->table_id = table_id;
 	/* get scope variables out of cookie */
 	asoc->ipv4_local_scope = cookie->ipv4_scope;
 	asoc->site_scope = cookie->site_scope;
@@ -1820,7 +1819,8 @@ static struct mbuf *
 sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
     struct sctphdr *sh, struct sctp_cookie_echo_chunk *cp,
     struct sctp_inpcb **inp_p, struct sctp_tcb **stcb, struct sctp_nets **netp,
-    int auth_skipped, uint32_t auth_offset, uint32_t auth_len, struct sctp_tcb **locked_tcb)
+    int auth_skipped, uint32_t auth_offset, uint32_t auth_len,
+    struct sctp_tcb **locked_tcb, uint32_t vrf_id, uint32_t table_id)
 {
 	struct sctp_state_cookie *cookie;
 	struct sockaddr_in6 sin6;
@@ -2109,7 +2109,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		/* this is the "normal" case... get a new TCB */
 		*stcb = sctp_process_cookie_new(m, iphlen, offset, sh, cookie,
 		    cookie_len, *inp_p, netp, to, &notification,
-		    auth_skipped, auth_offset, auth_len);
+		    auth_skipped, auth_offset, auth_len, vrf_id, table_id);
 	} else {
 		/* this is abnormal... cookie-echo on existing TCB */
 		had_a_existing_tcb = 1;
@@ -4148,7 +4148,9 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 								auth_skipped,
 								auth_offset,
 								auth_len,
-								&locked_tcb);
+								&locked_tcb,
+								vrf_id,
+								table_id);
 				if(linp)
 					SCTP_ASOC_CREATE_UNLOCK(linp);
 				if (ret_buf == NULL) {
