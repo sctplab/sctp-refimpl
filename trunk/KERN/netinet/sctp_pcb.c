@@ -196,6 +196,7 @@ sctp_allocate_vrf(int vrf_id)
 	/* Add it to the hash table */
 	bucket = &sctppcbinfo.sctp_vrfhash[(vrf_id & sctppcbinfo.hashvrfmark)];
 	LIST_INSERT_HEAD(bucket, vrf, next_vrf);
+	atomic_add_int(&sctppcbinfo.ipi_count_vrfs, 1);
 	return (vrf);
 }
 
@@ -246,6 +247,7 @@ sctp_free_ifn(struct sctp_ifn *sctp_ifnp)
 	if(ret == 1) {
 		/* We zero'd the count */
 		SCTP_FREE(sctp_ifnp);
+		atomic_subtract_int(&sctppcbinfo.ipi_count_ifns, 1);
 	}
 }
 
@@ -273,11 +275,12 @@ sctp_free_ifa(struct sctp_ifa *sctp_ifap)
 	if(ret == 1) {
 		/* We zero'd the count */
 		SCTP_FREE(sctp_ifap);
+		atomic_subtract_int(&sctppcbinfo.ipi_count_ifas, 1);
 	}
 }
 
-void
-sctp_delete_ifn(struct sctp_ifn *sctp_ifnp)
+static void
+sctp_delete_ifn(struct sctp_ifn *sctp_ifnp, int hold_addr_lock)
 {
 	struct sctp_ifn *found;
 	found = sctp_find_ifn(sctp_ifnp->vrf, sctp_ifnp->ifn_p, sctp_ifnp->ifn_index);
@@ -285,10 +288,12 @@ sctp_delete_ifn(struct sctp_ifn *sctp_ifnp)
 		/* Not in the list.. sorry */
 		return;
 	}
-	SCTP_IPI_ADDR_LOCK();
+	if (hold_addr_lock == 0) 
+		SCTP_IPI_ADDR_LOCK();
 	LIST_REMOVE(sctp_ifnp, next_bucket);
 	LIST_REMOVE(sctp_ifnp, next_ifn);
-	SCTP_IPI_ADDR_UNLOCK();
+	if (hold_addr_lock == 0) 
+		SCTP_IPI_ADDR_UNLOCK();
 	/* Take away the reference, and possibly free it */
 	sctp_free_ifn(sctp_ifnp);
 }
@@ -346,6 +351,7 @@ sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 		SCTP_IPI_ADDR_LOCK();
 		LIST_INSERT_HEAD(hash_ifn_head, sctp_ifnp, next_bucket);
 		LIST_INSERT_HEAD(&vrf->ifnlist, sctp_ifnp, next_ifn);
+		atomic_add_int(&sctppcbinfo.ipi_count_ifns, 1);
 	}
 	sctp_ifap = sctp_find_ifa_by_addr(addr, vrf->vrf_id, 1);
 	if (sctp_ifap) {
@@ -431,6 +437,7 @@ sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 	LIST_INSERT_HEAD(&sctp_ifnp->ifalist, sctp_ifap, next_ifa);
 	sctp_ifnp->ifa_count++;
 	vrf->total_ifa_count++;
+	atomic_add_int(&sctppcbinfo.ipi_count_ifas, 1);
 	SCTP_IPI_ADDR_UNLOCK();
 	if (dynamic_add) {
 		/* Bump up the refcount so that when the timer
@@ -450,9 +457,8 @@ sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 				printf("Lost and address change ???\n");
 			}
 #endif				/* SCTP_DEBUG */
-
 			/* Opps, must decrement the count */
-			sctp_free_ifa(sctp_ifap);
+			sctp_del_addr_from_vrf(vrf_id, addr, ifn_index);
 			return(NULL);
 		}
 		SCTP_INCR_LADDR_COUNT();
@@ -484,7 +490,9 @@ sctp_del_addr_from_vrf(uint32_t vrf_id, struct sockaddr *addr,
 
 	vrf = sctp_find_vrf(vrf_id);
 	if (vrf == NULL) {
+#ifdef SCTP_DEBUG
 		printf("Can't find vrf_id:%d\n", vrf_id);
+#endif
 		goto out_now;
 	}
 
@@ -497,14 +505,20 @@ sctp_del_addr_from_vrf(uint32_t vrf_id, struct sockaddr *addr,
 		LIST_REMOVE(sctp_ifap, next_bucket);
 		LIST_REMOVE(sctp_ifap, next_ifa);
 		if(sctp_ifap->ifn_p) {
-			sctp_free_ifn(sctp_ifap->ifn_p);
+			if (LIST_EMPTY(&sctp_ifap->ifn_p->ifalist)) {
+				sctp_delete_ifn (sctp_ifap->ifn_p, 1);
+			}
+	                sctp_free_ifn(sctp_ifap->ifn_p);
 			sctp_ifap->ifn_p = NULL;
 		}
-	} else {
+	}
+#ifdef SCTP_DEBUG
+	else {
 		printf("Del Addr-ifn:%d Could not find address:", 
 		       ifn_index);
 		sctp_print_address(addr);
 	}
+#endif
  out_now:
 	SCTP_IPI_ADDR_UNLOCK();	
 	if (sctp_ifap) {
