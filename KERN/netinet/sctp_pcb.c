@@ -336,7 +336,11 @@ sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 		sctp_ifnp->refcount = 1;
 		sctp_ifnp->vrf = vrf;
 		sctp_ifnp->ifn_mtu = SCTP_GATHER_MTU_FROM_IFN_INFO(ifn, ifn_index);
-		memcpy(sctp_ifnp->ifn_name, if_name, SCTP_IFNAMSIZ);
+		if(if_name != NULL) {
+			memcpy(sctp_ifnp->ifn_name, if_name, SCTP_IFNAMSIZ);
+		} else {
+			memcpy(sctp_ifnp->ifn_name, "unknown", min(7,SCTP_IFNAMSIZ));
+		}
 		hash_ifn_head = &vrf->vrf_ifn_hash[(ifn_index & vrf->vrf_ifn_hashmark)];
 		LIST_INIT(&sctp_ifnp->ifalist);
 		SCTP_IPI_ADDR_LOCK();
