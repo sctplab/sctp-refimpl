@@ -11862,6 +11862,9 @@ sctp_lower_sosend(struct socket *so,
 				if (net->flight_size > (net->mtu * stcb->asoc.max_burst)) {
 					queue_only = 1;
 					SCTP_STAT_INCR(sctps_send_burst_avoid);
+				} else if (net->flight_size > net->cwnd) {
+					queue_only = 1;
+					SCTP_STAT_INCR(sctps_send_cwnd_avoid);
 				} else {
 					queue_only = 0;
 				}
@@ -12133,6 +12136,9 @@ sctp_lower_sosend(struct socket *so,
 		if (net->flight_size > (net->mtu * stcb->asoc.max_burst)) {
 			queue_only = 1;
 			SCTP_STAT_INCR(sctps_send_burst_avoid);
+		} else if (net->flight_size > net->cwnd) {
+			queue_only = 1;
+			SCTP_STAT_INCR(sctps_send_cwnd_avoid);
 		} else {
 			queue_only = 0;
 		}
