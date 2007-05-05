@@ -352,7 +352,7 @@ typedef struct rtentry	sctp_rtentry_t;
 /*
  * IP output routines
  */
-#define SCTP_IP_OUTPUT(result, o_pak, ro, stcb) \
+#define SCTP_IP_OUTPUT(result, o_pak, ro, stcb, vrf_id, table_id) \
 { \
 	int o_flgs = 0; \
 	if (stcb && stcb->sctp_ep && stcb->sctp_ep->sctp_socket) { \
@@ -363,7 +363,7 @@ typedef struct rtentry	sctp_rtentry_t;
 	result = ip_output(o_pak, NULL, ro, o_flgs, 0, NULL); \
 }
 
-#define SCTP_IP6_OUTPUT(result, o_pak, ro, ifp, stcb) \
+#define SCTP_IP6_OUTPUT(result, o_pak, ro, ifp, stcb, vrf_id, table_id) \
 { \
  	if (stcb && stcb->sctp_ep) \
 		result = ip6_output(o_pak, \

@@ -3390,10 +3390,10 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		return (EFAULT);
 	}
 
-	if (stcb == NULL) {
-		vrf_id = inp->def_vrf_id;
+	if (stcb) {
+	    vrf_id = stcb->asoc.vrf_id;
 	} else {
-		vrf_id = stcb->asoc.vrf_id;
+	    vrf_id = inp->def_vrf_id;
 	}
 
 	/* fill in the HMAC digest for any AUTH chunk in the packet */
@@ -3605,8 +3605,8 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			printf("RTP route is %p through\n", ro->ro_rt);
 		}
 #endif
-
-		SCTP_IP_OUTPUT(ret, o_pak, ro, stcb);
+		/* send it out.  table id is taken from stcb */
+		SCTP_IP_OUTPUT(ret, o_pak, ro, stcb, vrf_id, 0);
 
 		SCTP_STAT_INCR(sctps_sendpackets);
 		SCTP_STAT_INCR_COUNTER64(sctps_outpackets);
@@ -3831,7 +3831,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			printf("dst: ");
 			sctp_print_address((struct sockaddr *)sin6);
 		}
-#endif				/* SCTP_DEBUG */
+#endif
 		if (net) {
 			sin6 = (struct sockaddr_in6 *)&net->ro._l_addr;
 			/* preserve the port and scope for link local send */
@@ -3839,8 +3839,9 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			prev_port = sin6->sin6_port;
 		}
 
+		/* send it out. table id is taken from stcb */
 		SCTP_IP6_OUTPUT(ret, o_pak, (struct route_in6 *)ro, &ifp,
-				stcb);
+				stcb, vrf_id, 0);
 
 		if (net) {
 			/* for link local this must be done */
@@ -3851,7 +3852,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		if (sctp_debug_on & SCTP_DEBUG_OUTPUT3) {
 			printf("return from send is %d\n", ret);
 		}
-#endif				/* SCTP_DEBUG_OUTPUT */
+#endif
 		SCTP_STAT_INCR(sctps_sendpackets);
 		SCTP_STAT_INCR_COUNTER64(sctps_outpackets);
 		if(ret) {
@@ -9561,7 +9562,7 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 		iph_out->ip_len = htons(SCTP_HEADER_LEN(o_pak));
 #endif
 		/* out it goes */
-		SCTP_IP_OUTPUT(ret, o_pak, &ro, stcb);
+		SCTP_IP_OUTPUT(ret, o_pak, &ro, stcb, vrf_id, table_id);
 
 		/* Free the route if we got one back */
 		if (ro.ro_rt)
@@ -9579,7 +9580,7 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 #endif
 
 		bzero(&ro, sizeof(ro));
-		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, stcb);
+		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, stcb, vrf_id, table_id);
 
 		/* Free the route if we got one back */
 		if (ro.ro_rt)
@@ -10442,7 +10443,7 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 		iph_out->ip_len = htons(SCTP_HEADER_LEN(o_pak));
 #endif
 		/* out it goes */
-		SCTP_IP_OUTPUT(ret, o_pak, &ro, stcb);
+		SCTP_IP_OUTPUT(ret, o_pak, &ro, stcb, vrf_id, table_id);
 
 		/* Free the route if we got one back */
 		if (ro.ro_rt)
@@ -10468,7 +10469,7 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 #endif
 		ip6_out->ip6_plen = SCTP_HEADER_LEN(o_pak) - sizeof(*ip6_out);
 
-		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, stcb);
+		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, stcb, vrf_id, table_id);
 
 		/* Free the route if we got one back */
 		if (ro.ro_rt)
@@ -10479,9 +10480,8 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 }
 
 void
-sctp_send_operr_to(struct mbuf *m, int iphlen,
-    struct mbuf *scm,
-    uint32_t vtag)
+sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
+		   uint32_t vrf_id, uint32_t table_id)
 {
 #ifdef __Panda__
 	pakhandle_type o_pak;
@@ -10570,7 +10570,7 @@ sctp_send_operr_to(struct mbuf *m, int iphlen,
 #else
 		out->ip_len = htons(SCTP_HEADER_LEN(o_pak));
 #endif
-		SCTP_IP_OUTPUT(retcode, o_pak, &ro, stcb);
+		SCTP_IP_OUTPUT(retcode, o_pak, &ro, stcb, vrf_id, table_id);
 
 		SCTP_STAT_INCR(sctps_sendpackets);
 		SCTP_STAT_INCR_COUNTER64(sctps_outpackets);
@@ -10627,7 +10627,7 @@ sctp_send_operr_to(struct mbuf *m, int iphlen,
 		}
 #endif				/* SCTP_DEBUG */
 
-		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, stcb);
+		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, stcb, vrf_id, table_id);
 
 		SCTP_STAT_INCR(sctps_sendpackets);
 		SCTP_STAT_INCR_COUNTER64(sctps_outpackets);

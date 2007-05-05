@@ -2077,7 +2077,6 @@ sctp_inpcb_alloc(struct socket *so)
 	 */
 	int i, error;
 	struct sctp_inpcb *inp;
-
 	struct sctp_pcb *m;
 	struct timeval time;
 	sctp_sharedkey_t *null_key;
@@ -2195,6 +2194,7 @@ sctp_inpcb_alloc(struct socket *so)
 	inp->m_vrf_ids[0] = SCTP_DEFAULT_VRFID;
 #endif
 	inp->def_vrf_id = SCTP_DEFAULT_VRFID;
+	inp->def_table_id = SCTP_DEFAULT_TABLEID;
 
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	/* LOCK init's */

@@ -317,7 +317,8 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 static int
 sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
     struct sctphdr *sh, struct sctp_init_ack_chunk *cp, struct sctp_tcb *stcb,
-    struct sctp_nets *net, int *abort_no_unlock)
+    struct sctp_nets *net, int *abort_no_unlock, uint32_t vrf_id,
+    uint32_t table_id)
 {
 	struct sctp_association *asoc;
 	struct mbuf *op_err;
@@ -334,7 +335,7 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 	if (abort_flag) {
 		/* Send an abort and notify peer */
 		if (op_err != NULL) {
-			sctp_send_operr_to(m, iphlen, op_err, cp->init.initiate_tag);
+			sctp_send_operr_to(m, iphlen, op_err, cp->init.initiate_tag, vrf_id, table_id);
 		} else {
 			/*
 			 * Just notify (abort_assoc does this if we send an
@@ -927,9 +928,10 @@ sctp_handle_error(struct sctp_chunkhdr *ch,
 }
 
 static int
-sctp_handle_init_ack(struct mbuf *m, int iphlen, int offset,struct sctphdr *sh,
-    struct sctp_init_ack_chunk *cp, struct sctp_tcb *stcb,
-    struct sctp_nets *net, int *abort_no_unlock)
+sctp_handle_init_ack(struct mbuf *m, int iphlen, int offset,
+    struct sctphdr *sh, struct sctp_init_ack_chunk *cp, struct sctp_tcb *stcb,
+    struct sctp_nets *net, int *abort_no_unlock, uint32_t vrf_id,
+    uint32_t table_id)
 {
 	struct sctp_init_ack *init_ack;
 	int *state;
@@ -1009,8 +1011,9 @@ sctp_handle_init_ack(struct mbuf *m, int iphlen, int offset,struct sctphdr *sh,
 			sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_CONFIRMED,
 			    stcb, 0, (void *)stcb->asoc.primary_destination);
 		}
-		if (sctp_process_init_ack(m, iphlen, offset, sh, cp, stcb, net,
-					  abort_no_unlock) < 0) {
+		if (sctp_process_init_ack(m, iphlen, offset, sh, cp, stcb,
+					  net, abort_no_unlock, vrf_id,
+					  table_id) < 0) {
 			/* error in parsing parameters */
 			return (-1);
 		}
@@ -1076,7 +1079,8 @@ static struct sctp_tcb *
 sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
     struct sctphdr *sh, struct sctp_state_cookie *cookie, int cookie_len,
     struct sctp_inpcb *inp, struct sctp_tcb *stcb, struct sctp_nets *net,
-    struct sockaddr *init_src, int *notification, sctp_assoc_t * sac_assoc_id)
+    struct sockaddr *init_src, int *notification, sctp_assoc_t * sac_assoc_id,
+    uint32_t vrf_id, uint32_t table_id)
 {
 	struct sctp_association *asoc;
 	struct sctp_init_chunk *init_cp, init_buf;
@@ -1117,8 +1121,9 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		ph = mtod(op_err, struct sctp_paramhdr *);
 		ph->param_type = htons(SCTP_CAUSE_COOKIE_IN_SHUTDOWN);
 		ph->param_length = htons(sizeof(struct sctp_paramhdr));
-		sctp_send_operr_to(m, iphlen, op_err, cookie->peers_vtag);
-		if(how_indx < sizeof(asoc->cookie_how))
+		sctp_send_operr_to(m, iphlen, op_err, cookie->peers_vtag,
+				   vrf_id, table_id);
+		if (how_indx < sizeof(asoc->cookie_how))
 			asoc->cookie_how[how_indx] = 2;
 		return (NULL);
 	}
@@ -2038,7 +2043,8 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		if (tim == 0)
 			tim = now.tv_usec - cookie->time_entered.tv_usec;
 		scm->time_usec = htonl(tim);
-		sctp_send_operr_to(m, iphlen, op_err, cookie->peers_vtag);
+		sctp_send_operr_to(m, iphlen, op_err, cookie->peers_vtag,
+				   vrf_id, table_id);
 		return (NULL);
 	}
 	/*
@@ -2115,7 +2121,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		had_a_existing_tcb = 1;
 		*stcb = sctp_process_cookie_existing(m, iphlen, offset, sh,
 		    cookie, cookie_len, *inp_p, *stcb, *netp, to, &notification,
-		    &sac_restart_id);
+		    &sac_restart_id, vrf_id, table_id);
 	}
 
 	if (*stcb == NULL) {
@@ -3911,7 +3917,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				return (NULL);
 			}
 			ret = sctp_handle_init_ack(m, iphlen, *offset, sh,
-						   (struct sctp_init_ack_chunk *)ch, stcb, *netp, &abort_no_unlock);
+						   (struct sctp_init_ack_chunk *)ch, stcb, *netp, &abort_no_unlock, vrf_id, table_id);
 			/*
 			 * Special case, I must call the output routine to
 			 * get the cookie echoed
@@ -4810,7 +4816,7 @@ trigger_send:
 #endif
 	SCTP_TCB_UNLOCK(stcb);
 #if defined(SCTP_PER_SOCKET_LOCKING)
-			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
+	SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
 	return (0);
 }
@@ -4913,8 +4919,6 @@ sctp_input(i_pak, va_alist)
 #endif
 #endif
 #ifdef __Panda__
-	int error;
-
 	res = pak_client_get_offset(i_pak, PAK_OFF_NETWORK_ST, &off_p);
 	if (CERR_IS_NOTOK(res)) {
 		SCTP_RELEASE_PKT(i_pak);
