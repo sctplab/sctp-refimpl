@@ -6208,9 +6208,9 @@ int sctp_l_soreceive(struct socket *so,
 		/* copy back the address info */
 		if (from && from->sa_len) {
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
-			*name = sodupsockaddr(from, M_NOWAIT);
+			*name = sodupsockaddr(from, M_WAIT);
 #else
-			*name = dup_sockaddr(from, mp0 == 0);
+			*name = dup_sockaddr(from, M_WAIT);
 #endif
 		} else {
 			*name = NULL;
