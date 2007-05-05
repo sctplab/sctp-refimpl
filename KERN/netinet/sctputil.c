@@ -5052,6 +5052,7 @@ restart:
 				if ((ctl->stcb != control->stcb) && (ctl->length) &&
 				    (ctl->some_taken || 
 				     ((ctl->do_not_ref_stcb == 0) && 
+				     ((ctl->spec_flags & M_NOTIFICATION) == 0) &&
 				      (ctl->stcb->asoc.strmin[ctl->sinfo_stream].delivery_started == 0)))
 					) {
 					/*-
@@ -5066,6 +5067,7 @@ restart:
 					   (ctl->length) &&
 					   ((ctl->some_taken) ||
 					    ((ctl->do_not_ref_stcb == 0) && 
+					     ((ctl->spec_flags & M_NOTIFICATION) == 0) &&
 					     (ctl->stcb->asoc.strmin[ctl->sinfo_stream].delivery_started == 0)))
 						   ){
 					/*-
@@ -5134,7 +5136,9 @@ found_one:
 			stcb->freed_by_sorcv_sincelast = 0;
 		}
         }
-	if (stcb && control->do_not_ref_stcb == 0) {
+	if (stcb && 
+	    ((control->spec_flags & M_NOTIFICATION) == 0) && 
+	    control->do_not_ref_stcb == 0) {
 		stcb->asoc.strmin[control->sinfo_stream].delivery_started = 1;
 	}
 
@@ -5308,7 +5312,7 @@ get_more_data:
 				if ((SCTP_BUF_NEXT(m)== NULL) &&
 				    (control->end_added)) {
 					out_flags |= MSG_EOR;
-					if (control->do_not_ref_stcb == 0)
+					if ((control->do_not_ref_stcb == 0) && ((ctl->spec_flags & M_NOTIFICATION) == 0))
 						control->stcb->asoc.strmin[control->sinfo_stream].delivery_started = 0;
 				}
 				if (control->spec_flags & M_NOTIFICATION) {
@@ -5602,12 +5606,12 @@ wait_some_more:
 				/* he aborted, or is done i.e.did a shutdown */
 				out_flags |= MSG_EOR;
 				if(control->pdapi_aborted) {
-					if (control->do_not_ref_stcb == 0)
+					if ((control->do_not_ref_stcb == 0) && ((ctl->spec_flags & M_NOTIFICATION) == 0))
 						control->stcb->asoc.strmin[control->sinfo_stream].delivery_started = 0;
 
 					out_flags |= MSG_TRUNC;
 				} else {
-					if (control->do_not_ref_stcb == 0)
+					if ((control->do_not_ref_stcb == 0) && ((ctl->spec_flags & M_NOTIFICATION) == 0))
 						control->stcb->asoc.strmin[control->sinfo_stream].delivery_started = 0;
 				}
 				goto done_with_control;
@@ -5653,7 +5657,7 @@ get_more_data2:
 			}
 			if (control->end_added) {
 				out_flags |= MSG_EOR;
-				if (control->do_not_ref_stcb == 0)
+				if ((control->do_not_ref_stcb == 0) && ((ctl->spec_flags & M_NOTIFICATION) == 0))
 					control->stcb->asoc.strmin[control->sinfo_stream].delivery_started = 0;
 			}
 			if (control->spec_flags & M_NOTIFICATION) {
@@ -5731,7 +5735,7 @@ get_more_data2:
 					out_flags |= MSG_EOR;
 					if(control->pdapi_aborted) {
 						out_flags |= MSG_TRUNC;
-						if (control->do_not_ref_stcb == 0)
+						if ((control->do_not_ref_stcb == 0) && ((ctl->spec_flags & M_NOTIFICATION) == 0))
 							control->stcb->asoc.strmin[control->sinfo_stream].delivery_started = 0;
 					}
 					goto done_with_control;
