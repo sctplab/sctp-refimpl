@@ -880,6 +880,7 @@ struct sctpstat {
 	u_long  sctps_cached_strmoq;    /* Number of cached stream oq's used */
 	u_long  sctps_left_abandon;     /* Number of unread message abandonded by close */
 	u_long  sctps_send_burst_avoid; /* Send burst avoidance, already max burst inflight to net */
+	u_long  sctps_send_cwnd_avoid; /* Send cwnd full  avoidance, already max burst inflight to net */
 };
 
 #define SCTP_STAT_INCR(_x) SCTP_STAT_INCR_BY(_x,1)
