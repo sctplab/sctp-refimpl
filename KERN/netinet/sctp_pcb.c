@@ -3851,6 +3851,8 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 		}
 		if(net->mtu == 0) {
 			/* Huh ?? */
+			printf("OVERLAY default MTU? no INTFC mtu for _s_addr:%p inf_p:%p?\n",
+			       net->ro._s_addr, net->ro._s_addr->ifn_p);
 			net->mtu = SCTP_DEFAULT_MTU;
 		} else {
 			uint32_t rmtu;
