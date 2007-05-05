@@ -3639,23 +3639,19 @@ sctp_abort_notification(struct sctp_tcb *stcb, int error)
 
 void
 sctp_abort_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
-    struct mbuf *m, int iphlen, struct sctphdr *sh, struct mbuf *op_err)
+    struct mbuf *m, int iphlen, struct sctphdr *sh, struct mbuf *op_err,
+    uint32_t vrf_id, uint32_t table_id)
 {
 	uint32_t vtag;
-	uint32_t vrf_id, table_id;
 
 	vtag = 0;
 	if (stcb != NULL) {
 		/* We have a TCB to abort, send notification too */
 		vtag = stcb->asoc.peer_vtag;
 		sctp_abort_notification(stcb, 0);
-	}
-	if (stcb) {
-	    vrf_id = stcb->asoc.vrf_id;
-	    table_id = stcb->asoc.table_id;
-	} else {
-	    vrf_id = inp->def_vrf_id;
-	    table_id = inp->def_table_id;
+		/* get the assoc vrf id and table id */
+		vrf_id = stcb->asoc.vrf_id;
+		table_id = stcb->asoc.table_id;
 	}
 	sctp_send_abort(m, iphlen, sh, vtag, op_err, vrf_id, table_id);
 	if (stcb != NULL) {
