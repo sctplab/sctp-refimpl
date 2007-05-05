@@ -103,7 +103,7 @@ static void* handle_connection(void *arg)
 	unsigned long notifications = 0;
 	struct sctp_sndrcvinfo sinfo;
 	unsigned int first_length;
-	int flags=0;
+	int flags;
 	
 	fd = *(int *) arg;
 	free(arg);
@@ -111,6 +111,7 @@ static void* handle_connection(void *arg)
 	pthread_detach(tid);
 	
 	buf = malloc(BUFFERSIZE);
+	flags = 0;
 	n = sctp_recvmsg(fd, (void*)buf, BUFFERSIZE, NULL, NULL, &sinfo, &flags);
 	gettimeofday(&start_time, NULL);
 	first_length = 0;
@@ -360,7 +361,6 @@ int main(int argc, char **argv)
 		}
 			
 		while (!done && ((number_of_messages == 0) || (i < number_of_messages))) {
-			i++;
 			if (very_verbose)
 				printf("Sending message number %lu.\n", i);
 			nn = 0;
@@ -370,6 +370,7 @@ int main(int argc, char **argv)
 				else
 					nn += n;
 			} while ((n >= 0) && (nn < length));
+			i++;
 		}
 		if (verbose)
 			printf("done.\n");
