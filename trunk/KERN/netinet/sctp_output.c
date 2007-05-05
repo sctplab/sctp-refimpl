@@ -11859,7 +11859,12 @@ sctp_lower_sosend(struct socket *so,
 				un_sent = ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight) +
 					   ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) * 
 					    sizeof(struct sctp_data_chunk)));
-				queue_only = 0;
+				if (net->flight_size > (net->mtu * stcb->asoc.max_burst)) {
+					queue_only = 1;
+					SCTP_STAT_INCR(sctps_send_burst_avoid);
+				} else {
+					queue_only = 0;
+				}
 			}
 			if ((sctp_is_feature_off(inp, SCTP_PCB_FLAGS_NODELAY)) &&
 			    (stcb->asoc.total_flight > 0) &&
@@ -12125,7 +12130,12 @@ sctp_lower_sosend(struct socket *so,
 		un_sent = ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight) +
 			   ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) * 
 			    sizeof(struct sctp_data_chunk)));
-		queue_only = 0;
+		if (net->flight_size > (net->mtu * stcb->asoc.max_burst)) {
+			queue_only = 1;
+			SCTP_STAT_INCR(sctps_send_burst_avoid);
+		} else {
+			queue_only = 0;
+		}
 	}
 	if ((sctp_is_feature_off(inp, SCTP_PCB_FLAGS_NODELAY)) &&
 	    (stcb->asoc.total_flight > 0) &&
