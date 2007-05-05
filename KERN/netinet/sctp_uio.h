@@ -944,6 +944,7 @@ struct xsctp_tcb {
 	uint32_t highest_tsn;
 	uint32_t cumulative_tsn;
 	uint32_t cumulative_tsn_ack;
+	uint32_t mtu;
 	/* add more association specific data here*/
 	uint16_t number_local_addresses;
 	uint16_t number_remote_addresses;
@@ -966,6 +967,7 @@ struct xsctp_raddr {
 	uint32_t RemAddrErrorCounter;      /*                            */
 	uint32_t RemAddrCwnd;              /*                            */
 	uint32_t RemAddrFlightSize;        /*                            */
+	uint32_t RemAddrMTU;               /*                            */
 	struct timeval RemAddrStartTime;   /* sctpAssocLocalRemEntry 8   */
 	/* add more remote address specific data */
 };
