@@ -10714,10 +10714,20 @@ sctp_copy_one(struct sctp_stream_queue_pending *sp,
 	      int resv_upfront)
 {
 	int left;
-#if defined(__FreeBSD__) && __FreeBSD_version > 602000
+#if defined(__Panda__) 
 	left = sp->length;
 	sp->data = m_uiotombuf(uio, M_WAITOK, sp->length, 
-			       resv_upfront, M_PKTHDR);
+			       resv_upfront, 0);
+	if (sp->data == NULL)
+		return (ENOMEM);
+
+	sp->tail_mbuf = m_last(sp->data);
+	return (0);
+
+#elif defined(__FreeBSD__) && __FreeBSD_version > 602000
+	left = sp->length;
+	sp->data = m_uiotombuf(uio, M_WAITOK, sp->length, 
+			       resv_upfront, 0);
 	if (sp->data == NULL)
 		return (ENOMEM);
 
@@ -11405,12 +11415,19 @@ sctp_lower_sosend(struct socket *so,
 #endif
 
 	if (stcb) {
-		if (net && ((srcv->sinfo_flags & SCTP_ADDR_OVER))) {
-			/* we take the override or the unconfirmed */
-			;
+		if (srcv->sinfo_flags & SCTP_ADDR_OVER) {
+			if (net == NULL) {
+				/* we had a bad address in an override */
+				error = EINVAL;
+				goto out_unlocked;
+			}
 		} else {
 			net = stcb->asoc.primary_destination;
 		}
+	}
+	if (net == NULL) {
+		error = EINVAL;
+		goto out_unlocked;
 	}
 	if ((net->flight_size > net->cwnd) && (sctp_cmt_on_off == 0)) {
 		/*-

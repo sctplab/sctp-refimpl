@@ -6085,13 +6085,12 @@ sctp_soreceive(so, paddr, uio, mp0, controlp, flagsp)
 #else
 
 int
-sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
-	struct socket *so;
-	struct sockaddr **psa;
-	struct uio *uio;
-	struct mbuf **mp0;
-	struct mbuf **controlp;
-	int *flagsp;
+sctp_soreceive(	struct socket *so,
+		struct sockaddr **psa,
+		struct uio *uio,
+		struct mbuf **mp0,
+		struct mbuf **controlp,
+		int *flagsp)
 {
 	int error, fromlen;
 	uint8_t sockbuf[256];
@@ -6152,6 +6151,77 @@ sctp_soreceive(so, psa, uio, mp0, controlp, flagsp)
 }
 
 #endif
+
+int sctp_l_soreceive(struct socket *so,
+		     struct sockaddr **name, 
+		     struct uio *uio, 
+		     char **controlp, 
+		     int *controllen, 
+		     int *flag)
+{
+	int error, fromlen;
+	uint8_t sockbuf[256];
+	struct sockaddr *from;
+	struct sctp_extrcvinfo sinfo;
+	int filling_sinfo = 1;
+	struct sctp_inpcb *inp;
+
+	inp = (struct sctp_inpcb *)so->so_pcb;
+	/* pickup the assoc we are reading from */
+	if (inp == NULL) {
+		return (EINVAL);
+	}
+	if ((sctp_is_feature_off(inp,
+	    SCTP_PCB_FLAGS_RECVDATAIOEVNT)) ||
+	    (controlp == NULL)) {
+		/* user does not want the sndrcv ctl */
+		filling_sinfo = 0;
+	}
+	if (name) {
+		from = (struct sockaddr *)sockbuf;
+		fromlen = sizeof(sockbuf);
+		from->sa_len = 0;
+	} else {
+		from = NULL;
+		fromlen = 0;
+	}
+
+#if defined(SCTP_PER_SOCKET_LOCKING)
+	SCTP_SOCKET_LOCK(so, 1);
+#endif
+	error = sctp_sorecvmsg(so, uio, 
+			       (struct mbuf **)NULL, 
+			       from, fromlen, flag, 
+			       (struct sctp_sndrcvinfo *)&sinfo,
+			       filling_sinfo);
+	if ((controlp) && (filling_sinfo)) {
+		/* copy back the sinfo in a CMSG format 
+		 * note that the caller has reponsibility for
+		 * freeing the memory.
+		 */
+		if(filling_sinfo)
+			*controlp = sctp_build_ctl_cchunk(inp, 
+							  controllen,
+							  (struct sctp_sndrcvinfo *)&sinfo);
+	} 
+	if (name) {
+		/* copy back the address info */
+		if (from && from->sa_len) {
+#if defined(__FreeBSD__) && __FreeBSD_version > 500000
+			*name = sodupsockaddr(from, M_NOWAIT);
+#else
+			*name = dup_sockaddr(from, mp0 == 0);
+#endif
+		} else {
+			*name = NULL;
+		}
+	}
+#if defined(SCTP_PER_SOCKET_LOCKING)
+	SCTP_SOCKET_UNLOCK(so, 1);
+#endif
+	return (error);
+}
+
 
 
 

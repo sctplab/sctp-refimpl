@@ -209,6 +209,7 @@ void
 sctp_abort_association(struct sctp_inpcb *, struct sctp_tcb *,
     struct mbuf *, int, struct sctphdr *, struct mbuf *);
 
+
 /* We choose to abort via user input */
 void
 sctp_abort_an_association(struct sctp_inpcb *, struct sctp_tcb *, int,
@@ -351,6 +352,18 @@ sctp_soreceive(struct socket *so, struct sockaddr **psa,
     int *flagsp);
 
 #endif
+
+/* For those not passing mbufs, this does the 
+ * translations for you. Caller owns memory
+ * of size controllen returned in controlp.
+ */
+int sctp_l_soreceive(struct socket *so,
+		     struct sockaddr **name, 
+		     struct uio *uio, 
+		     char **controlp, 
+		     int *controllen, 
+		     int *flag);
+
 
 #ifdef SCTP_STAT_LOGGING
 void
