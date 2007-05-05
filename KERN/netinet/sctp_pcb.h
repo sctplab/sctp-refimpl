@@ -238,9 +238,19 @@ struct sctp_epinfo {
 	/* socket queue zone info */
 	uint32_t ipi_count_strmoq;
 
+	/* Number of vrfs */
+	uint32_t ipi_count_vrfs;
+
+        /* Number of ifns */
+	uint32_t ipi_count_ifns;
+
+        /* Number of ifas */
+	uint32_t ipi_count_ifas;
+
 	/* system wide number of free chunks hanging around */
 	uint32_t ipi_free_chunks;
 	uint32_t ipi_free_strmoq;
+
 
 	struct sctpvtaghead vtag_timewait[SCTP_STACK_VTAG_HASH_SIZE];
 
@@ -526,7 +536,6 @@ void sctp_update_ifn_mtu(uint32_t vrf_id, uint32_t ifn_index, uint32_t mtu);
 void sctp_free_ifn(struct sctp_ifn *sctp_ifnp);
 void sctp_free_ifa(struct sctp_ifa *sctp_ifap);
 
-void sctp_delete_ifn(struct sctp_ifn *sctp_ifnp);
 
 void sctp_del_addr_from_vrf(uint32_t vrfid, struct sockaddr *addr,
 			    uint32_t ifn_index);
