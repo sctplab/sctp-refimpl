@@ -110,16 +110,18 @@ sctp_handle_init(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 		 * FIX ME ?? What about TCP model and we have a
 		 * match/restart case?
 		 */
-		sctp_abort_association(inp, stcb, m, iphlen, sh, op_err);
-		if(stcb)
+		sctp_abort_association(inp, stcb, m, iphlen, sh, op_err,
+				       vrf_id, table_id);
+		if (stcb)
 			*abort_no_unlock = 1;
 		return;
 	}
 	if (ntohs(cp->ch.chunk_length) < sizeof(struct sctp_init_chunk)) {
 		/* Invalid length */
 		op_err = sctp_generate_invmanparam(SCTP_CAUSE_INVALID_PARAM);
-		sctp_abort_association(inp, stcb, m, iphlen, sh, op_err);
-		if(stcb)
+		sctp_abort_association(inp, stcb, m, iphlen, sh, op_err,
+				       vrf_id, table_id);
+		if (stcb)
 			*abort_no_unlock = 1;
 		return;
 	}
@@ -127,30 +129,34 @@ sctp_handle_init(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 	if (init->initiate_tag == 0) {
 		/* protocol error... send abort */
 		op_err = sctp_generate_invmanparam(SCTP_CAUSE_INVALID_PARAM);
-		sctp_abort_association(inp, stcb, m, iphlen, sh, op_err);
-		if(stcb)
+		sctp_abort_association(inp, stcb, m, iphlen, sh, op_err,
+				       vrf_id, table_id);
+		if (stcb)
 			*abort_no_unlock = 1;
 		return;
 	}
 	if (ntohl(init->a_rwnd) < SCTP_MIN_RWND) {
 		/* invalid parameter... send abort */
 		op_err = sctp_generate_invmanparam(SCTP_CAUSE_INVALID_PARAM);
-		sctp_abort_association(inp, stcb, m, iphlen, sh, op_err);
+		sctp_abort_association(inp, stcb, m, iphlen, sh, op_err,
+				       vrf_id, table_id);
 		return;
 	}
 	if (init->num_inbound_streams == 0) {
 		/* protocol error... send abort */
 		op_err = sctp_generate_invmanparam(SCTP_CAUSE_INVALID_PARAM);
-		sctp_abort_association(inp, stcb, m, iphlen, sh, op_err);
-		if(stcb)
+		sctp_abort_association(inp, stcb, m, iphlen, sh, op_err,
+				       vrf_id, table_id);
+		if (stcb)
 			*abort_no_unlock = 1;
 		return;
 	}
 	if (init->num_outbound_streams == 0) {
 		/* protocol error... send abort */
 		op_err = sctp_generate_invmanparam(SCTP_CAUSE_INVALID_PARAM);
-		sctp_abort_association(inp, stcb, m, iphlen, sh, op_err);
-		if(stcb)
+		sctp_abort_association(inp, stcb, m, iphlen, sh, op_err,
+				       vrf_id, table_id);
+		if (stcb)
 			*abort_no_unlock = 1;
 		return;
 	}
@@ -159,8 +165,9 @@ sctp_handle_init(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 	if (sctp_validate_init_auth_params(m, offset + sizeof(*cp),
 					   init_limit)) {
 		/* auth parameter(s) error... send abort */
-		sctp_abort_association(inp, stcb, m, iphlen, sh, NULL);
-		if(stcb)
+		sctp_abort_association(inp, stcb, m, iphlen, sh, NULL, vrf_id,
+				       table_id);
+		if (stcb)
 			*abort_no_unlock = 1;
 		return;
 	}
@@ -335,7 +342,9 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 	if (abort_flag) {
 		/* Send an abort and notify peer */
 		if (op_err != NULL) {
-			sctp_send_operr_to(m, iphlen, op_err, cp->init.initiate_tag, vrf_id, table_id);
+			sctp_send_operr_to(m, iphlen, op_err,
+					   cp->init.initiate_tag, vrf_id,
+					   table_id);
 		} else {
 			/*
 			 * Just notify (abort_assoc does this if we send an
@@ -369,7 +378,7 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 		}
 #endif
 		sctp_abort_association(stcb->sctp_ep, stcb, m, iphlen, sh,
-		    NULL);
+				       NULL, 0, 0);
 		*abort_no_unlock = 1;
 		return (-1);
 	}
@@ -428,7 +437,7 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 				mp->resv = 0;
 			}
 			sctp_abort_association(stcb->sctp_ep, stcb, m, iphlen,
-			    sh, op_err);
+					       sh, op_err, 0 , 0);
 			*abort_no_unlock = 1;
 		}
 		return (retval);
@@ -586,7 +595,7 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 	} else {
 		sctp_update_acked(stcb, cp, net, abort_flag);
 	}
-	if(asoc->control_pdapi) {
+	if (asoc->control_pdapi) {
 		/* With a normal shutdown 
 		 * we assume the end of last record.
 		 */
@@ -598,7 +607,7 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 		sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 	}
 	/* goto SHUTDOWN_RECEIVED state to block new requests */
-	if(stcb->sctp_socket) {
+	if (stcb->sctp_socket) {
 		if ((SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_RECEIVED) &&
 		    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_SENT)) {
 			asoc->state = SCTP_STATE_SHUTDOWN_RECEIVED;
@@ -954,7 +963,7 @@ sctp_handle_init_ack(struct mbuf *m, int iphlen, int offset,
 		/* Invalid length */
 		op_err = sctp_generate_invmanparam(SCTP_CAUSE_INVALID_PARAM);
 		sctp_abort_association(stcb->sctp_ep, stcb, m, iphlen, sh,
-		    op_err);
+				       op_err, 0, 0);
 		*abort_no_unlock = 1;
 		return (-1);
 	}
@@ -964,7 +973,7 @@ sctp_handle_init_ack(struct mbuf *m, int iphlen, int offset,
 		/* protocol error... send an abort */
 		op_err = sctp_generate_invmanparam(SCTP_CAUSE_INVALID_PARAM);
 		sctp_abort_association(stcb->sctp_ep, stcb, m, iphlen, sh,
-		    op_err);
+				       op_err, 0 ,0);
 		*abort_no_unlock = 1;
 		return (-1);
 	}
@@ -972,7 +981,7 @@ sctp_handle_init_ack(struct mbuf *m, int iphlen, int offset,
 		/* protocol error... send an abort */
 		op_err = sctp_generate_invmanparam(SCTP_CAUSE_INVALID_PARAM);
 		sctp_abort_association(stcb->sctp_ep, stcb, m, iphlen, sh,
-		    op_err);
+				       op_err, 0, 0);
 		*abort_no_unlock = 1;
 		return (-1);
 	}
@@ -980,7 +989,7 @@ sctp_handle_init_ack(struct mbuf *m, int iphlen, int offset,
 		/* protocol error... send an abort */
 		op_err = sctp_generate_invmanparam(SCTP_CAUSE_INVALID_PARAM);
 		sctp_abort_association(stcb->sctp_ep, stcb, m, iphlen, sh,
-		    op_err);
+				       op_err, 0, 0);
 		*abort_no_unlock = 1;
 		return (-1);
 	}
@@ -988,7 +997,7 @@ sctp_handle_init_ack(struct mbuf *m, int iphlen, int offset,
 		/* protocol error... send an abort */
 		op_err = sctp_generate_invmanparam(SCTP_CAUSE_INVALID_PARAM);
 		sctp_abort_association(stcb->sctp_ep, stcb, m, iphlen, sh,
-		    op_err);
+				       op_err, 0 ,0);
 		*abort_no_unlock = 1;
 		return (-1);
 	}
@@ -1638,10 +1647,10 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
 			printf("process_cookie_new: no room for another TCB!\n");
 		}
-#endif				/* SCTP_DEBUG */
+#endif
 		op_err = sctp_generate_invmanparam(SCTP_CAUSE_OUT_OF_RESC);
 		sctp_abort_association(inp, (struct sctp_tcb *)NULL, m, iphlen,
-		    sh, op_err);
+				       sh, op_err, vrf_id, table_id);
 		return (NULL);
 	}
 	/* get the correct sctp_nets */
@@ -1666,7 +1675,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		 */
 		op_err = sctp_generate_invmanparam(SCTP_CAUSE_OUT_OF_RESC);
 		sctp_abort_association(inp, (struct sctp_tcb *)NULL, m, iphlen,
-		    sh, op_err);
+				       sh, op_err, vrf_id, table_id);
 		return (NULL);
 	}
 	/* process the INIT-ACK info (my info) */
@@ -2209,7 +2218,8 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 #endif				/* SCTP_DEBUG */
 				op_err = sctp_generate_invmanparam(SCTP_CAUSE_OUT_OF_RESC);
 				sctp_abort_association(*inp_p, NULL, m, iphlen,
-				    sh, op_err);
+						       sh, op_err, vrf_id,
+						       table_id);
 				sctp_free_assoc(*inp_p, *stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_20);
 				return (NULL);
 			}
@@ -3580,7 +3590,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 	 */
 	vtag_in = ntohl(sh->v_tag);
 
-	if(locked_tcb) {
+	if (locked_tcb) {
 		SCTP_TCB_LOCK_ASSERT(locked_tcb);
 	}
 	if (ch->chunk_type == SCTP_INITIATION) {
@@ -3722,8 +3732,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 		sctp_handle_cookie_ack((struct sctp_cookie_ack_chunk *)ch, stcb,
 				       *netp);
 	}
- process_control_chunks:
 
+ process_control_chunks:
 	while (IS_SCTP_CONTROL(ch)) {
 		/* validate chunk length */
 		chk_length = ntohs(ch->chunk_length);
@@ -3778,7 +3788,6 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				/* We can fit it all */
 				goto all_fits;
 			}
-
 		} else {
 			/* get a complete chunk... */
 			if ((size_t)chk_length > sizeof(chunk_buf)) {
@@ -4109,8 +4118,9 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					 */
 					goto process_cookie_anyway;
 				}
-				sctp_abort_association(inp, stcb, m, iphlen, sh,
-						       NULL);
+				sctp_abort_association(inp, stcb, m, iphlen,
+						       sh, NULL, vrf_id,
+						       table_id);
 				*offset = length;
 				return (NULL);
 			} else if (inp->sctp_socket->so_qlimit) {
@@ -4136,7 +4146,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 								htons(sizeof(struct sctp_paramhdr));
 						}
 						sctp_abort_association(inp, stcb, m,
-								       iphlen, sh, oper);
+								       iphlen, sh, oper, vrf_id, table_id);
 					}
 					*offset = length;
 					return (NULL);
