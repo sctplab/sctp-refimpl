@@ -11108,12 +11108,12 @@ sctp_lower_sosend(struct socket *so,
 		if (addr) {
 			/* Must locate the net structure if addr given */
 			net = sctp_findnet(stcb, addr);
-			if(net) {
+			if (net) {
 				/* validate port was 0 or correct */
 				struct sockaddr_in *sin;
 				sin = (struct sockaddr_in *)addr;
 				if ((sin->sin_port != 0) &&
-				    (sin->sin_port != inp->sctp_lport)) {
+				    (sin->sin_port != stcb->rport)) {
 					net = NULL;
 				}
 			}
@@ -11127,7 +11127,7 @@ sctp_lower_sosend(struct socket *so,
 				sin = (struct sockaddr_in *)addr;
 				if (sin->sin_addr.s_addr == 0) {
 					if ((sin->sin_port == 0) ||
-					    (sin->sin_port == inp->sctp_lport)){
+					    (sin->sin_port == stcb->rport)){
 						net = stcb->asoc.primary_destination;
 					}
 				}
@@ -11136,7 +11136,7 @@ sctp_lower_sosend(struct socket *so,
 				sin6 = (struct sockaddr_in6 *)addr;
 				if(IN6_IS_ADDR_UNSPECIFIED(&sin6->sin6_addr)) {
 					if ((sin6->sin6_port == 0) ||
-					    (sin6->sin6_port == inp->sctp_lport)){
+					    (sin6->sin6_port == stcb->rport)){
 						net = stcb->asoc.primary_destination;
 					}
 				}
@@ -11165,7 +11165,7 @@ sctp_lower_sosend(struct socket *so,
 				sin = (struct sockaddr_in *)addr;
 				/* Validate port is 0 or correct */
 				if ((sin->sin_port != 0) &&
-				    (sin->sin_port != inp->sctp_lport)) {
+				    (sin->sin_port != stcb->rport)) {
 					net = NULL;
 				}
 

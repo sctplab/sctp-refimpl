@@ -3819,7 +3819,6 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 #endif /* SCTP_EMBEDDED_V6_SCOPE */
 	if (SCTP_ROUTE_HAS_VALID_IFN(&net->ro)) {
 		/* Get source address */
-		printf("Doing src-addr selection\n");
 		net->ro._s_addr = sctp_source_address_selection(stcb->sctp_ep,
 								stcb, 
 								(sctp_route_t *)&net->ro, 
