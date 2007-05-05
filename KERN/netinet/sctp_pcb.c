@@ -505,7 +505,7 @@ sctp_del_addr_from_vrf(uint32_t vrf_id, struct sockaddr *addr,
 		LIST_REMOVE(sctp_ifap, next_bucket);
 		LIST_REMOVE(sctp_ifap, next_ifa);
 		if(sctp_ifap->ifn_p) {
-			if (LIST_EMPTY(&sctp_ifap->ifn_p->ifalist)) {
+			if (SCTP_LIST_EMPTY(&sctp_ifap->ifn_p->ifalist)) {
 				sctp_delete_ifn (sctp_ifap->ifn_p, 1);
 			}
 	                sctp_free_ifn(sctp_ifap->ifn_p);
