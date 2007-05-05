@@ -352,6 +352,8 @@ typedef struct route	sctp_route_t;
 typedef struct rtentry	sctp_rtentry_t;
 #define SCTP_RTALLOC(ro)	rtalloc_ign((struct route *)ro, 0UL)
 
+/* Future zero copy wakeup/send  function */
+#define SCTP_ZERO_COPY_EVENT(inp, so)
 
 /*
  * IP output routines
