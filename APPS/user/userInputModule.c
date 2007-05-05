@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.90 2007-05-02 19:16:21 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.91 2007-05-05 01:17:54 randall Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -2330,16 +2330,26 @@ static int cmd_getmaxseg(char *argv[], int argc)
   struct sctp_assoc_value av;
   socklen_t sz;
 
-  av.assoc_id    = 0;
-  av.assoc_value = 0;
+
+  if(argc == 1) {
+	  av.assoc_id    = strtoul(argv[0], NULL, 0);
+  } else {
+	  av.assoc_id    = 0;
+  }
+	  av.assoc_value = 0;
   sz = sizeof(struct sctp_assoc_value);
   if(getsockopt(adap->fd,IPPROTO_SCTP,
 		SCTP_MAXSEG,
 		&av, &sz) != 0) {
 	  printf("Can't get maxseg setting socket err:%d!\n",errno);
   }else{
-	  printf("Maxseg is %d\n",
-		 av.assoc_value);
+	  if(av.assoc_id) {
+		  printf("Maxseg for the assoc:%x is %d\n",
+			 av.assoc_id, av.assoc_value);
+	  } else {
+		  printf("Maxseg for the endpoint is %d\n",
+			 av.assoc_value);
+	  }
   }
   return(0);
 }
