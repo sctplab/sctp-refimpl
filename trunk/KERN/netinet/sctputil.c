@@ -5051,15 +5051,16 @@ restart:
 			while (ctl) {
 				if ((ctl->stcb != control->stcb) && (ctl->length) &&
 				    (ctl->some_taken || 
+				     (ctl->spec_flags & M_NOTIFICATION) ||
 				     ((ctl->do_not_ref_stcb == 0) && 
-				     ((ctl->spec_flags & M_NOTIFICATION) == 0) &&
 				      (ctl->stcb->asoc.strmin[ctl->sinfo_stream].delivery_started == 0)))
 					) {
 					/*-
 					 * If we have a different TCB next, and there is data
 					 * present. If we have already taken some (pdapi), OR we can
 					 * ref the tcb and no delivery as started on this stream, we
-					 * take it.
+					 * take it. Note we allow a notification on a different 
+					 * assoc to be delivered..
 					 */
 					control = ctl;
 					goto found_one;
@@ -5075,6 +5076,8 @@ restart:
 					 * have the strm interleave feature present. Then if we have
 					 * taken some (pdapi) or we can refer to tht tcb AND we have
 					 * not started a delivery for this stream, we can take it.
+					 * Note we do NOT allow a notificaiton on the same assoc to
+					 * be delivered.
 					 */
 					control = ctl;
 					goto found_one;
