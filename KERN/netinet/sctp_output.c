@@ -11027,6 +11027,7 @@ sctp_lower_sosend(struct socket *so,
 	int got_all_of_the_send = 0;
 	int hold_tcblock = 0;
 	int non_blocking = 0;
+	int temp_flags = 0;
 
 	error = 0;
 	net = NULL;
@@ -11104,11 +11105,47 @@ sctp_lower_sosend(struct socket *so,
 		}
 		hold_tcblock = 0;
 		SCTP_INP_RUNLOCK(inp);
-		if (addr) 
+		if (addr) {
 			/* Must locate the net structure if addr given */
 			net = sctp_findnet(stcb, addr);
-		else 
+			if(net) {
+				/* validate port was 0 or correct */
+				struct sockaddr_in *sin;
+				sin = (struct sockaddr_in *)addr;
+				if ((sin->sin_port != 0) &&
+				    (sin->sin_port != inp->sctp_lport)) {
+					net = NULL;
+				}
+			}
+			temp_flags |= SCTP_ADDR_OVER;
+		} else 
 			net = stcb->asoc.primary_destination;
+		if (addr && (net == NULL)) {
+			/* Could not find address, was it legal */
+			if (addr->sa_family == AF_INET) {
+				struct sockaddr_in *sin;
+				sin = (struct sockaddr_in *)addr;
+				if (sin->sin_addr.s_addr == 0) {
+					if ((sin->sin_port == 0) ||
+					    (sin->sin_port == inp->sctp_lport)){
+						net = stcb->asoc.primary_destination;
+					}
+				}
+			} else {
+				struct sockaddr_in6 *sin6;
+				sin6 = (struct sockaddr_in6 *)addr;
+				if(IN6_IS_ADDR_UNSPECIFIED(&sin6->sin6_addr)) {
+					if ((sin6->sin6_port == 0) ||
+					    (sin6->sin6_port == inp->sctp_lport)){
+						net = stcb->asoc.primary_destination;
+					}
+				}
+			}
+		}
+		if (net == NULL) {
+			error = EINVAL;
+			goto out_unlocked;
+		}
 
 	} else if (use_rcvinfo && srcv && srcv->sinfo_assoc_id) {
 		stcb = sctp_findassociation_ep_asocid(inp, srcv->sinfo_assoc_id, 0);
@@ -11118,6 +11155,21 @@ sctp_lower_sosend(struct socket *so,
 				net = sctp_findnet(stcb, addr);
 			else 
 				net = stcb->asoc.primary_destination;
+			if ((srcv->sinfo_flags & SCTP_ADDR_OVER) && 
+			    ((net == NULL) || (addr == NULL)))  {
+				struct sockaddr_in *sin;
+				if(addr == NULL) {
+					error = EINVAL;
+					goto out_unlocked;
+				}
+				sin = (struct sockaddr_in *)addr;
+				/* Validate port is 0 or correct */
+				if ((sin->sin_port != 0) &&
+				    (sin->sin_port != inp->sctp_lport)) {
+					net = NULL;
+				}
+
+			}
 		}
 		hold_tcblock = 0;
 	} else if (addr) {
@@ -11415,13 +11467,7 @@ sctp_lower_sosend(struct socket *so,
 #endif
 
 	if (stcb) {
-		if (srcv->sinfo_flags & SCTP_ADDR_OVER) {
-			if (net == NULL) {
-				/* we had a bad address in an override */
-				error = EINVAL;
-				goto out_unlocked;
-			}
-		} else {
+		if (((srcv->sinfo_flags|temp_flags) & SCTP_ADDR_OVER) == 0) {
 			net = stcb->asoc.primary_destination;
 		}
 	}
