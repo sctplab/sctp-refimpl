@@ -3864,12 +3864,17 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 			}
 	        }
 		if (from == SCTP_ALLOC_ASOC) {
+			printf("Setting initial smallest mtu is %d net:%p stcb:%p\n", 
+				net->mtu, net, stcb);
 			stcb->asoc.smallest_mtu = net->mtu;
 		}
 	} else {
+		printf("No valid ifn make mtu %d stcb:%p\n", stcb->asoc.smallest_mtu, stcb);
 		net->mtu = stcb->asoc.smallest_mtu;
 	}
 	if (stcb->asoc.smallest_mtu > net->mtu) {
+		printf("smallest:%d > net:%d - setting stcb:%p net:%p\n",
+			stcb->asoc.smallest_mtu, net->mtu, stcb, net);
 		stcb->asoc.smallest_mtu = net->mtu;
 	}
 	/*
