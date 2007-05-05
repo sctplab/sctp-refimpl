@@ -4241,7 +4241,10 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 	TAILQ_INSERT_TAIL(&inp->read_queue, control, next);
 	SCTP_INP_READ_UNLOCK(inp);
 	if (inp && inp->sctp_socket) {
-		sctp_sorwakeup(inp, inp->sctp_socket);
+		if(sctp_is_feature_on(inp, SCTP_PCB_FLAGS_ZERO_COPY_ACTIVE)) {
+			SCTP_ZERO_COPY_EVENT(inp, inp->sctp_socket);
+		} else 
+			sctp_sorwakeup(inp, inp->sctp_socket);
 	}
 }
 
@@ -4360,7 +4363,10 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 		SCTP_INP_READ_UNLOCK(inp);
 	}
 	if (inp && inp->sctp_socket) {
-		sctp_sorwakeup(inp, inp->sctp_socket);
+		if(sctp_is_feature_on(inp, SCTP_PCB_FLAGS_ZERO_COPY_ACTIVE)) {
+			SCTP_ZERO_COPY_EVENT(inp, inp->sctp_socket);
+		} else 
+			sctp_sorwakeup(inp, inp->sctp_socket);
 	}
 	return (0);
 }
