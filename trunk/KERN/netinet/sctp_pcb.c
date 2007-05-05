@@ -3817,9 +3817,11 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 #endif /* SCTP_KAME */
 	}
 #endif /* SCTP_EMBEDDED_V6_SCOPE */
-
+	printf("Adding address:");
+	sctp_print_address(newaddr);
 	if (SCTP_ROUTE_HAS_VALID_IFN(&net->ro)) {
 		/* Get source address */
+		printf("Doing src-addr selection\n");
 		net->ro._s_addr = sctp_source_address_selection(stcb->sctp_ep,
 								stcb, 
 								(sctp_route_t *)&net->ro, 
@@ -3829,9 +3831,9 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 		/* Now get the interface MTU */
 		if(net->ro._s_addr && net->ro._s_addr->ifn_p) {
 			net->mtu = SCTP_GATHER_MTU_FROM_INTFC(net->ro._s_addr->ifn_p); 
-		} else 
+		} else {
 			net->mtu = 0;
-
+		}
 		if(net->mtu == 0) {
 			/* Huh ?? */
 			net->mtu = SCTP_DEFAULT_MTU;
@@ -3839,10 +3841,6 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 			uint32_t rmtu;
 			rmtu = SCTP_GATHER_MTU_FROM_ROUTE(net->ro._s_addr, &net->ro._l_addr.sa, net->ro.ro_rt);
 			if (rmtu == 0) {
-				/* Start things off to match mtu of interface please. */
-				SCTP_SET_MTU_OF_ROUTE(&net->ro._l_addr.sa, 
-						      net->ro.ro_rt, net->mtu);
-			} else if (net->mtu < rmtu) {
 				/* Start things off to match mtu of interface please. */
 				SCTP_SET_MTU_OF_ROUTE(&net->ro._l_addr.sa, 
 						      net->ro.ro_rt, net->mtu);
