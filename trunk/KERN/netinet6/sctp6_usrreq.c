@@ -147,7 +147,7 @@ sctp6_input(i_pak, offp, proto)
 	int off = *offp;
 #else
 	pakoffset_type off_p;
-	int off, res, error;
+	int off, res;
 #endif
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s;
