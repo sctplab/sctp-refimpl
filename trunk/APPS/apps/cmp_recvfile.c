@@ -9,6 +9,7 @@
 #include <netinet/sctp.h>
 #include <errno.h>
 #include <arpa/inet.h>
+#include <sys/stat.h>
 #include <fcntl.h>
 #include <errno.h>
 
@@ -154,7 +155,7 @@ main(int argc, char **argv)
 		return(-1);
 	}	
 	printf("Client uses port %d\n",ntohs(got.sin_port));
-	outfd = open(out_file, (O_WRONLY|O_CREAT|O_TRUNC));
+	outfd = open(out_file, ((O_WRONLY|O_CREAT|O_TRUNC)));
 	if(outfd == -1) {
 		printf("Can't open out file %s err:%d",
 		       out_file, errno);
@@ -184,6 +185,7 @@ main(int argc, char **argv)
 	}
 	len = sizeof(from);
 	while(1) {
+		flags = 0;
 		ret = sctp_recvmsg (fd, buffer, sizeof(buffer), 	
 				    (struct sockaddr *)&from,
 				    &len, &sinfo, &flags);
@@ -198,16 +200,20 @@ main(int argc, char **argv)
 				break;
 			}
 		} else {
+			printf("Got ret:%d bytes\n", ret);
 			amount_in += ret;
 			ret1 = write(outfd, buffer, ret);
 			if(ret != ret1) {
 				printf("Can't write all the data %d vs %d\n",
 				       ret, ret1);
 			}
-			if(ret1 > 0)
+			if(ret1 > 0) {
 				amount_out += ret1;
+				
+			}
 		}
 	}
+	fchmod(outfd, 0644);
 	close(outfd);
 	close(fd);
 	gettimeofday(&end,NULL);
