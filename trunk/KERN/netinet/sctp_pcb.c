@@ -2175,6 +2175,16 @@ sctp_inpcb_alloc(struct socket *so)
 		    SCTP_PCB_FLAGS_UNBOUND);
 		/* Be sure we have blocking IO by default */
 		SCTP_CLEAR_SO_NBIO(so);
+#if defined(__Panda__)
+	} else if (SCTP_SO_TYPE(so) == SOCK_FASTSEQPACKET) {
+		inp->sctp_flags = (SCTP_PCB_FLAGS_UDPTYPE |
+		    SCTP_PCB_FLAGS_UNBOUND);
+		sctp_feature_on(inp, SCTP_PCB_FLAGS_ZERO_COPY_ACTIVE);
+	} else if (SCTP_SO_TYPE(so) == SOCK_FASTSTREAM) {
+		inp->sctp_flags = (SCTP_PCB_FLAGS_TCPTYPE |
+		    SCTP_PCB_FLAGS_UNBOUND);
+		sctp_feature_on(inp, SCTP_PCB_FLAGS_ZERO_COPY_ACTIVE);
+#endif
 	} else {
 		/*
 		 * unsupported socket type (RAW, etc)- in case we missed it
