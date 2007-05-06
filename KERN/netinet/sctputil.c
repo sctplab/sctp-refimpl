@@ -3368,6 +3368,15 @@ sctp_ulp_notify(uint32_t notification, struct sctp_tcb *stcb,
 		/* Can't send up to a closed socket any notifications */
 		return;
 	}
+	if(stcb && ((SCTP_GET_STATE((&stcb->asoc)) == SCTP_STATE_COOKIE_WAIT) ||
+		    (SCTP_GET_STATE((&stcb->asoc)))) == SCTP_STATE_COOKIE_ECHOED) {
+		if ((notification == SCTP_NOTIFY_INTERFACE_DOWN) ||
+		    (notification == SCTP_NOTIFY_INTERFACE_UP) ||
+		    (notification == SCTP_NOTIFY_INTERFACE_CONFIRMED)) {
+			/* Don't report these in front states */
+			return;
+		}
+	}
 	if (stcb && (stcb->asoc.assoc_up_sent == 0) && (notification != SCTP_NOTIFY_ASSOC_UP)) {
 		if ((notification != SCTP_NOTIFY_ASSOC_DOWN) &&
 		    (notification != SCTP_NOTIFY_ASSOC_ABORTED) &&
