@@ -3851,8 +3851,6 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 		}
 		if(net->mtu == 0) {
 			/* Huh ?? */
-			printf("OVERLAY default MTU? no INTFC mtu for _s_addr:%p inf_p:%p?\n",
-			       net->ro._s_addr, net->ro._s_addr->ifn_p);
 			net->mtu = SCTP_DEFAULT_MTU;
 		} else {
 			uint32_t rmtu;
@@ -3864,17 +3862,12 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 			}
 	        }
 		if (from == SCTP_ALLOC_ASOC) {
-			printf("Setting initial smallest mtu is %d net:%p stcb:%p\n", 
-				net->mtu, net, stcb);
 			stcb->asoc.smallest_mtu = net->mtu;
 		}
 	} else {
-		printf("No valid ifn make mtu %d stcb:%p\n", stcb->asoc.smallest_mtu, stcb);
 		net->mtu = stcb->asoc.smallest_mtu;
 	}
 	if (stcb->asoc.smallest_mtu > net->mtu) {
-		printf("smallest:%d > net:%d - setting stcb:%p net:%p\n",
-			stcb->asoc.smallest_mtu, net->mtu, stcb, net);
 		stcb->asoc.smallest_mtu = net->mtu;
 	}
 	/*
