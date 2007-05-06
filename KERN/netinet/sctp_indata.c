@@ -214,7 +214,6 @@ sctp_build_readq_entry(struct sctp_tcb *stcb,
 	read_queue_e->port_from = stcb->rport;
 	read_queue_e->do_not_ref_stcb = 0;
 	read_queue_e->end_added = 0;
-	read_queue_e->last_read_length = 0;
 	read_queue_e->some_taken = 0;
 	read_queue_e->pdapi_aborted = 0;
 failed_build:
@@ -255,7 +254,6 @@ sctp_build_readq_entry_chk(struct sctp_tcb *stcb,
 	read_queue_e->spec_flags = 0;
 	read_queue_e->do_not_ref_stcb = 0;
 	read_queue_e->end_added = 0;
-	read_queue_e->last_read_length = 0;
 	read_queue_e->some_taken = 0;
 	read_queue_e->pdapi_aborted = 0;
 failed_build:
