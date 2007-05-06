@@ -4793,7 +4793,9 @@ sctp_sorecvmsg(struct socket *so,
 #if defined(__FreeBSD__) && __FreeBSD_version >= 700000
 	int sockbuf_lock=0;
 #endif
-
+	if(uio == NULL) {
+		return (EINVAL);
+	}
 	if (msg_flags) {
 		in_flags = *msg_flags;
 		if(in_flags & MSG_PEEK) 
@@ -4801,8 +4803,7 @@ sctp_sorecvmsg(struct socket *so,
 	} else {
 		in_flags = 0;
 	}
-	if (uio)
-		slen = uio->uio_resid;
+	slen = uio->uio_resid;
 
 	/* Pull in and set up our int flags */
 	if (in_flags & MSG_OOB) {
@@ -4814,9 +4815,9 @@ sctp_sorecvmsg(struct socket *so,
 	}
 	if ((in_flags & (MSG_DONTWAIT
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
-	    | MSG_NBIO
+			 | MSG_NBIO
 #endif
-	    )) ||
+		     )) ||
 	    SCTP_SO_IS_NBIO(so)) {
 		block_allowed = 0;
 	}
@@ -4862,7 +4863,7 @@ sctp_sorecvmsg(struct socket *so,
 	if(error) {
 		goto release_unlocked;
 	}
-restart:
+ restart:
 #if defined(__FreeBSD__) && __FreeBSD_version < 700000
 	if(hold_sblock == 0) {
 		SOCKBUF_LOCK(&so->so_rcv);
@@ -4892,18 +4893,18 @@ restart:
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 	if (so->so_rcv.sb_state & SBS_CANTRCVMORE)
 #else
-	if (so->so_state & SS_CANTRCVMORE)
+		if (so->so_state & SS_CANTRCVMORE)
 #endif
-	{
-		if (so->so_error) {
-			error = so->so_error;
-			if ((in_flags & MSG_PEEK) == 0)
-				so->so_error = 0;
-		} else {
-			error = ENOTCONN;
+		{
+			if (so->so_error) {
+				error = so->so_error;
+				if ((in_flags & MSG_PEEK) == 0)
+					so->so_error = 0;
+			} else {
+				error = ENOTCONN;
+			}
+			goto out;
 		}
-		goto out;
-	}
 
 	if ((so->so_rcv.sb_cc <= held_length) && block_allowed) {
 		/* we need to wait for data */
@@ -5087,7 +5088,7 @@ restart:
 					    ((ctl->do_not_ref_stcb == 0) && 
 					     ((ctl->spec_flags & M_NOTIFICATION) == 0) &&
 					     (ctl->stcb->asoc.strmin[ctl->sinfo_stream].delivery_started == 0)))
-						   ){
+					){
 					/*-
 					 * If we have the same tcb, and there is data present, and we
 					 * have the strm interleave feature present. Then if we have
@@ -5117,7 +5118,7 @@ restart:
 		SCTP_INP_READ_UNLOCK(inp);
 		hold_rlock = 0;
 	}
-found_one:
+ found_one:
 	/*
 	 * If we reach here, control has a some data for us to read off.
 	 * Note that stcb COULD be NULL.
@@ -5130,7 +5131,7 @@ found_one:
 	stcb = control->stcb;
 	if (stcb) {
 		if((stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) &&
-		    (control->do_not_ref_stcb == 0)) {
+		   (control->do_not_ref_stcb == 0)) {
 			if(freecnt_applied == 0)
 				stcb = NULL;
 		} else if (control->do_not_ref_stcb == 0) {
@@ -5239,8 +5240,8 @@ found_one:
 			sin6.sin6_len = sizeof(struct sockaddr_in6);
 			sin6.sin6_addr.s6_addr16[2] = 0xffff;
 			bcopy(&sin->sin_addr,
-			    &sin6.sin6_addr.s6_addr16[3],
-			    sizeof(sin6.sin6_addr.s6_addr16[3]));
+			      &sin6.sin6_addr.s6_addr16[3],
+			      sizeof(sin6.sin6_addr.s6_addr16[3]));
 			sin6.sin6_port = sin->sin_port;
 			memcpy(from, (caddr_t)&sin6, sizeof(sin6));
 		}
@@ -5258,7 +5259,7 @@ found_one:
 	/* now copy out what data we can */
 	if (mp == NULL) {
 		/* copy out each mbuf in the chain up to length */
-get_more_data:
+	get_more_data:
 		m = control->data;
 		while (m) {
 			/* Move out all we can */
@@ -5347,12 +5348,12 @@ get_more_data:
 					/* dispose of the mbuf */
 #ifdef SCTP_SB_LOGGING
 					sctp_sblog(&so->so_rcv,
-					    control->do_not_ref_stcb?NULL:stcb, SCTP_LOG_SBFREE, SCTP_BUF_LEN(m));
+						   control->do_not_ref_stcb?NULL:stcb, SCTP_LOG_SBFREE, SCTP_BUF_LEN(m));
 #endif
 					sctp_sbfree(control, stcb, &so->so_rcv, m);
 #ifdef SCTP_SB_LOGGING
 					sctp_sblog(&so->so_rcv,
-					    control->do_not_ref_stcb?NULL:stcb, SCTP_LOG_SBRESULT, 0);
+						   control->do_not_ref_stcb?NULL:stcb, SCTP_LOG_SBRESULT, 0);
 #endif
 					embuf = m;
 					copied_so_far += cp_len;
@@ -5425,7 +5426,7 @@ get_more_data:
 					freed_so_far += cp_len;
 #ifdef SCTP_SB_LOGGING
 					sctp_sblog(&so->so_rcv, control->do_not_ref_stcb?NULL:stcb,
-					    SCTP_LOG_SBRESULT, 0);
+						   SCTP_LOG_SBRESULT, 0);
 #endif
 #ifdef __FreeBSD__
 					alen = atomic_fetchadd_int(&control->length, -(cp_len));
@@ -5476,7 +5477,7 @@ get_more_data:
 					control->data = NULL;
 #endif
 				}
-		done_with_control:
+			done_with_control:
 #ifdef SCTP_RECV_DETAIL_RWND_LOGGING
 				sctp_misc_ints(SCTP_SORCV_FREECTL,
 					       so->so_rcv.sb_cc,
@@ -5563,7 +5564,7 @@ get_more_data:
 		     (no_rcv_needed == 0))) {
 			sctp_user_rcvd(stcb, &freed_so_far, hold_rlock, rwnd_req);
 		}
-wait_some_more:
+	wait_some_more:
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000
 		if (so->so_rcv.sb_state & SBS_CANTRCVMORE) {
 			goto release;
@@ -5655,220 +5656,51 @@ wait_some_more:
 		}
 		goto get_more_data;
 	} else {
-		/* copy out the mbuf chain */
-get_more_data2:
-		/* Do we have a uio, I doubt it if so we grab
-		 * the size from it, if not you get it all
+		/*-
+		 * Give caller back the mbuf chain, 
+		 * store in uio_resid the length 
 		 */
-		if(uio)
-			cp_len = uio->uio_resid;
-		else
-			cp_len = control->length;
-
-		if ((uint32_t) cp_len >= control->length) {
-			/* easy way */
-			if ((control->end_added == 0) ||
-			    (TAILQ_NEXT(control, next) == NULL)){
-				/* Need to get rlock */
-				if(hold_rlock == 0) {
-					SCTP_INP_READ_LOCK(inp);
-					hold_rlock = 1;
-				}
-			}
-			if (control->end_added) {
-				out_flags |= MSG_EOR;
-				if ((control->do_not_ref_stcb == 0) && ((control->spec_flags & M_NOTIFICATION) == 0))
-					control->stcb->asoc.strmin[control->sinfo_stream].delivery_started = 0;
-			}
-			if (control->spec_flags & M_NOTIFICATION) {
-				out_flags |= MSG_NOTIFICATION;
-			}
-			if(uio)
-				uio->uio_resid -= control->length;
-			*mp = control->data;
-			m = control->data;
-			while (m) {
-#ifdef SCTP_SB_LOGGING
-				sctp_sblog(&so->so_rcv,
-				    control->do_not_ref_stcb?NULL:stcb, SCTP_LOG_SBFREE, SCTP_BUF_LEN(m));
-#endif
-				sctp_sbfree(control, stcb, &so->so_rcv, m);
-				freed_so_far += SCTP_BUF_LEN(m);
-#ifdef SCTP_SB_LOGGING
-				sctp_sblog(&so->so_rcv,
-				    control->do_not_ref_stcb?NULL:stcb, SCTP_LOG_SBRESULT, 0);
-#endif
-				m = SCTP_BUF_NEXT(m);
-			}
-			control->data = control->tail_mbuf = NULL;
-			control->length = 0;
-			if (out_flags & MSG_EOR) {
-				/* Done with this control */
-				goto done_with_control;
-			}
-			/* still more to do with this conntrol */
-			/* do we really support msg_waitall here? */
-			if ((block_allowed == 0) ||
-			    ((in_flags & MSG_WAITALL) == 0)) {
-				goto release;
-			}
-	wait_some_more2:
-#if defined(__FreeBSD__) && __FreeBSD_version > 500000
-			if (so->so_rcv.sb_state & SBS_CANTRCVMORE)
-				goto release;
-#else
-			if (so->so_state & SS_CANTRCVMORE)
-				goto release;
-#endif
-			if(hold_rlock == 1) {
-				SCTP_INP_READ_UNLOCK(inp);
-				hold_rlock = 0;
-			}
-			if(hold_sblock == 0) {
-				SOCKBUF_LOCK(&so->so_rcv);
-				hold_sblock = 1;
-			}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			sbunlock(&so->so_rcv, 1);
-#endif
-			if(so->so_rcv.sb_cc <= control->held_length) {
-				error = sbwait(&so->so_rcv);
-				if (error) {
-#if defined(__FreeBSD__) || defined(__NetBSD__)
-					goto release;
-#else
-					goto release_unlocked;
-#endif
-				}
-			}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-			error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
-#endif
-			if(hold_sblock) {
-				SOCKBUF_UNLOCK(&so->so_rcv);
-				hold_sblock = 0;
-			}
-			if (control->length == 0) {
-				/* still nothing here */
-				if(control->end_added == 1) {
-					/* he aborted, or is done i.e. shutdown */
-					out_flags |= MSG_EOR;
-					if(control->pdapi_aborted) {
-						out_flags |= MSG_TRUNC;
-						if ((control->do_not_ref_stcb == 0) && ((control->spec_flags & M_NOTIFICATION) == 0))
-							control->stcb->asoc.strmin[control->sinfo_stream].delivery_started = 0;
-					}
-					goto done_with_control;
-				}
-				if (so->so_rcv.sb_cc > held_length) {
-					control->held_length = so->so_rcv.sb_cc;
-					/* We don't use held_length while getting a message */
-					held_length = 0;
-				}
-				goto wait_some_more2;
-			}
-			goto get_more_data2;
-		} else {
-			/* hard way mbuf by mbuf */
-			m = control->data;
-			if (control->end_added == 0) {
-				/* need the rlock */
-				if(hold_rlock == 0) {
-					SCTP_INP_READ_LOCK(inp);
-					hold_rlock = 1;
-				}
-			}
-			if (control->spec_flags & M_NOTIFICATION) {
-				out_flags |= MSG_NOTIFICATION;
-			}
-			while ((m) && (cp_len > 0)) {
-				if (cp_len >= SCTP_BUF_LEN(m)) {
-					*mp = m;
-					atomic_subtract_int(&control->length,  SCTP_BUF_LEN(m));
-					if(uio)
-						uio->uio_resid -= SCTP_BUF_LEN(m);
-					cp_len -= SCTP_BUF_LEN(m);
-					control->data = SCTP_BUF_NEXT(m);
-					SCTP_BUF_NEXT(m) = NULL;
-#ifdef SCTP_SB_LOGGING
-					sctp_sblog(&so->so_rcv,
-					    control->do_not_ref_stcb?NULL:stcb, SCTP_LOG_SBFREE, SCTP_BUF_LEN(m));
-#endif
-					sctp_sbfree(control, stcb, &so->so_rcv, m);
-					freed_so_far += SCTP_BUF_LEN(m);
-#ifdef SCTP_SB_LOGGING
-					sctp_sblog(&so->so_rcv,
-					    control->do_not_ref_stcb?NULL:stcb, SCTP_LOG_SBRESULT, 0);
-#endif
-					mp = &SCTP_BUF_NEXT(m);
-					m = control->data;
-				} else {
-					/*
-					 * got all he wants and its part of
-					 * this mbuf only.
-					 */
-					if (uio)
-						uio->uio_resid -= SCTP_BUF_LEN(m);
-					cp_len -= SCTP_BUF_LEN(m);
-					if(hold_rlock) {
-						SCTP_INP_READ_UNLOCK(inp);
-						hold_rlock = 0;
-					}
-					if (hold_sblock) {
-						SOCKBUF_UNLOCK(&so->so_rcv);
-						hold_sblock = 0;
-					}
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-					splx(s);
-#endif
-					*mp = SCTP_M_COPYM(m, 0, cp_len,
-#if defined(__FreeBSD__) && __FreeBSD_version > 500000
-					    M_TRYWAIT
-#else
-					    M_WAIT
-#endif
-					    );
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-					s = splsoftnet();
-#endif
-#ifdef SCTP_LOCK_LOGGING
-					sctp_log_lock(inp, stcb, SCTP_LOG_LOCK_SOCKBUF_R);
-#endif
-					if(hold_sblock == 0) {
-						SOCKBUF_LOCK(&so->so_rcv);
-						hold_sblock = 1;
-					}
-					if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)
-						goto release;
-
-					if (stcb &&
-					    stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
-						no_rcv_needed = 1;
-					}
-					SCTP_BUF_RESV_UF(m, cp_len);
-					SCTP_BUF_LEN(m) -= cp_len;
-#ifdef SCTP_SB_LOGGING
-					sctp_sblog(&so->so_rcv, control->do_not_ref_stcb?NULL:stcb, SCTP_LOG_SBFREE, cp_len);
-#endif
-					freed_so_far += cp_len;
-					atomic_subtract_int(&so->so_rcv.sb_cc, cp_len);
-					if (stcb) {
-						atomic_subtract_int(&stcb->asoc.sb_cc,cp_len);
-						if((freed_so_far >= rwnd_req) &&
-						   (control->do_not_ref_stcb == 0) &&
-						   (no_rcv_needed == 0))
-							sctp_user_rcvd(stcb, &freed_so_far, hold_rlock, rwnd_req);
-				        }
-#ifdef SCTP_SB_LOGGING
-					sctp_sblog(&so->so_rcv, control->do_not_ref_stcb?NULL:stcb,
-					    SCTP_LOG_SBRESULT, 0);
-#endif
-					goto release;
-				}
+		wakeup_read_socket = 0;
+		if ((control->end_added == 0) ||
+		    (TAILQ_NEXT(control, next) == NULL)){
+			/* Need to get rlock */
+			if(hold_rlock == 0) {
+				SCTP_INP_READ_LOCK(inp);
+				hold_rlock = 1;
 			}
 		}
+		if (control->end_added) {
+			out_flags |= MSG_EOR;
+			if ((control->do_not_ref_stcb == 0) && ((control->spec_flags & M_NOTIFICATION) == 0))
+				control->stcb->asoc.strmin[control->sinfo_stream].delivery_started = 0;
+		}
+		if (control->spec_flags & M_NOTIFICATION) {
+			out_flags |= MSG_NOTIFICATION;
+		}
+		uio->uio_resid = control->length;
+		*mp = control->data;
+		m = control->data;
+		while (m) {
+#ifdef SCTP_SB_LOGGING
+			sctp_sblog(&so->so_rcv,
+				   control->do_not_ref_stcb?NULL:stcb, SCTP_LOG_SBFREE, SCTP_BUF_LEN(m));
+#endif
+			sctp_sbfree(control, stcb, &so->so_rcv, m);
+			freed_so_far += SCTP_BUF_LEN(m);
+#ifdef SCTP_SB_LOGGING
+			sctp_sblog(&so->so_rcv,
+				   control->do_not_ref_stcb?NULL:stcb, SCTP_LOG_SBRESULT, 0);
+#endif
+			m = SCTP_BUF_NEXT(m);
+		}
+		control->data = control->tail_mbuf = NULL;
+		control->length = 0;
+		if (out_flags & MSG_EOR) {
+			/* Done with this control */
+			goto done_with_control;
+		}
 	}
-release:
+ release:
 	if(hold_rlock == 1) {
 		SCTP_INP_READ_UNLOCK(inp);
 		hold_rlock = 0;
@@ -5898,7 +5730,7 @@ release:
 #endif
 #endif
 
-release_unlocked:
+ release_unlocked:
 	if(hold_sblock) {
 		SOCKBUF_UNLOCK(&so->so_rcv);
 		hold_sblock = 0;
@@ -5912,7 +5744,7 @@ release_unlocked:
 
 	if (msg_flags)
 		*msg_flags |= out_flags;
-out:
+ out:
 	if (((out_flags & MSG_EOR) == 0) && 
 	    ((in_flags & MSG_PEEK) == 0) &&
 	    (sinfo) &&
@@ -5921,12 +5753,6 @@ out:
 		s_extra = (struct sctp_extrcvinfo *)sinfo;
 		s_extra->sreinfo_next_flags = SCTP_NO_NEXT_MSG;
 	}
-	if (((out_flags & MSG_EOR) == 0) &&
-	    (control) && 
-	    (uio)){
-		control->last_read_length = slen - uio->uio_resid;
-	}
-
 	if(hold_rlock == 1) {
 		SCTP_INP_READ_UNLOCK(inp);
 		hold_rlock = 0;
