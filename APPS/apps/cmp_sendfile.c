@@ -23,7 +23,7 @@ main(int argc, char **argv)
 {
 	int in_fd,i,ret;
 	char buffer[1024];
-	uint16_t port;
+	uint16_t port=0;
 	struct txfr_request *req;
 	struct sockaddr_in bindto,got,from;
 	char *addr_to_bind=NULL;
