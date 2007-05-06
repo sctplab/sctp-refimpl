@@ -362,41 +362,10 @@ sctp_find_alternate_net(struct sctp_tcb *stcb,
 			alt = TAILQ_FIRST(&stcb->asoc.nets);
 		}
 		if (alt->ro.ro_rt == NULL) {
-#ifndef SCOPEDROUTING
-#ifdef SCTP_EMBEDDED_V6_SCOPE
-			struct sockaddr_in6 *sin6;
-
-			sin6 = (struct sockaddr_in6 *)&alt->ro._l_addr;
-			if (sin6->sin6_family == AF_INET6) {
-#if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
-				(void)in6_embedscope(&sin6->sin6_addr, sin6,
-				    NULL, NULL);
-#elif defined(SCTP_KAME)
-				(void)sa6_embedscope(sin6, ip6_use_defzone);
-#else
-				(void)in6_embedscope(&sin6->sin6_addr, sin6);
-#endif
-			}
-#endif /* SCTP_EMBEDDED_V6_SCOPE */
-#endif
-
-			SCTP_RTALLOC((sctp_route_t *)&alt->ro);
-
-#ifndef SCOPEDROUTING
-#ifdef SCTP_EMBEDDED_V6_SCOPE
-			if (sin6->sin6_family == AF_INET6) {
-#ifdef SCTP_KAME
-				(void)sa6_recoverscope(sin6);
-#else
-				(void)in6_recoverscope(sin6, &sin6->sin6_addr,
-				    NULL);
-#endif /* SCTP_KAME */
-			}
-#endif /* SCTP_EMBEDDED_V6_SCOPE */
-#endif
 			if (alt->ro._s_addr) {
 				sctp_free_ifa(alt->ro._s_addr);
 				alt->ro._s_addr = NULL;
+				
 			}
 			alt->src_addr_selected = 0;
 		}
@@ -980,6 +949,23 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 	if (net->dest_state & SCTP_ADDR_NOT_REACHABLE) {
 		/* Move all pending over too */
 		sctp_move_all_chunks_to_alt(stcb, net, alt);
+
+		/* Get the address that failed, to
+		 * force a new src address selecton and
+		 * a route allocation.
+		 */
+		if (net->ro._s_addr) {
+			sctp_free_ifa(net->ro._s_addr);
+	 		net->ro._s_addr = NULL;
+		}
+ 		net->src_addr_selected = 0;
+
+		/* Force a route allocation too */
+		if (net->ro.ro_rt) { 
+			RTFREE(net->ro.ro_rt);
+			net->ro.ro_rt = NULL;
+		}
+
 		/* Was it our primary? */
 		if ((stcb->asoc.primary_destination == net) && (alt != net)) {
 			/*
@@ -990,14 +976,9 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 			 * from any net structures.
 			 */
 			if (sctp_set_primary_addr(stcb,
-			    (struct sockaddr *)NULL,
-			    alt) == 0) {
+						  (struct sockaddr *)NULL,
+						  alt) == 0) {
 				net->dest_state |= SCTP_ADDR_WAS_PRIMARY;
-				if (net->ro._s_addr) {
-					sctp_free_ifa(net->ro._s_addr);
-					net->ro._s_addr = NULL;
-				}
-				net->src_addr_selected = 0;
 			}
 		}
 	}
@@ -1583,7 +1564,6 @@ sctp_pathmtu_timer(struct sctp_inpcb *inp,
     struct sctp_nets *net)
 {
 	uint32_t next_mtu;
-
 	/* restart the timer in any case */
 	next_mtu = sctp_getnext_mtu(inp, net->mtu);
 	if (next_mtu <= net->mtu) {
