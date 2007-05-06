@@ -5555,6 +5555,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 	SCTP_GETTIME_TIMEVAL(&sp->ts);
 	sp->stream = srcv->sinfo_stream;
 	sp->msg_is_complete = 1;
+	sp->sender_all_done = 1;
 	sp->some_taken = 0;
 	sp->data = m;
 	sp->tail_mbuf = NULL;
