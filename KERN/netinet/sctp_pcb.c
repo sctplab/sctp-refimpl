@@ -3859,12 +3859,18 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 		} else {
 			net->mtu = 0;
 		}
+#ifdef SCTP_PRINT_FOR_B_AND_M 
+		printf("We have found an interface mtu of %d\n", net->mtu);
+#endif
 		if(net->mtu == 0) {
 			/* Huh ?? */
 			net->mtu = SCTP_DEFAULT_MTU;
 		} else {
 			uint32_t rmtu;
 			rmtu = SCTP_GATHER_MTU_FROM_ROUTE(net->ro._s_addr, &net->ro._l_addr.sa, net->ro.ro_rt);
+#ifdef SCTP_PRINT_FOR_B_AND_M 
+			printf("The route mtu is %d\n", rmtu);
+#endif
 			if (rmtu == 0) {
 				/* Start things off to match mtu of interface please. */
 				SCTP_SET_MTU_OF_ROUTE(&net->ro._l_addr.sa, 
