@@ -92,6 +92,11 @@ char *bind_string = NULL;
 uint16_t strm_in=13;
 uint16_t strm_out=13;
 uint32_t msg_in_cnt=0;
+uint32_t msg_in_cnt_weor=0;
+uint32_t notify_in_cnt=0;
+uint32_t sends_out = 0;
+uint32_t sends_ping_resp = 0;
+
 struct timespec delay;
 struct sctp_sndrcvinfo sinfo_in, sinfo_out;
 
@@ -110,6 +115,13 @@ typedef struct {
 #define SCTP_TEST_LOOPRESP  2
 #define SCTP_TEST_SIMPLE    3
 uint32_t dgram_id_counter = 0;
+
+void
+print_stats()
+{
+	printf("Rcvd data:%d Snd/Rcv pings:%d Sent:%d Notify's:%d msg_w_weor:%d\n",
+	       (msg_in_cnt - notify_in_cnt), sends_ping_resp, sends_out, notify_in_cnt, msg_in_cnt_weor);
+}
 
 void
 handle_notification(char *receive_buffer, int *notDone)
@@ -343,6 +355,7 @@ handle_notification(char *receive_buffer, int *notDone)
 		}
 	} /* end switch(snp->sn_header.sn_type) */
 	if (asocDown) {
+		print_stats();
 		printf("Associd:0x%x Terminates (reason=%s)\n", 
 		       id, ((str == NULL) ? "None" : str));
 		*notDone = 0;
@@ -437,16 +450,21 @@ handle_read_event(int *notDone, int sd)
 	ret = sctp_recvmsg(sd, receive_buffer, sizeof(receive_buffer),
 			   &from.sa, &flen, &sinfo_in, &msg_flags);
 	if (ret < 0) {
+		print_stats();
 		printf("Got error on sctp_recvmsg:%d - next socket\n", errno);
 		*notDone=0;
 		return;
 	}
+	if (msg_flags & MSG_EOR)
+		msg_in_cnt_weor++;
+
 	if(msg_flags & MSG_NOTIFICATION) {
+		notify_in_cnt++;
 		handle_notification(receive_buffer, notDone);
 	} else {
 		msg_in_cnt++;
 		if(verbose) {
-			if ((msg_in_cnt % 10) == 0) {
+			if ((msg_in_cnt % 100) == 0) {
 				printf("msg count now %d\n", msg_in_cnt);
 			}
 		}
@@ -455,9 +473,12 @@ handle_read_event(int *notDone, int sd)
 			if (verbose) {
 				printf("Send loop response of size %d\n", ret);
 			}
+			sends_ping_resp++;
 			respmsg = sctp_send(sd, receive_buffer, ret, &sinfo_in, 0);
 			if(respmsg < 0) {
+				print_stats();
 				printf("Got error on sctp_send:%d (loop response) - next socket\n", errno);
+				print_stats();
 				*notDone = 0;
 				return;
 			}
@@ -688,6 +709,7 @@ main (int argc, char **argv)
 				} else {
 					snd->dgramID = dgram_id_counter++;
 					send_out--;
+					sends_out++;
 					printf("Associd:0x%x - Implicit send to:", sinfo_out.sinfo_assoc_id);
 					SCTPPrintAnAddress(&addr.sa);
 				}
@@ -711,6 +733,7 @@ main (int argc, char **argv)
 				while (send_out > 0) {
 					sctp_sendx(sd, send_buffer, size_to_send, &addr.sa,
 						   1, &sinfo_out, 0);
+					sends_out++;
 					send_out--;
 				}
 			}
@@ -732,5 +755,6 @@ main (int argc, char **argv)
 		close(sd);
 		nanosleep(&delay, NULL);
 		notDone = 1;
+		msg_in_cnt = msg_in_cnt_weor = notify_in_cnt = sends_out = sends_ping_resp = 0;
 	}
 }
