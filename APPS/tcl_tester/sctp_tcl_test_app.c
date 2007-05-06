@@ -123,11 +123,14 @@ handle_notification(char *receive_buffer, int *notDone)
 	struct sctp_authkey_event *auth;
 	struct sctp_stream_reset_event *strrst;
 	int asocDown;
-	char *str;
+	char *str = NULL;
 	char buf[256];
 	struct sockaddr_in *sin;
 	struct sockaddr_in6 *sin6;
+	sctp_assoc_t id;
+
 	asocDown = 0;
+
 	snp = (union sctp_notification *)receive_buffer;
 	switch(snp->sn_header.sn_type) {
 	case SCTP_ASSOC_CHANGE:
@@ -139,6 +142,7 @@ handle_notification(char *receive_buffer, int *notDone)
 			break;
 		case SCTP_COMM_LOST:
 			str = "COMMUNICATION LOST";
+			id = sac->sac_assoc_id;
 			asocDown = 1;
 			break;
 		case SCTP_RESTART:
@@ -146,10 +150,12 @@ handle_notification(char *receive_buffer, int *notDone)
 			break;
 		case SCTP_SHUTDOWN_COMP:
 			str = "SHUTDOWN COMPLETE";
+			id = sac->sac_assoc_id;
 			asocDown = 1;
 			break;
 		case SCTP_CANT_STR_ASSOC:
 			str = "CANT START ASSOC";
+			id = sac->sac_assoc_id;
 			asocDown = 1;
 			break;
 		default:
@@ -326,6 +332,8 @@ handle_notification(char *receive_buffer, int *notDone)
 			printf("SCTP_SHUTDOWN_EVENT: assoc=0x%x\n",
 			       (uint32_t)sse->sse_assoc_id);
 		}
+		str = "SHUTDOWN RCVD";
+		id = sac->sac_assoc_id;
 		asocDown = 1;
 		break;
 	default:
@@ -335,7 +343,8 @@ handle_notification(char *receive_buffer, int *notDone)
 		}
 	} /* end switch(snp->sn_header.sn_type) */
 	if (asocDown) {
-		printf("Association fails, - next socket\n");
+		printf("Associd:0x%x Terminates (reason=%s)\n", 
+		       id, ((str == NULL) ? "None" : str));
 		*notDone = 0;
 	}
 }
@@ -471,7 +480,7 @@ main (int argc, char **argv)
 	memset(&addr, 0, sizeof(addr));
 	memset(&bindto, 0, sizeof(bindto));
 	memset(&delay, 0, sizeof(delay));
-	delay.tv_nsec = 100 * 1000;
+	delay.tv_nsec = 100 * 1000000;
 
 	bindto.sa.sa_family = AF_INET6;
 	bindto.sa.sa_len = sizeof(struct sockaddr_in6);
@@ -487,7 +496,7 @@ main (int argc, char **argv)
 				delay.tv_sec++;
 				timeof -= 1000000;
 			}
-			delay.tv_nsec = timeof;
+			delay.tv_nsec = timeof * 1000000;
 			break;
 		case 'l':
 			listen_only = 1;
@@ -622,7 +631,7 @@ main (int argc, char **argv)
 			printf("I will NOT send any data at association startup\n");
 		}
 		printf("I will delay %d.%6.6d between any assoc failure to restart attempt\n",
-		       delay.tv_sec, (delay.tv_nsec/1000));
+		       delay.tv_sec, (delay.tv_nsec/1000000));
 	}
 	if ((listen_only == 0) && ((dest_addr_set == 0)  || (dest_port_set == 0))) {
 		printf("You must set -h and -p if you do not use -l\n");
@@ -679,11 +688,10 @@ main (int argc, char **argv)
 				} else {
 					snd->dgramID = dgram_id_counter++;
 					send_out--;
+					printf("Associd:0x%x - Implicit send to:", sinfo_out.sinfo_assoc_id);
+					SCTPPrintAnAddress(&addr.sa);
 				}
 			} else {
-				printf("Attempt to connect to:");
-				SCTPPrintAnAddress(&addr.sa);
-				printf("\n");
 				if(sctp_connectx(sd, &addr.sa, 1, &sinfo_out.sinfo_assoc_id) < 0) {
 					printf("Connect fails error:%d - next loop\n", errno);
 				next_iteration_with_sleep:
@@ -692,6 +700,9 @@ main (int argc, char **argv)
 					delay.tv_sec--;
 					goto next_loop;
 				}
+				printf("Associd:0x%x - Attempt to connect to:", sinfo_out.sinfo_assoc_id);
+				SCTPPrintAnAddress(&addr.sa);
+
 			}
 		} 
 		while (notDone) {
