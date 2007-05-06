@@ -3460,7 +3460,8 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		} else
 			ip->ip_off = 0;
 
-
+		printf("Packet length to go out is %d mbuf:%p\n", 
+		       packet_length, p);
 #if defined(__FreeBSD__)
 		/* FreeBSD has a function for ip_id's */
 		ip->ip_id = ip_newid();
@@ -3604,8 +3605,8 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			printf("RTP route is %p through\n", ro->ro_rt);
 		}
 #endif
-		o_pak = SCTP_GET_HEADER_FOR_OUTPUT();
-		if (o_pak == NULL) {
+
+		if (SCTP_GET_HEADER_FOR_OUTPUT(o_pak)) {
 			/* failed to prepend data, give up */
 			sctp_m_freem(m);
 			return (ENOMEM);
@@ -3852,8 +3853,8 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			prev_port = sin6->sin6_port;
 		}
 
-		o_pak = SCTP_GET_HEADER_FOR_OUTPUT();
-		if (o_pak == NULL) {
+		
+		if (SCTP_GET_HEADER_FOR_OUTPUT(o_pak)) {
 			/* failed to prepend data, give up */
 			sctp_m_freem(m);
 			return (ENOMEM);
@@ -9563,8 +9564,7 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 		/* Currently not supported. */
 		return (-1);
 	}
-	o_pak = SCTP_GET_HEADER_FOR_OUTPUT();
-	if (o_pak == NULL) {
+	if (SCTP_GET_HEADER_FOR_OUTPUT(o_pak)) {
 		/* no mbuf's */
 		sctp_m_freem(mout);
 		return (-1);
@@ -10465,8 +10465,7 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 	} else {
 		abm->sh.checksum = sctp_calculate_sum(mout, NULL, iphlen_out);
 	}
-	o_pak = SCTP_GET_HEADER_FOR_OUTPUT();
-	if (o_pak == NULL) {
+	if (SCTP_GET_HEADER_FOR_OUTPUT(o_pak)) {
 		/* no mbuf's */
 		sctp_m_freem(mout);
 		return;
@@ -10593,8 +10592,7 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 		sctp_m_freem(scm);
 		return;
 	}
-	o_pak = SCTP_GET_HEADER_FOR_OUTPUT();
-	if (o_pak == NULL) {
+	if (SCTP_GET_HEADER_FOR_OUTPUT(o_pak)) {
 		sctp_m_freem(scm);
 		sctp_m_freem(mout);
 		return;
