@@ -271,7 +271,7 @@ struct mbuf *sctp_m_prepend_2(struct mbuf *m, int len, int how);
 #define SCTP_HEADER_TO_CHAIN(m) (m)
 #define SCTP_DETACH_HEADER_FROM_CHAIN(m)
 #define SCTP_HEADER_LEN(m) (m->m_pkthdr.len)
-#define SCTP_GET_HEADER_FOR_OUTPUT(len) sctp_get_mbuf_for_msg(len, 1, M_DONTWAIT, 1, MT_DATA)
+#define SCTP_GET_HEADER_FOR_OUTPUT(len) NULL
 #define SCTP_RELEASE_HEADER(m)
 #define SCTP_RELEASE_PKT(m)	sctp_m_freem(m)
 
@@ -287,9 +287,9 @@ static inline int SCTP_GET_PKT_TABLEID(void *m, uint32_t table_id) {
 
 /* Attach the chain of data into the sendable packet. */
 #define SCTP_ATTACH_CHAIN(pak, m, packet_length) do { \
-	pak->m_next = m; \
-	pak->m_pkthdr.len = packet_length; \
-} while(0)
+                                                 pak = m; \
+                                                 pak->m_pkthdr.len = packet_length; \
+                         } while(0)
 
 /* Other m_pkthdr type things */
 #define SCTP_IS_IT_BROADCAST(dst, m) in_broadcast(dst, m->m_pkthdr.rcvif)
