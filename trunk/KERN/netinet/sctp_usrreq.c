@@ -3630,8 +3630,9 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 					}
 					if (paddrp->spp_pathmtu > SCTP_DEFAULT_MINSEGMENT) {
 						net->mtu = paddrp->spp_pathmtu;
-						if (net->mtu < stcb->asoc.smallest_mtu)
+						if (net->mtu < stcb->asoc.smallest_mtu) {
 							sctp_pathmtu_adjustment(inp, stcb, net, net->mtu);
+						}
 					}
 				}
 				if (paddrp->spp_flags & SPP_PMTUD_ENABLE) {
