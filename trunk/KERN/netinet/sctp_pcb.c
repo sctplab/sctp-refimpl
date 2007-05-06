@@ -3859,6 +3859,11 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 				/* Start things off to match mtu of interface please. */
 				SCTP_SET_MTU_OF_ROUTE(&net->ro._l_addr.sa, 
 						      net->ro.ro_rt, net->mtu);
+			} else if (rmtu > net->mtu) {
+				/* we take the route mtu over the interface, since
+				 * the route may be leading out the loopback.
+				 */
+ 				net->mtu = rmtu;
 			}
 	        }
 		if (from == SCTP_ALLOC_ASOC) {
