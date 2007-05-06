@@ -87,18 +87,17 @@ main(int argc, char **argv)
 		goto again;
 	}
 	failed_cnt = 0;
-	printf("Got a connection from %x:%d fd:%d\n",
+	printf("Got a connection from %x:%d fd:%d newfd:%d\n",
 	       (u_int)ntohl(from.sin_addr.s_addr),
 	       (int)ntohs(from.sin_port),
-	       fd);
+	       fd, newfd);
 	sa_len = sizeof(from);
 	ret = sctp_recvmsg (newfd, buffer, sizeof(buffer), 	
 			    (struct sockaddr *)&from,
 			    &sa_len, &sinfo, &flags);
 
-
 	if(ret <= 0){
-		printf("Gak got %d bytes errno:%d\n",
+		printf("rcvmsg:Gak got %d bytes errno:%d\n",
 		       ret,errno);
 		close(newfd);
 		goto again;

@@ -200,7 +200,6 @@ main(int argc, char **argv)
 				break;
 			}
 		} else {
-			printf("Got ret:%d bytes\n", ret);
 			amount_in += ret;
 			ret1 = write(outfd, buffer, ret);
 			if(ret != ret1) {
