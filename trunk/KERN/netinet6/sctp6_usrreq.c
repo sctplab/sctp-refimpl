@@ -874,20 +874,24 @@ sctp6_attach(struct socket *so, int proto, struct proc *p)
 	return 0;
 }
 
-static int
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+static int
 sctp6_bind(struct socket *so, struct sockaddr *addr, struct thread *p)
 {
-#else
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#elif defined(__FreeBSD__) || defined(__APPLE__)
+static int
 sctp6_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 {
+#elif defined(__Panda__)
+int
+sctp6_bind(struct socket *so, struct sockaddr *addr, void * p)
+{
 #else
+static int
 sctp6_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 {
 	struct sockaddr *addr = nam ? mtod(nam, struct sockaddr *): NULL;
 
-#endif
 #endif
 	struct sctp_inpcb *inp;
 	struct in6pcb *inp6;
@@ -1407,9 +1411,8 @@ sctp6_connect(struct socket *so, struct sockaddr *addr, struct proc *p)
 {
 #elif defined(__Panda__)
 int
-sctp6_connect(struct socket *so, struct sockaddr *addr)
-{ 
-	void *p = NULL;
+sctp6_connect(struct socket *so, struct sockaddr *addr, void *p)
+{
 #else
 static int
 sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
