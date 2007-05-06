@@ -152,7 +152,10 @@ sctp_pathmtu_adjustment(struct sctp_inpcb *inp,
 	/* Adjust that too */
 	stcb->asoc.smallest_mtu = nxtsz;
 	/* now off to subtract IP_DF flag if needed */
-
+#ifdef SCTP_PRINT_FOR_B_AND_M 
+	printf("sctp_pathmtu_adjust called inp:%p stcb:%p net:%p nxtsz:%d\n",
+	       inp, stcb, net, nxtsz);
+#endif
 	TAILQ_FOREACH(chk, &stcb->asoc.send_queue, sctp_next) {
 		if ((chk->send_size + IP_HDR_SIZE) > nxtsz) {
 			chk->flags |= CHUNK_FLAGS_FRAGMENT_OK;
@@ -247,6 +250,10 @@ sctp_notify_mbuf(struct sctp_inpcb *inp,
 	}
 	/* now what about the ep? */
 	if (stcb->asoc.smallest_mtu > nxtsz) {
+#ifdef SCTP_PRINT_FOR_B_AND_M 
+		printf("notify_mbuf (ICMP) calls sctp_pathmtu_adjust mtu:%d\n",
+		       nxtsz);
+#endif
 		sctp_pathmtu_adjustment(inp, stcb, net, nxtsz);
 	}
 	if (tmr_stopped)
@@ -3631,6 +3638,10 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 					if (paddrp->spp_pathmtu > SCTP_DEFAULT_MINSEGMENT) {
 						net->mtu = paddrp->spp_pathmtu;
 						if (net->mtu < stcb->asoc.smallest_mtu) {
+#ifdef SCTP_PRINT_FOR_B_AND_M 
+							printf("SCTP_PMTU_DISABLE calls sctp_pathmtu_adjustment:%d\n",
+							       net->mtu);
+#endif
 							sctp_pathmtu_adjustment(inp, stcb, net, net->mtu);
 						}
 					}
