@@ -3460,8 +3460,6 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		} else
 			ip->ip_off = 0;
 
-		printf("Packet length to go out is %d mbuf:%p\n", 
-		       packet_length, p);
 #if defined(__FreeBSD__)
 		/* FreeBSD has a function for ip_id's */
 		ip->ip_id = ip_newid();
@@ -9579,7 +9577,7 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 	comp_cp->shut_cmp.ch.chunk_length = htons(sizeof(struct sctp_shutdown_complete_chunk));
 
 	/* add checksum */
-	if ((sctp_no_csum_on_loopback) && SCTP_IS_IT_LOOPBACK(o_pak)){
+	if ((sctp_no_csum_on_loopback) && SCTP_IS_IT_LOOPBACK(mout)){
 		comp_cp->sh.checksum = 0;
 	} else {
 		comp_cp->sh.checksum = sctp_calculate_sum(mout, NULL, offset_out);
@@ -10592,8 +10590,8 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 		sctp_m_freem(scm);
 		return;
 	}
+	SCTP_BUF_NEXT(mout) = scm;
 	if (SCTP_GET_HEADER_FOR_OUTPUT(o_pak)) {
-		sctp_m_freem(scm);
 		sctp_m_freem(mout);
 		return;
 	}
@@ -10606,10 +10604,9 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 
 		SCTP_BUF_LEN(mout) = sizeof(struct ip);
 		len += sizeof(struct ip);
-		SCTP_BUF_NEXT(mout) = scm;
 
 		bzero(&ro, sizeof ro);
-		out = mtod(SCTP_HEADER_TO_CHAIN(o_pak), struct ip *);
+		out = mtod(mout, struct ip *);
 		out->ip_v = iph->ip_v;
 		out->ip_hl = (sizeof(struct ip) / 4);
 		out->ip_tos = iph->ip_tos;
@@ -10621,9 +10618,9 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 		out->ip_src = iph->ip_dst;
 		out->ip_dst = iph->ip_src;
 #if defined(__FreeBSD__) || defined(__APPLE__)
-		out->ip_len = SCTP_HEADER_LEN(o_pak);
+		out->ip_len = len;
 #else
-		out->ip_len = htons(SCTP_HEADER_LEN(o_pak));
+		out->ip_len = htons(len);
 #endif
 		SCTP_ATTACH_CHAIN(o_pak, mout, len);
 
@@ -10649,10 +10646,9 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 		struct ip6_hdr *out6, *in6;
 		SCTP_BUF_LEN(mout) = sizeof(struct ip6_hdr);
 		len += sizeof(struct ip6_hdr);
-		SCTP_BUF_NEXT(mout) = scm;
 		bzero(&ro, sizeof ro);
 		in6 = mtod(m, struct ip6_hdr *);
-		out6 = mtod(SCTP_HEADER_TO_CHAIN(o_pak), struct ip6_hdr *);
+		out6 = mtod(mout, struct ip6_hdr *);
 		out6->ip6_flow = in6->ip6_flow;
 		out6->ip6_hlim = ip6_defhlim;
 		out6->ip6_nxt = IPPROTO_SCTP;
