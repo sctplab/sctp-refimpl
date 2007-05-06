@@ -3002,7 +3002,6 @@ sctp_source_address_selection(struct sctp_inpcb *inp,
 	struct sockaddr_in6 *to6 = (struct sockaddr_in6 *)&ro->ro_dst;
 	struct sctp_ifa *answer;
 	uint8_t dest_is_priv, dest_is_loop;
-	int did_rtalloc=0;
 	sa_family_t fam;
 	/*
 	 * Rules: - Find the route if needed, cache if I can. - Look at
@@ -3071,7 +3070,6 @@ sctp_source_address_selection(struct sctp_inpcb *inp,
 		 * Need a route to cache.
 		 */
 		SCTP_RTALLOC(ro);
-		did_rtalloc = 1;
 	}
 	if (ro->ro_rt == NULL) {
 		return (NULL);
@@ -3516,7 +3514,8 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			if (net->src_addr_selected == 0) {
 				/* Cache the source address */
 				net->ro._s_addr = sctp_source_address_selection(inp,stcb,
-										ro, net, out_of_asoc_ok, vrf_id);
+										ro, net, out_of_asoc_ok, 
+										vrf_id);
 				if(net->ro._s_addr == NULL) {
 					/* No route to host */
 					goto no_route;
@@ -3636,6 +3635,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 					       mtu);
 #endif
 					sctp_mtu_size_reset(inp, &stcb->asoc, mtu);
+					net->mtu = mtu;
 				}
 			} else {
 				/* route was freed */
@@ -3888,6 +3888,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 					       mtu);
 #endif
 					sctp_mtu_size_reset(inp, &stcb->asoc, mtu);
+					net->mtu = mtu;
 				}
 			}
 #if !defined(__Panda__)
