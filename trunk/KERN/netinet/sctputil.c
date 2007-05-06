@@ -1034,6 +1034,10 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	asoc->peers_rwnd = SCTP_SB_LIMIT_RCV(m->sctp_socket);
 
 	asoc->smallest_mtu = m->sctp_frag_point;
+#ifdef SCTP_PRINT_FOR_B_AND_M 
+	printf("smallest_mtu init'd with asoc to :%d\n",
+	       asoc->smallest_mtu);
+#endif
 	asoc->minrto = m->sctp_ep.sctp_minrto;
 	asoc->maxrto = m->sctp_ep.sctp_maxrto;
 
@@ -2575,6 +2579,10 @@ sctp_mtu_size_reset(struct sctp_inpcb *inp,
 	struct sctp_tmit_chunk *chk;
 	unsigned int eff_mtu, ovh;
 
+#ifdef SCTP_PRINT_FOR_B_AND_M 
+	printf("sctp_mtu_size_reset(%p, asoc:%p mtu:%d\n",
+	       inp, asoc, mtu);
+#endif
 	asoc->smallest_mtu = mtu;
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) {
 		ovh = SCTP_MIN_OVERHEAD;

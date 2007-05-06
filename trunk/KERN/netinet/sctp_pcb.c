@@ -3862,12 +3862,20 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 			}
 	        }
 		if (from == SCTP_ALLOC_ASOC) {
+#ifdef SCTP_PRINT_FOR_B_AND_M 
+			printf("New assoc sets mtu to :%d\n",
+			       net->mtu);
+#endif
 			stcb->asoc.smallest_mtu = net->mtu;
 		}
 	} else {
 		net->mtu = stcb->asoc.smallest_mtu;
 	}
 	if (stcb->asoc.smallest_mtu > net->mtu) {
+#ifdef SCTP_PRINT_FOR_B_AND_M 
+		printf("new address mtu:%d smaller than smallest:%d\n",
+		       net->mtu, stcb->asoc.smallest_mtu);
+#endif
 		stcb->asoc.smallest_mtu = net->mtu;
 	}
 	/*
