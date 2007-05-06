@@ -11,5 +11,5 @@
    BSD, but may be other things later when BSD
    fully supports VRFs. 
 -  Additional stream reset bug (caught by cisco dev-test).
--  Additional validations for addresses in sending messages.
+-  Additional validations for the address in sending a message (socket api).
 
