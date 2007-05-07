@@ -1,5 +1,5 @@
 Makefile
-Makefile.am
+Makefile.im
 aclocal.m4
 autom4te.cache
 config.guess
