@@ -11672,7 +11672,9 @@ sctp_lower_sosend(struct socket *so,
 				       so, asoc, uio->uio_resid);
 #endif
 			be.error = 0;
+#ifndef __Panda__
 			stcb->block_entry = &be;
+#endif
 			error = sbwait(&so->so_snd);
 			stcb->block_entry = NULL;
 			if (error || so->so_error || be.error) {
@@ -12018,7 +12020,9 @@ sctp_lower_sosend(struct socket *so,
 					       so, asoc, uio->uio_resid);
 #endif
 				be.error = 0;
+#ifndef __Panda__
 				stcb->block_entry = &be;
+#endif
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 				sbunlock(&so->so_snd, 1);
 #endif
