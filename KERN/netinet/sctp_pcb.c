@@ -192,7 +192,6 @@ sctp_allocate_vrf(int vrf_id)
 		return (NULL);
 	}
 
-
 	/* Add it to the hash table */
 	bucket = &sctppcbinfo.sctp_vrfhash[(vrf_id & sctppcbinfo.hashvrfmark)];
 	LIST_INSERT_HEAD(bucket, vrf, next_vrf);
@@ -302,7 +301,8 @@ sctp_delete_ifn(struct sctp_ifn *sctp_ifnp, int hold_addr_lock)
 struct sctp_ifa *
 sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 		     uint32_t ifn_type, const char *if_name,
-		     void *ifa, struct sockaddr *addr, uint32_t ifa_flags, int dynamic_add)
+		     void *ifa, struct sockaddr *addr, uint32_t ifa_flags,
+		     int dynamic_add)
 {
 	struct sctp_vrf *vrf;
 	struct sctp_ifn *sctp_ifnp = NULL;
@@ -476,6 +476,9 @@ sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 				 (struct sctp_tcb *)NULL,
 				 (struct sctp_nets *)NULL);
 		SCTP_IPI_ITERATOR_WQ_UNLOCK();
+	} else {
+		/* it's ready for use */	
+		sctp_ifap->localifa_flags &= ~SCTP_ADDR_DEFER_USE;
 	}
 	return (sctp_ifap);
 }
