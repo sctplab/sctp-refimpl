@@ -345,7 +345,7 @@ handle_notification(char *receive_buffer, int *notDone)
 			       (uint32_t)sse->sse_assoc_id);
 		}
 		str = "SHUTDOWN RCVD";
-		id = sse->sac_assoc_id;
+		id = sse->sse_assoc_id;
 		asocDown = 1;
 		break;
 	default:
