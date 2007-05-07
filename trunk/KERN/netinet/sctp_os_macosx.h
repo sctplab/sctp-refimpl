@@ -109,6 +109,33 @@ extern struct fileops socketops;
 #define SCTP_LIST_EMPTY(list)	LIST_EMPTY(list)
 
 /*
+ * debug macro
+ */
+#if defined(SCTP_DEBUG)
+#define SCTPDBG(level, params...)					\
+{									\
+    do {								\
+	if (sctp_debug_on & level ) {					\
+	    printf(params);						\
+	}								\
+    } while (0);							\
+}
+#define SCTPDBG_ADDR(level, addr)					\
+{									\
+    do {								\
+	if (sctp_debug_on & level ) {					\
+	    sctp_print_address(addr);					\
+	}								\
+    } while (0);							\
+}
+#define SCTP_PRINTF(params...)	printf(params)
+#else
+#define SCTPDBG(level, params...)
+#define SCTPDBG_ADDR(level, addr)
+#define SCTP_PRINTF(params...)
+#endif
+
+/*
  * Local address and interface list handling
  */
 #define SCTP_MAX_VRF_ID		0
