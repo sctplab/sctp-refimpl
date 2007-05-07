@@ -370,6 +370,7 @@ setup_a_socket()
 	int on_off;
 	struct sctp_rtoinfo rto;
 	struct sctp_initmsg init;
+	struct linger linger;
 	struct sctp_event_subscribe events;
 	if(use_v6) {
 		sd  = socket(AF_INET6,SOCK_SEQPACKET, IPPROTO_SCTP);
@@ -397,6 +398,11 @@ setup_a_socket()
 	if(setsockopt(sd,IPPROTO_SCTP, SCTP_NODELAY, &on_off, siz) != 0) {
 		printf("Can't set SCTP_NODELAY to on error:%d - exiting\n", errno);
 		exit (-1);
+	}
+	linger.l_onoff = 1;
+	linger.l_linger = 0;
+	if (setsockopt(sd, SOL_SOCKET, SO_LINGER,(char*)&linger, sizeof(struct linger))<0) {
+		printf("Warning:Can't set SOL_SOCKET-SO_LINGER error:%d - tests may hang\n", errno);
 	}
 	memset(&init, 0, sizeof(init));
 	init.sinit_num_ostreams = strm_out;
