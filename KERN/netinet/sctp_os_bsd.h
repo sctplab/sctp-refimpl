@@ -129,7 +129,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.14 2007/05/02 12:50:13 rrs
 #define SCTP_DEFAULT_TABLEID	0
 #define SCTP_VRF_ADDR_HASH_SIZE	16
 #define SCTP_VRF_IFN_HASH_SIZE	3
-
+#define SCTP_VRF_DEFAULT_TABLEID(vrf_id)	0
 
 #define SCTP_IFN_IS_IFT_LOOP(ifn) ((ifn)->ifn_type == IFT_LOOP)
 
@@ -350,7 +350,7 @@ static inline int SCTP_GET_PKT_TABLEID(void *m, uint32_t table_id) {
  */
 typedef struct route	sctp_route_t;
 typedef struct rtentry	sctp_rtentry_t;
-#define SCTP_RTALLOC(ro)	rtalloc_ign((struct route *)ro, 0UL)
+#define SCTP_RTALLOC(ro, vrf_id, table_id) rtalloc_ign((struct route *)ro, 0UL)
 
 /* Future zero copy wakeup/send  function */
 #define SCTP_ZERO_COPY_EVENT(inp, so)
