@@ -119,6 +119,30 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.14 2007/05/02 12:50:13 rrs
 #define USER_ADDR_NULL	(NULL)		/* FIX ME: temp */
 #define SCTP_LIST_EMPTY(list)	LIST_EMPTY(list)
 
+#if defined(SCTP_DEBUG)
+#define SCTPDBG(level, params...)					\
+{									\
+    do {								\
+	if (sctp_debug_on & level ) {					\
+	    printf(params);						\
+	}								\
+    } while (0);							\
+}
+#define SCTPDBG_ADDR(level, addr)					\
+{									\
+    do {								\
+	if (sctp_debug_on & level ) {					\
+	    sctp_print_address(addr);					\
+	}								\
+    } while (0);							\
+}
+#define SCTP_PRINTF(params...)	printf(params)
+#else
+#define SCTPDBG(level, params...)
+#define SCTPDBG_ADDR(level, addr)
+#define SCTP_PRINTF(params...)
+#endif
+
 /*
  * Local address and interface list handling
  */
