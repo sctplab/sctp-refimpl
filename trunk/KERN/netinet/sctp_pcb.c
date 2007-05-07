@@ -3831,7 +3831,8 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	}
 #endif /* SCTP_EMBEDDED_V6_SCOPE */
 
-	SCTP_RTALLOC((sctp_route_t *)&net->ro);
+	SCTP_RTALLOC((sctp_route_t *)&net->ro, stcb->asoc.vrf_id,
+		     sctp->asoc.table_id);
 
 #ifdef SCTP_EMBEDDED_V6_SCOPE
 	if (newaddr->sa_family == AF_INET6) {

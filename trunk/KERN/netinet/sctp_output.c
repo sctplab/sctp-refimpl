@@ -3066,10 +3066,16 @@ sctp_source_address_selection(struct sctp_inpcb *inp,
 	 *   we must use rotation amongst the bound addresses..
 	 */
 	if (ro->ro_rt == NULL) {
+		uint32_t table_id = 0;
 		/*
 		 * Need a route to cache.
 		 */
-		SCTP_RTALLOC(ro);
+		if (stcb) {
+		    table_id = stcb->asoc.table_id;
+		} else {
+		    table_id = SCTP_VRF_DEFAULT_TABLEID(vrf_id);
+		}
+		SCTP_RTALLOC(ro, vrf_id, table_id);
 	}
 	if (ro->ro_rt == NULL) {
 		return (NULL);
