@@ -120,7 +120,7 @@ void
 print_stats()
 {
 	printf("Rcvd data:%d Snd/Rcv pings:%d Sent:%d Notify's:%d msg_w_weor:%d\n",
-	       (msg_in_cnt - notify_in_cnt), sends_ping_resp, sends_out, notify_in_cnt, msg_in_cnt_weor);
+	       msg_in_cnt, sends_ping_resp, sends_out, notify_in_cnt, msg_in_cnt_weor);
 }
 
 void
