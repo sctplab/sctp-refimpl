@@ -6135,3 +6135,89 @@ sctp_hashinit_flags(int elements, struct malloc_type *type,
 	return (hashtbl);
 }
 #endif
+
+
+
+int
+sctp_connectx_helper_add(struct sctp_tcb *stcb, struct sockaddr *addr, int totaddr, int *error)
+{
+	int added=0;
+	int i;
+	struct sctp_inpcb *inp;
+	struct sockaddr *sa;
+	size_t incr=0;
+
+	sa = addr;
+	inp = stcb->sctp_ep;
+	*error = 0;
+	for (i = 0; i < totaddr; i++) {
+		if (sa->sa_family == AF_INET) {
+			incr = sizeof(struct sockaddr_in);
+			if (sctp_add_remote_addr(stcb, sa, SCTP_DONOT_SETSCOPE, SCTP_ADDR_IS_CONFIRMED)) {
+				/* assoc gone no un-lock */
+				sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_7);
+				*error = ENOBUFS;
+				goto out_now;
+			}
+			added++;
+		} else if (sa->sa_family == AF_INET6) {
+			incr = sizeof(struct sockaddr_in6);
+			if (sctp_add_remote_addr(stcb, sa, SCTP_DONOT_SETSCOPE, SCTP_ADDR_IS_CONFIRMED)) {
+				/* assoc gone no un-lock */
+				sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_8);
+				*error = ENOBUFS;
+				goto out_now;
+			}
+			added++;
+		}
+		sa = (struct sockaddr *)((caddr_t)sa + incr);
+	}
+ out_now:
+	return(added);
+} 
+
+struct sctp_tcb *
+sctp_connectx_helper_find(struct sctp_inpcb *inp, struct sockaddr *addr, int *totaddr, 
+			  int *num_v4, int *num_v6, int *error, int max) 
+{
+	struct sockaddr *sa;
+	struct sctp_tcb *stcb=NULL;
+	size_t incr, at, i;
+	at = incr = 0;
+	sa = addr;
+	*error = *num_v6 = *num_v4 = 0;
+	/* account and validate addresses */
+	for (i = 0; i < *totaddr; i++) {
+		if (sa->sa_family == AF_INET) {
+			(*num_v4) += 1;
+			incr = sizeof(struct sockaddr_in);
+		} else if (sa->sa_family == AF_INET6) {
+			struct sockaddr_in6 *sin6;
+
+			sin6 = (struct sockaddr_in6 *)sa;
+			if (IN6_IS_ADDR_V4MAPPED(&sin6->sin6_addr)) {
+				/* Must be non-mapped for connectx */
+				*error = EINVAL;
+				return (NULL);
+			}
+			(*num_v6) += 1;
+			incr = sizeof(struct sockaddr_in6);
+		} else {
+			*totaddr = i;
+			/* we are done */
+			break;
+		}
+		stcb = sctp_findassociation_ep_addr(&inp, sa, NULL, NULL, NULL);
+		if (stcb != NULL) {
+			/* Already have or am bring up an association */
+			return (stcb);
+		}
+		if ((at + incr) > max) {
+			*totaddr = i;
+			break;
+		}
+		sa = (struct sockaddr *)((caddr_t)sa + incr);
+	}
+	return ((struct sctp_tcb *)NULL);
+}
+

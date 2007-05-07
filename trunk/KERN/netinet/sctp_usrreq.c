@@ -1620,7 +1620,6 @@ sctp_count_max_addresses(struct sctp_inpcb *inp)
 	return (cnt);
 }
 
-
 static int
 sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 		  size_t optsize, void *p, int delay)
@@ -1632,8 +1631,8 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 	int creat_lock_on = 0;
 	struct sctp_tcb *stcb = NULL;
 	struct sockaddr *sa;
-	int num_v6 = 0, num_v4 = 0, *totaddrp, totaddr, i;
-	size_t incr, at;
+	int num_v6 = 0, num_v4 = 0, *totaddrp, totaddr;
+	int added=0;
 	uint32_t vrf_id;
 	sctp_assoc_t *a_id;
 
@@ -1680,43 +1679,15 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 	totaddrp = (int *)optval;
 	totaddr = *totaddrp;
 	sa = (struct sockaddr *)(totaddrp + 1);
-	at = incr = 0;
-	/* account and validate addresses */
-	for (i = 0; i < totaddr; i++) {
-		if (sa->sa_family == AF_INET) {
-			num_v4++;
-			incr = sizeof(struct sockaddr_in);
-		} else if (sa->sa_family == AF_INET6) {
-			struct sockaddr_in6 *sin6;
-
-			sin6 = (struct sockaddr_in6 *)sa;
-			if (IN6_IS_ADDR_V4MAPPED(&sin6->sin6_addr)) {
-				/* Must be non-mapped for connectx */
-				error = EINVAL;
-				goto out_now;
-			}
-			num_v6++;
-			incr = sizeof(struct sockaddr_in6);
-		} else {
-			totaddr = i;
-			break;
-		}
-		stcb = sctp_findassociation_ep_addr(&inp, sa, NULL, NULL, NULL);
-		if (stcb != NULL) {
-			/* Already have or am bring up an association */
-			SCTP_ASOC_CREATE_UNLOCK(inp);
-			creat_lock_on = 0;
-			SCTP_TCB_UNLOCK(stcb);
-			error = EALREADY;
-			goto out_now;
-		}
-		if ((at + incr) > optsize) {
-			totaddr = i;
-			break;
-		}
-		sa = (struct sockaddr *)((caddr_t)sa + incr);
+	stcb = sctp_connectx_helper_find(inp, sa, &totaddr, &num_v4, &num_v6, &error, (optsize - sizeof(int)));
+	if (stcb != NULL) {
+		/* Already have or am bring up an association */
+		SCTP_ASOC_CREATE_UNLOCK(inp);
+		creat_lock_on = 0;
+		SCTP_TCB_UNLOCK(stcb);
+		error = EALREADY;
+		goto out_now;
 	}
-	sa = (struct sockaddr *)(totaddrp + 1);
 #ifdef INET6
 	if (((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0) &&
 	    (num_v6 > 0)) {
@@ -1759,33 +1730,14 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 		/* Gak! no memory */
 		goto out_now;
 	}
+	stcb->asoc.state = SCTP_STATE_COOKIE_WAIT;
 	/* move to second address */
 	if (sa->sa_family == AF_INET)
 		sa = (struct sockaddr *)((caddr_t)sa + sizeof(struct sockaddr_in));
 	else
 		sa = (struct sockaddr *)((caddr_t)sa + sizeof(struct sockaddr_in6));
-
-	for (i = 1; i < totaddr; i++) {
-		if (sa->sa_family == AF_INET) {
-			incr = sizeof(struct sockaddr_in);
-			if (sctp_add_remote_addr(stcb, sa, SCTP_DONOT_SETSCOPE, SCTP_ADDR_IS_CONFIRMED)) {
-				/* assoc gone no un-lock */
-				sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_7);
-				error = ENOBUFS;
-				goto out_now;
-			}
-		} else if (sa->sa_family == AF_INET6) {
-			incr = sizeof(struct sockaddr_in6);
-			if (sctp_add_remote_addr(stcb, sa, SCTP_DONOT_SETSCOPE, SCTP_ADDR_IS_CONFIRMED)) {
-				/* assoc gone no un-lock */
-				sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_8);
-				error = ENOBUFS;
-				goto out_now;
-			}
-		}
-		sa = (struct sockaddr *)((caddr_t)sa + incr);
-	}
-	stcb->asoc.state = SCTP_STATE_COOKIE_WAIT;
+	
+	added = sctp_connectx_helper_add(stcb, sa, (totaddr-1), &error);
 	/* Fill in the return id */
 	a_id = (sctp_assoc_t *)optval;
 	*a_id = sctp_get_associd(stcb);

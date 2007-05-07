@@ -218,6 +218,12 @@ sctp_abort_an_association(struct sctp_inpcb *, struct sctp_tcb *, int,
 void sctp_handle_ootb(struct mbuf *, int, int, struct sctphdr *,
     struct sctp_inpcb *, struct mbuf *, uint32_t, uint32_t);
 
+int sctp_connectx_helper_add(struct sctp_tcb *stcb, struct sockaddr *addr, int totaddr, int *error);
+
+struct sctp_tcb *
+sctp_connectx_helper_find(struct sctp_inpcb *inp, struct sockaddr *addr, int *totaddr, 
+			  int *num_v4, int *num_v6, int *error, int max);
+
 int sctp_is_there_an_abort_here(struct mbuf *, int, uint32_t *);
 uint32_t sctp_is_same_scope(struct sockaddr_in6 *, struct sockaddr_in6 *);
 
