@@ -2912,7 +2912,9 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 		printf("Plan C no preferred for Dest, acceptable for?\n");
 	}
 #endif
-
+	if (emit_ifn == NULL) {
+		goto plan_d;
+	}
 	LIST_FOREACH(sctp_ifa, &emit_ifn->ifalist, next_ifa) {
 		if ((sctp_ifa->localifa_flags & SCTP_ADDR_DEFER_USE) &&
 		    (non_asoc_addr_ok == 0)) 
@@ -2934,7 +2936,7 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 		atomic_add_int(&sifa->refcount, 1);
 		return (sifa);
 	}
-
+ plan_d:
 	/*
 	 * plan_d: We are in trouble. No preferred address on the emit
 	 * interface. And not even a perfered address on all interfaces.
