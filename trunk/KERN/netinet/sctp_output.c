@@ -8162,7 +8162,8 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 #ifdef SCTP_AUDITING_ENABLED
 	sctp_audit_log(0xC3, 1);
 #endif
-	if (TAILQ_EMPTY(&asoc->sent_queue)) {
+	if ((TAILQ_EMPTY(&asoc->sent_queue)) &&
+	    (TAILQ_EMPTY(&asoc->control_send_queue))){
 #ifdef SCTP_DEBUG
 		if (sctp_debug_on & SCTP_DEBUG_OUTPUT1) {
 			printf("SCTP hits empty queue with cnt set to %d?\n",
