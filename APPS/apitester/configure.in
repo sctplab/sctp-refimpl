@@ -20,7 +20,6 @@ AC_CHECK_TYPE(ssize_t)
 AC_CHECK_FUNCS(socket, , AC_CHECK_LIB(socket, socket))
 AC_CHECK_FUNCS(inet_addr, , AC_CHECK_LIB(nsl, inet_addr))
 AC_CHECK_FUNCS(sctp_recvmsg, , AC_CHECK_LIB(sctp, sctp_recvmsg))
-AC_CHECK_LIB(pthread,pthread_create)
 
 AC_CHECK_HEADERS(sys/types.h)
 AC_CHECK_MEMBER(struct sockaddr_in.sin_len,
@@ -40,4 +39,4 @@ AC_TRY_COMPILE([#ifdef HAVE_SYS_TYPES_H
                [AC_MSG_RESULT(int)
                 AC_DEFINE(socklen_t, int, [Define a type for socklen_t.])]) 
 
-AC_OUTPUT(Makefile)
+AC_OUTPUT(Makefile src/Makefile)
