@@ -2714,7 +2714,7 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 		break;
 	case SCTP_HEARTBEAT_REQUEST:
 		/* resend a demand HB */
-		sctp_send_hb(stcb, 1, net);
+		(void)sctp_send_hb(stcb, 1, net);
 		break;
 	case SCTP_SHUTDOWN:
 		sctp_send_shutdown(stcb, net);
