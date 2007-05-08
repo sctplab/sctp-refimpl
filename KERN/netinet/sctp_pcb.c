@@ -3358,7 +3358,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	}
 	if (cnt) {
 		/* Ok we have someone out there that will kill us */
-		SCTP_OS_TIMER_STOP(&inp->sctp_ep.signature_change.timer);
+		(void)SCTP_OS_TIMER_STOP(&inp->sctp_ep.signature_change.timer);
 		SCTP_INP_WUNLOCK(inp);
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		SCTP_INP_INFO_WUNLOCK();
@@ -3373,7 +3373,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
 	if ( (inp->refcount) || (inp->sctp_flags & SCTP_PCB_FLAGS_CLOSE_IP) ) {
-		SCTP_OS_TIMER_STOP(&inp->sctp_ep.signature_change.timer);
+		(void)SCTP_OS_TIMER_STOP(&inp->sctp_ep.signature_change.timer);
 		sctp_timer_start(SCTP_TIMER_TYPE_INPKILL, inp, NULL, NULL);
 		SCTP_INP_WUNLOCK(inp);
 		SCTP_ASOC_CREATE_UNLOCK(inp);
@@ -3387,7 +3387,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 		return;
 	}
 #endif
-	SCTP_OS_TIMER_STOP(&inp->sctp_ep.signature_change.timer);
+	(void)SCTP_OS_TIMER_STOP(&inp->sctp_ep.signature_change.timer);
 	inp->sctp_ep.signature_change.type = 0;
 	inp->sctp_flags |= SCTP_PCB_FLAGS_SOCKET_ALLGONE;
 
@@ -3400,7 +3400,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	rt = ip_pcb->inp_route.ro_rt;
 #endif
 #endif
-	SCTP_OS_TIMER_STOP(&inp->sctp_ep.signature_change.timer);
+	(void)SCTP_OS_TIMER_STOP(&inp->sctp_ep.signature_change.timer);
 	inp->sctp_ep.signature_change.type = SCTP_TIMER_TYPE_NONE;
 	/* Clear the read queue */
 	while ((sq = TAILQ_FIRST(&inp->read_queue)) != NULL) {
@@ -4465,11 +4465,11 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		}
 	}
 	/* now clean up any other timers */
-	SCTP_OS_TIMER_STOP(&asoc->hb_timer.timer);
+	(void)SCTP_OS_TIMER_STOP(&asoc->hb_timer.timer);
 	asoc->hb_timer.self = NULL;
-	SCTP_OS_TIMER_STOP(&asoc->dack_timer.timer);
+	(void)SCTP_OS_TIMER_STOP(&asoc->dack_timer.timer);
 	asoc->dack_timer.self = NULL;
-	SCTP_OS_TIMER_STOP(&asoc->strreset_timer.timer);
+	(void)SCTP_OS_TIMER_STOP(&asoc->strreset_timer.timer);
 	/*-
 	 * For stream reset we don't blast this unless
 	 * it is a str-reset timer, it might be the
@@ -4478,20 +4478,20 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	 */
 	if(asoc->strreset_timer.type == SCTP_TIMER_TYPE_STRRESET)
 		asoc->strreset_timer.self = NULL;
-	SCTP_OS_TIMER_STOP(&asoc->asconf_timer.timer);
+	(void)SCTP_OS_TIMER_STOP(&asoc->asconf_timer.timer);
 	asoc->asconf_timer.self = NULL;
-	SCTP_OS_TIMER_STOP(&asoc->autoclose_timer.timer);
+	(void)SCTP_OS_TIMER_STOP(&asoc->autoclose_timer.timer);
 	asoc->autoclose_timer.self = NULL;
-	SCTP_OS_TIMER_STOP(&asoc->shut_guard_timer.timer);
+	(void)SCTP_OS_TIMER_STOP(&asoc->shut_guard_timer.timer);
 	asoc->shut_guard_timer.self = NULL;
-	SCTP_OS_TIMER_STOP(&asoc->delayed_event_timer.timer);
+	(void)SCTP_OS_TIMER_STOP(&asoc->delayed_event_timer.timer);
 	asoc->delayed_event_timer.self = NULL;
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
-		SCTP_OS_TIMER_STOP(&net->fr_timer.timer);
+		(void)SCTP_OS_TIMER_STOP(&net->fr_timer.timer);
 		net->fr_timer.self = NULL;
-		SCTP_OS_TIMER_STOP(&net->rxt_timer.timer);
+		(void)SCTP_OS_TIMER_STOP(&net->rxt_timer.timer);
 		net->rxt_timer.self = NULL;
-		SCTP_OS_TIMER_STOP(&net->pmtu_timer.timer);
+		(void)SCTP_OS_TIMER_STOP(&net->pmtu_timer.timer);
 		net->pmtu_timer.self = NULL;
 	}
 	/* Now the read queue needs to be cleaned up (only once) */
@@ -4671,19 +4671,19 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	/* Now restop the timers to be sure - 
 	 * this is paranoia at is finest! 
 	 */
-	SCTP_OS_TIMER_STOP(&asoc->strreset_timer.timer); 
-	SCTP_OS_TIMER_STOP(&asoc->hb_timer.timer);
-	SCTP_OS_TIMER_STOP(&asoc->dack_timer.timer);
-	SCTP_OS_TIMER_STOP(&asoc->strreset_timer.timer);
-	SCTP_OS_TIMER_STOP(&asoc->asconf_timer.timer);
-	SCTP_OS_TIMER_STOP(&asoc->shut_guard_timer.timer);
-	SCTP_OS_TIMER_STOP(&asoc->autoclose_timer.timer);
-	SCTP_OS_TIMER_STOP(&asoc->delayed_event_timer.timer);
+	(void)SCTP_OS_TIMER_STOP(&asoc->strreset_timer.timer); 
+	(void)SCTP_OS_TIMER_STOP(&asoc->hb_timer.timer);
+	(void)SCTP_OS_TIMER_STOP(&asoc->dack_timer.timer);
+	(void)SCTP_OS_TIMER_STOP(&asoc->strreset_timer.timer);
+	(void)SCTP_OS_TIMER_STOP(&asoc->asconf_timer.timer);
+	(void)SCTP_OS_TIMER_STOP(&asoc->shut_guard_timer.timer);
+	(void)SCTP_OS_TIMER_STOP(&asoc->autoclose_timer.timer);
+	(void)SCTP_OS_TIMER_STOP(&asoc->delayed_event_timer.timer);
 
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
-		SCTP_OS_TIMER_STOP(&net->fr_timer.timer);
-		SCTP_OS_TIMER_STOP(&net->rxt_timer.timer);
-		SCTP_OS_TIMER_STOP(&net->pmtu_timer.timer);
+		(void)SCTP_OS_TIMER_STOP(&net->fr_timer.timer);
+		(void)SCTP_OS_TIMER_STOP(&net->rxt_timer.timer);
+		(void)SCTP_OS_TIMER_STOP(&net->pmtu_timer.timer);
 	}
 
 	asoc->strreset_timer.type = SCTP_TIMER_TYPE_NONE;
@@ -6489,7 +6489,7 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 			asoc->highest_tsn_inside_map = asoc->cumulative_tsn;
 		}
 		asoc->last_revoke_count = cnt;
-		SCTP_OS_TIMER_STOP(&stcb->asoc.dack_timer.timer);
+		(void)SCTP_OS_TIMER_STOP(&stcb->asoc.dack_timer.timer);
 		sctp_send_sack(stcb);
 		sctp_chunk_output(stcb->sctp_ep, stcb, SCTP_OUTPUT_FROM_DRAIN);
 		reneged_asoc_ids[reneged_at] = sctp_get_associd(stcb);
