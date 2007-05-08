@@ -3121,7 +3121,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	/* First time through we have the socket lock, after that
 	 * no more.
 	 */
-	if(from == 1) {
+	if(from == SCTP_CALLED_AFTER_CMPSET_OFCLOSE) {
 		/* Once we are in we can remove the flag 
 		 * from = 1 is only passed from the actual
 		 * closing routines that are called via the
@@ -4974,7 +4974,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			 * at the same time we are here we might
 			 * collide in the cleanup.
 			 */
-			sctp_inpcb_free(inp, 0, 0);
+			sctp_inpcb_free(inp, 0, SCTP_CALLED_DIRECTLY_NOCMPSET);
 			SCTP_INP_DECR_REF(inp);
 			goto out_of;
 		} else {
