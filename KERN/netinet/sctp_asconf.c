@@ -2400,6 +2400,8 @@ sctp_process_initack_addresses(struct sctp_tcb *stcb, struct mbuf *m,
 		printf("processing init-ack addresses\n");
 	}
 #endif				/* SCTP_DEBUG */
+	if (stcb == NULL) /* Un-needed check for SA */
+		return;
 
 	/* convert to upper bound */
 	length += offset;

@@ -5107,7 +5107,7 @@ void
 sctp_add_local_addr_ep(struct sctp_inpcb *inp, struct sctp_ifa *ifa, uint32_t action)
 {
 	struct sctp_laddr *laddr;
-	int fnd, error;
+	int fnd, error=0;
 
 	fnd = 0;
 
@@ -5265,7 +5265,6 @@ sctp_add_local_addr_assoc(struct sctp_tcb *stcb, struct sctp_ifa *ifa, int restr
 	struct sctp_inpcb *inp;
 	struct sctp_laddr *laddr;
 	struct sctpladdr *list;
-	int error;
 
 	/*
 	 * Assumes TCB is locked.. and possibly the INP. May need to
