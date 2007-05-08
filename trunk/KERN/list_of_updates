@@ -1,26 +1,7 @@
--  More macros for OS compatabilty
--  PR-SCTP would ignore FWD-TSN's above a rwnd's worth
-   of TSN's (1 byte msgs).. this left the peer hopelessly
-   out of sync.. or an attacker. So now we abort the assoc.
--  New IFN hash, also rename hashes to match addr/ifn now
-   that the vrf has multiple.
--  Do not enable SCTP_PCB_FLAGS_RECVDATAIOEVNT per default
-   as defined in the Socket API ID.
--  Export MTU information via sysctl.
--  Vrf's need table id's. This is default for
-   BSD, but may be other things later when BSD
-   fully supports VRFs. 
--  Additional stream reset bug (caught by cisco dev-test).
--  Additional validations for the address in sending a message (socket api).
--------- and -----
--  Fix association notifications not to give the active open
-   side false notifications.
--  Fix so sendfile and SENDALL will work properly (missing 
-   flag to say socket sender is done).
--  Fix Bug that prevented COOKIES from being retransmitted.
--  Break out connectx into helper sub-models so that iox routines can
-   reuse the helpers.
--  When an address is added during system init (non-dynamic mode) make
-   sure that the "defer use" flag is not set.
-** its compiling on XR now :-D
+-  Static analyisis fixes for cisco's commit
+-  A bug in the way sctp_abort() and friends were
+   setting the IP_CLOSE flag.. and NOT passing the
+   last argument as a (,1)... so that things would
+   get freed.. 
+
 
