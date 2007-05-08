@@ -748,7 +748,6 @@ main (int argc, char **argv)
 			} else {
 				if(sctp_connectx(sd, &addr.sa, 1, &sinfo_out.sinfo_assoc_id) < 0) {
 					printf("Connect fails error:%d - next loop\n", errno);
-				next_iteration_with_sleep:
 					mydelay.tv_sec++;
 					nanosleep(&mydelay, NULL);
 					mydelay.tv_sec--;
