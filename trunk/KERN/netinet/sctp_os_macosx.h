@@ -136,13 +136,12 @@ extern struct fileops socketops;
 	    }								\
     } while (0);							\
 }
-#define SCTP_PRINTF(params...)	printf(params)
 #else
 #define SCTPDBG(level, params...)
 #define SCTPDBG_ADDR(level, addr)
 #define SCTPDBG_PKT(level, iph, sh)
-#define SCTP_PRINTF(params...)
 #endif
+#define SCTP_PRINTF(params...)	printf(params)
 
 /*
  * Local address and interface list handling
