@@ -5349,7 +5349,7 @@ sctp_remove_laddr(struct sctp_laddr *laddr)
 /*
  * Remove an address from the TCB local address list
  */
-int
+void
 sctp_del_local_addr_assoc(struct sctp_tcb *stcb, struct sctp_ifa *ifa)
 {
 	struct sctp_inpcb *inp;
@@ -5371,7 +5371,7 @@ sctp_del_local_addr_assoc(struct sctp_tcb *stcb, struct sctp_ifa *ifa)
 	    (sctp_is_feature_off(inp, SCTP_PCB_FLAGS_DO_ASCONF) == 0)) {
 		if (stcb->asoc.numnets < 2) {
 			/* can't delete last address */
-			return (-1);
+			return;
 		}
 	}
 	LIST_FOREACH(laddr, &stcb->asoc.sctp_restricted_addrs, sctp_nxt_addr) {
@@ -5380,12 +5380,12 @@ sctp_del_local_addr_assoc(struct sctp_tcb *stcb, struct sctp_ifa *ifa)
 			continue;
 		if (laddr->ifa == ifa) {
 			sctp_remove_laddr(laddr);
-			return (0);
+			return;
 		}
 	}
 
 	/* address not found! */
-	return (-1);
+	return;
 }
 
 static char sctp_pcb_initialized = 0;
