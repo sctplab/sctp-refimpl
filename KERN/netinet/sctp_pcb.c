@@ -5103,7 +5103,7 @@ sctp_update_ep_vflag(struct sctp_inpcb *inp)
  * Add the address to the endpoint local address list There is nothing to be
  * done if we are bound to all addresses
  */
-int
+void
 sctp_add_local_addr_ep(struct sctp_inpcb *inp, struct sctp_ifa *ifa, uint32_t action)
 {
 	struct sctp_laddr *laddr;
@@ -5113,12 +5113,12 @@ sctp_add_local_addr_ep(struct sctp_inpcb *inp, struct sctp_ifa *ifa, uint32_t ac
 
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
 		/* You are already bound to all. You have it already */
-		return (0);
+		return;
 	}
 	if (ifa->address.sa.sa_family == AF_INET6) {
 		if (ifa->localifa_flags & SCTP_ADDR_IFA_UNUSEABLE) {
 			/* Can't bind a non-useable addr. */
-			return (-1);
+			return;
 		}
 	}
 	/* first, is it already present? */
@@ -5133,7 +5133,7 @@ sctp_add_local_addr_ep(struct sctp_inpcb *inp, struct sctp_ifa *ifa, uint32_t ac
 		/* Not in the ep list */
 		error = sctp_insert_laddr(&inp->sctp_addr_list, ifa, action);
 		if (error != 0)
-			return (error);
+			return;
 		inp->laddr_count++;
 		/* update inp_vflag flags */
 		if (ifa->address.sa.sa_family == AF_INET6) {
@@ -5150,7 +5150,7 @@ sctp_add_local_addr_ep(struct sctp_inpcb *inp, struct sctp_ifa *ifa, uint32_t ac
 #endif
 		}
 	}
-	return (0);
+	return;
 }
 
 
@@ -5259,7 +5259,7 @@ sctp_del_local_addr_ep(struct sctp_inpcb *inp, struct sctp_ifa *ifa)
  * ASCONF-ACK response) For the subset binding, static case, this is a
  * "valid" address list
  */
-int
+void
 sctp_add_local_addr_assoc(struct sctp_tcb *stcb, struct sctp_ifa *ifa, int restricted_list)
 {
 	struct sctp_inpcb *inp;
@@ -5277,21 +5277,19 @@ sctp_add_local_addr_assoc(struct sctp_tcb *stcb, struct sctp_ifa *ifa, int restr
 	if (ifa->address.sa.sa_family == AF_INET6) {
 		if (ifa->localifa_flags & SCTP_ADDR_IFA_UNUSEABLE) {
 			/* Can't bind a non-existent addr. */
-			return (-1);
+			return;
 		}
 	}
 	/* does the address already exist? */
 	LIST_FOREACH(laddr, list, sctp_nxt_addr) {
 		if (laddr->ifa == ifa) {
-			return (-1);
+			return;
 		}
 	}
 
 	/* add to the list */
-	error = sctp_insert_laddr(list, ifa, 0);
-	if (error != 0)
-		return (error);
-	return (0);
+	(void)sctp_insert_laddr(list, ifa, 0);
+	return;
 }
 
 /*

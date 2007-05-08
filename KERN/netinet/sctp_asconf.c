@@ -1120,7 +1120,7 @@ sctp_asconf_queue_add(struct sctp_tcb *stcb, struct sctp_ifa *ifa, uint16_t type
 		    sizeof(struct in_addr));
 	} else {
 		/* invalid family! */
-		SCTP_MALLOC(aa);
+		SCTP_FREE(aa);
 		return (-1);
 	}
 	aa->sent = 0;		/* clear sent flag */
