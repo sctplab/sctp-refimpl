@@ -39,6 +39,20 @@ document sctp_findep
 find an SCTP endpoint and print it out as a variable for use
 end
 
+define sctp_allep_wrefcnt
+set $_inp=sctppcbinfo.listhead.lh_first
+while ( $_inp != 0 )
+	if ( $_inp->refcount > 0 ) 
+          print $_inp
+        end
+set $_inp=$_inp->sctp_list.le_next
+end
+end
+document sctp_allep_wrefcnt
+Show all SCTP endpoints with refcount > 0
+end
+
+
 define sctp_findasoc
 set $_inp=sctppcbinfo.listhead.lh_first
  while ( $_inp != 0 )
