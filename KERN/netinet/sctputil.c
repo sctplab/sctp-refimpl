@@ -3962,7 +3962,9 @@ sctp_print_address(struct sockaddr *sa)
 	if (sa->sa_family == AF_INET6) {
 		struct sockaddr_in6 *sin6;	
 #if defined(__FreeBSD__) && __FreeBSD_version >= 700000
+#ifdef SCTP_DEBUG
 		char ip6buf[INET6_ADDRSTRLEN];
+#endif
 #endif
 
 		sin6 = (struct sockaddr_in6 *)sa;

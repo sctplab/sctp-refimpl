@@ -1716,7 +1716,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 
 		auth = (struct sctp_auth_chunk *)
 		    sctp_m_getptr(m, auth_offset, auth_len, auth_chunk_buf);
-		if (sctp_handle_auth(stcb, auth, m, auth_offset)) {
+		if ((auth == NULL) || sctp_handle_auth(stcb, auth, m, auth_offset)) {
 			/* auth HMAC failed, dump the assoc and packet */
 #ifdef SCTP_DEBUG
 			if (sctp_debug_on & SCTP_DEBUG_AUTH1)
@@ -1810,7 +1810,8 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		;
 	}
 	/* since we did not send a HB make sure we don't double things */
-	(*netp)->hb_responded = 1;
+	if ((netp) && (*netp)) 
+		(*netp)->hb_responded = 1;
 
 	if (stcb->asoc.sctp_autoclose_ticks &&
 	    sctp_is_feature_on(inp, SCTP_PCB_FLAGS_AUTOCLOSE)) {
@@ -2082,6 +2083,9 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		sin.sin_port = sh->src_port;
 		sin.sin_addr.s_addr = cookie->address[0];
 		to = (struct sockaddr *)&sin;
+	} else {
+		/* This should not happen */
+		return (NULL);
 	}
 	if ((*stcb == NULL) && to) {
 		/* Yep, lets check */
@@ -3236,7 +3240,7 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_out_req
 				seq = ntohl(req_out->response_seq);
 				if (seq == stcb->asoc.str_reset_seq_out) {
 					/* implicit ack */
-					sctp_handle_stream_reset_response(stcb, seq, SCTP_STREAM_RESET_PERFORMED, NULL);
+					(void)sctp_handle_stream_reset_response(stcb, seq, SCTP_STREAM_RESET_PERFORMED, NULL);
 				}
 			}
 			sctp_handle_str_reset_request_out(stcb, chk, req_out);
@@ -3624,6 +3628,11 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			}
 			ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, *offset,
 								   sizeof(struct sctp_chunkhdr), chunk_buf);
+		}
+		if(ch == NULL) {
+			/* Help */
+			*offset = length;
+			return (NULL);
 		}
 		if (ch->chunk_type == SCTP_COOKIE_ECHO) {
 			goto process_control_chunks;
@@ -4175,13 +4184,15 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			{
 				struct mbuf *ret_buf;
 				struct sctp_inpcb *linp;
-				if(stcb)
+				if(stcb) {
 					linp = NULL;
-				else 
+				} else {
 					linp = inp;
+				}
 
-				if(linp)
+				if(linp) {
 					SCTP_ASOC_CREATE_LOCK(linp);
+				}
 				ret_buf =
 					sctp_handle_cookie_echo(m, iphlen,
 								*offset, sh,
@@ -4193,8 +4204,9 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 								&locked_tcb,
 								vrf_id,
 								table_id);
-				if(linp)
+				if(linp) {
 					SCTP_ASOC_CREATE_UNLOCK(linp);
+				}
 				if (ret_buf == NULL) {
 					if (locked_tcb) {
 						SCTP_TCB_UNLOCK(locked_tcb);
@@ -4245,7 +4257,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				/* We are not interested anymore */
 				if ((stcb) && (stcb->asoc.total_output_queue_size)) {
 					;
-				}else {
+				} else if (stcb) {
 					sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_27);
 					*offset = length;
 					return (NULL);
@@ -4400,7 +4412,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 #endif				/* SCTP_DEBUG */
 			ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, *offset,
 								   chk_length, chunk_buf);
-			if (chk_length < sizeof(struct sctp_stream_reset_tsn_req)) {
+			if ((ch == NULL) || (chk_length < sizeof(struct sctp_stream_reset_tsn_req))) {
 				/* Its not ours */
 				if (locked_tcb) {
 					SCTP_TCB_UNLOCK(locked_tcb);
@@ -4450,7 +4462,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, *offset,
 								   chk_length, chunk_buf);
 
-			if ((stcb) && (*netp)){
+			if (ch && (stcb) && (*netp)){
 				sctp_handle_packet_dropped((struct sctp_pktdrop_chunk *)ch,
 							   stcb, *netp);
 			}
@@ -4492,8 +4504,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, *offset,
 								   chk_length, chunk_buf);
 			got_auth = 1;
-			if (sctp_handle_auth(stcb, (struct sctp_auth_chunk *)ch,
-					     m, *offset)) {
+			if ((ch == NULL) || sctp_handle_auth(stcb, (struct sctp_auth_chunk *)ch,
+							     m, *offset)) {
 				/* auth HMAC failed so dump the packet */
 				*offset = length;
 				return (stcb);
@@ -5290,8 +5302,9 @@ sctp_input(i_pak, va_alist)
 	}
 	return;
  bad:
-	if (stcb)
+	if (stcb) {
 		SCTP_TCB_UNLOCK(stcb);
+	}
 
 	if ((inp) && (refcount_up)) {
 		/* reduce ref-count */
