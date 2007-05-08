@@ -20,5 +20,7 @@
 -  Fix Bug that prevented COOKIES from being retransmitted.
 -  Break out connectx into helper sub-models so that iox routines can
    reuse the helpers.
+-  When an address is added during system init (non-dynamic mode) make
+   sure that the "defer use" flag is not set.
 ** its compiling on XR now :-D
 
