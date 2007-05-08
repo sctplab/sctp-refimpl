@@ -1654,7 +1654,9 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		return (NULL);
 	}
 	/* get the correct sctp_nets */
-	*netp = sctp_findnet(stcb, init_src);
+	if(netp)
+		*netp = sctp_findnet(stcb, init_src);
+
 	asoc = &stcb->asoc;
 	/* save the table id (vrf_id is done in aloc_assoc) */
 	asoc->table_id = table_id;
@@ -1819,8 +1821,9 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	}
 	/* respond with a COOKIE-ACK */
 	/* calculate the RTT */
-	(*netp)->RTO = sctp_calculate_rto(stcb, asoc, *netp,
-	    &cookie->time_entered);
+	if(netp) 
+		(*netp)->RTO = sctp_calculate_rto(stcb, asoc, *netp,
+						  &cookie->time_entered);
 	sctp_send_cookie_ack(stcb);
 	return (stcb);
 }
@@ -3663,8 +3666,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 						      auth_len, chunk_buf);
 				got_auth = 1;
 				auth_skipped = 0;
-				if (sctp_handle_auth(stcb, auth, m,
-						     auth_offset)) {
+				if ((auth == NULL) || sctp_handle_auth(stcb, auth, m,
+								       auth_offset)) {
 					/* auth HMAC failed so dump it */
 					*offset = length;
 					return (NULL);
@@ -3950,8 +3953,10 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				}
 				return (NULL);
 			}
-			ret = sctp_handle_init_ack(m, iphlen, *offset, sh,
-						   (struct sctp_init_ack_chunk *)ch, stcb, *netp, &abort_no_unlock, vrf_id, table_id);
+			if(netp) {
+				ret = sctp_handle_init_ack(m, iphlen, *offset, sh,
+							   (struct sctp_init_ack_chunk *)ch, stcb, *netp, &abort_no_unlock, vrf_id, table_id);
+			}
 			/*
 			 * Special case, I must call the output routine to
 			 * get the cookie echoed
@@ -3981,7 +3986,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				uint16_t num_seg;
 				int nonce_sum_flag;
 
-				if (chk_length < sizeof(struct sctp_sack_chunk)) {
+				if ((stcb == NULL) || (chk_length < sizeof(struct sctp_sack_chunk))) {
 #ifdef SCTP_DEBUG
 					if (sctp_debug_on & SCTP_DEBUG_INDATA1) {
 						printf("Bad size on sack chunk .. to small\n");
@@ -4029,12 +4034,14 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				printf("SCTP_HEARTBEAT\n");
 			}
 #endif				/* SCTP_DEBUG */
-			SCTP_STAT_INCR(sctps_recvheartbeat);
-			sctp_send_heartbeat_ack(stcb, m, *offset, chk_length,
-						*netp);
+			if (stcb) {
+				SCTP_STAT_INCR(sctps_recvheartbeat);
+				sctp_send_heartbeat_ack(stcb, m, *offset, chk_length,
+							*netp);
 
-			/* He's alive so give him credit */
-			stcb->asoc.overall_error_count = 0;
+				/* He's alive so give him credit */
+				stcb->asoc.overall_error_count = 0;
+			}
 			break;
 		case SCTP_HEARTBEAT_ACK:
 #ifdef SCTP_DEBUG
@@ -4042,7 +4049,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				printf("SCTP_HEARTBEAT-ACK\n");
 			}
 #endif				/* SCTP_DEBUG */
-			if (chk_length != sizeof(struct sctp_heartbeat_chunk)) {			
+			if ((stcb == NULL) || (chk_length != sizeof(struct sctp_heartbeat_chunk))) {			
 				/* Its not ours */
 				*offset = length;
 				if (locked_tcb) {
@@ -4062,8 +4069,9 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				printf("SCTP_ABORT\n");
 			}
 #endif				/* SCTP_DEBUG */
-			sctp_handle_abort((struct sctp_abort_chunk *)ch,
-					  stcb, *netp);
+			if(stcb) 
+				sctp_handle_abort((struct sctp_abort_chunk *)ch,
+						  stcb, *netp);
 			*offset = length;
 			return (NULL);
 			break;
@@ -4073,7 +4081,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				printf("SCTP_SHUTDOWN\n");
 			}
 #endif				/* SCTP_DEBUG */
-			if (chk_length != sizeof(struct sctp_shutdown_chunk)) {			
+			if ((stcb == NULL) || (chk_length != sizeof(struct sctp_shutdown_chunk))) {			
 				*offset = length;
 				if (locked_tcb) {
 					SCTP_TCB_UNLOCK(locked_tcb);
@@ -4098,7 +4106,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				printf("SCTP_SHUTDOWN-ACK\n");
 			}
 #endif				/* SCTP_DEBUG */
-			sctp_handle_shutdown_ack((struct sctp_shutdown_ack_chunk *)ch, stcb, *netp);
+			if(stcb) 
+				sctp_handle_shutdown_ack((struct sctp_shutdown_ack_chunk *)ch, stcb, *netp);
 			*offset = length;
 			return (NULL);
 			break;
@@ -4122,7 +4131,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			if ((stcb) && (stcb->asoc.total_output_queue_size)) {
 				;
 			} else {
-				if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) &&
+				if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 				    (stcb == NULL)) {
 					/* We are not interested anymore */
 					*offset = length;
@@ -4131,7 +4140,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			}
 			/*
 			 * First are we accepting? We do this again here
-			 * since it is possible that a previous endpoint WAS
+			 * sincen it is possible that a previous endpoint WAS
 			 * listening responded to a INIT-ACK and then
 			 * closed. We opened and bound.. and are now no
 			 * longer listening.
@@ -4247,7 +4256,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				printf("SCTP_COOKIE-ACK\n");
 			}
 #endif				/* SCTP_DEBUG */
-			if (chk_length != sizeof(struct sctp_cookie_ack_chunk)) {
+			if ((stcb == NULL) || chk_length != sizeof(struct sctp_cookie_ack_chunk)) {
 				if (locked_tcb) {
 					SCTP_TCB_UNLOCK(locked_tcb);
 				}
@@ -4276,7 +4285,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			}
 #endif				/* SCTP_DEBUG */
 			/* He's alive so give him credit */
-			if (chk_length != sizeof(struct sctp_ecne_chunk)) {			
+			if ((stcb == NULL) || (chk_length != sizeof(struct sctp_ecne_chunk))) {			
 				/* Its not ours */
 				if (locked_tcb) {
 					SCTP_TCB_UNLOCK(locked_tcb);
@@ -4297,7 +4306,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			}
 #endif				/* SCTP_DEBUG */
 			/* He's alive so give him credit */
-			if (chk_length != sizeof(struct sctp_cwr_chunk)) {			
+			if ((stcb == NULL) || (chk_length != sizeof(struct sctp_cwr_chunk))) {	
 				/* Its not ours */
 				if (locked_tcb) {
 					SCTP_TCB_UNLOCK(locked_tcb);
@@ -4412,7 +4421,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 #endif				/* SCTP_DEBUG */
 			ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, *offset,
 								   chk_length, chunk_buf);
-			if ((ch == NULL) || (chk_length < sizeof(struct sctp_stream_reset_tsn_req))) {
+			if (((stcb == NULL) ||(ch == NULL) || (chk_length < sizeof(struct sctp_stream_reset_tsn_req)))) {
 				/* Its not ours */
 				if (locked_tcb) {
 					SCTP_TCB_UNLOCK(locked_tcb);
@@ -4427,20 +4436,18 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				*offset = length;
 				return (NULL);
 			}
-			if (stcb) { 
-				if (stcb->asoc.peer_supports_strreset == 0) {
-					/*
-					 * hmm, peer should have announced this, but
-					 * we will turn it on since he is sending us
-					 * a stream reset.
-					 */
-					stcb->asoc.peer_supports_strreset = 1;
-				}
-				if (sctp_handle_stream_reset(stcb, (struct sctp_stream_reset_out_req *)ch)) {
-					/* stop processing */
-					*offset = length;
-					return (NULL);
-				}
+			if (stcb->asoc.peer_supports_strreset == 0) {
+				/*
+				 * hmm, peer should have announced this, but
+				 * we will turn it on since he is sending us
+				 * a stream reset.
+				 */
+				stcb->asoc.peer_supports_strreset = 1;
+			}
+			if (sctp_handle_stream_reset(stcb, (struct sctp_stream_reset_out_req *)ch)) {
+				/* stop processing */
+				*offset = length;
+				return (NULL);
 			}
 			break;
 		case SCTP_PACKET_DROPPED:
@@ -5317,6 +5324,6 @@ sctp_input(i_pak, va_alist)
 	}
 	/* For BSD/MAC this does nothing */
 	SCTP_DETACH_HEADER_FROM_CHAIN(i_pak);
-	SCTP_RELEASE_HEADER(i_pak);
+	(void)SCTP_RELEASE_HEADER(i_pak);
 	return;
 }
