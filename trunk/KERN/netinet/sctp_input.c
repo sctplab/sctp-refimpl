@@ -1953,12 +1953,12 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	if ((cookie->time_entered.tv_sec < (long)ep->time_of_secret_change) &&
 	    (ep->current_secret_number != ep->last_secret_number)) {
 		/* it's the old cookie */
-		sctp_hmac_m(SCTP_HMAC,
+		(void)sctp_hmac_m(SCTP_HMAC,
 		    (uint8_t *)ep->secret_key[(int)ep->last_secret_number],
 		    SCTP_SECRET_SIZE, m, cookie_offset, calc_sig);
 	} else {
 		/* it's the current cookie */
-		sctp_hmac_m(SCTP_HMAC,
+		(void)sctp_hmac_m(SCTP_HMAC,
 		    (uint8_t *)ep->secret_key[(int)ep->current_secret_number],
 		    SCTP_SECRET_SIZE, m, cookie_offset, calc_sig);
 	}
@@ -1976,7 +1976,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		if ((cookie->time_entered.tv_sec == (long)ep->time_of_secret_change) &&
 		    (ep->current_secret_number != ep->last_secret_number)) {
 			/* compute digest with old */
-			sctp_hmac_m(SCTP_HMAC,
+			(void)sctp_hmac_m(SCTP_HMAC,
 			    (uint8_t *)ep->secret_key[(int)ep->last_secret_number],
 			    SCTP_SECRET_SIZE, m, cookie_offset, calc_sig);
 			/* compare */
