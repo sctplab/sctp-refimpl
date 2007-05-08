@@ -7864,7 +7864,7 @@ sctp_send_heartbeat_ack(struct sctp_tcb *stcb,
 	chk->asoc->ctrl_queue_cnt++;
 }
 
-int
+void
 sctp_send_cookie_ack(struct sctp_tcb *stcb)
 {
 	/* formulate and queue a cookie-ack back to sender */
@@ -7878,14 +7878,14 @@ sctp_send_cookie_ack(struct sctp_tcb *stcb)
 	cookie_ack = sctp_get_mbuf_for_msg(sizeof(struct sctp_chunkhdr), 0, M_DONTWAIT, 1, MT_HEADER);
 	if (cookie_ack == NULL) {
 		/* no mbuf's */
-		return (-1);
+		return;
 	}
 	SCTP_BUF_RESV_UF(cookie_ack, SCTP_MIN_OVERHEAD);
 	sctp_alloc_a_chunk(stcb, chk);
 	if (chk == NULL) {
 		/* no memory */
 		sctp_m_freem(cookie_ack);
-		return (-1);
+		return;
 	}
 	chk->copy_by_ref = 0;
 	chk->send_size = sizeof(struct sctp_chunkhdr);
@@ -7909,11 +7909,11 @@ sctp_send_cookie_ack(struct sctp_tcb *stcb)
 	SCTP_BUF_LEN(cookie_ack) = chk->send_size;
 	TAILQ_INSERT_TAIL(&chk->asoc->control_send_queue, chk, sctp_next);
 	chk->asoc->ctrl_queue_cnt++;
-	return (0);
+	return;
 }
 
 
-int
+void
 sctp_send_shutdown_ack(struct sctp_tcb *stcb, struct sctp_nets *net)
 {
 	/* formulate and queue a SHUTDOWN-ACK back to the sender */
@@ -7924,14 +7924,14 @@ sctp_send_shutdown_ack(struct sctp_tcb *stcb, struct sctp_nets *net)
 	m_shutdown_ack = sctp_get_mbuf_for_msg(sizeof(struct sctp_shutdown_ack_chunk), 0, M_DONTWAIT, 1, MT_HEADER);
 	if (m_shutdown_ack == NULL) {
 		/* no mbuf's */
-		return (-1);
+		return;
 	}
 	SCTP_BUF_RESV_UF(m_shutdown_ack, SCTP_MIN_OVERHEAD);
 	sctp_alloc_a_chunk(stcb, chk);
 	if (chk == NULL) {
 		/* no memory */
 		sctp_m_freem(m_shutdown_ack);
-		return (-1);
+		return;
 	}
 	chk->copy_by_ref = 0;
 
@@ -7953,10 +7953,10 @@ sctp_send_shutdown_ack(struct sctp_tcb *stcb, struct sctp_nets *net)
 	SCTP_BUF_LEN(m_shutdown_ack) = chk->send_size;
 	TAILQ_INSERT_TAIL(&chk->asoc->control_send_queue, chk, sctp_next);
 	chk->asoc->ctrl_queue_cnt++;
-	return (0);
+	return;
 }
 
-int
+void
 sctp_send_shutdown(struct sctp_tcb *stcb, struct sctp_nets *net)
 {
 	/* formulate and queue a SHUTDOWN to the sender */
@@ -7967,14 +7967,14 @@ sctp_send_shutdown(struct sctp_tcb *stcb, struct sctp_nets *net)
 	m_shutdown = sctp_get_mbuf_for_msg(sizeof(struct sctp_shutdown_chunk), 0, M_DONTWAIT, 1, MT_HEADER);
 	if (m_shutdown == NULL) {
 		/* no mbuf's */
-		return (-1);
+		return;
 	}
 	SCTP_BUF_RESV_UF(m_shutdown, SCTP_MIN_OVERHEAD);
 	sctp_alloc_a_chunk(stcb, chk);
 	if (chk == NULL) {
 		/* no memory */
 		sctp_m_freem(m_shutdown);
-		return (-1);
+		return;
 	}
 	chk->copy_by_ref = 0;
 	chk->send_size = sizeof(struct sctp_shutdown_chunk);
@@ -7996,10 +7996,10 @@ sctp_send_shutdown(struct sctp_tcb *stcb, struct sctp_nets *net)
 	SCTP_BUF_LEN(m_shutdown) = chk->send_size;
 	TAILQ_INSERT_TAIL(&chk->asoc->control_send_queue, chk, sctp_next);
 	chk->asoc->ctrl_queue_cnt++;
-	return (0);
+	return;
 }
 
-int
+void
 sctp_send_asconf(struct sctp_tcb *stcb, struct sctp_nets *net)
 {
 	/*
@@ -8016,14 +8016,14 @@ sctp_send_asconf(struct sctp_tcb *stcb, struct sctp_nets *net)
 	/* compose an ASCONF chunk, maximum length is PMTU */
 	m_asconf = sctp_compose_asconf(stcb, &len);
 	if (m_asconf == NULL) {
-		return (-1);
+		return;
 	}
 	acp = mtod(m_asconf, struct sctp_asconf_chunk *);
 	sctp_alloc_a_chunk(stcb, chk);
 	if (chk == NULL) {
 		/* no memory */
 		sctp_m_freem(m_asconf);
-		return (-1);
+		return;
 	}
 	chk->copy_by_ref = 0;
 	chk->data = m_asconf;
@@ -8038,10 +8038,10 @@ sctp_send_asconf(struct sctp_tcb *stcb, struct sctp_nets *net)
 	atomic_add_int(&chk->whoTo->ref_count, 1);
 	TAILQ_INSERT_TAIL(&chk->asoc->control_send_queue, chk, sctp_next);
 	chk->asoc->ctrl_queue_cnt++;
-	return (0);
+	return;
 }
 
-int
+void
 sctp_send_asconf_ack(struct sctp_tcb *stcb, uint32_t retrans)
 {
 	/*
@@ -8054,21 +8054,21 @@ sctp_send_asconf_ack(struct sctp_tcb *stcb, uint32_t retrans)
 	SCTP_TCB_LOCK_ASSERT(stcb);
 	/* is there a asconf-ack mbuf chain to send? */
 	if (stcb->asoc.last_asconf_ack_sent == NULL) {
-		return (-1);
+		return;
 	}
 	/* copy the asconf_ack */
 	m_ack = SCTP_M_COPYM(stcb->asoc.last_asconf_ack_sent, 0, M_COPYALL, M_DONTWAIT);
 	if (m_ack == NULL) {
 		/* couldn't copy it */
 
-		return (-1);
+		return;
 	}
 	sctp_alloc_a_chunk(stcb, chk);
 	if (chk == NULL) {
 		/* no memory */
 		if (m_ack)
 			sctp_m_freem(m_ack);
-		return (-1);
+		return;
 	}
 	chk->copy_by_ref = 0;
 	/* figure out where it goes to */
@@ -8115,7 +8115,7 @@ sctp_send_asconf_ack(struct sctp_tcb *stcb, uint32_t retrans)
 	atomic_add_int(&chk->whoTo->ref_count, 1);
 	TAILQ_INSERT_TAIL(&chk->asoc->control_send_queue, chk, sctp_next);
 	chk->asoc->ctrl_queue_cnt++;
-	return (0);
+	return;
 }
 
 
