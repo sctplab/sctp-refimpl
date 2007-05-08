@@ -1703,7 +1703,7 @@ done_with_iterator:
 		SCTP_UNLOCK_EXC(sctppcbinfo.ipi_ep_mtx);
 #endif
 		SCTP_INP_INFO_WUNLOCK();
-		SCTP_OS_TIMER_STOP(&it->tmr.timer);
+		(void)SCTP_OS_TIMER_STOP(&it->tmr.timer);
 		if (it->function_atend != NULL) {
 			(*it->function_atend) (it->pointer, it->val);
 		}

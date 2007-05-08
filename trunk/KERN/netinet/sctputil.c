@@ -800,15 +800,15 @@ sctp_stop_timers_for_shutdown(struct sctp_tcb *stcb)
 
 	asoc = &stcb->asoc;
 
-	SCTP_OS_TIMER_STOP(&asoc->hb_timer.timer);
-	SCTP_OS_TIMER_STOP(&asoc->dack_timer.timer);
-	SCTP_OS_TIMER_STOP(&asoc->strreset_timer.timer);
-	SCTP_OS_TIMER_STOP(&asoc->asconf_timer.timer);
-	SCTP_OS_TIMER_STOP(&asoc->autoclose_timer.timer);
-	SCTP_OS_TIMER_STOP(&asoc->delayed_event_timer.timer);
+	(void)SCTP_OS_TIMER_STOP(&asoc->hb_timer.timer);
+	(void)SCTP_OS_TIMER_STOP(&asoc->dack_timer.timer);
+	(void)SCTP_OS_TIMER_STOP(&asoc->strreset_timer.timer);
+	(void)SCTP_OS_TIMER_STOP(&asoc->asconf_timer.timer);
+	(void)SCTP_OS_TIMER_STOP(&asoc->autoclose_timer.timer);
+	(void)SCTP_OS_TIMER_STOP(&asoc->delayed_event_timer.timer);
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
-		SCTP_OS_TIMER_STOP(&net->fr_timer.timer);
-		SCTP_OS_TIMER_STOP(&net->pmtu_timer.timer);
+		(void)SCTP_OS_TIMER_STOP(&net->fr_timer.timer);
+		(void)SCTP_OS_TIMER_STOP(&net->pmtu_timer.timer);
 	}
 }
 
@@ -2380,7 +2380,7 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	}
 	tmr->self = NULL;
 	tmr->stopped_from = from;
-	SCTP_OS_TIMER_STOP(&tmr->timer);
+	(void)SCTP_OS_TIMER_STOP(&tmr->timer);
 	return;
 }
 
