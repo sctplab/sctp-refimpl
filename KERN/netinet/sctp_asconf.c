@@ -2117,6 +2117,9 @@ sctp_find_valid_localaddr(struct sctp_tcb *stcb)
 	getmicrotime(&timenow);
 #endif
 	vrf = sctp_find_vrf(stcb->asoc.vrf_id);
+	if(vrf == NULL) {
+		return(NULL);
+	}
 	LIST_FOREACH(sctp_ifn, &vrf->ifnlist, next_ifn) {
 		if (stcb->asoc.loopback_scope == 0 &&
 		    SCTP_IFN_IS_IFT_LOOP(sctp_ifn)) {
@@ -2573,7 +2576,8 @@ sctp_addr_in_initack(struct sctp_tcb *stcb, struct mbuf *m, uint32_t offset,
 			    sizeof(struct sctp_ipv6addr_param),
 			    (uint8_t *) & addr_store);
 			if (plen != sizeof(struct sctp_ipv6addr_param) ||
-			    ph == NULL) {
+			   (ph == NULL) ||
+			    (a6p == NULL) ){
 				return (0);
 			}
 			sin6 = (struct sockaddr_in6 *)sa;
@@ -2601,7 +2605,8 @@ sctp_addr_in_initack(struct sctp_tcb *stcb, struct mbuf *m, uint32_t offset,
 			    offset, sizeof(struct sctp_ipv4addr_param),
 			    (uint8_t *) & addr_store);
 			if (plen != sizeof(struct sctp_ipv4addr_param) ||
-			    ph == NULL) {
+			    (ph == NULL) || 
+			    (a4p == NULL)) {
 				return (0);
 			}
 			sin = (struct sockaddr_in *)sa;
