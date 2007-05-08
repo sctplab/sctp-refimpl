@@ -153,8 +153,8 @@ sctp_pathmtu_adjustment(struct sctp_inpcb *inp,
 	stcb->asoc.smallest_mtu = nxtsz;
 	/* now off to subtract IP_DF flag if needed */
 #ifdef SCTP_PRINT_FOR_B_AND_M 
-	printf("sctp_pathmtu_adjust called inp:%p stcb:%p net:%p nxtsz:%d\n",
-	       inp, stcb, net, nxtsz);
+	SCTP_PRINTF("sctp_pathmtu_adjust called inp:%p stcb:%p net:%p nxtsz:%d\n",
+		    inp, stcb, net, nxtsz);
 #endif
 	TAILQ_FOREACH(chk, &stcb->asoc.send_queue, sctp_next) {
 		if ((chk->send_size + IP_HDR_SIZE) > nxtsz) {
@@ -252,8 +252,8 @@ sctp_notify_mbuf(struct sctp_inpcb *inp,
 	/* now what about the ep? */
 	if (stcb->asoc.smallest_mtu > nxtsz) {
 #ifdef SCTP_PRINT_FOR_B_AND_M 
-		printf("notify_mbuf (ICMP) calls sctp_pathmtu_adjust mtu:%d\n",
-		       nxtsz);
+		SCTP_PRINTF("notify_mbuf (ICMP) calls sctp_pathmtu_adjust mtu:%d\n",
+			    nxtsz);
 #endif
 		sctp_pathmtu_adjustment(inp, stcb, net, nxtsz);
 	}
@@ -298,10 +298,10 @@ sctp_notify(struct sctp_inpcb *inp,
 		if ((error == EHOSTUNREACH) || (error == EHOSTDOWN)) {
 			if (net->dest_state & SCTP_ADDR_REACHABLE) {
 				/* Ok that destination is NOT reachable */
-				printf("ICMP (thresh %d/%d) takes interface %p down\n",
-				       net->error_count,
-				       net->failure_threshold,
-				       net);
+				SCTP_PRINTF("ICMP (thresh %d/%d) takes interface %p down\n",
+					    net->error_count,
+					    net->failure_threshold,
+					    net);
 
 				net->dest_state &= ~SCTP_ADDR_REACHABLE;
 				net->dest_state |= SCTP_ADDR_NOT_REACHABLE;
@@ -941,7 +941,7 @@ connected_type:
 	/* now what about control */
 	if (control) {
 		if (inp->control) {
-			printf("huh? control set?\n");
+			SCTP_PRINTF("huh? control set?\n");
 			sctp_m_freem(inp->control);
 			inp->control = NULL;
 		}
@@ -1116,8 +1116,8 @@ sctp_disconnect(struct socket *so)
 					struct sctp_stream_queue_pending *sp;
 					sp = TAILQ_LAST(&asoc->locked_on_sending->outqueue, sctp_streamhead);
 					if(sp == NULL) {
-						printf("Error, sp is NULL, locked on sending is non-null strm:%d\n",
-						       asoc->locked_on_sending->stream_no);
+						SCTP_PRINTF("Error, sp is NULL, locked on sending is non-null strm:%d\n",
+							    asoc->locked_on_sending->stream_no);
 					} else {
 						if ((sp->length == 0) && (sp->msg_is_complete == 0))
 							asoc->state |= SCTP_STATE_PARTIAL_MSG_LEFT;
@@ -1274,8 +1274,8 @@ sctp_shutdown(struct socket *so)
 				struct sctp_stream_queue_pending *sp;
 				sp = TAILQ_LAST(&asoc->locked_on_sending->outqueue, sctp_streamhead);
 				if(sp == NULL) {
-					printf("Error, sp is NULL, locked on sending is non-null strm:%d\n",
-					       asoc->locked_on_sending->stream_no);
+					SCTP_PRINTF("Error, sp is NULL, locked on sending is non-null strm:%d\n",
+						    asoc->locked_on_sending->stream_no);
 				} else {
 					if ((sp->length == 0)  && (sp-> msg_is_complete == 0)) {
 						asoc->state |= SCTP_STATE_PARTIAL_MSG_LEFT;
@@ -2796,12 +2796,12 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 	sctp_lock_assert(so);
 #endif
 	if (optval == NULL) {
-		printf("optval is NULL\n");
+		SCTP_PRINTF("optval is NULL\n");
 		return (EINVAL);
 	}
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (inp == 0) {
-		printf("inp is NULL?\n");
+		SCTP_PRINTF("inp is NULL?\n");
 		return EINVAL;
 	}
 	vrf_id = inp->def_vrf_id;
@@ -3597,7 +3597,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 						net->mtu = paddrp->spp_pathmtu;
 						if (net->mtu < stcb->asoc.smallest_mtu) {
 #ifdef SCTP_PRINT_FOR_B_AND_M 
-							printf("SCTP_PMTU_DISABLE calls sctp_pathmtu_adjustment:%d\n",
+							SCTP_PRINTF("SCTP_PMTU_DISABLE calls sctp_pathmtu_adjustment:%d\n",
 							       net->mtu);
 #endif
 							sctp_pathmtu_adjustment(inp, stcb, net, net->mtu);
