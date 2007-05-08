@@ -4001,10 +4001,8 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		return;
 	}
 	/* start the INIT timer */
-	if (sctp_timer_start(SCTP_TIMER_TYPE_INIT, inp, stcb, net)) {
-		/* we are hosed since I can't start the INIT timer? */
-		return;
-	}
+	sctp_timer_start(SCTP_TIMER_TYPE_INIT, inp, stcb, net);
+
 	m = sctp_get_mbuf_for_msg(MCLBYTES, 1, M_DONTWAIT, 1, MT_DATA);
 	if (m == NULL) {
 		/* No memory, INIT timer will re-attempt. */
