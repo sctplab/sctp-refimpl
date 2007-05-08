@@ -171,8 +171,8 @@ sctp_auth_get_chklist_size(const sctp_auth_chklist_t *list)
 void
 sctp_auth_set_default_chunks(sctp_auth_chklist_t *list)
 {
-	sctp_auth_add_chunk(SCTP_ASCONF, list);
-	sctp_auth_add_chunk(SCTP_ASCONF_ACK, list);
+	(void)sctp_auth_add_chunk(SCTP_ASCONF, list);
+	(void)sctp_auth_add_chunk(SCTP_ASCONF_ACK, list);
 }
 
 /*
@@ -241,7 +241,7 @@ sctp_unpack_auth_chunks(const uint8_t *ptr, uint8_t num_chunks,
 	if (num_chunks <= 32) {
 		/* just pull them, one byte each */
 		for (i = 0; i < num_chunks; i++) {
-			sctp_auth_add_chunk(*ptr++, list);
+			(void)sctp_auth_add_chunk(*ptr++, list);
 		}
 		size = num_chunks;
 	} else {
@@ -251,7 +251,7 @@ sctp_unpack_auth_chunks(const uint8_t *ptr, uint8_t num_chunks,
 		for (index = 0; index < 32; index++) {
 			for (offset = 0; offset < 8; offset++) {
 				if (ptr[index] & (1 << offset)) {
-					sctp_auth_add_chunk((index * 8) + offset, list);
+					(void)sctp_auth_add_chunk((index * 8) + offset, list);
 				}
 			}
 		}
@@ -697,8 +697,8 @@ sctp_default_supported_hmaclist(void)
 	new_list = sctp_alloc_hmaclist(2);
 	if (new_list == NULL)
 		return (NULL);
-	sctp_auth_add_hmacid(new_list, SCTP_AUTH_HMAC_ID_SHA1);
-	sctp_auth_add_hmacid(new_list, SCTP_AUTH_HMAC_ID_SHA256);
+	(void)sctp_auth_add_hmacid(new_list, SCTP_AUTH_HMAC_ID_SHA1);
+	(void)sctp_auth_add_hmacid(new_list, SCTP_AUTH_HMAC_ID_SHA256);
 	return (new_list);
 }
 
@@ -1467,7 +1467,7 @@ sctp_auth_get_cookie_params(struct sctp_tcb *stcb, struct mbuf *m,
 			stcb->asoc.local_hmacs = sctp_alloc_hmaclist(num_hmacs);
 			if (stcb->asoc.local_hmacs != NULL) {
 				for (i = 0; i < num_hmacs; i++) {
-					sctp_auth_add_hmacid(stcb->asoc.local_hmacs,
+					(void)sctp_auth_add_hmacid(stcb->asoc.local_hmacs,
 					    ntohs(hmacs->hmac_ids[i]));
 				}
 			}
@@ -1488,7 +1488,7 @@ sctp_auth_get_cookie_params(struct sctp_tcb *stcb, struct mbuf *m,
 			else
 				stcb->asoc.local_auth_chunks = sctp_alloc_chunklist();
 			for (i = 0; i < num_chunks; i++) {
-				sctp_auth_add_chunk(chunks->chunk_types[i],
+				(void)sctp_auth_add_chunk(chunks->chunk_types[i],
 				    stcb->asoc.local_auth_chunks);
 			}
 		}
