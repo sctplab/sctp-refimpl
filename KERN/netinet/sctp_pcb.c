@@ -180,6 +180,7 @@ sctp_allocate_vrf(int vrf_id)
 #ifdef INVARIANTS
 		panic("No memory for VRF:%d", vrf_id);
 #endif
+		SCTP_FREE(vrf);
 		return (NULL);
 	}
 	vrf->vrf_ifn_hash = SCTP_HASH_INIT(SCTP_VRF_IFN_HASH_SIZE,
@@ -189,6 +190,8 @@ sctp_allocate_vrf(int vrf_id)
 #ifdef INVARIANTS
 		panic("No memory for VRF:%d", vrf_id);
 #endif
+		SCTP_HASH_FREE(vrf->vrf_addr_hash, vrf->vrf_addr_hashmark);
+		SCTP_FREE(vrf);
 		return (NULL);
 	}
 
@@ -503,11 +506,11 @@ sctp_del_addr_from_vrf(uint32_t vrf_id, struct sockaddr *addr,
 	if (sctp_ifap) {
 		sctp_ifap->localifa_flags &= SCTP_ADDR_VALID;
 		sctp_ifap->localifa_flags |= SCTP_BEING_DELETED;
-		sctp_ifap->ifn_p->ifa_count--;
 		vrf->total_ifa_count--;
 		LIST_REMOVE(sctp_ifap, next_bucket);
 		LIST_REMOVE(sctp_ifap, next_ifa);
 		if(sctp_ifap->ifn_p) {
+			sctp_ifap->ifn_p->ifa_count--;
 			if (SCTP_LIST_EMPTY(&sctp_ifap->ifn_p->ifalist)) {
 				sctp_delete_ifn (sctp_ifap->ifn_p, 1);
 			}
@@ -1744,7 +1747,9 @@ sctp_findassoc_by_vtag(struct sockaddr *from, uint32_t vtag,
 			}
 			if (skip_src_check) {
 #if defined(SCTP_PER_SOCKET_LOCKING)
-				SCTP_SOCKET_UNLOCK(SCTP_INP_SO(*inp_p), 1);
+				if ((inp_p) && (*inp_p)) {
+					SCTP_SOCKET_UNLOCK(SCTP_INP_SO(*inp_p), 1);
+				}
 				SCTP_SOCKET_LOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 				SCTP_UNLOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
 #endif
@@ -3973,8 +3978,10 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 						   net, sctp_next);
 				break;
 			}
+#ifndef __Panda__
 			/* Shift forward */
 			netfirst = netlook;
+#endif
 		} while (netlook != NULL);
 	}
 
