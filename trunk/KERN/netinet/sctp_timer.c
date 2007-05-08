@@ -891,7 +891,7 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 	        alt = sctp_find_alternate_net(stcb, net, 0);
 	}
 
-	sctp_mark_all_for_resend(stcb, net, alt, win_probe, &num_mk);
+	(void)sctp_mark_all_for_resend(stcb, net, alt, win_probe, &num_mk);
 	/* FR Loss recovery just ended with the T3. */
 	stcb->asoc.fast_retran_loss_recovery = 0;
 
@@ -1161,7 +1161,7 @@ sctp_strreset_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		return (0);
 	}
 	/* find the existing STRRESET, we use the seq number we sent out on */
-	sctp_find_stream_reset(stcb, stcb->asoc.str_reset_seq_out, &strrst);
+	(void)sctp_find_stream_reset(stcb, stcb->asoc.str_reset_seq_out, &strrst);
 	if (strrst == NULL) {
 		return (0);
 	}
@@ -1575,15 +1575,16 @@ sctp_pathmtu_timer(struct sctp_inpcb *inp,
 		if ((net->src_addr_selected == 0) ||
 		    (net->ro._s_addr == NULL) ||
 		    (net->ro._s_addr->localifa_flags & SCTP_BEING_DELETED)) {
-			if((net->ro._s_addr == NULL) && (net->ro._s_addr->localifa_flags & SCTP_BEING_DELETED)) {
+			if((net->ro._s_addr != NULL) && (net->ro._s_addr->localifa_flags & SCTP_BEING_DELETED)) {
 				sctp_free_ifa(net->ro._s_addr);
 				net->ro._s_addr = NULL;
 				net->src_addr_selected = 0;
+			} else  if (net->ro._s_addr == NULL) {
+				net->ro._s_addr = sctp_source_address_selection(inp, 
+										stcb,
+										(sctp_route_t *)&net->ro, 
+										net, 0, stcb->asoc.vrf_id);
 			}
-			net->ro._s_addr = sctp_source_address_selection(inp, 
-									stcb,
-									(sctp_route_t *)&net->ro, 
-									net, 0, stcb->asoc.vrf_id);
 			if(net->ro._s_addr)
 				net->src_addr_selected = 1;
 		}

@@ -6628,8 +6628,9 @@ sctp_initiate_iterator(inp_func inpf,
 	SCTP_LOCK_EXC(sctppcbinfo.ipi_ep_mtx);
 #endif
 	SCTP_IPI_ITERATOR_WQ_LOCK();
-	if (it->inp)
+	if (it->inp) {
 		SCTP_INP_INCR_REF(it->inp);
+	}
 	TAILQ_INSERT_TAIL(&sctppcbinfo.iteratorhead, it, sctp_nxt_itr);
 #if defined(SCTP_PER_SOCKET_LOCKING)
 	SCTP_UNLOCK_EXC(sctppcbinfo.ipi_ep_mtx);
