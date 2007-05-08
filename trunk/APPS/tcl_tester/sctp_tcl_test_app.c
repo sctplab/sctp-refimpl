@@ -90,7 +90,7 @@ useage(char *who)
 {
 	printf("Usage: %s [ options ]\n", who);
 	printf("Current options:\n");
-	printf("-D time         - Delay time in ms between new sockets at assoc failures (def = 100ms)\n");
+	printf("-D time         - Delay time in seconds between new sockets at assoc failures/terms (def = 1s)\n");
 	printf("-m myport       - Set my port to bind to (defaults to 2222)\n");
 	printf("-B ip-address   - Bind the specified address (else bindall)\n");
 	printf("-s size         - send data at start of an assoc size is data write size (def none)\n");
@@ -127,7 +127,7 @@ uint32_t notify_in_cnt=0;
 uint32_t sends_out = 0;
 uint32_t sends_ping_resp = 0;
 
-struct timespec mydelay;
+unsigned int mydelay;
 struct sctp_sndrcvinfo sinfo_in, sinfo_out;
 
 /* Max message sizes */
@@ -535,8 +535,7 @@ main (int argc, char **argv)
 	remote_port = local_port = htons(2222);
 	memset(&addr, 0, sizeof(addr));
 	memset(&bindto, 0, sizeof(bindto));
-	memset(&mydelay, 0, sizeof(mydelay));
-	mydelay.tv_nsec = 100 * 1000000;
+	mydelay = 1;
 
 	bindto.sa.sa_family = AF_INET6;
 	bindto.sa.sa_len = sizeof(struct sockaddr_in6);
@@ -545,14 +544,10 @@ main (int argc, char **argv)
 	while((i= getopt(argc, argv,"lSLs:c:46m:p:vB:h:D?")) != EOF) {
 		switch(i) {
 		case 'D':
-			timeof = strtol(optarg, NULL, 0);
-			mydelay.tv_sec = 0;
-
-			while(timeof > 1000000) {
-				mydelay.tv_sec++;
-				timeof -= 1000000;
+			mydelay = strtoul(optarg, NULL, 0);
+			if (mydelay == 0) {
+				printf("Warning, test app may not function/fail without some delay\n");
 			}
-			mydelay.tv_nsec = timeof * 1000000;
 			break;
 		case 'l':
 			listen_only = 1;
@@ -686,8 +681,8 @@ main (int argc, char **argv)
 		} else {
 			printf("I will NOT send any data at association startup\n");
 		}
-		printf("I will mydelay %d.%6.6d between any assoc failure to restart attempt\n",
-		       mydelay.tv_sec, (mydelay.tv_nsec/1000000));
+		printf("I will mydelay %d. seconds between any assoc failure to restart attempt\n",
+		       mydelay);
 	}
 	if ((listen_only == 0) && ((dest_addr_set == 0)  || (dest_port_set == 0))) {
 		printf("You must set -h and -p if you do not use -l\n");
@@ -748,9 +743,6 @@ main (int argc, char **argv)
 			} else {
 				if(sctp_connectx(sd, &addr.sa, 1, &sinfo_out.sinfo_assoc_id) < 0) {
 					printf("Connect fails error:%d - next loop\n", errno);
-					mydelay.tv_sec++;
-					nanosleep(&mydelay, NULL);
-					mydelay.tv_sec--;
 					goto next_loop;
 				}
 				printf("Associd:0x%x - Attempt to connect to:", sinfo_out.sinfo_assoc_id);
@@ -772,7 +764,8 @@ main (int argc, char **argv)
 		}
 	next_loop:
 		close(sd);
-		nanosleep(&mydelay, NULL);
+		if(mydelay)
+			sleep(mydelay);
 		notDone = 1;
 		msg_in_cnt = msg_in_cnt_weor = notify_in_cnt = sends_out = sends_ping_resp = 0;
 	}
