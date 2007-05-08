@@ -207,12 +207,8 @@ sctp6_input(i_pak, offp, proto)
 #endif				/* NFAITH defined and > 0 */
 	SCTP_STAT_INCR(sctps_recvpackets);
 	SCTP_STAT_INCR_COUNTER64(sctps_inpackets);
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-		printf("V6 input gets a packet iphlen:%d pktlen:%d\n", iphlen, 
-		       SCTP_HEADER_LEN((*i_pak)));
-	}
-#endif
+	SCTPDBG(SCTP_DEBUG_INPUT1, "V6 input gets a packet iphlen:%d pktlen:%d\n",
+		iphlen, SCTP_HEADER_LEN((*i_pak)));
 	if (IN6_IS_ADDR_MULTICAST(&ip6->ip6_dst)) {
 		/* No multi-cast support in SCTP */
 		goto bad;
@@ -239,13 +235,8 @@ sctp6_input(i_pak, offp, proto)
 		sh->checksum = 0;	/* prepare for calc */
 		calc_check = sctp_calculate_sum(m, &mlen, iphlen);
 		if (calc_check != check) {
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-				printf("Bad CSUM on SCTP packet calc_check:%x check:%x  m:%p mlen:%d iphlen:%d\n",
-				    calc_check, check, m,
-				    mlen, iphlen);
-			}
-#endif
+			SCTPDBG(SCTP_DEBUG_INPUT1, "Bad CSUM on SCTP packet calc_check:%x check:%x  m:%p mlen:%d iphlen:%d\n",
+				calc_check, check, m, mlen, iphlen);
 			stcb = sctp_findassociation_addr(m, iphlen, offset - sizeof(*ch),
 			    sh, ch, &in6p, &net, vrf_id);
 			/* in6p's ref-count increased && stcb locked */
@@ -1362,7 +1353,7 @@ connected_type:
 	/* now what about control */
 	if (control) {
 		if (inp->control) {
-			printf("huh? control set?\n");
+			SCTP_PRINTF("huh? control set?\n");
 			SCTP_RELEASE_PKT(inp->control);
 			inp->control = NULL;
 		}
