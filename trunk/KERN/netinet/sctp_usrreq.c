@@ -1776,7 +1776,7 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 	return error;
 }
 
-#define SCTP_FIND_STCB(inp, stcb, assoc_id) do { \
+#define SCTP_FIND_STCB(inp, stcb, assoc_id) { \
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) { \
 		SCTP_INP_RLOCK(inp); \
 		stcb = LIST_FIRST(&inp->sctp_asoc_list); \
@@ -1791,16 +1791,18 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 		} \
 	} else { \
 		stcb = NULL; \
-	} while (0)
+        } \
+  }
 
 
-#define SCTP_CHECK_AND_CAST(destp, srcp, type, size)  do {\
+#define SCTP_CHECK_AND_CAST(destp, srcp, type, size)  {\
 	if (size < sizeof(type)) { \
 		error = EINVAL; \
 		break; \
 	} else { \
 		destp = (type *)srcp; \
-	} while (0)
+	} \
+      } 
 
 #if defined(__Panda__)
 int
@@ -3102,8 +3104,8 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		size_t size;
 
 		SCTP_CHECK_AND_CAST(sca, optval, struct sctp_authkey, optsize);
-		SCTP_FIND_STCB(inp, stcb, sca->sca_assoc_id)
-			size = optsize - sizeof(*sca);
+		SCTP_FIND_STCB(inp, stcb, sca->sca_assoc_id);
+		size = optsize - sizeof(*sca);
 
 		if (stcb) {
 			/* set it on the assoc */
