@@ -1515,11 +1515,7 @@ sctp_timeout_handler(void *t)
 		}
 	}
 	tmr->stopped_from = 0xa005;
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_TIMER1) {
-		printf("Timer type %d goes off\n", tmr->type);
-	}
-#endif				/* SCTP_DEBUG */
+	SCTPDBG(SCTP_DEBUG_TIMER1, "Timer type %d goes off\n", tmr->type);
 #ifndef __NetBSD__
 	if (!SCTP_OS_TIMER_ACTIVE(&tmr->timer)) {
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -1789,12 +1785,8 @@ sctp_timeout_handler(void *t)
 		goto out_no_decr;
 		break;
 	default:
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_TIMER1) {
-			printf("sctp_timeout_handler:unknown timer %d\n",
-			    tmr->type);
-		}
-#endif				/* SCTP_DEBUG */
+		SCTPDBG(SCTP_DEBUG_TIMER1, "sctp_timeout_handler:unknown timer %d\n",
+			tmr->type);
 		break;
 	};
 #ifdef SCTP_AUDITING_ENABLED
@@ -1816,17 +1808,15 @@ get_out:
 	if (stcb) {
 		SCTP_TCB_UNLOCK(stcb);
 	}
+
 out_decr:
 	if (inp) {
 		SCTP_INP_DECR_REF(inp);
 	}
-out_no_decr:
 
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_TIMER1) {
-		printf("Timer now complete (type %d)\n", tmr->type);
-	}
-#endif				/* SCTP_DEBUG */
+out_no_decr:
+	SCTPDBG(SCTP_DEBUG_TIMER1, "Timer now complete (type %d)\n",
+		tmr->type);
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
 #endif
@@ -2166,22 +2156,14 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		tmr = &stcb->asoc.autoclose_timer;
 		break;
 	default:
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_TIMER1) {
-			printf("sctp_timer_start:Unknown timer type %d\n",
-			    t_type);
-		}
-#endif				/* SCTP_DEBUG */
+		SCTPDBG(SCTP_DEBUG_TIMER1, "%s: Unknown timer type %d\n",
+			__FUNCTION__, t_type);
 		return;
 		break;
 	};
 	if ((to_ticks <= 0) || (tmr == NULL)) {
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_TIMER1) {
-			printf("sctp_timer_start:%d:software error to_ticks:%d tmr:%p not set ??\n",
-			    t_type, to_ticks, tmr);
-		}
-#endif				/* SCTP_DEBUG */
+		SCTPDBG(SCTP_DEBUG_TIMER1, "%s: %d:software error to_ticks:%d tmr:%p not set ??\n",
+			__FUNCTION__, t_type, to_ticks, tmr);
 		return;
 	}
 	if (SCTP_OS_TIMER_PENDING(&tmr->timer)) {
@@ -2352,12 +2334,8 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		tmr = &stcb->asoc.autoclose_timer;
 		break;
 	default:
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_TIMER1) {
-			printf("sctp_timer_stop:Unknown timer type %d\n",
-			    t_type);
-		}
-#endif				/* SCTP_DEBUG */
+		SCTPDBG(SCTP_DEBUG_TIMER1, "%s: Unknown timer type %d\n",
+			__FUNCTION__, t_type);
 		break;
 	};
 	if (tmr == NULL) {
@@ -3517,12 +3495,8 @@ sctp_ulp_notify(uint32_t notification, struct sctp_tcb *stcb,
 
 
 	default:
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_UTIL1) {
-			printf("NOTIFY: unknown notification %xh (%u)\n",
-			    notification, notification);
-		}
-#endif				/* SCTP_DEBUG */
+		SCTPDBG(SCTP_DEBUG_UTIL1, "%s: unknown notification %xh (%u)\n",
+			__FUNCTION__, notification, notification);
 		break;
 	}			/* end switch */
 }
@@ -3991,26 +3965,26 @@ sctp_print_address(struct sockaddr *sa)
 
 		sin6 = (struct sockaddr_in6 *)sa;
 #if defined(__Panda__)
-		printf("IPv6 address: %x:%x:%x:%x:%x:%x:%x:%x:port:%d scope:%u \n",
-		       (uint32_t)sin6->sin6_addr.s6_addr16[0],
-		       (uint32_t)sin6->sin6_addr.s6_addr16[1],
-		       (uint32_t)sin6->sin6_addr.s6_addr16[2],
-		       (uint32_t)sin6->sin6_addr.s6_addr16[3],
-		       (uint32_t)sin6->sin6_addr.s6_addr16[4],
-		       (uint32_t)sin6->sin6_addr.s6_addr16[5],
-		       (uint32_t)sin6->sin6_addr.s6_addr16[6],
-		       (uint32_t)sin6->sin6_addr.s6_addr16[7],
-		       ntohs(sin6->sin6_port),
-		       sin6->sin6_scope_id);
+		SCTP_PRINTF("IPv6 address: %x:%x:%x:%x:%x:%x:%x:%x:port:%d scope:%u \n",
+			    (uint32_t)sin6->sin6_addr.s6_addr16[0],
+			    (uint32_t)sin6->sin6_addr.s6_addr16[1],
+			    (uint32_t)sin6->sin6_addr.s6_addr16[2],
+			    (uint32_t)sin6->sin6_addr.s6_addr16[3],
+			    (uint32_t)sin6->sin6_addr.s6_addr16[4],
+			    (uint32_t)sin6->sin6_addr.s6_addr16[5],
+			    (uint32_t)sin6->sin6_addr.s6_addr16[6],
+			    (uint32_t)sin6->sin6_addr.s6_addr16[7],
+			    ntohs(sin6->sin6_port),
+			    sin6->sin6_scope_id);
 #else
-		printf("IPv6 address: %s:port:%d scope:%u\n",
+		SCTP_PRINTF("IPv6 address: %s:port:%d scope:%u\n",
 #if defined(__FreeBSD__) && __FreeBSD_version >= 700000
-		    ip6_sprintf(ip6buf, &sin6->sin6_addr),
+			    ip6_sprintf(ip6buf, &sin6->sin6_addr),
 #else
-		    ip6_sprintf(&sin6->sin6_addr),
+			    ip6_sprintf(&sin6->sin6_addr),
 #endif
-		    ntohs(sin6->sin6_port),
-		    sin6->sin6_scope_id);
+			    ntohs(sin6->sin6_port),
+			    sin6->sin6_scope_id);
 #endif
 	} else if (sa->sa_family == AF_INET) {
 		struct sockaddr_in *sin;
@@ -4018,10 +3992,10 @@ sctp_print_address(struct sockaddr *sa)
 
 		sin = (struct sockaddr_in *)sa;
 		p = (unsigned char *)&sin->sin_addr;
-		printf("IPv4 address: %u.%u.%u.%u:%d\n",
-		    p[0], p[1], p[2], p[3], ntohs(sin->sin_port));
+		SCTP_PRINTF("IPv4 address: %u.%u.%u.%u:%d\n",
+			    p[0], p[1], p[2], p[3], ntohs(sin->sin_port));
 	} else {
-		printf("?\n");
+		SCTP_PRINTF("?\n");
 	}
 }
 
@@ -4041,9 +4015,9 @@ sctp_print_address_pkt(struct ip *iph, struct sctphdr *sh)
 		fsa.sin_family = AF_INET;
 		fsa.sin_addr = iph->ip_dst;
 		fsa.sin_port = sh->dest_port;
-		printf("src: ");
+		SCTP_PRINTF("src: ");
 		sctp_print_address((struct sockaddr *)&lsa);
-		printf("dest: ");
+		SCTP_PRINTF("dest: ");
 		sctp_print_address((struct sockaddr *)&fsa);
 	} else if (iph->ip_v == (IPV6_VERSION >> 4)) {
 		struct ip6_hdr *ip6;
@@ -4060,9 +4034,9 @@ sctp_print_address_pkt(struct ip *iph, struct sctphdr *sh)
 		fsa6.sin6_family = AF_INET6;
 		fsa6.sin6_addr = ip6->ip6_dst;
 		fsa6.sin6_port = sh->dest_port;
-		printf("src: ");
+		SCTP_PRINTF("src: ");
 		sctp_print_address((struct sockaddr *)&lsa6);
-		printf("dest: ");
+		SCTP_PRINTF("dest: ");
 		sctp_print_address((struct sockaddr *)&fsa6);
 	}
 }
