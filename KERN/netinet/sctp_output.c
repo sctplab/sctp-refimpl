@@ -3246,11 +3246,11 @@ sctp_get_ect(struct sctp_tcb *stcb,
 	if (chk == NULL)
 		return (SCTP_ECT0_BIT);
 
-	if (((stcb->asoc.hb_random_idx == 3) &&
-	    (stcb->asoc.hb_ect_randombit > 7)) ||
-	    (stcb->asoc.hb_random_idx > 3)) {
+	if ((stcb->asoc.hb_random_idx > 3) ||
+	    ((stcb->asoc.hb_random_idx == 3) &&
+	     (stcb->asoc.hb_ect_randombit > 7))) {
 		uint32_t rndval;
-
+	warp_drive_sa:
 		rndval = sctp_select_initial_TSN(&stcb->sctp_ep->sctp_ep);
 		memcpy(stcb->asoc.hb_random_values, &rndval,
 		    sizeof(stcb->asoc.hb_random_values));
@@ -3261,6 +3261,9 @@ sctp_get_ect(struct sctp_tcb *stcb,
 		if (stcb->asoc.hb_ect_randombit > 7) {
 			stcb->asoc.hb_ect_randombit = 0;
 			stcb->asoc.hb_random_idx++;
+			if (stcb->asoc.hb_random_idx > 3) {
+				goto warp_drive_sa;
+			}
 		}
 		this_random = stcb->asoc.hb_random_values[stcb->asoc.hb_random_idx];
 	}
@@ -8802,26 +8805,26 @@ sctp_output (inp, m, addr, control, p, flags)
 		return (EINVAL);
 	}
 	return (sctp_sosend(inp->sctp_socket,
-		    addr,
-		    (struct uio *)NULL,
-		    m,
-		    control,
+			    addr,
+			    (struct uio *)NULL,
+			    m,
+			    control,
 #if defined(__APPLE__) || defined(__NetBSD__) || defined(__Panda__)
-		    flags));
+			    flags
 #else
-		    flags,
-		    p));
+			    flags, p
 #endif
+			));
 }
 
 void
 send_forward_tsn(struct sctp_tcb *stcb,
 		 struct sctp_association *asoc)
 {
-	struct sctp_tmit_chunk *chk;
+        struct sctp_tmit_chunk *chk;
 	struct sctp_forward_tsn_chunk *fwdtsn;
 
-	SCTP_TCB_LOCK_ASSERT(stcb);
+        SCTP_TCB_LOCK_ASSERT(stcb);
 	TAILQ_FOREACH(chk, &asoc->control_send_queue, sctp_next) {
 		if (chk->rec.chunk_id.id == SCTP_FORWARD_CUM_TSN) {
 			/* mark it to unsent */
@@ -8845,9 +8848,11 @@ send_forward_tsn(struct sctp_tcb *stcb,
 	chk->rec.chunk_id.id = SCTP_FORWARD_CUM_TSN;
 	chk->rec.chunk_id.can_take_data = 0;
 	chk->asoc = asoc;
-	chk->data = sctp_get_mbuf_for_msg(MCLBYTES, 0, M_DONTWAIT, 1, MT_DATA);
-	if (chk->data == NULL) {
-		atomic_subtract_int(&chk->whoTo->ref_count, 1);
+
+        chk->data = sctp_get_mbuf_for_msg(MCLBYTES, 0, M_DONTWAIT, 1, MT_DATA);
+        if (chk->data == NULL) {
+                if(chk->whoTo)
+                     atomic_subtract_int(&chk->whoTo->ref_count, 1);
 		sctp_free_a_chunk(stcb, chk);
 		return;
 	}
@@ -8963,7 +8968,7 @@ sctp_fill_in_rest:
 			strseq++;
 			at = tp1;
 		}
-	}
+        }
 	return;
 
 }
@@ -9556,7 +9561,7 @@ sctp_select_hb_destination(struct sctp_tcb *stcb, struct timeval *now)
 		state_overide = 0;
 	}
 
-	if (highest_ms && (((unsigned int)highest_ms >= hnet->RTO) || state_overide)) {
+	if (hnet && highest_ms && (((unsigned int)highest_ms >= hnet->RTO) || state_overide)) {
 		/*-
 		 * Found the one with longest delay bounds OR it is
 		 * unconfirmed and still not marked unreachable.
@@ -10771,9 +10776,6 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 #endif
 	if (*error) {
 		sctp_free_a_strmoq(stcb, sp);
-		sp->data = NULL;
-		sp->net = NULL;
-		sp = NULL;
 	} else {
 		if(sp->sinfo_flags & SCTP_ADDR_OVER) {
 			sp->net = net;
@@ -10946,6 +10948,10 @@ sctp_lower_sosend(struct socket *so,
 #endif
 		goto out_unlocked;
 	}
+	if ((uio == NULL) && (top == NULL)) {
+		return (EINVAL);
+	}
+
 	atomic_add_int(&inp->total_sends, 1);
 	if (uio)
 		sndlen = uio->uio_resid;
@@ -11147,6 +11153,7 @@ sctp_lower_sosend(struct socket *so,
 			if ((use_rcvinfo) && (srcv) &&
 			    ((srcv->sinfo_flags & SCTP_ABORT) ||
 			     ((srcv->sinfo_flags & SCTP_EOF) &&
+			      (uio) &&
 			      (uio->uio_resid == 0)))) {
 				/*-
 				 * User asks to abort a non-existant assoc,
@@ -11204,9 +11211,6 @@ sctp_lower_sosend(struct socket *so,
 						/* Default is NOT correct */
 						SCTPDBG(SCTP_DEBUG_OUTPUT1, "Ok, defout:%d pre_open:%d\n",
 							asoc->streamoutcnt, asoc->pre_open_streams);
-						SCTP_FREE(asoc->strmout);
-						asoc->strmout = NULL;
-						asoc->streamoutcnt = asoc->pre_open_streams;
 						/*
 						 * What happens if this fails?
 						 * we panic ...
@@ -11221,17 +11225,18 @@ sctp_lower_sosend(struct socket *so,
 							}
 							SCTP_MALLOC(tmp_str,
 								    struct sctp_stream_out *,
-								    asoc->streamoutcnt *
-								    sizeof(struct sctp_stream_out),
+								    (asoc->pre_open_streams *
+								     sizeof(struct sctp_stream_out)),
 								    "StreamsOut");
 							if(had_lock) {
 								SCTP_TCB_LOCK(stcb);
 							}
-							if(asoc->strmout == NULL) {
-								asoc->strmout = tmp_str;
-							} else {
+							if(tmp_str != NULL) {
 								SCTP_FREE(asoc->strmout);
 								asoc->strmout = tmp_str;
+								asoc->streamoutcnt = asoc->pre_open_streams;
+							} else {
+								asoc->pre_open_streams = asoc->streamoutcnt;
 							}
 						}
 						for (i = 0; i < asoc->streamoutcnt; i++) {
@@ -11396,7 +11401,7 @@ sctp_lower_sosend(struct socket *so,
 	/* Are we aborting? */
 	if (srcv->sinfo_flags & SCTP_ABORT) {
 		struct mbuf *mm;
-		int tot_demand, tot_out, max;
+		int tot_demand, tot_out=0, max;
 
 		SCTP_STAT_INCR(sctps_sends_with_abort);
 		if ((SCTP_GET_STATE(asoc) == SCTP_STATE_COOKIE_WAIT) ||
@@ -11414,7 +11419,6 @@ sctp_lower_sosend(struct socket *so,
 			struct mbuf *cntm;
 			mm = sctp_get_mbuf_for_msg(1, 0, M_WAIT, 1, MT_DATA);
 
-			tot_out = 0;
 			cntm = top;
 			while(cntm) {
 				tot_out += SCTP_BUF_LEN(cntm);
@@ -11423,7 +11427,8 @@ sctp_lower_sosend(struct socket *so,
 			tot_demand = (tot_out + sizeof(struct sctp_paramhdr));
 		} else {
 			/* Must fit in a MTU */
-			tot_out = uio->uio_resid;
+			if(uio)
+				tot_out = uio->uio_resid;
 			tot_demand = (tot_out + sizeof(struct sctp_paramhdr));
 			mm = sctp_get_mbuf_for_msg(tot_demand, 0, M_WAIT, 1, MT_DATA);
 		}

@@ -5476,7 +5476,7 @@ sctp_pcb_init()
 
 #if defined(SCTP_USE_THREAD_BASED_ITERATOR)
 #if defined(SCTP_PROCESS_LEVEL_LOCKS)
-	pthread_cond_init(&sctppcbinfo.iterator_wakeup,
+	(void)pthread_cond_init(&sctppcbinfo.iterator_wakeup,
 			  NULL);
 #endif
 	sctppcbinfo.iterator_running = 0;
