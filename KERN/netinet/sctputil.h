@@ -132,7 +132,7 @@ int sctp_init_asoc(struct sctp_inpcb *, struct sctp_association *, int, uint32_t
 
 void sctp_fill_random_store(struct sctp_pcb *);
 
-int
+void
 sctp_timer_start(int, struct sctp_inpcb *, struct sctp_tcb *,
     struct sctp_nets *);
 

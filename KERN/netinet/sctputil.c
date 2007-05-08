@@ -1843,7 +1843,7 @@ out_no_decr:
 	}
 }
 
-int
+void
 sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
     struct sctp_nets *net)
 {
@@ -1851,7 +1851,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	struct sctp_timer *tmr;
 
 	if ((t_type != SCTP_TIMER_TYPE_ADDR_WQ) && (inp == NULL))
-		return (EFAULT);
+		return;
 
 	to_ticks = 0;
 
@@ -1892,7 +1892,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			int rto_val;
 
 			if ((stcb == NULL) || (net == NULL)) {
-				return (EFAULT);
+				return;
 			}
 			tmr = &net->rxt_timer;
 			if (net->RTO == 0) {
@@ -1909,7 +1909,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		 * minute.
 		 */
 		if ((stcb == NULL) || (net == NULL)) {
-			return (EFAULT);
+			return;
 		}
 		tmr = &net->rxt_timer;
 		if (net->RTO == 0) {
@@ -1924,7 +1924,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		 * ususually about 200ms.
 		 */
 		if (stcb == NULL) {
-			return (EFAULT);
+			return;
 		}
 		tmr = &stcb->asoc.dack_timer;
 		to_ticks = MSEC_TO_TICKS(stcb->asoc.delayed_ack);
@@ -1932,7 +1932,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	case SCTP_TIMER_TYPE_SHUTDOWN:
 		/* Here we use the RTO of the destination. */
 		if ((stcb == NULL) || (net == NULL)) {
-			return (EFAULT);
+			return;
 		}
 		if (net->RTO == 0) {
 			to_ticks = MSEC_TO_TICKS(stcb->asoc.initial_rto);
@@ -1948,7 +1948,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		 * PLUS a random jitter.
 		 */
 		if (stcb == NULL) {
-			return (EFAULT);
+			return;
 		} {
 			uint32_t rndval;
 			uint8_t this_random;
@@ -1979,7 +1979,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			 */
 			if ((stcb->asoc.hb_is_disabled) &&
 			    (cnt_of_unconf == 0)) {
-				return (0);
+				return;
 			}
 			if (net) {
 				struct sctp_nets *lnet;
@@ -2022,7 +2022,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		 * using the RTO initial value.
 		 */
 		if ((stcb == NULL) || (net == NULL)) {
-			return (EFAULT);
+			return;
 		}
 		if (net->RTO == 0) {
 			to_ticks = MSEC_TO_TICKS(stcb->asoc.initial_rto);
@@ -2041,7 +2041,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		break;
 	case SCTP_TIMER_TYPE_ASOCKILL:
 		if (stcb == NULL) {
-			return (EFAULT);
+			return;
 		}
 		tmr = &stcb->asoc.strreset_timer;
 		to_ticks = MSEC_TO_TICKS(SCTP_ASOC_KILL_TIMEOUT);
@@ -2061,10 +2061,10 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		 * about 10 minutes.
 		 */
 		if (stcb == NULL) {
-			return (EFAULT);
+			return;
 		}
 		if (net == NULL) {
-			return (EFAULT);
+			return;
 		}
 		to_ticks = inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_PMTU];
 		tmr = &net->pmtu_timer;
@@ -2072,7 +2072,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	case SCTP_TIMER_TYPE_SHUTDOWNACK:
 		/* Here we use the RTO of the destination */
 		if ((stcb == NULL) || (net == NULL)) {
-			return (EFAULT);
+			return;
 		}
 		if (net->RTO == 0) {
 			to_ticks = MSEC_TO_TICKS(stcb->asoc.initial_rto);
@@ -2087,7 +2087,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		 * about 3 minutes.
 		 */
 		if (stcb == NULL) {
-			return (EFAULT);
+			return;
 		}
 		to_ticks = inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_MAXSHUTDOWN];
 		tmr = &stcb->asoc.shut_guard_timer;
@@ -2098,7 +2098,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		 * the RTO.
 		 */
 		if ((stcb == NULL) || (net == NULL)) {
-			return (EFAULT);
+			return;
 		}
 		if (net->RTO == 0) {
 			to_ticks = MSEC_TO_TICKS(stcb->asoc.initial_rto);
@@ -2113,11 +2113,11 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			unsigned int msec;
 
 			if ((stcb == NULL) || (net == NULL)) {
-				return (EFAULT);
+				return;
 			}
 			if (net->flight_size > net->cwnd) {
 				/* no need to start */
-				return (0);
+				return;
 			}
 			SCTP_STAT_INCR(sctps_earlyfrstart);
 			if (net->lastsa == 0) {
@@ -2142,7 +2142,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		 * the RTO.
 		 */
 		if ((stcb == NULL) || (net == NULL)) {
-			return (EFAULT);
+			return;
 		}
 		if (net->RTO == 0) {
 			to_ticks = MSEC_TO_TICKS(stcb->asoc.initial_rto);
@@ -2153,14 +2153,14 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		break;
 	case SCTP_TIMER_TYPE_AUTOCLOSE:
 		if (stcb == NULL) {
-			return (EFAULT);
+			return;
 		}
 		if (stcb->asoc.sctp_autoclose_ticks == 0) {
 			/*
 			 * Really an error since stcb is NOT set to
 			 * autoclose
 			 */
-			return (0);
+			return;
 		}
 		to_ticks = stcb->asoc.sctp_autoclose_ticks;
 		tmr = &stcb->asoc.autoclose_timer;
@@ -2172,7 +2172,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			    t_type);
 		}
 #endif				/* SCTP_DEBUG */
-		return (EFAULT);
+		return;
 		break;
 	};
 	if ((to_ticks <= 0) || (tmr == NULL)) {
@@ -2182,14 +2182,14 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			    t_type, to_ticks, tmr);
 		}
 #endif				/* SCTP_DEBUG */
-		return (EFAULT);
+		return;
 	}
 	if (SCTP_OS_TIMER_PENDING(&tmr->timer)) {
 		/*
 		 * we do NOT allow you to have it already running. if it is
 		 * we leave the current one up unchanged
 		 */
-		return (EALREADY);
+		return;
 	}
 	/* At this point we can proceed */
 	if (t_type == SCTP_TIMER_TYPE_SEND) {
@@ -2205,7 +2205,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	tmr->ticks = ticks;
 #endif
 	SCTP_OS_TIMER_START(&tmr->timer, to_ticks, sctp_timeout_handler, tmr);
-	return (0);
+	return;
 }
 
 void

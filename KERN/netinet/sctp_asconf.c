@@ -58,7 +58,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_asconf.c,v 1.12 2007/05/08 17:01:10 rrs
 #define APPLE_FILE_NO 1
 #endif
 
-static int
+static void
 sctp_asconf_get_source_ip(struct mbuf *m, struct sockaddr *sa)
 {
 	struct ip *iph;
@@ -76,7 +76,7 @@ sctp_asconf_get_source_ip(struct mbuf *m, struct sockaddr *sa)
 		sin->sin_len = sizeof(struct sockaddr_in);
 		sin->sin_port = 0;
 		sin->sin_addr.s_addr = iph->ip_src.s_addr;
-		return 0;
+		return;
 	}
 #ifdef INET6
 	else if (iph->ip_v == (IPV6_VERSION >> 4)) {
@@ -90,11 +90,11 @@ sctp_asconf_get_source_ip(struct mbuf *m, struct sockaddr *sa)
 		sin6->sin6_port = 0;
 		ip6 = mtod(m, struct ip6_hdr *);
 		sin6->sin6_addr = ip6->ip6_src;
-		return 0;
+		return;
 	}
 #endif /* INET6 */
 	else
-		return -1;
+		return;
 }
 
 /*
