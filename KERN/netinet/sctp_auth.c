@@ -1362,8 +1362,9 @@ sctp_auth_setactivekey(struct sctp_tcb *stcb, uint16_t keyid)
 	}
 	if (skey == NULL) {
 		/* that key doesn't exist */
-		if (using_ep_key)
+		if (using_ep_key) {
 			SCTP_INP_RUNLOCK(stcb->sctp_ep);
+		}
 		return (-1);
 	}
 	/* get the shared key text */
@@ -1382,8 +1383,9 @@ sctp_auth_setactivekey(struct sctp_tcb *stcb, uint16_t keyid)
 		sctp_print_key(stcb->asoc.authinfo.assoc_key, "Assoc Key");
 #endif
 
-	if (using_ep_key)
+	if (using_ep_key) {
 		SCTP_INP_RUNLOCK(stcb->sctp_ep);
+	}
 	return (0);
 }
 
@@ -2013,7 +2015,7 @@ sctp_initialize_auth_params(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		plen = sizeof(*ph) + hmacs_len;
 		ph->param_length = htons(plen);
 		keylen += sizeof(*ph);
-		sctp_serialize_hmaclist(stcb->asoc.local_hmacs,
+		(void)sctp_serialize_hmaclist(stcb->asoc.local_hmacs,
 					new_key->key + keylen);
 	}
 #endif

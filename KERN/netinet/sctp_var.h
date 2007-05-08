@@ -215,9 +215,9 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 	if ((__net)) { \
 		atomic_subtract_int(&(__net)->ref_count, 1); \
 		if ((__net)->ref_count == 0) { \
-			SCTP_OS_TIMER_STOP(&(__net)->rxt_timer.timer); \
-			SCTP_OS_TIMER_STOP(&(__net)->pmtu_timer.timer); \
-			SCTP_OS_TIMER_STOP(&(__net)->fr_timer.timer); \
+			(void)SCTP_OS_TIMER_STOP(&(__net)->rxt_timer.timer); \
+			(void)SCTP_OS_TIMER_STOP(&(__net)->pmtu_timer.timer); \
+			(void)SCTP_OS_TIMER_STOP(&(__net)->fr_timer.timer); \
 			(__net)->dest_state = SCTP_ADDR_NOT_REACHABLE; \
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_net, (__net)); \
 			SCTP_DECR_RADDR_COUNT(); \
