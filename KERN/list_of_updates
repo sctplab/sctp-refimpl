@@ -1,5 +1,7 @@
--  Get rid of the sctp_inpcb_free() magic numbers, now they
-   are sensible defines that tell what you are directing
-   the function to do.
+-  Copyright change, cisco's silly tool wants it to say:
+       "Copyright (c) 2001-2007, by Cisco Systems,"
+   instead of
+       *Copyright (c) 2001-2007, Cisco Systems,"
 
+   Picky text tools :-0
 
