@@ -8634,8 +8634,8 @@ sctp_timer_validation(struct sctp_inpcb *inp,
 	return (ret);
 }
 
-int
-sctp_chunk_output(struct sctp_inpcb *inp,
+void
+sctp_chunk_output (struct sctp_inpcb *inp,
     struct sctp_tcb *stcb,
     int from_where)
 {
@@ -8679,7 +8679,7 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 	    (TAILQ_EMPTY(&asoc->control_send_queue)) &&
 	    (asoc->sent_queue_retran_cnt == 0)){
 		/* Nothing to do unless there is something to be sent left */
-		return(error);
+		return;
 	}
 	/* Do we have something to send, data or control AND
 	 * a sack timer running, if so piggy-back the sack.
@@ -8705,7 +8705,7 @@ sctp_chunk_output(struct sctp_inpcb *inp,
  			(void)sctp_med_chunk_output(inp, stcb, asoc, &num_out, &reason_code, 1,
 			    &cwnd_full, from_where,
 			    &now, &now_filled, frag_point);
-			return (0);
+			return;
 		} else if (from_where != SCTP_OUTPUT_FROM_HB_TMR) {
 			/* if its not from a HB then do it */
 			fr_done = 0;
@@ -8733,7 +8733,8 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 #ifdef SCTP_AUDITING_ENABLED
 			sctp_auditing(8, inp, stcb, NULL);
 #endif
-			return (sctp_timer_validation(inp, stcb, asoc, ret));
+			sctp_timer_validation(inp, stcb, asoc, ret);
+			return;
 		}
 		if (ret < 0) {
 			/*-
@@ -8744,7 +8745,7 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 			sctp_auditing(9, inp, stcb, NULL);
 #endif
 			if(ret == SCTP_RETRAN_EXIT) {
-				return (-1);
+				return;
 			}
 			break;
 		}
@@ -8756,11 +8757,11 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 			/* Push out any control */
 			(void)sctp_med_chunk_output(inp, stcb, asoc, &num_out, &reason_code, 1, &cwnd_full, from_where,
 			    &now, &now_filled, frag_point);
-			return (ret);
+			return;
 		}
 		if (tot_frs > asoc->max_burst) {
 			/* Hit FR burst limit */
-			return(0);
+			return;
 		}
 
 		if ((num_out == 0) && (ret == 0)) {
@@ -8908,12 +8909,12 @@ sctp_chunk_output(struct sctp_inpcb *inp,
 	 */
 	if(stcb->asoc.ecn_echo_cnt_onq)
 		sctp_fix_ecn_echo(asoc);
-	return (error);
+	return;
 }
 
 
 int
-sctp_output(inp, m, addr, control, p, flags)
+sctp_output (inp, m, addr, control, p, flags)
 	struct sctp_inpcb *inp;
 #if defined(__Panda__)
 	pakhandle_type m;
