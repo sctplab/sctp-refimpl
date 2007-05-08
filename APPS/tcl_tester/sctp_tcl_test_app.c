@@ -529,7 +529,6 @@ main (int argc, char **argv)
 	char send_buffer[SEND_BUF_SIZE];
 	socklen_t salen;
 	int i, sd, notDone = 1, at;
-	int timeof;
 	int send_out;
 	uint8_t dest_addr_set = 0, dest_port_set=0;
 	remote_port = local_port = htons(2222);
