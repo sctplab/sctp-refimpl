@@ -2709,7 +2709,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 					error = EINVAL;
 				} else {
 					/* copy in the chunks */
-					sctp_serialize_auth_chunks(chklist, sac->gauth_chunks);
+					(void)sctp_serialize_auth_chunks(chklist, sac->gauth_chunks);
 				}
 				SCTP_TCB_UNLOCK(stcb);
 			} else {
@@ -2722,7 +2722,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 					error = EINVAL;
 				} else {
 					/* copy in the chunks */
-					sctp_serialize_auth_chunks(chklist, sac->gauth_chunks);
+					(void)sctp_serialize_auth_chunks(chklist, sac->gauth_chunks);
 				}
 				SCTP_INP_RUNLOCK(inp);
 			}
@@ -2747,7 +2747,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 					error = EINVAL;
 				} else {
 					/* copy in the chunks */
-					sctp_serialize_auth_chunks(chklist, sac->gauth_chunks);
+					(void)sctp_serialize_auth_chunks(chklist, sac->gauth_chunks);
 				}
 				SCTP_TCB_UNLOCK(stcb);
 			} else {
