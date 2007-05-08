@@ -929,7 +929,7 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 					 * no recent feed back in an RTO or
 					 * more, request a RTT update
 					 */
-					sctp_send_hb(stcb, 1, net);
+					(void)sctp_send_hb(stcb, 1, net);
 				}
 			}
 		}
