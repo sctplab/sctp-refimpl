@@ -911,6 +911,10 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.13 2007/05/08 00:21:03 
 				 * detracts a small amount for ipv4 but it
 				 * simplifies the ipv6 addition */
 
+#define SCTP_CALLED_DIRECTLY_NOCMPSET     0
+#define SCTP_CALLED_AFTER_CMPSET_OFCLOSE  1
+
+
 #ifndef IPPROTO_SCTP
 #define IPPROTO_SCTP 132	/* the Official IANA number :-) */
 #endif				/* !IPPROTO_SCTP */
