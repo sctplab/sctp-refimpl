@@ -51,17 +51,17 @@
 
 /* Lock for INFO stuff */
 #define SCTP_INP_INFO_LOCK_INIT() \
-	pthread_mutex_init(&sctppcbinfo.ipi_ep_mtx, NULL)
+	(void)pthread_mutex_init(&sctppcbinfo.ipi_ep_mtx, NULL)
 #define SCTP_INP_INFO_RLOCK()
 #define SCTP_INP_INFO_RUNLOCK() 
 #define SCTP_INP_INFO_WLOCK() 
 #define SCTP_INP_INFO_WUNLOCK()
 #define SCTP_INP_INFO_LOCK_DESTROY() \
-	pthread_mutex_destroy(&sctppcbinfo.ipi_ep_mtx)
+	(void)pthread_mutex_destroy(&sctppcbinfo.ipi_ep_mtx)
 #define SCTP_IPI_COUNT_INIT() \
-	pthread_mutex_init(&sctppcbinfo.ipi_count_mtx, NULL)
+	(void)pthread_mutex_init(&sctppcbinfo.ipi_count_mtx, NULL)
 #define SCTP_IPI_COUNT_DESTROY() \
-	pthread_mutex_destory(&sctppcbinfo.ipi_count_mtx)
+	(void)pthread_mutex_destory(&sctppcbinfo.ipi_count_mtx)
 
 #define SCTP_TCB_SEND_LOCK_INIT(_tcb)
 #define SCTP_TCB_SEND_LOCK_DESTROY(_tcb)
@@ -315,7 +315,7 @@
 
 #define SCTP_DECR_EP_COUNT() \
 	do { \
-	       atomic_add_int(&sctppcbinfo.ipi_count_ep, -1); \
+	       atomic_subtract_int(&sctppcbinfo.ipi_count_ep, 1); \
 	} while (0)
 
 #define SCTP_INCR_ASOC_COUNT() \
@@ -325,7 +325,7 @@
 
 #define SCTP_DECR_ASOC_COUNT() \
 	do { \
-	       atomic_add_int(&sctppcbinfo.ipi_count_asoc, -1); \
+	       atomic_subtract_int(&sctppcbinfo.ipi_count_asoc, 1); \
 	} while (0)
 
 #define SCTP_INCR_LADDR_COUNT() \
@@ -335,7 +335,7 @@
 
 #define SCTP_DECR_LADDR_COUNT() \
 	do { \
-	       atomic_add_int(&sctppcbinfo.ipi_count_laddr, -1); \
+	       atomic_subtract_int(&sctppcbinfo.ipi_count_laddr, 1); \
 	} while (0)
 
 #define SCTP_INCR_RADDR_COUNT() \
@@ -345,7 +345,7 @@
 
 #define SCTP_DECR_RADDR_COUNT() \
 	do { \
- 	       atomic_add_int(&sctppcbinfo.ipi_count_raddr, -1); \
+ 	       atomic_subtract_int(&sctppcbinfo.ipi_count_raddr, 1); \
 	} while (0)
 
 #define SCTP_INCR_CHK_COUNT() \
@@ -355,7 +355,7 @@
 
 #define SCTP_DECR_CHK_COUNT() \
 	do { \
-  	       atomic_add_int(&sctppcbinfo.ipi_count_chunk, -1); \
+  	       atomic_subtract_int(&sctppcbinfo.ipi_count_chunk, 1); \
 	} while (0)
 
 #define SCTP_INCR_READQ_COUNT() \
@@ -365,7 +365,7 @@
 
 #define SCTP_DECR_READQ_COUNT() \
 	do { \
-	       atomic_add_int(&sctppcbinfo.ipi_count_readq, -1); \
+	       atomic_subtract_int(&sctppcbinfo.ipi_count_readq, 1); \
 	} while (0)
 
 #define SCTP_INCR_STRMOQ_COUNT() \
@@ -375,7 +375,7 @@
 
 #define SCTP_DECR_STRMOQ_COUNT() \
 	do { \
-	       atomic_add_int(&sctppcbinfo.ipi_count_strmoq, -1); \
+	       atomic_subtract_int(&sctppcbinfo.ipi_count_strmoq, 1); \
 	} while (0)
 
 #endif
