@@ -9467,7 +9467,7 @@ sctp_send_abort_tcb(struct sctp_tcb *stcb, struct mbuf *operr)
 	SCTP_STAT_INCR_COUNTER64(sctps_outcontrolchunks);
 }
 
-int
+void
 sctp_send_shutdown_complete(struct sctp_tcb *stcb,
     struct sctp_nets *net)
 {
@@ -9478,7 +9478,7 @@ sctp_send_shutdown_complete(struct sctp_tcb *stcb,
 	m_shutdown_comp = sctp_get_mbuf_for_msg(sizeof(struct sctp_shutdown_complete_msg), 0, M_DONTWAIT, 1, MT_HEADER);
 	if (m_shutdown_comp == NULL) {
 		/* no mbuf's */
-		return (-1);
+		return;
 	}
 	comp_cp = mtod(m_shutdown_comp, struct sctp_shutdown_complete_msg *);
 	comp_cp->shut_cmp.ch.chunk_type = SCTP_SHUTDOWN_COMPLETE;
@@ -9494,10 +9494,10 @@ sctp_send_shutdown_complete(struct sctp_tcb *stcb,
 	    (struct sockaddr *)&net->ro._l_addr,
 	    m_shutdown_comp, 0, NULL, 1, 0, NULL, 0);
 	SCTP_STAT_INCR_COUNTER64(sctps_outcontrolchunks);
-	return (0);
+	return;
 }
 
-int
+void
 sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 			     uint32_t vrf_id, uint32_t table_id)
 {
@@ -9519,7 +9519,7 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 
 	mout = sctp_get_mbuf_for_msg(len, 1, M_DONTWAIT, 1, MT_DATA);
 	if(mout == NULL) {
-		return(-1);
+		return;
 	}
 	SCTP_BUF_LEN(mout) = len;
 	iph = mtod(m, struct ip *);
@@ -9570,12 +9570,12 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 		    (caddr_t)ip6_out + offset_out);
 	} else {
 		/* Currently not supported. */
-		return (-1);
+		return;
 	}
 	if (SCTP_GET_HEADER_FOR_OUTPUT(o_pak)) {
 		/* no mbuf's */
 		sctp_m_freem(mout);
-		return (-1);
+		return;
 	}
 	/* Now copy in and fill in the ABORT tags etc. */
 	comp_cp->sh.src_port = sh->dest_port;
@@ -9637,7 +9637,7 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 	SCTP_STAT_INCR(sctps_sendpackets);
 	SCTP_STAT_INCR_COUNTER64(sctps_outpackets);
 	SCTP_STAT_INCR_COUNTER64(sctps_outcontrolchunks);
-	return (0);
+	return;
 
 }
 
