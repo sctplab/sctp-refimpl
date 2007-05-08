@@ -1750,7 +1750,7 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 		stcb->asoc.delayed_connection = 1;
 		sctp_timer_start(SCTP_TIMER_TYPE_INIT, inp, stcb, stcb->asoc.primary_destination);
 	} else {
-		SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_entered);
+		(void)SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_entered);
 		sctp_send_initiate(inp, stcb);
 	}
 	SCTP_TCB_UNLOCK(stcb);
@@ -3363,7 +3363,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		}
 		if (stcb->asoc.delayed_connection == 1) {
 			stcb->asoc.delayed_connection = 0;
-			SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_entered);
+			(void)SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_entered);
 			sctp_timer_stop(SCTP_TIMER_TYPE_INIT, inp, stcb, 
 					stcb->asoc.primary_destination,
 					SCTP_FROM_SCTP_USRREQ+SCTP_LOC_9);
@@ -4343,7 +4343,7 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		soisconnecting(so);
 	}
 	stcb->asoc.state = SCTP_STATE_COOKIE_WAIT;
-	SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_entered);
+	(void)SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_entered);
 
 	/* initialize authentication parameters for the assoc */
 	sctp_initialize_auth_params(inp, stcb);

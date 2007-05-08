@@ -615,7 +615,7 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 			sctp_ulp_notify(SCTP_NOTIFY_PEER_SHUTDOWN, stcb, 0, NULL);
 
 			/* reset time */
-			SCTP_GETTIME_TIMEVAL(&asoc->time_entered);
+			(void)SCTP_GETTIME_TIMEVAL(&asoc->time_entered);
 		}
 	}
 	if (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_SENT) {
@@ -1041,7 +1041,7 @@ sctp_handle_init_ack(struct mbuf *m, int iphlen, int offset,
 
 		/* reset the RTO calc */
 		stcb->asoc.overall_error_count = 0;
-		SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_entered);
+		(void)SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_entered);
 		/*
 		 * collapse the init timer back in case of a exponential
 		 * backoff
@@ -2015,7 +2015,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	/*
 	 * check the cookie timestamps to be sure it's not stale
 	 */
-	SCTP_GETTIME_TIMEVAL(&now);
+	(void)SCTP_GETTIME_TIMEVAL(&now);
 	/* Expire time is in Ticks, so we convert to seconds */
 	time_expires.tv_sec = cookie->time_entered.tv_sec + cookie->cookie_life;
 	time_expires.tv_usec = cookie->time_entered.tv_usec;
@@ -2339,7 +2339,7 @@ sctp_handle_cookie_ack(struct sctp_cookie_ack_chunk *cp,
 			net->RTO = sctp_calculate_rto(stcb, asoc, net,
 			    &asoc->time_entered);
 		}
-		SCTP_GETTIME_TIMEVAL(&asoc->time_entered);
+		(void)SCTP_GETTIME_TIMEVAL(&asoc->time_entered);
 		sctp_ulp_notify(SCTP_NOTIFY_ASSOC_UP, stcb, 0, NULL);
 		if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 		    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {

@@ -4218,7 +4218,7 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	    m, 0, NULL, 0, 0, NULL, 0);
 	SCTP_STAT_INCR_COUNTER64(sctps_outcontrolchunks);
 	sctp_timer_start(SCTP_TIMER_TYPE_INIT, inp, stcb, net);
-	SCTP_GETTIME_TIMEVAL(&net->last_sent_time);
+	(void)SCTP_GETTIME_TIMEVAL(&net->last_sent_time);
 }
 
 struct mbuf *
@@ -4727,7 +4727,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	SCTP_BUF_LEN(m) = sizeof(struct sctp_init_msg);
 
 	/* the time I built cookie */
-	SCTP_GETTIME_TIMEVAL(&stc.time_entered);
+	(void)SCTP_GETTIME_TIMEVAL(&stc.time_entered);
 
 	/* populate any tie tags */
 	if (asoc != NULL) {
@@ -5501,7 +5501,7 @@ sctp_set_prsctp_policy(struct sctp_tcb *stcb,
 		case CHUNK_FLAGS_PR_SCTP_TTL:
 		{
 			struct timeval tv;
-			SCTP_GETTIME_TIMEVAL(&sp->ts);
+			(void)SCTP_GETTIME_TIMEVAL(&sp->ts);
 			tv.tv_sec = sp->timetolive / 1000;
 			tv.tv_usec = (sp->timetolive * 1000) % 1000000;
 #ifndef __FreeBSD__
@@ -5589,7 +5589,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 		sp->addr_over = 0;
 	}
 	atomic_add_int(&sp->net->ref_count, 1);
-	SCTP_GETTIME_TIMEVAL(&sp->ts);
+	(void)SCTP_GETTIME_TIMEVAL(&sp->ts);
 	sp->stream = srcv->sinfo_stream;
 	sp->msg_is_complete = 1;
 	sp->sender_all_done = 1;
@@ -7312,7 +7312,7 @@ again_one_more_time:
 						/* error, could not output */
 						if (hbflag) {
 							if (*now_filled == 0) {
-								SCTP_GETTIME_TIMEVAL(&net->last_sent_time);
+								(void)SCTP_GETTIME_TIMEVAL(&net->last_sent_time);
 								*now_filled = 1;
 								*now = net->last_sent_time;
 							} else {
@@ -7335,7 +7335,7 @@ again_one_more_time:
 					/* Only HB or ASCONF advances time */
 					if (hbflag) {
 						if (*now_filled == 0) {
-							SCTP_GETTIME_TIMEVAL(&net->last_sent_time);
+							(void)SCTP_GETTIME_TIMEVAL(&net->last_sent_time);
 							*now_filled = 1;
 							*now = net->last_sent_time;
 						} else {
@@ -7583,7 +7583,7 @@ again_one_more_time:
 #endif
 				if (hbflag) {
 					if (*now_filled == 0) {
-						SCTP_GETTIME_TIMEVAL(&net->last_sent_time);
+						(void)SCTP_GETTIME_TIMEVAL(&net->last_sent_time);
 						*now_filled = 1;
 						*now = net->last_sent_time;
 					} else {
@@ -7616,7 +7616,7 @@ again_one_more_time:
 			if (bundle_at || hbflag) {
 				/* For data/asconf and hb set time */
 				if (*now_filled == 0) {
-					SCTP_GETTIME_TIMEVAL(&net->last_sent_time);
+					(void)SCTP_GETTIME_TIMEVAL(&net->last_sent_time);
 					*now_filled = 1;
 					*now = net->last_sent_time;
 				} else {
@@ -8250,7 +8250,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 		 * We don't want to mark the net->sent time here since this
 		 * we use this for HB and retrans cannot measure RTT
 		 */
-		/* SCTP_GETTIME_TIMEVAL(&chk->whoTo->last_sent_time); */
+		/* (void)SCTP_GETTIME_TIMEVAL(&chk->whoTo->last_sent_time); */
 		*cnt_out += 1;
 		chk->sent = SCTP_DATAGRAM_SENT;
 		sctp_ucount_decr(asoc->sent_queue_retran_cnt);
@@ -8490,12 +8490,12 @@ one_chunk_around:
 			 * since this we use this for HB and retrans cannot
 			 * measure RTT
 			 */
-			/* SCTP_GETTIME_TIMEVAL(&net->last_sent_time); */
+			/* (void)SCTP_GETTIME_TIMEVAL(&net->last_sent_time); */
 
 			/* For auto-close */
 			cnt_thru++;
 			if (*now_filled == 0) {
-				SCTP_GETTIME_TIMEVAL(&asoc->time_last_sent);
+				(void)SCTP_GETTIME_TIMEVAL(&asoc->time_last_sent);
 				*now = asoc->time_last_sent;
 				*now_filled = 1;
 			} else {
@@ -9646,7 +9646,7 @@ sctp_select_hb_destination(struct sctp_tcb *stcb, struct timeval *now)
 	struct sctp_nets *net, *hnet;
 	int ms_goneby, highest_ms, state_overide = 0;
 
-	SCTP_GETTIME_TIMEVAL(now);
+	(void)SCTP_GETTIME_TIMEVAL(now);
 	highest_ms = 0;
 	hnet = NULL;
 	SCTP_TCB_LOCK_ASSERT(stcb);
@@ -9751,7 +9751,7 @@ sctp_send_hb(struct sctp_tcb *stcb, int user_req, struct sctp_nets *u_net)
 		if (net == NULL) {
 			return (0);
 		}
-		SCTP_GETTIME_TIMEVAL(&now);
+		(void)SCTP_GETTIME_TIMEVAL(&now);
 	}
 	sin = (struct sockaddr_in *)&net->ro._l_addr;
 	if (sin->sin_family != AF_INET) {
@@ -10898,7 +10898,7 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 	sp->ppid = srcv->sinfo_ppid;
 	sp->context = srcv->sinfo_context;
 	sp->strseq = 0;
-	SCTP_GETTIME_TIMEVAL(&sp->ts);
+	(void)SCTP_GETTIME_TIMEVAL(&sp->ts);
 
 	sp->stream = srcv->sinfo_stream;
 	sp->length = min(uio->uio_resid, max_send_len);
@@ -11333,7 +11333,7 @@ sctp_lower_sosend(struct socket *so,
 			queue_only = 1;
 			asoc = &stcb->asoc;
 			asoc->state = SCTP_STATE_COOKIE_WAIT;
-			SCTP_GETTIME_TIMEVAL(&asoc->time_entered);
+			(void)SCTP_GETTIME_TIMEVAL(&asoc->time_entered);
 			
 			/* initialize authentication params for the assoc */
 			sctp_initialize_auth_params(inp, stcb);
