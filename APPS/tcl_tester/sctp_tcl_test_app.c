@@ -40,7 +40,9 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#ifdef __FreeBSD__
 #include <getopt.h>
+#endif
 
 #include <netinet/sctp.h>
 
