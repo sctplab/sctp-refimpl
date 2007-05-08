@@ -452,14 +452,10 @@ sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 		wi = SCTP_ZONE_GET(sctppcbinfo.ipi_zone_laddr, struct sctp_laddr);
 		if (wi == NULL) {
 			/*
-			 * Gak, what can we do? We have lost an address change can
-			 * you say HOSED?
+			 * Gak, what can we do? We have lost an address
+			 * change can you say HOSED?
 			 */
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_PCB1) {
-				printf("Lost and address change ???\n");
-			}
-#endif				/* SCTP_DEBUG */
+			SCTPDBG(SCTP_DEBUG_PCB1, "Lost and address change ???\n");
 			/* Opps, must decrement the count */
 			sctp_del_addr_from_vrf(vrf_id, addr, ifn_index);
 			return(NULL);
@@ -496,9 +492,7 @@ sctp_del_addr_from_vrf(uint32_t vrf_id, struct sockaddr *addr,
 
 	vrf = sctp_find_vrf(vrf_id);
 	if (vrf == NULL) {
-#ifdef SCTP_DEBUG
-		printf("Can't find vrf_id:%d\n", vrf_id);
-#endif
+		SCTP_PRINTF("Can't find vrf_id:%d\n", vrf_id);
 		goto out_now;
 	}
 
@@ -520,11 +514,12 @@ sctp_del_addr_from_vrf(uint32_t vrf_id, struct sockaddr *addr,
 	}
 #ifdef SCTP_DEBUG
 	else {
-		printf("Del Addr-ifn:%d Could not find address:", 
-		       ifn_index);
-		sctp_print_address(addr);
+		SCTPDBG(SCTP_DEBUG_PCB1, "Del Addr-ifn:%d Could not find address:", 
+			ifn_index);
+		SCTPDBG_ADDR(SCTP_DEBUG_PCB1, addr);
 	}
 #endif
+
  out_now:
 	SCTP_IPI_ADDR_UNLOCK();	
 	if (sctp_ifap) {
@@ -533,14 +528,10 @@ sctp_del_addr_from_vrf(uint32_t vrf_id, struct sockaddr *addr,
 		wi = SCTP_ZONE_GET(sctppcbinfo.ipi_zone_laddr, struct sctp_laddr);
 		if (wi == NULL) {
 			/*
-			 * Gak, what can we do? We have lost an address change can
-			 * you say HOSED?
+			 * Gak, what can we do? We have lost an address
+			 * change can you say HOSED?
 			 */
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_PCB1) {
-				printf("Lost and address change ???\n");
-			}
-#endif				/* SCTP_DEBUG */
+			SCTPDBG(SCTP_DEBUG_PCB1, "Lost and address change ???\n");
 
 			/* Opps, must decrement the count */
 			sctp_free_ifa(sctp_ifap);
@@ -654,19 +645,11 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 			LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
 
 				if (laddr->ifa == NULL) {
-#ifdef SCTP_DEBUG
-					if (sctp_debug_on & SCTP_DEBUG_PCB1) {
-						printf("An ounce of prevention is worth a pound of cure\n");
-					}
-#endif
+					SCTPDBG(SCTP_DEBUG_PCB1, "%s: NULL ifa\n", __FUNCTION__);
 					continue;
 				}
 				if (laddr->ifa->localifa_flags & SCTP_BEING_DELETED) {
-#ifdef SCTP_DEBUG
-					if (sctp_debug_on & SCTP_DEBUG_PCB1) {
-						printf("ifa being deleted\n");
-					}
-#endif
+					SCTPDBG(SCTP_DEBUG_PCB1, "ifa being deleted\n");
 					continue;
 				}
 				if (laddr->ifa->address.sa.sa_family ==
@@ -1358,25 +1341,14 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 		}
 		LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
 			if (laddr->ifa == NULL) {
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_PCB1) {
-					printf("An ounce of prevention is worth a pound of cure\n");
-				}
-#endif
+				SCTPDBG(SCTP_DEBUG_PCB1, "%s: NULL ifa\n",
+					__FUNCTION__);
 				continue;
 			}
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_PCB1) {
-				printf("Ok laddr->ifa:%p is possible, ",
-				    laddr->ifa);
-			}
-#endif
+			SCTPDBG(SCTP_DEBUG_PCB1, "Ok laddr->ifa:%p is possible, ",
+				laddr->ifa);
 			if (laddr->ifa->localifa_flags & SCTP_BEING_DELETED) {
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_PCB1) {
-					printf("Huh IFA being deleted\n");
-				}
-#endif
+				SCTPDBG(SCTP_DEBUG_PCB1, "Huh IFA being deleted\n");
 				continue;
 			}
 			if (laddr->ifa->address.sa.sa_family == nam->sa_family) {
@@ -1425,7 +1397,8 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 #endif
 
 struct sctp_inpcb *
-sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool, int have_lock, uint32_t vrf_id)
+sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool, int have_lock,
+		uint32_t vrf_id)
 {
 	/*
 	 * First we check the hash table to see if someone has this port
@@ -1918,11 +1891,7 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 		retval = sctp_findassociation_addr_sa(to, from, &inp, netp,
 		    find_tcp_pool, vrf_id);
 	}
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_PCB1) {
-		printf("retval:%p inp:%p\n", retval, inp);
-	}
-#endif
+	SCTPDBG(SCTP_DEBUG_PCB1, "retval:%p inp:%p\n", retval, inp);
 	if (retval == NULL && inp) {
 		/* Found a EP but not this address */
 		if ((ch->chunk_type == SCTP_INITIATION) ||
@@ -1951,11 +1920,7 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 			}
 		}
 	}
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_PCB1) {
-		printf("retval is %p\n", retval);
-	}
-#endif
+	SCTPDBG(SCTP_DEBUG_PCB1, "retval is %p\n", retval);
 	return (retval);
 }
 
@@ -2009,11 +1974,8 @@ sctp_findassociation_ep_asconf(struct mbuf *m, int iphlen, int offset,
 	phdr = sctp_get_next_param(m, offset + sizeof(struct sctp_asconf_chunk),
 				   &parm_buf, sizeof(struct sctp_paramhdr));
 	if (phdr == NULL) {
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INPUT3) {
-			printf("findassociation_ep_asconf: failed to get asconf lookup addr\n");
-		}
-#endif				/* SCTP_DEBUG */
+		SCTPDBG(SCTP_DEBUG_INPUT3, "%s: failed to get asconf lookup addr\n",
+			__FUNCTION__);
 		return NULL;
 	}
 	ptype = (int)((uint32_t) ntohs(phdr->param_type));
@@ -2029,11 +1991,8 @@ sctp_findassociation_ep_asconf(struct mbuf *m, int iphlen, int offset,
 								       offset + sizeof(struct sctp_asconf_chunk),
 								       &p6_buf.ph, sizeof(*p6));
 		if (p6 == NULL) {
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_INPUT3) {
-				printf("findassociation_ep_asconf: failed to get asconf v6 lookup addr\n");
-			}
-#endif				/* SCTP_DEBUG */
+			SCTPDBG(SCTP_DEBUG_INPUT3, "%s: failed to get asconf v6 lookup addr\n",
+				__FUNCTION__);
 			return (NULL);
 		}
 		sin6 = (struct sockaddr_in6 *)&remote_store;
@@ -2054,11 +2013,8 @@ sctp_findassociation_ep_asconf(struct mbuf *m, int iphlen, int offset,
 								       offset + sizeof(struct sctp_asconf_chunk),
 								       &p4_buf.ph, sizeof(*p4));
 		if (p4 == NULL) {
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_INPUT3) {
-				printf("findassociation_ep_asconf: failed to get asconf v4 lookup addr\n");
-			}
-#endif				/* SCTP_DEBUG */
+			SCTPDBG(SCTP_DEBUG_INPUT3, "%s: failed to get asconf v4 lookup addr\n",
+				__FUNCTION__);
 			return (NULL);
 		}
 		sin = (struct sockaddr_in *)&remote_store;
@@ -2116,7 +2072,7 @@ sctp_inpcb_alloc(struct socket *so)
 	SCTP_INP_INFO_WLOCK();
 	inp = SCTP_ZONE_GET(sctppcbinfo.ipi_zone_ep, struct sctp_inpcb);
 	if (inp == NULL) {
-		printf("Out of SCTP-INPCB structures - no resources\n");
+		SCTP_PRINTF("Out of SCTP-INPCB structures - no resources\n");
 #if defined(SCTP_PER_SOCKET_LOCKING)
 		SCTP_UNLOCK_EXC(sctppcbinfo.ipi_ep_mtx);
 #endif
@@ -2208,7 +2164,7 @@ sctp_inpcb_alloc(struct socket *so)
 	inp->sctp_tcbhash = SCTP_HASH_INIT(sctp_pcbtblsize,
 					   &inp->sctp_hashmark);
 	if (inp->sctp_tcbhash == NULL) {
-		printf("Out of SCTP-INPCB->hashinit - no resources\n");
+		SCTP_PRINT("Out of SCTP-INPCB->hashinit - no resources\n");
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, inp);
 #if defined(SCTP_PER_SOCKET_LOCKING)
 		SCTP_UNLOCK_EXC(sctppcbinfo.ipi_ep_mtx);
@@ -2237,7 +2193,7 @@ sctp_inpcb_alloc(struct socket *so)
 	/* LOCK init's */
 	inp->ip_inp.inp.inpcb_mtx = lck_mtx_alloc_init(sctppcbinfo.mtx_grp, sctppcbinfo.mtx_attr);
 	if (inp->ip_inp.inp.inpcb_mtx == NULL) {
-		printf("in_pcballoc: can't alloc mutex! so=%x\n", so);
+		SCTP_PRINTF("in_pcballoc: can't alloc mutex! so=%x\n", so);
 #ifdef SCTP_MVRF
 		SCTP_FREE(inp->m_vrf_ids);
 #endif
@@ -2443,11 +2399,7 @@ sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
 				 * HOSED. We probably should send an abort
 				 * here.
 				 */
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_PCB1) {
-					printf("Association hosed in TCP model, out of laddr memory\n");
-				}
-#endif				/* SCTP_DEBUG */
+				SCTPDBG(SCTP_DEBUG_PCB1, "Association hosed in TCP model, out of laddr memory\n");
 				continue;
 			}
 			SCTP_INCR_LADDR_COUNT();
@@ -2579,15 +2531,13 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	ip_inp = (struct inpcb *)so->so_pcb;
 #ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_PCB1) {
-		if (addr) {
-			printf("Bind called port:%d\n",
-			       ntohs(((struct sockaddr_in *)addr)->sin_port));
-			printf("Addr :");
-			sctp_print_address(addr);
-		}
+	if (addr) {
+		SCTPDBG(SCTP_DEBUG_PCB1, "Bind called port:%d\n",
+			ntohs(((struct sockaddr_in *)addr)->sin_port));
+		SCTPDBG(SCTP_DEBUG_PCB1, "Addr :");
+		SCTPDBG_ADDR(SCTP_DEBUG_PCB1, addr);
 	}
-#endif				/* SCTP_DEBUG */
+#endif
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) == 0) {
 		/* already did a bind, subsequent binds NOT allowed ! */
 		return (EINVAL);
@@ -2980,11 +2930,8 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 							     sctppcbinfo.hashmark)];
 	/* put it in the bucket */
 	LIST_INSERT_HEAD(head, inp, sctp_hash);
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_PCB1) {
-		printf("Main hash to bind at head:%p, bound port:%d\n", head, ntohs(lport));
-	}
-#endif
+	SCTPDBG(SCTP_DEBUG_PCB1, "Main hash to bind at head:%p, bound port:%d\n",
+		head, ntohs(lport));
 	/* set in the port */
 	inp->sctp_lport = lport;
 
@@ -3106,7 +3053,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
 #endif
-		printf("This conflict in free SHOULD not be happening!\n");
+		SCTP_PRINTF("This conflict in free SHOULD not be happening!\n");
 #if !defined(SCTP_PER_SOCKET_LOCKING)
 		SCTP_ITERATOR_UNLOCK();
 #endif
@@ -3119,9 +3066,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	SCTP_INP_INFO_WLOCK();
 
 	SCTP_INP_WLOCK(inp);
-	/* First time through we have the socket lock, after that
-	 * no more.
-	 */
+	/* First time through we have the socket lock, after that no more. */
 	if(from == SCTP_CALLED_AFTER_CMPSET_OFCLOSE) {
 		/* Once we are in we can remove the flag 
 		 * from = 1 is only passed from the actual
@@ -3240,7 +3185,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 					sp = TAILQ_LAST(&((asoc->asoc.locked_on_sending)->outqueue), 
 						sctp_streamhead);
 					if(sp == NULL) {
-						printf("Error, sp is NULL, locked on sending is %p strm:%d\n",
+						SCTP_PRINTF("Error, sp is NULL, locked on sending is %p strm:%d\n",
 						       asoc->asoc.locked_on_sending,
 						       asoc->asoc.locked_on_sending->stream_no);
 					} else {
@@ -3661,12 +3606,9 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	struct sctp_nets *net, *netfirst;
 	int addr_inscope;
 
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_PCB1) {
-		printf("Adding an address (from:%d) to the peer: ", from);
-		sctp_print_address(newaddr);
-	}
-#endif
+	SCTPDBG(SCTP_DEBUG_PCB1, "Adding an address (from:%d) to the peer: ",
+		from);
+	SCTPDBG_ADDR(SCTP_DEBUG_PCB1, newaddr);
 
 	netfirst = sctp_findnet(stcb, newaddr);
 	if (netfirst) {
@@ -3870,7 +3812,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 			net->mtu = 0;
 		}
 #ifdef SCTP_PRINT_FOR_B_AND_M 
-		printf("We have found an interface mtu of %d\n", net->mtu);
+		SCTP_PRINTF("We have found an interface mtu of %d\n", net->mtu);
 #endif
 		if(net->mtu == 0) {
 			/* Huh ?? */
@@ -3879,7 +3821,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 			uint32_t rmtu;
 			rmtu = SCTP_GATHER_MTU_FROM_ROUTE(net->ro._s_addr, &net->ro._l_addr.sa, net->ro.ro_rt);
 #ifdef SCTP_PRINT_FOR_B_AND_M 
-			printf("The route mtu is %d\n", rmtu);
+			SCTP_PRINTF("The route mtu is %d\n", rmtu);
 #endif
 			if (rmtu == 0) {
 				/* Start things off to match mtu of interface please. */
@@ -3895,8 +3837,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	        }
 		if (from == SCTP_ALLOC_ASOC) {
 #ifdef SCTP_PRINT_FOR_B_AND_M 
-			printf("New assoc sets mtu to :%d\n",
-			       net->mtu);
+			SCTP_PRINTF("New assoc sets mtu to :%d\n", net->mtu);
 #endif
 			stcb->asoc.smallest_mtu = net->mtu;
 		}
@@ -3905,8 +3846,8 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	}
 	if (stcb->asoc.smallest_mtu > net->mtu) {
 #ifdef SCTP_PRINT_FOR_B_AND_M 
-		printf("new address mtu:%d smaller than smallest:%d\n",
-		       net->mtu, stcb->asoc.smallest_mtu);
+		SCTP_PRINTF("new address mtu:%d smaller than smallest:%d\n",
+			    net->mtu, stcb->asoc.smallest_mtu);
 #endif
 		stcb->asoc.smallest_mtu = net->mtu;
 	}
@@ -4065,15 +4006,14 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		*error = EINVAL;
 		return (NULL);
 	}
+	SCTPDBG(SCTP_DEBUG_PCB3, "Allocate an association for peer:");
 #ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_PCB3) {
-		printf("Allocate an association for peer:");
-		if (firstaddr) {
-			sctp_print_address(firstaddr);
-			printf("Port:%d\n",
-			       ntohs(((struct sockaddr_in *)firstaddr)->sin_port));
-		} else
-			printf("None\n");
+	if (firstaddr) {
+		SCTPDBG_ADDR(SCTP_DEBUG_PCB3, firstaddr);
+		SCTPDBG(SCTP_DEBUG_PCB3, "Port:%d\n",
+			ntohs(((struct sockaddr_in *)firstaddr)->sin_port));
+	} else {
+		SCTPDBG(SCTP_DEBUG_PCB3,"None\n");
 	}
 #endif				/* SCTP_DEBUG */
 	if (firstaddr->sa_family == AF_INET) {
@@ -4217,11 +4157,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		LIST_INSERT_HEAD(head, stcb, sctp_tcbhash);
 	}
 	SCTP_INP_WUNLOCK(inp);
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_PCB1) {
-		printf("Association %p now allocated\n", stcb);
-	}
-#endif
+	SCTPDBG(SCTP_DEBUG_PCB1, "Association %p now allocated\n", stcb);
 	return (stcb);
 }
 
@@ -5077,11 +5013,8 @@ sctp_update_ep_vflag(struct sctp_inpcb *inp)
 	/* set the flag based on addresses on the ep list */
 	LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
 		if (laddr->ifa == NULL) {
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_PCB1) {
-				printf("An ounce of prevention is worth a pound of cure\n");
-			}
-#endif				/* SCTP_DEBUG */
+			SCTPDBG(SCTP_DEBUG_PCB1, "%s: NULL ifa\n",
+				__FUNCTION__);
 			continue;
 		}
 
@@ -5934,7 +5867,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			if (lptype == SCTP_IPV4_ADDRESS) {
 				if (plen !=
 				    sizeof(struct sctp_asconf_addrv4_param)) {
-					printf("Sizeof setprim in init/init ack not %d but %d - ignored\n",
+					SCTP_PRINTF("Sizeof setprim in init/init ack not %d but %d - ignored\n",
 					       (int)sizeof(struct sctp_asconf_addrv4_param),
 					       plen);
 				} else {
@@ -5945,7 +5878,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			} else if (lptype == SCTP_IPV6_ADDRESS) {
 				if (plen !=
 				    sizeof(struct sctp_asconf_addr_param)) {
-					printf("Sizeof setprim (v6) in init/init ack not %d but %d - ignored\n",
+					SCTP_PRINTF("Sizeof setprim (v6) in init/init ack not %d but %d - ignored\n",
 					       (int)sizeof(struct sctp_asconf_addr_param),
 					       plen);
 				} else {
@@ -6023,10 +5956,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			random_len = plen - sizeof(*p_random);
 			/* enforce the random length */
 			if (random_len != SCTP_AUTH_RANDOM_SIZE_REQUIRED) {
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_AUTH1)
-					printf("SCTP: invalid RANDOM len\n");
-#endif
+				SCTPDBG(SCTP_DEBUG_AUTH1, "SCTP: invalid RANDOM len\n");
 				return (-27);
 			}
 			got_random = 1;
@@ -6457,12 +6387,10 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	 * if we see a possible attack underway just abort the association.
 	 */
 #ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_PCB1) {
-		if (cnt) {
-			printf("Freed %d chunks from reneg harvest\n", cnt);
-		}
+	if (cnt) {
+		SCTPDBG(SCTP_DEBUG_PCB1, "Freed %d chunks from reneg harvest\n", cnt);
 	}
-#endif				/* SCTP_DEBUG */
+#endif
 	if (cnt) {
 		/*
 		 * Now do we need to find a new
@@ -6481,7 +6409,7 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 			 * have found NO data... wierd... we will start at
 			 * end of mapping array.
 			 */
-			printf("Gap was larger than array?? %d set to max:%d maparraymax:%x\n",
+			SCTP_PRINTF("Gap was larger than array?? %d set to max:%d maparraymax:%x\n",
 			    (int)gap,
 			    (int)(asoc->mapping_array_size << 3),
 			    (int)asoc->highest_tsn_inside_map);
