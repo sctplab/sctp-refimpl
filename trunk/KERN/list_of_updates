@@ -1,8 +1,5 @@
--  Static analyisis fixes for cisco's commit (this is equivilant
-   to the coverity tool.. may even be the same one.. not sure).
--  A bug in the way sctp_abort() and friends were
-   setting the IP_CLOSE flag.. and NOT passing the
-   last argument as a (,1)... so that things would
-   get freed.. 
+-  Get rid of the sctp_inpcb_free() magic numbers, now they
+   are sensible defines that tell what you are directing
+   the function to do.
 
 
