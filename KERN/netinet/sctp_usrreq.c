@@ -568,7 +568,8 @@ sctp_abort(struct socket *so)
 #ifdef SCTP_LOG_CLOSING
 		sctp_log_closing(inp, NULL, 16);
 #endif
-		sctp_inpcb_free(inp, 1, SCTP_CALLED_AFTER_CMPSET_OFCLOSE);
+		sctp_inpcb_free(inp, SCTP_FREE_SHOULD_USE_ABORT, 
+				SCTP_CALLED_AFTER_CMPSET_OFCLOSE);
 		SOCK_LOCK(so);
 		SCTP_SB_CLEAR(so->so_snd);
 		/* same for the rcv ones, they are only
@@ -672,7 +673,8 @@ sctp_attach(struct socket *so, int proto, struct proc *p)
 			sctp_log_closing(inp, NULL, 15);
 #endif
 			SCTP_INP_WUNLOCK(inp);
-			sctp_inpcb_free(inp, 1, SCTP_CALLED_AFTER_CMPSET_OFCLOSE);
+			sctp_inpcb_free(inp, SCTP_FREE_SHOULD_USE_ABORT, 
+					SCTP_CALLED_AFTER_CMPSET_OFCLOSE);
 		} else {
 			SCTP_INP_WUNLOCK(inp);
 		}
@@ -761,12 +763,14 @@ sctp_close(struct socket *so)
 #ifdef SCTP_LOG_CLOSING
 			sctp_log_closing(inp, NULL, 13);
 #endif
-			sctp_inpcb_free(inp, 1, SCTP_CALLED_AFTER_CMPSET_OFCLOSE);
+			sctp_inpcb_free(inp, SCTP_FREE_SHOULD_USE_ABORT, 
+					SCTP_CALLED_AFTER_CMPSET_OFCLOSE);
 		} else {
 #ifdef SCTP_LOG_CLOSING
 			sctp_log_closing(inp, NULL, 14);
 #endif
-			sctp_inpcb_free(inp, 0, SCTP_CALLED_AFTER_CMPSET_OFCLOSE);
+			sctp_inpcb_free(inp, SCTP_FREE_SHOULD_USE_GRACEFUL_CLOSE,
+					SCTP_CALLED_AFTER_CMPSET_OFCLOSE);
 		}
 		/* The socket is now detached, no matter what
 		 * the state of the SCTP association.
@@ -831,12 +835,14 @@ sctp_detach(struct socket *so)
 #ifdef SCTP_LOG_CLOSING
 			sctp_log_closing(inp, NULL, 13);
 #endif
-			sctp_inpcb_free(inp, 1, SCTP_CALLED_AFTER_CMPSET_OFCLOSE);
+			sctp_inpcb_free(inp, SCTP_FREE_SHOULD_USE_ABORT, 
+					SCTP_CALLED_AFTER_CMPSET_OFCLOSE);
 		} else {
 #ifdef SCTP_LOG_CLOSING
 			sctp_log_closing(inp, NULL, 13);
 #endif
-			sctp_inpcb_free(inp, 0, SCTP_CALLED_AFTER_CMPSET_OFCLOSE);
+			sctp_inpcb_free(inp, SCTP_FREE_SHOULD_USE_GRACEFUL_CLOSE, 
+					SCTP_CALLED_AFTER_CMPSET_OFCLOSE);
 		}
 		/* The socket is now detached, no matter what
 		 * the state of the SCTP association.
