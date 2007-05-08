@@ -100,9 +100,9 @@ void sctp_send_shutdown(struct sctp_tcb *, struct sctp_nets *);
 
 void sctp_send_shutdown_ack(struct sctp_tcb *, struct sctp_nets *);
 
-int sctp_send_shutdown_complete(struct sctp_tcb *, struct sctp_nets *);
+void sctp_send_shutdown_complete(struct sctp_tcb *, struct sctp_nets *);
 
-int sctp_send_shutdown_complete2(struct mbuf *, int, struct sctphdr *,
+void sctp_send_shutdown_complete2(struct mbuf *, int, struct sctphdr *,
 				 uint32_t, uint32_t);
 
 void sctp_send_asconf(struct sctp_tcb *, struct sctp_nets *);
