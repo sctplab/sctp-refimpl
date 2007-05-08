@@ -3956,6 +3956,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			if(netp) {
 				ret = sctp_handle_init_ack(m, iphlen, *offset, sh,
 							   (struct sctp_init_ack_chunk *)ch, stcb, *netp, &abort_no_unlock, vrf_id, table_id);
+			} else {
+				ret = -1;
 			}
 			/*
 			 * Special case, I must call the output routine to
@@ -4132,7 +4134,6 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				;
 			} else {
 				if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
-				    (stcb == NULL)) {
 					/* We are not interested anymore */
 					*offset = length;
 					return (NULL);
@@ -5322,8 +5323,11 @@ sctp_input(i_pak, va_alist)
 	if (m) {
 		sctp_m_freem(m);
 	}
+#ifdef __Panda__
 	/* For BSD/MAC this does nothing */
 	SCTP_DETACH_HEADER_FROM_CHAIN(i_pak);
 	(void)SCTP_RELEASE_HEADER(i_pak);
+#endif
+
 	return;
 }
