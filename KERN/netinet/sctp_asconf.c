@@ -2804,7 +2804,7 @@ sctp_addr_mgmt_ep_sa(struct sctp_inpcb *inp, struct sockaddr *sa, uint32_t type,
 		wi->action = type;
 		atomic_add_int(&ifa->refcount, 1);
 		LIST_INSERT_HEAD(&asc->list_of_work, wi, sctp_nxt_addr);
-		sctp_initiate_iterator(sctp_iterator_ep, 
+		(void)sctp_initiate_iterator(sctp_iterator_ep, 
 				       sctp_iterator_stcb, 
 				       sctp_iterator_ep_end,
 				       SCTP_PCB_ANY_FLAGS,

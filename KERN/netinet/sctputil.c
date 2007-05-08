@@ -1368,7 +1368,7 @@ sctp_handle_addr_wq(void)
 	if(asc->cnt == 0) {
 		SCTP_FREE(asc);
 	} else {
-		sctp_initiate_iterator(sctp_iterator_ep, 
+		(void)sctp_initiate_iterator(sctp_iterator_ep, 
 				       sctp_iterator_stcb, 
 				       NULL, 	/* No ep end for boundall */
 				       SCTP_PCB_FLAGS_BOUNDALL,
