@@ -1,7 +1,35 @@
+/*-
+ * Copyright (c) 2007, Cisco Systems, Inc. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without 
+ * modification, are permitted provided that the following conditions are met:
+ * 
+ * a) Redistributions of source code must retain the above copyright notice, 
+ *   this list of conditions and the following disclaimer.
+ *
+ * b) Redistributions in binary form must reproduce the above copyright 
+ *    notice, this list of conditions and the following disclaimer in 
+ *   the documentation and/or other materials provided with the distribution.
+ *
+ * c) Neither the name of Cisco Systems, Inc. nor the names of its 
+ *    contributors may be used to endorse or promote products derived 
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF 
+ * THE POSSIBILITY OF SUCH DAMAGE.
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <poll.h>
 #include <errno.h>
 #include <setjmp.h>
 #include <string.h>
@@ -97,7 +125,7 @@ uint32_t notify_in_cnt=0;
 uint32_t sends_out = 0;
 uint32_t sends_ping_resp = 0;
 
-struct timespec delay;
+struct timespec mydelay;
 struct sctp_sndrcvinfo sinfo_in, sinfo_out;
 
 /* Max message sizes */
@@ -394,7 +422,7 @@ setup_a_socket()
 	}
 	on_off = 1;
 	siz = sizeof(on_off);
-	/* set no delay */
+	/* set no mydelay */
 	if(setsockopt(sd,IPPROTO_SCTP, SCTP_NODELAY, &on_off, siz) != 0) {
 		printf("Can't set SCTP_NODELAY to on error:%d - exiting\n", errno);
 		exit (-1);
@@ -495,7 +523,6 @@ handle_read_event(int *notDone, int sd)
 int
 main (int argc, char **argv)
 {
-	struct pollfd fds[1];
 	testDgram_t *snd;
 	char send_buffer[SEND_BUF_SIZE];
 	socklen_t salen;
@@ -506,8 +533,8 @@ main (int argc, char **argv)
 	remote_port = local_port = htons(2222);
 	memset(&addr, 0, sizeof(addr));
 	memset(&bindto, 0, sizeof(bindto));
-	memset(&delay, 0, sizeof(delay));
-	delay.tv_nsec = 100 * 1000000;
+	memset(&mydelay, 0, sizeof(mydelay));
+	mydelay.tv_nsec = 100 * 1000000;
 
 	bindto.sa.sa_family = AF_INET6;
 	bindto.sa.sa_len = sizeof(struct sockaddr_in6);
@@ -517,13 +544,13 @@ main (int argc, char **argv)
 		switch(i) {
 		case 'D':
 			timeof = strtol(optarg, NULL, 0);
-			delay.tv_sec = 0;
+			mydelay.tv_sec = 0;
 
 			while(timeof > 1000000) {
-				delay.tv_sec++;
+				mydelay.tv_sec++;
 				timeof -= 1000000;
 			}
-			delay.tv_nsec = timeof * 1000000;
+			mydelay.tv_nsec = timeof * 1000000;
 			break;
 		case 'l':
 			listen_only = 1;
@@ -657,8 +684,8 @@ main (int argc, char **argv)
 		} else {
 			printf("I will NOT send any data at association startup\n");
 		}
-		printf("I will delay %d.%6.6d between any assoc failure to restart attempt\n",
-		       delay.tv_sec, (delay.tv_nsec/1000000));
+		printf("I will mydelay %d.%6.6d between any assoc failure to restart attempt\n",
+		       mydelay.tv_sec, (mydelay.tv_nsec/1000000));
 	}
 	if ((listen_only == 0) && ((dest_addr_set == 0)  || (dest_port_set == 0))) {
 		printf("You must set -h and -p if you do not use -l\n");
@@ -695,9 +722,6 @@ main (int argc, char **argv)
 			printf("huh?\n");
 			exit(0);
 		}
-		fds[0].fd = sd;
-		fds[0].events = POLLIN;
-		fds[0].revents = 0;
 		if (addr.sa.sa_family == AF_INET) {
 			salen = sizeof(struct sockaddr_in);
 		} else {
@@ -723,9 +747,9 @@ main (int argc, char **argv)
 				if(sctp_connectx(sd, &addr.sa, 1, &sinfo_out.sinfo_assoc_id) < 0) {
 					printf("Connect fails error:%d - next loop\n", errno);
 				next_iteration_with_sleep:
-					delay.tv_sec++;
-					nanosleep(&delay, NULL);
-					delay.tv_sec--;
+					mydelay.tv_sec++;
+					nanosleep(&mydelay, NULL);
+					mydelay.tv_sec--;
 					goto next_loop;
 				}
 				printf("Associd:0x%x - Attempt to connect to:", sinfo_out.sinfo_assoc_id);
@@ -743,23 +767,11 @@ main (int argc, char **argv)
 					send_out--;
 				}
 			}
-			fds[0].revents = 0;
-			i = poll(fds, 1, INFTIM);
-			if (i < 0) {
-				printf("Poll returns an error (%d) - next socket\n", errno);
-				goto next_iteration_with_sleep;;
-			}
-			if(fds[0].revents == POLLIN)
-				handle_read_event(&notDone, sd);
-			else {
-				printf("Unknown poll event %d - next socket\n", fds[0].revents);
-				goto next_iteration_with_sleep;
-			}
-			
+			handle_read_event(&notDone, sd);
 		}
 	next_loop:
 		close(sd);
-		nanosleep(&delay, NULL);
+		nanosleep(&mydelay, NULL);
 		notDone = 1;
 		msg_in_cnt = msg_in_cnt_weor = notify_in_cnt = sends_out = sends_ping_resp = 0;
 	}
