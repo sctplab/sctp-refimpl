@@ -3975,7 +3975,7 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		}
 		/* we confirm any address we send an INIT to */
 		net->dest_state &= ~SCTP_ADDR_UNCONFIRMED;
-		sctp_set_primary_addr(stcb, NULL, net);
+		(void)sctp_set_primary_addr(stcb, NULL, net);
 	} else {
 		/* we confirm any address we send an INIT to */
 		net->dest_state &= ~SCTP_ADDR_UNCONFIRMED;

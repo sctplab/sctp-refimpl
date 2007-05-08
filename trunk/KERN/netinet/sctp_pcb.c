@@ -5951,7 +5951,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 				}
 			}
 			if (lsa) {
-				sctp_set_primary_addr(stcb, sa, NULL);
+				(void)sctp_set_primary_addr(stcb, sa, NULL);
 			}
 		} else if (ptype == SCTP_PRSCTP_SUPPORTED) {
 			/* Peer supports pr-sctp */

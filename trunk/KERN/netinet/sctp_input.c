@@ -527,7 +527,7 @@ sctp_handle_heartbeat_ack(struct sctp_heartbeat_chunk *cp,
 		    SCTP_HEARTBEAT_SUCCESS, (void *)r_net);
 		/* now was it the primary? if so restore */
 		if (r_net->dest_state & SCTP_ADDR_WAS_PRIMARY) {
-			sctp_set_primary_addr(stcb, (struct sockaddr *)NULL, r_net);
+			(void)sctp_set_primary_addr(stcb, (struct sockaddr *)NULL, r_net);
 		}
 	}
 	/* Now lets do a RTO with this */
@@ -2155,7 +2155,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	if (netl) {
 		if (netl->dest_state & SCTP_ADDR_UNCONFIRMED) {
 			netl->dest_state &= ~SCTP_ADDR_UNCONFIRMED;
-			sctp_set_primary_addr((*stcb), (struct sockaddr *)NULL,
+			(void)sctp_set_primary_addr((*stcb), (struct sockaddr *)NULL,
 			    netl);
 			sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_CONFIRMED,
 			    (*stcb), 0, (void *)netl);
