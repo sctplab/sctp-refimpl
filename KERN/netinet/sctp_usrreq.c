@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.22 2007/05/08 00:21:04 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.23 2007/05/08 14:32:52 rrs Exp $");
 #endif
 #include <netinet/sctp_os.h>
 #ifdef __FreeBSD__
@@ -568,7 +568,7 @@ sctp_abort(struct socket *so)
 #ifdef SCTP_LOG_CLOSING
 		sctp_log_closing(inp, NULL, 16);
 #endif
-		sctp_inpcb_free(inp, 1, 0);
+		sctp_inpcb_free(inp, 1, 1);
 		SOCK_LOCK(so);
 		SCTP_SB_CLEAR(so->so_snd);
 		/* same for the rcv ones, they are only
@@ -672,7 +672,7 @@ sctp_attach(struct socket *so, int proto, struct proc *p)
 			sctp_log_closing(inp, NULL, 15);
 #endif
 			SCTP_INP_WUNLOCK(inp);
-			sctp_inpcb_free(inp, 1, 0);
+			sctp_inpcb_free(inp, 1, 1);
 		} else {
 			SCTP_INP_WUNLOCK(inp);
 		}
