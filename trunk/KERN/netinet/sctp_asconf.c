@@ -2683,8 +2683,8 @@ sctp_check_address_list_all(struct sctp_tcb *stcb, struct mbuf *m, int offset,
 
 	if(stcb) {
 		vrf_id = stcb->asoc.vrf_id;
-	} else {
-		vrf_id = SCTP_DEFAULT_VRFID;
+	}  else {
+		return;
 	}
 	vrf = sctp_find_vrf(vrf_id);
 	if(vrf == NULL) {
