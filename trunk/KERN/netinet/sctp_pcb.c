@@ -5182,7 +5182,7 @@ sctp_select_primary_destination(struct sctp_tcb *stcb)
  * Delete the address from the endpoint local address list There is nothing
  * to be done if we are bound to all addresses
  */
-int
+void
 sctp_del_local_addr_ep(struct sctp_inpcb *inp, struct sctp_ifa *ifa)
 {
 	struct sctp_laddr *laddr;
@@ -5191,7 +5191,7 @@ sctp_del_local_addr_ep(struct sctp_inpcb *inp, struct sctp_ifa *ifa)
 	fnd = 0;
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
 		/* You are already bound to all. You have it already */
-		return (EINVAL);
+		return;
 	}
 	LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
 		if (laddr->ifa == ifa) {
@@ -5201,7 +5201,7 @@ sctp_del_local_addr_ep(struct sctp_inpcb *inp, struct sctp_ifa *ifa)
 	}
 	if (fnd && (inp->laddr_count < 2)) {
 		/* can't delete unless there are at LEAST 2 addresses */
-		return (-1);
+		return;
 	}
 	if (fnd) {
 		/*
@@ -5250,7 +5250,7 @@ sctp_del_local_addr_ep(struct sctp_inpcb *inp, struct sctp_ifa *ifa)
 		/* update inp_vflag flags */
 		sctp_update_ep_vflag(inp);
 	}
-	return (0);
+	return;
 }
 
 /*

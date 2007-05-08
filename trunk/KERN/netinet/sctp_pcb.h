@@ -607,7 +607,7 @@ int sctp_insert_laddr(struct sctpladdr *, struct sctp_ifa *, uint32_t);
 
 void sctp_remove_laddr(struct sctp_laddr *);
 
-int sctp_del_local_addr_ep(struct sctp_inpcb *, struct sctp_ifa *);
+void sctp_del_local_addr_ep(struct sctp_inpcb *, struct sctp_ifa *);
 
 void sctp_set_initial_cc_param(struct sctp_tcb *,struct sctp_nets *net);
 
