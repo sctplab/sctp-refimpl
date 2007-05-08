@@ -2164,7 +2164,7 @@ sctp_inpcb_alloc(struct socket *so)
 	inp->sctp_tcbhash = SCTP_HASH_INIT(sctp_pcbtblsize,
 					   &inp->sctp_hashmark);
 	if (inp->sctp_tcbhash == NULL) {
-		SCTP_PRINT("Out of SCTP-INPCB->hashinit - no resources\n");
+		SCTP_PRINTF("Out of SCTP-INPCB->hashinit - no resources\n");
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, inp);
 #if defined(SCTP_PER_SOCKET_LOCKING)
 		SCTP_UNLOCK_EXC(sctppcbinfo.ipi_ep_mtx);
