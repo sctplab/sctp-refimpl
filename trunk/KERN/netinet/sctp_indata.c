@@ -3242,7 +3242,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					){
 					/* Yes so drop it */
 					if (tp1->data != NULL) {
-						sctp_release_pr_sctp_chunk(stcb, tp1,
+						(void)sctp_release_pr_sctp_chunk(stcb, tp1,
 									   (SCTP_RESPONSE_TO_USER_REQ | SCTP_NOTIFY_DATAGRAM_SENT),
 									   &asoc->sent_queue);
 					}
@@ -3255,7 +3255,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				if (tp1->snd_count > tp1->rec.data.timetodrop.tv_sec) {
 					/* Yes, so drop it */
 					if (tp1->data != NULL) {
-						sctp_release_pr_sctp_chunk(stcb, tp1,
+						(void)sctp_release_pr_sctp_chunk(stcb, tp1,
 									   (SCTP_RESPONSE_TO_USER_REQ | SCTP_NOTIFY_DATAGRAM_SENT),
 									   &asoc->sent_queue);
 					}
@@ -3647,7 +3647,7 @@ sctp_try_advance_peer_ack_point(struct sctp_tcb *stcb,
 			{
 				/* Yes so drop it */
 				if (tp1->data) {
-					sctp_release_pr_sctp_chunk(stcb, tp1,
+					(void)sctp_release_pr_sctp_chunk(stcb, tp1,
 					    (SCTP_RESPONSE_TO_USER_REQ | SCTP_NOTIFY_DATAGRAM_SENT),
 					    &asoc->sent_queue);
 				}

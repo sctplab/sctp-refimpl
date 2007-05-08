@@ -603,7 +603,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 				     (now.tv_usec > chk->rec.data.timetodrop.tv_usec))) {
 					/* Yes so drop it */
 					if (chk->data) {
-						sctp_release_pr_sctp_chunk(stcb,
+						(void)sctp_release_pr_sctp_chunk(stcb,
 									   chk,
 									   (SCTP_RESPONSE_TO_USER_REQ | SCTP_NOTIFY_DATAGRAM_SENT),
 									   &stcb->asoc.sent_queue);
@@ -615,7 +615,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 				/* Has it been retransmitted tv_sec times? */
 				if (chk->snd_count > chk->rec.data.timetodrop.tv_sec) {
 					if (chk->data) {
-						sctp_release_pr_sctp_chunk(stcb,
+						(void)sctp_release_pr_sctp_chunk(stcb,
 									   chk,
 									   (SCTP_RESPONSE_TO_USER_REQ | SCTP_NOTIFY_DATAGRAM_SENT),
 									   &stcb->asoc.sent_queue);
