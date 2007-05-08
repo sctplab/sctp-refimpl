@@ -4629,7 +4629,7 @@ sctp_process_ecn_marked_b(struct sctp_tcb *stcb, struct sctp_nets *net,
 /*
  * common input chunk processing (v4 and v6)
  */
-int
+void
 sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
     int length, struct sctphdr *sh, struct sctp_chunkhdr *ch,
     struct sctp_inpcb *inp, struct sctp_tcb *stcb, struct sctp_nets *net,
@@ -4699,7 +4699,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 #if defined(SCTP_PER_SOCKET_LOCKING)
 			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
-			return (1);
+			return;
 		}
 		if (stcb == NULL) {
 			/* out of the blue DATA chunk */
@@ -4708,7 +4708,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 #if defined(SCTP_PER_SOCKET_LOCKING)
 			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
-			return (1);
+			return;
 		}
 		if (stcb->asoc.my_vtag != ntohl(sh->v_tag)) {
 			/* v_tag mismatch! */
@@ -4717,7 +4717,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 #if defined(SCTP_PER_SOCKET_LOCKING)
 			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
-			return (1);
+			return;
 		}
 	}
 	
@@ -4730,7 +4730,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 #if defined(SCTP_PER_SOCKET_LOCKING)
 		SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
-		return (1);
+		return;
 	}
 #if defined(SCTP_PER_SOCKET_LOCKING)
 	sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
@@ -4785,7 +4785,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 #if defined(SCTP_PER_SOCKET_LOCKING)
 			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
-			return (1);
+			return;
 			break;
 		case SCTP_STATE_EMPTY:	/* should not happen */
 		case SCTP_STATE_INUSE:	/* should not happen */
@@ -4796,7 +4796,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 #if defined(SCTP_PER_SOCKET_LOCKING)
 			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
-			return (1);
+			return;
 			break;
 		case SCTP_STATE_OPEN:
 		case SCTP_STATE_SHUTDOWN_SENT:
@@ -4818,7 +4818,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 #if defined(SCTP_PER_SOCKET_LOCKING)
 			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
-			return (0);
+			return;
 		}
 		data_processed = 1;
 		if (retval == 0) {
@@ -4848,7 +4848,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 #if defined(SCTP_PER_SOCKET_LOCKING)
 			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
-			return (0);
+			return;
 		}
 	}
 	/* trigger send of any chunks in queue... */
@@ -4891,7 +4891,7 @@ trigger_send:
 #if defined(SCTP_PER_SOCKET_LOCKING)
 	SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
-	return (0);
+	return;
 }
 
 #ifdef __APPLE__
