@@ -5905,8 +5905,10 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 				phdr = sctp_get_next_param(m, offset,
 							   (struct sctp_paramhdr *)&ai, sizeof(ai));
 				aip = (struct sctp_adaptation_layer_indication *)phdr;
-				sctp_ulp_notify(SCTP_NOTIFY_ADAPTATION_INDICATION,
-						stcb, ntohl(aip->indication), NULL);
+				if(aip) {
+					sctp_ulp_notify(SCTP_NOTIFY_ADAPTATION_INDICATION,
+							stcb, ntohl(aip->indication), NULL);
+				} 
 			}
 		} else if (ptype == SCTP_SET_PRIM_ADDR) {
 			struct sctp_asconf_addr_param lstore, *fee;
