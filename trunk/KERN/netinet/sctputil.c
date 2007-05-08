@@ -243,7 +243,7 @@ sctp_log_strm_del(struct sctp_queued_to_read *control, struct sctp_queued_to_rea
 {
 	int sctp_cwnd_log_at;
 	if (control == NULL) {
-		printf("Gak log of NULL?\n");
+		SCTP_PRINTF("Gak log of NULL?\n");
 		return;
 	}
 
@@ -580,41 +580,41 @@ sctp_print_audit_report(void)
 		if ((sctp_audit_data[i][0] == 0xe0) &&
 		    (sctp_audit_data[i][1] == 0x01)) {
 			cnt = 0;
-			printf("\n");
+			SCTP_PRINTF("\n");
 		} else if (sctp_audit_data[i][0] == 0xf0) {
 			cnt = 0;
-			printf("\n");
+			SCTP_PRINTF("\n");
 		} else if ((sctp_audit_data[i][0] == 0xc0) &&
 		    (sctp_audit_data[i][1] == 0x01)) {
-			printf("\n");
+			SCTP_PRINTF("\n");
 			cnt = 0;
 		}
-		printf("%2.2x%2.2x ", (uint32_t) sctp_audit_data[i][0],
-		    (uint32_t) sctp_audit_data[i][1]);
+		SCTP_PRINTF("%2.2x%2.2x ", (uint32_t) sctp_audit_data[i][0],
+			    (uint32_t) sctp_audit_data[i][1]);
 		cnt++;
 		if ((cnt % 14) == 0)
-			printf("\n");
+			SCTP_PRINTF("\n");
 	}
 	for (i = 0; i < sctp_audit_indx; i++) {
 		if ((sctp_audit_data[i][0] == 0xe0) &&
 		    (sctp_audit_data[i][1] == 0x01)) {
 			cnt = 0;
-			printf("\n");
+			SCTP_PRINTF("\n");
 		} else if (sctp_audit_data[i][0] == 0xf0) {
 			cnt = 0;
-			printf("\n");
+			SCTP_PRINTF("\n");
 		} else if ((sctp_audit_data[i][0] == 0xc0) &&
 		    (sctp_audit_data[i][1] == 0x01)) {
-			printf("\n");
+			SCTP_PRINTF("\n");
 			cnt = 0;
 		}
-		printf("%2.2x%2.2x ", (uint32_t) sctp_audit_data[i][0],
-		    (uint32_t) sctp_audit_data[i][1]);
+		SCTP_PRINTF("%2.2x%2.2x ", (uint32_t) sctp_audit_data[i][0],
+			    (uint32_t) sctp_audit_data[i][1]);
 		cnt++;
 		if ((cnt % 14) == 0)
-			printf("\n");
+			SCTP_PRINTF("\n");
 	}
-	printf("\n");
+	SCTP_PRINTF("\n");
 }
 
 void
@@ -674,8 +674,8 @@ sctp_auditing(int from, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		if (sctp_audit_indx >= SCTP_AUDIT_SIZE) {
 			sctp_audit_indx = 0;
 		}
-		printf("resend_cnt:%d asoc-tot:%d\n",
-		    resend_cnt, stcb->asoc.sent_queue_retran_cnt);
+		SCTP_PRINTF("resend_cnt:%d asoc-tot:%d\n",
+			    resend_cnt, stcb->asoc.sent_queue_retran_cnt);
 		rep = 1;
 		stcb->asoc.sent_queue_retran_cnt = resend_cnt;
 		sctp_audit_data[sctp_audit_indx][0] = 0xA2;
@@ -694,8 +694,8 @@ sctp_auditing(int from, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			sctp_audit_indx = 0;
 		}
 		rep = 1;
-		printf("tot_flt:%d asoc_tot:%d\n", tot_out,
-		    (int)stcb->asoc.total_flight);
+		SCTP_PRINTF("tot_flt:%d asoc_tot:%d\n", tot_out,
+			    (int)stcb->asoc.total_flight);
 		stcb->asoc.total_flight = tot_out;
 	}
 	if (tot_book_cnt != stcb->asoc.total_flight_count) {
@@ -706,7 +706,7 @@ sctp_auditing(int from, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			sctp_audit_indx = 0;
 		}
 		rep = 1;
-		printf("tot_flt_book:%d\n", tot_book);
+		SCTP_PRINTF("tot_flt_book:%d\n", tot_book);
 
 		stcb->asoc.total_flight_count = tot_book_cnt;
 	}
@@ -722,8 +722,8 @@ sctp_auditing(int from, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			sctp_audit_indx = 0;
 		}
 		rep = 1;
-		printf("real flight:%d net total was %d\n",
-		    stcb->asoc.total_flight, tot_out);
+		SCTP_PRINTF("real flight:%d net total was %d\n",
+			    stcb->asoc.total_flight, tot_out);
 		/* now corrective action */
 		TAILQ_FOREACH(lnet, &stcb->asoc.nets, sctp_next) {
 
@@ -735,8 +735,9 @@ sctp_auditing(int from, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				}
 			}
 			if (lnet->flight_size != tot_out) {
-				printf("net:%x flight was %d corrected to %d\n",
-				    (uint32_t) lnet, lnet->flight_size, tot_out);
+				SCTP_PRINTF("net:%x flight was %d corrected to %d\n",
+					    (uint32_t) lnet, lnet->flight_size,
+					    tot_out);
 				lnet->flight_size = tot_out;
 			}
 		}
@@ -1035,8 +1036,8 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 
 	asoc->smallest_mtu = m->sctp_frag_point;
 #ifdef SCTP_PRINT_FOR_B_AND_M 
-	printf("smallest_mtu init'd with asoc to :%d\n",
-	       asoc->smallest_mtu);
+	SCTP_PRINTF("smallest_mtu init'd with asoc to :%d\n",
+		    asoc->smallest_mtu);
 #endif
 	asoc->minrto = m->sctp_ep.sctp_minrto;
 	asoc->maxrto = m->sctp_ep.sctp_maxrto;
@@ -1137,8 +1138,8 @@ sctp_expand_mapping_array(struct sctp_association *asoc)
 	SCTP_MALLOC(new_array, uint8_t *, new_size, "MappingArray");
 	if (new_array == NULL) {
 		/* can't get more, forget it */
-		printf("No memory for expansion of SCTP mapping array %d\n",
-		    new_size);
+		SCTP_PRINTF("No memory for expansion of SCTP mapping array %d\n",
+			    new_size);
 		return (-1);
 	}
 	memset(new_array, 0, new_size);
@@ -1426,7 +1427,7 @@ sctp_timeout_handler(void *t)
 	/* sanity checks... */
 	if (tmr->self != (void *)tmr) {
 		/*
-		 * printf("Stale SCTP timer fired (%p), ignoring...\n",
+		 * SCTP_PRINTF("Stale SCTP timer fired (%p), ignoring...\n",
 		 * tmr);
 		 */
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -1441,7 +1442,7 @@ sctp_timeout_handler(void *t)
 	tmr->stopped_from = 0xa001;
 	if (!SCTP_IS_TIMER_TYPE_VALID(tmr->type)) {
 		/*
-		 * printf("SCTP timer fired with invalid type: 0x%x\n",
+		 * SCTP_PRINTF("SCTP timer fired with invalid type: 0x%x\n",
 		 * tmr->type);
 		 */
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -2558,8 +2559,8 @@ sctp_mtu_size_reset(struct sctp_inpcb *inp,
 	unsigned int eff_mtu, ovh;
 
 #ifdef SCTP_PRINT_FOR_B_AND_M 
-	printf("sctp_mtu_size_reset(%p, asoc:%p mtu:%d\n",
-	       inp, asoc, mtu);
+	SCTP_PRINTF("sctp_mtu_size_reset(%p, asoc:%p mtu:%d\n",
+		    inp, asoc, mtu);
 #endif
 	asoc->smallest_mtu = mtu;
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) {
@@ -3662,58 +3663,59 @@ void
 sctp_print_out_track_log(struct sctp_tcb *stcb)
 {
 	int i;
-	printf("Last ep reason:%x\n", stcb->sctp_ep->last_abort_code);
-	printf("IN bound TSN log-aaa\n");
+	SCTP_PRINTF("Last ep reason:%x\n", stcb->sctp_ep->last_abort_code);
+	SCTP_PRINTF("IN bound TSN log-aaa\n");
 	if ((stcb->asoc.tsn_in_at == 0) && (stcb->asoc.tsn_in_wrapped == 0)) {
-		printf("None rcvd\n");
+		SCTP_PRINTF("None rcvd\n");
 		goto none_in;
 	}
 	if(stcb->asoc.tsn_in_wrapped) {
 		for(i=stcb->asoc.tsn_in_at;i <SCTP_TSN_LOG_SIZE; i++) {
-			printf("TSN:%x strm:%d seq:%d flags:%x sz:%d\n",
-			       stcb->asoc.in_tsnlog[i].tsn,
-			       stcb->asoc.in_tsnlog[i].strm,
-			       stcb->asoc.in_tsnlog[i].seq,
-			       stcb->asoc.in_tsnlog[i].flgs,
-			       stcb->asoc.in_tsnlog[i].sz);
+			SCTP_PRINTF("TSN:%x strm:%d seq:%d flags:%x sz:%d\n",
+				    stcb->asoc.in_tsnlog[i].tsn,
+				    stcb->asoc.in_tsnlog[i].strm,
+				    stcb->asoc.in_tsnlog[i].seq,
+				    stcb->asoc.in_tsnlog[i].flgs,
+				    stcb->asoc.in_tsnlog[i].sz);
 		}
 	}
 	if (stcb->asoc.tsn_in_at) {
 		for(i=0;i <stcb->asoc.tsn_in_at; i++) {
-			printf("TSN:%x strm:%d seq:%d flags:%x sz:%d\n",
-			       stcb->asoc.in_tsnlog[i].tsn,
-			       stcb->asoc.in_tsnlog[i].strm,
-			       stcb->asoc.in_tsnlog[i].seq,
-			       stcb->asoc.in_tsnlog[i].flgs,
-			       stcb->asoc.in_tsnlog[i].sz);
+			SCTP_PRINTF("TSN:%x strm:%d seq:%d flags:%x sz:%d\n",
+				    stcb->asoc.in_tsnlog[i].tsn,
+				    stcb->asoc.in_tsnlog[i].strm,
+				    stcb->asoc.in_tsnlog[i].seq,
+				    stcb->asoc.in_tsnlog[i].flgs,
+				    stcb->asoc.in_tsnlog[i].sz);
 		}
 	}
  none_in:
-	printf("OUT bound TSN log-aaa\n");
-	if ((stcb->asoc.tsn_out_at == 0) && (stcb->asoc.tsn_out_wrapped == 0)) {
-		printf("None sent\n");
+	SCTP_PRINTF("OUT bound TSN log-aaa\n");
+	if ((stcb->asoc.tsn_out_at == 0) &&
+	    (stcb->asoc.tsn_out_wrapped == 0)) {
+		SCTP_PRINTF("None sent\n");
 	}
 	if(stcb->asoc.tsn_out_wrapped) {
 		for(i=stcb->asoc.tsn_out_at;i <SCTP_TSN_LOG_SIZE; i++) {
-			printf("TSN:%x strm:%d seq:%d flags:%x sz:%d\n",
-			       stcb->asoc.out_tsnlog[i].tsn,
-			       stcb->asoc.out_tsnlog[i].strm,
-			       stcb->asoc.out_tsnlog[i].seq,
-			       stcb->asoc.out_tsnlog[i].flgs,
-			       stcb->asoc.out_tsnlog[i].sz);
+			SCTP_PRINTF("TSN:%x strm:%d seq:%d flags:%x sz:%d\n",
+				    stcb->asoc.out_tsnlog[i].tsn,
+				    stcb->asoc.out_tsnlog[i].strm,
+				    stcb->asoc.out_tsnlog[i].seq,
+				    stcb->asoc.out_tsnlog[i].flgs,
+				    stcb->asoc.out_tsnlog[i].sz);
 		}
 	}
 	if (stcb->asoc.tsn_out_at) {
 		for(i=0;i <stcb->asoc.tsn_out_at; i++) {
-			printf("TSN:%x strm:%d seq:%d flags:%x sz:%d\n",
-			       stcb->asoc.out_tsnlog[i].tsn,
-			       stcb->asoc.out_tsnlog[i].strm,
-			       stcb->asoc.out_tsnlog[i].seq,
-			       stcb->asoc.out_tsnlog[i].flgs,
-			       stcb->asoc.out_tsnlog[i].sz);
+			SCTP_PRINTF("TSN:%x strm:%d seq:%d flags:%x sz:%d\n",
+				    stcb->asoc.out_tsnlog[i].tsn,
+				    stcb->asoc.out_tsnlog[i].strm,
+				    stcb->asoc.out_tsnlog[i].seq,
+				    stcb->asoc.out_tsnlog[i].flgs,
+				    stcb->asoc.out_tsnlog[i].sz);
 		}
 	}
-}		
+}
 #endif
 
 void
@@ -4159,7 +4161,8 @@ sctp_print_mbuf_chain(struct mbuf *m)
 	for(; m; m = SCTP_BUF_NEXT(m)) {
 		printf("%p: m_len = %d\n", m, SCTP_BUF_LEN(m));
 		if (SCTP_BUF_IS_EXTENDED(m))
-			printf("%p: extend size = %d\n", m, SCTP_BUF_EXTEND_SIZE(m));
+			SCTP_PRINTF("%p: extend size = %d\n", m,
+				    SCTP_BUF_EXTEND_SIZE(m));
 		}  
 }
 #endif
@@ -4486,7 +4489,7 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
 			ret_sz += sctp_release_pr_sctp_chunk(stcb, tp1, reason,
 			    &stcb->asoc.send_queue);
 		} else {
-			printf("hmm, nothing on the send queue and no EOM?\n");
+			SCTP_PRINTF("hmm, nothing on the send queue and no EOM?\n");
 		}
 	}
 	return (ret_sz);
@@ -4579,11 +4582,11 @@ sctp_find_ifa_by_addr(struct sockaddr *addr, uint32_t vrf_id, int holds_lock)
 
 	hash_head = &vrf->vrf_addr_hash[(hash_of_addr & vrf->vrf_addr_hashmark)];
 	if (hash_head == NULL) {
-		printf("hash_of_addr:%x mask:%x table:%x - ",
-		       (u_int)hash_of_addr, (u_int)vrf->vrf_addr_hashmark,
-		       (u_int)(hash_of_addr & vrf->vrf_addr_hashmark));
+		SCTP_PRINTF("hash_of_addr:%x mask:%x table:%x - ",
+			    (u_int)hash_of_addr, (u_int)vrf->vrf_addr_hashmark,
+			    (u_int)(hash_of_addr & vrf->vrf_addr_hashmark));
 		sctp_print_address(addr);
-		printf("No such bucket for address\n");
+		SCTP_PRINTF("No such bucket for address\n");
 		if (holds_lock == 0)
 			SCTP_IPI_ADDR_UNLOCK();
 
@@ -5449,7 +5452,7 @@ sctp_sorecvmsg(struct socket *so,
 #ifdef INVARIANTS
 					panic("control->data not null at read eor?");
 #else
-					printf("Strange, data left in the control buffer .. invarients would panic?\n");
+					SCTP_PRINTF("Strange, data left in the control buffer .. invarients would panic?\n");
 					sctp_m_freem(control->data);
 					control->data = NULL;
 #endif
