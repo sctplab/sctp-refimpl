@@ -88,25 +88,26 @@ void sctp_queue_op_err(struct sctp_tcb *, struct mbuf *);
 int
 sctp_send_cookie_echo(struct mbuf *, int, struct sctp_tcb *,
     struct sctp_nets *);
-int sctp_send_cookie_ack(struct sctp_tcb *);
+
+void sctp_send_cookie_ack(struct sctp_tcb *);
 
 void
 sctp_send_heartbeat_ack(struct sctp_tcb *, struct mbuf *, int, int,
     struct sctp_nets *);
 
 
-int sctp_send_shutdown(struct sctp_tcb *, struct sctp_nets *);
+void sctp_send_shutdown(struct sctp_tcb *, struct sctp_nets *);
 
-int sctp_send_shutdown_ack(struct sctp_tcb *, struct sctp_nets *);
+void sctp_send_shutdown_ack(struct sctp_tcb *, struct sctp_nets *);
 
 int sctp_send_shutdown_complete(struct sctp_tcb *, struct sctp_nets *);
 
 int sctp_send_shutdown_complete2(struct mbuf *, int, struct sctphdr *,
 				 uint32_t, uint32_t);
 
-int sctp_send_asconf(struct sctp_tcb *, struct sctp_nets *);
+void sctp_send_asconf(struct sctp_tcb *, struct sctp_nets *);
 
-int sctp_send_asconf_ack(struct sctp_tcb *, uint32_t);
+void sctp_send_asconf_ack(struct sctp_tcb *, uint32_t);
 
 int sctp_get_frag_point(struct sctp_tcb *, struct sctp_association *);
 
