@@ -136,10 +136,19 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.16 2007/05/08 17:01:10 rrs
 	}								\
     } while (0);							\
 }
+#define SCTPDBG_PKT(level, iph, sh)					\
+{									\
+    do {								\
+	    if (sctp_debug_on & level) {				\
+		    sctp_print_address_pkt(iph, sh);			\
+	    }								\
+    } while (0);							\
+}
 #define SCTP_PRINTF(params...)	printf(params)
 #else
 #define SCTPDBG(level, params...)
 #define SCTPDBG_ADDR(level, addr)
+#define SCTPDBG_PKT(level, iph, sh)
 #define SCTP_PRINTF(params...)
 #endif
 
