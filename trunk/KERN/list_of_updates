@@ -12,7 +12,7 @@
    fully supports VRFs. 
 -  Additional stream reset bug (caught by cisco dev-test).
 -  Additional validations for the address in sending a message (socket api).
---------
+-------- and -----
 -  Fix association notifications not to give the active open
    side false notifications.
 -  Fix so sendfile and SENDALL will work properly (missing 
