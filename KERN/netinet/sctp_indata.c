@@ -367,7 +367,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 	int cntDel;
 	struct sctp_queued_to_read *control, *ctl, *ctlat;
 
-	if(stcb) 
+	if(stcb == NULL) 
 		return;
 
 	cntDel = stream_no = 0;
@@ -2459,7 +2459,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 					 * first packet OR there are gaps or
 					 * duplicates.
 					 */
-					SCTP_OS_TIMER_STOP(&stcb->asoc.dack_timer.timer);
+					(void)SCTP_OS_TIMER_STOP(&stcb->asoc.dack_timer.timer);
 					sctp_send_sack(stcb);
 				}
 			} else {
@@ -2806,7 +2806,7 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 		    (stcb->asoc.delayed_ack == 0) ||
 		    (stcb->asoc.send_sack == 1)){
 			if (SCTP_OS_TIMER_PENDING(&stcb->asoc.dack_timer.timer)) {
-				SCTP_OS_TIMER_STOP(&stcb->asoc.dack_timer.timer);
+				(void)SCTP_OS_TIMER_STOP(&stcb->asoc.dack_timer.timer);
 			}
 			sctp_send_sack(stcb);
 		} else {
