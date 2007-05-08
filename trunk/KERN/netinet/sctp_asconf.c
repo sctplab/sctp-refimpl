@@ -1120,6 +1120,7 @@ sctp_asconf_queue_add(struct sctp_tcb *stcb, struct sctp_ifa *ifa, uint16_t type
 		    sizeof(struct in_addr));
 	} else {
 		/* invalid family! */
+		SCTP_MALLOC(aa);
 		return (-1);
 	}
 	aa->sent = 0;		/* clear sent flag */
@@ -1172,6 +1173,9 @@ sctp_asconf_queue_add_sa(struct sctp_tcb *stcb, struct sockaddr *sa,
 	struct sctp_asconf_addr *aa, *aa_next;
 	uint32_t vrf_id;
 
+	if (stcb == NULL) {
+		return (-1);
+	}	
 	/* see if peer supports ASCONF */
 	if (stcb->asoc.peer_supports_asconf == 0) {
 		return (-1);
