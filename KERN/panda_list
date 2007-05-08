@@ -31,4 +31,4 @@ netinet/sctp_output.h
 netinet/sctp_structs.h
 netinet/sctp_usrreq.c
 netinet6/sctp6_usrreq.c
-netinet6sctp6_var.h
+netinet6/sctp6_var.h
