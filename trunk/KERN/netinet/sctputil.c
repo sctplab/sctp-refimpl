@@ -2208,7 +2208,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	return (0);
 }
 
-int
+void
 sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
     struct sctp_nets *net, uint32_t from)
 {
@@ -2216,7 +2216,7 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 
 	if ((t_type != SCTP_TIMER_TYPE_ADDR_WQ) &&
 	    (inp == NULL))
-		return (EFAULT);
+		return;
 
 	tmr = NULL;
 	if (stcb) {
@@ -2240,7 +2240,7 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		break;
 	case SCTP_TIMER_TYPE_EARLYFR:
 		if ((stcb == NULL) || (net == NULL)) {
-			return (EFAULT);
+			return;
 		}
 		tmr = &net->fr_timer;
 		SCTP_STAT_INCR(sctps_earlyfrstop);
@@ -2255,37 +2255,37 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		break;
 	case SCTP_TIMER_TYPE_SEND:
 		if ((stcb == NULL) || (net == NULL)) {
-			return (EFAULT);
+			return;
 		}
 		tmr = &net->rxt_timer;
 		break;
 	case SCTP_TIMER_TYPE_INIT:
 		if ((stcb == NULL) || (net == NULL)) {
-			return (EFAULT);
+			return;
 		}
 		tmr = &net->rxt_timer;
 		break;
 	case SCTP_TIMER_TYPE_RECV:
 		if (stcb == NULL) {
-			return (EFAULT);
+			return;
 		}
 		tmr = &stcb->asoc.dack_timer;
 		break;
 	case SCTP_TIMER_TYPE_SHUTDOWN:
 		if ((stcb == NULL) || (net == NULL)) {
-			return (EFAULT);
+			return;
 		}
 		tmr = &net->rxt_timer;
 		break;
 	case SCTP_TIMER_TYPE_HEARTBEAT:
 		if (stcb == NULL) {
-			return (EFAULT);
+			return;
 		}
 		tmr = &stcb->asoc.hb_timer;
 		break;
 	case SCTP_TIMER_TYPE_COOKIE:
 		if ((stcb == NULL) || (net == NULL)) {
-			return (EFAULT);
+			return;
 		}
 		tmr = &net->rxt_timer;
 		break;
@@ -2302,7 +2302,7 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		 * Stop the asoc kill timer.
 		 */
 		if (stcb == NULL) {
-			return (EFAULT);
+			return;
 		}
 		tmr = &stcb->asoc.strreset_timer;
 		break;
@@ -2317,37 +2317,37 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		break;
 	case SCTP_TIMER_TYPE_PATHMTURAISE:
 		if ((stcb == NULL) || (net == NULL)) {
-			return (EFAULT);
+			return;
 		}
 		tmr = &net->pmtu_timer;
 		break;
 	case SCTP_TIMER_TYPE_SHUTDOWNACK:
 		if ((stcb == NULL) || (net == NULL)) {
-			return (EFAULT);
+			return;
 		}
 		tmr = &net->rxt_timer;
 		break;
 	case SCTP_TIMER_TYPE_SHUTDOWNGUARD:
 		if (stcb == NULL) {
-			return (EFAULT);
+			return;
 		}
 		tmr = &stcb->asoc.shut_guard_timer;
 		break;
 	case SCTP_TIMER_TYPE_STRRESET:
 		if (stcb == NULL) {
-			return (EFAULT);
+			return;
 		}
 		tmr = &stcb->asoc.strreset_timer;
 		break;
 	case SCTP_TIMER_TYPE_ASCONF:
 		if (stcb == NULL) {
-			return (EFAULT);
+			return;
 		}
 		tmr = &stcb->asoc.asconf_timer;
 		break;
 	case SCTP_TIMER_TYPE_AUTOCLOSE:
 		if (stcb == NULL) {
-			return (EFAULT);
+			return;
 		}
 		tmr = &stcb->asoc.autoclose_timer;
 		break;
@@ -2361,7 +2361,7 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		break;
 	};
 	if (tmr == NULL) {
-		return (EFAULT);
+		return;
 	}
 	if ((tmr->type != t_type) && tmr->type) {
 		/*
@@ -2370,7 +2370,7 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		 * running the timer that the caller wants stopped.  So just
 		 * return.
 		 */
-		return (0);
+		return;
 	}
 	if (t_type == SCTP_TIMER_TYPE_SEND) {
 		stcb->asoc.num_send_timers_up--;
@@ -2381,7 +2381,7 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	tmr->self = NULL;
 	tmr->stopped_from = from;
 	SCTP_OS_TIMER_STOP(&tmr->timer);
-	return (0);
+	return;
 }
 
 #ifdef SCTP_USE_ADLER32
