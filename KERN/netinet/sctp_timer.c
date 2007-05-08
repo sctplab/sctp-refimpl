@@ -180,13 +180,9 @@ sctp_audit_retranmission_queue(struct sctp_association *asoc)
 {
 	struct sctp_tmit_chunk *chk;
 
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_TIMER4) {
-		printf("Audit invoked on send queue cnt:%d onqueue:%d\n",
-		    asoc->sent_queue_retran_cnt,
-		    asoc->sent_queue_cnt);
-	}
-#endif				/* SCTP_DEBUG */
+	SCTPDBG(SCTP_DEBUG_TIMER4, "Audit invoked on send queue cnt:%d onqueue:%d\n",
+			asoc->sent_queue_retran_cnt,
+			asoc->sent_queue_cnt);
 	asoc->sent_queue_retran_cnt = 0;
 	asoc->sent_queue_cnt = 0;
 	TAILQ_FOREACH(chk, &asoc->sent_queue, sctp_next) {
@@ -200,13 +196,9 @@ sctp_audit_retranmission_queue(struct sctp_association *asoc)
 			sctp_ucount_incr(asoc->sent_queue_retran_cnt);
 		}
 	}
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_TIMER4) {
-		printf("Audit completes retran:%d onqueue:%d\n",
-		    asoc->sent_queue_retran_cnt,
-		    asoc->sent_queue_cnt);
-	}
-#endif				/* SCTP_DEBUG */
+	SCTPDBG(SCTP_DEBUG_TIMER4, "Audit completes retran:%d onqueue:%d\n",
+		asoc->sent_queue_retran_cnt,
+		asoc->sent_queue_cnt);
 }
 
 int
@@ -215,13 +207,9 @@ sctp_threshold_management(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 {
 	if (net) {
 		net->error_count++;
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_TIMER4) {
-			printf("Error count for %p now %d thresh:%d\n",
-			    net, net->error_count,
-			    net->failure_threshold);
-		}
-#endif				/* SCTP_DEBUG */
+		SCTPDBG(SCTP_DEBUG_TIMER4, "Error count for %p now %d thresh:%d\n",
+			net, net->error_count,
+			net->failure_threshold);
 		if (net->error_count > net->failure_threshold) {
 			/* We had a threshold failure */
 			if (net->dest_state & SCTP_ADDR_REACHABLE) {
@@ -254,15 +242,10 @@ sctp_threshold_management(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	} else {
 		stcb->asoc.overall_error_count++;
 	}
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_TIMER4) {
-		printf("Overall error count for %p now %d thresh:%u state:%x\n",
-		    &stcb->asoc,
-		    stcb->asoc.overall_error_count,
-		    (uint32_t) threshold,
-		    ((net == NULL) ? (uint32_t) 0 : (uint32_t) net->dest_state));
-	}
-#endif				/* SCTP_DEBUG */
+	SCTPDBG(SCTP_DEBUG_TIMER4, "Overall error count for %p now %d thresh:%u state:%x\n",
+		&stcb->asoc, stcb->asoc.overall_error_count,
+		(uint32_t)threshold,
+		((net == NULL) ? (uint32_t) 0 : (uint32_t) net->dest_state));
 	/*
 	 * We specifically do not do >= to give the assoc one more change
 	 * before we fail it.
@@ -544,7 +527,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 				       MAX_TSN)) ||
 		    (stcb->asoc.last_acked_seq == chk->rec.data.TSN_seq)) {
 			/* Strange case our list got out of order? */
-			printf("Our list is out of order?\n");
+			SCTP_PRINTF("Our list is out of order?\n");
 			panic("Out of order list");
 		}
 		if ((chk->whoTo == net) && (chk->sent < SCTP_DATAGRAM_ACKED)) {
@@ -695,17 +678,16 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	sctp_log_fr(tsnfirst, tsnlast, num_mk, SCTP_FR_T3_TIMEOUT);
 #endif
 #ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_TIMER1) {
-		if (num_mk) {
-			printf("LAST TSN marked was %x\n", tsnlast);
-			printf("Num marked for retransmission was %d peer-rwd:%ld\n",
-			       num_mk, (u_long)stcb->asoc.peers_rwnd);
-			printf("LAST TSN marked was %x\n", tsnlast);
-			printf("Num marked for retransmission was %d peer-rwd:%d\n",
-			       num_mk,
-			       (int)stcb->asoc.peers_rwnd
-				);
-		}
+	if (num_mk) {
+		SCTPDBG(SCTP_DEBUG_TIMER1, "LAST TSN marked was %x\n",
+			tsnlast);
+		SCTPDBG(SCTP_DEBUG_TIMER1, "Num marked for retransmission was %d peer-rwd:%ld\n",
+			num_mk, (u_long)stcb->asoc.peers_rwnd);
+		SCTPDBG(SCTP_DEBUG_TIMER1, "LAST TSN marked was %x\n",
+			tsnlast);
+		SCTPDBG(SCTP_DEBUG_TIMER1, "Num marked for retransmission was %d peer-rwd:%d\n",
+			num_mk,
+			(int)stcb->asoc.peers_rwnd);
 	}
 #endif
 	*num_marked = num_mk;
@@ -717,8 +699,8 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	}
 	if (stcb->asoc.sent_queue_retran_cnt != cnt_mk) {
 #ifdef INVARIANTS
-		printf("Local Audit says there are %d for retran asoc cnt:%d\n",
-		       cnt_mk, stcb->asoc.sent_queue_retran_cnt);
+		SCTP_PRINTF("Local Audit says there are %d for retran asoc cnt:%d\n",
+			    cnt_mk, stcb->asoc.sent_queue_retran_cnt);
 #endif
 #ifndef SCTP_AUDITING_ENABLED
 		stcb->asoc.sent_queue_retran_cnt = cnt_mk;
@@ -738,23 +720,17 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 		}
 	}
 	if (audit_tf) {
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_TIMER4) {
-			printf("Audit total flight due to negative value net:%p\n",
-			       net);
-		}
-#endif				/* SCTP_DEBUG */
+		SCTPDBG(SCTP_DEBUG_TIMER4,
+			"Audit total flight due to negative value net:%p\n",
+			net);
 		stcb->asoc.total_flight = 0;
 		stcb->asoc.total_flight_count = 0;
 		/* Clear all networks flight size */
 		TAILQ_FOREACH(lnets, &stcb->asoc.nets, sctp_next) {
 			lnets->flight_size = 0;
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_TIMER4) {
-				printf("Net:%p c-f cwnd:%d ssthresh:%d\n",
-				       lnets, lnets->cwnd, lnets->ssthresh);
-			}
-#endif				/* SCTP_DEBUG */
+			SCTPDBG(SCTP_DEBUG_TIMER4,
+				"Net:%p c-f cwnd:%d ssthresh:%d\n",
+				lnets, lnets->cwnd, lnets->ssthresh);
 		}
 		TAILQ_FOREACH(chk, &stcb->asoc.sent_queue, sctp_next) {
 			if (chk->sent < SCTP_DATAGRAM_RESEND) {
@@ -1113,7 +1089,7 @@ sctp_cookie_timer(struct sctp_inpcb *inp,
 #ifdef INVARIANTS
 			panic("Cookie timer expires in wrong state?");
 #else
-			printf("Strange in state %d not cookie-echoed yet c-e timer expires?\n", SCTP_GET_STATE(&stcb->asoc));
+			SCTP_PRINTF("Strange in state %d not cookie-echoed yet c-e timer expires?\n", SCTP_GET_STATE(&stcb->asoc));
 			return (0);
 #endif
 		}
@@ -1253,11 +1229,7 @@ sctp_asconf_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			 * properly handling the chunk type upper bits Mark
 			 * this peer as ASCONF incapable and cleanup
 			 */
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_TIMER1) {
-				printf("asconf_timer: Peer has not responded to our repeated ASCONFs\n");
-			}
-#endif				/* SCTP_DEBUG */
+			SCTPDBG(SCTP_DEBUG_TIMER1, "asconf_timer: Peer has not responded to our repeated ASCONFs\n");
 			sctp_asconf_cleanup(stcb, net);
 			return (0);
 		}
@@ -1369,8 +1341,8 @@ sctp_audit_stream_queues_for_size(struct sctp_inpcb *inp,
 		return;
 
 	if (stcb->asoc.sent_queue_retran_cnt) {
-		printf("Hmm, sent_queue_retran_cnt is non-zero %d\n",
-		    stcb->asoc.sent_queue_retran_cnt);
+		SCTP_PRINTF("Hmm, sent_queue_retran_cnt is non-zero %d\n",
+			    stcb->asoc.sent_queue_retran_cnt);
 		stcb->asoc.sent_queue_retran_cnt = 0;
 	}
 	SCTP_TCB_SEND_LOCK(stcb);
@@ -1386,7 +1358,7 @@ sctp_audit_stream_queues_for_size(struct sctp_inpcb *inp,
 		}
 		if (cnt) {
 			/* yep, we lost a spoke or two */
-			printf("Found an additional %d streams NOT on outwheel, corrected\n", cnt);
+			SCTP_PRINTF("Found an additional %d streams NOT on outwheel, corrected\n", cnt);
 		} else {
 			/* no spokes lost, */
 			stcb->asoc.total_output_queue_size = 0;
@@ -1406,8 +1378,8 @@ sctp_audit_stream_queues_for_size(struct sctp_inpcb *inp,
 		}
 	}
 	if (chks_in_queue != stcb->asoc.stream_queue_cnt) {
-		printf("Hmm, stream queue cnt at %d I counted %d in stream out wheel\n",
-		    stcb->asoc.stream_queue_cnt, chks_in_queue);
+		SCTP_PRINTF("Hmm, stream queue cnt at %d I counted %d in stream out wheel\n",
+			    stcb->asoc.stream_queue_cnt, chks_in_queue);
 	}
 	if (chks_in_queue) {
 		/* call the output queue function */
@@ -1418,14 +1390,14 @@ sctp_audit_stream_queues_for_size(struct sctp_inpcb *inp,
 			 * Probably should go in and make it go back through
 			 * and add fragments allowed
 			 */
-			if(being_filled == 0) {
-				printf("Still nothing moved %d chunks are stuck\n", 
-				       chks_in_queue);
+			if (being_filled == 0) {
+				SCTP_PRINTF("Still nothing moved %d chunks are stuck\n", 
+					    chks_in_queue);
 			}
 		}
 	} else {
-		printf("Found no chunks on any queue tot:%lu\n",
-		    (u_long)stcb->asoc.total_output_queue_size);
+		SCTP_PRINTF("Found no chunks on any queue tot:%lu\n",
+			    (u_long)stcb->asoc.total_output_queue_size);
 		stcb->asoc.total_output_queue_size = 0;
 	}
 }
@@ -1743,8 +1715,8 @@ select_a_new_ep:
 	}
 	if ((it->inp->inp_starting_point_for_iterator != NULL) &&
 	    (it->inp->inp_starting_point_for_iterator != it)) {
-		printf("Iterator collision, waiting for one at %p\n",
-		       it->inp);
+		SCTP_PRINTF("Iterator collision, waiting for one at %p\n",
+			    it->inp);
 #if defined(SCTP_PER_SOCKET_LOCKING)
 		/* Unlock done at start_timer_return */
 #endif
