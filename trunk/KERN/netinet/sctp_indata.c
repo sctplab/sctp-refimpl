@@ -1508,6 +1508,9 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 #ifdef SCTP_MAP_LOGGING
 	sctp_log_map(0, tsn, asoc->cumulative_tsn, SCTP_MAP_PREPARE_SLIDE);
 #endif
+	if(stcb == NULL) {
+		return (0);
+	}
 	if (compare_with_wrap(asoc->cumulative_tsn, tsn, MAX_TSN) ||
 	    asoc->cumulative_tsn == tsn) {
 		/* It is a duplicate */
@@ -1553,9 +1556,9 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	 * Check to see about the GONE flag, duplicates would cause a sack
 	 * to be sent up above
 	 */
-	if (stcb && ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
+	if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
 		     (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) ||
-		     (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET))
+	     (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET))
 		) {
 		/*
 		 * wait a minute, this guy is gone, there is no longer a
