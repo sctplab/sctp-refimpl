@@ -206,8 +206,9 @@ sctp_notify_mbuf(struct sctp_inpcb *inp,
 	/* protection */
 	if ((inp == NULL) || (stcb == NULL) || (net == NULL) ||
 	    (ip == NULL) || (sh == NULL)) {
-		if (stcb != NULL)
+		if (stcb != NULL) {
 			SCTP_TCB_UNLOCK(stcb);
+		}
 		return;
 	}
 	/* First job is to verify the vtag matches what I would send */
@@ -309,8 +310,9 @@ sctp_notify(struct sctp_inpcb *inp,
 				    stcb, SCTP_FAILED_THRESHOLD,
 				    (void *)net);
 			}
-			if (stcb)
+			if (stcb) {
 				SCTP_TCB_UNLOCK(stcb);
+			}
 		} else {
 			/*
 			 * Here the peer is either playing tricks on us,
@@ -326,9 +328,9 @@ sctp_notify(struct sctp_inpcb *inp,
 		}
 	} else {
 		/* Send all others to the app */
-		if (stcb)
+		if (stcb) {
 			SCTP_TCB_UNLOCK(stcb);
-
+		}
 
 		if (inp->sctp_socket) {
 #ifdef SCTP_LOCK_LOGGING
@@ -1166,7 +1168,6 @@ sctp_disconnect(struct socket *so)
 			return (0);
 		}
 		/* not reached */
-		printf("Not reached reached?\n");
 	} else {
 		/* UDP model does not support this */
 		SCTP_INP_RUNLOCK(inp);
@@ -1775,7 +1776,7 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 	return error;
 }
 
-#define SCTP_FIND_STCB(inp, stcb, assoc_id) \
+#define SCTP_FIND_STCB(inp, stcb, assoc_id) do { \
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) { \
 		SCTP_INP_RLOCK(inp); \
 		stcb = LIST_FIRST(&inp->sctp_asoc_list); \
@@ -1790,15 +1791,16 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 		} \
 	} else { \
 		stcb = NULL; \
-	}
+	} while (0)
 
-#define SCTP_CHECK_AND_CAST(destp, srcp, type, size) \
+
+#define SCTP_CHECK_AND_CAST(destp, srcp, type, size)  do {\
 	if (size < sizeof(type)) { \
 		error = EINVAL; \
 		break; \
 	} else { \
 		destp = (type *)srcp; \
-	}
+	} while (0)
 
 #if defined(__Panda__)
 int
@@ -4032,8 +4034,8 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		 */
 		if (addrs->sget_assoc_id == 0) {
 			/* delete the address */
-			sctp_addr_mgmt_ep_sa(inp, addr_touse,
-					     SCTP_DEL_IP_ADDRESS, vrf_id);
+			(void)sctp_addr_mgmt_ep_sa(inp, addr_touse,
+						   SCTP_DEL_IP_ADDRESS, vrf_id);
 		} else {
 			/*
 			 * FIX: decide whether we allow assoc based
@@ -4357,8 +4359,9 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	sctp_send_initiate(inp, stcb);
 	SCTP_TCB_UNLOCK(stcb);
  out_now:
-	if (create_lock_on)
+	if (create_lock_on) {
 		SCTP_ASOC_CREATE_UNLOCK(inp);
+	}
 
 	SCTP_INP_DECR_REF(inp);
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -4820,8 +4823,9 @@ sctp_peeraddr(struct socket *so, struct mbuf *nam)
 	}
 	SCTP_INP_RLOCK(inp);
 	stcb = LIST_FIRST(&inp->sctp_asoc_list);
-	if (stcb)
+	if (stcb) {
 		SCTP_TCB_LOCK(stcb);
+	}
 	SCTP_INP_RUNLOCK(inp);
 	if (stcb == NULL) {
 #if defined(__NetBSD__) || defined(__OpenBSD__)
