@@ -3563,8 +3563,10 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				       (uintptr_t)tp1->whoTo, 
 				       tp1->rec.data.TSN_seq);
 #endif
-			tp1->whoTo->net_ack++;
-			sctp_flight_size_decrease(tp1);
+			if(tp1->whoTo) {
+				tp1->whoTo->net_ack++;
+				sctp_flight_size_decrease(tp1);
+			}
 
 #ifdef SCTP_LOG_RWND
 			sctp_log_rwnd(SCTP_INCREASE_PEER_RWND,
@@ -3961,7 +3963,7 @@ sctp_cwnd_update(struct sctp_tcb *stcb,
 				    SCTP_RECEIVED_SACK, (void *)net);
 				/* now was it the primary? if so restore */
 				if (net->dest_state & SCTP_ADDR_WAS_PRIMARY) {
-					sctp_set_primary_addr(stcb, (struct sockaddr *)NULL, net);
+					(void)sctp_set_primary_addr(stcb, (struct sockaddr *)NULL, net);
 				}
 			}
 		}
@@ -4483,7 +4485,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 				to_ticks = MSEC_TO_TICKS(net->RTO);
 			}
 			j++;
-			SCTP_OS_TIMER_START(&net->rxt_timer.timer, to_ticks, 
+			(void)SCTP_OS_TIMER_START(&net->rxt_timer.timer, to_ticks, 
 					    sctp_timeout_handler, &net->rxt_timer);
 		} else {
 			if(SCTP_OS_TIMER_PENDING(&net->rxt_timer.timer)) {
