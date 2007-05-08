@@ -887,7 +887,7 @@ sctp_select_a_tag(struct sctp_inpcb *m)
 	u_long x, not_done;
 	struct timeval now;
 
-	SCTP_GETTIME_TIMEVAL(&now);
+	(void)SCTP_GETTIME_TIMEVAL(&now);
 	not_done = 1;
 	while (not_done) {
 		x = sctp_select_initial_TSN(&m->sctp_ep);
@@ -945,7 +945,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 #endif
 	if (override_tag) {
 		struct timeval now;
-		SCTP_GETTIME_TIMEVAL(&now);
+		(void)SCTP_GETTIME_TIMEVAL(&now);
 		if (sctp_is_vtag_good(m, override_tag, &now)) {
 			asoc->my_vtag = override_tag;
 		} else {
@@ -1121,9 +1121,8 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	asoc->timoheartbeat = 0;
 	asoc->timocookie = 0;
 	asoc->timoshutdownack = 0;
-	SCTP_GETTIME_TIMEVAL(&asoc->start_time);
-	SCTP_GETTIME_TIMEVAL(&asoc->discontinuity_time);
-
+	(void)SCTP_GETTIME_TIMEVAL(&asoc->start_time);
+	asoc->discontinuity_time = asoc->start_time;
 	return (0);
 }
 
@@ -1688,7 +1687,7 @@ sctp_timeout_handler(void *t)
 			int i, secret;
 	
 			SCTP_STAT_INCR(sctps_timosecret);
-			SCTP_GETTIME_TIMEVAL(&tv);
+			(void)SCTP_GETTIME_TIMEVAL(&tv);
 			SCTP_INP_WLOCK(inp);
 			inp->sctp_ep.time_of_secret_change = tv.tv_sec;
 			inp->sctp_ep.last_secret_number =
@@ -2628,7 +2627,7 @@ sctp_calculate_rto(struct sctp_tcb *stcb,
 	/* 1. calculate new RTT */
 	/************************/
 	/* get the current time */
-	SCTP_GETTIME_TIMEVAL(&now);
+	(void)SCTP_GETTIME_TIMEVAL(&now);
 	/* compute the RTT value */
 	if ((u_long)now.tv_sec > (u_long)old->tv_sec) {
 		calc_time = ((u_long)now.tv_sec - (u_long)old->tv_sec) * 1000;

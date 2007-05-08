@@ -2318,7 +2318,7 @@ sctp_inpcb_alloc(struct socket *so)
 	m->size_of_a_cookie += SCTP_SIGNATURE_SIZE;
 
 	/* Setup the initial secret */
-	SCTP_GETTIME_TIMEVAL(&time);
+	(void)SCTP_GETTIME_TIMEVAL(&time);
 	m->time_of_secret_change = time.tv_sec;
 
 	for (i = 0; i < SCTP_NUMBER_OF_SECRETS; i++) {
@@ -3769,7 +3769,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	}
 	SCTP_INCR_RADDR_COUNT();
 	bzero(net, sizeof(*net));
-	SCTP_GETTIME_TIMEVAL(&net->start_time);
+	(void)SCTP_GETTIME_TIMEVAL(&net->start_time);
 	memcpy(&net->ro._l_addr, newaddr, newaddr->sa_len);
 	if (newaddr->sa_family == AF_INET) {
 		((struct sockaddr_in *)&net->ro._l_addr)->sin_port = stcb->rport;
@@ -4291,7 +4291,7 @@ sctp_add_vtag_to_timewait(struct sctp_inpcb *inp, uint32_t tag, uint32_t time)
 	struct timeval now;
 	int set, i;
 
-	SCTP_GETTIME_TIMEVAL(&now);
+	(void)SCTP_GETTIME_TIMEVAL(&now);
 	chain = &sctppcbinfo.vtag_timewait[(tag % SCTP_STACK_VTAG_HASH_SIZE)];
 	set = 0;
 	if (!SCTP_LIST_EMPTY(chain)) {
@@ -5409,7 +5409,7 @@ sctp_pcb_init()
 	sctp_pcb_initialized = 1;
 
 	bzero(&sctpstat, sizeof(struct sctpstat));
-	SCTP_GETTIME_TIMEVAL(&sctpstat.sctps_discontinuitytime);
+	(void)SCTP_GETTIME_TIMEVAL(&sctpstat.sctps_discontinuitytime);
 	/* init the empty list of (All) Endpoints */
 	LIST_INIT(&sctppcbinfo.listhead);
 #ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
