@@ -6053,7 +6053,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			stcb->asoc.peer_hmacs = sctp_alloc_hmaclist(num_hmacs);
 			if (stcb->asoc.peer_hmacs != NULL) {
 				for (i = 0; i < num_hmacs; i++) {
-					sctp_auth_add_hmacid(stcb->asoc.peer_hmacs,
+					(void)sctp_auth_add_hmacid(stcb->asoc.peer_hmacs,
 							     ntohs(hmacs->hmac_ids[i]));
 				}
 			}
@@ -6079,7 +6079,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			else
 				stcb->asoc.peer_auth_chunks = sctp_alloc_chunklist();
 			for (i = 0; i < num_chunks; i++) {
-				sctp_auth_add_chunk(chunks->chunk_types[i],
+				(void)sctp_auth_add_chunk(chunks->chunk_types[i],
 						    stcb->asoc.peer_auth_chunks);
 			}
 			got_chklist = 1;
