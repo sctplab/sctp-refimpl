@@ -1754,7 +1754,8 @@ sctp_findassoc_by_vtag(struct sockaddr *from, uint32_t vtag,
 				SCTP_UNLOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
 #endif
 				*netp = NULL;	/* unknown */
-				*inp_p = stcb->sctp_ep;
+				if(inp_p)
+					*inp_p = stcb->sctp_ep;
 				SCTP_INP_INFO_RUNLOCK();
 				return (stcb);
 			}
@@ -4046,6 +4047,10 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	if (sctppcbinfo.ipi_count_asoc >= SCTP_MAX_NUM_OF_ASOC) {
 		/* Hit max assoc, sorry no more */
 		*error = ENOBUFS;
+		return (NULL);
+	}
+	if( firstaddr == NULL) {
+		*error = EINVAL;
 		return (NULL);
 	}
 	SCTP_INP_RLOCK(inp);
