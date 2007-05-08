@@ -280,7 +280,10 @@ sctp_skip_csum:
 			init_chk = (struct sctp_init_chunk *)sctp_m_getptr(m,
 			    iphlen + sizeof(*sh), sizeof(*init_chk),
 			    (uint8_t *) & chunk_buf);
-			sh->v_tag = init_chk->init.initiate_tag;
+			if(init_chk)
+				sh->v_tag = init_chk->init.initiate_tag;
+			else 
+				sh->v_tag = 0;
 		}
 		if (ch->chunk_type == SCTP_SHUTDOWN_ACK) {
 			sctp_send_shutdown_complete2(m, iphlen, sh, vrf_id,
@@ -412,8 +415,9 @@ sctp_skip_csum:
 	return IPPROTO_DONE;
 
 bad:
-	if (stcb)
+	if (stcb) {
 		SCTP_TCB_UNLOCK(stcb);
+	}
 
 	if ((in6p) && refcount_up) {
 		/* reduce ref-count */
@@ -423,9 +427,11 @@ bad:
 	}
 	if (m)
 		sctp_m_freem(m);
+#ifdef __Panda__
 	/* For BSD/MAC this does nothing */
 	SCTP_DETACH_HEADER_FROM_CHAIN(*i_pak);
 	SCTP_RELEASE_HEADER(*i_pak);
+#endif
 	return IPPROTO_DONE;
 }
 
@@ -505,8 +511,9 @@ sctp6_notify_mbuf(struct sctp_inpcb *inp,
 	}
 	sctp_timer_start(SCTP_TIMER_TYPE_PATHMTURAISE, inp, stcb, NULL);
 out:
-	if (stcb)
+	if (stcb) {
 		SCTP_TCB_UNLOCK(stcb);
+	}
 }
 
 
@@ -1513,8 +1520,9 @@ sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	/* Now do we connect? */
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
 		stcb = LIST_FIRST(&inp->sctp_asoc_list);
-		if (stcb)
+		if (stcb) {
 			SCTP_TCB_UNLOCK(stcb);
+		}
 		SCTP_INP_RUNLOCK(inp);
 	} else {
 		SCTP_INP_RUNLOCK(inp);
@@ -1554,7 +1562,7 @@ sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		soisconnecting(so);
 	}
 	stcb->asoc.state = SCTP_STATE_COOKIE_WAIT;
-	SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_entered);
+	(void)SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_entered);
 
 	/* initialize authentication parameters for the assoc */
 	sctp_initialize_auth_params(inp, stcb);
@@ -1749,8 +1757,9 @@ sctp6_peeraddr(struct socket *so, struct mbuf *nam)
 	}
 	SCTP_INP_RLOCK(inp);
 	stcb = LIST_FIRST(&inp->sctp_asoc_list);
-	if (stcb)
+	if (stcb) {
 		SCTP_TCB_LOCK(stcb);
+	}
 	SCTP_INP_RUNLOCK(inp);
 	if (stcb == NULL) {
 #if defined(__FreeBSD__) || defined(__APPLE__)

@@ -1820,7 +1820,6 @@ sctp_timeout_handler(void *t)
 		 */
 		stcb = NULL;
 		goto out_no_decr;
-		break;
 	case SCTP_TIMER_TYPE_INPKILL:
 		SCTP_STAT_INCR(sctps_timoinpkill);
 		if (inp == NULL) {
@@ -4397,7 +4396,7 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 	}
 	if (end) {
 		/* message is complete */
-		if(control == stcb->asoc.control_pdapi) {
+		if (stcb && (control == stcb->asoc.control_pdapi)) {
 			stcb->asoc.control_pdapi = NULL;
 		}
 		control->held_length = 0;
@@ -4417,6 +4416,9 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 #endif
 		control->data = m;
 		control->tail_mbuf = tail;
+	}
+	if (stcb == NULL) {
+		control->do_not_ref_stcb = 1;
 	}
 	/*
 	 * When we are appending in partial delivery, the cum-ack is used
@@ -4574,8 +4576,9 @@ struct sctp_ifa *
 sctp_find_ifa_in_ep(struct sctp_inpcb *inp, struct sockaddr *addr, int holds_lock) 
 {
 	struct sctp_laddr *laddr;
-	if (holds_lock == 0)
+	if (holds_lock == 0) {
 		SCTP_INP_RLOCK(inp);
+	}
 
 	LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
 		if(laddr->ifa == NULL)
@@ -4586,8 +4589,9 @@ sctp_find_ifa_in_ep(struct sctp_inpcb *inp, struct sockaddr *addr, int holds_loc
 			if (((struct sockaddr_in *)addr)->sin_addr.s_addr ==
 			    laddr->ifa->address.sin.sin_addr.s_addr) {
 				/* found him. */
-				if (holds_lock == 0)
+				if (holds_lock == 0) {
 					SCTP_INP_RUNLOCK(inp);
+				}
 				return (laddr->ifa);
 				break;
 			}
@@ -4595,15 +4599,17 @@ sctp_find_ifa_in_ep(struct sctp_inpcb *inp, struct sockaddr *addr, int holds_loc
 			if (SCTP6_ARE_ADDR_EQUAL(&((struct sockaddr_in6 *)addr)->sin6_addr,
 						 &laddr->ifa->address.sin6.sin6_addr)) {
 				/* found him. */
-				if (holds_lock == 0)
+				if (holds_lock == 0) {
 					SCTP_INP_RUNLOCK(inp);
+				}
 				return (laddr->ifa);
 				break;
 			}
 		}
 	}
-	if (holds_lock == 0)
+	if (holds_lock == 0) {
 		SCTP_INP_RUNLOCK(inp);
+	}
 	return(NULL);
 }
 
