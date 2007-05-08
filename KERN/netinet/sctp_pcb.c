@@ -4063,12 +4063,12 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 #ifdef SCTP_DEBUG
 	if (sctp_debug_on & SCTP_DEBUG_PCB3) {
 		printf("Allocate an association for peer:");
-		if (firstaddr)
+		if (firstaddr) {
 			sctp_print_address(firstaddr);
-		else
+			printf("Port:%d\n",
+			       ntohs(((struct sockaddr_in *)firstaddr)->sin_port));
+		} else
 			printf("None\n");
-		printf("Port:%d\n",
-		    ntohs(((struct sockaddr_in *)firstaddr)->sin_port));
 	}
 #endif				/* SCTP_DEBUG */
 	if (firstaddr->sa_family == AF_INET) {
