@@ -58,6 +58,7 @@ int sctp_socketpair(int *fds)
 	addr_len = (socklen_t)sizeof(struct sockaddr_in);
 	if (getsockname (fd, (struct sockaddr *) &addr, &addr_len) < 0) {
 		close(fd);
+		close(fds[0]);
 		return -1;
 	}
 
