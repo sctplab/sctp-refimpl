@@ -44,6 +44,18 @@ DECLARE_APITEST(sctp_sso_rtoinfo_1_1_max);
 DECLARE_APITEST(sctp_sso_rtoinfo_1_M_max);
 DECLARE_APITEST(sctp_sso_rtoinfo_1_1_min);
 DECLARE_APITEST(sctp_sso_rtoinfo_1_M_min);
+DECLARE_APITEST(sctp_sso_rtoinfo_1_1_same);
+DECLARE_APITEST(sctp_sso_rtoinfo_1_M_same);
+DECLARE_APITEST(sctp_sso_rtoinfo_ill_1);
+DECLARE_APITEST(sctp_sso_rtoinfo_ill_2);
+DECLARE_APITEST(sctp_sso_rtoinfo_ill_3);
+DECLARE_APITEST(sctp_sso_rtoinfo_ill_4);
+DECLARE_APITEST(sctp_sso_rtoinfo_ill_5);
+DECLARE_APITEST(sctp_sso_rtoinfo_ill_6);
+DECLARE_APITEST(sctp_gso_rtoinfo_1_1_c_bad_id);
+DECLARE_APITEST(sctp_sso_rtoinfo_1_1_c_bad_id);
+DECLARE_APITEST(sctp_sso_rtoinfo_1_1_inherit);
+DECLARE_APITEST(sctp_sso_rtoinfo_1_M_inherit);
 
 struct test all_tests[] = {
 	REGISTER_APITEST(sctp_sendmsg_c_p_c_a),
@@ -84,6 +96,18 @@ struct test all_tests[] = {
 	REGISTER_APITEST(sctp_sso_rtoinfo_1_M_max),
 	REGISTER_APITEST(sctp_sso_rtoinfo_1_1_min),
 	REGISTER_APITEST(sctp_sso_rtoinfo_1_M_min),
+	REGISTER_APITEST(sctp_sso_rtoinfo_1_1_same),
+	REGISTER_APITEST(sctp_sso_rtoinfo_1_M_same),
+	REGISTER_APITEST(sctp_sso_rtoinfo_ill_1),
+	REGISTER_APITEST(sctp_sso_rtoinfo_ill_2),
+	REGISTER_APITEST(sctp_sso_rtoinfo_ill_3),
+	REGISTER_APITEST(sctp_sso_rtoinfo_ill_4),
+	REGISTER_APITEST(sctp_sso_rtoinfo_ill_5),
+	REGISTER_APITEST(sctp_sso_rtoinfo_ill_6),
+	REGISTER_APITEST(sctp_gso_rtoinfo_1_1_c_bad_id),
+	REGISTER_APITEST(sctp_sso_rtoinfo_1_1_c_bad_id),
+	REGISTER_APITEST(sctp_sso_rtoinfo_1_1_inherit),
+	REGISTER_APITEST(sctp_sso_rtoinfo_1_M_inherit),
 };
 
 unsigned int number_of_tests = (sizeof(all_tests) / sizeof(all_tests[0]));
