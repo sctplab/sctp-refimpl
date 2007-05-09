@@ -3213,7 +3213,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		/*
 		 * CMT : SFR algo (covers part of DAC and HTNA as well)
 		 */
-		if (tp1->whoTo->saw_newack == 0) {
+		if (tp1->whoTo && tp1->whoTo->saw_newack == 0) {
 			/*
 			 * No new acks were receieved for data sent to this
 			 * dest. Therefore, according to the SFR algo for
@@ -3222,8 +3222,8 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			 */
 			tp1 = TAILQ_NEXT(tp1, sctp_next);
 			continue;
-		} else if (compare_with_wrap(tp1->rec.data.TSN_seq,
-		    tp1->whoTo->this_sack_highest_newack, MAX_TSN)) {
+		} else if (tp1->whoTo && compare_with_wrap(tp1->rec.data.TSN_seq,
+							   tp1->whoTo->this_sack_highest_newack, MAX_TSN)) {
 			/*
 			 * CMT: New acks were receieved for data sent to
 			 * this dest. But no new acks were seen for data
