@@ -563,24 +563,17 @@ sctp_queue_data_to_stream(struct sctp_tcb *stcb, struct sctp_association *asoc,
 #ifdef SCTP_STR_LOGGING
 	sctp_log_strm_del(control, NULL, SCTP_STR_LOG_FROM_INTO_STRD);
 #endif
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_INDATA1) {
-		printf("queue to stream called for ssn:%u lastdel:%u nxt:%u\n",
-		    (uint32_t) control->sinfo_stream,
-		    (uint32_t) strm->last_sequence_delivered, (uint32_t) nxt_todel);
-	}
-#endif
+	SCTPDBG(SCTP_DEBUG_INDATA1,
+		"queue to stream called for ssn:%u lastdel:%u nxt:%u\n",
+		(uint32_t) control->sinfo_stream,
+		(uint32_t) strm->last_sequence_delivered,
+		(uint32_t) nxt_todel);
 	if (compare_with_wrap(strm->last_sequence_delivered,
 	    control->sinfo_ssn, MAX_SEQ) ||
 	    (strm->last_sequence_delivered == control->sinfo_ssn)) {
 		/* The incoming sseq is behind where we last delivered? */
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INDATA1) {
-			printf("Duplicate S-SEQ:%d delivered:%d from peer, Abort  association\n",
-			    control->sinfo_ssn,
-			    strm->last_sequence_delivered);
-		}
-#endif
+		SCTPDBG(SCTP_DEBUG_INDATA1, "Duplicate S-SEQ:%d delivered:%d from peer, Abort  association\n",
+			control->sinfo_ssn, strm->last_sequence_delivered);
 		/*
 		 * throw it in the stream so it gets cleaned up in
 		 * association destruction
@@ -851,11 +844,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				 * we hit the next one and it does NOT have
 				 * a FIRST fragment mark.
 				 */
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_INDATA1) {
-					printf("Gak, Evil plot, its not first, no fragmented delivery in progress\n");
-				}
-#endif
+				SCTPDBG(SCTP_DEBUG_INDATA1, "Gak, Evil plot, its not first, no fragmented delivery in progress\n");
 				oper = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) + 3 * sizeof(uint32_t)),
 							       0, M_DONTWAIT, 1, MT_DATA);
 
@@ -889,11 +878,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				 * NEXT chunk MUST be either the LAST or
 				 * MIDDLE fragment NOT a FIRST
 				 */
-#ifdef SCTP_DEBUG
-				if (sctp_debug_on & SCTP_DEBUG_INDATA1) {
-					printf("Gak, Evil plot, it IS a first and fragmented delivery in progress\n");
-				}
-#endif
+				SCTPDBG(SCTP_DEBUG_INDATA1, "Gak, Evil plot, it IS a first and fragmented delivery in progress\n");
 				oper = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) + 3 * sizeof(uint32_t)),
 							     0, M_DONTWAIT, 1, MT_DATA);
 				if (oper) {
@@ -926,13 +911,9 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				if (chk->rec.data.stream_number !=
 				    asoc->str_of_pdapi) {
 					/* Got to be the right STR No */
-#ifdef SCTP_DEBUG
-					if (sctp_debug_on & SCTP_DEBUG_INDATA1) {
-						printf("Gak, Evil plot, it IS not same stream number %d vs %d\n",
-						    chk->rec.data.stream_number,
-						    asoc->str_of_pdapi);
-					}
-#endif
+					SCTPDBG(SCTP_DEBUG_INDATA1, "Gak, Evil plot, it IS not same stream number %d vs %d\n",
+						chk->rec.data.stream_number,
+						asoc->str_of_pdapi);
 					oper = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) + 3 * sizeof(uint32_t)),
 								     0, M_DONTWAIT, 1, MT_DATA);
 					if (oper) {
@@ -964,13 +945,9 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					    chk->rec.data.stream_seq !=
 				    asoc->ssn_of_pdapi) {
 					/* Got to be the right STR Seq */
-#ifdef SCTP_DEBUG
-					if (sctp_debug_on & SCTP_DEBUG_INDATA1) {
-						printf("Gak, Evil plot, it IS not same stream seq %d vs %d\n",
-						    chk->rec.data.stream_seq,
-						    asoc->ssn_of_pdapi);
-					}
-#endif
+					SCTPDBG(SCTP_DEBUG_INDATA1, "Gak, Evil plot, it IS not same stream seq %d vs %d\n",
+						chk->rec.data.stream_seq,
+						asoc->ssn_of_pdapi);
 					oper = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) + 3 * sizeof(uint32_t)),
 								     0, M_DONTWAIT, 1, MT_DATA);
 					if (oper) {
@@ -1068,12 +1045,8 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				 */
 				if ((chk->rec.data.rcv_flags & SCTP_DATA_FRAG_MASK) ==
 				    SCTP_DATA_FIRST_FRAG) {
-#ifdef SCTP_DEBUG
-					if (sctp_debug_on & SCTP_DEBUG_INDATA1) {
-						printf("Prev check - It can be a midlle or last but not a first\n");
-						printf("Gak, Evil plot, it's a FIRST!\n");
-					}
-#endif
+					SCTPDBG(SCTP_DEBUG_INDATA1, "Prev check - It can be a midlle or last but not a first\n");
+					SCTPDBG(SCTP_DEBUG_INDATA1, "Gak, Evil plot, it's a FIRST!\n");
 					oper = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) + 3 * sizeof(uint32_t)),
 								     0, M_DONTWAIT, 1, MT_DATA);
 					if (oper) {
@@ -1109,13 +1082,9 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					 * Huh, need the correct STR here,
 					 * they must be the same.
 					 */
-#ifdef SCTP_DEBUG
-					if (sctp_debug_on & SCTP_DEBUG_INDATA1) {
-						printf("Prev check - Gak, Evil plot, ssn:%d not the same as at:%d\n",
+					SCTP_PRINTF("Prev check - Gak, Evil plot, ssn:%d not the same as at:%d\n",
 						    chk->rec.data.stream_number,
 						    prev->rec.data.stream_number);
-					}
-#endif
 					oper = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) + 3 * sizeof(uint32_t)),
 								     0, M_DONTWAIT, 1, MT_DATA);
 					if (oper) {
@@ -1152,13 +1121,9 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					 * Huh, need the correct STR here,
 					 * they must be the same.
 					 */
-#ifdef SCTP_DEBUG
-					if (sctp_debug_on & SCTP_DEBUG_INDATA1) {
-						printf("Prev check - Gak, Evil plot, sseq:%d not the same as at:%d\n",
-						    chk->rec.data.stream_seq,
-						    prev->rec.data.stream_seq);
-					}
-#endif
+					SCTPDBG(SCTP_DEBUG_INDATA1, "Prev check - Gak, Evil plot, sseq:%d not the same as at:%d\n",
+						chk->rec.data.stream_seq,
+						prev->rec.data.stream_seq);
 					oper = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) + 3 * sizeof(uint32_t)),
 								     0, M_DONTWAIT, 1, MT_DATA);
 					if (oper) {
@@ -1193,11 +1158,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				/* Insert chk MUST be a FIRST */
 				if ((chk->rec.data.rcv_flags & SCTP_DATA_FRAG_MASK) !=
 				    SCTP_DATA_FIRST_FRAG) {
-#ifdef SCTP_DEBUG
-					if (sctp_debug_on & SCTP_DEBUG_INDATA1) {
-						printf("Prev check - Gak, evil plot, its not FIRST and it must be!\n");
-					}
-#endif
+					SCTPDBG(SCTP_DEBUG_INDATA1, "Prev check - Gak, evil plot, its not FIRST and it must be!\n");
 					oper = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) + 3 * sizeof(uint32_t)),
 								     0, M_DONTWAIT, 1, MT_DATA);
 					if (oper) {
@@ -1242,12 +1203,8 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				/* Insert chk MUST be a last fragment */
 				if ((chk->rec.data.rcv_flags & SCTP_DATA_FRAG_MASK)
 				    != SCTP_DATA_LAST_FRAG) {
-#ifdef SCTP_DEBUG
-					if (sctp_debug_on & SCTP_DEBUG_INDATA1) {
-						printf("Next chk - Next is FIRST, we must be LAST\n");
-						printf("Gak, Evil plot, its not a last!\n");
-					}
-#endif
+					SCTPDBG(SCTP_DEBUG_INDATA1, "Next chk - Next is FIRST, we must be LAST\n");
+					SCTPDBG(SCTP_DEBUG_INDATA1, "Gak, Evil plot, its not a last!\n");
 					oper = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) + 3 * sizeof(uint32_t)),
 								     0, M_DONTWAIT, 1, MT_DATA);
 					if (oper) {
@@ -1287,12 +1244,8 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				 */
 				if ((chk->rec.data.rcv_flags & SCTP_DATA_FRAG_MASK) ==
 				    SCTP_DATA_LAST_FRAG) {
-#ifdef SCTP_DEBUG
-					if (sctp_debug_on & SCTP_DEBUG_INDATA1) {
-						printf("Next chk - Next is a MIDDLE/LAST\n");
-						printf("Gak, Evil plot, new prev chunk is a LAST\n");
-					}
-#endif
+					SCTPDBG(SCTP_DEBUG_INDATA1, "Next chk - Next is a MIDDLE/LAST\n");
+					SCTPDBG(SCTP_DEBUG_INDATA1, "Gak, Evil plot, new prev chunk is a LAST\n");
 					oper = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) + 3 * sizeof(uint32_t)),
 								     0, M_DONTWAIT, 1, MT_DATA);
 					if (oper) {
@@ -1329,13 +1282,9 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					 * Huh, need the correct STR here,
 					 * they must be the same.
 					 */
-#ifdef SCTP_DEBUG
-					if (sctp_debug_on & SCTP_DEBUG_INDATA1) {
-						printf("Next chk - Gak, Evil plot, ssn:%d not the same as at:%d\n",
-						    chk->rec.data.stream_number,
-						    next->rec.data.stream_number);
-					}
-#endif
+					SCTPDBG(SCTP_DEBUG_INDATA1, "Next chk - Gak, Evil plot, ssn:%d not the same as at:%d\n",
+						chk->rec.data.stream_number,
+						next->rec.data.stream_number);
 					oper = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) + 3 * sizeof(uint32_t)),
 								     0, M_DONTWAIT, 1, MT_DATA);
 					if (oper) {
@@ -1373,13 +1322,9 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					 * Huh, need the correct STR here,
 					 * they must be the same.
 					 */
-#ifdef SCTP_DEBUG
-					if (sctp_debug_on & SCTP_DEBUG_INDATA1) {
-						printf("Next chk - Gak, Evil plot, sseq:%d not the same as at:%d\n",
-						    chk->rec.data.stream_seq,
-						    next->rec.data.stream_seq);
-					}
-#endif
+					SCTPDBG(SCTP_DEBUG_INDATA1, "Next chk - Gak, Evil plot, sseq:%d not the same as at:%d\n",
+						chk->rec.data.stream_seq,
+						next->rec.data.stream_seq);
 					oper = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) + 3 * sizeof(uint32_t)),
 								     0, M_DONTWAIT, 1, MT_DATA);
 					if (oper) {
@@ -1595,14 +1540,9 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		    asoc->highest_tsn_inside_map, MAX_TSN)) {
 
 			/* Nope not in the valid range dump it */
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_INDATA1) {
-				printf("My rwnd overrun1:tsn:%lx rwnd %lu sbspace:%ld\n",
-				    (u_long)tsn, (u_long)asoc->my_rwnd,
-				    sctp_sbspace(&stcb->asoc, &stcb->sctp_socket->so_rcv));
-
-			}
-#endif
+			SCTPDBG(SCTP_DEBUG_INDATA1, "My rwnd overrun1:tsn:%lx rwnd %lu sbspace:%ld\n",
+				(u_long)tsn, (u_long)asoc->my_rwnd,
+				sctp_sbspace(&stcb->asoc, &stcb->sctp_socket->so_rcv));
 			sctp_set_rwnd(stcb, asoc);
 			if ((asoc->cnt_on_all_streams +
 			    asoc->cnt_on_reasm_queue +
@@ -1685,13 +1625,8 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	    strmseq, MAX_SEQ) ||
 	    asoc->strmin[strmno].last_sequence_delivered == strmseq)) {
 		/* The incoming sseq is behind where we last delivered? */
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INDATA1) {
-			printf("EVIL/Broken-Dup S-SEQ:%d delivered:%d from peer, Abort!\n",
-			    strmseq,
-			    asoc->strmin[strmno].last_sequence_delivered);
-		}
-#endif
+		SCTPDBG(SCTP_DEBUG_INDATA1, "EVIL/Broken-Dup S-SEQ:%d delivered:%d from peer, Abort!\n",
+			strmseq, asoc->strmin[strmno].last_sequence_delivered);
 		oper = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) + 3 * sizeof(uint32_t)),
 					     0, M_DONTWAIT, 1, MT_DATA);
 		if (oper) {
@@ -1836,7 +1771,7 @@ failed_express_del:
 			if(sctp_append_to_readq(stcb->sctp_ep, stcb, control, dmbuf, end, 
 						tsn,
 						&stcb->sctp_socket->so_rcv)) {
-				printf("Append fails end:%d\n", end);
+				SCTP_PRINTF("Append fails end:%d\n", end);
 				goto failed_pdapi_express_del;
 			}
 			SCTP_STAT_INCR(sctps_recvexpressm);
@@ -2303,7 +2238,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 #ifdef INVARIANTS
 		panic("huh, cumack greater than high-tsn in map");
 #else
-		printf("huh, cumack greater than high-tsn in map - should panic?\n");
+		SCTP_PRINTF("huh, cumack greater than high-tsn in map - should panic?\n");
 		asoc->highest_tsn_inside_map = asoc->cumulative_tsn;
 #endif
 	}
@@ -4125,8 +4060,8 @@ sctp_fs_audit(struct sctp_association *asoc)
 #ifdef INVARIANTS
 		panic("Flight size-express incorrect? \n");
 #else
-		printf("Flight size-express incorrect inflight:%d inbetween:%d\n",
-		       inflight, inbetween);
+		SCTP_PRINTF("Flight size-express incorrect inflight:%d inbetween:%d\n",
+			    inflight, inbetween);
 #endif
 	}
 
@@ -4709,7 +4644,7 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 
 			}
 		} else {
-			printf("Size invalid offset to dups:%d number dups:%d sack_len:%d num gaps:%d\n",
+			SCTP_PRINTF("Size invalid offset to dups:%d number dups:%d sack_len:%d num gaps:%d\n",
 			       off_to_dup, num_dup, sack_length, num_seg);
 		}
 	}
@@ -5037,9 +4972,8 @@ sctp_handle_sack(struct sctp_sack_chunk *ch, struct sctp_tcb *stcb,
 #ifdef INVARIANTS
 			panic("Warning flight size is postive and should be 0");
 #else
-			
-			printf("Warning flight size incorrect should be 0 is %d\n",
-			       asoc->total_flight);
+			SCTP_PRINTF("Warning flight size incorrect should be 0 is %d\n",
+				    asoc->total_flight);
 #endif
 			asoc->total_flight = 0;
 		}
@@ -5680,11 +5614,8 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 	asoc = &stcb->asoc;
 	cnt_gone = 0;
 	if ((fwd_sz = ntohs(fwd->ch.chunk_length)) < sizeof(struct sctp_forward_tsn_chunk)) {
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_INDATA1) {
-			printf("Bad size too small/big fwd-tsn\n");
-		}
-#endif
+		SCTPDBG(SCTP_DEBUG_INDATA1,
+			"Bad size too small/big fwd-tsn\n");
 		return;
 	}
 	m_size = (stcb->asoc.mapping_array_size << 3);
