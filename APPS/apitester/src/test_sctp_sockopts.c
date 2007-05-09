@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
+#include <stdio.h>
 #include "sctp_utilities.h"
 #include "api_tests.h"
 
