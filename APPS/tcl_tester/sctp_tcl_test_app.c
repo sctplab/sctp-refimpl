@@ -239,11 +239,11 @@ handle_notification(char *receive_buffer, int *notDone)
 			char scope_str[16];
 			snprintf(scope_str, sizeof(scope_str)-1, " scope %u",
 				 sin6->sin6_scope_id);
-			inet_ntop(AF_INET6, (char*)&sin6->sin6_addr, buf, sizeof(buf));
-			strcat(buf, scope_str);
+			(void)inet_ntop(AF_INET6, (char*)&sin6->sin6_addr, buf, sizeof(buf));
+			strncat(buf, scope_str, sizeof(scope_str));
 		} else {
 			sin = (struct sockaddr_in *)&spc->spc_aaddr;
-			inet_ntop(AF_INET, (char*)&sin->sin_addr, buf, sizeof(buf));
+			(void)inet_ntop(AF_INET, (char*)&sin->sin_addr, buf, sizeof(buf));
 		}
 		if(verbose) {
 			printf("SCTP_PEER_ADDR_CHANGE: %s, addr=%s, assoc=0x%x\n",
@@ -336,7 +336,7 @@ handle_notification(char *receive_buffer, int *notDone)
 		else if(ssf->ssf_flags == SCTP_DATA_SENT)
 			msg = "data sent";
 		else{
-			sprintf(msgbuf,"unknown flags:%d", ssf->ssf_flags);
+			snprintf(msgbuf, sizeof(msgbuf), "unknown flags:%d", ssf->ssf_flags);
 			msg = msgbuf;
 		}
 		if(verbose) {
@@ -529,7 +529,7 @@ main (int argc, char **argv)
 	char send_buffer[SEND_BUF_SIZE];
 	socklen_t salen;
 	int i, sd, notDone = 1, at;
-	int send_out;
+	int send_out=0;
 	uint8_t dest_addr_set = 0, dest_port_set=0;
 	remote_port = local_port = htons(2222);
 	memset(&addr, 0, sizeof(addr));
@@ -753,7 +753,7 @@ main (int argc, char **argv)
 			if ((listen_only == 0) && send_out) {
 				/* queue up the rest */
 				while (send_out > 0) {
-					sctp_sendx(sd, send_buffer, size_to_send, &addr.sa,
+					(void)sctp_sendx(sd, send_buffer, size_to_send, &addr.sa,
 						   1, &sinfo_out, 0);
 					sends_out++;
 					send_out--;
