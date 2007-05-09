@@ -12,7 +12,8 @@ DEFINE_APITEST(sctp_gso_rtoinfo_1_1_defaults)
 	int fd, result;
 	uint32_t init, max, min;
 	
-	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
+	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
+		return strerror(errno);
 	
 	result = sctp_get_rto_info(fd, 0, &init, &max, &min);
 	
@@ -32,7 +33,8 @@ DEFINE_APITEST(sctp_gso_rtoinfo_1_M_defaults)
 	int fd, result;
 	uint32_t init, max, min;
 	
-	fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
+	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
+		return strerror(errno);
 	
 	result = sctp_get_rto_info(fd, 0, &init, &max, &min);
 	
@@ -51,7 +53,8 @@ DEFINE_APITEST(sctp_gso_rtoinfo_1_1_bad_id)
 {
 	int fd, result;
 	
-	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
+	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
+		return strerror(errno);
 	
 	result = sctp_get_rto_info(fd, 1, NULL, NULL, NULL);
 	
@@ -67,7 +70,8 @@ DEFINE_APITEST(sctp_gso_rtoinfo_1_M_bad_id)
 {
 	int fd, result;
 	
-	fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
+	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
+		return strerror(errno);
 	
 	result = sctp_get_rto_info(fd, 1, NULL, NULL, NULL);
 	
@@ -87,7 +91,8 @@ DEFINE_APITEST(sctp_sso_rtoinfo_1_1_good)
 	int fd, result;
 	uint32_t init, max, min, new_init, new_max, new_min;
 	
-	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
+	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
+		return strerror(errno);
 
 	result = sctp_get_rto_info(fd, 0, &init, &max, &min);
 	
@@ -125,7 +130,8 @@ DEFINE_APITEST(sctp_sso_rtoinfo_1_M_good)
 	int fd, result;
 	uint32_t init, max, min, new_init, new_max, new_min;
 	
-	fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
+	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
+		return strerror(errno);
 
 	result = sctp_get_rto_info(fd, 0, &init, &max, &min);
 	
@@ -163,7 +169,8 @@ DEFINE_APITEST(sctp_sso_rtoinfo_1_1_bad_id)
 	int fd, result;
 	uint32_t init, max, min;
 	
-	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
+	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
+		return strerror(errno);
 
 	result = sctp_get_rto_info(fd, 0, &init, &max, &min);
 	
@@ -187,7 +194,8 @@ DEFINE_APITEST(sctp_sso_rtoinfo_1_M_bad_id)
 	int fd, result;
 	uint32_t init, max, min;
 	
-	fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
+	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
+		return strerror(errno);
 
 	result = sctp_get_rto_info(fd, 0, &init, &max, &min);
 	
@@ -214,7 +222,8 @@ DEFINE_APITEST(sctp_sso_rtoinfo_1_1_init)
 	int fd, result;
 	uint32_t init, max, min, new_init, new_max, new_min;
 	
-	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
+	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
+		return strerror(errno);
 
 	result = sctp_get_rto_info(fd, 0, &init, &max, &min);
 	
@@ -253,7 +262,8 @@ DEFINE_APITEST(sctp_sso_rtoinfo_1_M_init)
 	int fd, result;
 	uint32_t init, max, min, new_init, new_max, new_min;
 	
-	fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
+	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
+		return strerror(errno);
 
 	result = sctp_get_rto_info(fd, 0, &init, &max, &min);
 	
@@ -292,7 +302,8 @@ DEFINE_APITEST(sctp_sso_rtoinfo_1_1_max)
 	int fd, result;
 	uint32_t init, max, min, new_init, new_max, new_min;
 	
-	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
+	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
+		return strerror(errno);
 
 	result = sctp_get_rto_info(fd, 0, &init, &max, &min);
 	
@@ -331,7 +342,8 @@ DEFINE_APITEST(sctp_sso_rtoinfo_1_M_max)
 	int fd, result;
 	uint32_t init, max, min, new_init, new_max, new_min;
 	
-	fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
+	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
+		return strerror(errno);
 
 	result = sctp_get_rto_info(fd, 0, &init, &max, &min);
 	
@@ -370,7 +382,8 @@ DEFINE_APITEST(sctp_sso_rtoinfo_1_1_min)
 	int fd, result;
 	uint32_t init, max, min, new_init, new_max, new_min;
 	
-	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
+	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
+		return strerror(errno);
 
 	result = sctp_get_rto_info(fd, 0, &init, &max, &min);
 	
@@ -409,7 +422,8 @@ DEFINE_APITEST(sctp_sso_rtoinfo_1_M_min)
 	int fd, result;
 	uint32_t init, max, min, new_init, new_max, new_min;
 	
-	fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
+	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
+		return strerror(errno);
 
 	result = sctp_get_rto_info(fd, 0, &init, &max, &min);
 	
@@ -448,7 +462,8 @@ DEFINE_APITEST(sctp_sso_rtoinfo_1_1_same)
 	int fd, result;
 	uint32_t init, max, min;
 	
-	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
+	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
+		return strerror(errno);
 
 	result = sctp_set_rto_info(fd, 0, 100, 100, 100);
 	
@@ -476,7 +491,8 @@ DEFINE_APITEST(sctp_sso_rtoinfo_1_M_same)
 	int fd, result;
 	uint32_t init, max, min;
 	
-	fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
+	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
+		return strerror(errno);
 
 	result = sctp_set_rto_info(fd, 0, 100, 100, 100);
 	
@@ -504,7 +520,8 @@ DEFINE_APITEST(sctp_sso_rtoinfo_ill_1)
 	int fd, result;
 	uint32_t min;
 	
-	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
+	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
+		return strerror(errno);
 
 	result = sctp_get_minimum_rto(fd, 0, &min);
 	
@@ -531,7 +548,8 @@ DEFINE_APITEST(sctp_sso_rtoinfo_ill_2)
 	int fd, result;
 	uint32_t max;
 	
-	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
+	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
+		return strerror(errno);
 
 	result = sctp_get_maximum_rto(fd, 0, &max);
 	
@@ -558,7 +576,8 @@ DEFINE_APITEST(sctp_sso_rtoinfo_ill_3)
 	int fd, result;
 	uint32_t init;
 	
-	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
+	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
+		return strerror(errno);
 
 	result = sctp_get_initial_rto(fd, 0, &init);
 	if (result) {
@@ -584,7 +603,8 @@ DEFINE_APITEST(sctp_sso_rtoinfo_ill_4)
 	int fd, result;
 	uint32_t max;
 	
-	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
+	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
+		return strerror(errno);
 
 	result = sctp_get_maximum_rto(fd, 0, &max);
 	if (result) {
@@ -610,7 +630,8 @@ DEFINE_APITEST(sctp_sso_rtoinfo_ill_5)
 	int fd, result;
 	uint32_t init;
 	
-	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
+	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
+		return strerror(errno);
 
 	result = sctp_get_initial_rto(fd, 0, &init);
 	if (result) {
@@ -636,7 +657,8 @@ DEFINE_APITEST(sctp_sso_rtoinfo_ill_6)
 	int fd, result;
 	uint32_t max;
 	
-	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
+	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
+		return strerror(errno);
 
 	result = sctp_get_maximum_rto(fd, 0, &max);
 	if (result) {
