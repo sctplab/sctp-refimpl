@@ -3737,7 +3737,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				 * ASCONF... ASCONF processing will find the
 				 * right net later
 				 */
-				stcb->asoc.last_control_chunk_from = *netp;
+				if ((netp != NULL) && (*netp != NULL))
+					stcb->asoc.last_control_chunk_from = *netp;
 			}
 		}
 #ifdef SCTP_AUDITING_ENABLED
@@ -3887,7 +3888,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					sctp_express_handle_sack(stcb, cum_ack, a_rwnd, nonce_sum_flag, 
 								 &abort_now);
 				} else {
-					sctp_handle_sack(sack, stcb, *netp, &abort_now, chk_length, a_rwnd);
+					if(netp && *netp)
+						sctp_handle_sack(sack, stcb, *netp, &abort_now, chk_length, a_rwnd);
 				}
 				if (abort_now) {
 					/* ABORT signal from sack processing */
@@ -3898,7 +3900,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			break;
 		case SCTP_HEARTBEAT_REQUEST:
 			SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_HEARTBEAT\n");
-			if (stcb) {
+			if ((stcb) && netp && *netp) {
 				SCTP_STAT_INCR(sctps_recvheartbeat);
 				sctp_send_heartbeat_ack(stcb, m, *offset,
 							chk_length, *netp);
@@ -3920,12 +3922,13 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			/* He's alive so give him credit */
 			stcb->asoc.overall_error_count = 0;
 			SCTP_STAT_INCR(sctps_recvheartbeatack);
-			sctp_handle_heartbeat_ack((struct sctp_heartbeat_chunk *)ch,
-						  stcb, *netp);
+			if (netp && *netp)
+				sctp_handle_heartbeat_ack((struct sctp_heartbeat_chunk *)ch,
+							  stcb, *netp);
 			break;
 		case SCTP_ABORT_ASSOCIATION:
 			SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_ABORT\n");
-			if (stcb) 
+			if ((stcb) && netp && *netp)
 				sctp_handle_abort((struct sctp_abort_chunk *)ch,
 						  stcb, *netp);
 			*offset = length;
@@ -3941,7 +3944,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				return (NULL);
 				
 			}
-			{
+			if(netp && *netp){
 				int abort_flag = 0;
 
 				sctp_handle_shutdown((struct sctp_shutdown_chunk *)ch,
@@ -4044,17 +4047,21 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				if(linp) {
 					SCTP_ASOC_CREATE_LOCK(linp);
 				}
-				ret_buf =
-					sctp_handle_cookie_echo(m, iphlen,
-								*offset, sh,
-								(struct sctp_cookie_echo_chunk *)ch,
-								&inp, &stcb, netp,
-								auth_skipped,
-								auth_offset,
-								auth_len,
-								&locked_tcb,
-								vrf_id,
-								table_id);
+				if(netp) {
+					ret_buf =
+						sctp_handle_cookie_echo(m, iphlen,
+									*offset, sh,
+									(struct sctp_cookie_echo_chunk *)ch,
+									&inp, &stcb, netp,
+									auth_skipped,
+									auth_offset,
+									auth_len,
+									&locked_tcb,
+									vrf_id,
+									table_id);
+				} else {
+					ret_buf = NULL;
+				}
 				if(linp) {
 					SCTP_ASOC_CREATE_UNLOCK(linp);
 				}
@@ -4157,7 +4164,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				}
 				return (NULL);
 			}
-			if (stcb) {
+			if ((stcb) && netp && *netp) {
 				sctp_handle_shutdown_complete((struct sctp_shutdown_complete_chunk *)ch,
 							      stcb, *netp);
 			}
@@ -4183,7 +4190,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				*offset = length;
 				return (NULL);
 			}
-			if (stcb) {
+			if ((stcb) && netp && *netp) {
 				/* He's alive so give him credit */
 				stcb->asoc.overall_error_count = 0;
 				sctp_handle_asconf_ack(m, *offset,
@@ -4272,7 +4279,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, *offset,
 								   chk_length, chunk_buf);
 
-			if (ch && (stcb) && (*netp)){
+			if (ch && (stcb) && netp && (*netp)){
 				sctp_handle_packet_dropped((struct sctp_pktdrop_chunk *)ch,
 							   stcb, *netp);
 			}
