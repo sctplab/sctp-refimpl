@@ -3498,9 +3498,10 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				 * for orig dest. Let CUCv2 track new (rtx-)
 				 * pseudo-cumack always.
 				 */
-				tp1->whoTo->find_pseudo_cumack = 1;
-				tp1->whoTo->find_rtx_pseudo_cumack = 1;
-
+				if (tp1->whoTo) {
+					tp1->whoTo->find_pseudo_cumack = 1;
+					tp1->whoTo->find_rtx_pseudo_cumack = 1;
+				}
 
 			} else {/* CMT is OFF */
 
