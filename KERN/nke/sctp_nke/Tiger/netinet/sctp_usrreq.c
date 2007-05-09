@@ -1773,7 +1773,8 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 }
 
 #define SCTP_FIND_STCB(inp, stcb, assoc_id) { \
-	if (inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) { \
+	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||\
+	    (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) { \
 		SCTP_INP_RLOCK(inp); \
 		stcb = LIST_FIRST(&inp->sctp_asoc_list); \
 		if (stcb) \
