@@ -1606,7 +1606,10 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	asoc->advanced_peer_ack_point = asoc->last_acked_seq;
 
 	/* process the INIT info (peer's info) */
-	retval = sctp_process_init(init_cp, stcb, *netp);
+	if (netp) 
+		retval = sctp_process_init(init_cp, stcb, *netp);
+	else
+		retval = 0;
 	if (retval < 0) {
 		sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_16);
 		return (NULL);
@@ -1727,7 +1730,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	}
 	/* respond with a COOKIE-ACK */
 	/* calculate the RTT */
-	if(netp) 
+	if ((netp) && (*netp))
 		(*netp)->RTO = sctp_calculate_rto(stcb, asoc, *netp,
 						  &cookie->time_entered);
 	sctp_send_cookie_ack(stcb);
@@ -2026,6 +2029,9 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			}
 		}
 	}
+	if(to == NULL)
+		return (NULL);
+
 	cookie_len -= SCTP_SIGNATURE_SIZE;
 	if (*stcb == NULL) {
 		/* this is the "normal" case... get a new TCB */
@@ -3821,7 +3827,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				}
 				return (NULL);
 			}
-			if(netp) {
+			if ((netp) && (*netp)) {
 				ret = sctp_handle_init_ack(m, iphlen, *offset, sh,
 							   (struct sctp_init_ack_chunk *)ch, stcb, *netp, &abort_no_unlock, vrf_id, table_id);
 			} else {
@@ -3948,14 +3954,16 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			break;
 		case SCTP_SHUTDOWN_ACK:
 			SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_SHUTDOWN-ACK\n");
-			if(stcb) 
+			if ((stcb) && (netp) && (*netp))
 				sctp_handle_shutdown_ack((struct sctp_shutdown_ack_chunk *)ch, stcb, *netp);
 			*offset = length;
 			return (NULL);
 			break;
+
 		case SCTP_OPERATION_ERROR:
 			SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_OP-ERR\n");
-			if ((stcb) && sctp_handle_error(ch, stcb, *netp) < 0) {
+			if ((stcb) && netp && *netp && sctp_handle_error(ch, stcb, *netp) < 0) {
+
 				*offset = length;
 				return (NULL);
 			}
@@ -4100,7 +4108,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				}
 			}
 			/* He's alive so give him credit */
-			if(stcb) {
+			if ((stcb) && netp && *netp) {
 				stcb->asoc.overall_error_count = 0;
 				sctp_handle_cookie_ack((struct sctp_cookie_ack_chunk *)ch,stcb, *netp);
 			}
