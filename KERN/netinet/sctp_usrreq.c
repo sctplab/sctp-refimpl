@@ -3692,31 +3692,53 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 	case SCTP_RTOINFO:
 	{
 		struct sctp_rtoinfo *srto;
-
+		uint32_t new_init, new_min, new_max;
+		
 		SCTP_CHECK_AND_CAST(srto, optval, struct sctp_rtoinfo, optsize);
 		SCTP_FIND_STCB(inp, stcb, srto->srto_assoc_id);
 
 		if (stcb) {
-			/* Set in ms we hope :-) */
 			if (srto->srto_initial)
-				stcb->asoc.initial_rto = srto->srto_initial;
+				new_init = srto->srto_initial;
+			else
+				new_init = stcb->asoc.initial_rto;
 			if (srto->srto_max)
-				stcb->asoc.maxrto = srto->srto_max;
+				new_max = srto->srto_max;
+			else
+				new_max = stcb->asoc.maxrto;
 			if (srto->srto_min)
-				stcb->asoc.minrto = srto->srto_min;
+				new_min = srto->srto_min;
+			else
+				new_min = stcb->asoc.minrto;
+			if ((new_min <= new_init) && (new_init <= new_max)) {
+				stcb->asoc.initial_rto = new_init;
+				stcb->asoc.maxrto = new_max;
+				stcb->asoc.minrto = new_min;
+			} else {
+				error = EDOM;
+			}
 			SCTP_TCB_UNLOCK(stcb);
 		} else {
 			SCTP_INP_WLOCK(inp);
-			/*
-			 * If we have a null asoc, its default for
-			 * the endpoint
-			 */
 			if (srto->srto_initial)
-				inp->sctp_ep.initial_rto = srto->srto_initial;
+				new_init = srto->srto_initial;
+			else
+				new_init = inp->sctp_ep.initial_rto;
 			if (srto->srto_max)
-				inp->sctp_ep.sctp_maxrto = srto->srto_max;
+				new_max = srto->srto_max;
+			else
+				new_max = inp->sctp_ep.sctp_maxrto;
 			if (srto->srto_min)
-				inp->sctp_ep.sctp_minrto = srto->srto_min;
+				new_min = srto->srto_min;
+			else
+				new_min = inp->sctp_ep.sctp_minrto;
+			if ((new_min <= new_init) && (new_init <= new_max)) {
+				inp->sctp_ep.initial_rto = new_init;
+				inp->sctp_ep.sctp_maxrto = new_max;
+				inp->sctp_ep.sctp_minrto = new_min;
+			} else {
+				error = EDOM;
+			}
 			SCTP_INP_WUNLOCK(inp);
 		}
 	}
