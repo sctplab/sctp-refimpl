@@ -3731,7 +3731,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 		num_chunks++;
 		/* Save off the last place we got a control from */
 		if (stcb != NULL) {
-			if ((*netp != NULL) || (ch->chunk_type == SCTP_ASCONF)) {
+			if (((netp != NULL) && (*netp != NULL)) || (ch->chunk_type == SCTP_ASCONF)) {
 				/*
 				 * allow last_control to be NULL if
 				 * ASCONF... ASCONF processing will find the
