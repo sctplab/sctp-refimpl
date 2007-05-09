@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001-2007, Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -33,7 +33,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctputil.h,v 1.12 2007/04/15 13:03:14 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctputil.h,v 1.19 2007/05/09 13:30:06 rrs Exp $");
 #endif
 #ifndef __sctputil_h__
 #define __sctputil_h__
@@ -46,6 +46,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctputil.h,v 1.12 2007/04/15 13:03:14 rrs Ex
  * Any new logging added must also define SCTP_STAT_LOGGING if
  * its not already defined.
  */
+
 #if defined(SCTP_LOG_MAXBURST) || defined(SCTP_LOG_RWND) || defined(SCTP_LOG_RWND)
 #ifndef SCTP_STAT_LOGGING
 #define SCTP_STAT_LOGGING 1
@@ -88,7 +89,14 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctputil.h,v 1.12 2007/04/15 13:03:14 rrs Ex
 #endif
 #endif
 
-#ifdef SCTP_ASOCLOG_OF_TSNS
+#if defined(SCTP_LOG_SACK_ARRIVALS)
+#ifndef SCTP_STAT_LOGGING
+#define SCTP_STAT_LOGGING 1
+#endif
+#endif
+
+
+#ifdef SCTP_ASOCLOG_OF_TSNS 
 void sctp_print_out_track_log(struct sctp_tcb *stcb);
 #endif
 
@@ -112,9 +120,6 @@ sctp_get_ifa_hash_val(struct sockaddr *addr);
 
 struct sctp_ifa *
 sctp_find_ifa_in_ep(struct sctp_inpcb *inp, struct sockaddr *addr, int hold_lock);
-struct sctp_ifa *
-sctp_find_ifa_in_ifn(struct sctp_ifn *sctp_ifnp, struct sockaddr *addr,
-		     int holds_lock);
 
 struct sctp_ifa *
 sctp_find_ifa_by_addr(struct sockaddr *addr, uint32_t vrf_id, int holds_lock);
@@ -127,11 +132,11 @@ int sctp_init_asoc(struct sctp_inpcb *, struct sctp_association *, int, uint32_t
 
 void sctp_fill_random_store(struct sctp_pcb *);
 
-int
+void
 sctp_timer_start(int, struct sctp_inpcb *, struct sctp_tcb *,
     struct sctp_nets *);
 
-int
+void
 sctp_timer_stop(int, struct sctp_inpcb *, struct sctp_tcb *,
     struct sctp_nets *, uint32_t);
 
@@ -188,7 +193,7 @@ void sctp_ulp_notify(uint32_t, struct sctp_tcb *, uint32_t, void *);
 void
 sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
     struct sctp_inpcb *new_inp,
-    struct sctp_tcb *stcb);
+    struct sctp_tcb *stcb, int waitflags);
 
 
 void sctp_stop_timers_for_shutdown(struct sctp_tcb *);
@@ -202,16 +207,22 @@ void sctp_abort_notification(struct sctp_tcb *, int);
 /* We abort responding to an IP packet for some reason */
 void
 sctp_abort_association(struct sctp_inpcb *, struct sctp_tcb *,
-    struct mbuf *, int, struct sctphdr *, struct mbuf *);
+    struct mbuf *, int, struct sctphdr *, struct mbuf *, uint32_t, uint32_t);
+
 
 /* We choose to abort via user input */
 void
 sctp_abort_an_association(struct sctp_inpcb *, struct sctp_tcb *, int,
     struct mbuf *);
 
-void
-sctp_handle_ootb(struct mbuf *, int, int, struct sctphdr *,
-    struct sctp_inpcb *, struct mbuf *);
+void sctp_handle_ootb(struct mbuf *, int, int, struct sctphdr *,
+    struct sctp_inpcb *, struct mbuf *, uint32_t, uint32_t);
+
+int sctp_connectx_helper_add(struct sctp_tcb *stcb, struct sockaddr *addr, int totaddr, int *error);
+
+struct sctp_tcb *
+sctp_connectx_helper_find(struct sctp_inpcb *inp, struct sockaddr *addr, int *totaddr, 
+			  int *num_v4, int *num_v6, int *error, int max);
 
 int sctp_is_there_an_abort_here(struct mbuf *, int, uint32_t *);
 uint32_t sctp_is_same_scope(struct sockaddr_in6 *, struct sockaddr_in6 *);
@@ -262,7 +273,7 @@ void sctp_print_address_pkt(struct ip *, struct sctphdr *);
 
 void
 sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
-					uint32_t error, int no_lock);
+					uint32_t error, int no_lock, uint32_t strseq);
 
 int
 sctp_release_pr_sctp_chunk(struct sctp_tcb *, struct sctp_tmit_chunk *,
@@ -280,16 +291,16 @@ sctp_free_bufspace(struct sctp_tcb *, struct sctp_association *,
 #define sctp_free_bufspace(stcb, asoc, tp1, chk_cnt)  \
 do { \
 	if (tp1->data != NULL) { \
-                atomic_add_int(&((asoc)->chunks_on_out_queue), -chk_cnt); \
+                atomic_subtract_int(&((asoc)->chunks_on_out_queue), chk_cnt); \
 		if ((asoc)->total_output_queue_size >= tp1->book_size) { \
-			atomic_add_int(&((asoc)->total_output_queue_size), -tp1->book_size); \
+			atomic_subtract_int(&((asoc)->total_output_queue_size), tp1->book_size); \
 		} else { \
 			(asoc)->total_output_queue_size = 0; \
 		} \
    	        if (stcb->sctp_socket && ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) || \
 	            (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL))) { \
 			if (stcb->sctp_socket->so_snd.sb_cc >= tp1->book_size) { \
-				atomic_add_int(&((stcb)->sctp_socket->so_snd.sb_cc), -tp1->book_size); \
+				atomic_subtract_int(&((stcb)->sctp_socket->so_snd.sb_cc), tp1->book_size); \
 			} else { \
 				stcb->sctp_socket->so_snd.sb_cc = 0; \
 			} \
@@ -302,16 +313,16 @@ do { \
 #define sctp_free_spbufspace(stcb, asoc, sp)  \
 do { \
  	if (sp->data != NULL) { \
-                atomic_add_int(&(asoc)->chunks_on_out_queue, -1); \
+                atomic_subtract_int(&(asoc)->chunks_on_out_queue, 1); \
 		if ((asoc)->total_output_queue_size >= sp->length) { \
-			atomic_add_int(&(asoc)->total_output_queue_size,sp->length); \
+			atomic_subtract_int(&(asoc)->total_output_queue_size, sp->length); \
 		} else { \
 			(asoc)->total_output_queue_size = 0; \
 		} \
    	        if (stcb->sctp_socket && ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) || \
 	            (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL))) { \
 			if (stcb->sctp_socket->so_snd.sb_cc >= sp->length) { \
-				atomic_add_int(&stcb->sctp_socket->so_snd.sb_cc,sp->length); \
+				atomic_subtract_int(&stcb->sctp_socket->so_snd.sb_cc,sp->length); \
 			} else { \
 				stcb->sctp_socket->so_snd.sb_cc = 0; \
 			} \
@@ -347,6 +358,18 @@ sctp_soreceive(struct socket *so, struct sockaddr **psa,
     int *flagsp);
 
 #endif
+
+/* For those not passing mbufs, this does the 
+ * translations for you. Caller owns memory
+ * of size controllen returned in controlp.
+ */
+int sctp_l_soreceive(struct socket *so,
+		     struct sockaddr **name, 
+		     struct uio *uio, 
+		     char **controlp, 
+		     int *controllen, 
+		     int *flag);
+
 
 #ifdef SCTP_STAT_LOGGING
 void

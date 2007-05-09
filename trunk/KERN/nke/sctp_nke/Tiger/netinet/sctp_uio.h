@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001-2007, Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -31,7 +31,7 @@
 /* $KAME: sctp_uio.h,v 1.11 2005/03/06 16:04:18 itojun Exp $	 */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_uio.h,v 1.12 2007/04/15 11:58:26 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_uio.h,v 1.17 2007/05/08 17:01:11 rrs Exp $");
 #endif
 
 #ifndef __sctp_uio_h__
@@ -112,20 +112,12 @@ struct sctp_sndrcvinfo {
 };
 
 struct sctp_extrcvinfo {
-	uint16_t sinfo_stream;
-	uint16_t sinfo_ssn;
-	uint16_t sinfo_flags;
-	uint32_t sinfo_ppid;
-	uint32_t sinfo_context;
-	uint32_t sinfo_timetolive;
-	uint32_t sinfo_tsn;
-	uint32_t sinfo_cumtsn;
-	sctp_assoc_t sinfo_assoc_id; 
-	uint16_t next_flags;
-	uint16_t next_stream; 
-	uint32_t next_asocid;
-	uint32_t next_length;
-	uint32_t next_ppid;
+	struct sctp_sndrcvinfo sreinfo_sinfo;
+	uint16_t sreinfo_next_flags;
+	uint16_t sreinfo_next_stream; 
+	uint32_t sreinfo_next_aid;
+	uint32_t sreinfo_next_length;
+	uint32_t sreinfo_next_ppid;
 	uint8_t  __reserve_pad[SCTP_ALIGN_RESV_PAD_SHORT];
 };
 
@@ -325,6 +317,8 @@ struct sctp_pdapi_event {
 	uint16_t pdapi_flags;
 	uint32_t pdapi_length;
 	uint32_t pdapi_indication;
+	uint16_t pdapi_stream;
+	uint16_t pdapi_seq;
 	sctp_assoc_t pdapi_assoc_id;
 };
 
@@ -744,7 +738,7 @@ struct sctp_cwnd_log_req {
 	struct sctp_cwnd_log log[0];
 };
 
-struct	sctpstat {
+struct sctpstat {
 	/* MIB according to RFC 3873 */
 	u_long  sctps_currestab;           /* sctpStats  1   (Gauge32) */
 	u_long  sctps_activeestab;         /* sctpStats  2 (Counter32) */
@@ -885,16 +879,18 @@ struct	sctpstat {
 	u_long  sctps_cached_chk;       /* Number of cached chunks used */
 	u_long  sctps_cached_strmoq;    /* Number of cached stream oq's used */
 	u_long  sctps_left_abandon;     /* Number of unread message abandonded by close */
+	u_long  sctps_send_burst_avoid; /* Send burst avoidance, already max burst inflight to net */
+	u_long  sctps_send_cwnd_avoid; /* Send cwnd full  avoidance, already max burst inflight to net */
 };
 
 #define SCTP_STAT_INCR(_x) SCTP_STAT_INCR_BY(_x,1)
 #define SCTP_STAT_DECR(_x) SCTP_STAT_DECR_BY(_x,1)
 #if defined(__FreeBSD__)
 #define SCTP_STAT_INCR_BY(_x,_d) atomic_add_long(&sctpstat._x, _d)
-#define SCTP_STAT_DECR_BY(_x,_d) atomic_add_long(&sctpstat._x, -(_d))
+#define SCTP_STAT_DECR_BY(_x,_d) atomic_subtract_long(&sctpstat._x, _d)
 #else
 #define SCTP_STAT_INCR_BY(_x,_d) atomic_add_int(&sctpstat._x, _d)
-#define SCTP_STAT_DECR_BY(_x,_d) atomic_add_int(&sctpstat._x, -(_d))
+#define SCTP_STAT_DECR_BY(_x,_d) atomic_subtract_int(&sctpstat._x, _d)
 #endif
 /* The following macros are for handling MIB values, */
 #define SCTP_STAT_INCR_COUNTER32(_x) SCTP_STAT_INCR(_x)
@@ -924,6 +920,7 @@ struct xsctp_inpcb {
 	uint32_t total_sends;
 	uint32_t total_recvs;
 	uint32_t total_nospaces;
+	uint32_t fragmentation_point;
 	/* add more endpoint specific data here*/
 };
 
@@ -950,6 +947,7 @@ struct xsctp_tcb {
 	uint32_t highest_tsn;
 	uint32_t cumulative_tsn;
 	uint32_t cumulative_tsn_ack;
+	uint32_t mtu;
 	/* add more association specific data here*/
 	uint16_t number_local_addresses;
 	uint16_t number_remote_addresses;
@@ -972,6 +970,7 @@ struct xsctp_raddr {
 	uint32_t RemAddrErrorCounter;      /*                            */
 	uint32_t RemAddrCwnd;              /*                            */
 	uint32_t RemAddrFlightSize;        /*                            */
+	uint32_t RemAddrMTU;               /*                            */
 	struct timeval RemAddrStartTime;   /* sctpAssocLocalRemEntry 8   */
 	/* add more remote address specific data */
 };
@@ -984,13 +983,17 @@ int
 sctp_lower_sosend(struct socket *so,
     struct sockaddr *addr,
     struct uio *uio,
-
-    struct mbuf *top,
+#if defined(__Panda__)
+    pakhandle_type i_pak,
+    pakhandle_type i_control,
+#else
+    struct mbuf *i_pak,
     struct mbuf *control,
+#endif
     int flags,
     int use_rcvinfo,
     struct sctp_sndrcvinfo *srcv
-#ifndef __Panda__
+#if !defined(__Panda__)
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
     ,struct thread *p
 #else
@@ -1002,14 +1005,16 @@ sctp_lower_sosend(struct socket *so,
 int
 sctp_sorecvmsg(struct socket *so,
     struct uio *uio,
+#if defined(__Panda__)
+    particletype **mp,
+#else
     struct mbuf **mp,
+#endif
     struct sockaddr *from,
     int fromlen,
     int *msg_flags,
     struct sctp_sndrcvinfo *sinfo,
     int filling_sinfo);
-
-
 #endif
 
 /*
@@ -1028,28 +1033,25 @@ int sctp_getladdrs __P((int, sctp_assoc_t, struct sockaddr **));
 void sctp_freeladdrs __P((struct sockaddr *));
 int sctp_opt_info __P((int, sctp_assoc_t, int, void *, socklen_t *));
 
-ssize_t sctp_sendmsg
-__P((int, const void *, size_t,
+ssize_t sctp_sendmsg __P((int, const void *, size_t,
     const struct sockaddr *,
     socklen_t, uint32_t, uint32_t, uint16_t, uint32_t, uint32_t));
 
-	ssize_t sctp_send __P((int sd, const void *msg, size_t len,
-              const struct sctp_sndrcvinfo *sinfo, int flags));
+ssize_t sctp_send __P((int sd, const void *msg, size_t len,
+    const struct sctp_sndrcvinfo *sinfo, int flags));
 
-	ssize_t
-	sctp_sendx __P((int sd, const void *msg, size_t len,
-               struct sockaddr *addrs, int addrcnt,
-               struct sctp_sndrcvinfo *sinfo, int flags));
-	ssize_t
-	sctp_sendmsgx __P((int sd, const void *, size_t,
-                  struct sockaddr *, int,
-                  uint32_t, uint32_t, uint16_t, uint32_t, uint32_t));
+ssize_t	sctp_sendx __P((int sd, const void *msg, size_t len,
+    struct sockaddr *addrs, int addrcnt,
+    struct sctp_sndrcvinfo *sinfo, int flags));
 
-sctp_assoc_t
-sctp_getassocid __P((int sd, struct sockaddr *sa));
+ssize_t	sctp_sendmsgx __P((int sd, const void *, size_t,
+    struct sockaddr *, int,
+    uint32_t, uint32_t, uint16_t, uint32_t, uint32_t));
 
-	ssize_t sctp_recvmsg __P((int, void *, size_t, struct sockaddr *,
-                 socklen_t *, struct sctp_sndrcvinfo *, int *));
+sctp_assoc_t sctp_getassocid __P((int sd, struct sockaddr *sa));
+
+ssize_t sctp_recvmsg __P((int, void *, size_t, struct sockaddr *,
+    socklen_t *, struct sctp_sndrcvinfo *, int *));
 
 __END_DECLS
 

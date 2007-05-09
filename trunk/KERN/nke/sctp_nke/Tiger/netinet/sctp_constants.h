@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001-2007, Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.11 2007/04/14 09:44:09 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.15 2007/05/08 17:01:10 rrs Exp $");
 #endif
 
 #ifndef __sctp_constants_h__
@@ -200,7 +200,10 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.11 2007/04/14 09:44:09 
 #define SCTP_FLIGHT_LOG_UP_REVOKE  113
 #define SCTP_FLIGHT_LOG_DOWN_PDRP  114
 #define SCTP_FLIGHT_LOG_DOWN_PMTU  115
-#define SCTP_LOG_MAX_TYPES 116
+#define SCTP_SACK_LOG_NORMAL	   116
+#define SCTP_SACK_LOG_EXPRESS	   117
+
+#define SCTP_LOG_MAX_TYPES 118
 /*
  * To turn on various logging, you must first define SCTP_STAT_LOGGING. Then
  * to get something to log you define one of the logging defines i.e.
@@ -732,6 +735,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.11 2007/04/14 09:44:09 
 
 #define SCTP_INITIAL_CWND 4380
 
+#define SCTP_DEFAULT_MTU 1500 /* emegency default MTU */
 /* amount peer is obligated to have in rwnd or I will abort */
 #define SCTP_MIN_RWND	1500
 
@@ -848,6 +852,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.11 2007/04/14 09:44:09 
 #define SCTP_LOC_30 0x0000001e
 #define SCTP_LOC_31 0x0000001f
 #define SCTP_LOC_32 0x00000020
+#define SCTP_LOC_33 0x00000021
 
 
 /* Free assoc codes */
@@ -905,6 +910,16 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.11 2007/04/14 09:44:09 
 #define IP_HDR_SIZE 40		/* we use the size of a IP6 header here this
 				 * detracts a small amount for ipv4 but it
 				 * simplifies the ipv6 addition */
+
+/* Argument magic number for sctp_inpcb_free() */
+
+/* third argument */
+#define SCTP_CALLED_DIRECTLY_NOCMPSET     0
+#define SCTP_CALLED_AFTER_CMPSET_OFCLOSE  1
+
+/* second argument */
+#define SCTP_FREE_SHOULD_USE_ABORT          1
+#define SCTP_FREE_SHOULD_USE_GRACEFUL_CLOSE 0
 
 #ifndef IPPROTO_SCTP
 #define IPPROTO_SCTP 132	/* the Official IANA number :-) */

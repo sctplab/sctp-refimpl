@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001-2007, Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_timer.c,v 1.11 2007/04/14 09:44:09 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_timer.c,v 1.15 2007/05/09 13:30:06 rrs Exp $");
 #endif
 
 #define _IP_VHL
@@ -68,7 +68,7 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 	unsigned int cur_rtt, cnt = 0, cnt_resend = 0;
 
 	/* an early FR is occuring. */
-	SCTP_GETTIME_TIMEVAL(&now);
+	(void)SCTP_GETTIME_TIMEVAL(&now);
 	/* get cur rto in micro-seconds */
 	if (net->lastsa == 0) {
 		/* Hmm no rtt estimate yet? */
@@ -180,13 +180,9 @@ sctp_audit_retranmission_queue(struct sctp_association *asoc)
 {
 	struct sctp_tmit_chunk *chk;
 
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_TIMER4) {
-		printf("Audit invoked on send queue cnt:%d onqueue:%d\n",
-		    asoc->sent_queue_retran_cnt,
-		    asoc->sent_queue_cnt);
-	}
-#endif				/* SCTP_DEBUG */
+	SCTPDBG(SCTP_DEBUG_TIMER4, "Audit invoked on send queue cnt:%d onqueue:%d\n",
+			asoc->sent_queue_retran_cnt,
+			asoc->sent_queue_cnt);
 	asoc->sent_queue_retran_cnt = 0;
 	asoc->sent_queue_cnt = 0;
 	TAILQ_FOREACH(chk, &asoc->sent_queue, sctp_next) {
@@ -200,19 +196,10 @@ sctp_audit_retranmission_queue(struct sctp_association *asoc)
 			sctp_ucount_incr(asoc->sent_queue_retran_cnt);
 		}
 	}
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_TIMER4) {
-		printf("Audit completes retran:%d onqueue:%d\n",
-		    asoc->sent_queue_retran_cnt,
-		    asoc->sent_queue_cnt);
-	}
-#endif				/* SCTP_DEBUG */
+	SCTPDBG(SCTP_DEBUG_TIMER4, "Audit completes retran:%d onqueue:%d\n",
+		asoc->sent_queue_retran_cnt,
+		asoc->sent_queue_cnt);
 }
-
-#ifdef __Panda__
-void rtalloc_it(void);
-int panda_find_mtu(struct sctp_nets *net);
-#endif
 
 int
 sctp_threshold_management(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
@@ -220,13 +207,9 @@ sctp_threshold_management(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 {
 	if (net) {
 		net->error_count++;
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_TIMER4) {
-			printf("Error count for %p now %d thresh:%d\n",
-			    net, net->error_count,
-			    net->failure_threshold);
-		}
-#endif				/* SCTP_DEBUG */
+		SCTPDBG(SCTP_DEBUG_TIMER4, "Error count for %p now %d thresh:%d\n",
+			net, net->error_count,
+			net->failure_threshold);
 		if (net->error_count > net->failure_threshold) {
 			/* We had a threshold failure */
 			if (net->dest_state & SCTP_ADDR_REACHABLE) {
@@ -259,15 +242,10 @@ sctp_threshold_management(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	} else {
 		stcb->asoc.overall_error_count++;
 	}
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_TIMER4) {
-		printf("Overall error count for %p now %d thresh:%u state:%x\n",
-		    &stcb->asoc,
-		    stcb->asoc.overall_error_count,
-		    (uint32_t) threshold,
-		    ((net == NULL) ? (uint32_t) 0 : (uint32_t) net->dest_state));
-	}
-#endif				/* SCTP_DEBUG */
+	SCTPDBG(SCTP_DEBUG_TIMER4, "Overall error count for %p now %d thresh:%u state:%x\n",
+		&stcb->asoc, stcb->asoc.overall_error_count,
+		(uint32_t)threshold,
+		((net == NULL) ? (uint32_t) 0 : (uint32_t) net->dest_state));
 	/*
 	 * We specifically do not do >= to give the assoc one more change
 	 * before we fail it.
@@ -367,48 +345,10 @@ sctp_find_alternate_net(struct sctp_tcb *stcb,
 			alt = TAILQ_FIRST(&stcb->asoc.nets);
 		}
 		if (alt->ro.ro_rt == NULL) {
-#ifndef SCOPEDROUTING
-#ifdef SCTP_EMBEDDED_V6_SCOPE
-			struct sockaddr_in6 *sin6;
-
-			sin6 = (struct sockaddr_in6 *)&alt->ro._l_addr;
-			if (sin6->sin6_family == AF_INET6) {
-#if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
-				(void)in6_embedscope(&sin6->sin6_addr, sin6,
-				    NULL, NULL);
-#elif defined(SCTP_KAME)
-				(void)sa6_embedscope(sin6, ip6_use_defzone);
-#else
-				(void)in6_embedscope(&sin6->sin6_addr, sin6);
-#endif
-			}
-#endif /* SCTP_EMBEDDED_V6_SCOPE */
-#endif
-#ifndef __Panda__
-#if defined(__FreeBSD__) || defined(__APPLE__)
-			rtalloc_ign((struct route *)&alt->ro, 0UL);
-#else
-			rtalloc((struct route *)&alt->ro);
-#endif
-#else
-			rtalloc_it();
-#endif
-
-#ifndef SCOPEDROUTING
-#ifdef SCTP_EMBEDDED_V6_SCOPE
-			if (sin6->sin6_family == AF_INET6) {
-#ifdef SCTP_KAME
-				(void)sa6_recoverscope(sin6);
-#else
-				(void)in6_recoverscope(sin6, &sin6->sin6_addr,
-				    NULL);
-#endif /* SCTP_KAME */
-			}
-#endif /* SCTP_EMBEDDED_V6_SCOPE */
-#endif
 			if (alt->ro._s_addr) {
 				sctp_free_ifa(alt->ro._s_addr);
 				alt->ro._s_addr = NULL;
+				
 			}
 			alt->src_addr_selected = 0;
 		}
@@ -532,7 +472,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	 * figure out how long a data chunk must be pending before we can
 	 * mark it ..
 	 */
-	SCTP_GETTIME_TIMEVAL(&now);
+	(void)SCTP_GETTIME_TIMEVAL(&now);
 	/* get cur rto in micro-seconds */
 	cur_rtt = (((net->lastsa >> 2) + net->lastsv) >> 1);
 	cur_rtt *= 1000;
@@ -587,7 +527,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 				       MAX_TSN)) ||
 		    (stcb->asoc.last_acked_seq == chk->rec.data.TSN_seq)) {
 			/* Strange case our list got out of order? */
-			printf("Our list is out of order?\n");
+			SCTP_PRINTF("Our list is out of order?\n");
 			panic("Out of order list");
 		}
 		if ((chk->whoTo == net) && (chk->sent < SCTP_DATAGRAM_ACKED)) {
@@ -646,7 +586,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 				     (now.tv_usec > chk->rec.data.timetodrop.tv_usec))) {
 					/* Yes so drop it */
 					if (chk->data) {
-						sctp_release_pr_sctp_chunk(stcb,
+						(void)sctp_release_pr_sctp_chunk(stcb,
 									   chk,
 									   (SCTP_RESPONSE_TO_USER_REQ | SCTP_NOTIFY_DATAGRAM_SENT),
 									   &stcb->asoc.sent_queue);
@@ -658,7 +598,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 				/* Has it been retransmitted tv_sec times? */
 				if (chk->snd_count > chk->rec.data.timetodrop.tv_sec) {
 					if (chk->data) {
-						sctp_release_pr_sctp_chunk(stcb,
+						(void)sctp_release_pr_sctp_chunk(stcb,
 									   chk,
 									   (SCTP_RESPONSE_TO_USER_REQ | SCTP_NOTIFY_DATAGRAM_SENT),
 									   &stcb->asoc.sent_queue);
@@ -738,17 +678,16 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	sctp_log_fr(tsnfirst, tsnlast, num_mk, SCTP_FR_T3_TIMEOUT);
 #endif
 #ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_TIMER1) {
-		if (num_mk) {
-			printf("LAST TSN marked was %x\n", tsnlast);
-			printf("Num marked for retransmission was %d peer-rwd:%ld\n",
-			       num_mk, (u_long)stcb->asoc.peers_rwnd);
-			printf("LAST TSN marked was %x\n", tsnlast);
-			printf("Num marked for retransmission was %d peer-rwd:%d\n",
-			       num_mk,
-			       (int)stcb->asoc.peers_rwnd
-				);
-		}
+	if (num_mk) {
+		SCTPDBG(SCTP_DEBUG_TIMER1, "LAST TSN marked was %x\n",
+			tsnlast);
+		SCTPDBG(SCTP_DEBUG_TIMER1, "Num marked for retransmission was %d peer-rwd:%ld\n",
+			num_mk, (u_long)stcb->asoc.peers_rwnd);
+		SCTPDBG(SCTP_DEBUG_TIMER1, "LAST TSN marked was %x\n",
+			tsnlast);
+		SCTPDBG(SCTP_DEBUG_TIMER1, "Num marked for retransmission was %d peer-rwd:%d\n",
+			num_mk,
+			(int)stcb->asoc.peers_rwnd);
 	}
 #endif
 	*num_marked = num_mk;
@@ -760,8 +699,8 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	}
 	if (stcb->asoc.sent_queue_retran_cnt != cnt_mk) {
 #ifdef INVARIANTS
-		printf("Local Audit says there are %d for retran asoc cnt:%d\n",
-		       cnt_mk, stcb->asoc.sent_queue_retran_cnt);
+		SCTP_PRINTF("Local Audit says there are %d for retran asoc cnt:%d\n",
+			    cnt_mk, stcb->asoc.sent_queue_retran_cnt);
 #endif
 #ifndef SCTP_AUDITING_ENABLED
 		stcb->asoc.sent_queue_retran_cnt = cnt_mk;
@@ -781,23 +720,17 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 		}
 	}
 	if (audit_tf) {
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_TIMER4) {
-			printf("Audit total flight due to negative value net:%p\n",
-			       net);
-		}
-#endif				/* SCTP_DEBUG */
+		SCTPDBG(SCTP_DEBUG_TIMER4,
+			"Audit total flight due to negative value net:%p\n",
+			net);
 		stcb->asoc.total_flight = 0;
 		stcb->asoc.total_flight_count = 0;
 		/* Clear all networks flight size */
 		TAILQ_FOREACH(lnets, &stcb->asoc.nets, sctp_next) {
 			lnets->flight_size = 0;
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_TIMER4) {
-				printf("Net:%p c-f cwnd:%d ssthresh:%d\n",
-				       lnets, lnets->cwnd, lnets->ssthresh);
-			}
-#endif				/* SCTP_DEBUG */
+			SCTPDBG(SCTP_DEBUG_TIMER4,
+				"Net:%p c-f cwnd:%d ssthresh:%d\n",
+				lnets, lnets->cwnd, lnets->ssthresh);
 		}
 		TAILQ_FOREACH(chk, &stcb->asoc.sent_queue, sctp_next) {
 			if (chk->sent < SCTP_DATAGRAM_RESEND) {
@@ -934,7 +867,7 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 	        alt = sctp_find_alternate_net(stcb, net, 0);
 	}
 
-	sctp_mark_all_for_resend(stcb, net, alt, win_probe, &num_mk);
+	(void)sctp_mark_all_for_resend(stcb, net, alt, win_probe, &num_mk);
 	/* FR Loss recovery just ended with the T3. */
 	stcb->asoc.fast_retran_loss_recovery = 0;
 
@@ -961,7 +894,7 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 				struct timeval now;
 				unsigned int ms_goneby;
 
-				SCTP_GETTIME_TIMEVAL(&now);
+				(void)SCTP_GETTIME_TIMEVAL(&now);
 				if (net->last_sent_time.tv_sec) {
 					ms_goneby = (now.tv_sec - net->last_sent_time.tv_sec) * 1000;
 				} else {
@@ -972,7 +905,7 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 					 * no recent feed back in an RTO or
 					 * more, request a RTT update
 					 */
-					sctp_send_hb(stcb, 1, net);
+					(void)sctp_send_hb(stcb, 1, net);
 				}
 			}
 		}
@@ -992,6 +925,23 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 	if (net->dest_state & SCTP_ADDR_NOT_REACHABLE) {
 		/* Move all pending over too */
 		sctp_move_all_chunks_to_alt(stcb, net, alt);
+
+		/* Get the address that failed, to
+		 * force a new src address selecton and
+		 * a route allocation.
+		 */
+		if (net->ro._s_addr) {
+			sctp_free_ifa(net->ro._s_addr);
+	 		net->ro._s_addr = NULL;
+		}
+ 		net->src_addr_selected = 0;
+
+		/* Force a route allocation too */
+		if (net->ro.ro_rt) { 
+			RTFREE(net->ro.ro_rt);
+			net->ro.ro_rt = NULL;
+		}
+
 		/* Was it our primary? */
 		if ((stcb->asoc.primary_destination == net) && (alt != net)) {
 			/*
@@ -1002,14 +952,9 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 			 * from any net structures.
 			 */
 			if (sctp_set_primary_addr(stcb,
-			    (struct sockaddr *)NULL,
-			    alt) == 0) {
+						  (struct sockaddr *)NULL,
+						  alt) == 0) {
 				net->dest_state |= SCTP_ADDR_WAS_PRIMARY;
-				if (net->ro._s_addr) {
-					sctp_free_ifa(net->ro._s_addr);
-					net->ro._s_addr = NULL;
-				}
-				net->src_addr_selected = 0;
 			}
 		}
 	}
@@ -1144,7 +1089,7 @@ sctp_cookie_timer(struct sctp_inpcb *inp,
 #ifdef INVARIANTS
 			panic("Cookie timer expires in wrong state?");
 #else
-			printf("Strange in state %d not cookie-echoed yet c-e timer expires?\n", SCTP_GET_STATE(&stcb->asoc));
+			SCTP_PRINTF("Strange in state %d not cookie-echoed yet c-e timer expires?\n", SCTP_GET_STATE(&stcb->asoc));
 			return (0);
 #endif
 		}
@@ -1192,7 +1137,7 @@ sctp_strreset_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		return (0);
 	}
 	/* find the existing STRRESET, we use the seq number we sent out on */
-	sctp_find_stream_reset(stcb, stcb->asoc.str_reset_seq_out, &strrst);
+	(void)sctp_find_stream_reset(stcb, stcb->asoc.str_reset_seq_out, &strrst);
 	if (strrst == NULL) {
 		return (0);
 	}
@@ -1284,11 +1229,7 @@ sctp_asconf_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			 * properly handling the chunk type upper bits Mark
 			 * this peer as ASCONF incapable and cleanup
 			 */
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_TIMER1) {
-				printf("asconf_timer: Peer has not responded to our repeated ASCONFs\n");
-			}
-#endif				/* SCTP_DEBUG */
+			SCTPDBG(SCTP_DEBUG_TIMER1, "asconf_timer: Peer has not responded to our repeated ASCONFs\n");
 			sctp_asconf_cleanup(stcb, net);
 			return (0);
 		}
@@ -1400,8 +1341,8 @@ sctp_audit_stream_queues_for_size(struct sctp_inpcb *inp,
 		return;
 
 	if (stcb->asoc.sent_queue_retran_cnt) {
-		printf("Hmm, sent_queue_retran_cnt is non-zero %d\n",
-		    stcb->asoc.sent_queue_retran_cnt);
+		SCTP_PRINTF("Hmm, sent_queue_retran_cnt is non-zero %d\n",
+			    stcb->asoc.sent_queue_retran_cnt);
 		stcb->asoc.sent_queue_retran_cnt = 0;
 	}
 	SCTP_TCB_SEND_LOCK(stcb);
@@ -1417,7 +1358,7 @@ sctp_audit_stream_queues_for_size(struct sctp_inpcb *inp,
 		}
 		if (cnt) {
 			/* yep, we lost a spoke or two */
-			printf("Found an additional %d streams NOT on outwheel, corrected\n", cnt);
+			SCTP_PRINTF("Found an additional %d streams NOT on outwheel, corrected\n", cnt);
 		} else {
 			/* no spokes lost, */
 			stcb->asoc.total_output_queue_size = 0;
@@ -1437,8 +1378,8 @@ sctp_audit_stream_queues_for_size(struct sctp_inpcb *inp,
 		}
 	}
 	if (chks_in_queue != stcb->asoc.stream_queue_cnt) {
-		printf("Hmm, stream queue cnt at %d I counted %d in stream out wheel\n",
-		    stcb->asoc.stream_queue_cnt, chks_in_queue);
+		SCTP_PRINTF("Hmm, stream queue cnt at %d I counted %d in stream out wheel\n",
+			    stcb->asoc.stream_queue_cnt, chks_in_queue);
 	}
 	if (chks_in_queue) {
 		/* call the output queue function */
@@ -1449,14 +1390,14 @@ sctp_audit_stream_queues_for_size(struct sctp_inpcb *inp,
 			 * Probably should go in and make it go back through
 			 * and add fragments allowed
 			 */
-			if(being_filled == 0) {
-				printf("Still nothing moved %d chunks are stuck\n", 
-				       chks_in_queue);
+			if (being_filled == 0) {
+				SCTP_PRINTF("Still nothing moved %d chunks are stuck\n", 
+					    chks_in_queue);
 			}
 		}
 	} else {
-		printf("Found no chunks on any queue tot:%lu\n",
-		    (u_long)stcb->asoc.total_output_queue_size);
+		SCTP_PRINTF("Found no chunks on any queue tot:%lu\n",
+			    (u_long)stcb->asoc.total_output_queue_size);
 		stcb->asoc.total_output_queue_size = 0;
 	}
 }
@@ -1595,30 +1536,37 @@ sctp_pathmtu_timer(struct sctp_inpcb *inp,
     struct sctp_nets *net)
 {
 	uint32_t next_mtu;
-
 	/* restart the timer in any case */
 	next_mtu = sctp_getnext_mtu(inp, net->mtu);
 	if (next_mtu <= net->mtu) {
 		/* nothing to do */
 		return;
 	}
-#ifndef __Panda__
-	if (net->ro.ro_rt != NULL) {
-		/*
-		 * only if we have a route and interface do we set anything.
-		 * Note we always restart the timer though just in case it
-		 * is updated (i.e. the ifp) or route/ifp is populated.
-		 */
-		if (net->ro.ro_rt->rt_ifp != NULL) {
-			if (net->ro.ro_rt->rt_ifp->if_mtu > next_mtu) {
-				/* ok it will fit out the door */
+	{	
+		uint32_t mtu;
+		if ((net->src_addr_selected == 0) ||
+		    (net->ro._s_addr == NULL) ||
+		    (net->ro._s_addr->localifa_flags & SCTP_BEING_DELETED)) {
+			if((net->ro._s_addr != NULL) && (net->ro._s_addr->localifa_flags & SCTP_BEING_DELETED)) {
+				sctp_free_ifa(net->ro._s_addr);
+				net->ro._s_addr = NULL;
+				net->src_addr_selected = 0;
+			} else  if (net->ro._s_addr == NULL) {
+				net->ro._s_addr = sctp_source_address_selection(inp, 
+										stcb,
+										(sctp_route_t *)&net->ro, 
+										net, 0, stcb->asoc.vrf_id);
+			}
+			if(net->ro._s_addr)
+				net->src_addr_selected = 1;
+		}
+		if(net->ro._s_addr) {
+			mtu = SCTP_GATHER_MTU_FROM_ROUTE(net->ro._s_addr, &net->ro._s_addr.sa, net->ro.ro_rt);
+			if (mtu > next_mtu) {
 				net->mtu = next_mtu;
 			}
 		}
 	}
-#else
-	net->mtu = panda_find_mtu(net);
-#endif
 	/* restart the timer */
 	sctp_timer_start(SCTP_TIMER_TYPE_PATHMTURAISE, inp, stcb, net);
 }
@@ -1632,7 +1580,7 @@ sctp_autoclose_timer(struct sctp_inpcb *inp,
 	struct sctp_association *asoc;
 	int ticks_gone_by;
 
-	SCTP_GETTIME_TIMEVAL(&tn);
+	(void)SCTP_GETTIME_TIMEVAL(&tn);
 	if (stcb->asoc.sctp_autoclose_ticks &&
 	    sctp_is_feature_on(inp, SCTP_PCB_FLAGS_AUTOCLOSE)) {
 		/* Auto close is on */
@@ -1728,7 +1676,7 @@ done_with_iterator:
 		SCTP_UNLOCK_EXC(sctppcbinfo.ipi_ep_mtx);
 #endif
 		SCTP_INP_INFO_WUNLOCK();
-		SCTP_OS_TIMER_STOP(&it->tmr.timer);
+		(void)SCTP_OS_TIMER_STOP(&it->tmr.timer);
 		if (it->function_atend != NULL) {
 			(*it->function_atend) (it->pointer, it->val);
 		}
@@ -1767,8 +1715,8 @@ select_a_new_ep:
 	}
 	if ((it->inp->inp_starting_point_for_iterator != NULL) &&
 	    (it->inp->inp_starting_point_for_iterator != it)) {
-		printf("Iterator collision, waiting for one at %p\n",
-		       it->inp);
+		SCTP_PRINTF("Iterator collision, waiting for one at %p\n",
+			    it->inp);
 #if defined(SCTP_PER_SOCKET_LOCKING)
 		/* Unlock done at start_timer_return */
 #endif

@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001-2007, Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -33,7 +33,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_peeloff.c,v 1.6 2007/04/14 09:44:09 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_peeloff.c,v 1.9 2007/05/09 13:30:06 rrs Exp $");
 #endif
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_pcb.h>
@@ -103,30 +103,25 @@ sctp_do_peeloff(struct socket *head, struct socket *so, sctp_assoc_t assoc_id)
 	 */
 	sctp_move_pcb_and_assoc(inp, n_inp, stcb);
 
-	sctp_pull_off_control_to_new_inp(inp, n_inp, stcb);
+	sctp_pull_off_control_to_new_inp(inp, n_inp, stcb, M_WAITOK);
 
 	SCTP_TCB_UNLOCK(stcb);
 	return (0);
 }
 
-#if defined( __Panda__)
-/* Need a function to remove the asoc found from socket */
-void panda_remove_from_sockbuf(struct socket *head);
-#endif
 
 struct socket *
 sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 {
+#if defined(__Panda__)
+	*error = EINVAL;
+	return (NULL);
+#else
 	struct socket *newso;
 	struct sctp_inpcb *inp, *n_inp;
 	struct sctp_tcb *stcb;
 
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_PEEL1) {
-		printf("SCTP peel-off called\n");
-	}
-#endif				/* SCTP_DEBUG */
-
+	SCTPDBG(SCTP_DEBUG_PEEL1, "SCTP peel-off called\n");
 	inp = (struct sctp_inpcb *)head->so_pcb;
 	if (inp == NULL) {
 		*error = EFAULT;
@@ -146,11 +141,7 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 #endif
 		);
 	if (newso == NULL) {
-#ifdef SCTP_DEBUG
-		if (sctp_debug_on & SCTP_DEBUG_PEEL1) {
-			printf("sctp_peeloff:sonewconn failed err\n");
-		}
-#endif				/* SCTP_DEBUG */
+		SCTPDBG(SCTP_DEBUG_PEEL1, "sctp_peeloff:sonewconn failed\n");
 		*error = ENOMEM;
 		SCTP_TCB_UNLOCK(stcb);
 		return (NULL);
@@ -206,12 +197,10 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 	TAILQ_REMOVE(&head->so_comp, newso, so_list);
 	head->so_qlen--;
 	SOCK_UNLOCK(head);
-#elif defined ( __Panda__)
-        panda_remove_from_sockbuf(head);
 #else  /* Netbsd/OpenBSD */
         newso = TAILQ_FIRST(&head->so_q);
 	if (soqremque(newso, 1) == 0) {
-		printf("soremque failed, peeloff-fails (invarients would panic)\n");
+		SCTP_PRINTF("soremque failed, peeloff-fails (invarients would panic)\n");
 		*error = ENOTCONN;
 		return (NULL);
 
@@ -228,8 +217,9 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 	 * And now the final hack. We move data in the pending side i.e.
 	 * head to the new socket buffer. Let the GRUBBING begin :-0
 	 */
-	sctp_pull_off_control_to_new_inp(inp, n_inp, stcb);
+	sctp_pull_off_control_to_new_inp(inp, n_inp, stcb, M_WAITOK);
 
 	SCTP_TCB_UNLOCK(stcb);
 	return (newso);
+#endif
 }

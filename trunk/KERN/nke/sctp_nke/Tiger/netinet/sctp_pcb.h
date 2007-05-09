@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001-2007, Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.h,v 1.10 2007/04/03 11:15:32 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.h,v 1.16 2007/05/09 13:30:06 rrs Exp $");
 #endif
 
 #ifndef __sctp_pcb_h__
@@ -53,60 +53,7 @@ TAILQ_HEAD(sctp_readhead, sctp_queued_to_read);
 TAILQ_HEAD(sctp_streamhead, sctp_stream_queue_pending);
 
 #include <netinet/sctp_structs.h>
-#include <netinet/sctp_uio.h>
 #include <netinet/sctp_auth.h>
-
-/*
- * PCB flags (in sctp_flags bitmask)
- */
-#define SCTP_PCB_FLAGS_UDPTYPE		0x00000001
-#define SCTP_PCB_FLAGS_TCPTYPE		0x00000002
-#define SCTP_PCB_FLAGS_BOUNDALL		0x00000004
-#define SCTP_PCB_FLAGS_ACCEPTING	0x00000008
-#define SCTP_PCB_FLAGS_UNBOUND		0x00000010
-#define SCTP_PCB_FLAGS_CLOSE_IP         0x00040000
-#define SCTP_PCB_FLAGS_WAS_CONNECTED    0x00080000
-#define SCTP_PCB_FLAGS_WAS_ABORTED      0x00100000
-/* TCP model support */
-
-#define SCTP_PCB_FLAGS_CONNECTED	0x00200000
-#define SCTP_PCB_FLAGS_IN_TCPPOOL	0x00400000
-#define SCTP_PCB_FLAGS_DONT_WAKE	0x00800000
-#define SCTP_PCB_FLAGS_WAKEOUTPUT	0x01000000
-#define SCTP_PCB_FLAGS_WAKEINPUT	0x02000000
-#define SCTP_PCB_FLAGS_BOUND_V6		0x04000000
-#define SCTP_PCB_FLAGS_NEEDS_MAPPED_V4	0x08000000
-#define SCTP_PCB_FLAGS_BLOCKING_IO	0x10000000
-#define SCTP_PCB_FLAGS_SOCKET_GONE	0x20000000
-#define SCTP_PCB_FLAGS_SOCKET_ALLGONE	0x40000000
-/* flags to copy to new PCB */
-#define SCTP_PCB_COPY_FLAGS		0x0e000004
-
-
-/*
- * PCB Features (in sctp_features bitmask)
- */
-#define SCTP_PCB_FLAGS_EXT_RCVINFO      0x00000004
-#define SCTP_PCB_FLAGS_DONOT_HEARTBEAT  0x00000008
-#define SCTP_PCB_FLAGS_FRAG_INTERLEAVE  0x00000010
-#define SCTP_PCB_FLAGS_DO_ASCONF	0x00000020
-#define SCTP_PCB_FLAGS_AUTO_ASCONF	0x00000040
-/* socket options */
-#define SCTP_PCB_FLAGS_NODELAY		0x00000100
-#define SCTP_PCB_FLAGS_AUTOCLOSE	0x00000200
-#define SCTP_PCB_FLAGS_RECVDATAIOEVNT	0x00000400
-#define SCTP_PCB_FLAGS_RECVASSOCEVNT	0x00000800
-#define SCTP_PCB_FLAGS_RECVPADDREVNT	0x00001000
-#define SCTP_PCB_FLAGS_RECVPEERERR	0x00002000
-#define SCTP_PCB_FLAGS_RECVSENDFAILEVNT	0x00004000
-#define SCTP_PCB_FLAGS_RECVSHUTDOWNEVNT	0x00008000
-#define SCTP_PCB_FLAGS_ADAPTATIONEVNT	0x00010000
-#define SCTP_PCB_FLAGS_PDAPIEVNT	0x00020000
-#define SCTP_PCB_FLAGS_AUTHEVNT		0x00040000
-#define SCTP_PCB_FLAGS_STREAM_RESETEVNT 0x00080000
-#define SCTP_PCB_FLAGS_NO_FRAGMENT	0x00100000
-#define SCTP_PCB_FLAGS_EXPLICIT_EOR     0x00200000
-
 
 #define SCTP_PCBHASH_ALLADDR(port, mask) (port & mask)
 #define SCTP_PCBHASH_ASOC(tag, mask) (tag & mask)
@@ -114,17 +61,21 @@ TAILQ_HEAD(sctp_streamhead, sctp_stream_queue_pending);
 struct sctp_vrf {
 	LIST_ENTRY (sctp_vrf) next_vrf;
 	struct sctp_ifalist *vrf_addr_hash;
+	struct sctp_ifnlist *vrf_ifn_hash;
 	struct sctp_ifnlist ifnlist;
 	uint32_t vrf_id;
 	uint32_t total_ifa_count;
-	u_long   vrf_hashmark;
+	u_long   vrf_addr_hashmark;
+	u_long   vrf_ifn_hashmark;
 };
 
 struct sctp_ifn {
 	struct sctp_ifalist ifalist;
 	struct sctp_vrf *vrf;
 	LIST_ENTRY(sctp_ifn) next_ifn;
+	LIST_ENTRY(sctp_ifn) next_bucket;
 	void     *ifn_p;	/* never access without appropriate lock */
+	uint32_t ifn_mtu;
 	uint32_t ifn_type;
 	uint32_t ifn_index;	/* shorthand way to look at ifn for reference */
 	uint32_t refcount;	/* number of reference held should be >= ifa_count */
@@ -162,7 +113,8 @@ struct sctp_ifa {
 	uint8_t src_is_loop;
 	uint8_t src_is_priv;
 	uint8_t src_is_glob;
-	uint8_t in_ifa_list;
+	uint8_t resv;
+
 };
 
 struct sctp_laddr {
@@ -286,9 +238,19 @@ struct sctp_epinfo {
 	/* socket queue zone info */
 	uint32_t ipi_count_strmoq;
 
+	/* Number of vrfs */
+	uint32_t ipi_count_vrfs;
+
+        /* Number of ifns */
+	uint32_t ipi_count_ifns;
+
+        /* Number of ifas */
+	uint32_t ipi_count_ifas;
+
 	/* system wide number of free chunks hanging around */
 	uint32_t ipi_free_chunks;
 	uint32_t ipi_free_strmoq;
+
 
 	struct sctpvtaghead vtag_timewait[SCTP_STACK_VTAG_HASH_SIZE];
 
@@ -480,6 +442,7 @@ struct sctp_inpcb {
 	uint32_t i_am_here_line;
 #endif
 	uint32_t def_vrf_id;
+	uint32_t def_table_id;
 #ifdef SCTP_MVRF
 	uint32_t *m_vrf_ids;
 	uint32_t num_vrfs;
@@ -566,14 +529,16 @@ struct sctp_ifa *
 sctp_add_addr_to_vrf(uint32_t vrfid,
 		     void *ifn, uint32_t ifn_index, uint32_t ifn_type,
 		     const char *if_name,
-		     void *ifa, struct sockaddr *addr, uint32_t ifa_flags);
+		     void *ifa, struct sockaddr *addr, uint32_t ifa_flags, int dynamic_add);
 
+void sctp_update_ifn_mtu(uint32_t vrf_id, uint32_t ifn_index, uint32_t mtu);
+
+void sctp_free_ifn(struct sctp_ifn *sctp_ifnp);
 void sctp_free_ifa(struct sctp_ifa *sctp_ifap);
 
-struct sctp_ifa *
-sctp_del_addr_from_vrf(uint32_t vrfid, struct sockaddr *addr,
-		       uint32_t ifn_index);
 
+void sctp_del_addr_from_vrf(uint32_t vrfid, struct sockaddr *addr,
+			    uint32_t ifn_index);
 
 
 
@@ -636,13 +601,13 @@ int sctp_free_assoc(struct sctp_inpcb *, struct sctp_tcb *, int, int);
 void
 sctp_add_vtag_to_timewait(struct sctp_inpcb *, uint32_t, uint32_t);
 
-int sctp_add_local_addr_ep(struct sctp_inpcb *, struct sctp_ifa *, uint32_t);
+void sctp_add_local_addr_ep(struct sctp_inpcb *, struct sctp_ifa *, uint32_t);
 
 int sctp_insert_laddr(struct sctpladdr *, struct sctp_ifa *, uint32_t);
 
 void sctp_remove_laddr(struct sctp_laddr *);
 
-int sctp_del_local_addr_ep(struct sctp_inpcb *, struct sctp_ifa *);
+void sctp_del_local_addr_ep(struct sctp_inpcb *, struct sctp_ifa *);
 
 void sctp_set_initial_cc_param(struct sctp_tcb *,struct sctp_nets *net);
 
@@ -655,9 +620,9 @@ int sctp_del_remote_addr(struct sctp_tcb *, struct sockaddr *);
 
 void sctp_pcb_init(void);
 
-int sctp_add_local_addr_assoc(struct sctp_tcb *, struct sctp_ifa *, int);
+void sctp_add_local_addr_assoc(struct sctp_tcb *, struct sctp_ifa *, int);
 
-int sctp_del_local_addr_assoc(struct sctp_tcb *, struct sctp_ifa *);
+void sctp_del_local_addr_assoc(struct sctp_tcb *, struct sctp_ifa *);
 
 int
 sctp_load_addresses_from_init(struct sctp_tcb *, struct mbuf *, int, int,

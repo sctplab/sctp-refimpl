@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001-2007, Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_var.h,v 1.9 2007/04/15 11:58:26 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_var.h,v 1.13 2007/05/08 17:01:11 rrs Exp $");
 #endif
 
 #ifndef _NETINET_SCTP_VAR_H_
@@ -135,9 +135,9 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 #define sctp_free_remote_addr(__net) { \
 	if ((__net)) {  \
 		if (atomic_fetchadd_int(&(__net)->ref_count, -1) == 1) { \
-			SCTP_OS_TIMER_STOP(&(__net)->rxt_timer.timer); \
-			SCTP_OS_TIMER_STOP(&(__net)->pmtu_timer.timer); \
-			SCTP_OS_TIMER_STOP(&(__net)->fr_timer.timer); \
+			(void)SCTP_OS_TIMER_STOP(&(__net)->rxt_timer.timer); \
+			(void)SCTP_OS_TIMER_STOP(&(__net)->pmtu_timer.timer); \
+			(void)SCTP_OS_TIMER_STOP(&(__net)->fr_timer.timer); \
                         if ((__net)->ro.ro_rt) { \
 				RTFREE((__net)->ro.ro_rt); \
 				(__net)->ro.ro_rt = NULL; \
@@ -215,9 +215,9 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 	if ((__net)) { \
 		atomic_subtract_int(&(__net)->ref_count, 1); \
 		if ((__net)->ref_count == 0) { \
-			SCTP_OS_TIMER_STOP(&(__net)->rxt_timer.timer); \
-			SCTP_OS_TIMER_STOP(&(__net)->pmtu_timer.timer); \
-			SCTP_OS_TIMER_STOP(&(__net)->fr_timer.timer); \
+			(void)SCTP_OS_TIMER_STOP(&(__net)->rxt_timer.timer); \
+			(void)SCTP_OS_TIMER_STOP(&(__net)->pmtu_timer.timer); \
+			(void)SCTP_OS_TIMER_STOP(&(__net)->fr_timer.timer); \
 			(__net)->dest_state = SCTP_ADDR_NOT_REACHABLE; \
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_net, (__net)); \
 			SCTP_DECR_RADDR_COUNT(); \
@@ -416,9 +416,6 @@ int sctp_bindx(struct socket *, int, struct sockaddr_storage *,
 
 /* can't use sctp_assoc_t here */
 int sctp_peeloff(struct socket *, struct socket *, int, caddr_t, int *);
-
-sctp_assoc_t sctp_getassocid(struct sockaddr *);
-
 
 int sctp_ingetaddr(struct socket *,
 #if defined(__FreeBSD__) || defined(__APPLE__)

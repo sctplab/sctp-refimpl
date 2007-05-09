@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001-2007, Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.h,v 1.4 2007/04/03 11:15:32 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.h,v 1.8 2007/05/08 17:01:10 rrs Exp $");
 #endif
 
 #ifndef __sctp_output_h__
@@ -41,11 +41,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_output.h,v 1.4 2007/04/03 11:15:32 rrs 
 #include <netinet/sctp_header.h>
 
 #if defined(_KERNEL)
-
-struct mbuf *
-sctp_get_mbuf_for_msg(unsigned int space_needed, 
-		      int want_header, int how, int allonebuf, int type);
-
 
 
 struct mbuf *
@@ -82,7 +77,8 @@ void sctp_send_initiate(struct sctp_inpcb *, struct sctp_tcb *);
 
 void
 sctp_send_initiate_ack(struct sctp_inpcb *, struct sctp_tcb *,
-    struct mbuf *, int, int, struct sctphdr *, struct sctp_init_chunk *);
+    struct mbuf *, int, int, struct sctphdr *, struct sctp_init_chunk *,
+    uint32_t, uint32_t);
 
 struct mbuf *
 sctp_arethere_unrecognized_parameters(struct mbuf *, int, int *,
@@ -92,24 +88,26 @@ void sctp_queue_op_err(struct sctp_tcb *, struct mbuf *);
 int
 sctp_send_cookie_echo(struct mbuf *, int, struct sctp_tcb *,
     struct sctp_nets *);
-int sctp_send_cookie_ack(struct sctp_tcb *);
+
+void sctp_send_cookie_ack(struct sctp_tcb *);
 
 void
 sctp_send_heartbeat_ack(struct sctp_tcb *, struct mbuf *, int, int,
     struct sctp_nets *);
 
 
-int sctp_send_shutdown(struct sctp_tcb *, struct sctp_nets *);
+void sctp_send_shutdown(struct sctp_tcb *, struct sctp_nets *);
 
-int sctp_send_shutdown_ack(struct sctp_tcb *, struct sctp_nets *);
+void sctp_send_shutdown_ack(struct sctp_tcb *, struct sctp_nets *);
 
-int sctp_send_shutdown_complete(struct sctp_tcb *, struct sctp_nets *);
+void sctp_send_shutdown_complete(struct sctp_tcb *, struct sctp_nets *);
 
-int sctp_send_shutdown_complete2(struct mbuf *, int, struct sctphdr *);
+void sctp_send_shutdown_complete2(struct mbuf *, int, struct sctphdr *,
+				 uint32_t, uint32_t);
 
-int sctp_send_asconf(struct sctp_tcb *, struct sctp_nets *);
+void sctp_send_asconf(struct sctp_tcb *, struct sctp_nets *);
 
-int sctp_send_asconf_ack(struct sctp_tcb *, uint32_t);
+void sctp_send_asconf_ack(struct sctp_tcb *, uint32_t);
 
 int sctp_get_frag_point(struct sctp_tcb *, struct sctp_association *);
 
@@ -123,12 +121,21 @@ void sctp_fix_ecn_echo(struct sctp_association *);
 int
 sctp_output(struct sctp_inpcb *, struct mbuf *, struct sockaddr *,
     struct mbuf *, struct thread *, int);
-
 #else
 int
-sctp_output(struct sctp_inpcb *, struct mbuf *, struct sockaddr *,
-    struct mbuf *, struct proc *, int);
-
+sctp_output(struct sctp_inpcb *,
+#if defined(__Panda__)
+    pakhandle_type,
+#else
+    struct mbuf *,
+#endif
+    struct sockaddr *,
+#if defined(__Panda__)
+    pakhandle_type,
+#else
+    struct mbuf *,
+#endif
+    struct proc *, int);
 #endif
 
 void
@@ -136,7 +143,7 @@ sctp_insert_on_wheel(struct sctp_tcb *stcb,
     struct sctp_association *asoc,
     struct sctp_stream_out *strq, int holdslock);
 
-int sctp_chunk_output(struct sctp_inpcb *, struct sctp_tcb *, int);
+void sctp_chunk_output(struct sctp_inpcb *, struct sctp_tcb *, int);
 void sctp_send_abort_tcb(struct sctp_tcb *, struct mbuf *);
 
 void send_forward_tsn(struct sctp_tcb *, struct sctp_association *);
@@ -190,9 +197,10 @@ sctp_send_str_reset_req(struct sctp_tcb *stcb,
 
 void
 sctp_send_abort(struct mbuf *, int, struct sctphdr *, uint32_t,
-    struct mbuf *);
+    struct mbuf *, uint32_t, uint32_t);
 
-void sctp_send_operr_to(struct mbuf *, int, struct mbuf *, uint32_t);
+void sctp_send_operr_to(struct mbuf *, int, struct mbuf *, uint32_t, uint32_t,
+    uint32_t);
 
 int
 sctp_sosend(struct socket *so,

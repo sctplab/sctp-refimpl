@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001-2007, Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -32,7 +32,7 @@
 #define _NETINET6_SCTP6_VAR_H_
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_var.h,v 1.4 2007/03/19 06:53:02 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_var.h,v 1.5 2007/05/08 17:01:12 rrs Exp $");
 #endif
 
 #if defined(_KERNEL)
@@ -61,7 +61,7 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 #if defined(__APPLE__)
 int sctp6_input __P((struct mbuf **, int *));
 #elif defined(__Panda__)
-int sctp6_input (pakhandle_type);
+int sctp6_input (pakhandle_type *);
 #else
 int sctp6_input __P((struct mbuf **, int *, int));
 #endif

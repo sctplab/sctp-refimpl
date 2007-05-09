@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001-2007, Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_structs.h,v 1.12 2007/04/15 11:58:26 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_structs.h,v 1.16 2007/05/08 17:01:10 rrs Exp $");
 #endif
 
 #ifndef __sctp_structs_h__
@@ -40,7 +40,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_structs.h,v 1.12 2007/04/15 11:58:26 rr
 
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_header.h>
-#include <netinet/sctp_uio.h>
 #include <netinet/sctp_auth.h>
 
 struct sctp_timer {
@@ -158,6 +157,12 @@ struct sctp_asconf_iterator {
 };
 
 
+struct sctp_net_route {
+    sctp_rtentry_t *ro_rt;
+    union sctp_sockstore _l_addr;	/* remote peer addr */
+    struct sctp_ifa *_s_addr;		/* our selected src addr */
+};
+
 struct sctp_nets {
 	TAILQ_ENTRY(sctp_nets) sctp_next;	/* next link */
 
@@ -171,11 +176,8 @@ struct sctp_nets {
 	 * The following two in combination equate to a route entry for v6
 	 * or v4.
 	 */
-	struct sctp_route {
-		struct rtentry *ro_rt;
-		union sctp_sockstore _l_addr;	/* remote peer addr */
-		struct sctp_ifa *_s_addr;	/* our selected src addr */
-	}ro;
+	struct sctp_net_route ro;
+
 	/* mtu discovered so far */
 	uint32_t mtu;
 	uint32_t ssthresh;	/* not sure about this one for split */
@@ -370,6 +372,7 @@ struct sctp_queued_to_read {	/* sinfo structure Pluse more */
 	struct mbuf *data;	/* front of the mbuf chain of data with
 				 * PKT_HDR */
 	struct mbuf *tail_mbuf;	/* used for multi-part data */
+	struct mbuf *aux_data;  /* used to hold/cache  control if o/s does not take it from us */
 	struct sctp_tcb *stcb;	/* assoc, used for window update */
 	TAILQ_ENTRY(sctp_queued_to_read) next;
 	uint16_t port_from;
@@ -377,7 +380,7 @@ struct sctp_queued_to_read {	/* sinfo structure Pluse more */
 	uint8_t  do_not_ref_stcb;
 	uint8_t  end_added;
 	uint8_t  pdapi_aborted;
-	uint8_t  resv;
+	uint8_t  some_taken;
 };
 
 /* This data structure will be on the outbound
@@ -427,9 +430,9 @@ struct sctp_stream_queue_pending {
 TAILQ_HEAD(sctpwheelunrel_listhead, sctp_stream_in);
 struct sctp_stream_in {
 	struct sctp_readhead inqueue;
-	TAILQ_ENTRY(sctp_stream_in) next_spoke;
 	uint16_t stream_no;
 	uint16_t last_sequence_delivered;	/* used for re-order */
+	uint8_t  delivery_started;
 };
 
 /* This struct is used to track the traffic on outbound streams */
@@ -588,6 +591,7 @@ struct sctp_association {
 	struct sctp_readhead pending_reply_queue;
 
 	uint32_t vrf_id;
+	uint32_t table_id;
 
 	uint32_t cookie_preserve_req;
 	/* ASCONF next seq I am sending out, inits at init-tsn */
@@ -597,10 +601,8 @@ struct sctp_association {
 
 	/* next seq I am sending in str reset messages */
 	uint32_t str_reset_seq_out;
-
 	/* next seq I am expecting in str reset messages */
 	uint32_t str_reset_seq_in;
-
 
 	/* various verification tag information */
 	uint32_t my_vtag;	/* The tag to be used. if assoc is re-initited
