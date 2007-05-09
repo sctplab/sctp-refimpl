@@ -1760,7 +1760,6 @@ sctp_timeout_handler(void *t)
 		    SCTP_SHUTDOWN_GUARD_EXPIRES, NULL);
 		/* no need to unlock on tcb its gone */
 		goto out_decr;
-		break;
 
 	case SCTP_TIMER_TYPE_STRRESET:
 		if ((stcb == NULL) || (inp == NULL)) {

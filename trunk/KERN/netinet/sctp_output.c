@@ -8848,11 +8848,10 @@ send_forward_tsn(struct sctp_tcb *stcb,
 	chk->rec.chunk_id.id = SCTP_FORWARD_CUM_TSN;
 	chk->rec.chunk_id.can_take_data = 0;
 	chk->asoc = asoc;
+	chk->whoTo = NULL;
 
         chk->data = sctp_get_mbuf_for_msg(MCLBYTES, 0, M_DONTWAIT, 1, MT_DATA);
         if (chk->data == NULL) {
-                if(chk->whoTo)
-                     atomic_subtract_int(&chk->whoTo->ref_count, 1);
 		sctp_free_a_chunk(stcb, chk);
 		return;
 	}
@@ -10776,6 +10775,7 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 #endif
 	if (*error) {
 		sctp_free_a_strmoq(stcb, sp);
+		sp = NULL;
 	} else {
 		if(sp->sinfo_flags & SCTP_ADDR_OVER) {
 			sp->net = net;
