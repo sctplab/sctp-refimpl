@@ -106,3 +106,72 @@ int sctp_disable_non_blocking_blocking(int fd)
 	flags = fcntl(fd, F_GETFL, 0);
 	return fcntl(fd, F_SETFL, flags  & ~O_NONBLOCK);
 }
+
+int sctp_set_rto_info(int fd, sctp_assoc_t assoc_id, uint32_t init, uint32_t max, uint32_t min)
+{
+	struct sctp_rtoinfo rtoinfo;
+	socklen_t len;
+	
+	len = (socklen_t)sizeof(struct sctp_rtoinfo);
+	bzero((void *)&rtoinfo, sizeof(struct sctp_rtoinfo));
+	
+	rtoinfo.srto_assoc_id = assoc_id;
+	rtoinfo.srto_initial  = init;
+	rtoinfo.srto_max      = max;
+	rtoinfo.srto_min      = min;
+
+	return setsockopt(fd, IPPROTO_SCTP, SCTP_RTOINFO, (const void *)&rtoinfo, len);
+}
+
+int sctp_set_initial_rto(int fd, sctp_assoc_t assoc_id, uint32_t init)
+{
+	return sctp_set_rto_info(fd, assoc_id, init, 0, 0);
+}
+
+int sctp_set_maximum_rto(int fd, sctp_assoc_t assoc_id, uint32_t max)
+{
+	return sctp_set_rto_info(fd, assoc_id, 0, max, 0);
+}
+
+int sctp_set_minimum_rto(int fd, sctp_assoc_t assoc_id, uint32_t min)
+{
+	return sctp_set_rto_info(fd, assoc_id, 0, 0, min);
+}
+
+int sctp_get_rto_info(int fd, sctp_assoc_t assoc_id, uint32_t *init, uint32_t *max, uint32_t *min)
+{
+	struct sctp_rtoinfo rtoinfo;
+	socklen_t len;
+	int result;
+	
+	len = (socklen_t)sizeof(struct sctp_rtoinfo);
+	bzero((void *)&rtoinfo, sizeof(struct sctp_rtoinfo));
+	rtoinfo.srto_assoc_id = assoc_id;
+	
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_RTOINFO, (void *)&rtoinfo, &len);	
+
+	if (init)
+		*init = rtoinfo.srto_initial;
+	if (max)
+		*max = rtoinfo.srto_max;
+	if (min)
+		*min = rtoinfo.srto_min;
+
+	return result;
+}
+
+int sctp_get_initial_rto(int fd, sctp_assoc_t assoc_id, uint32_t *init)
+{
+	return sctp_get_rto_info(fd, assoc_id, init, NULL, NULL);
+}
+
+int sctp_get_minimum_rto(int fd, sctp_assoc_t assoc_id, uint32_t *min)
+{
+	return sctp_get_rto_info(fd, assoc_id, NULL, NULL, min);
+}
+
+int sctp_get_maximum_rto(int fd, sctp_assoc_t assoc_id, uint32_t *max)
+{
+	return sctp_get_rto_info(fd, assoc_id, NULL, max, NULL);
+}
+
