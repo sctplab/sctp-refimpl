@@ -3565,22 +3565,20 @@ sctp_findnet(struct sctp_tcb *stcb, struct sockaddr *addr)
 }
 
 
-/*
- * add's a remote endpoint address, done with the INIT/INIT-ACK as well as
- * when a ASCONF arrives that adds it. It will also initialize all the cwnd
- * stats of stuff.
- */
 int
 sctp_is_address_on_local_host(struct sockaddr *addr, uint32_t vrf_id)
 {
+#ifdef __Panda__
+	return (0);
+#else
 	struct sctp_ifa *sctp_ifa;
-
 	sctp_ifa = sctp_find_ifa_by_addr(addr, vrf_id, 0);
 	if (sctp_ifa) {
 		return (1);
 	} else {
 		return (0);
 	}
+#endif
 }
 
 void 
@@ -3594,6 +3592,13 @@ sctp_set_initial_cc_param(struct sctp_tcb *stcb, struct sctp_nets *net)
 	net->ssthresh = stcb->asoc.peers_rwnd;
 }
 
+
+
+/*
+ * add's a remote endpoint address, done with the INIT/INIT-ACK as well as
+ * when a ASCONF arrives that adds it. It will also initialize all the cwnd
+ * stats of stuff.
+ */
 int
 sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
     int set_scope, int from)
