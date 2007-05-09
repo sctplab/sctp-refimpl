@@ -105,6 +105,7 @@ useage(char *who)
 	printf("-S              - send SIMPLE data (default)\n");
 	printf("-I strms        - Number of allowed in-streams (default 13)\n");
 	printf("-O strms        - Number of requesed out-streams (default 13)\n");
+	printf("-H or -?        - help\n");
 }
 
 union sctp_sockstore addr;
@@ -540,7 +541,7 @@ main (int argc, char **argv)
 	bindto.sa.sa_len = sizeof(struct sockaddr_in6);
 	addr.sa.sa_family = AF_INET6;
 	addr.sa.sa_len = sizeof(struct sockaddr_in6);
-	while((i= getopt(argc, argv,"lSLs:c:46m:p:vB:h:D?")) != EOF) {
+	while((i= getopt(argc, argv,"lSLs:c:46m:p:vB:h:D?H")) != EOF) {
 		switch(i) {
 		case 'D':
 			mydelay = strtoul(optarg, NULL, 0);
@@ -653,6 +654,7 @@ main (int argc, char **argv)
 		break;
 		default:
 		case '?':
+		case 'H':
 			useage(argv[0]);
 			return(0);
 			break;
