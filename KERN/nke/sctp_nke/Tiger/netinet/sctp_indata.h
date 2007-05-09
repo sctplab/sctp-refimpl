@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001-2007, Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_indata.h,v 1.3 2007/01/18 09:58:43 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_indata.h,v 1.7 2007/05/08 17:01:10 rrs Exp $");
 #endif
 
 #ifndef __sctp_indata_h__
@@ -66,13 +66,14 @@ sctp_build_readq_entry(struct sctp_tcb *stcb,
 		(_ctl)->whoFrom = net; \
 		(_ctl)->data = dm; \
 		(_ctl)->tail_mbuf = NULL; \
+	        (_ctl)->aux_data = NULL; \
 		(_ctl)->stcb = (in_it); \
 		(_ctl)->port_from = (in_it)->rport; \
 		(_ctl)->spec_flags = 0; \
 		(_ctl)->do_not_ref_stcb = 0; \
 		(_ctl)->end_added = 0; \
 		(_ctl)->pdapi_aborted = 0; \
-		(_ctl)->resv = 0; \
+		(_ctl)->some_taken = 0; \
 	} \
 } while (0)
 
@@ -80,7 +81,12 @@ sctp_build_readq_entry(struct sctp_tcb *stcb,
 
 struct mbuf *
 sctp_build_ctl_nchunk(struct sctp_inpcb *inp,
-    struct sctp_sndrcvinfo *sinfo);
+		      struct sctp_sndrcvinfo *sinfo);
+
+char *
+sctp_build_ctl_cchunk(struct sctp_inpcb *inp,
+		      int *control_len,
+		      struct sctp_sndrcvinfo *sinfo);
 
 void sctp_set_rwnd(struct sctp_tcb *, struct sctp_association *);
 
@@ -93,15 +99,15 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 
 void
 sctp_handle_sack(struct sctp_sack_chunk *, struct sctp_tcb *,
-    struct sctp_nets *, int *);
+		 struct sctp_nets *, int *, int, uint32_t);
 
 /* draft-ietf-tsvwg-usctp */
 void
 sctp_handle_forward_tsn(struct sctp_tcb *,
-    struct sctp_forward_tsn_chunk *, int *);
+			struct sctp_forward_tsn_chunk *, int *);
 
 struct sctp_tmit_chunk *
-                sctp_try_advance_peer_ack_point(struct sctp_tcb *, struct sctp_association *);
+sctp_try_advance_peer_ack_point(struct sctp_tcb *, struct sctp_association *);
 
 void sctp_service_queues(struct sctp_tcb *, struct sctp_association *);
 
@@ -111,7 +117,8 @@ sctp_update_acked(struct sctp_tcb *, struct sctp_shutdown_chunk *,
 
 int
 sctp_process_data(struct mbuf **, int, int *, int, struct sctphdr *,
-    struct sctp_inpcb *, struct sctp_tcb *, struct sctp_nets *, uint32_t *);
+		  struct sctp_inpcb *, struct sctp_tcb *, 
+		  struct sctp_nets *, uint32_t *);
 
 void sctp_sack_check(struct sctp_tcb *, int, int, int *);
 

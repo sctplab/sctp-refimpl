@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2007, Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2007, by Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -30,7 +30,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_sysctl.c,v 1.3 2007/04/03 11:15:32 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_sysctl.c,v 1.5 2007/05/08 17:01:11 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -223,6 +223,7 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 		xinpcb.total_sends            = inp->total_sends;
 		xinpcb.total_recvs            = inp->total_recvs;
 		xinpcb.total_nospaces         = inp->total_nospaces;
+		xinpcb.fragmentation_point    = inp->sctp_frag_point;
 		SCTP_INP_INCR_REF(inp);
 		SCTP_INP_RUNLOCK(inp);
 		SCTP_INP_INFO_RUNLOCK();
@@ -286,6 +287,7 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 			xstcb.highest_tsn = stcb->asoc.sending_seq - 1;
 			xstcb.cumulative_tsn = stcb->asoc.last_acked_seq;
 			xstcb.cumulative_tsn_ack = stcb->asoc.cumulative_tsn;
+			xstcb.mtu = stcb->asoc.smallest_mtu;
 			SCTP_INP_RUNLOCK(inp);
 			SCTP_INP_INFO_RUNLOCK();
 			error = SYSCTL_OUT(req, &xstcb, sizeof(struct xsctp_tcb));
@@ -309,6 +311,7 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 				xraddr.RemAddrCwnd = net->cwnd;
 				xraddr.RemAddrFlightSize = net->flight_size;
 				xraddr.RemAddrStartTime = net->start_time;
+				xraddr.RemAddrMTU = net->mtu;
 				error = SYSCTL_OUT(req, &xraddr, sizeof(struct xsctp_raddr));
 				if (error) {
 #if defined(SCTP_PER_SOCKET_LOCKING)

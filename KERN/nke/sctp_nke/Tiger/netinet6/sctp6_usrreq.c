@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001-2007, Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -30,7 +30,7 @@
 /*	$KAME: sctp6_usrreq.c,v 1.38 2005/08/24 08:08:56 suz Exp $	*/
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.15 2007/04/14 09:44:09 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.21 2007/05/09 13:30:06 rrs Exp $");
 #endif
 
 
@@ -120,11 +120,9 @@ in6_sin6_2_sin_in_sock(struct sockaddr *nam)
 
 int
 #if defined(__APPLE__)
-sctp6_input(mp, offp)
-	struct mbuf **mp;
-	int *offp;
+sctp6_input(struct mbuf **i_pak, int *offp)
 #elif defined( __Panda__)
-sctp6_input(pakhandle_type i_pak)
+sctp6_input(pakhandle_type *i_pak)
 #else
 sctp6_input(i_pak, offp, proto)
 	struct mbuf **i_pak;
@@ -138,7 +136,8 @@ sctp6_input(i_pak, offp, proto)
 	struct sctp_inpcb *in6p = NULL;
 	struct sctp_nets *net;
 	int refcount_up = 0;
-	uint32_t check, calc_check, vrf_id;
+	uint32_t check, calc_check;
+	uint32_t vrf_id = 0, table_id = 0;
 	struct inpcb *in6p_ip;
 	struct sctp_chunkhdr *ch;
 	int length, mlen, offset, iphlen;
@@ -148,33 +147,34 @@ sctp6_input(i_pak, offp, proto)
 	int off = *offp;
 #else
 	pakoffset_type off_p;
-	int off, res, error;
+	int off, res;
 #endif
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s;
 #endif
 #ifdef __Panda__
-	res = pak_client_get_offset(i_pak, PAK_OFF_NETWORK_ST, &off_p);
+	res = pak_client_get_offset(*i_pak, PAK_OFF_NETWORK_ST, &off_p);
 	if (CERR_IS_NOTOK(res)) {
-		(void) pak_client_return_buffer(i_pak);
-		return(-1);
+		SCTP_RELEASE_PKT(*i_pak);
+		return (-1);
 	}
-	off = (int)off_p;
-	error = pak_client_get_vrf_id(i_pak, &vrf_id);
-	if (error != EOK) {
-		(void) pak_client_return_buffer(i_pak);
-		return(-1);
+	/*-
+	 * This is Evil, but its the only way to make
+	 * panda work right 
+	 */
+	off = (int)off_p + sizeof(struct ip6_hdr);
+#endif
+	/* get the VRF and table id's */
+ 	if (SCTP_GET_PKT_VRFID(*i_pak, vrf_id)) {
+		SCTP_RELEASE_PKT(*i_pak);
+		return (-1);
 	}
-	m = SCTP_HEADER_TO_CHAIN(i_pak);
-#else
-	vrf_id = SCTP_DEFAULT_VRFID;
-#if defined(__APPLE__)
-	m = SCTP_HEADER_TO_CHAIN(*mp);
-#else
-	m = SCTP_HEADER_TO_CHAIN(*i_pak);
-#endif
-#endif
+ 	if (SCTP_GET_PKT_TABLEID(*i_pak, table_id)) {
+		SCTP_RELEASE_PKT(*i_pak);
+		return (-1);
+	}
 
+	m = SCTP_HEADER_TO_CHAIN(*i_pak);
 
 	ip6 = mtod(m, struct ip6_hdr *);
 	/* Ensure that (sctphdr + sctp_chunkhdr) in a row. */
@@ -211,21 +211,8 @@ sctp6_input(i_pak, offp, proto)
 #endif				/* NFAITH defined and > 0 */
 	SCTP_STAT_INCR(sctps_recvpackets);
 	SCTP_STAT_INCR_COUNTER64(sctps_inpackets);
-#ifdef SCTP_DEBUG
-	if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-		printf("V6 input gets a packet iphlen:%d pktlen:%d\n", iphlen, 
-#ifdef __Panda__
-		       SCTP_HEADER_LEN((i_pak))
-#else
-#if defined(__APPLE__)
-		       SCTP_HEADER_LEN((*mp))
-#else
-		       SCTP_HEADER_LEN((*i_pak))
-#endif
-#endif
-			);
-	}
-#endif
+	SCTPDBG(SCTP_DEBUG_INPUT1, "V6 input gets a packet iphlen:%d pktlen:%d\n",
+		iphlen, SCTP_HEADER_LEN((*i_pak)));
 	if (IN6_IS_ADDR_MULTICAST(&ip6->ip6_dst)) {
 		/* No multi-cast support in SCTP */
 		goto bad;
@@ -252,13 +239,8 @@ sctp6_input(i_pak, offp, proto)
 		sh->checksum = 0;	/* prepare for calc */
 		calc_check = sctp_calculate_sum(m, &mlen, iphlen);
 		if (calc_check != check) {
-#ifdef SCTP_DEBUG
-			if (sctp_debug_on & SCTP_DEBUG_INPUT1) {
-				printf("Bad CSUM on SCTP packet calc_check:%x check:%x  m:%p mlen:%d iphlen:%d\n",
-				    calc_check, check, m,
-				    mlen, iphlen);
-			}
-#endif
+			SCTPDBG(SCTP_DEBUG_INPUT1, "Bad CSUM on SCTP packet calc_check:%x check:%x  m:%p mlen:%d iphlen:%d\n",
+				calc_check, check, m, mlen, iphlen);
 			stcb = sctp_findassociation_addr(m, iphlen, offset - sizeof(*ch),
 			    sh, ch, &in6p, &net, vrf_id);
 			/* in6p's ref-count increased && stcb locked */
@@ -302,10 +284,14 @@ sctp_skip_csum:
 			init_chk = (struct sctp_init_chunk *)sctp_m_getptr(m,
 			    iphlen + sizeof(*sh), sizeof(*init_chk),
 			    (uint8_t *) & chunk_buf);
-			sh->v_tag = init_chk->init.initiate_tag;
+			if(init_chk)
+				sh->v_tag = init_chk->init.initiate_tag;
+			else 
+				sh->v_tag = 0;
 		}
 		if (ch->chunk_type == SCTP_SHUTDOWN_ACK) {
-			sctp_send_shutdown_complete2(m, iphlen, sh);
+			sctp_send_shutdown_complete2(m, iphlen, sh, vrf_id,
+						     table_id);
  			goto bad;
 		}
 		if (ch->chunk_type == SCTP_SHUTDOWN_COMPLETE) {
@@ -313,7 +299,8 @@ sctp_skip_csum:
 		}
 
 		if (ch->chunk_type != SCTP_ABORT_ASSOCIATION)
-			sctp_send_abort(m, iphlen, sh, 0, NULL);
+			sctp_send_abort(m, iphlen, sh, 0, NULL, vrf_id,
+					table_id);
 		goto bad;
 	} else if (stcb == NULL) {
 		refcount_up = 1;
@@ -414,15 +401,15 @@ sctp_skip_csum:
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
 #endif
-	(void)sctp_common_input_processing(&m, iphlen, offset, length, sh, ch,
-	    in6p, stcb, net, ecn_bits);
+	sctp_common_input_processing(&m, iphlen, offset, length, sh, ch,
+	    in6p, stcb, net, ecn_bits, vrf_id, table_id);
 	/* inp's ref-count reduced && stcb unlocked */
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
 #endif
 	/* XXX this stuff below gets moved to appropriate parts later... */
 	if (m)
-		m_freem(m);
+		sctp_m_freem(m);
 	if ((in6p) && refcount_up) {
 		/* reduce ref-count */
 		SCTP_INP_WLOCK(in6p);
@@ -432,8 +419,9 @@ sctp_skip_csum:
 	return IPPROTO_DONE;
 
 bad:
-	if (stcb)
+	if (stcb) {
 		SCTP_TCB_UNLOCK(stcb);
+	}
 
 	if ((in6p) && refcount_up) {
 		/* reduce ref-count */
@@ -442,7 +430,12 @@ bad:
 		SCTP_INP_WUNLOCK(in6p);
 	}
 	if (m)
-		m_freem(m);
+		sctp_m_freem(m);
+#ifdef __Panda__
+	/* For BSD/MAC this does nothing */
+	SCTP_DETACH_HEADER_FROM_CHAIN(*i_pak);
+	(void)SCTP_RELEASE_HEADER(*i_pak);
+#endif
 	return IPPROTO_DONE;
 }
 
@@ -522,8 +515,9 @@ sctp6_notify_mbuf(struct sctp_inpcb *inp,
 	}
 	sctp_timer_start(SCTP_TIMER_TYPE_PATHMTURAISE, inp, stcb, NULL);
 out:
-	if (stcb)
+	if (stcb) {
 		SCTP_TCB_UNLOCK(stcb);
+	}
 }
 
 
@@ -774,7 +768,8 @@ sctp6_abort(struct socket *so)
 #ifdef SCTP_LOG_CLOSING
 		sctp_log_closing(inp, NULL, 16);
 #endif
-		sctp_inpcb_free(inp, 1, 0);
+		sctp_inpcb_free(inp, SCTP_FREE_SHOULD_USE_ABORT, 
+				SCTP_CALLED_AFTER_CMPSET_OFCLOSE);
 		SOCK_LOCK(so);
 		SCTP_SB_CLEAR(so->so_snd);
 		/* same for the rcv ones, they are only
@@ -882,20 +877,24 @@ sctp6_attach(struct socket *so, int proto, struct proc *p)
 	return 0;
 }
 
-static int
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+static int
 sctp6_bind(struct socket *so, struct sockaddr *addr, struct thread *p)
 {
-#else
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#elif defined(__FreeBSD__) || defined(__APPLE__)
+static int
 sctp6_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 {
+#elif defined(__Panda__)
+int
+sctp6_bind(struct socket *so, struct sockaddr *addr, void * p)
+{
 #else
+static int
 sctp6_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 {
 	struct sockaddr *addr = nam ? mtod(nam, struct sockaddr *): NULL;
 
-#endif
 #endif
 	struct sctp_inpcb *inp;
 	struct in6pcb *inp6;
@@ -1030,12 +1029,14 @@ sctp6_close(struct socket *so)
 #ifdef SCTP_LOG_CLOSING
 			sctp_log_closing(inp, NULL, 13);
 #endif
-			sctp_inpcb_free(inp, 1, 1);
+			sctp_inpcb_free(inp, SCTP_FREE_SHOULD_USE_ABORT
+					, SCTP_CALLED_AFTER_CMPSET_OFCLOSE);
 		} else {
 #ifdef SCTP_LOG_CLOSING
 			sctp_log_closing(inp, NULL, 14);
 #endif
-			sctp_inpcb_free(inp, 0, 1);
+			sctp_inpcb_free(inp, SCTP_FREE_SHOULD_USE_GRACEFUL_CLOSE, 
+					SCTP_CALLED_AFTER_CMPSET_OFCLOSE);
 		}
 		/* The socket is now detached, no matter what
 		 * the state of the SCTP association.
@@ -1093,12 +1094,14 @@ sctp6_detach(struct socket *so)
 #ifdef SCTP_LOG_CLOSING
 			sctp_log_closing(inp, NULL, 13);
 #endif
-			sctp_inpcb_free(inp, 1, 1);
+			sctp_inpcb_free(inp, SCTP_FREE_SHOULD_USE_ABORT,
+					SCTP_CALLED_AFTER_CMPSET_OFCLOSE);
 		} else {
 #ifdef SCTP_LOG_CLOSING
 			sctp_log_closing(inp, NULL, 14);
 #endif
-			sctp_inpcb_free(inp, 0, 1);
+			sctp_inpcb_free(inp, SCTP_FREE_SHOULD_USE_GRACEFUL_CLOSE,
+					SCTP_CALLED_AFTER_CMPSET_OFCLOSE);
 		}
 		
 		/* The socket is now detached, no matter what
@@ -1275,7 +1278,7 @@ sctp_sendm(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
 
 #endif
 
-
+#if !defined(__Panda__)
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 static int
 sctp6_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
@@ -1286,12 +1289,6 @@ static int
 sctp6_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
     struct mbuf *control, struct proc *p)
 {
-#elif defined(__Panda__)
-int
-sctp6_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
-    struct mbuf *control)
-{
-	void *p = NULL;
 #else
 static int
 sctp6_send(struct socket *so, int flags, struct mbuf *m, struct mbuf *nam,
@@ -1311,10 +1308,10 @@ sctp6_send(struct socket *so, int flags, struct mbuf *m, struct mbuf *nam,
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (inp == NULL) {
 		if (control) {
-			m_freem(control);
+			SCTP_RELEASE_PKT(control);
 			control = NULL;
 		}
-		m_freem(m);
+		SCTP_RELEASE_PKT(m);
 		return EINVAL;
 	}
 	in_inp = (struct inpcb *)inp;
@@ -1328,9 +1325,9 @@ sctp6_send(struct socket *so, int flags, struct mbuf *m, struct mbuf *nam,
 		goto connected_type;
 	}
 	if (addr == NULL) {
-		m_freem(m);
+		SCTP_RELEASE_PKT(m);
 		if (control) {
-			m_freem(control);
+			SCTP_RELEASE_PKT(control);
 			control = NULL;
 		}
 		return (EDESTADDRREQ);
@@ -1367,8 +1364,8 @@ connected_type:
 	/* now what about control */
 	if (control) {
 		if (inp->control) {
-			printf("huh? control set?\n");
-			m_freem(inp->control);
+			SCTP_PRINTF("huh? control set?\n");
+			SCTP_RELEASE_PKT(inp->control);
 			inp->control = NULL;
 		}
 		inp->control = control;
@@ -1409,6 +1406,7 @@ connected_type:
 		return (0);
 	}
 }
+#endif
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 static int
@@ -1420,9 +1418,8 @@ sctp6_connect(struct socket *so, struct sockaddr *addr, struct proc *p)
 {
 #elif defined(__Panda__)
 int
-sctp6_connect(struct socket *so, struct sockaddr *addr)
-{ 
-	void *p = NULL;
+sctp6_connect(struct socket *so, struct sockaddr *addr, void *p)
+{
 #else
 static int
 sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
@@ -1527,8 +1524,9 @@ sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	/* Now do we connect? */
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
 		stcb = LIST_FIRST(&inp->sctp_asoc_list);
-		if (stcb)
+		if (stcb) {
 			SCTP_TCB_UNLOCK(stcb);
+		}
 		SCTP_INP_RUNLOCK(inp);
 	} else {
 		SCTP_INP_RUNLOCK(inp);
@@ -1568,7 +1566,7 @@ sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		soisconnecting(so);
 	}
 	stcb->asoc.state = SCTP_STATE_COOKIE_WAIT;
-	SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_entered);
+	(void)SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_entered);
 
 	/* initialize authentication parameters for the assoc */
 	sctp_initialize_auth_params(inp, stcb);
@@ -1763,8 +1761,9 @@ sctp6_peeraddr(struct socket *so, struct mbuf *nam)
 	}
 	SCTP_INP_RLOCK(inp);
 	stcb = LIST_FIRST(&inp->sctp_asoc_list);
-	if (stcb)
+	if (stcb) {
 		SCTP_TCB_LOCK(stcb);
+	}
 	SCTP_INP_RUNLOCK(inp);
 	if (stcb == NULL) {
 #if defined(__FreeBSD__) || defined(__APPLE__)
