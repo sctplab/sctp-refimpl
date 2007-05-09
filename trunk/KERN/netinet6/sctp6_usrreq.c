@@ -430,7 +430,7 @@ bad:
 #ifdef __Panda__
 	/* For BSD/MAC this does nothing */
 	SCTP_DETACH_HEADER_FROM_CHAIN(*i_pak);
-	SCTP_RELEASE_HEADER(*i_pak);
+	(void)SCTP_RELEASE_HEADER(*i_pak);
 #endif
 	return IPPROTO_DONE;
 }
