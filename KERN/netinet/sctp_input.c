@@ -4810,7 +4810,7 @@ sctp_input(i_pak, va_alist)
 	 * This is Evil, but its the only way to make
 	 * panda work right 
 	 */
-	off = (int)(off_p + sizeof(struct ip);
+	off = (int)(off_p + sizeof(struct ip));
 #endif
 
  	if (SCTP_GET_PKT_VRFID(i_pak, vrf_id)) {
