@@ -655,18 +655,18 @@ DEFINE_APITEST(sctp_sso_rtoinfo_ill_5)
 DEFINE_APITEST(sctp_sso_rtoinfo_ill_6)
 {
 	int fd, result;
-	uint32_t max;
+	uint32_t min;
 	
 	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
 
-	result = sctp_get_maximum_rto(fd, 0, &max);
+	result = sctp_get_minimum_rto(fd, 0, &min);
 	if (result) {
 		close(fd);
 		return strerror(errno);
 	}
 		
-	result = sctp_set_maximum_rto(fd, 0, max - 10);
+	result = sctp_set_maximum_rto(fd, 0, min - 10);
 
 	close(fd);
 	
