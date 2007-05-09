@@ -158,7 +158,11 @@ sctp6_input(i_pak, offp, proto)
 		SCTP_RELEASE_PKT(*i_pak);
 		return (-1);
 	}
-	off = (int)off_p;
+	/*-
+	 * This is Evil, but its the only way to make
+	 * panda work right 
+	 */
+	off = (int)off_p + sizeof(struct ip6_hdr);
 #endif
 	/* get the VRF and table id's */
  	if (SCTP_GET_PKT_VRFID(*i_pak, vrf_id)) {
