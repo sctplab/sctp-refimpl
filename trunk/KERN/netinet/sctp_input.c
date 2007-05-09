@@ -3791,8 +3791,11 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				}
 				return (NULL);
 			}
-			sctp_handle_init(m, iphlen, *offset, sh,
-					 (struct sctp_init_chunk *)ch, inp, stcb, *netp, &abort_no_unlock, vrf_id, table_id);
+			if(netp) {
+				sctp_handle_init(m, iphlen, *offset, sh,
+						 (struct sctp_init_chunk *)ch, inp, 
+						 stcb, *netp, &abort_no_unlock, vrf_id, table_id);
+			} 
 			if (abort_no_unlock)
 				return (NULL);
 
