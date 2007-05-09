@@ -13,7 +13,7 @@ int main()
 	run = passed = failed = 0;
 	
 	printf("Name                          Verdict  Info\n");
-	printf("====================================================================================\n");
+	printf("================================================================================\n");
 	for (i = 0; i < number_of_tests; i++) {
 		printf("%-29.29s ", all_tests[i].name);
 		result =  all_tests[i].func();
@@ -26,7 +26,7 @@ int main()
 		}
 		run++;
 	}
-	printf("====================================================================================\n");
+	printf("===============================================================================\n");
 	printf("Summary: Number of tests run:    %3u\n", run);
 	printf("         Number of tests passed: %3u\n", passed);
 	printf("         Number of tests failed: %3u\n", failed);
