@@ -9,7 +9,7 @@ int sctp_set_maximum_rto(int , sctp_assoc_t, uint32_t);
 int sctp_set_minimum_rto(int , sctp_assoc_t, uint32_t);
 int sctp_get_rto_info(int, sctp_assoc_t, uint32_t *, uint32_t *, uint32_t *);
 int sctp_get_initial_rto(int fd, sctp_assoc_t, uint32_t *);
-
+int sctp_get_maximum_rto(int fd, sctp_assoc_t, uint32_t *);
 int sctp_get_minimum_rto(int fd, sctp_assoc_t, uint32_t *);
 
 int sctp_socketpair_1tom(int *fds, sctp_assoc_t *asocids);
