@@ -14,7 +14,7 @@ static char io_buffer[IO_BUFFER_SIZE];
 static char text_buffer[TEXT_BUFFER_SIZE];
 FILE *registerfile;
 
-char* read(FILE *stream) {
+char* myread(FILE *stream) {
 	char *text = text_buffer;
 	*text = '\0';
 	while(fgets(io_buffer, IO_BUFFER_SIZE, stream)) {
@@ -36,7 +36,7 @@ testfile = fopen("tests.txt", "r");
 	}
 	else
 	{
-		tests = read(testfile);
+		tests = myread(testfile);
 		fclose (testfile);
 		strcpy(header, test);
 		fwrite(header, strlen(header),1,registerfile);
@@ -70,13 +70,13 @@ testfile = fopen("tests.txt", "r");
 }
 
 
-void make_file_register_tests()
+int main()
 {
 
 	char header[100];
 	
-	system("grep \"DEFINE\" test* > tests.txt");
-	registerfile = fopen("register.c","w");
+	system("grep \"DEFINE\" test* > tmptests.txt");
+	registerfile = fopen("register_tests.c","w");
 	if (!registerfile) 
 	{
 		fprintf(stderr, "Cannot open file [%s] for writing: %s\n", "register.c", strerror(errno));
@@ -87,5 +87,7 @@ void make_file_register_tests()
 	strcpy(header, HEADER3);
 	fwrite(header, strlen(header),1,registerfile);
 	fclose (registerfile);
+	system("rm tmptests.txt");
+	return 0;
 }
 
