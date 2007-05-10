@@ -12,6 +12,7 @@
 
 static char io_buffer[IO_BUFFER_SIZE];
 static char text_buffer[TEXT_BUFFER_SIZE];
+FILE *registerfile;
 
 char* read(FILE *stream) {
 	char *text = text_buffer;
@@ -22,15 +23,12 @@ char* read(FILE *stream) {
 	return text;
 }
 
-
-void make_file_register_tests()
+void fill_file(char* test, int mode)
 {
-	FILE *testfile, *registerfile;
-	char *tests, *line;
-	char header[100], declare[100];
-	
-	system("grep \"DEFINE\" test* > tests.txt");
-	testfile = fopen("tests.txt", "r");
+char header[100], declare[100];
+char *tests, *line;
+FILE *testfile;
+testfile = fopen("tests.txt", "r");
 	if (!testfile) 
 	{
 		fprintf(stderr, "Cannot open file [%s] for writing: %s\n", "tests.txt", strerror(errno));
@@ -40,60 +38,54 @@ void make_file_register_tests()
 	{
 		tests = read(testfile);
 		fclose (testfile);
-		registerfile = fopen("register.c","w");
-		if (!registerfile) 
-		{
-			fprintf(stderr, "Cannot open file [%s] for writing: %s\n", "register.c", strerror(errno));
-			exit(-1);
-		}
-		else
-		{
-			strcpy(header, HEADER1);
-			fwrite(header, strlen(header),1,registerfile);
-			line = strtok (tests, "(");
-			while (line)
-			{	
-				line = strtok(NULL, ")");
-				if (line)
+		strcpy(header, test);
+		fwrite(header, strlen(header),1,registerfile);
+		line = strtok (tests, "(");
+		while (line)
+		{	
+			line = strtok(NULL, ")");
+			if (line)
+			{
+				declare[0] = '\0';
+				if (mode==1)
 				{
-					declare[0] = '\0';
 					strcat(declare,"DECLARE_APITEST(");
 					strcat(declare,line);
 					strcat(declare,");\n");
-					fwrite(declare, strlen(declare), 1, registerfile);
-					line = strtok(NULL, "(");
 				}
 				else
-					break;	
-			}
-			testfile = NULL;
-			testfile = fopen("tests.txt", "r");
-			tests=NULL;
-			tests = read(testfile);
-			fclose (testfile);
-			strcpy(header, HEADER2);
-			fwrite(header, strlen(header),1,registerfile);
-			line = strtok (tests, "(");
-			while (line)
-			{			
-				line = strtok(NULL, ")");
-				if (line)
 				{
-					declare[0] = '\0';
 					strcat(declare,"\tREGISTER_APITEST(");
 					strcat(declare,line);
 					strcat(declare,"),\n");
-					fwrite(declare, strlen(declare), 1, registerfile);
-					line = strtok(NULL, "(");
 				}
-				else
-					break;	
+				fwrite(declare, strlen(declare), 1, registerfile);
+				line = strtok(NULL, "(");
 			}
-			strcpy(header, HEADER3);
-			fwrite(header, strlen(header),1,registerfile);
+			else
+				break;	
 		}
+		testfile = NULL;
 	}
+}
+
+
+void make_file_register_tests()
+{
+
+	char header[100];
 	
+	system("grep \"DEFINE\" test* > tests.txt");
+	registerfile = fopen("register.c","w");
+	if (!registerfile) 
+	{
+		fprintf(stderr, "Cannot open file [%s] for writing: %s\n", "register.c", strerror(errno));
+		exit(-1);
+	}
+	fill_file(HEADER1, 1);
+	fill_file(HEADER2,0);
+	strcpy(header, HEADER3);
+	fwrite(header, strlen(header),1,registerfile);
 	fclose (registerfile);
 }
 
