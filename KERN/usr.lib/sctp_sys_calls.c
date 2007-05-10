@@ -422,7 +422,7 @@ sctp_sendmsg(int s,
     const void *data,
     size_t len,
     const struct sockaddr *to,
-    socklen_t tolen __attribute__((unused)),
+    socklen_t tolen,
     u_int32_t ppid,
     u_int32_t flags,
     u_int16_t stream_no,
@@ -467,30 +467,47 @@ sctp_sendmsg(int s,
   (u_int)context);
   fflush(io);
 */
-	if (to) {
-		if (to->sa_len == 0) {
-			/*
-			 * For the lazy app, that did not set sa_len, we
-			 * attempt to set for them.
-			 */
-			if (to->sa_family == AF_INET) {
-				memcpy(&addr, to, sizeof(struct sockaddr_in));
-				addr.in.sin_len = sizeof(struct sockaddr_in);
-			} else if (to->sa_family == AF_INET6) {
-				memcpy(&addr, to, sizeof(struct sockaddr_in6));
-				addr.in6.sin6_len = sizeof(struct sockaddr_in6);
+	if ((tolen > 0) && ((to == NULL) || (tolen < sizeof(struct sockaddr)))){
+		errno = EINVAL;
+		return -1;
+	}
+		
+	if (to && (tolen > 0)) {
+		if (to->sa_family == AF_INET) {
+			if (tolen != sizeof(struct sockaddr_in)) {
+				errno = EINVAL;
+				return -1;
 			}
+			if ((to->sa_len > 0) && (to->sa_len != sizeof(struct sockaddr_in))) {
+				errno = EINVAL;
+				return -1;
+			}
+			memcpy(&addr, to, sizeof(struct sockaddr_in));
+			addr.in.sin_len = sizeof(struct sockaddr_in);			
+		} else if (to->sa_family == AF_INET6) {
+			if (tolen != sizeof(struct sockaddr_in6)) {
+				errno = EINVAL;
+				return -1;
+			}
+			if ((to->sa_len > 0) && (to->sa_len != sizeof(struct sockaddr_in6))) {
+				errno = EINVAL;
+				return -1;
+			}
+			memcpy(&addr, to, sizeof(struct sockaddr_in6));
+			addr.in6.sin6_len = sizeof(struct sockaddr_in6);			
 		} else {
-			memcpy(&addr, to, to->sa_len);
+			errno = EAFNOSUPPORT;
+			return -1;
 		}
 		who = (struct sockaddr *)&addr;
 	}
+	 
 	iov[0].iov_base = (char *)data;
 	iov[0].iov_len = len;
 	iov[1].iov_base = NULL;
 	iov[1].iov_len = 0;
 
-	if (to) {
+	if (who) {
 		msg.msg_name = (caddr_t)who;
 		msg.msg_namelen = who->sa_len;
 	} else {
