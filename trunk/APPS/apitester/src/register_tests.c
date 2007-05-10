@@ -1,9 +1,3 @@
-/* 
- * This file will be generated automatically in the future.
- * Up to now you must insert one line per test manually.
- *
- */
- 
 #include "api_tests.h"
 
 DECLARE_APITEST(sctp_sendmsg_c_p_c_a);
@@ -109,5 +103,4 @@ struct test all_tests[] = {
 	REGISTER_APITEST(sctp_sso_rtoinfo_1_1_inherit),
 	REGISTER_APITEST(sctp_sso_rtoinfo_1_M_inherit),
 };
-
 unsigned int number_of_tests = (sizeof(all_tests) / sizeof(all_tests[0]));
