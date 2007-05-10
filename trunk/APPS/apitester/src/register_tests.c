@@ -51,6 +51,12 @@ DECLARE_APITEST(sctp_sso_rtoinfo_1_1_c_bad_id);
 DECLARE_APITEST(sctp_sso_rtoinfo_1_1_inherit);
 DECLARE_APITEST(sctp_sso_rtoinfo_1_M_inherit);
 
+/* Assoc Info */
+DECLARE_APITEST(sctp_gso_asocinfo_1_1_defaults);
+DECLARE_APITEST(sctp_gso_asocinfo_1_M_defaults);
+
+
+
 struct test all_tests[] = {
 	REGISTER_APITEST(sctp_sendmsg_c_p_c_a),
 	REGISTER_APITEST(sctp_sendmsg_c_p_c_a_over),
@@ -102,5 +108,7 @@ struct test all_tests[] = {
 	REGISTER_APITEST(sctp_sso_rtoinfo_1_1_c_bad_id),
 	REGISTER_APITEST(sctp_sso_rtoinfo_1_1_inherit),
 	REGISTER_APITEST(sctp_sso_rtoinfo_1_M_inherit),
+	REGISTER_APITEST(sctp_gso_asocinfo_1_1_defaults),
+	REGISTER_APITEST(sctp_gso_asocinfo_1_M_defaults),
 };
 unsigned int number_of_tests = (sizeof(all_tests) / sizeof(all_tests[0]));

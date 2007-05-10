@@ -932,3 +932,112 @@ DEFINE_APITEST(sctp_sso_rtoinfo_1_M_inherit)
 
 	return NULL;
 }
+
+
+
+/********************************************************
+ *
+ * SCTP_ASSOCINFO tests
+ *
+ ********************************************************/
+static char error_buffer[128];
+
+DEFINE_APITEST(sctp_gso_asocinfo_1_1_defaults)
+{
+	int fd, result;
+	uint16_t asoc_maxrxt, peer_dest_cnt;
+	uint32_t peer_rwnd, local_rwnd, cookie_life, sack_delay, sack_freq;
+	
+	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
+	
+	result = sctp_get_assoc_info(fd, 0, 
+				     &asoc_maxrxt,
+				     &peer_dest_cnt, 
+				     &peer_rwnd,
+				     &local_rwnd,
+				     &cookie_life,
+				     &sack_delay,
+				     &sack_freq);
+	close(fd);
+	if (result)
+		return strerror(errno);
+
+	if (asoc_maxrxt != 10) {
+		sprintf(error_buffer, "max_rxt:%d Not compliant with RFC4960", asoc_maxrxt);
+		return(error_buffer);
+	}
+	if (local_rwnd < 4096) {
+		sprintf(error_buffer, "local_rwnd:%d Not compliant with RFC4960", local_rwnd);
+		return(error_buffer);
+	}
+	if (cookie_life != 60) {
+		sprintf(error_buffer, "cookie_life:%d Not compliant with RFC4960", cookie_life);
+		return(error_buffer);
+	}
+	if ((sack_delay < 200) || (sack_delay > 500)) {
+		sprintf(error_buffer, "sack_delay:%d Not compliant with RFC4960", sack_delay);
+		return(error_buffer);
+	}
+	if (sack_freq != 2) {
+		sprintf(error_buffer, "sack_frequency:%d Not compliant with RFC4960", sack_freq);
+		return(error_buffer);
+	}
+	if(peer_rwnd != 0) {
+		return "Peer rwnd with no peer?";
+	}
+
+	if(peer_dest_cnt != 0) {
+		return "Peer destination count with no peer?";
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(sctp_gso_asocinfo_1_M_defaults)
+{
+	int fd, result;
+	uint16_t asoc_maxrxt, peer_dest_cnt;
+	uint32_t peer_rwnd, local_rwnd, cookie_life, sack_delay, sack_freq;
+	
+	fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
+
+	result = sctp_get_assoc_info(fd, 0, 
+				     &asoc_maxrxt,
+				     &peer_dest_cnt, 
+				     &peer_rwnd,
+				     &local_rwnd,
+				     &cookie_life,
+				     &sack_delay,
+				     &sack_freq);
+	close(fd);
+	if (result)
+		return strerror(errno);
+
+	if (asoc_maxrxt != 10) {
+		sprintf(error_buffer, "max_rxt:%d Not compliant with RFC4960", asoc_maxrxt);
+		return(error_buffer);
+	}
+	if (local_rwnd < 4096) {
+		sprintf(error_buffer, "local_rwnd:%d Not compliant with RFC4960", local_rwnd);
+		return(error_buffer);
+	}
+	if (cookie_life != 60) {
+		sprintf(error_buffer, "cookie_life:%d Not compliant with RFC4960", cookie_life);
+		return(error_buffer);
+	}
+	if ((sack_delay < 200) || (sack_delay > 500)) {
+		sprintf(error_buffer, "sack_delay:%d Not compliant with RFC4960", sack_delay);
+		return(error_buffer);
+	}
+	if (sack_freq != 2) {
+		sprintf(error_buffer, "sack_frequency:%d Not compliant with RFC4960", sack_freq);
+		return(error_buffer);
+	}
+	if(peer_rwnd != 0) {
+		return "Peer rwnd with no peer?";
+	}
+
+	if(peer_dest_cnt != 0) {
+		return "Peer destination count with no peer?";
+	}
+	return NULL;
+}
