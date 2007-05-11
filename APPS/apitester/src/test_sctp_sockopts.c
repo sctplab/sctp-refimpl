@@ -8,7 +8,7 @@
 #include "sctp_utilities.h"
 #include "api_tests.h"
 
-DEFINE_APITEST(sctp_gso_rtoinfo_1_1_defaults)
+DEFINE_APITEST(rtoinfo, gso_1_1_defaults)
 {
 	int fd, result;
 	uint32_t init, max, min;
@@ -29,7 +29,7 @@ DEFINE_APITEST(sctp_gso_rtoinfo_1_1_defaults)
 	return NULL;
 }
 
-DEFINE_APITEST(sctp_gso_rtoinfo_1_M_defaults)
+DEFINE_APITEST(rtoinfo, gso_1_M_defaults)
 {
 	int fd, result;
 	uint32_t init, max, min;
@@ -50,7 +50,7 @@ DEFINE_APITEST(sctp_gso_rtoinfo_1_M_defaults)
 	return NULL;
 }
 
-DEFINE_APITEST(sctp_gso_rtoinfo_1_1_bad_id)
+DEFINE_APITEST(rtoinfo, gso_1_1_bad_id)
 {
 	int fd, result;
 	
@@ -67,7 +67,7 @@ DEFINE_APITEST(sctp_gso_rtoinfo_1_1_bad_id)
 	return NULL;
 }
 
-DEFINE_APITEST(sctp_gso_rtoinfo_1_M_bad_id)
+DEFINE_APITEST(rtoinfo, gso_1_M_bad_id)
 {
 	int fd, result;
 	
@@ -87,7 +87,7 @@ DEFINE_APITEST(sctp_gso_rtoinfo_1_M_bad_id)
 	return NULL;
 }
 
-DEFINE_APITEST(sctp_sso_rtoinfo_1_1_good)
+DEFINE_APITEST(rtoinfo, sso_1_1_good)
 {
 	int fd, result;
 	uint32_t init, max, min, new_init, new_max, new_min;
@@ -126,7 +126,7 @@ DEFINE_APITEST(sctp_sso_rtoinfo_1_1_good)
 	return NULL;
 }
 
-DEFINE_APITEST(sctp_sso_rtoinfo_1_M_good)
+DEFINE_APITEST(rtoinfo, sso_1_M_good)
 {
 	int fd, result;
 	uint32_t init, max, min, new_init, new_max, new_min;
@@ -165,7 +165,7 @@ DEFINE_APITEST(sctp_sso_rtoinfo_1_M_good)
 	return NULL;
 }
 
-DEFINE_APITEST(sctp_sso_rtoinfo_1_1_bad_id)
+DEFINE_APITEST(rtoinfo, sso_1_1_bad_id)
 {
 	int fd, result;
 	uint32_t init, max, min;
@@ -190,7 +190,7 @@ DEFINE_APITEST(sctp_sso_rtoinfo_1_1_bad_id)
 	return NULL;
 }
 
-DEFINE_APITEST(sctp_sso_rtoinfo_1_M_bad_id)
+DEFINE_APITEST(rtoinfo, sso_1_M_bad_id)
 {
 	int fd, result;
 	uint32_t init, max, min;
@@ -218,7 +218,7 @@ DEFINE_APITEST(sctp_sso_rtoinfo_1_M_bad_id)
 	return NULL;
 }
 
-DEFINE_APITEST(sctp_sso_rtoinfo_1_1_init)
+DEFINE_APITEST(rtoinfo, sso_1_1_init)
 {
 	int fd, result;
 	uint32_t init, max, min, new_init, new_max, new_min;
@@ -258,7 +258,7 @@ DEFINE_APITEST(sctp_sso_rtoinfo_1_1_init)
 	return NULL;
 }
 
-DEFINE_APITEST(sctp_sso_rtoinfo_1_M_init)
+DEFINE_APITEST(rtoinfo, sso_1_M_init)
 {
 	int fd, result;
 	uint32_t init, max, min, new_init, new_max, new_min;
@@ -298,7 +298,7 @@ DEFINE_APITEST(sctp_sso_rtoinfo_1_M_init)
 	return NULL;
 }
 
-DEFINE_APITEST(sctp_sso_rtoinfo_1_1_max)
+DEFINE_APITEST(rtoinfo, sso_1_1_max)
 {
 	int fd, result;
 	uint32_t init, max, min, new_init, new_max, new_min;
@@ -338,7 +338,7 @@ DEFINE_APITEST(sctp_sso_rtoinfo_1_1_max)
 	return NULL;
 }
 
-DEFINE_APITEST(sctp_sso_rtoinfo_1_M_max)
+DEFINE_APITEST(rtoinfo, sso_1_M_max)
 {
 	int fd, result;
 	uint32_t init, max, min, new_init, new_max, new_min;
@@ -378,7 +378,7 @@ DEFINE_APITEST(sctp_sso_rtoinfo_1_M_max)
 	return NULL;
 }
 
-DEFINE_APITEST(sctp_sso_rtoinfo_1_1_min)
+DEFINE_APITEST(rtoinfo, sso_1_1_min)
 {
 	int fd, result;
 	uint32_t init, max, min, new_init, new_max, new_min;
@@ -418,7 +418,7 @@ DEFINE_APITEST(sctp_sso_rtoinfo_1_1_min)
 	return NULL;
 }
 
-DEFINE_APITEST(sctp_sso_rtoinfo_1_M_min)
+DEFINE_APITEST(rtoinfo, sso_1_M_min)
 {
 	int fd, result;
 	uint32_t init, max, min, new_init, new_max, new_min;
@@ -458,7 +458,7 @@ DEFINE_APITEST(sctp_sso_rtoinfo_1_M_min)
 	return NULL;
 }
 
-DEFINE_APITEST(sctp_sso_rtoinfo_1_1_same)
+DEFINE_APITEST(rtoinfo, sso_1_1_same)
 {
 	int fd, result;
 	uint32_t init, max, min;
@@ -487,7 +487,7 @@ DEFINE_APITEST(sctp_sso_rtoinfo_1_1_same)
 	return NULL;
 }
 
-DEFINE_APITEST(sctp_sso_rtoinfo_1_M_same)
+DEFINE_APITEST(rtoinfo, sso_1_M_same)
 {
 	int fd, result;
 	uint32_t init, max, min;
@@ -516,7 +516,7 @@ DEFINE_APITEST(sctp_sso_rtoinfo_1_M_same)
 	return NULL;
 }
 
-DEFINE_APITEST(sctp_sso_rtoinfo_ill_1)
+DEFINE_APITEST(rtoinfo, sso_ill_1)
 {
 	int fd, result;
 	uint32_t min;
@@ -544,7 +544,7 @@ DEFINE_APITEST(sctp_sso_rtoinfo_ill_1)
 	return NULL;
 }
 
-DEFINE_APITEST(sctp_sso_rtoinfo_ill_2)
+DEFINE_APITEST(rtoinfo, sso_ill_2)
 {
 	int fd, result;
 	uint32_t max;
@@ -572,7 +572,7 @@ DEFINE_APITEST(sctp_sso_rtoinfo_ill_2)
 	return NULL;
 }
 
-DEFINE_APITEST(sctp_sso_rtoinfo_ill_3)
+DEFINE_APITEST(rtoinfo, sso_ill_3)
 {
 	int fd, result;
 	uint32_t init;
@@ -599,7 +599,7 @@ DEFINE_APITEST(sctp_sso_rtoinfo_ill_3)
 	return NULL;
 }
 
-DEFINE_APITEST(sctp_sso_rtoinfo_ill_4)
+DEFINE_APITEST(rtoinfo, sso_ill_4)
 {
 	int fd, result;
 	uint32_t max;
@@ -626,7 +626,7 @@ DEFINE_APITEST(sctp_sso_rtoinfo_ill_4)
 	return NULL;
 }
 
-DEFINE_APITEST(sctp_sso_rtoinfo_ill_5)
+DEFINE_APITEST(rtoinfo, sso_ill_5)
 {
 	int fd, result;
 	uint32_t init;
@@ -653,7 +653,7 @@ DEFINE_APITEST(sctp_sso_rtoinfo_ill_5)
 	return NULL;
 }
 
-DEFINE_APITEST(sctp_sso_rtoinfo_ill_6)
+DEFINE_APITEST(rtoinfo, sso_ill_6)
 {
 	int fd, result;
 	uint32_t min;
@@ -680,7 +680,7 @@ DEFINE_APITEST(sctp_sso_rtoinfo_ill_6)
 	return NULL;
 }
 
-DEFINE_APITEST(sctp_gso_rtoinfo_1_1_c_bad_id)
+DEFINE_APITEST(rtoinfo, gso_1_1_c_bad_id)
 {
 	int fd[2], result;
 
@@ -698,7 +698,7 @@ DEFINE_APITEST(sctp_gso_rtoinfo_1_1_c_bad_id)
 	return NULL;
 }
 
-DEFINE_APITEST(sctp_sso_rtoinfo_1_1_c_bad_id)
+DEFINE_APITEST(rtoinfo, sso_1_1_c_bad_id)
 {
 	int fd[2], result;
 	uint32_t init, max, min;
@@ -725,7 +725,7 @@ DEFINE_APITEST(sctp_sso_rtoinfo_1_1_c_bad_id)
 	return NULL;
 }
 
-DEFINE_APITEST(sctp_sso_rtoinfo_1_1_inherit)
+DEFINE_APITEST(rtoinfo, sso_1_1_inherit)
 {
 	int cfd, afd, lfd, result;
 	struct sockaddr_in addr;
@@ -824,7 +824,7 @@ DEFINE_APITEST(sctp_sso_rtoinfo_1_1_inherit)
 	return NULL;
 }
 
-DEFINE_APITEST(sctp_sso_rtoinfo_1_M_inherit)
+DEFINE_APITEST(rtoinfo, sso_1_M_inherit)
 {
 	int cfd, pfd, afd, lfd, result;
 	struct sockaddr_in addr;
@@ -942,7 +942,7 @@ DEFINE_APITEST(sctp_sso_rtoinfo_1_M_inherit)
  ********************************************************/
 static char error_buffer[128];
 
-DEFINE_APITEST(sctp_gso_asocinfo_1_1_defaults)
+DEFINE_APITEST(associnfo, gso_1_1_defaults)
 {
 	int fd, result;
 	uint16_t asoc_maxrxt, peer_dest_cnt;
@@ -992,7 +992,7 @@ DEFINE_APITEST(sctp_gso_asocinfo_1_1_defaults)
 	return NULL;
 }
 
-DEFINE_APITEST(sctp_gso_asocinfo_1_M_defaults)
+DEFINE_APITEST(associnfo, gso_1_M_defaults)
 {
 	int fd, result;
 	uint16_t asoc_maxrxt, peer_dest_cnt;

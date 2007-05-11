@@ -1,12 +1,13 @@
 #include <stdio.h>
+#include <string.h>
 #include "api_tests.h"
 
 extern struct test all_tests[];
 extern unsigned number_of_tests;
 
-int main()
+int main(int argc, char *argv[])
 {
-	unsigned int i;
+	unsigned int i, j;
 	char *result;
 	unsigned int run, passed, failed;
 	
@@ -15,16 +16,21 @@ int main()
 	printf("Name                          Verdict  Info\n");
 	printf("================================================================================\n");
 	for (i = 0; i < number_of_tests; i++) {
-		printf("%-29.29s ", all_tests[i].name);
-		result =  all_tests[i].func();
-		if (result) {
-			printf("failed   %-40.40s\n", result);
-			failed++;
-		} else {
-			printf("passed\n");
-			passed++;
+		for (j = 1; j < argc; j ++)
+			if (strcmp(all_tests[i].suite_name, argv[j]) == 0)
+				break;
+		if ((argc == 1) || (j < argc)) {
+			printf("%-29.29s ", all_tests[i].case_name);
+			result =  all_tests[i].func();
+			if (result) {
+				printf("failed   %-40.40s\n", result);
+				failed++;
+			} else {
+				printf("passed\n");
+				passed++;
+			}
+			run++;
 		}
-		run++;
 	}
 	printf("===============================================================================\n");
 	printf("Summary: Number of tests run:    %3u\n", run);
