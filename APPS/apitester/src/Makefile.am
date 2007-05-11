@@ -1,11 +1,16 @@
+# Please add additional files containing test cases here
 TEST_SOURCES                = test_sctp_sendmsg.c \
                               test_sctp_sockopts.c
-bin_PROGRAMS                = make_register_tests api_tests
-make_register_tests_SOURCES = make_register_tests.c
+
+# Plese do not edit anything below
+bin_PROGRAMS                = api_tests
 api_tests_SOURCES           = api_tests.c api_tests.h \
                               sctp_utilities.c sctp_utilities.h \
                               register_tests.c \
                               $(TEST_SOURCES)
-api_tests_DEPENDENCIES      = make_register_tests
-register_tests.c: $(TEST_SOURCES)
-	$(srcdir)/make_register_tests
+EXTRA_DIST                  = make_register_tests.sh
+CLEANFILES                  = register_tests.c
+register_tests.c: $(TEST_SOURCES) make_register_tests.sh
+	sh make_register_tests.sh register_tests.c $(TEST_SOURCES)
+dist-hook:
+	@rm -f $(distdir)/register_tests.c

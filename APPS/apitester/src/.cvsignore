@@ -2,4 +2,4 @@
 Makefile
 Makefile.in
 api_tests
-make_register_tests
+register_tests.c
