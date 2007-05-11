@@ -1330,6 +1330,7 @@ sctp_iterator_worker(void)
 		SCTP_IPI_ITERATOR_WQ_UNLOCK();
 		sctp_iterator_work(it);
 		SCTP_IPI_ITERATOR_WQ_LOCK();
+        /*sa_ignore FREED_MEMORY*/
 		it = TAILQ_FIRST(&sctppcbinfo.iteratorhead);		
 	}
 	if (TAILQ_FIRST(&sctppcbinfo.iteratorhead)) {
@@ -3606,6 +3607,7 @@ sctp_report_all_outbound(struct sctp_tcb *stcb, int holds_lock)
 			sp->net = NULL;
 			/* Free the chunk */
 			sctp_free_a_strmoq(stcb, sp);
+            /*sa_ignore FREED_MEMORY*/
 			sp = TAILQ_FIRST(&outs->outqueue);
 		}
 	}
@@ -3637,6 +3639,7 @@ sctp_report_all_outbound(struct sctp_tcb *stcb, int holds_lock)
 				sctp_free_remote_addr(chk->whoTo);
 			chk->whoTo = NULL;
 			sctp_free_a_chunk(stcb, chk);
+            /*sa_ignore FREED_MEMORY*/
 			chk = TAILQ_FIRST(&asoc->send_queue);
 		}
 	}
@@ -3668,6 +3671,7 @@ sctp_report_all_outbound(struct sctp_tcb *stcb, int holds_lock)
 				sctp_free_remote_addr(chk->whoTo);
 			chk->whoTo = NULL;
 			sctp_free_a_chunk(stcb, chk);
+            /*sa_ignore FREED_MEMORY*/
 			chk = TAILQ_FIRST(&asoc->sent_queue);
 		}
 	}
@@ -5055,6 +5059,7 @@ sctp_sorecvmsg(struct socket *so,
 	error = sblock(&so->so_rcv, (block_allowed ? M_WAITOK : 0));
 #endif
 	/* we possibly have data we can read */
+    /*sa_ignore FREED_MEMORY*/
 	control = TAILQ_FIRST(&inp->read_queue);
 	if (control == NULL) {
 		/* This could be happening since
