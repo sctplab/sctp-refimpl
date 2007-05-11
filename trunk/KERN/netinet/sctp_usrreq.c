@@ -4028,8 +4028,8 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		}
 #ifdef SCTP_MVRF
 		/* Is the VRF one we have */
-		for (i=0;i<inp->num_vrfs; i++) {
-			if(vrf_id == inp->m_vrf_ids[i]) {
+		for (i = 0; i < inp->num_vrfs; i++) {
+			if (vrf_id == inp->m_vrf_ids[i]) {
 				fnd = 1;
 				break;
 			}
@@ -4058,8 +4058,9 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		 */
 		if (addrs->sget_assoc_id == 0) {
 			/* delete the address */
-			(void)sctp_addr_mgmt_ep_sa(inp, addr_touse,
-						   SCTP_DEL_IP_ADDRESS, vrf_id);
+			error = sctp_addr_mgmt_ep_sa(inp, addr_touse,
+						     SCTP_DEL_IP_ADDRESS,
+						     vrf_id);
 		} else {
 			/*
 			 * FIX: decide whether we allow assoc based
