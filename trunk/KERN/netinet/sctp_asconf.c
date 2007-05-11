@@ -291,8 +291,10 @@ sctp_process_asconf_add_ip(struct mbuf *m, struct sctp_asconf_paramhdr *aph,
 			m_reply =
 			    sctp_asconf_success_response(aph->correlation_id);
 		}
-		sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep, stcb, NULL,SCTP_FROM_SCTP_ASCONF+SCTP_LOC_1 );
-		sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep, stcb, NULL);
+		sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep, stcb,
+				NULL, SCTP_FROM_SCTP_ASCONF+SCTP_LOC_1 );
+		sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep,
+				 stcb, NULL);
 	}
 
 	return m_reply;
@@ -881,7 +883,8 @@ sctp_asconf_cleanup(struct sctp_tcb *stcb, struct sctp_nets *net)
 	/*
 	 * clear out any existing asconfs going out
 	 */
-	sctp_timer_stop(SCTP_TIMER_TYPE_ASCONF, stcb->sctp_ep, stcb, net, SCTP_FROM_SCTP_ASCONF+SCTP_LOC_2 );
+	sctp_timer_stop(SCTP_TIMER_TYPE_ASCONF, stcb->sctp_ep, stcb, net,
+			SCTP_FROM_SCTP_ASCONF+SCTP_LOC_2 );
 	stcb->asoc.asconf_seq_out++;
 	/* remove the old ASCONF on our outbound queue */
 	sctp_toss_old_asconf(stcb);
@@ -1346,7 +1349,8 @@ sctp_handle_asconf_ack(struct mbuf *m, int offset,
 	}
 
 	/* stop our timer */
-	sctp_timer_stop(SCTP_TIMER_TYPE_ASCONF, stcb->sctp_ep, stcb, net, SCTP_FROM_SCTP_ASCONF+SCTP_LOC_3 );
+	sctp_timer_stop(SCTP_TIMER_TYPE_ASCONF, stcb->sctp_ep, stcb, net,
+			SCTP_FROM_SCTP_ASCONF+SCTP_LOC_3 );
 
 	/* process the ASCONF-ACK contents */
 	ack_length = ntohs(cp->ch.chunk_length) -
@@ -2200,7 +2204,8 @@ sctp_compose_asconf(struct sctp_tcb *stcb, int *retlen)
 	}
 	/* chain it all together */
 	SCTP_BUF_NEXT(m_asconf_chk) = m_asconf;
-	*retlen = acp->ch.chunk_length = ntohs(SCTP_BUF_LEN(m_asconf_chk) + SCTP_BUF_LEN(m_asconf));
+	*retlen =  ntohs(SCTP_BUF_LEN(m_asconf_chk) + SCTP_BUF_LEN(m_asconf));
+	acp->ch.chunk_length = ntohs(*retlen);
 
 	/* update "sent" flag */
 	stcb->asoc.asconf_sent++;
@@ -2624,7 +2629,8 @@ sctp_addr_mgmt_ep_sa(struct sctp_inpcb *inp, struct sockaddr *sa, uint32_t type,
 				       sctp_iterator_stcb, 
 				       sctp_iterator_ep_end,
 				       SCTP_PCB_ANY_FLAGS,
-				       SCTP_PCB_ANY_FEATURES, SCTP_ASOC_ANY_STATE, (void *)asc, 0,
+				       SCTP_PCB_ANY_FEATURES,
+				       SCTP_ASOC_ANY_STATE, (void *)asc, 0,
 				       sctp_iterator_end, inp, 0);
 	} else {
 		/* invalid address! */
