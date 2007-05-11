@@ -1,8 +1,9 @@
-#define REGISTER_APITEST(test) {#test, test}
-#define DECLARE_APITEST(test) extern char * test(void)
-#define DEFINE_APITEST(test) char *test(void)
+#define REGISTER_APITEST(suite, case) {#suite"_"#case, #suite, suite##case}
+#define DECLARE_APITEST(suite, case) extern char *suite##case(void)
+#define DEFINE_APITEST(suite, case) char *suite##case(void)
 
 struct test {
-	char *name;
+	char *case_name;
+	char *suite_name;
 	char *(*func)(void);
 };

@@ -12,7 +12,7 @@
 #include "sctp_utilities.h"
 #include "api_tests.h"
 
-DEFINE_APITEST(sctp_sendmsg_c_p_c_a)
+DEFINE_APITEST(sctp_sendmsg, c_p_c_a)
 {
 	int fd[2], n;
 	struct sockaddr_in addr;
@@ -37,7 +37,7 @@ DEFINE_APITEST(sctp_sendmsg_c_p_c_a)
 	}
 }
 
-DEFINE_APITEST(sctp_sendmsg_c_p_c_a_over)
+DEFINE_APITEST(sctp_sendmsg, c_p_c_a_over)
 {
 	int fd[2], n;
 	struct sockaddr_in addr;
@@ -62,7 +62,7 @@ DEFINE_APITEST(sctp_sendmsg_c_p_c_a_over)
 	}
 }
 
-DEFINE_APITEST(sctp_sendmsg_w_p_c_a)
+DEFINE_APITEST(sctp_sendmsg, w_p_c_a)
 {
 	int fd[2], n;
 	struct sockaddr_in addr;
@@ -88,7 +88,7 @@ DEFINE_APITEST(sctp_sendmsg_w_p_c_a)
 	}
 }
 
-DEFINE_APITEST(sctp_sendmsg_w_p_c_a_over)
+DEFINE_APITEST(sctp_sendmsg, w_p_c_a_over)
 {
 	int fd[2], n;
 	struct sockaddr_in addr;
@@ -114,7 +114,7 @@ DEFINE_APITEST(sctp_sendmsg_w_p_c_a_over)
 	}
 }
 
-DEFINE_APITEST(sctp_sendmsg_c_p_w_a)
+DEFINE_APITEST(sctp_sendmsg, c_p_w_a)
 {
 	int fd[2], n;
 	struct sockaddr_in addr;
@@ -140,7 +140,7 @@ DEFINE_APITEST(sctp_sendmsg_c_p_w_a)
 	}
 }
 
-DEFINE_APITEST(sctp_sendmsg_c_p_w_a_over)
+DEFINE_APITEST(sctp_sendmsg, c_p_w_a_over)
 {
 	int fd[2], n;
 	struct sockaddr_in addr;
@@ -166,7 +166,7 @@ DEFINE_APITEST(sctp_sendmsg_c_p_w_a_over)
 	}
 }
 
-DEFINE_APITEST(sctp_sendmsg_w_p_w_a)
+DEFINE_APITEST(sctp_sendmsg, w_p_w_a)
 {
 	int fd[2], n;
 	struct sockaddr_in addr;
@@ -193,7 +193,7 @@ DEFINE_APITEST(sctp_sendmsg_w_p_w_a)
 	}
 }
 
-DEFINE_APITEST(sctp_sendmsg_w_p_w_a_over)
+DEFINE_APITEST(sctp_sendmsg, w_p_w_a_over)
 {
 	int fd[2], n;
 	struct sockaddr_in addr;
@@ -220,7 +220,7 @@ DEFINE_APITEST(sctp_sendmsg_w_p_w_a_over)
 	}
 }
 
-DEFINE_APITEST(sctp_sendmsg_b_p_c_a)
+DEFINE_APITEST(sctp_sendmsg, b_p_c_a)
 {
 	int fd[2], n;
 	struct sockaddr_in addr;
@@ -246,7 +246,7 @@ DEFINE_APITEST(sctp_sendmsg_b_p_c_a)
 	}
 }
 
-DEFINE_APITEST(sctp_sendmsg_b_p_c_a_over)
+DEFINE_APITEST(sctp_sendmsg, b_p_c_a_over)
 {
 	int fd[2], n;
 	struct sockaddr_in addr;
@@ -272,7 +272,7 @@ DEFINE_APITEST(sctp_sendmsg_b_p_c_a_over)
 	}
 }
 
-DEFINE_APITEST(sctp_sendmsg_c_p_b_a)
+DEFINE_APITEST(sctp_sendmsg, c_p_b_a)
 {
 	int fd[2], n;
 	struct sockaddr_in addr;
@@ -298,7 +298,7 @@ DEFINE_APITEST(sctp_sendmsg_c_p_b_a)
 	}
 }
 
-DEFINE_APITEST(sctp_sendmsg_c_p_b_a_over)
+DEFINE_APITEST(sctp_sendmsg, c_p_b_a_over)
 {
 	int fd[2], n;
 	struct sockaddr_in addr;
@@ -324,7 +324,7 @@ DEFINE_APITEST(sctp_sendmsg_c_p_b_a_over)
 	}
 }
 
-DEFINE_APITEST(sctp_sendmsg_b_p_b_a)
+DEFINE_APITEST(sctp_sendmsg, b_p_b_a)
 {
 	int fd[2], n;
 	struct sockaddr_in addr;
@@ -351,7 +351,7 @@ DEFINE_APITEST(sctp_sendmsg_b_p_b_a)
 	}
 }
 
-DEFINE_APITEST(sctp_sendmsg_b_p_b_a_over)
+DEFINE_APITEST(sctp_sendmsg, b_p_b_a_over)
 {
 	int fd[2], n;
 	struct sockaddr_in addr;
@@ -378,7 +378,7 @@ DEFINE_APITEST(sctp_sendmsg_b_p_b_a_over)
 	}
 }
 
-DEFINE_APITEST(sctp_sendmsg_w_p_b_a)
+DEFINE_APITEST(sctp_sendmsg, w_p_b_a)
 {
 	int fd[2], n;
 	struct sockaddr_in addr;
@@ -405,7 +405,7 @@ DEFINE_APITEST(sctp_sendmsg_w_p_b_a)
 	}
 }
 
-DEFINE_APITEST(sctp_sendmsg_w_p_b_a_over)
+DEFINE_APITEST(sctp_sendmsg, w_p_b_a_over)
 {
 	int fd[2], n;
 	struct sockaddr_in addr;
@@ -432,7 +432,7 @@ DEFINE_APITEST(sctp_sendmsg_w_p_b_a_over)
 	}
 }
 
-DEFINE_APITEST(sctp_sendmsg_b_p_w_a)
+DEFINE_APITEST(sctp_sendmsg, b_p_w_a)
 {
 	int fd[2], n;
 	struct sockaddr_in addr;
@@ -459,7 +459,7 @@ DEFINE_APITEST(sctp_sendmsg_b_p_w_a)
 	}
 }
 
-DEFINE_APITEST(sctp_sendmsg_b_p_w_a_over)
+DEFINE_APITEST(sctp_sendmsg, b_p_w_a_over)
 {
 	int fd[2], n;
 	struct sockaddr_in addr;
@@ -485,7 +485,7 @@ DEFINE_APITEST(sctp_sendmsg_b_p_w_a_over)
 	}
 }
 
-DEFINE_APITEST(sctp_sendmsg_non_null_zero)
+DEFINE_APITEST(sctp_sendmsg, non_null_zero)
 {
 	int fd[2], n;
 	struct sockaddr_in addr;
@@ -512,7 +512,7 @@ DEFINE_APITEST(sctp_sendmsg_non_null_zero)
 	}
 }
 
-DEFINE_APITEST(sctp_sendmsg_non_null_zero_over)
+DEFINE_APITEST(sctp_sendmsg, non_null_zero_over)
 {
 	int fd[2], n;
 	struct sockaddr_in addr;
@@ -539,7 +539,7 @@ DEFINE_APITEST(sctp_sendmsg_non_null_zero_over)
 	}
 }
 
-DEFINE_APITEST(sctp_sendmsg_null_zero)
+DEFINE_APITEST(sctp_sendmsg, null_zero)
 {
 	int fd[2], n;
 	struct sockaddr_in addr;
@@ -566,7 +566,7 @@ DEFINE_APITEST(sctp_sendmsg_null_zero)
 	}
 }
 
-DEFINE_APITEST(sctp_sendmsg_null_zero_over)
+DEFINE_APITEST(sctp_sendmsg, null_zero_over)
 {
 	int fd[2], n;
 	struct sockaddr_in addr;
@@ -593,7 +593,7 @@ DEFINE_APITEST(sctp_sendmsg_null_zero_over)
 	}
 }
 
-DEFINE_APITEST(sctp_sendmsg_null_non_zero)
+DEFINE_APITEST(sctp_sendmsg, null_non_zero)
 {
 	int fd[2], n;
 	struct sockaddr_in addr;
@@ -620,7 +620,7 @@ DEFINE_APITEST(sctp_sendmsg_null_non_zero)
 	}
 }
 
-DEFINE_APITEST(sctp_sendmsg_null_non_zero_over)
+DEFINE_APITEST(sctp_sendmsg, null_non_zero_over)
 {
 	int fd[2], n;
 	struct sockaddr_in addr;
