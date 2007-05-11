@@ -3354,6 +3354,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	(void)SCTP_OS_TIMER_STOP(&inp->sctp_ep.signature_change.timer);
 	inp->sctp_ep.signature_change.type = SCTP_TIMER_TYPE_NONE;
 	/* Clear the read queue */
+    /*sa_ignore FREED_MEMORY*/
 	while ((sq = TAILQ_FIRST(&inp->read_queue)) != NULL) {
 		/* Its only abandoned if it had data left */
 		if(sq->length)
@@ -3467,6 +3468,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	while (shared_key) {
 		LIST_REMOVE(shared_key, next);
 		sctp_free_sharedkey(shared_key);
+        /*sa_ignore FREED_MEMORY*/
 		shared_key = LIST_FIRST(&inp->sctp_ep.shared_keys);
 	}
 
@@ -4664,10 +4666,12 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			/* Free the zone stuff  */
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_strmoq, sp);
 			SCTP_DECR_STRMOQ_COUNT();
+            /*sa_ignore FREED_MEMORY*/
 			sp = TAILQ_FIRST(&outs->outqueue);
 		}
 	}
 
+    /*sa_ignore FREED_MEMORY*/
 	while ((liste = TAILQ_FIRST(&asoc->resetHead)) != NULL) {
 		TAILQ_REMOVE(&asoc->resetHead, liste, next_resp);
 		SCTP_FREE(liste);
@@ -4686,6 +4690,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		/* Free the ctl entry */
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, sq);
 		SCTP_DECR_READQ_COUNT();
+        /*sa_ignore FREED_MEMORY*/
 		sq = TAILQ_FIRST(&asoc->pending_reply_queue);
 	}
 
@@ -4701,6 +4706,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		SCTP_DECR_CHK_COUNT();
 		atomic_subtract_int(&sctppcbinfo.ipi_free_chunks, 1);
 		asoc->free_chunk_cnt--;
+        /*sa_ignore FREED_MEMORY*/
 		chk = TAILQ_FIRST(&asoc->free_chunks);
 	}
 	/* pending send queue SHOULD be empty */
@@ -4716,6 +4722,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			sctp_free_remote_addr(chk->whoTo);
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
 			SCTP_DECR_CHK_COUNT();
+            /*sa_ignore FREED_MEMORY*/
 			chk = TAILQ_FIRST(&asoc->send_queue);
 		}
 	}
@@ -4738,6 +4745,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			sctp_free_remote_addr(chk->whoTo);
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
 			SCTP_DECR_CHK_COUNT();
+            /*sa_ignore FREED_MEMORY*/
 			chk = TAILQ_FIRST(&asoc->sent_queue);
 		}
 	}
@@ -4760,6 +4768,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			sctp_free_remote_addr(chk->whoTo);
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
 			SCTP_DECR_CHK_COUNT();
+            /*sa_ignore FREED_MEMORY*/
 			chk = TAILQ_FIRST(&asoc->control_send_queue);
 		}
 	}
@@ -4781,6 +4790,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			ccnt++;
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
 			SCTP_DECR_CHK_COUNT();
+            /*sa_ignore FREED_MEMORY*/
 			chk = TAILQ_FIRST(&asoc->reasmqueue);
 		}
 	}
@@ -4831,6 +4841,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	}
 	asoc->streamincnt = 0;
 	while (!TAILQ_EMPTY(&asoc->nets)) {
+        /*sa_ignore FREED_MEMORY*/
 		net = TAILQ_FIRST(&asoc->nets);
 		/* pull from list */
 		if ((sctppcbinfo.ipi_count_raddr == 0) || (prev == net)) {
@@ -4845,12 +4856,14 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	}
 
 	while (!SCTP_LIST_EMPTY(&asoc->sctp_restricted_addrs)) {
+        /*sa_ignore FREED_MEMORY*/
 		laddr = LIST_FIRST(&asoc->sctp_restricted_addrs);
 		sctp_remove_laddr(laddr);
 	}
 
 	/* pending asconf (address) parameters */
 	while (!TAILQ_EMPTY(&asoc->asconf_queue)) {
+        /*sa_ignore FREED_MEMORY*/
 		aparam = TAILQ_FIRST(&asoc->asconf_queue);
 		TAILQ_REMOVE(&asoc->asconf_queue, aparam, next);
 		SCTP_FREE(aparam);
@@ -4876,6 +4889,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	while (shared_key) {
 		LIST_REMOVE(shared_key, next);
 		sctp_free_sharedkey(shared_key);
+        /*sa_ignore FREED_MEMORY*/
 		shared_key = LIST_FIRST(&asoc->shared_keys);
 	}
 
@@ -6589,5 +6603,6 @@ sctp_initiate_iterator(inp_func inpf,
 	splx(s);
 #endif
 #endif
+    /* sa_ignore MEMLEAK {memory is put on the tailq for the iterator} */
 	return (0);
 }

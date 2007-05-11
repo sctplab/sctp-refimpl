@@ -401,6 +401,7 @@ sctp_skip_csum:
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
 #endif
+    /*sa_ignore NO_NULL_CHK*/
 	sctp_common_input_processing(&m, iphlen, offset, length, sh, ch,
 	    in6p, stcb, net, ecn_bits, vrf_id, table_id);
 	/* inp's ref-count reduced && stcb unlocked */

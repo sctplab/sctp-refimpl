@@ -1763,8 +1763,9 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 		soisconnecting(so);
 	}
  out_now:
-	if (creat_lock_on)
+	if (creat_lock_on) {
 		SCTP_ASOC_CREATE_UNLOCK(inp);
+    }
 	SCTP_INP_DECR_REF(inp);
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
@@ -1777,8 +1778,9 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) { \
 		SCTP_INP_RLOCK(inp); \
 		stcb = LIST_FIRST(&inp->sctp_asoc_list); \
-		if (stcb) \
+		if (stcb) { \
 			SCTP_TCB_LOCK(stcb); \
+                } \
 		SCTP_INP_RUNLOCK(inp); \
 	} else if (assoc_id != 0) { \
 		stcb = sctp_findassociation_ep_asocid(inp, assoc_id, 1); \
@@ -2313,8 +2315,9 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 			sas = (struct sockaddr_storage *)&saddr->addr[0];
 			limit = *optsize - sizeof(sctp_assoc_t);
 			actual = sctp_fill_up_addresses(inp, stcb, limit, sas);
-			if (stcb)
+			if (stcb) {
 				SCTP_TCB_UNLOCK(stcb);
+            }
 			*optsize = sizeof(struct sockaddr_storage) + actual;
 		}
 		break;
