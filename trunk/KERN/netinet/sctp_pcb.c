@@ -2904,12 +2904,12 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 		}
 		/* we're not bound all */
 		inp->sctp_flags &= ~SCTP_PCB_FLAGS_BOUNDALL;
-		/* set the automatic addr changes from kernel flag */
+		/* allow bindx() to send ASCONF's for binding changes */
 		sctp_feature_on(inp, SCTP_PCB_FLAGS_DO_ASCONF);
+		/* set the automatic addr changes from kernel flag */
 		if (sctp_auto_asconf == 0) {
 			sctp_feature_off(inp, SCTP_PCB_FLAGS_AUTO_ASCONF);
 		} else {
-			/* allow bindx() to send ASCONF's for binding changes */
 			sctp_feature_on(inp, SCTP_PCB_FLAGS_AUTO_ASCONF);
 		}
 
