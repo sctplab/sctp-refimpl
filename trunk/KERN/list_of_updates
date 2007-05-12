@@ -1,3 +1,4 @@
 - Fixed 1-2-1 model to not worry about associd in sockopts
 - Fixed RTOinfo for bounding.
+- Fixed connect() to return ECONNREFUSED when an ABORT is received.
 
