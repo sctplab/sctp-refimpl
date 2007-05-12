@@ -40,4 +40,5 @@ int main(int argc, char *argv[])
 	if (failed == 0) {
 		printf("Congratulations!\n");
 	}
+	return 0;
 }
