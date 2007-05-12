@@ -197,7 +197,6 @@ __get_assoc_id (int fd, struct sockaddr *addr)
 {
 	struct sctp_paddrinfo sp;
 	socklen_t siz;
-	struct sockaddr *sa;
 	socklen_t sa_len;
 
 	/* First get the assoc id */
@@ -319,7 +318,7 @@ sctp_get_assoc_info(int fd, sctp_assoc_t assoc_id,
 	asocinfo.sasoc_assoc_id = assoc_id;
 	result = getsockopt(fd, IPPROTO_SCTP, SCTP_ASSOCINFO, (void *)&asocinfo, &len);
 
-	if(*asoc_maxrxt) 
+	if(asoc_maxrxt) 
 		*asoc_maxrxt = asocinfo.sasoc_asocmaxrxt;
 	if (peer_dest_cnt) 
 		*peer_dest_cnt = asocinfo.sasoc_number_peer_destinations;
