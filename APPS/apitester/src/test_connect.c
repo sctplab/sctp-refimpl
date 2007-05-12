@@ -44,6 +44,20 @@ DEFINE_APITEST(connect, non_listen)
 		close(fds);
 		return strerror(errno);
 	}
+
+	memset((void *)&addr, 0, sizeof(struct sockaddr_in));
+	addr.sin_family      = AF_INET;
+#ifdef HAVE_SIN_LEN
+	addr.sin_len         = sizeof(struct sockaddr_in);
+#endif
+	addr.sin_port        = htons(0);
+	addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+
+	if (bind(fdc, (struct sockaddr *)&addr, (socklen_t)sizeof(struct sockaddr_in)) < 0) {
+		close(fdc);
+		close(fds);
+		return strerror(errno);
+	}
 	
 	n = connect(fdc, (const struct sockaddr *)&addr, addr_len);
 
@@ -56,7 +70,7 @@ DEFINE_APITEST(connect, non_listen)
 		return "connect was successful";
 }
 
-DEFINE_APITEST(connect1, listen)
+DEFINE_APITEST(connect, listen)
 {
 	int fdc, fds, n;
 	struct sockaddr_in addr;
@@ -104,7 +118,7 @@ DEFINE_APITEST(connect1, listen)
 }
 
 
-DEFINE_APITEST(connect1, self_non_listen)
+DEFINE_APITEST(connect, self_non_listen)
 {
 	int fd, n;
 	struct sockaddr_in addr;
@@ -134,14 +148,18 @@ DEFINE_APITEST(connect1, self_non_listen)
 	
 	n = connect(fd, (const struct sockaddr *)&addr, addr_len);
 	close(fd);
+
+	/*  This really depends on when connect() returns. On the
+	 *  reception of the INIT-ACK or the COOKIE-ACK
+	 */
 	if (n < 0)
-		return NULL;
+		return strerror(errno);
 	else
-		return "connect was successful";
+		return NULL;
 
 }
 
-DEFINE_APITEST(connect1, self_listen)
+DEFINE_APITEST(connect, self_listen)
 {
 	int fd, n;
 	struct sockaddr_in addr;

@@ -21,6 +21,7 @@ int main(int argc, char *argv[])
 				break;
 		if ((argc == 1) || (j < argc)) {
 			printf("%-29.29s ", all_tests[i].case_name);
+			fflush(stdout);
 			result =  all_tests[i].func();
 			if (result) {
 				printf("failed   %-40.40s\n", result);
@@ -39,6 +40,4 @@ int main(int argc, char *argv[])
 	if (failed == 0) {
 		printf("Congratulations!\n");
 	}
-
-	return 0;
 }
