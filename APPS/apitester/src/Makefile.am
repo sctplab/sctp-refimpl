@@ -1,6 +1,7 @@
 # Please add additional files containing test cases here
 TEST_SOURCES                = test_sctp_sendmsg.c \
-                              test_sctp_sockopts.c
+                              test_sctp_sockopts.c \
+                              test_connect.c
 
 # Plese do not edit anything below
 bin_PROGRAMS                = api_tests

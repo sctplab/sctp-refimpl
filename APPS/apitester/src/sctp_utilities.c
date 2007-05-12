@@ -14,7 +14,10 @@ int sctp_socketpair(int *fds)
 	int fd;
 	struct sockaddr_in addr;
 	socklen_t addr_len;
+	unsigned short port1, port2, port3;
 
+	port1 = port2 = port3 = 0;
+	
 	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
     	return -1;
 
@@ -30,6 +33,9 @@ int sctp_socketpair(int *fds)
 		close(fd);
 		return -1;
 	}
+	addr_len = (socklen_t)sizeof(struct sockaddr_in);
+	getsockname (fd, (struct sockaddr *) &addr, &addr_len);
+	port1 = ntohs(addr.sin_port);
 
 	if (listen(fd, 1) < 0) {
 		close(fd);
@@ -56,11 +62,17 @@ int sctp_socketpair(int *fds)
 	}
 
 	addr_len = (socklen_t)sizeof(struct sockaddr_in);
+	getsockname (fds[0], (struct sockaddr *) &addr, &addr_len);
+	port2 = ntohs(addr.sin_port);
+
+	addr_len = (socklen_t)sizeof(struct sockaddr_in);
 	if (getsockname (fd, (struct sockaddr *) &addr, &addr_len) < 0) {
 		close(fd);
 		close(fds[0]);
 		return -1;
 	}
+
+	port3 = ntohs(addr.sin_port);
 
 	if (connect(fds[0], (struct sockaddr *) &addr, addr_len) < 0) {
 		close(fd);
