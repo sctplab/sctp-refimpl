@@ -2443,6 +2443,7 @@ sctp_isport_inuse(struct sctp_inpcb *inp, uint16_t lport, uint32_t vrf_id)
 	int i;
 #endif
 	int fnd;
+
 	head = &sctppcbinfo.sctp_ephash[SCTP_PCBHASH_ALLADDR(lport,
 	    sctppcbinfo.hashmark)];
 
@@ -2752,7 +2753,9 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 				if (sctp_isport_inuse(inp, htons(port_attempt), vrf_id) == 1) {
 					/* got a port we can use */
 					not_found = 0;
+#ifdef SCTP_MVRF
 					break;
+#endif
 				}
 #ifdef SCTP_MVRF
 			}
@@ -2765,6 +2768,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 			/* try upper half */
 		next_half:
 			port_attempt = ((port_guess >> 16) & 0x0000ffff);
+
 			if (port_attempt == 0) {
 				goto last_try;
 			}
@@ -2779,7 +2783,9 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 				if (sctp_isport_inuse(inp, htons(port_attempt), vrf_id) == 1) {
 					/* got a port we can use */
 					not_found = 0;
+#ifdef SCTP_MVRF
 					break;
+#endif
 				}
 #ifdef SCTP_MVRF
 			}
@@ -2808,7 +2814,9 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 				if (sctp_isport_inuse(inp, htons(port_attempt), vrf_id) == 1) {
 					/* got a port we can use */
 					not_found = 0;
+#ifdef SCTP_MVRF
 					break;
+#endif
 				}
 #ifdef SCTP_MVRF
 			}
