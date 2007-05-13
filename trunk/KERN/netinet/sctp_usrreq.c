@@ -1942,49 +1942,41 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 			*optsize = sizeof(*av); 
 		}
 		break;
+	case SCTP_GET_ASOC_ID_NUMBER:
+		{
+			uint32_t *value, cnt;
+		
+			SCTP_CHECK_AND_CAST(value, optval, uint32_t, *optsize);
+			cnt = 0;
+			SCTP_INP_RLOCK(inp);
+			LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
+				cnt++;
+			}
+			SCTP_INP_RUNLOCK(inp);
+			*value = cnt;
+			*optsize = sizeof(uint32_t);
+		}
+		break;
+
 	case SCTP_GET_ASOC_ID_LIST:
 		{
 			struct sctp_assoc_ids *ids;
-			int cnt, at;
-			uint16_t orig;
+			unsigned int at, limit;
 
 			SCTP_CHECK_AND_CAST(ids, optval, struct sctp_assoc_ids, *optsize);
-			cnt = 0;
-			SCTP_INP_RLOCK(inp);
-			stcb = LIST_FIRST(&inp->sctp_asoc_list);
-			if (stcb == NULL) {
-		none_out_now:
-				ids->asls_numb_present = 0;
-				ids->asls_more_to_get = 0;
-				SCTP_INP_RUNLOCK(inp);
-				break;
-			}
-			orig = ids->asls_assoc_start;
-			stcb = LIST_FIRST(&inp->sctp_asoc_list);
-			while (orig) {
-				stcb = LIST_NEXT(stcb, sctp_tcblist);
-				orig--;
-				cnt--;
-				if (stcb == NULL)
-					goto none_out_now;
-			}
-			if (stcb == NULL)
-				goto none_out_now;
-
 			at = 0;
-			ids->asls_numb_present = 0;
-			ids->asls_more_to_get = 1;
-			while (at < MAX_ASOC_IDS_RET) {
-				ids->asls_assoc_id[at] = sctp_get_associd(stcb);
-				at++;
-				ids->asls_numb_present++;
-				stcb = LIST_NEXT(stcb, sctp_tcblist);
-				if (stcb == NULL) {
-					ids->asls_more_to_get = 0;
+			limit = *optsize / sizeof(sctp_assoc_t);
+			SCTP_INP_RLOCK(inp);
+			LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
+				if (at < limit) {
+					ids->asls_assoc_id[at++] = sctp_get_associd(stcb);
+				} else {
+					error = EINVAL;
 					break;
 				}
 			}
 			SCTP_INP_RUNLOCK(inp);
+			*optsize = at * sizeof(sctp_assoc_t);
 		}
 		break;
 	case SCTP_CONTEXT:
