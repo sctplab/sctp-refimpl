@@ -1,4 +1,5 @@
 int sctp_socketpair(int *);
+int sctp_socketstar(int *, int *, unsigned int);
 int sctp_shutdown(int);
 int sctp_abort(int);
 int sctp_enable_non_blocking(int);
@@ -47,4 +48,7 @@ int sctp_get_asoc_cookie_life(int fd, sctp_assoc_t asoc, uint32_t *life);
 int sctp_set_asoc_sack_delay(int fd, sctp_assoc_t asoc, uint32_t delay);
 int sctp_get_asoc_sack_delay(int fd, sctp_assoc_t asoc, uint32_t *delay);
 
+
+uint32_t sctp_get_number_of_associations(int);
+uint32_t sctp_get_association_identifiers(int, sctp_assoc_t [], unsigned int);
 
