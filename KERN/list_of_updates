@@ -1,4 +1,6 @@
 - Fixed 1-2-1 model to not worry about associd in sockopts
 - Fixed RTOinfo for bounding.
 - Fixed connect() to return ECONNREFUSED when an ABORT is received.
-- Fixed port number selection in sctp_inpc_bind.
+- Fixed port number selection in sctp_inpcb_bind.
+- Added comments to direct Static Analysis not to look at some things
+  it does not understand (comments are /* sa_ignore XXXXX */)
