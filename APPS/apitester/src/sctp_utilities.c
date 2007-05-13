@@ -14,9 +14,6 @@ int sctp_socketpair(int *fds)
 	int fd;
 	struct sockaddr_in addr;
 	socklen_t addr_len;
-	unsigned short port1, port2, port3;
-
-	port1 = port2 = port3 = 0;
 	
 	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
     	return -1;
@@ -35,7 +32,6 @@ int sctp_socketpair(int *fds)
 	}
 	addr_len = (socklen_t)sizeof(struct sockaddr_in);
 	getsockname (fd, (struct sockaddr *) &addr, &addr_len);
-	port1 = ntohs(addr.sin_port);
 
 	if (listen(fd, 1) < 0) {
 		close(fd);
@@ -63,7 +59,6 @@ int sctp_socketpair(int *fds)
 
 	addr_len = (socklen_t)sizeof(struct sockaddr_in);
 	getsockname (fds[0], (struct sockaddr *) &addr, &addr_len);
-	port2 = ntohs(addr.sin_port);
 
 	addr_len = (socklen_t)sizeof(struct sockaddr_in);
 	if (getsockname (fd, (struct sockaddr *) &addr, &addr_len) < 0) {
@@ -71,8 +66,6 @@ int sctp_socketpair(int *fds)
 		close(fds[0]);
 		return -1;
 	}
-
-	port3 = ntohs(addr.sin_port);
 
 	if (connect(fds[0], (struct sockaddr *) &addr, addr_len) < 0) {
 		close(fd);
@@ -87,6 +80,58 @@ int sctp_socketpair(int *fds)
 	}
 
 	close(fd);
+	return 0;
+}
+
+int sctp_socketstar(int *fd, int *fds, unsigned int n)
+{
+	struct sockaddr_in addr;
+	socklen_t addr_len;
+	unsigned int i, j;
+	
+	if ((*fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
+    	return -1;
+
+	memset((void *)&addr, 0, sizeof(struct sockaddr_in));
+	addr.sin_family      = AF_INET;
+#ifdef HAVE_SIN_LEN
+	addr.sin_len         = sizeof(struct sockaddr_in);
+#endif
+	addr.sin_port        = htons(0);
+	addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+
+	if (bind(*fd, (struct sockaddr *)&addr, (socklen_t)sizeof(struct sockaddr_in)) < 0) {
+		close(*fd);
+		return -1;
+	}
+	
+	addr_len = (socklen_t)sizeof(struct sockaddr_in);
+	if (getsockname (*fd, (struct sockaddr *) &addr, &addr_len) < 0) {
+		close(*fd);
+		return -1;
+	}
+
+	if (listen(*fd, 1) < 0) {
+		close(*fd);
+		return -1;
+	}
+
+	for (i = 0; i < n; i++){
+		if ((fds[i] = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) {
+			close(*fd);
+			for (j = 0; j < i; j++ )
+				close(fds[j]);
+			return -1;
+		}
+
+		if (connect(fds[i], (struct sockaddr *) &addr, addr_len) < 0) {
+			close(*fd);
+			for (j = 0; j <= i; j++ )
+				close(fds[j]);
+			return -1;
+		}
+	}
+
 	return 0;
 }
 
@@ -446,4 +491,29 @@ int
 sctp_get_asoc_(int fd, sctp_assoc_t asoc, uint32_t *freq)
 {
 	return(sctp_get_assoc_info(fd, asoc, NULL, NULL, NULL, NULL, NULL, NULL, freq));
+}
+
+uint32_t
+sctp_get_number_of_associations(int fd)
+{
+	uint32_t number;
+	socklen_t len;
+	
+	len = (socklen_t) sizeof(uint32_t);
+	if (getsockopt(fd, IPPROTO_SCTP, SCTP_GET_ASOC_ID_NUMBER, (void *)&number, &len) < 0)
+		return -1;
+	else
+		return number;
+}
+
+uint32_t
+sctp_get_association_identifiers(int fd, sctp_assoc_t ids[], unsigned int n)
+{
+	socklen_t len;
+	
+	len = (socklen_t) (n * sizeof(sctp_assoc_t));
+	if (getsockopt(fd, IPPROTO_SCTP, SCTP_GET_ASOC_ID_LIST, (void *)ids, &len) < 0)
+		return -1;
+	else
+		return (len / sizeof(sctp_assoc_t));
 }

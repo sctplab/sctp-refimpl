@@ -933,6 +933,116 @@ DEFINE_APITEST(rtoinfo, sso_1_M_inherit)
 	return NULL;
 }
 
+#define NUMBER_OF_ASSOCS 234
+
+DEFINE_APITEST(assoclist, gso_numbers)
+{
+	int fd, fds[NUMBER_OF_ASSOCS], result;
+	unsigned int i;
+	
+	if (sctp_socketstar(&fd, fds, NUMBER_OF_ASSOCS) < 0)
+		return strerror(errno);
+		
+	result = sctp_get_number_of_associations(fd);
+	
+	close(fd);
+	for (i = 0; i < NUMBER_OF_ASSOCS; i++)
+		close(fds[i]);
+	
+	if (result == NUMBER_OF_ASSOCS)
+		return NULL;
+	else
+		return "Wrong number of associations";
+}
+
+DEFINE_APITEST(assoclist, gso_ids_buf_fit)
+{
+	int fd, fds[NUMBER_OF_ASSOCS], result;
+	sctp_assoc_t ids[NUMBER_OF_ASSOCS];
+	unsigned int i, j;
+	
+	if (sctp_socketstar(&fd, fds, NUMBER_OF_ASSOCS) < 0)
+		return strerror(errno);
+		
+	if (sctp_get_number_of_associations(fd) != NUMBER_OF_ASSOCS) {
+		close(fd);
+		for (i = 0; i < NUMBER_OF_ASSOCS; i++)
+			close(fds[i]);	
+	}
+	
+	result = sctp_get_association_identifiers(fd, ids, NUMBER_OF_ASSOCS);
+	
+	close(fd);
+	for (i = 0; i < NUMBER_OF_ASSOCS; i++)
+		close(fds[i]);
+	
+	if (result == NUMBER_OF_ASSOCS) {
+		for (i = 0; i < NUMBER_OF_ASSOCS; i++)
+			for (j = 0; j < NUMBER_OF_ASSOCS; j++)
+				if ((i != j) && (ids[i] == ids[j]))
+					return "Same identifier for different associations";
+		return NULL;
+	} else
+		return "Wrong number of identifiers";
+}
+
+DEFINE_APITEST(assoclist, gso_ids_buf_large)
+{
+	int fd, fds[NUMBER_OF_ASSOCS + 1], result;
+	sctp_assoc_t ids[NUMBER_OF_ASSOCS];
+	unsigned int i, j;
+	
+	if (sctp_socketstar(&fd, fds, NUMBER_OF_ASSOCS) < 0)
+		return strerror(errno);
+		
+	if (sctp_get_number_of_associations(fd) != NUMBER_OF_ASSOCS) {
+		close(fd);
+		for (i = 0; i < NUMBER_OF_ASSOCS; i++)
+			close(fds[i]);	
+	}
+	
+	result = sctp_get_association_identifiers(fd, ids, NUMBER_OF_ASSOCS + 1);
+	
+	close(fd);
+	for (i = 0; i < NUMBER_OF_ASSOCS; i++)
+		close(fds[i]);
+	
+	if (result == NUMBER_OF_ASSOCS) {
+		for (i = 0; i < NUMBER_OF_ASSOCS; i++)
+			for (j = 0; j < NUMBER_OF_ASSOCS; j++)
+				if ((i != j) && (ids[i] == ids[j]))
+					return "Same identifier for different associations";
+		return NULL;
+	} else
+		return "Wrong number of identifiers";
+}
+
+DEFINE_APITEST(assoclist, gso_ids_buf_small)
+{
+	int fd, fds[NUMBER_OF_ASSOCS - 1], result;
+	sctp_assoc_t ids[NUMBER_OF_ASSOCS];
+	unsigned int i;
+	
+	if (sctp_socketstar(&fd, fds, NUMBER_OF_ASSOCS) < 0)
+		return strerror(errno);
+		
+	if (sctp_get_number_of_associations(fd) != NUMBER_OF_ASSOCS) {
+		close(fd);
+		for (i = 0; i < NUMBER_OF_ASSOCS; i++)
+			close(fds[i]);	
+	}
+	
+	result = sctp_get_association_identifiers(fd, ids, NUMBER_OF_ASSOCS - 1);
+	
+	close(fd);
+	for (i = 0; i < NUMBER_OF_ASSOCS; i++)
+		close(fds[i]);
+	
+	if (result > 0)
+		return "getsockopt successful";
+	else
+		return NULL;
+}
 
 
 /********************************************************
