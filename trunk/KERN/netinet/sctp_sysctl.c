@@ -460,7 +460,7 @@ SYSCTL_UINT(_net_inet_sctp, OID_AUTO, init_rto_max, CTLFLAG_RW,
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, valid_cookie_life, CTLFLAG_RW,
     &sctp_valid_cookie_life_default, 0,
-    "Default cookie lifetime in sec");
+    "Default cookie lifetime in ticks");
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, init_rtx_max, CTLFLAG_RW,
     &sctp_init_rtx_max_default, 0,
@@ -983,7 +983,7 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
 	sysctl_createv(clog, 0, NULL, NULL,
 	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
 	    CTLTYPE_INT, "valid_cookie_life",
-	    SYSCTL_DESCR("Default cookie lifetime in sec"),
+	    SYSCTL_DESCR("Default cookie lifetime in ticks"),
 	    NULL, 0, &sctp_valid_cookie_life_default, 0,
 	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_COOKIE_LIFE,
 	    CTL_EOL);

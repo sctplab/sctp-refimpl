@@ -494,8 +494,8 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.15 2007/05/08 17:01:10 
  */
 #define SCTP_DEFAULT_MBUFS_IN_CHAIN 5
 
-/* How long a cookie lives in seconds */
-#define SCTP_DEFAULT_COOKIE_LIFE	60
+/* How long a cookie lives in milli-seconds */
+#define SCTP_DEFAULT_COOKIE_LIFE	60000
 
 /* resource limit of streams */
 #define MAX_SCTP_STREAMS	2048

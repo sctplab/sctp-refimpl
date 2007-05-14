@@ -2289,7 +2289,7 @@ sctp_inpcb_alloc(struct socket *so)
 	sctp_timer_start(SCTP_TIMER_TYPE_NEWCOOKIE, inp, NULL, NULL);
 
 	/* How long is a cookie good for ? */
-	m->def_cookie_life = sctp_valid_cookie_life_default;
+	m->def_cookie_life = MSEC_TO_TICKS(sctp_valid_cookie_life_default);
 	/*
 	 * Initialize authentication parameters
 	 */
@@ -2446,7 +2446,6 @@ sctp_isport_inuse(struct sctp_inpcb *inp, uint16_t lport, uint32_t vrf_id)
 
 	head = &sctppcbinfo.sctp_ephash[SCTP_PCBHASH_ALLADDR(lport,
 	    sctppcbinfo.hashmark)];
-
 	LIST_FOREACH(t_inp, head, sctp_hash) {
 		if (t_inp->sctp_lport != lport) {
 			continue;
@@ -2748,6 +2747,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 			if (port_attempt < IPPORT_RESERVED) {
 				port_attempt += IPPORT_RESERVED;
 			}
+			not_found = 1;
 #ifdef SCTP_MVRF
 			for (i=0; i < inp->num_vrfs; i++) {
 #else
@@ -2779,6 +2779,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 			if (port_attempt < IPPORT_RESERVED) {
 				port_attempt += IPPORT_RESERVED;
 			}
+			not_found = 1;
 #ifdef SCTP_MVRF
 			for (i=0; i < inp->num_vrfs; i++) {
 #else
@@ -2811,6 +2812,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 			if (port_attempt < IPPORT_RESERVED) {
 				port_attempt += IPPORT_RESERVED;
 			}
+			not_found = 1;
 #ifdef SCTP_MVRF
 			for(i=0; i<inp->num_vrfs; i++) {
 #else
