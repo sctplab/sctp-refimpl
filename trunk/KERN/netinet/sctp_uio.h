@@ -536,7 +536,7 @@ struct sctp_assoc_value {
 };
 
 struct sctp_assoc_ids {
-	sctp_assoc_t asls_assoc_id[0];
+	sctp_assoc_t gaids_assoc_id[0];
 };
 
 struct sctp_cwnd_args {

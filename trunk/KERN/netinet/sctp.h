@@ -121,8 +121,8 @@ struct sctp_paramhdr {
 /* authentication support */
 #define SCTP_PEER_AUTH_CHUNKS 		0x00000102
 #define SCTP_LOCAL_AUTH_CHUNKS 		0x00000103
-#define SCTP_GET_ASOC_ID_NUMBER         0x00000104 /* ro */
-#define SCTP_GET_ASOC_ID_LIST           0x00000105 /* ro */
+#define SCTP_GET_ASSOC_NUMBER           0x00000104 /* ro */
+#define SCTP_GET_ASSOC_ID_LIST          0x00000105 /* ro */
 
 /*
  * user socket options: BSD implementation specific
