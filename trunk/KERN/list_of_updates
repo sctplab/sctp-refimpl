@@ -4,3 +4,7 @@
 - Fixed port number selection in sctp_inpcb_bind.
 - Added comments to direct Static Analysis not to look at some things
   it does not understand (comments are /* sa_ignore XXXXX */)
+- Bind when colliding was broken, missing not_found = 1 before
+  checking to see if the port was in use.
+- Cookie life needs to be in milliseconds to conform to socket api.
+
