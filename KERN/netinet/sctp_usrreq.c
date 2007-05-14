@@ -2565,7 +2565,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 				sasoc->sasoc_number_peer_destinations = stcb->asoc.numnets;
 				sasoc->sasoc_peer_rwnd = stcb->asoc.peers_rwnd;
 				sasoc->sasoc_local_rwnd = stcb->asoc.my_rwnd;
-				sasoc->sasoc_cookie_life = stcb->asoc.cookie_life;
+				sasoc->sasoc_cookie_life = TICKS_TO_MSEC(stcb->asoc.cookie_life);
 				sasoc->sasoc_sack_delay = stcb->asoc.delayed_ack;
 				sasoc->sasoc_sack_freq = stcb->asoc.sack_freq;
 				SCTP_TCB_UNLOCK(stcb);
@@ -2575,7 +2575,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 				sasoc->sasoc_number_peer_destinations = 0;
 				sasoc->sasoc_peer_rwnd = 0;
 				sasoc->sasoc_local_rwnd = sbspace(&inp->sctp_socket->so_rcv);
-				sasoc->sasoc_cookie_life = inp->sctp_ep.def_cookie_life;
+				sasoc->sasoc_cookie_life = TICKS_TO_MSEC(inp->sctp_ep.def_cookie_life);
 				sasoc->sasoc_sack_delay = TICKS_TO_MSEC(inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV]);
 				sasoc->sasoc_sack_freq = inp->sctp_ep.sctp_sack_freq;
 				SCTP_INP_RUNLOCK(inp);
@@ -3753,7 +3753,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			sasoc->sasoc_peer_rwnd = 0;
 			sasoc->sasoc_local_rwnd = 0;
 			if (stcb->asoc.cookie_life)
-				stcb->asoc.cookie_life = sasoc->sasoc_cookie_life;
+				stcb->asoc.cookie_life = MSEC_TO_TICKS(sasoc->sasoc_cookie_life);
 			stcb->asoc.delayed_ack = sasoc->sasoc_sack_delay;
 			if(sasoc->sasoc_sack_freq) {
 				stcb->asoc.sack_freq = sasoc->sasoc_sack_freq;
@@ -3767,7 +3767,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			sasoc->sasoc_peer_rwnd = 0;
 			sasoc->sasoc_local_rwnd = 0;
 			if (sasoc->sasoc_cookie_life)
-				inp->sctp_ep.def_cookie_life = sasoc->sasoc_cookie_life;
+				inp->sctp_ep.def_cookie_life = MSEC_TO_TICKS(sasoc->sasoc_cookie_life);
 			inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV] = MSEC_TO_TICKS(sasoc->sasoc_sack_delay);
 			if(sasoc->sasoc_sack_freq) {
 				inp->sctp_ep.sctp_sack_freq = sasoc->sasoc_sack_freq;
