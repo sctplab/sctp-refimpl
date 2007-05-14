@@ -500,7 +500,7 @@ sctp_get_number_of_associations(int fd)
 	socklen_t len;
 	
 	len = (socklen_t) sizeof(uint32_t);
-	if (getsockopt(fd, IPPROTO_SCTP, SCTP_GET_ASOC_ID_NUMBER, (void *)&number, &len) < 0)
+	if (getsockopt(fd, IPPROTO_SCTP, SCTP_GET_ASSOC_NUMBER, (void *)&number, &len) < 0)
 		return -1;
 	else
 		return number;
@@ -512,7 +512,7 @@ sctp_get_association_identifiers(int fd, sctp_assoc_t ids[], unsigned int n)
 	socklen_t len;
 	
 	len = (socklen_t) (n * sizeof(sctp_assoc_t));
-	if (getsockopt(fd, IPPROTO_SCTP, SCTP_GET_ASOC_ID_LIST, (void *)ids, &len) < 0)
+	if (getsockopt(fd, IPPROTO_SCTP, SCTP_GET_ASSOC_ID_LIST, (void *)ids, &len) < 0)
 		return -1;
 	else
 		return (len / sizeof(sctp_assoc_t));
