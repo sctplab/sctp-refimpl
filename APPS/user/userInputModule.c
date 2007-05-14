@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.95 2007-05-05 19:36:33 tuexen Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.96 2007-05-14 23:52:05 randall Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -1709,7 +1709,7 @@ cmd_gettimetolive(char *argv[], int argc)
 
 int cmd_getassocids(char *argv[], int argc)
 {
-#if defined(__BSD_SCTP_STACK__)
+#if defined(MUSTFIX)
 	struct sctp_assoc_ids ids;
 	int i;
 	socklen_t sz;
