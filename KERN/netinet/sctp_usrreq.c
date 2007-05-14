@@ -1942,7 +1942,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 			*optsize = sizeof(*av); 
 		}
 		break;
-	case SCTP_GET_ASOC_ID_NUMBER:
+	case SCTP_GET_ASSOC_NUMBER:
 		{
 			uint32_t *value, cnt;
 		
@@ -1958,7 +1958,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 		}
 		break;
 
-	case SCTP_GET_ASOC_ID_LIST:
+	case SCTP_GET_ASSOC_ID_LIST:
 		{
 			struct sctp_assoc_ids *ids;
 			unsigned int at, limit;
@@ -1969,7 +1969,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 			SCTP_INP_RLOCK(inp);
 			LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
 				if (at < limit) {
-					ids->asls_assoc_id[at++] = sctp_get_associd(stcb);
+					ids->gaids_assoc_id[at++] = sctp_get_associd(stcb);
 				} else {
 					error = EINVAL;
 					break;
