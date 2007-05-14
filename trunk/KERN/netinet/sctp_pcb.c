@@ -2454,7 +2454,7 @@ sctp_isport_inuse(struct sctp_inpcb *inp, uint16_t lport, uint32_t vrf_id)
 		/* is it in the VRF in question */
 		fnd = 0;
 #ifdef SCTP_MVRF
-		for(i=0; i<inp->num_vrfs; i++) {
+		for(i=0; i < inp->num_vrfs; i++) {
 			if(t_inp->m_vrf_ids[i] == vrf_id) {
 				fnd = 1;
 				break;
@@ -2600,9 +2600,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 			return (EAFNOSUPPORT);
 		}
 	}
-	/* Setup a vrf_id to be the default for the
-	 * non-bind-all case.
-	 */
+	/* Setup a vrf_id to be the default for the non-bind-all case. */
  	vrf_id = inp->def_vrf_id;
 
 #if defined(SCTP_PER_SOCKET_LOCKING)
@@ -2650,6 +2648,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 				return (error);
 			}
 		}
+#if !defined(__Panda__)
 		if (p == NULL) {
 			SCTP_INP_DECR_REF(inp);
 			SCTP_INP_WUNLOCK(inp);
@@ -2659,10 +2658,11 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 			SCTP_INP_INFO_WUNLOCK();
 			return (error);
 		}
+#endif
 		SCTP_INP_WUNLOCK(inp);
-		if(bindall) {
+		if (bindall) {
 #ifdef SCTP_MVRF
-			for(i=0; i<inp->num_vrfs; i++) {
+			for (i=0; i < inp->num_vrfs; i++) {
 				vrf_id = inp->m_vrf_ids[i];
 #else
 				vrf_id = inp->def_vrf_id;
@@ -2670,10 +2670,12 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 				inp_tmp = sctp_pcb_findep(addr, 0, 1, vrf_id);
 				if (inp_tmp != NULL) {
 					/*
-					 * lock guy returned and lower count note that we
-					 * are not bound so inp_tmp should NEVER be inp. And
-					 * it is this inp (inp_tmp) that gets the reference
-					 * bump, so we must lower it.
+					 * lock guy returned and lower count
+					 * note that we are not bound so
+					 * inp_tmp should NEVER be inp. And
+					 * it is this inp (inp_tmp) that gets
+					 * the reference bump, so we must
+					 * lower it.
 					 */
 					SCTP_INP_DECR_REF(inp_tmp);
 					SCTP_INP_DECR_REF(inp);
@@ -2691,10 +2693,11 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 			inp_tmp = sctp_pcb_findep(addr, 0, 1, vrf_id);
 			if (inp_tmp != NULL) {
 				/*
-				 * lock guy returned and lower count note that we
-				 * are not bound so inp_tmp should NEVER be inp. And
-				 * it is this inp (inp_tmp) that gets the reference
-				 * bump, so we must lower it.
+				 * lock guy returned and lower count note
+				 * that we are not bound so inp_tmp should
+				 * NEVER be inp. And it is this inp (inp_tmp)
+				 * that gets the reference bump, so we must
+				 * lower it.
 				 */
 				SCTP_INP_DECR_REF(inp_tmp);
 				SCTP_INP_DECR_REF(inp);
@@ -2746,11 +2749,12 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 				port_attempt += IPPORT_RESERVED;
 			}
 #ifdef SCTP_MVRF
-			for(i=0; i<inp->num_vrfs; i++) {
+			for (i=0; i < inp->num_vrfs; i++) {
 #else
 				vrf_id = inp->def_vrf_id;
 #endif
-				if (sctp_isport_inuse(inp, htons(port_attempt), vrf_id) == 1) {
+				if (sctp_isport_inuse(inp, htons(port_attempt),
+						      vrf_id) == 1) {
 					/* got a port we can use */
 					not_found = 0;
 #ifdef SCTP_MVRF
@@ -2760,7 +2764,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 #ifdef SCTP_MVRF
 			}
 #endif
-			if(not_found == 1) {
+			if (not_found == 1) {
 				/* We can use this port */
 				not_done = 0;
 				continue;
@@ -2776,11 +2780,12 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 				port_attempt += IPPORT_RESERVED;
 			}
 #ifdef SCTP_MVRF
-			for(i=0; i<inp->num_vrfs; i++) {
+			for (i=0; i < inp->num_vrfs; i++) {
 #else
 				vrf_id = inp->def_vrf_id;
 #endif
-				if (sctp_isport_inuse(inp, htons(port_attempt), vrf_id) == 1) {
+				if (sctp_isport_inuse(inp, htons(port_attempt),
+						      vrf_id) == 1) {
 					/* got a port we can use */
 					not_found = 0;
 #ifdef SCTP_MVRF
@@ -2790,7 +2795,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 #ifdef SCTP_MVRF
 			}
 #endif
-			if(not_found == 1) {
+			if (not_found == 1) {
 				/* We can use this port */
 				not_done = 0;
 				continue;
@@ -2821,7 +2826,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 #ifdef SCTP_MVRF
 			}
 #endif
-			if(not_found == 1) {
+			if (not_found == 1) {
 				/* We can use this port */
 				not_done = 0;
 				continue;
@@ -2888,7 +2893,8 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 		 * zero out the port to find the address! yuck! can't do
 		 * this earlier since need port for sctp_pcb_findep()
 		 */
-		ifa = sctp_find_ifa_by_addr((struct sockaddr *)&store_sa, vrf_id, 0);
+		ifa = sctp_find_ifa_by_addr((struct sockaddr *)&store_sa,
+					    vrf_id, 0);
 		if (ifa == NULL) {
 			/* Can't find an interface with that address */
 			SCTP_INP_WUNLOCK(inp);
