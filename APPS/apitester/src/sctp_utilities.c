@@ -9,57 +9,56 @@
 #include <fcntl.h>
 #include <netinet/sctp.h>
 
-int sctp_socketpair(int *fds)
+int 
+sctp_one2one(unsigned short port, int should_listen)
 {
 	int fd;
 	struct sockaddr_in addr;
-	socklen_t addr_len;
-	
-	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
-    	return -1;
+
+	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
+		return -1;
 
 	memset((void *)&addr, 0, sizeof(struct sockaddr_in));
 	addr.sin_family      = AF_INET;
 #ifdef HAVE_SIN_LEN
 	addr.sin_len         = sizeof(struct sockaddr_in);
 #endif
-	addr.sin_port        = htons(0);
+	addr.sin_port        = htons(port);
 	addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
 	if (bind(fd, (struct sockaddr *)&addr, (socklen_t)sizeof(struct sockaddr_in)) < 0) {
 		close(fd);
 		return -1;
 	}
-	addr_len = (socklen_t)sizeof(struct sockaddr_in);
-	getsockname (fd, (struct sockaddr *) &addr, &addr_len);
+	if(should_listen) {
+		if (listen(fd, 1) < 0) {
+			close(fd);
+			return -1;
+		}
+	}
+	return(fd);
+}
 
-	if (listen(fd, 1) < 0) {
+
+
+int sctp_socketpair(int *fds)
+{
+	int fd;
+	struct sockaddr_in addr;
+	socklen_t addr_len;
+	
+
+	/* Get any old port, but listen */
+	fd = sctp_one2one(0, 1);
+	if (fd  < 0)
+		return -1;
+
+	/* Get any old port, but no listen */
+	fds[0] = sctp_one2one(0, 0);
+	if (fds[0] < 0) {
 		close(fd);
 		return -1;
 	}
-
-	if ((fds[0] = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) {
-		close(fd);
-		return -1;
-	}
-
-	memset((void *)&addr, 0, sizeof(struct sockaddr_in));
-	addr.sin_family      = AF_INET;
-#ifdef HAVE_SIN_LEN
-	addr.sin_len         = sizeof(struct sockaddr_in);
-#endif
-	addr.sin_port        = htons(0);
-	addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-
-	if (bind(fds[0], (struct sockaddr *)&addr, (socklen_t)sizeof(struct sockaddr_in)) < 0) {
-		close(fd);
-		close(fds[0]);
-		return -1;
-	}
-
-	addr_len = (socklen_t)sizeof(struct sockaddr_in);
-	getsockname (fds[0], (struct sockaddr *) &addr, &addr_len);
-
 	addr_len = (socklen_t)sizeof(struct sockaddr_in);
 	if (getsockname (fd, (struct sockaddr *) &addr, &addr_len) < 0) {
 		close(fd);
@@ -264,11 +263,13 @@ __get_assoc_id (int fd, struct sockaddr *addr)
 
 }
 
-int sctp_socketpair_1tom(int *fds, sctp_assoc_t *ids)
+
+
+int 
+sctp_one2many(unsigned short port)
 {
 	int fd;
 	struct sockaddr_in addr;
-	socklen_t addr_len;
 
 	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
 		return -1;
@@ -278,7 +279,7 @@ int sctp_socketpair_1tom(int *fds, sctp_assoc_t *ids)
 #ifdef HAVE_SIN_LEN
 	addr.sin_len         = sizeof(struct sockaddr_in);
 #endif
-	addr.sin_port        = htons(0);
+	addr.sin_port        = htons(port);
 	addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
 	if (bind(fd, (struct sockaddr *)&addr, (socklen_t)sizeof(struct sockaddr_in)) < 0) {
@@ -290,33 +291,36 @@ int sctp_socketpair_1tom(int *fds, sctp_assoc_t *ids)
 		close(fd);
 		return -1;
 	}
+	return(fd);
+}
 
 
-	if ((fds[0] = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0) {
-		close(fd);
+
+/* If fds[0] != -1 its a valid 1-2-M socket already open
+ * that is to be used with the new association 
+ */
+
+
+
+int 
+sctp_socketpair_1tom(int *fds, sctp_assoc_t *ids)
+{
+	int fd;
+	struct sockaddr_in addr;
+	socklen_t addr_len;
+
+	fd = sctp_one2many(0);
+	if (fd == -1) {
 		return -1;
 	}
 
-	memset((void *)&addr, 0, sizeof(struct sockaddr_in));
-	addr.sin_family      = AF_INET;
-#ifdef HAVE_SIN_LEN
-	addr.sin_len         = sizeof(struct sockaddr_in);
-#endif
-	addr.sin_port        = htons(0);
-	addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-
-	if (bind(fds[0], (struct sockaddr *)&addr, (socklen_t)sizeof(struct sockaddr_in)) < 0) {
-		close(fd);
-		close(fds[0]);
-		return -1;
+	if(fds[0] == -1) {
+		fds[0] = sctp_one2many(0);
+		if (fds[0]  < 0) {
+			close(fd);
+			return -1;
+		}
 	}
-
-	if (listen(fds[0], 1) < 0) {
-		close(fd);
-		close(fds[0]);
-		return -1;
-	}
-
 	addr_len = (socklen_t)sizeof(struct sockaddr_in);
 	if (getsockname (fd, (struct sockaddr *) &addr, &addr_len) < 0) {
 		close(fd);
@@ -343,6 +347,8 @@ int sctp_socketpair_1tom(int *fds, sctp_assoc_t *ids)
 	ids[1] = __get_assoc_id (fds[1], (struct sockaddr *)&addr);
 	return 0;
 }
+
+
 
 int 
 sctp_get_assoc_info(int fd, sctp_assoc_t assoc_id, 
@@ -411,7 +417,10 @@ sctp_set_assoc_info(int fd, sctp_assoc_t assoc_id,
 int 
 sctp_set_asoc_maxrxt(int fd, sctp_assoc_t asoc, uint16_t max)
 {
-	return(sctp_set_assoc_info(fd, asoc, max, 0, 0, 0, 0, 0, 0));
+	uint32_t sack_delay;
+	sctp_get_assoc_info(fd, asoc, NULL, NULL, NULL, NULL, NULL, &sack_delay, NULL);
+
+	return(sctp_set_assoc_info(fd, asoc, max, 0, 0, 0, 0, sack_delay, 0));
 }
 
 int 
@@ -423,7 +432,10 @@ sctp_get_asoc_maxrxt(int fd, sctp_assoc_t asoc, uint16_t *max)
 int 
 sctp_set_asoc_peerdest_cnt(int fd, sctp_assoc_t asoc, uint16_t dstcnt)
 {
-	return(sctp_set_assoc_info(fd, asoc, 0, dstcnt, 0, 0, 0, 0, 0));
+	uint32_t sack_delay;
+	sctp_get_assoc_info(fd, asoc, NULL, NULL, NULL, NULL, NULL, &sack_delay, NULL);
+
+	return(sctp_set_assoc_info(fd, asoc, 0, dstcnt, 0, 0, 0, sack_delay, 0));
 }
 
 int 
@@ -435,7 +447,10 @@ sctp_get_asoc_peerdest_cnt(int fd, sctp_assoc_t asoc, uint16_t *dst)
 int 
 sctp_set_asoc_peer_rwnd(int fd, sctp_assoc_t asoc, uint32_t rwnd)
 {
-	return(sctp_set_assoc_info(fd, asoc, 0, 0, rwnd, 0, 0, 0, 0));
+	uint32_t sack_delay;
+	sctp_get_assoc_info(fd, asoc, NULL, NULL, NULL, NULL, NULL, &sack_delay, NULL);
+
+	return(sctp_set_assoc_info(fd, asoc, 0, 0, rwnd, 0, 0, sack_delay, 0));
 }
 
 int 
@@ -448,19 +463,28 @@ sctp_get_asoc_peer_rwnd(int fd, sctp_assoc_t asoc, uint32_t *rwnd)
 int 
 sctp_set_asoc_local_rwnd(int fd, sctp_assoc_t asoc, uint32_t lrwnd)
 {
-	return(sctp_set_assoc_info(fd, asoc, 0, 0, 0, lrwnd, 0, 0, 0));
+	uint32_t sack_delay;
+	sctp_get_assoc_info(fd, asoc, NULL, NULL, NULL, NULL, NULL, &sack_delay, NULL);
+
+
+	return(sctp_set_assoc_info(fd, asoc, 0, 0, 0, lrwnd, 0, sack_delay, 0));
 }
 
 int 
 sctp_get_asoc_local_rwnd(int fd, sctp_assoc_t asoc, uint32_t *lrwnd)
 {
+
 	return(sctp_get_assoc_info(fd, asoc, NULL, NULL, NULL, lrwnd, NULL, NULL, NULL));
 }
 
 int 
 sctp_set_asoc_cookie_life(int fd, sctp_assoc_t asoc, uint32_t life)
 {
-	return(sctp_set_assoc_info(fd, asoc, 0, 0, 0, 0, life, 0, 0));
+	uint32_t sack_delay;
+	sctp_get_assoc_info(fd, asoc, NULL, NULL, NULL, NULL, NULL, &sack_delay, NULL);
+
+
+	return(sctp_set_assoc_info(fd, asoc, 0, 0, 0, 0, life, sack_delay, 0));
 }
 
 int 
@@ -484,11 +508,14 @@ sctp_get_asoc_sack_delay(int fd, sctp_assoc_t asoc, uint32_t *delay)
 int 
 sctp_set_asoc_sack_freq(int fd, sctp_assoc_t asoc, uint32_t freq)
 {
-	return(sctp_set_assoc_info(fd, asoc, 0, 0, 0, 0, 0, 0, freq));
+	uint32_t sack_delay;
+	sctp_get_assoc_info(fd, asoc, NULL, NULL, NULL, NULL, NULL, &sack_delay, NULL);
+
+	return(sctp_set_assoc_info(fd, asoc, 0, 0, 0, 0, 0, sack_delay, freq));
 }
 
 int 
-sctp_get_asoc_(int fd, sctp_assoc_t asoc, uint32_t *freq)
+sctp_get_asoc_sack_freq(int fd, sctp_assoc_t asoc, uint32_t *freq)
 {
 	return(sctp_get_assoc_info(fd, asoc, NULL, NULL, NULL, NULL, NULL, NULL, freq));
 }

@@ -1,3 +1,4 @@
+int  sctp_one2one(unsigned short port, int should_listen);
 int sctp_socketpair(int *);
 int sctp_socketstar(int *, int *, unsigned int);
 int sctp_shutdown(int);
@@ -13,6 +14,7 @@ int sctp_get_initial_rto(int fd, sctp_assoc_t, uint32_t *);
 int sctp_get_maximum_rto(int fd, sctp_assoc_t, uint32_t *);
 int sctp_get_minimum_rto(int fd, sctp_assoc_t, uint32_t *);
 
+int sctp_one2many(unsigned short port);
 int sctp_socketpair_1tom(int *fds, sctp_assoc_t *asocids);
 int sctp_get_assoc_info(int fd, sctp_assoc_t assoc_id, 
 			uint16_t *asoc_maxrxt,
@@ -47,6 +49,9 @@ int sctp_get_asoc_cookie_life(int fd, sctp_assoc_t asoc, uint32_t *life);
 
 int sctp_set_asoc_sack_delay(int fd, sctp_assoc_t asoc, uint32_t delay);
 int sctp_get_asoc_sack_delay(int fd, sctp_assoc_t asoc, uint32_t *delay);
+
+int sctp_set_asoc_sack_freq(int fd, sctp_assoc_t asoc, uint32_t freq);
+int sctp_get_asoc_sack_freq(int fd, sctp_assoc_t asoc, uint32_t *freq);
 
 
 uint32_t sctp_get_number_of_associations(int);
