@@ -15,7 +15,7 @@ sctp_one2one(unsigned short port, int should_listen)
 	int fd;
 	struct sockaddr_in addr;
 
-	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
+	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) 
 		return -1;
 
 	memset((void *)&addr, 0, sizeof(struct sockaddr_in));
@@ -50,8 +50,9 @@ int sctp_socketpair(int *fds)
 
 	/* Get any old port, but listen */
 	fd = sctp_one2one(0, 1);
-	if (fd  < 0)
+	if (fd  < 0) {
 		return -1;
+	}
 
 	/* Get any old port, but no listen */
 	fds[0] = sctp_one2one(0, 0);
