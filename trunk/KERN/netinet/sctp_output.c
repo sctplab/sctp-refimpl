@@ -9463,6 +9463,9 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 
 		mlen = SCTP_BUF_LEN(mout);
 		bzero(&ro, sizeof ro);
+#if defined(__Panda__)
+		ro._l_addr.sa.sa_family = AF_INET;
+#endif
 		/* set IPv4 length */
 #if defined(__FreeBSD__) || defined (__APPLE__)
 		iph_out->ip_len = mlen;
@@ -9490,6 +9493,9 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 #endif
 
 		bzero(&ro, sizeof(ro));
+#if defined(__Panda__)
+		ro._l_addr.sa.sa_family = AF_INET6;
+#endif
 		mlen = SCTP_BUF_LEN(mout);
 		SCTP_ATTACH_CHAIN(o_pak, mout, mlen);
 		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, stcb, vrf_id, table_id);
@@ -10345,6 +10351,9 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 
 		/* zap the stack pointer to the route */
 		bzero(&ro, sizeof ro);
+#if defined(__Panda__)
+		ro._l_addr.sa.sa_family = AF_INET;
+#endif
 		SCTPDBG(SCTP_DEBUG_OUTPUT2, "sctp_send_abort calling ip_output:\n");
 		SCTPDBG_PKT(SCTP_DEBUG_OUTPUT2, iph_out, &abm->sh);
 		/* set IPv4 length */
@@ -10373,6 +10382,9 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 #endif
 		/* zap the stack pointer to the route */
 		bzero(&ro, sizeof(ro));
+#if defined(__Panda__)
+		ro._l_addr.sa.sa_family = AF_INET6;
+#endif
 		SCTPDBG(SCTP_DEBUG_OUTPUT2, "sctp_send_abort calling ip6_output:\n");
 		SCTPDBG_PKT(SCTP_DEBUG_OUTPUT2, (struct ip *)ip6_out, &abm->sh);
 		ip6_out->ip6_plen = len - sizeof(*ip6_out);
@@ -10467,6 +10479,9 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 		len += sizeof(struct ip);
 
 		bzero(&ro, sizeof ro);
+#if defined(__Panda__)
+		ro._l_addr.sa.sa_family = AF_INET;
+#endif
 		out = mtod(mout, struct ip *);
 		out->ip_v = iph->ip_v;
 		out->ip_hl = (sizeof(struct ip) / 4);
@@ -10508,6 +10523,9 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 		SCTP_BUF_LEN(mout) = sizeof(struct ip6_hdr);
 		len += sizeof(struct ip6_hdr);
 		bzero(&ro, sizeof ro);
+#if defined(__Panda__)
+		ro._l_addr.sa.sa_family = AF_INET6;
+#endif
 		in6 = mtod(m, struct ip6_hdr *);
 		out6 = mtod(mout, struct ip6_hdr *);
 		out6->ip6_flow = in6->ip6_flow;
