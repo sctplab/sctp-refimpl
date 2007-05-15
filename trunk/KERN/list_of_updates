@@ -17,6 +17,7 @@
 - When sending failed due to a no route to host, we leaked
   the mbuf chain failing to call m_freem().
 - Fix #ifdef issue for getting hash block len when HAVE_SHA2 is NOT defined
+- Improve port number selection.
 ---------Above May15 patch (new items below here please)-----
 
 -
