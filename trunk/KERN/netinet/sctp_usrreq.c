@@ -2051,22 +2051,23 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 			*optsize = sizeof(*gnv);
 		}
 		break;
-	case SCTP_DELAYED_ACK_TIME:
+	case SCTP_DELAYED_SACK:
 		{
-			struct sctp_assoc_value *tm;
+			struct sctp_sack_info *sack;
 
-			SCTP_CHECK_AND_CAST(tm, optval, struct sctp_assoc_value, *optsize);
-			SCTP_FIND_STCB(inp, stcb, tm->assoc_id);
-			
+			SCTP_CHECK_AND_CAST(sack, optval, struct sctp_sack_info, *optsize);
+			SCTP_FIND_STCB(inp, stcb, sack->sack_assoc_id);
 			if (stcb) {
-				tm->assoc_value = stcb->asoc.delayed_ack;
+				sack->sack_delay = stcb->asoc.delayed_ack;
+				sack->sack_freq = stcb->asoc.sack_freq;
 				SCTP_TCB_UNLOCK(stcb);
 			} else {
 				SCTP_INP_RLOCK(inp);				
-				tm->assoc_value = TICKS_TO_MSEC(inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV]);
+				sack->sack_delay = TICKS_TO_MSEC(inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV]);
+				sack->sack_freq = inp->sctp_ep.sctp_sack_freq;
 				SCTP_INP_RUNLOCK(inp);				
 			}
-			*optsize = sizeof(*tm);
+			*optsize = sizeof(*sack);
 		}
 		break;
 
@@ -2566,8 +2567,6 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 				sasoc->sasoc_peer_rwnd = stcb->asoc.peers_rwnd;
 				sasoc->sasoc_local_rwnd = stcb->asoc.my_rwnd;
 				sasoc->sasoc_cookie_life = TICKS_TO_MSEC(stcb->asoc.cookie_life);
-				sasoc->sasoc_sack_delay = stcb->asoc.delayed_ack;
-				sasoc->sasoc_sack_freq = stcb->asoc.sack_freq;
 				SCTP_TCB_UNLOCK(stcb);
 			} else {
 				SCTP_INP_RLOCK(inp);
@@ -2576,8 +2575,6 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 				sasoc->sasoc_peer_rwnd = 0;
 				sasoc->sasoc_local_rwnd = sbspace(&inp->sctp_socket->so_rcv);
 				sasoc->sasoc_cookie_life = TICKS_TO_MSEC(inp->sctp_ep.def_cookie_life);
-				sasoc->sasoc_sack_delay = TICKS_TO_MSEC(inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV]);
-				sasoc->sasoc_sack_freq = inp->sctp_ep.sctp_sack_freq;
 				SCTP_INP_RUNLOCK(inp);
 			}
 			*optsize = sizeof(*sasoc);
@@ -3057,20 +3054,28 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 #endif
 	 	break;
 	}
-	
-	case SCTP_DELAYED_ACK_TIME:
+	case SCTP_DELAYED_SACK:
 	{
-		struct sctp_assoc_value *tm;
+		struct sctp_sack_info *sack;
 
-		SCTP_CHECK_AND_CAST(tm, optval, struct sctp_assoc_value, optsize);
-		SCTP_FIND_STCB(inp, stcb, tm->assoc_id);
-
+		SCTP_CHECK_AND_CAST(sack, optval, struct sctp_sack_info, optsize);
+		SCTP_FIND_STCB(inp, stcb, sack->sack_assoc_id);
 		if (stcb) {
-			stcb->asoc.delayed_ack = tm->assoc_value;
+			if(sack->sack_delay) {
+				stcb->asoc.delayed_ack = sack->sack_delay;
+			}
+			if(sack->sack_freq) {
+				stcb->asoc.sack_freq = sack->sack_freq;
+			}
 			SCTP_TCB_UNLOCK(stcb);
 		} else {
 			SCTP_INP_WLOCK(inp);
-			inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV] = MSEC_TO_TICKS(tm->assoc_value);
+			if(sack->sack_delay) {
+				inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV] = MSEC_TO_TICKS(sack->sack_delay);
+			}
+			if(sack->sack_freq) {
+				inp->sctp_ep.sctp_sack_freq = sack->sack_freq;
+			}
 			SCTP_INP_WUNLOCK(inp);
 		}
 		break;
@@ -3754,10 +3759,6 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			sasoc->sasoc_local_rwnd = 0;
 			if (sasoc->sasoc_cookie_life)
 				stcb->asoc.cookie_life = MSEC_TO_TICKS(sasoc->sasoc_cookie_life);
-			stcb->asoc.delayed_ack = sasoc->sasoc_sack_delay;
-			if(sasoc->sasoc_sack_freq) {
-				stcb->asoc.sack_freq = sasoc->sasoc_sack_freq;
-			}
 			SCTP_TCB_UNLOCK(stcb);
 		} else {
 			SCTP_INP_WLOCK(inp);
@@ -3768,10 +3769,6 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			sasoc->sasoc_local_rwnd = 0;
 			if (sasoc->sasoc_cookie_life)
 				inp->sctp_ep.def_cookie_life = MSEC_TO_TICKS(sasoc->sasoc_cookie_life);
-			inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV] = MSEC_TO_TICKS(sasoc->sasoc_sack_delay);
-			if(sasoc->sasoc_sack_freq) {
-				inp->sctp_ep.sctp_sack_freq = sasoc->sasoc_sack_freq;
-			}
 			SCTP_INP_WUNLOCK(inp);
 		}
 	}

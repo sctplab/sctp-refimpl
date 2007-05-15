@@ -96,7 +96,7 @@ struct sctp_paramhdr {
 /* Without this applied we will give V4 and V6 addresses on a V6 socket */
 #define SCTP_I_WANT_MAPPED_V4_ADDR	0x0000000d
 #define SCTP_MAXSEG 			0x0000000e
-#define SCTP_DELAYED_ACK_TIME           0x0000000f
+#define SCTP_DELAYED_SACK               0x0000000f
 #define SCTP_FRAGMENT_INTERLEAVE        0x00000010
 #define SCTP_PARTIAL_DELIVERY_POINT     0x00000011
 /* authentication support */
