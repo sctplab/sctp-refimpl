@@ -271,22 +271,8 @@ sctp_opt_info(int sd, sctp_assoc_t id, int opt, void *arg, socklen_t * size)
 	if (arg == NULL) {
 		return (EINVAL);
 	}
-	if ((opt == SCTP_RTOINFO) ||
-	    (opt == SCTP_ASSOCINFO) ||
-	    (opt == SCTP_PRIMARY_ADDR) ||
-	    (opt == SCTP_SET_PEER_PRIMARY_ADDR) ||
-	    (opt == SCTP_PEER_ADDR_PARAMS) ||
-	    (opt == SCTP_STATUS) ||
-	    (opt == SCTP_GET_PEER_ADDR_INFO) ||
-	    (opt == SCTP_AUTH_ACTIVE_KEY) ||
-	    (opt == SCTP_PEER_AUTH_CHUNKS) ||
-	    (opt == SCTP_LOCAL_AUTH_CHUNKS)) {
-		*(sctp_assoc_t *) arg = id;
-		return (getsockopt(sd, IPPROTO_SCTP, opt, arg, size));
-	} else {
-		errno = EOPNOTSUPP;
-		return (-1);
-	}
+	*(sctp_assoc_t *) arg = id;
+	return (getsockopt(sd, IPPROTO_SCTP, opt, arg, size));
 }
 
 int
