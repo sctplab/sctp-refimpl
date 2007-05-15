@@ -4386,10 +4386,12 @@ sctp_arethere_unrecognized_parameters(struct mbuf *in_initpkt,
 		l_len = sizeof(struct ip6_hdr) + sizeof(struct sctphdr) + sizeof(struct sctp_chunkhdr);
 		l_len += (2 * sizeof(struct sctp_paramhdr));
 		op_err = sctp_get_mbuf_for_msg(l_len, 0, M_DONTWAIT, 1, MT_DATA);
-		SCTP_BUF_LEN(op_err) = 0;
-		SCTP_BUF_RESV_UF(op_err, sizeof(struct ip6_hdr));
-		SCTP_BUF_RESV_UF(op_err, sizeof(struct sctphdr));
-		SCTP_BUF_RESV_UF(op_err, sizeof(struct sctp_chunkhdr));
+        if (op_err) {
+    		SCTP_BUF_LEN(op_err) = 0;
+	    	SCTP_BUF_RESV_UF(op_err, sizeof(struct ip6_hdr));
+		    SCTP_BUF_RESV_UF(op_err, sizeof(struct sctphdr));
+    		SCTP_BUF_RESV_UF(op_err, sizeof(struct sctp_chunkhdr));
+        }
 	}
 	if ((op_err) && phdr) {
 		struct sctp_paramhdr s;
@@ -10589,6 +10591,9 @@ sctp_copy_resume(struct sctp_stream_queue_pending *sp,
         left = min(uio->uio_resid, max_send_len);
 	/* Always get a header just in case */
 	head = sctp_get_mbuf_for_msg(left, 0, M_WAIT, 0, MT_DATA);
+    if (head == NULL) {
+        return (NULL);
+    }
 	cancpy = M_TRAILINGSPACE(head);
 	willcpy = min(cancpy, left);
 	*error = uiomove(mtod(head, caddr_t), willcpy, uio);
