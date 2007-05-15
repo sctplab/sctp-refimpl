@@ -1,3 +1,4 @@
+----------------------------------------------------------------
 - Fixed 1-2-1 model to not worry about associd in sockopts
 - Fixed RTOinfo for bounding.
 - Fixed connect() to return ECONNREFUSED when an ABORT is received.
@@ -16,4 +17,7 @@
 - When sending failed due to a no route to host, we leaked
   the mbuf chain failing to call m_freem().
 - Fix #ifdef issue for getting hash block len when HAVE_SHA2 is NOT defined
+---------Above May15 patch (new items below here please)-----
+
+-
 
