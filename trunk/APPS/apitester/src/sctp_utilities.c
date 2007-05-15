@@ -362,7 +362,7 @@ sctp_socketpair_1tom(int *fds, sctp_assoc_t *ids)
 		return -1;
 	}
 
-	if (connect(fds[0], (struct sockaddr *) &addr, addr_len) < 0) {
+	if (sctp_connectx(fds[0], (struct sockaddr *) &addr, 1, NULL) < 0) {
 		close(fd);
 		close(fds[0]);
 		return -1;
