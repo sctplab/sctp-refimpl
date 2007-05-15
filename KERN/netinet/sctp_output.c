@@ -10972,7 +10972,7 @@ sctp_lower_sosend(struct socket *so,
 #endif
 		goto out_unlocked;
 	}
-	if ((uio == NULL) && (top == NULL)) {
+	if ((uio == NULL) && (i_pak == NULL)) {
 		return (EINVAL);
 	}
 
@@ -10984,7 +10984,9 @@ sctp_lower_sosend(struct socket *so,
 		top = SCTP_HEADER_TO_CHAIN(i_pak);
 	}
 #ifdef __Panda__
-	control = SCTP_HEADER_TO_CHAIN(i_control);
+    if (i_control) {
+    	control = SCTP_HEADER_TO_CHAIN(i_control);
+    }
 #endif	
 
 #if defined(__NetBSD__) || defined(__OpenBSD__)
