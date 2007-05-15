@@ -917,6 +917,7 @@ struct xsctp_inpcb {
 	uint32_t total_recvs;
 	uint32_t total_nospaces;
 	uint32_t fragmentation_point;
+	struct xsocket xsocket;
 	/* add more endpoint specific data here*/
 };
 

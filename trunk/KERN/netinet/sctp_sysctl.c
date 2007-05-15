@@ -224,6 +224,12 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 		xinpcb.total_recvs            = inp->total_recvs;
 		xinpcb.total_nospaces         = inp->total_nospaces;
 		xinpcb.fragmentation_point    = inp->sctp_frag_point;
+		if (inp->sctp_socket != NULL) {
+			sotoxsocket(inp->sctp_socket, &xinpcb.xsocket);
+		} else {
+			bzero(&xinpcb.xsocket, sizeof xinpcb.xsocket);
+			xinpcb.xsocket.xso_protocol = IPPROTO_SCTP;
+		}
 		SCTP_INP_INCR_REF(inp);
 		SCTP_INP_RUNLOCK(inp);
 		SCTP_INP_INFO_RUNLOCK();
