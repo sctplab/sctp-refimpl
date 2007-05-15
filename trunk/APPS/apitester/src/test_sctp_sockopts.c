@@ -1097,7 +1097,7 @@ DEFINE_APITEST(associnfo, gso_1_1_defaults)
 {
 	int fd, result;
 	uint16_t asoc_maxrxt, peer_dest_cnt;
-	uint32_t peer_rwnd, local_rwnd, cookie_life, sack_delay, sack_freq;
+	uint32_t peer_rwnd, local_rwnd, cookie_life;
 	
 	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
 	
@@ -1106,9 +1106,7 @@ DEFINE_APITEST(associnfo, gso_1_1_defaults)
 				     &peer_dest_cnt, 
 				     &peer_rwnd,
 				     &local_rwnd,
-				     &cookie_life,
-				     &sack_delay,
-				     &sack_freq);
+				     &cookie_life);
 	close(fd);
 	if (result)
 		return strerror(errno);
@@ -1123,14 +1121,6 @@ DEFINE_APITEST(associnfo, gso_1_1_defaults)
 	}
 	if (cookie_life != 60000) {
 		sprintf(error_buffer, "cookie_life:%d Not compliant with RFC4960", cookie_life);
-		return(error_buffer);
-	}
-	if ((sack_delay < 200) || (sack_delay > 500)) {
-		sprintf(error_buffer, "sack_delay:%d Not compliant with RFC4960", sack_delay);
-		return(error_buffer);
-	}
-	if (sack_freq != 2) {
-		sprintf(error_buffer, "sack_frequency:%d Not compliant with RFC4960", sack_freq);
 		return(error_buffer);
 	}
 	if(peer_rwnd != 0) {
@@ -1147,7 +1137,7 @@ DEFINE_APITEST(associnfo, gso_1_M_defaults)
 {
 	int fd, result;
 	uint16_t asoc_maxrxt, peer_dest_cnt;
-	uint32_t peer_rwnd, local_rwnd, cookie_life, sack_delay, sack_freq;
+	uint32_t peer_rwnd, local_rwnd, cookie_life;
 	
 	fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
 
@@ -1156,9 +1146,7 @@ DEFINE_APITEST(associnfo, gso_1_M_defaults)
 				     &peer_dest_cnt, 
 				     &peer_rwnd,
 				     &local_rwnd,
-				     &cookie_life,
-				     &sack_delay,
-				     &sack_freq);
+				     &cookie_life);
 	close(fd);
 	if (result)
 		return strerror(errno);
@@ -1173,14 +1161,6 @@ DEFINE_APITEST(associnfo, gso_1_M_defaults)
 	}
 	if (cookie_life != 60000) {
 		sprintf(error_buffer, "cookie_life:%d Not compliant with RFC4960", cookie_life);
-		return(error_buffer);
-	}
-	if ((sack_delay < 200) || (sack_delay > 500)) {
-		sprintf(error_buffer, "sack_delay:%d Not compliant with RFC4960", sack_delay);
-		return(error_buffer);
-	}
-	if (sack_freq != 2) {
-		sprintf(error_buffer, "sack_frequency:%d Not compliant with RFC4960", sack_freq);
 		return(error_buffer);
 	}
 	if(peer_rwnd != 0) {
@@ -1198,7 +1178,7 @@ DEFINE_APITEST(associnfo, sso_rxt_1_1)
 {
 	int fd, result;
 	uint16_t asoc_maxrxt[2], peer_dest_cnt[2];
-	uint32_t peer_rwnd[2], local_rwnd[2], cookie_life[2], sack_delay[2], sack_freq[2];
+	uint32_t peer_rwnd[2], local_rwnd[2], cookie_life[2];
 	int newval;
 	char *retstring=NULL;
 
@@ -1210,9 +1190,7 @@ DEFINE_APITEST(associnfo, sso_rxt_1_1)
 				     &peer_dest_cnt[0], 
 				     &peer_rwnd[0],
 				     &local_rwnd[0],
-				     &cookie_life[0],
-				     &sack_delay[0],
-				     &sack_freq[0]);
+				     &cookie_life[0]);
 	if (result) {
 		retstring = strerror(errno);
 		goto out;
@@ -1231,13 +1209,7 @@ DEFINE_APITEST(associnfo, sso_rxt_1_1)
 				     &peer_dest_cnt[1], 
 				     &peer_rwnd[1],
 				     &local_rwnd[1],
-				     &cookie_life[1],
-				     &sack_delay[1],
-				     &sack_freq[1]);
-	if(sack_freq[0] != sack_freq[1]) {
-		retstring = "sack-freq changed on set of maxrxt";
-		goto out;
-	}
+				     &cookie_life[1]);
 
 	if(cookie_life[0] != cookie_life[1]) {
 		retstring = "cookie-life changed on set of maxrxt";
@@ -1269,7 +1241,7 @@ DEFINE_APITEST(associnfo, sso_rxt_1_M)
 {
 	int fd, result;
 	uint16_t asoc_maxrxt[2], peer_dest_cnt[2];
-	uint32_t peer_rwnd[2], local_rwnd[2], cookie_life[2], sack_delay[2], sack_freq[2];
+	uint32_t peer_rwnd[2], local_rwnd[2], cookie_life[2];
 	int newval;
 	char *retstring=NULL;
 
@@ -1281,9 +1253,7 @@ DEFINE_APITEST(associnfo, sso_rxt_1_M)
 				     &peer_dest_cnt[0], 
 				     &peer_rwnd[0],
 				     &local_rwnd[0],
-				     &cookie_life[0],
-				     &sack_delay[0],
-				     &sack_freq[0]);
+				     &cookie_life[0]);
 	if (result) {
 		retstring = strerror(errno);
 		goto out;
@@ -1303,20 +1273,7 @@ DEFINE_APITEST(associnfo, sso_rxt_1_M)
 				     &peer_dest_cnt[1], 
 				     &peer_rwnd[1],
 				     &local_rwnd[1],
-				     &cookie_life[1],
-				     &sack_delay[1],
-				     &sack_freq[1]);
-	if(sack_freq[0] != sack_freq[1]) {
-		retstring = "sack-freq changed on set of maxrxt";
-		goto out;
-	}
-
-	if(sack_delay[0] != sack_delay[1]) {
-		printf("Was %d now %d\n", sack_delay[0], sack_delay[1]);
-		retstring = "sack-delay changed on set of maxrxt";
-		goto out;
-	}
-
+				     &cookie_life[1]);
 	if(cookie_life[0] != cookie_life[1]) {
 		retstring = "cookie-life changed on set of maxrxt";
 		goto out;
@@ -1347,7 +1304,7 @@ DEFINE_APITEST(associnfo, sso_rxt_asoc_1_1)
 {
 	int fd, result;
 	uint16_t asoc_maxrxt[3], peer_dest_cnt[3];
-	uint32_t peer_rwnd[3], local_rwnd[3], cookie_life[3], sack_delay[3], sack_freq[3];
+	uint32_t peer_rwnd[3], local_rwnd[3], cookie_life[3];
 	int newval;
 	int fds[2];
 	char *retstring=NULL;
@@ -1362,9 +1319,7 @@ DEFINE_APITEST(associnfo, sso_rxt_asoc_1_1)
 				     &peer_dest_cnt[0], 
 				     &peer_rwnd[0],
 				     &local_rwnd[0],
-				     &cookie_life[0],
-				     &sack_delay[0],
-				     &sack_freq[0]);
+				     &cookie_life[0]);
 	if (result) {
 		retstring = strerror(errno);
 		goto out_nopair;
@@ -1389,19 +1344,8 @@ DEFINE_APITEST(associnfo, sso_rxt_asoc_1_1)
 				     &peer_dest_cnt[1], 
 				     &peer_rwnd[1],
 				     &local_rwnd[1],
-				     &cookie_life[1],
-				     &sack_delay[1],
-				     &sack_freq[1]);
+				     &cookie_life[1]);
 
-	if(sack_freq[0] != sack_freq[1]) {
-		retstring = "sack-freq changed on set of maxrxt";
-		goto out;
-	}
-	if(sack_delay[0] != sack_delay[1]) {
-		printf("Was %d now %d\n", sack_delay[0], sack_delay[1]);
-		retstring = "sack-delay changed on set of maxrxt";
-		goto out;
-	}
 	if(cookie_life[0] != cookie_life[1]) {
 		retstring = "cookie-life changed on set of maxrxt";
 		goto out;
@@ -1426,19 +1370,8 @@ DEFINE_APITEST(associnfo, sso_rxt_asoc_1_1)
 				     &peer_dest_cnt[2], 
 				     &peer_rwnd[2],
 				     &local_rwnd[2],
-				     &cookie_life[2],
-				     &sack_delay[2],
-				     &sack_freq[2]);
+				     &cookie_life[2]);
 
-	if(sack_freq[0] != sack_freq[2]) {
-		retstring = "sack-freq ep changed on set of maxrxt";
-		goto out;
-	}
-	if(sack_delay[0] != sack_delay[2]) {
-		printf("Was %d now %d\n", sack_delay[0], sack_delay[1]);
-		retstring = "sack-delay ep changed on set of maxrxt";
-		goto out;
-	}
 	if(cookie_life[0] != cookie_life[2]) {
 		retstring = "cookie-life ep changed on set of maxrxt";
 		goto out;
@@ -1467,7 +1400,7 @@ DEFINE_APITEST(associnfo, sso_rxt_asoc_1_M)
 {
 	int result;
 	uint16_t asoc_maxrxt[3], peer_dest_cnt[3];
-	uint32_t peer_rwnd[3], local_rwnd[3], cookie_life[3], sack_delay[3], sack_freq[3];
+	uint32_t peer_rwnd[3], local_rwnd[3], cookie_life[3];
 	int newval;
 	int fds[2];
 	sctp_assoc_t ids[2];
@@ -1483,9 +1416,7 @@ DEFINE_APITEST(associnfo, sso_rxt_asoc_1_M)
 				     &peer_dest_cnt[0], 
 				     &peer_rwnd[0],
 				     &local_rwnd[0],
-				     &cookie_life[0],
-				     &sack_delay[0],
-				     &sack_freq[0]);
+				     &cookie_life[0]);
 	if (result) {
 		retstring = strerror(errno);
 		goto out_nopair;
@@ -1509,22 +1440,9 @@ DEFINE_APITEST(associnfo, sso_rxt_asoc_1_M)
 				     &peer_dest_cnt[1], 
 				     &peer_rwnd[1],
 				     &local_rwnd[1],
-				     &cookie_life[1],
-				     &sack_delay[1],
-				     &sack_freq[1]);
+				     &cookie_life[1]);
 
-	if(sack_freq[0] != sack_freq[1]) {
-		retstring = "sack-freq changed on set of maxrxt";
-		goto out;
-	}
-	if(sack_delay[0] != sack_delay[1]) {
-		printf("Was %d now %d\n", sack_delay[0], sack_delay[1]);
-		retstring = "sack-delay changed on set of maxrxt";
-		goto out;
-	}
 	if(cookie_life[0] != cookie_life[1]) {
-		printf("cl[0]:%d cl[1]:%d\n",
-		       cookie_life[0], cookie_life[1]);
 		retstring = "cookie-life changed on set of maxrxt";
 		goto out;
 	}
@@ -1548,19 +1466,7 @@ DEFINE_APITEST(associnfo, sso_rxt_asoc_1_M)
 				     &peer_dest_cnt[2], 
 				     &peer_rwnd[2],
 				     &local_rwnd[2],
-				     &cookie_life[2],
-				     &sack_delay[2],
-				     &sack_freq[2]);
-
-	if(sack_freq[0] != sack_freq[2]) {
-		retstring = "sack-freq ep changed on set of maxrxt";
-		goto out;
-	}
-	if(sack_delay[0] != sack_delay[2]) {
-		printf("Was %d now %d\n", sack_delay[0], sack_delay[1]);
-		retstring = "sack-delay ep changed on set of maxrxt";
-		goto out;
-	}
+				     &cookie_life[2]);
 	if(cookie_life[0] != cookie_life[2]) {
 		retstring = "cookie-life ep changed on set of maxrxt";
 		goto out;

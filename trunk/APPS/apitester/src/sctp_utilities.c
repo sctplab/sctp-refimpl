@@ -391,9 +391,7 @@ sctp_get_assoc_info(int fd, sctp_assoc_t assoc_id,
 		    uint16_t *peer_dest_cnt, 
 		    uint32_t *peer_rwnd,
 		    uint32_t *local_rwnd,
-		    uint32_t *cookie_life,
-		    uint32_t *sack_delay,
-		    uint32_t *sack_freq)
+		    uint32_t *cookie_life)
 {
 	struct sctp_assocparams asocinfo;
 	socklen_t len;
@@ -414,10 +412,6 @@ sctp_get_assoc_info(int fd, sctp_assoc_t assoc_id,
 		*local_rwnd = asocinfo.sasoc_local_rwnd;
 	if (cookie_life)
 		*cookie_life = asocinfo.sasoc_cookie_life;
-	if (sack_delay) 
-		*sack_delay = asocinfo.sasoc_sack_delay;
-	if (sack_freq)
-		*sack_freq = asocinfo.sasoc_sack_freq;
 	return result;
 }
 
@@ -427,9 +421,7 @@ sctp_set_assoc_info(int fd, sctp_assoc_t assoc_id,
 		    uint16_t peer_dest_cnt, 
 		    uint32_t peer_rwnd,
 		    uint32_t local_rwnd,
-		    uint32_t cookie_life,
-		    uint32_t sack_delay,
-		    uint32_t sack_freq)
+		    uint32_t cookie_life)
 {
 	struct sctp_assocparams asocinfo;
 	socklen_t len;
@@ -443,8 +435,6 @@ sctp_set_assoc_info(int fd, sctp_assoc_t assoc_id,
 	asocinfo.sasoc_peer_rwnd = peer_rwnd;
 	asocinfo.sasoc_local_rwnd = local_rwnd;
 	asocinfo.sasoc_cookie_life = cookie_life;
-	asocinfo.sasoc_sack_delay = sack_delay;
-	asocinfo.sasoc_sack_freq = sack_freq;
 	result = setsockopt(fd, IPPROTO_SCTP, SCTP_ASSOCINFO, (void *)&asocinfo, len);
 	return result;
 }
@@ -452,108 +442,65 @@ sctp_set_assoc_info(int fd, sctp_assoc_t assoc_id,
 int 
 sctp_set_asoc_maxrxt(int fd, sctp_assoc_t asoc, uint16_t max)
 {
-	uint32_t sack_delay;
-	sctp_get_assoc_info(fd, asoc, NULL, NULL, NULL, NULL, NULL, &sack_delay, NULL);
-
-	return(sctp_set_assoc_info(fd, asoc, max, 0, 0, 0, 0, sack_delay, 0));
+	return(sctp_set_assoc_info(fd, asoc, max, 0, 0, 0, 0));
 }
 
 int 
 sctp_get_asoc_maxrxt(int fd, sctp_assoc_t asoc, uint16_t *max)
 {
-	return(sctp_get_assoc_info(fd, asoc, max, NULL, NULL, NULL, NULL, NULL, NULL));
+	return(sctp_get_assoc_info(fd, asoc, max, NULL, NULL, NULL, NULL));
 }
 
 int 
 sctp_set_asoc_peerdest_cnt(int fd, sctp_assoc_t asoc, uint16_t dstcnt)
 {
-	uint32_t sack_delay;
-	sctp_get_assoc_info(fd, asoc, NULL, NULL, NULL, NULL, NULL, &sack_delay, NULL);
-
-	return(sctp_set_assoc_info(fd, asoc, 0, dstcnt, 0, 0, 0, sack_delay, 0));
+	return(sctp_set_assoc_info(fd, asoc, 0, dstcnt, 0, 0, 0));
 }
 
 int 
 sctp_get_asoc_peerdest_cnt(int fd, sctp_assoc_t asoc, uint16_t *dst)
 {
-	return(sctp_get_assoc_info(fd, asoc, NULL, dst, NULL, NULL, NULL, NULL, NULL));
+	return(sctp_get_assoc_info(fd, asoc, NULL, dst, NULL, NULL, NULL));
 }
 
 int 
 sctp_set_asoc_peer_rwnd(int fd, sctp_assoc_t asoc, uint32_t rwnd)
 {
-	uint32_t sack_delay;
-	sctp_get_assoc_info(fd, asoc, NULL, NULL, NULL, NULL, NULL, &sack_delay, NULL);
-
-	return(sctp_set_assoc_info(fd, asoc, 0, 0, rwnd, 0, 0, sack_delay, 0));
+	return(sctp_set_assoc_info(fd, asoc, 0, 0, rwnd, 0, 0));
 }
 
 int 
 sctp_get_asoc_peer_rwnd(int fd, sctp_assoc_t asoc, uint32_t *rwnd)
 {
-	return(sctp_get_assoc_info(fd, asoc, NULL, NULL, rwnd, NULL, NULL, NULL, NULL));
+	return(sctp_get_assoc_info(fd, asoc, NULL, NULL, rwnd, NULL, NULL));
 }
 
 
 int 
 sctp_set_asoc_local_rwnd(int fd, sctp_assoc_t asoc, uint32_t lrwnd)
 {
-	uint32_t sack_delay;
-	sctp_get_assoc_info(fd, asoc, NULL, NULL, NULL, NULL, NULL, &sack_delay, NULL);
-
-
-	return(sctp_set_assoc_info(fd, asoc, 0, 0, 0, lrwnd, 0, sack_delay, 0));
+	return(sctp_set_assoc_info(fd, asoc, 0, 0, 0, lrwnd, 0));
 }
 
 int 
 sctp_get_asoc_local_rwnd(int fd, sctp_assoc_t asoc, uint32_t *lrwnd)
 {
 
-	return(sctp_get_assoc_info(fd, asoc, NULL, NULL, NULL, lrwnd, NULL, NULL, NULL));
+	return(sctp_get_assoc_info(fd, asoc, NULL, NULL, NULL, lrwnd, NULL));
 }
 
 int 
 sctp_set_asoc_cookie_life(int fd, sctp_assoc_t asoc, uint32_t life)
 {
-	uint32_t sack_delay;
-	sctp_get_assoc_info(fd, asoc, NULL, NULL, NULL, NULL, NULL, &sack_delay, NULL);
-
-
-	return(sctp_set_assoc_info(fd, asoc, 0, 0, 0, 0, life, sack_delay, 0));
+	return(sctp_set_assoc_info(fd, asoc, 0, 0, 0, 0, life));
 }
 
 int 
 sctp_get_asoc_cookie_life(int fd, sctp_assoc_t asoc, uint32_t *life)
 {
-	return(sctp_get_assoc_info(fd, asoc, NULL, NULL, NULL, NULL, life, NULL, NULL));
+	return(sctp_get_assoc_info(fd, asoc, NULL, NULL, NULL, NULL, life));
 }
 
-int 
-sctp_set_asoc_sack_delay(int fd, sctp_assoc_t asoc, uint32_t delay)
-{
-	return(sctp_set_assoc_info(fd, asoc, 0, 0, 0, 0, 0, delay, 0));
-}
-
-int 
-sctp_get_asoc_sack_delay(int fd, sctp_assoc_t asoc, uint32_t *delay)
-{
-	return(sctp_get_assoc_info(fd, asoc, NULL, NULL, NULL, NULL, NULL, delay, NULL));
-}
-
-int 
-sctp_set_asoc_sack_freq(int fd, sctp_assoc_t asoc, uint32_t freq)
-{
-	uint32_t sack_delay;
-	sctp_get_assoc_info(fd, asoc, NULL, NULL, NULL, NULL, NULL, &sack_delay, NULL);
-
-	return(sctp_set_assoc_info(fd, asoc, 0, 0, 0, 0, 0, sack_delay, freq));
-}
-
-int 
-sctp_get_asoc_sack_freq(int fd, sctp_assoc_t asoc, uint32_t *freq)
-{
-	return(sctp_get_assoc_info(fd, asoc, NULL, NULL, NULL, NULL, NULL, NULL, freq));
-}
 
 uint32_t
 sctp_get_number_of_associations(int fd)
