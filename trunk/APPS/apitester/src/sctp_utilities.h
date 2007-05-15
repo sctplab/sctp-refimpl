@@ -1,5 +1,6 @@
 int  sctp_one2one(unsigned short port, int should_listen);
 int sctp_socketpair(int *);
+int sctp_socketpair_reuse(int fd, int *fds);
 int sctp_socketstar(int *, int *, unsigned int);
 int sctp_shutdown(int);
 int sctp_abort(int);
