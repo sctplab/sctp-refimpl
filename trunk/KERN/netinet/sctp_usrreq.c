@@ -3757,8 +3757,11 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			sasoc->sasoc_number_peer_destinations = stcb->asoc.numnets;
 			sasoc->sasoc_peer_rwnd = 0;
 			sasoc->sasoc_local_rwnd = 0;
-			if (sasoc->sasoc_cookie_life)
+			if (sasoc->sasoc_cookie_life) {
+				if (sasoc->sasoc_cookie_life < 1000)
+					sasoc->sasoc_cookie_life = 1000;
 				stcb->asoc.cookie_life = MSEC_TO_TICKS(sasoc->sasoc_cookie_life);
+			}
 			SCTP_TCB_UNLOCK(stcb);
 		} else {
 			SCTP_INP_WLOCK(inp);
@@ -3767,8 +3770,11 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			sasoc->sasoc_number_peer_destinations = 0;
 			sasoc->sasoc_peer_rwnd = 0;
 			sasoc->sasoc_local_rwnd = 0;
-			if (sasoc->sasoc_cookie_life)
+			if (sasoc->sasoc_cookie_life) {
+				if (sasoc->sasoc_cookie_life < 1000)
+					sasoc->sasoc_cookie_life = 1000;
 				inp->sctp_ep.def_cookie_life = MSEC_TO_TICKS(sasoc->sasoc_cookie_life);
+			}
 			SCTP_INP_WUNLOCK(inp);
 		}
 	}
