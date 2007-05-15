@@ -2724,118 +2724,90 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 			}
 		}
 	} else {
-		/*
-		 * get any port but lets make sure no one has any address
-		 * with this port bound
-		 */
-
-		/*
-		 * setup the inp to the top (I could use the union but this
-		 * is just as easy
-		 */
-		uint32_t port_guess;
-		uint16_t port_attempt;
-		int not_done = 1;
-		int not_found=1;
-
-		while (not_done) {
-			port_guess = sctp_select_initial_TSN(&inp->sctp_ep);
-			port_attempt = (port_guess & 0x0000ffff);
-			if (port_attempt == 0) {
-				goto next_half;
+		uint16_t first, last, candiate;
+                uint16_t count;
+		int done;
+		
+                if (ip_inp->inp_flags & INP_HIGHPORT) {
+                        first = ipport_hifirstauto;
+                        last  = ipport_hilastauto;
+                } else if (ip_inp->inp_flags & INP_LOWPORT) {
+			if (p && (error =
+#ifdef __FreeBSD__
+#if __FreeBSD_version > 602000
+				  priv_check_cred(p->td_ucred,
+						  PRIV_NETINET_RESERVEDPORT,
+						  SUSER_ALLOWJAIL
+						  )
+#elif __FreeBSD_version >= 500000
+				  suser_cred(p->td_ucred, 0)
+#else
+				  suser(p)
+#endif
+#elif defined(__NetBSD__) || defined(__APPLE__)
+				  suser(p->p_ucred, &p->p_acflag)
+#else
+				  suser(p, 0)
+#endif
+				    )) {
+				SCTP_INP_DECR_REF(inp);
+				SCTP_INP_WUNLOCK(inp);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+				SCTP_UNLOCK_EXC(sctppcbinfo.ipi_ep_mtx);
+#endif
+				SCTP_INP_INFO_WUNLOCK();
+				return (error);
 			}
-			if (port_attempt < IPPORT_RESERVED) {
-				port_attempt += IPPORT_RESERVED;
-			}
-			not_found = 1;
+                        first = ipport_lowfirstauto;
+                        last  = ipport_lowlastauto;
+                } else {
+                        first = ipport_firstauto;
+                        last  = ipport_lastauto;
+                }
+ 
+		if (first > last) {
+			uint16_t temp;
+			
+			temp = first;
+			first = last;
+			last = temp;
+		}
+		count = last - first + 1; /* number of candidates */
+		candiate = first + sctp_select_initial_TSN(&inp->sctp_ep) % (count);
+		
+		done = 0;
+		while (!done) {
 #ifdef SCTP_MVRF
 			for (i=0; i < inp->num_vrfs; i++) {
-#else
-				vrf_id = inp->def_vrf_id;
-#endif
-				if (sctp_isport_inuse(inp, htons(port_attempt),
-						      vrf_id) == 1) {
-					/* got a port we can use */
-					not_found = 0;
-#ifdef SCTP_MVRF
+				if (sctp_isport_inuse(inp, htons(candiate), inp->m_vrf_ids[i]) == 1) {
 					break;
-#endif
 				}
-#ifdef SCTP_MVRF
 			}
-#endif
-			if (not_found == 1) {
-				/* We can use this port */
-				not_done = 0;
-				continue;
+			if (i == inp->num_vrfs) {
+				done = 1;
 			}
-			/* try upper half */
-		next_half:
-			port_attempt = ((port_guess >> 16) & 0x0000ffff);
-
-			if (port_attempt == 0) {
-				goto last_try;
-			}
-			if (port_attempt < IPPORT_RESERVED) {
-				port_attempt += IPPORT_RESERVED;
-			}
-			not_found = 1;
-#ifdef SCTP_MVRF
-			for (i=0; i < inp->num_vrfs; i++) {
 #else
-				vrf_id = inp->def_vrf_id;
+			if (sctp_isport_inuse(inp, htons(candiate), inp->def_vrf_id) == 0) {
+				done = 1;
+			}
 #endif
-				if (sctp_isport_inuse(inp, htons(port_attempt),
-						      vrf_id) == 1) {
-					/* got a port we can use */
-					not_found = 0;
-#ifdef SCTP_MVRF
-					break;
+			if (!done) {
+				if (--count == 0) {
+					SCTP_INP_DECR_REF(inp);
+					SCTP_INP_WUNLOCK(inp);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+					SCTP_UNLOCK_EXC(sctppcbinfo.ipi_ep_mtx);
 #endif
+					SCTP_INP_INFO_WUNLOCK();
+					return (EADDRNOTAVAIL);
 				}
-#ifdef SCTP_MVRF
-			}
-#endif
-			if (not_found == 1) {
-				/* We can use this port */
-				not_done = 0;
-				continue;
-			}
-			/* try two half's added together */
-		last_try:
-			port_attempt = (((port_guess >> 16) & 0x0000ffff) +
-					(port_guess & 0x0000ffff));
-			if (port_attempt == 0) {
-				/* get a new random number */
-				continue;
-			}
-			if (port_attempt < IPPORT_RESERVED) {
-				port_attempt += IPPORT_RESERVED;
-			}
-			not_found = 1;
-#ifdef SCTP_MVRF
-			for(i=0; i<inp->num_vrfs; i++) {
-#else
-				vrf_id = inp->def_vrf_id;
-#endif
-				if (sctp_isport_inuse(inp, htons(port_attempt), vrf_id) == 1) {
-					/* got a port we can use */
-					not_found = 0;
-#ifdef SCTP_MVRF
-					break;
-#endif
-				}
-#ifdef SCTP_MVRF
-			}
-#endif
-			if (not_found == 1) {
-				/* We can use this port */
-				not_done = 0;
-				continue;
+				if (candiate == last)
+					candiate = first;
+				else
+					candiate = candiate + 1;
 			}
 		}
-		/* we don't get out of the loop until we have a port */
-		lport = htons(port_attempt);
+		lport = htons(candiate);
 	}
 	SCTP_INP_DECR_REF(inp);
 	if (inp->sctp_flags & (SCTP_PCB_FLAGS_SOCKET_GONE |
