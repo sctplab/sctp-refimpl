@@ -17,48 +17,22 @@ DEFINE_APITEST(connect, non_listen)
 	int fdc, fds, n;
 	struct sockaddr_in addr;
 	socklen_t addr_len;
-	
-	if ((fds = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
-		return strerror(errno);
-		
-	memset((void *)&addr, 0, sizeof(struct sockaddr_in));
-	addr.sin_family      = AF_INET;
-#ifdef HAVE_SIN_LEN
-	addr.sin_len         = sizeof(struct sockaddr_in);
-#endif
-	addr.sin_port        = htons(0);
-	addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
-	if (bind(fds, (struct sockaddr *)&addr, (socklen_t)sizeof(struct sockaddr_in)) < 0) {
-		close(fds);
+	fds = sctp_one2one(0, 0);
+	if (fds  < 0)
 		return strerror(errno);
-	}
-	
-	addr_len = (socklen_t)sizeof(struct sockaddr_in);
+
+	addr_len = (socklen_t)sizeof(struct sockaddr_in);		
 	if (getsockname (fds, (struct sockaddr *) &addr, &addr_len) < 0) {
 		close(fds);
 		return strerror(errno);
 	}
 	
-	if ((fdc = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) {
+	fdc = sctp_one2one(0, 0);
+	if (fdc  < 0) {
 		close(fds);
 		return strerror(errno);
 	}
-
-	memset((void *)&addr, 0, sizeof(struct sockaddr_in));
-	addr.sin_family      = AF_INET;
-#ifdef HAVE_SIN_LEN
-	addr.sin_len         = sizeof(struct sockaddr_in);
-#endif
-	addr.sin_port        = htons(0);
-	addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-
-	if (bind(fdc, (struct sockaddr *)&addr, (socklen_t)sizeof(struct sockaddr_in)) < 0) {
-		close(fdc);
-		close(fds);
-		return strerror(errno);
-	}
-	
 	n = connect(fdc, (const struct sockaddr *)&addr, addr_len);
 
 	close(fds);
@@ -76,26 +50,9 @@ DEFINE_APITEST(connect, listen)
 	struct sockaddr_in addr;
 	socklen_t addr_len;
 	
-	if ((fds = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
+	fds = sctp_one2one(0, 1);
+	if (fds  < 0)
 		return strerror(errno);
-		
-	memset((void *)&addr, 0, sizeof(struct sockaddr_in));
-	addr.sin_family      = AF_INET;
-#ifdef HAVE_SIN_LEN
-	addr.sin_len         = sizeof(struct sockaddr_in);
-#endif
-	addr.sin_port        = htons(0);
-	addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-
-	if (bind(fds, (struct sockaddr *)&addr, (socklen_t)sizeof(struct sockaddr_in)) < 0) {
-		close(fds);
-		return strerror(errno);
-	}
-	
-	if (listen(fds, 1) < 0) {
-		close(fds);
-		return strerror(errno);
-	}
 		
 	addr_len = (socklen_t)sizeof(struct sockaddr_in);
 	if (getsockname (fds, (struct sockaddr *) &addr, &addr_len) < 0) {
@@ -103,7 +60,8 @@ DEFINE_APITEST(connect, listen)
 		return strerror(errno);
 	}
 	
-	if ((fdc = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) {
+	fdc = sctp_one2one(0, 0);
+	if (fdc  < 0) {
 		close(fds);
 		return strerror(errno);
 	}
