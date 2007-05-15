@@ -3752,7 +3752,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			sasoc->sasoc_number_peer_destinations = stcb->asoc.numnets;
 			sasoc->sasoc_peer_rwnd = 0;
 			sasoc->sasoc_local_rwnd = 0;
-			if (stcb->asoc.cookie_life)
+			if (sasoc->sasoc_cookie_life)
 				stcb->asoc.cookie_life = MSEC_TO_TICKS(sasoc->sasoc_cookie_life);
 			stcb->asoc.delayed_ack = sasoc->sasoc_sack_delay;
 			if(sasoc->sasoc_sack_freq) {
