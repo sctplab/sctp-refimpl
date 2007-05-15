@@ -2002,7 +2002,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				}
 			}
 			if (cnt_of_unconf) {
-				lnet = NULL;
+				net = lnet = NULL;
 				(void)sctp_heartbeat_timer(inp, stcb, lnet, cnt_of_unconf);
 			}
 			if (stcb->asoc.hb_random_idx > 3) {
