@@ -2433,3 +2433,256 @@ DEFINE_APITEST(associnfo, sso_lrwnd_asoc_1_M)
 	return(retstring);
 }
 
+
+
+
+DEFINE_APITEST(associnfo, sso_prwnd_asoc_1_1)
+{
+	int result;
+	uint16_t asoc_maxrxt[2], peer_dest_cnt[2];
+	uint32_t peer_rwnd[2], local_rwnd[2], cookie_life[2];
+	int fds[2];
+	char *retstring=NULL;
+	result = sctp_socketpair(fds);
+	if(result < 0) {
+		return(strerror(errno));
+	}
+	/* Get all the values for assoc info on ep */
+	result = sctp_get_assoc_info(fds[0], 0, 
+				     &asoc_maxrxt[0],
+				     &peer_dest_cnt[0], 
+				     &peer_rwnd[0],
+				     &local_rwnd[0],
+				     &cookie_life[0]);
+	if (result) {
+		retstring = strerror(errno);
+		goto out;
+	}
+	/* We don't care about the return.. error or
+	 * whatever. We care about if it changed.
+	 */
+	(void)sctp_set_asoc_peer_rwnd(fds[0], 0,  (2*peer_rwnd[0]));
+	result = sctp_get_assoc_info(fds[0], 0, 
+				     &asoc_maxrxt[1],
+				     &peer_dest_cnt[1], 
+				     &peer_rwnd[1],
+				     &local_rwnd[1],
+				     &cookie_life[1]);
+	
+	if (result) {
+		retstring = strerror(errno);
+		goto out;
+	}
+	if(asoc_maxrxt[0] != asoc_maxrxt[1]) {
+		retstring = "maxrxt changed on set of lrwnd";
+		goto out;
+	}
+
+	if(local_rwnd[0] != local_rwnd[1]) {
+		retstring = "local-rwnd changed on set!";
+		goto out;
+	}
+	/* don't check peer_rwnd or peer_dest_cnt  we have no peer */
+	if(cookie_life[0] != cookie_life[1]) {
+		retstring = "cookie_life changed on set of lrwnd";
+		goto out;
+	}
+	if(peer_rwnd[0] != peer_rwnd[1]) {
+		retstring = "peers rwnd changed";
+	}
+ out:
+	close (fds[0]);
+	close (fds[1]);
+	return(retstring);
+}
+
+
+DEFINE_APITEST(associnfo, sso_prwnd_asoc_1_M)
+{
+	int result;
+	uint16_t asoc_maxrxt[2], peer_dest_cnt[2];
+	uint32_t peer_rwnd[2], local_rwnd[2], cookie_life[2];
+	int fds[2];
+	sctp_assoc_t ids[2];	
+	char *retstring=NULL;
+	fds[0] = fds[1] = -1;
+
+	result = sctp_socketpair_1tom(fds, ids);
+	if(result < 0) {
+		return(strerror(errno));
+	}
+	/* Get all the values for assoc info on ep */
+	result = sctp_get_assoc_info(fds[0], 0, 
+				     &asoc_maxrxt[0],
+				     &peer_dest_cnt[0], 
+				     &peer_rwnd[0],
+				     &local_rwnd[0],
+				     &cookie_life[0]);
+	if (result) {
+		retstring = strerror(errno);
+		goto out;
+	}
+	/* We don't care about the return.. error or
+	 * whatever. We care about if it changed.
+	 */
+	(void)sctp_set_asoc_peer_rwnd(fds[0], 0,  (2*peer_rwnd[0]));
+
+	result = sctp_get_assoc_info(fds[0], 0, 
+				     &asoc_maxrxt[1],
+				     &peer_dest_cnt[1], 
+				     &peer_rwnd[1],
+				     &local_rwnd[1],
+				     &cookie_life[1]);
+	
+	if (result) {
+		retstring = strerror(errno);
+		goto out;
+	}
+	if(asoc_maxrxt[0] != asoc_maxrxt[1]) {
+		retstring = "maxrxt changed on set of lrwnd";
+		goto out;
+	}
+
+	if(local_rwnd[0] != local_rwnd[1]) {
+		retstring = "local-rwnd changed on set!";
+		goto out;
+	}
+	/* don't check peer_rwnd or peer_dest_cnt  we have no peer */
+	if(cookie_life[0] != cookie_life[1]) {
+		retstring = "cookie_life changed on set of lrwnd";
+		goto out;
+	}
+	if (peer_rwnd[0] != peer_rwnd[1]) {
+		retstring = "peers rwnd changed";
+	}
+ out:
+	close (fds[0]);
+	close (fds[1]);
+	return(retstring);
+}
+
+DEFINE_APITEST(associnfo, sso_pdest_asoc_1_1)
+{
+	int result;
+	uint16_t asoc_maxrxt[2], peer_dest_cnt[2];
+	uint32_t peer_rwnd[2], local_rwnd[2], cookie_life[2];
+	int fds[2];
+	char *retstring=NULL;
+	result = sctp_socketpair(fds);
+	if(result < 0) {
+		return(strerror(errno));
+	}
+	/* Get all the values for assoc info on ep */
+	result = sctp_get_assoc_info(fds[0], 0, 
+				     &asoc_maxrxt[0],
+				     &peer_dest_cnt[0], 
+				     &peer_rwnd[0],
+				     &local_rwnd[0],
+				     &cookie_life[0]);
+	if (result) {
+		retstring = strerror(errno);
+		goto out;
+	}
+	/* We don't care about the return.. error or
+	 * whatever. We care about if it changed.
+	 */
+	(void)sctp_set_asoc_peerdest_cnt(fds[0], 0,  (2*peer_rwnd[0]));
+	result = sctp_get_assoc_info(fds[0], 0, 
+				     &asoc_maxrxt[1],
+				     &peer_dest_cnt[1], 
+				     &peer_rwnd[1],
+				     &local_rwnd[1],
+				     &cookie_life[1]);
+	
+	if (result) {
+		retstring = strerror(errno);
+		goto out;
+	}
+	if(asoc_maxrxt[0] != asoc_maxrxt[1]) {
+		retstring = "maxrxt changed on set of lrwnd";
+		goto out;
+	}
+
+	if(local_rwnd[0] != local_rwnd[1]) {
+		retstring = "local-rwnd changed on set!";
+		goto out;
+	}
+	/* don't check peer_rwnd or peer_dest_cnt  we have no peer */
+	if(cookie_life[0] != cookie_life[1]) {
+		retstring = "cookie_life changed on set of lrwnd";
+		goto out;
+	}
+	if(peer_dest_cnt[0] != peer_dest_cnt[1]) {
+		retstring = "peers dest count changed";
+	}
+ out:
+	close (fds[0]);
+	close (fds[1]);
+	return(retstring);
+}
+
+
+DEFINE_APITEST(associnfo, sso_pdest_asoc_1_M)
+{
+	int result;
+	uint16_t asoc_maxrxt[2], peer_dest_cnt[2];
+	uint32_t peer_rwnd[2], local_rwnd[2], cookie_life[2];
+	int fds[2];
+	sctp_assoc_t ids[2];	
+	char *retstring=NULL;
+	fds[0] = fds[1] = -1;
+
+	result = sctp_socketpair_1tom(fds, ids);
+	if(result < 0) {
+		return(strerror(errno));
+	}
+	/* Get all the values for assoc info on ep */
+	result = sctp_get_assoc_info(fds[0], 0, 
+				     &asoc_maxrxt[0],
+				     &peer_dest_cnt[0], 
+				     &peer_rwnd[0],
+				     &local_rwnd[0],
+				     &cookie_life[0]);
+	if (result) {
+		retstring = strerror(errno);
+		goto out;
+	}
+	/* We don't care about the return.. error or
+	 * whatever. We care about if it changed.
+	 */
+	(void)sctp_set_asoc_peerdest_cnt(fds[0], 0,  (2*peer_rwnd[0]));
+
+	result = sctp_get_assoc_info(fds[0], 0, 
+				     &asoc_maxrxt[1],
+				     &peer_dest_cnt[1], 
+				     &peer_rwnd[1],
+				     &local_rwnd[1],
+				     &cookie_life[1]);
+	
+	if (result) {
+		retstring = strerror(errno);
+		goto out;
+	}
+	if(asoc_maxrxt[0] != asoc_maxrxt[1]) {
+		retstring = "maxrxt changed on set of lrwnd";
+		goto out;
+	}
+
+	if(local_rwnd[0] != local_rwnd[1]) {
+		retstring = "local-rwnd changed on set!";
+		goto out;
+	}
+	/* don't check peer_rwnd or peer_dest_cnt  we have no peer */
+	if(cookie_life[0] != cookie_life[1]) {
+		retstring = "cookie_life changed on set of lrwnd";
+		goto out;
+	}
+	if(peer_dest_cnt[0] != peer_dest_cnt[1]) {
+		retstring = "peers dest count changed";
+	}
+
+ out:
+	close (fds[0]);
+	close (fds[1]);
+	return(retstring);
+}
