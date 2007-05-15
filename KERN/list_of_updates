@@ -13,5 +13,7 @@
   tool. Null checks needed.
 - An issue for sendfile(). Need to validate the correct
   input argument.
+- When sending failed due to a no route to host, we leaked
+  the mbuf chain failing to call m_freem().
 - Fix #ifdef issue for getting hash block len when HAVE_SHA2 is NOT defined
 
