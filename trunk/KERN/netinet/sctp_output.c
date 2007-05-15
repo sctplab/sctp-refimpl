@@ -3525,6 +3525,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 					}
 				}
 			}
+			sctp_m_freem(m);
 			return (EHOSTUNREACH);
 		}
 		if (ro != &iproute) {
