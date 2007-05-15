@@ -1449,7 +1449,7 @@ DEFINE_APITEST(associnfo, sso_rxt_asoc_1_1)
 		goto out;
 	}
 	/* don't check peer_rwnd or peer_dest_cnt  we have no peer */
-	if(asoc_maxrxt[0] == asoc_maxrxt[2]) {
+	if(asoc_maxrxt[0] != asoc_maxrxt[2]) {
 		retstring = "maxrxt changed on ep";
 		goto out;
 	}
@@ -1571,7 +1571,7 @@ DEFINE_APITEST(associnfo, sso_rxt_asoc_1_M)
 		goto out;
 	}
 	/* don't check peer_rwnd or peer_dest_cnt  we have no peer */
-	if(asoc_maxrxt[0] == asoc_maxrxt[2]) {
+	if(asoc_maxrxt[0] != asoc_maxrxt[2]) {
 		retstring = "maxrxt changed on ep";
 		goto out;
 	}
