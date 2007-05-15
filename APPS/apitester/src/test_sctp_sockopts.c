@@ -1342,3 +1342,243 @@ DEFINE_APITEST(associnfo, sso_rxt_1_M)
 
 
 }
+
+DEFINE_APITEST(associnfo, sso_rxt_asoc_1_1)
+{
+	int fd, result;
+	uint16_t asoc_maxrxt[3], peer_dest_cnt[3];
+	uint32_t peer_rwnd[3], local_rwnd[3], cookie_life[3], sack_delay[3], sack_freq[3];
+	int newval;
+	int fds[2];
+	char *retstring=NULL;
+
+	fd = sctp_one2one(0,1);
+	if(fd < 0) {
+		return(strerror(errno));
+	}
+	/* Get all the values for assoc info on ep */
+	result = sctp_get_assoc_info(fd, 0, 
+				     &asoc_maxrxt[0],
+				     &peer_dest_cnt[0], 
+				     &peer_rwnd[0],
+				     &local_rwnd[0],
+				     &cookie_life[0],
+				     &sack_delay[0],
+				     &sack_freq[0]);
+	if (result) {
+		retstring = strerror(errno);
+		goto out_nopair;
+	}
+	if (sctp_socketpair_reuse(fd, fds) < 0) {
+		retstring = strerror(errno);
+		close(fd);
+		goto out_nopair;
+	}
+
+	newval = asoc_maxrxt[0] * 2;
+
+	/* Set the assoc value */
+	result = sctp_set_asoc_maxrxt(fds[1], 0, newval);
+	if (result) {
+		retstring = strerror(errno);
+		goto out;
+	}
+	/* Validate it set */
+	result = sctp_get_assoc_info(fds[1], 0, 
+				     &asoc_maxrxt[1],
+				     &peer_dest_cnt[1], 
+				     &peer_rwnd[1],
+				     &local_rwnd[1],
+				     &cookie_life[1],
+				     &sack_delay[1],
+				     &sack_freq[1]);
+
+	if(sack_freq[0] != sack_freq[1]) {
+		retstring = "sack-freq changed on set of maxrxt";
+		goto out;
+	}
+	if(sack_delay[0] != sack_delay[1]) {
+		printf("Was %d now %d\n", sack_delay[0], sack_delay[1]);
+		retstring = "sack-delay changed on set of maxrxt";
+		goto out;
+	}
+	if(cookie_life[0] != cookie_life[1]) {
+		retstring = "cookie-life changed on set of maxrxt";
+		goto out;
+	}
+
+	if(local_rwnd[0] != local_rwnd[1]) {
+		retstring = "cookie-life changed on set of maxrxt";
+		goto out;
+	}
+	/* don't check peer_rwnd or peer_dest_cnt  we have no peer */
+	if(asoc_maxrxt[0] == asoc_maxrxt[1]) {
+		retstring = "maxrxt did not change";
+		goto out;
+	}
+	if(asoc_maxrxt[1] != newval) {
+		retstring = "maxrxt did not change to correct value on assoc";
+		goto out;
+	}
+	/* Now what about on ep? */
+	result = sctp_get_assoc_info(fd, 0, 
+				     &asoc_maxrxt[2],
+				     &peer_dest_cnt[2], 
+				     &peer_rwnd[2],
+				     &local_rwnd[2],
+				     &cookie_life[2],
+				     &sack_delay[2],
+				     &sack_freq[2]);
+
+	if(sack_freq[0] != sack_freq[2]) {
+		retstring = "sack-freq ep changed on set of maxrxt";
+		goto out;
+	}
+	if(sack_delay[0] != sack_delay[2]) {
+		printf("Was %d now %d\n", sack_delay[0], sack_delay[1]);
+		retstring = "sack-delay ep changed on set of maxrxt";
+		goto out;
+	}
+	if(cookie_life[0] != cookie_life[2]) {
+		retstring = "cookie-life ep changed on set of maxrxt";
+		goto out;
+	}
+
+	if(local_rwnd[0] != local_rwnd[2]) {
+		retstring = "cookie-life ep changed on set of maxrxt";
+		goto out;
+	}
+	/* don't check peer_rwnd or peer_dest_cnt  we have no peer */
+	if(asoc_maxrxt[0] == asoc_maxrxt[2]) {
+		retstring = "maxrxt changed on ep";
+		goto out;
+	}
+ out:
+	close(fds[0]);
+	close(fds[1]);
+ out_nopair:
+	close(fd);
+	return (retstring);
+
+
+}
+
+DEFINE_APITEST(associnfo, sso_rxt_asoc_1_M)
+{
+	int result;
+	uint16_t asoc_maxrxt[3], peer_dest_cnt[3];
+	uint32_t peer_rwnd[3], local_rwnd[3], cookie_life[3], sack_delay[3], sack_freq[3];
+	int newval;
+	int fds[2];
+	sctp_assoc_t ids[2];
+	char *retstring=NULL;
+
+	fds[0] = sctp_one2many(0);
+	if(fds[0] < 0) {
+		return (strerror(errno));
+	}
+	/* Get all the values for assoc info on ep */
+	result = sctp_get_assoc_info(fds[0], 0, 
+				     &asoc_maxrxt[0],
+				     &peer_dest_cnt[0], 
+				     &peer_rwnd[0],
+				     &local_rwnd[0],
+				     &cookie_life[0],
+				     &sack_delay[0],
+				     &sack_freq[0]);
+	if (result) {
+		retstring = strerror(errno);
+		goto out_nopair;
+	}
+	if (sctp_socketpair_1tom(fds, ids) < 0) {
+		retstring = strerror(errno);
+		close(fds[0]);
+		goto out_nopair;
+	}
+
+	newval = asoc_maxrxt[0] * 2;
+	/* Set the assoc value */
+	result = sctp_set_asoc_maxrxt(fds[0], ids[0], newval);
+	if (result) {
+		retstring = strerror(errno);
+		goto out;
+	}
+	/* Validate it set */
+	result = sctp_get_assoc_info(fds[0], ids[0], 
+				     &asoc_maxrxt[1],
+				     &peer_dest_cnt[1], 
+				     &peer_rwnd[1],
+				     &local_rwnd[1],
+				     &cookie_life[1],
+				     &sack_delay[1],
+				     &sack_freq[1]);
+
+	if(sack_freq[0] != sack_freq[1]) {
+		retstring = "sack-freq changed on set of maxrxt";
+		goto out;
+	}
+	if(sack_delay[0] != sack_delay[1]) {
+		printf("Was %d now %d\n", sack_delay[0], sack_delay[1]);
+		retstring = "sack-delay changed on set of maxrxt";
+		goto out;
+	}
+	if(cookie_life[0] != cookie_life[1]) {
+		printf("cl[0]:%d cl[1]:%d\n",
+		       cookie_life[0], cookie_life[1]);
+		retstring = "cookie-life changed on set of maxrxt";
+		goto out;
+	}
+
+	if(local_rwnd[0] != local_rwnd[1]) {
+		retstring = "cookie-life changed on set of maxrxt";
+		goto out;
+	}
+	/* don't check peer_rwnd or peer_dest_cnt  we have no peer */
+	if(asoc_maxrxt[0] == asoc_maxrxt[1]) {
+		retstring = "maxrxt did not change";
+		goto out;
+	}
+	if(asoc_maxrxt[1] != newval) {
+		retstring = "maxrxt did not change to correct value on assoc";
+		goto out;
+	}
+	/* Now what about on ep? */
+	result = sctp_get_assoc_info(fds[0], 0, 
+				     &asoc_maxrxt[2],
+				     &peer_dest_cnt[2], 
+				     &peer_rwnd[2],
+				     &local_rwnd[2],
+				     &cookie_life[2],
+				     &sack_delay[2],
+				     &sack_freq[2]);
+
+	if(sack_freq[0] != sack_freq[2]) {
+		retstring = "sack-freq ep changed on set of maxrxt";
+		goto out;
+	}
+	if(sack_delay[0] != sack_delay[2]) {
+		printf("Was %d now %d\n", sack_delay[0], sack_delay[1]);
+		retstring = "sack-delay ep changed on set of maxrxt";
+		goto out;
+	}
+	if(cookie_life[0] != cookie_life[2]) {
+		retstring = "cookie-life ep changed on set of maxrxt";
+		goto out;
+	}
+
+	if(local_rwnd[0] != local_rwnd[2]) {
+		retstring = "cookie-life ep changed on set of maxrxt";
+		goto out;
+	}
+	/* don't check peer_rwnd or peer_dest_cnt  we have no peer */
+	if(asoc_maxrxt[0] == asoc_maxrxt[2]) {
+		retstring = "maxrxt changed on ep";
+		goto out;
+	}
+ out:
+	close(fds[1]);
+ out_nopair:
+	close(fds[0]);
+	return (retstring);
+
+}

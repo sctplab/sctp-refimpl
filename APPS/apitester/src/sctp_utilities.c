@@ -83,6 +83,40 @@ int sctp_socketpair(int *fds)
 	return 0;
 }
 
+int sctp_socketpair_reuse(int fd, int *fds)
+{
+	struct sockaddr_in addr;
+	socklen_t addr_len;
+	
+
+	/* Get any old port, but no listen */
+	fds[0] = sctp_one2one(0, 0);
+	if (fds[0] < 0) {
+		close(fd);
+		return -1;
+	}
+	addr_len = (socklen_t)sizeof(struct sockaddr_in);
+	if (getsockname (fd, (struct sockaddr *) &addr, &addr_len) < 0) {
+		close(fd);
+		close(fds[0]);
+		return -1;
+	}
+
+	if (connect(fds[0], (struct sockaddr *) &addr, addr_len) < 0) {
+		close(fd);
+		close(fds[0]);
+		return -1;
+	}
+
+	if ((fds[1] = accept(fd, NULL, 0)) < 0) {
+		close(fd);
+		close(fds[0]);
+		return -1;
+	}
+	return 0;
+}
+
+
 int sctp_socketstar(int *fd, int *fds, unsigned int n)
 {
 	struct sockaddr_in addr;
