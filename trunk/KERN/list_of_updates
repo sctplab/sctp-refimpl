@@ -9,3 +9,9 @@
 - Cookie life needs to be in milliseconds to conform to socket api.
 - Cookie life is not supposed to change if its 0, On the assoc
   level set we changed it to 0.
+- Two more static analysis issues identified by the cisco
+  tool. Null checks needed.
+- An issue for sendfile(). Need to validate the correct
+  input argument.
+
+
