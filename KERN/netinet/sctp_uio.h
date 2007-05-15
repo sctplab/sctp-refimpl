@@ -452,8 +452,6 @@ struct sctp_assocparams {
 	uint32_t sasoc_peer_rwnd;
 	uint32_t sasoc_local_rwnd;
 	uint32_t sasoc_cookie_life;
-	uint32_t sasoc_sack_delay;
-	uint32_t sasoc_sack_freq;
 };
 
 struct sctp_setprim {
@@ -540,6 +538,12 @@ struct sctp_assoc_value {
 
 struct sctp_assoc_ids {
 	sctp_assoc_t gaids_assoc_id[0];
+};
+
+struct sctp_sack_info {
+	sctp_assoc_t sack_assoc_id;
+	uint32_t sack_delay;
+	uint32_t sack_freq;
 };
 
 struct sctp_cwnd_args {
