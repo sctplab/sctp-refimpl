@@ -49,6 +49,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_uio.h,v 1.17 2007/05/08 17:01:11 rrs Ex
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/time.h>
+#include <sys/socketvar.h>
 #include <netinet/in.h>
 
 typedef uint32_t sctp_assoc_t;
