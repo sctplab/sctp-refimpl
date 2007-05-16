@@ -416,8 +416,8 @@ setup_a_socket()
 	}
 	memset(&rto, 0, sizeof(rto));
 	siz = sizeof(rto);
-	rto.srto_max = 1000;
-        rto.srto_min = 5000;
+	rto.srto_min = 1000;
+        rto.srto_max = 5000;
         rto.srto_initial = 1000;
 	if(setsockopt(sd, IPPROTO_SCTP, SCTP_RTOINFO, &rto, siz) != 0) {
 		printf("Can't set RTO information error:%d - exiting\n", errno);
