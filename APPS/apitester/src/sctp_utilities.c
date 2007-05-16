@@ -595,3 +595,24 @@ int sctp_set_im_maxtimeo(int fd, uint16_t timeo)
 {
 	return (sctp_set_initmsg(fd, 0, 0, 0, timeo));
 }
+
+int sctp_get_ndelay(int fd, uint32_t *val)
+{
+	int result;
+	socklen_t len;
+	len = sizeof(*val);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_NODELAY, 
+			    val, &len);
+	return (result);
+}
+
+int sctp_set_ndelay(int fd, uint32_t val)
+{
+	int result;
+	socklen_t len;
+	len = sizeof(val);
+
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_NODELAY, 
+			    &val, len);
+	return(result);
+}
