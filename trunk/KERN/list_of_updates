@@ -17,7 +17,11 @@
 - When sending failed due to a no route to host, we leaked
   the mbuf chain failing to call m_freem().
 - Fix #ifdef issue for getting hash block len when HAVE_SHA2 is NOT defined
-- Improve port number selection.
+
 ---------Above May15 patch (new items below here please)-----
 - fixed autclose to not allow setting on 1-2-1 model.
-
+- bounded cookie-life to 1 second minimum in socket option set.
+- Delayed_ack_time becomes delayed_ack per new socket api document.
+- Improve port number selection, we now use low/high bounds and
+  no chance of a endless loop. Only one call to random per bind
+  as well.
