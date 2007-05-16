@@ -2837,6 +2837,10 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			set_opt = SCTP_PCB_FLAGS_NODELAY;
 			break;
 		case SCTP_AUTOCLOSE:
+			if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
+			    (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
+				return (EINVAL);
+			}
 			set_opt = SCTP_PCB_FLAGS_AUTOCLOSE;
 			/*
 			 * The value is in ticks. Note this does not effect
