@@ -526,3 +526,72 @@ sctp_get_association_identifiers(int fd, sctp_assoc_t ids[], unsigned int n)
 	else
 		return (len / sizeof(sctp_assoc_t));
 }
+
+
+int 
+sctp_get_initmsg(int fd, 
+		 uint32_t *ostreams,
+		 uint32_t *istreams,
+		 uint16_t *maxattempt,
+		 uint16_t *max_init_timeo)
+
+{
+	struct sctp_initmsg initmsg;
+	socklen_t len;
+	int result;
+	
+	len = (socklen_t)sizeof(initmsg);
+	bzero((void *)&initmsg, sizeof(initmsg));
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_INITMSG, 
+			    (void *)&initmsg, &len);
+
+	if(ostreams) 
+		*ostreams = initmsg.sinit_num_ostreams;
+	if (istreams)
+		*istreams = initmsg.sinit_max_instreams;
+	if (maxattempt) 
+		*maxattempt = initmsg.sinit_max_attempts;
+	if (max_init_timeo)
+		*max_init_timeo = initmsg.sinit_max_init_timeo;
+	return result;
+}
+
+int 
+sctp_set_initmsg(int fd, 
+		 uint32_t ostreams,
+		 uint32_t istreams,
+		 uint16_t maxattempt,
+		 uint16_t max_init_timeo)
+
+{
+	struct sctp_initmsg initmsg;
+	socklen_t len;
+	int result;
+	
+	len = (socklen_t)sizeof(initmsg);
+	bzero((void *)&initmsg, sizeof(initmsg));
+	initmsg.sinit_num_ostreams = ostreams;
+	initmsg.sinit_max_instreams = istreams;
+	initmsg.sinit_max_attempts = maxattempt;
+	initmsg.sinit_max_init_timeo = max_init_timeo;
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_INITMSG, 
+			    (void *)&initmsg, len);
+
+	return result;
+}
+int sctp_set_im_ostream(int fd, uint32_t ostream)
+{
+	return (sctp_set_initmsg(fd, ostream, 0, 0, 0));
+}
+int sctp_set_im_istream(int fd, uint32_t istream)
+{
+	return (sctp_set_initmsg(fd, 0, istream, 0, 0));
+}
+int sctp_set_im_maxattempt(int fd, uint16_t max)
+{
+	return (sctp_set_initmsg(fd, 0, 0, max, 0));
+}
+int sctp_set_im_maxtimeo(int fd, uint16_t timeo)
+{
+	return (sctp_set_initmsg(fd, 0, 0, 0, timeo));
+}
