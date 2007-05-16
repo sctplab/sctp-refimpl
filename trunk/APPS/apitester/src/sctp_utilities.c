@@ -10,7 +10,7 @@
 #include <netinet/sctp.h>
 
 int 
-sctp_one2one(unsigned short port, int should_listen)
+sctp_one2one(unsigned short port, int should_listen, int bindall)
 {
 	int fd;
 	struct sockaddr_in addr;
@@ -24,7 +24,11 @@ sctp_one2one(unsigned short port, int should_listen)
 	addr.sin_len         = sizeof(struct sockaddr_in);
 #endif
 	addr.sin_port        = htons(port);
-	addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	if (bindall) {
+		addr.sin_addr.s_addr = 0;
+	} else {
+		addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	}
 
 	if (bind(fd, (struct sockaddr *)&addr, (socklen_t)sizeof(struct sockaddr_in)) < 0) {
 		close(fd);
@@ -41,7 +45,7 @@ sctp_one2one(unsigned short port, int should_listen)
 
 
 
-int sctp_socketpair(int *fds)
+int sctp_socketpair(int *fds, int bindall)
 {
 	int fd;
 	struct sockaddr_in addr;
@@ -49,13 +53,13 @@ int sctp_socketpair(int *fds)
 	
 
 	/* Get any old port, but listen */
-	fd = sctp_one2one(0, 1);
+	fd = sctp_one2one(0, 1, bindall);
 	if (fd  < 0) {
 		return -1;
 	}
 
 	/* Get any old port, but no listen */
-	fds[0] = sctp_one2one(0, 0);
+	fds[0] = sctp_one2one(0, 0, bindall);
 	if (fds[0] < 0) {
 		close(fd);
 		return -1;
@@ -66,7 +70,9 @@ int sctp_socketpair(int *fds)
 		close(fds[0]);
 		return -1;
 	}
-
+	if (bindall) {
+		addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	}
 	if (connect(fds[0], (struct sockaddr *) &addr, addr_len) < 0) {
 		close(fd);
 		close(fds[0]);
@@ -83,14 +89,14 @@ int sctp_socketpair(int *fds)
 	return 0;
 }
 
-int sctp_socketpair_reuse(int fd, int *fds)
+int sctp_socketpair_reuse(int fd, int *fds, int bindall)
 {
 	struct sockaddr_in addr;
 	socklen_t addr_len;
 	
 
 	/* Get any old port, but no listen */
-	fds[0] = sctp_one2one(0, 0);
+	fds[0] = sctp_one2one(0, 0, bindall);
 	if (fds[0] < 0) {
 		close(fd);
 		return -1;
@@ -101,7 +107,9 @@ int sctp_socketpair_reuse(int fd, int *fds)
 		close(fds[0]);
 		return -1;
 	}
-
+	if (bindall) {
+		addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	}
 	if (connect(fds[0], (struct sockaddr *) &addr, addr_len) < 0) {
 		close(fd);
 		close(fds[0]);
@@ -301,7 +309,7 @@ __get_assoc_id (int fd, struct sockaddr *addr)
 
 
 int 
-sctp_one2many(unsigned short port)
+sctp_one2many(unsigned short port, int bindall)
 {
 	int fd;
 	struct sockaddr_in addr;
@@ -315,7 +323,11 @@ sctp_one2many(unsigned short port)
 	addr.sin_len         = sizeof(struct sockaddr_in);
 #endif
 	addr.sin_port        = htons(port);
-	addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	if (bindall) {
+		addr.sin_addr.s_addr = 0;
+	} else {
+		addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	}
 
 	if (bind(fd, (struct sockaddr *)&addr, (socklen_t)sizeof(struct sockaddr_in)) < 0) {
 		close(fd);
@@ -338,33 +350,40 @@ sctp_one2many(unsigned short port)
 
 
 int 
-sctp_socketpair_1tom(int *fds, sctp_assoc_t *ids)
+sctp_socketpair_1tom(int *fds, sctp_assoc_t *ids, int bindall)
 {
 	int fd;
 	struct sockaddr_in addr;
 	socklen_t addr_len;
-
-	fd = sctp_one2many(0);
+	int set=0;
+	fd = sctp_one2many(0, bindall);
 	if (fd == -1) {
+		printf("Can't get socket\n");
 		return -1;
 	}
 
 	if(fds[0] == -1) {
-		fds[0] = sctp_one2many(0);
+		fds[0] = sctp_one2many(0, bindall);
 		if (fds[0]  < 0) {
 			close(fd);
 			return -1;
 		}
 	}
+	set = 1;
 	addr_len = (socklen_t)sizeof(struct sockaddr_in);
 	if (getsockname (fd, (struct sockaddr *) &addr, &addr_len) < 0) {
+		if(set)
+			close(fds[0]);
 		close(fd);
 		return -1;
 	}
-
+	if (bindall) {
+		addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	}
 	if (sctp_connectx(fds[0], (struct sockaddr *) &addr, 1, NULL) < 0) {
 		close(fd);
-		close(fds[0]);
+		if(set)
+			close(fds[0]);
 		return -1;
 	}
 	fds[1] = fd;
@@ -376,9 +395,14 @@ sctp_socketpair_1tom(int *fds, sctp_assoc_t *ids)
 
 	if (getsockname (fds[0], (struct sockaddr *) &addr, &addr_len) < 0) {
 		close(fd);
+		printf("Can't get socket name2\n");
+		if (set) 
+			close (fds[0]);
 		return -1;
 	}
-
+	if (bindall) {
+		addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	}
 	ids[1] = __get_assoc_id (fds[1], (struct sockaddr *)&addr);
 	return 0;
 }
@@ -615,4 +639,51 @@ int sctp_set_ndelay(int fd, uint32_t val)
 	result = setsockopt(fd, IPPROTO_SCTP, SCTP_NODELAY, 
 			    &val, len);
 	return(result);
+}
+
+int sctp_set_autoclose(int fd, uint32_t val)
+{
+	int result;
+	socklen_t len;
+	len = sizeof(val);
+
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_AUTOCLOSE, 
+			    &val, len);
+	return(result);
+
+}
+
+int sctp_get_autoclose(int fd, uint32_t *val)
+{
+	int result;
+	socklen_t len;
+	len = sizeof(*val);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_AUTOCLOSE, 
+			    val, &len);
+	return (result);
+}
+
+int sctp_set_peer_prim(int fd, sctp_assoc_t id,  struct sockaddr *sa)
+{
+
+	struct sctp_setpeerprim prim;	
+	int result;
+	socklen_t len;
+	if(sa == NULL) {
+		errno = EINVAL;
+		return (-1);
+	}
+	if(sa->sa_family == AF_INET) {
+		memcpy(&prim.sspp_addr, sa, sizeof(struct sockaddr_in));
+	}else if (sa->sa_family == AF_INET6) {
+		memcpy(&prim.sspp_addr, sa, sizeof(struct sockaddr_in6));
+	} else {
+		errno = EINVAL;
+		return (-1);
+	}
+	prim.sspp_assoc_id = id;
+	len = sizeof(prim);
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_SET_PEER_PRIMARY_ADDR,
+			    &prim, len);
+	return (result);
 }

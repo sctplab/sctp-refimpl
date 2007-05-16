@@ -1,6 +1,6 @@
-int  sctp_one2one(unsigned short port, int should_listen);
-int sctp_socketpair(int *);
-int sctp_socketpair_reuse(int fd, int *fds);
+int  sctp_one2one(unsigned short port, int should_listen, int bindall);
+int sctp_socketpair(int *, int bindall);
+int sctp_socketpair_reuse(int fd, int *fds, int bindall);
 int sctp_socketstar(int *, int *, unsigned int);
 int sctp_shutdown(int);
 int sctp_abort(int);
@@ -15,8 +15,8 @@ int sctp_get_initial_rto(int fd, sctp_assoc_t, uint32_t *);
 int sctp_get_maximum_rto(int fd, sctp_assoc_t, uint32_t *);
 int sctp_get_minimum_rto(int fd, sctp_assoc_t, uint32_t *);
 
-int sctp_one2many(unsigned short port);
-int sctp_socketpair_1tom(int *fds, sctp_assoc_t *asocids);
+int sctp_one2many(unsigned short port, int bindall);
+int sctp_socketpair_1tom(int *fds, sctp_assoc_t *asocids, int bindall);
 int sctp_get_assoc_info(int fd, sctp_assoc_t assoc_id, 
 			uint16_t *asoc_maxrxt,
 			uint16_t *peer_dest_cnt, 
@@ -67,4 +67,7 @@ int sctp_set_im_maxattempt(int fd, uint16_t max);
 int sctp_set_im_maxtimeo(int fd, uint16_t timeo);
 int sctp_get_ndelay(int fd, uint32_t *val);
 int sctp_set_ndelay(int fd, uint32_t val);
+int sctp_get_autoclose(int fd, uint32_t *val);
+int sctp_set_autoclose(int fd, uint32_t val);
 
+int sctp_set_peer_prim(int, sctp_assoc_t,  struct sockaddr *);
