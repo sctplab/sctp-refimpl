@@ -2686,3 +2686,58 @@ DEFINE_APITEST(associnfo, sso_pdest_asoc_1_M)
 	close (fds[1]);
 	return(retstring);
 }
+
+
+/********************************************************
+ *
+ * SCTP_initmsg tests
+ *
+ ********************************************************/
+
+DEFINE_APITEST(initmsg, gso_1_1_defaults)
+{
+	int fd, result;
+	uint32_t ostreams, istreams;
+	uint16_t max, timeo;
+
+	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
+	
+	result = sctp_get_initmsg(fd, &ostreams, &istreams,
+				  &max, &timeo);
+	close(fd);
+	if(result < 0) {
+		return(strerror(errno));		
+	}
+	if (max != 8) {
+		return "Default not RFC 2960 compliant (max_attempts)";
+	}
+	if (timeo != 60000) {
+		return "Default not RFC 2960 compliant (max_init_timeo)";
+	}
+	return(NULL);
+}
+
+
+DEFINE_APITEST(initmsg, gso_1_M_defaults)
+{
+	int fd,result;
+	uint32_t ostreams, istreams;
+	uint16_t max, timeo;
+
+	fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
+	
+	result = sctp_get_initmsg(fd, &ostreams, &istreams,
+				  &max, &timeo);
+	close(fd);
+	if(result < 0) {
+		return(strerror(errno));		
+	}
+	if (max != 8) {
+		return "Default not RFC 2960 compliant (max_attempts)";
+	}
+	if (timeo != 60000) {
+		return "Default not RFC 2960 compliant (max_init_timeo)";
+	}
+	return(NULL);
+}
+
