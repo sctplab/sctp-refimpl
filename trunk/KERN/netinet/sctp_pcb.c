@@ -2727,8 +2727,8 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 		uint16_t first, last, candiate;
                 uint16_t count;
 		int done;
-/* for panda simply use fixed high/low values */
-#if !defined(__Panda__)
+
+#if defined(__FreeBSD__) || defined(__APPLE__)		
                 if (ip_inp->inp_flags & INP_HIGHPORT) {
                         first = ipport_hifirstauto;
                         last  = ipport_hilastauto;
@@ -2762,15 +2762,12 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
                         first = ipport_lowfirstauto;
                         last  = ipport_lowlastauto;
                 } else {
+#endif
                         first = ipport_firstauto;
                         last  = ipport_lastauto;
+#if defined(__FreeBSD__) || defined(__APPLE__)
                 }
-#else
-                /* For panda use these fixed values */
-                first = IPPORT_RESERVED;
-                last  = IPPORT_MAX;
 #endif
- 
 		if (first > last) {
 			uint16_t temp;
 			
