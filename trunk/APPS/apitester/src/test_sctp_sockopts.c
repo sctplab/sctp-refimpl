@@ -2701,6 +2701,9 @@ DEFINE_APITEST(initmsg, gso_1_1_defaults)
 	uint16_t max, timeo;
 
 	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
+	if(fd < 0) {
+		return(strerror(errno));
+	}
 	
 	result = sctp_get_initmsg(fd, &ostreams, &istreams,
 				  &max, &timeo);
@@ -2725,6 +2728,9 @@ DEFINE_APITEST(initmsg, gso_1_M_defaults)
 	uint16_t max, timeo;
 
 	fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
+	if(fd < 0) {
+		return(strerror(errno));
+	}
 	
 	result = sctp_get_initmsg(fd, &ostreams, &istreams,
 				  &max, &timeo);
@@ -2749,6 +2755,9 @@ DEFINE_APITEST(initmsg, gso_1_1_set_ostrm)
 	uint32_t newval;
 
 	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
+	if(fd < 0) {
+		return(strerror(errno));
+	}
 	
 	result = sctp_get_initmsg(fd, &ostreams[0], &istreams[0],
 				  &max[0], &timeo[0]);
@@ -2791,6 +2800,9 @@ DEFINE_APITEST(initmsg, gso_1_1_set_istrm)
 	uint32_t newval;
 
 	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
+	if(fd < 0) {
+		return(strerror(errno));
+	}
 	
 	result = sctp_get_initmsg(fd, &ostreams[0], &istreams[0],
 				  &max[0], &timeo[0]);
@@ -2834,6 +2846,9 @@ DEFINE_APITEST(initmsg, gso_1_1_set_max)
 	uint16_t newval;
 
 	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
+	if(fd < 0) {
+		return(strerror(errno));
+	}
 	
 	result = sctp_get_initmsg(fd, &ostreams[0], &istreams[0],
 				  &max[0], &timeo[0]);
@@ -2876,6 +2891,9 @@ DEFINE_APITEST(initmsg, gso_1_1_set_timeo)
 	uint16_t newval;
 
 	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
+	if(fd < 0) {
+		return(strerror(errno));
+	}
 	
 	result = sctp_get_initmsg(fd, &ostreams[0], &istreams[0],
 				  &max[0], &timeo[0]);
@@ -2918,6 +2936,9 @@ DEFINE_APITEST(initmsg, gso_1_M_set_ostrm)
 	uint32_t newval;
 
 	fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
+	if(fd < 0) {
+		return(strerror(errno));
+	}
 	
 	result = sctp_get_initmsg(fd, &ostreams[0], &istreams[0],
 				  &max[0], &timeo[0]);
@@ -2961,6 +2982,9 @@ DEFINE_APITEST(initmsg, gso_1_M_set_istrm)
 	uint32_t newval;
 
 	fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
+	if(fd < 0) {
+		return(strerror(errno));
+	}
 	
 	result = sctp_get_initmsg(fd, &ostreams[0], &istreams[0],
 				  &max[0], &timeo[0]);
@@ -3003,6 +3027,9 @@ DEFINE_APITEST(initmsg, gso_1_M_set_max)
 	uint16_t newval;
 
 	fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
+	if(fd < 0) {
+		return(strerror(errno));
+	}
 	
 	result = sctp_get_initmsg(fd, &ostreams[0], &istreams[0],
 				  &max[0], &timeo[0]);
@@ -3045,12 +3072,15 @@ DEFINE_APITEST(initmsg, gso_1_M_set_timeo)
 	uint16_t newval;
 
 	fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
+	if(fd < 0) {
+		return(strerror(errno));
+	}
 	
 	result = sctp_get_initmsg(fd, &ostreams[0], &istreams[0],
 				  &max[0], &timeo[0]);
 	if(result < 0) {
 		close(fd);
-		return(strerror(errno));		
+		return(strerror(errno));
 	}
 	newval = 2 * max[0];
 	result = sctp_set_im_maxtimeo(fd, newval);
@@ -3077,4 +3107,108 @@ DEFINE_APITEST(initmsg, gso_1_M_set_timeo)
 		return "failed to set new max timeo value";
 	}
 	return(NULL);
+}
+
+/********************************************************
+ *
+ * SCTP_NODELAY tests
+ *
+ ********************************************************/
+
+DEFINE_APITEST(initmsg, gso_1_1_def_ndelay)
+{
+	uint32_t val;
+	int fd, result;
+	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
+	if(fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_ndelay(fd, &val);
+	close(fd);
+	if(result) {
+		return(strerror(errno));
+	}
+	if(val == 1) {
+		return "non-compliant NO-Delay should default to off";
+	}
+	return NULL;
+}
+DEFINE_APITEST(initmsg, gso_1_M_def_ndelay)
+{
+	uint32_t val;
+	int fd, result;
+	fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
+	if(fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_ndelay(fd, &val);
+	close(fd);
+	if(result) {
+		return(strerror(errno));
+	}
+	if(val == 1) {
+		return "non-compliant NO-Delay should default to off";
+	}
+	return NULL;
+}
+DEFINE_APITEST(initmsg, gso_1_1_set_ndelay)
+{
+	uint32_t val[3];
+	int fd, result;
+	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
+	if(fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_ndelay(fd, &val[0]);
+	if(result) {
+		close(fd);
+		return(strerror(errno));
+	}
+	val[1] = !val[0];
+	result = sctp_set_ndelay(fd, val[1]);
+	if(result) {
+		close(fd);
+		return(strerror(errno));
+	}
+	result = sctp_get_ndelay(fd, &val[2]);
+	if(result) {
+		close(fd);
+		return(strerror(errno));
+	}
+	close (fd);
+	if(val[1] != val[2]) {
+		return "could not toggle the value";
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(initmsg, gso_1_M_set_ndelay)
+{
+	uint32_t val[3];
+	int fd, result;
+	fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
+	if(fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_ndelay(fd, &val[0]);
+	if(result) {
+		close(fd);
+		return(strerror(errno));
+	}
+	val[1] = !val[0];
+	result = sctp_set_ndelay(fd, val[1]);
+	if(result) {
+		close(fd);
+		return(strerror(errno));
+	}
+	result = sctp_get_ndelay(fd, &val[2]);
+	if(result) {
+		close(fd);
+		return(strerror(errno));
+	}
+	close (fd);
+	if(val[1] != val[2]) {
+		return "could not toggle the value";
+	}
+	return NULL;
 }

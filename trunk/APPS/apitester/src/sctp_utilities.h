@@ -65,3 +65,6 @@ int sctp_set_im_ostream(int fd, uint32_t ostream);
 int sctp_set_im_istream(int fd, uint32_t istream);
 int sctp_set_im_maxattempt(int fd, uint16_t max);
 int sctp_set_im_maxtimeo(int fd, uint16_t timeo);
+int sctp_get_ndelay(int fd, uint32_t *val);
+int sctp_set_ndelay(int fd, uint32_t val);
+
