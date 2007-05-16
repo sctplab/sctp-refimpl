@@ -120,6 +120,17 @@ document sctp_allep
 Show all SCTP endpoints
 end
 
+define sctp_allepports
+set $_inp=sctppcbinfo.listhead.lh_first
+while ( $_inp != 0 )
+   print $_inp->ip_inp.inp.inp_inc.inc_ie.ie_lport 
+set $_inp=$_inp->sctp_list.le_next
+end
+end
+document sctp_allepports
+Show all SCTP endpoint port numbers
+end
+
 define sctp_allreadq
  set $_inp=sctppcbinfo.listhead.lh_first
  while ( $_inp != 0 )
