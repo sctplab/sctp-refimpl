@@ -2741,3 +2741,340 @@ DEFINE_APITEST(initmsg, gso_1_M_defaults)
 	return(NULL);
 }
 
+DEFINE_APITEST(initmsg, gso_1_1_set_ostrm)
+{
+	int fd, result;
+	uint32_t ostreams[2], istreams[2];
+	uint16_t max[2], timeo[2];
+	uint32_t newval;
+
+	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
+	
+	result = sctp_get_initmsg(fd, &ostreams[0], &istreams[0],
+				  &max[0], &timeo[0]);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));		
+	}
+	newval = 2 * ostreams[0];
+	result = sctp_set_im_ostream(fd, newval);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));		
+	}
+	result = sctp_get_initmsg(fd, &ostreams[1], &istreams[1],
+				  &max[1], &timeo[1]);
+	close(fd);
+	if(result < 0) {
+		return(strerror(errno));		
+	}
+	if (ostreams[1] != newval) {
+		return "failed to set new ostream value";
+	}
+	if (istreams[0] != istreams[1]) {
+		return "ostream set changed istream value";
+	}
+	if (max[0] != max[1]) {
+		return "ostream set changed max attempts value";
+	}
+	if (timeo[0] != timeo[1]) {
+		return "ostream set changed max init timeout value";
+	}
+
+	return(NULL);
+}
+DEFINE_APITEST(initmsg, gso_1_1_set_istrm)
+{
+	int fd, result;
+	uint32_t ostreams[2], istreams[2];
+	uint16_t max[2], timeo[2];
+	uint32_t newval;
+
+	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
+	
+	result = sctp_get_initmsg(fd, &ostreams[0], &istreams[0],
+				  &max[0], &timeo[0]);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));		
+	}
+	newval = 2 * istreams[0];
+	result = sctp_set_im_istream(fd, newval);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));		
+	}
+	result = sctp_get_initmsg(fd, &ostreams[1], &istreams[1],
+				  &max[1], &timeo[1]);
+	close(fd);
+	if(result < 0) {
+		return(strerror(errno));		
+	}
+	if (ostreams[0] != ostreams[1]) {
+		return "istream set changed ostream value";
+	}
+	if (newval != istreams[1]) {
+		return "failed to set new istream value";
+	}
+	if (max[0] != max[1]) {
+		return "istream set changed max attempts value";
+	}
+	if (timeo[0] != timeo[1]) {
+		return "istream set changed max init timeout value";
+	}
+	return(NULL);
+}
+
+
+DEFINE_APITEST(initmsg, gso_1_1_set_max)
+{
+	int fd, result;
+	uint32_t ostreams[2], istreams[2];
+	uint16_t max[2], timeo[2];
+	uint16_t newval;
+
+	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
+	
+	result = sctp_get_initmsg(fd, &ostreams[0], &istreams[0],
+				  &max[0], &timeo[0]);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));		
+	}
+	newval = 2 * max[0];
+	result = sctp_set_im_maxattempt(fd, newval);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));		
+	}
+	result = sctp_get_initmsg(fd, &ostreams[1], &istreams[1],
+				  &max[1], &timeo[1]);
+	close(fd);
+	if(result < 0) {
+		return(strerror(errno));		
+	}
+	if (ostreams[0] != ostreams[1]) {
+		return "max attempt set changed ostream value";
+	}
+	if (istreams[0] != istreams[1]) {
+		return "max attempt set changed max attempts value";
+	}
+	if (newval != max[1]) {
+		return "failed to set new max attempt value";
+	}
+	if (timeo[0] != timeo[1]) {
+		return "max attempt set changed max init timeout value";
+	}
+	return(NULL);
+}
+
+DEFINE_APITEST(initmsg, gso_1_1_set_timeo)
+{
+	int fd, result;
+	uint32_t ostreams[2], istreams[2];
+	uint16_t max[2], timeo[2];
+	uint16_t newval;
+
+	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
+	
+	result = sctp_get_initmsg(fd, &ostreams[0], &istreams[0],
+				  &max[0], &timeo[0]);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));		
+	}
+	newval = 2 * max[0];
+	result = sctp_set_im_maxtimeo(fd, newval);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));		
+	}
+	result = sctp_get_initmsg(fd, &ostreams[1], &istreams[1],
+				  &max[1], &timeo[1]);
+	close(fd);
+	if(result < 0) {
+		return(strerror(errno));		
+	}
+	if (ostreams[0] != ostreams[1]) {
+		return "max timeo set changed ostream value";
+	}
+	if (istreams[0] != istreams[1]) {
+		return "max timeo set changed max attempts value";
+	}
+	if (max[0] != max[1]) {
+		return "max timo set changed max attempts value";
+	}
+	if (newval != timeo[1]) {
+		return "failed to set new max timeo value";
+	}
+	return(NULL);
+}
+
+DEFINE_APITEST(initmsg, gso_1_M_set_ostrm)
+{
+	int fd, result;
+	uint32_t ostreams[2], istreams[2];
+	uint16_t max[2], timeo[2];
+	uint32_t newval;
+
+	fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
+	
+	result = sctp_get_initmsg(fd, &ostreams[0], &istreams[0],
+				  &max[0], &timeo[0]);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));		
+	}
+	newval = 2 * ostreams[0];
+	result = sctp_set_im_ostream(fd, newval);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));		
+	}
+	result = sctp_get_initmsg(fd, &ostreams[1], &istreams[1],
+				  &max[1], &timeo[1]);
+	close(fd);
+	if(result < 0) {
+		return(strerror(errno));		
+	}
+	if (ostreams[1] != newval) {
+		return "failed to set new ostream value";
+	}
+	if (istreams[0] != istreams[1]) {
+		return "ostream set changed istream value";
+	}
+	if (max[0] != max[1]) {
+		return "ostream set changed max attempts value";
+	}
+	if (timeo[0] != timeo[1]) {
+		return "ostream set changed max init timeout value";
+	}
+
+	return(NULL);
+}
+
+DEFINE_APITEST(initmsg, gso_1_M_set_istrm)
+{
+	int fd, result;
+	uint32_t ostreams[2], istreams[2];
+	uint16_t max[2], timeo[2];
+	uint32_t newval;
+
+	fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
+	
+	result = sctp_get_initmsg(fd, &ostreams[0], &istreams[0],
+				  &max[0], &timeo[0]);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));		
+	}
+	newval = 2 * istreams[0];
+	result = sctp_set_im_istream(fd, newval);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));		
+	}
+	result = sctp_get_initmsg(fd, &ostreams[1], &istreams[1],
+				  &max[1], &timeo[1]);
+	close(fd);
+	if(result < 0) {
+		return(strerror(errno));		
+	}
+	if (ostreams[0] != ostreams[1]) {
+		return "istream set changed ostream value";
+	}
+	if (newval != istreams[1]) {
+		return "failed to set new istream value";
+	}
+	if (max[0] != max[1]) {
+		return "istream set changed max attempts value";
+	}
+	if (timeo[0] != timeo[1]) {
+		return "istream set changed max init timeout value";
+	}
+	return(NULL);
+}
+
+DEFINE_APITEST(initmsg, gso_1_M_set_max)
+{
+	int fd, result;
+	uint32_t ostreams[2], istreams[2];
+	uint16_t max[2], timeo[2];
+	uint16_t newval;
+
+	fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
+	
+	result = sctp_get_initmsg(fd, &ostreams[0], &istreams[0],
+				  &max[0], &timeo[0]);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));		
+	}
+	newval = 2 * max[0];
+	result = sctp_set_im_maxattempt(fd, newval);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));		
+	}
+	result = sctp_get_initmsg(fd, &ostreams[1], &istreams[1],
+				  &max[1], &timeo[1]);
+	close(fd);
+	if(result < 0) {
+		return(strerror(errno));		
+	}
+	if (ostreams[0] != ostreams[1]) {
+		return "max attempt set changed ostream value";
+	}
+	if (istreams[0] != istreams[1]) {
+		return "max attempt set changed max attempts value";
+	}
+	if (newval != max[1]) {
+		return "failed to set new max attempt value";
+	}
+	if (timeo[0] != timeo[1]) {
+		return "max attempt set changed max init timeout value";
+	}
+	return(NULL);
+}
+
+DEFINE_APITEST(initmsg, gso_1_M_set_timeo)
+{
+	int fd, result;
+	uint32_t ostreams[2], istreams[2];
+	uint16_t max[2], timeo[2];
+	uint16_t newval;
+
+	fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
+	
+	result = sctp_get_initmsg(fd, &ostreams[0], &istreams[0],
+				  &max[0], &timeo[0]);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));		
+	}
+	newval = 2 * max[0];
+	result = sctp_set_im_maxtimeo(fd, newval);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));		
+	}
+	result = sctp_get_initmsg(fd, &ostreams[1], &istreams[1],
+				  &max[1], &timeo[1]);
+	close(fd);
+	if(result < 0) {
+		return(strerror(errno));		
+	}
+	if (ostreams[0] != ostreams[1]) {
+		return "max timeo set changed ostream value";
+	}
+	if (istreams[0] != istreams[1]) {
+		return "max timeo set changed max attempts value";
+	}
+	if (max[0] != max[1]) {
+		return "max timo set changed max attempts value";
+	}
+	if (newval != timeo[1]) {
+		return "failed to set new max timeo value";
+	}
+	return(NULL);
+}
