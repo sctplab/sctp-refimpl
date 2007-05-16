@@ -18,7 +18,7 @@ DEFINE_APITEST(connect, non_listen)
 	struct sockaddr_in addr;
 	socklen_t addr_len;
 
-	fds = sctp_one2one(0, 0);
+	fds = sctp_one2one(0, 0, 0);
 	if (fds  < 0)
 		return strerror(errno);
 
@@ -28,7 +28,7 @@ DEFINE_APITEST(connect, non_listen)
 		return strerror(errno);
 	}
 	
-	fdc = sctp_one2one(0, 0);
+	fdc = sctp_one2one(0, 0, 0);
 	if (fdc  < 0) {
 		close(fds);
 		return strerror(errno);
@@ -50,7 +50,7 @@ DEFINE_APITEST(connect, listen)
 	struct sockaddr_in addr;
 	socklen_t addr_len;
 	
-	fds = sctp_one2one(0, 1);
+	fds = sctp_one2one(0, 1, 0);
 	if (fds  < 0)
 		return strerror(errno);
 		
@@ -60,7 +60,7 @@ DEFINE_APITEST(connect, listen)
 		return strerror(errno);
 	}
 	
-	fdc = sctp_one2one(0, 0);
+	fdc = sctp_one2one(0, 0, 0);
 	if (fdc  < 0) {
 		close(fds);
 		return strerror(errno);
@@ -82,7 +82,7 @@ DEFINE_APITEST(connect, self_non_listen)
 	struct sockaddr_in addr;
 	socklen_t addr_len;
 	
-	fd = sctp_one2one(0, 0);
+	fd = sctp_one2one(0, 0, 0);
 	if (fd  < 0)
 		return strerror(errno);
 
@@ -112,7 +112,7 @@ DEFINE_APITEST(connect, self_listen)
 	struct sockaddr_in addr;
 	socklen_t addr_len;
 	
-	fd = sctp_one2one(0, 1);
+	fd = sctp_one2one(0, 1, 0);
 	addr_len = (socklen_t)sizeof(struct sockaddr_in);
 	if (getsockname(fd, (struct sockaddr *) &addr, &addr_len) < 0) {
 		close(fd);

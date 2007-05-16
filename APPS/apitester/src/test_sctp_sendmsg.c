@@ -18,7 +18,7 @@ DEFINE_APITEST(sctp_sendmsg, c_p_c_a)
 	struct sockaddr_in addr;
 	socklen_t size;
 	
-	if (sctp_socketpair(fd) < 0)
+	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
 	
 	size = (socklen_t)sizeof(struct sockaddr_in);
@@ -43,7 +43,7 @@ DEFINE_APITEST(sctp_sendmsg, c_p_c_a_over)
 	struct sockaddr_in addr;
 	socklen_t size;
 	
-	if (sctp_socketpair(fd) < 0)
+	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
 	
 	size = (socklen_t)sizeof(struct sockaddr_in);
@@ -68,7 +68,7 @@ DEFINE_APITEST(sctp_sendmsg, w_p_c_a)
 	struct sockaddr_in addr;
 	socklen_t size;
 	
-	if (sctp_socketpair(fd) < 0)
+	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
 	
 	size = (socklen_t)sizeof(struct sockaddr_in);
@@ -94,7 +94,7 @@ DEFINE_APITEST(sctp_sendmsg, w_p_c_a_over)
 	struct sockaddr_in addr;
 	socklen_t size;
 	
-	if (sctp_socketpair(fd) < 0)
+	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
 	
 	size = (socklen_t)sizeof(struct sockaddr_in);
@@ -120,7 +120,7 @@ DEFINE_APITEST(sctp_sendmsg, c_p_w_a)
 	struct sockaddr_in addr;
 	socklen_t size;
 	
-	if (sctp_socketpair(fd) < 0)
+	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
 	
 	size = (socklen_t)sizeof(struct sockaddr_in);
@@ -146,7 +146,7 @@ DEFINE_APITEST(sctp_sendmsg, c_p_w_a_over)
 	struct sockaddr_in addr;
 	socklen_t size;
 	
-	if (sctp_socketpair(fd) < 0)
+	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
 	
 	size = (socklen_t)sizeof(struct sockaddr_in);
@@ -172,7 +172,7 @@ DEFINE_APITEST(sctp_sendmsg, w_p_w_a)
 	struct sockaddr_in addr;
 	socklen_t size;
 	
-	if (sctp_socketpair(fd) < 0)
+	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
 	
 	size = (socklen_t)sizeof(struct sockaddr_in);
@@ -199,7 +199,7 @@ DEFINE_APITEST(sctp_sendmsg, w_p_w_a_over)
 	struct sockaddr_in addr;
 	socklen_t size;
 	
-	if (sctp_socketpair(fd) < 0)
+	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
 	
 	size = (socklen_t)sizeof(struct sockaddr_in);
@@ -226,7 +226,7 @@ DEFINE_APITEST(sctp_sendmsg, b_p_c_a)
 	struct sockaddr_in addr;
 	socklen_t size;
 	
-	if (sctp_socketpair(fd) < 0)
+	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
 	
 	size = (socklen_t)sizeof(struct sockaddr_in);
@@ -252,7 +252,7 @@ DEFINE_APITEST(sctp_sendmsg, b_p_c_a_over)
 	struct sockaddr_in addr;
 	socklen_t size;
 	
-	if (sctp_socketpair(fd) < 0)
+	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
 	
 	size = (socklen_t)sizeof(struct sockaddr_in);
@@ -278,7 +278,7 @@ DEFINE_APITEST(sctp_sendmsg, c_p_b_a)
 	struct sockaddr_in addr;
 	socklen_t size;
 	
-	if (sctp_socketpair(fd) < 0)
+	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
 	
 	size = (socklen_t)sizeof(struct sockaddr_in);
@@ -304,7 +304,7 @@ DEFINE_APITEST(sctp_sendmsg, c_p_b_a_over)
 	struct sockaddr_in addr;
 	socklen_t size;
 	
-	if (sctp_socketpair(fd) < 0)
+	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
 	
 	size = (socklen_t)sizeof(struct sockaddr_in);
@@ -330,7 +330,7 @@ DEFINE_APITEST(sctp_sendmsg, b_p_b_a)
 	struct sockaddr_in addr;
 	socklen_t size;
 	
-	if (sctp_socketpair(fd) < 0)
+	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
 	
 	size = (socklen_t)sizeof(struct sockaddr_in);
@@ -357,7 +357,7 @@ DEFINE_APITEST(sctp_sendmsg, b_p_b_a_over)
 	struct sockaddr_in addr;
 	socklen_t size;
 	
-	if (sctp_socketpair(fd) < 0)
+	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
 	
 	size = (socklen_t)sizeof(struct sockaddr_in);
@@ -384,7 +384,7 @@ DEFINE_APITEST(sctp_sendmsg, w_p_b_a)
 	struct sockaddr_in addr;
 	socklen_t size;
 	
-	if (sctp_socketpair(fd) < 0)
+	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
 	
 	size = (socklen_t)sizeof(struct sockaddr_in);
@@ -411,7 +411,7 @@ DEFINE_APITEST(sctp_sendmsg, w_p_b_a_over)
 	struct sockaddr_in addr;
 	socklen_t size;
 	
-	if (sctp_socketpair(fd) < 0)
+	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
 	
 	size = (socklen_t)sizeof(struct sockaddr_in);
@@ -438,7 +438,7 @@ DEFINE_APITEST(sctp_sendmsg, b_p_w_a)
 	struct sockaddr_in addr;
 	socklen_t size;
 	
-	if (sctp_socketpair(fd) < 0)
+	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
 	
 	size = (socklen_t)sizeof(struct sockaddr_in);
@@ -465,7 +465,7 @@ DEFINE_APITEST(sctp_sendmsg, b_p_w_a_over)
 	struct sockaddr_in addr;
 	socklen_t size;
 	
-	if (sctp_socketpair(fd) < 0)
+	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
 	
 	size = (socklen_t)sizeof(struct sockaddr_in);
@@ -491,7 +491,7 @@ DEFINE_APITEST(sctp_sendmsg, non_null_zero)
 	struct sockaddr_in addr;
 	socklen_t size;
 	
-	if (sctp_socketpair(fd) < 0)
+	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
 	
 	size = (socklen_t)sizeof(struct sockaddr_in);
@@ -518,7 +518,7 @@ DEFINE_APITEST(sctp_sendmsg, non_null_zero_over)
 	struct sockaddr_in addr;
 	socklen_t size;
 	
-	if (sctp_socketpair(fd) < 0)
+	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
 	
 	size = (socklen_t)sizeof(struct sockaddr_in);
@@ -545,7 +545,7 @@ DEFINE_APITEST(sctp_sendmsg, null_zero)
 	struct sockaddr_in addr;
 	socklen_t size;
 	
-	if (sctp_socketpair(fd) < 0)
+	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
 	
 	size = (socklen_t)sizeof(struct sockaddr_in);
@@ -572,7 +572,7 @@ DEFINE_APITEST(sctp_sendmsg, null_zero_over)
 	struct sockaddr_in addr;
 	socklen_t size;
 	
-	if (sctp_socketpair(fd) < 0)
+	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
 	
 	size = (socklen_t)sizeof(struct sockaddr_in);
@@ -599,7 +599,7 @@ DEFINE_APITEST(sctp_sendmsg, null_non_zero)
 	struct sockaddr_in addr;
 	socklen_t size;
 	
-	if (sctp_socketpair(fd) < 0)
+	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
 	
 	size = (socklen_t)sizeof(struct sockaddr_in);
@@ -626,7 +626,7 @@ DEFINE_APITEST(sctp_sendmsg, null_non_zero_over)
 	struct sockaddr_in addr;
 	socklen_t size;
 	
-	if (sctp_socketpair(fd) < 0)
+	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
 	
 	size = (socklen_t)sizeof(struct sockaddr_in);

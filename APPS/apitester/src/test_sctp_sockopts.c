@@ -684,7 +684,7 @@ DEFINE_APITEST(rtoinfo, gso_1_1_c_bad_id)
 {
 	int fd[2], result;
 
-	if (sctp_socketpair(fd) < 0)
+	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
 		
 	result = sctp_get_rto_info(fd[0], 1, NULL, NULL, NULL);
@@ -703,7 +703,7 @@ DEFINE_APITEST(rtoinfo, sso_1_1_c_bad_id)
 	int fd[2], result;
 	uint32_t init, max, min;
 	
-	if (sctp_socketpair(fd) < 0)
+	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
 
 	result = sctp_get_rto_info(fd[0], 0, &init, &max, &min);
@@ -1182,7 +1182,7 @@ DEFINE_APITEST(associnfo, sso_rxt_1_1)
 	int newval;
 	char *retstring=NULL;
 
-	fd = sctp_one2one(0,1);
+	fd = sctp_one2one(0,1, 0);
 
 	/* Get all the values for assoc info on ep */
 	result = sctp_get_assoc_info(fd, 0, 
@@ -1245,7 +1245,7 @@ DEFINE_APITEST(associnfo, sso_rxt_1_M)
 	int newval;
 	char *retstring=NULL;
 
-	fd = sctp_one2many(0);
+	fd = sctp_one2many(0, 0);
 
 	/* Get all the values for assoc info on ep */
 	result = sctp_get_assoc_info(fd, 0, 
@@ -1309,7 +1309,7 @@ DEFINE_APITEST(associnfo, sso_rxt_asoc_1_1)
 	int fds[2];
 	char *retstring=NULL;
 
-	fd = sctp_one2one(0,1);
+	fd = sctp_one2one(0,1, 0);
 	if(fd < 0) {
 		return(strerror(errno));
 	}
@@ -1324,7 +1324,7 @@ DEFINE_APITEST(associnfo, sso_rxt_asoc_1_1)
 		retstring = strerror(errno);
 		goto out_nopair;
 	}
-	if (sctp_socketpair_reuse(fd, fds) < 0) {
+	if (sctp_socketpair_reuse(fd, fds, 0) < 0) {
 		retstring = strerror(errno);
 		close(fd);
 		goto out_nopair;
@@ -1406,7 +1406,7 @@ DEFINE_APITEST(associnfo, sso_rxt_asoc_1_M)
 	sctp_assoc_t ids[2];
 	char *retstring=NULL;
 
-	fds[0] = sctp_one2many(0);
+	fds[0] = sctp_one2many(0,0);
 	if(fds[0] < 0) {
 		return (strerror(errno));
 	}
@@ -1421,7 +1421,7 @@ DEFINE_APITEST(associnfo, sso_rxt_asoc_1_M)
 		retstring = strerror(errno);
 		goto out_nopair;
 	}
-	if (sctp_socketpair_1tom(fds, ids) < 0) {
+	if (sctp_socketpair_1tom(fds, ids, 0) < 0) {
 		retstring = strerror(errno);
 		close(fds[0]);
 		goto out_nopair;
@@ -1498,7 +1498,7 @@ DEFINE_APITEST(associnfo, sso_rxt_asoc_1_1_inherit)
 	int fds[2];
 	char *retstring=NULL;
 
-	fd = sctp_one2one(0,1);
+	fd = sctp_one2one(0,1, 0);
 	if(fd < 0) {
 		return(strerror(errno));
 	}
@@ -1550,7 +1550,7 @@ DEFINE_APITEST(associnfo, sso_rxt_asoc_1_1_inherit)
 	}
 
 
-	if (sctp_socketpair_reuse(fd, fds) < 0) {
+	if (sctp_socketpair_reuse(fd, fds, 0) < 0) {
 		retstring = strerror(errno);
 		close(fd);
 		goto out_nopair;
@@ -1598,7 +1598,7 @@ DEFINE_APITEST(associnfo, sso_rxt_asoc_1_M_inherit)
 	sctp_assoc_t ids[2];
 	char *retstring=NULL;
 
-	fds[0] = sctp_one2many(0);
+	fds[0] = sctp_one2many(0, 0);
 	if(fds[0] < 0) {
 		return(strerror(errno));
 	}
@@ -1650,7 +1650,7 @@ DEFINE_APITEST(associnfo, sso_rxt_asoc_1_M_inherit)
 	}
 
 
-	if (sctp_socketpair_1tom(fds, ids) < 0) {
+	if (sctp_socketpair_1tom(fds, ids, 0) < 0) {
 		retstring = strerror(errno);
 		close(fds[0]);
 		goto out_nopair;
@@ -1696,7 +1696,7 @@ DEFINE_APITEST(associnfo, sso_clife_1_1)
 	int newval;
 	char *retstring=NULL;
 
-	fd = sctp_one2one(0,1);
+	fd = sctp_one2one(0,1, 0);
 
 	/* Get all the values for assoc info on ep */
 	result = sctp_get_assoc_info(fd, 0, 
@@ -1759,7 +1759,7 @@ DEFINE_APITEST(associnfo, sso_clife_1_M)
 	int newval;
 	char *retstring=NULL;
 
-	fd = sctp_one2many(0);
+	fd = sctp_one2many(0, 0);
 
 	/* Get all the values for assoc info on ep */
 	result = sctp_get_assoc_info(fd, 0, 
@@ -1824,7 +1824,7 @@ DEFINE_APITEST(associnfo, sso_clife_asoc_1_1)
 	int fds[2];
 	char *retstring=NULL;
 
-	fd = sctp_one2one(0,1);
+	fd = sctp_one2one(0,1, 0);
 	if(fd < 0) {
 		return(strerror(errno));
 	}
@@ -1839,7 +1839,7 @@ DEFINE_APITEST(associnfo, sso_clife_asoc_1_1)
 		retstring = strerror(errno);
 		goto out_nopair;
 	}
-	if (sctp_socketpair_reuse(fd, fds) < 0) {
+	if (sctp_socketpair_reuse(fd, fds, 0) < 0) {
 		retstring = strerror(errno);
 		close(fd);
 		goto out_nopair;
@@ -1921,7 +1921,7 @@ DEFINE_APITEST(associnfo, sso_clife_asoc_1_M)
 	sctp_assoc_t ids[2];
 	char *retstring=NULL;
 
-	fds[0] = sctp_one2many(0);
+	fds[0] = sctp_one2many(0, 0);
 	if(fds[0] < 0) {
 		return (strerror(errno));
 	}
@@ -1936,7 +1936,7 @@ DEFINE_APITEST(associnfo, sso_clife_asoc_1_M)
 		retstring = strerror(errno);
 		goto out_nopair;
 	}
-	if (sctp_socketpair_1tom(fds, ids) < 0) {
+	if (sctp_socketpair_1tom(fds, ids,0) < 0) {
 		retstring = strerror(errno);
 		close(fds[0]);
 		goto out_nopair;
@@ -2013,7 +2013,7 @@ DEFINE_APITEST(associnfo, sso_clife_asoc_1_1_inherit)
 	int fds[2];
 	char *retstring=NULL;
 
-	fd = sctp_one2one(0,1);
+	fd = sctp_one2one(0,1, 0);
 	if(fd < 0) {
 		return(strerror(errno));
 	}
@@ -2065,7 +2065,7 @@ DEFINE_APITEST(associnfo, sso_clife_asoc_1_1_inherit)
 	}
 
 
-	if (sctp_socketpair_reuse(fd, fds) < 0) {
+	if (sctp_socketpair_reuse(fd, fds, 0) < 0) {
 		retstring = strerror(errno);
 		close(fd);
 		goto out_nopair;
@@ -2113,7 +2113,7 @@ DEFINE_APITEST(associnfo, sso_clife_asoc_1_M_inherit)
 	sctp_assoc_t ids[2];
 	char *retstring=NULL;
 
-	fds[0] = sctp_one2many(0);
+	fds[0] = sctp_one2many(0,0);
 	if(fds[0] < 0) {
 		return(strerror(errno));
 	}
@@ -2165,7 +2165,7 @@ DEFINE_APITEST(associnfo, sso_clife_asoc_1_M_inherit)
 	}
 
 
-	if (sctp_socketpair_1tom(fds, ids) < 0) {
+	if (sctp_socketpair_1tom(fds, ids, 0) < 0) {
 		retstring = strerror(errno);
 		close(fds[0]);
 		goto out_nopair;
@@ -2208,7 +2208,7 @@ DEFINE_APITEST(associnfo, sso_lrwnd_ep_1_1)
 	uint32_t peer_rwnd[2], local_rwnd[2], cookie_life[2];
 	int fd;
 	char *retstring=NULL;
-	fd = sctp_one2one(0,1);
+	fd = sctp_one2one(0,1, 0);
 	if(fd < 0) {
 		return(strerror(errno));
 	}
@@ -2264,7 +2264,7 @@ DEFINE_APITEST(associnfo, sso_lrwnd_ep_1_M)
 	uint32_t peer_rwnd[2], local_rwnd[2], cookie_life[2];
 	int fd;
 	char *retstring=NULL;
-	fd = sctp_one2many(0);
+	fd = sctp_one2many(0, 0);
 	if(fd < 0) {
 		return(strerror(errno));
 	}
@@ -2321,7 +2321,7 @@ DEFINE_APITEST(associnfo, sso_lrwnd_asoc_1_1)
 	uint32_t peer_rwnd[2], local_rwnd[2], cookie_life[2];
 	int fds[2];
 	char *retstring=NULL;
-	result = sctp_socketpair(fds);
+	result = sctp_socketpair(fds, 0);
 	if(result < 0) {
 		return(strerror(errno));
 	}
@@ -2382,7 +2382,7 @@ DEFINE_APITEST(associnfo, sso_lrwnd_asoc_1_M)
 	char *retstring=NULL;
 	fds[0] = fds[1] = -1;
 
-	result = sctp_socketpair_1tom(fds, ids);
+	result = sctp_socketpair_1tom(fds, ids, 0);
 	if(result < 0) {
 		return(strerror(errno));
 	}
@@ -2443,7 +2443,7 @@ DEFINE_APITEST(associnfo, sso_prwnd_asoc_1_1)
 	uint32_t peer_rwnd[2], local_rwnd[2], cookie_life[2];
 	int fds[2];
 	char *retstring=NULL;
-	result = sctp_socketpair(fds);
+	result = sctp_socketpair(fds, 0);
 	if(result < 0) {
 		return(strerror(errno));
 	}
@@ -2507,7 +2507,7 @@ DEFINE_APITEST(associnfo, sso_prwnd_asoc_1_M)
 	char *retstring=NULL;
 	fds[0] = fds[1] = -1;
 
-	result = sctp_socketpair_1tom(fds, ids);
+	result = sctp_socketpair_1tom(fds, ids, 0);
 	if(result < 0) {
 		return(strerror(errno));
 	}
@@ -2568,7 +2568,7 @@ DEFINE_APITEST(associnfo, sso_pdest_asoc_1_1)
 	uint32_t peer_rwnd[2], local_rwnd[2], cookie_life[2];
 	int fds[2];
 	char *retstring=NULL;
-	result = sctp_socketpair(fds);
+	result = sctp_socketpair(fds, 0);
 	if(result < 0) {
 		return(strerror(errno));
 	}
@@ -2632,7 +2632,7 @@ DEFINE_APITEST(associnfo, sso_pdest_asoc_1_M)
 	char *retstring=NULL;
 	fds[0] = fds[1] = -1;
 
-	result = sctp_socketpair_1tom(fds, ids);
+	result = sctp_socketpair_1tom(fds, ids, 0);
 	if(result < 0) {
 		return(strerror(errno));
 	}
@@ -3211,4 +3211,187 @@ DEFINE_APITEST(initmsg, gso_1_M_set_ndelay)
 		return "could not toggle the value";
 	}
 	return NULL;
+}
+
+/********************************************************
+ *
+ * SCTP_autoclose tests
+ *
+ ********************************************************/
+
+DEFINE_APITEST(initmsg, gso_1_1_def_autoclose)
+{
+	uint32_t aclose;
+	int result, fd;
+
+	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
+	if(fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_autoclose(fd, &aclose);
+	close(fd);
+	if (result < 0) {
+		return NULL;
+	}
+	if(aclose) {
+		return "autoclose enabled on 1-2-1?";
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(initmsg, gso_1_M_def_autoclose)
+{
+	uint32_t aclose;
+	int result, fd;
+
+	fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
+	if(fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_autoclose(fd, &aclose);
+	close(fd);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	if(aclose) {
+		return "autoclose is enabled by default";
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(initmsg, gso_1_1_set_autoclose)
+{
+	uint32_t aclose[3];
+	int result, fd;
+
+	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
+	if(fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_autoclose(fd, &aclose[0]);
+	if (result < 0) {
+		close(fd);
+		return NULL;
+	}
+	aclose[1] = 40;
+	result = sctp_set_autoclose(fd, aclose[1]);
+	if (result < 0) {
+		close(fd);
+		return NULL;
+	}
+	result = sctp_get_autoclose(fd, &aclose[2]);
+	close(fd);
+	if (result < 0) {
+		return NULL;
+	}
+	if(aclose[1] == aclose[2]) {
+		return "1-2-1 allowed set of auto close";
+	}
+	return NULL;
+}
+
+
+DEFINE_APITEST(initmsg, gso_1_M_set_autoclose)
+{
+	uint32_t aclose[3];
+	int result, fd;
+
+	fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
+	if(fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_autoclose(fd, &aclose[0]);
+	if (result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	aclose[1] = 40;
+	result = sctp_set_autoclose(fd, aclose[1]);
+	if (result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	result = sctp_get_autoclose(fd, &aclose[2]);
+	close(fd);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	if(aclose[1] != aclose[2]) {
+		return "Can't set auto close to new value";
+	}
+	return NULL;
+}
+
+
+/********************************************************
+ *
+ * SCTP_SET_PEER_PRIMARY tests
+ *
+ ********************************************************/
+
+DEFINE_APITEST(initmsg, gso_1_1_set_peerprim)
+{
+	int fds[2];
+	int result, num;
+	char *retstring = NULL;
+	struct sockaddr *sa=NULL;;
+
+	result = sctp_socketpair(fds, 1);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	num = sctp_getladdrs(fds[0], 0, &sa);
+	if( num < 0) {
+		retstring = "sctp_getladdr failed";
+		goto out;
+	}
+	if (num < 2) {
+		sctp_freeladdrs(sa);
+		retstring = "host is not multi-homed can't run test";
+		goto out;
+	}
+	result = sctp_set_peer_prim(fds[0], 0,  sa);
+	if (result < 0) {
+		retstring = strerror(errno);
+	}
+	sctp_freeladdrs(sa);
+ out:
+	close(fds[0]);
+	close(fds[1]);
+	return (retstring);
+}
+
+DEFINE_APITEST(initmsg, gso_1_M_set_peerprim)
+{
+	int fds[2];
+	sctp_assoc_t ids[2];
+	int result, num;
+	char *retstring = NULL;
+	struct sockaddr *sa=NULL;;
+
+	fds[0] = fds[1] = -1;
+	result =  sctp_socketpair_1tom(fds, ids, 1);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	num = sctp_getladdrs(fds[0], ids[0], &sa);
+	if( num < 0) {
+		retstring = "sctp_getladdr failed";
+		goto out;
+	}
+	if (num < 2) {
+		sctp_freeladdrs(sa);
+		retstring = "host is not multi-homed can't run test";
+		goto out;
+	}
+	result = sctp_set_peer_prim(fds[0], ids[0],  sa);
+	if (result < 0) {
+		retstring = strerror(errno);
+	}
+	sctp_freeladdrs(sa);
+ out:
+	close(fds[0]);
+	close(fds[1]);
+	return (retstring);
+
 }
