@@ -47,3 +47,21 @@ int sctp_get_asoc_cookie_life(int fd, sctp_assoc_t asoc, uint32_t *life);
 uint32_t sctp_get_number_of_associations(int);
 uint32_t sctp_get_association_identifiers(int, sctp_assoc_t [], unsigned int);
 
+int 
+sctp_get_initmsg(int fd, 
+		 uint32_t *ostreams,
+		 uint32_t *istreams,
+		 uint16_t *maxattempt,
+		 uint16_t *max_init_timeo);
+
+int 
+sctp_set_initmsg(int fd, 
+		 uint32_t ostreams,
+		 uint32_t istreams,
+		 uint16_t maxattempt,
+		 uint16_t max_init_timeo);
+
+int sctp_set_im_ostream(int fd, uint32_t ostream);
+int sctp_set_im_istream(int fd, uint32_t istream);
+int sctp_set_im_maxattempt(int fd, uint16_t max);
+int sctp_set_im_maxtimeo(int fd, uint16_t timeo);
