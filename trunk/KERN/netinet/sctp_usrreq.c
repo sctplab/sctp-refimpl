@@ -3990,11 +3990,14 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		}
 #endif
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) {
+
+#if !defined(__Panda__)            
 			if (p == NULL) {
 				/* Can't get proc for Net/Open BSD */
 				error = EINVAL;
 				break;
 			}
+#endif
 			error = sctp_inpcb_bind(so, addr_touse, p);
 			break;
 		}
