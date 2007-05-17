@@ -25,3 +25,7 @@
 - Improve port number selection, we now use low/high bounds and
   no chance of a endless loop. Only one call to random per bind
   as well.
+- fixes so set_peer_primary pre-screens addresses to be 
+  valid to this host.
+
+
