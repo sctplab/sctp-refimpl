@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.96 2007-05-14 23:52:05 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.97 2007-05-17 15:48:23 tuexen Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -1709,52 +1709,41 @@ cmd_gettimetolive(char *argv[], int argc)
 
 int cmd_getassocids(char *argv[], int argc)
 {
-#if defined(MUSTFIX)
-	struct sctp_assoc_ids ids;
-	int i;
+#if defined(__BSD_SCTP_STACK__)
+	sctp_assoc_t *ids;
+	unsigned int i;
 	socklen_t sz;
-
-	sz = sizeof(ids);
-	memset(&ids, 0, sizeof(ids));
-	if(getsockopt(adap->fd, IPPROTO_SCTP,
-		      SCTP_GET_ASOC_ID_LIST,
-			&ids, &sz) != 0){
-		printf("Could not get ids error:%d\n",errno);
+	uint32_t number_of_assocs;
+	
+	sz = (socklen_t)sizeof(uint32_t);
+	if (getsockopt(adap->fd, IPPROTO_SCTP, SCTP_GET_ASSOC_NUMBER, (void *)&number_of_assocs, &sz) != 0) {
+		printf("Could not get the number of associations. Error: %s\n", strerror(errno));
 		return(-1);
 	}
-	printf("Got %d ids starting at index:%d (more_to_get:%d)\n",
-	       ids.asls_numb_present,
-	       ids.asls_assoc_start,
-	       ids.asls_more_to_get
-		);
-	for (i=0; i < ids.asls_numb_present; i++ ) {
-		printf("id:0x%x ",(uint32_t)ids.asls_assoc_id[i]);
-		if((i+1) % 16 == 0){
+	printf("There are currently %u associations.\n", number_of_assocs);
+		
+	ids = (sctp_assoc_t *)malloc(number_of_assocs * sizeof(sctp_assoc_t));
+	if (ids == NULL) {
+		printf("Could not allocate memory.\n");
+		return (-1);
+	}
+	
+	sz = (socklen_t)(number_of_assocs * sizeof(sctp_assoc_t));
+	if (getsockopt(adap->fd, IPPROTO_SCTP, SCTP_GET_ASSOC_ID_LIST, (void *)ids, &sz) != 0) {
+		printf("Could not get the association identifiers. Error: %s\n", strerror(errno));
+		free(ids);
+		return (-1);
+	}
+
+	for (i = 0; i < sz / sizeof(sctp_assoc_t); i++) {
+		printf("id:0x%x ", (uint32_t)ids[i]);
+		if ((i + 1) % 16 == 0) {
 			printf("\n");
 		}
 	}
-	printf("\n");
-	while (ids.asls_more_to_get) {
-		ids.asls_assoc_start += ids.asls_numb_present;
-		if(getsockopt(adap->fd, IPPROTO_SCTP,
-			      SCTP_GET_ASOC_ID_LIST,
-			      &ids, &sz) != 0){
-			printf("Could not get ids error:%d\n",errno);
-			return(-1);
-		}
-		printf("Got %d ids starting at index:%d (more_to_get:%d)\n",
-		       ids.asls_numb_present,
-		       ids.asls_assoc_start,
-		       ids.asls_more_to_get
-			);
-		for (i=0; i < ids.asls_numb_present; i++ ) {
-			printf("id:0x%x ",(uint32_t)ids.asls_assoc_id[i]);
-			if((i+1) % 16 == 0){
-				printf("\n");
-			}
-		}
+	if ((i + 1) % 16 != 0)
 		printf("\n");
-	}
+	free(ids);
 	return(0);
 #else
 	printf("Not supported on this OS\n");
@@ -3638,6 +3627,7 @@ static int
 cmd_getassocstat(char *argv[], int argc)
 {
 #if defined(__APPLE__) || defined(__FreeBSD__)
+#define ADDRSTRLEN 46
 	size_t len;
 	caddr_t buf;
 	unsigned int offset, i, j;
@@ -3648,6 +3638,9 @@ cmd_getassocstat(char *argv[], int argc)
 	uint16_t number_of_local_addresses;
 	uint16_t number_of_remote_addresses;
 	uint16_t number_associations;
+	char buffer[ADDRSTRLEN];
+	sa_family_t family;
+	void *addr;
 
 	len = 0;
 	if (sysctlbyname("net.inet.sctp.assoclist", 0, &len, 0, 0) < 0) {
@@ -3690,8 +3683,17 @@ cmd_getassocstat(char *argv[], int argc)
 			}
 			for (j = 0; j < number_of_remote_addresses; j++) {
 				xraddr = (struct xsctp_raddr *)(buf + offset);
+				family = xraddr->RemAddr.sin.sin_family;
+				switch (family) {
+				case AF_INET:
+					addr = (void *)&xraddr->RemAddr.sin.sin_addr;
+					break;
+				case AF_INET6:
+					addr = (void *)&xraddr->RemAddr.sin6.sin6_addr;
+					break;
+				}
 				printf("\t\tPath towards %s, Active=%d, Confirmed=%d, MTU=%u, HBEnabled=%u, RTO=%u, CWND=%u, Flightsize=%u, ErrorCounter=%u.\n",
-				       inet_ntoa(xraddr->RemAddr.sin.sin_addr), xraddr->RemAddrActive, xraddr->RemAddrConfirmed, xraddr->RemAddrMTU, xraddr->RemAddrHBActive, xraddr->RemAddrRTO, xraddr->RemAddrCwnd, xraddr->RemAddrFlightSize, xraddr->RemAddrErrorCounter);
+				       inet_ntop(family, addr, buffer, ADDRSTRLEN), xraddr->RemAddrActive, xraddr->RemAddrConfirmed, xraddr->RemAddrMTU, xraddr->RemAddrHBActive, xraddr->RemAddrRTO, xraddr->RemAddrCwnd, xraddr->RemAddrFlightSize, xraddr->RemAddrErrorCounter);
 				offset += sizeof(struct xsctp_raddr);
 			}
 		}
