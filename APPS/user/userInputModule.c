@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.98 2007-05-17 15:51:59 tuexen Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.99 2007-05-17 22:05:04 tuexen Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -2897,8 +2897,10 @@ static int
 cmd_getpaddrs(char *argv[], int argc)
 {
 	sctp_assoc_t asocid;
-	int cnt;
-	struct sockaddr *addrs=NULL;
+	int cnt, i;
+	struct sockaddr *sa, *addrs=NULL;
+	size_t sa_len;
+	
 	if(argc == 0) {
 		asocid = get_assoc_id();
 	} else {
@@ -2910,13 +2912,25 @@ cmd_getpaddrs(char *argv[], int argc)
 #else
 	cnt = sctp_getpaddrs(adap->fd, asocid, &addrs);
 #endif /* SOLARIS */
-	if(addrs == NULL) {
-		printf("Returned errno %d\n", errno);
-	} else {
-		printf("Got %d addresses back\n", cnt);
-	}
-	if (cnt > 0)
+	if (cnt > 0){
+		sa = addrs;
+		for(i = 0; i < cnt; i++){
+#ifdef HAVE_SA_LEN
+			sa_len = sa->sa_len;
+#else
+			if (sa->sa_family == AF_INET)
+				sa_len = sizeof(struct sockaddr_in);
+			else if (sa->sa_family == AF_INET)
+				sa_len = sizeof(struct sockaddr_in6);
+#endif
+			printf("Address[%d] ",i);
+			SCTPPrintAnAddress(sa);
+			sa = (struct sockaddr *)((caddr_t)sa + sa_len);
+			if (sa_len == 0)
+				break;
+		}
 		sctp_freepaddrs(addrs);
+	}
 	return 0;
 }
 
@@ -5345,9 +5359,9 @@ cmd_setprimary(char *argv[], int argc)
     printf("Can't get the peer addresses\n");
     return -1;
   }
-  if((num > numnets) || (num < 0)){
+  if((num >= numnets) || (num < 0)){
     printf("Invalid address number range is 0 to %d\n",(numnets-1));
-    free(addrs);
+    sctp_freepaddrs(addrs);
     return -1;
   }
   sa = addrs;
