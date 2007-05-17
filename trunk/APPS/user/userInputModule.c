@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.97 2007-05-17 15:48:23 tuexen Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.98 2007-05-17 15:51:59 tuexen Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -1721,29 +1721,31 @@ int cmd_getassocids(char *argv[], int argc)
 		return(-1);
 	}
 	printf("There are currently %u associations.\n", number_of_assocs);
-		
-	ids = (sctp_assoc_t *)malloc(number_of_assocs * sizeof(sctp_assoc_t));
-	if (ids == NULL) {
-		printf("Could not allocate memory.\n");
-		return (-1);
-	}
 	
-	sz = (socklen_t)(number_of_assocs * sizeof(sctp_assoc_t));
-	if (getsockopt(adap->fd, IPPROTO_SCTP, SCTP_GET_ASSOC_ID_LIST, (void *)ids, &sz) != 0) {
-		printf("Could not get the association identifiers. Error: %s\n", strerror(errno));
-		free(ids);
-		return (-1);
-	}
-
-	for (i = 0; i < sz / sizeof(sctp_assoc_t); i++) {
-		printf("id:0x%x ", (uint32_t)ids[i]);
-		if ((i + 1) % 16 == 0) {
-			printf("\n");
+	if (number_of_assocs > 0) {
+		ids = (sctp_assoc_t *)malloc(number_of_assocs * sizeof(sctp_assoc_t));
+		if (ids == NULL) {
+			printf("Could not allocate memory.\n");
+			return (-1);
 		}
+		
+		sz = (socklen_t)(number_of_assocs * sizeof(sctp_assoc_t));
+		if (getsockopt(adap->fd, IPPROTO_SCTP, SCTP_GET_ASSOC_ID_LIST, (void *)ids, &sz) != 0) {
+			printf("Could not get the association identifiers. Error: %s\n", strerror(errno));
+			free(ids);
+			return (-1);
+		}
+	
+		for (i = 0; i < sz / sizeof(sctp_assoc_t); i++) {
+			printf("id:0x%x ", (uint32_t)ids[i]);
+			if ((i + 1) % 16 == 0) {
+				printf("\n");
+			}
+		}
+		if ((i + 1) % 16 != 0)
+			printf("\n");
+		free(ids);
 	}
-	if ((i + 1) % 16 != 0)
-		printf("\n");
-	free(ids);
 	return(0);
 #else
 	printf("Not supported on this OS\n");
