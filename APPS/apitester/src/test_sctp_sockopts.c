@@ -3115,7 +3115,7 @@ DEFINE_APITEST(initmsg, gso_1_M_set_timeo)
  *
  ********************************************************/
 
-DEFINE_APITEST(initmsg, gso_1_1_def_ndelay)
+DEFINE_APITEST(nodelay, gso_1_1_def_ndelay)
 {
 	uint32_t val;
 	int fd, result;
@@ -3133,7 +3133,7 @@ DEFINE_APITEST(initmsg, gso_1_1_def_ndelay)
 	}
 	return NULL;
 }
-DEFINE_APITEST(initmsg, gso_1_M_def_ndelay)
+DEFINE_APITEST(nodelay, gso_1_M_def_ndelay)
 {
 	uint32_t val;
 	int fd, result;
@@ -3151,7 +3151,7 @@ DEFINE_APITEST(initmsg, gso_1_M_def_ndelay)
 	}
 	return NULL;
 }
-DEFINE_APITEST(initmsg, gso_1_1_set_ndelay)
+DEFINE_APITEST(nodelay, gso_1_1_set_ndelay)
 {
 	uint32_t val[3];
 	int fd, result;
@@ -3182,7 +3182,7 @@ DEFINE_APITEST(initmsg, gso_1_1_set_ndelay)
 	return NULL;
 }
 
-DEFINE_APITEST(initmsg, gso_1_M_set_ndelay)
+DEFINE_APITEST(nodelay, gso_1_M_set_ndelay)
 {
 	uint32_t val[3];
 	int fd, result;
@@ -3219,7 +3219,7 @@ DEFINE_APITEST(initmsg, gso_1_M_set_ndelay)
  *
  ********************************************************/
 
-DEFINE_APITEST(initmsg, gso_1_1_def_autoclose)
+DEFINE_APITEST(autoclose, gso_1_1_def_autoclose)
 {
 	uint32_t aclose;
 	int result, fd;
@@ -3239,7 +3239,7 @@ DEFINE_APITEST(initmsg, gso_1_1_def_autoclose)
 	return NULL;
 }
 
-DEFINE_APITEST(initmsg, gso_1_M_def_autoclose)
+DEFINE_APITEST(autoclose, gso_1_M_def_autoclose)
 {
 	uint32_t aclose;
 	int result, fd;
@@ -3259,7 +3259,7 @@ DEFINE_APITEST(initmsg, gso_1_M_def_autoclose)
 	return NULL;
 }
 
-DEFINE_APITEST(initmsg, gso_1_1_set_autoclose)
+DEFINE_APITEST(autoclose, gso_1_1_set_autoclose)
 {
 	uint32_t aclose[3];
 	int result, fd;
@@ -3291,7 +3291,7 @@ DEFINE_APITEST(initmsg, gso_1_1_set_autoclose)
 }
 
 
-DEFINE_APITEST(initmsg, gso_1_M_set_autoclose)
+DEFINE_APITEST(autoclose, gso_1_M_set_autoclose)
 {
 	uint32_t aclose[3];
 	int result, fd;
@@ -3329,7 +3329,7 @@ DEFINE_APITEST(initmsg, gso_1_M_set_autoclose)
  *
  ********************************************************/
 
-DEFINE_APITEST(initmsg, gso_1_1_set_peerprim)
+DEFINE_APITEST(setpeerprim, sso_1_1_good_peerprim)
 {
 	int fds[2];
 	int result, num;
@@ -3361,7 +3361,44 @@ DEFINE_APITEST(initmsg, gso_1_1_set_peerprim)
 	return (retstring);
 }
 
-DEFINE_APITEST(initmsg, gso_1_M_set_peerprim)
+DEFINE_APITEST(setpeerprim, sso_1_1_bad_peerprim)
+{
+	int fds[2];
+	int result, num;
+	char *retstring = NULL;
+	struct sockaddr_in sin;
+	struct sockaddr *sa=NULL;
+
+	result = sctp_socketpair(fds, 1);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	num = sctp_getladdrs(fds[0], 0, &sa);
+	if( num < 0) {
+		retstring = "sctp_getladdr failed";
+		goto out;
+	}
+	if (num < 2) {
+		sctp_freeladdrs(sa);
+		retstring = "host is not multi-homed can't run test";
+		goto out;
+	}
+	sin = *((struct sockaddr_in *)sa);
+	sctp_freeladdrs(sa);
+	sin.sin_addr.s_addr = 0x12345678;
+	result = sctp_set_peer_prim(fds[0], 0,  (struct sockaddr *)&sin);
+	if (result >= 0) {
+		retstring = "set peer primary for bad address allowed";
+	}
+
+ out:
+	close(fds[0]);
+	close(fds[1]);
+	return (retstring);
+}
+
+
+DEFINE_APITEST(setpeerprim, sso_1_M_good_peerprim)
 {
 	int fds[2];
 	sctp_assoc_t ids[2];
@@ -3392,6 +3429,158 @@ DEFINE_APITEST(initmsg, gso_1_M_set_peerprim)
  out:
 	close(fds[0]);
 	close(fds[1]);
+	return (retstring);
+
+}
+
+
+DEFINE_APITEST(setpeerprim, sso_1_M_bad_peerprim)
+{
+	int fds[2];
+	sctp_assoc_t ids[2];
+	int result, num;
+	char *retstring = NULL;
+	struct sockaddr_in sin;
+	struct sockaddr *sa=NULL;
+
+
+	fds[0] = fds[1] = -1;
+	result =  sctp_socketpair_1tom(fds, ids, 1);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	num = sctp_getladdrs(fds[0], ids[0], &sa);
+	if( num < 0) {
+		retstring = "sctp_getladdr failed";
+		goto out;
+	}
+	if (num < 2) {
+		sctp_freeladdrs(sa);
+		retstring = "host is not multi-homed can't run test";
+		goto out;
+	}
+	sin = *((struct sockaddr_in *)sa);
+	sctp_freeladdrs(sa);
+	sin.sin_addr.s_addr = 0x12345678;
+	result = sctp_set_peer_prim(fds[0], 0,  (struct sockaddr *)&sin);
+	if (result >= 0) {
+		retstring = "set peer primary for bad address allowed";
+	}
+ out:
+	close(fds[0]);
+	close(fds[1]);
+	return (retstring);
+}
+
+/********************************************************
+ *
+ * SCTP_PRIMARY tests
+ *
+ ********************************************************/
+
+DEFINE_APITEST(setprim, gso_1_1_get_prim)
+{
+	int fds[2], i, found;
+	int result, num;
+	char *retstring = NULL;
+	struct sockaddr *sa, *at;
+	union sctp_sockstore store;
+	socklen_t len;
+
+	result = sctp_socketpair(fds, 1);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	num = sctp_getpaddrs(fds[0], 0, &sa);
+	if( num < 0) {
+		retstring = "sctp_getpaddr failed";
+		goto out;
+	}
+	if (num < 2) {
+		sctp_freepaddrs(sa);
+		retstring = "host is not multi-homed can't run test";
+		goto out;
+	}
+	len = sizeof(store);
+	result = sctp_get_primary(fds[0], 0,  &store.sa, &len);
+	if (result < 0) {
+		retstring = strerror(errno);
+	}
+	/* validate its in the list of addresses */
+	at = sa;
+	found = 0;
+	for (i=0; i<num; i++) {
+		if(store.sa.sa_family != at->sa_family) {
+			goto skip_forward;
+		}
+		if (at->sa_family == AF_INET) {
+			struct sockaddr_in *sin;
+			sin = (struct sockaddr_in *)at;
+			if(sin->sin_addr.s_addr ==
+			   store.sin.sin_addr.s_addr) {
+				found = 1;
+				break;
+			}
+		} else if (at->sa_family == AF_INET6) {
+			struct sockaddr_in6 *sin6;
+			sin6 = (struct sockaddr_in6 *)at;
+			if (IN6_ARE_ADDR_EQUAL(&sin6->sin6_addr, 
+					      &store.sin6.sin6_addr)) {
+				found = 1;
+				break;
+			}
+		} else {
+			break;
+		}
+	skip_forward:			
+		if (at->sa_family == AF_INET)
+			len = sizeof(struct sockaddr_in);
+		else if (at->sa_family == AF_INET6)
+			len = sizeof(struct sockaddr_in6);
+		else
+			break;
+		at = (struct sockaddr *)((caddr_t)at  + len);
+	}
+	sctp_freepaddrs(sa);
+	if(found == 0) {
+		retstring = "Bad primary - not in peer addr list";
+	}
+ out:
+	close(fds[0]);
+	close(fds[1]);
+	return (retstring);
+}
+
+DEFINE_APITEST(setprim, gso_1_M_get_prim)
+{
+	char *retstring = NULL;
+	return (retstring);
+}
+
+DEFINE_APITEST(setprim, sso_1_1_set_prim)
+{
+	char *retstring = NULL;
+	return (retstring);
+
+}
+
+DEFINE_APITEST(setprim, sso_1_M_set_prim)
+{
+	char *retstring = NULL;
+	return (retstring);
+
+}
+
+DEFINE_APITEST(setprim, sso_1_1_bad_prim)
+{
+	char *retstring = NULL;
+	return (retstring);
+
+}
+
+DEFINE_APITEST(setprim, sso_1_M_bad_prim)
+{
+	char *retstring = NULL;
 	return (retstring);
 
 }

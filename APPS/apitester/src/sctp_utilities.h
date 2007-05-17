@@ -71,3 +71,9 @@ int sctp_get_autoclose(int fd, uint32_t *val);
 int sctp_set_autoclose(int fd, uint32_t val);
 
 int sctp_set_peer_prim(int, sctp_assoc_t,  struct sockaddr *);
+
+
+int sctp_set_primary(int, sctp_assoc_t, struct sockaddr *);
+int sctp_get_primary(int, sctp_assoc_t, struct sockaddr *, socklen_t *len);
+
+
