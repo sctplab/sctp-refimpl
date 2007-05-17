@@ -2622,8 +2622,14 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 			
 			if (stcb) {
 				/* simply copy out the sockaddr_storage... */
-				memcpy(&ssp->ssp_addr,  &stcb->asoc.primary_destination->ro._l_addr,
-				    ((struct sockaddr *)&stcb->asoc.primary_destination->ro._l_addr)->sa_len);
+				int len;
+				len = *optsize;
+				if(len > stcb->asoc.primary_destination->ro._l_addr.sa.sa_len)
+					len = stcb->asoc.primary_destination->ro._l_addr.sa.sa_len;
+
+				memcpy(&ssp->ssp_addr,  
+				       &stcb->asoc.primary_destination->ro._l_addr,
+				       len);
 				SCTP_TCB_UNLOCK(stcb);
 			} else {
 				error = EINVAL;
@@ -3904,9 +3910,38 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		SCTP_CHECK_AND_CAST(sspp, optval, struct sctp_setpeerprim, optsize);
 		SCTP_FIND_STCB(inp, stcb, sspp->sspp_assoc_id);
 		if (stcb != NULL) {
-			if (sctp_set_primary_ip_address_sa(stcb, (struct sockaddr *)&sspp->sspp_addr) != 0) {
+			struct sctp_ifa *ifa;
+			ifa = sctp_find_ifa_by_addr((struct sockaddr *)&sspp->sspp_addr, 
+						    stcb->asoc.vrf_id, 0);
+			if (ifa == NULL) {
+				error = EINVAL;
+				goto out_of_it;
+			}
+			if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) == 0) {
+				/* Must validate the ifa found is in our ep */
+				struct sctp_laddr *laddr;
+				int found=0;
+				LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
+					if (laddr->ifa == NULL) {
+						SCTPDBG(SCTP_DEBUG_OUTPUT1, "%s: NULL ifa\n",
+							__FUNCTION__);
+						continue;
+					}
+					if (laddr->ifa == ifa) {
+						found = 1;
+						break;
+					}
+				}
+				if(!found) {
+					error = EINVAL;
+					goto out_of_it;
+				}
+			}
+			if (sctp_set_primary_ip_address_sa(stcb, 
+							   (struct sockaddr *)&sspp->sspp_addr) != 0) {
 				error = EINVAL;
 			}
+		out_of_it:
 			SCTP_TCB_UNLOCK(stcb);
 		} else {
 			error = EINVAL;
