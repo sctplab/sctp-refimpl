@@ -76,4 +76,28 @@ int sctp_set_peer_prim(int, sctp_assoc_t,  struct sockaddr *);
 int sctp_set_primary(int, sctp_assoc_t, struct sockaddr *);
 int sctp_get_primary(int, sctp_assoc_t, struct sockaddr *, socklen_t *len);
 
+int sctp_set_adaptation( int fd, uint32_t val);
+int sctp_get_adaptation( int fd, uint32_t *val);
+
+int sctp_set_disfrag( int fd, int val);
+int sctp_get_disfrag( int fd, int *val);
+
+int sctp_get_paddr_param(int fd, sctp_assoc_t id, 
+			 struct sockaddr *sa,
+			 uint32_t *hbinterval,
+			 uint16_t *maxrxt,
+			 uint32_t *pathmtu,
+			 uint32_t *flags,
+			 uint32_t *ipv6_flowlabel,
+			 uint8_t *ipv4_tos);
+
+int sctp_set_paddr_param(int fd, sctp_assoc_t id, 
+			 struct sockaddr *sa,
+			 uint32_t hbinterval,
+			 uint16_t maxrxt,
+			 uint32_t pathmtu,
+			 uint32_t flags,
+			 uint32_t ipv6_flowlabel,
+			 uint8_t ipv4_tos);
+
 

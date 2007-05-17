@@ -4127,3 +4127,211 @@ DEFINE_APITEST(setprim, sso_1_M_bad_prim)
 	close(fds[1]);
 	return (retstring);
 }
+
+DEFINE_APITEST(adaptation, gso_1_1)
+{
+	int fd, result;
+	uint32_t val;
+
+	fd = sctp_one2one(0, 0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_adaptation(fd, &val);
+	close(fd);
+	if(result < 0) {
+		return(strerror(errno));
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(adaptation, gso_1_M)
+{
+	int fd, result;
+	uint32_t val;
+
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_adaptation(fd, &val);
+	close(fd);
+	if(result < 0) {
+		return(strerror(errno));
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(adaptation, sso_1_1)
+{
+	int fd, result;
+	uint32_t val, val1;
+
+	fd = sctp_one2one(0, 0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_adaptation(fd, &val);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	val1 =  val + 1;
+	result = sctp_set_adaptation(fd, val1);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	result = sctp_get_adaptation(fd, &val);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	close (fd);
+	if(val1 != val) {
+		return "Set failed, not new value that was set";
+	}
+	return NULL;
+
+}
+
+DEFINE_APITEST(adaptation, sso_1_M)
+{
+	int fd, result;
+	uint32_t val, val1;
+
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_adaptation(fd, &val);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	val1 =  val + 1;
+	result = sctp_set_adaptation(fd, val1);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	result = sctp_get_adaptation(fd, &val);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	close (fd);
+	if(val1 != val) {
+		printf("%x was what I set, val:%x\n", 
+		       val1, val);
+		return "Set failed, not new value that was set";
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(disfrag, gso_def_1_1)
+{
+	int fd, result;
+	int val=0;
+
+	fd = sctp_one2one(0, 0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_disfrag(fd, &val);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	close(fd);
+	if(val) {
+		return "Incorrect default, SCTP fragmentation is disabled";
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(disfrag, gso_def_1_M)
+{
+	int fd, result;
+	int val=0;
+
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_disfrag(fd, &val);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	close(fd);
+	if(val) {
+		return "Incorrect default, SCTP fragmentation is disabled";
+	}
+	return NULL;
+}
+
+
+DEFINE_APITEST(disfrag, sso_1_1)
+{
+	int fd, result;
+	int val=0,nval;
+
+	fd = sctp_one2one(0, 0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_disfrag(fd, &val);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	nval = !val;
+	result = sctp_set_disfrag(fd, nval);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	result = sctp_get_disfrag(fd, &val);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	close (fd);
+	if (val != nval) {
+		return "disable fragments not changed";
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(disfrag, sso_1_M)
+{
+	int fd, result;
+	int val=0,nval;
+
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_disfrag(fd, &val);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	nval = !val;
+	result = sctp_set_disfrag(fd, nval);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	result = sctp_get_disfrag(fd, &val);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	close (fd);
+	if (val != nval) {
+		return "disable fragments not changed";
+	}
+	return NULL;
+}
