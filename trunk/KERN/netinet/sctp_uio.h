@@ -49,9 +49,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_uio.h,v 1.17 2007/05/08 17:01:11 rrs Ex
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/time.h>
-#if defined(__FreeBSD__) || defined(__APPLE__)
-#include <sys/socketvar.h>
-#endif
 #include <netinet/in.h>
 
 typedef uint32_t sctp_assoc_t;
@@ -925,7 +922,8 @@ struct xsctp_inpcb {
 	uint32_t total_recvs;
 	uint32_t total_nospaces;
 	uint32_t fragmentation_point;
-	struct xsocket xsocket;
+	uint16_t qlen;
+	uint16_t maxqlen;
 	/* add more endpoint specific data here*/
 };
 #endif
