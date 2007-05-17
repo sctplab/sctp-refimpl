@@ -3544,6 +3544,9 @@ DEFINE_APITEST(setprim, gso_1_1_get_prim)
 	sctp_freepaddrs(sa);
 	if(found == 0) {
 		retstring = "Bad primary - not in peer addr list";
+		sctp_freepaddrs(sa);
+		goto out;
+
 	}
  out:
 	close(fds[0]);
@@ -3553,34 +3556,574 @@ DEFINE_APITEST(setprim, gso_1_1_get_prim)
 
 DEFINE_APITEST(setprim, gso_1_M_get_prim)
 {
+	int fds[2], i, found;
+	int result, num;
 	char *retstring = NULL;
+	struct sockaddr *sa, *at;
+	union sctp_sockstore store;
+	socklen_t len;
+	sctp_assoc_t ids[2];
+
+	fds[0] = fds[1] = -1;
+	result = sctp_socketpair_1tom(fds, ids, 1);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	num = sctp_getpaddrs(fds[0], ids[0], &sa);
+	if( num < 0) {
+		retstring = "sctp_getpaddr failed";
+		goto out;
+	}
+	if (num < 2) {
+		sctp_freepaddrs(sa);
+		retstring = "host is not multi-homed can't run test";
+		goto out;
+	}
+	len = sizeof(store);
+	result = sctp_get_primary(fds[0], ids[0],  &store.sa, &len);
+	if (result < 0) {
+		retstring = strerror(errno);
+	}
+	/* validate its in the list of addresses */
+	at = sa;
+	found = 0;
+	for (i=0; i<num; i++) {
+		if(store.sa.sa_family != at->sa_family) {
+			goto skip_forward;
+		}
+		if (at->sa_family == AF_INET) {
+			struct sockaddr_in *sin;
+			sin = (struct sockaddr_in *)at;
+			if(sin->sin_addr.s_addr ==
+			   store.sin.sin_addr.s_addr) {
+				found = 1;
+				break;
+			}
+		} else if (at->sa_family == AF_INET6) {
+			struct sockaddr_in6 *sin6;
+			sin6 = (struct sockaddr_in6 *)at;
+			if (IN6_ARE_ADDR_EQUAL(&sin6->sin6_addr, 
+					      &store.sin6.sin6_addr)) {
+				found = 1;
+				break;
+			}
+		} else {
+			break;
+		}
+	skip_forward:			
+		if (at->sa_family == AF_INET)
+			len = sizeof(struct sockaddr_in);
+		else if (at->sa_family == AF_INET6)
+			len = sizeof(struct sockaddr_in6);
+		else
+			break;
+		at = (struct sockaddr *)((caddr_t)at  + len);
+	}
+	sctp_freepaddrs(sa);
+	if(found == 0) {
+		retstring = "Bad primary - not in peer addr list";
+		sctp_freepaddrs(sa);
+		goto out;
+
+	}
+ out:
+	close(fds[0]);
+	close(fds[1]);
 	return (retstring);
 }
 
 DEFINE_APITEST(setprim, sso_1_1_set_prim)
 {
+	int fds[2], i, found;
+	int result, num;
 	char *retstring = NULL;
-	return (retstring);
+	struct sockaddr *sa, *at, *setit;
+	union sctp_sockstore store;
+	socklen_t len;
+	int cnt;
 
+	result = sctp_socketpair(fds, 1);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	num = sctp_getpaddrs(fds[0], 0, &sa);
+	if( num < 0) {
+		retstring = "sctp_getpaddr failed";
+		goto out;
+	}
+	if (num < 2) {
+		sctp_freepaddrs(sa);
+		retstring = "host is not multi-homed can't run test";
+		goto out;
+	}
+	len = sizeof(store);
+	result = sctp_get_primary(fds[0], 0,  &store.sa, &len);
+	if (result < 0) {
+		retstring = strerror(errno);
+	}
+	/* validate its in the list of addresses */
+	at = sa;
+	cnt = found = 0;
+	for (i=0; i<num; i++) {
+		if(store.sa.sa_family != at->sa_family) {
+			goto skip_forward;
+		}
+		if (at->sa_family == AF_INET) {
+			struct sockaddr_in *sin;
+			sin = (struct sockaddr_in *)at;
+			if(sin->sin_addr.s_addr ==
+			   store.sin.sin_addr.s_addr) {
+				found = 1;
+				break;
+			}
+		} else if (at->sa_family == AF_INET6) {
+			struct sockaddr_in6 *sin6;
+			sin6 = (struct sockaddr_in6 *)at;
+			if (IN6_ARE_ADDR_EQUAL(&sin6->sin6_addr, 
+					      &store.sin6.sin6_addr)) {
+				found = 1;
+				break;
+			}
+		} else {
+			break;
+		}
+	skip_forward:
+		cnt++;
+		if (at->sa_family == AF_INET)
+			len = sizeof(struct sockaddr_in);
+		else if (at->sa_family == AF_INET6)
+			len = sizeof(struct sockaddr_in6);
+		else
+			break;
+		at = (struct sockaddr *)((caddr_t)at  + len);
+	}
+	if(found == 0) {
+		retstring = "Bad primary - not in peer addr list";
+		sctp_freepaddrs(sa);
+		goto out;
+
+	}
+	/* ok we now know that cnt is the current primary */
+	if(cnt == 0) {
+		/* we want the second one */
+		if (sa->sa_family == AF_INET)
+			len = sizeof(struct sockaddr_in);
+		else
+			len = sizeof(struct sockaddr_in6);
+		setit = (struct sockaddr *)((caddr_t)sa  + len);
+	} else {
+		/* we want the first one */
+		setit = sa;
+	}
+	/* now do the set */
+	result = sctp_set_primary(fds[0], 0, setit);
+	if (result < 0) {
+		retstring = strerror(errno);
+		sctp_freepaddrs(sa);
+		goto out;
+	}
+	/* now did we actually set it? */
+	result = sctp_get_primary(fds[0], 0,  &store.sa, &len);
+	if (result < 0) {
+		retstring = strerror(errno);
+		sctp_freepaddrs(sa);
+		goto out;
+	}
+	found = 0;
+	if (setit->sa_family != store.sa.sa_family) {
+		found = 1;
+	} else {
+		if(setit->sa_family == AF_INET) {
+			struct sockaddr_in *sin;
+			sin = (struct sockaddr_in *)setit;
+			if(sin->sin_addr.s_addr !=
+			   store.sin.sin_addr.s_addr) {
+				found = 1;
+			}
+		} else {
+			struct sockaddr_in6 *sin6;
+			sin6 = (struct sockaddr_in6 *)setit;
+			if (!IN6_ARE_ADDR_EQUAL(&sin6->sin6_addr, 
+					      &store.sin6.sin6_addr)) {
+				found = 1;
+			}
+		}
+	}
+	if (found) {
+		retstring = "set to new primary failed";
+	}
+	
+	sctp_freepaddrs(sa);
+ out:
+	close(fds[0]);
+	close(fds[1]);
+	return (retstring);
 }
 
 DEFINE_APITEST(setprim, sso_1_M_set_prim)
 {
+	int fds[2], i, found;
+	int result, num;
 	char *retstring = NULL;
-	return (retstring);
+	struct sockaddr *sa, *at, *setit;
+	union sctp_sockstore store;
+	socklen_t len;
+	int cnt;
+	sctp_assoc_t ids[2];
 
+	fds[0] = fds[1] = -1;
+	result = sctp_socketpair_1tom(fds, ids, 1);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	num = sctp_getpaddrs(fds[0], ids[0], &sa);
+	if( num < 0) {
+		retstring = "sctp_getpaddr failed";
+		goto out;
+	}
+	if (num < 2) {
+		sctp_freepaddrs(sa);
+		retstring = "host is not multi-homed can't run test";
+		goto out;
+	}
+	len = sizeof(store);
+	result = sctp_get_primary(fds[0], ids[0],  &store.sa, &len);
+	if (result < 0) {
+		retstring = strerror(errno);
+	}
+	/* validate its in the list of addresses */
+	at = sa;
+	cnt = found = 0;
+	for (i=0; i<num; i++) {
+		if(store.sa.sa_family != at->sa_family) {
+			goto skip_forward;
+		}
+		if (at->sa_family == AF_INET) {
+			struct sockaddr_in *sin;
+			sin = (struct sockaddr_in *)at;
+			if(sin->sin_addr.s_addr ==
+			   store.sin.sin_addr.s_addr) {
+				found = 1;
+				break;
+			}
+		} else if (at->sa_family == AF_INET6) {
+			struct sockaddr_in6 *sin6;
+			sin6 = (struct sockaddr_in6 *)at;
+			if (IN6_ARE_ADDR_EQUAL(&sin6->sin6_addr, 
+					      &store.sin6.sin6_addr)) {
+				found = 1;
+				break;
+			}
+		} else {
+			break;
+		}
+	skip_forward:
+		cnt++;
+		if (at->sa_family == AF_INET)
+			len = sizeof(struct sockaddr_in);
+		else if (at->sa_family == AF_INET6)
+			len = sizeof(struct sockaddr_in6);
+		else
+			break;
+		at = (struct sockaddr *)((caddr_t)at  + len);
+	}
+	if(found == 0) {
+		retstring = "Bad primary - not in peer addr list";
+		sctp_freepaddrs(sa);
+		goto out;
+
+	}
+	/* ok we now know that cnt is the current primary */
+	if(cnt == 0) {
+		/* we want the second one */
+		if (sa->sa_family == AF_INET)
+			len = sizeof(struct sockaddr_in);
+		else
+			len = sizeof(struct sockaddr_in6);
+		setit = (struct sockaddr *)((caddr_t)sa  + len);
+	} else {
+		/* we want the first one */
+		setit = sa;
+	}
+	/* now do the set */
+	result = sctp_set_primary(fds[0], ids[0], setit);
+	if (result < 0) {
+		retstring = strerror(errno);
+		sctp_freepaddrs(sa);
+		goto out;
+	}
+	/* now did we actually set it? */
+	result = sctp_get_primary(fds[0], ids[0],  &store.sa, &len);
+	if (result < 0) {
+		retstring = strerror(errno);
+		sctp_freepaddrs(sa);
+		goto out;
+	}
+	found = 0;
+	if (setit->sa_family != store.sa.sa_family) {
+		found = 1;
+	} else {
+		if(setit->sa_family == AF_INET) {
+			struct sockaddr_in *sin;
+			sin = (struct sockaddr_in *)setit;
+			if(sin->sin_addr.s_addr !=
+			   store.sin.sin_addr.s_addr) {
+				found = 1;
+			}
+		} else {
+			struct sockaddr_in6 *sin6;
+			sin6 = (struct sockaddr_in6 *)setit;
+			if (!IN6_ARE_ADDR_EQUAL(&sin6->sin6_addr, 
+					      &store.sin6.sin6_addr)) {
+				found = 1;
+			}
+		}
+	}
+	if (found) {
+		retstring = "set to new primary failed";
+	}
+	sctp_freepaddrs(sa);
+ out:
+	close(fds[0]);
+	close(fds[1]);
+	return (retstring);
 }
 
 DEFINE_APITEST(setprim, sso_1_1_bad_prim)
 {
+	int fds[2], i, found;
+	int result, num;
 	char *retstring = NULL;
-	return (retstring);
+	struct sockaddr *sa, *at, *setit;
+	union sctp_sockstore store;
+	struct sockaddr_in sinc;
+	socklen_t len;
+	int cnt;
 
+	result = sctp_socketpair(fds, 1);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	num = sctp_getpaddrs(fds[0], 0, &sa);
+	if( num < 0) {
+		retstring = "sctp_getpaddr failed";
+		goto out;
+	}
+	if (num < 2) {
+		sctp_freepaddrs(sa);
+		retstring = "host is not multi-homed can't run test";
+		goto out;
+	}
+	len = sizeof(store);
+	result = sctp_get_primary(fds[0], 0,  &store.sa, &len);
+	if (result < 0) {
+		retstring = strerror(errno);
+	}
+	/* validate its in the list of addresses */
+	at = sa;
+	cnt = found = 0;
+	for (i=0; i<num; i++) {
+		if(store.sa.sa_family != at->sa_family) {
+			goto skip_forward;
+		}
+		if (at->sa_family == AF_INET) {
+			struct sockaddr_in *sin;
+			sin = (struct sockaddr_in *)at;
+			if(sin->sin_addr.s_addr ==
+			   store.sin.sin_addr.s_addr) {
+				found = 1;
+				break;
+			}
+		} else if (at->sa_family == AF_INET6) {
+			struct sockaddr_in6 *sin6;
+			sin6 = (struct sockaddr_in6 *)at;
+			if (IN6_ARE_ADDR_EQUAL(&sin6->sin6_addr, 
+					      &store.sin6.sin6_addr)) {
+				found = 1;
+				break;
+			}
+		} else {
+			break;
+		}
+	skip_forward:
+		cnt++;
+		if (at->sa_family == AF_INET)
+			len = sizeof(struct sockaddr_in);
+		else if (at->sa_family == AF_INET6)
+			len = sizeof(struct sockaddr_in6);
+		else
+			break;
+		at = (struct sockaddr *)((caddr_t)at  + len);
+	}
+	if(found == 0) {
+		retstring = "Bad primary - not in peer addr list";
+		sctp_freepaddrs(sa);
+		goto out;
+	} 
+	/* ok we now know that cnt is the current primary */
+	sinc = *((struct sockaddr_in *)sa);
+	sinc.sin_addr.s_addr = 0x12345678;
+	setit = (struct sockaddr *)&sinc;
+
+	result = sctp_set_primary(fds[0], 0, setit);
+	if (result < 0) {
+		/* good we rejected it */
+		sctp_freepaddrs(sa);
+		goto out;
+	}
+	/* now did we actually set it? */
+	result = sctp_get_primary(fds[0], 0,  &store.sa, &len);
+	if (result < 0) {
+		retstring = strerror(errno);
+		sctp_freepaddrs(sa);
+		goto out;
+	}
+	found = 0;
+	if(setit->sa_family == AF_INET) {
+		struct sockaddr_in *sin;
+		sin = (struct sockaddr_in *)setit;
+		if(sin->sin_addr.s_addr !=
+		   store.sin.sin_addr.s_addr) {
+			found = 1;
+		}
+	} else {
+		struct sockaddr_in6 *sin6;
+		sin6 = (struct sockaddr_in6 *)setit;
+		if (!IN6_ARE_ADDR_EQUAL(&sin6->sin6_addr, 
+				       &store.sin6.sin6_addr)) {
+			found = 1;
+		}
+	}
+	if (found == 0) {
+		retstring = "set to corrupt primary allowed";
+	}
+	
+	sctp_freepaddrs(sa);
+ out:
+	close(fds[0]);
+	close(fds[1]);
+	return (retstring);
 }
 
 DEFINE_APITEST(setprim, sso_1_M_bad_prim)
 {
+	int fds[2], i, found;
+	int result, num;
 	char *retstring = NULL;
-	return (retstring);
+	struct sockaddr_in sinc;
+	struct sockaddr *sa, *at, *setit;
+	union sctp_sockstore store;
+	socklen_t len;
+	int cnt;
+	sctp_assoc_t ids[2];
 
+	fds[0] = fds[1] = -1;
+	result = sctp_socketpair_1tom(fds, ids, 1);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	num = sctp_getpaddrs(fds[0], ids[0], &sa);
+	if( num < 0) {
+		retstring = "sctp_getpaddr failed";
+		goto out;
+	}
+	if (num < 2) {
+		sctp_freepaddrs(sa);
+		retstring = "host is not multi-homed can't run test";
+		goto out;
+	}
+	len = sizeof(store);
+	result = sctp_get_primary(fds[0], ids[0],  &store.sa, &len);
+	if (result < 0) {
+		retstring = strerror(errno);
+	}
+	/* validate its in the list of addresses */
+	at = sa;
+	cnt = found = 0;
+	for (i=0; i<num; i++) {
+		if(store.sa.sa_family != at->sa_family) {
+			goto skip_forward;
+		}
+		if (at->sa_family == AF_INET) {
+			struct sockaddr_in *sin;
+			sin = (struct sockaddr_in *)at;
+			if(sin->sin_addr.s_addr ==
+			   store.sin.sin_addr.s_addr) {
+				found = 1;
+				break;
+			}
+		} else if (at->sa_family == AF_INET6) {
+			struct sockaddr_in6 *sin6;
+			sin6 = (struct sockaddr_in6 *)at;
+			if (IN6_ARE_ADDR_EQUAL(&sin6->sin6_addr, 
+					      &store.sin6.sin6_addr)) {
+				found = 1;
+				break;
+			}
+		} else {
+			break;
+		}
+	skip_forward:
+		cnt++;
+		if (at->sa_family == AF_INET)
+			len = sizeof(struct sockaddr_in);
+		else if (at->sa_family == AF_INET6)
+			len = sizeof(struct sockaddr_in6);
+		else
+			break;
+		at = (struct sockaddr *)((caddr_t)at  + len);
+	}
+	if(found == 0) {
+		retstring = "Bad primary - not in peer addr list";
+		sctp_freepaddrs(sa);
+		goto out;
+
+	}
+	/* ok we now know that cnt is the current primary */
+	sinc = *((struct sockaddr_in *)sa);
+	sinc.sin_addr.s_addr = 0x12345678;
+	setit = (struct sockaddr *)&sinc;
+
+	/* now do the set */
+	result = sctp_set_primary(fds[0], ids[0], setit);
+	if (result < 0) {
+		sctp_freepaddrs(sa);
+		goto out;
+	}
+	/* now did we actually set it? */
+	result = sctp_get_primary(fds[0], ids[0],  &store.sa, &len);
+	if (result < 0) {
+		retstring = strerror(errno);
+		sctp_freepaddrs(sa);
+		goto out;
+	}
+	found = 0;
+	if (found) {
+		retstring = "set to new primary failed";
+	}
+
+	found = 0;
+	if(setit->sa_family == AF_INET) {
+		struct sockaddr_in *sin;
+		sin = (struct sockaddr_in *)setit;
+		if(sin->sin_addr.s_addr !=
+		   store.sin.sin_addr.s_addr) {
+			found = 1;
+		}
+	} else {
+		struct sockaddr_in6 *sin6;
+		sin6 = (struct sockaddr_in6 *)setit;
+		if (!IN6_ARE_ADDR_EQUAL(&sin6->sin6_addr, 
+				       &store.sin6.sin6_addr)) {
+			found = 1;
+		}
+	}
+	if (found == 0) {
+		retstring = "set to corrupt primary allowed";
+	}
+	sctp_freepaddrs(sa);
+ out:
+	close(fds[0]);
+	close(fds[1]);
+	return (retstring);
 }
