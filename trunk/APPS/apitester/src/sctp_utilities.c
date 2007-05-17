@@ -742,3 +742,86 @@ sctp_get_primary(int fd, sctp_assoc_t id, struct sockaddr *sa, socklen_t *alen)
 	*alen = clen;
 	return(result);
 }
+
+
+int
+sctp_set_adaptation( int fd, uint32_t val)
+{
+	struct sctp_setadaptation adapt;
+	socklen_t len;
+	int result;
+
+	len = sizeof(adapt);
+	memset(&adapt, 0, sizeof(adapt));
+	adapt.ssb_adaptation_ind = val;
+
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_ADAPTATION_LAYER,
+			    &adapt, len);
+	return(result);
+
+}
+
+int 
+sctp_get_adaptation( int fd, uint32_t *val)
+{
+	struct sctp_setadaptation adapt;
+	socklen_t len;
+	int result;
+
+	len = sizeof(adapt);
+	memset(&adapt, 0, sizeof(adapt));
+
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_ADAPTATION_LAYER,
+			    &adapt, &len);
+	*val = adapt.ssb_adaptation_ind;
+	return(result);
+}
+
+int sctp_set_disfrag( int fd, int val)
+{
+	socklen_t len;
+	int result;
+
+	len = sizeof(val);
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_DISABLE_FRAGMENTS,
+			    &val, len);
+	return(result);
+
+}
+
+int sctp_get_disfrag( int fd, int *val)
+{
+	socklen_t len;
+	int result;
+
+	len = sizeof(*val);
+
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_DISABLE_FRAGMENTS,
+			    val, &len);
+	return(result);
+}
+
+int sctp_get_paddr_param(int fd, sctp_assoc_t id, 
+			 struct sockaddr *sa,
+			 uint32_t *hbinterval,
+			 uint16_t *maxrxt,
+			 uint32_t *pathmtu,
+			 uint32_t *flags,
+			 uint32_t *ipv6_flowlabel,
+			 uint8_t *ipv4_tos)
+{
+	
+}
+
+
+int sctp_set_paddr_param(int fd, sctp_assoc_t id, 
+			 struct sockaddr *sa,
+			 uint32_t hbinterval,
+			 uint16_t maxrxt,
+			 uint32_t pathmtu,
+			 uint32_t flags,
+			 uint32_t ipv6_flowlabel,
+			 uint8_t ipv4_tos)
+{
+
+}
