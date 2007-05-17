@@ -687,3 +687,58 @@ int sctp_set_peer_prim(int fd, sctp_assoc_t id,  struct sockaddr *sa)
 			    &prim, len);
 	return (result);
 }
+
+
+int 
+sctp_set_primary(int fd, sctp_assoc_t id, struct sockaddr *sa)
+{
+	struct sctp_setprim prim;
+	socklen_t len;
+	int result;
+
+	len = sizeof(prim);
+	prim.ssp_assoc_id = id;
+	if(sa->sa_family == AF_INET) {
+		memcpy(&prim.ssp_addr, sa, sizeof(struct sockaddr_in));
+	} else if (sa->sa_family == AF_INET6) {
+		memcpy(&prim.ssp_addr, sa, sizeof(struct sockaddr_in6));
+	} else {
+		errno = EINVAL;
+		return -1;
+	}
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_PRIMARY_ADDR, 
+			    &prim, len);
+	return(result);
+}
+
+int 
+sctp_get_primary(int fd, sctp_assoc_t id, struct sockaddr *sa, socklen_t *alen)
+{
+	struct sctp_setprim prim;
+	socklen_t len, clen;
+	int result;
+	struct sockaddr *lsa;
+
+	len = sizeof(prim);
+	memset(&prim, 0, sizeof(prim));
+	prim.ssp_assoc_id = id;
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_PRIMARY_ADDR, 
+			    &prim, &len);
+	lsa = (struct sockaddr *)&prim.ssp_addr;
+	if(lsa->sa_family == AF_INET)
+		clen = sizeof(struct sockaddr_in);
+	else if (lsa->sa_family == AF_INET6)
+		clen = sizeof(struct sockaddr_in6);
+	else {
+		errno = EFAULT;
+		return -1;
+	}
+	if(*alen > clen) 
+		len = clen;
+	else
+		len = *alen;
+
+	memcpy(sa, lsa, len);
+	*alen = clen;
+	return(result);
+}
