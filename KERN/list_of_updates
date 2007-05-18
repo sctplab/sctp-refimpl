@@ -8,4 +8,4 @@
   valid to this host.
 - maxseg did not allow setting on an assoc basis. We needed
   to thus track and use an association value instead of a inp value.
-
+- Fixed ep get of HB status to report back properly.
