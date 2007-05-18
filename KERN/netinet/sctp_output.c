@@ -10985,9 +10985,9 @@ sctp_lower_sosend(struct socket *so,
 		top = SCTP_HEADER_TO_CHAIN(i_pak);
 	}
 #ifdef __Panda__
-    if (i_control) {
-    	control = SCTP_HEADER_TO_CHAIN(i_control);
-    }
+	if (i_control) {
+		control = SCTP_HEADER_TO_CHAIN(i_control);
+	}
 #endif	
 
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -11005,7 +11005,8 @@ sctp_lower_sosend(struct socket *so,
 		goto out_unlocked;
 	}
 	if ((use_rcvinfo) && srcv) {
-		if (INVALID_SINFO_FLAG(srcv->sinfo_flags) || PR_SCTP_INVALID_POLICY(srcv->sinfo_flags)) {
+		if (INVALID_SINFO_FLAG(srcv->sinfo_flags) ||
+		    PR_SCTP_INVALID_POLICY(srcv->sinfo_flags)) {
 			error = EINVAL;
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);
@@ -11013,7 +11014,7 @@ sctp_lower_sosend(struct socket *so,
 			goto out_unlocked;
 		}
 
-		if(srcv->sinfo_flags)
+		if (srcv->sinfo_flags)
 			SCTP_STAT_INCR(sctps_sends_with_flags);
 
 		if (srcv->sinfo_flags & SCTP_SENDALL) {
@@ -11193,7 +11194,6 @@ sctp_lower_sosend(struct socket *so,
 				goto out_unlocked;
 			}
 			/* get an asoc/stcb struct */
-
 			vrf_id = inp->def_vrf_id;
 			stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0, vrf_id);
 			if (stcb == NULL) {

@@ -5500,9 +5500,7 @@ sctp_sorecvmsg(struct socket *so,
 					copied_so_far += cp_len;
 				}
 			}
-			if ((out_flags & MSG_EOR) ||
-			    (uio->uio_resid == 0)
-				) {
+			if ((out_flags & MSG_EOR) || (uio->uio_resid == 0)) {
 				break;
 			}
 			if (((stcb) && (in_flags & MSG_PEEK) == 0) &&
@@ -5524,8 +5522,7 @@ sctp_sorecvmsg(struct socket *so,
 		 * a MSG_EOR/or read all the user wants... <OR>
 		 * control->length == 0.
 		 */
-		if ((out_flags & MSG_EOR) &&
-		    ((in_flags & MSG_PEEK) == 0)) {
+		if ((out_flags & MSG_EOR) && ((in_flags & MSG_PEEK) == 0)) {
 			/* we are done with this control */
 			if (control->length == 0) {
 				if (control->data) {
@@ -6199,7 +6196,8 @@ sctp_hashinit_flags(int elements, struct malloc_type *type,
 
 
 int
-sctp_connectx_helper_add(struct sctp_tcb *stcb, struct sockaddr *addr, int totaddr, int *error)
+sctp_connectx_helper_add(struct sctp_tcb *stcb, struct sockaddr *addr,
+			 int totaddr, int *error)
 {
 	int added=0;
 	int i;
@@ -6237,8 +6235,9 @@ sctp_connectx_helper_add(struct sctp_tcb *stcb, struct sockaddr *addr, int totad
 } 
 
 struct sctp_tcb *
-sctp_connectx_helper_find(struct sctp_inpcb *inp, struct sockaddr *addr, int *totaddr, 
-			  int *num_v4, int *num_v6, int *error, int max) 
+sctp_connectx_helper_find(struct sctp_inpcb *inp, struct sockaddr *addr,
+			  int *totaddr, int *num_v4, int *num_v6, int *error,
+			  int limit) 
 {
 	struct sockaddr *sa;
 	struct sctp_tcb *stcb=NULL;
@@ -6272,7 +6271,7 @@ sctp_connectx_helper_find(struct sctp_inpcb *inp, struct sockaddr *addr, int *to
 			/* Already have or am bring up an association */
 			return (stcb);
 		}
-		if ((at + incr) > max) {
+		if ((at + incr) > limit) {
 			*totaddr = i;
 			break;
 		}
