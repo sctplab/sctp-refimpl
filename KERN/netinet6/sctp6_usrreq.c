@@ -143,26 +143,21 @@ sctp6_input(i_pak, offp, proto)
 	int length, mlen, offset, iphlen;
 	uint8_t ecn_bits;
 	struct sctp_tcb *stcb = NULL;
+    int pkt_len = 0;
 #ifndef __Panda__
 	int off = *offp;
 #else
-	pakoffset_type off_p;
-	int off, res;
+	int off;
 #endif
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s;
 #endif
 #ifdef __Panda__
-	res = pak_client_get_offset(*i_pak, PAK_OFF_NETWORK_ST, &off_p);
-	if (CERR_IS_NOTOK(res)) {
-		SCTP_RELEASE_PKT(*i_pak);
-		return (-1);
-	}
 	/*-
 	 * This is Evil, but its the only way to make
 	 * panda work right 
 	 */
-	off = (int)off_p + sizeof(struct ip6_hdr);
+	off = sizeof(struct ip6_hdr);
 #endif
 	/* get the VRF and table id's */
  	if (SCTP_GET_PKT_VRFID(*i_pak, vrf_id)) {
@@ -175,6 +170,13 @@ sctp6_input(i_pak, offp, proto)
 	}
 
 	m = SCTP_HEADER_TO_CHAIN(*i_pak);
+    pkt_len = SCTP_HEADER_LEN((*i_pak));
+#ifdef __Panda__
+    /* We dont need the pak hdr, free it */
+	/* For BSD/MAC this does nothing */
+	SCTP_DETACH_HEADER_FROM_CHAIN(*i_pak);
+	(void)SCTP_RELEASE_HEADER(*i_pak);
+#endif
 
 	ip6 = mtod(m, struct ip6_hdr *);
 	/* Ensure that (sctphdr + sctp_chunkhdr) in a row. */
@@ -212,7 +214,7 @@ sctp6_input(i_pak, offp, proto)
 	SCTP_STAT_INCR(sctps_recvpackets);
 	SCTP_STAT_INCR_COUNTER64(sctps_inpackets);
 	SCTPDBG(SCTP_DEBUG_INPUT1, "V6 input gets a packet iphlen:%d pktlen:%d\n",
-		iphlen, SCTP_HEADER_LEN((*i_pak)));
+		iphlen, pkt_len);
 	if (IN6_IS_ADDR_MULTICAST(&ip6->ip6_dst)) {
 		/* No multi-cast support in SCTP */
 		goto bad;
@@ -432,11 +434,6 @@ bad:
 	}
 	if (m)
 		sctp_m_freem(m);
-#ifdef __Panda__
-	/* For BSD/MAC this does nothing */
-	SCTP_DETACH_HEADER_FROM_CHAIN(*i_pak);
-	(void)SCTP_RELEASE_HEADER(*i_pak);
-#endif
 	return IPPROTO_DONE;
 }
 
