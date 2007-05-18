@@ -713,7 +713,6 @@ sctp_recvmsg(int s,
     struct sctp_sndrcvinfo *sinfo,
     int *msg_flags)
 {
-
 #ifdef SYS_sctp_generic_recvmsg
 	struct iovec iov[SCTP_SMALL_IOVEC_SIZE];
 
@@ -749,7 +748,7 @@ sctp_recvmsg(int s,
 	msg.msg_control = (caddr_t)controlVector;
 	msg.msg_controllen = sizeof(controlVector);
 	errno = 0;
-	sz = recvmsg(s, &msg, 0);
+	sz = recvmsg(s, &msg, *msg_flags);
 	if (sz <= 0)
 		return (sz);
 
