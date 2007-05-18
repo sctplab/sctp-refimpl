@@ -2384,8 +2384,10 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 					paddrp->spp_flags |= SPP_IPV6_FLOWLABEL;
 #endif
 					/* default settings should be these */
-					if (sctp_is_hb_timer_running(stcb)) {
+					if (stcb->asoc.hb_is_disabled == 0) {
 						paddrp->spp_flags |= SPP_HB_ENABLE;
+					} else {
+						paddrp->spp_flags |= SPP_HB_DISABLE;
 					}
 				}
 				paddrp->spp_hbinterval = stcb->asoc.heart_beat_delay;
@@ -3584,7 +3586,18 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 				SCTP_INP_DECR_REF(inp);
 			}
 		}
+		/* sanity checks */
+		if ((paddrp->spp_flags & SPP_HB_ENABLE) && (paddrp->spp_flags & SPP_HB_DISABLE)) {
+			if(stcb)
+				SCTP_TCB_UNLOCK(stcb);
+			return (EINVAL);
+		}
 
+		if ((paddrp->spp_flags & SPP_PMTUD_ENABLE) && (paddrp->spp_flags & SPP_PMTUD_DISABLE)) {
+			if(stcb)
+				SCTP_TCB_UNLOCK(stcb);
+			return (EINVAL);
+		}
 
 		if (stcb) {
 			/************************TCB SPECIFIC SET ******************/
