@@ -6,5 +6,6 @@
   as well.
 - fixes so set_peer_primary pre-screens addresses to be 
   valid to this host.
-
+- maxseg did not allow setting on an assoc basis. We needed
+  to thus track and use an association value instead of a inp value.
 
