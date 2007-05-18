@@ -4335,3 +4335,158 @@ DEFINE_APITEST(disfrag, sso_1_M)
 	}
 	return NULL;
 }
+
+DEFINE_APITEST(paddrpara, gso_def_1_1)
+{
+	int fd;
+	int result;
+	struct sockaddr *sa = NULL;
+	uint32_t hbinterval;
+	uint16_t maxrxt;
+	uint32_t pathmtu;
+	uint32_t flags;
+	uint32_t ipv6_flowlabel;
+	uint8_t ipv4_tos;
+
+	fd = sctp_one2one(0, 1, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_paddr_param(fd, 0, sa, &hbinterval,
+				      &maxrxt,
+				      &pathmtu,
+				      &flags,
+				      &ipv6_flowlabel,
+				      &ipv4_tos);
+	if (result< 0) {
+		return(strerror(errno));
+	}
+	close(fd);
+	if (hbinterval != 30000) {
+		return "HB Interval not compliant to RFC2960";
+	}
+	if (maxrxt != 5) {
+		return "Path Max RXT not compliant to RFC2960";
+	}
+	if (ipv6_flowlabel) {
+		return "IPv6 Flow label something other than 0 by default";
+	}
+	if (ipv4_tos) {
+		return "IPv4 TOS something other than 0 by default";
+	}
+	if (flags & SPP_PMTUD_DISABLE) {
+		return "Path MTU not enabled by default";
+	}
+	if (flags & SPP_HB_DISABLE) {
+		return "HB not enabled by default";
+	}
+	return NULL;
+}
+
+
+DEFINE_APITEST(paddrpara, gso_def_1_M)
+{
+	int fd;
+	int result;
+	struct sockaddr *sa = NULL;
+	uint32_t hbinterval;
+	uint16_t maxrxt;
+	uint32_t pathmtu;
+	uint32_t flags;
+	uint32_t ipv6_flowlabel;
+	uint8_t ipv4_tos;
+
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_paddr_param(fd, 0, sa, &hbinterval,
+				      &maxrxt,
+				      &pathmtu,
+				      &flags,
+				      &ipv6_flowlabel,
+				      &ipv4_tos);
+	if (result< 0) {
+		return(strerror(errno));
+	}
+	close(fd);
+	if (hbinterval != 30000) {
+		return "HB Interval not compliant to RFC2960";
+	}
+	if (maxrxt != 5) {
+		return "Path Max RXT not compliant to RFC2960";
+	}
+	if (ipv6_flowlabel) {
+		return "IPv6 Flow label something other than 0 by default";
+	}
+	if (ipv4_tos) {
+		return "IPv4 TOS something other than 0 by default";
+	}
+	if (flags & SPP_PMTUD_DISABLE) {
+		return "Path MTU not enabled by default";
+	}
+	if (flags & SPP_HB_DISABLE) {
+		return "HB not enabled by default";
+	}
+	return NULL;
+}
+
+
+
+
+DEFINE_APITEST(maxseg, gso_def_1_1)
+{
+	int fd, val, result;
+
+	fd = sctp_one2one(0, 0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_maxseg(fd, 0, &val);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	close(fd);
+	if (val != 0) {
+		return "maxseg not unlimited (i.e. 0)";
+	}
+
+	return NULL;
+}
+
+DEFINE_APITEST(maxseg, sso_set_1_1)
+{
+	int fd, val[3], result;
+	fd = sctp_one2one(0, 0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_maxseg(fd, 0, &val[0]);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+
+	if ((val[0] == 0) || (val[0] > 1452)) {
+		val[1] = 1452;
+	} else {
+		val[1] = val[0] - 100;
+	}
+	result = sctp_set_maxseg(fd, 0, val[1]);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	result = sctp_get_maxseg(fd, 0, &val[2]);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	close(fd);
+	if(val[1] < val[2]) {
+		return "Set did not work";
+	}
+	return NULL;
+}
+
