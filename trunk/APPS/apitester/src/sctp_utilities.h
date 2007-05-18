@@ -111,6 +111,10 @@ sctp_set_hbdisable(int fd, sctp_assoc_t id,
 		   struct sockaddr *sa);
 
 int
+sctp_set_hbenable(int fd, sctp_assoc_t id, 
+		   struct sockaddr *sa);
+
+int
 sctp_set_hbzero(int fd, sctp_assoc_t id, 
 		struct sockaddr *sa);
 
