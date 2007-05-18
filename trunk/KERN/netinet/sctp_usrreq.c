@@ -92,7 +92,7 @@ sctp_init(void)
 	sb_max_adj = (u_long)((u_quad_t) (SB_MAX) * MCLBYTES / (MSIZE + MCLBYTES));
 	sctp_sendspace = min((min(SB_MAX, sb_max_adj)),
 #ifndef __OpenBSD__
-	    ((nmbclusters / 2) * SCTP_DEFAULT_MAXSEGMENT));
+	    (((uint32_t)nmbclusters / 2) * SCTP_DEFAULT_MAXSEGMENT));
 #else
 	    ((nmbclust / 2) * SCTP_DEFAULT_MAXSEGMENT));
 #endif
@@ -1999,9 +1999,10 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 		break;
 	case SCTP_VRF_ID:
 	{
-		uint32_t *vrf_id;
-		SCTP_CHECK_AND_CAST(vrf_id, optval, uint32_t, *optsize);
-		*vrf_id = inp->def_vrf_id;
+		uint32_t *default_vrfid;
+
+		SCTP_CHECK_AND_CAST(default_vrfid, optval, uint32_t, *optsize);
+		*default_vrfid = inp->def_vrf_id;
 		break;
 	}
 	case SCTP_GET_ASOC_VRF:
@@ -2021,9 +2022,10 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 #ifdef SCTP_MVRF
 		int siz_needed;
 		uint32_t *vrf_ids;
+
 		SCTP_CHECK_AND_CAST(vrf_ids, optval, uint32_t, *optsize);
 		siz_needed = inp->num_vrfs * sizeof(uint32_t);
-		if(*optsize < siz_needed) {
+		if (*optsize < siz_needed) {
 			error = EINVAL;
 			break;
 		}
@@ -2949,28 +2951,28 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 	break;
 	case SCTP_VRF_ID:
 	{
-		uint32_t *vrf_id;
+		uint32_t *default_vrfid;
 #ifdef SCTP_MVRF
 		int i;
 #endif
-		SCTP_CHECK_AND_CAST(vrf_id, optval, uint32_t, optsize);
-		if (*vrf_id > SCTP_MAX_VRF_ID) {
+		SCTP_CHECK_AND_CAST(default_vrfid, optval, uint32_t, optsize);
+		if (*default_vrfid > SCTP_MAX_VRF_ID) {
 			error = EINVAL;
 			break;
 		}
 #ifdef SCTP_MVRF
-		for(i=0; i<inp->num_vrfs; i++) {
+		for (i = 0; i < inp->num_vrfs; i++) {
 			/* The VRF must be in the VRF list */
-			if(*vrf_id == inp->m_vrf_ids[i]) {
+			if (*default_vrfid == inp->m_vrf_ids[i]) {
 				SCTP_INP_WLOCK(inp);
- 				inp->def_vrf_id = *vrf_id;
+ 				inp->def_vrf_id = *default_vrfid;
 				SCTP_INP_WUNLOCK(inp);
 				goto sctp_done;
 			}
 		}
 		error = EINVAL;
 #else
-		inp->def_vrf_id = *vrf_id;
+		inp->def_vrf_id = *default_vrfid;
 #endif
 #ifdef SCTP_MVRF
 	sctp_done:
@@ -2980,11 +2982,11 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 	case SCTP_DEL_VRF_ID:
 	{
 #ifdef SCTP_MVRF
-		uint32_t *vrf_id;
+		uint32_t *del_vrfid;
 		int i, fnd=0;
 
-		SCTP_CHECK_AND_CAST(vrf_id, optval, uint32_t, optsize);
-		if (*vrf_id > SCTP_MAX_VRF_ID) {
+		SCTP_CHECK_AND_CAST(del_vrfid, optval, uint32_t, optsize);
+		if (*del_vrfid > SCTP_MAX_VRF_ID) {
 			error = EINVAL;
 			break;
 		}
@@ -2999,21 +3001,21 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			break;
 		}
 		SCTP_INP_WLOCK(inp);
-		for(i=0; i<inp->num_vrfs; i++) {
-			if(*vrf_id == inp->m_vrf_ids[i]) {
+		for (i = 0; i < inp->num_vrfs; i++) {
+			if (*del_vrfid == inp->m_vrf_ids[i]) {
 				fnd = 1;
 				break;
 			}
 		}
-		if(!fnd) {
+		if (!fnd) {
 			error = EINVAL;
 			break;
 		}
-		if (i != (inp->num_vrfs-1)) {
+		if (i != (inp->num_vrfs - 1)) {
 			/* Take bottom one and move to this slot */
 			inp->m_vrf_ids[i] = inp->m_vrf_ids[(inp->num_vrfs-1)];
 		}
-		if (*vrf_id == inp->def_vrf_id) {
+		if (*del_vrfid == inp->def_vrf_id) {
 			/* Take the first one as the new default */
 			inp->def_vrf_id = inp->m_vrf_ids[0];
 		}
@@ -3027,11 +3029,11 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 	case SCTP_ADD_VRF_ID:
 	{
 #ifdef SCTP_MVRF
-		uint32_t *vrf_id;
+		uint32_t *add_vrfid;
 		int i;
 
-		SCTP_CHECK_AND_CAST(vrf_id, optval, uint32_t, optsize);
-		if (*vrf_id > SCTP_MAX_VRF_ID) {
+		SCTP_CHECK_AND_CAST(add_vrfid, optval, uint32_t, optsize);
+		if (*add_vrfid > SCTP_MAX_VRF_ID) {
 			error = EINVAL;
 			break;
 		}
@@ -3042,14 +3044,14 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		}
 		SCTP_INP_WLOCK(inp);
 		/* Verify its not already here */
-		for(i=0; i<inp->num_vrfs; i++) {
-			if(*vrf_id == inp->m_vrf_ids[i]) {
+		for (i = 0; i < inp->num_vrfs; i++) {
+			if (*add_vrfid == inp->m_vrf_ids[i]) {
 				error = EALREADY;
 				SCTP_INP_WUNLOCK(inp);
 				break;
 			}
 		}
-		if((inp->num_vrfs+1) > inp->vrf_size) {
+		if ((inp->num_vrfs + 1) > inp->vrf_size) {
 			/* need to grow array */
 			uint32_t *tarray;
 			SCTP_MALLOC(tarray, uint32_t *,
@@ -3065,7 +3067,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			inp->m_vrf_ids = tarray;
 			inp->vrf_size += SCTP_DEFAULT_VRF_SIZE;
 		}
-		inp->m_vrf_ids[inp->num_vrfs] = *vrf_id;
+		inp->m_vrf_ids[inp->num_vrfs] = *add_vrfid;
 		inp->num_vrfs++;
 		SCTP_INP_WUNLOCK(inp);
 #else
