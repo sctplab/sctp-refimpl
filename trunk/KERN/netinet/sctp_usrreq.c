@@ -2105,7 +2105,6 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 		{
 			struct sctp_assoc_value *av;
 			int ovh;
-
 			SCTP_CHECK_AND_CAST(av, optval, struct sctp_assoc_value, *optsize);
 			if(av->assoc_id) {
 				SCTP_FIND_STCB(inp, stcb, av->assoc_id);
@@ -2123,7 +2122,10 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 				} else {
 					ovh = SCTP_MED_V4_OVERHEAD;
 				}
-				av->assoc_value = inp->sctp_frag_point - ovh;
+				if(inp->sctp_frag_point >= SCTP_DEFAULT_MAXSEGMENT)
+					av->assoc_value = 0;
+				else
+					av->assoc_value = inp->sctp_frag_point - ovh;
 				SCTP_INP_RUNLOCK(inp);				
 			}
 			*optsize = sizeof(struct sctp_assoc_value);
@@ -3416,21 +3418,25 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		SCTP_CHECK_AND_CAST(av, optval, struct sctp_assoc_value, optsize);
 		SCTP_FIND_STCB(inp, stcb, av->assoc_id);
 
+		if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) {
+			ovh = SCTP_MED_OVERHEAD;
+		} else {
+			ovh = SCTP_MED_V4_OVERHEAD;
+		}
 		if (stcb) {
-			error = EINVAL;
+			if (av->assoc_value) {
+				stcb->asoc.sctp_frag_point = (av->assoc_value + ovh);
+			} else {
+				stcb->asoc.sctp_frag_point = SCTP_DEFAULT_MAXSEGMENT;
+			}
 			SCTP_TCB_UNLOCK(stcb);
 		} else {
 			SCTP_INP_WLOCK(inp);
-			if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) {
-				ovh = SCTP_MED_OVERHEAD;
-			} else {
-				ovh = SCTP_MED_V4_OVERHEAD;
-			}
 			/* FIXME MT: I think this is not in tune with the API ID */
 			if (av->assoc_value) {
 				inp->sctp_frag_point = (av->assoc_value + ovh);
 			} else {
-				error = EINVAL;
+				inp->sctp_frag_point = SCTP_DEFAULT_MAXSEGMENT;
 			}
 			SCTP_INP_WUNLOCK(inp);
 		}

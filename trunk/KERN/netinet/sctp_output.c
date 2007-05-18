@@ -5350,10 +5350,10 @@ sctp_get_frag_point(struct sctp_tcb *stcb,
 		ovh = SCTP_MED_V4_OVERHEAD;
 	}
 
-	if (stcb->sctp_ep->sctp_frag_point > asoc->smallest_mtu)
+	if (stcb->asoc.sctp_frag_point > asoc->smallest_mtu)
 		siz = asoc->smallest_mtu - ovh;
 	else
-		siz = (stcb->sctp_ep->sctp_frag_point - ovh);
+		siz = (stcb->asoc.sctp_frag_point - ovh);
 	/*
 	 * if (siz > (MCLBYTES-sizeof(struct sctp_data_chunk))) {
 	 */
