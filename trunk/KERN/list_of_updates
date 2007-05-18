@@ -9,3 +9,10 @@
 - maxseg did not allow setting on an assoc basis. We needed
   to thus track and use an association value instead of a inp value.
 - Fixed ep get of HB status to report back properly.
+- use settings flag to tell if assoc level hb is on off not
+  the timer.. since the timer may still run if unconf address
+  are present.
+- check for crazy ENABLE/DISABLE conditions.
+
+
+
