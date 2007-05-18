@@ -452,6 +452,8 @@ struct sctp_error_unrecognized_chunk {
 #define SCTP_PCB_FLAGS_NO_FRAGMENT	0x00100000
 #define SCTP_PCB_FLAGS_EXPLICIT_EOR     0x00400000
 
+#define SCTP_SMALLEST_PMTU 512	 /* smallest pmtu allowed when disabling PMTU discovery */
+
 #include <netinet/sctp_uio.h>
 
 #endif				/* !_NETINET_SCTP_H_ */
