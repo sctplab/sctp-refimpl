@@ -4778,8 +4778,7 @@ sctp_input(i_pak, va_alist)
 	struct mbuf *m;
 	int iphlen;
 #ifdef __Panda__
-	pakoffset_type off_p;
-	int off,res;
+	int off;
 #endif
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s;
@@ -4807,16 +4806,11 @@ sctp_input(i_pak, va_alist)
 #endif
 #endif
 #ifdef __Panda__
-	res = pak_client_get_offset(i_pak, PAK_OFF_NETWORK_ST, &off_p);
-	if (CERR_IS_NOTOK(res)) {
-		SCTP_RELEASE_PKT(i_pak);
-		return;
-	}
 	/*-
 	 * This is Evil, but its the only way to make
 	 * panda work right 
 	 */
-	off = (int)(off_p + sizeof(struct ip));
+	off = sizeof(struct ip);
 #endif
 
  	if (SCTP_GET_PKT_VRFID(i_pak, vrf_id)) {
