@@ -927,6 +927,24 @@ sctp_set_hbdisable(int fd, sctp_assoc_t id,
 }
 
 int
+sctp_set_hbenable(int fd, sctp_assoc_t id, 
+		   struct sockaddr *sa)
+{
+	int result;
+	uint32_t flags;
+	flags = SPP_HB_ENABLE;
+	result  = sctp_set_paddr_param(fd, id, sa,
+				       0,
+				       0,
+				       0,
+				       flags,
+				       0,
+				       0);
+	return result;
+}
+
+
+int
 sctp_set_hbzero(int fd, sctp_assoc_t id, 
 		struct sockaddr *sa)
 {
