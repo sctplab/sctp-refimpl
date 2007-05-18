@@ -698,6 +698,7 @@ struct sctp_association {
 	uint32_t my_rwnd;
 	uint32_t my_last_reported_rwnd;
 	uint32_t my_rwnd_control_len;
+	uint32_t sctp_frag_point;
 
 	uint32_t total_output_queue_size;
 
