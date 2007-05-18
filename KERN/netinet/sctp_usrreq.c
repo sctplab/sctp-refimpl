@@ -2418,7 +2418,13 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 				paddrp->spp_pathmtu = 0;
 
 				/* default behavior, no stcb */
-				paddrp->spp_flags = SPP_HB_ENABLE | SPP_PMTUD_ENABLE;
+				paddrp->spp_flags = SPP_PMTUD_ENABLE;
+
+				if(sctp_is_feature_off(inp, SCTP_PCB_FLAGS_DONOT_HEARTBEAT)) {
+					paddrp->spp_flags |= SPP_HB_ENABLE;
+				} else {
+					paddrp->spp_flags |= SPP_HB_DISABLE;
+				}
 				SCTP_INP_RUNLOCK(inp);
 			}
 			*optsize = sizeof(struct sctp_paddrparams);
