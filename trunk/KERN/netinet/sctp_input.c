@@ -4832,6 +4832,13 @@ sctp_input(i_pak, va_alist)
 	iphlen = off;
 #endif
 	m = SCTP_HEADER_TO_CHAIN(i_pak);
+#ifdef __Panda__
+    /* Free the pak header as we already have the data chain */
+	/* For BSD/MAC this does nothing */
+	SCTP_DETACH_HEADER_FROM_CHAIN(i_pak);
+	(void)SCTP_RELEASE_HEADER(i_pak);
+#endif
+
 	net = NULL;
 	SCTP_STAT_INCR(sctps_recvpackets);
 	SCTP_STAT_INCR_COUNTER64(sctps_inpackets);
@@ -5109,11 +5116,5 @@ sctp_input(i_pak, va_alist)
 	if (m) {
 		sctp_m_freem(m);
 	}
-#ifdef __Panda__
-	/* For BSD/MAC this does nothing */
-	SCTP_DETACH_HEADER_FROM_CHAIN(i_pak);
-	(void)SCTP_RELEASE_HEADER(i_pak);
-#endif
-
 	return;
 }
