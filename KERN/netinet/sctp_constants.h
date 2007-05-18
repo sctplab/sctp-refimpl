@@ -662,10 +662,11 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.16 2007/05/17 12:16:23 
 
 #define SCTP_DEF_MAX_INIT	8
 #define SCTP_DEF_MAX_SEND	10
-#define SCTP_DEF_MAX_PATH_RTX	4
+#define SCTP_DEF_MAX_PATH_RTX	5
 
 #define SCTP_DEF_PMTU_RAISE_SEC	600	/* 10 min between raise attempts */
 #define SCTP_DEF_PMTU_MIN	600
+
 
 #define SCTP_MSEC_IN_A_SEC	1000
 #define SCTP_USEC_IN_A_SEC	1000000

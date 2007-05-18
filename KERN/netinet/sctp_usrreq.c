@@ -2415,11 +2415,10 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 				}
 #endif
 				/* can't return this */
-				paddrp->spp_pathmaxrxt = 0;
 				paddrp->spp_pathmtu = 0;
+
 				/* default behavior, no stcb */
 				paddrp->spp_flags = SPP_HB_ENABLE | SPP_PMTUD_ENABLE;
-
 				SCTP_INP_RUNLOCK(inp);
 			}
 			*optsize = sizeof(struct sctp_paddrparams);
@@ -3605,7 +3604,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 				if (paddrp->spp_flags & SPP_HB_ENABLE) {
 					net->dest_state &= ~SCTP_ADDR_NOHB;
 				}
-				if (paddrp->spp_flags & SPP_PMTUD_DISABLE) {
+				if ((paddrp->spp_flags & SPP_PMTUD_DISABLE) && (paddrp->spp_pathmtu >= SCTP_SMALLEST_PMTU)) {
 					if (SCTP_OS_TIMER_PENDING(&net->pmtu_timer.timer)) {
 						sctp_timer_stop(SCTP_TIMER_TYPE_PATHMTURAISE, inp, stcb, net,
 								SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
@@ -3615,7 +3614,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 						if (net->mtu < stcb->asoc.smallest_mtu) {
 #ifdef SCTP_PRINT_FOR_B_AND_M 
 							SCTP_PRINTF("SCTP_PMTU_DISABLE calls sctp_pathmtu_adjustment:%d\n",
-							       net->mtu);
+								    net->mtu);
 #endif
 							sctp_pathmtu_adjustment(inp, stcb, net, net->mtu);
 						}
@@ -3652,6 +3651,32 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 					stcb->asoc.hb_is_disabled = 0;
 					sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net);
 				}
+				if ((paddrp->spp_flags & SPP_PMTUD_DISABLE) && (paddrp->spp_pathmtu >= SCTP_SMALLEST_PMTU)) {
+					TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
+						if (SCTP_OS_TIMER_PENDING(&net->pmtu_timer.timer)) {
+							sctp_timer_stop(SCTP_TIMER_TYPE_PATHMTURAISE, inp, stcb, net,
+									SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
+						}
+						if (paddrp->spp_pathmtu > SCTP_DEFAULT_MINSEGMENT) {
+							net->mtu = paddrp->spp_pathmtu;
+							if (net->mtu < stcb->asoc.smallest_mtu) {
+#ifdef SCTP_PRINT_FOR_B_AND_M 
+								SCTP_PRINTF("SCTP_PMTU_DISABLE calls sctp_pathmtu_adjustment:%d\n",
+									    net->mtu);
+#endif
+								sctp_pathmtu_adjustment(inp, stcb, net, net->mtu);
+							}
+						}
+					}
+				} 
+				if (paddrp->spp_flags & SPP_PMTUD_ENABLE) {
+					TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
+						if (SCTP_OS_TIMER_PENDING(&net->pmtu_timer.timer)) {
+							sctp_timer_start(SCTP_TIMER_TYPE_PATHMTURAISE, inp, stcb, net);
+						}
+					}
+				}
+
 				if (paddrp->spp_flags & SPP_HB_DISABLE) {
 					int cnt_of_unconf = 0;
 					struct sctp_nets *lnet;
@@ -3668,12 +3693,17 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 					 * addresses
 					 */
 					if (cnt_of_unconf == 0) {
-						sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_11);
+						TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
+							sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net, 
+								SCTP_FROM_SCTP_USRREQ+SCTP_LOC_11);
+						}
 					}
 				}
 				if (paddrp->spp_flags & SPP_HB_ENABLE) {
 					/* start up the timer. */
-					sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net);
+					TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
+						sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net);
+					}
 				}
 #ifdef INET
 				if (paddrp->spp_flags & SPP_IPV4_TOS)
@@ -3696,9 +3726,15 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			if (paddrp->spp_pathmaxrxt) {
 				inp->sctp_ep.def_net_failure = paddrp->spp_pathmaxrxt;
 			}
-			if (paddrp->spp_flags & SPP_HB_ENABLE) {
+
+			if (paddrp->spp_flags & SPP_HB_TIME_IS_ZERO)
+				inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_HEARTBEAT] = 0;
+			else if (paddrp->spp_hbinterval)
 				inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_HEARTBEAT] = MSEC_TO_TICKS(paddrp->spp_hbinterval);
+
+			if (paddrp->spp_flags & SPP_HB_ENABLE) {
 				sctp_feature_off(inp, SCTP_PCB_FLAGS_DONOT_HEARTBEAT);
+
 			} else if (paddrp->spp_flags & SPP_HB_DISABLE) {
 				sctp_feature_on(inp, SCTP_PCB_FLAGS_DONOT_HEARTBEAT);
 			}
@@ -3872,8 +3908,8 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 #ifdef __FreeBSD__
 #if __FreeBSD_version > 602000
 		error = priv_check_cred(curthread->td_ucred, 
-				   PRIV_NETINET_RESERVEDPORT,
-				   SUSER_ALLOWJAIL);
+					PRIV_NETINET_RESERVEDPORT,
+					SUSER_ALLOWJAIL);
 #elif __FreeBSD_version >= 500000
 		error = suser((struct thread *)p);
 #else
