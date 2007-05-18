@@ -402,9 +402,9 @@ typedef struct rtentry	sctp_rtentry_t;
  	if (stcb && stcb->sctp_ep) \
 		result = ip6_output(o_pak, \
 				    ((struct in6pcb *)(stcb->sctp_ep))->in6p_outputopts, \
-				    (ro), 0, 0, ifp, NULL); \
+				    (ro), 0, 0, ifp, 0); \
 	else \
-		result = ip6_output(o_pak, NULL, (ro), 0, 0, ifp, NULL); \
+		result = ip6_output(o_pak, NULL, (ro), 0, NULL, ifp, 0); \
 }
 
 struct mbuf *
