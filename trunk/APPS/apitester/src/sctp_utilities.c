@@ -810,7 +810,46 @@ int sctp_get_paddr_param(int fd, sctp_assoc_t id,
 			 uint32_t *ipv6_flowlabel,
 			 uint8_t *ipv4_tos)
 {
-	
+	struct sctp_paddrparams param;
+	socklen_t len;
+	int result;
+	memset(&param, 0, sizeof(param));
+	param.spp_assoc_id = id;
+	if(sa) {
+		if (sa->sa_family == AF_INET) {
+			memcpy(&param.spp_address, sa, sizeof(struct sockaddr_in));
+		} else if (sa->sa_family == AF_INET6) {
+			memcpy(&param.spp_address, sa, sizeof(struct sockaddr_in6));
+		} else {
+			errno = EINVAL;
+			return -1;
+		}
+	}
+	len = sizeof(param);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_PEER_ADDR_PARAMS,
+			    &param, &len);
+	if (result < 0) {
+		return (result);
+	}
+	if (hbinterval) {
+		*hbinterval = param.spp_hbinterval;
+	}
+	if (maxrxt) {
+		*maxrxt = param.spp_pathmaxrxt;
+	}
+	if (pathmtu) {
+		*pathmtu  = param.spp_pathmtu;
+	}
+	if (flags) {
+		*flags = param.spp_flags;
+	}
+	if (ipv6_flowlabel) {
+		*ipv6_flowlabel = param.spp_ipv6_flowlabel;
+	}
+	if (ipv4_tos) {
+		*ipv4_tos = param.spp_ipv4_tos;
+	}
+	return (result);
 }
 
 
@@ -823,5 +862,211 @@ int sctp_set_paddr_param(int fd, sctp_assoc_t id,
 			 uint32_t ipv6_flowlabel,
 			 uint8_t ipv4_tos)
 {
+	struct sctp_paddrparams param;
+	socklen_t len;
+	int result;
 
+	memset(&param, 0, sizeof(param));
+	param.spp_assoc_id = id;
+	if(sa) {
+		if (sa->sa_family == AF_INET) {
+			memcpy(&param.spp_address, sa, sizeof(struct sockaddr_in));
+		} else if (sa->sa_family == AF_INET6) {
+			memcpy(&param.spp_address, sa, sizeof(struct sockaddr_in6));
+		} else {
+			errno = EINVAL;
+			return -1;
+		}
+	}
+	param.spp_hbinterval = hbinterval;
+	param.spp_pathmaxrxt = maxrxt;
+	param.spp_pathmtu = pathmtu;
+	param.spp_flags = flags;
+	param.spp_ipv6_flowlabel = ipv6_flowlabel;
+	param.spp_ipv4_tos = ipv4_tos;
+	len = sizeof(param);
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_PEER_ADDR_PARAMS,
+			    &param, len);
+	return(result);
+	
+}
+
+int
+sctp_set_hbint(int fd, sctp_assoc_t id, 
+	       struct sockaddr *sa,
+	       uint16_t hbinterval)
+{
+	int result;
+	uint32_t flags;
+	flags = SPP_HB_ENABLE;
+	result  = sctp_set_paddr_param(fd, id, sa,
+				       hbinterval,
+				       0,
+				       0,
+				       flags,
+				       0,
+				       0);
+	return result;	
+}
+
+int
+sctp_set_hbdisable(int fd, sctp_assoc_t id, 
+		   struct sockaddr *sa)
+{
+	int result;
+	uint32_t flags;
+	flags = SPP_HB_DISABLE;
+	result  = sctp_set_paddr_param(fd, id, sa,
+				       0,
+				       0,
+				       0,
+				       flags,
+				       0,
+				       0);
+	return result;
+}
+
+int
+sctp_set_hbzero(int fd, sctp_assoc_t id, 
+		struct sockaddr *sa)
+{
+	int result;
+	uint32_t flags;
+	flags = SPP_HB_ENABLE | SPP_HB_TIME_IS_ZERO;
+	result  = sctp_set_paddr_param(fd, id, sa,
+				       0,
+				       0,
+				       0,
+				       flags,
+				       0,
+				       0);
+	return result;
+
+}
+
+
+int
+sctp_set_maxrxt(int fd, sctp_assoc_t id, 
+	       struct sockaddr *sa,
+	       uint32_t maxrxt)
+{
+	int result;
+	uint32_t flags;
+	flags = 0;
+	result  = sctp_set_paddr_param(fd, id, sa,
+				       0,
+				       maxrxt,
+				       0,
+				       flags,
+				       0,
+				       0);
+	return (result);
+
+}
+
+int
+sctp_set_pmtu(int fd, sctp_assoc_t id, 
+	      struct sockaddr *sa,
+	      uint32_t pathmtu)
+{
+	int result;
+	uint32_t flags;
+	flags = SPP_PMTUD_DISABLE;
+	result  = sctp_set_paddr_param(fd, id, sa,
+				       0,
+				       0,
+				       pathmtu,
+				       flags,
+				       0,
+				       0);
+	return (result);
+
+}
+
+int
+sctp_set_pmtu_enable(int fd, sctp_assoc_t id, 
+		     struct sockaddr *sa)
+{
+	int result;
+	uint32_t flags;
+	flags = SPP_PMTUD_ENABLE;
+	result  = sctp_set_paddr_param(fd, id, sa,
+				       0,
+				       0,
+				       0,
+				       flags,
+				       0,
+				       0);
+	return (result);
+}
+
+
+
+int
+sctp_set_flow(int fd, sctp_assoc_t id, 
+	      struct sockaddr *sa,
+	      uint32_t ipv6_flowlabel)
+{
+	int result;
+	uint32_t flags;
+
+	flags = SPP_IPV6_FLOWLABEL;
+	result  = sctp_set_paddr_param(fd, id, sa,
+				       0,
+				       0,
+				       0,
+				       flags,
+				       ipv6_flowlabel,
+				       0);
+	return (result);
+}
+
+int
+sctp_set_tos(int fd, sctp_assoc_t id, 
+	     struct sockaddr *sa,
+	     uint8_t ipv4_tos)
+{
+	int result;
+	uint32_t flags;
+	flags = SPP_IPV4_TOS;
+	result  = sctp_set_paddr_param(fd, id, sa,
+				       0,
+				       0,
+				       0,
+				       flags,
+				       0,
+				       ipv4_tos);
+	return (result);
+}
+
+
+int sctp_get_maxseg(int fd, sctp_assoc_t id, int *val)
+{
+	socklen_t len;
+	struct sctp_assoc_value av;
+	int result;
+
+	av.assoc_id = id;
+	av.assoc_value = 0;
+
+	len = sizeof(av);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_MAXSEG,
+			    &av, &len);
+	*val = av.assoc_value;
+	return(result);
+
+}
+
+int sctp_set_maxseg(int fd, sctp_assoc_t id, int val)
+{
+	socklen_t len;
+	int result;
+	struct sctp_assoc_value av;
+	len = sizeof(av);
+	av.assoc_id = id;
+	av.assoc_value = val;
+
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_MAXSEG,
+			    &av, len);
+	return(result);
 }

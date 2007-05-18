@@ -101,3 +101,44 @@ int sctp_set_paddr_param(int fd, sctp_assoc_t id,
 			 uint8_t ipv4_tos);
 
 
+
+int
+sctp_set_hbint(int fd, sctp_assoc_t id, 
+	       struct sockaddr *sa,
+	       uint16_t hbinterval);
+int
+sctp_set_hbdisable(int fd, sctp_assoc_t id, 
+		   struct sockaddr *sa);
+
+int
+sctp_set_hbzero(int fd, sctp_assoc_t id, 
+		struct sockaddr *sa);
+
+
+int
+sctp_set_maxrxt(int fd, sctp_assoc_t id, 
+		struct sockaddr *sa,
+		uint32_t maxrxt);
+
+int
+sctp_set_pmtu(int fd, sctp_assoc_t id, 
+	      struct sockaddr *sa,
+	      uint32_t pathmtu);
+int
+sctp_set_pmtu_enable(int fd, sctp_assoc_t id, 
+		     struct sockaddr *sa);
+
+int
+sctp_set_flow(int fd, sctp_assoc_t id, 
+	      struct sockaddr *sa,
+	      uint32_t ipv6_flowlabel);
+
+int
+sctp_set_tos(int fd, sctp_assoc_t id, 
+	     struct sockaddr *sa,
+	     uint8_t ipv4_tos);
+
+
+
+int sctp_set_maxseg(int fd, sctp_assoc_t id, int val);
+int sctp_get_maxseg(int fd, sctp_assoc_t id, int *val);
