@@ -1,4 +1,4 @@
-int  sctp_one2one(unsigned short port, int should_listen, int bindall);
+int sctp_one2one(unsigned short port, int should_listen, int bindall);
 int sctp_socketpair(int *, int bindall);
 int sctp_socketpair_reuse(int fd, int *fds, int bindall);
 int sctp_socketstar(int *, int *, unsigned int);
