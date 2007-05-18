@@ -2345,8 +2345,16 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 				/* Applys to the specific association */
 				paddrp->spp_flags = 0;
 				if (net) {
+					int ovh;
+					if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) {
+						ovh = SCTP_MED_OVERHEAD;
+					} else {
+						ovh = SCTP_MED_V4_OVERHEAD;
+					}
+
+
 					paddrp->spp_pathmaxrxt = net->failure_threshold;
-					paddrp->spp_pathmtu = net->mtu;
+					paddrp->spp_pathmtu = net->mtu - ovh;
 					/* get flags for HB */
 					if (net->dest_state & SCTP_ADDR_NOHB)
 						paddrp->spp_flags |= SPP_HB_DISABLE;
@@ -3607,6 +3615,14 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			 * do we change the timer for HB, we run
 			 * only one?
 			 */
+			int ovh=0;
+
+			if (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) {
+				ovh = SCTP_MED_OVERHEAD;
+			} else {
+				ovh = SCTP_MED_V4_OVERHEAD;
+			}
+
 			if (paddrp->spp_hbinterval)
 				stcb->asoc.heart_beat_delay = paddrp->spp_hbinterval;
 			else if (paddrp->spp_flags & SPP_HB_TIME_IS_ZERO)
@@ -3631,7 +3647,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 								SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
 					}
 					if (paddrp->spp_pathmtu > SCTP_DEFAULT_MINSEGMENT) {
-						net->mtu = paddrp->spp_pathmtu;
+						net->mtu = paddrp->spp_pathmtu + ovh;
 						if (net->mtu < stcb->asoc.smallest_mtu) {
 #ifdef SCTP_PRINT_FOR_B_AND_M 
 							SCTP_PRINTF("SCTP_PMTU_DISABLE calls sctp_pathmtu_adjustment:%d\n",
@@ -3679,7 +3695,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 									SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
 						}
 						if (paddrp->spp_pathmtu > SCTP_DEFAULT_MINSEGMENT) {
-							net->mtu = paddrp->spp_pathmtu;
+							net->mtu = paddrp->spp_pathmtu + ovh;
 							if (net->mtu < stcb->asoc.smallest_mtu) {
 #ifdef SCTP_PRINT_FOR_B_AND_M 
 								SCTP_PRINTF("SCTP_PMTU_DISABLE calls sctp_pathmtu_adjustment:%d\n",

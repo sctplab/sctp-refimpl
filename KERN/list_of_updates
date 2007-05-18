@@ -13,6 +13,6 @@
   the timer.. since the timer may still run if unconf address
   are present.
 - check for crazy ENABLE/DISABLE conditions.
-
+- set and get of pmtud (fixed path mtu) not always taking into account ovh.
 
 
