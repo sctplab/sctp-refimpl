@@ -5238,7 +5238,273 @@ DEFINE_APITEST(paddrpara, sso_bad_pmtud_en_1_M)
 	return NULL;
 }
 
+DEFINE_APITEST(paddrpara, sso_ahb_int_1_1)
+{
+	int fds[2];
+	int result;
+	struct sockaddr *sa = NULL;
+	uint32_t hbinterval[2], newval;
+	uint16_t maxrxt[2];
+	uint32_t pathmtu[2];
+	uint32_t flags[2];
+	uint32_t ipv6_flowlabel[2];
+	uint8_t ipv4_tos[2];
+	char *retstring = NULL;
 
+	fds[0] = fds[1] = -1;
+	result = sctp_socketpair(fds, 1);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_paddr_param(fds[0], 0, sa, &hbinterval[0],
+				      &maxrxt[0],
+				      &pathmtu[0],
+				      &flags[0],
+				      &ipv6_flowlabel[0],
+				      &ipv4_tos[0]);
+	if (result < 0) {
+		close(fds[0]);
+		close(fds[1]);
+		return(strerror(errno));
+	}
+	newval = (hbinterval[0] * 2) + 1;
+
+	result = sctp_set_hbint(fds[0], 0, NULL, newval);
+	if (result< 0) {
+		close(fds[0]);
+		close(fds[1]);
+		return(strerror(errno));
+	}
+
+	result = sctp_get_paddr_param(fds[0], 0, sa, &hbinterval[1],
+				      &maxrxt[1],
+				      &pathmtu[1],
+				      &flags[1],
+				      &ipv6_flowlabel[1],
+				      &ipv4_tos[1]);
+	if (result< 0) {
+		close(fds[0]);
+		close(fds[1]);
+		return(strerror(errno));
+	}
+	close(fds[0]);
+	close(fds[1]);
+
+	if(hbinterval[1] != newval) {
+		retstring = "HB interval set on ep failed";
+	}
+	if(maxrxt[0] != maxrxt[1]) {
+		retstring = "maxrxt changed";
+	}
+	if(pathmtu[0] != pathmtu[1]) {
+		retstring = "pathmtu changed";
+	}
+	if(flags[0] != flags[1]) {
+		retstring = "flag settings changed";
+	}
+	return retstring;
+}
+
+DEFINE_APITEST(paddrpara, sso_ahb_int_1_M)
+{
+	int fds[2];
+	int result;
+	struct sockaddr *sa = NULL;
+	uint32_t hbinterval[2], newval;
+	uint16_t maxrxt[2];
+	uint32_t pathmtu[2];
+	uint32_t flags[2];
+	uint32_t ipv6_flowlabel[2];
+	uint8_t ipv4_tos[2];
+	char *retstring = NULL;
+	sctp_assoc_t ids[2];
+
+	fds[0] = fds[1] = -1;
+	result = sctp_socketpair_1tom(fds, ids, 1);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_paddr_param(fds[0], ids[0], sa, &hbinterval[0],
+				      &maxrxt[0],
+				      &pathmtu[0],
+				      &flags[0],
+				      &ipv6_flowlabel[0],
+				      &ipv4_tos[0]);
+	if (result < 0) {
+		close(fds[0]);
+		close(fds[1]);
+		return(strerror(errno));
+	}
+	newval = (hbinterval[0] * 2) + 1;
+
+	result = sctp_set_hbint(fds[0], ids[0], NULL, newval);
+	if (result< 0) {
+		close(fds[0]);
+		close(fds[1]);
+		return(strerror(errno));
+	}
+
+	result = sctp_get_paddr_param(fds[0], ids[0], sa, &hbinterval[1],
+				      &maxrxt[1],
+				      &pathmtu[1],
+				      &flags[1],
+				      &ipv6_flowlabel[1],
+				      &ipv4_tos[1]);
+	if (result< 0) {
+		close(fds[0]);
+		close(fds[1]);
+		return(strerror(errno));
+	}
+	close(fds[0]);
+	close(fds[1]);
+
+	if(hbinterval[1] != newval) {
+		retstring = "HB interval set on ep failed";
+	}
+	if(maxrxt[0] != maxrxt[1]) {
+		retstring = "maxrxt changed";
+	}
+	if(pathmtu[0] != pathmtu[1]) {
+		retstring = "pathmtu changed";
+	}
+	if(flags[0] != flags[1]) {
+		retstring = "flag settings changed";
+	}
+	return retstring;
+}
+
+
+DEFINE_APITEST(paddrpara, sso_ahb_zero_1_1)
+{
+	int fds[2];
+	int result;
+	struct sockaddr *sa = NULL;
+	uint32_t hbinterval[2], newval;
+	uint16_t maxrxt[2];
+	uint32_t pathmtu[2];
+	uint32_t flags[2];
+	uint32_t ipv6_flowlabel[2];
+	uint8_t ipv4_tos[2];
+	char *retstring = NULL;
+	fds[0] = fds[1] = -1;
+	result = sctp_socketpair(fds, 1);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+
+	result = sctp_get_paddr_param(fds[0], 0, sa, &hbinterval[0],
+				      &maxrxt[0],
+				      &pathmtu[0],
+				      &flags[0],
+				      &ipv6_flowlabel[0],
+				      &ipv4_tos[0]);
+	if (result< 0) {
+		close(fds[0]);
+		close(fds[1]);
+		return(strerror(errno));
+	}
+	newval = 0;
+
+	result = sctp_set_hbzero(fds[0], 0, NULL);
+	if (result< 0) {
+		close(fds[0]);
+		close(fds[1]);
+		return(strerror(errno));
+	}
+	result = sctp_get_paddr_param(fds[0], 0, sa, &hbinterval[1],
+				      &maxrxt[1],
+				      &pathmtu[1],
+				      &flags[1],
+				      &ipv6_flowlabel[1],
+				      &ipv4_tos[1]);
+	if (result< 0) {
+		close(fds[0]);
+		close(fds[1]);
+		return(strerror(errno));
+	}
+	close(fds[0]);
+	close(fds[1]);
+	if(hbinterval[1] != newval) {
+		retstring = "HB interval set on ep failed";
+	}
+	if(maxrxt[0] != maxrxt[1]) {
+		retstring = "maxrxt changed";
+	}
+	if(pathmtu[0] != pathmtu[1]) {
+		retstring = "pathmtu changed";
+	}
+	if(flags[0] != flags[1]) {
+		retstring = "flag settings changed";
+	}
+	return retstring;
+
+}
+DEFINE_APITEST(paddrpara, sso_ahb_zero_1_M)
+{
+	int fds[2];
+	int result;
+	struct sockaddr *sa = NULL;
+	uint32_t hbinterval[2], newval;
+	uint16_t maxrxt[2];
+	uint32_t pathmtu[2];
+	uint32_t flags[2];
+	uint32_t ipv6_flowlabel[2];
+	uint8_t ipv4_tos[2];
+	char *retstring = NULL;
+	sctp_assoc_t ids[2];
+
+	fds[0] = fds[1] = -1;
+	result = sctp_socketpair_1tom(fds, ids, 1);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+
+	result = sctp_get_paddr_param(fds[0], ids[0], sa, &hbinterval[0],
+				      &maxrxt[0],
+				      &pathmtu[0],
+				      &flags[0],
+				      &ipv6_flowlabel[0],
+				      &ipv4_tos[0]);
+	if (result< 0) {
+		close(fds[0]);
+		close(fds[1]);
+		return(strerror(errno));
+	}
+	newval = 0;
+
+	result = sctp_set_hbzero(fds[0], ids[0], NULL);
+	if (result< 0) {
+		close(fds[0]);
+		close(fds[1]);
+		return(strerror(errno));
+	}
+	result = sctp_get_paddr_param(fds[0], ids[0], sa, &hbinterval[1],
+				      &maxrxt[1],
+				      &pathmtu[1],
+				      &flags[1],
+				      &ipv6_flowlabel[1],
+				      &ipv4_tos[1]);
+	if (result< 0) {
+		close(fds[0]);
+		close(fds[1]);
+		return(strerror(errno));
+	}
+	close(fds[0]);
+	close(fds[1]);
+	if(hbinterval[1] != newval) {
+		retstring = "HB interval set on ep failed";
+	}
+	if(maxrxt[0] != maxrxt[1]) {
+		retstring = "maxrxt changed";
+	}
+	if(pathmtu[0] != pathmtu[1]) {
+		retstring = "pathmtu changed";
+	}
+	if(flags[0] != flags[1]) {
+		retstring = "flag settings changed";
+	}
+	return retstring;
+}
 /********************************************************
  *
  * SCTP_MAXSEG tests
