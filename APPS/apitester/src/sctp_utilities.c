@@ -1311,7 +1311,7 @@ int sctp_get_active_key(int fd, sctp_assoc_t assoc_id, uint16_t *keyid) {
 	result = getsockopt(fd, IPPROTO_SCTP, SCTP_AUTH_ACTIVE_KEY,
 			    &akey, &len);
 	if (result >= 0) {
-	    *keyid = akey.scact_keynumber;
+		*keyid = akey.scact_keynumber;
 	}
 	return (result);
 }
@@ -1442,4 +1442,29 @@ int sctp_set_interleave(int fd, int inter)
 	result = setsockopt(fd, IPPROTO_SCTP, SCTP_FRAGMENT_INTERLEAVE,
 			    &inter, len);
 	return(result);
+}
+
+int sctp_get_pdapi_point(int fd, int *point)
+{
+	int result;
+	socklen_t len;
+
+	len = sizeof(*point);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_PARTIAL_DELIVERY_POINT,
+			    point, &len);
+	return(result);
+
+}
+
+
+int sctp_set_pdapi_point(int fd, int point)
+{
+	int result;
+	socklen_t len;
+
+	len = sizeof(point);
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_PARTIAL_DELIVERY_POINT,
+			    &point, len);
+	return(result);
+
 }

@@ -207,3 +207,11 @@ int sctp_set_dfreq(int fd, sctp_assoc_t id, uint32_t freq);
  ********************************************************/
 int sctp_get_interleave(int fd, int *inter);
 int sctp_set_interleave(int fd, int inter);
+
+/********************************************************
+ *
+ * SCTP_PARTIAL_DELIVERY_POINT tests
+ *
+ ********************************************************/
+int sctp_get_pdapi_point(int fd, int *point);
+int sctp_set_pdapi_point(int fd, int *point);
