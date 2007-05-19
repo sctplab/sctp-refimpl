@@ -180,7 +180,8 @@ sctp6_input(i_pak, offp, proto)
 
 	ip6 = mtod(m, struct ip6_hdr *);
 	/* Ensure that (sctphdr + sctp_chunkhdr) in a row. */
-	IP6_EXTHDR_GET(sh, struct sctphdr *, m, off, sizeof(*sh) + sizeof(*ch));
+	IP6_EXTHDR_GET(sh, struct sctphdr *, m, off,
+		       (int)(sizeof(*sh) + sizeof(*ch)));
 	if (sh == NULL) {
 		SCTP_STAT_INCR(sctps_hdrops);
 		return IPPROTO_DONE;
