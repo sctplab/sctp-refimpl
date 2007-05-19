@@ -215,3 +215,12 @@ int sctp_set_interleave(int fd, int inter);
  ********************************************************/
 int sctp_get_pdapi_point(int fd, int *point);
 int sctp_set_pdapi_point(int fd, int point);
+
+
+/********************************************************
+ *
+ * SCTP_CONTEXT tests
+ *
+ ********************************************************/
+int sctp_set_context(int fd, sctp_assoc_t id, uint32_t context);
+int sctp_get_context(int fd, sctp_assoc_t id, uint32_t *context);
