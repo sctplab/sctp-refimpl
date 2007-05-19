@@ -11480,3 +11480,118 @@ DEFINE_APITEST(dsack, sso_nc_other_asc_1_M)
  * SCTP_FRAGMENT_INTERLEAVE tests
  *
  ********************************************************/
+DEFINE_APITEST(fraginter, gso_def_1_1)
+{
+	int inter;
+	int fd, result;
+
+	fd = sctp_one2one(0, 0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_interleave(fd, &inter);
+	close(fd);
+	if(result < 0) {
+		return(strerror(errno));
+	}
+	if (inter != 1) {
+		return "Default fragment interleave not 1";
+	}
+	return NULL;
+}
+DEFINE_APITEST(fraginter, gso_def_1_M)
+{
+	int inter;
+	int fd, result;
+
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_interleave(fd, &inter);
+	close(fd);
+	if(result < 0) {
+		return(strerror(errno));
+	}
+	if (inter != 1) {
+		return "Default fragment interleave not 1";
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(fraginter, sso_1_1)
+{
+	int inter[2],newval;
+	int fd, result;
+	int cnt, i;
+
+	fd = sctp_one2one(0, 0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	cnt = 0;
+	for(cnt=0; cnt<2; cnt++) {
+		for(i=0; i<3; i++) {
+			newval = i;
+			result = sctp_set_interleave(fd, newval);
+			if(result < 0) {
+				close(fd);
+				return(strerror(errno));
+			}
+		
+			result = sctp_get_interleave(fd, &inter[1]);
+			if(result < 0) {
+				close(fd);
+				return(strerror(errno));
+			} 
+			if(inter[1] != newval) {
+				close(fd);
+				return "failed to set fragment interleave";
+			}
+
+		}
+	}
+	close(fd);
+	return NULL;
+}
+
+DEFINE_APITEST(fraginter, sso_1_M)
+{
+	int inter[2],newval;
+	int fd, result;
+	int cnt, i;
+
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_interleave(fd, &inter[0]);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	cnt = 0;
+	for(cnt=0; cnt<2; cnt++) {
+		for(i=0; i<3; i++) {
+			newval = i;
+			result = sctp_set_interleave(fd, newval);
+			if(result < 0) {
+				close(fd);
+				return(strerror(errno));
+			}
+		
+			result = sctp_get_interleave(fd, &inter[1]);
+			if(result < 0) {
+				close(fd);
+				return(strerror(errno));
+			} 
+			if(inter[1] != newval) {
+				close(fd);
+				return "failed to set fragment interleave";
+			}
+
+		}
+	}
+	close(fd);
+	return NULL;
+}

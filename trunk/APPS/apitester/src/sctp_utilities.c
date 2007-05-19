@@ -1417,3 +1417,27 @@ int sctp_get_dsack(int fd, sctp_assoc_t id,uint32_t *delay, uint32_t *freq)
 	}
 	return(result);
 }
+
+
+int sctp_get_interleave(int fd, int *inter)
+{
+	int result;
+	socklen_t len;
+
+	len = sizeof(*inter);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_FRAGMENT_INTERLEAVE,
+			    inter, &len);
+	return(result);
+
+}
+
+int sctp_set_interleave(int fd, int inter)
+{
+	int result;
+	socklen_t len;
+
+	len = sizeof(inter);
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_FRAGMENT_INTERLEAVE,
+			    &inter, len);
+	return(result);
+}

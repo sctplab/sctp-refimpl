@@ -200,4 +200,10 @@ int sctp_get_dsack(int fd, sctp_assoc_t id,uint32_t *delay, uint32_t *freq);
 int sctp_set_ddelay(int fd, sctp_assoc_t id, uint32_t delay);
 int sctp_set_dfreq(int fd, sctp_assoc_t id, uint32_t freq);
 
-
+/********************************************************
+ *
+ * SCTP_FRAGMENT_INTERLEAVE tests
+ *
+ ********************************************************/
+int sctp_get_interleave(int fd, int *inter);
+int sctp_set_interleave(int fd, int inter);
