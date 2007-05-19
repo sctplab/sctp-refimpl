@@ -3206,7 +3206,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		struct sctp_hmacalgo *shmac;
 		sctp_hmaclist_t *hmaclist;
 		uint32_t hmacid;
-		size_t size, i;
+		size_t size, i, found;
 
 		SCTP_CHECK_AND_CAST(shmac, optval, struct sctp_hmacalgo, optsize);
 		size = (optsize - sizeof(*shmac)) / sizeof(shmac->shmac_idents[0]);
@@ -3223,6 +3223,18 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 				sctp_free_hmaclist(hmaclist);
 				goto sctp_set_hmac_done;
 			}
+		}
+		found = 0;
+		for (i=0; i<hmaclist->num_algo; i++) {
+			if (hmaclist->hmac[i] == SCTP_AUTH_HMAC_ID_SHA1) {
+				/* already in list */
+				found = 1;
+			}
+		}
+		if (!found) {
+			sctp_free_hmaclist(hmaclist);
+			error = EINVAL;
+			break;
 		}
 		/* set it on the endpoint */
 		SCTP_INP_WLOCK(inp);
