@@ -10490,7 +10490,7 @@ DEFINE_APITEST(authkey, sso_new_1_1)
 DEFINE_APITEST(authkey, sso_new_1_M)
 {
 	int fd, result;
-	uint16_t keyid, keylen;
+	uint16_t keyid, keylen;	
 	char *keytext = "This is my new key";
 
 	fd = sctp_one2many(0, 1);
@@ -10566,12 +10566,12 @@ DEFINE_APITEST(authkey, gso_a_def_1_1)
 	fds[0] = fds[1] = -1;
 	fd = sctp_one2one(0, 1, 1);
 	if (fd < 0) {
-		return(strerror(errno));
+		return (strerror(errno));
 	}
 	result = sctp_socketpair_reuse(fd, fds, 1);
 	if (result < 0) {
-		close (fd);
-		return(strerror(errno));
+		close(fd);
+		return (strerror(errno));
 	}
 	keylen = sizeof(keytext);
 	keyid = 0;
@@ -10627,17 +10627,17 @@ DEFINE_APITEST(authkey, sso_a_def_1_1)
 	fds[0] = fds[1] = -1;
 	fd = sctp_one2one(0, 1, 1);
 	if (fd < 0) {
-		return(strerror(errno));
+		return (strerror(errno));
 	}
 	result = sctp_socketpair_reuse(fd, fds, 1);
 	if (result < 0) {
-		close (fd);
-		return(strerror(errno));
+		close(fd);
+		return (strerror(errno));
 	}
 	/* overwrite the default key */
 	keylen = sizeof(keytext);
 	keyid = 0;
-	result = sctp_set_auth_key(fds[0], 0, keyid, keylen,
+	result = sctp_set_auth_key(fds[1], 0, keyid, keylen,
 				   (uint8_t *)keytext);
 	if (result < 0) {
 		close(fd);
@@ -10693,17 +10693,17 @@ DEFINE_APITEST(authkey, sso_a_new_1_1)
 	fds[0] = fds[1] = -1;
 	fd = sctp_one2one(0, 1, 1);
 	if (fd < 0) {
-		return(strerror(errno));
+		return (strerror(errno));
 	}
 	result = sctp_socketpair_reuse(fd, fds, 1);
 	if (result < 0) {
-		close (fd);
-		return(strerror(errno));
+		close(fd);
+		return (strerror(errno));
 	}
 	/* add a new key id */
 	keylen = sizeof(keytext);
 	keyid = 1;
-	result = sctp_set_auth_key(fds[0], 0, keyid, keylen,
+	result = sctp_set_auth_key(fds[1], 0, keyid, keylen,
 				   (uint8_t *)keytext);
 	if (result < 0) {
 		close(fd);
@@ -10763,10 +10763,14 @@ DEFINE_APITEST(authkey, sso_a_newnul_1_1)
 		return (strerror(errno));
 	}
 	result = sctp_socketpair_reuse(fd, fds, 1);
+	if (result < 0) {
+		close(fd);
+		return (strerror(errno));
+	}
 	/* add a new NULL key id */
 	keylen = 0;
 	keyid = 1;
-	result = sctp_set_auth_key(fds[0], 0, keyid, keylen, &keytext);
+	result = sctp_set_auth_key(fds[1], 0, keyid, keylen, &keytext);
 	if (result < 0) {
 		close(fd);
 		close(fds[0]);
@@ -10811,9 +10815,522 @@ DEFINE_APITEST(authkey, sso_a_newnul_1_M)
 	close(fds[1]);
 	return NULL;
 }
+
 /********************************************************
  *
  * SCTP_AUTH_ACTIVE_KEY tests
+ *
+ ********************************************************/
+DEFINE_APITEST(actkey, gso_def_1_1)
+{
+	int fd, result;
+	uint16_t keyid;
+
+	fd = sctp_one2one(0, 0, 1);
+	if (fd < 0) {
+		return (strerror(errno));
+	}
+	keyid = 0xff;
+	result = sctp_get_active_key(fd, 0, &keyid);
+	close(fd);
+	if (result < 0) {
+		return "was unable to get active key";
+	}
+	if (keyid != 0) {
+		return "default key not key 0";
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(actkey, gso_def_1_M)
+{
+	int fd, result;
+	uint16_t keyid;
+
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return (strerror(errno));
+	}
+	keyid = 0xff;
+	result = sctp_get_active_key(fd, 0, &keyid);
+	close(fd);
+	if (result < 0) {
+		return "was unable to get active key";
+	}
+	if (keyid != 0) {
+		return "default key not key 0";
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(actkey, sso_def_1_1)
+{
+	int fd, result;
+	uint16_t keyid, verify_keyid;
+
+	fd = sctp_one2one(0, 0, 1);
+	if (fd < 0) {
+		return (strerror(errno));
+	}
+	keyid = 0;
+	result = sctp_set_active_key(fd, 0, keyid);
+	if (result < 0) {
+		close(fd);
+		return "was unable to set key active";
+	}
+	result = sctp_get_active_key(fd, 0, &verify_keyid);
+	close(fd);
+	if (result < 0) {
+		return "was unable to get active key";
+	}
+	if (verify_keyid != keyid) {
+		return "active key was not set";
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(actkey, sso_def_1_M)
+{
+	int fd, result;
+	uint16_t keyid, verify_keyid;
+
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return (strerror(errno));
+	}
+	keyid = 0;
+	result = sctp_set_active_key(fd, 0, keyid);
+	if (result < 0) {
+		return "was unable to set key active";
+	}
+	result = sctp_get_active_key(fd, 0, &verify_keyid);
+	close(fd);
+	if (result < 0) {
+		return "was unable to get active key";
+	}
+	if (verify_keyid != keyid) {
+		return "active key was not set";
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(actkey, sso_inval_1_1)
+{
+	int fd, result;
+	uint16_t keyid;
+
+	fd = sctp_one2one(0, 0, 1);
+	if (fd < 0) {
+		return (strerror(errno));
+	}
+	keyid = 0x1234;
+	result = sctp_set_active_key(fd, 0, keyid);
+	close(fd);
+	if (result >= 0) {
+		return "was able to set unknown key active";
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(actkey, sso_inval_1_M)
+{
+	int fd, result;
+	uint16_t keyid;
+
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return (strerror(errno));
+	}
+	keyid = 0x1234;
+	result = sctp_set_active_key(fd, 0, keyid);
+	close(fd);
+	if (result >= 0) {
+		return "was able to set unknown key active";
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(actkey, sso_new_1_1)
+{
+	int fd, result;
+	uint16_t keyid, verify_keyid, keylen;
+	char *keytext = "This is my new key";
+
+	fd = sctp_one2one(0, 0, 1);
+	if (fd < 0) {
+		return (strerror(errno));
+	}
+	keylen = sizeof(keytext);
+	keyid = 1;
+	result = sctp_set_auth_key(fd, 0, keyid, keylen, (uint8_t *)keytext);
+	if (result < 0) {
+		close(fd);
+		return "failed to set auth key";
+	}
+	result = sctp_set_active_key(fd, 0, keyid);
+	if (result < 0) {	
+		close(fd);
+		return "was unable to set new key active";
+	}
+	result = sctp_get_active_key(fd, 0, &verify_keyid);
+	close(fd);
+	if (result < 0) {
+		return "was unable to get active key";
+	}
+	if (verify_keyid != keyid) {
+		return "new active key was not set";
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(actkey, sso_new_1_M)
+{
+	int fd, result;
+	uint16_t keyid, verify_keyid, keylen;
+	char *keytext = "This is my new key";
+
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return (strerror(errno));
+	}
+	keylen = sizeof(keytext);
+	keyid = 1;
+	result = sctp_set_auth_key(fd, 0, keyid, keylen, (uint8_t *)keytext);
+	if (result < 0) {
+		close(fd);
+		return "failed to set auth key";
+	}
+	result = sctp_set_active_key(fd, 0, keyid);
+	if (result < 0) {
+		close(fd);
+		return "was unable to set new key active";
+	}
+	result = sctp_get_active_key(fd, 0, &verify_keyid);
+	close(fd);
+	if (result < 0) {
+		return "was unable to get active key";
+	}
+	if (verify_keyid != keyid) {
+		return "new active key was not set";
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(actkey, sso_inhdef_1_1)
+{
+	int fd, fds[2], result;
+	uint16_t keyid, a_keyid;
+
+	/* does the new assoc inherit the default active key from the ep? */
+	fd = sctp_one2one(0, 1, 1);
+	if (fd < 0) {
+		return (strerror(errno));
+	}
+	result = sctp_get_active_key(fd, 0, &keyid);
+	if (result < 0) {
+		return "was unable to get active key";
+	}
+	result = sctp_socketpair_reuse(fd, fds, 1);
+	if (result < 0) {
+		close(fd);
+		return (strerror(errno));
+	}
+	result = sctp_get_active_key(fds[1], 0, &a_keyid);
+	close(fd);
+	if (result < 0) {
+		return "was unable to get assoc active key";
+	}
+	if (a_keyid != keyid) {
+		return "did not inherit from ep";
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(actkey, sso_inhdef_1_M)
+{
+	int fds[2], result;
+	sctp_assoc_t ids[2];
+	uint16_t keyid, a_keyid;
+	char *ret = NULL;
+
+	/* does the new assoc inherit the default active key from the ep? */
+	fds[0] = fds[1] = -1;
+	fds[0] = sctp_one2many(0, 1);
+	if (fds[0] < 0) {
+		return (strerror(errno));
+	}
+	result = sctp_get_active_key(fds[0], 0, &keyid);
+	if (result < 0) {
+		return "was unable to get ep active key";
+	}
+	result = sctp_socketpair_1tom(fds, ids, 1);
+	if (result < 0) {
+		close(fds[0]);
+		return (strerror(errno));
+	}
+	result = sctp_get_active_key(fds[0], ids[0], &a_keyid);	
+	if (result < 0) {
+		ret = "was unable to get assoc active key";
+		goto out;
+	}
+	if (a_keyid != keyid) {
+		ret = "did not inherit default active key";
+		goto out;
+	}
+ out:
+	close(fds[0]);
+	close(fds[1]);
+	return (ret);
+}
+
+DEFINE_APITEST(actkey, sso_inhnew_1_1)
+{
+	int fd, fds[2], result;
+	uint16_t keyid, a_keyid, keylen;
+	char *keytext = "This is my new key";
+	char *ret = NULL;
+
+	/* does the new assoc inherit the new active key from the ep? */
+	fd = sctp_one2one(0, 1, 1);
+	if (fd < 0) {
+		return (strerror(errno));
+	}
+	keylen = sizeof(keytext);
+	keyid = 1;
+	result = sctp_set_auth_key(fd, 0, keyid, keylen, (uint8_t *)keytext);
+	if (result < 0) {
+		close(fd);
+		return "failed to set auth key";
+	}
+	result = sctp_set_active_key(fd, 0, keyid);
+	if (result < 0) {
+		close(fd);
+		return "was unable to set new key active";
+	}
+
+	result = sctp_socketpair_reuse(fd, fds, 1);
+	if (result < 0) {
+		close(fd);
+		return (strerror(errno));
+	}
+	result = sctp_get_active_key(fds[1], 0, &a_keyid);
+	if (result < 0) {
+		ret = "was unable to get active key";
+		goto out;
+	}
+	if (a_keyid != keyid) {
+		ret = "new active key was not set";
+		goto out;
+	}
+ out:
+	close(fd);
+	close(fds[0]);
+	close(fds[1]);
+	return (ret);
+}
+
+DEFINE_APITEST(actkey, sso_inhnew_1_M)
+{
+	int fds[2], result;
+	sctp_assoc_t ids[2];
+	uint16_t keyid, a_keyid, keylen;
+	char *keytext = "This is my new key";
+	char *ret = NULL;
+
+	/* does the new assoc inherit the new active key from the ep? */
+	fds[0] = fds[1] = -1;
+	fds[0] = sctp_one2many(0, 1);
+	if (fds[0] < 0) {
+		return (strerror(errno));
+	}
+	keylen = sizeof(keytext);
+	keyid = 1;
+	result = sctp_set_auth_key(fds[0], 0, keyid, keylen,
+				   (uint8_t *)keytext);
+	if (result < 0) {
+		close(fds[0]);
+		return "failed to set auth key";
+	}
+	result = sctp_set_active_key(fds[0], 0, keyid);
+	if (result < 0) {
+		close(fds[0]);
+		return "was unable to set new key active";
+	}
+
+	result = sctp_socketpair_1tom(fds, ids, 1);
+	if (result < 0) {
+		close(fds[0]);
+		return (strerror(errno));
+	}
+	result = sctp_get_active_key(fds[0], ids[0], &a_keyid);
+	if (result < 0) {
+		ret = "was unable to get assoc active key";
+		goto out;
+	}
+	if (a_keyid != keyid) {
+		ret = "did not inherit default active key";
+		goto out;
+	}
+ out:
+	close(fds[0]);
+	close(fds[1]);
+	return (ret);
+}
+
+DEFINE_APITEST(actkey, sso_achg_1_1)
+{
+	int fd, fds[2], result;
+	uint16_t def_keyid, keyid, a_keyid, keylen;
+	char *keytext = "This is my new key";
+	char *ret = NULL;
+
+	/* does changing the assoc active key leave the ep alone? */
+	fd = sctp_one2one(0, 1, 1);
+	if (fd < 0) {
+		return (strerror(errno));
+	}
+	/* get the default key */
+	result = sctp_get_active_key(fd, 0, &def_keyid);
+	if (result < 0) {
+		close(fd);
+		return "was unable to get default active key";
+	}
+	/* add a new key */
+	keylen = sizeof(keytext);
+	keyid = 1;
+	result = sctp_set_auth_key(fd, 0, keyid, keylen, (uint8_t *)keytext);
+	if (result < 0) {
+		close(fd);
+		return "failed to set auth key";
+	}
+	/* create a new assoc */
+	result = sctp_socketpair_reuse(fd, fds, 1);
+	if (result < 0) {
+		close(fd);
+		return (strerror(errno));
+	}
+	/* get assoc's active key, should be default key */
+	result = sctp_get_active_key(fds[1], 0, &a_keyid);
+	if (result < 0) {
+		ret = "was unable to get active key";
+		goto out;
+	}
+	if (a_keyid != def_keyid) {
+		ret = "new active key was not set";
+		goto out;
+	}
+	/* set assoc's active key */
+	result = sctp_set_active_key(fds[1], 0, keyid);
+	if (result < 0) {
+		ret = "was unable to set assoc active key";
+		goto out;
+	}
+	result = sctp_get_active_key(fds[1], 0, &a_keyid);
+	if (result < 0) {
+		ret = "was unable to get active key";
+		goto out;
+	}
+	if (a_keyid != keyid) {
+		ret = "new active key was not set";
+		goto out;
+	}
+	/* make sure ep active key didn't change */
+	result = sctp_get_active_key(fd, 0, &keyid);
+	if (result < 0) {
+		ret = "was unable to get ep active key back";
+		goto out;
+	}
+	if (keyid != def_keyid) {
+		ret = "ep active key changed";
+		goto out;
+	}
+
+ out:
+	close(fd);
+	close(fds[0]);
+	close(fds[1]);
+	return (ret);
+}
+
+DEFINE_APITEST(actkey, sso_achg_1_M)
+{
+	int fds[2], result;
+	sctp_assoc_t ids[2];
+	uint16_t def_keyid, keyid, a_keyid, keylen;
+	char *keytext = "This is my new key";
+	char *ret = NULL;
+
+	/* does changing the assoc active key leave the ep alone? */
+	fds[0] = fds[1] = -1;
+	fds[0] = sctp_one2many(0, 1);
+	if (fds[0] < 0) {
+		return (strerror(errno));
+	}
+	/* get the default key */
+	result = sctp_get_active_key(fds[0], 0, &def_keyid);
+	if (result < 0) {
+		close(fds[0]);
+		return "was unable to geet default active key";
+	}
+	/* add a new key */
+	keylen = sizeof(keytext);
+	keyid = 1;
+	result = sctp_set_auth_key(fds[0], 0, keyid, keylen,
+				   (uint8_t *)keytext);
+	if (result < 0) {
+		close(fds[0]);
+		return "failed to set auth key";
+	}
+	/* create a new assoc */
+	result = sctp_socketpair_1tom(fds, ids, 1);
+	if (result < 0) {
+		close(fds[0]);
+		return (strerror(errno));
+	}
+	/* get assoc's active key, should be default key */
+	result = sctp_get_active_key(fds[0], ids[0], &a_keyid);
+	if (result < 0) {
+		ret = "was unable to get active key";
+		goto out;
+	}
+	if (a_keyid != def_keyid) {
+		ret = "new active key was not set";
+		goto out;
+	}
+	/* set assoc's active key */
+	result = sctp_set_active_key(fds[0], ids[0], keyid);
+	if (result < 0) {
+		ret = "was unable to set assoc active key";
+		goto out;
+	}
+	result = sctp_get_active_key(fds[0], ids[0], &a_keyid);
+	if (result < 0) {
+		ret = "was unable to get active key";
+		goto out;
+	}
+	if (a_keyid != keyid) {
+		ret = "new active key was not set";
+		goto out;
+	}
+	/* make sure ep active key didn't change */
+	result = sctp_get_active_key(fds[0], 0, &keyid);
+	if (result < 0) {
+		ret = "was unable to get ep active key back";
+		goto out;
+	}
+	if (keyid != def_keyid) {
+		ret = "ep active key changed";
+		goto out;
+	}
+
+ out:
+	close(fds[0]);
+	close(fds[1]);
+	return (ret);
+}
+/********************************************************
+ *
+ * SCTP_AUTH_DELETE_KEY tests
  *
  ********************************************************/
 
