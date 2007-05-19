@@ -7418,6 +7418,7 @@ DEFINE_APITEST(paddrpara, sso_dhb_int_1_M)
 	sctp_assoc_t ids[2];
 	struct sockaddr *sa = NULL;
 
+	fds[0] = fds[1] = -1;
 	if (sctp_socketpair_1tom(fds, ids,  1) < 0) {
 		retstring = strerror(errno);
 		goto out_nopair;
@@ -7495,7 +7496,386 @@ DEFINE_APITEST(paddrpara, sso_dhb_int_1_M)
 	return (retstring);
 }
 
+DEFINE_APITEST(paddrpara, sso_dhb_zero_1_1)
+{
+	int result, num;
+	uint32_t newval;
+	int fds[2];
+	char *retstring=NULL;
+	uint32_t hbinterval[2];
+	uint16_t maxrxt[2];
+	uint32_t pathmtu[2];
+	uint32_t flags[2];
+	uint32_t ipv6_flowlabel[2];
+	uint8_t ipv4_tos[2];
+	struct sockaddr *sa = NULL;
 
+	if (sctp_socketpair(fds, 1) < 0) {
+		retstring = strerror(errno);
+		goto out_nopair;
+	}
+	num = sctp_getpaddrs(fds[0], 0, &sa);
+	if( num < 0) {
+		retstring = "sctp_getpaddr failed";
+		goto out;
+	}
+	if (num < 2) {
+		sctp_freepaddrs(sa);
+		printf("num:%d\n", num);
+		retstring = "host is not multi-homed can't run test";
+		goto out;
+	}
+
+	/* Get all the values for assoc info on ep */
+	result = sctp_get_paddr_param(fds[0], 0, sa, &hbinterval[0],
+				      &maxrxt[0],
+				      &pathmtu[0],
+				      &flags[0],
+				      &ipv6_flowlabel[0],
+				      &ipv4_tos[0]);
+
+	if (result) {
+		sctp_freepaddrs(sa);
+		retstring = strerror(errno);
+		goto out;
+	}
+	newval = 0;
+
+	result = sctp_set_hbzero(fds[0], 0, sa);
+	if (result< 0) {
+		retstring = strerror(errno);
+		sctp_freepaddrs(sa);
+		goto out;
+	}
+	/* Now what got set? */
+	result = sctp_get_paddr_param(fds[0], 0, sa, &hbinterval[1],
+				      &maxrxt[1],
+				      &pathmtu[1],
+				      &flags[1],
+				      &ipv6_flowlabel[1],
+				      &ipv4_tos[1]);
+	sctp_freepaddrs(sa);
+	if (result < 0) {
+		retstring = strerror(errno);
+		goto out;
+	}
+	if(maxrxt[1] != maxrxt[0]) {
+		retstring = "maxrxt changed";
+		goto out;
+	}
+	if(hbinterval[1] != newval) {
+		retstring = "hb interval did not change";
+		goto out;
+	}
+	if(ipv6_flowlabel[0] != ipv6_flowlabel[1]) {
+		retstring = "v6 flowlabel changed";
+		goto out;
+	}
+	if(ipv4_tos[0] != ipv4_tos[1]) {
+		retstring = "v4 tos changed";
+		goto out;
+	}
+	if (flags[0] != flags[1]) {
+		retstring = "flags changed";
+		goto out;
+
+	}
+ out:
+	close(fds[0]);
+	close(fds[1]);
+ out_nopair:
+	return (retstring);
+}
+
+
+DEFINE_APITEST(paddrpara, sso_dhb_zero_1_M)
+{
+	int result, num;
+	uint32_t newval;
+	int fds[2];
+	char *retstring=NULL;
+	uint32_t hbinterval[2];
+	uint16_t maxrxt[2];
+	uint32_t pathmtu[2];
+	uint32_t flags[2];
+	uint32_t ipv6_flowlabel[2];
+	uint8_t ipv4_tos[2];
+	sctp_assoc_t ids[2];
+	struct sockaddr *sa = NULL;
+
+	fds[0] = fds[1] = -1;
+	if (sctp_socketpair_1tom(fds, ids,  1) < 0) {
+		retstring = strerror(errno);
+		goto out_nopair;
+	}
+	num = sctp_getpaddrs(fds[0], ids[0], &sa);
+	if( num < 0) {
+		retstring = "sctp_getpaddr failed";
+		goto out;
+	}
+	if (num < 2) {
+		sctp_freepaddrs(sa);
+		printf("num:%d\n", num);
+		retstring = "host is not multi-homed can't run test";
+		goto out;
+	}
+
+	/* Get all the values for assoc info on ep */
+	result = sctp_get_paddr_param(fds[0], ids[0], sa, &hbinterval[0],
+				      &maxrxt[0],
+				      &pathmtu[0],
+				      &flags[0],
+				      &ipv6_flowlabel[0],
+				      &ipv4_tos[0]);
+
+	if (result) {
+		sctp_freepaddrs(sa);
+		retstring = strerror(errno);
+		goto out;
+	}
+	newval = 0;
+
+	result = sctp_set_hbzero(fds[0], ids[0], sa);
+	if (result< 0) {
+		retstring = strerror(errno);
+		sctp_freepaddrs(sa);
+		goto out;
+	}
+	/* Now what got set? */
+	result = sctp_get_paddr_param(fds[0], ids[0], sa, &hbinterval[1],
+				      &maxrxt[1],
+				      &pathmtu[1],
+				      &flags[1],
+				      &ipv6_flowlabel[1],
+				      &ipv4_tos[1]);
+	sctp_freepaddrs(sa);
+	if (result < 0) {
+		retstring = strerror(errno);
+		goto out;
+	}
+	if(maxrxt[1] != maxrxt[0]) {
+		retstring = "maxrxt changed";
+		goto out;
+	}
+	if(hbinterval[1] != newval) {
+		retstring = "hb interval did not change";
+		goto out;
+	}
+	if(ipv6_flowlabel[0] != ipv6_flowlabel[1]) {
+		retstring = "v6 flowlabel changed";
+		goto out;
+	}
+	if(ipv4_tos[0] != ipv4_tos[1]) {
+		retstring = "v4 tos changed";
+		goto out;
+	}
+	if (flags[0] != flags[1]) {
+		retstring = "flags changed";
+		goto out;
+
+	}
+ out:
+	close(fds[0]);
+	close(fds[1]);
+ out_nopair:
+	return (retstring);
+}
+
+
+DEFINE_APITEST(paddrpara, sso_dhb_off_1_1)
+{
+	int result, num;
+	int fds[2];
+	char *retstring=NULL;
+	uint32_t hbinterval[2];
+	uint16_t maxrxt[2];
+	uint32_t pathmtu[2];
+	uint32_t flags[2];
+	uint32_t muflags[2];
+	uint32_t ipv6_flowlabel[2];
+	uint8_t ipv4_tos[2];
+	struct sockaddr *sa = NULL;
+
+	if (sctp_socketpair(fds, 1) < 0) {
+		retstring = strerror(errno);
+		goto out_nopair;
+	}
+	num = sctp_getpaddrs(fds[0], 0, &sa);
+	if( num < 0) {
+		retstring = "sctp_getpaddr failed";
+		goto out;
+	}
+	if (num < 2) {
+		sctp_freepaddrs(sa);
+		printf("num:%d\n", num);
+		retstring = "host is not multi-homed can't run test";
+		goto out;
+	}
+
+	/* Get all the values for assoc info on ep */
+	result = sctp_get_paddr_param(fds[0], 0, sa, &hbinterval[0],
+				      &maxrxt[0],
+				      &pathmtu[0],
+				      &flags[0],
+				      &ipv6_flowlabel[0],
+				      &ipv4_tos[0]);
+
+	if (result) {
+		sctp_freepaddrs(sa);
+		retstring = strerror(errno);
+		goto out;
+	}
+
+	result = sctp_set_hbdisable(fds[0], 0, sa);
+	if (result< 0) {
+		retstring = strerror(errno);
+		sctp_freepaddrs(sa);
+		goto out;
+	}
+	/* Now what got set? */
+	result = sctp_get_paddr_param(fds[0], 0, sa, &hbinterval[1],
+				      &maxrxt[1],
+				      &pathmtu[1],
+				      &flags[1],
+				      &ipv6_flowlabel[1],
+				      &ipv4_tos[1]);
+	sctp_freepaddrs(sa);
+	if (result < 0) {
+		retstring = strerror(errno);
+		goto out;
+	}
+	if(maxrxt[1] != maxrxt[0]) {
+		retstring = "maxrxt changed";
+		goto out;
+	}
+	if(hbinterval[1] != hbinterval[0]) {
+		retstring = "hb interval changed";
+		goto out;
+	}
+	if(ipv6_flowlabel[0] != ipv6_flowlabel[1]) {
+		retstring = "v6 flowlabel changed";
+		goto out;
+	}
+	if(ipv4_tos[0] != ipv4_tos[1]) {
+		retstring = "v4 tos changed";
+		goto out;
+	}
+	muflags[0] = (flags[0] & ~(SPP_HB_DISABLE|SPP_HB_ENABLE));
+	muflags[1] = (flags[1] & ~(SPP_HB_DISABLE|SPP_HB_ENABLE));
+	if (muflags[0] != muflags[1]) {
+		retstring = "flags changed";
+		goto out;
+
+	}
+	if( flags[1] & SPP_HB_ENABLE) {
+		retstring = "HB not disabled";
+	}
+ out:
+	close(fds[0]);
+	close(fds[1]);
+ out_nopair:
+	return (retstring);
+
+}
+
+
+DEFINE_APITEST(paddrpara, sso_dhb_off_1_M)
+{
+	int result, num;
+	int fds[2];
+	char *retstring=NULL;
+	uint32_t hbinterval[2];
+	uint16_t maxrxt[2];
+	uint32_t pathmtu[2];
+	uint32_t flags[2];
+	uint32_t ipv6_flowlabel[2];
+	uint32_t muflags[2];
+	uint8_t ipv4_tos[2];
+	sctp_assoc_t ids[2];
+	struct sockaddr *sa = NULL;
+
+	fds[0] = fds[1] = -1;
+	if (sctp_socketpair_1tom(fds, ids,  1) < 0) {
+		retstring = strerror(errno);
+		goto out_nopair;
+	}
+	num = sctp_getpaddrs(fds[0], ids[0], &sa);
+	if( num < 0) {
+		retstring = "sctp_getpaddr failed";
+		goto out;
+	}
+	if (num < 2) {
+		sctp_freepaddrs(sa);
+		printf("num:%d\n", num);
+		retstring = "host is not multi-homed can't run test";
+		goto out;
+	}
+
+	/* Get all the values for assoc info on ep */
+	result = sctp_get_paddr_param(fds[0], ids[0], sa, &hbinterval[0],
+				      &maxrxt[0],
+				      &pathmtu[0],
+				      &flags[0],
+				      &ipv6_flowlabel[0],
+				      &ipv4_tos[0]);
+
+	if (result) {
+		sctp_freepaddrs(sa);
+		retstring = strerror(errno);
+		goto out;
+	}
+	result = sctp_set_hbdisable(fds[0],ids[0], sa);
+	if (result< 0) {
+		retstring = strerror(errno);
+		sctp_freepaddrs(sa);
+		goto out;
+	}
+	/* Now what got set? */
+	result = sctp_get_paddr_param(fds[0], ids[0], sa, &hbinterval[1],
+				      &maxrxt[1],
+				      &pathmtu[1],
+				      &flags[1],
+				      &ipv6_flowlabel[1],
+				      &ipv4_tos[1]);
+	sctp_freepaddrs(sa);
+	if (result < 0) {
+		retstring = strerror(errno);
+		goto out;
+	}
+	if(maxrxt[1] != maxrxt[0]) {
+		retstring = "maxrxt changed";
+		goto out;
+	}
+	if(hbinterval[1] != hbinterval[0]) {
+		retstring = "hb interval changed";
+		goto out;
+	}
+	if(ipv6_flowlabel[0] != ipv6_flowlabel[1]) {
+		retstring = "v6 flowlabel changed";
+		goto out;
+	}
+	if(ipv4_tos[0] != ipv4_tos[1]) {
+		retstring = "v4 tos changed";
+		goto out;
+	}
+	muflags[0] = (flags[0] & ~(SPP_HB_DISABLE|SPP_HB_ENABLE));
+	muflags[1] = (flags[1] & ~(SPP_HB_DISABLE|SPP_HB_ENABLE));
+	if (muflags[0] != muflags[1]) {
+		retstring = "flags changed";
+		goto out;
+
+	}
+	if( flags[1] & SPP_HB_ENABLE) {
+		retstring = "HB not disabled";
+	}
+
+ out:
+	close(fds[0]);
+	close(fds[1]);
+ out_nopair:
+	return (retstring);
+
+}
 /********************************************************
  *
  * SCTP_MAXSEG tests
