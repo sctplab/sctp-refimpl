@@ -13174,3 +13174,231 @@ DEFINE_APITEST(eeor, sso_1_M)
 	}
 	return NULL;
 }
+
+/********************************************************
+ *
+ * Read only options on associations.
+ *
+ ********************************************************/
+DEFINE_APITEST(read, status)
+{
+	int fds[2], result;
+	sctp_assoc_t ids[2];
+	struct sctp_status stat;
+	socklen_t len;
+
+	fds[0] = fds[1] = -1;
+	memset(&stat, 0, sizeof(stat));
+	result = sctp_socketpair_1tom(fds, ids, 1);
+	if(result < 0) {
+		return(strerror(errno));		
+	}
+	stat.sstat_assoc_id = ids[0];
+	len = sizeof(stat);
+	result = getsockopt(fds[0], IPPROTO_SCTP, SCTP_STATUS,
+			    &stat, &len);
+	close(fds[0]);
+	close(fds[1]);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	if(len != sizeof(stat)) {
+		return "Did not get back a full stat structure";
+	} 
+	return NULL;
+}
+
+DEFINE_APITEST(read, paddrinfo)
+{
+	int fds[2], result;
+	sctp_assoc_t ids[2];
+	struct sctp_status stat;
+	struct sctp_paddrinfo pa;
+	socklen_t len;
+
+	fds[0] = fds[1] = -1;
+	memset(&stat, 0, sizeof(stat));
+	result = sctp_socketpair_1tom(fds, ids, 1);
+	if(result < 0) {
+		return(strerror(errno));		
+	}
+	stat.sstat_assoc_id = ids[0];
+	len = sizeof(stat);
+	result = getsockopt(fds[0], IPPROTO_SCTP, SCTP_STATUS,
+			    &stat, &len);
+	if (result < 0) {
+		close(fds[0]);
+		close(fds[1]);
+		return(strerror(errno));
+	}
+	memcpy(&pa, &stat.sstat_primary, sizeof(pa));
+	pa.spinfo_assoc_id = ids[0];
+	len = sizeof(pa);
+	result = getsockopt(fds[0], IPPROTO_SCTP, SCTP_GET_PEER_ADDR_INFO,
+			    &pa, &len);
+	close(fds[0]);
+	close(fds[1]);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	if(len != sizeof(pa)) {
+		return "Did not get back a full structure";
+	} 
+	return NULL;
+}
+
+DEFINE_APITEST(read, auth_p_chklist)
+{
+	int fds[2], result, i, j;
+	sctp_assoc_t ids[2];
+	uint8_t asconf=0, asconf_ack=0;
+	uint8_t buffer[260];
+	struct sctp_authchunks *auth;
+	socklen_t len;
+
+	fds[0] = fds[1] = -1;
+	result = sctp_socketpair_1tom(fds, ids, 1);
+	if(result < 0) {
+		return(strerror(errno));		
+	}
+	memset(buffer, 0, sizeof(buffer));
+	auth = (struct sctp_authchunks *)buffer;
+	auth->gauth_assoc_id = ids[0];
+	len = sizeof(buffer);
+	result = getsockopt(fds[0], IPPROTO_SCTP, SCTP_PEER_AUTH_CHUNKS,
+			    auth, &len);
+	if (result < 0) {
+		close(fds[0]);
+		close(fds[1]);
+		return(strerror(errno));
+	}
+	close(fds[0]);
+	close(fds[1]);
+	j = len - sizeof(sctp_assoc_t);
+	if(j > 260)
+		j = 256;
+
+	for (i=0; i<j; i++) {
+		if(auth->gauth_chunks[i] == SCTP_ASCONF) {
+			asconf = 1;
+		}
+		if(auth->gauth_chunks[i] == SCTP_ASCONF_ACK) {
+			asconf_ack = 1;
+		}
+	}
+	if ((asconf_ack == 0) || (asconf == 0)) {
+		return "Did not see ASCONF/ASCONF-ACK in list";
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(read, auth_l_chklist)
+{
+	int fds[2], result, i,j;
+	sctp_assoc_t ids[2];
+	uint8_t buffer[260];
+	uint8_t asconf=0, asconf_ack=0;
+	struct sctp_authchunks *auth;
+	socklen_t len;
+
+	fds[0] = fds[1] = -1;
+	result = sctp_socketpair_1tom(fds, ids, 1);
+	if(result < 0) {
+		return(strerror(errno));		
+	}
+	memset(buffer, 0, sizeof(buffer));
+	auth = (struct sctp_authchunks *)buffer;
+	auth->gauth_assoc_id = ids[0];
+	len = sizeof(buffer);
+	result = getsockopt(fds[0], IPPROTO_SCTP, SCTP_LOCAL_AUTH_CHUNKS,
+			    auth, &len);
+	if (result < 0) {
+		close(fds[0]);
+		close(fds[1]);
+		return(strerror(errno));
+	}
+	close(fds[0]);
+	close(fds[1]);
+	j = len - sizeof(sctp_assoc_t);
+	if(j > 260)
+		j = 256;
+
+	for (i=0; i<j; i++) {
+		if(auth->gauth_chunks[i] == SCTP_ASCONF) {
+			asconf = 1;
+		}
+		if(auth->gauth_chunks[i] == SCTP_ASCONF_ACK) {
+			asconf_ack = 1;
+		}
+	}
+	if ((asconf_ack == 0) || (asconf == 0)) {
+		return "Did not see ASCONF/ASCONF-ACK in list";
+	}
+	return NULL;
+}
+
+
+DEFINE_APITEST(read, numasoc)
+{
+	int fds[2], result;
+	uint32_t cnt=0;
+	sctp_assoc_t ids[2];
+	socklen_t len;
+
+	fds[0] = fds[1] = -1;
+	result = sctp_socketpair_1tom(fds, ids, 1);
+	if(result < 0) {
+		return(strerror(errno));		
+	}
+	len = sizeof(cnt);
+	result = getsockopt(fds[0], IPPROTO_SCTP, SCTP_GET_ASSOC_NUMBER,
+			    &cnt, &len);
+	if (result < 0) {
+		close(fds[0]);
+		close(fds[1]);
+		return(strerror(errno));
+	}
+	close(fds[0]);
+	close(fds[1]);
+	if(cnt != 1) {
+		return "Did not get correct number of assocs";
+	}
+	return NULL;
+}
+
+
+DEFINE_APITEST(read, asocidlist)
+{
+	int fds[2], result;
+	sctp_assoc_t ids[2];
+	socklen_t len;
+	struct sctp_assoc_ids *list;
+	uint8_t buffer[1024];
+
+	fds[0] = fds[1] = -1;
+	memset(buffer, 0, sizeof(buffer));
+	result = sctp_socketpair_1tom(fds, ids, 1);
+	if(result < 0) {
+		return(strerror(errno));		
+	}
+	len = sizeof(buffer);
+	result = getsockopt(fds[0], IPPROTO_SCTP, SCTP_GET_ASSOC_ID_LIST,
+			    &buffer, &len);
+	if (result < 0) {
+		close(fds[0]);
+		close(fds[1]);
+		return(strerror(errno));
+	}
+	close(fds[0]);
+	close(fds[1]);
+	list = (struct sctp_assoc_ids *)buffer;
+	if(list->gaids_assoc_id[0] != ids[0]) {
+		return "Incorrect assoc-id in list";
+	}
+	if((len / sizeof(sctp_assoc_t)) != 1) {
+		return "Incorrect number of assocs";
+	}
+	return NULL;
+}
+
+
