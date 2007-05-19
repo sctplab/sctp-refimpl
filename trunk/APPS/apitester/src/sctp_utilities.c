@@ -4,7 +4,9 @@
 #include <arpa/inet.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
+#include <strings.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <time.h>
@@ -1183,8 +1185,100 @@ int sctp_set_auth_chunk_id(int fd, uint8_t chk)
  * SCTP_KEY tests
  *
  ********************************************************/
+int sctp_get_add_key(int fd, sctp_assoc_t assoc_id, uint16_t *keyid,
+		     uint16_t *keylen, uint8_t *keytext) {
+	socklen_t len;
+	struct sctp_authkey *akey;
+	int result;
+
+	len = sizeof(akey) + *keylen;
+	akey = (struct sctp_authkey *)alloca(len);
+	akey->sca_assoc_id = assoc_id;
+	akey->sca_keynumber = *keyid;
+	bcopy(keytext, akey->sca_key, *keylen);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_AUTH_KEY,
+			    &akey, &len);
+	if (result > 0) {
+	    /* This should always fail */
+	    *keyid = akey->sca_keynumber;
+	    *keylen = len - sizeof(*akey);
+	    bcopy(akey->sca_key, keytext, *keylen);
+	}
+	return (result);
+}
+
+int sctp_set_add_key(int fd, sctp_assoc_t assoc_id, uint16_t keyid,
+		     uint16_t keylen, uint8_t *keytext) {
+	socklen_t len;
+	struct sctp_authkey *akey;
+	int result;
+
+	len = sizeof(*akey) + keylen;
+	akey = (struct sctp_authkey *)alloca(len);
+	akey->sca_assoc_id = assoc_id;
+	akey->sca_keynumber = keyid;
+	bcopy(keytext, akey->sca_key, keylen);
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_AUTH_KEY,
+			    &akey, len);
+	return (result);
+}
+
+int sctp_get_active_key(int fd, sctp_assoc_t assoc_id, uint16_t *keyid) {
+	socklen_t len;
+	struct sctp_authkeyid akey;
+	int result;
+
+	len = sizeof(akey);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_AUTH_ACTIVE_KEY,
+			    &akey, &len);
+	if (result > 0) {
+	    *keyid = akey.scact_keynumber;
+	}
+	return (result);
+}
 
 
+int sctp_set_active_key(int fd, sctp_assoc_t assoc_id, uint16_t keyid) {
+	socklen_t len;
+	struct sctp_authkeyid akey;
+	int result;
+
+	len = sizeof(akey);
+	akey.scact_assoc_id = assoc_id;
+	akey.scact_keynumber = keyid;
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_AUTH_ACTIVE_KEY,
+			    &akey, len);
+	return (result);
+}
+
+
+int sctp_get_delete_key(int fd, sctp_assoc_t assoc_id, uint16_t *keyid) {
+	socklen_t len;
+	struct sctp_authkeyid akey;
+	int result;
+
+	len = sizeof(akey);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_AUTH_DELETE_KEY,
+			    &akey, &len);
+	if (result > 0) {
+	    /* This should always fail */
+	    *keyid = akey.scact_keynumber;
+	}
+	return (result);
+}
+
+int sctp_set_delete_key(int fd, sctp_assoc_t assoc_id, uint16_t keyid) {
+	socklen_t len;
+	struct sctp_authkeyid akey;
+	int result;
+
+	len = sizeof(akey);
+	akey.scact_assoc_id = assoc_id;
+	akey.scact_keynumber = keyid;
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_AUTH_DELETE_KEY,
+			    &akey, len);
+	return (result);
+}
 
 
 
