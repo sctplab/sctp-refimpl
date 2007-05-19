@@ -9526,3 +9526,465 @@ DEFINE_APITEST(maxseg, sso_set_1_1)
 	return NULL;
 }
 
+
+DEFINE_APITEST(maxseg, gso_def_1_M)
+{
+	int fd, val, result;
+
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_maxseg(fd, 0, &val);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	close(fd);
+	if (val != 0) {
+		return "maxseg not unlimited (i.e. 0)";
+	}
+
+	return NULL;
+}
+
+DEFINE_APITEST(maxseg, sso_set_1_M)
+{
+	int fd, val[3], result;
+	fd = sctp_one2many(0,1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_maxseg(fd, 0, &val[0]);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+
+	if ((val[0] == 0) || (val[0] > 1452)) {
+		val[1] = 1452;
+	} else {
+		val[1] = val[0] - 100;
+	}
+	result = sctp_set_maxseg(fd, 0, val[1]);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	result = sctp_get_maxseg(fd, 0, &val[2]);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	close(fd);
+	if(val[1] < val[2]) {
+		return "Set did not work";
+	}
+	return NULL;
+}
+
+
+DEFINE_APITEST(maxseg, sso_asc_1_1)
+{
+	int val[2];
+	int fd, result;
+	int fds[2];
+	fds[0] = fds[1] = -1;
+
+	fd = sctp_one2one(0, 1, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_maxseg(fd, 0, &val[0]);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+	result = sctp_socketpair_reuse(fd, fds, 1);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+	val[1] = 1200;
+	result = sctp_set_maxseg(fds[1], 0, val[1]);
+	if (result < 0) {
+		close (fd);
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	result = sctp_get_maxseg(fds[1], 0, &val[1]);
+	if (result < 0) {
+		close (fd);
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	close (fd);
+	close (fds[0]);
+	close (fds[1]);
+
+ 	if(val[1] != 1200)
+ 		return "maxseg on assoc not expected value";
+
+ 	return NULL;
+}
+
+DEFINE_APITEST(maxseg, sso_asc_1_M)
+{
+	int val[2];
+	int result;
+	int fds[2];
+	sctp_assoc_t ids[2];
+	fds[0] = fds[1] = -1;
+
+	fds[0] = sctp_one2many(0, 1);
+	if (fds[0] < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_maxseg(fds[0], 0, &val[0]);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+	result = sctp_socketpair_1tom(fds, ids,  1);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+	val[1] = 1200;
+	result = sctp_set_maxseg(fds[0], ids[0], val[1]);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	result = sctp_get_maxseg(fds[0], ids[0], &val[1]);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	close (fds[0]);
+	close (fds[1]);
+	if(val[1] == val[0])
+		return "maxseg on assoc did not change";
+
+ 	if(val[1] != 1200)
+ 		return "maxseg on assoc not expected value";
+	return NULL;
+}
+
+DEFINE_APITEST(maxseg, sso_inherit_1_1)
+{
+	int val[2];
+	int fd, result;
+	int fds[2];
+	fds[0] = fds[1] = -1;
+
+	fd = sctp_one2one(0, 1, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_maxseg(fd, 0, &val[0]);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+	val[1] = 1200;
+	result = sctp_set_maxseg(fd, 0, val[1]);
+	if (result < 0) {
+		close (fd);
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	result = sctp_socketpair_reuse(fd, fds, 1);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+	result = sctp_get_maxseg(fds[1], 0, &val[1]);
+	if (result < 0) {
+		close (fd);
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	close (fd);
+	close (fds[0]);
+	close (fds[1]);
+	if(val[1] != 1200) {
+		return "maxseg did not inherit to assoc";
+	}
+	return NULL;
+
+}
+
+DEFINE_APITEST(maxseg, sso_inherit_1_M)
+{
+	int val[2];
+	int result;
+	int fds[2];
+	sctp_assoc_t ids[2];
+	fds[0] = fds[1] = -1;
+
+	fds[0] = sctp_one2many(0, 1);
+	if (fds[0] < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_maxseg(fds[0], 0, &val[0]);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+	val[1] = 1200;
+	result = sctp_set_maxseg(fds[0], 0, val[1]);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+
+	result = sctp_socketpair_1tom(fds, ids,  1);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+	result = sctp_get_maxseg(fds[0], ids[0], &val[1]);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	close (fds[0]);
+	close (fds[1]);
+	if(val[1] != 1200) {
+		return "maxseg did not inherit to assoc";
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(maxseg, sso_inherit_ncep_1_1)
+{
+	int val[3];
+	int fd, result;
+	char *retstring = NULL;
+	int fds[2];
+	fds[0] = fds[1] = -1;
+
+	fd = sctp_one2one(0, 1, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_maxseg(fd, 0, &val[0]);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+	val[1] = 1200;
+	result = sctp_set_maxseg(fd, 0, val[1]);
+	if (result < 0) {
+		close (fd);
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	result = sctp_socketpair_reuse(fd, fds, 1);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+	result = sctp_get_maxseg(fds[1], 0, &val[1]);
+	if (result < 0) {
+		close (fd);
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	
+	if (val[1] != 1200) {
+		retstring = "maxseg did not change on asoc";
+		goto out;
+        }
+	/* Change the assoc value */
+	val[2] = val[1] + 100;
+	result = sctp_set_maxseg(fds[1], 0, val[2]);
+	if (result < 0) {
+		close (fd);
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	/* Now get the listener value, it should NOT have changed */
+	result = sctp_get_maxseg(fd, 0, &val[2]);
+	if (result < 0) {
+		close (fd);
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	if (val[2] != val[1]) {
+		retstring = "Change of assoc, effected ep";
+	}
+ out:
+ 	close (fd);
+ 	close (fds[0]);
+ 	close (fds[1]);
+	return retstring;
+
+}
+
+DEFINE_APITEST(maxseg, sso_inherit_ncep_1_M)
+{
+	int  val[3];
+	int result;
+	char *retstring = NULL;
+	int fds[2];
+	sctp_assoc_t ids[2];
+
+	fds[0] = fds[1] = -1;
+	fds[0] = sctp_one2many(0, 1);
+	if (fds[0] < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_maxseg(fds[0], 0, &val[0]);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+	val[1] = 1200;
+	result = sctp_set_maxseg(fds[0], 0, val[1]);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+
+	result = sctp_socketpair_1tom(fds, ids,  1);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+	result = sctp_get_maxseg(fds[0], ids[0], &val[1]);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	
+	if (val[1] != 1200) {
+		retstring = "maxseg did not change";
+		goto out;
+	}
+	/* Change the assoc value */
+	val[2] = val[1] + 100;
+	result = sctp_set_maxseg(fds[0], ids[0], val[2]);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	result = sctp_get_maxseg(fds[0], 0, &val[2]);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+
+	if (val[2] != val[1]) {
+		retstring = "change on assoc, effected ep";
+	}
+ out:
+	close (fds[0]);
+	close (fds[1]);
+	return retstring;
+}
+
+DEFINE_APITEST(maxseg, sso_nc_other_asc_1_M)
+{
+	int val[3];
+	int result;
+	char *retstring = NULL;
+	int fds[2];
+	int fds2[2];
+	sctp_assoc_t ids[2], ids2[2];
+	fds[0] = fds[1] = -1;
+
+	fds[0] = sctp_one2many(0, 1);
+	if (fds[0] < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_maxseg(fds[0], 0, &val[0]);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+	val[1] = 1200;
+	result = sctp_set_maxseg(fds[0], 0, val[1]);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+	result = sctp_socketpair_1tom(fds, ids,  1);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+	/* Create a second assoc for fds[0] */
+	fds2[0] = fds[0];
+	result = sctp_socketpair_1tom(fds2, ids2,  1);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+
+	result = sctp_get_maxseg(fds[0], ids[0], &val[1]);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		close (fds2[1]);
+		return(strerror(errno));
+	}
+	
+	if (1200 != val[1]) {
+		retstring = "maxseg did not change in assoc";
+		goto out;
+	}
+	/* Change the assoc value */
+	val[2] = val[1] + 100;;
+	result = sctp_set_maxseg(fds[0], ids[0], val[2]);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		close (fds2[1]);
+		return(strerror(errno));
+	}
+
+	result = sctp_get_maxseg(fds[0], 0, &val[2]);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		close (fds2[1]);
+		return(strerror(errno));
+	}
+
+	if (val[2] != val[1]) {
+		retstring = "Change of assoc, effected ep";
+	}
+	/* check other asoc */
+	result = sctp_get_maxseg(fds[0], ids2[0], &val[2]);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		close (fds2[1]);
+		return(strerror(errno));
+	}
+	if (val[2] != val[1]) {
+		retstring = "Change of assoc, effected other assoc";
+	}
+ out:
+	close (fds[0]);
+	close (fds[1]);
+	close (fds2[1]);
+	return retstring;
+}
