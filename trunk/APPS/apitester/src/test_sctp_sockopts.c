@@ -10102,3 +10102,233 @@ DEFINE_APITEST(authchk, sso_1_M)
 	return NULL;
 
 }
+
+/********************************************************
+ *
+ * SCTP_HMAC_IDENT tests
+ *
+ ********************************************************/
+DEFINE_APITEST(hmacid, sso_1_1)
+{
+	int result, fd, i;
+	socklen_t len;
+	int check=2;
+	uint16_t ary[2];
+	uint16_t ary2[100];
+	struct sctp_hmacalgo *algo;
+	algo = (struct sctp_hmacalgo *)ary;
+	/* First try 256 */
+	ary[0] = SCTP_AUTH_HMAC_ID_SHA256;
+	ary[1] = SCTP_AUTH_HMAC_ID_SHA1;
+	len = sizeof(ary);
+
+	fd = sctp_one2one(0, 1, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_HMAC_IDENT,
+			    algo, len);
+	if (result < 0) {
+		/* no sha256, retry with just sha1 */
+		ary[0] = SCTP_AUTH_HMAC_ID_SHA1;
+		check = 1;
+		len = sizeof(uint16_t);
+		result = setsockopt(fd, IPPROTO_SCTP, SCTP_HMAC_IDENT,
+				    algo, len);
+		if (result < 0) {
+			close (fd);
+			return(strerror(errno));
+		}
+	}
+	memset(ary2, 0, sizeof(ary2));
+	algo = (struct sctp_hmacalgo *)ary2;
+	len = sizeof(ary2);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_HMAC_IDENT,
+			    algo, &len);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+	close (fd);
+	for (i=0; i<check; i++) {
+		if(ary[i] != ary2[i]) {
+			return "Did not get back the expected list";
+		}
+	}
+	
+	if((len/sizeof(uint16_t)) != check) {
+		return "Did not get back the expected list - size wrong";
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(hmacid, sso_1_M)
+{
+	int result, fd, i;
+	socklen_t len;
+	int check=2;
+	uint16_t ary[2];
+	uint16_t ary2[100];
+	struct sctp_hmacalgo *algo;
+	algo = (struct sctp_hmacalgo *)ary;
+	/* First try 256 */
+	ary[0] = SCTP_AUTH_HMAC_ID_SHA256;
+	ary[1] = SCTP_AUTH_HMAC_ID_SHA1;
+	len = sizeof(ary);
+
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_HMAC_IDENT,
+			    algo, len);
+	if (result < 0) {
+		/* no sha256, retry with just sha1 */
+		ary[0] = SCTP_AUTH_HMAC_ID_SHA1;
+		check = 1;
+		len = sizeof(uint16_t);
+		result = setsockopt(fd, IPPROTO_SCTP, SCTP_HMAC_IDENT,
+				    algo, len);
+		if (result < 0) {
+			close (fd);
+			return(strerror(errno));
+		}
+	}
+	memset(ary2, 0, sizeof(ary2));
+	algo = (struct sctp_hmacalgo *)ary2;
+	len = sizeof(ary2);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_HMAC_IDENT,
+			    algo, &len);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+	close (fd);
+	for (i=0; i<check; i++) {
+		if(ary[i] != ary2[i]) {
+			return "Did not get back the expected list";
+		}
+	}
+	
+	if((len/sizeof(uint16_t)) != check) {
+		return "Did not get back the expected list - size wrong";
+	}
+	return NULL;
+}
+DEFINE_APITEST(hmacid, sso_bad_1_1)
+{
+	int result, fd;
+	socklen_t len;
+	uint16_t ary[2];
+	struct sctp_hmacalgo *algo;
+	algo = (struct sctp_hmacalgo *)ary;
+	/* First try 256 */
+	ary[0] = 2960;
+	ary[1] = SCTP_AUTH_HMAC_ID_SHA1;
+	len = sizeof(ary);
+
+	fd = sctp_one2one(0, 1, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_HMAC_IDENT,
+			    algo, len);
+	close(fd);
+	if (result >= 0) {
+		return "was able to set bogus hmac id 2960";
+	}
+	return NULL;
+}
+DEFINE_APITEST(hmacid, sso_bad_1_M)
+{
+	int result, fd;
+	socklen_t len;
+	uint16_t ary[2];
+	struct sctp_hmacalgo *algo;
+	algo = (struct sctp_hmacalgo *)ary;
+	/* First try 256 */
+	ary[0] = 2960;
+	ary[1] = SCTP_AUTH_HMAC_ID_SHA1;
+	len = sizeof(ary);
+
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_HMAC_IDENT,
+			    algo, len);
+	close(fd);
+	if (result >= 0) {
+		return "was able to set bogus hmac id 2960";
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(hmacid, sso_nosha1_1_1)
+{
+	int result, fd;
+	socklen_t len;
+	uint16_t ary[2];
+	struct sctp_hmacalgo *algo;
+	algo = (struct sctp_hmacalgo *)ary;
+	/* First try 256 */
+	ary[0] = SCTP_AUTH_HMAC_ID_SHA256;
+	ary[1] = SCTP_AUTH_HMAC_ID_SHA1;
+	len = sizeof(ary);
+
+	fd = sctp_one2one(0, 1, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_HMAC_IDENT,
+			    algo, len);
+	if (result < 0) {
+		/* no sha256, retry with just sha1 */
+		close (fd);
+		return "Can't run test SHA256 not supported";
+	}
+	ary[1] = 0;
+	len = sizeof(uint16_t);
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_HMAC_IDENT,
+			    algo, len);
+	close (fd);
+	if (result >= 0) {
+		return "Was allowed to set only SHA256";
+	}
+	return NULL;
+
+}
+
+DEFINE_APITEST(hmacid, sso_nosha1_1_M)
+{
+	int result, fd;
+	socklen_t len;
+	uint16_t ary[2];
+	struct sctp_hmacalgo *algo;
+	algo = (struct sctp_hmacalgo *)ary;
+	/* First try 256 */
+	ary[0] = SCTP_AUTH_HMAC_ID_SHA256;
+	ary[1] = SCTP_AUTH_HMAC_ID_SHA1;
+	len = sizeof(ary);
+
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_HMAC_IDENT,
+			    algo, len);
+	if (result < 0) {
+		/* no sha256, retry with just sha1 */
+		close (fd);
+		return "Can't run test SHA256 not supported";
+	}
+	ary[1] = 0;
+	len = sizeof(uint16_t);
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_HMAC_IDENT,
+			    algo, len);
+	close (fd);
+	if (result >= 0) {
+		return "Was allowed to set only SHA256";
+	}
+	return NULL;
+}
