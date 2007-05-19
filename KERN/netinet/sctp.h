@@ -108,6 +108,7 @@ struct sctp_paramhdr {
 #define SCTP_USE_EXT_RCVINFO		0x00000017
 #define SCTP_AUTO_ASCONF		0x00000018 /* rw */
 #define SCTP_MAXBURST			0x00000019 /* rw */
+#define SCTP_MAX_BURST			0x00000019 /* rw */
 /* assoc level context */
 #define SCTP_CONTEXT                    0x0000001a /* rw */
 /* explict EOR signalling */
