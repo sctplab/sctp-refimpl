@@ -1479,7 +1479,7 @@ int sctp_set_context(int fd, sctp_assoc_t id, uint32_t context)
 	av.assoc_id = id;
 	av.assoc_value = context;
 
-	result = setsockopt(fd, IPPROTO_SCTP, SCTP_PARTIAL_DELIVERY_POINT,
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_CONTEXT,
 			    &av, len);
 	return(result);
 
@@ -1495,7 +1495,7 @@ int sctp_get_context(int fd, sctp_assoc_t id, uint32_t *context)
 	av.assoc_id = id;
 	av.assoc_value = 0;
 
-	result = getsockopt(fd, IPPROTO_SCTP, SCTP_PARTIAL_DELIVERY_POINT,
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_CONTEXT,
 			    &av, &len);
 	*context = av.assoc_value;
 	return(result);

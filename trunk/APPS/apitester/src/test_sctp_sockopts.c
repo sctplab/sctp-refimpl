@@ -12090,6 +12090,485 @@ DEFINE_APITEST(maxburst, sso_1_M)
 	return NULL;
 }
 
+/********************************************************
+ *
+ * SCTP_CONTEXT tests
+ *
+ ********************************************************/
+DEFINE_APITEST(context, sso_1_1)
+{
+	uint32_t val, newval, finalval;
+	int fd, result;
+
+	fd = sctp_one2one(0, 0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_context(fd, 0, &val);
+	if (result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	if(val == 0)
+		newval = 4960;
+	else
+		newval = 0;
+
+	result = sctp_set_context(fd, 0, newval);
+	if (result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	result = sctp_get_context(fd, 0, &finalval);
+	close(fd);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	if (newval != finalval) {
+		return "Set of context failed";
+	}
+	return NULL;
+	
+}
+
+
+DEFINE_APITEST(context, sso_1_M)
+{
+	uint32_t val, newval, finalval;
+	int fd, result;
+
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_context(fd, 0, &val);
+	if (result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	if(val == 0)
+		newval = 4960;
+	else
+		newval = 0;
+
+	result = sctp_set_context(fd, 0, newval);
+	if (result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	result = sctp_get_context(fd, 0, &finalval);
+	close(fd);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	if (newval != finalval) {
+		return "Set of context failed";
+	}
+	return NULL;
+	
+}
+
+DEFINE_APITEST(context, sso_asc_1_1)
+{
+	uint32_t val[2], newval;
+	int fd, result;
+	int fds[2];
+	fds[0] = fds[1] = -1;
+
+	fd = sctp_one2one(0, 1, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_context(fd, 0, &val[0]);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+	result = sctp_socketpair_reuse(fd, fds, 1);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+	newval = val[0] + 100;
+	result = sctp_set_context(fds[1], 0, newval);
+	if (result < 0) {
+		close (fd);
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	result = sctp_get_context(fds[1], 0, &val[1]);
+	if (result < 0) {
+		close (fd);
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	close (fd);
+	close (fds[0]);
+	close (fds[1]);
+	
+	if (newval != val[1]) {
+		return "Could not set context";
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(context, sso_asc_1_M)
+{
+	uint32_t val[2],newval;
+	int result;
+	int fds[2];
+	sctp_assoc_t ids[2];
+	fds[0] = fds[1] = -1;
+
+	fds[0] = sctp_one2many(0, 1);
+	if (fds[0] < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_context(fds[0], 0, &val[0]);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+	result = sctp_socketpair_1tom(fds, ids,  1);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+	newval = val[0] + 100;
+	result = sctp_set_context(fds[0], ids[0], newval);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	result = sctp_get_context(fds[0], ids[0], &val[1]);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	close (fds[0]);
+	close (fds[1]);
+	if (newval != val[1]) {
+		return "Could not set context";
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(context, sso_inherit_1_1)
+{
+	uint32_t val[2], newval;
+	int fd, result;
+	int fds[2];
+	fds[0] = fds[1] = -1;
+
+	fd = sctp_one2one(0, 1, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_context(fd, 0, &val[0]);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+	newval = val[0] + 100;
+	result = sctp_set_context(fd, 0, newval);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+	result = sctp_socketpair_reuse(fd, fds, 1);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+	result = sctp_get_context(fds[1], 0, &val[1]);
+	if (result < 0) {
+		close (fd);
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	close (fd);
+	close (fds[0]);
+	close (fds[1]);
+	if (newval != val[1]) {
+		return "New context did not inherit";
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(context, sso_inherit_1_M)
+{
+	uint32_t val[2], newval;
+	int result;
+	int fds[2];
+	sctp_assoc_t ids[2];
+	fds[0] = fds[1] = -1;
+
+	fds[0] = sctp_one2many(0, 1);
+	if (fds[0] < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_context(fds[0], 0, &val[0]);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+	newval = val[0] + 100;
+	result = sctp_set_context(fds[0], 0, newval);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+	result = sctp_socketpair_1tom(fds, ids,  1);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+	result = sctp_get_context(fds[0], ids[0], &val[1]);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	close (fds[0]);
+	close (fds[1]);
+	if (newval != val[1]) {
+		return "New context did not inherit";
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(context, sso_inherit_ncep_1_1)
+{
+	uint32_t val[3], newval;
+	int fd, result;
+	char *retstring = NULL;
+	int fds[2];
+	fds[0] = fds[1] = -1;
+
+	fd = sctp_one2one(0, 1, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_context(fd, 0, &val[0]);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+	newval = val[0] + 100;
+	result = sctp_set_context(fd, 0, newval);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+	result = sctp_socketpair_reuse(fd, fds, 1);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+	result = sctp_get_context(fds[1], 0, &val[1]);
+	if (result < 0) {
+		close (fd);
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	
+	if (val[1] != newval) {
+		retstring = "Inheritance failed";
+		goto out;
+	}
+	/* Change the assoc value */
+	newval -= 50;
+	result = sctp_set_context(fds[1], 0, newval);
+	if (result < 0) {
+		close (fd);
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	/* Now get the listener value, it should NOT have changed */
+	result = sctp_get_context(fd, 0, &val[2]);
+	if (result < 0) {
+		close (fd);
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	if (val[2] != val[1]) {
+		retstring = "Change of assoc, effected ep";
+	}
+ out:
+ 	close (fd);
+ 	close (fds[0]);
+ 	close (fds[1]);
+ 	return retstring;
+
+}
+
+DEFINE_APITEST(context, sso_inherit_ncep_1_M)
+{
+	uint32_t val[3], newval;
+	int result;
+	char *retstring = NULL;
+	int fds[2];
+	sctp_assoc_t ids[2];
+	fds[0] = fds[1] = -1;
+
+	fds[0] = sctp_one2many(0, 1);
+	if (fds[0] < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_context(fds[0], 0, &val[0]);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+	newval = val[0] + 100;
+	result = sctp_set_context(fds[0], 0, newval);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+	result = sctp_socketpair_1tom(fds, ids,  1);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+
+	result = sctp_get_context(fds[0], ids[0], &val[1]);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	
+	if (newval != val[1]) {
+		retstring = "Context did not change";
+		goto out;
+	}
+
+	/* Change the assoc value */
+	newval -= 50;
+	result = sctp_set_context(fds[0], ids[0], newval);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+
+	result = sctp_get_context(fds[0], 0, &val[2]);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+
+	if (val[2] != val[1]) {
+		retstring = "Change of assoc, effected ep";
+	}
+ out:
+	close (fds[0]);
+	close (fds[1]);
+	return retstring;
+}
+
+DEFINE_APITEST(context, sso_nc_other_asc_1_M)
+{
+	uint32_t val[3], newval;
+	int result;
+	char *retstring = NULL;
+	int fds[2];
+	int fds2[2];
+	sctp_assoc_t ids[2], ids2[2];
+	fds[0] = fds[1] = -1;
+
+	fds[0] = sctp_one2many(0, 1);
+	if (fds[0] < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_context(fds[0], 0, &val[0]);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+	newval = val[0] + 100;
+	result = sctp_set_context(fds[0], 0, newval);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+
+	result = sctp_socketpair_1tom(fds, ids,  1);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+	/* Create a second assoc for fds[0] */
+	fds2[0] = fds[0];
+	result = sctp_socketpair_1tom(fds2, ids2,  1);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+
+	result = sctp_get_context(fds[0], ids[0], &val[1]);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		close (fds2[1]);
+		return(strerror(errno));
+	}
+	
+	if (newval != val[1]) {
+		retstring = "Did not change context on asoc";
+		goto out;
+	}
+
+	/* Change the assoc value */
+	newval -= 50;
+	result = sctp_set_context(fds[0], ids[0], newval);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		close (fds2[1]);
+		return(strerror(errno));
+	}
+
+	result = sctp_get_context(fds[0], 0, &val[2]);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		close (fds2[1]);
+		return(strerror(errno));
+	}
+
+	if (val[2] != val[1]) {
+		retstring = "Change of assoc, effected ep";
+	}
+	/* check other asoc */
+	result = sctp_get_context(fds[0], ids2[0], &val[2]);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		close (fds2[1]);
+		return(strerror(errno));
+	}
+	if (val[2] != val[1]) {
+		retstring = "Change of assoc, effected other assoc";
+	}
+ out:
+	close (fds[0]);
+	close (fds[1]);
+	close (fds2[1]);
+	return retstring;
+}
+
 
 /********************************************************
  *
