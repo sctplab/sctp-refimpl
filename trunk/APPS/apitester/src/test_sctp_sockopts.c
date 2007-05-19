@@ -4543,7 +4543,7 @@ DEFINE_APITEST(paddrpara, sso_hb_int_1_1)
 		close(fd);
 		return(strerror(errno));
 	}
-	newval = (hbinterval[0] * 2) + 1;
+	newval = (hbinterval[0] * 2) + 10;
 
 	result = sctp_set_hbint(fd, 0, NULL, newval);
 	if (result< 0) {
@@ -4604,7 +4604,7 @@ DEFINE_APITEST(paddrpara, sso_hb_int_1_M)
 		close(fd);
 		return(strerror(errno));
 	}
-	newval = (hbinterval[0] * 2) + 1;
+	newval = (hbinterval[0] * 2) + 10;
 
 	result = sctp_set_hbint(fd, 0, NULL, newval);
 	if (result< 0) {
@@ -5332,7 +5332,7 @@ DEFINE_APITEST(paddrpara, sso_ahb_int_1_1)
 		close(fds[1]);
 		return(strerror(errno));
 	}
-	newval = (hbinterval[0] * 2) + 1;
+	newval = (hbinterval[0] * 2) + 10;
 
 	result = sctp_set_hbint(fds[0], 0, NULL, newval);
 	if (result< 0) {
@@ -5400,7 +5400,7 @@ DEFINE_APITEST(paddrpara, sso_ahb_int_1_M)
 		close(fds[1]);
 		return(strerror(errno));
 	}
-	newval = (hbinterval[0] * 2) + 1;
+	newval = (hbinterval[0] * 2) + 10;
 
 	result = sctp_set_hbint(fds[0], ids[0], NULL, newval);
 	if (result< 0) {
@@ -6613,7 +6613,7 @@ DEFINE_APITEST(paddrpara, sso_ainhhb_int_1_1)
 		retstring = strerror(errno);
 		goto out_nopair;
 	}
-	newval = (hbinterval[0] * 2) + 1;
+	newval = (hbinterval[0] * 2) + 10;
 
 	result = sctp_set_hbint(fd, 0, NULL, newval);
 	if (result< 0) {
@@ -6657,7 +6657,6 @@ DEFINE_APITEST(paddrpara, sso_ainhhb_int_1_1)
 				      &flags[2],
 				      &ipv6_flowlabel[2],
 				      &ipv4_tos[2]);
-
 	if(maxrxt[0] != maxrxt[2]) {
 		retstring = "maxrxt changed";
 		goto out;
@@ -6711,7 +6710,7 @@ DEFINE_APITEST(paddrpara, sso_ainhhb_int_1_M)
 		retstring = strerror(errno);
 		goto out_nopair;
 	}
-	newval = (hbinterval[0] * 2) + 1;
+	newval = (hbinterval[0] * 2) + 10;
 
 	/* Set the assoc value */
 	result = sctp_set_hbint(fds[0], 0, NULL, newval);
@@ -7420,7 +7419,7 @@ DEFINE_APITEST(paddrpara, sso_dhb_int_1_1)
 		goto out;
 	}
 
-	newval = (hbinterval[0] * 2) + 1;
+	newval = (hbinterval[0] * 2) + 10;
 	result = sctp_set_hbint(fds[0], 0, sa, newval);
 	if (result< 0) {
 		retstring = strerror(errno);
@@ -7518,7 +7517,7 @@ DEFINE_APITEST(paddrpara, sso_dhb_int_1_M)
 		goto out;
 	}
 
-	newval = (hbinterval[0] * 2) + 1;
+	newval = (hbinterval[0] * 2) + 10;
 	result = sctp_set_hbint(fds[0], ids[0], sa, newval);
 	if (result< 0) {
 		retstring = strerror(errno);
