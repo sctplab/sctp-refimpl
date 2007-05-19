@@ -449,10 +449,10 @@ sctp_m_prepend(struct mbuf *m, int len, int how)
 	mn->m_next = m;
 	m = mn;
 	if (m->m_flags & M_PKTHDR) {
-		if (len < MHLEN)
+		if ((size_t)len < MHLEN)
 			MH_ALIGN(m, len);
 	} else {
-		if (len < MLEN)
+		if ((size_t)len < MLEN)
 			M_ALIGN(m, len);
 	}
 	m->m_len = len;
