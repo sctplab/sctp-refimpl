@@ -8491,6 +8491,579 @@ DEFINE_APITEST(defsend, gso_def_1_M)
 	return NULL;
 }
 
+DEFINE_APITEST(defsend, sso_on_1_1)
+{
+	struct sctp_sndrcvinfo sinfo[2];
+	int fd, result;
+
+	fd = sctp_one2one(0, 0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_defsend(fd, 0, &sinfo[0]);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+	sinfo[1] = sinfo[0];
+	sinfo[1].sinfo_stream++;
+	result = sctp_set_defsend(fd, 0, &sinfo[1]);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+
+	result = sctp_get_defsend(fd, 0, &sinfo[1]);
+	close (fd);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	if ((sinfo[0].sinfo_stream+1) != sinfo[1].sinfo_stream) {
+		return "Def send stream did not change";
+	}
+	if (sinfo[0].sinfo_flags != sinfo[1].sinfo_flags) {
+		return "sinfo_flags changed";
+	}
+	if (sinfo[0].sinfo_ppid != sinfo[1].sinfo_ppid) {
+		return "sinfo_flags changed";
+	}
+	if (sinfo[0].sinfo_context != sinfo[1].sinfo_context) {
+		return "sinfo context changed";
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(defsend, sso_on_1_M)
+{
+	struct sctp_sndrcvinfo sinfo[2];
+	int fd, result;
+
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_defsend(fd, 0, &sinfo[0]);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+	sinfo[1] = sinfo[0];
+	sinfo[1].sinfo_stream++;
+	result = sctp_set_defsend(fd, 0, &sinfo[1]);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+
+	result = sctp_get_defsend(fd, 0, &sinfo[1]);
+	close (fd);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	if ((sinfo[0].sinfo_stream+1) != sinfo[1].sinfo_stream) {
+		return "Def send stream did not change";
+	}
+	if (sinfo[0].sinfo_flags != sinfo[1].sinfo_flags) {
+		return "sinfo_flags changed";
+	}
+	if (sinfo[0].sinfo_ppid != sinfo[1].sinfo_ppid) {
+		return "sinfo_flags changed";
+	}
+	if (sinfo[0].sinfo_context != sinfo[1].sinfo_context) {
+		return "sinfo context changed";
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(defsend, sso_asc_1_1)
+{
+	struct sctp_sndrcvinfo sinfo[2];
+	int fd, result;
+	int fds[2];
+	fds[0] = fds[1] = -1;
+
+	fd = sctp_one2one(0, 1, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_defsend(fd, 0, &sinfo[0]);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+	result = sctp_socketpair_reuse(fd, fds, 1);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+	sinfo[1] = sinfo[0];
+	sinfo[1].sinfo_stream++;
+	result = sctp_set_defsend(fds[1], 0, &sinfo[1]);
+	if (result < 0) {
+		close (fd);
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	result = sctp_get_defsend(fds[1], 0, &sinfo[1]);
+	if (result < 0) {
+		close (fd);
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	close (fd);
+	close (fds[0]);
+	close (fds[1]);
+	
+	if ((sinfo[0].sinfo_stream+1) != sinfo[1].sinfo_stream) {
+		return "Def send stream did not change";
+	}
+	if (sinfo[0].sinfo_flags != sinfo[1].sinfo_flags) {
+		return "sinfo_flags changed";
+	}
+	if (sinfo[0].sinfo_ppid != sinfo[1].sinfo_ppid) {
+		return "sinfo_flags changed";
+	}
+	if (sinfo[0].sinfo_context != sinfo[1].sinfo_context) {
+		return "sinfo context changed";
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(defsend, sso_asc_1_M)
+{
+	struct sctp_sndrcvinfo sinfo[2];
+	int result;
+	int fds[2];
+	sctp_assoc_t ids[2];
+	fds[0] = fds[1] = -1;
+
+	fds[0] = sctp_one2many(0, 1);
+	if (fds[0] < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_defsend(fds[0], 0, &sinfo[0]);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+	result = sctp_socketpair_1tom(fds, ids,  1);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+	sinfo[1] = sinfo[0];
+	sinfo[1].sinfo_stream++;
+	result = sctp_set_defsend(fds[0], ids[0], &sinfo[1]);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	result = sctp_get_defsend(fds[0], ids[0], &sinfo[1]);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	close (fds[0]);
+	close (fds[1]);
+	
+	if ((sinfo[0].sinfo_stream+1) != sinfo[1].sinfo_stream) {
+		return "Def send stream did not change";
+	}
+	if (sinfo[0].sinfo_flags != sinfo[1].sinfo_flags) {
+		return "sinfo_flags changed";
+	}
+	if (sinfo[0].sinfo_ppid != sinfo[1].sinfo_ppid) {
+		return "sinfo_flags changed";
+	}
+	if (sinfo[0].sinfo_context != sinfo[1].sinfo_context) {
+		return "sinfo context changed";
+	}
+	return NULL;
+}
+DEFINE_APITEST(defsend, sso_inherit_1_1)
+{
+	struct sctp_sndrcvinfo sinfo[2];
+	int fd, result;
+	int fds[2];
+	fds[0] = fds[1] = -1;
+
+	fd = sctp_one2one(0, 1, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_defsend(fd, 0, &sinfo[0]);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+	sinfo[1] = sinfo[0];
+	sinfo[1].sinfo_stream++;
+	result = sctp_set_defsend(fd, 0, &sinfo[1]);
+	if (result < 0) {
+		close (fd);
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	result = sctp_socketpair_reuse(fd, fds, 1);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+	result = sctp_get_defsend(fds[1], 0, &sinfo[1]);
+	if (result < 0) {
+		close (fd);
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	close (fd);
+	close (fds[0]);
+	close (fds[1]);
+	
+	if ((sinfo[0].sinfo_stream+1) != sinfo[1].sinfo_stream) {
+		return "Def send stream did not change";
+	}
+	if (sinfo[0].sinfo_flags != sinfo[1].sinfo_flags) {
+		return "sinfo_flags changed";
+	}
+	if (sinfo[0].sinfo_ppid != sinfo[1].sinfo_ppid) {
+		return "sinfo_flags changed";
+	}
+	if (sinfo[0].sinfo_context != sinfo[1].sinfo_context) {
+		return "sinfo context changed";
+	}
+	return NULL;
+
+}
+
+DEFINE_APITEST(defsend, sso_inherit_1_M)
+{
+	struct sctp_sndrcvinfo sinfo[2];
+	int result;
+	int fds[2];
+	sctp_assoc_t ids[2];
+	fds[0] = fds[1] = -1;
+
+	fds[0] = sctp_one2many(0, 1);
+	if (fds[0] < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_defsend(fds[0], 0, &sinfo[0]);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+	sinfo[1] = sinfo[0];
+	sinfo[1].sinfo_stream++;
+	result = sctp_set_defsend(fds[0], 0, &sinfo[1]);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+
+	result = sctp_socketpair_1tom(fds, ids,  1);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+	result = sctp_get_defsend(fds[0], ids[0], &sinfo[1]);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	close (fds[0]);
+	close (fds[1]);
+	
+	if ((sinfo[0].sinfo_stream+1) != sinfo[1].sinfo_stream) {
+		return "Def send stream did not change";
+	}
+	if (sinfo[0].sinfo_flags != sinfo[1].sinfo_flags) {
+		return "sinfo_flags changed";
+	}
+	if (sinfo[0].sinfo_ppid != sinfo[1].sinfo_ppid) {
+		return "sinfo_flags changed";
+	}
+	if (sinfo[0].sinfo_context != sinfo[1].sinfo_context) {
+		return "sinfo context changed";
+	}
+	return NULL;
+
+
+}
+
+DEFINE_APITEST(defsend, sso_inherit_ncep_1_1)
+{
+	struct sctp_sndrcvinfo sinfo[3];
+	int fd, result;
+	char *retstring = NULL;
+	int fds[2];
+	fds[0] = fds[1] = -1;
+
+	fd = sctp_one2one(0, 1, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_defsend(fd, 0, &sinfo[0]);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+	sinfo[1] = sinfo[0];
+	sinfo[1].sinfo_stream++;
+	result = sctp_set_defsend(fd, 0, &sinfo[1]);
+	if (result < 0) {
+		close (fd);
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	result = sctp_socketpair_reuse(fd, fds, 1);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+	result = sctp_get_defsend(fds[1], 0, &sinfo[1]);
+	if (result < 0) {
+		close (fd);
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	
+	if ((sinfo[0].sinfo_stream+1) != sinfo[1].sinfo_stream) {
+		retstring = "Def send stream did not change";
+		goto out;
+	}
+	if (sinfo[0].sinfo_flags != sinfo[1].sinfo_flags) {
+		retstring =  "sinfo_flags changed";
+		goto out;
+	}
+	if (sinfo[0].sinfo_ppid != sinfo[1].sinfo_ppid) {
+		retstring = "sinfo_flags changed";
+		goto out;
+	}
+	if (sinfo[0].sinfo_context != sinfo[1].sinfo_context) {
+		retstring = "sinfo context changed";
+		goto out;
+	}
+	/* Change the assoc value */
+	sinfo[2] = sinfo[1];
+	sinfo[2].sinfo_stream++;
+	result = sctp_set_defsend(fds[1], 0, &sinfo[2]);
+	if (result < 0) {
+		close (fd);
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	/* Now get the listener value, it should NOT have changed */
+	result = sctp_get_defsend(fd, 0, &sinfo[2]);
+	if (result < 0) {
+		close (fd);
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	if (sinfo[2].sinfo_stream != sinfo[1].sinfo_stream) {
+		retstring = "Change of assoc, effected ep";
+	}
+ out:
+ 	close (fd);
+ 	close (fds[0]);
+ 	close (fds[1]);
+ 	return retstring;
+
+}
+
+DEFINE_APITEST(defsend, sso_inherit_ncep_1_M)
+{
+	struct sctp_sndrcvinfo sinfo[3];
+	int result;
+	char *retstring = NULL;
+	int fds[2];
+	sctp_assoc_t ids[2];
+	fds[0] = fds[1] = -1;
+
+	fds[0] = sctp_one2many(0, 1);
+	if (fds[0] < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_defsend(fds[0], 0, &sinfo[0]);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+	sinfo[1] = sinfo[0];
+	sinfo[1].sinfo_stream++;
+	result = sctp_set_defsend(fds[0], 0, &sinfo[1]);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+
+	result = sctp_socketpair_1tom(fds, ids,  1);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+	result = sctp_get_defsend(fds[0], ids[0], &sinfo[1]);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	
+	if ((sinfo[0].sinfo_stream+1) != sinfo[1].sinfo_stream) {
+		retstring = "Def send stream did not change";
+		goto out;
+	}
+	if (sinfo[0].sinfo_flags != sinfo[1].sinfo_flags) {
+		retstring =  "sinfo_flags changed";
+		goto out;
+	}
+	if (sinfo[0].sinfo_ppid != sinfo[1].sinfo_ppid) {
+		retstring = "sinfo_flags changed";
+		goto out;
+	}
+	if (sinfo[0].sinfo_context != sinfo[1].sinfo_context) {
+		retstring = "sinfo context changed";
+		goto out;
+	}
+	/* Change the assoc value */
+	sinfo[2] = sinfo[1];
+	sinfo[2].sinfo_stream++;
+	result = sctp_set_defsend(fds[0], ids[0], &sinfo[2]);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	result = sctp_get_defsend(fds[0], 0, &sinfo[2]);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+
+	if (sinfo[2].sinfo_stream != sinfo[1].sinfo_stream) {
+		retstring = "Change of assoc, effected ep";
+	}
+ out:
+	close (fds[0]);
+	close (fds[1]);
+	return retstring;
+}
+
+DEFINE_APITEST(defsend, sso_nc_other_asc_1_M)
+{
+	struct sctp_sndrcvinfo sinfo[3];
+	int result;
+	char *retstring = NULL;
+	int fds[2];
+	int fds2[2];
+	sctp_assoc_t ids[2], ids2[2];
+	fds[0] = fds[1] = -1;
+
+	fds[0] = sctp_one2many(0, 1);
+	if (fds[0] < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_defsend(fds[0], 0, &sinfo[0]);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+	sinfo[1] = sinfo[0];
+	sinfo[1].sinfo_stream++;
+	result = sctp_set_defsend(fds[0], 0, &sinfo[1]);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+
+	result = sctp_socketpair_1tom(fds, ids,  1);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+	/* Create a second assoc for fds[0] */
+	fds2[0] = fds[0];
+	result = sctp_socketpair_1tom(fds2, ids2,  1);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+
+	result = sctp_get_defsend(fds[0], ids[0], &sinfo[1]);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		close (fds2[1]);
+		return(strerror(errno));
+	}
+	
+	if ((sinfo[0].sinfo_stream+1) != sinfo[1].sinfo_stream) {
+		retstring = "Def send stream did not change";
+		goto out;
+	}
+	if (sinfo[0].sinfo_flags != sinfo[1].sinfo_flags) {
+		retstring =  "sinfo_flags changed";
+		goto out;
+	}
+	if (sinfo[0].sinfo_ppid != sinfo[1].sinfo_ppid) {
+		retstring = "sinfo_flags changed";
+		goto out;
+	}
+	if (sinfo[0].sinfo_context != sinfo[1].sinfo_context) {
+		retstring = "sinfo context changed";
+		goto out;
+	}
+	/* Change the assoc value */
+	sinfo[2] = sinfo[1];
+	sinfo[2].sinfo_stream++;
+	result = sctp_set_defsend(fds[0], ids[0], &sinfo[2]);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		close (fds2[1]);
+		return(strerror(errno));
+	}
+
+	result = sctp_get_defsend(fds[0], 0, &sinfo[2]);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		close (fds2[1]);
+		return(strerror(errno));
+	}
+
+	if (sinfo[2].sinfo_stream != sinfo[1].sinfo_stream) {
+		retstring = "Change of assoc, effected ep";
+	}
+	/* check other asoc */
+	result = sctp_get_defsend(fds[0], ids2[0], &sinfo[2]);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		close (fds2[1]);
+		return(strerror(errno));
+	}
+	if (sinfo[2].sinfo_stream != sinfo[1].sinfo_stream) {
+		retstring = "Change of assoc, effected other assoc";
+	}
+ out:
+	close (fds[0]);
+	close (fds[1]);
+	close (fds2[1]);
+	return retstring;
+}
 
 /********************************************************
  *
