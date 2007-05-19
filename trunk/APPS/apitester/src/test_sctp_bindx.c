@@ -312,9 +312,10 @@ DEFINE_APITEST(bindx, rem_s_a_s_p)
 	close(fd);
 		
 	if (result)
-		return strerror(errno);
-	else
 		return NULL;
+	else
+		return "Allowed to remove a boundall address";
+
 }
 
 /*
