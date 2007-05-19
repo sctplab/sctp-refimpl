@@ -10021,3 +10021,88 @@ DEFINE_APITEST(maxseg, sso_nc_other_asc_1_M)
 	close (fds2[1]);
 	return retstring;
 }
+
+/********************************************************
+ *
+ * SCTP_AUTH_CHUNK tests
+ *
+ ********************************************************/
+
+DEFINE_APITEST(authchk, gso_1_1)
+{
+	int result;
+	int fd;
+	uint8_t chk;
+
+	fd = sctp_one2one(0, 1, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_auth_chunk_id(fd, &chk);
+	close (fd);
+	if (result >= 0) {
+		return "allowed get of auth chunk id";
+	}
+	return NULL;
+}
+DEFINE_APITEST(authchk, gso_1_M)
+{
+	int result;
+	int fd;
+	uint8_t chk;
+
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_auth_chunk_id(fd, &chk);
+	close (fd);
+	if (result >= 0) {
+		return "allowed get of auth chunk id";
+	}
+	return NULL;
+}
+DEFINE_APITEST(authchk, sso_1_1)
+{
+	int result;
+	int fd;
+	uint8_t chk;
+
+	fd = sctp_one2one(0, 1, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	/*
+	 * Set to auth a data chunk.
+	 */
+	chk = 0;
+	result = sctp_set_auth_chunk_id(fd, chk);
+	close (fd);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(authchk, sso_1_M)
+{
+	int result;
+	int fd;
+	uint8_t chk;
+
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	/*
+	 * Set to auth a data chunk.
+	 */
+	chk = 0;
+	result = sctp_set_auth_chunk_id(fd, chk);
+	close (fd);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	return NULL;
+
+}
