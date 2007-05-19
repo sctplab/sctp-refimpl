@@ -7,7 +7,18 @@
 #include <unistd.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <time.h>
 #include <netinet/sctp.h>
+
+void
+sctp_delay(int ms)
+{
+    struct timespec ts;
+    ts.tv_sec = 0;
+    ts.tv_nsec = (ms * 1000 * 1000);
+    (void)nanosleep(&ts, NULL);
+}
+
 
 int 
 sctp_one2one(unsigned short port, int should_listen, int bindall)
