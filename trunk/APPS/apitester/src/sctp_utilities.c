@@ -1145,3 +1145,34 @@ int sctp_get_events(int fd, struct sctp_event_subscribe *ev)
 			    ev, &len);
 	return (result);
 }
+
+
+int sctp_get_auth_chunk_id(int fd, uint8_t *fill)
+{
+	int result;
+	socklen_t len;
+	struct sctp_authchunk ch;
+
+	len = sizeof(ch);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_AUTH_CHUNK,
+			    &ch, &len);
+	if(result >= 0) {
+		/* We really expect this to ALWAYS fail */
+		*fill = ch.sauth_chunk;
+	}
+	return(result);
+}
+
+int sctp_set_auth_chunk_id(int fd, uint8_t chk)
+{
+	int result;
+	socklen_t len;
+	struct sctp_authchunk ch;
+
+	len = sizeof(ch);
+	ch.sauth_chunk = chk;
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_AUTH_CHUNK,
+			    &ch, len);
+	return(result);
+
+}

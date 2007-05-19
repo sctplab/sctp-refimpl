@@ -154,3 +154,7 @@ int sctp_get_maxseg(int fd, sctp_assoc_t id, int *val);
 
 int sctp_set_events(int fd, struct sctp_event_subscribe *ev);
 int sctp_get_events(int fd, struct sctp_event_subscribe *ev);
+
+int sctp_get_auth_chunk_id(int fd, uint8_t *fill);
+int sctp_set_auth_chunk_id(int fd, uint8_t chk);
+
