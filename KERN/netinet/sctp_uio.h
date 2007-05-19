@@ -912,8 +912,6 @@ union sctp_sockstore {
 struct xsctp_inpcb {
 	uint32_t last;
 	uint16_t local_port;
-	uint16_t number_local_addresses;
-	uint32_t number_associations;
 	uint32_t flags;
 	uint32_t features;
 	uint32_t total_sends;
@@ -927,20 +925,21 @@ struct xsctp_inpcb {
 #endif
 
 struct xsctp_tcb {
-	uint16_t LocalPort;                /* sctpAssocEntry 3   */
-	uint16_t RemPort;                  /* sctpAssocEntry 4   */
-	union sctp_sockstore RemPrimAddr;  /* sctpAssocEntry 5/6 */
-	uint32_t HeartBeatInterval;        /* sctpAssocEntry 7   */
-	uint32_t State;                    /* sctpAssocEntry 8   */
-	uint32_t InStreams;                /* sctpAssocEntry 9   */
-	uint32_t OutStreams;               /* sctpAssocEntry 10  */
-	uint32_t MaxRetr;                  /* sctpAssocEntry 11  */
-	uint32_t PrimProcess;              /* sctpAssocEntry 12  */
-	uint32_t T1expireds;               /* sctpAssocEntry 13  */
-	uint32_t T2expireds;               /* sctpAssocEntry 14  */
-	uint32_t RtxChunks;                /* sctpAssocEntry 15  */
-	struct timeval StartTime;          /* sctpAssocEntry 16  */
-	struct timeval DiscontinuityTime;  /* sctpAssocEntry 17  */
+	uint32_t last;
+	uint16_t local_port;               /* sctpAssocEntry 3   */
+	uint16_t remote_port;              /* sctpAssocEntry 4   */
+	union sctp_sockstore primary_addr; /* sctpAssocEntry 5/6 */
+	uint32_t heartbeat_interval;       /* sctpAssocEntry 7   */
+	uint32_t state;                    /* sctpAssocEntry 8   */
+	uint32_t in_streams;               /* sctpAssocEntry 9   */
+	uint32_t out_streams;              /* sctpAssocEntry 10  */
+	uint32_t max_nr_retrans;           /* sctpAssocEntry 11  */
+	uint32_t primary_process;          /* sctpAssocEntry 12  */
+	uint32_t T1_expireries;            /* sctpAssocEntry 13  */
+	uint32_t T2_expireries;            /* sctpAssocEntry 14  */
+	uint32_t retransmitted_tsns;       /* sctpAssocEntry 15  */
+	struct timeval start_time;         /* sctpAssocEntry 16  */
+	struct timeval discontinuity_time; /* sctpAssocEntry 17  */
 	uint32_t total_sends;
 	uint32_t total_recvs;
 	uint32_t local_tag;
@@ -951,29 +950,29 @@ struct xsctp_tcb {
 	uint32_t cumulative_tsn_ack;
 	uint32_t mtu;
 	/* add more association specific data here*/
-	uint16_t number_local_addresses;
-	uint16_t number_remote_addresses;
 };
 
 struct xsctp_laddr {
-	union sctp_sockstore LocalAddr;    /* sctpAssocLocalAddrEntry 1/2 */
-	struct timeval LocalStartTime;     /* sctpAssocLocalAddrEntry 3   */
+	uint32_t last;
+	union sctp_sockstore address;    /* sctpAssocLocalAddrEntry 1/2 */
+	struct timeval start_time;        /* sctpAssocLocalAddrEntry 3   */
 	/* add more local address specific data */
 };
 
 struct xsctp_raddr {
-	union sctp_sockstore RemAddr;      /* sctpAssocLocalRemEntry 1/2 */
-	uint8_t RemAddrActive;             /* sctpAssocLocalRemEntry 3   */
-	uint8_t RemAddrConfirmed;          /*                            */
-	uint8_t RemAddrHBActive;           /* sctpAssocLocalRemEntry 4   */
-	uint32_t RemAddrRTO;               /* sctpAssocLocalRemEntry 5   */
-	uint32_t RemAddrMaxPathRtx;        /* sctpAssocLocalRemEntry 6   */
-	uint32_t RemAddrRtx;               /* sctpAssocLocalRemEntry 7   */
-	uint32_t RemAddrErrorCounter;      /*                            */
-	uint32_t RemAddrCwnd;              /*                            */
-	uint32_t RemAddrFlightSize;        /*                            */
-	uint32_t RemAddrMTU;               /*                            */
-	struct timeval RemAddrStartTime;   /* sctpAssocLocalRemEntry 8   */
+	uint32_t last;
+	union sctp_sockstore address;      /* sctpAssocLocalRemEntry 1/2 */
+	uint8_t active;                    /* sctpAssocLocalRemEntry 3   */
+	uint8_t confirmed;                 /*                            */
+	uint8_t heartbeat_enabled;          /* sctpAssocLocalRemEntry 4   */
+	uint32_t rto;                      /* sctpAssocLocalRemEntry 5   */
+	uint32_t max_path_rtx;             /* sctpAssocLocalRemEntry 6   */
+	uint32_t rtx;                      /* sctpAssocLocalRemEntry 7   */
+	uint32_t error_counter;            /*                            */
+	uint32_t cwnd;                     /*                            */
+	uint32_t flight_size;              /*                            */
+	uint32_t mtu;                      /*                            */
+	struct timeval start_time;         /* sctpAssocLocalRemEntry 8   */
 	/* add more remote address specific data */
 };
 
