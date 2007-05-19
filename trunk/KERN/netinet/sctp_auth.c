@@ -631,6 +631,7 @@ sctp_free_hmaclist(sctp_hmaclist_t *list)
 int
 sctp_auth_add_hmacid(sctp_hmaclist_t *list, uint16_t hmac_id)
 {
+	int i;
 	if (list == NULL)
 		return (-1);
 	if (list->num_algo == list->max_algo) {
@@ -649,6 +650,13 @@ sctp_auth_add_hmacid(sctp_hmaclist_t *list, uint16_t hmac_id)
 #endif
 	    (hmac_id != SCTP_AUTH_HMAC_ID_MD5)) {
 		return (-1);
+	}
+	/* Now is it already in the list */
+	for (i=0; i<list->num_algo; i++) {
+		if (list->hmac[i] == hmac_id) {
+			/* already in list */
+			return (-1);
+		}
 	}
 	SCTPDBG(SCTP_DEBUG_AUTH1, "SCTP: add HMAC id %u to list\n", hmac_id);
 	list->hmac[list->num_algo++] = hmac_id;
