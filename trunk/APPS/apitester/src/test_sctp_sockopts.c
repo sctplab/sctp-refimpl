@@ -6600,9 +6600,6 @@ DEFINE_APITEST(paddrpara, sso_ainhhb_int_1_1)
 	muflags[0] = flags[0] & ~(SPP_IPV6_FLOWLABEL|SPP_IPV4_TOS);
 	muflags[1] = flags[2] & ~(SPP_IPV6_FLOWLABEL|SPP_IPV4_TOS);
 	if(muflags[0] != muflags[1]) {
-		printf("flags was %x now %x\n",
-		       muflags[0],
-		       muflags[1]);
 		retstring = "flag settings changed";
 		goto out;
 	}
@@ -6702,9 +6699,6 @@ DEFINE_APITEST(paddrpara, sso_ainhhb_int_1_M)
 	muflags[0] = flags[0] & ~(SPP_IPV6_FLOWLABEL|SPP_IPV4_TOS);
 	muflags[1] = flags[2] & ~(SPP_IPV6_FLOWLABEL|SPP_IPV4_TOS);
 	if(muflags[0] != muflags[1]) {
-		printf("flags was %x now %x\n",
-		       muflags[0],
-		       muflags[1]);
 		retstring = "flag settings changed";
 		goto out;
 	}
@@ -6718,6 +6712,604 @@ DEFINE_APITEST(paddrpara, sso_ainhhb_int_1_M)
 	close(fds[0]);
 	return (retstring);
 
+}
+
+DEFINE_APITEST(paddrpara, sso_ainhhb_zero_1_1)
+{
+	int fd, result;
+	uint32_t newval;
+	int fds[2];
+	char *retstring=NULL;
+	uint32_t hbinterval[3];
+	uint16_t maxrxt[3];
+	uint32_t pathmtu[3];
+	uint32_t flags[3];
+	uint32_t ipv6_flowlabel[3];
+	uint8_t ipv4_tos[3];
+	uint32_t muflags[2];
+
+	fd = sctp_one2one(0,1, 0);
+	if(fd < 0) {
+		return(strerror(errno));
+	}
+	/* Get all the values for assoc info on ep */
+	result = sctp_get_paddr_param(fd, 0, NULL, &hbinterval[0],
+				      &maxrxt[0],
+				      &pathmtu[0],
+				      &flags[0],
+				      &ipv6_flowlabel[0],
+				      &ipv4_tos[0]);
+
+	if (result) {
+		retstring = strerror(errno);
+		goto out_nopair;
+	}
+	newval = 0;
+
+	result = sctp_set_hbzero(fd, 0, NULL);
+	if (result< 0) {
+		retstring = strerror(errno);
+		goto out_nopair;
+	}
+
+	result = sctp_get_paddr_param(fd, 0, NULL, &hbinterval[1],
+				      &maxrxt[1],
+				      &pathmtu[1],
+				      &flags[1],
+				      &ipv6_flowlabel[1],
+				      &ipv4_tos[1]);
+
+
+	if (result) {
+		retstring = strerror(errno);
+		goto out_nopair;
+	}
+	/* Validate it set */
+	if(hbinterval[1] != newval) {
+		retstring = "HB interval set on ep failed";
+	}
+	if(maxrxt[0] != maxrxt[1]) {
+		retstring = "maxrxt changed";
+	}
+	if(flags[0] != flags[1]) {
+		retstring = "flag settings changed";
+	}
+
+	if (sctp_socketpair_reuse(fd, fds, 0) < 0) {
+		retstring = strerror(errno);
+		close(fd);
+		goto out_nopair;
+	}
+
+	/* Now what about on ep? */
+	result = sctp_get_paddr_param(fds[1], 0, NULL, &hbinterval[2],
+				      &maxrxt[2],
+				      &pathmtu[2],
+				      &flags[2],
+				      &ipv6_flowlabel[2],
+				      &ipv4_tos[2]);
+
+	if(maxrxt[0] != maxrxt[2]) {
+		retstring = "maxrxt changed";
+		goto out;
+	}
+	muflags[0] = flags[0] & ~(SPP_IPV6_FLOWLABEL|SPP_IPV4_TOS);
+	muflags[1] = flags[2] & ~(SPP_IPV6_FLOWLABEL|SPP_IPV4_TOS);
+	if(muflags[0] != muflags[1]) {
+		retstring = "flag settings changed";
+		goto out;
+	}
+
+	if (hbinterval[2] != newval) {
+		retstring = "HB interval did not inherit";
+	}
+ out:
+	close(fds[0]);
+	close(fds[1]);
+ out_nopair:
+	close(fd);
+	return (retstring);
+}
+
+DEFINE_APITEST(paddrpara, sso_ainhhb_zero_1_M)
+{
+	int result;
+	uint32_t hbinterval[3];
+	uint16_t maxrxt[3];
+	uint32_t pathmtu[3];
+	uint32_t flags[3];
+	uint32_t ipv6_flowlabel[3];
+	uint8_t ipv4_tos[3];
+	uint32_t muflags[2];
+	uint32_t newval;
+	int fds[2];
+	sctp_assoc_t ids[2];
+	char *retstring=NULL;
+
+	fds[0] = sctp_one2many(0,0);
+	if(fds[0] < 0) {
+		return(strerror(errno));
+	}
+	/* Get all the values for assoc info on ep */
+	result = sctp_get_paddr_param(fds[0], 0, NULL, &hbinterval[0],
+				      &maxrxt[0],
+				      &pathmtu[0],
+				      &flags[0],
+				      &ipv6_flowlabel[0],
+				      &ipv4_tos[0]);
+	if (result) {
+		retstring = strerror(errno);
+		goto out_nopair;
+	}
+	newval = 0;
+	result = sctp_set_hbzero(fds[0], 0, NULL);
+	/* Set the assoc value */
+
+	if (result) {
+		retstring = strerror(errno);
+		goto out_nopair;
+	}
+	/* Validate it set */
+	result = sctp_get_paddr_param(fds[0], 0, NULL, &hbinterval[1],
+				      &maxrxt[1],
+				      &pathmtu[1],
+				      &flags[1],
+				      &ipv6_flowlabel[1],
+				      &ipv4_tos[1]);
+
+
+	if (result) {
+		retstring = strerror(errno);
+		goto out_nopair;
+	}
+	/* Validate it set */
+	if(hbinterval[1] != newval) {
+		retstring = "HB interval set on ep failed";
+	}
+	if(maxrxt[0] != maxrxt[1]) {
+		retstring = "maxrxt changed";
+	}
+	if(flags[0] != flags[1]) {
+		retstring = "flag settings changed";
+	}
+
+	if (sctp_socketpair_1tom(fds, ids, 0) < 0) {
+		retstring = strerror(errno);
+		close(fds[0]);
+		goto out_nopair;
+	}
+	/* Now what about on ep? */
+	/* Now what about on ep? */
+	result = sctp_get_paddr_param(fds[0], 0, NULL, &hbinterval[2],
+				      &maxrxt[2],
+				      &pathmtu[2],
+				      &flags[2],
+				      &ipv6_flowlabel[2],
+				      &ipv4_tos[2]);
+
+	if(maxrxt[0] != maxrxt[2]) {
+		retstring = "maxrxt changed";
+		goto out;
+	}
+	muflags[0] = flags[0] & ~(SPP_IPV6_FLOWLABEL|SPP_IPV4_TOS);
+	muflags[1] = flags[2] & ~(SPP_IPV6_FLOWLABEL|SPP_IPV4_TOS);
+	if(muflags[0] != muflags[1]) {
+		retstring = "flag settings changed";
+		goto out;
+	}
+
+	if (hbinterval[2] != newval) {
+		retstring = "HB interval did not inherit";
+	}
+ out:
+	close(fds[1]);
+ out_nopair:
+	close(fds[0]);
+	return (retstring);
+}
+
+DEFINE_APITEST(paddrpara, sso_ainhhb_off_1_1)
+{
+	int fd, result;
+	int fds[2];
+	char *retstring=NULL;
+	uint32_t hbinterval[3];
+	uint16_t maxrxt[3];
+	uint32_t pathmtu[3];
+	uint32_t flags[3];
+	uint32_t ipv6_flowlabel[3];
+	uint8_t ipv4_tos[3];
+	uint32_t muflags[2];
+
+	fd = sctp_one2one(0,1, 0);
+	if(fd < 0) {
+		return(strerror(errno));
+	}
+	/* Get all the values for assoc info on ep */
+	result = sctp_get_paddr_param(fd, 0, NULL, &hbinterval[0],
+				      &maxrxt[0],
+				      &pathmtu[0],
+				      &flags[0],
+				      &ipv6_flowlabel[0],
+				      &ipv4_tos[0]);
+
+	if (result) {
+		retstring = strerror(errno);
+		goto out_nopair;
+	}
+
+	result = sctp_set_hbdisable(fd, 0, NULL);
+	if (result< 0) {
+		retstring = strerror(errno);
+		goto out_nopair;
+	}
+
+	result = sctp_get_paddr_param(fd, 0, NULL, &hbinterval[1],
+				      &maxrxt[1],
+				      &pathmtu[1],
+				      &flags[1],
+				      &ipv6_flowlabel[1],
+				      &ipv4_tos[1]);
+
+
+	if (result) {
+		retstring = strerror(errno);
+		goto out_nopair;
+	}
+	/* Validate it set */
+	if(hbinterval[1] != hbinterval[0]) {
+		retstring = "HB interval changed on ep failed";
+	}
+	if(maxrxt[0] != maxrxt[1]) {
+		retstring = "maxrxt changed";
+	}
+	muflags[0] = flags[0] & ~(SPP_HB_ENABLE|SPP_HB_DISABLE);
+	muflags[1] = flags[1] & ~(SPP_HB_ENABLE|SPP_HB_DISABLE);
+	if(muflags[0] != muflags[1]) {
+		retstring = "flag settings changed";
+	}
+	if (flags[1] & SPP_HB_ENABLE) {
+		retstring = "HB ep did not disable HB";
+	}
+
+	if (sctp_socketpair_reuse(fd, fds, 0) < 0) {
+		retstring = strerror(errno);
+		close(fd);
+		goto out_nopair;
+	}
+
+	/* Now what about on ep? */
+	result = sctp_get_paddr_param(fds[1], 0, NULL, &hbinterval[2],
+				      &maxrxt[2],
+				      &pathmtu[2],
+				      &flags[2],
+				      &ipv6_flowlabel[2],
+				      &ipv4_tos[2]);
+
+	if(maxrxt[0] != maxrxt[2]) {
+		retstring = "maxrxt changed";
+		goto out;
+	}
+	muflags[0] = flags[0] & ~(SPP_IPV6_FLOWLABEL|SPP_IPV4_TOS|SPP_HB_ENABLE|SPP_HB_DISABLE);
+	muflags[1] = flags[2] & ~(SPP_IPV6_FLOWLABEL|SPP_IPV4_TOS|SPP_HB_ENABLE|SPP_HB_DISABLE);
+	if(muflags[0] != muflags[1]) {
+		retstring = "flag settings changed";
+		goto out;
+	}
+
+	if (hbinterval[2] != hbinterval[1]) {
+		retstring = "HB interval changecd";
+	}
+	if (flags[2] & SPP_HB_ENABLE) {
+		retstring = "HB did not stay disabled";
+	}
+ out:
+	close(fds[0]);
+	close(fds[1]);
+ out_nopair:
+	close(fd);
+	return (retstring);
+}
+
+DEFINE_APITEST(paddrpara, sso_ainhhb_off_1_M)
+{
+	int result;
+	uint32_t hbinterval[3];
+	uint16_t maxrxt[3];
+	uint32_t pathmtu[3];
+	uint32_t flags[3];
+	uint32_t ipv6_flowlabel[3];
+	uint8_t ipv4_tos[3];
+	uint32_t muflags[2];
+	int fds[2];
+	sctp_assoc_t ids[2];
+	char *retstring=NULL;
+
+	fds[0] = sctp_one2many(0,0);
+	if(fds[0] < 0) {
+		return(strerror(errno));
+	}
+	/* Get all the values for assoc info on ep */
+	result = sctp_get_paddr_param(fds[0], 0, NULL, &hbinterval[0],
+				      &maxrxt[0],
+				      &pathmtu[0],
+				      &flags[0],
+				      &ipv6_flowlabel[0],
+				      &ipv4_tos[0]);
+	if (result) {
+		retstring = strerror(errno);
+		goto out_nopair;
+	}
+	result = sctp_set_hbdisable(fds[0], ids[0], NULL);
+	/* Set the assoc value */
+
+	if (result) {
+		retstring = strerror(errno);
+		goto out_nopair;
+	}
+	/* Validate it set */
+	result = sctp_get_paddr_param(fds[0], 0, NULL, &hbinterval[1],
+				      &maxrxt[1],
+				      &pathmtu[1],
+				      &flags[1],
+				      &ipv6_flowlabel[1],
+				      &ipv4_tos[1]);
+
+
+	if (result) {
+		retstring = strerror(errno);
+		goto out_nopair;
+	}
+	/* Validate it set */
+	if(hbinterval[1] != hbinterval[0]) {
+		retstring = "HB interval changed on ep failed";
+	}
+	if(maxrxt[0] != maxrxt[1]) {
+		retstring = "maxrxt changed";
+	}
+	muflags[0] = flags[0] & ~(SPP_HB_ENABLE|SPP_HB_DISABLE);
+	muflags[1] = flags[1] & ~(SPP_HB_ENABLE|SPP_HB_DISABLE);
+	if(muflags[0] != muflags[1]) {
+		retstring = "flag settings changed";
+	}
+	if(flags[1] & SPP_HB_ENABLE) {
+		retstring = "HB ep did not disable HB";
+	}
+
+	if (sctp_socketpair_1tom(fds, ids, 0) < 0) {
+		retstring = strerror(errno);
+		close(fds[0]);
+		goto out_nopair;
+	}
+	/* Now what about on ep? */
+	/* Now what about on ep? */
+	result = sctp_get_paddr_param(fds[0], 0, NULL, &hbinterval[2],
+				      &maxrxt[2],
+				      &pathmtu[2],
+				      &flags[2],
+				      &ipv6_flowlabel[2],
+				      &ipv4_tos[2]);
+
+	if(maxrxt[0] != maxrxt[2]) {
+		retstring = "maxrxt changed";
+		goto out;
+	}
+
+	muflags[0] = flags[0] & ~(SPP_IPV6_FLOWLABEL|SPP_IPV4_TOS|SPP_HB_ENABLE|SPP_HB_DISABLE);
+	muflags[1] = flags[2] & ~(SPP_IPV6_FLOWLABEL|SPP_IPV4_TOS|SPP_HB_ENABLE|SPP_HB_DISABLE);
+
+	if(muflags[0] != muflags[1]) {
+		retstring = "flag settings changed";
+		goto out;
+	}
+	if (hbinterval[2] != hbinterval[1]) {
+		retstring = "HB interval changecd";
+	}
+	if(flags[2] & SPP_HB_ENABLE) {
+		retstring = "HB did not stay disabled";
+	}
+
+ out:
+	close(fds[1]);
+ out_nopair:
+	close(fds[0]);
+	return (retstring);
+}
+
+
+DEFINE_APITEST(paddrpara, sso_ainhpmrxt_int_1_1)
+{
+	int fd, result;
+	int fds[2];
+	char *retstring=NULL;
+	uint32_t hbinterval[3];
+	uint16_t maxrxt[3];
+	uint32_t pathmtu[3];
+	uint32_t flags[3];
+	uint32_t ipv6_flowlabel[3];
+	uint8_t ipv4_tos[3];
+	uint32_t muflags[2];
+	uint16_t new_maxrxt;
+
+	fd = sctp_one2one(0,1, 0);
+	if(fd < 0) {
+		return(strerror(errno));
+	}
+	/* Get all the values for assoc info on ep */
+	result = sctp_get_paddr_param(fd, 0, NULL, &hbinterval[0],
+				      &maxrxt[0],
+				      &pathmtu[0],
+				      &flags[0],
+				      &ipv6_flowlabel[0],
+				      &ipv4_tos[0]);
+
+	if (result) {
+		retstring = strerror(errno);
+		goto out_nopair;
+	}
+	new_maxrxt = 2 * maxrxt[0];
+	result = sctp_set_maxrxt(fd, 0, NULL, new_maxrxt);
+
+	if (result< 0) {
+		retstring = strerror(errno);
+		goto out_nopair;
+	}
+
+	result = sctp_get_paddr_param(fd, 0, NULL, &hbinterval[1],
+				      &maxrxt[1],
+				      &pathmtu[1],
+				      &flags[1],
+				      &ipv6_flowlabel[1],
+				      &ipv4_tos[1]);
+
+
+	if (result) {
+		retstring = strerror(errno);
+		goto out_nopair;
+	}
+	/* Validate it set */
+	if(hbinterval[1] != hbinterval[0]) {
+		retstring = "HB interval changed ep failed";
+	}
+	if(maxrxt[1] != new_maxrxt) {
+		retstring = "maxrxt did not change on ep";
+	}
+	if(flags[0] != flags[1]) {
+		retstring = "flag settings changed on ep";
+	}
+	if (sctp_socketpair_reuse(fd, fds, 0) < 0) {
+		retstring = strerror(errno);
+		close(fd);
+		goto out_nopair;
+	}
+
+	/* Now what about on ep? */
+	result = sctp_get_paddr_param(fds[1], 0, NULL, &hbinterval[2],
+				      &maxrxt[2],
+				      &pathmtu[2],
+				      &flags[2],
+				      &ipv6_flowlabel[2],
+				      &ipv4_tos[2]);
+
+	if(new_maxrxt != maxrxt[2]) {
+		retstring = "maxrxt did NOT change on assoc";
+		goto out;
+	}
+	muflags[0] = flags[0] & ~(SPP_IPV6_FLOWLABEL|SPP_IPV4_TOS);
+	muflags[1] = flags[2] & ~(SPP_IPV6_FLOWLABEL|SPP_IPV4_TOS);
+	if(muflags[0] != muflags[1]) {
+		retstring = "flag settings changed";
+		goto out;
+	}
+
+	if (hbinterval[2] != hbinterval[1]) {
+		retstring = "HB interval changed";
+	}
+ out:
+	close(fds[0]);
+	close(fds[1]);
+ out_nopair:
+	close(fd);
+	return (retstring);
+
+}
+
+
+DEFINE_APITEST(paddrpara, sso_ainhpmrxt_int_1_M)
+{
+	int result;
+	uint32_t hbinterval[3];
+	uint16_t maxrxt[3];
+	uint32_t pathmtu[3];
+	uint32_t flags[3];
+	uint32_t ipv6_flowlabel[3];
+	uint8_t ipv4_tos[3];
+	uint32_t muflags[2];
+	int fds[2];
+	sctp_assoc_t ids[2];
+	char *retstring=NULL;
+	uint16_t new_maxrxt;
+
+	fds[0] = sctp_one2many(0,0);
+	if(fds[0] < 0) {
+		return(strerror(errno));
+	}
+	/* Get all the values for assoc info on ep */
+	result = sctp_get_paddr_param(fds[0], 0, NULL, &hbinterval[0],
+				      &maxrxt[0],
+				      &pathmtu[0],
+				      &flags[0],
+				      &ipv6_flowlabel[0],
+				      &ipv4_tos[0]);
+	if (result) {
+		retstring = strerror(errno);
+		goto out_nopair;
+	}
+
+	new_maxrxt = 2 * maxrxt[0];
+	result = sctp_set_maxrxt(fds[0], 0, NULL, new_maxrxt);
+
+	if (result) {
+		retstring = strerror(errno);
+		goto out_nopair;
+	}
+	/* Validate it set */
+	result = sctp_get_paddr_param(fds[0], 0, NULL, &hbinterval[1],
+				      &maxrxt[1],
+				      &pathmtu[1],
+				      &flags[1],
+				      &ipv6_flowlabel[1],
+				      &ipv4_tos[1]);
+
+
+	if (result) {
+		retstring = strerror(errno);
+		goto out_nopair;
+	}
+	/* Validate it set */
+	if(hbinterval[1] != hbinterval[0]) {
+		retstring = "HB interval changed on ep failed";
+	}
+	if(new_maxrxt != maxrxt[1]) {
+		retstring = "maxrxt did not change";
+	}
+	if(flags[0] != flags[1]) {
+		retstring = "flag settings changed";
+	}
+	if (sctp_socketpair_1tom(fds, ids, 0) < 0) {
+		retstring = strerror(errno);
+		close(fds[0]);
+		goto out_nopair;
+	}
+	/* Now what about on ep? */
+	/* Now what about on ep? */
+	result = sctp_get_paddr_param(fds[0], 0, NULL, &hbinterval[2],
+				      &maxrxt[2],
+				      &pathmtu[2],
+				      &flags[2],
+				      &ipv6_flowlabel[2],
+				      &ipv4_tos[2]);
+
+	if(new_maxrxt != maxrxt[2]) {
+		retstring = "maxrxt changed";
+		goto out;
+	}
+
+	muflags[0] = flags[0] & ~(SPP_IPV6_FLOWLABEL|SPP_IPV4_TOS);
+	muflags[1] = flags[2] & ~(SPP_IPV6_FLOWLABEL|SPP_IPV4_TOS);
+
+	if(muflags[0] != muflags[1]) {
+		retstring = "flag settings changed";
+		goto out;
+	}
+	if (hbinterval[2] != hbinterval[1]) {
+		retstring = "HB interval changecd";
+	}
+ out:
+	close(fds[1]);
+ out_nopair:
+	close(fds[0]);
+	return (retstring);
 }
 
 
