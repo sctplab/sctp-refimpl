@@ -142,6 +142,8 @@ sctp_set_tos(int fd, sctp_assoc_t id,
 	     struct sockaddr *sa,
 	     uint8_t ipv4_tos);
 
+int sctp_get_defsend(int fd, sctp_assoc_t id, struct sctp_sndrcvinfo *s);
+int sctp_set_defsend(int fd, sctp_assoc_t id, struct sctp_sndrcvinfo *s);
 
 
 int sctp_set_maxseg(int fd, sctp_assoc_t id, int val);
