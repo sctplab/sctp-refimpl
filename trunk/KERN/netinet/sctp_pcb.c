@@ -462,6 +462,7 @@ sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 		}
 		SCTP_INCR_LADDR_COUNT();
 		bzero(wi, sizeof(*wi));
+		(void)SCTP_GETTIME_TIMEVAL(&wi->start_time);
 		wi->ifa = sctp_ifap;
 		wi->action = SCTP_ADD_IP_ADDRESS;
 		SCTP_IPI_ITERATOR_WQ_LOCK();
@@ -539,6 +540,7 @@ sctp_del_addr_from_vrf(uint32_t vrf_id, struct sockaddr *addr,
 		}
 		SCTP_INCR_LADDR_COUNT();
 		bzero(wi, sizeof(*wi));
+		(void)SCTP_GETTIME_TIMEVAL(&wi->start_time);
 		wi->ifa = sctp_ifap;
 		wi->action = SCTP_DEL_IP_ADDRESS;
 		SCTP_IPI_ITERATOR_WQ_LOCK();
@@ -2404,6 +2406,7 @@ sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
 			}
 			SCTP_INCR_LADDR_COUNT();
 			bzero(laddr, sizeof(*laddr));
+			(void)SCTP_GETTIME_TIMEVAL(&laddr->start_time);
 			laddr->ifa = oladdr->ifa;
 			atomic_add_int(&laddr->ifa->refcount, 1);
 			LIST_INSERT_HEAD(&new_inp->sctp_addr_list, laddr,
@@ -5261,6 +5264,7 @@ sctp_insert_laddr(struct sctpladdr *list, struct sctp_ifa *ifa, uint32_t act)
 	}
 	SCTP_INCR_LADDR_COUNT();
 	bzero(laddr, sizeof(*laddr));
+	(void)SCTP_GETTIME_TIMEVAL(&laddr->start_time);
 	laddr->ifa = ifa;
 	laddr->action = act;
 	atomic_add_int(&ifa->refcount, 1);

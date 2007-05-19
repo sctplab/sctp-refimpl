@@ -5905,6 +5905,7 @@ sctp_dynamic_set_primary(struct sockaddr *sa, uint32_t vrf_id)
 	/* Now incr the count and int wi structure */
 	SCTP_INCR_LADDR_COUNT();
 	bzero(wi, sizeof(*wi));
+	(void)SCTP_GETTIME_TIMEVAL(&wi->start_time);
 	wi->ifa = ifa;
 	wi->action = SCTP_SET_PRIM_ADDR;
 	atomic_add_int(&ifa->refcount, 1);
