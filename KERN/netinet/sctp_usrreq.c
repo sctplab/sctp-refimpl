@@ -3096,6 +3096,9 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		SCTP_FIND_STCB(inp, stcb, sack->sack_assoc_id);
 		if (stcb) {
 			if(sack->sack_delay) {
+				if (MSEC_TO_TICKS(sack->sack_delay) < 1) {
+					sack->sack_delay = TICKS_TO_MSEC(1);
+				}
 				stcb->asoc.delayed_ack = sack->sack_delay;
 			}
 			if(sack->sack_freq) {
@@ -3105,6 +3108,9 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		} else {
 			SCTP_INP_WLOCK(inp);
 			if(sack->sack_delay) {
+				if (MSEC_TO_TICKS(sack->sack_delay) < 1) {
+					sack->sack_delay = TICKS_TO_MSEC(1);
+				}
 				inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV] = MSEC_TO_TICKS(sack->sack_delay);
 			}
 			if(sack->sack_freq) {
