@@ -1205,6 +1205,27 @@ sctp_v4_address_mapping_enabled(int fd)
 	return (onoff);
 }
 
+int
+sctp_enable_v6_only(int fd)
+{
+	const int on = 1;
+	socklen_t length;
+	
+	length = (socklen_t)sizeof(int);
+	return (setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, &on, length));
+}
+
+int
+sctp_v6_only_enabled(int fd)
+{
+	int onoff = 1;
+	socklen_t length;
+	
+	length = (socklen_t)sizeof(int);
+	getsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, &onoff, &length);
+	return (onoff);
+}
+
 int sctp_get_auth_chunk_id(int fd, uint8_t *fill)
 {
 	int result;

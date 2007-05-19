@@ -34,6 +34,92 @@ DEFINE_APITEST(bind, port_s_a_s_p)
 		return NULL;
 }
 
+DEFINE_APITEST(bind, v4tov6_s_a_s_p)
+{
+	int fd;
+	unsigned short port;
+	
+	if ((fd = socket(AF_INET6, SOCK_STREAM, IPPROTO_SCTP)) < 0)
+		return strerror(errno);
+		
+	if (sctp_bind(fd, INADDR_LOOPBACK, 12345) < 0) {
+		close(fd);
+		return strerror(errno);
+	}
+	
+	port = sctp_get_local_port(fd);
+	close(fd);
+	
+	if (port != 12345)
+		return "Wrong port";
+	else
+		return NULL;
+}
+
+DEFINE_APITEST(bind, v4tov6_w_a_s_p)
+{
+	int fd;
+	unsigned short port;
+	
+	if ((fd = socket(AF_INET6, SOCK_STREAM, IPPROTO_SCTP)) < 0)
+		return strerror(errno);
+		
+	if (sctp_bind(fd, INADDR_ANY, 12345) < 0) {
+		close(fd);
+		return strerror(errno);
+	}
+	
+	port = sctp_get_local_port(fd);
+	close(fd);
+	
+	if (port != 12345)
+		return "Wrong port";
+	else
+		return NULL;
+}
+
+DEFINE_APITEST(bind, v4tov6only_w_a)
+{
+	int fd, result;
+	
+	if ((fd = socket(AF_INET6, SOCK_STREAM, IPPROTO_SCTP)) < 0)
+		return strerror(errno);
+	
+	if (sctp_enable_v6_only(fd)	< 0) {
+		close(fd);
+		return strerror(errno);
+	}
+	
+	result = sctp_bind(fd, INADDR_ANY, 12345);
+	close(fd);
+		
+	if (result)
+		return NULL;
+	else
+		return "bind() was successful";
+}
+
+DEFINE_APITEST(bind, v4tov6only_s_a)
+{
+	int fd, result;
+	
+	if ((fd = socket(AF_INET6, SOCK_STREAM, IPPROTO_SCTP)) < 0)
+		return strerror(errno);
+	
+	if (sctp_enable_v6_only(fd)	< 0) {
+		close(fd);
+		return strerror(errno);
+	}
+	
+	result = sctp_bind(fd, INADDR_LOOPBACK, 12345);
+	close(fd);
+		
+	if (result)
+		return NULL;
+	else
+		return "bind() was successful";
+}
+
 DEFINE_APITEST(bind, same_port_s_a_s_p)
 {
 	int fd1, fd2, result;

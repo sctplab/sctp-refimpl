@@ -161,6 +161,9 @@ int sctp_enable_v4_address_mapping(int);
 int sctp_disable_v4_address_mapping(int);
 int sctp_v4_address_mapping_enabled(int);
 
+int sctp_enable_v6_only(int);
+int sctp_v6_only_enabled(int);
+
 int sctp_get_auth_chunk_id(int fd, uint8_t *fill);
 int sctp_set_auth_chunk_id(int fd, uint8_t chk);
 
