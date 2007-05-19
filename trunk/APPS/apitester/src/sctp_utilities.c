@@ -1088,3 +1088,28 @@ int sctp_set_maxseg(int fd, sctp_assoc_t id, int val)
 			    &av, len);
 	return(result);
 }
+
+int sctp_get_defsend(int fd, sctp_assoc_t id, struct sctp_sndrcvinfo *s)
+{
+	socklen_t len;
+	int result;
+	s->sinfo_assoc_id = id;
+
+	len = sizeof(*s);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_DEFAULT_SEND_PARAM,
+			    s, &len);
+	return (result);
+	
+}
+
+int sctp_set_defsend(int fd, sctp_assoc_t id, struct sctp_sndrcvinfo *s)
+{
+	socklen_t len;
+	int result;
+	s->sinfo_assoc_id = id;
+
+	len = sizeof(*s);
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_DEFAULT_SEND_PARAM,
+			    s, len);
+	return (result);
+}

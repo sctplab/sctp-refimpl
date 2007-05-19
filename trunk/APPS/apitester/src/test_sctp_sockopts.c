@@ -8428,6 +8428,68 @@ DEFINE_APITEST(paddrpara, sso_hb_demand_1_M)
  out_nopair:
 	return (retstring);
 }
+/********************************************************
+ *
+ * SCTP_DEFAULT_SEND_PARAM tests
+ *
+ ********************************************************/
+DEFINE_APITEST(defsend, gso_def_1_1)
+{
+	struct sctp_sndrcvinfo sinfo;
+	int fd, result;
+
+	fd = sctp_one2one(0, 0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_defsend(fd, 0, &sinfo);
+	close(fd);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	if (sinfo.sinfo_stream != 0) {
+		return "Default is not to send on stream 0";
+	}
+	if (sinfo.sinfo_flags != 0) {
+		return "Default sends with options set";
+	}
+	if (sinfo.sinfo_ppid != 0) {
+		return "Default sends with non-zero ppid";
+	}
+	if (sinfo.sinfo_context != 0) {
+		return "Default sends with non-zero context";
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(defsend, gso_def_1_M)
+{
+	struct sctp_sndrcvinfo sinfo;
+	int fd, result;
+
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_defsend(fd, 0, &sinfo);
+	close(fd);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	if (sinfo.sinfo_stream != 0) {
+		return "Default is not to send on stream 0";
+	}
+	if (sinfo.sinfo_flags != 0) {
+		return "Default sends with options set";
+	}
+	if (sinfo.sinfo_ppid != 0) {
+		return "Default sends with non-zero ppid";
+	}
+	if (sinfo.sinfo_context != 0) {
+		return "Default sends with non-zero context";
+	}
+	return NULL;
+}
 
 
 /********************************************************
