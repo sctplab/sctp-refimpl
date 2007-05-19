@@ -124,6 +124,7 @@ struct sctp_laddr {
 					 * if no-zero src-addr selection will
 					 * not consider this address.
 					 */
+	struct timeval start_time;      /* time when this address was created */
 };
 
 struct sctp_block_entry {
