@@ -2383,6 +2383,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 					 * No destination so return default
 					 * value
 					 */
+					int cnt=0;
 					paddrp->spp_pathmaxrxt = stcb->asoc.def_net_failure;
 					paddrp->spp_pathmtu = sctp_get_frag_point(stcb, &stcb->asoc);
 #ifdef INET
@@ -2398,6 +2399,14 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 						paddrp->spp_flags |= SPP_HB_ENABLE;
 					} else {
 						paddrp->spp_flags |= SPP_HB_DISABLE;
+					}
+					TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
+						if (SCTP_OS_TIMER_PENDING(&net->pmtu_timer.timer)) {
+							cnt++;
+						}
+					}
+					if (cnt) {
+						paddrp->spp_flags |= SPP_PMTUD_ENABLE;
 					}
 				}
 				paddrp->spp_hbinterval = stcb->asoc.heart_beat_delay;
