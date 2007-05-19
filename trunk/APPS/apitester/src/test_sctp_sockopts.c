@@ -11663,3 +11663,117 @@ DEFINE_APITEST(fraginter, sso_bad_1_M)
 	close(fd);	
 	return NULL;
 }
+
+/********************************************************
+ *
+ * SCTP_PARTIAL_DELIVERY_POINT tests
+ *
+ ********************************************************/
+DEFINE_APITEST(pdapi, gso_1_1)
+{
+	int point;
+	int fd, result;
+
+	fd = sctp_one2one(0, 0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_pdapi_point(fd, &point);
+	close(fd);
+	if(result < 0) {
+		return(strerror(errno));
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(pdapi, gso_1_M)
+{
+	int point;
+	int fd, result;
+
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_pdapi_point(fd, &point);
+	close(fd);
+	if(result < 0) {
+		return(strerror(errno));
+	}
+	return NULL;
+
+}
+
+DEFINE_APITEST(padapi, sso_1_1)
+{
+	int point, newval;
+	int fd, result;
+
+	fd = sctp_one2one(0, 0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_pdapi_point(fd, &point);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	if (point > 100 ){
+		newval = point/2;
+	} else {
+		newval = point *2;
+	}
+	result = sctp_set_pdapi_point(fd, newval);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	result = sctp_get_pdapi_point(fd, &point);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	close(fd);
+	if(newval != point) {
+		return "Could not set pdapi point";
+	}
+	return NULL;
+
+}
+
+DEFINE_APITEST(pdapi, sso_1_M)
+{
+	int point, newval;
+	int fd, result;
+
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_pdapi_point(fd, &point);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	if (point > 100 ){
+		newval = point/2;
+	} else {
+		newval = point *2;
+	}
+	result = sctp_set_pdapi_point(fd, newval);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	result = sctp_get_pdapi_point(fd, &point);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	close(fd);
+	if(newval != point) {
+		return "Could not set pdapi point";
+	}
+	return NULL;
+
+}
