@@ -12091,3 +12091,90 @@ DEFINE_APITEST(maxburst, sso_1_M)
 }
 
 
+/********************************************************
+ *
+ * SCTP_EXPLICIT_EOR tests
+ *
+ ********************************************************/
+DEFINE_APITEST(eeor, sso_1_1)
+{
+	int val, newval, finalval;
+	int fd, result;
+	socklen_t len;
+
+	fd = sctp_one2one(0, 0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	len = sizeof(val);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_EXPLICIT_EOR,
+			    &val, &len);
+	if (result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	if(val)
+		newval = 0;
+	else
+		newval = 1;
+	len = sizeof(newval);
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_EXPLICIT_EOR,
+			    &newval, len);
+	if (result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	len = sizeof(finalval);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_EXPLICIT_EOR,
+			    &finalval, &len);
+	close(fd);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	if (newval != finalval) {
+		return "Set of auto-asconf failed";
+	}
+	return NULL;
+	
+}
+
+DEFINE_APITEST(eeor, sso_1_M)
+{
+	int val, newval, finalval;
+	int fd, result;
+	socklen_t len;
+
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	len = sizeof(val);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_EXPLICIT_EOR,
+			    &val, &len);
+	if (result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	if(val)
+		newval = 0;
+	else
+		newval = 1;
+	len = sizeof(newval);
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_EXPLICIT_EOR,
+			    &newval, len);
+	if (result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	len = sizeof(finalval);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_EXPLICIT_EOR,
+			    &finalval, &len);
+	close(fd);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	if (newval != finalval) {
+		return "Set of auto-asconf failed";
+	}
+	return NULL;
+}

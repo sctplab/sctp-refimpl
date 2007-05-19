@@ -1468,3 +1468,36 @@ int sctp_set_pdapi_point(int fd, int point)
 	return(result);
 
 }
+
+int sctp_set_context(int fd, sctp_assoc_t id, uint32_t context)
+{
+	int result;
+	socklen_t len;
+	struct sctp_assoc_value av;
+
+	len = sizeof(av);
+	av.assoc_id = id;
+	av.assoc_value = context;
+
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_PARTIAL_DELIVERY_POINT,
+			    &av, len);
+	return(result);
+
+}
+
+int sctp_get_context(int fd, sctp_assoc_t id, uint32_t *context)
+{
+	int result;
+	socklen_t len;
+	struct sctp_assoc_value av;
+
+	len = sizeof(av);
+	av.assoc_id = id;
+	av.assoc_value = 0;
+
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_PARTIAL_DELIVERY_POINT,
+			    &av, &len);
+	*context = av.assoc_value;
+	return(result);
+}
+
