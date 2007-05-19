@@ -1275,7 +1275,7 @@ int sctp_get_auth_key(int fd, sctp_assoc_t assoc_id, uint16_t *keyid,
 	bcopy(keytext, akey->sca_key, *keylen);
 	result = getsockopt(fd, IPPROTO_SCTP, SCTP_AUTH_KEY,
 			    akey, &len);
-	if (result > 0) {
+	if (result >= 0) {
 	    /* This should always fail */
 	    *keyid = akey->sca_keynumber;
 	    *keylen = len - sizeof(*akey);
@@ -1306,9 +1306,11 @@ int sctp_get_active_key(int fd, sctp_assoc_t assoc_id, uint16_t *keyid) {
 	int result;
 
 	len = sizeof(akey);
+	akey.scact_assoc_id = assoc_id;
+	akey.scact_keynumber = keyid;
 	result = getsockopt(fd, IPPROTO_SCTP, SCTP_AUTH_ACTIVE_KEY,
 			    &akey, &len);
-	if (result > 0) {
+	if (result >= 0) {
 	    *keyid = akey.scact_keynumber;
 	}
 	return (result);
@@ -1337,7 +1339,7 @@ int sctp_get_delete_key(int fd, sctp_assoc_t assoc_id, uint16_t *keyid) {
 	len = sizeof(akey);
 	result = getsockopt(fd, IPPROTO_SCTP, SCTP_AUTH_DELETE_KEY,
 			    &akey, &len);
-	if (result > 0) {
+	if (result >= 0) {
 	    /* This should always fail */
 	    *keyid = akey.scact_keynumber;
 	}
