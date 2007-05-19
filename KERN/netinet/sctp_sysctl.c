@@ -508,7 +508,6 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 #if defined(SCTP_PER_SOCKET_LOCKING)
 		SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
-		SCTP_INP_DECR_REF(inp);
 		SCTP_INP_RUNLOCK(inp);
 		SCTP_INP_INFO_RUNLOCK();
 		memset((void *)&xstcb, 0, sizeof(struct xsctp_tcb));
@@ -521,6 +520,7 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 			return error;
 		}
 		SCTP_INP_INFO_RLOCK();
+		SCTP_INP_DECR_REF(inp);
 	}
 #if defined(SCTP_PER_SOCKET_LOCKING)
 	SCTP_UNLOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
