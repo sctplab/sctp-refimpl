@@ -21,4 +21,5 @@
 - sndrcvinfo appearing in both inp and stcb was full size, instead
   of the non-pad version. This saves about 92 bytes from each struct
   by carefully converting to use the smaller version.
-
+- one-2-one model get(maxseg) would always get ep value, never the
+  tcb's value.
