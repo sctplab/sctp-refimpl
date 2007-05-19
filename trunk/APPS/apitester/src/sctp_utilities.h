@@ -181,3 +181,9 @@ int sctp_set_auth_chunk_id(int fd, uint8_t chk);
  * SCTP_DELAYED_SACK tests
  *
  ********************************************************/
+int sctp_set_dsack(int fd, sctp_assoc_t id, uint32_t delay, uint32_t freq);
+int sctp_get_dsack(int fd, sctp_assoc_t id,uint32_t *delay, uint32_t *freq);
+int sctp_set_ddelay(int fd, sctp_assoc_t id, uint32_t delay);
+int sctp_set_dfreq(int fd, sctp_assoc_t id, uint32_t freq);
+
+
