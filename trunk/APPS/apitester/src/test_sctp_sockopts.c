@@ -7104,7 +7104,7 @@ DEFINE_APITEST(paddrpara, sso_ainhhb_off_1_M)
 		retstring = strerror(errno);
 		goto out_nopair;
 	}
-	result = sctp_set_hbdisable(fds[0], ids[0], NULL);
+	result = sctp_set_hbdisable(fds[0], 0, NULL);
 	/* Set the assoc value */
 
 	if (result) {
@@ -7147,7 +7147,7 @@ DEFINE_APITEST(paddrpara, sso_ainhhb_off_1_M)
 	}
 	/* Now what about on ep? */
 	/* Now what about on ep? */
-	result = sctp_get_paddr_param(fds[0], 0, NULL, &hbinterval[2],
+	result = sctp_get_paddr_param(fds[0], ids[0], NULL, &hbinterval[2],
 				      &maxrxt[2],
 				      &pathmtu[2],
 				      &flags[2],
@@ -7167,7 +7167,7 @@ DEFINE_APITEST(paddrpara, sso_ainhhb_off_1_M)
 		goto out;
 	}
 	if (hbinterval[2] != hbinterval[1]) {
-		retstring = "HB interval changecd";
+		retstring = "HB interval changed";
 	}
 	if(flags[2] & SPP_HB_ENABLE) {
 		retstring = "HB did not stay disabled";
