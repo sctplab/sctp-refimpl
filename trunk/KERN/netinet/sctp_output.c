@@ -7371,7 +7371,7 @@ again_one_more_time:
 						r_mtu = 0;
 
 					to_out += chk->send_size;
-					if(to_out > mx_mtu) {
+					if((to_out > mx_mtu) && no_fragmentflg) {
 #ifdef INVARIANTS
 						panic("Exceeding mtu of %d out size is %d", mx_mtu, to_out);
 #else
