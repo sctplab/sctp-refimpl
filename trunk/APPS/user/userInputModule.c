@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.99 2007-05-17 22:05:04 tuexen Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.100 2007-05-19 10:42:05 tuexen Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -3646,14 +3646,11 @@ cmd_getassocstat(char *argv[], int argc)
 #define ADDRSTRLEN 46
 	size_t len;
 	caddr_t buf;
-	unsigned int offset, i, j;
+	unsigned int offset;
 	struct xsctp_inpcb *xinp;
 	struct xsctp_tcb *xstcb;
 	struct xsctp_laddr *xladdr;
 	struct xsctp_raddr *xraddr;
-	uint16_t number_of_local_addresses;
-	uint16_t number_of_remote_addresses;
-	uint16_t number_associations;
 	char buffer[ADDRSTRLEN];
 	sa_family_t family;
 	void *addr;
@@ -3677,42 +3674,78 @@ cmd_getassocstat(char *argv[], int argc)
 	while (xinp->last == 0) {
 		printf("\nEndpoint with port=%d, flags=%x, features=%x, FragPoint=%u, Msgs(R/S/SF)=%u/%u/%u\n",
 		       xinp->local_port, xinp->flags, xinp->features, xinp->fragmentation_point, xinp->total_recvs, xinp->total_sends, xinp->total_nospaces);
-		number_of_local_addresses = xinp->number_local_addresses;
-		number_associations = xinp->number_associations;
 		offset += sizeof(struct xsctp_inpcb);
-		for (i = 0; i < number_of_local_addresses; i++) {
-			xladdr = (struct xsctp_laddr *)(buf + offset);
-			/* handle it */
-			offset += sizeof(struct xsctp_laddr);
-		}
-		for (i = 0; i < number_associations; i++) {
-			xstcb = (struct xsctp_tcb *)(buf + offset);
-			printf("\tAssociation towards port=%d, state=%d, Streams(I/O)=(%u/%u), HBInterval=%u, MTU=%u, Msgs(R/S)=(%u/%u), \n\tTSN(init/high/cum/cumack)=(%x/%x/%x/%x),\n\t Tag(L/R)=(%x/%x).\n",
-			       xstcb->RemPort, xstcb->State, xstcb->InStreams, xstcb->OutStreams, xstcb->HeartBeatInterval, xstcb->mtu, xstcb->total_recvs, xstcb->total_sends, xstcb->initial_tsn, xstcb->highest_tsn, xstcb->cumulative_tsn, xstcb->cumulative_tsn_ack, xstcb->local_tag, xstcb->remote_tag);
-			number_of_local_addresses = xstcb->number_local_addresses;
-			number_of_remote_addresses = xstcb->number_remote_addresses;
-			offset += sizeof(struct xsctp_tcb);
-			for (j = 0; j < number_of_local_addresses; j++) {
-				xladdr = (struct xsctp_laddr *)(buf + offset);
-				/* handle it */
-				offset += sizeof(struct xsctp_laddr);
+		printf("\tLocal addresses:");
+		xladdr = (struct xsctp_laddr *)(buf + offset);
+		while (xladdr->last == 0) {
+			family = xladdr->address.sin.sin_family;
+			switch (family) {
+			case AF_INET:
+				addr = (void *)&xladdr->address.sin.sin_addr;
+				break;
+			case AF_INET6:
+				addr = (void *)&xladdr->address.sin6.sin6_addr;
+				break;
+			default:
+				printf("Unknown family: %d.\n", family);
+				break;
 			}
-			for (j = 0; j < number_of_remote_addresses; j++) {
-				xraddr = (struct xsctp_raddr *)(buf + offset);
-				family = xraddr->RemAddr.sin.sin_family;
+			printf(" %s", inet_ntop(family, addr, buffer, ADDRSTRLEN));
+			offset += sizeof(struct xsctp_laddr);
+			xladdr = (struct xsctp_laddr *)(buf + offset);
+		}
+		offset += sizeof(struct xsctp_laddr);
+		printf(".\n");
+
+		xstcb = (struct xsctp_tcb *)(buf + offset);
+		while (xstcb->last == 0) {
+			xstcb = (struct xsctp_tcb *)(buf + offset);
+			printf("\tAssociation towards port=%d, state=%d, Streams(I/O)=(%u/%u), HBInterval=%u, MTU=%u, Msgs(R/S)=(%u/%u), \n\t\tTSN(init/high/cum/cumack)=(%x/%x/%x/%x),\n\t\tTag(L/R)=(%x/%x).\n",
+			       xstcb->remote_port, xstcb->state, xstcb->in_streams, xstcb->out_streams, xstcb->heartbeat_interval, xstcb->mtu, xstcb->total_recvs, xstcb->total_sends, xstcb->initial_tsn, xstcb->highest_tsn, xstcb->cumulative_tsn, xstcb->cumulative_tsn_ack, xstcb->local_tag, xstcb->remote_tag);
+			offset += sizeof(struct xsctp_tcb);
+
+			printf("\t\tLocal addresses:");
+			xladdr = (struct xsctp_laddr *)(buf + offset);
+			while (xladdr->last == 0) {
+				family = xladdr->address.sin.sin_family;
 				switch (family) {
 				case AF_INET:
-					addr = (void *)&xraddr->RemAddr.sin.sin_addr;
+					addr = (void *)&xladdr->address.sin.sin_addr;
 					break;
 				case AF_INET6:
-					addr = (void *)&xraddr->RemAddr.sin6.sin6_addr;
+					addr = (void *)&xladdr->address.sin6.sin6_addr;
+					break;
+				default:
+					printf("Unknown family: %d.\n", family);
+					break;
+				}
+				printf(" %s", inet_ntop(family, addr, buffer, ADDRSTRLEN));
+				offset += sizeof(struct xsctp_laddr);
+				xladdr = (struct xsctp_laddr *)(buf + offset);
+			}
+			offset += sizeof(struct xsctp_laddr);
+			printf(".\n");
+			
+			xraddr = (struct xsctp_raddr *)(buf + offset);
+			while (xraddr->last == 0) {
+				family = xraddr->address.sin.sin_family;
+				switch (family) {
+				case AF_INET:
+					addr = (void *)&xraddr->address.sin.sin_addr;
+					break;
+				case AF_INET6:
+					addr = (void *)&xraddr->address.sin6.sin6_addr;
 					break;
 				}
 				printf("\t\tPath towards %s, Active=%d, Confirmed=%d, MTU=%u, HBEnabled=%u, RTO=%u, CWND=%u, Flightsize=%u, ErrorCounter=%u.\n",
-				       inet_ntop(family, addr, buffer, ADDRSTRLEN), xraddr->RemAddrActive, xraddr->RemAddrConfirmed, xraddr->RemAddrMTU, xraddr->RemAddrHBActive, xraddr->RemAddrRTO, xraddr->RemAddrCwnd, xraddr->RemAddrFlightSize, xraddr->RemAddrErrorCounter);
+				       inet_ntop(family, addr, buffer, ADDRSTRLEN), xraddr->active, xraddr->confirmed, xraddr->mtu, xraddr->heartbeat_enabled, xraddr->rto, xraddr->cwnd, xraddr->flight_size, xraddr->error_counter);
 				offset += sizeof(struct xsctp_raddr);
+				xraddr = (struct xsctp_raddr *)(buf + offset);
 			}
+			offset += sizeof(struct xsctp_raddr);
+			xstcb = (struct xsctp_tcb *)(buf + offset);
 		}
+		offset += sizeof(struct xsctp_tcb);
 		xinp = (struct xsctp_inpcb *)(buf + offset);
 	}
 	free((void *)buf);
