@@ -148,3 +148,6 @@ int sctp_set_defsend(int fd, sctp_assoc_t id, struct sctp_sndrcvinfo *s);
 
 int sctp_set_maxseg(int fd, sctp_assoc_t id, int val);
 int sctp_get_maxseg(int fd, sctp_assoc_t id, int *val);
+
+int sctp_set_events(int fd, struct sctp_event_subscribe *ev);
+int sctp_get_events(int fd, struct sctp_event_subscribe *ev);
