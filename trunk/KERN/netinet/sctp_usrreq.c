@@ -2108,11 +2108,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 			struct sctp_assoc_value *av;
 			int ovh;
 			SCTP_CHECK_AND_CAST(av, optval, struct sctp_assoc_value, *optsize);
-			if(av->assoc_id) {
-				SCTP_FIND_STCB(inp, stcb, av->assoc_id);
-			} else {
-				stcb = NULL;
-			}
+			SCTP_FIND_STCB(inp, stcb, av->assoc_id);
 
 			if (stcb) {
 				av->assoc_value = sctp_get_frag_point(stcb, &stcb->asoc);
