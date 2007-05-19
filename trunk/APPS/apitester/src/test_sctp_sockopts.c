@@ -9330,6 +9330,142 @@ DEFINE_APITEST(events, sso_1_M)
 
 /********************************************************
  *
+ * SCTP_I_WANT_MAPPED_V4_ADDR tests
+ *
+ ********************************************************/
+DEFINE_APITEST(mapped, sso_1_1)
+{
+	socklen_t len;
+	int val, result, val2;
+	int fd;
+
+	fd = socket(AF_INET6, SOCK_STREAM, IPPROTO_SCTP);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+
+	len = sizeof(val);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_I_WANT_MAPPED_V4_ADDR,
+			    &val, &len);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	if (val == 0) {
+		val = 1;
+	} else {
+		val = 0;
+	}
+	len = sizeof(val);
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_I_WANT_MAPPED_V4_ADDR,
+			    &val, len);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	len = sizeof(val2);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_I_WANT_MAPPED_V4_ADDR,
+			    &val2, &len);
+	close(fd);
+	if(result < 0) {
+		return(strerror(errno));
+	}
+	if(val != val2) {
+		return "Could not change mapped v4 address";
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(mapped, sso_1_M)
+{
+	socklen_t len;
+	int val, result, val2;
+	int fd;
+
+	fd = socket(AF_INET6, SOCK_SEQPACKET, IPPROTO_SCTP);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+
+	len = sizeof(val);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_I_WANT_MAPPED_V4_ADDR,
+			    &val, &len);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	if (val == 0) {
+		val = 1;
+	} else {
+		val = 0;
+	}
+	len = sizeof(val);
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_I_WANT_MAPPED_V4_ADDR,
+			    &val, len);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	len = sizeof(val2);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_I_WANT_MAPPED_V4_ADDR,
+			    &val2, &len);
+	close(fd);
+	if(result < 0) {
+		return(strerror(errno));
+	}
+	if(val != val2) {
+		return "Could not change mapped v4 address";
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(mapped, sso_bad_1_1)
+{
+	socklen_t len;
+	int val, result;
+	int fd;
+
+	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+
+	len = sizeof(val);
+	val = 1;
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_I_WANT_MAPPED_V4_ADDR,
+			    &val, len);
+	close(fd);
+	if(result >= 0) {
+		return "mapped v4 setting allowed on non v6 socket";
+	}
+	return NULL;
+}
+
+
+DEFINE_APITEST(mapped, sso_bad_1_M)
+{
+	socklen_t len;
+	int val, result;
+	int fd;
+
+	fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+
+	len = sizeof(val);
+	val = 1;
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_I_WANT_MAPPED_V4_ADDR,
+			    &val, len);
+	close(fd);
+	if(result >= 0) {
+		return "mapped v4 setting allowed on non v6 socket";
+	}
+	return NULL;
+}
+
+/********************************************************
+ *
  * SCTP_MAXSEG tests
  *
  ********************************************************/
