@@ -16,4 +16,9 @@
 - set and get of pmtud (fixed path mtu) not always taking into account ovh.
 - Getting PMTU info on stcb only needs to return PMTUD_ENABLED if
   any net is doing PMTU discovery.
+- Panic or warning fixed to not do so when a valid ip frag is
+  taking place.
+- sndrcvinfo appearing in both inp and stcb was full size, instead
+  of the non-pad version. This saves about 92 bytes from each struct
+  by carefully converting to use the smaller version.
 

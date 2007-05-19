@@ -38,7 +38,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_sysctl.c,v 1.5 2007/05/08 17:01:11 rrs 
 #include <netinet/sctp_sysctl.h>
 #include <netinet/sctp_pcb.h>
 #include <netinet/sctputil.h>
-
+#include <netinet/sctp_output.h>
 /*
  * sysctl tunable variables
  */
@@ -311,7 +311,6 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 	struct sctp_inpcb *inp;
 	struct sctp_tcb *stcb;
 	struct sctp_nets *net;
-	struct sctp_laddr *laddr;
 	struct xsctp_inpcb xinpcb;
 	struct xsctp_tcb xstcb;
 	struct xsctp_raddr xraddr;
