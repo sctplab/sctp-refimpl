@@ -163,11 +163,16 @@ int sctp_set_auth_chunk_id(int fd, uint8_t chk);
  * SCTP_KEY tests
  *
  ********************************************************/
+int sctp_get_add_key(int fd, sctp_assoc_t assoc_id, uint16_t keyid,
+		     uint16_t *keylen, uint8_t *keytext);
+int sctp_set_add_key(int fd, sctp_assoc_t assoc_id, uint16_t keyid,
+		     uint16_t keylen, uint8_t *keytext);
 
+int sctp_get_active_key(int fd, sctp_assoc_t assoc_id, uint16_t *keyid);
+int sctp_set_active_key(int fd, sctp_assoc_t assoc_id, uint16_t keyid);
 
-
-
-
+int sctp_get_delete_key(int fd, sctp_assoc_t assoc_id, uint16_t *keyid);
+int sctp_set_delete_key(int fd, sctp_assoc_t assoc_id, uint16_t keyid);
 
 /********************************************************
  *
