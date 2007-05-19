@@ -388,7 +388,7 @@ struct sctp_inpcb {
 	uint32_t sctp_frag_point;
 	uint32_t partial_delivery_point;
 	uint32_t sctp_context;
-	struct sctp_sndrcvinfo def_send;
+	struct sctp_nonpad_sndrcvinfo def_send;
 	/*-
 	 * These three are here for the sosend_dgram
 	 * (pkt, pkt_last and control).

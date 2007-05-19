@@ -2616,11 +2616,11 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 			SCTP_FIND_STCB(inp, stcb, s_info->sinfo_assoc_id);
 			
 			if (stcb) {
-				*s_info = stcb->asoc.def_send;
+				memcpy(s_info, &stcb->asoc.def_send, sizeof(stcb->asoc.def_send));
 				SCTP_TCB_UNLOCK(stcb);
 			} else {
 				SCTP_INP_RLOCK(inp);
-				*s_info = inp->def_send;
+				memcpy(s_info, &inp->def_send, sizeof(inp->def_send));
 				SCTP_INP_RUNLOCK(inp);
 			}
 			*optsize = sizeof(*s_info);
@@ -3569,14 +3569,14 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 
 		if (stcb) {
 			if (s_info->sinfo_stream <= stcb->asoc.streamoutcnt) {
-				stcb->asoc.def_send = *s_info;
+				memcpy(&stcb->asoc.def_send, s_info, min(optsize, sizeof(stcb->asoc.def_send)));
 			} else {
 				error = EINVAL;
 			}
 			SCTP_TCB_UNLOCK(stcb);
 		} else {
 			SCTP_INP_WLOCK(inp);
-			inp->def_send = *s_info;
+			memcpy(&inp->def_send, s_info, min(optsize, sizeof(inp->def_send)));
 			SCTP_INP_WUNLOCK(inp);
 		}
 	}
