@@ -15,34 +15,20 @@
 DEFINE_APITEST(bind, port_s_a_s_p)
 {
 	int fd;
-	struct sockaddr_in addr;
-	socklen_t addr_len;
+	unsigned short port;
 	
 	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
 		
-	memset((void *)&addr, 0, sizeof(struct sockaddr_in));
-	addr.sin_family      = AF_INET;
-#ifdef HAVE_SIN_LEN
-	addr.sin_len         = sizeof(struct sockaddr_in);
-#endif
-	addr.sin_port        = htons(12345);
-	addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-
-	if (bind(fd, (struct sockaddr *)&addr, (socklen_t)sizeof(struct sockaddr_in)) < 0) {
+	if (sctp_bind(fd, INADDR_LOOPBACK, 12345) < 0) {
 		close(fd);
 		return strerror(errno);
 	}
 	
-	addr_len = (socklen_t)sizeof(struct sockaddr_in);
-	if (getsockname (fd, (struct sockaddr *) &addr, &addr_len) < 0) {
-		close(fd);
-		return strerror(errno);
-	}
-
+	port = sctp_get_local_port(fd);
 	close(fd);
 	
-	if (ntohs(addr.sin_port) != 12345)
+	if (port != 12345)
 		return "Wrong port";
 	else
 		return NULL;
@@ -50,43 +36,69 @@ DEFINE_APITEST(bind, port_s_a_s_p)
 
 DEFINE_APITEST(bind, same_port_s_a_s_p)
 {
-	int fd1, fd2, n;
-	struct sockaddr_in addr;
+	int fd1, fd2, result;
 	
 	if ((fd1 = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
 		
-	memset((void *)&addr, 0, sizeof(struct sockaddr_in));
-	addr.sin_family      = AF_INET;
-#ifdef HAVE_SIN_LEN
-	addr.sin_len         = sizeof(struct sockaddr_in);
-#endif
-	addr.sin_port        = htons(12345);
-	addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-
-	if (bind(fd1, (struct sockaddr *)&addr, (socklen_t)sizeof(struct sockaddr_in)) < 0) {
+	if (sctp_bind(fd1, INADDR_LOOPBACK, 12345) < 0) {
 		close(fd1);
 		return strerror(errno);
 	}
 	
 	if ((fd2 = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
-		
-	memset((void *)&addr, 0, sizeof(struct sockaddr_in));
-	addr.sin_family      = AF_INET;
-#ifdef HAVE_SIN_LEN
-	addr.sin_len         = sizeof(struct sockaddr_in);
-#endif
-	addr.sin_port        = htons(12345);
-	addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
-	n = bind(fd2, (struct sockaddr *)&addr, (socklen_t)sizeof(struct sockaddr_in));
+	result = sctp_bind(fd2, INADDR_LOOPBACK, 12345);
 	
 	close(fd1);
 	close(fd2);
 	
-	if (n < 0)
+	if (result < 0)
 		return NULL;
 	else
 		return "bind was successful";
+}
+
+DEFINE_APITEST(bind, duplicate_s_a_s_p)
+{
+	int fd, result;
+	
+	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
+		return strerror(errno);
+
+	if (sctp_bind(fd, INADDR_LOOPBACK, 1234) < 0) {
+		close(fd);
+		return strerror(errno);
+	}
+	
+	result = sctp_bind(fd, INADDR_LOOPBACK, 1234);
+	
+	close(fd);
+	
+	if (result < 0)
+		return NULL;
+	else
+		return "bind was successful";
+}
+
+DEFINE_APITEST(bind, refinement)
+{
+	int fd, result;
+	
+	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
+		return strerror(errno);
+
+	if (sctp_bind(fd, INADDR_ANY, 1234) < 0) {
+		close(fd);
+		return strerror(errno);
+	}
+
+	result = sctp_bind(fd, INADDR_LOOPBACK, 1234);
+	close(fd);
+	
+	if (result == 0)
+		return "bind was successful";
+	else
+		return NULL;
 }

@@ -9362,6 +9362,43 @@ DEFINE_APITEST(events, sso_1_M)
  * SCTP_I_WANT_MAPPED_V4_ADDR tests
  *
  ********************************************************/
+
+DEFINE_APITEST(mapped, gso_1_1_def)
+{
+	int fd, onoff;
+	
+	fd = socket(AF_INET6, SOCK_STREAM, IPPROTO_SCTP);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	onoff = sctp_v4_address_mapping_enabled(fd);
+	close(fd);
+	
+	if (onoff) {
+		return NULL;
+	} else {
+		return "Option disabled by default";
+	}
+}
+
+DEFINE_APITEST(mapped, gso_1_m_def)
+{
+	int fd, onoff;
+	
+	fd = socket(AF_INET6, SOCK_SEQPACKET, IPPROTO_SCTP);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	onoff = sctp_v4_address_mapping_enabled(fd);
+	close(fd);
+	
+	if (onoff) {
+		return NULL;
+	} else {
+		return "Option disabled by default";
+	}
+}
+
 DEFINE_APITEST(mapped, sso_1_1)
 {
 	socklen_t len;

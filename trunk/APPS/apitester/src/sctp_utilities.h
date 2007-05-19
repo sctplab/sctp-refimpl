@@ -2,6 +2,8 @@
 void sctp_delay(int ms);
 
 int sctp_one2one(unsigned short port, int should_listen, int bindall);
+unsigned short sctp_get_local_port(int);
+int sctp_bind(int, in_addr_t, in_port_t);
 int sctp_socketpair(int *, int bindall);
 int sctp_socketpair_reuse(int fd, int *fds, int bindall);
 int sctp_socketstar(int *, int *, unsigned int);
@@ -154,6 +156,10 @@ int sctp_get_maxseg(int fd, sctp_assoc_t id, int *val);
 
 int sctp_set_events(int fd, struct sctp_event_subscribe *ev);
 int sctp_get_events(int fd, struct sctp_event_subscribe *ev);
+
+int sctp_enable_v4_address_mapping(int);
+int sctp_disable_v4_address_mapping(int);
+int sctp_v4_address_mapping_enabled(int);
 
 int sctp_get_auth_chunk_id(int fd, uint8_t *fill);
 int sctp_set_auth_chunk_id(int fd, uint8_t chk);
