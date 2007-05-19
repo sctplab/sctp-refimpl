@@ -214,4 +214,4 @@ int sctp_set_interleave(int fd, int inter);
  *
  ********************************************************/
 int sctp_get_pdapi_point(int fd, int *point);
-int sctp_set_pdapi_point(int fd, int *point);
+int sctp_set_pdapi_point(int fd, int point);
