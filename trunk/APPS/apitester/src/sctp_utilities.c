@@ -1113,3 +1113,24 @@ int sctp_set_defsend(int fd, sctp_assoc_t id, struct sctp_sndrcvinfo *s)
 			    s, len);
 	return (result);
 }
+
+
+int sctp_set_events(int fd, struct sctp_event_subscribe *ev)
+{
+	socklen_t len;
+	int result;
+	len = sizeof(*ev);
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_EVENTS,
+			    ev, len);
+	return (result);
+}
+
+int sctp_get_events(int fd, struct sctp_event_subscribe *ev)
+{
+	socklen_t len;
+	int result;
+	len = sizeof(*ev);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_EVENTS,
+			    ev, &len);
+	return (result);
+}

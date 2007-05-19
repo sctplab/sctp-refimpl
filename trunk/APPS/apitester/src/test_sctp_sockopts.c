@@ -9124,6 +9124,209 @@ DEFINE_APITEST(defsend, sso_nc_other_asc_1_M)
 	close (fds2[1]);
 	return retstring;
 }
+/********************************************************
+ *
+ * SCTP_EVENTS tests
+ *
+ ********************************************************/
+DEFINE_APITEST(events, gso_def_1_1)
+{
+	struct sctp_event_subscribe ev;
+	int fd, result;
+
+	fd = sctp_one2one(0, 0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	memset(&ev, 0, sizeof(ev));
+	result = sctp_get_events(fd, &ev);
+	close(fd);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	if(ev.sctp_data_io_event)
+		return "data_io_event not defaulted to off";
+
+	if (ev.sctp_association_event)
+		return "association_event not defaulted to off";
+	if (ev.sctp_address_event)
+		return "address_event not defaulted to off";
+	if (ev.sctp_send_failure_event)
+		return "send_failure_event not defaulted to off";
+	if (ev.sctp_peer_error_event)
+		return "peer_error_event not defaulted to off";
+	if (ev.sctp_shutdown_event)
+		return "shutdown_event not defaulted to off";
+	if (ev.sctp_partial_delivery_event)
+		return "pdap_event not defaulted to off";
+	if (ev.sctp_adaptation_layer_event)
+		return "adaptation_event not defaulted to off";
+	if (ev.sctp_authentication_event)
+		return "authentication_event not defaulted to off";
+	return NULL;
+}
+DEFINE_APITEST(events, gso_def_1_M)
+{
+	struct sctp_event_subscribe ev;
+	int fd, result;
+
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	memset(&ev, 0, sizeof(ev));
+	result = sctp_get_events(fd, &ev);
+	close(fd);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	if(ev.sctp_data_io_event)
+		return "data_io_event not defaulted to off";
+
+	if (ev.sctp_association_event)
+		return "association_event not defaulted to off";
+	if (ev.sctp_address_event)
+		return "address_event not defaulted to off";
+	if (ev.sctp_send_failure_event)
+		return "send_failure_event not defaulted to off";
+	if (ev.sctp_peer_error_event)
+		return "peer_error_event not defaulted to off";
+	if (ev.sctp_shutdown_event)
+		return "shutdown_event not defaulted to off";
+	if (ev.sctp_partial_delivery_event)
+		return "pdap_event not defaulted to off";
+	if (ev.sctp_adaptation_layer_event)
+		return "adaptation_event not defaulted to off";
+	if (ev.sctp_authentication_event)
+		return "authentication_event not defaulted to off";
+	return NULL;
+
+}
+
+DEFINE_APITEST(events, sso_1_1)
+{
+	struct sctp_event_subscribe ev[2];
+	int fd, result;
+
+	fd = sctp_one2one(0, 0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	memset(&ev, 0, sizeof(ev));
+	result = sctp_get_events(fd, &ev[0]);
+	if (result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	if(ev[0].sctp_data_io_event == 0) {
+		ev[0].sctp_data_io_event = 1;
+	} else {
+		ev[0].sctp_data_io_event = 0;
+	}
+	if(ev[0].sctp_association_event == 0) {
+		ev[0].sctp_association_event = 1;
+	} else {
+		ev[0].sctp_association_event = 0;
+	}
+	result = sctp_set_events(fd, &ev[0]);
+	if (result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	result = sctp_get_events(fd, &ev[1]);
+	if (result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	close(fd);
+	if(ev[0].sctp_data_io_event != ev[1].sctp_data_io_event)
+		return "data_io_event set failed";
+
+	if (ev[0].sctp_association_event != ev[1].sctp_association_event)
+		return "association_event set failed";
+
+	if (ev[0].sctp_address_event != ev[1].sctp_address_event)
+		return "address_event changed";
+
+	if (ev[0].sctp_send_failure_event != ev[1].sctp_send_failure_event)
+		return "send_failure_event changed";
+
+	if (ev[0].sctp_peer_error_event != ev[1].sctp_peer_error_event)
+		return "peer_error_event changed";
+
+	if (ev[0].sctp_shutdown_event != ev[1].sctp_shutdown_event) 
+		return "shutdown_event changed";
+	if (ev[0].sctp_partial_delivery_event !=ev[1].sctp_partial_delivery_event)
+		return "pdap_event changed";
+	if (ev[0].sctp_adaptation_layer_event != ev[1].sctp_adaptation_layer_event)
+		return "adaptation_event changed";
+	if (ev[0].sctp_authentication_event != ev[1].sctp_authentication_event)
+		return "authentication_event changed";
+	return NULL;
+}
+
+DEFINE_APITEST(events, sso_1_M)
+{
+	struct sctp_event_subscribe ev[2];
+	int fd, result;
+
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	memset(&ev, 0, sizeof(ev));
+	result = sctp_get_events(fd, &ev[0]);
+	if (result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	if(ev[0].sctp_data_io_event == 0) {
+		ev[0].sctp_data_io_event = 1;
+	} else {
+		ev[0].sctp_data_io_event = 0;
+	}
+	if(ev[0].sctp_association_event == 0) {
+		ev[0].sctp_association_event = 1;
+	} else {
+		ev[0].sctp_association_event = 0;
+	}
+	result = sctp_set_events(fd, &ev[0]);
+	if (result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	result = sctp_get_events(fd, &ev[1]);
+	if (result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	close(fd);
+	if(ev[0].sctp_data_io_event != ev[1].sctp_data_io_event)
+		return "data_io_event set failed";
+
+	if (ev[0].sctp_association_event != ev[1].sctp_association_event)
+		return "association_event set failed";
+
+	if (ev[0].sctp_address_event != ev[1].sctp_address_event)
+		return "address_event changed";
+
+	if (ev[0].sctp_send_failure_event != ev[1].sctp_send_failure_event)
+		return "send_failure_event changed";
+
+	if (ev[0].sctp_peer_error_event != ev[1].sctp_peer_error_event)
+		return "peer_error_event changed";
+
+	if (ev[0].sctp_shutdown_event != ev[1].sctp_shutdown_event) 
+		return "shutdown_event changed";
+	if (ev[0].sctp_partial_delivery_event !=ev[1].sctp_partial_delivery_event)
+		return "pdap_event changed";
+	if (ev[0].sctp_adaptation_layer_event != ev[1].sctp_adaptation_layer_event)
+		return "adaptation_event changed";
+	if (ev[0].sctp_authentication_event != ev[1].sctp_authentication_event)
+		return "authentication_event changed";
+	return NULL;
+}
+
 
 /********************************************************
  *
