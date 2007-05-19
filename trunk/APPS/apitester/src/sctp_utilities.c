@@ -1185,8 +1185,8 @@ int sctp_set_auth_chunk_id(int fd, uint8_t chk)
  * SCTP_KEY tests
  *
  ********************************************************/
-int sctp_get_add_key(int fd, sctp_assoc_t assoc_id, uint16_t *keyid,
-		     uint16_t *keylen, uint8_t *keytext) {
+int sctp_get_auth_key(int fd, sctp_assoc_t assoc_id, uint16_t *keyid,
+		      uint16_t *keylen, uint8_t *keytext) {
 	socklen_t len;
 	struct sctp_authkey *akey;
 	int result;
@@ -1207,8 +1207,8 @@ int sctp_get_add_key(int fd, sctp_assoc_t assoc_id, uint16_t *keyid,
 	return (result);
 }
 
-int sctp_set_add_key(int fd, sctp_assoc_t assoc_id, uint16_t keyid,
-		     uint16_t keylen, uint8_t *keytext) {
+int sctp_set_auth_key(int fd, sctp_assoc_t assoc_id, uint16_t keyid,
+		      uint16_t keylen, uint8_t *keytext) {
 	socklen_t len;
 	struct sctp_authkey *akey;
 	int result;
