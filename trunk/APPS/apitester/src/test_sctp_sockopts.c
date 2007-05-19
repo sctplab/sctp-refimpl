@@ -10372,13 +10372,450 @@ DEFINE_APITEST(hmacid, sso_nosha1_1_M)
 
 /********************************************************
  *
- * SCTP_KEY tests
+ * SCTP_AUTH_KEY tests
  *
  ********************************************************/
+/* endpoint tests */
+DEFINE_APITEST(authkey, gso_def_1_1)
+{
+	int fd, result;
+	uint16_t keyid, keylen;
+	uint8_t keytext[128];
 
+	fd = sctp_one2one(0, 0, 1);
+	if (fd < 0) {
+		return (strerror(errno));
+	}
+	keylen = sizeof(keytext);
+	keyid = 0;
+	result = sctp_get_auth_key(fd, 0, &keyid, &keylen, keytext);
+	if (result >= 0) {
+		close(fd);
+		return "was able to get auth key";
+	}
+	close(fd);
+	return NULL;
+}
 
+DEFINE_APITEST(authkey, gso_def_1_M)
+{
+	int fd, result;
+	uint16_t keyid, keylen;
+	uint8_t keytext[128];
 
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return (strerror(errno));
+	}
+	keylen = sizeof(keytext);
+	keyid = 0;
+	result = sctp_get_auth_key(fd, 0, &keyid, &keylen, keytext);
+	if (result >= 0) {
+		close(fd);
+		return "was able to get auth key";
+	}
+	close(fd);
+	return NULL;
+}
 
+DEFINE_APITEST(authkey, sso_def_1_1)
+{
+	int fd, result;
+	uint16_t keyid, keylen;
+	char *keytext = "This is my key";
+
+	fd = sctp_one2one(0, 0, 1);
+	if (fd < 0) {
+		return (strerror(errno));
+	}
+	/* overwrite the default key */
+	keylen = sizeof(keytext);
+	keyid = 0;
+	result = sctp_set_auth_key(fd, 0, keyid, keylen, (uint8_t *)keytext);
+	if (result < 0) {
+		close(fd);
+		return "failed to set auth key";
+	}
+	/* No way to tell if it was really written ok */
+	close(fd);
+	return NULL;
+}
+
+DEFINE_APITEST(authkey, sso_def_1_M)
+{
+	int fd, result;
+	uint16_t keyid, keylen;
+	char *keytext = "This is my key";
+
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return (strerror(errno));
+	}
+	/* overwrite the default key */
+	keylen = sizeof(keytext);
+	keyid = 0;
+	result = sctp_set_auth_key(fd, 0, keyid, keylen, (uint8_t *)keytext);
+	if (result < 0) {
+		close(fd);
+		return "failed to set auth key";
+	}
+	/* No way to tell if it was really written ok */
+	close(fd);
+	return NULL;
+}
+
+DEFINE_APITEST(authkey, sso_new_1_1)
+{
+	int fd, result;
+	uint16_t keyid, keylen;
+	char *keytext = "This is my new key";
+
+	fd = sctp_one2one(0, 0, 1);
+	if (fd < 0) {
+		return (strerror(errno));
+	}
+	/* add a new key id */
+	keylen = sizeof(keytext);
+	keyid = 1;
+	result = sctp_set_auth_key(fd, 0, keyid, keylen, (uint8_t *)keytext);
+	if (result < 0) {
+		close(fd);
+		return "failed to set auth key";
+	}
+	/* No way to tell if it was really written ok */
+	close(fd);
+	return NULL;
+}
+
+DEFINE_APITEST(authkey, sso_new_1_M)
+{
+	int fd, result;
+	uint16_t keyid, keylen;
+	char *keytext = "This is my new key";
+
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return (strerror(errno));
+	}
+	/* add a new key id */
+	keylen = sizeof(keytext);
+	keyid = 1;
+	result = sctp_set_auth_key(fd, 0, keyid, keylen, (uint8_t *)keytext);
+	if (result < 0) {
+		close(fd);
+		return "failed to set auth key";
+	}
+	/* No way to tell if it was really written ok */
+	close(fd);
+	return NULL;
+}
+
+DEFINE_APITEST(authkey, sso_newnul_1_1)
+{
+	int fd, result;
+	uint16_t keyid, keylen;
+	uint8_t keytext = 0xff;
+
+	fd = sctp_one2one(0, 0, 1);
+	if (fd < 0) {
+		return (strerror(errno));
+	}
+	/* add a new NULL key id */
+	keylen = 0;
+	keyid = 1;
+	result = sctp_set_auth_key(fd, 0, keyid, keylen, &keytext);
+	if (result < 0) {
+		close(fd);
+		return "failed to set auth key";
+	}
+	/* No way to tell if it was really written ok */
+	close(fd);
+	return NULL;
+}
+
+DEFINE_APITEST(authkey, sso_newnul_1_M)
+{
+	int fd, result;
+	uint16_t keyid, keylen;
+	uint8_t keytext = 0xff;
+
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return (strerror(errno));
+	}
+	/* add a new NULL key id */
+	keylen = 0;
+	keyid = 1;
+	result = sctp_set_auth_key(fd, 0, keyid, keylen, &keytext);
+	if (result < 0) {
+		close(fd);
+		return "failed to set auth key";
+	}
+	/* No way to tell if it was really written ok */
+	close(fd);
+	return NULL;
+}
+
+/* assoc tests */
+DEFINE_APITEST(authkey, gso_a_def_1_1)
+{
+	int fd, fds[2], result;
+	uint16_t keyid, keylen;
+	uint8_t keytext[128];
+
+	fds[0] = fds[1] = -1;
+	fd = sctp_one2one(0, 1, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_socketpair_reuse(fd, fds, 1);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+	keylen = sizeof(keytext);
+	keyid = 0;
+	result = sctp_get_auth_key(fds[1], 0, &keyid, &keylen, keytext);
+	if (result >= 0) {
+		close(fd);
+		close(fds[0]);
+		close(fds[1]);
+		return "was able to get auth key";
+	}
+	close(fd);
+	close(fds[0]);
+	close(fds[1]);
+	return NULL;
+}
+
+DEFINE_APITEST(authkey, gso_a_def_1_M)
+{
+	int fds[2], result;
+	sctp_assoc_t ids[2];
+	uint16_t keyid, keylen;
+	uint8_t keytext[128];
+
+	fds[0] = fds[1] = -1;
+	fds[0] = sctp_one2many(0, 1);
+	if (fds[0] < 0) {
+		return (strerror(errno));
+	}
+	result = sctp_socketpair_1tom(fds, ids, 1);
+	if (result < 0) {
+		close(fds[0]);
+		return (strerror(errno));
+	}
+	keylen = sizeof(keytext);
+	keyid = 0;
+	result = sctp_get_auth_key(fds[0], ids[0], &keyid, &keylen, keytext);
+	if (result >= 0) {
+		close(fds[0]);
+		close(fds[1]);
+		return "was able to get auth key";
+	}
+	close(fds[0]);
+	close(fds[1]);
+	return NULL;
+}
+
+DEFINE_APITEST(authkey, sso_a_def_1_1)
+{
+	int fd, fds[2], result;
+	uint16_t keyid, keylen;
+	char *keytext = "This is my key";
+
+	fds[0] = fds[1] = -1;
+	fd = sctp_one2one(0, 1, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_socketpair_reuse(fd, fds, 1);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+	/* overwrite the default key */
+	keylen = sizeof(keytext);
+	keyid = 0;
+	result = sctp_set_auth_key(fds[0], 0, keyid, keylen,
+				   (uint8_t *)keytext);
+	if (result < 0) {
+		close(fd);
+		close(fds[0]);
+		close(fds[1]);
+		return "failed to set auth key";
+	}
+	/* No way to tell if it was really written ok */
+	close(fd);
+	close(fds[0]);
+	close(fds[1]);
+	return NULL;
+}
+
+DEFINE_APITEST(authkey, sso_a_def_1_M)
+{
+	int fds[2], result;
+	sctp_assoc_t ids[2];
+	uint16_t keyid, keylen;
+	char *keytext = "This is my key";
+
+	fds[0] = sctp_one2many(0, 1);
+	if (fds[0] < 0) {
+		return (strerror(errno));
+	}
+	result = sctp_socketpair_1tom(fds, ids, 1);
+	if (result < 0) {
+		close(fds[0]);
+		return (strerror(errno));
+	}
+	/* overwrite the default key */
+	keylen = sizeof(keytext);
+	keyid = 0;
+	result = sctp_set_auth_key(fds[0], ids[0], keyid, keylen,
+				   (uint8_t *)keytext);
+	if (result < 0) {
+		close(fds[0]);
+		close(fds[1]);
+		return "failed to set auth key";
+	}
+	/* No way to tell if it was really written ok */
+	close(fds[0]);
+	close(fds[1]);
+	return NULL;
+}
+
+DEFINE_APITEST(authkey, sso_a_new_1_1)
+{
+	int fd, fds[2], result;
+	uint16_t keyid, keylen;
+	char *keytext = "This is my new key";
+
+	fds[0] = fds[1] = -1;
+	fd = sctp_one2one(0, 1, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_socketpair_reuse(fd, fds, 1);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+	/* add a new key id */
+	keylen = sizeof(keytext);
+	keyid = 1;
+	result = sctp_set_auth_key(fds[0], 0, keyid, keylen,
+				   (uint8_t *)keytext);
+	if (result < 0) {
+		close(fd);
+		close(fds[0]);
+		close(fds[1]);
+		return "failed to set auth key";
+	}
+	/* No way to tell if it was really written ok */
+	close(fd);
+	close(fds[0]);
+	close(fds[1]);
+	return NULL;
+}
+
+DEFINE_APITEST(authkey, sso_a_new_1_M)
+{
+	int fds[2], result;
+	sctp_assoc_t ids[2];
+	uint16_t keyid, keylen;
+	char *keytext = "This is my new key";
+
+	fds[0] = fds[1] = -1;
+	fds[0] = sctp_one2many(0, 1);
+	if (fds[0] < 0) {
+		return (strerror(errno));
+	}
+	result = sctp_socketpair_1tom(fds, ids, 1);
+	if (result < 0) {
+		close(fds[0]);
+		return (strerror(errno));
+	}
+	/* add a new key id */
+	keylen = sizeof(keytext);
+	keyid = 1;
+	result = sctp_set_auth_key(fds[0], ids[0], keyid, keylen,
+				   (uint8_t *)keytext);
+	if (result < 0) {
+		close(fds[0]);
+		close(fds[1]);
+		return "failed to set auth key";
+	}
+	/* No way to tell if it was really written ok */
+	close(fds[0]);
+	close(fds[1]);
+	return NULL;
+}
+
+DEFINE_APITEST(authkey, sso_a_newnul_1_1)
+{
+	int fd, fds[2], result;
+	uint16_t keyid, keylen;
+	uint8_t keytext = 0xff;
+
+	fds[0] = fds[1] = -1;
+	fd = sctp_one2one(0, 1, 1);
+	if (fd < 0) {
+		return (strerror(errno));
+	}
+	result = sctp_socketpair_reuse(fd, fds, 1);
+	/* add a new NULL key id */
+	keylen = 0;
+	keyid = 1;
+	result = sctp_set_auth_key(fds[0], 0, keyid, keylen, &keytext);
+	if (result < 0) {
+		close(fd);
+		close(fds[0]);
+		close(fds[1]);
+		return "failed to set auth key";
+	}
+	/* No way to tell if it was really written ok */
+	close(fd);
+	close(fds[0]);
+	close(fds[1]);
+	return NULL;
+}
+
+DEFINE_APITEST(authkey, sso_a_newnul_1_M)
+{
+	int fds[2], result;
+	sctp_assoc_t ids[2];
+	uint16_t keyid, keylen;
+	uint8_t keytext = 0xff;
+
+	fds[0] = fds[1] = -1;
+	fds[0] = sctp_one2many(0, 1);
+	if (fds[0] < 0) {
+		return (strerror(errno));
+	}
+	result = sctp_socketpair_1tom(fds, ids, 1);
+	if (result < 0) {
+		close(fds[0]);
+		return (strerror(errno));
+	}
+	/* add a new NULL key id */
+	keylen = 0;
+	keyid = 1;
+	result = sctp_set_auth_key(fds[0], ids[0], keyid, keylen, &keytext);
+	if (result < 0) {
+		close(fds[0]);
+		close(fds[1]);
+		return "failed to set auth key";
+	}
+	/* No way to tell if it was really written ok */
+	close(fds[0]);
+	close(fds[1]);
+	return NULL;
+}
+/********************************************************
+ *
+ * SCTP_AUTH_ACTIVE_KEY tests
+ *
+ ********************************************************/
 
 
 /********************************************************
