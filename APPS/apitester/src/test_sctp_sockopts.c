@@ -11595,3 +11595,71 @@ DEFINE_APITEST(fraginter, sso_1_M)
 	close(fd);
 	return NULL;
 }
+
+
+
+DEFINE_APITEST(fraginter, sso_bad_1_1)
+{
+	int inter[2],newval;
+	int fd, result;
+
+	fd = sctp_one2one(0, 0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_interleave(fd, &inter[0]);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));
+	} 
+	newval = 42;
+	result = sctp_set_interleave(fd, newval);
+	if(result < 0) {
+		close(fd);
+		return NULL;
+	}
+	result = sctp_get_interleave(fd, &inter[1]);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));
+	} 
+	if(inter[1] != inter[0]) {
+		close(fd);
+		return "bogus set changed interleave value";
+	}
+	close(fd);	
+	return NULL;
+}
+
+DEFINE_APITEST(fraginter, sso_bad_1_M)
+{
+	int inter[2],newval;
+	int fd, result;
+
+	fd = sctp_one2many(0,1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_interleave(fd, &inter[0]);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));
+	} 
+	newval = 42;
+	result = sctp_set_interleave(fd, newval);
+	if(result < 0) {
+		close(fd);
+		return NULL;
+	}
+	result = sctp_get_interleave(fd, &inter[1]);
+	if(result < 0) {
+		close(fd);
+		return(strerror(errno));
+	} 
+	if(inter[1] != inter[0]) {
+		close(fd);
+		return "bogus set changed interleave value";
+	}
+	close(fd);	
+	return NULL;
+}
