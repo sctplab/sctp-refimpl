@@ -2912,7 +2912,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			sctp_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE);
 			sctp_feature_off(inp, SCTP_PCB_FLAGS_INTERLEAVE_STRMS);
 		} else if (*level == SCTP_FRAG_LEVEL_0) {
-			sctp_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE);
+			sctp_feature_off(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE);
 			sctp_feature_off(inp, SCTP_PCB_FLAGS_INTERLEAVE_STRMS);
 
 		} else {
