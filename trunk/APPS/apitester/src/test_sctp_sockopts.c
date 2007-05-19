@@ -3421,7 +3421,7 @@ DEFINE_APITEST(setpeerprim, sso_1_M_good_peerprim)
 	if (num < 2) {
 		sctp_freeladdrs(sa);
 		if(cnt < 1) {
-			sleep(1);
+			sctp_delay(250);
 			cnt++;
 			goto try_again;
 		}
@@ -3465,7 +3465,7 @@ DEFINE_APITEST(setpeerprim, sso_1_M_bad_peerprim)
 	if (num < 2) {
 		sctp_freeladdrs(sa);
 		if(cnt < 1) {
-			sleep(1);
+			sctp_delay(SCTP_SLEEP_MS);
 			cnt++;
 			goto try_again;
 		}
@@ -3499,11 +3499,13 @@ DEFINE_APITEST(setprim, gso_1_1_get_prim)
 	struct sockaddr *sa, *at;
 	union sctp_sockstore store;
 	socklen_t len;
+	int cnt = 0;
 
 	result = sctp_socketpair(fds, 1);
 	if (result < 0) {
 		return(strerror(errno));
 	}
+ try_again:
 	num = sctp_getpaddrs(fds[0], 0, &sa);
 	if( num < 0) {
 		retstring = "sctp_getpaddr failed";
@@ -3511,6 +3513,11 @@ DEFINE_APITEST(setprim, gso_1_1_get_prim)
 	}
 	if (num < 2) {
 		sctp_freepaddrs(sa);
+		if(cnt < 1) {
+			sctp_delay(SCTP_SLEEP_MS);
+			cnt++;
+			goto try_again;
+		}
 		retstring = "host is not multi-homed can't run test";
 		goto out;
 	}
@@ -3592,7 +3599,7 @@ DEFINE_APITEST(setprim, gso_1_M_get_prim)
 	if (num < 2) {
 		sctp_freepaddrs(sa);
 		if(cnt < 1) {
-			sleep(1);
+			sctp_delay(SCTP_SLEEP_MS);
 			cnt++;
 			goto try_again;
 		}
@@ -3660,12 +3667,13 @@ DEFINE_APITEST(setprim, sso_1_1_set_prim)
 	struct sockaddr *sa, *at, *setit;
 	union sctp_sockstore store;
 	socklen_t len;
-	int cnt;
+	int cnt = 0;
 
 	result = sctp_socketpair(fds, 1);
 	if (result < 0) {
 		return(strerror(errno));
 	}
+ try_again:
 	num = sctp_getpaddrs(fds[0], 0, &sa);
 	if( num < 0) {
 		retstring = "sctp_getpaddr failed";
@@ -3673,6 +3681,11 @@ DEFINE_APITEST(setprim, sso_1_1_set_prim)
 	}
 	if (num < 2) {
 		sctp_freepaddrs(sa);
+		if(cnt < 1) {
+			sctp_delay(SCTP_SLEEP_MS);
+			cnt++;
+			goto try_again;
+		}
 		retstring = "host is not multi-homed can't run test";
 		goto out;
 	}
@@ -3736,6 +3749,8 @@ DEFINE_APITEST(setprim, sso_1_1_set_prim)
 		setit = sa;
 	}
 	/* now do the set */
+ set_again:
+	cnt = 0;
 	result = sctp_set_primary(fds[0], 0, setit);
 	if (result < 0) {
 		retstring = strerror(errno);
@@ -3770,6 +3785,11 @@ DEFINE_APITEST(setprim, sso_1_1_set_prim)
 		}
 	}
 	if (found) {
+		if (cnt < 1) {
+			sctp_delay(SCTP_SLEEP_MS);
+			cnt++;
+			goto set_again;
+		}
 		retstring = "set to new primary failed";
 	}
 	
@@ -3805,7 +3825,7 @@ DEFINE_APITEST(setprim, sso_1_M_set_prim)
 	if (num < 2) {
 		sctp_freepaddrs(sa);
 		if(cnt < 1) {
-			sleep(1);
+			sctp_delay(SCTP_SLEEP_MS);
 			cnt++;
 			goto try_again;
 		}
@@ -3872,6 +3892,8 @@ DEFINE_APITEST(setprim, sso_1_M_set_prim)
 		setit = sa;
 	}
 	/* now do the set */
+ set_again:
+	cnt = 0;
 	result = sctp_set_primary(fds[0], ids[0], setit);
 	if (result < 0) {
 		retstring = strerror(errno);
@@ -3906,6 +3928,11 @@ DEFINE_APITEST(setprim, sso_1_M_set_prim)
 		}
 	}
 	if (found) {
+		if (cnt < 1) {
+			sctp_delay(SCTP_SLEEP_MS);
+			cnt++;
+			goto set_again;
+		}
 		retstring = "set to new primary failed";
 	}
 	sctp_freepaddrs(sa);
@@ -3924,12 +3951,13 @@ DEFINE_APITEST(setprim, sso_1_1_bad_prim)
 	union sctp_sockstore store;
 	struct sockaddr_in sinc;
 	socklen_t len;
-	int cnt;
+	int cnt=0;
 
 	result = sctp_socketpair(fds, 1);
 	if (result < 0) {
 		return(strerror(errno));
 	}
+ try_again:
 	num = sctp_getpaddrs(fds[0], 0, &sa);
 	if( num < 0) {
 		retstring = "sctp_getpaddr failed";
@@ -3937,6 +3965,11 @@ DEFINE_APITEST(setprim, sso_1_1_bad_prim)
 	}
 	if (num < 2) {
 		sctp_freepaddrs(sa);
+		if(cnt < 1) {
+			sctp_delay(SCTP_SLEEP_MS);
+			cnt++;
+			goto try_again;
+		}
 		retstring = "host is not multi-homed can't run test";
 		goto out;
 	}
@@ -4057,7 +4090,7 @@ DEFINE_APITEST(setprim, sso_1_M_bad_prim)
 	if (num < 2) {
 		sctp_freepaddrs(sa);
 		if(cnt < 1) {
-			sleep(1);
+			sctp_delay(SCTP_SLEEP_MS);
 			cnt++;
 			goto try_again;
 		}
@@ -7463,7 +7496,7 @@ DEFINE_APITEST(paddrpara, sso_dhb_int_1_M)
 	if (num < 2) {
 		sctp_freepaddrs(sa);
 		if(cnt < 1) {
-			sleep(1);
+			sctp_delay(SCTP_SLEEP_MS);
 			cnt++;
 			goto try_again;
 		}
@@ -7653,7 +7686,7 @@ DEFINE_APITEST(paddrpara, sso_dhb_zero_1_M)
 	if (num < 2) {
 		sctp_freepaddrs(sa);
 		if(cnt < 1) {
-			sleep(1);
+			sctp_delay(SCTP_SLEEP_MS);
 			cnt++;
 			goto try_again;
 		}
@@ -7848,7 +7881,7 @@ DEFINE_APITEST(paddrpara, sso_dhb_off_1_M)
 	if (num < 2) {
 		sctp_freepaddrs(sa);
 		if(cnt < 1) {
-			sleep(1);
+			sctp_delay(SCTP_SLEEP_MS);
 			cnt++;
 			goto try_again;
 		}
@@ -8040,7 +8073,7 @@ DEFINE_APITEST(paddrpara, sso_dpmrxt_int_1_M)
 	if (num < 2) {
 		sctp_freepaddrs(sa);
 		if(cnt < 1) {
-			sleep(1);
+			sctp_delay(SCTP_SLEEP_MS);
 			cnt++;
 			goto try_again;
 		}
@@ -8226,7 +8259,7 @@ DEFINE_APITEST(paddrpara, sso_dav4_tos_1_M)
 	if (num < 2) {
 		sctp_freepaddrs(sa);
 		if(cnt < 1) {
-			sleep(1);
+			sctp_delay(SCTP_SLEEP_MS);
 			cnt++;
 			goto try_again;
 		}
@@ -8417,7 +8450,7 @@ DEFINE_APITEST(paddrpara, sso_hb_demand_1_M)
 	if (num < 2) {
 		sctp_freepaddrs(sa);
 		if(cnt < 1) {
-			sleep(1);
+			sctp_delay(SCTP_SLEEP_MS);
 			cnt++;
 			goto try_again;
 		}
