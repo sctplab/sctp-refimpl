@@ -11777,3 +11777,317 @@ DEFINE_APITEST(pdapi, sso_1_M)
 	return NULL;
 
 }
+
+/********************************************************
+ *
+ * SCTP_USE_EXT_RCVINFO tests
+ *
+ ********************************************************/
+DEFINE_APITEST(xrcvinfo, sso_1_1)
+{
+	int val, newval, finalval;
+	int fd, result;
+	socklen_t len;
+
+	fd = sctp_one2one(0, 0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	len = sizeof(val);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_USE_EXT_RCVINFO,
+			    &val, &len);
+	if (result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	if(val)
+		newval = 0;
+	else
+		newval = 1;
+	len = sizeof(newval);
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_USE_EXT_RCVINFO,
+			    &newval, len);
+	if (result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	len = sizeof(finalval);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_USE_EXT_RCVINFO,
+			    &finalval, &len);
+	close(fd);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	if (newval != finalval) {
+		return "Set of ext_rcvinfo failed";
+	}
+	return NULL;
+	
+}
+
+DEFINE_APITEST(xrcvinfo, sso_1_M)
+{
+	int val, newval, finalval;
+	int fd, result;
+	socklen_t len;
+
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	len = sizeof(val);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_USE_EXT_RCVINFO,
+			    &val, &len);
+	if (result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	if(val)
+		newval = 0;
+	else
+		newval = 1;
+	len = sizeof(newval);
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_USE_EXT_RCVINFO,
+			    &newval, len);
+	if (result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	len = sizeof(finalval);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_USE_EXT_RCVINFO,
+			    &finalval, &len);
+	close(fd);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	if (newval != finalval) {
+		return "Set of ext_rcvinfo failed";
+	}
+	return NULL;
+
+}
+/********************************************************
+ *
+ * SCTP_AUTO_ASCONF tests
+ *
+ ********************************************************/
+DEFINE_APITEST(aasconf, sso_1_1)
+{
+	int val, newval, finalval;
+	int fd, result;
+	socklen_t len;
+
+	fd = sctp_one2one(0, 0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	len = sizeof(val);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_AUTO_ASCONF,
+			    &val, &len);
+	if (result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	if(val)
+		newval = 0;
+	else
+		newval = 1;
+	len = sizeof(newval);
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_AUTO_ASCONF,
+			    &newval, len);
+	if (result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	len = sizeof(finalval);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_AUTO_ASCONF,
+			    &finalval, &len);
+	close(fd);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	if (newval != finalval) {
+		return "Set of auto-asconf failed";
+	}
+	return NULL;
+	
+}
+
+DEFINE_APITEST(aasconf, sso_1_M)
+{
+	int val, newval, finalval;
+	int fd, result;
+	socklen_t len;
+
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	len = sizeof(val);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_AUTO_ASCONF,
+			    &val, &len);
+	if (result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	if(val)
+		newval = 0;
+	else
+		newval = 1;
+	len = sizeof(newval);
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_AUTO_ASCONF,
+			    &newval, len);
+	if (result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	len = sizeof(finalval);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_AUTO_ASCONF,
+			    &finalval, &len);
+	close(fd);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	if (newval != finalval) {
+		return "Set of auto-asconf failed";
+	}
+	return NULL;
+}
+
+
+/********************************************************
+ *
+ * SCTP_MAX_BURST tests
+ *
+ ********************************************************/
+DEFINE_APITEST(maxburst, gso_def_1_1)
+{
+	uint8_t val=0;
+	int fd, result;
+	socklen_t len;
+
+	fd = sctp_one2one(0, 0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	len = sizeof(val);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_MAX_BURST,
+			    &val, &len);
+	close(fd);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	if (val != 4) {
+		return "Max burst not compliant to RFC4960 - 4";
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(maxburst, gso_def_1_M)
+{
+	uint8_t val=0;
+	int fd, result;
+	socklen_t len;
+
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	len = sizeof(val);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_MAX_BURST,
+			    &val, &len);
+	close(fd);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	if (val != 4) {
+		return "Max burst not compliant to RFC4960 - 4";
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(maxburst, sso_1_1)
+{
+	uint8_t val, newval, finalval;
+	int fd, result;
+	socklen_t len;
+
+	fd = sctp_one2one(0, 0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	len = sizeof(val);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_MAX_BURST,
+			    &val, &len);
+	if (result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	if(val >= 2)
+		newval = val -1;
+	else
+		newval = val +1;
+
+	len = sizeof(newval);
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_MAX_BURST,
+			    &newval, len);
+	if (result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	len = sizeof(finalval);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_MAX_BURST,
+			    &finalval, &len);
+	close(fd);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	if (newval != finalval) {
+		return "Set of max-burst failed";
+	}
+	return NULL;
+	
+}
+
+DEFINE_APITEST(maxburst, sso_1_M)
+{
+	uint8_t val, newval, finalval;
+	int fd, result;
+	socklen_t len;
+
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	len = sizeof(val);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_MAX_BURST,
+			    &val, &len);
+	if (result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	if(val >= 2)
+		newval = val -1;
+	else
+		newval = val +1;
+	len = sizeof(newval);
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_MAX_BURST,
+			    &newval, len);
+	if (result < 0) {
+		close(fd);
+		return(strerror(errno));
+	}
+	len = sizeof(finalval);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_MAX_BURST,
+			    &finalval, &len);
+	close(fd);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	if (newval != finalval) {
+		return "Set of max-burst failed";
+	}
+	return NULL;
+}
+
+
