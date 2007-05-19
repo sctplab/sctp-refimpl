@@ -31,7 +31,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp.h,v 1.7 2007/05/08 17:01:10 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp.h,v 1.8 2007/05/17 12:16:23 rrs Exp $");
 #endif
 
 #ifndef _NETINET_SCTP_H_
@@ -96,7 +96,7 @@ struct sctp_paramhdr {
 /* Without this applied we will give V4 and V6 addresses on a V6 socket */
 #define SCTP_I_WANT_MAPPED_V4_ADDR	0x0000000d
 #define SCTP_MAXSEG 			0x0000000e
-#define SCTP_DELAYED_ACK_TIME           0x0000000f
+#define SCTP_DELAYED_SACK               0x0000000f
 #define SCTP_FRAGMENT_INTERLEAVE        0x00000010
 #define SCTP_PARTIAL_DELIVERY_POINT     0x00000011
 /* authentication support */
@@ -121,7 +121,8 @@ struct sctp_paramhdr {
 /* authentication support */
 #define SCTP_PEER_AUTH_CHUNKS 		0x00000102
 #define SCTP_LOCAL_AUTH_CHUNKS 		0x00000103
-
+#define SCTP_GET_ASSOC_NUMBER           0x00000104 /* ro */
+#define SCTP_GET_ASSOC_ID_LIST          0x00000105 /* ro */
 
 /*
  * user socket options: BSD implementation specific
@@ -158,9 +159,8 @@ struct sctp_paramhdr {
 /* read only */
 #define SCTP_GET_SNDBUF_USE		0x00001101
 #define SCTP_GET_STAT_LOG		0x00001103
-#define SCTP_GET_ASOC_ID_LIST           0x00001104 /* ro */
-#define SCTP_PCB_STATUS			0x00001105
-#define SCTP_GET_NONCE_VALUES           0x00001106
+#define SCTP_PCB_STATUS			0x00001104
+#define SCTP_GET_NONCE_VALUES           0x00001105
 
 /* Special hook for dynamically setting primary for all assoc's,
  * this is a write only option that requires root privledge.
@@ -451,6 +451,8 @@ struct sctp_error_unrecognized_chunk {
 #define SCTP_PCB_FLAGS_STREAM_RESETEVNT 0x00080000
 #define SCTP_PCB_FLAGS_NO_FRAGMENT	0x00100000
 #define SCTP_PCB_FLAGS_EXPLICIT_EOR     0x00400000
+
+#define SCTP_SMALLEST_PMTU 512	 /* smallest pmtu allowed when disabling PMTU discovery */
 
 #include <netinet/sctp_uio.h>
 

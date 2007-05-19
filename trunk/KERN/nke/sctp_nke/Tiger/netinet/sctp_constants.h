@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.15 2007/05/08 17:01:10 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.16 2007/05/17 12:16:23 rrs Exp $");
 #endif
 
 #ifndef __sctp_constants_h__
@@ -494,8 +494,8 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.15 2007/05/08 17:01:10 
  */
 #define SCTP_DEFAULT_MBUFS_IN_CHAIN 5
 
-/* How long a cookie lives in seconds */
-#define SCTP_DEFAULT_COOKIE_LIFE	60
+/* How long a cookie lives in milli-seconds */
+#define SCTP_DEFAULT_COOKIE_LIFE	60000
 
 /* resource limit of streams */
 #define MAX_SCTP_STREAMS	2048
@@ -662,10 +662,11 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.15 2007/05/08 17:01:10 
 
 #define SCTP_DEF_MAX_INIT	8
 #define SCTP_DEF_MAX_SEND	10
-#define SCTP_DEF_MAX_PATH_RTX	4
+#define SCTP_DEF_MAX_PATH_RTX	5
 
 #define SCTP_DEF_PMTU_RAISE_SEC	600	/* 10 min between raise attempts */
 #define SCTP_DEF_PMTU_MIN	600
+
 
 #define SCTP_MSEC_IN_A_SEC	1000
 #define SCTP_USEC_IN_A_SEC	1000000

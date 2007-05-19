@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.26 2007/05/09 13:30:06 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.27 2007/05/17 12:16:24 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -233,6 +233,7 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 						    sp, stcb);
 
 					sctp_free_a_strmoq(stcb, sp);
+                    /*sa_ignore FREED_MEMORY*/
 					sp = TAILQ_FIRST(&outs->outqueue);
 				}
 			}
@@ -302,6 +303,7 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 	 * removed). Up front when the INIT arrives we will discard it if it
 	 * is a restart and new addresses have been added.
 	 */
+    /* sa_ignore MEMLEAK */
 	return (0);
 }
 
@@ -399,8 +401,6 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 		 */
 		if (retval == -3) {
 			/* We abort with an error of missing mandatory param */
-			struct mbuf *op_err;
-
 			op_err =
 			    sctp_generate_invmanparam(SCTP_CAUSE_MISSING_PARAM);
 			if (op_err) {
@@ -1924,7 +1924,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	 */
 	(void)SCTP_GETTIME_TIMEVAL(&now);
 	/* Expire time is in Ticks, so we convert to seconds */
-	time_expires.tv_sec = cookie->time_entered.tv_sec + cookie->cookie_life;
+	time_expires.tv_sec = cookie->time_entered.tv_sec + TICKS_TO_SEC(cookie->cookie_life);
 	time_expires.tv_usec = cookie->time_entered.tv_usec;
 #ifndef __FreeBSD__
 	if (timercmp(&now, &time_expires, >))
@@ -4496,6 +4496,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 	}
 	if (IS_SCTP_CONTROL(ch)) {
 		/* process the control portion of the SCTP packet */
+        /*sa_ignore NO_NULL_CHK*/
 		stcb = sctp_process_control(m, iphlen, &offset, length, sh, ch,
 		    inp, stcb, &net, &fwd_tsn_seen, vrf_id, table_id);
 		if (stcb) {
@@ -4775,8 +4776,7 @@ sctp_input(i_pak, va_alist)
 	struct mbuf *m;
 	int iphlen;
 #ifdef __Panda__
-	pakoffset_type off_p;
-	int off,res;
+	int off;
 #endif
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s;
@@ -4804,16 +4804,11 @@ sctp_input(i_pak, va_alist)
 #endif
 #endif
 #ifdef __Panda__
-	res = pak_client_get_offset(i_pak, PAK_OFF_NETWORK_ST, &off_p);
-	if (CERR_IS_NOTOK(res)) {
-		SCTP_RELEASE_PKT(i_pak);
-		return;
-	}
 	/*-
 	 * This is Evil, but its the only way to make
 	 * panda work right 
 	 */
-	off = (int)(off_p + sizeof(struct ip));
+	off = sizeof(struct ip);
 #endif
 
  	if (SCTP_GET_PKT_VRFID(i_pak, vrf_id)) {
@@ -4837,6 +4832,13 @@ sctp_input(i_pak, va_alist)
 	iphlen = off;
 #endif
 	m = SCTP_HEADER_TO_CHAIN(i_pak);
+#ifdef __Panda__
+    /* Free the pak header as we already have the data chain */
+	/* For BSD/MAC this does nothing */
+	SCTP_DETACH_HEADER_FROM_CHAIN(i_pak);
+	(void)SCTP_RELEASE_HEADER(i_pak);
+#endif
+
 	net = NULL;
 	SCTP_STAT_INCR(sctps_recvpackets);
 	SCTP_STAT_INCR_COUNTER64(sctps_inpackets);
@@ -5082,6 +5084,7 @@ sctp_input(i_pak, va_alist)
 	s = splsoftnet();
 #endif
 
+    /*sa_ignore NO_NULL_CHK*/
 	sctp_common_input_processing(&m, iphlen, offset, length, sh, ch,
 				     inp, stcb, net, ecn_bits, vrf_id,
 				     table_id);
@@ -5113,11 +5116,5 @@ sctp_input(i_pak, va_alist)
 	if (m) {
 		sctp_m_freem(m);
 	}
-#ifdef __Panda__
-	/* For BSD/MAC this does nothing */
-	SCTP_DETACH_HEADER_FROM_CHAIN(i_pak);
-	(void)SCTP_RELEASE_HEADER(i_pak);
-#endif
-
 	return;
 }

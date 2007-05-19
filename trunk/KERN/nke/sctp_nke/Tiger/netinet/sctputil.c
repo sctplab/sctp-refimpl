@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.30 2007/05/09 13:30:06 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.31 2007/05/17 12:16:24 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -927,6 +927,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	asoc->heart_beat_delay = TICKS_TO_MSEC(m->sctp_ep.sctp_timeoutticks[SCTP_TIMER_HEARTBEAT]);
 	asoc->cookie_life = m->sctp_ep.def_cookie_life;
 	asoc->sctp_cmt_on_off = (uint8_t) sctp_cmt_on_off;
+	asoc->sctp_frag_point = m->sctp_frag_point;
 #ifdef INET
 #if defined(__FreeBSD__) || defined(__APPLE__)
 	asoc->default_tos = m->ip_inp.inp.inp_ip_tos;
@@ -1330,6 +1331,7 @@ sctp_iterator_worker(void)
 		SCTP_IPI_ITERATOR_WQ_UNLOCK();
 		sctp_iterator_work(it);
 		SCTP_IPI_ITERATOR_WQ_LOCK();
+        /*sa_ignore FREED_MEMORY*/
 		it = TAILQ_FIRST(&sctppcbinfo.iteratorhead);		
 	}
 	if (TAILQ_FIRST(&sctppcbinfo.iteratorhead)) {
@@ -2001,7 +2003,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				}
 			}
 			if (cnt_of_unconf) {
-				lnet = NULL;
+				net = lnet = NULL;
 				(void)sctp_heartbeat_timer(inp, stcb, lnet, cnt_of_unconf);
 			}
 			if (stcb->asoc.hb_random_idx > 3) {
@@ -2898,7 +2900,7 @@ sctp_notify_assoc_change(uint32_t event, struct sctp_tcb *stcb,
 	 */
 	if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 	     (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) &&
-	    ((event == SCTP_COMM_LOST) || (event ==SCTP_SHUTDOWN_COMP)) ) {
+	    ((event == SCTP_COMM_LOST) || (event == SCTP_CANT_STR_ASSOC))) {
 		if (SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_COOKIE_WAIT)
 			stcb->sctp_socket->so_error = ECONNREFUSED;
 		else
@@ -3606,6 +3608,7 @@ sctp_report_all_outbound(struct sctp_tcb *stcb, int holds_lock)
 			sp->net = NULL;
 			/* Free the chunk */
 			sctp_free_a_strmoq(stcb, sp);
+            /*sa_ignore FREED_MEMORY*/
 			sp = TAILQ_FIRST(&outs->outqueue);
 		}
 	}
@@ -3637,6 +3640,7 @@ sctp_report_all_outbound(struct sctp_tcb *stcb, int holds_lock)
 				sctp_free_remote_addr(chk->whoTo);
 			chk->whoTo = NULL;
 			sctp_free_a_chunk(stcb, chk);
+            /*sa_ignore FREED_MEMORY*/
 			chk = TAILQ_FIRST(&asoc->send_queue);
 		}
 	}
@@ -3668,6 +3672,7 @@ sctp_report_all_outbound(struct sctp_tcb *stcb, int holds_lock)
 				sctp_free_remote_addr(chk->whoTo);
 			chk->whoTo = NULL;
 			sctp_free_a_chunk(stcb, chk);
+            /*sa_ignore FREED_MEMORY*/
 			chk = TAILQ_FIRST(&asoc->sent_queue);
 		}
 	}
@@ -5055,6 +5060,7 @@ sctp_sorecvmsg(struct socket *so,
 	error = sblock(&so->so_rcv, (block_allowed ? M_WAITOK : 0));
 #endif
 	/* we possibly have data we can read */
+    /*sa_ignore FREED_MEMORY*/
 	control = TAILQ_FIRST(&inp->read_queue);
 	if (control == NULL) {
 		/* This could be happening since
@@ -5494,9 +5500,7 @@ sctp_sorecvmsg(struct socket *so,
 					copied_so_far += cp_len;
 				}
 			}
-			if ((out_flags & MSG_EOR) ||
-			    (uio->uio_resid == 0)
-				) {
+			if ((out_flags & MSG_EOR) || (uio->uio_resid == 0)) {
 				break;
 			}
 			if (((stcb) && (in_flags & MSG_PEEK) == 0) &&
@@ -5518,8 +5522,7 @@ sctp_sorecvmsg(struct socket *so,
 		 * a MSG_EOR/or read all the user wants... <OR>
 		 * control->length == 0.
 		 */
-		if ((out_flags & MSG_EOR) &&
-		    ((in_flags & MSG_PEEK) == 0)) {
+		if ((out_flags & MSG_EOR) && ((in_flags & MSG_PEEK) == 0)) {
 			/* we are done with this control */
 			if (control->length == 0) {
 				if (control->data) {
@@ -5902,6 +5905,7 @@ sctp_dynamic_set_primary(struct sockaddr *sa, uint32_t vrf_id)
 	/* Now incr the count and int wi structure */
 	SCTP_INCR_LADDR_COUNT();
 	bzero(wi, sizeof(*wi));
+	(void)SCTP_GETTIME_TIMEVAL(&wi->start_time);
 	wi->ifa = ifa;
 	wi->action = SCTP_SET_PRIM_ADDR;
 	atomic_add_int(&ifa->refcount, 1);
@@ -6193,7 +6197,8 @@ sctp_hashinit_flags(int elements, struct malloc_type *type,
 
 
 int
-sctp_connectx_helper_add(struct sctp_tcb *stcb, struct sockaddr *addr, int totaddr, int *error)
+sctp_connectx_helper_add(struct sctp_tcb *stcb, struct sockaddr *addr,
+			 int totaddr, int *error)
 {
 	int added=0;
 	int i;
@@ -6231,8 +6236,9 @@ sctp_connectx_helper_add(struct sctp_tcb *stcb, struct sockaddr *addr, int totad
 } 
 
 struct sctp_tcb *
-sctp_connectx_helper_find(struct sctp_inpcb *inp, struct sockaddr *addr, int *totaddr, 
-			  int *num_v4, int *num_v6, int *error, int max) 
+sctp_connectx_helper_find(struct sctp_inpcb *inp, struct sockaddr *addr,
+			  int *totaddr, int *num_v4, int *num_v6, int *error,
+			  int limit) 
 {
 	struct sockaddr *sa;
 	struct sctp_tcb *stcb=NULL;
@@ -6266,7 +6272,7 @@ sctp_connectx_helper_find(struct sctp_inpcb *inp, struct sockaddr *addr, int *to
 			/* Already have or am bring up an association */
 			return (stcb);
 		}
-		if ((at + incr) > max) {
+		if ((at + incr) > limit) {
 			*totaddr = i;
 			break;
 		}
