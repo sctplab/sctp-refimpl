@@ -1362,7 +1362,7 @@ int sctp_set_dsack(int fd, sctp_assoc_t id, uint32_t delay, uint32_t freq)
 	sack.sack_assoc_id = id;
 	sack.sack_delay = delay;
 	sack.sack_freq = freq;
-	result = setsockopt(fd, IPPROTO_SCTP, SCTP_AUTH_CHUNK,
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_DELAYED_SACK,
 			    &sack, len);
 	return(result);
 
@@ -1386,7 +1386,7 @@ int sctp_get_dsack(int fd, sctp_assoc_t id,uint32_t *delay, uint32_t *freq)
 	memset(&sack, 0, sizeof(sack));
 	sack.sack_assoc_id = id;
 	len = sizeof(sack);
-	result = getsockopt(fd, IPPROTO_SCTP, SCTP_AUTH_CHUNK,
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_DELAYED_SACK,
 			    &sack, &len);
 	if (delay) {
 		*delay = sack.sack_delay;

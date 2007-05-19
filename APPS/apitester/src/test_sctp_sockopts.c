@@ -24,7 +24,7 @@ DEFINE_APITEST(rtoinfo, gso_1_1_defaults)
 		return strerror(errno);
 
 	if ((init != 3000) || (min != 1000) || (max != 60000))
-		return "Default not RFC 2960 compliant";
+		return "Default not RFC 4960 compliant";
 	
 	return NULL;
 }
@@ -45,7 +45,7 @@ DEFINE_APITEST(rtoinfo, gso_1_M_defaults)
 		return strerror(errno);
 
 	if ((init != 3000) || (min != 1000) || (max != 60000))
-		return "Default not RFC 2960 compliant";
+		return "Default not RFC 4960 compliant";
 	
 	return NULL;
 }
@@ -2712,10 +2712,10 @@ DEFINE_APITEST(initmsg, gso_1_1_defaults)
 		return(strerror(errno));		
 	}
 	if (max != 8) {
-		return "Default not RFC 2960 compliant (max_attempts)";
+		return "Default not RFC 4960 compliant (max_attempts)";
 	}
 	if (timeo != 60000) {
-		return "Default not RFC 2960 compliant (max_init_timeo)";
+		return "Default not RFC 4960 compliant (max_init_timeo)";
 	}
 	return(NULL);
 }
@@ -2739,10 +2739,10 @@ DEFINE_APITEST(initmsg, gso_1_M_defaults)
 		return(strerror(errno));		
 	}
 	if (max != 8) {
-		return "Default not RFC 2960 compliant (max_attempts)";
+		return "Default not RFC 4960 compliant (max_attempts)";
 	}
 	if (timeo != 60000) {
-		return "Default not RFC 2960 compliant (max_init_timeo)";
+		return "Default not RFC 4960 compliant (max_init_timeo)";
 	}
 	return(NULL);
 }
@@ -4448,10 +4448,10 @@ DEFINE_APITEST(paddrpara, gso_def_1_1)
 		return(strerror(errno));
 	}
 	if (hbinterval != 30000) {
-		return "HB Interval not compliant to RFC2960";
+		return "HB Interval not compliant to RFC 4960";
 	}
 	if (maxrxt != 5) {
-		return "Path Max RXT not compliant to RFC2960";
+		return "Path Max RXT not compliant to RFC 4960";
 	}
 	if (ipv6_flowlabel) {
 		return "IPv6 Flow label something other than 0 by default";
@@ -4496,10 +4496,10 @@ DEFINE_APITEST(paddrpara, gso_def_1_M)
 		return(strerror(errno));
 	}
 	if (hbinterval != 30000) {
-		return "HB Interval not compliant to RFC2960";
+		return "HB Interval not compliant to RFC4960";
 	}
 	if (maxrxt != 5) {
-		return "Path Max RXT not compliant to RFC2960";
+		return "Path Max RXT not compliant to RFC4960";
 	}
 	if (ipv6_flowlabel) {
 		return "IPv6 Flow label something other than 0 by default";
@@ -9375,9 +9375,9 @@ DEFINE_APITEST(mapped, gso_1_1_def)
 	close(fd);
 	
 	if (onoff) {
-		return NULL;
+		return "Option enabled by default";
 	} else {
-		return "Option disabled by default";
+		return NULL;
 	}
 }
 
@@ -9393,9 +9393,9 @@ DEFINE_APITEST(mapped, gso_1_m_def)
 	close(fd);
 	
 	if (onoff) {
-		return NULL;
+		return "Option enabled by default";
 	} else {
-		return "Option disabled by default";
+		return NULL;
 	}
 }
 
@@ -10397,3 +10397,643 @@ DEFINE_APITEST(hmacid, sso_nosha1_1_M)
 
 
 
+DEFINE_APITEST(dsack, gso_def_1_1)
+{
+	uint32_t delay, freq;
+	int fd, result;
+
+	fd = sctp_one2one(0, 0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_dsack(fd, 0, &delay, &freq);
+	close(fd);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	if ((delay < 200) || (delay > 500)) {
+		return "Delay non-compliant to RFC4960 - 200ms <= x <= 500ms";
+	}
+	if (freq != 2) {
+		return "Sack Freq non-compliant to RFC4960 its != 2";
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(dsack, gso_def_1_M)
+{
+	uint32_t delay, freq;
+	int fd, result;
+
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_dsack(fd, 0, &delay, &freq);
+	close(fd);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	if ((delay < 200) || (delay > 500)) {
+		return "Delay non-compliant to RFC4960 - 200ms <= x <= 500ms";
+	}
+	if (freq != 2) {
+		return "Sack Freq non-compliant to RFC4960 its != 2";
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(dsack, sso_delay_1_1)
+{
+	uint32_t delay[2];
+	uint32_t freq[2];
+	uint32_t newval;
+	int fd, result;
+
+	fd = sctp_one2one(0, 0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_dsack(fd, 0, &delay[0], &freq[0]);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+	newval = delay[0] + 100;
+	if( newval > 500 ) {
+		newval = delay[0] - 100;
+	}
+	result = sctp_set_ddelay(fd, 0, newval);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+	result = sctp_get_dsack(fd, 0, &delay[1], &freq[1]);
+	close (fd);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	if (newval != delay[1]) {
+		return "Could not change delay";
+	}
+	if (freq[0] != freq[1]) {
+		return "Set of delay changed frequency";
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(dsack, sso_delay_1_M)
+{
+	uint32_t delay[2];
+	uint32_t freq[2];
+	uint32_t newval;
+	int fd, result;
+
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_dsack(fd, 0, &delay[0], &freq[0]);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+	newval = delay[0] + 100;
+	if( newval > 500 ) {
+		newval = delay[0] - 100;
+	}
+	result = sctp_set_ddelay(fd, 0, newval);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+	result = sctp_get_dsack(fd, 0, &delay[1], &freq[1]);
+	close (fd);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	if (newval != delay[1]) {
+		return "Could not change delay";
+	}
+	if (freq[0] != freq[1]) {
+		return "Set of delay changed frequency";
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(dsack, sso_freq_1_1)
+{
+	uint32_t delay[2];
+	uint32_t freq[2];
+	uint32_t newval;
+	int fd, result;
+
+	fd = sctp_one2one(0, 0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_dsack(fd, 0, &delay[0], &freq[0]);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+	newval = freq[0]++;
+	result = sctp_set_dfreq(fd, 0, newval);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+	result = sctp_get_dsack(fd, 0, &delay[1], &freq[1]);
+	close (fd);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	if (delay[0] != delay[1]) {
+		return "Set of freq changed delay";
+	}
+	if (newval != freq[1]) {
+		return "Could not change freq";
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(dsack, sso_freq_1_M)
+{
+	uint32_t delay[2], freq[2];
+	uint32_t newval;
+	int fd, result;
+
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_dsack(fd, 0, &delay[0], &freq[0]);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+	newval = freq[0]+1;
+
+	result = sctp_set_dfreq(fd, 0, newval);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+	result = sctp_get_dsack(fd, 0, &delay[1], &freq[1]);
+	close (fd);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	if (delay[0] != delay[1]) {
+		return "Set of frequency changed delay";
+	}
+	if (newval != freq[1]) {
+		return "Could not change frequency";
+	}
+	return NULL;
+}
+
+
+DEFINE_APITEST(dsack, sso_asc_1_1)
+{
+	uint32_t delay[2], freq[2], newval;
+	int fd, result;
+	int fds[2];
+	fds[0] = fds[1] = -1;
+
+	fd = sctp_one2one(0, 1, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_dsack(fd, 0, &delay[0], &freq[0]);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+	result = sctp_socketpair_reuse(fd, fds, 1);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+	newval = delay[0] + 100;
+	if (newval > 500) {
+		newval = delay[0] - 100;
+	}
+	result = sctp_set_ddelay(fds[1], 0, newval);
+	if (result < 0) {
+		close (fd);
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	result = sctp_get_dsack(fds[1], 0, &delay[1], &freq[1]);
+	if (result < 0) {
+		close (fd);
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	close (fd);
+	close (fds[0]);
+	close (fds[1]);
+	
+	if (newval != delay[1]) {
+		return "Could not set delay";
+	}
+	if (freq[0] != freq[1]) {
+		return "freq changed on delay set";
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(dsack, sso_asc_1_M)
+{
+	uint32_t delay[2], freq[2], newval;
+	int result;
+	int fds[2];
+	sctp_assoc_t ids[2];
+	fds[0] = fds[1] = -1;
+
+	fds[0] = sctp_one2many(0, 1);
+	if (fds[0] < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_dsack(fds[0], 0, &delay[0], &freq[0]);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+	result = sctp_socketpair_1tom(fds, ids,  1);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+	newval = delay[0] + 100;
+	if (newval > 500) {
+		newval = delay[0] - 100;
+	}
+	result = sctp_set_ddelay(fds[0], ids[0], newval);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	result = sctp_get_dsack(fds[0], ids[0], &delay[1], &freq[1]);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	close (fds[0]);
+	close (fds[1]);
+	if (newval != delay[1]) {
+		return "Could not set delay";
+	}
+	if (freq[0] != freq[1]) {
+		return "freq changed on delay set";
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(dsack, sso_inherit_1_1)
+{
+	uint32_t delay[2], freq[2], newval;
+	int fd, result;
+	int fds[2];
+	fds[0] = fds[1] = -1;
+
+	fd = sctp_one2one(0, 1, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_dsack(fd, 0, &delay[0], &freq[0]);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+	newval = delay[0] + 100;
+	if (newval > 500) {
+		newval = delay[0] - 100;
+	}
+	result = sctp_set_ddelay(fd, 0, newval);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+	result = sctp_socketpair_reuse(fd, fds, 1);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+	result = sctp_get_dsack(fds[1], 0, &delay[1], &freq[1]);
+	if (result < 0) {
+		close (fd);
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	close (fd);
+	close (fds[0]);
+	close (fds[1]);
+	if (newval != delay[1]) {
+		return "New delay did not inherit";
+	}
+	if (freq[0] != freq[1]) {
+		return "freq changed on delay set";
+	}
+
+	return NULL;
+}
+
+DEFINE_APITEST(dsack, sso_inherit_1_M)
+{
+	uint32_t delay[2], freq[2], newval;
+	int result;
+	int fds[2];
+	sctp_assoc_t ids[2];
+	fds[0] = fds[1] = -1;
+
+	fds[0] = sctp_one2many(0, 1);
+	if (fds[0] < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_dsack(fds[0], 0, &delay[0], &freq[0]);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+	newval = delay[0] + 100;
+	if (newval > 500) {
+		newval = delay[0] - 100;
+	}
+	result = sctp_set_ddelay(fds[0], 0, newval);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+	result = sctp_socketpair_1tom(fds, ids,  1);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+	result = sctp_get_dsack(fds[0], ids[0], &delay[1], &freq[1]);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	close (fds[0]);
+	close (fds[1]);
+	if (newval != delay[1]) {
+		return "New delay did not inherit";
+	}
+	if (freq[0] != freq[1]) {
+		return "freq changed on delay set";
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(dsack, sso_inherit_ncep_1_1)
+{
+	uint32_t delay[3], freq[3], newval;
+	int fd, result;
+	char *retstring = NULL;
+	int fds[2];
+	fds[0] = fds[1] = -1;
+
+	fd = sctp_one2one(0, 1, 1);
+	if (fd < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_dsack(fd, 0, &delay[0], &freq[0]);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+	newval = delay[0] + 100;
+	if (newval > 500) {
+		newval = delay[0] - 100;
+	}
+	result = sctp_set_ddelay(fd, 0, newval);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+	result = sctp_socketpair_reuse(fd, fds, 1);
+	if (result < 0) {
+		close (fd);
+		return(strerror(errno));
+	}
+	result = sctp_get_dsack(fds[1], 0, &delay[1], &freq[1]);
+	if (result < 0) {
+		close (fd);
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	
+	if (delay[1] != newval) {
+		retstring = "Inheritance failed";
+		goto out;
+	}
+	if (freq[0] != freq[1]) {
+		retstring = "freq changed";
+		goto out;
+	}
+	/* Change the assoc value */
+	newval -= 50;
+	result = sctp_set_ddelay(fds[1], 0, newval);
+	if (result < 0) {
+		close (fd);
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	/* Now get the listener value, it should NOT have changed */
+	result = sctp_get_dsack(fd, 0, &delay[2], &freq[2]);
+	if (result < 0) {
+		close (fd);
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	if (delay[2] != delay[1]) {
+		retstring = "Change of assoc, effected ep";
+	}
+ out:
+ 	close (fd);
+ 	close (fds[0]);
+ 	close (fds[1]);
+ 	return retstring;
+
+}
+
+DEFINE_APITEST(dsack, sso_inherit_ncep_1_M)
+{
+	uint32_t delay[3], freq[3], newval;
+	int result;
+	char *retstring = NULL;
+	int fds[2];
+	sctp_assoc_t ids[2];
+	fds[0] = fds[1] = -1;
+
+	fds[0] = sctp_one2many(0, 1);
+	if (fds[0] < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_dsack(fds[0], 0, &delay[0], &freq[0]);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+	newval = delay[0] + 100;
+	if (newval > 500) {
+		newval = delay[0] - 100;
+	}
+	result = sctp_set_ddelay(fds[0], 0, newval);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+	result = sctp_socketpair_1tom(fds, ids,  1);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+
+	result = sctp_get_dsack(fds[0], ids[0], &delay[1], &freq[1]);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+	
+	if (newval != delay[1]) {
+		retstring = "Delay did not change";
+		goto out;
+	}
+	if (freq[0] != freq[1]) {
+		retstring =  "freq changed";
+		goto out;
+	}
+
+	/* Change the assoc value */
+	newval -= 50;
+	result = sctp_set_ddelay(fds[0], ids[0], newval);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+
+	result = sctp_get_dsack(fds[0], 0, &delay[2], &freq[2]);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+
+	if (delay[2] != delay[1]) {
+		retstring = "Change of assoc, effected ep";
+	}
+ out:
+	close (fds[0]);
+	close (fds[1]);
+	return retstring;
+}
+
+DEFINE_APITEST(dsack, sso_nc_other_asc_1_M)
+{
+	uint32_t delay[3], freq[3], newval;
+	int result;
+	char *retstring = NULL;
+	int fds[2];
+	int fds2[2];
+	sctp_assoc_t ids[2], ids2[2];
+	fds[0] = fds[1] = -1;
+
+	fds[0] = sctp_one2many(0, 1);
+	if (fds[0] < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_dsack(fds[0], 0, &delay[0], &freq[0]);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+	newval = delay[0] + 100;
+	if (newval > 500) {
+		newval = delay[0] - 100;
+	}
+	result = sctp_set_ddelay(fds[0], 0, newval);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+
+
+	result = sctp_socketpair_1tom(fds, ids,  1);
+	if (result < 0) {
+		close (fds[0]);
+		return(strerror(errno));
+	}
+	/* Create a second assoc for fds[0] */
+	fds2[0] = fds[0];
+	result = sctp_socketpair_1tom(fds2, ids2,  1);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		return(strerror(errno));
+	}
+
+	result = sctp_get_dsack(fds[0], ids[0], &delay[1], &freq[1]);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		close (fds2[1]);
+		return(strerror(errno));
+	}
+	
+	if (newval != delay[1]) {
+		retstring = "Did not change delay on asoc";
+		goto out;
+	}
+
+	/* Change the assoc value */
+	newval -= 50;
+	result = sctp_set_ddelay(fds[0], ids[0], newval);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		close (fds2[1]);
+		return(strerror(errno));
+	}
+
+	result = sctp_get_dsack(fds[0], 0, &delay[2], &freq[2]);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		close (fds2[1]);
+		return(strerror(errno));
+	}
+
+	if (delay[2] != delay[1]) {
+		retstring = "Change of assoc, effected ep";
+	}
+	/* check other asoc */
+	result = sctp_get_dsack(fds[0], ids2[0], &delay[2], &freq[2]);
+	if (result < 0) {
+		close (fds[0]);
+		close (fds[1]);
+		close (fds2[1]);
+		return(strerror(errno));
+	}
+	if (delay[2] != delay[1]) {
+		retstring = "Change of assoc, effected other assoc";
+	}
+ out:
+	close (fds[0]);
+	close (fds[1]);
+	close (fds2[1]);
+	return retstring;
+}
