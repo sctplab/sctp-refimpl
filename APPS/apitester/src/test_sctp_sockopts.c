@@ -4543,7 +4543,7 @@ DEFINE_APITEST(paddrpara, sso_hb_int_1_1)
 		close(fd);
 		return(strerror(errno));
 	}
-	newval = (hbinterval[0] * 2) + 10;
+	newval = (hbinterval[0] * 2);
 
 	result = sctp_set_hbint(fd, 0, NULL, newval);
 	if (result< 0) {
@@ -4604,7 +4604,7 @@ DEFINE_APITEST(paddrpara, sso_hb_int_1_M)
 		close(fd);
 		return(strerror(errno));
 	}
-	newval = (hbinterval[0] * 2) + 10;
+	newval = (hbinterval[0] * 2);
 
 	result = sctp_set_hbint(fd, 0, NULL, newval);
 	if (result< 0) {
@@ -6613,7 +6613,7 @@ DEFINE_APITEST(paddrpara, sso_ainhhb_int_1_1)
 		retstring = strerror(errno);
 		goto out_nopair;
 	}
-	newval = (hbinterval[0] * 2) + 10;
+	newval = (hbinterval[0] * 2);
 
 	result = sctp_set_hbint(fd, 0, NULL, newval);
 	if (result< 0) {
@@ -6710,7 +6710,7 @@ DEFINE_APITEST(paddrpara, sso_ainhhb_int_1_M)
 		retstring = strerror(errno);
 		goto out_nopair;
 	}
-	newval = (hbinterval[0] * 2) + 10;
+	newval = (hbinterval[0] * 2);
 
 	/* Set the assoc value */
 	result = sctp_set_hbint(fds[0], 0, NULL, newval);
@@ -7106,7 +7106,6 @@ DEFINE_APITEST(paddrpara, sso_ainhhb_off_1_M)
 	}
 	result = sctp_set_hbdisable(fds[0], 0, NULL);
 	/* Set the assoc value */
-
 	if (result) {
 		retstring = strerror(errno);
 		goto out_nopair;
@@ -7118,7 +7117,6 @@ DEFINE_APITEST(paddrpara, sso_ainhhb_off_1_M)
 				      &flags[1],
 				      &ipv6_flowlabel[1],
 				      &ipv4_tos[1]);
-
 
 	if (result) {
 		retstring = strerror(errno);
@@ -7139,7 +7137,6 @@ DEFINE_APITEST(paddrpara, sso_ainhhb_off_1_M)
 	if(flags[1] & SPP_HB_ENABLE) {
 		retstring = "HB ep did not disable HB";
 	}
-
 	if (sctp_socketpair_1tom(fds, ids, 0) < 0) {
 		retstring = strerror(errno);
 		close(fds[0]);
