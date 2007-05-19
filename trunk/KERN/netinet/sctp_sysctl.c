@@ -30,7 +30,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_sysctl.c,v 1.6 2007/05/17 12:16:24 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_sysctl.c,v 1.5 2007/05/08 17:01:11 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -251,7 +251,7 @@ copy_out_local_addresses(struct sctp_inpcb *inp, struct sctp_tcb *stcb, struct s
 					continue;
 				memset((void *)&xladdr, 0, sizeof(union sctp_sockstore));
 				memcpy((void *)&xladdr.address, (const void *)&sctp_ifa->address, sizeof(union sctp_sockstore));
-				xladdr.start_time = laddr->start_time;
+				(void)SCTP_GETTIME_TIMEVAL(&xladdr.start_time);
 				SCTP_INP_RUNLOCK(inp);
 				SCTP_INP_INFO_RUNLOCK();
 				error = SYSCTL_OUT(req, &xladdr, sizeof(struct xsctp_laddr));
