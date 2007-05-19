@@ -2163,6 +2163,8 @@ sctp_inpcb_alloc(struct socket *so)
 #endif
 		return (EOPNOTSUPP);
 	}
+	sctp_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE);
+
 	inp->sctp_tcbhash = SCTP_HASH_INIT(sctp_pcbtblsize,
 					   &inp->sctp_hashmark);
 	if (inp->sctp_tcbhash == NULL) {
