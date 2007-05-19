@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_indata.c,v 1.23 2007/05/09 13:30:06 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_indata.c,v 1.24 2007/05/17 12:16:24 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -391,6 +391,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 			/* Now free the address and data */
 			sctp_free_remote_addr(chk->whoTo);
 			sctp_free_a_chunk(stcb, chk);
+            /*sa_ignore FREED_MEMORY*/
 			chk = TAILQ_FIRST(&asoc->reasmqueue);
 		}
 		return;
@@ -517,6 +518,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 			}
 			break;
 		}
+        /*sa_ignore FREED_MEMORY*/
 		chk = TAILQ_FIRST(&asoc->reasmqueue);
 	} while (chk);
 }
@@ -1995,8 +1997,6 @@ failed_express_del:
 			 * and proceessed by TSN order. It is only the
 			 * singletons I must worry about.
 			 */
-			struct sctp_stream_reset_list *liste;
-
 			if (((liste = TAILQ_FIRST(&asoc->resetHead)) != NULL) &&
 			    ((compare_with_wrap(tsn, ntohl(liste->tsn), MAX_TSN)) ||
 			    (tsn == ntohl(liste->tsn)))
@@ -2098,6 +2098,7 @@ finish_express_del:
 		sctp_reset_in_stream(stcb, liste->number_entries, liste->req.list_of_streams);
 		TAILQ_REMOVE(&asoc->resetHead, liste, next_resp);
 		SCTP_FREE(liste);
+        /*sa_ignore FREED_MEMORY*/
 		liste = TAILQ_FIRST(&asoc->resetHead);
 		ctl = TAILQ_FIRST(&asoc->pending_reply_queue);
 		if (ctl && (liste == NULL)) {
@@ -2659,12 +2660,12 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 				/* unknown chunk type, use bit rules */
 				if (ch->ch.chunk_type & 0x40) {
 					/* Add a error report to the queue */
-					struct mbuf *mm;
+					struct mbuf *merr;
 					struct sctp_paramhdr *phd;
 
-					mm = sctp_get_mbuf_for_msg(sizeof(*phd), 0, M_DONTWAIT, 1, MT_DATA);
-					if (mm) {
-						phd = mtod(mm, struct sctp_paramhdr *);
+					merr = sctp_get_mbuf_for_msg(sizeof(*phd), 0, M_DONTWAIT, 1, MT_DATA);
+					if (merr) {
+						phd = mtod(merr, struct sctp_paramhdr *);
 						/*
 						 * We cheat and use param
 						 * type since we did not
@@ -2677,14 +2678,14 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 							htons(SCTP_CAUSE_UNRECOG_CHUNK);
 						phd->param_length =
 							htons(chk_length + sizeof(*phd));
-						SCTP_BUF_LEN(mm) = sizeof(*phd);
-						SCTP_BUF_NEXT(mm) = SCTP_M_COPYM(m, *offset,
+						SCTP_BUF_LEN(merr) = sizeof(*phd);
+						SCTP_BUF_NEXT(merr) = SCTP_M_COPYM(m, *offset,
 									  SCTP_SIZE32(chk_length),
 									  M_DONTWAIT);
-						if (SCTP_BUF_NEXT(mm)) {
-							sctp_queue_op_err(stcb, mm);
+						if (SCTP_BUF_NEXT(merr)) {
+							sctp_queue_op_err(stcb, merr);
 						} else {
-							sctp_m_freem(mm);
+							sctp_m_freem(merr);
 						}
 					}
 				}
@@ -3425,6 +3426,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				 */
 				tp1->no_fr_allowed = 1;
 				alt = tp1->whoTo;
+                /*sa_ignore NO_NULL_CHK*/
 				alt = sctp_find_alternate_net(stcb, alt, 1);
 				if( alt == NULL ) {
 					alt = tp1->whoTo;
@@ -3519,6 +3521,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			if (alt != tp1->whoTo) {
 				/* yes, there is an alternate. */
 				sctp_free_remote_addr(tp1->whoTo);
+                /*sa_ignore FREED_MEMORY*/
 				tp1->whoTo = alt;
 				atomic_add_int(&alt->ref_count, 1);
 			}
@@ -4408,6 +4411,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 			net->window_probe = 0;
 			win_probe_recovered=1;
 			/* Find first chunk that was used with window probe and clear the sent */
+            /*sa_ignore FREED_MEMORY*/
 			TAILQ_FOREACH(tp1, &asoc->sent_queue, sctp_next) {
 				if(tp1->window_probe) {
 					/* move back to data send queue */
@@ -5838,7 +5842,7 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 	fwd_sz -= sizeof(*fwd);
 	{
 		/* New method. */
-		int num_str, i;
+		unsigned int num_str;
 
 		num_str = fwd_sz / sizeof(struct sctp_strseq);
 		for (i = 0; i < num_str; i++) {

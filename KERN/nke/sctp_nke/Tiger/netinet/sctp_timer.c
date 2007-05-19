@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_timer.c,v 1.15 2007/05/09 13:30:06 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_timer.c,v 1.16 2007/05/17 12:16:24 rrs Exp $");
 #endif
 
 #define _IP_VHL
@@ -355,6 +355,7 @@ sctp_find_alternate_net(struct sctp_tcb *stcb,
 		if (
 		    ((alt->dest_state & SCTP_ADDR_REACHABLE) == SCTP_ADDR_REACHABLE) &&
 		    (alt->ro.ro_rt != NULL) &&
+            /*sa_ignore NO_NULL_CHK*/
 		    (!(alt->dest_state & SCTP_ADDR_UNCONFIRMED))
 		    ) {
 			/* Found a reachable address */
@@ -377,6 +378,7 @@ sctp_find_alternate_net(struct sctp_tcb *stcb,
 				}
 				alt = TAILQ_FIRST(&stcb->asoc.nets);
 			}
+            /*sa_ignore NO_NULL_CHK*/
 			if ((!(alt->dest_state & SCTP_ADDR_UNCONFIRMED)) &&
 			    (alt != net)) {
 				/* Found an alternate address */
@@ -1441,7 +1443,7 @@ sctp_heartbeat_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		 * this will send out extra hb's up to maxburst if there are
 		 * any unconfirmed addresses.
 		 */
-		int cnt_sent = 0;
+		uint32_t cnt_sent = 0;
 
 		TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 			if ((net->dest_state & SCTP_ADDR_UNCONFIRMED) &&

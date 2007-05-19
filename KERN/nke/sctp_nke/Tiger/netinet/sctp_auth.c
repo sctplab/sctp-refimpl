@@ -30,7 +30,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_auth.c,v 1.10 2007/05/09 13:30:06 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_auth.c,v 1.11 2007/05/17 12:16:23 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -631,6 +631,7 @@ sctp_free_hmaclist(sctp_hmaclist_t *list)
 int
 sctp_auth_add_hmacid(sctp_hmaclist_t *list, uint16_t hmac_id)
 {
+	int i;
 	if (list == NULL)
 		return (-1);
 	if (list->num_algo == list->max_algo) {
@@ -649,6 +650,13 @@ sctp_auth_add_hmacid(sctp_hmaclist_t *list, uint16_t hmac_id)
 #endif
 	    (hmac_id != SCTP_AUTH_HMAC_ID_MD5)) {
 		return (-1);
+	}
+	/* Now is it already in the list */
+	for (i=0; i<list->num_algo; i++) {
+		if (list->hmac[i] == hmac_id) {
+			/* already in list */
+			return (-1);
+		}
 	}
 	SCTPDBG(SCTP_DEBUG_AUTH1, "SCTP: add HMAC id %u to list\n", hmac_id);
 	list->hmac[list->num_algo++] = hmac_id;
@@ -839,8 +847,8 @@ sctp_get_hmac_block_len(uint16_t hmac_algo)
 	case SCTP_AUTH_HMAC_ID_MD5:
 #ifdef HAVE_SHA224
 	case SCTP_AUTH_HMAC_ID_SHA224:
-		return (64);
 #endif
+		return (64);
 #ifdef HAVE_SHA2
 	case SCTP_AUTH_HMAC_ID_SHA256:
 		return (64);

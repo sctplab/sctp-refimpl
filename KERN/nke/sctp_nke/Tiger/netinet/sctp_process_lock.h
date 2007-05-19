@@ -98,14 +98,6 @@
 #define SCTP_TCB_UNLOCK_IFOWNED(_tcb)
 #define SCTP_TCB_LOCK_ASSERT(_tcb)
 
-/* socket locks */
-#define SOCK_LOCK(_so)
-#define SOCK_UNLOCK(_so)
-#define SOCKBUF_LOCK(_so_buf)
-#define SOCKBUF_UNLOCK(_so_buf)
-#define SOCKBUF_LOCK_ASSERT(_so_buf)
-
-
 #else
 /*
  * per tcb level locking
@@ -116,11 +108,11 @@
 	(void)pthread_mutex_init(&sctppcbinfo.ipi_ep_mtx, NULL)
 
 #define SCTP_INP_INFO_RLOCK()	do { 					\
-	(void)ptrhead_mutex_lock(&sctppcbinfo.ipi_ep_mtx);			\
+	(void)pthread_mutex_lock(&sctppcbinfo.ipi_ep_mtx);		\
 } while (0)
 
 #define SCTP_INP_INFO_WLOCK()	do { 					\
-	(void)ptrhead_mutex_lock(&sctppcbinfo.ipi_ep_mtx);			\
+	(void)pthread_mutex_lock(&sctppcbinfo.ipi_ep_mtx);		\
 } while (0)
 
 
@@ -145,37 +137,40 @@
 } while (0)
 
 
-#define SCTP_INP_READ_UNLOCK(_inp) (void)pthread_mutex_unlock(&(_inp)->inp_rdata_mtx)
+#define SCTP_INP_READ_UNLOCK(_inp) \
+	(void)pthread_mutex_unlock(&(_inp)->inp_rdata_mtx)
 
 #define SCTP_INP_LOCK_INIT(_inp) \
 	(void)pthread_mutex_init(&(_inp)->inp_mtx, NULL)
+
 #define SCTP_ASOC_CREATE_LOCK_INIT(_inp) \
 	(void)pthread_mutex_init(&(_inp)->inp_create_mtx, NULL)
 
-#define SCTP_INP_LOCK_DESTROY(_inp) (void)pthread_mutex_destroy(&(_inp)->inp_mtx)
+#define SCTP_INP_LOCK_DESTROY(_inp) \
+	(void)pthread_mutex_destroy(&(_inp)->inp_mtx)
 
-#define SCTP_ASOC_CREATE_LOCK_DESTROY(_inp) (void)pthread_mutex_destroy(&(_inp)->inp_create_mtx)
-
+#define SCTP_ASOC_CREATE_LOCK_DESTROY(_inp) \
+	(void)pthread_mutex_destroy(&(_inp)->inp_create_mtx)
 
 #ifdef SCTP_LOCK_LOGGING
 #define SCTP_INP_RLOCK(_inp)	do { 					\
 	sctp_log_lock(_inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_INP);\
-	(void)pthread_mutex_lock(&(_inp)->inp_mtx);				\
+	(void)pthread_mutex_lock(&(_inp)->inp_mtx);			\
 } while (0)
 
 #define SCTP_INP_WLOCK(_inp)	do { 					\
 	sctp_log_lock(_inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_INP);\
-	(void)pthread_mutex_lock(&(_inp)->inp_mtx);				\
+	(void)pthread_mutex_lock(&(_inp)->inp_mtx);			\
 } while (0)
 
 #else
 
 #define SCTP_INP_RLOCK(_inp)	do { 					\
-	(void)pthread_mutex_lock(&(_inp)->inp_mtx);				\
+	(void)pthread_mutex_lock(&(_inp)->inp_mtx);			\
 } while (0)
 
 #define SCTP_INP_WLOCK(_inp)	do { 					\
-	(void)pthread_mutex_lock(&(_inp)->inp_mtx);				\
+	(void)pthread_mutex_lock(&(_inp)->inp_mtx);			\
 } while (0)
 #endif
 
@@ -183,34 +178,36 @@
 #define SCTP_TCB_SEND_LOCK_INIT(_tcb) \
 	(void)pthread_mutex_init(&(_tcb)->tcb_send_mtx, NULL)
 
-#define SCTP_TCB_SEND_LOCK_DESTROY(_tcb) (void)pthread_mutex_destroy(&(_tcb)->tcb_send_mtx)
+#define SCTP_TCB_SEND_LOCK_DESTROY(_tcb) \
+	(void)pthread_mutex_destroy(&(_tcb)->tcb_send_mtx)
 
-#define SCTP_TCB_SEND_LOCK(_tcb)  do { (void)pthread_mutex_lock(&(_tcb)->tcb_send_mtx); \
+#define SCTP_TCB_SEND_LOCK(_tcb) do { \
+	(void)pthread_mutex_lock(&(_tcb)->tcb_send_mtx); \
 } while (0)
 
-#define SCTP_TCB_SEND_UNLOCK(_tcb) (void)pthread_mutex_unlock(&(_tcb)->tcb_send_mtx)
-
+#define SCTP_TCB_SEND_UNLOCK(_tcb) \
+	(void)pthread_mutex_unlock(&(_tcb)->tcb_send_mtx)
 
 #define SCTP_INP_INCR_REF(_inp) atomic_add_int(&((_inp)->refcount), 1)
 #define SCTP_INP_DECR_REF(_inp) atomic_add_int(&((_inp)->refcount), -1)
 
 #ifdef SCTP_LOCK_LOGGING
-#define SCTP_ASOC_CREATE_LOCK(_inp) \
-	do {								\
-		sctp_log_lock(_inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_CREATE); \
-		(void)pthread_mutex_lock(&(_inp)->inp_create_mtx);		\
-	} while (0)
+#define SCTP_ASOC_CREATE_LOCK(_inp) do {				\
+	sctp_log_lock(_inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_CREATE); \
+	(void)pthread_mutex_lock(&(_inp)->inp_create_mtx);		\
+} while (0)
 #else
-
-#define SCTP_ASOC_CREATE_LOCK(_inp) \
-	do {								\
-		(void)pthread_mutex_lock(&(_inp)->inp_create_mtx);		\
-	} while (0)
+#define SCTP_ASOC_CREATE_LOCK(_inp) do {				\
+	(void)pthread_mutex_lock(&(_inp)->inp_create_mtx);		\
+} while (0)
 #endif
 
-#define SCTP_INP_RUNLOCK(_inp)		(void)pthread_mutex_unlock(&(_inp)->inp_mtx)
-#define SCTP_INP_WUNLOCK(_inp)		(void)pthread_mutex_unlock(&(_inp)->inp_mtx)
-#define SCTP_ASOC_CREATE_UNLOCK(_inp)	(void)pthread_mutex_unlock(&(_inp)->inp_create_mtx)
+#define SCTP_INP_RUNLOCK(_inp) \
+	(void)pthread_mutex_unlock(&(_inp)->inp_mtx)
+#define SCTP_INP_WUNLOCK(_inp) \
+	(void)pthread_mutex_unlock(&(_inp)->inp_mtx)
+#define SCTP_ASOC_CREATE_UNLOCK(_inp) \
+	(void)pthread_mutex_unlock(&(_inp)->inp_create_mtx)
 
 /*
  * For the majority of things (once we have found the association) we will
@@ -223,21 +220,22 @@
 #define SCTP_TCB_LOCK_INIT(_tcb) \
 	(void)pthread_mutex_init(&(_tcb)->tcb_mtx, NULL)
 
-#define SCTP_TCB_LOCK_DESTROY(_tcb)	(void)pthread_mutex_destroy(&(_tcb)->tcb_mtx)
+#define SCTP_TCB_LOCK_DESTROY(_tcb) \
+	(void)pthread_mutex_destroy(&(_tcb)->tcb_mtx)
 
 #ifdef SCTP_LOCK_LOGGING
 #define SCTP_TCB_LOCK(_tcb)  do {					\
 	sctp_log_lock(_tcb->sctp_ep, _tcb, SCTP_LOG_LOCK_TCB);		\
-	(void)pthread_mutex_lock(&(_tcb)->tcb_mtx);				\
+	(void)pthread_mutex_lock(&(_tcb)->tcb_mtx);			\
 } while (0)
 
 #else
 #define SCTP_TCB_LOCK(_tcb)  do {					\
-	(void)pthread_mutex_lock(&(_tcb)->tcb_mtx);				\
+	(void)pthread_mutex_lock(&(_tcb)->tcb_mtx);			\
 } while (0)
 #endif
 
-#define SCTP_TCB_TRYLOCK(_tcb) 	(void)pthread_mutex_trylock(&(_tcb)->tcb_mtx)
+#define SCTP_TCB_TRYLOCK(_tcb) 	pthread_mutex_trylock(&(_tcb)->tcb_mtx)
 
 #define SCTP_TCB_UNLOCK(_tcb)	(void)pthread_mutex_unlock(&(_tcb)->tcb_mtx)
 
@@ -249,6 +247,13 @@
 /*
  * common locks
  */
+/* socket locks */
+#define SOCK_LOCK(_so)
+#define SOCK_UNLOCK(_so)
+#define SOCKBUF_LOCK(_so_buf)
+#define SOCKBUF_UNLOCK(_so_buf)
+#define SOCKBUF_LOCK_ASSERT(_so_buf)
+
 #define SCTP_STATLOG_INIT_LOCK() 
 #define SCTP_STATLOG_LOCK()
 #define SCTP_STATLOG_UNLOCK()
@@ -269,9 +274,9 @@
 #define SCTP_IPI_ADDR_DESTROY() \
 	(void)pthread_mutex_destroy(&sctppcbinfo.ipi_addr_mtx)
 
-#define SCTP_IPI_ADDR_LOCK() \
-	do { 					\
-		(void)pthread_mutex_lock(&sctppcbinfo.ipi_addr_mtx);		\
+#define SCTP_IPI_ADDR_LOCK() 						\
+	do { 								\
+		(void)pthread_mutex_lock(&sctppcbinfo.ipi_addr_mtx);	\
 	} while (0)
 
 #define SCTP_IPI_ADDR_UNLOCK() \
@@ -281,7 +286,7 @@
 #define SCTP_ITERATOR_LOCK_INIT() \
 	(void)pthread_mutex_init(&sctppcbinfo.it_mtx, NULL)
 
-#define SCTP_ITERATOR_LOCK() \
+#define SCTP_ITERATOR_LOCK() 						\
 	do {								\
 		(void)pthread_mutex_lock(&sctppcbinfo.it_mtx);		\
 	} while (0)

@@ -30,7 +30,7 @@
  */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/net/sctp_sys_calls.c,v 1.5 2007/02/22 14:48:12 rrs Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/net/sctp_sys_calls.c,v 1.7 2007/05/16 20:23:39 rrs Exp $");
 #endif
 #include <stdio.h>
 #include <string.h>
@@ -271,22 +271,8 @@ sctp_opt_info(int sd, sctp_assoc_t id, int opt, void *arg, socklen_t * size)
 	if (arg == NULL) {
 		return (EINVAL);
 	}
-	if ((opt == SCTP_RTOINFO) ||
-	    (opt == SCTP_ASSOCINFO) ||
-	    (opt == SCTP_PRIMARY_ADDR) ||
-	    (opt == SCTP_SET_PEER_PRIMARY_ADDR) ||
-	    (opt == SCTP_PEER_ADDR_PARAMS) ||
-	    (opt == SCTP_STATUS) ||
-	    (opt == SCTP_GET_PEER_ADDR_INFO) ||
-	    (opt == SCTP_AUTH_ACTIVE_KEY) ||
-	    (opt == SCTP_PEER_AUTH_CHUNKS) ||
-	    (opt == SCTP_LOCAL_AUTH_CHUNKS)) {
-		*(sctp_assoc_t *) arg = id;
-		return (getsockopt(sd, IPPROTO_SCTP, opt, arg, size));
-	} else {
-		errno = EOPNOTSUPP;
-		return (-1);
-	}
+	*(sctp_assoc_t *) arg = id;
+	return (getsockopt(sd, IPPROTO_SCTP, opt, arg, size));
 }
 
 int
@@ -727,7 +713,6 @@ sctp_recvmsg(int s,
     struct sctp_sndrcvinfo *sinfo,
     int *msg_flags)
 {
-
 #ifdef SYS_sctp_generic_recvmsg
 	struct iovec iov[SCTP_SMALL_IOVEC_SIZE];
 
@@ -763,7 +748,7 @@ sctp_recvmsg(int s,
 	msg.msg_control = (caddr_t)controlVector;
 	msg.msg_controllen = sizeof(controlVector);
 	errno = 0;
-	sz = recvmsg(s, &msg, 0);
+	sz = recvmsg(s, &msg, *msg_flags);
 	if (sz <= 0)
 		return (sz);
 

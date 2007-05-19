@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.25 2007/05/09 13:30:06 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.26 2007/05/17 12:16:24 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -3525,6 +3525,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 					}
 				}
 			}
+			sctp_m_freem(m);
 			return (EHOSTUNREACH);
 		}
 		if (ro != &iproute) {
@@ -4386,10 +4387,12 @@ sctp_arethere_unrecognized_parameters(struct mbuf *in_initpkt,
 		l_len = sizeof(struct ip6_hdr) + sizeof(struct sctphdr) + sizeof(struct sctp_chunkhdr);
 		l_len += (2 * sizeof(struct sctp_paramhdr));
 		op_err = sctp_get_mbuf_for_msg(l_len, 0, M_DONTWAIT, 1, MT_DATA);
-		SCTP_BUF_LEN(op_err) = 0;
-		SCTP_BUF_RESV_UF(op_err, sizeof(struct ip6_hdr));
-		SCTP_BUF_RESV_UF(op_err, sizeof(struct sctphdr));
-		SCTP_BUF_RESV_UF(op_err, sizeof(struct sctp_chunkhdr));
+        if (op_err) {
+    		SCTP_BUF_LEN(op_err) = 0;
+	    	SCTP_BUF_RESV_UF(op_err, sizeof(struct ip6_hdr));
+		    SCTP_BUF_RESV_UF(op_err, sizeof(struct sctphdr));
+    		SCTP_BUF_RESV_UF(op_err, sizeof(struct sctp_chunkhdr));
+        }
 	}
 	if ((op_err) && phdr) {
 		struct sctp_paramhdr s;
@@ -5347,10 +5350,10 @@ sctp_get_frag_point(struct sctp_tcb *stcb,
 		ovh = SCTP_MED_V4_OVERHEAD;
 	}
 
-	if (stcb->sctp_ep->sctp_frag_point > asoc->smallest_mtu)
+	if (stcb->asoc.sctp_frag_point > asoc->smallest_mtu)
 		siz = asoc->smallest_mtu - ovh;
 	else
-		siz = (stcb->sctp_ep->sctp_frag_point - ovh);
+		siz = (stcb->asoc.sctp_frag_point - ovh);
 	/*
 	 * if (siz > (MCLBYTES-sizeof(struct sctp_data_chunk))) {
 	 */
@@ -5940,7 +5943,7 @@ sctp_sendall(struct sctp_inpcb *inp, struct uio *uio, struct mbuf *m,
 	memset(ca, 0, sizeof(struct sctp_copy_all));
 
 	ca->inp = inp;
-	ca->sndrcv = *srcv;
+	memcpy(&ca->sndrcv, srcv, sizeof(struct sctp_nonpad_sndrcvinfo));
 	/*
 	 * take off the sendall flag, it would be bad if we failed to do
 	 * this :-0
@@ -6235,6 +6238,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	SCTP_TCB_LOCK_ASSERT(stcb);
 	asoc = &stcb->asoc;
  one_more_time:
+    /*sa_ignore FREED_MEMORY*/
 	sp = TAILQ_FIRST(&strq->outqueue);
 	if (sp == NULL) {
 		*locked = 0;
@@ -7367,7 +7371,7 @@ again_one_more_time:
 						r_mtu = 0;
 
 					to_out += chk->send_size;
-					if(to_out > mx_mtu) {
+					if((to_out > mx_mtu) && no_fragmentflg) {
 #ifdef INVARIANTS
 						panic("Exceeding mtu of %d out size is %d", mx_mtu, to_out);
 #else
@@ -9462,6 +9466,9 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 
 		mlen = SCTP_BUF_LEN(mout);
 		bzero(&ro, sizeof ro);
+#if defined(__Panda__)
+		ro._l_addr.sa.sa_family = AF_INET;
+#endif
 		/* set IPv4 length */
 #if defined(__FreeBSD__) || defined (__APPLE__)
 		iph_out->ip_len = mlen;
@@ -9489,6 +9496,9 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 #endif
 
 		bzero(&ro, sizeof(ro));
+#if defined(__Panda__)
+		ro._l_addr.sa.sa_family = AF_INET6;
+#endif
 		mlen = SCTP_BUF_LEN(mout);
 		SCTP_ATTACH_CHAIN(o_pak, mout, mlen);
 		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, stcb, vrf_id, table_id);
@@ -10344,6 +10354,9 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 
 		/* zap the stack pointer to the route */
 		bzero(&ro, sizeof ro);
+#if defined(__Panda__)
+		ro._l_addr.sa.sa_family = AF_INET;
+#endif
 		SCTPDBG(SCTP_DEBUG_OUTPUT2, "sctp_send_abort calling ip_output:\n");
 		SCTPDBG_PKT(SCTP_DEBUG_OUTPUT2, iph_out, &abm->sh);
 		/* set IPv4 length */
@@ -10372,6 +10385,9 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 #endif
 		/* zap the stack pointer to the route */
 		bzero(&ro, sizeof(ro));
+#if defined(__Panda__)
+		ro._l_addr.sa.sa_family = AF_INET6;
+#endif
 		SCTPDBG(SCTP_DEBUG_OUTPUT2, "sctp_send_abort calling ip6_output:\n");
 		SCTPDBG_PKT(SCTP_DEBUG_OUTPUT2, (struct ip *)ip6_out, &abm->sh);
 		ip6_out->ip6_plen = len - sizeof(*ip6_out);
@@ -10466,6 +10482,9 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 		len += sizeof(struct ip);
 
 		bzero(&ro, sizeof ro);
+#if defined(__Panda__)
+		ro._l_addr.sa.sa_family = AF_INET;
+#endif
 		out = mtod(mout, struct ip *);
 		out->ip_v = iph->ip_v;
 		out->ip_hl = (sizeof(struct ip) / 4);
@@ -10507,6 +10526,9 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 		SCTP_BUF_LEN(mout) = sizeof(struct ip6_hdr);
 		len += sizeof(struct ip6_hdr);
 		bzero(&ro, sizeof ro);
+#if defined(__Panda__)
+		ro._l_addr.sa.sa_family = AF_INET6;
+#endif
 		in6 = mtod(m, struct ip6_hdr *);
 		out6 = mtod(mout, struct ip6_hdr *);
 		out6->ip6_flow = in6->ip6_flow;
@@ -10570,6 +10592,9 @@ sctp_copy_resume(struct sctp_stream_queue_pending *sp,
         left = min(uio->uio_resid, max_send_len);
 	/* Always get a header just in case */
 	head = sctp_get_mbuf_for_msg(left, 0, M_WAIT, 0, MT_DATA);
+    if (head == NULL) {
+        return (NULL);
+    }
 	cancpy = M_TRAILINGSPACE(head);
 	willcpy = min(cancpy, left);
 	*error = uiomove(mtod(head, caddr_t), willcpy, uio);
@@ -10948,7 +10973,7 @@ sctp_lower_sosend(struct socket *so,
 #endif
 		goto out_unlocked;
 	}
-	if ((uio == NULL) && (top == NULL)) {
+	if ((uio == NULL) && (i_pak == NULL)) {
 		return (EINVAL);
 	}
 
@@ -10960,7 +10985,9 @@ sctp_lower_sosend(struct socket *so,
 		top = SCTP_HEADER_TO_CHAIN(i_pak);
 	}
 #ifdef __Panda__
-	control = SCTP_HEADER_TO_CHAIN(i_control);
+	if (i_control) {
+		control = SCTP_HEADER_TO_CHAIN(i_control);
+	}
 #endif	
 
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -10978,7 +11005,8 @@ sctp_lower_sosend(struct socket *so,
 		goto out_unlocked;
 	}
 	if ((use_rcvinfo) && srcv) {
-		if (INVALID_SINFO_FLAG(srcv->sinfo_flags) || PR_SCTP_INVALID_POLICY(srcv->sinfo_flags)) {
+		if (INVALID_SINFO_FLAG(srcv->sinfo_flags) ||
+		    PR_SCTP_INVALID_POLICY(srcv->sinfo_flags)) {
 			error = EINVAL;
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);
@@ -10986,7 +11014,7 @@ sctp_lower_sosend(struct socket *so,
 			goto out_unlocked;
 		}
 
-		if(srcv->sinfo_flags)
+		if (srcv->sinfo_flags)
 			SCTP_STAT_INCR(sctps_sends_with_flags);
 
 		if (srcv->sinfo_flags & SCTP_SENDALL) {
@@ -11166,7 +11194,6 @@ sctp_lower_sosend(struct socket *so,
 				goto out_unlocked;
 			}
 			/* get an asoc/stcb struct */
-
 			vrf_id = inp->def_vrf_id;
 			stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0, vrf_id);
 			if (stcb == NULL) {
@@ -11336,7 +11363,7 @@ sctp_lower_sosend(struct socket *so,
 	}
 	if ((use_rcvinfo == 0) || (srcv == NULL)) {
 		/* Grab the default stuff from the asoc */
-		srcv = &stcb->asoc.def_send;
+		srcv = (struct sctp_sndrcvinfo *)&stcb->asoc.def_send;
 	}
 	/* we are now done with all control */
 	if (control) {

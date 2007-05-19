@@ -75,7 +75,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_os.h,v 1.7 2007/05/08 17:01:10 rrs Exp 
 #endif
 
 #if defined(__Panda__)
-#include "sctp_os_iox.h"
+#include <ip/sctp/sctp_os_iox.h>
 #endif
 
 /* All os's must implement this address gatherer. If
