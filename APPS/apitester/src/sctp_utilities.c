@@ -21,6 +21,32 @@ sctp_delay(int ms)
     (void)nanosleep(&ts, NULL);
 }
 
+unsigned short
+sctp_get_local_port(int fd)
+{
+	struct sockaddr_in addr;
+	socklen_t addr_len;
+
+	addr_len = (socklen_t)sizeof(struct sockaddr_in);
+	getsockname (fd, (struct sockaddr *) &addr, &addr_len);
+	return ntohs(addr.sin_port);
+}
+
+int
+sctp_bind(int fd, in_addr_t address, in_port_t port)
+{
+	struct sockaddr_in addr;
+	
+	memset((void *)&addr, 0, sizeof(struct sockaddr_in));
+	addr.sin_family      = AF_INET;
+#ifdef HAVE_SIN_LEN
+	addr.sin_len         = sizeof(struct sockaddr_in);
+#endif
+	addr.sin_port        = htons(port);
+	addr.sin_addr.s_addr = htonl(address);
+	
+	return (bind(fd, (struct sockaddr *)&addr, (socklen_t)sizeof(struct sockaddr_in)));
+}
 
 int 
 sctp_one2one(unsigned short port, int should_listen, int bindall)
@@ -1148,6 +1174,36 @@ int sctp_get_events(int fd, struct sctp_event_subscribe *ev)
 	return (result);
 }
 
+int
+sctp_enable_v4_address_mapping(int fd)
+{
+	const int on = 1;
+	socklen_t length;
+	
+	length = (socklen_t)sizeof(int);
+	return (setsockopt(fd, IPPROTO_SCTP, SCTP_I_WANT_MAPPED_V4_ADDR, &on, length));
+}
+
+int
+sctp_disable_v4_address_mapping(int fd)
+{
+	const int off = 0;
+	socklen_t length;
+	
+	length = (socklen_t)sizeof(int);
+	return (setsockopt(fd, IPPROTO_SCTP, SCTP_I_WANT_MAPPED_V4_ADDR, &off, length));
+}
+
+int
+sctp_v4_address_mapping_enabled(int fd)
+{
+	int onoff;
+	socklen_t length;
+	
+	length = (socklen_t)sizeof(int);
+	getsockopt(fd, IPPROTO_SCTP, SCTP_I_WANT_MAPPED_V4_ADDR, &onoff, &length);
+	return (onoff);
+}
 
 int sctp_get_auth_chunk_id(int fd, uint8_t *fill)
 {
