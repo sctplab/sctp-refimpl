@@ -1307,7 +1307,7 @@ int sctp_get_active_key(int fd, sctp_assoc_t assoc_id, uint16_t *keyid) {
 
 	len = sizeof(akey);
 	akey.scact_assoc_id = assoc_id;
-	akey.scact_keynumber = keyid;
+	akey.scact_keynumber = *keyid;
 	result = getsockopt(fd, IPPROTO_SCTP, SCTP_AUTH_ACTIVE_KEY,
 			    &akey, &len);
 	if (result >= 0) {
