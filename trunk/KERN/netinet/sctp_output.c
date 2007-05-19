@@ -5943,7 +5943,7 @@ sctp_sendall(struct sctp_inpcb *inp, struct uio *uio, struct mbuf *m,
 	memset(ca, 0, sizeof(struct sctp_copy_all));
 
 	ca->inp = inp;
-	ca->sndrcv = *srcv;
+	memcpy(&ca->sndrcv, srcv, sizeof(struct sctp_nonpad_sndrcvinfo));
 	/*
 	 * take off the sendall flag, it would be bad if we failed to do
 	 * this :-0
@@ -11363,7 +11363,7 @@ sctp_lower_sosend(struct socket *so,
 	}
 	if ((use_rcvinfo == 0) || (srcv == NULL)) {
 		/* Grab the default stuff from the asoc */
-		srcv = &stcb->asoc.def_send;
+		srcv = (struct sctp_sndrcvinfo *)&stcb->asoc.def_send;
 	}
 	/* we are now done with all control */
 	if (control) {
