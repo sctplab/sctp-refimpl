@@ -23,3 +23,8 @@
   by carefully converting to use the smaller version.
 - one-2-one model get(maxseg) would always get ep value, never the
   tcb's value.
+- The delayed ack time could be under a tick, this fixes so
+  it bounds it to at least 1 tick for platforms whos tick
+  is more than a ms.
+- Fragment interleave level set to wrong default value.
+
