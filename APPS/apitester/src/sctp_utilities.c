@@ -1201,3 +1201,48 @@ int sctp_set_auth_chunk_id(int fd, uint8_t chk)
  * SCTP_DELAYED_SACK tests
  *
  ********************************************************/
+
+int sctp_set_dsack(int fd, sctp_assoc_t id, uint32_t delay, uint32_t freq)
+{
+	int result;
+	socklen_t len;
+	struct sctp_sack_info sack;
+
+	len = sizeof(sack);
+	sack.sack_assoc_id = id;
+	sack.sack_delay = delay;
+	sack.sack_freq = freq;
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_AUTH_CHUNK,
+			    &sack, len);
+	return(result);
+
+}
+
+int sctp_set_ddelay(int fd, sctp_assoc_t id, uint32_t delay)
+{
+	return (sctp_set_dsack(fd, id, delay, 0));
+}
+
+int sctp_set_dfreq(int fd, sctp_assoc_t id, uint32_t freq)
+{
+	return (sctp_set_dsack(fd, id, 0, freq));
+}
+
+int sctp_get_dsack(int fd, sctp_assoc_t id,uint32_t *delay, uint32_t *freq)
+{
+	int result;
+	socklen_t len;
+	struct sctp_sack_info sack;
+	memset(&sack, 0, sizeof(sack));
+	sack.sack_assoc_id = id;
+	len = sizeof(sack);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_AUTH_CHUNK,
+			    &sack, &len);
+	if (delay) {
+		*delay = sack.sack_delay;
+	}
+	if (freq) {
+		*freq = sack.sack_freq;
+	}
+	return(result);
+}
