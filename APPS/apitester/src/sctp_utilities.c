@@ -12,6 +12,8 @@
 #include <time.h>
 #include <netinet/sctp.h>
 
+#include "sctp_utilities.h"
+
 void
 sctp_delay(int ms)
 {
