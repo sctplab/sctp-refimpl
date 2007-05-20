@@ -2091,7 +2091,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 			*optsize = sizeof(struct sctp_sockstat);
 		}
 		break;
-	case SCTP_MAXBURST:
+	case SCTP_MAX_BURST:
 		{
 			uint8_t *value;
 			
@@ -3437,7 +3437,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		SCTP_TCB_UNLOCK(stcb);
 	}
 	break;
-	case SCTP_MAXBURST:
+	case SCTP_MAX_BURST:
 	{
 		uint8_t *burst;
 
