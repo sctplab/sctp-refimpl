@@ -11022,7 +11022,7 @@ DEFINE_APITEST(maxseg, sso_inherit_ncep_1_1)
 		return(strerror(errno));
 	}
 	result = sctp_get_maxseg(fd, 0, &val[0]);
-a	if (result < 0) {
+	if (result < 0) {
 		close (fd);
 		return(strerror(errno));
 	}
