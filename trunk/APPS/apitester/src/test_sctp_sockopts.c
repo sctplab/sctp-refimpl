@@ -11333,7 +11333,275 @@ DEFINE_APITEST(actkey, sso_achg_1_M)
  * SCTP_AUTH_DELETE_KEY tests
  *
  ********************************************************/
+DEFINE_APITEST(delkey, gso_def_1_1)
+{
+	int fd, result;
+	uint16_t keyid;
 
+	fd = sctp_one2one(0, 0, 1);
+	if (fd < 0) {
+		return (strerror(errno));
+	}
+	keyid = 0;
+	result = sctp_get_delete_key(fd, 0, &keyid);
+	close(fd);
+	if (result >= 0) {
+		return "was able to get delete key?";
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(delkey, gso_def_1_M)
+{
+	int fd, result;
+	uint16_t keyid;
+
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return (strerror(errno));
+	}
+	keyid = 0;
+	result = sctp_get_delete_key(fd, 0, &keyid);
+	close(fd);
+	if (result >= 0) {
+		return "was able to get delete key?";
+	}
+	return NULL;
+}
+
+DEFINE_APITEST(delkey, sso_def_1_1)
+{
+	int fd, result;
+	uint16_t keyid;
+
+	fd = sctp_one2one(0, 0, 1);
+	if (fd < 0) {
+		return (strerror(errno));
+	}
+	/* delete the default, active key */
+	keyid = 0;
+	result = sctp_get_delete_key(fd, 0, &keyid);
+	if (result >= 0) {
+		close(fd);
+		return "was able to delete default active key";
+	}
+	close(fd);
+	return NULL;
+}
+
+DEFINE_APITEST(delkey, sso_def_1_M)
+{
+	int fd, result;
+	uint16_t keyid;
+
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return (strerror(errno));
+	}
+	/* delete the default, active key */
+	keyid = 0;
+	result = sctp_get_delete_key(fd, 0, &keyid);
+	if (result >= 0) {
+		close(fd);
+		return "was able to delete default active key";
+	}
+	close(fd);
+	return NULL;
+}
+
+DEFINE_APITEST(delkey, sso_inval_1_1)
+{
+	int fd, result;
+	uint16_t keyid;
+
+	fd = sctp_one2one(0, 0, 1);
+	if (fd < 0) {
+		return (strerror(errno));
+	}
+	/* delete a non-existant key */
+	keyid = 1234;
+	result = sctp_get_delete_key(fd, 0, &keyid);
+	if (result >= 0) {
+		close(fd);
+		return "was able to delete non-existant key";
+	}
+	close(fd);
+	return NULL;
+}
+
+DEFINE_APITEST(delkey, sso_inval_1_M)
+{
+	int fd, result;
+	uint16_t keyid;
+
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return (strerror(errno));
+	}
+	/* delete a non-existant key */
+	keyid = 1234;
+	result = sctp_set_delete_key(fd, 0, keyid);
+	if (result >= 0) {
+		close(fd);
+		return "was able to delete non-existant key";
+	}
+	close(fd);
+	return NULL;
+}
+
+DEFINE_APITEST(delkey, sso_new_1_1)
+{
+	int fd, result;
+	uint16_t keyid, keylen;
+	char *keytext = "This is my new key";
+
+	fd = sctp_one2one(0, 0, 1);
+	if (fd < 0) {
+		return (strerror(errno));
+	}
+	/* add a new key */
+	keyid = 1;
+	keylen = sizeof(keytext);
+	result = sctp_set_auth_key(fd, 0, keyid, keylen, (uint8_t *)keytext);
+	if (result < 0) {
+		close(fd);
+		return "was unable to add key";
+	}
+
+	/* delete the key */
+	result = sctp_set_delete_key(fd, 0, keyid);
+	if (result < 0) {
+		close(fd);
+		return "was unable to delete key";
+	}
+	/* delete again to make sure it's really gone */
+	result = sctp_set_delete_key(fd, 0, keyid);
+	if (result >= 0) {
+		close(fd);
+		return "was able to re-delete key";
+	}
+	close(fd);
+	return NULL;
+}
+
+DEFINE_APITEST(delkey, sso_new_1_M)
+{
+	int fd, result;
+	uint16_t keyid, keylen;
+	char *keytext = "This is my new key";
+
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return (strerror(errno));
+	}
+	/* add a new key */
+	keyid = 1;
+	keylen = sizeof(keytext);
+	result = sctp_set_auth_key(fd, 0, keyid, keylen, (uint8_t *)keytext);
+	if (result < 0) {
+		close(fd);
+		return "was unable to add key";
+	}
+
+	/* delete the key */
+	result = sctp_set_delete_key(fd, 0, keyid);
+	if (result < 0) {
+		close(fd);
+		return "was unable to delete key";
+	}
+	/* delete again to make sure it's really gone */
+	result = sctp_set_delete_key(fd, 0, keyid);
+	if (result >= 0) {
+		close(fd);
+		return "was able to re-delete key";
+	}
+	close(fd);
+	return NULL;
+}
+
+
+DEFINE_APITEST(delkey, sso_zero_1_1)
+{
+	int fd, result;
+	uint16_t keyid, keylen;
+	char *keytext = "This is my new key";
+
+	fd = sctp_one2one(0, 0, 1);
+	if (fd < 0) {
+		return (strerror(errno));
+	}
+	/* add and activate a new key */
+	keyid = 1;
+	keylen = sizeof(keytext);
+	result = sctp_set_auth_key(fd, 0, keyid, keylen, (uint8_t *)keytext);
+	if (result < 0) {
+		close(fd);
+		return "was unable to add key";
+	}
+	result = sctp_set_active_key(fd, 0, keyid);
+	if (result < 0) {
+		close(fd);
+		return "was unable to set active key";
+	}
+
+	/* delete default key 0 */
+	keyid = 0;
+	result = sctp_set_delete_key(fd, 0, keyid);
+	if (result < 0) {
+		close(fd);
+		return "was unable to delete key";
+	}
+	/* delete again to make sure it's really gone */
+	result = sctp_set_delete_key(fd, 0, keyid);
+	if (result >= 0) {
+		close(fd);
+		return "was able to re-delete key";
+	}
+
+	close(fd);
+	return NULL;
+}
+
+DEFINE_APITEST(delkey, sso_zero_1_M)
+{
+	int fd, result;
+	uint16_t keyid, keylen;
+	char *keytext = "This is my new key";
+
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return (strerror(errno));
+	}
+	/* add and activate a new key */
+	keyid = 1;
+	keylen = sizeof(keytext);
+	result = sctp_set_auth_key(fd, 0, keyid, keylen, (uint8_t *)keytext);
+	if (result < 0) {
+		close(fd);
+		return "was unable to add key";
+	}
+	result = sctp_set_active_key(fd, 0, keyid);
+	if (result < 0) {
+		close(fd);
+		return "was unable to set active key";
+	}
+
+	/* delete default key 0 */
+	keyid = 0;
+	result = sctp_set_delete_key(fd, 0, keyid);
+	if (result < 0) {
+		close(fd);
+		return "was unable to delete key";
+	}
+	/* delete again to make sure it's really gone */
+	result = sctp_set_delete_key(fd, 0, keyid);
+	if (result >= 0) {
+		close(fd);
+		return "was able to re-delete key";
+	}
+	close(fd);
+	return NULL;
+}
 
 /********************************************************
  *
