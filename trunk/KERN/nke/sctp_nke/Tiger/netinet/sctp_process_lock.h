@@ -235,7 +235,7 @@
 } while (0)
 #endif
 
-#define SCTP_TCB_TRYLOCK(_tcb) 	pthread_mutex_trylock(&(_tcb)->tcb_mtx)
+#define SCTP_TCB_TRYLOCK(_tcb) 	(!(pthread_mutex_trylock(&(_tcb)->tcb_mtx))) 
 
 #define SCTP_TCB_UNLOCK(_tcb)	(void)pthread_mutex_unlock(&(_tcb)->tcb_mtx)
 
