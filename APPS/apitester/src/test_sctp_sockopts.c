@@ -10,7 +10,7 @@
 
 
 /*
- * TEST-DESCR: rtoinfo/gso_1_1_defaults
+ * TEST-TITLE rtoinfo/gso_1_1_defaults
  * TEST-DESCR: will open a 1-1 socket, get the endpoint
  * TEST-DESCR: rto info and validate it conforms
  * TEST-DESCR: to recommended default values
@@ -38,7 +38,7 @@ DEFINE_APITEST(rtoinfo, gso_1_1_defaults)
 }
 
 /*
- * TEST-DESCR: rtoinfo/gso_1_M_defaults
+ * TEST-TITLE rtoinfo/gso_1_M_defaults
  * TEST-DESCR: will open a 1-M socket, get the endpoint
  * TEST-DESCR: rto info and validate it conforms
  * TEST-DESCR: to recommended default values
@@ -66,7 +66,7 @@ DEFINE_APITEST(rtoinfo, gso_1_M_defaults)
 }
 
 /*
- * TEST-DESCR: rtoinfo/gso_1_1_badid
+ * TEST-TITLE rtoinfo/gso_1_1_badid
  * TEST-DESCR: will open a 1-1 socket, and attempt to
  * TEST-DESCR: get association level rto information  using a bad 
  * TEST-DESCR: association id. It expects the call to
@@ -90,7 +90,7 @@ DEFINE_APITEST(rtoinfo, gso_1_1_bad_id)
 }
 
 /*
- * TEST-DESCR: rtoinfo/gso_1_M_badid
+ * TEST-TITLE rtoinfo/gso_1_M_badid
  * TEST-DESCR: will open a 1-M socket, and attempt to
  * TEST-DESCR: association level get rto information  using a bad 
  * TEST-DESCR: association id. It expects the call to
@@ -117,7 +117,7 @@ DEFINE_APITEST(rtoinfo, gso_1_M_bad_id)
 }
 
 /*
- * TEST-DESCR: rtoinfo/gso_1_1_good
+ * TEST-TITLE rtoinfo/gso_1_1_good
  * TEST-DESCR: will open a 1-1 socket, get the rto info
  * TEST-DESCR: double it, and attempt to set the doubled
  * TEST-DESCR: information back on the ep. It expects
@@ -163,7 +163,7 @@ DEFINE_APITEST(rtoinfo, sso_1_1_good)
 }
 
 /*
- * TEST-DESCR: rtoinfo/gso_1_M_good
+ * TEST-TITLE rtoinfo/gso_1_M_good
  * TEST-DESCR: will open a 1-M socket, get the rto info
  * TEST-DESCR: double it, and attempt to set the doubled
  * TEST-DESCR: information back on the ep. It expects
@@ -209,7 +209,7 @@ DEFINE_APITEST(rtoinfo, sso_1_M_good)
 }
 
 /*
- * TEST-DESCR: rtoinfo/gso_1_1_bad_id
+ * TEST-TITLE rtoinfo/gso_1_1_bad_id
  * TEST-DESCR: will open a 1-1 socket, set rto information
  * TEST-DESCR: using a bad association id. It expects the
  * TEST-DESCR: call to fail.
@@ -240,7 +240,7 @@ DEFINE_APITEST(rtoinfo, sso_1_1_bad_id)
 }
 
 /*
- * TEST-DESCR: rtoinfo/gso_1_M_bad_id
+ * TEST-TITLE rtoinfo/gso_1_M_bad_id
  * TEST-DESCR: will open a 1-M socket, set rto information
  * TEST-DESCR: using a bad association id. It expects the
  * TEST-DESCR: call to fail.
@@ -274,7 +274,7 @@ DEFINE_APITEST(rtoinfo, sso_1_M_bad_id)
 }
 
 /*
- * TEST-DESCR: rtoinfo/sso_1_1_init
+ * TEST-TITLE rtoinfo/sso_1_1_init
  * TEST-DESCR: opens a 1-1 socket, gets the 
  * TEST-DESCR: current values on an endpoint adds 10
  * TEST-DESCR: to initial value but leaves max/min 
@@ -323,7 +323,7 @@ DEFINE_APITEST(rtoinfo, sso_1_1_init)
 }
 
 /*
- * TEST-DESCR: rtoinfo/sso_1_M_init
+ * TEST-TITLE rtoinfo/sso_1_M_init
  * TEST-DESCR: opens a 1-1 socket, gets the 
  * TEST-DESCR: current values on an endpoint adds 10
  * TEST-DESCR: to initial value but leaves max/min 
@@ -372,7 +372,7 @@ DEFINE_APITEST(rtoinfo, sso_1_M_init)
 }
 
 /*
- * TEST-DESCR: rtoinfo/sso_1_1_max
+ * TEST-TITLE rtoinfo/sso_1_1_max
  * TEST-DESCR: Validates on a 1-1 model socket that
  * TEST-DESCR: you can set only the max value and other
  * TEST-DESCR: values are not effected.
@@ -418,7 +418,7 @@ DEFINE_APITEST(rtoinfo, sso_1_1_max)
 }
 
 /*
- * TEST-DESCR: rtoinfo/sso_1_M_max
+ * TEST-TITLE rtoinfo/sso_1_M_max
  * TEST-DESCR: Validates on a 1-M model socket that
  * TEST-DESCR: you can set only the max value and other
  * TEST-DESCR: values are not effected.
@@ -464,7 +464,7 @@ DEFINE_APITEST(rtoinfo, sso_1_M_max)
 }
 
 /*
- * TEST-DESCR: rtoinfo/sso_1_1_min
+ * TEST-TITLE rtoinfo/sso_1_1_min
  * TEST-DESCR: Validates on a 1-1 model socket that
  * TEST-DESCR: you can set only the min value and other
  * TEST-DESCR: values are not effected.
@@ -510,7 +510,7 @@ DEFINE_APITEST(rtoinfo, sso_1_1_min)
 }
 
 /*
- * TEST-DESCR: rtoinfo/sso_1_M_min
+ * TEST-TITLE rtoinfo/sso_1_M_min
  * TEST-DESCR: Validates on a 1-M model socket that
  * TEST-DESCR: you can set only the min value and other
  * TEST-DESCR: values are not effected.
@@ -556,7 +556,7 @@ DEFINE_APITEST(rtoinfo, sso_1_M_min)
 }
 
 /*
- * TEST-DESCR: rtoinfo/sso_1_1_same
+ * TEST-TITLE rtoinfo/sso_1_1_same
  * TEST-DESCR: Validates on a 1-1 model socket that
  * TEST-DESCR: you can set all values to the same setting
  * TEST-DESCR: (100).
@@ -591,7 +591,7 @@ DEFINE_APITEST(rtoinfo, sso_1_1_same)
 }
 
 /*
- * TEST-DESCR: rtoinfo/sso_1_M_same
+ * TEST-TITLE rtoinfo/sso_1_M_same
  * TEST-DESCR: Validates on a 1-M model socket that
  * TEST-DESCR: you can set all values to the same setting
  * TEST-DESCR: (100).
@@ -626,7 +626,7 @@ DEFINE_APITEST(rtoinfo, sso_1_M_same)
 }
 
 /*
- * TEST-DESCR: rtoinfo/sso_ill_1
+ * TEST-TITLE rtoinfo/sso_ill_1
  * TEST-DESCR: On a 1-1 socket we attempt to
  * TEST-DESCR: set the initial RTO less than
  * TEST-DESCR: the minimum. This should fail.
@@ -660,7 +660,7 @@ DEFINE_APITEST(rtoinfo, sso_ill_1)
 }
 
 /*
- * TEST-DESCR: rtoinfo/sso_ill_2
+ * TEST-TITLE rtoinfo/sso_ill_2
  * TEST-DESCR: On a 1-1 socket we attempt to
  * TEST-DESCR: set the initial RTO greater than
  * TEST-DESCR: the maximum. This should fail.
@@ -694,7 +694,7 @@ DEFINE_APITEST(rtoinfo, sso_ill_2)
 }
 
 /*
- * TEST-DESCR: rtoinfo/sso_ill_3
+ * TEST-TITLE rtoinfo/sso_ill_3
  * TEST-DESCR: On a 1-1 socket we attempt to
  * TEST-DESCR: set the minimum RTO greater than
  * TEST-DESCR: the initial RTO. This should fail.
@@ -727,7 +727,7 @@ DEFINE_APITEST(rtoinfo, sso_ill_3)
 }
 
 /*
- * TEST-DESCR: rtoinfo/sso_ill_4
+ * TEST-TITLE rtoinfo/sso_ill_4
  * TEST-DESCR: On a 1-1 socket we attempt to
  * TEST-DESCR: set the minimum RTO greater than
  * TEST-DESCR: the maximum RTO. This should fail.
@@ -760,7 +760,7 @@ DEFINE_APITEST(rtoinfo, sso_ill_4)
 }
 
 /*
- * TEST-DESCR: rtoinfo/sso_ill_5
+ * TEST-TITLE rtoinfo/sso_ill_5
  * TEST-DESCR: On a 1-1 socket we attempt to
  * TEST-DESCR: set the maximum RTO smaller than
  * TEST-DESCR: the initial RTO. This should fail.
@@ -793,7 +793,7 @@ DEFINE_APITEST(rtoinfo, sso_ill_5)
 }
 
 /*
- * TEST-DESCR: rtoinfo/sso_ill_6
+ * TEST-TITLE rtoinfo/sso_ill_6
  * TEST-DESCR: On a 1-1 socket we attempt to
  * TEST-DESCR: set the maximum RTO smaller than
  * TEST-DESCR: the minimum RTO. This should fail.
@@ -826,7 +826,7 @@ DEFINE_APITEST(rtoinfo, sso_ill_6)
 }
 
 /*
- * TEST-DESCR: rtoinfo/gso_1_1_c_bad_id
+ * TEST-TITLE rtoinfo/gso_1_1_c_bad_id
  * TEST-DESCR: On a 1-1 socket we create an association
  * TEST-DESCR: and attempt to get information using one
  * TEST-DESCR: of the file descriptors using a random (1)
@@ -853,7 +853,7 @@ DEFINE_APITEST(rtoinfo, gso_1_1_c_bad_id)
 }
 
 /*
- * TEST-DESCR: rtoinfo/sso_1_1_c_bad_id
+ * TEST-TITLE rtoinfo/sso_1_1_c_bad_id
  * TEST-DESCR: On a 1-1 socket we create an association
  * TEST-DESCR: and attempt to set information using one
  * TEST-DESCR: of the file descriptors using a random (1)
@@ -889,7 +889,7 @@ DEFINE_APITEST(rtoinfo, sso_1_1_c_bad_id)
 }
 
 /*
- * TEST-DESCR: rtoinfo/sso_1_1_inherit
+ * TEST-TITLE rtoinfo/sso_1_1_inherit
  * TEST-DESCR: We open a 1-1 socket, change the
  * TEST-DESCR: default values of the endpoint. We
  * TEST-DESCR: then create an association by having
@@ -998,7 +998,7 @@ DEFINE_APITEST(rtoinfo, sso_1_1_inherit)
 }
 
 /*
- * TEST-DESCR: rtoinfo/sso_1_M_inherit
+ * TEST-TITLE rtoinfo/sso_1_M_inherit
  * TEST-DESCR: We open a 1-M socket, change the
  * TEST-DESCR: default values of the endpoint. We
  * TEST-DESCR: then create an association by having
@@ -1123,7 +1123,7 @@ DEFINE_APITEST(rtoinfo, sso_1_M_inherit)
  ********************************************************/
 
 /*
- * TEST-DESCR: assoclist/gso_numbers_zero
+ * TEST-TITLE assoclist/gso_numbers_zero
  * TEST-DESCR: Open a 1-1 socket and validate that
  * TEST-DESCR: it has no associations.
  */
@@ -1147,7 +1147,7 @@ DEFINE_APITEST(assoclist, gso_numbers_zero)
 #define NUMBER_OF_ASSOCS 12
 
 /*
- * TEST-DESCR: assoclist/gso_numbers_pos
+ * TEST-TITLE assoclist/gso_numbers_pos
  * TEST-DESCR: Open a 1-M socket, and create
  * TEST-DESCR: a number of associations (using seperate fd's) to
  * TEST-DESCR: it. Validate that the number of associations
@@ -1174,7 +1174,7 @@ DEFINE_APITEST(assoclist, gso_numbers_pos)
 }
 
 /*
- * TEST-DESCR: assoclist/gso_ids_no_assoc
+ * TEST-TITLE assoclist/gso_ids_no_assoc
  * TEST-DESCR: Open a 1-1 socket, and get the 
  * TEST-DESCR: assocation list. Verify that no
  * TEST-DESCR: association id's are returned.
@@ -1201,7 +1201,7 @@ DEFINE_APITEST(assoclist, gso_ids_no_assoc)
 }
 
 /*
- * TEST-DESCR: assoclist/gso_ids_buf_fit
+ * TEST-TITLE assoclist/gso_ids_buf_fit
  * TEST-DESCR: Open a 1-M socket and create a
  * TEST-DESCR: number of assocaitions connected to
  * TEST-DESCR: the 1-M socket. Get the association 
@@ -1241,7 +1241,7 @@ DEFINE_APITEST(assoclist, gso_ids_buf_fit)
 }
 
 /*
- * TEST-DESCR: assoclist/gso_ids_buf_large
+ * TEST-TITLE assoclist/gso_ids_buf_large
  * TEST-DESCR: Create a number of associations connected
  * TEST-DESCR: to our 1-M socket. Get the number of 
  * TEST-DESCR: assocations passing in a larger buffer
@@ -1281,7 +1281,7 @@ DEFINE_APITEST(assoclist, gso_ids_buf_large)
 }
 
 /*
- * TEST-DESCR: assoclist/gso_ids_buf_small
+ * TEST-TITLE assoclist/gso_ids_buf_small
  * TEST-DESCR: Create a number of associations
  * TEST-DESCR: on a 1-M socket, then request the
  * TEST-DESCR: association id's but give too small
@@ -1326,7 +1326,7 @@ DEFINE_APITEST(assoclist, gso_ids_buf_small)
 static char error_buffer[128];
 
 /*
- * TEST-DESCR: associnfo/gso_1_1_defaults
+ * TEST-TITLE associnfo/gso_1_1_defaults
  * TEST-DESCR: Open a 1-1 socket and validate that
  * TEST-DESCR: the default settings conform to RFC4960.
  */
@@ -1371,7 +1371,7 @@ DEFINE_APITEST(associnfo, gso_1_1_defaults)
 }
 
 /*
- * TEST-DESCR: associnfo/gso_1_M_defaults
+ * TEST-TITLE associnfo/gso_1_M_defaults
  * TEST-DESCR: Open a 1-1 socket and validate that
  * TEST-DESCR: the default settings conform to RFC4960.
  */
@@ -1416,7 +1416,7 @@ DEFINE_APITEST(associnfo, gso_1_M_defaults)
 }
 
 /*
- * TEST-DESCR: associnfo/sso_rxt_1_1
+ * TEST-TITLE associnfo/sso_rxt_1_1
  * TEST-DESCR: Open a 1-1 socket and validate that
  * TEST-DESCR: you can set the maximum rxt and no
  * TEST-DESCR: other associnfo value is changed.
@@ -1485,7 +1485,7 @@ DEFINE_APITEST(associnfo, sso_rxt_1_1)
 }
 
 /*
- * TEST-DESCR: associnfo/sso_rxt_1_M
+ * TEST-TITLE associnfo/sso_rxt_1_M
  * TEST-DESCR: Open a 1-M socket and validate that
  * TEST-DESCR: you can set the maximum rxt and no
  * TEST-DESCR: other associnfo value is changed.
@@ -1554,7 +1554,7 @@ DEFINE_APITEST(associnfo, sso_rxt_1_M)
 }
 
 /*
- * TEST-DESCR: associnfo/sso_rxt_asoc_1_1
+ * TEST-TITLE associnfo/sso_rxt_asoc_1_1
  * TEST-DESCR: Open a 1-1 socket, create an association,
  * TEST-DESCR  using that listener, and validate that
  * TEST-DESCR: you can set the maximum rxt on the association and no
@@ -1657,7 +1657,7 @@ DEFINE_APITEST(associnfo, sso_rxt_asoc_1_1)
 }
 
 /*
- * TEST-DESCR: associnfo/sso_rxt_asoc_1_M
+ * TEST-TITLE associnfo/sso_rxt_asoc_1_M
  * TEST-DESCR: Open a 1-M socket, create an association,
  * TEST-DESCR  using the endpoint, and validate that
  * TEST-DESCR: you can set the maximum rxt on the association and no
@@ -1757,7 +1757,7 @@ DEFINE_APITEST(associnfo, sso_rxt_asoc_1_M)
 }
 
 /*
- * TEST-DESCR: associnfo/sso_rxt_asoc_1_1_inherit
+ * TEST-TITLE associnfo/sso_rxt_asoc_1_1_inherit
  * TEST-DESCR: Create a 1-1 socket, change a value
  * TEST-DESCR: (maxrxt) and then create an association
  * TEST-DESCR: using that socket. Validate that the new
@@ -1863,7 +1863,7 @@ DEFINE_APITEST(associnfo, sso_rxt_asoc_1_1_inherit)
 }
 
 /*
- * TEST-DESCR: associnfo/sso_rxt_asoc_1_M_inherit
+ * TEST-TITLE associnfo/sso_rxt_asoc_1_M_inherit
  * TEST-DESCR: Create a 1-M socket, change a value
  * TEST-DESCR: (maxrxt) and then create an association
  * TEST-DESCR: using that socket. Validate that the new
@@ -1968,7 +1968,7 @@ DEFINE_APITEST(associnfo, sso_rxt_asoc_1_M_inherit)
 }
 
 /*
- * TEST-DESCR: associnfo/sso_clife_1_1
+ * TEST-TITLE associnfo/sso_clife_1_1
  * TEST-DESCR: Open a 1-1 socket, double the cookie
  * TEST-DESCR: life and validate it does not change
  * TEST-DESCR: any other values in the associnfo list.
@@ -2037,7 +2037,7 @@ DEFINE_APITEST(associnfo, sso_clife_1_1)
 }
 
 /*
- * TEST-DESCR: associnfo/sso_clife_1_M
+ * TEST-TITLE associnfo/sso_clife_1_M
  * TEST-DESCR: Open a 1-M socket, double the cookie
  * TEST-DESCR: life and validate it does not change
  * TEST-DESCR: any other values in the associnfo list.
@@ -2106,7 +2106,7 @@ DEFINE_APITEST(associnfo, sso_clife_1_M)
 }
 
 /*
- * TEST-DESCR: associnfo/sso_clife_asoc_1_1
+ * TEST-TITLE associnfo/sso_clife_asoc_1_1
  * TEST-DESCR: Open a 1-1 socket, create an association,
  * TEST-DESCR  double the cookie life on the association
  * TEST-DESCR: and validate it does not change
@@ -2209,7 +2209,7 @@ DEFINE_APITEST(associnfo, sso_clife_asoc_1_1)
 }
 
 /*
- * TEST-DESCR: associnfo/sso_clife_asoc_1_M
+ * TEST-TITLE associnfo/sso_clife_asoc_1_M
  * TEST-DESCR: Open a 1-M socket, create an association,
  * TEST-DESCR  double the cookie life on the association
  * TEST-DESCR: and validate it does not change
@@ -2309,7 +2309,7 @@ DEFINE_APITEST(associnfo, sso_clife_asoc_1_M)
 }
 
 /*
- * TEST-DESCR: associnfo/sso_clife_asoc_1_1_inherit
+ * TEST-TITLE associnfo/sso_clife_asoc_1_1_inherit
  * TEST-DESCR: Open a 1-1 socket, double its cookie life.
  * TEST-DESCR  Use the socket to create an association and
  * TEST-DESCR: validate that the new cookie life inherited to
@@ -2415,7 +2415,7 @@ DEFINE_APITEST(associnfo, sso_clife_asoc_1_1_inherit)
 }
 
 /*
- * TEST-DESCR: associnfo/sso_clife_asoc_1_M_inherit
+ * TEST-TITLE associnfo/sso_clife_asoc_1_M_inherit
  * TEST-DESCR: Open a 1-1 socket, double its cookie life.
  * TEST-DESCR  Use the socket to create an association and
  * TEST-DESCR: validate that the new cookie life inherited to
@@ -2520,7 +2520,7 @@ DEFINE_APITEST(associnfo, sso_clife_asoc_1_M_inherit)
 }
 
 /*
- * TEST-DESCR: associnfo/sso_lrwd_ep_1_1
+ * TEST-TITLE associnfo/sso_lrwd_ep_1_1
  * TEST-DESCR: Attempt to set the local rwnd using
  * TEST-DESCR: the associnfo structure on a 1-1 socket. We validate
  * TEST-DESCR: that the set option did not effect
@@ -2583,7 +2583,7 @@ DEFINE_APITEST(associnfo, sso_lrwnd_ep_1_1)
 }
 
 /*
- * TEST-DESCR: associnfo/sso_lrwd_ep_1_M
+ * TEST-TITLE associnfo/sso_lrwd_ep_1_M
  * TEST-DESCR: Attempt to set the local rwnd using
  * TEST-DESCR: the associnfo structure on a 1-M socket. We validate
  * TEST-DESCR: that the set option did not effect
@@ -2647,7 +2647,7 @@ DEFINE_APITEST(associnfo, sso_lrwnd_ep_1_M)
 }
 
 /*
- * TEST-DESCR: associnfo/sso_lrwd_asoc_1_1
+ * TEST-TITLE associnfo/sso_lrwd_asoc_1_1
  * TEST-DESDR: Using a 1-1 socket create an assocation.
  * TEST-DESCR: Attempt to set the local rwnd using
  * TEST-DESCR: the associnfo structure on the assocation. We validate
@@ -2712,7 +2712,7 @@ DEFINE_APITEST(associnfo, sso_lrwnd_asoc_1_1)
 }
 
 /*
- * TEST-DESCR: associnfo/sso_lrwd_asoc_1_M
+ * TEST-TITLE associnfo/sso_lrwd_asoc_1_M
  * TEST-DESDR: Using a 1-M socket create an assocation.
  * TEST-DESCR: Attempt to set the local rwnd using
  * TEST-DESCR: the associnfo structure on the assocation. We validate
@@ -2783,7 +2783,7 @@ DEFINE_APITEST(associnfo, sso_lrwnd_asoc_1_M)
 
 
 /*
- * TEST-DESCR: associnfo/sso_lrwd_asoc_1_1
+ * TEST-TITLE associnfo/sso_lrwd_asoc_1_1
  * TEST-DESDR: Using a 1-1 socket create an assocation.
  * TEST-DESCR: Attempt to set the peers rwnd using
  * TEST-DESCR: the associnfo structure on the assocation. We validate
@@ -2851,7 +2851,7 @@ DEFINE_APITEST(associnfo, sso_prwnd_asoc_1_1)
 }
 
 /*
- * TEST-DESCR: associnfo/sso_lrwd_asoc_1_M
+ * TEST-TITLE associnfo/sso_lrwd_asoc_1_M
  * TEST-DESDR: Using a 1-M socket create an assocation.
  * TEST-DESCR: Attempt to set the peers rwnd using
  * TEST-DESCR: the associnfo structure on the assocation. We validate
@@ -2923,7 +2923,7 @@ DEFINE_APITEST(associnfo, sso_prwnd_asoc_1_M)
 }
 
 /*
- * TEST-DESCR: associnfo/sso_pdest_asoc_1_1
+ * TEST-TITLE associnfo/sso_pdest_asoc_1_1
  * TEST-DESCR: Create an assocation with the 1-1 model.
  * TEST-DESCR: Then attempt to set the number of peer
  * TEST-DESCR: destinations. Validate that the set
@@ -2990,7 +2990,7 @@ DEFINE_APITEST(associnfo, sso_pdest_asoc_1_1)
 }
 
 /*
- * TEST-DESCR: associnfo/sso_pdest_asoc_1_M
+ * TEST-TITLE associnfo/sso_pdest_asoc_1_M
  * TEST-DESCR: Create an assocation with the 1-M model.
  * TEST-DESCR: Then attempt to set the number of peer
  * TEST-DESCR: destinations. Validate that the set
@@ -3068,7 +3068,7 @@ DEFINE_APITEST(associnfo, sso_pdest_asoc_1_M)
  *
  ********************************************************/
 /*
- * TEST-DESCR: initmsg/gso_1_1_defaults
+ * TEST-TITLE initmsg/gso_1_1_defaults
  * TEST-DESCR: Create a 1-1 socket, and gather
  * TEST-DESCR: the initmsg defaults. Compare these
  * TEST-DESCR: to those required by RFC4960.
@@ -3100,7 +3100,7 @@ DEFINE_APITEST(initmsg, gso_1_1_defaults)
 }
 
 /*
- * TEST-DESCR: initmsg/gso_1_M_defaults
+ * TEST-TITLE initmsg/gso_1_M_defaults
  * TEST-DESCR: Create a 1-M socket, and gather
  * TEST-DESCR: the initmsg defaults. Compare these
  * TEST-DESCR: to those required by RFC4960.
@@ -3132,7 +3132,7 @@ DEFINE_APITEST(initmsg, gso_1_M_defaults)
 }
 
 /*
- * TEST-DESCR: initmsg/gso_1_1_set_ostrm
+ * TEST-TITLE initmsg/gso_1_1_set_ostrm
  * TEST-DESCR: Create a 1-1 socket, set the
  * TEST-DESCR: ostrm's and validate that no other
  * TEST-DESCR: initmsg parameters change.
@@ -3184,7 +3184,7 @@ DEFINE_APITEST(initmsg, gso_1_1_set_ostrm)
 }
 
 /*
- * TEST-DESCR: initmsg/gso_1_1_set_istrm
+ * TEST-TITLE initmsg/gso_1_1_set_istrm
  * TEST-DESCR: Create a 1-1 socket, set the
  * TEST-DESCR: istrm's and validate that no other
  * TEST-DESCR: initmsg parameters change.
@@ -3235,7 +3235,7 @@ DEFINE_APITEST(initmsg, gso_1_1_set_istrm)
 }
 
 /*
- * TEST-DESCR: initmsg/gso_1_1_set_max
+ * TEST-TITLE initmsg/gso_1_1_set_max
  * TEST-DESCR: Create a 1-1 socket, set the
  * TEST-DESCR: max retrans and validate that no other
  * TEST-DESCR: initmsg parameters change.
@@ -3286,7 +3286,7 @@ DEFINE_APITEST(initmsg, gso_1_1_set_max)
 }
 
 /*
- * TEST-DESCR: initmsg/gso_1_1_set_max
+ * TEST-TITLE initmsg/gso_1_1_set_max
  * TEST-DESCR: Create a 1-1 socket, set the
  * TEST-DESCR: timeo and validate that no other
  * TEST-DESCR: initmsg parameters change.
@@ -3338,7 +3338,7 @@ DEFINE_APITEST(initmsg, gso_1_1_set_timeo)
 
 
 /*
- * TEST-DESCR: initmsg/gso_1_M_set_ostrm
+ * TEST-TITLE initmsg/gso_1_M_set_ostrm
  * TEST-DESCR: Create a 1-M socket, set the
  * TEST-DESCR: ostrm's and validate that no other
  * TEST-DESCR: initmsg parameters change.
@@ -3390,7 +3390,7 @@ DEFINE_APITEST(initmsg, gso_1_M_set_ostrm)
 }
 
 /*
- * TEST-DESCR: initmsg/gso_1_M_set_istrm
+ * TEST-TITLE initmsg/gso_1_M_set_istrm
  * TEST-DESCR: Create a 1-M socket, set the
  * TEST-DESCR: istrm's and validate that no other
  * TEST-DESCR: initmsg parameters change.
@@ -3441,7 +3441,7 @@ DEFINE_APITEST(initmsg, gso_1_M_set_istrm)
 }
 
 /*
- * TEST-DESCR: initmsg/gso_1_M_set_max
+ * TEST-TITLE initmsg/gso_1_M_set_max
  * TEST-DESCR: Create a 1-M socket, set the
  * TEST-DESCR: max retrans and validate that no other
  * TEST-DESCR: initmsg parameters change.
@@ -3492,7 +3492,7 @@ DEFINE_APITEST(initmsg, gso_1_M_set_max)
 }
 
 /*
- * TEST-DESCR: initmsg/gso_1_M_set_max
+ * TEST-TITLE initmsg/gso_1_M_set_max
  * TEST-DESCR: Create a 1-M socket, set the
  * TEST-DESCR: timeo and validate that no other
  * TEST-DESCR: initmsg parameters change.
@@ -3548,7 +3548,7 @@ DEFINE_APITEST(initmsg, gso_1_M_set_timeo)
  *
  ********************************************************/
 /*
- * TEST-DESCR: nodelay/gso_1_1_def_ndelay
+ * TEST-TITLE nodelay/gso_1_1_def_ndelay
  * TEST-DESCR: Create a 1-1 socket, and get
  * TEST-DESCR: the nodelay option. Validate that
  * TEST-DESCR: it is off i.e.the Nagle algorithim is enabled by
@@ -3574,7 +3574,7 @@ DEFINE_APITEST(nodelay, gso_1_1_def_ndelay)
 }
 
 /*
- * TEST-DESCR: nodelay/gso_1_M_def_ndelay
+ * TEST-TITLE nodelay/gso_1_M_def_ndelay
  * TEST-DESCR: Create a 1-M socket, and get
  * TEST-DESCR: the nodelay option. Validate that
  * TEST-DESCR: it is off i.e.the Nagle algorithim is enabled by
@@ -3600,7 +3600,7 @@ DEFINE_APITEST(nodelay, gso_1_M_def_ndelay)
 }
 
 /*
- * TEST-DESCR: nodelay/gso_1_1_set_ndelay
+ * TEST-TITLE nodelay/gso_1_1_set_ndelay
  * TEST-DESCR: Create a 1-1 socket, and change
  * TEST-DESCR: the nodelay option. Validate that
  * TEST-DESCR: it changes correctly.
@@ -3637,7 +3637,7 @@ DEFINE_APITEST(nodelay, gso_1_1_set_ndelay)
 }
 
 /*
- * TEST-DESCR: nodelay/gso_1_M_set_ndelay
+ * TEST-TITLE nodelay/gso_1_M_set_ndelay
  * TEST-DESCR: Create a 1-M socket, and change
  * TEST-DESCR: the nodelay option. Validate that
  * TEST-DESCR: it changes correctly.
@@ -3679,7 +3679,7 @@ DEFINE_APITEST(nodelay, gso_1_M_set_ndelay)
  *
  ********************************************************/
 /*
- * TEST-DESCR: autoclose/gso_1_1_def_autoclose
+ * TEST-TITLE autoclose/gso_1_1_def_autoclose
  * TEST-DESCR: Open a 1-1 socket and get the value
  * TEST-DESCR: set on autoclose. Validate it is
  * TEST-DESCR: off by default.
@@ -3705,7 +3705,7 @@ DEFINE_APITEST(autoclose, gso_1_1_def_autoclose)
 }
 
 /*
- * TEST-DESCR: autoclose/gso_1_M_def_autoclose
+ * TEST-TITLE autoclose/gso_1_M_def_autoclose
  * TEST-DESCR: Open a 1-M socket and get the value
  * TEST-DESCR: set on autoclose. Validate it is
  * TEST-DESCR: off by default.
@@ -3731,7 +3731,7 @@ DEFINE_APITEST(autoclose, gso_1_M_def_autoclose)
 }
 
 /*
- * TEST-DESCR: autoclose/gso_1_1_set_autoclose
+ * TEST-TITLE autoclose/gso_1_1_set_autoclose
  * TEST-DESCR: Open a 1-1 socket and get the value
  * TEST-DESCR: set on autoclose. Toggle it and change
  * TEST-DESCR: its setting. Validate that the setting
@@ -3769,7 +3769,7 @@ DEFINE_APITEST(autoclose, gso_1_1_set_autoclose)
 }
 
 /*
- * TEST-DESCR: autoclose/gso_1_M_set_autoclose
+ * TEST-TITLE autoclose/gso_1_M_set_autoclose
  * TEST-DESCR: Open a 1-M socket and get the value
  * TEST-DESCR: set on autoclose. Toggle it and change
  * TEST-DESCR: its setting. Validate that the setting
@@ -3813,7 +3813,7 @@ DEFINE_APITEST(autoclose, gso_1_M_set_autoclose)
  *
  ********************************************************/
 /*
- * TEST-DESCR: setpeerprim/sso_1_1_good_peerprim
+ * TEST-TITLE setpeerprim/sso_1_1_good_peerprim
  * TEST-DESCR: Create an assocaition using a 1-1 socket.
  * TEST-DESCR: Validate that you can get the peers primary address and
  * TEST-DESCR: succesfully request the peer to changes its primary.
@@ -3854,7 +3854,7 @@ DEFINE_APITEST(setpeerprim, sso_1_1_good_peerprim)
 }
 
 /*
- * TEST-DESCR: setpeerprim/sso_1_1_bad_peerprim
+ * TEST-TITLE setpeerprim/sso_1_1_bad_peerprim
  * TEST-DESCR: Create an assocaition using a 1-1 socket.
  * TEST-DESCR: Validate that you can get the peers primary address and
  * TEST-DESCR: ask to change the peer primary address to an invalid
@@ -3900,7 +3900,7 @@ DEFINE_APITEST(setpeerprim, sso_1_1_bad_peerprim)
 }
 
 /*
- * TEST-DESCR: setpeerprim/sso_1_M_good_peerprim
+ * TEST-TITLE setpeerprim/sso_1_M_good_peerprim
  * TEST-DESCR: Create an association using a 1-M socket.
  * TEST-DESCR: Validate that you can get the peers primary address and
  * TEST-DESCR: succesfully request the peer to changes its primary.
@@ -3951,7 +3951,7 @@ DEFINE_APITEST(setpeerprim, sso_1_M_good_peerprim)
 }
 
 /*
- * TEST-DESCR: setpeerprim/sso_1_M_bad_peerprim
+ * TEST-TITLE setpeerprim/sso_1_M_bad_peerprim
  * TEST-DESCR: Create an assocaition using a 1-M socket.
  * TEST-DESCR: Validate that you can get the peers primary address and
  * TEST-DESCR: ask to change the peer primary address to an invalid
@@ -4011,7 +4011,7 @@ DEFINE_APITEST(setpeerprim, sso_1_M_bad_peerprim)
  ********************************************************/
 
 /*
- * TEST-DESCR: setprim/gso_1_1_get_prim
+ * TEST-TITLE setprim/gso_1_1_get_prim
  * TEST-DESCR: On a 1-1 socket, create an association.
  * TEST-DESCR: After creating, get the address list and
  * TEST-DESCR: retrieve the primary address. Validate
@@ -4102,7 +4102,7 @@ DEFINE_APITEST(setprim, gso_1_1_get_prim)
 }
 
 /*
- * TEST-DESCR: setprim/gso_1_M_get_prim
+ * TEST-TITLE setprim/gso_1_M_get_prim
  * TEST-DESCR: On a 1-M socket, create an association.
  * TEST-DESCR: After creating, get the address list and
  * TEST-DESCR: retrieve the primary address. Validate
@@ -4195,7 +4195,7 @@ DEFINE_APITEST(setprim, gso_1_M_get_prim)
 }
 
 /*
- * TEST-DESCR: setprim/gso_1_1_set_prim
+ * TEST-TITLE setprim/gso_1_1_set_prim
  * TEST-DESCR: On a 1-1 socket, create an association.
  * TEST-DESCR: After creating, get the address list and
  * TEST-DESCR: retrieve the primary address. Pick a new primary
@@ -4345,7 +4345,7 @@ DEFINE_APITEST(setprim, sso_1_1_set_prim)
 }
 
 /*
- * TEST-DESCR: setprim/gso_1_M_set_prim
+ * TEST-TITLE setprim/gso_1_M_set_prim
  * TEST-DESCR: On a 1-M socket, create an association.
  * TEST-DESCR: After creating, get the address list and
  * TEST-DESCR: retrieve the primary address. Pick a new primary
@@ -4495,7 +4495,7 @@ DEFINE_APITEST(setprim, sso_1_M_set_prim)
 	return (retstring);
 }
 /*
- * TEST-DESCR: setprim/gso_1_1_bad_prim
+ * TEST-TITLE setprim/gso_1_1_bad_prim
  * TEST-DESCR: On a 1-1 socket, create an association.
  * TEST-DESCR: After creating, get the address list and
  * TEST-DESCR: retrieve the primary address. Pick a new primary
@@ -4627,7 +4627,7 @@ DEFINE_APITEST(setprim, sso_1_1_bad_prim)
 }
 
 /*
- * TEST-DESCR: setprim/gso_1_M_bad_prim
+ * TEST-TITLE setprim/gso_1_M_bad_prim
  * TEST-DESCR: On a 1-M socket, create an association.
  * TEST-DESCR: After creating, get the address list and
  * TEST-DESCR: retrieve the primary address. Pick a new primary
@@ -4772,7 +4772,7 @@ DEFINE_APITEST(setprim, sso_1_M_bad_prim)
  *
  ********************************************************/
 /*
- * TEST-DESCR: adaptation/gso_1_1
+ * TEST-TITLE adaptation/gso_1_1
  * TEST-DESCR: On a 1-1 socket, and retrieve the
  * TEST-DESCR: adaptation layer indication set on 
  * TEST-DESCR: the endpoint.
@@ -4794,7 +4794,7 @@ DEFINE_APITEST(adaptation, gso_1_1)
 	return NULL;
 }
 /*
- * TEST-DESCR: adaptation/gso_1_M
+ * TEST-TITLE adaptation/gso_1_M
  * TEST-DESCR: On a 1-1 socket, and retrieve the
  * TEST-DESCR: adaptation layer indication set on 
  * TEST-DESCR: the endpoint.
@@ -4817,7 +4817,7 @@ DEFINE_APITEST(adaptation, gso_1_M)
 }
 
 /*
- * TEST-DESCR: adaptation/sso_1_1
+ * TEST-TITLE adaptation/sso_1_1
  * TEST-DESCR: On a 1-1 socket, and retrieve the
  * TEST-DESCR: adaptation layer indication set on 
  * TEST-DESCR: the endpoint add one to it and set it.
@@ -4857,7 +4857,7 @@ DEFINE_APITEST(adaptation, sso_1_1)
 }
 
 /*
- * TEST-DESCR: adaptation/sso_1_M
+ * TEST-TITLE adaptation/sso_1_M
  * TEST-DESCR: On a 1-M socket, and retrieve the
  * TEST-DESCR: adaptation layer indication set on 
  * TEST-DESCR: the endpoint add one to it and set it.
@@ -4904,7 +4904,7 @@ DEFINE_APITEST(adaptation, sso_1_M)
  *
  ********************************************************/
 /*
- * TEST-DESCR: disfrag/gso_def_1_1
+ * TEST-TITLE disfrag/gso_def_1_1
  * TEST-DESCR: On a 1-1 socket, get the disable 
  * TEST-DESCR: fragmentation setting. Validate it
  * TEST-DESCR: is not enabled (sctp will fragment messages).
@@ -4931,7 +4931,7 @@ DEFINE_APITEST(disfrag, gso_def_1_1)
 }
 
 /*
- * TEST-DESCR: disfrag/gso_def_1_M
+ * TEST-TITLE disfrag/gso_def_1_M
  * TEST-DESCR: On a 1-M socket, get the disable 
  * TEST-DESCR: fragmentation setting. Validate it
  * TEST-DESCR: is not enabled (sctp will fragment messages).
@@ -4959,7 +4959,7 @@ DEFINE_APITEST(disfrag, gso_def_1_M)
 
 
 /*
- * TEST-DESCR: disfrag/sso_1_1
+ * TEST-TITLE disfrag/sso_1_1
  * TEST-DESCR: On a 1-1 socket, get the disable 
  * TEST-DESCR: fragmentation setting. Change it to the 
  * TEST-DESCR: opposite. Validate that our set was
@@ -4998,7 +4998,7 @@ DEFINE_APITEST(disfrag, sso_1_1)
 }
 
 /*
- * TEST-DESCR: disfrag/sso_1_M
+ * TEST-TITLE disfrag/sso_1_M
  * TEST-DESCR: On a 1-1 socket, get the disable 
  * TEST-DESCR: fragmentation setting. Change it to the 
  * TEST-DESCR: opposite. Validate that our set was
@@ -5043,7 +5043,7 @@ DEFINE_APITEST(disfrag, sso_1_M)
  ********************************************************/
 
 /*
- * TEST-DESCR: paddrpara/gso_1_1
+ * TEST-TITLE paddrpara/gso_1_1
  * TEST-DESCR: On a 1-1 socket, retrieve the
  * TEST-DESCR: endpoint default settings and
  * TEST-DESCR: validate they conform to RFC 4960.
@@ -5096,7 +5096,7 @@ DEFINE_APITEST(paddrpara, gso_def_1_1)
 }
 
 /*
- * TEST-DESCR: paddrpara/gso_1_M
+ * TEST-TITLE paddrpara/gso_1_M
  * TEST-DESCR: On a 1-M socket, retrieve the
  * TEST-DESCR: endpoint default settings and
  * TEST-DESCR: validate they conform to RFC 4960.
@@ -5149,7 +5149,7 @@ DEFINE_APITEST(paddrpara, gso_def_1_M)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_hb_int_1_1
+ * TEST-TITLE paddrpara/sso_hb_int_1_1
  * TEST-DESCR: On a 1-1 socket, Retreive
  * TEST-DESCR: the current values, change the
  * TEST-DESCR: hb interval, assure the change
@@ -5218,7 +5218,7 @@ DEFINE_APITEST(paddrpara, sso_hb_int_1_1)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_hb_int_1_M
+ * TEST-TITLE paddrpara/sso_hb_int_1_M
  * TEST-DESCR: On a 1-M socket, Retreive
  * TEST-DESCR: the current values, change the
  * TEST-DESCR: hb interval, assure the change
@@ -5287,7 +5287,7 @@ DEFINE_APITEST(paddrpara, sso_hb_int_1_M)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_hb_zero_1_1
+ * TEST-TITLE paddrpara/sso_hb_zero_1_1
  * TEST-DESCR: On a 1-1 socket, Retreive
  * TEST-DESCR: the current values, change the
  * TEST-DESCR: hb interval to zero, assure the change
@@ -5356,7 +5356,7 @@ DEFINE_APITEST(paddrpara, sso_hb_zero_1_1)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_hb_zero_1_M
+ * TEST-TITLE paddrpara/sso_hb_zero_1_M
  * TEST-DESCR: On a 1-M socket, Retreive
  * TEST-DESCR: the current values, change the
  * TEST-DESCR: hb interval to zero, assure the change
@@ -5426,7 +5426,7 @@ DEFINE_APITEST(paddrpara, sso_hb_zero_1_M)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_hb_off_1_1
+ * TEST-TITLE paddrpara/sso_hb_off_1_1
  * TEST-DESCR: On a 1-1 socket, Retreive
  * TEST-DESCR: the current values, 
  * TEST-DESCR: turn off hb's, assure the change
@@ -5499,7 +5499,7 @@ DEFINE_APITEST(paddrpara, sso_hb_off_1_1)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_hb_off_1_M
+ * TEST-TITLE paddrpara/sso_hb_off_1_M
  * TEST-DESCR: On a 1-M socket, Retreive
  * TEST-DESCR: the current values, 
  * TEST-DESCR: turn off hb's, assure the change
@@ -5574,7 +5574,7 @@ DEFINE_APITEST(paddrpara, sso_hb_off_1_M)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_hb_on_1_1
+ * TEST-TITLE paddrpara/sso_hb_on_1_1
  * TEST-DESCR: On a 1-1 socket, Retreive
  * TEST-DESCR: the current values, 
  * TEST-DESCR: turn off hb's then turn them back on, 
@@ -5680,7 +5680,7 @@ DEFINE_APITEST(paddrpara, sso_hb_on_1_1)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_hb_on_1_M
+ * TEST-TITLE paddrpara/sso_hb_on_1_M
  * TEST-DESCR: On a 1-M socket, Retreive
  * TEST-DESCR: the current values, 
  * TEST-DESCR: turn off hb's then turn them back on, 
@@ -5787,7 +5787,7 @@ DEFINE_APITEST(paddrpara, sso_hb_on_1_M)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_pmrxt_int_1_1
+ * TEST-TITLE paddrpara/sso_pmrxt_int_1_1
  * TEST-DESCR: On a 1-1 socket, Retreive
  * TEST-DESCR: the current values, change the
  * TEST-DESCR: path max retransmit.
@@ -5855,7 +5855,7 @@ DEFINE_APITEST(paddrpara, sso_pmrxt_int_1_1)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_pmrxt_int_1_M
+ * TEST-TITLE paddrpara/sso_pmrxt_int_1_M
  * TEST-DESCR: On a 1-M socket, Retreive
  * TEST-DESCR: the current values, change the
  * TEST-DESCR: path max retransmit.
@@ -5923,7 +5923,7 @@ DEFINE_APITEST(paddrpara, sso_pmrxt_int_1_M)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_bad_hb_en_1_1
+ * TEST-TITLE paddrpara/sso_bad_hb_en_1_1
  * TEST-DESCR: On a 1-1 socket, Set the
  * TEST-DESCR: flags to both enable and disable
  * TEST-DESCR: HB at the same time, we expect
@@ -5953,7 +5953,7 @@ DEFINE_APITEST(paddrpara, sso_bad_hb_en_1_1)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_bad_hb_en_1_M
+ * TEST-TITLE paddrpara/sso_bad_hb_en_1_M
  * TEST-DESCR: On a 1-M socket, Set the
  * TEST-DESCR: flags to both enable and disable
  * TEST-DESCR: HB at the same time, we expect
@@ -5984,7 +5984,7 @@ DEFINE_APITEST(paddrpara, sso_bad_hb_en_1_M)
 
 
 /*
- * TEST-DESCR: paddrpara/sso_bad_pmtud_en_1_1
+ * TEST-TITLE paddrpara/sso_bad_pmtud_en_1_1
  * TEST-DESCR: On a 1-1 socket, Set the
  * TEST-DESCR: flags to both enable and disable
  * TEST-DESCR: PMTU discovery at the same time, we expect
@@ -6014,7 +6014,7 @@ DEFINE_APITEST(paddrpara, sso_bad_pmtud_en_1_1)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_bad_pmtud_en_1_M
+ * TEST-TITLE paddrpara/sso_bad_pmtud_en_1_M
  * TEST-DESCR: On a 1-M socket, Set the
  * TEST-DESCR: flags to both enable and disable
  * TEST-DESCR: PMTU discovery at the same time, we expect
@@ -6044,7 +6044,7 @@ DEFINE_APITEST(paddrpara, sso_bad_pmtud_en_1_M)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_ahb_int_1_1
+ * TEST-TITLE paddrpara/sso_ahb_int_1_1
  * TEST-DESCR: On a 1-1 socket, Create an assoc and
  * TEST-DESCR: set the hb interval on the association.
  * TEST-DESCR: Assure its set and no other values changed.
@@ -6117,7 +6117,7 @@ DEFINE_APITEST(paddrpara, sso_ahb_int_1_1)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_ahb_int_1_M
+ * TEST-TITLE paddrpara/sso_ahb_int_1_M
  * TEST-DESCR: On a 1-M socket, Create an assoc and
  * TEST-DESCR: set the hb interval on the association.
  * TEST-DESCR: Assure its set and no other values changed.
@@ -6208,7 +6208,7 @@ DEFINE_APITEST(paddrpara, sso_ahb_int_1_M)
 
 
 /*
- * TEST-DESCR: paddrpara/sso_ahb_zero_1_1
+ * TEST-TITLE paddrpara/sso_ahb_zero_1_1
  * TEST-DESCR: On a 1-1 socket, Create an assoc and
  * TEST-DESCR: set the hb interval to zero on the association.
  * TEST-DESCR: Assure its set and no other values changed.
@@ -6280,7 +6280,7 @@ DEFINE_APITEST(paddrpara, sso_ahb_zero_1_1)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_ahb_zero_1_M
+ * TEST-TITLE paddrpara/sso_ahb_zero_1_M
  * TEST-DESCR: On a 1-M socket, Create an assoc and
  * TEST-DESCR: set the hb interval to zero on the association.
  * TEST-DESCR: Assure its set and no other values changed.
@@ -6370,7 +6370,7 @@ DEFINE_APITEST(paddrpara, sso_ahb_zero_1_M)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_ahb_off_1_1
+ * TEST-TITLE paddrpara/sso_ahb_off_1_1
  * TEST-DESCR: On a 1-1 socket, Create an assoc and
  * TEST-DESCR: turn heartbeats off on the association.
  * TEST-DESCR: Assure its set and no other values changed.
@@ -6444,7 +6444,7 @@ DEFINE_APITEST(paddrpara, sso_ahb_off_1_1)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_ahb_off_1_M
+ * TEST-TITLE paddrpara/sso_ahb_off_1_M
  * TEST-DESCR: On a 1-M socket, Create an assoc and
  * TEST-DESCR: turn heartbeats off on the association.
  * TEST-DESCR: Assure its set and no other values changed.
@@ -6539,7 +6539,7 @@ DEFINE_APITEST(paddrpara, sso_ahb_off_1_M)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_ahb_on_1_1
+ * TEST-TITLE paddrpara/sso_ahb_on_1_1
  * TEST-DESCR: On a 1-1 socket, Create an assoc and
  * TEST-DESCR: turn heartbeats off and then back on for the association.
  * TEST-DESCR: Assure its set and no other values changed.
@@ -6649,7 +6649,7 @@ DEFINE_APITEST(paddrpara, sso_ahb_on_1_1)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_ahb_on_1_M
+ * TEST-TITLE paddrpara/sso_ahb_on_1_M
  * TEST-DESCR: On a 1-M socket, Create an assoc and
  * TEST-DESCR: turn heartbeats off and then back on for the association.
  * TEST-DESCR: Assure its set and no other values changed.
@@ -6786,7 +6786,7 @@ DEFINE_APITEST(paddrpara, sso_ahb_on_1_M)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_apmrxt_int_1_1
+ * TEST-TITLE paddrpara/sso_apmrxt_int_1_1
  * TEST-DESCR: On a 1-1 socket, Create an assoc and
  * TEST-DESCR: set the path max retransmit for the association.
  * TEST-DESCR: Assure its set and no other values changed.
@@ -6857,7 +6857,7 @@ DEFINE_APITEST(paddrpara, sso_apmrxt_int_1_1)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_apmrxt_int_1_M
+ * TEST-TITLE paddrpara/sso_apmrxt_int_1_M
  * TEST-DESCR: On a 1-M socket, Create an assoc and
  * TEST-DESCR: set the path max retransmit for the association.
  * TEST-DESCR: Assure its set and no other values changed.
@@ -6947,7 +6947,7 @@ DEFINE_APITEST(paddrpara, sso_apmrxt_int_1_M)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_apmtu_dis_1_1
+ * TEST-TITLE paddrpara/sso_apmtu_dis_1_1
  * TEST-DESCR: On a 1-1 socket, Create an assoc and
  * TEST-DESCR: disable the path mtu algorithm for the association.
  * TEST-DESCR: Assure its set and no other values changed.
@@ -7034,7 +7034,7 @@ DEFINE_APITEST(paddrpara, sso_apmtu_dis_1_1)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_apmtu_dis_1_M
+ * TEST-TITLE paddrpara/sso_apmtu_dis_1_M
  * TEST-DESCR: On a 1-1 socket, Create an assoc and
  * TEST-DESCR: disable the path mtu algorithm for the association.
  * TEST-DESCR: Assure its set and no other values changed.
@@ -7123,7 +7123,7 @@ DEFINE_APITEST(paddrpara, sso_apmtu_dis_1_M)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_av6_flow_1_1
+ * TEST-TITLE paddrpara/sso_av6_flow_1_1
  * TEST-DESCR: On a 1-1 socket, Create an assoc and
  * TEST-DESCR: set the v6 flowlabel for the association.
  * TEST-DESCR: Assure its set and no other values changed.
@@ -7198,7 +7198,7 @@ DEFINE_APITEST(paddrpara, sso_av6_flo_1_1)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_av6_flow_1_M
+ * TEST-TITLE paddrpara/sso_av6_flow_1_M
  * TEST-DESCR: On a 1-M socket, Create an assoc and
  * TEST-DESCR: set the v6 flowlabel for the association.
  * TEST-DESCR: Assure its set and no other values changed.
@@ -7273,7 +7273,7 @@ DEFINE_APITEST(paddrpara, sso_av6_flo_1_M)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_av4_tos_1_1
+ * TEST-TITLE paddrpara/sso_av4_tos_1_1
  * TEST-DESCR: On a 1-1 socket, Create an assoc and
  * TEST-DESCR: set the v4 tos (dscp)  for the association.
  * TEST-DESCR: Assure its set and no other values changed.
@@ -7347,7 +7347,7 @@ DEFINE_APITEST(paddrpara, sso_av4_tos_1_1)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_av4_tos_1_M
+ * TEST-TITLE paddrpara/sso_av4_tos_1_M
  * TEST-DESCR: On a 1-M socket, Create an assoc and
  * TEST-DESCR: set the v4 tos (dscp)  for the association.
  * TEST-DESCR: Assure its set and no other values changed.
@@ -7422,7 +7422,7 @@ DEFINE_APITEST(paddrpara, sso_av4_tos_1_M)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_ainhhb_int_1_1
+ * TEST-TITLE paddrpara/sso_ainhhb_int_1_1
  * TEST-DESCR: On a 1-1 socket, set the heartbeat interval
  * TEST-DESCR: on the socket. Create an assoc and
  * TEST-DESCR: assure the new value inherited to the association.
@@ -7524,7 +7524,7 @@ DEFINE_APITEST(paddrpara, sso_ainhhb_int_1_1)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_ainhhb_int_1_M
+ * TEST-TITLE paddrpara/sso_ainhhb_int_1_M
  * TEST-DESCR: On a 1-M socket, set the heartbeat interval
  * TEST-DESCR: on the socket. Create an assoc and
  * TEST-DESCR: assure the new value inherited to the association.
@@ -7628,7 +7628,7 @@ DEFINE_APITEST(paddrpara, sso_ainhhb_int_1_M)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_ainhhb_zero_1_1
+ * TEST-TITLE paddrpara/sso_ainhhb_zero_1_1
  * TEST-DESCR: On a 1-1 socket, set the heartbeat interval to 0
  * TEST-DESCR: on the socket. Create an assoc and
  * TEST-DESCR: assure the new value inherited to the association.
@@ -7731,7 +7731,7 @@ DEFINE_APITEST(paddrpara, sso_ainhhb_zero_1_1)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_ainhhb_zero_1_M
+ * TEST-TITLE paddrpara/sso_ainhhb_zero_1_M
  * TEST-DESCR: On a 1-M socket, set the heartbeat interval to 0
  * TEST-DESCR: on the socket. Create an assoc and
  * TEST-DESCR: assure the new value inherited to the association.
@@ -7834,7 +7834,7 @@ DEFINE_APITEST(paddrpara, sso_ainhhb_zero_1_M)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_ainhhb_off_1_1
+ * TEST-TITLE paddrpara/sso_ainhhb_off_1_1
  * TEST-DESCR: On a 1-1 socket, set heartbeat to off
  * TEST-DESCR: on the socket. Create an assoc and
  * TEST-DESCR: assure the new value inherited to the association.
@@ -7943,7 +7943,7 @@ DEFINE_APITEST(paddrpara, sso_ainhhb_off_1_1)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_ainhhb_off_1_M
+ * TEST-TITLE paddrpara/sso_ainhhb_off_1_M
  * TEST-DESCR: On a 1-M socket, set heartbeat to off
  * TEST-DESCR: on the socket. Create an assoc and
  * TEST-DESCR: assure the new value inherited to the association.
@@ -8051,7 +8051,7 @@ DEFINE_APITEST(paddrpara, sso_ainhhb_off_1_M)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_ainhpmrxt_int_1_1
+ * TEST-TITLE paddrpara/sso_ainhpmrxt_int_1_1
  * TEST-DESCR: On a 1-1 socket, set path max retransmit
  * TEST-DESCR: on the socket. Create an assoc and
  * TEST-DESCR: assure the new value inherited to the association.
@@ -8154,7 +8154,7 @@ DEFINE_APITEST(paddrpara, sso_ainhpmrxt_int_1_1)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_ainhpmrxt_int_1_M
+ * TEST-TITLE paddrpara/sso_ainhpmrxt_int_1_M
  * TEST-DESCR: On a 1-M socket, set path max retransmit
  * TEST-DESCR: on the socket. Create an assoc and
  * TEST-DESCR: assure the new value inherited to the association.
@@ -8257,7 +8257,7 @@ DEFINE_APITEST(paddrpara, sso_ainhpmrxt_int_1_M)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_dhb_int_1_1
+ * TEST-TITLE paddrpara/sso_dhb_int_1_1
  * TEST-DESCR: On a 1-1 socket, create an assocation and set
  * TEST-DESCR: the heartbeat interval for the association.
  * TEST-DESCR: assure the new value is on the association and
@@ -8354,7 +8354,7 @@ DEFINE_APITEST(paddrpara, sso_dhb_int_1_1)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_dhb_int_1_m
+ * TEST-TITLE paddrpara/sso_dhb_int_1_m
  * TEST-DESCR: On a 1-M socket, create an assocation and set
  * TEST-DESCR: the heartbeat interval for the association.
  * TEST-DESCR: assure the new value is on the association and
@@ -8459,7 +8459,7 @@ DEFINE_APITEST(paddrpara, sso_dhb_int_1_M)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_dhb_zero_1_1
+ * TEST-TITLE paddrpara/sso_dhb_zero_1_1
  * TEST-DESCR: On a 1-1 socket, create an assocation and set
  * TEST-DESCR: the heartbeat interval for the association to zero.
  * TEST-DESCR: assure the new value is on the association and
@@ -8556,7 +8556,7 @@ DEFINE_APITEST(paddrpara, sso_dhb_zero_1_1)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_dhb_zero_1_M
+ * TEST-TITLE paddrpara/sso_dhb_zero_1_M
  * TEST-DESCR: On a 1-M socket, create an assocation and set
  * TEST-DESCR: the heartbeat interval for the association to zero.
  * TEST-DESCR: assure the new value is on the association and
@@ -8662,7 +8662,7 @@ DEFINE_APITEST(paddrpara, sso_dhb_zero_1_M)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_dhb_off_1_1
+ * TEST-TITLE paddrpara/sso_dhb_off_1_1
  * TEST-DESCR: On a 1-1 socket, create an assocation and turn
  * TEST-DESCR: heartbeating or the association.
  * TEST-DESCR: assure the new value is on the association and
@@ -8764,7 +8764,7 @@ DEFINE_APITEST(paddrpara, sso_dhb_off_1_1)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_dhb_off_1_M
+ * TEST-TITLE paddrpara/sso_dhb_off_1_M
  * TEST-DESCR: On a 1-M socket, create an assocation and turn
  * TEST-DESCR: heartbeating or the association.
  * TEST-DESCR: assure the new value is on the association and
@@ -8875,7 +8875,7 @@ DEFINE_APITEST(paddrpara, sso_dhb_off_1_M)
 
 
 /*
- * TEST-DESCR: paddrpara/sso_dpmrxt_int_1_1
+ * TEST-TITLE paddrpara/sso_dpmrxt_int_1_1
  * TEST-DESCR: On a 1-1 socket, create an assocation and 
  * TEST-DESCR: set the path max retransmit.
  * TEST-DESCR: assure the new value is on the association and
@@ -8970,7 +8970,7 @@ DEFINE_APITEST(paddrpara, sso_dpmrxt_int_1_1)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_dpmrxt_int_1_M
+ * TEST-TITLE paddrpara/sso_dpmrxt_int_1_M
  * TEST-DESCR: On a 1-M socket, create an assocation and 
  * TEST-DESCR: set the path max retransmit.
  * TEST-DESCR: assure the new value is on the association and
@@ -9074,7 +9074,7 @@ DEFINE_APITEST(paddrpara, sso_dpmrxt_int_1_M)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_dpmrxt_int_1_1
+ * TEST-TITLE paddrpara/sso_dpmrxt_int_1_1
  * TEST-DESCR: On a 1-1 socket, create an assocation and 
  * TEST-DESCR: set the ipv4 tos (DSCP).
  * TEST-DESCR: assure the new value is on the association and
@@ -9170,7 +9170,7 @@ DEFINE_APITEST(paddrpara, sso_dav4_tos_1_1)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_dpmrxt_int_1_M
+ * TEST-TITLE paddrpara/sso_dpmrxt_int_1_M
  * TEST-DESCR: On a 1-M socket, create an assocation and 
  * TEST-DESCR: set the ipv4 tos (DSCP).
  * TEST-DESCR: assure the new value is on the association and
@@ -9275,7 +9275,7 @@ DEFINE_APITEST(paddrpara, sso_dav4_tos_1_M)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_hb_demand_1_1
+ * TEST-TITLE paddrpara/sso_hb_demand_1_1
  * TEST-DESCR: On a 1-1 socket, create an assocation and 
  * TEST-DESCR: demand a heartbeat.
  * TEST-DESCR: assure that no settings on the association
@@ -9374,7 +9374,7 @@ DEFINE_APITEST(paddrpara, sso_hb_demand_1_1)
 }
 
 /*
- * TEST-DESCR: paddrpara/sso_hb_demand_1_M
+ * TEST-TITLE paddrpara/sso_hb_demand_1_M
  * TEST-DESCR: On a 1-M socket, create an assocation and 
  * TEST-DESCR: demand a heartbeat.
  * TEST-DESCR: assure that no settings on the association
@@ -9487,7 +9487,7 @@ DEFINE_APITEST(paddrpara, sso_hb_demand_1_M)
  ********************************************************/
 
 /*
- * TEST-DESCR: defsend/gso_def_1_1
+ * TEST-TITLE defsend/gso_def_1_1
  * TEST-DESCR: On a 1-1 socket.
  * TEST-DESCR: Get the default send parameters
  * TEST-DESCR: and validate they are all 0.
@@ -9522,7 +9522,7 @@ DEFINE_APITEST(defsend, gso_def_1_1)
 }
 
 /*
- * TEST-DESCR: defsend/gso_def_1_M
+ * TEST-TITLE defsend/gso_def_1_M
  * TEST-DESCR: On a 1-M socket.
  * TEST-DESCR: Get the default send parameters
  * TEST-DESCR: and validate they are all 0.
@@ -9557,7 +9557,7 @@ DEFINE_APITEST(defsend, gso_def_1_M)
 }
 
 /*
- * TEST-DESCR: defsend/sso_on_1_1
+ * TEST-TITLE defsend/sso_on_1_1
  * TEST-DESCR: On a 1-1 socket.
  * TEST-DESCR: Change the default stream.
  * TEST-DESCR: Validate that it changed and
@@ -9606,7 +9606,7 @@ DEFINE_APITEST(defsend, sso_on_1_1)
 }
 
 /*
- * TEST-DESCR: defsend/sso_on_1_M
+ * TEST-TITLE defsend/sso_on_1_M
  * TEST-DESCR: On a 1-M socket.
  * TEST-DESCR: Change the default stream.
  * TEST-DESCR: Validate that it changed and
@@ -9655,7 +9655,7 @@ DEFINE_APITEST(defsend, sso_on_1_M)
 }
 
 /*
- * TEST-DESCR: defsend/sso_asc_1_1
+ * TEST-TITLE defsend/sso_asc_1_1
  * TEST-DESCR: On a 1-1 socket create an assocaition.
  * TEST-DESCR: Change default stream on the assocation.
  * TEST-DESCR: Validate that it changed and
@@ -9718,7 +9718,7 @@ DEFINE_APITEST(defsend, sso_asc_1_1)
 }
 
 /*
- * TEST-DESCR: defsend/sso_asc_1_M
+ * TEST-TITLE defsend/sso_asc_1_M
  * TEST-DESCR: On a 1-M socket create an assocaition.
  * TEST-DESCR: Change default stream on the assocation.
  * TEST-DESCR: Validate that it changed and
@@ -9779,7 +9779,7 @@ DEFINE_APITEST(defsend, sso_asc_1_M)
 }
 
 /*
- * TEST-DESCR: defsend/sso_inherit_1_1
+ * TEST-TITLE defsend/sso_inherit_1_1
  * TEST-DESCR: On a 1-1 socket.
  * TEST-DESCR: Change default stream on the endpoint.
  * TEST-DESCR: Create an assocation and
@@ -9844,7 +9844,7 @@ DEFINE_APITEST(defsend, sso_inherit_1_1)
 }
 
 /*
- * TEST-DESCR: defsend/sso_inherit_1_M
+ * TEST-TITLE defsend/sso_inherit_1_M
  * TEST-DESCR: On a 1-M socket.
  * TEST-DESCR: Change default stream on the endpoint.
  * TEST-DESCR: Create an assocation and
@@ -9908,7 +9908,7 @@ DEFINE_APITEST(defsend, sso_inherit_1_M)
 }
 
 /*
- * TEST-DESCR: defsend/sso_inherit_ncep_1_1
+ * TEST-TITLE defsend/sso_inherit_ncep_1_1
  * TEST-DESCR: On a 1-1 socket.
  * TEST-DESCR: Change default stream on the endpoint.
  * TEST-DESCR: Create an assocation and
@@ -10002,7 +10002,7 @@ DEFINE_APITEST(defsend, sso_inherit_ncep_1_1)
 }
 
 /*
- * TEST-DESCR: defsend/sso_inherit_ncep_1_M
+ * TEST-TITLE defsend/sso_inherit_ncep_1_M
  * TEST-DESCR: On a 1-M socket.
  * TEST-DESCR: Change default stream on the endpoint.
  * TEST-DESCR: Create an assocation and
@@ -10091,7 +10091,7 @@ DEFINE_APITEST(defsend, sso_inherit_ncep_1_M)
 }
 
 /*
- * TEST-DESCR: defsend/sso_nc_other_asc_1_M
+ * TEST-TITLE defsend/sso_nc_other_asc_1_M
  * TEST-DESCR: On a 1-M socket.
  * TEST-DESCR: Change default stream on the endpoint.
  * TEST-DESCR: Create two assocation and
@@ -10211,6 +10211,14 @@ DEFINE_APITEST(defsend, sso_nc_other_asc_1_M)
  * SCTP_EVENTS tests
  *
  ********************************************************/
+
+/*
+ * TEST-TITLE events/gso_def_1_1
+ * TEST-DESCR: On a 1-1 socket.
+ * TEST-DESCR: Get the default events and 
+ * TEST-DESCR: validate that no notification is
+ * TEST-DESCR: enabled.
+ */
 DEFINE_APITEST(events, gso_def_1_1)
 {
 	struct sctp_event_subscribe ev;
@@ -10247,6 +10255,14 @@ DEFINE_APITEST(events, gso_def_1_1)
 		return "authentication_event not defaulted to off";
 	return NULL;
 }
+
+/*
+ * TEST-TITLE events/gso_def_1_M
+ * TEST-DESCR: On a 1-M socket.
+ * TEST-DESCR: Get the default events and 
+ * TEST-DESCR: validate that no notification is
+ * TEST-DESCR: enabled.
+ */
 DEFINE_APITEST(events, gso_def_1_M)
 {
 	struct sctp_event_subscribe ev;
@@ -10285,6 +10301,15 @@ DEFINE_APITEST(events, gso_def_1_M)
 
 }
 
+/*
+ * TEST-TITLE events/sso_def_1_1
+ * TEST-DESCR: On a 1-1 socket.
+ * TEST-DESCR: Change two of the settings to the
+ * TEST-DESCR: opposite value with the set option.
+ * TEST-DESCR: validate that the new settings are
+ * TEST-DESCR: correct and no other un-changed settings
+ * TEST-DESCR: changed.
+ */
 DEFINE_APITEST(events, sso_1_1)
 {
 	struct sctp_event_subscribe ev[2];
@@ -10347,6 +10372,15 @@ DEFINE_APITEST(events, sso_1_1)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE events/sso_def_1_M
+ * TEST-DESCR: On a 1-M socket.
+ * TEST-DESCR: Change two of the settings to the
+ * TEST-DESCR: opposite value with the set option.
+ * TEST-DESCR: validate that the new settings are
+ * TEST-DESCR: correct and no other un-changed settings
+ * TEST-DESCR: changed.
+ */
 DEFINE_APITEST(events, sso_1_M)
 {
 	struct sctp_event_subscribe ev[2];
@@ -10415,7 +10449,11 @@ DEFINE_APITEST(events, sso_1_M)
  * SCTP_I_WANT_MAPPED_V4_ADDR tests
  *
  ********************************************************/
-
+/*
+ * TEST-TITLE mapped/gso_1_1_def
+ * TEST-DESCR: On a 1-1 socket.
+ * TEST-DESCR: Get the setting and validate the default.
+ */
 DEFINE_APITEST(mapped, gso_1_1_def)
 {
 	int fd, onoff;
@@ -10434,7 +10472,12 @@ DEFINE_APITEST(mapped, gso_1_1_def)
 	}
 }
 
-DEFINE_APITEST(mapped, gso_1_m_def)
+/*
+ * TEST-TITLE mapped/gso_1_M_def
+ * TEST-DESCR: On a 1-M socket.
+ * TEST-DESCR: Get the setting and validate the default.
+ */
+DEFINE_APITEST(mapped, gso_1_M_def)
 {
 	int fd, onoff;
 	
@@ -10452,6 +10495,12 @@ DEFINE_APITEST(mapped, gso_1_m_def)
 	}
 }
 
+/*
+ * TEST-TITLE mapped/sso_1_1
+ * TEST-DESCR: On a 1-1 socket.
+ * TEST-DESCR: Toggle the setting to the opposite
+ * TEST-DESCR: value and validate it can be set.
+ */
 DEFINE_APITEST(mapped, sso_1_1)
 {
 	socklen_t len;
@@ -10495,6 +10544,12 @@ DEFINE_APITEST(mapped, sso_1_1)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE mapped/sso_1_M
+ * TEST-DESCR: On a 1-M socket.
+ * TEST-DESCR: Toggle the setting to the opposite
+ * TEST-DESCR: value and validate it can be set.
+ */
 DEFINE_APITEST(mapped, sso_1_M)
 {
 	socklen_t len;
@@ -10538,6 +10593,13 @@ DEFINE_APITEST(mapped, sso_1_M)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE mapped/sso_bad_1_1
+ * TEST-DESCR: On a 1-1 socket.
+ * TEST-DESCR: Open a v4 socket and attempt to
+ * TEST-DESCR: turn on mapped v4 addresses. Validate
+ * TEST-DESCR: it fails.
+ */
 DEFINE_APITEST(mapped, sso_bad_1_1)
 {
 	socklen_t len;
@@ -10560,7 +10622,13 @@ DEFINE_APITEST(mapped, sso_bad_1_1)
 	return NULL;
 }
 
-
+/*
+ * TEST-TITLE mapped/sso_bad_1_M
+ * TEST-DESCR: On a 1-M socket.
+ * TEST-DESCR: Open a v4 socket and attempt to
+ * TEST-DESCR: turn on mapped v4 addresses. Validate
+ * TEST-DESCR: it fails.
+ */
 DEFINE_APITEST(mapped, sso_bad_1_M)
 {
 	socklen_t len;
@@ -10588,7 +10656,13 @@ DEFINE_APITEST(mapped, sso_bad_1_M)
  * SCTP_MAXSEG tests
  *
  ********************************************************/
-
+/*
+ * TEST-TITLE maxseg/gso_def_1_1
+ * TEST-DESCR: On a 1-1 socket.
+ * TEST-DESCR: Validate that the default setting
+ * TEST-DESCR: for maxseg is 0, i.e., no user
+ * TEST-DESCR: defined fragmentaton point.
+ */
 DEFINE_APITEST(maxseg, gso_def_1_1)
 {
 	int fd, val, result;
@@ -10610,6 +10684,13 @@ DEFINE_APITEST(maxseg, gso_def_1_1)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE maxseg/gso_def_1_1
+ * TEST-DESCR: On a 1-1 socket.
+ * TEST-DESCR: Validate that the default setting
+ * TEST-DESCR: for maxseg is 0, i.e., no user
+ * TEST-DESCR: defined fragmentaton point.
+ */
 DEFINE_APITEST(maxseg, sso_set_1_1)
 {
 	int fd, val[3], result;
