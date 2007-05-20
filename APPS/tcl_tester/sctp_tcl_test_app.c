@@ -451,6 +451,7 @@ setup_a_socket()
 	events.sctp_address_event = 1;
 	events.sctp_shutdown_event = 1;
 	events.sctp_adaptation_layer_event = 1;
+	events.sctp_stream_reset_events = 1;
 	siz = sizeof(events);
 	if(setsockopt(sd, IPPROTO_SCTP, SCTP_EVENTS, &events, siz) != 0) {
 		printf("Can't set SCTP_EVENTS to on error:%d - exiting\n", errno);
@@ -713,17 +714,15 @@ main (int argc, char **argv)
 		printf("set remote port to %d\n", ntohs(remote_port));
 		addr.sin.sin_port = remote_port;		
 	}
-
+	sd = setup_a_socket();
+	if(sd == -1) {
+		printf("huh?\n");
+		exit(0);
+	}
 	while (1) {
-		sd = setup_a_socket();
-		if(sd == -1) {
-			printf("huh?\n");
-			exit(0);
-		}
 		if (addr.sa.sa_family == AF_INET) {
 			salen = sizeof(struct sockaddr_in);
 		} else {
-			printf("default to v6 salen type:%d\n",addr.sa.sa_family);
 			salen = sizeof(struct sockaddr_in6);
 		}
 		if (size_to_send) {
@@ -743,6 +742,10 @@ main (int argc, char **argv)
 				}
 			} else {
 				if(sctp_connectx(sd, &addr.sa, 1, &sinfo_out.sinfo_assoc_id) < 0) {
+					if (errno == EALREADY) {
+						printf("Connect already running\n");
+						goto start_loop;
+					}
 					printf("Connect fails error:%d - next loop\n", errno);
 					goto next_loop;
 				}
@@ -751,6 +754,7 @@ main (int argc, char **argv)
 
 			}
 		} 
+	start_loop:
 		while (notDone) {
 			if ((listen_only == 0) && send_out) {
 				/* queue up the rest */
@@ -764,7 +768,6 @@ main (int argc, char **argv)
 			handle_read_event(&notDone, sd);
 		}
 	next_loop:
-		close(sd);
 		if(mydelay)
 			sleep(mydelay);
 		notDone = 1;
