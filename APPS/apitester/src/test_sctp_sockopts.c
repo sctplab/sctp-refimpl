@@ -13401,7 +13401,7 @@ DEFINE_APITEST(dsack, sso_asc_1_M)
  * TEST-TITLE dsack/sso_inherit_1_1
  * TEST-DESCR: On a 1-1 socket. 
  * TEST-DESCR: Set the delay to a new value for the ep.
- * TEST-DESCR: create an association validate that it the
+ * TEST-DESCR: create an association validate that the
  * TEST-DESCR: association inherits the new value.
  */
 DEFINE_APITEST(dsack, sso_inherit_1_1)
@@ -13458,7 +13458,7 @@ DEFINE_APITEST(dsack, sso_inherit_1_1)
  * TEST-TITLE dsack/sso_inherit_1_M
  * TEST-DESCR: On a 1-M socket. 
  * TEST-DESCR: Set the delay to a new value for the ep.
- * TEST-DESCR: create an association validate that it the
+ * TEST-DESCR: create an association validate that the
  * TEST-DESCR: association inherits the new value.
  */
 DEFINE_APITEST(dsack, sso_inherit_1_M)
@@ -13510,10 +13510,10 @@ DEFINE_APITEST(dsack, sso_inherit_1_M)
 }
 
 /*
- * TEST-TITLE dsack/sso_inherit_1_1
+ * TEST-TITLE dsack/sso_inherit_ncep_1_1
  * TEST-DESCR: On a 1-1 socket. 
  * TEST-DESCR: Set the delay to a new value for the ep.
- * TEST-DESCR: create an association validate that it the
+ * TEST-DESCR: create an association validate that the
  * TEST-DESCR: association inherits the new value. Now
  * TEST-DESCR: change the assocation value, and validate
  * TEST-DESCR: the new value is set but not in the endpoint.
@@ -13594,10 +13594,10 @@ DEFINE_APITEST(dsack, sso_inherit_ncep_1_1)
 }
 
 /*
- * TEST-TITLE dsack/sso_inherit_1_M
+ * TEST-TITLE dsack/sso_inherit_ncep_1_M
  * TEST-DESCR: On a 1-M socket. 
  * TEST-DESCR: Set the delay to a new value for the ep.
- * TEST-DESCR: create an association validate that it the
+ * TEST-DESCR: create an association validate that the
  * TEST-DESCR: association inherits the new value. Now
  * TEST-DESCR: change the assocation value, and validate
  * TEST-DESCR: the new value is set but not in the endpoint.
@@ -13677,7 +13677,7 @@ DEFINE_APITEST(dsack, sso_inherit_ncep_1_M)
 }
 
 /*
- * TEST-TITLE dsack/sso_inherit_1_M
+ * TEST-TITLE dsack/sso_nc_other_asc_1_M
  * TEST-DESCR: On a 1-M socket. 
  * TEST-DESCR: Set the delay to a new value for the ep.
  * TEST-DESCR: create two associations validate that both
@@ -13787,6 +13787,12 @@ DEFINE_APITEST(dsack, sso_nc_other_asc_1_M)
  * SCTP_FRAGMENT_INTERLEAVE tests
  *
  ********************************************************/
+/*
+ * TEST-TITLE fraginter/gso_def_1_1
+ * TEST-DESCR: On a 1-1 socket. 
+ * TEST-DESCR: Get the default fragment interleave and
+ * TEST-DESCR: validate it is set to 1.
+ */
 DEFINE_APITEST(fraginter, gso_def_1_1)
 {
 	int inter;
@@ -13806,6 +13812,13 @@ DEFINE_APITEST(fraginter, gso_def_1_1)
 	}
 	return NULL;
 }
+
+/*
+ * TEST-TITLE fraginter/gso_def_1_M
+ * TEST-DESCR: On a 1-M socket. 
+ * TEST-DESCR: Get the default fragment interleave and
+ * TEST-DESCR: validate it is set to 1.
+ */
 DEFINE_APITEST(fraginter, gso_def_1_M)
 {
 	int inter;
@@ -13826,6 +13839,11 @@ DEFINE_APITEST(fraginter, gso_def_1_M)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE fraginter/sso_1_1
+ * TEST-DESCR: On a 1-1 socket. 
+ * TEST-DESCR: Validate that we can set levels 0, 1 and 2
+ */
 DEFINE_APITEST(fraginter, sso_1_1)
 {
 	int inter[2],newval;
@@ -13862,6 +13880,11 @@ DEFINE_APITEST(fraginter, sso_1_1)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE fraginter/sso_1_M
+ * TEST-DESCR: On a 1-M socket. 
+ * TEST-DESCR: Validate that we can set levels 0, 1 and 2
+ */
 DEFINE_APITEST(fraginter, sso_1_M)
 {
 	int inter[2],newval;
@@ -13904,7 +13927,12 @@ DEFINE_APITEST(fraginter, sso_1_M)
 }
 
 
-
+/*
+ * TEST-TITLE fraginter/sso_bad_1_1
+ * TEST-DESCR: On a 1-1 socket. 
+ * TEST-DESCR: Validate that we fail to set a
+ * TEST-DESCR: bad fragment interleave level (42).
+ */
 DEFINE_APITEST(fraginter, sso_bad_1_1)
 {
 	int inter[2],newval;
@@ -13938,6 +13966,12 @@ DEFINE_APITEST(fraginter, sso_bad_1_1)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE fraginter/sso_bad_1_M
+ * TEST-DESCR: On a 1-1 socket. 
+ * TEST-DESCR: Validate that we fail to set a
+ * TEST-DESCR: bad fragment interleave level (42).
+ */
 DEFINE_APITEST(fraginter, sso_bad_1_M)
 {
 	int inter[2],newval;
@@ -13976,6 +14010,12 @@ DEFINE_APITEST(fraginter, sso_bad_1_M)
  * SCTP_PARTIAL_DELIVERY_POINT tests
  *
  ********************************************************/
+/*
+ * TEST-TITLE paapi/gso_1_1
+ * TEST-DESCR: On a 1-1 socket. 
+ * TEST-DESCR: Validate that we can retrieve
+ * TEST-DESCR: the pd-api point.
+ */
 DEFINE_APITEST(pdapi, gso_1_1)
 {
 	int point;
@@ -13993,6 +14033,12 @@ DEFINE_APITEST(pdapi, gso_1_1)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE paapi/gso_1_M
+ * TEST-DESCR: On a 1-M socket. 
+ * TEST-DESCR: Validate that we can retrieve
+ * TEST-DESCR: the pd-api point.
+ */
 DEFINE_APITEST(pdapi, gso_1_M)
 {
 	int point;
@@ -14011,6 +14057,12 @@ DEFINE_APITEST(pdapi, gso_1_M)
 
 }
 
+/*
+ * TEST-TITLE paapi/sso_1_1
+ * TEST-DESCR: On a 1-1 socket. 
+ * TEST-DESCR: Validate that we can set
+ * TEST-DESCR: the pd-api point.
+ */
 DEFINE_APITEST(padapi, sso_1_1)
 {
 	int point, newval;
@@ -14048,6 +14100,12 @@ DEFINE_APITEST(padapi, sso_1_1)
 
 }
 
+/*
+ * TEST-TITLE paapi/sso_1_M
+ * TEST-DESCR: On a 1-M socket. 
+ * TEST-DESCR: Validate that we can set
+ * TEST-DESCR: the pd-api point.
+ */
 DEFINE_APITEST(pdapi, sso_1_M)
 {
 	int point, newval;
@@ -14090,6 +14148,12 @@ DEFINE_APITEST(pdapi, sso_1_M)
  * SCTP_USE_EXT_RCVINFO tests
  *
  ********************************************************/
+/*
+ * TEST-TITLE xrcvinfo/sso_1_1
+ * TEST-DESCR: On a 1-1 socket. 
+ * TEST-DESCR: Validate that you can get and set
+ * TEST-DESCR: the SCTP_USE_EXT_RECVINFO flags.
+ */
 DEFINE_APITEST(xrcvinfo, sso_1_1)
 {
 	int val, newval, finalval;
@@ -14131,7 +14195,12 @@ DEFINE_APITEST(xrcvinfo, sso_1_1)
 	return NULL;
 	
 }
-
+/*
+ * TEST-TITLE xrcvinfo/sso_1_M
+ * TEST-DESCR: On a 1-M socket. 
+ * TEST-DESCR: Validate that you can get and set
+ * TEST-DESCR: the SCTP_USE_EXT_RECVINFO flags.
+ */
 DEFINE_APITEST(xrcvinfo, sso_1_M)
 {
 	int val, newval, finalval;
@@ -14178,6 +14247,13 @@ DEFINE_APITEST(xrcvinfo, sso_1_M)
  * SCTP_AUTO_ASCONF tests
  *
  ********************************************************/
+
+/*
+ * TEST-TITLE aasconf/sso_1_1
+ * TEST-DESCR: On a 1-1 socket. 
+ * TEST-DESCR: Validate that the auto-asconf 
+ * TEST-DESCR: option can be retrieved and changed.
+ */
 DEFINE_APITEST(aasconf, sso_1_1)
 {
 	int val, newval, finalval;
@@ -14220,6 +14296,12 @@ DEFINE_APITEST(aasconf, sso_1_1)
 	
 }
 
+/*
+ * TEST-TITLE aasconf/sso_1_M
+ * TEST-DESCR: On a 1-M socket. 
+ * TEST-DESCR: Validate that the auto-asconf 
+ * TEST-DESCR: option can be retrieved and changed.
+ */
 DEFINE_APITEST(aasconf, sso_1_M)
 {
 	int val, newval, finalval;
@@ -14267,6 +14349,12 @@ DEFINE_APITEST(aasconf, sso_1_M)
  * SCTP_MAX_BURST tests
  *
  ********************************************************/
+/*
+ * TEST-TITLE maxburst/gso_def_1_1
+ * TEST-DESCR: On a 1-1 socket. 
+ * TEST-DESCR: Retrieve the max burst setting and
+ * TEST-DESCR: validate it conforms to RFC4960.
+ */
 DEFINE_APITEST(maxburst, gso_def_1_1)
 {
 	uint8_t val=0;
@@ -14290,6 +14378,12 @@ DEFINE_APITEST(maxburst, gso_def_1_1)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE maxburst/gso_def_1_M
+ * TEST-DESCR: On a 1-M socket. 
+ * TEST-DESCR: Retrieve the max burst setting and
+ * TEST-DESCR: validate it conforms to RFC4960.
+ */
 DEFINE_APITEST(maxburst, gso_def_1_M)
 {
 	uint8_t val=0;
@@ -14313,6 +14407,13 @@ DEFINE_APITEST(maxburst, gso_def_1_M)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE maxburst/sso_1_1
+ * TEST-DESCR: On a 1-1 socket. 
+ * TEST-DESCR: Retrieve the max burst lower this
+ * TEST-DESCR: by one, and then set it. Validate
+ * TEST-DESCR: we can set it.
+ */
 DEFINE_APITEST(maxburst, sso_1_1)
 {
 	uint8_t val, newval, finalval;
@@ -14356,6 +14457,13 @@ DEFINE_APITEST(maxburst, sso_1_1)
 	
 }
 
+/*
+ * TEST-TITLE maxburst/sso_1_M
+ * TEST-DESCR: On a 1-M socket. 
+ * TEST-DESCR: Retrieve the max burst lower this
+ * TEST-DESCR: by one, and then set it. Validate
+ * TEST-DESCR: we can set it.
+ */
 DEFINE_APITEST(maxburst, sso_1_M)
 {
 	uint8_t val, newval, finalval;
@@ -14402,6 +14510,13 @@ DEFINE_APITEST(maxburst, sso_1_M)
  * SCTP_CONTEXT tests
  *
  ********************************************************/
+
+/*
+ * TEST-TITLE context/sso_1_1
+ * TEST-DESCR: On a 1-1 socket.
+ * TEST-DESCR: Set the context to a new value.
+ * TEST-DESCR: Validate that it is set.
+ */
 DEFINE_APITEST(context, sso_1_1)
 {
 	uint32_t val, newval, finalval;
@@ -14438,7 +14553,12 @@ DEFINE_APITEST(context, sso_1_1)
 	
 }
 
-
+/*
+ * TEST-TITLE context/sso_1_M
+ * TEST-DESCR: On a 1-M socket.
+ * TEST-DESCR: Set the context to a new value.
+ * TEST-DESCR: Validate that it is set.
+ */
 DEFINE_APITEST(context, sso_1_M)
 {
 	uint32_t val, newval, finalval;
@@ -14475,6 +14595,13 @@ DEFINE_APITEST(context, sso_1_M)
 	
 }
 
+
+/*
+ * TEST-TITLE context/sso_asc_1_1
+ * TEST-DESCR: On a 1-1 socket, create an association
+ * TEST-DESCR: Set the context to a new value for the assoc.
+ * TEST-DESCR: Validate that it happens 
+ */
 DEFINE_APITEST(context, sso_asc_1_1)
 {
 	uint32_t val[2], newval;
@@ -14521,6 +14648,12 @@ DEFINE_APITEST(context, sso_asc_1_1)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE context/sso_asc_1_M
+ * TEST-DESCR: On a 1-M socket, create an association
+ * TEST-DESCR: Set the context to a new value for the assoc.
+ * TEST-DESCR: Validate that it happens 
+ */
 DEFINE_APITEST(context, sso_asc_1_M)
 {
 	uint32_t val[2],newval;
@@ -14564,6 +14697,13 @@ DEFINE_APITEST(context, sso_asc_1_M)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE context/sso_inherit_1_1
+ * TEST-DESCR: On a 1-1 socket. 
+ * TEST-DESCR: Set the context to a new value for the ep.
+ * TEST-DESCR: create an association validate that the
+ * TEST-DESCR: association inherits the new value.
+ */
 DEFINE_APITEST(context, sso_inherit_1_1)
 {
 	uint32_t val[2], newval;
@@ -14607,6 +14747,13 @@ DEFINE_APITEST(context, sso_inherit_1_1)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE context/sso_inherit_1_M
+ * TEST-DESCR: On a 1-M socket. 
+ * TEST-DESCR: Set the context to a new value for the ep.
+ * TEST-DESCR: create an association validate that the
+ * TEST-DESCR: association inherits the new value.
+ */
 DEFINE_APITEST(context, sso_inherit_1_M)
 {
 	uint32_t val[2], newval;
@@ -14649,6 +14796,15 @@ DEFINE_APITEST(context, sso_inherit_1_M)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE context/sso_inherit_ncep_1_1
+ * TEST-DESCR: On a 1-1 socket. 
+ * TEST-DESCR: Set the context to a new value for the ep.
+ * TEST-DESCR: create an association validate that the
+ * TEST-DESCR: association inherits the new value. Now
+ * TEST-DESCR: change the assocation value, and validate
+ * TEST-DESCR: the new value is set but not in the endpoint.
+ */
 DEFINE_APITEST(context, sso_inherit_ncep_1_1)
 {
 	uint32_t val[3], newval;
@@ -14717,6 +14873,15 @@ DEFINE_APITEST(context, sso_inherit_ncep_1_1)
 
 }
 
+/*
+ * TEST-TITLE context/sso_inherit_ncep_1_M
+ * TEST-DESCR: On a 1-M socket. 
+ * TEST-DESCR: Set the context to a new value for the ep.
+ * TEST-DESCR: create an association validate that the
+ * TEST-DESCR: association inherits the new value. Now
+ * TEST-DESCR: change the assocation value, and validate
+ * TEST-DESCR: the new value is set but not in the endpoint.
+ */
 DEFINE_APITEST(context, sso_inherit_ncep_1_M)
 {
 	uint32_t val[3], newval;
@@ -14784,6 +14949,16 @@ DEFINE_APITEST(context, sso_inherit_ncep_1_M)
 	return retstring;
 }
 
+/*
+ * TEST-TITLE context/sso_nc_other_asc_1_M
+ * TEST-DESCR: On a 1-M socket. 
+ * TEST-DESCR: Set the context to a new value for the ep.
+ * TEST-DESCR: create two associations validate that both
+ * TEST-DESCR: association inherit the new value. Now
+ * TEST-DESCR: change one assocations value, and validate
+ * TEST-DESCR: the new value is set but not in the endpoint or
+ * TEST-DESCR: other association.
+ */
 DEFINE_APITEST(context, sso_nc_other_asc_1_M)
 {
 	uint32_t val[3], newval;
@@ -14882,6 +15057,12 @@ DEFINE_APITEST(context, sso_nc_other_asc_1_M)
  * SCTP_EXPLICIT_EOR tests
  *
  ********************************************************/
+/*
+ * TEST-TITLE eeor/sso_1_1
+ * TEST-DESCR: On a 1-1 socket. 
+ * TEST-DESCR: Get the eeor mode setting, Change it
+ * TEST-DESCR: and validate the change occurs.
+ */
 DEFINE_APITEST(eeor, sso_1_1)
 {
 	int val, newval, finalval;
@@ -14924,6 +15105,12 @@ DEFINE_APITEST(eeor, sso_1_1)
 	
 }
 
+/*
+ * TEST-TITLE eeor/sso_1_M
+ * TEST-DESCR: On a 1-M socket. 
+ * TEST-DESCR: Get the eeor mode setting, Change it
+ * TEST-DESCR: and validate the change occurs.
+ */
 DEFINE_APITEST(eeor, sso_1_M)
 {
 	int val, newval, finalval;
@@ -14970,6 +15157,12 @@ DEFINE_APITEST(eeor, sso_1_M)
  * Read only options on associations.
  *
  ********************************************************/
+/*
+ * TEST-TITLE read/status
+ * TEST-DESCR: Setup an association on a 1-M socket
+ * TEST-DESCR: and get the SCTP_STATUS, validate 
+ * TEST-DESCR: there is no error.
+ */
 DEFINE_APITEST(read, status)
 {
 	int fds[2], result;
@@ -14998,6 +15191,12 @@ DEFINE_APITEST(read, status)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE read/status
+ * TEST-DESCR: Setup an association on a 1-M socket
+ * TEST-DESCR: and get the SCTP_STATUS, use the status
+ * TEST-DESCR: to get the paddrinfo of the primary address.
+ */
 DEFINE_APITEST(read, paddrinfo)
 {
 	int fds[2], result;
@@ -15037,6 +15236,14 @@ DEFINE_APITEST(read, paddrinfo)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE read/auth_p_chklist
+ * TEST-DESCR: Setup an association on a 1-M socket
+ * TEST-DESCR: and get the peer authentication chunk lists. Validate
+ * TEST-DESCR: that asconf and asconf-ack are in the list. Note
+ * TEST-DESCR: that this test will fail if the peer does not support
+ * TEST-DESCR: the add-ip extension.
+ */
 DEFINE_APITEST(read, auth_p_chklist)
 {
 	int fds[2], result, i, j;
@@ -15091,6 +15298,12 @@ DEFINE_APITEST(read, auth_p_chklist)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE read/auth_p_chklist
+ * TEST-DESCR: Setup an association on a 1-M socket
+ * TEST-DESCR: and get the local authentication chunk lists. Validate
+ * TEST-DESCR: that asconf and asconf-ack are in the list.
+ */
 DEFINE_APITEST(read, auth_l_chklist)
 {
 	int fds[2], result, i,j;
