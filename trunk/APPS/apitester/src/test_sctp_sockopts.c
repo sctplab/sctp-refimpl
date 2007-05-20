@@ -3680,11 +3680,10 @@ DEFINE_APITEST(nodelay, gso_1_M_set_ndelay)
  ********************************************************/
 /*
  * TEST-DESCR: autoclose/gso_1_1_def_autoclose
- * TEST-DESCR: 
- * TEST-DESCR: 
- * TEST-DESCR: 
+ * TEST-DESCR: Open a 1-1 socket and get the value
+ * TEST-DESCR: set on autoclose. Validate it is
+ * TEST-DESCR: off by default.
  */
-
 DEFINE_APITEST(autoclose, gso_1_1_def_autoclose)
 {
 	uint32_t aclose;
@@ -3705,6 +3704,12 @@ DEFINE_APITEST(autoclose, gso_1_1_def_autoclose)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: autoclose/gso_1_M_def_autoclose
+ * TEST-DESCR: Open a 1-M socket and get the value
+ * TEST-DESCR: set on autoclose. Validate it is
+ * TEST-DESCR: off by default.
+ */
 DEFINE_APITEST(autoclose, gso_1_M_def_autoclose)
 {
 	uint32_t aclose;
@@ -3725,6 +3730,13 @@ DEFINE_APITEST(autoclose, gso_1_M_def_autoclose)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: autoclose/gso_1_1_set_autoclose
+ * TEST-DESCR: Open a 1-1 socket and get the value
+ * TEST-DESCR: set on autoclose. Toggle it and change
+ * TEST-DESCR: its setting. Validate that the setting
+ * TEST-DESCR: changes.
+ */
 DEFINE_APITEST(autoclose, gso_1_1_set_autoclose)
 {
 	uint32_t aclose[3];
@@ -3756,7 +3768,13 @@ DEFINE_APITEST(autoclose, gso_1_1_set_autoclose)
 	return NULL;
 }
 
-
+/*
+ * TEST-DESCR: autoclose/gso_1_M_set_autoclose
+ * TEST-DESCR: Open a 1-M socket and get the value
+ * TEST-DESCR: set on autoclose. Toggle it and change
+ * TEST-DESCR: its setting. Validate that the setting
+ * TEST-DESCR: changes.
+ */
 DEFINE_APITEST(autoclose, gso_1_M_set_autoclose)
 {
 	uint32_t aclose[3];
