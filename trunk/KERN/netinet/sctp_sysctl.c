@@ -152,6 +152,7 @@ number_of_addresses(struct sctp_inpcb *inp)
 	return (cnt);
 }
 
+#if defined (__APPLE__) || defined (__FreeBSD__)
 static int
 copy_out_local_addresses(struct sctp_inpcb *inp, struct sctp_tcb *stcb, struct sysctl_req *req)
 {
@@ -294,7 +295,6 @@ copy_out_local_addresses(struct sctp_inpcb *inp, struct sctp_tcb *stcb, struct s
 /*
  * sysctl functions
  */
-#if defined (__APPLE__) || defined (__FreeBSD__)
 static int
 #if defined (__APPLE__)
 sctp_assoclist SYSCTL_HANDLER_ARGS
