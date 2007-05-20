@@ -12,6 +12,12 @@
 #include "sctp_utilities.h"
 #include "api_tests.h"
 
+/*
+ * TEST-TITLE connect/non_listen
+ * TEST-DESCR: On a 1-1 socket, get two sockets.
+ * TEST-DESCR: Neither should listen, attempt to
+ * TEST-DESCR: connect one to the other. This should fail.
+ */
 DEFINE_APITEST(connect, non_listen)
 {
 	int fdc, fds, n;
@@ -44,6 +50,12 @@ DEFINE_APITEST(connect, non_listen)
 		return "connect was successful";
 }
 
+/*
+ * TEST-TITLE connect/non_listen
+ * TEST-DESCR: On a 1-1 socket, get two sockets.
+ * TEST-DESCR: One should listen, attempt to
+ * TEST-DESCR: connect one to the other. This should work..
+ */
 DEFINE_APITEST(connect, listen)
 {
 	int fdc, fds, n;
@@ -75,7 +87,12 @@ DEFINE_APITEST(connect, listen)
 		return NULL;
 }
 
-
+/*
+ * TEST-TITLE connect/self_non_listen
+ * TEST-DESCR: On a 1-1 socket, get a socket, no listen.
+ * TEST-DESCR: Attempt to connect to itself. 
+ * TEST-DESCR: This should fail, since we are not listening.
+ */
 DEFINE_APITEST(connect, self_non_listen)
 {
 	int fd, n;
@@ -105,7 +122,13 @@ DEFINE_APITEST(connect, self_non_listen)
 
 
 }
-
+/*
+ * TEST-TITLE connect/self_listen
+ * TEST-DESCR: On a 1-1 socket, get a socket, and listen.
+ * TEST-DESCR: Attempt to connect to itself. 
+ * TEST-DESCR: This should fail, since we are not allowed to
+ * TEST-DESCR: connect when listening.
+ */
 DEFINE_APITEST(connect, self_listen)
 {
 	int fd, n;
