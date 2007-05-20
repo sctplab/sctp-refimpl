@@ -12,6 +12,14 @@
 #include "sctp_utilities.h"
 #include "api_tests.h"
 
+/*
+ * TEST-TITLE sctp_sendmsg/c_p_c_a
+ * TEST-DESCR: (correct port correct address).
+ * TEST-DESCR: On a 1-1 socket, create an
+ * TEST-DESCR: association. Validate that no error
+ * TEST-DESCR: occurs when sending with an address and
+ * TEST-DESCR: proper size (tolen).
+ */
 DEFINE_APITEST(sctp_sendmsg, c_p_c_a)
 {
 	int fd[2], n;
@@ -37,6 +45,14 @@ DEFINE_APITEST(sctp_sendmsg, c_p_c_a)
 	}
 }
 
+/*
+ * TEST-TITLE sctp_sendmsg/c_p_c_a_over
+ * TEST-DESCR: (correct port correct address override).
+ * TEST-DESCR: On a 1-1 socket, create an
+ * TEST-DESCR: association. Validate that no error
+ * TEST-DESCR: occurs when sending with an address and
+ * TEST-DESCR: proper size (tolen), add the override flag.
+ */
 DEFINE_APITEST(sctp_sendmsg, c_p_c_a_over)
 {
 	int fd[2], n;
@@ -61,6 +77,15 @@ DEFINE_APITEST(sctp_sendmsg, c_p_c_a_over)
 		return NULL;
 	}
 }
+
+/*
+ * TEST-TITLE sctp_sendmsg/w_p_c_a
+ * TEST-DESCR: (without port correct address).
+ * TEST-DESCR: On a 1-1 socket, create an
+ * TEST-DESCR: association. Validate that no error
+ * TEST-DESCR: occurs when sending with an port
+ * TEST-DESCR: that is set to zero, but sized correctly.
+ */
 
 DEFINE_APITEST(sctp_sendmsg, w_p_c_a)
 {
@@ -88,6 +113,15 @@ DEFINE_APITEST(sctp_sendmsg, w_p_c_a)
 	}
 }
 
+/*
+ * TEST-TITLE sctp_sendmsg/w_p_c_a_over
+ * TEST-DESCR: (without port correct address override).
+ * TEST-DESCR: On a 1-1 socket, create an
+ * TEST-DESCR: association. Validate that no error
+ * TEST-DESCR: occurs when sending with an address 
+ * TEST-DESCR: that is set with a port of zero, but sized correctly and
+ * TEST-DESCR: with the override address flag set.
+ */
 DEFINE_APITEST(sctp_sendmsg, w_p_c_a_over)
 {
 	int fd[2], n;
@@ -114,6 +148,13 @@ DEFINE_APITEST(sctp_sendmsg, w_p_c_a_over)
 	}
 }
 
+/*
+ * TEST-TITLE sctp_sendmsg/c_p_w_a
+ * TEST-DESCR: (correct port without address).
+ * TEST-DESCR: On a 1-1 socket, create an
+ * TEST-DESCR: association. And send to INADDR_ANY
+ * TEST-DESCR: with no port set. Validate it succeeds.
+ */
 DEFINE_APITEST(sctp_sendmsg, c_p_w_a)
 {
 	int fd[2], n;
@@ -139,6 +180,15 @@ DEFINE_APITEST(sctp_sendmsg, c_p_w_a)
 		return NULL;
 	}
 }
+
+/*
+ * TEST-TITLE sctp_sendmsg/c_p_w_a_over
+ * TEST-DESCR: (correct port without address override).
+ * TEST-DESCR: On a 1-1 socket, create an
+ * TEST-DESCR: association. And send to INADDR_ANY
+ * TEST-DESCR: with port set and address override
+ * TEST-DESCR: Validate it succeeds.
+ */
 
 DEFINE_APITEST(sctp_sendmsg, c_p_w_a_over)
 {
@@ -166,6 +216,14 @@ DEFINE_APITEST(sctp_sendmsg, c_p_w_a_over)
 	}
 }
 
+/*
+ * TEST-TITLE sctp_sendmsg/w_p_w_a
+ * TEST-DESCR: (with port without address).
+ * TEST-DESCR: On a 1-1 socket, create an
+ * TEST-DESCR: association. And send to INADDR_ANY
+ * TEST-DESCR: with no port set and no address override
+ * TEST-DESCR: Validate it succeeds.
+ */
 DEFINE_APITEST(sctp_sendmsg, w_p_w_a)
 {
 	int fd[2], n;
@@ -193,6 +251,14 @@ DEFINE_APITEST(sctp_sendmsg, w_p_w_a)
 	}
 }
 
+/*
+ * TEST-TITLE sctp_sendmsg/w_p_w_a_over
+ * TEST-DESCR: (with port without address and override).
+ * TEST-DESCR: On a 1-1 socket, create an
+ * TEST-DESCR: association. And send to INADDR_ANY
+ * TEST-DESCR: with no port set and address override
+ * TEST-DESCR: Validate it succeeds.
+ */
 DEFINE_APITEST(sctp_sendmsg, w_p_w_a_over)
 {
 	int fd[2], n;
@@ -220,6 +286,14 @@ DEFINE_APITEST(sctp_sendmsg, w_p_w_a_over)
 	}
 }
 
+/*
+ * TEST-TITLE sctp_sendmsg/b_p_c_a
+ * TEST-DESCR: (bad port correct address).
+ * TEST-DESCR: On a 1-1 socket, create an
+ * TEST-DESCR: association. Send to a bad port
+ * TEST-DESCR: with correct address.
+ * TEST-DESCR: Validate it fails.
+ */
 DEFINE_APITEST(sctp_sendmsg, b_p_c_a)
 {
 	int fd[2], n;
@@ -246,6 +320,14 @@ DEFINE_APITEST(sctp_sendmsg, b_p_c_a)
 	}
 }
 
+/*
+ * TEST-TITLE sctp_sendmsg/b_p_c_a_over
+ * TEST-DESCR: (bad port correct address override).
+ * TEST-DESCR: On a 1-1 socket, create an
+ * TEST-DESCR: association. Send to a bad port
+ * TEST-DESCR: with correct address.
+ * TEST-DESCR: Validate it fails.
+ */
 DEFINE_APITEST(sctp_sendmsg, b_p_c_a_over)
 {
 	int fd[2], n;
@@ -272,6 +354,14 @@ DEFINE_APITEST(sctp_sendmsg, b_p_c_a_over)
 	}
 }
 
+/*
+ * TEST-TITLE sctp_sendmsg/c_p_b_a
+ * TEST-DESCR: (correct port bad address)
+ * TEST-DESCR: On a 1-1 socket, create an
+ * TEST-DESCR: association. Send to a correct port
+ * TEST-DESCR: with bad address.
+ * TEST-DESCR: Validate it fails.
+ */
 DEFINE_APITEST(sctp_sendmsg, c_p_b_a)
 {
 	int fd[2], n;
@@ -298,6 +388,14 @@ DEFINE_APITEST(sctp_sendmsg, c_p_b_a)
 	}
 }
 
+/*
+ * TEST-TITLE sctp_sendmsg/c_p_b_a_over
+ * TEST-DESCR: (correct port bad address override) 
+ * TEST-DESCR: On a 1-1 socket, create an
+ * TEST-DESCR: association. Send to a correct port
+ * TEST-DESCR: with bad address and override.
+ * TEST-DESCR: Validate it fails.
+ */
 DEFINE_APITEST(sctp_sendmsg, c_p_b_a_over)
 {
 	int fd[2], n;
@@ -324,6 +422,14 @@ DEFINE_APITEST(sctp_sendmsg, c_p_b_a_over)
 	}
 }
 
+/*
+ * TEST-TITLE sctp_sendmsg/b_p_b_a
+ * TEST-DESCR: (bad port bad address) 
+ * TEST-DESCR: On a 1-1 socket, create an
+ * TEST-DESCR: association. Send to a bad port
+ * TEST-DESCR: with bad address and override.
+ * TEST-DESCR: Validate it fails.
+ */
 DEFINE_APITEST(sctp_sendmsg, b_p_b_a)
 {
 	int fd[2], n;
@@ -351,6 +457,14 @@ DEFINE_APITEST(sctp_sendmsg, b_p_b_a)
 	}
 }
 
+/*
+ * TEST-TITLE sctp_sendmsg/b_p_b_a_over
+ * TEST-DESCR: (bad port bad address override) 
+ * TEST-DESCR: On a 1-1 socket, create an
+ * TEST-DESCR: association. Send to a bad port
+ * TEST-DESCR: with bad address and override.
+ * TEST-DESCR: Validate it fails.
+ */
 DEFINE_APITEST(sctp_sendmsg, b_p_b_a_over)
 {
 	int fd[2], n;
@@ -378,6 +492,14 @@ DEFINE_APITEST(sctp_sendmsg, b_p_b_a_over)
 	}
 }
 
+/*
+ * TEST-TITLE sctp_sendmsg/w_p_b_a
+ * TEST-DESCR: (without port bad address) 
+ * TEST-DESCR: On a 1-1 socket, create an
+ * TEST-DESCR: association. Send to a no port (0)
+ * TEST-DESCR: with bad address.
+ * TEST-DESCR: Validate it fails.
+ */
 DEFINE_APITEST(sctp_sendmsg, w_p_b_a)
 {
 	int fd[2], n;
@@ -405,6 +527,14 @@ DEFINE_APITEST(sctp_sendmsg, w_p_b_a)
 	}
 }
 
+/*
+ * TEST-TITLE sctp_sendmsg/w_p_b_a_over
+ * TEST-DESCR: (without port bad address override) 
+ * TEST-DESCR: On a 1-1 socket, create an
+ * TEST-DESCR: association. Send to a no port (0)
+ * TEST-DESCR: with bad address and override.
+ * TEST-DESCR: Validate it fails.
+ */
 DEFINE_APITEST(sctp_sendmsg, w_p_b_a_over)
 {
 	int fd[2], n;
@@ -432,6 +562,14 @@ DEFINE_APITEST(sctp_sendmsg, w_p_b_a_over)
 	}
 }
 
+/*
+ * TEST-TITLE sctp_sendmsg/b_p_w_a
+ * TEST-DESCR: (bad port without address) 
+ * TEST-DESCR: On a 1-1 socket, create an
+ * TEST-DESCR: association. Send to a bad port
+ * TEST-DESCR: without an  address.
+ * TEST-DESCR: Validate it fails.
+ */
 DEFINE_APITEST(sctp_sendmsg, b_p_w_a)
 {
 	int fd[2], n;
@@ -458,7 +596,14 @@ DEFINE_APITEST(sctp_sendmsg, b_p_w_a)
 		return "sctp_sendmsg was successful";
 	}
 }
-
+/*
+ * TEST-TITLE sctp_sendmsg/b_p_w_a
+ * TEST-DESCR: (bad port without address override) 
+ * TEST-DESCR: On a 1-1 socket, create an
+ * TEST-DESCR: association. Send to a bad port
+ * TEST-DESCR: without an address with override.
+ * TEST-DESCR: Validate it fails.
+ */
 DEFINE_APITEST(sctp_sendmsg, b_p_w_a_over)
 {
 	int fd[2], n;
@@ -485,6 +630,13 @@ DEFINE_APITEST(sctp_sendmsg, b_p_w_a_over)
 	}
 }
 
+/*
+ * TEST-TITLE sctp_sendmsg/non_null_zero
+ * TEST-DESCR: On a 1-1 socket, create an
+ * TEST-DESCR: association. Send to a bad port/bad address
+ * TEST-DESCR: with no override.
+ * TEST-DESCR: Validate it succeeds.
+ */
 DEFINE_APITEST(sctp_sendmsg, non_null_zero)
 {
 	int fd[2], n;
@@ -512,6 +664,13 @@ DEFINE_APITEST(sctp_sendmsg, non_null_zero)
 	}
 }
 
+/*
+ * TEST-TITLE sctp_sendmsg/non_null_zero_over
+ * TEST-DESCR: On a 1-1 socket, create an
+ * TEST-DESCR: association. Send to a bad port/bad address
+ * TEST-DESCR: with override.
+ * TEST-DESCR: Validate it succeeds.
+ */
 DEFINE_APITEST(sctp_sendmsg, non_null_zero_over)
 {
 	int fd[2], n;
@@ -539,6 +698,13 @@ DEFINE_APITEST(sctp_sendmsg, non_null_zero_over)
 	}
 }
 
+/*
+ * TEST-TITLE sctp_sendmsg/null_zero
+ * TEST-DESCR: On a 1-1 socket, create an
+ * TEST-DESCR: association. Send to a null address with 0 length
+ * TEST-DESCR: without override.
+ * TEST-DESCR: Validate it succeeds.
+ */
 DEFINE_APITEST(sctp_sendmsg, null_zero)
 {
 	int fd[2], n;
@@ -566,6 +732,13 @@ DEFINE_APITEST(sctp_sendmsg, null_zero)
 	}
 }
 
+/*
+ * TEST-TITLE sctp_sendmsg/null_zero_over
+ * TEST-DESCR: On a 1-1 socket, create an
+ * TEST-DESCR: association. Send to a null address with 0 length
+ * TEST-DESCR: with override.
+ * TEST-DESCR: Validate it succeeds.
+ */
 DEFINE_APITEST(sctp_sendmsg, null_zero_over)
 {
 	int fd[2], n;
@@ -593,6 +766,13 @@ DEFINE_APITEST(sctp_sendmsg, null_zero_over)
 	}
 }
 
+/*
+ * TEST-TITLE sctp_sendmsg/null_non_zero
+ * TEST-DESCR: On a 1-1 socket, create an
+ * TEST-DESCR: association. Send to a null address with non-zero length
+ * TEST-DESCR: without override.
+ * TEST-DESCR: Validate it fails.
+ */
 DEFINE_APITEST(sctp_sendmsg, null_non_zero)
 {
 	int fd[2], n;
@@ -620,6 +800,13 @@ DEFINE_APITEST(sctp_sendmsg, null_non_zero)
 	}
 }
 
+/*
+ * TEST-TITLE sctp_sendmsg/null_non_zero_over
+ * TEST-DESCR: On a 1-1 socket, create an
+ * TEST-DESCR: association. Send to a null address with non-zero length
+ * TEST-DESCR: with override.
+ * TEST-DESCR: Validate it fails.
+ */
 DEFINE_APITEST(sctp_sendmsg, null_non_zero_over)
 {
 	int fd[2], n;
