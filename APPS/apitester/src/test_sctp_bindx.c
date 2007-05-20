@@ -12,6 +12,13 @@
 #include "sctp_utilities.h"
 #include "api_tests.h"
 
+/*
+ * TEST-TITLE bind/port_w_a_w_p
+ * TEST-DESCR: (port without adress without port )
+ * TEST-DESCR: On a 1-1 socket, bindx to a single
+ * TEST-DESCR: address (INADDR_ANY) and 0 port.
+ * TEST-DESCR: We expect success.
+ */
 DEFINE_APITEST(bindx, port_w_a_w_p)
 {
 	int fd, result;
@@ -37,6 +44,13 @@ DEFINE_APITEST(bindx, port_w_a_w_p)
 		return NULL;
 }
 
+/*
+ * TEST-TITLE bind/port_s_a_w_p
+ * TEST-DESCR: (port specified adress without port )
+ * TEST-DESCR: On a 1-1 socket, bindx to a single
+ * TEST-DESCR: address (LOOPBACK) and 0 port.
+ * TEST-DESCR: We expect success.
+ */
 DEFINE_APITEST(bindx, port_s_a_w_p)
 {
 	int fd, result;
@@ -62,6 +76,13 @@ DEFINE_APITEST(bindx, port_s_a_w_p)
 		return NULL;
 }
 
+/*
+ * TEST-TITLE bind/port_w_a_s_p
+ * TEST-DESCR: (port without address specifed port )
+ * TEST-DESCR: On a 1-1 socket, bindx to a single
+ * TEST-DESCR: address (ANY) and a specified port.
+ * TEST-DESCR: We expect success and we got that port.
+ */
 DEFINE_APITEST(bindx, port_w_a_s_p)
 {
 	int fd, result;
@@ -87,6 +108,13 @@ DEFINE_APITEST(bindx, port_w_a_s_p)
 		return NULL;
 }
 
+/*
+ * TEST-TITLE bind/port_s_a_s_p
+ * TEST-DESCR: (port specified address specifed port )
+ * TEST-DESCR: On a 1-1 socket, bindx to a single
+ * TEST-DESCR: address (LOOPBACK) and a specified port.
+ * TEST-DESCR: We expect success and we got that port.
+ */
 DEFINE_APITEST(bindx, port_s_a_s_p)
 {
 	int fd, result;
@@ -112,6 +140,12 @@ DEFINE_APITEST(bindx, port_s_a_s_p)
 		return NULL;
 }
 
+/*
+ * TEST-TITLE bind/zero_flag
+ * TEST-DESCR: On a 1-1 socket, bindx to a single
+ * TEST-DESCR: address (LOOPBACK) and a specified port with
+ * TEST-DESCR: no flags, we expect failure.
+ */
 DEFINE_APITEST(bindx, zero_flag)
 {
 	int fd, result;
@@ -137,6 +171,12 @@ DEFINE_APITEST(bindx, zero_flag)
 		return "sctp_bindx() was successful";
 }
 
+/*
+ * TEST-TITLE bind/add_zero_addresses
+ * TEST-DESCR: On a 1-1 socket, bindx add to a single
+ * TEST-DESCR: address (LOOPBACK) and a specified port with
+ * TEST-DESCR: but address count is 0, we expect failure.
+ */
 DEFINE_APITEST(bindx, add_zero_addresses)
 {
 	int fd, result;
@@ -162,6 +202,12 @@ DEFINE_APITEST(bindx, add_zero_addresses)
 		return NULL;
 }
 
+/*
+ * TEST-TITLE bind/rem_zero_addresses
+ * TEST-DESCR: On a 1-1 socket, bindx remove to a single
+ * TEST-DESCR: address (LOOPBACK) and a specified port with
+ * TEST-DESCR: but address count is 0, we expect failure.
+ */
 DEFINE_APITEST(bindx, rem_zero_addresses)
 {
 	int fd, result;
@@ -187,6 +233,11 @@ DEFINE_APITEST(bindx, rem_zero_addresses)
 		return NULL;
 }
 
+/*
+ * TEST-TITLE bind/add_zero_addresses_NULL
+ * TEST-DESCR: On a 1-1 socket, bindx add no addresses
+ * TEST-DESCR: and NULL pointer, we expect a error.
+ */
 DEFINE_APITEST(bindx, add_zero_addresses_NULL)
 {
 	int fd, result;
@@ -203,6 +254,11 @@ DEFINE_APITEST(bindx, add_zero_addresses_NULL)
 		return NULL;
 }
 
+/*
+ * TEST-TITLE bind/rem_zero_addresses_NULL
+ * TEST-DESCR: On a 1-1 socket, bindx remove no addresses
+ * TEST-DESCR: and NULL pointer, we expect a error.
+ */
 DEFINE_APITEST(bindx, rem_zero_addresses_NULL)
 {
 	int fd, result;
@@ -219,6 +275,13 @@ DEFINE_APITEST(bindx, rem_zero_addresses_NULL)
 		return NULL;
 }
 
+/*
+ * TEST-TITLE bind/dup_add_s_a_s_p
+ * TEST-DESCR: (duplicate add specified addres specified port)
+ * TEST-DESCR: On a 1-1 socket, bindx add an address (loopback/1234)
+ * TEST-DESCR: and then do it a second time and look for failure
+ * TEST-DESCR: of the second attempt.
+ */
 DEFINE_APITEST(bindx, dup_add_s_a_s_p)
 {
 	int fd, result;
@@ -249,6 +312,13 @@ DEFINE_APITEST(bindx, dup_add_s_a_s_p)
 		return NULL;
 }
 
+/*
+ * TEST-TITLE bind/rem_last_s_a_s_p
+ * TEST-DESCR: (remove last specified address specified port)
+ * TEST-DESCR: On a 1-1 socket, bindx add an address (loopback/1234)
+ * TEST-DESCR: and then do it a second time with a remove.
+ * TEST-DESCR: This should fail, since you can't remove your last address.
+ */
 DEFINE_APITEST(bindx, rem_last_s_a_s_p)
 {
 	int fd, result;
@@ -279,6 +349,14 @@ DEFINE_APITEST(bindx, rem_last_s_a_s_p)
 		return "Can remove last address";
 }
 
+/*
+ * TEST-TITLE bind/rem_s_a_s_p
+ * TEST-DESCR: (remove specified address specified port)
+ * TEST-DESCR: On a 1-1 socket, bindx add an address (inaddr_any/1234)
+ * TEST-DESCR: and then do it a second time with a remove of the loopback.
+ * TEST-DESCR: This should fail, since you can't downgrade a bound-all
+ * TEST-DESCR: socket to bound specific.
+ */
 DEFINE_APITEST(bindx, rem_s_a_s_p)
 {
 	int fd, result;
