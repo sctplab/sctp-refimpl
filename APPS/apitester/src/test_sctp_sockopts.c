@@ -4010,6 +4010,14 @@ DEFINE_APITEST(setpeerprim, sso_1_M_bad_peerprim)
  *
  ********************************************************/
 
+/*
+ * TEST-DESCR: setprim/gso_1_1_get_prim
+ * TEST-DESCR: On a 1-1 socket, create an association.
+ * TEST-DESCR: After creating, get the address list and
+ * TEST-DESCR: retrieve the primary address. Validate
+ * TEST-DESCR: the primary is in the retrieved address list.
+ * TEST-DESCR: Note we must be multi-homed for this to work.
+ */
 DEFINE_APITEST(setprim, gso_1_1_get_prim)
 {
 	int fds[2], i, found;
@@ -4093,6 +4101,14 @@ DEFINE_APITEST(setprim, gso_1_1_get_prim)
 	return (retstring);
 }
 
+/*
+ * TEST-DESCR: setprim/gso_1_M_get_prim
+ * TEST-DESCR: On a 1-M socket, create an association.
+ * TEST-DESCR: After creating, get the address list and
+ * TEST-DESCR: retrieve the primary address. Validate
+ * TEST-DESCR: the primary is in the retrieved address list.
+ * TEST-DESCR: Note we must be multi-homed for this to work.
+ */
 DEFINE_APITEST(setprim, gso_1_M_get_prim)
 {
 	int fds[2], i, found;
@@ -4178,6 +4194,15 @@ DEFINE_APITEST(setprim, gso_1_M_get_prim)
 	return (retstring);
 }
 
+/*
+ * TEST-DESCR: setprim/gso_1_1_set_prim
+ * TEST-DESCR: On a 1-1 socket, create an association.
+ * TEST-DESCR: After creating, get the address list and
+ * TEST-DESCR: retrieve the primary address. Pick a new primary
+ * TEST-DESCR: and set it. Then retrieve the primary address. Validate
+ * TEST-DESCR: the primary is the new one.
+ * TEST-DESCR: Note we must be multi-homed for this to work.
+ */
 DEFINE_APITEST(setprim, sso_1_1_set_prim)
 {
 	int fds[2], i, found;
@@ -4319,6 +4344,15 @@ DEFINE_APITEST(setprim, sso_1_1_set_prim)
 	return (retstring);
 }
 
+/*
+ * TEST-DESCR: setprim/gso_1_M_set_prim
+ * TEST-DESCR: On a 1-M socket, create an association.
+ * TEST-DESCR: After creating, get the address list and
+ * TEST-DESCR: retrieve the primary address. Pick a new primary
+ * TEST-DESCR: and set it. Then retrieve the primary address. Validate
+ * TEST-DESCR: the primary is the new one.
+ * TEST-DESCR: Note we must be multi-homed for this to work.
+ */
 DEFINE_APITEST(setprim, sso_1_M_set_prim)
 {
 	int fds[2], i, found;
@@ -4460,7 +4494,16 @@ DEFINE_APITEST(setprim, sso_1_M_set_prim)
 	close(fds[1]);
 	return (retstring);
 }
-
+/*
+ * TEST-DESCR: setprim/gso_1_1_bad_prim
+ * TEST-DESCR: On a 1-1 socket, create an association.
+ * TEST-DESCR: After creating, get the address list and
+ * TEST-DESCR: retrieve the primary address. Pick a new primary
+ * TEST-DESCR: but corrupt it to be a non-valid address.
+ * TEST-DESCR: Set it. Validate that it fails OR the 
+ * TEST-DESCR: primary has not changed.
+ * TEST-DESCR: Note we must be multi-homed for this to work.
+ */
 DEFINE_APITEST(setprim, sso_1_1_bad_prim)
 {
 	int fds[2], i, found;
@@ -4583,6 +4626,16 @@ DEFINE_APITEST(setprim, sso_1_1_bad_prim)
 	return (retstring);
 }
 
+/*
+ * TEST-DESCR: setprim/gso_1_M_bad_prim
+ * TEST-DESCR: On a 1-M socket, create an association.
+ * TEST-DESCR: After creating, get the address list and
+ * TEST-DESCR: retrieve the primary address. Pick a new primary
+ * TEST-DESCR: but corrupt it to be a non-valid address.
+ * TEST-DESCR: Set it. Validate that it fails OR the 
+ * TEST-DESCR: primary has not changed.
+ * TEST-DESCR: Note we must be multi-homed for this to work.
+ */
 DEFINE_APITEST(setprim, sso_1_M_bad_prim)
 {
 	int fds[2], i, found;
@@ -4718,7 +4771,12 @@ DEFINE_APITEST(setprim, sso_1_M_bad_prim)
  * SCTP_ADAPTATION tests
  *
  ********************************************************/
-
+/*
+ * TEST-DESCR: adaptation/gso_1_1
+ * TEST-DESCR: On a 1-1 socket, and retrieve the
+ * TEST-DESCR: adaptation layer indication set on 
+ * TEST-DESCR: the endpoint.
+ */
 DEFINE_APITEST(adaptation, gso_1_1)
 {
 	int fd, result;
@@ -4735,7 +4793,12 @@ DEFINE_APITEST(adaptation, gso_1_1)
 	}
 	return NULL;
 }
-
+/*
+ * TEST-DESCR: adaptation/gso_1_M
+ * TEST-DESCR: On a 1-1 socket, and retrieve the
+ * TEST-DESCR: adaptation layer indication set on 
+ * TEST-DESCR: the endpoint.
+ */
 DEFINE_APITEST(adaptation, gso_1_M)
 {
 	int fd, result;
@@ -4753,6 +4816,13 @@ DEFINE_APITEST(adaptation, gso_1_M)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: adaptation/sso_1_1
+ * TEST-DESCR: On a 1-1 socket, and retrieve the
+ * TEST-DESCR: adaptation layer indication set on 
+ * TEST-DESCR: the endpoint add one to it and set it.
+ * TEST-DESCR: Validate that we set the new value.
+ */
 DEFINE_APITEST(adaptation, sso_1_1)
 {
 	int fd, result;
@@ -4786,6 +4856,13 @@ DEFINE_APITEST(adaptation, sso_1_1)
 
 }
 
+/*
+ * TEST-DESCR: adaptation/sso_1_M
+ * TEST-DESCR: On a 1-M socket, and retrieve the
+ * TEST-DESCR: adaptation layer indication set on 
+ * TEST-DESCR: the endpoint add one to it and set it.
+ * TEST-DESCR: Validate that we set the new value.
+ */
 DEFINE_APITEST(adaptation, sso_1_M)
 {
 	int fd, result;
@@ -4826,7 +4903,12 @@ DEFINE_APITEST(adaptation, sso_1_M)
  * SCTP_DISABLE_FRAGMENTS tests
  *
  ********************************************************/
-
+/*
+ * TEST-DESCR: disfrag/gso_def_1_1
+ * TEST-DESCR: On a 1-1 socket, get the disable 
+ * TEST-DESCR: fragmentation setting. Validate it
+ * TEST-DESCR: is not enabled (sctp will fragment messages).
+ */
 DEFINE_APITEST(disfrag, gso_def_1_1)
 {
 	int fd, result;
@@ -4848,6 +4930,12 @@ DEFINE_APITEST(disfrag, gso_def_1_1)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: disfrag/gso_def_1_M
+ * TEST-DESCR: On a 1-M socket, get the disable 
+ * TEST-DESCR: fragmentation setting. Validate it
+ * TEST-DESCR: is not enabled (sctp will fragment messages).
+ */
 DEFINE_APITEST(disfrag, gso_def_1_M)
 {
 	int fd, result;
@@ -4870,6 +4958,13 @@ DEFINE_APITEST(disfrag, gso_def_1_M)
 }
 
 
+/*
+ * TEST-DESCR: disfrag/sso_1_1
+ * TEST-DESCR: On a 1-1 socket, get the disable 
+ * TEST-DESCR: fragmentation setting. Change it to the 
+ * TEST-DESCR: opposite. Validate that our set was
+ * TEST-DESCR: successful.
+ */
 DEFINE_APITEST(disfrag, sso_1_1)
 {
 	int fd, result;
@@ -4902,6 +4997,13 @@ DEFINE_APITEST(disfrag, sso_1_1)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: disfrag/sso_1_M
+ * TEST-DESCR: On a 1-1 socket, get the disable 
+ * TEST-DESCR: fragmentation setting. Change it to the 
+ * TEST-DESCR: opposite. Validate that our set was
+ * TEST-DESCR: successful.
+ */
 DEFINE_APITEST(disfrag, sso_1_M)
 {
 	int fd, result;
@@ -4940,6 +5042,13 @@ DEFINE_APITEST(disfrag, sso_1_M)
  *
  ********************************************************/
 
+/*
+ * TEST-DESCR: paddrpara/gso_1_1
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ */
 DEFINE_APITEST(paddrpara, gso_def_1_1)
 {
 	int fd;
