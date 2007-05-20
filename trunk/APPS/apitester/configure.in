@@ -12,6 +12,9 @@ case $host_os in
 solaris*)
   CFLAGS="$CFLAGS -D_XPG4_2 -D__EXTENSIONS__"
   ;;
+linux*)
+  CFLAGS="$CFLAGS -DLINUX"
+  ;;
 esac
 
 AC_CHECK_TYPE(size_t)
