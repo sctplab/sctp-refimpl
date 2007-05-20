@@ -200,7 +200,7 @@ int sctp_socketstar(int *fd, int *fds, unsigned int n)
 	}
 
 	for (i = 0; i < n; i++){
-		if ((fds[i] = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) {
+		if ((fds[i] = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0) {
 			close(*fd);
 			for (j = 0; j < i; j++ )
 				close(fds[j]);

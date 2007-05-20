@@ -946,7 +946,7 @@ DEFINE_APITEST(rtoinfo, sso_1_1_inherit)
 		return strerror(errno);
 	}
 	
-	if ((cfd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) {
+	if ((cfd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0) {
 		close(lfd);
 		return strerror(errno);
 	}
