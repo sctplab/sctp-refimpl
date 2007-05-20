@@ -5044,10 +5044,9 @@ DEFINE_APITEST(disfrag, sso_1_M)
 
 /*
  * TEST-DESCR: paddrpara/gso_1_1
- * TEST-DESCR: 
- * TEST-DESCR: 
- * TEST-DESCR: 
- * TEST-DESCR: 
+ * TEST-DESCR: On a 1-1 socket, retrieve the
+ * TEST-DESCR: endpoint default settings and
+ * TEST-DESCR: validate they conform to RFC 4960.
  */
 DEFINE_APITEST(paddrpara, gso_def_1_1)
 {
@@ -5096,7 +5095,12 @@ DEFINE_APITEST(paddrpara, gso_def_1_1)
 	return NULL;
 }
 
-
+/*
+ * TEST-DESCR: paddrpara/gso_1_M
+ * TEST-DESCR: On a 1-M socket, retrieve the
+ * TEST-DESCR: endpoint default settings and
+ * TEST-DESCR: validate they conform to RFC 4960.
+ */
 DEFINE_APITEST(paddrpara, gso_def_1_M)
 {
 	int fd;
@@ -5144,6 +5148,14 @@ DEFINE_APITEST(paddrpara, gso_def_1_M)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: paddrpara/sso_hb_int_1_1
+ * TEST-DESCR: On a 1-1 socket, Retreive
+ * TEST-DESCR: the current values, change the
+ * TEST-DESCR: hb interval, assure the change
+ * TEST-DESCR: happens and no other parameters
+ * TEST-DESCR: are effected.
+ */
 DEFINE_APITEST(paddrpara, sso_hb_int_1_1)
 {
 	int fd;
@@ -5205,6 +5217,14 @@ DEFINE_APITEST(paddrpara, sso_hb_int_1_1)
 	return retstring;
 }
 
+/*
+ * TEST-DESCR: paddrpara/sso_hb_int_1_M
+ * TEST-DESCR: On a 1-M socket, Retreive
+ * TEST-DESCR: the current values, change the
+ * TEST-DESCR: hb interval, assure the change
+ * TEST-DESCR: happens and no other parameters
+ * TEST-DESCR: are effected.
+ */
 DEFINE_APITEST(paddrpara, sso_hb_int_1_M)
 {
 	int fd;
@@ -5266,6 +5286,14 @@ DEFINE_APITEST(paddrpara, sso_hb_int_1_M)
 	return retstring;
 }
 
+/*
+ * TEST-DESCR: paddrpara/sso_hb_zero_1_1
+ * TEST-DESCR: On a 1-1 socket, Retreive
+ * TEST-DESCR: the current values, change the
+ * TEST-DESCR: hb interval to zero, assure the change
+ * TEST-DESCR: happens and no other parameters
+ * TEST-DESCR: are effected.
+ */
 DEFINE_APITEST(paddrpara, sso_hb_zero_1_1)
 {
 	int fd;
@@ -5326,6 +5354,15 @@ DEFINE_APITEST(paddrpara, sso_hb_zero_1_1)
 	return retstring;
 
 }
+
+/*
+ * TEST-DESCR: paddrpara/sso_hb_zero_1_M
+ * TEST-DESCR: On a 1-M socket, Retreive
+ * TEST-DESCR: the current values, change the
+ * TEST-DESCR: hb interval to zero, assure the change
+ * TEST-DESCR: happens and no other parameters
+ * TEST-DESCR: are effected.
+ */
 DEFINE_APITEST(paddrpara, sso_hb_zero_1_M)
 {
 	int fd;
@@ -5388,7 +5425,14 @@ DEFINE_APITEST(paddrpara, sso_hb_zero_1_M)
 
 }
 
-
+/*
+ * TEST-DESCR: paddrpara/sso_hb_off_1_1
+ * TEST-DESCR: On a 1-1 socket, Retreive
+ * TEST-DESCR: the current values, 
+ * TEST-DESCR: turn off hb's, assure the change
+ * TEST-DESCR: happens and no other parameters
+ * TEST-DESCR: are effected.
+ */
 DEFINE_APITEST(paddrpara, sso_hb_off_1_1)
 {
 	int fd;
@@ -5453,6 +5497,15 @@ DEFINE_APITEST(paddrpara, sso_hb_off_1_1)
 	return retstring;
 
 }
+
+/*
+ * TEST-DESCR: paddrpara/sso_hb_off_1_M
+ * TEST-DESCR: On a 1-M socket, Retreive
+ * TEST-DESCR: the current values, 
+ * TEST-DESCR: turn off hb's, assure the change
+ * TEST-DESCR: happens and no other parameters
+ * TEST-DESCR: are effected.
+ */
 DEFINE_APITEST(paddrpara, sso_hb_off_1_M)
 {
 	int fd;
@@ -5520,6 +5573,14 @@ DEFINE_APITEST(paddrpara, sso_hb_off_1_M)
 
 }
 
+/*
+ * TEST-DESCR: paddrpara/sso_hb_on_1_1
+ * TEST-DESCR: On a 1-1 socket, Retreive
+ * TEST-DESCR: the current values, 
+ * TEST-DESCR: turn off hb's then turn them back on, 
+ * TEST-DESCR: assure the change happens and no other parameters
+ * TEST-DESCR: are effected.
+ */
 DEFINE_APITEST(paddrpara, sso_hb_on_1_1)
 {
 	int fd;
@@ -5618,6 +5679,14 @@ DEFINE_APITEST(paddrpara, sso_hb_on_1_1)
 
 }
 
+/*
+ * TEST-DESCR: paddrpara/sso_hb_on_1_M
+ * TEST-DESCR: On a 1-M socket, Retreive
+ * TEST-DESCR: the current values, 
+ * TEST-DESCR: turn off hb's then turn them back on, 
+ * TEST-DESCR: assure the change happens and no other parameters
+ * TEST-DESCR: are effected.
+ */
 DEFINE_APITEST(paddrpara, sso_hb_on_1_M)
 {
 	int fd;
@@ -5717,6 +5786,14 @@ DEFINE_APITEST(paddrpara, sso_hb_on_1_M)
 
 }
 
+/*
+ * TEST-DESCR: paddrpara/sso_pmrxt_int_1_1
+ * TEST-DESCR: On a 1-1 socket, Retreive
+ * TEST-DESCR: the current values, change the
+ * TEST-DESCR: path max retransmit.
+ * TEST-DESCR: assure the change happens and no other parameters
+ * TEST-DESCR: are effected.
+ */
 DEFINE_APITEST(paddrpara, sso_pmrxt_int_1_1)
 {
 	int fd;
@@ -5777,6 +5854,14 @@ DEFINE_APITEST(paddrpara, sso_pmrxt_int_1_1)
 	return retstring;
 }
 
+/*
+ * TEST-DESCR: paddrpara/sso_pmrxt_int_1_M
+ * TEST-DESCR: On a 1-M socket, Retreive
+ * TEST-DESCR: the current values, change the
+ * TEST-DESCR: path max retransmit.
+ * TEST-DESCR: assure the change happens and no other parameters
+ * TEST-DESCR: are effected.
+ */
 DEFINE_APITEST(paddrpara, sso_pmrxt_int_1_M)
 {
 	int fd;
@@ -5837,6 +5922,13 @@ DEFINE_APITEST(paddrpara, sso_pmrxt_int_1_M)
 	return retstring;
 }
 
+/*
+ * TEST-DESCR: paddrpara/sso_bad_hb_en_1_1
+ * TEST-DESCR: On a 1-1 socket, Set the
+ * TEST-DESCR: flags to both enable and disable
+ * TEST-DESCR: HB at the same time, we expect
+ * TEST-DESCR: the call to fail.
+ */
 DEFINE_APITEST(paddrpara, sso_bad_hb_en_1_1)
 {
 	int fd, result;
@@ -5860,6 +5952,13 @@ DEFINE_APITEST(paddrpara, sso_bad_hb_en_1_1)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: paddrpara/sso_bad_hb_en_1_M
+ * TEST-DESCR: On a 1-M socket, Set the
+ * TEST-DESCR: flags to both enable and disable
+ * TEST-DESCR: HB at the same time, we expect
+ * TEST-DESCR: the call to fail.
+ */
 DEFINE_APITEST(paddrpara, sso_bad_hb_en_1_M)
 {
 	int fd, result;
@@ -5884,7 +5983,13 @@ DEFINE_APITEST(paddrpara, sso_bad_hb_en_1_M)
 }
 
 
-
+/*
+ * TEST-DESCR: paddrpara/sso_bad_pmtud_en_1_1
+ * TEST-DESCR: On a 1-1 socket, Set the
+ * TEST-DESCR: flags to both enable and disable
+ * TEST-DESCR: PMTU discovery at the same time, we expect
+ * TEST-DESCR: the call to fail.
+ */
 DEFINE_APITEST(paddrpara, sso_bad_pmtud_en_1_1)
 {
 	int fd, result;
@@ -5908,6 +6013,13 @@ DEFINE_APITEST(paddrpara, sso_bad_pmtud_en_1_1)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: paddrpara/sso_bad_pmtud_en_1_M
+ * TEST-DESCR: On a 1-M socket, Set the
+ * TEST-DESCR: flags to both enable and disable
+ * TEST-DESCR: PMTU discovery at the same time, we expect
+ * TEST-DESCR: the call to fail.
+ */
 DEFINE_APITEST(paddrpara, sso_bad_pmtud_en_1_M)
 {
 	int fd, result;
@@ -5931,6 +6043,12 @@ DEFINE_APITEST(paddrpara, sso_bad_pmtud_en_1_M)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: paddrpara/sso_ahb_int_1_1
+ * TEST-DESCR: On a 1-1 socket, Create an assoc and
+ * TEST-DESCR: set the hb interval on the association.
+ * TEST-DESCR: Assure its set and no other values changed.
+ */
 DEFINE_APITEST(paddrpara, sso_ahb_int_1_1)
 {
 	int fds[2];
@@ -5998,6 +6116,12 @@ DEFINE_APITEST(paddrpara, sso_ahb_int_1_1)
 	return retstring;
 }
 
+/*
+ * TEST-DESCR: paddrpara/sso_ahb_int_1_M
+ * TEST-DESCR: On a 1-M socket, Create an assoc and
+ * TEST-DESCR: set the hb interval on the association.
+ * TEST-DESCR: Assure its set and no other values changed.
+ */
 DEFINE_APITEST(paddrpara, sso_ahb_int_1_M)
 {
 	int fds[2];
@@ -6083,6 +6207,12 @@ DEFINE_APITEST(paddrpara, sso_ahb_int_1_M)
 }
 
 
+/*
+ * TEST-DESCR: paddrpara/sso_ahb_zero_1_1
+ * TEST-DESCR: On a 1-1 socket, Create an assoc and
+ * TEST-DESCR: set the hb interval to zero on the association.
+ * TEST-DESCR: Assure its set and no other values changed.
+ */
 DEFINE_APITEST(paddrpara, sso_ahb_zero_1_1)
 {
 	int fds[2];
@@ -6148,6 +6278,13 @@ DEFINE_APITEST(paddrpara, sso_ahb_zero_1_1)
 	return retstring;
 
 }
+
+/*
+ * TEST-DESCR: paddrpara/sso_ahb_zero_1_M
+ * TEST-DESCR: On a 1-M socket, Create an assoc and
+ * TEST-DESCR: set the hb interval to zero on the association.
+ * TEST-DESCR: Assure its set and no other values changed.
+ */
 DEFINE_APITEST(paddrpara, sso_ahb_zero_1_M)
 {
 	int fds[2];
@@ -6232,6 +6369,12 @@ DEFINE_APITEST(paddrpara, sso_ahb_zero_1_M)
 	return retstring;
 }
 
+/*
+ * TEST-DESCR: paddrpara/sso_ahb_off_1_1
+ * TEST-DESCR: On a 1-1 socket, Create an assoc and
+ * TEST-DESCR: turn heartbeats off on the association.
+ * TEST-DESCR: Assure its set and no other values changed.
+ */
 DEFINE_APITEST(paddrpara, sso_ahb_off_1_1)
 {
 	int fds[2];
@@ -6300,6 +6443,12 @@ DEFINE_APITEST(paddrpara, sso_ahb_off_1_1)
 	return retstring;
 }
 
+/*
+ * TEST-DESCR: paddrpara/sso_ahb_off_1_M
+ * TEST-DESCR: On a 1-M socket, Create an assoc and
+ * TEST-DESCR: turn heartbeats off on the association.
+ * TEST-DESCR: Assure its set and no other values changed.
+ */
 DEFINE_APITEST(paddrpara, sso_ahb_off_1_M)
 {
 	int fds[2];
@@ -6389,6 +6538,12 @@ DEFINE_APITEST(paddrpara, sso_ahb_off_1_M)
 	return retstring;
 }
 
+/*
+ * TEST-DESCR: paddrpara/sso_ahb_on_1_1
+ * TEST-DESCR: On a 1-1 socket, Create an assoc and
+ * TEST-DESCR: turn heartbeats off and then back on for the association.
+ * TEST-DESCR: Assure its set and no other values changed.
+ */
 DEFINE_APITEST(paddrpara, sso_ahb_on_1_1)
 {
 	int fds[2];
@@ -6492,6 +6647,13 @@ DEFINE_APITEST(paddrpara, sso_ahb_on_1_1)
 	return retstring;
 
 }
+
+/*
+ * TEST-DESCR: paddrpara/sso_ahb_on_1_M
+ * TEST-DESCR: On a 1-M socket, Create an assoc and
+ * TEST-DESCR: turn heartbeats off and then back on for the association.
+ * TEST-DESCR: Assure its set and no other values changed.
+ */
 DEFINE_APITEST(paddrpara, sso_ahb_on_1_M)
 {
 	int fds[2];
@@ -6623,6 +6785,12 @@ DEFINE_APITEST(paddrpara, sso_ahb_on_1_M)
 
 }
 
+/*
+ * TEST-DESCR: paddrpara/sso_apmrxt_int_1_1
+ * TEST-DESCR: On a 1-1 socket, Create an assoc and
+ * TEST-DESCR: set the path max retransmit for the association.
+ * TEST-DESCR: Assure its set and no other values changed.
+ */
 DEFINE_APITEST(paddrpara, sso_apmrxt_int_1_1)
 {
 	int fds[2];
@@ -6688,6 +6856,12 @@ DEFINE_APITEST(paddrpara, sso_apmrxt_int_1_1)
 	return retstring;
 }
 
+/*
+ * TEST-DESCR: paddrpara/sso_apmrxt_int_1_M
+ * TEST-DESCR: On a 1-M socket, Create an assoc and
+ * TEST-DESCR: set the path max retransmit for the association.
+ * TEST-DESCR: Assure its set and no other values changed.
+ */
 DEFINE_APITEST(paddrpara, sso_apmrxt_int_1_M)
 {
 	int fds[2];
@@ -6772,6 +6946,12 @@ DEFINE_APITEST(paddrpara, sso_apmrxt_int_1_M)
 	return retstring;
 }
 
+/*
+ * TEST-DESCR: paddrpara/sso_apmtu_dis_1_1
+ * TEST-DESCR: On a 1-1 socket, Create an assoc and
+ * TEST-DESCR: disable the path mtu algorithm for the association.
+ * TEST-DESCR: Assure its set and no other values changed.
+ */
 DEFINE_APITEST(paddrpara, sso_apmtu_dis_1_1)
 {
 	int fds[2];
@@ -6853,6 +7033,12 @@ DEFINE_APITEST(paddrpara, sso_apmtu_dis_1_1)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: paddrpara/sso_apmtu_dis_1_M
+ * TEST-DESCR: On a 1-1 socket, Create an assoc and
+ * TEST-DESCR: disable the path mtu algorithm for the association.
+ * TEST-DESCR: Assure its set and no other values changed.
+ */
 DEFINE_APITEST(paddrpara, sso_apmtu_dis_1_M)
 {
 	int fds[2];
@@ -6936,6 +7122,12 @@ DEFINE_APITEST(paddrpara, sso_apmtu_dis_1_M)
 
 }
 
+/*
+ * TEST-DESCR: paddrpara/sso_av6_flow_1_1
+ * TEST-DESCR: On a 1-1 socket, Create an assoc and
+ * TEST-DESCR: set the v6 flowlabel for the association.
+ * TEST-DESCR: Assure its set and no other values changed.
+ */
 DEFINE_APITEST(paddrpara, sso_av6_flo_1_1)
 {
 	int fds[2];
@@ -7005,6 +7197,12 @@ DEFINE_APITEST(paddrpara, sso_av6_flo_1_1)
 
 }
 
+/*
+ * TEST-DESCR: paddrpara/sso_av6_flow_1_M
+ * TEST-DESCR: On a 1-M socket, Create an assoc and
+ * TEST-DESCR: set the v6 flowlabel for the association.
+ * TEST-DESCR: Assure its set and no other values changed.
+ */
 DEFINE_APITEST(paddrpara, sso_av6_flo_1_M)
 {
 	int fds[2];
@@ -7074,6 +7272,12 @@ DEFINE_APITEST(paddrpara, sso_av6_flo_1_M)
         return NULL;
 }
 
+/*
+ * TEST-DESCR: paddrpara/sso_av4_tos_1_1
+ * TEST-DESCR: On a 1-1 socket, Create an assoc and
+ * TEST-DESCR: set the v4 tos (dscp)  for the association.
+ * TEST-DESCR: Assure its set and no other values changed.
+ */
 DEFINE_APITEST(paddrpara, sso_av4_tos_1_1)
 {
 	int fds[2];
@@ -7142,6 +7346,12 @@ DEFINE_APITEST(paddrpara, sso_av4_tos_1_1)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: paddrpara/sso_av4_tos_1_M
+ * TEST-DESCR: On a 1-M socket, Create an assoc and
+ * TEST-DESCR: set the v4 tos (dscp)  for the association.
+ * TEST-DESCR: Assure its set and no other values changed.
+ */
 DEFINE_APITEST(paddrpara, sso_av4_tos_1_M)
 {
 	int fds[2];
@@ -7211,6 +7421,12 @@ DEFINE_APITEST(paddrpara, sso_av4_tos_1_M)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: paddrpara/sso_ainhhb_int_1_1
+ * TEST-DESCR: On a 1-1 socket, set the heartbeat interval
+ * TEST-DESCR: on the socket. Create an assoc and
+ * TEST-DESCR: assure the new value inherited to the association.
+ */
 DEFINE_APITEST(paddrpara, sso_ainhhb_int_1_1)
 {
 	int fd, result;
@@ -7307,7 +7523,12 @@ DEFINE_APITEST(paddrpara, sso_ainhhb_int_1_1)
 	return (retstring);
 }
 
-
+/*
+ * TEST-DESCR: paddrpara/sso_ainhhb_int_1_M
+ * TEST-DESCR: On a 1-M socket, set the heartbeat interval
+ * TEST-DESCR: on the socket. Create an assoc and
+ * TEST-DESCR: assure the new value inherited to the association.
+ */
 DEFINE_APITEST(paddrpara, sso_ainhhb_int_1_M)
 {
 	int result;
@@ -7406,6 +7627,12 @@ DEFINE_APITEST(paddrpara, sso_ainhhb_int_1_M)
 
 }
 
+/*
+ * TEST-DESCR: paddrpara/sso_ainhhb_zero_1_1
+ * TEST-DESCR: On a 1-1 socket, set the heartbeat interval to 0
+ * TEST-DESCR: on the socket. Create an assoc and
+ * TEST-DESCR: assure the new value inherited to the association.
+ */
 DEFINE_APITEST(paddrpara, sso_ainhhb_zero_1_1)
 {
 	int fd, result;
@@ -7503,6 +7730,12 @@ DEFINE_APITEST(paddrpara, sso_ainhhb_zero_1_1)
 	return (retstring);
 }
 
+/*
+ * TEST-DESCR: paddrpara/sso_ainhhb_zero_1_M
+ * TEST-DESCR: On a 1-M socket, set the heartbeat interval to 0
+ * TEST-DESCR: on the socket. Create an assoc and
+ * TEST-DESCR: assure the new value inherited to the association.
+ */
 DEFINE_APITEST(paddrpara, sso_ainhhb_zero_1_M)
 {
 	int result;
@@ -7600,6 +7833,12 @@ DEFINE_APITEST(paddrpara, sso_ainhhb_zero_1_M)
 	return (retstring);
 }
 
+/*
+ * TEST-DESCR: paddrpara/sso_ainhhb_off_1_1
+ * TEST-DESCR: On a 1-1 socket, set heartbeat to off
+ * TEST-DESCR: on the socket. Create an assoc and
+ * TEST-DESCR: assure the new value inherited to the association.
+ */
 DEFINE_APITEST(paddrpara, sso_ainhhb_off_1_1)
 {
 	int fd, result;
@@ -7703,6 +7942,12 @@ DEFINE_APITEST(paddrpara, sso_ainhhb_off_1_1)
 	return (retstring);
 }
 
+/*
+ * TEST-DESCR: paddrpara/sso_ainhhb_off_1_M
+ * TEST-DESCR: On a 1-M socket, set heartbeat to off
+ * TEST-DESCR: on the socket. Create an assoc and
+ * TEST-DESCR: assure the new value inherited to the association.
+ */
 DEFINE_APITEST(paddrpara, sso_ainhhb_off_1_M)
 {
 	int result;
@@ -7805,7 +8050,12 @@ DEFINE_APITEST(paddrpara, sso_ainhhb_off_1_M)
 	return (retstring);
 }
 
-
+/*
+ * TEST-DESCR: paddrpara/sso_ainhpmrxt_int_1_1
+ * TEST-DESCR: On a 1-1 socket, set path max retransmit
+ * TEST-DESCR: on the socket. Create an assoc and
+ * TEST-DESCR: assure the new value inherited to the association.
+ */
 DEFINE_APITEST(paddrpara, sso_ainhpmrxt_int_1_1)
 {
 	int fd, result;
@@ -7903,7 +8153,12 @@ DEFINE_APITEST(paddrpara, sso_ainhpmrxt_int_1_1)
 
 }
 
-
+/*
+ * TEST-DESCR: paddrpara/sso_ainhpmrxt_int_1_M
+ * TEST-DESCR: On a 1-M socket, set path max retransmit
+ * TEST-DESCR: on the socket. Create an assoc and
+ * TEST-DESCR: assure the new value inherited to the association.
+ */
 DEFINE_APITEST(paddrpara, sso_ainhpmrxt_int_1_M)
 {
 	int result;
@@ -8001,6 +8256,13 @@ DEFINE_APITEST(paddrpara, sso_ainhpmrxt_int_1_M)
 	return (retstring);
 }
 
+/*
+ * TEST-DESCR: paddrpara/sso_dhb_int_1_1
+ * TEST-DESCR: On a 1-1 socket, create an assocation and set
+ * TEST-DESCR: the heartbeat interval for the association.
+ * TEST-DESCR: assure the new value is on the association and
+ * TEST-DESCR: no other values have changed.
+ */
 DEFINE_APITEST(paddrpara, sso_dhb_int_1_1)
 {
 	int result, num;
@@ -8091,6 +8353,13 @@ DEFINE_APITEST(paddrpara, sso_dhb_int_1_1)
 	return (retstring);
 }
 
+/*
+ * TEST-DESCR: paddrpara/sso_dhb_int_1_m
+ * TEST-DESCR: On a 1-M socket, create an assocation and set
+ * TEST-DESCR: the heartbeat interval for the association.
+ * TEST-DESCR: assure the new value is on the association and
+ * TEST-DESCR: no other values have changed.
+ */
 DEFINE_APITEST(paddrpara, sso_dhb_int_1_M)
 {
 	int result, num;
@@ -8189,6 +8458,13 @@ DEFINE_APITEST(paddrpara, sso_dhb_int_1_M)
 	return (retstring);
 }
 
+/*
+ * TEST-DESCR: paddrpara/sso_dhb_zero_1_1
+ * TEST-DESCR: On a 1-1 socket, create an assocation and set
+ * TEST-DESCR: the heartbeat interval for the association to zero.
+ * TEST-DESCR: assure the new value is on the association and
+ * TEST-DESCR: no other values have changed.
+ */
 DEFINE_APITEST(paddrpara, sso_dhb_zero_1_1)
 {
 	int result, num;
@@ -8279,7 +8555,13 @@ DEFINE_APITEST(paddrpara, sso_dhb_zero_1_1)
 	return (retstring);
 }
 
-
+/*
+ * TEST-DESCR: paddrpara/sso_dhb_zero_1_M
+ * TEST-DESCR: On a 1-M socket, create an assocation and set
+ * TEST-DESCR: the heartbeat interval for the association to zero.
+ * TEST-DESCR: assure the new value is on the association and
+ * TEST-DESCR: no other values have changed.
+ */
 DEFINE_APITEST(paddrpara, sso_dhb_zero_1_M)
 {
 	int result, num;
@@ -8379,7 +8661,13 @@ DEFINE_APITEST(paddrpara, sso_dhb_zero_1_M)
 	return (retstring);
 }
 
-
+/*
+ * TEST-DESCR: paddrpara/sso_dhb_off_1_1
+ * TEST-DESCR: On a 1-1 socket, create an assocation and turn
+ * TEST-DESCR: heartbeating or the association.
+ * TEST-DESCR: assure the new value is on the association and
+ * TEST-DESCR: no other values have changed.
+ */
 DEFINE_APITEST(paddrpara, sso_dhb_off_1_1)
 {
 	int result, num;
@@ -8475,7 +8763,13 @@ DEFINE_APITEST(paddrpara, sso_dhb_off_1_1)
 
 }
 
-
+/*
+ * TEST-DESCR: paddrpara/sso_dhb_off_1_M
+ * TEST-DESCR: On a 1-M socket, create an assocation and turn
+ * TEST-DESCR: heartbeating or the association.
+ * TEST-DESCR: assure the new value is on the association and
+ * TEST-DESCR: no other values have changed.
+ */
 DEFINE_APITEST(paddrpara, sso_dhb_off_1_M)
 {
 	int result, num;
@@ -8579,6 +8873,14 @@ DEFINE_APITEST(paddrpara, sso_dhb_off_1_M)
 
 }
 
+
+/*
+ * TEST-DESCR: paddrpara/sso_dpmrxt_int_1_1
+ * TEST-DESCR: On a 1-1 socket, create an assocation and 
+ * TEST-DESCR: set the path max retransmit.
+ * TEST-DESCR: assure the new value is on the association and
+ * TEST-DESCR: no other values have changed.
+ */
 DEFINE_APITEST(paddrpara, sso_dpmrxt_int_1_1)
 {
 	int result, num;
@@ -8667,7 +8969,13 @@ DEFINE_APITEST(paddrpara, sso_dpmrxt_int_1_1)
 	return (retstring);
 }
 
-
+/*
+ * TEST-DESCR: paddrpara/sso_dpmrxt_int_1_M
+ * TEST-DESCR: On a 1-M socket, create an assocation and 
+ * TEST-DESCR: set the path max retransmit.
+ * TEST-DESCR: assure the new value is on the association and
+ * TEST-DESCR: no other values have changed.
+ */
 DEFINE_APITEST(paddrpara, sso_dpmrxt_int_1_M)
 {
 	int result, num;
@@ -8765,6 +9073,13 @@ DEFINE_APITEST(paddrpara, sso_dpmrxt_int_1_M)
 	return (retstring);
 }
 
+/*
+ * TEST-DESCR: paddrpara/sso_dpmrxt_int_1_1
+ * TEST-DESCR: On a 1-1 socket, create an assocation and 
+ * TEST-DESCR: set the ipv4 tos (DSCP).
+ * TEST-DESCR: assure the new value is on the association and
+ * TEST-DESCR: no other values have changed.
+ */
 DEFINE_APITEST(paddrpara, sso_dav4_tos_1_1)
 {
 	int result, num;
@@ -8854,6 +9169,13 @@ DEFINE_APITEST(paddrpara, sso_dav4_tos_1_1)
 
 }
 
+/*
+ * TEST-DESCR: paddrpara/sso_dpmrxt_int_1_M
+ * TEST-DESCR: On a 1-M socket, create an assocation and 
+ * TEST-DESCR: set the ipv4 tos (DSCP).
+ * TEST-DESCR: assure the new value is on the association and
+ * TEST-DESCR: no other values have changed.
+ */
 DEFINE_APITEST(paddrpara, sso_dav4_tos_1_M)
 {
 	int result, num;
@@ -8952,6 +9274,13 @@ DEFINE_APITEST(paddrpara, sso_dav4_tos_1_M)
 
 }
 
+/*
+ * TEST-DESCR: paddrpara/sso_hb_demand_1_1
+ * TEST-DESCR: On a 1-1 socket, create an assocation and 
+ * TEST-DESCR: demand a heartbeat.
+ * TEST-DESCR: assure that no settings on the association
+ * TEST-DESCR: have changed.
+ */
 DEFINE_APITEST(paddrpara, sso_hb_demand_1_1)
 {
 	int result, num;
@@ -9044,7 +9373,13 @@ DEFINE_APITEST(paddrpara, sso_hb_demand_1_1)
 	return (retstring);
 }
 
-
+/*
+ * TEST-DESCR: paddrpara/sso_hb_demand_1_M
+ * TEST-DESCR: On a 1-M socket, create an assocation and 
+ * TEST-DESCR: demand a heartbeat.
+ * TEST-DESCR: assure that no settings on the association
+ * TEST-DESCR: have changed.
+ */
 DEFINE_APITEST(paddrpara, sso_hb_demand_1_M)
 {
 	int result, num;
@@ -9150,6 +9485,14 @@ DEFINE_APITEST(paddrpara, sso_hb_demand_1_M)
  * SCTP_DEFAULT_SEND_PARAM tests
  *
  ********************************************************/
+
+/*
+ * TEST-DESCR: defsend/gso_def_1_1
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ */
 DEFINE_APITEST(defsend, gso_def_1_1)
 {
 	struct sctp_sndrcvinfo sinfo;
