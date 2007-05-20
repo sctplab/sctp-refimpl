@@ -3812,7 +3812,15 @@ DEFINE_APITEST(autoclose, gso_1_M_set_autoclose)
  * SCTP_SET_PEER_PRIMARY tests
  *
  ********************************************************/
-
+/*
+ * TEST-DESCR: setpeerprim/sso_1_1_good_peerprim
+ * TEST-DESCR: Create an assocaition using a 1-1 socket.
+ * TEST-DESCR: Validate that you can get the peers primary address and
+ * TEST-DESCR: succesfully request the peer to changes its primary.
+ * TEST-DESCR: Note this test requires more than one address
+ * TEST-DESCR: on the local host and a working getladdr()/getpaddr()
+ * TEST-DESCR: functions. It also depends on free[lp]addr() to work.
+ */
 DEFINE_APITEST(setpeerprim, sso_1_1_good_peerprim)
 {
 	int fds[2];
@@ -3845,6 +3853,16 @@ DEFINE_APITEST(setpeerprim, sso_1_1_good_peerprim)
 	return (retstring);
 }
 
+/*
+ * TEST-DESCR: setpeerprim/sso_1_1_bad_peerprim
+ * TEST-DESCR: Create an assocaition using a 1-1 socket.
+ * TEST-DESCR: Validate that you can get the peers primary address and
+ * TEST-DESCR: ask to change the peer primary address to an invalid
+ * TEST-DESCR: address on this host. We expect the call to fail.
+ * TEST-DESCR: Note this test requires more than one address
+ * TEST-DESCR: on the local host and a working getladdr()/getpaddr()
+ * TEST-DESCR: functions. It also depends on free[lp]addr() to work.
+ */
 DEFINE_APITEST(setpeerprim, sso_1_1_bad_peerprim)
 {
 	int fds[2];
@@ -3881,7 +3899,15 @@ DEFINE_APITEST(setpeerprim, sso_1_1_bad_peerprim)
 	return (retstring);
 }
 
-
+/*
+ * TEST-DESCR: setpeerprim/sso_1_M_good_peerprim
+ * TEST-DESCR: Create an association using a 1-M socket.
+ * TEST-DESCR: Validate that you can get the peers primary address and
+ * TEST-DESCR: succesfully request the peer to changes its primary.
+ * TEST-DESCR: Note this test requires more than one address
+ * TEST-DESCR: on the local host and a working getladdr()/getpaddr()
+ * TEST-DESCR: functions. It also depends on free[lp]addr() to work.
+ */
 DEFINE_APITEST(setpeerprim, sso_1_M_good_peerprim)
 {
 	int fds[2];
@@ -3924,7 +3950,16 @@ DEFINE_APITEST(setpeerprim, sso_1_M_good_peerprim)
 
 }
 
-
+/*
+ * TEST-DESCR: setpeerprim/sso_1_M_bad_peerprim
+ * TEST-DESCR: Create an assocaition using a 1-M socket.
+ * TEST-DESCR: Validate that you can get the peers primary address and
+ * TEST-DESCR: ask to change the peer primary address to an invalid
+ * TEST-DESCR: address on this host. We expect the call to fail.
+ * TEST-DESCR: Note this test requires more than one address
+ * TEST-DESCR: on the local host and a working getladdr()/getpaddr()
+ * TEST-DESCR: functions. It also depends on free[lp]addr() to work.
+ */
 DEFINE_APITEST(setpeerprim, sso_1_M_bad_peerprim)
 {
 	int fds[2];
